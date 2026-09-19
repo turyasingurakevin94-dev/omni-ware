@@ -676,11 +676,32 @@ const stockMove = (before, after, whenDays) => {
     'and every one of them is the filter, from that same template — the six chips under the search are gone');
   eq((summary.match(/\$\{tile\(/g) || []).length, 5,
     'and there are five of them — the queue, and then what the queue is made of');
-  ['To message', 'Promised', 'Money', 'News', 'Worth a word'].forEach((k) => {
-    t.check(summary.includes(k), `the strip names ${k.toLowerCase()} — the composition of the work, not a count of rows`);
+  /* WHAT THE FIVE TILES NAME, AND WHY IT CHANGED.
+
+     They used to name To message, Promised, Money, News and Worth a
+     word: the queue, and then what the queue is MADE OF. That was one
+     subject cut three ways, and it had two costs. It cut the same
+     people up, so a client who owed money and wanted news of a price
+     sat under two tiles and had to argue themselves out of one of them;
+     and it left the inbound half of WhatsApp -- somebody who wrote to
+     the shop and is waiting -- with no tile at all, because it is not a
+     follow-up and never was.
+
+     The five now name the LOOP, in the order it runs: somebody is
+     waiting on you, somebody is owed a word, somebody answered, somebody
+     named a day, and the day's posts. Every one of them is work that can
+     be done, and no two describe the same thing. The one that could not
+     be acted on -- everybody already messaged and not yet answered --
+     gave up its slot and reads as a status line under the strip, which
+     is what renderFollowUpQuietLine draws.
+
+     The claim underneath is unchanged and is asserted right below: a
+     tile that is pressable must open exactly what it counted. */
+  ['Waiting on you', 'To message', 'Came back', 'They promised', 'To post'].forEach((k) => {
+    t.check(summary.includes(k), `the strip names ${k.toLowerCase()} — a stage of the loop, each one work that can be done`);
   });
-  t.check(/counts\[r\.kind\]/.test(summary),
-    'and the kept-posted kinds are counted from followUpReasons itself, so the strip can never disagree with the queue beneath it');
+  t.check(/renderFollowUpQuietLine\(\)/.test(summary),
+    'and the reading that is NOT work — sent and still waiting — is a line under the strip, not a tile nobody can press');
   /* THE STRONGER FORM OF THAT SAME CLAIM. A tile that is pressable has
      to open what it counted: "Money 15" that opens fourteen rows is
      worse than no tile. Both figures and filter go through fupRowLenses,

@@ -608,12 +608,35 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
          The ratchet follows the builders, and the builders are this
          screen's now. */
       renders: ['renderFollowUpsContact', 'renderFollowUpSummary', 'renderFollowUpsAll',
+                /* The console's own builders: the status line that replaced the
+                   sixth tile, the rail that closes the loop, and the three lanes
+                   the merge brought in. They draw markup, so the ratchet follows
+                   them too. */
+                'renderFollowUpQuietLine', 'renderMessagesSide', 'msgLaneHTML', 'msgLaneRow',
                 'renderFollowUpScore', 'fupHeldPanelHTML', 'fupCp',
                 'briefStripHTML', 'briefWhyHTML', 'customerBriefPanelHTML',
                 'briefNoteBody', 'briefLeftOffHTML'],
+      /* WHAT THE MERGE TOOK OFF THIS LIST, and why.
+
+         'ow-grid-l' and 'ow-lr' were here because the screen was a
+         narrow list of clients beside a wide card holding the draft.
+         That is the shape the Messages console removed. The old
+         assertion meant: this screen lays a queue out on the layer's
+         split grid and draws each client as a dense side row. It
+         stopped being true when the queue became the layer's own WORK
+         QUEUE -- .ow-q, one 44px row per person, opening IN PLACE --
+         and the split became .ow-grid's queue-plus-304px-rail.
+
+         Two places showing one draft is how they come to disagree, so
+         there is no second pane to put .ow-lr rows beside any more. The
+         new names below assert the replacement rather than the absence:
+         the queue is the layer's component, not a fourteenth variant of
+         it, and .ow-q-x is the expansion that proves it opens in place. */
       rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-u',
-                    'ow-grid-l', 'ow-grid', 'ow-side', 'ow-stack',
-                    'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-lr', 'ow-msg',
+                    'ow-grid', 'ow-side', 'ow-stack',
+                    'ow-q', 'ow-q-r', 'ow-q-x', 'ow-q-card', 'ow-q-v', 'ow-q-f', 'ow-q-b',
+                    'ow-mq', 'ow-mq-h', 'ow-mq-n', 'ow-mq-s', 'ow-mq-band', 'ow-mq-quiet',
+                    'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-msg',
                     'ow-cp', 'ow-cp-d', 'ow-av', 'ow-sr', 'ow-sr-k', 'ow-sr-v',
                     'ow-tbl', 'ow-tbl-g', 'ow-tbl-r', 'ow-tbl-a', 'ow-fig',
                     'ow-empty', 'ow-mini',

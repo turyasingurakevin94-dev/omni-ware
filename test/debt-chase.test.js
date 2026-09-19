@@ -339,8 +339,20 @@ if (scope) {
         short label the approved canvas gives all five; and the help says
         where the book is, so the division the app states in three other
         places is readable and not merely true. */
-  t.check(/tile\('Money', 'money', n\('money'\) \? 'past your terms'/.test(summary),
-    'the Money tile keeps the canvas’s own sub, in the shape the other four wear');
+  /* THE MONEY TILE IS A DOOR NOW, NOT A TILE.
+
+     This asserted that the fold kept a Money tile with the canvas's own
+     sub. It stopped being true when the strip was recut from five
+     SUBJECTS to the five stages of the loop: a person who owes money is
+     in the queue like everybody else, ranked dearest first, and 'money'
+     survives in FUP_WHY as a door other screens still open by name --
+     Debtors and Invoices both send the owner here with it.
+
+     What the assertion was really protecting is the sentence after it,
+     and that has not moved an inch: no total is worked out over this
+     queue. So the check below now pins the door instead of the tile. */
+  t.check(/\['money','Money'\]/.test(src) && /fupWhy = 'money'/.test(src),
+    'Money is still a door this screen opens by name, for the screens that own the book');
   t.check(!/moneyOwed|moneyNote/.test(contact) && !/moneyOwed/.test(summary),
     'and no total is worked out over this queue — a position over a subset is a position nobody can trust');
   const sect = (/<section id="tab-followups"[\s\S]*?<\/section>/.exec(src) || [''])[0];
