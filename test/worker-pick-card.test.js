@@ -323,8 +323,22 @@ const pick = compileScope([extractFunction(js, 'pickLineCount', 'shared-worker.j
   const host = read('worker.html');
   t.check(/const zoomEl = e\.target\.closest\('\.img-zoomable'\);/.test(host),
     'the lightbox opens from its own document-level listener');
-  t.check(/class="q-stage-thumb img-zoomable"/.test(read('shared-worker.js')),
+  /* The class is conditional now -- the quote screen's usual-buys cards
+     and rows sit INSIDE a control that already acts on a tap, and a
+     photo that also opened the lightbox put it on top of whatever that
+     tap had just started. So the assertion moved from the literal
+     string to the thing the literal string was standing for, and it
+     got stricter in the move: the emitter still marks a real photo
+     zoomable, it does so BY DEFAULT rather than on request, and this
+     screen's own call takes that default. The old check could not have
+     caught the default being flipped to off; these three can. */
+  const emitter = (/function ipStageThumbHTML[\s\S]*?\n\}/.exec(read('shared-worker.js')) || [''])[0];
+  t.check(/class="q-stage-thumb\$\{zoom \? ' img-zoomable' : ''\}"/.test(emitter),
     "and the pick card's photo is marked zoomable");
+  t.check(/const zoom = !opts \|\| opts\.zoom !== false;/.test(emitter),
+    'zoomable is what a caller gets for saying nothing — only an explicit {zoom:false} turns it off');
+  t.check(/const photo = ipStageThumbHTML\(product\|\|\{\}, it\.variantIdx\);/.test(read('shared-worker.js')),
+    'and the pick card asks for no such thing, so its photo stays zoomable');
 
   // The card handler must not claim it. Both controls are matched by
   // closest(); the photo is neither.

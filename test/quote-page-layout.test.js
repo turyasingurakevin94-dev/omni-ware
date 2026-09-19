@@ -336,6 +336,50 @@ const src = read('index.html');
   const fit = extractFunction(src, 'fitUsualChips', 'index.html');
   t.check(/more\.textContent = `\+\$\{cut\}`;/.test(fit),
     'and the chips that do not fit the line are counted, never silently cut');
+
+  /* ---------- a usual is a CARD, and the photograph is on it ----------
+   *
+   * A hardware name is a specification -- "Iron Sheets (28 gauge,
+   * plain)", "PVC Pipe 1 inch" -- and a row of them reads as one grey
+   * line that has to be parsed word by word. The photograph is how the
+   * thing is recognised across a counter, the books already hold it
+   * against the product, and it is drawn from the SAME emitter both
+   * other surfaces use rather than a second copy of the lookup.
+   */
+  const usual = extractFunction(src, 'renderClientUsualBuys', 'index.html');
+  t.check(/ipStageThumbHTML\(product\|\|\{\}, r\.variantIdx, \{zoom:false\}\)/.test(usual),
+    'each usual carries the product’s own photograph, from the one emitter that draws them');
+  t.check(/<span class="q-uc-n">/.test(usual) && /<span class="q-uc-s">Last: <b>/.test(usual),
+    'with the name over what they last took — the offer, not just the word');
+  /* ONE TAP, ONE ACT. The lightbox listener is on the document, so a
+   * zoomable photo inside a control fires alongside that control's own
+   * handler: the picker opens and the photograph lands on top of it.
+   * Both surfaces that draw a usual therefore ask for no zoom. */
+  const rowsFn = extractFunction(src, 'usualBuysRowsHTML', 'index.html');
+  t.check(/\{zoom:false\}/.test(rowsFn),
+    'and the phone’s rows ask for the same, so tapping a usual’s photo adds the line rather than opening a lightbox over the picker');
+  /* THE CATALOGUE DECIDES, on both surfaces and at the handler. A usual
+   * whose product has since been deleted cannot be added, so it is not
+   * offered as though it could -- the console used to judge this by the
+   * line's stored id alone and drew a live card for a deleted product. */
+  t.check(/const product = r\.productId \? data\.products\.find\(p=>p\.id===r\.productId\) : null;[\s\S]*?\$\{product \? '' : ' disabled'\}/.test(usual),
+    'a usual whose product is gone from the catalogue is drawn dead, judged by the catalogue and not by the old line');
+  const add = extractFunction(src, 'usualBuysAdd', 'index.html');
+  t.check(/if\(!data\.products\.some\(p=>p\.id===r\.productId\)\) return;/.test(add),
+    'and the handler says the same, so a stale row cannot open the picker on nothing');
+  /* The card leaves the pill radius for the console's surface radius,
+     and it must outrank .q-chg-sug -- which opens `all:unset` and is
+     declared further down the sheet, so a single-class rule here is
+     silently reset and the cards draw as pills. */
+  t.check(/\.q-client-usual \.q-usual-chip\{[^}]*border-radius:var\(--ow-r-sm\);max-width:236px;/.test(src),
+    'the card is scoped to the strip so .q-chg-sug’s all:unset cannot reset it, and it is capped so one long name cannot eat the line');
+  t.check(/\.q-uc-n\{display:block;[^}]*overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\}/.test(src),
+    'the name truncates properly — all three declarations');
+  /* .q-uc-n sets its own full ink, so the card's disabled colour never
+     reaches it: a dead card drew identically to a live one and said so
+     only in a title. */
+  t.check(/\.q-client-usual \.q-usual-chip\[disabled\] \.q-uc-n\{color:var\(--ink-soft\);\}/.test(src),
+    'and a dead card is dead on screen, not only in its title');
   const hist = extractFunction(src, 'renderClientHistoryBox', 'index.html');
   t.check(/Orders<\/span>/.test(hist) && /Owed now/.test(hist) && /Last order<\/span>/.test(hist),
     'the facts are orders, what is owed now and the last order — the rail’s client panel folded into the band');

@@ -124,9 +124,16 @@ function resolveProductImage(p, variantIdx){
   const cat = p.category && data.presetCategories ? data.presetCategories.find(c=>c.name===p.category) : null;
   return (cat && cat.image) || null;
 }
-function ipStageThumbHTML(product, variantIdx){
+/* opts.zoom:false drops the lightbox affordance. A thumbnail sitting
+   INSIDE a control that already acts on a tap must not also be
+   zoomable: the global .img-zoomable handler is on the document, so it
+   fires alongside the control's own and the photograph lands on top of
+   whatever that tap just started. The usual-buys cards and rows are
+   exactly that -- one tap, one act, which is adding the line. */
+function ipStageThumbHTML(product, variantIdx, opts){
   const src = resolveProductImage(product, variantIdx);
-  if(src) return `<img class="q-stage-thumb img-zoomable" src="${src}" alt="${esc(product.name)}">`;
+  const zoom = !opts || opts.zoom !== false;
+  if(src) return `<img class="q-stage-thumb${zoom ? ' img-zoomable' : ''}" src="${src}" alt="${esc(product.name)}">`;
   return `<div class="q-stage-thumb-placeholder"><svg class="icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></div>`;
 }
 

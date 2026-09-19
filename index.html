@@ -6628,7 +6628,7 @@
   .q-band .ow-cb-kx.ow-good{color:var(--ow-verdigris);font-weight:var(--ow-fw-600);}
   .q-band .ow-cb-kx.ow-warn{color:var(--ow-amber-ink);font-weight:var(--ow-fw-600);}
   .q-band .ow-cb-kx.ow-bad{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
-  /* The usual-buys line under the search: one line, chips that do not
+  /* The usual-buys line under the search: one line, cards that do not
      fit counted on the last one. Opened, it wraps. */
   .q-client-usual{display:none;position:relative;align-items:center;gap:var(--ow-sp-6);
     padding:var(--ow-sp-8) var(--ow-sp-12);border-bottom:1px solid var(--ow-rule-soft);overflow:hidden;}
@@ -6640,8 +6640,57 @@
   /* A chip the count has cut is gone: the chip's own inline-flex would
      otherwise outrank the hidden attribute. */
   .q-chg-sug[hidden]{display:none;}
+  /* EACH USUAL IS A CARD, and the photograph is why. A hardware name is
+     a specification -- "Iron Sheets (28 gauge, plain)", "PVC Pipe 1
+     inch" -- and four of them side by side read as one grey line that
+     has to be parsed word by word. The photograph is how the thing is
+     actually recognised across a counter, it is already in the books
+     against the product, and it turns the strip into something the eye
+     lands on rather than reads. The line under the name is the offer
+     itself: what they last took, and how long ago -- a client who took
+     cement four days ago and one who took it eight months ago are not
+     the same offer, and that was hidden in a title attribute nobody
+     hovers on a call.
+
+     A pill has no room for two lines and a photograph, so these leave
+     the pill radius for the console's own surface radius. They are the
+     one exception in the chip family, and they are named separately for
+     it rather than the family being widened.
+
+     SCOPED TO THE STRIP, and not for tidiness: .q-chg-sug opens with
+     `all:unset` and is declared further down this sheet, so a bare
+     .q-usual-chip rule is reset by it at equal specificity -- silently,
+     with the cards drawn as pills and the max-width gone. Two classes
+     outrank it, the way .q-client-usual .q-chg-sug just above already
+     has to. */
+  .q-client-usual .q-usual-chip{align-items:center;gap:var(--ow-sp-8);
+    padding:var(--ow-sp-4) var(--ow-sp-10) var(--ow-sp-4) var(--ow-sp-4);
+    border-radius:var(--ow-r-sm);max-width:236px;min-width:0;}
+  .q-usual-chip .q-stage-thumb,.q-usual-chip .q-stage-thumb-placeholder{
+    width:28px;height:28px;border-radius:var(--ow-r-sm);}
+  .q-usual-chip .q-stage-thumb-placeholder .icon{width:15px;height:15px;}
+  /* The name gives way, never the figure: a cut quantity is a WRONG
+     quantity. The text block is display:block so both lines truncate
+     against the card's own width. */
+  .q-uc-t{min-width:0;}
+  .q-uc-n{display:block;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ink);
+    line-height:var(--ow-lh-tight);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .q-uc-s{display:block;font-size:var(--ow-t-11);color:var(--ow-ink-600);
+    line-height:var(--ow-lh-tight);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  /* A usual whose product has gone from the catalogue cannot be added,
+     so it must not look like one that can. The card's own colour does
+     not reach the name -- .q-uc-n carries full ink of its own -- so
+     dimming the card alone left a dead card reading exactly like a live
+     one, with the fact in a title attribute and nowhere on screen. The
+     name steps back to the meta line's ink and the photograph goes
+     quiet; the row is still DRAWN, because a usual you can no longer
+     sell is a fact about this client's history and dropping it would
+     make the strip lie about what they buy. */
   .q-usual-chip[disabled]{cursor:default;color:var(--ink-soft);}
   .q-usual-chip[disabled]:hover{border-color:var(--ow-rule-soft);}
+  .q-client-usual .q-usual-chip[disabled] .q-uc-n{color:var(--ink-soft);}
+  .q-client-usual .q-usual-chip[disabled] .q-stage-thumb,
+  .q-client-usual .q-usual-chip[disabled] .q-stage-thumb-placeholder{opacity:.5;}
   /* The empty document's usual rows are the phone's; the console has the chips. */
   .q-usual-slot{display:none;}
   /* The one add row: the words, then the taps, all on one line. */
@@ -37236,22 +37285,31 @@ function lastPriceToClient(nameLower, productId, variantIdx){
   return best;
 }
 
-/* WHAT THEY USUALLY TAKE, as chips on one line under the search.
+/* WHAT THEY USUALLY TAKE, as cards on one line under the search: the
+   product's own photograph, its name, and what they last took.
    Tapping one jumps straight into the item picker's supplier/price
    stage for that product (not a raw re-add of the old line), so the
    quote always picks up current pricing and stock rather than whatever
    was true last time.
 
    ONE LINE, AND THE CUT IS COUNTED. The row never wraps and never
-   scrolls: chips that do not fit are hidden and the last chip says how
+   scrolls: cards that do not fit are hidden and the last chip says how
    many ("+3"), which opens the row. A strip that scrolled sideways hid
-   its own tail with nothing to say it had one. On the phone this row
-   is not drawn at all; the same rows sit in the empty document as
-   thumb-sized lines (usualBuysRowsHTML), because there the usuals are
-   the next act, not a garnish. */
+   its own tail with nothing to say it had one. Cards are wider than the
+   bare names were, so the count carries more of the list than it used
+   to -- which is the trade the photograph is worth, and it is stated
+   rather than silently cut. On the phone this row is not drawn at all;
+   the same rows sit in the empty document as thumb-sized lines
+   (usualBuysRowsHTML), because there the usuals are the next act, not a
+   garnish. Both surfaces draw the same photograph from the same
+   helper. */
 let quoteUsualRows = [];
 function usualBuysAdd(r){
   if(!r || !r.productId) return;
+  /* Same rule as the drawing: a usual whose product has since been
+     deleted is not addable. Without this the handler called
+     ipSelectProduct on an id the catalogue no longer holds. */
+  if(!data.products.some(p=>p.id===r.productId)) return;
   openModal('itemPickerModal');
   ipSelectProduct(r.productId, r.variantIdx);
   const qtyEl = document.getElementById('ip_qty');
@@ -37273,7 +37331,13 @@ function renderClientUsualBuys(nameLower){
   const firstName = String(data.quote.client.name || '').trim().split(/\s+/)[0];
   wrap.innerHTML = `<span class="q-usual-l">${firstName ? esc(firstName) + ' usually buys' : 'Usually buys'}</span>` + rows.map((r,i)=>{
     const when = savedAgoLabel(r.lastOrderedAt);
-    return `<button type="button" class="q-chg-sug q-usual-chip" data-idx="${i}"${r.productId ? '' : ' disabled'} title="${esc(r.productName)} — last ${esc(r.lastQty)} ${esc(r.unit)}, ${esc(when)}${r.productId ? '. Add it to this quote' : '. Not in the catalogue any more'}">${esc(r.productName)}<b>${esc(r.lastQty)} ${esc(r.unit)}</b></button>`;
+    /* The catalogue is the truth about what can still be sold, so the
+       card is drawn dead when the PRODUCT is gone -- not merely when
+       the old line carried no id. The phone's rows already judged it
+       that way; the console judged it the looser way and offered a
+       live card for a deleted product. */
+    const product = r.productId ? data.products.find(p=>p.id===r.productId) : null;
+    return `<button type="button" class="q-chg-sug q-usual-chip" data-idx="${i}"${product ? '' : ' disabled'} title="${esc(r.productName)} — last ${esc(r.lastQty)} ${esc(r.unit)}, ${esc(when)}${product ? '. Add it to this quote' : '. Not in the catalogue any more'}">${ipStageThumbHTML(product||{}, r.variantIdx, {zoom:false})}<span class="q-uc-t"><span class="q-uc-n">${esc(r.productName)}</span><span class="q-uc-s">Last: <b>${esc(r.lastQty)} ${esc(r.unit)}</b> · ${esc(when)}</span></span></button>`;
   }).join('') + `<button type="button" class="q-chg-sug q-chg-sug-more q-usual-more" hidden></button>`;
   wrap.classList.add('show');
   wrap.querySelectorAll('.q-usual-chip').forEach(btn=>{
@@ -37323,7 +37387,7 @@ function usualBuysRowsHTML(){
   const line = (r, i)=>{
     const product = r.productId ? data.products.find(p=>p.id===r.productId) : null;
     return `<button type="button" class="q-usual-row" data-usual="${i}"${product ? '' : ' disabled'} title="${product ? 'Add to this quote' : 'Not in the catalogue any more'}">
-      ${ipStageThumbHTML(product||{}, r.variantIdx)}
+      ${ipStageThumbHTML(product||{}, r.variantIdx, {zoom:false})}
       <span class="q-ur-t"><span class="q-ur-n">${esc(r.productName)}</span><span class="q-ur-s">Last: ${esc(r.lastQty)} ${esc(r.unit)} · ${esc(savedAgoLabel(r.lastOrderedAt))}</span></span>
       <span class="q-add-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
     </button>`;
