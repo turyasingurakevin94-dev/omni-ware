@@ -142,7 +142,24 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        transparent` the lane used to declare, purely to transition out
        of, did NOT: that one was a distinct shadow spent on nothing
        being drawn, and it is gone for good. */
-    'shadows': [56, /box-shadow:\s*([^;}]+)/g],
+    /* 57, not 56, and this one goes UP -- the second time in this file,
+       so it is argued rather than nudged.
+
+       The owner asked for the New quote screen to be restored exactly as
+       it stood before the rebuild, and explicitly authorised breaking the
+       house rules to get it. The screen it brings back carries one shadow
+       the rebuild had removed: 0 -4px 16px rgba(20,30,40,.06) under the
+       sticky totals bar. That bar is fixed to the viewport with the
+       document scrolling underneath it, which is the one case --ow-lift
+       exists for ("things that genuinely float"), except that it lifts
+       UPWARD and --ow-lift only casts down. A hairline cannot do the job:
+       the bar's ground and the page's ground are both warm paper, so at
+       the moment a row passes under it there is nothing to separate them.
+
+       It is one shadow, on one element, on one screen, and it is the
+       original's. It may not spread: anything else that wants depth still
+       uses --ow-lift or a hairline. */
+    'shadows': [57, /box-shadow:\s*([^;}]+)/g],
     /* 103, not 104: the product form's type cards carried #FFF9EF -- a
        cream that existed only to tint the selected option, and that made
        the selection one of four things on that form wearing a warm colour
@@ -172,30 +189,43 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        says. The panel went when the list became a set of place cards;
        one of its two keylines was already spent elsewhere, the other
        was not. */
-    /* 108, not 102: the one rise in this file's history, and it was a
-       decision rather than a leak. The owner's ruling: a palette held to
+    /* 109, not 102. TWO rises, from two unrelated decisions, and both
+       are kept whole because each is an argument the next reader has to
+       be able to weigh on its own.
+
+       +6, THE CATEGORY PALETTE (the owner's ruling). A palette held to
        one accent forces every layout monochrome, and colour is a real
        instrument of hierarchy -- six rail doors told apart by hue are
-       found faster than six told apart by position alone.
+       found faster than six told apart by position alone. So a fourth
+       ROLE was added and it cost six literals: indigo, sky and plum,
+       each a tint and its ink. Sell, Catalogue and Setup wear oxide,
+       verdigris and the neutrals, which is why this is +6 and not +12.
 
-       So a fourth ROLE was added, the category palette, and it cost six
-       literals: indigo, sky and plum, each a tint and its ink. Sell,
-       Catalogue and Setup wear oxide, verdigris and the neutrals, which
-       is why this is +6 and not +12 -- the ceiling still makes a new hue
-       argue for itself, it just no longer refuses to hear the argument.
+       +1, THE RESTORED NEW QUOTE SCREEN (also the owner's, and also a
+       ruling: the page was to come back exactly as it stood before the
+       rebuild, house rules included). It carries #F7F9FB, the cool tint
+       behind an item thumbnail's dashed placeholder in the picker and
+       on a quote line -- the ground for a box standing in for a
+       photograph nobody has taken. The palette has no cool near-white:
+       --ow-paper-2 is warm, and on a warm ground a warm placeholder
+       does not read as an absence. One value, two rules.
 
        What did NOT change: this is still a ceiling, it still may only
-       fall, and every pair added below is held to 4.5:1 in the contrast
+       fall, and every pair added is held to 4.5:1 in the contrast
        block. A colour is cheap to justify and expensive to add. */
-    /* 107, not 108: the cash book went back to the four stacked panels
-       it had before the console, and the console's opening bar went with
-       it. #E3B5AE was that bar's broken-chain variant -- the keyline on
-       a ghost button inside a warning nothing else draws. The warning
+    /* 108, not 109: the cash book went back to the four stacked panels
+       it had before the console -- the same ruling that brought back New
+       Quote above -- and the console's opening bar went with it.
+       #E3B5AE was that bar's broken-chain variant: the keyline on a
+       ghost button inside a warning nothing else draws. The warning
        itself is .cb-chain-break again, at the head of the closing panel,
        which is where it sat before and which spends no literal of its
        own. The bar survives for Mobile Money, the shop's unset settings
-       and the duplicate-supplier band; only the crimson variant went. */
-    'distinct colours': [107, /#[0-9A-Fa-f]{6}\b/g],
+       and the duplicate-supplier band; only the crimson variant went.
+
+       Worth noting against the +1 above: restoring a screen does not
+       have to cost a colour. This one paid one back. */
+    'distinct colours': [108, /#[0-9A-Fa-f]{6}\b/g],
   };
   /* RESOLVE THE TOKENS BEFORE COUNTING.
    *

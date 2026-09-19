@@ -137,9 +137,7 @@ if (fns) {
      (debtStandingHTML); the band replaced it. */
   const bandFn = (/function renderClientHistoryBox\(\)\{[\s\S]*?\n\}/.exec(code) || [''])[0];
   t.check(/const standing = customerDebtStanding\(customer\);\s*const band = debtStandingBand\(standing\);/.test(bandFn)
-    /* "Owed now": the same words the rail and the customer book use for
-       the same figure. The band alone said "Owes now". */
-    && /Owed now\$\{esc\(age\)\}/.test(bandFn),
+    && /Owes now\$\{esc\(age\)\}/.test(bandFn),
     'and again on the quote once a client is chosen, banded the same way');
   t.check(!/parts\.push\(`<span class="owed">owes/.test(code),
     'the old dot-separated "owes" clause is gone');
