@@ -38,7 +38,8 @@ const INV = (over = {}) => ({
   let f = null, err = null;
   try {
     ({ anInvoicesInRange: f } = compileScope(
-      [extractFunction(src, 'anInvoicesInRange', 'index.html')],
+      [extractFunction(src, 'anInvoicesInRange', 'index.html'),
+       extractFunction(src, 'isInvoice', 'index.html')],
       { data: { savedQuotes: [] } }, ['anInvoicesInRange'],
     ));
   } catch (e) { err = e; }
@@ -51,7 +52,8 @@ const INV = (over = {}) => ({
     let g = null;
     try {
       ({ anInvoicesInRange: g } = compileScope(
-        [extractFunction(src, 'anInvoicesInRange', 'index.html')], { data: scope }, ['anInvoicesInRange'],
+        [extractFunction(src, 'anInvoicesInRange', 'index.html'),
+         extractFunction(src, 'isInvoice', 'index.html')], { data: scope }, ['anInvoicesInRange'],
       ));
     } catch (e) { /* covered above */ }
 

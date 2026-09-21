@@ -109,6 +109,7 @@ const scope = (data) => compileScope([
      is decided inside these, so stubbing them would leave the claim
      this file exists to make untested. */
   extractFunction(src, 'anInvoicesInRange', 'index.html'),
+  extractFunction(src, 'isInvoice', 'index.html'),
   extractFunction(src, 'debtCollectionsOn', 'index.html'),
   extractFunction(src, 'debtLogIsInvoiceOwned', 'index.html'),
   extractFunction(src, 'cashIsMoneyIn', 'index.html'),
@@ -305,6 +306,7 @@ const scope = (data) => compileScope([
     extractFunction(src, 'dayPulse', 'index.html'),
     extractFunction(src, 'dayMedian', 'index.html'),
     extractFunction(src, 'anInvoicesInRange', 'index.html'),
+  extractFunction(src, 'isInvoice', 'index.html'),
     extractFunction(src, 'debtCollectionsOn', 'index.html'),
     extractFunction(src, 'debtLogIsInvoiceOwned', 'index.html'),
     extractFunction(src, 'cashIsMoneyIn', 'index.html'),
@@ -378,6 +380,7 @@ const scope = (data) => compileScope([
      Tuesday that reconciled to the shilling. */
   const closScope = (data) => compileScope([
     extractFunction(src, 'dayClosing', 'index.html'),
+    extractFunction(src, 'awaitsInvoice', 'index.html'),
     extractFunction(src, 'dayCashPosition', 'index.html'),
     extractFunction(src, 'dayRecord', 'index.html'),
   /* THE STAMP IS A NUMBER. The board keeps stageEnteredAt as
@@ -391,6 +394,7 @@ const scope = (data) => compileScope([
     extractFunction(src, 'previousCashDate', 'index.html'),
     extractFunction(src, 'cbClosingFor', 'index.html'),
     extractFunction(src, 'anInvoicesInRange', 'index.html'),
+  extractFunction(src, 'isInvoice', 'index.html'),
     extractFunction(src, 'debtCollectionsOn', 'index.html'),
     extractFunction(src, 'debtLogIsInvoiceOwned', 'index.html'),
     extractFunction(src, 'cashIsMoneyIn', 'index.html'),
@@ -511,6 +515,7 @@ const scope = (data) => compileScope([
      app's numeric ones are both exercised. */
   extractFunction(src, 'dayStampISO', 'index.html'),
     extractFunction(src, 'anInvoicesInRange', 'index.html'),
+  extractFunction(src, 'isInvoice', 'index.html'),
     extractFunction(src, 'debtCollectionsOn', 'index.html'),
     extractFunction(src, 'debtLogIsInvoiceOwned', 'index.html'),
     extractFunction(src, 'cashIsMoneyIn', 'index.html'),

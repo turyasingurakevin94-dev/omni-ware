@@ -84,6 +84,7 @@ const sharedJs = read('shared-worker.js');
     extractFunction(src, 'orderChargesTotal', 'index.html'),
     extractFunction(src, 'orderChargeLines', 'index.html'),
     extractFunction(src, 'orderInvoiceCheckHTML', 'index.html'),
+    extractFunction(src, 'awaitsInvoice', 'index.html'),
     /* The check says each count in the unit the line was chosen in --
        the same reader every document uses -- so it is compiled in. A
        loose line reads exactly as before. */
@@ -147,6 +148,7 @@ const sharedJs = read('shared-worker.js');
     extractDeclaration(sharedJs, 'SQ_BOARD_HIDE_AFTER_MS', 'shared-worker.js'),
     extractFunction(sharedJs, 'quoteAgedOffBoard', 'shared-worker.js'),
     extractFunction(src, 'ordersReadyToInvoice', 'index.html'),
+    extractFunction(src, 'awaitsInvoice', 'index.html'),
     extractFunction(src, 'invoicePickedOrders', 'index.html'),
     extractFunction(src, 'otInvoiceSpec', 'index.html'),
   ], {
@@ -220,6 +222,7 @@ const sharedJs = read('shared-worker.js');
       extractDeclaration(sharedJs, 'SQ_BOARD_HIDE_AFTER_MS', 'shared-worker.js'),
       extractFunction(sharedJs, 'quoteAgedOffBoard', 'shared-worker.js'),
       extractFunction(src, 'ordersReadyToInvoice', 'index.html'),
+      extractFunction(src, 'awaitsInvoice', 'index.html'),
       extractFunction(src, 'invoicePickedOrders', 'index.html'),
     ], {
       data, orderHasPickShortfall: () => false, savedQuoteTotal: (q) => q.total || 0,
