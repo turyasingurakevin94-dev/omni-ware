@@ -91,6 +91,7 @@ const scope = compileScope([
   extractFunction(src, 'anInvoiceTotals', 'index.html'),
   extractFunction(src, 'anOverallTotals', 'index.html'),
   extractFunction(src, 'anInvoicesInRange', 'index.html'),
+  extractFunction(src, 'isInvoice', 'index.html'),
   extractFunction(src, 'incomeStatement', 'index.html'),
   extractFunction(src, 'cashFlowStatement', 'index.html'),
   extractFunction(src, 'statementBasisGap', 'index.html'),

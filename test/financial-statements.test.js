@@ -85,6 +85,7 @@ const scope = compileScope([
   extractFunction(src, 'anInvoiceTotals', 'index.html'),
   extractFunction(src, 'anOverallTotals', 'index.html'),
   extractFunction(src, 'anInvoicesInRange', 'index.html'),
+  extractFunction(src, 'isInvoice', 'index.html'),
   extractFunction(src, 'dashCashTxnsInRange', 'index.html'),
   extractFunction(src, 'dashTotalDebtors', 'index.html'),
   extractFunction(src, 'dueBalance', 'index.html'),

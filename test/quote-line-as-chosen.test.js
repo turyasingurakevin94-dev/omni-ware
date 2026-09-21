@@ -91,7 +91,7 @@ const near = (got, want, msg) => t.check(Math.abs(Number(got) - want) < 1e-6, `$
   const NAMES = ['orderCharges', 'chargeAmount', 'savedQuoteGoodsTotal', 'orderChargesTotal', 'orderChargeLines',
     'savedQuoteCashTotal', 'shopCreditPct', 'custTermsDays', 'orderTakesCredit', 'orderCreditTerms',
     'orderCreditCharge', 'creditTermLabel', 'orderCreditOffer', 'orderBillLines', 'orderCreditCheckHTML',
-    'quoteLinePack', 'quoteLineCountPer', 'quoteLineCount', 'orderInvoiceCheckHTML'];
+    'quoteLinePack', 'quoteLineCountPer', 'quoteLineCount', 'awaitsInvoice', 'orderInvoiceCheckHTML'];
   const fns = compileScope(NAMES.map((n)=> extractFunction(src, n, 'index.html')), {
     data: { customers: [], suppliers: [] },
     esc: (x)=> String(x == null ? '' : x),

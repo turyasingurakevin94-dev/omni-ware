@@ -24095,6 +24095,38 @@ const SQ_STATUS_ORDER = ['draft','awaiting_goods','preparing','pending_delivery'
 // carry a "Step N." prefix meant for the board columns, not this compact view).
 const ORDER_STATUS_SHORT_LABELS = {draft:'Drafts', awaiting_goods:'Awaiting Goods', preparing:'Being Prepared', pending_delivery:'Pending Delivery', completed:'Completed'};
 
+/* IS THIS AN INVOICE? One question, one answer, wherever it is asked.
+
+   An order becomes an invoice at Step 5 and not before: toggleQuoteInvoiced
+   refuses to raise one on anything earlier, and raising it is the act that
+   takes the goods off the shelf, raises each supplier's bill and charges the
+   customer's account. So "a real invoice" has always been BOTH halves -- the
+   stage and the flag -- and the app spelled that pair out by hand in four
+   places, with its opposite open-coded in six more.
+
+   The pair is not the same question as the flag alone, which is what another
+   forty-odd derivations ask. Nothing stops an invoiced order being stepped
+   back off Completed -- stepSavedQuoteStatus guards the forward moves and
+   nothing guards this one -- and in that state the flag stays true while the
+   stage does not, so the two readings disagree about the same order. Naming
+   them makes a screen choose in the open which it means, instead of the
+   choice living in whichever line somebody happened to copy.
+
+   VOIDING IS DELIBERATELY NOT FOLDED IN. The Invoices register shows voided
+   invoices and hides them behind its own checkbox; Analytics drops them
+   outright. Both are right for what they are, and a helper that answered
+   that question too would have taken it away from the screen -- so every
+   caller still says !q.voided for itself, where the reader can see it. */
+function isInvoice(q){
+  return !!q && q.status === 'completed' && !!q.invoiced;
+}
+/* FINISHED, AND WAITING ON ONE. Not !isInvoice(q): a draft is not an invoice
+   either, and it is not waiting to become one. Only an order that has reached
+   Step 5 carrying no invoice is the work this names. */
+function awaitsInvoice(q){
+  return !!q && q.status === 'completed' && !q.invoiced;
+}
+
 /* ---------------- The sourcing funnel ----------------
    An item a client asked for that the shop does not sell, and how far the
    research on it has got. Same five-lane shape as the order board and the
@@ -42387,7 +42419,7 @@ function orderNeedsYou(q, isOverdue){
       need = { chip: otStaffGone(q.assignedDeliveryId) ? 'Driver left' : 'Nobody named', tone: late ? 'ow-warn' : '', acts:[{act:'loaded', label:'Who has it'}],
         say:'Out, with nobody named as carrying it. Open the row and say who has it — the transport, one of ours, or the client’s own person.' };
     }
-  } else if(q.status === 'completed' && !q.invoiced){
+  } else if(awaitsInvoice(q)){
     need = { chip:'Not invoiced', tone: late ? 'ow-warn' : '', acts:[{act:'invoice', label:'Invoice'}],
       say:`Delivered ${esc(otWhen(q.stageEnteredAt))}. Invoicing moves the stock, raises the supplier bills and books ${fig(savedQuoteTotal(q))} on ${em(quoteClientName(q))}'s account.` };
   }
@@ -42433,7 +42465,7 @@ function orderActSpec(q){
     if(orderNeedsDelivery(q)) return { act:'loaded', label:'Who has it' };
     return { act:'next', label: q.deliveryMode === 'agent_pickup' ? 'Collected' : 'Delivered', primary:true };
   }
-  if(q.status === 'completed' && !q.invoiced) return { act:'invoice', label:'Invoice', primary:true };
+  if(awaitsInvoice(q)) return { act:'invoice', label:'Invoice', primary:true };
   return null;
 }
 /* The accent appears ONCE on the screen: on the open row's own act, and
@@ -42588,12 +42620,12 @@ function orderRowBodyHTML(q){
     q.status === 'draft' && orderSupplierGroups(q).length ? ghost('confirm', 'Every supplier') : '',
     ghost('edit', 'Edit lines', ICON_EDIT),
     idx > 0 ? ghost('prev', 'Move back') : '',
-    q.status === 'completed' && q.invoiced ? ghost('invoice', 'Undo invoice') : '',
+    isInvoice(q) ? ghost('invoice', 'Undo invoice') : '',
     /* Delete for a Taken order that was a mistake; Cancel once it has
        moved, because by then goods may have arrived and a delete would
        erase what is owed for them. */
     q.status === 'draft' ? ghost('delete', 'Delete', ICON_TRASH)
-      : (!q.voided && !(q.status === 'completed' && q.invoiced) ? ghost('cancel', 'Cancel order', ICON_TRASH) : ''),
+      : (!q.voided && !isInvoice(q) ? ghost('cancel', 'Cancel order', ICON_TRASH) : ''),
   ].join('');
   const total = savedQuoteTotal(q);
   const facts = [`${items.length} line${items.length === 1 ? '' : 's'}`, `client pays ${fmtUGX(total)}`, orderCustomerLocation(q) ? `to ${orderCustomerLocation(q)}` : '', q.client && q.client.phone ? q.client.phone : ''].filter(Boolean);
@@ -42780,7 +42812,7 @@ function orderChargeCostHTML(q){
    order. Nothing is computed here that is not already the app's answer
    somewhere else. */
 function orderInvoiceCheckHTML(q){
-  if(q.status !== 'completed' || q.invoiced) return '';
+  if(!awaitsInvoice(q)) return '';
   const items = q.items || [];
   const rows = items.map(it=>{
     const ordered = Number(it.qty) || 0;
@@ -42851,7 +42883,7 @@ function orderCreditCheckHTML(q){
    pick is left out and named: it is a decision, and the single-order
    path already refuses to invoice past one. */
 function ordersReadyToInvoice(){
-  return (data.savedQuotes || []).filter(q=> q.status === 'completed' && !q.invoiced && !q.voided
+  return (data.savedQuotes || []).filter(q=> awaitsInvoice(q) && !q.voided
     && !quoteAgedOffBoard(q) && !orderHasPickShortfall(q));
 }
 /* invoiceAllDelivered() is gone: the board's dialogs are one object now — see OT_DIALOGS. */
@@ -43960,7 +43992,7 @@ let otAnnounceDraft = null;      // what the owner has edited, kept across a red
    Pick, then draw. Never "invoice everything" without saying which. */
 function otInvoiceSpec(){
   const ready = ordersReadyToInvoice();
-  const short = (data.savedQuotes || []).filter(q=> q.status === 'completed' && !q.invoiced && !q.voided
+  const short = (data.savedQuotes || []).filter(q=> awaitsInvoice(q) && !q.voided
     && !quoteAgedOffBoard(q) && orderHasPickShortfall(q));
   [...otInvoicePick].forEach(id=>{ if(!ready.some(q=> q.id === id)) otInvoicePick.delete(id); });
   const picked = ready.filter(q=> otInvoicePick.has(q.id));
@@ -45734,7 +45766,7 @@ function invRangedInvoices(filter){
   const tokens = searchTokens(filter);
   const {from, to} = invDocGetDateRange();
   const hideVoided = document.getElementById('inv_doc_hide_voided').checked;
-  let invoices = data.savedQuotes.filter(q=>q.status==='completed' && q.invoiced);
+  let invoices = data.savedQuotes.filter(q=> isInvoice(q));
   invoices = invoices.filter(q=>{
     const d = q.invoicedAt || q.date || '';
     if(from && d < from) return false;
@@ -49381,7 +49413,7 @@ function anGetDateRange(){
 // sale date, falling back to the quote date for older records.
 function anInvoicesInRange(from, to){
   return data.savedQuotes.filter(q=>{
-    if(!(q.status==='completed' && q.invoiced)) return false;
+    if(!isInvoice(q)) return false;
     // A voided invoice is a cancelled sale. It was counted here as revenue:
     // in the KPIs, and in the by-item, by-customer and by-document tables.
     // Every other surface already treats it as not having happened --
@@ -94168,7 +94200,7 @@ function dayClosing(dateISO){
      told about -- it is in none of the figures above, and it is the one
      gap that makes a closed day quietly wrong. */
   const uninvoiced = (data.savedQuotes || []).filter(q=> q && !q.voided
-    && q.status === 'completed' && !q.invoiced
+    && awaitsInvoice(q)
     && dayStampISO(q.stageEnteredAt) === day);
   checks.push(uninvoiced.length
     ? { mark: 'warn',
