@@ -78,10 +78,18 @@ const books = () => ({
   /* Dad's two orders sit in 2024 on purpose: whatever day this suite is
      run, he is long overdue against his own ten-day rhythm, so the real
      dashGoingQuietCustomers has somebody to flag without the test ever
-     having to freeze the clock. */
-  savedQuotes: [{ id: 'Q9', invoiced: false },
-    { id: 'Q1', client: { name: 'Dad' }, savedAt: '2024-01-01T08:00:00Z' },
-    { id: 'Q2', client: { name: 'Dad' }, savedAt: '2024-01-11T08:00:00Z' }],
+     having to freeze the clock.
+     They are INVOICED, because the rhythm is read off sales now -- a quote
+     is not a visit. Q9 is the counterweight: uninvoiced, so it must not
+     lend anybody a rhythm. Each carries invoicedAt, which is the stamp the
+     gap is measured between; savedAt stays on them to prove it is no
+     longer what the gap is read from. */
+  savedQuotes: [{ id: 'Q9', invoiced: false, client: { name: 'Dad' },
+      savedAt: '2024-06-01T08:00:00Z' },
+    { id: 'Q1', client: { name: 'Dad' }, status: 'completed', invoiced: true,
+      invoicedAt: '2024-01-01', savedAt: '2023-05-01T08:00:00Z' },
+    { id: 'Q2', client: { name: 'Dad' }, status: 'completed', invoiced: true,
+      invoicedAt: '2024-01-11', savedAt: '2023-09-01T08:00:00Z' }],
   /* Two open bills from S3 — one the owner has named a day for and one
      they have not — plus the payment that makes a settle move derivable.
      The dated one is what who_you_owe must hand back with its supplierId
@@ -170,7 +178,10 @@ const books = () => ({
   const data = books();
   /* Compiled over the same books, so the reading's customerId comes out
      of the real function rather than being handed in by a fixture. */
-  const goingQuiet = compileScope([extractFunction(src, 'dashGoingQuietCustomers', 'index.html')],
+  const goingQuiet = compileScope([extractFunction(src, 'dashGoingQuietCustomers', 'index.html'),
+    /* The real invoice test, not a stand-in: what counts as a visit is the
+       claim this reading rests on. */
+    extractFunction(src, 'isInvoice', 'index.html')],
     { data, Date, Math, Number, String, Array, Object }, ['dashGoingQuietCustomers']).dashGoingQuietCustomers;
   const env = {
     data,

@@ -88600,14 +88600,28 @@ function dashSupplierPriceInflation(){
 // Needs at least 2 past orders to establish a rhythm; a customer with only
 // one order ever doesn't have one yet, so they're left out here (that's a
 // different signal -- new-customer follow-up -- not "going quiet").
+/* A QUOTE IS NOT A PURCHASE, and this is the screen that most needs to
+   know it. The filter was !q.voided alone, so a draft on the board, an
+   order still being picked and a delivered-but-uninvoiced one all counted
+   as visits: a customer quoted three times who bought nothing read as a
+   regular with a rhythm, and then as a regular who had gone quiet -- on
+   the dashboard and in what the Manager is told. The rhythm is now read
+   off invoices, which is what customerStats has always done, so the two
+   going-quiet readings in this app can no longer disagree about whether
+   somebody ever bought.
+
+   Dated by invoicedAt, for the same reason: savedAt is when somebody typed
+   the quote, and the gap between visits is the gap between SALES. Falls
+   back to q.date exactly as customerStats does, so an older record with no
+   invoice stamp still counts rather than quietly dropping out. */
 function dashGoingQuietCustomers(){
   const rows = [];
   data.customers.forEach(c=>{
     const nameLower = (c.name||'').trim().toLowerCase();
     if(!nameLower) return;
     const orderTimes = data.savedQuotes
-      .filter(q=>!q.voided && ((q.client&&q.client.name)||'').trim().toLowerCase()===nameLower)
-      .map(q=>q.savedAt ? new Date(q.savedAt).getTime() : NaN)
+      .filter(q=>!q.voided && isInvoice(q) && ((q.client&&q.client.name)||'').trim().toLowerCase()===nameLower)
+      .map(q=>{ const d = q.invoicedAt || q.date; return d ? new Date(d).getTime() : NaN; })
       .filter(t=>!isNaN(t))
       .sort((a,b)=>a-b);
     if(orderTimes.length<2) return;

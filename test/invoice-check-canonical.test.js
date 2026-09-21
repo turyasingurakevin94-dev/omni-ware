@@ -141,4 +141,63 @@ const { isInvoice, awaitsInvoice } = fns;
     'and deleting one still puts its goods back on the flag alone — the stock moved, whatever the stage now says');
 }
 
+/* ---------- 6. the dashboard's going-quiet alert reads SALES --------- */
+{
+  /* This is the one behaviour change in the work: dashGoingQuietCustomers
+     had no invoice test at all -- !q.voided alone -- so a draft on the
+     board, an order being picked and a delivered-but-uninvoiced one each
+     counted as a visit. A customer quoted three times who bought nothing
+     read as a regular with a rhythm, and then as a regular gone quiet, on
+     the dashboard and in what the Manager is told. */
+  const quiet = (savedQuotes)=> compileScope([
+    extractFunction(src, 'dashGoingQuietCustomers', 'index.html'),
+    extractFunction(src, 'isInvoice', 'index.html'),
+  ], { data: { customers: [{ id: 7, name: 'Mulongo' }], savedQuotes }, Date, Math, Number, String, Array, Object },
+    ['dashGoingQuietCustomers']).dashGoingQuietCustomers();
+
+  const sale = (invoicedAt)=> ({ client: { name: 'Mulongo' }, status: 'completed',
+    invoiced: true, invoicedAt });
+  /* Two sales ten days apart in 2024, so the rhythm is overdue whatever
+     day this runs -- the same trick manager-subjects.test.js uses. */
+  t.check(quiet([sale('2024-01-01'), sale('2024-01-11')]).length === 1,
+    'two sales ten days apart and a long silence still flag the customer');
+
+  /* Every shape that is not a sale, each given the same two dates. */
+  const notSales = [
+    ['a draft', { status: 'draft', invoiced: false }],
+    ['an order being picked', { status: 'preparing', invoiced: false }],
+    ['a delivered order with no invoice', { status: 'completed', invoiced: false }],
+    ['an invoiced order stepped back off Step 5', { status: 'pending_delivery', invoiced: true }],
+  ];
+  for (const [what, shape] of notSales) {
+    const rows = quiet([
+      Object.assign({ client: { name: 'Mulongo' }, invoicedAt: '2024-01-01', date: '2024-01-01' }, shape),
+      Object.assign({ client: { name: 'Mulongo' }, invoicedAt: '2024-01-11', date: '2024-01-11' }, shape),
+    ]);
+    t.check(rows.length === 0, `${what} lends nobody a rhythm`);
+  }
+  /* And a voided invoice still does not, which was already true. */
+  t.check(quiet([Object.assign(sale('2024-01-01'), { voided: true }),
+    Object.assign(sale('2024-01-11'), { voided: true })]).length === 0,
+    'nor does a voided sale');
+
+  /* The gap is between sales, not between the days somebody typed the
+     quotes. savedAt on these two is four months apart and must not be
+     what the rhythm is read from. */
+  const dated = quiet([
+    Object.assign(sale('2024-01-01'), { savedAt: '2023-05-01T08:00:00Z' }),
+    Object.assign(sale('2024-01-11'), { savedAt: '2023-09-01T08:00:00Z' }),
+  ]);
+  t.check(dated.length === 1 && Math.round(dated[0].avgGapDays) === 10,
+    `the gap is measured between invoicedAt, not savedAt (${dated.length ? Math.round(dated[0].avgGapDays) : 'no row'} days)`);
+  /* q.date is the fallback customerStats uses, so an older sale with no
+     invoice stamp still counts rather than quietly dropping out. */
+  const older = quiet([
+    { client: { name: 'Mulongo' }, status: 'completed', invoiced: true, date: '2024-01-01' },
+    { client: { name: 'Mulongo' }, status: 'completed', invoiced: true, date: '2024-01-11' },
+  ]);
+  t.check(older.length === 1,
+    'and a sale carrying only q.date still counts, the way customerStats reads one');
+}
+
 process.exit(t.done() ? 1 : 0);
