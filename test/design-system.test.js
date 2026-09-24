@@ -915,11 +915,17 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
       retired: ['page-head', 'panel', 'panel-head', 'sc-stats', 'fa-summary', 'pi-table-wrap',
                 'fa-name', 'fa-sub', 'fa-tag', 'fa-gone', 'empty', 'ln-due-banner', 'sp-lead'],
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-stack', 'ow-grid', 'ow-side'],
-      renders: ['renderAssetsLoans', 'alRows', 'alRowHTML', 'alFig', 'alTbl', 'alLoanBody', 'alAssetBody'],
-      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-pan', 'ow-pan-h', 'ow-pan-t',
+      /* Drawn rather than listed: the four tiles and the Position list
+         became one picture of who owns what the shop owns and one of
+         what falls due by month, so .ow-strip/.ow-mt and the .ow-sr
+         rows left the screen; the worth-less-owed sum (.ow-ar) became
+         the chart it summarised. */
+      renders: ['renderAssetsLoans', 'alRows', 'alRowHTML', 'alFig', 'alTbl', 'alLoanBody', 'alAssetBody',
+                'alBarHTML', 'alPayFormHTML', 'alPaidListHTML', 'alPipsHTML', 'alInstalmentBarsHTML', 'alWorthChartSVG'],
+      rendersUses: ['ow-pan', 'ow-pan-h', 'ow-pan-t',
                     'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-why', 'ow-q-un', 'ow-q-a', 'ow-cp',
                     'ow-ev', 'ow-ev-h', 'ow-ev-t', 'ow-ev-row', 'ow-tbl', 'ow-tbl-r', 'ow-tbl-n',
-                    'ow-ar', 'ow-ar-k', 'ow-ar-v', 'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-mini', 'ow-empty',
+                    'ow-mini', 'ow-empty', 'ow-al-top', 'ow-al-ob', 'ow-al-dc', 'ow-al-bar', 'ow-al-ch', 'ow-al-pips',
                     /* the five this screen owns: the fifth column and its
                        names, the crest and two-line title beside it, the
                        dash that is not a nought, the band under which
