@@ -147,7 +147,13 @@ function build(days) {
   t.check(/data-unusual-day="[\d-]+"/.test(html), 'the day still opens in full');
   ui.answersMap().set(tue + '|sales', 'The shop was closed');
   const said = ui.mgrUnusualHTML(u);
-  t.check(/You said: The shop was closed/.test(said) && !/data-unusual-answer=/.test(said), 'an answered day shows what was said and asks no more');
+  t.check(/explained: “The shop was closed”/.test(said) && !/data-unusual-answer=/.test(said) && /Nothing unexplained/.test(said),
+    'an answered day is explained, asks no more, and is no longer counted as out of the ordinary');
+  t.check(/mgr-od-d-ex/.test(said) && !/mgr-od-d-bad/.test(said), 'and its day in the week reads as settled, not flagged');
+  ui.answersMap().set(tue + '|sales', 'Sales not entered yet');
+  const todo = ui.mgrUnusualHTML(u);
+  t.check(/class="mgr-od-task" data-unusual-day="[\d-]+"/.test(todo) && /Enter Tuesday/.test(todo) && /sales<\/b>/.test(todo),
+    'sales not entered yet turns the day into a job — enter them — that opens the day');
 }
 
 /* ---------- 5. wiring --------------------------------------------------- */
@@ -168,7 +174,8 @@ function build(days) {
   t.check(/kind: 'question'/.test(save) && /status: 'answered'/.test(save) && /unusualDay: x\.date, metric: x\.metric/.test(save),
     'a tapped answer is kept as an answered question, so it reaches the next meeting the way every answer does');
   t.check(/mgrUnusualAnswers\.delete\(key\)/.test(save), 'and one that could not be kept is taken back and said so');
-  t.check(/owner_said: said\.body\.answer/.test(hist), 'the meeting reads the owner\'s word on the day beside the finding');
+  t.check(/owner_said: said\.body\.answer/.test(hist) && /never flag the day again/.test(hist) && /!answeredDay\(x\)/.test(hist),
+    'the meeting reads the owner\'s word on the day, never raises an answered day as news, and turns unentered sales into a job');
   t.check(/mgrUnusualAnswersLoad\(\);/.test(extractFunction(src, 'renderManager', 'index.html')), 'and a day answered before stays answered');
 }
 

@@ -50,7 +50,7 @@ const src = read('index.html');
 {
   const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const scope = compileScope([
-    extractFunction(src, 'mgrRichRowHTML', 'index.html'),
+    extractFunction(src, 'mgrRichRowHTML', 'index.html'), extractFunction(src, 'mgrMoveReach', 'index.html'),
     extractFunction(src, 'mgrMoveFace', 'index.html'),
     extractFunction(src, 'mgrAvatarHTML', 'index.html'),
     extractDeclaration(src, 'MGR_KIND_TONE', 'index.html'),
@@ -237,6 +237,23 @@ const src = read('index.html');
     'the journal draws the chart, the repeated advice and its weeks');
   t.check(/label: 'sales', cls: 'mgr-jr-b-s'/.test(render) && /' · was ' \+ mgrShortUGX\(wk\.prior_sales\)/.test(render),
     'and a review row carries its week as bars, sales beside the week before');
+}
+
+/* ---------- 7. a move with no figure still shows the money it touches -- */
+{
+  const bills = { undated: [{ supplierId: 'S1', due: 12000000, invoice: { id: 'B1' } }, { supplierId: 'S2', due: 7660000, invoice: { id: 'B2' } }],
+    ahead: [], missed: [], total: 19660000, count: 35 };
+  const { mgrMoveReach } = compileScope([extractFunction(src, 'mgrMoveReach', 'index.html'), extractFunction(src, 'mgrShortUGX', 'index.html')], {
+    credDueRows: () => bills, debtChaseRows: () => ({ due: [{ id: 7, debt: 2515000 }], promised: [], resting: [], blocked: [] }),
+    Math, Number, String, Set,
+  }, ['mgrMoveReach']);
+  const dating = mgrMoveReach({ mkind: 'settle', title: 'Name a day on the supplier bills', subject: {} });
+  t.check(dating && dating.amount === 19660000 && /owed with no day named, of 19\.66m across 35 bills/.test(dating.basis),
+    'dating the supplier bills shows the money it puts on the calendar: what is owed with no day named');
+  t.check(mgrMoveReach({ mkind: 'settle', subject: { supplierId: 'S1' } }).amount === 12000000, 'a supplier move shows what that supplier is owed');
+  t.check(mgrMoveReach({ mkind: 'chase', subject: { customerId: 7 } }).basis === 'owed by them', 'a customer move shows what they owe');
+  t.check(mgrMoveReach({ mkind: 'price', title: 'Lift Masasi', subject: {} }) === null, 'and a move the books cannot size shows no figure rather than a guess');
+  t.check(/reach\.basis \+ ' · from your books'/.test(extractFunction(src, 'mgrRichRowHTML', 'index.html')), 'marked as the books\' figure, never the Manager\'s');
 }
 
 process.exit(t.done() ? 1 : 0);

@@ -166,7 +166,7 @@ const shift = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate
       extractDeclaration(src, 'BUY_HOLD_MAX_DAYS', 'index.html'),
       extractFunction(src, 'booksStartDate', 'index.html'),
       extractFunction(src, 'managerPlayProgress', 'index.html'),
-      extractFunction(src, 'managerAdviceTally', 'index.html'),
+      extractFunction(src, 'managerAdviceTally', 'index.html'), extractFunction(src, 'mgrJrWords', 'index.html'), extractDeclaration(src, 'MGR_JR_STOP', 'index.html'),
       extractFunction(src, 'managerTrackRecord', 'index.html'),
       extractFunction(src, 'managerChaseEvidence', 'index.html'),
       /* The unusual-days reading has its own test; here it is quiet. */
@@ -267,9 +267,11 @@ const shift = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate
     t.check(!JSON.stringify(doNot).includes('Mulongo'),
       'and it is NOT in do_not_repeat, which would bury advice the owner may still need');
 
-    const twice = await run(journal({ move: putThrice.slice(0, 2) }));
-    eq(twice.worth_saying.filter((x) => x.kind === 'advice_not_landing').length, 0,
-      'twice is a busy week, not a shop ignoring its manager');
+    const oneMorning = await run(journal({ move: putThrice.slice(0, 2).map((m) => ({ ...m, date: '2026-08-21' })) }));
+    eq(oneMorning.worth_saying.filter((x) => x.kind === 'advice_not_landing').length, 0,
+      'two meetings on one morning are one sitting, not advice that failed to land');
+    t.check(/ask ONCE, as an ask carrying its likely answers/.test(nl[0].what_to_do) && /SMALLER one the owner can say yes to today/.test(nl[0].what_to_do),
+      'and the instruction offers the two better moves: ask once and keep the answer, or a smaller version');
   }
 
   /* A target behind its own pace is news; one on course is not. */

@@ -1645,6 +1645,16 @@
   .mgr-od-d-bad{background:var(--ow-crimson);color:var(--ow-paper);}
   .mgr-od-d-now{border:2px dashed var(--ow-steel-100);}
   .mgr-od-d-thin{background:var(--ow-rule-soft);}
+  .mgr-od-d-ex{background:var(--ow-steel-050);color:var(--ow-ink-600);border:1px solid var(--ow-steel-100);}
+  .mgr-od-task{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:var(--ow-sp-10);align-items:center;width:100%;
+    padding:var(--ow-sp-10) var(--ow-sp-12);border:0;border-top:1px solid var(--ow-rule);background:var(--ow-sky-soft);text-align:left;font-family:inherit;cursor:pointer;}
+  .mgr-od-task .mgr-av-k{width:34px;height:34px;}
+  .mgr-od-task .mgr-av-k svg{width:18px;height:18px;}
+  .mgr-od-i-task{background:var(--ow-paper);color:var(--ow-sky);}
+  .mgr-od-go{font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-sky);white-space:nowrap;}
+  .mgr-od-ex{margin:0;display:flex;gap:var(--ow-sp-6);align-items:flex-start;padding:var(--ow-sp-8) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);
+    font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .mgr-od-ex svg{flex:none;width:13px;height:13px;margin-top:1px;fill:none;stroke:var(--ow-verdigris);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;}
   .mgr-od-sum{margin:var(--ow-sp-8) 0 0;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
   .mgr-od-calm{color:var(--ow-verdigris);}
   .mgr-od-card{border-top:1px solid var(--ow-rule);padding:var(--ow-sp-12);display:flex;flex-direction:column;gap:var(--ow-sp-10);}
@@ -2232,6 +2242,9 @@
   .mgr-pp-sw{width:8px;height:8px;flex:none;border-radius:var(--ow-r-pill);background:var(--ow-sky);}
   .mgr-pp-sw.mgr-pp-adds{background:repeating-linear-gradient(135deg,var(--ow-sky) 0 2px,var(--ow-sky-soft) 2px 5px);}
   .mgr-pp-pl{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mgr-pp-back{margin:0;display:flex;gap:var(--ow-sp-6);padding:var(--ow-sp-8) var(--ow-sp-10);border-radius:var(--ow-r-sm);
+    background:var(--ow-amber-soft);color:var(--ow-amber-ink);font-size:var(--ow-t-12);line-height:1.4;}
+  .mgr-pp-back svg{flex:none;width:14px;height:14px;margin-top:1px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;}
   .mgr-pp-why{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
   .mgr-pp-why summary{cursor:pointer;color:var(--ow-ink-400);}
   .mgr-pp-why p{margin:var(--ow-sp-4) 0 0;line-height:var(--ow-lh-normal);max-width:var(--ow-measure);}
@@ -93535,7 +93548,7 @@ async function managerAdviceTally(todayISO_){
   /* The window and the thresholds leave WITH the rows, so the sentences
      the screen writes about these lists and the lists themselves are
      drawn from one reading and cannot come to disagree. */
-  const days = 35, times = 2, repeats = 3;
+  const days = 35, times = 2, repeats = 2;
   const empty = { passedOn: [], notLanding: [],
     counts: { proposed: 0, done: 0, skipped: 0, untouched: 0, days }, days, times, repeats };
   if(!managerNotesTable) return empty;
@@ -93556,12 +93569,30 @@ async function managerAdviceTally(todayISO_){
       : { key: String(b.mkind || 'other') + '|~' + String(b.title || '').trim().toLowerCase(), byWording: true };
   };
   const by = new Map();
+  /* ADVICE IN DIFFERENT WORDS IS THE SAME ADVICE. A move with no id was
+     matched on its exact title, so "put 5,000 on the Masasi carton" and
+     "put 5,000 more shillings on each Masasi carton before you refill
+     them" counted as two ideas, each said once -- and the one said four
+     times never showed. Titles sharing half their words are one. */
+  const wordGroups = [];
+  const wordingKey = (b)=>{
+    const w = mgrJrWords(b.title);
+    const kind = String(b.mkind || 'other');
+    const hit = w.size >= 2 && wordGroups.find(g=> g.kind === kind && (()=>{ let c = 0; w.forEach(x=> { if(g.words.has(x)) c++; });
+      return c / Math.max(1, new Set([...w, ...g.words]).size) >= 0.5; })());
+    if(hit) return hit.key;
+    const key = kind + '|~' + String(b.title || '').trim().toLowerCase();
+    wordGroups.push({ kind, words: w, key });
+    return key;
+  };
   (r.data || []).forEach(row=>{
     const b = row.body || {};
     if(!String(b.title || '').trim()) return;
-    const fp = fingerprint(b);
+    const fp0 = fingerprint(b);
+    const fp = fp0.byWording ? { key: wordingKey(b), byWording: true } : fp0;
     const cur = by.get(fp.key) || { key: fp.key, title: b.title, byWording: fp.byWording,
-      proposed: 0, skipped: 0, done: 0, reasons: [], lastOn: '' };
+      proposed: 0, skipped: 0, done: 0, reasons: [], lastOn: '', onDays: new Set() };
+    cur.onDays.add(String(row.date || ''));
     /* HOW OFTEN IT HAS BEEN PUT, whatever became of it. The counter this
        tally never kept, and the only one that can see the manager
        repeating itself: five meetings in one day, one idea, restated. */
@@ -93593,12 +93624,14 @@ async function managerAdviceTally(todayISO_){
      opposite remedy, so folding the two together would lose the only
      thing that tells them apart.
 
-     Three, not two. Twice is a busy week. */
+     Two DAYS, not two meetings. Two meetings on one morning are one
+     sitting; put on two different days and still untouched, the
+     advice has had its chance, and a third telling is the failure. */
   const passedOn = all.filter(x=> x.skipped >= times && x.done === 0)
     .sort((a, b)=> (b.skipped - a.skipped) || String(b.lastOn).localeCompare(String(a.lastOn)))
     .map(x=> ({ key: x.key, title: x.title, times: x.skipped, last_on: x.lastOn,
       reasons: x.reasons.slice(0, 3), ...wording(x) }));
-  const notLanding = all.filter(x=> x.proposed >= repeats && x.done === 0 && x.skipped === 0)
+  const notLanding = all.filter(x=> x.onDays.size >= repeats && x.done === 0 && x.skipped === 0)
     .sort((a, b)=> (b.proposed - a.proposed) || String(b.lastOn).localeCompare(String(a.lastOn)))
     .map(x=> ({ key: x.key, title: x.title, times: x.proposed, last_on: x.lastOn, ...wording(x) }));
   /* WHAT THE WHOLE WINDOW CAME TO. The screen's verdict strip asks one
@@ -94586,6 +94619,11 @@ function mgrProposalHTML(x){
     } else if(m.kind === 'flow') chip = 'from 0';
   }
   const mark = MGR_METRIC_MARKS[x.metric] || '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>';
+  /* AN AIM BELOW WHAT THE SHOP ALREADY DID looks like a mistake unless
+     it says why -- so the argument comes out of its fold and leads,
+     and a missing argument is said to be missing. */
+  const lowerIsBetter = x.metric === 'debtors_total' || x.metric === 'dead_stock_value';
+  const backwards = !!(before && before.v > 0 && m.kind === 'flow' && !lowerIsBetter && aim < before.v);
   const aimBar = parts.length
     ? parts.map(p=> `<i class="mgr-pp-seg${p.adds ? ' mgr-pp-adds' : ''}" style="width:${w(p.amount)}"></i>`).join('')
     : `<i class="mgr-pp-seg" style="width:${w(aim)}"></i>`;
@@ -94602,7 +94640,9 @@ function mgrProposalHTML(x){
       <span class="mgr-pp-k">Aim</span><span class="mgr-pp-tr mgr-pp-tr-aim">${aimBar}${tick}</span>
       ${legend ? `<span></span><span class="mgr-pp-c mgr-pp-parts">${legend}</span>` : ''}
     </div>
-    ${x.why ? `<details class="mgr-pp-why"><summary>The argument</summary><p>${esc(x.why)}</p></details>` : ''}
+    ${backwards ? `<p class="mgr-pp-back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg><span><b>Aims ${esc(Number(before.v - aim).toLocaleString('en-US'))} below last week.</b> ${
+      x.why ? esc(x.why) : 'The Manager gave no reason for aiming lower than what you already did — ask it why before taking this on.'}</span></p>`
+      : x.why ? `<details class="mgr-pp-why"><summary>The argument</summary><p>${esc(x.why)}</p></details>` : ''}
     <div class="mgr-pp-row">
       <button type="button" class="btn btn-ghost ow-sm mgr-target-adopt"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>Take it on</button>
       <button type="button" class="btn btn-ghost ow-sm mgr-target-decline">Set aside</button>
@@ -94911,7 +94951,7 @@ function mgrPaintVerdict(state){
     cells[3] = { label: 'Not landing', value: String(t.notLanding.length),
       tone: t.notLanding.length ? 'ow-warn' : '',
       sub: t.notLanding.length
-        ? `put to you ${t.repeats}+ times, never done and never refused`
+        ? `put to you on ${t.repeats}+ days, never done and never refused`
         : 'everything it has put to you has had an answer' };
   }
   if(sc && sc.error) cells[1] = unread('Targets met');
@@ -97830,8 +97870,9 @@ function mgrQueueRowHTML(row, all, opts){
      nothing. What a move is worth is how big it is, and usually good
      news; the row says what KIND of thing it is in its chips. */
   const worth = Number(b.worth) > 0;
-  const money = worth ? fmtUGX(Math.round(b.worth)) : '\u2014';
-  const basis = worth ? (MANAGER_WORTH_BASES[b.worthBasis] || 'on this move') : 'no figure on it';
+  const reach = worth ? null : mgrMoveReach(b);
+  const money = worth ? fmtUGX(Math.round(b.worth)) : reach ? fmtUGX(reach.amount) : '\u2014';
+  const basis = worth ? (MANAGER_WORTH_BASES[b.worthBasis] || 'on this move') : reach ? reach.basis + ' · from your books' : 'no figure on it';
   const state = out.status === 'done' ? '<span class="ow-cp ow-good">Done</span>'
     : out.status === 'skipped' ? '<span class="ow-cp">Not now</span>' : '';
   /* WHICH TIER IS TALKING, on Today -- where the manager's advice and
@@ -97924,7 +97965,7 @@ function mgrUnusualWeekHTML(u){
   const toLook = days.reduce((n, d)=> n + (d.flags || 0), 0);
   const cells = days.map(d=>{
     const wd = d.today ? 'Today' : new Date(d.date + 'T12:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short' });
-    const cls = d.flags ? 'mgr-od-d-bad' : !d.judged ? 'mgr-od-d-thin' : d.today ? 'mgr-od-d-now' : 'mgr-od-d-ok';
+    const cls = d.flags ? 'mgr-od-d-bad' : !d.judged ? 'mgr-od-d-thin' : d.today ? 'mgr-od-d-now' : d.explained ? 'mgr-od-d-ex' : 'mgr-od-d-ok';
     const mark = d.flags ? (d.flags > 1 ? String(d.flags) : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg>')
       : d.judged && !d.today ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>' : '';
     return `<span class="mgr-od-c" title="${esc(fmtShortDate(d.date))}${!d.judged ? ' — too few weeks to judge' : d.flags ? ' — ' + d.flags + ' to look at' : d.today ? ' — the day is not over' : ' — inside its usual'}"><span class="mgr-od-wd">${esc(wd)}</span><span class="mgr-od-d ${cls}">${mark}</span><span class="mgr-od-dd">${esc(d.date.slice(8))}</span></span>`;
@@ -98008,10 +98049,30 @@ function mgrUnusualHTML(u){
       <p class="mgr-rl">Not enough weeks on the books yet to know what a usual day looks like here &mdash; it needs five of each weekday.</p></div>`;
   if(!u.items.length) return `<div class="ow-pan mgr-od">${head(0)}${mgrUnusualWeekHTML(u)}
       <p class="mgr-rl">Nothing out of the ordinary in the last week: every day sat inside this shop&rsquo;s own usual range for its weekday.</p></div>`;
-  const open = u.items.find(x=> mgrUnusualKey(x) === mgrUnusualOpen) || u.items[0];
-  return `<div class="ow-pan mgr-od">${head(u.items.length)}${mgrUnusualWeekHTML(u)}
+  /* AN ANSWERED DAY IS NOT A QUESTION ANY MORE. "Sales not entered yet"
+     turns it into a job -- enter the day -- and any other answer
+     explains it; neither is counted as out of the ordinary again. The
+     finding goes away by itself once the missing sales are entered. */
+  const said = (x)=> mgrUnusualAnswers.get(mgrUnusualKey(x));
+  const late = (x)=> /not entered|late sales/i.test(String(said(x) || ''));
+  const todo = u.items.filter(x=> said(x) && late(x));
+  const explained = u.items.filter(x=> said(x) && !late(x));
+  const live = u.items.filter(x=> !said(x));
+  const liveU = { ...u, days: (u.days || []).map(d=> ({ ...d, flags: live.filter(x=> x.date === d.date).length,
+    explained: u.items.some(x=> x.date === d.date && said(x)) })) };
+  const tasks = todo.map(x=> `<button type="button" class="mgr-od-task" data-unusual-day="${esc(x.date)}">
+      <span class="mgr-av mgr-av-k mgr-od-i-task" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+      <span class="mgr-od-rm"><b>Enter ${esc(mgrUnusualWhen(x.date, true))}’s sales</b><small>you said they were not entered yet · usually ${esc(mgrUnusualFig(x, x.usual))} on a ${esc(new Date(x.date + 'T12:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'long' }))}</small></span>
+      <span class="mgr-od-go">Open the day</span></button>`).join('');
+  const done = explained.map(x=> `<p class="mgr-od-ex"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>${esc((UNUSUAL_TITLES[x.metric] || {})[x.dir] || 'Unusual')} ${esc(mgrUnusualWhen(x.date))} — explained: “${esc(said(x))}”</p>`).join('');
+  if(!live.length) return `<div class="ow-pan mgr-od">${head(0)}${mgrUnusualWeekHTML(liveU)}${tasks}${done}
+      ${!tasks && !done ? '' : ''}<p class="mgr-rl">Nothing unexplained in the last week.</p></div>`;
+  const open = live.find(x=> mgrUnusualKey(x) === mgrUnusualOpen) || live[0];
+  return `<div class="ow-pan mgr-od">${head(live.length)}${mgrUnusualWeekHTML(liveU)}
+    ${tasks}
     ${mgrUnusualCardHTML(open)}
-    ${u.items.filter(x=> x !== open).map(mgrUnusualRowHTML).join('')}
+    ${live.filter(x=> x !== open).map(mgrUnusualRowHTML).join('')}
+    ${done}
   </div>`;
 }
 function mgrPaintUnusual(){
@@ -98122,6 +98183,35 @@ function mgrMoveFace(b){
   const icon = MGR_KIND_ICON[b.mkind] || MGR_KIND_ICON.other;
   return { name: '', html: `<span class="mgr-av mgr-av-k mgr-kt-${MGR_KIND_TONE[b.mkind] || 'setup'}" aria-hidden="true"><svg viewBox="0 0 24 24">${icon}</svg></span>` };
 }
+/* WHEN THE MANAGER PUT NO FIGURE ON A MOVE, THE BOOKS CAN STILL SAY
+   WHAT IT TOUCHES. Not a claim about what the move will earn -- the
+   money it is about: what a supplier is owed, what a customer owes,
+   and for naming a day on the bills, everything owed with none named.
+   Said as that, and marked as the books' figure, never the Manager's. */
+function mgrMoveReach(b){
+  const subj = (b && b.subject) || {};
+  try{
+    if(subj.supplierId != null){
+      const q = credDueRows(), mine = [...q.undated, ...q.ahead, ...q.missed].filter(x=> String(x.supplierId) === String(subj.supplierId));
+      const seen = new Set(), bills = mine.filter(x=> { const k = String((x.invoice || {}).id); if(seen.has(k)) return false; seen.add(k); return true; });
+      const amt = bills.reduce((n, x)=> n + (Number(x.due) || 0), 0);
+      if(amt > 0) return { amount: Math.round(amt), basis: `owed to them, ${bills.length} bill${bills.length === 1 ? '' : 's'}` };
+    }
+    if(subj.customerId != null){
+      const ch = debtChaseRows();
+      const d = [...ch.due, ...ch.promised, ...ch.resting, ...ch.blocked].find(x=> String(x.id) === String(subj.customerId));
+      if(d && d.debt > 0) return { amount: Math.round(d.debt), basis: 'owed by them' };
+    }
+    if(b && (b.mkind === 'settle' || /\bbills?\b/i.test(String(b.title || '')))){
+      const q = credDueRows();
+      const none = q.undated.reduce((n, x)=> n + (Number(x.due) || 0), 0);
+      if(q.total > 0) return none > 0
+        ? { amount: Math.round(none), basis: `owed with no day named, of ${mgrShortUGX(q.total)} across ${q.count} bills` }
+        : { amount: q.total, basis: `owed across ${q.count} bills` };
+    }
+  }catch(e){}
+  return null;
+}
 function mgrRichRowHTML(row, all, opts){
   const b = row.body || {};
   const out = deriveMoveOutcome(row);
@@ -98141,8 +98231,9 @@ function mgrRichRowHTML(row, all, opts){
       ? `<span class="mgr-sc">Not now</span> ${b.skipReason ? `<span class="mgr-sc-why">“${esc(b.skipReason)}”</span>` : ''}`
     : waiting ? `<span class="mgr-sc"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>waiting on ${blockerNum}</span>` : '';
   const worth = Number(b.worth) > 0;
-  const money = worth ? fmtUGX(Math.round(b.worth)) : '—';
-  const basis = worth ? (MANAGER_WORTH_BASES[b.worthBasis] || 'on this move') : 'no figure on it';
+  const reach = worth ? null : mgrMoveReach(b);
+  const money = worth ? fmtUGX(Math.round(b.worth)) : reach ? fmtUGX(reach.amount) : '—';
+  const basis = worth ? (MANAGER_WORTH_BASES[b.worthBasis] || 'on this move') : reach ? reach.basis + ' · from your books' : 'no figure on it';
   /* The evidence, as chips: what the books say since, what nothing can
      measure, a chase's own record, and what this move makes possible. */
   const chaseEv = (b.mkind === 'chase' && b.subject && b.subject.customerId != null) ? mgrChaseRowFor(b.subject.customerId) : null;
@@ -107866,7 +107957,11 @@ const ASSISTANT_TOOLS = {
         what_to_do: 'You have put this to the owner ' + x.times
           + ' times and they have neither done it nor turned it down. Say so plainly in one sentence,'
           + ' and DO NOT propose it again in different words: either ask what is in the way, or spend'
-          + ' today’s plan on something else.' });
+          + ' today’s plan on something else. If you ask, ask ONCE, as an ask carrying its likely answers'
+          + ' in choices, so the answer is kept and comes back to you as an answered question — and if it'
+          + ' has already been answered, act on that answer instead of asking. The one version of it you'
+          + ' may still propose is a SMALLER one the owner can say yes to today (one size or one line'
+          + ' only, a smaller amount, a one-week trial), said plainly as the smaller version.' });
     });
 
     /* A STRATEGY THAT HAS OUTLIVED WHAT IT WAS FOR.
@@ -107906,7 +108001,9 @@ const ASSISTANT_TOOLS = {
     /* A DAY OUT OF THE ORDINARY since the last meeting -- the two
        furthest from usual. A question for the owner, never a verdict:
        the books show what happened, not why. */
-    unusual.items.filter(x=> isNew(x.date)).sort((a, b)=> Math.abs(b.z) - Math.abs(a.z)).slice(0, 2).forEach(x=>{
+    /* A day the owner has already answered is not news. */
+    const answeredDay = (x)=> (qRows || []).some(q=> (q.body || {}).unusualDay === x.date && (q.body || {}).metric === x.metric && (q.body || {}).answer);
+    unusual.items.filter(x=> isNew(x.date) && !answeredDay(x)).sort((a, b)=> Math.abs(b.z) - Math.abs(a.z)).slice(0, 2).forEach(x=>{
       worth.push({ kind: 'unusual_day', date: x.date, what: x.metric, direction: x.dir,
         figure: x.metric === 'margin' ? Math.round(x.value * 1000) / 10 + '%' : apRound(x.value),
         usual: x.metric === 'margin' ? Math.round(x.usual * 1000) / 10 + '%' : apRound(x.usual),
@@ -107992,7 +108089,12 @@ const ASSISTANT_TOOLS = {
            that is the answer, and the day is no longer a question. */
         const said = qRows.find(q=> (q.body || {}).unusualDay === x.date && (q.body || {}).metric === x.metric && (q.body || {}).answer);
         return { date: x.date, what: x.metric, direction: x.dir, reads_as: unusualLine(x), drove_it: x.drivers || [],
-          ...(said ? { owner_said: said.body.answer } : {}) }; }) } : {}),
+          ...(said ? { owner_said: said.body.answer,
+            /* Answered: not a question any more. Sales not entered is a
+               job to name, never a day to flag again. */
+            settled: /not entered|late sales/i.test(said.body.answer)
+              ? 'The owner said these sales are not entered yet: if it helps, a move to enter that day\u2019s invoices; never flag the day again.'
+              : 'The owner explained this day. Do not raise it again.' } : {}) }; }) } : {}),
       /* WHO A CHASE MOVES. The debtors that owe most now, each with how
          often they paid within a week after a chase against how often
          they paid in a week nobody chased them -- and the shop's own

@@ -62,7 +62,7 @@ const advice = async (rows) => {
     q.select = () => q; q.eq = () => q; q.gte = () => q;
     q.lte = () => Promise.resolve({ data: rows, error: null });
     return q; } };
-  const s = compileScope([extractFunction(src, 'managerAdviceTally', 'index.html')],
+  const s = compileScope([extractFunction(src, 'managerAdviceTally', 'index.html'), extractFunction(src, 'mgrJrWords', 'index.html'), extractDeclaration(src, 'MGR_JR_STOP', 'index.html')],
     { managerNotesTable: true, currentShopId: 'shop-1', sb,
       todayISO: () => TODAY, anShiftDate: shift,
       console, Date, Math, Number, String, Array, Object, Map, Set, Promise },
@@ -161,11 +161,22 @@ const advice = async (rows) => {
     eq(thrice.notLanding[0].times, 3, 'with how many times it was put');
     eq(thrice.notLanding[0].title, 'Get a dated commitment from Mulongo', 'and what it was');
     eq(thrice.passedOn.length, 0, 'and it is NOT on the passed-on list — nobody declined it');
-    eq(thrice.repeats, 3, 'the threshold travels with the answer');
+    eq(thrice.repeats, 2, 'the threshold travels with the answer');
 
-    /* TWICE IS A BUSY WEEK. */
-    eq((await advice(put(2))).notLanding.length, 0,
-      'twice is a busy week, not a shop ignoring its manager');
+    /* TWO DAYS, NOT TWO MEETINGS. Put on two different days and still
+       untouched, the advice has had its chance; two meetings on one
+       morning are one sitting. */
+    eq((await advice(put(2))).notLanding.length, 1,
+      'put on two different days and never touched, it is not landing — a third telling is the failure');
+    const sameDay = [0, 1].map(() => move({ title: 'Get a dated commitment from Mulongo', subject: { customerId: 9 }, status: 'open', date: '2026-08-21' }));
+    eq((await advice(sameDay)).notLanding.length, 0, 'two meetings on one morning are one sitting, not two tellings');
+
+    /* ADVICE IN DIFFERENT WORDS IS THE SAME ADVICE. */
+    const reworded = await advice([
+      move({ title: 'Put 5,000 shillings on the Masasi carton', kind: 'price', subject: {}, status: 'open', date: '2026-08-21' }),
+      move({ title: 'Put 5,000 more shillings on each Masasi carton before you refill them', kind: 'price', subject: {}, status: 'open', date: '2026-08-23' }),
+    ]);
+    eq(reworded.notLanding.length, 1, 'the same advice reworded is counted as said twice, not two ideas said once each');
 
     /* A DECISION BELONGS ON THE OTHER LIST, WITH ITS REASON. The two
        lists are exclusive by construction: fold them together and the
