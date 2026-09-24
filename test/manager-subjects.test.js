@@ -80,8 +80,8 @@ const books = () => ({
      dashGoingQuietCustomers has somebody to flag without the test ever
      having to freeze the clock. */
   savedQuotes: [{ id: 'Q9', invoiced: false },
-    { id: 'Q1', client: { name: 'Dad' }, savedAt: '2024-01-01T08:00:00Z' },
-    { id: 'Q2', client: { name: 'Dad' }, savedAt: '2024-01-11T08:00:00Z' }],
+    { id: 'Q1', customerId:7, invoiced:true, invoicedAt:'2024-01-01', client: { name: 'Dad' }, savedAt: '2024-01-01T08:00:00Z' },
+    { id: 'Q2', customerId:7, invoiced:true, invoicedAt:'2024-01-11', client: { name: 'Dad' }, savedAt: '2024-01-11T08:00:00Z' }],
   /* Two open bills from S3 — one the owner has named a day for and one
      they have not — plus the payment that makes a settle move derivable.
      The dated one is what who_you_owe must hand back with its supplierId
@@ -170,7 +170,7 @@ const books = () => ({
   const data = books();
   /* Compiled over the same books, so the reading's customerId comes out
      of the real function rather than being handed in by a fixture. */
-  const goingQuiet = compileScope([extractFunction(src, 'dashGoingQuietCustomers', 'index.html')],
+  const goingQuiet = compileScope([extractFunction(src, 'dashGoingQuietCustomers', 'index.html'), extractFunction(src, 'managerPurchaseHistory', 'index.html')],
     { data, Date, Math, Number, String, Array, Object }, ['dashGoingQuietCustomers']).dashGoingQuietCustomers;
   const env = {
     data,

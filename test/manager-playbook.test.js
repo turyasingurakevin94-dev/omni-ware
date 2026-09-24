@@ -80,6 +80,7 @@ const base = {
     const inserted = [];
     const save = compileScope([
       extractFunction(src, 'managerSaveMeeting', 'index.html'),
+      'async function managerInsertProposals(rows){ return sb.from(\'manager_notes\').insert(rows); }',
       extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
       extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
       extractDeclaration(src, 'MANAGER_WORTH_BASES', 'index.html'),

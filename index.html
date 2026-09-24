@@ -17569,6 +17569,24 @@
     .ow-mq-ts{display:none;}
   }
 
+
+  .ow-growth-settings{padding:var(--ow-sp-12);font-size:var(--ow-t-13);}
+  .ow-growth-summary{cursor:pointer;font-weight:600;}
+  .ow-growth-controls{display:grid;grid-template-columns:minmax(0,1fr) 140px;gap:var(--ow-sp-12);margin-top:var(--ow-sp-12);}
+  .ow-growth-field{min-width:0;}
+  .ow-growth-reading{font-size:var(--ow-t-13);line-height:var(--ow-lh-normal);}
+  .ow-growth-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--ow-sp-12);padding:var(--ow-sp-12);border-top:1px solid var(--ow-rule);}
+  .ow-growth-copy{margin:var(--ow-sp-6) 0;max-width:var(--ow-measure);}
+  .ow-growth-actions{display:flex;flex-direction:column;gap:var(--ow-sp-6);justify-content:center;}
+  .ow-growth-price{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+  .ow-growth-evidence{padding:var(--ow-sp-12);border-top:1px solid var(--ow-rule);}
+  @media(max-width:820px){
+    .ow-growth-reading{font-size:var(--ow-t-14);}
+    .ow-growth-controls{grid-template-columns:1fr;}
+    .ow-growth-row{display:block;padding:var(--ow-sp-16);}
+    .ow-growth-actions{flex-direction:row;margin-top:var(--ow-sp-12);}
+    .ow-growth-action{min-height:var(--ow-tap);flex:1;}
+  }
 </style>
 </head>
 <body class="app-loading">
@@ -19422,6 +19440,7 @@
            the switch is a paint and never a second read. -->
       <div class="ow-grid">
         <div class="ow-stack">
+          <div id="managerGrowthWrap" class="mgr-bed mgr-bed-s"></div>
           <div id="managerPlanWrap" class="mgr-bed mgr-bed-s"></div>
           <div id="managerPlaysWrap" class="mgr-bed mgr-bed-s"></div>
           <div id="managerHistoryWrap" class="mgr-bed mgr-bed-r"></div>
@@ -24618,6 +24637,7 @@ async function loadData(shopId){
     // review's two settings need no column and no migration.
     presetPriceReview: presets.priceReview || {},
     presetFollowUp: presets.followUp || {},
+    presetManager: presets.manager || {},
     presetAgentDiscountWholesalePct: Number(presets.agentDiscountWholesalePct)||0,
     presetAgentDiscountRetailPct: Number(presets.agentDiscountRetailPct)||0,
     // The shop default price rule: what effectiveMarkupRule falls back to
@@ -24869,7 +24889,7 @@ function buildSyncRows(d, shopId){
       date:dateOrNull(q.date), status:q.status, invoiced:q.invoiced, invoiced_at:dateOrNull(q.invoicedAt),
       invoiced_ts: q.invoicedTs ? new Date(q.invoicedTs).toISOString() : null,
       amount_paid:q.amountPaid, voided:q.voided,
-      payload:{client:q.client, items:q.items, charges:q.charges||[], credit:q.credit||null, savedAt:q.savedAt, payments:q.payments, customerId:q.customerId, debtCharged:q.debtCharged, stageEnteredAt:q.stageEnteredAt, assignedWorkerId:q.assignedWorkerId, assignedDeliveryId:q.assignedDeliveryId, pickingStatus:q.pickingStatus||null, pickCursor:q.pickCursor||0, pickingAssignedAt:q.pickingAssignedAt||null, workerAcceptedAt:q.workerAcceptedAt||null,
+      payload:{client:q.client, items:q.items, charges:q.charges||[], credit:q.credit||null, savedAt:q.savedAt, createdAt:q.createdAt||null, payments:q.payments, customerId:q.customerId, debtCharged:q.debtCharged, stageEnteredAt:q.stageEnteredAt, assignedWorkerId:q.assignedWorkerId, assignedDeliveryId:q.assignedDeliveryId, pickingStatus:q.pickingStatus||null, pickCursor:q.pickCursor||0, pickingAssignedAt:q.pickingAssignedAt||null, workerAcceptedAt:q.workerAcceptedAt||null,
         // The admin's decision about a short pick. Admin-owned on purpose:
         // it is not in WORKER_OWNED_KEYS (worker.html), so a worker save
         // merging onto the server row leaves whatever was decided here
@@ -25030,7 +25050,7 @@ function buildSyncRows(d, shopId){
     })),
     settings: {
       shop_id: shopId,
-      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, stageAlerts:!!d.presetStageAlerts, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, reorderRules:d.presetReorderRules||{}, buyHolds:d.presetBuyHolds||{}, buyOrders:d.presetBuyOrders||{}, deadStockDays:d.presetDeadStockDays, clearance:d.presetClearance||{}, targetMarginPct:d.presetTargetMarginPct, services:d.presetServices||[], chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, creditPct:d.presetCreditPct, debtChases:d.presetDebtChases||{}, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate, waNeverPost:d.presetWaNeverPost||[], waAliases:d.presetWaAliases||[], waAliasNo:d.presetWaAliasNo||[],
+      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, stageAlerts:!!d.presetStageAlerts, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, manager:d.presetManager||{}, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, reorderRules:d.presetReorderRules||{}, buyHolds:d.presetBuyHolds||{}, buyOrders:d.presetBuyOrders||{}, deadStockDays:d.presetDeadStockDays, clearance:d.presetClearance||{}, targetMarginPct:d.presetTargetMarginPct, services:d.presetServices||[], chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, creditPct:d.presetCreditPct, debtChases:d.presetDebtChases||{}, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate, waNeverPost:d.presetWaNeverPost||[], waAliases:d.presetWaAliases||[], waAliasNo:d.presetWaAliasNo||[],
         shopLegalName:d.presetShopLegalName||'', shopAddress:d.presetShopAddress||'', shopPhone:d.presetShopPhone||'',
         shopTin:d.presetShopTin||'', receiptFooter:d.presetReceiptFooter||'', autoPrintReceipt:!!d.presetAutoPrintReceipt,
         idCounters:d.idCounters||{}},
@@ -39623,6 +39643,7 @@ function buildQuoteRecord({quoteId, client, date, items, charges, existing}){
     charges: Array.isArray(charges)
       ? JSON.parse(JSON.stringify(charges))
       : ((existing && orderCharges(existing)) || []),
+    createdAt: existing ? (existing.createdAt || null) : new Date().toISOString(),
     savedAt: new Date().toISOString(),
     // The rest re-state defaults for a brand-new record, and normalise
     // types on an existing one (the spread above already carried the
@@ -41326,7 +41347,8 @@ function customerOrdersFor(customerId){
   const name = c ? String(c.name||'').trim().toLowerCase() : '';
   return (data.savedQuotes||[]).filter(q=>{
     if(q.voided) return false;
-    if(q.customerId) return String(q.customerId) === String(customerId);
+    if(q.customerId != null && q.customerId !== '') return String(q.customerId) === String(customerId);
+    if((data.customers||[]).filter(x=> String(x.name||'').trim().toLowerCase() === name).length !== 1) return false;
     return !!name && String((q.client&&q.client.name)||'').trim().toLowerCase() === name;
   });
 }
@@ -88568,16 +88590,242 @@ function dashSupplierPriceInflation(){
 // Needs at least 2 past orders to establish a rhythm; a customer with only
 // one order ever doesn't have one yet, so they're left out here (that's a
 // different signal -- new-customer follow-up -- not "going quiet").
+/* Growth readings are descriptive evidence, never forecasts or automatic outreach. */
+function managerGrowthSettings(){
+  const p = data.presetManager || {};
+  return { objective: MANAGER_OBJECTIVES[p.objective] ? p.objective : null,
+    enabled: p.growthEnabled === true,
+    limit: Math.max(1, Math.min(10, Math.round(Number(p.dailyLimit) || 5))) };
+}
+
+function managerPurchaseHistory(nowMs){
+  const now = nowMs || Date.now(), byCustomer = new Map();
+  const coverage = { invoices: 0, linked: 0, missingCustomer: 0, missingDate: 0, futureDate: 0 };
+  const ids = new Set((data.customers || []).map(c=> String(c.id)));
+  (data.savedQuotes || []).forEach(q=>{
+    if(!q.invoiced || q.voided || q.cancelledAt) return;
+    coverage.invoices++;
+    if(q.customerId == null || !ids.has(String(q.customerId))){ coverage.missingCustomer++; return; }
+    const stamp = Number(q.invoicedTs);
+    const at = Number.isFinite(stamp) && stamp > 0 ? stamp : Date.parse(q.invoicedAt || '');
+    if(!Number.isFinite(at)){ coverage.missingDate++; return; }
+    if(at > now){ coverage.futureDate++; return; }
+    const id = String(q.customerId);
+    if(!byCustomer.has(id)) byCustomer.set(id, []);
+    byCustomer.get(id).push({ id: q.id, at, quote: q });
+    coverage.linked++;
+  });
+  byCustomer.forEach(events=> events.sort((a,b)=> a.at - b.at));
+  return { byCustomer, coverage };
+}
+
+function managerGrowthBaseline(nowMs){
+  const now = nowMs || Date.now(), day = 86400000, history = managerPurchaseHistory(now);
+  const cohort = (start, end)=>{
+    let eligible = 0, returned = 0;
+    history.byCustomer.forEach(events=>{
+      const first = events[0].at;
+      if(first < start || first >= end) return;
+      eligible++;
+      if(events.some(e=> e.at > first && e.at <= first + 30 * day)) returned++;
+    });
+    return { eligible, returned, rate: eligible ? returned / eligible : null };
+  };
+  let repeatCustomers = 0;
+  history.byCustomer.forEach(es=>{ if(es.some(e=> e.at > es[0].at)) repeatCustomers++; });
+  const quoteCohort = (start, end)=>{
+    let eligible = 0, converted = 0, pending = 0, cancelled = 0, unmeasured = 0;
+    (data.savedQuotes || []).forEach(q=>{
+      const at = Date.parse(q.createdAt || '');
+      // Counter sales were never a quote offered to a customer.
+      if(q.counterSale || !Number.isFinite(at) || at < start || at >= end) return;
+      eligible++;
+      if(q.voided || q.cancelledAt){ cancelled++; return; }
+      if(!q.invoiced){ pending++; return; }
+      const invoiceAt = Number(q.invoicedTs) || Date.parse(q.invoicedAt || '');
+      if(!Number.isFinite(invoiceAt) || invoiceAt < at){ unmeasured++; return; }
+      if(invoiceAt <= at + 30 * day) converted++;
+    });
+    return { eligible, converted, pending, cancelled, unmeasured,
+      rate: eligible && !unmeasured ? converted / eligible : null };
+  };
+  return { asOf: new Date(now).toISOString(), horizonDays: 30,
+    customersWithPurchases: history.byCustomer.size, repeatCustomers,
+    recentMatureCohort: cohort(now - 60 * day, now - 30 * day),
+    priorMatureCohort: cohort(now - 90 * day, now - 60 * day),
+    quotes: { ...quoteCohort(now - 60 * day, now - 30 * day),
+      missingCreationDate: (data.savedQuotes || []).filter(q=> !q.counterSale && !Number.isFinite(Date.parse(q.createdAt || ''))).length }, coverage: history.coverage,
+    caveat: 'First observed purchase, not proven first-ever purchase. Both customer cohorts have a full 30-day follow-up. Current records cannot reconstruct deleted quotes or historic cancellations. These are observed rates, not predictions or causal effects.' };
+}
+
+function managerGrowthOffer(productId, variantIdx, qty){
+  const product = productById(productId);
+  if(!product || (product.type === 'variable' && variantIdx == null)) return null;
+  const n = Number(qty) > 0 ? Number(qty) : 1;
+  const available = Number(getStockQty(productId, variantIdx));
+  const px = briefPriceFor(productId, variantIdx, n);
+  if(!Number.isFinite(available) || available < n || !px || px.why || px.packCost
+    || px.source !== 'shelf' || !Number.isFinite(px.price) || !Number.isFinite(px.cost) || px.cost <= 0 || px.price <= px.cost) return null;
+  const margin = (px.price - px.cost) / px.price * 100;
+  const floor = targetMarginPct();
+  if(margin < floor) return null;
+  return { productId, variantIdx: variantIdx == null ? null : variantIdx,
+    label: productVariantLabel(product, variantIdx), qty: n, available,
+    price: px.price, cost: px.cost, marginPct: margin, priceSource: px.source,
+    recheck: 'Recheck quantity, price and stock before preparing the quote.' };
+}
+
+function managerGrowthCandidates(nowMs){
+  const now = nowMs || Date.now(), history = managerPurchaseHistory(now), by = new Map();
+  const add = (customerId, reason, offer, source)=>{
+    const customer = (data.customers || []).find(c=> String(c.id) === String(customerId));
+    if(!customer || !offer || !reason.text || !contactPhones(customer).length) return;
+    const id = String(customerId), key = source.kind + ':' + source.id;
+    const blocked = ((data.presetManager || {}).growthBlocked || {})[id + ':' + key];
+    if(blocked && Date.parse(blocked.until) > now) return;
+    const row = by.get(id) || { customerId: id, name: customer.name, reasons: [], offers: [], sources: [], priority: 0 };
+    if(row.sources.some(s=> s.key === key)) return;
+    row.reasons.push(reason.text); row.offers.push(offer); row.sources.push({ ...source, key });
+    row.priority = Math.max(row.priority, reason.priority);
+    by.set(id, row);
+  };
+  followUpClientsToContact(now).forEach(row=> row.items.forEach(item=>{
+    const f = item.followUp;
+    if(followUpAlreadyBought(f)) return;
+    const subject = followUpSubject(f);
+    if(!subject.product) return;
+    // Only concrete availability/price news. Silence alone is not an offer.
+    const reason = item.reasons.find(r=> ['back_in_stock','price_moved'].includes(r.kind));
+    if(!reason) return;
+    add(row.customerId, {text: reason.text, priority: reason.kind === 'back_in_stock' ? 3 : 2},
+      managerGrowthOffer(subject.product.id, subject.variantIdx, f.qty), {kind: 'followup', id: f.id});
+  }));
+  briefQueue().forEach(b=>{
+    const id = String(b.customer.id), events = history.byCustomer.get(id) || [];
+    if(!events.length || !b.reason || !['rhythm','return','needs','price','stage'].includes(b.reason.key)) return;
+    // Do not let ambiguous legacy names establish a buying pattern for this queue.
+    if(customerOrdersFor(b.customer.id).some(q=> q.invoiced && String(q.customerId) !== id)) return;
+    add(id, {text: briefPlainLine(b), priority: b.reason.key === 'rhythm' ? 2 : 1},
+      managerGrowthOffer(b.reason.productId, b.reason.variantIdx, b.qty),
+      {kind: b.reason.key, id: events[events.length - 1].id});
+  });
+  (data.savedQuotes || []).forEach(q=>{
+    if(q.invoiced || q.voided || q.cancelledAt || q.status !== 'draft' || q.customerId == null) return;
+    const saved = Date.parse(q.savedAt || '');
+    if(!Number.isFinite(saved) || now - saved < 7 * 86400000 || now - saved > 30 * 86400000) return;
+    const items = q.items || [];
+    if(!items.length) return;
+    const quantities = new Map();
+    for(const it of items){
+      const line = stockMoveOnRowUnit(it.productId, it.variantIdx, it.qty, it.unit, null, it);
+      if(!line.joined || !line.unit || !Number.isFinite(line.qty) || line.qty <= 0) return;
+      const key = stockKey(it.productId, it.variantIdx);
+      const previous = quantities.get(key);
+      quantities.set(key, { productId: it.productId, variantIdx: it.variantIdx,
+        qty: (previous ? previous.qty : 0) + line.qty });
+    }
+    const offers = [...quantities.values()].map(it=>managerGrowthOffer(it.productId, it.variantIdx, it.qty));
+    // All quoted lines must be fulfilable; one available line does not recover an order.
+    if(offers.some(o=> !o)) return;
+    add(q.customerId, {text: 'Draft quote ' + q.id + ' was last saved ' + Math.floor((now-saved)/86400000)
+      + ' days ago. Its lines are available at current prices; check whether it was sent and ask what is blocking the order.', priority: 2},
+      offers[0], {kind:'quote', id:q.id});
+  });
+  return [...by.values()].filter(row=>{
+    const contacts = followUpsForCustomer(row.customerId).flatMap(f=> f.contacts || []);
+    const recent = contacts.some(c=> { const t = Date.parse(c.at || ''); return Number.isFinite(t) && now - t < 7 * 86400000; });
+    const book = customerBookRow((data.customers || []).find(c=> String(c.id) === row.customerId));
+    return !recent && !briefHeldBack(book);
+  }).sort((a,b)=> b.priority - a.priority || a.customerId.localeCompare(b.customerId));
+}
+
+async function managerGrowthRead(){
+  const settings = managerGrowthSettings(), baseline = managerGrowthBaseline();
+  if(!settings.enabled) return { settings, baseline, opportunities: [], state: 'disabled' };
+  const shop = currentShopId, candidates = managerGrowthCandidates(), eligible = [];
+  // Read every matching phone, not the inbox's most recent 100 conversations.
+  for(const row of candidates){
+    const c = (data.customers || []).find(x=> String(x.id) === row.customerId);
+    const phones = contactPhones(c).map(p=> managerGrowthPhone(p)).filter(Boolean);
+    if(!phones.length) continue;
+    const r = await sb.from('wa_conversations').select('wa_id,opt_out,last_message_at')
+      .eq('shop_id', shop).in('wa_id', phones);
+    if(r.error || shop !== currentShopId) return { settings, baseline, opportunities: [], state: 'contact_check_unavailable' };
+    if((r.data || []).some(x=> x.opt_out || (x.last_message_at && Date.now() - Date.parse(x.last_message_at) < 7 * 86400000))) continue;
+    eligible.push({ ...row, contactCheck: 'No recorded opt-out or conversation within 7 days; confirm permission before contacting.' });
+    if(eligible.length >= settings.limit) break;
+  }
+  return { settings, baseline, opportunities: eligible, state: 'ready',
+    ranking: 'Requested stock first, then repeat-buying/price evidence, then relevant next purchases. No estimated uplift.' };
+}
+
+async function renderManagerGrowth(){
+  const wrap = document.getElementById('managerGrowthWrap');
+  if(!wrap) return;
+  const stamp = String(Date.now()) + Math.random(); wrap.dataset.read = stamp;
+  const settings = managerGrowthSettings();
+  wrap.innerHTML = `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">Customer growth</span></div>
+    <details class="ow-growth-settings"><summary class="ow-growth-summary">${settings.enabled ? esc(MANAGER_OBJECTIVES[settings.objective] || 'Customer opportunities') + ' · up to ' + settings.limit + ' a day' : 'Growth queue is off'} · Settings</summary>
+    <div class="ow-growth-controls"><div class="field ow-growth-field"><label for="mgrObjective">Standing objective</label><select id="mgrObjective"><option value="">Let the meeting choose</option>${Object.entries(MANAGER_OBJECTIVES).map(([k,v])=> `<option value="${k}" ${settings.objective === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></div>
+    <div class="field ow-growth-field"><label for="mgrGrowthLimit">Daily capacity</label><input id="mgrGrowthLimit" type="number" min="1" max="10" value="${settings.limit}"></div></div>
+    <label><input id="mgrGrowthEnabled" type="checkbox" ${settings.enabled ? 'checked' : ''}> Show growth opportunities</label></details>
+    <div id="mgrGrowthReading" class="ow-growth-reading">Reading customer history…</div></div>`;
+  ['mgrObjective','mgrGrowthEnabled','mgrGrowthLimit'].forEach(id=> document.getElementById(id).onchange = ()=>{
+    data.presetManager = { ...(data.presetManager || {}), objective: document.getElementById('mgrObjective').value,
+      growthEnabled: document.getElementById('mgrGrowthEnabled').checked,
+      dailyLimit: Math.max(1, Math.min(10, Number(document.getElementById('mgrGrowthLimit').value) || 5)) };
+    saveData(); renderManagerGrowth();
+  });
+  try{
+    const result = await managerGrowthRead();
+    if(wrap.dataset.read !== stamp) return;
+    const b = result.baseline, cohort = b.recentMatureCohort;
+    const rate = cohort.rate == null ? 'Not enough history' : `${Math.round(cohort.rate * 100)}% (${cohort.returned}/${cohort.eligible})`;
+    document.getElementById('mgrGrowthReading').innerHTML = `
+      ${result.opportunities.map((row,i)=> `<div class="ow-growth-row"><div><b>${esc(row.name)}</b><p class="ow-growth-copy">${row.reasons.map(esc).join(' · ')}</p><p class="ow-growth-copy ow-growth-price">${row.offers.map(o=> `${esc(o.label)} · ${fmtUGX(o.price)} each · ${o.available} available`).join('<br>')}</p></div>
+      <div class="ow-growth-actions"><button type="button" class="btn btn-ghost ow-sm ow-growth-action" data-growth-pick="${i}">${row.sources.some(s=> s.kind === 'quote') ? 'Review quote' : 'Review follow-up'}</button><button type="button" class="btn btn-ghost ow-sm ow-growth-action" data-growth-defer="${i}">Not now</button></div></div>`).join('')}
+      <p class="ow-mini">${result.state === 'disabled' ? 'Open Settings to enable the queue for this shop.' : result.state !== 'ready' ? 'Contact preferences could not be checked. Retry when connected.' : result.opportunities.length ? 'Review before contacting. Opening a follow-up records no action.' : 'No eligible opportunities today. No need to fill the queue.'}</p>
+      <details class="ow-growth-evidence"><summary>30-day second purchase: <b>${rate}</b> · Evidence</summary><div class="ow-mini">
+      <p>Customers whose first observed purchase was 30–60 days ago. ${b.coverage.linked} of ${b.coverage.invoices} invoices have a known customer and valid purchase date.</p>
+      <p>${esc(b.caveat)}</p>
+      <p>Quotes invoiced within 30 days: ${b.quotes.rate == null ? 'not measurable' : Math.round(b.quotes.rate * 100) + '%'} (${b.quotes.converted}/${b.quotes.eligible}); ${b.quotes.pending} still pending, ${b.quotes.cancelled} cancelled. ${b.quotes.missingCreationDate} records lack a creation date and are excluded.</p></div></details>`;
+    wrap.querySelectorAll('[data-growth-defer]').forEach(button=> button.onclick = ()=>{
+      const row = result.opportunities[Number(button.dataset.growthDefer)];
+      const reason = prompt('What is blocking this opportunity? It will be set aside for 7 days.');
+      if(!reason || !reason.trim()) return;
+      data.presetManager = data.presetManager || {};
+      const blocks = data.presetManager.growthBlocked || {};
+      Object.keys(blocks).forEach(k=>{ if(Date.parse(blocks[k].until) <= Date.now()) delete blocks[k]; });
+      row.sources.forEach(source=>{ blocks[row.customerId + ':' + source.key] = {
+        reason: reason.trim().slice(0,200), recordedAt: new Date().toISOString(),
+        until: new Date(Date.now() + 7 * 86400000).toISOString() }; });
+      data.presetManager.growthBlocked = blocks;
+      saveData(); renderManagerGrowth();
+    });
+    wrap.querySelectorAll('[data-growth-pick]').forEach(button=> button.onclick = ()=>{
+      const row = result.opportunities[Number(button.dataset.growthPick)];
+      const quote = row.sources.find(s=> s.kind === 'quote');
+      if(quote){ goToTab('quote-saved'); otOpenRow(quote.id); return; }
+      fupTab = 'contact'; fupWhy = 'all'; fupQueueQuery = ''; fupSelectedCustomerId = row.customerId; goToTab('followups');
+    });
+  }catch(error){
+    if(wrap.dataset.read === stamp) document.getElementById('mgrGrowthReading').textContent = 'Could not read growth opportunities. Retry when connected.';
+    console.warn('Manager growth:', error);
+  }
+}
+
+function managerGrowthPhone(phone){
+  let digits = String(phone || '').replace(/\D/g, '');
+  if(/^0[0-9]{9}$/.test(digits)) digits = '256' + digits.slice(1);
+  else if(/^[0-9]{9}$/.test(digits)) digits = '256' + digits;
+  return /^[1-9][0-9]{9,14}$/.test(digits) ? digits : null;
+}
+
 function dashGoingQuietCustomers(){
   const rows = [];
+  const history = managerPurchaseHistory();
   data.customers.forEach(c=>{
-    const nameLower = (c.name||'').trim().toLowerCase();
-    if(!nameLower) return;
-    const orderTimes = data.savedQuotes
-      .filter(q=>!q.voided && ((q.client&&q.client.name)||'').trim().toLowerCase()===nameLower)
-      .map(q=>q.savedAt ? new Date(q.savedAt).getTime() : NaN)
-      .filter(t=>!isNaN(t))
-      .sort((a,b)=>a-b);
+    const orderTimes = (history.byCustomer.get(String(c.id)) || []).map(e=> e.at);
     if(orderTimes.length<2) return;
     const first = orderTimes[0], last = orderTimes[orderTimes.length-1];
     const avgGapDays = (last-first) / (orderTimes.length-1) / 86400000;
@@ -91752,7 +92000,7 @@ function deriveMoveOutcome(row, untilISO){
        pay, and saying so was already the invoice branch's discipline.
        Read as "no payment seen since", a deleted card looked exactly
        like a debtor ignoring every chase. */
-    happened = paid > 0;
+    happened = c ? paid > 0 : null;
     derived = !c ? 'that customer is no longer on file'
       : (paid > 0 ? `paid ${fmtUGX(Math.round(paid))} since` : 'no payment seen since');
   } else if(b.mkind === 'buy' && subj.key){
@@ -91767,7 +92015,7 @@ function deriveMoveOutcome(row, untilISO){
        available when the day it happened was written down. Without
        that day, happened stays null: unknowable in a window is not the
        same as no. */
-    happened = !q ? false
+    happened = !q ? null
       : (until == null ? !!q.invoiced
         : (q.invoicedAt ? (q.invoiced && within(q.invoicedAt)) : null));
     derived = !q ? 'order no longer on file' : (q.invoiced ? 'invoiced' : 'still not invoiced');
@@ -91791,6 +92039,30 @@ function deriveMoveOutcome(row, untilISO){
 }
 
 /* ---- the journal: direct reads and writes, wa_* style ---- */
+function managerProposalKey(row){
+  const b = row.body || {};
+  return row.kind === 'target' ? String(b.metric || '').trim().toLowerCase()
+    : String(b.name || '').trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+}
+async function managerInsertProposals(rows){
+  if(!rows.length) return { error: null };
+  const keys = new Set();
+  for(let offset = 0; ; offset += 250){
+    const r = await sb.from('manager_notes').select('kind,body')
+      .eq('shop_id', currentShopId).eq('kind', rows[0].kind).eq('status', 'proposed')
+      .order('id', { ascending: true }).range(offset, offset + 249);
+    if(r.error) return r;
+    (r.data || []).forEach(row=> keys.add(managerProposalKey(row)));
+    if((r.data || []).length < 250) break;
+  }
+  const fresh = rows.filter(row=>{
+    const key = managerProposalKey(row);
+    if(!key || keys.has(key)) return false;
+    keys.add(key); return true;
+  });
+  // The database trigger provides the concurrent-writer guarantee.
+  return fresh.length ? await sb.from('manager_notes').insert(fresh) : { error: null };
+}
 async function managerSaveMeeting(plan){
   if(!managerNotesTable) return null;
   const obj = plan.objective || {};
@@ -91798,6 +92070,7 @@ async function managerSaveMeeting(plan){
     shop_id: currentShopId, kind: 'meeting', date: todayISO(),
     body: { keyline: String(plan.keyline||'').slice(0, 300),
       rejected: String(plan.rejected||'').slice(0, 400), moves: (plan.moves||[]).length,
+      ...(data.presetManager && data.presetManager.growthEnabled ? { growthBaseline: managerGrowthBaseline() } : {}),
       /* The week's aim and the figures that chose it, kept so the review
          can judge the plan against what it set out to do. */
       objective: MANAGER_OBJECTIVES[String(obj.name||'')] ? String(obj.name) : null,
@@ -91885,8 +92158,8 @@ async function managerSaveMeeting(plan){
       body: { metric: String(x.metric), aim: apRound(x.aim), why: String(x.why||'').slice(0, 200) },
       status: 'proposed' }));
   if(targets.length){
-    const r4 = await sb.from('manager_notes').insert(targets);
-    if(r4.error) console.warn('Manager: targets not saved:', r4.error.message);
+    const r4 = await managerInsertProposals(targets);
+    if(r4.error){ console.warn('Manager: targets not saved:', r4.error.message); toast('Meeting saved, but target proposals could not be saved.'); }
   }
   /* THE STRATEGIES THEMSELVES, proposed and never adopted by the writing
      of them. A play is craft -- the judgement half of managing, which no
@@ -91911,8 +92184,8 @@ async function managerSaveMeeting(plan){
         source: 'manager' },
       status: 'proposed' }));
   if(plays.length){
-    const r5 = await sb.from('manager_notes').insert(plays);
-    if(r5.error) console.warn('Manager: plays not saved:', r5.error.message);
+    const r5 = await managerInsertProposals(plays);
+    if(r5.error){ console.warn('Manager: plays not saved:', r5.error.message); toast('Meeting saved, but strategy proposals could not be saved.'); }
   }
   /* THE LINES IT SAID NOT TO BUY YET.
 
@@ -92042,6 +92315,8 @@ async function managerSetMoveStatus(rowId, status, skipReason){
   }
   const cur = await sb.from('manager_notes').select('body').eq('shop_id', currentShopId).eq('id', rowId).single();
   const body = (cur.data && cur.data.body) || {};
+  if(status === 'done') body.doneOn = body.doneOn || todayISO();
+  else delete body.doneOn;
   if(skipReason) body.skipReason = String(skipReason).slice(0, 200);
   const up = await sb.from('manager_notes').update({ status, body }).eq('shop_id', currentShopId).eq('id', rowId);
   if(up.error) toast('Could not record that — ' + up.error.message);
@@ -92228,7 +92503,7 @@ async function managerTrackRecord(todayISO_){
     /* Oldest first, so each occasion can be closed at the next. */
     const occ = g.occasions.slice().sort((a, b)=> String(a.date).localeCompare(String(b.date)));
     const windowed = !!TRACK_WINDOWED[g.kind];
-    let worked = 0, money = 0, scored = 0;
+    let worked = 0, money = 0, scored = 0, completedScored = 0, completedObserved = 0;
     occ.forEach((o, i)=>{
       if(!windowed) return;
       /* The LAST occasion runs to today: it is still open, and closing
@@ -92237,6 +92512,12 @@ async function managerTrackRecord(todayISO_){
       const out = deriveMoveOutcome({ date: o.date, status: o.status, body: o.body }, until);
       if(out.happened == null) return;
       scored += 1;
+      const recorded = o.body && o.body.doneOn;
+      if(o.status === 'done' && recorded && recorded >= o.date && (!until || recorded < until)){
+        const afterDay = new Date(Date.parse(recorded) + 86400000).toISOString().slice(0,10);
+        const afterCompletion = deriveMoveOutcome({ date: afterDay, status: o.status, body: o.body }, until);
+        if(afterCompletion.happened != null){ completedScored++; if(afterCompletion.happened) completedObserved++; }
+      }
       if(out.happened) worked += 1;
       money += Math.round(Number(out.money) || 0);
     });
@@ -92251,7 +92532,7 @@ async function managerTrackRecord(todayISO_){
       done: occ.filter(o=> o.status === 'done').length,
       skipped: occ.filter(o=> o.status === 'skipped').length,
       firstOn: occ[0].date, lastOn: occ[occ.length - 1].date,
-      windowed, scored, worked, money: Math.round(money),
+      windowed, scored, worked, completedScored, completedObserved, money: Math.round(money),
       ...(now ? { standsNow: now.derived } : {}) };
   }).filter(x=> x.times >= TRACK_MIN_TIMES)
     .sort((a, b)=> b.times - a.times || b.money - a.money);
@@ -92277,9 +92558,9 @@ function trackRecordName(row){
 }
 function trackRecordLine(row){
   if(!row) return '';
-  const what = { chase: 'Chased', buy: 'Told to restock', settle: 'Told to pay',
+  const what = { chase: 'Advised chasing', buy: 'Told to restock', settle: 'Told to pay',
     invoice: 'Told to invoice', policy: 'Advised a standing rule on' }[row.kind] || 'Advised';
-  const head = `${what} ${row.times} times since ${fmtShortDate(row.firstOn)}`;
+  const head = `${what} ${row.times} times since ${fmtShortDate(row.firstOn)} · ${row.done || 0} marked done`;
   if(!row.windowed) return head + (row.standsNow ? ` — ${row.standsNow}` : '');
   /* NOTHING SCORED IS NOT NOTHING EARNED. A run of occasions the books
      could not answer is a gap in the record, and reading it as a
@@ -92288,7 +92569,7 @@ function trackRecordLine(row){
   if(!row.scored) return head + ' — nothing in the books can weigh any of them';
   if(!row.worked) return head + ` — and the books show nothing after any of ${row.scored === 1 ? 'it' : 'them'}`;
   const money = row.money > 0 ? `, ${fmtUGX(row.money)} in all` : '';
-  return head + ` — it worked ${row.worked} of ${row.scored} times${money}`;
+  return head + ` — an event followed ${row.worked} of ${row.scored} recommendations${money}; this does not prove the advice caused it`;
 }
 
 /* THE FINDING WORTH INTERRUPTING FOR: a lever that has never once
@@ -92297,20 +92578,10 @@ function trackRecordLine(row){
    about the shop -- and it is the thing a manager with a memory says
    and one without cannot. */
 function trackRecordDeadLevers(track){
-  /* NOTHING WEIGHED IS NOT NOTHING EARNED, and `scored` is the guard
-     that keeps those apart.
-
-     There was a second guard here -- scored >= minTimes -- and it was
-     removed because no mutation could tell it from the line above:
-     every windowed kind answers happened as a plain yes or no, so
-     scored always equals times, and times is already filtered at
-     minTimes when the rows are built. A guard that cannot fail is a
-     guard nobody can maintain. The invariant it rested on is pinned in
-     track-record.test.js instead, so a future windowed kind that CAN
-     answer "unknowable" fails a test rather than quietly widening what
-     this calls dead. */
+  // Only dated completion records support a question about executed advice.
+  // Even these are observations, not causal proof of an ineffective tactic.
   return ((track && track.rows) || [])
-    .filter(x=> x.windowed && x.scored > 0 && x.worked === 0)
+    .filter(x=> x.windowed && x.completedScored >= TRACK_MIN_TIMES && x.completedObserved === 0)
     .sort((a, b)=> b.scored - a.scored);
 }
 
@@ -92843,7 +93114,10 @@ async function runManagerMeeting(){
   apCutOffThisSitting = false;
   renderManager();
   apOpenPanel();
-  assistantThread.push({ role: 'user', content: '[Today is ' + todayISO() + ']\nHold the morning meeting.' });
+  const strategy = managerGrowthSettings();
+  assistantThread.push({ role: 'user', content: '[Today is ' + todayISO() + ']\nHold the morning meeting.'
+    + (strategy.objective ? '\nStanding owner objective: ' + strategy.objective + '. Preserve it; explain cash or fulfilment constraints.' : '')
+    + (strategy.enabled ? '\nRead growth_opportunities for evidence-backed customer actions and the baseline.' : '') });
   apRenderUser('Hold the morning meeting.');
   try{
     await apRunLoop();
@@ -93164,7 +93438,7 @@ function mgrVerdictHTML(cells){
 const MGR_WAIT_CELLS = [
   { label: 'Advice done', value: '&mdash;', sub: 'reading the journal&hellip;', wait: true },
   { label: 'Targets met', value: '&mdash;', sub: 'reading the journal&hellip;', wait: true },
-  { label: 'Levers that work', value: '&mdash;', sub: 'reading the journal&hellip;', wait: true },
+  { label: 'Advice followed by events', value: '&mdash;', sub: 'reading the journal&hellip;', wait: true },
   { label: 'Not landing', value: '&mdash;', sub: 'reading the journal&hellip;', wait: true },
 ];
 /* A count over a denominator, said the way the shop says it. */
@@ -93215,10 +93489,10 @@ function mgrPaintVerdict(state){
     const weighed = (tr.rows || []).filter(x=> x.windowed && x.scored > 0);
     const works = weighed.filter(x=> x.worked > 0).length;
     const dead = weighed.length - works;
-    cells[2] = { label: 'Levers that work',
+    cells[2] = { label: 'Advice followed by events',
       value: weighed.length ? mgrOf(works, weighed.length) : '&mdash;',
       sub: weighed.length
-        ? `advised ${tr.minTimes}+ times${dead ? ` &middot; ${dead} ${dead === 1 ? 'has' : 'have'} never once worked` : ''}`
+        ? `advised ${tr.minTimes}+ times${dead ? ` &middot; ${dead} with no subsequent event` : ''}`
         : 'nothing advised often enough to judge yet' };
   }
   el.innerHTML = mgrVerdictHTML(cells);
@@ -93328,8 +93602,8 @@ function mgrLeverRows(track, tally){
 
 const MGR_LEVER_FILTERS = [
   { id: 'all', label: 'All', has: ()=> true },
-  { id: 'works', label: 'Works', has: (r)=> r.verdict === 'works' },
-  { id: 'never', label: 'Never worked', has: (r)=> r.verdict === 'never' },
+  { id: 'works', label: 'Event followed', has: (r)=> r.verdict === 'works' },
+  { id: 'never', label: 'No event recorded', has: (r)=> r.verdict === 'never' },
   { id: 'notlanding', label: 'Not landing', has: (r)=> r.verdict === 'notlanding' },
   { id: 'passed', label: 'You passed on', has: (r)=> r.verdict === 'passed' },
 ];
@@ -93337,7 +93611,7 @@ const MGR_LEVER_FILTERS = [
 function mgrLeverVerdictCell(r){
   if(r.verdict === 'works' || r.verdict === 'never')
     return `<td class="sc w">${r.worked} of ${r.scored}<span class="b">${
-      r.verdict === 'works' ? 'works' : 'never worked'}</span></td>`;
+      r.verdict === 'works' ? 'event followed' : 'no event recorded'}</span></td>`;
   if(r.verdict === 'notlanding') return `<td class="cp"><span class="ow-cp ow-warn">not landing</span></td>`;
   if(r.verdict === 'passed') return `<td class="cp"><span class="ow-cp">passed on</span></td>`;
   return `<td class="cp"><span class="ow-cp">not weighed</span></td>`;
@@ -93373,7 +93647,7 @@ function mgrPaintLevers(track, tally){
   const rows = all.filter(f.has);
   const shown = rows.slice(0, 12);
   el.innerHTML = `<div class="ow-pan">
-    <div class="ow-pan-h mgr-h"><span class="ow-pan-t">Every lever it has pulled</span>
+    <div class="ow-pan-h mgr-h"><span class="ow-pan-t">Advice and observed outcomes</span>
       <div class="mgr-fp">${MGR_LEVER_FILTERS.map(x=>{
         const n = all.filter(x.has).length;
         return `<button type="button" data-mgrlv="${x.id}" class="${x.id === mgrLeverFilter ? 'on' : ''}"
@@ -93408,6 +93682,7 @@ function renderManager(){
   /* Taken AFTER the early return: a render that paints nothing has no
      business cancelling one that is still painting. */
   const gen = ++mgrRenderGen;
+  renderManagerGrowth();
   memoryNote.innerHTML = managerNotesTable ? '' : `<div class="cb-chain-break">
     <div><b>The manager cannot remember yet.</b> Meetings run, but nothing is kept — no advice,
       no account of what it earned, no scoreboard and no record. One database update fixes it.</div>
@@ -104250,6 +104525,8 @@ const ASSISTANT_TOOLS = {
      drills with the narrower tools only where a figure needs support.
      Every number here comes from the same functions the screens render,
      through the one dashboardContext the dashboard itself reads. */
+  growth_opportunities: { confirm: false, async run(){ return managerGrowthRead(); }},
+
   shop_pulse: { confirm: false, run(){
     const today = todayISO();
     const dctx = dashboardContext(anShiftDate(today, -29), today);
@@ -104814,6 +105091,7 @@ const ASSISTANT_TOOLS = {
        from rather than re-invented. */
     const book = await managerPlaybook();
     const playbook = {
+      ...((book.proposed||[]).length ? { awaiting_approval: book.proposed.map(p=> ({id:p.id, name:p.name, treats:p.treats})) } : {}),
       ...(book.running.length ? { running: book.running.map(p=> ({ name: p.name, treats: p.treats,
         how: p.how, since: p.started_on, whose: p.source,
         /* HOW LONG IT WAS FOR AND HOW FAR THROUGH IT IS. A play with
@@ -104946,11 +105224,11 @@ const ASSISTANT_TOOLS = {
     trackRecordDeadLevers(track).slice(0, 1).forEach(x=>{
       worth.push({ kind: 'this_has_never_worked', advice: x.title,
         [x.field]: x.id, about: trackRecordName(x),
-        advised: x.times, weighed: x.scored, worked: 0,
+        advised: x.times, weighed: x.completedScored, worked: 0,
         since: x.firstOn, last_put: x.lastOn,
         what_to_do: 'You have advised this ' + x.times + ' times since ' + x.firstOn
-          + ' and the books have weighed ' + x.scored + ' of them: nothing followed any one.'
-          + ' That is evidence about the LEVER, not about the shop — so do not advise it again'
+          + ' and ' + x.completedScored + ' have dated completion records with no subsequent event in their windows.'
+          + ' This is an observation, not proof of effectiveness. Ask about timing and blockers before recommending it again' 
           + ' unchanged. Say what the record shows in one sentence, then pull a different lever'
           + ' or ask the owner what they know that the books do not.' });
     });
@@ -104984,6 +105262,7 @@ const ASSISTANT_TOOLS = {
       ...(track.unnamed ? { moves_nothing_could_be_learned_from: track.unnamed } : {}),
       rows: track.rows.slice(0, 8).map(x=> ({ about: trackRecordName(x), [x.field]: x.id,
         kind: x.kind, advised: x.times, done: x.done, skipped: x.skipped,
+        completed_with_dated_record: x.completedScored, events_after_completion_record: x.completedObserved,
         first_on: x.firstOn, last_on: x.lastOn,
         ...(x.windowed
           ? { weighed: x.scored, it_worked: x.worked,
@@ -104993,6 +105272,7 @@ const ASSISTANT_TOOLS = {
     } : null;
     const passedOn = { rows: tally.passedOn };
     const doNot = {
+      ...((book.proposed||[]).length ? { plays_pending: book.proposed.map(p=> p.name) } : {}),
       ...(open.length ? { open_questions: open.slice(0, 8).map(q=> q.asked) } : {}),
       ...((book.running||[]).length ? { plays_running: book.running.slice(0, 8).map(pl=> pl.name) } : {}),
       ...((book.dropped||[]).length ? { plays_dropped: book.dropped.slice(0, 8).map(pl=> pl.name) } : {}),

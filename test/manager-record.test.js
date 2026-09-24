@@ -115,7 +115,7 @@ const src = read('index.html');
                         src.indexOf('<section id="tab-map"'));
   const kids = [...sec.matchAll(/<div id="(manager[A-Za-z]+)"([^>]*)>/g)];
   const ids = kids.map(k => k[1]);
-  t.check(ids.length === 11, `every container is a flat sibling div with an id (${ids.length})`);
+  t.check(ids.length === 12, `every container is a flat sibling div with an id (${ids.length})`);
 
   /* The two that were retired, and the two that replaced them. Named
      rather than merely absent: a wrap that comes back by accident is a
