@@ -158,6 +158,50 @@ const fmtUGX = (n) => Number(n).toLocaleString('en-US') + ' UGX';
       'the resume turn is the same sentence the owner\'s own "continue" sends');
   }
 
+  /* ---------- 3d. one proposal per play ------------------------------ */
+  {
+    const rows = [
+      { id: 30, status: 'proposed', date: '2026-09-20', body: { name: 'Retire the stale fixed markups on the top sellers', treats: 'margin' } },
+      { id: 28, status: 'proposed', date: '2026-09-19', body: { name: 'Retire the stale fixed markups on the top sellers.', treats: 'margin' } },
+      { id: 27, status: 'proposed', date: '2026-09-19', body: { name: 'Buy Masasi at the rung', treats: 'supplier_cost' } },
+      { id: 26, status: 'proposed', date: '2026-09-18', body: { name: 'Charge for cutting', treats: 'margin' } },
+      { id: 20, status: 'running', date: '2026-09-10', body: { name: 'Charge for cutting', treats: 'margin', startedOn: '2026-09-11' } },
+    ];
+    const { managerPlaybook } = compileScope([extractFunction(src, 'managerPlaybook', 'index.html')], {
+      managerNotesTable: true, currentShopId: 'S', todayISO: () => TODAY,
+      MANAGER_PROBLEMS: { margin: 'Margin', supplier_cost: 'Supplier cost' },
+      managerPlayProgress: () => null, managerPlayClock: () => null,
+      sb: { from: () => { const q = { select: () => q, eq: () => q, order: () => q,
+        limit: () => Promise.resolve({ data: rows, error: null }) }; return q; } },
+      console, String, Number, Math, Map, Set,
+    }, ['managerPlaybook']);
+    const book = await managerPlaybook();
+    const retire = book.proposed.filter((p) => /Retire the stale/.test(p.name));
+    t.check(retire.length === 1 && retire[0].id === 30 && retire[0].dupIds.join() === '28',
+      'a play proposed twice shows once, the newest, with the older copy carried to be retired (a trailing full stop is the same play)');
+    t.check(!book.proposed.some((p) => p.name === 'Charge for cutting'), 'a play already running is not proposed again beside itself');
+    t.check(book.proposed.length === 2 && book.running.length === 1, 'and the rest are untouched');
+    const status = extractFunction(src, 'managerPlayStatus', 'index.html');
+    t.check(/async function managerPlayStatus\(rowId, status, dupIds\)/.test(status)
+      && /if\(status === 'running' \|\| status === 'dropped'\) await managerRetireDuplicates\(dupIds\);/.test(status),
+      'trying it or setting it aside retires the older copies too');
+    t.check(/managerPlayStatus\(id, status, dups\)/.test(extractFunction(src, 'renderManager', 'index.html')),
+      'and the row hands its copies to that answer');
+  }
+
+  /* ---------- 3e. a meeting that stopped short says so ------------------ */
+  {
+    const render = extractFunction(src, 'renderManager', 'index.html');
+    t.check(/const cutShort = \(\)=> apMode === 'manager' && apWasCutOff && !managerCommittedPlan && !assistantBusy;/.test(render),
+      'a manager sitting cut off before any plan was kept is told apart from no meeting at all');
+    t.check(/const notHeldHTML = \(weekMeetings, last\)=> cutShort\(\) \? unfinishedHTML\(\) :/.test(render)
+      && /ran out of room before its plan/.test(render) && /<span class="ow-pan-n">unfinished<\/span>/.test(render),
+      'and the plan panel says the meeting is unfinished instead of "not held"');
+    t.check(/id="mgrFinishBtn">Finish the meeting<\/button>/.test(render)
+      && /finBtn\.addEventListener\('click', \(\)=>\{ apOpenPanel\(\); apSend\('continue'\); \}\);/.test(render),
+      'with one button that finishes it — "continue", sent for the owner');
+  }
+
   /* ---------- 4. wiring ------------------------------------------------ */
   {
     const render = extractFunction(src, 'renderManager', 'index.html');

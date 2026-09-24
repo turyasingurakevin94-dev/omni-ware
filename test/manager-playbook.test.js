@@ -208,6 +208,7 @@ const base = {
       const updates = [], inserts = [], toasts = [];
       const s = compileScope([
         extractFunction(src, 'managerPlayStatus', 'index.html'),
+        extractFunction(src, 'managerRetireDuplicates', 'index.html'),
         extractFunction(src, 'managerAddOwnPlay', 'index.html'),
         extractDeclaration(src, 'MANAGER_PROBLEM_METRICS', 'index.html'),
         'function names(){ return { managerPlayStatus, managerAddOwnPlay }; }',
@@ -409,7 +410,9 @@ const base = {
     const render = extractFunction(src, 'renderManager', 'index.html');
     t.check(/managerPlaybook\(\)/.test(render),
       'the screen draws the playbook from the same function the tool calls');
-    t.check(/managerPlayStatus\(id, status\)/.test(render) && /managerAddOwnPlay\(/.test(render),
+    /* The tap also hands over the older copies of a proposal written
+       before the duplicate guard, so answering one retires them all. */
+    t.check(/managerPlayStatus\(id, status, dups\)/.test(render) && /managerAddOwnPlay\(/.test(render),
       'with the taps that try, stop and add one');
     const rest = src.replace(extractFunction(src, 'managerPlaybook', 'index.html'),
       extractFunction(src, 'managerPlayClock', 'index.html'),

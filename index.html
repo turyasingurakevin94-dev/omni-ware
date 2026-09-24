@@ -93042,9 +93042,26 @@ async function managerPlaybook(){
     p.progress = managerPlayProgress(p, todayISO(), running);
     p.clock = managerPlayClock(p, todayISO());
   });
+  /* ONE PROPOSAL PER PLAY. Proposals written before the duplicate guard
+     (0097) could stand twice -- "Retire the stale fixed markups on the
+     top sellers", word for word, each with its own Try it. Keyed the way
+     the guard keys them (the name, letters and digits only), the newest
+     speaks for its play and the older copies ride along as dupIds, so
+     trying it or setting it aside retires them too. A play already
+     running is not proposed again beside itself. */
+  const playKey = (name)=> String(name || '').trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+  const runningKeys = new Set(running.map(p=> playKey(p.name)));
+  const byKey = new Map();
+  rows.filter(x=> x.status === 'proposed').forEach(x=>{
+    const k = playKey((x.body||{}).name);
+    if(!k || runningKeys.has(k)) return;
+    const seen = byKey.get(k);
+    if(seen){ seen.dupIds.push(x.id); return; }
+    byKey.set(k, { ...view(x), dupIds: [] });
+  });
   return {
     running,
-    proposed: rows.filter(x=> x.status === 'proposed').map(view),
+    proposed: [...byKey.values()],
     dropped: rows.filter(x=> x.status === 'dropped' || x.status === 'done').map(x=> ({ ...view(x), status: x.status })),
   };
 }
@@ -93205,7 +93222,7 @@ function managerPlayProgress(view, dateISO, plays){
   return out;
 }
 
-async function managerPlayStatus(rowId, status){
+async function managerPlayStatus(rowId, status, dupIds){
   if(!managerNotesTable || rowId == null) return;
   const cur = await sb.from('manager_notes').select('body').eq('shop_id', currentShopId).eq('id', rowId).single();
   const body = (cur.data && cur.data.body) || {};
@@ -93227,6 +93244,9 @@ async function managerPlayStatus(rowId, status){
       : 'Could not change that play — ' + up.error.message, 9000);
     return;
   }
+  /* The older copies of this proposal are answered with it: whichever
+     way the owner went, the question is closed for all of them. */
+  if(status === 'running' || status === 'dropped') await managerRetireDuplicates(dupIds);
   toast(status === 'running' ? 'Running — the manager knows it is on and will not propose it again'
     : status === 'done' ? 'Marked as worked — it stays on the record'
     : 'Set aside — it will not be proposed again');
@@ -94366,7 +94386,24 @@ function renderManager(){
       than replacing the first.</p>
     <button type="button" class="btn btn-ghost ow-sm" id="mgrRunBtn">Hold another anyway</button>
   </div>`;
-  const notHeldHTML = (weekMeetings, last)=> `<div class="ow-pan">
+  /* A MEETING THAT STARTED AND STOPPED SHORT OF ITS PLAN is not "no
+     meeting". The panel beside this screen holds a whole transcript, and
+     the screen used to say nothing had happened -- which is how an owner
+     came to ask why it said no meeting was held. It says what happened
+     instead, and the one button finishes it: "continue", sent for them. */
+  const cutShort = ()=> apMode === 'manager' && apWasCutOff && !managerCommittedPlan && !assistantBusy;
+  const unfinishedHTML = ()=> `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">Today&rsquo;s plan</span>
+      <span class="ow-pan-n">unfinished</span></div>
+    <div class="mgr-emp">
+      <svg class="mgr-emp-i" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg>
+      <p class="mgr-emp-t">Today&rsquo;s meeting ran out of room before its plan.</p>
+      <p class="mgr-emp-w">What it said is in the panel; the moves, targets and questions come at the end,
+        and they are kept the moment they arrive. Finishing picks up where it stopped &mdash; it does not start again.</p>
+      <button type="button" class="btn btn-accent" id="mgrFinishBtn">Finish the meeting</button>
+    </div>
+  </div>`;
+  const notHeldHTML = (weekMeetings, last)=> cutShort() ? unfinishedHTML() : `<div class="ow-pan">
     <div class="ow-pan-h"><span class="ow-pan-t">Today&rsquo;s plan</span>
       <span class="ow-pan-n">not held</span></div>
     <div class="mgr-emp">
@@ -94384,6 +94421,8 @@ function renderManager(){
   const wireOffers = ()=>{
     const runBtn = document.getElementById('mgrRunBtn');
     if(runBtn) runBtn.addEventListener('click', runManagerMeeting);
+    const finBtn = document.getElementById('mgrFinishBtn');
+    if(finBtn) finBtn.addEventListener('click', ()=>{ apOpenPanel(); apSend('continue'); });
     const revBtn = document.getElementById('mgrReviewBtn');
     if(revBtn) revBtn.addEventListener('click', runManagerReview);
   };
@@ -94460,7 +94499,7 @@ function renderManager(){
           c.daysOver === 1 ? 'day' : 'days'} past its ${c.weeks} weeks</span>`;
         return `<span class="mgr-play-clock">week ${c.weekOf} of ${c.weeks}</span>`;
       };
-      const row = (p, buttons)=> `<div class="mgr-pb" data-pid="${esc(String(p.id))}">
+      const row = (p, buttons)=> `<div class="mgr-pb" data-pid="${esc(String(p.id))}" data-dups="${esc((p.dupIds||[]).join(','))}">
         <div class="mgr-pb-n"><span class="mgr-pb-nm" title="${esc(p.name)}">${esc(p.name)}</span>${clock(p)}
           <span class="mgr-play-tag">${esc(p.problem)}${p.source === 'owner' ? ' · yours' : ''}</span></div>
         <p class="mgr-pb-m">${p.how ? esc(p.how) : ''}${
@@ -94498,7 +94537,8 @@ function renderManager(){
       </div>`;
       playWrap.querySelectorAll('.mgr-pb').forEach(el=>{
         const id = Number(el.dataset.pid);
-        const on = (sel, status)=>{ const b = el.querySelector(sel); if(b) b.addEventListener('click', ()=> managerPlayStatus(id, status)); };
+        const dups = String(el.dataset.dups || '').split(',').filter(Boolean).map(Number);
+        const on = (sel, status)=>{ const b = el.querySelector(sel); if(b) b.addEventListener('click', ()=> managerPlayStatus(id, status, dups)); };
         on('.mgr-play-run', 'running'); on('.mgr-play-drop', 'dropped'); on('.mgr-play-done', 'done');
       });
       const addBtn = playWrap.querySelector('#mgrPlayAdd');
