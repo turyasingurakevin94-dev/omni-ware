@@ -77,7 +77,7 @@ const env = {
   // helpers read .value straight off a search input and would throw on one.
   document: { getElementById: (id) => (String(id).startsWith('tab-') ? null : { value: '' }) },
   renderCbTransactions: () => {}, renderCbSummary: () => {}, renderCbTriggers: () => {},
-  renderInvoices: () => {}, renderCustomers: () => {}, renderDebtorsList: () => {},
+  invRenderSide: () => {}, renderCustomers: () => {}, renderDebtorsList: () => {},
   renderSavedQuotes: () => {}, renderPurchaseInvoices: () => {},
   // deleteSavedQuote asks before it acts, and so does voiding now.
   // Always saying yes is the harsher path -- it is the one that actually

@@ -40,7 +40,7 @@ const env = {
   generateCustomerId: () => 'C' + (nextId++),
   quoteSuggestedPrice: () => null, quoteSuggestedStockPrice: () => null,
   saveData: () => {},
-  renderInvoices: () => rendered.push('invoices'),
+  invRenderSide: () => rendered.push('invoices'),
   renderCustomers: () => rendered.push('customers'),
   renderDebtorsList: () => rendered.push('debtors'),
   document: { getElementById: () => ({ value: '' }) },
