@@ -352,7 +352,9 @@ const advice = async (rows) => {
       `every plan on the screen is drawn through the sequence pass (${passes.length} found)`);
     t.check(/const ordered = mgrMoveOrder\(rows\);/.test(src),
       'today\u2019s plan orders the moves once, before it draws any of them');
-    t.check(/mgrQueueRowHTML\(r, rows, \{ kindChip: true, open \}\)/.test(src),
+    /* The row also gets its number in the plan's own order (num), drawn
+       beside its face -- still the plan's order, never the drawing's. */
+    t.check(/mgrQueueRowHTML\(r, rows, \{ kindChip: true, open, rich: true, num: ordered\.indexOf\(r\) \}\)/.test(src),
       'and hands each row the whole plan, in its own order, not the drawing order');
     t.check(/mgrMoveOrder\(w\.moves\)\.map\(\(r, i\)=> mgrMoveView\(r, i, w\.moves\)\)/.test(src),
       'and a meeting opened in the journal is drawn the same way, through the same pass');
