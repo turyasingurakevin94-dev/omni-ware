@@ -255,7 +255,7 @@ const advice = async (rows) => {
       extractDeclaration(src, 'MANAGER_LEVERS', 'index.html'),
       extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
       extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html')],
-    { managerNotesTable: true, currentShopId: 'shop-1', todayISO: () => TODAY,
+    { data: {}, managerNotesTable: true, currentShopId: 'shop-1', todayISO: () => TODAY,
       apRound: (n) => Math.round(Number(n) || 0),
       sb: { from: () => ({ insert: (row) => { inserted.push(row); return {
         select: () => ({ single: () => Promise.resolve({ data: { id: 21 }, error: null }) }) }; } }) },
