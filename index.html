@@ -7221,6 +7221,65 @@
      down the document rather than a mark on each row. */
   .q-doc .q-shop-first{align-self:stretch;display:flex;align-items:center;min-width:0;
     border-left:1px solid var(--ow-rule);padding-left:var(--ow-sp-8);}
+  /* IN THE ORDER A LINE IS WORKED: what, from whom, how many, what it
+     costs, what it sells for, what that keeps, what it comes to. The
+     markup keeps its old order -- the phone card and every template
+     that reads a cell by position still find it -- and the desk lays
+     the cells out in this one. Buy each and Price each now sit side by
+     side under their own names, which is what keeps a cost from being
+     read as a price; the divider that used to do that job goes. */
+  @media (min-width:821px){
+    .q-doc .ow-tbl{--ow-tbl-cols:28px minmax(0,1fr) 150px 88px 86px 108px 52px minmax(112px,auto);}
+    .q-doc .ow-tbl-h > :nth-child(6),.q-doc .q-line > :nth-child(6){order:3;}
+    .q-doc .ow-tbl-h > :nth-child(3),.q-doc .q-line > :nth-child(3){order:4;}
+    .q-doc .ow-tbl-h > :nth-child(7),.q-doc .q-line > :nth-child(7){order:5;}
+    .q-doc .ow-tbl-h > :nth-child(4),.q-doc .q-line > :nth-child(4){order:6;}
+    .q-doc .ow-tbl-h > :nth-child(8),.q-doc .q-line > :nth-child(8){order:7;}
+    .q-doc .ow-tbl-h > :nth-child(5),.q-doc .q-line > :nth-child(5){order:8;}
+    .q-doc .ow-tbl-h > .q-shop-first,.q-doc .q-line > .q-shop-first{border-left:0;padding-left:0;}
+    .q-doc .q-foot-l{grid-column:1/8;}
+    .q-doc .q-foot-v{grid-column:8;}
+    .q-doc .q-foot-x{display:none;}
+  }
+  /* THE PHONE CARD, in the same order: name; who from; how many, what
+     it costs and what it sells for side by side; then what it keeps
+     and what it comes to. Seven stacked label rows became four. */
+  @media (max-width:820px){
+    .q-doc .ow-tbl-r.q-line:not(.q-charge){grid-template-columns:22px repeat(3,minmax(0,1fr)) 36px;row-gap:var(--ow-sp-8);}
+    .q-doc .q-line:not(.q-charge) .q-row-num{grid-column:1;grid-row:1;}
+    .q-doc .q-line:not(.q-charge) > .q-name-cell{grid-column:2/5;grid-row:1;}
+    .q-doc .q-line:not(.q-charge) .q-remove-icon{grid-column:5;grid-row:1;justify-self:end;}
+    .q-doc .q-line:not(.q-charge) > :nth-child(6){grid-column:1/-1;grid-row:2;}
+    .q-doc .q-line:not(.q-charge) > :nth-child(3){grid-column:1/3;grid-row:3;}
+    .q-doc .q-line:not(.q-charge) > :nth-child(7){grid-column:3/4;grid-row:3;}
+    .q-doc .q-line:not(.q-charge) > :nth-child(4){grid-column:4/6;grid-row:3;}
+    .q-doc .q-line:not(.q-charge) > :nth-child(3),
+    .q-doc .q-line:not(.q-charge) > :nth-child(7),
+    .q-doc .q-line:not(.q-charge) > :nth-child(4){flex-direction:column;align-items:stretch;justify-content:flex-start;gap:2px;}
+    .q-doc .q-line:not(.q-charge) > :nth-child(3) .ow-gi,
+    .q-doc .q-line:not(.q-charge) > :nth-child(7) .ow-gi,
+    .q-doc .q-line:not(.q-charge) > :nth-child(4) .ow-gi{max-width:none;width:100%;min-height:var(--ow-tap);box-sizing:border-box;text-align:right;}
+    .q-doc .q-line:not(.q-charge) > :nth-child(8){grid-column:1/4;grid-row:4;}
+    .q-doc .q-line:not(.q-charge) > :nth-child(5){grid-column:4/6;grid-row:4;}
+    .q-doc .q-line:not(.q-charge) > .q-line-flag{grid-column:1/-1;grid-row:5;justify-content:flex-start;}
+    .q-doc .q-line:not(.q-charge) .q-qty-cell{display:flex;align-items:center;gap:6px;}
+  }
+  /* The picker's keep line: what the two boxes above leave, and the
+     save offer when the buy price typed is not the one on file. */
+  .q-ip-keep{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ow-sp-8);margin:calc(-1 * var(--ow-sp-6)) 0 var(--ow-sp-10);font-size:12px;}
+  .q-ip-keep-c{padding:2px 10px;border-radius:var(--ow-r-pill);font-weight:600;background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .q-ip-keep-c.is-low{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .q-ip-keep-c.is-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .q-ip-save{display:flex;align-items:center;gap:6px;font-weight:500;}
+  /* A buy price that wants a decision, under its line. */
+  .q-line-flag{grid-column:1/-1;order:9;display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;
+    gap:var(--ow-sp-8);margin-top:var(--ow-sp-4);font-size:12px;}
+  .q-flag-t{padding:2px 10px;border-radius:var(--ow-r-pill);font-weight:600;
+    background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .q-line-flag.is-old .q-flag-t{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .q-line-flag.is-down .q-flag-t{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .q-flag-undo{all:unset;cursor:pointer;font-weight:600;color:var(--ow-ink-600);text-decoration:underline;}
+  .q-has-flag .q-price{border-color:var(--ow-amber);}
   /* The gutter: the line's number, and on hover the way to remove it. */
   .q-gutter{display:flex;align-items:center;justify-content:center;min-width:0;}
   .q-row-num{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);min-width:14px;text-align:center;}
@@ -7539,6 +7598,9 @@
      caution colour, so it prompts fixing the product instead of being
      read to the client as the price. */
   .ip-price-norule{color:var(--warn-ink);font-size:11px;}
+  .ip-price-keep{display:block;font-style:normal;font-size:11px;font-weight:600;color:var(--ow-verdigris);text-align:right;}
+  .ip-price-keep.is-low{color:var(--ow-amber-ink);}
+  .ip-price-keep.is-bad{color:var(--ow-crimson);}
   .ip-price-none{font-size:11px;}
   .ip-stock{font-size:10.5px;color:var(--ink-soft);font-weight:600;white-space:nowrap;}
   .ip-stock.none{color:var(--warn-ink);}
@@ -7562,8 +7624,8 @@
     background:var(--ow-steel-050);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:8px;
   }
   .q-qty-field{flex-shrink:0;gap:3px;}
-  .q-qty-field:last-child{flex:1;min-width:110px;}
-  .q-qty-field:last-child input{width:100%;box-sizing:border-box;}
+  .q-qty-field:not(:first-child){flex:1;min-width:110px;}
+  .q-qty-field:not(:first-child) input{width:100%;box-sizing:border-box;}
   .q-qty-field label{font-size:10px;text-transform:uppercase;letter-spacing:0.4px;font-weight:700;color:var(--ink-soft);}
   .q-qty-input-group{display:flex;gap:6px;}
   .q-qty-input-group input{
@@ -39206,6 +39268,20 @@ function suggestionStockParts(p, variantIdx){
 function ipSuggestionPriceNote(p, variantIdx){
   const best = rankedPriceRows(p.id, variantIdx)[0];
   if(!best) return '<span class="ip-price-none">No price on file</span>';
+  const packQty = Number(best.packQty)||0;
+  const keep = (sell, cost)=> sell > 0
+    ? `<em class="ip-price-keep${sell - cost <= 0 ? ' is-bad' : (sell - cost) / sell < 0.1 ? ' is-low' : ''}">keep ${Math.round((sell - cost) / sell * 100)}%</em>` : '';
+  /* WHOLESALE FIRST. This shop sells mostly by the pack, so where the
+     supplier has a pack price AND the product has a wholesale rule to
+     turn it into a sell, the row leads with that -- the pack price the
+     rep will actually quote, per bundle or carton, and what it keeps. */
+  if(best.wholesale!=null){
+    const wsSell = suggestedSellingPrice(p, best.wholesale, 'wholesale', variantIdx, packQty);
+    if(wsSell!=null){
+      const packUnit = best.packUnit || best.unit;
+      return `<span class="ip-price-sell">${fmtUGXPerUnit(Math.round(wsSell), packUnit)}<i>wholesale</i></span>${keep(wsSell, best.wholesale)}`;
+    }
+  }
   /* The tier the supplier actually offers, not a hardcoded one. The
      first cut always asked the RETAIL rule -- and half this shop's
      catalogue is carton-only, priced wholesale with a wholesale markup
@@ -39216,12 +39292,11 @@ function ipSuggestionPriceNote(p, variantIdx){
      the wholesale rule against the wholesale cost. */
   const kind = best.retail!=null ? 'retail' : 'wholesale';
   const cost = best.retail!=null ? best.retail : best.wholesale;
-  const packQty = Number(best.packQty)||0;
   const sell = suggestedSellingPrice(p, cost, kind, variantIdx, packQty);
   if(sell==null){
     return `<span class="ip-price-norule" title="No ${kind} markup rule on this product — set one in Products and this becomes a sell price">cost ${fmtUGXPerUnit(cost, best.unit)} · no markup rule</span>`;
   }
-  return `<span class="ip-price-sell">${fmtUGXPerUnit(Math.round(sell), best.unit)}<i>sell</i></span>`;
+  return `<span class="ip-price-sell">${fmtUGXPerUnit(Math.round(sell), best.unit)}<i>sell</i></span>${keep(sell, cost)}`;
 }
 /* "14 in stock" / "out of stock", said where the choosing happens --
    whether the shelf can cover it decides what the admin promises.
@@ -39275,7 +39350,7 @@ function ipRenderList(query){
       <div class="ip-item-price">${priceNote}</div>
     </div>`;
   }).join('')
-  + `<div class="ip-list-note">Sell prices — costs and suppliers appear after you pick the item.</div>`;
+  + `<div class="ip-list-note">Wholesale price per pack where the product has a wholesale rule — suppliers and buy prices appear after you pick.</div>`;
 }
 function ipShowSearchView(){
   ipProductId = null; ipVariantIdx = null; ipSelectedSupplierId = null; ipSelectedRecType = null;
@@ -39336,7 +39411,7 @@ function renderQuoteItemSearchDd(query){
       <div class="ip-item-price">${ipSuggestionPriceNote(p, variantIdx)}</div>
     </div>`;
   }).join('')
-  + `<div class="ip-list-note">Sell prices — costs and suppliers appear after you pick the item.</div>`;
+  + `<div class="ip-list-note">Wholesale price per pack where the product has a wholesale rule — suppliers and buy prices appear after you pick.</div>`;
   dd.style.display = 'block';
 }
 function quoteItemSearchPick(sel){
@@ -39752,9 +39827,14 @@ function renderIpStage(){
       </div>
       <div class="field q-qty-field">
         <label>Sell price ${chosenIsPack ? `per ${esc(packUnit)}` : 'each'} (UGX)</label>
-        <input type="number" id="ip_price" min="0" step="any" value="${Math.round(sellStart * perChosen)}" title="What the client pays per ${esc(chosenUnit||'unit')} — the buy cost is recorded automatically from the chosen supplier">
+        <input type="number" id="ip_price" min="0" step="any" value="${Math.round(sellStart * perChosen)}" title="What the client pays per ${esc(chosenUnit||'unit')} — the buy cost is recorded automatically from the chosen supplier, or from Buy today if you type one">
+      </div>
+      <div class="field q-qty-field">
+        <label for="ip_buy">Buy ${chosenIsPack ? `per ${esc(packUnit)}` : 'each'} today</label>
+        <input type="number" id="ip_buy" min="0" step="any" value="${Math.round(buyStart * perChosen)}" data-file="${Math.round(buyStart * perChosen)}"${ipSelectedSupplierId==='__stock__' ? ' readonly title="What the stock on the shelf cost"' : ` title="${esc(supplierName(ipSelectedSupplierId) || 'The supplier')}’s price — type today’s if it has changed"`}>
       </div>
     </div>
+    <div class="q-ip-keep" id="ip_keep" aria-live="polite"></div>
 
     ${oosHTML}
     ${ranked.length===0 && !oosNotice ? `<div class="q-no-prices">No prices recorded for this item yet. Set a price manually below, or add price entries in the Price Registry tab.</div>` : ''}
@@ -39763,6 +39843,14 @@ function renderIpStage(){
       <div class="q-stage-col q-stage-col-left">
         <div class="q-section-label">Recommended prices</div>
         <div class="q-rec-cards">
+          <div class="q-rec-card ${effectiveRecType==='wholesale'?'selected':''} ${suggWholesale==null?'q-rec-disabled':''}" data-use="wholesale" role="button" tabindex="${suggWholesale==null?'-1':'0'}">
+            <svg class="q-rec-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
+            <div class="q-rec-info">
+              <span class="q-rec-label">Wholesale</span>
+              <span class="q-rec-value">${fmtPriceCompactPack(suggWholesale, refRow)}</span>
+            </div>
+            ${suggWholesale!=null?`<span class="q-rec-use">${effectiveRecType==='wholesale'?'✓ Using':'Use →'}</span>`:''}
+          </div>
           ${lastToClient ? `<div class="q-rec-card q-rec-last ${effectiveRecType==='last'?'selected':''} ${lastCovers?'':'q-rec-under'}" data-use="last" role="button" tabindex="0" title="${lastCovers ? 'The price this client was last given for this item' : 'This is now below what the item costs you — charging it would sell at a loss'}">
             <svg class="q-rec-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5l3 2"/><circle cx="12" cy="12" r="9"/></svg>
             <div class="q-rec-info">
@@ -39772,14 +39860,6 @@ function renderIpStage(){
             </div>
             <span class="q-rec-use">${effectiveRecType==='last'?'✓ Using':'Use →'}</span>
           </div>` : ''}
-          <div class="q-rec-card ${effectiveRecType==='wholesale'?'selected':''} ${suggWholesale==null?'q-rec-disabled':''}" data-use="wholesale" role="button" tabindex="${suggWholesale==null?'-1':'0'}">
-            <svg class="q-rec-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
-            <div class="q-rec-info">
-              <span class="q-rec-label">Wholesale</span>
-              <span class="q-rec-value">${fmtPriceCompactPack(suggWholesale, refRow)}</span>
-            </div>
-            ${suggWholesale!=null?`<span class="q-rec-use">${effectiveRecType==='wholesale'?'✓ Using':'Use →'}</span>`:''}
-          </div>
           <div class="q-rec-card q-rec-retail ${effectiveRecType==='retail'?'selected':''} ${suggRetail==null?'q-rec-disabled':''}" data-use="retail" role="button" tabindex="${suggRetail==null?'-1':'0'}">
             <svg class="q-rec-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
             <div class="q-rec-info">
@@ -39885,6 +39965,30 @@ function renderIpStage(){
     });
   });
 
+  /* What the line keeps, as the two boxes are typed into, and -- when
+     the buy price typed differs from the supplier's price on file -- the
+     offer to save it to their list. Nothing is written until the line is
+     added, and then only if the box is ticked. */
+  const ipKeepEl = wrap.querySelector('#ip_keep');
+  const ipBuyEl = wrap.querySelector('#ip_buy');
+  const ipSellEl = wrap.querySelector('#ip_price');
+  let ipSaveBook = true;
+  const renderIpKeep = ()=>{
+    if(!ipKeepEl || !ipBuyEl || !ipSellEl) return;
+    const b = Number(ipBuyEl.value) || 0, sv = Number(ipSellEl.value) || 0, onFile = Number(ipBuyEl.dataset.file) || 0;
+    const k = sv - b, pct = sv > 0 ? Math.round(k / sv * 100) : 0;
+    const tone = k <= 0 ? 'is-bad' : pct < 10 ? 'is-low' : '';
+    const moved = ipSelectedSupplierId && ipSelectedSupplierId !== '__stock__' && onFile > 0 && Math.round(b) !== Math.round(onFile);
+    ipKeepEl.innerHTML = `<span class="q-ip-keep-c ${tone}">keep ${esc(fmtUGX(Math.round(k)))} ${chosenIsPack ? `a ${esc(packUnit)}` : 'each'} &middot; ${pct}%</span>${
+      moved ? `<span class="q-flag-t">${b > onFile ? '↑' : '↓'} ${esc(fmtUGX(Math.abs(Math.round(b - onFile))))} on the ${esc(fmtUGX(onFile))} on file</span>
+        <label class="q-ip-save"><input type="checkbox" id="ip_buy_save"${ipSaveBook ? ' checked' : ''}> Save to ${esc(supplierName(ipSelectedSupplierId))}’s price list</label>` : ''}`;
+    const cb = ipKeepEl.querySelector('#ip_buy_save');
+    if(cb) cb.addEventListener('change', ()=>{ ipSaveBook = cb.checked; });
+  };
+  if(ipBuyEl) ipBuyEl.addEventListener('input', renderIpKeep);
+  if(ipSellEl) ipSellEl.addEventListener('input', renderIpKeep);
+  renderIpKeep();
+
   document.getElementById('ip_add_btn').addEventListener('click', ()=>{
     // Recomputed fresh rather than trusting the render-time closures above
     // -- qty/unit changes always trigger a full re-render before this can
@@ -39900,7 +40004,12 @@ function renderIpStage(){
     const supplierId = ipSelectedSupplierId;
     if(!supplierId){ toast('Choose a supplier first'); return; }
     const overStock = supplierId==='__stock__' && qty > stockQty;
-    const buyPrice = ipLineBuyPrice(supplierId, refRow, qty, stockCost);
+    let buyPrice = ipLineBuyPrice(supplierId, refRow, qty, stockCost);
+    /* A price typed in "Buy today" is this line's cost; whether it also
+       becomes the supplier's price on file is the tick box's decision. */
+    const typedBuy = ipBuyEl && supplierId !== '__stock__' ? (Number(ipBuyEl.value) || 0) / (inPacks ? packQty : 1) : null;
+    const buyTyped = typedBuy != null && typedBuy > 0 && Math.round(typedBuy * (inPacks ? packQty : 1)) !== Math.round(Number(ipBuyEl.dataset.file) || 0);
+    if(buyTyped) buyPrice = typedBuy;
     ensureQuote();
     data.quote.items.push({
       lineId: data.nextQuoteLineId++,
@@ -39911,6 +40020,11 @@ function renderIpStage(){
       qty, supplierId, supplierName: supplierName(supplierId),
       price: buyPrice, sellPrice
     });
+    if(buyTyped){
+      const added = data.quote.items[data.quote.items.length-1];
+      if(ipSaveBook) quoteLineSaveToBook(added);
+      else added.priceTyped = true;
+    }
     saveData();
     closeModal('itemPickerModal');
     renderQuoteItems();
@@ -39923,6 +40037,52 @@ function renderIpStage(){
     toast(warnings.length ? `Added — but ${warnings.join('; and ')}.` : 'Item added to quote',
       warnings.length ? 7000 : undefined);
   });
+}
+
+/* The price row this quote line buys through, and what it charges at
+   the line's quantity -- the figure the line's Buy each started from. */
+function quoteLinePriceRow(item){
+  if(!item || !item.supplierId || item.supplierId === '__stock__') return null;
+  const vi = item.variantIdx==null ? null : item.variantIdx;
+  return (data.prices||[]).find(p=> p.productId===item.productId
+    && (p.variantIdx==null?null:p.variantIdx)===vi && p.supplierId===item.supplierId) || null;
+}
+function quoteLineOnFile(item){
+  const row = quoteLinePriceRow(item);
+  return row ? Number(purchasePriceAtQty(row, item.qty)) || null : null;
+}
+/* Saving a typed buy price to the supplier's list, at this line's
+   quantity -- the one write the quote line makes, and only when asked. */
+function quoteLineSaveToBook(item){
+  syncPriceRegistryFromPurchase(item.productId, item.variantIdx==null?null:item.variantIdx, item.supplierId, item.price, item.qty, {unit: item.unit});
+  delete item.priceTyped;
+}
+/* The strip under a line whose buy price wants a decision: a typed price
+   that differs from the list, or a listed price past its review age. */
+function quoteLineBuyFlag(item, qty, buy, sell){
+  const row = quoteLinePriceRow(item);
+  if(!row) return '';
+  const per = quoteLineCountPer(item);
+  const onFile = Number(purchasePriceAtQty(row, qty)) || 0;
+  const sup = esc(supplierName(item.supplierId));
+  if(item.priceTyped && Math.round(buy) !== Math.round(onFile)){
+    const d = (buy - onFile) * per;
+    const was = sell > 0 ? (sell - onFile) / sell * 100 : 0;
+    const now = sell > 0 ? (sell - buy) / sell * 100 : 0;
+    return `<div class="q-line-flag${d > 0 ? ' is-up' : ' is-down'}" role="status">
+      <span class="q-flag-t">Buy ${d > 0 ? '↑' : '↓'} ${esc(fmtUGX(Math.abs(Math.round(d))))} on the ${esc(fmtUGX(Math.round(onFile * per)))} on file &middot; margin ${Math.round(was)}% → ${Math.round(now)}%</span>
+      <button type="button" class="btn btn-ghost ow-sm q-flag-save">Save to ${sup}’s price list</button>
+      <button type="button" class="q-flag-undo">Put it back</button>
+    </div>`;
+  }
+  const age = priceAgeDays(row.date);
+  if(age != null && age > priceStaleDaysFor(row)){
+    return `<div class="q-line-flag is-old" role="status">
+      <span class="q-flag-t">${sup}’s price on file is ${age} days old &mdash; type today’s in Buy each, or</span>
+      <button type="button" class="btn btn-ghost ow-sm q-flag-still" data-price="${esc(String(row.id))}">Still right</button>
+    </div>`;
+  }
+  return '';
 }
 
 function renderQuoteItems(){
@@ -40008,7 +40168,14 @@ function renderQuoteItems(){
         ${manual?`<button type="button" class="q-sell-reset" title="Reset to suggested price"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>`:''}
       </div>`;
 
-    return `<div class="ow-tbl-r q-line${rowMarginClass}" data-line="${it.lineId}">
+    /* THE BUY PRICE, AGAINST WHAT IS ON FILE. A price typed here is the
+       supplier's price moving -- or a one-off for this quote -- and which
+       it is is the rep's call, so the line says the difference and offers
+       to save it rather than writing it to the price list behind their
+       back. With nothing typed, a price on file past its review age says
+       so here, where it is about to be quoted on. */
+    const flag = quoteLineBuyFlag(it, qty, buy, sell);
+    return `<div class="ow-tbl-r q-line${rowMarginClass}${flag ? ' q-has-flag' : ''}" data-line="${it.lineId}">
       <div class="ow-tbl-c q-gutter">
         <span class="q-row-num">${idx+1}</span>
         <button class="q-remove-icon" title="Remove item" aria-label="Remove line ${idx+1}"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
@@ -40026,9 +40193,10 @@ function renderQuoteItems(){
         (!asPack && packView) ? `<span class="q-qty-pack" title="The quotation and the invoice will say ${esc(packView.text)} — ${esc(String(it.packQty))} ${esc(it.unit || 'units')} in a ${esc(it.packUnit)}">= ${esc(packView.short)}</span>` : ''}</div>
       <div class="ow-tbl-n" data-l="Price each">${sellCellHTML}</div>
       <div data-l="Line total" title="What this line adds to the client's bill" class="ow-tbl-n q-line-total price">${fmtUGX(lineSell)}</div>
-      <div class="ow-tbl-c q-shop-first" data-l="Supplier">${supplierPickerHTML}</div>
-      <div class="ow-tbl-n" data-l="Buy @"><input type="number" class="ow-gi price-input q-price" min="0" step="any" value="${Math.round(it.price * per)}" aria-label="Buy price${countUnit ? ` per ${esc(countUnit)}` : ''}"></div>
+      <div class="ow-tbl-c q-shop-first" data-l="Buying from">${supplierPickerHTML}</div>
+      <div class="ow-tbl-n" data-l="Buy each"><input type="number" class="ow-gi price-input q-price" min="0" step="any" value="${Math.round(it.price * per)}" aria-label="Buy price${countUnit ? ` per ${esc(countUnit)}` : ''}"></div>
       <div class="ow-tbl-n" data-l="Margin"><span class="q-margin-pill ${pillClass}">${Math.round(marginPct)}%</span></div>
+      ${flag}
     </div>`;
   }).join('');
 
@@ -40118,8 +40286,8 @@ function renderQuoteItems(){
       <div class="ow-tbl-n">Qty</div>
       <div class="ow-tbl-n">Price each</div>
       <div class="ow-tbl-n">Line total</div>
-      <div class="ow-tbl-c q-shop-first">Supplier</div>
-      <div class="ow-tbl-n">Buy @</div>
+      <div class="ow-tbl-c q-shop-first">Buying from</div>
+      <div class="ow-tbl-n">Buy each</div>
       <div class="ow-tbl-n">Margin</div>
     </div>${rowsHtml}${takesCharges ? chargeRowsHTML(data.quote, grandSell) : ''}${takesCredit ? creditRowHTML(data.quote, cashTotal) : ''}${addRowHtml}${takesCharges ? chargeAddRowHTML() : ''}${takesCredit ? creditOfferRowHTML(data.quote) : ''}${footHtml}
   </div>`;
@@ -40172,9 +40340,30 @@ function renderQuoteItems(){
       /* item.unit was snapshotted from whoever this line was quoted
          against; setLineSupplier may since have moved it to a supplier
          who prices in something else. */
-      syncPriceRegistryFromPurchase(item.productId, item.variantIdx==null?null:item.variantIdx, item.supplierId, item.price, item.qty, {unit: item.unit});
+      /* Not written to the price list from here. The line flags the
+         difference against what is on file and the rep chooses: save it
+         for next time, or keep it to this quote. */
+      const onFile = quoteLineOnFile(item);
+      item.priceTyped = onFile != null && Math.round(item.price) !== Math.round(onFile);
       saveData(); renderQuoteItems();
     });
+    row.querySelectorAll('.q-flag-save').forEach(b=> b.addEventListener('click', ()=>{
+      quoteLineSaveToBook(item);
+      saveData(); renderQuoteItems();
+      toast(`Saved to ${supplierName(item.supplierId)}’s price list`);
+    }));
+    row.querySelectorAll('.q-flag-undo').forEach(b=> b.addEventListener('click', ()=>{
+      const onFile = quoteLineOnFile(item);
+      if(onFile != null) item.price = onFile;
+      delete item.priceTyped;
+      saveData(); renderQuoteItems();
+    }));
+    row.querySelectorAll('.q-flag-still').forEach(b=> b.addEventListener('click', ()=>{
+      if(confirmPriceUnchanged(Number(b.dataset.price))){
+        saveData(); renderQuoteItems();
+        toast(`Marked ${supplierName(item.supplierId)}’s price as checked today`);
+      }
+    }));
     row.querySelector('.q-sell').addEventListener('change', (e)=>{
       // Typed per the unit the row counts in; kept per base unit.
       item.sellPrice = (Number(e.target.value) || 0) / quoteLineCountPer(item);
