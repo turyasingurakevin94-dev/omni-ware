@@ -93,7 +93,7 @@ let scope = null; let err = null;
 try {
   scope = compileScope([
     'debtChaseRows', 'debtChaseInvoices', 'debtChaseMessage',
-    'markDebtChased', 'unmarkDebtChased', 'pruneDebtChases',
+    'markDebtChased', 'unmarkDebtChased', 'pruneDebtChases', 'logDebtChase', 'unlogDebtChase',
     'promisesFor', 'promiseState', 'promiseLatest', 'promisesBroken',
     'debAllRows', 'customerOpenCharges', 'customerOldestOpenChargeDate',
     'customerDebtProgress', 'customerDebtDrift', 'customerLedgerTotal', 'customerOrdersFor',
@@ -103,6 +103,8 @@ try {
     .concat([
       extractDeclaration(src, 'AGING_BANDS', 'index.html'),
       extractDeclaration(src, 'DEBT_CHASE_INVOICE_LINES', 'index.html'),
+      extractDeclaration(src, 'CHASE_LOG_DAYS', 'index.html'),
+      extractDeclaration(src, 'CHASE_LOG_MAX', 'index.html'),
     ]),
   env, ['debtChaseRows', 'debtChaseMessage', 'markDebtChased', 'unmarkDebtChased', 'pruneDebtChases']);
 } catch (e) { err = e; }

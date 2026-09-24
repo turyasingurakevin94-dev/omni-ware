@@ -88,7 +88,8 @@ const MOVES = [
 ];
 
 const NAMES = ['deriveMoveOutcome', 'managerTrackRecord', 'trackRecordName',
-  'trackRecordLine', 'trackRecordDeadLevers'];
+  'trackRecordLine', 'trackRecordDeadLevers',
+  'collectionInvoiceTxn', 'collectionLedgerRow', 'debtLogIsInvoiceOwned', 'cashIsMoneyIn'];
 const build = (rows, over) => compileScope(
   NAMES.map((n) => extractFunction(src, n, 'index.html'))
     .concat([extractDeclaration(src, 'TRACK_MOVES_READ', 'index.html'),

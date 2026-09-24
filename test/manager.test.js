@@ -260,7 +260,7 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
 /* ---------- 4. the verdict comes from the books --------------------- */
 {
   const data = { customers: [], stockLog: [], savedQuotes: [], purchaseInvoices: [] };
-  const NAMES = ['deriveMoveOutcome'];
+  const NAMES = ['deriveMoveOutcome', 'collectionInvoiceTxn', 'collectionLedgerRow', 'debtLogIsInvoiceOwned', 'cashIsMoneyIn'];
   const fns = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html')), {
     data, fmtUGX: (n) => `${Math.round(n).toLocaleString('en-US')} UGX`,
   }, NAMES);
@@ -518,7 +518,7 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
       extractDeclaration(src, 'MANAGER_PROBLEM_METRICS', 'index.html'),
       extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
       extractDeclaration(src, 'BUY_HOLD_MAX_DAYS', 'index.html'),
-      extractFunction(src, 'deriveMoveOutcome', 'index.html'),
+      extractFunction(src, 'deriveMoveOutcome', 'index.html'), extractFunction(src, 'collectionInvoiceTxn', 'index.html'), extractFunction(src, 'collectionLedgerRow', 'index.html'), extractFunction(src, 'debtLogIsInvoiceOwned', 'index.html'), extractFunction(src, 'cashIsMoneyIn', 'index.html'),
       extractFunction(src, 'managerScoreboard', 'index.html'),
       extractFunction(src, 'managerRecentReviews', 'index.html'),
       extractFunction(src, 'managerReviewBrief', 'index.html'),
@@ -573,7 +573,7 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
       extractDeclaration(src, 'MANAGER_PROBLEM_METRICS', 'index.html'),
       extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
       extractDeclaration(src, 'BUY_HOLD_MAX_DAYS', 'index.html'),
-      extractFunction(src, 'deriveMoveOutcome', 'index.html'),
+      extractFunction(src, 'deriveMoveOutcome', 'index.html'), extractFunction(src, 'collectionInvoiceTxn', 'index.html'), extractFunction(src, 'collectionLedgerRow', 'index.html'), extractFunction(src, 'debtLogIsInvoiceOwned', 'index.html'), extractFunction(src, 'cashIsMoneyIn', 'index.html'),
       extractFunction(src, 'managerScoreboard', 'index.html'),
       extractFunction(src, 'managerRecentReviews', 'index.html'),
       extractFunction(src, 'managerReviewBrief', 'index.html'),

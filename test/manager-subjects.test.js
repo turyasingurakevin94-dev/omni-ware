@@ -101,7 +101,7 @@ const books = () => ({
 /* ---------- 1. the gap names itself, and only when it is a gap ------- */
 {
   const data = books();
-  const derive = compileScope([extractFunction(src, 'deriveMoveOutcome', 'index.html')],
+  const derive = compileScope([extractFunction(src, 'deriveMoveOutcome', 'index.html'), extractFunction(src, 'collectionInvoiceTxn', 'index.html'), extractFunction(src, 'collectionLedgerRow', 'index.html'), extractFunction(src, 'debtLogIsInvoiceOwned', 'index.html'), extractFunction(src, 'cashIsMoneyIn', 'index.html')],
     { data, fmtUGX: (n) => String(n), Math, Number, String, Object, Array },
     ['deriveMoveOutcome']).deriveMoveOutcome;
 
@@ -255,7 +255,7 @@ const books = () => ({
   };
   const scope = compileScope([
     extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
-    extractFunction(src, 'deriveMoveOutcome', 'index.html'),
+    extractFunction(src, 'deriveMoveOutcome', 'index.html'), extractFunction(src, 'collectionInvoiceTxn', 'index.html'), extractFunction(src, 'collectionLedgerRow', 'index.html'), extractFunction(src, 'debtLogIsInvoiceOwned', 'index.html'), extractFunction(src, 'cashIsMoneyIn', 'index.html'),
     extractFunction(src, 'anRowsByCustomer', 'index.html'),
     /* The supplier side, WHOLE rather than stubbed: whether the
        supplierId who_you_owe hands back is one deriveMoveOutcome can
@@ -385,13 +385,32 @@ const books = () => ({
       return q; } };
     const s = compileScope([
       extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
-      extractFunction(src, 'deriveMoveOutcome', 'index.html'),
+      extractFunction(src, 'deriveMoveOutcome', 'index.html'), extractFunction(src, 'collectionInvoiceTxn', 'index.html'), extractFunction(src, 'collectionLedgerRow', 'index.html'), extractFunction(src, 'debtLogIsInvoiceOwned', 'index.html'), extractFunction(src, 'cashIsMoneyIn', 'index.html'),
       extractFunction(src, 'managerScoreboard', 'index.html'),
       extractFunction(src, 'managerScoreProgress', 'index.html'),
       extractFunction(src, 'managerRecentReviews', 'index.html'),
       extractFunction(src, 'managerReviewBrief', 'index.html'),
       extractFunction(src, 'managerAdviceTally', 'index.html'),
       extractFunction(src, 'managerTrackRecord', 'index.html'),
+      extractFunction(src, 'managerChaseEvidence', 'index.html'),
+      extractFunction(src, 'chaseResponse', 'index.html'),
+      extractFunction(src, 'chaseDayAdd', 'index.html'),
+      extractFunction(src, 'chaseRate', 'index.html'),
+      extractFunction(src, 'chaseResponseLine', 'index.html'),
+      extractFunction(src, 'customerCollectionDays', 'index.html'),
+      extractFunction(src, 'collectionInvoiceTxn', 'index.html'),
+      extractFunction(src, 'collectionLedgerRow', 'index.html'),
+      extractFunction(src, 'debtLogIsInvoiceOwned', 'index.html'),
+      extractFunction(src, 'cashIsMoneyIn', 'index.html'),
+      extractDeclaration(src, 'CHASE_WINDOW', 'index.html'),
+      extractDeclaration(src, 'CHASE_LOOKBACK', 'index.html'),
+      extractDeclaration(src, 'CHASE_QUIET', 'index.html'),
+      extractDeclaration(src, 'CHASE_MIN_CHASED', 'index.html'),
+      extractDeclaration(src, 'CHASE_MIN_QUIET', 'index.html'),
+      extractDeclaration(src, 'CHASE_MERGE', 'index.html'),
+      extractDeclaration(src, 'CHASE_VERDICT_WORDS', 'index.html'),
+      extractDeclaration(src, 'mgrChaseMemo', 'index.html'),
+      extractDeclaration(src, 'mgrChaseExtras', 'index.html'),
       extractFunction(src, 'trackRecordName', 'index.html'),
       extractFunction(src, 'trackRecordLine', 'index.html'),
       extractFunction(src, 'trackRecordDeadLevers', 'index.html'),
@@ -483,7 +502,7 @@ const books = () => ({
     {
       const view = compileScope([
         extractFunction(src, 'mgrMoveView', 'index.html'),
-        extractFunction(src, 'deriveMoveOutcome', 'index.html'),
+        extractFunction(src, 'deriveMoveOutcome', 'index.html'), extractFunction(src, 'collectionInvoiceTxn', 'index.html'), extractFunction(src, 'collectionLedgerRow', 'index.html'), extractFunction(src, 'debtLogIsInvoiceOwned', 'index.html'), extractFunction(src, 'cashIsMoneyIn', 'index.html'),
         extractDeclaration(src, 'MANAGER_DOORS', 'index.html'),
         extractDeclaration(src, 'MANAGER_WORTH_BASES', 'index.html'),
       ], { data: books(), esc: (x) => String(x == null ? '' : x)

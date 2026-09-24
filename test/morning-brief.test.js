@@ -141,6 +141,8 @@ const NOW = Date.parse('2026-08-27T06:30:00.000Z');
     extractFunction(src, 'cashIsDebtCollection', 'index.html'),
     extractFunction(src, 'debtLogIsInvoiceOwned', 'index.html'),
     extractFunction(src, 'debtCollectionsOn', 'index.html'),
+    extractFunction(src, 'collectionInvoiceTxn', 'index.html'),
+    extractFunction(src, 'collectionLedgerRow', 'index.html'),
     /* The brief now says what a debtor promised, so the promise model
        comes in whole — a stub would let the brief and the chase queue
        disagree about who has named a day. */

@@ -24694,6 +24694,7 @@ async function loadData(shopId){
        the customers table syncs a fixed set of columns. Pruned on write
        to whoever still owes, so it cannot grow past the debtors list. */
     presetDebtChases: (presets.debtChases && typeof presets.debtChases === 'object') ? presets.debtChases : {},
+    presetChaseLog: Array.isArray(presets.chaseLog) ? presets.chaseLog : [],
     presetAgentClusterWaitDays: presets.agentClusterWaitDays!=null ? Number(presets.agentClusterWaitDays) : 7,
     presetWaPhone: presets.waPhone || '',
     /* Who the shop is, on paper. printedShopName() has been the entire
@@ -25050,7 +25051,7 @@ function buildSyncRows(d, shopId){
     })),
     settings: {
       shop_id: shopId,
-      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, stageAlerts:!!d.presetStageAlerts, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, manager:d.presetManager||{}, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, reorderRules:d.presetReorderRules||{}, buyHolds:d.presetBuyHolds||{}, buyOrders:d.presetBuyOrders||{}, deadStockDays:d.presetDeadStockDays, clearance:d.presetClearance||{}, targetMarginPct:d.presetTargetMarginPct, services:d.presetServices||[], chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, creditPct:d.presetCreditPct, debtChases:d.presetDebtChases||{}, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate, waNeverPost:d.presetWaNeverPost||[], waAliases:d.presetWaAliases||[], waAliasNo:d.presetWaAliasNo||[],
+      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, stageAlerts:!!d.presetStageAlerts, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, manager:d.presetManager||{}, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, reorderRules:d.presetReorderRules||{}, buyHolds:d.presetBuyHolds||{}, buyOrders:d.presetBuyOrders||{}, deadStockDays:d.presetDeadStockDays, clearance:d.presetClearance||{}, targetMarginPct:d.presetTargetMarginPct, services:d.presetServices||[], chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, creditPct:d.presetCreditPct, debtChases:d.presetDebtChases||{}, chaseLog:d.presetChaseLog||[], waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate, waNeverPost:d.presetWaNeverPost||[], waAliases:d.presetWaAliases||[], waAliasNo:d.presetWaAliasNo||[],
         shopLegalName:d.presetShopLegalName||'', shopAddress:d.presetShopAddress||'', shopPhone:d.presetShopPhone||'',
         shopTin:d.presetShopTin||'', receiptFooter:d.presetReceiptFooter||'', autoPrintReceipt:!!d.presetAutoPrintReceipt,
         idCounters:d.idCounters||{}},
@@ -41656,6 +41657,45 @@ function recordCustomerPayment(customerId, amount, account, note, selections, ca
        Payment' — the agents' flow, the one to keep out).
    Shared by the morning brief and the assistant's debtor_payments, so
    the two can never tell the owner different stories. */
+/* THE TWO GATES, named once. An invoice payment is money when its cash
+   receipt exists, is money IN, and is not an agent settling their own
+   order; a ledger row is money when the owner wrote it and it carries
+   the receipt its money arrived on. debtCollectionsOn and
+   customerCollectionDays both ask through these, so the day's brief and
+   the Manager's reading of who pays can never count differently. */
+function collectionInvoiceTxn(p, txnById){
+  const t = p ? txnById.get(p.cashTxnId) : null;
+  return (!t || !cashIsMoneyIn(t) || t.category === 'Agent Payment') ? null : t;
+}
+function collectionLedgerRow(l){
+  return !!(l && l.type === 'payment' && !debtLogIsInvoiceOwned(l) && l.cashTxnId != null);
+}
+/* Every day each customer paid money, from fromISO on, through the same
+   gates as the day's brief: Map customerId(string) -> Set of dates. */
+function customerCollectionDays(fromISO){
+  const from = String(fromISO || '').slice(0, 10);
+  const out = new Map();
+  const add = (id, d, amount)=>{
+    if(id == null || !(amount > 0) || !d || d < from) return;
+    const k = String(id);
+    if(!out.has(k)) out.set(k, new Set());
+    out.get(k).add(d);
+  };
+  const txnById = new Map((data.cashTxns||[]).map(t=> [t.id, t]));
+  (data.savedQuotes||[]).forEach(q=>{
+    if(q.customerId == null) return;
+    (q.payments||[]).forEach(p=>{
+      if(collectionInvoiceTxn(p, txnById)) add(q.customerId, String(p.date||'').slice(0, 10), Number(p.amount)||0);
+    });
+  });
+  (data.customers||[]).forEach(c=>{
+    (c.debtLog||[]).forEach(l=>{
+      if(collectionLedgerRow(l)) add(c.id, String(l.date||'').slice(0, 10), Number(l.amount)||0);
+    });
+  });
+  return out;
+}
+
 function debtCollectionsOn(dateISO){
   const day = String(dateISO||'').slice(0, 10);
   const rows = new Map();
@@ -41684,8 +41724,8 @@ function debtCollectionsOn(dateISO){
   (data.savedQuotes||[]).forEach(q=>{
     (q.payments||[]).forEach(p=>{
       if(!p || String(p.date||'').slice(0, 10) !== day) return;
-      const t = txnById.get(p.cashTxnId);
-      if(!t || !cashIsMoneyIn(t) || t.category === 'Agent Payment') return;
+      const t = collectionInvoiceTxn(p, txnById);
+      if(!t) return;
       const c = q.customerId != null ? (data.customers||[]).find(x=> x.id === q.customerId) : null;
       const raised = String(q.invoicedAt || q.date || '').slice(0, 10);
       const age = raised && raised <= day
@@ -41697,7 +41737,7 @@ function debtCollectionsOn(dateISO){
   });
   (data.customers||[]).forEach(c=>{
     (c.debtLog||[]).forEach(l=>{
-      if(!l || l.type !== 'payment' || debtLogIsInvoiceOwned(l) || l.cashTxnId == null) return;
+      if(!collectionLedgerRow(l)) return;
       if(String(l.date||'').slice(0, 10) !== day) return;
       const lt = txnById.get(l.cashTxnId);
       add(c.id, c.name, Number(l.amount)||0, lt ? accountLabel(lt.account) : '', '', lt ? lt.time : '');
@@ -62140,12 +62180,40 @@ function lastClearancePricePaid(buyer, key){
 function markDebtChased(customerId, dateISO){
   if(!data.presetDebtChases) data.presetDebtChases = {};
   data.presetDebtChases[customerId] = dateISO || todayISO();
+  logDebtChase(customerId, dateISO || todayISO());
   pruneDebtChases();
   saveData();
 }
 function unmarkDebtChased(customerId){
   if(data.presetDebtChases) delete data.presetDebtChases[customerId];
+  unlogDebtChase(customerId, todayISO());
   saveData();
+}
+
+/* EVERY CHASE, NOT JUST THE LATEST.
+
+   presetDebtChases keeps one stamp per customer and drops it the moment
+   they have paid -- which is exactly the case that would show a chase
+   worked, so nothing could ever learn from it (FUP_MONEY_UNMEASURABLE
+   says so in the owner's words). This is the history beside it: one
+   row per customer per day, kept after the debt clears, and trimmed by
+   age rather than by outcome. chaseResponse reads it. */
+const CHASE_LOG_DAYS = 400;
+const CHASE_LOG_MAX = 3000;
+function logDebtChase(customerId, dateISO){
+  if(!Array.isArray(data.presetChaseLog)) data.presetChaseLog = [];
+  const c = String(customerId), d = String(dateISO || todayISO()).slice(0, 10);
+  if(data.presetChaseLog.some(r=> r && r.c === c && r.d === d)) return;
+  data.presetChaseLog.push({ c, d });
+  const oldest = new Date(Date.parse(todayISO()) - CHASE_LOG_DAYS * 86400000).toISOString().slice(0, 10);
+  data.presetChaseLog = data.presetChaseLog.filter(r=> r && String(r.d) >= oldest).slice(-CHASE_LOG_MAX);
+}
+/* An undo takes back the chase it undoes -- today's, for that customer
+   -- and never an older one: those were real conversations. */
+function unlogDebtChase(customerId, dateISO){
+  if(!Array.isArray(data.presetChaseLog)) return;
+  const c = String(customerId), d = String(dateISO || todayISO()).slice(0, 10);
+  data.presetChaseLog = data.presetChaseLog.filter(r=> !(r && r.c === c && r.d === d));
 }
 // Kept to whoever still owes. A stamp for a customer who has paid up is
 // a note about a conversation that is over.
@@ -91990,8 +92058,22 @@ function deriveMoveOutcome(row, untilISO){
     ? `nothing measures it — it named no ${needs[1]}` : null;
   if(b.mkind === 'chase' && subj.customerId != null){
     const c = (data.customers||[]).find(x=> String(x.id) === String(subj.customerId));
-    const paid = c ? (c.debtLog||[]).filter(r=> r.type === 'payment' && r.cashTxnId
-      && within(r.date)).reduce((n,r)=> n + (Number(r.amount)||0), 0) : 0;
+    /* Through the collection gates, both halves: a ledger row the owner
+       wrote with its receipt, AND a payment against one of their
+       invoices. The ledger alone missed every customer who paid an
+       invoice directly, and counted the invoice sync's echo rows as if
+       they were money. */
+    let paid = 0;
+    if(c){
+      (c.debtLog||[]).forEach(r=>{ if(collectionLedgerRow(r) && within(String(r.date||'').slice(0, 10))) paid += Number(r.amount)||0; });
+      const txnById = new Map((data.cashTxns||[]).map(t=> [t.id, t]));
+      (data.savedQuotes||[]).forEach(q=>{
+        if(String(q.customerId) !== String(c.id)) return;
+        (q.payments||[]).forEach(pm=>{
+          if(pm && within(String(pm.date||'').slice(0, 10)) && collectionInvoiceTxn(pm, txnById)) paid += Number(pm.amount)||0;
+        });
+      });
+    }
     /* The number leaves as a number too, for the weekly review's
        arithmetic -- and ONLY from here, so the cashTxnId law (echo rows
        are not money) is applied in exactly one place. */
@@ -92618,6 +92700,171 @@ function trackRecordDeadLevers(track){
   return ((track && track.rows) || [])
     .filter(x=> x.windowed && x.completedScored >= TRACK_MIN_TIMES && x.completedObserved === 0)
     .sort((a, b)=> b.scored - a.scored);
+}
+
+/* ==== DOES CHASING WORK HERE, AND ON WHOM ============================
+
+   The track record could say "an event followed 3 of 4 chases" and
+   nothing more, and said honestly that this proves nothing: a customer
+   who pays every Friday pays on the Friday after a chase too. What was
+   missing is the comparison -- how often the same customer pays in a
+   week NOBODY chased them. The difference between those two rates is
+   what chasing adds, and it is the only figure that says whether a
+   chase is worth a move.
+
+     chased weeks    every chase on record (the chase log, and Manager
+                     chase moves marked done), each followed by a
+                     seven-day window: did money arrive in it?
+     unchased weeks  seven-day windows, back to back over the last six
+                     months, on days the customer owed money and no
+                     chase fell within a fortnight before or during
+                     the window: did money arrive anyway?
+
+   Money is counted only through the collection gates, so the brief,
+   the track record and this can never disagree about who paid. And a
+   verdict is given only on enough weeks of each kind -- fewer, and the
+   reading says "too early" rather than guessing. */
+const CHASE_WINDOW = 7;         // days a chase is given to be answered
+const CHASE_LOOKBACK = 182;     // six months of weeks to compare against
+const CHASE_QUIET = 14;         // no chase this close before an unchased week
+const CHASE_MIN_CHASED = 3;     // chases before a customer is read
+const CHASE_MIN_QUIET = 6;      // unchased weeks before a customer is read
+const CHASE_MERGE = 3;          // chases this close together are one occasion
+
+function chaseDayAdd(d, n){ return new Date(Date.parse(d) + n * 86400000).toISOString().slice(0, 10); }
+
+/* A share with a 95% range around it (Wilson), so four out of five is
+   never read as if it were eighty out of a hundred. */
+function chaseRate(k, n){
+  if(!n) return { k: 0, n: 0, rate: null, low: null, high: null };
+  const z = 1.96, p = k / n, d = 1 + z * z / n;
+  const mid = (p + z * z / (2 * n)) / d;
+  const half = z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d;
+  return { k, n, rate: p, low: Math.max(0, mid - half), high: Math.min(1, mid + half) };
+}
+
+/* extraChases: [{ customerId, date }] from outside the chase log --
+   the Manager's own chase moves marked done. */
+function chaseResponse(todayISO_, extraChases){
+  const today = String(todayISO_ || todayISO()).slice(0, 10);
+  const start = chaseDayAdd(today, -CHASE_LOOKBACK);
+  const lastOpen = chaseDayAdd(today, -CHASE_WINDOW);   // a window must have closed
+  const paid = customerCollectionDays(start);
+  const chasesBy = new Map();
+  const addChase = (id, d)=>{
+    if(id == null || !/^\d{4}-\d{2}-\d{2}$/.test(String(d || ''))) return;
+    const k = String(id);
+    if(!chasesBy.has(k)) chasesBy.set(k, []);
+    chasesBy.get(k).push(String(d));
+  };
+  (data.presetChaseLog || []).forEach(r=> r && addChase(r.c, r.d));
+  (extraChases || []).forEach(r=> r && addChase(r.customerId, r.date));
+
+  const paidIn = (days, from, n)=>{
+    if(!days) return false;
+    for(let i = 0; i < n; i++) if(days.has(chaseDayAdd(from, i))) return true;
+    return false;
+  };
+  const customers = [];
+  let poolChased = [0, 0], poolQuiet = [0, 0];
+  (data.customers || []).forEach(c=>{
+    const id = String(c.id);
+    /* Occasions, oldest first, with chases a few days apart merged: a
+       reminder on Tuesday after a message on Monday is one chase. */
+    const raw = (chasesBy.get(id) || []).slice().sort();
+    const occasions = [];
+    raw.forEach(d=>{
+      const prev = occasions[occasions.length - 1];
+      if(prev && d < chaseDayAdd(prev, CHASE_MERGE)) return;
+      occasions.push(d);
+    });
+    const days = paid.get(id);
+    let ck = 0, cn = 0;
+    occasions.forEach(d=>{
+      if(d < start || d > lastOpen) return;
+      cn++; if(paidIn(days, d, CHASE_WINDOW)) ck++;
+    });
+    /* WHAT THEY OWED EACH DAY, walked back from today's balance through
+       the ledger that moves it. A week is only a fair comparison when
+       there was money to pay. */
+    const moves = (c.debtLog || []).filter(l=> l && (l.type === 'charge' || l.type === 'payment')
+      && String(l.date || '').slice(0, 10) >= start)
+      .map(l=> ({ d: String(l.date).slice(0, 10), amt: (Number(l.amount) || 0) * (l.type === 'charge' ? 1 : -1) }));
+    const owedAtStartOf = (t)=> (Number(c.debt) || 0) - moves.filter(m=> m.d >= t).reduce((n, m)=> n + m.amt, 0);
+    const chasedNear = (t)=> occasions.some(d=> d >= chaseDayAdd(t, -CHASE_QUIET) && d < chaseDayAdd(t, CHASE_WINDOW));
+    let qk = 0, qn = 0;
+    for(let t = start; t <= lastOpen; t = chaseDayAdd(t, CHASE_WINDOW)){
+      if(owedAtStartOf(t) <= 0.5 || chasedNear(t)) continue;
+      qn++; if(paidIn(days, t, CHASE_WINDOW)) qk++;
+    }
+    if(!cn && !qn) return;
+    poolChased[0] += ck; poolChased[1] += cn;
+    poolQuiet[0] += qk; poolQuiet[1] += qn;
+    const chased = chaseRate(ck, cn), quiet = chaseRate(qk, qn);
+    let verdict = 'too_early';
+    if(cn >= CHASE_MIN_CHASED){
+      if(chased.rate <= 0.2) verdict = 'ignores_chases';
+      else if(qn >= CHASE_MIN_QUIET){
+        const lift = chased.rate - quiet.rate;
+        if(chased.rate >= 0.5 && lift >= 0.3) verdict = 'pays_when_chased';
+        else if(quiet.rate >= 0.4 && lift < 0.15) verdict = 'pays_without_chasing';
+        else verdict = 'mixed';
+      }
+    }
+    customers.push({ customerId: c.id, name: c.name || 'Unnamed customer', owes: Math.round(Number(c.debt) || 0),
+      chased, quiet, verdict, lastChased: occasions[occasions.length - 1] || null });
+  });
+
+  /* THE SHOP AS A WHOLE, pooled. "Clear" only when the two ranges do
+     not overlap -- otherwise the difference is within what luck alone
+     would produce, and it is said that way. */
+  const chased = chaseRate(poolChased[0], poolChased[1]);
+  const quiet = chaseRate(poolQuiet[0], poolQuiet[1]);
+  let shop = 'too_early';
+  if(chased.n >= 10 && quiet.n >= 20){
+    if(chased.low > quiet.high) shop = 'chasing_helps';
+    else if(chased.high < quiet.low) shop = 'chasing_hurts';
+    else shop = 'no_clear_difference';
+  }
+  return { since: start, windowDays: CHASE_WINDOW, shop: { verdict: shop, chased, quiet }, customers };
+}
+
+/* The Manager's own chase moves the owner marked done are chases too --
+   the log only sees chases sent from the Messages console. */
+async function managerChaseEvidence(todayISO_){
+  let extra = [];
+  if(managerNotesTable){
+    const r = await sb.from('manager_notes').select('date, body, status')
+      .eq('shop_id', currentShopId).eq('kind', 'move').eq('status', 'done')
+      .order('id', { ascending: false }).limit(TRACK_MOVES_READ);
+    if(!r.error) extra = (r.data || []).filter(x=> x.body && x.body.mkind === 'chase'
+        && x.body.subject && x.body.subject.customerId != null)
+      .map(x=> ({ customerId: x.body.subject.customerId, date: x.body.doneOn || x.date }));
+  }
+  const reading = chaseResponse(todayISO_, extra);
+  mgrChaseExtras = extra;
+  mgrChaseMemo = { day: String(todayISO_ || todayISO()).slice(0, 10), at: Date.now(), reading };
+  return reading;
+}
+
+/* One customer's reading, in the owner's words: the sentence the card
+   shows and the one the Manager is handed come from here. */
+const CHASE_VERDICT_WORDS = {
+  pays_when_chased: 'Pays when chased',
+  pays_without_chasing: 'Pays without being chased',
+  ignores_chases: 'Chasing has not worked',
+  mixed: 'No clear pattern',
+  too_early: 'Too early to tell',
+};
+function chaseResponseLine(row){
+  if(!row) return '';
+  const bits = [];
+  if(row.chased.n) bits.push(`paid within a week after ${row.chased.k} of ${row.chased.n} chase${row.chased.n === 1 ? '' : 's'}`);
+  if(row.quiet.n) bits.push(`${row.quiet.k} of ${row.quiet.n} weeks nobody chased`);
+  const head = CHASE_VERDICT_WORDS[row.verdict] || '';
+  /* Counts, never a bare percentage: "5 of 5" says how little it rests
+     on, "100%" hides it. */
+  return head + (bits.length ? ' — ' + bits.join('; ') : '');
 }
 
 async function managerAdviceTally(todayISO_){
@@ -95522,6 +95769,14 @@ function mgrQueueRowHTML(row, all, opts){
     bits.push('waiting on: ' + esc(((blocker.body||{}).title) || 'an earlier move'));
   if(out.derived) bits.push(esc(out.derived));
   if(out.unmeasured) bits.push(esc(out.unmeasured));
+  /* WHETHER A CHASE MOVES THIS CUSTOMER, on the chase itself -- the
+     same reading the Manager argued from, so the owner can weigh the
+     move with the evidence in front of them. Said only once there is
+     a chase on record to say it from. */
+  const chaseEv = (b.mkind === 'chase' && b.subject && b.subject.customerId != null)
+    ? mgrChaseRowFor(b.subject.customerId) : null;
+  const chaseNote = (chaseEv && chaseEv.chased.n)
+    ? `<p class="ow-q-note">${esc(chaseResponseLine(chaseEv))}</p>` : '';
   /* A FIGURE IS A SIZE. IT IS NOT A WARNING.
      This carried `ow-bad` -- oxide crimson, this app's grammar for
      something being wrong -- switched on by the figure EXISTING. So a
@@ -95562,8 +95817,23 @@ function mgrQueueRowHTML(row, all, opts){
     <div class="ow-q-x">
       <p class="ow-q-why">${esc(b.why || '')}</p>${
       b.unlocks ? `<div class="ow-q-un">Unlocks: ${esc(b.unlocks)}</div>` : ''}${
-      bits.length ? `<p class="ow-q-note">${bits.join(' \u00b7 ')}</p>` : ''}${acts}</div>
+      bits.length ? `<p class="ow-q-note">${bits.join(' \u00b7 ')}</p>` : ''}${chaseNote}${acts}</div>
   </div>`;
+}
+
+/* One reading per day's render, not one per row: chaseResponse walks
+   every customer. The meeting's own reading (which also counts the
+   Manager's done chase moves) replaces it when it runs, so the card
+   and the Manager argue from the same figures. */
+let mgrChaseMemo = null;
+/* The Manager's done chase moves, as last read from the journal -- kept
+   so a card redrawn later counts the same chases the meeting did. */
+let mgrChaseExtras = [];
+function mgrChaseRowFor(customerId){
+  const now = Date.now(), day = todayISO();
+  if(!mgrChaseMemo || mgrChaseMemo.day !== day || now - mgrChaseMemo.at > 60000)
+    mgrChaseMemo = { day, at: now, reading: chaseResponse(day, mgrChaseExtras) };
+  return mgrChaseMemo.reading.customers.find(x=> String(x.customerId) === String(customerId)) || null;
 }
 
 /* Fills the Manager's tier when the journal answers, into its OWN
@@ -105185,6 +105455,9 @@ const ASSISTANT_TOOLS = {
        customer" -- and no reading in this app could answer the second
        until now. */
     const track = await managerTrackRecord(todayISO());
+    /* WHETHER CHASING WORKS HERE, AND ON WHOM -- measured against the
+       weeks nobody chased, which the track record cannot do. */
+    const chasing = await managerChaseEvidence(todayISO());
     const worth = [];
     /* A target behind its own pace, with how far. One on course needs
        no sentence -- that is the whole point of a pace line. */
@@ -105268,6 +105541,20 @@ const ASSISTANT_TOOLS = {
           + ' or ask the owner what they know that the books do not.' });
     });
 
+    /* A BIG DEBT CHASING HAS NOT MOVED. The largest balance whose own
+       record says chases go unanswered: another chase is the one move
+       the evidence argues against, so it is said once, with what to do
+       instead. */
+    chasing.customers.filter(x=> x.verdict === 'ignores_chases' && x.owes > 0)
+      .sort((a, b)=> b.owes - a.owes).slice(0, 1).forEach(x=>{
+        worth.push({ kind: 'chasing_has_not_worked', customerId: x.customerId, about: x.name,
+          owes: x.owes, chased: x.chased.n, paid_within_a_week_after: x.chased.k,
+          reads_as: chaseResponseLine(x),
+          what_to_do: 'Another reminder is the move this record argues against. Say what it shows in one'
+            + ' sentence, then pull a different lever: a visit or a call from the owner, a part-payment'
+            + ' plan, or no more goods on credit until something is paid.' });
+      });
+
     managerPlaysPastSpan(book).slice(0, 2).forEach(p=>{
       worth.push({ kind: 'play_past_its_span', play: p.name, treats: p.problem,
         was_for_weeks: p.clock.weeks, has_run_days: p.clock.days, days_over: p.clock.daysOver,
@@ -105325,6 +105612,21 @@ const ASSISTANT_TOOLS = {
          move should reach for and quote. It belongs here, beside the
          scoreboard and the market. */
       ...(trackOut ? { track_record: trackOut } : {}),
+      /* WHO A CHASE MOVES. The debtors that owe most now, each with how
+         often they paid within a week after a chase against how often
+         they paid in a week nobody chased them -- and the shop's own
+         pooled answer. Evidence for choosing WHOM to chase: a customer
+         who pays anyway does not need a move, one who ignores chases
+         needs a different one. */
+      ...(chasing.customers.length ? { chase_response: {
+        window_days: chasing.windowDays, since: chasing.since,
+        shop: { verdict: chasing.shop.verdict,
+          paid_within_a_week_after_a_chase: chasing.shop.chased.k + ' of ' + chasing.shop.chased.n,
+          paid_in_a_week_nobody_chased: chasing.shop.quiet.k + ' of ' + chasing.shop.quiet.n },
+        debtors: chasing.customers.filter(x=> x.owes > 0).sort((a, b)=> b.owes - a.owes).slice(0, 10)
+          .map(x=> ({ customerId: x.customerId, about: x.name, owes: x.owes, verdict: x.verdict,
+            ...(x.lastChased ? { last_chased: x.lastChased } : {}), reads_as: chaseResponseLine(x) })),
+      } } : {}),
       ...(Object.keys(playbook).length ? { playbook } : {}),
       ...(held.length ? { holds_you_placed: held } : {}),
       ...(lastReview ? { last_review: lastReview } : {}),
