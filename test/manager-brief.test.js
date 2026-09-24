@@ -167,7 +167,9 @@ const shift = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate
       extractFunction(src, 'booksStartDate', 'index.html'),
       extractFunction(src, 'managerPlayProgress', 'index.html'),
       extractFunction(src, 'managerAdviceTally', 'index.html'),
+      extractFunction(src, 'mgrLiveMoveRows', 'index.html'),
       extractFunction(src, 'managerTrackRecord', 'index.html'),
+      extractFunction(src, 'mgrLiveMoveRows', 'index.html'),
       extractFunction(src, 'managerChaseEvidence', 'index.html'),
       /* The unusual-days reading has its own test; here it is quiet. */
       "function unusualDays(){ return { today: '', judged: 0, thin: 0, floor: 0, items: [] }; } function unusualLine(){ return ''; } var mgrUnusualMemo = null;",

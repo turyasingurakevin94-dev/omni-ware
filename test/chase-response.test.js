@@ -58,7 +58,7 @@ const txns = () => Array.from({ length: txn }, (_, i) => ({ id: 'T' + (i + 1), t
   t.check(c.chased.k === 5 && c.chased.n === 5, 'paid within the week after 5 of 5 chases (got ' + c.chased.k + '/' + c.chased.n + ')');
   t.check(c.quiet.n >= 6 && c.quiet.k === 0, 'and in none of the ' + c.quiet.n + ' weeks nobody chased them');
   t.check(c.verdict === 'pays_when_chased', 'so: pays when chased (got ' + c.verdict + ')');
-  t.check(/^Pays when chased — paid within a week after 5 of 5 chases; 0 of \d+ weeks nobody chased$/.test(s.chaseResponseLine(c)),
+  t.check(/^Pays when chased — paid within a week after 5 of 5 chases; paid in 0 of \d+ weeks nobody chased$/.test(s.chaseResponseLine(c)),
     'said with its counts, not a bare percentage: ' + s.chaseResponseLine(c));
 }
 
@@ -89,6 +89,12 @@ const txns = () => Array.from({ length: txn }, (_, i) => ({ id: 'T' + (i + 1), t
   const by = Object.fromEntries(r.customers.map((x) => [x.customerId, x]));
   t.check(by.C3.verdict === 'ignores_chases', 'four chases and nothing paid: chasing has not worked');
   t.check(by.C4.verdict === 'too_early', 'one chase is too early to say anything (got ' + by.C4.verdict + ')');
+  /* Live, Dad owed for 85 days and the card read "Too early to tell — 0
+     of 12 weeks nobody chased", which reads as a mistake. It says what
+     is missing instead, and what the quiet weeks came to. */
+  const line = build(data).chaseResponseLine(by.C4);
+  t.check(/^Too few chases on record to judge \(1 of 3\)/.test(line) && !/Too early to tell/.test(line),
+    'and says why: too few chases to judge, with how many there are (got ' + line + ')');
 }
 
 /* ---------- 4. the fair comparison ------------------------------------ */

@@ -638,7 +638,10 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
        meetings have named their ids. */
     const wave = /const \[meetR, score, qR, reviews, wkR\] = await Promise\.all\(\[/.exec(load);
     t.check(!!wave, 'the readings that need nothing from each other go out together');
-    ['managerScoreboard()', 'managerRecentReviews(4)', "eq('kind', 'question')", "count: 'exact', head: true"]
+    /* The week's meetings are counted as DAYS now (a meeting held again
+       the same morning is one meeting on record), so that reading is
+       found by its window rather than by a row count. */
+    ['managerScoreboard()', 'managerRecentReviews(4)', "eq('kind', 'question')", ".gte('date', anShiftDate(today, -6))"]
       .forEach(bit=>{
         const at = load.indexOf(bit);
         t.check(at > -1 && wave && at > load.indexOf(wave[0]) && at < load.indexOf(']);'),

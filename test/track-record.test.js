@@ -87,7 +87,7 @@ const MOVES = [
   { date: '2026-07-20', status: 'open', body: { title: 'Tidy the shelves', mkind: 'other' } },
 ];
 
-const NAMES = ['deriveMoveOutcome', 'managerTrackRecord', 'trackRecordName',
+const NAMES = ['deriveMoveOutcome', 'managerTrackRecord', 'mgrLiveMoveRows', 'trackRecordName',
   'trackRecordLine', 'trackRecordDeadLevers',
   'collectionInvoiceTxn', 'collectionLedgerRow', 'debtLogIsInvoiceOwned', 'cashIsMoneyIn'];
 const build = (rows, over) => compileScope(
