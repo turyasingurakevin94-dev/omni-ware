@@ -124,4 +124,54 @@ const src = read('index.html');
     'growth leads with its evidence as a gauge, and every customer has a face');
 }
 
+/* ---------- 4. the record and the meeting, drawn ------------------------ */
+{
+  const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const els = {};
+  const scope = compileScope([
+    extractFunction(src, 'mgrWeekBarsHTML', 'index.html'),
+    extractFunction(src, 'mgrLeverDotsHTML', 'index.html'),
+    extractFunction(src, 'mgrJournalRowHTML', 'index.html'),
+    extractFunction(src, 'mgrShortUGX', 'index.html'),
+    extractFunction(src, 'mgrTrailPush', 'index.html'),
+    extractFunction(src, 'mgrTrailHTML', 'index.html'),
+    extractDeclaration(src, 'MGR_TRAIL_WORDS', 'index.html'),
+    extractDeclaration(src, 'MGR_JR_ICON', 'index.html'),
+    'let mgrTrail = [];',
+  ], {
+    esc, Math, Number, String, Array, MGR_CARET: '', fmtShortDate: (d) => d,
+    document: { getElementById: (id) => els[id] || null },
+  }, ['mgrWeekBarsHTML', 'mgrLeverDotsHTML', 'mgrJournalRowHTML', 'mgrTrailPush', 'mgrTrailHTML']);
+
+  const bars = scope.mgrWeekBarsHTML({ sales: 15694755, prior_sales: 39737000, gross_profit: 0, prior_gross_profit: 0 });
+  t.check(/width:39%/.test(bars) && /width:100%/.test(bars) && /mgr-wb-down/.test(bars),
+    'a week that fell draws this week against the last on one scale, marked down');
+  t.check(!/Gross profit/.test(bars), 'and a figure with nothing either week draws no pair');
+  t.check(scope.mgrWeekBarsHTML({}) === '', 'an empty week draws nothing');
+
+  const dots = scope.mgrLeverDotsHTML(3, 10);
+  t.check((dots.match(/<i/g) || []).length === 8 && (dots.match(/mgr-ld-on/g) || []).length === 3,
+    'a lever shows one dot per time it was advised, capped at eight, filled for each that worked');
+  t.check(scope.mgrLeverDotsHTML(0, 0) === '', 'and none when it was never scored');
+
+  const jr = scope.mgrJournalRowHTML({ date: '2026-09-24', kind: 'meeting', title: 'Get Kato in', count: '1 of 3 done', dots: ['done', 'open', 'skipped'], body: '' });
+  t.check(/mgr-jr-node/.test(jr) && /mgr-jd-done/.test(jr) && /mgr-jd-open/.test(jr) && /mgr-jd-skip/.test(jr),
+    'a meeting in the journal is a node on the timeline, with a dot per move in its state');
+
+  els.mgrTrail = { innerHTML: '' };
+  scope.mgrTrailPush('list_debtors');
+  scope.mgrTrailPush('list_debtors');
+  scope.mgrTrailPush('some_new_tool');
+  t.check((els.mgrTrail.innerHTML.match(/mgr-tr-done/g) || []).length === 2
+    && /Read who owes you/.test(els.mgrTrail.innerHTML) && /Looked at some new tool/.test(els.mgrTrail.innerHTML),
+    'a live meeting lists each thing it read once, in words, as it reads it');
+  t.check(/mgr-tr-now/.test(scope.mgrTrailHTML()), 'and always ends on what it is doing now');
+
+  t.check(/if\(managerMeetingRunning\) mgrTrailPush\(block\.name\);/.test(src), 'the trail is fed by the meeting\'s own tool calls');
+  t.check((src.match(/managerMeetingRunning = true;\n  mgrTrail = \[\];/g) || []).length === 2, 'and starts empty for every meeting');
+  const hero = extractFunction(src, 'mgrHeroHTML', 'index.html');
+  t.check(/The meeting is on\./.test(hero) && /The meeting stopped short\./.test(hero),
+    'the hero never says "no meeting yet" while one is running or after one ran out of room');
+}
+
 process.exit(t.done() ? 1 : 0);
