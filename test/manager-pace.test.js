@@ -120,16 +120,22 @@ const row = (body) => ({ date: '2026-08-24', body: { from: '2026-08-24', to: '20
   /* RENDER it, twice. Reading the source for the right shape let a
      mutation through that simply returned early and emptied the slot —
      every assertion still matched the code that never ran. */
-  const drawCard = (heldOn) => {
+  const drawCard = (heldOn, opts) => {
+    const o = opts || {};
     const el = { innerHTML: '', querySelector: () => null, querySelectorAll: () => [] };
-    let paceCalls = 0;
+    let paceCalls = 0, asked = 0, stamped = null;
     compileScope([extractFunction(src, 'renderManagerCard', 'index.html')], {
       document: { getElementById: (id) => (id === 'dash_managerCard' ? el : null) },
-      lsGet: () => heldOn, todayISO: () => TODAY,
+      lsGet: () => heldOn, lsSet: (k, v) => { stamped = v; }, todayISO: () => TODAY,
       MANAGER_MEETING_KEY: 'k', renderManagerPace: () => { paceCalls++; },
+      managerNotesTable: o.table !== false,
+      /* Answers in the caller's own turn -- the sb mock's trick, so the
+         journal's correction can be asserted without making this block
+         async and the assertions below reordering themselves. */
+      managerHeldToday: () => { asked += 1; return { then: (res) => res(!!o.journal) }; },
       goToTab: () => {}, runManagerMeeting: () => {}, String,
     }, ['renderManagerCard']).renderManagerCard();
-    return { html: el.innerHTML, paceCalls };
+    return { html: el.innerHTML, paceCalls, asked, stamped };
   };
 
   const before = drawCard('2026-08-01');
@@ -138,6 +144,26 @@ const row = (body) => ({ date: '2026-08-24', body: { from: '2026-08-24', to: '20
   const after = drawCard(TODAY);
   t.check(!/mgr-invite/.test(after.html), 'once today’s meeting is held the invite goes');
   eq(after.paceCalls, 1, 'and the pace is filled either way, held meeting or not');
+
+  /* THE OTHER TABLET. The stamp is per device, so a meeting held on the
+     owner's other tablet leaves it saying no while the journal says
+     yes. The Manager screen has corrected for that since the stamp was
+     introduced; the front door read the stamp and stopped, and offered
+     to hold a meeting whose plan was sitting one tab away. */
+  const elsewhere = drawCard('2026-08-01', { journal: true });
+  eq(elsewhere.asked, 1, 'a stamp saying no is put to the journal');
+  t.check(!/mgr-invite/.test(elsewhere.html),
+    'and a meeting held on another device takes the invite away, as it does on the Manager screen');
+  eq(elsewhere.stamped, TODAY, 'the stamp is brought up to date, so the next render costs no query');
+
+  /* ONLY WHEN THE STAMP SAYS NO. A stamp reading today can only have
+     been written by a meeting committed on this device today, so a yes
+     needs no confirming -- and that is every dashboard render for the
+     rest of the day. */
+  eq(drawCard(TODAY, { journal: true }).asked, 0,
+    'a stamp saying yes is believed, and costs no query');
+  eq(drawCard('2026-08-01', { table: false }).asked, 0,
+    'and a shop with no journal yet is never asked at all');
 
   /* TWO THINGS, TWO SLOTS — AND THE SECOND SLOT WAS A DUPLICATE ID.
    *

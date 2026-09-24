@@ -92914,7 +92914,7 @@ function renderManagerCard(){
      costing a stack gap on both sides of it, on the phone's front door,
      for ever. */
   const seen = lsGet(MANAGER_MEETING_KEY);
-  const heldToday = seen && String(seen) >= todayISO();
+  const heldToday = !!(seen && String(seen) >= todayISO());
   /* FORTY-FOUR WORDS IS ONE ROW ON A CONSOLE AND FOUR LINES ON A PHONE.
 
      This is the first thing under the figures on Today, so on a phone it
@@ -92928,13 +92928,46 @@ function renderManagerCard(){
      for layout. So the phone reads "Your manager is ready. One tap holds
      the morning meeting. A meeting spends a little AI credit." and the
      console reads exactly what it read before, word for word. */
-  el.innerHTML = (heldToday ? '' : `<div class="mgr-invite">
-    <p><b>Your manager is ready.</b> One tap holds the morning meeting<span class="ow-hide-sm">: yesterday's advice accounted
-      for, and today's few moves ranked by the money on them</span>. A meeting spends a little AI credit.</p>
-    <button type="button" class="btn btn-accent" id="mgrInviteBtn">Hold the morning meeting</button>
-  </div>`);
-  const btn = el.querySelector('#mgrInviteBtn');
-  if(btn) btn.addEventListener('click', ()=>{ goToTab('manager'); runManagerMeeting(); });
+  const paint = (held)=>{
+    el.innerHTML = (held ? '' : `<div class="mgr-invite">
+      <p><b>Your manager is ready.</b> One tap holds the morning meeting<span class="ow-hide-sm">: yesterday's advice accounted
+        for, and today's few moves ranked by the money on them</span>. A meeting spends a little AI credit.</p>
+      <button type="button" class="btn btn-accent" id="mgrInviteBtn">Hold the morning meeting</button>
+    </div>`);
+    const btn = el.querySelector('#mgrInviteBtn');
+    if(btn) btn.addEventListener('click', ()=>{ goToTab('manager'); runManagerMeeting(); });
+  };
+  paint(heldToday);
+
+  /* THE OTHER TABLET.
+
+     The Manager screen has known this since the stamp was introduced:
+     lsGet is per device, so a meeting held on the owner's other tablet,
+     or one held before this browser's storage was cleared, leaves the
+     stamp saying no when the journal says yes. That screen paints from
+     the stamp and lets the journal correct it, and even says WHICH --
+     "the meeting has been held on another device".
+
+     The front door never got that half. It read the stamp and stopped,
+     so the second tablet offered "Your manager is ready. One tap holds
+     the morning meeting" for a meeting already held that morning, with
+     its plan sitting one tab away. The tap is not refused -- nothing
+     here is -- but runManagerMeeting then has to open with a confirm
+     explaining that the owner has been told the wrong thing, after they
+     have committed to the tap. The same journal that corrects the
+     screen corrects the card.
+
+     ONLY WHEN THE STAMP SAYS NO. A stamp reading today can only have
+     been written by a meeting committed on this device today, so a yes
+     needs no confirming and costs no query -- which is every dashboard
+     render for the rest of the day. And no guard against an overtaking
+     render is needed either: this paints a held meeting and nothing
+     else, and a meeting held today does not become unheld. */
+  if(!heldToday && managerNotesTable) managerHeldToday().then(held=>{
+    if(!held) return;
+    lsSet(MANAGER_MEETING_KEY, todayISO());
+    paint(true);
+  });
   renderManagerPace();
 }
 
