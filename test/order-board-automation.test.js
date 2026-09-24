@@ -278,8 +278,9 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   /* The message the owner actually READ is what goes: the announce
      dialog hands its edited text through, so the call carries it. What
      this guards is unchanged -- one function tells the group, and it
-     stamps when, so the chip goes quiet and the trail says so. */
-  t.check(/shareOrderToSalesGroup\(q, text\);\s*q\.announcedAt = Date\.now\(\);/.test(extractFunction(src, 'announceOrderToGroup', 'index.html')),
+     stamps when, so the chip goes quiet and the trail says so -- but
+     only when WhatsApp actually opened: a blocked pop-up told nobody. */
+  t.check(/if\(shareOrderToSalesGroup\(q, text\) === false\) return;\s*q\.announcedAt = Date\.now\(\);/.test(extractFunction(src, 'announceOrderToGroup', 'index.html')),
     'the group is told by announceOrderToGroup, which stamps when');
   eq((code.match(/shareOrderToSalesGroup\(/g) || []).length, 2, 'and that is its only caller besides its own definition');
 }

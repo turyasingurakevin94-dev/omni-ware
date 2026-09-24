@@ -40287,22 +40287,49 @@ function setSavedQuoteStatus(id, status){
 /* Copy the order out to the sales group. WhatsApp group invite links
    cannot carry pre-filled text -- that only works for wa.me/<number>
    chats -- so the best a webpage can do is put the message on the
-   clipboard and open the group for a single paste. */
+   clipboard and open the group for a single paste.
+
+   Both happen INSIDE the tap. The group used to open only after the
+   async clipboard write settled, and on a phone that write is slow or
+   asks permission -- by the time it came back the tap no longer counted
+   as the owner's, the browser blocked the pop-up, and nothing reached
+   the group at all. */
+function copyTextInTap(text){
+  let copied = false;
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;';
+  const had = document.activeElement;
+  document.body.appendChild(ta);
+  ta.select();
+  ta.setSelectionRange(0, ta.value.length);
+  try { copied = document.execCommand('copy'); } catch(e){ copied = false; }
+  ta.remove();
+  if(had && had.focus) had.focus();
+  /* The modern write too, started while the page still has focus; it
+     settles on its own and is never waited on. */
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    const p = navigator.clipboard.writeText(text);
+    if(p && p.catch) p.catch(()=>{});
+    copied = true;
+  }
+  return copied;
+}
 function shareOrderToSalesGroup(q, text){
   /* What the owner READ is what goes, not what the app drafted: the
      announce dialog hands the edited text straight through. */
   const msg = text == null || text === '' ? buildSalesGroupQuoteMessage(q.items, q.client, q) : String(text);
-  const openGroupAndToast = (copied)=>{
-    window.open(SALES_GROUP_WA_LINK, '_blank');
-    toast(copied
-      ? 'Message copied — paste it in the sales group'
-      : 'Open the sales group and paste the order from Order tracking', 4000);
-  };
-  if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(msg).then(()=>openGroupAndToast(true)).catch(()=>openGroupAndToast(false));
-  } else {
-    openGroupAndToast(false);
+  const copied = copyTextInTap(msg);
+  const win = window.open(SALES_GROUP_WA_LINK, '_blank');
+  if(!win){
+    toast('WhatsApp was blocked from opening — allow pop-ups for this site, then send again', 6000);
+    return false;
   }
+  toast(copied
+    ? 'Message copied — paste it in the sales group'
+    : 'Open the sales group and paste the order from Order tracking', 4000);
+  return true;
 }
 
 /* A move gave no feedback at all: the card vanished from one column and
@@ -42406,7 +42433,8 @@ function otOpenRow(id){ otOpenRows.add(id); renderSavedQuotes(); }
 function announceOrderToGroup(id, text){
   const q = data.savedQuotes.find(x=> x.id === id);
   if(!q) return;
-  shareOrderToSalesGroup(q, text);
+  /* A blocked open told nobody, so it is not stamped as told. */
+  if(shareOrderToSalesGroup(q, text) === false) return;
   q.announcedAt = Date.now();
   saveData();
   renderSavedQuotes();
@@ -44495,9 +44523,8 @@ function otDlgAct(act, el){
     case 'copydraft': {
       const box = document.getElementById('ot_dlg_draft');
       const text = box ? box.value : '';
-      if(navigator.clipboard && navigator.clipboard.writeText){
-        navigator.clipboard.writeText(text).then(()=> toast('Message copied')).catch(()=> toast('Could not copy — select the text and copy it by hand', 5000));
-      } else toast('Could not copy — select the text and copy it by hand', 5000);
+      if(copyTextInTap(text)) toast('Message copied');
+      else toast('Could not copy — select the text and copy it by hand', 5000);
       break;
     }
     case 'sendgroup': {
