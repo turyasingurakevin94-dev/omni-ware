@@ -256,4 +256,18 @@ const src = read('index.html');
   t.check(/reach\.basis \+ ' · from your books'/.test(extractFunction(src, 'mgrRichRowHTML', 'index.html')), 'marked as the books\' figure, never the Manager\'s');
 }
 
+/* ---------- 8. the scorecard, the pick, the reasoning ------------------- */
+{
+  const render = extractFunction(src, 'renderManager', 'index.html');
+  const tally = extractFunction(src, 'managerAdviceTally', 'index.html');
+  t.check(/counts\.worthDone \+= x\.worth/.test(tally) && /counts\.waiting\.repeated\+\+/.test(tally) && /counts\.waiting\.stale\+\+/.test(tally) && /counts\.waiting\.fresh\+\+/.test(tally),
+    'the tally carries the money acted on and why each waiting move is waiting: repeated, stale, or new this week');
+  const verdict = extractFunction(src, 'mgrPaintVerdict', 'index.html');
+  t.check(/'Money acted on'/.test(verdict) && /waiting: \$\{why\}/.test(verdict), 'and the scorecard shows money acted on against money waiting, with the reasons, not a bare count of untouched');
+  t.check(/Try this one first\./.test(render) && /which is worth more — try that first/.test(render),
+    'of two overlapping plays it recommends the one worth more, and the other card points to it');
+  t.check(/class="mgr-rv-why"/.test(extractFunction(src, 'mgrRichRowHTML', 'index.html')), 'every move carries one line of its reasoning on the card');
+  t.check(/<p class="mgr-rej">/.test(render) && !/<p class="ow-mini">Considered and rejected/.test(render), 'and what was considered and rejected leads the plan instead of trailing it');
+}
+
 process.exit(t.done() ? 1 : 0);

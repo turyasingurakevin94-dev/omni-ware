@@ -1342,6 +1342,10 @@
      and a done or skipped card -- which has no Skip button to push
      against -- got the worst of it. A sentence is not a control. */
   .mgr-reading{font-size:12px;color:var(--ow-ink-400);margin:0;padding:14px 0;}
+  .mgr-stale{position:relative;}
+  .mgr-stale > *:not(.mgr-stale-tag){opacity:.55;pointer-events:none;filter:saturate(.6);}
+  .mgr-stale-tag{position:absolute;top:6px;right:8px;z-index:2;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
+    color:var(--ow-ink-600);background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-pill);padding:1px 8px;}
   .mgr-move-state{display:block;font-size:12px;color:var(--ink-soft);
     margin:0 0 8px;max-width:76ch;line-height:1.45;}
   .mgr-state{font-size:12px;color:var(--ink-soft);margin-left:auto;text-align:right;}
@@ -1527,6 +1531,13 @@
   .mgr-kt-sell{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
   .mgr-kt-setup{background:var(--ow-rule-soft);color:var(--ow-ink-600);}
   .mgr-rv-mid{display:flex;flex-direction:column;gap:3px;min-width:0;}
+  .mgr-rv-why{font-size:var(--ow-t-12);color:var(--ow-ink-600);line-height:1.4;font-weight:var(--ow-fw-400);
+    display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;}
+  .ow-q.ow-open .mgr-rv-why{display:none;}
+  .mgr-rej{margin:0;display:flex;gap:var(--ow-sp-8);align-items:flex-start;padding:var(--ow-sp-8) var(--ow-sp-12);
+    background:var(--ow-steel-050);border-bottom:1px solid var(--ow-rule-soft);font-size:var(--ow-t-12);line-height:1.45;color:var(--ow-ink-600);}
+  .mgr-rej b{color:var(--ow-ink-900);}
+  .mgr-rej svg{flex:none;width:15px;height:15px;margin-top:1px;fill:none;stroke:var(--ow-ink-400);stroke-width:2;stroke-linecap:round;}
   .mgr-rv-tags{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ow-sp-6);min-width:0;}
   .mgr-kc{font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);letter-spacing:.06em;text-transform:uppercase;
     padding:1px var(--ow-sp-6);border-radius:var(--ow-r-pill);}
@@ -1760,6 +1771,10 @@
   .mgr-pk-name{font-size:var(--ow-t-14);line-height:1.3;}
   .mgr-pk-more summary,.mgr-pk-own summary{cursor:pointer;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-sky);}
   .mgr-pk-more p{margin:var(--ow-sp-6) 0 0;font-size:var(--ow-t-12);line-height:1.45;color:var(--ow-ink-600);}
+  .mgr-pk-rec{margin:0;display:flex;gap:var(--ow-sp-6);padding:var(--ow-sp-6) var(--ow-sp-10);border-radius:var(--ow-r-sm);
+    background:var(--ow-verdigris-soft);color:var(--ow-verdigris);font-size:var(--ow-t-12);line-height:1.4;}
+  .mgr-pk-rec b{font-weight:var(--ow-fw-700);}
+  .mgr-pk-rec svg{flex:none;width:14px;height:14px;margin-top:1px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;}
   .mgr-pk-ov{margin:0;display:flex;gap:var(--ow-sp-6);padding:var(--ow-sp-6) var(--ow-sp-10);border-radius:var(--ow-r-sm);
     background:var(--ow-amber-soft);color:var(--ow-amber-ink);font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);line-height:1.35;}
   .mgr-pk .mgr-pk-card .mgr-pb-a{grid-column:auto;grid-row:auto;align-self:stretch;margin-top:auto;display:flex;gap:var(--ow-sp-6);}
@@ -10130,6 +10145,7 @@
   .assistant-panel.open{display:flex;}
   .ap-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line);}
   .ap-head h2{font-size:14px;margin:0;text-transform:uppercase;letter-spacing:0.6px;color:var(--ink-soft);font-weight:700;flex:1;}
+  .ap-chip.ap-chip-plan{border-color:var(--ow-steel-950);color:var(--ow-steel-950);font-weight:600;}
   .ap-credit{font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap;}
   .ap-credit-ok{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
   .ap-credit-out{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
@@ -93569,6 +93585,7 @@ async function managerAdviceTally(todayISO_){
       : { key: String(b.mkind || 'other') + '|~' + String(b.title || '').trim().toLowerCase(), byWording: true };
   };
   const by = new Map();
+  const rowsSeen = [];
   /* ADVICE IN DIFFERENT WORDS IS THE SAME ADVICE. A move with no id was
      matched on its exact title, so "put 5,000 on the Masasi carton" and
      "put 5,000 more shillings on each Masasi carton before you refill
@@ -93593,6 +93610,7 @@ async function managerAdviceTally(todayISO_){
     const cur = by.get(fp.key) || { key: fp.key, title: b.title, byWording: fp.byWording,
       proposed: 0, skipped: 0, done: 0, reasons: [], lastOn: '', onDays: new Set() };
     cur.onDays.add(String(row.date || ''));
+    rowsSeen.push({ key: fp.key, status: row.status, date: String(row.date || ''), worth: Math.max(0, Number(b.worth) || 0) });
     /* HOW OFTEN IT HAS BEEN PUT, whatever became of it. The counter this
        tally never kept, and the only one that can see the manager
        repeating itself: five meetings in one day, one idea, restated. */
@@ -93643,6 +93661,24 @@ async function managerAdviceTally(todayISO_){
   all.forEach(x=>{
     counts.proposed += x.proposed; counts.done += x.done; counts.skipped += x.skipped;
     counts.untouched += Math.max(0, x.proposed - x.done - x.skipped);
+  });
+  /* THE MONEY, AND WHY THE REST IS STILL WAITING. "7 of 52 done, 45
+     untouched" read as a telling-off and said nothing about what was
+     left. The same rows say how much money the done moves carried
+     against what is still waiting, and sort the waiting ones by why:
+     advice it keeps repeating, advice that has gone stale (over a week
+     old), and advice still new this week. */
+  const nlKeys = new Set(notLanding.map(x=> x.key));
+  const weekAgo = anShiftDate(today, -7);
+  counts.worthDone = 0; counts.worthWaiting = 0;
+  counts.waiting = { repeated: 0, stale: 0, fresh: 0 };
+  rowsSeen.forEach(x=>{
+    if(x.status === 'done'){ counts.worthDone += x.worth; return; }
+    if(x.status === 'skipped') return;
+    counts.worthWaiting += x.worth;
+    if(nlKeys.has(x.key)) counts.waiting.repeated++;
+    else if(x.date < weekAgo) counts.waiting.stale++;
+    else counts.waiting.fresh++;
   });
   return { passedOn, notLanding, counts, days, times, repeats };
 }
@@ -94854,7 +94890,8 @@ function mgrHeroHTML(plan, moves, held){
   const key = plan && plan.keyline ? `<p class="mgr-hero-k"><b>The one thing:</b> ${esc(plan.keyline)}</p>`
     : running ? '<p class="mgr-hero-k">It is reading the same figures you see beside this. The plan lands below when it is done.</p>'
     : stopped ? '<p class="mgr-hero-k">It ran out of room before naming the plan. Finish it below &mdash; it picks up where it stopped.</p>'
-    : held === false ? '<p class="mgr-hero-k">The figures beside this are live from your books. The meeting reads them and names the one thing.</p>' : '';
+    : held === false ? '<p class="mgr-hero-k">The figures beside this are live from your books. The meeting reads them and names the one thing.</p>'
+    : held == null ? '<p class="mgr-hero-k">Reading today’s meeting — the figures beside this are already live from your books.</p>' : '';
   const safeShare = (f.safe != null && f.held > 0) ? Math.max(0, Math.min(100, Math.round(f.safe / f.held * 100))) : 0;
   const bills = f.bills.slice(0, 40).map(a=> `<i class="${a >= 90 ? '' : a >= 60 ? 'mgr-bill-2' : a >= 30 ? 'mgr-bill-3' : 'mgr-bill-4'}"></i>`).join('');
   const marginShare = (f.margin != null && f.aim > 0) ? Math.max(0, Math.min(100, Math.round(f.margin / f.aim * 100))) : 0;
@@ -94944,9 +94981,14 @@ function mgrPaintVerdict(state){
   if(t && t.error){ cells[0] = unread('Advice done'); cells[3] = unread('Not landing'); }
   else if(t && t.counts){
     const c = t.counts;
-    cells[0] = { label: 'Advice done', value: mgrOf(c.done, c.proposed),
+    const w = c.waiting || {};
+    const why = [w.repeated ? `${w.repeated} repeated` : '', w.stale ? `${w.stale} over a week old` : '', w.fresh ? `${w.fresh} new this week` : '']
+      .filter(Boolean).join(', ');
+    const money = (c.worthDone || 0) + (c.worthWaiting || 0) > 0;
+    cells[0] = { label: money ? 'Money acted on' : 'Advice done',
+      value: money ? mgrOf(mgrShortUGX(c.worthDone || 0), mgrShortUGX((c.worthDone || 0) + (c.worthWaiting || 0))) : mgrOf(c.done, c.proposed),
       sub: c.proposed
-        ? `last ${c.days} days &middot; ${c.skipped} skipped, ${c.untouched} untouched`
+        ? `${c.done} of ${c.proposed} moves in ${c.days} days${why ? ` &middot; waiting: ${why}` : ''}${c.skipped ? ` &middot; ${c.skipped} set aside` : ''}`
         : `nothing advised in ${c.days} days` };
     cells[3] = { label: 'Not landing', value: String(t.notLanding.length),
       tone: t.notLanding.length ? 'ow-warn' : '',
@@ -95748,6 +95790,43 @@ function mgrPaintLevers(track, tally){
   }));
 }
 
+/* ==== LAST KNOWN, UNTIL THE FRESH READING ARRIVES =====================
+
+   Several boxes on this screen wait seconds for the journal, and sat
+   empty or saying "reading the journal…" meanwhile. Each box's last good
+   render is kept, and put back at once -- dimmed, not clickable, and
+   tagged as last known -- so the owner reads figures straight away and
+   can never mistake them for today's: the tag and the dimming go the
+   moment the box's fresh reading replaces it. */
+const MGR_CACHED_WRAPS = ['managerVerdictWrap', 'managerPlanWrap', 'managerPlaysWrap', 'managerScoreWrap',
+  'managerQuestionsWrap', 'managerHistoryWrap', 'managerTrackWrap', 'managerAccountWrap'];
+function mgrCacheKey(id){ return 'ow-mgr-last:' + (currentShopId || '-') + ':' + id; }
+function mgrCacheSave(){
+  MGR_CACHED_WRAPS.forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el || el.classList.contains('mgr-stale') || !el.innerHTML.trim() || el.querySelector('.mgr-reading')) return;
+    if(el.innerHTML.length > 200000) return;
+    try{ localStorage.setItem(mgrCacheKey(id), JSON.stringify({ at: new Date().toISOString(), html: el.innerHTML })); }catch(e){}
+  });
+}
+function mgrCachePaint(el){
+  if(!el) return false;
+  let c = null;
+  try{ c = JSON.parse(localStorage.getItem(mgrCacheKey(el.id)) || 'null'); }catch(e){}
+  if(!c || !c.html) return false;
+  const when = new Date(c.at);
+  const same = when.toDateString() === new Date().toDateString();
+  const label = same ? 'last known ' + when.toTimeString().slice(0, 5) : 'last known ' + fmtShortDate(c.at.slice(0, 10));
+  el.innerHTML = c.html + `<span class="mgr-stale-tag">${esc(label)} · updating…</span>`;
+  el.classList.add('mgr-stale');
+  if(!el._mgrStaleObs){
+    el._mgrStaleObs = new MutationObserver(()=>{ if(!el.querySelector('.mgr-stale-tag')) el.classList.remove('mgr-stale'); });
+    el._mgrStaleObs.observe(el, { childList: true });
+  }
+  return true;
+}
+
+window.addEventListener('pagehide', ()=>{ try{ mgrCacheSave(); }catch(e){} });
 function renderManager(){
   const memoryNote = document.getElementById('managerMemoryNote');
   if(!memoryNote) return;
@@ -95848,6 +95927,7 @@ function renderManager(){
         <span class="ow-pan-n">${rows.length} move${rows.length === 1 ? '' : 's'}${
           done ? ` · ${done} done` : ''}</span>
       </div>
+      ${(plan && plan.rejected) ? `<p class="mgr-rej"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 9l6 6M15 9l-6 6"/><circle cx="12" cy="12" r="9"/></svg><span><b>Considered and rejected:</b> ${esc(plan.rejected)}</span></p>` : ''}
       ${(()=>{ let opened = false;
         return ordered.map(r=>{
           /* THE FIRST MOVE STILL OPEN IS OPEN. The plan exists to name
@@ -95859,7 +95939,6 @@ function renderManager(){
           if(open) opened = true;
           return mgrQueueRowHTML(r, rows, { kindChip: true, open, rich: true, num: ordered.indexOf(r) });
         }).join(''); })()}
-      ${(plan && plan.rejected) ? `<p class="ow-mini">Considered and rejected: ${esc(plan.rejected)}</p>` : ''}
       ${(plan && plan.cutOff) ? `<p class="ow-mini">This meeting ran out of room mid-answer — there may have been more to it.</p>` : ''}
       ${foot || ''}
     </div>`;
@@ -95957,7 +96036,7 @@ function renderManager(){
 
        The announcement belongs to the wait, not instead of it. */
     if(!managerNotesTable) playWrap.innerHTML = '';
-    else if(playWrap.innerHTML) playWrap.innerHTML = '<p class="mgr-reading">Reading the journal…</p>';
+    else if(!mgrCachePaint(playWrap) && playWrap.innerHTML) playWrap.innerHTML = '<p class="mgr-reading">Reading the journal…</p>';
     if(managerNotesTable) managerPlaybook().then(book=>{
       if(gen !== mgrRenderGen) return;
       /* WHAT MOVED WHILE IT RAN -- said as movement, never as credit.
@@ -96042,6 +96121,14 @@ function renderManager(){
         /* Two proposals treating the same thing pull on the same lever:
            trying both at once would leave neither judgeable. */
         const twins = book.proposed.filter(q=> q.id !== p.id && q.treats === p.treats && p.treats !== 'other');
+        /* AND IT PICKS. Flagging the overlap and leaving the owner to
+           choose was half the job: of plays pulling on the same lever,
+           the one worth more goes first, and the card says so and why. */
+        const group = [p, ...twins];
+        const best = group.slice().sort((a, b)=> ((worthOf.get(b.id) || {}).amount || 0) - ((worthOf.get(a.id) || {}).amount || 0))[0];
+        const pick = twins.length && best.id === p.id && ((worthOf.get(p.id) || {}).amount || 0) > 0;
+        const other = pick ? twins[0] : best;
+        const wOf = (q)=> (worthOf.get(q.id) || {}).amount || 0;
         return `<div class="mgr-pb mgr-pk-card" data-pid="${esc(String(p.id))}" data-dups="${esc((p.dupIds||[]).join(','))}">
           <div class="mgr-pk-top">${tile(p)} ${chip(p)}</div>
           ${w ? `<div class="mgr-pk-worth"><b title="${esc(fmtUGX(w.amount))}">+${esc(mgrShortUGX(w.amount))}</b> <small>${esc(w.per)}</small>
@@ -96049,7 +96136,8 @@ function renderManager(){
           <b class="mgr-pk-name">${esc(p.name)}</b>
           ${p.how || p.sized ? `<details class="mgr-pk-more"><summary>How it works</summary><p>${esc(mgrPlayText(p.how))}${p.how && p.sized ? ' · ' : ''}${esc(mgrPlayText(p.sized))}</p></details>` : ''}
           ${watch(p)}
-          ${twins.length ? `<p class="mgr-pk-ov"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/></svg>Overlaps “${esc(twins[0].name)}” — both treat ${esc(p.problem.toLowerCase())}; try one at a time</p>` : ''}
+          ${pick ? `<p class="mgr-pk-rec"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg><span><b>Try this one first.</b> It and “${esc(other.name)}” both treat ${esc(p.problem.toLowerCase())}, so only one can be judged at a time — and this one is sized at +${esc(mgrShortUGX(wOf(p)))} against +${esc(mgrShortUGX(wOf(other)))}.</span></p>`
+            : twins.length ? `<p class="mgr-pk-ov"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/></svg>Overlaps “${esc(other.name)}”${wOf(other) > wOf(p) ? ', which is worth more — try that first' : ' — both treat ' + esc(p.problem.toLowerCase()) + '; try one at a time'}</p>` : ''}
           <div class="mgr-pb-a"><button type="button" class="btn btn-ghost ow-sm mgr-play-run">Try it</button>
             <button type="button" class="btn btn-ghost ow-sm mgr-play-drop">Set aside</button></div>
         </div>`;
@@ -96134,9 +96222,12 @@ function renderManager(){
      on screen to say otherwise. There is no visual difference between
      "this is your plan" and "this is the plan from before you tapped
      Done", and the second one is a lie the app tells silently. */
+  mgrCacheSave();
   mgrPaintVerdict({});
+  mgrCachePaint(document.getElementById('managerVerdictWrap'));
   mgrPaintSwitch({ standing: null, record: null, since: null });
-  if(!managerMeetingRunning){
+  if(!managerMeetingRunning && heldGuess && mgrCachePaint(planWrap)){ wireOffers(); }
+  else if(!managerMeetingRunning){
     planWrap.innerHTML = heldGuess
       ? planShell(`<p class="mgr-reading">Reading the journal…</p>`
           + heldFoot(null, false))
@@ -96154,7 +96245,7 @@ function renderManager(){
      and the screen read as broken rather than as busy. The clearing is
      the part that matters; the announcement only has to happen once. */
   [scoreWrap, qWrap, hist, acct,
-   document.getElementById('managerTrackWrap')].forEach(el=>{ if(el) el.innerHTML = ''; });
+   document.getElementById('managerTrackWrap')].forEach(el=>{ if(el && !mgrCachePaint(el)) el.innerHTML = ''; });
 
   /* The two readings the verdict and the levers table are built from.
      Kept on one object so each can paint as it arrives without either
@@ -96293,6 +96384,7 @@ function renderManager(){
       oldestFirst.map(w=> ({ date: String(w.meeting.date), moves: w.moves.map(x=> x.status || 'open'), done: w.moves.filter(x=> x.status === 'done').length })),
       st.reviews.map(r=> ({ date: String(r.date), sales: ((r.body || {}).week || {}).sales })), todayISO_);
     const top = reps.top;
+    mgrJournalTopRepeat = top;
     const callout = top ? `<div class="mgr-jr-rep">
         <span class="mgr-av mgr-av-k" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></svg></span>
         <span class="mgr-jr-rt"><b>Said ${top.dates.length} times: ${esc(String(top.title).split(/\s[—–]\s/)[0])}</b>
@@ -97779,9 +97871,16 @@ function dashboardContext(from, to){
 function mgrWirePlan(root){
   root.querySelectorAll('.mgr-door').forEach(btn=> btn.addEventListener('click', ()=> goToTab(btn.dataset.tab)));
   root.querySelectorAll('.mgr-discuss').forEach(btn=> btn.addEventListener('click', ()=>{
+    /* The move, filled in: which one, what it is worth and where it
+       stands -- and the question goes with today's plan beside it, so
+       the answer is about THIS plan and not the shop in general. */
+    const card = btn.closest('[data-mid]');
+    const n = card && card.querySelector('.mgr-rv-n') ? card.querySelector('.mgr-rv-n').textContent : '';
+    const fig = card && card.querySelector('.ow-q-f') ? card.querySelector('.ow-q-f').textContent : '';
+    apPlanContextNext = true;
     apOpenPanel();
     const input = document.getElementById('apInput');
-    if(input){ input.value = `About "${btn.dataset.title}" — `; input.focus(); }
+    if(input){ input.value = `About move ${n ? n + ' ' : ''}"${btn.dataset.title}"${fig && fig !== '—' ? ' (' + fig + ')' : ''} — `; input.focus(); }
   }));
   /* EVERY MOVE, WHICHEVER WAY IT IS DRAWN. This found only the old
      .mgr-move cards; the plan and Today's queue draw moves as queue rows
@@ -98260,12 +98359,13 @@ function mgrRichRowHTML(row, all, opts){
     <button type="button" class="ow-q-r ow-qtog">${OW_CARET}
       <span class="mgr-rv-lead"><span class="mgr-rv-n">${num}</span>${face.html}</span>
       <span class="mgr-rv-mid"><span class="mgr-rv-tags">${kind} ${state} ${face.name ? `<span class="mgr-rv-who">${esc(face.name)}</span>` : ''}</span>
-        <span class="ow-q-t">${esc(b.title || '')}</span></span>
+        <span class="ow-q-t">${esc(b.title || '')}</span>${b.why ? `<span class="mgr-rv-why" title="${esc(b.why)}">${esc(b.why)}</span>` : ''}</span>
       <span class="ow-q-v"><b class="ow-q-f">${esc(money)}</b><span class="ow-q-b">${esc(basis)}</span></span>
     </button>
     <button type="button" class="ow-q-card ow-qtog">
       <span class="mgr-rv-lead"><span class="mgr-rv-n">${num}</span>${face.html}</span>
       <span class="mgr-rv-mid"><span class="mgr-rv-tags">${kind} ${state}</span><span class="ow-q-ct">${esc(b.title || '')}</span>
+        ${b.why ? `<span class="mgr-rv-why">${esc(b.why)}</span>` : ''}
         <span class="ow-q-cv">${esc(money)}<span class="ow-q-b">${esc(basis)}</span></span></span>
       ${OW_CARET_C}
     </button>
@@ -109296,22 +109396,60 @@ function apSendLocal(q){
   if(b) b.classList.add('ap-from-books');
 }
 
+/* ==== THE CHAT, TOLD WHAT THE MANAGER KNOWS ==========================
+
+   The panel opened with "Ask your shop anything" and generic questions,
+   as if no plan existed. When one does, its first questions are about
+   it, and a question asked from the plan carries a short summary of it
+   -- the plan the owner is looking at, not the shop in general. */
+let apPlanContextNext = false;
+let apPlanSeededThread = null;
+function apPlanSummary(){
+  const today = mgrMapJournal && mgrMapJournal.today;
+  if(!today) return '';
+  const b = today.meeting.body || {};
+  const moves = mgrMoveOrder(today.moves).map((m, i)=>{
+    const mb = m.body || {};
+    return `${i + 1}) ${mb.title || ''}${Number(mb.worth) > 0 ? ' — ' + Math.round(mb.worth) + ' UGX' : ''} — ${m.status || 'open'}${mb.why ? ' — why: ' + String(mb.why).slice(0, 160) : ''}`;
+  }).join('; ');
+  return `[Today's plan on the Manager screen — objective: ${MANAGER_OBJECTIVES[b.objective] || b.objective || 'none'}; the one thing: ${b.keyline || ''}; moves: ${moves}${b.rejected ? '; considered and rejected: ' + b.rejected : ''}]`;
+}
+function apPlanChips(){
+  const today = mgrMapJournal && mgrMapJournal.today;
+  if(!today) return [];
+  const open = mgrMoveOrder(today.moves).filter(m=> m.status !== 'done' && m.status !== 'skipped');
+  const first = open[0] || mgrMoveOrder(today.moves)[0];
+  const out = [];
+  if(first){
+    const face = mgrMoveFace(first.body || {});
+    out.push(`Why is ${face.name ? face.name.split(/\s+/).slice(0, 2).join(' ') : 'move 1'} first?`);
+  }
+  const top = mgrJournalTopRepeat;
+  if(top) out.push(`Did the advice to ${String(top.title).split(/\s[—–]\s/)[0].replace(/^[A-Z]/, (c)=> c.toLowerCase()).slice(0, 60)} work?`);
+  let aim = null; try{ aim = targetMarginPct(); }catch(e){}
+  if(aim) out.push(`What's stopping margin reaching ${aim}%?`);
+  out.push('What should I do first today?');
+  return out.slice(0, 4);
+}
+let mgrJournalTopRepeat = null;
+
 function apRenderWelcome(){
   const div = document.createElement('div');
   div.className = 'ap-welcome';
   div.id = 'apWelcome';
+  const planChips = apPlanChips();
   const chips = [
+    ...planChips,
     'How much money do I have?',
     'Who owes me the most?',
     'What did we sell this month?',
-    'What is the price of ',
+    ...(planChips.length ? [] : ['What is the price of ']),
   ];
   div.innerHTML = '<div class="ap-welcome-icon"><svg class="icon" viewBox="0 0 24 24">'
     + '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>'
-    + '<h3>Ask your shop anything</h3>'
-    + '<p>Debts, stock, prices, statements — or tell me what to record. Press the headset button to talk hands-free.</p>'
-    + '<div class="ap-chips">' + chips.map(c=>
-      '<button type="button" class="ap-chip">' + esc(c.trim()) + (c.endsWith(' ') ? '…' : '') + '</button>').join('') + '</div>'
+    + (planChips.length ? '<h3>Ask about today’s plan</h3><p>It knows the plan on the Manager screen. Or ask about debts, stock and prices.</p>'
+      : '<h3>Ask your shop anything</h3><p>Debts, stock, prices, statements — or tell me what to record. Press the headset button to talk hands-free.</p>')
+    + '<div class="ap-chips">' + chips.map((c, i)=> `<button type="button" class="${i < planChips.length ? 'ap-chip ap-chip-plan' : 'ap-chip'}">${esc(c.trim())}${c.endsWith(' ') ? '…' : ''}</button>`).join('') + '</div>'
     + '<div class="ap-welcome-small">The first three answer straight from your books, free. Other questions use a little AI credit from your own key. Answers can be read aloud — in a crowded shop, use a headset. Names can be said as they sound, and a customer\'s nickname written in their notes teaches me it.</div>';
   apLogEl().appendChild(div);
   div.querySelectorAll('.ap-chip').forEach((btn, i)=>{
@@ -109320,6 +109458,7 @@ function apRenderWelcome(){
       /* The everyday questions are answered from the books directly:
          instant, free, and still there when the AI credit runs out. */
       if(apLocalAnswer(q)){ apSendLocal(q); return; }
+      if(i < planChips.length) apPlanContextNext = true;
       if(q.endsWith(' ')){
         // The open-ended one seeds the box for the owner to finish.
         const input = document.getElementById('apInput');
@@ -109813,7 +109952,10 @@ function apSend(text){
      system prompt stays byte-stable so the big prefix caches. With a
      photo the turn becomes [image, text]: the picture first, the date
      and the words inside the TEXT block -- the shape the API reads. */
-  const stamped = '[Today is ' + todayISO() + ']\n'
+  const planCtx = (apPlanContextNext && apPlanSeededThread !== assistantThread) ? apPlanSummary() : '';
+  if(planCtx) apPlanSeededThread = assistantThread;
+  apPlanContextNext = false;
+  const stamped = '[Today is ' + todayISO() + ']\n' + (planCtx ? planCtx + '\n' : '')
     + (apWasCutOff ? '[Your previous answer was cut off mid-way. Resume from where it stopped, in smaller pieces — do not repeat what already went through, do not re-ask what was already answered.]\n' : '')
     + (clean || 'Read this photo. If it is a document for the books, read it out and propose the entries.');
   apWasCutOff = false;

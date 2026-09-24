@@ -77,4 +77,27 @@ const api = read('api/assistant.js');
   t.check(/input\.focus\(\);/.test(open) && /setTimeout\(grab, 320\)/.test(open), 'and the box takes the cursor at once, and again once the panel has slid in');
 }
 
+/* ---------- 5. the chat knows today's plan ------------------------------ */
+{
+  const scope = compileScope([extractFunction(src, 'apPlanChips', 'index.html'), extractFunction(src, 'apPlanSummary', 'index.html'),
+    'let mgrMapJournal = null; let mgrJournalTopRepeat = null; function setJ(j, t){ mgrMapJournal = j; mgrJournalTopRepeat = t; }'], {
+    mgrMoveOrder: (m) => m, mgrMoveFace: (b) => ({ name: b.who || '' }), targetMarginPct: () => 10,
+    MANAGER_OBJECTIVES: { cash: 'Cash first' }, String, Math, Number,
+  }, ['apPlanChips', 'apPlanSummary', 'setJ']);
+  t.check(scope.apPlanChips().length === 0 && scope.apPlanSummary() === '', 'with no plan, the chat opens as before');
+  scope.setJ({ today: { meeting: { body: { objective: 'cash', keyline: 'Get Amos in', rejected: 'the reorder waits' } },
+    moves: [{ status: 'open', body: { title: 'Collect from Amos', who: 'Amos Dulisa', worth: 2515000, why: 'biggest and freshest' } }] } },
+    { title: 'Put 5,000 shillings on the Masasi carton — worth more' });
+  const chips = scope.apPlanChips();
+  t.check(chips[0] === 'Why is Amos Dulisa first?' && /Did the advice to put 5,000 shillings on the Masasi carton work\?/.test(chips[1]) && /margin reaching 10%/.test(chips[2]),
+    'with a plan, its first questions are about it: why this first, did the repeated advice work, what stops the margin (got ' + JSON.stringify(chips) + ')');
+  const sum = scope.apPlanSummary();
+  t.check(/Get Amos in/.test(sum) && /Collect from Amos — 2515000 UGX — open — why: biggest and freshest/.test(sum) && /considered and rejected: the reorder waits/.test(sum),
+    'and a question asked from the plan carries it: the one thing, each move with its figure, state and reason, and what was rejected');
+  t.check(/const planCtx = \(apPlanContextNext && apPlanSeededThread !== assistantThread\) \? apPlanSummary\(\) : '';/.test(extractFunction(src, 'apSend', 'index.html')),
+    'once per conversation, not on every question');
+  const wire = extractFunction(src, 'mgrWirePlan', 'index.html');
+  t.check(/apPlanContextNext = true;/.test(wire) && /About move \$\{n \? n \+ ' ' : ''\}/.test(wire), 'Ask on a move opens the chat with that move, its number and figure filled in');
+}
+
 process.exit(t.done() ? 1 : 0);
