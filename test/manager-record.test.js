@@ -119,8 +119,9 @@ const src = read('index.html');
      (managerUnusualWrap): the days of the last week outside this shop's
      own usual. A new section is a new container, not a wrapper.
      Fourteen since the band under the verdict (managerHeroWrap): what
-     today is about and the three figures it is about. */
-  t.check(ids.length === 14, `every container is a flat sibling div with an id (${ids.length})`);
+     today is about and the three figures it is about. Fifteen since the
+     map (managerMapWrap): the shop as one picture, in a bed of its own. */
+  t.check(ids.length === 15, `every container is a flat sibling div with an id (${ids.length})`);
 
   /* The two that were retired, and the two that replaced them. Named
      rather than merely absent: a wrap that comes back by accident is a
@@ -147,7 +148,7 @@ const src = read('index.html');
   /* TWO BEDS, AND NOTHING IN BOTH. .mgr-bed-s is what still wants an
      answer; .mgr-bed-r is the record. A wrap in neither would show on
      both views; a wrap in both would show twice. */
-  const bedded = kids.filter(k => /class="mgr-bed mgr-bed-[sr]"/.test(k[2]));
+  const bedded = kids.filter(k => /class="mgr-bed mgr-bed-[srm]"/.test(k[2]));
   t.check(bedded.length === ids.length - 3,
     `every wrap but the three above the switch belongs to a bed (${bedded.length} of ${ids.length - 3})`);
   t.check(kids.filter(k => /mgr-bed-s/.test(k[2]) && /mgr-bed-r/.test(k[2])).length === 0,
@@ -164,7 +165,7 @@ const src = read('index.html');
      a bed that had to be re-read on every tap would spend a query on a
      view the owner may only be glancing at. */
   const flat = src.replace(/\s*\n\s*/g, '');
-  t.check(/#tab-manager\.mgr-on-standing \.mgr-bed-s,#tab-manager\.mgr-on-record \.mgr-bed-r\{display:block;\}/.test(flat),
+  t.check(/#tab-manager\.mgr-on-standing \.mgr-bed-s,#tab-manager\.mgr-on-record \.mgr-bed-r,#tab-manager\.mgr-on-map \.mgr-bed-m\{display:block;\}/.test(flat),
     'the switch shows a bed with one class on the section, not with a second read of the journal');
   t.check(/\.mgr-bed\{display:none;\}/.test(flat), 'and everything is hidden until it does');
   t.check(/\.mgr-bed:empty\{display:none;\}/.test(flat),
