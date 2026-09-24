@@ -92928,7 +92928,12 @@ function renderManagerCard(){
 async function renderManagerPace(){
   const el = document.getElementById('dash_managerPace');
   if(!el || !managerNotesTable) return;
+  const gen = ++mgrPaceGen;
   const board = await managerScoreboard();
+  /* Overtaken while the scoreboard was out: the render that overtook
+     this one is reading the same targets, and the figure it brings is
+     the newer of the two. */
+  if(gen !== mgrPaceGen) return;
   const live = (board.targets||[]).filter(x=> x.pace && !x.finished);
   if(!live.length){ el.innerHTML = ''; return; }
   const behind = live.filter(x=> !x.pace.on_course);
@@ -93042,6 +93047,32 @@ let mgrView = 'standing';
    a re-render -- a move marked done, a question answered -- keeps the
    owner where they were looking. */
 let mgrLeverFilter = 'all';
+
+/* WHICH RENDER IS STILL THE CURRENT ONE.
+
+   This screen paints from four readings that answer at their own
+   speeds, and thirteen places call renderManager -- several of them
+   twice in a row, right after a write. So two renders are routinely in
+   flight at once, and until now the one that ANSWERED LAST won the
+   screen rather than the one that STARTED last.
+
+   Live: the owner taps Done on a move, then Done on the next one. Two
+   renders go out. The first one's journal read comes back slower than
+   the second's, paints over it, and the move that was just marked done
+   is drawn open again. Nothing on the screen says which reading it is
+   looking at, and the owner taps Done a second time on work they have
+   already finished.
+
+   Every chain therefore takes the ticket it was issued and checks it
+   before it writes: a reading that was overtaken while it was out
+   drops its answer instead of painting it. The render that overtook it
+   is already asking the same questions. */
+let mgrRenderGen = 0;
+/* The pace strip on Today has the same shape and a counter of its own,
+   because it is called from the dashboard rather than from this screen
+   -- sharing one would let a Manager render silently cancel a pace
+   paint and leave yesterday's figure on the front door. */
+let mgrPaceGen = 0;
 
 /* WHAT KIND OF LEVER THIS MOVE PULLS. On Today the chip says "Manager",
    because the queue there mixes the manager's advice with the app's own
@@ -93285,6 +93316,9 @@ function mgrPaintLevers(track, tally){
 function renderManager(){
   const memoryNote = document.getElementById('managerMemoryNote');
   if(!memoryNote) return;
+  /* Taken AFTER the early return: a render that paints nothing has no
+     business cancelling one that is still painting. */
+  const gen = ++mgrRenderGen;
   memoryNote.innerHTML = managerNotesTable ? '' : `<div class="cb-chain-break">
     <div><b>The manager cannot remember yet.</b> Meetings run, but nothing is kept — no advice,
       no account of what it earned, no scoreboard and no record. One database update fixes it.</div>
@@ -93447,9 +93481,21 @@ function renderManager(){
      rather than in the record: each play has a span, and one running
      past its own span is the manager's failure to answer for. ---- */
   if(playWrap){
+    /* THE ANNOUNCEMENT IS NOT THE READING.
+
+       This said: no table, empty it; already painted, say it is
+       reading; otherwise read. So the read lived in the branch that
+       only ever ran on the FIRST render, and every render after it
+       announced a journal read that was never made. Try it, Stop it,
+       Add -- each ends in renderManager, so the panel the owner had
+       just acted on went to "Reading the journal…" and stayed there
+       until the page was reloaded.
+
+       The announcement belongs to the wait, not instead of it. */
     if(!managerNotesTable) playWrap.innerHTML = '';
     else if(playWrap.innerHTML) playWrap.innerHTML = '<p class="mgr-reading">Reading the journal…</p>';
-    else managerPlaybook().then(book=>{
+    if(managerNotesTable) managerPlaybook().then(book=>{
+      if(gen !== mgrRenderGen) return;
       /* WHAT MOVED WHILE IT RAN -- said as movement, never as credit.
          The owner reads exactly what the weekly review reads, from the
          same arithmetic, and the wording refuses the causal claim on
@@ -93589,6 +93635,7 @@ function renderManager(){
   const verdict = {};
 
   managerLoadState().then(st=>{
+    if(gen !== mgrRenderGen) return;
     if(st.error){
       planWrap.innerHTML = `<div class="ow-pan"><div class="ow-empty">The journal could not be read — ${
         esc(st.error)}</div></div>`;
@@ -93773,12 +93820,14 @@ function renderManager(){
   /* The two long readings. They fill the verdict and the levers table
      when they answer, and neither waits on the other. */
   managerAdviceTally(todayISO()).then(tally=>{
+    if(gen !== mgrRenderGen) return;
     verdict.tally = tally;
     mgrPaintVerdict(verdict);
     mgrPaintAcctAdvice(verdict);
     if(verdict.track) mgrPaintLevers(verdict.track, tally);
   });
   managerTrackRecord(todayISO()).then(track=>{
+    if(gen !== mgrRenderGen) return;
     verdict.track = track;
     mgrPaintVerdict(verdict);
     mgrPaintLevers(track, verdict.tally);

@@ -35,6 +35,26 @@
  *                    difference between "this is your plan" and "this
  *                    is the plan from before you tapped Done".
  *
+ * And a fourth, found later and of the same family — the screen saying
+ * something about its own state that is not true:
+ *
+ *   THE RACE         Those same four chains, with thirteen callers,
+ *                    several of which fire twice in a row right after a
+ *                    write. Two renders are routinely out at once, and
+ *                    the one that ANSWERED last won the screen rather
+ *                    than the one that STARTED last. Tap Done on a
+ *                    move, then Done on the next: if the first render's
+ *                    journal read is the slower of the two it paints
+ *                    over the second, and the move just marked done is
+ *                    drawn open again.
+ *
+ *                    Beside it, the playbook's read sat in an `else`
+ *                    that only ran on the FIRST render — so every
+ *                    render after it announced "Reading the journal…"
+ *                    and never read. Try it, Stop it and Add all end in
+ *                    renderManager, so the panel the owner had just
+ *                    acted on stuck on that line until a page reload.
+ *
  * Run: node test/manager-screen-defects.test.js   (or: npm test)
  */
 const { read, extractFunction, createReporter } = require('./_extract');
@@ -175,6 +195,46 @@ const render = extractFunction(src, 'renderManager', 'index.html');
     'with em-dashes rather than zeroes');
   t.check(/\.mgr-verdict \.mgr-wait \.ow-mt-v\{color:var\(--ow-ink-400\)/.test(src.replace(/\s*\n\s*/g, '')),
     'and in a colour that reads as a wait');
+}
+
+/* ---------- 4. the render that started last wins ---------- */
+{
+  t.check(/let mgrRenderGen = 0;/.test(src), 'the screen holds a render counter');
+  t.check(/const gen = \+\+mgrRenderGen;/.test(render), 'and every render takes a ticket from it');
+  /* AFTER the early return: a render that paints nothing has no
+     business cancelling one that is still painting. */
+  t.check(render.indexOf('if(!memoryNote) return;') < render.indexOf('const gen = ++mgrRenderGen;'),
+    'taken after the early return, so a render that paints nothing cannot cancel one that does');
+
+  /* Every chain checks the ticket it was issued BEFORE it writes. The
+     guard is asserted against each chain by name rather than counted,
+     so a fifth reading added without one fails here. */
+  ['managerPlaybook().then', 'managerLoadState().then',
+   'managerAdviceTally(todayISO()).then', 'managerTrackRecord(todayISO()).then'].forEach(open=>{
+    const at = render.indexOf(open);
+    t.check(at > -1, `${open} is still one of the screen's readings`);
+    t.check(at > -1 && /^[\s\S]{0,140}?if\(gen !== mgrRenderGen\) return;/.test(render.slice(at)),
+      `and it drops its answer when it has been overtaken`);
+  });
+
+  /* THE ANNOUNCEMENT IS NOT THE READING. */
+  t.check(/if\(managerNotesTable\) managerPlaybook\(\)\.then/.test(render),
+    'the playbook is read on every render, not only the one that found the panel empty');
+  t.check(!/else managerPlaybook\(\)/.test(render),
+    'so the read no longer sits in a branch the second render cannot reach');
+  t.check(/else if\(playWrap\.innerHTML\) playWrap\.innerHTML = '<p class="mgr-reading">/.test(render),
+    'and the waiting line is still said when there is something on screen to replace');
+
+  /* The pace strip on Today is the same shape with a counter of its
+     own: sharing one would let a Manager render cancel a pace paint
+     and leave a stale figure on the front door. */
+  const pace = extractFunction(src, 'renderManagerPace', 'index.html');
+  t.check(/let mgrPaceGen = 0;/.test(src) && /const gen = \+\+mgrPaceGen;/.test(pace),
+    'the dashboard pace strip counts its own renders');
+  t.check(/if\(gen !== mgrPaceGen\) return;/.test(pace),
+    'and drops an overtaken scoreboard rather than painting it');
+  t.check(!/mgrRenderGen/.test(pace),
+    'on a counter of its own, so a Manager render cannot cancel a pace paint');
 }
 
 process.exit(t.done() ? 1 : 0);
