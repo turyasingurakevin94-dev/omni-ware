@@ -138,7 +138,7 @@ const N = scope.names();
   /* ---------- 4. the screen reads the same rows ---------------------- */
   {
     const load = extractFunction(src, 'managerLoadState', 'index.html');
-    t.check(/const reviews = await managerRecentReviews\(4\);/.test(load),
+    t.check(/managerRecentReviews\(4\)/.test(load),
       'the screen takes the reviews from the one reading');
     t.check(!/\.eq\('kind', 'review'\)/.test(load),
       'and no longer keeps a second query of its own — two readings are two chances to disagree');

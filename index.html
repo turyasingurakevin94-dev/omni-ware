@@ -92688,9 +92688,43 @@ async function managerAnswerQuestion(rowId, answer){
 
 async function managerLoadState(){
   if(!managerNotesTable) return { today: null, prior: [], reviews: [], weekMeetings: 0 };
-  const meetR = await sb.from('manager_notes').select('id, date, body, status')
-    .eq('shop_id', currentShopId).eq('kind', 'meeting')
-    .order('date', { ascending: false }).order('id', { ascending: false }).limit(6);
+  const today = todayISO();
+  /* TWO WAVES, NOT SIX.
+
+     This read the journal in six steps, each waiting on the one before
+     it, and only ONE of those waits was real: the moves cannot be asked
+     for until the meetings have named their ids. The scoreboard, the
+     open questions, the reviews and the week's count know nothing about
+     each other and nothing about the meetings -- they were serial
+     because they were written one under the other, not because anything
+     made them so.
+
+     Six round trips is the whole settling time of this screen, and the
+     shop reads it on a phone on a morning connection. They go out
+     together now, and the moves follow once the ids are known.
+
+     Everything they hand back is still read exactly as it was: a
+     reading that fails answers for itself below rather than taking the
+     screen down with it. */
+  const [meetR, score, qR, reviews, wkR] = await Promise.all([
+    sb.from('manager_notes').select('id, date, body, status')
+      .eq('shop_id', currentShopId).eq('kind', 'meeting')
+      .order('date', { ascending: false }).order('id', { ascending: false }).limit(6),
+    /* Reviews before 0082 simply do not exist yet -- an empty read here
+       is the honest answer, and the save path names the migration if a
+       write is refused. */
+    managerScoreboard(),
+    sb.from('manager_notes').select('id, date, body, status')
+      .eq('shop_id', currentShopId).eq('kind', 'question').eq('status', 'open')
+      .order('id', { ascending: false }).limit(6),
+    managerRecentReviews(4),
+    /* How much evidence a review would stand on -- the same 7-day window
+       week_review_data reads, counted so the offer can say it is thin
+       BEFORE the owner spends credit on it. */
+    sb.from('manager_notes').select('id', { count: 'exact', head: true })
+      .eq('shop_id', currentShopId).eq('kind', 'meeting')
+      .gte('date', anShiftDate(today, -6)).lte('date', today),
+  ]);
   if(meetR.error) return { error: meetR.error.message, today: null, prior: [], reviews: [], weekMeetings: 0 };
   const meetings = meetR.data || [];
   const ids = meetings.map(m=> m.id);
@@ -92708,21 +92742,6 @@ async function managerLoadState(){
   const movesBy = {};
   ((movesR && movesR.data) || []).forEach(x=>{ (movesBy[x.meeting_id] = movesBy[x.meeting_id] || []).push(x); });
   const withMoves = meetings.map(m=> ({ meeting: m, moves: movesBy[m.id] || [] }));
-  const today = todayISO();
-  /* Reviews before 0082 simply do not exist yet -- an empty read here is
-     the honest answer, and the save path names the migration if a write
-     is refused. */
-  const score = await managerScoreboard();
-  const qR = await sb.from('manager_notes').select('id, date, body, status')
-    .eq('shop_id', currentShopId).eq('kind', 'question').eq('status', 'open')
-    .order('id', { ascending: false }).limit(6);
-  const reviews = await managerRecentReviews(4);
-  /* How much evidence a review would stand on -- the same 7-day window
-     week_review_data reads, counted so the offer can say it is thin
-     BEFORE the owner spends credit on it. */
-  const wkR = await sb.from('manager_notes').select('id', { count: 'exact', head: true })
-    .eq('shop_id', currentShopId).eq('kind', 'meeting')
-    .gte('date', anShiftDate(today, -6)).lte('date', today);
   return {
     today: withMoves.find(w=> w.meeting.date === today) || null,
     prior: withMoves.filter(w=> w.meeting.date !== today),

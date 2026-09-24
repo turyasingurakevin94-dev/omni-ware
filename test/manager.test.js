@@ -22,6 +22,10 @@
  *                   render time, never from a stored opinion — and a
  *                   chase is answered only by ledger rows that carry a
  *                   cash link, the debtCollectionsOn lesson.
+ *   TWO WAVES       the journal's readings wait on each other only where
+ *                   one genuinely needs another's answer. Six round
+ *                   trips written one under the other is the settling
+ *                   time of the screen the shop opens every morning.
  *
  * Run: node test/manager.test.js   (or: npm test)
  */
@@ -626,6 +630,35 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     eq(await refused(review, weekData), null, 'a refused insert returns null');
     t.check(toasts.some((m) => /0082_manager_reviews\.sql/.test(m)),
       'and a check-constraint refusal names 0082 — the one paste that fixes it, not a raw error');
+  }
+  /* ---------- TWO WAVES ---------------------------------------------- */
+  {
+    const load = extractFunction(src, 'managerLoadState', 'index.html');
+    /* The ONE wait that is real: the moves cannot be asked for until the
+       meetings have named their ids. */
+    const wave = /const \[meetR, score, qR, reviews, wkR\] = await Promise\.all\(\[/.exec(load);
+    t.check(!!wave, 'the readings that need nothing from each other go out together');
+    ['managerScoreboard()', 'managerRecentReviews(4)', "eq('kind', 'question')", "count: 'exact', head: true"]
+      .forEach(bit=>{
+        const at = load.indexOf(bit);
+        t.check(at > -1 && wave && at > load.indexOf(wave[0]) && at < load.indexOf(']);'),
+          `${bit} is inside the wave rather than queued behind it`);
+      });
+    const moves = load.indexOf("eq('kind', 'move')");
+    t.check(moves > load.indexOf(']);'),
+      'and only the moves wait, because only they need an answer first');
+
+    /* A reading queued behind the others is how this got to six in the
+       first place, so the count itself is pinned: the wave, and the
+       moves that wait on it. Nothing else. */
+    const awaits = (load.match(/await /g) || []).length;
+    t.check(awaits === 2,
+      `two awaits in all — the wave, and the moves alone behind it (found ${awaits})`);
+
+    /* A failed meeting read still answers for itself rather than taking
+       the screen down: the error is returned, not thrown. */
+    t.check(/if\(meetR\.error\) return \{ error: meetR\.error\.message/.test(load),
+      'and a refused journal read is still returned as an error the screen can say');
   }
 })().then(() => {
   process.exit(t.done() ? 1 : 0);
