@@ -359,7 +359,7 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     'the server has an outer catch, so no throw anywhere in the handler dies as a bare platform page');
   t.check(/'The server hit a bug — ' \+ String\(\(err && err\.message\) \|\| err\)\.slice\(0, 300\)/.test(handlerSrc),
     'and both catch tails carry the real error message — the panel is the only log the shop can read');
-  const call = extractFunction(src, 'apCallServer', 'index.html');
+  const call = extractFunction(src, 'apCallServerOnce', 'index.html');
   t.check(/'Something went wrong \(HTTP ' \+ resp\.status \+ '\)\. Try again\.'/.test(call),
     'a bodyless failure names its HTTP status — the one fact that diagnoses it');
   t.check(/something unreadable \(HTTP ' \+ resp\.status/.test(call),

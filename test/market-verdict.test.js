@@ -403,7 +403,7 @@ const build = (data, extraSrc, names, over) => compileScope(
   t.check(/at_stake_30d/.test(hist) && /worst first/.test(hist), 'including the figure and its order');
   t.check(/AT STAKE, not a loss the books recorded/.test(hist),
     'and what the figure does NOT claim — being dearer risks the sale, it does not take money out of the till');
-  t.check(/Thirty-six tools in FIXED order/.test(api),
+  t.check(/Forty-one tools in FIXED order/.test(api),
     'and the tool count in the comment beside them is the number of tools there actually are');
 }
 

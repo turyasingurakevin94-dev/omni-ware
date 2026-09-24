@@ -111,6 +111,9 @@ const { MANAGER_METRICS: M, managerScoreProgress } = scope.names();
     const inserted = [];
     const save = compileScope([
       extractFunction(src, 'managerSaveMeeting', 'index.html'),
+      extractDeclaration(src, 'MANAGER_DOORS', 'index.html'),
+      extractDeclaration(src, 'MANAGER_MOVE_KINDS', 'index.html'),
+      extractFunction(src, 'managerResolvedSubject', 'index.html'),
       'async function managerInsertProposals(rows){ return sb.from(\'manager_notes\').insert(rows); }',
       extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
       extractDeclaration(src, 'MANAGER_WORTH_BASES', 'index.html'),

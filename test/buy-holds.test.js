@@ -465,6 +465,9 @@ const build = (data, extraSrc, extraNames, extraEnv) => compileScope(
         .concat(CONSTS.map((n) => extractDeclaration(src, n, 'index.html')))
         .concat([
           extractFunction(src, 'managerSaveMeeting', 'index.html'),
+      extractDeclaration(src, 'MANAGER_DOORS', 'index.html'),
+      extractDeclaration(src, 'MANAGER_MOVE_KINDS', 'index.html'),
+      extractFunction(src, 'managerResolvedSubject', 'index.html'),
           extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
           extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
           extractDeclaration(src, 'MANAGER_WORTH_BASES', 'index.html'),

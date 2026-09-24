@@ -108,6 +108,8 @@ const clock = (over) => clockScope.managerPlayClock(Object.assign({ weeks: 4, st
     const inserted = [];
     const scope = compileScope(
       [extractFunction(src, 'managerSaveMeeting', 'index.html'),
+      extractDeclaration(src, 'MANAGER_MOVE_KINDS', 'index.html'),
+      extractFunction(src, 'managerResolvedSubject', 'index.html'),
       'async function managerInsertProposals(rows){ return sb.from(\'manager_notes\').insert(rows); }',
         extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
         extractDeclaration(src, 'MANAGER_DOORS', 'index.html'),

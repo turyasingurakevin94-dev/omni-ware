@@ -108,7 +108,7 @@ const { apAssistantTurnContent, apToolResultText } = fns;
     'and CONCATENATED INTO the message the owner reads — computing it and dropping it is the same as not having it');
   t.check(/None of it is the shop's\s+data/.test(api),
     'with the reason that is safe written down beside it');
-  const fivexx = api.slice(api.indexOf('return res.status(502).json({ error: { type: \'api_error\', message: \'The AI service returned an error'));
+  const fivexx = api.slice(api.indexOf("message: 'The AI service returned an error"));
   t.check(/Try again shortly/.test(fivexx.slice(0, 300)),
     'while a 5xx keeps its plain sentence — its internals mean nothing to a shop');
   t.check(api.indexOf('The AI service rejected the request') < api.indexOf('The AI service returned an error'),

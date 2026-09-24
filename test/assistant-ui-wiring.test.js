@@ -271,7 +271,10 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
 
 /* ---------- 9. the loop’s failure sentences --------------------------- */
 {
-  const call = extractFunction(src, 'apCallServer', 'index.html');
+  /* One call, three parts: the retrying caller, the single request,
+     and the stream reader. The sentences may live in any of them. */
+  const call = ['apCallServer', 'apCallServerOnce', 'apReadStream']
+    .map(n=> extractFunction(src, n, 'index.html')).join('\n');
   t.check(/not_configured/.test(call) && /apRenderSetupCard\(\)/.test(call),
     'the dark server renders the setup card, not an error');
   t.check(/login has expired/.test(call), 'a dead session says what to do');
@@ -280,8 +283,8 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   /* The thread plus, at most, WHICH mind answers -- mode names the
      manager, it cannot carry a prompt. Tools and prompts stay
      server-side where they cache. */
-  t.check(/JSON\.stringify\(\{ messages: assistantThread, \.\.\.\(apMode \? \{ mode: apMode \} : \{\}\) \}\)/.test(call),
-    'and only the thread and the mode name — tools and prompts live server-side where they cache');
+  t.check(/JSON\.stringify\(\{ messages: assistantThread, stream: true, \.\.\.\(apMode \? \{ mode: apMode \} : \{\}\) \}\)/.test(call),
+    'and only the thread, the stream flag and the mode name — tools and prompts live server-side where they cache');
 }
 
 /* ---------- 10. the professional pass --------------------------------- */
@@ -319,8 +322,11 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   const call = extractFunction(src, 'apCallServer', 'index.html');
   t.check(/apShowTyping\(\)/.test(call),
     'waiting shows the typing dots');
-  t.check((call.match(/apHideTyping\(\)/g) || []).length >= 2,
-    'and every outcome clears them — the no-token return and the response paths alike');
+  /* Every outcome now leaves through one door: the dots are cleared
+     after the retry loop settles and BEFORE any branch returns. */
+  const typingOffAt = call.indexOf('apHideTyping()', call.indexOf('for(let attempt'));
+  t.check(typingOffAt > 0 && typingOffAt < call.indexOf('if(out.setup)') && typingOffAt < call.indexOf('return out.body'),
+    'and every outcome clears them — the setup, error and answer paths alike');
   const hideAt = call.indexOf('apHideTyping();', call.indexOf('await resp.json'));
   const setupAt = call.indexOf('apRenderSetupCard');
   t.check(hideAt > 0 && setupAt > hideAt,

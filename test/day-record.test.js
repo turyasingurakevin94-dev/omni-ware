@@ -570,8 +570,8 @@ const scope = (data) => compileScope([
     /* ---------- 7. seeded once, and never over a meeting -------------- */
     {
       const loop = extractFunction(src, 'apRunLoop', 'index.html');
-      t.check(/apMode !== 'manager'/.test(loop),
-        'a meeting is not told the day twice — it reads all of it through its own tools');
+      t.check(/!apDaySeeded && !apMode/.test(loop),
+        'neither a meeting nor a review is told the day twice — each reads all of it through its own tools');
       t.check(/assistantThread\.length === 1/.test(loop),
         'and the day rides the FIRST turn of a thread, not every turn');
       t.check(/apDaySeeded = true;/.test(loop), 'once per thread');

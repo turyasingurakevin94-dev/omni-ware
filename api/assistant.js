@@ -158,7 +158,7 @@ function managerExtension(mode){
   return own.concat(['']).concat(MANAGER_COMMON).join('\n');
 }
 
-/* Thirty-six tools in FIXED order — the array is part of the cached
+/* Forty-one tools in FIXED order — the array is part of the cached
    prefix, so reordering it would re-bill the whole prefix for nothing.
    Every schema closes with additionalProperties:false so a drifted call
    fails loudly instead of half-working. */
@@ -635,6 +635,41 @@ const TOOLS = [
   },
 ];
 
+/* Every failure of the Anthropic call, as a sentence the owner can act
+   on -- raw error JSON in a chat bubble helps nobody. Most specific
+   first. `retryable` marks the failures that a second try moments later
+   can cure (busy, unreachable, the service's own 5xx), so the browser
+   retries those by itself and never the ones that would fail the same
+   way twice. */
+function apiErrorReply(err) {
+  if (err instanceof Anthropic.AuthenticationError) {
+    return { status: 502, error: { type: 'bad_key', message: 'The AI key on the server was rejected. Check ANTHROPIC_API_KEY in Vercel — it may have been revoked or mistyped.' } };
+  }
+  if (err instanceof Anthropic.RateLimitError) {
+    return { status: 429, error: { type: 'rate_limited', retryable: true, message: 'The AI service is busy right now. Wait a minute and ask again.' } };
+  }
+  if (err instanceof Anthropic.APIConnectionError) {
+    return { status: 502, error: { type: 'network', retryable: true, message: 'Could not reach the AI service. Check the internet connection and try again.' } };
+  }
+  if (err instanceof Anthropic.APIError) {
+    /* A 4xx is a verdict on OUR OWN REQUEST -- "text content blocks
+       must be non-empty", "tool_result ... unexpected" -- and names a
+       part of the payload this file built. None of it is the shop's
+       data, and without it the panel can only say a number, which
+       diagnoses nothing. A 5xx is the service's own internals and
+       still means nothing to a shop, so that one keeps its sentence. */
+    const status = err.status || 0;
+    if (status >= 400 && status < 500) {
+      const detail = String((err && err.message) || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+      return { status: 502, error: { type: 'api_error',
+        message: 'The AI service rejected the request (' + status + ')'
+          + (detail ? ' — ' + detail : '') + '.' } };
+    }
+    return { status: 502, error: { type: 'api_error', retryable: true, message: 'The AI service returned an error (' + (err.status || 'unknown') + '). Try again shortly.' } };
+  }
+  return { status: 500, error: { type: 'server_error', message: 'The server hit a bug — ' + String((err && err.message) || err).slice(0, 300) } };
+}
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: { type: 'method', message: 'POST only.' } });
@@ -718,10 +753,17 @@ module.exports = async (req, res) => {
   const rawMode = String((req.body && req.body.mode) || '');
   const mgrMode = (rawMode === 'manager' || rawMode === 'manager-review') ? rawMode : null;
 
+  /* Whether the browser can read the answer as it is written. Opt-in,
+     so a page still cached from before this change keeps getting the
+     one JSON body it knows how to read. */
+  const wantStream = !!(req.body && req.body.stream === true);
+
   const client = new Anthropic();
-  try {
-    const response = await client.beta.messages.create({
-      model: 'claude-opus-5',
+  const params = {
+      /* The model is a setting, not a literal buried in a request: moving
+         the shop to a newer one is an environment variable and a
+         redeploy, not a code change. Unset means the default here. */
+      model: process.env.ANTHROPIC_MODEL || 'claude-opus-5',
       /* 3000 is sized to the 60s Vercel window, not to taste: adaptive
          thinking counts against it too, and generating much more than
          this cannot finish before the function is killed. A bulk import
@@ -750,41 +792,58 @@ module.exports = async (req, res) => {
         : [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
       tools: TOOLS,
       messages,
-    });
+  };
+
+  /* THE ANSWER AS IT IS WRITTEN.
+
+     A meeting is up to ten blocking round-trips, and for each one the
+     owner watched three dots for twenty seconds. Streamed, the words
+     arrive as the model writes them. One JSON object per line: `text`
+     deltas for the screen, then one `done` carrying the whole message,
+     which is the only thing the browser puts back into the thread --
+     the deltas are a preview, never the record.
+
+     The status line is only written once the first byte is ready, so a
+     failure BEFORE the stream begins (a bad key, a 429 that outlived
+     the SDK's own retries) still leaves as the same worded JSON error
+     it always did. After that the status is spent, and a failure goes
+     down the stream as an `error` line instead. */
+  if (wantStream) {
+    let started = false;
+    const begin = () => {
+      if (started) return;
+      started = true;
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache, no-transform');
+      res.setHeader('X-Accel-Buffering', 'no');
+      if (typeof res.flushHeaders === 'function') res.flushHeaders();
+    };
+    const line = (obj) => { begin(); res.write(JSON.stringify(obj) + '\n'); };
+    try {
+      const stream = client.beta.messages.stream(params);
+      stream.on('text', (delta) => { if (delta) line({ type: 'text', text: delta }); });
+      const final = await stream.finalMessage();
+      line({ type: 'done', content: final.content, stop_reason: final.stop_reason, usage: final.usage });
+      return res.end();
+    } catch (err) {
+      const out = apiErrorReply(err);
+      if (!started) return res.status(out.status).json({ error: out.error });
+      line({ type: 'error', error: out.error });
+      return res.end();
+    }
+  }
+
+  try {
+    const response = await client.beta.messages.create(params);
     return res.status(200).json({
       content: response.content,
       stop_reason: response.stop_reason,
       usage: response.usage,
     });
   } catch (err) {
-    /* Most specific first; every branch is a sentence the owner can act
-       on, because raw error JSON in a chat bubble helps nobody. */
-    if (err instanceof Anthropic.AuthenticationError) {
-      return res.status(502).json({ error: { type: 'bad_key', message: 'The AI key on the server was rejected. Check ANTHROPIC_API_KEY in Vercel — it may have been revoked or mistyped.' } });
-    }
-    if (err instanceof Anthropic.RateLimitError) {
-      return res.status(429).json({ error: { type: 'rate_limited', message: 'The AI service is busy right now. Wait a minute and ask again.' } });
-    }
-    if (err instanceof Anthropic.APIConnectionError) {
-      return res.status(502).json({ error: { type: 'network', message: 'Could not reach the AI service. Check the internet connection and try again.' } });
-    }
-    if (err instanceof Anthropic.APIError) {
-      /* A 4xx is a verdict on OUR OWN REQUEST -- "text content blocks
-         must be non-empty", "tool_result ... unexpected" -- and names a
-         part of the payload this file built. None of it is the shop's
-         data, and without it the panel can only say a number, which
-         diagnoses nothing. A 5xx is the service's own internals and
-         still means nothing to a shop, so that one keeps its sentence. */
-      const status = err.status || 0;
-      if (status >= 400 && status < 500) {
-        const detail = String((err && err.message) || '').replace(/\s+/g, ' ').trim().slice(0, 200);
-        return res.status(502).json({ error: { type: 'api_error',
-          message: 'The AI service rejected the request (' + status + ')'
-            + (detail ? ' — ' + detail : '') + '.' } });
-      }
-      return res.status(502).json({ error: { type: 'api_error', message: 'The AI service returned an error (' + (err.status || 'unknown') + '). Try again shortly.' } });
-    }
-    return res.status(500).json({ error: { type: 'server_error', message: 'The server hit a bug — ' + String((err && err.message) || err).slice(0, 300) } });
+    const out = apiErrorReply(err);
+    return res.status(out.status).json({ error: out.error });
   }
   } catch (err) {
     /* A throw from OUTSIDE the inner try — validation, auth plumbing,

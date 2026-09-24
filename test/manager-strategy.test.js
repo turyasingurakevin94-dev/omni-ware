@@ -274,6 +274,9 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     const inserted = [];
     const saveMeeting = compileScope([
       extractFunction(src, 'managerSaveMeeting', 'index.html'),
+      extractDeclaration(src, 'MANAGER_DOORS', 'index.html'),
+      extractDeclaration(src, 'MANAGER_MOVE_KINDS', 'index.html'),
+      extractFunction(src, 'managerResolvedSubject', 'index.html'),
       extractDeclaration(src, 'MANAGER_WORTH_BASES', 'index.html'),
       extractDeclaration(src, 'MANAGER_LEVERS', 'index.html'),
       extractDeclaration(src, 'MANAGER_OBJECTIVES', 'index.html'),

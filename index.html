@@ -92063,6 +92063,37 @@ async function managerInsertProposals(rows){
   // The database trigger provides the concurrent-writer guarantee.
   return fresh.length ? await sb.from('manager_notes').insert(fresh) : { error: null };
 }
+/* The kinds a move may be -- the same list the meeting contract names
+   on the server. Anything else is stored as 'other'. */
+const MANAGER_MOVE_KINDS = ['chase', 'buy', 'invoice', 'settle', 'price', 'policy', 'other'];
+
+/* A SUBJECT ONLY NAMES WHAT IS ON FILE.
+
+   The contract tells the model to copy ids from tool results, and
+   nothing checked that it had. An invented customerId was kept, and
+   the card's outcome then read that nobody paid -- a verdict about a
+   customer who does not exist. Each id is kept only when it resolves
+   against the shop's own records, the way a hold's key already is; one
+   that does not becomes absent, and the card says plainly that nothing
+   measures it. The id keeps the type the record carries, because the
+   readers compare some of them strictly. */
+function managerResolvedSubject(subj){
+  const s = (subj && typeof subj === 'object') ? subj : {};
+  const out = {};
+  const find = (list, id)=> (list || []).find(x=> x && String(x.id) === String(id));
+  if(s.customerId != null && s.customerId !== ''){
+    const c = find(data.customers, s.customerId); if(c) out.customerId = c.id;
+  }
+  if(s.supplierId != null && s.supplierId !== ''){
+    const x = find(data.suppliers, s.supplierId); if(x) out.supplierId = x.id;
+  }
+  if(s.key != null && s.key !== '' && buyKeyParts(String(s.key))) out.key = String(s.key);
+  if(s.orderId != null && s.orderId !== ''){
+    const q = find(data.savedQuotes, s.orderId); if(q) out.orderId = q.id;
+  }
+  return out;
+}
+
 async function managerSaveMeeting(plan){
   if(!managerNotesTable) return null;
   const obj = plan.objective || {};
@@ -92119,7 +92150,16 @@ async function managerSaveMeeting(plan){
   const rows = kept.map((m, mi)=> ({
     shop_id: currentShopId, kind: 'move', meeting_id: ins.data.id, date: todayISO(),
     body: { title: String(m.title||'').slice(0, 200), why: String(m.why||'').slice(0, 500),
-      worth: apRound(m.worth||0), door: String(m.door||''), mkind: String(m.kind||'other'),
+      /* A worth is whole shillings or nothing: a negative, a NaN or a
+         string the model wrote in words becomes 0, which the screen
+         already reads as "no honest figure". */
+      worth: Math.max(0, apRound(Number(m.worth) || 0)),
+      /* Door and kind are whitelisted like every other word in the
+         block. An unknown door used to be stored raw and drew no
+         button; an unknown kind was stored raw and silently fell out
+         of every outcome reading. */
+      door: MANAGER_DOORS[String(m.door||'')] ? String(m.door) : '',
+      mkind: MANAGER_MOVE_KINDS.includes(String(m.kind||'')) ? String(m.kind) : 'other',
       /* What the figure MEANS, and which lever the move pulls -- both
          whitelisted, so an unknown word becomes nothing rather than a
          label the screen would print unchallenged. */
@@ -92135,17 +92175,12 @@ async function managerSaveMeeting(plan){
       ...(after[mi] != null ? { after: after[mi] } : {}),
       /* Only ids, only known keys -- the block is model output and is
          stored as data, never trusted as structure. */
-      subject: {
-        ...(m.subject && m.subject.customerId != null ? { customerId: m.subject.customerId } : {}),
-        ...(m.subject && m.subject.supplierId != null ? { supplierId: m.subject.supplierId } : {}),
-        ...(m.subject && m.subject.key != null ? { key: String(m.subject.key) } : {}),
-        ...(m.subject && m.subject.orderId != null ? { orderId: m.subject.orderId } : {}),
-      } },
+      subject: managerResolvedSubject(m.subject) },
     status: 'open',
   }));
   if(rows.length){
     const r2 = await sb.from('manager_notes').insert(rows);
-    if(r2.error) console.warn('Manager: moves not saved:', r2.error.message);
+    if(r2.error){ console.warn('Manager: moves not saved:', r2.error.message); toast('Meeting saved, but its moves could not be saved.'); }
   }
   /* Targets are PROPOSED, never adopted by the writing of them: a number
      the shop is measured against is a commitment, and commitments here
@@ -92227,7 +92262,7 @@ async function managerSaveMeeting(plan){
     });
   if(asks.length){
     const r3 = await sb.from('manager_notes').insert(asks);
-    if(r3.error) console.warn('Manager: questions not saved:', r3.error.message);
+    if(r3.error){ console.warn('Manager: questions not saved:', r3.error.message); toast('Meeting saved, but its questions could not be saved.'); }
   }
   return ins.data.id;
 }
@@ -93481,7 +93516,7 @@ function mgrPaintVerdict(state){
         ? (run.length ? `${run.length} still running` : 'none running now')
         : (run.length ? `${run.length} running &middot; none finished yet` : 'it has taken none on') };
   }
-  if(tr && tr.error) cells[2] = unread('Levers that work');
+  if(tr && tr.error) cells[2] = unread('Advice followed by events');
   else if(tr){
     /* Only levers the books can actually weigh. A kind nothing can
        answer is not a lever that failed, it is a lever nobody scored,
@@ -106502,11 +106537,45 @@ function apAskConfirm(tool, input){
 
 /* ---- the loop ---- */
 
+/* HOW LONG TO WAIT BEFORE TRYING AGAIN, and how many times.
+
+   One dropped packet or one busy minute at the AI service used to end a
+   meeting with an error bubble and the owner pressing the button again
+   -- paying again for every tool round already run. The server now
+   marks the failures a second try can cure (busy, unreachable, the
+   service's own 5xx), and only those are retried here, twice at most,
+   quietly. A rejected key or a malformed request fails the same way
+   every time and is said at once. Retrying is safe because nothing
+   joins the thread until a whole answer has arrived. */
+const AP_RETRY_WAITS = [2000, 5000];
+
 async function apCallServer(){
   apShowTyping();
+  let out;
+  for(let attempt = 0; ; attempt++){
+    out = await apCallServerOnce();
+    apLiveEnd();
+    if(out.retry && attempt < AP_RETRY_WAITS.length){
+      apShowTyping();
+      await new Promise(r=> setTimeout(r, AP_RETRY_WAITS[attempt]));
+      continue;
+    }
+    break;
+  }
+  apHideTyping();
+  if(out.setup){ apRenderSetupCard(); return null; }
+  if(out.error){ apRenderError(out.error); return null; }
+  return out.body;
+}
+
+/* One request. Returns { body } on an answer, { error, retry } on a
+   failure, { setup } when the key is not configured -- never throws,
+   and never renders an error itself, so the caller alone decides
+   whether a failure is shown or tried again. */
+async function apCallServerOnce(){
   const sess = await sb.auth.getSession();
   const token = sess && sess.data && sess.data.session && sess.data.session.access_token;
-  if(!token){ apHideTyping(); apRenderError('Your login has expired — reload the page and sign in again.'); return null; }
+  if(!token) return { error: 'Your login has expired — reload the page and sign in again.' };
   let resp;
   try{
     resp = await fetch('/api/assistant', {
@@ -106515,36 +106584,96 @@ async function apCallServer(){
       /* mode selects which mind answers: the counter assistant, or the
          Manager holding a meeting. The PROMPTS both live on the server
          -- this only names one; it cannot supply one. */
-      body: JSON.stringify({ messages: assistantThread, ...(apMode ? { mode: apMode } : {}) }),
+      body: JSON.stringify({ messages: assistantThread, stream: true, ...(apMode ? { mode: apMode } : {}) }),
     });
   } catch(e){
-    apHideTyping();
-    apRenderError('Could not reach the assistant — check the internet connection and try again.');
-    return null;
+    return { error: 'Could not reach the assistant — check the internet connection and try again.', retry: true };
   }
+  if(resp.ok && /ndjson/.test(resp.headers.get('content-type') || '')) return apReadStream(resp);
   let body = null;
   try{ body = await resp.json(); } catch(e){}
-  apHideTyping();
-  if(resp.status === 401){ apRenderError((body && body.error && body.error.message) || 'Your login has expired — reload the page and sign in again.'); return null; }
-  if(body && body.not_configured){ apRenderSetupCard(); return null; }
+  if(resp.status === 401) return { error: (body && body.error && body.error.message) || 'Your login has expired — reload the page and sign in again.' };
+  if(body && body.not_configured) return { setup: true };
   if(!resp.ok || (body && body.error)){
     /* The status is the one fact that diagnoses a bodyless failure -- a
        Vercel platform page mid-deploy, a gateway timeout -- and the old
        wording threw it away. "Something went wrong (HTTP 504)" is a
        sentence somebody can act on; the bare version was anonymous. */
-    apRenderError((body && body.error && body.error.message)
-      || ('Something went wrong (HTTP ' + resp.status + '). Try again.'));
-    return null;
+    const err = body && body.error;
+    return { error: (err && err.message) || ('Something went wrong (HTTP ' + resp.status + '). Try again.'),
+      /* A bodyless 504 is NOT retried: it is the function's own sixty
+         seconds running out, and a second try would pay for the same
+         long answer again and most likely run out the same way. */
+      retry: !!(err ? err.retryable : [429, 502, 503].includes(resp.status)) };
   }
   /* An OK status wrapping an unreadable body used to fall through and
      return null -- which the loop reads as "error already rendered" and
      ends the turn showing NOTHING. A dead panel is the one failure this
      loop must never allow. */
-  if(!body){
-    apRenderError('The server answered with something unreadable (HTTP ' + resp.status + '). Try again.');
-    return null;
-  }
-  return body;
+  if(!body) return { error: 'The server answered with something unreadable (HTTP ' + resp.status + '). Try again.' };
+  return { body };
+}
+
+/* THE ANSWER AS IT ARRIVES. One JSON object per line: `text` deltas,
+   drawn into a live bubble as a preview, then `done` with the whole
+   message -- the only thing that becomes the answer. The preview is
+   removed when the call settles and the loop renders the real turn
+   through the same path as ever, so plan blocks, choices and emphasis
+   are handled exactly once, in one place. */
+async function apReadStream(resp){
+  const reader = resp.body.getReader();
+  const dec = new TextDecoder();
+  let buf = '', text = '', done = null, failed = null;
+  const take = (ln)=>{
+    if(!ln.trim()) return;
+    let ev; try{ ev = JSON.parse(ln); } catch(e){ return; }
+    if(ev.type === 'text' && typeof ev.text === 'string'){ text += ev.text; apLiveShow(text); }
+    else if(ev.type === 'done') done = ev;
+    else if(ev.type === 'error') failed = ev.error || {};
+  };
+  try{
+    for(;;){
+      const r = await reader.read();
+      if(r.done) break;
+      buf += dec.decode(r.value, { stream: true });
+      let i;
+      while((i = buf.indexOf('\n')) >= 0){ take(buf.slice(0, i)); buf = buf.slice(i + 1); }
+    }
+    take(buf + dec.decode());
+  } catch(e){ /* the connection dropped; judged below by what arrived */ }
+  if(done) return { body: { content: done.content, stop_reason: done.stop_reason, usage: done.usage } };
+  if(failed) return { error: failed.message || 'The AI service stopped mid-answer. Try again.', retry: !!failed.retryable && !text };
+  /* The stream ended with no verdict. Nothing written yet means the
+     connection dropped before the model spoke: try again. Words written
+     means the server's time ran out mid-answer -- and those words are
+     kept as a cut-off turn, so "continue" resumes from them exactly as
+     it does when the model runs out of room, instead of the whole
+     answer being thrown away and paid for twice. */
+  if(!text) return { error: 'The connection dropped before the answer came back. Try again.', retry: true };
+  return { body: { content: [{ type: 'text', text }], stop_reason: 'max_tokens' } };
+}
+
+/* The live preview bubble. Machine blocks never show, not even half
+   written: everything from the first "[plan:", "[review:" or
+   "[choices:" on is held back, and so is a trailing "[" that may be
+   the start of one. */
+let apLiveEl = null;
+function apLiveShow(text){
+  let shown = String(text);
+  const m = shown.search(/\[\s*(plan|review|choices)\s*:/i);
+  if(m >= 0) shown = shown.slice(0, m);
+  const open = shown.lastIndexOf('[');
+  if(open >= 0 && shown.length - open < 12 && shown.indexOf(']', open) < 0) shown = shown.slice(0, open);
+  shown = shown.trim();
+  if(!shown) return;
+  apHideTyping();
+  if(!apLiveEl || !apLiveEl.isConnected) apLiveEl = apBubble('bot ap-live', '');
+  apLiveEl.innerHTML = apFormatText(shown);
+  apScroll();
+}
+function apLiveEnd(){
+  if(apLiveEl && apLiveEl.isConnected) apLiveEl.remove();
+  apLiveEl = null;
 }
 
 /* WHAT MAY GO BACK INTO THE THREAD.
@@ -106641,8 +106770,10 @@ async function apRunLoop(){
   let finalText = '';
   try{
     /* Once per thread, and never in manager mode: a meeting reads all of
-       this through its own tools and would be told it twice. */
-    if(!apDaySeeded && apMode !== 'manager' && assistantThread.length === 1){
+       this through its own tools and would be told it twice. The review
+       too -- it judges the week from week_review_data, and a line about
+       this morning's sales slipped in ahead of its trigger sentence. */
+    if(!apDaySeeded && !apMode && assistantThread.length === 1){
       apDaySeeded = true;
       const line = await dayThreadLine();
       const turn = assistantThread[0];
@@ -106900,8 +107031,16 @@ document.getElementById('assistantOpenBtn').addEventListener('click', apTogglePa
 document.getElementById('assistantOpenBtnMobile').addEventListener('click', apTogglePanel);
 document.getElementById('apCloseBtn').addEventListener('click', apClosePanel);
 document.getElementById('apNewChatBtn').addEventListener('click', ()=>{
+  if(assistantBusy) return;
   assistantThread = [];
   apDaySeeded = false;
+  /* A new chat is the counter assistant again. Manager mode is meant
+     to outlive the meeting only for follow-ups in THAT thread; left on
+     here, every later question went out under the meeting's rulebook,
+     costing more and inviting a [plan:] block in reply to "how much
+     cement is left?". */
+  apMode = null;
+  apWasCutOff = false;
   apLogEl().innerHTML = '';
   apRenderWelcome();
 });

@@ -362,7 +362,7 @@ const build = (data, extraSrc, names, over) => compileScope(
   const desc = api.slice(api.indexOf("name: 'set_markup_rule'"), api.indexOf('input_schema', api.indexOf("name: 'set_markup_rule'")));
   t.check(/TWO RULES CAN EXIST ON ONE LINE/.test(desc), 'and the mind is told the two tiers exist');
   t.check(/shelf_price_unchanged/.test(desc), 'and what the flag it may get back means');
-  t.check(/Thirty-six tools in FIXED order/.test(api), 'with no new tool added: still thirty-six');
+  t.check(/Forty-one tools in FIXED order/.test(api), 'with no new tool added: still forty-one');
 }
 
 /* ---------- 6. the modal must name the rule it is actually using ----- *
