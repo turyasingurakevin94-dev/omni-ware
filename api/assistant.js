@@ -642,6 +642,12 @@ const TOOLS = [
    retries those by itself and never the ones that would fail the same
    way twice. */
 function apiErrorReply(err) {
+  /* OUT OF CREDIT is the owner's account, not a fault in the request:
+     the provider says so in its message, and the raw text of that
+     message (a JSON body) must never reach the chat bubble. */
+  if (/credit balance is too low|insufficient.{0,20}credit|billing/i.test(String((err && err.message) || ''))) {
+    return { status: 402, error: { type: 'no_credit', message: 'Out of AI credit. Top up the Anthropic account behind this shop (console.anthropic.com, Billing), then ask again.' } };
+  }
   if (err instanceof Anthropic.AuthenticationError) {
     return { status: 502, error: { type: 'bad_key', message: 'The AI key on the server was rejected. Check ANTHROPIC_API_KEY in Vercel — it may have been revoked or mistyped.' } };
   }

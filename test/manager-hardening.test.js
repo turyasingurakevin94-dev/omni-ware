@@ -119,8 +119,8 @@ const api = read('api/assistant.js');
 
   /* ---------- 5. the stream reader ------------------------------------ */
   const shown = [];
-  const reader = compileScope([extractFunction(src, 'apReadStream', 'index.html')], {
-    apLiveShow: (x) => shown.push(x), TextDecoder, JSON, String,
+  const reader = compileScope([extractFunction(src, 'apReadStream', 'index.html'), extractFunction(src, 'apIsNoCredit', 'index.html')], {
+    apLiveShow: (x) => shown.push(x), TextDecoder, JSON, String, AP_NO_CREDIT: 'no credit',
   }, ['apReadStream']).apReadStream;
   const respOf = (lines, opts) => {
     const enc = new TextEncoder();
@@ -173,6 +173,7 @@ const api = read('api/assistant.js');
       apCallServerOnce: async () => script.shift(),
       apShowTyping: () => {}, apHideTyping: () => { seen.typingOff++; }, apLiveEnd: () => {},
       apRenderSetupCard: () => { seen.setup++; }, apRenderError: (m) => seen.errors.push(m),
+      apCreditMark: () => {}, apRenderNoCredit: () => seen.errors.push('NO CREDIT'),
       setTimeout, Promise,
     }, ['apCallServer']).apCallServer;
 

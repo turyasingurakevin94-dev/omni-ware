@@ -10117,6 +10117,10 @@
   .assistant-panel.open{display:flex;}
   .ap-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line);}
   .ap-head h2{font-size:14px;margin:0;text-transform:uppercase;letter-spacing:0.6px;color:var(--ink-soft);font-weight:700;flex:1;}
+  .ap-credit{font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap;}
+  .ap-credit-ok{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .ap-credit-out{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .ap-local{margin-top:6px;font-size:11px;color:var(--ow-ink-600);}
   .ap-state{font-size:11px;font-weight:700;letter-spacing:0.4px;padding:3px 9px;border-radius:999px;
     background:var(--bg);color:var(--ink-soft);white-space:nowrap;}
   .ap-state.listening{background:var(--good-bg);color:var(--good);}
@@ -18441,6 +18445,7 @@
   <div class="ap-head">
     <h2>Assistant</h2>
     <span class="ap-state" id="apState" hidden></span>
+    <span class="ap-credit" id="apCredit" hidden></span>
     <button type="button" class="btn btn-ghost" id="apNewChatBtn" style="padding:6px 12px;font-size:12px;">New chat</button>
     <button class="modal-close" id="apCloseBtn" aria-label="Close">
       <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -26500,6 +26505,11 @@ function navShortcutsBlocked(e){
   const el = document.activeElement;
   if(el && (el.tagName==='INPUT' || el.tagName==='TEXTAREA' || el.tagName==='SELECT' || el.isContentEditable)) return true;
   if(document.querySelector('.modal-overlay.show')) return true;
+  /* The assistant panel is a place to type. A letter pressed there
+     before the box has the cursor must never jump the app to another
+     screen -- the owner typed "what…" and landed on Products. */
+  const ap = document.getElementById('assistantPanel');
+  if(ap && ap.classList.contains('open')) return true;
   return false;
 }
 document.addEventListener('keydown', (e)=>{
@@ -109080,6 +109090,110 @@ function apRenderError(msg){
    chip goes through apSend -- the same path as typing, so every gate
    (busy, confirm, results) holds. Removed on the first send; New chat
    brings it back. */
+/* ==== AI CREDIT, AND WHAT THE BOOKS CAN ANSWER WITHOUT IT ============
+
+   The provider's "credit balance is too low" came back as its raw JSON
+   in the chat bubble. It is a fact about the account, said once in
+   plain words, remembered so the panel can show it before the next
+   question is spent on a certain refusal, and cleared by the first
+   answer that comes back. The account's balance itself is not
+   something the provider lets this app read, so the pill says what the
+   app does know: whether the last question got through, and how many
+   were asked this month. */
+const AP_NO_CREDIT = 'Out of AI credit. The Anthropic account behind this shop needs topping up (console.anthropic.com, Billing). Your books still work, and the questions below answer without AI.';
+function apIsNoCredit(err, status){
+  const e = err || {};
+  return e.type === 'no_credit' || status === 402
+    || /credit balance is too low|insufficient.{0,20}credit/i.test(String(e.message || ''));
+}
+function apCreditState(){
+  try{ const v = JSON.parse(localStorage.getItem('ow-ai-credit') || 'null'); return v && v.state; }catch(e){ return null; }
+}
+function apCreditMark(state){
+  try{
+    const now = new Date(), month = now.toISOString().slice(0, 7);
+    const prev = JSON.parse(localStorage.getItem('ow-ai-credit') || 'null') || {};
+    const asked = prev.month === month ? (prev.asked || 0) : 0;
+    localStorage.setItem('ow-ai-credit', JSON.stringify({ state, month, asked: asked + (state === 'ok' ? 1 : 0), at: now.toISOString() }));
+  }catch(e){}
+  apPaintCredit();
+}
+function apPaintCredit(){
+  const el = document.getElementById('apCredit');
+  if(!el) return;
+  let v = null;
+  try{ v = JSON.parse(localStorage.getItem('ow-ai-credit') || 'null'); }catch(e){}
+  const month = new Date().toISOString().slice(0, 7);
+  const asked = v && v.month === month ? (v.asked || 0) : 0;
+  const out = v && v.state === 'out';
+  el.hidden = false;
+  el.className = 'ap-credit ' + (out ? 'ap-credit-out' : 'ap-credit-ok');
+  el.textContent = out ? 'AI credit: out' : `AI ready · ${asked} this month`;
+  el.title = out ? AP_NO_CREDIT : 'Questions that went to the AI this month. The first starter questions are answered from your books and are not counted.';
+}
+function apRenderNoCredit(){
+  const div = apBubble('err', `<b>Out of AI credit.</b> The Anthropic account behind this shop needs topping up: console.anthropic.com, then Billing. Your books still work, and these answer without AI:`);
+  const chips = ['How much money do I have?', 'Who owes me the most?', 'What did we sell this month?'];
+  const row = document.createElement('div');
+  row.className = 'ap-chips';
+  row.innerHTML = chips.map(c=> `<button type="button" class="ap-chip">${esc(c)}</button>`).join('');
+  row.querySelectorAll('.ap-chip').forEach((b, i)=> b.addEventListener('click', ()=> apSendLocal(chips[i])));
+  div.appendChild(row);
+  div.dataset.errText = AP_NO_CREDIT;
+}
+/* The answer, from the books, as HTML -- or null when the books alone
+   cannot answer it and the question needs the AI. */
+function apLocalAnswer(q){
+  const t = String(q || '').toLowerCase().trim();
+  if(!t) return null;
+  if(/\b(how much (money|cash)|cash (do i have|on hand|in hand)|money do i have)\b/.test(t)){
+    const held = cashOnHandByAccount();
+    let ahead = null; try{ ahead = cashAhead(todayISO(), CASH_AHEAD_DAYS); }catch(e){}
+    if(!held.byAccount.some(a=> a.amount)) return 'No money is recorded in any account yet — the cash book shows nothing on hand.';
+    return `You have <b>${esc(fmtUGX(held.total))}</b> across your accounts:<br>`
+      + held.byAccount.filter(a=> a.amount).map(a=> `${esc(a.label)}: ${esc(fmtUGX(a.amount))}`).join('<br>')
+      + (ahead && ahead.committed > 0 ? `<br><br>Safe to spend after what is already promised in the next ${CASH_AHEAD_DAYS} days: <b>${esc(fmtUGX(Math.round(ahead.safeToSpend)))}</b>.` : '');
+  }
+  if(/\bwho owes (me|us)\b|\bbiggest debtors?\b|\bowes me the most\b/.test(t)){
+    const ch = debtChaseRows();
+    const all = [...ch.due, ...ch.promised, ...ch.resting, ...ch.blocked].sort((a, b)=> b.debt - a.debt);
+    if(!all.length) return 'Nobody owes you anything right now.';
+    const total = all.reduce((n, r)=> n + r.debt, 0);
+    return `${all.length} customer${all.length === 1 ? ' owes' : 's owe'} you <b>${esc(fmtUGX(Math.round(total)))}</b>. The most:<br>`
+      + all.slice(0, 5).map((r, i)=> `${i + 1}. ${esc(r.name)} — ${esc(fmtUGX(Math.round(r.debt)))}${r.ageDays != null ? ', oldest ' + r.ageDays + ' days' : ''}`).join('<br>');
+  }
+  if(/\b(what|how much) did (we|i) sell\b|\bsales (this|so far this) month\b|\bthis month'?s sales\b/.test(t)){
+    const today = todayISO(), from = today.slice(0, 8) + '01';
+    const inv = anInvoicesInRange(from, today);
+    const sales = inv.reduce((n, q)=> n + (Number(savedQuoteTotal(q)) || 0), 0);
+    let profit = 0; inv.forEach(q=>{ const tt = anInvoiceTotals(q); if(tt && typeof tt.profit === 'number') profit += tt.profit; });
+    return `This month so far (${esc(fmtShortDate(from))} to today): <b>${esc(fmtUGX(Math.round(sales)))}</b> in sales across ${inv.length} invoice${inv.length === 1 ? '' : 's'}`
+      + (sales > 0 ? `, keeping about <b>${esc(fmtUGX(Math.round(profit)))}</b> gross profit (${Math.round(profit / sales * 1000) / 10}%).` : '.');
+  }
+  const m = /\bprice of (.{2,60})$/.exec(t);
+  if(m){
+    const words = m[1].replace(/[?.!]+$/, '').split(/\s+/).filter(w=> w.length > 1);
+    const hits = (data.products || []).filter(p=> words.every(w=> String(p.name || '').toLowerCase().includes(w))).slice(0, 4);
+    if(!hits.length) return null;
+    return hits.map(p=>{
+      const vs = (p.variants && p.variants.length) ? p.variants.map((v, i)=> i) : [null];
+      return vs.slice(0, 6).map(vi=>{
+        let price = null; try{ price = ourPriceFor(p.id, vi); }catch(e){}
+        return `${esc(productVariantLabel(p, vi))}: ${price != null ? '<b>' + esc(fmtUGX(price)) + '</b>' : 'no price on file'}`;
+      }).join('<br>');
+    }).join('<br>') + '<br><small>Wholesale, from your price rules.</small>';
+  }
+  return null;
+}
+function apSendLocal(q){
+  const html = apLocalAnswer(q);
+  if(!html) return;
+  apClearWelcome();
+  apRenderUser(q);
+  const b = apBubble('bot', html + '<div class="ap-local">Answered from your books — no AI credit used.</div>');
+  if(b) b.classList.add('ap-from-books');
+}
+
 function apRenderWelcome(){
   const div = document.createElement('div');
   div.className = 'ap-welcome';
@@ -109096,11 +109210,14 @@ function apRenderWelcome(){
     + '<p>Debts, stock, prices, statements — or tell me what to record. Press the headset button to talk hands-free.</p>'
     + '<div class="ap-chips">' + chips.map(c=>
       '<button type="button" class="ap-chip">' + esc(c.trim()) + (c.endsWith(' ') ? '…' : '') + '</button>').join('') + '</div>'
-    + '<div class="ap-welcome-small">Each question uses a little AI credit from your own key. Answers can be read aloud — in a crowded shop, use a headset. Names can be said as they sound, and a customer\'s nickname written in their notes teaches me it.</div>';
+    + '<div class="ap-welcome-small">The first three answer straight from your books, free. Other questions use a little AI credit from your own key. Answers can be read aloud — in a crowded shop, use a headset. Names can be said as they sound, and a customer\'s nickname written in their notes teaches me it.</div>';
   apLogEl().appendChild(div);
   div.querySelectorAll('.ap-chip').forEach((btn, i)=>{
     btn.addEventListener('click', ()=>{
       const q = chips[i];
+      /* The everyday questions are answered from the books directly:
+         instant, free, and still there when the AI credit runs out. */
+      if(apLocalAnswer(q)){ apSendLocal(q); return; }
       if(q.endsWith(' ')){
         // The open-ended one seeds the box for the owner to finish.
         const input = document.getElementById('apInput');
@@ -109237,7 +109354,9 @@ async function apCallServer(){
   }
   apHideTyping();
   if(out.setup){ apRenderSetupCard(); return null; }
+  if(out.noCredit){ apCreditMark('out'); apRenderNoCredit(); return null; }
   if(out.error){ apRenderError(out.error); return null; }
+  apCreditMark('ok');
   return out.body;
 }
 
@@ -109273,6 +109392,7 @@ async function apCallServerOnce(){
        wording threw it away. "Something went wrong (HTTP 504)" is a
        sentence somebody can act on; the bare version was anonymous. */
     const err = body && body.error;
+    if(apIsNoCredit(err, resp.status)) return { error: AP_NO_CREDIT, noCredit: true };
     return { error: (err && err.message) || ('Something went wrong (HTTP ' + resp.status + '). Try again.'),
       /* A bodyless 504 is NOT retried: it is the function's own sixty
          seconds running out, and a second try would pay for the same
@@ -109315,6 +109435,7 @@ async function apReadStream(resp){
     take(buf + dec.decode());
   } catch(e){ /* the connection dropped; judged below by what arrived */ }
   if(done) return { body: { content: done.content, stop_reason: done.stop_reason, usage: done.usage } };
+  if(failed && apIsNoCredit(failed)) return { error: AP_NO_CREDIT, noCredit: true };
   if(failed) return { error: failed.message || 'The AI service stopped mid-answer. Try again.', retry: !!failed.retryable && !text };
   /* The stream ended with no verdict. Nothing written yet means the
      connection dropped before the model spoke: try again. Words written
@@ -109581,6 +109702,7 @@ function apTrimThread(){
 function apSend(text){
   const clean = String(text||'').trim();
   if(assistantBusy || (!clean && !apPendingPhoto)) return;
+  if(!apPendingPhoto && apCreditState() === 'out' && apLocalAnswer(clean)){ apSendLocal(clean); return; }
   apClearWelcome();
   apClearChoices();
   const inputEl = document.getElementById('apInput');
@@ -109692,7 +109814,14 @@ function apOpenPanel(){
   if(assistantThread.length === 0 && apLogEl().children.length === 0){
     apRenderWelcome();
   }
-  setTimeout(()=> input.focus(), 30);
+  apPaintCredit();
+  /* Focused at once AND again after the panel's slide-in: a box inside
+     a panel that is still animating in can refuse the first focus, and
+     the owner's first keys then went to the page behind it. */
+  const grab = ()=>{ if(document.getElementById('assistantPanel').classList.contains('open') && document.activeElement !== input) input.focus(); };
+  input.focus();
+  setTimeout(grab, 30);
+  setTimeout(grab, 320);
 }
 function apClosePanel(){
   apStopVoice();
