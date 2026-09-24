@@ -52,6 +52,7 @@ const src = read('index.html');
   const scope = compileScope([
     extractFunction(src, 'mgrRichRowHTML', 'index.html'),
     extractFunction(src, 'mgrMoveFace', 'index.html'),
+    extractFunction(src, 'mgrAvatarHTML', 'index.html'),
     extractDeclaration(src, 'MGR_KIND_TONE', 'index.html'),
     extractDeclaration(src, 'MGR_KIND_WORD', 'index.html'),
     extractDeclaration(src, 'MGR_KIND_ICON', 'index.html'),
@@ -90,6 +91,37 @@ const src = read('index.html');
   t.check(/mgr-rv-skipped/.test(skipped) && /“travelling”/.test(skipped), 'a move set aside shows the owner\'s own reason');
   t.check(/mgrQueueRowHTML\(r, rows, \{ kindChip: true, open, rich: true, num: ordered\.indexOf\(r\) \}\)/.test(src),
     'the Manager\'s plan draws rich rows; Today\'s queue keeps its compact one');
+}
+
+/* ---------- 3. the rail, the playbook and growth, drawn ----------------- */
+{
+  const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const { mgrScoreRingsHTML, mgrAvatarHTML } = compileScope([
+    extractFunction(src, 'mgrScoreRingsHTML', 'index.html'),
+    extractFunction(src, 'mgrAvatarHTML', 'index.html'),
+    extractFunction(src, 'mgrShortUGX', 'index.html'),
+  ], { esc, Math, Number, String }, ['mgrScoreRingsHTML', 'mgrAvatarHTML']);
+  const rings = mgrScoreRingsHTML([
+    { label: 'Sales', pct: 25, pace: { on_course: false, behind_by: 2898857 } },
+    { label: 'Gross profit', pct: 74, pace: { on_course: true } },
+  ]);
+  t.check((rings.match(/class="mgr-sr-bad"/g) || []).length === 1 && (rings.match(/class="mgr-sr-good"/g) || []).length === 1,
+    'one ring per running target, crimson behind pace and verdigris on course');
+  t.check(/25% · 2\.9m behind/.test(rings) && /74% · on course/.test(rings), 'with how far each is, and by how much it is behind');
+  t.check(mgrScoreRingsHTML([]) === '', 'and nothing at all when no target is running');
+  t.check(mgrAvatarHTML('Kato Construction Ltd') === mgrAvatarHTML('Kato Construction Ltd') && />KC</.test(mgrAvatarHTML('Kato Construction Ltd')),
+    'a customer wears the same initials and the same tint every time');
+
+  const render = extractFunction(src, 'renderManager', 'index.html');
+  t.check(/mgrScoreRingsHTML\(sb2\.targets\.filter\(x=> !x\.finished\)\)/.test(render), 'the scoreboard opens with its rings');
+  t.check(/<div class="mgr-rt">/.test(render) && /class="mgr-av mgr-av-k mgr-kt-money"/.test(render),
+    'the standing rules are rows with the mark of the door each belongs to');
+  t.check(/const dial = \(p\)=>/.test(render) && /mgr-dial-over/.test(render) && /const bars = \(p\)=>/.test(render),
+    'a running play wears its span as a dial, crimson once past it, and its before and after as bars');
+  t.check(/class="mgr-cmp"/.test(render) && /mgr-cmp-q/.test(render), 'a price question draws your price beside the blank to fill');
+  const growth = extractFunction(src, 'renderManagerGrowth', 'index.html');
+  t.check(/class="mgr-gg"/.test(growth) && /mgrAvatarHTML\(row\.name\)/.test(growth),
+    'growth leads with its evidence as a gauge, and every customer has a face');
 }
 
 process.exit(t.done() ? 1 : 0);
