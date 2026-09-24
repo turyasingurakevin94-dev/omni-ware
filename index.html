@@ -1623,6 +1623,37 @@
   .mgr-tg-f{font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.45;margin:0;}
   .mgr-tg-f.mgr-behind{color:var(--ow-crimson);}
   .mgr-tg-f.mgr-met{color:var(--ow-verdigris);}
+  /* ---- the pace chart, in place of the bar while a target runs. The
+     road and the aim are recessive ink; the path is the bar's own navy;
+     only the point where it stands today, and the dashed "at this rate",
+     carry state -- verdigris on course, crimson behind -- and the line
+     of text under it says the same in words. ---- */
+  .mgr-pc{position:relative;margin:var(--ow-sp-6) 0 var(--ow-sp-4);padding-bottom:14px;}
+  .mgr-pc svg{display:block;width:100%;height:auto;overflow:visible;}
+  .mgr-pc-base{stroke:var(--ow-rule);stroke-width:1;}
+  .mgr-pc-road{stroke:var(--ow-ink-400);stroke-width:1;}
+  .mgr-pc-aim{fill:var(--ow-paper);stroke:var(--ow-ink-400);stroke-width:1.5;}
+  .mgr-pc-act{fill:none;stroke:var(--ow-steel-800);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;}
+  .mgr-pc-start{fill:var(--ow-steel-800);stroke:var(--ow-paper);stroke-width:2;}
+  .mgr-pc-now{stroke:var(--ow-paper);stroke-width:2;}
+  .mgr-pc-now.mgr-pc-good{fill:var(--ow-verdigris);}
+  .mgr-pc-now.mgr-pc-bad{fill:var(--ow-crimson);}
+  .mgr-pc-proj{stroke-width:1.5;stroke-dasharray:3 3;}
+  .mgr-pc-proj.mgr-pc-good{stroke:var(--ow-verdigris);}
+  .mgr-pc-proj.mgr-pc-bad{stroke:var(--ow-crimson);}
+  .mgr-pc-x{stroke:var(--ow-ink-400);stroke-width:1;opacity:0;}
+  .mgr-pc.mgr-pc-on .mgr-pc-x{opacity:1;}
+  .mgr-pc-d{position:absolute;bottom:0;left:0;font-size:var(--ow-t-11);color:var(--ow-ink-400);line-height:1.2;}
+  .mgr-pc-d-end{left:auto;right:0;}
+  .mgr-pc-tip{position:absolute;top:0;left:0;transform:translateY(-100%);
+    background:var(--ow-steel-950);color:var(--ow-paper);font-size:var(--ow-t-11);line-height:1.3;
+    padding:3px var(--ow-sp-6);border-radius:var(--ow-r-sm);max-width:100%;pointer-events:none;}
+  /* ---- the eight-week trend beside a verdict figure ---- */
+  .mgr-mt-row{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--ow-sp-8);}
+  .mgr-spark{flex:none;display:block;}
+  .mgr-spark-bar{fill:var(--ow-ink-400);}
+  .mgr-spark-now{fill:var(--ow-ink-900);}
+  .mgr-spark-gap{fill:var(--ow-rule);}
   /* An ask in the rail keeps the .mgr-ask vocabulary it already had --
      a proposed target and an open question are both the manager asking
      something -- and only loses the rounded card it sat in, because the
@@ -93710,10 +93741,202 @@ const MGR_CARET = '<svg class="ow-q-cr" viewBox="0 0 24 24" fill="none" stroke="
    reading answers. A strip that shows 0 while the journal is still
    being read says the manager has done nothing, which is a different
    claim from "not counted yet" and the wrong one. */
+/* ==== THE TREND UNDER TWO OF THE FOUR FIGURES =======================
+
+   "23 of 61" says where the Manager stands and nothing about which way
+   it is going. Eight weeks, week by week, answer that -- but only for
+   the two figures a week can carry: how much of what it advised got
+   done, and how much of it the books saw something follow. Targets
+   finish a few times a quarter and "not landing" is a count of repeats,
+   so a weekly line under either would draw noise as if it were a trend,
+   and they are left as figures.
+
+   A week with nothing advised is a gap, not a zero: the column is a
+   tick on the baseline and says so on the pointer. The current week is
+   still running; it is drawn darker and called "so far". */
+const MGR_TREND_WEEKS = 8;
+async function managerAdviceWeeks(todayISO_){
+  if(!managerNotesTable) return null;
+  const today = String(todayISO_ || todayISO()).slice(0, 10);
+  const start = anShiftDate(today, -(MGR_TREND_WEEKS * 7 - 1));
+  const r = await sb.from('manager_notes').select('date, body, status')
+    .eq('shop_id', currentShopId).eq('kind', 'move').gte('date', start)
+    .order('id', { ascending: false }).limit(TRACK_MOVES_READ);
+  if(r.error) return { error: r.error.message };
+  const weeks = [];
+  for(let k = MGR_TREND_WEEKS - 1; k >= 0; k--){
+    const to = anShiftDate(today, -7 * k), from = anShiftDate(to, -6);
+    weeks.push({ from, to, current: k === 0, proposed: 0, done: 0, scored: 0, followed: 0 });
+  }
+  (r.data || []).forEach(row=>{
+    const b = row.body || {};
+    if(!String(b.title || '').trim()) return;
+    const d = String(row.date || '');
+    const w = weeks.find(x=> d >= x.from && d <= x.to);
+    if(!w) return;
+    w.proposed++;
+    if(row.status === 'done') w.done++;
+    /* Only kinds whose answer is an event with a date, each given the
+       week after it -- the same question the levers table asks. */
+    if(TRACK_WINDOWED[b.mkind]){
+      const out = deriveMoveOutcome(row, anShiftDate(d, 7));
+      if(out.happened != null){ w.scored++; if(out.happened) w.followed++; }
+    }
+  });
+  return { weeks };
+}
+
+/* Eight columns, one per week, height = the week's share. Drawn in the
+   neutrals: a trend is not a verdict, and the tile's own tone already
+   carries state. */
+function mgrSparkHTML(weeks, num, den, what){
+  if(!weeks || !weeks.some(w=> w[den] > 0)) return '';
+  const W = 64, H = 22, gap = 2, bw = (W - gap * (weeks.length - 1)) / weeks.length;
+  const cols = weeks.map((w, i)=>{
+    const x = i * (bw + gap);
+    const label = `${w.current ? 'This week so far' : 'Week of ' + fmtShortDate(w.from)}: ${
+      w[den] ? `${w[num]} of ${w[den]} ${what}` : 'nothing advised'}`;
+    if(!w[den]) return `<rect x="${x.toFixed(1)}" y="${H - 1}" width="${bw.toFixed(1)}" height="1" class="mgr-spark-gap"><title>${esc(label)}</title></rect>`;
+    const h = Math.max(2, Math.round((w[num] / w[den]) * (H - 2)));
+    return `<rect x="${x.toFixed(1)}" y="${H - h}" width="${bw.toFixed(1)}" height="${h}" rx="1" class="${
+      w.current ? 'mgr-spark-now' : 'mgr-spark-bar'}"><title>${esc(label)}</title></rect>`;
+  }).join('');
+  const sum = weeks.filter(w=> w[den])
+    .map(w=> `${w.current ? 'this week so far' : fmtShortDate(w.from)} ${w[num]} of ${w[den]}`).join('; ');
+  return `<svg class="mgr-spark" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${
+    esc('Last ' + weeks.length + ' weeks, ' + what + ': ' + sum)}">${cols}</svg>`;
+}
+
+/* ==== WHERE A TARGET STANDS AGAINST ITS PACE ==========================
+
+   The bar said 69% there. It could not say whether 69% on Wednesday is
+   ahead or behind, or where the period is heading. This draws the lines
+   a manager reads a target by:
+     pace          the straight road from where it started to the aim on
+                   the last day -- where a target on course would be
+     actual        where the books say it has been, day by day
+     at this rate  the observed rate carried to the last day, dashed:
+                   arithmetic on the past, never a forecast
+
+   A FLOW (sales, profit, collections) is earned day by day, so its path
+   is drawn from each day's own figure. A LEVEL (debt, dead stock, cash)
+   is read as it stands now and the books keep no daily reading of it --
+   so the chart has two points, where it started and where it is, and
+   no line between them: a line there would invent the path. */
+function managerTargetSeries(x){
+  const m = MANAGER_METRICS[x && x.metric];
+  if(!m || !x.pace || !/^\d{4}-\d{2}-\d{2}$/.test(String(x.from)) || !/^\d{4}-\d{2}-\d{2}$/.test(String(x.to))) return null;
+  const total = x.pace.total_days, elapsed = Math.min(x.pace.elapsed_days, total);
+  if(!(total >= 1) || !(elapsed >= 1)) return null;
+  const pts = [];
+  if(m.kind === 'flow'){
+    let run = 0;
+    for(let i = 0; i < elapsed; i++){
+      const d = anShiftDate(x.from, i);
+      run += Number(m.measure(d, d)) || 0;
+      pts.push({ i, d, v: Math.round(run) });
+    }
+  } else {
+    pts.push({ i: 0, d: x.from, v: Math.round(Number(x.baseline) || 0) });
+    if(elapsed > 1) pts.push({ i: elapsed - 1, d: anShiftDate(x.from, elapsed - 1), v: Math.round(x.actual) });
+  }
+  const start = m.kind === 'flow' ? 0 : Number(x.baseline) || 0;
+  /* Where the road has it at the END of day i (0-based): a flow that
+     must reach the aim over `total` days is at aim*(i+1)/total. */
+  const expectedOn = (i)=> Math.round(start + (x.aim - start) * ((i + 1) / total));
+  return { kind: m.kind, total, elapsed, start, aim: Number(x.aim) || 0, pts, expectedOn,
+    /* Money on a shelf or owed cannot go below nothing; a rate carried
+       past zero is arithmetic, not a place the figure can reach. */
+    projected: Math.max(0, Number(x.pace.at_this_rate) || 0), onCourse: !!x.pace.on_course };
+}
+function mgrPaceHTML(x){
+  const s = managerTargetSeries(x);
+  if(!s || !s.pts.length) return '';
+  const W = 280, H = 72, top = 6, bottom = 18, padR = 6;
+  const vals = [s.start, s.aim, s.projected].concat(s.pts.map(p=> p.v));
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  if(s.kind === 'flow') lo = 0;
+  if(hi - lo < 1) hi = lo + 1;
+  /* Positions are ENDS of days: day i (0-based) closes at X(i + 1), and
+     X(0) is the moment the period opened, where a flow stands at
+     nothing and a level at its baseline. */
+  const X = (k)=> (k / s.total) * (W - padR);
+  const Y = (v)=> top + (1 - (v - lo) / (hi - lo)) * (H - top - bottom);
+  const f = (n)=> n.toFixed(1);
+  const tone = s.onCourse ? 'mgr-pc-good' : 'mgr-pc-bad';
+  const last = s.pts[s.pts.length - 1];
+  const at = (p, n)=> s.kind === 'level' && n === 0 ? 0 : p.i + 1;
+  const line = s.kind === 'flow'
+    ? `<polyline class="mgr-pc-act" points="${[f(X(0)) + ',' + f(Y(0))].concat(s.pts.map(p=> f(X(p.i + 1)) + ',' + f(Y(p.v)))).join(' ')}"/>` : '';
+  const startDot = s.kind === 'level' && s.pts.length > 1
+    ? `<circle class="mgr-pc-start" cx="${f(X(0))}" cy="${f(Y(s.pts[0].v))}" r="3.5"/>` : '';
+  const lastX = X(at(last, s.pts.length - 1));
+  const proj = at(last, s.pts.length - 1) < s.total
+    ? `<line class="mgr-pc-proj ${tone}" x1="${f(lastX)}" y1="${f(Y(last.v))}" x2="${f(X(s.total))}" y2="${f(Y(s.projected))}"/>` : '';
+  /* The road starts from nothing before the first day for a flow, and
+     from the baseline for a level. */
+  const roadFrom = s.kind === 'flow' ? 0 : s.start;
+  const dayLabel = (iso)=> new Date(iso + 'T12:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short' });
+  const endISO = anShiftDate(s.pts[0].d, s.total - 1);
+  const said = `${x.label}: ${fmtUGX(x.actual)} of ${fmtUGX(s.aim)}, day ${s.elapsed} of ${s.total}. `
+    + `On course would be ${fmtUGX(x.pace.expected)}; at this rate it ends at ${fmtUGX(s.projected)}.`;
+  /* The hover reads these back: each recorded day, the figure the books
+     give it, and where the road had it. */
+  const days = s.pts.map((p, n)=> [p.d, p.v, s.kind === 'level' && n === 0 ? s.start : s.expectedOn(p.i), at(p, n)])
+    .map(a=> a.join(':')).join('|');
+  return `<div class="mgr-pc" data-pace-days="${esc(days)}" data-pace-total="${s.total}" data-pace-w="${W - padR}" data-pace-vw="${W}">
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${esc(said)}">
+      <line class="mgr-pc-base" x1="0" y1="${f(H - bottom)}" x2="${W}" y2="${f(H - bottom)}"/>
+      <line class="mgr-pc-road" x1="${f(X(0))}" y1="${f(Y(roadFrom))}" x2="${f(X(s.total))}" y2="${f(Y(s.aim))}"/>
+      <circle class="mgr-pc-aim" cx="${f(X(s.total))}" cy="${f(Y(s.aim))}" r="3"/>
+      ${proj}${line}${startDot}
+      <line class="mgr-pc-x" x1="0" y1="${top}" x2="0" y2="${f(H - bottom)}"/>
+      <circle class="mgr-pc-now ${tone}" cx="${f(lastX)}" cy="${f(Y(last.v))}" r="4"/>
+    </svg>
+    <span class="mgr-pc-d">${esc(dayLabel(s.pts[0].d))}</span><span class="mgr-pc-d mgr-pc-d-end">aim · ${esc(dayLabel(endISO))}</span>
+    <span class="mgr-pc-tip" hidden></span>
+  </div>`;
+}
+/* One hover for every pace chart on the page: the nearest recorded day
+   under the pointer, its figure, and where the road had it. */
+document.addEventListener('pointermove', (e)=>{
+  const box = e.target && e.target.closest ? e.target.closest('.mgr-pc') : null;
+  document.querySelectorAll('.mgr-pc.mgr-pc-on').forEach(b=>{ if(b !== box) mgrPaceOff(b); });
+  if(!box) return;
+  const days = String(box.dataset.paceDays || '').split('|').filter(Boolean).map(r=> r.split(':'));
+  if(!days.length) return;
+  const total = Number(box.dataset.paceTotal) || 1, rect = box.getBoundingClientRect();
+  const frac = Math.max(0, Math.min(1, (e.clientX - rect.left) / (rect.width || 1)));
+  let best = null;
+  days.forEach(r=>{
+    const k = Number(r[3]);
+    if(!best || Math.abs(k / total - frac) < Math.abs(best.k / total - frac)) best = { k, d: r[0], v: Number(r[1]), e: Number(r[2]) };
+  });
+  const tip = box.querySelector('.mgr-pc-tip'), cross = box.querySelector('.mgr-pc-x');
+  const x = (best.k / total) * (Number(box.dataset.paceW) || 274);
+  if(cross){ cross.setAttribute('x1', x); cross.setAttribute('x2', x); }
+  box.classList.add('mgr-pc-on');
+  if(tip){
+    tip.hidden = false;
+    tip.textContent = `${new Date(best.d + 'T12:00:00Z').toLocaleDateString('en-GB',
+      { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' })}: ${fmtUGX(best.v)} · pace ${Math.round(best.e).toLocaleString('en-US')}`;
+    /* Kept inside the chart: centred over the day, but never past
+       either edge -- a figure cut by the panel's edge is a wrong figure. */
+    const px = (best.k / total) * rect.width, tw = tip.offsetWidth;
+    tip.style.left = Math.max(0, Math.min(rect.width - tw, px - tw / 2)) + 'px';
+  }
+});
+function mgrPaceOff(b){
+  b.classList.remove('mgr-pc-on');
+  const t = b.querySelector('.mgr-pc-tip');
+  if(t) t.hidden = true;
+}
+
 function mgrVerdictHTML(cells){
   const cell = (c)=> `<div class="ow-mt${c.tone ? ' ' + c.tone : ''}${c.wait ? ' mgr-wait' : ''}">
       <p class="ow-mt-l">${esc(c.label)}</p>
-      <span class="ow-mt-v">${c.value}</span>
+      ${c.spark ? `<div class="mgr-mt-row"><span class="ow-mt-v">${c.value}</span>${c.spark}</div>`
+        : `<span class="ow-mt-v">${c.value}</span>`}
       <p class="ow-mt-s">${c.sub}</p>
     </div>`;
   return `<div class="ow-strip mgr-verdict">${cells.map(cell).join('')}</div>`;
@@ -93778,6 +94001,11 @@ function mgrPaintVerdict(state){
         ? `advised ${tr.minTimes}+ times${dead ? ` &middot; ${dead} with no subsequent event` : ''}`
         : 'nothing advised often enough to judge yet' };
   }
+  /* The eight-week trend rides beside a figure only once that figure is
+     read -- a trend under an em-dash would be a claim with no subject. */
+  const wk = state.weeks && state.weeks.weeks;
+  if(wk && !cells[0].wait) cells[0].spark = mgrSparkHTML(wk, 'done', 'proposed', 'done');
+  if(wk && !cells[2].wait) cells[2].spark = mgrSparkHTML(wk, 'followed', 'scored', 'followed by an event within a week');
   el.innerHTML = mgrVerdictHTML(cells);
 }
 
@@ -94336,7 +94564,7 @@ function renderManager(){
             return `<div class="mgr-tg${x.met ? ' mgr-met' : behind ? ' mgr-behind' : ''}">
               <div class="mgr-tg-t"><span class="mgr-tg-n" title="${esc(x.label)}">${esc(x.label)}</span
                 ><span class="mgr-tg-v">${fmtUGX(x.actual)}</span></div>
-              ${bar(x.pct)}
+              ${(!x.finished && mgrPaceHTML(x)) || bar(x.pct)}
               <p class="mgr-tg-f${x.finished ? (x.met ? ' mgr-met' : '') : (behind ? ' mgr-behind' : '')}">of ${
                 fmtUGX(x.aim)} · ${
                 x.finished
@@ -94483,6 +94711,13 @@ function renderManager(){
     mgrPaintVerdict(verdict);
     mgrPaintLevers(track, verdict.tally);
   });
+  /* The eight weeks behind two of the figures. A failed read draws no
+     trend and costs the figures nothing. */
+  managerAdviceWeeks(todayISO()).then(weeks=>{
+    if(gen !== mgrRenderGen || !weeks || weeks.error) return;
+    verdict.weeks = weeks;
+    mgrPaintVerdict(verdict);
+  }).catch(()=>{});
 }
 
 /* The advice half of the account, painted separately because the tally
