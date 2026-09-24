@@ -198,4 +198,45 @@ const src = read('index.html');
     'a line code in the Manager\'s words is read back as the line\'s name, and nothing else is touched');
 }
 
+/* ---------- 6. the journal, drawn -------------------------------------- */
+{
+  const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const sc = compileScope([
+    extractFunction(src, 'mgrJournalRepeats', 'index.html'), extractFunction(src, 'mgrJrWords', 'index.html'),
+    extractFunction(src, 'mgrJournalChartHTML', 'index.html'), extractFunction(src, 'mgrDayMonth', 'index.html'),
+    extractFunction(src, 'mgrJournalWeekLabel', 'index.html'), extractFunction(src, 'mgrMondayOf', 'index.html'),
+    extractFunction(src, 'mgrShortUGX', 'index.html'), extractDeclaration(src, 'MGR_JR_STOP', 'index.html'),
+  ], { esc, Math, Number, String, Date, Set, Array, fmtShortDate: (d) => d }, ['mgrJournalRepeats', 'mgrJournalChartHTML', 'mgrJournalWeekLabel', 'mgrMondayOf']);
+  const reps = sc.mgrJournalRepeats([
+    { date: '2026-08-29', title: 'Put 5,000 shillings on the Masasi carton — that one change is worth more than every chase made last week.' },
+    { date: '2026-08-31', title: 'Put 5,000 more shillings on each Masasi carton before you refill them — that one change is worth more.' },
+    { date: '2026-09-06', title: 'Put 5,000 more shillings on each Masasi carton — 943,304 UGX a month on volume you already sell.' },
+    { date: '2026-09-06', title: 'Put 5,000 more shillings on each Masasi carton — 943,304 UGX a month on volume you already sell.' },
+    { date: '2026-09-19', title: 'Take the Masasi margin from Roto’s 50-carton rung, not from a price your customers have already refused.' },
+    { date: '2026-09-24', title: 'Collect Amos’s 2,515,000 first, then refill the two shelves that are empty and earning.' },
+  ]);
+  t.check(JSON.stringify(reps.nth) === '[1,2,3,4,1,1]', 'the same advice in different words is counted as said again, and different advice is not (got ' + JSON.stringify(reps.nth) + ')');
+  t.check(reps.top && reps.top.dates.length === 4 && /Masasi carton/.test(reps.top.title), 'and the advice said most often is named, with its dates');
+  t.check(sc.mgrJournalRepeats([{ date: '2026-09-01', title: 'A' }, { date: '2026-09-02', title: 'B things here' }]).top === null, 'nothing is called repeated under three times');
+
+  const chart = sc.mgrJournalChartHTML([
+    { date: '2026-08-29', moves: ['done', 'open', 'open', 'open', 'open'], done: 1 },
+    { date: '2026-09-24', moves: ['done', 'done', 'done', 'open', 'open'], done: 3 },
+  ], [{ date: '2026-09-08', sales: 15694755 }], '2026-09-24');
+  t.check(/<b class="mgr-jc-bad">4<\/b> of 10 moves done/.test(chart) === false && /<b class="mgr-jc-(mid|bad|good)">4<\/b> of 10 moves done/.test(chart),
+    'follow-through counts every move done across the meetings shown');
+  t.check((chart.slice(chart.indexOf('mgr-jc-plot')).match(/class="mgr-jc-done"/g) || []).length === 4 && /class="mgr-jc-r"/.test(chart) && /15\.69m/.test(chart),
+    'each meeting is a stack of squares, done ones filled, and each review a mark with that week’s sales');
+  t.check(/Today: 3 of 5\. Before it: 1 of 5\./.test(chart), 'and today is set against everything before it');
+  t.check(sc.mgrMondayOf('2026-09-24') === '2026-09-21' && sc.mgrMondayOf('2026-09-06') === '2026-08-31',
+    'entries are kept by the week they fall in, Monday to Sunday');
+  t.check(sc.mgrJournalWeekLabel('2026-09-21', '2026-09-24') === 'This week · 21–27 Sept' && sc.mgrJournalWeekLabel('2026-08-31', '2026-09-24') === '31 Aug – 6 Sept',
+    'and each week is labelled by its dates, this one named as such');
+  const render = extractFunction(src, 'renderManager', 'index.html');
+  t.check(/said again — \$\{ORD\[n\] \|\| n \+ 'th'\} time/.test(render) && /Said \$\{top\.dates\.length\} times/.test(render) && /mgr-jr-wk/.test(render),
+    'the journal draws the chart, the repeated advice and its weeks');
+  t.check(/label: 'sales', cls: 'mgr-jr-b-s'/.test(render) && /' · was ' \+ mgrShortUGX\(wk\.prior_sales\)/.test(render),
+    'and a review row carries its week as bars, sales beside the week before');
+}
+
 process.exit(t.done() ? 1 : 0);
