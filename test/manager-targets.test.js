@@ -150,6 +150,7 @@ const { MANAGER_METRICS: M, managerScoreProgress } = scope.names();
     const toasts = [];
     const adopt = compileScope([
       extractFunction(src, 'managerAdoptTarget', 'index.html'),
+      extractFunction(src, 'managerRetireDuplicates', 'index.html'),
       extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
     ], { ...env, managerNotesTable: true, rivalPricesTable: false, currentShopId: 'shop-1',
       toast: (m) => toasts.push(m), renderManager: () => {},

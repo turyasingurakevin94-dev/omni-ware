@@ -1654,6 +1654,7 @@
   .mgr-spark-bar{fill:var(--ow-ink-400);}
   .mgr-spark-now{fill:var(--ow-ink-900);}
   .mgr-spark-gap{fill:var(--ow-rule);}
+  .mgr-spark-track{fill:var(--ow-steel-100);}
   /* An ask in the rail keeps the .mgr-ask vocabulary it already had --
      a proposed target and an open question are both the manager asking
      something -- and only loses the rounded card it sat in, because the
@@ -92476,7 +92477,16 @@ async function managerSetMoveStatus(rowId, status, skipReason){
    the period it runs over, and WHERE THE SHOP STOOD when it was taken
    on. A level target measured without its baseline reads as though the
    whole debt book were this week's work. */
-async function managerAdoptTarget(rowId){
+/* The older copies of a proposal go when the owner answers the newest --
+   either way they answered, the question is closed for all of them. */
+async function managerRetireDuplicates(dupIds){
+  const ids = (dupIds || []).filter(x=> x != null);
+  if(!ids.length) return;
+  const r = await sb.from('manager_notes').update({ status: 'declined' })
+    .eq('shop_id', currentShopId).in('id', ids);
+  if(r.error) console.warn('Manager: older copies of a proposal not retired:', r.error.message);
+}
+async function managerAdoptTarget(rowId, dupIds){
   if(!managerNotesTable || rowId == null) return;
   const cur = await sb.from('manager_notes').select('body, date').eq('shop_id', currentShopId).eq('id', rowId).single();
   const body = (cur.data && cur.data.body) || {};
@@ -92490,14 +92500,16 @@ async function managerAdoptTarget(rowId){
   const up = await sb.from('manager_notes').update({ status: 'open', body })
     .eq('shop_id', currentShopId).eq('id', rowId);
   if(up.error){ toast('Could not adopt that target — ' + up.error.message, 8000); return; }
+  await managerRetireDuplicates(dupIds);
   toast(m.label + ' target adopted — the scoreboard reads it from your books from now on');
   renderManager();
 }
-async function managerDeclineTarget(rowId){
+async function managerDeclineTarget(rowId, dupIds){
   if(!managerNotesTable || rowId == null) return;
   const up = await sb.from('manager_notes').update({ status: 'declined' })
     .eq('shop_id', currentShopId).eq('id', rowId);
   if(up.error){ toast('Could not set that aside — ' + up.error.message, 8000); return; }
+  await managerRetireDuplicates(dupIds);
   renderManager();
 }
 
@@ -92514,9 +92526,23 @@ async function managerScoreboard(){
   const cutoff = anShiftDate(todayISO(), -7);
   const open = (r.data||[]).filter(x=> x.status === 'open' && String((x.body||{}).to||'') >= cutoff)
     .map(x=> ({ id: x.id, ...managerScoreProgress(x) })).filter(x=> x.metric);
-  const proposed = (r.data||[]).filter(x=> x.status === 'proposed')
-    .map(x=> ({ id: x.id, metric: (x.body||{}).metric, label: (MANAGER_METRICS[(x.body||{}).metric]||{}).label || '',
-      aim: Number((x.body||{}).aim)||0, why: (x.body||{}).why || '', date: x.date }));
+  /* ONE PROPOSAL PER MEASURE. Proposals written before the duplicate
+     guard (0097) could stand side by side -- "Gross profit 1,400,000
+     this week" twice, each with its own Take it on. The newest speaks
+     for its measure; the older copies ride along as dupIds, so taking
+     one on or setting it aside retires them with it. A measure that is
+     already running is not proposed again. */
+  const running = new Set(open.map(x=> x.metric));
+  const byMetric = new Map();
+  (r.data||[]).filter(x=> x.status === 'proposed').forEach(x=>{
+    const metric = (x.body||{}).metric;
+    if(!metric || running.has(metric)) return;
+    const seen = byMetric.get(metric);
+    if(seen){ seen.dupIds.push(x.id); return; }
+    byMetric.set(metric, { id: x.id, metric, label: (MANAGER_METRICS[metric]||{}).label || '',
+      aim: Number((x.body||{}).aim)||0, why: (x.body||{}).why || '', date: x.date, dupIds: [] });
+  });
+  const proposed = [...byMetric.values()];
   return { targets: open, proposed };
 }
 
@@ -93392,6 +93418,16 @@ async function managerHeldToday(){
   return !r.error && (r.data || []).length > 0;
 }
 
+/* THE TURN THAT RESUMES A CUT-OFF OCCASION, sent by the app itself.
+   Worded like the owner's own "continue" -- the same sentence apSend
+   adds -- and told what the occasion still owes: its closing block. */
+function apPushResume(owes){
+  assistantThread.push({ role: 'user', content: '[Today is ' + todayISO() + ']\n'
+    + '[Your previous answer was cut off mid-way. Resume from where it stopped, in smaller pieces — do not repeat what already went through, do not re-ask what was already answered.]\n'
+    + 'Continue, and finish with the ' + owes + ' block.' });
+  apWasCutOff = false;
+}
+
 async function runManagerMeeting(){
   if(assistantBusy || managerMeetingRunning){ toast('The manager is already in the middle of something'); return; }
   /* ONE MEETING A DAY, CONFIRMED RATHER THAN REFUSED.
@@ -93434,8 +93470,18 @@ async function runManagerMeeting(){
     + (strategy.enabled ? '\nRead growth_opportunities for evidence-backed customer actions and the baseline.' : '') });
   apRenderUser('Hold the morning meeting.');
   try{
+    /* A MEETING THAT STOPS BEFORE ITS PLAN HAS NOT HAPPENED. Live: the
+       prose came through, the plan block did not, and the screen said
+       "not held" under a full transcript until somebody typed
+       "continue". It now carries on by itself, once. A second cut-off
+       falls back to asking, so a meeting can never loop on its own
+       credit. */
+    apAutoResume = true;
     await apRunLoop();
+    apAutoResume = false;
+    if(apWasCutOff && !apLastPlan){ apPushResume('[plan: …]'); await apRunLoop(); }
   } finally {
+    apAutoResume = false;
     managerMeetingRunning = false;
     const committed = await managerCommitPlan();
     if(!committed && !apLastPlan && !apWasCutOff){
@@ -93479,8 +93525,14 @@ async function runManagerReview(){
   assistantThread.push({ role: 'user', content: '[Today is ' + todayISO() + ']\nHold the weekly review.' });
   apRenderUser('Hold the weekly review.');
   try{
+    /* The same once-only carry-on as the meeting: a review that stops
+       before its verdict block is a review nothing can keep. */
+    apAutoResume = true;
     await apRunLoop();
+    apAutoResume = false;
+    if(apWasCutOff && !apLastReview){ apPushResume('[review: …]'); await apRunLoop(); }
   } finally {
+    apAutoResume = false;
     managerMeetingRunning = false;
     if(apLastReview && typeof apLastReview.verdict === 'string'){
       const week = await ASSISTANT_TOOLS.week_review_data.run();
@@ -93797,9 +93849,15 @@ function mgrSparkHTML(weeks, num, den, what){
     const label = `${w.current ? 'This week so far' : 'Week of ' + fmtShortDate(w.from)}: ${
       w[den] ? `${w[num]} of ${w[den]} ${what}` : 'nothing advised'}`;
     if(!w[den]) return `<rect x="${x.toFixed(1)}" y="${H - 1}" width="${bw.toFixed(1)}" height="1" class="mgr-spark-gap"><title>${esc(label)}</title></rect>`;
-    const h = Math.max(2, Math.round((w[num] / w[den]) * (H - 2)));
-    return `<rect x="${x.toFixed(1)}" y="${H - h}" width="${bw.toFixed(1)}" height="${h}" rx="1" class="${
-      w.current ? 'mgr-spark-now' : 'mgr-spark-bar'}"><title>${esc(label)}</title></rect>`;
+    /* A WEEK WITH ADVICE HAS A FULL-HEIGHT TRACK, and the share fills it.
+       Without the track, "0 of 6 done" was a 2px stub and "nothing
+       advised" a 1px tick -- two different facts, drawn the same. Now an
+       empty track says advice went unanswered, and no track says there
+       was none. */
+    const h = w[num] ? Math.max(2, Math.round((w[num] / w[den]) * H)) : 0;
+    return `<g><title>${esc(label)}</title><rect x="${x.toFixed(1)}" y="0" width="${bw.toFixed(1)}" height="${H}" rx="1" class="mgr-spark-track"/>${
+      h ? `<rect x="${x.toFixed(1)}" y="${H - h}" width="${bw.toFixed(1)}" height="${h}" rx="1" class="${
+        w.current ? 'mgr-spark-now' : 'mgr-spark-bar'}"/>` : ''}</g>`;
   }).join('');
   const sum = weeks.filter(w=> w[den])
     .map(w=> `${w.current ? 'this week so far' : fmtShortDate(w.from)} ${w[num]} of ${w[den]}`).join('; ');
@@ -94574,7 +94632,7 @@ function renderManager(){
                 x.why ? ' · ' + esc(x.why) : ''}${
                 behind ? ` · level today would be ${fmtUGX(x.pace.expected)}, ${fmtUGX(x.pace.behind_by)} short; at this rate it ends at ${fmtUGX(x.pace.at_this_rate)}` : ''}</p>
             </div>`; }).join('')}
-          ${(sb2.proposed||[]).map(x=> `<div class="mgr-ask" data-tid="${esc(String(x.id))}">
+          ${(sb2.proposed||[]).map(x=> `<div class="mgr-ask" data-tid="${esc(String(x.id))}" data-dups="${esc((x.dupIds||[]).join(','))}">
             <p class="mgr-ask-q">${esc(x.label)} ${fmtUGX(x.aim)} this week</p>
             <p class="mgr-ask-w">${esc(x.why)} A number becomes a commitment only when you take it on.</p>
             <div class="mgr-ask-row">
@@ -94586,8 +94644,9 @@ function renderManager(){
       : '';
     scoreWrap.querySelectorAll('.mgr-ask[data-tid]').forEach(card=>{
       const id = Number(card.dataset.tid);
-      card.querySelector('.mgr-target-adopt').addEventListener('click', ()=> managerAdoptTarget(id));
-      card.querySelector('.mgr-target-decline').addEventListener('click', ()=> managerDeclineTarget(id));
+      const dups = String(card.dataset.dups || '').split(',').filter(Boolean).map(Number);
+      card.querySelector('.mgr-target-adopt').addEventListener('click', ()=> managerAdoptTarget(id, dups));
+      card.querySelector('.mgr-target-decline').addEventListener('click', ()=> managerDeclineTarget(id, dups));
     });
 
     /* ---- Standing: what it needs to know. The one place the shop's own
@@ -104382,6 +104441,10 @@ let apWasCutOff = false;    // last answer hit max_tokens; next send says so
    whether the instructions are still too heavy. This one survives the
    whole meeting and is written into the journal with it. */
 let apCutOffThisSitting = false;
+/* Set by a meeting or review while it runs: a cut-off turn will be
+   resumed automatically ONCE, so the panel says it is carrying on
+   rather than asking the owner to type "continue". */
+let apAutoResume = false;
 let apRecognition = null;   // the live SpeechRecognition, when listening
 let apQuoteInFlight = false; // one INV- number per confirm, ever
 
@@ -107598,6 +107661,10 @@ async function apRunLoop(){
              the model its answer was cut off, so it resumes smaller
              instead of repeating -- no burnt round re-explaining. */
           apWasCutOff = true;
+          if(apAutoResume){
+            apBubble('bot', esc('I ran out of room mid-answer — picking up where I stopped, in smaller pieces.'));
+            finalText = spokeText; return;
+          }
           apRenderError('I had to stop mid-answer — that was too much for one go. Say "continue" and I will pick up where I stopped, in smaller pieces.'
             + (apMode === 'manager' ? ' The plan is not lost: it is kept the moment the meeting finishes.' : ''));
           if(apMode === 'manager' || apMode === 'manager-review') apCutOffThisSitting = true;

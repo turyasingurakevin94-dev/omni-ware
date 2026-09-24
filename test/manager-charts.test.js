@@ -58,7 +58,11 @@ const fmtUGX = (n) => Number(n).toLocaleString('en-US') + ' UGX';
     const weeks = Array.from({ length: 8 }, (_, i) => ({ from: day(-7 * (7 - i) - 6), current: i === 7,
       proposed: i === 2 ? 0 : 4, done: i === 2 ? 0 : i % 4 }));
     const svg = mgrSparkHTML(weeks, 'done', 'proposed', 'done');
-    t.check((svg.match(/<rect /g) || []).length === 8, 'one column per week');
+    t.check((svg.match(/mgr-spark-track/g) || []).length === 7 && (svg.match(/mgr-spark-gap/g) || []).length === 1,
+      'one column per week: a full-height track for each week with advice, a baseline tick for the one without');
+    const zero = svg.split('<g>').find((g) => /Week of [\d-]+: 0 of 4 done/.test(g)) || '';
+    t.check(/mgr-spark-track/.test(zero) && !/mgr-spark-bar|mgr-spark-now/.test(zero),
+      'a week where nothing advised was done is an EMPTY track — not the same mark as a week with nothing advised');
     t.check(/class="mgr-spark-gap"><title>Week of [\d-]+: nothing advised<\/title>/.test(svg),
       'a week with nothing advised is a gap that says so, not a zero');
     t.check((svg.match(/mgr-spark-now/g) || []).length === 1 && /This week so far: 3 of 4 done/.test(svg),
@@ -103,6 +107,55 @@ const fmtUGX = (n) => Number(n).toLocaleString('en-US') + ' UGX';
     const s = paceScope({ sales: { kind: 'flow', measure: () => 0 } });
     t.check(s.mgrPaceHTML({ metric: 'sales', from: day(-1), to: day(5), aim: 10, pace: null }) === '',
       'a target with no pace draws no chart');
+  }
+
+  /* ---------- 3b. one proposal per measure ----------------------------- */
+  {
+    const rows = [
+      { id: 9, status: 'proposed', date: '2026-09-20', body: { metric: 'gross_profit', aim: 1400000, why: 'newest' } },
+      { id: 7, status: 'proposed', date: '2026-09-19', body: { metric: 'gross_profit', aim: 1400000, why: 'older copy' } },
+      { id: 6, status: 'proposed', date: '2026-09-19', body: { metric: 'collections', aim: 2500000, why: 'c' } },
+      { id: 5, status: 'proposed', date: '2026-09-18', body: { metric: 'sales', aim: 9, why: 's' } },
+      { id: 4, status: 'open', date: '2026-09-21', body: { metric: 'sales', aim: 9, from: '2026-09-21', to: '2026-09-27' } },
+    ];
+    const { managerScoreboard } = compileScope([
+      extractFunction(src, 'managerScoreboard', 'index.html'),
+      extractFunction(src, 'anShiftDate', 'index.html'),
+    ], {
+      managerNotesTable: true, currentShopId: 'S', todayISO: () => TODAY,
+      MANAGER_METRICS: { gross_profit: { label: 'Gross profit' }, collections: { label: 'Collect' }, sales: { label: 'Sales' } },
+      managerScoreProgress: (x) => ({ metric: x.body.metric }),
+      sb: { from: () => { const q = { select: () => q, eq: () => q, order: () => q,
+        limit: () => Promise.resolve({ data: rows, error: null }) }; return q; } },
+      Date, String, Number, Map, Set,
+    }, ['managerScoreboard']);
+    const sb2 = await managerScoreboard();
+    const gp = sb2.proposed.filter((x) => x.metric === 'gross_profit');
+    t.check(gp.length === 1 && gp[0].id === 9 && gp[0].dupIds.join() === '7',
+      'two copies of one proposal show as one, the newest, carrying the older as a duplicate');
+    t.check(!sb2.proposed.some((x) => x.metric === 'sales'), 'a measure already running is not proposed again');
+    t.check(sb2.proposed.length === 2, 'and the rest are untouched');
+    const render = extractFunction(src, 'renderManager', 'index.html');
+    t.check(/managerAdoptTarget\(id, dups\)/.test(render) && /managerDeclineTarget\(id, dups\)/.test(render)
+      && /await managerRetireDuplicates\(dupIds\);/.test(extractFunction(src, 'managerAdoptTarget', 'index.html'))
+      && /await managerRetireDuplicates\(dupIds\);/.test(extractFunction(src, 'managerDeclineTarget', 'index.html')),
+      'answering the newest retires its older copies, whichever way it was answered');
+  }
+
+  /* ---------- 3c. a cut-off meeting carries on by itself, once --------- */
+  {
+    const meet = extractFunction(src, 'runManagerMeeting', 'index.html');
+    t.check(/apAutoResume = true;\s*await apRunLoop\(\);\s*apAutoResume = false;\s*if\(apWasCutOff && !apLastPlan\)\{ apPushResume\('\[plan: …\]'\); await apRunLoop\(\); \}/.test(meet),
+      'a meeting cut off before its plan resumes once, and a second cut-off falls back to asking');
+    const rev = extractFunction(src, 'runManagerReview', 'index.html');
+    t.check(/if\(apWasCutOff && !apLastReview\)\{ apPushResume\('\[review: …\]'\); await apRunLoop\(\); \}/.test(rev),
+      'and so does a review cut off before its verdict');
+    const loop = extractFunction(src, 'apRunLoop', 'index.html');
+    t.check(/if\(apAutoResume\)\{\s*apBubble\('bot', esc\('I ran out of room mid-answer — picking up where I stopped/.test(loop),
+      'while it carries on, the panel says so instead of asking for "continue"');
+    const push = extractFunction(src, 'apPushResume', 'index.html');
+    t.check(/Resume from where it stopped/.test(push) && /apWasCutOff = false;/.test(push),
+      'the resume turn is the same sentence the owner\'s own "continue" sends');
   }
 
   /* ---------- 4. wiring ------------------------------------------------ */
