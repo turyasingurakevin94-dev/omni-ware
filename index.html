@@ -2535,6 +2535,9 @@
   .an-shr{display:inline-block;vertical-align:middle;width:56px;height:6px;margin-right:var(--ow-sp-8);
     border-radius:var(--ow-r-pill);background:var(--ow-rule-soft);overflow:hidden;}
   .an-shr-f{display:block;height:100%;background:var(--ow-steel-950);}
+  /* Another rule turns navs inside this panel into a column; the pager
+     reads left to right, the count and then the pages. */
+  .ow-pg.an-pg{flex-direction:row;}
   .an-split{padding:var(--ow-sp-10) var(--ow-sp-12) var(--ow-sp-8);border-bottom:1px solid var(--ow-rule-soft);}
   .an-split-t{margin:0 0 var(--ow-sp-6);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
   .an-split-b{display:flex;gap:var(--ow-sp-2);height:20px;border-radius:var(--ow-r-sm);overflow:hidden;}
@@ -51056,6 +51059,30 @@ function anFootRowHTML(cols, rows){
    as one grey segment, so how concentrated the window was is seen at
    once. Item and customer views only -- a document is not a source. */
 let anShareOf = 0;
+/* PAGES. A long window listed a row for every item it ever sold, and the
+   total sat under all of them. The table now shows AN_PAGE_SIZE rows at a
+   time; the tiles, the split bar, the total and the export still read
+   EVERY visible row, so turning a page never changes a figure. */
+const AN_PAGE_SIZE = 25;
+let anPage = 1;
+function anPagerHTML(total, pageCount, from, shown){
+  if(pageCount <= 1) return '';
+  const noun = anView==='item' ? 'item' : anView==='customer' ? 'customer' : anView==='pair' ? 'pair' : 'invoice';
+  const step = (to, label, on)=>
+    `<button type="button" class="btn btn-ghost ow-sm ow-pg-s" data-anpg="${to}"${on?'':' disabled'}>${label}</button>`;
+  const num = (n)=> n === 'gap'
+    ? '<span class="ow-pg-g" aria-hidden="true">&hellip;</span>'
+    : `<button type="button" class="btn btn-ghost ow-sm ow-pg-i${n===anPage?' ow-pg-on':''}" data-anpg="${n}"${
+        n===anPage?' aria-current="page"':''}>${n}</button>`;
+  return `<nav class="ow-pg an-pg" aria-label="Pages of the table">
+    <p class="ow-pg-n">Showing <span class="ow-pg-f">${from + 1}&ndash;${from + shown}</span> of <span class="ow-pg-f">${total}</span> ${noun}${total===1?'':'s'} &middot; page <span class="ow-pg-f">${anPage}</span> of <span class="ow-pg-f">${pageCount}</span></p>
+    <div class="ow-pg-a">
+      ${step(anPage - 1, 'Back', anPage > 1)}
+      ${invPageWindow(anPage, pageCount).map(num).join('')}
+      ${step(anPage + 1, 'Next', anPage < pageCount)}
+    </div>
+  </nav>`;
+}
 function anSplitHTML(rows){
   if(!(anView==='item' || anView==='customer')) return '';
   const total = rows.reduce((n, r)=> n + Math.max(0, Number(r.sales)||0), 0);
@@ -51094,6 +51121,11 @@ function renderAnTable(){
     if(anLastInvoices.length===0) anWireNothingHere();
     return;
   }
+  const pageCount = Math.max(1, Math.ceil(rows.length / AN_PAGE_SIZE));
+  if(anPage > pageCount) anPage = pageCount;
+  if(anPage < 1) anPage = 1;
+  const pageFrom = (anPage - 1) * AN_PAGE_SIZE;
+  const pageRows = rows.slice(pageFrom, pageFrom + AN_PAGE_SIZE);
   wrap.innerHTML = anSplitHTML(rows) + `<div class="ow-tbl an-tbl" style="--ow-tbl-cols:${AN_TRACKS[anView]}">
     <div class="ow-tbl-h">
       <div class="ow-tbl-n">No.</div>
@@ -51112,16 +51144,23 @@ function renderAnTable(){
           on ? `<span class="an-arrow">${sort.dir===1?'▲':'▼'}</span>` : ''}</div>`;
       }).join('')}
     </div>
-    ${rows.map((r,i)=>`<div class="ow-tbl-r">
-      <div class="ow-tbl-n an-no">${i+1}</div>
+    ${pageRows.map((r,i)=>`<div class="ow-tbl-r">
+      <div class="ow-tbl-n an-no">${pageFrom+i+1}</div>
       ${cols.map(c=> anCellHTML(c, r, false)).join('')}
     </div>`).join('')}
     ${anFootRowHTML(cols, rows)}
-  </div>`;
+  </div>${anPagerHTML(rows.length, pageCount, pageFrom, pageRows.length)}`;
+  wrap.querySelectorAll('[data-anpg]').forEach(btn=> btn.addEventListener('click', ()=>{
+    anPage = Number(btn.dataset.anpg) || 1;
+    renderAnTable();
+    const pan = wrap.closest('.ow-pan');
+    if(pan && pan.scrollIntoView) pan.scrollIntoView({block:'start', behavior:'smooth'});
+  }));
   wrap.querySelectorAll('.an-th').forEach(th=>{
     const go = ()=>{
       const key = th.dataset.key;
       if(sort.key===key) sort.dir *= -1; else { sort.key = key; sort.dir = -1; }
+      anPage = 1;
       renderAnTable();
     };
     th.addEventListener('click', go);
@@ -51129,6 +51168,7 @@ function renderAnTable(){
   });
 }
 function renderSalesAnalytics(){
+  anPage = 1;
   const {from, to} = anGetDateRange();
   anLastInvoices = anInvoicesInRange(from, to);
   /* The sub is never folded, so it carries the one thing that goes stale:
@@ -51166,7 +51206,7 @@ function anSyncRangeSwitch(){
   document.querySelectorAll('#an_range_switch button[data-range]').forEach(b=>
     b.setAttribute('aria-pressed', String(!!sel && b.dataset.range === sel.value)));
 }
-document.getElementById('an_table_search').addEventListener('input', renderAnTable);
+document.getElementById('an_table_search').addEventListener('input', ()=>{ anPage = 1; renderAnTable(); });
 document.querySelectorAll('#an_subtabs .ow-seg-b').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     document.querySelectorAll('#an_subtabs .ow-seg-b').forEach(b=>{
@@ -51174,6 +51214,7 @@ document.querySelectorAll('#an_subtabs .ow-seg-b').forEach(btn=>{
     });
     btn.classList.add('ow-on'); btn.setAttribute('aria-selected','true');
     anView = btn.dataset.view;
+    anPage = 1;
     renderAnTable();
   });
 });
