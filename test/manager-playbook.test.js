@@ -192,6 +192,10 @@ const base = {
       q.limit = () => Promise.resolve({ data: null, error: { message: 'no such kind' } }); return q; } } },
       ['managerPlaybook', 'managerPlayClock', 'managerPlaysPastSpan']).managerPlaybook();
     eq(errBook.running.length, 0, 'and a refused read is an empty book, never a crashed screen');
+    /* An empty book is a claim about this shop's strategy. A refused
+       read is not, and the two are no longer the same answer. */
+    eq(errBook.error, 'no such kind',
+      'and carries the failure home, so the panel says so rather than "no play is running"');
   }
 
   /* ---------- 4. trying it, stopping it, and the owner's own --------- */

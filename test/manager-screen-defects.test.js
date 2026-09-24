@@ -57,7 +57,7 @@
  *
  * Run: node test/manager-screen-defects.test.js   (or: npm test)
  */
-const { read, extractFunction, createReporter } = require('./_extract');
+const { read, extractFunction, extractDeclaration, compileScope, createReporter } = require('./_extract');
 
 const t = createReporter('manager screen defects');
 const src = read('index.html');
@@ -235,6 +235,85 @@ const render = extractFunction(src, 'renderManager', 'index.html');
     'and drops an overtaken scoreboard rather than painting it');
   t.check(!/mgrRenderGen/.test(pace),
     'on a counter of its own, so a Manager render cannot cancel a pace paint');
+}
+
+/* ---------- 5. a reading that failed is not a zero ---------- */
+{
+  /* Every reading on this screen answered a failed query with its own
+     empty shape, so a dropped connection said: no advice has been put
+     to you, no target has been taken on, no lever has ever been
+     weighed, no play is running. Four claims about the shop, made on
+     no evidence, on the screen whose whole discipline is never to say
+     anything the books do not support. Silence was the worst of them:
+     the levers table simply emptied, and the record of everything the
+     manager's advice has ever produced read as never having advised
+     anything.
+
+     PAINTED, not read for shape. These are the assertions that matter
+     most in this file and the easiest to satisfy with code that never
+     runs, so the strip is rendered and its words are read back. */
+  const esc = (v)=> String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const paint = (id, names, state)=>{
+    const el = { innerHTML: '', querySelector: ()=> null, querySelectorAll: ()=> [] };
+    const scope = compileScope(names.map(n=> n.d
+      ? extractDeclaration(src, n.n, 'index.html')
+      : extractFunction(src, n.n, 'index.html')), {
+      document: { getElementById: (x)=> (x === id ? el : null) },
+      esc, String, Number, Object, Array, Boolean, Math, JSON,
+      fmtUGX: (n)=> String(n),
+    }, names.filter(n=> !n.d).map(n=> n.n));
+    scope[names[0].n](state, state && state.tally);
+    return el.innerHTML;
+  };
+
+  const VERDICT = [{ n: 'mgrPaintVerdict' }, { n: 'mgrVerdictHTML' },
+    { n: 'MGR_WAIT_CELLS', d: true }, { n: 'mgrOf', d: true }];
+  const failed = { message: 'network' };
+  const broke = paint('managerVerdictWrap', VERDICT,
+    { tally: { error: failed.message, counts: { proposed: 0, done: 0, skipped: 0, untouched: 0, days: 35 }, notLanding: [], repeats: 3 },
+      track: { error: failed.message, rows: [], minTimes: 3 },
+      score: { error: failed.message, targets: [] } });
+  const lies = ['nothing advised in', 'it has taken none on',
+    'nothing advised often enough to judge', 'everything it has put to you has had an answer'];
+  lies.forEach(lie=> t.check(!broke.includes(lie),
+    `a failed reading never says "${lie}"`));
+  t.check((broke.match(/the journal could not be read/g) || []).length === 4,
+    'all four cells say what happened instead of counting it');
+  t.check(!/>0</.test(broke), 'and not one of them shows a zero');
+
+  /* AND THE FIGURES STILL ARRIVE when the reading worked -- an error
+     branch that swallows the happy path passes every check above. */
+  const good = paint('managerVerdictWrap', VERDICT,
+    { tally: { counts: { proposed: 9, done: 4, skipped: 2, untouched: 3, days: 35 }, notLanding: [], repeats: 3 },
+      track: { rows: [], minTimes: 3 },
+      score: { targets: [] } });
+  t.check(/4<span class="of">of<\/span>9/.test(good), 'a reading that worked still counts');
+  t.check(!/could not be read/.test(good), 'and says nothing about a failure that did not happen');
+
+  /* The account's advice half, and the levers table that used to go
+     silent. */
+  const acct = paint('mgrAcctAdvice', [{ n: 'mgrPaintAcctAdvice' }],
+    { tally: { error: 'network' } });
+  t.check(/could not be read/.test(acct) && !/Moves put to you/.test(acct),
+    'the account says the advice could not be read rather than showing four zeroes');
+  t.check(/counted from your books and stand/.test(acct),
+    'and says which figures on the panel are still good');
+
+  const lev = paint('managerTrackWrap', [{ n: 'mgrPaintLevers' }], { tally: { error: 'network' } });
+  t.check(/could not be read/.test(lev),
+    'the levers table says so rather than emptying, which read as "it has never advised anything"');
+  t.check(/Nothing has been lost/.test(lev),
+    'and that nothing was lost, because the table is counted afresh every time it is shown');
+
+  /* The three readings carry the error home in the first place. The
+     scoreboard has done this since it was written; these joined it. */
+  ['managerPlaybook', 'managerTrackRecord', 'managerAdviceTally'].forEach(n=>{
+    const fn = extractFunction(src, n, 'index.html');
+    t.check(/error: r\.error\.message/.test(fn),
+      `${n} hands the failure back rather than an empty shape`);
+  });
+  t.check(/book\.error \?/.test(render), 'and the playbook panel says it rather than "no play is running"');
 }
 
 process.exit(t.done() ? 1 : 0);

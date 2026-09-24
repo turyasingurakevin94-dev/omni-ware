@@ -92196,7 +92196,10 @@ async function managerTrackRecord(todayISO_){
   const r = await sb.from('manager_notes').select('date, body, status')
     .eq('shop_id', currentShopId).eq('kind', 'move')
     .order('id', { ascending: false }).limit(TRACK_MOVES_READ);
-  if(r.error){ console.warn('Manager: track record not read:', r.error.message); return empty; }
+  /* Not an empty record -- a reading that did not happen. See the note
+     in managerPlaybook: the difference is the whole of this screen. */
+  if(r.error){ console.warn('Manager: track record not read:', r.error.message);
+    return { ...empty, error: r.error.message }; }
 
   const subjectId = (b)=>{
     const s = (b && b.subject) || {};
@@ -92323,7 +92326,8 @@ async function managerAdviceTally(todayISO_){
   const r = await sb.from('manager_notes').select('date, body, status')
     .eq('shop_id', currentShopId).eq('kind', 'move')
     .gte('date', anShiftDate(today, -days)).lte('date', today);
-  if(r.error){ console.warn('Manager: advice tally not read:', r.error.message); return empty; }
+  if(r.error){ console.warn('Manager: advice tally not read:', r.error.message);
+    return { ...empty, error: r.error.message }; }
   const fingerprint = (b)=>{
     const subj = b.subject || {};
     const id = subj.customerId != null ? subj.customerId
@@ -92402,7 +92406,14 @@ async function managerPlaybook(){
   const r = await sb.from('manager_notes').select('id, date, body, status')
     .eq('shop_id', currentShopId).eq('kind', 'play')
     .order('id', { ascending: false }).limit(30);
-  if(r.error){ console.warn('Manager: playbook not read:', r.error.message); return { running: [], proposed: [], dropped: [] }; }
+  /* A READING THAT FAILED IS NOT AN EMPTY SHOP. Handed back as an
+     empty playbook, a dropped connection says "no play is running and
+     none is proposed" -- a claim about this shop's strategy, made on
+     no evidence, on the screen whose whole discipline is never to say
+     anything the books do not support. The scoreboard has carried its
+     error home since it was written; these three now do too. */
+  if(r.error){ console.warn('Manager: playbook not read:', r.error.message);
+    return { running: [], proposed: [], dropped: [], error: r.error.message }; }
   const rows = (r.data||[]).filter(x=> String(((x.body||{}).name)||'').trim());
   const view = (x)=> ({ id: x.id, name: (x.body||{}).name, treats: (x.body||{}).treats || 'other',
     problem: MANAGER_PROBLEMS[(x.body||{}).treats] || 'Other',
@@ -93164,7 +93175,17 @@ function mgrPaintVerdict(state){
   if(!el) return;
   const cells = MGR_WAIT_CELLS.map(c=> ({ ...c }));
   const t = state.tally, tr = state.track, sc = state.score;
-  if(t && t.counts){
+  /* A READING THAT FAILED IS NOT A ZERO.
+
+     "Advice done 0 of 0", "it has taken none on", "nothing advised
+     often enough to judge yet" -- every one of those is a statement
+     about the shop, and a dropped connection made all four of them at
+     once. The waiting state already had the vocabulary for a figure
+     that is not a figure: an em-dash in the colour of a wait. It says
+     what happened instead of counting it. */
+  const unread = (label)=> ({ label, value: '&mdash;', sub: 'the journal could not be read', wait: true });
+  if(t && t.error){ cells[0] = unread('Advice done'); cells[3] = unread('Not landing'); }
+  else if(t && t.counts){
     const c = t.counts;
     cells[0] = { label: 'Advice done', value: mgrOf(c.done, c.proposed),
       sub: c.proposed
@@ -93176,7 +93197,8 @@ function mgrPaintVerdict(state){
         ? `put to you ${t.repeats}+ times, never done and never refused`
         : 'everything it has put to you has had an answer' };
   }
-  if(sc){
+  if(sc && sc.error) cells[1] = unread('Targets met');
+  else if(sc){
     const fin = (sc.targets || []).filter(x=> x.finished);
     const run = (sc.targets || []).filter(x=> !x.finished);
     cells[1] = { label: 'Targets met',
@@ -93185,7 +93207,8 @@ function mgrPaintVerdict(state){
         ? (run.length ? `${run.length} still running` : 'none running now')
         : (run.length ? `${run.length} running &middot; none finished yet` : 'it has taken none on') };
   }
-  if(tr){
+  if(tr && tr.error) cells[2] = unread('Levers that work');
+  else if(tr){
     /* Only levers the books can actually weigh. A kind nothing can
        answer is not a lever that failed, it is a lever nobody scored,
        and counting it either way would be an invention. */
@@ -93330,6 +93353,20 @@ function mgrLeverLine(r){
 function mgrPaintLevers(track, tally){
   const el = document.getElementById('managerTrackWrap');
   if(!el) return;
+  /* SILENCE IS THE WORST OF THE THREE. An empty table and a table
+     that could not be read look identical when both are nothing at
+     all, and this one is the whole record of what the manager's advice
+     has ever produced -- so its absence is read as "it has never
+     advised anything", which is the biggest claim on the screen. */
+  const failed = (track && track.error) || (tally && tally.error);
+  if(failed){
+    el.innerHTML = `<div class="ow-pan">
+      <div class="ow-pan-h"><span class="ow-pan-t">Every lever it has pulled</span></div>
+      <div class="ow-empty">The journal could not be read just now &mdash; ${esc(failed)}.
+        Nothing has been lost: this table is counted from it afresh every time it is shown.</div>
+    </div>`;
+    return;
+  }
   const all = mgrLeverRows(track, tally);
   if(!all.length){ el.innerHTML = ''; return; }
   const f = MGR_LEVER_FILTERS.find(x=> x.id === mgrLeverFilter) || MGR_LEVER_FILTERS[0];
@@ -93590,9 +93627,11 @@ function renderManager(){
       playWrap.innerHTML = `<div class="ow-pan">
         <div class="ow-pan-h"><span class="ow-pan-t">The playbook</span>
           <span class="ow-pan-nt">judgement, not arithmetic — it becomes real only when you try it</span>
-          <span class="ow-pan-n">${book.running.length} running${
-            book.proposed.length ? ` · ${book.proposed.length} proposed` : ''}</span></div>
-        ${any ? book.proposed.map(p=> row(p,
+          <span class="ow-pan-n">${book.error ? 'not read' : `${book.running.length} running${
+            book.proposed.length ? ` · ${book.proposed.length} proposed` : ''}`}</span></div>
+        ${book.error ? `<div class="ow-empty">The playbook could not be read just now &mdash; ${
+            esc(book.error)}. No play has been stopped or started by this.</div>`
+          : any ? book.proposed.map(p=> row(p,
             `<button type="button" class="btn btn-ghost ow-sm mgr-play-run">Try it</button>
              <button type="button" class="btn btn-ghost ow-sm mgr-play-drop">Set aside</button>`)).join('')
           + book.running.map(p=> row(p,
@@ -93602,7 +93641,7 @@ function renderManager(){
               the books show a pattern arithmetic cannot fix.</div>`}
         <div class="mgr-pfoot">
           <p>The manager never proposes a play you have set aside, and it treats your own plays as the
-            shop&rsquo;s, above anything it suggests.${book.dropped.length
+            shop&rsquo;s, above anything it suggests.${!book.error && book.dropped.length
               ? ` Tried and set aside: ${esc(book.dropped.map(p=> p.name).join(', '))}.` : ''}</p>
           <div class="mgr-ask-row" style="flex:1 1 320px;">
             <input type="text" class="mgr-ask-input" id="mgrPlayName" placeholder="Name your own play">
@@ -93893,6 +93932,14 @@ function mgrPaintAcctAdvice(verdict){
   const el = document.getElementById('mgrAcctAdvice');
   if(!el) return;
   const t = verdict.tally;
+  /* Four zeroes under "Moves put to you" is an account of a manager
+     that has advised nothing. Said plainly instead, and without a
+     figure to misread. */
+  if(t && t.error){
+    el.innerHTML = `<p class="mgr-rl">What you did with the advice could not be read just now &mdash; ${
+      esc(t.error)}. The figures above are counted from your books and stand.</p>`;
+    return;
+  }
   if(!t || !t.counts){ el.innerHTML = ''; return; }
   const c = t.counts;
   el.innerHTML = `<div class="mgr-rf"><span class="mgr-rf-l">Moves put to you</span><span class="mgr-rf-v">${c.proposed}</span></div>

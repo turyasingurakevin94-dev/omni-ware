@@ -240,7 +240,13 @@ const build = (rows, over) => compileScope(
     eq(tr.rows.length, 0, 'no memory table, no record — and no crash');
     const err = build([], { sb: { from: () => { const q = {}; q.select = () => q; q.eq = () => q;
       q.order = () => q; q.limit = () => Promise.resolve({ data: null, error: { message: 'no' } }); return q; } } });
-    eq((await err.managerTrackRecord(TODAY)).rows.length, 0, 'and a refused read is an empty record, never a crashed screen');
+    const refused = await err.managerTrackRecord(TODAY);
+    eq(refused.rows.length, 0, 'and a refused read is an empty record, never a crashed screen');
+    /* AND IT SAYS WHICH. An empty record and a record that could not be
+       read look identical, and the screen drew the first from the
+       second: "nothing advised often enough to judge yet", about a shop
+       whose journal was never reached. */
+    eq(refused.error, 'no', 'and carries the failure home, so the screen can say so instead of counting zero');
   }
 
   /* ---------- 8. and it reaches the Manager, and the screen ---------- */
