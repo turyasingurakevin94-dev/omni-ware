@@ -51065,23 +51065,29 @@ let anShareOf = 0;
    EVERY visible row, so turning a page never changes a figure. */
 const AN_PAGE_SIZE = 25;
 let anPage = 1;
-function anPagerHTML(total, pageCount, from, shown){
+/* The pager both analytics tables share: Sales and Purchase page their
+   rows the same way, so they draw the same control. `attr` names the
+   data attribute each screen listens for. */
+function reportPagerHTML(attr, page, pageCount, total, from, shown, noun){
   if(pageCount <= 1) return '';
-  const noun = anView==='item' ? 'item' : anView==='customer' ? 'customer' : anView==='pair' ? 'pair' : 'invoice';
   const step = (to, label, on)=>
-    `<button type="button" class="btn btn-ghost ow-sm ow-pg-s" data-anpg="${to}"${on?'':' disabled'}>${label}</button>`;
+    `<button type="button" class="btn btn-ghost ow-sm ow-pg-s" ${attr}="${to}"${on?'':' disabled'}>${label}</button>`;
   const num = (n)=> n === 'gap'
     ? '<span class="ow-pg-g" aria-hidden="true">&hellip;</span>'
-    : `<button type="button" class="btn btn-ghost ow-sm ow-pg-i${n===anPage?' ow-pg-on':''}" data-anpg="${n}"${
-        n===anPage?' aria-current="page"':''}>${n}</button>`;
+    : `<button type="button" class="btn btn-ghost ow-sm ow-pg-i${n===page?' ow-pg-on':''}" ${attr}="${n}"${
+        n===page?' aria-current="page"':''}>${n}</button>`;
   return `<nav class="ow-pg an-pg" aria-label="Pages of the table">
-    <p class="ow-pg-n">Showing <span class="ow-pg-f">${from + 1}&ndash;${from + shown}</span> of <span class="ow-pg-f">${total}</span> ${noun}${total===1?'':'s'} &middot; page <span class="ow-pg-f">${anPage}</span> of <span class="ow-pg-f">${pageCount}</span></p>
+    <p class="ow-pg-n">Showing <span class="ow-pg-f">${from + 1}&ndash;${from + shown}</span> of <span class="ow-pg-f">${total}</span> ${noun}${total===1?'':'s'} &middot; page <span class="ow-pg-f">${page}</span> of <span class="ow-pg-f">${pageCount}</span></p>
     <div class="ow-pg-a">
-      ${step(anPage - 1, 'Back', anPage > 1)}
-      ${invPageWindow(anPage, pageCount).map(num).join('')}
-      ${step(anPage + 1, 'Next', anPage < pageCount)}
+      ${step(page - 1, 'Back', page > 1)}
+      ${invPageWindow(page, pageCount).map(num).join('')}
+      ${step(page + 1, 'Next', page < pageCount)}
     </div>
   </nav>`;
+}
+function anPagerHTML(total, pageCount, from, shown){
+  const noun = anView==='item' ? 'item' : anView==='customer' ? 'customer' : anView==='pair' ? 'pair' : 'invoice';
+  return reportPagerHTML('data-anpg', anPage, pageCount, total, from, shown, noun);
 }
 function anSplitHTML(rows){
   if(!(anView==='item' || anView==='customer')) return '';
@@ -51853,6 +51859,9 @@ const PAN_ORDER_NOTE = {
   item: 'ranked by what the price change added to the bill',
   supplier: 'ranked by what you spent with them'
 };
+/* PAGES, as on Sales analytics: the strip, the chart, the total and the
+   export read every row; only the rows drawn are paged. */
+let panPage = 1;
 function renderPanTable(){
   const rows = panVisibleRows();
   const all = PAN_COLUMNS[panView];
@@ -51894,6 +51903,11 @@ function renderPanTable(){
         : '';
     tnote.style.display = tnote.innerHTML ? '' : 'none';
   }
+  const pageCount = Math.max(1, Math.ceil(rows.length / AN_PAGE_SIZE));
+  if(panPage > pageCount) panPage = pageCount;
+  if(panPage < 1) panPage = 1;
+  const pageFrom = (panPage - 1) * AN_PAGE_SIZE;
+  const pageRows = rows.slice(pageFrom, pageFrom + AN_PAGE_SIZE);
   wrap.innerHTML = `<div class="ow-tbl an-tbl" style="--ow-tbl-cols:${PAN_TRACKS[panView]}">
     <div class="ow-tbl-h">
       <div class="ow-tbl-n">No.</div>
@@ -51906,16 +51920,23 @@ function renderPanTable(){
           on ? `<span class="an-arrow">${sort.dir===1?'▲':'▼'}</span>` : ''}</div>`;
       }).join('')}
     </div>
-    ${rows.map((r,i)=>`<div class="ow-tbl-r">
-      <div class="ow-tbl-n an-no">${i+1}</div>
+    ${pageRows.map((r,i)=>`<div class="ow-tbl-r">
+      <div class="ow-tbl-n an-no">${pageFrom+i+1}</div>
       ${cols.map(c=> panCellHTML(c, r, false)).join('')}
     </div>`).join('')}
     ${panFootRowHTML(cols, rows)}
-  </div>`;
+  </div>${reportPagerHTML('data-panpg', panPage, pageCount, rows.length, pageFrom, pageRows.length, panView==='item' ? 'line' : 'supplier')}`;
+  wrap.querySelectorAll('[data-panpg]').forEach(btn=> btn.addEventListener('click', ()=>{
+    panPage = Number(btn.dataset.panpg) || 1;
+    renderPanTable();
+    const pan = wrap.closest('.ow-pan');
+    if(pan && pan.scrollIntoView) pan.scrollIntoView({block:'start', behavior:'smooth'});
+  }));
   wrap.querySelectorAll('.an-th').forEach(th=>{
     const go = ()=>{
       const key = th.dataset.key;
       if(sort.key===key) sort.dir *= -1; else { sort.key = key; sort.dir = -1; }
+      panPage = 1;
       renderPanTable();
     };
     th.addEventListener('click', go);
@@ -51923,6 +51944,7 @@ function renderPanTable(){
   });
 }
 function renderPurchaseAnalytics(){
+  panPage = 1;
   const {from, to} = panGetDateRange();
   panLastEntries = panInvoicesInRange(from, to);
   /* The sub is never folded, so it carries the one thing that goes
@@ -51948,7 +51970,7 @@ document.getElementById('pan_range_preset').addEventListener('change', ()=>{
   if(!isCustom) renderPurchaseAnalytics();
 });
 document.getElementById('pan_apply_btn').addEventListener('click', renderPurchaseAnalytics);
-document.getElementById('pan_table_search').addEventListener('input', renderPanTable);
+document.getElementById('pan_table_search').addEventListener('input', ()=>{ panPage = 1; renderPanTable(); });
 document.querySelectorAll('#pan_subtabs .ow-seg-b').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     document.querySelectorAll('#pan_subtabs .ow-seg-b').forEach(b=>{
@@ -51956,6 +51978,7 @@ document.querySelectorAll('#pan_subtabs .ow-seg-b').forEach(btn=>{
     });
     btn.classList.add('ow-on'); btn.setAttribute('aria-selected','true');
     panView = btn.dataset.view;
+    panPage = 1;
     renderPanTable();
   });
 });
