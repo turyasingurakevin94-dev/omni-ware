@@ -268,6 +268,7 @@ const render = extractFunction(src, 'renderManager', 'index.html');
   };
 
   const VERDICT = [{ n: 'mgrPaintVerdict' }, { n: 'mgrVerdictHTML' },
+    { n: 'mgrWaffleHTML' }, { n: 'mgrTargetRingHTML' }, { n: 'mgrDotsHTML' },
     { n: 'MGR_WAIT_CELLS', d: true }, { n: 'mgrOf', d: true }];
   const failed = { message: 'network' };
   const broke = paint('managerVerdictWrap', VERDICT,

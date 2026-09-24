@@ -117,8 +117,10 @@ const src = read('index.html');
   const ids = kids.map(k => k[1]);
   /* Thirteen since the side rail gained "Out of the ordinary"
      (managerUnusualWrap): the days of the last week outside this shop's
-     own usual. A new section is a new container, not a wrapper. */
-  t.check(ids.length === 13, `every container is a flat sibling div with an id (${ids.length})`);
+     own usual. A new section is a new container, not a wrapper.
+     Fourteen since the band under the verdict (managerHeroWrap): what
+     today is about and the three figures it is about. */
+  t.check(ids.length === 14, `every container is a flat sibling div with an id (${ids.length})`);
 
   /* The two that were retired, and the two that replaced them. Named
      rather than merely absent: a wrap that comes back by accident is a

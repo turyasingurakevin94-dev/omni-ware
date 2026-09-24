@@ -209,9 +209,12 @@ const fmtUGX = (n) => Number(n).toLocaleString('en-US') + ' UGX';
       'a running target shows its pace chart; a finished one keeps its bar');
     t.check(/managerAdviceWeeks\(todayISO\(\)\)\.then/.test(render), 'the weeks are read beside the other verdict readings');
     const paint = extractFunction(src, 'mgrPaintVerdict', 'index.html');
-    t.check(/if\(wk && !cells\[0\]\.wait\) cells\[0\]\.spark/.test(paint) && /if\(wk && !cells\[2\]\.wait\) cells\[2\]\.spark/.test(paint),
-      'the trend rides beside a figure only once that figure is read');
-    t.check(!/cells\[1\]\.spark|cells\[3\]\.spark/.test(paint), 'and targets met and not landing carry none — a weekly line there would be noise');
+    /* Advice done became a square per piece of advice (a share of a
+       whole); the trend stays with the figure that is about change. */
+    t.check(/if\(wk && !cells\[2\]\.wait\) cells\[2\]\.spark/.test(paint)
+      && /cells\[0\]\.viz = mgrWaffleHTML\(/.test(paint),
+      'the trend rides beside a figure only once that figure is read, and advice done is drawn as its whole');
+    t.check(!/cells\[1\]\.spark|cells\[3\]\.spark|cells\[0\]\.spark/.test(paint), 'and no other figure carries a weekly line — there it would be noise');
     t.check(/closest\('\.mgr-pc'\)/.test(src) && /tip\.style\.left = Math\.max\(0, Math\.min\(rect\.width - tw/.test(src),
       'one hover for every pace chart, and its label is kept inside the chart');
   }

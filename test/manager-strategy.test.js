@@ -244,7 +244,10 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   t.check(/MANAGER_OBJECTIVES\[String\(obj\.name\|\|''\)\] \? String\(obj\.name\) : null/.test(save),
     'and an unknown objective');
   const render = extractFunction(src, 'renderManager', 'index.html');
-  t.check(/MANAGER_OBJECTIVES\[plan\.objective\]/.test(render),
+  /* The objective moved from the plan's header into the band above it,
+     which the render paints first -- still above the moves. */
+  t.check(/MANAGER_OBJECTIVES\[plan\.objective\]/.test(extractFunction(src, 'mgrHeroHTML', 'index.html'))
+    && /heroWrap\.innerHTML = mgrHeroHTML\(/.test(render),
     'the screen leads with the week’s objective, above the moves');
 }
 
