@@ -19448,6 +19448,7 @@
         </div>
         <div class="ow-side">
           <div id="managerScoreWrap" class="mgr-bed mgr-bed-s"></div>
+          <div id="managerUnusualWrap" class="mgr-bed mgr-bed-s"></div>
           <div id="managerQuestionsWrap" class="mgr-bed mgr-bed-s"></div>
           <div id="managerPoliciesWrap" class="mgr-bed mgr-bed-s"></div>
           <div id="managerAccountWrap" class="mgr-bed mgr-bed-r"></div>
@@ -94002,6 +94003,8 @@ function renderManager(){
      never wait on one. From standingPoliciesData and nowhere else --
      the same reading the standing_policies tool answers with, so the
      screen and the mind can never disagree about what stands. */
+  const unWrap = document.getElementById('managerUnusualWrap');
+  if(unWrap) unWrap.innerHTML = mgrUnusualHTML(mgrUnusualReading());
   if(polWrap){
     const pol = standingPoliciesData();
     const stageBits = pol.stages.limits.map(l=>
@@ -94775,6 +94778,176 @@ function dayDelta(value, typical){
   return pc > 0
     ? { dir: 'up', tone: 'good', text: Math.abs(n) + '% above' }
     : { dir: 'down', tone: '', text: Math.abs(n) + '% below' };
+}
+
+/* ==== DAYS OUT OF THE ORDINARY ======================================
+
+   The Day screen says how a day compared with its typical weekday, one
+   day at a time, for somebody who opened it. Nobody opens last
+   Tuesday. This walks the last week on its own and names the days that
+   fell outside what is NORMAL for this shop on that weekday -- not
+   merely above or below the middle, which half of all days are.
+
+   Normal is the middle AND the spread: the median of the last eight of
+   that weekday with anything on the record (the Day screen's own rules
+   -- a day before the books began is not a quiet day), and the median
+   distance from it. A day is out of the ordinary when it sits more than
+   three of those distances away, AND by more than a sum worth a
+   sentence. The spread is what stops a shop whose Saturdays swing
+   between 2m and 6m hearing about every Saturday.
+
+   What is watched, and which way:
+     sales        low or high      a quiet day, or an unusually big one
+     margin       low only         a day that sold at less than it keeps
+     cash out     high only        money leaving that does not usually
+     stock short  high only        counts that found less than the book
+
+   Today is judged only on the two that can only grow -- cash out and
+   stock found short. A day still trading is not a slow day at noon.
+
+   A finding is a QUESTION, not a verdict. It names what drove it -- the
+   invoice, the payment, the line -- so the owner can answer it in one
+   look, and it never names a cause the books do not show. */
+const UNUSUAL_WEEKS = 8;        // same weekdays read for normal
+const UNUSUAL_MIN = 5;          // fewer, and the day is not judged
+const UNUSUAL_Z = 3;            // distances from the middle to be unusual
+const UNUSUAL_LOOKBACK = 7;     // finished days checked
+
+function unusualDayReading(dateISO){
+  const day = String(dateISO || '').slice(0, 10);
+  const p = dayPulse(day);
+  const invoices = anInvoicesInRange(day, day);
+  let out = 0;
+  const outRows = [];
+  (data.cashTxns || []).forEach(t=>{
+    if(!t || String(t.date || '').slice(0, 10) !== day || cashIsMoneyIn(t)) return;
+    const amt = Number(t.amount) || 0;
+    out += amt;
+    outRows.push({ what: String(t.category || t.note || 'Money out'), amount: Math.round(amt) });
+  });
+  /* A count that found LESS than the book, valued at what the line
+     cost. A count that found more is the book catching up, not a loss. */
+  let short = 0;
+  const shortRows = [];
+  (data.stockLog || []).forEach(l=>{
+    if(!l || l.type !== 'count' || String(l.date || '').slice(0, 10) !== day) return;
+    const delta = Number(l.delta) || 0;
+    if(delta >= 0) return;
+    const parts = buyKeyParts(l.key);
+    const unit = l.cost != null && l.cost !== '' ? Number(l.cost)
+      : (parts ? getFIFOUnitCost(parts.productId, parts.variantIdx) : null);
+    const value = unit != null && isFinite(unit) ? Math.round(-delta * unit) : 0;
+    short += value;
+    shortRows.push({ line: l.label || l.key, qty: Math.round(-delta * 100) / 100, value });
+  });
+  return { ...p, invoices, count: invoices.length,
+    margin: p.sales > 0 ? p.profit / p.sales : null,
+    out: Math.round(out), outRows: outRows.sort((a, b)=> b.amount - a.amount).slice(0, 2),
+    short: Math.round(short), shortRows: shortRows.sort((a, b)=> b.value - a.value).slice(0, 2),
+    any: p.any };
+}
+
+/* The middle and the spread of a list, robustly: one wild Saturday in
+   eight moves neither. */
+function unusualSpread(xs){
+  const sorted = xs.slice().sort((a, b)=> a - b);
+  const med = (a)=>{ const m = Math.floor(a.length / 2); return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; };
+  const mid = med(sorted);
+  const mad = med(sorted.map(x=> Math.abs(x - mid)).sort((a, b)=> a - b));
+  return { mid, scale: 1.4826 * mad, low: sorted[0], high: sorted[sorted.length - 1] };
+}
+
+function unusualDays(todayISO_){
+  const today = String(todayISO_ || todayISO()).slice(0, 10);
+  const cache = new Map();
+  const read = (d)=>{ if(!cache.has(d)) cache.set(d, unusualDayReading(d)); return cache.get(d); };
+  /* A sum worth a sentence: 5% of what this shop typically sells in a
+     day, and never under 20,000. Below it a "spike" is small change. */
+  const recent = [];
+  for(let i = 1; i <= 28; i++){ const r = read(anShiftDate(today, -i)); if(r.any) recent.push(r.sales); }
+  const floor = Math.max(20000, Math.round(0.05 * (recent.length ? unusualSpread(recent).mid : 0)));
+
+  const items = [];
+  let judged = 0, thin = 0;
+  for(let i = 0; i <= UNUSUAL_LOOKBACK; i++){
+    const day = anShiftDate(today, -i);
+    const isToday = i === 0;
+    const r = read(day);
+    const past = [];
+    for(let w = 1; w <= 52 && past.length < UNUSUAL_WEEKS; w++){
+      const pr = read(anShiftDate(day, -7 * w));
+      if(pr.any) past.push(pr);
+    }
+    if(past.length < UNUSUAL_MIN){ thin++; continue; }
+    judged++;
+    const weigh = (metric, value, list, dirs, minGap)=>{
+      if(value == null) return;
+      const vals = list.filter(v=> v != null);
+      if(vals.length < UNUSUAL_MIN) return;
+      const sp = unusualSpread(vals);
+      /* A spread of nothing -- every past Tuesday wrote off exactly 0 --
+         would make any shilling infinitely unusual. The gap alone then
+         has to carry it, at a quarter of the middle or the floor. */
+      const scale = sp.scale > 0 ? sp.scale : Math.max(Math.abs(sp.mid) * 0.25, minGap);
+      const z = (value - sp.mid) / scale;
+      const dir = z > 0 ? 'high' : 'low';
+      if(!dirs.includes(dir) || Math.abs(z) < UNUSUAL_Z || Math.abs(value - sp.mid) < minGap) return;
+      items.push({ date: day, metric, dir, value, usual: sp.mid, usualLow: sp.low, usualHigh: sp.high,
+        z: Math.round(z * 10) / 10, weeks: vals.length, reading: r });
+    };
+    if(!isToday){
+      weigh('sales', r.sales, past.map(x=> x.sales), ['low', 'high'], floor);
+      /* Margin only on a day that sold something like a day's worth --
+         one small invoice at cost is not a margin problem. */
+      const typicalSales = unusualSpread(past.map(x=> x.sales)).mid;
+      if(r.margin != null && r.sales >= 0.25 * typicalSales)
+        weigh('margin', r.margin, past.map(x=> x.margin), ['low'], 0.05);
+    }
+    weigh('cash_out', r.out, past.map(x=> x.out), ['high'], floor);
+    weigh('stock_short', r.short, past.map(x=> x.short), ['high'], floor);
+  }
+  items.forEach(x=>{ x.drivers = unusualDrivers(x); delete x.reading; });
+  items.sort((a, b)=> (b.date.localeCompare(a.date)) || (Math.abs(b.z) - Math.abs(a.z)));
+  return { today, judged, thin, floor, items: items.slice(0, 8) };
+}
+
+/* What drove a finding, from the day's own rows -- the thing the owner
+   would look up first. Never a cause: the invoice, the payment, the
+   line, as the books have them. */
+function unusualDrivers(x){
+  const r = x.reading;
+  if(x.metric === 'sales' && x.dir === 'high'){
+    const big = r.invoices.slice().sort((a, b)=> savedQuoteTotal(b) - savedQuoteTotal(a))[0];
+    return big ? [`largest: ${((big.client && big.client.name) || 'Walk-in')} ${fmtUGX(Math.round(savedQuoteTotal(big)))}`] : [];
+  }
+  if(x.metric === 'sales') return [`${r.count} invoice${r.count === 1 ? '' : 's'}`];
+  if(x.metric === 'margin'){
+    return r.invoices.map(q=>{ const t = anInvoiceTotals(q); const tot = savedQuoteTotal(q);
+        return { q, m: tot > 0 && t && typeof t.profit === 'number' ? t.profit / tot : null, tot }; })
+      .filter(o=> o.m != null).sort((a, b)=> a.m - b.m).slice(0, 2)
+      .map(o=> `${((o.q.client && o.q.client.name) || 'Walk-in')} at ${Math.round(o.m * 100)}% on ${fmtUGX(Math.round(o.tot))}`);
+  }
+  if(x.metric === 'cash_out') return r.outRows.map(o=> `${o.what} ${fmtUGX(o.amount)}`);
+  if(x.metric === 'stock_short') return r.shortRows.map(o=> `${o.line}: ${o.qty} short${o.value ? ', ' + fmtUGX(o.value) : ''}`);
+  return [];
+}
+
+/* One finding in the owner's words -- the screen and the Manager read
+   the same sentence. */
+const UNUSUAL_WORDS = {
+  sales: { low: 'Sales well below a usual', high: 'Sales well above a usual' },
+  margin: { low: 'Margin well below a usual' },
+  cash_out: { high: 'More money out than a usual' },
+  stock_short: { high: 'Stock counted short, more than a usual' },
+};
+function unusualLine(x){
+  const pct = (v)=> Math.round(v * 100) + '%';
+  const fig = x.metric === 'margin' ? pct(x.value) : fmtUGX(Math.round(x.value));
+  const usual = x.metric === 'margin'
+    ? `usually ${pct(x.usual)}, ${pct(x.usualLow)}–${pct(x.usualHigh)}`
+    : `usually ${fmtUGX(Math.round(x.usual))}, ${fmtUGX(Math.round(x.usualLow))}–${fmtUGX(Math.round(x.usualHigh))}`;
+  const wd = dayWeekday(x.date);
+  return `${(UNUSUAL_WORDS[x.metric] || {})[x.dir] || 'Unusual'} ${wd}, ${fmtShortDate(x.date)}: ${fig} — ${usual} over the last ${x.weeks} ${wd}s`;
 }
 
 /* ---- IS THE DAY PROPERLY ON THE RECORD? ------------------------------
@@ -95820,6 +95993,59 @@ function mgrQueueRowHTML(row, all, opts){
       bits.length ? `<p class="ow-q-note">${bits.join(' \u00b7 ')}</p>` : ''}${chaseNote}${acts}</div>
   </div>`;
 }
+
+/* DAYS OUT OF THE ORDINARY, on the Manager's side rail. Each row opens
+   The day on that date, where the whole day is laid out -- the rail
+   says which day and why, the Day screen answers what happened.
+
+   Read once a minute at most: the reading walks some eighty days of
+   books, and the screen repaints more often than that. The meeting's
+   own reading refreshes it. */
+let mgrUnusualMemo = null;
+function mgrUnusualReading(){
+  const now = Date.now(), day = todayISO();
+  if(!mgrUnusualMemo || mgrUnusualMemo.day !== day || now - mgrUnusualMemo.at > 60000)
+    mgrUnusualMemo = { day, at: now, reading: unusualDays(day) };
+  return mgrUnusualMemo.reading;
+}
+function mgrUnusualHTML(u){
+  const head = (n)=> `<div class="ow-pan-h"><span class="ow-pan-t">Out of the ordinary</span>${
+    n ? `<span class="ow-pan-n">${n}</span>` : ''}</div>`;
+  /* NOT ENOUGH IS AN ANSWER. Under five of a weekday on the books there
+     is no "usual" to be outside of, and the rail says so rather than
+     reporting a calm week it cannot vouch for. */
+  if(!u.judged) return `<div class="ow-pan">${head(0)}
+      <p class="mgr-rl">Not enough weeks on the books yet to know what a usual day looks like here &mdash; it needs five of each weekday.</p></div>`;
+  if(!u.items.length) return `<div class="ow-pan">${head(0)}
+      <p class="mgr-rl">Nothing out of the ordinary in the last week: every day sat inside this shop&rsquo;s own usual range for its weekday.</p></div>`;
+  const fig = (x)=> x.metric === 'margin' ? Math.round(x.value * 100) + '%' : fmtUGX(Math.round(x.value));
+  const rows = u.items.map(x=>{
+    const title = ({ sales: { low: 'Sales low', high: 'Sales high' }, margin: { low: 'Margin low' },
+      cash_out: { high: 'Money out high' }, stock_short: { high: 'Stock counted short' } }[x.metric] || {})[x.dir] || 'Unusual';
+    const usual = x.metric === 'margin' ? Math.round(x.usual * 100) + '%' : fmtUGX(Math.round(x.usual));
+    /* The usual sits UNDER the figure, where money never truncates: it
+       is half of the finding. The date and what drove it take the line
+       that may be cut, with the whole sentence on the pointer. */
+    const when = new Date(x.date + 'T12:00:00Z').toLocaleDateString('en-GB',
+      { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' });
+    const why = (x.drivers || [])[0] || '';
+    return `<button type="button" class="ow-lr" data-unusual-day="${esc(x.date)}" title="${esc(unusualLine(x))}">
+      <span class="ow-lr-n"><span class="ow-lr-nm">${esc(title)}</span></span>
+      <span class="ow-lr-m">${esc(when)}${why ? ' · ' + esc(why) : ''}</span>
+      <span class="ow-lr-v">${esc(fig(x))}<span class="ow-lr-b">usually ${esc(usual)}</span></span>
+    </button>`;
+  }).join('');
+  return `<div class="ow-pan">${head(u.items.length)}${rows}
+    <p class="mgr-rl">Against the same weekday over the last eight weeks. A question to answer, not a verdict &mdash; open a day to see it whole.</p></div>`;
+}
+/* One listener for the rail, not one per row: the rows are repainted
+   every render and a listener per row would be re-added every time. */
+document.addEventListener('click', (e)=>{
+  const b = e.target.closest && e.target.closest('[data-unusual-day]');
+  if(!b) return;
+  dayShown = b.dataset.unusualDay;
+  goToTab('day');
+});
 
 /* One reading per day's render, not one per row: chaseResponse walks
    every customer. The meeting's own reading (which also counts the
@@ -105458,6 +105684,11 @@ const ASSISTANT_TOOLS = {
     /* WHETHER CHASING WORKS HERE, AND ON WHOM -- measured against the
        weeks nobody chased, which the track record cannot do. */
     const chasing = await managerChaseEvidence(todayISO());
+    /* DAYS OUT OF THE ORDINARY in the last week, against this shop's own
+       usual for each weekday. Refreshes the screen's reading too, so the
+       rail and the meeting argue from the same days. */
+    const unusual = unusualDays(todayISO());
+    mgrUnusualMemo = { day: todayISO(), at: Date.now(), reading: unusual };
     const worth = [];
     /* A target behind its own pace, with how far. One on course needs
        no sentence -- that is the whole point of a pace line. */
@@ -105541,6 +105772,19 @@ const ASSISTANT_TOOLS = {
           + ' or ask the owner what they know that the books do not.' });
     });
 
+    /* A DAY OUT OF THE ORDINARY since the last meeting -- the two
+       furthest from usual. A question for the owner, never a verdict:
+       the books show what happened, not why. */
+    unusual.items.filter(x=> isNew(x.date)).sort((a, b)=> Math.abs(b.z) - Math.abs(a.z)).slice(0, 2).forEach(x=>{
+      worth.push({ kind: 'unusual_day', date: x.date, what: x.metric, direction: x.dir,
+        figure: x.metric === 'margin' ? Math.round(x.value * 1000) / 10 + '%' : apRound(x.value),
+        usual: x.metric === 'margin' ? Math.round(x.usual * 1000) / 10 + '%' : apRound(x.usual),
+        weekdays_compared: x.weeks, drove_it: x.drivers || [], reads_as: unusualLine(x),
+        what_to_do: 'Say which day and what was unusual in one sentence, name what drove it from drove_it,'
+          + ' and ASK what happened if the books cannot say. Never name a cause the figures do not show:'
+          + ' stock counted short is a question, not a theft.' });
+    });
+
     /* A BIG DEBT CHASING HAS NOT MOVED. The largest balance whose own
        record says chases go unanswered: another chase is the one move
        the evidence argues against, so it is said once, with what to do
@@ -105612,6 +105856,8 @@ const ASSISTANT_TOOLS = {
          move should reach for and quote. It belongs here, beside the
          scoreboard and the market. */
       ...(trackOut ? { track_record: trackOut } : {}),
+      ...(unusual.items.length ? { unusual_days: unusual.items.map(x=> ({ date: x.date, what: x.metric,
+        direction: x.dir, reads_as: unusualLine(x), drove_it: x.drivers || [] })) } : {}),
       /* WHO A CHASE MOVES. The debtors that owe most now, each with how
          often they paid within a week after a chase against how often
          they paid in a week nobody chased them -- and the shop's own

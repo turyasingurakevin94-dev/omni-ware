@@ -115,7 +115,10 @@ const src = read('index.html');
                         src.indexOf('<section id="tab-map"'));
   const kids = [...sec.matchAll(/<div id="(manager[A-Za-z]+)"([^>]*)>/g)];
   const ids = kids.map(k => k[1]);
-  t.check(ids.length === 12, `every container is a flat sibling div with an id (${ids.length})`);
+  /* Thirteen since the side rail gained "Out of the ordinary"
+     (managerUnusualWrap): the days of the last week outside this shop's
+     own usual. A new section is a new container, not a wrapper. */
+  t.check(ids.length === 13, `every container is a flat sibling div with an id (${ids.length})`);
 
   /* The two that were retired, and the two that replaced them. Named
      rather than merely absent: a wrap that comes back by accident is a
