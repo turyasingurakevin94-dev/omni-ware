@@ -113,6 +113,43 @@ function build(days) {
   t.check(u.judged === 0 && u.items.length === 0, 'three weeks of books judge nothing — there is no usual to be outside of');
 }
 
+/* ---------- 4b. what the screen draws ---------------------------------- */
+{
+  const tue = day(-2);
+  const u = build(shop(10, [{ d: tue, set: { sales: 0, profit: 0, invoices: [] } }])).unusualDays(TODAY);
+  const x = u.items.find((i) => i.date === tue && i.metric === 'sales');
+  t.check(x && Array.isArray(x.past) && x.past.length === 8 && x.past[0].date < x.past[7].date && x.past[7].date === day(-9),
+    'a finding keeps the same weekdays it was measured against, oldest first, a week apart');
+  t.check(u.days.length === 8 && u.days[0].today && u.days.find((d) => d.date === tue).flags === 1
+    && u.days.filter((d) => !d.today && d.judged && !d.flags).length === 5 && u.days.filter((d) => !d.judged).length === 1,
+    'and every day looked at is kept with how many findings it had — five calm, one to look at, and the closed Sunday not judged');
+
+  const esc = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const ui = compileScope([
+    'mgrUnusualHTML', 'mgrUnusualWeekHTML', 'mgrUnusualCardHTML', 'mgrUnusualRowHTML', 'mgrUnusualBarsHTML',
+    'mgrUnusualKey', 'mgrUnusualGood', 'mgrUnusualFig', 'mgrUnusualWhen', 'mgrShortUGX', 'mgrNum',
+  ].map((n) => extractFunction(src, n, 'index.html')).concat([
+    'UNUSUAL_TITLES', 'UNUSUAL_ANSWERS', 'UNUSUAL_ICON',
+  ].map((n) => extractDeclaration(src, n, 'index.html'))).concat(['const mgrUnusualAnswers = new Map(); let mgrUnusualOpen = null; function answersMap(){ return mgrUnusualAnswers; }']), {
+    esc, Math, Date, Number, String, Map, Array,
+    fmtUGX: (n) => Number(n).toLocaleString('en-US') + ' UGX', fmtShortDate: (d) => d.slice(5),
+    unusualLine: () => 'a line',
+  }, ['mgrUnusualHTML', 'answersMap']);
+  const html = ui.mgrUnusualHTML(u);
+  t.check((html.match(/class="mgr-od-d mgr-od-d-ok"/g) || []).length === 5 && /mgr-od-d-bad/.test(html) && /mgr-od-d-now/.test(html) && /mgr-od-d-thin/.test(html),
+    'the week is a row of days: ticks for the calm ones, the day to look at marked, a day it cannot judge greyed, today left open');
+  t.check(/5 of 6<\/b> days inside their usual · 1 to look at/.test(html), 'and says how many sat inside their usual');
+  t.check((html.match(/class="mgr-od-b"/g) || []).length === 8 && /mgr-od-b mgr-od-b-bad/.test(html) && /class="mgr-od-band"/.test(html) && /usual /.test(html),
+    'the day is drawn beside the eight it was measured against, with the usual range behind them');
+  t.check(/under a usual Tuesday/.test(html) && /lower than every Tuesday in 8 weeks/.test(html), 'the gap, and whether it is past anything in eight weeks');
+  t.check(/data-unusual-answer="The shop was closed"/.test(html) && /What happened on Tuesday\?/.test(html),
+    'and the question it raises is answered with a tap');
+  t.check(/data-unusual-day="[\d-]+"/.test(html), 'the day still opens in full');
+  ui.answersMap().set(tue + '|sales', 'The shop was closed');
+  const said = ui.mgrUnusualHTML(u);
+  t.check(/You said: The shop was closed/.test(said) && !/data-unusual-answer=/.test(said), 'an answered day shows what was said and asks no more');
+}
+
 /* ---------- 5. wiring --------------------------------------------------- */
 {
   const hist = src.slice(src.indexOf('  manager_history: { confirm: false'));
@@ -127,6 +164,12 @@ function build(days) {
   t.check(/Not enough weeks on the books yet/.test(html) && /Nothing out of the ordinary in the last week/.test(html),
     'with an honest word for too-new and for a calm week, never a blank');
   t.check(/dayShown = b\.dataset\.unusualDay;\s*goToTab\('day'\);/.test(src), 'and a row opens The day on that date');
+  const save = extractFunction(src, 'mgrAnswerUnusual', 'index.html');
+  t.check(/kind: 'question'/.test(save) && /status: 'answered'/.test(save) && /unusualDay: x\.date, metric: x\.metric/.test(save),
+    'a tapped answer is kept as an answered question, so it reaches the next meeting the way every answer does');
+  t.check(/mgrUnusualAnswers\.delete\(key\)/.test(save), 'and one that could not be kept is taken back and said so');
+  t.check(/owner_said: said\.body\.answer/.test(hist), 'the meeting reads the owner\'s word on the day beside the finding');
+  t.check(/mgrUnusualAnswersLoad\(\);/.test(extractFunction(src, 'renderManager', 'index.html')), 'and a day answered before stays answered');
 }
 
 process.exit(t.done() ? 1 : 0);
