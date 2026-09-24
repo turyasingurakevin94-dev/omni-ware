@@ -2511,6 +2511,39 @@
   .an-ch{width:100%;height:118px;}
   .an-bar{fill:var(--ow-steel-400);}
   .an-bar-q{fill:var(--ow-steel-100);}
+  .an-bar-lo{fill:var(--ow-steel-400);opacity:.55;}
+  .an-band{fill:var(--ow-crimson-soft);}
+  .an-band.an-band-up{fill:var(--ow-verdigris-soft);}
+  .an-say.an-say-dn,.an-say.an-say-up{display:inline-block;padding:var(--ow-sp-4) var(--ow-sp-10);
+    border-radius:var(--ow-r-sm);font-weight:var(--ow-fw-600);}
+  .an-say.an-say-dn{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .an-say.an-say-up{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  /* The tiles' pictures: now against before, the margin against the
+     rule, and how much of what sold has a cost on file. */
+  .an-vs{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;
+    gap:var(--ow-sp-2) var(--ow-sp-6);margin-top:var(--ow-sp-6);}
+  .an-vs-k{font-size:10px;color:var(--ow-ink-600);}
+  .an-vs-t{position:relative;display:block;height:6px;}
+  .an-vs-f{position:absolute;left:0;top:0;bottom:0;border-radius:var(--ow-r-pill);background:var(--ow-steel-950);}
+  .an-vs-f.an-vs-b{background:var(--ow-steel-100);}
+  .an-tk-b{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;background:var(--ow-steel-400);}
+  .an-ring{float:right;width:34px;height:34px;margin-top:-30px;}
+  .an-ring-t{fill:none;stroke:var(--ow-rule-soft);stroke-width:5;}
+  .an-ring-f{fill:none;stroke:var(--ow-verdigris);stroke-width:5;}
+  .an-ring-f.an-ring-w{stroke:var(--ow-amber);}
+  /* A row's share of the sales shown, beside its figure. */
+  .an-shr{display:inline-block;vertical-align:middle;width:56px;height:6px;margin-right:var(--ow-sp-8);
+    border-radius:var(--ow-r-pill);background:var(--ow-rule-soft);overflow:hidden;}
+  .an-shr-f{display:block;height:100%;background:var(--ow-steel-950);}
+  .an-split{padding:var(--ow-sp-10) var(--ow-sp-12) var(--ow-sp-8);border-bottom:1px solid var(--ow-rule-soft);}
+  .an-split-t{margin:0 0 var(--ow-sp-6);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .an-split-b{display:flex;gap:var(--ow-sp-2);height:20px;border-radius:var(--ow-r-sm);overflow:hidden;}
+  .an-sp{display:grid;place-items:center;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-paper);background:var(--ow-steel-950);}
+  .an-sp.an-sp-1{background:var(--ow-indigo);}
+  .an-sp.an-sp-2{background:var(--ow-sky);}
+  .an-sp.an-sp-3{background:var(--ow-plum);}
+  .an-sp.an-sp-4{background:var(--ow-steel-100);color:var(--ow-ink-900);}
   .an-ref{stroke:var(--ow-ink-600);stroke-width:1;stroke-dasharray:3 3;vector-effect:non-scaling-stroke;}
   /* ink-600, not ink-400: 11px in ink-400 is 3.12 to 1 on paper, and the
      ratchet has now caught that colour carrying small text three times
@@ -2590,7 +2623,12 @@
   @media (max-width:820px){
     /* The phone gets the ranking and the position, and the chart goes:
        thirty bars at 390px is a smudge. */
-    .an-shape{display:none !important;}
+    /* The chart stays, at a phone's height: the shaded tail and the
+       dark-and-light bars read at 390px where thirty plain bars did not. */
+    .an-ch{height:96px;}
+    .an-shr{display:none;}
+    .ow-pan-h.an-tbh .ow-seg{display:grid;grid-template-columns:1fr 1fr;}
+    .ow-pan-h.an-tbh .ow-seg-b{min-height:40px;}
     .ow-pan-h.an-tbh{padding:var(--ow-sp-10) var(--ow-sp-12);gap:var(--ow-sp-8);}
     .ow-pan-h.an-tbh .ow-pan-n{margin-left:0;}
     .ow-pan-h.an-tbh .ow-seg{width:100%;}
@@ -19596,9 +19634,22 @@
           Invoices tab shows. An order that was quoted but never invoiced does not appear here.
           Pick a date range, then break it down by item, by customer, or by document.</p>
         <span class="ow-ph-sp"></span>
-        <div class="ow-f ow-ph-f an-f">
+        <!-- THE WINDOW, AS A SWITCH -- the same one Analysis wears. The
+             select stays as the one place the window is kept; the switch
+             writes to it, and Custom opens the two dates beside it. -->
+        <div class="ow-an-win" id="an_range_switch" role="group" aria-label="Date range">
+          <button type="button" class="ow-an-wb" data-range="today">Today</button>
+          <button type="button" class="ow-an-wb" data-range="yesterday">Yesterday</button>
+          <button type="button" class="ow-an-wb" data-range="7">7d</button>
+          <button type="button" class="ow-an-wb" data-range="30">30d</button>
+          <button type="button" class="ow-an-wb" data-range="90">90d</button>
+          <button type="button" class="ow-an-wb" data-range="month">Month</button>
+          <button type="button" class="ow-an-wb" data-range="all">All</button>
+          <button type="button" class="ow-an-wb" data-range="custom">Custom</button>
+        </div>
+        <div class="ow-f ow-ph-f an-f" hidden>
           <label class="ow-f-l" for="an_range_preset">Date range</label>
-          <select id="an_range_preset" class="ow-f-in an-sel">
+          <select id="an_range_preset" class="ow-f-in an-sel" tabindex="-1">
             <option value="today">Today</option>
             <option value="yesterday">Yesterday</option>
             <option value="7">Last 7 days</option>
@@ -19641,7 +19692,7 @@
            Sales per day against the previous window's daily average --
            whether the period was steady, front-loaded, or died in its
            last week. The sentence comes first and the bars prove it. -->
-      <div class="ow-pan an-shape" id="an_shapePan" style="display:none;">
+      <div class="ow-pan" id="an_shapePan" style="display:none;">
         <div class="ow-pan-h">
           <span class="ow-pan-t">The shape of the period</span>
           <span class="ow-pan-nt" id="an_shapeNote"></span>
@@ -50587,12 +50638,43 @@ function anDeltaText(now, before, points){
   const pct = (now - before)/Math.abs(before)*100;
   return `<span class="an-d">${pct>=0?'+':''}${pct.toFixed(0)}%</span> on the window before`;
 }
-function anMtHTML(label, value, sub, cls){
+function anMtHTML(label, value, sub, cls, pic){
   return `<div class="ow-mt${cls?' '+cls:''}">
     <p class="ow-mt-l">${esc(label)}</p>
-    <span class="ow-mt-v">${value}</span>
+    <span class="ow-mt-v">${value}</span>${pic||''}
     <p class="ow-mt-s">${sub||''}</p>
   </div>`;
+}
+/* NOW AGAINST BEFORE, DRAWN. Two bars on one scale, so the size of the
+   change is seen before the percentage under it is read. Both are ink
+   and grey -- a fall in turnover is not by itself bad news, and this
+   screen keeps state colour for a loss. */
+function anVsHTML(now, before, prev){
+  if(!prev || !(before > 0) || !(now >= 0)) return '';
+  const top = Math.max(now, before, 1);
+  const when = `${fmtShortDate(prev.from)} – ${fmtShortDate(prev.to)}`;
+  return `<span class="an-vs" title="${esc('Before: ' + when + ', ' + fmtUGX(Math.round(before)))}">
+    <span class="an-vs-k">now</span><span class="an-vs-t"><i class="an-vs-f" style="width:${(now / top * 100).toFixed(1)}%"></i></span>
+    <span class="an-vs-k">before</span><span class="an-vs-t"><i class="an-vs-f an-vs-b" style="width:${(before / top * 100).toFixed(1)}%"></i></span>
+  </span>`;
+}
+/* The margin on a bar, with a tick at the shop's own rule and a grey
+   tick where the window before stood. */
+function anMarginBarHTML(margin, before){
+  let rule = null; try { rule = targetMarginPct(); } catch(e){ rule = null; }
+  if(!(Number(rule) > 0)) rule = null;
+  if(!(margin >= 0) && rule == null) return '';
+  const sc = Math.max(1, margin || 0, (rule || 0) * 1.5, before || 0);
+  const at = (v)=> Math.max(0, Math.min(100, v / sc * 100)).toFixed(1);
+  return `<span class="ow-an-tb"><i class="${rule != null && margin < rule ? 'ow-an-tf ow-bad' : 'ow-an-tf'}" style="width:${at(Math.max(0, margin))}%"></i>${
+    before != null ? `<i class="an-tk-b" style="left:${at(before)}%" title="The window before: ${before.toFixed(1)}%"></i>` : ''}${
+    rule != null ? `<i class="ow-an-tk" style="left:${at(rule)}%" title="Your rule: ${rule}%"></i>` : ''}</span>`;
+}
+/* How much of what sold has a cost on file, as a ring. */
+function anRingHTML(share){
+  const k = Math.max(0, Math.min(1, share));
+  const c = 2 * Math.PI * 14;
+  return `<svg class="an-ring" viewBox="0 0 36 36" aria-hidden="true"><circle class="an-ring-t" cx="18" cy="18" r="14"></circle><circle class="${k < 0.5 ? 'an-ring-f an-ring-w' : 'an-ring-f'}" cx="18" cy="18" r="14" stroke-dasharray="${(k * c).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 18 18)"></circle></svg>`;
 }
 /* Quantities, not money: units and counts, to at most two decimals.
    Shared by the strip and the table so a figure cannot be rounded one
@@ -50635,7 +50717,7 @@ function anSeries(invoices, from, to, step){
   });
   return buckets;
 }
-function anShapeChartHTML(buckets, refPerBucket){
+function anShapeChartHTML(buckets, refPerBucket, band){
   const W = 1000, H = 118, GAP = buckets.length > 60 ? 1 : 4;
   const bw = Math.max(1, (W - GAP*(buckets.length-1)) / buckets.length);
   const top = Math.max(1, ...buckets.map(b=>b.sales), refPerBucket||0);
@@ -50643,15 +50725,21 @@ function anShapeChartHTML(buckets, refPerBucket){
     const h = Math.max(1.5, b.sales / top * H);
     const x = i * (bw + GAP);
     const quiet = !(b.sales > 0);
-    return `<rect class="an-bar${quiet?' an-bar-q':''}" x="${x.toFixed(1)}" y="${(H-h).toFixed(1)}"
+    /* Dark above the window before's average, light below it -- the same
+       one colour, so the line reads as a threshold at a glance. */
+    const lo = !quiet && refPerBucket > 0 && b.sales < refPerBucket;
+    return `<rect class="${quiet ? 'an-bar an-bar-q' : lo ? 'an-bar an-bar-lo' : 'an-bar'}" x="${x.toFixed(1)}" y="${(H-h).toFixed(1)}"
       width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="1"><title>${
       esc(b.from===b.to ? fmtShortDate(b.from) : fmtShortDate(b.from)+' – '+fmtShortDate(b.to))
       } — ${esc(fmtUGX(Math.round(b.sales)))}</title></rect>`;
   }).join('');
   const ref = refPerBucket > 0 && refPerBucket <= top
     ? `<line class="an-ref" x1="0" y1="${(H - refPerBucket/top*H).toFixed(1)}" x2="${W}" y2="${(H - refPerBucket/top*H).toFixed(1)}"></line>` : '';
+  /* The stretch the sentence is about, shaded behind its bars. */
+  const bandRect = band && band.n > 0 && band.n < buckets.length
+    ? `<rect class="${band.down ? 'an-band' : 'an-band an-band-up'}" x="${((buckets.length - band.n) * (bw + GAP) - GAP / 2).toFixed(1)}" y="0" width="${(W - (buckets.length - band.n) * (bw + GAP) + GAP / 2).toFixed(1)}" height="${H}"></rect>` : '';
   return `<svg class="ow-ch an-ch" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
-    aria-label="Items sales per ${buckets.length} periods across the window">${bars}${ref}</svg>`;
+    aria-label="Items sales per ${buckets.length} periods across the window">${bandRect}${bars}${ref}</svg>`;
 }
 /* The sentence, then the bars. Somebody reading this wants to be told
    what happened, not handed a grid to do the subtraction on. */
@@ -50686,13 +50774,18 @@ function renderAnShape(){
   const ref = prev ? prev.sales / buckets.length : 0;
   pan.style.display = '';
   document.getElementById('an_shapeNote').innerHTML =
-    `items sales, ${esc(bucketing.label)}${ref>0 ? ' · the dashed line is the previous window&rsquo;s average' : ''}`;
+    `items sales, ${esc(bucketing.label)}${ref>0 ? ` · dashed: the window before, ${esc(fmtUGX(Math.round(ref)))} a ${esc(bucketing.name)} · lighter bars fell under it` : ''}`;
   document.getElementById('an_shapeRange').textContent =
     fmtShortDate(f) + ' – ' + fmtShortDate(t);
   const say = anShapeSentence(buckets, ref, bucketing.name);
+  /* The sentence names a stretch at the end of the window; the chart
+     shades that same stretch, so the words and the bars point at one
+     place. anShapeSentence takes the last third, and so does this. */
+  const moved = say && !/held steady/.test(say);
+  const band = moved ? { n: Math.max(1, Math.round(buckets.length / 3)), down: /fell away/.test(say) } : null;
   document.getElementById('an_shapeBody').innerHTML =
-    `<div class="an-ch-w">${say ? `<p class="an-say">${say}</p>` : ''}
-      ${anShapeChartHTML(buckets, ref)}
+    `<div class="an-ch-w">${say ? `<p class="${moved ? (band.down ? 'an-say an-say-dn' : 'an-say an-say-up') : 'an-say'}">${say}</p>` : ''}
+      ${anShapeChartHTML(buckets, ref, band)}
       <div class="an-ch-x"><span>${esc(fmtShortDate(buckets[0].from))}</span><span>${
         esc(fmtShortDate(buckets[buckets.length-1].to))}</span></div>
     </div>`;
@@ -50770,7 +50863,8 @@ function renderAnKpis(rows){
 
   document.getElementById('an_kpiGrid').innerHTML =
       anMtHTML('Items sales', fmtUGX(Math.round(t.sales)),
-               cmp ? anDeltaText(t.sales, cmp.sales) : 'every invoice in the window')
+               cmp ? anDeltaText(t.sales, cmp.sales) : 'every invoice in the window', '',
+               anVsHTML(t.sales, cmp && cmp.sales, cmp))
     + secondCell
     /* A LOSS IS CRIMSON; A PROFIT IS INK. The tile used to carry a
        hardcoded verdigris, so a loss of 60,000 rendered in the colour of
@@ -50781,12 +50875,14 @@ function renderAnKpis(rows){
                mute ? 'not stated' : fmtUGX(Math.round(t.profit)),
                mute ? 'most of the cost behind it is unknown'
                     : (cmp ? anDeltaText(t.profit, cmp.profit) : 'what the window kept'),
-               mute ? 'ow-warn' : (t.profit < 0 ? 'ow-bad' : ''))
+               mute ? 'ow-warn' : (t.profit < 0 ? 'ow-bad' : ''),
+               mute ? '' : anVsHTML(t.profit, cmp && cmp.profit, cmp))
     + anMtHTML('Gross margin',
                mute ? 'not stated' : t.margin.toFixed(1) + '<span class="ow-u">%</span>',
                mute ? 'a margin over an invented cost is not a margin'
                     : (cmp ? anDeltaText(t.margin, cmp.margin, true) : 'of everything sold'),
-               mute ? 'ow-warn' : (t.margin < 0 ? 'ow-bad' : ''))
+               mute ? 'ow-warn' : (t.margin < 0 ? 'ow-bad' : ''),
+               mute ? '' : anMarginBarHTML(t.margin, cmp ? cmp.margin : null))
     /* THE FIFTH TILE IS THE TRUST, and it took Cost of item sold's place.
        That tile printed Items sales minus Gross profit -- a figure the
        row beside it already carried. This one says how much of all of it
@@ -50796,7 +50892,8 @@ function renderAnKpis(rows){
                conf ? fmtNumAn(conf.est) + '<span class="ow-u">units</span>' : 'nothing',
                conf ? `${Math.round(conf.share*100)}% of what you sold · marked *`
                     : 'every unit sold has a cost on file',
-               conf && conf.dominant ? 'ow-warn' : '');
+               conf && conf.dominant ? 'ow-warn' : '',
+               anRingHTML(conf ? 1 - conf.share : 1));
 
   const note = document.getElementById('an_kpiNote');
   const bits = [];
@@ -50814,7 +50911,8 @@ function renderAnKpis(rows){
     if(svc > 0) bits.push(`<span class="an-note-estimated">A further ${esc(fmtUGX(Math.round(svc)))} was charged for delivery, fetching and the like on these invoices. It is not in the tiles above — they read per item, and a charge belongs to no item — and it carries no cost of sales yet. The profit and loss counts it as service income.</span>`);
   }
   if(filtered) bits.push(`<span class="an-note-filtered">Showing only what matches &ldquo;${esc(document.getElementById('an_table_search').value.trim())}&rdquo; — clear the search to see the whole range.</span>`);
-  else if(prev) bits.push(`Against ${esc(fmtShortDate(prev.from))} – ${esc(fmtShortDate(prev.to))}: ${esc(fmtUGX(Math.round(prev.sales)))} of sales, ${esc(fmtUGX(Math.round(prev.profit)))} profit.`);
+  /* The window before is no longer a sentence here: it is the grey bar
+     in each tile, with its dates on the bar. */
   /* The wording no longer blames stock alone: a bought-in line with no
      price on file counts here too now, and telling somebody to go and
      look at their shelf for it would send them to the wrong place. The
@@ -50911,7 +51009,10 @@ function anCellHTML(col, row, isFoot){
   else if(col.pct) text = (Number(v)||0).toFixed(1) + '%';
   else text = fmtNumAn(v);
   const mark = col.key==='profit' ? anEstimatedMarkHTML(row, 'cost') : '';
-  return `<div class="ow-tbl-n${neg?' ow-fig ow-bad':''}" data-l="${esc(AN_HEAD[col.key]||col.label)}">${text}${mark}</div>`;
+  /* Each row's share of the sales on screen, as a bar beside its figure. */
+  const share = !isFoot && col.key==='sales' && anShareOf > 0 && (anView==='item' || anView==='customer')
+    ? `<span class="an-shr" title="${((Number(v)||0) / anShareOf * 100).toFixed(1)}% of the sales shown"><i class="an-shr-f" style="width:${Math.max(0, Math.min(100, (Number(v)||0) / anShareOf * 100)).toFixed(1)}%"></i></span>` : '';
+  return `<div class="ow-tbl-n${neg?' ow-fig ow-bad':''}" data-l="${esc(AN_HEAD[col.key]||col.label)}">${share}${text}${mark}</div>`;
 }
 /* A totals row, and it stays put. It used to sit at the bottom of every
    row in the range, so the only practical way to see what a column added
@@ -50951,8 +51052,28 @@ function anFootRowHTML(cols, rows){
   </div>`;
 }
 
+/* WHERE THE SALES CAME FROM: one bar split by the biggest rows, the rest
+   as one grey segment, so how concentrated the window was is seen at
+   once. Item and customer views only -- a document is not a source. */
+let anShareOf = 0;
+function anSplitHTML(rows){
+  if(!(anView==='item' || anView==='customer')) return '';
+  const total = rows.reduce((n, r)=> n + Math.max(0, Number(r.sales)||0), 0);
+  if(!(total > 0) || rows.length < 2) return '';
+  const top = rows.slice().sort((a, b)=> (b.sales||0) - (a.sales||0)).slice(0, 4);
+  const rest = total - top.reduce((n, r)=> n + Math.max(0, Number(r.sales)||0), 0);
+  const seg = (name, v, i)=>{
+    const pct = v / total * 100;
+    const short = String(name).split(' (')[0];
+    return `<span class="an-sp an-sp-${i}" style="flex-grow:${v.toFixed(0)}" title="${esc(name)} · ${pct.toFixed(1)}%">${pct >= 12 ? esc(short) + ' ' + Math.round(pct) + '%' : ''}</span>`;
+  };
+  return `<div class="an-split"><p class="an-split-t">Where the ${esc(fmtUGX(Math.round(total)))} came from</p>
+    <div class="an-split-b">${top.map((r, i)=> seg(r.name || '—', Math.max(0, Number(r.sales)||0), i)).join('')}${
+      rest > 0 ? seg(`${rows.length - top.length} more`, rest, 4) : ''}</div></div>`;
+}
 function renderAnTable(){
   const rows = anVisibleRows();
+  anShareOf = rows.reduce((n, r)=> n + Math.max(0, Number(r.sales)||0), 0);
   const all = AN_COLUMNS[anView];
   const cols = AN_SCREEN[anView].map(k=> all.find(c=>c.key===k)).filter(Boolean);
   const sort = anSortState[anView];
@@ -50967,11 +51088,13 @@ function renderAnTable(){
   if(rows.length===0){
     wrap.innerHTML = anLastInvoices.length===0
       ? anNothingHereHTML()
-      : '<div class="ow-empty">No rows match your search.</div>';
+      : (anView==='pair' && !document.getElementById('an_table_search').value.trim()
+        ? '<div class="ow-empty">No two items were bought on the same invoice in this window.</div>'
+        : '<div class="ow-empty">No rows match your search.</div>');
     if(anLastInvoices.length===0) anWireNothingHere();
     return;
   }
-  wrap.innerHTML = `<div class="ow-tbl an-tbl" style="--ow-tbl-cols:${AN_TRACKS[anView]}">
+  wrap.innerHTML = anSplitHTML(rows) + `<div class="ow-tbl an-tbl" style="--ow-tbl-cols:${AN_TRACKS[anView]}">
     <div class="ow-tbl-h">
       <div class="ow-tbl-n">No.</div>
       ${cols.map(c=>{
@@ -51019,6 +51142,7 @@ function renderSalesAnalytics(){
   // renderAnTable works out the visible rows and hands them to the KPIs
   // and the chart, so all three describe exactly the same list.
   renderAnTable();
+  anSyncRangeSwitch();
 }
 document.getElementById('an_range_preset').addEventListener('change', ()=>{
   const isCustom = document.getElementById('an_range_preset').value==='custom';
@@ -51029,6 +51153,19 @@ document.getElementById('an_range_preset').addEventListener('change', ()=>{
   if(!isCustom) renderSalesAnalytics();
 });
 document.getElementById('an_apply_btn').addEventListener('click', renderSalesAnalytics);
+document.getElementById('an_range_switch').addEventListener('click', (e)=>{
+  const b = e.target.closest && e.target.closest('button[data-range]');
+  const sel = document.getElementById('an_range_preset');
+  if(!b || !sel || sel.value === b.dataset.range) return;
+  sel.value = b.dataset.range;
+  sel.dispatchEvent(new Event('change'));
+  anSyncRangeSwitch();
+});
+function anSyncRangeSwitch(){
+  const sel = document.getElementById('an_range_preset');
+  document.querySelectorAll('#an_range_switch button[data-range]').forEach(b=>
+    b.setAttribute('aria-pressed', String(!!sel && b.dataset.range === sel.value)));
+}
 document.getElementById('an_table_search').addEventListener('input', renderAnTable);
 document.querySelectorAll('#an_subtabs .ow-seg-b').forEach(btn=>{
   btn.addEventListener('click', ()=>{
