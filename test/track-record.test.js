@@ -157,8 +157,8 @@ const build = (rows, over) => compileScope(
     const m = tr.rows.find((x) => String(x.id) === '7');
     const d = tr.rows.find((x) => String(x.id) === '9');
     eq(s.trackRecordName(m), 'Mulongo', 'named as the shop names them');
-    t.check(/Chased 5 times since 2026-03-01/.test(s.trackRecordLine(m)), 'the record reads as a sentence');
-    t.check(/it worked 4 of 5 times/.test(s.trackRecordLine(m)), 'with what it earned the shop');
+    t.check(/Advised chasing 5 times since 2026-03-01/.test(s.trackRecordLine(m)), 'the record reads as a sentence');
+    t.check(/an event followed 4 of 5 recommendations/.test(s.trackRecordLine(m)), 'with what it earned the shop');
     t.check(/1,000,000 in all/.test(s.trackRecordLine(m)), 'and the money');
     t.check(/the books show nothing after any of them/.test(s.trackRecordLine(d)),
       'and a lever that has never worked says exactly that');
@@ -169,8 +169,15 @@ const build = (rows, over) => compileScope(
     const s = build(MOVES);
     const tr = await s.managerTrackRecord(TODAY);
     const dead = s.trackRecordDeadLevers(tr);
-    eq(dead.length, 1, 'one lever has never once worked');
-    eq(String(dead[0].id), '9', 'and it is David’s');
+    eq(dead.length, 0, 'open advice is not a failed executed tactic');
+    eq(tr.rows.find(x=> String(x.id) === '7').completedScored, 0, 'legacy done records have no execution date');
+    const dated = MOVES.map(m=> String((m.body.subject||{}).customerId) === '9'
+      ? {...m, status:'done', body:{...m.body, doneOn:m.date}} : m);
+    const withDates = build(dated);
+    const datedTrack = await withDates.managerTrackRecord(TODAY);
+    eq(withDates.trackRecordDeadLevers(datedTrack).length, 1, 'three dated completions with no events warrant a review');
+    const oneDone = build(dated.map((m,i)=> i===5 || i===6 ? {...m,status:'open'} : m));
+    eq(oneDone.trackRecordDeadLevers(await oneDone.managerTrackRecord(TODAY)).length, 0, 'one completed occasion is too little evidence');
     t.check(!dead.some((x) => String(x.id) === '7'),
       'NOT Mulongo — four of five is not a dead lever, and a reading that lumped them together would be worse than none');
 
@@ -209,7 +216,7 @@ const build = (rows, over) => compileScope(
        IS an answer — so this is scored, and reads as a dead lever. It
        is a dead lever: chasing a customer who is off the books earns
        nothing, and the sentence says so in the owner's words. */
-    t.check(/the books show nothing after any of them/.test(s.trackRecordLine(g)),
+    t.check(/nothing in the books can weigh/.test(s.trackRecordLine(g)),
       'and the sentence says what happened, not what it means');
   }
 
@@ -249,15 +256,11 @@ const build = (rows, over) => compileScope(
        which means "never mention this" — the exact opposite of what a
        record is for. */
     const hist = api.slice(api.indexOf("name: 'manager_history'"), api.indexOf("name: 'week_review_data'"));
-    t.check(/track_record \\u2014 THE LONGEST MEMORY YOU HAVE/.test(hist),
-      'the tool says what it is: the only reading that looks past five meetings');
-    t.check(/USE IT AS EVIDENCE INSIDE A MOVE, never as a list to recite/.test(hist),
-      'AND WHAT IT IS FOR — evidence a move reaches for, never a recital');
-    t.check(/the same payment is never counted twice/.test(hist),
-      'with the law that makes the figure trustworthy');
-    t.check(/this_has_never_worked/.test(hist), 'and the finding worth interrupting for is named');
-    t.check(/evidence about the LEVER and not about the shop/.test(hist),
-      'said as what it is: a fact about the advice, not about the shop');
+    t.check(/separates advice, recorded completion and events observed afterward/.test(hist),
+      'the tool separates execution from observation');
+    t.check(/not evidence of execution or causation/.test(hist), 'the legacy field cannot imply causal credit');
+    t.check(/Undated legacy done records cannot establish execution timing/.test(hist),
+      'legacy missing dates remain unknown');
 
     const tool = src.slice(src.indexOf("manager_history: { confirm: false"));
     t.check(tool.slice(0, 20000).includes('{ track_record: trackOut }'),
@@ -276,11 +279,11 @@ const build = (rows, over) => compileScope(
        said they were the same question asked three ways. They are one
        table now, and its heading names what the rows ARE while the
        filter names which of the three questions you are asking. */
-    t.check(/Every lever it has pulled/.test(src), 'under a heading that says what the rows are');
-    ['Works', 'Never worked', 'Not landing', 'You passed on'].forEach(q=>
+    t.check(/Advice and observed outcomes/.test(src), 'under a heading that says what the rows are');
+    ['Event followed', 'No event recorded', 'Not landing', 'You passed on'].forEach(q=>
       t.check(new RegExp(`label: '${q}'`).test(src),
         `and a filter for "${q}" \u2014 the three old sections are three questions of one list`));
-    t.check(/never once worked/.test(src), 'and marks the levers that never have');
+    t.check(/no event recorded/.test(src), 'and marks the levers that never have');
   }
 })().then(() => {
   process.exit(t.done() ? 1 : 0);
