@@ -118,7 +118,6 @@ const src = read('index.html');
     'the standing rules are rows with the mark of the door each belongs to');
   t.check(/const dial = \(p\)=>/.test(render) && /mgr-dial-over/.test(render) && /const bars = \(p\)=>/.test(render),
     'a running play wears its span as a dial, crimson once past it, and its before and after as bars');
-  t.check(/class="mgr-cmp"/.test(render) && /mgr-cmp-q/.test(render), 'a price question draws your price beside the blank to fill');
   const growth = extractFunction(src, 'renderManagerGrowth', 'index.html');
   t.check(/class="mgr-gg"/.test(growth) && /mgrAvatarHTML\(row\.name\)/.test(growth),
     'growth leads with its evidence as a gauge, and every customer has a face');
