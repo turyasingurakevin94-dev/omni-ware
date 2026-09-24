@@ -116,8 +116,12 @@ const src = read('index.html');
   t.check(/mgrScoreRingsHTML\(sb2\.targets\.filter\(x=> !x\.finished\)\)/.test(render), 'the scoreboard opens with its rings');
   t.check(/<div class="mgr-rt">/.test(render) && /class="mgr-av mgr-av-k mgr-kt-money"/.test(render),
     'the standing rules are rows with the mark of the door each belongs to');
-  t.check(/const dial = \(p\)=>/.test(render) && /mgr-dial-over/.test(render) && /const bars = \(p\)=>/.test(render),
-    'a running play wears its span as a dial, crimson once past it, and its before and after as bars');
+  t.check(/const span = \(p\)=>/.test(render) && /mgr-pk-over/.test(render) && /const gauge = \(p\)=>/.test(render),
+    'a running play wears its span as its weeks, crimson once past them, and what it watches as start-and-now bars');
+  t.check(/mgr-pk-pipe/.test(render) && /'Proposed'/.test(render) && /'Running'/.test(render) && /'Worked'/.test(render) && /'Set aside'/.test(render),
+    'the playbook opens with the road a play travels: proposed, running, worked or set aside');
+  t.check(/b\.treats \|\| 0\) - \(\(worthOf|worthOf\.get\(b\.id\) \|\| \{\}\)\.amount/.test(render) && /Overlaps “/.test(render),
+    'proposals are ordered by what they would add, and two treating the same thing are flagged as overlapping');
   const growth = extractFunction(src, 'renderManagerGrowth', 'index.html');
   t.check(/class="mgr-gg"/.test(growth) && /mgrAvatarHTML\(row\.name\)/.test(growth),
     'growth leads with its evidence as a gauge, and every customer has a face');
@@ -171,6 +175,27 @@ const src = read('index.html');
   const hero = extractFunction(src, 'mgrHeroHTML', 'index.html');
   t.check(/The meeting is on\./.test(hero) && /The meeting stopped short\./.test(hero),
     'the hero never says "no meeting yet" while one is running or after one ran out of room');
+}
+
+/* ---------- 5. the playbook's own figures ------------------------------ */
+{
+  const products = [{ id: 'P051', name: 'Masasi', variants: [{ name: 'a' }, { name: '12"' }] }, { id: 'P002', name: 'Cement', variants: [] }];
+  const { mgrPlayWorth, mgrPlayText } = compileScope([
+    extractFunction(src, 'mgrPlayWorth', 'index.html'), extractFunction(src, 'mgrPlayText', 'index.html'),
+  ], {
+    buyKeyParts: (k) => { const [pid, v] = String(k).split('::'); const p = products.find((x) => x.id === pid); return p ? { product: p, variantIdx: v == null ? null : Number(v) } : null; },
+    productVariantLabel: (p, v) => p.name + (v == null ? '' : ' ' + p.variants[v].name),
+    Number, String, RegExp,
+  }, ['mgrPlayWorth', 'mgrPlayText']);
+  const w1 = mgrPlayWorth('Those five lines sold 23,305,000 in 30 days; lifting them adds 1,466,051 over 30 days, and all 63 are worth 2,660,550.');
+  t.check(w1 && w1.amount === 1466051 && w1.per === 'over 30 days', 'the prize is what a play ADDS, never what the lines already sell (got ' + JSON.stringify(w1) + ')');
+  const w2 = mgrPlayWorth('64 cartons a month sold; 5,000 off each at 50 cartons is about 250,000 a month on volume you already sell.');
+  t.check(w2 && w2.amount === 250000 && w2.per === 'a month', 'an "about … a month" sizing is read as the prize');
+  t.check(mgrPlayWorth('1,108,301 UGX a month on volume already sold').amount === 1108301, 'with the currency in the way too');
+  t.check(mgrPlayWorth('Keeps the shelf honest') === null, 'and a play sized in words alone shows no figure at all');
+  t.check(mgrPlayText('Kept percent on P051::1 moving off 4.8%') === 'Kept percent on Masasi 12" moving off 4.8%'
+    && mgrPlayText('Watch P002 and the Q3 plan') === 'Watch Cement and the Q3 plan',
+    'a line code in the Manager\'s words is read back as the line\'s name, and nothing else is touched');
 }
 
 process.exit(t.done() ? 1 : 0);
