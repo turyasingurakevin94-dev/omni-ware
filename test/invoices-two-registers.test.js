@@ -75,7 +75,7 @@ const sec = (/<section id="tab-invoices"[\s\S]*?\n    <\/section>/.exec(src) || 
   t.check(/\.inv-crumb\[hidden\]\{display:none;\}/.test(src),
     'including on the crumb, whose own display:flex would otherwise win');
 
-  t.check(/sub\.textContent = sales/.test(side) && /placeholder = sales/.test(side),
+  t.check(/sub\.textContent = sales/.test(side) && /box\.placeholder = paired/.test(side),
     'the words around the register follow it — the sub, and what the search box says it searches');
   /* Reached through the section, not by id: an id on a paragraph is an
      id another screen can one day repeat, and this file has already
@@ -100,9 +100,9 @@ const sec = (/<section id="tab-invoices"[\s\S]*?\n    <\/section>/.exec(src) || 
     'and one keystroke in it draws whichever register is open');
 
   const side = extractFunction(src, 'invApplySide', 'index.html');
-  t.check(/classList\.toggle\('btn-accent', sales\)/.test(side)
-    && /classList\.toggle\('btn-ghost', !sales\)/.test(side),
-    'the one accent follows the lens: the printed sheet on Sales, quiet on Purchases');
+  t.check(/classList\.toggle\('btn-accent', invSide==='sales'\)/.test(side)
+    && /classList\.toggle\('btn-ghost', invSide!=='sales'\)/.test(side),
+    'the printed sheet is prominent on Sales and quiet on Together and Purchases');
   t.check((sec.match(/btn-accent/g) || []).length === 1,
     'and the screen carries exactly one of them in its markup');
 }

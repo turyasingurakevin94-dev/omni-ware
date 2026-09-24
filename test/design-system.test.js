@@ -1064,7 +1064,7 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
          assertion's meaning ("this screen is built on the layer") is
          unchanged, and what changed is how many functions that screen
          is now spread across. */
-      renders: ['renderInvoices', 'renderInvoicesPaired', 'invPairRailHTML',
+      renders: ['renderInvoices', 'renderInvoicesUnified',
                 'invStatusChip', 'invProgressCell'],
       rendersUses: ['ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-tbl', 'ow-tbl-h', 'ow-tbl-r',
                     'ow-tbl-g', 'ow-tbl-f', 'ow-tbl-c', 'ow-tbl-n', 'ow-tbl-a', 'ow-tbl-note',
