@@ -170,7 +170,10 @@ const render = extractFunction(src, 'renderManager', 'index.html');
   const shellAt = render.indexOf("planShell(`<p class=\"mgr-reading\">");
   t.check(shellAt > -1, 'and it says so in the plan panel, where the eye already is');
 
-  const loop = /\[scoreWrap,[\s\S]{0,400}?forEach\(el=>\{ if\(el\) el\.innerHTML = ''; \}\);/.exec(render);
+  /* LAST KNOWN, NEVER SILENTLY. A box with a last good render shows it
+     at once, dimmed, inert and tagged as last known; one without is
+     emptied as before. Either way nothing stale passes for today's. */
+  const loop = /\[scoreWrap,[\s\S]{0,400}?forEach\(el=>\{ if\(el && !mgrCachePaint\(el\)\) el\.innerHTML = ''; \}\);/.exec(render);
   t.check(!!loop, 'the clearing loop exists and names its containers in one place');
   const at = render.indexOf('managerLoadState().then');
   t.check(loop && render.indexOf(loop[0]) < at,
@@ -222,7 +225,7 @@ const render = extractFunction(src, 'renderManager', 'index.html');
     'the playbook is read on every render, not only the one that found the panel empty');
   t.check(!/else managerPlaybook\(\)/.test(render),
     'so the read no longer sits in a branch the second render cannot reach');
-  t.check(/else if\(playWrap\.innerHTML\) playWrap\.innerHTML = '<p class="mgr-reading">/.test(render),
+  t.check(/else if\(!mgrCachePaint\(playWrap\) && playWrap\.innerHTML\) playWrap\.innerHTML = '<p class="mgr-reading">/.test(render),
     'and the waiting line is still said when there is something on screen to replace');
 
   /* The pace strip on Today is the same shape with a counter of its
@@ -315,6 +318,21 @@ const render = extractFunction(src, 'renderManager', 'index.html');
       `${n} hands the failure back rather than an empty shape`);
   });
   t.check(/book\.error \?/.test(render), 'and the playbook panel says it rather than "no play is running"');
+}
+
+/* ---------- last known, tagged and inert, until the fresh reading ----- */
+{
+  const paint = extractFunction(src, 'mgrCachePaint', 'index.html');
+  t.check(/el\.classList\.add\('mgr-stale'\)/.test(paint) && /mgr-stale-tag/.test(paint) && /updating…/.test(paint),
+    'a last-known box is marked as such and says it is updating');
+  t.check(/if\(!el\.querySelector\('\.mgr-stale-tag'\)\) el\.classList\.remove\('mgr-stale'\)/.test(paint),
+    'and the marking goes the moment the fresh reading replaces it');
+  t.check(/\.mgr-stale > \*:not\(\.mgr-stale-tag\)\{opacity:\.55;pointer-events:none;/.test(src),
+    'dimmed and not clickable meanwhile — a last-known button must not act on a stale row');
+  const save = extractFunction(src, 'mgrCacheSave', 'index.html');
+  t.check(/classList\.contains\('mgr-stale'\)/.test(save) && /querySelector\('\.mgr-reading'\)/.test(save),
+    'only a fresh, finished render is kept — never a stale copy or a waiting line');
+  t.check(/mgrCacheSave\(\);\s*mgrPaintVerdict\(\{\}\);/.test(render), 'what was on screen is kept before the next render clears it');
 }
 
 process.exit(t.done() ? 1 : 0);

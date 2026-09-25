@@ -50,7 +50,7 @@ const src = read('index.html');
 {
   const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const scope = compileScope([
-    extractFunction(src, 'mgrRichRowHTML', 'index.html'),
+    extractFunction(src, 'mgrRichRowHTML', 'index.html'), extractFunction(src, 'mgrMoveReach', 'index.html'),
     extractFunction(src, 'mgrMoveFace', 'index.html'),
     extractFunction(src, 'mgrAvatarHTML', 'index.html'),
     extractDeclaration(src, 'MGR_KIND_TONE', 'index.html'),
@@ -196,6 +196,78 @@ const src = read('index.html');
   t.check(mgrPlayText('Kept percent on P051::1 moving off 4.8%') === 'Kept percent on Masasi 12" moving off 4.8%'
     && mgrPlayText('Watch P002 and the Q3 plan') === 'Watch Cement and the Q3 plan',
     'a line code in the Manager\'s words is read back as the line\'s name, and nothing else is touched');
+}
+
+/* ---------- 6. the journal, drawn -------------------------------------- */
+{
+  const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const sc = compileScope([
+    extractFunction(src, 'mgrJournalRepeats', 'index.html'), extractFunction(src, 'mgrJrWords', 'index.html'),
+    extractFunction(src, 'mgrJournalChartHTML', 'index.html'), extractFunction(src, 'mgrDayMonth', 'index.html'),
+    extractFunction(src, 'mgrJournalWeekLabel', 'index.html'), extractFunction(src, 'mgrMondayOf', 'index.html'),
+    extractFunction(src, 'mgrShortUGX', 'index.html'), extractDeclaration(src, 'MGR_JR_STOP', 'index.html'),
+  ], { esc, Math, Number, String, Date, Set, Array, fmtShortDate: (d) => d }, ['mgrJournalRepeats', 'mgrJournalChartHTML', 'mgrJournalWeekLabel', 'mgrMondayOf']);
+  const reps = sc.mgrJournalRepeats([
+    { date: '2026-08-29', title: 'Put 5,000 shillings on the Masasi carton — that one change is worth more than every chase made last week.' },
+    { date: '2026-08-31', title: 'Put 5,000 more shillings on each Masasi carton before you refill them — that one change is worth more.' },
+    { date: '2026-09-06', title: 'Put 5,000 more shillings on each Masasi carton — 943,304 UGX a month on volume you already sell.' },
+    { date: '2026-09-06', title: 'Put 5,000 more shillings on each Masasi carton — 943,304 UGX a month on volume you already sell.' },
+    { date: '2026-09-19', title: 'Take the Masasi margin from Roto’s 50-carton rung, not from a price your customers have already refused.' },
+    { date: '2026-09-24', title: 'Collect Amos’s 2,515,000 first, then refill the two shelves that are empty and earning.' },
+  ]);
+  t.check(JSON.stringify(reps.nth) === '[1,2,3,4,1,1]', 'the same advice in different words is counted as said again, and different advice is not (got ' + JSON.stringify(reps.nth) + ')');
+  t.check(reps.top && reps.top.dates.length === 4 && /Masasi carton/.test(reps.top.title), 'and the advice said most often is named, with its dates');
+  t.check(sc.mgrJournalRepeats([{ date: '2026-09-01', title: 'A' }, { date: '2026-09-02', title: 'B things here' }]).top === null, 'nothing is called repeated under three times');
+
+  const chart = sc.mgrJournalChartHTML([
+    { date: '2026-08-29', moves: ['done', 'open', 'open', 'open', 'open'], done: 1 },
+    { date: '2026-09-24', moves: ['done', 'done', 'done', 'open', 'open'], done: 3 },
+  ], [{ date: '2026-09-08', sales: 15694755 }], '2026-09-24');
+  t.check(/<b class="mgr-jc-bad">4<\/b> of 10 moves done/.test(chart) === false && /<b class="mgr-jc-(mid|bad|good)">4<\/b> of 10 moves done/.test(chart),
+    'follow-through counts every move done across the meetings shown');
+  t.check((chart.slice(chart.indexOf('mgr-jc-plot')).match(/class="mgr-jc-done"/g) || []).length === 4 && /class="mgr-jc-r"/.test(chart) && /15\.69m/.test(chart),
+    'each meeting is a stack of squares, done ones filled, and each review a mark with that week’s sales');
+  t.check(/Today: 3 of 5\. Before it: 1 of 5\./.test(chart), 'and today is set against everything before it');
+  t.check(sc.mgrMondayOf('2026-09-24') === '2026-09-21' && sc.mgrMondayOf('2026-09-06') === '2026-08-31',
+    'entries are kept by the week they fall in, Monday to Sunday');
+  t.check(sc.mgrJournalWeekLabel('2026-09-21', '2026-09-24') === 'This week · 21–27 Sept' && sc.mgrJournalWeekLabel('2026-08-31', '2026-09-24') === '31 Aug – 6 Sept',
+    'and each week is labelled by its dates, this one named as such');
+  const render = extractFunction(src, 'renderManager', 'index.html');
+  t.check(/said again — \$\{ORD\[n\] \|\| n \+ 'th'\} time/.test(render) && /Said \$\{top\.dates\.length\} times/.test(render) && /mgr-jr-wk/.test(render),
+    'the journal draws the chart, the repeated advice and its weeks');
+  t.check(/label: 'sales', cls: 'mgr-jr-b-s'/.test(render) && /' · was ' \+ mgrShortUGX\(wk\.prior_sales\)/.test(render),
+    'and a review row carries its week as bars, sales beside the week before');
+}
+
+/* ---------- 7. a move with no figure still shows the money it touches -- */
+{
+  const bills = { undated: [{ supplierId: 'S1', due: 12000000, invoice: { id: 'B1' } }, { supplierId: 'S2', due: 7660000, invoice: { id: 'B2' } }],
+    ahead: [], missed: [], total: 19660000, count: 35 };
+  const { mgrMoveReach } = compileScope([extractFunction(src, 'mgrMoveReach', 'index.html'), extractFunction(src, 'mgrShortUGX', 'index.html')], {
+    credDueRows: () => bills, debtChaseRows: () => ({ due: [{ id: 7, debt: 2515000 }], promised: [], resting: [], blocked: [] }),
+    Math, Number, String, Set,
+  }, ['mgrMoveReach']);
+  const dating = mgrMoveReach({ mkind: 'settle', title: 'Name a day on the supplier bills', subject: {} });
+  t.check(dating && dating.amount === 19660000 && /owed with no day named, of 19\.66m across 35 bills/.test(dating.basis),
+    'dating the supplier bills shows the money it puts on the calendar: what is owed with no day named');
+  t.check(mgrMoveReach({ mkind: 'settle', subject: { supplierId: 'S1' } }).amount === 12000000, 'a supplier move shows what that supplier is owed');
+  t.check(mgrMoveReach({ mkind: 'chase', subject: { customerId: 7 } }).basis === 'owed by them', 'a customer move shows what they owe');
+  t.check(mgrMoveReach({ mkind: 'price', title: 'Lift Masasi', subject: {} }) === null, 'and a move the books cannot size shows no figure rather than a guess');
+  t.check(/reach\.basis \+ ' · from your books'/.test(extractFunction(src, 'mgrRichRowHTML', 'index.html')), 'marked as the books\' figure, never the Manager\'s');
+}
+
+/* ---------- 8. the scorecard, the pick, the reasoning ------------------- */
+{
+  const render = extractFunction(src, 'renderManager', 'index.html');
+  const tally = extractFunction(src, 'managerAdviceTally', 'index.html');
+  t.check(/counts\.worthDone \+= x\.worth/.test(tally) && /counts\.waiting\.repeated\+\+/.test(tally) && /counts\.waiting\.stale\+\+/.test(tally) && /counts\.waiting\.fresh\+\+/.test(tally),
+    'the tally carries the money acted on and why each waiting move is waiting: repeated, stale, or new this week');
+  const verdict = extractFunction(src, 'mgrPaintVerdict', 'index.html');
+  t.check(/'Money acted on'/.test(verdict) && /waiting: \$\{why\}/.test(verdict), 'and the scorecard shows money acted on against money waiting, with the reasons, not a bare count of untouched');
+  t.check(/Try this one first\./.test(render) && /which is worth more — try that first/.test(render),
+    'of two overlapping plays it recommends the one worth more, and the other card points to it');
+  t.check(/class="mgr-rv-why"/.test(extractFunction(src, 'mgrRichRowHTML', 'index.html')), 'every move carries one line of its reasoning on the card');
+  t.check(/<p class="mgr-rej">/.test(render) && !/<p class="ow-mini">Considered and rejected/.test(render), 'and what was considered and rejected leads the plan instead of trailing it');
 }
 
 process.exit(t.done() ? 1 : 0);

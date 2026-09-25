@@ -73,7 +73,7 @@ const scope = compileScope([
   extractFunction(src, 'buyHoldsStanding', 'index.html'),
   extractFunction(src, 'buyHoldFor', 'index.html'),
   extractFunction(src, 'buyKeyLabel', 'index.html'),
-  extractFunction(src, 'managerAdviceTally', 'index.html'),
+  extractFunction(src, 'managerAdviceTally', 'index.html'), extractFunction(src, 'mgrJrWords', 'index.html'), extractDeclaration(src, 'MGR_JR_STOP', 'index.html'),
       extractFunction(src, 'managerTrackRecord', 'index.html'),
       extractFunction(src, 'managerChaseEvidence', 'index.html'),
       /* The unusual-days reading has its own test; here it is quiet. */

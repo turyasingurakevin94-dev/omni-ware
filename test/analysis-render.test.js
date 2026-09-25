@@ -123,6 +123,7 @@ const env = {
   goToTab: () => {},
   OW_CARET: '<svg/>', OW_CARET_C: '<svg/>',
   deadStockQuietDays: () => 60,
+  targetMarginPct: () => 22,
   deadStockRows: () => [{ line: 'Wheelbarrows (heavy)', value: 830000, daysQuiet: 214 }],
   priceReviewStaleDays: () => 60,
   priceReviewProgress: () => ({ done: 6, target: 20 }),
@@ -144,7 +145,7 @@ const env = {
 /* EVERY function the screen is built from, compiled together. One of
    them reaching for a name that is not there is the whole point of
    this file, and seven functions is seven chances to do it. */
-const NAMES = ['analysisWorth', 'dashNetCashSVG', 'anEv', 'anSum',
+const NAMES = ['analysisWorth', 'dashNetCashSVG', 'anEv', 'anSum', 'anBar', 'anPriceLineSVG', 'anIconSVG',
   'analysisFindings', 'analysisRowHTML', 'renderAnalysis'];
 const scope = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html')), env, NAMES);
 
@@ -203,7 +204,14 @@ const scope = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html'
   const cash = found.find((f) => f.id === 'cash');
   t.check(cash && cash.worth === null && cash.position === true,
     'net cash is a position, not a fix, so it is not ranked');
-  t.check(/Position, not a fix/.test(html), 'and the band on the screen says exactly that');
+  /* WHERE IT SAYS SO MOVED. It was a band at the foot of the list,
+     under a row that had to be opened to show the one chart on the
+     screen. The chart is now always open in the rail, and the rail
+     panel carries the words instead of the list -- the claim is the
+     same, that cash is drawn but never ranked; only where it is said
+     changed. So the list must NOT carry it, and the rail must. */
+  t.check(/Position, not a fix/.test(written.dash_cash || ''), 'and the rail panel it is drawn in says exactly that');
+  t.check(!/data-fid="cash"/.test(html), 'and it is not drawn in the ranked list at all');
 
   /* THE ACCENT APPEARS ONCE, AND ON THE RIGHT ROW.
      It was first hard-coded onto the margin finding, so a shop whose
@@ -275,7 +283,7 @@ const scope = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html'
   const app = src + read('shared-worker.js');
   const stubbed = ['marginRows', 'deadStockRows', 'deadStockQuietDays', 'priceReviewCandidates',
     'priceReviewProgress', 'priceReviewStaleDays', 'dashCashBridgeData', 'dashGetRange',
-    'dashboardContext', 'fmtShortDate', 'fmtUGX', 'todayISO', 'goToTab', 'esc'];
+    'dashboardContext', 'fmtShortDate', 'fmtUGX', 'todayISO', 'goToTab', 'esc', 'targetMarginPct'];
   const missing = stubbed.filter((n) => !new RegExp('function ' + n + '\\s*\\(').test(app));
   t.check(missing.length === 0,
     `every function this file stubs really exists in the app${missing.length ? ' — missing: ' + missing.join(', ') : ''}`);

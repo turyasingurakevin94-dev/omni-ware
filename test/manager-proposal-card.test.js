@@ -99,4 +99,15 @@ const s = compileScope([
   t.check((s.mgrScoreSlotsHTML(5).match(/mgr-pp-slot-on/g) || []).length === 2, 'never more than the two a week may carry');
 }
 
+/* ---------- an aim below what the shop already did says why ---------- */
+{
+  const low = s.mgrProposalHTML({ id: 9, metric: 'gross_profit', label: 'Gross profit', aim: 1000000, date: TODAY, why: 'Last week had one unusual sale to Kato that will not repeat' });
+  t.check(/class="mgr-pp-back"/.test(low) && /Aims 124,990 below last week\./.test(low) && /will not repeat/.test(low) && !/<details class="mgr-pp-why"/.test(low),
+    'an aim below what the shop already did leads with how far below, and the Manager\'s reason, out of its fold');
+  const bare = s.mgrProposalHTML({ id: 10, metric: 'gross_profit', label: 'Gross profit', aim: 1000000, date: TODAY });
+  t.check(/gave no reason for aiming lower/.test(bare), 'and a missing reason is said to be missing');
+  const up = s.mgrProposalHTML({ id: 11, metric: 'gross_profit', label: 'Gross profit', aim: 1400000, date: TODAY, why: 'w' });
+  t.check(!/mgr-pp-back/.test(up) && /<details class="mgr-pp-why"/.test(up), 'an aim above it keeps its argument folded as before');
+}
+
 t.done();

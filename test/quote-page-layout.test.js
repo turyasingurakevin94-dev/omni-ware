@@ -372,7 +372,7 @@ const src = read('index.html');
      also names the unit it counts in. "Each" when the quantity is typed
      loose, "per Ctn" when it is typed in cartons -- the box, the card
      above it and the line it writes all count in the same unit. */
-  t.check(/<label>Sell price \$\{chosenIsPack \? `per \$\{esc\(packUnit\)\}` : 'each'\} \(UGX\)<\/label>/.test(src),
+  t.check(/<label class=\"q-ip-l\" for=\"ip_price\">Sell \$\{chosenIsPack \? `per \$\{esc\(packUnit\)\}` : 'each'\}<\/label>/.test(src),
     'the one price field names itself the SELL price — sell and buy kept trading clothes');
   t.check(/title="What the client pays per \$\{esc\(chosenUnit\|\|'unit'\)\} — the buy cost is recorded automatically/.test(src),
     'and its tooltip says where the buy cost comes from, so nobody types a cost into it');

@@ -110,26 +110,22 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
      as pure profit. The figure is still profit and still there. */
   t.check(/You keep\$\{chargesTotal > 0 \|\| creditCharge > 0 \? ' on the items' : ''\}<\/div>[\s\S]{0,200}?\$\{fmtUGX\(profit\)\}/.test(items),
     'and so is what is left over, said to be about the items once it is only about them');
-  /* A rule between the client's columns and the shop's, so no cost
-     figure sits in the run of client figures. */
-  /* The table is the layer's .ow-tbl now (a grid, not a <table>); the
-     divider is the same rule on the same class, carried through the
-     header, every row and the foot. */
-  t.check(/<div class="ow-tbl-c q-shop-first">Supplier<\/div>/.test(items),
-    'the shop’s columns start behind a divider');
-  t.check(/\.q-doc \.q-shop-first\{[\s\S]{0,120}?border-left:/.test(src),
-    'which is a real rule, not just a class name');
-  t.check(/<div class="ow-tbl-c q-shop-first" data-l="Supplier">\$\{supplierPickerHTML\}<\/div>/.test(items),
-    'and every row honours it');
-  /* Back to three. The foot briefly carried "Items" and "Charges" above
-     the client's figure, from when the charges lived in a block BELOW the
-     foot and the jump between the two had to be explained; each charge is
-     now a row directly above these, so those two restated the screen. What
-     is pinned is not the number but that EVERY foot row carries the
-     divider, so the rule runs the length of the document. */
+  /* The divider between the client's columns and the shop's is gone:
+     the desk lays a line out in the order it is worked -- item, who from,
+     how many, Buy each, Price each, margin, line total -- and what keeps
+     a cost from being read as a price is now its own name beside the
+     price rather than a rule between them. The cell still wears
+     .q-shop-first, and the foot still carries its three rows. */
+  t.check(/<div class="ow-tbl-c q-shop-first">Buying from<\/div>/.test(items)
+    && /<div class="ow-tbl-n">Buy each<\/div>/.test(items),
+    'the shop’s figures are named as the shop’s: Buying from, Buy each');
+  t.check(/\.q-doc \.ow-tbl-h > :nth-child\(7\),\.q-doc \.q-line > :nth-child\(7\)\{order:5;\}/.test(src)
+    && /\.q-doc \.ow-tbl-h > :nth-child\(4\),\.q-doc \.q-line > :nth-child\(4\)\{order:6;\}/.test(src),
+    'and on the desk Buy each sits directly before Price each, so the two are read as a pair');
+  t.check(/<div class="ow-tbl-c q-shop-first" data-l="Buying from">\$\{supplierPickerHTML\}<\/div>/.test(items),
+    'every row carries the supplier under the same name');
   const footRows = (items.match(/<div class="ow-tbl-f q-foot/g) || []).length;
-  t.check(footRows === 3 && (items.match(/<div class="q-foot-x q-shop-first"><\/div>/g) || []).length === footRows,
-    `every row of the foot carries the divider, so the rule runs the length of the document (${footRows})`);
+  t.check(footRows === 3, `the foot is three rows (${footRows})`);
 
   // The supplier copy is the shop's own document and must keep the cost.
   t.check(/it\.price/.test(supplierPrint) && !/quoteItemSellPrice/.test(supplierPrint),
@@ -223,7 +219,7 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
     'there is no second template for the phone');
   t.check(/<div data-l="Line total" title="What this line adds to the client's bill" class="ow-tbl-n q-line-total price">\$\{fmtUGX\(lineSell\)\}/.test(items),
     'the one row carries the client’s line total under its column name, which is the phone’s label');
-  ['Qty', 'Price each', 'Supplier', 'Buy @', 'Margin'].forEach((l) => {
+  ['Qty', 'Price each', 'Buying from', 'Buy each', 'Margin'].forEach((l) => {
     t.check(items.includes(`data-l="${l}"`), `and the ${l} cell is labelled for the card`);
   });
   t.check(!/fmtUGX\(lineCost\)/.test(items), 'and the cost is never printed on a line');
