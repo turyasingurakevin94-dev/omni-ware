@@ -242,14 +242,50 @@ const reset = () => { data.stock = {}; data.stockLots = {}; };
   t.check(/at what you paid/.test(render) && /of \$\{all\.lines\} on file/.test(render),
     'and both figures say which of the two they are');
 
-  /* NO TILE EVER READS 0. Four figures saying nothing happened fill a
-     healthy screen with noise and make a good shelf look like a broken
-     app, so a count that would be zero is replaced by the fact that
-     makes it good news -- never simply dropped, which would leave the
-     strip a different shape on a good day. */
-  t.check(/else tiles\.push\(mt\('Costed'/.test(render)
-       && /else if\(withFloor\) tiles\.push\(mt\('With a floor set'/.test(render),
-    'a count that would be zero is replaced by the reading that makes it good news');
+  /* THE TILES ARE A BAR NOW, and this is the third reversal on this
+     strip. It was checked as `else tiles.push(mt('Costed'` and
+     `else if(withFloor) tiles.push(mt('With a floor set'`, under the
+     rule "no tile ever reads 0 -- a count that would be zero is
+     replaced by the fact that makes it good news, never simply dropped,
+     which would leave the strip a different shape on a good day."
+
+     WHAT THAT MEANT: four bare numbers, and a nought among them reads
+     as a broken app. Swapping the nought for its good-news reading kept
+     four tiles on screen every day.
+
+     WHY IT STOPPED BEING TRUE: the complaint is no longer about noughts.
+     "3 below their floor" and "1 valued by nothing" were counts with
+     nothing to measure them by -- three of how many? -- said a second
+     time by the amber repair line under them and a third by the
+     sentence under the search. The owner asked for the shelf's state to
+     be SHOWN rather than listed. Every line on file is exactly one of
+     four states, so the shelf is one bar whose segments add up to it,
+     and a good day is not "a different shape": it is a bar that is all
+     one colour, which is the good news drawn.
+
+     WHAT THE NEW ASSERTIONS MEAN: a state with no lines is not drawn --
+     the old rule's intent, no nought on screen -- and every line is
+     counted in exactly one state, with a precedence rather than a
+     guess, so the segments can never add up to more than the shelf. */
+  t.check(/const segs = INV_HEALTH\.filter\(h=> counts\[h\.key\] > 0\);/.test(render),
+    'a state with no lines in it is not drawn, so the band never shows a nought');
+  t.check(/allLines\.forEach\(l=>\{ const k = invHealthOf\(l\); counts\[k\] = \(counts\[k\] \|\| 0\) \+ 1; \}\);/.test(render),
+    'and every line on the WHOLE shelf is counted into exactly one state, so the bar adds up to the shelf');
+  t.check(/No line has a restock floor yet/.test(render) && /\$\{withFloor \? '' :/.test(render),
+    'the warning the zero-floors tile carried survives — a shelf with no floors is told nothing can warn it');
+  {
+    const h = compileScope([extractFunction(src, 'invHealthOf', 'index.html')], {}, ['invHealthOf']).invHealthOf;
+    eq(h({ belowFloor: true, uncosted: true, qty: 2 }), 'floor', 'under the floor wins over a missing cost — running out is what costs a sale');
+    eq(h({ belowFloor: true, uncosted: false, qty: 0 }), 'floor', 'an empty shelf WITH a floor is under it, not merely empty');
+    eq(h({ belowFloor: false, uncosted: true, qty: 5 }), 'nocost', 'stock nobody costed is its own state');
+    eq(h({ belowFloor: false, uncosted: false, qty: 0 }), 'empty', 'nothing on the shelf and no floor is empty');
+    eq(h({ belowFloor: false, uncosted: false, qty: 5 }), 'ok', 'and everything else is healthy');
+  }
+  /* The bar is the filter, and pressing a state must be able to list
+     empty lines -- so while one is pressed, "hide no stock" steps aside
+     rather than emptying the very list that was asked for. */
+  t.check(/checked && !invHealth;/.test(render) && /if\(invHealth\) lines = lines\.filter\(l=> invHealthOf\(l\) === invHealth\);/.test(render),
+    'a pressed state is the filter, and hide-no-stock gives way to it');
 
   // Every option offered is one the sort understands.
   const sorts = (/const INVENTORY_SORTS = \[([\s\S]*?)\];/.exec(code) || ['', ''])[1];
