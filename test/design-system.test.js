@@ -681,8 +681,18 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'sc-avatar', 'sc-title', 'sc-name', 'sc-stats', 'sc-stat', 'chase-row'],
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp'],
       renders: 'renderConsignment',
-      rendersUses: ['ow-strip', 'ow-mt', 'ow-grid', 'ow-side', 'ow-pan', 'ow-pan-h', 'ow-pan-t',
-                    'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-why', 'ow-q-note', 'ow-q-a',
+      /* 'ow-strip', 'ow-mt' and 'ow-q-why' left this list with the
+         picture redesign, and on purpose. The strip's four equal tiles
+         became the hero (owed against cash, two bars on one scale) and
+         the four-place flow that doubles as the queue's filter; the
+         why-paragraph under every open row became the row's own bar and
+         the steps drawn beside Settle. What the list still protects is
+         unchanged: the screen is built on the layer's queue, table,
+         panels and side rows, not on a private family of its own. The
+         hero keeps the strip's label face (.ow-mt-l) so the headline
+         reads as the same kind of thing it does on every other screen. */
+      rendersUses: ['ow-mt-l', 'ow-grid', 'ow-side', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n',
+                    'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-note', 'ow-q-a',
                     'ow-q-un', 'ow-cp', 'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-n', 'ow-tbl-a',
                     'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-mini'],
     },

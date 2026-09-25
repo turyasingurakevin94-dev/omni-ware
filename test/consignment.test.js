@@ -611,16 +611,27 @@ if (scope) {
      hid two of its columns -- a reflow, not a second design. */
   t.check(/class="ow-q-r ow-qtog"/.test(render) && /class="ow-q-card ow-qtog"/.test(render),
     'and the desk row and the phone card come from that one call');
-  t.check(/class="ow-strip"/.test(render) && !/class="sum-strip"/.test(render),
-    'the figures the screen exists for are in the strip every other screen uses for them');
-  /* The four figures of one consignment are still together and still
-     comparable -- they are the strip's four tiles now rather than a
-     private stat strip inside each card, so they are read once for the
-     whole screen instead of once per consignor. */
-  t.check(/'Owed to consignors'/.test(render) && /'Of it, already billed'/.test(render)
-    && /'Their goods here'/.test(render) && /'Consignors'/.test(render)
+  /* THE STRIP BECAME A PICTURE, and this pair of assertions moved with
+     it. They used to ask for the layer's four-tile strip -- owed, of it
+     billed, goods here, consignor count -- which said the holding as
+     four equal numbers and left the one answer the owner wanted (could
+     I pay them all today?) to a sentence at the foot of the rail.
+
+     What they protect is the same: the figures the screen exists for
+     are read ONCE, for the whole screen, where they can be compared,
+     and never as a private stat strip per consignor. They are now the
+     hero (the debt and the cash as two bars on one scale) and the four
+     places a consignor's money can be -- which partition the holding
+     exactly, where the old tiles overlapped ("of it, already billed"
+     was part of the figure beside it). */
+  t.check(/class="cons-hero"/.test(render) && /class="cons-flow"/.test(render)
+    && !/class="sum-strip"/.test(render),
+    'the figures the screen exists for are drawn once, at the top, for the whole screen');
+  t.check(/Owed to consignors/.test(render)
+    && /label: 'On shelf'/.test(render) && /label: 'Sold, not billed'/.test(render)
+    && /label: 'Billed, unpaid'/.test(render) && /label: 'Paid'/.test(render)
     && !/class="sc-stats"/.test(render),
-    'and the four that make up the whole holding sit together where they can be compared');
+    'and the four places that make up the whole holding sit together where they can be compared');
   t.check(/class="ow-tbl cons-tbl"/.test(render) && !/cons-goods-table/.test(render)
     && !/class="buy-row"/.test(render),
     'their goods are the layer\'s table, so the figures line up down the column');
@@ -636,7 +647,7 @@ if (scope) {
      with figures that mean nothing and make a quiet screen look like a
      broken one, so the count lives in the panel head instead. */
   const emptyArm = render.slice(render.indexOf('if(!rows.length)'), render.indexOf('GOODS OF THEIRS'));
-  t.check(!/ow-strip/.test(emptyArm) && /ow-pan-n">none/.test(emptyArm),
+  t.check(!/ow-strip|cons-hero|cons-flow/.test(emptyArm) && /ow-pan-n">none/.test(emptyArm),
     'and shows no strip of zeros when there is nothing to count');
 
   const css = (sel) => (new RegExp(`\\${sel}\\{([^}]*)\\}`).exec(src) || ['', ''])[1];
@@ -791,7 +802,9 @@ if (scope) {
   // it exists to explain.
   t.check(!/of your cash is theirs/.test(render.replace(/\/\*[\s\S]*?\*\//g, '')),
     'the screen no longer calls a liability cash');
-  t.check(/'Owed to consignors'/.test(render), 'it calls it what it is');
+  /* The label is markup in the hero now rather than a tile() argument,
+     so the quotes went; the claim did not. */
+  t.check(/>Owed to consignors</.test(render), 'it calls it what it is');
   /* The same three derived figures, moved from a paragraph under the
      strip into the rail's own rows, where they read as the arithmetic
      behind the headline rather than as a caveat trailing it. The
@@ -803,7 +816,11 @@ if (scope) {
     && /const cashHeld = cashOnHandByAccount\(\)\.total;/.test(render)
     && /you would be \$\{esc\(f\(short\)\)\} short/.test(render),
     'and answers the question that sentence was reaching for, out of figures it can actually derive');
-  t.check(/'Of it, already billed'/.test(render) && /still to pay, on their bill/.test(render),
+  /* 'Of it, already billed' was a tile; billed-and-unpaid is one of the
+     four places now, and paid is another, so the two facts are two
+     places on the same flow rather than a tile and a footnote. */
+  t.check(/label: 'Billed, unpaid'/.test(render) && /label: 'Paid'/.test(render)
+    && /still to pay, on their bill/.test(render),
     'billed and paid are two facts, and the screen carries both');
   /* And the headline is the whole debt, not the half of it that has no
      bill yet. It read "0 UGX · nothing owed" the moment Settle was
