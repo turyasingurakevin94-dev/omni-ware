@@ -44,15 +44,21 @@ const scope = compileScope([
   extractDeclaration(src, 'LIST_PAGE_SIZES', 'index.html'),
   extractDeclaration(src, 'LIST_PAGE_DEFAULT', 'index.html'),
   extractDeclaration(src, 'listPageExpanded', 'index.html'),
+  extractDeclaration(src, 'LIST_PAGED', 'index.html'),
+  extractDeclaration(src, 'listPageNum', 'index.html'),
+  extractDeclaration(src, 'listPageSeen', 'index.html'),
   extractFunction(src, 'listPageSize', 'index.html'),
+  extractFunction(src, 'listPageAt', 'index.html'),
+  extractFunction(src, 'listPagerHTML', 'index.html'),
   extractFunction(src, 'listPageSlice', 'index.html'),
   extractFunction(src, 'listMoreButtonHTML', 'index.html'),
   'function __expand(id, v){ listPageExpanded[id] = v; }',
   'function __sizes(){ return LIST_PAGE_SIZES; }',
   'function __default(){ return LIST_PAGE_DEFAULT; }',
+  'function __goto(id, n){ listPageNum[id] = n; }',
 ], {
   esc: (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'),
-}, ['listPageSize', 'listPageSlice', 'listMoreButtonHTML', '__expand', '__sizes', '__default']);
+}, ['listPageSize', 'listPageSlice', 'listMoreButtonHTML', '__expand', '__sizes', '__default', '__goto']);
 
 const { listPageSize, listPageSlice, listMoreButtonHTML, __expand } = scope;
 const rows = (n) => Array.from({ length: n }, (_, i) => ({ i }));
@@ -114,6 +120,52 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     'nor does a short one');
   t.check(listMoreButtonHTML('prices', 25, 'price entries') !== '',
     'one row over the page is enough to offer the rest');
+}
+
+/* ---------- 2b. the invoice registers turn pages --------------------- */
+/*
+ * The owner asked for next-page paging on Invoices: step through last
+ * month and the one before a page at a time, rather than one long list
+ * or nothing. These registers take a PAGE, not the first page; the
+ * control is Previous / numbers / Next, and it says which rows are on
+ * screen out of how many.
+ */
+{
+  const { __goto } = scope;
+  const size = listPageSize('invoices');
+  const list = Array.from({ length: size * 3 + 5 }, (_, i) => ({ tag: 'i' + i }));
+  __expand('invoices', false);
+  eq(listPageSlice('invoices', list)[0], list[0], 'a new list opens on its first page');
+  __goto('invoices', 2);
+  const p2 = listPageSlice('invoices', list);
+  t.check(p2.length === size && p2[0] === list[size] && p2[size - 1] === list[2 * size - 1],
+    `page 2 is the SECOND page's rows, in order (first is ${p2[0] && p2[0].tag})`);
+  __goto('invoices', 4);
+  eq(listPageSlice('invoices', list).length, 5, 'the last page holds what is left');
+  __goto('invoices', 99);
+  eq(listPageSlice('invoices', list)[0], list[size * 3], 'a page past the end lands on the last page, not an empty one');
+
+  __goto('invoices', 2);
+  const bar = listMoreButtonHTML('invoices', list.length, 'invoices');
+  t.check(/data-list-page="invoices" data-page="1"[^>]*aria-label="Previous page"/.test(bar), 'Previous goes back one page');
+  t.check(/data-list-page="invoices" data-page="3"[^>]*aria-label="Next page"/.test(bar), 'Next goes on one page');
+  t.check(/aria-current="page"[^>]*>2</.test(bar), 'the page you are on is marked as current');
+  t.check(new RegExp(`${size + 1}&ndash;${2 * size}</b> of <b class="ow-fig">${list.length}`).test(bar),
+    'and it says which rows are on screen out of how many matched');
+  t.check(/data-list-more="invoices"[^>]*>Show all</.test(bar), 'Show all is still there');
+  __goto('invoices', 1);
+  t.check(/data-page="0" disabled aria-label="Previous page"/.test(listMoreButtonHTML('invoices', list.length, 'invoices')),
+    'on the first page there is no going back');
+
+  /* A different list is a new list: its page 3 is not this one's. */
+  __goto('invoices', 3);
+  listPageSlice('invoices', list);
+  eq(listPageSlice('invoices', list.slice(0, size * 2))[0], list[0],
+    'a search that changes the row count starts again on page 1');
+
+  eq(listMoreButtonHTML('invoices', size, 'invoices'), '', 'a register that fits one page has no pager');
+  t.check(/Show all 276 price entries/.test(listMoreButtonHTML('prices', 276, 'price entries')),
+    'and the other lists keep their plain Show all');
 }
 
 /* ---------- 3. WHERE the slice is taken ------------------------------- */
