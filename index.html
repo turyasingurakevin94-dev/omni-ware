@@ -9077,6 +9077,32 @@
   .st-ladder-bar i{display:block;height:100%;border-radius:var(--ow-r-pill);}
   .st-ladder-w{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
 
+  /* The cash flow's bridge: start, the three sections, end. Columns on
+     one shared scale; a step floats between the level before it and the
+     level after, and the start and end stand on the axis. */
+  .st-bridge{display:flex;gap:var(--ow-sp-8);padding:var(--ow-sp-12) var(--ow-sp-12) var(--ow-sp-4);}
+  .st-bridge-c{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;
+    gap:var(--ow-sp-4);text-align:center;}
+  .st-bridge-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-size:var(--ow-t-12);
+    font-weight:var(--ow-fw-600);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    white-space:nowrap;color:var(--ow-ink-900);}
+  .st-bridge-v.out{color:var(--ow-ink-600);}
+  .st-bridge-p{position:relative;display:block;width:100%;height:120px;
+    border-bottom:1px solid var(--ow-rule);}
+  .st-bridge-p i{position:absolute;left:12%;right:12%;display:block;background:var(--ow-steel-400);}
+  .st-bridge-p i.in{background:var(--ow-sky);}
+  .st-bridge-p i.end{background:var(--ow-steel-800);}
+  .st-bridge-p em{position:absolute;left:0;right:0;height:1px;background:var(--ow-ink-400);}
+  .st-bridge-c b{font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);
+    max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .st-bridge-s{font-size:var(--ow-t-11);color:var(--ow-ink-400);max-width:100%;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .st-cf-cap{margin:0;padding:var(--ow-sp-6) var(--ow-sp-12) 0;font-size:var(--ow-t-13);
+    font-weight:var(--ow-fw-600);color:var(--ow-ink-600);max-width:var(--ow-measure);}
+  .st-cf-cap.good{color:var(--ow-verdigris);}
+  .st-cf-cap.bad{color:var(--ow-crimson);}
+  .st-size i.in{background:var(--ow-sky);}
+
   /* How the statement counts, as chips; the sentences one tap away. */
   .st-basis{border-top:1px solid var(--ow-rule-soft);margin-top:var(--ow-sp-12);}
   .st-basis summary{list-style:none;cursor:pointer;display:flex;flex-wrap:wrap;align-items:center;
@@ -9461,6 +9487,12 @@
     .st-be-head b{font-size:var(--ow-t-20);}
     .st-be-part b{font-size:var(--ow-t-20);}
     .st-wf{padding:var(--ow-sp-12) var(--ow-sp-16) var(--ow-sp-16);}
+    /* Five columns in 358px: the names wrap rather than truncate, and
+       the grey sub-lines go -- the table under the bridge says the same. */
+    .st-bridge{gap:var(--ow-sp-4);padding:var(--ow-sp-12) var(--ow-sp-16) var(--ow-sp-4);}
+    .st-bridge-c b{white-space:normal;overflow:visible;line-height:var(--ow-lh-tight);}
+    .st-bridge-s{display:none;}
+    .st-cf-cap{padding:var(--ow-sp-8) var(--ow-sp-16) 0;font-size:var(--ow-t-14);}
     .st-wf-r{grid-template-columns:minmax(0,108px) minmax(0,1fr) auto 36px;column-gap:var(--ow-sp-8);min-height:32px;}
     .st-wf-l{font-size:var(--ow-t-14);}
     .st-wf-v{font-size:var(--ow-t-13);}
@@ -86970,7 +87002,7 @@ function stLine(label, value, prior, opts){
   return `<tr class="${o.cls||''}${drillable?' st-drillable':''}${open?' st-drilled':''}"${
       drillable?` data-st-drill="${esc(o.drill)}" tabindex="0" role="button" aria-expanded="${open}" title="Show the records behind this figure"`:''}>
     <td class="st-l">${esc(label)}${drillable?'<span class="st-drill-aff" aria-hidden="true">&#8250;</span>':''}${
-      o.size!=null ? `<span class="st-size" aria-hidden="true" title="${esc(o.size.toFixed(1))} of every 100 sold"><i class="${o.sizeKind||'cost'}" style="width:${Math.max(0.5, Math.min(100, o.size)).toFixed(2)}%"></i></span>` : ''}${
+      o.size!=null ? `<span class="st-size" aria-hidden="true" title="${esc(o.size.toFixed(1))} of every 100 sold"><i class="${o.sizeKind||'cost'}" style="width:${(o.size > 0.05 ? Math.max(0.5, Math.min(100, o.size)) : 0).toFixed(2)}%"></i></span>` : ''}${
       o.hint?`<span class="st-hint">${esc(o.hint)}</span>`:''}</td>
     <td class="st-v">${fmtUGX(stZero(value))}${o.delta&&prior!=null?stDeltaChip(value,prior,o.higherIsBetter):''}</td>
     ${prior!=null?`<td class="st-p">${fmtUGX(stZero(prior))}</td>`:'<td class="st-p"></td>'}
@@ -89163,41 +89195,102 @@ function stBalanceSheet(ctx){
   </section>`;
 }
 
-function stCashFlow({from, to, cf, prevCf}){
+/* THE TILL, BRIDGED.
+
+   A cash flow statement is an explanation of one difference: the money
+   there was at the start and the money there is at the end. The table
+   gives the pieces and leaves the reader to add them; the bridge draws
+   the addition. The start and end are the same cash the balance sheet
+   carries -- the end is the sheet's cash, the start that less everything
+   that moved -- so the bridge cannot close anywhere but on the figure
+   the balance sheet prints.
+
+   Money coming in is the Money door's sky, money going out the neutral
+   grey: which way it went is identity, not a verdict. The verdict is the
+   caption under it, in words. */
+function stCashBridgeHTML(cf, bs, from){
+  const end = Number(bs.cash) || 0;
+  const startV = end - (Number(cf.netMovement) || 0);
+  const steps = [
+    {l:'At the start', s: from, kind:'end', v: startV},
+    {l:'Trading', s:'selling and buying', v: cf.operating},
+    {l:'Investing', s:'equipment', v: cf.investing},
+    {l:'Financing', s:'loans and the owner', v: cf.financing},
+    Math.abs(cf.unclassified) >= 1 ? {l:'Not classified', s:'none of the above', v: cf.unclassified} : null,
+    {l:'At the end', s: bs.asOf, kind:'end', v: end},
+  ].filter(Boolean);
+  let level = 0;
+  steps.forEach(x=>{
+    x.v = Number(x.v) || 0;
+    if(x.kind === 'end'){ x.a = 0; x.b = x.v; level = x.v; }
+    else { x.a = level; x.b = level + x.v; level = x.b; }
+  });
+  const ends = steps.flatMap(x=> [x.a, x.b]);
+  const lo = Math.min(0, ...ends), hi = Math.max(0, ...ends);
+  if(hi - lo < 1) return '';
+  const y = (v)=> (v - lo) / (hi - lo) * 100;
+  const signed = (v)=> (v > 0 ? '+' : '') + stShort(v);
+  return `<div class="st-bridge" role="img" aria-label="${esc(`Cash ${fmtUGX(Math.round(startV))} at the start, ${fmtUGX(Math.round(end))} at the end`)}">
+    ${steps.map(x=>{
+      const bottom = y(Math.min(x.a, x.b)), height = Math.max(1.5, y(Math.max(x.a, x.b)) - bottom);
+      const cls = x.kind === 'end' ? 'end' : (x.v >= 0 ? 'in' : 'out');
+      return `<div class="st-bridge-c" title="${esc(x.l)}: ${esc(fmtUGX(Math.round(x.v)))}">
+        <span class="st-bridge-v ${cls}">${esc(x.kind === 'end' ? stShort(x.v) : signed(x.v))}</span>
+        <span class="st-bridge-p">${lo < 0 ? `<em style="bottom:${y(0).toFixed(2)}%"></em>` : ''}<i class="${cls}" style="bottom:${bottom.toFixed(2)}%;height:${height.toFixed(2)}%"></i></span>
+        <b>${esc(x.l)}</b><span class="st-bridge-s">${esc(x.s)}</span>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function stCashFlow({from, to, cf, prevCf, bs}){
+  /* EVERY LINE AS A SHARE OF WHAT CAME IN. "Of every 100 shillings that
+     came into the till, 77 went on stock" is the reading a shopkeeper
+     does in their head from this table; the bar under each line does it
+     for them. Money in is sky, money out grey. Nothing is drawn when
+     nothing came in, since a share of nothing is not a size. */
+  const came = [cf.tradingIn, cf.debtCollected, cf.cashFound, cf.assetSaleIn, cf.borrowed, cf.ownerIn]
+    .reduce((n, v)=> n + Math.max(0, Number(v) || 0), 0);
+  const sz = (v, kind)=> came > 0 ? {size: Math.abs(Number(v) || 0) / came * 100, sizeKind: kind || 'cost'} : {};
+  const verdict = cf.operating < 0 && cf.financing > 0
+    ? {cls:'bad', t:'Trading consumed cash this period and borrowing covered it — worth watching if it repeats.'}
+    : (cf.operating > 0 ? {cls:'good', t:'Trading produced cash this period.'} : {cls:'', t:'Trading neither produced nor consumed cash.'});
   return `<section class="st-doc st-doc-wide">
     <header class="st-doc-head"><h3>Cash flow</h3>
       <span class="st-doc-when">${esc(from)} to ${esc(to)}</span></header>
+    ${stCashBridgeHTML(cf, bs, from)}
+    <p class="st-cf-cap ${verdict.cls}">${esc(verdict.t)}</p>
     <table class="st-table">
       ${stHead('This period', 'Period before')}
       <tr class="st-section"><td colspan="3">Trading</td></tr>
-      ${stLine('Received from sales', cf.tradingIn, prevCf.tradingIn, {drill:'cf:tradingin'})}
-      ${stLine('Collected from debtors', cf.debtCollected, prevCf.debtCollected, {hint:'older sales being settled', drill:'cf:debtcollected'})}
+      ${stLine('Received from sales', cf.tradingIn, prevCf.tradingIn, {...sz(cf.tradingIn, 'in'), drill:'cf:tradingin'})}
+      ${stLine('Collected from debtors', cf.debtCollected, prevCf.debtCollected, {...sz(cf.debtCollected, 'in'), hint:'older sales being settled', drill:'cf:debtcollected'})}
       ${cf.cashFound || prevCf.cashFound
-        ? stLine('Found on the count', cf.cashFound, prevCf.cashFound, {hint:'more in the drawer than the book said', drill:'cf:cashfound'})
+        ? stLine('Found on the count', cf.cashFound, prevCf.cashFound, {...sz(cf.cashFound, 'in'), hint:'more in the drawer than the book said', drill:'cf:cashfound'})
         : ''}
-      ${stLine('Spent on stock and suppliers', -cf.stockOut, -prevCf.stockOut, {drill:'cf:stockout'})}
-      ${stLine('Running costs paid', -cf.operatingOut, -prevCf.operatingOut, {drill:'cf:opexpaid'})}
+      ${stLine('Spent on stock and suppliers', -cf.stockOut, -prevCf.stockOut, {...sz(cf.stockOut), drill:'cf:stockout'})}
+      ${stLine('Running costs paid', -cf.operatingOut, -prevCf.operatingOut, {...sz(cf.operatingOut), drill:'cf:opexpaid'})}
       ${stLine('From trading', cf.operating, prevCf.operating, {cls:'st-total', delta:true, higherIsBetter:true})}
       <tr class="st-gap"><td colspan="3"></td></tr>
       <tr class="st-section"><td colspan="3">Investing</td></tr>
-      ${stLine('Equipment bought', -cf.equipmentOut, -prevCf.equipmentOut, {hint:'from the asset register', drill:'cf:equipment'})}
-      ${stLine('Equipment sold', cf.assetSaleIn, prevCf.assetSaleIn, {drill:'cf:assetsale'})}
+      ${stLine('Equipment bought', -cf.equipmentOut, -prevCf.equipmentOut, {...sz(cf.equipmentOut), hint:'from the asset register', drill:'cf:equipment'})}
+      ${stLine('Equipment sold', cf.assetSaleIn, prevCf.assetSaleIn, {...sz(cf.assetSaleIn, 'in'), drill:'cf:assetsale'})}
       ${stLine('From investing', cf.investing, prevCf.investing, {cls:'st-total'})}
       <tr class="st-gap"><td colspan="3"></td></tr>
       <tr class="st-section"><td colspan="3">Financing</td></tr>
-      ${stLine('Borrowed', cf.borrowed, prevCf.borrowed, {drill:'cf:borrowed'})}
-      ${stLine('Put in by the owner', cf.ownerIn, prevCf.ownerIn, {drill:'cf:ownerin'})}
-      ${(cf.ownerOut||prevCf.ownerOut) ? stLine('Taken out by the owner', -cf.ownerOut, -prevCf.ownerOut, {drill:'cf:ownerout'}) : ''}
-      ${stLine('Loan repayments', -cf.repaid, -prevCf.repaid, {drill:'cf:repaid'})}
+      ${stLine('Borrowed', cf.borrowed, prevCf.borrowed, {...sz(cf.borrowed, 'in'), drill:'cf:borrowed'})}
+      ${stLine('Put in by the owner', cf.ownerIn, prevCf.ownerIn, {...sz(cf.ownerIn, 'in'), drill:'cf:ownerin'})}
+      ${(cf.ownerOut||prevCf.ownerOut) ? stLine('Taken out by the owner', -cf.ownerOut, -prevCf.ownerOut, {...sz(cf.ownerOut), drill:'cf:ownerout'}) : ''}
+      ${stLine('Loan repayments', -cf.repaid, -prevCf.repaid, {...sz(cf.repaid), drill:'cf:repaid'})}
       ${stLine('From financing', cf.financing, prevCf.financing, {cls:'st-total'})}
       <tr class="st-gap"><td colspan="3"></td></tr>
       ${Math.abs(cf.unclassified)>=1 ? stLine('Not classified', cf.unclassified, null, {hint:'movement that fell into none of the above', drill:'cf:unclassified'}) : ''}
       ${stLine('Money in the till moved by', cf.netMovement, prevCf.netMovement, {cls:'st-grand', delta:true, higherIsBetter:true})}
     </table>
-    <p class="st-read">${cf.operating < 0 && cf.financing > 0
-      ? 'Trading consumed cash this period and borrowing covered it — worth watching if it repeats.'
-      : (cf.operating > 0 ? 'Trading produced cash this period.' : 'Trading neither produced nor consumed cash.')}
-      Equipment shows separately because the asset register records the payment itself — anything bought before you started using this app, or paid for outside it, will not appear here.</p>
+    ${stBasisHTML([
+      {k:'Counted on the day money moved', t:'Every line is money that moved in or out of the shop’s accounts in this period, whatever it was for — which is why it differs from the profit and loss, where a sale counts when it is invoiced.'},
+      {k:'Equipment from the asset register', t:'Equipment shows separately because the asset register records the payment itself — anything bought before you started using this app, or paid for outside it, will not appear here.'},
+    ])}
   </section>`;
 }
 
