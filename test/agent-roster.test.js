@@ -342,4 +342,50 @@ if (scope) {
     'and the email, which nobody was deciding anything from, is off the card');
 }
 
+/* ---------- 10. the screen, drawn ------------------------------------
+   The figures above are unchanged; these are the shapes the desktop now
+   gives them. Each shape is drawn from the same orders the figure beside
+   it is counted from. */
+{
+  const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const draw = compileScope([
+    ...NAMES.map((n) => extractFunction(src, n, 'index.html')),
+    ...['agentWeeks', 'agentSparkHTML', 'agentActivityHTML', 'agentAgeBarHTML', 'agentSparkTop'].map((n) => extractFunction(src, n, 'index.html')),
+    extractDeclaration(src, 'AG_WEEKS', 'index.html'),
+  ], { data, todayISO: () => TODAY, esc, agingDaysLabel: (d) => d + ' days' },
+  ['agentWeeks', 'agentSparkHTML', 'agentActivityHTML', 'agentAgeBarHTML', 'agentSparkTop']);
+  data.agents = [agent('AG001')];
+  data.savedQuotes = [
+    order(1, 'AG001', 1200000, 1350000, 1200000, 'completed', '2026-08-04'),   // this week
+    order(2, 'AG001', 800000, 900000, 800000, 'completed', '2026-07-20'),      // two weeks back
+    order(3, 'AG001', 450000, 500000, 0, 'preparing', '2026-08-03'),           // this week, not landed
+    order(4, 'AG001', 999999, 999999, 0, 'completed', '2026-01-01'),           // older than the window
+  ];
+  const w = draw.agentWeeks(data.agents[0]);
+  eq(w.length, 12, 'twelve weeks, newest last');
+  eq(w[11].rev, 1200000, 'a week brings in only what completed in it');
+  eq(w[11].orders, 2, 'while any order placed in it counts as selling');
+  eq(w[9].rev, 800000, 'and an order lands in the week it was invoiced');
+  eq(w.reduce((n, x) => n + x.rev, 0), 2000000, 'nothing older than the window is drawn in it');
+  eq(draw.agentSparkTop(), 1200000, 'the roster shares one scale, so a taller bar is more money anywhere on the screen');
+  const act = draw.agentActivityHTML(w);
+  t.check(/Ordered in 2 of the last 12 weeks/.test(act) && (act.match(/agv-on/g) || []).length === 2,
+    'the weeks with an order are filled, and the count is said for a screen reader');
+  const bar = draw.agentAgeBarHTML(30, 'ow-bad');
+  t.check(/width:50%/.test(bar) && /class="ow-bad"/.test(bar), 'a debt 30 days old reaches the 30-day line, coloured like its figure');
+  t.check(/width:100%/.test(draw.agentAgeBarHTML(200, 'ow-bad')), 'and a very old one fills the bar rather than running out of it');
+  eq(draw.agentAgeBarHTML(null, 'ow-bad'), '', 'no age draws no bar, never a bar of nought');
+
+  const pos = (/function agentRosterPositionHTML\(\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+  t.check(/The claims could not be read, so this is missing rather than nothing/.test(pos) && /Still reading the claims/.test(pos),
+    'the balance still says when what you owe could not be read, rather than drawing it as nothing');
+  t.check(/const claimsRead = commissionClaims !== null && !commissionClaimsError;/.test(pos) && /claimsRead \? wait\.total : 0/.test(pos),
+    'and draws no "you owe them" side, and no net, until the claims are read');
+  const q = (/function agentAttentionRows\(\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+  t.check((q.match(/viz:/g) || []).length === 5, 'every kind of queue row draws its reason');
+  const rows = (/function renderAgents\(filter=''\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+  t.check(/headInvite\.style\.display = 'none'/.test(rows) && /id="ag_first_invite"/.test(src) && /headInvite\.click\(\)/.test(rows),
+    'with nobody invited, the card carries the one accent and hands the tap to the same invite, so the screen still has exactly one');
+}
+
 process.exit(t.done() ? 1 : 0);
