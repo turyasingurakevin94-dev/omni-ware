@@ -843,8 +843,19 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'pr-gross', 'pr-accrued', 'row-actions', 'an-scroll', 'pi-table-wrap', 'price'],
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-py', 'ow-py-ms',
              'ow-grid', 'ow-side', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-py-rent'],
-      renders: ['renderPayrollPosition', 'renderPayrollDues', 'renderPayrollRail', 'payrollGroups'],
-      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s',
+      renders: ['renderPayrollPosition', 'renderPayrollDues', 'renderPayrollRail', 'payrollGroups',
+                'payrollMonthTrackHTML', 'payrollStripHTML', 'payrollDayGridHTML'],
+      /* No .ow-strip here any more, and that is a decision, not a patch.
+         The strip was four tiles -- in hand, still to pay, late, next due
+         -- that left the owner to do the one sum the screen exists for.
+         It is replaced by the RUNWAY (.ow-py-rw): the same figures, plus
+         the bar that does the sum, today's cash marked on it, and the
+         month's days (.ow-py-mt) under it. Each row carries its own month
+         as ticks (.ow-py-ds), a daily month is counted by tapping
+         (.ow-py-dg), and the rail's derived figures became bars
+         (.ow-py-mx). Holding this list to .ow-strip would have kept the
+         tiles alive beside the bar that answers them. */
+      rendersUses: ['ow-py-rw', 'ow-py-mt', 'ow-py-ds', 'ow-py-dg', 'ow-py-mx', 'ow-u',
                     'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n',
                     'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t', 'ow-q-who', 'ow-q-v',
                     'ow-q-f', 'ow-q-b', 'ow-q-note', 'ow-q-a', 'ow-cp',
@@ -877,32 +888,40 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        list INSIDE a lane, because it grows without bound and nothing
        leaves it, which is the layout saying the shape was wrong.
 
-       A queue banded by what needs doing, with the stage carried on the
-       row as five segments of ink. The board's own five colours went
-       with it: they were outside the palette and read as one dark green
-       at a glance (see SOURCING_STATUSES for what replaced them). The
-       archive is one folded line that opens on its search, because
-       browsing a hundred listed items is what Products is for. */
+       Then drawn rather than told. The four-tile strip became the
+       pipeline: five steps with one square per item in its state's
+       colour, and the three figures on one line under it -- so .ow-strip
+       and .ow-mt left the screen. The "Needs you" and "Somebody is on
+       it" bands became ONE list ranked by people times wait, each row
+       carrying its one next move by name (.ow-sf-need went with the
+       band, and .ow-sf-who with the avatar that stood in for a move),
+       above it a demand map of every item, and beside it who is
+       waiting as bars. The archive is still one folded line that opens
+       on its search, because browsing a hundred listed items is what
+       Products is for. */
     'sourcing': {
       retired: ['page-head', 'panel', 'qp-panel', 'sq-board-tools', 'sq-select-all-label',
                 'sq-board', 'sq-col', 'sq-card', 'sq-stepper', 'sf-card', 'sf-facts', 'sf-fact',
                 'sf-listed', 'sf-dropped', 'sf-meta-row', 'sf-days', 'sf-ask-count', 'empty'],
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp'],
       renders: ['renderSourcing', 'sourcingRowHTML', 'sourcingStageHTML', 'sourcingStripHTML',
-                'sourcingRailHTML', 'sourcingOpenBodyHTML', 'sourcingArchiveHTML', 'listedRowHTML', 'renderSourcingListedBody', 'sourcingPhotoHTML', 'sourcingThumbHTML'],
-      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s',
-                    'ow-grid', 'ow-side', 'ow-stack', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n',
+                'sourcingRailHTML', 'sourcingOpenBodyHTML', 'sourcingArchiveHTML', 'listedRowHTML', 'renderSourcingListedBody', 'sourcingPhotoHTML', 'sourcingThumbHTML',
+                'sourcingFilterHTML', 'sourcingKnownHTML', 'sourcingGaugeHTML', 'sourcingSpreadHTML', 'sourcingMapSVG'],
+      rendersUses: ['ow-grid', 'ow-side', 'ow-stack', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n',
                     'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t', 'ow-q-who', 'ow-q-v',
                     'ow-q-f', 'ow-q-b', 'ow-q-note', 'ow-q-why', 'ow-q-a', 'ow-cp',
                     'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-n', 'ow-tbl-c',
-                    'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-av', 'ow-mini', 'ow-empty',
-                    /* the seven this screen owns: the column heads, the
-                       stage as segments rather than as a colour, the
-                       band that is the one thing to do next, who is on
-                       it in the action column, and the archive's fold
-                       and its rows */
-                    'ow-sf', 'ow-sf-h', 'ow-sf-st', 'ow-sf-sg', 'ow-sf-need', 'ow-sf-who',
-                    'ow-sf-a', 'ow-sf-arc', 'ow-sf-lr', 'ow-sf-more', 'ow-sf-say', 'ow-sf-x', 'ow-sf-ph', 'ow-thumb'],
+                    'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-mini', 'ow-empty', 'ow-seg', 'ow-seg-b', 'ow-seg-n',
+                    /* what this screen owns: the column heads, the stage
+                       as segments inside an open row, the action column,
+                       the archive's fold and its rows -- and the drawn
+                       parts: the pipeline strip and its squares, the
+                       four squares of what is known, days in the step
+                       against the limit, the price spread, and who is
+                       waiting as bars */
+                    'ow-sf', 'ow-sf-h', 'ow-sf-st', 'ow-sf-sg',
+                    'ow-sf-a', 'ow-sf-arc', 'ow-sf-lr', 'ow-sf-more', 'ow-sf-say', 'ow-sf-x', 'ow-sf-ph', 'ow-thumb',
+                    'ow-sf-pl-row', 'ow-sf-sq', 'ow-sf-kn', 'ow-sf-kq', 'ow-sf-gg', 'ow-sf-sp', 'ow-sf-wr', 'ow-sf-src-b'],
     },
     /* Assets & loans. Two screens for one question: the van on Assets,
        the loan that bought the van on Loans, neither page mentioning the

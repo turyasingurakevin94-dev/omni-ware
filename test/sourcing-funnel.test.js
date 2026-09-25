@@ -205,6 +205,14 @@ const sources = [
   extractFunction(src, 'sourcingFindCustomerByName', 'index.html'),
   extractFunction(src, 'sourcingResolveAsker', 'index.html'),
   extractFunction(src, 'applyCandidateFields', 'index.html'),
+  extractFunction(src, 'sourcingUnstaffed', 'index.html'),
+  extractFunction(src, 'sourcingReadyToList', 'index.html'),
+  extractDeclaration(src, 'SOURCING_STATE_LABELS', 'index.html'),
+  extractFunction(src, 'sourcingState', 'index.html'),
+  extractFunction(src, 'sourcingFilterMatch', 'index.html'),
+  extractFunction(src, 'sourcingWaitDays', 'index.html'),
+  extractFunction(src, 'sourcingKnown', 'index.html'),
+  extractFunction(src, 'sourcingNextMove', 'index.html'),
 ];
 const S = compileScope(sources, env, [
   'sourcingPhoneKey', 'leadDistinctAskers', 'leadAskCount', 'leadFacts',
@@ -223,6 +231,7 @@ const S = compileScope(sources, env, [
   'candidateRowCount', 'listedSupplierCount', 'listedAge', 'listedLeads',
   'sourcingOutcomeSuppliers',
   'graduatePackingSeed',
+  'sourcingState', 'sourcingFilterMatch', 'sourcingWaitDays', 'sourcingKnown', 'sourcingNextMove',
 ]);
 // compileScope only hands back functions, so the cap is read from source.
 // Reading it rather than restating it means the claim below is about
@@ -2424,6 +2433,65 @@ async function main() {
     'and a stale client cannot delete the record of who asked for what');
 }
 
+
+  /* ---------- 11. the board says the next move, not just the stage ------ */
+  /* The screen was redrawn around one question per item -- what is the
+     next move -- with a demand map above it and a filter on it. Its
+     state, its filter and its move are read here from the functions the
+     screen draws with, so the map's colours, the filter's counts and the
+     button on the row cannot drift apart. */
+  {
+    const DAY = 86400000, now = Date.UTC(2026, 8, 25);
+    const saved = { staff: data.staff, limits: data.presetSourcingStageLimits, suppliers: data.suppliers };
+    data.staff = [{ id: 'S1', name: 'Grace Namuli' }];
+    data.presetSourcingStageLimits = { asked: 7, looking: 14, sourced: 10, priced: 7 };
+    data.suppliers = data.suppliers || [];
+    const priced = cand({ supplierName: 'Owino Imports', quotedPrice: 3100, packQty: 50, packUnit: 'carton' });
+    const ready = lead({ status: 'priced', assignedStaffId: 'S1', stageEnteredAt: now - 2 * DAY, candidates: [priced] });
+    const late = lead({ status: 'sourced', assignedStaffId: 'S1', stageEnteredAt: now - 12 * DAY,
+      candidates: [cand({ supplierName: 'Owino Imports', quotedPrice: 0 })] });
+    const lateNobody = lead({ status: 'looking', assignedStaffId: null, stageEnteredAt: now - 20 * DAY });
+    const nobody = lead({ status: 'asked', assignedStaffId: null, stageEnteredAt: now - 1 * DAY });
+    const gone = lead({ status: 'looking', assignedStaffId: 'LEFT', stageEnteredAt: now - 1 * DAY });
+    const onTrack = lead({ status: 'looking', assignedStaffId: 'S1', stageEnteredAt: now - 1 * DAY });
+
+    eq(S.sourcingState(ready, now), 'ready', 'priced with a price on file is ready to sell');
+    eq(S.sourcingState(late, now), 'over', 'past the limit for its step is over time');
+    eq(S.sourcingState(lateNobody, now), 'over', 'late AND unowned reads as over time — the sharper of the two');
+    eq(S.sourcingState(nobody, now), 'nobody', 'nobody assigned is nobody on it');
+    eq(S.sourcingState(gone, now), 'nobody', 'and so is somebody who has left the staff list');
+    eq(S.sourcingState(onTrack, now), 'track', 'owned and inside the limit is on track');
+
+    t.check(S.sourcingFilterMatch(lateNobody, now, 'over') && S.sourcingFilterMatch(lateNobody, now, 'nobody'),
+      'an item both late and unowned answers to BOTH filters — hiding it from "nobody on it" would hide the fix it needs');
+    t.check(!S.sourcingFilterMatch(ready, now, 'over') && !S.sourcingFilterMatch(ready, now, 'nobody')
+      && S.sourcingFilterMatch(ready, now, 'ready') && S.sourcingFilterMatch(ready, now, 'all'),
+      'ready is its own filter and nothing else, and every item is under all');
+
+    eq(S.sourcingNextMove(ready, now).label, 'Add it to what we sell', 'ready: the move is to list it');
+    t.check(S.sourcingNextMove(ready, now).graduate === true, 'and it is the graduate action, not the record');
+    eq(S.sourcingNextMove(nobody, now).label, 'Give it to someone', 'unowned: give it to someone');
+    eq(S.sourcingNextMove(late, now).label, 'Get Owino’s price', 'a shop found but not priced: get that shop’s price, by name');
+    eq(S.sourcingNextMove(onTrack, now).label, 'Find who has it', 'owned with no shop yet: find who has it');
+    eq(S.sourcingNextMove(lead({ status: 'priced', assignedStaffId: 'S1', candidates: [cand({ quotedPrice: 0 })] }), now).label,
+      'Put a price back', 'priced but its prices gone: put one back, never offer to list an empty product');
+
+    eq(S.sourcingKnown(ready).map((k) => k.ok).join(','), 'true,true,true,false',
+      'what is known: a shop, a price, a pack size — and no photo');
+    eq(S.sourcingKnown(nobody).filter((k) => k.ok).length, 0, 'and a fresh ask knows none of the four');
+
+    const asked = lead({ requests: [ask({ at: new Date(now - 30 * DAY).toISOString() }), ask({ at: new Date(now - 3 * DAY).toISOString() })] });
+    eq(S.sourcingWaitDays(asked, now), 30, 'the wait is the FIRST person’s, not the latest ask');
+    eq(S.sourcingWaitDays(lead({ requests: [] }), now), 0, 'and an item with no asks has nobody waiting');
+
+    const render = extractFunction(src, 'renderSourcing', 'index.html');
+    t.check(/sourcingRowHTML\(l, now, i === 0\)/.test(render),
+      'only the top row of the list is handed the accent — one primary action on the screen');
+    const row = extractFunction(src, 'sourcingRowHTML', 'index.html');
+    t.check(/primary \? 'btn-accent' : 'btn-ghost'/.test(row) && !/btn-primary/.test(row),
+      'and every other move on the list is a ghost button');
+    Object.assign(data, { staff: saved.staff, presetSourcingStageLimits: saved.limits, suppliers: saved.suppliers });
+  }
 }
 
 main().then(()=> process.exit(t.done() ? 1 : 0),
