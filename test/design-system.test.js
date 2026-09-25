@@ -842,8 +842,19 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'pr-gross', 'pr-accrued', 'row-actions', 'an-scroll', 'pi-table-wrap', 'price'],
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-py', 'ow-py-ms',
              'ow-grid', 'ow-side', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-py-rent'],
-      renders: ['renderPayrollPosition', 'renderPayrollDues', 'renderPayrollRail', 'payrollGroups'],
-      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s',
+      renders: ['renderPayrollPosition', 'renderPayrollDues', 'renderPayrollRail', 'payrollGroups',
+                'payrollMonthTrackHTML', 'payrollStripHTML', 'payrollDayGridHTML'],
+      /* No .ow-strip here any more, and that is a decision, not a patch.
+         The strip was four tiles -- in hand, still to pay, late, next due
+         -- that left the owner to do the one sum the screen exists for.
+         It is replaced by the RUNWAY (.ow-py-rw): the same figures, plus
+         the bar that does the sum, today's cash marked on it, and the
+         month's days (.ow-py-mt) under it. Each row carries its own month
+         as ticks (.ow-py-ds), a daily month is counted by tapping
+         (.ow-py-dg), and the rail's derived figures became bars
+         (.ow-py-mx). Holding this list to .ow-strip would have kept the
+         tiles alive beside the bar that answers them. */
+      rendersUses: ['ow-py-rw', 'ow-py-mt', 'ow-py-ds', 'ow-py-dg', 'ow-py-mx', 'ow-u',
                     'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n',
                     'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t', 'ow-q-who', 'ow-q-v',
                     'ow-q-f', 'ow-q-b', 'ow-q-note', 'ow-q-a', 'ow-cp',
