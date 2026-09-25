@@ -9004,6 +9004,34 @@
   .st-table td.st-p{color:var(--ow-ink-400);width:26%;font-size:11.5px;}
   .st-table td.st-v .st-delta{margin-left:7px;}
   .st-hint{display:block;font-size:10.5px;color:var(--ow-ink-400);margin-top:1px;}
+  /* A line's size, as a share of what was invoiced. Thin, under the
+     name, and capped short of the figure column so it reads as a
+     proportion of the line and never as an underline of the money. */
+  .st-size{display:block;height:4px;max-width:240px;margin-top:var(--ow-sp-4);
+    background:var(--ow-steel-050);border-radius:var(--ow-r-pill);overflow:hidden;}
+  .st-size i{display:block;height:100%;border-radius:var(--ow-r-pill);background:var(--ow-steel-400);}
+  .st-size i.total{background:var(--ow-steel-800);}
+  .st-size i.good{background:var(--ow-verdigris);}
+  .st-size i.bad{background:var(--ow-crimson);}
+
+  /* How the statement counts, as chips; the sentences one tap away. */
+  .st-basis{border-top:1px solid var(--ow-rule-soft);margin-top:var(--ow-sp-12);}
+  .st-basis summary{list-style:none;cursor:pointer;display:flex;flex-wrap:wrap;align-items:center;
+    gap:var(--ow-sp-6);padding:var(--ow-sp-10) var(--ow-sp-12);}
+  .st-basis summary::-webkit-details-marker{display:none;}
+  .st-basis summary:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
+  .st-basis-l{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.09em;
+    text-transform:uppercase;color:var(--ow-ink-400);margin-right:var(--ow-sp-2);}
+  .st-basis-c{font-size:var(--ow-t-12);color:var(--ow-ink-600);background:var(--ow-paper-2);
+    border:1px solid var(--ow-rule);border-radius:var(--ow-r-pill);padding:2px var(--ow-sp-8);}
+  .st-basis-more{display:inline-flex;align-items:center;gap:2px;font-size:var(--ow-t-12);
+    font-weight:var(--ow-fw-600);color:var(--ow-sky);}
+  .st-basis-i{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round;}
+  .st-basis[open] .st-basis-i{transform:rotate(180deg);}
+  .st-basis-t{margin:0;padding:0 var(--ow-sp-12) var(--ow-sp-10);max-width:var(--ow-measure);
+    font-size:var(--ow-t-12);line-height:var(--ow-lh-normal);color:var(--ow-ink-600);}
+  .st-print .st-basis summary{display:none;}
   .st-table tr.st-head td{
     padding:0 0 6px;font-family:'Figtree',system-ui,sans-serif;font-size:9.5px;font-weight:700;
     letter-spacing:.06em;text-transform:uppercase;color:var(--ow-ink-400);
@@ -9113,6 +9141,13 @@
   .st-drill-amt{display:block;margin-top:2px;font-size:var(--ow-t-20);color:var(--ow-ink-900);
     font-weight:var(--ow-fw-500);letter-spacing:-.03em;
     font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;}
+  /* The records month by month, above the list they come from. */
+  .st-drill-months{display:flex;align-items:flex-end;gap:var(--ow-sp-4);height:84px;
+    margin:var(--ow-sp-10) 14px 0;}
+  .st-dm{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;
+    justify-content:flex-end;align-items:center;gap:var(--ow-sp-4);}
+  .st-dm i{display:block;width:100%;max-width:26px;background:var(--ow-steel-800);}
+  .st-dm em{font-style:normal;font-size:var(--ow-t-11);color:var(--ow-ink-400);}
   .st-drill-note{margin:var(--ow-sp-8) 14px 0;font-size:var(--ow-t-11);
     line-height:var(--ow-lh-snug);color:var(--ow-ink-600);}
   .st-drill-list{margin-top:10px;border-top:1px solid var(--ow-rule-soft);overflow-y:auto;
@@ -86871,7 +86906,9 @@ function stLine(label, value, prior, opts){
   const open = drillable && stDrillKey === o.drill;
   return `<tr class="${o.cls||''}${drillable?' st-drillable':''}${open?' st-drilled':''}"${
       drillable?` data-st-drill="${esc(o.drill)}" tabindex="0" role="button" aria-expanded="${open}" title="Show the records behind this figure"`:''}>
-    <td class="st-l">${esc(label)}${drillable?'<span class="st-drill-aff" aria-hidden="true">&#8250;</span>':''}${o.hint?`<span class="st-hint">${esc(o.hint)}</span>`:''}</td>
+    <td class="st-l">${esc(label)}${drillable?'<span class="st-drill-aff" aria-hidden="true">&#8250;</span>':''}${
+      o.size!=null ? `<span class="st-size" aria-hidden="true" title="${esc(o.size.toFixed(1))} of every 100 sold"><i class="${o.sizeKind||'cost'}" style="width:${Math.max(0.5, Math.min(100, o.size)).toFixed(2)}%"></i></span>` : ''}${
+      o.hint?`<span class="st-hint">${esc(o.hint)}</span>`:''}</td>
     <td class="st-v">${fmtUGX(stZero(value))}${o.delta&&prior!=null?stDeltaChip(value,prior,o.higherIsBetter):''}</td>
     ${prior!=null?`<td class="st-p">${fmtUGX(stZero(prior))}</td>`:'<td class="st-p"></td>'}
   </tr>`;
@@ -86977,6 +87014,13 @@ function stResolvedBasis(from, to){
    drillable, and "the records behind gross profit" is just both lists
    again with a minus sign. */
 let stDrillKey = null;
+/* Whether the profit and loss may open its panel on its own. An empty
+   panel holding one instruction sentence was the first thing the
+   statement showed beside itself; it opens on Revenue now, the line
+   every other line is a share of. Closing it is a choice that is kept
+   until another document is opened -- a panel that reopened itself
+   after being shut would be arguing with the reader. */
+let stDrillAuto = true;
 
 function stDrillData(key, ctx){
   const {from, to, is, bs, cf} = ctx;
@@ -87359,6 +87403,24 @@ function stDrillPanelHTML(ctx){
   const sum = rows.reduce((s2,r)=> s2 + (Number(r.v)||0), 0);
   const agrees = Math.abs(sum - (Number(d.expect)||0)) < 1;
   const shown = rows.slice(0, ST_DRILL_MAX_ROWS);
+  /* THE SAME RECORDS, MONTH BY MONTH. A list of fifty invoices says what
+     they were, not WHEN the money came -- the first thing a figure over
+     a quarter or a year raises. Drawn only when the records span two
+     months or more, since one bar is not a shape, and from the very rows
+     the list shows and the foot adds up, so the three cannot disagree.
+     Every bar names its month and its figure. */
+  const byMonth = {};
+  rows.forEach(r=>{
+    const m = /^(\d{4}-\d{2})/.exec(String(r.d || ''));
+    if(m) byMonth[m[1]] = (byMonth[m[1]] || 0) + Math.abs(Number(r.v) || 0);
+  });
+  const months = Object.keys(byMonth).sort();
+  const monthTop = Math.max(0, ...months.map(m=> byMonth[m])) || 1;
+  const monthsHTML = months.length < 2 ? '' : `<div class="st-drill-months" role="img" aria-label="The same records, month by month">
+    ${months.map(m=> `<span class="st-dm" title="${esc(periodLabel(m))}: ${esc(fmtUGX(Math.round(byMonth[m])))}">
+      <i style="height:${Math.max(2, Math.round(byMonth[m] / monthTop * 64))}px"></i>
+      <em>${esc(periodLabel(m).slice(0,3))}</em></span>`).join('')}
+  </div>`;
   const amt = (v)=> d.signed
     ? `${v < 0 ? '−' : ''}${fmtUGX(Math.abs(Math.round(v)))}`
     : fmtUGX(Math.round(Math.abs(v)));
@@ -87373,6 +87435,7 @@ function stDrillPanelHTML(ctx){
       </button>
     </header>
     ${d.note ? `<p class="st-drill-note">${esc(d.note)}</p>` : ''}
+    ${monthsHTML}
     ${rows.length === 0
       ? '<div class="st-drill-hint">No records behind this figure in this period.</div>'
       : `<div class="st-drill-list">${shown.map(r=> `
@@ -88418,6 +88481,7 @@ function renderStatements(){
      invoices live behind the P&L's revenue line, not behind a digest of
      it. */
   const drillable = stActiveTab !== 'ratios' && stActiveTab !== 'overview';
+  if(stActiveTab === 'pl' && !stDrillKey && stDrillAuto && ctx.is.revenue > 0) stDrillKey = 'pl:revenue';
   body.innerHTML = drillable
     ? `<div class="st-split">
         <div class="st-split-doc">${statementDocHTML(stActiveTab, ctx)}</div>
@@ -88467,6 +88531,9 @@ function printStatements(which){
       </footer>
     </div>`;
 
+  // What folds away on screen prints in full: the basis a statement is
+  // counted on goes wherever the statement goes.
+  document.querySelectorAll('#printArea details').forEach(d=> { d.open = true; });
   window.print();
   window.addEventListener('afterprint', function cleanup(){
     document.getElementById('printArea').innerHTML = '';
@@ -88803,40 +88870,67 @@ function stOverview({from, to, is, prev, bs, cf, checks}){
     </div>`;
 }
 
+/* How the profit and loss counts, one rule to a chip.
+
+   This was a seven-sentence paragraph under the statement, and a
+   paragraph under a table is the part nobody reads. The rules are the
+   same six; each is a chip whose name is the rule in a few words, and
+   the sentences are one tap away for whoever needs the whole of it. On
+   paper they print in full -- a statement that leaves the building
+   carries its basis. */
+const ST_PL_BASIS = [
+  {k:'Sales when invoiced', t:'Sales counted when invoiced.'},
+  {k:'Rent and wages by the month they are for', t:'Rent and wages counted against the months they are for, spread across those months’ days, so a short period shows its own share rather than a whole month or none.'},
+  {k:'Dated costs spread over their days', t:'A running cost whose cash entry says which days it covers is spread across those days the same way.'},
+  {k:'Depreciation by the day', t:'Depreciation is spread by the day.'},
+  {k:'Loan charges when the lender charges', t:'Loan interest and instalment charges are counted when the lender charges them, whether or not they have been paid.'},
+  {k:'Other running costs when paid', t:'Every other running cost is counted when it was paid.'},
+];
+function stBasisHTML(rules){
+  return `<details class="st-basis">
+    <summary><span class="st-basis-l">Counted</span> ${rules.map(r=>
+      `<span class="st-basis-c">${esc(r.k)}</span>`).join(' ')} <span class="st-basis-more">How <svg class="st-basis-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></span></summary>
+    <p class="st-basis-t">${rules.map(r=> esc(r.t)).join(' ')}</p>
+  </details>`;
+}
+
 function stProfitAndLoss(ctx){
   const {from, to, prevFrom, prevTo, is, prev} = ctx;
   const cats = [...new Set(Object.keys(is.opexRows).concat(Object.keys(prev.opexRows)))].sort();
+  /* EVERY LINE CARRIES ITS SIZE. A thin bar under each name, as a share
+     of what was invoiced -- the same "of every 100" the Overview's
+     waterfall draws, so a running cost that has crept up is visible as a
+     longer bar before anyone subtracts two columns. Costs are grey, the
+     subtotals navy, and only net profit carries a state. Nothing is
+     drawn when nothing was invoiced: a share of zero is not a size. */
+  const share = (v)=> is.revenue > 0 ? Math.abs(Number(v) || 0) / is.revenue * 100 : null;
+  const sz = (v, kind)=> ({size: share(v), sizeKind: kind});
   return `<section class="st-doc st-doc-wide">
     <header class="st-doc-head"><h3>Profit and loss</h3>
       <span class="st-doc-when">${esc(from)} to ${esc(to)} · ${is.invoiceCount} invoice${is.invoiceCount===1?'':'s'}</span></header>
     <table class="st-table">
       ${stHead('This period', 'Period before')}
       ${(is.serviceIncome || prev.serviceIncome || is.creditIncome || prev.creditIncome) ? `
-      ${stLine('Item sales', is.itemSales, prev.itemSales, {delta:true, higherIsBetter:true, drill:'pl:itemsales'})}
-      ${(is.serviceIncome || prev.serviceIncome) ? stLine('Service income', is.serviceIncome, prev.serviceIncome, {hint:'delivery, fetching, cutting — charged on an invoice', delta:true, higherIsBetter:true, drill:'pl:services'}) : ''}
-      ${(is.costOfService || prev.costOfService) ? stLine('Cost of service', -is.costOfService, -prev.costOfService, {hint:'what those deliveries and cuts were paid for — lifted out of running costs so the same money is not charged twice', drill:'pl:costofservice'}) : ''}
-      ${(is.creditIncome || prev.creditIncome) ? stLine('Credit charges', is.creditIncome, prev.creditIncome, {hint:'what customers paid for being paid later — no cost of sales behind it, because what it costs the shop is the use of its own money', delta:true, higherIsBetter:true, drill:'pl:credit'}) : ''}
-      ${stLine('Revenue', is.revenue, prev.revenue, {cls:'st-total', delta:true, higherIsBetter:true, drill:'pl:revenue'})}`
-      : stLine('Revenue', is.revenue, prev.revenue, {delta:true, higherIsBetter:true, drill:'pl:revenue'})}
-      ${stLine('Cost of sales', -is.costOfSales, -prev.costOfSales, {hint:'what the goods actually cost', drill:'pl:cogs'})}
-      ${stLine('Gross profit', is.grossProfit, prev.grossProfit, {cls:'st-total', delta:true, higherIsBetter:true})}
+      ${stLine('Item sales', is.itemSales, prev.itemSales, {...sz(is.itemSales,'total'), delta:true, higherIsBetter:true, drill:'pl:itemsales'})}
+      ${(is.serviceIncome || prev.serviceIncome) ? stLine('Service income', is.serviceIncome, prev.serviceIncome, {...sz(is.serviceIncome,'total'), hint:'delivery, fetching, cutting — charged on an invoice', delta:true, higherIsBetter:true, drill:'pl:services'}) : ''}
+      ${(is.costOfService || prev.costOfService) ? stLine('Cost of service', -is.costOfService, -prev.costOfService, {...sz(is.costOfService), hint:'what those deliveries and cuts were paid for — lifted out of running costs so the same money is not charged twice', drill:'pl:costofservice'}) : ''}
+      ${(is.creditIncome || prev.creditIncome) ? stLine('Credit charges', is.creditIncome, prev.creditIncome, {...sz(is.creditIncome,'total'), hint:'what customers paid for being paid later — no cost of sales behind it, because what it costs the shop is the use of its own money', delta:true, higherIsBetter:true, drill:'pl:credit'}) : ''}
+      ${stLine('Revenue', is.revenue, prev.revenue, {...sz(is.revenue,'total'), cls:'st-total', delta:true, higherIsBetter:true, drill:'pl:revenue'})}`
+      : stLine('Revenue', is.revenue, prev.revenue, {...sz(is.revenue,'total'), delta:true, higherIsBetter:true, drill:'pl:revenue'})}
+      ${stLine('Cost of sales', -is.costOfSales, -prev.costOfSales, {...sz(is.costOfSales), hint:'what the goods actually cost', drill:'pl:cogs'})}
+      ${stLine('Gross profit', is.grossProfit, prev.grossProfit, {...sz(is.grossProfit, is.grossProfit < 0 ? 'bad' : 'total'), cls:'st-total', delta:true, higherIsBetter:true})}
       <tr class="st-gap"><td colspan="3"></td></tr>
-      ${cats.map(k=>stLine(k, -(is.opexRows[k]||0), -(prev.opexRows[k]||0), {drill:'pl:opex:'+k})).join('')}
-      ${(is.depreciation||prev.depreciation) ? stLine('Depreciation', -is.depreciation, -prev.depreciation, {hint:'wear on what the shop owns', drill:'pl:depreciation'}) : ''}
-      ${stLine('Operating profit', is.operatingProfit, prev.operatingProfit, {cls:'st-total', delta:true, higherIsBetter:true})}
+      ${cats.map(k=>stLine(k, -(is.opexRows[k]||0), -(prev.opexRows[k]||0), {...sz(is.opexRows[k]), drill:'pl:opex:'+k})).join('')}
+      ${(is.depreciation||prev.depreciation) ? stLine('Depreciation', -is.depreciation, -prev.depreciation, {...sz(is.depreciation), hint:'wear on what the shop owns', drill:'pl:depreciation'}) : ''}
+      ${stLine('Operating profit', is.operatingProfit, prev.operatingProfit, {...sz(is.operatingProfit, is.operatingProfit < 0 ? 'bad' : 'total'), cls:'st-total', delta:true, higherIsBetter:true})}
       <tr class="st-gap"><td colspan="3"></td></tr>
-      ${(is.disposalGain||prev.disposalGain) ? stLine('Assets sold above or below book value', is.disposalGain, prev.disposalGain, {drill:'pl:disposals'}) : ''}
-      ${(is.interest||prev.interest) ? stLine('Loan interest', -is.interest, -prev.interest, {drill:'pl:interest'}) : ''}
-      ${(is.loanFees||prev.loanFees) ? stLine('Loan fees and charges', -is.loanFees, -prev.loanFees, {hint:'arrangement fees when drawn, instalment charges as they fall due', drill:'pl:loanfees'}) : ''}
-      ${stLine('Net profit', is.netProfit, prev.netProfit, {cls:'st-grand', delta:true, higherIsBetter:true})}
+      ${(is.disposalGain||prev.disposalGain) ? stLine('Assets sold above or below book value', is.disposalGain, prev.disposalGain, {...sz(is.disposalGain), drill:'pl:disposals'}) : ''}
+      ${(is.interest||prev.interest) ? stLine('Loan interest', -is.interest, -prev.interest, {...sz(is.interest), drill:'pl:interest'}) : ''}
+      ${(is.loanFees||prev.loanFees) ? stLine('Loan fees and charges', -is.loanFees, -prev.loanFees, {...sz(is.loanFees), hint:'arrangement fees when drawn, instalment charges as they fall due', drill:'pl:loanfees'}) : ''}
+      ${stLine('Net profit', is.netProfit, prev.netProfit, {...sz(is.netProfit, is.netProfit < 0 ? 'bad' : 'good'), cls:'st-grand', delta:true, higherIsBetter:true})}
     </table>
-    <p class="st-read">Sales counted when invoiced. Rent and wages counted against the months
-      they are for, spread across those months&rsquo; days, so a short period shows its own
-      share rather than a whole month or none. A running cost whose cash entry says which days
-      it covers is spread across those days the same way. Depreciation is spread by the day.
-      Loan interest and instalment charges are counted when the lender charges them, whether
-      or not they have been paid. Every other running cost is counted when it was paid.
-      ${stComparisonNote(ctx)}</p>
+    ${stBasisHTML(ST_PL_BASIS)}
+    <p class="st-read">${stComparisonNote(ctx)}</p>
   </section>`;
 }
 
@@ -88936,6 +89030,7 @@ document.getElementById('st_tabs').addEventListener('click', (e)=>{
   const b = e.target.closest('.st-tab');
   if(!b) return;
   stActiveTab = b.dataset.stab;
+  stDrillAuto = true;
   // A preview from the previous document would sit beside a statement it
   // is not part of, agreeing with a figure that is no longer on screen.
   stDrillKey = null;
@@ -88947,7 +89042,7 @@ document.getElementById('st_tabs').addEventListener('click', (e)=>{
    document to the document itself. */
 function stHandleDrillAction(e){
   const close = e.target.closest('#st_drill_close');
-  if(close){ stDrillKey = null; renderStatements(); return true; }
+  if(close){ stDrillKey = null; stDrillAuto = false; renderStatements(); return true; }
   const go = e.target.closest('[data-st-go]');
   if(go){
     const [kind, rawId] = String(go.dataset.stGo).split(':');
@@ -88969,6 +89064,7 @@ function stHandleDrillAction(e){
   if(row){
     const k = row.dataset.stDrill;
     stDrillKey = stDrillKey === k ? null : k;
+    if(!stDrillKey) stDrillAuto = false;
     renderStatements();
     /* On a narrow screen the panel sits BELOW the document, off-screen
        at the moment it fills -- which reads as the click doing nothing.
