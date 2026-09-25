@@ -50,7 +50,8 @@ const scope = compileScope([
   extractFunction(src, 'listPageCount', 'index.html'),
   extractFunction(src, 'listPageIndex', 'index.html'),
   extractFunction(src, 'listPageSlice', 'index.html'),
-  extractFunction(src, 'listPagerNumbers', 'index.html'),
+  extractFunction(src, 'invPageWindow', 'index.html'),
+  extractFunction(src, 'reportPagerHTML', 'index.html'),
   extractFunction(src, 'listPagerHTML', 'index.html'),
   extractFunction(src, 'listMoreButtonHTML', 'index.html'),
   'function __page(id, v){ listPageAt[id] = v; }',
@@ -59,9 +60,9 @@ const scope = compileScope([
   'function __default(){ return LIST_PAGE_DEFAULT; }',
 ], {
   esc: (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'),
-}, ['listPageSize', 'listPageSlice', 'listMoreButtonHTML', 'listPagerNumbers', '__expand', '__page', '__sizes', '__default']);
+}, ['listPageSize', 'listPageSlice', 'listMoreButtonHTML', '__expand', '__page', '__sizes', '__default']);
 
-const { listPageSize, listPageSlice, listMoreButtonHTML, listPagerNumbers, __expand, __page } = scope;
+const { listPageSize, listPageSlice, listMoreButtonHTML, __expand, __page } = scope;
 const rows = (n) => Array.from({ length: n }, (_, i) => ({ i }));
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 
@@ -152,30 +153,24 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
 
   __page('customers', 1);
   const html = listMoreButtonHTML('customers', 60, 'customers');
-  t.check(/data-list-page="customers"/.test(html) && !/data-list-more=/.test(html),
-    'the customer book draws the pager, not the show-all button');
-  t.check(new RegExp(`${size + 1}&ndash;${2 * size}</b> of 60 customers`).test(html),
+  t.check(/data-list-pager="customers"/.test(html) && /class="ow-pg an-pg"/.test(html) && !/data-list-more=/.test(html),
+    'the customer book draws the shared pager, not the show-all button and not a look-alike');
+  t.check(new RegExp(`${size + 1}&ndash;${2 * size}</span> of <span class="ow-pg-f">60</span> customers`).test(html),
     'and names the rows on screen out of every one that matched');
-  t.check(/aria-current="page"[^>]*>2</.test(html), 'the page you are on is marked, and it is page 2');
-  t.check(/aria-label="Previous page"/.test(html) && !/data-page="0" disabled aria-label="Previous page"/.test(html),
-    'from page 2 the way back is open');
+  t.check(/data-list-page="2" aria-current="page">2</.test(html), 'the page you are on is marked, and it is page 2');
+  t.check(/data-list-page="1">Back</.test(html), 'from page 2 the way back is open, to page 1');
   __page('customers', 2);
-  t.check(/data-page="3" disabled aria-label="Next page"/.test(listMoreButtonHTML('customers', 60, 'customers')),
+  t.check(/data-list-page="4" disabled>Next</.test(listMoreButtonHTML('customers', 60, 'customers')),
     'and on the last page the way forward is shut');
   __page('customers', 0);
   eq(listMoreButtonHTML('customers', size, 'customers'), '', 'a book that fits one page gets no pager');
 
-  eq(JSON.stringify(listPagerNumbers(0, 5)), '[0,1,2,3,4]', 'a few pages are all shown');
-  eq(JSON.stringify(listPagerNumbers(6, 13)), '[0,null,5,6,7,null,12]',
-    'many pages show the ends and the neighbours, with the gaps marked');
-  eq(JSON.stringify(listPagerNumbers(0, 13)), '[0,1,2,3,null,12]', 'at the start, the first few');
-  eq(JSON.stringify(listPagerNumbers(12, 13)), '[0,null,9,10,11,12]', 'at the end, the last few');
-
   const render = (/function renderCustomers\([\s\S]*?\n\}/.exec(code) || [''])[0];
   t.check(/if\(question !== custPageQuestion\)\{[^}]*listPageAt\.customers = 0;/.test(render),
     'a new search or lens goes back to page one');
-  t.check(/closest\('\[data-list-page\]'\)/.test(code) && /listPageAt\[id\] = /.test(code),
-    'one delegated listener turns the page');
+  t.check(/closest\('\[data-list-page\]'\)/.test(code) && /closest\('\[data-list-pager\]'\)/.test(code)
+    && /listPageAt\[id\] = Math\.max\(0, \(Number\(btn\.getAttribute\('data-list-page'\)\) \|\| 1\) - 1\);/.test(code),
+    'one delegated listener turns the page, converting the pager\u2019s page-from-one to the list\u2019s index');
 }
 
 /* ---------- 3. WHERE the slice is taken ------------------------------- */

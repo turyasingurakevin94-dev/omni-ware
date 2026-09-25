@@ -15500,31 +15500,6 @@
     font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);color:var(--ow-ink-600);}
   .ow-seg-b.ow-on .ow-seg-n{color:var(--ow-steel-100);}
   .ow-seg-n:empty{display:none;}
-  /* ---- the pager: where you are in a long list ---- */
-  /* The range in figures, a bar showing which slice of the whole this
-     page is, and the page switch -- the lens switch's own anatomy, so the
-     page you are on is inverted like the lens you are on. */
-  .ow-pgr{display:flex;align-items:center;gap:var(--ow-sp-12);padding:var(--ow-sp-12) var(--ow-sp-16);
-    border-top:1px solid var(--ow-rule-soft);}
-  .ow-pgr-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
-    font-size:var(--ow-t-12);color:var(--ow-ink-600);white-space:nowrap;}
-  .ow-pgr-nb{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
-  .ow-pgr-bar{position:relative;flex:1 1 auto;min-width:40px;height:4px;border-radius:var(--ow-r-pill);background:var(--ow-rule-soft);}
-  .ow-pgr-fill{position:absolute;top:0;bottom:0;border-radius:var(--ow-r-pill);background:var(--ow-steel-950);}
-  .ow-pgr-s{flex:0 0 auto;}
-  .ow-pgr-s .ow-seg-b{justify-content:center;min-width:28px;padding:0 var(--ow-sp-8);
-    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;}
-  .ow-pgr-s .ow-pgr-a{font-family:'Figtree',system-ui,sans-serif;gap:var(--ow-sp-4);}
-  .ow-pgr-ic{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
-  .ow-pgr-a:disabled{cursor:default;color:var(--ow-ink-400);background:none;}
-  .ow-pgr-gap{padding:0 var(--ow-sp-2);color:var(--ow-ink-600);font-size:var(--ow-t-12);}
-  @media (max-width:820px){
-    .ow-pgr{flex-wrap:wrap;padding:var(--ow-sp-12);gap:var(--ow-sp-8);}
-    .ow-pgr-bar{order:1;flex:1 1 100%;}
-    .ow-pgr-s{order:2;width:100%;height:var(--ow-tap);}
-    .ow-pgr-s .ow-seg-b{flex:1 1 0;min-width:0;padding:0;}
-    .ow-pgr-w{display:none;}
-  }
   /* ---- a section head over a run of cards ---- */
   /* The title, the count, and a line on what the run is ranked by. */
   .ow-sec{display:flex;align-items:baseline;gap:var(--ow-sp-10);margin:var(--ow-sp-20) 0 var(--ow-sp-8);min-width:0;}
@@ -27253,41 +27228,16 @@ function listPageSlice(id, rows){
   }
   return listPageExpanded[id] ? rows : rows.slice(0, listPageSize(id));
 }
-/* Which page numbers to draw: the first, the last, and the two either
-   side of where you are, with a gap marked where pages are skipped. Seven
-   buttons at most, so the row fits a phone. */
-function listPagerNumbers(at, pages){
-  if(pages <= 7) return Array.from({ length: pages }, (_, i)=> i);
-  const keep = new Set([0, pages - 1, at - 1, at, at + 1]);
-  if(at <= 2) [1, 2, 3].forEach(i=> keep.add(i));
-  if(at >= pages - 3) [pages - 4, pages - 3, pages - 2].forEach(i=> keep.add(i));
-  const list = [...keep].filter(i=> i >= 0 && i < pages).sort((a, b)=> a - b);
-  const out = [];
-  list.forEach((i, k)=>{ if(k && i - list[k - 1] > 1) out.push(null); out.push(i); });
-  return out;
-}
+/* The same pager Sales, Purchases and Invoices draw -- one control for
+   "which page of a long list", not a second one that looks nearly the
+   same. It counts pages from one; listPageAt counts from nought. */
 function listPagerHTML(id, total, noun){
   if(total <= listPageSize(id)) return '';
-  const size = listPageSize(id), pages = listPageCount(id, total), at = listPageIndex(id, total);
-  const from = at * size + 1, to = Math.min(total, from + size - 1);
-  const n = (v)=> Number(v).toLocaleString('en-UG');
-  const arrow = (pg, label, d, off)=> `<button type="button" class="ow-seg-b ow-pgr-a" data-list-page="${esc(id)}" data-page="${pg}"${off ? ' disabled' : ''} aria-label="${label}">
-      <svg class="ow-pgr-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg><span class="ow-pgr-w">${label.split(' ')[0]}</span></button>`;
-  const nums = listPagerNumbers(at, pages).map(i=> i === null
-    ? '<span class="ow-pgr-gap" aria-hidden="true">&hellip;</span>'
-    : `<button type="button" class="ow-seg-b${i === at ? ' ow-on' : ''}" data-list-page="${esc(id)}" data-page="${i}"${i === at ? ' aria-current="page"' : ''} aria-label="Page ${i + 1} of ${pages}">${i + 1}</button>`).join('');
-  return `<div class="ow-pgr" role="navigation" aria-label="Pages of ${esc(noun)}">
-    <span class="ow-pgr-n"><b class="ow-pgr-nb">${n(from)}&ndash;${n(to)}</b> of ${n(total)} ${esc(noun)}</span>
-    <span class="ow-pgr-bar" aria-hidden="true"><i class="ow-pgr-fill" style="left:${((from - 1) / total * 100).toFixed(2)}%;width:${Math.max(2, (to - from + 1) / total * 100).toFixed(2)}%"></i></span>
-    <div class="ow-seg ow-pgr-s">
-      ${arrow(at - 1, 'Previous page', 'M15 6l-6 6 6 6', at === 0)}${nums}${arrow(at + 1, 'Next page', 'M9 6l6 6-6 6', at === pages - 1)}
-    </div>
-  </div>`;
+  const size = listPageSize(id), at = listPageIndex(id, total);
+  const from = at * size, shown = Math.min(size, total - from);
+  return `<div data-list-pager="${esc(id)}">${
+    reportPagerHTML('data-list-page', at + 1, listPageCount(id, total), total, from, shown, noun.replace(/s$/, ''))}</div>`;
 }
-/* The control, or nothing when the list already fits. `total` is what
-   matched, so the label promises exactly what pressing it delivers --
-   unlike the stock log's, which has a hard cap above it to apologise for.
-   These pages have no cap: showing all of them means all of them. */
 function listMoreButtonHTML(id, total, noun){
   if(LIST_PAGED.has(id)) return listPagerHTML(id, total, noun);
   if(total <= listPageSize(id)) return '';
@@ -27338,13 +27288,15 @@ document.addEventListener('click', (e)=>{
 document.addEventListener('click', (e)=>{
   const btn = e.target.closest ? e.target.closest('[data-list-page]') : null;
   if(!btn || btn.disabled) return;
-  const id = btn.getAttribute('data-list-page');
-  listPageAt[id] = Math.max(0, Number(btn.getAttribute('data-page')) || 0);
+  const wrap = btn.closest('[data-list-pager]');
+  if(!wrap) return;
+  const id = wrap.getAttribute('data-list-pager');
+  listPageAt[id] = Math.max(0, (Number(btn.getAttribute('data-list-page')) || 1) - 1);
   const again = LIST_PAGE_RERENDER[id];
   if(again) again();
   // A new page is read from its top. Staying at the foot of the list
   // would open the new page on its last row.
-  const panel = document.querySelector(`[data-list-page="${id}"]`);
+  const panel = document.querySelector(`[data-list-pager="${id}"]`);
   const top = panel && panel.closest('.ow-pan, .panel');
   if(top && top.getBoundingClientRect().top < 0){
     const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
