@@ -45,24 +45,22 @@ const scope = compileScope([
   extractDeclaration(src, 'LIST_PAGE_DEFAULT', 'index.html'),
   extractDeclaration(src, 'listPageExpanded', 'index.html'),
   extractDeclaration(src, 'LIST_PAGED', 'index.html'),
-  extractDeclaration(src, 'listPageAt', 'index.html'),
+  extractDeclaration(src, 'listPageNum', 'index.html'),
+  extractDeclaration(src, 'listPageSeen', 'index.html'),
   extractFunction(src, 'listPageSize', 'index.html'),
-  extractFunction(src, 'listPageCount', 'index.html'),
-  extractFunction(src, 'listPageIndex', 'index.html'),
-  extractFunction(src, 'listPageSlice', 'index.html'),
-  extractFunction(src, 'invPageWindow', 'index.html'),
-  extractFunction(src, 'reportPagerHTML', 'index.html'),
+  extractFunction(src, 'listPageAt', 'index.html'),
   extractFunction(src, 'listPagerHTML', 'index.html'),
+  extractFunction(src, 'listPageSlice', 'index.html'),
   extractFunction(src, 'listMoreButtonHTML', 'index.html'),
-  'function __page(id, v){ listPageAt[id] = v; }',
   'function __expand(id, v){ listPageExpanded[id] = v; }',
   'function __sizes(){ return LIST_PAGE_SIZES; }',
   'function __default(){ return LIST_PAGE_DEFAULT; }',
+  'function __goto(id, n){ listPageNum[id] = n; }',
 ], {
   esc: (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'),
-}, ['listPageSize', 'listPageSlice', 'listMoreButtonHTML', '__expand', '__page', '__sizes', '__default']);
+}, ['listPageSize', 'listPageSlice', 'listMoreButtonHTML', '__expand', '__sizes', '__default', '__goto']);
 
-const { listPageSize, listPageSlice, listMoreButtonHTML, __expand, __page } = scope;
+const { listPageSize, listPageSlice, listMoreButtonHTML, __expand } = scope;
 const rows = (n) => Array.from({ length: n }, (_, i) => ({ i }));
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 
@@ -124,53 +122,76 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     'one row over the page is enough to offer the rest');
 }
 
-/* ---------- 2b. the customer book turns pages ------------------------- */
+/* ---------- 2b. the invoice registers turn pages --------------------- */
 /*
- * The owner asked for a next page on Customers rather than one button that
- * pours the whole book onto the screen. The page must be the RIGHT rows --
- * the second page starts where the first stopped, by identity -- and the
- * control must say which rows of how many, in figures.
+ * The owner asked for next-page paging on Invoices: step through last
+ * month and the one before a page at a time, rather than one long list
+ * or nothing. These registers take a PAGE, not the first page; the
+ * control is Previous / numbers / Next, and it says which rows are on
+ * screen out of how many.
+ */
+{
+  const { __goto } = scope;
+  const size = listPageSize('invoices');
+  const list = Array.from({ length: size * 3 + 5 }, (_, i) => ({ tag: 'i' + i }));
+  __expand('invoices', false);
+  eq(listPageSlice('invoices', list)[0], list[0], 'a new list opens on its first page');
+  __goto('invoices', 2);
+  const p2 = listPageSlice('invoices', list);
+  t.check(p2.length === size && p2[0] === list[size] && p2[size - 1] === list[2 * size - 1],
+    `page 2 is the SECOND page's rows, in order (first is ${p2[0] && p2[0].tag})`);
+  __goto('invoices', 4);
+  eq(listPageSlice('invoices', list).length, 5, 'the last page holds what is left');
+  __goto('invoices', 99);
+  eq(listPageSlice('invoices', list)[0], list[size * 3], 'a page past the end lands on the last page, not an empty one');
+
+  __goto('invoices', 2);
+  const bar = listMoreButtonHTML('invoices', list.length, 'invoices');
+  t.check(/data-list-page="invoices" data-page="1"[^>]*aria-label="Previous page"/.test(bar), 'Previous goes back one page');
+  t.check(/data-list-page="invoices" data-page="3"[^>]*aria-label="Next page"/.test(bar), 'Next goes on one page');
+  t.check(/aria-current="page"[^>]*>2</.test(bar), 'the page you are on is marked as current');
+  t.check(new RegExp(`${size + 1}&ndash;${2 * size}</b> of <b class="ow-fig">${list.length}`).test(bar),
+    'and it says which rows are on screen out of how many matched');
+  t.check(/data-list-more="invoices"[^>]*>Show all</.test(bar), 'Show all is still there');
+  __goto('invoices', 1);
+  t.check(/data-page="0" disabled aria-label="Previous page"/.test(listMoreButtonHTML('invoices', list.length, 'invoices')),
+    'on the first page there is no going back');
+
+  /* A different list is a new list: its page 3 is not this one's. */
+  __goto('invoices', 3);
+  listPageSlice('invoices', list);
+  eq(listPageSlice('invoices', list.slice(0, size * 2))[0], list[0],
+    'a search that changes the row count starts again on page 1');
+
+  eq(listMoreButtonHTML('invoices', size, 'invoices'), '', 'a register that fits one page has no pager');
+  t.check(/Show all 276 price entries/.test(listMoreButtonHTML('prices', 276, 'price entries')),
+    'and the other lists keep their plain Show all');
+}
+
+/* ---------- 2c. the customer book turns pages too --------------------- */
+/*
+ * The owner asked for a next page on Customers. The book pages through
+ * the same mechanism as the invoice registers, and page two is the rows
+ * that follow page one -- by identity, not just by count.
  */
 {
   const size = listPageSize('customers');
   const book = Array.from({ length: 60 }, (_, i) => ({ tag: 'c' + i }));
-  __page('customers', 0);
-  let pg = listPageSlice('customers', book);
-  t.check(pg.length === size && pg[0] === book[0], 'page one is the front of the book');
-  __page('customers', 1);
-  pg = listPageSlice('customers', book);
-  t.check(pg.length === size && pg[0] === book[size] && pg[size - 1] === book[2 * size - 1],
-    `page two starts where page one stopped (first is ${pg[0] && pg[0].tag}, want c${size})`);
-  __page('customers', 2);
-  eq(listPageSlice('customers', book).length, 60 - 2 * size, 'the last page holds what is left, not a padded page');
-  __page('customers', 9);
-  t.check(listPageSlice('customers', book)[0] === book[2 * size],
-    'a page past the end lands on the last page rather than an empty one');
-  __page('customers', 0);
-  __expand('customers', true);
-  eq(listPageSlice('customers', book).length, size, 'a paged list is not grown by the old show-all state');
   __expand('customers', false);
-
-  __page('customers', 1);
-  const html = listMoreButtonHTML('customers', 60, 'customers');
-  t.check(/data-list-pager="customers"/.test(html) && /class="ow-pg an-pg"/.test(html) && !/data-list-more=/.test(html),
-    'the customer book draws the shared pager, not the show-all button and not a look-alike');
-  t.check(new RegExp(`${size + 1}&ndash;${2 * size}</span> of <span class="ow-pg-f">60</span> customers`).test(html),
-    'and names the rows on screen out of every one that matched');
-  t.check(/data-list-page="2" aria-current="page">2</.test(html), 'the page you are on is marked, and it is page 2');
-  t.check(/data-list-page="1">Back</.test(html), 'from page 2 the way back is open, to page 1');
-  __page('customers', 2);
-  t.check(/data-list-page="4" disabled>Next</.test(listMoreButtonHTML('customers', 60, 'customers')),
-    'and on the last page the way forward is shut');
-  __page('customers', 0);
-  eq(listMoreButtonHTML('customers', size, 'customers'), '', 'a book that fits one page gets no pager');
+  listPageSlice('customers', book);
+  scope.__goto('customers', 2);
+  const pg = listPageSlice('customers', book);
+  t.check(pg.length === size && pg[0] === book[size] && pg[size - 1] === book[2 * size - 1],
+    `customers page two starts where page one stopped (first is ${pg[0] && pg[0].tag}, want c${size})`);
+  t.check(/data-list-page="customers"/.test(listMoreButtonHTML('customers', 60, 'customers')),
+    'and the book draws the pager rather than a lone show-all button');
+  scope.__goto('customers', 1);
 
   const render = (/function renderCustomers\([\s\S]*?\n\}/.exec(code) || [''])[0];
-  t.check(/if\(question !== custPageQuestion\)\{[^}]*listPageAt\.customers = 0;/.test(render),
-    'a new search or lens goes back to page one');
-  t.check(/closest\('\[data-list-page\]'\)/.test(code) && /closest\('\[data-list-pager\]'\)/.test(code)
-    && /listPageAt\[id\] = Math\.max\(0, \(Number\(btn\.getAttribute\('data-list-page'\)\) \|\| 1\) - 1\);/.test(code),
-    'one delegated listener turns the page, converting the pager\u2019s page-from-one to the list\u2019s index');
+  t.check(/if\(question !== custPageQuestion\)\{[^}]*listPageNum\.customers = 1;/.test(render),
+    'a new search or lens goes back to page one, even one that matches as many rows');
+  const suppliers = (/function renderSuppliers\([\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(!/listPageNum\.customers/.test(suppliers), 'and nothing else turns the customer book back');
 }
 
 /* ---------- 3. WHERE the slice is taken ------------------------------- */
