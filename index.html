@@ -14463,6 +14463,34 @@
     border:1px dashed var(--ow-rule);border-radius:var(--ow-r-lg);}
   .agv-ghost-g{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--ow-sp-16);opacity:.55;}
   .agv-ghost-g > div{display:flex;flex-direction:column;gap:6px;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  /* Who, at a glance: initials in a ring, dashed until they have sold. */
+  .ow-ag-tbl .agv-who{display:flex;flex-direction:row;align-items:center;gap:var(--ow-sp-10);}
+  .agv-who-t{display:flex;flex-direction:column;min-width:0;}
+  .agv-av{width:32px;height:32px;flex:none;border-radius:50%;display:inline-grid;place-items:center;box-sizing:border-box;
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+  .agv-av.agv-av-n{background:transparent;border:2px dashed var(--ow-steel-400);color:var(--ow-ink-600);}
+  .agv-ti{width:14px;height:14px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px;margin-right:4px;}
+  .agv-term{display:inline-flex;align-items:center;}
+  /* A new agent's row: one line from invited to first order across the
+     columns that would otherwise be four empty charts. */
+  .ow-ag-tbl .agv-span{grid-column:3 / span 4;}
+  .agv-jr{display:flex;align-items:flex-start;width:100%;max-width:520px;}
+  .agv-jr-st{display:flex;flex-direction:column;align-items:center;gap:2px;flex:none;min-width:88px;text-align:center;}
+  .agv-jr-st i{width:12px;height:12px;border-radius:50%;box-sizing:border-box;border:2px solid var(--ow-steel-400);background:var(--ow-paper);}
+  .agv-jr-st.agv-on i{background:var(--ow-ink-900);border-color:var(--ow-ink-900);}
+  .agv-jr-st.agv-jr-unk i{border-style:dashed;}
+  .agv-jr-st b{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .agv-jr-st small{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .agv-jr-ln{flex:1;min-width:16px;height:0;margin-top:5px;border-top:2px dashed var(--ow-rule);}
+  .agv-jr-ln.agv-on{border-top-style:solid;border-top-color:var(--ow-ink-900);}
+  .agv-jr.agv-jr-big{max-width:600px;margin:var(--ow-sp-4) 0 var(--ow-sp-12);}
+  .agv-jr-big .agv-jr-st{min-width:120px;}
+  .agv-jr-big .agv-jr-st i{width:16px;height:16px;}
+  .agv-jr-big .agv-jr-st b{font-size:var(--ow-t-13);}
+  .agv-jr-big .agv-jr-st small{font-size:var(--ow-t-12);}
+  .agv-jr-big .agv-jr-ln{margin-top:7px;}
+  .agv-qviz .agv-jr-st{min-width:0;}
+  .agv-qviz .agv-jr-st small{display:none;}
   @media (max-width:820px){
     /* The phone keeps its own design: the drawn columns and the balance's
        side panels are the desktop console's. */
@@ -14481,6 +14509,9 @@
     .agv-ghost-g{grid-template-columns:minmax(0,1fr);}
     /* The strip is the console's; a label with nothing beside it is not. */
     .ow-ag-tbl [data-l="Selling"]{display:none;}
+    .ow-ag-tbl .agv-span{grid-column:auto;}
+    .agv-jr-st,.agv-jr-big .agv-jr-st{min-width:0;flex:1 1 0;}
+    .agv-jr-ln{min-width:8px;}
     .agv-bal-v{font-size:18px;}
   }
   /* ==================================================================
@@ -26311,7 +26342,7 @@ async function loadData(shopId){
     staff: (staffR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, role:s.role, notes:s.notes, unavailable:!!s.unavailable, userId:s.user_id||null,
       payBasis: s.pay_basis || null,
       payRate: s.pay_rate==null ? null : Number(s.pay_rate)})),
-    agents: (agentsR.data||[]).map(a=>({id:a.id, name:a.name, phone:a.phone, email:a.email, location:a.location||'', paymentTerm:a.payment_term||'prepay', unavailable:!!a.unavailable, retiredAt:a.retired_at||null, notes:a.notes||'', userId:a.user_id||null})),
+    agents: (agentsR.data||[]).map(a=>({id:a.id, name:a.name, phone:a.phone, email:a.email, location:a.location||'', paymentTerm:a.payment_term||'prepay', unavailable:!!a.unavailable, retiredAt:a.retired_at||null, notes:a.notes||'', userId:a.user_id||null, invitedAt:a.created_at||null})),
     customers: (customersR.data||[]).map(c=>({id:c.id, name:c.name, phone:c.phone, phone2:c.phone2||'', location:c.location, notes:c.notes, debt:Number(c.debt)||0, linkedSupplierId:c.linked_supplier_id||null,
       /* Where their build has reached, and WHEN they said so. The date
          is not decoration: a stage with no date rots silently, and a
@@ -33324,7 +33355,7 @@ function goToTab(tab){
   if(tab==='suppliers' && !supEntering){ supViewId = null; }
   if(tab==='suppliers') renderSuppliers(document.getElementById('s_search').value);
   if(tab==='staff') renderStaff(document.getElementById('st_search').value);
-  if(tab==='agents') refreshAgentsScreen();
+  if(tab==='agents'){ refreshAgentsScreen(); loadAgentSignIns().then(()=> refreshAgentsScreen()); }
   if(tab==='worker') renderWorkerView();
   if(tab==='analytics-sales') renderSalesAnalytics();
   if(tab==='analytics-purchase') renderPurchaseAnalytics();
@@ -56355,6 +56386,62 @@ function agentOldestUnpaidDays(){
   return oldest;
 }
 
+/* HAS THE AGENT EVER SIGNED IN. An invite that never took and an agent
+   who signs in, looks around and has not ordered yet are different
+   conversations, and the Agent app records every sign-in in
+   login_sessions (app = 'agent'). Read once per visit to this screen;
+   null until read, and a failed read is held as a reason so the screen
+   says "not known" rather than "never". */
+let agentSeen = null;
+let agentSeenError = null;
+let agentSeenAt = 0;
+async function loadAgentSignIns(){
+  if(agentSeen && Date.now() - agentSeenAt < 5 * 60 * 1000) return;
+  try{
+    const { data: rows, error } = await sb.from('login_sessions').select('user_id, last_seen_at')
+      .eq('shop_id', currentShopId).eq('app', 'agent');
+    if(error) throw error;
+    const m = new Map();
+    (rows || []).forEach(r=>{
+      const k = String(r.user_id), d = String(r.last_seen_at || '');
+      if(!m.has(k) || d > m.get(k)) m.set(k, d);
+    });
+    agentSeen = m; agentSeenError = null; agentSeenAt = Date.now();
+  }catch(e){
+    agentSeen = null; agentSeenError = (e && e.message) || 'could not be read';
+  }
+}
+/* WHERE A NEW AGENT HAS GOT TO: invited, signed in, first order. Each
+   step is a fact from the books, or said to be unknown -- never guessed. */
+function agentJourney(a, s){
+  const invitedDays = a.invitedAt ? daysSinceDate(String(a.invitedAt).slice(0, 10)) : null;
+  let signedIn = null, seenDays = null;
+  if(agentSeen){
+    const seen = a.userId ? agentSeen.get(String(a.userId)) : null;
+    signedIn = !!seen;
+    if(seen) seenDays = daysSinceDate(String(seen).slice(0, 10));
+  }
+  return { invitedDays, signedIn, seenDays, ordered: s.orders > 0 };
+}
+function agentJourneyHTML(j, big){
+  const ago = (d)=> d == null ? '' : d === 0 ? 'today' : esc(agingDaysLabel(d)) + ' ago';
+  const steps = [
+    { on: true, t: 'Invited', s: j.invitedDays != null ? ago(j.invitedDays) : 'date not kept' },
+    { on: j.signedIn === true, unknown: j.signedIn == null,
+      t: 'Signed in', s: j.signedIn == null ? (agentSeenError ? 'could not be read' : 'checking…') : j.signedIn ? 'last seen ' + ago(j.seenDays) : 'not yet' },
+    { on: j.ordered, t: 'First order', s: j.ordered ? 'placed' : 'none yet' },
+  ];
+  const label = steps.map(x=> x.t + ': ' + x.s.replace(/&[a-z]+;/g, '')).join('; ');
+  return `<span class="agv-jr${big ? ' agv-jr-big' : ''}" role="img" aria-label="${esc(label)}">${steps.map((x, i)=>
+    `${i ? `<span class="agv-jr-ln${x.on ? ' agv-on' : ''}"></span>` : ''}<span class="agv-jr-st${x.on ? ' agv-on' : x.unknown ? ' agv-jr-unk' : ''}"><i></i><b>${x.t}</b><small>${x.s}</small></span>`).join('')}</span>`;
+}
+/* Initials in a ring: solid once they have sold, dashed until then. */
+function agentAvatarHTML(a, never){
+  const w = String(a.name || '').trim().split(/\s+/).filter(Boolean);
+  const ini = ((w[0] || '?')[0] + (w[1] ? w[1][0] : '')).toUpperCase();
+  return `<span class="agv-av${never ? ' agv-av-n' : ''}" aria-hidden="true">${esc(ini)}</span>`;
+}
+
 /* TWELVE WEEKS, DRAWN. What each agent brought in and whether they
    ordered at all, week by week, newest last -- from the same orders
    agentStanding reads, so the shapes and the figures beside them cannot
@@ -56382,6 +56469,7 @@ function agentSparkTop(){
 /* Bars on ONE scale across the roster when `top` is given, so a taller
    bar is more money wherever it stands on the screen. */
 function agentSparkHTML(weeks, top, label){
+  if(!weeks.some(w=> w.rev > 0)) return '';
   const max = Math.max(1, top || 0, ...weeks.map(w=> w.rev));
   return `<span class="agv-sp" role="img" aria-label="${esc(label)}">${weeks.map((w, i)=>
     `<i class="${!w.rev ? 'agv-z' : i === weeks.length - 1 ? 'agv-now' : ''}" style="height:${w.rev ? Math.max(8, Math.round(w.rev / max * 100)) : 8}%"></i>`).join('')}</span>`;
@@ -56421,27 +56509,34 @@ function agentRowHTML(a){
 
   const state = retired ? '<span class="ow-cp">Retired</span>'
     : a.unavailable ? '<span class="ow-cp ow-warn">Paused</span>' : '';
+  /* The terms wear a mark as well as a word: a shield where nothing
+     leaves before the money, an open hand where goods go out on trust. */
+  const termIcon = (d)=> `<svg class="agv-ti" viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
   const terms = retired
     ? `<span class="ow-quiet-v">Retired ${esc(fmtShortDate(String(a.retiredAt).slice(0,10)))}</span>`
     : s.onCredit
-      ? '<span class="ow-cp ow-bad"><span class="ow-cp-d"></span>Pay on delivery</span>'
-      : '<span class="ow-quiet-v">Prepay</span>';
+      ? `<span class="ow-cp ow-bad">${termIcon('<path d="M3 12h4l3-3 4 4 3-3 4 4"/><path d="M3 17h18"/>')}Pay on delivery</span>`
+      : `<span class="ow-quiet-v agv-term">${termIcon('<path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/>')}Prepay</span>`;
+  /* Nobody who has never ordered has a figure, a trend or a debt, and
+     four empty charts said nothing four times. Their row says where they
+     have got to instead: invited, signed in, first order. */
+  const unstarted = s.orders === 0 && !retired;
 
   return `<div class="ow-tbl-r ow-tbl-k ow-ag-r${open?' ow-open':''}${never||retired?' ow-ag-quiet':''}"
       data-agrow="${esc(a.id)}" role="button" tabindex="0" aria-expanded="${open}">
-    <div class="ow-tbl-c">
+    <div class="ow-tbl-c agv-who">${agentAvatarHTML(a, never)}<span class="agv-who-t">
       <span class="ow-tbl-p" title="${esc(a.name)}">${esc(a.name)}</span>
       <span class="ow-tbl-s">${esc(a.id)}${a.location?' &middot; '+esc(a.location):''} &middot; ${
         s.orders} order${s.orders===1?'':'s'}</span>
-    </div>
+    </span></div>
     <div class="ow-tbl-c" data-l="Terms">${terms}${state?' '+state:''}</div>
-    <div class="ow-tbl-n" data-l="Brought in"><span class="agv-fv"><span>${s.revenue>0 ? money(s.revenue) : dash}</span>${
+    ${unstarted ? `<div class="ow-tbl-c agv-span" data-l="Progress">${agentJourneyHTML(agentJourney(a, s), false)}</div>` : `<div class="ow-tbl-n" data-l="Brought in"><span class="agv-fv"><span>${s.revenue>0 ? money(s.revenue) : dash}</span>${
       agentSparkHTML(weeks, agentSparkTop(), `Brought in, week by week, over the last ${AG_WEEKS} weeks`)}</span></div>
     <div class="ow-tbl-n" data-l="Owed to you"><span class="agv-fv"><span>${s.owed>0
       ? `<span class="ow-fig ${s.onCredit?'ow-bad':'ow-warn'}">${money(s.owed)}</span>` : dash}</span>${
       s.owed>0 ? agentAgeBarHTML(oldest, s.onCredit?'ow-bad':'ow-warn', oldest != null ? `oldest unpaid invoice ${agingDaysLabel(oldest)} old` : '') : '<span class="agv-age" style="visibility:hidden"></span>'}</span></div>
     <div class="ow-tbl-n" data-l="In flight">${s.live>0 ? s.live : dash}</div>
-    <div class="ow-tbl-c" data-l="Selling">${agentActivityHTML(weeks)}</div>
+    <div class="ow-tbl-c" data-l="Selling">${agentActivityHTML(weeks)}</div>`}
     <div class="ow-tbl-c" data-l="Last order"><span class="ow-quiet-v">${
       never ? 'never' : esc(agingDaysLabel(s.idleDays)) + (s.idleDays===0?'':' ago')}</span></div>
   </div>${open ? agentOpenHTML(a, s) : ''}`;
@@ -56470,7 +56565,12 @@ function agentOpenHTML(a, s){
       oldest != null ? ` &mdash; the oldest invoice was raised ${esc(agingDaysLabel(oldest))} ago` : ''}.`);
   }
   if(s.idleDays == null){
-    why.push('They have never placed an order. That is an invite that did not take, not a relationship going cold, and it is a different conversation.');
+    /* Signed in or not is the whole difference: one is an invite that
+       did not take, the other took and is waiting on a first sale. */
+    const j = agentJourney(a, s);
+    why.push(j.signedIn
+      ? `They have never placed an order, but they have signed in${j.seenDays != null ? ` &mdash; last seen ${j.seenDays === 0 ? 'today' : esc(agingDaysLabel(j.seenDays)) + ' ago'}` : ''}. The invite took; what is missing is a first sale, and that is a conversation about what they could sell.`
+      : 'They have never placed an order. That is an invite that did not take, not a relationship going cold, and it is a different conversation.');
   } else if(s.idleDays > AGENT_IDLE_DAYS){
     why.push(`Their last order was ${esc(agingDaysLabel(s.idleDays))} ago.`);
   }
@@ -56558,6 +56658,7 @@ function agentOpenHTML(a, s){
      follows, .ow-q-x by the queue row it sits inside. Emitting only one
      of them is how the queue's open row rendered nothing at all. */
   return `<div class="ow-tbl-x ow-q-x">
+    ${s.orders === 0 && !retired ? agentJourneyHTML(agentJourney(a, s), true) : ''}
     <p class="ow-q-why">${why.join(' ')}</p>
     ${stateNote}${invTable}${phantomNote}
     ${s.done > 0 && s.revenue + s.earned > 0 ? `<div class="agv-split">
@@ -56769,7 +56870,7 @@ function agentAttentionRows(){
       rows.push({ rank:5, sort:0, kind:'agent', id:a.id, key:'', who:a.name,
         line:'has never placed an order since being invited',
         fig:'—', basis:'never started',
-        viz: '<span class="agv-line" role="img" aria-label="Invited, never signed in, never ordered"><i></i><s></s><i></i><s></s><i></i></span>' });
+        viz: agentJourneyHTML(agentJourney(a, s), false) });
     } else if(s.idleDays > AGENT_IDLE_DAYS){
       rows.push({ rank:4, sort:s.idleDays, kind:'agent', id:a.id, key:'', who:a.name,
         line:`has not placed an order in ${agingDaysLabel(s.idleDays)}`,
@@ -57028,7 +57129,7 @@ function renderAgents(filter=''){
   const n = document.getElementById('agRosterN');
   if(n) n.textContent = tokens.length
     ? `${rows.length} of ${total}`
-    : `${live.length} selling${gone.length ? ` · ${gone.length} retired` : ''}`;
+    : `${live.length} agent${live.length===1?'':'s'} · ${agentRosterPosition().selling} selling${gone.length ? ` · ${gone.length} retired` : ''}`;
 
   if(top) top.querySelectorAll('.ow-q[data-agq]').forEach(q=>{
     q.querySelectorAll('.ow-q-r,.ow-q-card').forEach(btn=> btn.addEventListener('click', ()=>{
