@@ -306,4 +306,23 @@ if (scope) {
     'while one nobody has earned on is deleted without the extra warning');
 }
 
+/* ---------- drawn, and said once ---------------------------------------
+   Live, two running promotions nobody had sold on carried the same
+   sentence as a banner under each row and again in the footnote, and
+   the product led with its stock code. */
+{
+  t.check(/const pname = product \? productVariantLabel\(product, variantIdx\)/.test(card),
+    'the product is named as the shop says it, not code-first');
+  t.check(!/Running, and no agent has sold one yet\. Nobody is earning from it and its funder is getting nothing\.<\/div>'/.test(card),
+    'a running promotion nobody has sold on is no longer a banner under its row');
+  t.check(/const unsold = running && !clash\.length && earned\.units === 0;/.test(card) && /class="agv-chip0"/.test(card),
+    'it is a "0 sold" chip in the units column instead');
+  t.check(/running && !promo\.ends_at \? 'no end date' : when/.test(card) && /class="agv-open"/.test(card),
+    'an open-ended window is drawn as running, not cut off mid-sentence');
+  t.check(/never been sold on/.test(posHTML), 'and the footnote still counts them, once');
+  const claims = (/function renderCommissionClaims\(\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+  t.check(/Nothing waiting on you/.test(claims) && /You settle it into the Cash Book/.test(claims),
+    'with no claim waiting, the panel says so first and draws how a claim arrives');
+}
+
 process.exit(t.done() ? 1 : 0);
