@@ -13772,7 +13772,7 @@
   /* The register's tracks. .ow-tbl.su-tbl, not .su-tbl: the layer sets
      the same custom property on .ow-tbl, and a bare class would lose
      the cascade to it on document order. */
-  .ow-tbl.su-tbl{--ow-tbl-cols:minmax(0,1fr) 128px 84px 108px 104px 132px 128px 18px;}
+  .ow-tbl.su-tbl{--ow-tbl-cols:minmax(0,1fr) 128px 156px 132px 184px 128px 18px;}
   .su-tbl .ow-tbl-h,.su-tbl .ow-tbl-r{gap:var(--ow-sp-8);}
   /* A column NAME may be cut; a column's figures may not. */
   .su-tbl .ow-tbl-h > span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -13814,6 +13814,83 @@
      AFTER .su-win, which it ties with on specificity (0,2,0). */
   .su-win{color:var(--ow-verdigris);}
   .su-win.su-nil{color:var(--ow-ink-600);}
+
+  /* ---- THE FIGURES, DRAWN ----------------------------------------
+     Each shape sits beside the figure it restates; neither replaces
+     the other. Colour by role: verdigris = cheapest (the screen's good
+     news), indigo = Buy's own spend (category, never status), amber
+     only where the band would flag a price, neutrals for everything
+     that is merely a size. */
+  .su-c-won,.ow-tbl-n.su-c-conf,.ow-tbl-n.su-c-spent{display:flex;align-items:center;
+    justify-content:flex-end;gap:var(--ow-sp-8);}
+  .su-c-won{gap:var(--ow-sp-6);}
+  .su-fv{display:inline-flex;flex-direction:column;align-items:flex-end;min-width:0;}
+  .su-of{font-size:var(--ow-t-11);font-weight:var(--ow-fw-400);color:var(--ow-ink-600);white-space:nowrap;}
+  /* One square per priced line: filled = cheapest, outlined = beaten. */
+  .su-marks{display:inline-flex;gap:3px;margin-right:var(--ow-sp-2);}
+  .su-mk{display:block;width:10px;height:10px;border-radius:3px;box-sizing:border-box;
+    border:1.5px solid var(--ow-steel-400);background:var(--ow-paper);}
+  .su-mk.su-mk-w{border-color:var(--ow-verdigris);background:var(--ow-verdigris);}
+  .su-marks-bar{width:64px;height:8px;border-radius:3px;background:var(--ow-rule);overflow:hidden;}
+  .su-marks-bar > span{display:block;height:100%;width:var(--w);background:var(--ow-verdigris);}
+  /* The freshest price on a one-year track: today at the left edge,
+     ticks at 90 and 180 days. */
+  .su-age{position:relative;display:block;flex:none;width:56px;height:10px;
+    background:linear-gradient(var(--ow-rule),var(--ow-rule)) 0 50%/100% 2px no-repeat,
+      linear-gradient(var(--ow-steel-100),var(--ow-steel-100)) 24.6% 50%/1px 8px no-repeat,
+      linear-gradient(var(--ow-steel-100),var(--ow-steel-100)) 49.3% 50%/1px 8px no-repeat;}
+  .su-age > span{position:absolute;top:-1px;left:var(--x);width:8px;height:8px;margin-left:-6px;
+    border:2px solid var(--ow-paper);border-radius:50%;background:var(--ow-ink-900);}
+  .su-age.su-age-warn > span{background:var(--ow-amber);}
+  /* Spend against the biggest spend on the book. */
+  .su-bar{display:block;flex:none;width:56px;height:6px;border-radius:3px;background:var(--ow-rule-soft);}
+  .su-bar > span{display:block;height:100%;width:var(--w);border-radius:3px;background:var(--ow-indigo);}
+  /* The three biggest spenders wear a shade each, in the strip's split
+     and on their own row; everyone else shares the palest. Opacity on
+     the one indigo rather than three new values. */
+  .su-sh-1{--su-o:1;}.su-sh-2{--su-o:.68;}.su-sh-3{--su-o:.44;}.su-sh-4{--su-o:.22;}
+  .su-bar[class*="su-sh-"] > span{opacity:var(--su-o);}
+
+  /* The strip's shapes. Same height in every tile so the four read as
+     one row of instruments. */
+  .su-strip .ow-mt{display:flex;flex-direction:column;}
+  .su-strip .ow-mt-s b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  .su-viz{display:flex;height:8px;margin-top:var(--ow-sp-8);border-radius:3px;overflow:hidden;}
+  .su-split{background:var(--ow-amber-soft);}
+  .su-split > .su-sp-on{display:block;width:var(--w);background:var(--ow-steel-950);}
+  .su-split.su-split-q > .su-sp-on{background:var(--ow-verdigris);}
+  .su-cut{gap:2px;background:var(--ow-rule-soft);}
+  .su-cut > span{display:block;width:var(--w);background:var(--ow-indigo);opacity:var(--su-o);}
+  /* Price age: four columns, empty ones kept as a 2px floor so a gap
+     reads as "none this old" rather than as a missing column. */
+  .su-viz.su-ages{height:auto;gap:var(--ow-sp-4);border-radius:0;overflow:visible;}
+  .su-ag{flex:1;min-width:0;height:44px;display:flex;flex-direction:column;justify-content:flex-end;gap:3px;}
+  .su-ag > span{display:block;height:var(--h);min-height:2px;background:var(--ow-steel-400);border-radius:2px;}
+  .su-ag > i{font-style:normal;font-size:var(--ow-t-11);line-height:1.2;color:var(--ow-ink-600);
+    text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+  /* The band with nothing in it: one line, not a panel. */
+  .su-clear{display:flex;align-items:center;gap:var(--ow-sp-8);min-height:40px;
+    padding:0 var(--ow-sp-16);margin-bottom:var(--ow-sp-16);border-radius:var(--ow-r);
+    background:var(--ow-verdigris-soft);color:var(--ow-verdigris);font-size:var(--ow-t-13);}
+  .su-clear svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round;}
+  .su-clear b{flex:none;white-space:nowrap;}
+  .su-clear span{color:var(--ow-ink-600);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+  /* The key replaces the paragraph that explained the columns. */
+  .su-key{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ow-sp-6) var(--ow-sp-20);
+    padding:var(--ow-sp-10) var(--ow-sp-16);border-top:1px solid var(--ow-rule-soft);
+    font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .su-key-i{display:inline-flex;align-items:center;gap:var(--ow-sp-6);}
+
+  /* A NARROW DESK drops the shapes before it drops a figure: the
+     figures are what is read exactly, and 800px of desk cannot hold
+     both. The tracks go back to the figure-only widths. */
+  @media (min-width:821px) and (max-width:1240px){
+    .ow-tbl.su-tbl{--ow-tbl-cols:minmax(0,1fr) 128px 96px 96px 124px 128px 18px;}
+    .su-tbl .su-marks,.su-tbl .su-age,.su-tbl .su-bar,.su-key{display:none;}
+  }
 
   /* The band: prices that have outlived what the shop's own invoices
      say they are good for. Its own tracks, because a reason is a
@@ -13921,9 +13998,14 @@
        (.ow-tbl-n[data-l]{display:flex}) sits LATER in the stylesheet and
        ties on specificity, so a plainer selector here would lose on
        document order and these three would reappear. */
-    .ow-tbl.su-tbl .ow-tbl-n.su-c-priced,
     .ow-tbl.su-tbl .ow-tbl-n.su-c-conf,
     .ow-tbl.su-tbl .ow-tbl-n.su-c-spent{display:none;}
+    /* The row's shapes are the desk's; the card keeps its two figures,
+       and the key goes with the shapes it explains. */
+    .su-tbl .su-marks,.su-key{display:none;}
+    /* One line on the phone too: the clause after the dot is the desk's. */
+    .su-clear span{display:none;}
+    .su-clear b{white-space:normal;}
     .su-tbl .ow-tbl-n{font-size:15px;}
     .su-tbl .su-cr{justify-self:end;width:14px;height:14px;}
     /* The account's tables lose the columns a yard cannot use: the
@@ -54052,13 +54134,19 @@ function supplierStats(supplierId){
   const own = data.prices.filter(p=>p.supplierId===supplierId);
   const lineKeys = new Set(own.map(p=>p.productId+'::'+(p.variantIdx==null?'':p.variantIdx)));
   let bestCount = 0;
+  /* Each line as well as the count, so the register can draw one mark
+     per line from the same comparison that counted it -- a second pass
+     over the prices would be free to disagree with "best". */
+  const lines = [];
   lineKeys.forEach(key=>{
     const [productId, vRaw] = key.split('::');
     const variantIdx = vRaw==='' ? null : Number(vRaw);
     const ranked = rankedPriceRows(productId, variantIdx);
-    if(ranked.length && ranked[0].supplierId===supplierId) bestCount++;
+    const won = !!(ranked.length && ranked[0].supplierId===supplierId);
+    if(won) bestCount++;
+    lines.push({ productId, variantIdx, won });
   });
-  return { priced: lineKeys.size, best: bestCount };
+  return { priced: lineKeys.size, best: bestCount, lines };
 }
 // Price rows this supplier has on file whose product/variant matches the
 // given search tokens -- surfaces "which suppliers stock this item" when
@@ -54503,6 +54591,10 @@ let supEntering = false;
    read over the same quarter. */
 const SUP_WINDOW_DAYS = 90;
 const SUP_ATTENTION_SHOWN = 5;
+/* How many per-line marks a register row draws before it switches to a
+   single share bar. Eight squares still count at a glance; twelve do
+   not, and a supplier pricing forty lines would push the row apart. */
+const SUP_MARKS_MAX = 8;
 
 /* ONE SUPPLIER, EVERYTHING THIS SCREEN KNOWS.
 
@@ -54540,6 +54632,13 @@ function supplierBookRow(s){
     phones: contactPhones(s),
     linked: linkedCustomerOf(s),
     priced: stats.priced, wins: stats.best,
+    /* The same lines, named, won ones first: the register draws one
+       mark per line, so the order is what makes "2 of 3" readable as
+       two filled marks and one empty one rather than a pattern. */
+    lines: stats.lines.map(l=>{
+      const p = (data.products || []).find(x=> x.id === l.productId);
+      return { name: p ? productVariantLabel(p, l.variantIdx) : 'A line no longer in the catalogue', won: l.won };
+    }).sort((a, b)=> (b.won - a.won) || a.name.localeCompare(b.name)),
     /* Undated prices are not counted as fresh: a row nobody has dated is
        a row nothing is known about, and averaging it in as "today"
        would be the one direction that hides the problem. */
@@ -54613,12 +54712,16 @@ function supplierAttentionHTML(rows){
     ((b.reason.tone === 'ow-bad' ? 1 : 0) - (a.reason.tone === 'ow-bad' ? 1 : 0))
     || (b.reason.weight - a.reason.weight)
     || a.r.name.localeCompare(b.r.name));
+  /* NOTHING TO SAY TAKES ONE LINE. The empty panel was 130px of prose
+     every morning saying there was nothing to do; the reasoning behind
+     "stale" already lives behind the header's "i". Still a named
+     outcome rather than a missing panel -- an absent band would read
+     the same as a band that failed to draw. */
   if(!flagged.length){
-    return `<div class="ow-pan">
-      <div class="ow-pan-h"><span class="ow-pan-t">Prices you can no longer trust</span>
-        <span class="ow-pan-n">nothing of ${rows.length}</span></div>
-      <div class="ow-empty"><b>Every price you actually trade on is inside its own age.</b>
-        <span>A price is only counted as stale once it is past what this item&rsquo;s own purchase invoices say it moves in &mdash; and only where something is sold, quoted or sitting on the shelf against it. Nothing on the book is past both today.</span></div>
+    return `<div class="su-clear" role="status">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.6 2.6L16 9.5"/></svg>
+      <b>No price you trade on is past its own age</b>
+      <span>&middot; each line measured against its own purchase invoices, across ${rows.length} ${rows.length === 1 ? 'supplier' : 'suppliers'}</span>
     </div>`;
   }
   const shown = flagged.slice(0, SUP_ATTENTION_SHOWN);
@@ -54667,7 +54770,7 @@ function supActionHTML(r, act){
    be said to have cost the shop nothing, and one with no price on file
    cannot be said to be cheapest on none -- the app has nothing to
    compare. Saying 0 would be a claim it cannot make. */
-function supplierRegisterRowHTML(r, matches){
+function supplierRegisterRowHTML(r, matches, scale){
   const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
   const dash = '<span class="su-dash">&mdash;</span>';
   const reason = supAttentionReason(r);
@@ -54699,6 +54802,33 @@ function supplierRegisterRowHTML(r, matches){
     r.linked ? 'Also a customer' : '',
     r.commissionPct ? r.commissionPct + '% commission' : '',
     r.phones.length ? '' : 'no number on file'].filter(Boolean).join(' · ');
+  /* THE FIGURES, DRAWN AS WELL AS WRITTEN. Each shape sits beside the
+     figure it restates and never replaces it: the figure is what is
+     read exactly, the shape is what a column of forty rows is scanned
+     by. All three are desk-only; the phone card keeps its two figures.
+
+     One mark per priced line, won ones first and filled -- "2 of 3"
+     becomes two solid squares and one empty one. Past SUP_MARKS_MAX
+     lines a row of squares stops being countable at a glance, so it
+     becomes one bar holding the same share. */
+  const lines = r.lines || [];
+  const marksHTML = !r.priced ? ''
+    : lines.length <= SUP_MARKS_MAX
+      ? `<span class="su-marks" aria-hidden="true">${lines.map(l=>
+          `<span class="su-mk${l.won ? ' su-mk-w' : ''}" title="${esc(l.name)} &mdash; ${l.won ? 'cheapest' : 'someone is cheaper'}"></span>`).join('')}</span>`
+      : `<span class="su-marks su-marks-bar" aria-hidden="true" title="Cheapest on ${r.wins} of ${r.priced} lines"><span style="--w:${Math.round(r.wins / r.priced * 100)}%"></span></span>`;
+  /* The freshest price on a one-year track, ticks at 90 and 180 days.
+     Amber only when the band would list them -- an old price nothing
+     depends on is old, not a warning, which is the band's own rule. */
+  const ageTrack = r.lastPricedDays === null ? ''
+    : `<span class="su-age${r.ask.length ? ' su-age-warn' : ''}" aria-hidden="true"><span style="--x:${Math.round(Math.min(Math.max(r.lastPricedDays, 0), 365) / 365 * 100)}%"></span></span>`;
+  /* Spend against the biggest spend on the book, so bars compare across
+     rows. The top three wear the same shade here as in the strip's
+     split, which is what joins "48% of spend" to its row. */
+  const sc = scale || {};
+  const spendBar = r.spend > 0 && sc.maxSpend > 0
+    ? `<span class="su-bar su-sh-${(sc.shade && sc.shade.get(r.id)) || 4}" aria-hidden="true"><span style="--w:${Math.max(2, Math.round(r.spend / sc.maxSpend * 100))}%"></span></span>`
+    : '';
   return `<div class="ow-tbl-r ow-tbl-k" role="button" tabindex="0"
       data-sopen="${esc(r.id)}" title="See the account for ${esc(r.name)}">
     <div class="ow-tbl-c">
@@ -54706,17 +54836,16 @@ function supplierRegisterRowHTML(r, matches){
       <span class="ow-tbl-s" title="${esc(meta)}">${esc(meta)}</span>
     </div>
     <span class="su-c-st">${chip}</span>
-    <span class="ow-tbl-n su-c-priced" data-l="Priced">${r.priced ? String(r.priced) : dash}</span>
-    <span class="ow-tbl-n" data-l="Cheapest on">${r.priced
+    <span class="ow-tbl-n su-c-won" data-l="Cheapest on">${marksHTML}${r.priced
       ? `<span class="ow-fig su-win${r.wins ? '' : ' su-nil'}">${r.wins}</span>`
-      : dash}</span>
+      : dash} ${r.priced ? `<span class="su-of">of ${r.priced}</span>` : ''}</span>
     <span class="ow-tbl-n su-c-conf" data-l="Last priced">${r.lastPricedDays !== null
-      ? `<span class="ow-fig${r.ask.length ? ' ow-warn' : ''}">${r.lastPricedDays}</span><span class="ow-fig-b">days</span>`
+      ? `${ageTrack}<span class="su-fv"><span class="ow-fig${r.ask.length ? ' ow-warn' : ''}">${r.lastPricedDays}</span><span class="ow-fig-b">days</span></span>`
       : dash}</span>
     <span class="ow-tbl-n su-c-spent" data-l="Spent, 90 days">${r.everInvoiced
-      ? (r.spend > 0 ? `<span class="ow-fig">${f(r.spend)}</span><span class="ow-fig-b">${r.bills} ${r.bills === 1 ? 'bill' : 'bills'}</span>`
-                     : `${dash}<span class="ow-fig-b">nothing in 90 days</span>`)
-      : `${dash}<span class="ow-fig-b">never invoiced</span>`}</span>
+      ? (r.spend > 0 ? `${spendBar}<span class="su-fv"><span class="ow-fig">${f(r.spend)}</span><span class="ow-fig-b">${r.bills} ${r.bills === 1 ? 'bill' : 'bills'}</span></span>`
+                     : `<span class="su-fv">${dash} <span class="ow-fig-b">nothing in 90 days</span></span>`)
+      : `<span class="su-fv">${dash} <span class="ow-fig-b">never invoiced</span></span>`}</span>
     <span class="ow-tbl-n" data-l="Owed now">${r.owed > 0.5
       ? `<span class="ow-fig">${f(r.owed)}</span><span class="ow-fig-b">${r.oldestDueDays >= 0 ? `oldest ${r.oldestDueDays} days` : 'no dated bill'}</span>`
       : dash}</span>
@@ -54766,23 +54895,63 @@ function renderSuppliers(filter=''){
   const staleRows = all.filter(r=> r.ask.length);
   const stalePrices = staleRows.reduce((n, r)=> n + r.ask.length, 0);
   const staleBuying = staleRows.filter(r=> r.askWinning).length;
+  /* EACH FIGURE CARRIES ITS OWN SHAPE (.su-viz), drawn from the same
+     sets the figure counts, so the two cannot say different things:
+       - who can be bought from: a bar split priced / no price;
+       - lines with a choice: a bar split two-or-more quotes / one;
+       - spend: one bar cut by supplier, the three biggest shaded so
+         the register's own bars can wear the same shade;
+       - price age: every price on file by how old it is.
+     The captions shrink to what the shape cannot say -- a name, a
+     count -- because the shape now says the proportion. */
+  const pct = (n, d)=> d ? Math.round(n / d * 1000) / 10 : 0;
+  const single = [...lines].filter(k=> !contested.has(k));
+  const singleName = single.length === 1 ? (()=>{
+    const [pid, v] = single[0].split('::');
+    const p = (data.products || []).find(x=> x.id === pid);
+    return p ? productVariantLabel(p, v === '' ? null : Number(v)) : '';
+  })() : '';
+  const bySpend = all.filter(r=> r.spend > 0).sort((a, b)=> b.spend - a.spend);
+  const shade = new Map(bySpend.slice(0, 3).map((r, i)=> [r.id, i + 1]));
+  const rest = bySpend.slice(3).reduce((n, r)=> n + r.spend, 0);
+  const firstWord = (s)=> String(s).split(/\s+/)[0];
+  const ageBuckets = [['<30', 0, 29], ['30–90', 30, 90], ['90–180', 91, 180], ['180+', 181, Infinity]]
+    .map(([label, lo, hi])=> ({ label, n: 0, lo, hi }));
+  let undated = 0;
+  (data.prices || []).forEach(p=>{
+    const d = priceAgeDays(p.date);
+    if(d === null){ undated++; return; }
+    const b = ageBuckets.find(x=> d >= x.lo && d <= x.hi) || ageBuckets[0];
+    b.n++;
+  });
+  const ageMax = Math.max(1, ...ageBuckets.map(b=> b.n));
   const strip = document.getElementById('supStripWrap');
   if(strip && !all.length){ strip.innerHTML = ''; }
-  else if(strip) strip.innerHTML = `<div class="ow-strip">
-    <div class="ow-mt"><p class="ow-mt-l">You can buy from</p><span class="ow-mt-v">${usable.length}</span>
-      <p class="ow-mt-s">of ${all.length} on the book${all.length - usable.length
-        ? ` &middot; ${all.length - usable.length} carry no price and cannot be picked as a source`
-        : ''}</p></div>
-    <div class="ow-mt"><p class="ow-mt-l">Lines with a choice</p><span class="ow-mt-v">${contested.size}</span>
-      <p class="ow-mt-s">of ${lines.size} priced${lines.size - contested.size
-        ? ` &middot; ${lines.size - contested.size} have one supplier and no second quote`
-        : ''}</p></div>
-    <div class="ow-mt"><p class="ow-mt-l">Spent in 90 days</p><span class="ow-mt-v">${f(spend)}</span>
-      <p class="ow-mt-s">UGX, on ${bills} purchase ${bills === 1 ? 'invoice' : 'invoices'} from ${buyers} ${buyers === 1 ? 'supplier' : 'suppliers'}</p></div>
-    <div class="ow-mt"><p class="ow-mt-l">Prices to confirm</p><span class="ow-mt-v">${stalePrices}</span>
+  else if(strip) strip.innerHTML = `<div class="ow-strip su-strip">
+    <div class="ow-mt"><p class="ow-mt-l">You can buy from</p><span class="ow-mt-v">${usable.length}<span class="ow-u">of ${all.length}</span></span>
+      <span class="su-viz su-split" aria-hidden="true"><span class="su-sp-on" style="--w:${pct(usable.length, all.length)}%"></span></span>
+      <p class="ow-mt-s">${all.length - usable.length
+        ? `<b>${all.length - usable.length}</b> ${all.length - usable.length === 1 ? 'has' : 'have'} no price yet`
+        : 'every supplier has a price on file'}</p></div>
+    <div class="ow-mt"><p class="ow-mt-l">Lines with a choice</p><span class="ow-mt-v">${contested.size}<span class="ow-u">of ${lines.size}</span></span>
+      <span class="su-viz su-split su-split-q" aria-hidden="true"><span class="su-sp-on" style="--w:${pct(contested.size, lines.size)}%"></span></span>
+      <p class="ow-mt-s">${single.length
+        ? (singleName ? `<b>${esc(singleName)}</b> has one quote` : `<b>${single.length}</b> have one quote`)
+        : 'every priced line has a second quote'}</p></div>
+    <div class="ow-mt"><p class="ow-mt-l">Spent in 90 days</p><span class="ow-mt-v">${f(spend)}<span class="ow-u">UGX</span></span>
+      <span class="su-viz su-cut" aria-hidden="true">${bySpend.slice(0, 3).map((r, i)=>
+        `<span class="su-sh-${i + 1}" style="--w:${pct(r.spend, spend)}%" title="${esc(r.name)} &middot; ${f(r.spend)}"></span>`).join('')}${rest
+        ? `<span class="su-sh-4" style="--w:${pct(rest, spend)}%" title="${bySpend.length - 3} more &middot; ${f(rest)}"></span>` : ''}</span>
+      <p class="ow-mt-s">${bySpend.length
+        ? bySpend.slice(0, 2).map(r=> `${esc(firstWord(r.name))} <b>${Math.round(pct(r.spend, spend))}%</b>`).join(' &middot; ')
+          + (bySpend.length > 2 ? ` &middot; ${bySpend.length - 2} more` : '')
+        : `on ${bills} purchase ${bills === 1 ? 'invoice' : 'invoices'} from ${buyers} ${buyers === 1 ? 'supplier' : 'suppliers'}`}</p></div>
+    <div class="ow-mt${stalePrices ? (staleBuying ? ' ow-bad' : ' ow-warn') : ''}"><p class="ow-mt-l">Prices to confirm</p><span class="ow-mt-v">${stalePrices}</span>
+      <span class="su-viz su-ages" aria-hidden="true">${ageBuckets.map(b=>
+        `<span class="su-ag" title="${b.n} ${b.n === 1 ? 'price' : 'prices'} ${esc(b.label)} days old"><span style="--h:${b.n ? Math.max(3, Math.round(b.n / ageMax * 26)) : 0}px"></span><i>${esc(b.label)}</i></span>`).join('')}</span>
       <p class="ow-mt-s">${stalePrices
-        ? `across ${staleRows.length} ${staleRows.length === 1 ? 'supplier' : 'suppliers'}${staleBuying ? `, ${staleBuying} of whom you buy on` : ''}`
-        : 'nothing you trade on is past its own age'}</p></div>
+        ? `across ${staleRows.length} ${staleRows.length === 1 ? 'supplier' : 'suppliers'}${staleBuying ? `, ${staleBuying} you buy on` : ''}`
+        : 'nothing you trade on is past its own age'}${undated ? ` &middot; ${undated} undated` : ''}</p></div>
   </div>`;
 
   /* ---- the band ---- */
@@ -54876,23 +55045,32 @@ function renderSuppliers(filter=''){
   const never = rows.filter(r=> !r.everInvoiced).length;
   const noPhone = rows.filter(r=> !r.phones.length).length;
   const facts = [];
-  if(byProduct) facts.push(`<b>${byProduct}</b> of these ${byProduct === 1 ? 'was' : 'were'} matched on a product they price rather than on their own details`);
-  if(unpriced) facts.push(`<b>${unpriced}</b> ${unpriced === 1 ? 'carries' : 'carry'} no price at all and cannot be picked as a source for anything`);
-  if(never) facts.push(`<b>${never}</b> ${never === 1 ? 'has' : 'have'} never been invoiced and ${never === 1 ? 'sits' : 'sit'} with dashes rather than zeros, because nothing bought is not the same as nothing spent`);
+  if(byProduct) facts.push(`<b>${byProduct}</b> matched on a product they price, not on their own details`);
+  if(unpriced) facts.push(`<b>${unpriced}</b> with no price cannot be picked as a source`);
+  if(never) facts.push(`<b>${never}</b> never invoiced show a dash, not a zero`);
   if(noPhone) facts.push(`<b>${noPhone}</b> ${noPhone === 1 ? 'has' : 'have'} no way to reach them on file`);
+  /* The bars are scaled against the WHOLE book, not the page or the
+     search: a filtered register whose biggest bar is always full would
+     make a small supplier look like the main one. */
+  const scale = { maxSpend: Math.max(0, ...all.map(x=> x.spend)), shade };
   wrap.innerHTML = `<div class="ow-tbl su-tbl">
       <div class="ow-tbl-h">
         <span>Supplier</span><span class="su-c-st">Standing</span>
-        <span class="ow-tbl-n su-c-priced">Priced</span>
-        <span class="ow-tbl-n">Cheapest on</span>
+        <span class="ow-tbl-n su-c-won">Cheapest on</span>
         <span class="ow-tbl-n su-c-conf">Last priced</span>
         <span class="ow-tbl-n su-c-spent">Spent, 90 days</span>
         <span class="ow-tbl-n">Owed now</span><span></span>
       </div>
-      ${listPageSlice('suppliers', rows).map(r=> supplierRegisterRowHTML(r, matchMap.get(r.id))).join('')}
+      ${listPageSlice('suppliers', rows).map(r=> supplierRegisterRowHTML(r, matchMap.get(r.id), scale)).join('')}
     </div>
     ${listMoreButtonHTML('suppliers', rows.length, 'suppliers')}
-    <p class="ow-mini su-foot">${facts.length ? facts.join('. ') + '. ' : ''}<b>Cheapest on</b> counts the product lines where this supplier currently beats everyone else who prices the same line &mdash; the same comparison Compare prices makes, so the two cannot disagree about who wins a line. Who to pay first is <b>Creditors</b>, and nothing here is ranked by what is owed.</p>`;
+    <div class="su-key">
+      <span class="su-key-i"><span class="su-mk su-mk-w"></span>cheapest on the line</span>
+      <span class="su-key-i"><span class="su-mk"></span>priced, someone is cheaper</span>
+      <span class="su-key-i"><span class="su-age"><span style="--x:57%"></span></span>freshest price on a year, ticks at 90 and 180 days</span>
+      <span class="su-key-i"><span class="su-bar su-sh-1"><span style="--w:70%"></span></span>spend against the biggest on the book</span>
+    </div>
+    <p class="ow-mini su-foot">${facts.length ? facts.join('. ') + '. ' : ''}Who to pay first is <b>Creditors</b>; nothing here is ranked by what is owed.</p>`;
 }
 function editSupplier(id){
   const s = data.suppliers.find(x=>x.id===id); if(!s) return;
