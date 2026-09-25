@@ -9705,6 +9705,103 @@
 
   /* ---- the client being worked ---- */
   .fup-work{display:flex;flex-direction:column;min-height:0;}
+  /* ---- THE QUEUE AND THE CLIENT, SIDE BY SIDE (desktop) ----
+     The queue keeps its list in view while one client is worked beside
+     it. Each row is two lines -- who and what about, then why -- and one
+     figure every row shares, days waiting, with a bar that reads down
+     the column: the longest wait is the longest bar. */
+  .fup-md{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:var(--ow-sp-12);align-items:start;}
+  .fup-md > .fup-work{position:sticky;top:var(--ow-sp-12);}
+  .fup-md .fup-work .ow-mq-l1{padding:var(--ow-sp-12) var(--ow-sp-12) 0;}
+  .fup-md .fup-work .ow-mq-l1 .fup-it,.fup-md .fup-work .ow-mq-l1 .fup-w-facts{padding-left:0;padding-right:0;}
+  .fup-md .fup-work .ow-mq-l2 > .ow-mq-hold{margin:var(--ow-sp-12) var(--ow-sp-12) 0;}
+  .fup-md .fup-w-head .btn{white-space:nowrap;}
+  .fup-queue.ow-mq .ow-q-r{grid-template-columns:minmax(0,1fr) 112px;
+    grid-template-areas:"who wt" "cps wt";row-gap:var(--ow-sp-4);padding:var(--ow-sp-8) var(--ow-sp-12);}
+  .fup-queue.ow-mq .ow-q-r .ow-mq-who{grid-area:who;}
+  .fup-queue.ow-mq .ow-q-r .ow-mq-cps{grid-area:cps;padding-left:38px;}
+  .fup-queue.ow-mq .ow-q-r .fup-wt{grid-area:wt;}
+  .fup-queue.ow-mq .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
+  .fup-queue .ow-mq-h{grid-template-columns:minmax(0,1fr) 112px;}
+  .fup-queue .ow-mq-h .ow-mq-hc:nth-child(2){display:none;}
+  .fup-wt{display:flex;flex-direction:column;align-items:flex-end;gap:3px;min-width:0;}
+  /* The basis carries a debtor's balance, and money never truncates:
+     it wraps before it is ever cut. */
+  .fup-wt .ow-q-b{max-width:100%;white-space:normal;overflow:visible;text-align:right;line-height:1.25;}
+  .fup-wbar{display:flex;justify-content:flex-end;width:72px;height:4px;border-radius:var(--ow-r-pill);
+    background:var(--ow-rule-soft);overflow:hidden;}
+  .fup-wbar-f{display:block;width:var(--fup-w);height:100%;border-radius:var(--ow-r-pill);background:var(--ow-steel-400);}
+  .fup-wt-bad .ow-q-f{color:var(--ow-crimson);}
+  .fup-wt-bad .fup-wbar-f{background:var(--ow-crimson);}
+  .fup-wt-warn .ow-q-f{color:var(--ow-amber);}
+  .fup-wt-warn .fup-wbar-f{background:var(--ow-amber);}
+  /* The register's two glances: on the shelf or not, and quiet for how
+     long against the rule. */
+  .fup-rd{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:var(--ow-sp-6);
+    vertical-align:middle;background:var(--ow-crimson);}
+  .fup-rd-in{background:var(--ow-verdigris);}
+  .fup-rq{display:block;width:56px;height:4px;margin:3px 0 0 auto;border-radius:var(--ow-r-pill);background:var(--ow-rule-soft);overflow:hidden;}
+  .fup-rq-f{display:block;width:var(--fup-w);height:100%;border-radius:var(--ow-r-pill);background:var(--ow-steel-400);}
+  .fup-rq-due .fup-rq-f{background:var(--ow-amber);}
+  /* ---- A POST, OPENED: the card as it will look, and what it should move ---- */
+  .ow-mq-x.fup-post{grid-template-columns:230px minmax(0,1fr);}
+  .fup-ps{display:flex;flex-direction:column;gap:var(--ow-sp-6);width:100%;box-sizing:border-box;
+    aspect-ratio:9 / 16;max-height:410px;padding:var(--ow-sp-12);border-radius:var(--ow-r-lg);
+    background:var(--ow-steel-950);color:var(--ow-paper);}
+  .fup-ps-ph{display:flex;align-items:center;justify-content:center;flex:0 0 46%;min-height:0;
+    border-radius:var(--ow-r);background:var(--ow-steel-800);overflow:hidden;}
+  .fup-ps-img{width:100%;height:100%;object-fit:cover;display:block;}
+  .fup-ps-none{padding:var(--ow-sp-8);font-size:var(--ow-t-11);color:var(--ow-steel-100);text-align:center;}
+  .fup-ps-drop{align-self:flex-start;padding:1px var(--ow-sp-8);border-radius:var(--ow-r-pill);
+    background:var(--ow-verdigris-soft);color:var(--ow-verdigris);font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);}
+  .fup-ps-n{font-size:var(--ow-t-16);font-weight:var(--ow-fw-700);line-height:1.2;}
+  .fup-ps-p{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-20);font-weight:var(--ow-fw-600);letter-spacing:-.02em;}
+  .fup-ps-u{font-size:var(--ow-t-12);color:var(--ow-steel-100);}
+  .fup-ps-sp{flex:1 1 auto;}
+  .fup-ps-shop{font-size:var(--ow-t-11);color:var(--ow-steel-100);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .fup-pl{display:flex;flex-direction:column;gap:var(--ow-sp-6);margin:var(--ow-sp-12) 0;}
+  .fup-pl-h{display:flex;justify-content:space-between;gap:var(--ow-sp-8);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .fup-pl-h .ow-fig{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  .fup-pl-bar{display:flex;height:22px;border-radius:var(--ow-r-sm);background:var(--ow-rule-soft);overflow:hidden;}
+  .fup-pl-f{display:flex;align-items:center;justify-content:flex-end;box-sizing:border-box;width:var(--fup-w);
+    min-width:34px;padding-right:var(--ow-sp-6);background:var(--ow-verdigris);color:var(--ow-paper);}
+  .fup-pl-f .ow-fig{font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);}
+  .fup-pl-s{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .fup-pfs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--ow-sp-8);margin:0 0 var(--ow-sp-12);}
+  .fup-pf{display:flex;flex-direction:column;gap:2px;min-width:0;padding:var(--ow-sp-8) var(--ow-sp-10);
+    border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);}
+  .fup-pf-l{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .fup-pf-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);letter-spacing:-.02em;white-space:nowrap;}
+  .fup-pf-good .fup-pf-v{color:var(--ow-verdigris);}
+  .fup-pf-sum{background:var(--ow-verdigris-soft);border-color:var(--ow-verdigris-soft);}
+  .fup-pips{display:inline-flex;gap:var(--ow-sp-4);vertical-align:middle;margin-right:var(--ow-sp-6);}
+  .fup-pip{display:block;width:18px;height:6px;border-radius:var(--ow-r-pill);box-sizing:border-box;
+    border:1.5px solid var(--ow-steel-400);}
+  .fup-pip-on{background:var(--ow-verdigris);border-color:var(--ow-verdigris);}
+  .fup-pic-img{width:100%;height:100%;object-fit:cover;border-radius:var(--ow-r-sm);display:block;}
+  @media (max-width:820px){
+    .ow-mq-x.fup-post{grid-template-columns:minmax(0,1fr);}
+    .fup-ps{max-width:240px;margin:0 auto;}
+  }
+  /* Sent and still waiting, in the rail: the bar runs against the quiet
+     rule, marked by the tick; past it the row turns caution. */
+  .fup-sw{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--ow-sp-4) var(--ow-sp-8);
+    padding:var(--ow-sp-8) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);font-size:var(--ow-t-12);}
+  .fup-sw-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .fup-sw-d{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
+  .fup-sw-bar{grid-column:1 / -1;position:relative;height:4px;border-radius:var(--ow-r-pill);background:var(--ow-rule-soft);}
+  .fup-sw-f{position:absolute;left:0;top:0;bottom:0;width:var(--fup-w);border-radius:var(--ow-r-pill);background:var(--ow-steel-400);}
+  .fup-sw-m{position:absolute;left:var(--fup-w);top:-3px;bottom:-3px;width:2px;background:var(--ow-ink-900);}
+  .fup-sw-due .fup-sw-f{background:var(--ow-amber);}
+  .fup-sw-due .fup-sw-d{color:var(--ow-amber);}
+  @media (max-width:820px){
+    .fup-queue .ow-q-card .fup-wt{flex-direction:row;align-items:center;gap:var(--ow-sp-8);}
+    .fup-queue .ow-q-card .fup-wt .ow-q-f{font-size:15px;}
+    .fup-queue .ow-q-card .fup-wbar{width:64px;justify-content:flex-start;}
+  }
   /* ---- THE OPENED ROW ON THE MESSAGES CONSOLE ----------------------
      These reach from the layer's queue into this screen's own card, so
      they live here beside the markup they couple to rather than in the
@@ -9824,6 +9921,53 @@
   .fup-strip .ow-mt:hover{background:var(--ow-paper-2);}
   .fup-strip .ow-mt:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
   .fup-strip .ow-mt.ow-on{background:var(--ow-paper-2);box-shadow:inset 0 3px 0 var(--ow-steel-950);}
+  /* THE LANES AS CHIPS. The five figures are the filter; drawn as a
+     band of tiles they took a full row to say mostly zero. As a line of
+     chips they are the same five buttons from the same template, and the
+     chosen one is inverted -- navy ground, white ink -- as the rail's own
+     "you are here" is. A lane with nobody in it goes quiet and dashed. */
+  .fup-lanebar{display:flex;align-items:center;flex-wrap:wrap;gap:var(--ow-sp-8) var(--ow-sp-16);
+    margin:0 0 var(--ow-sp-12);}
+  .fup-lanebar #fupSummaryRow{flex:1 1 auto;min-width:0;}
+  .fup-strip.fup-lanes{display:flex;flex-wrap:wrap;gap:var(--ow-sp-8);margin:0;
+    background:none;border:0;border-radius:0;overflow:visible;}
+  .fup-strip.fup-lanes .ow-mt{display:flex;align-items:center;gap:var(--ow-sp-6);width:auto;
+    height:32px;padding:0 var(--ow-sp-12);border:1px solid var(--ow-steel-100);
+    border-radius:var(--ow-r-pill);background:var(--ow-paper);box-shadow:none;}
+  .fup-strip.fup-lanes .ow-mt:first-child{border-left:1px solid var(--ow-steel-100);}
+  .fup-strip.fup-lanes .ow-mt-l{display:flex;align-items:center;gap:var(--ow-sp-6);margin:0;
+    font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);letter-spacing:0;text-transform:none;
+    color:var(--ow-ink-900);white-space:nowrap;}
+  .fup-strip.fup-lanes .ow-mt-v{display:inline;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);
+    letter-spacing:-.02em;line-height:1;color:var(--ow-ink-900);}
+  .fup-strip.fup-lanes .ow-mt-v .ow-u{font-size:1em;margin-left:.25em;}
+  .fup-strip.fup-lanes .ow-mt-s{display:none;}
+  .fup-strip.fup-lanes .ow-mt:hover{background:var(--ow-paper-2);}
+  .fup-strip.fup-lanes .ow-mt.fup-zero{background:none;border-style:dashed;}
+  .fup-strip.fup-lanes .ow-mt.fup-zero .ow-mt-l,
+  .fup-strip.fup-lanes .ow-mt.fup-zero .ow-mt-v,
+  .fup-strip.fup-lanes .ow-mt.fup-zero .ow-mt-v .ow-u{color:var(--ow-ink-400);}
+  .fup-strip.fup-lanes .ow-mt.ow-on{background:var(--ow-steel-950);border-color:var(--ow-steel-950);border-style:solid;box-shadow:none;}
+  .fup-strip.fup-lanes .ow-mt.ow-on .ow-mt-l,
+  .fup-strip.fup-lanes .ow-mt.ow-on .ow-mt-v,
+  .fup-strip.fup-lanes .ow-mt.ow-on .ow-mt-v .ow-u{color:var(--ow-paper);}
+  /* The dot says what KIND of lane it is by the state vocabulary: somebody
+     waiting is caution, an answer is good news, the rest are ink. */
+  .fup-dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--ow-steel-400);}
+  .fup-dot-inbox{background:var(--ow-amber);}
+  .fup-dot-all{background:var(--ow-steel-950);}
+  .fup-dot-back{background:var(--ow-verdigris);}
+  .fup-dot-post{background:none;outline:2px solid var(--ow-verdigris);outline-offset:-2px;}
+  .fup-strip.fup-lanes .ow-mt.ow-on .fup-dot-all{background:var(--ow-paper);}
+  .fup-lanebar .ow-mq-quiet{margin:0;padding:0;background:none;border:0;gap:var(--ow-sp-6);}
+  .fup-lanebar .ow-mq-qt,.fup-lanebar .ow-mq-qs{font-weight:var(--ow-fw-400);color:var(--ow-ink-600);}
+  .fup-lanebar .ow-mq-qt .ow-fig,.fup-lanebar .ow-mq-qs .ow-fig{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  @media (max-width:820px){
+    .fup-strip.fup-lanes{flex-wrap:nowrap;overflow-x:auto;margin-right:calc(-1 * var(--ow-sp-16));
+      padding-right:var(--ow-sp-16);scrollbar-width:none;}
+    .fup-strip.fup-lanes .ow-mt{height:40px;flex:none;}
+    .fup-lanebar #fupSummaryRow{flex:1 1 100%;}
+  }
   /* The acts under an item -- name a day, fix the qty, open the lead,
      take a payment -- are links in a line, in ink rather than the accent:
      the accent is the send, and a card wearing five oxide words beside
@@ -20736,12 +20880,15 @@
              single row it has always been. -->
         <button type="button" class="btn btn-ghost ow-sm" id="fup_add_any">Write to someone else</button>
       </div>
+      <!-- THE LANES AND THE ONE READING, ON ONE LINE. Five tiles took a
+           full band of the screen to say mostly zero; as chips they say
+           the same five counts, stay the filter, and give the height back
+           to the queue. The sent-and-waiting reading sits at the end of
+           the same line, because it is read with them. -->
+      <div class="fup-lanebar">
       <div id="fupSummaryRow"></div>
-      <!-- THE READING THAT IS NOT WORK. "Still waiting" used to hold a
-           strip slot, and nothing on it can be acted on today: nobody is
-           chased twice inside the rest period. It gave the slot up to the
-           inbox and reads as a status line instead. -->
       <div id="fupQuietLine"></div>
+      </div>
       <!-- ONE QUEUE AND A 304px RAIL, on both views, so the furniture
            never moves between filters. The queue expands IN PLACE: there
            is no second pane holding a copy of the draft, because two
@@ -101741,10 +101888,6 @@ const FUP_WHY = [
    worth-telling line is OFF by default (its natural form is the
    picture); the quiet line is ON, because it is the whole of that row. */
 const fupTicks = Object.create(null);
-/* Held back is a BAND under the queue, not a panel beside it: named
-   rather than dropped, but not taking a column from the work. Opening it
-   is a deliberate act, so the set is closed until somebody asks. */
-let fupHeldOpen = false;
 /* Which inbound conversation is open in the queue. A question is read
    where it is ranked -- the thread opens IN PLACE like every other row
    -- and only the answering happens on the inbox screen, which owns the
@@ -101953,20 +102096,54 @@ function renderMessagesSide(nowMs, rows){
         <span class="ow-mq-tw" title="${esc(o.who)}">${esc(o.who)}</span></div>`).join('')
     : `<div class="ow-mq-rfoot">Nothing has gone out today.</div>`;
 
-  el.innerHTML = `<div class="ow-pan">
+  /* SENT, AND STILL WAITING -- one row per client, with how long since
+     the word went and a bar against the quiet rule: past the line it is
+     amber, because that client can be asked again. */
+  const quietDays = followUpQuietDays();
+  const sentBy = new Map();
+  try{
+    followUpsAll().forEach(f=>{
+      if(!followUpIsOpen(f)) return;
+      const last = followUpLastContact(f);
+      if(!last) return;
+      const key = String(f.customerId);
+      const d = Math.max(0, Math.floor((nowMs - new Date(last.at).getTime()) / 86400000));
+      const cur = sentBy.get(key);
+      if(!cur || d < cur.d){
+        const cu = (data.customers||[]).find(x=> String(x.id) === key);
+        sentBy.set(key, {d, name: cu ? cu.name : 'a client'});
+      }
+    });
+  }catch(err){ /* nothing sent */ }
+  const sent = [...sentBy.values()].sort((a,b)=> b.d - a.d);
+  const sentHTML = sent.length ? `<div class="ow-pan">
+      <div class="ow-pan-h"><span class="ow-pan-t">Sent, waiting</span><span class="ow-pan-n">${sent.length}</span></div>
+      ${sent.slice(0, 5).map(r=> `<div class="fup-sw${r.d >= quietDays ? ' fup-sw-due' : ''}">
+        <span class="fup-sw-n" title="${esc(r.name)}">${esc(r.name)}</span><span class="fup-sw-d">${r.d}d</span>
+        <span class="fup-sw-bar" aria-hidden="true"><i class="fup-sw-f" style="--fup-w:${Math.max(4, Math.round(Math.min(1, r.d / (quietDays * 1.5)) * 100))}%"></i><i class="fup-sw-m" style="--fup-w:${Math.round(100 / 1.5)}%"></i></span>
+      </div>`).join('')}
+      ${sent.length > 5 ? `<p class="ow-mini">and ${sent.length - 5} more.</p>` : ''}
+      <p class="ow-mini">the line is ${quietDays} days &mdash; past it, they can be asked again</p>
+    </div>` : '';
+  /* HELD BACK moved here from a band under the queue: named rather than
+     dropped, read beside the work rather than competing with it. */
+  const heldRows = rows && rows.length ? rows : fupHubRowsNow();
+  const heldHTML = followUpHeldBack(nowMs, heldRows).list.length ? fupHeldPanelHTML(nowMs, heldRows) : '';
+  /* Came back and Gone out today are drawn only when they hold
+     something: an empty box saying nothing has happened is the lane
+     chip's count said again at four times the size. */
+  el.innerHTML = `${lanes.back.length ? `<div class="ow-pan">
       <div class="ow-pan-h"><span class="ow-pan-t">Came back</span>
-        <span class="ow-pan-n">${lanes.back.length ? lanes.back.length + ' to deal with' : 'nothing to deal with'}</span></div>
+        <span class="ow-pan-n">${lanes.back.length} to deal with</span></div>
       ${backHTML}
-    </div>
-    <div class="ow-pan">
+    </div>` : ''}
+    ${out.length ? `<div class="ow-pan">
       <div class="ow-pan-h"><span class="ow-pan-t">Gone out today</span>
         <span class="ow-pan-n">${out.length}</span></div>
       ${goneHTML}
-    </div>
-    <div class="ow-pan">
-      <div class="ow-pan-h"><span class="ow-pan-t">The window</span></div>
-      <div class="ow-mq-rfoot">Nothing on this screen sends itself. Every message here is an owner tap, and the app writes nothing down until you say it went.</div>
-    </div>`;
+    </div>` : ''}
+    ${sentHTML}${heldHTML}
+    ${!lanes.back.length && !out.length && !sentHTML && !heldHTML ? `<div class="ow-pan"><div class="ow-mq-rfoot">Nothing has gone out today, nothing has come back, and nobody is held back.</div></div>` : ''}`;
 }
 
 function fupHeldPanelHTML(nowMs, rows){
@@ -102100,31 +102277,33 @@ function fupRowLenses(row){
   return out;
 }
 
-/* The one figure the queue row carries, by what put the client here:
-   days past the day the owner named, money owed, days since anything
-   was said, or the book's own figure for a quiet customer. */
-function fupRowValue(row, nowMs){
+
+/* HOW LONG THIS CLIENT HAS BEEN WAITING, in days -- the one unit every
+   row of the queue can share, so the column reads DOWN. What the wait is
+   counted from depends on what put them here: the day the owner named,
+   the oldest money past terms, the last word said, or the last thing
+   they bought. The tone is the state vocabulary: a day that has passed
+   is bad, money is caution, the rest is ink. */
+function fupRowWait(row, nowMs){
   if(row.kinds.has('promised')){
     let late = 0;
     row.items.forEach(i=> i.reasons.forEach(r=>{ if(r.kind === 'promised') late = Math.max(late, r.lateDays||0); }));
-    return late > 0 ? {v: String(late), b: late === 1 ? 'day late' : 'days late'} : {v: 'today', b: 'you said'};
+    return late > 0 ? {d: late, b: 'past your day', tone: 'bad'}
+      : {d: 0, b: 'your day is today', tone: 'warn'};
   }
-  if(row.kinds.has('money')) return {v: fmtUGX(Math.round(row.chase.debt)), b: 'owed'};
-  if(row.items.length) return {v: String(fupDaysQuiet(row, nowMs)), b: 'days quiet'};
-  if(row.quiet) return {v: row.quiet.reason.fig, b: row.quiet.reason.basis};
-  /* WORTH TELLING, AND NOTHING ELSE TRUE OF THEM. This read
-     "— worth a word", which is the chip beside it saying nothing twice:
-     a figure column that states nothing is worse than no column.
-
-     What the row actually wants is the fact that makes the telling worth
-     anything -- how long since this client last bought. The customer
-     book has measured it on every open for as long as it has existed;
-     followUpHubRows already reads that book and now carries the row. */
-  const b = row.book;
-  if(b && !b.orderCount) return {v: 'never', b: 'bought from you'};
-  if(b && b.daysSinceLast != null)
-    return {v: String(b.daysSinceLast), b: b.daysSinceLast === 1 ? 'day since they bought' : 'days since they bought'};
-  return {v: '—', b: 'no dated order on file'};
+  if(row.kinds.has('money') && row.chase)
+    return {d: Math.max(0, Math.round(Number(row.chase.ageDays) || 0)), b: fmtUGX(Math.round(row.chase.debt)) + ' owed', tone: 'warn'};
+  if(row.items.length) return {d: fupDaysQuiet(row, nowMs), b: 'days quiet', tone: 'q'};
+  const bk = row.book;
+  if(bk && bk.daysSinceLast != null) return {d: bk.daysSinceLast, b: 'since they bought', tone: 'q'};
+  return {d: null, b: bk && !bk.orderCount ? 'never bought' : 'no dated order', tone: 'q'};
+}
+/* Side by side, or opened in place: the desktop has room for the queue
+   AND the client; a phone does not. Read at render time, and the screen
+   redraws itself when the window crosses the line, so the one draft is
+   never left in the layout it no longer fits. */
+function fupSplit(){
+  return !(typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width:820px)').matches);
 }
 
 /* THE THREE LANES THAT ARE NOT FOLLOW-UPS.
@@ -102240,37 +102419,59 @@ const MSG_PROD_MARK = `<span class="ow-mq-pic"><svg class="ow-mq-pici" viewBox="
 function msgPostOpenHTML(p, i){
   const fig = (n)=> Number(Math.round(Number(n) || 0)).toLocaleString('en-UG');
   const lift = typeof WA_LIFT_DAYS === 'number' ? WA_LIFT_DAYS : 7;
-  const fact = (name, sub, val, basis)=> `<div class="ow-mq-f">
-    <span class="ow-mq-fn" title="${esc(name)}">${esc(name)}${sub ? ` <i class="ow-mq-fni">&middot; ${esc(sub)}</i>` : ''}</span>
-    <span class="ow-mq-fv">${esc(val)}</span><span class="ow-mq-fs">${esc(basis)}</span></div>`;
-  const facts = [
-    p.qty != null ? fact('On the shelf', p.unit ? 'per ' + p.unit : '', fig(p.qty), fig(p.price) + ' each') : '',
-    p.marginUnit != null ? fact('You keep', 'a ' + (p.unit || 'unit'),
-      fmtUGX(p.marginUnit), fig(p.price) + ' less ' + fig(p.cost)) : '',
-    p.expectedUnits != null ? fact('Expected in ' + lift + ' days', 'from this shop\u2019s own posts',
-      fig(p.expectedUnits), p.est && p.est.pooled ? 'the median' : 'its own history') : '',
-    p.cappedBy != null ? fact('Held back by the shelf', 'the estimate stops there',
-      fig(p.cappedBy), 'is all there is') : '',
-  ].filter(Boolean).join('');
-  const caption = typeof waCaption === 'function'
-    ? waCaption(p, typeof printedShopName === 'function' ? printedShopName() : '', data.presetWaPhone || '')
-    : '';
-  return `<div class="ow-mq-x">
-    <div class="ow-mq-l1">
-      <p class="ow-mq-l">Why this one</p>
-      ${facts || '<p class="ow-mq-p">The signal put it up, but the books cannot value it yet &mdash; no cost on the last purchase, so there is no margin to state.</p>'}
-      <p class="ow-mq-p">Every figure is read from this shop&rsquo;s own shelf and its own posts.
-        <b class="ow-mq-pb">An expectation is not a promise</b> &mdash; it is the median of what happened
-        the last times something like this went out.</p>
-    </div>
+  const shop = typeof printedShopName === 'function' ? printedShopName() : '';
+  const phone = data.presetWaPhone || '';
+  const caption = typeof waCaption === 'function' ? waCaption(p, shop, phone) : '';
+  const brk = (p.breaks || [])[0];
+  /* THE CARD AS IT WILL LOOK. The Status is a picture before it is a
+     sentence, so the owner sees the frame the shop's contacts will see
+     -- the photo, the name, the price at the size it is drawn -- rather
+     than reading about it. With no photo on file it says so, because it
+     goes out as a text card and the owner should know that first. */
+  const preview = `<div class="fup-ps" aria-label="How the Status will look">
+      <span class="fup-ps-ph">${p.image
+        ? `<img class="fup-ps-img" src="${esc(String(p.image))}" alt="">`
+        : `<span class="fup-ps-none">no photo &mdash; goes as a text card</span>`}</span>
+      ${p.dropped ? '<span class="fup-ps-drop">New lower price</span>' : ''}
+      <b class="fup-ps-n">${esc(p.name || 'a product')}</b>
+      <span class="fup-ps-p">UGX ${esc(fig(p.price))}</span>
+      ${p.unit ? `<span class="fup-ps-u">per ${esc(p.unit)}</span>` : ''}
+      ${brk ? `<span class="fup-ps-u">Buy ${esc(String(brk.qty))}+ at UGX ${esc(fig(brk.price))}</span>` : ''}
+      <span class="fup-ps-sp"></span>
+      <span class="fup-ps-shop">${esc([shop, phone].filter(Boolean).join(' \u00b7 ') || 'your shop name and number')}</span>
+    </div>`;
+  /* LIKELY TO GO AGAINST WHAT IS ON THE SHELF. One bar says both the
+     expectation and its ceiling, which were two lines of prose: the
+     fill is what the shop's own past posts say will go in the week, the
+     track is the shelf, and a fill that reaches the end says the shelf
+     is what stops it. */
+  const q = Number(p.qty) || 0, ex = p.expectedUnits;
+  const pct = ex != null && q > 0 ? Math.max(4, Math.round(Math.min(1, ex / q) * 100)) : 0;
+  const likely = ex != null ? `<div class="fup-pl">
+      <span class="fup-pl-h"><span>Likely to go in ${lift} days</span><span>on the shelf <b class="ow-fig">${esc(fig(q))}</b></span></span>
+      <span class="fup-pl-bar"><i class="fup-pl-f" style="--fup-w:${pct}%"><b class="ow-fig">${esc(fig(ex))}</b></i></span>
+      <span class="fup-pl-s">${p.cappedBy != null ? 'capped by the shelf \u2014 past posts say more would go than you have'
+        : (p.est && p.est.pooled ? 'the median of what went after posts like this one' : 'from this product\u2019s own past posts')}. An expectation, not a promise.</span>
+    </div>` : `<p class="ow-mq-p">No past posts to go on yet, so nothing is expected of this one &mdash; the first posts are how the shop learns.</p>`;
+  const keepAll = p.marginUnit != null && ex != null ? p.marginUnit * ex : null;
+  const cell = (l, v, cls)=> `<span class="fup-pf${cls ? ' ' + cls : ''}"><span class="fup-pf-l">${l}</span><b class="fup-pf-v">${v}</b></span>`;
+  const figs = `<div class="fup-pfs">
+      ${cell('Sells at', esc(fig(p.price)))}
+      ${cell('You keep each', p.marginUnit != null ? esc(fig(p.marginUnit)) : '\u2014', p.marginUnit != null ? 'fup-pf-good' : '')}
+      ${cell(ex != null ? 'If ' + esc(fig(ex)) + ' go' : 'If they go', keepAll != null ? '+' + esc(fig(keepAll)) : '\u2014', keepAll != null ? 'fup-pf-good fup-pf-sum' : '')}
+    </div>`;
+  return `<div class="ow-mq-x fup-post">
+    <div class="ow-mq-l1">${preview}</div>
     <div class="ow-mq-l2">
-      <p class="ow-mq-l">What will be posted</p>
+      <p class="ow-mq-l">Why this one</p>
+      <div class="ow-mq-acts">${(p.reasons || []).slice(0, 3).map(r=> `<span class="ow-cp ow-good">${esc(r.text)}</span>`).join('')}</div>
+      ${likely}
+      ${p.marginUnit != null ? figs : `<p class="ow-mq-p">No cost on the last purchase, so the books cannot say what it keeps.</p>`}
+      <p class="ow-mq-l">The words that go with it</p>
       <div class="ow-msg">${esc(caption)}</div>
       <div class="ow-mq-send">
         <button type="button" class="btn btn-accent msg-post-open" data-pick="${esc(String(i))}">Open WhatsApp with this</button>
-        <span class="ow-mq-note">The card and the words are handed over &mdash; nothing is posted for you.
-          <b class="ow-mq-pb">The app cannot see your Status</b>, so when you come back it asks whether it went out,
-          and counts it neither way until you answer.</span>
+        <span class="ow-mq-note">Nothing is posted for you. <b class="ow-mq-pb">The app cannot see your Status</b>, so when you come back it asks whether it went out.</span>
       </div>
     </div>
   </div>`;
@@ -102290,22 +102491,32 @@ function msgLaneHTML(lane, nowMs){
     if(!picks.length) return pan('What to post', 'nothing nominated',
       'Ranked by what actually sold after a post &mdash; not by what is dearest', '', '',
       '') + `<div class="ow-pan ow-mq"><div class="ow-empty"><b>Nothing is worth posting today.</b><br>Every product the signal put up is either out of cover or already posted.</div></div>`;
+    const fig = (n)=> Number(Math.round(Number(n) || 0)).toLocaleString('en-UG');
     const body = picks.map((p, i)=>{
       const worth = Math.round((Number(p.price)||0) * (Number(p.qty)||0));
       const open = String(msgOpenPost) === String(i);
+      /* The figure a post row carries is what it is expected to MOVE --
+         the reason it was picked -- over the shelf it can move from. */
+      const reason = (p.reasons || [])[0];
       return msgLaneRow({
         act: `data-pick="${esc(String(i))}"`, cls: 'msg-post-pick', open,
         x: open ? msgPostOpenHTML(p, i) : '',
-        mark: MSG_PROD_MARK, name: p.name || 'a product',
+        mark: p.image ? `<span class="ow-mq-pic"><img class="fup-pic-img" src="${esc(String(p.image))}" alt=""></span>` : MSG_PROD_MARK,
+        name: p.name || 'a product',
         sub: `to everybody${p.unit ? ' · per ' + p.unit : ''}${p.qty ? ' · ' + p.qty + ' in the yard' : ''}`,
-        chips: `<span class="ow-cp">${esc(p.whyChip || p.why || 'the signal put it up')}</span>`,
-        v: worth ? fmtUGX(worth) : '—', b: worth ? 'on the shelf' : 'not valued',
+        chips: `<span class="ow-cp ow-good">${esc(reason ? reason.text : 'the signal put it up')}</span>`,
+        v: p.expectedUnits != null ? fig(p.expectedUnits) + ' likely' : (worth ? fmtUGX(worth) : '—'),
+        b: p.expectedUnits != null ? 'of ' + fig(p.qty) + ' on the shelf' : (worth ? 'on the shelf' : 'not valued'),
         until: i < cap ? 'today' : 'rolls over', untilCls: i < cap ? 'ow-warn' : 'ow-q',
         state: i < postedToday ? 'posted' : 'picked', stateCls: i < postedToday ? ' ow-good' : '',
       });
     }).join('');
+    /* The day's slots as pips: posted solid, left hollow -- the count
+       the chip carries, drawn so it can be read without reading. */
+    const pips = `<span class="fup-pips" aria-label="${postedToday} of ${cap} posted today">${
+      Array.from({length: cap}, (_, k)=> `<i class="fup-pip${k < postedToday ? ' fup-pip-on' : ''}"></i>`).join('')}</span>`;
     return pan('What to post', `${picks.length} nominated · ${Math.max(0, cap - postedToday)} slot${cap - postedToday === 1 ? '' : 's'} left today`,
-      'Ranked by what actually sold after a post &mdash; not by what is dearest',
+      pips + ' ranked by what sold after a post',
       'What, and who it goes to', 'Until', body)
       + `<div class="ow-pan ow-mq"><div class="ow-mq-band"><span class="ow-mq-bt">The app cannot see your Status</span>
         <span class="ow-mq-bs">so it asks rather than assumes &mdash; a post counts neither way until you stamp it</span></div></div>`;
@@ -102465,60 +102676,54 @@ function renderFollowUpsContact(){
      true, which is the column two opposite clocks make necessary: a
      debt gets MORE worth chasing every day it is left, news gets less.
      State is where it stands on the ladder, and the WORD carries it. */
-  const rowUntil = (row)=>{
-    if(row.kinds.has('promised')){
-      const val = fupRowValue(row, now);
-      return val.b === 'you said' ? {t:'today', cls:'ow-warn'} : {t:val.v + 'd late', cls:'ow-warn'};
-    }
-    if(row.kinds.has('money')) return {t:'today', cls:'ow-warn'};
-    if(row.items.length) return {t:'today', cls:'ow-warn'};
-    return {t:'no end', cls:'ow-q'};
-  };
-  const rowState = (row)=>{
-    const last = row.items.map(i=> followUpLastContact(i.followUp)).filter(Boolean)
-      .sort((a,b)=> new Date(b.at) - new Date(a.at))[0];
-    if(!last) return {t:'draft', cls:'', sub:''};
-    const days = Math.max(0, Math.floor((now - new Date(last.at).getTime()) / 86400000));
-    return {t:'sent', cls:'', sub: days === 0 ? 'today' : days + 'd ago'};
-  };
+  /* ONE FIGURE EVERY ROW SHARES: HOW LONG THEY HAVE BEEN WAITING.
+     The old row said "1 day late", "250,000 UGX" and "21 days quiet" in
+     one column, which cannot be read down -- three units, and the eye
+     has to stop on each to learn which. Days can be: a bar under the
+     figure, scaled to the longest wait in the list, says at a glance who
+     has been left longest. The money a debtor owes is kept -- on the
+     basis line under the days, mono, never cut. */
+  const waits = shown.map(r=> fupRowWait(r, now));
+  const maxD = Math.max(1, ...waits.map(w=> w.d || 0));
   const queueRow = (row, xHTML)=> {
     const open = String(row.customerId) === String(fupSelectedCustomerId);
     const cid = esc(String(row.customerId));
     const chip = fupCp(fupRowChip(row));
     const held = (row.held || []).length
       ? `<span class="ow-cp">${esc(row.held.length === 1 ? row.held[0].label : row.held.length + ' held')}</span>` : '';
-    const val = fupRowValue(row, now);
-    const until = rowUntil(row);
-    const st = rowState(row);
+    const w = fupRowWait(row, now);
+    const fig = w.d == null ? '\u2014' : w.d + 'd';
+    const pct = w.d == null ? 0 : Math.max(4, Math.round(Math.min(1, w.d / maxD) * 100));
     /* The subtitle is what NEITHER the chip nor the figure has said --
        a word that appears twice in one row teaches the eye to stop
        reading one of them. */
     const last = row.items.map(i=> followUpLastContact(i.followUp)).filter(Boolean)
       .sort((a,b)=> new Date(b.at) - new Date(a.at))[0];
     const sub = [
-      row.items.length ? `${row.items.length} thing${row.items.length === 1 ? '' : 's'}` : '',
+      row.items.length ? row.items.map(i=> followUpSubject(i.followUp).label).join(', ') : '',
       row.items.length ? (last ? 'last told ' + fupDay(last.at) : 'never told') : '',
       row.phone ? '' : 'no number on file',
     ].filter(Boolean).join(' · ');
-    const money = row.kinds.has('money') ? ' ow-bad' : '';
+    const waitHTML = `<span class="ow-q-v fup-wt fup-wt-${w.tone}"><span class="ow-q-f">${esc(fig)}</span>
+          <span class="fup-wbar" aria-hidden="true"><i class="fup-wbar-f" style="--fup-w:${pct}%"></i></span>
+          <span class="ow-q-b">${esc(w.b)}</span></span>`;
     /* The desktop row and the phone card are emitted from ONE call, so
-       they can never come to say different things. */
+       they can never come to say different things. On the desktop the
+       row does not open in place: the client opens in the pane beside
+       the queue, so the draft is in exactly one place either way. */
     return `<div class="ow-q${open ? ' ow-open' : ''}">
       <button type="button" class="ow-q-r fup-pick" data-cust="${cid}" aria-expanded="${open ? 'true' : 'false'}">
-        <svg class="ow-q-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
         <span class="ow-mq-who"><span class="ow-mq-av">${esc(fupInitials(row.name))}</span>
           <span class="ow-mq-b"><span class="ow-mq-n">${esc(row.name)}</span>
             <span class="ow-mq-s" title="${esc(sub)}">${esc(sub)}</span></span></span>
         <span class="ow-mq-cps">${chip}${held}</span>
-        <span class="ow-q-v${money}"><span class="ow-q-f">${esc(val.v)}</span><span class="ow-q-b">${esc(val.b)}</span></span>
-        <span class="ow-mq-u ${until.cls}">${esc(until.t)}</span>
-        <span class="ow-mq-st${open ? ' ow-on' : ''}">${open ? 'open' : esc(st.t)}${st.sub && !open ? `<b class="ow-mq-stb">${esc(st.sub)}</b>` : ''}</span>
+        ${waitHTML}
       </button>
       <button type="button" class="ow-q-card fup-pick" data-cust="${cid}" aria-expanded="${open ? 'true' : 'false'}">
         <span class="ow-q-cm">${chip}${held}
           <svg class="ow-q-cc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></span>
         <p class="ow-q-ct">${esc(row.name)}</p>
-        <span class="ow-q-cv${money}">${esc(val.v)}<span class="ow-q-b">${esc(val.b)}</span></span>
+        ${waitHTML}
       </button>
       <div class="ow-q-x">${xHTML || ''}</div>
     </div>`;
@@ -102737,29 +102942,27 @@ function renderFollowUpsContact(){
       </div>
     </div>`;
   }
-  /* ONE PANEL, and the draft opens inside the row it belongs to. The
-     held-back set stops being a panel of its own and becomes the band at
-     the foot of the queue: named rather than dropped, but not competing
-     with the work for a column. */
+  /* ONE DRAFT, IN ONE PLACE. On the desktop the queue and the client
+     being worked sit side by side -- the list stays in view while the
+     message is written, which is the whole point of a queue. On a phone
+     there is no room beside it, so the client opens in place under their
+     own card. Which of the two is decided here, once per render, so the
+     draft is only ever drawn once. */
+  const split = fupSplit();
   const body = shown.length
-    ? shown.map(r=> queueRow(r, String(r.customerId) === String(fupSelectedCustomerId) ? work : '')).join('')
+    ? shown.map(r=> queueRow(r, !split && String(r.customerId) === String(fupSelectedCustomerId) ? work : '')).join('')
     : emptyHTML;
-  const held = followUpHeldBack(now, rows);
-  const bandHTML = held.list.length ? `<div class="ow-mq-band">
-    <span class="ow-mq-bt">Held back</span><span class="ow-cp">${held.list.length}</span>
-    <span class="ow-mq-bs" title="${esc(fupHeldWhy(held))}">${esc(fupHeldWhy(held))}</span>
-    <button type="button" class="btn btn-ghost ow-sm fup-held-show">${fupHeldOpen ? 'Hide them' : 'Show them'}</button>
-  </div>${fupHeldOpen ? fupHeldPanelHTML(now, rows) : ''}` : '';
-  fupSetHTML(wrap, `<div class="ow-pan ow-mq">
+  const queueHTML = `<div class="ow-pan ow-mq fup-queue">
     <div class="ow-pan-h ow-mq-hd"><span class="ow-pan-t">${fupWhy === 'all' ? 'Who is up' : esc(whyLabel)}</span>
       <span class="ow-pan-n">${shown.length}${narrowed ? ' of ' + rows.length : ''} ${(narrowed ? rows.length : shown.length) === 1 ? 'person' : 'people'}</span>
       <span class="ow-pan-sp"></span>
-      <span class="ow-pan-note">Money first, dearest first &mdash; then news, soonest to stop being true</span></div>
+      <span class="ow-pan-note" title="Money first, dearest first \u2014 then news, soonest to stop being true">dearest first</span></div>
     ${rows.length || tokens.length ? `<div class="ow-tb"><label class="ow-f ow-f-grow"><span class="ow-f-l">Find in the queue</span><span class="ow-f-in"><input type="search" class="ow-f-v ow-f-t" id="fup_queue_search" placeholder="Client, item or note" value="${esc(fupQueueQuery)}"></span></label></div>` : ''}
-    ${shown.length ? `<div class="ow-mq-h"><span class="ow-mq-hc"></span><span class="ow-mq-hc">Who, and what it is about</span><span class="ow-mq-hc">Why now</span>
-      <span class="ow-mq-hc ow-mq-r">At stake</span><span class="ow-mq-hc ow-mq-r">Until</span><span class="ow-mq-hc ow-mq-r">State</span></div>` : ''}
-    ${body}${undo}${bandHTML}
-  </div>`);
+    ${shown.length ? `<div class="ow-mq-h"><span class="ow-mq-hc">Who, and what it is about</span><span class="ow-mq-hc">Why now</span>
+      <span class="ow-mq-hc ow-mq-r">Waiting</span></div>` : ''}
+    ${body}${undo}
+  </div>`;
+  fupSetHTML(wrap, split && shown.length ? `<div class="fup-md">${queueHTML}${work}</div>` : queueHTML);
   renderMessagesSide(now, rows);
 }
 
@@ -102801,9 +103004,13 @@ function renderFollowUpSummary(){
      either half of itself, because the retired page's door opens
      'telling' on its own. */
   const on = (k)=> k === fupWhy || (k === 'word' && (fupWhy === 'telling' || fupWhy === 'quiet'));
-  const tile = (label, k, v, sub, tone)=> `<button type="button" class="ow-mt fup-mt${on(k) ? ' ow-on' : ''}${tone ? ' ' + tone : ''}" data-fupwhy="${k}" aria-pressed="${on(k) ? 'true' : 'false'}">
-    <p class="ow-mt-l">${label}</p><span class="ow-mt-v">${v}</span><p class="ow-mt-s">${sub}</p></button>`;
-  el.innerHTML = `<div class="ow-strip ow-strip-5 fup-strip">
+  /* A lane with nobody in it is still a door -- other screens open it
+     by name -- but it is drawn quiet, so the eye lands on the lanes
+     that hold work. The subtitle is the chip's hover, not a second line:
+     the count is what is read, the sentence is what is checked. */
+  const tile = (label, k, v, sub, tone)=> `<button type="button" class="ow-mt fup-mt${on(k) ? ' ow-on' : ''}${tone ? ' ' + tone : ''}${/^0(<|$)/.test(String(v)) ? ' fup-zero' : ''}" data-fupwhy="${k}" aria-pressed="${on(k) ? 'true' : 'false'}" title="${esc(String(sub).replace(/<[^>]*>/g, ''))}">
+    <p class="ow-mt-l"><i class="fup-dot fup-dot-${k}"></i>${label}</p><span class="ow-mt-v">${v}</span><p class="ow-mt-s">${sub}</p></button>`;
+  el.innerHTML = `<div class="ow-strip ow-strip-5 fup-strip fup-lanes">
     ${tile('Waiting on you', 'inbox', lanes.waiting.length,
       lanes.waiting.length ? 'longest ' + esc(wait(oldest)) : 'nobody is waiting',
       lanes.waiting.length ? 'ow-warn' : '')}
@@ -102842,10 +103049,9 @@ function renderFollowUpQuietLine(){
     return last ? Math.floor((now - new Date(last.at).getTime()) / 86400000) : 0;
   });
   const oldest = ages.reduce((m,d)=> d > m ? d : m, 0);
-  el.innerHTML = `<div class="ow-mq-quiet">
+  el.innerHTML = `<div class="ow-mq-quiet" title="Nobody is chased twice inside the rest period, so none of them is up again today">
     <span class="ow-mq-qt"><b class="ow-fig">${sent.length}</b> sent and still waiting</span>
-    <span class="ow-mq-qs">oldest ${oldest} day${oldest === 1 ? '' : 's'} &middot; nobody is chased twice inside the rest period, so none of them is up again today</span>
-    <button type="button" class="btn btn-ghost ow-sm fup-mt" data-fupwhy="all">Show the queue</button>
+    <span class="ow-mq-qs">oldest <b class="ow-fig">${oldest}d</b></span>
   </div>`;
 }
 
@@ -102915,6 +103121,7 @@ function renderFollowUpsAll(filter){
     (b.items.some(followUpIsOpen) - a.items.some(followUpIsOpen))
     || String(a.name).localeCompare(String(b.name)));
 
+  const quietDays = followUpQuietDays();
   const body = !groups.length
     ? `<div class="ow-empty">${all.length
         ? 'Nothing matches. Try a client’s name, or part of an item.'
@@ -102930,13 +103137,24 @@ function renderFollowUpsAll(filter){
             const s = followUpSubject(f);
             const last = followUpLastContact(f);
             const pill = followUpStatePill(f, now);
+            /* Is it on the shelf? A dot before the name answers the one
+               question every open line is really asking, in the state
+               vocabulary: in is good, not in is bad, a lead has no shelf. */
+            const onHand = s.kind === 'product' && s.product ? getStockQty(s.product.id, s.variantIdx) : null;
+            const dot = f.closedAt || onHand == null ? ''
+              : `<i class="fup-rd${onHand > 0 ? ' fup-rd-in' : ''}" title="${onHand > 0 ? esc(String(onHand)) + ' on hand' : 'not in'}"></i>`;
+            /* How long the line has been quiet, against the quiet rule: a
+               short bar that fills to the rule and turns caution past it. */
+            const since = followUpSinceMs(f);
+            const qd = !f.closedAt && since ? Math.max(0, Math.floor((now - since) / 86400000)) : null;
+            const qBar = qd == null ? '' : `<span class="fup-rq${qd >= quietDays ? ' fup-rq-due' : ''}" title="${qd} day${qd === 1 ? '' : 's'} quiet"><i class="fup-rq-f" style="--fup-w:${Math.max(4, Math.round(Math.min(1, qd / quietDays) * 100))}%"></i></span>`;
             return `<div class="ow-tbl-r${f.closedAt ? ' fup-closed' : ''}">
-              <div class="ow-tbl-c"><span class="ow-tbl-p" title="${esc(s.label)}">${esc(s.label)}</span>${
+              <div class="ow-tbl-c"><span class="ow-tbl-p" title="${esc(s.label)}">${dot}${esc(s.label)}</span>${
                 f.note ? `<span class="ow-tbl-s" title="${esc(f.note)}">${esc(f.note)}</span>` : ''}${
                 f.promisedOn && !f.closedAt ? `<span class="ow-tbl-s">get back by ${esc(fmtShortDate(f.promisedOn))}</span>` : ''}</div>
               <div class="ow-tbl-c" data-l="State">${fupCp(f.closedAt ? {label: fupClosedLabel(f), cls:''} : pill)}</div>
               <div class="ow-tbl-n" data-l="Asked">${esc(f.createdAt ? fupDay(f.createdAt) : '—')}</div>
-              <div class="ow-tbl-n" data-l="Last told">${last ? esc(fupDay(last.at)) : 'never'}</div>
+              <div class="ow-tbl-n" data-l="Last told">${last ? esc(fupDay(last.at)) : 'never'}${qBar}</div>
               <div class="ow-tbl-a"><button type="button" class="fup-link ${f.closedAt ? 'fup-reopen' : 'fup-close'}"
                 data-id="${esc(String(f.id))}" data-reason="">${f.closedAt ? 'Reopen' : 'Close'}</button></div>
             </div>`;
@@ -103173,6 +103391,14 @@ function wireFollowUpsScreen(){
     });
 
   const screen = document.getElementById('tab-followups');
+  /* Crossing the phone line moves the draft between the pane and the
+     row, so the queue is redrawn when it happens -- the typed words are
+     kept in fupDrafts and come with it. */
+  try{
+    const mq = window.matchMedia('(max-width:820px)');
+    const redraw = ()=>{ if(screen.style.display !== 'none') renderFollowUpsContact(); };
+    if(mq.addEventListener) mq.addEventListener('change', redraw); else if(mq.addListener) mq.addListener(redraw);
+  }catch(err){ /* no media queries: the desktop layout stands */ }
   screen.addEventListener('input', (e)=>{
     if(e.target.id === 'fup_queue_search'){ fupQueueQuery = e.target.value; renderFollowUpsContact(); return; }
     if(e.target.id === 'fup_search'){ fupRegisterQuery = e.target.value; renderFollowUpsAll(fupRegisterQuery); return; }
@@ -103191,7 +103417,6 @@ function wireFollowUpsScreen(){
 
   screen.addEventListener('click', (e)=>{
     if(e.target.closest('#fup_add_any')){ openFollowUpListModal(null); return; }
-    if(e.target.closest('.fup-held-show')){ fupHeldOpen = !fupHeldOpen; renderFollowUpsContact(); return; }
     /* A question is answered in the chat it arrived in, with the thread
        in front of you -- this screen ranks the asking, the inbox holds
        the conversation. */
@@ -103255,7 +103480,7 @@ function wireFollowUpsScreen(){
       fupEditing = null;
       /* Pressing the row that is already open folds it. A queue row that
          can only ever open is a caret pointing at nothing. */
-      fupSelectedCustomerId = String(fupSelectedCustomerId) === String(pick.dataset.cust)
+      fupSelectedCustomerId = String(fupSelectedCustomerId) === String(pick.dataset.cust) && !fupSplit()
         ? FUP_FOLDED : pick.dataset.cust;
       renderFollowUpsContact(); return; }
 
