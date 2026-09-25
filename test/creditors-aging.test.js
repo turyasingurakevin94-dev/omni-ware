@@ -54,6 +54,9 @@ const scope = compileScope([
   extractFunction(src, 'credRowAmount', 'index.html'),
   extractFunction(src, 'credRowProgress', 'index.html'),
   extractFunction(src, 'credCashOnHand', 'index.html'),
+  extractFunction(src, 'credPayCompare', 'index.html'),
+  extractFunction(src, 'credReach', 'index.html'),
+  extractFunction(src, 'credRowTone', 'index.html'),
   'function sortState(){ return CRED_SORT_STATE; }',
   'function sortFirstDir(){ return CRED_SORT_FIRST_DIR; }',
   'function sortChoices(){ return CRED_SORT_CHOICES; }',
@@ -67,6 +70,7 @@ const scope = compileScope([
   supplierName: (id) => (data.suppliers.find((s) => s.id === id) || {}).name || '',
   cbDayPosition: (d) => ({ closing: data.__closing[d] }),
 }, ['credOpenInvoices', 'credAgingProfile', 'credAllRows', 'credRowAmount', 'credRowProgress', 'credCashOnHand',
+  'credReach', 'credRowTone',
   'creditorLastPaymentDate', 'agingBandFor', 'sortState', 'sortFirstDir', 'sortChoices', 'setBandFilter']);
 
 let iid = 1;
@@ -304,8 +308,22 @@ const reset = (suppliers, invoices) => {
     'a band holding nothing is left off the bar rather than drawn as a sliver of zero');
   t.check(/credBandFilter = \(credBandFilter === el\.dataset\.band\) \? '' : el\.dataset\.band/.test(pos),
     'clicking the active band turns the filter off again');
-  t.check(/const big = p\.suppliers > 1 \? p\.biggest : null;/.test(pos),
-    'the concentration figure is withheld when there is only one supplier');
+  /* THE CONCENTRATION TILE IS GONE, because the bar draws it. "Largest
+     single balance, 34% of everything you owe" was a sentence about one
+     segment of a bar that now exists: every supplier is as wide as what
+     they are owed, so the biggest is the widest and every other share
+     sits beside it. The old check kept that tile from making a claim of
+     a one-supplier book; no claim is made at all now. What has to hold
+     instead is that the widths ARE the money, and that the gap between
+     the drawer and the debt is not painted as bad news -- owing more
+     than you hold on a given morning is how trade credit works, and
+     crimson on it is the fault this screen was converted once to fix. */
+  t.check(/class="ow-cr-rb-s \$\{credRowTone\(r\)\}" style="flex-grow:\$\{o\.owed\}"/.test(pos),
+    'each supplier on the bar is exactly as wide as what is owed them');
+  t.check(/tile\('Short today', `\$\{f\(reach\.short\)\}<span class="ow-u">UGX<\/span>`,\s*`cash covers <b>\$\{pct\(Math\.max\(0, cash\)\)\}%<\/b> of what you owe`\)/.test(pos),
+    'and the gap between cash and debt is a figure in ink, not a warning');
+  t.check(/const reach = credReach\(\);/.test(pos) && !/credRowsForList/.test(pos.replace(/function credOpenSupplier[\s\S]*/, '')),
+    'the bar is measured on the whole book, never on the filtered list');
   t.check(/Nothing is owed by you yet/.test(pos) && /Every supplier invoice on file is settled/.test(pos),
     'an empty book and a settled book say different things');
   t.check(/const any = \(data\.suppliers\|\|\[\]\)\.length > 0;/.test(pos),
@@ -318,6 +336,57 @@ const reset = (suppliers, invoices) => {
      card underneath said "suppliers". */
   t.check(/<span class="ow-db-ag-m">\$\{b\.count\} invoice\$\{b\.count===1\?'':'s'\}/.test(pos),
     'a band card says how many INVOICES are in it');
+}
+
+/* ---------- 8b. how far today's cash reaches ------------------------- *
+ * One walk down the whole book in pay order, paying each supplier in
+ * full before the next. The bar, the "cash covers" meter on each row and
+ * the line across the list all read it, so none can say the money goes
+ * further than another does.
+ */
+{
+  reset(
+    [{ id: 'S1', name: 'No day' }, { id: 'S2', name: 'Day coming' }, { id: 'S3', name: 'Word broken' }],
+    [
+      inv('S1', 80, 300000),
+      Object.assign(inv('S2', 20, 700000), { dueDate: ago(-3) }),
+      Object.assign(inv('S3', 40, 600000), { dueDate: ago(5) }),
+    ],
+  );
+  const r0 = scope.credReach();
+  t.check(r0.cash === null && r0.order.every((o) => o.covered === null) && r0.short === null,
+    'with today not opened, nothing is measured -- covered is unknown, not zero');
+  eq(r0.order.map((o) => o.row.name).join(' > '), 'Word broken > Day coming > No day',
+    'the walk runs in pay order: a broken word, then a day given, then the rest');
+  eq(r0.total, 1600000, 'and over the whole book');
+
+  data.cashDays[TODAY] = { opening: {}, actual: {}, openingSet: true };
+  data.__closing[TODAY] = 1000000;
+  const r = scope.credReach();
+  eq(r.order.map((o) => o.covered).join(','), '600000,400000,0',
+    'each supplier gets what is left after everyone above them');
+  eq(r.short, 600000, 'and what the drawer cannot reach is the gap');
+  eq(r.order.reduce((n, o) => n + o.covered, 0), 1000000,
+    'no shilling of cash is counted twice or left over while anything is owed');
+
+  scope.setBandFilter('b30');
+  eq(scope.credReach().order.length, 3, 'a band filter does not narrow the walk -- it is the whole book');
+  scope.setBandFilter('');
+
+  data.__closing[TODAY] = -50000;
+  t.check(scope.credReach().order.every((o) => o.covered === 0),
+    'an overdrawn day covers nothing, rather than a negative share of somebody');
+  data.__closing[TODAY] = 5000000;
+  const all = scope.credReach();
+  t.check(all.order.every((o) => o.covered === o.owed) && all.short === 0,
+    'and a drawer that holds more than the book covers every supplier in full');
+  eq(scope.credRowTone(rowFor('Word broken')), 'ow-bad', 'a broken word is painted as one');
+  eq(scope.credRowTone(rowFor('Day coming')), 'ow-warn', 'a day given as a commitment');
+  eq(scope.credRowTone(rowFor('No day')), 'ow-none', 'and no day as nothing at all');
+
+  const list = (/function credRowsForList[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/if\(key === 'pay'\) return credPayCompare\(a, b\);/.test(list),
+    'the list ranks with the very comparator the walk uses');
 }
 
 /* ---------- 9. one scale for both sides ------------------------------ */
