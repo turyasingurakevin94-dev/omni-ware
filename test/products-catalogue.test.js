@@ -280,12 +280,18 @@ const reset = () => {
   t.check(/What is on the shelf is not here/.test(render) && /Inventory/.test(render),
     'and the panel foot says where stock went, rather than letting a column vanish in silence');
 
-  /* Three money columns and one elastic name column: six grid tracks,
-     not seven. Pinned with the widths because the whole argument for the
-     row is that the figures line up, which stops being true the moment a
-     money column is allowed to be the flexible one. */
-  t.check(/\.pg-cols\{display:grid;grid-template-columns:34px minmax\(0,1fr\) 126px 112px 112px 22px;/.test(src),
-    'the register is three money columns wide, each fixed, with the name the only one that gives way');
+  /* Three money columns and one elastic name column. Pinned with the
+     widths because the whole argument for the row is that the figures
+     line up, which stops being true the moment a money column is allowed
+     to be the flexible one.
+
+     Seven tracks now, not six: the readiness redesign put the three
+     set-up marks (built / priced / ruled) in a column of their own,
+     68px, between the name and the money. It is fixed like the money
+     columns, so the name is still the only track that gives way -- which
+     is the thing this check exists to hold. */
+  t.check(/\.pg-cols\{display:grid;grid-template-columns:34px minmax\(0,1fr\) 68px 126px 112px 112px 22px;/.test(src),
+    'the register is a fixed marks column and three money columns, each fixed, with the name the only one that gives way');
 
   /* The figures line up, which is the whole argument for the row. Money
      is tabular and right-aligned, and the money columns are fixed while
