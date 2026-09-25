@@ -13975,7 +13975,7 @@
   .bf-4 .bf-s{color:var(--ow-oxide-soft);font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;}
 
   /* the pairings register */
-  .ow-tbl.pr-tbl{--ow-tbl-cols:minmax(0,1fr) 112px 152px 92px 18px;}
+  .ow-tbl.pr-tbl{--ow-tbl-cols:112px minmax(0,1fr) 104px 156px 18px;}
   .pr-tbl .ow-tbl-h,.pr-tbl .ow-tbl-r{gap:var(--ow-sp-10);}
   /* TWO PANES. The product is the unit the owner thinks in, so the left
      is a product list and the right is everything about one product.
@@ -14033,12 +14033,124 @@
   .pr-sizes-open{color:var(--ow-amber-ink);}
   /* The verb is the grammar of the rule, so it is the one word set
      apart -- and the one that changes what a picture may say. */
-  .pr-vb{flex:none;font-family:'Archivo Black',sans-serif;font-size:var(--ow-t-11);
-    letter-spacing:.03em;text-transform:uppercase;color:var(--ow-ink-600);}
-  .pr-vb.pr-needs{color:var(--ow-oxide-deep);}
-  .pr-vb.pr-with{color:var(--ow-ink-900);}
-  .pr-vb.pr-after{color:var(--ow-verdigris);}
+  /* THE KIND OF RULE IS A SHAPE. Solid for needs, outlined for goes
+     with, dashed for instead of, flat for part of -- the same four
+     shapes the map's lines and the list's marks use, so the kind is
+     read from the shape before the word, and survives a bright yard
+     where hue does not. */
+  .pr-vb{flex:none;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;
+    min-width:96px;height:24px;padding:0 var(--ow-sp-8);border-radius:var(--ow-r-sm);
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);letter-spacing:.06em;text-transform:uppercase;
+    white-space:nowrap;background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+  .pr-vb.pr-needs{background:var(--ow-steel-950);color:var(--ow-paper);}
+  .pr-vb.pr-with{background:var(--ow-paper);color:var(--ow-ink-900);border:1.5px solid var(--ow-ink-900);}
+  .pr-vb.pr-instead{background:var(--ow-paper);color:var(--ow-ink-600);border:1.5px dashed var(--ow-ink-600);}
+  .pr-vb.pr-after{background:var(--ow-rule-soft);color:var(--ow-ink-900);}
   .pr-nofig{font-size:var(--ow-t-12);font-weight:var(--ow-fw-400);color:var(--ow-ink-600);}
+
+  /* THE MAP. The product is the navy node; its rules hang off one
+     spine, each joined by a line in its own kind. */
+  /* The node sits level with the first rule, not the middle of the
+     list: an opened rule would otherwise push it a screen away. */
+  .pr-map{display:grid;grid-template-columns:140px minmax(0,1fr);align-items:start;
+    padding:var(--ow-sp-16);gap:0;}
+  .pr-node{display:flex;flex-direction:column;gap:var(--ow-sp-4);padding:var(--ow-sp-12);margin-top:var(--ow-sp-24);
+    border-radius:var(--ow-r-lg);background:var(--ow-steel-950);color:var(--ow-paper);min-width:0;}
+  .pr-node-n{font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);line-height:var(--ow-lh-snug);overflow-wrap:anywhere;}
+  .pr-node-s{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-size:var(--ow-t-11);color:var(--ow-steel-100);}
+  /* The gap for the joining line is the TABLE's padding, not the
+     row's: the rows are a subgrid, and padding on one would come out
+     of its first column. */
+  .pr-map .pr-tbl{margin-left:var(--ow-sp-16);padding-left:var(--ow-sp-24);border-left:2px solid var(--ow-rule);min-width:0;}
+  .pr-map .ow-tbl-r{position:relative;}
+  .pr-r{--pr-line:1.5px solid var(--ow-ink-600);}
+  .pr-r-needs{--pr-line:3px solid var(--ow-ink-900);}
+  .pr-r-instead{--pr-line:1.5px dashed var(--ow-ink-600);}
+  .pr-r-part{--pr-line:2px dotted var(--ow-ink-400);}
+  .pr-r-after{--pr-line:2px solid var(--ow-rule);}
+  .pr-map .pr-r::before{content:"";position:absolute;left:calc(-1 * var(--ow-sp-24));top:50%;width:var(--ow-sp-24);border-top:var(--pr-line);}
+  .pr-map .pr-r.tl-on::before{top:22px;}
+  .pr-map .tl-x{margin-left:0;}
+  .pr-map-empty{align-items:stretch;}
+  .pr-slot{margin-left:var(--ow-sp-16);border:1.5px dashed var(--ow-rule);border-radius:var(--ow-r);}
+  .pr-sent{flex-direction:column;align-items:flex-start;gap:2px;}
+  .pr-sizes{display:inline-flex;align-items:center;gap:var(--ow-sp-4);}
+  /* The books' answer, as a bar. Green where they agree, red where
+     they argue, empty where there is nothing yet to compare -- with the
+     words beside it, since colour is never the only carrier. */
+  .pr-bar,.pr-meter{display:block;height:6px;border-radius:3px;background:var(--ow-rule-soft);overflow:hidden;}
+  .pr-bar i,.pr-meter i{display:block;height:100%;width:var(--pr-v,0%);background:var(--ow-steel-950);}
+  .pr-ev{display:flex;flex-direction:column;gap:var(--ow-sp-4);min-width:0;}
+  .pr-ev-t{display:flex;justify-content:space-between;gap:var(--ow-sp-6);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .pr-ev-t b{font-weight:var(--ow-fw-600);}
+  .pr-ev-t .ow-fig{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .pr-ev-agree .pr-bar i{background:var(--ow-verdigris);}
+  .pr-ev-agree .pr-ev-t b{color:var(--ow-verdigris);}
+  .pr-ev-argue .pr-bar i{background:var(--ow-crimson);}
+  .pr-ev-argue .pr-ev-t b{color:var(--ow-crimson);}
+  .pr-ev-unseen .pr-ev-t b{color:var(--ow-amber-ink);}
+  .pr-ev-nothing .pr-bar,.pr-ev-self .pr-bar{background:repeating-linear-gradient(90deg,var(--ow-rule) 0 4px,transparent 4px 8px);}
+  /* the marks in the list, the chips and the picture */
+  .pr-g{display:inline-block;flex:none;box-sizing:border-box;width:9px;height:9px;border-radius:2px;
+    background:var(--ow-rule-soft);vertical-align:middle;}
+  .pr-g-needs{background:var(--ow-ink-900);}
+  .pr-g-with{background:transparent;border:1.5px solid var(--ow-ink-900);border-radius:var(--ow-r-pill);}
+  .pr-g-instead{background:transparent;border:1.5px dashed var(--ow-ink-600);}
+  .pr-g-part{width:12px;height:4px;background:var(--ow-ink-400);}
+  .pr-g-after{background:transparent;border:1.5px solid var(--ow-ink-400);border-radius:var(--ow-r-pill);}
+  .pr-prod-s{display:flex;align-items:center;gap:var(--ow-sp-4);}
+  .pr-prod-s > span{margin-left:var(--ow-sp-4);font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+  .pr-head-s{display:flex;align-items:center;gap:var(--ow-sp-4);flex-wrap:wrap;}
+  .pr-head-o{margin-left:var(--ow-sp-4);}
+  .pr-head-o b{color:var(--ow-amber-ink);font-weight:var(--ow-fw-600);}
+  .pr-size{all:unset;box-sizing:border-box;padding:1px var(--ow-sp-8);border:1px solid var(--ow-rule);
+    border-radius:var(--ow-r-pill);cursor:pointer;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .pr-size:hover{background:var(--ow-paper-2);}
+  .pr-size:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
+  .pr-size.pr-on{background:var(--ow-steel-950);border-color:var(--ow-steel-950);color:var(--ow-paper);}
+  .pr-size-one{cursor:default;}
+  .pr-reach{display:flex;align-items:center;gap:var(--ow-sp-6);flex-wrap:wrap;padding:var(--ow-sp-12) var(--ow-sp-16) 0;}
+  .pr-reach .pr-lbl{margin:0 var(--ow-sp-4) 0 0;}
+  .pr-chip{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;gap:var(--ow-sp-6);max-width:100%;
+    padding:3px var(--ow-sp-10) 3px var(--ow-sp-8);border:1px solid var(--ow-rule);border-radius:var(--ow-r-pill);
+    cursor:pointer;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .pr-chip:hover{background:var(--ow-paper-2);}
+  .pr-chip:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
+  .pr-chip-n{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pr-foot{display:flex;align-items:center;gap:var(--ow-sp-6);border-top:1px solid var(--ow-rule-soft);margin:0;}
+  .pr-foot .icon{width:16px;height:16px;flex:none;}
+  .pr-mt-warn{color:var(--ow-amber-ink);}
+  .pr-strip .ow-mt-s{display:flex;align-items:center;gap:var(--ow-sp-6);}
+  .pr-strip .pr-meter{margin-top:var(--ow-sp-6);}
+  /* THE PICTURE, drawn. What a customer takes, then what the rules add. */
+  .pr-pic{padding:var(--ow-sp-12) var(--ow-sp-16);display:flex;flex-direction:column;gap:var(--ow-sp-12);}
+  .pr-pic-h{display:flex;align-items:center;gap:var(--ow-sp-12);}
+  .pr-pic-h .pr-lbl{margin:0;flex:none;}
+  .pr-pic-r{flex:1 1 0;min-width:0;accent-color:var(--ow-steel-950);}
+  .pr-pic-n{flex:none;min-width:96px;text-align:right;}
+  .pr-pic-n .ow-fig-b{margin-left:var(--ow-sp-4);}
+  .pr-pic-b{display:flex;gap:var(--ow-sp-8);flex-wrap:wrap;}
+  .pr-blk{display:flex;flex-direction:column;gap:2px;min-width:120px;max-width:220px;box-sizing:border-box;
+    padding:var(--ow-sp-8) var(--ow-sp-12);border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+  .pr-blk-v{display:flex;align-items:center;gap:var(--ow-sp-6);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .pr-blk-q{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-size:var(--ow-t-20);font-weight:var(--ow-fw-600);line-height:var(--ow-lh-tight);}
+  .pr-blk-n{font-size:var(--ow-t-12);color:var(--ow-ink-900);overflow-wrap:anywhere;}
+  .pr-blk-n i{font-style:normal;color:var(--ow-amber-ink);font-weight:var(--ow-fw-600);}
+  .pr-blk-self{background:var(--ow-steel-950);border-color:var(--ow-steel-950);color:var(--ow-paper);}
+  .pr-blk-self .pr-blk-v{color:var(--ow-steel-100);}
+  .pr-blk-self .pr-blk-n{color:var(--ow-paper);}
+  .pr-blk-nofig{border-style:dashed;background:var(--ow-paper-2);}
+  .pr-blk-nofig .pr-blk-q{color:var(--ow-ink-400);}
+  .pr-obs .s{display:flex;align-items:center;gap:var(--ow-sp-8);}
+  .pr-obs .s .pr-bar{width:64px;flex:none;}
+  .pr-heat-k{display:inline-flex;gap:2px;margin-right:var(--ow-sp-4);vertical-align:middle;}
+  .pr-heat-k i{width:10px;height:10px;border-radius:2px;background:color-mix(in srgb,var(--ow-steel-950) var(--pr-heat),var(--ow-paper));}
+  .pr-tick-k{display:inline-block;box-sizing:border-box;width:10px;height:10px;border-radius:2px;border:2px solid var(--ow-steel-950);
+    margin:0 var(--ow-sp-4) 0 var(--ow-sp-10);vertical-align:middle;}
 
   /* the sentence, being written */
   .pr-lbl{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.09em;
@@ -14123,14 +14235,14 @@
   .pr-cell{all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:2px;
     height:36px;border-top:1px solid var(--ow-rule-soft);border-left:1px solid var(--ow-rule-soft);cursor:pointer;
     font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;}
-  .pr-cell:hover{background:var(--ow-paper-2);}
+  .pr-cell{background:color-mix(in srgb,var(--ow-steel-950) var(--pr-heat,0%),var(--ow-paper));}
+  .pr-cell:hover{outline:1px solid var(--ow-ink-400);outline-offset:-1px;}
   .pr-cell:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
   .pr-cell .pr-box{width:18px;height:18px;border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);background:var(--ow-paper);}
   .pr-cell svg{width:16px;height:16px;fill:none;stroke:var(--ow-verdigris);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
-  .pr-cell-on{background:var(--ow-verdigris-soft);}
-  .pr-cell-on:hover{background:var(--ow-verdigris-soft);}
+  .pr-cell-on,.pr-cell-on:hover{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
   .pr-cell-n{font-size:10px;color:var(--ow-ink-600);}
-  .pr-cell-on .pr-cell-n{color:var(--ow-verdigris);}
+  .pr-cell-on .pr-cell-n{color:var(--ow-ink-900);}
 
   /* writing a rule */
   .pr-draft{padding:var(--ow-sp-4) var(--ow-sp-16) var(--ow-sp-12);border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper);}
@@ -14166,7 +14278,24 @@
     .ow-tbl.pr-tbl{--ow-tbl-cols:minmax(0,1fr) auto;}
     .pr-tbl .ow-tbl-r{padding:var(--ow-sp-12);row-gap:var(--ow-sp-6);
       align-items:baseline;min-height:var(--ow-tap);}
-    .pr-sent{grid-column:1/-1;flex-wrap:wrap;}
+    .pr-sent{flex-wrap:wrap;}
+    /* ON THE PHONE THE MAP BECOMES A LIST. The node is the page head
+       already, so it goes; each rule keeps its line, turned to run down
+       its left edge, so the kind still reads by shape. */
+    .pr-map{grid-template-columns:minmax(0,1fr);padding:0;}
+    .pr-node{display:none;}
+    .pr-map .pr-tbl{margin-left:0;padding-left:0;border-left:0;}
+    .pr-map .ow-tbl-r{padding-left:var(--ow-sp-20);}
+    .pr-map .pr-r::before{left:var(--ow-sp-8);top:var(--ow-sp-12);bottom:var(--ow-sp-12);width:0;
+      border-top:0;border-left:var(--pr-line);}
+    .pr-map .pr-r.tl-on::before{top:var(--ow-sp-12);}
+    .pr-slot{margin:var(--ow-sp-12);}
+    .pr-reach{padding:var(--ow-sp-12) var(--ow-sp-12) 0;}
+    .pr-chip{min-height:36px;}
+    .pr-pic-h{flex-wrap:wrap;}
+    .pr-pic-r{flex-basis:100%;order:3;height:var(--ow-tap);}
+    .pr-pic-n{margin-left:auto;}
+    .pr-blk{flex:1 1 30%;min-width:96px;}
     .pr-sent .pr-p{white-space:normal;}
     /* ONE PANE AT A TIME. The list, then the product, with a back
        button -- a two-pane console does not fold onto a phone, it
@@ -14186,7 +14315,7 @@
     /* Back, then the name; the one action on its own line, thumb-sized. */
     .pr-head{display:grid;grid-template-columns:auto minmax(0,1fr);padding:var(--ow-sp-12);gap:var(--ow-sp-10);}
     .pr-head .pr-back{display:inline-flex;width:var(--ow-tap);min-width:var(--ow-tap);height:var(--ow-tap);padding:0;justify-content:center;}
-    .pr-head .btn-accent{grid-column:1/-1;width:100%;justify-content:center;min-height:var(--ow-tap);}
+    .pr-head .btn-accent{grid-column:1/-1;width:100%;box-sizing:border-box;justify-content:center;min-height:var(--ow-tap);}
     .pr-grid-h{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--ow-sp-8);}
     .pr-grid-h .pr-lbl{grid-column:1/-1;}
     .pr-grid-h .btn{min-height:40px;}
@@ -14210,10 +14339,11 @@
        sentence keeps the top, and the three things that judge it --
        the figure, where it came from, what the orders show -- are
        placed onto two lines rather than left to stack one per row. */
-    .pr-tbl .ow-tbl-r > *:nth-child(2){grid-area:2 / 2;}
-    .pr-tbl .ow-tbl-r > *:nth-child(3){grid-area:2 / 1;justify-self:start;}
-    .pr-tbl .ow-tbl-r > *:nth-child(4){grid-area:3 / 1;justify-self:start;text-align:left;}
-    .pr-tbl .ow-tbl-r > *:nth-child(5){grid-area:3 / 2;align-self:center;}
+    .pr-tbl .ow-tbl-r > .pr-vb{grid-area:1 / 1;justify-self:start;}
+    .pr-tbl .ow-tbl-r > .ow-tbl-n{grid-area:1 / 2;}
+    .pr-tbl .ow-tbl-r > .pr-sent{grid-area:2 / 1 / 3 / -1;}
+    .pr-tbl .ow-tbl-r > .pr-ev{grid-area:3 / 1 / 4 / -1;}
+    .pr-tbl .ow-tbl-r > .cu-cr{display:none;}
     /* On one line the label reads as a caption, not a second row. */
     .pr-tbl .ow-tbl-r > .ow-tbl-n .ow-fig,
     .pr-tbl .ow-tbl-r > .ow-tbl-n .ow-fig-b{display:inline;}
@@ -62455,7 +62585,7 @@ function pairProductRows(){
     const rules = pairRulesOf(p.id).filter(r=> r.active);
     const gaps = rules.reduce((n, r)=> { const g = pairGrid(r); return n + (g ? g.open : 0); }, 0);
     const sizes = Array.isArray(p.variants) ? p.variants.length : 0;
-    return { p, rules: rules.length, gaps, sizes, orders: orders.get(p.id) || 0 };
+    return { p, rules: rules.length, verbs: rules.map(r=> r.verb), gaps, sizes, orders: orders.get(p.id) || 0 };
   });
 }
 function renderPairings(){
@@ -62469,16 +62599,23 @@ function renderPairings(){
   const figures = new Set(links.filter(l=> l.qty != null).map(pairRuleKey)).size;
   const rules = new Set(links.map(pairRuleKey)).size;
 
+  /* FOUR METERS, NOT FOUR SENTENCES. Each tile is a count and the shape
+     of it -- how much of the catalogue is covered, how much of what is
+     written can put a number on a picture -- so the state of the screen
+     is read before a word of it. The words that explained each tile
+     now live in the "i" bubble, where the page's longer help already is. */
+  const openSizes = gaps.reduce((n, x)=> n + x.gaps, 0);
+  const pct = (n, of)=> of ? Math.round(n / of * 100) : 0;
   const strip = document.getElementById('pairStripWrap');
-  if(strip) strip.innerHTML = `<div class="ow-strip">
+  if(strip) strip.innerHTML = `<div class="ow-strip pr-strip">
     <div class="ow-mt"><p class="ow-mt-l">Products with rules</p><span class="ow-mt-v">${withRules.length} <span class="ow-u">of ${all.length}</span></span>
-      <p class="ow-mt-s">${rules} rule${rules === 1 ? '' : 's'} written down</p></div>
-    <div class="ow-mt"><p class="ow-mt-l">Sizes still open</p><span class="ow-mt-v">${gaps.reduce((n, x)=> n + x.gaps, 0)}</span>
-      <p class="ow-mt-s">a size whose picture leaves the second thing off</p></div>
-    <div class="ow-mt"><p class="ow-mt-l">Found in the orders</p><span class="ow-mt-v">${observed.length}</span>
-      <p class="ow-mt-s">seen often enough to ask about, not yet judged</p></div>
+      <span class="pr-meter" title="${withRules.length} of ${all.length} products carry a rule"><i style="--pr-v:${pct(withRules.length, all.length)}%"></i></span></div>
     <div class="ow-mt"><p class="ow-mt-l">Carry a figure</p><span class="ow-mt-v">${figures} <span class="ow-u">of ${rules}</span></span>
-      <p class="ow-mt-s">only these can put a quantity on a picture</p></div>
+      <span class="pr-meter" title="only a rule with a figure can put a quantity on a picture"><i style="--pr-v:${pct(figures, rules)}%"></i></span></div>
+    <div class="ow-mt"><p class="ow-mt-l">Sizes still open</p><span class="ow-mt-v${openSizes ? ' pr-mt-warn' : ''}">${openSizes}</span>
+      <p class="ow-mt-s">${openSizes ? `<span class="pr-gap"></span>${esc(briefShortName(gaps[0].p.name))}${gaps.length > 1 ? ` +${gaps.length - 1}` : ''}` : 'every size settled'}</p></div>
+    <div class="ow-mt"><p class="ow-mt-l">Found in the orders</p><span class="ow-mt-v">${observed.length}</span>
+      <p class="ow-mt-s">${observed.length ? 'pairs to judge' : 'nothing new to judge'}</p></div>
   </div>`;
 
   if(!productLinksTable){
@@ -62521,7 +62658,7 @@ function pairListHTML(all, observed){
   const shown = rows.slice(0, 60);
   return `${shown.length ? shown.map(x=> `<div class="pr-prod${x.p.id === pairSelectedId ? ' pr-cur' : ''}" role="button" tabindex="0" data-pairsel="${esc(x.p.id)}">
       <div class="pr-prod-t"><span class="pr-prod-n" title="${esc(x.p.name)}">${esc(x.p.name)}</span>
-        <span class="pr-prod-s">${x.sizes > 1 ? `${x.sizes} sizes` : 'one size'}${x.orders ? ` &middot; ${x.orders} orders` : ''}${x.rules ? ` &middot; ${x.rules} rule${x.rules === 1 ? '' : 's'}` : ''}</span></div>
+        <span class="pr-prod-s">${pairGlyphsHTML(x.verbs)}<span>${x.sizes > 1 ? `${x.sizes} sizes` : 'one size'}${x.orders ? ` &middot; ${x.orders} orders` : ''}</span></span></div>
       ${x.gaps ? `<span class="pr-gap" title="${x.gaps} size${x.gaps === 1 ? '' : 's'} whose picture leaves the second thing off"></span>` : ''}
       <svg class="cu-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
     </div>`).join('') : `<div class="ow-empty"><b>${q ? 'Nothing by that name.' : pairFilter === 'gaps' ? 'No size is open.' : 'No rules written yet.'}</b>
@@ -62537,51 +62674,136 @@ function pairProductHTML(productId){
   const sizes = Array.isArray(p.variants) ? p.variants : [];
   const open = live.reduce((n, r)=> { const g = pairGrid(r); return n + (g ? g.open : 0); }, 0);
   const stands = live.map(r=> ({ r, st: pairStanding(r.lead) }))
-    .sort((a, b)=> (b.st.key === 'agree') - (a.st.key === 'agree') || productLinkName(a.r.toId).localeCompare(productLinkName(b.r.toId)));
+    .sort((a, b)=> ((PAIR_VERB_ORDER[a.r.verb] ?? 9) - (PAIR_VERB_ORDER[b.r.verb] ?? 9))
+      || (b.st.key === 'agree') - (a.st.key === 'agree') || productLinkName(a.r.toId).localeCompare(productLinkName(b.r.toId)));
   const reach = pairReachingRules(productId);
+  const orders = pairOrdersOf(productId).length;
+  const drafting = pairRuleDraft && pairRuleDraft.fromId === productId;
+  /* THE PRODUCT AS A MAP. The product is the node; every rule written on
+     it branches off one spine, and the line itself says which kind of
+     rule it is -- heavy for needs, thin for goes with, dashed for
+     instead of, dotted for part of -- so the kind is carried by shape
+     and not by colour alone. What other products say about this one
+     sits above it as chips, each a door to where it was written. */
   return `<div class="ow-pan">
     <div class="pr-head">
       <button type="button" class="btn btn-ghost ow-sm pr-back" data-pair="back" aria-label="Back to the products"><svg class="icon" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
       <div class="pr-head-t"><span class="pr-head-n">${esc(p.name)}</span>
-        <span class="pr-head-s">${esc(p.category || '')}${p.category ? ' &middot; ' : ''}${sizes.length > 1 ? `${sizes.length} sizes: ${esc(sizes.map(v=> variantLabel(v.combo || {})).join(', '))}` : 'one size'}${live.length ? ` &middot; ${live.length} rule${live.length === 1 ? '' : 's'}` : ''}${open ? ` &middot; <b>${open} size${open === 1 ? '' : 's'} still open</b>` : ''}</span></div>
+        <span class="pr-head-s">${sizes.length > 1
+          ? sizes.map((v, i)=> `<button type="button" class="pr-size${i === pairPreviewSize(productId) ? ' pr-on' : ''}" data-pairsize="${i}" title="Show the picture for this size">${esc(variantLabel(v.combo || {}))}</button>`).join('')
+          : '<span class="pr-size pr-size-one">one size</span>'}
+          <span class="pr-head-o">${esc(p.category || '')}${p.category ? ' &middot; ' : ''}${orders} order${orders === 1 ? '' : 's'}${open ? ` &middot; <b>${open} size${open === 1 ? '' : 's'} open</b>` : ''}</span></span></div>
       ${pairRuleDraft ? '' : `<button type="button" class="btn btn-accent ow-sm" data-pair="draft"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add a rule for ${esc(briefShortName(p.name))}</button>`}
     </div>
-    ${pairRuleDraft && pairRuleDraft.fromId === productId ? pairDraftHTML(pairRuleDraft) : ''}
-    ${live.length ? `<div class="ow-tbl pr-tbl">
-      <div class="ow-tbl-h"><span>The rule</span><span class="ow-tbl-n">How many</span>
-        <span>Where it came from</span><span class="ow-tbl-n">In orders</span><span></span></div>
-      ${stands.map(x=> pairRowHTML(x.r, x.st)).join('')}
-    </div>` : (pairRuleDraft && pairRuleDraft.fromId === productId) ? '' : `<div class="ow-empty"><b>Nothing written ON ${esc(p.name)} yet.</b>
-      <span>A rule is one sentence: ${esc(p.name)} goes with that, needs so many of this, is part of one job with those. Write the first, and the grid under it settles the sizes.${
-        reach.length ? ` ${reach.length} rule${reach.length === 1 ? '' : 's'} written on other products already reach${reach.length === 1 ? 'es' : ''} it &mdash; they are listed below.` : ''}</span></div>`}
-    <p class="ow-mini pr-foot">A rule changes nothing about prices, stock or orders. It only lets a customer&rsquo;s picture say a second thing &mdash; and it only ever says a quantity where you gave one.</p>
+    ${drafting ? pairDraftHTML(pairRuleDraft) : ''}
+    ${pairReachHTML(productId, reach)}
+    ${live.length ? `<div class="pr-map">
+      <div class="pr-node"><span class="pr-node-n">${esc(briefShortName(p.name))}</span>
+        <span class="pr-node-s">${live.length} rule${live.length === 1 ? '' : 's'}</span></div>
+      <div class="ow-tbl pr-tbl">
+        <div class="ow-tbl-h"><span>Kind</span><span>With</span><span class="ow-tbl-n">How many</span><span>Your orders</span><span></span></div>
+        ${stands.map(x=> pairRowHTML(x.r, x.st)).join('')}
+      </div>
+    </div>` : drafting ? '' : `<div class="pr-map pr-map-empty">
+      <div class="pr-node"><span class="pr-node-n">${esc(briefShortName(p.name))}</span><span class="pr-node-s">no rules</span></div>
+      <div class="ow-empty pr-slot"><b>Nothing written on ${esc(briefShortName(p.name))} yet.</b>
+        <span>${reach.length ? `${reach.length} rule${reach.length === 1 ? '' : 's'} on other products already reach${reach.length === 1 ? 'es' : ''} it &mdash; above. ` : ''}Add one: it goes with that, needs so many of this, is part of one job with those.</span></div>
+    </div>`}
+    <p class="ow-mini pr-foot"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>A rule never changes a price, stock or an order &mdash; it only lets a picture say a second thing.</p>
   </div>
-  ${pairReachHTML(productId, reach)}
+  ${pairPictureHTML(productId)}
   ${off.length ? pairOffHTML(off) : ''}`;
 }
-/* Read from this end, and pointing at where it was written. */
+/* The invoiced orders that carried this product, with the quantity on
+   each. The picture preview starts from the middle of them -- the
+   order this shop actually sees -- rather than from a number made up. */
+function pairOrdersOf(productId){
+  const out = [];
+  invoicedOrders().forEach(q=>{
+    const n = (q.items || []).filter(it=> it.productId === productId).reduce((s, it)=> s + (Number(it.qty) || 0), 0);
+    if(n > 0) out.push(n);
+  });
+  return out;
+}
+const pairPreviewQtys = new Map();   // productId -> the quantity the preview is showing
+const pairPreviewSizes = new Map();  // productId -> the size the preview is showing
+function pairPreviewSize(productId){
+  const p = productById(productId);
+  if(!p || !Array.isArray(p.variants) || p.variants.length < 2) return null;
+  const i = pairPreviewSizes.get(productId);
+  return i != null && i < p.variants.length ? i : 0;
+}
+function pairPreviewQty(productId){
+  if(pairPreviewQtys.has(productId)) return pairPreviewQtys.get(productId);
+  const q = pairOrdersOf(productId).sort((a, b)=> a - b);
+  return q.length ? Math.max(1, Math.round(q[Math.floor(q.length / 2)])) : 10;
+}
+/* WHAT A FIGURE IS FOR, shown rather than said. A customer takes so
+   many; the picture adds what the rules add. Read through
+   pairCompanionsFor -- the one reading every picture, quote rail and
+   till already uses -- so this cannot promise a companion the real
+   picture would not carry. Instead-of is left out, as it is on the
+   picture: it is offered only when the first thing is out. */
+function pairPictureHTML(productId){
+  const p = productById(productId);
+  if(!p) return '';
+  const vi = pairPreviewSize(productId);
+  const qty = pairPreviewQty(productId);
+  const unit = productUnitLabel(productId, vi) || p.unit || 'units';
+  const max = Math.max(50, Math.ceil(Math.max(qty, ...pairOrdersOf(productId)) * 1.5 / 10) * 10);
+  return `<div class="ow-pan pr-pic" id="pairPic">
+    <div class="pr-pic-h">
+      <span class="pr-lbl">A customer takes</span>
+      <input type="range" class="pr-pic-r" id="pair_qty" min="1" max="${max}" value="${Math.min(qty, max)}" aria-label="How many the customer takes">
+      <span class="pr-pic-n"><span class="ow-fig" id="pair_qty_n">${qty}</span><span class="ow-fig-b">${esc(unit)}</span></span>
+    </div>
+    <div class="pr-pic-b" id="pairPicBlocks">${pairPictureBlocksHTML(productId, vi, qty)}</div>
+  </div>`;
+}
+function pairPictureBlocksHTML(productId, vi, qty){
+  const p = productById(productId);
+  const unit = productUnitLabel(productId, vi) || p.unit || 'units';
+  const goes = pairCompanionsFor(productId, vi, qty).filter(c=> c.verbId !== 'instead');
+  const size = vi != null && p.variants && p.variants[vi] ? variantLabel(p.variants[vi].combo || {}) : '';
+  return `<div class="pr-blk pr-blk-self"><span class="pr-blk-v">the customer takes</span>
+      <span class="pr-blk-q">${qty}</span><span class="pr-blk-n">${esc(unit)}${size ? ` &middot; ${esc(size)}` : ''}</span></div>
+    ${goes.length ? goes.map(c=> `<div class="pr-blk${c.qty == null ? ' pr-blk-nofig' : ''}" title="${esc((c.verb || {}).say || '')} ${esc(c.label)}${c.qty == null ? ' — no figure, so the picture names it with no number' : ''}">
+      <span class="pr-blk-v">${pairGlyphsHTML([c.verbId])}${esc((PAIR_VERBS.find(v=> v.id === c.verbId) || {}).brief || '').toLowerCase()}</span>
+      <span class="pr-blk-q">${c.qty == null ? '&mdash;' : c.qty}</span>
+      <span class="pr-blk-n">${c.qty == null || !c.unit ? '' : `${esc(c.unit)} &middot; `}${esc(c.label)}${c.inStock ? '' : ' <i>to order</i>'}</span></div>`).join('')
+    : `<div class="pr-blk pr-blk-nofig"><span class="pr-blk-v">nothing yet</span><span class="pr-blk-n">No rule reaches a picture for this${size ? ' size' : ''} &mdash; add one above.</span></div>`}`;
+}
+/* The kind of a rule, as a mark: the same shapes the map's lines use,
+   small enough to sit in a list row. */
+function pairGlyphsHTML(verbs){
+  return (verbs || []).map(v=> `<i class="pr-g pr-g-${esc(v)}" title="${esc((pairVerb(v) || {}).say || v)}"></i>`).join('');
+}
+/* Read from this end, and pointing at where it was written: a chip per
+   rule another product carries about this one. The chip opens that
+   product; the sentence as written is in its title. */
 function pairReachHTML(productId, reach){
   if(!reach.length) return '';
   const p = productById(productId);
-  return `<div class="ow-pan">
-    <div class="ow-pan-h"><span class="ow-pan-t">Also reaches ${esc(briefShortName(p.name))}</span>
-      <span class="ow-pan-n">${reach.length} written on other products</span></div>
+  return `<div class="pr-reach"><span class="pr-lbl">Reached from</span>
     ${reach.map(r=>{
       const other = productById(r.otherId);
       const v = pairVerb(r.verb) || {};
       const av = pairVerb(r.authoredVerb) || {};
-      return `<div class="pr-obs">
-        <span class="p">${esc(p.name)} &rarr; ${esc(v.say || r.verb)} &rarr; ${esc(productLinkName(r.otherId))}</span>
-        <span class="s">written as &ldquo;${esc(productLinkName(r.otherId))} ${esc(av.say || r.authoredVerb)} ${esc(p.name)}&rdquo;${
-          r.verb !== r.authoredVerb ? ' &mdash; read back it is the weaker, true word' : ''}${
-          r.rows.some(x=> x.qty != null) ? ' &middot; its figure counts only the way it was written' : ''}</span>
-        <span class="a">${other ? `<button type="button" class="btn btn-ghost ow-sm" data-pairsel="${esc(r.otherId)}">Open ${esc(briefShortName(other.name))}</button>` : ''}</span>
-      </div>`; }).join('')}
-    <p class="ow-mini">A sentence is true from both ends: cement goes with sand, so sand goes with cement. These are read here and changed where they were written. <b>Needs</b> is the one word that softens on the way back &mdash; sheets need nails, but nails only <b>go with</b> sheets.</p>
+      const said = `Written as “${productLinkName(r.otherId)} ${av.say || r.authoredVerb} ${p.name}”${
+        r.verb !== r.authoredVerb ? ' — read back it is the weaker, true word' : ''}${
+        r.rows.some(x=> x.qty != null) ? ' · its figure counts only the way it was written' : ''}`;
+      return `<button type="button" class="pr-chip"${other ? ` data-pairsel="${esc(r.otherId)}"` : ' disabled'} title="${esc(said)}">
+        ${pairGlyphsHTML([r.verb])}<span class="pr-chip-n">${esc(productLinkName(r.otherId))}</span><span class="pr-chip-v">${esc(v.say || r.verb)}</span></button>`; }).join('')}
   </div>`;
 }
-/* A rule, in one row: the sentence, its figure, where it came from,
-   what the orders show. Opened, the grid and the rest follow. */
+/* A rule, in one row of the map: the kind of rule as a badge on the
+   line that joins it to the product, the other product, its figure,
+   and a bar of what the orders show. Opened, the grid and the rest
+   follow. The bar is the books' answer at a glance: its length is the
+   share of orders carrying the first thing that carried the second
+   too, green where they agree and red where they argue -- and the
+   words ride beside it, because hue alone does not survive a bright
+   yard. */
 function pairRowHTML(rule, st){
   const l = rule.lead;
   const open = rule.lead.id === pairOpenId;
@@ -62592,21 +62814,22 @@ function pairRowHTML(rule, st){
     : !grid ? 'one size each'
     : grid.open ? `${grid.settled} of ${grid.rows.length} sizes settled &middot; ${grid.open} open`
     : grid.rows.length > 1 ? `every size settled` : `${grid.cols.length} sizes`;
-  return `<div class="ow-tbl-r ow-tbl-k${open ? ' tl-on' : ''}" role="button" tabindex="0"
+  const share = ev.withFrom ? Math.round(ev.andTo / ev.withFrom * 100) : 0;
+  const words = { agree: 'books agree', argue: 'books argue', nothing: 'yours only', unseen: 'not sold here', self: 'a rhythm' }[st.key] || st.label;
+  return `<div class="ow-tbl-r ow-tbl-k pr-r pr-r-${esc(rule.verb)}${open ? ' tl-on' : ''}" role="button" tabindex="0"
       data-pairopen="${esc(String(l.id))}" aria-expanded="${open}">
-    <div class="pr-sent">
-      <span class="pr-vb pr-${esc(rule.verb)}">${esc(v.label)}</span>
-      ${v.self ? '' : `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h13M12 7l5 5-5 5"/></svg>
-      <span class="pr-p" title="${esc(productLinkName(rule.toId))}">${esc(productLinkName(rule.toId))}</span>`}
-      <span class="pr-sizes${grid && grid.open ? ' pr-sizes-open' : ''}">${sizesNote}</span>
-    </div>
+    <span class="pr-vb pr-${esc(rule.verb)}">${esc(v.label)}</span>
+    <span class="pr-sent">
+      <span class="pr-p" title="${esc(v.self ? 'this product itself' : productLinkName(rule.toId))}">${esc(v.self ? briefShortName(productLinkName(rule.fromId)) : productLinkName(rule.toId))}</span>
+      <span class="pr-sizes${grid && grid.open ? ' pr-sizes-open' : ''}">${grid && grid.open ? '<span class="pr-gap"></span>' : ''}${sizesNote}</span>
+    </span>
     <span class="ow-tbl-n">${l.qty != null
       ? `<span class="ow-fig">${l.qty}</span><span class="ow-fig-b">${v.self ? 'days' : `per ${esc(l.per || 'one')}`}</span>`
       : '<span class="pr-nofig">no figure</span>'}</span>
-    <span><span class="ow-cp ${st.tone}"><span class="ow-cp-d"></span>${esc(st.label)}</span></span>
-    <span class="ow-tbl-n">${ev.withFrom && !v.self
-      ? `<span class="ow-fig">${ev.andTo}</span><span class="ow-fig-b">of ${ev.withFrom} orders</span>`
-      : '<span class="cu-dash">&mdash;</span>'}</span>
+    <span class="pr-ev pr-ev-${esc(st.key)}" title="${ev.withFrom && !v.self ? `${ev.andTo} of ${ev.withFrom} orders with the first thing also carried the second` : esc(st.label)}">
+      <span class="pr-bar"><i style="--pr-v:${v.self ? 0 : share}%"></i></span>
+      <span class="pr-ev-t"><b>${words}</b>${ev.withFrom && !v.self ? `<span class="ow-fig">${ev.andTo}/${ev.withFrom}</span>` : ''}</span>
+    </span>
     <svg class="cu-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
   </div>
   ${open ? pairEditorHTML(rule, st) : ''}`;
@@ -62634,7 +62857,7 @@ function pairGridHTML(rule, grid, draft){
   return `<div class="pr-grid-w">
     <div class="pr-grid-h">
       <span class="pr-lbl">Which size goes with which</span>
-      <span class="pr-grid-k">tick = a rule for that pair &middot; figure = orders with both</span>
+      <span class="pr-grid-k"><span class="pr-heat-k"><i style="--pr-heat:10%"></i><i style="--pr-heat:20%"></i><i style="--pr-heat:30%"></i></span>orders with both <span class="pr-tick-k"></span>your rule</span>
       ${grid.toSized && grid.fromSized ? `<button type="button" class="btn btn-ghost ow-sm" data-pair="match" data-ref="${ref}">Match by size</button>` : ''}
       <button type="button" class="btn btn-ghost ow-sm" data-pair="clear" data-ref="${ref}">Clear</button>
     </div>
@@ -62644,7 +62867,12 @@ function pairGridHTML(rule, grid, draft){
          scroll under them -- otherwise the one thing the grid exists to
          say is two screens to the right of the question. */
       const wide = grid.cols.length > 6;
-      const cells = (r)=> r.cells.map(c=> `<button type="button" class="pr-cell${on(c) ? ' pr-cell-on' : ''}" data-cell="${ref}:${c.i == null ? '' : c.i}:${c.j == null ? '' : c.j}"
+      /* THE SQUARES ARE SHADED BY THE BOOKS: the more orders carried that
+         pair of sizes, the darker the square, so where the shop really
+         trades shows before a single figure is read. The tick stays the
+         owner's, drawn over it. */
+      const most = Math.max(1, ...grid.rows.flatMap(r=> r.cells.map(c=> c.orders || 0)));
+      const cells = (r)=> r.cells.map(c=> `<button type="button" class="pr-cell${on(c) ? ' pr-cell-on' : ''}" data-cell="${ref}:${c.i == null ? '' : c.i}:${c.j == null ? '' : c.j}" style="--pr-heat:${c.orders ? Math.round(8 + 22 * c.orders / most) : 0}%"
             aria-pressed="${on(c)}" title="${esc(fp.name)} ${esc(r.label)} &rarr; ${esc(tp.name)} ${esc(grid.cols[c.j == null ? 0 : c.j].label)}${c.orders ? ` &middot; ${c.orders} order${c.orders === 1 ? '' : 's'} carried both` : ''}">
           ${on(c) ? `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>${c.orders ? `<span class="pr-cell-n">${c.orders}</span>` : ''}` : `<span class="pr-box"></span>${c.orders ? `<span class="pr-cell-n">${c.orders}</span>` : ''}`}
         </button>`).join('');
@@ -62781,7 +63009,7 @@ function pairObservedHTML(list){
     <div class="ow-pan-h"><span class="ow-pan-t">Found in your orders</span><span class="ow-pan-n">${list.length} to judge</span></div>
     ${list.slice(0, 8).map(o=> `<div class="pr-obs">
       <span class="p">${esc(productLinkName(o.fromId))} &rarr; ${esc(productLinkName(o.toId))}</span>
-      <span class="s">${o.ev.andTo} of ${o.ev.withFrom} orders${o.ev.perUnit != null ? ` &middot; ${o.ev.perUnit.toFixed(1)} per one` : ''}</span>
+      <span class="s"><span class="pr-bar"><i style="--pr-v:${o.ev.withFrom ? Math.round(o.ev.andTo / o.ev.withFrom * 100) : 0}%"></i></span>${o.ev.andTo} of ${o.ev.withFrom} orders${o.ev.perUnit != null ? ` &middot; ${o.ev.perUnit.toFixed(1)} per one` : ''}</span>
       <span class="a">
         <button type="button" class="btn btn-ghost ow-sm" data-obs="keep" data-from="${esc(o.fromId)}" data-to="${esc(o.toId)}">Keep</button>
         <button type="button" class="btn btn-ghost ow-sm" data-obs="no" data-from="${esc(o.fromId)}" data-to="${esc(o.toId)}">No</button>
@@ -62922,6 +63150,9 @@ async function saveBriefGif(customerId){
     if(sel){ pairSelectedId = sel.dataset.pairsel; pairOpenId = null; pairRuleDraft = null; renderPairings(); return; }
     const flt = e.target.closest('[data-pairfilter]');
     if(flt){ pairFilter = flt.dataset.pairfilter; renderPairings(); return; }
+    /* a size chip in the product's head: which size the picture shows */
+    const sz = e.target.closest('[data-pairsize]');
+    if(sz && pairSelectedId){ pairPreviewSizes.set(pairSelectedId, Number(sz.dataset.pairsize)); renderPairings(); return; }
     const obs = e.target.closest('[data-obs]');
     if(obs){
       const { from, to } = obs.dataset;
@@ -63051,6 +63282,16 @@ async function saveBriefGif(customerId){
      so the cursor stays where it is. The draft's product search is the
      same, except that the menu under it is what changes. */
   wrap.addEventListener('input', (e)=>{
+    /* The slider redraws the blocks beside it and never itself, so a
+       drag is not dropped halfway. */
+    if(e.target.id === 'pair_qty' && pairSelectedId){
+      const n = Math.max(1, Number(e.target.value) || 1);
+      pairPreviewQtys.set(pairSelectedId, n);
+      const lbl = document.getElementById('pair_qty_n'); if(lbl) lbl.textContent = n;
+      const blk = document.getElementById('pairPicBlocks');
+      if(blk) blk.innerHTML = pairPictureBlocksHTML(pairSelectedId, pairPreviewSize(pairSelectedId), n);
+      return;
+    }
     if(e.target.id === 'pair_find'){
       pairSearch = e.target.value;
       const list = document.getElementById('pairListWrap');
