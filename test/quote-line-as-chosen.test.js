@@ -148,7 +148,7 @@ const near = (got, want, msg) => t.check(Math.abs(Number(got) - want) < 1e-6, `$
     'the factor between the chosen unit and the base unit is the pack size in pack mode, else 1');
   t.check(/id="ip_price"[^>]*value="\$\{Math\.round\(sellStart \* perChosen\)\}"/.test(stage),
     'the price box counts in the chosen unit — 240,000 under a card saying 240,000/Ctn, not 2,400');
-  t.check(/<label>Sell price \$\{chosenIsPack \? `per \$\{esc\(packUnit\)\}` : 'each'\} \(UGX\)<\/label>/.test(stage),
+  t.check(/<label class=\"q-ip-l\" for=\"ip_price\">Sell \$\{chosenIsPack \? `per \$\{esc\(packUnit\)\}` : 'each'\}<\/label>/.test(stage),
     'and its label says which unit');
   t.check(/getElementById\('ip_price'\)\.value = Math\.round\(val \* perChosen\);/.test(stage),
     'a recommended-price card "used" into the box lands in that unit too');
