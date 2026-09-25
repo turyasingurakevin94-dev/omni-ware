@@ -44,17 +44,24 @@ const scope = compileScope([
   extractDeclaration(src, 'LIST_PAGE_SIZES', 'index.html'),
   extractDeclaration(src, 'LIST_PAGE_DEFAULT', 'index.html'),
   extractDeclaration(src, 'listPageExpanded', 'index.html'),
+  extractDeclaration(src, 'LIST_PAGED', 'index.html'),
+  extractDeclaration(src, 'listPageAt', 'index.html'),
   extractFunction(src, 'listPageSize', 'index.html'),
+  extractFunction(src, 'listPageCount', 'index.html'),
+  extractFunction(src, 'listPageIndex', 'index.html'),
   extractFunction(src, 'listPageSlice', 'index.html'),
+  extractFunction(src, 'listPagerNumbers', 'index.html'),
+  extractFunction(src, 'listPagerHTML', 'index.html'),
   extractFunction(src, 'listMoreButtonHTML', 'index.html'),
+  'function __page(id, v){ listPageAt[id] = v; }',
   'function __expand(id, v){ listPageExpanded[id] = v; }',
   'function __sizes(){ return LIST_PAGE_SIZES; }',
   'function __default(){ return LIST_PAGE_DEFAULT; }',
 ], {
   esc: (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'),
-}, ['listPageSize', 'listPageSlice', 'listMoreButtonHTML', '__expand', '__sizes', '__default']);
+}, ['listPageSize', 'listPageSlice', 'listMoreButtonHTML', 'listPagerNumbers', '__expand', '__page', '__sizes', '__default']);
 
-const { listPageSize, listPageSlice, listMoreButtonHTML, __expand } = scope;
+const { listPageSize, listPageSlice, listMoreButtonHTML, listPagerNumbers, __expand, __page } = scope;
 const rows = (n) => Array.from({ length: n }, (_, i) => ({ i }));
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 
@@ -114,6 +121,61 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     'nor does a short one');
   t.check(listMoreButtonHTML('prices', 25, 'price entries') !== '',
     'one row over the page is enough to offer the rest');
+}
+
+/* ---------- 2b. the customer book turns pages ------------------------- */
+/*
+ * The owner asked for a next page on Customers rather than one button that
+ * pours the whole book onto the screen. The page must be the RIGHT rows --
+ * the second page starts where the first stopped, by identity -- and the
+ * control must say which rows of how many, in figures.
+ */
+{
+  const size = listPageSize('customers');
+  const book = Array.from({ length: 60 }, (_, i) => ({ tag: 'c' + i }));
+  __page('customers', 0);
+  let pg = listPageSlice('customers', book);
+  t.check(pg.length === size && pg[0] === book[0], 'page one is the front of the book');
+  __page('customers', 1);
+  pg = listPageSlice('customers', book);
+  t.check(pg.length === size && pg[0] === book[size] && pg[size - 1] === book[2 * size - 1],
+    `page two starts where page one stopped (first is ${pg[0] && pg[0].tag}, want c${size})`);
+  __page('customers', 2);
+  eq(listPageSlice('customers', book).length, 60 - 2 * size, 'the last page holds what is left, not a padded page');
+  __page('customers', 9);
+  t.check(listPageSlice('customers', book)[0] === book[2 * size],
+    'a page past the end lands on the last page rather than an empty one');
+  __page('customers', 0);
+  __expand('customers', true);
+  eq(listPageSlice('customers', book).length, size, 'a paged list is not grown by the old show-all state');
+  __expand('customers', false);
+
+  __page('customers', 1);
+  const html = listMoreButtonHTML('customers', 60, 'customers');
+  t.check(/data-list-page="customers"/.test(html) && !/data-list-more=/.test(html),
+    'the customer book draws the pager, not the show-all button');
+  t.check(new RegExp(`${size + 1}&ndash;${2 * size}</b> of 60 customers`).test(html),
+    'and names the rows on screen out of every one that matched');
+  t.check(/aria-current="page"[^>]*>2</.test(html), 'the page you are on is marked, and it is page 2');
+  t.check(/aria-label="Previous page"/.test(html) && !/data-page="0" disabled aria-label="Previous page"/.test(html),
+    'from page 2 the way back is open');
+  __page('customers', 2);
+  t.check(/data-page="3" disabled aria-label="Next page"/.test(listMoreButtonHTML('customers', 60, 'customers')),
+    'and on the last page the way forward is shut');
+  __page('customers', 0);
+  eq(listMoreButtonHTML('customers', size, 'customers'), '', 'a book that fits one page gets no pager');
+
+  eq(JSON.stringify(listPagerNumbers(0, 5)), '[0,1,2,3,4]', 'a few pages are all shown');
+  eq(JSON.stringify(listPagerNumbers(6, 13)), '[0,null,5,6,7,null,12]',
+    'many pages show the ends and the neighbours, with the gaps marked');
+  eq(JSON.stringify(listPagerNumbers(0, 13)), '[0,1,2,3,null,12]', 'at the start, the first few');
+  eq(JSON.stringify(listPagerNumbers(12, 13)), '[0,null,9,10,11,12]', 'at the end, the last few');
+
+  const render = (/function renderCustomers\([\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/if\(question !== custPageQuestion\)\{[^}]*listPageAt\.customers = 0;/.test(render),
+    'a new search or lens goes back to page one');
+  t.check(/closest\('\[data-list-page\]'\)/.test(code) && /listPageAt\[id\] = /.test(code),
+    'one delegated listener turns the page');
 }
 
 /* ---------- 3. WHERE the slice is taken ------------------------------- */
