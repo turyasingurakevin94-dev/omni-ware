@@ -13378,7 +13378,7 @@
   /* The register's tracks. .ow-tbl.cu-tbl, not .cu-tbl: the layer sets
      the same custom property on .ow-tbl, and a bare class would lose
      the cascade to it on document order. */
-  .ow-tbl.cu-tbl{--ow-tbl-cols:minmax(0,1fr) 152px 96px 76px 150px 120px 132px 18px;}
+  .ow-tbl.cu-tbl{--ow-tbl-cols:minmax(0,1fr) 172px 184px 150px 120px 132px 18px;}
   .cu-tbl .ow-tbl-h,.cu-tbl .ow-tbl-r{gap:var(--ow-sp-8);}
   /* A column NAME may be cut; a column's figures may not. */
   .cu-tbl .ow-tbl-h > span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -13390,11 +13390,97 @@
   .cu-cr{width:12px;height:12px;color:var(--ow-ink-400);justify-self:center;transition:transform .13s;}
   .cu-on .cu-cr{transform:rotate(90deg);}
   .cu-c-st{min-width:0;}
+  /* A chip is cut rather than let run into the rhythm beside it. */
+  .cu-tbl .cu-c-st .ow-cp{max-width:100%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   /* A dash is not a zero and must not be read as one: it is the app
      saying it cannot know yet. Caption ink at 13px would be 3.1 to 1,
      so it takes the secondary ink every other quiet figure takes. */
   .cu-dash{color:var(--ow-ink-600);font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
     font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+
+  /* ---- the book at a glance ----------------------------------------
+     Each mark answers one of the four questions in the palette rules:
+     the dots are state (buying, quiet, lapsed, never), the weekly
+     columns are neutral ink because a week is neither good nor bad, and
+     the owed split is the one place crimson appears -- on the money past
+     terms. */
+  .cu-of{font-size:var(--ow-t-13);color:var(--ow-ink-600);font-weight:var(--ow-fw-400);}
+  .cu-dots{display:flex;flex-wrap:wrap;gap:4px;margin:var(--ow-sp-6) 0 var(--ow-sp-2);max-width:100%;}
+  .cu-dot{display:inline-block;width:10px;height:10px;border-radius:50%;box-sizing:border-box;flex:none;}
+  .cu-dot-b{background:var(--ow-verdigris);}
+  .cu-dot-q{background:var(--ow-amber);}
+  .cu-dot-l{background:var(--ow-ink-400);}
+  .cu-dot-n{border:1.5px solid var(--ow-ink-400);}
+  .cu-dots-more{font-size:var(--ow-t-11);color:var(--ow-ink-600);align-self:center;}
+  .cu-keys{display:flex;flex-wrap:wrap;gap:2px var(--ow-sp-10);}
+  .cu-key{display:inline-flex;align-items:center;gap:var(--ow-sp-4);white-space:nowrap;}
+  .cu-key .cu-dot{width:8px;height:8px;}
+  .cu-wks{display:flex;align-items:flex-end;gap:3px;height:28px;margin:var(--ow-sp-6) 0 var(--ow-sp-2);}
+  .cu-wk{flex:1;min-height:2px;background:var(--ow-steel-100);border-radius:2px;}
+  .cu-wk.cu-wk-now{background:var(--ow-steel-800);}
+  .cu-split{display:flex;gap:2px;height:10px;border-radius:3px;overflow:hidden;margin:var(--ow-sp-8) 0 var(--ow-sp-4);}
+  .cu-split-in{background:var(--ow-ink-400);}
+  .cu-split-late{background:var(--ow-crimson);}
+  .cu-late-t{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
+
+  /* Who the 90 days rest on: neutral steps down from the navy, because
+     the segments are customers, not states; the rest is paper-grey. */
+  .cu-share{margin-top:var(--ow-sp-12);}
+  .cu-sh{display:flex;gap:2px;height:28px;margin:var(--ow-sp-10) var(--ow-sp-12) var(--ow-sp-12);
+    border-radius:4px;overflow:hidden;}
+  .cu-sh-s{display:flex;align-items:center;gap:var(--ow-sp-8);min-width:0;padding:0 var(--ow-sp-10);
+    font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-paper);}
+  .cu-sh-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cu-sh-p{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-weight:var(--ow-fw-400);flex:none;}
+  .cu-sh-1{background:var(--ow-steel-950);}
+  .cu-sh-2{background:var(--ow-steel-800);}
+  .cu-sh-3{background:var(--ow-ink-600);}
+  .cu-sh-r{background:var(--ow-steel-100);color:var(--ow-ink-900);}
+
+  /* Needs you: one lane per kind of job. The lane's head carries the
+     state colour; the rows stay ink, so a lane of three reads as one
+     warning rather than three. */
+  .cu-lanes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--ow-sp-12);
+    align-items:start;margin-bottom:var(--ow-sp-16);}
+  .cu-lanes-1{grid-template-columns:minmax(0,1fr);}
+  .cu-lanes-2{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .cu-lane{margin:0;}
+  .cu-lane-i{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round;color:var(--ow-ink-600);margin-right:var(--ow-sp-6);}
+  .cu-lane-bad .cu-lane-i,.cu-lane-bad .ow-pan-t{color:var(--ow-crimson);}
+  .cu-lane-warn .cu-lane-i,.cu-lane-warn .ow-pan-t{color:var(--ow-amber);}
+  .cu-lr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--ow-sp-6) var(--ow-sp-12);
+    align-items:center;padding:var(--ow-sp-10) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);}
+  .ow-pan-h + .cu-lr{border-top:0;}
+  .cu-lr-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .cu-lr-f{justify-self:end;white-space:nowrap;}
+  .cu-lr-v{grid-column:1/-1;display:flex;}
+  .cu-lr-s{min-width:0;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .cu-lr-a{justify-self:end;}
+  .cu-lane-more{border-top:1px solid var(--ow-rule-soft);}
+  /* How old the money is against the shop's own terms: the fill is the
+     age, the tick is the terms. */
+  .cu-age{position:relative;display:block;flex:1;height:8px;background:var(--ow-rule-soft);border-radius:2px;}
+  .cu-age-f{position:absolute;left:0;top:0;bottom:0;background:var(--ow-crimson);border-radius:2px;}
+  .cu-age-t{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;background:var(--ow-ink-900);}
+
+  /* The rhythm track: their own gap, up to twice it, past twice it. */
+  .cu-rh{position:relative;display:inline-block;flex:none;width:96px;height:6px;border-radius:2px;
+    vertical-align:middle;background:linear-gradient(to right,
+      var(--ow-verdigris-soft) 0 33.3%,var(--ow-rule-soft) 33.3% 66.6%,var(--ow-amber-soft) 66.6% 100%);}
+  .cu-lr-v .cu-rh{flex:1;width:auto;}
+  .cu-rh-d{position:absolute;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;
+    box-sizing:border-box;border:2px solid var(--ow-paper);background:var(--ow-ink-900);}
+  .cu-rh-d.cu-rh-ok{background:var(--ow-verdigris);}
+  .cu-rh-d.cu-rh-late{background:var(--ow-amber);}
+  .cu-c-rh{display:flex;align-items:center;gap:var(--ow-sp-10);min-width:0;}
+  .cu-rh-l{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-size:var(--ow-t-12);color:var(--ow-ink-900);white-space:nowrap;}
+  .cu-rh-e{color:var(--ow-ink-600);}
+  .cu-legend{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ow-sp-6) var(--ow-sp-16);}
+  .cu-rh.cu-rh-key{width:36px;}
 
   /* The band. Its own tracks, because a reason is a sentence and the
      register's name column is a name. */
@@ -13607,9 +13693,36 @@
        (.ow-tbl-n[data-l]{display:flex}) sits LATER in the stylesheet and
        ties on specificity, so a plainer selector here would lose on
        document order and these three would reappear. */
-    .ow-tbl.cu-tbl .ow-tbl-n.cu-c-when,
-    .ow-tbl.cu-tbl .ow-tbl-n.cu-c-ev,
     .ow-tbl.cu-tbl .ow-tbl-n.cu-c-kept{display:none;}
+    /* The rhythm stays on the card: it is the one desk column that is
+       also a yard question -- are they due in -- and it reads as a
+       shape, so it costs a line rather than a label. */
+    /* One line: how their rhythm stands on the left, what they paid on
+       the right with no label -- the book is ranked on it, so it is the
+       figure the eye expects there. What they owe gets its own labelled
+       line only when there is something owed; a card that says "owed
+       now —" fourteen times says nothing fourteen times. The whole card
+       opens the account, so the chevron has nothing left to point at. */
+    .cu-tbl .ow-tbl-r > .cu-c-rh{grid-column:1;align-self:center;}
+    .cu-tbl .ow-tbl-h .cu-c-rh{display:none;}
+    .ow-tbl.cu-tbl .ow-tbl-n.cu-c-paid{grid-column:2;justify-self:end;}
+    .ow-tbl.cu-tbl .ow-tbl-n.cu-c-paid::before{content:none;}
+    .ow-tbl.cu-tbl .ow-tbl-n.cu-c-owed{grid-column:1 / span 2;}
+    .ow-tbl.cu-tbl .ow-tbl-n.cu-nil,.ow-tbl.cu-tbl .cu-cr{display:none;}
+    .cu-lanes,.cu-lanes-2{grid-template-columns:minmax(0,1fr);}
+    .cu-lr{padding:var(--ow-sp-12);}
+    .cu-lr-n{font-size:15px;}
+    .cu-lr-a .btn.ow-sm{min-height:var(--ow-tap);}
+    .cu-sh-n{display:none;}
+    /* The one primary action goes where the thumb is: above the tab bar,
+       on the right. It lives in the book's header, so it leaves with the
+       header when an account is open. */
+    #c_add_btn{position:fixed;right:var(--ow-sp-16);bottom:calc(76px + env(safe-area-inset-bottom, 0px));
+      z-index:30;height:52px;padding:0 var(--ow-sp-20);border-radius:var(--ow-r-pill);
+      box-shadow:var(--ow-lift);font-size:15px;}
+    /* Room under the last card, so the button never sits on it. */
+    #custBookPan{margin-bottom:76px;}
+
     .cu-tbl .ow-tbl-n{font-size:15px;}
     .cu-tbl .cu-cr{justify-self:end;width:14px;height:14px;}
     .cu-x{padding:0 var(--ow-sp-12) var(--ow-sp-12);}
@@ -58715,6 +58828,9 @@ function customerBookRow(c){
   const s = customerStats(c.id);
   const today = todayISO();
   let spend = 0, kept = 0, spendPrev = 0, orders90 = 0, costed = true;
+  /* The same 90 days, week by week, newest first -- so the strip can
+     draw what the window is made of from the very sums it totals. */
+  const weeks = new Array(Math.ceil(CUST_WINDOW_DAYS / 7)).fill(0);
   customerOrdersFor(c.id).filter(q=> q.invoiced).forEach(q=>{
     const when = q.invoicedAt || q.date || '';
     if(!when) return;
@@ -58722,6 +58838,7 @@ function customerBookRow(c){
     const tot = anInvoiceTotals(q);
     if(age < CUST_WINDOW_DAYS){
       spend += tot.sales; kept += tot.profit; orders90++;
+      weeks[Math.min(weeks.length - 1, Math.max(0, Math.floor(age / 7)))] += tot.sales;
       if(tot.estimatedQty) costed = false;
     } else if(age < CUST_WINDOW_DAYS * 2){
       spendPrev += tot.sales;
@@ -58733,7 +58850,7 @@ function customerBookRow(c){
     c, id: c.id, name: c.name || '', stats: s,
     place: c.location || '', phones: contactPhones(c),
     both: bothSidesPosition(c),
-    spend, kept, spendPrev, orders90, costed,
+    spend, kept, spendPrev, orders90, costed, weeks,
     keptPct: spend > 0 ? kept / spend * 100 : null,
     /* Only a fall counts. A customer who doubled is good news, and good
        news does not belong in a queue of work. */
@@ -58837,39 +58954,83 @@ function customerAttentionHTML(rows){
         <span>Nothing is ${custTermsPhrase()}, nobody has gone quiet past twice their own buying gap, and no account has shrunk by a third. The register below is the whole book.</span></div>
     </div>`;
   }
-  const shown = flagged.slice(0, CUST_ATTENTION_SHOWN);
+  /* THREE LANES, BY KIND OF JOB. Money to chase, customers going quiet,
+     and first buyers who did not come back are three different jobs --
+     a chase, a call, a follow-up -- so they are three columns, each worst
+     first, rather than one list whose order mixed them. Each row carries
+     the one shape that makes its reason readable at a glance; the
+     sentence behind it stays on the name's tooltip. */
+  const lanes = [
+    { key: 'late', title: 'Money to chase', tone: 'cu-lane-bad',
+      icon: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+      match: (x)=> x.reason.key === 'terms' || x.reason.key === 'nophone', more: 'Owing' },
+    { key: 'quiet', title: 'Going quiet', tone: 'cu-lane-warn',
+      icon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+      match: (x)=> x.reason.key === 'quiet' || x.reason.key === 'spend_down', more: 'Quiet' },
+    { key: 'first', title: 'Bought once, not back', tone: '',
+      icon: '<path d="M9 14l-4-4 4-4"/><path d="M5 10h9a5 5 0 0 1 0 10h-2"/>',
+      match: (x)=> x.reason.key === 'first_order', more: 'Buying' },
+  ].map(l=> ({ ...l, items: flagged.filter(l.match) })).filter(l=> l.items.length);
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
   const terms = custTermsDays();
-  const late = flagged.filter(x=> x.reason.tone === 'ow-bad' && x.reason.basis === 'UGX owed'
-    && x.reason.chip !== 'No way to reach them').length;
-  const quiet = flagged.filter(x=> x.r.quiet).length;
-  const shrunk = flagged.filter(x=> x.reason.chip.indexOf('Spend down') === 0).length;
-  const first = flagged.filter(x=> x.reason.chip === 'First order, no return').length;
-  const unreachable = flagged.filter(x=> x.reason.chip === 'No way to reach them').length;
-  const parts = [];
-  if(late) parts.push(`<b>${late}</b> ${custTermsPhrase()}`);
-  if(unreachable) parts.push(`<b>${unreachable}</b> owing with no number on file`);
-  if(quiet) parts.push(`<b>${quiet}</b> quiet past twice their own buying gap`);
-  if(shrunk) parts.push(`<b>${shrunk}</b> whose spend has fallen by a third or more`);
-  if(first) parts.push(`<b>${first}</b> who bought once and did not come back`);
-  return `<div class="ow-pan">
-    <div class="ow-pan-h"><span class="ow-pan-t">Needs you today</span>
-      <span class="ow-pan-n">${flagged.length} of ${rows.length} &middot; worst first</span></div>
-    <div class="ow-tbl cu-att-tbl">
-      ${shown.map(({ r, reason })=> `<div class="ow-tbl-r">
-        <div class="ow-tbl-c">
-          <span class="ow-tbl-p" title="${esc(r.name)}">${esc(r.name)}</span>
-          <p class="cu-why">${reason.why}</p>
+  const why = (reason)=> String(reason.why || '').replace(/<[^>]+>/g, '')
+    .replace(/&mdash;/g, '—').replace(/&[a-z]+;/g, ' ');
+  const shape = (r, reason)=>{
+    if((reason.key === 'terms' || reason.key === 'nophone') && r.ageDays >= 0){
+      const span = Math.max(90, terms * 3, r.ageDays);
+      return `<span class="cu-age" role="img" aria-label="Oldest charge ${r.ageDays} days old; terms ${terms} days"><i class="cu-age-f" style="width:${
+        (r.ageDays / span * 100).toFixed(1)}%"></i>${
+        terms > 0 ? `<i class="cu-age-t" style="left:${(terms / span * 100).toFixed(1)}%"></i>` : ''}</span>`;
+    }
+    if(reason.key === 'quiet') return custRhythmTrackHTML(r);
+    return '';
+  };
+  const sub = (r, reason)=>{
+    if(reason.key === 'terms') return `${r.ageDays} days old${terms > 0 ? ` &middot; terms ${terms}` : ''}`;
+    if(reason.key === 'nophone') return `no number on file${r.ageDays >= 0 ? ` &middot; ${r.ageDays} days old` : ''}`;
+    if(reason.key === 'quiet') return `${r.daysSinceLast} days quiet &middot; usually every ${r.everyDays}`;
+    if(reason.key === 'spend_down') return `${f(r.spend)} against ${f(r.spendPrev)} the 90 before`;
+    if(reason.key === 'first_order') return `one order, ${r.daysSinceLast} days ago`;
+    return '';
+  };
+  return `<div class="cu-lanes cu-lanes-${lanes.length}">
+    ${lanes.map(l=>{
+      const shown = l.items.slice(0, CUST_ATTENTION_SHOWN);
+      const owed = l.items.reduce((n, x)=> n + (x.reason.key === 'terms' || x.reason.key === 'nophone' ? x.r.debt : 0), 0);
+      return `<div class="ow-pan cu-lane ${l.tone}">
+        <div class="ow-pan-h">
+          <svg class="cu-lane-i" viewBox="0 0 24 24" aria-hidden="true">${l.icon}</svg>
+          <span class="ow-pan-t">${l.title}</span>
+          <span class="ow-pan-n">${owed > 0 ? `${f(owed)} UGX &middot; ` : ''}${l.items.length}</span>
         </div>
-        <span class="ow-cp ${reason.tone}"><span class="ow-cp-d"></span>${esc(reason.chip)}</span>
-        <span class="ow-tbl-n"><span class="ow-fig${reason.tone === 'ow-bad' ? ' ow-bad' : ''}">${esc(reason.fig)}</span><span class="ow-fig-b">${esc(reason.basis)}</span></span>
-        <div class="ow-tbl-a">${custActionHTML(r, reason.act)}</div>
-      </div>`).join('')}
-    </div>
-    <p class="ow-mini">${
-      flagged.length > shown.length
-        ? `The ${shown.length} dearest of <b>${flagged.length}</b> are listed; the rest are in the register below under <b>Quiet</b> and <b>Owing</b>. `
-        : ''}Of the ${flagged.length}: ${parts.join(', ')}. Late is measured against each customer&rsquo;s own buying gap, so a monthly buyer is never chased on day 32. Everything here is read from invoiced orders and the debt book &mdash; nothing is estimated, and nothing has been sent.</p>
+        ${shown.map(({ r, reason })=>{
+          const v = shape(r, reason);
+          return `<div class="cu-lr">
+          <span class="cu-lr-n" title="${esc(why(reason))}">${esc(r.name)}</span>
+          <span class="cu-lr-f"><span class="ow-fig${reason.tone === 'ow-bad' ? ' ow-bad' : ''}">${esc(reason.fig)}</span></span>
+          ${v ? `<span class="cu-lr-v">${v}</span>` : ''}
+          <span class="cu-lr-s">${sub(r, reason)}</span>
+          <span class="ow-tbl-a cu-lr-a">${custActionHTML(r, reason.act)}</span>
+        </div>`;
+        }).join('')}
+        ${l.items.length > shown.length
+          ? `<p class="ow-mini cu-lane-more">${l.items.length - shown.length} more under <b>${l.more}</b> in the register below.</p>` : ''}
+      </div>`;
+    }).join('')}
   </div>`;
+}
+
+/* THE RHYTHM, DRAWN. A short track in three zones -- within their own
+   usual gap, up to twice it, past twice it -- and a dot for how long it
+   has been. "Late" on this screen has always been measured against the
+   customer's own habit; this is that measure made visible, so a monthly
+   buyer on day 32 and a daily buyer on day 3 read differently at a
+   glance. */
+function custRhythmTrackHTML(r){
+  if(r.everyDays == null || r.daysSinceLast == null) return '';
+  const ratio = Math.min(r.daysSinceLast / (r.everyDays * 3), 1);
+  const tone = r.daysSinceLast > r.everyDays * 2 ? ' cu-rh-late' : r.daysSinceLast <= r.everyDays ? ' cu-rh-ok' : '';
+  return `<span class="cu-rh" role="img" aria-label="Last order ${r.daysSinceLast} days ago; usually every ${r.everyDays} days"><i class="cu-rh-d${tone}" style="left:${(ratio * 100).toFixed(1)}%"></i></span>`;
 }
 
 /* One action, and never the accent. A tel: link is the owner's own
@@ -58911,13 +59072,15 @@ function customerRegisterRowHTML(r){
       <span class="ow-tbl-s" title="${esc(meta)}">${esc(meta)}</span>
     </div>
     <span class="cu-c-st">${chip}</span>
-    <span class="ow-tbl-n cu-c-when" data-l="Last bought">${r.last ? esc(fmtShortDate(r.last)) : dash}</span>
-    <span class="ow-tbl-n cu-c-ev" data-l="Every">${r.everyDays !== null ? r.everyDays + ' days' : dash}</span>
-    <span class="ow-tbl-n" data-l="Paid you, 90 days">${r.everInvoiced ? `<span class="ow-fig">${f(r.spend)}</span>` : dash}</span>
+    <span class="cu-c-rh" title="${r.last ? `Last bought ${esc(fmtShortDate(r.last))}` : 'Never invoiced'}">${
+      r.everyDays !== null && r.daysSinceLast !== null
+        ? `${custRhythmTrackHTML(r)}<span class="cu-rh-l">${r.daysSinceLast}d <span class="cu-rh-e">/ every ${r.everyDays}</span></span>`
+        : r.last ? `<span class="cu-rh-l">once &middot; ${r.daysSinceLast}d ago</span>` : dash}</span>
+    <span class="ow-tbl-n cu-c-paid" data-l="Paid you, 90 days">${r.everInvoiced ? `<span class="ow-fig">${f(r.spend)}</span>` : dash}</span>
     <span class="ow-tbl-n cu-c-kept" data-l="You kept">${r.everInvoiced
       ? `<span class="ow-fig">${f(r.kept)}</span><span class="ow-fig-b">${r.keptPct === null ? 'nothing sold in 90 days' : r.keptPct.toFixed(1) + '%'}</span>`
       : dash}</span>
-    <span class="ow-tbl-n" data-l="Owed now">${r.debt > 0
+    <span class="ow-tbl-n cu-c-owed${r.debt > 0 ? '' : ' cu-nil'}" data-l="Owed now">${r.debt > 0
       ? `<span class="ow-fig${late ? ' ow-bad' : ''}">${f(r.debt)}</span>${r.ageDays >= 0 ? `<span class="ow-fig-b">${r.ageDays} days old</span>` : '<span class="ow-fig-b">no dated charge</span>'}`
       : dash}</span>
     <svg class="cu-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
@@ -59011,6 +59174,99 @@ function customerAccountActionsHTML(r){
    book, never over the page or the search, so "Owing 11" means eleven
    customers owe you and not eleven of the ones you happen to be
    looking at. */
+/* THE STRIP, DRAWN. Four figures, each with the one shape that says
+   what the number alone cannot:
+
+   - who bought: one mark per customer on the book, so twelve of fourteen
+     and twelve of four hundred stop looking alike;
+   - what they paid: the 90 days as thirteen weeks, from the same sums
+     the figure totals, so a quiet fortnight is seen and not averaged;
+   - what is owed: the money inside the shop's terms and the money past
+     them, as one split, because the second half is the only part of the
+     figure anybody has to act on.
+
+   What you kept stays a figure and a percentage. Not every number needs
+   a picture, and a strip where all four carry one reads as decoration. */
+const CUST_DOTS_MAX = 48;
+function customerPulseHTML(all, k){
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const quiet = all.filter(r=> r.quiet);
+  const never = all.filter(r=> !r.everInvoiced);
+  const buying = all.filter(r=> r.orders90 > 0 && !r.quiet);
+  const lapsed = all.filter(r=> r.everInvoiced && !r.quiet && !(r.orders90 > 0));
+  const marks = [...buying.map(()=> 'cu-dot-b'), ...quiet.map(()=> 'cu-dot-q'),
+    ...lapsed.map(()=> 'cu-dot-l'), ...never.map(()=> 'cu-dot-n')];
+  const cut = Math.max(0, marks.length - CUST_DOTS_MAX);
+  const key = [
+    buying.length ? `<span class="cu-key"><i class="cu-dot cu-dot-b"></i>${buying.length} buying</span>` : '',
+    quiet.length ? `<span class="cu-key"><i class="cu-dot cu-dot-q"></i>${quiet.length} quiet</span>` : '',
+    lapsed.length ? `<span class="cu-key"><i class="cu-dot cu-dot-l"></i>${lapsed.length} not in 90 days</span>` : '',
+    never.length ? `<span class="cu-key"><i class="cu-dot cu-dot-n"></i>${never.length} never invoiced</span>` : '',
+  ].join('');
+
+  const weeks = new Array(Math.ceil(CUST_WINDOW_DAYS / 7)).fill(0);
+  all.forEach(r=> (r.weeks || []).forEach((v, i)=>{ weeks[i] += v; }));
+  const peak = Math.max(...weeks, 0);
+  const cols = weeks.slice().reverse().map((v, i, a)=>{
+    const back = a.length - 1 - i;
+    const h = peak > 0 ? Math.max(v > 0 ? 8 : 3, Math.round(v / peak * 100)) : 3;
+    return `<i class="cu-wk${back === 0 ? ' cu-wk-now' : ''}" style="height:${h}%" title="${
+      back === 0 ? 'This week' : `${back} ${back === 1 ? 'week' : 'weeks'} ago`}: ${f(v)} UGX"></i>`;
+  }).join('');
+
+  const lateOwed = k.late.reduce((n, r)=> n + r.debt, 0);
+  const inTerms = Math.max(0, k.owed - lateOwed);
+  const split = k.owed > 0 ? `<span class="cu-split" role="img" aria-label="${f(inTerms)} inside your terms, ${f(lateOwed)} past them">${
+      inTerms > 0 ? `<i class="cu-split-in" style="flex-grow:${Math.round(inTerms)}"></i>` : ''}${
+      lateOwed > 0 ? `<i class="cu-split-late" style="flex-grow:${Math.round(lateOwed)}"></i>` : ''}</span>
+    <p class="ow-mt-s">${k.owing.length} carrying a balance${lateOwed > 0
+      ? ` &middot; <b class="cu-late-t">${f(lateOwed)} ${custTermsPhrase()}</b>` : ' &middot; none past your terms'}</p>`
+    : '<p class="ow-mt-s">UGX &middot; nothing outstanding</p>';
+
+  return `<div class="ow-strip">
+    <div class="ow-mt"><p class="ow-mt-l">Bought in 90 days</p><span class="ow-mt-v">${k.bought.length}<span class="cu-of"> of ${all.length}</span></span>
+      <span class="cu-dots" role="img" aria-label="${buying.length} buying, ${quiet.length} quiet, ${lapsed.length} not in 90 days, ${never.length} never invoiced">${
+        marks.slice(0, CUST_DOTS_MAX).map(c=> `<i class="cu-dot ${c}"></i>`).join('')}${cut ? ` <span class="cu-dots-more">+${cut}</span>` : ''}</span>
+      <p class="ow-mt-s cu-keys">${key}</p></div>
+    <div class="ow-mt"><p class="ow-mt-l">They paid you</p><span class="ow-mt-v">${f(k.paid)}</span>
+      <span class="cu-wks" role="img" aria-label="What they paid you, week by week, over 90 days">${cols}</span>
+      <p class="ow-mt-s">UGX, on ${k.bought.reduce((n, r)=> n + r.orders90, 0)} invoiced orders &middot; by week</p></div>
+    <div class="ow-mt"><p class="ow-mt-l">You kept</p><span class="ow-mt-v">${f(k.kept)}</span>
+      <p class="ow-mt-s">UGX${k.paid > 0 ? ` &middot; ${(k.kept / k.paid * 100).toFixed(1)}% of what they paid` : ' &middot; nothing sold in the window'}${
+        k.fresh.length ? ` &middot; ${k.fresh.length} bought for the first time` : ''}</p></div>
+    <div class="ow-mt"><p class="ow-mt-l">Still owed</p><span class="ow-mt-v">${f(k.owed)}</span>
+      ${split}</div>
+  </div>
+  ${customerShareHTML(all, k.paid)}`;
+}
+
+/* WHO THE 90 DAYS REST ON. The three who paid most, and everybody else,
+   as shares of one bar -- the one fact about the book no row can show,
+   because it is about all of them at once. Only drawn once there are
+   enough buyers for "the top three" to be a finding rather than the
+   whole list. */
+function customerShareHTML(all, paid){
+  const buyers = all.filter(r=> r.spend > 0).sort((a, b)=> b.spend - a.spend);
+  if(buyers.length < 4 || !(paid > 0)) return '';
+  const top = buyers.slice(0, 3);
+  const topSum = top.reduce((n, r)=> n + r.spend, 0);
+  const rest = paid - topSum;
+  const others = buyers.length - top.length;
+  const seg = (name, v, cls)=>{
+    const pct = v / paid * 100;
+    return `<span class="cu-sh-s ${cls}" style="flex-grow:${Math.round(v)}" title="${esc(name)} &middot; ${pct.toFixed(1)}%">${
+      pct >= 12 ? `<span class="cu-sh-n">${esc(name)}</span><span class="cu-sh-p">${Math.round(pct)}%</span>` : ''}</span>`;
+  };
+  return `<div class="ow-pan cu-share">
+    <div class="ow-pan-h"><span class="ow-pan-t">Who your 90 days rest on</span>
+      <span class="ow-pan-n">${top.length} customers pay you ${Math.round(topSum / paid * 100)}%</span></div>
+    <div class="cu-sh" role="img" aria-label="${top.map(r=> `${esc(r.name)} ${Math.round(r.spend / paid * 100)}%`).join(', ')}, ${others} others ${Math.round(rest / paid * 100)}%">
+      ${top.map((r, i)=> seg(r.name, r.spend, 'cu-sh-' + (i + 1))).join('')}
+      ${rest > 0.5 ? seg(`${others} ${others === 1 ? 'other' : 'others'}`, rest, 'cu-sh-r') : ''}
+    </div>
+  </div>`;
+}
+
 function renderCustomers(filter=''){
   const wrap = document.getElementById('customersTableWrap');
   if(!wrap) return;
@@ -59042,16 +59298,7 @@ function renderCustomers(filter=''){
   const fresh = bought.filter(r=> r.orderCount === 1);
   const strip = document.getElementById('custStripWrap');
   if(strip && !all.length){ strip.innerHTML = ''; }
-  else if(strip) strip.innerHTML = `<div class="ow-strip">
-    <div class="ow-mt"><p class="ow-mt-l">Bought in 90 days</p><span class="ow-mt-v">${bought.length}</span>
-      <p class="ow-mt-s">of ${all.length} on the book${fresh.length ? ` &middot; ${fresh.length} for the first time` : ''}</p></div>
-    <div class="ow-mt"><p class="ow-mt-l">They paid you</p><span class="ow-mt-v">${f(paid)}</span>
-      <p class="ow-mt-s">UGX, on ${bought.reduce((s, r)=> s + r.orders90, 0)} invoiced orders</p></div>
-    <div class="ow-mt"><p class="ow-mt-l">You kept</p><span class="ow-mt-v">${f(kept)}</span>
-      <p class="ow-mt-s">UGX${paid > 0 ? ` &middot; ${(kept / paid * 100).toFixed(1)}% of what they paid` : ' &middot; nothing sold in the window'}</p></div>
-    <div class="ow-mt"><p class="ow-mt-l">Still owed</p><span class="ow-mt-v">${f(owed)}</span>
-      <p class="ow-mt-s">UGX &middot; ${owing.length} carrying a balance${late.length ? `, ${late.length} ${custTermsPhrase()}` : ''}</p></div>
-  </div>`;
+  else if(strip) strip.innerHTML = customerPulseHTML(all, { bought, paid, kept, owed, owing, late, fresh, terms });
 
   /* ---- the band: who needs you today ---- */
   const band = document.getElementById('custAttentionWrap');
@@ -59108,16 +59355,10 @@ function renderCustomers(filter=''){
     return;
   }
 
-  const never = rows.filter(r=> !r.everInvoiced).length;
-  const noPhone = rows.filter(r=> !r.phones.length).length;
-  const facts = [];
-  if(never) facts.push(`<b>${never}</b> ${never === 1 ? 'has' : 'have'} never been invoiced and ${never === 1 ? 'sits' : 'sit'} at the foot with dashes rather than zeros, because nothing sold is not the same as nothing earned`);
-  if(noPhone) facts.push(`<b>${noPhone}</b> ${noPhone === 1 ? 'has' : 'have'} no way to reach them on file`);
   wrap.innerHTML = `<div class="ow-tbl cu-tbl">
       <div class="ow-tbl-h">
         <span>Customer</span><span class="cu-c-st">Standing</span>
-        <span class="ow-tbl-n cu-c-when">Last bought</span>
-        <span class="ow-tbl-n cu-c-ev">Every</span>
+        <span class="cu-c-rh">Last order &middot; their gap</span>
         <span class="ow-tbl-n">Paid you, 90 days</span>
         <span class="ow-tbl-n cu-c-kept">You kept</span>
         <span class="ow-tbl-n">Owed now</span><span></span>
@@ -59125,7 +59366,12 @@ function renderCustomers(filter=''){
       ${listPageSlice('customers', rows).map(r=> customerRegisterRowHTML(r)).join('')}
     </div>
     ${listMoreButtonHTML('customers', rows.length, 'customers')}
-    <p class="ow-mini cu-foot">${facts.length ? facts.join('. ') + '. ' : ''}Spend, what you kept and how often somebody buys are read from <b>invoiced</b> orders only, so a quote still on the board counts for nothing here &mdash; which is why a customer can show a dash and still owe you money.</p>`;
+    <p class="ow-mini cu-foot cu-legend">
+      <span class="cu-key"><span class="cu-rh cu-rh-key" aria-hidden="true"><i class="cu-rh-d cu-rh-ok" style="left:16%"></i></span>within their usual gap</span>
+      <span class="cu-key"><span class="cu-rh cu-rh-key" aria-hidden="true"><i class="cu-rh-d cu-rh-late" style="left:84%"></i></span>past twice it</span>
+      <span class="cu-key"><span class="cu-dash">&mdash;</span> not invoiced yet, which is not zero</span>
+      <span class="cu-key">read from invoiced orders only</span>
+    </p>`;
 }
 
 /* The panel behind a customer card.
