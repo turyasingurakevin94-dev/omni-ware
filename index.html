@@ -9310,6 +9310,39 @@
   }
   .st-ratio.ok .st-ratio-head b{color:var(--ow-verdigris);}
   .st-ratio.warn .st-ratio-head b{color:var(--ow-amber-ink);}
+  .st-ratio.bad .st-ratio-head b{color:var(--ow-crimson);}
+  /* Each question's answer in a word, under its name. */
+  .st-ratio-verdict{display:inline-block;margin:0 0 var(--ow-sp-6);padding:2px var(--ow-sp-8);
+    border-radius:var(--ow-r-pill);font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);}
+  .st-ratio-verdict.good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .st-ratio-verdict.watch{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .st-ratio-verdict.bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .st-ratio-verdict.none{background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+  .st-ratio-none{margin:0;font-size:var(--ow-t-12);line-height:var(--ow-lh-normal);color:var(--ow-ink-400);}
+  /* The gauge: shaded zones, the mark where it stands, a faint tick
+     where it stood. The mark is ink and taller than the track, so it
+     reads by shape as well as position. */
+  .st-gauge{position:relative;display:block;height:16px;margin:var(--ow-sp-4) 0 var(--ow-sp-2);}
+  .st-gauge-t{position:absolute;left:0;right:0;top:5px;height:6px;display:flex;
+    overflow:hidden;border-radius:var(--ow-r-pill);}
+  .st-gauge-t i,.st-gauge-key i{display:block;height:100%;}
+  /* The state colours themselves, thinned: the soft tints vanish on
+     white in daylight, and a zone nobody can see shades nothing. */
+  .st-gauge-t i.good,.st-gauge-key i.good{background:var(--ow-verdigris);opacity:.32;}
+  .st-gauge-t i.watch,.st-gauge-key i.watch{background:var(--ow-amber);opacity:.32;}
+  .st-gauge-t i.bad,.st-gauge-key i.bad{background:var(--ow-crimson);opacity:.32;}
+  .st-gauge-now{position:absolute;top:0;width:3px;height:16px;margin-left:-1.5px;
+    background:var(--ow-ink-900);}
+  .st-gauge-now.off{width:0;height:0;top:3px;margin-left:-5px;background:none;
+    border-left:5px solid transparent;border-right:5px solid transparent;border-top:10px solid var(--ow-ink-900);}
+  .st-gauge-was{position:absolute;top:3px;width:2px;height:10px;margin-left:-1px;
+    background:var(--ow-steel-400);}
+  .st-gauge-key{display:flex;flex-wrap:wrap;gap:var(--ow-sp-4) var(--ow-sp-16);
+    padding:var(--ow-sp-10) var(--ow-sp-12) 0;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .st-gauge-key span{display:inline-flex;align-items:center;gap:var(--ow-sp-6);}
+  .st-gauge-key i{width:18px;height:8px;border-radius:var(--ow-r-pill);}
+  .st-gauge-key b{display:block;width:3px;height:14px;background:var(--ow-ink-900);}
+  .st-gauge-key em{display:block;width:2px;height:10px;background:var(--ow-steel-400);}
   .st-ratio-read{display:block;font-size:var(--ow-t-11);line-height:var(--ow-lh-normal);
     color:var(--ow-ink-600);margin-top:3px;}
 
@@ -86908,39 +86941,132 @@ function stDefaultRange(preset){
 }
 /* A ratio nobody can read is a number on a screen.
 
-   Each carries a plain sentence saying what it means, because "1.8x" is
-   only useful to a reader who already knows what a current ratio is --
-   and the shopkeeper this is built for reasonably does not. */
-function ratiosHTML(r){
+   Each still carries its plain sentence, because "1.8x" is only useful
+   to a reader who already knows what a current ratio is. What changed is
+   that each now also carries a GAUGE: a track shaded where the figure
+   would be healthy and where it wants watching, a mark where it stands
+   now, and a faint tick where it stood in the comparison period. "3.94x"
+   asks the reader to know that over 1.5 is comfortable; a mark sitting
+   well inside the green says it.
+
+   THE SHADING IS READ FROM THE RATIO'S OWN TEST, not drawn from a second
+   copy of its threshold. The track is sampled against row.good -- the
+   same function that decides the figure's colour -- so the drawing and
+   the verdict cannot drift apart when a threshold is changed. What this
+   table adds is only the stretch of scale worth drawing, and, where the
+   ratio's own sentence names one, the line past which it is trouble
+   rather than merely worth a look: under 1 the current ratio says the
+   shop cannot pay what falls due; under 1 interest cover says profit
+   does not cover the interest; under 0 a margin or a return is a loss. */
+const ST_RATIO_SCALES = {
+  'Gross margin':                   {min:-10, max:50, trouble:0},
+  'Net margin':                     {min:-20, max:30, trouble:0},
+  'Return on assets':               {min:-20, max:40, trouble:0},
+  'Return on the owner’s money':    {min:-20, max:60, trouble:0},
+  'Current ratio':                  {min:0, max:4, trouble:1},
+  'Quick ratio':                    {min:0, max:3},
+  'Cash to short-term debt':        {min:0, max:2},
+  'Stock turns a year':             {min:0, max:12},
+  'Days of stock':                  {min:0, max:365},
+  'Days to get paid':               {min:0, max:120},
+  'Debt to net worth':              {min:0, max:3},
+  'Borrowing as a share of assets': {min:0, max:100},
+  'Interest cover':                 {min:0, max:10, trouble:1},
+};
+
+// Where a figure sits: 'good', 'watch' or 'bad' (past the trouble line,
+// on the side the ratio's own test calls unhealthy).
+function stRatioState(row, v, sc){
+  if(row.good(v)) return 'good';
+  if(sc && sc.trouble != null){
+    const higher = row.good(sc.max);
+    if(higher ? v < sc.trouble : v > sc.trouble) return 'bad';
+  }
+  return 'watch';
+}
+
+function stRatioGaugeHTML(row, prior){
+  const sc = ST_RATIO_SCALES[row.label];
+  if(!sc) return '';
+  const span = sc.max - sc.min;
+  const at = (v)=> Math.max(0, Math.min(100, (v - sc.min) / span * 100));
+  // Sample the ratio's own test along the scale and merge the runs.
+  const N = 60, runs = [];
+  for(let i = 0; i < N; i++){
+    const v = sc.min + span * (i + 0.5) / N;
+    const st = stRatioState(row, v, sc);
+    const last = runs[runs.length - 1];
+    if(last && last.st === st) last.n++; else runs.push({st, n:1});
+  }
+  const track = runs.map(r=> `<i class="${r.st}" style="width:${(r.n / N * 100).toFixed(2)}%"></i>`).join('');
+  const was = prior != null && isFinite(prior)
+    ? `<em class="st-gauge-was" style="left:${at(prior).toFixed(2)}%"></em>` : '';
+  const off = row.value < sc.min || row.value > sc.max;
+  return `<span class="st-gauge" aria-hidden="true"><span class="st-gauge-t">${track}</span>${was}<b class="st-gauge-now${off ? ' off' : ''}" style="left:${at(row.value).toFixed(2)}%"></b></span>`;
+}
+
+function ratiosHTML(r, prev){
   const fmtVal = (row)=>{
     if(row.value == null) return '—';
     const v = row.unit === '%' ? row.value.toFixed(1)
       : row.unit === 'x' ? row.value.toFixed(2)
       : Math.round(row.value);
-    return v + row.unit;
+    return v + (row.unit === ' days' && v === 1 ? ' day' : row.unit);
   };
+  const priorOf = (g, row)=>{
+    if(!prev) return null;
+    const pg = prev.groups.find(x=> x.name === g.name);
+    const pr = pg && pg.rows.find(x=> x.label === row.label);
+    return pr && pr.value != null && isFinite(pr.value) ? pr.value : null;
+  };
+  const basis = [];
+  if(r.annualised) basis.push({k:'“a year” scales the period to twelve months',
+    t:`Anything marked a year scales this ${r.days}-day period up to twelve months so it can be set against the balances, which are a snapshot. A good month is not a good year.`});
+  else basis.push({k:'A full year, nothing scaled', t:'The period is a full year, so nothing needed scaling.'});
+  basis.push({k:'“closing” uses today’s stock and debtors',
+    t:'Ratios marked closing use today’s stock and debtors rather than the period’s average, which this app does not keep — they read high in a growing shop and low in a shrinking one.'});
+  basis.push({k:'Shading follows each ratio’s own test',
+    t:'The green stretch of each track is where that ratio counts as healthy, the amber where it wants a look, and the red — drawn only where the ratio’s own sentence names a line — where it is trouble: a margin or return below nothing, a current ratio under 1, interest not covered by profit.'});
+
   return `<section class="st-ratios">
     <h3>What the figures say</h3>
-    <p class="st-note">${r.annualised
-      ? `Anything marked <b>a year</b> scales this ${r.days}-day period up to twelve months so it can be set against the balances, which are a snapshot. A good month is not a good year.`
-      : 'The period is a full year, so nothing needed scaling.'}
-      Ratios marked <b>closing</b> use today's stock and debtors rather than the period's average, which this app does not keep — they read high in a growing shop and low in a shrinking one.</p>
+    <div class="st-gauge-key" aria-hidden="true">
+      <span><i class="good"></i>healthy</span><span><i class="watch"></i>worth a look</span><span><i class="bad"></i>trouble</span>
+      <span><b></b>now</span>${prev ? '<span><em></em>the period compared</span>' : ''}
+    </div>
     <div class="st-ratio-grid">
-      ${r.groups.map(g=>`<div class="st-ratio-group">
+      ${r.groups.map(g=>{
+        const known = g.rows.filter(row=> row.value != null && isFinite(row.value));
+        const states = known.map(row=> stRatioState(row, row.value, ST_RATIO_SCALES[row.label]));
+        const bad = states.filter(x=> x === 'bad').length, watch = states.filter(x=> x === 'watch').length;
+        /* Each question answered in a word before its figures, so the
+           four groups read as four answers across the top of the page. */
+        const verdict = !known.length ? {cls:'none', t:'Nothing to measure yet'}
+          : bad ? {cls:'bad', t:`${bad} in trouble`}
+          : watch ? {cls:'watch', t:`${watch} worth a look`}
+          : {cls:'good', t:'All healthy'};
+        return `<div class="st-ratio-group">
         <h4>${esc(g.name)}</h4>
-        ${g.rows.map(row=>{
-          const known = row.value != null && isFinite(row.value);
-          const tone = !known ? '' : (row.good(row.value) ? 'ok' : 'warn');
+        <span class="st-ratio-verdict ${verdict.cls}">${esc(verdict.t)}</span>
+        ${!known.length
+          ? `<p class="st-ratio-none">None of these can be worked out — there is nothing to measure them against in this period yet.</p>`
+          : g.rows.map(row=>{
+          const isKnown = row.value != null && isFinite(row.value);
+          const st = isKnown ? stRatioState(row, row.value, ST_RATIO_SCALES[row.label]) : '';
+          const tone = !isKnown ? '' : (st === 'good' ? 'ok' : st === 'bad' ? 'bad' : 'warn');
           return `<div class="st-ratio ${tone}">
             <div class="st-ratio-head">
               <span class="st-ratio-label">${esc(row.label)}${row.annual?'<em>a year</em>':''}${row.closing?'<em>closing</em>':''}</span>
               <b>${esc(fmtVal(row))}</b>
             </div>
-            <span class="st-ratio-read">${known ? esc(row.read) : 'Cannot be worked out — there is nothing to measure it against yet.'}</span>
+            ${isKnown ? stRatioGaugeHTML(row, priorOf(g, row)) : ''}
+            <span class="st-ratio-read">${isKnown ? esc(row.read) : 'Cannot be worked out — there is nothing to measure it against yet.'}</span>
           </div>`;
         }).join('')}
-      </div>`).join('')}
+      </div>`;
+      }).join('')}
     </div>
+    ${stBasisHTML(basis)}
   </section>`;
 }
 const stRow = (label, value, cls)=>
@@ -87586,7 +87712,11 @@ function statementDocHTML(key, ctx){
   return key === 'pl'     ? stProfitAndLoss(ctx)
     :    key === 'bs'     ? stBalanceSheet(ctx)
     :    key === 'cf'     ? stCashFlow(ctx)
-    :    key === 'ratios' ? ratiosHTML(financialRatios(ctx.is, ctx.bs, ctx.cf))
+    :    key === 'ratios' ? ratiosHTML(financialRatios(ctx.is, ctx.bs, ctx.cf),
+           /* The same ratios for the period compared, so each gauge can
+              show where it stood. None when nothing was on file then --
+              a tick at zero would read as a real reading. */
+           ctx.prevHasActivity ? financialRatios(ctx.prev, balanceSheetAsAt(ctx.prevTo), ctx.prevCf) : null)
     :                       stOverview(ctx);
 }
 
