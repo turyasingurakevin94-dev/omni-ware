@@ -388,4 +388,44 @@ if (scope) {
     'with nobody invited, the card carries the one accent and hands the tap to the same invite, so the screen still has exactly one');
 }
 
+/* ---------- 11. somebody who has not started yet ----------------------
+   Live, two invited agents with no orders showed as four empty charts
+   each. Their row says where they have got to instead. */
+{
+  const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const env = { data, todayISO: () => TODAY, esc, agingDaysLabel: (d) => d + ' days', agentSeen: null, agentSeenError: null };
+  const jr = compileScope([
+    extractFunction(src, 'agentJourney', 'index.html'), extractFunction(src, 'agentJourneyHTML', 'index.html'),
+    extractFunction(src, 'agentAvatarHTML', 'index.html'), extractFunction(src, 'daysSinceDate', 'index.html'),
+    'function setSeen(m, e){ agentSeen = m; agentSeenError = e; }',
+  ], env, ['agentJourney', 'agentJourneyHTML', 'agentAvatarHTML', 'setSeen']);
+  const s0 = { orders: 0 };
+  const henry = agent('AG006', { userId: 'u1', invitedAt: '2026-07-27T09:00:00Z' });
+  jr.setSeen(null, null);
+  let j = jr.agentJourney(henry, s0);
+  eq(j.invitedDays, 9, 'the invite is dated from the day the agent was created');
+  eq(j.signedIn, null, 'before the sign-ins are read, whether they signed in is unknown, not "no"');
+  t.check(/checking/.test(jr.agentJourneyHTML(j, false)), 'and it says it is checking');
+  jr.setSeen(null, 'permission denied');
+  t.check(/could not be read/.test(jr.agentJourneyHTML(jr.agentJourney(henry, s0), false)), 'a failed read says so, never "not yet"');
+  jr.setSeen(new Map(), null);
+  j = jr.agentJourney(henry, s0);
+  eq(j.signedIn, false, 'with the sign-ins read and none for them, they have not signed in');
+  t.check(/Signed in: not yet/.test(jr.agentJourneyHTML(j, false)), 'and the line says not yet');
+  jr.setSeen(new Map([['u1', '2026-08-03T10:00:00Z']]), null);
+  j = jr.agentJourney(henry, s0);
+  t.check(j.signedIn === true && j.seenDays === 2, 'a sign-in on record is found, with how long ago');
+  const html = jr.agentJourneyHTML(j, true);
+  t.check((html.match(/agv-jr-st agv-on/g) || []).length === 2 && /First order: none yet/.test(html),
+    'two of the three steps are reached, and the first order is still to come');
+  t.check(/agv-av-n/.test(jr.agentAvatarHTML(henry, true)) && />AG</.test(jr.agentAvatarHTML(agent('AG x', { name: 'Anna Grace' }), false)),
+    'a new agent wears a dashed ring; initials come from the name');
+  const row = (/function agentRowHTML\(a\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+  t.check(/const unstarted = s\.orders === 0 && !retired;/.test(row) && /agv-span" data-l="Progress"/.test(row),
+    'the row draws the journey in place of four empty charts for anybody who has not ordered');
+  const body = (/function agentOpenHTML\(a, s\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+  t.check(/The invite took; what is missing is a first sale/.test(body),
+    'and an agent who has signed in is not called an invite that did not take');
+}
+
 process.exit(t.done() ? 1 : 0);
