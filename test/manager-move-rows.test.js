@@ -206,7 +206,7 @@ const src = read('index.html');
     extractFunction(src, 'mgrJournalChartHTML', 'index.html'), extractFunction(src, 'mgrDayMonth', 'index.html'),
     extractFunction(src, 'mgrJournalWeekLabel', 'index.html'), extractFunction(src, 'mgrMondayOf', 'index.html'),
     extractFunction(src, 'mgrShortUGX', 'index.html'), extractDeclaration(src, 'MGR_JR_STOP', 'index.html'),
-  ], { esc, Math, Number, String, Date, Set, Array, fmtShortDate: (d) => d }, ['mgrJournalRepeats', 'mgrJournalChartHTML', 'mgrJournalWeekLabel', 'mgrMondayOf']);
+  ], { esc, Math, Number, String, Date, Set, Array, fmtShortDate: (d) => d, fmtUGX: (n) => Math.round(n).toLocaleString('en-US') + ' UGX' }, ['mgrJournalRepeats', 'mgrJournalChartHTML', 'mgrJournalWeekLabel', 'mgrMondayOf']);
   const reps = sc.mgrJournalRepeats([
     { date: '2026-08-29', title: 'Put 5,000 shillings on the Masasi carton — that one change is worth more than every chase made last week.' },
     { date: '2026-08-31', title: 'Put 5,000 more shillings on each Masasi carton before you refill them — that one change is worth more.' },
@@ -268,6 +268,98 @@ const src = read('index.html');
     'of two overlapping plays it recommends the one worth more, and the other card points to it');
   t.check(/class="mgr-rv-why"/.test(extractFunction(src, 'mgrRichRowHTML', 'index.html')), 'every move carries one line of its reasoning on the card');
   t.check(/<p class="mgr-rej">/.test(render) && !/<p class="ow-mini">Considered and rejected/.test(render), 'and what was considered and rejected leads the plan instead of trailing it');
+}
+
+/* ---------- 8. what the shop's real journal broke ---------------------
+   Read from the live books on 24 Sept: one Saturday held six meetings
+   before noon, a Sunday held two sixteen minutes apart, and a move done
+   on the earlier of those two. */
+{
+  const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const sc = compileScope([
+    extractFunction(src, 'mgrLiveMoveRows', 'index.html'),
+    extractFunction(src, 'mgrJrMoveFingerprint', 'index.html'),
+    extractFunction(src, 'mgrJournalRepeats', 'index.html'), extractFunction(src, 'mgrJrWords', 'index.html'),
+    extractFunction(src, 'mgrJournalChartHTML', 'index.html'), extractFunction(src, 'mgrDayMonth', 'index.html'),
+    extractFunction(src, 'mgrShortUGX', 'index.html'), extractDeclaration(src, 'MGR_JR_STOP', 'index.html'),
+  ], { esc, Math, Number, String, Date, Set, Map, Array, fmtShortDate: (d) => d,
+    fmtUGX: (n) => Math.round(n).toLocaleString('en-US') + ' UGX' },
+  ['mgrLiveMoveRows', 'mgrJrMoveFingerprint', 'mgrJournalRepeats', 'mgrJournalChartHTML']);
+
+  const rows = [
+    { meeting_id: 59, date: '2026-09-06', status: 'open' },
+    { meeting_id: 59, date: '2026-09-06', status: 'done' },
+    { meeting_id: 59, date: '2026-09-06', status: 'skipped' },
+    { meeting_id: 68, date: '2026-09-06', status: 'open' },
+    { meeting_id: 68, date: '2026-09-06', status: 'open' },
+    { meeting_id: 79, date: '2026-09-19', status: 'open' },
+    { meeting_id: null, date: '2026-08-20', status: 'open' },
+  ];
+  const split = sc.mgrLiveMoveRows(rows);
+  t.check(split.replaced.length === 1 && split.replaced[0].meeting_id === 59 && split.replaced[0].status === 'open',
+    'an open move from a plan replaced the same day is replaced, not "never touched"');
+  t.check(split.live.length === 6 && split.live.some((r) => r.meeting_id === 59 && r.status === 'done') && split.live.some((r) => r.meeting_id === 59 && r.status === 'skipped'),
+    'but an answer given on the earlier plan stands, and a day held once is untouched');
+  t.check(split.live.some((r) => r.meeting_id == null), 'and a move written before meetings were linked is always live');
+
+  const mv = (mkind, subject) => ({ body: { mkind, subject } });
+  t.check(sc.mgrJrMoveFingerprint(mv('price', { key: 'P051' })) === sc.mgrJrMoveFingerprint(mv('price', { key: 'P051::18' })),
+    'a product is the same advice whatever size it names');
+  t.check(sc.mgrJrMoveFingerprint(mv('chase', { customerId: 106 })) === sc.mgrJrMoveFingerprint(mv('chase', { customerId: 'C106' })),
+    'and a customer is the same whether the plan wrote 106 or C106');
+  t.check(sc.mgrJrMoveFingerprint(mv('chase', {})) === '' && sc.mgrJrMoveFingerprint(undefined) === '',
+    'a move about nothing has no fingerprint, and matches nothing');
+
+  const reps = sc.mgrJournalRepeats([
+    { date: '2026-09-19', title: 'Take the Masasi margin from Roto’s 50-carton rung, not from a price your customers have already refused.', fp: 'chase|c1056' },
+    { date: '2026-09-24', title: 'Collect Amos’s 2,515,000 first, then refill the two shelves that are empty and earning.', fp: 'chase|c1056' },
+  ]);
+  t.check(JSON.stringify(reps.nth) === '[1,2]',
+    'two headlines with nothing in common are still the same advice when their first move acts on the same customer (got ' + JSON.stringify(reps.nth) + ')');
+
+  const chart = sc.mgrJournalChartHTML([
+    { date: '2026-08-29', moves: ['open'], done: 0 },
+    { date: '2026-09-24', moves: ['done'], done: 1 },
+  ], [{ date: '2026-08-29', sales: 31436660 }, { date: '2026-08-31', sales: 32696500 }, { date: '2026-09-08', sales: 15694755 }], '2026-09-24');
+  const figs = chart.match(/<b>[\d.]+m<\/b>/g) || [];
+  t.check(figs.length === 2 && /32\.7m/.test(chart) && /15\.69m/.test(chart) && !/<b>31\.44m<\/b>/.test(chart),
+    'reviews two days apart do not write their figures on top of each other; the newer keeps its figure (got ' + figs.join(' ') + ')');
+  t.check((chart.match(/class="mgr-jc-r"/g) || []).length === 3 && /Weekly review, 2026-08-29: sales 31,436,660 UGX/.test(chart),
+    'and the older keeps its mark, with its figure on hover');
+
+  const render = extractFunction(src, 'renderManager', 'index.html');
+  t.check(/held: again \? `held \$\{again \+ 1\} times`/.test(render) && /Answered on the earlier plan that day/.test(render),
+    'a day held more than once is one entry, says how many times, and keeps what was answered on the earlier plan');
+  const load = extractFunction(src, 'managerLoadState', 'index.html');
+  t.check(/earlierAnswered/.test(load) && /if\(meetings\.length < 6\) meetings\.push\(m\)/.test(load),
+    'the journal keeps six DAYS, not six rows');
+}
+
+/* ---------- 9. one row, two questions ---------------------------------
+   Live: the strip said "followed by events 2 of 3" while the table said
+   "Event followed 0 · Not landing 4" about the same four rows. What the
+   books did and whether the owner answered are two facts. */
+{
+  const sc = compileScope([extractFunction(src, 'mgrLeverRows', 'index.html'), extractDeclaration(src, 'MGR_LEVER_FILTERS', 'index.html'),
+    'function leverFilters(){ return MGR_LEVER_FILTERS; }'],
+    { String, Map, Set, trackRecordName: (x) => x.id, trackRecordLine: () => 'line' }, ['mgrLeverRows', 'leverFilters']);
+  const track = { rows: [
+    { key: 'chase|C106', kind: 'chase', id: 'Mulongo', times: 5, windowed: true, scored: 5, worked: 2 },
+    { key: 'chase|C1046', kind: 'chase', id: 'Dad', times: 4, windowed: true, scored: 4, worked: 0 },
+    { key: 'price|P051', kind: 'price', id: 'Masasi', times: 5, windowed: false, scored: 0, worked: 0 },
+  ] };
+  const tally = { passedOn: [], notLanding: ['chase|C106', 'chase|C1046', 'price|P051'].map((key) => ({ key, title: key, times: 5 })) };
+  const rows = sc.mgrLeverRows(track, tally);
+  const by = Object.fromEntries(rows.map((r) => [r.key, r]));
+  t.check(by['chase|C106'].verdict === 'works' && by['chase|C106'].notLanding && by['chase|C1046'].verdict === 'never' && by['chase|C1046'].notLanding,
+    'the outcome is the verdict, and "not landing" rides beside it rather than hiding it');
+  t.check(by['price|P051'].verdict === 'notlanding', 'advice the books cannot weigh is still called not landing');
+  const n = (id) => rows.filter(sc.leverFilters().find((f) => f.id === id).has).length;
+  t.check(n('works') === 1 && n('never') === 1 && n('notlanding') === 3,
+    'so the filter counts agree with the strip: 1 followed, 1 not, 3 not landing (got ' + n('works') + '/' + n('never') + '/' + n('notlanding') + ')');
+  const tallyFn = extractFunction(src, 'managerAdviceTally', 'index.html');
+  t.check(/recentlyDone/.test(tallyFn) && /kind: 'advice_already_done'/.test(src) && /Do not put it to them again/.test(src),
+    'and the meeting is told what the owner already did, so it stops proposing it as new');
 }
 
 process.exit(t.done() ? 1 : 0);

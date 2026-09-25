@@ -32,6 +32,7 @@ const fmtUGX = (n) => Number(n).toLocaleString('en-US') + ' UGX';
     ];
     const { managerAdviceWeeks } = compileScope([
       extractFunction(src, 'managerAdviceWeeks', 'index.html'),
+      extractFunction(src, 'mgrLiveMoveRows', 'index.html'),
       extractFunction(src, 'anShiftDate', 'index.html'),
       extractDeclaration(src, 'MGR_TREND_WEEKS', 'index.html'),
       extractDeclaration(src, 'TRACK_WINDOWED', 'index.html'),

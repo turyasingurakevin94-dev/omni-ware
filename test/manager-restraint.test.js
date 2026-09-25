@@ -62,7 +62,7 @@ const advice = async (rows) => {
     q.select = () => q; q.eq = () => q; q.gte = () => q;
     q.lte = () => Promise.resolve({ data: rows, error: null });
     return q; } };
-  const s = compileScope([extractFunction(src, 'managerAdviceTally', 'index.html'), extractFunction(src, 'mgrJrWords', 'index.html'), extractDeclaration(src, 'MGR_JR_STOP', 'index.html')],
+  const s = compileScope([extractFunction(src, 'managerAdviceTally', 'index.html'), extractFunction(src, 'mgrLiveMoveRows', 'index.html'), extractFunction(src, 'mgrJrWords', 'index.html'), extractDeclaration(src, 'MGR_JR_STOP', 'index.html')],
     { managerNotesTable: true, currentShopId: 'shop-1', sb,
       todayISO: () => TODAY, anShiftDate: shift,
       console, Date, Math, Number, String, Array, Object, Map, Set, Promise },

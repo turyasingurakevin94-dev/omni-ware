@@ -21,6 +21,10 @@ const scope = compileScope([
   extractFunction(src, 'mgrMapModel', 'index.html'),
   extractFunction(src, 'mgrMapSubjectIds', 'index.html'),
   extractFunction(src, 'mgrMapLayout', 'index.html'),
+  extractFunction(src, 'mgrMapUnclash', 'index.html'),
+  extractFunction(src, 'mgrMapLeafW', 'index.html'),
+  extractDeclaration(src, 'MGR_MAP_LEAF_MAXW', 'index.html'),
+  extractFunction(src, 'mgrMapAvHTML', 'index.html'),
   extractFunction(src, 'mgrMapNodeStyle', 'index.html'),
   extractFunction(src, 'mgrMapIni', 'index.html'),
   extractFunction(src, 'mgrMapHTML', 'index.html'),
@@ -34,7 +38,7 @@ const scope = compileScope([
   MANAGER_DOORS: { chase: { tab: 'chase', label: 'Open the money queue' }, cashbook: { tab: 'cashbook', label: 'Open the Cash book' } },
   MANAGER_OBJECTIVES: { cash: 'Cash first' },
   chaseResponseLine: () => 'pays when chased', mgrChaseRowFor: () => ({}),
-}, ['mgrMapModel', 'mgrMapLayout', 'mgrMapHTML']);
+}, ['mgrMapModel', 'mgrMapLayout', 'mgrMapHTML', 'mgrMapAvHTML']);
 
 const pulse = {
   cash: { total: 10630000, safe_to_spend: 6600000 },
@@ -127,5 +131,42 @@ t.check(/mgrMapJournal = \{ today: st\.today/.test(render) && /mgrMapModelCache 
 t.check(/\.mgr-mp-cv\{display:none;\}/.test(src) && /\.mgr-mp-tiles\{display:grid;/.test(src),
   'on a phone the drawing becomes tiles');
 t.check(/prefers-reduced-motion: reduce\)\{ \.mgr-mp-lines line\.mgr-mp-ln-on/.test(src), 'and the glow holds still for those who ask it to');
+
+/* ---------- labels that land on each other --------------------------
+   The shop's own map on 24 Sept: five customers on the right edge and
+   five items at the bottom. Before, Mulongo sat under Amos Dulisa and
+   "Soft Close Mulper — Flat" under "Half Bend". Every leaf is measured
+   as the stylesheet draws it and no two boxes may touch. */
+{
+  const real = [{"id": "cash", "angle": -90, "leaves": [{"id": "a:cash", "label": "Cash"}, {"id": "a:momo", "label": "Mobile Money"}, {"id": "a:bank", "label": "Bank"}]}, {"id": "customers", "angle": -30, "leaves": [{"id": "c:X727", "label": "Aid"}, {"id": "c:X208", "label": "Kato Brian"}, {"id": "c:X600", "label": "Ruthx"}, {"id": "c:X350", "label": "Mukasax"}, {"id": "c:X864", "label": "Ojok Peters"}]}, {"id": "growth", "angle": 30, "leaves": [{"id": "c:X108", "label": "Nakato An"}, {"id": "c:X793", "label": "Okello Jox"}, {"id": "c:X409", "label": "Babiry"}]}, {"id": "margin", "angle": 90, "leaves": [{"id": "k:P051::18", "label": "Runners \u2014 Masasi / 14\""}, {"id": "k:P051::17", "label": "Runners \u2014 Masasi / 12\""}, {"id": "k:P073::0", "label": "ELEPHANT King \u2014 Short / Single Lock"}]}, {"id": "stock", "angle": 150, "leaves": [{"id": "k:P044::0", "label": "Soft Close Mulper \u2014 Flat"}, {"id": "k:P044::1", "label": "Soft Close Mulper \u2014 Half Bend"}, {"id": "k:P211::3", "label": "Window Rollers \u2014 Big / Grooved"}, {"id": "s:X43", "label": "Akello Maryxx"}, {"id": "k:P073::0", "label": "ELEPHANT King \u2014 Short / Single Lock"}]}, {"id": "suppliers", "angle": 210, "leaves": [{"id": "s:X43", "label": "Akello Maryxx"}, {"id": "s:X574", "label": "Wasswaxxxxx"}]}];
+  const out = scope.mgrMapLayout(real);
+  const PX = 0.84, PY = 560 / 660, boxes = [];
+  out.forEach((d) => d.leaves.forEach((l) => boxes.push({ n: l.label, x: l.x * PX, y: l.y * PY, w: Math.min(180, 36 + l.label.length * 6.2), h: 24 })));
+  out.forEach((d) => boxes.push({ n: d.id, x: d.x * PX, y: d.y * PY, w: 108, h: 90 }));
+  boxes.push({ n: 'core', x: 420, y: 280, w: 124, h: 124 });
+  const clash = [];
+  for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+    const a = boxes[i], b = boxes[j];
+    if (Math.abs(a.x - b.x) < (a.w + b.w) / 2 && Math.abs(a.y - b.y) < (a.h + b.h) / 2) clash.push(a.n + ' / ' + b.n);
+  }
+  t.check(!clash.length, 'no label on the map lands on another, or on an area (' + (clash.join('; ') || 'none') + ')');
+  t.check(out.every((d) => d.leaves.every((l) => l.x * PX - Math.min(180, 36 + l.label.length * 6.2) / 2 >= 0 && l.x * PX + Math.min(180, 36 + l.label.length * 6.2) / 2 <= 840)),
+    'and every label stays inside the frame');
+  const crossing = [];
+  out.forEach((d) => d.leaves.forEach((l) => {
+    const through = out.filter((o) => o.id !== d.id).find((o) => {
+      for (let k = 0.1; k < 0.95; k += 0.05) { const x = d.x + (l.x - d.x) * k, y = d.y + (l.y - d.y) * k; if (Math.abs(x - o.x) < 75 && Math.abs(y - o.y) < 61) return true; }
+      return false; });
+    if (through) crossing.push(l.label + ' through ' + through.id);
+  }));
+  t.check(!crossing.length, 'and no leaf is moved so far that its line runs through another area (' + (crossing.join('; ') || 'none') + ')');
+  const again = scope.mgrMapLayout(real);
+  t.check(JSON.stringify(again) === JSON.stringify(out), 'the same books always draw the same map');
+  const a = scope.mgrMapAvHTML({ id: 'k:P051::18', label: 'Runners — Masasi / 14"' }, { tone: 'buy' });
+  const b = scope.mgrMapAvHTML({ id: 'k:P051::17', label: 'Runners — Masasi / 12"' }, { tone: 'buy' });
+  const c = scope.mgrMapAvHTML({ id: 'c:C106', label: 'Mulongo' }, { tone: 'money' });
+  t.check(/<svg/.test(a) && a === b && />MU</.test(c),
+    'an item wears the tag rather than initials two sizes of it would share; a person keeps their initials');
+}
 
 process.exit(t.done() ? 1 : 0);
