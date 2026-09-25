@@ -13452,6 +13452,10 @@
      next. Its header is the page's own, so the customer's name is the
      page name while you are on it. */
   .cu-acct-ph{align-items:baseline;row-gap:var(--ow-sp-4);}
+  /* Where they are and how long they have bought goes under the name,
+     so the name, its standing and the three things to do share one
+     line instead of pushing the payment button onto a second. */
+  .cu-acct-ph .ow-ph-sub{order:10;flex:1 1 100%;margin:0;}
   .cu-acct-ph .ow-ph-t{min-width:0;max-width:46ch;overflow:hidden;
     text-overflow:ellipsis;white-space:nowrap;}
   /* The way back takes the whole first line, ahead of the name. A back
@@ -13499,6 +13503,38 @@
   .cu-led-none .ow-tbl-c{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
   .cu-led .ow-tbl-f .cu-led-d{color:var(--ow-ink-900);}
   .cu-led-pan .ow-mini{border-top:1px solid var(--ow-rule-soft);}
+  /* The statement's header carries the two readings, so it grows with
+     the control the way the analytics table's header does. */
+  .cu-led-pan .ow-pan-h{height:auto;min-height:44px;padding-top:var(--ow-sp-6);
+    padding-bottom:var(--ow-sp-6);flex-wrap:wrap;row-gap:var(--ow-sp-6);}
+  .cu-led-pan .ow-pan-h .ow-seg.cu-stmt-seg{margin-left:var(--ow-sp-12);}
+  /* By invoice. The date and the three figures are fixed and the
+     sentence about settling gives way -- a clipped figure is a wrong
+     figure. */
+  .ow-tbl.cu-inv{--ow-tbl-cols:104px 88px minmax(0,1fr) 116px 116px 116px;}
+  .cu-inv .ow-tbl-h,.cu-inv .ow-tbl-r,.cu-inv .ow-tbl-f{gap:var(--ow-sp-10);}
+  .cu-inv .ow-tbl-r{align-items:center;min-height:40px;}
+  .cu-inv-st{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  /* The one bill still open. A faint ground to find it by and crimson
+     words to say why -- the same caution-then-bad pairing every other
+     late figure on this screen already wears. */
+  .cu-inv .ow-tbl-r.cu-inv-open{background:var(--ow-amber-faint);}
+  .cu-inv-late{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
+  .cu-inv-none b{display:block;margin-bottom:var(--ow-sp-6);}
+
+  /* The balance, drawn. Neutral ink for the account and crimson only
+     for the floor that has not cleared, because that floor is the one
+     thing on the chart that is bad. */
+  .cu-bal-svg{display:block;width:100%;height:auto;padding:var(--ow-sp-8) var(--ow-sp-12) var(--ow-sp-4);
+    box-sizing:border-box;}
+  .cu-bal-ax{stroke:var(--ow-steel-100);stroke-width:1;}
+  .cu-bal-gl{stroke:var(--ow-rule-soft);stroke-width:1;}
+  .cu-bal-a{fill:var(--ow-rule-soft);}
+  .cu-bal-l{fill:none;stroke:var(--ow-steel-800);stroke-width:1.8;stroke-linejoin:round;}
+  .cu-bal-floor{stroke:var(--ow-crimson);stroke-width:2;stroke-dasharray:5 4;}
+  .cu-bal-t{font-family:'Figtree',system-ui,sans-serif;font-size:11px;fill:var(--ow-ink-600);}
+  .cu-bal-n.ow-pan-n{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
   /* Crimson, because the document has just failed its own check --
      a running history and the balance kept beside it have stopped
      agreeing, and one of the two is wrong. */
@@ -13611,6 +13647,28 @@
     .cu-led .ow-tbl-c{grid-column:1/-1;}
     .cu-led .ow-tbl-p{white-space:normal;font-size:15px;}
     .ow-tbl.cu-led .ow-tbl-n.cu-nil{display:none;}
+    /* By invoice at 390: the number and the date head each block, the
+       settling sentence under them, then what it came to and what is
+       still due. What was paid is the difference and steps off the card. */
+    .ow-tbl.cu-inv{--ow-tbl-cols:minmax(0,1fr) auto;}
+    .cu-inv .ow-tbl-h{display:none;}
+    .cu-inv .ow-tbl-r,.cu-inv .ow-tbl-f{padding:var(--ow-sp-12);row-gap:var(--ow-sp-4);}
+    .cu-inv .cu-led-d,.cu-inv .ow-tbl-c,.cu-inv .cu-inv-st{grid-column:1/-1;}
+    .cu-inv .ow-tbl-p{font-size:15px;}
+    .cu-inv-st{white-space:normal;font-size:var(--ow-t-13);}
+    .ow-tbl.cu-inv .ow-tbl-n.cu-nil,
+    .ow-tbl.cu-inv .ow-tbl-n.cu-inv-paid,.cu-inv .ow-tbl-f .ow-tbl-n[data-l="Paid"]{display:none;}
+    .cu-inv .ow-tbl-f > span:nth-child(-n+2){display:none;}
+    .cu-led-pan .ow-pan-h .ow-seg.cu-stmt-seg{margin-left:0;flex:1 1 100%;display:grid;
+      grid-template-columns:1fr 1fr;}
+    .cu-stmt-seg .ow-seg-b{min-height:var(--ow-tap);}
+    /* The chart keeps its shape at 390 and loses its axis words, which
+       would be drawn at under five pixels; the header says the one
+       figure that matters, on a line of its own. */
+    .cu-bal .ow-pan-h{height:auto;flex-wrap:wrap;row-gap:2px;
+      padding-top:var(--ow-sp-6);padding-bottom:var(--ow-sp-6);}
+    .cu-bal .ow-pan-n{margin-left:0;flex:1 1 100%;white-space:normal;}
+    .cu-bal-t{display:none;}
     /* Two to a row, and Delete on a line of its own at the end. The
        spacer that pushes it right on a desk has nothing to push against
        here, and Delete sharing a row with Edit is how a thumb finds the
@@ -58623,6 +58681,15 @@ let custViewId = null;
    defined thousands of lines earlier -- a `let` still in its temporal
    dead zone would throw on any tab switch during boot. */
 let custEntering = false;
+/* How the statement on an account is read, and which page of it. Both
+   belong to ONE customer: opening somebody else starts again on their
+   invoices at page one, because page three of Kato is not a place in
+   Nakato's account. A ledger page left unset means its LAST page --
+   the lines nearest today, ending on the balance now due. */
+let custStmtView = 'invoice';
+let custStmtPage = { invoice: 1, ledger: null };
+let custStmtFor = null;
+const CUST_STMT_PAGE = { invoice: 10, ledger: 12 };
 
 /* The shop's own terms, so this screen and the money queue cannot
    disagree about who is late. */
@@ -59170,8 +59237,11 @@ function customerAccountRailHTML(r){
     (!contactPhones(c).length && !c.location && !c.notes)
       ? '<p class="ow-mini">No contact details on file yet &mdash; there is nobody to ring, and nothing to put at the head of a statement.</p>' : ''}`;
 
+  const range = customerStatementRange();
+  const speed = customerPaySpeed(customerInvoiceStatementRows(r.id, range.from, range.to));
   const rhythm = s.orderCount ? `${
     sr('Buys about every', s.everyDays !== null ? `${s.everyDays} <span class="ow-u">days</span>` : '&mdash;')}${
+    speed ? sr('Pays an invoice in', `${speed.days} <span class="ow-u">${speed.days === 1 ? 'day' : 'days'}</span>`) : ''}${
     sr('Last order', s.daysSinceLast !== null ? ago(s.daysSinceLast) : '&mdash;', r.quiet ? 'ow-warn' : '')}${
     sr('First bought', esc(fmtShortDate(s.first || '')))}${
     sr('Invoiced orders', String(s.orderCount))}${
@@ -59257,6 +59327,11 @@ function renderCustomerAccount(id){
         <span>They were deleted here or on another device while this was open. Nothing has been lost from the books &mdash; invoices and cash entries keep their own record &mdash; but there is no account left to draw.</span></div></div>`;
     return;
   }
+  if(custStmtFor !== String(c.id)){
+    custStmtFor = String(c.id);
+    custStmtView = 'invoice';
+    custStmtPage = { invoice: 1, ledger: null };
+  }
   const r = customerBookRow(c);
   const s = r.stats;
   const reason = custAttentionReason(r);
@@ -59271,6 +59346,12 @@ function renderCustomerAccount(id){
      the one thing an account screen is opened to settle; where nothing
      is owed there is no single next action, and the rule is that the
      accent appears at MOST once, not at least once. */
+  /* Asking for the money lives on Messages, with the words already
+     written; this only takes the owner there. Offered where there is
+     money owed and somebody to ask. */
+  const chase = r.debt > 0 && r.phones.length
+    ? `<button type="button" class="btn btn-ghost ow-sm" data-cact="chase" data-cid="${esc(r.id)}">Draft the chase</button>`
+    : '';
   const pay = r.debt > 0
     ? `<button type="button" class="btn btn-accent ow-sm" data-cact="payment" data-cid="${esc(r.id)}">Record a payment</button>`
     : `<button type="button" class="btn btn-ghost ow-sm" data-cact="payment" data-cid="${esc(r.id)}">Record a payment</button>`;
@@ -59285,13 +59366,15 @@ function renderCustomerAccount(id){
       <button type="button" class="btn btn-ghost ow-sm" data-cact="print" data-cid="${esc(r.id)}">
         <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M7 16h10v5H7z"/></svg>
         Print the statement</button>
+      ${chase}
       ${pay}
     </div>
     ${s.orderCount ? customerFiguresHTML(r) : ''}
     <div class="ow-grid cu-acct-grid">
       <div class="ow-stack">
-        ${customerBriefPanelHTML(r.id)}
+        ${customerBalanceChartHTML(r.id)}
         ${customerStatsHTML(s)}
+        ${customerBriefPanelHTML(r.id)}
         <div class="cu-acct-bar">
           <button type="button" class="btn btn-ghost ow-sm" data-cact="charge" data-cid="${esc(r.id)}">Record a charge</button>
           <button type="button" class="btn btn-ghost ow-sm" data-cact="edit" data-cid="${esc(r.id)}">Edit the record</button>
@@ -59332,7 +59415,7 @@ function openCustomerStats(customerId){
    places for one to go wrong. `side` carries only what genuinely
    differs: the word for a payment, and what the closing figure is
    measured against. */
-function statementLedgerHTML(st, side){
+function statementLedgerHTML(st, side, extra){
   /* Bare grouped figures with the unit named once in the panel head.
      "250,000 UGX" on every cell of a five-column ledger is the unit
      printed thirty times and the figures pushed apart; the rule is
@@ -59360,6 +59443,7 @@ function statementLedgerHTML(st, side){
       <div class="ow-pan-h">
         <span class="ow-pan-t">Statement of account</span>
         <span class="ow-pan-n">${esc(fmtShortDate(st.from))} &rarr; ${esc(fmtShortDate(st.to))} &middot; UGX &middot; oldest first</span>
+        ${(extra && extra.tools) || ''}
       </div>
       <div class="ow-tbl cu-led">
         <div class="ow-tbl-h">
@@ -59392,13 +59476,222 @@ function statementLedgerHTML(st, side){
         ${money(st.closing)}, but ${esc((side && side.recordedAs) || 'the record carries')}
         ${money(st.recorded)} &mdash; the running history and the balance beside it have gone
         out of step.</p>`}
+      ${(extra && extra.foot) || ''}
     </div>`;
 }
+/* THE STATEMENT ON THE ACCOUNT SCREEN: two readings of one period, and
+   a page at a time.
+
+   By invoice is the default because it is the question asked at the
+   counter -- which bill is still open, and how quickly do they pay --
+   and a running ledger answers it only to somebody who adds up pairs
+   of lines in their head. The ledger is still one tap away, unchanged,
+   because it is the document that gets printed and handed across.
+
+   A LEDGER PAGE CARRIES ITS OWN BALANCE IN. Cutting a running balance
+   into pages leaves page two starting from a figure nobody can see, so
+   each page opens on the balance the lines before it left, exactly as
+   the first page opens on what the months before the period left. The
+   closing line is the whole period's, on every page, because "balance
+   now due" does not change with the page you are reading. */
 function customerStatementBlockHTML(customerId){
   if(customerId == null) return '';
   const { from, to } = customerStatementRange();
-  return statementLedgerHTML(customerStatementRows(customerId, from, to),
-    { payWord: 'Payment received', recordedAs: 'the card carries' });
+  const st = customerStatementRows(customerId, from, to);
+  const side = { payWord: 'Payment received', recordedAs: 'the card carries' };
+  const tools = `<div class="ow-seg cu-stmt-seg" role="group" aria-label="Read the statement">
+      <button type="button" class="ow-seg-b${custStmtView === 'invoice' ? ' ow-on' : ''}" data-cstview="invoice" aria-pressed="${custStmtView === 'invoice'}">By invoice</button>
+      <button type="button" class="ow-seg-b${custStmtView === 'ledger' ? ' ow-on' : ''}" data-cstview="ledger" aria-pressed="${custStmtView === 'ledger'}">Ledger</button>
+    </div>`;
+  if(custStmtView === 'invoice') return customerInvoiceStatementHTML(customerId, st, tools);
+  const size = CUST_STMT_PAGE.ledger;
+  const pages = Math.max(1, Math.ceil(st.rows.length / size));
+  const page = Math.min(Math.max(1, custStmtPage.ledger == null ? pages : custStmtPage.ledger), pages);
+  const start = (page - 1) * size;
+  const shown = st.rows.slice(start, start + size);
+  const pageSt = Object.assign({}, st, {
+    from: start ? st.rows[start].date : st.from,
+    opening: start ? st.rows[start - 1].balance : st.opening,
+    rows: shown,
+  });
+  return statementLedgerHTML(pageSt, side, {
+    tools,
+    foot: reportPagerHTML('data-cstpg', page, pages, st.rows.length, start, shown.length, 'line'),
+  });
+}
+
+/* EVERY INVOICE IN THE PERIOD, AND WHAT BECAME OF IT.
+
+   The invoice's own balance says whether it is settled; the debt log
+   says WHEN, because a payment there names the invoice it was for. So
+   "paid in 2 days" is read off the day the linked payments first
+   covered the bill -- and where the log carries no linked payment for a
+   bill that is nonetheless settled, the row says paid and gives no day,
+   rather than inventing one.
+
+   An invoice from before the period that is still owed is listed too.
+   A statement that dropped the one bill still open because it is old
+   would be hiding the only line that matters. */
+function customerInvoiceStatementRows(customerId, fromISO, toISO){
+  const c = (data.customers||[]).find(x=> String(x.id) === String(customerId)) || null;
+  const log = (c && Array.isArray(c.debtLog) ? c.debtLog : [])
+    .filter(e=> e.type === 'payment' && e.quoteId != null)
+    .slice().sort((a,b)=> String(a.date||'').localeCompare(String(b.date||'')) || ((a.id||0) - (b.id||0)));
+  return customerOrdersFor(customerId)
+    .filter(q=> q.invoiced && !q.voided)
+    .map(q=>{
+      const date = q.invoicedAt || q.date || '';
+      const total = savedQuoteTotal(q);
+      const due = invoiceBalanceDue(q);
+      let got = 0, settledOn = null, lastPaidOn = null;
+      log.filter(e=> String(e.quoteId) === String(q.id)).forEach(e=>{
+        got += Number(e.amount)||0;
+        lastPaidOn = e.date || lastPaidOn;
+        if(settledOn == null && got >= total - 0.5) settledOn = e.date || null;
+      });
+      return {
+        q, date, no: invoiceNumberLabel(q), total, due, paid: Math.max(0, total - due),
+        settledOn: due > 0.5 ? null : settledOn,
+        lastPaidOn,
+        days: (due > 0.5 || !settledOn || !date) ? null : Math.max(0, daysBetweenISO(date, settledOn)),
+        ageDays: due > 0.5 && date ? daysBetweenISO(date, todayISO()) : null,
+      };
+    })
+    .filter(r=> (r.date >= fromISO && r.date <= toISO) || r.due > 0.5)
+    .sort((a,b)=> String(b.date).localeCompare(String(a.date)) || ((b.q.id||0) - (a.q.id||0)));
+}
+
+/* How long they take to pay, read off their own settled bills. The
+   middle of the last six, not the average: one bill paid a month late
+   among five paid in two days is a customer who pays in two days. */
+function customerPaySpeed(rows){
+  const done = rows.filter(r=> r.days != null).slice(0, 6).map(r=> r.days).sort((a,b)=> a - b);
+  if(done.length < 2) return null;
+  const mid = done.length >> 1;
+  return { days: done.length % 2 ? done[mid] : Math.round((done[mid - 1] + done[mid]) / 2), of: done.length };
+}
+
+function customerInvoiceStatementHTML(customerId, st, tools){
+  const money = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const plural = (n, one, many)=> n === 1 ? one : many;
+  const rows = customerInvoiceStatementRows(customerId, st.from, st.to);
+  const head = `<div class="ow-pan-h">
+      <span class="ow-pan-t">Statement of account</span>
+      <span class="ow-pan-n">${esc(fmtShortDate(st.from))} &rarr; ${esc(fmtShortDate(st.to))} &middot; UGX &middot; newest first</span>
+      ${tools}
+    </div>`;
+  if(!rows.length){
+    return `<div class="ow-pan cu-led-pan">${head}
+      <div class="ow-empty cu-inv-none"><b>No invoice in this period.</b>
+        <span>Anything charged or paid by hand is on the <b>Ledger</b> reading.</span></div>
+    </div>`;
+  }
+  const size = CUST_STMT_PAGE.invoice;
+  const pages = Math.max(1, Math.ceil(rows.length / size));
+  const page = Math.min(Math.max(1, custStmtPage.invoice || 1), pages);
+  const start = (page - 1) * size;
+  const shown = rows.slice(start, start + size);
+  const settled = (r)=>{
+    if(r.due > 0.5){
+      const part = r.paid > 0.5 && r.lastPaidOn ? `Part-paid ${esc(fmtShortDate(r.lastPaidOn))} &middot; ` : '';
+      return `<span class="cu-inv-st cu-inv-late">${part}open ${r.ageDays} ${plural(r.ageDays, 'day', 'days')}</span>`;
+    }
+    if(r.settledOn) return `<span class="cu-inv-st">Paid ${esc(fmtShortDate(r.settledOn))} &middot; ${r.days} ${plural(r.days, 'day', 'days')}</span>`;
+    return '<span class="cu-inv-st">Paid &middot; no dated payment on the ledger</span>';
+  };
+  const sum = (k)=> rows.reduce((n, r)=> n + r[k], 0);
+  const due = sum('due');
+  return `<div class="ow-pan cu-led-pan">${head}
+    <div class="ow-tbl cu-inv">
+      <div class="ow-tbl-h">
+        <span>Date</span><span>Invoice</span><span>Settled</span>
+        <span class="ow-tbl-n">Amount</span><span class="ow-tbl-n">Paid</span><span class="ow-tbl-n">Still due</span>
+      </div>
+      ${shown.map(r=> `<div class="ow-tbl-r${r.due > 0.5 ? ' cu-inv-open' : ''}">
+        <span class="cu-led-d">${esc(fmtShortDate(r.date))}</span>
+        <span class="ow-tbl-c"><span class="ow-tbl-p">${esc(r.no)}</span></span>
+        ${settled(r)}
+        <span class="ow-tbl-n" data-l="Amount"><span class="ow-fig">${money(r.total)}</span></span>
+        <span class="ow-tbl-n cu-inv-paid" data-l="Paid"><span class="ow-fig">${money(r.paid)}</span></span>
+        <span class="ow-tbl-n${r.due > 0.5 ? '' : ' cu-nil'}" data-l="Still due">${r.due > 0.5
+          ? `<span class="ow-fig ow-bad">${money(r.due)}</span>`
+          : '<span class="cu-dash">&mdash;</span>'}</span>
+      </div>`).join('')}
+      <div class="ow-tbl-f">
+        <span class="cu-led-d"></span>
+        <span></span>
+        <span class="ow-tbl-c"><span class="ow-tbl-p">${rows.length} ${plural(rows.length, 'invoice', 'invoices')}</span></span>
+        <span class="ow-tbl-n" data-l="Amount">${money(sum('total'))}</span>
+        <span class="ow-tbl-n" data-l="Paid">${money(sum('paid'))}</span>
+        <span class="ow-tbl-n${due > 0.5 ? ' cu-inv-late' : ''}" data-l="Still due">${money(due)}</span>
+      </div>
+    </div>
+    ${reportPagerHTML('data-cstpg', page, pages, rows.length, start, shown.length, 'invoice')}
+  </div>`;
+}
+
+/* WHAT THEY OWED YOU, DAY BY DAY. The statement's own running balance
+   drawn as a step line, so the shape of the account -- a bill, then the
+   drop when it is paid -- is seen before a single figure is read. Where
+   the balance has not once fallen below what is owed now, that floor is
+   drawn and dated: that much has been outstanding the whole time since,
+   whatever else was bought and paid around it. Nothing here is new
+   arithmetic; every point is a line of the ledger. */
+function customerBalanceChartHTML(customerId){
+  if(customerId == null) return '';
+  const { from, to } = customerStatementRange();
+  const st = customerStatementRows(customerId, from, to);
+  if(st.rows.length < 2) return '';
+  const money = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const W = 860, H = 170, L = 52, T = 14, B = 150;
+  const span = Math.max(1, daysBetweenISO(st.from, st.to));
+  const peak = Math.max(st.opening, ...st.rows.map(r=> r.balance), 1);
+  const step = Math.pow(10, Math.floor(Math.log10(peak))) / 2;
+  const top = Math.ceil(peak / step) * step;
+  const X = (iso)=> (L + Math.min(span, Math.max(0, daysBetweenISO(st.from, iso))) / span * (W - L)).toFixed(1);
+  const Y = (v)=> (B - Math.max(0, v) / top * (B - T)).toFixed(1);
+  let line = `M${X(st.from)},${Y(st.opening)}`;
+  st.rows.forEach(r=>{ line += ` H${X(r.date)} V${Y(r.balance)}`; });
+  line += ` H${X(st.to)}`;
+  const area = `${line} V${Y(0)} H${X(st.from)} Z`;
+  const short = (n)=> n >= 1e6 ? (n / 1e6).toFixed(n % 1e6 ? 1 : 0) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(n);
+  const months = [];
+  const d0 = new Date(st.from + 'T00:00:00Z');
+  for(let m = 1; m <= 12; m++){
+    const iso = new Date(Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth() + m, 1)).toISOString().slice(0, 10);
+    if(iso > st.to) break;
+    months.push(`<text class="cu-bal-t" x="${X(iso)}" y="${H - 2}">${esc(fmtShortDate(iso).replace(/^\d+\s*/, ''))}</text>`);
+  }
+  /* The floor: what is owed now, from the day the balance first came to
+     rest on it after it last stood lower. Bills bought and paid since
+     rise above it and fall back to it; the line is what none of those
+     payments has touched. Drawn only where something is owed and it has
+     stood for more than the last line of the ledger. */
+  let floor = '', floorNote = '';
+  if(st.closing > 0.5){
+    let low = -1;
+    st.rows.forEach((r, i)=>{ if(r.balance < st.closing - 0.5) low = i; });
+    const rest = st.rows.findIndex((r, i)=> i > low && Math.abs(r.balance - st.closing) < 0.5);
+    if(rest > -1 && rest < st.rows.length - 1){
+      const since = st.rows[rest].date, y = Y(st.closing);
+      floor = `<line class="cu-bal-floor" x1="${X(since)}" x2="${X(st.to)}" y1="${y}" y2="${y}"/>`;
+      floorNote = `<span class="ow-pan-n cu-bal-n">${money(st.closing)} left unpaid since ${esc(fmtShortDate(since))}</span>`;
+    }
+  }
+  return `<div class="ow-pan cu-bal">
+    <div class="ow-pan-h"><span class="ow-pan-t">What they owed you, day by day</span>
+      ${floorNote || `<span class="ow-pan-n">${esc(fmtShortDate(st.from))} &rarr; today</span>`}</div>
+    <svg class="cu-bal-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Balance owed over the period, from ${money(st.opening)} to ${money(st.closing)} now">
+      <line class="cu-bal-ax" x1="${L}" x2="${W}" y1="${B}" y2="${B}"/>
+      <line class="cu-bal-gl" x1="${L}" x2="${W}" y1="${T}" y2="${T}"/>
+      <text class="cu-bal-t" x="${L - 8}" y="${B + 4}" text-anchor="end">0</text>
+      <text class="cu-bal-t" x="${L - 8}" y="${T + 4}" text-anchor="end">${short(top)}</text>
+      <path class="cu-bal-a" d="${area}"/>
+      <path class="cu-bal-l" d="${line}"/>
+      ${floor}
+      ${months.join('')}
+    </svg>
+  </div>`;
 }
 
 /* What one line of the statement SAYS it is.
@@ -59732,6 +60025,28 @@ function printSupplierStatement(supplierId){
     if(name === 'chase') return goToTab('chase');
   };
   const onClick = (e)=>{
+    /* The statement's two readings and its pages. Redrawn in place, and
+       a turned page brings the statement's own top back into view --
+       turning from the foot of a long page must not leave the reader at
+       the foot of the next. */
+    const sv = e.target.closest('[data-cstview]');
+    if(sv){
+      custStmtView = sv.dataset.cstview === 'ledger' ? 'ledger' : 'invoice';
+      rerender();
+      return;
+    }
+    const sp = e.target.closest('[data-cstpg]');
+    if(sp){
+      if(sp.disabled) return;
+      custStmtPage[custStmtView] = Math.max(1, Number(sp.getAttribute('data-cstpg')) || 1);
+      rerender();
+      const pan = document.querySelector('#custAccountWrap .cu-led-pan');
+      if(pan){
+        const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        pan.scrollIntoView({block:'start', behavior: reducedMotion ? 'auto' : 'smooth'});
+      }
+      return;
+    }
     const b = e.target.closest('[data-cact]');
     if(b){ act(b.dataset.cact, b.dataset.cid); return; }
     /* A tel: link is the owner's own thumb on their own phone, and the
