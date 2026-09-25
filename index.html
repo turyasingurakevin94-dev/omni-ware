@@ -9770,43 +9770,64 @@
     max-width:var(--ow-measure);border-top:1px solid var(--ow-rule-soft);}
   .st-doc > .st-note{margin:0;padding:0 var(--ow-sp-12) var(--ow-sp-10);}
 
-  /* The desk never shows the line that stands in for the chart. */
-  .st-trend-desk{display:none;}
+  /* The phone's period summary and print icon: the desk never shows
+     them, and never shows the foot's second print button either. */
+  .st-per-m,.st-foot-m{display:none;}
+  .st-per-i{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round;}
 
   /* ---- THE PHONE. 820px is a switch, not a reflow ------------------
 
-     What the desk shows and the phone does not: the six-month chart.
-     Twelve bars across 358px is a smudge, and this screen's own law is
-     that what is dropped gets NAMED rather than quietly left out -- so
-     the panel stays and says where the chart is.
+     The six-month chart is on the phone too now. It was dropped as
+     "twelve bars across 358px is a smudge", but six months of two
+     series is twelve bars of 22px, which reads -- and a sentence saying
+     the chart is elsewhere was a paragraph where a picture belonged.
 
      Everything else survives because it is already the layer's: the
      strip goes 2x2, the two columns become one, and the panels stack.
      What needed drawing for the phone is the chrome the desk crams into
      one line -- the period, and which document. */
   @media (max-width:820px){
-    .st-per{display:grid;grid-template-columns:1fr 1fr;gap:var(--ow-sp-8);width:100%;}
+    /* One summary of the period, opening the same controls under it. */
+    .st-per-m{display:flex;gap:var(--ow-sp-8);width:100%;}
+    .st-per-sum{flex:1;min-width:0;display:flex;align-items:center;gap:var(--ow-sp-10);
+      min-height:var(--ow-tap);padding:0 var(--ow-sp-12);box-sizing:border-box;cursor:pointer;
+      background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r);
+      font:inherit;font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);text-align:left;}
+    .st-per-sum .st-per-i{color:var(--ow-ink-600);}
+    .st-per-sum-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .st-per-open .st-per-chev{transform:rotate(180deg);}
+    .st-per-print{flex:none;width:var(--ow-tap);height:var(--ow-tap);display:flex;align-items:center;
+      justify-content:center;cursor:pointer;background:var(--ow-paper);border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r);color:var(--ow-ink-600);}
+    .st-per-sum:focus-visible,.st-per-print:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:2px;}
+    .st-per{display:none;}
+    .st-per-open .st-per{display:grid;grid-template-columns:1fr 1fr;gap:var(--ow-sp-8);width:100%;}
     .st-per .ow-seg{grid-column:1 / -1;}
     .st-per .ow-seg-b{flex:1;justify-content:center;height:var(--ow-tap);}
     .st-f-cmp{grid-column:1 / -1;}
     .st-f .ow-f-in{min-width:0;height:var(--ow-tap);}
 
-    /* Five names and two buttons will not share 358px. The names scroll,
-       because choosing a document is the frequent move; the two prints
-       take a row of their own, because on a phone they are the rare one
-       and a control cut in half is worse than a control below. */
-    .st-docs{flex-wrap:wrap;gap:var(--ow-sp-6);}
-    .st-tabs{flex:1 1 100%;min-width:0;-webkit-overflow-scrolling:touch;}
-    .st-tab{min-height:var(--ow-tap);font-size:var(--ow-t-16);}
+    /* The five documents as pills that scroll, each carrying its own
+       answer. The row runs off the right edge of the screen on purpose:
+       a pill cut in half is the cue that there are more, where a row
+       that stopped neatly at the margin hid Cash flow and Ratios with no
+       sign they existed. The prints left this row -- one is an icon
+       beside the period, the other at the foot of the page. */
+    .st-docs{border-bottom:0;margin-bottom:var(--ow-sp-12);}
+    .st-docs .st-actions{display:none;}
+    .st-tabs{flex:1 1 100%;min-width:0;-webkit-overflow-scrolling:touch;scrollbar-width:none;
+      gap:var(--ow-sp-8);margin-right:calc(-1 * var(--ow-sp-16));padding-right:var(--ow-sp-16);}
+    .st-tabs::-webkit-scrollbar{display:none;}
+    .st-tab{min-height:var(--ow-tap);font-size:var(--ow-t-14);margin-bottom:0;
+      padding:var(--ow-sp-6) var(--ow-sp-12);background:var(--ow-paper);
+      border:1px solid var(--ow-rule);border-radius:var(--ow-r);}
+    .st-tab.active{background:var(--ow-steel-950);border-color:var(--ow-steel-950);color:var(--ow-paper);}
+    .st-tab.active .st-tab-n{color:var(--ow-steel-100);}
+    .st-foot-m{display:flex;justify-content:center;margin-top:var(--ow-sp-16);}
+    .st-foot-m .btn{min-height:var(--ow-tap);}
     .st-tab-n{font-size:var(--ow-t-12);}
     .st-docs-sp{display:none;}
-    .st-actions{flex:1 1 100%;min-width:0;padding:0 0 var(--ow-sp-8);}
-    /* The phone gives every .ow-sm a min-width of half a row, which two
-       buttons plus a gap cannot fit; the same override the chase and
-       follow-up feet already carry. Raised over that rule by naming the
-       strip, since this block sits earlier in the file. */
-    .st-docs .st-actions .btn.ow-sm{flex:1 1 calc(50% - 3px);min-width:0;
-      height:var(--ow-tap);font-size:var(--ow-t-14);box-sizing:border-box;}
 
     .st-verdict{align-items:flex-start;flex-direction:column;gap:var(--ow-sp-10);
       padding:var(--ow-sp-12) var(--ow-sp-16);}
@@ -9836,10 +9857,6 @@
     .st-mkey{font-size:var(--ow-t-12);}
     .st-be-scale{font-size:var(--ow-t-13);}
 
-    /* Named, not dropped. */
-    .st-trend-svg,.st-trend-x,.st-trend-key{display:none;}
-    .st-trend-desk{display:block;font-size:var(--ow-t-14);line-height:var(--ow-lh-normal);
-      color:var(--ow-ink-600);margin:0;}
 
     .st-check{padding:var(--ow-sp-12) var(--ow-sp-16);}
     .st-check b{font-size:var(--ow-t-16);}
@@ -23664,7 +23681,24 @@
              page rather than to any one of them -- the same place Payroll
              carries its month. Presets and a typed range at equal weight:
              the shop uses both. -->
-        <div class="st-per">
+        <!-- THE PHONE'S PERIOD. On a desk the period sits in the header as
+             presets, two dates and a comparison. On a phone that was a
+             third of the first screen, spent on controls that are touched
+             once and read every time -- so the phone shows one summary
+             that says what is chosen, opening the same controls below it,
+             and the print that sat on a row of its own is an icon beside
+             it. Hidden on the desk, which keeps its header as it was. -->
+        <div class="st-per-m">
+          <button type="button" class="st-per-sum" id="st_per_sum" aria-expanded="false" aria-controls="st_per">
+            <svg class="st-per-i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg>
+            <span class="st-per-sum-t" id="st_per_sum_t">Choose the period</span>
+            <svg class="st-per-i st-per-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+          </button>
+          <button type="button" class="st-per-print" id="st_print_m" aria-label="Print the statement on screen">
+            <svg class="st-per-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6"></path><path d="M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"></path><path d="M6 14h12v7H6z"></path></svg>
+          </button>
+        </div>
+        <div class="st-per" id="st_per">
           <div class="ow-seg" id="st_presets">
             <button type="button" class="ow-seg-b st-preset" data-preset="month">Month</button>
             <button type="button" class="ow-seg-b st-preset" data-preset="quarter">Quarter</button>
@@ -91526,6 +91560,21 @@ function renderStatements(){
   document.querySelectorAll('#st_tabs .st-tab').forEach(b=>
     b.classList.toggle('active', b.dataset.stab === stActiveTab));
   stTabHeadlines(ctx);
+  /* On the phone the pills scroll, and Ratios lives past the edge. The
+     one you are on is brought into the row so the screen always says
+     which document it is -- sideways only, so the page does not jump. */
+  const tabs = document.getElementById('st_tabs');
+  const on = tabs.querySelector('.st-tab.active');
+  if(on && tabs.scrollWidth > tabs.clientWidth){
+    const r = on.getBoundingClientRect(), box = tabs.getBoundingClientRect();
+    if(r.left < box.left || r.right > box.right) tabs.scrollLeft += r.left - box.left - 16;
+  }
+  /* The phone's one-line summary of the period: which preset (or that
+     the dates were typed), and what it is measured against. The dates
+     themselves are in the sub line directly above. */
+  const lit = document.querySelector('#st_presets .st-preset.ow-on');
+  document.getElementById('st_per_sum_t').textContent =
+    `${lit ? lit.textContent.trim() : 'Your own dates'} · vs ${ctx.basis === 'lastyear' ? 'last year' : 'the period before'}`;
   /* Left on "automatically", the control says which one that turned out
      to be rather than leaving the reader to infer it from the note. */
   const basisEl = document.getElementById('st_basis');
@@ -91548,6 +91597,11 @@ function renderStatements(){
         <aside class="st-split-side" id="st_drill_side"><div class="st-split-anchor">${stDrillPanelHTML(ctx)}</div></aside>
       </div>`
     : statementDocHTML(stActiveTab, ctx);
+  /* Print all five, on the phone, at the foot of what was read rather
+     than in a row of its own above it: the rare act goes where the
+     reading ends. Named, not dropped -- the desk keeps it in the strip. */
+  body.insertAdjacentHTML('beforeend', `<div class="st-foot-m">
+    <button type="button" class="btn btn-ghost ow-sm" id="st_print_all_m">Print all five</button></div>`);
 }
 
 /* On paper.
@@ -91675,9 +91729,6 @@ function stTrendChartHTML(trend){
       ${bars}
     </svg>
     <div class="st-trend-x">${trend.map(m=> `<span>${esc(m.short)}</span>`).join('')}</div>
-    <p class="st-trend-desk">${trend.length} months of net profit against cash from trading, ${
-      esc(trend[0].label)} to ${esc(trend[trend.length-1].label)}. The chart is on the desk screen &mdash;
-      twelve bars across a phone is a smudge, and a smudge of the shop&rsquo;s own money is worse than none.</p>
     </div>
   </section>`;
 }
@@ -92261,6 +92312,16 @@ function stCashFlow({from, to, cf, prevCf, bs}){
 
 document.getElementById('st_print').addEventListener('click', ()=> printStatements(stActiveTab));
 document.getElementById('st_print_all').addEventListener('click', ()=> printStatements('all'));
+document.getElementById('st_print_m').addEventListener('click', ()=> printStatements(stActiveTab));
+document.getElementById('st_body').addEventListener('click', (e)=>{
+  if(e.target.closest('#st_print_all_m')) printStatements('all');
+});
+document.getElementById('st_per_sum').addEventListener('click', ()=>{
+  const head = document.getElementById('st_per').closest('.ow-ph');
+  const open = !head.classList.contains('st-per-open');
+  head.classList.toggle('st-per-open', open);
+  document.getElementById('st_per_sum').setAttribute('aria-expanded', String(open));
+});
 document.getElementById('st_tabs').addEventListener('click', (e)=>{
   const b = e.target.closest('.st-tab');
   if(!b) return;
@@ -92343,6 +92404,12 @@ document.querySelectorAll('.st-preset').forEach(b=>b.addEventListener('click', (
   const d = stDefaultRange(b.dataset.preset);
   document.getElementById('st_from').value = d.from;
   document.getElementById('st_to').value = d.to;
+  // A preset is a whole choice; the phone folds its controls away again
+  // so the figures it chose come back into view. Typed dates keep them
+  // open, since a range is two edits.
+  const head = document.getElementById('st_per').closest('.ow-ph');
+  head.classList.remove('st-per-open');
+  document.getElementById('st_per_sum').setAttribute('aria-expanded', 'false');
   renderStatements();
 }));
 ['st_from','st_to'].forEach(id=>
