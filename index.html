@@ -66472,11 +66472,13 @@ function briefGroups(c, habits){
 
 /* The list, cut into frames. A heading is never left stranded at the
    foot of a frame with its rows on the next one. */
-/* The bottom stops short of the foot by the height of the trade
-   footnote. Reserved on every frame rather than only where a trade line
-   lands: a page whose rows change height depending on whether a
-   footnote appeared is a column that moves as the picture loops. */
-const BRIEF_ROW_H = 42, BRIEF_HEAD_H = 80, BRIEF_BODY_TOP = 170, BRIEF_BODY_BOT = 652;
+/* The body runs from under the masthead to the order strip. A row is
+   two lines -- the name, then its pack -- at sizes a phone can read
+   before anyone taps the picture open, so a frame holds six lines under
+   two bands, and a longer list goes on to the next frame. There is no
+   trade footnote to reserve room for: a trade price says so on its own
+   line. */
+const BRIEF_ROW_H = 84, BRIEF_HEAD_H = 44, BRIEF_BODY_TOP = 112, BRIEF_BODY_BOT = 704;
 function briefPaginate(groups){
   const cap = BRIEF_BODY_BOT - BRIEF_BODY_TOP;
   const pages = [];
@@ -66507,7 +66509,7 @@ function briefPaginate(groups){
        keep their size, because a heading stretched to fill a page stops
        reading as a heading. */
     const room = cap - heads * BRIEF_HEAD_H;
-    if(rows > 0 && room > 0) out[0].scale = Math.min(1.7, room / (rows * BRIEF_ROW_H));
+    if(rows > 0 && room > 0) out[0].scale = Math.min(1.2, room / (rows * BRIEF_ROW_H));
   }
   return out;
 }
@@ -66540,13 +66542,13 @@ function briefWordCount(frames){
       count(fr.who);
       fr.items.forEach(it=>{
         if(it.kind === 'head'){ count(it.text); return; }
-        count(it.name); count(it.unit);
-        if(it.was != null) n += 2;                 // WAS 42,000
-        else if(it.theirQty != null) n += 3;       // YOU TAKE 3
+        count(it.name);
+        if(it.was != null) n += 1;                 // SAVE 20,000
+        else { count(it.unit); n += 1; }           // per Bag -- ×3 is a figure, not a word
       });
-      n += 5;                                      // WHAT WOULD YOU LIKE TODAY, on the foot
+      n += 4;                                      // Your prices, and Reply to order on the foot
     }
-    if(fr.kind === 'act'){ n += 11; }              // the question, and the promise under it
+    if(fr.kind === 'act'){ n += 10; }              // the question, and the promise under it
   });
   return n;
 }
@@ -66774,7 +66776,8 @@ function gifEncode(frames, w, h){
    like the shop. */
 const BRIEF_INK = { navy:'#16203C', oxide:'#C93A30', oxideLight:'#E5483D', paper:'#FFFFFF',
   paper2:'#FCFBF9', verdigris:'#0F6B43', verdigrisSoft:'#E4F4EA', ink600:'#5F6980',
-  ink400:'#767F91', rule:'#EFECE6', oxideSoft:'#FDE8E4', amber:'#95530C' };
+  ink400:'#767F91', rule:'#EFECE6', oxideSoft:'#FDE8E4', amber:'#95530C',
+  ground:'#F7F5F2', mastSoft:'#B3BCD2' };
 const BRIEF_DISPLAY = "'Archivo Black', system-ui, sans-serif";
 const BRIEF_BODY = "'Figtree', system-ui, sans-serif";
 const BRIEF_MONO = "'IBM Plex Mono', ui-monospace, monospace";
@@ -66866,11 +66869,14 @@ function briefTrack(ctx, px){
 /* A figure that must not collide with the column beside it. Money never
    truncates and never wraps, so it gives up size instead -- the one
    thing on this page allowed to. */
-function briefClip(ctx, text, font, px, maxW, floor){
+function briefClip(ctx, text, font, px, maxW, floor, weight){
+  /* Measured in the weight it will be drawn in: a bold name measured
+     as a regular one is a name that runs into the price beside it. */
+  const w = weight ? `${weight} ` : '';
   let size = px;
-  ctx.font = `${size}px ${font}`;
+  ctx.font = `${w}${size}px ${font}`;
   while(ctx.measureText(text).width > maxW && size > (floor || 12)){
-    size -= 1; ctx.font = `${size}px ${font}`;
+    size -= 1; ctx.font = `${w}${size}px ${font}`;
   }
   /* The mark goes on only where something was actually removed:
      measuring the text WITH an ellipsis it does not need is how a value
@@ -66889,170 +66895,212 @@ function briefFitNum(ctx, text, weight, px, maxW){
   }
 }
 
-/* THE LIST FRAME — direction G, the ruled grid with a reversed header.
-   The shape a price list has always had: a boxed table, banded rows, and
-   the column names in a bar across the top. The section title sits
-   OUTSIDE the table in sentence case, which is what settles rank here --
-   a heading that is not inside the grid cannot be read as a line of it,
-   so it needs no weight contest with a product name.
+/* THE LIST FRAME — one line per product, no column headers.
 
-   Five columns, one shape for every block. The last one changes with
-   the block, because a saving and a habit are not the same fact:
-   YOU SAVE under a fall, YOU TAKE under a habit. */
-const BRIEF_MAST_H = 150, BRIEF_FOOT_H = 96;
-const BRIEF_GRP_H = 46, BRIEF_THEAD_H = 34;
-/* Column edges, left to right, inside the 34px margins. Money gets the
-   two right-hand columns and never gives up its width. */
-const BRIEF_COLS = [34, 214, 306, 380, 484, 566], BRIEF_PAD = 10;
+   The customer who reads this is often not a confident reader, and a
+   table asks them to match every figure to a word at the top of its
+   column before it means anything. So nothing here has a header: each
+   product is its own line, the name large on the left, its pack in
+   plain words under it, and the price -- the biggest thing on the
+   frame -- on the right. What a figure IS is carried by a mark beside
+   it rather than by a column name: a green SAVE pill under a fall, the
+   old price struck through beside the new one, and what they usually
+   take as a row of small blocks they can count without reading.
+
+   A block's name is a coloured band with its own mark (an arrow down
+   for a fall, a turn for a habit), so PRICE DOWN is seen before it is
+   read. Green is spent only on money saved; the accent only on the
+   strip that says how to order. */
+const BRIEF_MAST_H = 112, BRIEF_FOOT_H = 96, BRIEF_M = 32;
+/* The marks, in the app's own 24-unit stroke vocabulary. */
+const BRIEF_ICON = {
+  down: 'M12 5v14M6 13l6 6 6-6',
+  again: 'M4 12a8 8 0 0 1 13.7-5.6L20 9M20 4v5h-5M20 12a8 8 0 0 1-13.7 5.6L4 15M4 20v-5h5',
+  plus: 'M12 5v14M5 12h14',
+  swap: 'M4 8h13l-3-3M20 16H7l3 3',
+  phone: 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2',
+  chat: 'M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 21l1.9-5.6A8.5 8.5 0 1 1 21 11.5zM8 10h8M8 13.5h5',
+};
+function briefIcon(ctx, d, cx, cy, size, color, lw){
+  if(typeof Path2D !== 'function') return;
+  ctx.save();
+  ctx.translate(cx - size / 2, cy - size / 2);
+  ctx.scale(size / 24, size / 24);
+  ctx.strokeStyle = color; ctx.lineWidth = lw || 2.2;
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.stroke(new Path2D(d));
+  ctx.restore();
+}
+/* A mark in a filled disc: the band's badge and the foot's phone. */
+function briefDisc(ctx, cx, cy, r, fill, d, ink, size){
+  ctx.fillStyle = fill;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+  briefIcon(ctx, d, cx, cy, size, ink);
+}
+function briefBandIcon(key){
+  if(key === 'price') return BRIEF_ICON.down;
+  if(key === 'usual') return BRIEF_ICON.again;
+  if(key === 'instead') return BRIEF_ICON.swap;
+  return BRIEF_ICON.plus;
+}
 
 function briefPaintList(ctx, fr){
   const W = BRIEF_W, H = BRIEF_H, f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
-  const C = BRIEF_COLS, L = C[0], R = C[5];
+  const L = BRIEF_M, R = W - BRIEF_M;
   const rowH = Math.round(BRIEF_ROW_H * (fr.scale || 1));
 
   ctx.fillStyle = BRIEF_INK.paper; ctx.fillRect(0, 0, W, H);
 
-  /* The masthead: what it is, who it is for, the day it was true. */
+  /* The masthead: whose prices these are, and the day. The shop's mark
+     stays in the corner; the customer's own name is the headline. */
   ctx.fillStyle = BRIEF_INK.navy; ctx.fillRect(0, 0, W, BRIEF_MAST_H);
-  briefMark(ctx, true);
-  ctx.textAlign = 'right';
-  briefTrack(ctx, 2.5);
-  ctx.fillStyle = BRIEF_INK.oxideLight;
-  ctx.font = `13px ${BRIEF_DISPLAY}`;
-  ctx.fillText('PRICE LIST', R, 48);
-  briefTrack(ctx, 0);
   ctx.fillStyle = BRIEF_INK.paper;
-  const ns = briefFit(ctx, String(fr.who).toUpperCase(), BRIEF_DISPLAY, 30, 400);
-  ctx.font = `${ns}px ${BRIEF_DISPLAY}`;
-  ctx.fillText(String(fr.who).toUpperCase(), R, 98);
-  ctx.fillStyle = BRIEF_INK.ink400;
-  ctx.font = `15px ${BRIEF_BODY}`;
-  ctx.fillText(`${fr.when}${fr.pages > 1 ? `   ·   ${fr.page} of ${fr.pages}` : ''}`, R, 126);
-  ctx.fillStyle = BRIEF_INK.oxide; ctx.fillRect(0, BRIEF_MAST_H - 4, W, 4);
+  ctx.fill(briefRoundRect(L, 34, 44, 44, 10));
+  ctx.fillStyle = BRIEF_INK.oxide;
+  ctx.font = `700 16px ${BRIEF_BODY}`;
+  ctx.textAlign = 'center';
+  ctx.fillText('OW', L + 22, 62);
+  /* Which frame of how many, as dots: a count anyone can read. */
+  const dotsW = fr.pages > 1 ? fr.pages * 18 : 0;
+  if(fr.pages > 1){
+    for(let i = 0; i < fr.pages; i++){
+      const cx = R - dotsW + 9 + i * 18;
+      ctx.beginPath(); ctx.arc(cx, 56, 6, 0, Math.PI * 2);
+      if(i + 1 === fr.page){ ctx.fillStyle = BRIEF_INK.paper; ctx.fill(); }
+      else { ctx.strokeStyle = BRIEF_INK.paper; ctx.lineWidth = 2; ctx.stroke(); }
+    }
+  }
+  ctx.textAlign = 'left';
+  ctx.fillStyle = BRIEF_INK.paper;
+  const who = String(fr.who).toUpperCase();
+  const nmX = L + 60, nmW = R - nmX - (dotsW ? dotsW + 16 : 0);
+  const ws = briefClip(ctx, who, BRIEF_BODY, 34, nmW, 20, 700);
+  ctx.font = `700 ${ws.size}px ${BRIEF_BODY}`;
+  ctx.fillText(ws.text, nmX, 60);
+  ctx.fillStyle = BRIEF_INK.mastSoft;
+  ctx.font = `18px ${BRIEF_BODY}`;
+  ctx.fillText(`Your prices · ${fr.when}`, nmX, 88);
 
-  const cellL = (i)=> C[i] + BRIEF_PAD;          // a left-set column
-  const cellR = (i)=> C[i + 1] - BRIEF_PAD;      // a right-set one
-  let y = BRIEF_BODY_TOP, band = 0;
-
+  let y = BRIEF_BODY_TOP;
   fr.items.forEach(it=>{
     if(it.kind === 'head'){
-      band = 0;
-      /* The block's name, outside the table and in sentence case. */
+      const good = it.key === 'price';
+      ctx.fillStyle = good ? BRIEF_INK.verdigrisSoft : BRIEF_INK.ground;
+      ctx.fillRect(0, y, W, BRIEF_HEAD_H);
+      briefDisc(ctx, L + 15, y + BRIEF_HEAD_H / 2, 15, good ? BRIEF_INK.verdigris : BRIEF_INK.navy,
+        briefBandIcon(it.key), BRIEF_INK.paper, 19);
+      ctx.fillStyle = good ? BRIEF_INK.verdigris : BRIEF_INK.navy;
       ctx.textAlign = 'left';
-      ctx.fillStyle = BRIEF_INK.navy;
-      const gs = briefFit(ctx, it.text, BRIEF_BODY, 21, R - L);
-      ctx.font = `${gs}px ${BRIEF_BODY}`;
-      ctx.fillText(it.text, L, y + BRIEF_GRP_H - 14);
-      y += BRIEF_GRP_H;
-      /* The column names, reversed out of a bar -- which is what makes
-         this G rather than F: no inner vertical rules, the columns held
-         by alignment and by the bar above them. */
-      ctx.fillStyle = BRIEF_INK.navy; ctx.fillRect(L, y, R - L, BRIEF_THEAD_H);
-      briefTrack(ctx, 1.1);
-      ctx.fillStyle = BRIEF_INK.paper;
-      ctx.font = `700 11px ${BRIEF_BODY}`;
-      ctx.fillText('PRODUCT', cellL(0), y + 22);
-      ctx.fillText('PACKING', cellL(1), y + 22);
-      ctx.fillText('PER', cellL(2), y + 22);
-      ctx.textAlign = 'right';
-      ctx.fillText('PRICE', cellR(3), y + 22);
-      ctx.fillText(it.key === 'price' ? 'YOU SAVE' : 'YOU TAKE', cellR(4), y + 22);
+      briefTrack(ctx, 0.8);
+      const hs = briefClip(ctx, it.text, BRIEF_BODY, 22, R - L - 44, 16, 700);
+      ctx.font = `700 ${hs.size}px ${BRIEF_BODY}`;
+      ctx.fillText(hs.text, L + 44, y + BRIEF_HEAD_H / 2 + 8);
       briefTrack(ctx, 0);
-      y += BRIEF_THEAD_H;
+      y += BRIEF_HEAD_H;
       return;
     }
-
-    /* Banded rows, alternating from the top of each block. */
-    if(band % 2 === 1){ ctx.fillStyle = BRIEF_INK.paper2; ctx.fillRect(L, y, R - L, rowH); }
-    band++;
     const mid = y + rowH / 2;
+    const older = it.was != null ? it.was : (it.wasPaid != null ? it.wasPaid : null);
 
-    ctx.textAlign = 'left';
-    ctx.fillStyle = BRIEF_INK.navy;
-    const nmW = C[1] - C[0] - BRIEF_PAD * 2;
-    const nm = briefClip(ctx, it.name, BRIEF_BODY, 15, nmW, 12);
-    ctx.font = `600 ${nm.size}px ${BRIEF_BODY}`;
-    ctx.fillText(nm.text, cellL(0), it.variant ? mid - 2 : mid + 5);
-    if(it.variant){
-      ctx.fillStyle = BRIEF_INK.ink600;
-      const vt = briefClip(ctx, it.variant, BRIEF_BODY, 13, nmW, 11);
-      ctx.font = `${vt.size}px ${BRIEF_BODY}`;
-      ctx.fillText(vt.text, cellL(0), mid + 16);
-    }
-
-    ctx.fillStyle = BRIEF_INK.ink600;
-    const pk = briefClip(ctx, it.packing, BRIEF_BODY, 14, C[2] - C[1] - BRIEF_PAD * 2, 11);
-    ctx.font = `${pk.size}px ${BRIEF_BODY}`;
-    ctx.fillText(pk.text, cellL(1), mid + 5);
-
-    /* The side of the trade, in the column that already names the unit.
-       A trade price with nothing marking it as one invites the argument
-       at the counter this picture exists to prevent. */
-    const per = it.unit ? (it.side === 'wholesale' ? it.unit + '*' : it.unit) : '—';
-    const pu = briefClip(ctx, per, BRIEF_BODY, 14, C[3] - C[2] - BRIEF_PAD * 2, 10);
-    ctx.fillStyle = it.side === 'wholesale' ? BRIEF_INK.verdigris : BRIEF_INK.ink600;
-    ctx.font = `${it.side === 'wholesale' ? '600 ' : ''}${pu.size}px ${BRIEF_BODY}`;
-    ctx.fillText(pu.text, cellL(2), mid + 5);
-
+    /* The price first, because it decides how much room the name has. */
     ctx.textAlign = 'right';
     ctx.fillStyle = BRIEF_INK.navy;
     const money = f(it.price);
-    const ms = briefFitNum(ctx, money, 600, 19, C[4] - C[3] - BRIEF_PAD * 2);
+    const ms = briefFitNum(ctx, money, 600, 32, 200);
     ctx.font = `600 ${ms}px ${BRIEF_MONO}`;
-    const older = it.was != null ? it.was : (it.wasPaid != null ? it.wasPaid : null);
-    ctx.fillText(money, cellR(3), older != null ? mid + 1 : mid + 5);
+    const priceY = mid + 2;
+    ctx.fillText(money, R, priceY);
+    let leftOfPrice = R - ctx.measureText(money).width - 12;
     if(older != null){
-      /* The old price under the new one, inside the money column: a
-         figure compared against another figure belongs beside it. */
-      ctx.fillStyle = BRIEF_INK.ink400;
-      ctx.font = `13px ${BRIEF_MONO}`;
-      const t = f(older);
-      ctx.fillText(t, cellR(3), mid + 18);
-      const w = ctx.measureText(t).width;
-      ctx.fillRect(cellR(3) - w, mid + 13, w, 1);
+      /* The old price, struck, beside the new one: a figure compared
+         against another figure belongs next to it. */
+      ctx.fillStyle = BRIEF_INK.ink600;
+      ctx.font = `18px ${BRIEF_MONO}`;
+      const t = f(older), tw = ctx.measureText(t).width;
+      ctx.fillText(t, leftOfPrice, priceY);
+      ctx.fillRect(leftOfPrice - tw, priceY - 6, tw, 2);
+      leftOfPrice -= tw + 12;
     }
     if(it.was != null){
+      /* SAVE, and how much: one word the customer came for. */
+      const t = `SAVE ${f(it.was - it.price)}`;
+      ctx.font = `600 17px ${BRIEF_MONO}`;
+      const pw = ctx.measureText(t).width + 22;
       ctx.fillStyle = BRIEF_INK.verdigris;
-      ctx.font = `600 15px ${BRIEF_MONO}`;
-      ctx.fillText(f(it.was - it.price), cellR(4), mid + 5);
-    } else if(it.theirQty != null){
-      ctx.fillStyle = BRIEF_INK.ink600;
-      ctx.font = `15px ${BRIEF_MONO}`;
+      ctx.fill(briefRoundRect(R - pw, mid + 12, pw, 28, 14));
+      ctx.fillStyle = BRIEF_INK.paper;
+      ctx.fillText(t, R - 11, mid + 32);
+    } else {
+      /* What the figure is for. A trade price says so in words, in the
+         line it applies to, rather than behind a star and a footnote. */
+      const unit = it.unit || '';
+      ctx.font = `16px ${BRIEF_BODY}`;
+      if(it.side === 'wholesale'){
+        ctx.fillStyle = BRIEF_INK.verdigris;
+        ctx.font = `600 16px ${BRIEF_BODY}`;
+        ctx.fillText(' · trade', R, mid + 28);
+        const tw = ctx.measureText(' · trade').width;
+        ctx.fillStyle = BRIEF_INK.ink600;
+        ctx.font = `16px ${BRIEF_BODY}`;
+        if(unit) ctx.fillText(`per ${unit}`, R - tw, mid + 28);
+      } else if(unit){
+        ctx.fillStyle = BRIEF_INK.ink600;
+        ctx.fillText(`per ${unit}`, R, mid + 28);
+      }
+    }
+
+    /* The name, as large as the room left of the money allows. */
+    ctx.textAlign = 'left';
+    ctx.fillStyle = BRIEF_INK.navy;
+    const nmMax = leftOfPrice - L - 12;
+    const nm = briefClip(ctx, it.name, BRIEF_BODY, 26, nmMax, 16, 600);
+    ctx.font = `600 ${nm.size}px ${BRIEF_BODY}`;
+    ctx.fillText(nm.text, L, mid - 4);
+
+    /* The second line: the size and the pack, in words, then -- for a
+       habit -- what they take, as blocks that can be counted. */
+    const sub = [it.variant, it.packing].filter(Boolean).join(' · ');
+    let x = L;
+    ctx.fillStyle = BRIEF_INK.ink600;
+    if(sub){
+      const st = briefClip(ctx, sub, BRIEF_BODY, 18, nmMax - (it.theirQty != null && it.was == null ? 150 : 0), 13);
+      ctx.font = `${st.size}px ${BRIEF_BODY}`;
+      ctx.fillText(st.text, x, mid + 24);
+      x += ctx.measureText(st.text).width + 14;
+    }
+    if(it.was == null && it.theirQty != null){
+      const q = Number(it.theirQty);
+      if(Number.isInteger(q) && q >= 1 && q <= 8){
+        ctx.fillStyle = BRIEF_INK.navy;
+        for(let i = 0; i < q; i++){ ctx.fill(briefRoundRect(x, mid + 12, 12, 12, 3)); x += 15; }
+        x += 4;
+      }
+      ctx.fillStyle = BRIEF_INK.navy;
+      ctx.font = `600 18px ${BRIEF_MONO}`;
       /* Not through f(): a count in cartons can be 1.5, and rounding
          it to 2 tells the customer they take more than they do. */
-      ctx.fillText(Number(it.theirQty).toLocaleString('en-UG'), cellR(4), mid + 5);
+      ctx.fillText(`×${Number(it.theirQty).toLocaleString('en-UG')}`, x, mid + 24);
     }
 
     ctx.fillStyle = BRIEF_INK.rule; ctx.fillRect(L, y + rowH - 1, R - L, 1);
     y += rowH;
   });
 
-  /* A star beside a unit means the trade side, said once at the foot
-     rather than on every row that carries it. */
-  if(fr.items.some(i=> i.kind === 'row' && i.side === 'wholesale')){
-    ctx.textAlign = 'left';
-    ctx.fillStyle = BRIEF_INK.verdigris;
-    ctx.font = `13px ${BRIEF_BODY}`;
-    ctx.fillText('* trade price, at the quantity you usually take', L, y + 24);
-  }
-
-  /* The foot. Any one frame may be screenshotted and passed on, so the
-     number is on every one of them. */
-  ctx.fillStyle = BRIEF_INK.navy; ctx.fillRect(0, H - BRIEF_FOOT_H, W, BRIEF_FOOT_H);
+  /* The foot: how to order, on every frame, because any one of them
+     may be screenshotted and passed on. The one place the accent is. */
+  ctx.fillStyle = BRIEF_INK.oxide; ctx.fillRect(0, H - BRIEF_FOOT_H, W, BRIEF_FOOT_H);
+  const fy = H - BRIEF_FOOT_H / 2;
+  briefDisc(ctx, L + 28, fy, 28, BRIEF_INK.paper, BRIEF_ICON.phone, BRIEF_INK.oxide, 30);
   ctx.textAlign = 'left';
   ctx.fillStyle = BRIEF_INK.paper;
-  ctx.font = `20px ${BRIEF_DISPLAY}`;
-  ctx.fillText('WHAT WOULD YOU LIKE TODAY?', L, H - 48);
-  briefTrack(ctx, 1.4);
-  ctx.fillStyle = BRIEF_INK.oxideLight;
-  ctx.font = `12px ${BRIEF_DISPLAY}`;
-  ctx.fillText('TELL US AND WE KEEP IT FOR YOU', L, H - 26);
-  briefTrack(ctx, 0);
   if(fr.tel){
-    ctx.textAlign = 'right';
-    ctx.fillStyle = BRIEF_INK.paper;
-    ctx.font = `600 26px ${BRIEF_MONO}`;
-    ctx.fillText(fr.tel, R, H - 34);
+    ctx.font = `600 36px ${BRIEF_MONO}`;
+    ctx.fillText(fr.tel, L + 72, fy + 4);
+    ctx.font = `600 18px ${BRIEF_BODY}`;
+    ctx.fillText('Reply to order', L + 72, fy + 30);
+  } else {
+    ctx.font = `700 30px ${BRIEF_BODY}`;
+    ctx.fillText('Reply to order', L + 72, fy + 11);
   }
   ctx.textAlign = 'left';
 }
@@ -67062,43 +67110,41 @@ function briefPaint(ctx, fr){
   ctx.textBaseline = 'alphabetic';
   ctx.textAlign = 'left';
   if(fr.kind === 'list') return briefPaintList(ctx, fr);
-  /* The closing card. The only frame that spends the accent as a
-     ground rather than as a keyline. */
+  /* The closing card: one question, one number, one promise. A chat
+     bubble says "reply" before a word of it is read. */
   ctx.fillStyle = BRIEF_INK.oxide; ctx.fillRect(0, 0, W, H);
   briefMark(ctx, true);
+  briefDisc(ctx, W / 2, 222, 75, BRIEF_INK.paper, BRIEF_ICON.chat, BRIEF_INK.oxide, 84);
   ctx.textAlign = 'center';
   ctx.fillStyle = BRIEF_INK.paper;
-  ctx.font = `58px ${BRIEF_DISPLAY}`;
-  ctx.fillText('WHAT WOULD', W / 2, 296);
-  ctx.fillText('YOU LIKE', W / 2, 364);
-  ctx.fillText('TODAY?', W / 2, 432);
-  briefTrack(ctx, 2.5);
-  ctx.fillStyle = BRIEF_INK.oxideSoft;
-  ctx.font = `20px ${BRIEF_DISPLAY}`;
-  ctx.fillText('TELL US AND WE KEEP IT FOR YOU', W / 2, 478);
-  briefTrack(ctx, 0);
+  ctx.font = `700 56px ${BRIEF_BODY}`;
+  ctx.fillText('What would you', W / 2, 382);
+  ctx.fillText('like today?', W / 2, 442);
+  let y = 482;
   if(fr.tel){
     ctx.font = `600 44px ${BRIEF_MONO}`;
-    const bw = ctx.measureText(fr.tel).width + 64, bx = (W - bw) / 2, by = 512;
+    const bw = ctx.measureText(fr.tel).width + 64, bx = (W - bw) / 2;
     ctx.fillStyle = BRIEF_INK.paper;
-    ctx.fill(briefRoundRect(bx, by, bw, 76, 38));
-    ctx.fillStyle = BRIEF_INK.oxide;
-    ctx.fillText(fr.tel, W / 2, by + 52);
+    ctx.fill(briefRoundRect(bx, y, bw, 76, 38));
+    ctx.fillStyle = BRIEF_INK.navy;
+    ctx.fillText(fr.tel, W / 2, y + 53);
+    y += 76;
   }
+  ctx.fillStyle = BRIEF_INK.paper;
+  ctx.font = `600 24px ${BRIEF_BODY}`;
+  ctx.fillText('We keep it for you', W / 2, y + 48);
   /* The sign-off, under a keyline: the shop's name, and the day these
      figures were true. A price list with no date on it is a price
      nobody can be held to, and this is the frame that carries it. */
   ctx.globalAlpha = 0.35;
-  ctx.fillStyle = BRIEF_INK.paper; ctx.fillRect(120, 648, W - 240, 1);
+  ctx.fillStyle = BRIEF_INK.paper; ctx.fillRect(120, 668, W - 240, 1);
   ctx.globalAlpha = 1;
   ctx.fillStyle = BRIEF_INK.paper;
-  ctx.font = `20px ${BRIEF_DISPLAY}`;
-  ctx.fillText(fr.shop || '', W / 2, 692);
-  briefTrack(ctx, 1.4);
+  ctx.font = `700 20px ${BRIEF_BODY}`;
+  ctx.fillText(fr.shop || '', W / 2, 708);
   ctx.fillStyle = BRIEF_INK.oxideSoft;
-  ctx.font = `12px ${BRIEF_DISPLAY}`;
-  ctx.fillText(`PRICES AS AT ${String(fr.when || '').toUpperCase()}`, W / 2, 716);
-  briefTrack(ctx, 0);
+  ctx.font = `16px ${BRIEF_BODY}`;
+  ctx.fillText(`Prices on ${fr.when || ''}`, W / 2, 734);
   ctx.textAlign = 'left';
 }
 
