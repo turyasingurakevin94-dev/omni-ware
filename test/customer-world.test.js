@@ -196,6 +196,7 @@ const row = (id, o) => Object.assign({ id, name: id, c: { id, phone: '0772 000 0
   const rows = [36, 35, 33, 31, 29, 28, 27, 25, 20, 12].map((a, i) => ({ no: 'INV-' + i, date: iso(a), total: 400000 + i * 150000,
     due: a === 12 ? 450000 : 0, ageDays: a === 12 ? 12 : null, settledOn: a === 12 ? null : iso(a - 1), days: a === 12 ? null : 1 }));
   const tl = compileScope([
+    'const CUST_TL_DAY_PX = 24;',
     extractFunction(src, 'custAddDaysISO', 'index.html'),
     extractFunction(src, 'customerTimelineHTML', 'index.html'),
   ], Object.assign({}, env, { customerInvoiceStatementRows: () => rows.slice().reverse() }), ['customerTimelineHTML']);
@@ -207,6 +208,61 @@ const row = (id, o) => Object.assign({ id, name: id, c: { id, phone: '0772 000 0
   const clash = xs.some((a, i) => xs.some((b, j) => j > i && a.y === b.y && Math.abs(a.x - b.x) < (a.w + b.w) / 2));
   t.check(xs.length > 0 && !clash, `no two order figures overlap (${xs.length} drawn)`);
   t.check((html.match(/<circle class="cu-tl-o/g) || []).length === rows.length, 'and every order is still drawn, labelled or not');
+  /* Day by day, and it slides: one dated tick per day across the whole
+     window, a width set by the days rather than squeezed to the panel,
+     and arrows that step a week. */
+  const ticks = (html.match(/class="cu-tl-dn/g) || []).length;
+  const w = Number((/class="cu-tl-svg cu-tl-days" width="(\d+)"/.exec(html) || [])[1]);
+  t.check(ticks >= 42, `every day carries its own date on the axis (${ticks})`);
+  t.check(w >= ticks * 20, `the chart is as wide as its days, not squeezed into the panel (${w}px for ${ticks} days)`);
+  t.check(/data-tlnav="-1"/.test(html) && /data-tlnav="1"/.test(html), 'and there are arrows to step a week back and forward');
+  const acct = extractFunction(src, 'renderCustomerAccount', 'index.html');
+  t.check(/tl\.scrollLeft = tl\.scrollWidth;/.test(acct) && /pointermove/.test(acct),
+    'it opens on today and slides by drag as well as by touch');
+}
+
+/* ---------- the printed statement: the sheet that leaves the shop -----
+   Built from the design board: who from and to, the balance due as the
+   biggest figure on the page, the sum that makes it, how old it is, and
+   then every line. Black ink only, and the ageing is the same reading
+   Debtors and the account screen use. */
+{
+  const sheet = extractFunction(src, 'printStatementSheet', 'index.html');
+  const cust = extractFunction(src, 'printCustomerStatement', 'index.html');
+  t.check(/shopIdentity\(\)/.test(sheet), 'the sheet is headed with the shop\'s own printed identity');
+  t.check(/cst-due-v/.test(sheet) && /Balance due/.test(sheet), 'the balance due is the one big figure');
+  t.check(/Brought forward[\s\S]*Charged[\s\S]*Paid[\s\S]*Closing/.test(sheet), 'and the sum that makes it is written out');
+  t.check(/customerOpenCharges\(c\)/.test(cust) && /aging: st\.closing > 0\.5 \? buckets : null/.test(cust),
+    'the customer sheet ages what is due on the open charges, and only when something is due');
+  t.check(/account: c\.id/.test(cust) && /Quote account/.test(sheet), 'and tells them which account to quote');
+  t.check(!/<td class="r num">\$\{money\(/.test(sheet), 'the ledger prints bare figures, with UGX stated once in the head');
+}
+
+/* ---------- "Pre-fill a quote": their usual lines, wired to New quote --- */
+{
+  const orders = (list) => list.map((items, i) => ({ q: { items }, date: '2026-0' + (i + 1) + '-01', total: 1 }));
+  const it = (productId, qty, sellPrice) => ({ productId, productName: productId, qty, sellPrice });
+  let hist = [];
+  const u = compileScope([extractFunction(src, 'customerUsualLines', 'index.html')],
+    { customerOrderHistory: () => hist, quoteItemSellPrice: () => 0 }, ['customerUsualLines']);
+  hist = orders([[it('CEM', 80, 40000), it('NAIL', 5, 7000)], [it('CEM', 60, 41000)], [it('CEM', 20, 41500), it('WIRE', 1, 9)], [it('CEM', 50, 42000)]]);
+  const lines = u.customerUsualLines('C');
+  eq(lines.map((l) => l.productId), ['CEM'], 'only what is on at least half their orders is a usual line');
+  eq(lines[0].qty, 60, 'at the middle quantity they take');
+  eq(lines[0].sellPrice, 42000, 'and at the price they last paid');
+  hist = orders([[it('A', 3, 100), it('B', 2, 50)]]);
+  eq(u.customerUsualLines('C').map((l) => l.productId), ['A', 'B'], 'one order: its lines, a repeat of it');
+  hist = [];
+  eq(u.customerUsualLines('C'), [], 'no invoiced order, no lines -- nothing is guessed');
+
+  const start = extractFunction(src, 'startQuoteForCustomer', 'index.html');
+  t.check(/confirm\(/.test(start) && /cur\.items\.length && !sameClient/.test(start),
+    'a quote open for somebody else is never replaced without asking');
+  t.check(/goToTab\('quote'\)/.test(start) && !/saveQuote|buildQuoteRecord|savedQuotes\.push/.test(start),
+    'it opens New quote as a draft -- it saves no order and sends nothing');
+  t.check(/if\(name === 'quote'\) return startQuoteForCustomer\(id\);/.test(src), 'and the account\'s buttons reach it');
+  t.check(/cact: 'quote', label: 'Pre-fill a quote'/.test(extractFunction(src, 'customerNextMoves', 'index.html')),
+    'the reorder card offers it when they have usual lines');
 }
 
 process.exit(t.done() ? 1 : 0);
