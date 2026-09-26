@@ -23922,7 +23922,10 @@
   .ow-mi-chat{display:grid;grid-template-columns:320px minmax(0,1fr) 320px;height:calc(100vh - 230px);min-height:560px;
     background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);overflow:hidden;}
   .ow-mi-chl{display:flex;flex-direction:column;min-height:0;min-width:0;border-right:1px solid var(--ow-rule);}
-  .ow-mi-chf{display:flex;flex-wrap:nowrap;gap:var(--ow-sp-4);padding:var(--ow-sp-8) var(--ow-sp-12);overflow-x:auto;}
+  /* Wraps rather than scrolls: a filter pushed off the edge is a filter
+     nobody knows is there. Zero counts are left off so it is one row on
+     most days. */
+  .ow-mi-chf{display:flex;flex-wrap:wrap;gap:var(--ow-sp-4);padding:var(--ow-sp-8) var(--ow-sp-12);}
   .ow-mi-fch{flex:none;display:inline-flex;align-items:center;gap:var(--ow-sp-4);height:28px;padding:0 var(--ow-sp-8);border:1px solid var(--ow-rule);
     border-radius:var(--ow-r-pill);background:var(--ow-paper);font-family:inherit;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);cursor:pointer;}
   .ow-mi-fch .ow-fig{font-size:var(--ow-t-11);}
@@ -36859,7 +36862,7 @@ function waRenderInbox(){
   // Pinned chats sit on top of whatever the filter shows, in its order.
   entries = entries.filter(e=> pins.has(String(e.conv.id))).concat(entries.filter(e=> !pins.has(String(e.conv.id))));
 
-  const fl = (k, label)=> `<button type="button" class="ow-mi-fch${!query && filter === k ? ' ow-on' : ''}" data-wafilter="${k}" aria-pressed="${!query && filter === k}">${label} <span class="ow-fig">${counts[k]}</span></button>`;
+  const fl = (k, label)=> `<button type="button" class="ow-mi-fch${!query && filter === k ? ' ow-on' : ''}" data-wafilter="${k}" aria-pressed="${!query && filter === k}">${label}${counts[k] ? ` <span class="ow-fig">${counts[k]}</span>` : ''}</button>`;
   const fEl = document.getElementById('wa_filters');
   if(fEl) fEl.innerHTML = fl('wait', 'Waiting') + fl('unread', 'Unread') + fl('cust', 'Customers') + (counts.cart || filter === 'cart' ? fl('cart', 'Carts') : '') + fl('all', 'All');
 
@@ -36988,7 +36991,7 @@ function waChatItemHTML(e, snippets, waitingIds, nowMs, pins){
     ${waChatFaceHTML(c, cust)}
     <span class="ow-mi-cib">
       <span class="ow-mi-cir"><span class="ow-mi-cin">${pinned ? '<svg class="ow-mi-cpin" viewBox="0 0 24 24"><path d="M9 4h6l-1 6 4 3v2H6v-2l4-3z"/><path d="M12 15v6"/></svg>' : ''}${esc(title)}</span><span class="ow-mi-cit${late ? ' ow-warn' : unread ? ' ow-good' : ''}">${esc(age)}</span></span>
-      <span class="ow-mi-cir"><span class="ow-mi-cis${unread ? ' ow-mi-cisu' : ''}">${mine ? waTickHTML(snip.status) + ' You: ' : ''}${esc(line)}</span>${unread ? `<span class="ow-mi-unr">${unread}</span>` : ''}</span>
+      <span class="ow-mi-cir"><span class="ow-mi-cis${unread ? ' ow-mi-cisu' : ''}">${mine ? waTickHTML(snip.status) + ' ' : ''}${esc(line)}</span>${unread ? `<span class="ow-mi-unr">${unread}</span>` : ''}</span>
       ${winHTML || chips ? `<span class="ow-mi-cim">${winHTML}${chips}</span>` : ''}
     </span>
   </button>`;
