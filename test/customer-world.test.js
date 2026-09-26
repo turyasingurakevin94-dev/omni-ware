@@ -226,4 +226,31 @@ const row = (id, o) => Object.assign({ id, name: id, c: { id, phone: '0772 000 0
   t.check(!/<td class="r num">\$\{money\(/.test(sheet), 'the ledger prints bare figures, with UGX stated once in the head');
 }
 
+/* ---------- "Pre-fill a quote": their usual lines, wired to New quote --- */
+{
+  const orders = (list) => list.map((items, i) => ({ q: { items }, date: '2026-0' + (i + 1) + '-01', total: 1 }));
+  const it = (productId, qty, sellPrice) => ({ productId, productName: productId, qty, sellPrice });
+  let hist = [];
+  const u = compileScope([extractFunction(src, 'customerUsualLines', 'index.html')],
+    { customerOrderHistory: () => hist, quoteItemSellPrice: () => 0 }, ['customerUsualLines']);
+  hist = orders([[it('CEM', 80, 40000), it('NAIL', 5, 7000)], [it('CEM', 60, 41000)], [it('CEM', 20, 41500), it('WIRE', 1, 9)], [it('CEM', 50, 42000)]]);
+  const lines = u.customerUsualLines('C');
+  eq(lines.map((l) => l.productId), ['CEM'], 'only what is on at least half their orders is a usual line');
+  eq(lines[0].qty, 60, 'at the middle quantity they take');
+  eq(lines[0].sellPrice, 42000, 'and at the price they last paid');
+  hist = orders([[it('A', 3, 100), it('B', 2, 50)]]);
+  eq(u.customerUsualLines('C').map((l) => l.productId), ['A', 'B'], 'one order: its lines, a repeat of it');
+  hist = [];
+  eq(u.customerUsualLines('C'), [], 'no invoiced order, no lines -- nothing is guessed');
+
+  const start = extractFunction(src, 'startQuoteForCustomer', 'index.html');
+  t.check(/confirm\(/.test(start) && /cur\.items\.length && !sameClient/.test(start),
+    'a quote open for somebody else is never replaced without asking');
+  t.check(/goToTab\('quote'\)/.test(start) && !/saveQuote|buildQuoteRecord|savedQuotes\.push/.test(start),
+    'it opens New quote as a draft -- it saves no order and sends nothing');
+  t.check(/if\(name === 'quote'\) return startQuoteForCustomer\(id\);/.test(src), 'and the account\'s buttons reach it');
+  t.check(/cact: 'quote', label: 'Pre-fill a quote'/.test(extractFunction(src, 'customerNextMoves', 'index.html')),
+    'the reorder card offers it when they have usual lines');
+}
+
 process.exit(t.done() ? 1 : 0);

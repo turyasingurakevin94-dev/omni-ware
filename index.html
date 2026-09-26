@@ -63768,6 +63768,100 @@ function customerProfileHTML(r, book){
   </div>`;
 }
 
+/* WHAT THEY USUALLY BUY, AS QUOTE LINES. Anything on at least half their
+   invoiced orders (and on two at least), at the quantity they usually
+   take -- the middle of what they have taken -- and at the price they
+   last paid for it. A customer with one order has no "usual" yet, so
+   their last order is the answer: a repeat of it. Read off their own
+   invoices; nothing here is a guess about what they might want. */
+function customerUsualLines(customerId){
+  const hist = customerOrderHistory(customerId);
+  if(!hist.length) return [];
+  const key = (it)=> `${it.productId}|${it.variantIdx == null ? '' : it.variantIdx}`;
+  const seen = new Map();
+  hist.forEach((o, i)=>{
+    const here = new Set();
+    (o.q.items || []).forEach(it=>{
+      if(!it.productId) return;
+      const k = key(it);
+      const e = seen.get(k) || { productId: it.productId, variantIdx: it.variantIdx == null ? null : it.variantIdx,
+        name: it.productName || '', orders: 0, qtys: [], last: null, lastAt: -1 };
+      if(!here.has(k)){ e.orders++; here.add(k); }
+      e.qtys.push(Number(it.qty) || 0);
+      if(i >= e.lastAt){ e.last = it; e.lastAt = i; }
+      seen.set(k, e);
+    });
+  });
+  const n = hist.length;
+  const need = n < 2 ? 1 : Math.max(2, Math.ceil(n / 2));
+  const lastOrder = hist.length - 1;
+  return [...seen.values()]
+    .filter(e=> n < 2 ? e.lastAt === lastOrder : e.orders >= need)
+    .sort((a, b)=> b.orders - a.orders)
+    .map(e=>{
+      const q = e.qtys.filter(x=> x > 0).sort((a, b)=> a - b);
+      const qty = q.length ? q[q.length >> 1] : 1;
+      const sell = e.last && e.last.sellPrice != null && e.last.sellPrice !== '' ? Number(e.last.sellPrice) || 0 : quoteItemSellPrice(e.last || {});
+      return { productId: e.productId, variantIdx: e.variantIdx, name: e.name, qty, sellPrice: sell, orders: e.orders, of: n };
+    });
+}
+
+/* START THEIR QUOTE. Opens New quote for this customer with their usual
+   lines on it -- sourced the way the quote rail's own "add" sources a
+   line: from the shelf where it can serve the quantity, otherwise from
+   the cheapest supplier who can. Nothing is saved as an order and
+   nothing is sent; it is a draft on the quote screen for the owner to
+   check. A quote already open for somebody else is never thrown away
+   without asking. */
+function startQuoteForCustomer(customerId){
+  const c = (data.customers || []).find(x=> String(x.id) === String(customerId));
+  if(!c){ toast('That customer is no longer on file'); return; }
+  const lines = customerUsualLines(c.id);
+  ensureQuote();
+  const same = (a, b)=> String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
+  const cur = data.quote;
+  const sameClient = same(cur.client && cur.client.name, c.name);
+  if(cur.items.length && !sameClient){
+    const who = (cur.client && cur.client.name) ? cur.client.name : 'no client';
+    if(!confirm(`New quote already has ${cur.items.length} ${cur.items.length === 1 ? 'line' : 'lines'} for ${who}.\n\nReplace it with a quote for ${c.name}? Save that one first if you want to keep it.`)) return;
+  }
+  if(!sameClient || !cur.items.length){
+    data.quote = { client: { name: c.name || '', phone: contactPhones(c)[0] || '' }, date: todayISO(), items: [], savedId: null };
+    ensureQuote();
+  }
+  const has = new Set(data.quote.items.map(it=> `${it.productId}|${it.variantIdx == null ? '' : it.variantIdx}`));
+  const added = [], skipped = [];
+  lines.forEach(u=>{
+    if(has.has(`${u.productId}|${u.variantIdx == null ? '' : u.variantIdx}`)) return;
+    const p = productById(u.productId);
+    if(!p){ skipped.push(u.name || u.productId); return; }
+    const vi = u.variantIdx;
+    const shelf = getStockQty(u.productId, vi);
+    const best = rankedPurchaseRowsAtQty(u.productId, vi, u.qty).find(r=> r.purchasePrice != null) || null;
+    const fromShelf = shelf >= u.qty;
+    if(!fromShelf && !best){ skipped.push(productVariantLabel(p, vi)); return; }
+    const supplierId = fromShelf ? '__stock__' : best.supplierId;
+    data.quote.items.push({
+      lineId: data.nextQuoteLineId++,
+      productId: u.productId, variantIdx: vi, productName: productVariantLabel(p, vi),
+      unit: (best && best.unit) || productUnitLabel(u.productId, vi) || p.unit || '',
+      packUnit: best ? (best.packUnit || '') : '', packQty: best ? (best.packQty || 0) : '',
+      qty: u.qty, supplierId, supplierName: supplierName(supplierId),
+      price: ipLineBuyPrice(supplierId, best, u.qty, fromShelf ? getFIFOUnitCost(u.productId, vi) : null),
+      sellPrice: u.sellPrice,
+    });
+    added.push(productVariantLabel(p, vi));
+  });
+  saveData();
+  goToTab('quote');
+  if(typeof renderQuoteAll === 'function') renderQuoteAll();
+  window.scrollTo(0, 0);
+  const tail = skipped.length ? ` ${skipped.length} left off — no shelf stock or supplier price for ${skipped.join(', ')}.` : '';
+  toast(added.length
+    ? `Quote started for ${c.name}: ${added.length} usual ${added.length === 1 ? 'line' : 'lines'} at the price they last paid — check before saving.${tail}`
+    : `Quote started for ${c.name}.${lines.length ? tail : ' They have no invoiced order to take usual lines from.'}`, 7000);
+}
+
 /* WHAT TO DO NEXT, AND WHY. At most three, worst first, each one a
    reading of the books with the evidence drawn beside it and the one
    control that acts on it. None of them does anything by itself: a
@@ -63839,7 +63933,7 @@ function customerNextMoves(r){
         fig: until <= 0 ? `${-until}d past` : `in ${until}d`,
         title: until <= 0 ? `Due to order since ${fmtShortDate(due)}` : `Next order due ~${fmtShortDate(due)}`,
         why: `Day ${s.daysSinceLast} of their ${s.everyDays}-day cycle.${usual.length ? ' What they come back for:' : ''}`, viz: chips, vizAfter: true,
-        act: { cact: 'follow', label: 'Set a reminder' } });
+        act: usual.length ? { cact: 'quote', label: 'Pre-fill a quote' } : { cact: 'follow', label: 'Set a reminder' } });
     }
   } else if(s.orderCount === 1 && s.daysSinceLast !== null && s.daysSinceLast > CUST_FIRST_SILENCE_DAYS){
     out.push({ rank: 1, tone: 'ow-warn', kind: 'Win back', fig: `${s.daysSinceLast}d`, title: 'Bought once, not back',
@@ -64157,6 +64251,9 @@ function renderCustomerAccount(id){
       <button type="button" class="btn btn-ghost ow-sm" data-cact="print" data-cid="${esc(r.id)}">
         <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M7 16h10v5H7z"/></svg>
         Print the statement</button>
+      ${s.orderCount ? `<button type="button" class="btn btn-ghost ow-sm" data-cact="quote" data-cid="${esc(r.id)}">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Quote for them</button>` : ''}
       ${chase}
       ${pay}
     </div>
@@ -64872,6 +64969,7 @@ function printSupplierStatement(supplierId){
     if(name === 'payment') return openCustomerDebtModal(id, 'payment');
     if(name === 'charge') return openCustomerDebtModal(id, 'charge');
     if(name === 'follow') return openFollowUpListModal(id);
+    if(name === 'quote') return startQuoteForCustomer(id);
     if(name === 'edit') return editCustomer(id);
     if(name === 'delete') return deleteCustomer(id);
     /* The asking lives on one screen, with the words already written.
