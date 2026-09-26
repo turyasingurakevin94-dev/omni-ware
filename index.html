@@ -15083,7 +15083,18 @@
   .cu-tl-key i.cu-k-a{width:14px;height:0;border-top:1.5px solid var(--ow-verdigris);}
   .cu-tl-key i.cu-k-u{width:14px;height:0;border-top:2px dashed var(--ow-crimson);}
   .cu-tl-key i.cu-k-n{border-radius:50%;border:1.5px dashed var(--ow-sky);background:var(--ow-sky-soft);}
-  .cu-tl-sc{overflow-x:auto;}
+  .cu-tl-sc{overflow-x:auto;cursor:grab;overscroll-behavior-x:contain;}
+  .cu-tl-sc.cu-drag{cursor:grabbing;user-select:none;}
+  .cu-tl-svg.cu-tl-days{width:auto;max-width:none;height:auto;padding:0;}
+  .cu-tl-wk{stroke:var(--ow-rule-soft);stroke-width:1;}
+  .cu-tl-dn{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-size:var(--ow-t-11);
+    fill:var(--ow-ink-400);text-anchor:middle;}
+  .cu-tl-dn.cu-tl-mon{fill:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  .cu-tl-m.cu-tl-mo{text-anchor:start;fill:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  .cu-tl-nav{display:inline-flex;gap:var(--ow-sp-4);margin-left:var(--ow-sp-8);}
+  .cu-tl-nav .btn.ow-sm{min-width:30px;padding:0 var(--ow-sp-6);}
+  .cu-tl-nav svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+  .cu-tl-m.cu-tl-mw{text-anchor:start;fill:var(--ow-ink-400);}
   .cu-tl-svg{display:block;width:100%;height:auto;padding:var(--ow-sp-8) var(--ow-sp-12) var(--ow-sp-4);box-sizing:border-box;}
   .cu-tl-ax,.cu-tl-tk{stroke:var(--ow-steel-100);stroke-width:1;}
   .cu-tl-ln{stroke:var(--ow-rule-soft);stroke-width:1;stroke-dasharray:2 4;}
@@ -15150,6 +15161,7 @@
     .cu-pf-a{min-height:var(--ow-tap);}
     .cu-nm{grid-template-columns:minmax(0,1fr);}
     .cu-tl-svg,.cu-mp-svg{min-width:720px;}
+    .cu-tl-nav .btn.ow-sm{min-height:var(--ow-tap);min-width:var(--ow-tap);}
     .cu-hf-r{grid-template-columns:70px minmax(0,1fr) 84px;}
   }
 
@@ -63968,6 +63980,8 @@ function customerNextMovesHTML(r){
    little slower each time is SEEN paying slower. A bill still open runs
    on to today. Where they have a rhythm, the next order sits ahead of
    today as a ring: their own gap, added to their last order. */
+/* How wide one day is on the timeline, in px. Wide enough for its date. */
+const CUST_TL_DAY_PX = 24;
 function customerTimelineHTML(r){
   const s = r.stats;
   const range = customerStatementRange();
@@ -63977,21 +63991,25 @@ function customerTimelineHTML(r){
   const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
   const short = (n)=> n >= 1e6 ? (n / 1e6).toFixed(2) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(Math.round(n));
   const next = s.everyDays !== null && s.last && !r.quiet ? custAddDaysISO(s.last, s.everyDays) : null;
-  const end = next && next > today ? custAddDaysISO(next, 10) : custAddDaysISO(today, 10);
+  const end = next && next > today ? custAddDaysISO(next, 7) : custAddDaysISO(today, 7);
   const c = r.c;
   const pays = (c && Array.isArray(c.debtLog) ? c.debtLog : []).filter(e=> e.type === 'payment' && e.date >= range.from && e.date <= today);
-  /* THE WINDOW FITS THE HISTORY, not the statement's six months. A
-     customer who started buying five weeks ago drawn across half a year
-     is five weeks of orders crushed into the last sixth of the chart,
-     every bubble on top of the next. So it opens a little before their
-     first mark, and never on less than six weeks. */
+  /* DAY BY DAY, AND IT SLIDES. Every day gets the same width and its own
+     date on the axis, so the chart is as long as the history is -- wider
+     than the panel -- and the panel scrolls sideways over it, opening on
+     today at the right; slide it to uncover the days before, or step a
+     week at a time with the arrows. It starts a week before the
+     customer's first mark in the statement's six months, and runs a week
+     past today, or past the next order their rhythm expects. */
   const firstMark = [...inv.map(x=> x.date), ...pays.map(e=> e.date)].filter(d=> d && d >= range.from).sort()[0] || range.from;
-  let from = custAddDaysISO(firstMark, -Math.max(3, Math.round(daysBetweenISO(firstMark, end) * 0.05)));
-  if(daysBetweenISO(from, end) < 42) from = custAddDaysISO(end, -42);
+  let from = custAddDaysISO(firstMark, -7);
   if(from < range.from) from = range.from;
-  const W = 1000, H = 212, L = 36, R = 16, OY = 72, PY = 160;
+  const H = 236, L = 16, R = 16, OY = 72, PY = 160, AX = H - 40;
   const span = Math.max(1, daysBetweenISO(from, end));
-  const X = (iso)=> (L + Math.min(span, Math.max(0, daysBetweenISO(from, iso))) / span * (W - L - R)).toFixed(1);
+  /* A short history still fills the panel rather than huddling left. */
+  const DAY = Math.max(CUST_TL_DAY_PX, (1000 - L - R) / span);
+  const W = Math.round(L + R + span * DAY);
+  const X = (iso)=> (L + Math.min(span, Math.max(0, daysBetweenISO(from, iso))) * DAY).toFixed(1);
   const peak = Math.max(...inv.map(x=> x.total), 1);
   /* Bubbles are as big as the spacing allows: sized off the gaps most
      orders keep (the quarter-way gap, so two orders on one day do not
@@ -64001,23 +64019,19 @@ function customerTimelineHTML(r){
   const gaps = xs.slice(1).map((x, i)=> x - xs[i]).sort((a, b)=> a - b);
   const rMax = gaps.length ? Math.max(6, Math.min(22, gaps[Math.floor(gaps.length / 4)] * 0.55)) : 22;
   const rad = (v)=> Math.max(3.5, Math.sqrt(v / peak) * rMax).toFixed(1);
-  /* Months on a long window; weeks on a short one, dated, so a
-     six-week relationship still has a scale to read. */
+  /* The axis: every day's date, the month where it turns, and a faint
+     line down each Monday so weeks can be counted by eye. */
   const months = [];
-  const tick = (iso, label)=> months.push(`<line class="cu-tl-tk" x1="${X(iso)}" x2="${X(iso)}" y1="${H - 26}" y2="${H - 20}"/><text class="cu-tl-m" x="${X(iso)}" y="${H - 6}">${esc(label)}</text>`);
-  if(span <= 100){
-    for(let d = 0; d <= span; d += 7){
-      const iso = custAddDaysISO(from, d);
-      tick(iso, fmtShortDate(iso).replace(/\s*\d{4}$/, ''));
-    }
-  } else {
-    const d0 = new Date(from + 'T00:00:00Z');
-    for(let m = 0; m <= 14; m++){
-      const iso = new Date(Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth() + m, 1)).toISOString().slice(0, 10);
-      if(iso > end) break;
-      if(iso < from) continue;
-      tick(iso, fmtShortDate(iso).replace(/^\d+\s*/, '').split(' ')[0]);
-    }
+  for(let d = 0; d <= span; d++){
+    const iso = custAddDaysISO(from, d), x = X(iso);
+    const day = Number(iso.slice(8, 10));
+    const monday = new Date(iso + 'T00:00:00Z').getUTCDay() === 1;
+    if(monday) months.push(`<line class="cu-tl-wk" x1="${x}" x2="${x}" y1="14" y2="${AX}"/>`);
+    months.push(`<line class="cu-tl-tk" x1="${x}" x2="${x}" y1="${AX}" y2="${AX + (day === 1 ? 8 : 4)}"/><text class="cu-tl-dn${monday ? ' cu-tl-mon' : ''}" x="${x}" y="${AX + 17}">${day}</text>`);
+    /* The month under its first day, and again under every Monday, so
+       any week slid into view still says which month it is in. */
+    if(day === 1 || d === 0) months.push(`<text class="cu-tl-m cu-tl-mo" x="${x}" y="${H - 4}">${esc(fmtShortDate(iso).replace(/^\d+\s*/, ''))}</text>`);
+    else if(monday && day > 3 && day + 5 <= new Date(Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7), 0)).getUTCDate()) months.push(`<text class="cu-tl-m cu-tl-mw" x="${x}" y="${H - 4}">${esc(fmtShortDate(iso).replace(/^\d+\s*/, '').split(' ')[0])}</text>`);
   }
   const arcMids = [];
   const arcs = inv.filter(x=> x.settledOn && x.days != null).map(x=>{
@@ -64060,13 +64074,14 @@ function customerTimelineHTML(r){
         settled.length ? '<span><i class="cu-k-a"></i>days to pay</span>' : ''}${
         inv.some(x=> x.due > 0.5) ? '<span><i class="cu-k-u"></i>still open</span>' : ''}${
         nextMark ? '<span><i class="cu-k-n"></i>expected</span>' : ''}</span>
-      <span class="ow-pan-n">${esc(fmtShortDate(from))} &rarr; ${next && next > today ? esc(fmtShortDate(next)) : 'today'}</span></div>
-    <div class="cu-tl-sc"><svg class="cu-tl-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${inv.length} invoiced orders and ${pays.length} payments since ${esc(fmtShortDate(from))}">
-      <line class="cu-tl-ax" x1="${L}" x2="${W - R}" y1="${H - 26}" y2="${H - 26}"/>
+      <span class="ow-pan-n">${esc(fmtShortDate(from))} &rarr; ${next && next > today ? esc(fmtShortDate(next)) : 'today'} &middot; day by day</span>
+      <span class="cu-tl-nav"><button type="button" class="btn btn-ghost ow-sm" data-tlnav="-1" aria-label="A week earlier" title="A week earlier"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button><button type="button" class="btn btn-ghost ow-sm" data-tlnav="1" aria-label="A week later" title="A week later"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button></span></div>
+    <div class="cu-tl-sc"><svg class="cu-tl-svg cu-tl-days" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${inv.length} invoiced orders and ${pays.length} payments since ${esc(fmtShortDate(from))}">
+      <line class="cu-tl-ax" x1="${L}" x2="${W - R}" y1="${AX}" y2="${AX}"/>
       <line class="cu-tl-ln" x1="${L}" x2="${W - R}" y1="${PY}" y2="${PY}"/>
       ${months.join('')}
       ${arcs}${tails}${dots}${labels}${diamonds}${nextMark}
-      <line class="cu-tl-now" x1="${X(today)}" x2="${X(today)}" y1="14" y2="${H - 26}"/>
+      <line class="cu-tl-now" x1="${X(today)}" x2="${X(today)}" y1="14" y2="${AX}"/>
       <text class="cu-tl-nw" x="${X(today)}" y="10">Today</text>
     </svg></div>
   </div>`;
@@ -64277,10 +64292,26 @@ function renderCustomerAccount(id){
       </div>
       ${customerAccountRailHTML(r)}
     </div>`;
-  /* On a phone the timeline scrolls sideways; it opens on today, which
-     is the end anybody reads first. */
+  /* The timeline slides. It opens on today -- the end anybody reads
+     first -- and goes back by dragging it (a finger does this natively;
+     a mouse needs the drag below) or a week at a time on the arrows. */
   const tl = wrap.querySelector('.cu-tl-sc');
-  if(tl) tl.scrollLeft = tl.scrollWidth;
+  if(tl){
+    tl.scrollLeft = tl.scrollWidth;
+    let down = null;
+    tl.addEventListener('pointerdown', (e)=>{
+      if(e.pointerType !== 'mouse' || e.button !== 0) return;
+      down = { x: e.clientX, left: tl.scrollLeft };
+      tl.classList.add('cu-drag');
+    });
+    tl.addEventListener('pointermove', (e)=>{ if(down) tl.scrollLeft = down.left - (e.clientX - down.x); });
+    const up = ()=>{ down = null; tl.classList.remove('cu-drag'); };
+    tl.addEventListener('pointerup', up);
+    tl.addEventListener('pointerleave', up);
+    wrap.querySelectorAll('[data-tlnav]').forEach(b=> b.addEventListener('click', ()=>{
+      tl.scrollBy({ left: Number(b.dataset.tlnav) * CUST_TL_DAY_PX * 7, behavior: 'smooth' });
+    }));
+  }
 }
 
 /* The one way in, from wherever it is asked for. */

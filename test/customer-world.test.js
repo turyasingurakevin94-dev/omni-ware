@@ -196,6 +196,7 @@ const row = (id, o) => Object.assign({ id, name: id, c: { id, phone: '0772 000 0
   const rows = [36, 35, 33, 31, 29, 28, 27, 25, 20, 12].map((a, i) => ({ no: 'INV-' + i, date: iso(a), total: 400000 + i * 150000,
     due: a === 12 ? 450000 : 0, ageDays: a === 12 ? 12 : null, settledOn: a === 12 ? null : iso(a - 1), days: a === 12 ? null : 1 }));
   const tl = compileScope([
+    'const CUST_TL_DAY_PX = 24;',
     extractFunction(src, 'custAddDaysISO', 'index.html'),
     extractFunction(src, 'customerTimelineHTML', 'index.html'),
   ], Object.assign({}, env, { customerInvoiceStatementRows: () => rows.slice().reverse() }), ['customerTimelineHTML']);
@@ -207,6 +208,17 @@ const row = (id, o) => Object.assign({ id, name: id, c: { id, phone: '0772 000 0
   const clash = xs.some((a, i) => xs.some((b, j) => j > i && a.y === b.y && Math.abs(a.x - b.x) < (a.w + b.w) / 2));
   t.check(xs.length > 0 && !clash, `no two order figures overlap (${xs.length} drawn)`);
   t.check((html.match(/<circle class="cu-tl-o/g) || []).length === rows.length, 'and every order is still drawn, labelled or not');
+  /* Day by day, and it slides: one dated tick per day across the whole
+     window, a width set by the days rather than squeezed to the panel,
+     and arrows that step a week. */
+  const ticks = (html.match(/class="cu-tl-dn/g) || []).length;
+  const w = Number((/class="cu-tl-svg cu-tl-days" width="(\d+)"/.exec(html) || [])[1]);
+  t.check(ticks >= 42, `every day carries its own date on the axis (${ticks})`);
+  t.check(w >= ticks * 20, `the chart is as wide as its days, not squeezed into the panel (${w}px for ${ticks} days)`);
+  t.check(/data-tlnav="-1"/.test(html) && /data-tlnav="1"/.test(html), 'and there are arrows to step a week back and forward');
+  const acct = extractFunction(src, 'renderCustomerAccount', 'index.html');
+  t.check(/tl\.scrollLeft = tl\.scrollWidth;/.test(acct) && /pointermove/.test(acct),
+    'it opens on today and slides by drag as well as by touch');
 }
 
 /* ---------- the printed statement: the sheet that leaves the shop -----
