@@ -265,16 +265,34 @@ const charge = (id, date, amount, quoteId) => ({ id, date, type: 'charge', amoun
 
   const panel = extractFunction(src, 'customerStatementPanelHTML', 'index.html');
   const send = extractFunction(src, 'sendCustomerStatementPdf', 'index.html');
+  const share = extractFunction(src, 'shareStatementPdf', 'index.html');
   t.check(/data-cact="wapdf"[^>]*>[\s\S]*?Send on WhatsApp<\/button>/.test(panel) && !/waComposeUrl/.test(panel),
     'the button sends the file; it no longer opens a chat with text alone');
   t.check(/if\(name === 'wapdf'\) return sendCustomerStatementPdf\(id\);/.test(src), 'and the account hands it the customer');
-  t.check(/customerStatementSheet\(customerId\)/.test(send) && /statementPdfBytes\(st, side\)/.test(send),
+  t.check(/customerStatementSheet\(customerId\)/.test(send) && /shareStatementPdf\(sheet\.st, sheet\.side, /.test(send)
+       && /statementPdfBytes\(st, side\)/.test(share),
     'the file is built from the same sheet the printer gets');
-  t.check(/navigator\.canShare\(\{ files: \[file\] \}\)[\s\S]*?navigator\.share\(\{ files: \[file\], text \}\)/.test(send),
+  t.check(/navigator\.canShare\(\{ files: \[file\] \}\)[\s\S]*?navigator\.share\(\{ files: \[file\], text \}\)/.test(share),
     'where the phone can share a file, the PDF goes into the share sheet with the balance line');
-  t.check(/AbortError'\) return;/.test(send), 'backing out of the share sheet is left alone');
-  t.check(/a\.download = name;[\s\S]*?waComposeUrl\(side\.who\.phone, text\)/.test(send),
+  t.check(/AbortError'\) return;/.test(share), 'backing out of the share sheet is left alone');
+  t.check(/a\.download = name;[\s\S]*?waComposeUrl\(side\.who\.phone, text\)/.test(share),
     'elsewhere the PDF is saved and the customer\'s chat opened, ready to attach it');
+
+  /* The supplier's statement leaves the same way: the same sheet builder
+     the supplier print uses, the same file, the same share. */
+  const sup = extractFunction(src, 'sendSupplierStatementPdf', 'index.html');
+  const supPrint = extractFunction(src, 'printSupplierStatement', 'index.html');
+  t.check(/supplierStatementSheet\(supplierId\)/.test(sup) && /shareStatementPdf\(sheet\.st, sheet\.side, supplierStatementLine\(/.test(sup)
+       && /supplierStatementSheet\(supplierId\)/.test(supPrint) && /printStatementSheet\(sheet\.st, sheet\.side\)/.test(supPrint),
+    'the supplier PDF is built from the sheet the supplier print uses');
+  t.check(/data-sact="wapdf" data-sid=/.test(src) && /if\(name === 'wapdf'\) return sendSupplierStatementPdf\(id\);/.test(src),
+    'and the supplier account carries the button, wired to it');
+  const supLine = compileScope([extractFunction(src, 'supplierStatementLine', 'index.html')],
+    { printedShopName: () => 'Shop', fmtShortDate: (d) => d }, ['supplierStatementLine']).supplierStatementLine;
+  eq([supLine({ closing: 1500, to: 'T' }, 'Mukwano'), supLine({ closing: -200, to: 'T' }, 'Mukwano'), supLine({ closing: 0, to: 'T' }, 'Mukwano')],
+    ['Statement to T: Shop owes Mukwano 1,500 UGX.', 'Statement to T: Shop has overpaid Mukwano by 200 UGX.',
+     'Statement to T: the account between Shop and Mukwano is settled.'],
+    'the message with it says who owes whom, the shop\'s way round');
 }
 
 process.exit(t.done() ? 1 : 0);

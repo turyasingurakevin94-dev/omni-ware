@@ -59801,7 +59801,10 @@ function renderSupplierAccount(id){
            button. */''}
       ${r.everInvoiced ? `<button type="button" class="btn btn-ghost ow-sm" data-sact="print" data-sid="${esc(r.id)}">
         <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M7 16h10v5H7z"/></svg>
-        Print the statement</button>` : ''}
+        Print the statement</button>
+      <button type="button" class="btn btn-ghost ow-sm" data-sact="wapdf" data-sid="${esc(r.id)}" title="Send the statement as a PDF">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M4 20l1.5-4A8 8 0 1 1 9 19.5z"/></svg>
+        Send on WhatsApp</button>` : ''}
       ${ask}
     </div>
     ${supplierFiguresHTML(r)}
@@ -67045,11 +67048,14 @@ function statementPdfBytes(st, side){
 async function sendCustomerStatementPdf(customerId){
   const sheet = customerStatementSheet(customerId);
   if(!sheet){ toast('That customer is no longer on file'); return; }
-  const { st, side } = sheet;
+  return shareStatementPdf(sheet.st, sheet.side, customerStatementLine(sheet.st, sheet.side.who.name));
+}
+
+/* The one way a statement leaves as a file, for either side. */
+async function shareStatementPdf(st, side, text){
   const bytes = statementPdfBytes(st, side);
-  const name = `statement-${String(side.who.name).replace(/[^\w]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'customer'}-${st.to}.pdf`;
+  const name = `statement-${String(side.who.name).replace(/[^\w]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'account'}-${st.to}.pdf`;
   const blob = new Blob([bytes], { type: 'application/pdf' });
-  const text = customerStatementLine(st, side.who.name);
   let file = null;
   try{ file = new File([blob], name, { type: 'application/pdf' }); }catch(e){}
   try{
@@ -67085,11 +67091,18 @@ function customerStatementLine(st, name){
    the closing sentence names the shop as the one who owes rather than
    addressing the reader. */
 function printSupplierStatement(supplierId){
+  const sheet = supplierStatementSheet(supplierId);
+  if(!sheet){ toast('That supplier is no longer on file'); return; }
+  printStatementSheet(sheet.st, sheet.side);
+}
+
+/* What the supplier's sheet says, for the printer and for the PDF alike. */
+function supplierStatementSheet(supplierId){
   const { from, to } = customerStatementRange();
   const st = supplierStatementRows(supplierId, from, to);
   const s = st.supplier;
-  if(!s){ toast('That supplier is no longer on file'); return; }
-  printStatementSheet(st, {
+  if(!s) return null;
+  return { st, side: {
     who: { name: s.name, location: s.location, phone: (contactPhones(s)[0] || '') },
     payWord: 'Payment made',
     owesLine: (m)=> `${esc(printedShopName())} owes <b>${esc(s.name)}</b> <b>${m}</b> as at ${esc(fmtShortDate(to))}.`,
@@ -67097,7 +67110,25 @@ function printSupplierStatement(supplierId){
     recordedAs: 'the balance carried on their open invoices is',
     beforeWhat: 'paying against it',
     foot: 'Raised from the purchase invoices on file for this supplier.',
-  });
+  } };
+}
+
+/* The supplier's copy goes the same way as the customer's: the PDF into
+   the share sheet, or saved beside an opened chat. The line with it
+   says who owes whom, the shop's way round. */
+function supplierStatementLine(st, name){
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const shop = printedShopName();
+  return st.closing > 0.5
+    ? `Statement to ${fmtShortDate(st.to)}: ${shop} owes ${name} ${f(st.closing)} UGX.`
+    : st.closing < -0.5
+      ? `Statement to ${fmtShortDate(st.to)}: ${shop} has overpaid ${name} by ${f(-st.closing)} UGX.`
+      : `Statement to ${fmtShortDate(st.to)}: the account between ${shop} and ${name} is settled.`;
+}
+async function sendSupplierStatementPdf(supplierId){
+  const sheet = supplierStatementSheet(supplierId);
+  if(!sheet){ toast('That supplier is no longer on file'); return; }
+  return shareStatementPdf(sheet.st, sheet.side, supplierStatementLine(sheet.st, sheet.side.who.name));
 }
 
 /* ONE DELEGATED LISTENER on the register, one on the band and one on
@@ -67124,6 +67155,7 @@ function printSupplierStatement(supplierId){
     if(name === 'ask') return askSupplierForPrices(id);
     if(name === 'reply') return openSupplierReply(id);
     if(name === 'print') return printSupplierStatement(id);
+    if(name === 'wapdf') return sendSupplierStatementPdf(id);
     if(name === 'commission') return openSupplierCommissionModal(id);
     if(name === 'edit') return editSupplier(id);
     if(name === 'delete') return deleteSupplier(id);
