@@ -15095,7 +15095,7 @@
   .cu-tl-arc{fill:none;stroke:var(--ow-verdigris);stroke-width:1.4;opacity:.6;}
   .cu-tl-open{stroke:var(--ow-amber);stroke-width:1.6;stroke-dasharray:4 4;}
   .cu-tl-open.ow-bad{stroke:var(--ow-crimson);}
-  .cu-tl-o{fill:var(--ow-ink-900);}
+  .cu-tl-o{fill:var(--ow-ink-900);stroke:var(--ow-paper);stroke-width:1.5;}
   .cu-tl-o.ow-warn{fill:var(--ow-amber);}
   .cu-tl-o.ow-bad{fill:var(--ow-crimson);}
   .cu-tl-p{fill:var(--ow-verdigris);}
@@ -62964,27 +62964,56 @@ function customerTimelineHTML(r){
   const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
   const short = (n)=> n >= 1e6 ? (n / 1e6).toFixed(2) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(Math.round(n));
   const next = s.everyDays !== null && s.last && !r.quiet ? custAddDaysISO(s.last, s.everyDays) : null;
-  const from = range.from;
   const end = next && next > today ? custAddDaysISO(next, 10) : custAddDaysISO(today, 10);
+  const c = r.c;
+  const pays = (c && Array.isArray(c.debtLog) ? c.debtLog : []).filter(e=> e.type === 'payment' && e.date >= range.from && e.date <= today);
+  /* THE WINDOW FITS THE HISTORY, not the statement's six months. A
+     customer who started buying five weeks ago drawn across half a year
+     is five weeks of orders crushed into the last sixth of the chart,
+     every bubble on top of the next. So it opens a little before their
+     first mark, and never on less than six weeks. */
+  const firstMark = [...inv.map(x=> x.date), ...pays.map(e=> e.date)].filter(d=> d && d >= range.from).sort()[0] || range.from;
+  let from = custAddDaysISO(firstMark, -Math.max(3, Math.round(daysBetweenISO(firstMark, end) * 0.05)));
+  if(daysBetweenISO(from, end) < 42) from = custAddDaysISO(end, -42);
+  if(from < range.from) from = range.from;
   const W = 1000, H = 212, L = 36, R = 16, OY = 72, PY = 160;
   const span = Math.max(1, daysBetweenISO(from, end));
   const X = (iso)=> (L + Math.min(span, Math.max(0, daysBetweenISO(from, iso))) / span * (W - L - R)).toFixed(1);
   const peak = Math.max(...inv.map(x=> x.total), 1);
-  const rad = (v)=> Math.max(5, Math.sqrt(v / peak) * 22).toFixed(1);
-  const c = r.c;
-  const pays = (c && Array.isArray(c.debtLog) ? c.debtLog : []).filter(e=> e.type === 'payment' && e.date >= from && e.date <= today);
+  /* Bubbles are as big as the spacing allows: sized off the gaps most
+     orders keep (the quarter-way gap, so two orders on one day do not
+     shrink everybody), with a paper edge so the ones that still touch
+     stay two marks. */
+  const xs = inv.map(x=> +X(x.date)).sort((a, b)=> a - b);
+  const gaps = xs.slice(1).map((x, i)=> x - xs[i]).sort((a, b)=> a - b);
+  const rMax = gaps.length ? Math.max(6, Math.min(22, gaps[Math.floor(gaps.length / 4)] * 0.55)) : 22;
+  const rad = (v)=> Math.max(3.5, Math.sqrt(v / peak) * rMax).toFixed(1);
+  /* Months on a long window; weeks on a short one, dated, so a
+     six-week relationship still has a scale to read. */
   const months = [];
-  const d0 = new Date(from + 'T00:00:00Z');
-  for(let m = 0; m <= 14; m++){
-    const iso = new Date(Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth() + m, 1)).toISOString().slice(0, 10);
-    if(iso > end) break;
-    if(iso < from) continue;
-    months.push(`<line class="cu-tl-tk" x1="${X(iso)}" x2="${X(iso)}" y1="${H - 26}" y2="${H - 20}"/><text class="cu-tl-m" x="${X(iso)}" y="${H - 6}">${esc(fmtShortDate(iso).replace(/^\d+\s*/, '').split(' ')[0])}</text>`);
+  const tick = (iso, label)=> months.push(`<line class="cu-tl-tk" x1="${X(iso)}" x2="${X(iso)}" y1="${H - 26}" y2="${H - 20}"/><text class="cu-tl-m" x="${X(iso)}" y="${H - 6}">${esc(label)}</text>`);
+  if(span <= 100){
+    for(let d = 0; d <= span; d += 7){
+      const iso = custAddDaysISO(from, d);
+      tick(iso, fmtShortDate(iso).replace(/\s*\d{4}$/, ''));
+    }
+  } else {
+    const d0 = new Date(from + 'T00:00:00Z');
+    for(let m = 0; m <= 14; m++){
+      const iso = new Date(Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth() + m, 1)).toISOString().slice(0, 10);
+      if(iso > end) break;
+      if(iso < from) continue;
+      tick(iso, fmtShortDate(iso).replace(/^\d+\s*/, '').split(' ')[0]);
+    }
   }
+  const arcMids = [];
   const arcs = inv.filter(x=> x.settledOn && x.days != null).map(x=>{
     const x1 = X(x.date), x2 = X(x.settledOn), mid = ((+x1 + +x2) / 2).toFixed(1);
-    return `<path class="cu-tl-arc" d="M${x1} ${OY + 10} Q${mid} ${OY + 70} ${x2} ${PY - 6}"/>
-      <text class="cu-tl-d" x="${mid}" y="${OY + 52}">${x.days}d</text>`;
+    /* The day count only where it does not sit on the last one's. */
+    const room = !arcMids.some(m=> Math.abs(m - mid) < 26);
+    if(room) arcMids.push(+mid);
+    return `<path class="cu-tl-arc" d="M${x1} ${OY + 10} Q${mid} ${OY + 70} ${x2} ${PY - 6}"><title>${esc(x.no)} paid in ${x.days} ${x.days === 1 ? 'day' : 'days'}</title></path>${
+      room ? `<text class="cu-tl-d" x="${mid}" y="${OY + 52}">${x.days}d</text>` : ''}`;
   }).join('');
   const tails = inv.filter(x=> x.due > 0.5).map(x=>
     `<line class="cu-tl-open ${x.ageDays > terms ? 'ow-bad' : 'ow-warn'}" x1="${X(x.date)}" x2="${X(today)}" y1="${OY}" y2="${OY}"/>`).join('');
@@ -62992,11 +63021,19 @@ function customerTimelineHTML(r){
     const cls = x.due > 0.5 ? (x.ageDays > terms ? 'ow-bad' : 'ow-warn') : '';
     return `<circle class="cu-tl-o ${cls}" cx="${X(x.date)}" cy="${OY}" r="${rad(x.total)}"><title>${esc(x.no)} · ${esc(fmtShortDate(x.date))} · ${f(x.total)} UGX${x.due > 0.5 ? ` · ${f(x.due)} still due, ${x.ageDays} days` : x.days != null ? ` · paid in ${x.days} days` : ''}</title></circle>`;
   }).join('');
-  /* Labels only where there is room: a label per order on a customer
-     who buys twice a week would be a black smear. */
-  const labelEvery = Math.max(1, Math.ceil(inv.length / 12));
-  const labels = inv.map((x, i)=> i % labelEvery ? '' :
-    `<text class="cu-tl-v" x="${X(x.date)}" y="${(OY - +rad(x.total) - 6).toFixed(1)}">${short(x.total)}</text>`).join('');
+  /* Labels only where there is room: the biggest orders first, on two
+     rows above the bubbles, and a label that would touch one already
+     placed is left to the bubble's tooltip. A label per order on a
+     customer who buys twice a week would be a black smear. */
+  const rows = [OY - rMax - 6, OY - rMax - 19];
+  const placedL = rows.map(()=> []);
+  const labels = inv.slice().sort((a, b)=> b.total - a.total).map(x=>{
+    const text = short(x.total), w = text.length * 6.8 + 6, cx = +X(x.date);
+    const row = rows.findIndex((y, i)=> !placedL[i].some(p=> cx - w / 2 < p.b && p.a < cx + w / 2));
+    if(row < 0) return '';
+    placedL[row].push({ a: cx - w / 2, b: cx + w / 2 });
+    return `<text class="cu-tl-v" x="${cx.toFixed(1)}" y="${rows[row].toFixed(1)}">${text}</text>`;
+  }).join('');
   const diamonds = pays.map(e=> {
     const x = X(e.date);
     return `<rect class="cu-tl-p" x="${(+x - 5).toFixed(1)}" y="${PY - 5}" width="10" height="10" transform="rotate(45 ${x} ${PY})"><title>Paid ${esc(fmtShortDate(e.date))} · ${f(Number(e.amount) || 0)} UGX</title></rect>`;

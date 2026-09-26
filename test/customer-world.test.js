@@ -187,4 +187,26 @@ const row = (id, o) => Object.assign({ id, name: id, c: { id, phone: '0772 000 0
   t.check(/customerRegisterRowHTML\(r, health\.get\(r\.id\)\)/.test(render), 'every row carries it');
 }
 
+/* ---------- the timeline fits the history it draws -------------------
+   Seen live: a customer whose ten orders all fell in the last five
+   weeks, drawn across the statement's six months -- every bubble and
+   every figure on top of the next in the last sixth of the chart. */
+{
+  const iso = (n) => { const d = new Date(TODAY + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - n); return d.toISOString().slice(0, 10); };
+  const rows = [36, 35, 33, 31, 29, 28, 27, 25, 20, 12].map((a, i) => ({ no: 'INV-' + i, date: iso(a), total: 400000 + i * 150000,
+    due: a === 12 ? 450000 : 0, ageDays: a === 12 ? 12 : null, settledOn: a === 12 ? null : iso(a - 1), days: a === 12 ? null : 1 }));
+  const tl = compileScope([
+    extractFunction(src, 'custAddDaysISO', 'index.html'),
+    extractFunction(src, 'customerTimelineHTML', 'index.html'),
+  ], Object.assign({}, env, { customerInvoiceStatementRows: () => rows.slice().reverse() }), ['customerTimelineHTML']);
+  const r = row('A', { c: { id: 'A', debtLog: [] }, stats: stats({ everyDays: null, last: iso(12) }) });
+  const html = tl.customerTimelineHTML(r);
+  t.check(!/2026-03-01 &rarr;/.test(html), 'a five-week customer is not drawn across six months');
+  const xs = [...html.matchAll(/<text class="cu-tl-v" x="([\d.]+)" y="([\d.]+)">([^<]+)</g)]
+    .map((m) => ({ x: +m[1], y: +m[2], w: m[3].length * 6.8 + 6 }));
+  const clash = xs.some((a, i) => xs.some((b, j) => j > i && a.y === b.y && Math.abs(a.x - b.x) < (a.w + b.w) / 2));
+  t.check(xs.length > 0 && !clash, `no two order figures overlap (${xs.length} drawn)`);
+  t.check((html.match(/<circle class="cu-tl-o/g) || []).length === rows.length, 'and every order is still drawn, labelled or not');
+}
+
 process.exit(t.done() ? 1 : 0);
