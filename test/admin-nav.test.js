@@ -86,7 +86,9 @@ const INDEX = railIndex();
 /* ---------- 1. nothing was lost ------------------------------------- */
 {
   const EVERY_TAB = [
-    'dashboard', 'quote', 'quote-saved', 'invoices', 'customers', 'agents', 'whatsapp',
+    /* WhatsApp is not in this list any more: it is the Chats view of
+       Messages. Section 2 below holds what that merge could lose. */
+    'dashboard', 'quote', 'quote-saved', 'invoices', 'customers', 'agents',
     'compare', 'sourcing', 'suppliers',
     /* Purchase invoices is NOT in this list, and that is deliberate. An
        order, the invoice it becomes and the bills it raises against its
@@ -267,13 +269,17 @@ const INDEX = railIndex();
     const lost = carried.filter((w) => !fu.keywords.includes(w));
     t.check(lost.length === 0,
       `Follow-ups carries the search words of the screen it absorbed${lost.length ? ' — lost ' + lost.join(', ') : ''}`);
-    /* NOT "broadcast". WhatsApp is the real answer for it, and the note
-       above the Follow-ups button already records this law for the word
-       "stock": claiming a word another screen owns buries that screen
-       for its own most obvious search. */
-    const wa = INDEX.find((x) => x.tab === 'whatsapp') || { keywords: '' };
-    t.check(!/broadcast/.test(fu.keywords) && /broadcast/.test(wa.keywords),
-      'and not "broadcast", which is WhatsApp\'s own most obvious search, and still its');
+    /* "broadcast" was held OFF this row while WhatsApp was a screen of
+       its own, because claiming a word another screen owns buries that
+       screen for its own most obvious search. WhatsApp is now the Chats
+       view of this screen, so the law turns round: its words must come
+       here, or a search for "whatsapp" or "broadcast" finds nothing at
+       all. And the old door still lands, on Chats. */
+    const waLost = ['whatsapp', 'broadcast', 'chat', 'inbox'].filter((w) => !fu.keywords.includes(w));
+    t.check(waLost.length === 0 && !INDEX.some((x) => x.tab === 'whatsapp') && !/id="tab-whatsapp"/.test(src),
+      `Messages carries WhatsApp's search words, and WhatsApp is not a destination of its own${waLost.length ? ' — lost ' + waLost.join(', ') : ''}`);
+    t.check(/if\(tab === 'whatsapp'\)\{ fupTab = 'chats'; return 'followups'; \}/.test(extractFunction(src, 'resolveTab', 'index.html')),
+      'and the old WhatsApp door lands on the Chats view');
     t.check(!INDEX.some((x) => x.tab === 'telling') && !/id="tab-telling"/.test(src),
       'Worth telling is not a destination any more, and has no section left behind');
     const alias = extractFunction(src, 'resolveTab', 'index.html');
