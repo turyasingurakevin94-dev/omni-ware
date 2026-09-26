@@ -676,8 +676,19 @@ const stockMove = (before, after, whenDays) => {
     'the tiles are the layer’s, drawn from one template rather than five copies of a box');
   eq((summary.match(/data-fupwhy=/g) || []).length, 1,
     'and every one of them is the filter, from that same template — the six chips under the search are gone');
-  eq((summary.match(/\$\{tile\(/g) || []).length, 5,
-    'and there are five of them — the queue, and then what the queue is made of');
+  /* SIX NOW. The five named the loop in the order it runs; the sixth is
+     the part of the loop the screen deliberately skips -- who has a
+     reason and is NOT being messaged, and until when. It was a panel in
+     the rail with names and no dates; it became a lane because the date
+     each hold lets go, and the one or two holds only a person can lift,
+     are work the owner plans around. The claim is unchanged: every tile
+     is a stage that can be pressed, and opens exactly what it counts --
+     Held back counts followUpHeldBack's list and opens that list. */
+  eq((summary.match(/\$\{tile\(/g) || []).length, 6,
+    'and there are six of them — the five stages of the loop, and who is deliberately held out of it');
+  t.check(/followUpHeldBack\(now, rows\)\.list/.test(summary)
+    && /lane === 'held'\) return fupHeldPanelHTML\(nowMs, fupHubRowsNow\(\)\)/.test(lane),
+    'and Held back counts the same list its lane opens');
   /* WHAT THE FIVE TILES NAME, AND WHY IT CHANGED.
 
      They used to name To message, Promised, Money, News and Worth a
@@ -699,7 +710,7 @@ const stockMove = (before, after, whenDays) => {
 
      The claim underneath is unchanged and is asserted right below: a
      tile that is pressable must open exactly what it counted. */
-  ['Waiting on you', 'To message', 'Came back', 'They promised', 'To post'].forEach((k) => {
+  ['Waiting on you', 'To message', 'Came back', 'They promised', 'To post', 'Held back'].forEach((k) => {
     t.check(summary.includes(k), `the strip names ${k.toLowerCase()} — a stage of the loop, each one work that can be done`);
   });
   t.check(/renderFollowUpQuietLine\(\)/.test(summary),

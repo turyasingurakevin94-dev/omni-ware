@@ -10947,25 +10947,31 @@
 
   /* ---- the client being worked ---- */
   .fup-work{display:flex;flex-direction:column;min-height:0;}
-  /* ---- THE QUEUE AND THE CLIENT, SIDE BY SIDE (desktop) ----
-     The queue keeps its list in view while one client is worked beside
-     it. Each row is two lines -- who and what about, then why -- and one
-     figure every row shares, days waiting, with a bar that reads down
-     the column: the longest wait is the longest bar. */
-  .fup-md{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:var(--ow-sp-12);align-items:start;}
-  .fup-md > .fup-work{position:sticky;top:var(--ow-sp-12);}
-  .fup-md .fup-work .ow-mq-l1{padding:var(--ow-sp-12) var(--ow-sp-12) 0;}
-  .fup-md .fup-work .ow-mq-l1 .fup-it,.fup-md .fup-work .ow-mq-l1 .fup-w-facts{padding-left:0;padding-right:0;}
-  .fup-md .fup-work .ow-mq-l2 > .ow-mq-hold{margin:var(--ow-sp-12) var(--ow-sp-12) 0;}
-  .fup-md .fup-w-head .btn{white-space:nowrap;}
-  .fup-queue.ow-mq .ow-q-r{grid-template-columns:minmax(0,1fr) 112px;
-    grid-template-areas:"who wt" "cps wt";row-gap:var(--ow-sp-4);padding:var(--ow-sp-8) var(--ow-sp-12);}
+  /* Six columns: who and why, then four readings, then the wait. The
+     readings are sized to what they draw and the name gives way first --
+     the stake is money, and money never truncates. */
+  .fup-queue.ow-mq .ow-q-r{grid-template-columns:minmax(0,1fr) 150px 112px 96px 76px 84px;
+    grid-template-areas:"who sig stk odd win wt" "cps sig stk odd win wt";
+    row-gap:var(--ow-sp-4);column-gap:var(--ow-sp-12);padding:var(--ow-sp-8) var(--ow-sp-12);}
   .fup-queue.ow-mq .ow-q-r .ow-mq-who{grid-area:who;}
   .fup-queue.ow-mq .ow-q-r .ow-mq-cps{grid-area:cps;padding-left:38px;}
+  .fup-queue.ow-mq .ow-q-r .ow-mi-sig{grid-area:sig;}
+  .fup-queue.ow-mq .ow-q-r .ow-mi-stk{grid-area:stk;}
+  .fup-queue.ow-mq .ow-q-r .ow-mi-odd{grid-area:odd;}
+  .fup-queue.ow-mq .ow-q-r .ow-mi-win{grid-area:win;}
   .fup-queue.ow-mq .ow-q-r .fup-wt{grid-area:wt;}
   .fup-queue.ow-mq .ow-q.ow-open .ow-q-r{background:var(--ow-paper-2);outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
-  .fup-queue .ow-mq-h{grid-template-columns:minmax(0,1fr) 112px;}
+  .fup-queue .ow-mq-h{grid-template-columns:minmax(0,1fr) 150px 112px 96px 76px 84px;column-gap:var(--ow-sp-12);}
   .fup-queue .ow-mq-h .ow-mq-hc:nth-child(2){display:none;}
+  @media (max-width:1180px){
+    .fup-queue.ow-mq .ow-q-r{grid-template-columns:minmax(0,1fr) 112px 84px;
+      grid-template-areas:"who stk wt" "cps stk wt";}
+    .fup-queue.ow-mq .ow-q-r .ow-mi-sig,.fup-queue.ow-mq .ow-q-r .ow-mi-odd,
+    .fup-queue.ow-mq .ow-q-r .ow-mi-win{display:none;}
+    .fup-queue .ow-mq-h{grid-template-columns:minmax(0,1fr) 112px 84px;}
+    .fup-queue .ow-mq-h .ow-mq-hc:nth-child(3),.fup-queue .ow-mq-h .ow-mq-hc:nth-child(5),
+    .fup-queue .ow-mq-h .ow-mq-hc:nth-child(6){display:none;}
+  }
   .fup-wt{display:flex;flex-direction:column;align-items:flex-end;gap:3px;min-width:0;}
   /* The basis carries a debtor's balance, and money never truncates:
      it wraps before it is ever cut. */
@@ -11200,6 +11206,8 @@
   .fup-dot-all{background:var(--ow-steel-950);}
   .fup-dot-back{background:var(--ow-verdigris);}
   .fup-dot-post{background:none;outline:2px solid var(--ow-verdigris);outline-offset:-2px;}
+  /* Held back is a pause, and draws as one: a hollow ring. */
+  .fup-dot-held{background:none;outline:2px solid var(--ow-steel-400);outline-offset:-2px;}
   .fup-strip.fup-lanes .ow-mt.ow-on .fup-dot-all{background:var(--ow-paper);}
   .fup-lanebar .ow-mq-quiet{margin:0;padding:0;background:none;border:0;gap:var(--ow-sp-6);}
   .fup-lanebar .ow-mq-qt,.fup-lanebar .ow-mq-qs{font-weight:var(--ow-fw-400);color:var(--ow-ink-600);}
@@ -22092,6 +22100,317 @@
     font-variant-numeric:tabular-nums;font-size:15px;font-weight:var(--ow-fw-600);
     letter-spacing:-.02em;}
 
+
+  /* ==== THE INTELLIGENCE CENTER: the readings, drawn ====
+     Every chart on the Messages console is positioned HTML on the
+     layer's tokens: category hues say which part of the business (Money
+     sky, goods verdigris, a relationship oxide, posts plum), state hues
+     say how it is doing, and nothing else is painted. */
+  .ow-mi-band{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) minmax(0,.8fr);
+    gap:var(--ow-sp-12);margin:0 0 var(--ow-sp-12);}
+  .ow-mi-in{padding:var(--ow-sp-10) var(--ow-sp-12);}
+  .ow-mi-sts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));}
+  .ow-mi-st{display:flex;flex-direction:column;gap:var(--ow-sp-4);min-width:0;
+    padding:var(--ow-sp-10) var(--ow-sp-12);border-left:1px solid var(--ow-rule-soft);}
+  .ow-mi-st:first-child{border-left:0;}
+  .ow-mi-l{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.09em;
+    text-transform:uppercase;color:var(--ow-ink-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+  .ow-mi-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-20);font-weight:var(--ow-fw-600);letter-spacing:-.02em;line-height:1.1;}
+  .ow-mi-v.ow-good{color:var(--ow-verdigris);}
+  .ow-mi-s{font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.35;}
+  .ow-mi-s .ow-fig{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  .ow-mi-bar{display:block;height:6px;border-radius:var(--ow-r-pill);background:var(--ow-rule-soft);overflow:hidden;}
+  .ow-mi-bf{display:block;height:100%;border-radius:var(--ow-r-pill);background:var(--ow-ink-900);}
+  .ow-mi-bf.ow-good{background:var(--ow-verdigris);}
+  .ow-mi-stack{display:flex;gap:2px;height:12px;border-radius:var(--ow-r-sm);overflow:hidden;}
+  .ow-mi-seg{display:block;height:100%;min-width:4px;}
+  .ow-mi-owed{background:var(--ow-sky);}
+  .ow-mi-prom{background:var(--ow-sky-soft);border:1px solid var(--ow-sky);box-sizing:border-box;}
+  .ow-mi-goods{background:var(--ow-verdigris);}
+  .ow-mi-rel{background:var(--ow-oxide-deep);}
+  .ow-mi-keys{display:flex;flex-direction:column;gap:var(--ow-sp-4);margin-top:var(--ow-sp-10);}
+  .ow-mi-k{display:flex;align-items:center;gap:var(--ow-sp-8);font-size:var(--ow-t-12);}
+  .ow-mi-kl{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-mi-sw{display:block;width:10px;height:10px;border-radius:var(--ow-r-pill);flex:none;}
+  .ow-mi-dots{display:flex;flex-wrap:wrap;gap:var(--ow-sp-6);}
+  .ow-mi-dot{display:block;width:14px;height:14px;border-radius:50%;box-sizing:border-box;}
+  .ow-mi-dot-on{background:var(--ow-verdigris);}
+  .ow-mi-dot-off{border:2px solid var(--ow-steel-400);}
+  .ow-mi-dot-q{border:2px dashed var(--ow-steel-400);}
+
+  /* ---- a row's four readings ---- */
+  .ow-mi-sig{position:relative;display:block;height:28px;min-width:0;}
+  .ow-mi-ax{position:absolute;left:0;right:0;top:19px;height:2px;background:var(--ow-steel-100);}
+  .ow-mi-terms{position:absolute;top:4px;bottom:3px;width:0;border-left:1px dashed var(--ow-steel-400);}
+  .ow-mi-ag{position:absolute;top:20px;width:var(--d);height:var(--d);margin:calc(var(--d) / -2) 0 0 calc(var(--d) / -2);
+    border-radius:50%;background:var(--ow-steel-400);}
+  .ow-mi-ag.ow-warn{background:var(--ow-amber);}
+  .ow-mi-ag.ow-bad{background:var(--ow-crimson);}
+  .ow-mi-sn{position:absolute;left:0;top:0;font-size:var(--ow-t-11);color:var(--ow-ink-600);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;min-width:0;}
+  .ow-mi-sn.ow-mi-sr{left:auto;right:0;}
+  .ow-mi-sn.ow-good{color:var(--ow-verdigris);font-weight:var(--ow-fw-600);}
+  .ow-mi-sn.ow-warn{color:var(--ow-amber);font-weight:var(--ow-fw-600);}
+  .ow-mi-sn.ow-bad{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
+  .ow-mi-sig-2 .ow-mi-sn{top:2px;}
+  .ow-mi-pt{position:absolute;top:20px;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;box-sizing:border-box;}
+  .ow-mi-pt-o{border:2px solid var(--ow-ink-900);background:var(--ow-paper);}
+  .ow-mi-pt.ow-good{background:var(--ow-verdigris);}
+  .ow-mi-step{position:absolute;left:0;right:44px;top:6px;height:18px;display:flex;}
+  .ow-mi-sti{flex:1 1 0;border-top:2px solid currentColor;}
+  .ow-mi-step.ow-good .ow-mi-sti:last-child{margin-top:12px;}
+  .ow-mi-step.ow-warn .ow-mi-sti:first-child{margin-top:12px;}
+  .ow-mi-step.ow-good{color:var(--ow-verdigris);}
+  .ow-mi-step.ow-warn{color:var(--ow-amber);}
+  .ow-mi-pips{display:flex;align-items:center;gap:3px;}
+  .ow-mi-pip{display:block;flex:1 1 0;height:8px;border-radius:var(--ow-r-pill);background:var(--ow-rule-soft);}
+  .ow-mi-pip.ow-on{background:var(--ow-verdigris);}
+  .ow-mi-gap{display:flex;flex-direction:column;gap:3px;justify-content:center;}
+  .ow-mi-gap .ow-mi-sn{position:static;}
+  .ow-mi-gr{display:block;height:5px;}
+  .ow-mi-gu,.ow-mi-gn{display:block;height:100%;border-radius:var(--ow-r-pill);background:var(--ow-steel-400);}
+  .ow-mi-gn{background:var(--ow-ink-900);}
+  .ow-mi-gn.ow-warn{background:var(--ow-amber);}
+  .ow-mi-stk{display:flex;flex-direction:column;align-items:flex-end;gap:1px;min-width:0;text-align:right;}
+  .ow-mi-stk .ow-fig{font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);white-space:nowrap;}
+  .ow-mi-nv{font-size:var(--ow-t-13);color:var(--ow-ink-600);}
+  .ow-mi-odd{display:flex;flex-direction:column;gap:3px;min-width:0;}
+  .ow-mi-segs{display:flex;gap:2px;}
+  .ow-mi-sgi{display:block;width:10px;height:8px;border-radius:var(--ow-r-pill);background:var(--ow-rule);}
+  .ow-mi-sgi.ow-on{background:var(--ow-ink-900);}
+  .ow-mi-on{font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;}
+  .ow-mi-on .ow-fig{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  .ow-mi-win{display:flex;align-items:center;gap:var(--ow-sp-6);font-size:var(--ow-t-12);
+    color:var(--ow-ink-600);white-space:nowrap;}
+  .ow-mi-win.ow-good{color:var(--ow-verdigris);font-weight:var(--ow-fw-600);}
+  .ow-mi-win-q{color:var(--ow-ink-400);}
+  .ow-mi-wd{display:block;width:8px;height:8px;border-radius:50%;background:var(--ow-verdigris);flex:none;}
+  .ow-mi-wd-o{background:none;border:1.5px solid var(--ow-steel-400);box-sizing:border-box;}
+  .ow-mi-cardl{display:none;}
+
+  /* ---- the dossier inside an opened row ---- */
+  .ow-mi-dos{display:flex;flex-direction:column;gap:var(--ow-sp-10);margin:0 0 var(--ow-sp-12);}
+  .ow-mi-card{background:var(--ow-paper);border:1px solid var(--ow-steel-100);border-radius:var(--ow-r);
+    padding:var(--ow-sp-10) var(--ow-sp-12);}
+  .ow-mi-ch{display:flex;align-items:baseline;gap:var(--ow-sp-8);flex-wrap:wrap;}
+  .ow-mi-ch .ow-mq-l{flex:1 1 auto;margin:0;}
+  .ow-mi-ch > .ow-fig{font-size:var(--ow-t-16);font-weight:var(--ow-fw-600);}
+  .ow-mi-age{position:relative;height:74px;margin:var(--ow-sp-8) 0 var(--ow-sp-4);}
+  .ow-mi-age .ow-mi-ax{top:44px;}
+  .ow-mi-age .ow-mi-terms{top:6px;bottom:24px;}
+  .ow-mi-past{position:absolute;right:0;top:6px;bottom:24px;background:var(--ow-amber-faint);}
+  .ow-mi-agp{position:absolute;top:0;bottom:24px;width:0;}
+  .ow-mi-agp .ow-mi-ag{top:45px;}
+  .ow-mi-agl{position:absolute;top:2px;left:0;transform:translateX(-50%);font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;}
+  .ow-mi-tk{position:absolute;bottom:0;transform:translateX(-50%);font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-mi-tk:first-of-type{transform:none;}
+  .ow-mi-lg{display:flex;align-items:center;flex-wrap:wrap;gap:var(--ow-sp-4) var(--ow-sp-8);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-mi-lg .ow-mi-ev{position:static;margin:0 -4px 0 0;}
+  .ow-mi-tl{position:relative;height:44px;margin-top:var(--ow-sp-8);}
+  .ow-mi-tl .ow-mi-ax{top:24px;}
+  .ow-mi-ev{position:absolute;display:inline-block;flex:none;box-sizing:border-box;}
+  .ow-mi-ev-b{bottom:20px;width:8px;height:var(--h,10px);margin-left:-4px;background:var(--ow-ink-900);}
+  .ow-mi-lg .ow-mi-ev-b{height:10px;}
+  .ow-mi-ev-p{top:30px;width:9px;height:9px;margin-left:-4.5px;border-radius:50%;background:var(--ow-verdigris);}
+  .ow-mi-ev-t{top:32px;width:9px;height:9px;margin-left:-4.5px;border-radius:50%;border:1.5px solid var(--ow-sky);background:var(--ow-paper);}
+  .ow-mi-ev-w{top:32px;width:9px;height:9px;margin-left:-4.5px;border-radius:50%;background:var(--ow-sky);}
+  .ow-mi-ev-n{top:0;width:10px;height:10px;margin-left:-5px;transform:rotate(45deg);background:var(--ow-steel-400);}
+  .ow-mi-ev-n.ow-bad{background:var(--ow-crimson);}
+  .ow-mi-ev-n.ow-good{background:var(--ow-verdigris);}
+  .ow-mi-tls{display:flex;justify-content:space-between;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-mi-figs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--ow-paper);
+    border:1px solid var(--ow-steel-100);border-radius:var(--ow-r);}
+  .ow-mi-fc{display:flex;flex-direction:column;gap:var(--ow-sp-4);min-width:0;padding:var(--ow-sp-8) var(--ow-sp-10);
+    border-left:1px solid var(--ow-rule-soft);}
+  .ow-mi-fc:first-child{border-left:0;}
+  .ow-mi-fv{font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);white-space:nowrap;display:flex;align-items:center;gap:var(--ow-sp-6);}
+  .ow-mi-rec{display:inline-flex;gap:3px;}
+  .ow-mi-rdt{display:block;width:9px;height:9px;border-radius:50%;}
+  .ow-mi-rdt.ow-good{background:var(--ow-verdigris);}
+  .ow-mi-rdt.ow-bad{background:var(--ow-crimson);}
+  @media (max-width:1180px){
+    .ow-mi-band{grid-template-columns:minmax(0,1fr) minmax(0,1fr);}
+    .ow-mi-loop{grid-column:1 / -1;}
+  }
+  @media (max-width:820px){
+    /* THE PHONE KEEPS THE LOOP AND NOTHING ELSE ABOVE THE WORK. The money
+       and the reach are read at a desk; in the yard they pushed the first
+       person a full screen down. The loop shrinks to four figures in one
+       row, and the money and the reach wait on the desktop. */
+    .ow-mi-band{grid-template-columns:minmax(0,1fr);gap:var(--ow-sp-10);}
+    .ow-mi-stake,.ow-mi-reach{display:none;}
+    .ow-mi-loop .ow-pan-h{display:none;}
+    .ow-mi-st{padding:var(--ow-sp-8) var(--ow-sp-8);gap:2px;}
+    .ow-mi-st .ow-mi-s{display:none;}
+    .ow-mi-st .ow-mi-l{letter-spacing:.04em;}
+    .ow-mi-cardl{display:flex;align-items:center;justify-content:space-between;gap:var(--ow-sp-12);}
+    .ow-mi-cardl .ow-mi-sig{flex:1 1 auto;max-width:180px;}
+    .ow-mi-figs{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .ow-mi-fc:nth-child(3){border-left:0;}
+    .ow-mi-fc:nth-child(n+3){border-top:1px solid var(--ow-rule-soft);}
+  }
+
+
+  /* ---- promise states, one vocabulary for the week bars, the calendar
+     and the ladder: kept good, broken bad, today caution, ahead Money ---- */
+  .ow-mi-p-kept{background:var(--ow-verdigris);}
+  .ow-mi-p-broken{background:var(--ow-crimson);}
+  .ow-mi-p-due{background:var(--ow-amber);}
+  .ow-mi-p-waiting{background:var(--ow-sky-soft);border:1px solid var(--ow-sky);box-sizing:border-box;}
+  .ow-mi-p-none{background:var(--ow-rule-soft);height:3px;}
+  .ow-mi-wk{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:var(--ow-sp-4);margin-bottom:var(--ow-sp-8);}
+  .ow-mi-wkd{display:flex;flex-direction:column;align-items:center;gap:var(--ow-sp-4);border-radius:var(--ow-r-sm);padding-top:var(--ow-sp-4);}
+  .ow-mi-wkd.ow-on{background:var(--ow-amber-faint);}
+  .ow-mi-wks{display:flex;flex-direction:column-reverse;justify-content:flex-start;align-items:center;gap:2px;height:64px;width:100%;}
+  .ow-mi-wkb{display:block;width:14px;min-height:3px;border-radius:var(--ow-r-pill);}
+  .ow-mi-wkl{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-mi-wkd.ow-on .ow-mi-wkl{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  .ow-mi-hg{display:grid;grid-template-columns:56px minmax(0,1fr) auto;align-items:center;gap:var(--ow-sp-8);
+    padding:var(--ow-sp-6) var(--ow-sp-12);font-size:var(--ow-t-12);}
+  .ow-mi-hgb{display:block;height:6px;}
+  .ow-mi-hgf{display:block;height:100%;border-radius:var(--ow-r-pill);background:var(--ow-steel-400);}
+  .ow-mi-hgf.ow-warn{background:var(--ow-amber);}
+  .ow-mi-hgl{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+  /* ---- the bands over a lane ---- */
+  .ow-mi-lb{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:var(--ow-sp-12);margin-bottom:var(--ow-sp-12);}
+  .ow-mi-hist{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:var(--ow-sp-6);align-items:end;height:84px;}
+  .ow-mi-hc{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:var(--ow-sp-4);height:100%;}
+  .ow-mi-hcb{display:block;width:100%;min-height:2px;border-radius:var(--ow-r-sm);background:var(--ow-ink-900);}
+  .ow-mi-hcb.ow-warn{background:var(--ow-amber);}
+  .ow-mi-hcl{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-mi-wc{display:grid;grid-template-columns:minmax(0,1fr) 80px 36px;align-items:center;gap:var(--ow-sp-8);
+    padding:var(--ow-sp-8) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);font-size:var(--ow-t-12);}
+  .ow-mi-wc:first-of-type{border-top:0;}
+  .ow-mi-wcn{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-mi-wcb{display:block;height:6px;border-radius:var(--ow-r-pill);background:var(--ow-rule-soft);overflow:hidden;}
+  .ow-mi-wcf{display:block;height:100%;background:var(--ow-verdigris);}
+  .ow-mi-wcf.ow-warn{background:var(--ow-amber);}
+  .ow-mi-wc .ow-fig{text-align:right;}
+  .ow-mi-rd{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));margin-bottom:var(--ow-sp-12);}
+  .ow-mi-rdc{display:flex;flex-direction:column;gap:var(--ow-sp-4);padding:var(--ow-sp-10) var(--ow-sp-12);border-left:1px solid var(--ow-rule-soft);min-width:0;}
+  .ow-mi-rdc:first-child{border-left:0;}
+  .ow-mi-v.ow-warn{color:var(--ow-amber);}
+  .ow-mi-v.ow-bad{color:var(--ow-crimson);}
+  .ow-mi-zero .ow-mi-v,.ow-mi-zero .ow-mi-kl,.ow-mi-zero .ow-fig{color:var(--ow-ink-400);}
+  .ow-mi-reads{margin-bottom:var(--ow-sp-12);padding-bottom:var(--ow-sp-10);border-bottom:1px dashed var(--ow-rule);}
+  .ow-mi-ok{color:var(--ow-verdigris);}
+  .ow-mi-no{color:var(--ow-amber-ink);}
+  .ow-mi-cal{display:grid;grid-template-columns:repeat(15,minmax(0,1fr));gap:var(--ow-sp-4);margin-bottom:var(--ow-sp-8);}
+  .ow-mi-cd{display:flex;flex-direction:column;align-items:center;gap:var(--ow-sp-4);min-width:0;padding-top:var(--ow-sp-4);border-radius:var(--ow-r-sm);}
+  .ow-mi-cd.ow-on{background:var(--ow-amber-faint);}
+  .ow-mi-cv{height:14px;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;}
+  .ow-mi-cs{display:flex;flex-direction:column-reverse;align-items:center;gap:2px;height:96px;width:100%;
+    border-bottom:1px solid var(--ow-steel-100);}
+  .ow-mi-cl{font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;min-width:0;}
+  .ow-mi-cd.ow-on .ow-mi-cl{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  .ow-mi-grid{display:flex;flex-wrap:wrap;gap:3px;margin-top:var(--ow-sp-10);}
+  .ow-mi-gc{display:block;width:14px;height:14px;border-radius:var(--ow-r-sm);background:var(--ow-rule-soft);}
+  .ow-mi-gc.ow-good{background:var(--ow-verdigris);}
+  .ow-mi-gc.ow-bad{background:var(--ow-crimson);}
+  .ow-mi-slots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--ow-sp-8);}
+  .ow-mi-slot{display:flex;flex-direction:column;gap:var(--ow-sp-4);min-width:0;padding:var(--ow-sp-8) var(--ow-sp-10);
+    border:1px dashed var(--ow-steel-400);border-radius:var(--ow-r);}
+  .ow-mi-slot.ow-on{border-style:solid;border-color:var(--ow-plum-soft);background:var(--ow-plum-soft);}
+  .ow-mi-slot.ow-mi-next{border:1.5px solid var(--ow-plum);}
+  .ow-mi-sn2{font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-mi-pws{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:var(--ow-sp-6);}
+  .ow-mi-pw{display:flex;flex-direction:column;align-items:stretch;gap:3px;padding:var(--ow-sp-4);border-radius:var(--ow-r-sm);}
+  .ow-mi-pw.ow-on{background:var(--ow-paper-2);}
+  .ow-mi-pwcs{display:flex;flex-direction:column;gap:3px;}
+  .ow-mi-pwc{display:block;height:10px;border-radius:var(--ow-r-pill);background:var(--ow-rule-soft);}
+  .ow-mi-pwc.ow-on{background:var(--ow-plum);}
+  .ow-mi-pwl{text-align:center;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+
+  /* ---- held back: a row per hold, a bar to the day it lets go ---- */
+  .ow-mi-hbar{display:flex;gap:3px;height:28px;border-radius:var(--ow-r-sm);overflow:hidden;}
+  .ow-mi-hs{display:flex;align-items:center;gap:var(--ow-sp-4);min-width:0;padding:0 var(--ow-sp-8);
+    background:var(--ow-rule-soft);color:var(--ow-ink-900);font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ow-mi-hs .ow-fig{color:inherit;}
+  .ow-mi-hs.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .ow-mi-hh{display:flex;align-items:center;gap:var(--ow-sp-10);padding:var(--ow-sp-6) var(--ow-sp-12);
+    background:var(--ow-paper-2);border-top:1px solid var(--ow-steel-100);border-bottom:1px solid var(--ow-rule-soft);
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
+  .ow-mi-hh.ow-warn{color:var(--ow-amber-ink);background:var(--ow-amber-faint);}
+  .ow-mi-hh .ow-pan-n{letter-spacing:0;text-transform:none;font-weight:var(--ow-fw-400);}
+  .ow-mi-hks{position:relative;flex:none;width:calc(100% - 520px);margin-left:auto;margin-right:220px;height:14px;}
+  .ow-mi-hk{position:absolute;top:0;transform:translateX(-50%);letter-spacing:0;text-transform:none;font-weight:var(--ow-fw-400);white-space:nowrap;}
+  .ow-mi-hk:first-child{transform:none;}
+  .ow-mi-hr{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr) 120px;align-items:center;gap:var(--ow-sp-4) var(--ow-sp-16);
+    padding:var(--ow-sp-8) var(--ow-sp-12);border-bottom:1px solid var(--ow-rule-soft);}
+  .ow-mi-hw{min-width:0;}
+  .ow-mi-ht{position:relative;display:block;height:12px;border-radius:var(--ow-r-pill);background:var(--ow-rule-soft);}
+  .ow-mi-htb{display:block;height:100%;border-radius:var(--ow-r-pill);background:var(--ow-steel-400);}
+  .ow-mi-htb.ow-mi-htw{background:repeating-linear-gradient(135deg,var(--ow-amber-soft) 0 6px,var(--ow-amber-faint) 6px 12px);}
+  .ow-mi-htr{position:absolute;top:-3px;bottom:-3px;width:3px;margin-left:-1.5px;border-radius:var(--ow-r-pill);background:var(--ow-ink-900);}
+  .ow-mi-hon{display:flex;flex-direction:column;align-items:flex-end;text-align:right;}
+  .ow-mi-hon .ow-fig{font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);}
+  .ow-mi-hwt{font-size:var(--ow-t-12);color:var(--ow-amber-ink);}
+  .ow-mi-ha{grid-column:1 / -1;}
+
+  /* ---- Intelligence ---- */
+  .ow-mi-strip{margin-bottom:var(--ow-sp-12);grid-template-columns:repeat(6,minmax(0,1fr));}
+  .ow-mt-v.ow-good{color:var(--ow-verdigris);}
+  .ow-mi-finds{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--ow-sp-12);margin-bottom:var(--ow-sp-12);}
+  .ow-mi-find{display:flex;flex-direction:column;align-items:flex-start;gap:var(--ow-sp-8);padding:var(--ow-sp-12);}
+  .ow-mi-fgo{margin-top:auto;}
+  .ow-mi-ft{margin:0;font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);line-height:1.35;}
+  .ow-mi-fb{display:grid;grid-template-columns:110px minmax(0,1fr) 40px;align-items:center;gap:var(--ow-sp-8);width:100%;font-size:var(--ow-t-12);}
+  .ow-mi-fb .ow-fig{text-align:right;}
+  .ow-cp.ow-mi-c-goods{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .ow-cp.ow-mi-c-money{background:var(--ow-sky-soft);color:var(--ow-sky);}
+  .ow-cp.ow-mi-c-ins{background:var(--ow-plum-soft);color:var(--ow-plum);}
+  .ow-cp.ow-mi-c-setup{background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+  .ow-mi-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--ow-sp-12);margin-bottom:var(--ow-sp-12);}
+  .ow-mi-rr,.ow-mi-lad{display:grid;grid-template-columns:150px minmax(0,1fr) 64px 56px;align-items:center;gap:var(--ow-sp-8);
+    padding:var(--ow-sp-6) 0;font-size:var(--ow-t-12);}
+  .ow-mi-lad{grid-template-columns:150px minmax(0,1fr) 40px;}
+  .ow-mi-rr .ow-fig,.ow-mi-lad .ow-fig{text-align:right;font-weight:var(--ow-fw-600);}
+  .ow-mi-bar-l{height:12px;}
+  .ow-mi-on.ow-warn{color:var(--ow-amber);font-weight:var(--ow-fw-600);text-align:right;}
+  .ow-mi-heat{display:grid;grid-template-columns:32px repeat(12,minmax(0,1fr));gap:3px;align-items:center;}
+  .ow-mi-hx{display:block;height:18px;border-radius:var(--ow-r-sm);}
+  .ow-mi-hl,.ow-mi-hh2{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-mi-hh2{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;}
+  .ow-mi-h0{background:var(--ow-rule-soft);}
+  .ow-mi-h1{background:var(--ow-plum-soft);}
+  .ow-mi-h2{background:var(--ow-plum);opacity:.4;}
+  .ow-mi-h3{background:var(--ow-plum);opacity:.7;}
+  .ow-mi-h4{background:var(--ow-plum);}
+  .ow-mi-rule{position:relative;height:14px;border-radius:var(--ow-r-pill);background:var(--ow-sky-soft);margin:var(--ow-sp-6) 0;}
+  .ow-mi-rq{position:absolute;left:0;top:0;bottom:0;border-radius:var(--ow-r-pill);background:var(--ow-rule);}
+  .ow-mi-ra,.ow-mi-rn{position:absolute;top:-4px;width:18px;height:18px;margin-left:-9px;border-radius:50%;
+    background:var(--ow-paper);border:2px solid var(--ow-steel-950);box-sizing:border-box;}
+  .ow-mi-rt{position:absolute;top:3px;width:4px;height:8px;margin-left:-2px;border-radius:var(--ow-r-pill);background:var(--ow-sky);}
+  .ow-mi-rls{display:flex;justify-content:space-between;gap:var(--ow-sp-12);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  @media (max-width:1180px){
+    .ow-mi-strip{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .ow-mi-finds{grid-template-columns:minmax(0,1fr);}
+    .ow-mi-two,.ow-mi-lb{grid-template-columns:minmax(0,1fr);}
+    .ow-mi-hks{display:none;}
+  }
+  @media (max-width:820px){
+    .ow-mi-strip{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .ow-mi-rd{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .ow-mi-rdc:nth-child(4){border-left:0;}
+    .ow-mi-rdc:nth-child(n+4){border-top:1px solid var(--ow-rule-soft);}
+    .ow-mi-cal{grid-template-columns:repeat(8,minmax(0,1fr));}
+    .ow-mi-cd:nth-child(-n+7){display:none;}
+    .ow-mi-slots{grid-template-columns:minmax(0,1fr);}
+    .ow-mi-hr{grid-template-columns:minmax(0,1fr) 110px;}
+    .ow-mi-hh .ow-pan-n{display:none;}
+    .ow-mi-hbar{flex-direction:column;height:auto;gap:2px;}
+    .ow-mi-hs{flex:none !important;padding:var(--ow-sp-4) var(--ow-sp-8);}
+    .ow-mi-ht{grid-column:1 / -1;grid-row:2;}
+    .ow-mi-rr,.ow-mi-lad{grid-template-columns:110px minmax(0,1fr) 56px;}
+    .ow-mi-rr .ow-mi-on:last-child{display:none;}
+    .ow-mi-heat{grid-template-columns:28px repeat(12,minmax(0,1fr));gap:2px;}
+  }
+
   /* ==== THE PHONE IS ITS OWN DESIGN, NOT THIS REFLOWED ====
      The table stops being a table: a row becomes a card, the whole card
      is the tap, and the expansion's two columns become one. Nothing is
@@ -23630,7 +23949,7 @@
              rather than dropped, and a failure must name itself. So the
              whole argument is here, and what stays on the surface beside
              each figure is one short line. -->
-        <p class="ow-ph-help">Every client with a reason to hear from you, in one queue &mdash; the five tiles above name the reasons, and pressing one shows only those clients. One reason each, the dearest first, so nobody is listed twice. One message per client, however many things it covers, written from their own records for you to change and send. Ring them, take a payment, write down a day they promised, add to their list &mdash; all from here. The app never sends anything by itself.</p>
+        <p class="ow-ph-help">Every client with a reason to hear from you, in one queue &mdash; the six lanes above are the stages of the loop, and pressing one opens that stage. The band under them is the day read whole: what is owed a word and what came of it, the money riding on it, and who can be written to free. On each row, <b>Signal</b> draws the reason, <b>At stake</b> is money the books stand behind (owed, a basket they sized at today&rsquo;s price, or a usual month) and says &ldquo;not valued&rdquo; otherwise, <b>Odds</b> is how often that reason has been followed by a sale within a fortnight &mdash; shown only after enough tellings to mean something &mdash; and <b>Window</b> is whether their free WhatsApp reply window is open. One reason each, the dearest first, so nobody is listed twice. One message per client, however many things it covers, written from their own records for you to change and send. Ring them, take a payment, write down a day they promised, add to their list &mdash; all from here. The app never sends anything by itself.</p>
         <p class="ow-ph-help"><b>Money</b> is who is past your terms, worst-aged first, each with the demand written from their own invoices &mdash; and those invoices on their card, adding to the balance, so the arithmetic is checked before it goes. Nobody is asked inside the grace period, nobody twice inside the rest period, and a balance that does not agree with its own history is held back for checking rather than asked for a figure the shop cannot explain. Both rules are fields in this header while that tile is pressed. This queue is only who is past your terms today; what the whole book comes to, and how much of it is old, is <b>Debtors</b>, which owns that reading &mdash; a total worked out over this list would describe a slice of the shop rather than the shop.</p>
         <p class="ow-ph-help"><b>Held back</b> is who is deliberately not being messaged today: anyone told inside the last fortnight, chased in the last week, past your terms, or with no number on file. Somebody you are chasing for money does not also get a picture of cement &mdash; they get the statement. They are named rather than dropped, and a client already in the queue carries their hold on their own card. A debtor who named a day, or who was asked too recently, carries the two acts that conversation needs on their row. Something worth telling goes as a <b>picture</b> built from their own dealings, one per client per fortnight; look at it before you send.</p>
         <p class="ow-ph-help"><b>Whether any of it works.</b> Bought within a fortnight is not proof the message did it &mdash; somebody due cement would have bought cement anyway. It is the only measure the books can honestly give, and a reason that never converts sinks down the ranking on its own. Tellings about goods still being sourced are left out: there is nothing on the shelf to buy yet. Money is not counted and cannot be &mdash; a chase note is dropped the moment the client owes nothing, which is exactly when the chase worked, so any rate would flatter you. The rules on <b>Register</b> are the whole algorithm: no model, and a site stage is asked once, goes stale by itself, and is set on the client’s own record.</p>
@@ -23642,7 +23961,8 @@
              IS the history and the score MEASURES it, so they share one
              view: the table, and the 304px rail beside it. -->
         <div class="ow-seg fup-tabs" id="fup_tabs">
-          <button type="button" class="ow-seg-b ow-on" data-fuptab="contact">Work<span class="ow-seg-n" id="fupSegContact"></span></button>
+          <button type="button" class="ow-seg-b ow-on" data-fuptab="contact">Today<span class="ow-seg-n" id="fupSegContact"></span></button>
+          <button type="button" class="ow-seg-b" data-fuptab="intel">Intelligence</button>
           <button type="button" class="ow-seg-b" data-fuptab="all">Register<span class="ow-seg-n" id="fupSegAll"></span></button>
         </div>
         <!-- The rules this screen turns on, in the header beside the
@@ -23686,11 +24006,18 @@
            is no second pane holding a copy of the draft, because two
            places showing one draft is how they come to disagree. -->
       <div id="fup_contact_pane">
+        <!-- THE DAY'S BAND: the loop, the money riding on it and who can
+             be reached for nothing, over every lane so it never moves. -->
+        <div id="fupBand"></div>
         <div class="ow-grid">
           <div id="fup_contact_list"></div>
           <aside class="ow-side" id="fup_side"></aside>
         </div>
       </div>
+      <!-- INTELLIGENCE: what the whole record of asking and telling came
+           to. Its own view because it is read weekly, not worked daily --
+           and nothing on it is an act, so it carries no accent. -->
+      <div id="fup_intel_pane" style="display:none;"></div>
       <div id="fup_all_pane" style="display:none;">
         <div class="ow-grid">
           <div id="fup_all_list"></div>
@@ -108657,8 +108984,9 @@ function followUpHeldBack(nowMs, rows){
      no card of theirs to put them on. */
   const chase = fupChaseNow();
   chase.promised.forEach(r=> add(r.id, r.name, `said ${fmtShortDate(r.promise.promisedOn)}`, 'promised',
-    {debt: r.debt, promiseId: r.promise.id, brokenPromises: r.brokenPromises}));
-  chase.resting.forEach(r=> add(r.id, r.name, fupChasedWords(r.chasedDaysAgo), 'chased', {debt: r.debt}));
+    {debt: r.debt, promiseId: r.promise.id, brokenPromises: r.brokenPromises, promisedOn: r.promise.promisedOn}));
+  chase.resting.forEach(r=> add(r.id, r.name, fupChasedWords(r.chasedDaysAgo), 'chased',
+    {debt: r.debt, lastChased: r.lastChased, restDays: chase.restDays}));
   chase.blocked.forEach(r=> add(r.id, r.name,
     r.why === 'drift' ? 'balance being checked' : 'owes, undated', 'blocked', {debt: r.debt}));
   /* And the customer book's own worry, held back by the same rule a
@@ -108876,6 +109204,12 @@ const FUP_WHY = [
      half of WhatsApp with nowhere to go at all. */
   ['inbox','Waiting on you'], ['all','To message'], ['back','Came back'],
   ['promised','They promised'], ['post','To post'],
+  /* The sixth stage is the one the loop deliberately skips: who has a
+     reason and is NOT being messaged today, and until when. It was a
+     footnote panel in the rail; it is a lane now, because the day each
+     of them comes back -- and the one or two only a person can release --
+     is work the owner plans around. */
+  ['held','Held back'],
   /* The subject lenses stay as doors: other screens open this one by
      name, and the register still filters by them. A door is not a tile. */
   ['money','Money'], ['news','News'],
@@ -109122,14 +109456,18 @@ function renderMessagesSide(nowMs, rows){
       ${sent.length > 5 ? `<p class="ow-mini">and ${sent.length - 5} more.</p>` : ''}
       <p class="ow-mini">the line is ${quietDays} days &mdash; past it, they can be asked again</p>
     </div>` : '';
-  /* HELD BACK moved here from a band under the queue: named rather than
-     dropped, read beside the work rather than competing with it. */
+  /* HELD BACK is a lane of its own now; the rail keeps the reading --
+     how many, split by what holds them -- and the door to the lane. */
   const heldRows = rows && rows.length ? rows : fupHubRowsNow();
-  const heldHTML = followUpHeldBack(nowMs, heldRows).list.length ? fupHeldPanelHTML(nowMs, heldRows) : '';
+  const heldList = followUpHeldBack(nowMs, heldRows).list;
+  const heldHTML = heldList.length && fupWhy !== 'held' ? msgHeldSummaryHTML(heldList) : '';
+  /* THE WEEK'S PROMISES, as bars: what was named for each day, and what
+     became of the days already gone. */
+  const weekHTML = fupWhy !== 'promised' ? msgPromiseWeekHTML(nowMs) : '';
   /* Came back and Gone out today are drawn only when they hold
      something: an empty box saying nothing has happened is the lane
      chip's count said again at four times the size. */
-  el.innerHTML = `${lanes.back.length ? `<div class="ow-pan">
+  el.innerHTML = `${lanes.back.length && fupWhy !== 'back' ? `<div class="ow-pan">
       <div class="ow-pan-h"><span class="ow-pan-t">Came back</span>
         <span class="ow-pan-n">${lanes.back.length} to deal with</span></div>
       ${backHTML}
@@ -109139,20 +109477,26 @@ function renderMessagesSide(nowMs, rows){
         <span class="ow-pan-n">${out.length}</span></div>
       ${goneHTML}
     </div>` : ''}
-    ${sentHTML}${heldHTML}
-    ${!lanes.back.length && !out.length && !sentHTML && !heldHTML ? `<div class="ow-pan"><div class="ow-mq-rfoot">Nothing has gone out today, nothing has come back, and nobody is held back.</div></div>` : ''}`;
+    ${weekHTML}${sentHTML}${heldHTML}
+    ${!lanes.back.length && !out.length && !sentHTML && !heldHTML && !weekHTML ? `<div class="ow-pan"><div class="ow-mq-rfoot">Nothing has gone out today, nothing has come back, and nobody is held back.</div></div>` : ''}`;
 }
 
+/* THE HELD BACK LANE: who has a reason and is deliberately not being
+   messaged, and the day each comes back.
+
+   It was a footnote panel under the rail, a list of names with a reason
+   each. The reason was never the useful half -- the DATE was: a rule
+   that holds somebody also says when it lets go, and a list that shows
+   the date lets the owner plan the week instead of rediscovering the
+   same names every morning. The holds only a person can lift (no
+   number, a balance being checked) have no date and are grouped apart,
+   because they are the only rows here that are work. */
+const MSG_HELD_SPAN = 14;
 function fupHeldPanelHTML(nowMs, rows){
   const {list, alsoInQueue} = followUpHeldBack(nowMs, rows);
-  const shown = list.slice(0, FUP_HELD_SHOWN);
-  /* Counted in the eyebrow rather than explained in a footer. The split
-     -- why somebody in the queue carries their hold on their own card
-     instead of here -- reads in full behind the "i". */
-  const also = alsoInQueue ? ` · ${alsoInQueue} in the queue` : '';
-  /* The two acts a held-back debtor can need, on their own line under
-     the row rather than squeezed into its 30px. Links, not buttons: this
-     panel is a footnote to the queue and carries no accent at all. */
+  const today = fupDayISO(nowMs);
+  /* The acts a held-back client can need, on their own line under the
+     row. Links, not buttons: nothing here is the screen's next move. */
   const heldActs = (h)=> {
     const cid = esc(String(h.customerId));
     if(h.kind === 'promised') return `<span class="fup-held-a">`
@@ -109161,19 +109505,42 @@ function fupHeldPanelHTML(nowMs, rows){
     if(h.kind === 'chased') return `<span class="fup-held-a">`
       + `<button type="button" class="fup-link fup-act fup-held-promise" data-cust="${cid}">They promised…</button> · `
       + `<button type="button" class="fup-link fup-act fup-held-again" data-cust="${cid}">Chase again</button></span>`;
+    if(h.kind === 'nophone') return `<span class="fup-held-a">`
+      + `<button type="button" class="fup-link fup-act fup-held-edit" data-cust="${cid}">Add their number</button></span>`;
     return '';
   };
-  const body = shown.length
-    ? shown.map(h=> { const acts = heldActs(h);
-        return `<div class="ow-sr${acts ? ' fup-heldr' : ''}"><span class="ow-sr-k">${esc(h.name)}</span>
-        <span class="ow-sr-v${h.kind === 'terms' || h.kind === 'chased' ? ' ow-warn' : ''}">${esc(h.label)}${
-          h.undo ? ` <button type="button" class="tl-undo" data-tell="undo" data-cid="${esc(String(h.customerId))}">Undo</button>` : ''}</span>${acts}</div>`; }).join('')
-      + (list.length > shown.length
-        ? `<p class="ow-mini">and ${list.length - shown.length} more.</p>` : '')
-    : '<p class="ow-mini">Nobody is being kept back.</p>';
-  return `<div class="ow-pan fup-held">
-    <div class="ow-pan-h"><span class="ow-pan-t">Held back</span><span class="ow-pan-n">${list.length}${also}</span></div>
-    ${body}
+  if(!list.length) return `<div class="ow-pan ow-mq"><div class="ow-empty"><b>Nobody is being kept back.</b><br>Everyone with a reason to hear from you is in <b>To message</b>.</div></div>`;
+  const lifts = list.map(h=> ({h, lift: msgHeldLift(h)}));
+  const timed = lifts.filter(x=> x.lift.on).sort((a,b)=> a.lift.on.localeCompare(b.lift.on));
+  /* Past terms is not a hold anybody releases: they get the statement
+     instead of news, on the money lane, until the money comes. */
+  const instead = lifts.filter(x=> !x.lift.on && x.lift.instead);
+  const waits = lifts.filter(x=> !x.lift.on && !x.lift.instead);
+  const g = msgHeldGroups(list);
+  const ticks = [0, 7, 14].map(d=> `<span class="ow-mi-hk" style="left:${msgPct(d / MSG_HELD_SPAN)}">${d === 0 ? 'today' : esc(fmtShortDate(fupDayISO(nowMs + d * 86400000)))}</span>`).join('');
+  const row = ({h, lift})=>{
+    const d = lift.on ? Math.max(0, daysBetweenISO(today, lift.on)) : null;
+    const acts = heldActs(h);
+    return `<div class="ow-mi-hr">
+      <div class="ow-mi-hw"><span class="ow-mq-n" title="${esc(h.name)}">${esc(h.name)}</span>
+        <span class="ow-mq-s">${esc(h.label)}${h.debt ? ' · owes ' + esc(fmtUGX(Math.round(h.debt))) : ''}${
+          h.undo ? ` <button type="button" class="tl-undo" data-tell="undo" data-cid="${esc(String(h.customerId))}">Undo</button>` : ''}</span></div>
+      ${lift.instead ? '<span></span>' : `<span class="ow-mi-ht"><i class="ow-mi-htb${h.kind === 'promised' ? ' ow-mi-prom' : lift.on ? '' : lift.instead ? ' ow-mi-owed' : ' ow-mi-htw'}" style="width:${d == null ? '100%' : msgPct(Math.min(1, d / MSG_HELD_SPAN))}"></i>${d != null && d <= MSG_HELD_SPAN ? `<i class="ow-mi-htr" style="left:${msgPct(d / MSG_HELD_SPAN)}"></i>` : ''}</span>`}
+      <span class="ow-mi-hon">${lift.on ? `<b class="ow-fig">${esc(fmtShortDate(lift.on))}</b><span class="ow-q-b">${lift.ifUnpaid ? 'if nothing lands' : d === 0 ? 'today' : 'in ' + d + 'd'}</span>`
+        : lift.instead ? `<span class="ow-q-b">the statement, not news</span>` : `<b class="ow-mi-hwt">when ${esc(lift.waits || 'you act')}</b>`}</span>
+      ${acts ? `<div class="ow-mi-ha">${acts}</div>` : ''}
+    </div>`;
+  };
+  const also = alsoInQueue ? ` · ${alsoInQueue} more carry a hold on their own card in the queue` : '';
+  return `<div class="ow-pan ow-mq fup-held">
+    <div class="ow-pan-h ow-mq-hd"><span class="ow-pan-t">Held back</span><span class="ow-pan-n">${list.length}${also}</span>
+      <span class="ow-pan-sp"></span><span class="ow-pan-note">named, never dropped</span></div>
+    <div class="ow-mi-in">
+      <div class="ow-mi-hbar">${g.map(x=> `<span class="ow-mi-hs${x.waits ? ' ow-warn' : ''}" style="flex:${x.n}"><b class="ow-fig">${x.n}</b> ${esc(x.label)}</span>`).join('')}</div>
+    </div>
+    ${waits.length ? `<div class="ow-mi-hh ow-warn">Waits on you <span class="ow-pan-n">nothing moves until something on their record changes</span></div>${waits.map(row).join('')}` : ''}
+    ${timed.length ? `<div class="ow-mi-hh">Comes back on its own <span class="ow-mi-hks">${ticks}</span></div>${timed.map(row).join('')}` : ''}
+    ${instead.length ? `<div class="ow-mi-hh">Owes past your terms <span class="ow-pan-n">asked for the money on its own lane, never sent news on top</span></div>${instead.map(row).join('')}` : ''}
   </div>`;
 }
 
@@ -109289,18 +109656,13 @@ function fupRowWait(row, nowMs){
       : {d: 0, b: 'your day is today', tone: 'warn'};
   }
   if(row.kinds.has('money') && row.chase)
-    return {d: Math.max(0, Math.round(Number(row.chase.ageDays) || 0)), b: fmtUGX(Math.round(row.chase.debt)) + ' owed', tone: 'warn'};
+    /* The balance is the At stake column's now; the wait says how old
+       the oldest of it is, which is the one thing that column does not. */
+    return {d: Math.max(0, Math.round(Number(row.chase.ageDays) || 0)), b: 'oldest charge', tone: 'warn'};
   if(row.items.length) return {d: fupDaysQuiet(row, nowMs), b: 'days quiet', tone: 'q'};
   const bk = row.book;
   if(bk && bk.daysSinceLast != null) return {d: bk.daysSinceLast, b: 'since they bought', tone: 'q'};
   return {d: null, b: bk && !bk.orderCount ? 'never bought' : 'no dated order', tone: 'q'};
-}
-/* Side by side, or opened in place: the desktop has room for the queue
-   AND the client; a phone does not. Read at render time, and the screen
-   redraws itself when the window crosses the line, so the one draft is
-   never left in the layout it no longer fits. */
-function fupSplit(){
-  return !(typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width:820px)').matches);
 }
 
 /* THE THREE LANES THAT ARE NOT FOLLOW-UPS.
@@ -109366,7 +109728,7 @@ function msgLaneRow(o){
 /* THE CONVERSATION, SHOWN AS ONE. Their words are the only text on this
    screen that is not derived from the books, so the bubbles say which
    side each came from and the wait is stated rather than implied. */
-function msgThreadHTML(a, nowMs){
+function msgThreadHTML(a, nowMs, lane){
   const { msgs } = msgInboxSource();
   const thread = (msgs || []).filter(m=> m.conversation_id === a.conv.id)
     .sort((x,y)=> String(x.sent_at).localeCompare(String(y.sent_at))).slice(-6);
@@ -109386,6 +109748,7 @@ function msgThreadHTML(a, nowMs){
         inbox&rsquo;s own job, and the price in a reply is the price you are held to.</p>
     </div>
     <div class="ow-mq-l2">
+      ${lane === 'back' ? msgReadsHTML(a, nowMs) : ''}
       <p class="ow-mq-l">What you can do</p>
       <div class="ow-mq-ra">
         <button type="button" class="ow-mq-rab fup-open-chat" data-conv="${esc(String(a.conv.id))}">
@@ -109473,6 +109836,118 @@ function msgPostOpenHTML(p, i){
     </div>
   </div>`;
 }
+/* ---- THE LANES' OWN READINGS ------------------------------------------ */
+const MSG_READ_CLS = {stop: 'ow-bad', paid: 'ow-warn', dispute: 'ow-bad', day: '', buy: 'ow-good'};
+/* WHAT A REPLY READS AS, AND WHAT THE BOOKS SAY ABOUT IT. The reading
+   is a hint from their words; the check under it is the ledger's, and
+   the ledger is the one that is believed. */
+function msgReadsHTML(a, nowMs){
+  const r = msgReadReply(a.said);
+  if(r.key === 'other') return '';
+  let check = '';
+  if(r.key === 'paid' && a.customer){
+    const from = fupDayISO(nowMs - 3 * 86400000);
+    const hit = (a.customer.debtLog || []).filter(l=> l.type === 'payment' && String(l.date || '') >= from)
+      .sort((x, y)=> String(y.date).localeCompare(String(x.date)))[0];
+    check = hit
+      ? `<p class="ow-mq-p ow-mi-ok">A payment of <b class="ow-fig">${esc(fmtUGX(Math.round(Number(hit.amount) || 0)))}</b> from them is in the books, ${esc(fmtShortDate(hit.date))}.</p>`
+      : `<p class="ow-mq-p ow-mi-no">Nothing from them in the books in the last three days. If it came, record it; if not, ask for the reference.</p>`;
+  }
+  if(r.key === 'stop') check = `<p class="ow-mq-p ow-mi-no">Honour it before anything else: nothing more should go to them from this screen.</p>`;
+  return `<div class="ow-mi-reads">
+    <p class="ow-mq-l">Reads as</p>
+    <div class="ow-mq-acts" style="margin-top:0"><span class="ow-cp ${MSG_READ_CLS[r.key] || ''}">${esc(r.label)}</span>
+      ${r.word ? `<span class="ow-mq-note">from &ldquo;<b>${esc(r.word)}</b>&rdquo; in their message &mdash; a reading, not a fact</span>` : ''}</div>
+    ${check}
+    ${r.key === 'paid' && a.customerId != null ? `<div class="ow-mq-acts"><button type="button" class="btn btn-ghost ow-sm fup-pay" data-cust="${esc(String(a.customerId))}">Record the payment</button></div>` : ''}
+  </div>`;
+}
+/* HOW FAST THE SHOP ANSWERS, and whose free window closes first. */
+function msgAnswerBandHTML(nowMs, list){
+  const { msgs } = msgInboxSource();
+  const mins = msgAnswerMinutes(msgs);
+  const buckets = msgAnswerBuckets(mins);
+  const max = Math.max(1, ...buckets.map(b=> b.n));
+  const med = waMedian(mins);
+  const closing = list.map(a=> ({a, w: waWindowInfo(a.conv.last_inbound_at, nowMs)}))
+    .filter(x=> x.w.open).sort((x, y)=> x.w.hoursLeft - y.w.hoursLeft).slice(0, 4);
+  return `<div class="ow-mi-lb">
+    <div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">How fast you answer</span><span class="ow-pan-n">${mins.length ? mins.length + ' answers in the inbox' : 'no answers on record yet'}</span>
+      <span class="ow-pan-sp"></span><span class="ow-pan-n">${med != null ? 'median <b class="ow-fig">' + esc(waFmtMins(med)) + '</b>' : ''}</span></div>
+      <div class="ow-mi-in">${mins.length ? `<div class="ow-mi-hist">${buckets.map((b, i)=> `<span class="ow-mi-hc"><i class="ow-mi-hcb${i >= 4 ? ' ow-warn' : ''}" style="height:${msgPct(b.n / max)}"></i><span class="ow-mi-hcl">${esc(b.label)}</span></span>`).join('')}</div>`
+        : '<p class="ow-mini">Once the shop has answered a few questions here, this shows how long people wait.</p>'}</div></div>
+    <div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">Free windows closing</span><span class="ow-pan-n">${closing.length}</span></div>
+      ${closing.length ? closing.map(x=> `<div class="ow-mi-wc"><span class="ow-mi-wcn">${esc(x.a.name)}</span>
+        <span class="ow-mi-wcb"><i class="ow-mi-wcf${x.w.hoursLeft < 4 ? ' ow-warn' : ''}" style="width:${msgPct(x.w.hoursLeft / 24)}"></i></span><b class="ow-fig">${x.w.hoursLeft}h</b></div>`).join('')
+        : '<div class="ow-mi-in"><p class="ow-mini">Nobody waiting has a free window left to lose.</p></div>'}</div>
+  </div>`;
+}
+/* WHAT THE REPLIES SAY, counted -- the strip over Came back. */
+function msgReadsBandHTML(list){
+  const keys = [['day','A day'], ['paid','Paid, they say'], ['buy','Wants to buy'], ['dispute','Disputes'], ['stop','Stop'], ['other','Other']];
+  const n = {}; list.forEach(a=>{ const k = msgReadReply(a.said).key; n[k] = (n[k] || 0) + 1; });
+  return `<div class="ow-pan ow-mi-rd">${keys.map(([k, l])=> `<div class="ow-mi-rdc${n[k] ? '' : ' ow-mi-zero'}"><span class="ow-mi-l">${l}</span><b class="ow-mi-v ${n[k] ? MSG_READ_CLS[k] || '' : ''}">${n[k] || 0}</b></div>`).join('')}</div>`;
+}
+/* Their word, as dots: every decided promise, oldest first. */
+function msgRecordHTML(customerId, nowMs){
+  const rec = msgPromiseRecord(customerId, nowMs);
+  if(!rec.length) return '';
+  return `<span class="ow-mi-rec" title="Kept ${rec.filter(x=> x === 'kept').length} of ${rec.length} promises">${rec.slice(-6).map(x=> `<i class="ow-mi-rdt ${x === 'kept' ? 'ow-good' : 'ow-bad'}"></i>`).join('')}</span>`;
+}
+/* THE PROMISE CALENDAR: a week behind and a week ahead, bar height the
+   money named, colour what became of it -- with the book's own rate
+   beside it. */
+function msgPromiseCalendarHTML(nowMs){
+  const days = msgPromiseDays(nowMs, 7, 7);
+  const sums = days.map(d=> d.items.reduce((t, x)=> t + (Number(x.amount) || 0), 0));
+  const max = Math.max(1, ...sums);
+  const rate = msgPromiseRate(nowMs);
+  const wd = (iso)=> new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', {weekday: 'narrow', timeZone: 'UTC'}) + ' ' + Number(iso.slice(8,10));
+  const cal = `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">The promise calendar</span><span class="ow-pan-n">a week either side</span></div>
+    <div class="ow-mi-in"><div class="ow-mi-cal">${days.map((d, i)=> `<div class="ow-mi-cd${d.i === 0 ? ' ow-on' : ''}" title="${esc(d.items.map(x=> x.name + ' — ' + x.state + (x.amount ? ' · ' + fmtUGX(x.amount) : '')).join('\n') || 'nothing named')}">
+      <span class="ow-mi-cv">${sums[i] ? esc(msgFigK(sums[i])) : ''}</span>
+      <span class="ow-mi-cs">${d.items.map(x=> `<i class="ow-mi-wkb ow-mi-p-${x.state}" style="height:${msgPct((Number(x.amount) || max * .12) / max)}"></i>`).join('')}</span>
+      <span class="ow-mi-cl">${d.i === 0 ? 'Today' : esc(wd(d.d))}</span></div>`).join('')}</div>
+      <div class="ow-mi-lg"><i class="ow-mi-sw ow-mi-p-kept"></i>kept <i class="ow-mi-sw ow-mi-p-broken"></i>broken <i class="ow-mi-sw ow-mi-p-due"></i>due today <i class="ow-mi-sw ow-mi-p-waiting"></i>coming</div></div></div>`;
+  const cells = [];
+  for(let i = 0; i < rate.kept; i++) cells.push('<i class="ow-mi-gc ow-good"></i>');
+  for(let i = 0; i < rate.broken; i++) cells.push('<i class="ow-mi-gc ow-bad"></i>');
+  for(let i = 0; i < rate.open; i++) cells.push('<i class="ow-mi-gc"></i>');
+  const kept = `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">Promises kept</span><span class="ow-pan-n">every one on record</span></div>
+    <div class="ow-mi-in">${rate.decided
+      ? `<b class="ow-mi-v">${Math.round(rate.kept / rate.decided * 100)}%</b> <span class="ow-mi-s">${rate.kept} of ${rate.decided} whose day has passed</span>
+        <div class="ow-mi-grid">${cells.slice(0, 60).join('')}</div>`
+      : '<p class="ow-mini">No promised day has passed yet, so nobody&rsquo;s word has been tested.</p>'}</div></div>`;
+  return `<div class="ow-mi-lb">${cal}${kept}</div>`;
+}
+/* THE DAY'S THREE SLOTS AND THE WEEK BEHIND THEM. Posted is what the
+   owner stamped -- the app cannot see the Status -- so an empty slot
+   is "not stamped", not "not posted". */
+function msgPostBandHTML(nowMs, picks, postedToday, cap){
+  const day = (w)=> String(w.sentOn || w.postedOn || w.date || '').slice(0,10);
+  const today = fupDayISO(nowMs);
+  const posts = (data.waPosts || []);
+  const todays = posts.filter(w=> day(w) === today);
+  const slots = Array.from({length: cap}, (_, i)=>{
+    const w = todays[i];
+    if(w) return `<div class="ow-mi-slot ow-on"><span class="ow-mi-l">Slot ${i + 1} &middot; posted</span><b class="ow-mi-sn2">${esc(w.name || w.productName || 'a product')}</b></div>`;
+    const p = picks[i - todays.length];
+    return `<div class="ow-mi-slot${p ? ' ow-mi-next' : ''}"><span class="ow-mi-l">Slot ${i + 1}</span><b class="ow-mi-sn2">${p ? esc(p.name || 'a product') : 'empty'}</b><span class="ow-mq-note">${p ? 'the next pick below' : 'nothing nominated'}</span></div>`;
+  }).join('');
+  const week = Array.from({length: 7}, (_, k)=>{
+    const d = fupDayISO(nowMs - (6 - k) * 86400000);
+    const n = posts.filter(w=> day(w) === d).length;
+    const wd = new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', {weekday: 'narrow', timeZone: 'UTC'});
+    return `<span class="ow-mi-pw${d === today ? ' ow-on' : ''}" title="${esc(fmtShortDate(d))}: ${n} stamped"><span class="ow-mi-pwcs">${Array.from({length: cap}, (_, j)=> `<i class="ow-mi-pwc${j < n ? ' ow-on' : ''}"></i>`).join('')}</span><span class="ow-mi-pwl">${esc(wd)}</span></span>`;
+  }).join('');
+  const used = posts.filter(w=> day(w) > fupDayISO(nowMs - 7 * 86400000)).length;
+  return `<div class="ow-mi-lb">
+    <div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">Today&rsquo;s slots</span><span class="ow-pan-n">${postedToday} of ${cap} stamped</span></div>
+      <div class="ow-mi-in"><div class="ow-mi-slots">${slots}</div></div></div>
+    <div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">This week</span><span class="ow-pan-n">${used} of ${cap * 7} slots used</span></div>
+      <div class="ow-mi-in"><div class="ow-mi-pws">${week}</div></div></div>
+  </div>`;
+}
 function msgLaneHTML(lane, nowMs){
   const wait = (m)=> typeof waFmtWait === 'function' ? waFmtWait(m) : Math.round(m) + ' min';
   const head = `<div class="ow-mq-h"><span class="ow-mq-hc"></span><span class="ow-mq-hc">__WHO__</span><span class="ow-mq-hc">Why now</span>
@@ -109483,9 +109958,12 @@ function msgLaneHTML(lane, nowMs){
     ${body ? head.replace('__WHO__', who).replace('__UNTIL__', until) + body : ''}
   </div>`;
 
+  if(lane === 'held') return fupHeldPanelHTML(nowMs, fupHubRowsNow());
+
   if(lane === 'post'){
     const { picks, postedToday, cap } = msgPostLane();
-    if(!picks.length) return pan('What to post', 'nothing nominated',
+    const postBand = msgPostBandHTML(nowMs, picks, postedToday, cap);
+    if(!picks.length) return postBand + pan('What to post', 'nothing nominated',
       'Ranked by what actually sold after a post &mdash; not by what is dearest', '', '',
       '') + `<div class="ow-pan ow-mq"><div class="ow-empty"><b>Nothing is worth posting today.</b><br>Every product the signal put up is either out of cover or already posted.</div></div>`;
     const fig = (n)=> Number(Math.round(Number(n) || 0)).toLocaleString('en-UG');
@@ -109512,7 +109990,7 @@ function msgLaneHTML(lane, nowMs){
        the chip carries, drawn so it can be read without reading. */
     const pips = `<span class="fup-pips" aria-label="${postedToday} of ${cap} posted today">${
       Array.from({length: cap}, (_, k)=> `<i class="fup-pip${k < postedToday ? ' fup-pip-on' : ''}"></i>`).join('')}</span>`;
-    return pan('What to post', `${picks.length} nominated · ${Math.max(0, cap - postedToday)} slot${cap - postedToday === 1 ? '' : 's'} left today`,
+    return postBand + pan('What to post', `${picks.length} nominated · ${Math.max(0, cap - postedToday)} slot${cap - postedToday === 1 ? '' : 's'} left today`,
       pips + ' ranked by what sold after a post',
       'What, and who it goes to', 'Until', body)
       + `<div class="ow-pan ow-mq"><div class="ow-mq-band"><span class="ow-mq-bt">The app cannot see your Status</span>
@@ -109521,7 +109999,8 @@ function msgLaneHTML(lane, nowMs){
 
   if(lane === 'promised'){
     const list = msgPromisedLane(nowMs);
-    if(!list.length) return pan('They promised', 'nobody has named a day',
+    const calBand = msgPromiseCalendarHTML(nowMs);
+    if(!list.length) return calBand + pan('They promised', 'nobody has named a day',
       'By the day they named &mdash; not by what they owe', '', '', '')
       + `<div class="ow-pan ow-mq"><div class="ow-empty"><b>Nobody has named a day.</b><br>A day written down against a client &mdash; from a chase, or from their own record &mdash; lands here and waits for the day to decide it.</div></div>`;
     const due = list.filter(r=> r.due).length;
@@ -109533,9 +110012,9 @@ function msgLaneHTML(lane, nowMs){
         open: String(msgOpenProm) === String(r.id),
         mark: `<span class="ow-mq-av">${esc(fupInitials(r.name))}</span>`,
         name: r.name, sub: `named ${fmtShortDate(r.named)} \u00b7 ${esc(r.about)}`,
-        chips: r.late ? '<span class="ow-cp ow-bad">the day passed</span>'
+        chips: (r.late ? '<span class="ow-cp ow-bad">the day passed</span>'
           : r.due ? '<span class="ow-cp ow-warn">due today</span>'
-          : '<span class="ow-cp">a day ahead</span>',
+          : '<span class="ow-cp">a day ahead</span>') + msgRecordHTML(r.id, nowMs),
         v: r.debt ? fmtUGX(r.debt) : '\u2014', b: r.debt ? 'owed' : 'nothing owed', bad: !!r.debt,
         until: r.late ? Math.abs(days) + 'd late' : r.due ? 'today' : days + ' days',
         untilCls: r.due || r.late ? 'ow-warn' : '',
@@ -109553,13 +110032,14 @@ function msgLaneHTML(lane, nowMs){
             </div></div>` : '',
       });
     }).join('');
-    return pan('They promised', `${list.length} ${list.length === 1 ? 'date' : 'dates'} \u00b7 ${due ? due + ' fall due today' : 'none fall due today'}`,
+    return calBand + pan('They promised', `${list.length} ${list.length === 1 ? 'date' : 'dates'} \u00b7 ${due ? due + ' fall due today' : 'none fall due today'}`,
       'By the day they named &mdash; not by what they owe', 'Who, and what they said', 'Due', body);
   }
 
   const lanes = msgLanes(nowMs);
   const list = lane === 'inbox' ? lanes.waiting : lanes.back;
   const title = lane === 'inbox' ? 'Waiting on you' : 'Came back';
+  const convBand = lane === 'inbox' ? msgAnswerBandHTML(nowMs, list) : msgReadsBandHTML(list);
   const note = lane === 'inbox'
     ? 'Longest waiting first &mdash; the question does not get dearer, the person does'
     : 'A reply changes a state you are already tracking';
@@ -109567,26 +110047,31 @@ function msgLaneHTML(lane, nowMs){
     const why = typeof waInbox === 'object' && waInbox && (waInbox.convs||[]).length
       ? (lane === 'inbox' ? 'Everyone who wrote in has been answered.' : 'Nobody has answered a chase yet today.')
       : 'WhatsApp is not connected on this device, so the shop’s inbox cannot be read here.';
-    return pan(title, 'nobody', note, '', '', '')
+    return convBand + pan(title, 'nobody', note, '', '', '')
       + `<div class="ow-pan ow-mq"><div class="ow-empty"><b>${esc(why)}</b><br>${lane === 'inbox'
         ? 'A question that arrives will come to the top of this queue, ahead of every chase.'
         : 'A reply to a chase lands here with the act it implies beside it.'}</div></div>`;
   }
   const body = list.map(a=>{
     const owed = a.customer && typeof customerDebt === 'function' ? Math.round(customerDebt(a.customer.id) || 0) : 0;
+    /* A cold question is read for what it wants; only a REPLY can name a
+       day or say it paid, because only a reply answers something. */
+    const read0 = msgReadReply(a.said);
+    const reads = lane === 'back' || read0.key === 'buy' || read0.key === 'stop' ? read0 : {key: 'other'};
+    const win = waWindowInfo(a.conv.last_inbound_at, nowMs);
     return msgLaneRow({
       act: `data-conv="${esc(String(a.conv.id))}"`, cls: 'msg-conv-pick',
-      x: String(msgOpenConv) === String(a.conv.id) ? msgThreadHTML(a, nowMs) : '',
+      x: String(msgOpenConv) === String(a.conv.id) ? msgThreadHTML(a, nowMs, lane) : '',
       open: String(msgOpenConv) === String(a.conv.id),
       mark: `<span class="ow-mq-av">${esc(fupInitials(a.name))}</span>`,
       name: a.name, sub: a.said || 'no words in the message',
-      chips: `<span class="ow-cp">${a.customer ? 'a customer you know' : 'no name on this number'}</span>`
-        + (lane === 'back' ? `<span class="ow-cp ow-good">answered your chase</span>` : ''),
+      chips: (reads.key !== 'other' ? `<span class="ow-cp ${MSG_READ_CLS[reads.key] || ''}" title="A reading of their words, not a fact">${esc(reads.label)}</span>` : '')
+        + `<span class="ow-cp ${win.open ? 'ow-good' : ''}">${win.open ? win.hoursLeft + 'h free' : 'window shut'}</span>`,
       v: owed ? fmtUGX(owed) : '—', b: owed ? 'owed' : 'not priced', bad: !!owed,
       until: wait(a.waited), untilCls: 'ow-warn', state: 'waiting',
     });
   }).join('');
-  return pan(title, `${list.length} ${list.length === 1 ? 'person' : 'people'}`, note,
+  return convBand + pan(title, `${list.length} ${list.length === 1 ? 'person' : 'people'}`, note,
     'Who, and what they asked for', 'Waiting', body);
 }
 
@@ -109640,18 +110125,568 @@ function fupPromiseHTML(named, lastAt, nowMs){
   </div>`;
   return { track, hold, late: false, named };
 }
+
+/* ================= THE INTELLIGENCE CENTER: WHAT THE BOOKS CAN SAY =====
+
+   The console used to show WHO was owed a word and nothing about what
+   was riding on it, whether that kind of word had ever worked, or
+   whether the person could even be reached for free. Every one of those
+   is already in the books -- the ledger, the invoices, the contact
+   stamps, the promise book, the inbox -- and none of it was drawn.
+
+   These are the readings. Each is derived at render time and each says
+   so when it cannot answer: a reason told fewer than MSG_ODDS_MIN times
+   has no odds rather than a confident 0%, a basket nobody sized has no
+   value rather than a guessed one, and a phone the inbox has never seen
+   is "not known" rather than "closed". Nothing here is stored. */
+
+/* WHAT IS RIDING ON THIS ROW, and on what basis. Money owed is the
+   ledger's; a basket is the quantity they asked for at today's price;
+   a quiet customer is worth a usual month of their own spend. Anything
+   else is not valued -- null, and the column says so. */
+function msgRowStake(row){
+  if(!row) return null;
+  if(row.chase) return {v: Math.round(Number(row.chase.debt) || 0), b: 'owed', kind: 'owed'};
+  let basket = 0, priced = 0;
+  (row.items || []).forEach(i=>{
+    const f = i.followUp;
+    const q = Number(f && f.qty);
+    if(!(q > 0)) return;
+    let p = null;
+    try{ p = followUpPriceNow(f); }catch(err){ p = null; }
+    if(p == null) return;
+    basket += p * q; priced++;
+  });
+  if(priced) return {v: Math.round(basket), b: 'at today’s price', kind: 'basket'};
+  const bk = row.book;
+  if(bk && bk.spend > 0 && (row.quiet || row.telling))
+    return {v: Math.round(bk.spend * 30 / CUST_WINDOW_DAYS), b: 'a usual month', kind: 'month'};
+  return null;
+}
+
+/* The reason a row is scored under -- the keys hubScoreboard counts
+   by, so the odds on a row and the bars on Intelligence are one
+   reading. Money has no key: a cleared chase deletes its own record, so
+   any rate would be wrong in the shop's favour (FUP_MONEY_UNMEASURABLE). */
+function msgRowReasonKey(row){
+  if(!row) return null;
+  if(row.chase) return 'money';
+  for(const i of (row.items || [])){
+    const r = i.reasons.find(x=> x.kind !== 'gone_quiet') || i.reasons[0];
+    if(r) return r.kind;
+  }
+  if(row.telling && row.telling.reason) return row.telling.reason.key;
+  if(row.quiet) return row.quiet.sub;
+  return null;
+}
+/* Fewer tellings than this and a rate is an anecdote. */
+const MSG_ODDS_MIN = 5;
+function msgOdds(key, score){
+  if(!key || key === 'money') return null;
+  const s = score && score.byReason && score.byReason[key];
+  if(!s || s.told < MSG_ODDS_MIN) return {pct: null, n: s ? s.told : 0};
+  return {pct: Math.round(s.worked / s.told * 100), n: s.told};
+}
+
+/* IS THE FREE WINDOW OPEN FOR THEM. Only the inbox knows, and only for
+   a number it has a conversation with. null = not known here (no inbox
+   on this device), which is not the same statement as closed. */
+function msgInboxLoaded(){
+  return typeof waInbox === 'object' && !!waInbox && (waInbox.convs || []).length > 0;
+}
+function msgWindowFor(phone, nowMs){
+  if(!msgInboxLoaded() || !phone) return null;
+  const suf = cfNormalisedPhone(phone);
+  if(!suf) return null;
+  const c = waInbox.convs.find(x=> cfNormalisedPhone(x.wa_id) === suf);
+  if(!c) return {open: false, hoursLeft: 0, conv: null};
+  return Object.assign(waWindowInfo(c.last_inbound_at, nowMs), {conv: c});
+}
+
+/* WHO HAS BEEN SPOKEN TO, and when -- every engine's stamp in one
+   place: the follow-up contacts, the chase book and the pictures sent.
+   Returns customer id -> the latest day on or after `fromISO`. */
+function msgToldSince(fromISO){
+  const out = new Map();
+  const put = (cid, d)=>{
+    const day = String(d || '').slice(0,10);
+    if(!day || day < fromISO) return;
+    const k = String(cid);
+    if(!out.has(k) || out.get(k) < day) out.set(k, day);
+  };
+  followUpsAll().forEach(f=> (f.contacts || []).forEach(c=> put(f.customerId, c.at)));
+  Object.entries(data.presetDebtChases || {}).forEach(([cid, d])=> put(cid, d));
+  (data.briefsSent || []).forEach(b=> put(b.customerId, b.sentOn));
+  return out;
+}
+
+/* THE DAY'S LOOP: owed a word, said, answered, acted on. "Acted" is
+   anybody told inside the did-it-work window who paid or was invoiced
+   TODAY -- the books' own reading, and not proof the message did it. */
+function msgTodayLoop(nowMs, rows, lanes){
+  const day = fupDayISO(nowMs);
+  const toldToday = [...msgToldSince(day).keys()];
+  const recent = msgToldSince(fupDayISO(nowMs - TELL_WORKED_DAYS * 86400000));
+  let paid = 0, bought = 0;
+  const acted = new Set();
+  recent.forEach((_, cid)=>{
+    const c = (data.customers || []).find(x=> String(x.id) === cid);
+    if(!c) return;
+    (c.debtLog || []).forEach(l=>{
+      if(l.type === 'payment' && String(l.date || '').slice(0,10) === day){ paid += Number(l.amount) || 0; acted.add(cid); }
+    });
+    customerOrdersFor(c.id).forEach(q=>{
+      if(q.invoiced && String(q.invoicedAt || q.date || '').slice(0,10) === day){ bought += savedQuoteTotal(q) || 0; acted.add(cid); }
+    });
+  });
+  return {toSay: rows.length, sent: toldToday.length, asks: lanes.waiting.length,
+    back: lanes.back.length, acted: acted.size, paid: Math.round(paid), bought: Math.round(bought)};
+}
+
+/* WHERE THE MONEY ON THE SCREEN SITS, by the basis each row is valued
+   on. A row with no basis is counted, not valued. */
+function msgStakeSplit(rows, promised){
+  const out = {owed: 0, basket: 0, month: 0, promised: 0, unvalued: 0};
+  rows.forEach(r=>{ const s = msgRowStake(r); if(s) out[s.kind] += s.v; else out.unvalued++; });
+  (promised || []).forEach(p=>{ out.promised += Number(p.debt) || 0; });
+  out.total = out.owed + out.basket + out.month + out.promised;
+  return out;
+}
+
+/* THE INVOICES BEHIND A BALANCE, as points on an age axis. What the
+   invoices do not cover is carried from earlier and has no age. */
+function msgAgingPoints(chase, nowMs){
+  if(!chase) return null;
+  const today = fupDayISO(nowMs);
+  const pts = (chase.invoices || []).map(i=> ({no: i.no,
+    age: Math.max(0, daysBetweenISO(String(i.date || '').slice(0,10), today)), due: Number(i.due) || 0}));
+  const listed = pts.reduce((s, p)=> s + p.due, 0);
+  return {pts, carried: Math.max(0, (Number(chase.debt) || 0) - listed), terms: custTermsDays()};
+}
+
+/* THE LAST N DAYS BETWEEN THE SHOP AND ONE CUSTOMER: what they bought,
+   what they paid, when the shop spoke, when they wrote, and every day
+   they named. One line, so a gap reads as a gap. */
+function msgTimeline(customerId, nowMs, days){
+  const today = fupDayISO(nowMs);
+  const from = fupDayISO(nowMs - days * 86400000);
+  const inRange = (d)=> d && d >= from && d <= today;
+  const c = (data.customers || []).find(x=> String(x.id) === String(customerId));
+  const ev = [];
+  if(!c) return {from, today, days, ev};
+  customerOrdersFor(c.id).forEach(q=>{
+    const d = String(q.invoicedAt || q.date || '').slice(0,10);
+    if(q.invoiced && inRange(d)) ev.push({d, k: 'bought', v: savedQuoteTotal(q) || 0});
+  });
+  (c.debtLog || []).forEach(l=>{
+    const d = String(l.date || '').slice(0,10);
+    if(l.type === 'payment' && inRange(d)) ev.push({d, k: 'paid', v: Number(l.amount) || 0});
+  });
+  followUpsForCustomer(c.id).forEach(f=> (f.contacts || []).forEach(x=>{
+    const d = String(x.at || '').slice(0,10); if(inRange(d)) ev.push({d, k: 'told'}); }));
+  const chased = (data.presetDebtChases || {})[c.id];
+  if(inRange(String(chased || '').slice(0,10))) ev.push({d: String(chased).slice(0,10), k: 'told'});
+  (data.briefsSent || []).forEach(b=>{
+    if(String(b.customerId) === String(c.id) && inRange(String(b.sentOn || '').slice(0,10))) ev.push({d: String(b.sentOn).slice(0,10), k: 'told'});
+  });
+  if(msgInboxLoaded()){
+    const sufs = contactPhones(c).map(cfNormalisedPhone).filter(Boolean);
+    const convIds = new Set(waInbox.convs.filter(x=> sufs.includes(cfNormalisedPhone(x.wa_id))).map(x=> x.id));
+    msgInboxSource().msgs.forEach(m=>{
+      const d = String(m.sent_at || '').slice(0,10);
+      if(m.direction === 'in' && convIds.has(m.conversation_id) && inRange(d)) ev.push({d, k: 'wrote'});
+    });
+  }
+  promisesFor(c.id).forEach(p=>{
+    if(inRange(p.promisedOn)) ev.push({d: p.promisedOn, k: 'named', state: promiseState(p, c, today)});
+  });
+  return {from, today, days, ev};
+}
+
+/* WHOSE WORD HOLDS: each decided payment promise, oldest first, kept or
+   broken as the ledger reads it today. */
+function msgPromiseRecord(customerId, nowMs){
+  const c = (data.customers || []).find(x=> String(x.id) === String(customerId));
+  if(!c) return [];
+  const today = fupDayISO(nowMs);
+  return promisesFor(c.id).slice().reverse()
+    .map(p=> promiseState(p, c, today)).filter(s=> s !== 'waiting');
+}
+/* The whole book's version: of every promise whose day has passed, how
+   many were kept. */
+function msgPromiseRate(nowMs){
+  const today = fupDayISO(nowMs);
+  let kept = 0, broken = 0, open = 0;
+  (data.paymentPromises || []).forEach(p=>{
+    const c = (data.customers || []).find(x=> String(x.id) === String(p.customerId));
+    if(!c) return;
+    const s = promiseState(p, c, today);
+    /* A day they have since replaced with a later word is not coming --
+       the same rule the calendar draws by. */
+    if(s === 'waiting'){ const latest = promisesFor(c.id)[0]; if(latest && latest.id !== p.id) return; }
+    if(s === 'kept') kept++; else if(s === 'broken') broken++; else open++;
+  });
+  return {kept, broken, open, decided: kept + broken};
+}
+
+/* THE PROMISE CALENDAR: every day in the window, with each day somebody
+   named on it. A promise somebody has since replaced with a later word
+   is not a day anyone is holding, so only the latest counts ahead of
+   today; behind today every promise is history and keeps its verdict. */
+function msgPromiseDays(nowMs, back, ahead){
+  const today = fupDayISO(nowMs);
+  const days = [];
+  for(let i = -back; i <= ahead; i++) days.push({d: fupDayISO(nowMs + i * 86400000), i, items: []});
+  const at = new Map(days.map(x=> [x.d, x]));
+  (data.paymentPromises || []).forEach(p=>{
+    const slot = at.get(String(p.promisedOn || ''));
+    if(!slot) return;
+    const c = (data.customers || []).find(x=> String(x.id) === String(p.customerId));
+    if(!c) return;
+    const latest = promisesFor(c.id)[0];
+    if(latest && latest.id !== p.id && p.promisedOn >= today) return;
+    const st = promiseState(p, c, today);
+    const amount = Number(p.amount) > 0 ? Math.round(Number(p.amount))
+      : (st === 'kept' ? null : Math.round(Number(c.debt) || 0));
+    slot.items.push({id: c.id, name: c.name, state: p.promisedOn === today && st === 'waiting' ? 'due' : st, amount});
+  });
+  return days;
+}
+
+/* WHEN SOMEBODY HELD BACK COMES BACK. The rule that holds them says
+   when it lets go; a hold that only a person can lift (no number, a
+   balance being checked, money past terms) has no date, and says what
+   it waits on instead. */
+function msgHeldLift(h){
+  const addDays = (iso, n)=> fupDayISO(Date.parse(String(iso).slice(0,10) + 'T00:00:00Z') + n * 86400000);
+  if(h.kind === 'told'){
+    const t = briefLastTold(h.customerId);
+    return t ? {on: addDays(t.sentOn, TELL_EVERY_DAYS)} : {on: null};
+  }
+  if(h.kind === 'chased'){
+    if(h.lastChased) return {on: addDays(h.lastChased, Number(h.restDays) || 0)};
+    const d = (data.presetDebtChases || {})[h.customerId];
+    return d ? {on: addDays(d, TELL_AFTER_CHASE_DAYS)} : {on: null};
+  }
+  if(h.kind === 'promised') return h.promisedOn ? {on: addDays(h.promisedOn, 1), ifUnpaid: true} : {on: null};
+  if(h.kind === 'nophone') return {on: null, waits: 'a number'};
+  if(h.kind === 'blocked') return {on: null, waits: 'the balance checked'};
+  if(h.kind === 'terms') return {on: null, instead: true};
+  return {on: null};
+}
+
+/* WHAT A REPLY READS AS. A hint drawn from their own words, in order of
+   what it would cost to get wrong -- a request to stop is honoured
+   before anything else. It is labelled a reading on screen, never a
+   fact: nothing is recorded until the owner presses the act beside it. */
+const MSG_READS = [
+  ['stop', /\b(stop|unsubscribe|remove me|don'?t (text|message|send))\b/i, 'Asked to stop'],
+  ['paid', /\b(paid|sent|deposited|momo|mobile money|transferred|banked)\b/i, 'Says they paid'],
+  ['dispute', /\b(wrong|not (correct|right|mine)|don'?t owe|mistake|never (took|bought))\b/i, 'Disputes a figure'],
+  ['day', /\b((mon|tues|wednes|thurs|fri|satur|sun)day|tomorrow|next week|month end|end of (the )?month|\d{1,2}(st|nd|rd|th)|\d{1,2}\/\d{1,2})\b/i, 'Names a day'],
+  ['buy', /\b(price|how much|send me|do you have|need|want|order|quote|available)\b/i, 'Wants to buy'],
+];
+function msgReadReply(text){
+  const s = String(text || '');
+  for(const [key, re, label] of MSG_READS){
+    const m = re.exec(s);
+    if(m) return {key, label, word: m[0]};
+  }
+  return {key: 'other', label: 'Something else', word: ''};
+}
+
+/* HOW LONG THE SHOP TAKES TO ANSWER: per conversation, from the first
+   message of an unanswered run to the reply -- the same measure the
+   WhatsApp strip takes its median from. */
+function msgAnswerMinutes(msgs){
+  const byConv = new Map();
+  (msgs || []).forEach(m=>{
+    if(!byConv.has(m.conversation_id)) byConv.set(m.conversation_id, []);
+    byConv.get(m.conversation_id).push(m);
+  });
+  const out = [];
+  byConv.forEach(list=>{
+    let since = null;
+    list.slice().sort((a,b)=> String(a.sent_at).localeCompare(String(b.sent_at))).forEach(m=>{
+      if(m.direction === 'in'){ if(since == null) since = Date.parse(m.sent_at); }
+      else if(since != null){
+        const d = Date.parse(m.sent_at) - since;
+        if(isFinite(d) && d >= 0) out.push(d / 60000);
+        since = null;
+      }
+    });
+  });
+  return out;
+}
+const MSG_ANSWER_BUCKETS = [[10,'10m'], [30,'30m'], [60,'1h'], [120,'2h'], [240,'4h'], [480,'8h'], [Infinity,'8h+']];
+function msgAnswerBuckets(mins){
+  const n = MSG_ANSWER_BUCKETS.map(()=> 0);
+  (mins || []).forEach(m=>{ n[MSG_ANSWER_BUCKETS.findIndex(b=> m <= b[0])]++; });
+  return MSG_ANSWER_BUCKETS.map((b, i)=> ({label: b[1], n: n[i]}));
+}
+
+/* WHEN CUSTOMERS WRITE: inbound messages by weekday and hour, on the
+   device's own clock -- the shop's clock. Mon first, 07:00 to 18:00. */
+const MSG_HEAT_HOURS = [7,8,9,10,11,12,13,14,15,16,17,18];
+function msgReplyHeat(msgs){
+  const grid = Array.from({length: 7}, ()=> MSG_HEAT_HOURS.map(()=> 0));
+  let n = 0;
+  (msgs || []).forEach(m=>{
+    if(m.direction !== 'in') return;
+    const t = new Date(m.sent_at);
+    if(isNaN(t.getTime())) return;
+    const h = MSG_HEAT_HOURS.indexOf(t.getHours());
+    if(h < 0) return;
+    grid[(t.getDay() + 6) % 7][h]++; n++;
+  });
+  const max = Math.max(0, ...grid.flat());
+  let best = null;
+  grid.forEach((row, d)=> row.forEach((v, h)=>{ if(v && (!best || v > best.v)) best = {d, h: MSG_HEAT_HOURS[h], v}; }));
+  return {grid, n, max, best};
+}
+
+/* ---- DRAWING THE READINGS ------------------------------------------
+   Every mark below is HTML positioned in percent rather than an SVG
+   stretched to fit: a stretched viewBox turns dots into ellipses, and a
+   dot's size is one of the things these charts say. Colours are classes
+   so the state and category tokens stay the only paint. */
+const msgFigK = (n)=>{
+  const v = Math.round(Number(n) || 0);
+  if(v >= 1e6) return (v / 1e6).toFixed(v >= 1e7 ? 0 : 1).replace(/\.0$/, '') + 'M';
+  if(v >= 1e3) return Math.round(v / 1e3) + 'k';
+  return String(v);
+};
+const msgPct = (x)=> Math.max(0, Math.min(100, Math.round(x * 1000) / 10)) + '%';
+
+/* THE TODAY BAND: the loop, the money riding on it, and who can be
+   reached for nothing. Drawn over the lanes, on every lane, so it does
+   not move when the filter does. */
+function msgBandHTML(now, rows, lanes, promised){
+  const loop = msgTodayLoop(now, rows, lanes);
+  const day = loop.toSay + loop.sent;
+  const stage = (label, v, sub, frac, cls)=> `<div class="ow-mi-st">
+      <span class="ow-mi-l">${label}</span><b class="ow-mi-v${cls ? ' ' + cls : ''}">${v}</b>
+      <span class="ow-mi-bar"><i class="ow-mi-bf${cls ? ' ' + cls : ''}" style="width:${msgPct(frac)}"></i></span>
+      <span class="ow-mi-s">${sub}</span></div>`;
+  const loopHTML = `<div class="ow-pan ow-mi-loop">
+    <div class="ow-pan-h"><span class="ow-pan-t">Today&rsquo;s loop</span><span class="ow-pan-n">from a reason to money in the till</span></div>
+    <div class="ow-mi-sts">
+      ${stage('To say', day, day ? `${loop.toSay} still to go` : 'nobody today', day ? 1 : 0)}
+      ${stage('Sent', loop.sent, loop.sent ? 'stamped today' : 'nothing yet', day ? loop.sent / day : 0)}
+      ${stage('Replied', loop.back, loop.asks ? `${loop.asks} more wrote first` : 'replies to what you sent', loop.sent ? Math.min(1, loop.back / loop.sent) : 0)}
+      ${stage('Acted', loop.acted, loop.acted
+        ? [loop.paid ? `<b class="ow-fig">${esc(msgFigK(loop.paid))}</b> paid` : '', loop.bought ? `<b class="ow-fig">${esc(msgFigK(loop.bought))}</b> bought` : ''].filter(Boolean).join(' &middot; ')
+        : 'paid or bought today, of those told', loop.sent ? Math.min(1, loop.acted / Math.max(1, loop.sent)) : 0, 'ow-good')}
+    </div></div>`;
+
+  const s = msgStakeSplit(rows, promised);
+  const seg = (v, cls)=> v > 0 && s.total > 0 ? `<i class="ow-mi-seg ${cls}" style="width:${msgPct(v / s.total)}"></i>` : '';
+  const key = (v, cls, label)=> v > 0 ? `<span class="ow-mi-k"><i class="ow-mi-sw ${cls}"></i><span class="ow-mi-kl">${label}</span><b class="ow-fig">${esc(fmtUGX(v))}</b></span>` : '';
+  const stakeHTML = `<div class="ow-pan ow-mi-stake">
+    <div class="ow-pan-h"><span class="ow-pan-t">At stake</span><span class="ow-pan-sp"></span><span class="ow-pan-n ow-fig">${s.total ? esc(fmtUGX(s.total)) : '&mdash;'}</span></div>
+    <div class="ow-mi-in">
+      ${s.total ? `<div class="ow-mi-stack">${seg(s.owed, 'ow-mi-owed')}${seg(s.promised, 'ow-mi-prom')}${seg(s.basket, 'ow-mi-goods')}${seg(s.month, 'ow-mi-rel')}</div>
+      <div class="ow-mi-keys">${key(s.owed, 'ow-mi-owed', 'Owed, past terms')}${key(s.promised, 'ow-mi-prom', 'Named a day')}${key(s.basket, 'ow-mi-goods', 'Asked for, today&rsquo;s price')}${key(s.month, 'ow-mi-rel', 'Quiet, a usual month')}</div>`
+      : '<p class="ow-mini">Nothing on today&rsquo;s list carries a figure the books can stand behind.</p>'}
+      ${s.unvalued ? `<p class="ow-mini">${s.unvalued} ${s.unvalued === 1 ? 'row has' : 'rows have'} no figure &mdash; counted, not valued.</p>` : ''}
+    </div></div>`;
+
+  const win = rows.map(r=> msgWindowFor(r.phone, now));
+  const known = win.filter(w=> w);
+  const open = known.filter(w=> w.open).length;
+  const dots = rows.slice(0, 28).map((r, i)=>{
+    const w = win[i];
+    const cls = !w ? 'ow-mi-dot-q' : w.open ? 'ow-mi-dot-on' : 'ow-mi-dot-off';
+    return `<i class="ow-mi-dot ${cls}" title="${esc(r.name)} — ${!w ? 'not known here' : w.open ? 'free, ' + w.hoursLeft + 'h left' : 'window closed'}"></i>`;
+  }).join('');
+  const reachHTML = `<div class="ow-pan ow-mi-reach">
+    <div class="ow-pan-h"><span class="ow-pan-t">Reachable free</span><span class="ow-pan-sp"></span><span class="ow-pan-n">${msgInboxLoaded() ? `<b class="ow-fig">${open}</b> of ${rows.length}` : 'not known here'}</span></div>
+    <div class="ow-mi-in">
+      ${rows.length ? `<div class="ow-mi-dots">${dots}</div>` : ''}
+      <p class="ow-mini">${msgInboxLoaded()
+        ? 'Filled: their 24-hour WhatsApp window is open, so a reply costs nothing. Hollow: closed — ring, or wait for them to write.'
+        : 'WhatsApp is not read on this device, so nobody’s window is known. Dashed until it is.'}</p>
+    </div></div>`;
+  return `<div class="ow-mi-band">${loopHTML}${stakeHTML}${reachHTML}</div>`;
+}
+
+/* ONE ROW'S SIGNAL: the shape of its reason, in 150 pixels. */
+function msgSignalHTML(row, now){
+  const today = fupDayISO(now);
+  const ag = msgAgingPoints(row.chase, now);
+  if(ag){
+    const span = Math.max(120, ...ag.pts.map(p=> p.age + 10));
+    const maxDue = Math.max(1, ...ag.pts.map(p=> p.due));
+    const dots = ag.pts.map(p=> `<i class="ow-mi-ag ${p.age > Math.max(60, ag.terms * 2) ? 'ow-bad' : p.age > ag.terms ? 'ow-warn' : ''}" style="left:${msgPct(p.age / span)};--d:${Math.round(6 + 8 * Math.sqrt(p.due / maxDue))}px" title="${esc(p.no)} · ${p.age}d · ${esc(fmtUGX(Math.round(p.due)))}"></i>`).join('');
+    return `<span class="ow-mi-sig" aria-label="${ag.pts.length} invoices by age">
+      <i class="ow-mi-ax"></i><i class="ow-mi-terms" style="left:${msgPct(ag.terms / span)}"></i>${dots}
+      ${!ag.pts.length ? `<span class="ow-mi-sn">carried, no invoice</span>` : ''}</span>`;
+  }
+  const item = (row.items || [])[0];
+  const r = item && (item.reasons.find(x=> x.kind !== 'gone_quiet') || item.reasons[0]);
+  if(r && (r.kind === 'back_in_stock' || r.kind === 'companion_in')){
+    const asked = String(item.followUp.createdAt || '').slice(0,10);
+    return `<span class="ow-mi-sig ow-mi-sig-2"><span class="ow-mi-sn">asked ${asked ? esc(fmtShortDate(asked)) : ''}</span>
+      <i class="ow-mi-ax"></i><i class="ow-mi-pt ow-mi-pt-o" style="left:0"></i><i class="ow-mi-pt ow-good" style="left:100%"></i>
+      <span class="ow-mi-sn ow-mi-sr ow-good">${esc(r.detail || 'in now')}</span></span>`;
+  }
+  if(r && r.kind === 'price_moved'){
+    return `<span class="ow-mi-sig ow-mi-sig-2"><span class="ow-mi-step ${r.down ? 'ow-good' : 'ow-warn'}"><i class="ow-mi-sti"></i><i class="ow-mi-sti"></i></span>
+      <span class="ow-mi-sn ow-mi-sr ${r.down ? 'ow-good' : 'ow-warn'}">${r.down ? '−' : '+'}${Math.round(Math.abs(r.now - r.was) / Math.max(1, r.was) * 100)}%</span></span>`;
+  }
+  if(r && r.kind === 'sourcing_progress'){
+    const at = SOURCING_STATUS_ORDER.indexOf(r.status);
+    return `<span class="ow-mi-sig ow-mi-pips">${SOURCING_STATUS_ORDER.map((k, i)=> `<i class="ow-mi-pip${i <= at ? ' ow-on' : ''}" title="${esc(SOURCING_SHORT_LABELS[k] || k)}"></i>`).join('')}</span>`;
+  }
+  if(r && r.kind === 'promised'){
+    return `<span class="ow-mi-sig ow-mi-sig-2"><span class="ow-mi-sn ${r.lateDays ? 'ow-bad' : 'ow-warn'}">${r.lateDays ? 'you said ' + esc(fmtShortDate(r.promisedOn)) + ' · ' + r.lateDays + 'd past' : 'you said today'}</span></span>`;
+  }
+  /* A rhythm: how often they usually come, against how long it has been. */
+  const bk = row.book;
+  if(bk && bk.everyDays > 0 && bk.daysSinceLast != null){
+    const span = Math.max(bk.everyDays, bk.daysSinceLast, 1);
+    return `<span class="ow-mi-sig ow-mi-gap" title="Buys about every ${bk.everyDays} days; ${bk.daysSinceLast} days since the last">
+      <span class="ow-mi-gr"><i class="ow-mi-gu" style="width:${msgPct(bk.everyDays / span)}"></i></span>
+      <span class="ow-mi-gr"><i class="ow-mi-gn${bk.daysSinceLast > bk.everyDays ? ' ow-warn' : ''}" style="width:${msgPct(bk.daysSinceLast / span)}"></i></span>
+      <span class="ow-mi-sn">${bk.daysSinceLast}d &middot; usual ${bk.everyDays}d</span></span>`;
+  }
+  if(bk && bk.orderCount === 1 && bk.daysSinceLast != null)
+    return `<span class="ow-mi-sig ow-mi-sig-2"><span class="ow-mi-sn">one order, ${bk.daysSinceLast}d ago</span></span>`;
+  return `<span class="ow-mi-sig ow-mi-sig-2"><span class="ow-mi-sn">&mdash;</span></span>`;
+}
+/* The odds a row carries: its reason's own record, or why it has none. */
+function msgOddsHTML(key, score){
+  if(key === 'money') return `<span class="ow-mi-odd" title="${esc(FUP_MONEY_UNMEASURABLE)}"><span class="ow-mi-on">not counted</span></span>`;
+  const o = msgOdds(key, score);
+  if(!o || o.pct == null) return `<span class="ow-mi-odd" title="${o && o.n ? 'Told ' + o.n + ' times — too few to call a rate' : 'Never told for this reason yet'}"><span class="ow-mi-segs">${'<i class="ow-mi-sgi"></i>'.repeat(5)}</span><span class="ow-mi-on">${o && o.n ? o.n + ' told' : 'no record'}</span></span>`;
+  const fill = Math.round(o.pct / 20);
+  return `<span class="ow-mi-odd" title="Bought within ${TELL_WORKED_DAYS} days after ${o.n} tellings for this reason. Not proof."><span class="ow-mi-segs">${Array.from({length: 5}, (_, i)=> `<i class="ow-mi-sgi${i < fill ? ' ow-on' : ''}"></i>`).join('')}</span><span class="ow-mi-on"><b class="ow-fig">${o.pct}%</b> bought</span></span>`;
+}
+function msgWindowHTML(w){
+  if(!w) return `<span class="ow-mi-win ow-mi-win-q" title="WhatsApp is not read on this device">&mdash;</span>`;
+  return w.open
+    ? `<span class="ow-mi-win ow-good"><i class="ow-mi-wd"></i>${w.hoursLeft}h free</span>`
+    : `<span class="ow-mi-win"><i class="ow-mi-wd ow-mi-wd-o"></i>closed</span>`;
+}
+
+/* THE DOSSIER: what an opened row is built from, drawn -- the money by
+   age, ninety days between you, and the figures that say who they are. */
+function msgDossierHTML(row, now){
+  const out = [];
+  const ag = msgAgingPoints(row.chase, now);
+  if(ag && ag.pts.length){
+    const span = Math.max(120, ...ag.pts.map(p=> p.age + 15));
+    const maxDue = Math.max(1, ...ag.pts.map(p=> p.due));
+    const ticks = [0, 30, 60, 90, 120].filter(d=> d <= span).map(d=> `<span class="ow-mi-tk" style="left:${msgPct(d / span)}">${d}d</span>`).join('');
+    out.push(`<div class="ow-mi-card">
+      <div class="ow-mi-ch"><span class="ow-mq-l">What they owe, by age</span><b class="ow-fig">${esc(fmtUGX(Math.round(row.chase.debt)))}</b></div>
+      <div class="ow-mi-age">
+        <i class="ow-mi-past" style="left:${msgPct(ag.terms / span)}"></i>
+        <i class="ow-mi-ax"></i><i class="ow-mi-terms" style="left:${msgPct(ag.terms / span)}"></i>
+        ${ag.pts.map(p=> `<span class="ow-mi-agp" style="left:${msgPct(p.age / span)}"><span class="ow-mi-agl">${esc(msgFigK(p.due))}</span><i class="ow-mi-ag ${p.age > Math.max(60, ag.terms * 2) ? 'ow-bad' : p.age > ag.terms ? 'ow-warn' : ''}" style="--d:${Math.round(10 + 14 * Math.sqrt(p.due / maxDue))}px" title="${esc(p.no)} · ${p.age} days"></i></span>`).join('')}
+        ${ticks}
+      </div>
+      ${ag.carried > 0.5 ? `<p class="ow-mini"><b class="ow-fig">${esc(fmtUGX(Math.round(ag.carried)))}</b> carried from earlier, with no invoice and no age.</p>` : ''}
+      <p class="ow-mini">The dashed line is your terms, ${ag.terms} days; the tint past it is money that is late.</p>
+    </div>`);
+  }
+  const tl = msgTimeline(row.customerId, now, 90);
+  if(tl.ev.length){
+    const at = (d)=> msgPct(daysBetweenISO(tl.from, d) / tl.days);
+    const maxBuy = Math.max(1, ...tl.ev.filter(e=> e.k === 'bought').map(e=> e.v));
+    const mark = (e)=>{
+      if(e.k === 'bought') return `<i class="ow-mi-ev ow-mi-ev-b" style="left:${at(e.d)};--h:${Math.round(6 + 16 * Math.sqrt(e.v / maxBuy))}px" title="Bought ${esc(fmtUGX(Math.round(e.v)))} · ${esc(fmtShortDate(e.d))}"></i>`;
+      if(e.k === 'paid') return `<i class="ow-mi-ev ow-mi-ev-p" style="left:${at(e.d)}" title="Paid ${esc(fmtUGX(Math.round(e.v)))} · ${esc(fmtShortDate(e.d))}"></i>`;
+      if(e.k === 'told') return `<i class="ow-mi-ev ow-mi-ev-t" style="left:${at(e.d)}" title="You told them · ${esc(fmtShortDate(e.d))}"></i>`;
+      if(e.k === 'wrote') return `<i class="ow-mi-ev ow-mi-ev-w" style="left:${at(e.d)}" title="They wrote · ${esc(fmtShortDate(e.d))}"></i>`;
+      return `<i class="ow-mi-ev ow-mi-ev-n ${e.state === 'broken' ? 'ow-bad' : e.state === 'kept' ? 'ow-good' : ''}" style="left:${at(e.d)}" title="Named ${esc(fmtShortDate(e.d))} — ${esc(e.state)}"></i>`;
+    };
+    out.push(`<div class="ow-mi-card">
+      <div class="ow-mi-ch"><span class="ow-mq-l">The last 90 days between you</span>
+        <span class="ow-mi-lg"><i class="ow-mi-ev ow-mi-ev-b"></i>bought <i class="ow-mi-ev ow-mi-ev-p"></i>paid <i class="ow-mi-ev ow-mi-ev-t"></i>you told <i class="ow-mi-ev ow-mi-ev-w"></i>they wrote <i class="ow-mi-ev ow-mi-ev-n"></i>a day named</span></div>
+      <div class="ow-mi-tl"><i class="ow-mi-ax"></i>${tl.ev.map(mark).join('')}</div>
+      <div class="ow-mi-tls"><span>${esc(fmtShortDate(tl.from))}</span><span>today</span></div>
+    </div>`);
+  }
+  if(ag && !ag.pts.length && ag.carried > 0.5)
+    out.push(`<p class="ow-mini"><b class="ow-fig">${esc(fmtUGX(Math.round(ag.carried)))}</b> is carried from earlier, with no invoice behind it, so it has no age to draw.</p>`);
+  const bk = row.book;
+  const rec = msgPromiseRecord(row.customerId, now);
+  const cell = (l, v, cls)=> `<div class="ow-mi-fc"><span class="ow-mi-l">${l}</span><b class="ow-fig ow-mi-fv${cls ? ' ' + cls : ''}">${v}</b></div>`;
+  if(bk){
+    const fig = (n)=> esc(Number(Math.round(n)).toLocaleString('en-UG'));
+    if(bk.spend > 0 || bk.everyDays || rec.length) out.push(`<div class="ow-mi-figs">
+      ${cell('90-day spend', bk.spend > 0 ? fig(bk.spend) : '&mdash;')}
+      ${cell('You kept', bk.spend > 0 && bk.costed ? fig(bk.kept) : '&mdash;')}
+      ${cell('Buys every', bk.everyDays ? bk.everyDays + 'd' : '&mdash;')}
+      ${cell('Their word', rec.length
+        ? `<span class="ow-mi-rec">${rec.slice(-6).map(s=> `<i class="ow-mi-rdt ${s === 'kept' ? 'ow-good' : 'ow-bad'}" title="${s}"></i>`).join('')}</span> ${rec.filter(s=> s === 'kept').length}/${rec.length}`
+        : '&mdash;')}
+    </div>`);
+  }
+  return out.length ? `<div class="ow-mi-dos">${out.join('')}</div>` : '';
+}
+
+/* HOLDS, COUNTED BY WHAT HOLDS THEM. The split is the reading; the
+   names are the lane's. */
+const MSG_HELD_WORDS = {told: 'told inside a fortnight', chased: 'asked recently',
+  promised: 'inside a day they named', blocked: 'balance being checked',
+  nophone: 'no number on file', terms: 'owes, gets the statement'};
+function msgHeldGroups(list){
+  const by = new Map();
+  list.forEach(h=>{ const k = MSG_HELD_WORDS[h.kind] ? h.kind : 'other'; by.set(k, (by.get(k) || 0) + 1); });
+  return [...by.entries()].map(([k, n])=> ({k, n, label: MSG_HELD_WORDS[k] || 'held for another reason',
+    waits: ['nophone','blocked'].includes(k)})).sort((a,b)=> b.n - a.n);
+}
+function msgHeldSummaryHTML(list){
+  const g = msgHeldGroups(list);
+  const max = Math.max(1, ...g.map(x=> x.n));
+  return `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">Held back</span><span class="ow-pan-n">${list.length} &middot; not today, and why</span></div>
+    ${g.map(x=> `<div class="ow-mi-hg"><span class="ow-mi-hgb"><i class="ow-mi-hgf${x.waits ? ' ow-warn' : ''}" style="width:${msgPct(x.n / max)}"></i></span>
+      <span class="ow-mi-hgl">${esc(x.label)}</span><b class="ow-fig">${x.n}</b></div>`).join('')}
+    <div class="ow-mq-rfoot"><button type="button" class="fup-link fup-inline" data-fupwhy="held">See when each comes back</button></div>
+  </div>`;
+}
+function msgPromiseWeekHTML(nowMs){
+  const days = msgPromiseDays(nowMs, 2, 4);
+  const sum = (d)=> d.items.reduce((s, x)=> s + (Number(x.amount) || 0), 0);
+  const any = days.some(d=> d.items.length);
+  if(!any) return '';
+  const max = Math.max(1, ...days.map(sum));
+  const total = days.filter(d=> d.i >= 0).reduce((s, d)=> s + d.items.filter(x=> x.state !== 'kept').reduce((t, x)=> t + (Number(x.amount) || 0), 0), 0);
+  const wd = (iso)=> new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', {weekday: 'short', timeZone: 'UTC'});
+  return `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">Promises this week</span><span class="ow-pan-sp"></span><span class="ow-pan-n ow-fig">${total ? esc(fmtUGX(total)) : ''}</span></div>
+    <div class="ow-mi-in">
+      <div class="ow-mi-wk">${days.map(d=> `<div class="ow-mi-wkd${d.i === 0 ? ' ow-on' : ''}" title="${esc(d.items.map(x=> x.name + ' — ' + x.state).join(', ') || 'nothing named')}">
+        <span class="ow-mi-wks">${d.items.map(x=> `<i class="ow-mi-wkb ow-mi-p-${x.state}" style="height:${msgPct((Number(x.amount) || max * .15) / max)}"></i>`).join('') || '<i class="ow-mi-wkb ow-mi-p-none"></i>'}</span>
+        <span class="ow-mi-wkl">${d.i === 0 ? 'Today' : esc(wd(d.d))}</span></div>`).join('')}</div>
+      <div class="ow-mi-lg"><i class="ow-mi-sw ow-mi-p-broken"></i>broken <i class="ow-mi-sw ow-mi-p-kept"></i>kept <i class="ow-mi-sw ow-mi-p-due"></i>due today <i class="ow-mi-sw ow-mi-p-waiting"></i>coming</div>
+    </div></div>`;
+}
+
 function renderFollowUpsContact(){
   const wrap = document.getElementById('fup_contact_list');
   if(!wrap) return;
   const now = fupPass ? fupPass.now : Date.now();
-  /* The three lanes the merge brought in are their own row sets, drawn
-     in the same panel with the same columns and the same rail. */
-  if(fupWhy === 'inbox' || fupWhy === 'back' || fupWhy === 'post' || fupWhy === 'promised'){
+  /* THE BAND OVER EVERY LANE: the loop, the money and the reach. It is
+     drawn from the whole day, never the filtered slice, so pressing a
+     lane changes the queue and leaves the band standing still. */
+  const band = document.getElementById('fupBand');
+  if(band){
+    try{ band.innerHTML = msgBandHTML(now, fupHubRowsNow(), msgLanes(now), msgPromisedLane(now)); }
+    catch(err){ console.error('messages band failed', err); band.innerHTML = `<div class="ow-pan"><div class="ow-empty"><b>The day&rsquo;s reading could not be drawn.</b><br>${esc(String(err && err.message || err))}</div></div>`; }
+  }
+  /* The lanes that are not the day's queue are their own row sets, drawn
+     in the same panel with the same rail. */
+  if(fupWhy === 'inbox' || fupWhy === 'back' || fupWhy === 'post' || fupWhy === 'promised' || fupWhy === 'held'){
     fupSetHTML(wrap, msgLaneHTML(fupWhy, now));
     renderMessagesSide(now, []);
     return;
   }
   const rows = fupHubRowsNow();
+  const score = hubScoreboard();
   const tokens = searchTokens(fupQueueQuery);
   const under = fupWhy === 'all' ? rows : rows.filter(r=> fupRowLenses(r).has(fupWhy));
   const shown = !tokens.length ? under : under.filter(row=> matchesAllTokens(fupRowHay(row), tokens));
@@ -109704,23 +110739,36 @@ function renderFollowUpsContact(){
     const waitHTML = `<span class="ow-q-v fup-wt fup-wt-${w.tone}"><span class="ow-q-f">${esc(fig)}</span>
           <span class="fup-wbar" aria-hidden="true"><i class="fup-wbar-f" style="--fup-w:${pct}%"></i></span>
           <span class="ow-q-b">${esc(w.b)}</span></span>`;
+    /* WHAT THE ROW NOW SAYS BESIDE WHO AND WHY: the shape of the reason,
+       the money riding on it, how often that reason has worked before,
+       and whether a message would cost anything. Each one says so when
+       the books cannot answer, rather than printing a zero. */
+    const stake = msgRowStake(row);
+    const stakeHTML = `<span class="ow-mi-stk">${stake
+      ? `<b class="ow-fig">${esc(Number(stake.v).toLocaleString('en-UG'))}</b><span class="ow-q-b">${esc(stake.b)}</span>`
+      : '<b class="ow-mi-nv">&mdash;</b><span class="ow-q-b">not valued</span>'}</span>`;
+    const winHTML = msgWindowHTML(msgWindowFor(row.phone, now));
+    const oddsHTML = msgOddsHTML(msgRowReasonKey(row), score);
+    const sigHTML = msgSignalHTML(row, now);
     /* The desktop row and the phone card are emitted from ONE call, so
-       they can never come to say different things. On the desktop the
-       row does not open in place: the client opens in the pane beside
-       the queue, so the draft is in exactly one place either way. */
+       they can never come to say different things. Both open IN PLACE
+       now: the queue is the width of the screen and the row it opens is
+       read where it is ranked, so the draft is in exactly one place. */
     return `<div class="ow-q${open ? ' ow-open' : ''}">
       <button type="button" class="ow-q-r fup-pick" data-cust="${cid}" aria-expanded="${open ? 'true' : 'false'}">
         <span class="ow-mq-who"><span class="ow-mq-av">${esc(fupInitials(row.name))}</span>
           <span class="ow-mq-b"><span class="ow-mq-n">${esc(row.name)}</span>
             <span class="ow-mq-s" title="${esc(sub)}">${esc(sub)}</span></span></span>
         <span class="ow-mq-cps">${chip}${held}</span>
+        ${sigHTML}${stakeHTML}${oddsHTML}${winHTML}
         ${waitHTML}
       </button>
       <button type="button" class="ow-q-card fup-pick" data-cust="${cid}" aria-expanded="${open ? 'true' : 'false'}">
         <span class="ow-q-cm">${chip}${held}
           <svg class="ow-q-cc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></span>
         <p class="ow-q-ct">${esc(row.name)}</p>
-        ${waitHTML}
+        <span class="ow-mi-cardl">${sigHTML}${stakeHTML}</span>
+        <span class="ow-mi-cardl">${winHTML}${waitHTML}</span>
       </button>
       <div class="ow-q-x">${xHTML || ''}</div>
     </div>`;
@@ -109912,6 +110960,7 @@ function renderFollowUpsContact(){
       </div>
       <div class="ow-mq-l1">
       ${prom ? prom.track : ''}
+      ${msgDossierHTML(row, now)}
       ${facts ? `<div class="fup-w-facts">${facts}</div>` : ''}
       ${items}${account}${telling}${quiet}
       </div>
@@ -109939,15 +110988,13 @@ function renderFollowUpsContact(){
       </div>
     </div>`;
   }
-  /* ONE DRAFT, IN ONE PLACE. On the desktop the queue and the client
-     being worked sit side by side -- the list stays in view while the
-     message is written, which is the whole point of a queue. On a phone
-     there is no room beside it, so the client opens in place under their
-     own card. Which of the two is decided here, once per render, so the
-     draft is only ever drawn once. */
-  const split = fupSplit();
+  /* ONE DRAFT, IN ONE PLACE, AND IN PLACE ON EVERY WIDTH. The desktop
+     used to put the client in a pane beside a 380px queue, which
+     squeezed the reading into two columns and left a third of the
+     screen empty. The queue is the full width now and the opened row is
+     read where it is ranked -- the draft is still only ever drawn once. */
   const body = shown.length
-    ? shown.map(r=> queueRow(r, !split && String(r.customerId) === String(fupSelectedCustomerId) ? work : '')).join('')
+    ? shown.map(r=> queueRow(r, String(r.customerId) === String(fupSelectedCustomerId) ? work : '')).join('')
     : emptyHTML;
   const queueHTML = `<div class="ow-pan ow-mq fup-queue">
     <div class="ow-pan-h ow-mq-hd"><span class="ow-pan-t">${fupWhy === 'all' ? 'Who is up' : esc(whyLabel)}</span>
@@ -109955,11 +111002,13 @@ function renderFollowUpsContact(){
       <span class="ow-pan-sp"></span>
       <span class="ow-pan-note" title="Money first, dearest first \u2014 then news, soonest to stop being true">dearest first</span></div>
     ${rows.length || tokens.length ? `<div class="ow-tb"><label class="ow-f ow-f-grow"><span class="ow-f-l">Find in the queue</span><span class="ow-f-in"><input type="search" class="ow-f-v ow-f-t" id="fup_queue_search" placeholder="Client, item or note" value="${esc(fupQueueQuery)}"></span></label></div>` : ''}
-    ${shown.length ? `<div class="ow-mq-h"><span class="ow-mq-hc">Who, and what it is about</span><span class="ow-mq-hc">Why now</span>
-      <span class="ow-mq-hc ow-mq-r">Waiting</span></div>` : ''}
+    ${shown.length ? `<div class="ow-mq-h"><span class="ow-mq-hc">Who, and why now</span><span class="ow-mq-hc">Why now</span>
+      <span class="ow-mq-hc">Signal</span><span class="ow-mq-hc ow-mq-r">At stake</span>
+      <span class="ow-mq-hc" title="How often this reason has been followed by a sale within ${TELL_WORKED_DAYS} days">Odds</span>
+      <span class="ow-mq-hc">Window</span><span class="ow-mq-hc ow-mq-r">Waiting</span></div>` : ''}
     ${body}${undo}
   </div>`;
-  fupSetHTML(wrap, split && shown.length ? `<div class="fup-md">${queueHTML}${work}</div>` : queueHTML);
+  fupSetHTML(wrap, queueHTML);
   renderMessagesSide(now, rows);
 }
 
@@ -109993,6 +111042,9 @@ function renderFollowUpSummary(){
   const promised = msgPromisedLane(now);
   const nPromised = promised.length;
   const nDue = promised.filter(r=> r.due).length;
+  /* Held back reads the same list its lane opens. */
+  const held = followUpHeldBack(now, rows).list;
+  const fixable = held.filter(h=> !msgHeldLift(h).on).length;
   const oldest = lanes.waiting.concat(lanes.back)
     .reduce((m,a)=> a.waited != null && a.waited > m ? a.waited : m, 0);
   const wait = (m)=> typeof waFmtWait === 'function' ? waFmtWait(m) : Math.round(m) + ' min';
@@ -110000,7 +111052,7 @@ function renderFollowUpSummary(){
      .ow-lr and .ow-seg-b wear. Worth a word still reads as chosen for
      either half of itself, because the retired page's door opens
      'telling' on its own. */
-  const on = (k)=> k === fupWhy || (k === 'word' && (fupWhy === 'telling' || fupWhy === 'quiet'));
+  const on = (k)=> fupTab === 'contact' && (k === fupWhy || (k === 'word' && (fupWhy === 'telling' || fupWhy === 'quiet')));
   /* A lane with nobody in it is still a door -- other screens open it
      by name -- but it is drawn quiet, so the eye lands on the lanes
      that hold work. The subtitle is the chip's hover, not a second line:
@@ -110020,6 +111072,8 @@ function renderFollowUpSummary(){
       nPromised ? (nDue ? nDue + ' fall due today' : 'none fall due today') : 'nobody has named a day')}
     ${tile('To post', 'post', `${post.postedToday}<span class="ow-u">of ${post.cap}</span>`,
       post.picks.length ? `${post.picks.length} nominated today` : 'nothing nominated')}
+    ${tile('Held back', 'held', held.length,
+      held.length ? (fixable ? fixable + ' only you can release' : 'each comes back on its own day') : 'nobody is held back')}
   </div>`;
   renderFollowUpQuietLine();
 }
@@ -110285,6 +111339,143 @@ function renderFollowUpScore(){
   return work + rules;
 }
 
+/* ================= INTELLIGENCE: what all of it came to ===============
+
+   The Register records what went out; this reads it. Weekly, not daily,
+   so it is its own view -- and nothing on it is the screen's next move,
+   so it carries no accent. Every figure is the same reading the queue
+   uses: the odds on a row ARE the bar here, the promise dots on a row
+   ARE the rate here. Where the books cannot answer, the panel says so
+   in place of the figure. */
+function msgFindings(nowMs, rows, score){
+  const out = [];
+  /* 1. Which reasons earn, of those told often enough to say. */
+  const rated = Object.entries(score.byReason || {}).filter(([, v])=> v.told >= MSG_ODDS_MIN)
+    .map(([k, v])=> ({k, pct: Math.round(v.worked / v.told * 100), n: v.told})).sort((a,b)=> b.pct - a.pct);
+  if(rated.length >= 2){
+    const hi = rated[0], lo = rated[rated.length - 1];
+    if(hi.pct > lo.pct) out.push({cat: 'goods', tag: 'What works', title: `${HUB_SCORE_LABELS[hi.k] || hi.k} is followed by a sale ${hi.pct}% of the time; ${(HUB_SCORE_LABELS[lo.k] || lo.k).toLowerCase()}, ${lo.pct}%`,
+      bars: [[HUB_SCORE_LABELS[hi.k] || hi.k, hi.pct], [HUB_SCORE_LABELS[lo.k] || lo.k, lo.pct]], note: `${hi.n} and ${lo.n} tellings · not proof`});
+  }
+  /* 2. Whose word does not hold, among people who owe today. */
+  const liars = (data.customers || []).filter(c=> (Number(c.debt) || 0) > 0.5)
+    .map(c=> ({c, rec: msgPromiseRecord(c.id, nowMs)})).filter(x=> x.rec.filter(r=> r === 'broken').length >= 2);
+  if(liars.length) out.push({cat: 'money', tag: 'Money', title: `${liars.length} ${liars.length === 1 ? 'customer who owes has' : 'customers who owe have'} broken two promises or more`,
+    names: liars.slice(0, 3).map(x=> x.c.name), note: 'a call reaches further than another message', door: ['promised', 'See the promise calendar']});
+  /* 3. Reach: who on today's list can be written to for nothing. */
+  if(msgInboxLoaded() && rows.length){
+    const w = rows.map(r=> msgWindowFor(r.phone, nowMs));
+    const open = w.filter(x=> x && x.open).length;
+    out.push({cat: 'reach', tag: 'Reach', title: `${open} of today&rsquo;s ${rows.length} can be messaged free right now`,
+      bars: [['Window open', Math.round(open / rows.length * 100)]], note: 'the rest need a call, or wait for them to write', door: ['all', 'Open today&rsquo;s list']});
+  }
+  /* 4. When they write. */
+  const heat = msgReplyHeat(msgInboxSource().msgs);
+  if(heat.best && heat.n >= 20){
+    const dn = ['Mondays','Tuesdays','Wednesdays','Thursdays','Fridays','Saturdays','Sundays'][heat.best.d];
+    out.push({cat: 'insight', tag: 'Timing', title: `Customers write most on ${dn} around ${String(heat.best.h).padStart(2,'0')}:00`,
+      note: `${heat.n} messages read · have the morning\u2019s messages sent before then`});
+  }
+  /* 5. Holds only a person can lift. */
+  const held = followUpHeldBack(nowMs, rows).list.filter(h=> !msgHeldLift(h).on);
+  if(held.length) out.push({cat: 'setup', tag: 'Held back', title: `${held.length} ${held.length === 1 ? 'person is' : 'people are'} held back until you act`,
+    names: held.slice(0, 3).map(h=> h.name), note: held.some(h=> h.kind === 'nophone') ? 'most often a missing phone number' : 'a balance to check', door: ['held', 'See who, and why']});
+  return out.slice(0, 3);
+}
+
+function renderMessagesIntel(){
+  const el = document.getElementById('fup_intel_pane');
+  if(!el) return;
+  const now = fupPass ? fupPass.now : Date.now();
+  const rows = fupHubRowsNow();
+  const score = hubScoreboard();
+  const rate = msgPromiseRate(now);
+  const { convs, msgs } = msgInboxSource();
+  const mins = msgAnswerMinutes(msgs);
+  const med = waMedian(mins);
+  const pct = (a, b)=> b ? Math.round(a / b * 100) + '%' : '—';
+  const cell = (l, v, sub, cls)=> `<div class="ow-mt"><p class="ow-mt-l">${l}</p><span class="ow-mt-v${cls ? ' ' + cls : ''}">${v}</span><p class="ow-mt-s">${sub}</p></div>`;
+  const strip = `<div class="ow-strip ow-mi-strip">
+    ${cell('Told', score.told || '0', score.told ? 'messages and pictures on record' : 'nothing told yet')}
+    ${cell(`Bought within ${TELL_WORKED_DAYS}d`, pct(score.worked, score.told), score.told ? `${score.worked} of ${score.told} · not proof` : 'no record yet', score.told ? 'ow-good' : '')}
+    ${cell('Those orders', score.worth ? esc(msgFigK(score.worth)) : '—', 'UGX, at invoice')}
+    ${cell('Days kept', rate.decided ? `${rate.kept}<span class="ow-u">of ${rate.decided}</span>` : '—', rate.decided ? `${rate.broken} broken · ${rate.open} still coming` : 'no promised day has passed')}
+    ${cell('You answer in', med != null ? esc(waFmtMins(med)) : '—', med != null ? 'median, from the inbox' : 'the inbox is not read here')}
+    ${cell('Asked to stop', (convs || []).filter(c=> c.opt_out).length, (convs || []).length ? 'of ' + convs.length + ' chats' : 'the inbox is not read here')}
+  </div>`;
+
+  const find = msgFindings(now, rows, score);
+  const CAT = {goods: 'ow-mi-c-goods', money: 'ow-mi-c-money', reach: 'ow-mi-c-goods', insight: 'ow-mi-c-ins', setup: 'ow-mi-c-setup'};
+  const findings = find.length ? `<div class="ow-mi-finds">${find.map(f=> `<div class="ow-pan ow-mi-find">
+      <span class="ow-cp ${CAT[f.cat] || ''}">${esc(f.tag)}</span>
+      <p class="ow-mi-ft">${f.title}</p>
+      ${f.bars ? f.bars.map(([l, v])=> `<div class="ow-mi-fb"><span class="ow-mi-kl">${esc(l)}</span><span class="ow-mi-bar"><i class="ow-mi-bf" style="width:${v}%"></i></span><b class="ow-fig">${v}%</b></div>`).join('') : ''}
+      ${f.names ? `<div class="ow-mq-acts" style="margin-top:0">${f.names.map(n=> `<span class="ow-cp">${esc(n)}</span>`).join('')}</div>` : ''}
+      <p class="ow-mini">${esc(f.note)}</p>
+      ${f.door ? `<button type="button" class="btn btn-ghost ow-sm ow-mi-fgo" data-fupwhy="${f.door[0]}">${f.door[1]}</button>` : ''}
+    </div>`).join('')}</div>` : '';
+
+  /* Reason by reason: the same bars the queue's odds column reads. */
+  const reasons = Object.entries(score.byReason || {}).sort((a,b)=> b[1].told - a[1].told);
+  const byReason = `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">What works, reason by reason</span><span class="ow-pan-n">bought within ${TELL_WORKED_DAYS} days of being told</span></div>
+    <div class="ow-mi-in">${reasons.length ? reasons.map(([k, v])=>{
+      const enough = v.told >= MSG_ODDS_MIN;
+      return `<div class="ow-mi-rr${enough ? '' : ' ow-mi-zero'}"><span class="ow-mi-kl">${esc(HUB_SCORE_LABELS[k] || k)}</span>
+        <span class="ow-mi-bar ow-mi-bar-l"><i class="ow-mi-bf ow-good" style="width:${enough ? Math.round(v.worked / v.told * 100) : 0}%"></i></span>
+        <b class="ow-fig">${enough ? Math.round(v.worked / v.told * 100) + '%' : 'too few'}</b><span class="ow-mi-on">${v.told} told</span></div>`;
+    }).join('') : '<p class="ow-mini">Nothing told yet. Once messages go, each reason earns a bar here.</p>'}
+      <div class="ow-mi-rr"><span class="ow-mi-kl">Money</span><span class="ow-mi-bar ow-mi-bar-l"></span><b class="ow-mi-on ow-warn">not counted</b><span class="ow-mi-on"></span></div>
+      <p class="ow-mini">A chase note is dropped the moment the client owes nothing &mdash; exactly when it worked &mdash; so money has no honest rate.</p>
+    </div></div>`;
+
+  const heat = msgReplyHeat(msgs);
+  const shade = (v)=> heat.max ? Math.min(4, Math.ceil(v / heat.max * 4)) : 0;
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const heatHTML = `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">When customers write</span><span class="ow-pan-n">${heat.n ? heat.n + ' messages, by hour' : ''}</span></div>
+    <div class="ow-mi-in">${heat.n ? `<div class="ow-mi-heat">
+      ${heat.grid.map((row, d)=> `<span class="ow-mi-hl">${days[d]}</span>${row.map((v, h)=> `<i class="ow-mi-hx ow-mi-h${shade(v)}" title="${days[d]} ${String(MSG_HEAT_HOURS[h]).padStart(2,'0')}:00 — ${v}"></i>`).join('')}`).join('')}
+      <span></span>${MSG_HEAT_HOURS.map(h=> `<span class="ow-mi-hh2">${h % 2 ? '' : String(h).padStart(2,'0')}</span>`).join('')}
+    </div><div class="ow-mi-lg">fewer <i class="ow-mi-sw ow-mi-h1"></i><i class="ow-mi-sw ow-mi-h2"></i><i class="ow-mi-sw ow-mi-h3"></i><i class="ow-mi-sw ow-mi-h4"></i> more</div>`
+      : `<p class="ow-mini">${msgInboxLoaded() ? 'No messages from customers in the inbox yet.' : 'WhatsApp is not read on this device, so when customers write is not known here.'}</p>`}</div></div>`;
+
+  /* The money ladder: from past terms to a day kept or broken. */
+  const ch = fupChaseNow();
+  const pastTerms = ch.due.length + ch.resting.length + ch.promised.length;
+  const stamps = data.presetDebtChases || {};
+  const owing = [...ch.due, ...ch.resting, ...ch.promised];
+  const asked = owing.filter(r=> stamps[r.id]).length;
+  const named = owing.filter(r=> promisesFor(r.id).length).length;
+  const step = (l, n, of)=> `<div class="ow-mi-lad"><span class="ow-mi-kl">${l}</span><span class="ow-mi-bar ow-mi-bar-l"><i class="ow-mi-bf ow-mi-owed" style="width:${of ? msgPct(n / of) : '0%'}"></i></span><b class="ow-fig">${n}</b></div>`;
+  const tot = rate.kept + rate.broken + rate.open;
+  const ladder = `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">The money ladder</span><span class="ow-pan-n">who owes past your terms, and how far each has got</span></div>
+    <div class="ow-mi-in">${pastTerms ? `${step('Past your terms', pastTerms, pastTerms)}${step('Asked', asked, pastTerms)}${step('Named a day', named, pastTerms)}`
+      : '<p class="ow-mini">Nobody owes past your terms today.</p>'}
+      ${tot ? `<div class="ow-mi-lad"><span class="ow-mi-kl">Every day named</span><span class="ow-mi-stack ow-mi-bar-l">
+        ${rate.kept ? `<i class="ow-mi-seg ow-mi-p-kept" style="width:${msgPct(rate.kept / tot)}"></i>` : ''}${rate.broken ? `<i class="ow-mi-seg ow-mi-p-broken" style="width:${msgPct(rate.broken / tot)}"></i>` : ''}${rate.open ? `<i class="ow-mi-seg ow-mi-p-waiting" style="width:${msgPct(rate.open / tot)}"></i>` : ''}</span><b class="ow-fig">${tot}</b></div>
+        <div class="ow-mi-lg"><i class="ow-mi-sw ow-mi-p-kept"></i>kept ${rate.kept} <i class="ow-mi-sw ow-mi-p-broken"></i>broken ${rate.broken} <i class="ow-mi-sw ow-mi-p-waiting"></i>still coming ${rate.open}</div>` : ''}
+      ${ch.blocked.length ? `<p class="ow-mini">${ch.blocked.length} more owe but are not asked: a balance being checked, or one with no date.</p>` : ''}
+    </div></div>`;
+
+  /* The rules, drawn as the days they govern. Set on the Register. */
+  const grace = ch.graceDays, rest = ch.restDays, quiet = followUpQuietDays();
+  const span = Math.max(30, grace + rest * 4 + 2);
+  const asks = []; for(let d = grace, k = 0; d <= span && k < 6; d += Math.max(1, rest), k++) asks.push(d);
+  const rules = `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">The rules, as the days they govern</span><span class="ow-pan-n">changed on the Register</span></div>
+    <div class="ow-mi-in">
+      <p class="ow-mq-l">Money &middot; days after an invoice falls due</p>
+      <div class="ow-mi-rule"><i class="ow-mi-rq" style="width:${msgPct(grace / span)}"></i><i class="ow-mi-ra" style="left:${msgPct(grace / span)}"></i>
+        ${asks.map(d=> `<i class="ow-mi-rt" style="left:${msgPct(d / span)}" title="asked again on day ${d}"></i>`).join('')}</div>
+      <div class="ow-mi-rls"><span>grace <b class="ow-fig">${grace}d</b>, nobody asked</span><span>then every <b class="ow-fig">${rest}d</b> at most</span></div>
+      <p class="ow-mq-l" style="margin-top:12px">News &middot; days since they were last told anything</p>
+      <div class="ow-mi-rule"><i class="ow-mi-rq" style="width:${msgPct(Math.min(quiet, 30) / 30)}"></i><i class="ow-mi-rn" style="left:${msgPct(Math.min(quiet, 30) / 30)}"></i></div>
+      <div class="ow-mi-rls"><span>quiet <b class="ow-fig">${quiet}d</b>, then worth a word</span><span>one picture per <b class="ow-fig">${TELL_EVERY_DAYS}d</b>, never inside a chase</span></div>
+    </div></div>`;
+
+  el.innerHTML = `${strip}${findings}
+    <div class="ow-mi-two">${byReason}${heatHTML}</div>
+    <div class="ow-mi-two">${ladder}${rules}</div>`;
+}
+
 function renderFollowUps(){
   const now = Date.now();
   /* The chase reading FIRST: followUpHubRows takes it as an argument now
@@ -110295,8 +111486,11 @@ function renderFollowUps(){
   fupPass = {now, chase, rows: followUpHubRows(now, chase)};
   try{
     const work = fupTab === 'contact';
+    const intel = fupTab === 'intel';
     document.getElementById('fup_contact_pane').style.display = work ? '' : 'none';
-    document.getElementById('fup_all_pane').style.display = work ? 'none' : '';
+    const intelPane = document.getElementById('fup_intel_pane');
+    if(intelPane) intelPane.style.display = intel ? '' : 'none';
+    document.getElementById('fup_all_pane').style.display = work || intel ? 'none' : '';
     /* ONE STRIP, ON BOTH VIEWS, ALWAYS. It used to be hidden on the
        third tab, which carried four figures of its own -- so switching
        view moved the page's own furniture, and the eye had to find the
@@ -110326,6 +111520,7 @@ function renderFollowUps(){
     if(nA) nA.textContent = String(openFollowUps().length || '');
     renderFollowUpSummary();
     if(work) renderFollowUpsContact();
+    else if(intel) renderMessagesIntel();
     else renderFollowUpsAll(fupRegisterQuery);
     renderFollowUpBadge();
   } finally { fupPass = null; }
@@ -110388,14 +111583,6 @@ function wireFollowUpsScreen(){
     });
 
   const screen = document.getElementById('tab-followups');
-  /* Crossing the phone line moves the draft between the pane and the
-     row, so the queue is redrawn when it happens -- the typed words are
-     kept in fupDrafts and come with it. */
-  try{
-    const mq = window.matchMedia('(max-width:820px)');
-    const redraw = ()=>{ if(screen.style.display !== 'none') renderFollowUpsContact(); };
-    if(mq.addEventListener) mq.addEventListener('change', redraw); else if(mq.addListener) mq.addListener(redraw);
-  }catch(err){ /* no media queries: the desktop layout stands */ }
   screen.addEventListener('input', (e)=>{
     if(e.target.id === 'fup_queue_search'){ fupQueueQuery = e.target.value; renderFollowUpsContact(); return; }
     if(e.target.id === 'fup_search'){ fupRegisterQuery = e.target.value; renderFollowUpsAll(fupRegisterQuery); return; }
@@ -110477,7 +111664,7 @@ function wireFollowUpsScreen(){
       fupEditing = null;
       /* Pressing the row that is already open folds it. A queue row that
          can only ever open is a caret pointing at nothing. */
-      fupSelectedCustomerId = String(fupSelectedCustomerId) === String(pick.dataset.cust) && !fupSplit()
+      fupSelectedCustomerId = String(fupSelectedCustomerId) === String(pick.dataset.cust)
         ? FUP_FOLDED : pick.dataset.cust;
       renderFollowUpsContact(); return; }
 
@@ -110501,6 +111688,14 @@ function wireFollowUpsScreen(){
        the ear, and a modal to fill in is a modal nobody fills in. The
        card's own "They promised to pay on..." stays an inline field --
        that client is in front of you on screen; these people are not. */
+    /* No number is the one hold a person releases by typing: the
+       customer's own form, where the number lives. */
+    const addNo = e.target.closest('.fup-held-edit');
+    if(addNo){
+      const c = (data.customers || []).find(x=> String(x.id) === String(addNo.dataset.cust));
+      if(c) editCustomer(c.id);
+      return;
+    }
     const held = e.target.closest('.fup-held-promise, .fup-held-unpromise, .fup-held-again');
     if(held){
       if(held.classList.contains('fup-held-again')){

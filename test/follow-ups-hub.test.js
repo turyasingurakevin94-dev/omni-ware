@@ -469,7 +469,23 @@ const bookRow = (id, reason, held) => ({ id, name: (data.customers.find((c) => c
   const sec = (/<section id="tab-followups"[\s\S]*?<\/section>/.exec(src) || [''])[0];
   t.check(!/data-fuptab="score"/.test(sec) && !/id="fup_score_pane"/.test(sec),
     'the measurement is not a view of its own any more');
-  eq((sec.match(/class="ow-seg-b/g) || []).length, 2, 'two views — the work, and the register that records it');
+  /* THREE VIEWS NOW, AND THE CLAIM ABOVE STILL HOLDS. The old assertion
+     meant: the measurement is not a peer of the work, because as a peer
+     it brought a strip of its own and moved the page's furniture. The
+     Intelligence view is a peer -- but it brings NO strip of its own
+     (renderMessagesIntel draws .ow-mi-strip, a reading, not the lane
+     filter), the lane strip stays on every view, and "Did it work"
+     still lives in the Register's rail beside the history it measures.
+     What changed is that the screen now has something to say about the
+     WHOLE record -- reason bars, when customers write, the money
+     ladder, the rules as days -- that is read weekly and would crowd
+     the work if it sat above it. So: the work, what it all came to, and
+     the register that records it. */
+  eq((sec.match(/class="ow-seg-b/g) || []).length, 3, 'three views — the work, what it came to, and the register that records it');
+  t.check(/data-fuptab="intel"/.test(sec) && /id="fup_intel_pane"/.test(sec),
+    'and the middle one is Intelligence, with its own pane');
+  t.check(!/btn-accent/.test(extractFunction(src, 'renderMessagesIntel', 'index.html')),
+    'which carries no accent — nothing on a page of readings is the next move');
   /* STILL THE REGISTER'S RAIL, drawn beside the history it measures --
      but the rail is the SCREEN's now, not one this view builds for
      itself. The Messages console stands one .ow-grid and one .ow-side in

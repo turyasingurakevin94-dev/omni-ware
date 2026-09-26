@@ -621,6 +621,15 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                    them too. */
                 'renderFollowUpQuietLine', 'renderMessagesSide', 'msgLaneHTML', 'msgLaneRow',
                 'msgThreadHTML', 'fupPromiseHTML', 'msgPostOpenHTML',
+                /* And the intelligence center's readings: the band over every
+                   lane, a row's signal and odds, the dossier an opened row
+                   carries, the lanes' own bands and the Intelligence view.
+                   They draw markup on this screen, so the ratchet follows
+                   them -- none of them may bring back a retired family. */
+                'msgBandHTML', 'msgSignalHTML', 'msgOddsHTML', 'msgWindowHTML', 'msgDossierHTML',
+                'msgHeldSummaryHTML', 'msgPromiseWeekHTML', 'msgReadsHTML', 'msgAnswerBandHTML',
+                'msgReadsBandHTML', 'msgRecordHTML', 'msgPromiseCalendarHTML', 'msgPostBandHTML',
+                'renderMessagesIntel',
                 'renderFollowUpScore', 'fupHeldPanelHTML', 'fupCp',
                 'briefStripHTML', 'briefWhyHTML', 'customerBriefPanelHTML',
                 'briefNoteBody', 'briefLeftOffHTML'],
