@@ -217,7 +217,10 @@ const row = (id, o) => Object.assign({ id, name: id, c: { id, phone: '0772 000 0
    Debtors and the account screen use. */
 {
   const sheet = extractFunction(src, 'printStatementSheet', 'index.html');
-  const cust = extractFunction(src, 'printCustomerStatement', 'index.html');
+  /* What the customer's sheet says moved into customerStatementSheet when
+     the statement also became a PDF: the print and the file read the one
+     builder, so the claims below are made about it. */
+  const cust = extractFunction(src, 'customerStatementSheet', 'index.html');
   t.check(/shopIdentity\(\)/.test(sheet), 'the sheet is headed with the shop\'s own printed identity');
   t.check(/cst-due-v/.test(sheet) && /Balance due/.test(sheet), 'the balance due is the one big figure');
   t.check(/Brought forward[\s\S]*Charged[\s\S]*Paid[\s\S]*Closing/.test(sheet), 'and the sum that makes it is written out');

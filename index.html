@@ -66036,9 +66036,7 @@ function customerStatementPanelHTML(r){
     </div>`;
   }
 
-  const phone = r.phones[0] || '';
-  const waText = `${r.name}: balance due ${f(st.closing)} UGX as at ${fmtShortDate(st.to)}${open.length
-    ? ` (${open.map(x=> `${x.no} ${f(x.due)}`).join(', ')})` : ''}. ${printedShopName()}`;
+  const waText = customerStatementLine(st, r.name);
   return `<div class="ow-pan cu-sp">
     <div class="ow-pan-h cu-sp-h">
       <span class="ow-pan-t">Statement of account</span>
@@ -66056,7 +66054,7 @@ function customerStatementPanelHTML(r){
     ${drawer}
     <div class="cu-sp-f">
       <button type="button" class="btn btn-ghost ow-sm" data-cact="print" data-cid="${esc(r.id)}"><svg class="icon" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M7 16h10v5H7z"/></svg>Print</button>
-      <a class="btn btn-ghost ow-sm" href="${esc(waComposeUrl(phone, waText))}" target="_blank" rel="noopener"><svg class="icon" viewBox="0 0 24 24"><path d="M4 20l1.5-4A8 8 0 1 1 9 19.5z"/></svg>Send on WhatsApp</a>
+      <button type="button" class="btn btn-ghost ow-sm" data-cact="wapdf" data-cid="${esc(r.id)}" title="Send the statement as a PDF"><svg class="icon" viewBox="0 0 24 24"><path d="M4 20l1.5-4A8 8 0 1 1 9 19.5z"/></svg>Send on WhatsApp</button>
       <button type="button" class="btn btn-ghost ow-sm" data-cstcopy="${esc(waText)}"><svg class="icon" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg>Copy balance line</button>
       <span class="cu-sp-fn">On screen = on paper</span>
     </div>
@@ -66780,6 +66778,14 @@ function printStatementSheet(st, side){
 }
 
 function printCustomerStatement(customerId){
+  const sheet = customerStatementSheet(customerId);
+  if(!sheet){ toast('That customer is no longer on file'); return; }
+  printStatementSheet(sheet.st, sheet.side);
+}
+
+/* What the customer's sheet says, whether it goes to the printer or into
+   a PDF: one builder, so paper and file cannot drift apart. */
+function customerStatementSheet(customerId){
   /* The period on screen is the period on paper, for the account that is
      open; anywhere else, the statement's usual six months. */
   const cRec = (data.customers || []).find(x=> String(x.id) === String(customerId));
@@ -66787,7 +66793,7 @@ function printCustomerStatement(customerId){
     ? customerStatementPeriod(cRec) : customerStatementRange();
   const st = customerStatementRows(customerId, from, to);
   const c = st.customer;
-  if(!c){ toast('That customer is no longer on file'); return; }
+  if(!c) return null;
   /* How old what is due is, on the same open charges Debtors ages its
      bands on and the account screen draws -- so the paper, the screen
      and the chase agree about which money is late. */
@@ -66801,7 +66807,7 @@ function printCustomerStatement(customerId){
     if(b) b.value += rem;
   });
   const open = customerOutstandingInvoices(c.id).length;
-  printStatementSheet(st, {
+  return { st, side: {
     who: { name: c.name, location: c.location, phone: (contactPhones(c)[0] || '') },
     account: c.id,
     openLine: open ? `${open} open ${open === 1 ? 'invoice' : 'invoices'}` : '',
@@ -66812,7 +66818,266 @@ function printCustomerStatement(customerId){
     recordedAs: 'the balance recorded against this customer is',
     beforeWhat: 'sending this out',
     foot: 'Payments settle the oldest invoice first.',
+  } };
+}
+
+/* ---- The statement as a PDF file -----------------------------------------
+
+   WhatsApp takes a file, not a print dialog, so the sheet is also written
+   as a PDF: the same sections in the same order as printStatementSheet,
+   black on white, in the two fonts every PDF reader already has
+   (Helvetica and Helvetica-Bold), so nothing is embedded or downloaded
+   and the file stays a few kilobytes. Text is real text -- it can be
+   searched and copied, and the figures stay sharp at any zoom.
+
+   The widths are Helvetica's published metrics, needed only to right-
+   align the money and to wrap the closing sentences. */
+const PDF_W_REG = [278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
+const PDF_W_BOLD = [278,333,474,556,556,889,722,238,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,333,333,584,584,584,611,975,722,722,722,722,667,611,778,722,278,556,722,611,833,722,778,667,778,722,667,611,722,667,944,667,667,611,333,278,333,584,556,333,556,611,556,611,556,333,611,611,278,278,556,278,889,611,611,611,611,389,556,333,611,556,778,556,556,500,389,280,389,584];
+
+/* Into the one-byte WinAnsi alphabet the standard fonts read. The few
+   characters the app actually prints outside ASCII are mapped; anything
+   else becomes a plain stand-in rather than a broken glyph. */
+function pdfText(str){
+  return String(str == null ? '' : str)
+    .replace(/&mdash;/g, '—').replace(/&middot;/g, '·').replace(/&rarr;/g, 'to')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/[   ]/g, ' ').replace(/→/g, 'to').replace(/[‘’]/g, "'").replace(/[“”]/g, '"')
+    .replace(/—/g, '\x97').replace(/–/g, '\x96').replace(/…/g, '...')
+    .replace(/[^\x20-\x7e\x96\x97\xa0-\xff]/g, '?');
+}
+function pdfTextWidth(str, size, bold){
+  const w = bold ? PDF_W_BOLD : PDF_W_REG;
+  let t = 0;
+  for(const ch of str){
+    const c = ch.charCodeAt(0);
+    t += c >= 32 && c <= 126 ? w[c - 32] : c === 0x97 ? 1000 : c === 0xb7 ? 278 : 556;
+  }
+  return t * size / 1000;
+}
+/* A detail line longer than its column is cut with an ellipsis rather
+   than running into the money beside it. */
+function pdfFit(str, size, bold, maxW){
+  if(pdfTextWidth(str, size, bold) <= maxW) return str;
+  let s = str;
+  while(s.length > 1 && pdfTextWidth(s + '...', size, bold) > maxW) s = s.slice(0, -1);
+  return s.replace(/\s+$/, '') + '...';
+}
+function pdfWrap(str, size, bold, maxW){
+  const lines = [];
+  let cur = '';
+  str.split(/\s+/).filter(Boolean).forEach(word=>{
+    const next = cur ? cur + ' ' + word : word;
+    if(cur && pdfTextWidth(next, size, bold) > maxW){ lines.push(cur); cur = word; }
+    else cur = next;
   });
+  if(cur) lines.push(cur);
+  return lines;
+}
+
+/* The sheet, laid out on A4 in points. Returns the file's bytes. The
+   table runs onto as many pages as it needs, with its column heads
+   repeated, and every page is numbered "Page n of N". */
+function statementPdfBytes(st, side){
+  const PW = 595.28, PH = 841.89, M = 42, R = PW - M, BOTTOM = 56;
+  const shop = shopIdentity();
+  const who = side.who;
+  const fig = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const money = (n)=> fmtUGX(Math.round(n));
+  const plain = (html)=> String(html || '').replace(/<[^>]+>/g, '');
+  const pages = [];
+  let ops = null, y = 0;
+  const esc = (s)=> s.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+  const grey = (g)=> ops.push(`${g} g`);
+  const text = (x, yy, str, size, bold, align, g)=>{
+    const s = pdfText(str);
+    const w = pdfTextWidth(s, size, bold);
+    const xx = align === 'r' ? x - w : x;
+    ops.push(`${g == null ? 0 : g} g BT /${bold ? 'F2' : 'F1'} ${size} Tf ${xx.toFixed(2)} ${yy.toFixed(2)} Td (${esc(s)}) Tj ET`);
+  };
+  const rule = (yy, width, g)=> ops.push(`${g == null ? 0 : g} G ${width} w ${M} ${yy.toFixed(2)} m ${R} ${yy.toFixed(2)} l S`);
+  const newPage = ()=>{ ops = []; pages.push(ops); y = PH - M; };
+  const LABEL = 0.4;
+
+  newPage();
+  /* Who it is from, and what it is. */
+  text(M, y - 14, shop.name || printedShopName(), 15, true);
+  text(R, y - 14, 'Statement of account', 13, true, 'r');
+  const shopMeta = [shop.address, shop.phone, shop.tin ? 'TIN ' + shop.tin : ''].filter(Boolean).join(' · ');
+  text(M, y - 28, pdfFit(pdfText(shopMeta), 8, false, 260), 8, false, null, LABEL);
+  text(R, y - 28, `${fmtShortDate(st.from)} to ${fmtShortDate(st.to)} · UGX · printed ${fmtShortDate(todayISO())}`, 8, false, 'r', LABEL);
+  y -= 40; rule(y, 1.2);
+
+  /* Who it is to, and what is due, in the biggest figure on the page. */
+  y -= 18;
+  text(M, y, 'TO', 7, true, null, LABEL);
+  text(R, y, st.closing < 0 ? 'IN CREDIT' : 'BALANCE DUE', 7, true, 'r', LABEL);
+  text(M, y - 18, pdfFit(pdfText(who.name), 14, true, 280), 14, true);
+  text(R, y - 26, fig(Math.abs(st.closing)), 26, true, 'r');
+  const whoMeta = [who.location, who.phone, side.account ? 'Account ' + side.account : ''].filter(Boolean).join(' · ');
+  text(M, y - 32, pdfFit(pdfText(whoMeta), 8, false, 280), 8, false, null, LABEL);
+  text(R, y - 40, `${side.openLine ? side.openLine + ' · ' : ''}as at ${fmtShortDate(st.to)}`, 8, false, 'r', LABEL);
+  y -= 54;
+
+  /* How the figure is made. */
+  const cellW = (R - M) / 4;
+  rule(y, 0.5, 0.75);
+  [['BROUGHT FORWARD', st.opening], ['CHARGED', st.charged], ['PAID', st.paid], ['CLOSING', st.closing]].forEach(([l, v], i)=>{
+    text(M + i * cellW, y - 13, l, 7, true, null, LABEL);
+    text(M + i * cellW, y - 28, fig(v), 12, true);
+  });
+  y -= 36; rule(y, 0.5, 0.75);
+
+  /* How old it is. */
+  if(side.aging){
+    y -= 16;
+    text(M, y, 'HOW OLD THE BALANCE IS', 7, true, null, LABEL);
+    side.aging.forEach((b, i)=>{
+      text(M + i * cellW, y - 14, b.label, 8, false, null, LABEL);
+      text(M + i * cellW + cellW - 12, y - 14, fig(b.value), 9, true, 'r');
+    });
+    y -= 22; rule(y, 0.5, 0.75);
+  }
+
+  /* Every line behind it. */
+  const COL = { date: M, detail: M + 72, charge: R - 150, pay: R - 75, bal: R };
+  const head = ()=>{
+    y -= 20;
+    text(COL.date, y, 'DATE', 7, true, null, LABEL);
+    text(COL.detail, y, 'DETAIL', 7, true, null, LABEL);
+    text(COL.charge, y, 'CHARGED', 7, true, 'r', LABEL);
+    text(COL.pay, y, 'PAID', 7, true, 'r', LABEL);
+    text(COL.bal, y, 'BALANCE', 7, true, 'r', LABEL);
+    y -= 6; rule(y, 0.8);
+  };
+  const row = (d, detail, c, p, b, bold)=>{
+    if(y - 16 < BOTTOM){ newPage(); head(); }
+    y -= 15;
+    text(COL.date, y, d, 8.5, bold);
+    text(COL.detail, y, pdfFit(pdfText(detail), 8.5, bold, COL.charge - 70 - COL.detail), 8.5, bold);
+    if(c !== '') text(COL.charge, y, c, 8.5, bold, 'r');
+    if(p !== '') text(COL.pay, y, p, 8.5, bold, 'r');
+    text(COL.bal, y, b, 8.5, true, 'r');
+    y -= 4; rule(y, 0.3, 0.85);
+  };
+  y -= 4;
+  head();
+  row(fmtShortDate(st.from), 'Balance brought forward', '', '', fig(st.opening));
+  st.rows.forEach(r=> row(fmtShortDate(r.date), statementRowDetail(r, side.payWord),
+    r.charge ? fig(r.charge) : '', r.payment ? fig(r.payment) : '', fig(r.balance)));
+  if(!st.rows.length){
+    if(y - 16 < BOTTOM){ newPage(); head(); }
+    y -= 15; text(COL.detail, y, 'Nothing was charged or paid in this period.', 8.5, false, null, LABEL); y -= 4;
+  }
+  if(y - 22 < BOTTOM){ newPage(); head(); }
+  y -= 2; rule(y, 1.2);
+  y -= 14;
+  text(COL.date, y, 'Balance now due', 9, true);
+  text(COL.charge, y, fig(st.charged), 9, true, 'r');
+  text(COL.pay, y, fig(st.paid), 9, true, 'r');
+  text(COL.bal, y, fig(st.closing), 9, true, 'r');
+
+  /* The sentences under it, wrapped to the page. */
+  const para = (str, size, bold, g, gap)=>{
+    const lines = pdfWrap(pdfText(plain(str)), size, bold, R - M);
+    y -= gap;
+    lines.forEach(l=>{
+      if(y - size - 2 < BOTTOM - 20) newPage();
+      y -= size + 3;
+      text(M, y, l, size, bold, null, g);
+    });
+  };
+  para(st.closing > 0 ? side.owesLine(money(st.closing))
+    : st.closing < 0 ? side.creditLine(money(-st.closing))
+    : `The account is settled as at ${fmtShortDate(st.to)}.`, 10, true, 0, 16);
+  if(!st.agrees){
+    para(`The entries above come to ${money(st.closing)}, while ${side.recordedAs} ${money(st.recorded)}. `
+      + `The two disagree by ${money(Math.abs(st.closing - st.recorded))} — settle that before ${side.beforeWhat}.`, 9, true, 0, 8);
+  }
+  para(`${side.account ? `Quote account ${side.account} with your payment. ` : ''}${side.foot}${
+    shop.phone ? ` Anything that disagrees with your records — call ${shop.phone} and we will go through it line by line.` : ''}`, 7.5, false, LABEL, 18);
+  para(`Charges and payments as recorded by ${printedShopName()}. Anything before ${fmtShortDate(st.from)} is included in the balance brought forward.${
+    shop.footer ? ' ' + shop.footer : ''}`, 7.5, false, LABEL, 4);
+
+  pages.forEach((p, i)=>{
+    ops = p;
+    text(M, 28, `${pdfText(who.name)} · statement to ${fmtShortDate(st.to)}`, 7, false, null, LABEL);
+    text(R, 28, `Page ${i + 1} of ${pages.length}`, 7, false, 'r', LABEL);
+  });
+
+  /* The file itself: catalog, page tree, two fonts, then a page and a
+     content stream per page, with the byte offsets the xref needs.
+     Every character is one byte, so string length is byte length. */
+  const objs = [];
+  const n = pages.length;
+  const pageIds = pages.map((_, i)=> 5 + i * 2);
+  objs[1] = '<< /Type /Catalog /Pages 2 0 R >>';
+  objs[2] = `<< /Type /Pages /Kids [${pageIds.map(id=> id + ' 0 R').join(' ')}] /Count ${n} >>`;
+  objs[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
+  objs[4] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
+  pages.forEach((p, i)=>{
+    const body = p.join('\n');
+    objs[pageIds[i]] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${pageIds[i] + 1} 0 R >>`;
+    objs[pageIds[i] + 1] = `<< /Length ${body.length} >>\nstream\n${body}\nendstream`;
+  });
+  let out = '%PDF-1.4\n%\xe2\xe3\xcf\xd3\n';
+  const offsets = [];
+  for(let id = 1; id < objs.length; id++){
+    offsets[id] = out.length;
+    out += `${id} 0 obj\n${objs[id]}\nendobj\n`;
+  }
+  const xref = out.length;
+  out += `xref\n0 ${objs.length}\n0000000000 65535 f \n`;
+  for(let id = 1; id < objs.length; id++) out += String(offsets[id]).padStart(10, '0') + ' 00000 n \n';
+  out += `trailer\n<< /Size ${objs.length} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  const bytes = new Uint8Array(out.length);
+  for(let i = 0; i < out.length; i++) bytes[i] = out.charCodeAt(i) & 0xff;
+  return bytes;
+}
+
+/* SEND ON WHATSAPP sends the file. On a phone (and any browser that can
+   share files) the share sheet opens with the PDF attached and the
+   balance line as its message -- pick WhatsApp, pick the chat, send.
+   Where a browser cannot hand a file to another app, the PDF is saved
+   and the customer's chat opens with the balance line typed, so the
+   file is one attach away; the toast says so, because the app did not
+   see it go. */
+async function sendCustomerStatementPdf(customerId){
+  const sheet = customerStatementSheet(customerId);
+  if(!sheet){ toast('That customer is no longer on file'); return; }
+  const { st, side } = sheet;
+  const bytes = statementPdfBytes(st, side);
+  const name = `statement-${String(side.who.name).replace(/[^\w]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'customer'}-${st.to}.pdf`;
+  const blob = new Blob([bytes], { type: 'application/pdf' });
+  const text = customerStatementLine(st, side.who.name);
+  let file = null;
+  try{ file = new File([blob], name, { type: 'application/pdf' }); }catch(e){}
+  try{
+    if(file && navigator.canShare && navigator.canShare({ files: [file] })){
+      await navigator.share({ files: [file], text });
+      return;
+    }
+  }catch(e){
+    // Backing out of the share sheet is a choice, not a failure.
+    if(e && e.name === 'AbortError') return;
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=> URL.revokeObjectURL(url), 4000);
+  window.open(waComposeUrl(side.who.phone, text), '_blank');
+  toast('Saved the statement PDF — attach it in the WhatsApp chat and send.', 8000);
+}
+
+/* The message that travels with the file, and the line Copy puts on the
+   clipboard: the same words in both places. */
+function customerStatementLine(st, name){
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const open = st.customer ? customerInvoiceStatementRows(st.customer.id, st.from, st.to)
+    .filter(x=> x.due > 0.5 && x.ageDays != null).sort((a, b)=> b.ageDays - a.ageDays) : [];
+  return `${name}: balance due ${f(st.closing)} UGX as at ${fmtShortDate(st.to)}${open.length
+    ? ` (${open.map(x=> `${x.no} ${f(x.due)}`).join(', ')})` : ''}. ${printedShopName()}`;
 }
 
 /* The supplier's copy. Handed over when they ask what is still owed, or
@@ -66919,6 +67184,7 @@ function printSupplierStatement(supplierId){
     if(name === 'open') return openCustomerStats(id);
     if(name === 'statement') return openCustomerStats(id);
     if(name === 'print') return printCustomerStatement(id);
+    if(name === 'wapdf') return sendCustomerStatementPdf(id);
     /* Back to the book. The register was only hidden, so this is a
        re-render rather than a rebuild. */
     if(name === 'book'){ custViewId = null; rerender(); window.scrollTo(0, 0); return; }

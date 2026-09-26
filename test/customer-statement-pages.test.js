@@ -143,6 +143,7 @@ const charge = (id, date, amount, quoteId) => ({ id, date, type: 'charge', amoun
     extractFunction(src, 'customerInvoiceStatementRows', 'index.html'),
     extractFunction(src, 'statementRowDetail', 'index.html'),
     extractFunction(src, 'custPaymentMethod', 'index.html'),
+    extractFunction(src, 'customerStatementLine', 'index.html'),
     extractFunction(src, 'custInvoiceItemsLine', 'index.html'),
     extractFunction(src, 'customerLedgerLines', 'index.html'),
     extractFunction(src, 'customerStatementPanelHTML', 'index.html'),
@@ -206,8 +207,74 @@ const charge = (id, date, amount, quoteId) => ({ id, date, type: 'charge', amoun
     'a turned page is stored for the ledger');
   eq(extractDeclaration(src, 'CUST_STMT_PAGE', 'index.html').replace(/\s+/g, ' ').trim(),
     'const CUST_STMT_PAGE = { ledger: 6 };', 'six ledger lines to a page, as the design board draws it');
-  const print = extractFunction(src, 'printCustomerStatement', 'index.html');
+  const print = extractFunction(src, 'customerStatementSheet', 'index.html');
   t.check(/customerStatementPeriod\(cRec\)/.test(print), 'and the printed sheet covers the period on screen');
+}
+
+/* ---------- 5. Send on WhatsApp sends the statement as a PDF ----------
+   The file is written by hand (no library): the checks read the bytes
+   back the way a PDF reader does -- the header, every xref offset
+   landing on its object, one page object per page -- and then look for
+   the figures on the sheet. */
+{
+  const sc = compileScope([
+    extractDeclaration(src, 'PDF_W_REG', 'index.html'),
+    extractDeclaration(src, 'PDF_W_BOLD', 'index.html'),
+    extractFunction(src, 'pdfText', 'index.html'),
+    extractFunction(src, 'pdfTextWidth', 'index.html'),
+    extractFunction(src, 'pdfFit', 'index.html'),
+    extractFunction(src, 'pdfWrap', 'index.html'),
+    extractFunction(src, 'statementRowDetail', 'index.html'),
+    extractFunction(src, 'statementPdfBytes', 'index.html'),
+  ], {
+    shopIdentity: () => ({ name: 'Shop (Kampala)', address: 'Plot 4', phone: '0700 000 000', tin: '', footer: '' }),
+    printedShopName: () => 'Shop (Kampala)',
+    fmtShortDate: (d) => String(d),
+    fmtUGX: (n) => Number(n).toLocaleString('en-UG') + ' UGX',
+    todayISO: () => TODAY,
+  }, ['statementPdfBytes', 'pdfText']);
+  const rows = [];
+  let bal = 0;
+  for(let i = 0; i < 70; i++){
+    const charge = i % 2 ? 0 : 2000, payment = i % 2 ? 1000 : 0;
+    bal += charge - payment;
+    rows.push({ date: '2026-05-01', type: charge ? 'charge' : 'payment', ref: `INV-${1000 + i}`, charge, payment, balance: bal });
+  }
+  const st = { from: '2026-03-01', to: TODAY, opening: 500, rows, charged: 70000, paid: 35000, closing: 500 + bal, agrees: true, recorded: 500 + bal };
+  const side = { who: { name: 'Kato — Seeta', location: 'Seeta', phone: '0700' }, account: 'C1', openLine: '2 open invoices',
+    aging: [{ label: '0–30 days', value: 500 + bal }], payWord: 'Payment received',
+    owesLine: (m) => `<b>Kato</b> owes <b>${m}</b>.`, creditLine: (m) => m, recordedAs: 'x', beforeWhat: 'y', foot: 'Payments settle the oldest invoice first.' };
+  const bytes = sc.statementPdfBytes(st, side);
+  const pdf = Buffer.from(bytes).toString('latin1');
+  t.check(pdf.startsWith('%PDF-1.4') && pdf.trimEnd().endsWith('%%EOF'), 'the bytes are a PDF, start to end');
+  const xrefAt = Number(/startxref\n(\d+)/.exec(pdf)[1]);
+  t.check(pdf.slice(xrefAt, xrefAt + 4) === 'xref', 'startxref points at the cross-reference table');
+  const offs = pdf.slice(xrefAt).split('\n').filter(l => / 00000 n $/.test(l)).map(l => Number(l.slice(0, 10)));
+  t.check(offs.length > 0 && offs.every((o, i) => pdf.slice(o).startsWith(`${i + 1} 0 obj`)),
+    'every object sits exactly where the table says, so a strict reader opens it without repair');
+  const pages = (pdf.match(/\/Type \/Page /g) || []).length;
+  eq(pages, 3, 'seventy lines run onto three pages rather than off the bottom of one');
+  t.check(/\(Page 3 of 3\) Tj/.test(pdf) && (pdf.match(/\(BALANCE\) Tj/g) || []).length === 3,
+    'each page is numbered and carries the column heads again');
+  t.check(/\(Balance brought forward\) Tj/.test(pdf) && /\(Balance now due\) Tj/.test(pdf)
+    && pdf.includes(`(${(500 + bal).toLocaleString('en-UG')}) Tj`),
+    'the carried line, the totals and the balance due are on it');
+  t.check(pdf.includes('(Shop \\(Kampala\\)) Tj'), 'brackets in a name are escaped, not left to break the page');
+  t.check(pdf.includes('Kato \x97 Seeta'), 'a dash is written in the font\'s own alphabet, not as a broken glyph');
+  t.check(/\(Kato owes 35,500 UGX\.\) Tj/.test(pdf), 'the closing sentence is the print\'s, without its markup');
+
+  const panel = extractFunction(src, 'customerStatementPanelHTML', 'index.html');
+  const send = extractFunction(src, 'sendCustomerStatementPdf', 'index.html');
+  t.check(/data-cact="wapdf"[^>]*>[\s\S]*?Send on WhatsApp<\/button>/.test(panel) && !/waComposeUrl/.test(panel),
+    'the button sends the file; it no longer opens a chat with text alone');
+  t.check(/if\(name === 'wapdf'\) return sendCustomerStatementPdf\(id\);/.test(src), 'and the account hands it the customer');
+  t.check(/customerStatementSheet\(customerId\)/.test(send) && /statementPdfBytes\(st, side\)/.test(send),
+    'the file is built from the same sheet the printer gets');
+  t.check(/navigator\.canShare\(\{ files: \[file\] \}\)[\s\S]*?navigator\.share\(\{ files: \[file\], text \}\)/.test(send),
+    'where the phone can share a file, the PDF goes into the share sheet with the balance line');
+  t.check(/AbortError'\) return;/.test(send), 'backing out of the share sheet is left alone');
+  t.check(/a\.download = name;[\s\S]*?waComposeUrl\(side\.who\.phone, text\)/.test(send),
+    'elsewhere the PDF is saved and the customer\'s chat opened, ready to attach it');
 }
 
 process.exit(t.done() ? 1 : 0);

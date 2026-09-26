@@ -160,10 +160,14 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
    identical on both documents. Every claim below is the one it always
    was; it is now made about the builder the customer print calls. */
 {
-  const caller = (/function printCustomerStatement[\s\S]*?\n\}/.exec(code) || [''])[0];
+  /* The customer's words moved into customerStatementSheet when the
+     statement also became a PDF: the print and the file take them from
+     the one builder, so both claims are asked of it. */
+  const print = (/function printCustomerStatement[\s\S]*?\n\}/.exec(code) || [''])[0];
+  const caller = (/function customerStatementSheet[\s\S]*?\n\}/.exec(code) || [''])[0];
   const p = (/function printStatementSheet[\s\S]*?\n\}/.exec(code) || [''])[0];
-  t.check(caller.length > 0 && p.length > 0, 'there is a print path');
-  t.check(/printStatementSheet\(st, \{/.test(caller),
+  t.check(print.length > 0 && caller.length > 0 && p.length > 0, 'there is a print path');
+  t.check(/customerStatementSheet\(customerId\)/.test(print) && /printStatementSheet\(sheet\.st, sheet\.side\)/.test(print),
     'and it goes through the shared sheet rather than laying out its own');
   t.check(/clearInjectedPrintStyles\(\);/.test(p),
     'it clears a stale page size from another printout first');
@@ -221,7 +225,7 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
 {
   const panel = extractFunction(src, 'customerStatementPanelHTML', 'index.html');
   const lines = extractFunction(src, 'customerLedgerLines', 'index.html');
-  const print = extractFunction(src, 'printCustomerStatement', 'index.html');
+  const print = extractFunction(src, 'customerStatementSheet', 'index.html');
   t.check(panel.length > 0 && lines.length > 0, 'the account has a statement');
 
   t.check(/customerStatementRows\(c\.id, from, to\)/.test(panel),
