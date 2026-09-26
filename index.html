@@ -86935,41 +86935,107 @@ function invMapFx(d){
 }
 function invMapHTML(zr, all, withFloor){
   const zoned = zr.filter(z=> z.zone === 'buy' || z.zone === 'ok' || z.zone === 'dead');
-  const still = zoned.filter(z=> z.zone === 'dead' && (z.daysLeft == null || z.daysLeft > 60))
-    .sort((a, b)=> (b.l.value || 0) - (a.l.value || 0));
+  /* THE DEAD-MONEY BAND MEANS SOMETHING ACROSS TOO. It holds lines the
+     pace scale cannot place -- no pace at all, or more than 60 days of
+     it -- and it used to spread them by money rank, which drew a falling
+     staircase that read as a trend and was nothing but a sort. Across the
+     band is now how long the stock has sat: days since it last sold for
+     an idle line, days of stock for a slow one, on one scale from 60 to
+     300 and beyond, and "never sold" at the far wall. */
+  const deadFx = (z)=>{
+    const days = z.daysLeft != null ? z.daysLeft : z.quiet;
+    if(days == null) return .965;
+    return .775 + Math.min(1, Math.max(0, (days - 60) / 240)) * .15;
+  };
   const top = Math.max(1, ...zoned.map(z=> z.l.value || 0));
   const dots = [];
   let noPace = 0;
   zoned.forEach(z=>{
     let fx;
-    if(still.includes(z)){
-      const i = still.indexOf(z);
-      fx = .79 + (still.length > 1 ? i / (still.length - 1) : .5) * .17;
-    } else if(z.daysLeft == null){
+    if(z.zone === 'dead' && (z.daysLeft == null || z.daysLeft > 60)) fx = deadFx(z);
+    else if(z.daysLeft == null){
       // Under its floor with no sales to pace it: urgent, and at the wall.
       if(z.zone === 'buy') fx = .015; else { noPace++; return; }
     } else fx = invMapFx(z.daysLeft);
     dots.push({ z, fx, fy: Math.sqrt((z.l.value || 0) / top) });
   });
+  /* Dots that would land on one another step aside, a dot's width at a
+     time, so ten idle lines at "never sold" read as ten and not as one
+     smudge. The step is sideways only: the money a dot stands for is
+     never moved. */
+  const DOT_FX = 13 / 1000, DOT_FY = 13 / 200;
+  const set = [];
+  dots.slice().sort((a, b)=> (b.z.l.value || 0) - (a.z.l.value || 0)).forEach((d)=>{
+    const base = d.fx;
+    const hit = (fx)=> set.some(o=> Math.abs(o.fx - fx) < DOT_FX && Math.abs(o.fy - d.fy) < DOT_FY);
+    for(let i = 1; hit(d.fx) && i <= 8; i++){
+      const step = Math.ceil(i / 2) * DOT_FX * (i % 2 ? -1 : 1);
+      d.fx = Math.min(.995, Math.max(.005, base + step));
+    }
+    set.push(d);
+  });
   const biggest = new Set(dots.slice().sort((a, b)=> (b.z.l.value || 0) - (a.z.l.value || 0)).slice(0, 3).map(d=> d.z.key));
   const shopCover = Math.max(1, Number(data.presetRestockCoverDays) || 14);
   const coverFx = invMapFx(shopCover);
   const pct = (f)=> (f * 100).toFixed(2);
-  const yPct = (fy)=> (94 - fy * 84).toFixed(2);
+  /* The dots keep clear of the axis band at the foot, so a line holding
+     almost nothing sits just above the day labels rather than on them. */
+  const Y_TOP = 7, Y_FOOT = 86;
+  const yPct = (fy)=> (Y_FOOT - fy * (Y_FOOT - Y_TOP)).toFixed(2);
+  /* LABELS NEVER LAND ON EACH OTHER. Placed in priority order -- the line
+     you opened, then Buy now, then the biggest money -- each tries the
+     right of its dot, then the left, and is left off when both would sit
+     on a label already placed. The dot keeps its name in its title. */
+  const PLOT_PX = 1000, PLOT_H = 260, CH = 6.4;
+  const placed = [];
+  const dotsPx = dots.map(d=> ({ key: d.z.key, x: d.fx * PLOT_PX, y: Number(yPct(d.fy)) / 100 * PLOT_H }));
+  const fits = (x0, x1, y, own)=> !placed.some(b=> x0 < b.x1 && x1 > b.x0 && Math.abs(y - b.y) < 15)
+    // ...nor across another line's dot, which a name printed over would hide.
+    && !dotsPx.some(o=> o.key !== own && o.x > x0 - 6 && o.x < x1 + 6 && Math.abs(o.y - y) < 11);
+  const labelOf = new Map();
+  dots.slice().sort((a, b)=>{
+    const rank = (d)=> invOpenKey === d.z.key ? 0 : d.z.zone === 'buy' ? 1 : 2;
+    return rank(a) - rank(b) || (b.z.l.value || 0) - (a.z.l.value || 0);
+  }).forEach((d)=>{
+    const want = invOpenKey === d.z.key || d.z.zone === 'buy' || biggest.has(d.z.key);
+    if(!want) return;
+    const text = invLineName(d.z.l).split(' (')[0];
+    const w = text.length * CH + 10, x = d.fx * PLOT_PX, y = Number(yPct(d.fy)) / 100 * PLOT_H;
+    const right = [x + 8, x + 8 + w], left = [x - 8 - w, x - 8];
+    const preferLeft = d.fx > .8;
+    const order = preferLeft ? [left, right] : [right, left];
+    const spot = order.find(([x0, x1])=> x0 >= 0 && x1 <= PLOT_PX && fits(x0, x1, y, d.z.key));
+    if(!spot) return;
+    placed.push({ x0: spot[0], x1: spot[1], y });
+    labelOf.set(d.z.key, { text, left: spot === left });
+  });
   const dotHTML = dots.map(({ z, fx, fy })=>{
     const name = invLineName(z.l);
     const on = invOpenKey === z.key;
     const dim = invZone && invZone !== z.zone;
     const say = `${name}: ${z.l.value != null ? invFig(z.l.value) + ' UGX' : 'not valued'}, ${
-      z.daysLeft != null ? 'about ' + invDaysSay(z.daysLeft) + ' left' : z.zone === 'dead' ? 'not selling' : 'no sales to pace it'}`;
-    const label = z.zone === 'buy' || biggest.has(z.key) || on;
+      z.daysLeft != null ? 'about ' + invDaysSay(z.daysLeft) + ' left'
+        : z.zone === 'dead' ? (z.quiet != null ? `last sold ${z.quiet} days ago` : 'never sold here') : 'no sales to pace it'}`;
+    const lab = labelOf.get(z.key);
     return `<button type="button" class="iv-dot iv-dot-${z.zone}${on ? ' ow-on' : ''}${dim ? ' iv-dim' : ''}" data-invpick="${esc(z.key)}"
         style="left:${pct(fx)}%;top:${yPct(fy)}%" title="${esc(say)}" aria-label="${esc(say)}"></button>${
-      label ? `<span class="iv-dl iv-dl-${z.zone}${fx > .8 ? ' iv-dl-l' : ''}${dim ? ' iv-dim' : ''}" style="left:${pct(fx)}%;top:${yPct(fy)}%" aria-hidden="true">${esc(name.split(' (')[0])}</span>` : ''}`;
+      lab ? `<span class="iv-dl iv-dl-${z.zone}${lab.left ? ' iv-dl-l' : ''}${dim ? ' iv-dim' : ''}" style="left:${pct(fx)}%;top:${yPct(fy)}%" aria-hidden="true">${esc(lab.text)}</span>` : ''}`;
   }).join('');
-  const gridY = [1, .5, .25].map(fy=> `<span class="iv-gl" style="top:${yPct(fy)}%"></span><span class="iv-gy" style="top:${yPct(fy)}%">${invShortMoney(top * fy * fy)}</span>`).join('');
+  /* Round money on the grid: the nice values that fall under the top,
+     kept only where they are far enough apart on the square-root scale
+     to read -- not top/4 and top/16, which printed 900k, 225k and 56k. */
+  const NICE = [10e6, 5e6, 2.5e6, 1e6, 500e3, 250e3, 100e3, 50e3, 25e3, 10e3, 5e3];
+  const ticks = [];
+  NICE.filter(v=> v <= top).forEach(v=>{
+    const fy = Math.sqrt(v / top);
+    if(ticks.length < 3 && (!ticks.length || ticks[ticks.length - 1] - fy >= .22)) ticks.push(fy);
+  });
+  const gridY = ticks.map(fy=> `<span class="iv-gl" style="top:${yPct(fy)}%"></span><span class="iv-gy" style="top:${yPct(fy)}%">${invShortMoney(top * fy * fy)}</span>`).join('');
   const gridX = [[0,'0'],[7,'7 d'],[14,'14 d'],[30,'30 d'],[60,'60 d']].map(([d, t])=>
-    `<span class="iv-gx" style="left:${pct(invMapFx(d))}%">${t}</span>`).join('') + `<span class="iv-gx" style="left:87.5%">not selling</span>`;
+    `<span class="iv-gx" style="left:${pct(invMapFx(d))}%">${t}</span>`).join('')
+    + `<span class="iv-gx" style="left:${pct(.775 + (120 - 60) / 240 * .15)}%">120 d</span>`
+    + `<span class="iv-gx" style="left:${pct(.925)}%">300 d+</span>`
+    + `<span class="iv-gx" style="left:${pct(.965)}%">never</span>`;
   /* The phone reads the same zones as one bar of the shop's money,
      split three ways. */
   const money = (k)=> zoned.filter(z=> z.zone === k).reduce((n, z)=> n + (z.l.value || 0), 0);
@@ -86989,11 +87055,14 @@ function invMapHTML(zr, all, withFloor){
     </div>
     <div class="iv-map-p">
       <div class="iv-zn iv-zn-buy" style="left:0;width:${pct(coverFx)}%"><span>Buy now</span></div>
-      <div class="iv-zn iv-zn-ok" style="left:${pct(coverFx)}%;width:${pct(.74 - coverFx)}%"><span>Healthy</span></div>
+      <div class="iv-zn iv-zn-ok" style="left:${pct(coverFx)}%;width:${pct(.74 - coverFx)}%"><span style="left:${
+        /* A short cover makes a narrow Buy now band whose name runs past
+           it; Healthy's own name steps clear of it rather than under it. */
+        Math.max(8, Math.round((.085 - coverFx) * 1000))}px">Healthy</span></div>
       <div class="iv-zn iv-zn-dead" style="left:74%;right:0"><span>Dead money</span></div>
       ${gridY}${gridX}${dotHTML}
     </div>
-    <p class="iv-map-a" aria-hidden="true"><span>&uarr; money in the line</span><span>days the shelf lasts at the last 30 days&rsquo; pace &rarr;</span></p>
+    <p class="iv-map-a" aria-hidden="true"><span>&uarr; money in the line</span><span>days the shelf lasts at the last 30 days&rsquo; pace &rarr; &middot; in dead money, days it has sat</span></p>
     <div class="iv-zb" aria-hidden="true">${phoneBar}</div>
     ${notes.length || !withFloor ? `<p class="iv-map-n">${esc(notes.join(' · '))}${notes.length && !withFloor ? ' · ' : ''}${
       withFloor ? '' : 'No line has a restock floor yet, so a line can only land in Buy now by its pace.'}</p>` : ''}
