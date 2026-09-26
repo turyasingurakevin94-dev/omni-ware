@@ -12019,7 +12019,13 @@
     /* THE PHONE IS ITS OWN DESIGN, as drawn: four figures over the sales,
        each sale a card -- number and status, what is open; who and when,
        how much is paid; its bills, and what the sale leaves after them. */
-    #inv_paired_pane > #inv_u_insights,#inv_paired_pane > #inv_u_panels,#inv_paired_pane > #inv_u_attention{display:none;}
+    #inv_paired_pane > #inv_u_insights,#inv_paired_pane > #inv_u_panels{display:none;}
+    /* The chips stay, as drawn: one row under the four figures, slid
+       sideways rather than wrapped, each just its name and its count. */
+    #inv_paired_pane > #inv_u_attention{flex-wrap:nowrap;overflow-x:auto;gap:var(--ow-sp-8);padding:0;margin:0 0 var(--ow-sp-16);border:0;background:none;scrollbar-width:none;}
+    #inv_u_attention .inv-att-l,#inv_u_attention .inv-att-sum{display:none;}
+    #inv_u_attention .inv-att-b{flex:none;font-size:var(--ow-t-13);padding:0 var(--ow-sp-12);}
+    #inv_u_attention .inv-att-b b{flex:none;}
     #inv_u_phone{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);margin:0 0 var(--ow-sp-16);overflow:hidden;}
     .inv-u-pt{display:flex;flex-direction:column;gap:4px;padding:12px 14px;min-width:0;}
     .inv-u-pt:nth-child(2n){border-left:1px solid var(--ow-rule-soft);}
@@ -54321,7 +54327,7 @@ function renderInvoicesUnified(filter=''){
     {k:'all', l:'Everything', dot:'', test:()=>true, sum:null},
     {k:'open', l:'Still to collect', dot:'is-warn', test:c=> openOf(c) > 0.5, sum:c=>openOf(c)},
     {k:'late', l:'Past terms', dot:'is-bad', test:c=> !c.q.voided && invSalesStatus(c.q).k === 'late', sum:c=>openOf(c)},
-    {k:'front', l:'Cash went out first', dot:'is-warn', test:c=> netOf(c) < -0.5, sum:c=>netOf(c)},
+    {k:'front', l:'Cash went out first', ph:'Cash out first', dot:'is-warn', test:c=> netOf(c) < -0.5, sum:c=>netOf(c)},
     {k:'review', l:'Bills to review', dot:'is-warn', test:c=> !!findings.ids && c.bills.some(pi=>!pi.voided && findings.ids.has(pi.id)), sum:null},
   ];
   const showOn = SHOW.find(x=>x.k===invUnifiedShow) || SHOW[0];
@@ -54333,7 +54339,7 @@ function renderInvoicesUnified(filter=''){
          empties makes the others jump sideways under the finger. */
       const none = x.k!=='all' && !hits.length && x.k!==showOn.k;
       const sum = x.sum && hits.length ? hits.reduce((s,c)=>s + x.sum(c), 0) : null;
-      return `<button type="button" class="inv-att-b${x.k===showOn.k?' is-on':''}" data-u-show="${x.k}" aria-pressed="${x.k===showOn.k}"${none ? ' disabled' : ''}><i class="${x.dot || 'is-mute'}"></i>${x.l} <b>${hits.length}${sum != null ? ` · ${sum < 0 ? '−' : ''}${number(Math.abs(sum))}` : ''}</b></button>`;
+      return `<button type="button" class="inv-att-b${x.k===showOn.k?' is-on':''}" data-u-show="${x.k}" aria-pressed="${x.k===showOn.k}"${none ? ' disabled' : ''}><i class="${x.dot || 'is-mute'}"></i>${x.ph ? `<span class="inv-lbl-dk">${x.l}</span><span class="inv-lbl-ph">${x.ph}</span>` : x.l} <b>${hits.length}${sum != null ? `<span class="inv-att-sum"> · ${sum < 0 ? '−' : ''}${number(Math.abs(sum))}</span>` : ''}</b></button>`;
     }).join('')}`;
     attention.querySelectorAll('[data-u-show]').forEach(b=>b.addEventListener('click',()=>{
       invUnifiedShow = invUnifiedShow===b.dataset.uShow ? 'all' : b.dataset.uShow;
