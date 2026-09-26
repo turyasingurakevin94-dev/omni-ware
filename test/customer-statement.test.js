@@ -37,7 +37,7 @@ const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join(
 const data = { customers: [] };
 
 const scope = compileScope([
-  extractFunction(src, 'customerStatementRows', 'index.html'),
+  extractFunction(src, 'customerStatementRows', 'index.html'), extractFunction(src, 'customerLogQuoteResolver', 'index.html'), extractFunction(src, 'invoiceNumberLabel', 'index.html'),
 ], { data }, ['customerStatementRows']);
 
 const charge = (id, date, amount, note) => ({ id, date, type: 'charge', amount, note: note || '' });

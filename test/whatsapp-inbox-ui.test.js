@@ -276,4 +276,21 @@ if (!scope) process.exit(1);
     'the telling is stamped only after the reply went, and only if the news was still in it');
 }
 
+/* ---------- 11. the canvas's last pieces -------------------------------- */
+{
+  t.check(/<th>Yard<\/th><th><\/th><\/tr>/.test(src) && /function waYardHTML\(m\)/.test(src),
+    'a matched line says what the yard holds of it');
+  const photo = (/async function waSendChatPhoto\(file\)\{[\s\S]*?\n\}/.exec(src) || [''])[0];
+  t.check(photo.indexOf('confirm(') > -1 && photo.indexOf('confirm(') < photo.indexOf("invoke('wa-send'"),
+    'a photo is asked about before it goes — choosing a file is not sending one');
+  const wire = (/function waBindChatConsole\(\)\{[\s\S]*?\n\}/.exec(src) || [''])[0];
+  const mk = wire.slice(wire.indexOf('.ow-mi-mkord'), wire.indexOf('.ow-mi-photo'));
+  t.check(/confirm\(/.test(mk) && mk.indexOf('confirm(') < mk.indexOf('waCreateOrderFromChat('),
+    'an order from the match is asked about first, since its receipt goes to them');
+  t.check(/laneBar\.style\.display = chats \? 'none' : ''/.test(src),
+    'Chats gives the lanes\' row back to the chats');
+  t.check(/function waNamedDayISO\(word, nowMs\)/.test(src) && /data-day="\$\{iso\}"/.test(src),
+    'a named day reads as a date, and the promise prompt opens on it');
+}
+
 process.exit(t.done() ? 1 : 0);

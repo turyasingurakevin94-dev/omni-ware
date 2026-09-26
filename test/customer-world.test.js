@@ -167,7 +167,11 @@ const row = (id, o) => Object.assign({ id, name: id, c: { id, phone: '0772 000 0
     'two customers with a rhythm is not a picture of the book');
   const html = map.customerMapHTML([b('A', 10, 5, 100), b('B', 10, 25, 50), b('C', 20, 70, 900), none], new Map());
   eq((html.match(/<circle class="cu-mp-d/g) || []).length, 3, 'only customers with a rhythm are placed');
-  t.check(/1 customer has one order or none/.test(html), 'and the one who cannot be placed is counted, not dropped');
+  /* Counted in the panel's own caption rather than a sentence under the
+     map, which the design board does not have: the title on "dot =
+     customer · colour = health" names how many are placed and how many
+     are left to the book below. */
+  t.check(/3 with a buying rhythm; 1 with one order or none are in the book below/.test(html), 'and the one who cannot be placed is counted, not dropped');
   t.check(/data-cact="statement" data-cid="C"/.test(html), 'a dot opens that customer\'s account');
   eq(map.custHealthRingHTML(null), '', 'no reading, no ring -- not a ring at zero');
   const render = extractFunction(src, 'renderCustomers', 'index.html');
@@ -266,7 +270,11 @@ const row = (id, o) => Object.assign({ id, name: id, c: { id, phone: '0772 000 0
   const panel = extractFunction(src, 'customerStatementPanelHTML', 'index.html');
   t.check(/data-cstinv="\$\{esc\(String\(qid\)\)\}"/.test(panel) && /invLink\(l\.qid, l\.detail\)/.test(panel) && /invLink\(x\.q\.id, x\.no\)/.test(panel),
     'each invoice in the ledger and among the open bills is a link');
-  t.check(/quoteId: e\.quoteId != null \? e\.quoteId : null/.test(extractFunction(src, 'customerStatementRows', 'index.html')),
+  /* Through the resolver since the live books showed every line carrying
+     its invoice only in its note ("Auto-sync — INV-0186"): quoteId when
+     the line has one, the invoice its note names otherwise. */
+  t.check(/quoteId: quoteOf\(e\)/.test(extractFunction(src, 'customerStatementRows', 'index.html'))
+       && /if\(e\.quoteId != null\) return e\.quoteId;/.test(extractFunction(src, 'customerLogQuoteResolver', 'index.html')),
     'the ledger line carries the invoice it belongs to');
   t.check(/closest\('\[data-cstinv\]'\)/.test(src) && /custStmtInv = /.test(src), 'following one opens it beside the table');
   t.check(/data-cinv="\$\{esc\(String\(q\.id\)\)\}">Open in Invoices/.test(panel)
