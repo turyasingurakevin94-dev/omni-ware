@@ -24071,12 +24071,12 @@
   .ow-mi-ev.ow-good{background:var(--ow-verdigris);}
   .ow-mi-ev.ow-warn{background:var(--ow-amber);}
   /* ---- CHATS, AS A CHAT APP: the list, the open chat, who it is ---- */
-  .ow-mi-chat{display:grid;grid-template-columns:340px minmax(0,1fr) 320px;height:calc(100vh - 230px);min-height:560px;
+  .ow-mi-chat{display:grid;grid-template-columns:320px minmax(0,1fr) 320px;height:calc(100vh - 230px);min-height:560px;
     background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);overflow:hidden;}
   .ow-mi-chl{display:flex;flex-direction:column;min-height:0;min-width:0;border-right:1px solid var(--ow-rule);}
-  .ow-mi-chf{display:flex;flex-wrap:wrap;gap:var(--ow-sp-6);padding:var(--ow-sp-8) var(--ow-sp-12);}
-  .ow-mi-fch{display:inline-flex;align-items:center;gap:var(--ow-sp-4);height:28px;padding:0 var(--ow-sp-10);border:1px solid var(--ow-rule);
-    border-radius:var(--ow-r-pill);background:var(--ow-paper);font-family:inherit;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);cursor:pointer;}
+  .ow-mi-chf{display:flex;flex-wrap:nowrap;gap:var(--ow-sp-4);padding:var(--ow-sp-8) var(--ow-sp-12);overflow-x:auto;}
+  .ow-mi-fch{flex:none;display:inline-flex;align-items:center;gap:var(--ow-sp-4);height:28px;padding:0 var(--ow-sp-8);border:1px solid var(--ow-rule);
+    border-radius:var(--ow-r-pill);background:var(--ow-paper);font-family:inherit;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);cursor:pointer;}
   .ow-mi-fch .ow-fig{font-size:var(--ow-t-11);}
   .ow-mi-fch.ow-on{background:var(--ow-steel-950);border-color:var(--ow-steel-950);color:var(--ow-paper);}
   .ow-mi-chm{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:0 var(--ow-sp-12) var(--ow-sp-8);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);}
@@ -24123,6 +24123,21 @@
   .ow-mi-thn{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:1px;}
   .ow-mi-ths{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
   .ow-mi-chacts{display:flex;flex-wrap:wrap;gap:var(--ow-sp-6);}
+  .ow-mi-mta{display:flex;flex-wrap:wrap;gap:var(--ow-sp-6);margin:0 0 var(--ow-sp-8);}
+  .ow-mi-astext,.ow-mi-mkord{flex:none;}
+  .ow-mi-cmpt{display:flex;align-items:center;gap:var(--ow-sp-6);padding:var(--ow-sp-6) var(--ow-sp-8) 0;}
+  .ow-mi-pcard,.ow-mi-photo{width:30px;height:30px;}
+  .ow-mi-photoin{display:none;}
+  /* The header already carries the window on a desk; the phone hides
+     that header part, so the line comes back there. */
+  .ow-mi-winl{display:none;}
+  .ow-mi-sendi{width:14px;height:14px;margin-right:var(--ow-sp-4);vertical-align:-2px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .ow-mi-agb{display:flex;height:8px;margin-top:var(--ow-sp-8);border-radius:var(--ow-r-pill);background:var(--ow-rule-soft);overflow:hidden;}
+  .ow-mi-agbs{display:block;flex:none;height:100%;}
+  .ow-mi-ag1{background:var(--ow-sky-soft);}
+  .ow-mi-ag2{background:var(--ow-amber);}
+  .ow-mi-ag3{background:var(--ow-crimson);}
+  .ow-mi-agbl{display:flex;justify-content:space-between;margin-top:var(--ow-sp-4);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
   .ow-mi-fupins{white-space:normal;text-align:left;}
   .ow-mi-cmpoff{display:none;}
   .ow-mi-call{flex:none;white-space:nowrap;}
@@ -24266,6 +24281,7 @@
     .ow-mi-back{display:flex;border:0;width:44px;height:44px;}
     .ow-mi-thh{padding:var(--ow-sp-6) var(--ow-sp-8);gap:var(--ow-sp-8);}
     .ow-mi-thw,.ow-mi-openrec{display:none;}
+    .ow-mi-winl{display:inline-flex;}
     .ow-mi-ib{width:44px;height:44px;}
     .ow-mi-chtb{padding:0 var(--ow-sp-12) var(--ow-sp-12);overflow:visible;}
     .ow-mi-tx{flex:none;height:56vh;margin:0 calc(-1 * var(--ow-sp-12)) var(--ow-sp-12);}
@@ -35665,9 +35681,9 @@ async function waSendQuoteFromChat(){
    Order tracking through create_quote.run (one arithmetic), stamped as
    WhatsApp-born so the insights count it — and then the receipt above
    goes out, composed from the order that now exists. */
-async function waCreateOrderFromChat(){
+async function waCreateOrderFromChat(fromMatch){
   const conv = (waInbox.convs||[]).find(c=> c.id === waInbox.active);
-  const d = waInbox.aiDrafts[String(waInbox.active)];
+  const d = fromMatch ? { order: fromMatch } : waInbox.aiDrafts[String(waInbox.active)];
   if(!conv || !d || !d.order || !(d.order.lines||[]).length || waInbox.sending || waInbox.creating) return;
   waInbox.creating = true;
   try{
@@ -35687,7 +35703,7 @@ async function waCreateOrderFromChat(){
     const q = (data.savedQuotes||[]).find(x=> invoiceNumberLabel(x) === res.invoice);
     if(q){ q.originWa = true; q.waConversationId = conv.id; saveData(); }
     refreshNavBadges();
-    delete waInbox.aiDrafts[String(waInbox.active)];
+    if(!fromMatch) delete waInbox.aiDrafts[String(waInbox.active)];
     waRenderInbox();
     /* The card that reminded the owner about unpriced items dies with
        the draft, so the reminder moves to a toast — and the leftovers
@@ -37022,7 +37038,7 @@ function waRenderInbox(){
 
   const fl = (k, label)=> `<button type="button" class="ow-mi-fch${!query && filter === k ? ' ow-on' : ''}" data-wafilter="${k}" aria-pressed="${!query && filter === k}">${label} <span class="ow-fig">${counts[k]}</span></button>`;
   const fEl = document.getElementById('wa_filters');
-  if(fEl) fEl.innerHTML = fl('wait', 'Waiting') + fl('unread', 'Unread') + fl('cust', 'Customers') + fl('cart', 'Carts') + fl('all', 'All');
+  if(fEl) fEl.innerHTML = fl('wait', 'Waiting') + fl('unread', 'Unread') + fl('cust', 'Customers') + (counts.cart || filter === 'cart' ? fl('cart', 'Carts') : '') + fl('all', 'All');
 
   const FILTER_NAMES = { wait: 'People waiting', unread: 'Unread', cust: 'Customers on file', cart: 'Sent a cart', all: 'Every chat' };
   document.getElementById('wa_waiting_t').textContent = query ? 'Chats matching what you typed' : FILTER_NAMES[filter];
@@ -37206,13 +37222,24 @@ function waChatCustomerHTML(c, nowMs){
 
   const st = customerDebtStanding(cust);
   const band = debtStandingBand(st);
+  /* What they owe, by age of the invoice it sits on: inside a month,
+     late, and past sixty days. */
+  const ages = { total: 0, parts: [{label: '0–30d', v: 0, cls: 'ow-mi-ag1'}, {label: '31–60d', v: 0, cls: 'ow-mi-ag2'}, {label: '60d+', v: 0, cls: 'ow-mi-ag3'}] };
+  if(st) customerOutstandingInvoices(cust.id).forEach(q=>{
+    const due = Number(invoiceBalanceDue(q)) || 0;
+    const d = daysSinceDate(q.invoicedAt || q.date);
+    ages.parts[d == null || d <= 30 ? 0 : d <= 60 ? 1 : 2].v += due;
+    ages.total += due;
+  });
   const today = fupDayISO(nowMs);
   const nextProm = promisesFor(cust.id).filter(p=> promiseState(p, cust, today) === 'waiting')
     .sort((a, b)=> String(a.promisedOn).localeCompare(String(b.promisedOn)))[0];
   const rec = msgPromiseRecord(cust.id, nowMs);
   const owe = `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">What they owe</span></div><div class="ow-mi-in">
     ${st ? `<div class="ow-mi-cbr"><b class="ow-mi-v${band === 'severe' ? ' ow-mi-vbad' : band === 'late' ? ' ow-mi-vwarn' : ''}">${esc(fig(st.owed))}</b><span class="ow-mi-s">UGX</span></div>
-      <span class="ow-mi-s">${st.openCount ? `${st.openCount} invoice${st.openCount === 1 ? '' : 's'} open${st.oldestDays != null ? ` &middot; the oldest ${st.oldestDays} days` : ''}` : 'carried from before, with no invoice behind it'}</span>`
+      <span class="ow-mi-s">${st.openCount ? `${st.openCount} invoice${st.openCount === 1 ? '' : 's'} open${st.oldestDays != null ? ` &middot; the oldest ${st.oldestDays} days` : ''}` : 'carried from before, with no invoice behind it'}</span>
+      ${ages.total > 0 ? `<span class="ow-mi-agb" title="${ages.parts.map(x=> x.label + ': ' + fig(x.v)).join(' · ')}">${ages.parts.map(x=> x.v ? `<i class="ow-mi-agbs ${x.cls}" style="width:${msgPct(x.v / ages.total)}"></i>` : '').join('')}</span>
+        <span class="ow-mi-agbl">${ages.parts.map(x=> `<span>${x.label}</span>`).join('')}</span>` : ''}`
       : '<span class="ow-mi-s">Nothing owed.</span>'}
     </div>
     ${nextProm ? `<div class="ow-sr"><span class="ow-sr-k">Said they would pay</span><span class="ow-sr-v">${esc(fmtShortDate(nextProm.promisedOn))}</span></div>` : ''}
@@ -37274,6 +37301,58 @@ function waChatFollowUpNews(customerId){
   return { items, text };
 }
 
+/* What the yard holds of a matched line -- the shelf, not a promise. */
+function waYardHTML(m){
+  if(!m || m.productId == null) return '';
+  const q = Number(getStockQty(m.productId, m.variantIdx == null ? null : m.variantIdx)) || 0;
+  return q > 0 ? `<span class="ow-cp ow-good">${esc(q.toLocaleString('en-UG'))}</span>` : '<span class="ow-cp ow-bad">none</span>';
+}
+/* A named day as a date: the next one of that name, today included. A
+   word that is not a day stays a word -- never a guessed date. */
+function waNamedDayISO(word, nowMs){
+  const w = String(word || '').toLowerCase().trim();
+  const days = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+  const d = new Date(nowMs);
+  if(w === 'today') return fupDayISO(nowMs);
+  if(w === 'tomorrow') return fupDayISO(nowMs + 86400000);
+  const i = days.findIndex(x=> w === x || w === x.slice(0, 3));
+  if(i < 0) return null;
+  return fupDayISO(nowMs + (((i - d.getDay()) + 7) % 7) * 86400000);
+}
+/* A photo from the owner's own files, sent with the words in the box as
+   its caption. Asked first, because it goes the moment it is chosen. */
+async function waSendChatPhoto(file){
+  if(!file || waInbox.active == null || waInbox.sending) return;
+  const conv = (waInbox.convs || []).find(x=> x.id === waInbox.active);
+  const ta = document.getElementById('wa_reply');
+  const caption = ta ? ta.value.trim() : '';
+  if(!confirm(`Send this photo to ${conv ? waConvTitle(conv) : 'them'}${caption ? ', with the words in the box as its caption' : ''}?`)) return;
+  waInbox.sending = true;
+  try{
+    const ext = (String(file.type || '').split('/')[1] || 'jpg').replace(/[^a-z0-9]/g, '') || 'jpg';
+    const path = `${currentShopId}/chat/${crypto.randomUUID()}.${ext}`;
+    const { error: upErr } = await sb.storage.from(PRODUCT_IMAGE_BUCKET).upload(path, file, { contentType: file.type || 'image/jpeg' });
+    if(upErr) throw upErr;
+    const link = sb.storage.from(PRODUCT_IMAGE_BUCKET).getPublicUrl(path).data.publicUrl;
+    const { data: out, error } = await sb.functions.invoke('wa-send', {
+      body: { shopId: currentShopId, action: 'send-image', conversationId: waInbox.active, link, caption } });
+    if(error){
+      let m = error.message;
+      try{ const b = await error.context.json(); if(b && b.error) m = b.error; }catch(_e){}
+      throw new Error(m);
+    }
+    if(!(out && out.sent)) throw new Error('the send was refused');
+    if(ta && caption){ ta.value = ''; delete waInbox.drafts[String(waInbox.active)]; }
+    await waFetchThread(waInbox.active);
+    await waFetchConvs();
+  }catch(e){
+    toast('The photo did not go: ' + ((e && e.message) || 'unknown'), 8000);
+  }finally{
+    waInbox.sending = false;
+    waRenderInbox();
+  }
+}
+
 /* The side pane: the customer, or the number itself. */
 function waRenderChatSide(){
   const side = waInbox.side || 'cust';
@@ -37307,6 +37386,13 @@ function waBindChatConsole(){
   const el = document.getElementById('wa_console');
   if(!el || el.dataset.bound) return;
   el.dataset.bound = '1';
+  el.addEventListener('change', (e)=>{
+    if(e.target && e.target.id === 'wa_photo_in'){
+      const f = e.target.files && e.target.files[0];
+      e.target.value = '';
+      waSendChatPhoto(f);
+    }
+  });
   el.addEventListener('click', (e)=>{
     const f = e.target.closest('[data-wafilter]');
     if(f){
@@ -37359,6 +37445,29 @@ function waBindChatConsole(){
       const ta = document.getElementById('wa_reply');
       if(!q || !ta || ta.disabled) return;
       ta.value = ta.value.trim() ? ta.value.replace(/\s+$/, '') + '\n' + q.text : q.text;
+      waInbox.drafts[ta.dataset.conv] = ta.value;
+      ta.focus(); return;
+    }
+    const ast = e.target.closest('.ow-mi-astext');
+    if(ast){ waInbox.asText = Object.assign({}, waInbox.asText, { [ast.dataset.wamid]: true }); waRenderInbox(); return; }
+    const mk = e.target.closest('.ow-mi-mkord');
+    if(mk){
+      const o = (waInbox.matchOrder || {})[String(mk.dataset.conv)];
+      if(!o) return;
+      if(!confirm(`Make an order of ${o.lines.map(l=> l.qty + ' × ' + l.name).join(', ')} — UGX ${Number(o.total).toLocaleString('en-UG')}?\n\nIts receipt goes to them in this chat.`)) return;
+      waCreateOrderFromChat(o); return;
+    }
+    if(e.target.closest('.ow-mi-photo')){ const fi = document.getElementById('wa_photo_in'); if(fi) fi.click(); return; }
+    if(e.target.closest('.ow-mi-pcard')){
+      const ta = document.getElementById('wa_reply');
+      if(!ta || ta.disabled) return;
+      const said = prompt('Which product? Type it the way a customer would.', '');
+      if(said === null || !String(said).trim()) return;
+      const m = waQuoteMatch(said, waQuoteCandidates());
+      if(!m){ toast('Nothing in the price list matches “' + said + '”'); return; }
+      if(m.ambiguous){ toast(m.options.length + ' match — say more: ' + m.options.slice(0, 3).map(o=> o.name).join(', '), 7000); return; }
+      const line = waQuoteReply(m, null);
+      ta.value = ta.value.trim() ? ta.value.replace(/\s+$/, '') + '\n' + line : line;
       waInbox.drafts[ta.dataset.conv] = ta.value;
       ta.focus(); return;
     }
@@ -37541,7 +37650,11 @@ function waOpenRowHTML(c, nowMs){
   const whoC = waMatchCustomer(c.wa_id);
   const read = unanswered && whoC ? msgReadReply(lastIn.body) : null;
   const reading = !read ? ''
-    : read.key === 'day' ? `<div class="ow-mi-brd"><span class="ow-cp ow-mi-c-day">reads as a day${read.word ? ' &middot; &ldquo;' + esc(read.word) + '&rdquo;' : ''}</span><button type="button" class="btn btn-ghost ow-sm fup-held-promise" data-cust="${esc(String(whoC.id))}">Write it down as a promise</button></div>`
+    : read.key === 'day' ? (()=>{
+      const iso = waNamedDayISO(read.word, nowMs);
+      const when = iso ? new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', {weekday: 'long', day: 'numeric', month: 'short', timeZone: 'UTC'}) : null;
+      return `<div class="ow-mi-brd"><span class="ow-cp ow-mi-c-day">reads as a day${when ? ' &middot; ' + esc(when) : read.word ? ' &middot; &ldquo;' + esc(read.word) + '&rdquo;' : ''}</span><button type="button" class="btn btn-ghost ow-sm fup-held-promise" data-cust="${esc(String(whoC.id))}"${iso ? ` data-day="${iso}"` : ''}>Write it down as a promise</button></div>`;
+    })()
     : read.key === 'paid' ? `<div class="ow-mi-brd"><span class="ow-cp ow-warn">says they paid &mdash; check the books</span><button type="button" class="btn btn-ghost ow-sm fup-pay" data-cust="${esc(String(whoC.id))}">Record the payment</button></div>`
     : '';
   /* A named day, a payment claimed, a dispute or a stop is not an ask
@@ -37603,6 +37716,7 @@ function waOpenRowHTML(c, nowMs){
      and the screen can never disagree. Held against the message, so a
      newer question cannot be answered with an older list. */
   const askedQty = match && lastIn ? waAskedQty(lastIn.body || '', match) : null;
+  const asText = !!(lastIn && (waInbox.asText || {})[lastIn.wamid]);
   waInbox.priceDoc[convId] = null;
   if(lastIn && (match || options || (multi && multi.settled))){
     /* A TIE IS A PRICE LIST. "do you have pull handles" ties five
@@ -37632,8 +37746,25 @@ function waOpenRowHTML(c, nowMs){
       : match ? waQuoteReply(match, askedQty)
       : multi ? waQuoteReplyAll(multi.slots, multi.qtys, multi.unread)
       : waPriceListText(doc);
-    if(doc.rows) waInbox.priceDoc[convId] = { wamid: lastIn.wamid, doc, twin };
+    /* "Put it in the reply" answers in words instead of the picture:
+       the doc is not held, so Send sends what is in the box. */
+    waInbox.priceTwin = waInbox.priceTwin || {};
+    waInbox.priceTwin[convId] = twin;
+    if(doc.rows && !asText) waInbox.priceDoc[convId] = { wamid: lastIn.wamid, doc, twin };
   }
+  /* AN ORDER STRAIGHT FROM THE MATCH, when every line is priced and has
+     a quantity -- the same road the assistant's order takes. */
+  const mkLines = !lastIn ? null
+    : match && askedQty && match.priced !== false ? [{ m: match, qty: Number(askedQty) }]
+    : multi && multi.settled && multi.slots.every((m, i)=> m.priced !== false && Number(multi.qtys[i]) > 0)
+      ? multi.slots.map((m, i)=> ({ m, qty: Number(multi.qtys[i]) })) : null;
+  const mkOrder = mkLines ? (()=>{
+    const lines = mkLines.map(({m, qty})=> ({ productId: m.productId, variantIdx: m.variantIdx == null ? null : m.variantIdx,
+      qty, price: waQuoteEach(m, qty).each, name: m.name, unit: m.unit || '' }));
+    return { lines, total: lines.reduce((t, l)=> t + Math.round(l.qty * l.price), 0), unpriced: [], unmatched: [] };
+  })() : null;
+  waInbox.matchOrder = waInbox.matchOrder || {};
+  waInbox.matchOrder[convId] = mkOrder;
 
   /* THE CAPTION IS A CALL TO ACTION, AND NOTHING ELSE. It used to
      repeat every figure the picture was already showing -- the same
@@ -37642,6 +37773,7 @@ function waOpenRowHTML(c, nowMs){
      words carry what to do about it. */
   const suggested = aiLive && aiLive.text ? aiLive.text
     : waInbox.priceDoc[convId] ? WA_PRICE_CALL
+    : asText && waInbox.priceTwin && waInbox.priceTwin[convId] ? waInbox.priceTwin[convId]
     : null;
   if(suggested != null){
     const held = waInbox.drafts[convId];
@@ -37710,27 +37842,31 @@ function waOpenRowHTML(c, nowMs){
                 : match.exact ? '' : (match.via === 'named' ? 'a partial match — check it before it goes' : 'a guess — check it before it goes'),
             ].filter(Boolean).join(' · ') : 'read from your catalogue')}</span>
       </div>
+      ${(match || (multi && multi.settled)) && lastIn ? `<div class="ow-mi-mta">
+        <button type="button" class="btn btn-ghost ow-sm ow-mi-astext" data-wamid="${esc(lastIn.wamid)}"${asText ? ' disabled' : ''}>${asText ? 'In the reply as words' : 'Put it in the reply'}</button>
+        ${mkOrder && w.open ? `<button type="button" class="btn btn-ghost ow-sm ow-mi-mkord" data-conv="${c.id}">Make it an order &middot; <span class="ow-fig">${esc(Number(mkOrder.total).toLocaleString('en-UG'))}</span></button>` : ''}
+      </div>` : ''}
       ${(order || options || match || multi) ? `<table class="wa-mtbl">
-        <tr><th class="wa-l">Item</th><th>Each</th><th${kinds ? ' class="wa-kd-h"' : ''}>${askedQty ? esc(askedQty) + ' comes to' : multi ? 'Comes to' : kinds ? 'Sizes' : 'Buy more'}</th><th></th></tr>
+        <tr><th class="wa-l">Item</th><th>Each</th><th${kinds ? ' class="wa-kd-h"' : ''}>${askedQty ? esc(askedQty) + ' comes to' : multi ? 'Comes to' : kinds ? 'Sizes' : 'Buy more'}</th><th>Yard</th><th></th></tr>
         ${multi ? multi.slots.map((m, i)=> m.ambiguous
             /* An unsettled slot: its options, each a tap that fills it. */
-            ? `<tr><td class="wa-nm" colspan="4"><span class="wa-none">${m.options.length} things match “${esc(((m.options[0].said||[]).length ? m.options[0].said : (m.options[0].viaSoft||[])).join(' '))}” — pick one</span></td></tr>`
-              + m.options.map(o=> `<tr><td class="wa-nm" title="${esc(o.name)}">&nbsp;&nbsp;${esc(o.name)}</td><td>${esc(String(Number(o.price||0).toLocaleString('en-UG')))}</td><td>${esc(waBreakLabel(o))}</td><td><button type="button" class="btn btn-ghost ow-sm wa-slot-pick" data-slot="${i}" data-key="${esc(o.key)}" data-wamid="${esc(lastIn.wamid)}">Use this</button></td></tr>`).join('')
+            ? `<tr><td class="wa-nm" colspan="5"><span class="wa-none">${m.options.length} things match “${esc(((m.options[0].said||[]).length ? m.options[0].said : (m.options[0].viaSoft||[])).join(' '))}” — pick one</span></td></tr>`
+              + m.options.map(o=> `<tr><td class="wa-nm" title="${esc(o.name)}">&nbsp;&nbsp;${esc(o.name)}</td><td>${esc(String(Number(o.price||0).toLocaleString('en-UG')))}</td><td>${esc(waBreakLabel(o))}</td><td>${waYardHTML(o)}</td><td><button type="button" class="btn btn-ghost ow-sm wa-slot-pick" data-slot="${i}" data-key="${esc(o.key)}" data-wamid="${esc(lastIn.wamid)}">Use this</button></td></tr>`).join('')
             : `<tr><td class="wa-nm" title="${esc(m.name)}">${multi.qtys[i] ? esc(String(multi.qtys[i])) + ' × ' : ''}${esc(m.name)}</td><td>${m.priced === false ? '<span class="wa-none">no price</span>' : esc(String(Number(m.price||0).toLocaleString('en-UG')))}</td><td class="wa-w">${m.priced === false ? '—' : multi.qtys[i]
                 ? esc(String(Math.round(multi.qtys[i] * waQuoteEach(m, multi.qtys[i]).each).toLocaleString('en-UG')))
-                : '—'}</td><td></td></tr>`).join('')
-        : order ? order.lines.map(l=> `<tr><td class="wa-nm" title="${esc(l.name)}">${esc(String(l.qty))} × ${esc(l.name)}</td><td>${esc(String(Number(l.price).toLocaleString('en-UG')))}</td><td class="wa-w">${esc(String(Math.round(l.qty*l.price).toLocaleString('en-UG')))}</td><td></td></tr>`).join('')
-          + (order.unpriced||[]).map(u=> `<tr><td class="wa-nm">${esc(String(u.qty))} × ${esc(u.name)}</td><td class="wa-none" colspan="3">no price on file — quote this one by hand</td></tr>`).join('')
-          + (order.unmatched||[]).map(u=> `<tr><td class="wa-nm">${esc(u)}</td><td class="wa-none" colspan="3">not in the catalogue</td></tr>`).join('')
+                : '—'}</td><td>${waYardHTML(m)}</td><td></td></tr>`).join('')
+        : order ? order.lines.map(l=> `<tr><td class="wa-nm" title="${esc(l.name)}">${esc(String(l.qty))} × ${esc(l.name)}</td><td>${esc(String(Number(l.price).toLocaleString('en-UG')))}</td><td class="wa-w">${esc(String(Math.round(l.qty*l.price).toLocaleString('en-UG')))}</td><td>${waYardHTML(l)}</td><td></td></tr>`).join('')
+          + (order.unpriced||[]).map(u=> `<tr><td class="wa-nm">${esc(String(u.qty))} × ${esc(u.name)}</td><td class="wa-none" colspan="4">no price on file — quote this one by hand</td></tr>`).join('')
+          + (order.unmatched||[]).map(u=> `<tr><td class="wa-nm">${esc(u)}</td><td class="wa-none" colspan="4">not in the catalogue</td></tr>`).join('')
         : kinds ? kinds.map(k=> `<tr><td class="wa-nm wa-kd" title="${esc(k.name)}">${esc(k.name)}</td><td>${
             k.from == null ? '<span class="wa-none">no price</span>'
             : esc(Number(k.from).toLocaleString('en-UG')) + (k.to !== k.from ? '–' + esc(Number(k.to).toLocaleString('en-UG')) : '')}</td><td class="wa-kd-n">${
-            k.sizes === 1 ? '—' : esc(String(k.sizes)) + ' sizes'}</td><td><button type="button" class="btn btn-ghost ow-sm wa-kind-pick" data-pid="${esc(k.productId)}" data-wamid="${esc(lastIn.wamid)}">${k.sizes === 1 ? 'Use this' : esc(String(k.sizes)) + ' sizes'}</button></td></tr>`).join('')
-        : options ? options.slice(0, WA_QUOTE_TIE_ROWS).map((o,i)=> `<tr><td class="wa-nm" title="${esc(o.name)}">${esc(o.name)}</td><td>${o.priced === false ? '<span class="wa-none">no price</span>' : esc(String(Number(o.price||0).toLocaleString('en-UG')))}</td><td>${esc(waBreakLabel(o))}</td><td><button type="button" class="btn btn-ghost ow-sm wa-suggest-opt" data-oi="${i}" data-wamid="${esc(lastIn.wamid)}">Use this</button></td></tr>`).join('')
-          + (options.length > WA_QUOTE_TIE_ROWS ? `<tr><td class="wa-nm" colspan="4"><span class="wa-none">and ${options.length - WA_QUOTE_TIE_ROWS} more — ask them which</span></td></tr>` : '')
+            k.sizes === 1 ? '—' : esc(String(k.sizes)) + ' sizes'}</td><td></td><td><button type="button" class="btn btn-ghost ow-sm wa-kind-pick" data-pid="${esc(k.productId)}" data-wamid="${esc(lastIn.wamid)}">${k.sizes === 1 ? 'Use this' : esc(String(k.sizes)) + ' sizes'}</button></td></tr>`).join('')
+        : options ? options.slice(0, WA_QUOTE_TIE_ROWS).map((o,i)=> `<tr><td class="wa-nm" title="${esc(o.name)}">${esc(o.name)}</td><td>${o.priced === false ? '<span class="wa-none">no price</span>' : esc(String(Number(o.price||0).toLocaleString('en-UG')))}</td><td>${esc(waBreakLabel(o))}</td><td>${waYardHTML(o)}</td><td><button type="button" class="btn btn-ghost ow-sm wa-suggest-opt" data-oi="${i}" data-wamid="${esc(lastIn.wamid)}">Use this</button></td></tr>`).join('')
+          + (options.length > WA_QUOTE_TIE_ROWS ? `<tr><td class="wa-nm" colspan="5"><span class="wa-none">and ${options.length - WA_QUOTE_TIE_ROWS} more — ask them which</span></td></tr>` : '')
         : `<tr><td class="wa-nm" title="${esc(match.name)}">${esc(match.name)}</td><td>${match.priced === false ? '<span class="wa-none">no price</span>' : esc(String(Number(match.price||0).toLocaleString('en-UG')))}</td><td class="wa-w">${match.priced === false ? '—' : askedQty
             ? esc(String(Math.round(askedQty * waQuoteEach(match, askedQty).each).toLocaleString('en-UG')))
-            : esc(waBreakLabel(match))}</td><td><button type="button" class="btn btn-ghost ow-sm" id="wa_match_no" data-wamid="${esc(lastIn.wamid)}">Not this</button></td></tr>`}
+            : esc(waBreakLabel(match))}</td><td>${waYardHTML(match)}</td><td><button type="button" class="btn btn-ghost ow-sm" id="wa_match_no" data-wamid="${esc(lastIn.wamid)}">Not this</button></td></tr>`}
       </table>`
       : `<p class="wa-cmp-n" style="margin-top:0;">Nothing in the catalogue matches what they asked for${known ? ` — it is already being sourced as <b>${esc(known.name)}</b>` : ''}. Say so, or record the ask.</p>`}
       ${kinds ? `<p class="wa-cmp-n" style="margin-top:0;">They named the thing, not which kind of it &mdash;
@@ -37762,9 +37898,14 @@ function waOpenRowHTML(c, nowMs){
       <a class="btn btn-ghost ow-sm ow-mi-call" href="tel:+${esc(String(c.wa_id))}">Call them</a>
     </div>`}
     <div class="wa-cmp${w.open ? '' : ' ow-mi-cmpoff'}">
+      <div class="ow-mi-cmpt">
+        <button type="button" class="ow-mi-ib ow-mi-pcard" aria-label="Add a product's price to the reply" title="Add a product's price"><svg class="ow-mi-ibi" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg></button>
+        <button type="button" class="ow-mi-ib ow-mi-photo" aria-label="Send a photo" title="Send a photo"><svg class="ow-mi-ibi" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 8"/></svg></button>
+        <input type="file" accept="image/*" class="ow-mi-photoin" id="wa_photo_in" aria-label="Choose a photo to send">
+      </div>
       <textarea id="wa_reply" data-conv="${c.id}" placeholder="Reply…" ${w.open?'':'disabled'}></textarea>
       <div class="wa-cmp-f">
-        <span class="wa-win${w.open?'':' wa-shut'}">${w.open
+        <span class="wa-win ow-mi-winl${w.open?'':' wa-shut'}">${w.open
           ? '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'
           : '<svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>'}${esc(waWindowLabel(w))}</span>
         <span class="wa-cmp-sp"></span>
@@ -37772,10 +37913,10 @@ function waOpenRowHTML(c, nowMs){
         ${waInbox.aiBusy === convId ? '<span class="wa-mh-n">Drafting…</span>' : ''}
         ${w.open ? '<button type="button" class="btn btn-ghost ow-sm" id="wa_send_catalog">Send the catalogue</button>' : ''}
         ${order ? `<button type="button" class="btn btn-ghost ow-sm" id="wa_ai_order">Make it an order · ${esc(String(Number(order.total||0).toLocaleString('en-UG')))}</button>` : ''}
-        <button type="button" class="btn btn-accent ow-sm" id="wa_reply_send" ${w.open && !waInbox.sending ? '' : 'disabled'}>${order ? 'Send the quotation' : 'Send'}</button>
+        <button type="button" class="btn btn-accent ow-sm" id="wa_reply_send" ${w.open && !waInbox.sending ? '' : 'disabled'}><svg class="ow-mi-sendi" viewBox="0 0 24 24"><path d="M4 12l16-8-6 16-2-7z"/></svg>${order ? 'Send the quotation' : 'Send'}</button>
       </div>
     </div>
-    <p class="wa-cmp-n">${aiLive && aiLive.error ? `The assistant could not draft this one: ${esc(aiLive.error)} ` : ''}${aiLive && aiLive.text ? 'Written by the assistant from this chat and your catalogue — <b>read it before it goes</b>. ' : (match ? (match.priced === false ? 'Written from your catalogue — it has no price on file yet, so none is promised. ' : 'Written from your catalogue at today’s price. ') : '')}Nothing has been sent: the reply leaves the shop when you press <b>Send</b>, and lands in this same chat on your phone.</p>`;
+    <p class="wa-cmp-n">${aiLive && aiLive.error ? `The assistant could not draft this one: ${esc(aiLive.error)} ` : ''}${aiLive && aiLive.text ? 'Written by the assistant from this chat and your catalogue — <b>read it before it goes</b>. ' : (match ? (match.priced === false ? 'Written from your catalogue — it has no price on file yet, so none is promised. ' : 'Written from your catalogue at today’s price. ') : '')}Nothing is sent until you press <b>Send</b> &middot; Enter sends, Shift+Enter makes a new line.</p>`;
 }
 
 /* The first bulk break, which is the second thing every builder asks
@@ -118693,6 +118834,10 @@ function renderFollowUps(){
     document.getElementById('fup_contact_pane').style.display = work ? '' : 'none';
     const chatPane = document.getElementById('fup_chat_pane');
     if(chatPane) chatPane.style.display = chats ? '' : 'none';
+    /* The lanes are the queue's filter; Chats is not the queue, so it
+       gives their row back to the chats. */
+    const laneBar = document.querySelector('#tab-followups .fup-lanebar');
+    if(laneBar) laneBar.style.display = chats ? 'none' : '';
     const intelPane = document.getElementById('fup_intel_pane');
     if(intelPane) intelPane.style.display = intel ? '' : 'none';
     const tplPane = document.getElementById('fup_tpl_pane');
@@ -119038,7 +119183,7 @@ function wireFollowUpsScreen(){
       const cid = held.dataset.cust;
       const c = (data.customers||[]).find(x=> String(x.id) === String(cid));
       const owed = c ? Math.round(Number(c.debt) || 0) : 0;
-      const when = prompt('What day did ' + ((c && c.name) || 'they') + ' say they would pay?\n\nAs YYYY-MM-DD.', todayISO());
+      const when = prompt('What day did ' + ((c && c.name) || 'they') + ' say they would pay?\n\nAs YYYY-MM-DD.', held.dataset.day || todayISO());
       if(when === null) return;
       const how = prompt('How much did they say?\n\nLeave it blank if they said the whole '
         + fmtUGX(owed) + '.', '');
