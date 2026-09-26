@@ -5,6 +5,10 @@ const assert = require('assert');
 const {read, extractFunction} = require('./_extract');
 const src = read('index.html');
 const renderer = extractFunction(src,'renderInvoicesUnified','index.html');
+/* The insights and the two panels read the same facts the list does,
+   and live beside the renderer as functions of their own. */
+const helpers = ['invUDays','invULastPaid','invUInsightsHTML','invUPanelsHTML']
+  .map(n=>extractFunction(src,n,'index.html')).join('\n');
 const route = extractFunction(src,'invRenderSide','index.html');
 const sales = extractFunction(src,'renderInvoices','index.html');
 const buys = extractFunction(src,'renderPurchaseInvoices','index.html');
@@ -19,10 +23,11 @@ assert.doesNotMatch(renderer,/\bKept\b|Left after bills/);
 
 const wrap = {innerHTML:'',querySelectorAll:()=>[]};
 const strip = {innerHTML:''};
-const attention = {innerHTML:''};
+const attention = {innerHTML:'',querySelectorAll:()=>[]};
+const panels = {innerHTML:'',querySelectorAll:()=>[]};
 const count = {textContent:''};
 const elements = {
-  invPairSalesWrap:wrap, inv_strip:strip, inv_u_attention:attention, inv_pair_in_n:count,
+  invPairSalesWrap:wrap, inv_u_insights:strip, inv_u_attention:attention, inv_u_panels:panels, inv_pair_in_n:count,
   inv_doc_hide_voided:{checked:true},
 };
 const data = {
@@ -42,6 +47,7 @@ const names = [
   'listPageSlice','listMoreButtonHTML','esc','invBillChip','invStatusChip','invBindDocActions',
   'invSyncStickyOffset','invSearchValue','revealPurchaseInvoice','openPiPaymentModal',
   'purchaseInvoiceFindings','todayISO','quoteItemSellPrice','orderLineIsBoughtIn','nameInitials',
+  'fmtShortDate',
 ];
 const values = [
   {getElementById:id=>elements[id]||null},data,
@@ -51,23 +57,34 @@ const values = [
   q=>`INV-${q.id}`,pi=>`PINV-${pi.id}`,
   q=>q.total,pi=>pi.total,pi=>pi.total-pi.amountPaid,
   (_key,rows)=>rows,()=>'',s=>String(s),()=>'',()=>'',()=>{},()=>{},()=>'',()=>{},()=>{},
-  bills=>({count:bills.length}),()=> '2026-09-24',
+  bills=>({count:bills.length, ids:new Map(bills.map(b=>[b.id,{kind:'warn'}]))}),()=> '2026-09-24',
   it=>Number(it.sellPrice)||0, it=>!!(it && it.supplierId && it.supplierId!=='__stock__'),
   n=>String(n||'?').slice(0,1).toUpperCase(),
+  d=>String(d),
 ];
-const render = new Function(...names,`let invUnifiedOpenKey='s1'; let invLastRows=[]; ${renderer}; return renderInvoicesUnified;`)(...values);
+const lens = new Function(...names,`let invUnifiedOpenKey='s1'; let invUnifiedShow='all'; let invLastRows=[]; ${helpers}; ${renderer};
+  return {render:renderInvoicesUnified, show:k=>{ invUnifiedShow = k; }};`)(...values);
+const render = lens.render;
 
 render('PINV-1');
 assert.match(wrap.innerHTML,/INV-1/,'a bill-number search finds its parent sale');
 assert.match(wrap.innerHTML,/PINV-1/,'the matching bill appears inside that sale');
 assert.match(wrap.innerHTML,/inv-u-flow/,'the expanded sale displays the document relationship');
 assert.doesNotMatch(wrap.innerHTML,/PINV-2/,'unrelated stock purchases stay out of a specific search');
-assert.match(strip.innerHTML,/590,000/,'collection total follows the unpaid part of shown sales');
-assert.match(strip.innerHTML,/500,000/,'payment total follows the unpaid part of shown bills');
-assert.match(strip.innerHTML,/aria-valuenow="14"/,'the receipt bar reflects actual customer payments');
-assert.match(strip.innerHTML,/aria-valuenow="24"/,'the supplier bar reflects actual payments');
-assert.match(attention.innerHTML,/1 bill due or late/,'an explicit bill due date becomes visible attention');
-assert.match(attention.innerHTML,/1 bill needs review/,'the existing bill findings feed the attention row');
+/* THE STRIP'S THREE TOTALS WERE THE REGISTERS' OWN -- to collect, to
+   pay, and the cash between -- said a third time. What replaced them is
+   what only the pair can say, and the cash position survives as the Held
+   and Fronted cards: sale 1 took 100,000 in and paid 160,000 out on its
+   bill, so the shop has fronted 60,000 on one sale. */
+assert.match(strip.innerHTML,/Fronted to suppliers<\/span><span>1 sale<\/span><\/p><p class="inv-hf-v">60,000/,'the cash position survives as the fronted card');
+assert.match(strip.innerHTML,/Held for suppliers<\/span><span>0 sales/,'and nothing is held when no customer has paid ahead');
+assert.match(strip.innerHTML,/Who pays first/,'the insights time both sides of the counter');
+/* THE ATTENTION ROW'S COUNTS ARE NOW THE FILTERS they described, each
+   with its number; the due date and the findings still feed them. */
+assert.match(attention.innerHTML,/Bills due or late <b>1<\/b>/,'an explicit bill due date becomes a visible count');
+assert.match(attention.innerHTML,/Bills to review <b>1<\/b>/,'the existing bill findings feed the same row');
+/* The owed bill is matched to its sale, under the customer it waits on. */
+assert.match(panels.innerHTML,/Waiting on the customer[\s\S]*PINV-1[\s\S]*INV-1/,'an owed bill is matched to the sale it waits on');
 assert.doesNotMatch(wrap.innerHTML,/Sale less linked bills/,'an incomplete cost difference is not presented as profit');
 /* THE BILL TAGS. Sale 690,000 with 100,000 in; one bill of 660,000 with
    160,000 paid. The bill is a tag in its supplier's colour, pale because
@@ -87,7 +104,15 @@ assert.match(wrap.innerHTML,/30,000<\/span><span class="inv-u-sub">sale − bill
 assert.match(wrap.innerHTML,/−60,000 fronted/,'paying a supplier ahead of the customer shows as fronted cash');
 assert.match(wrap.innerHTML,/inv-b-joins/,'the open sale joins its lines to its bills');
 assert.match(wrap.innerHTML,/from the shelf · no bill/,'a line with no supplier is named as shelf stock, not treated as costless');
-assert.match(strip.innerHTML,/Cash on these sales/,'the strip carries the cash position across the shown sales');
+/* SHOW narrows the list and says so when nothing is left. */
+lens.show('shelf');
+render('');
+assert.match(wrap.innerHTML,/PINV-2/,'the shelf filter keeps the restock');
+assert.doesNotMatch(wrap.innerHTML,/INV-1</,'and lets no sale through');
+lens.show('stock');
+render('');
+assert.match(wrap.innerHTML,/Nothing here is from stock/,'an empty filter says so rather than showing a blank');
+lens.show('all');
 
 render('Stock House');
 assert.match(wrap.innerHTML,/Stock purchase/,'unlinked restocks remain visible as their own rows');
