@@ -74,7 +74,13 @@ assert.doesNotMatch(wrap.innerHTML,/Sale less linked bills/,'an incomplete cost 
    sale fills the width and the bill stops short of it. */
 assert.match(wrap.innerHTML,/class="inv-m"/,'each sale carries its two-layer bar');
 assert.match(wrap.innerHTML,/inv-m-top" style="width:100\.00%"><i style="width:14\.49%"/,'the top layer is the sale, filled by what was received');
-assert.match(wrap.innerHTML,/inv-m-seg" style="width:95\.65%"><i style="width:24\.24%"/,'the bill sits beneath on the same scale, filled by what was paid');
+assert.match(wrap.innerHTML,/inv-m-seg inv-sup-\d" style="width:95\.65%"><i style="width:24\.24%"/,'the bill sits beneath on the same scale, filled by what was paid');
+/* One supplier, one colour: the segment, the join and the bill card all
+   carry the same hue class, so the eye can follow a supplier across. */
+{
+  const hue = /inv-m-seg (inv-sup-\d)"/.exec(wrap.innerHTML)[1];
+  assert.match(wrap.innerHTML,new RegExp(`class="inv-b-bill ${hue}`),'the bill card wears its supplier\'s colour');
+}
 assert.match(wrap.innerHTML,/30,000<\/span><span class="inv-u-sub">sale − bills/,'the difference is named as one between documents');
 assert.match(wrap.innerHTML,/−60,000 fronted/,'paying a supplier ahead of the customer shows as fronted cash');
 assert.match(wrap.innerHTML,/inv-b-joins/,'the open sale joins its lines to its bills');

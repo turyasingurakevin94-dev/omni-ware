@@ -82,6 +82,17 @@
     --ow-sky-soft:#DCEAF8;
     --ow-plum:#7A3268;
     --ow-plum-soft:#F6E4F1;
+    /* THE SUPPLIER HUES. Identity again, not state: on Invoices each
+       supplier keeps one colour on its bar segment, its join and its
+       bill, so "which supplier" is read before a name is. Three more
+       families beside indigo, sky and plum, each held to 4.5:1 as ink on
+       its tint, as text, and under white -- design-system.test.js. */
+    --ow-teal:#0E6470;
+    --ow-teal-soft:#DDF1F3;
+    --ow-violet:#5D3FA0;
+    --ow-violet-soft:#ECE6FA;
+    --ow-slate:#3E4C63;
+    --ow-slate-soft:#E3E8EF;
 
     --ow-ink-900:#1C2233;
     --ow-ink-600:#5F6980;
@@ -11594,16 +11605,26 @@
   .inv-m-top.inv-m-none{width:100%;background:none;border-style:dashed;}
   .inv-m-top i,.inv-m-seg i{display:block;height:100%;background:var(--ow-verdigris);}
   .inv-m-bot{display:flex;gap:2px;height:13px;min-width:0;}
-  .inv-m-seg{flex:0 1 auto;min-width:3px;background:var(--ow-indigo-soft);border:1px solid var(--ow-rule);}
-  .inv-m-seg b{position:absolute;left:4px;top:-1px;font-size:var(--ow-t-11);line-height:13px;font-weight:var(--ow-fw-700);color:var(--ow-indigo);}
+  .inv-sup-0{--sup:var(--ow-indigo);--sup-soft:var(--ow-indigo-soft);}
+  .inv-sup-1{--sup:var(--ow-teal);--sup-soft:var(--ow-teal-soft);}
+  .inv-sup-2{--sup:var(--ow-plum);--sup-soft:var(--ow-plum-soft);}
+  .inv-sup-3{--sup:var(--ow-sky);--sup-soft:var(--ow-sky-soft);}
+  .inv-sup-4{--sup:var(--ow-violet);--sup-soft:var(--ow-violet-soft);}
+  .inv-sup-5{--sup:var(--ow-slate);--sup-soft:var(--ow-slate-soft);}
+  .inv-m-seg{flex:0 1 auto;min-width:3px;background:var(--sup-soft,var(--ow-indigo-soft));border:1px solid var(--sup,var(--ow-rule));}
+  .inv-m-seg i{background:var(--sup,var(--ow-indigo));}
+  .inv-m-seg b{position:absolute;left:4px;top:-1px;font-size:var(--ow-t-11);line-height:13px;font-weight:var(--ow-fw-700);color:var(--sup,var(--ow-indigo));}
   .inv-m-seg b.on-fill{color:var(--ow-paper);}
   .inv-m-shelf,.inv-lg-shelf{background:repeating-linear-gradient(135deg,var(--ow-paper) 0 3px,var(--ow-rule-soft) 3px 6px);border:1px solid var(--ow-ink-400);box-sizing:border-box;}
   .inv-m-void{opacity:.4;}
   .inv-u-legend{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:var(--ow-sp-6) var(--ow-sp-16);padding:var(--ow-sp-4) var(--ow-sp-6) var(--ow-sp-8);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
   .inv-u-legend i{display:inline-block;width:14px;height:8px;margin-right:var(--ow-sp-6);vertical-align:middle;}
   .inv-lg-sale{background:var(--ow-oxide-soft);border:1px solid var(--ow-rule);box-sizing:border-box;}
-  .inv-lg-bill{background:var(--ow-indigo-soft);border:1px solid var(--ow-rule);box-sizing:border-box;}
+  .inv-lg-bill{display:inline-flex;gap:2px;margin-right:var(--ow-sp-6);vertical-align:middle;}
+  .inv-lg-bill i{width:8px;margin:0;background:var(--sup-soft);border:1px solid var(--sup);box-sizing:border-box;}
   .inv-lg-done{background:var(--ow-verdigris);}
+  .inv-lg-paid{display:inline-flex;gap:2px;margin-right:var(--ow-sp-6);vertical-align:middle;}
+  .inv-lg-paid i{width:8px;margin:0;background:var(--sup);}
   .inv-u-detail{border-top:1px solid var(--ow-rule-soft);padding:var(--ow-sp-12) var(--ow-sp-12) var(--ow-sp-12) 44px;background:var(--ow-paper-2);}
   .inv-u-detail[hidden]{display:none;}
   /* THE BRIDGE. Fixed row heights -- 52 a line, 64 + 8 a bill -- are
@@ -11620,16 +11641,30 @@
   .inv-b-fig{display:flex;flex-direction:column;align-items:flex-end;flex:none;text-align:right;}
   .inv-b-fig .inv-u-sub{margin-top:0;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;}
   .inv-b-d{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);margin-top:2px;}
-  .inv-b-to{display:none;color:var(--ow-indigo);font-weight:var(--ow-fw-600);}
+  .inv-b-to{display:none;color:var(--sup,var(--ow-indigo));font-weight:var(--ow-fw-600);}
   .inv-b-joins{display:block;}
-  .inv-b-joins path{fill:none;stroke:var(--ow-indigo);stroke-opacity:.28;stroke-linecap:round;}
+  .inv-b-joins path{fill:none;stroke:var(--sup,var(--ow-indigo));stroke-opacity:.38;stroke-linecap:round;}
   .inv-b-bills{display:flex;flex-direction:column;gap:var(--ow-sp-8);min-width:0;}
   .inv-b-bill{height:64px;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:var(--ow-sp-12);padding:0 var(--ow-sp-12);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);background:var(--ow-paper);}
-  .inv-b-bill .ow-link{font-size:var(--ow-t-13);text-align:left;}
+  .inv-b-bill .ow-link{font-size:var(--ow-t-13);text-align:left;color:var(--sup,var(--ow-oxide));}
+  .inv-b-mono{display:inline-flex;align-items:center;justify-content:center;flex:none;width:28px;height:28px;border-radius:var(--ow-r-sm);background:var(--sup-soft);color:var(--sup);font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);}
+  .inv-b-who{display:flex;align-items:center;gap:var(--ow-sp-10);min-width:0;}
+  .inv-u-case .inv-u-head .inv-u-doc{color:var(--ow-oxide-deep);}
+  .inv-u-case.is-bill .inv-u-head .inv-u-doc{color:var(--sup,var(--ow-indigo));}
+  .inv-u-bad{color:var(--ow-crimson);}
+  .inv-b-d.is-good{color:var(--ow-verdigris);}
+  .inv-b-d.is-bad{color:var(--ow-crimson);}
+  .ow-cp.inv-cp-part{background:var(--ow-sky-soft);color:var(--ow-sky);}
+  .inv-u-group span:first-child::before{content:"";display:inline-block;width:8px;height:8px;margin-right:var(--ow-sp-8);border-radius:var(--ow-r-pill);background:var(--ow-oxide);vertical-align:middle;}
+  .inv-u-group.is-buy span:first-child::before{background:var(--ow-indigo);}
+  .inv-u-strip .ow-mt:nth-child(2) .inv-u-meter{background:var(--ow-indigo-soft);}
+  .inv-u-strip .ow-mt:nth-child(2) .inv-u-meter-fill{background:var(--ow-indigo);}
+  .inv-u-strip .ow-mt:nth-child(1) .inv-u-meter{background:var(--ow-oxide-soft);}
+  .inv-u-pos{color:var(--ow-verdigris);}
   .inv-b-bill.is-void .inv-u-doc{text-decoration:line-through;color:var(--ow-ink-400);}
   .inv-b-bill .inv-b-fig .inv-u-value{font-size:var(--ow-t-13);}
-  .inv-b-paid{display:block;width:120px;height:5px;margin-top:6px;border-radius:var(--ow-r-pill);background:var(--ow-indigo-soft);overflow:hidden;}
-  .inv-b-paid i{display:block;height:100%;background:var(--ow-verdigris);}
+  .inv-b-paid{display:block;width:120px;height:5px;margin-top:6px;border-radius:var(--ow-r-pill);background:var(--sup-soft,var(--ow-indigo-soft));overflow:hidden;}
+  .inv-b-paid i{display:block;height:100%;background:var(--sup,var(--ow-verdigris));}
   .inv-b-act{display:flex;justify-content:flex-end;min-width:64px;}
   .inv-b-none{padding:var(--ow-sp-10);border:1px dashed var(--ow-rule);border-radius:var(--ow-r);color:var(--ow-ink-600);font-size:var(--ow-t-12);}
   .inv-u-foot{display:flex;align-items:center;justify-content:space-between;gap:var(--ow-sp-10);flex-wrap:wrap;margin-top:var(--ow-sp-12);padding-top:var(--ow-sp-10);border-top:1px solid var(--ow-rule-soft);}
@@ -14927,6 +14962,206 @@
     border-top:1px solid var(--ow-rule-soft);}
   .cu-side-a .btn{width:100%;}
 
+  /* ---- the book, drawn ---------------------------------------------
+     Where everyone stands: four regions, tinted with the grounds of the
+     state they mean (Slipping is the caution ground, Core the good one),
+     the one prediction-free picture of the whole book. The dots wear the
+     account's health tone and open the account. */
+  #custStripWrap > .cu-mp{margin:var(--ow-sp-12) 0;}
+  .cu-mp .ow-pan-h{height:auto;min-height:38px;flex-wrap:wrap;row-gap:var(--ow-sp-4);
+    padding-top:var(--ow-sp-6);padding-bottom:var(--ow-sp-6);}
+  .cu-tl-key i.cu-k-o.cu-k-good{background:var(--ow-verdigris);}
+  .cu-tl-key i.cu-k-o.cu-k-warn{background:var(--ow-amber);}
+  .cu-tl-key i.cu-k-o.cu-k-bad{background:var(--ow-crimson);}
+  .cu-mp-svg{display:block;width:100%;height:auto;padding:var(--ow-sp-8) var(--ow-sp-12) var(--ow-sp-4);box-sizing:border-box;}
+  .cu-mp-z{fill:var(--ow-paper-2);}
+  .cu-mp-z.cu-mp-core{fill:var(--ow-verdigris-soft);opacity:.55;}
+  .cu-mp-z.cu-mp-slip{fill:var(--ow-amber-faint);}
+  .cu-mp-z.cu-mp-light{fill:var(--ow-sky-soft);opacity:.45;}
+  .cu-mp-ax{stroke:var(--ow-steel-100);stroke-width:1;}
+  .cu-mp-gap{stroke:var(--ow-ink-400);stroke-width:1;stroke-dasharray:3 3;}
+  .cu-mp-gap.cu-mp-q2{stroke:var(--ow-amber);}
+  .cu-mp-mid{stroke:var(--ow-ink-400);stroke-width:1;stroke-dasharray:1 3;}
+  .cu-mp-q{font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);
+    letter-spacing:.08em;fill:var(--ow-ink-600);}
+  .cu-mp-q.cu-mp-qc{fill:var(--ow-verdigris);}
+  .cu-mp-q.cu-mp-qs{fill:var(--ow-amber);}
+  .cu-mp-q.cu-mp-ql{fill:var(--ow-sky);}
+  .cu-mp-t{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-size:var(--ow-t-11);
+    fill:var(--ow-ink-600);}
+  .cu-mp-nm{font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);
+    fill:var(--ow-ink-900);pointer-events:none;}
+  .cu-mp-d{fill:var(--ow-ink-400);stroke:var(--ow-paper);stroke-width:2;cursor:pointer;}
+  .cu-mp-d.ow-good{fill:var(--ow-verdigris);}
+  .cu-mp-d.ow-warn{fill:var(--ow-amber);}
+  .cu-mp-d.ow-bad{fill:var(--ow-crimson);}
+  .cu-mp-d:hover{stroke:var(--ow-ink-900);}
+  .cu-mp-f{margin:0;padding:var(--ow-sp-8) var(--ow-sp-16) var(--ow-sp-12);}
+
+  /* A row's health and its thirteen weeks. */
+  .ow-tbl-c.cu-c-who{display:grid;grid-template-columns:30px minmax(0,1fr);column-gap:var(--ow-sp-10);align-items:center;}
+  .cu-c-who .cu-hr{grid-row:1 / span 2;}
+  .cu-hr{position:relative;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;flex:none;}
+  .cu-hr svg{position:absolute;inset:0;width:30px;height:30px;}
+  .cu-hr .cu-hl-bg,.cu-hr .cu-hl-v{stroke-width:3.5;}
+  .cu-hr b{position:relative;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .cu-wk-s{display:flex;align-items:flex-end;justify-content:flex-end;gap:1px;height:14px;margin-top:var(--ow-sp-4);}
+  .cu-wk-s i{display:block;width:5px;background:var(--ow-steel-400);border-radius:2px;}
+  .cu-wk-s i.cu-wk-0{background:var(--ow-rule);height:2px;}
+
+  /* ---- one customer's world ----------------------------------------
+     The profile band, the next moves, the timeline and the standing of
+     the account. Every colour here answers one of the four questions:
+     crimson / amber / verdigris say how a reading is doing, sky marks
+     the one PREDICTION on the screen (a date the books expect, not one
+     that happened), and everything else is ink. */
+  .cu-pf{display:grid;grid-template-columns:minmax(0,1fr) 400px;}
+  /* The world's four bands stack with the page's own gap between them. */
+  #custAccountWrap > .cu-pf,#custAccountWrap > .ow-strip,#custAccountWrap > .cu-nm,
+  #custAccountWrap > .cu-tl{margin-bottom:var(--ow-sp-12);}
+  .cu-pf-who{display:flex;gap:var(--ow-sp-16);padding:var(--ow-sp-16);min-width:0;}
+  .cu-pf-m{width:52px;height:52px;border-radius:var(--ow-r-lg);background:var(--ow-steel-950);
+    color:var(--ow-paper);display:flex;align-items:center;justify-content:center;flex:none;
+    font-size:var(--ow-t-20);font-weight:var(--ow-fw-700);letter-spacing:.02em;}
+  .cu-pf-b{min-width:0;display:flex;flex-direction:column;gap:var(--ow-sp-8);}
+  .cu-pf-tr{display:flex;flex-wrap:wrap;gap:var(--ow-sp-6);}
+  .cu-pf-r{display:flex;flex-wrap:wrap;gap:var(--ow-sp-6) var(--ow-sp-16);
+    font-size:var(--ow-t-13);color:var(--ow-ink-600);}
+  .cu-pf-a,.cu-pf-i{display:inline-flex;align-items:center;gap:var(--ow-sp-6);}
+  .cu-pf-a{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);text-decoration:none;min-height:24px;}
+  .cu-pf-a:hover{text-decoration:underline;}
+  .cu-pf-a svg,.cu-pf-i svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round;flex:none;}
+  .cu-pf-n{margin:0;font-size:var(--ow-t-12);color:var(--ow-ink-600);max-width:var(--ow-measure);}
+  .cu-pf-hl{border-left:1px solid var(--ow-rule-soft);padding:var(--ow-sp-12) var(--ow-sp-16);
+    display:flex;gap:var(--ow-sp-16);align-items:center;min-width:0;}
+  .cu-hl-none{margin:0;}
+  .cu-hl{position:relative;width:96px;height:96px;flex:none;}
+  .cu-hl-svg{display:block;width:96px;height:96px;}
+  .cu-hl-bg{fill:none;stroke:var(--ow-rule-soft);stroke-width:9;}
+  .cu-hl-v{fill:none;stroke:var(--ow-ink-400);stroke-width:9;stroke-linecap:round;}
+  .cu-hl-v.ow-good{stroke:var(--ow-verdigris);}
+  .cu-hl-v.ow-warn{stroke:var(--ow-amber);}
+  .cu-hl-v.ow-bad{stroke:var(--ow-crimson);}
+  .cu-hl-n{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  .cu-hl-n b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-size:var(--ow-t-28);font-weight:var(--ow-fw-600);line-height:1;color:var(--ow-ink-900);}
+  .cu-hl-n span{font-size:var(--ow-t-11);color:var(--ow-ink-600);margin-top:var(--ow-sp-2);}
+  .cu-hf{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:var(--ow-sp-8);}
+  .cu-hf-r{display:grid;grid-template-columns:70px minmax(0,1fr) 92px;gap:var(--ow-sp-8);
+    align-items:center;font-size:var(--ow-t-12);cursor:help;}
+  .cu-hf-k{color:var(--ow-ink-600);}
+  .cu-hf-t{display:block;height:6px;border-radius:3px;background:var(--ow-rule-soft);overflow:hidden;}
+  .cu-hf-t i{display:block;height:100%;border-radius:3px;background:var(--ow-ink-400);}
+  .cu-hf-t i.ow-good,.cu-nm-bars i.ow-good,.cu-st-bar i.ow-good,.cu-st-bk i.ow-good{background:var(--ow-verdigris);}
+  .cu-hf-t i.ow-warn,.cu-nm-bars i.ow-warn,.cu-st-bar i.ow-warn,.cu-st-bk i.ow-warn{background:var(--ow-amber);}
+  .cu-hf-t i.ow-bad,.cu-nm-bars i.ow-bad,.cu-st-bar i.ow-bad,.cu-st-bk i.ow-bad{background:var(--ow-crimson);}
+  .cu-hf-w{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:var(--ow-fw-600);}
+  .cu-hf-w.ow-good,.cu-nm-k.ow-good{color:var(--ow-verdigris);}
+  .cu-hf-w.ow-warn,.cu-nm-k.ow-warn{color:var(--ow-amber);}
+  .cu-hf-w.ow-bad,.cu-nm-k.ow-bad{color:var(--ow-crimson);}
+
+  /* The next moves: three cards, one question each, the evidence drawn. */
+  .cu-nm{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--ow-sp-12);}
+  .cu-nm-c{padding:var(--ow-sp-12) var(--ow-sp-16);display:flex;flex-direction:column;gap:var(--ow-sp-8);}
+  .cu-nm-h{display:flex;align-items:center;gap:var(--ow-sp-8);}
+  .cu-nm-k{font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);letter-spacing:.08em;
+    text-transform:uppercase;color:var(--ow-ink-600);}
+  .cu-nm-k.cu-sky{color:var(--ow-sky);}
+  .cu-nm-f{margin-left:auto;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-13);
+    font-weight:var(--ow-fw-600);color:var(--ow-ink-900);white-space:nowrap;}
+  .cu-nm-t{margin:0;font-size:var(--ow-t-14);font-weight:var(--ow-fw-700);color:var(--ow-ink-900);}
+  .cu-nm-w{margin:0;font-size:var(--ow-t-12);line-height:1.45;color:var(--ow-ink-600);}
+  .cu-nm-a{margin-top:auto;padding-top:var(--ow-sp-4);}
+  .cu-nm-bars{display:flex;align-items:flex-end;gap:3px;height:28px;}
+  .cu-nm-bars i{flex:1 1 0;max-width:28px;background:var(--ow-steel-100);border-radius:2px;}
+  .cu-nm-ch{display:flex;flex-wrap:wrap;gap:var(--ow-sp-6);}
+
+  /* The timeline. The panel scrolls sideways on a phone rather than
+     shrinking a year of orders to a smear. */
+  .cu-tl .ow-pan-h,.cu-st .ow-pan-h{height:auto;min-height:38px;flex-wrap:wrap;row-gap:var(--ow-sp-4);
+    padding-top:var(--ow-sp-6);padding-bottom:var(--ow-sp-6);}
+  .cu-tl-key{display:flex;flex-wrap:wrap;gap:var(--ow-sp-4) var(--ow-sp-12);margin-left:var(--ow-sp-8);
+    font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .cu-tl-key span{display:inline-flex;align-items:center;gap:5px;}
+  .cu-tl-key i{display:inline-block;width:9px;height:9px;box-sizing:border-box;}
+  .cu-tl-key i.cu-k-o{border-radius:50%;background:var(--ow-ink-900);}
+  .cu-tl-key i.cu-k-p{width:8px;height:8px;background:var(--ow-verdigris);transform:rotate(45deg);}
+  .cu-tl-key i.cu-k-a{width:14px;height:0;border-top:1.5px solid var(--ow-verdigris);}
+  .cu-tl-key i.cu-k-u{width:14px;height:0;border-top:2px dashed var(--ow-crimson);}
+  .cu-tl-key i.cu-k-n{border-radius:50%;border:1.5px dashed var(--ow-sky);background:var(--ow-sky-soft);}
+  .cu-tl-sc{overflow-x:auto;}
+  .cu-tl-svg{display:block;width:100%;height:auto;padding:var(--ow-sp-8) var(--ow-sp-12) var(--ow-sp-4);box-sizing:border-box;}
+  .cu-tl-ax,.cu-tl-tk{stroke:var(--ow-steel-100);stroke-width:1;}
+  .cu-tl-ln{stroke:var(--ow-rule-soft);stroke-width:1;stroke-dasharray:2 4;}
+  .cu-tl-m,.cu-tl-v,.cu-tl-d,.cu-tl-nx,.cu-gp-t{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-size:var(--ow-t-11);fill:var(--ow-ink-600);text-anchor:middle;}
+  .cu-tl-v{fill:var(--ow-ink-900);}
+  .cu-tl-d{fill:var(--ow-verdigris);font-weight:var(--ow-fw-600);}
+  .cu-tl-arc{fill:none;stroke:var(--ow-verdigris);stroke-width:1.4;opacity:.6;}
+  .cu-tl-open{stroke:var(--ow-amber);stroke-width:1.6;stroke-dasharray:4 4;}
+  .cu-tl-open.ow-bad{stroke:var(--ow-crimson);}
+  .cu-tl-o{fill:var(--ow-ink-900);stroke:var(--ow-paper);stroke-width:1.5;}
+  .cu-tl-o.ow-warn{fill:var(--ow-amber);}
+  .cu-tl-o.ow-bad{fill:var(--ow-crimson);}
+  .cu-tl-p{fill:var(--ow-verdigris);}
+  .cu-tl-next{fill:var(--ow-sky-soft);stroke:var(--ow-sky);stroke-width:1.5;stroke-dasharray:3 3;}
+  .cu-tl-nx{fill:var(--ow-sky);}
+  .cu-tl-now{stroke:var(--ow-ink-900);stroke-width:1.2;}
+  .cu-tl-nw{font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);
+    fill:var(--ow-ink-900);text-anchor:middle;}
+
+  /* Where the account stands: the sum, the ages, and the two checks. */
+  .cu-st-eq{display:flex;align-items:flex-end;flex-wrap:wrap;gap:var(--ow-sp-8) var(--ow-sp-16);
+    padding:var(--ow-sp-12) var(--ow-sp-16) var(--ow-sp-8);}
+  .cu-st-eq .ow-mt-l{margin:0 0 var(--ow-sp-2);}
+  .cu-st-eq .ow-fig{font-size:var(--ow-t-20);color:var(--ow-ink-900);}
+  .cu-st-eq .ow-fig.cu-st-paid{color:var(--ow-verdigris);}
+  .cu-st-eq .ow-fig.ow-bad{color:var(--ow-crimson);}
+  .cu-st-due{font-weight:var(--ow-fw-600);}
+  .cu-st-op{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-size:var(--ow-t-20);
+    color:var(--ow-ink-400);line-height:1.5;}
+  .cu-st-age{display:flex;flex-direction:column;gap:var(--ow-sp-6);padding:var(--ow-sp-4) var(--ow-sp-16) var(--ow-sp-10);}
+  .cu-st-bar{display:flex;gap:2px;height:10px;border-radius:3px;overflow:hidden;}
+  .cu-st-bar i{display:block;}
+  .cu-st-bar i.cu-old,.cu-st-bk i.cu-old{background:var(--ow-ink-900);}
+  .cu-st-bar i.cu-und,.cu-st-bk i.cu-und{background:var(--ow-ink-400);}
+  .cu-st-bk{display:flex;flex-wrap:wrap;gap:var(--ow-sp-4) var(--ow-sp-16);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .cu-st-bk span{display:inline-flex;align-items:center;gap:var(--ow-sp-6);}
+  .cu-st-bk i{display:inline-block;width:8px;height:8px;border-radius:50%;}
+  .cu-st-bk b{color:var(--ow-ink-900);font-weight:var(--ow-fw-500);}
+  .cu-st-ck{display:flex;align-items:center;flex-wrap:wrap;gap:var(--ow-sp-8) var(--ow-sp-12);
+    padding:var(--ow-sp-10) var(--ow-sp-16);border-top:1px solid var(--ow-rule-soft);}
+  .ow-cp.cu-st-ok{white-space:normal;height:auto;min-height:22px;max-width:100%;
+    padding-top:var(--ow-sp-2);padding-bottom:var(--ow-sp-2);line-height:1.35;}
+  .cu-st-tm{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+
+  /* What they buy, as shares; how far apart their orders fall. */
+  .cu-by{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--ow-sp-4) var(--ow-sp-8);
+    padding:var(--ow-sp-8) var(--ow-sp-12) 0;font-size:var(--ow-t-13);}
+  .cu-by-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ow-ink-900);}
+  .cu-by-p{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;color:var(--ow-ink-600);}
+  .cu-by-t{grid-column:1/-1;display:block;height:6px;border-radius:3px;background:var(--ow-rule-soft);overflow:hidden;}
+  .cu-by-t i{display:block;height:100%;border-radius:3px;background:var(--ow-steel-800);}
+  .cu-gp{display:block;width:100%;height:auto;padding:var(--ow-sp-8) var(--ow-sp-12) 0;box-sizing:border-box;}
+  .cu-gp-avg{stroke:var(--ow-sky);stroke-width:1;stroke-dasharray:3 3;}
+  .cu-gp-t{font-size:var(--ow-t-11);}
+  .cu-gp-l{text-anchor:start;fill:var(--ow-sky);}
+  .cu-gp-d{fill:var(--ow-ink-900);}
+  .cu-gp-d.ow-warn{fill:var(--ow-amber);}
+
+  @media (max-width:820px){
+    .cu-pf{grid-template-columns:minmax(0,1fr);}
+    .cu-pf-hl{border-left:0;border-top:1px solid var(--ow-rule-soft);}
+    .cu-pf-a{min-height:var(--ow-tap);}
+    .cu-nm{grid-template-columns:minmax(0,1fr);}
+    .cu-tl-svg,.cu-mp-svg{min-width:720px;}
+    .cu-hf-r{grid-template-columns:70px minmax(0,1fr) 84px;}
+  }
+
   /* The actions under the document, and the sentence that keeps the app
      honest about what they do. */
   .cu-acct-bar{display:flex;align-items:center;gap:var(--ow-sp-6);flex-wrap:wrap;}
@@ -14956,6 +15191,7 @@
     .cu-tbl .ow-tbl-r{padding:var(--ow-sp-12);row-gap:var(--ow-sp-6);
       min-height:var(--ow-tap);align-items:baseline;}
     .cu-tbl .ow-tbl-r > .ow-tbl-c{grid-column:1/-1;}
+    .ow-tbl.cu-tbl .ow-tbl-n.cu-c-paid .cu-wk-s{display:none;}
     .cu-tbl .ow-tbl-p{font-size:16px;white-space:normal;}
     .cu-tbl .ow-tbl-s{font-size:var(--ow-t-13);white-space:normal;}
     .cu-tbl .cu-c-st{grid-column:1/-1;}
@@ -22450,6 +22686,129 @@
     .ow-growth-row{display:block;padding:var(--ow-sp-16);}
     .ow-growth-actions{flex-direction:row;margin-top:var(--ow-sp-12);}
     .ow-growth-action{min-height:var(--ow-tap);flex:1;}
+  }
+  /* THEIR PRICE LIST, AS A SHEET (briefSheetHTML). The account reads the
+     list the way the owner already reads a price list: a row per line
+     they buy, a column per fact, gridlines, a totals row. Row number,
+     mark and item stay put while the columns scroll, so a narrow desk
+     still knows which line a figure belongs to. The tinted columns are
+     the ones the customer never sees. On the phone it is a different
+     design: each row a card, three lines, the shop-only columns gone. */
+  .ow-ps{--ow-ps-cols:36px 32px minmax(168px,1.6fr) minmax(96px,1fr) 96px 96px 132px 60px 104px 112px 64px 112px 136px;font-size:var(--ow-t-13);}
+  .ow-ps-top{display:flex;align-items:center;flex-wrap:wrap;gap:var(--ow-sp-10);padding:var(--ow-sp-10) var(--ow-sp-16);border-bottom:1px solid var(--ow-rule);}
+  .ow-ps-sp{flex:1 1 auto;}
+  .ow-ps-meter{display:inline-flex;align-items:center;gap:var(--ow-sp-8);}
+  .ow-ps-mv-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-14);color:var(--ow-ink-600);}
+  .ow-ps-mv-b{font-size:var(--ow-t-20);font-weight:600;color:var(--ow-ink-900);}
+  .ow-ps-mbar{display:flex;gap:var(--ow-sp-2);width:160px;height:10px;}
+  .ow-ps-mg{flex-basis:0;border-radius:var(--ow-r-pill);}
+  .ow-ps-mg-yes{background:var(--ow-verdigris);}
+  .ow-ps-mg-cut{background:var(--ow-steel-100);}
+  .ow-ps-mg-no{background:var(--ow-crimson-soft);border:1px solid var(--ow-crimson);box-sizing:border-box;}
+  .ow-ps-fl{display:flex;align-items:center;flex-wrap:wrap;gap:var(--ow-sp-6);padding:var(--ow-sp-8) var(--ow-sp-16);background:var(--ow-paper-2);border-bottom:1px solid var(--ow-rule);}
+  .ow-ps-fb{display:inline-flex;align-items:center;gap:var(--ow-sp-6);height:32px;padding:0 var(--ow-sp-10);border:1px solid var(--ow-rule);border-radius:var(--ow-r-pill);background:transparent;color:var(--ow-ink-900);font-family:inherit;font-size:var(--ow-t-12);font-weight:500;cursor:pointer;}
+  .ow-ps-fb[aria-pressed="true"]{background:var(--ow-paper);border-color:var(--ow-steel-950);outline:1px solid var(--ow-steel-950);}
+  .ow-ps-fn{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:600;}
+  .ow-ps-d{width:8px;height:8px;border-radius:50%;flex:none;}
+  .ow-ps-d-yes{background:var(--ow-verdigris);}
+  .ow-ps-d-no{background:var(--ow-crimson);}
+  .ow-ps-d-cut{background:var(--ow-ink-400);}
+  .ow-ps-d-ord{background:var(--ow-amber);}
+  .ow-ps-d-mv{background:var(--ow-sky);}
+  .ow-ps-key{display:inline-flex;align-items:center;gap:var(--ow-sp-6);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-ps-key-sw{width:14px;height:14px;background:var(--ow-steel-050);border:1px solid var(--ow-steel-100);}
+  .ow-ps-fx{display:flex;align-items:stretch;min-height:32px;border-bottom:1px solid var(--ow-rule);font-size:var(--ow-t-12);}
+  .ow-ps-ref{flex:none;width:64px;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--ow-rule);background:var(--ow-steel-050);color:var(--ow-ink-600);font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:600;}
+  .ow-ps-fxl{flex:none;width:32px;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--ow-rule);color:var(--ow-ink-600);font-style:italic;}
+  .ow-ps-fxt{flex:1 1 auto;min-width:0;align-self:center;padding:var(--ow-sp-6) var(--ow-sp-12);line-height:var(--ow-lh-snug);max-width:var(--ow-measure);}
+  .ow-ps-g{overflow-x:auto;}
+  .ow-ps-in{min-width:1244px;}
+  .ow-ps-lt,.ow-ps-h,.ow-ps-r,.ow-ps-t{display:grid;grid-template-columns:var(--ow-ps-cols);}
+  .ow-ps-lt{height:20px;font-size:var(--ow-t-11);color:var(--ow-ink-600);background:var(--ow-steel-050);border-bottom:1px solid var(--ow-steel-100);}
+  .ow-ps-l{display:flex;align-items:center;justify-content:center;border-right:1px solid var(--ow-steel-100);}
+  .ow-ps-lt .ow-ps-l:nth-child(6),.ow-ps-lt .ow-ps-l:nth-child(7),.ow-ps-lt .ow-ps-l:nth-child(9),.ow-ps-lt .ow-ps-l:nth-child(10){background:var(--ow-rule-soft);}
+  .ow-ps-c{position:relative;min-width:0;padding:0 var(--ow-sp-8);line-height:36px;border-right:1px solid var(--ow-steel-100);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-ps-h{font-size:var(--ow-t-12);font-weight:700;background:var(--ow-paper);border-bottom:2px solid var(--ow-steel-950);}
+  .ow-ps-h .ow-ps-c{font-family:inherit;font-size:var(--ow-t-12);font-weight:700;color:var(--ow-ink-900);}
+  .ow-ps-r{background:var(--ow-paper);border-bottom:1px solid var(--ow-steel-100);cursor:pointer;}
+  .ow-ps-r:hover{background:var(--ow-paper-2);}
+  .ow-ps-on{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
+  .ow-ps-c-n{border:0;border-right:1px solid var(--ow-steel-100);padding:0;background:var(--ow-steel-050);color:var(--ow-ink-600);font-family:inherit;font-size:var(--ow-t-11);text-align:center;cursor:pointer;}
+  .ow-ps-on .ow-ps-c-n{background:var(--ow-steel-950);color:var(--ow-paper);font-weight:600;}
+  .ow-ps-c-pk{padding:0;text-align:center;}
+  .ow-ps-c-n,.ow-ps-c-pk,.ow-ps-c-nm{position:sticky;z-index:1;background-color:inherit;}
+  .ow-ps-c-n{left:0;}
+  .ow-ps-c-pk{left:36px;}
+  .ow-ps-c-nm{left:68px;font-weight:600;}
+  .ow-ps-mk{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:var(--ow-r-sm);vertical-align:middle;}
+  .ow-ps-mk-yes{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .ow-ps-mk-no{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .ow-ps-mk-cut{background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+  .ow-ps-ic{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .ow-ps-c-va,.ow-ps-c-pa,.ow-ps-c-un{color:var(--ow-ink-600);}
+  .ow-ps-c-pr,.ow-ps-c-pd,.ow-ps-c-ch,.ow-ps-c-tk,.ow-ps-c-vl{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;text-align:right;}
+  .ow-ps-c-pr{font-size:var(--ow-t-14);font-weight:600;}
+  .ow-ps-c-tk{font-weight:600;}
+  .ow-ps-c-pd,.ow-ps-c-ch,.ow-ps-c-vl,.ow-ps-c-sp{background:var(--ow-steel-050);}
+  .ow-ps-c-pd{color:var(--ow-ink-600);}
+  .ow-ps-c-bl{font-size:var(--ow-t-12);font-weight:600;color:var(--ow-ink-600);}
+  .ow-ps-c-sp{font-size:var(--ow-t-12);font-weight:600;color:var(--ow-verdigris);}
+  .ow-ps-ord .ow-ps-c-sp{color:var(--ow-amber-ink);}
+  .ow-ps-off,.ow-ps-gone,.ow-ps-cut{background:var(--ow-paper-2);}
+  .ow-ps-off .ow-ps-c-nm,.ow-ps-gone .ow-ps-c-nm,.ow-ps-cut .ow-ps-c-nm{color:var(--ow-ink-600);}
+  .ow-ps-off .ow-ps-c-sp,.ow-ps-gone .ow-ps-c-sp,.ow-ps-off .ow-ps-c-bl,.ow-ps-gone .ow-ps-c-bl{color:var(--ow-crimson);}
+  .ow-ps-na{color:var(--ow-crimson);font-size:var(--ow-t-12);}
+  .ow-ps-nil{color:var(--ow-ink-600);}
+  .ow-ps-x{color:var(--ow-ink-600);font-weight:400;}
+  .ow-ps-bar{position:absolute;left:var(--ow-sp-4);top:10px;bottom:10px;width:var(--w);max-width:calc(100% - 8px);}
+  .ow-ps-dn .ow-ps-bar{background:var(--ow-verdigris-soft);}
+  .ow-ps-up .ow-ps-bar{background:var(--ow-amber-soft);}
+  .ow-ps-fg{position:relative;font-size:var(--ow-t-12);font-weight:600;}
+  .ow-ps-pc{font-size:var(--ow-t-11);font-weight:500;}
+  .ow-ps-dn .ow-ps-fg,.ow-ps-t .ow-ps-dn{color:var(--ow-verdigris);}
+  .ow-ps-up .ow-ps-fg,.ow-ps-t .ow-ps-up{color:var(--ow-amber-ink);}
+  .ow-ps-t{background:var(--ow-steel-050);border-top:2px solid var(--ow-steel-950);font-weight:700;}
+  .ow-ps-t .ow-ps-c-n,.ow-ps-t .ow-ps-c-pk,.ow-ps-t .ow-ps-c-nm{background-color:var(--ow-steel-050);}
+  .ow-ps[data-f="pic"] .ow-ps-r:not(.ow-ps-pic),
+  .ow-ps[data-f="off"] .ow-ps-r:not(.ow-ps-off):not(.ow-ps-gone),
+  .ow-ps[data-f="cut"] .ow-ps-r:not(.ow-ps-cut),
+  .ow-ps[data-f="ord"] .ow-ps-r:not(.ow-ps-ord),
+  .ow-ps[data-f="mv"] .ow-ps-r:not(.ow-ps-mv){display:none;}
+  .ow-ps-sb{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ow-sp-6) var(--ow-sp-20);padding:var(--ow-sp-8) var(--ow-sp-16);background:var(--ow-steel-950);color:var(--ow-steel-100);font-size:var(--ow-t-12);}
+  .ow-ps-sb-v{color:var(--ow-paper);font-weight:600;}
+  .ow-ps-sb-i{display:inline-flex;align-items:center;gap:var(--ow-sp-6);min-width:0;max-width:100%;}
+  .ow-ps-sb-d{width:8px;height:8px;border-radius:50%;flex:none;}
+  .ow-ps-sb-bad{background:var(--ow-oxide-light);}
+  .ow-ps-sb-good{background:var(--ow-verdigris-soft);}
+  .ow-ps-sb-why{min-width:0;max-width:var(--ow-measure);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-ps-see{border-top:1px solid var(--ow-rule);}
+  .ow-ps-see-s{min-height:var(--ow-tap);display:flex;align-items:center;padding:0 var(--ow-sp-16);font-size:var(--ow-t-13);font-weight:600;cursor:pointer;}
+  @media(max-width:820px){
+    .ow-ps{font-size:var(--ow-t-14);}
+    .ow-ps-top{padding:var(--ow-sp-12) var(--ow-sp-16);}
+    .ow-ps-act{flex:1 1 100%;min-height:var(--ow-tap);justify-content:center;}
+    .ow-ps-fl{flex-wrap:nowrap;overflow-x:auto;}
+    .ow-ps-fb{flex:none;height:var(--ow-tap);font-size:var(--ow-t-13);}
+    .ow-ps-key,.ow-ps-ref,.ow-ps-fxl,.ow-ps-lt,.ow-ps-h{display:none;}
+    .ow-ps-fx{font-size:var(--ow-t-13);}
+    .ow-ps-fxt{padding:var(--ow-sp-8) var(--ow-sp-16);}
+    .ow-ps-in{min-width:0;}
+    .ow-ps-r{grid-template-columns:32px minmax(0,1fr) auto;grid-template-areas:"pk nm pr" "pk va ch" "pk sp tk";column-gap:var(--ow-sp-8);row-gap:var(--ow-sp-2);padding:var(--ow-sp-12) var(--ow-sp-16) var(--ow-sp-12) var(--ow-sp-8);}
+    .ow-ps-r .ow-ps-c{position:static;padding:0;border-right:0;background:none;line-height:var(--ow-lh-snug);}
+    .ow-ps-r .ow-ps-c-n,.ow-ps-r .ow-ps-c-pd,.ow-ps-r .ow-ps-c-vl,.ow-ps-r .ow-ps-c-un,.ow-ps-r .ow-ps-c-pa,.ow-ps-r .ow-ps-c-bl,.ow-ps-r .ow-ps-bar{display:none;}
+    .ow-ps-r .ow-ps-nil{display:none;}
+    .ow-ps-r .ow-ps-c-pk{grid-area:pk;align-self:start;}
+    .ow-ps-r .ow-ps-c-nm{grid-area:nm;font-size:var(--ow-t-16);}
+    .ow-ps-r .ow-ps-c-pr{grid-area:pr;font-size:var(--ow-t-16);}
+    .ow-ps-r .ow-ps-c-va{grid-area:va;font-size:var(--ow-t-13);}
+    .ow-ps-r .ow-ps-c-ch{grid-area:ch;}
+    .ow-ps-r .ow-ps-c-sp{grid-area:sp;font-size:var(--ow-t-13);}
+    .ow-ps-r .ow-ps-c-tk{grid-area:tk;font-size:var(--ow-t-13);}
+    .ow-ps-t{grid-template-columns:auto minmax(0,1fr) auto;column-gap:var(--ow-sp-8);padding:var(--ow-sp-12) var(--ow-sp-16);}
+    .ow-ps-t .ow-ps-c{display:none;padding:0;border-right:0;line-height:var(--ow-lh-snug);}
+    .ow-ps-t .ow-ps-c-nm,.ow-ps-t .ow-ps-c-va,.ow-ps-t .ow-ps-c-vl{display:block;position:static;}
+    .ow-ps-sb{flex-direction:column;align-items:flex-start;padding:var(--ow-sp-12) var(--ow-sp-16);font-size:var(--ow-t-13);}
+    .ow-ps-sb-why{white-space:normal;overflow:visible;text-overflow:clip;}
   }
 </style>
 </head>
@@ -51289,9 +51648,20 @@ function invStatusChip(q){
   const status = invoicePaymentStatusLabel(q);
   return q.voided ? '<span class="ow-cp ow-bad"><i class="ow-cp-d"></i>Voided</span>'
       : total <= 0 ? '<span class="ow-cp ow-warn"><i class="ow-cp-d"></i>Unpriced</span>'
-      : status.cls === 'settled' ? '<span class="ow-cp">Settled</span>'
-      : status.cls === 'partial' ? '<span class="ow-cp">Part paid</span>'
+      : status.cls === 'settled' ? '<span class="ow-cp ow-good">Settled</span>'
+      : status.cls === 'partial' ? '<span class="ow-cp inv-cp-part">Part paid</span>'
+      : invOpenDays(q) > 30 ? `<span class="ow-cp ow-warn"><i class="ow-cp-d"></i>Open ${invOpenDays(q)} days</span>`
       : '<span class="ow-cp">Open</span>';
+}
+/* How long an unpaid invoice has been out. Past thirty days the chip
+   turns amber and says the number: caution, not alarm -- the shop set no
+   terms on most sales, so "late" would be a judgement this screen has
+   not earned. Debtors owns the ageing; this is only the glance. */
+function invOpenDays(q){
+  const d = q && (q.invoicedAt || q.date);
+  if(!d) return 0;
+  const ms = new Date(todayISO() + 'T00:00:00') - new Date(String(d).slice(0,10) + 'T00:00:00');
+  return Number.isFinite(ms) ? Math.max(0, Math.round(ms / 86400000)) : 0;
 }
 
 /* THE ROW'S ACTS, BOUND. Both lenses draw the same buttons from the
@@ -51490,7 +51860,7 @@ function renderInvoicesUnified(filter=''){
   const cashNet = cashIn - cashOut;
   const cashMetric = `<div class="ow-mt">
     <div class="inv-u-metric-top"><p class="ow-mt-l">Cash on these sales</p><span class="inv-u-metric-scope">in − out</span></div>
-    <p class="ow-mt-v${cashNet < -0.5 ? ' inv-u-neg' : ''}">${cashNet < -0.5 ? '−' : cashNet > 0.5 ? '+' : ''}${money(Math.abs(cashNet))}</p>
+    <p class="ow-mt-v${cashNet < -0.5 ? ' inv-u-neg' : cashNet > 0.5 ? ' inv-u-pos' : ''}">${cashNet < -0.5 ? '−' : cashNet > 0.5 ? '+' : ''}${money(Math.abs(cashNet))}</p>
     <div class="inv-u-meter-legend"><span>${number(cashIn)} in</span><span>${number(cashOut)} out${cashNet < -0.5 ? ' · fronted' : ''}</span></div>
   </div>`;
   strip.innerHTML = metric('Customer payments', `${visibleSales.length} shown sales`, toCollect,
@@ -51524,6 +51894,15 @@ function renderInvoicesUnified(filter=''){
      bill is a cancelled document, not a cost: it is left out of the bar
      and listed, struck through, when the sale is opened. */
   const paidOn = pi=>Math.min(purchaseInvoiceTotal(pi), Math.max(0, Number(pi.amountPaid)||0));
+  /* ONE COLOUR PER SUPPLIER, the same one wherever that supplier appears
+     -- its segment, its join, its bill. Taken from the supplier's place
+     in the directory so it does not change as the filter does. */
+  const supHue = pi=>{
+    const id = String(pi && pi.supplierId || pi && pi.supplierName || '');
+    const at = (data.suppliers||[]).findIndex(x=>String(x.id)===id);
+    const n = at >= 0 ? at : [...id].reduce((h,ch)=>(h*31+ch.charCodeAt(0))>>>0, 7);
+    return `inv-sup-${n % 6}`;
+  };
   const pct = (n, of)=> of>0 ? Math.max(0, Math.min(100, n/of*100)).toFixed(2)+'%' : '0%';
   const saleLines = (q, bills)=>(q.items||[]).map(it=>{
     const qty = Number(it.qty)||0;
@@ -51543,7 +51922,7 @@ function renderInvoicesUnified(filter=''){
       : '<span class="inv-m-top inv-m-none"></span>';
     const segs = live.map(pi=>{
       const t = purchaseInvoiceTotal(pi), share = t/scale;
-      return `<span class="inv-m-seg" style="width:${pct(t,scale)}"><i style="width:${pct(paidOn(pi),t)}"></i>${share>=0.14?`<b${paidOn(pi)>t/2?' class="on-fill"':''}>${esc(nameInitials(pi.supplierName))}</b>`:''}</span>`;
+      return `<span class="inv-m-seg ${supHue(pi)}" style="width:${pct(t,scale)}"><i style="width:${pct(paidOn(pi),t)}"></i>${share>=0.14?`<b${paidOn(pi)>t/2?' class="on-fill"':''}>${esc(nameInitials(pi.supplierName))}</b>`:''}</span>`;
     }).join('') + (shelfSold>0 ? `<span class="inv-m-seg inv-m-shelf" style="width:${pct(shelfSold,scale)}"></span>` : '');
     return `<span class="inv-m${voided?' inv-m-void':''}" role="img" aria-label="${esc(aria)}" title="${esc(aria)}">${topHtml}<span class="inv-m-bot">${segs}</span></span>`;
   };
@@ -51552,15 +51931,16 @@ function renderInvoicesUnified(filter=''){
      has fronted -- paid for goods before being paid for them -- and that
      is the one figure here that earns a colour. */
   const cashChip = net=> net < -0.5 ? `<span class="ow-cp ow-warn">−${esc(number(-net))} fronted</span>`
-    : net > 0.5 ? `<span class="ow-cp">+${esc(number(net))} in hand</span>`
+    : net > 0.5 ? `<span class="ow-cp ow-good">+${esc(number(net))} in hand</span>`
     : '<span class="inv-u-sub">nothing moved</span>';
   const chev = '<svg class="icon inv-u-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
   const bridgeBill = pi=>{
     const t = purchaseInvoiceTotal(pi);
     const due = pi.voided ? 0 : Math.max(0,purchaseInvoiceBalanceDue(pi));
-    return `<div class="inv-b-bill${pi.voided?' is-void':''}">
-      <span class="inv-b-main"><button type="button" class="ow-link inv-u-doc" data-pi-open="${pi.id}">${esc(purchaseInvoiceNumberLabel(pi))}</button>
-        <span class="inv-u-sub inv-b-ell" title="${esc(pi.supplierName||'Unnamed supplier')}">${esc(pi.supplierName||'Unnamed supplier')}</span></span>
+    return `<div class="inv-b-bill ${supHue(pi)}${pi.voided?' is-void':''}">
+      <span class="inv-b-who"><span class="inv-b-mono" aria-hidden="true">${esc(nameInitials(pi.supplierName))}</span>
+        <span class="inv-b-main"><button type="button" class="ow-link inv-u-doc" data-pi-open="${pi.id}">${esc(purchaseInvoiceNumberLabel(pi))}</button>
+        <span class="inv-u-sub inv-b-ell" title="${esc(pi.supplierName||'Unnamed supplier')}">${esc(pi.supplierName||'Unnamed supplier')}</span></span></span>
       <span class="inv-b-fig"><span class="inv-u-value">${esc(number(t))}</span>
         ${pi.voided ? '<span class="inv-u-sub">voided</span>' : `<span class="inv-b-paid"><i style="width:${pct(paidOn(pi),t)}"></i></span>`}</span>
       <span class="inv-b-act">${pi.voided ? '' : due>0.5 ? `<button type="button" class="btn btn-ghost ow-sm pi-doc-pay" data-id="${pi.id}">Pay</button>` : '<span class="ow-cp ow-good">Paid</span>'}</span>
@@ -51579,7 +51959,7 @@ function renderInvoicesUnified(filter=''){
       const due = voided ? 0 : purchaseInvoiceBalanceDue(pi);
       const status = invBillChip(pi) || (due>0.5 ? '<span class="ow-cp">Open</span>' : '');
       const kind = pi.quoteId==null ? 'Stock purchase' : 'Linked sale outside view';
-      return `<article class="inv-u-case"><button type="button" class="inv-u-head" data-unified-key="${key}" aria-expanded="${open}">
+      return `<article class="inv-u-case is-bill ${supHue(pi)}"><button type="button" class="inv-u-head" data-unified-key="${key}" aria-expanded="${open}">
         ${chev}
         <span class="inv-u-id"><span class="inv-u-ident"><span class="inv-u-doc">${esc(label)}</span>${status}</span>
           <span class="inv-u-sub inv-b-ell">${kind} · ${esc(who)} · ${esc(c.date||'No date')}</span></span>
@@ -51616,7 +51996,7 @@ function renderInvoicesUnified(filter=''){
       <span class="inv-u-id"><span class="inv-u-ident"><span class="inv-u-doc">${esc(label)}</span>${invStatusChip(q)}</span>
         <span class="inv-u-sub inv-b-ell" title="${esc(who)}">${esc(who)} · ${esc(c.date||'No date')}</span></span>
       ${mirror({sale:total, received, live:voided?[]:live, shelfSold, voided, aria})}
-      <span class="inv-u-diff"><span class="inv-u-value">${diff==null||voided?'—':esc(number(diff))}</span><span class="inv-u-sub">${diffSub}</span></span>
+      <span class="inv-u-diff"><span class="inv-u-value${diff!=null && diff < -0.5 && !voided ? ' inv-u-bad' : ''}">${diff==null||voided?'—':(diff<0?'−':'')+esc(number(Math.abs(diff)))}</span><span class="inv-u-sub">${diffSub}</span></span>
       <span class="inv-u-cash">${voided ? '<span class="inv-u-sub">voided</span>' : cashChip(received-paidOut)}</span>
       <span class="inv-u-head-amount"><span class="inv-u-value">${voided?'—':over>0.5?'+'+esc(number(over)):esc(number(due))}</span>
         <span class="inv-u-sub">${voided?'voided':over>0.5?'overpaid':due>0.5?'to collect · UGX':'settled'}</span></span>
@@ -51632,16 +52012,16 @@ function renderInvoicesUnified(filter=''){
       const j = l.bill ? c.bills.indexOf(l.bill) : -1;
       if(j<0) return '';
       const y1 = 26+52*i, y2 = 32+72*j;
-      return `<path d="M0 ${y1}C60 ${y1} 60 ${y2} 120 ${y2}" stroke-width="${2+Math.round(10*(l.bought||0)/heaviest)}"/>`;
+      return `<path class="${supHue(l.bill)}" d="M0 ${y1}C60 ${y1} 60 ${y2} 120 ${y2}" stroke-width="${2+Math.round(10*(l.bought||0)/heaviest)}"/>`;
     }).join('');
     const lineRow = l=>{
       const name = l.it.productName || 'Item';
       const bought = l.shelf ? '<span class="inv-u-sub">from the shelf · no bill</span>'
         : l.bought==null ? `<span class="inv-u-sub">on ${l.bill?esc(purchaseInvoiceNumberLabel(l.bill)):'no live bill'}</span>`
-        : `<span class="inv-b-d">${l.sold-l.bought>=0?'+':'−'}${esc(number(Math.abs(l.sold-l.bought)))}</span>`;
+        : `<span class="inv-b-d ${l.sold-l.bought>=0?'is-good':'is-bad'}">${l.sold-l.bought>=0?'+':'−'}${esc(number(Math.abs(l.sold-l.bought)))}</span>`;
       return `<div class="inv-b-line">
         <span class="inv-b-main"><span class="inv-b-name inv-b-ell" title="${esc(name)}">${esc(name)}</span>
-          <span class="inv-u-sub">${esc(number(l.qty))} ${esc(l.it.unit||'')}${l.bill?` <span class="inv-b-to">→ ${esc(purchaseInvoiceNumberLabel(l.bill))}</span>`:''}</span></span>
+          <span class="inv-u-sub">${esc(number(l.qty))} ${esc(l.it.unit||'')}${l.bill?` <span class="inv-b-to ${supHue(l.bill)}">→ ${esc(purchaseInvoiceNumberLabel(l.bill))}</span>`:''}</span></span>
         <span class="inv-b-fig"><span class="inv-u-sub">${esc(number(l.sold))}${l.bought!=null?` → ${esc(number(l.bought))}`:''}</span>${bought}</span>
       </div>`;
     };
@@ -51668,12 +52048,14 @@ function renderInvoicesUnified(filter=''){
     ['Other supplier bills', shown.filter(c=>c.type==='bill' && c.pi.quoteId!=null)],
   ];
   const legend = `<div class="inv-u-legend" aria-hidden="true">
-    <span><i class="inv-lg-sale"></i>sale, open</span><span><i class="inv-lg-bill"></i>bill, open</span>
-    <span><i class="inv-lg-done"></i>settled</span><span><i class="inv-lg-shelf"></i>from the shelf</span></div>
+    <span><i class="inv-lg-sale"></i>sale, open</span><span><i class="inv-lg-done"></i>received</span>
+    <span><span class="inv-lg-bill"><i class="inv-sup-0"></i><i class="inv-sup-1"></i><i class="inv-sup-2"></i></span>bill owed · a colour per supplier</span>
+    <span><span class="inv-lg-paid"><i class="inv-sup-0"></i><i class="inv-sup-1"></i><i class="inv-sup-2"></i></span>bill paid</span>
+    <span><i class="inv-lg-shelf"></i>from the shelf</span></div>
     <div class="inv-u-cols" aria-hidden="true"><span></span><span>Document</span><span>Sale ▲ · bills ▼</span>
     <span>Difference</span><span>Cash so far</span><span>Still open</span></div>`;
   wrap.innerHTML = `<div class="inv-u-list">${legend}${groups.filter(([,rows])=>rows.length).map(([name,rows])=>
-    `<div class="inv-u-group"><span>${name}</span><span>${rows.length}</span></div>${rows.map(caseHTML).join('')}`).join('')}
+    `<div class="inv-u-group${name.startsWith('Sales')?'':' is-buy'}"><span>${name}</span><span>${rows.length}</span></div>${rows.map(caseHTML).join('')}`).join('')}
     ${listMoreButtonHTML('invoices',cases.length,'invoices')}</div>`;
   wrap.querySelectorAll('[data-unified-key]').forEach(btn=>btn.addEventListener('click',()=>{
     invUnifiedOpenKey = invUnifiedOpenKey===btn.dataset.unifiedKey ? null : btn.dataset.unifiedKey;
@@ -62141,7 +62523,7 @@ function custActionHTML(r, act){
    A dash is not a zero. A customer who has never been invoiced cannot
    be said to have earned the shop nothing -- the app does not know what
    they are worth yet, and saying 0 would be a claim it cannot make. */
-function customerRegisterRowHTML(r){
+function customerRegisterRowHTML(r, h){
   const open = r.id === custOpenId;
   const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
   const dash = '<span class="cu-dash">&mdash;</span>';
@@ -62159,7 +62541,7 @@ function customerRegisterRowHTML(r){
     .filter(Boolean).join(' · ');
   return `<div class="ow-tbl-r ow-tbl-k${open ? ' cu-on' : ''}" role="button" tabindex="0"
       data-copen="${esc(r.id)}" aria-expanded="${open}">
-    <div class="ow-tbl-c">
+    <div class="ow-tbl-c${h ? ' cu-c-who' : ''}">${custHealthRingHTML(h)}
       <span class="ow-tbl-p" title="${esc(r.name)}">${esc(r.name)}</span>
       <span class="ow-tbl-s" title="${esc(meta)}">${esc(meta)}</span>
     </div>
@@ -62168,7 +62550,7 @@ function customerRegisterRowHTML(r){
       r.everyDays !== null && r.daysSinceLast !== null
         ? `${custRhythmTrackHTML(r)}<span class="cu-rh-l">${r.daysSinceLast}d <span class="cu-rh-e">/ every ${r.everyDays}</span></span>`
         : r.last ? `<span class="cu-rh-l">once &middot; ${r.daysSinceLast}d ago</span>` : dash}</span>
-    <span class="ow-tbl-n cu-c-paid" data-l="Paid you, 90 days">${r.everInvoiced ? `<span class="ow-fig">${f(r.spend)}</span>` : dash}</span>
+    <span class="ow-tbl-n cu-c-paid" data-l="Paid you, 90 days">${r.everInvoiced ? `<span class="ow-fig">${f(r.spend)}</span>${custWeeksHTML(r)}` : dash}</span>
     <span class="ow-tbl-n cu-c-kept" data-l="You kept">${r.everInvoiced
       ? `<span class="ow-fig">${f(r.kept)}</span><span class="ow-fig-b">${r.keptPct === null ? 'nothing sold in 90 days' : r.keptPct.toFixed(1) + '%'}</span>`
       : dash}</span>
@@ -62359,6 +62741,112 @@ function customerShareHTML(all, paid){
   </div>`;
 }
 
+/* WHERE EVERYONE STANDS. The whole book on one picture: how late each
+   customer is against their OWN usual gap (across), and what they have
+   paid you over the last 180 days (up). Four regions fall out of it --
+   worth a lot and on time, worth a lot and slipping, light and on time,
+   light and asleep -- and the one worth acting on first, Slipping, is
+   the top right.
+
+   Only customers with a rhythm can be placed: one order, or none, gives
+   nothing to be late against, so they are counted in the foot rather
+   than pinned somewhere invented. The dot is coloured by the same
+   health reading the account opens on, and clicking it opens that
+   account. The middle line is this book's own middle customer, so
+   "worth a lot" means worth a lot HERE. */
+const CUST_MAP_LABELS = 10;
+function customerMapHTML(all, health){
+  const placed = all.filter(r=> r.everyDays !== null && r.daysSinceLast !== null);
+  if(placed.length < 3) return '';
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const short = (n)=> n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(Math.round(n));
+  const W = 1000, H = 300, L = 56, R = 16, T = 14, B = 262;
+  const XMAX = 3;
+  const worth = (r)=> r.spend + r.spendPrev;
+  const top = Math.max(...placed.map(worth), 1);
+  const X = (r)=> L + Math.min(XMAX, r.daysSinceLast / r.everyDays) / XMAX * (W - L - R);
+  /* A square-root scale: one contractor paying ten times the rest would
+     otherwise press everybody else flat against the floor. */
+  const Y = (v)=> B - Math.sqrt(Math.max(0, v) / top) * (B - T);
+  const ys = placed.map(worth).sort((a, b)=> a - b);
+  const mid = ys[ys.length >> 1];
+  const x1 = L + (W - L - R) / XMAX, x2 = L + 2 * (W - L - R) / XMAX, ym = Y(mid);
+  const pts = placed.map(r=> ({ r, x: X(r), y: Y(worth(r)), h: health.get(r.id) }));
+  /* Names only where they fit: the slipping ones first, then the rest by
+     what they are worth, and never two labels on top of each other. */
+  const byNeed = pts.slice().sort((a, b)=>
+    ((b.x > x1 && worth(b.r) >= mid) - (a.x > x1 && worth(a.r) >= mid)) || (worth(b.r) - worth(a.r)));
+  const taken = [];
+  const labels = [];
+  byNeed.forEach(p=>{
+    if(labels.length >= CUST_MAP_LABELS) return;
+    const name = p.r.name.length > 22 ? p.r.name.slice(0, 21) + '…' : p.r.name;
+    const w = name.length * 7 + 4, ly = p.y + 4;
+    const fits = (x0)=> x0 >= L && x0 + w <= W - R
+      && !taken.some(b=> Math.abs(b.y - ly) < 14 && x0 < b.x0 + b.w && b.x0 < x0 + w)
+      && !pts.some(o=> o !== p && o.x + 8 > x0 && o.x - 8 < x0 + w && o.y + 8 > ly - 12 && o.y - 8 < ly + 4);
+    const side = [['start', p.x + 11], ['end', p.x - 11 - w]].find(([, x0])=> fits(x0));
+    if(!side) return;
+    taken.push({ x0: side[1], y: ly, w });
+    labels.push(`<text class="cu-mp-nm" x="${(side[0] === 'start' ? p.x + 11 : p.x - 11).toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="${side[0]}">${esc(name)}</text>`);
+  });
+  const dots = pts.sort((a, b)=> worth(a.r) - worth(b.r)).map(p=>
+    `<circle class="cu-mp-d ${p.h ? p.h.tone : ''}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="7" data-cact="statement" data-cid="${esc(p.r.id)}"><title>${esc(p.r.name)} · last order ${p.r.daysSinceLast} days ago, usually every ${p.r.everyDays} · ${f(worth(p.r))} UGX in 180 days${p.h ? ` · health ${p.h.score}` : ''}</title></circle>`).join('');
+  const off = all.length - placed.length;
+  const zone = (cls, x, y, w, h)=> `<rect class="cu-mp-z ${cls}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}"/>`;
+  return `<div class="ow-pan cu-mp">
+    <div class="ow-pan-h"><span class="ow-pan-t">Where everyone stands</span>
+      <span class="cu-tl-key"><span><i class="cu-k-o cu-k-good"></i>healthy</span><span><i class="cu-k-o cu-k-warn"></i>cooling</span><span><i class="cu-k-o cu-k-bad"></i>at risk</span></span>
+      <span class="ow-pan-n">${placed.length} with a buying rhythm &middot; tap a dot to open them</span></div>
+    <div class="cu-tl-sc"><svg class="cu-mp-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${placed.length} customers placed by how late they are against their own gap and what they paid in 180 days">
+      ${zone('cu-mp-core', L, T, x1 - L, ym - T)}${zone('cu-mp-slip', x1, T, W - R - x1, ym - T)}
+      ${zone('cu-mp-light', L, ym, x1 - L, B - ym)}${zone('cu-mp-sleep', x1, ym, W - R - x1, B - ym)}
+      <text class="cu-mp-q cu-mp-qc" x="${L + 8}" y="${T + 16}">CORE</text>
+      <text class="cu-mp-q cu-mp-qs" x="${x1 + 8}" y="${T + 16}">SLIPPING &#8212; WORTH A LOT, LATE</text>
+      <text class="cu-mp-q cu-mp-ql" x="${L + 8}" y="${ym + 16}">LIGHT</text>
+      <text class="cu-mp-q" x="${x1 + 8}" y="${ym + 16}">SLEEPING</text>
+      <line class="cu-mp-ax" x1="${L}" x2="${W - R}" y1="${B}" y2="${B}"/>
+      <line class="cu-mp-ax" x1="${L}" x2="${L}" y1="${T}" y2="${B}"/>
+      <line class="cu-mp-gap" x1="${x1.toFixed(1)}" x2="${x1.toFixed(1)}" y1="${T}" y2="${B}"/>
+      <line class="cu-mp-gap cu-mp-q2" x1="${x2.toFixed(1)}" x2="${x2.toFixed(1)}" y1="${T}" y2="${B}"/>
+      <line class="cu-mp-mid" x1="${L}" x2="${W - R}" y1="${ym.toFixed(1)}" y2="${ym.toFixed(1)}"/>
+      <text class="cu-mp-t" x="${L}" y="${B + 16}" text-anchor="start">just bought</text>
+      <text class="cu-mp-t" text-anchor="middle" x="${x1.toFixed(1)}" y="${B + 16}">their usual gap</text>
+      <text class="cu-mp-t" text-anchor="middle" x="${x2.toFixed(1)}" y="${B + 16}">twice it &#183; quiet</text>
+      <text class="cu-mp-t" x="${W - R}" y="${B + 16}" text-anchor="end">3&#215; or more</text>
+      <text class="cu-mp-t" x="${L - 8}" y="${B + 4}" text-anchor="end">0</text>
+      <text class="cu-mp-t" x="${L - 8}" y="${(ym + 4).toFixed(1)}" text-anchor="end">${short(mid)}</text>
+      <text class="cu-mp-t" x="${L - 8}" y="${T + 8}" text-anchor="end">${short(top)}</text>
+      <text class="cu-mp-t" text-anchor="middle" x="${((L + W - R) / 2).toFixed(1)}" y="${H - 4}">time since their last order, against their own gap &#8594;</text>
+      ${dots}${labels.join('')}
+    </svg></div>
+    <p class="ow-mini cu-mp-f">Up is what they paid you in the last 180 days; the line across is your middle customer, ${f(mid)} UGX.${
+      off ? ` ${off} ${off === 1 ? 'customer has' : 'customers have'} one order or none, so no rhythm to place them by &mdash; they are in the register below.` : ''}</p>
+  </div>`;
+}
+
+/* A customer's health, as a ring the size of a line of text: the same
+   reading the account opens on, so a row and its account cannot tell
+   two stories. */
+function custHealthRingHTML(h){
+  if(!h) return '';
+  const C = 2 * Math.PI * 11;
+  return `<span class="cu-hr" title="Relationship ${h.score} of 100 &middot; ${esc(h.word)} &middot; ${esc(h.factors.map(x=> `${x.label} ${x.word}`).join(', '))}">
+    <svg viewBox="0 0 28 28" aria-hidden="true"><circle class="cu-hl-bg" cx="14" cy="14" r="11"/><circle class="cu-hl-v ${h.tone}" cx="14" cy="14" r="11" stroke-dasharray="${(h.score / 100 * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 14 14)"/></svg>
+    <b>${h.score}</b></span>`;
+}
+
+/* The 90 days behind the figure, week by week -- the same thirteen sums
+   the strip's own bars are built from, per customer. A steady buyer and
+   one big order twelve weeks ago can total the same; they do not look
+   the same. */
+function custWeeksHTML(r){
+  if(!r.everInvoiced || !(r.spend > 0)) return '';
+  const peak = Math.max(...r.weeks, 1);
+  return `<span class="cu-wk-s" role="img" aria-label="What they paid you, week by week, over 90 days">${
+    r.weeks.slice().reverse().map(v=> v > 0 ? `<i style="height:${Math.max(18, Math.round(v / peak * 100))}%"></i>` : '<i class="cu-wk-0"></i>').join('')}</span>`;
+}
+
 function renderCustomers(filter=''){
   const wrap = document.getElementById('customersTableWrap');
   if(!wrap) return;
@@ -62379,6 +62867,10 @@ function renderCustomers(filter=''){
   const all = customerBookRows();
   const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
   const terms = custTermsDays();
+  /* Every customer's health, read once against the whole book -- the map
+     and the rows both draw it, and the account behind them reads the
+     same function over the same book. */
+  const health = new Map(all.map(r=> [r.id, customerHealth(r, all)]));
 
   /* ---- the strip: is the book healthy ---- */
   const bought = all.filter(r=> r.orders90 > 0);
@@ -62390,7 +62882,8 @@ function renderCustomers(filter=''){
   const fresh = bought.filter(r=> r.orderCount === 1);
   const strip = document.getElementById('custStripWrap');
   if(strip && !all.length){ strip.innerHTML = ''; }
-  else if(strip) strip.innerHTML = customerPulseHTML(all, { bought, paid, kept, owed, owing, late, fresh, terms });
+  else if(strip) strip.innerHTML = customerPulseHTML(all, { bought, paid, kept, owed, owing, late, fresh, terms })
+    + customerMapHTML(all, health);
 
   /* ---- the band: who needs you today ---- */
   const band = document.getElementById('custAttentionWrap');
@@ -62455,7 +62948,7 @@ function renderCustomers(filter=''){
         <span class="ow-tbl-n cu-c-kept">You kept</span>
         <span class="ow-tbl-n">Owed now</span><span></span>
       </div>
-      ${listPageSlice('customers', rows).map(r=> customerRegisterRowHTML(r)).join('')}
+      ${listPageSlice('customers', rows).map(r=> customerRegisterRowHTML(r, health.get(r.id))).join('')}
     </div>
     ${listMoreButtonHTML('customers', rows.length, 'customers')}
     <p class="ow-mini cu-foot cu-legend">
@@ -62566,15 +63059,9 @@ function customerAccountRailHTML(r){
   const sr = (k, v, tone)=> `<div class="ow-sr"><span class="ow-sr-k">${k}</span><span class="ow-sr-v${tone ? ' ' + tone : ''}">${v}</span></div>`;
   const ago = (d)=> d === 0 ? 'today' : d === 1 ? 'yesterday' : `${d} days ago`;
 
-  /* Every number on the record, through the one helper, so a number the
-     shop can see here is a number the duplicate check and the WhatsApp
-     match can see too. */
-  const reach = `${contactPhones(c).map(ph=> sr('Phone', `<span class="cu-tel-v">${esc(ph)}</span>`)).join('')}${
-    c.location ? sr('Where', esc(c.location)) : ''}${
-    c.notes ? `<p class="ow-mini">${esc(c.notes)}</p>` : ''}${
-    (!contactPhones(c).length && !c.location && !c.notes)
-      ? '<p class="ow-mini">No contact details on file yet &mdash; there is nobody to ring, and nothing to put at the head of a statement.</p>' : ''}`;
-
+  /* Who they are and how to reach them moved to the profile band at the
+     head of the account, which is read first; the rail keeps what the
+     ledger cannot say. */
   const range = customerStatementRange();
   const speed = customerPaySpeed(customerInvoiceStatementRows(r.id, range.from, range.to));
   const rhythm = s.orderCount ? `${
@@ -62588,14 +63075,7 @@ function customerAccountRailHTML(r){
       ? `Late is measured against their own gap, not the calendar &mdash; twice ${s.everyDays} ${plural(s.everyDays,'day','days')} is ${s.everyDays * 2}, and they are on ${s.daysSinceLast}.`
       : 'One invoiced order so far, which is not enough to know a rhythm. A second one is what makes this figure mean anything.'}</p>` : '';
 
-  const top = s.topProducts.slice(0, 5);
-  const share = top.reduce((n, p)=> n + p.value, 0);
-  const buys = top.length ? `${top.map(p=> sr(esc(p.name), `<span class="ow-fig">${f(p.value)}</span>`)).join('')}
-    <p class="ow-mini">${s.sales > 0
-      ? (share >= s.sales * 0.995
-          ? `That is everything they have ever bought. If one of these runs out, this account feels it first.`
-          : `These ${top.length} are ${(share / s.sales * 100).toFixed(0)}% of everything they have spent. If one of them runs out, this account feels it first.`)
-      : 'Nothing invoiced yet, so there is nothing to rank.'}</p>` : '';
+  const buys = customerBuysHTML(s);
 
   const open = followUpsForCustomer(r.id).filter(followUpIsOpen);
   const fups = open.length ? open.slice(0, 5).map(fu=> `<div class="cu-fu">
@@ -62605,17 +63085,14 @@ function customerAccountRailHTML(r){
     </div>`).join('') : '';
 
   return `<div class="ow-side">
-    <div class="ow-pan">
-      <div class="ow-pan-h"><span class="ow-pan-t">How to reach them</span></div>
-      ${reach}
-    </div>
+    ${buys ? `<div class="ow-pan">
+      <div class="ow-pan-h"><span class="ow-pan-t">What they buy</span><span class="ow-pan-n">share of spend</span></div>
+      ${buys}
+    </div>` : ''}
     ${rhythm ? `<div class="ow-pan">
       <div class="ow-pan-h"><span class="ow-pan-t">Do they still come?</span></div>
+      ${customerGapsHTML(r)}
       ${rhythm}
-    </div>` : ''}
-    ${buys ? `<div class="ow-pan">
-      <div class="ow-pan-h"><span class="ow-pan-t">What they buy</span><span class="ow-pan-n">by value</span></div>
-      ${buys}
     </div>` : ''}
     ${r.both ? `<div class="ow-pan">
       <div class="ow-pan-h"><span class="ow-pan-t">Both sides</span></div>
@@ -62632,6 +63109,509 @@ function customerAccountRailHTML(r){
       <div class="cu-side-a"><button type="button" class="btn btn-ghost ow-sm" data-cact="follow" data-cid="${esc(r.id)}">Add a follow-up</button></div>
     </div>
   </div>`;
+}
+
+/* ================= ONE CUSTOMER'S WORLD ==============================
+
+   The account used to open on a ledger: the right document, and the only
+   thing on the screen that said anything. Everything the books know
+   about a customer -- who they are to the shop, whether the relationship
+   is warming or cooling, what to do about it -- had to be worked out in
+   the owner's head from the rows.
+
+   These builders put it on the screen, and they follow the app's one law
+   about figures: DERIVED, NEVER INVENTED. Every trait, every score and
+   every suggestion below is read off invoiced orders, the debt log and
+   the shop's own terms, and each one carries the sentence that says how
+   (on its tooltip), so a number the owner doubts is a number they can
+   check. Where the books cannot say, the element is left off rather than
+   filled in -- a customer with one order has no rhythm, and gets no
+   rhythm bar. */
+
+/* One customer's invoiced orders, oldest first, with the figure each
+   one came to. The timeline and the size-of-basket reading both need
+   the whole history, not the statement's six months. */
+function customerOrderHistory(customerId){
+  return customerOrdersFor(customerId)
+    .filter(q=> q.invoiced && !q.voided)
+    .map(q=> ({ q, date: q.invoicedAt || q.date || '', total: savedQuoteTotal(q) }))
+    .filter(o=> o.date)
+    .sort((a, b)=> a.date.localeCompare(b.date) || ((a.q.id||0) - (b.q.id||0)));
+}
+
+function custAddDaysISO(iso, n){
+  const d = new Date(iso + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+/* WHO THEY ARE, IN A FEW WORDS. Each trait is a rule over the books,
+   and the rule is the trait's tooltip. A shop of four customers has no
+   "bulk buyer" -- the comparison needs a book to compare against -- so
+   the trait is simply not claimed. */
+function customerTraits(r, book){
+  const s = r.stats, out = [];
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const buyers = book.filter(b=> b.stats.sales > 0);
+  if(s.sales > 0 && buyers.length >= 3){
+    const rank = buyers.slice().sort((a, b)=> b.stats.sales - a.stats.sales).findIndex(b=> b.id === r.id) + 1;
+    /* A rank is only a trait where it distinguishes: first of three, or
+       inside the top tenth -- or the top three of a book of ten or more. */
+    if(rank > 0 && (rank === 1 || rank <= Math.ceil(buyers.length / 10) || (rank <= 3 && buyers.length >= 10))){
+      out.push({ label: `#${rank} by value`, why: `${f(s.sales)} UGX invoiced to them, ever — number ${rank} of the ${buyers.length} customers who have bought.` });
+    }
+  }
+  if(s.orderCount >= 2 && buyers.length >= 4){
+    const avgs = buyers.map(b=> b.stats.average).sort((a, b)=> a - b);
+    const mid = avgs[avgs.length >> 1];
+    if(mid > 0 && s.average >= mid * 2){
+      out.push({ label: 'Big baskets', why: `Their average order is ${f(s.average)} UGX, at least twice the ${f(mid)} a typical customer here spends.` });
+    }
+  }
+  if(s.everyDays !== null && s.orderCount >= 3 && !r.quiet){
+    out.push({ label: 'Regular', why: `${s.orderCount} invoiced orders, about every ${s.everyDays} days.` });
+  }
+  const log = (r.c && Array.isArray(r.c.debtLog)) ? r.c.debtLog : [];
+  if(log.some(e=> e.type === 'charge')){
+    out.push({ label: 'Buys on credit', why: 'The debt book carries charges against them.' });
+  } else if(s.orderCount > 0){
+    out.push({ label: 'Pays on the day', why: 'No invoice of theirs has ever gone onto the debt book.' });
+  }
+  const top = s.topProducts[0];
+  if(top && s.sales > 0 && top.value / s.sales >= 0.5){
+    out.push({ label: `Mostly ${top.name}`, why: `${Math.round(top.value / s.sales * 100)}% of everything they have spent.` });
+  }
+  if(r.both) out.push({ label: 'Also a supplier', why: 'You buy from them as well as sell to them.' });
+  if(s.first && daysBetweenISO(s.first, todayISO()) <= 30){
+    out.push({ label: 'New', why: `First bought ${fmtShortDate(s.first)}.` });
+  }
+  return out;
+}
+
+/* HOW THE RELATIONSHIP STANDS, AS FOUR READINGS AND ONE NUMBER.
+
+   Four questions the owner already asks about a customer, each scored
+   0-100 from the books and each worded, so the ring is never the only
+   thing to read:
+
+     Rhythm    are they coming when they usually come -- against their
+               OWN gap, the same yardstick the band's "quiet" uses;
+     Value     where they rank on what they have ever been invoiced;
+     Paying    how old the money they owe is, against the shop's terms,
+               and how long their settled bills took;
+     Momentum  these 90 days against the 90 before.
+
+   A reading the books cannot make is left out, not scored as zero, and
+   under two readings there is no score at all -- one question is not a
+   relationship. The overall is the plain mean of what is there, so it
+   can be checked by eye against the four bars beside it. */
+function customerHealth(r, book){
+  const s = r.stats, terms = custTermsDays(), factors = [];
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const tone = (n)=> n >= 70 ? 'ow-good' : n >= 45 ? 'ow-warn' : 'ow-bad';
+  const add = (label, score, word, basis)=> factors.push({ label, score: Math.max(0, Math.min(100, Math.round(score))), word, basis });
+
+  if(s.everyDays !== null && s.daysSinceLast !== null){
+    const x = s.daysSinceLast / s.everyDays;
+    add('Rhythm', x <= 1 ? 100 : x < 2 ? 100 - (x - 1) * 70 : 30 - (x - 2) * 30,
+      x <= 1 ? 'on time' : x < 2 ? 'due' : 'quiet',
+      `Last order ${s.daysSinceLast} days ago; they buy about every ${s.everyDays}.`);
+  }
+  const buyers = book.filter(b=> b.stats.sales > 0).sort((a, b)=> b.stats.sales - a.stats.sales);
+  if(s.sales > 0 && buyers.length >= 2){
+    const rank = buyers.findIndex(b=> b.id === r.id) + 1;
+    if(rank > 0) add('Value', (1 - (rank - 1) / buyers.length) * 100, `#${rank} of ${buyers.length}`,
+      `${f(s.sales)} UGX invoiced to them, ever.`);
+  }
+  const range = customerStatementRange();
+  const speed = customerPaySpeed(customerInvoiceStatementRows(r.id, range.from, range.to));
+  if(r.debt > 0.5 && r.ageDays >= 0){
+    const over = r.ageDays - terms;
+    add('Paying', over <= 0 ? 80 : over <= 30 ? 50 : over <= 60 ? 30 : 10,
+      over <= 0 ? 'inside terms' : `${r.ageDays}d owed`,
+      `Oldest money owed is ${r.ageDays} days old; your terms are ${terms} days.${speed ? ` Settled bills took ${speed.days} days (middle of ${speed.of}).` : ''}`);
+  } else if(s.orderCount > 0){
+    const slow = speed && terms > 0 && speed.days > terms;
+    add('Paying', slow ? 70 : 100, slow ? `pays in ${speed.days}d` : 'owes nothing',
+      `Nothing owed now.${speed ? ` Settled bills took ${speed.days} days (middle of ${speed.of}).` : ''}`);
+  }
+  if(r.spendPrev > 0){
+    const ratio = r.spend / r.spendPrev, pct = Math.round(Math.abs(ratio - 1) * 100);
+    add('Momentum', ratio * 70, ratio >= 1.1 ? `up ${pct}%` : ratio > 0.9 ? 'steady' : `down ${pct}%`,
+      `${f(r.spend)} UGX these 90 days against ${f(r.spendPrev)} the 90 before.`);
+  } else if(r.spend > 0){
+    add('Momentum', 85, 'new spend', `${f(r.spend)} UGX these 90 days, nothing the 90 before.`);
+  } else if(s.orderCount > 0){
+    add('Momentum', 0, 'nothing in 180d', 'No invoiced order in the last 180 days.');
+  }
+  if(factors.length < 2) return null;
+  const score = Math.round(factors.reduce((n, x)=> n + x.score, 0) / factors.length);
+  factors.forEach(x=>{ x.tone = tone(x.score); });
+  return { score, tone: tone(score), word: score >= 70 ? 'Healthy' : score >= 45 ? 'Cooling' : 'At risk', factors };
+}
+
+/* THE PROFILE BAND: who they are, how to reach them, and how the
+   relationship stands -- the first thing read on the account, before a
+   single figure. Ringing and WhatsApp are links, the owner's own thumb;
+   the WhatsApp one opens the chat with nothing written in it. */
+function customerProfileHTML(r, book){
+  const c = r.c, s = r.stats;
+  const health = customerHealth(r, book);
+  const traits = customerTraits(r, book);
+  const phones = contactPhones(c);
+  const initials = String(r.name || '?').trim().split(/\s+/).filter(w=> /^[A-Za-z0-9]/.test(w))
+    .slice(0, 2).map(w=> w[0].toUpperCase()).join('') || '?';
+  const ico = (d)=> `<svg viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
+  const tel = (ph)=> String(ph).replace(/[^0-9+]/g, '');
+  const reach = [
+    ...phones.map(ph=> `<a class="cu-pf-a" href="tel:${esc(tel(ph))}">${ico('<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>')} <span class="cu-tel-v">${esc(ph)}</span></a>`),
+    phones.length ? `<a class="cu-pf-a" href="${esc(waComposeUrl(phones[0], ''))}" target="_blank" rel="noopener">${ico('<path d="M4 20l1.5-4A8 8 0 1 1 9 19.5z"/>')}WhatsApp</a>` : '',
+    c.location ? `<span class="cu-pf-i">${ico('<path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>')}${esc(c.location)}</span>` : '',
+    s.first ? `<span class="cu-pf-i">${ico('<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>')}Since ${esc(fmtShortDate(s.first))}</span>` : '',
+  ].filter(Boolean).join('');
+  const ring = health ? (()=>{
+    const C = 2 * Math.PI * 40;
+    return `<div class="cu-hl" title="The mean of the readings beside it">
+      <svg class="cu-hl-svg" viewBox="0 0 100 100" role="img" aria-label="Relationship ${health.score} of 100, ${health.word}">
+        <circle class="cu-hl-bg" cx="50" cy="50" r="40"/>
+        <circle class="cu-hl-v ${health.tone}" cx="50" cy="50" r="40" stroke-dasharray="${(health.score / 100 * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 50 50)"/>
+      </svg>
+      <span class="cu-hl-n"><b>${health.score}</b><span>${health.word}</span></span>
+    </div>
+    <div class="cu-hf">
+      ${health.factors.map(x=> `<div class="cu-hf-r" title="${esc(x.basis)}">
+        <span class="cu-hf-k">${x.label}</span>
+        <span class="cu-hf-t"><i class="${x.tone}" style="width:${Math.max(4, x.score)}%"></i></span>
+        <span class="cu-hf-w ${x.tone}">${esc(x.word)}</span>
+      </div>`).join('')}
+    </div>`;
+  })() : `<p class="ow-mini cu-hl-none">Not enough history to read how this relationship stands &mdash; it needs a second invoiced order, or money on the book.</p>`;
+  return `<div class="ow-pan cu-pf">
+    <div class="cu-pf-who">
+      <span class="cu-pf-m" aria-hidden="true">${esc(initials)}</span>
+      <div class="cu-pf-b">
+        ${traits.length ? `<div class="cu-pf-tr">${traits.map(t=> `<span class="ow-cp" title="${esc(t.why)}">${esc(t.label)}</span>`).join('')}</div>` : ''}
+        <div class="cu-pf-r">${reach || '<span class="cu-pf-i">No number or place on file yet</span>'}</div>
+        ${c.notes ? `<p class="cu-pf-n">${esc(c.notes)}</p>` : ''}
+      </div>
+    </div>
+    <div class="cu-pf-hl">${ring}</div>
+  </div>`;
+}
+
+/* WHAT TO DO NEXT, AND WHY. At most three, worst first, each one a
+   reading of the books with the evidence drawn beside it and the one
+   control that acts on it. None of them does anything by itself: a
+   chase opens the page where the words are written, a reminder opens
+   the follow-up form. */
+function customerNextMoves(r){
+  const s = r.stats, c = r.c, terms = custTermsDays(), out = [];
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const short = (n)=> n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 1 : 2) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(Math.round(n));
+  const phones = contactPhones(c);
+  const range = customerStatementRange();
+  const inv = customerInvoiceStatementRows(r.id, range.from, range.to);
+
+  const open = inv.filter(x=> x.due > 0.5 && x.ageDays != null).sort((a, b)=> b.ageDays - a.ageDays);
+  if(open.length && open[0].ageDays > terms){
+    const o = open[0], speed = customerPaySpeed(inv);
+    const peak = Math.max(...open.map(x=> x.due));
+    out.push({ rank: 3, tone: 'ow-bad', kind: 'Collect', fig: f(o.due),
+      title: `${o.no} is ${o.ageDays} days old`,
+      why: speed ? `Their settled bills took ${speed.days} days &mdash; the middle of the last ${speed.of}.`
+        : `${open.length} ${open.length === 1 ? 'bill is' : 'bills are'} open, ${f(open.reduce((n, x)=> n + x.due, 0))} UGX in all.`,
+      viz: `<span class="cu-nm-bars" role="img" aria-label="Open bills by age">${open.slice(0, 8).map(x=>
+        `<i class="${x.ageDays > terms + 30 ? 'ow-bad' : x.ageDays > terms ? 'ow-warn' : 'ow-good'}" style="height:${Math.max(12, Math.round(x.due / peak * 100))}%" title="${esc(x.no)} · ${f(x.due)} · ${x.ageDays} days"></i>`).join('')}</span>`,
+      act: phones.length ? { cact: 'chase', label: 'Draft the chase' } : { cact: 'edit', label: 'Add a number' } });
+  } else if(r.debt > 0.5 && !phones.length){
+    out.push({ rank: 3, tone: 'ow-bad', kind: 'Reach', fig: f(r.debt), title: 'Owing, with no number on file',
+      why: 'There is nobody to ask for this money until a number is on the record.', act: { cact: 'edit', label: 'Add a number' } });
+  }
+
+  const hist = customerOrderHistory(r.id);
+  if(hist.length >= 5){
+    const late = hist.slice(-3), early = hist.slice(0, -3);
+    const a = early.reduce((n, o)=> n + o.total, 0) / early.length;
+    const b = late.reduce((n, o)=> n + o.total, 0) / late.length;
+    if(a > 0 && b < a * 0.67){
+      const shown = hist.slice(-8), peak = Math.max(...shown.map(o=> o.total), 1);
+      out.push({ rank: 2, tone: 'ow-warn', kind: 'Understand', fig: '−' + Math.round((1 - b / a) * 100) + '%',
+        title: 'Their orders are getting smaller',
+        why: `${short(a)} an order before, ${short(b)} over the last three. Are they buying the rest elsewhere?`,
+        viz: `<span class="cu-nm-bars" role="img" aria-label="Their last ${shown.length} orders by size">${shown.map((o, i)=>
+          `<i class="${i >= shown.length - 3 ? 'ow-warn' : ''}" style="height:${Math.max(8, Math.round(o.total / peak * 100))}%" title="${esc(fmtShortDate(o.date))} · ${f(o.total)}"></i>`).join('')}</span>`,
+        act: { cact: 'follow', label: 'Add a follow-up' } });
+    }
+  }
+  if(!out.some(m=> m.kind === 'Understand') && r.dropPct !== null && r.dropPct >= CUST_DROP_PCT){
+    out.push({ rank: 2, tone: 'ow-warn', kind: 'Understand', fig: '−' + Math.round(r.dropPct) + '%',
+      title: 'Spending less than last quarter', why: `${f(r.spend)} UGX these 90 days against ${f(r.spendPrev)} the 90 before.`,
+      act: { cact: 'follow', label: 'Add a follow-up' } });
+  }
+
+  if(s.everyDays !== null && s.last){
+    const due = custAddDaysISO(s.last, s.everyDays), until = s.everyDays - s.daysSinceLast;
+    /* What they come back for: anything on at least half their orders. */
+    const sold = hist.map(o=> o.q), seen = new Map();
+    sold.forEach(q=>{
+      const names = new Set((q.items||[]).map(it=> it.productName || it.productId || '').filter(Boolean));
+      names.forEach(n=> seen.set(n, (seen.get(n) || 0) + 1));
+    });
+    const usual = [...seen.entries()].filter(([, k])=> k >= Math.max(2, sold.length / 2))
+      .sort((a, b)=> b[1] - a[1]).slice(0, 3);
+    const chips = usual.length ? `<span class="cu-nm-ch">${usual.map(([n, k])=>
+      `<span class="ow-cp" title="On ${k} of their ${sold.length} orders">${esc(n)} &middot; ${k}/${sold.length}</span>`).join('')}</span>` : '';
+    if(r.quiet){
+      out.push({ rank: 2, tone: 'ow-bad', kind: 'Win back', fig: `${s.daysSinceLast}d`,
+        title: `Quiet ${s.daysSinceLast} days`, why: `They buy about every ${s.everyDays} days &mdash; this is past twice that.`, viz: chips, vizAfter: true,
+        act: phones.length ? { tel: phones[0], label: 'Ring them' } : { cact: 'follow', label: 'Add a follow-up' } });
+    } else {
+      out.push({ rank: until <= 3 ? 1 : 0, tone: 'cu-sky', kind: until <= 0 ? 'Due now' : 'Prepare',
+        fig: until <= 0 ? `${-until}d past` : `in ${until}d`,
+        title: until <= 0 ? `Due to order since ${fmtShortDate(due)}` : `Next order due ~${fmtShortDate(due)}`,
+        why: `Day ${s.daysSinceLast} of their ${s.everyDays}-day cycle.${usual.length ? ' What they come back for:' : ''}`, viz: chips, vizAfter: true,
+        act: { cact: 'follow', label: 'Set a reminder' } });
+    }
+  } else if(s.orderCount === 1 && s.daysSinceLast !== null && s.daysSinceLast > CUST_FIRST_SILENCE_DAYS){
+    out.push({ rank: 1, tone: 'ow-warn', kind: 'Win back', fig: `${s.daysSinceLast}d`, title: 'Bought once, not back',
+      why: `One order, ${s.daysSinceLast} days ago. A first-time buyer is the cheapest one to keep.`,
+      act: { cact: 'follow', label: 'Add a follow-up' } });
+  }
+  return out.sort((a, b)=> b.rank - a.rank).slice(0, 3);
+}
+
+function customerNextMovesHTML(r){
+  const moves = customerNextMoves(r);
+  if(!moves.length) return '';
+  const btn = (m)=> m.act.tel
+    ? `<a class="btn btn-ghost ow-sm" href="tel:${esc(String(m.act.tel).replace(/[^0-9+]/g, ''))}">${esc(m.act.label)}</a>`
+    : `<button type="button" class="btn btn-ghost ow-sm" data-cact="${m.act.cact}" data-cid="${esc(r.id)}">${esc(m.act.label)}</button>`;
+  return `<div class="cu-nm" role="list" aria-label="What to do next">
+    ${moves.map(m=> `<div class="ow-pan cu-nm-c" role="listitem">
+      <div class="cu-nm-h"><span class="cu-nm-k ${m.tone}">${esc(m.kind)}</span><span class="cu-nm-f">${m.fig}</span></div>
+      <p class="cu-nm-t">${esc(m.title)}</p>
+      ${m.vizAfter ? '' : (m.viz || '')}
+      <p class="cu-nm-w">${m.why}</p>
+      ${m.vizAfter ? (m.viz || '') : ''}
+      <div class="cu-nm-a">${btn(m)}</div>
+    </div>`).join('')}
+  </div>`;
+}
+
+/* THE RELATIONSHIP, OVER TIME. Every invoiced order in the statement's
+   window as a mark sized by what it came to, every payment on the lane
+   beneath it, and a line from each settled bill to the day it was
+   settled, labelled with how long that took -- so a customer who pays a
+   little slower each time is SEEN paying slower. A bill still open runs
+   on to today. Where they have a rhythm, the next order sits ahead of
+   today as a ring: their own gap, added to their last order. */
+function customerTimelineHTML(r){
+  const s = r.stats;
+  const range = customerStatementRange();
+  const inv = customerInvoiceStatementRows(r.id, range.from, range.to).slice().reverse();
+  if(!inv.length) return '';
+  const terms = custTermsDays(), today = range.to;
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const short = (n)=> n >= 1e6 ? (n / 1e6).toFixed(2) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(Math.round(n));
+  const next = s.everyDays !== null && s.last && !r.quiet ? custAddDaysISO(s.last, s.everyDays) : null;
+  const end = next && next > today ? custAddDaysISO(next, 10) : custAddDaysISO(today, 10);
+  const c = r.c;
+  const pays = (c && Array.isArray(c.debtLog) ? c.debtLog : []).filter(e=> e.type === 'payment' && e.date >= range.from && e.date <= today);
+  /* THE WINDOW FITS THE HISTORY, not the statement's six months. A
+     customer who started buying five weeks ago drawn across half a year
+     is five weeks of orders crushed into the last sixth of the chart,
+     every bubble on top of the next. So it opens a little before their
+     first mark, and never on less than six weeks. */
+  const firstMark = [...inv.map(x=> x.date), ...pays.map(e=> e.date)].filter(d=> d && d >= range.from).sort()[0] || range.from;
+  let from = custAddDaysISO(firstMark, -Math.max(3, Math.round(daysBetweenISO(firstMark, end) * 0.05)));
+  if(daysBetweenISO(from, end) < 42) from = custAddDaysISO(end, -42);
+  if(from < range.from) from = range.from;
+  const W = 1000, H = 212, L = 36, R = 16, OY = 72, PY = 160;
+  const span = Math.max(1, daysBetweenISO(from, end));
+  const X = (iso)=> (L + Math.min(span, Math.max(0, daysBetweenISO(from, iso))) / span * (W - L - R)).toFixed(1);
+  const peak = Math.max(...inv.map(x=> x.total), 1);
+  /* Bubbles are as big as the spacing allows: sized off the gaps most
+     orders keep (the quarter-way gap, so two orders on one day do not
+     shrink everybody), with a paper edge so the ones that still touch
+     stay two marks. */
+  const xs = inv.map(x=> +X(x.date)).sort((a, b)=> a - b);
+  const gaps = xs.slice(1).map((x, i)=> x - xs[i]).sort((a, b)=> a - b);
+  const rMax = gaps.length ? Math.max(6, Math.min(22, gaps[Math.floor(gaps.length / 4)] * 0.55)) : 22;
+  const rad = (v)=> Math.max(3.5, Math.sqrt(v / peak) * rMax).toFixed(1);
+  /* Months on a long window; weeks on a short one, dated, so a
+     six-week relationship still has a scale to read. */
+  const months = [];
+  const tick = (iso, label)=> months.push(`<line class="cu-tl-tk" x1="${X(iso)}" x2="${X(iso)}" y1="${H - 26}" y2="${H - 20}"/><text class="cu-tl-m" x="${X(iso)}" y="${H - 6}">${esc(label)}</text>`);
+  if(span <= 100){
+    for(let d = 0; d <= span; d += 7){
+      const iso = custAddDaysISO(from, d);
+      tick(iso, fmtShortDate(iso).replace(/\s*\d{4}$/, ''));
+    }
+  } else {
+    const d0 = new Date(from + 'T00:00:00Z');
+    for(let m = 0; m <= 14; m++){
+      const iso = new Date(Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth() + m, 1)).toISOString().slice(0, 10);
+      if(iso > end) break;
+      if(iso < from) continue;
+      tick(iso, fmtShortDate(iso).replace(/^\d+\s*/, '').split(' ')[0]);
+    }
+  }
+  const arcMids = [];
+  const arcs = inv.filter(x=> x.settledOn && x.days != null).map(x=>{
+    const x1 = X(x.date), x2 = X(x.settledOn), mid = ((+x1 + +x2) / 2).toFixed(1);
+    /* The day count only where it does not sit on the last one's. */
+    const room = !arcMids.some(m=> Math.abs(m - mid) < 26);
+    if(room) arcMids.push(+mid);
+    return `<path class="cu-tl-arc" d="M${x1} ${OY + 10} Q${mid} ${OY + 70} ${x2} ${PY - 6}"><title>${esc(x.no)} paid in ${x.days} ${x.days === 1 ? 'day' : 'days'}</title></path>${
+      room ? `<text class="cu-tl-d" x="${mid}" y="${OY + 52}">${x.days}d</text>` : ''}`;
+  }).join('');
+  const tails = inv.filter(x=> x.due > 0.5).map(x=>
+    `<line class="cu-tl-open ${x.ageDays > terms ? 'ow-bad' : 'ow-warn'}" x1="${X(x.date)}" x2="${X(today)}" y1="${OY}" y2="${OY}"/>`).join('');
+  const dots = inv.map(x=>{
+    const cls = x.due > 0.5 ? (x.ageDays > terms ? 'ow-bad' : 'ow-warn') : '';
+    return `<circle class="cu-tl-o ${cls}" cx="${X(x.date)}" cy="${OY}" r="${rad(x.total)}"><title>${esc(x.no)} · ${esc(fmtShortDate(x.date))} · ${f(x.total)} UGX${x.due > 0.5 ? ` · ${f(x.due)} still due, ${x.ageDays} days` : x.days != null ? ` · paid in ${x.days} days` : ''}</title></circle>`;
+  }).join('');
+  /* Labels only where there is room: the biggest orders first, on two
+     rows above the bubbles, and a label that would touch one already
+     placed is left to the bubble's tooltip. A label per order on a
+     customer who buys twice a week would be a black smear. */
+  const rows = [OY - rMax - 6, OY - rMax - 19];
+  const placedL = rows.map(()=> []);
+  const labels = inv.slice().sort((a, b)=> b.total - a.total).map(x=>{
+    const text = short(x.total), w = text.length * 6.8 + 6, cx = +X(x.date);
+    const row = rows.findIndex((y, i)=> !placedL[i].some(p=> cx - w / 2 < p.b && p.a < cx + w / 2));
+    if(row < 0) return '';
+    placedL[row].push({ a: cx - w / 2, b: cx + w / 2 });
+    return `<text class="cu-tl-v" x="${cx.toFixed(1)}" y="${rows[row].toFixed(1)}">${text}</text>`;
+  }).join('');
+  const diamonds = pays.map(e=> {
+    const x = X(e.date);
+    return `<rect class="cu-tl-p" x="${(+x - 5).toFixed(1)}" y="${PY - 5}" width="10" height="10" transform="rotate(45 ${x} ${PY})"><title>Paid ${esc(fmtShortDate(e.date))} · ${f(Number(e.amount) || 0)} UGX</title></rect>`;
+  }).join('');
+  const nextMark = next && next <= end ? `<circle class="cu-tl-next" cx="${X(next)}" cy="${OY}" r="12"><title>Next order expected about ${esc(fmtShortDate(next))}</title></circle>
+    <text class="cu-tl-nx" x="${X(next)}" y="${OY - 20}">~${esc(fmtShortDate(next))}</text>` : '';
+  const settled = inv.filter(x=> x.days != null);
+  return `<div class="ow-pan cu-tl">
+    <div class="ow-pan-h"><span class="ow-pan-t">The relationship, over time</span>
+      <span class="cu-tl-key"><span><i class="cu-k-o"></i>order, sized by value</span>${pays.length ? '<span><i class="cu-k-p"></i>payment</span>' : ''}${
+        settled.length ? '<span><i class="cu-k-a"></i>days to pay</span>' : ''}${
+        inv.some(x=> x.due > 0.5) ? '<span><i class="cu-k-u"></i>still open</span>' : ''}${
+        nextMark ? '<span><i class="cu-k-n"></i>expected</span>' : ''}</span>
+      <span class="ow-pan-n">${esc(fmtShortDate(from))} &rarr; ${next && next > today ? esc(fmtShortDate(next)) : 'today'}</span></div>
+    <div class="cu-tl-sc"><svg class="cu-tl-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${inv.length} invoiced orders and ${pays.length} payments since ${esc(fmtShortDate(from))}">
+      <line class="cu-tl-ax" x1="${L}" x2="${W - R}" y1="${H - 26}" y2="${H - 26}"/>
+      <line class="cu-tl-ln" x1="${L}" x2="${W - R}" y1="${PY}" y2="${PY}"/>
+      ${months.join('')}
+      ${arcs}${tails}${dots}${labels}${diamonds}${nextMark}
+      <line class="cu-tl-now" x1="${X(today)}" x2="${X(today)}" y1="14" y2="${H - 26}"/>
+      <text class="cu-tl-nw" x="${X(today)}" y="10">Today</text>
+    </svg></div>
+  </div>`;
+}
+
+/* WHERE THE ACCOUNT STANDS, BEFORE THE ROWS. The statement's own sum
+   written out -- brought forward, plus charged, less paid, is due -- and
+   what is due split by how old it is, on the same open charges Debtors
+   ages its bands on. Then the two checks a statement must pass before
+   anybody hands it across a counter: the running history lands on the
+   balance the shop carries, and the invoices agree with the debt book.
+   Both passing is said in one green line; either failing is said in
+   crimson, with the figure. */
+function customerStandingHTML(r){
+  const c = r.c, s = r.stats;
+  if(!c || !(Array.isArray(c.debtLog) && c.debtLog.length) && !(r.debt > 0)) return '';
+  const { from, to } = customerStatementRange();
+  const st = customerStatementRows(r.id, from, to);
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const terms = custTermsDays();
+  const buckets = [
+    { k: '0–30 days', lo: 0, hi: 30, cls: 'ow-good', v: 0 },
+    { k: '31–60', lo: 31, hi: 60, cls: 'ow-warn', v: 0 },
+    { k: '61–90', lo: 61, hi: 90, cls: 'ow-bad', v: 0 },
+    { k: 'Over 90', lo: 91, hi: Infinity, cls: 'cu-old', v: 0 },
+  ];
+  let undated = 0;
+  customerOpenCharges(c).forEach(ch=>{
+    const rem = Number(ch.remaining) || 0;
+    if(rem <= 0.5) return;
+    if(!ch.date){ undated += rem; return; }
+    const age = daysSinceDate(ch.date);
+    const b = buckets.find(x=> age >= x.lo && age <= x.hi);
+    if(b) b.v += rem;
+  });
+  const agedSum = buckets.reduce((n, b)=> n + b.v, 0) + undated;
+  const offBook = Math.round(s.outstanding - s.debt);
+  const ok = st.agrees && !(offBook > 0);
+  const check = ok
+    ? `<span class="ow-cp ow-good cu-st-ok"><span class="ow-cp-d"></span>Adds up &mdash; the ledger, the debt book and the invoices agree</span>`
+    : `<span class="ow-cp ow-bad cu-st-ok"><span class="ow-cp-d"></span>${!st.agrees
+        ? `Out of step &mdash; the ledger adds to ${f(st.closing)}, the card carries ${f(st.recorded)}`
+        : `Out of step &mdash; invoices show ${f(offBook)} more than the debt book`}</span>`;
+  return `<div class="ow-pan cu-st">
+    <div class="ow-pan-h"><span class="ow-pan-t">Where the account stands</span>
+      <span class="ow-pan-n">${esc(fmtShortDate(from))} &rarr; ${esc(fmtShortDate(to))} &middot; UGX</span></div>
+    <div class="cu-st-eq">
+      ${st.opening ? `<div><p class="ow-mt-l">Brought forward</p><span class="ow-fig">${f(st.opening)}</span></div><span class="cu-st-op">+</span>` : ''}
+      <div><p class="ow-mt-l">Charged</p><span class="ow-fig">${f(st.charged)}</span></div>
+      <span class="cu-st-op">&minus;</span>
+      <div><p class="ow-mt-l">Paid</p><span class="ow-fig cu-st-paid">${f(st.paid)}</span></div>
+      <span class="cu-st-op">=</span>
+      <div><p class="ow-mt-l">Due now</p><span class="ow-fig cu-st-due${st.closing > 0.5 ? ' ow-bad' : ''}">${f(st.closing)}</span></div>
+    </div>
+    ${agedSum > 0.5 ? `<div class="cu-st-age">
+      <span class="cu-st-bar" role="img" aria-label="${buckets.filter(b=> b.v > 0.5).map(b=> `${b.k}: ${f(b.v)}`).join(', ')}">${
+        buckets.filter(b=> b.v > 0.5).map(b=> `<i class="${b.cls}" style="flex-grow:${Math.round(b.v)}"></i>`).join('')}${
+        undated > 0.5 ? `<i class="cu-und" style="flex-grow:${Math.round(undated)}"></i>` : ''}</span>
+      <span class="cu-st-bk">${buckets.map(b=> `<span><i class="${b.cls}"></i>${b.k} <b class="ow-fig">${f(b.v)}</b></span>`).join('')}${
+        undated > 0.5 ? `<span><i class="cu-und"></i>no date <b class="ow-fig">${f(undated)}</b></span>` : ''}</span>
+    </div>` : ''}
+    <div class="cu-st-ck">${check} ${terms > 0 ? `<span class="cu-st-tm">Your terms: ${terms} days</span>` : ''}</div>
+  </div>`;
+}
+
+/* WHAT THEY BUY, AS SHARES. The rail's list of names and sums read as a
+   list; the same five as bars read as a shape -- one product carrying
+   the account, or a spread. */
+function customerBuysHTML(s){
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const top = s.topProducts.slice(0, 5);
+  if(!top.length || !(s.sales > 0)) return '';
+  const share = top.reduce((n, p)=> n + p.value, 0);
+  return `${top.map(p=>{
+      const pct = p.value / s.sales * 100;
+      return `<div class="cu-by" title="${esc(p.name)} · ${f(p.value)} UGX">
+        <span class="cu-by-n">${esc(p.name)}</span><span class="cu-by-p">${pct >= 10 ? Math.round(pct) : pct.toFixed(1)}%</span>
+        <span class="cu-by-t"><i style="width:${Math.max(1, pct).toFixed(1)}%"></i></span>
+      </div>`;
+    }).join('')}
+    <p class="ow-mini">${share >= s.sales * 0.995
+      ? 'That is everything they have ever bought. If one of these runs out, this account feels it first.'
+      : `These ${top.length} are ${(share / s.sales * 100).toFixed(0)}% of everything they have spent. If one of them runs out, this account feels it first.`}</p>`;
+}
+
+/* THE GAPS BETWEEN THEIR ORDERS, one dot each against their own
+   average, so a steady buyer and an erratic one with the same average
+   stop looking alike. */
+function customerGapsHTML(r){
+  const hist = customerOrderHistory(r.id);
+  if(hist.length < 3) return '';
+  const gaps = [];
+  for(let i = 1; i < hist.length; i++) gaps.push(daysBetweenISO(hist[i - 1].date, hist[i].date));
+  const shown = gaps.slice(-10);
+  const avg = r.stats.everyDays;
+  const top = Math.max(...shown, avg * 2, 1);
+  const W = 260, H = 76, T = 22, B = 58;
+  const Y = (v)=> (B - v / top * (B - T)).toFixed(1);
+  const step = W / shown.length;
+  return `<svg class="cu-gp" viewBox="0 0 ${W} ${H}" role="img" aria-label="Days between their last ${shown.length + 1} orders: ${shown.join(', ')}">
+    <line class="cu-gp-avg" x1="0" x2="${W}" y1="${Y(avg)}" y2="${Y(avg)}"/>
+    <text class="cu-gp-t cu-gp-l" x="0" y="10">- - every ${avg} days, on average</text>
+    ${shown.map((g, i)=>{
+      const x = (step * i + step / 2).toFixed(1);
+      return `<circle class="cu-gp-d${g > avg * 1.2 ? ' ow-warn' : ''}" cx="${x}" cy="${Y(g)}" r="4.5"><title>${g} days</title></circle>
+        <text class="cu-gp-t" x="${x}" y="${H - 4}" text-anchor="middle">${g}</text>`;
+    }).join('')}
+  </svg>`;
 }
 
 /* THE ACCOUNT, AS A SCREEN.
@@ -62670,7 +63650,11 @@ function renderCustomerAccount(id){
     custStmtView = 'invoice';
     custStmtPage = { invoice: 1, ledger: null };
   }
-  const r = customerBookRow(c);
+  /* The whole book, once: the profile ranks this customer against it,
+     and ranking against a second reading could disagree with the
+     register the owner just came from. */
+  const book = customerBookRows();
+  const r = book.find(x=> String(x.id) === String(c.id)) || customerBookRow(c);
   const s = r.stats;
   const reason = custAttentionReason(r);
   const chip = reason
@@ -62707,9 +63691,13 @@ function renderCustomerAccount(id){
       ${chase}
       ${pay}
     </div>
+    ${customerProfileHTML(r, book)}
     ${s.orderCount ? customerFiguresHTML(r) : ''}
+    ${customerNextMovesHTML(r)}
+    ${customerTimelineHTML(r)}
     <div class="ow-grid cu-acct-grid">
       <div class="ow-stack">
+        ${customerStandingHTML(r)}
         ${customerBalanceChartHTML(r.id)}
         ${customerStatsHTML(s)}
         ${customerBriefPanelHTML(r.id)}
@@ -62723,6 +63711,10 @@ function renderCustomerAccount(id){
       </div>
       ${customerAccountRailHTML(r)}
     </div>`;
+  /* On a phone the timeline scrolls sideways; it opens on today, which
+     is the end anybody reads first. */
+  const tl = wrap.querySelector('.cu-tl-sc');
+  if(tl) tl.scrollLeft = tl.scrollWidth;
 }
 
 /* The one way in, from wherever it is asked for. */
@@ -65127,6 +66119,10 @@ function briefGroups(c, habits){
          by it -- read off their own last invoice. Said as bought at the
          end of briefGroups, once every per-unit comparison is done. */
       packQty: px.packQty || 0, packUnit: px.packUnit || '',
+      /* Where the figure came from -- our own shelf or a supplier's row
+         -- so the account's sheet can say how a price was reached
+         without working it out a second time. */
+      source: px.source || '',
       asPack: !!(habit && habit.asPack),
       /* Not on OUR shelf, and orderable: the SHOP is told, so nobody
          promises today what arrives on Thursday. The picture itself is
@@ -66895,6 +67891,210 @@ function cfReadStage(prev){
   day.addEventListener('change', cfStageHint);
 })();
 
+/* ---- the brief as a SHEET --------------------------------------------
+   The account is a place to READ, and what the owner reads here is a
+   price list: so it is drawn as one. Every line the shop knows they buy
+   is a row -- the ones on the picture, the ones that did not fit, the
+   ones left off and the ones nobody can supply -- so "why is X not on
+   it" is answered by looking down one column instead of opening three
+   folded paragraphs. The columns the customer never sees are tinted,
+   and the reasoning behind any one figure is on the formula bar when
+   its row is picked. Follow-ups keeps the folded form: that screen is a
+   place to act, and it draws the filmstrip, not the sheet. */
+const BRIEF_LEFT_OFF_SHORT = {
+  noRow: 'no price', outOfStock: 'supplier out', noBase: 'blank row',
+  pickVariant: 'which size?', packFigure: 'pack on receipt', packCostShelf: 'pack cost on lot',
+  packCostRow: 'pack price on row', noRuleWholesale: 'no wholesale rule',
+  noRuleRetail: 'no retail rule', checkRow: 'check the row', belowCost: 'under cost',
+};
+const BRIEF_SHEET_COLS = ['', '', 'Item', 'Variant', 'Price', 'Last paid', 'Change', 'Takes',
+  'Order value', 'Supply', 'Unit', 'Packing', 'Block'];
+function briefSheetHTML(b){
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const q = (n)=> Number(n).toLocaleString('en-UG');
+  /* The reasoning is written as HTML for the paragraphs; the formula
+     bar is one line of text, so it is read back out of it. */
+  const plain = (h)=> String(h || '').replace(/<[^>]*>/g, '')
+    .replace(/&mdash;/g, '—').replace(/&middot;/g, '·').replace(/&rarr;/g, '→')
+    .replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+  const sentence = (s)=> { s = String(s || '').toLowerCase(); return s.charAt(0).toUpperCase() + s.slice(1); };
+  const frames = briefFrames(b);
+  const words = briefWordCount(frames);
+  const shown = new Set();
+  frames.forEach(fr=> (fr.items || []).forEach(it=> { if(it.kind === 'row') shown.add(String(it.productId)); }));
+
+  const alsoFx = (r)=>{
+    const a = (b.also || []).find(x=> x.product && String(x.product.id) === String(r.productId));
+    return a ? plain(briefAlsoWords(a, briefOwnEvidence(b.customer.id, b.product, b.pickVariant, a))) : '';
+  };
+  const rows = [];
+  (b.groups || []).forEach(g=> g.rows.forEach(r=>{
+    const paid = r.was != null ? r.was : r.wasPaid != null ? r.wasPaid : r.upFrom != null ? r.upFrom : null;
+    rows.push({ kind: shown.has(String(r.productId)) ? 'pic' : 'cut', r, paid, block: sentence(g.head) });
+  }));
+  ((b.pricing && b.pricing.rows) || []).forEach(o=> rows.push({ kind: 'off', o }));
+  (b.dropped || []).forEach(d=> rows.push({ kind: 'gone', d }));
+  const count = (k)=> rows.filter(x=> x.kind === k).length;
+  const nPic = count('pic'), nCut = count('cut'), nOff = count('off') + count('gone');
+  const nOrder = rows.filter(x=> x.r && x.r.toOrder).length;
+  const nMoved = rows.filter(x=> x.r && x.paid != null && x.paid !== x.r.price).length;
+
+  const ic = {
+    yes: '<svg class="ow-ps-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+    no: '<svg class="ow-ps-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  };
+  const cell = (k, html, title)=> `<span class="ow-ps-c ow-ps-c-${k}"${title ? ` title="${esc(title)}"` : ''}>${html}</span>`;
+  const dash = '<span class="ow-ps-nil">&mdash;</span>';
+
+  /* THE FORMULA BAR: how one figure was reached, in a line. A row that
+     is left off says its cause and the errand that fixes it. */
+  const fxOf = (x)=>{
+    if(x.kind === 'off'){
+      const w = BRIEF_LEFT_OFF[x.o.why] || BRIEF_LEFT_OFF.noRow;
+      return `#N/A ← ${w.head}. ${w.fix}`;
+    }
+    if(x.kind === 'gone') return `#N/A ← ${x.d.why}.`;
+    const r = x.r;
+    return [
+      `${f(r.price)} ← ${r.source === 'shelf' ? 'your shelf cost' : 'the cheapest supplier row'}, at the ${r.side === 'wholesale' ? 'wholesale' : 'retail'} rule${
+        r.theirQty != null ? `, for ${q(r.theirQty)} ${r.unit || ''}`.trimEnd() : ''}`,
+      x.paid != null ? `they paid ${f(x.paid)}${r.upFrom != null ? ' — this is above it, and the picture does not say so' : ''}` : '',
+      r.toOrder ? `not on the shelf${r.lead != null ? `, about ${r.lead} day${r.lead === 1 ? '' : 's'} to order in` : ', ordered in'}` : '',
+      r.insteadOf ? `offered instead of ${r.insteadOf}` : '',
+      r.packCost ? `the stock lot carries the ${r.packCost.packUnit || 'pack'} cost per ${r.packCost.unit || 'piece'} — correct it under Inventory` : '',
+      x.kind === 'cut' ? `did not fit on ${BRIEF_MAX_LIST_FRAMES} pictures, so it is not sent` : '',
+      alsoFx(r),
+    ].filter(Boolean).join(' · ');
+  };
+  /* The row the bar opens on: the first thing to fix, where there is
+     one, because that is the question the sheet is opened with. */
+  const firstFx = Math.max(0, rows.findIndex(x=> x.kind === 'off' || x.kind === 'gone'));
+  const rowHTML = (x, i)=>{
+    const n = i + 1;
+    if(x.kind === 'off' || x.kind === 'gone'){
+      const off = x.kind === 'off';
+      const name = off ? x.o.name : x.d.name;
+      return `<div class="ow-ps-r ow-ps-${x.kind}${i === firstFx ? ' ow-ps-on' : ''}" data-fx="${esc(fxOf(x))}" data-ref="D${n}">
+        <button type="button" class="ow-ps-c ow-ps-c-n" aria-label="Row ${n}: why it is left off">${n}</button>
+        ${cell('pk', `<span class="ow-ps-mk ow-ps-mk-no" role="img" aria-label="Not on the picture">${ic.no}</span>`)}
+        ${cell('nm', esc(name), name)}${cell('va', dash)}
+        ${cell('pr', '<span class="ow-ps-na">#N/A</span>')}${cell('pd', dash)}${cell('ch', dash)}
+        ${cell('tk', dash)}${cell('vl', dash)}
+        ${cell('sp', esc(off ? (BRIEF_LEFT_OFF_SHORT[x.o.why] || 'no price') : 'nobody has it'))}
+        ${cell('un', dash)}${cell('pa', dash)}${cell('bl', off ? 'Left off' : 'Nobody has it')}
+      </div>`;
+    }
+    const r = x.r;
+    const unit = `${r.unit || '—'}${r.side === 'wholesale' ? '*' : ''}`;
+    const diff = x.paid != null ? r.price - x.paid : null;
+    const pct = diff != null && x.paid ? diff / x.paid * 100 : 0;
+    const ch = diff == null ? dash
+      : `<span class="ow-ps-bar" style="--w:${Math.min(100, Math.round(Math.abs(pct) * 6))}%"></span>`
+        + `<span class="ow-ps-fg">${diff === 0 ? 'same' : `${diff < 0 ? '−' : '+'}${f(Math.abs(diff))}`
+        }${diff ? ` <small class="ow-ps-pc">${Math.abs(pct).toFixed(1)}%</small>` : ''}</span>`;
+    const value = r.theirQty != null ? r.price * r.theirQty : null;
+    const supply = r.packCost ? 'check the lot'
+      : r.toOrder ? (r.lead != null ? `order ~${r.lead}d` : 'to order') : 'on shelf';
+    const tone = diff == null || diff === 0 ? '' : diff < 0 ? ' ow-ps-dn' : ' ow-ps-up';
+    return `<div class="ow-ps-r ow-ps-${x.kind}${r.toOrder ? ' ow-ps-ord' : ''}${diff ? ' ow-ps-mv' : ''}${tone}${i === firstFx ? ' ow-ps-on' : ''}" data-fx="${esc(fxOf(x))}" data-ref="D${n}">
+      <button type="button" class="ow-ps-c ow-ps-c-n" aria-label="Row ${n}: how this price was reached">${n}</button>
+      ${cell('pk', x.kind === 'pic'
+        ? `<span class="ow-ps-mk ow-ps-mk-yes" role="img" aria-label="On the picture">${ic.yes}</span>`
+        : `<span class="ow-ps-mk ow-ps-mk-cut" role="img" aria-label="Did not fit on the picture">${ic.no}</span>`)}
+      ${cell('nm', esc(r.name), r.name)}${cell('va', r.variant ? esc(r.variant) : dash, r.variant)}
+      ${cell('pr', f(r.price))}${cell('pd', x.paid != null ? f(x.paid) : dash)}${cell('ch', ch)}
+      ${cell('tk', r.theirQty != null ? `<span class="ow-ps-x">&times;</span>${q(r.theirQty)}` : dash)}
+      ${cell('vl', value != null ? f(value) : dash)}
+      ${cell('sp', esc(supply))}${cell('un', esc(unit))}${cell('pa', r.packing ? esc(r.packing) : dash, r.packing)}
+      ${cell('bl', esc(x.block))}
+    </div>`;
+  };
+
+  /* The totals are of what is SENT: a line that did not fit or was
+     left off is not part of the offer the customer reads. */
+  const sent = rows.filter(x=> x.kind === 'pic');
+  const moved = sent.filter(x=> x.paid != null);
+  const changeSum = moved.reduce((s, x)=> s + (x.r.price - x.paid), 0);
+  const valueSum = sent.reduce((s, x)=> s + (x.r.theirQty != null ? x.r.price * x.r.theirQty : 0), 0);
+  const sentOrder = sent.filter(x=> x.r.toOrder).length;
+
+  /* EVERYTHING STILL OUT, through the same reader the reasoning and the
+     debtors list use, so the bar and the paragraph cannot disagree. */
+  const owed = (b.customer && typeof customerOutstandingInvoices === 'function')
+    ? customerOutstandingInvoices(b.customer.id) : [];
+  const owedTotal = owed.reduce((s, oq)=> s + invoiceBalanceDue(oq), 0);
+  const terms = owed.length ? custTermsDays() : 0;
+  const late = owed.filter(oq=>{
+    const when = String(oq.invoicedAt || oq.date || '').slice(0, 10);
+    return !!when && daysBetweenISO(when, todayISO()) > terms;
+  }).length;
+  const carried = rows.some(x=> x.r && x.r.productId === (b.reason || {}).productId);
+  const reasonOff = b.reason && (b.reason.key === 'needs' || b.reason.key === 'swap') && !carried && b.product;
+
+  const filters = [
+    ['all', 'All', rows.length, ''],
+    ['pic', 'On the picture', nPic, 'ow-ps-d-yes'],
+    ['off', 'Left off', nOff, 'ow-ps-d-no'],
+    ['cut', 'Did not fit', nCut, 'ow-ps-d-cut'],
+    ['ord', 'To order in', nOrder, 'ow-ps-d-ord'],
+    ['mv', 'Price moved', nMoved, 'ow-ps-d-mv'],
+  ].filter(([k, , n])=> k === 'all' || n > 0);
+
+  const sb = [
+    `They see <b class="ow-ps-sb-v">${nPic}</b> ${nPic === 1 ? 'line' : 'lines'} &middot; <b class="ow-ps-sb-v">${words}</b> words &middot; <b class="ow-ps-sb-v">${frames.length}</b> ${frames.length === 1 ? 'picture' : 'pictures'}`,
+    owed.length ? `<span class="ow-ps-sb-d ow-ps-sb-bad"></span>They owe <b class="ow-ps-sb-v">${f(owedTotal)}</b> on ${owed.length === 1 ? 'one invoice' : `${owed.length} invoices`}${
+      late ? ` &middot; ${late === owed.length ? (owed.length === 1 ? 'past your terms' : 'all past your terms') : `${late} past your terms`}` : ''}` : '',
+    b.reason ? `<span class="ow-ps-sb-d ow-ps-sb-good"></span><span class="ow-ps-sb-why" title="${esc(plain(b.reason.why))}">${esc(plain(b.reason.why))}</span>` : '',
+    reasonOff ? `The reason names <b class="ow-ps-sb-v">${esc(productVariantLabel(b.product, b.pickVariant))}</b>, and it is not on the list` : '',
+  ].filter(Boolean).map(s=> `<span class="ow-ps-sb-i">${s}</span>`).join('');
+
+  const mg = (n, k)=> n ? `<span class="ow-ps-mg ow-ps-mg-${k}" style="flex-grow:${n}"></span>` : '';
+  const held = b.held;
+  return `<div class="ow-ps" data-f="all">
+    <div class="ow-ps-top">
+      ${b.told ? `<span class="ow-cp"><span class="ow-cp-d"></span>Told ${b.told.daysAgo} days ago</span>`
+        : '<span class="ow-cp ow-warn"><span class="ow-cp-d"></span>Never told</span>'}
+      <span class="ow-ps-meter" role="img" aria-label="${nPic} of ${rows.length} lines on the picture">
+        <span class="ow-ps-mv-n"><b class="ow-ps-mv-b">${nPic}</b>/${rows.length}</span>
+        <span class="ow-ps-mbar">${mg(nPic, 'yes')}${mg(nCut, 'cut')}${mg(nOff, 'no')}</span>
+      </span>
+      ${held ? `<span class="ow-cp ow-warn"><span class="ow-cp-d"></span>${esc(held.label)}</span>` : ''}
+      <span class="ow-ps-sp"></span>
+      <button type="button" class="btn btn-ghost ow-sm ow-ps-act" data-tell="save" data-cid="${esc(b.customer.id)}">Save the picture</button>
+      <button type="button" class="btn btn-ghost ow-sm ow-ps-act" data-tell="share" data-cid="${esc(b.customer.id)}">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 21l1.9-5.6A8.5 8.5 0 1 1 21 11.5z"/></svg>
+        Share ${nPic} ${nPic === 1 ? 'line' : 'lines'} on WhatsApp</button>
+    </div>
+    <div class="ow-ps-fl" role="group" aria-label="Show">
+      ${filters.map(([k, label, n, dot])=> `<button type="button" class="ow-ps-fb" data-psf="${k}" aria-pressed="${k === 'all'}">${
+        dot ? `<span class="ow-ps-d ${dot}"></span>` : ''}${label} <span class="ow-ps-fn">${n}</span></button>`).join('')}
+      <span class="ow-ps-sp"></span>
+      <span class="ow-ps-key"><span class="ow-ps-key-sw"></span>tinted columns stay in the shop</span>
+    </div>
+    <div class="ow-ps-fx"><span class="ow-ps-ref">${rows.length ? `D${firstFx + 1}` : ''}</span><span class="ow-ps-fxl">fx</span>
+      <span class="ow-ps-fxt" aria-live="polite">${rows.length ? esc(fxOf(rows[firstFx])) : ''}</span></div>
+    <div class="ow-ps-g"><div class="ow-ps-in">
+      <div class="ow-ps-lt" aria-hidden="true"><span class="ow-ps-l"></span>${'ABCDEFGHIJKL'.split('').map(l=> `<span class="ow-ps-l">${l}</span>`).join('')}</div>
+      <div class="ow-ps-h">${BRIEF_SHEET_COLS.map((t, i)=> `<span class="ow-ps-c ow-ps-c-${['n', 'pk', 'nm', 'va', 'pr', 'pd', 'ch', 'tk', 'vl', 'sp', 'un', 'pa', 'bl'][i]}">${
+        i === 1 ? '<span class="ow-ps-hk" title="On the picture">Pic</span>' : esc(t)}</span>`).join('')}</div>
+      ${rows.map(rowHTML).join('')}
+      <div class="ow-ps-t">
+        <span class="ow-ps-c ow-ps-c-n"></span><span class="ow-ps-c ow-ps-c-pk"></span>
+        <span class="ow-ps-c ow-ps-c-nm">Sent</span><span class="ow-ps-c ow-ps-c-va">${nPic} of ${rows.length}</span>
+        <span class="ow-ps-c ow-ps-c-pr"></span><span class="ow-ps-c ow-ps-c-pd"></span>
+        <span class="ow-ps-c ow-ps-c-ch${changeSum < 0 ? ' ow-ps-dn' : changeSum > 0 ? ' ow-ps-up' : ''}">${moved.length
+          ? (changeSum === 0 ? 'same' : `${changeSum < 0 ? '−' : '+'}${f(Math.abs(changeSum))}`) : ''}</span>
+        <span class="ow-ps-c ow-ps-c-tk"></span><span class="ow-ps-c ow-ps-c-vl">${valueSum ? f(valueSum) : ''}</span>
+        <span class="ow-ps-c ow-ps-c-sp">${sentOrder ? `${sentOrder} to order` : ''}</span>
+        <span class="ow-ps-c ow-ps-c-un"></span><span class="ow-ps-c ow-ps-c-pa"></span><span class="ow-ps-c ow-ps-c-bl"></span>
+      </div>
+    </div></div>
+    <div class="ow-ps-sb">${sb}</div>
+    <details class="ow-ps-see"><summary class="ow-ps-see-s">See the picture as they will</summary>${briefStripHTML(b)}</details>
+  </div>`;
+}
+
 /* ---- the brief, on a customer's own account --------------------------
    Every customer has one, whether or not the queue has anything to say
    about them this fortnight. The queue decides who is worth telling; the
@@ -66933,6 +68133,16 @@ function customerBriefPanelHTML(customerId, opts){
     </div>`;
   }
   const held = b.held;
+  /* ON THE ACCOUNT, THE LIST IS A SHEET: a place to read, so every line
+     they buy is a row and the reasoning is on the formula bar. The
+     folded form below is Follow-ups', where the filmstrip is approved
+     before a send; the sheet keeps that same filmstrip one tap away, so
+     the two screens still show one picture. */
+  if(!opts) return `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">Their price list</span>
+      <span class="ow-pan-n">${briefRowCount(b)} lines from their own dealings</span></div>
+    ${briefSheetHTML(b)}
+  </div>`;
   return `<div class="ow-pan">
     <div class="ow-pan-h"><span class="ow-pan-t">Their price list</span>
       <span class="ow-pan-n">${briefRowCount(b)} lines from their own dealings${b.told ? ` &middot; told ${b.told.daysAgo} days ago` : ' &middot; never told'}</span></div>
@@ -67220,6 +68430,25 @@ async function saveBriefGif(customerId){
   const acct = document.getElementById('custAccountWrap');
   if(!acct) return;
   acct.addEventListener('click', (e)=>{
+    /* The sheet's filter: a class on its root, so nothing re-renders
+       and a row picked on the formula bar stays picked. */
+    const fb = e.target.closest('[data-psf]');
+    if(fb){
+      const sheet = fb.closest('.ow-ps');
+      if(!sheet) return;
+      sheet.dataset.f = fb.dataset.psf;
+      sheet.querySelectorAll('[data-psf]').forEach(x=> x.setAttribute('aria-pressed', String(x === fb)));
+      return;
+    }
+    const row = e.target.closest('.ow-ps-r');
+    if(row){
+      const sheet = row.closest('.ow-ps');
+      sheet.querySelectorAll('.ow-ps-r.ow-ps-on').forEach(x=> x.classList.remove('ow-ps-on'));
+      row.classList.add('ow-ps-on');
+      sheet.querySelector('.ow-ps-fxt').textContent = row.dataset.fx || '';
+      sheet.querySelector('.ow-ps-ref').textContent = row.dataset.ref || '';
+      return;
+    }
     const b = e.target.closest('[data-tell]');
     if(!b) return;
     if(b.dataset.tell === 'share') return shareBrief(b.dataset.cid);
