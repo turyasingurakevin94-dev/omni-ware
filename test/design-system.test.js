@@ -1172,8 +1172,10 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'cc-last-activity', 'pc-icon-btn', 'btn-icon', 'empty', 'field'],
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-f', 'ow-f-l', 'ow-f-in',
              'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-seg', 'ow-seg-b', 'ow-seg-n', 'ow-tb'],
-      renders: ['renderCustomers', 'customerRegisterRowHTML', 'customerAttentionHTML',
-                'customerAccountHTML', 'customerFiguresHTML', 'renderCustomerAccount',
+      /* customerAttentionHTML left this list with the band it drew: the
+         owner had it removed as a repeat of the map and the register. */
+      renders: ['renderCustomers', 'customerRegisterRowHTML',
+                'customerAccountHTML', 'customerAccountActionsHTML', 'customerFiguresHTML', 'renderCustomerAccount',
                 'customerAccountRailHTML', 'customerStatsHTML'],
       rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-tbl', 'ow-tbl-h',
                     'ow-tbl-r', 'ow-tbl-c', 'ow-tbl-p', 'ow-tbl-s', 'ow-tbl-n', 'ow-tbl-a',
