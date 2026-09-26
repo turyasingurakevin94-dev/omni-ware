@@ -334,10 +334,14 @@ const nums = (html) => (html.match(/[\d,]{4,}/g) || []).map((x) => Number(x.repl
      one to), so the class is gone while the guarantee is not: a receipt
      for the whole sale, with no payment argument, is reachable from the
      row. That is what .inv-doc-receipt names and what the row binds. */
-  t.check(/class="btn btn-ghost ow-sm inv-ib \$\{cls\}"/.test(src),
-    'the row\'s icon acts are the existing button family, sized — not a new one');
-  t.check(/'inv-doc-receipt'/.test(src) && /printReceipt\(q, null, null\)/.test(src),
-    'and the whole sale can be printed from the Invoices row');
+  /* AND NOW FROM THE OPENED INVOICE. The owner's redesign strips the
+     row to its one pencil; a whole-sale receipt is one press inside the
+     invoice that pencil opens, in its menu beside Print A5 -- still
+     printReceipt with no payment argument, still no second icon family. */
+  t.check(/class="inv-kb inv-doc-open"/.test(src) && /class="inv-kb" aria-label="More for this invoice"/.test(src),
+    'the row\'s act and the opened invoice\'s menu wear the one icon button, not a new family');
+  t.check(/data-ed-act="receipt">Print receipt</.test(src) && /act === 'receipt'\) return closeThen\(\(\)=>printReceipt\(q, null, null\)\)/.test(src),
+    'and the whole sale can be printed from the opened invoice');
 }
 
 process.exit(t.done() ? 1 : 0);

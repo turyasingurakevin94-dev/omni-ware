@@ -230,7 +230,10 @@ const BLOCK = probe.__blockSize();
    * one at a time at the moment of creation instead.
    */
   {
-    t.check(DENSE_KINDS.slice().sort().join(',') === 'purchaseInvoice,savedQuote',
+    /* CN- and SC- joined them: a credit note and a supplier credit are
+       numbered documents handed over on paper, so a skipped number there
+       is the same fault a skipped INV- is. */
+    t.check(DENSE_KINDS.slice().sort().join(',') === 'creditNote,purchaseInvoice,savedQuote,supplierCredit',
       `the document-numbered collections are exactly the dense ones (${DENSE_KINDS.join(', ')})`);
     t.check(BLOCK_KINDS.length + DENSE_KINDS.length === KINDS.length,
       'every kind is either block-allocated or dense, never neither or both');
