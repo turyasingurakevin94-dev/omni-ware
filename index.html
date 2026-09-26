@@ -8261,7 +8261,8 @@
 
   /* one row per line: its number, what it is, and the reading that says whether it is ready */
   .q-rl-pips{display:inline-flex;gap:3px;margin-left:auto;}
-  .q-rl-pip{width:14px;height:6px;border-radius:3px;background:var(--ow-steel-100);display:block;}
+  #q_rail .ow-pan-t{white-space:nowrap;}
+  .q-rl-pip{width:8px;height:6px;border-radius:3px;background:var(--ow-steel-100);display:block;}
   .q-rl-pip-ok{background:var(--ow-verdigris);}
   .q-rl-pip-warn{background:var(--ow-amber);}
   .q-rl-pips + .ow-pan-n{margin-left:var(--ow-sp-6);}
@@ -8300,7 +8301,7 @@
   .q-rl-swap-b{border:1px solid var(--ow-verdigris-soft);background:var(--ow-verdigris-soft);}
   .q-rl-swap-b b{font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
   .q-rl-swap-b .ow-fig{color:var(--ow-verdigris);}
-  .q-rl-go{width:100%;justify-content:center;height:auto;min-height:32px;padding-top:6px;padding-bottom:6px;
+  .q-rl-go{box-sizing:border-box;width:100%;justify-content:center;height:auto;min-height:32px;padding-top:6px;padding-bottom:6px;
     line-height:1.3;text-align:center;white-space:normal;}
   .q-rl-with{display:flex;flex-direction:column;gap:var(--ow-sp-8);padding:var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);}
   .ow-pan-h + .q-rl-with{border-top:0;}
@@ -8310,17 +8311,47 @@
   .q-rl-blk.q-rl-ink{background:var(--ow-ink-600);}
   .q-rl-blk.q-rl-warn{background:var(--ow-amber);}
   .q-rl-blk.q-rl-bad{background:var(--ow-crimson);}
+  .q-rl-add{width:auto;flex:none;min-height:28px;padding:4px 10px;font-size:var(--ow-t-12);}
+  .q-rl-meta{display:flex;align-items:center;gap:var(--ow-sp-10);min-width:0;}
+  .q-rl-ev{display:inline-flex;align-items:center;gap:var(--ow-sp-6);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .q-rl-ev .q-rl-bar{width:40px;height:4px;}
+  .q-rl-with .q-rl-row > b{flex:1;}
+  .q-rl-line-s{row-gap:0;padding-top:var(--ow-sp-8);padding-bottom:var(--ow-sp-8);align-items:center;}
+  .q-rl-more{border-top:1px solid var(--ow-rule-soft);}
+  .q-rl-more > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:var(--ow-sp-8);
+    padding:var(--ow-sp-10) var(--ow-sp-12);font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
+  .q-rl-more > summary::-webkit-details-marker{display:none;}
+  .q-rl-more > summary:hover{background:var(--ow-paper-2);}
+  .q-rl-more > summary:focus-visible{outline:2px solid var(--ow-oxide);outline-offset:-2px;}
+  .q-rl-more > summary .q-rl-ic{color:var(--ow-verdigris);}
+  .q-rl-more > summary > span:first-of-type{flex:1;min-width:0;}
+  .q-rl-more-n{font-size:var(--ow-t-11);color:var(--ow-oxide-deep);}
+  .q-rl-more[open] .q-rl-more-n{visibility:hidden;}
+  .q-rl-more > .q-rl-line,.q-rl-more > .q-rl-with{border-top:1px solid var(--ow-rule-soft);}
+  /* The rail keeps to the window on the console: it pins below the top
+     bar and scrolls on its own, so however many lines the quote has, the
+     rail never makes the page longer than the document it sits beside. */
+  @media (min-width:821px){
+    #q_rail{position:sticky;top:calc(var(--topbar-h) + var(--ow-sp-12));
+      /* 64px is the quote's own fixed bar (.q-stickybar) along the foot of
+         the window: the rail ends above it rather than under it. */
+      max-height:var(--q-rail-max, calc(100vh - var(--topbar-h) - var(--ow-sp-24) - 64px));overflow-y:auto;
+      overscroll-behavior:contain;scrollbar-width:thin;gap:var(--ow-sp-12);}
+    #q_rail > *{flex:none;}
+  }
   /* An empty reading takes a line, not a panel. */
   .ow-pan.q-rl-slim{display:flex;align-items:center;gap:var(--ow-sp-10);padding:var(--ow-sp-10) var(--ow-sp-12);
     border-style:dashed;}
   .q-rl-slim > .q-rl-ic{width:18px;height:18px;color:var(--ow-ink-600);}
   .q-rl-slim .q-rl-lt b{font-size:var(--ow-t-12);}
-  .q-rl-door{flex:none;font-size:var(--ow-t-12);}
+  .q-rl-slim .q-rl-door{flex:none;font-size:var(--ow-t-12);}
   @media (max-width:820px){
     .q-rl-tile{min-height:var(--ow-tap);padding:var(--ow-sp-12);}
     .q-rl-go{min-height:var(--ow-tap);}
     .q-rl-door{min-height:var(--ow-tap);display:inline-flex;align-items:center;}
     .q-rl-line,.q-rl-sec,.q-rl-with,.q-rl-ask{padding:var(--ow-sp-16);}
+    .q-rl-more > summary{min-height:var(--ow-tap);box-sizing:border-box;padding:0 var(--ow-sp-16);}
+    .q-rl-add{padding-left:var(--ow-sp-16);padding-right:var(--ow-sp-16);}
   }
 
   .qty-input{width:64px;padding:6px 7px;border:1px solid var(--line);border-radius:6px;font-size:13px;font-family:'IBM Plex Mono',monospace;}
@@ -43350,6 +43381,30 @@ function quoteRailBlocks(filled, total, cls){
   const pct = total ? Math.round(100 * filled / total) : 0;
   return `<span class="q-rl-bar"><span class="q-rl-fill ${cls}" style="width:${pct}%"></span></span>`;
 }
+/* The rail's window. Pinned, it runs from under the top bar to above the
+   quote's fixed bar; before the page has scrolled it starts lower, and a
+   fixed max-height would let its foot slide under that bar. So its height
+   is the room actually left below where it starts, read on scroll and
+   resize. The console only: on the phone the rail sits under the work. */
+function quoteRailFit(){
+  const rail = document.getElementById('q_rail');
+  if(!rail) return;
+  if(window.innerWidth <= 820 || !rail.offsetParent){ rail.style.removeProperty('--q-rail-max'); return; }
+  const bar = document.getElementById('q_stickybar');
+  /* The bar is position:fixed, whose offsetParent is always null -- so
+     whether it shows is asked of its style, not its offsetParent. */
+  const foot = bar && getComputedStyle(bar).display !== 'none' ? bar.getBoundingClientRect().top : window.innerHeight;
+  const top = Math.max(rail.getBoundingClientRect().top, 0);
+  rail.style.setProperty('--q-rail-max', Math.max(240, Math.floor(foot - top - 12)) + 'px');
+}
+let quoteRailFitQueued = false;
+function queueQuoteRailFit(){
+  if(quoteRailFitQueued) return;
+  quoteRailFitQueued = true;
+  requestAnimationFrame(()=>{ quoteRailFitQueued = false; quoteRailFit(); });
+}
+window.addEventListener('scroll', queueQuoteRailFit, { passive: true });
+window.addEventListener('resize', queueQuoteRailFit);
 function renderQuoteRail(){
   const healthEl = document.getElementById('q_rail_health');
   const clientEl = document.getElementById('q_rail_client');
@@ -43454,10 +43509,15 @@ function renderQuoteRail(){
   const cheapers = rows.filter(r=> r.cheaper);
   {
     const ready = rows.filter(r=> r.state==='ok').length;
-    const head = `<div class="ow-pan-h"><span class="ow-pan-t">Lines check</span>${rows.length ? `<span class="q-rl-pips" aria-hidden="true">${rows.slice(0, 12).map(r=> `<i class="q-rl-pip q-rl-pip-${r.state}"></i>`).join('')}</span><span class="ow-pan-n">${ready} of ${rows.length} ready</span>` : ''}</div>`;
+    const head = `<div class="ow-pan-h"><span class="ow-pan-t">Lines check</span>${rows.length ? `<span class="q-rl-pips" aria-hidden="true">${rows.slice(0, 10).map(r=> `<i class="q-rl-pip q-rl-pip-${r.state}"></i>`).join('')}</span><span class="ow-pan-n">${ready} of ${rows.length} ready</span>` : ''}</div>`;
     let body = '';
     if(!items.length) body = `<p class="ow-mini">Add a line and its shelf count and supplier price are checked here.</p>`;
-    else body = rows.map(r=>{
+    else {
+    /* THE RAIL IS NOT LONGER THAN THE QUOTE. A line that is ready says
+       so in one row; only a line with something to do opens up. Past a
+       handful, or beside lines that do need something, the ready ones
+       fold behind one summary -- counted, never dropped. */
+    const draw = (r)=>{
       const it = r.it;
       const unit = it.unit || 'unit';
       const src = !it.productId ? 'Typed in — not in the catalogue'
@@ -43509,7 +43569,26 @@ function renderQuoteRail(){
         <span class="q-rl-q ow-fig">×${esc(n(r.qty))}</span>
         <div class="q-rl-read">${read}</div>
       </div>`;
-    }).join('');
+    };
+    const brief = (r)=>{
+      const it = r.it;
+      const say = !it.productId ? 'Typed in — not in the catalogue'
+        : r.fromShelf ? `${n(r.shelf - r.qty)} left on the shelf after`
+        : !r.ranked.length ? 'No supplier price on file'
+        : `${r.ranked.length > 1 ? 'Cheapest of ' + r.ranked.length : 'Only supplier on file'} · ${n(r.paying)}/${it.unit || 'unit'}`;
+      return `<div class="q-rl-line q-rl-line-s">
+        <span class="q-rl-no q-rl-no-${r.state}">${r.idx+1}</span>
+        <span class="q-rl-lt"><b title="${esc(it.productName)}">${esc(it.productName)}</b><span class="${r.state === 'ok' ? 'q-rl-t-ok' : ''}">${esc(say)}</span></span>
+        <span class="q-rl-q ow-fig">×${esc(n(r.qty))}</span>
+      </div>`;
+    };
+    const act = rows.filter(r=> r.state === 'warn');
+    const calm = rows.filter(r=> r.state !== 'warn');
+    const fold = calm.length && (act.length || calm.length > 4);
+    body = act.map(draw).join('') + (fold
+      ? `<details class="q-rl-more"><summary>${ICON.ok}<span>${calm.length} line${calm.length===1?'':'s'} with nothing to do</span><span class="q-rl-more-n">Show</span></summary>${calm.map(brief).join('')}</details>`
+      : calm.map(brief).join(''));
+    }
     linesEl.innerHTML = head + body;
     /* The switch is the row picker's own move -- setLineSupplier, then
        the line re-priced at that supplier's figure for this quantity,
@@ -43581,7 +43660,12 @@ function renderQuoteRail(){
     } else {
       withEl.className = 'ow-pan';
       const head = `<div class="ow-pan-h"><span class="ow-pan-t">Goes with it</span><span class="ow-pan-n">${found.length}</span></div>`;
-      withEl.innerHTML = head + found.slice(0, 4).map(f=>{
+      /* What the shop cannot sell without comes first, then what is most
+         often taken with it; a pairing no order has ever borne out last. */
+      const weight = (f)=> f.c.verbId === 'needs' ? 2
+        : f.c.evidence && f.c.evidence.withFrom ? f.c.evidence.andTo / f.c.evidence.withFrom : 0;
+      found.sort((a, b)=> weight(b) - weight(a));
+      const card = (f)=>{
         const c = f.c;
         const say = c.verbId === 'needs' ? 'Needed by' : c.verbId === 'part' ? 'Same job as' : 'With';
         const tag = `<span class="ow-cp${c.verbId === 'needs' ? ' ow-warn' : ''}">${say} line ${f.idx+1}</span>`;
@@ -43596,11 +43680,15 @@ function renderQuoteRail(){
         }
         if(c.why) return `<div class="q-rl-with"><span class="q-rl-row"><b>${esc(c.label)}</b>${tag}</span><span class="q-rl-note">No price on file for it yet.</span></div>`;
         const ev = c.evidence && c.evidence.withFrom
-          ? `${quoteRailBlocks(c.evidence.andTo, c.evidence.withFrom, 'q-rl-ink')}<span class="q-rl-row"><span class="q-rl-note">On <span class="ow-fig">${c.evidence.andTo}</span> of <span class="ow-fig">${c.evidence.withFrom}</span> orders that carried it</span></span>` : '';
-        return `<div class="q-rl-with"><span class="q-rl-row"><b>${esc(c.label)}</b>${tag}</span>${ev}
-          <span class="q-rl-row"><span class="q-rl-v ow-fig">${c.qty ? esc(n(c.qty))+' '+esc(c.unit || '') : 'no figure written'}</span><span class="q-rl-v ow-fig">${esc(n(c.price))}/${esc(c.unit || 'unit')}</span></span>
-          <button type="button" class="btn btn-ghost ow-sm q-rl-go" data-with="${esc(c.productId)}" data-wv="${c.variantIdx == null ? '' : c.variantIdx}" data-wq="${c.qty || 1}" data-wp="${c.price}">Add ${c.qty ? n(c.qty) + ' ' + esc(c.unit || '') : ''} to the quote</button></div>`;
-      }).join('') + (found.length > 4 ? `<p class="ow-mini">${found.length - 4} more written down for these lines.</p>` : '');
+          ? `<span class="q-rl-ev" title="On ${c.evidence.andTo} of ${c.evidence.withFrom} orders that carried it"><span class="q-rl-bar"><span class="q-rl-fill q-rl-ink" style="width:${Math.round(100 * c.evidence.andTo / c.evidence.withFrom)}%"></span></span><span class="ow-fig">${c.evidence.andTo}/${c.evidence.withFrom}</span></span>` : '';
+        const addWhat = c.qty ? n(c.qty) + ' ' + (c.unit || '') : '';
+        return `<div class="q-rl-with"><span class="q-rl-row"><b title="${esc(c.label)}">${esc(c.label)}</b>${tag}</span>
+          <span class="q-rl-row"><span class="q-rl-meta">${ev} <span class="q-rl-v ow-fig">${esc(n(c.price))}/${esc(c.unit || 'unit')}</span></span><button type="button" class="btn btn-ghost ow-sm q-rl-go q-rl-add" aria-label="Add ${esc(addWhat)} ${esc(c.label)} to the quote" data-with="${esc(c.productId)}" data-wv="${c.variantIdx == null ? '' : c.variantIdx}" data-wq="${c.qty || 1}" data-wp="${c.price}">+ Add${addWhat ? ' ' + esc(addWhat) : ''}</button></span></div>`;
+      };
+      const shown = found.slice(0, 3);
+      const rest = found.slice(3);
+      withEl.innerHTML = head + shown.map(card).join('') + (rest.length
+        ? `<details class="q-rl-more"><summary>${ICON.link}<span>${rest.length} more written down for these lines</span><span class="q-rl-more-n">Show</span></summary>${rest.map(card).join('')}</details>` : '');
     }
     /* The add is the item picker's own move, done from here: our own
        shelf where it can serve the quantity, otherwise the cheapest
@@ -43658,6 +43746,7 @@ function renderQuoteRail(){
       }));
     }
   }
+  queueQuoteRailFit();
 }
 
 /* THE NUMBER THE REP SAYS OUT LOUD.
