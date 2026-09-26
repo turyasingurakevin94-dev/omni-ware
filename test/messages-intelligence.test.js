@@ -211,9 +211,13 @@ const S = scope;
     extractDeclaration(src, 'MSG_TPL_DEFAULTS', 'index.html'),
     extractDeclaration(src, 'MSG_COMPANY_WORDS', 'index.html'),
     extractDeclaration(src, 'MSG_TOKENS', 'index.html'),
+    extractDeclaration(src, 'MSG_POST_TOKENS', 'index.html'),
+    extractDeclaration(src, 'WA_LIFT_DAYS', 'index.html'),
+    extractDeclaration(src, 'msgPostPick', 'index.html'),
     'const fupTplPick = {};',
     ...['msgTplAll', 'msgTplById', 'msgRowKind', 'msgTplTokens', 'msgTplFill', 'msgTplTypedFigures',
-      'msgLogTplUse', 'msgUnlogTplUse', 'msgTplOutcomes', 'msgCadenceStep', 'msgCadence', 'msgTplFor', 'msgDraftFor', 'chaseRate']
+      'msgLogTplUse', 'msgUnlogTplUse', 'msgTplOutcomes', 'msgCadenceStep', 'msgCadence', 'msgTplFor', 'msgDraftFor', 'chaseRate',
+      'msgTokensFor', 'msgPostReasons', 'msgPostTplFor']
       .map((n) => extractFunction(src, n, 'index.html')),
   ], {
     data,
@@ -222,7 +226,9 @@ const S = scope;
     shopIdentity: () => ({ name: 'Omni-Ware' }),
     customerOrdersFor: (cid) => (data.savedQuotes || []).filter((q) => String(q.customerId) === String(cid)),
     followUpHubDigest: () => 'AS WRITTEN',
-  }, ['msgTplAll', 'msgTplById', 'msgRowKind', 'msgTplFill', 'msgTplTypedFigures', 'msgLogTplUse',
+    printedShopName: () => 'Omni-Ware',
+    waUnitsByKeyDate: () => new Map([['7:', new Map([[day(-15), 2]])]]),
+  }, ['msgPostReasons', 'msgPostTplFor', 'msgTplAll', 'msgTplById', 'msgRowKind', 'msgTplFill', 'msgTplTypedFigures', 'msgLogTplUse',
     'msgUnlogTplUse', 'msgTplOutcomes', 'msgCadenceStep', 'msgTplFor', 'msgDraftFor']);
 
   const debtor = { customerId: 'C4', name: 'Ssekitoleko Hardware', items: [],
@@ -287,6 +293,37 @@ const S = scope;
   t.check((view.match(/btn-accent/g) || []).length === 1, 'saving is the one act on the Templates view, so it is its one accent');
   t.check(/presetMsgTemplates: Array\.isArray\(presets\.msgTemplates\)/.test(src) && /msgTemplates:d\.presetMsgTemplates\|\|\[\]/.test(src)
     && /msgUseLog:d\.presetMsgUseLog\|\|\[\]/.test(src), 'templates and their log load and save with the shop settings');
+
+  /* posts: the order line told apart, and judged by what sold */
+  data.presetWaPhone = '0772 000000';
+  const shelf = { key: '7:', name: 'Soft close hinge', price: 11500, unit: 'box', qty: 6, reasons: [] };
+  const order = Object.assign({}, shelf, { qty: 0, toOrder: true, leadDays: 3 });
+  const stockTpl = T.msgTplById('post-stock'), orderTpl = T.msgTplById('post-order'), waitTpl = T.msgTplById('post-wait');
+  t.check(/^6 on the shelf today — UGX 11,500 per box\.$/m.test(T.msgTplFill(stockTpl, shelf).text), 'a post template is filled from the shelf, the unit said once');
+  eq(T.msgTplFill(stockTpl, order).missing, ['on shelf'],
+    'and a line with nothing on the shelf cannot be posted as stock — the words would promise what is not there');
+  t.check(/about 3 days/.test(T.msgTplFill(waitTpl, order).text || ''), 'an order line can name the wait, from the supplier’s own record');
+  eq(T.msgTplFill(waitTpl, Object.assign({}, order, { leadDays: null })).missing, ['lead time'],
+    'and with no delivery record, no day is promised');
+  eq(T.msgPostTplFor(order).id, 'post-order', 'so an order line opens on order words, not shelf words');
+  eq(T.msgPostTplFor(shelf).id, 'post-auto', 'and a stocked line on the words the app has always written');
+  eq(T.msgPostReasons({ reasons: [{ kind: 'fresh' }, { kind: 'nophoto' }] }).map((r) => r.kind), ['fresh'],
+    'a missing photo is a blocker, not a reason to post');
+  data.presetMsgUseLog = [{ c: 'post:7:', t: 'post-order', k: 'post', d: day(-20) },
+    { c: 'post:9:', t: 'post-order', k: 'post', d: day(-20) }, { c: 'post:7:', t: 'post-order', k: 'post', d: day(-2) }];
+  const po = T.msgTplOutcomes(NOW)['post-order'];
+  eq([po.n, po.k, po.pending], [2, 1, 1],
+    'a post counts if its product sold inside the week after; one whose week is still open is pending');
+
+  const reg = extractFunction(src, 'renderFollowUpsAll', 'index.html');
+  t.check(!/btn-accent/.test(reg), 'the register carries no accent — nothing on it is an act');
+  t.check(/fup-reg-tell/.test(reg) && /msgRegTrackHTML/.test(reg), 'and groups by the thing asked for, each ask drawn as a line through time');
+  const wireAll = extractFunction(src, 'wireFollowUpsScreen', 'index.html');
+  const door = wireAll.slice(wireAll.indexOf("closest('.fup-reg-tell')"), wireAll.indexOf("closest('.fup-reg-tell')") + 300);
+  t.check(/fupTab = 'contact'/.test(door) && !/openWa|wa\.me|recordBriefSent|followUpContact/.test(door),
+    '“Tell all” is a door to the queue with those names in it — never a send of its own');
+  const score = extractFunction(src, 'msgToldOutcomes', 'index.html');
+  t.check(/fu\.wait\+\+/.test(score), 'the funnel keeps a telling inside its fortnight apart from a miss');
 }
 
 process.exit(t.done() ? 1 : 0);
