@@ -3050,6 +3050,26 @@
     #printArea .cst-table tr.cst-opening td{font-style:italic;color:#333;}
     #printArea .cst-none{color:#444;font-style:italic;padding:10px 0;}
     #printArea .cst-flag{border:1px solid #000;padding:9px 11px;margin-top:12px;font-size:11px;line-height:1.5;}
+    /* The sheet's head: who it is from on the left, what it is on the
+       right; then who it is to beside the one figure that matters. */
+    #printArea .cst-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;}
+    #printArea .cst-what{text-align:right;}
+    #printArea .cst-lbl{font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#444;}
+    #printArea .cst-top{display:flex;gap:14px;margin-bottom:12px;}
+    #printArea .cst-to{flex:1;border:1px solid #999;padding:9px 11px;}
+    #printArea .cst-name{font-size:14px;font-weight:700;margin:2px 0;}
+    #printArea .cst-due{width:38%;border:2px solid #000;padding:9px 11px;}
+    #printArea .cst-due-v{font-size:20px;font-weight:700;margin:2px 0;}
+    #printArea .cst-sum,#printArea .cst-age-row{display:flex;border:1px solid #999;margin-bottom:12px;}
+    #printArea .cst-sum > div,#printArea .cst-age-c{flex:1;padding:7px 9px;border-left:1px solid #999;}
+    #printArea .cst-sum > div:first-child,#printArea .cst-age-c:first-child{border-left:none;}
+    #printArea .cst-sum b,#printArea .cst-age-c b{display:block;font-size:13px;margin-top:2px;}
+    #printArea .cst-age-c span{font-size:10px;color:#444;}
+    #printArea .cst-age .cst-lbl{margin-bottom:4px;}
+    #printArea .cst-foot{display:flex;gap:14px;}
+    #printArea .cst-foot > div{flex:1;}
+    /* Money on the sheet is the figure face, so columns line up down the page. */
+    #printArea .cst-print .num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
     #printArea .st-print .st-hint,
     #printArea .st-print .st-doc-when,
     #printArea .st-print .st-print-meta{color:#444 !important;}
@@ -64559,16 +64579,52 @@ function printStatementSheet(st, side){
   clearInjectedPrintStyles();
 
   const money = (n)=> fmtUGX(Math.round(n));
+  const fig = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const shop = shopIdentity();
+  /* THE SHEET READS TOP DOWN IN THE ORDER IT IS ASKED ABOUT: who it is
+     from and to, what is due -- in the biggest figure on the page --
+     how that figure is made (brought forward, charged, paid, closing),
+     how old it is, and only then every line behind it. Black on white
+     throughout: a filled panel or a coloured bar does not survive a
+     black-and-white printer, so weight and rules carry the emphasis. */
+  const due = st.closing;
+  const aging = side.aging ? `<div class="cst-age">
+        <div class="cst-lbl">How old the balance is</div>
+        <div class="cst-age-row">${side.aging.map(b=> `<div class="cst-age-c"><span>${esc(b.label)}</span><b class="num">${fig(b.value)}</b></div>`).join('')}</div>
+      </div>` : '';
   document.getElementById('printArea').innerHTML = `
     <div class="st-print cst-print">
-      <header class="st-print-head">
-        <div class="st-print-shop">${esc(printedShopName())}</div>
-        <div class="st-print-title">Statement of account</div>
-        <div class="st-print-meta">
-          ${esc(who.name)}${who.location ? ` · ${esc(who.location)}` : ''}${who.phone ? ` · ${esc(who.phone)}` : ''}<br>
-          ${esc(st.from)} to ${esc(st.to)} · printed ${esc(todayISO())}
+      <header class="st-print-head cst-head">
+        <div class="cst-from">
+          <div class="st-print-shop">${esc(shop.name)}</div>
+          <div class="st-print-meta">${[shop.address, shop.phone, shop.tin ? 'TIN ' + shop.tin : ''].filter(Boolean).map(esc).join(' · ')}</div>
+        </div>
+        <div class="cst-what">
+          <div class="st-print-title">Statement of account</div>
+          <div class="st-print-meta">${esc(fmtShortDate(st.from))} to ${esc(fmtShortDate(st.to))} · UGX · printed ${esc(fmtShortDate(todayISO()))}</div>
         </div>
       </header>
+
+      <div class="cst-top">
+        <div class="cst-to">
+          <div class="cst-lbl">To</div>
+          <div class="cst-name">${esc(who.name)}</div>
+          <div class="st-print-meta">${[who.location, who.phone, side.account ? 'Account ' + side.account : ''].filter(Boolean).map(esc).join(' · ')}</div>
+        </div>
+        <div class="cst-due">
+          <div class="cst-lbl">${due < 0 ? 'In credit' : 'Balance due'}</div>
+          <div class="cst-due-v num">${fig(Math.abs(due))}</div>
+          <div class="st-print-meta">${side.openLine ? esc(side.openLine) + ' · ' : ''}as at ${esc(fmtShortDate(st.to))}</div>
+        </div>
+      </div>
+
+      <div class="cst-sum">
+        <div><span class="cst-lbl">Brought forward</span><b class="num">${fig(st.opening)}</b></div>
+        <div><span class="cst-lbl">Charged</span><b class="num">${fig(st.charged)}</b></div>
+        <div><span class="cst-lbl">Paid</span><b class="num">${fig(st.paid)}</b></div>
+        <div><span class="cst-lbl">Closing</span><b class="num">${fig(st.closing)}</b></div>
+      </div>
+      ${aging}
 
       <table class="st-table cst-table">
         <thead><tr>
@@ -64577,15 +64633,15 @@ function printStatementSheet(st, side){
         </tr></thead>
         <tbody>
           <tr class="cst-opening">
-            <td>${esc(st.from)}</td><td>Balance brought forward</td>
-            <td class="r"></td><td class="r"></td><td class="r num">${money(st.opening)}</td>
+            <td>${esc(fmtShortDate(st.from))}</td><td>Balance brought forward</td>
+            <td class="r"></td><td class="r"></td><td class="r num">${fig(st.opening)}</td>
           </tr>
           ${st.rows.map(r=>`<tr>
-            <td>${esc(r.date)}</td>
+            <td>${esc(fmtShortDate(r.date))}</td>
             <td>${esc(statementRowDetail(r, side.payWord))}</td>
-            <td class="r num">${r.charge ? money(r.charge) : ''}</td>
-            <td class="r num">${r.payment ? money(r.payment) : ''}</td>
-            <td class="r num">${money(r.balance)}</td>
+            <td class="r num">${r.charge ? fig(r.charge) : ''}</td>
+            <td class="r num">${r.payment ? fig(r.payment) : ''}</td>
+            <td class="r num">${fig(r.balance)}</td>
           </tr>`).join('')}
           ${st.rows.length ? '' : `<tr><td colspan="5" class="cst-none">
             Nothing was charged or paid in this period.</td></tr>`}
@@ -64593,9 +64649,9 @@ function printStatementSheet(st, side){
         <tfoot>
           <tr class="st-grand">
             <td colspan="2">Balance now due</td>
-            <td class="r num">${money(st.charged)}</td>
-            <td class="r num">${money(st.paid)}</td>
-            <td class="r num">${money(st.closing)}</td>
+            <td class="r num">${fig(st.charged)}</td>
+            <td class="r num">${fig(st.paid)}</td>
+            <td class="r num">${fig(st.closing)}</td>
           </tr>
         </tfoot>
       </table>
@@ -64604,16 +64660,18 @@ function printStatementSheet(st, side){
         ? side.owesLine(money(st.closing))
         : st.closing < 0
           ? side.creditLine(money(-st.closing))
-          : `The account is settled as at ${esc(st.to)}.`}</p>
+          : `The account is settled as at ${esc(fmtShortDate(st.to))}.`}</p>
 
       ${st.agrees ? '' : `<p class="cst-flag">The entries above come to ${money(st.closing)},
         while ${esc(side.recordedAs)} ${money(st.recorded)}.
         The two disagree by ${money(Math.abs(st.closing - st.recorded))} — settle that before
         ${esc(side.beforeWhat)}.</p>`}
 
-      <footer class="st-print-foot">
-        Charges and payments as recorded by ${esc(printedShopName())}. Anything before
-        ${esc(st.from)} is included in the balance brought forward. ${esc(side.foot)}
+      <footer class="st-print-foot cst-foot">
+        <div>${side.account ? `Quote account <b>${esc(side.account)}</b> with your payment. ` : ''}${esc(side.foot)}${
+          shop.phone ? ` Anything that disagrees with your records &mdash; call ${esc(shop.phone)} and we will go through it line by line.` : ''}</div>
+        <div>Charges and payments as recorded by ${esc(printedShopName())}. Anything before
+        ${esc(fmtShortDate(st.from))} is included in the balance brought forward.${shop.footer ? ' ' + esc(shop.footer) : ''}</div>
       </footer>
     </div>`;
 
@@ -64629,14 +64687,30 @@ function printCustomerStatement(customerId){
   const st = customerStatementRows(customerId, from, to);
   const c = st.customer;
   if(!c){ toast('That customer is no longer on file'); return; }
+  /* How old what is due is, on the same open charges Debtors ages its
+     bands on and the account screen draws -- so the paper, the screen
+     and the chase agree about which money is late. */
+  const buckets = [['0–30 days', 0, 30], ['31–60', 31, 60], ['61–90', 61, 90], ['Over 90', 91, Infinity]]
+    .map(([label, lo, hi])=> ({ label, lo, hi, value: 0 }));
+  customerOpenCharges(c).forEach(ch=>{
+    const rem = Number(ch.remaining) || 0;
+    if(rem <= 0.5 || !ch.date) return;
+    const age = daysSinceDate(ch.date);
+    const b = buckets.find(x=> age >= x.lo && age <= x.hi);
+    if(b) b.value += rem;
+  });
+  const open = customerOutstandingInvoices(c.id).length;
   printStatementSheet(st, {
-    who: c,
+    who: { name: c.name, location: c.location, phone: (contactPhones(c)[0] || '') },
+    account: c.id,
+    openLine: open ? `${open} open ${open === 1 ? 'invoice' : 'invoices'}` : '',
+    aging: st.closing > 0.5 ? buckets : null,
     payWord: 'Payment received',
-    owesLine: (m)=> `<b>${esc(c.name)}</b> owes <b>${m}</b> as at ${esc(to)}.`,
-    creditLine: (m)=> `The account is <b>${m}</b> in credit as at ${esc(to)}.`,
+    owesLine: (m)=> `<b>${esc(c.name)}</b> owes <b>${m}</b> as at ${esc(fmtShortDate(to))}.`,
+    creditLine: (m)=> `The account is <b>${m}</b> in credit as at ${esc(fmtShortDate(to))}.`,
     recordedAs: 'the balance recorded against this customer is',
     beforeWhat: 'sending this out',
-    foot: 'Please quote this statement when paying.',
+    foot: 'Payments settle the oldest invoice first.',
   });
 }
 
@@ -64652,8 +64726,8 @@ function printSupplierStatement(supplierId){
   printStatementSheet(st, {
     who: { name: s.name, location: s.location, phone: (contactPhones(s)[0] || '') },
     payWord: 'Payment made',
-    owesLine: (m)=> `${esc(printedShopName())} owes <b>${esc(s.name)}</b> <b>${m}</b> as at ${esc(to)}.`,
-    creditLine: (m)=> `The account is <b>${m}</b> overpaid as at ${esc(to)}.`,
+    owesLine: (m)=> `${esc(printedShopName())} owes <b>${esc(s.name)}</b> <b>${m}</b> as at ${esc(fmtShortDate(to))}.`,
+    creditLine: (m)=> `The account is <b>${m}</b> overpaid as at ${esc(fmtShortDate(to))}.`,
     recordedAs: 'the balance carried on their open invoices is',
     beforeWhat: 'paying against it',
     foot: 'Raised from the purchase invoices on file for this supplier.',

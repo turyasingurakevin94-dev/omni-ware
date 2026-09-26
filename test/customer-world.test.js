@@ -209,4 +209,21 @@ const row = (id, o) => Object.assign({ id, name: id, c: { id, phone: '0772 000 0
   t.check((html.match(/<circle class="cu-tl-o/g) || []).length === rows.length, 'and every order is still drawn, labelled or not');
 }
 
+/* ---------- the printed statement: the sheet that leaves the shop -----
+   Built from the design board: who from and to, the balance due as the
+   biggest figure on the page, the sum that makes it, how old it is, and
+   then every line. Black ink only, and the ageing is the same reading
+   Debtors and the account screen use. */
+{
+  const sheet = extractFunction(src, 'printStatementSheet', 'index.html');
+  const cust = extractFunction(src, 'printCustomerStatement', 'index.html');
+  t.check(/shopIdentity\(\)/.test(sheet), 'the sheet is headed with the shop\'s own printed identity');
+  t.check(/cst-due-v/.test(sheet) && /Balance due/.test(sheet), 'the balance due is the one big figure');
+  t.check(/Brought forward[\s\S]*Charged[\s\S]*Paid[\s\S]*Closing/.test(sheet), 'and the sum that makes it is written out');
+  t.check(/customerOpenCharges\(c\)/.test(cust) && /aging: st\.closing > 0\.5 \? buckets : null/.test(cust),
+    'the customer sheet ages what is due on the open charges, and only when something is due');
+  t.check(/account: c\.id/.test(cust) && /Quote account/.test(sheet), 'and tells them which account to quote');
+  t.check(!/<td class="r num">\$\{money\(/.test(sheet), 'the ledger prints bare figures, with UGX stated once in the head');
+}
+
 process.exit(t.done() ? 1 : 0);
