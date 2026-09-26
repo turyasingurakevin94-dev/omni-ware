@@ -69,16 +69,18 @@ assert.match(strip.innerHTML,/aria-valuenow="24"/,'the supplier bar reflects act
 assert.match(attention.innerHTML,/1 bill due or late/,'an explicit bill due date becomes visible attention');
 assert.match(attention.innerHTML,/1 bill needs review/,'the existing bill findings feed the attention row');
 assert.doesNotMatch(wrap.innerHTML,/Sale less linked bills/,'an incomplete cost difference is not presented as profit');
-/* THE MIRROR BAR. Sale 690,000 with 100,000 in; one bill of 660,000 with
-   160,000 paid. Both layers are drawn on the larger of the two, so the
-   sale fills the width and the bill stops short of it. */
-assert.match(wrap.innerHTML,/class="inv-m"/,'each sale carries its two-layer bar');
-assert.match(wrap.innerHTML,/inv-m-top" style="width:100\.00%"><i style="width:14\.49%"/,'the top layer is the sale, filled by what was received');
-assert.match(wrap.innerHTML,/inv-m-seg inv-sup-\d" style="width:95\.65%"><i style="width:24\.24%"/,'the bill sits beneath on the same scale, filled by what was paid');
-/* One supplier, one colour: the segment, the join and the bill card all
-   carry the same hue class, so the eye can follow a supplier across. */
+/* THE BILL TAGS. Sale 690,000 with 100,000 in; one bill of 660,000 with
+   160,000 paid. The bill is a tag in its supplier's colour, pale because
+   it is still owed; what the customer has paid is the line under the
+   figure still open. */
+assert.match(wrap.innerHTML,/class="inv-chips"/,'each sale carries its bills as tags');
+assert.match(wrap.innerHTML,/class="inv-chip inv-sup-\d" title="PINV-1 · North · 660,000 · owed">N 660k</,'an owed bill is a pale tag naming its supplier and amount');
+assert.doesNotMatch(wrap.innerHTML,/inv-chip inv-sup-\d is-paid" title="PINV-1/,'and it is not drawn as paid while money is still owed on it');
+assert.match(wrap.innerHTML,/inv-u-rcv" aria-hidden="true"><i style="width:14\.49%"/,'what the customer paid is a line under the open figure');
+/* One supplier, one colour: the tag and the bill card carry the same hue
+   class, so the eye can follow a supplier across. */
 {
-  const hue = /inv-m-seg (inv-sup-\d)"/.exec(wrap.innerHTML)[1];
+  const hue = /inv-chip (inv-sup-\d)" title="PINV-1/.exec(wrap.innerHTML)[1];
   assert.match(wrap.innerHTML,new RegExp(`class="inv-b-bill ${hue}`),'the bill card wears its supplier\'s colour');
 }
 assert.match(wrap.innerHTML,/30,000<\/span><span class="inv-u-sub">sale − bills/,'the difference is named as one between documents');
