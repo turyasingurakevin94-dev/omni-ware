@@ -22801,6 +22801,7 @@
   .ow-mi-thn{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:1px;}
   .ow-mi-ths{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
   .ow-mi-chacts{display:flex;flex-wrap:wrap;gap:var(--ow-sp-6);}
+  .ow-mi-fupins{white-space:normal;text-align:left;}
   .ow-mi-cmpoff{display:none;}
   .ow-mi-call{flex:none;white-space:nowrap;}
   .ow-mi-thnm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--ow-t-16);font-weight:var(--ow-fw-700);}
@@ -35783,13 +35784,34 @@ function waChatCustomerHTML(c, nowMs){
   </div></div>`;
 
   const asks = followUpsForCustomer(cust.id).filter(followUpIsOpen);
+  /* THE FOLLOW-UPS THIS CHAT CAN CARRY. The news is the queue's own
+     words for it, put into this reply box -- it goes only when Send is
+     pressed, and only then is the telling stamped, the same stamp Today
+     writes. A shut window says why it cannot go from here. */
+  const newsN = waChatFollowUpNews(cust.id).items.length;
+  const winOpen = waWindowInfo(c.last_inbound_at, nowMs).open;
+  const pend = waInbox.fupPending && waInbox.fupPending[String(c.id)];
   const wait = asks.length ? `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">Waiting to hear from you</span><span class="ow-pan-n">${asks.length}</span></div>
     ${asks.slice(0, 4).map(f=>{
       const news = followUpReasons(f, nowMs).some(r=> r.kind !== 'gone_quiet');
       return `<div class="ow-sr"><span class="ow-sr-k">${esc(followUpSubject(f).label)}</span><span class="ow-sr-v${news ? ' ow-warn' : ''}">${news ? 'news to tell' : 'waiting'}</span></div>`;
-    }).join('')}</div>` : '';
+    }).join('')}
+    ${newsN ? `<div class="ow-mi-in">${pend
+      ? '<span class="ow-mi-s">In the reply box &mdash; it is recorded as told when you press Send.</span>'
+      : `<button type="button" class="btn btn-ghost ow-sm ow-mi-fupins" data-cust="${esc(String(cust.id))}" data-conv="${c.id}"${winOpen ? '' : ' disabled title="Their free window has shut: this can go once they write again"'}>Share ${newsN > 1 ? 'the ' + newsN + ' updates' : 'the update'} in this chat</button>`}</div>` : ''}
+  </div>` : '';
   const acts = `<div class="ow-mi-chacts"><button type="button" class="btn btn-ghost ow-sm ow-mi-openrec" data-cust="${esc(String(cust.id))}">Open their record</button></div>`;
   return owe + buys + wait + chat + acts;
+}
+
+/* The follow-up news one customer is owed, as the queue would word it --
+   only the asks (not a chase, a picture or a nudge, which have lanes of
+   their own). */
+function waChatFollowUpNews(customerId){
+  const row = fupHubRowsNow().find(r=> String(r.customerId) === String(customerId));
+  const items = row ? row.items.filter(i=> (i.reasons || []).length) : [];
+  const text = items.length ? followUpHubDigest({ name: row.name, items }, {}) : '';
+  return { items, text };
 }
 
 /* The side pane: the customer, or the number itself. */
@@ -35878,6 +35900,22 @@ function waBindChatConsole(){
       if(!q || !ta || ta.disabled) return;
       ta.value = ta.value.trim() ? ta.value.replace(/\s+$/, '') + '\n' + q.text : q.text;
       waInbox.drafts[ta.dataset.conv] = ta.value;
+      ta.focus(); return;
+    }
+    const fins = e.target.closest('.ow-mi-fupins');
+    if(fins){
+      const ta = document.getElementById('wa_reply');
+      if(!ta || ta.disabled){ toast('Their free window has shut — this can go once they write again'); return; }
+      const n = waChatFollowUpNews(fins.dataset.cust);
+      if(!n.text) return;
+      ta.value = ta.value.trim() ? ta.value.replace(/\s+$/, '') + '\n\n' + n.text : n.text;
+      waInbox.drafts[ta.dataset.conv] = ta.value;
+      /* Remembered against the chat with the first line of news, so the
+         stamp is written only if the words actually went. */
+      const first = (n.text.split('\n').find(l=> l.startsWith('• ')) || '').trim();
+      waInbox.fupPending = Object.assign({}, waInbox.fupPending, { [String(fins.dataset.conv)]:
+        { customerId: String(fins.dataset.cust), items: n.items.map(i=> ({ id: i.followUp.id, kind: i.reasons[0] && i.reasons[0].kind })), line: first } });
+      waRenderChatSide();
       ta.focus(); return;
     }
     const rec = e.target.closest('.ow-mi-openrec');
@@ -36456,6 +36494,16 @@ async function waSendReply(textOverride){
     }
     if(ta && !(typeof textOverride === 'string' && textOverride.trim())) ta.value = '';
     delete waInbox.drafts[String(waInbox.active)];
+    /* A follow-up shared from this chat is stamped as told now that it
+       has actually gone -- and only if its news is in what went. */
+    const pend = waInbox.fupPending && waInbox.fupPending[String(waInbox.active)];
+    if(pend){
+      delete waInbox.fupPending[String(waInbox.active)];
+      if(!pend.line || text.includes(pend.line)){
+        pend.items.forEach(i=> recordFollowUpContact(i.id, i.kind));
+        toast(`Recorded — told about ${pend.items.length === 1 ? 'the update' : pend.items.length + ' updates'}`);
+      }
+    }
     await waFetchThread(waInbox.active);
     await waFetchConvs();
   } finally {
