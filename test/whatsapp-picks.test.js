@@ -733,4 +733,19 @@ const THU = '2026-08-06', MON = '2026-08-03';
     'with an id kind named the way every other kind is');
 }
 
+/* ---------- a post's kinds survive a reload (0098) ---------- */
+{
+  const mig = read('supabase/migrations/0098_wa_post_kinds.sql');
+  t.check(/alter table wa_posts add column if not exists kinds text\[\];/.test(mig),
+    'the kinds get a column, safe to paste twice');
+  t.check(/sb\.from\('wa_posts'\)\.select\('kinds'\)\.limit\(1\)/.test(src)
+    && /waPostKindsColumn = !\(waPostKindsColR && waPostKindsColR\.error\);/.test(src),
+    'the app probes for it rather than assuming the migration landed');
+  t.check(/\.\.\.\(waPostKindsColumn \? \{ kinds:/.test(src),
+    'and writes it only where it exists -- an unknown column would fail every post save');
+  t.check(/kinds: Array\.isArray\(w\.kinds\) \? w\.kinds\.map\(String\) : null,/.test(src),
+    'read back as a list, or null for a post from before -- never an empty list that claims no reason');
+  t.check(/kinds: p\.reasons\.map\(r=> r\.kind\)/.test(src), 'the stamp still writes them');
+}
+
 process.exit(t.done() ? 1 : 0);

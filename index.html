@@ -29585,7 +29585,7 @@ async function loadData(shopId){
     stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR,
     savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR,
     mediaR, mediaFoldersR, waPostsR,
-    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, followUpsR, rivalPricesR, paymentPromisesR, productLinksR, briefsSentR, variantColR, imageColR, askedColR, transferColR, lotConsignColR, rivalSideColR, stageColR, managerNotesR, linkSizeColR, coversColR, clientAccountsR, termsColR
+    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, followUpsR, rivalPricesR, paymentPromisesR, productLinksR, briefsSentR, variantColR, imageColR, askedColR, transferColR, lotConsignColR, rivalSideColR, stageColR, managerNotesR, linkSizeColR, coversColR, clientAccountsR, termsColR, waPostKindsColR
   ] = await Promise.all([
     sel('suppliers'), sel('staff'), sel('customers'), sel('customer_debt_log'), sel('products'), sel('prices'),
     sel('stock'), sel('stock_lots'), sel('stock_log'), sel('cash_days'), sel('cash_txns'),
@@ -29612,7 +29612,10 @@ async function loadData(shopId){
        accounts table and an older customers, and the write below would
        then fail EVERY customer save over two fields nothing else reads. */
     sb.from('client_accounts').select('customer_id').limit(1),
-    sb.from('customers').select('terms_days, credit_limit').limit(1)
+    sb.from('customers').select('terms_days, credit_limit').limit(1),
+    /* 0098, why each post was picked. Probed alone: a wa_posts upsert
+       carrying a column the table lacks would fail every post save. */
+    sb.from('wa_posts').select('kinds').limit(1)
   ]);
   [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR, mediaR, mediaFoldersR, waPostsR, rentAgreementsR, duesR, placesR]
     .forEach(r=>{ if(r.error) throw r.error; });
@@ -29713,6 +29716,9 @@ async function loadData(shopId){
      upsert carrying a column the table lacks would fail every pairing
      save, over a size nobody there has chosen yet. */
   linkSizeColumn = !(linkSizeColR && linkSizeColR.error);
+  /* 0098. Without it a post's kinds live until the next reload, as they
+     always have, and the lift table files it under the pooled figure. */
+  waPostKindsColumn = !(waPostKindsColR && waPostKindsColR.error);
   /* 0096. A shop without the table has no portal, which is what it had
      yesterday -- the customer form hides the block rather than offering a
      button that cannot work, and nothing else in the app changes. */
@@ -29994,7 +30000,11 @@ async function loadData(shopId){
     waPosts: (waPostsR.data||[]).map(w=>({
       id:w.id, date:w.date, productId:w.product_id,
       variantIdx: w.variant_idx==null ? null : Number(w.variant_idx),
-      name:w.name||'', reason:w.reason||'', createdAt:w.created_at
+      name:w.name||'', reason:w.reason||'',
+      /* Null, not [], for a post from before 0098: nobody wrote its
+         kinds down, which is not the same as picked for no reason. */
+      kinds: Array.isArray(w.kinds) ? w.kinds.map(String) : null,
+      createdAt:w.created_at
     })),
     nextWaPostId: (waPostsR.data||[]).length ? Math.max(0,...waPostsR.data.map(w=>w.id||0))+1 : 1,
     // amount and days stay null rather than becoming 0. Null means nobody
@@ -30173,6 +30183,7 @@ let clientAccountsTable = false;
 let clientAccountsWhy = '';          // why the probe failed, in the database's own words
 let customerTermsColumns = false;
 let linkSizeColumn = false;
+let waPostKindsColumn = false;
 let cashTransferColumn = false;
 let cashCoversColumns = false;
 
@@ -30436,7 +30447,8 @@ function buildSyncRows(d, shopId){
     waPosts: (d.waPosts||[]).map(w=>({
       id:w.id, shop_id:shopId, date:dateOrNull(w.date), product_id:w.productId,
       variant_idx: w.variantIdx==null ? null : w.variantIdx,
-      name:w.name, reason:w.reason||null
+      name:w.name, reason:w.reason||null,
+      ...(waPostKindsColumn ? { kinds: Array.isArray(w.kinds) ? w.kinds.map(String) : null } : {})
     })),
     rentAgreements: (d.rentAgreements||[]).map(r=>({
       id:r.id, shop_id:shopId, premises:r.premises, landlord:r.landlord||null,

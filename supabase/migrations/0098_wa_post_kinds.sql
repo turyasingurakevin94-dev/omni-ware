@@ -1,0 +1,33 @@
+-- Why a post was picked, as the picker's own kinds -- kept.
+--
+-- THE GAP THIS CLOSES. 0051 stored `reason`, the sentence shown on the
+-- day ("12 bags sitting 46 days · Never been posted"). The lift table
+-- -- what posts brought, by the reason each was picked for -- files a
+-- post under its KINDS (sitting, fresh, asked, drop, nophoto ...), and
+-- the app has been writing those kinds onto every new post since the
+-- picker learned to measure itself. But there was no column for them,
+-- so they lived only in the browser until the next reload. After that,
+-- every post fell back to the pooled figure: it still counted towards
+-- "posts move stock", but it could no longer speak for WHY it was
+-- posted, and "What posts brought" on the To post lane stayed empty for
+-- a shop that had been posting for weeks.
+--
+-- text[], not jsonb: a flat list of short fixed words, read whole and
+-- never queried inside. Null, not '{}', for a post made before this
+-- column existed -- "nobody wrote it down" is not "picked for no
+-- reason", and the lift table treats the two differently.
+--
+-- The sentence stays in `reason`. The kinds are for counting; the
+-- sentence is for reading back months later.
+--
+-- SAFE TO RUN TWICE, per 0089: add column if not exists is idempotent.
+-- The app probes for the column on load and neither reads nor writes it
+-- until it is there, so this can be pasted before or after the release.
+-- Posts made before it is applied keep the kinds only until the next
+-- reload -- as they do today -- and nothing already saved is lost.
+
+alter table wa_posts add column if not exists kinds text[];
+
+-- What the picker has been posting for, once a few are on file:
+-- select unnest(kinds) as kind, count(*) from wa_posts
+--   where kinds is not null group by 1 order by 2 desc;
