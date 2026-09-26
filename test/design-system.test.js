@@ -662,7 +662,7 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'msgBandHTML', 'msgSignalHTML', 'msgOddsHTML', 'msgWindowHTML', 'msgDossierHTML',
                 'msgHeldSummaryHTML', 'msgPromiseWeekHTML', 'msgReadsHTML', 'msgAnswerBandHTML',
                 'msgReadsBandHTML', 'msgRecordHTML', 'msgPromiseCalendarHTML', 'msgPostBandHTML',
-                'renderMessagesIntel',
+                'renderMessagesIntel', 'msgTplChipsHTML', 'msgTplFilledHTML', 'renderMessagesTemplates',
                 'renderFollowUpScore', 'fupHeldPanelHTML', 'fupCp',
                 'briefStripHTML', 'briefWhyHTML', 'customerBriefPanelHTML',
                 'briefNoteBody', 'briefLeftOffHTML'],

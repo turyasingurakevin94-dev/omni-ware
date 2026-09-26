@@ -196,4 +196,97 @@ const S = scope;
     'and neither the band nor the held-back lane competes with the one primary action');
 }
 
+/* ---------- 9. templates: words filled from the books, and judged ---------- */
+{
+  const T = compileScope([
+    'function todayISO(){ return "' + day(0) + '"; }',
+    extractDeclaration(src, 'fupDayISO', 'index.html'),
+    extractDeclaration(src, 'CUST_WINDOW_DAYS', 'index.html'),
+    extractDeclaration(src, 'TELL_WORKED_DAYS', 'index.html'),
+    extractDeclaration(src, 'CHASE_WINDOW', 'index.html'),
+    extractDeclaration(src, 'MSG_ODDS_MIN', 'index.html'),
+    extractDeclaration(src, 'DEBT_CHASE_INVOICE_LINES', 'index.html'),
+    extractDeclaration(src, 'MSG_TPL_LOG_DAYS', 'index.html'),
+    extractDeclaration(src, 'MSG_TPL_LOG_MAX', 'index.html'),
+    extractDeclaration(src, 'MSG_TPL_DEFAULTS', 'index.html'),
+    extractDeclaration(src, 'MSG_COMPANY_WORDS', 'index.html'),
+    extractDeclaration(src, 'MSG_TOKENS', 'index.html'),
+    'const fupTplPick = {};',
+    ...['msgTplAll', 'msgTplById', 'msgRowKind', 'msgTplTokens', 'msgTplFill', 'msgTplTypedFigures',
+      'msgLogTplUse', 'msgUnlogTplUse', 'msgTplOutcomes', 'msgCadenceStep', 'msgCadence', 'msgTplFor', 'msgDraftFor', 'chaseRate']
+      .map((n) => extractFunction(src, n, 'index.html')),
+  ], {
+    data,
+    fmtUGX: (n) => Number(n).toLocaleString('en-UG') + ' UGX',
+    fmtShortDate: (iso) => String(iso || '').slice(0, 10),
+    shopIdentity: () => ({ name: 'Omni-Ware' }),
+    customerOrdersFor: (cid) => (data.savedQuotes || []).filter((q) => String(q.customerId) === String(cid)),
+    followUpHubDigest: () => 'AS WRITTEN',
+  }, ['msgTplAll', 'msgTplById', 'msgRowKind', 'msgTplFill', 'msgTplTypedFigures', 'msgLogTplUse',
+    'msgUnlogTplUse', 'msgTplOutcomes', 'msgCadenceStep', 'msgTplFor', 'msgDraftFor']);
+
+  const debtor = { customerId: 'C4', name: 'Ssekitoleko Hardware', items: [],
+    chase: { debt: 1840000, ageDays: 72, lastPaid: null,
+      invoices: [{ no: 'INV-1', date: day(-72), due: 640000 }, { no: 'INV-2', date: day(-51), due: 1200000 }],
+      promise: { state: 'broken', promisedOn: day(-6) } } };
+  const firm = T.msgTplById('tpl-firm');
+  const f = T.msgTplFill(firm, debtor);
+  t.check(/1,840,000 UGX/.test(f.text) && /72 days/.test(f.text) && /Ssekitoleko Hardware/.test(f.text),
+    'a template is filled from the books: the balance, the age, and a company addressed by its whole name');
+  const quiet = { customerId: 'C9', name: 'Peter Ssebowa', items: [], book: { daysSinceLast: null } };
+  const miss = T.msgTplFill(T.msgTplById('tpl-missed'), quiet);
+  eq([miss.text, miss.missing], [null, ['since bought']],
+    'a token the books cannot fill for this person means NO text — never a message with a gap in it');
+  eq(T.msgTplFill(T.msgTplById('tpl-statement'), Object.assign({}, debtor, { chase: Object.assign({}, debtor.chase, { debt: 500000 }) })).missing,
+    ['invoice list'], 'and invoices adding to more than the balance are not quoted — the card’s own rule');
+  eq(T.msgTplTypedFigures('You owe {balance}, not 250,000 as before'), ['250,000'],
+    'a figure typed into a template is caught — it would never update');
+  eq(T.msgTplTypedFigures('Hello {first name}, see you on the 3rd'), [], 'and a date or a small number is not a figure');
+
+  /* the cadence */
+  data.presetChaseLog = [{ c: 'C4', d: day(-60) }, { c: 'C4', d: day(-59) }, { c: 'C4', d: day(-30) }, { c: 'C4', d: day(-90) }];
+  eq(T.msgCadenceStep(debtor, NOW), 'broken', 'a broken named day opens on its own words');
+  const plain = Object.assign({}, debtor, { chase: Object.assign({}, debtor.chase, { promise: null }) });
+  eq(T.msgCadenceStep(plain, NOW), 2,
+    'otherwise it is the times asked since the oldest charge still open, a reminder the next day being the same ask');
+  eq(T.msgTplFor(plain, NOW).id, 'tpl-statement', 'so the queue opens a third-time debtor on the third step');
+  eq(T.msgTplFor(debtor, NOW).id, 'tpl-broken', 'and a broken day on the words for that');
+  eq(T.msgDraftFor({ customerId: 'C1', items: [{ reasons: [] }] }, {}, NOW), 'AS WRITTEN',
+    'a row with no template of its own opens on the app’s own words');
+
+  /* the owner's version, and retiring */
+  data.presetMsgTemplates = [{ id: 'tpl-firm', name: 'Firm', body: 'Hi {first name}, {balance} please.' },
+    { id: 'tpl-x', name: 'Old one', kind: 'money', body: 'x', archived: true }];
+  eq(T.msgTplById('tpl-firm').edited && T.msgTplById('tpl-firm').step, 1,
+    'the shop’s own words for a built-in keep its place in the cadence, marked edited');
+  eq(T.msgTplById('tpl-x'), null, 'and a retired template is no longer offered');
+
+  /* the log and the rates */
+  data.presetMsgUseLog = [];
+  data.customers = [{ id: 'P1', debtLog: [{ type: 'payment', date: day(-18), amount: 5 }] },
+    { id: 'P2', debtLog: [] }, { id: 'P3', debtLog: [] }];
+  T.msgLogTplUse('P1', 'tpl-gentle', 'money', day(-20));
+  T.msgLogTplUse('P2', 'tpl-gentle', 'money', day(-20));
+  T.msgLogTplUse('P3', 'tpl-gentle', 'money', day(-2));
+  T.msgLogTplUse('P2', 'tpl-firm', 'money', day(-20));
+  eq(data.presetMsgUseLog.filter((r) => r.c === 'P2' && r.d === day(-20)).length, 1,
+    'one entry per person per day: the later words replace the earlier');
+  const o = T.msgTplOutcomes(NOW);
+  eq([o['tpl-gentle'].n, o['tpl-gentle'].k, o['tpl-gentle'].pending, o['tpl-gentle'].pct], [1, 1, 1, null],
+    'a payment inside the week counts; a use whose week is still open is pending, not a miss; and one is no rate');
+  T.msgLogTplUse('P3', 'tpl-news', 'news', day(0), true);
+  eq(data.presetMsgUseLog.find((r) => r.c === 'P3' && r.d === day(0)).e, 1, 'words the owner changed are marked edited');
+  T.msgUnlogTplUse('P3', day(0));
+  eq(data.presetMsgUseLog.some((r) => r.c === 'P3' && r.d === day(0)), false, 'and "it did not go" takes today’s back');
+
+  const wire = extractFunction(src, 'wireFollowUpsScreen', 'index.html');
+  t.check(/msgLogTplUse\(cid/.test(wire) && /msgUnlogTplUse\(fupLastTold\.customerId\)/.test(wire),
+    'the use is written when a message is marked told, and taken back by its undo — never on opening WhatsApp');
+  t.check(/Replace the words you typed/.test(wire), 'and picking other words over typed ones is asked, not assumed');
+  const view = extractFunction(src, 'renderMessagesTemplates', 'index.html');
+  t.check((view.match(/btn-accent/g) || []).length === 1, 'saving is the one act on the Templates view, so it is its one accent');
+  t.check(/presetMsgTemplates: Array\.isArray\(presets\.msgTemplates\)/.test(src) && /msgTemplates:d\.presetMsgTemplates\|\|\[\]/.test(src)
+    && /msgUseLog:d\.presetMsgUseLog\|\|\[\]/.test(src), 'templates and their log load and save with the shop settings');
+}
+
 process.exit(t.done() ? 1 : 0);
