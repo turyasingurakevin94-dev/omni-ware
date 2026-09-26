@@ -105,10 +105,11 @@ const code = src.replace(/\/\*[\s\S]*?\*\//g, ' ');
      Inventory, Chase and Worth telling into Follow-ups, Loans into
      Assets -- and each time the count fell by design and the floor with
      it. This release folds What's coming, What to buy and The day into
-     Forecasts, so the rail went 37 -> 35 and the floor 35 -> 33. What
+     Forecasts, so the rail went 37 -> 35 and the floor 35 -> 33; and
+     WhatsApp into Messages as its Chats view, 34 -> 33, floor -> 31. What
      the check still means is that every destination is ON the rail
      rather than behind a menu, which is the claim that matters. */
-  t.check((sidebar.match(/data-tab=/g) || []).length > 33,
+  t.check((sidebar.match(/data-tab=/g) || []).length > 31,
     `with every destination still on it (${(sidebar.match(/data-tab=/g) || []).length}) — none of them behind a menu`);
 }
 

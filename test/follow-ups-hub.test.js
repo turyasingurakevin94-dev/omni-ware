@@ -485,7 +485,15 @@ const bookRow = (id, reason, held) => ({ id, name: (data.customers.find((c) => c
      words are edited and judged away from the work -- a library, an
      editor checked against today's real list, and each template's own
      record -- and like Intelligence it brings no strip of its own. */
-  eq((sec.match(/class="ow-seg-b/g) || []).length, 4, 'four views — the work, what it came to, the words it is said in, and the register that records it');
+  /* AND FIVE: the chats. WhatsApp was a page; what it said twice (who is
+     waiting, who wrote back, today's post) was already lanes here, and
+     what only it had -- the thread you reply in, the connection, the
+     number's settings -- came here as Chats. It brings no strip either:
+     the old page's five-figure strip went, because the band on Today
+     already reads the day. */
+  eq((sec.match(/class="ow-seg-b/g) || []).length, 5, 'five views — the work, the chats, what it came to, the words it is said in, and the register that records it');
+  t.check(/data-fuptab="chats"/.test(sec) && /id="fup_chat_pane"/.test(sec) && !/id="wa_strip"/.test(sec),
+    'the chats are a view with no strip of their own');
   t.check(/data-fuptab="tpls"/.test(sec) && /id="fup_tpl_pane"/.test(sec), 'and Templates has its own pane');
   t.check(/data-fuptab="intel"/.test(sec) && /id="fup_intel_pane"/.test(sec),
     'and the middle one is Intelligence, with its own pane');

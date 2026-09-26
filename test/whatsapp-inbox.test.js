@@ -264,14 +264,21 @@ if (!hook) process.exit(1);
 
 /* ---------- 6. all of it is REACHED ---------------------------------- */
 {
-  /* One door now. waInboxEnter draws every panel once it knows whether
-     the number is linked; the old order drew the picks and the strip
-     first, so a shop that had never connected saw its daily post and
-     six zeroes above a desk that did not exist. */
-  t.check(/if\(tab==='whatsapp'\)\{ waInboxEnter\(\); \}/.test(src),
-    'entering the tab starts the desk, which draws the rest once it knows the number is linked');
-  t.check(/if\(currentActiveTab !== 'whatsapp' \|\| !waInbox\.configured\)\{\s*\n?\s*clearInterval\(waInbox\.timer\); waInbox\.timer = null; return;/.test(src),
-    'the poller stops itself when the user leaves the tab');
+  /* One door now, and it is Messages. The chats were fetched only when
+     a separate WhatsApp page was opened, so Messages' own lanes --
+     Waiting on you, Came back -- sat empty for a shop that never
+     visited it. Entering Messages starts the desk, which draws the rest
+     once it knows whether the number is linked. */
+  t.check(/if\(tab==='followups'\)\{ renderFollowUps\(\); waInboxEnter\(\); \}/.test(src),
+    'entering Messages starts the desk, which draws the rest once it knows the number is linked');
+  t.check(/if\(currentActiveTab !== 'followups' \|\| !waInbox\.configured\)\{\s*\n?\s*clearInterval\(waInbox\.timer\); waInbox\.timer = null; return;/.test(src),
+    'the poller stops itself when the user leaves the screen');
+  /* "Answer on WhatsApp" on a lane used to change page. It opens the
+     thread on Chats now, and hands waOpenConv a NUMBER: the id comes off
+     a data attribute as a string, and the queue finds conversations with
+     ===, so a string id opened nothing. */
+  t.check(/fupTab = 'chats';\s*\n\s*renderFollowUps\(\);\s*\n\s*if\(typeof waOpenConv === 'function' && id\) waOpenConv\(Number\(id\)\);/.test(src),
+    'answering from a lane opens the thread on Chats, by its numeric id');
   t.check(/action: 'send', conversationId: waInbox\.active, text/.test(src),
     'a reply goes through the edge function, with the conversation named');
   t.check(/<textarea id="wa_reply" data-conv="\$\{c\.id\}" placeholder="Reply…" \$\{w\.open\?'':'disabled'\}/.test(src),
