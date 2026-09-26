@@ -41,7 +41,7 @@ const names = [
   'purchaseInvoiceNumberLabel','savedQuoteTotal','purchaseInvoiceTotal','purchaseInvoiceBalanceDue',
   'listPageSlice','listMoreButtonHTML','esc','invBillChip','invStatusChip','invBindDocActions',
   'invSyncStickyOffset','invSearchValue','revealPurchaseInvoice','openPiPaymentModal',
-  'purchaseInvoiceFindings','todayISO',
+  'purchaseInvoiceFindings','todayISO','quoteItemSellPrice','orderLineIsBoughtIn','nameInitials',
 ];
 const values = [
   {getElementById:id=>elements[id]||null},data,
@@ -52,6 +52,8 @@ const values = [
   q=>q.total,pi=>pi.total,pi=>pi.total-pi.amountPaid,
   (_key,rows)=>rows,()=>'',s=>String(s),()=>'',()=>'',()=>{},()=>{},()=>'',()=>{},()=>{},
   bills=>({count:bills.length}),()=> '2026-09-24',
+  it=>Number(it.sellPrice)||0, it=>!!(it && it.supplierId && it.supplierId!=='__stock__'),
+  n=>String(n||'?').slice(0,1).toUpperCase(),
 ];
 const render = new Function(...names,`let invUnifiedOpenKey='s1'; let invLastRows=[]; ${renderer}; return renderInvoicesUnified;`)(...values);
 
@@ -67,6 +69,17 @@ assert.match(strip.innerHTML,/aria-valuenow="24"/,'the supplier bar reflects act
 assert.match(attention.innerHTML,/1 bill due or late/,'an explicit bill due date becomes visible attention');
 assert.match(attention.innerHTML,/1 bill needs review/,'the existing bill findings feed the attention row');
 assert.doesNotMatch(wrap.innerHTML,/Sale less linked bills/,'an incomplete cost difference is not presented as profit');
+/* THE MIRROR BAR. Sale 690,000 with 100,000 in; one bill of 660,000 with
+   160,000 paid. Both layers are drawn on the larger of the two, so the
+   sale fills the width and the bill stops short of it. */
+assert.match(wrap.innerHTML,/class="inv-m"/,'each sale carries its two-layer bar');
+assert.match(wrap.innerHTML,/inv-m-top" style="width:100\.00%"><i style="width:14\.49%"/,'the top layer is the sale, filled by what was received');
+assert.match(wrap.innerHTML,/inv-m-seg" style="width:95\.65%"><i style="width:24\.24%"/,'the bill sits beneath on the same scale, filled by what was paid');
+assert.match(wrap.innerHTML,/30,000<\/span><span class="inv-u-sub">sale − bills/,'the difference is named as one between documents');
+assert.match(wrap.innerHTML,/−60,000 fronted/,'paying a supplier ahead of the customer shows as fronted cash');
+assert.match(wrap.innerHTML,/inv-b-joins/,'the open sale joins its lines to its bills');
+assert.match(wrap.innerHTML,/from the shelf · no bill/,'a line with no supplier is named as shelf stock, not treated as costless');
+assert.match(strip.innerHTML,/Cash on these sales/,'the strip carries the cash position across the shown sales');
 
 render('Stock House');
 assert.match(wrap.innerHTML,/Stock purchase/,'unlinked restocks remain visible as their own rows');

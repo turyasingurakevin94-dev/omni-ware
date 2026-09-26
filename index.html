@@ -11393,7 +11393,7 @@
   .inv-pr-bills{display:none;}
 
   /* Together: show the state first, then the link between documents. */
-  .ow-strip.inv-u-strip{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .ow-strip.inv-u-strip{grid-template-columns:repeat(3,minmax(0,1fr));}
   @media (min-width:821px){.ow-strip.inv-u-strip{margin-top:var(--ow-sp-16);}}
   .inv-u-strip .ow-mt{min-width:0;}
   .inv-u-strip .ow-mt-v{font-size:var(--ow-t-20);font-variant-numeric:tabular-nums;}
@@ -11412,32 +11412,75 @@
   .inv-u-list{padding:var(--ow-sp-8);}
   .inv-u-group{display:flex;align-items:center;justify-content:space-between;gap:var(--ow-sp-8);padding:var(--ow-sp-10) var(--ow-sp-6) var(--ow-sp-8);color:var(--ow-ink-600);font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.06em;text-transform:uppercase;}
   .inv-u-case{border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);background:var(--ow-paper);margin-bottom:var(--ow-sp-8);overflow:hidden;}
-  .inv-u-head{display:grid;grid-template-columns:minmax(0,1fr) minmax(110px,auto);gap:var(--ow-sp-12);align-items:center;width:100%;padding:var(--ow-sp-12);border:0;background:transparent;color:var(--ow-ink-900);text-align:left;font:inherit;cursor:pointer;}
+  .inv-u-case.is-open{border-color:var(--ow-rule);}
+  /* ONE ROW, SIX COLUMNS, and the column names above it share the track
+     list so a figure sits under its own name at every width. */
+  .inv-u-head,.inv-u-cols{display:grid;grid-template-columns:16px minmax(150px,220px) minmax(160px,300px) minmax(96px,120px) minmax(120px,170px) minmax(110px,1fr);column-gap:var(--ow-sp-16);align-items:center;}
+  .inv-u-head{width:100%;padding:var(--ow-sp-12);border:0;background:transparent;color:var(--ow-ink-900);text-align:left;font:inherit;cursor:pointer;}
   .inv-u-head:hover{background:var(--ow-paper-2);}
+  .inv-u-cols{padding:0 13px var(--ow-sp-6);font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.06em;text-transform:uppercase;color:var(--ow-ink-600);}
+  .inv-u-cols span:nth-child(n+4){text-align:right;}
+  .inv-u-chev{width:16px;height:16px;color:var(--ow-ink-600);transition:transform .15s;}
+  .inv-u-head[aria-expanded="true"] .inv-u-chev{transform:rotate(90deg);}
+  .inv-u-id{display:block;min-width:0;}
   .inv-u-ident{display:flex;align-items:center;gap:var(--ow-sp-8);flex-wrap:wrap;min-width:0;}
   .inv-u-doc{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-weight:var(--ow-fw-600);white-space:nowrap;}
-  .inv-u-chevron{color:var(--ow-oxide);font-size:var(--ow-t-16);}
   .inv-u-sub{display:block;color:var(--ow-ink-600);font-size:var(--ow-t-12);margin-top:3px;overflow-wrap:anywhere;}
-  .inv-u-value{display:block;font-variant-numeric:tabular-nums;font-weight:var(--ow-fw-600);white-space:nowrap;}
-  .inv-u-head-amount{text-align:right;}
-  .inv-u-rel{display:inline-flex;align-items:center;gap:var(--ow-sp-6);font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
-  .inv-u-rel-arrow{color:var(--ow-oxide);}
-  .inv-u-detail{border-top:1px solid var(--ow-rule-soft);padding:var(--ow-sp-12);background:var(--ow-paper-2);}
+  .inv-u-value{display:block;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:var(--ow-fw-600);white-space:nowrap;}
+  .inv-u-diff,.inv-u-head-amount{display:block;text-align:right;}
+  .inv-u-cash{display:flex;justify-content:flex-end;}
+  .inv-u-cash .ow-cp{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;}
+  .inv-u-neg{color:var(--ow-amber-ink);}
+  .inv-b-ell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  /* THE MIRROR BAR. Sale above, its bills below, one scale. */
+  .inv-m{display:flex;flex-direction:column;gap:3px;min-width:0;}
+  .inv-m-top,.inv-m-seg{display:flex;height:13px;overflow:hidden;position:relative;box-sizing:border-box;}
+  .inv-m-top{background:var(--ow-oxide-soft);border:1px solid var(--ow-rule);}
+  .inv-m-top.inv-m-none{width:100%;background:none;border-style:dashed;}
+  .inv-m-top i,.inv-m-seg i{display:block;height:100%;background:var(--ow-verdigris);}
+  .inv-m-bot{display:flex;gap:2px;height:13px;min-width:0;}
+  .inv-m-seg{flex:0 1 auto;min-width:3px;background:var(--ow-indigo-soft);border:1px solid var(--ow-rule);}
+  .inv-m-seg b{position:absolute;left:4px;top:-1px;font-size:var(--ow-t-11);line-height:13px;font-weight:var(--ow-fw-700);color:var(--ow-indigo);}
+  .inv-m-seg b.on-fill{color:var(--ow-paper);}
+  .inv-m-shelf,.inv-lg-shelf{background:repeating-linear-gradient(135deg,var(--ow-paper) 0 3px,var(--ow-rule-soft) 3px 6px);border:1px solid var(--ow-ink-400);box-sizing:border-box;}
+  .inv-m-void{opacity:.4;}
+  .inv-u-legend{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:var(--ow-sp-6) var(--ow-sp-16);padding:var(--ow-sp-4) var(--ow-sp-6) var(--ow-sp-8);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .inv-u-legend i{display:inline-block;width:14px;height:8px;margin-right:var(--ow-sp-6);vertical-align:middle;}
+  .inv-lg-sale{background:var(--ow-oxide-soft);border:1px solid var(--ow-rule);box-sizing:border-box;}
+  .inv-lg-bill{background:var(--ow-indigo-soft);border:1px solid var(--ow-rule);box-sizing:border-box;}
+  .inv-lg-done{background:var(--ow-verdigris);}
+  .inv-u-detail{border-top:1px solid var(--ow-rule-soft);padding:var(--ow-sp-12) var(--ow-sp-12) var(--ow-sp-12) 44px;background:var(--ow-paper-2);}
   .inv-u-detail[hidden]{display:none;}
-  .inv-u-flow{display:grid;grid-template-columns:minmax(0,1fr) 34px minmax(0,1.1fr);align-items:start;gap:var(--ow-sp-8);}
-  .inv-u-flow-side{min-width:0;}
-  .inv-u-flow-label{margin:0 0 var(--ow-sp-8);font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.06em;text-transform:uppercase;color:var(--ow-ink-600);}
-  .inv-u-flow-link{display:flex;align-items:center;justify-content:center;min-height:54px;color:var(--ow-oxide);font-size:var(--ow-t-20);}
-  .inv-u-node{display:flex;align-items:center;justify-content:space-between;gap:var(--ow-sp-10);min-width:0;padding:var(--ow-sp-10);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);background:var(--ow-paper);}
-  .inv-u-node + .inv-u-node{margin-top:var(--ow-sp-6);}
-  .inv-u-node-main{min-width:0;}
-  .inv-u-node .inv-u-doc{font-size:var(--ow-t-12);}
-  .inv-u-node .inv-u-sub{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .inv-u-node-amount{text-align:right;flex:none;}
-  .inv-u-node-amount .inv-u-value{font-size:var(--ow-t-12);}
-  .inv-u-node button.ow-link{font-size:var(--ow-t-12);}
-  .inv-u-flow-empty{padding:var(--ow-sp-10);border:1px dashed var(--ow-rule);border-radius:var(--ow-r);color:var(--ow-ink-600);font-size:var(--ow-t-12);}
+  /* THE BRIDGE. Fixed row heights -- 52 a line, 64 + 8 a bill -- are
+     what the joins are drawn from; change one and change both. */
+  .inv-b-cols,.inv-b-grid{display:grid;grid-template-columns:minmax(0,1fr) 120px minmax(0,1.15fr);}
+  .inv-b-cols{margin-bottom:var(--ow-sp-8);font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.06em;text-transform:uppercase;color:var(--ow-ink-600);}
+  .inv-b-grid{align-items:start;}
+  .inv-b-lines{border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);background:var(--ow-paper);min-width:0;}
+  .inv-b-line{height:52px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:var(--ow-sp-10);padding:0 var(--ow-sp-12);}
+  .inv-b-line + .inv-b-line{border-top:1px solid var(--ow-rule-soft);}
+  .inv-b-main{display:flex;flex-direction:column;min-width:0;}
+  .inv-b-name{font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);}
+  .inv-b-main .inv-u-sub{margin-top:2px;}
+  .inv-b-fig{display:flex;flex-direction:column;align-items:flex-end;flex:none;text-align:right;}
+  .inv-b-fig .inv-u-sub{margin-top:0;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;}
+  .inv-b-d{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);margin-top:2px;}
+  .inv-b-to{display:none;color:var(--ow-indigo);font-weight:var(--ow-fw-600);}
+  .inv-b-joins{display:block;}
+  .inv-b-joins path{fill:none;stroke:var(--ow-indigo);stroke-opacity:.28;stroke-linecap:round;}
+  .inv-b-bills{display:flex;flex-direction:column;gap:var(--ow-sp-8);min-width:0;}
+  .inv-b-bill{height:64px;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:var(--ow-sp-12);padding:0 var(--ow-sp-12);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);background:var(--ow-paper);}
+  .inv-b-bill .ow-link{font-size:var(--ow-t-13);text-align:left;}
+  .inv-b-bill.is-void .inv-u-doc{text-decoration:line-through;color:var(--ow-ink-400);}
+  .inv-b-bill .inv-b-fig .inv-u-value{font-size:var(--ow-t-13);}
+  .inv-b-paid{display:block;width:120px;height:5px;margin-top:6px;border-radius:var(--ow-r-pill);background:var(--ow-indigo-soft);overflow:hidden;}
+  .inv-b-paid i{display:block;height:100%;background:var(--ow-verdigris);}
+  .inv-b-act{display:flex;justify-content:flex-end;min-width:64px;}
+  .inv-b-none{padding:var(--ow-sp-10);border:1px dashed var(--ow-rule);border-radius:var(--ow-r);color:var(--ow-ink-600);font-size:var(--ow-t-12);}
   .inv-u-foot{display:flex;align-items:center;justify-content:space-between;gap:var(--ow-sp-10);flex-wrap:wrap;margin-top:var(--ow-sp-12);padding-top:var(--ow-sp-10);border-top:1px solid var(--ow-rule-soft);}
+  .inv-b-eq{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-size:var(--ow-t-13);color:var(--ow-ink-600);}
+  .inv-b-eq b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  .inv-u-foot .inv-u-note{flex:1 1 200px;}
   .inv-u-acts{display:flex;gap:var(--ow-sp-8);flex-wrap:wrap;align-items:center;}
   .inv-u-note{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
   .inv-u-list .ow-cp{white-space:nowrap;}
@@ -11451,13 +11494,38 @@
     .inv-u-metric-scope{display:none;}
     .inv-u-attention{gap:var(--ow-sp-8) var(--ow-sp-12);padding:var(--ow-sp-8) var(--ow-sp-12);}
     .inv-u-attention b{flex:1 1 100%;}
-    .inv-u-flow{grid-template-columns:minmax(0,1fr);}
-    .inv-u-flow-link{min-height:16px;transform:rotate(90deg);}
-    .inv-u-head{grid-template-columns:minmax(0,1fr) auto;}
-    .inv-u-head-amount .inv-u-value{font-size:var(--ow-t-13);}
-    .inv-u-node{min-height:var(--ow-tap);}
-    .inv-u-foot .inv-u-acts{width:100%;}
-    .inv-u-foot .inv-doc-receive{flex:1 1 auto;}
+  }
+  /* THE PHONE IS ITS OWN DESIGN: the row stacks -- who and what is still
+     open, then the bar the whole width, then the difference and the cash
+     -- and the bridge drops its joins for a named arrow on each line. */
+  @media (max-width:820px){
+    .inv-u-cols{display:none;}
+    .inv-u-legend{justify-content:flex-start;}
+    .ow-strip.inv-u-strip{grid-template-columns:1fr 1fr;}
+    .inv-u-strip .ow-mt:nth-child(3){grid-column:1/-1;border-left:0;border-top:1px solid var(--ow-rule-soft);}
+    .inv-u-head{grid-template-columns:16px minmax(0,1fr) auto;grid-template-areas:"chev id amt" ". bar bar" ". diff cash";row-gap:var(--ow-sp-10);padding:var(--ow-sp-16) var(--ow-sp-12);}
+    .inv-u-chev{grid-area:chev;align-self:start;margin-top:2px;}
+    .inv-u-id{grid-area:id;}
+    .inv-u-head-amount{grid-area:amt;align-self:start;}
+    .inv-m{grid-area:bar;}
+    .inv-u-diff{grid-area:diff;text-align:left;}
+    .inv-u-cash{grid-area:cash;align-self:center;}
+    .inv-u-detail{padding:var(--ow-sp-12);}
+    .inv-b-cols{display:none;}
+    .inv-b-grid{grid-template-columns:minmax(0,1fr);gap:var(--ow-sp-12);}
+    .inv-b-joins{display:none;}
+    .inv-b-to{display:inline;}
+    .inv-b-line{height:auto;min-height:52px;flex-direction:column;align-items:stretch;gap:var(--ow-sp-4);padding:var(--ow-sp-10) var(--ow-sp-12);}
+    .inv-b-fig{flex-direction:row;justify-content:space-between;align-items:baseline;}
+    .inv-b-bill{height:auto;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"main act" "fig fig";row-gap:var(--ow-sp-8);padding:var(--ow-sp-10) var(--ow-sp-12);}
+    .inv-b-bill .inv-b-main{grid-area:main;}
+    .inv-b-bill .inv-b-act{grid-area:act;}
+    .inv-b-bill .inv-b-fig{grid-area:fig;flex-direction:row-reverse;align-items:center;}
+    .inv-b-paid{width:120px;margin-top:0;}
+    .inv-b-act .btn{min-height:var(--ow-tap);}
+    .inv-u-foot .inv-u-acts{width:100%;display:grid;grid-template-columns:1fr 1fr;}
+    .inv-u-foot .inv-u-acts .btn{min-height:var(--ow-tap);justify-content:center;}
+    .inv-u-foot .inv-doc-receive{grid-column:1/-1;}
   }
   /* THE COLUMN NAMES DO NOT SCROLL AWAY. A register of three hundred
      rows is read by running down one column, and twenty rows in there
@@ -22813,7 +22881,7 @@
              Invoicing an order RAISES a bill against every supplier used
              on it, and quoteId has carried that link since purchase
              invoices existed. -->
-        <p class="ow-ph-help inv-help-paired" hidden>Sales and supplier bills appear in one expandable list. A sale shows every bill linked to it; stock purchases and bills whose sale is outside the current filter appear as their own rows. Search finds either document number, customer, supplier, or item. The two totals count the cases shown, with bills dated in the selected range. A sale minus its linked bills is only a document difference: it excludes the cost of stock already on hand, so it is not profit. Open a bill for its lines, checks, and correction actions. Sales and Purchases keep their full registers and bulk workflows.</p>
+        <p class="ow-ph-help inv-help-paired" hidden>Each sale carries one bar: the sale on top, the supplier bills it raised underneath, on one scale, with green for what has been settled on either side. Where the top runs past the bottom, the sale is bigger than its bills; hatching is a line sold from the shelf, whose cost is on no bill. Cash so far is what the customer has paid less what has gone out to those suppliers &mdash; below zero, the shop has paid for goods before being paid for them. Open a sale to see each line joined to the bill that bought it in. A sale minus its bills is a difference between documents, not profit. Stock purchases and bills whose sale is outside the filter appear as their own rows. Sales and Purchases keep their full registers and bulk workflows.</p>
         <span class="ow-ph-sp"></span>
         <div class="ow-seg inv-side" id="iv_side" role="tablist" aria-label="Which register">
           <button type="button" class="ow-seg-b ow-on" role="tab" aria-selected="true" data-side="paired">Together<span class="ow-seg-n" id="ivSidePaired"></span></button>
@@ -50844,10 +50912,24 @@ function renderInvoicesUnified(filter=''){
     <div class="inv-u-meter" role="progressbar" aria-label="${esc(settledLabel)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><span class="inv-u-meter-fill" style="width:${pct}%"></span></div>
     <div class="inv-u-meter-legend"><span>${number(paid)} ${settledLabel}</span><span>${number(outstanding)} ${openLabel}</span></div>
   </div>`;
+  /* CASH SO FAR ON THESE SALES: taken from their customers, less paid to
+     the suppliers on their live bills. Below zero the shop has paid for
+     goods before being paid for them -- fronted money, the one position
+     on this screen neither register can show by itself. */
+  const cashIn = cases.reduce((n,c)=>n+(c.type==='sale' && !c.q.voided ? Math.max(0,Number(c.q.amountPaid)||0) : 0),0);
+  const cashOut = cases.reduce((n,c)=>n+(c.type==='sale' && !c.q.voided
+    ? c.bills.filter(pi=>!pi.voided).reduce((m,pi)=>m+Math.min(purchaseInvoiceTotal(pi),Math.max(0,Number(pi.amountPaid)||0)),0) : 0),0);
+  const cashNet = cashIn - cashOut;
+  const cashMetric = `<div class="ow-mt">
+    <div class="inv-u-metric-top"><p class="ow-mt-l">Cash on these sales</p><span class="inv-u-metric-scope">in − out</span></div>
+    <p class="ow-mt-v${cashNet < -0.5 ? ' inv-u-neg' : ''}">${cashNet < -0.5 ? '−' : cashNet > 0.5 ? '+' : ''}${money(Math.abs(cashNet))}</p>
+    <div class="inv-u-meter-legend"><span>${number(cashIn)} in</span><span>${number(cashOut)} out${cashNet < -0.5 ? ' · fronted' : ''}</span></div>
+  </div>`;
   strip.innerHTML = metric('Customer payments', `${visibleSales.length} shown sales`, toCollect,
       Math.max(0,salesBilled-toCollect), receivedPct, 'received', 'to collect')
     + metric('Supplier payments', `${shownBills.length} bills dated in range`, toPay,
-      Math.max(0,billsBilled-toPay), paidPct, 'paid', 'to pay');
+      Math.max(0,billsBilled-toPay), paidPct, 'paid', 'to pay')
+    + cashMetric;
   const openSales = visibleSales.filter(q=>!q.voided && savedQuoteTotal(q)-Number(q.amountPaid||0)>0.5);
   const findings = purchaseInvoiceFindings(shownBills);
   const dueBills = shownBills.filter(pi=>pi.dueDate && pi.dueDate<=todayISO() && purchaseInvoiceBalanceDue(pi)>0.5);
@@ -50864,53 +50946,165 @@ function renderInvoicesUnified(filter=''){
     return;
   }
   const shown = listPageSlice('invoices', cases);
-  const billRow = pi=>{
+  /* ONE BAR, TWO LAYERS, ONE SCALE. The sale on top, the bills it raised
+     beneath it, both drawn against the larger of the two so an overhang
+     is a difference that can be SEEN rather than subtracted. Green is
+     what has been settled on either side; the layer, not the hue, says
+     which side it is. A line filled from the shelf has no bill, so it is
+     drawn as what it was SOLD for and struck with hatching -- a cost this
+     screen cannot see is shown as missing, never as nothing. A voided
+     bill is a cancelled document, not a cost: it is left out of the bar
+     and listed, struck through, when the sale is opened. */
+  const paidOn = pi=>Math.min(purchaseInvoiceTotal(pi), Math.max(0, Number(pi.amountPaid)||0));
+  const pct = (n, of)=> of>0 ? Math.max(0, Math.min(100, n/of*100)).toFixed(2)+'%' : '0%';
+  const saleLines = (q, bills)=>(q.items||[]).map(it=>{
+    const qty = Number(it.qty)||0;
+    const sold = qty*quoteItemSellPrice(it);
+    if(!orderLineIsBoughtIn(it)) return {it, qty, sold, bill:null, bought:null, shelf:true};
+    const bill = bills.find(pi=>!pi.voided && pi.supplierId===it.supplierId) || null;
+    const same = bill ? (bill.items||[]).filter(x=>x.productId===it.productId
+      && (x.variantIdx==null?null:x.variantIdx)===(it.variantIdx==null?null:it.variantIdx)) : [];
+    const bought = same.length ? same.reduce((n,x)=>n+(Number(x.qty)||0)*(Number(x.price)||0),0) : null;
+    return {it, qty, sold, bill, bought, shelf:false};
+  });
+  const mirror = ({sale, received, live, shelfSold, voided, aria})=>{
+    const billed = live.reduce((n,pi)=>n+purchaseInvoiceTotal(pi),0);
+    const scale = Math.max(sale, billed + shelfSold, 1);
+    const topHtml = sale>0
+      ? `<span class="inv-m-top" style="width:${pct(sale,scale)}"><i style="width:${pct(Math.min(received,sale),sale)}"></i></span>`
+      : '<span class="inv-m-top inv-m-none"></span>';
+    const segs = live.map(pi=>{
+      const t = purchaseInvoiceTotal(pi), share = t/scale;
+      return `<span class="inv-m-seg" style="width:${pct(t,scale)}"><i style="width:${pct(paidOn(pi),t)}"></i>${share>=0.14?`<b${paidOn(pi)>t/2?' class="on-fill"':''}>${esc(nameInitials(pi.supplierName))}</b>`:''}</span>`;
+    }).join('') + (shelfSold>0 ? `<span class="inv-m-seg inv-m-shelf" style="width:${pct(shelfSold,scale)}"></span>` : '');
+    return `<span class="inv-m${voided?' inv-m-void':''}" role="img" aria-label="${esc(aria)}" title="${esc(aria)}">${topHtml}<span class="inv-m-bot">${segs}</span></span>`;
+  };
+  /* Cash so far on ONE case: what came in from the customer less what
+     went out to the suppliers on its bills. Negative is money the shop
+     has fronted -- paid for goods before being paid for them -- and that
+     is the one figure here that earns a colour. */
+  const cashChip = net=> net < -0.5 ? `<span class="ow-cp ow-warn">−${esc(number(-net))} fronted</span>`
+    : net > 0.5 ? `<span class="ow-cp">+${esc(number(net))} in hand</span>`
+    : '<span class="inv-u-sub">nothing moved</span>';
+  const chev = '<svg class="icon inv-u-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+  const bridgeBill = pi=>{
+    const t = purchaseInvoiceTotal(pi);
     const due = pi.voided ? 0 : Math.max(0,purchaseInvoiceBalanceDue(pi));
-    return `<div class="inv-u-node">
-      <div class="inv-u-node-main"><button type="button" class="ow-link inv-u-doc" data-pi-open="${pi.id}">${esc(purchaseInvoiceNumberLabel(pi))}</button>
-        <span class="inv-u-sub" title="${esc(pi.supplierName||'Unnamed supplier')}">${esc(pi.supplierName||'Unnamed supplier')} · ${esc(pi.date||'No date')}</span></div>
-      <div class="inv-u-node-amount"><span class="inv-u-value">${pi.voided?'—':esc(number(due))}</span><span class="inv-u-sub">${pi.voided?'voided':'to pay · UGX'}</span></div>
-      ${due>0.5 ? `<button type="button" class="btn btn-ghost ow-sm pi-doc-pay" data-id="${pi.id}">Pay</button>` : ''}
+    return `<div class="inv-b-bill${pi.voided?' is-void':''}">
+      <span class="inv-b-main"><button type="button" class="ow-link inv-u-doc" data-pi-open="${pi.id}">${esc(purchaseInvoiceNumberLabel(pi))}</button>
+        <span class="inv-u-sub inv-b-ell" title="${esc(pi.supplierName||'Unnamed supplier')}">${esc(pi.supplierName||'Unnamed supplier')}</span></span>
+      <span class="inv-b-fig"><span class="inv-u-value">${esc(number(t))}</span>
+        ${pi.voided ? '<span class="inv-u-sub">voided</span>' : `<span class="inv-b-paid"><i style="width:${pct(paidOn(pi),t)}"></i></span>`}</span>
+      <span class="inv-b-act">${pi.voided ? '' : due>0.5 ? `<button type="button" class="btn btn-ghost ow-sm pi-doc-pay" data-id="${pi.id}">Pay</button>` : '<span class="ow-cp ow-good">Paid</span>'}</span>
     </div>`;
   };
   const caseHTML = c=>{
     const sale = c.type==='sale';
     const q = c.q, pi = c.pi;
     const key = sale ? `s${q.id}` : `p${pi.id}`;
-    const open = invUnifiedOpenKey===key;
-    const total = sale ? savedQuoteTotal(q) : purchaseInvoiceTotal(pi);
-    const due = sale ? (q.voided?0:Math.max(0,total-Number(q.amountPaid||0))) : (pi.voided?0:purchaseInvoiceBalanceDue(pi));
+    const voided = sale ? !!q.voided : !!pi.voided;
     const label = sale ? invoiceNumberLabel(q) : purchaseInvoiceNumberLabel(pi);
     const who = sale ? q.client?.name||'Unnamed client' : pi.supplierName||'Unnamed supplier';
-    const status = sale ? invStatusChip(q)
-      : (invBillChip(pi) || (due>0.5 ? '<span class="ow-cp">Open</span>' : ''));
-    const relation = sale ? `<span class="inv-u-rel">Sale <span class="inv-u-rel-arrow">→</span> ${c.bills.length} supplier bill${c.bills.length===1?'':'s'}</span>`
-      : `<span class="inv-u-rel">${pi.quoteId==null?'Stock purchase':'Linked sale outside view'}</span>`;
-    const detail = sale ? `<div class="inv-u-flow">
-      <div class="inv-u-flow-side"><p class="inv-u-flow-label">Customer invoice · money in</p>
-        <div class="inv-u-node"><div class="inv-u-node-main"><span class="inv-u-doc">${esc(label)}</span><span class="inv-u-sub">${esc(who)}</span></div><div class="inv-u-node-amount"><span class="inv-u-value">${esc(number(total))}</span><span class="inv-u-sub">billed · UGX</span></div></div></div>
-      <span class="inv-u-flow-link" aria-hidden="true">↔</span>
-      <div class="inv-u-flow-side"><p class="inv-u-flow-label">${c.bills.length} supplier bill${c.bills.length===1?'':'s'} · money out</p>
-        ${c.bills.length ? c.bills.map(billRow).join('') : '<div class="inv-u-flow-empty">No direct bill · fulfilled from existing stock</div>'}</div>
-    </div><div class="inv-u-foot"><span class="inv-u-note">Stock cost is not included here; this is not a profit figure.</span>
-      <div class="inv-u-acts">${due>0.5 ? `<button type="button" class="btn btn-accent ow-sm inv-doc-receive" data-id="${q.id}">Receive payment</button>`:''}
-        <button type="button" class="btn btn-ghost ow-sm inv-doc-print" data-id="${q.id}">Print sale</button></div></div>`
-      : `<div class="inv-u-foot"><span class="inv-u-note">${pi.quoteId==null?'Stock purchase · no linked customer sale':'The linked sale is outside the current filter.'}</span>
+    if(!sale){
+      const open = invUnifiedOpenKey===key;
+      const t = purchaseInvoiceTotal(pi);
+      const due = voided ? 0 : purchaseInvoiceBalanceDue(pi);
+      const status = invBillChip(pi) || (due>0.5 ? '<span class="ow-cp">Open</span>' : '');
+      const kind = pi.quoteId==null ? 'Stock purchase' : 'Linked sale outside view';
+      return `<article class="inv-u-case"><button type="button" class="inv-u-head" data-unified-key="${key}" aria-expanded="${open}">
+        ${chev}
+        <span class="inv-u-id"><span class="inv-u-ident"><span class="inv-u-doc">${esc(label)}</span>${status}</span>
+          <span class="inv-u-sub inv-b-ell">${kind} · ${esc(who)} · ${esc(c.date||'No date')}</span></span>
+        ${mirror({sale:0, received:0, live:voided?[]:[pi], shelfSold:0, voided,
+          aria:`${kind}: bill ${number(t)}, ${number(voided?0:paidOn(pi))} paid; no sale behind it`})}
+        <span class="inv-u-diff"><span class="inv-u-value">—</span><span class="inv-u-sub">no sale</span></span>
+        <span class="inv-u-cash">${paidOn(pi)>0.5 && !voided ? `<span class="ow-cp">${esc(number(paidOn(pi)))} paid</span>` : '<span class="inv-u-sub">nothing paid</span>'}</span>
+        <span class="inv-u-head-amount"><span class="inv-u-value">${voided?'—':esc(number(due))}</span><span class="inv-u-sub">${voided?'voided':'to pay · UGX'}</span></span>
+      </button><div class="inv-u-detail" ${open?'':'hidden'}><div class="inv-u-foot"><span class="inv-u-note">${pi.quoteId==null?'Stock purchase · no linked customer sale':'The linked sale is outside the current filter.'}</span>
         <div class="inv-u-acts"><button type="button" class="btn btn-accent ow-sm" data-pi-open="${pi.id}">Open bill</button>
-          ${due>0.5 ? `<button type="button" class="btn btn-ghost ow-sm pi-doc-pay" data-id="${pi.id}">Record payment</button>`:''}</div></div>`;
-    return `<article class="inv-u-case"><button type="button" class="inv-u-head" data-unified-key="${key}" aria-expanded="${open}">
-      <div><span class="inv-u-ident"><span class="inv-u-chevron">${open?'⌄':'›'}</span><span class="inv-u-doc">${esc(label)}</span>${status}${relation}</span>
-        <span class="inv-u-sub">${esc(who)} · ${esc(c.date||'No date')}</span></div>
-      <div class="inv-u-head-amount"><span class="inv-u-value">${c.type==='sale' && q.voided || c.type==='bill' && pi.voided?'—':esc(number(due))}</span>
-        <span class="inv-u-sub">${sale?'to collect':'to pay'} · UGX</span></div>
-    </button><div class="inv-u-detail" ${open?'':'hidden'}>${detail}</div></article>`;
+          ${due>0.5 ? `<button type="button" class="btn btn-ghost ow-sm pi-doc-pay" data-id="${pi.id}">Record payment</button>`:''}</div></div></div></article>`;
+    }
+    /* A search that found this sale THROUGH one of its bills opens it,
+       so the bill that matched is on screen rather than behind a click. */
+    const open = invUnifiedOpenKey===key || (tokens.length>0 && c.bills.some(pi=>
+      matches([purchaseInvoiceNumberLabel(pi), pi.supplierName||''])));
+    const total = savedQuoteTotal(q);
+    const received = Math.max(0, Number(q.amountPaid)||0);
+    const due = voided ? 0 : Math.max(0,total-received);
+    const over = voided ? 0 : received-total;
+    const live = c.bills.filter(b=>!b.voided);
+    const billed = live.reduce((n,b)=>n+purchaseInvoiceTotal(b),0);
+    const paidOut = live.reduce((n,b)=>n+paidOn(b),0);
+    const lines = saleLines(q, c.bills);
+    const shelfSold = lines.filter(l=>l.shelf).reduce((n,l)=>n+l.sold,0);
+    const diff = live.length ? total-billed : null;
+    const diffSub = diff==null ? 'no bill' : shelfSold>0 ? 'part from shelf' : 'sale − bills';
+    const aria = `Sale ${number(total)}, ${number(Math.min(received,total))} received; `
+      + `${live.length} bill${live.length===1?'':'s'} ${number(billed)}, ${number(paidOut)} paid`
+      + (live.length ? ` (${live.map(b=>purchaseInvoiceNumberLabel(b)).join(', ')})` : '')
+      + (shelfSold>0 ? `; ${number(shelfSold)} of it sold from the shelf with no bill` : '');
+    const head = `<button type="button" class="inv-u-head" data-unified-key="${key}" aria-expanded="${open}">
+      ${chev}
+      <span class="inv-u-id"><span class="inv-u-ident"><span class="inv-u-doc">${esc(label)}</span>${invStatusChip(q)}</span>
+        <span class="inv-u-sub inv-b-ell" title="${esc(who)}">${esc(who)} · ${esc(c.date||'No date')}</span></span>
+      ${mirror({sale:total, received, live:voided?[]:live, shelfSold, voided, aria})}
+      <span class="inv-u-diff"><span class="inv-u-value">${diff==null||voided?'—':esc(number(diff))}</span><span class="inv-u-sub">${diffSub}</span></span>
+      <span class="inv-u-cash">${voided ? '<span class="inv-u-sub">voided</span>' : cashChip(received-paidOut)}</span>
+      <span class="inv-u-head-amount"><span class="inv-u-value">${voided?'—':over>0.5?'+'+esc(number(over)):esc(number(due))}</span>
+        <span class="inv-u-sub">${voided?'voided':over>0.5?'overpaid':due>0.5?'to collect · UGX':'settled'}</span></span>
+    </button>`;
+    if(!open) return `<article class="inv-u-case">${head}<div class="inv-u-detail" hidden></div></article>`;
+    /* THE BRIDGE. Each line of the sale, joined to the bill that bought
+       it in, the join as thick as what it cost. Row heights are fixed
+       (52 a line, 64 + 8 a bill) so the joins can be drawn from
+       arithmetic rather than from measuring the page. */
+    const H = Math.max(lines.length*52, c.bills.length*72-8, 52);
+    const heaviest = Math.max(1, ...lines.map(l=>l.bought||0));
+    const joins = lines.map((l,i)=>{
+      const j = l.bill ? c.bills.indexOf(l.bill) : -1;
+      if(j<0) return '';
+      const y1 = 26+52*i, y2 = 32+72*j;
+      return `<path d="M0 ${y1}C60 ${y1} 60 ${y2} 120 ${y2}" stroke-width="${2+Math.round(10*(l.bought||0)/heaviest)}"/>`;
+    }).join('');
+    const lineRow = l=>{
+      const name = l.it.productName || 'Item';
+      const bought = l.shelf ? '<span class="inv-u-sub">from the shelf · no bill</span>'
+        : l.bought==null ? `<span class="inv-u-sub">on ${l.bill?esc(purchaseInvoiceNumberLabel(l.bill)):'no live bill'}</span>`
+        : `<span class="inv-b-d">${l.sold-l.bought>=0?'+':'−'}${esc(number(Math.abs(l.sold-l.bought)))}</span>`;
+      return `<div class="inv-b-line">
+        <span class="inv-b-main"><span class="inv-b-name inv-b-ell" title="${esc(name)}">${esc(name)}</span>
+          <span class="inv-u-sub">${esc(number(l.qty))} ${esc(l.it.unit||'')}${l.bill?` <span class="inv-b-to">→ ${esc(purchaseInvoiceNumberLabel(l.bill))}</span>`:''}</span></span>
+        <span class="inv-b-fig"><span class="inv-u-sub">${esc(number(l.sold))}${l.bought!=null?` → ${esc(number(l.bought))}`:''}</span>${bought}</span>
+      </div>`;
+    };
+    const note = diff==null ? 'No bill behind this sale — it was filled from stock the shop already had.'
+      : shelfSold>0 ? 'Shelf lines have no bill here, so this is not a like-for-like difference.'
+      : 'A difference between documents, not profit: stock already on hand is not in it.';
+    const detail = `<div class="inv-u-flow">
+      <div class="inv-b-cols"><span>Sold · what it sold for → what it cost</span><span></span><span>Raised ${c.bills.length} bill${c.bills.length===1?'':'s'}</span></div>
+      <div class="inv-b-grid">
+        <div class="inv-b-lines">${lines.length ? lines.map(lineRow).join('') : '<div class="inv-b-line"><span class="inv-u-sub">No lines on this sale</span></div>'}</div>
+        <svg class="inv-b-joins" width="120" height="${H}" viewBox="0 0 120 ${H}" aria-hidden="true">${joins}</svg>
+        <div class="inv-b-bills">${c.bills.length ? c.bills.map(bridgeBill).join('') : '<div class="inv-b-none">No bill · filled from stock</div>'}</div>
+      </div></div>
+      <div class="inv-u-foot">${diff==null ? '' : `<span class="inv-b-eq"><b>${esc(number(total))}</b> sale − <b>${esc(number(billed))}</b> bills = <b>${esc(number(diff))}</b></span>`}
+        <span class="inv-u-note">${note}</span>
+        <div class="inv-u-acts">${voided ? '' : `<button type="button" class="btn btn-ghost ow-sm inv-doc-unbill" data-id="${q.id}">Undo invoice…</button>`}
+          <button type="button" class="btn btn-ghost ow-sm inv-doc-print" data-id="${q.id}">Print sale</button>
+          ${due>0.5 ? `<button type="button" class="btn btn-accent ow-sm inv-doc-receive" data-id="${q.id}">Receive payment</button>`:''}</div></div>`;
+    return `<article class="inv-u-case is-open">${head}<div class="inv-u-detail">${detail}</div></article>`;
   };
   const groups = [
-    ['Sales and linked bills', shown.filter(c=>c.type==='sale')],
-    ['Stock purchases', shown.filter(c=>c.type==='bill' && c.pi.quoteId==null)],
+    ['Sales and their bills', shown.filter(c=>c.type==='sale')],
+    ['Bills for the shelf · no sale behind them', shown.filter(c=>c.type==='bill' && c.pi.quoteId==null)],
     ['Other supplier bills', shown.filter(c=>c.type==='bill' && c.pi.quoteId!=null)],
   ];
-  wrap.innerHTML = `<div class="inv-u-list">${groups.filter(([,rows])=>rows.length).map(([name,rows])=>
+  const legend = `<div class="inv-u-legend" aria-hidden="true">
+    <span><i class="inv-lg-sale"></i>sale, open</span><span><i class="inv-lg-bill"></i>bill, open</span>
+    <span><i class="inv-lg-done"></i>settled</span><span><i class="inv-lg-shelf"></i>from the shelf</span></div>
+    <div class="inv-u-cols" aria-hidden="true"><span></span><span>Document</span><span>Sale ▲ · bills ▼</span>
+    <span>Difference</span><span>Cash so far</span><span>Still open</span></div>`;
+  wrap.innerHTML = `<div class="inv-u-list">${legend}${groups.filter(([,rows])=>rows.length).map(([name,rows])=>
     `<div class="inv-u-group"><span>${name}</span><span>${rows.length}</span></div>${rows.map(caseHTML).join('')}`).join('')}
     ${listMoreButtonHTML('invoices',cases.length,'invoices')}</div>`;
   wrap.querySelectorAll('[data-unified-key]').forEach(btn=>btn.addEventListener('click',()=>{
