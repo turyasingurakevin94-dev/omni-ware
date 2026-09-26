@@ -315,8 +315,12 @@ const vercel = read('vercel.json');
      draft still wins when it is live for the current question, the
      call to action fills in when there is a document, and nothing else
      writes the composer. One chain, one composer, no second card. */
-  t.check(/const suggested = aiLive && aiLive\.text \? aiLive\.text\s*\n\s*: waInbox\.priceDoc\[convId\] \? WA_PRICE_CALL\s*\n\s*: null;/.test(app),
-    'the assistant draft outranks the call to action, and nothing else writes the composer');
+  /* One more link, at the END of the chain: when the owner chooses "Put
+     it in the reply", the price answer goes as words instead of the
+     picture. The assistant still outranks it, and it writes nothing
+     unless the owner asked for it. */
+  t.check(/const suggested = aiLive && aiLive\.text \? aiLive\.text\s*\n\s*: waInbox\.priceDoc\[convId\] \? WA_PRICE_CALL\s*\n\s*: asText && waInbox\.priceTwin && waInbox\.priceTwin\[convId\] \? waInbox\.priceTwin\[convId\]\s*\n\s*: null;/.test(app),
+    'the assistant draft outranks the call to action, and nothing else writes the composer unless the owner asks for words');
   /* And the words the call to action REPLACED are not lost -- they are
      the twin held with the document, so a customer whose phone cannot
      show the picture still gets every price. */
@@ -329,7 +333,7 @@ const vercel = read('vercel.json');
   t.check(/id="wa_ai_order"/.test(app) && /waCreateOrderFromChat\(\)/.test(app)
     && /\$\{order \? `<button/.test(app),
     'the Create-order button exists only when the draft carries a resolved order');
-  const createFn = (/async function waCreateOrderFromChat\(\)\{[\s\S]*?\n\}/.exec(app) || [''])[0];
+  const createFn = (/async function waCreateOrderFromChat\(fromMatch\)\{[\s\S]*?\n\}/.exec(app) || [''])[0];
   t.check(/ASSISTANT_TOOLS\.create_quote\.run\(/.test(createFn),
     'the order is created through create_quote.run — the same door the owner\'s assistant uses');
   t.check(/q\.originWa = true; q\.waConversationId = conv\.id;/.test(createFn),
