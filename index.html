@@ -7843,29 +7843,6 @@
     .q-doc .q-foot-v{grid-column:8;}
     .q-doc .q-foot-x{display:none;}
   }
-  /* THE PHONE CARD, in the same order: name; who from; how many, what
-     it costs and what it sells for side by side; then what it keeps
-     and what it comes to. Seven stacked label rows became four. */
-  @media (max-width:820px){
-    .q-doc .ow-tbl-r.q-line:not(.q-charge){grid-template-columns:22px repeat(3,minmax(0,1fr)) 36px;row-gap:var(--ow-sp-8);}
-    .q-doc .q-line:not(.q-charge) .q-row-num{grid-column:1;grid-row:1;}
-    .q-doc .q-line:not(.q-charge) > .q-name-cell{grid-column:2/5;grid-row:1;}
-    .q-doc .q-line:not(.q-charge) .q-remove-icon{grid-column:5;grid-row:1;justify-self:end;}
-    .q-doc .q-line:not(.q-charge) > :nth-child(6){grid-column:1/-1;grid-row:2;}
-    .q-doc .q-line:not(.q-charge) > :nth-child(3){grid-column:1/3;grid-row:3;}
-    .q-doc .q-line:not(.q-charge) > :nth-child(7){grid-column:3/4;grid-row:3;}
-    .q-doc .q-line:not(.q-charge) > :nth-child(4){grid-column:4/6;grid-row:3;}
-    .q-doc .q-line:not(.q-charge) > :nth-child(3),
-    .q-doc .q-line:not(.q-charge) > :nth-child(7),
-    .q-doc .q-line:not(.q-charge) > :nth-child(4){flex-direction:column;align-items:stretch;justify-content:flex-start;gap:2px;}
-    .q-doc .q-line:not(.q-charge) > :nth-child(3) .ow-gi,
-    .q-doc .q-line:not(.q-charge) > :nth-child(7) .ow-gi,
-    .q-doc .q-line:not(.q-charge) > :nth-child(4) .ow-gi{max-width:none;width:100%;min-height:var(--ow-tap);box-sizing:border-box;text-align:right;}
-    .q-doc .q-line:not(.q-charge) > :nth-child(8){grid-column:1/4;grid-row:4;}
-    .q-doc .q-line:not(.q-charge) > :nth-child(5){grid-column:4/6;grid-row:4;}
-    .q-doc .q-line:not(.q-charge) > .q-line-flag{grid-column:1/-1;grid-row:5;justify-content:flex-start;}
-    .q-doc .q-line:not(.q-charge) .q-qty-cell{display:flex;align-items:center;gap:6px;}
-  }
   /* The picker's keep line: what the two boxes above leave, and the
      save offer when the buy price typed is not the one on file. */
   .q-ip-keep{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ow-sp-8);margin:calc(-1 * var(--ow-sp-6)) 0 var(--ow-sp-10);font-size:12px;}
@@ -8180,25 +8157,33 @@
      shelf line and a price position per bought-in line. Colour is state
      only (verdigris / amber / crimson); everything else is ink and
      hairlines. Buttons are the app's own .btn.btn-ghost.ow-sm. */
-  .q-rl-health{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));background:var(--ow-paper);
+  /* The rail's tabs. Which one is open is said by weight, ground and an
+     ink keyline; how each is doing by the word under its name; and what
+     needs the owner by a counted badge. Three carriers, three jobs. */
+  .q-rl-health{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));background:var(--ow-paper-2);
     border:1px solid var(--ow-steel-100);border-radius:var(--ow-r-lg);overflow:hidden;}
   .q-rl-health[hidden]{display:none;}
-  .q-rl-tile{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:var(--ow-sp-6);
-    min-width:0;padding:var(--ow-sp-10) var(--ow-sp-10) var(--ow-sp-8);border-bottom:3px solid var(--ow-rule);}
+  .q-rl-tile{all:unset;position:relative;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:var(--ow-sp-4);
+    min-width:0;padding:var(--ow-sp-10) var(--ow-sp-10) var(--ow-sp-8);border-bottom:3px solid transparent;}
   .q-rl-tile + .q-rl-tile{border-left:1px solid var(--ow-rule-soft);}
-  .q-rl-tile:hover{background:var(--ow-paper-2);}
+  .q-rl-tile:hover{background:var(--ow-paper);}
   .q-rl-tile:focus-visible{outline:2px solid var(--ow-oxide);outline-offset:-2px;}
-  .q-rl-tile-k{display:flex;align-items:center;gap:var(--ow-sp-6);font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
-    letter-spacing:.06em;text-transform:uppercase;color:var(--ow-ink-600);}
-  .q-rl-tile-v{font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);
+  .q-rl-tile.q-rl-on{background:var(--ow-paper);border-bottom-color:var(--ow-ink-900);}
+  .q-rl-tile-k{display:flex;align-items:center;gap:var(--ow-sp-6);font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);
+    color:var(--ow-ink-600);}
+  .q-rl-on .q-rl-tile-k{font-weight:var(--ow-fw-700);color:var(--ow-ink-900);}
+  .q-rl-tile-v{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);
     min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .q-rl-tile-ok{border-bottom-color:var(--ow-verdigris);}
-  .q-rl-tile-ok .q-rl-ic,.q-rl-tile-ok .q-rl-tile-v{color:var(--ow-verdigris);}
-  .q-rl-tile-warn{border-bottom-color:var(--ow-amber);}
-  .q-rl-tile-warn .q-rl-ic{color:var(--ow-amber);}
+  .q-rl-tile-ok .q-rl-tile-v{color:var(--ow-verdigris);}
   .q-rl-tile-warn .q-rl-tile-v{color:var(--ow-amber-ink);}
-  .q-rl-tile-bad{border-bottom-color:var(--ow-crimson);}
-  .q-rl-tile-bad .q-rl-ic,.q-rl-tile-bad .q-rl-tile-v{color:var(--ow-crimson);}
+  .q-rl-tile-bad .q-rl-tile-v{color:var(--ow-crimson);}
+  .q-rl-badge{position:absolute;top:var(--ow-sp-6);right:var(--ow-sp-6);display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;
+    padding:0 var(--ow-sp-4);box-sizing:border-box;border-radius:var(--ow-r-pill);
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);line-height:1;color:var(--ow-paper);}
+  .q-rl-badge-warn{background:var(--ow-amber);}
+  .q-rl-badge-bad{background:var(--ow-crimson);}
+  #q_rail > [role="tabpanel"][hidden]{display:none;}
   .q-rl-ic{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;
     stroke-linecap:round;stroke-linejoin:round;}
 
@@ -8362,6 +8347,7 @@
       max-height:var(--q-rail-max, calc(100vh - var(--topbar-h) - var(--ow-sp-24) - 64px));overflow-y:auto;
       overscroll-behavior:contain;scrollbar-width:thin;gap:var(--ow-sp-12);}
     #q_rail > *{flex:none;}
+    #q_rail > .q-rl-health{position:sticky;top:0;z-index:2;}
   }
   /* An empty reading takes a line, not a panel. */
   .ow-pan.q-rl-slim{display:flex;align-items:center;gap:var(--ow-sp-10);padding:var(--ow-sp-10) var(--ow-sp-12);
@@ -8375,7 +8361,8 @@
     .q-rl-door{min-height:var(--ow-tap);display:inline-flex;align-items:center;}
     .q-rl-line,.q-rl-sec,.q-rl-with,.q-rl-ask{padding:var(--ow-sp-16);}
     .q-rl-more > summary{min-height:var(--ow-tap);box-sizing:border-box;padding:0 var(--ow-sp-16);}
-    .q-rl-add{padding-left:var(--ow-sp-16);padding-right:var(--ow-sp-16);}
+    /* Above the layer's phone rule that stretches every .btn.ow-sm to half a row. */
+    .q-rl-with .btn.ow-sm.q-rl-add{flex:none;min-width:0;padding-left:var(--ow-sp-16);padding-right:var(--ow-sp-16);}
   }
 
   .qty-input{width:64px;padding:6px 7px;border:1px solid var(--line);border-radius:6px;font-size:13px;font-family:'IBM Plex Mono',monospace;}
@@ -8387,6 +8374,166 @@
      was green, which made every ordinary line the loud one. */
   .q-doc .q-row-margin-warn{background:var(--ow-amber-faint);}
   .q-doc .q-row-margin-danger{background:var(--ow-crimson-soft);}
+  /* THE DOCUMENT AS A SHEET (console only). The rows were uneven -- the
+     unit under the name made every row two lines, an old price added a
+     third, the margin tinted the whole row -- and the columns did not
+     read down. So every line is one line, every cell is a cell with a
+     hairline on its right, every figure sits right under a right-set
+     heading, and a cell shows its edges only when it is pointed at or
+     typed in, the way a spreadsheet's does. What a line needs to say is
+     said in the cell it is about: the margin in its pill, an old price
+     in a mark in the corner of Buy each. */
+  .q-stale-sum{grid-column:1/-1;display:flex;align-items:center;gap:var(--ow-sp-8);
+    padding:var(--ow-sp-8) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);
+    background:var(--ow-amber-faint);font-size:var(--ow-t-12);color:var(--ow-amber-ink);}
+  .q-stale-sum > span:nth-child(2){flex:1;min-width:0;}
+  .q-stale-mk{width:0;height:0;border-top:9px solid var(--ow-amber);border-right:9px solid transparent;flex:none;}
+  .q-flag-mark{all:unset;cursor:pointer;position:absolute;left:0;top:0;width:14px;height:14px;
+    display:block;background:linear-gradient(135deg,var(--ow-amber) 50%,transparent 50%);}
+  .q-flag-mark:hover{background:linear-gradient(135deg,var(--ow-amber-ink) 50%,transparent 50%);}
+  .q-flag-mark:focus-visible{outline:2px solid var(--ow-oxide);outline-offset:1px;}
+  @media (min-width:821px){
+    /* The words share what is left, two to one; the figures keep their width. */
+    .q-doc .ow-tbl{--ow-tbl-cols:36px minmax(160px,2fr) minmax(104px,1fr) 92px 96px 124px 76px minmax(116px,auto);}
+    .q-doc .ow-tbl-h,.q-doc .ow-tbl-r{gap:0;padding:0;}
+    .q-doc .ow-tbl-f{gap:0;padding:var(--ow-sp-6) 0;}
+    .q-doc .ow-tbl-h{min-height:32px;align-items:stretch;background:var(--ow-paper-2);}
+    .q-doc .q-line{min-height:36px;align-items:stretch;position:relative;}
+    .q-doc .q-line.q-row-margin-warn,.q-doc .q-line.q-row-margin-danger{background:transparent;}
+    .q-doc .ow-tbl-r.q-line:hover{background:var(--ow-paper-2);}
+    .q-doc .ow-tbl-h > *,.q-doc .q-line > :not(.q-line-flag){display:flex;align-items:center;justify-self:stretch;
+      min-width:0;box-sizing:border-box;padding:0 var(--ow-sp-10);border-right:1px solid var(--ow-rule-soft);}
+    .q-doc .ow-tbl-h > .ow-tbl-n,.q-doc .q-line > .ow-tbl-n{justify-content:flex-end;}
+    /* A heading is one line: it gives way with an ellipsis, never a wrap. */
+    .q-doc .ow-tbl-h > :not(.q-gutter){display:block;line-height:32px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .q-doc .ow-tbl-h > .ow-tbl-n{text-align:right;}
+    .q-doc .ow-tbl-h > :nth-child(5),.q-doc .q-line > :nth-child(5){border-right:0;}
+    .q-doc .ow-tbl-h > .q-gutter,.q-doc .q-line > .q-gutter{justify-content:center;padding:0;}
+    /* One line: the unit is said once, beside the count; a consignor's
+       tag stays, beside the name. */
+    .q-doc .q-line > .q-name-cell{flex-direction:row;gap:var(--ow-sp-8);}
+    .q-doc .q-line > .q-name-cell > .ow-tbl-p{flex:0 1 auto;min-width:0;}
+    .q-doc .q-line:not(.q-charge) .q-item-sub{margin-top:0;flex:none;}
+    .q-doc .q-line:not(.q-charge) .q-item-sub .q-item-unit{display:none;}
+    .q-doc .q-line > [data-l="Qty"]{padding:0 var(--ow-sp-6);}
+    .q-doc .q-qty-cell{width:100%;}
+    .q-doc .q-qty-cell .ow-gi{flex:1 1 auto;min-width:32px;}
+    .q-doc .q-qty-unit{flex:0 0 auto;max-width:44px;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .q-doc .q-sell-cell .ow-gi{min-width:72px;}
+    .q-doc .q-qty-pack{display:none;}
+    /* A cell is edged only when it is the one being pointed at or typed
+       in -- not every input on a hovered row at once. */
+    .q-doc .q-line .ow-gi{border-radius:0;height:28px;}
+    .q-doc .ow-tbl-r.q-line:hover .ow-gi{border-color:transparent;background:transparent;}
+    .q-doc .ow-tbl-r.q-line .ow-gi:hover{border-color:var(--ow-steel-100);background:var(--ow-paper);}
+    .q-doc .ow-tbl-r.q-line .ow-gi:focus{border-color:var(--ow-steel-950);background:var(--ow-paper);
+      outline:1px solid var(--ow-steel-950);outline-offset:-2px;}
+    .q-doc .q-has-flag .q-price{border-color:transparent;}
+    .q-doc .q-line .q-sup-text{border-radius:0;padding-left:0;}
+    .q-doc .q-line:hover .q-sup-text{border-color:transparent;background:transparent;}
+    .q-doc .q-line .q-sup-text:hover{border-color:var(--ow-steel-100);background:var(--ow-paper);padding-left:var(--ow-sp-6);}
+    /* The old price: a mark in the corner of its cell, and the note
+       behind it opened below the row on a tap -- never a row of its own. */
+    .q-doc .q-line > [data-l="Buy each"]{position:relative;}
+    .q-doc .q-line-flag.is-old{display:none;position:absolute;right:196px;top:calc(100% - 2px);z-index:20;
+      width:300px;margin:0;box-sizing:border-box;padding:var(--ow-sp-12);flex-direction:column;align-items:stretch;
+      gap:var(--ow-sp-10);background:var(--ow-paper);border:1px solid var(--ow-steel-100);
+      border-radius:var(--ow-r-lg);box-shadow:var(--ow-lift);}
+    .q-doc .q-line.q-flag-open{z-index:21;}
+    .q-doc .q-line.q-flag-open .q-line-flag.is-old{display:flex;}
+    .q-doc .q-line-flag.is-old .q-flag-t{padding:0;border-radius:0;background:transparent;
+      font-weight:var(--ow-fw-500);line-height:1.45;}
+    .q-doc .q-line-flag.is-old .q-flag-still{align-self:flex-end;}
+    /* A price just typed still speaks under its line, across the row. */
+    .q-doc .q-line-flag:not(.is-old){padding:var(--ow-sp-6) var(--ow-sp-10);margin:0;
+      border-top:1px dashed var(--ow-rule-soft);}
+    .q-doc .q-foot-l{padding-right:var(--ow-sp-10);}
+    .q-doc .q-foot-v{padding-right:var(--ow-sp-10);}
+  }
+  /* THE SAME SHEET ON THE PHONE. Eight columns do not fit in 390px, and
+     the card that stacked them made every line a different shape. So
+     the phone gets the sheet too, the way a spreadsheet app does it:
+     the columns keep their widths and the sheet slides sideways under
+     a frozen # and Item, so a line is always read against its name.
+     Rows are a thumb high; the add rows, the old-price count and the
+     foot stay put at the width of the screen while the figures slide. */
+  @media (max-width:820px){
+    .q-doc .ow-tbl{display:grid;--ow-tbl-cols:32px 148px 124px 96px 100px 128px 76px 136px;
+      grid-template-columns:var(--ow-tbl-cols);overflow-x:auto;overscroll-behavior-x:contain;
+      container-type:inline-size;scrollbar-width:thin;}
+    .q-doc .ow-tbl > .ow-tbl-h,.q-doc .ow-tbl > .ow-tbl-r.q-line{display:grid;grid-column:1/-1;
+      grid-template-columns:var(--ow-tbl-cols);gap:0;padding:0;align-items:stretch;
+      border-top:1px solid var(--ow-rule-soft);font-size:var(--ow-t-14);}
+    .q-doc .ow-tbl > .ow-tbl-h{min-height:36px;background:var(--ow-paper-2);border-top:0;
+      border-bottom:1px solid var(--ow-rule);}
+    .q-doc .ow-tbl > .ow-tbl-r.q-line{min-height:var(--ow-tap);position:relative;}
+    .q-doc .ow-tbl > .q-line.q-row-margin-warn,.q-doc .ow-tbl > .q-line.q-row-margin-danger{background:transparent;}
+    .q-doc .ow-tbl > .ow-tbl-h > *,.q-doc .ow-tbl > .q-line > :not(.q-line-flag){display:flex;align-items:center;
+      grid-column:auto;grid-row:auto;justify-self:stretch;min-width:0;box-sizing:border-box;
+      padding:0 var(--ow-sp-10);border-right:1px solid var(--ow-rule-soft);}
+    .q-doc .ow-tbl > .ow-tbl-h > :not(.q-gutter){display:block;line-height:36px;font-size:var(--ow-t-11);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .q-doc .ow-tbl > .ow-tbl-h > .ow-tbl-n{text-align:right;}
+    .q-doc .ow-tbl > .ow-tbl-h > .ow-tbl-n,.q-doc .ow-tbl > .q-line > .ow-tbl-n{justify-content:flex-end;}
+    .q-doc .ow-tbl > .ow-tbl-h > :nth-child(5),.q-doc .ow-tbl > .q-line > :nth-child(5){border-right:0;}
+    /* the console's order: what, from whom, how many, cost, price, margin, total */
+    .q-doc .ow-tbl > .ow-tbl-h > :nth-child(6),.q-doc .ow-tbl > .q-line > :nth-child(6){order:3;}
+    .q-doc .ow-tbl > .ow-tbl-h > :nth-child(3),.q-doc .ow-tbl > .q-line > :nth-child(3){order:4;}
+    .q-doc .ow-tbl > .ow-tbl-h > :nth-child(7),.q-doc .ow-tbl > .q-line > :nth-child(7){order:5;}
+    .q-doc .ow-tbl > .ow-tbl-h > :nth-child(4),.q-doc .ow-tbl > .q-line > :nth-child(4){order:6;}
+    .q-doc .ow-tbl > .ow-tbl-h > :nth-child(8),.q-doc .ow-tbl > .q-line > :nth-child(8){order:7;}
+    .q-doc .ow-tbl > .ow-tbl-h > :nth-child(5),.q-doc .ow-tbl > .q-line > :nth-child(5){order:8;}
+    .q-doc .ow-tbl > .ow-tbl-h > .q-shop-first,.q-doc .ow-tbl > .q-line > .q-shop-first{border-left:0;}
+    /* frozen: the number and the name */
+    .q-doc .ow-tbl > .ow-tbl-h > .q-gutter,.q-doc .ow-tbl > .q-line > .q-gutter{position:sticky;left:0;z-index:2;
+      justify-content:center;padding:0;background:var(--ow-paper);}
+    .q-doc .ow-tbl > .ow-tbl-h > :nth-child(2),.q-doc .ow-tbl > .q-line > .q-name-cell{position:sticky;left:32px;z-index:2;
+      background:var(--ow-paper);border-right:1px solid var(--ow-steel-100);}
+    .q-doc .ow-tbl > .ow-tbl-h > .q-gutter,.q-doc .ow-tbl > .ow-tbl-h > :nth-child(2){background:var(--ow-paper-2);}
+    .q-doc .ow-tbl > .q-line > .q-name-cell{flex-direction:row;gap:var(--ow-sp-6);}
+    .q-doc .ow-tbl > .q-line > .q-name-cell > .ow-tbl-p{flex:0 1 auto;min-width:0;font-size:var(--ow-t-14);}
+    .q-doc .ow-tbl > .q-line:not(.q-charge) .q-item-sub{margin-top:0;flex:none;}
+    .q-doc .ow-tbl > .q-line:not(.q-charge) .q-item-sub .q-item-unit{display:none;}
+    .q-doc .ow-tbl > .q-line .q-row-num{display:inline;}
+    .q-doc .ow-tbl > .q-line .q-remove-icon{display:none;}
+    /* the cells themselves */
+    .q-doc .ow-tbl > .q-line .ow-gi{font-size:16px;min-height:36px;max-width:none;width:100%;border-radius:0;flex:1 1 auto;}
+    .q-doc .ow-tbl > .q-line > [data-l="Qty"]{padding:0 var(--ow-sp-6);}
+    .q-doc .ow-tbl .q-qty-cell{width:100%;display:flex;align-items:center;gap:var(--ow-sp-4);}
+    .q-doc .ow-tbl .q-qty-cell .ow-gi{min-width:36px;}
+    .q-doc .ow-tbl .q-qty-unit{flex:0 0 auto;max-width:40px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .q-doc .ow-tbl .q-qty-pack{display:none;}
+    .q-doc .ow-tbl .q-sell-cell .ow-gi{min-width:72px;}
+    .q-doc .ow-tbl .q-supplier-picker{max-width:none;}
+    .q-doc .ow-tbl .q-sup-text{text-align:left;font-size:var(--ow-t-14);padding-left:0;}
+    .q-doc .ow-tbl > .q-line > [data-l="Buy each"]{position:relative;}
+    .q-doc .ow-tbl > .q-charge > *{display:flex;}
+    .q-doc .ow-tbl .q-has-flag .q-price{border-color:transparent;}
+    /* what does not slide: the width of the screen, pinned to its left */
+    .q-doc .ow-tbl > .q-add-row-trailing,.q-doc .ow-tbl > .q-stale-sum,.q-doc .ow-tbl > .ow-tbl-f,
+    .q-doc .ow-tbl > .q-line > .q-line-flag{position:sticky;left:0;width:100cqw;box-sizing:border-box;
+      grid-column:1/-1;justify-self:start;}
+    .q-doc .ow-tbl > .ow-tbl-f{display:flex;align-items:baseline;justify-content:space-between;gap:var(--ow-sp-12);
+      padding:var(--ow-sp-8) var(--ow-sp-12);}
+    .q-doc .ow-tbl > .ow-tbl-f .q-foot-x{display:none;}
+    .q-doc .ow-tbl > .q-line > .q-line-flag{margin:0;padding:var(--ow-sp-8) var(--ow-sp-12);justify-content:flex-start;
+      border-top:1px dashed var(--ow-rule-soft);z-index:3;}
+    .q-doc .ow-tbl > .q-line > .q-line-flag.is-old{display:none;background:var(--ow-amber-faint);}
+    .q-doc .ow-tbl > .q-line.q-flag-open > .q-line-flag.is-old{display:flex;}
+    .q-doc .ow-tbl .q-line-flag.is-old .q-flag-t{padding:0;background:transparent;font-weight:var(--ow-fw-500);}
+    .q-doc .ow-tbl .q-line-flag .btn.ow-sm{flex:none;min-width:0;}
+    /* The column says what a cell is; the card's per-cell label goes. */
+    .q-doc .ow-tbl > .q-line > [data-l]::before{content:none;display:none;}
+    .q-doc .ow-tbl > .q-line > [data-l]{align-items:center;}
+    .q-doc .ow-tbl > .q-stale-sum .btn.ow-sm{flex:none;min-width:0;}
+    .q-doc .ow-tbl > .q-line .q-row-num{align-self:center;padding-top:0;}
+    /* A tap leaves :hover behind on a touch screen; only the cell being
+       typed in is edged, never the whole row that was touched. */
+    .q-doc .ow-tbl > .ow-tbl-r.q-line:hover .ow-gi{border-color:transparent;background:transparent;}
+    .q-doc .ow-tbl > .ow-tbl-r.q-line .ow-gi:focus{border-color:var(--ow-steel-950);background:var(--ow-paper);
+      outline:1px solid var(--ow-steel-950);outline-offset:-2px;}
+    .q-doc .ow-tbl > .q-line:hover .q-sup-text{border-color:transparent;background:transparent;}
+  }
   .q-margin-pill{
     display:inline-flex;align-items:center;height:18px;padding:0 var(--ow-sp-6);border-radius:var(--ow-r-sm);
     font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:11px;font-weight:600;
@@ -22717,7 +22864,7 @@
              a derivation another screen already owns. See
              renderQuoteRail. -->
         <div class="ow-side" id="q_rail">
-          <div class="q-rl-health" id="q_rail_health" hidden></div>
+          <div class="q-rl-health" id="q_rail_health" role="tablist" aria-label="About this quote" hidden></div>
           <div class="ow-pan" id="q_rail_client"></div>
           <div class="ow-pan" id="q_rail_lines"></div>
           <div class="ow-pan" id="q_rail_with"></div>
@@ -43101,6 +43248,17 @@ function quoteLineBuyFlag(item, qty, buy, sell){
   return '';
 }
 
+function closeQuoteFlags(){
+  document.querySelectorAll('#q_itemsWrap .q-line.q-flag-open').forEach(r=>{
+    r.classList.remove('q-flag-open');
+    const m = r.querySelector('.q-flag-mark'); if(m) m.setAttribute('aria-expanded', 'false');
+  });
+}
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest || e.target.closest('#q_itemsWrap .q-line-flag')) return;
+  closeQuoteFlags();
+});
+document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeQuoteFlags(); });
 function renderQuoteItems(){
   ensureQuote();
   const wrap = document.getElementById('q_itemsWrap');
@@ -43115,7 +43273,7 @@ function renderQuoteItems(){
   // Rows below this margin % are flagged amber; at/below 0% (selling at or
   // under cost) are flagged red. Purely visual — doesn't block saving/printing.
   const MARGIN_WARN_PCT = 10;
-  let grandBuy = 0, grandSell = 0;
+  let grandBuy = 0, grandSell = 0, staleLines = 0;
   /* ONE TEMPLATE, TWO SKINS. The row is an .ow-tbl-r; every cell that
      had a column name carries it as data-l, and below 820px the layer
      turns the same row into a card with those names as its labels.
@@ -43191,7 +43349,16 @@ function renderQuoteItems(){
        back. With nothing typed, a price on file past its review age says
        so here, where it is about to be quoted on. */
     const flag = quoteLineBuyFlag(it, qty, buy, sell);
-    return `<div class="ow-tbl-r q-line${rowMarginClass}${flag ? ' q-has-flag' : ''}" data-line="${it.lineId}">
+    /* AN OLD PRICE IS A MARK IN ITS CELL, NOT A ROW OF ITS OWN. On the
+       console the note behind it opens from the corner of Buy each, the
+       way a spreadsheet keeps a comment; a row that grew a second line
+       for it knocked every column below it out of step. A price just
+       TYPED still says its difference under the line -- that one is the
+       answer to what the rep did a moment ago, and must not be missed. */
+    const oldFlag = flag.indexOf('is-old') >= 0;
+    if(oldFlag) staleLines++;
+    const flagMark = oldFlag ? `<button type="button" class="q-flag-mark" aria-expanded="false" aria-label="${esc(supplierName(it.supplierId))}’s price on file is old — check it" title="${esc(supplierName(it.supplierId))}’s price on file is old"></button>` : '';
+    return `<div class="ow-tbl-r q-line${rowMarginClass}${flag ? ' q-has-flag' : ''}${oldFlag ? ' q-has-old' : ''}" data-line="${it.lineId}">
       <div class="ow-tbl-c q-gutter">
         <span class="q-row-num">${idx+1}</span>
         <button class="q-remove-icon" title="Remove item" aria-label="Remove line ${idx+1}"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
@@ -43210,7 +43377,7 @@ function renderQuoteItems(){
       <div class="ow-tbl-n" data-l="Price each">${sellCellHTML}</div>
       <div data-l="Line total" title="What this line adds to the client's bill" class="ow-tbl-n q-line-total price">${fmtUGX(lineSell)}</div>
       <div class="ow-tbl-c q-shop-first" data-l="Buying from">${supplierPickerHTML}</div>
-      <div class="ow-tbl-n" data-l="Buy each"><input type="number" class="ow-gi price-input q-price" min="0" step="any" value="${Math.round(it.price * per)}" aria-label="Buy price${countUnit ? ` per ${esc(countUnit)}` : ''}"></div>
+      <div class="ow-tbl-n" data-l="Buy each">${flagMark}<input type="number" class="ow-gi price-input q-price" min="0" step="any" value="${Math.round(it.price * per)}" aria-label="Buy price${countUnit ? ` per ${esc(countUnit)}` : ''}"></div>
       <div class="ow-tbl-n" data-l="Margin"><span class="q-margin-pill ${pillClass}">${Math.round(marginPct)}%</span></div>
       ${flag}
     </div>`;
@@ -43305,12 +43472,41 @@ function renderQuoteItems(){
       <div class="ow-tbl-c q-shop-first">Buying from</div>
       <div class="ow-tbl-n">Buy each</div>
       <div class="ow-tbl-n">Margin</div>
-    </div>${rowsHtml}${takesCharges ? chargeRowsHTML(data.quote, grandSell) : ''}${takesCredit ? creditRowHTML(data.quote, cashTotal) : ''}${addRowHtml}${takesCharges ? chargeAddRowHTML() : ''}${takesCredit ? creditOfferRowHTML(data.quote) : ''}${footHtml}
+    </div>${rowsHtml}${staleLines ? `<div class="q-stale-sum" role="status"><span class="q-stale-mk" aria-hidden="true"></span><span><b class="ow-fig">${staleLines}</b> buy price${staleLines===1?' is':'s are'} old on file</span><button type="button" class="btn btn-ghost ow-sm q-stale-go">Check ${staleLines===1?'it':'them'}</button></div>` : ''}${takesCharges ? chargeRowsHTML(data.quote, grandSell) : ''}${takesCredit ? creditRowHTML(data.quote, cashTotal) : ''}${addRowHtml}${takesCharges ? chargeAddRowHTML() : ''}${takesCredit ? creditOfferRowHTML(data.quote) : ''}${footHtml}
   </div>`;
 
   if(takesCharges || takesCredit) wireQuoteCharges(wrap);
 
   renderQuoteFinbar(grandBuy, grandSell, profit, chargesTotal, creditCharge);
+
+  /* The note behind an old price opens on its own row, one at a time. */
+  const openFlag = (row, focus)=>{
+    wrap.querySelectorAll('.q-line.q-flag-open').forEach(r=>{
+      if(r === row) return;
+      r.classList.remove('q-flag-open');
+      const m = r.querySelector('.q-flag-mark'); if(m) m.setAttribute('aria-expanded', 'false');
+    });
+    const on = !row.classList.contains('q-flag-open');
+    row.classList.toggle('q-flag-open', on);
+    const mark = row.querySelector('.q-flag-mark');
+    if(mark) mark.setAttribute('aria-expanded', String(on));
+    if(on && focus){
+      const still = row.querySelector('.q-flag-still');
+      if(still) still.focus();
+    }
+  };
+  wrap.querySelectorAll('.q-flag-mark').forEach(m=> m.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    openFlag(m.closest('.q-line'), true);
+  }));
+  const staleGo = wrap.querySelector('.q-stale-go');
+  if(staleGo) staleGo.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const first = wrap.querySelector('.q-line.q-has-old');
+    if(!first) return;
+    first.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    if(!first.classList.contains('q-flag-open')) openFlag(first, true);
+  });
 
   wrap.querySelectorAll('[data-line]').forEach(row=>{
     const lineId = Number(row.dataset.line);
@@ -43493,6 +43689,8 @@ function quoteRailFit(){
   rail.style.setProperty('--q-rail-max', Math.max(240, Math.floor(foot - top - 12)) + 'px');
 }
 let quoteRailFitQueued = false;
+/* The rail tab the owner last picked; null means "open on whatever needs them". */
+let quoteRailTab = null;
 function queueQuoteRailFit(){
   if(quoteRailFitQueued) return;
   quoteRailFitQueued = true;
@@ -43598,8 +43796,6 @@ function renderQuoteRail(){
     const state = !it.productId ? 'none' : short || cheaper ? 'warn' : bought && !ranked.length ? 'none' : 'ok';
     return { it, idx, qty, shelf, ranked, best, paying, short, bought, cheaper, fromShelf, state };
   });
-  const shelfRows = rows.filter(r=> r.it.productId && r.fromShelf);
-  const boughtRows = rows.filter(r=> r.bought);
   const shorts = rows.filter(r=> r.short);
   const cheapers = rows.filter(r=> r.cheaper);
   {
@@ -43724,6 +43920,7 @@ function renderQuoteRail(){
     });
   }
 
+  const withFound = [];
   /* ---- goes with it ----
      What the shop itself has written down about the lines already on
      the document: what they cannot be used without, what is usually
@@ -43733,7 +43930,7 @@ function renderQuoteRail(){
   {
     const onDoc = new Set(items.map(it=> it.productId).filter(Boolean));
     const seenC = new Set();
-    const found = [];
+    const found = withFound;
     items.forEach((it, idx)=>{
       if(!it.productId) return;
       pairCompanionsFor(it.productId, it.variantIdx, Number(it.qty)||0,
@@ -43818,28 +44015,72 @@ function renderQuoteRail(){
     });
   }
 
-  /* ---- the strip: the three answers, before anything is read ----
-     Each tile is its state three ways -- the word, the mark (a check,
-     a warning, a dash) and the keyline -- because hue alone fails in
-     the yard at midday. A tap takes you to the panel that says why. */
+  /* ---- the tabs: one panel at a time, and a badge where you are needed ----
+     The rail was three panels stacked, and on a long quote it ran far
+     past the document beside it. Now it is three tabs over one panel.
+     Each tab carries its answer in a word under its name, and a badge
+     when its panel holds something to act on: a late balance, a line
+     that is short or dearer than it needs to be, something a line
+     cannot be used without. The badge is a count AND a colour, so it
+     reads without the hue. Until the owner picks a tab, the rail opens
+     on the first one that needs them. */
   {
-    const stock = !shelfRows.length ? { state: 'none', word: items.length ? 'Bought in' : '—' }
-      : shorts.length ? { state: 'warn', word: `${shorts.length} short` }
-      : { state: 'ok', word: 'Covered' };
-    const price = !boughtRows.length ? { state: 'none', word: items.length ? 'Shelf only' : '—' }
-      : cheapers.length ? { state: 'warn', word: `${cheapers.length} cheaper` }
-      : boughtRows.some(r=> r.ranked.length) ? { state: 'ok', word: 'Best buys' }
-      : { state: 'none', word: 'No prices' };
-    const tile = (k, s, to)=> `<button type="button" class="q-rl-tile q-rl-tile-${s.state}" data-to="${to}"><span class="q-rl-tile-k">${ICON[s.state==='bad' ? 'warn' : s.state]}${k}</span><span class="q-rl-tile-v">${esc(s.word)}</span></button>`;
-    if(!items.length && !nameLower){ healthEl.hidden = true; healthEl.innerHTML = ''; }
-    else {
-      healthEl.hidden = false;
-      healthEl.innerHTML = tile('Credit', credit, 'q_rail_client') + tile('Stock', stock, 'q_rail_lines') + tile('Price', price, 'q_rail_lines');
-      healthEl.querySelectorAll('[data-to]').forEach(b=> b.addEventListener('click', ()=>{
-        const el = document.getElementById(b.dataset.to);
-        if(el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }));
-    }
+    const act = rows.filter(r=> r.state === 'warn');
+    const needs = withFound.filter(f=> f.c.verbId === 'needs' || f.c.why === 'outOfStock');
+    const lineWord = !items.length ? '—'
+      : !act.length ? 'All ready'
+      : `${act.length} to fix`;
+    const tabs = [
+      { id: 'client', label: 'Client', panel: clientEl, word: credit.word,
+        badge: credit.state === 'warn' || credit.state === 'bad' ? 1 : 0, tone: credit.state === 'bad' ? 'bad' : 'warn',
+        state: credit.state },
+      { id: 'lines', label: 'Lines', panel: linesEl, word: lineWord,
+        badge: act.length, tone: 'warn', state: !items.length ? 'none' : act.length ? 'warn' : 'ok' },
+      { id: 'with', label: 'Pairings', panel: withEl,
+        word: withFound.length ? `${withFound.length} idea${withFound.length===1?'':'s'}` : 'None',
+        badge: needs.length, tone: 'warn', state: needs.length ? 'warn' : 'none' },
+    ];
+    if(!items.length && !nameLower) quoteRailTab = null;
+    const auto = (tabs.find(t=> t.badge) || tabs[nameLower && !items.length ? 0 : 1]).id;
+    const current = tabs.some(t=> t.id === quoteRailTab) ? quoteRailTab : auto;
+    healthEl.hidden = false;
+    healthEl.innerHTML = tabs.map(t=> `<button type="button" role="tab" id="q_rail_tab_${t.id}" class="q-rl-tile q-rl-tile-${t.state}${t.id === current ? ' q-rl-on' : ''}"
+        aria-selected="${t.id === current}" aria-controls="${t.panel.id}" tabindex="${t.id === current ? 0 : -1}" data-tab="${t.id}"
+        title="${esc(t.id === 'lines' && act.length ? [shorts.length ? shorts.length + ' short on the shelf' : '', cheapers.length ? cheapers.length + ' cheaper elsewhere' : ''].filter(Boolean).join(', ') : t.word)}"
+        aria-label="${esc(t.label)}: ${esc(t.word)}${t.badge ? ', ' + t.badge + ' to act on' : ''}">
+        <span class="q-rl-tile-k">${esc(t.label)} ${t.badge ? `<span class="q-rl-badge q-rl-badge-${t.tone}" aria-hidden="true">${t.badge > 9 ? '9+' : t.badge}</span>` : ''}</span>
+        <span class="q-rl-tile-v" aria-hidden="true">${esc(t.word)}</span>
+      </button>`).join('');
+    tabs.forEach(t=>{
+      t.panel.hidden = t.id !== current;
+      t.panel.setAttribute('role', 'tabpanel');
+      t.panel.setAttribute('aria-labelledby', 'q_rail_tab_' + t.id);
+    });
+    const pick = (id, focus)=>{
+      quoteRailTab = id;
+      tabs.forEach(t=>{
+        const on = t.id === id;
+        const b = document.getElementById('q_rail_tab_' + t.id);
+        b.classList.toggle('q-rl-on', on);
+        b.setAttribute('aria-selected', on);
+        b.tabIndex = on ? 0 : -1;
+        t.panel.hidden = !on;
+        if(on && focus) b.focus();
+      });
+      const rail = document.getElementById('q_rail');
+      if(rail) rail.scrollTop = 0;
+      queueQuoteRailFit();
+    };
+    healthEl.querySelectorAll('[data-tab]').forEach((b, i, all)=>{
+      b.addEventListener('click', ()=> pick(b.dataset.tab));
+      /* Arrow keys walk the tabs, as a tablist is expected to. */
+      b.addEventListener('keydown', (e)=>{
+        const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+        if(!step) return;
+        e.preventDefault();
+        pick(all[(i + step + all.length) % all.length].dataset.tab, true);
+      });
+    });
   }
   queueQuoteRailFit();
 }
