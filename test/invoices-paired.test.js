@@ -7,7 +7,7 @@ const src = read('index.html');
 const renderer = extractFunction(src,'renderInvoicesUnified','index.html');
 /* The insights and the two panels read the same facts the list does,
    and live beside the renderer as functions of their own. */
-const helpers = ['invUDays','invULastPaid','invUInsightsHTML','invUPanelsHTML']
+const helpers = ['invUDays','invULastPaid','invUInsightsHTML','invUPanelsHTML','invSupHue','invSalesStatus','invTermsOf','invDayMon']
   .map(n=>extractFunction(src,n,'index.html')).join('\n');
 const route = extractFunction(src,'invRenderSide','index.html');
 const sales = extractFunction(src,'renderInvoices','index.html');
@@ -47,7 +47,7 @@ const names = [
   'listPageSlice','listMoreButtonHTML','esc','invBillChip','invStatusChip','invBindDocActions',
   'invSyncStickyOffset','invSearchValue','revealPurchaseInvoice','openPiPaymentModal',
   'purchaseInvoiceFindings','todayISO','quoteItemSellPrice','orderLineIsBoughtIn','nameInitials',
-  'fmtShortDate',
+  'fmtShortDate','invoiceOpenDays','openPiDocPopup','goToTab','toast',
 ];
 const values = [
   {getElementById:id=>elements[id]||null},data,
@@ -61,8 +61,9 @@ const values = [
   it=>Number(it.sellPrice)||0, it=>!!(it && it.supplierId && it.supplierId!=='__stock__'),
   n=>String(n||'?').slice(0,1).toUpperCase(),
   d=>String(d),
+  ()=>null, ()=>{}, ()=>{}, ()=>{},
 ];
-const lens = new Function(...names,`let invUnifiedOpenKey='s1'; let invUnifiedShow='all'; let invLastRows=[]; ${helpers}; ${renderer};
+const lens = new Function(...names,`let invUnifiedOpenKey='s1'; let invUnifiedShow='all'; let invUnifiedMore=0; let invLastRows=[]; ${helpers}; ${renderer};
   return {render:renderInvoicesUnified, show:k=>{ invUnifiedShow = k; }};`)(...values);
 const render = lens.render;
 
@@ -79,45 +80,46 @@ assert.doesNotMatch(wrap.innerHTML,/PINV-2/,'unrelated stock purchases stay out 
 assert.match(strip.innerHTML,/Fronted to suppliers<\/span><span>1 sale<\/span><\/p><p class="inv-hf-v">60,000/,'the cash position survives as the fronted card');
 assert.match(strip.innerHTML,/Held for suppliers<\/span><span>0 sales/,'and nothing is held when no customer has paid ahead');
 assert.match(strip.innerHTML,/Who pays first/,'the insights time both sides of the counter');
-/* THE ATTENTION ROW'S COUNTS ARE NOW THE FILTERS they described, each
-   with its number; the due date and the findings still feed them. */
-assert.match(attention.innerHTML,/Bills due or late <b>1<\/b>/,'an explicit bill due date becomes a visible count');
+/* SHOW, AS THE OWNER DREW IT: Everything, Still to collect, Past terms,
+   Cash went out first and Bills to review, each with how many and what
+   they come to. "Bills due or late" left the row: when a bill falls due
+   is the Purchases lens's calendar now, where it is drawn by the day. */
+assert.match(attention.innerHTML,/Still to collect <b>1 · 590,000<\/b>/,'what is still to collect is a count and a sum');
+assert.match(attention.innerHTML,/Cash went out first <b>1 · −60,000<\/b>/,'paying a supplier ahead of the customer is its own filter, with the money fronted');
 assert.match(attention.innerHTML,/Bills to review <b>1<\/b>/,'the existing bill findings feed the same row');
-/* The owed bill is matched to its sale, under the customer it waits on. */
-assert.match(panels.innerHTML,/Waiting on the customer[\s\S]*PINV-1[\s\S]*INV-1/,'an owed bill is matched to the sale it waits on');
+/* The owed bill is matched to its sale, under the customer it waits on,
+   and the act offered is to chase the customer. */
+assert.match(panels.innerHTML,/Waiting on the customer[\s\S]*PINV-1[\s\S]*INV-1[\s\S]*Chase/,'an owed bill is matched to the sale it waits on');
 assert.doesNotMatch(wrap.innerHTML,/Sale less linked bills/,'an incomplete cost difference is not presented as profit');
 /* THE BILL TAGS. Sale 690,000 with 100,000 in; one bill of 660,000 with
    160,000 paid. The bill is a tag in its supplier's colour, pale because
-   it is still owed; what the customer has paid is the line under the
-   figure still open. */
+   it is still owed. */
 assert.match(wrap.innerHTML,/class="inv-chips"/,'each sale carries its bills as tags');
 assert.match(wrap.innerHTML,/class="inv-chip inv-sup-\d" title="PINV-1 · North · 660,000 · owed">N 660k</,'an owed bill is a pale tag naming its supplier and amount');
 assert.doesNotMatch(wrap.innerHTML,/inv-chip inv-sup-\d is-paid" title="PINV-1/,'and it is not drawn as paid while money is still owed on it');
-assert.match(wrap.innerHTML,/inv-u-rcv" aria-hidden="true"><i style="width:14\.49%"/,'what the customer paid is a line under the open figure');
-/* One supplier, one colour: the tag and the bill card carry the same hue
-   class, so the eye can follow a supplier across. */
-{
-  const hue = /inv-chip (inv-sup-\d)" title="PINV-1/.exec(wrap.innerHTML)[1];
-  assert.match(wrap.innerHTML,new RegExp(`class="inv-b-bill ${hue}`),'the bill card wears its supplier\'s colour');
-}
-assert.match(wrap.innerHTML,/30,000<\/span><span class="inv-u-sub">sale − bills/,'the difference is named as one between documents');
-assert.match(wrap.innerHTML,/−60,000 fronted/,'paying a supplier ahead of the customer shows as fronted cash');
-assert.match(wrap.innerHTML,/inv-b-joins/,'the open sale joins its lines to its bills');
-assert.match(wrap.innerHTML,/from the shelf · no bill/,'a line with no supplier is named as shelf stock, not treated as costless');
+assert.match(wrap.innerHTML,/<span class="inv-u-pct">14% paid<\/span>/,'how much the customer has paid is said on the row');
+/* One supplier, one colour: the row's tag and the opened line's bill
+   carry the same hue class, so the eye can follow a supplier across. */
+assert.match(wrap.innerHTML,/<span class="inv-u-diff"><span class="inv-u-value">30,000<\/span>/,'sale − bills has a column of its own');
+assert.match(wrap.innerHTML,/inv-u-value inv-u-neg"[^>]*>−60,000</,'and cash so far goes below zero when the supplier was paid first');
+assert.match(wrap.innerHTML,/inv-x-arr/,'the open sale joins each line to its bill with an arrow');
+assert.match(wrap.innerHTML,/From stock<\/span>/,'a line with no supplier is named as shelf stock, not treated as costless');
+assert.match(wrap.innerHTML,/on no bill/,'and its cost is said to be on no bill, not zero');
 /* SHOW narrows the list and says so when nothing is left. */
-lens.show('shelf');
+lens.show('front');
 render('');
-assert.match(wrap.innerHTML,/PINV-2/,'the shelf filter keeps the restock');
-assert.doesNotMatch(wrap.innerHTML,/INV-1</,'and lets no sale through');
-lens.show('stock');
+assert.match(wrap.innerHTML,/INV-1</,'the fronted filter keeps the sale whose supplier was paid first');
+lens.show('late');
 render('');
-assert.match(wrap.innerHTML,/Nothing here is from stock/,'an empty filter says so rather than showing a blank');
+assert.match(wrap.innerHTML,/Nothing here is past terms/,'an empty filter says so rather than showing a blank');
 lens.show('all');
 
+/* THE LIST IS SALES AND THE BILLS THEY RAISED -- the canvas's table --
+   so a restock with no sale behind it is not a row here: it is a bill
+   for the shelf, and the Purchases lens lists it. */
 render('Stock House');
-assert.match(wrap.innerHTML,/Stock purchase/,'unlinked restocks remain visible as their own rows');
-assert.match(wrap.innerHTML,/PINV-2/);
-assert.doesNotMatch(wrap.innerHTML,/INV-1/);
+assert.doesNotMatch(wrap.innerHTML,/INV-1</);
+assert.match(wrap.innerHTML,/No invoices matched/,'a search that matches only a restock says nothing here matched');
 
 render('West');
 assert.match(wrap.innerHTML,/INV-2/,'a bill dated in range brings its older linked sale into context');

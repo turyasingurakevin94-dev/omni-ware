@@ -130,8 +130,12 @@ const sec = (/<section id="tab-invoices"[\s\S]*?\n    <\/section>/.exec(src) || 
     'under a focus the list is that order\'s bills');
   t.check(/if\(tokens\.length && !focusOrder\)/.test(pr),
     'and the range and the search do not narrow it — a bill raised last month is still one of them');
-  t.check(/const seg = focusOrder \? '' :/.test(pr),
-    'the kind segment is not drawn under a focus, where two of its three choices could only empty the list');
+  /* The All / For an order / For the shelf segment became the For
+     column's filter in the owner's canvas. The rule it kept still holds
+     for what replaced it: under a focus no filter narrows the order's
+     bills, and the filter row is not drawn. */
+  t.check(/if\(colf\.length && !focusOrder\)/.test(pr) && /piColfShown && !focusOrder \? piColfRowHTML/.test(pr),
+    'the column filters are not applied or drawn under a focus, where they could only empty the list');
 
   const crumb = extractFunction(src, 'invRenderCrumb', 'index.html');
   t.check(/invoiceNumberLabel\(q\)/.test(crumb) && /Back to Sales/.test(crumb),

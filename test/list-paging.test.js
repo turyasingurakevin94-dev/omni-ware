@@ -241,7 +241,10 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
  * compared against the registry.
  */
 {
-  const used = [...new Set([...code.matchAll(/listMoreButtonHTML\('([\w-]+)'/g)].map((m) => m[1]))].sort();
+  /* The two invoice registers draw the spreadsheet pager the owner's
+     canvas has (invGridPagerHTML) rather than the shared button; it is
+     the same paging state, so it answers the same questions here. */
+  const used = [...new Set([...code.matchAll(/(?:listMoreButtonHTML|invGridPagerHTML)\('([\w-]+)'/g)].map((m) => m[1]))].sort();
   const sliced = [...new Set([...code.matchAll(/listPageSlice\('([\w-]+)'/g)].map((m) => m[1]))].sort();
   const registry = (/const LIST_PAGE_RERENDER = \{([\s\S]*?)\n\};/.exec(code) || ['', ''])[1];
   const wired = [...new Set([...registry.matchAll(/(\w+):/g)].map((m) => m[1]))].sort();
@@ -311,43 +314,35 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
        over the table. The hazard this block guards -- an unlabelled
        "Total" beside a page, read as the total of the filter -- is the
        one that label closes; the pager is still told the FULL count. */
-    if(fn === 'renderInvoices'){
-      t.check(/invGridPagerHTML\('invoices', invoices\.length/.test(body),
-        `${fn}: the pager is told the FULL count, so its pages and "of N" are the whole match`);
-      t.check(/const totalLabel = cut \? `Page total · \$\{shown\.length\}/.test(body),
-        `${fn}: and a cut page's footer says it is the page's total`);
-      t.check(/invFbarHTML\(rangeAll, invoices\)/.test(body),
-        `${fn}: while the bar over the table carries the whole match's figure`);
-    } else {
-    t.check(new RegExp(`listMoreButtonHTML\\('${id}', invoices\\.length`).test(body),
-      `${fn}: the button promises the FULL count, which is what pressing it delivers`);
-    /* A footer reading "Total" beside two dozen rows reads as their
-       total. When a page is cut it has to say which total it is. */
-    t.check(/const totalLabel = cut \? `Total \(all \$\{invoices\.length\}\)` : 'Total';/.test(body),
-      `${fn}: and the footer says so when a page is being shown`);
-    }
-    /* Selection can only reach drawn checkboxes, and the bulk actions
-       behind it include voiding. The label must not imply the rest.
-       ASKED OF THE REGISTER THAT STILL HAS ONE. Purchase invoices no
-       longer draws checkboxes at all: on that screen voiding is not a
-       flag but an act on the shelf -- a bill raised from the shop's own
-       purchase order takes its goods back off the shelf and reopens the
-       order -- and "void selected" behind a dropdown did several of
-       those irreversible things on one press, with nothing on screen
-       saying which of the ticked rows were deliveries. Its bulk menu
-       and its checkbox column are gone; printing survives as a list
-       print over everything the filters matched, which is not a
-       selection and cannot misreport one. The assertion is kept, and
-       kept sharp, for Invoices, where selection still exists -- the
-       original hazard is that a select-all label promises rows the
-       press cannot reach, and a screen with no select-all makes no
-       promise to break. */
+    /* BOTH REGISTERS ARE SPREADSHEETS NOW, drawn to the owner's canvas:
+       their own pager (rows per page, first / previous / numbers / next /
+       last) instead of the shared More button, and a footer that is the
+       PAGE's -- labelled "Page total · 10 sales" / "· 10 bills", naming
+       exactly what it adds, with the whole match's open or owed figure on
+       the bar over the table. The hazard this block guards -- an
+       unlabelled "Total" beside a page, read as the total of the filter --
+       is the one that label closes; the pager is still told the FULL
+       count. */
+    const noun = fn === 'renderInvoices' ? 'sale' : 'bill';
+    t.check(new RegExp(`invGridPagerHTML\\('${id}', invoices\\.length`).test(body),
+      `${fn}: the pager is told the FULL count, so its pages and "of N" are the whole match`);
+    t.check(new RegExp(`const totalLabel = cut \\? \`Page total · \\$\\{shown\\.length\\} ${noun}`).test(body),
+      `${fn}: and a cut page's footer says it is the page's total`);
+    t.check(fn === 'renderInvoices' ? /invFbarHTML\(rangeAll, invoices\)/.test(body) : /piFbarHTML\(ranged, invoices\)/.test(body),
+      `${fn}: while the bar over the table carries the whole match's figure`);
+    /* Selection can only reach drawn checkboxes. On Sales the bar behind
+       it includes voiding, so the label must not imply rows it cannot
+       reach. Purchases draws a selection again, as the canvas does, and
+       its bar is payment, marking checked and printing -- NEVER voiding:
+       on that screen voiding a bill raised from the shop's own purchase
+       order takes its goods back off the shelf, one bill at a time, from
+       the bill itself. */
     if(fn !== 'renderPurchaseInvoices'){
       t.check(/const selectAllLabel = cut \? `Select all \$\{shown\.length\} shown`/.test(body),
         `${fn}: select-all says what it can actually take`);
     } else {
-      t.check(!/pi-doc-check|selectAllLabel|Select all/.test(body),
-        `${fn}: draws no selection at all, so it promises no rows it cannot take`);
+      t.check(/data-pi-bulk="pay"/.test(body) && !/data-pi-bulk="void"/.test(body) && !/void selected/i.test(body),
+        `${fn}: its selection can pay, mark checked and print, and can never void`);
     }
   });
 
