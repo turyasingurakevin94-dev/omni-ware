@@ -1172,6 +1172,15 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        Anything that drew a second copy of either would be free to
        disagree with the first, which is the drift this list exists to
        stop. */
+    /* Rebuilt to the design board: a row opens the account (no account
+       in place any more, so customerAccountHTML, its figures and its
+       action row went), the account is hero, five figures, next moves,
+       timeline, the statement as a ruled table and a rail, and the book
+       is the map beside Needs you today over a table. The layer still
+       carries the frame of all of it -- panels, the strip, chips, the
+       segmented lenses, the grid -- and the table rows are this screen's
+       own ruled table, drawn once for the book and once for the
+       statement. */
     customers: {
       retired: ['panel', 'panel-head-row', 'search-bar', 'dir-summary-row', 'dir-summary-card',
                 'customer-grid', 'customer-card', 'cc-head', 'cc-avatar', 'cc-title', 'cc-name',
@@ -1179,18 +1188,14 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'cc-debt-row', 'cc-debt-label', 'cc-debt-value', 'cc-debt-actions', 'cc-debt-btn',
                 'cc-last-activity', 'pc-icon-btn', 'btn-icon', 'empty', 'field'],
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-f', 'ow-f-l', 'ow-f-in',
-             'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-seg', 'ow-seg-b', 'ow-seg-n', 'ow-tb'],
-      /* customerAttentionHTML left this list with the band it drew: the
-         owner had it removed as a repeat of the map and the register. */
-      renders: ['renderCustomers', 'customerRegisterRowHTML',
-                'customerAccountHTML', 'customerAccountActionsHTML', 'customerFiguresHTML', 'renderCustomerAccount',
-                'customerAccountRailHTML', 'customerStatsHTML'],
-      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-tbl', 'ow-tbl-h',
-                    'ow-tbl-r', 'ow-tbl-c', 'ow-tbl-p', 'ow-tbl-s', 'ow-tbl-n', 'ow-tbl-a',
-                    'ow-fig', 'ow-fig-b', 'ow-cp', 'ow-cp-d', 'ow-empty', 'ow-mini', 'ow-q-why',
-                    'ow-q-note', 'ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-sp', 'ow-grid',
-                    'ow-stack', 'ow-side', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-sr',
-                    'ow-sr-k', 'ow-sr-v'],
+             'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-seg', 'ow-seg-b', 'ow-seg-n'],
+      renders: ['renderCustomers', 'customerRegisterRowHTML', 'customerNeedsTodayHTML',
+                'renderCustomerAccount', 'customerHeroHTML', 'customerKpiHTML',
+                'customerStatementPanelHTML', 'customerRailHTML'],
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-tbl-p', 'ow-tbl-s',
+                    'ow-fig', 'ow-cp', 'ow-cp-d', 'ow-empty', 'ow-mini', 'ow-q-note', 'ow-ph-t',
+                    'ow-grid', 'ow-stack', 'ow-side', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n',
+                    'ow-seg', 'ow-seg-b'],
     },
     /* Suppliers. The last Buy screen on the legacy shell, and the shell
        was the smaller half of it: the headline was an instruction about

@@ -23,11 +23,16 @@
  *                    only line that matters.
  *   pay speed        the middle of the last six settled bills, not the
  *                    average, and nothing at all from fewer than two.
- *   ledger pages     each page opens on the balance the lines before it
- *                    left, and an unturned ledger opens on its LAST page,
- *                    the one ending on the balance now due.
- *   one customer     the reading and the page belong to whoever is open;
- *                    opening somebody else starts again.
+ *   the table        (rebuilt to the design board) one ruled table per
+ *                    reading -- Ledger, Open invoices, Aging. Every ledger
+ *                    line carries its own running balance, so a page needs
+ *                    no balance carried in; the totals row is the whole
+ *                    period on every page, six lines to a page, through
+ *                    the shared pager. Any column sorts; a payment names
+ *                    how it came in, read from the cash book.
+ *   one customer     the reading, the sort, the period and the page belong
+ *                    to whoever is open; opening somebody else starts
+ *                    again.
  *
  * Run: node test/customer-statement-pages.test.js   (or: npm test)
  */
@@ -65,10 +70,7 @@ const scope = compileScope([
   extractFunction(src, 'customerStatementRows', 'index.html'),
   extractFunction(src, 'customerInvoiceStatementRows', 'index.html'),
   extractFunction(src, 'customerPaySpeed', 'index.html'),
-  extractFunction(src, 'customerStatementBlockHTML', 'index.html'),
-  'function __set(view, page){ custStmtView = view; custStmtPage = page; }',
-], env, ['customerStatementRows', 'customerInvoiceStatementRows', 'customerPaySpeed',
-  'customerStatementBlockHTML', '__set']);
+], env, ['customerStatementRows', 'customerInvoiceStatementRows', 'customerPaySpeed']);
 
 const inv = (id, date, total, amountPaid) => ({ id, customerId: 'C1', invoiced: true, invoicedAt: date, total, amountPaid });
 const pay = (id, date, amount, quoteId, note) => ({ id, date, type: 'payment', amount, quoteId, note: note || '' });
@@ -114,53 +116,98 @@ const charge = (id, date, amount, quoteId) => ({ id, date, type: 'charge', amoun
   eq(scope.customerPaySpeed([r(4)]), null, 'one settled bill is not a habit, so nothing is claimed');
 }
 
-/* ---------- 3. the ledger, a page at a time --------------------------- */
+/* ---------- 3. the statement as a table, a page at a time ------------- */
 {
-  const log = [charge(1, '2026-02-10', 100000)];
-  for(let i = 0; i < 30; i++) log.push(charge(100 + i, `2026-04-${String(i + 1).padStart(2, '0')}`, 10000));
-  data.customers = [{ id: 'C1', name: 'Kato', debt: 400000, debtLog: log }];
+  const st = { data: { customers: [], savedQuotes: [], cashTxns: [] } };
+  const cap = {};
+  const env2 = Object.assign({}, env, {
+    data: st.data,
+    CUST_STMT_PAGE: { ledger: 6 },
+    custStmtView: 'ledger', custStmtPage: { ledger: 1 }, custStmtSort: { key: 'date', dir: 1 },
+    custStmtPeriod: 'first', custStmtCustom: { from: '', to: '' }, custStmtInv: null,
+    customerStatementPeriod: () => ({ from: '2026-03-01', to: TODAY }),
+    customerOrdersFor: (id) => st.data.savedQuotes.filter((q) => q.customerId === id),
+    custTermsDays: () => 30,
+    daysSinceDate: (d) => env.daysBetweenISO(d, TODAY),
+    fmtShortDate: (d) => String(d),
+    customerOpenCharges: (c) => (c.__open || []),
+    customerOffBookHTML: () => 'OFFBOOK',
+    accountLabel: (k) => ({ cash: 'Cash', momo: 'Mobile Money', bank: 'Bank' })[k] || k,
+    quoteItemSellPrice: (it) => it.sellPrice || 0,
+    printedShopName: () => 'Shop',
+    waComposeUrl: () => 'https://wa.me/',
+    reportPagerHTML: (attr, page, pages, total, from, shown, noun) => { cap.pager = { attr, page, pages, total, from, shown, noun }; return 'PAGER'; },
+  });
+  const sc = compileScope([
+    extractFunction(src, 'customerStatementRows', 'index.html'),
+    extractFunction(src, 'customerInvoiceStatementRows', 'index.html'),
+    extractFunction(src, 'statementRowDetail', 'index.html'),
+    extractFunction(src, 'custPaymentMethod', 'index.html'),
+    extractFunction(src, 'custInvoiceItemsLine', 'index.html'),
+    extractFunction(src, 'customerLedgerLines', 'index.html'),
+    extractFunction(src, 'customerStatementPanelHTML', 'index.html'),
+    'function __set(o){ Object.keys(o).forEach(k=> { if(k === "view") custStmtView = o[k]; if(k === "page") custStmtPage = o[k]; if(k === "sort") custStmtSort = o[k]; if(k === "inv") custStmtInv = o[k]; }); }',
+  ], env2, ['customerStatementPanelHTML', 'customerStatementRows', '__set']);
+  const log = [];
+  for(let i = 0; i < 8; i++){
+    st.data.savedQuotes.push({ id: i + 1, customerId: 'C1', invoiced: true, invoicedAt: `2026-04-${String(i + 1).padStart(2, '0')}`, total: 1000 * (i + 1), amountPaid: i < 2 ? 1000 * (i + 1) : 0, items: [{ productName: 'Cement (50kg)', qty: 1, sellPrice: 1000 * (i + 1) }] });
+    log.push(charge(10 + i, `2026-04-${String(i + 1).padStart(2, '0')}`, 1000 * (i + 1), i + 1));
+  }
+  st.data.cashTxns.push({ id: 77, account: 'momo' });
+  log.push({ id: 90, date: '2026-05-01', type: 'payment', amount: 1000, quoteId: 1, cashTxnId: 77 });
+  log.push({ id: 91, date: '2026-05-02', type: 'payment', amount: 2000, quoteId: 2 });
+  const c = { id: 'C1', name: 'Kato', debt: 33000, debtLog: log };
+  st.data.customers = [c];
+  const r = { id: 'C1', name: 'Kato', c, phones: ['0700'], stats: { outstanding: 33000, debt: 33000 } };
+  const full = sc.customerStatementRows('C1', '2026-03-01', TODAY);
 
-  scope.__set('ledger', { invoice: 1, ledger: null });
-  t.check(scope.customerStatementBlockHTML('C1') === 'LEDGER', 'the ledger reading draws the ledger');
-  const full = scope.customerStatementRows('C1', '2026-03-01', TODAY);
-  eq([captured.pager.page, captured.pager.pages, captured.pager.total], [3, 3, 30],
-    'an unturned ledger opens on its last page -- the one ending on the balance now due');
-  eq(captured.ledger.st.rows.length, 6, 'and shows only that page');
-  eq(captured.ledger.st.opening, full.rows[23].balance,
-    'the page opens on the balance the lines before it left, not on the period opening');
-  eq(captured.ledger.st.from, full.rows[24].date, 'dated at its own first line');
-  eq([captured.ledger.st.closing, captured.ledger.st.charged], [full.closing, full.charged],
-    'the closing line is the whole period on every page');
-  eq(captured.ledger.side.payWord, 'Payment received', 'and it is still the customer statement, word for word');
+  sc.__set({ view: 'ledger', page: { ledger: 1 }, sort: { key: 'date', dir: 1 }, inv: null });
+  let html = sc.customerStatementPanelHTML(r);
+  eq([cap.pager.attr, cap.pager.total, cap.pager.shown], ['data-cstpg', 11, 6],
+    'the brought-forward line and ten entries, six to a page, through the shared pager');
+  eq((html.match(/class="cu-tr cu-t-led( cu-z)?"/g) || []).length, 6, 'and only that page is drawn');
+  t.check(/Balance now due[\s\S]*?>36,000<[\s\S]*?>3,000<[\s\S]*?>33,000</.test(html),
+    'the totals row is the whole period -- charged, paid, due -- on every page');
+  t.check(/data-cstinv="1"[^>]*>INV-0001</.test(html) || /INV-0001/.test(html), 'an invoice line is a link that opens it');
+  sc.__set({ page: { ledger: 2 } });
+  html = sc.customerStatementPanelHTML(r);
+  t.check(/Balance now due[\s\S]*?>33,000</.test(html), 'still the whole period on page two');
+  t.check(/Mobile Money/.test(html), 'a payment says how it came in, read from the cash book it posted to');
 
-  scope.__set('ledger', { invoice: 1, ledger: 1 });
-  scope.customerStatementBlockHTML('C1');
-  eq(captured.ledger.st.opening, full.opening, 'page one opens on the period opening');
-  eq(captured.ledger.st.from, full.from, 'dated at the start of the period');
+  sc.__set({ page: { ledger: 1 }, sort: { key: 'charge', dir: -1 } });
+  html = sc.customerStatementPanelHTML(r);
+  const first = /class="cu-tr cu-t-led"[\s\S]*?<span class="ow-fig">([\d,]+)<\/span>/.exec(html);
+  eq(first && first[1], '8,000', 'sorted by what was charged, biggest first, the dearest bill leads');
+  t.check(/data-cstsort="charge"[^>]*>Charged <b>&#9660;<\/b>/.test(html), 'and the column says it is the one sorted on');
 
-  scope.__set('ledger', { invoice: 1, ledger: 9 });
-  scope.customerStatementBlockHTML('C1');
-  eq(captured.pager.page, 3, 'a page past the end lands on the last one rather than on nothing');
+  sc.__set({ view: 'open', sort: { key: 'date', dir: 1 } });
+  html = sc.customerStatementPanelHTML(r);
+  eq((html.match(/class="cu-tr cu-t-opn( cu-z)?"/g) || []).length, 6, 'open invoices: the six still owed, the two paid left off');
+  t.check(/6 open/.test(html) && />33,000</.test(html), 'counted and totalled');
+  t.check(/next 3,000 settles INV-0003/.test(html), 'and it says which bill the next payment settles -- the oldest');
 
-  scope.__set('invoice', { invoice: 1, ledger: null });
-  t.check(scope.customerStatementBlockHTML('C1') === 'BY-INVOICE', 'by invoice is its own drawing');
-  t.check(/data-cstview="invoice"/.test(captured.invoice.tools) && /data-cstview="ledger"/.test(captured.invoice.tools),
-    'and both readings are offered from either');
-  t.check(scope.customerStatementBlockHTML(null) === '', 'no customer, nothing');
+  const ago = (n) => new Date(Date.parse(TODAY + 'T00:00:00Z') - n * 864e5).toISOString().slice(0, 10);
+  c.__open = [{ date: ago(10), remaining: 500 }, { date: ago(45), remaining: 1500 }, { date: ago(200), remaining: 3000 }];
+  sc.__set({ view: 'aging' });
+  html = sc.customerStatementPanelHTML(r);
+  t.check(/0–30 days<\/span><span class="n">1<\/span><span class="n"><b class="ow-fig">500/.test(html)
+    && /Over 90<\/span><span class="n">1<\/span><span class="n"><b class="ow-fig">3,000/.test(html),
+    'aging puts each open charge in its band, with the count and the sum');
+  t.check(/All open<\/span><span class="n">3<\/span><span class="n ow-bad">5,000/.test(html), 'and totals them');
 }
 
 /* ---------- 4. wired to one customer, and to the screen --------------- */
 {
   const acct = extractFunction(src, 'renderCustomerAccount', 'index.html');
-  t.check(/if\(custStmtFor !== String\(c\.id\)\)\{[\s\S]*?custStmtView = 'invoice';[\s\S]*?custStmtPage = \{ invoice: 1, ledger: null \};/.test(acct),
-    'opening a different customer starts again on their invoices, page one');
-  t.check(/customerBalanceChartHTML\(r\.id\)/.test(acct), 'the account draws the balance chart');
-  t.check(/data-cstpg/.test(src) && /custStmtPage\[custStmtView\] = /.test(src), 'a turned page is stored for the reading on screen');
+  t.check(/if\(custStmtFor !== String\(c\.id\)\)\{[\s\S]*?custStmtView = 'ledger';[\s\S]*?custStmtPage = \{ ledger: 1 \};[\s\S]*?custStmtSort = \{ key: 'date', dir: 1 \};[\s\S]*?custStmtInv = null;/.test(acct),
+    'opening a different customer starts again: the ledger, page one, by date, nothing open beside it');
+  t.check(/customerStatementPanelHTML\(r\)/.test(acct), 'the account draws the statement');
+  t.check(/data-cstpg/.test(src) && /custStmtPage\.ledger = Math\.max\(1, Number\(sp\.getAttribute\('data-cstpg'\)\) \|\| 1\);/.test(src),
+    'a turned page is stored for the ledger');
   eq(extractDeclaration(src, 'CUST_STMT_PAGE', 'index.html').replace(/\s+/g, ' ').trim(),
-    'const CUST_STMT_PAGE = { invoice: 10, ledger: 12 };', 'ten invoices or twelve ledger lines to a page');
-  const inv2 = extractFunction(src, 'customerInvoiceStatementHTML', 'index.html');
-  t.check(/reportPagerHTML\('data-cstpg'/.test(inv2), 'by invoice pages through the shared pager');
-  t.check(!/cu-bar|width:\$\{/.test(inv2), 'and draws no bars: a statement is figures and words');
+    'const CUST_STMT_PAGE = { ledger: 6 };', 'six ledger lines to a page, as the design board draws it');
+  const print = extractFunction(src, 'printCustomerStatement', 'index.html');
+  t.check(/customerStatementPeriod\(cRec\)/.test(print), 'and the printed sheet covers the period on screen');
 }
 
 process.exit(t.done() ? 1 : 0);

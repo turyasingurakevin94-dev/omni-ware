@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * The customer book at a glance: the strip, the share of the 90 days,
- * and the rhythm track on every row.
+ * The customer book at a glance: six months of spend on every row, the
+ * Needs you today panel beside the map, and the rhythm track.
  *
  * The screen used to say all of this in sentences -- a paragraph per
  * flagged customer, a paragraph under the register, "last bought" and
@@ -11,11 +11,11 @@
  * arithmetic the figures beside it use, because a picture that disagrees
  * with its own number is worse than no picture:
  *
- *   weeks          the weekly columns are the 90-day spend, split by
- *                  week in the same loop that totals it -- so they sum
- *                  to the figure printed above them, exactly.
- *   share          only drawn once there are four buyers: with three,
- *                  "the top three" is the whole list, not a finding.
+ *   months         the row's sparkline is six calendar months of spend,
+ *                  oldest first, summed in the same loop that totals the
+ *                  90-day windows -- so it cannot describe other sales.
+ *   today          the panel beside the map: worst first, four shown and
+ *                  the rest counted, and totals over the WHOLE book.
  *   no band        the three lanes of "needs you" are gone, at the
  *                  owner's word: they listed the late, the quiet and the
  *                  bought-once a third time, after the map and the
@@ -40,7 +40,7 @@ const ago = (d) => new Date(Date.parse(TODAY + 'T00:00:00Z') - d * 864e5).toISOS
 const env = {
   data,
   CUST_WINDOW_DAYS: 90,
-  CUST_DOTS_MAX: 48,
+  CUST_TODAY_SHOWN: 4,
   todayISO: () => TODAY,
   daysBetweenISO: (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 864e5),
   daysSinceDate: (d) => d ? Math.round((Date.parse(TODAY + 'T00:00:00Z') - Date.parse(d + 'T00:00:00Z')) / 864e5) : -1,
@@ -56,44 +56,52 @@ const env = {
 };
 const scope = compileScope([
   extractFunction(src, 'customerBookRow', 'index.html'),
-  extractFunction(src, 'customerPulseHTML', 'index.html'),
-  extractFunction(src, 'customerShareHTML', 'index.html'),
+  extractFunction(src, 'customerNeedsTodayHTML', 'index.html'),
   extractFunction(src, 'custRhythmTrackHTML', 'index.html'),
-], env, ['customerBookRow', 'customerPulseHTML', 'customerShareHTML', 'custRhythmTrackHTML']);
+], env, ['customerBookRow', 'customerNeedsTodayHTML', 'custRhythmTrackHTML']);
 
-/* ---------- 1. the weeks add up to the figure --------------------------- */
+/* ---------- 1. six months of spend, from the same sums ----------------- */
 {
-  data.customers = [{ id: 'C1', name: 'Kato', debt: 0 }, { id: 'C2', name: 'Nakato', debt: 0 }];
+  data.customers = [{ id: 'C1', name: 'Kato', debt: 0 }];
   data.savedQuotes = [
-    { customerId: 'C1', invoiced: true, invoicedAt: ago(0), sales: 100 },
-    { customerId: 'C1', invoiced: true, invoicedAt: ago(6), sales: 50 },
-    { customerId: 'C1', invoiced: true, invoicedAt: ago(7), sales: 30 },
-    { customerId: 'C2', invoiced: true, invoicedAt: ago(89), sales: 20 },
-    { customerId: 'C2', invoiced: true, invoicedAt: ago(90), sales: 999 },   // outside the window
+    { customerId: 'C1', invoiced: true, invoicedAt: '2026-09-02', sales: 100 },
+    { customerId: 'C1', invoiced: true, invoicedAt: '2026-09-20', sales: 50 },
+    { customerId: 'C1', invoiced: true, invoicedAt: '2026-06-10', sales: 30 },
+    { customerId: 'C1', invoiced: true, invoicedAt: '2026-04-30', sales: 20 },
+    { customerId: 'C1', invoiced: true, invoicedAt: '2026-03-31', sales: 999 },   // seven months back
   ];
-  const rows = data.customers.map(scope.customerBookRow);
-  eq(rows[0].weeks.slice(0, 2), [150, 30], 'this week and last week, newest first');
-  eq(rows[1].weeks[12], 20, 'day 89 lands in the thirteenth week, not off the end');
-  const weekly = rows.reduce((n, r) => n + r.weeks.reduce((a, b) => a + b, 0), 0);
-  const paid = rows.reduce((n, r) => n + r.spend, 0);
-  eq(weekly, paid, 'the columns sum to exactly what the strip prints as paid');
-  eq(rows[1].spendPrev, 999, 'and the day-90 invoice goes to the window before, as it always did');
+  const r = scope.customerBookRow(data.customers[0]);
+  eq(r.months6, [20, 0, 30, 0, 0, 150], 'April to September, oldest first, each month its own sales');
+  t.check(!r.months6.includes(999), 'a month outside the six is left off, not folded into the first');
+  eq(r.spend, 150, 'and the 90-day figure beside it, read in the same loop, holds only September (10 June is 107 days back)');
 }
 
-/* ---------- 2. the share bar needs a finding to show -------------------- */
+/* ---------- 2. needs you today: worst first, the book's totals --------- */
 {
-  const r = (name, spend) => ({ name, spend });
-  eq(scope.customerShareHTML([r('A', 5), r('B', 3), r('C', 2)], 10), '',
-    'three buyers: the top three is the whole list, so nothing is drawn');
-  const html = scope.customerShareHTML([r('A', 50), r('B', 30), r('C', 15), r('D', 5), r('E', 0)], 100);
-  t.check(/3 customers pay you 95%/.test(html), 'four buyers: the top three and their share are said');
-  t.check(/cu-sh-r/.test(html) && /1 other/.test(html), 'and the rest is one segment, counted, never dropped');
+  const reason = { terms: { key: 'terms', tone: 'ow-bad', weight: 900, chip: 'late', act: { act: 'chase' } },
+    quiet: { key: 'quiet', tone: 'ow-warn', weight: 50, chip: 'quiet', act: { act: 'tel', tel: '0700' } },
+    first: { key: 'first_order', tone: '', weight: 5, chip: 'once', act: { act: 'follow' } } };
+  const row = (id, key, extra) => Object.assign({ id, name: id, debt: 0, spend: 0, kept: 0, ageDays: -1, daysSinceLast: 40, everyDays: 10, __k: key }, extra);
+  const scoped = compileScope([extractFunction(src, 'customerNeedsTodayHTML', 'index.html')],
+    Object.assign({}, env, { custAttentionReason: (r) => reason[r.__k] || null }), ['customerNeedsTodayHTML']);
+  const all = [row('Q1', 'quiet'), row('T1', 'terms', { debt: 900, ageDays: 70 }), row('F1', 'first'), row('Q2', 'quiet'),
+    row('Q3', 'quiet'), row('OK', null, { spend: 1000, kept: 100 })];
+  const html = scoped.customerNeedsTodayHTML(all);
+  const names = [...html.matchAll(/class="cu-td-n"[^>]*>([^<]+)</g)].map((m) => m[1]);
+  eq(names, ['T1', 'Q1', 'Q2', 'Q3'], 'money past terms first, then the quiet, four shown');
+  t.check(/1 more in the book below/.test(html), 'and the one not shown is counted, not dropped');
+  t.check(/worst first &middot; 5/.test(html), 'the head counts everybody flagged');
+  t.check(/Paid 90d<\/p><b class="ow-fig">1,000/.test(html) && /Owed<\/p><b class="ow-fig ow-bad">900/.test(html),
+    'the totals underneath are the whole book, not the four shown');
+  t.check(/href="tel:0700">Call</.test(html) && /data-cact="chase"[^>]*>Chase</.test(html),
+    'each carries the one move that answers it -- a ring is the owner\'s own thumb, a chase opens the chase page');
 }
 
 /* ---------- 3. no band of "needs you" -------------------------------
-   It repeated the map and the register as three columns of cards; the
-   owner asked for it gone. Its container, its builder and its drawing
-   call all went, so it cannot come back half-wired. */
+   The three-lane band repeated the map and the register as columns of
+   cards; the owner asked for it gone, and it stays gone. What the design
+   board asked for in its place is the compact Needs you today panel
+   beside the map (section 2), drawn into the map's own container. */
 {
   const render = extractFunction(src, 'renderCustomers', 'index.html');
   t.check(!/customerAttentionHTML/.test(src), 'the band builder is gone from the file');
@@ -121,7 +129,8 @@ const scope = compileScope([
   t.check(!/data-l="Last bought"/.test(row) && !/data-l="Every"/.test(row),
     'and "last bought" and "every" are no longer two columns to compare in your head');
   const render = extractFunction(src, 'renderCustomers', 'index.html');
-  t.check(/customerPulseHTML\(all,/.test(render), 'the strip is drawn over the whole book, never the page');
+  t.check(/customerMapHTML\(all, health\)/.test(render) && /customerNeedsTodayHTML\(all\)/.test(render),
+    'the map and the panel beside it are drawn over the whole book, never the page');
 }
 
 process.exit(t.done() ? 1 : 0);
