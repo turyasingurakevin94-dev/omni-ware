@@ -8180,25 +8180,33 @@
      shelf line and a price position per bought-in line. Colour is state
      only (verdigris / amber / crimson); everything else is ink and
      hairlines. Buttons are the app's own .btn.btn-ghost.ow-sm. */
-  .q-rl-health{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));background:var(--ow-paper);
+  /* The rail's tabs. Which one is open is said by weight, ground and an
+     ink keyline; how each is doing by the word under its name; and what
+     needs the owner by a counted badge. Three carriers, three jobs. */
+  .q-rl-health{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));background:var(--ow-paper-2);
     border:1px solid var(--ow-steel-100);border-radius:var(--ow-r-lg);overflow:hidden;}
   .q-rl-health[hidden]{display:none;}
-  .q-rl-tile{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:var(--ow-sp-6);
-    min-width:0;padding:var(--ow-sp-10) var(--ow-sp-10) var(--ow-sp-8);border-bottom:3px solid var(--ow-rule);}
+  .q-rl-tile{all:unset;position:relative;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:var(--ow-sp-4);
+    min-width:0;padding:var(--ow-sp-10) var(--ow-sp-10) var(--ow-sp-8);border-bottom:3px solid transparent;}
   .q-rl-tile + .q-rl-tile{border-left:1px solid var(--ow-rule-soft);}
-  .q-rl-tile:hover{background:var(--ow-paper-2);}
+  .q-rl-tile:hover{background:var(--ow-paper);}
   .q-rl-tile:focus-visible{outline:2px solid var(--ow-oxide);outline-offset:-2px;}
-  .q-rl-tile-k{display:flex;align-items:center;gap:var(--ow-sp-6);font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
-    letter-spacing:.06em;text-transform:uppercase;color:var(--ow-ink-600);}
-  .q-rl-tile-v{font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);
+  .q-rl-tile.q-rl-on{background:var(--ow-paper);border-bottom-color:var(--ow-ink-900);}
+  .q-rl-tile-k{display:flex;align-items:center;gap:var(--ow-sp-6);font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);
+    color:var(--ow-ink-600);}
+  .q-rl-on .q-rl-tile-k{font-weight:var(--ow-fw-700);color:var(--ow-ink-900);}
+  .q-rl-tile-v{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);
     min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .q-rl-tile-ok{border-bottom-color:var(--ow-verdigris);}
-  .q-rl-tile-ok .q-rl-ic,.q-rl-tile-ok .q-rl-tile-v{color:var(--ow-verdigris);}
-  .q-rl-tile-warn{border-bottom-color:var(--ow-amber);}
-  .q-rl-tile-warn .q-rl-ic{color:var(--ow-amber);}
+  .q-rl-tile-ok .q-rl-tile-v{color:var(--ow-verdigris);}
   .q-rl-tile-warn .q-rl-tile-v{color:var(--ow-amber-ink);}
-  .q-rl-tile-bad{border-bottom-color:var(--ow-crimson);}
-  .q-rl-tile-bad .q-rl-ic,.q-rl-tile-bad .q-rl-tile-v{color:var(--ow-crimson);}
+  .q-rl-tile-bad .q-rl-tile-v{color:var(--ow-crimson);}
+  .q-rl-badge{position:absolute;top:var(--ow-sp-6);right:var(--ow-sp-6);display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;
+    padding:0 var(--ow-sp-4);box-sizing:border-box;border-radius:var(--ow-r-pill);
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);line-height:1;color:var(--ow-paper);}
+  .q-rl-badge-warn{background:var(--ow-amber);}
+  .q-rl-badge-bad{background:var(--ow-crimson);}
+  #q_rail > [role="tabpanel"][hidden]{display:none;}
   .q-rl-ic{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;
     stroke-linecap:round;stroke-linejoin:round;}
 
@@ -8362,6 +8370,7 @@
       max-height:var(--q-rail-max, calc(100vh - var(--topbar-h) - var(--ow-sp-24) - 64px));overflow-y:auto;
       overscroll-behavior:contain;scrollbar-width:thin;gap:var(--ow-sp-12);}
     #q_rail > *{flex:none;}
+    #q_rail > .q-rl-health{position:sticky;top:0;z-index:2;}
   }
   /* An empty reading takes a line, not a panel. */
   .ow-pan.q-rl-slim{display:flex;align-items:center;gap:var(--ow-sp-10);padding:var(--ow-sp-10) var(--ow-sp-12);
@@ -8375,7 +8384,8 @@
     .q-rl-door{min-height:var(--ow-tap);display:inline-flex;align-items:center;}
     .q-rl-line,.q-rl-sec,.q-rl-with,.q-rl-ask{padding:var(--ow-sp-16);}
     .q-rl-more > summary{min-height:var(--ow-tap);box-sizing:border-box;padding:0 var(--ow-sp-16);}
-    .q-rl-add{padding-left:var(--ow-sp-16);padding-right:var(--ow-sp-16);}
+    /* Above the layer's phone rule that stretches every .btn.ow-sm to half a row. */
+    .q-rl-with .btn.ow-sm.q-rl-add{flex:none;min-width:0;padding-left:var(--ow-sp-16);padding-right:var(--ow-sp-16);}
   }
 
   .qty-input{width:64px;padding:6px 7px;border:1px solid var(--line);border-radius:6px;font-size:13px;font-family:'IBM Plex Mono',monospace;}
@@ -22649,7 +22659,7 @@
              a derivation another screen already owns. See
              renderQuoteRail. -->
         <div class="ow-side" id="q_rail">
-          <div class="q-rl-health" id="q_rail_health" hidden></div>
+          <div class="q-rl-health" id="q_rail_health" role="tablist" aria-label="About this quote" hidden></div>
           <div class="ow-pan" id="q_rail_client"></div>
           <div class="ow-pan" id="q_rail_lines"></div>
           <div class="ow-pan" id="q_rail_with"></div>
@@ -43425,6 +43435,8 @@ function quoteRailFit(){
   rail.style.setProperty('--q-rail-max', Math.max(240, Math.floor(foot - top - 12)) + 'px');
 }
 let quoteRailFitQueued = false;
+/* The rail tab the owner last picked; null means "open on whatever needs them". */
+let quoteRailTab = null;
 function queueQuoteRailFit(){
   if(quoteRailFitQueued) return;
   quoteRailFitQueued = true;
@@ -43530,8 +43542,6 @@ function renderQuoteRail(){
     const state = !it.productId ? 'none' : short || cheaper ? 'warn' : bought && !ranked.length ? 'none' : 'ok';
     return { it, idx, qty, shelf, ranked, best, paying, short, bought, cheaper, fromShelf, state };
   });
-  const shelfRows = rows.filter(r=> r.it.productId && r.fromShelf);
-  const boughtRows = rows.filter(r=> r.bought);
   const shorts = rows.filter(r=> r.short);
   const cheapers = rows.filter(r=> r.cheaper);
   {
@@ -43656,6 +43666,7 @@ function renderQuoteRail(){
     });
   }
 
+  const withFound = [];
   /* ---- goes with it ----
      What the shop itself has written down about the lines already on
      the document: what they cannot be used without, what is usually
@@ -43665,7 +43676,7 @@ function renderQuoteRail(){
   {
     const onDoc = new Set(items.map(it=> it.productId).filter(Boolean));
     const seenC = new Set();
-    const found = [];
+    const found = withFound;
     items.forEach((it, idx)=>{
       if(!it.productId) return;
       pairCompanionsFor(it.productId, it.variantIdx, Number(it.qty)||0,
@@ -43750,28 +43761,72 @@ function renderQuoteRail(){
     });
   }
 
-  /* ---- the strip: the three answers, before anything is read ----
-     Each tile is its state three ways -- the word, the mark (a check,
-     a warning, a dash) and the keyline -- because hue alone fails in
-     the yard at midday. A tap takes you to the panel that says why. */
+  /* ---- the tabs: one panel at a time, and a badge where you are needed ----
+     The rail was three panels stacked, and on a long quote it ran far
+     past the document beside it. Now it is three tabs over one panel.
+     Each tab carries its answer in a word under its name, and a badge
+     when its panel holds something to act on: a late balance, a line
+     that is short or dearer than it needs to be, something a line
+     cannot be used without. The badge is a count AND a colour, so it
+     reads without the hue. Until the owner picks a tab, the rail opens
+     on the first one that needs them. */
   {
-    const stock = !shelfRows.length ? { state: 'none', word: items.length ? 'Bought in' : '—' }
-      : shorts.length ? { state: 'warn', word: `${shorts.length} short` }
-      : { state: 'ok', word: 'Covered' };
-    const price = !boughtRows.length ? { state: 'none', word: items.length ? 'Shelf only' : '—' }
-      : cheapers.length ? { state: 'warn', word: `${cheapers.length} cheaper` }
-      : boughtRows.some(r=> r.ranked.length) ? { state: 'ok', word: 'Best buys' }
-      : { state: 'none', word: 'No prices' };
-    const tile = (k, s, to)=> `<button type="button" class="q-rl-tile q-rl-tile-${s.state}" data-to="${to}"><span class="q-rl-tile-k">${ICON[s.state==='bad' ? 'warn' : s.state]}${k}</span><span class="q-rl-tile-v">${esc(s.word)}</span></button>`;
-    if(!items.length && !nameLower){ healthEl.hidden = true; healthEl.innerHTML = ''; }
-    else {
-      healthEl.hidden = false;
-      healthEl.innerHTML = tile('Credit', credit, 'q_rail_client') + tile('Stock', stock, 'q_rail_lines') + tile('Price', price, 'q_rail_lines');
-      healthEl.querySelectorAll('[data-to]').forEach(b=> b.addEventListener('click', ()=>{
-        const el = document.getElementById(b.dataset.to);
-        if(el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }));
-    }
+    const act = rows.filter(r=> r.state === 'warn');
+    const needs = withFound.filter(f=> f.c.verbId === 'needs' || f.c.why === 'outOfStock');
+    const lineWord = !items.length ? '—'
+      : !act.length ? 'All ready'
+      : `${act.length} to fix`;
+    const tabs = [
+      { id: 'client', label: 'Client', panel: clientEl, word: credit.word,
+        badge: credit.state === 'warn' || credit.state === 'bad' ? 1 : 0, tone: credit.state === 'bad' ? 'bad' : 'warn',
+        state: credit.state },
+      { id: 'lines', label: 'Lines', panel: linesEl, word: lineWord,
+        badge: act.length, tone: 'warn', state: !items.length ? 'none' : act.length ? 'warn' : 'ok' },
+      { id: 'with', label: 'Pairings', panel: withEl,
+        word: withFound.length ? `${withFound.length} idea${withFound.length===1?'':'s'}` : 'None',
+        badge: needs.length, tone: 'warn', state: needs.length ? 'warn' : 'none' },
+    ];
+    if(!items.length && !nameLower) quoteRailTab = null;
+    const auto = (tabs.find(t=> t.badge) || tabs[nameLower && !items.length ? 0 : 1]).id;
+    const current = tabs.some(t=> t.id === quoteRailTab) ? quoteRailTab : auto;
+    healthEl.hidden = false;
+    healthEl.innerHTML = tabs.map(t=> `<button type="button" role="tab" id="q_rail_tab_${t.id}" class="q-rl-tile q-rl-tile-${t.state}${t.id === current ? ' q-rl-on' : ''}"
+        aria-selected="${t.id === current}" aria-controls="${t.panel.id}" tabindex="${t.id === current ? 0 : -1}" data-tab="${t.id}"
+        title="${esc(t.id === 'lines' && act.length ? [shorts.length ? shorts.length + ' short on the shelf' : '', cheapers.length ? cheapers.length + ' cheaper elsewhere' : ''].filter(Boolean).join(', ') : t.word)}"
+        aria-label="${esc(t.label)}: ${esc(t.word)}${t.badge ? ', ' + t.badge + ' to act on' : ''}">
+        <span class="q-rl-tile-k">${esc(t.label)} ${t.badge ? `<span class="q-rl-badge q-rl-badge-${t.tone}" aria-hidden="true">${t.badge > 9 ? '9+' : t.badge}</span>` : ''}</span>
+        <span class="q-rl-tile-v" aria-hidden="true">${esc(t.word)}</span>
+      </button>`).join('');
+    tabs.forEach(t=>{
+      t.panel.hidden = t.id !== current;
+      t.panel.setAttribute('role', 'tabpanel');
+      t.panel.setAttribute('aria-labelledby', 'q_rail_tab_' + t.id);
+    });
+    const pick = (id, focus)=>{
+      quoteRailTab = id;
+      tabs.forEach(t=>{
+        const on = t.id === id;
+        const b = document.getElementById('q_rail_tab_' + t.id);
+        b.classList.toggle('q-rl-on', on);
+        b.setAttribute('aria-selected', on);
+        b.tabIndex = on ? 0 : -1;
+        t.panel.hidden = !on;
+        if(on && focus) b.focus();
+      });
+      const rail = document.getElementById('q_rail');
+      if(rail) rail.scrollTop = 0;
+      queueQuoteRailFit();
+    };
+    healthEl.querySelectorAll('[data-tab]').forEach((b, i, all)=>{
+      b.addEventListener('click', ()=> pick(b.dataset.tab));
+      /* Arrow keys walk the tabs, as a tablist is expected to. */
+      b.addEventListener('keydown', (e)=>{
+        const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+        if(!step) return;
+        e.preventDefault();
+        pick(all[(i + step + all.length) % all.length].dataset.tab, true);
+      });
+    });
   }
   queueQuoteRailFit();
 }
