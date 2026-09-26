@@ -245,11 +245,16 @@ const paid = (date, amount, note) => ({ date, amount, note: note || '', cashTxnI
      supplierStatementBlockHTML, called by the supplier account screen,
      and it is what the shared-layout guarantee attaches to. */
   const panel = extractFunction(src, 'supplierStatementBlockHTML', 'index.html');
-  const print = extractFunction(src, 'printSupplierStatement', 'index.html');
+  /* The sheet's words moved into supplierStatementSheet when the
+     statement also became a PDF for WhatsApp: the print and the file
+     read the one builder, so the claims below are asked of it. */
+  const printer = extractFunction(src, 'printSupplierStatement', 'index.html');
+  const print = extractFunction(src, 'supplierStatementSheet', 'index.html');
 
   t.check(/statementLedgerHTML\(supplierStatementRows\(supplierId, from, to\)/.test(panel),
     'the account renders through the shared ledger');
-  t.check(/printStatementSheet\(st, \{/.test(print), 'and the print through the shared sheet');
+  t.check(/supplierStatementSheet\(supplierId\)/.test(printer) && /printStatementSheet\(sheet\.st, sheet\.side\)/.test(printer),
+    'and the print through the shared sheet');
   t.check(/supplierStatementRows\(supplierId, from, to\)/.test(print),
     'both off the same builder, so the sheet cannot disagree with the screen');
   t.check(/customerStatementRange\(\)/.test(print) && /customerStatementRange\(\)/.test(panel),
@@ -274,6 +279,8 @@ const paid = (date, amount, note) => ({ date, amount, note: note || '', cashTxnI
   const acct = extractFunction(src, 'renderSupplierAccount', 'index.html');
   t.check(/\$\{r\.everInvoiced \? `<button type="button" class="btn btn-ghost ow-sm" data-sact="print"/.test(acct),
     'the print button is withheld from a supplier with no purchase invoice');
+  t.check(/\$\{r\.everInvoiced \? `<button[^`]*data-sact="print"[^`]*data-sact="wapdf"[^`]*` : ''\}/.test(acct),
+    'and so is Send on WhatsApp, inside the same gate: no invoice, no PDF of nothing');
   t.check(/const ask = r\.ask\.length\s*\n?\s*\? `<button/.test(acct),
     'while asking for a price is offered on its own terms, which a supplier with no invoice can very much have');
   t.check(/No purchase invoice has been raised with them yet/.test(acct),
