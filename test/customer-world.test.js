@@ -60,8 +60,7 @@ const scope = compileScope([
   extractFunction(src, 'customerTraits', 'index.html'),
   extractFunction(src, 'customerHealth', 'index.html'),
   extractFunction(src, 'customerNextMoves', 'index.html'),
-  extractFunction(src, 'customerStandingHTML', 'index.html'),
-], env, ['customerTraits', 'customerHealth', 'customerNextMoves', 'customerStandingHTML']);
+], env, ['customerTraits', 'customerHealth', 'customerNextMoves']);
 
 const stats = (o) => Object.assign({ sales: 0, orderCount: 0, everyDays: null, daysSinceLast: null, first: null, last: null,
   average: 0, topProducts: [], outstanding: 0, debt: 0 }, o);
@@ -132,33 +131,25 @@ const row = (id, o) => Object.assign({ id, name: id, c: { id, phone: '0772 000 0
   state.orders = [];
 }
 
-/* ---------- standing: it adds up, or it says what does not ----------- */
+/* ---------- standing: it adds up, or it says what does not -----------
+   The account's standing is the statement's own header now: one check
+   that the ledger, the debt book and the invoices agree, named with the
+   figures when they do not. */
 {
-  state.terms = 30;
-  state.open = [{ date: '2026-09-10', remaining: 400 }, { date: '2026-06-01', remaining: 600 }];
-  state.st = { opening: 0, charged: 3000, paid: 2000, closing: 1000, recorded: 1000, agrees: true };
-  const r = row('A', { c: { id: 'A', debtLog: [{ type: 'charge' }] }, debt: 1000, stats: stats({ outstanding: 1000, debt: 1000 }) });
-  const ok = scope.customerStandingHTML(r);
-  t.check(/Adds up/.test(ok) && /ow-good/.test(ok), 'when the ledger, the debt book and the invoices agree, it says so');
-  t.check(/0–30 days <b class="ow-fig">400<\/b>/.test(ok) && /Over 90 <b class="ow-fig">600<\/b>/.test(ok),
-    'what is due is aged on the open charges, the reading Debtors uses');
-  state.st = Object.assign({}, state.st, { recorded: 1200, agrees: false });
-  t.check(/Out of step/.test(scope.customerStandingHTML(r)) && /1,200/.test(scope.customerStandingHTML(r)),
-    'a ledger that no longer lands on the card is named with both figures');
-  state.st = Object.assign({}, state.st, { recorded: 1000, agrees: true });
-  const ahead = row('A', { c: r.c, debt: 1000, stats: stats({ outstanding: 1500, debt: 1000 }) });
-  t.check(/invoices show 500 more/.test(scope.customerStandingHTML(ahead)), 'invoices ahead of the debt book are named with the gap');
-  const none = row('Z', { c: { id: 'Z', debtLog: [] }, debt: 0 });
-  eq(scope.customerStandingHTML(none), '', 'a customer with no ledger and nothing owed has no standing to draw');
+  const panel = extractFunction(src, 'customerStatementPanelHTML', 'index.html');
+  t.check(/const ok = st\.agrees && !\(offBook > 0\);/.test(panel), 'it adds up only when the ledger lands on the card AND the invoices are not ahead');
+  t.check(/Invoices agree with the debt book/.test(panel) && /ow-good/.test(panel), 'and says so when it does');
+  t.check(/the ledger adds to \$\{f\(st\.closing\)\}, the card carries \$\{f\(st\.recorded\)\}/.test(panel)
+    && /invoices show \$\{f\(offBook\)\} more than the debt book/.test(panel), 'and names the figures when it does not');
 }
 
 /* ---------- wired into the account ------------------------------------ */
 {
   const acct = extractFunction(src, 'renderCustomerAccount', 'index.html');
   t.check(/const book = customerBookRows\(\);/.test(acct), 'the account ranks against the same book the register draws');
-  ['customerProfileHTML(r, book)', 'customerNextMovesHTML(r)', 'customerTimelineHTML(r)', 'customerStandingHTML(r)',
-    'customerBalanceChartHTML(r.id)', 'customerStatsHTML(s)'].forEach((call) =>
-    t.check(acct.includes('${' + call + '}'), `the account draws ${call.replace(/\(.*/, '')}`));
+  ['customerHeroHTML(r, book)', 'customerKpiHTML(r, book)', 'customerNextMovesHTML(r)', 'customerTimelineHTML(r)',
+    'customerRailHTML(r, book)'].forEach((call) =>
+    t.check(acct.includes(call), `the account draws ${call.replace(/\(.*/, '')}`));
   const moves = extractFunction(src, 'customerNextMovesHTML', 'index.html');
   t.check(!/wa\.me|waComposeUrl|fetch\(/.test(moves), 'no next move sends anything: each opens a page or a form, or rings');
 }
@@ -169,8 +160,7 @@ const row = (id, o) => Object.assign({ id, name: id, c: { id, phone: '0772 000 0
     'const CUST_MAP_LABELS = 10;',
     extractFunction(src, 'customerMapHTML', 'index.html'),
     extractFunction(src, 'custHealthRingHTML', 'index.html'),
-    extractFunction(src, 'custWeeksHTML', 'index.html'),
-  ], { esc: (s) => String(s) }, ['customerMapHTML', 'custHealthRingHTML', 'custWeeksHTML']);
+  ], { esc: (s) => String(s) }, ['customerMapHTML', 'custHealthRingHTML']);
   const b = (id, gap, since, spend) => ({ id, name: id, everyDays: gap, daysSinceLast: since, spend, spendPrev: 0 });
   const none = { id: 'N', name: 'N', everyDays: null, daysSinceLast: null, spend: 0, spendPrev: 0 };
   eq(map.customerMapHTML([b('A', 10, 5, 100), b('B', 10, 25, 50), none], new Map()), '',
@@ -180,7 +170,6 @@ const row = (id, o) => Object.assign({ id, name: id, c: { id, phone: '0772 000 0
   t.check(/1 customer has one order or none/.test(html), 'and the one who cannot be placed is counted, not dropped');
   t.check(/data-cact="statement" data-cid="C"/.test(html), 'a dot opens that customer\'s account');
   eq(map.custHealthRingHTML(null), '', 'no reading, no ring -- not a ring at zero');
-  eq(map.custWeeksHTML({ everInvoiced: true, spend: 0, weeks: [0] }), '', 'no spend in the window, no weekly bars');
   const render = extractFunction(src, 'renderCustomers', 'index.html');
   t.check(/const health = new Map\(all\.map\(r=> \[r\.id, customerHealth\(r, all\)\]\)\);/.test(render),
     'the rows and the map read health over the same whole book the account ranks against');
@@ -228,7 +217,10 @@ const row = (id, o) => Object.assign({ id, name: id, c: { id, phone: '0772 000 0
    Debtors and the account screen use. */
 {
   const sheet = extractFunction(src, 'printStatementSheet', 'index.html');
-  const cust = extractFunction(src, 'printCustomerStatement', 'index.html');
+  /* What the customer's sheet says moved into customerStatementSheet when
+     the statement also became a PDF: the print and the file read the one
+     builder, so the claims below are made about it. */
+  const cust = extractFunction(src, 'customerStatementSheet', 'index.html');
   t.check(/shopIdentity\(\)/.test(sheet), 'the sheet is headed with the shop\'s own printed identity');
   t.check(/cst-due-v/.test(sheet) && /Balance due/.test(sheet), 'the balance due is the one big figure');
   t.check(/Brought forward[\s\S]*Charged[\s\S]*Paid[\s\S]*Closing/.test(sheet), 'and the sum that makes it is written out');
@@ -265,16 +257,22 @@ const row = (id, o) => Object.assign({ id, name: id, c: { id, phone: '0772 000 0
     'the reorder card offers it when they have usual lines');
 }
 
-/* ---------- an invoice on the statement opens that invoice ---------- */
+/* ---------- an invoice on the statement opens that invoice ----------
+   Every invoice named in the statement -- a ledger line, an open bill --
+   opens that invoice in a drawer beside the table; the drawer's own
+   "Open in Invoices" goes to the Invoices screen through the reveal
+   every other screen uses, and its Print is the invoice's own A5. */
 {
-  const byInv = extractFunction(src, 'customerInvoiceStatementHTML', 'index.html');
-  const led = extractFunction(src, 'statementLedgerHTML', 'index.html');
-  t.check(/class="cu-inv-a" data-cinv="\$\{esc\(String\(r\.q\.id\)\)\}"/.test(byInv), 'each invoice on the By invoice reading is a link to it');
-  t.check(/qid != null/.test(led) && /r\.quoteId\)\)\.join/.test(led), 'and each ledger line that belongs to an invoice is too');
+  const panel = extractFunction(src, 'customerStatementPanelHTML', 'index.html');
+  t.check(/data-cstinv="\$\{esc\(String\(qid\)\)\}"/.test(panel) && /invLink\(l\.qid, l\.detail\)/.test(panel) && /invLink\(x\.q\.id, x\.no\)/.test(panel),
+    'each invoice in the ledger and among the open bills is a link');
   t.check(/quoteId: e\.quoteId != null \? e\.quoteId : null/.test(extractFunction(src, 'customerStatementRows', 'index.html')),
     'the ledger line carries the invoice it belongs to');
-  t.check(/closest\('\[data-cinv\]'\)[\s\S]{0,200}revealInvoice\(q\.id\)/.test(src),
-    'and following it opens the Invoices screen on that invoice, the way every other screen does');
+  t.check(/closest\('\[data-cstinv\]'\)/.test(src) && /custStmtInv = /.test(src), 'following one opens it beside the table');
+  t.check(/data-cinv="\$\{esc\(String\(q\.id\)\)\}">Open in Invoices/.test(panel)
+    && /closest\('\[data-cinv\]'\)[\s\S]{0,200}revealInvoice\(q\.id\)/.test(src),
+    'and the drawer goes on to the Invoices screen the way every other screen does');
+  t.check(/data-cstprint/.test(panel) && /printQuotesA5\(\[q\]\)/.test(src), 'or prints that invoice on its own sheet');
 }
 
 process.exit(t.done() ? 1 : 0);
