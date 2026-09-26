@@ -481,7 +481,12 @@ const bookRow = (id, reason, held) => ({ id, name: (data.customers.find((c) => c
      ladder, the rules as days -- that is read weekly and would crowd
      the work if it sat above it. So: the work, what it all came to, and
      the register that records it. */
-  eq((sec.match(/class="ow-seg-b/g) || []).length, 3, 'three views — the work, what it came to, and the register that records it');
+  /* AND FOUR: the words themselves. Templates is a view because the
+     words are edited and judged away from the work -- a library, an
+     editor checked against today's real list, and each template's own
+     record -- and like Intelligence it brings no strip of its own. */
+  eq((sec.match(/class="ow-seg-b/g) || []).length, 4, 'four views — the work, what it came to, the words it is said in, and the register that records it');
+  t.check(/data-fuptab="tpls"/.test(sec) && /id="fup_tpl_pane"/.test(sec), 'and Templates has its own pane');
   t.check(/data-fuptab="intel"/.test(sec) && /id="fup_intel_pane"/.test(sec),
     'and the middle one is Intelligence, with its own pane');
   t.check(!/btn-accent/.test(extractFunction(src, 'renderMessagesIntel', 'index.html')),
