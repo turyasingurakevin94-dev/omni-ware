@@ -43987,7 +43987,10 @@ function renderIpStage(){
      takes to sell at the last thirty days' pace. */
   const outlay = (selectedRow && ipSelectedSupplierId!=='__stock__') ? ipLineOutlay(selectedRow, qty) : null;
   let packStripHTML = '';
-  if(outlay && outlay.forcedPack && outlay.units > 0){
+  /* Drawn too when the line is counted in whole packs: the grid then
+     comes out full, which is the point -- a whole pack bought, none of it
+     left over. */
+  if(outlay && outlay.units > 0 && outlay.packQty > 0 && (outlay.forcedPack || chosenIsPack)){
     const used = Math.max(1, Math.min(100, Math.round(qty / outlay.units * 100)));
     const spare = outlay.units - qty;
     const dots = Array.from({length:100}, (_, i)=> `<i${i < used ? ' class="on"' : ''}></i>`).join('');
@@ -43995,8 +43998,8 @@ function renderIpStage(){
     packStripHTML = `<div class="q-pack">
       <span class="q-pack-grid" role="img" aria-label="${esc(fmtNumAn(qty))} of ${esc(fmtNumAn(outlay.units))} ${esc(unit||'units')} used, ${esc(fmtNumAn(spare))} spare">${dots}</span>
       <span class="q-pack-f"><span>Ties up</span><b>${esc(fmtNumAn(Math.round(outlay.cash)))}</b></span>
-      <span class="q-pack-f"><span>Spare to shelf</span><b>${esc(fmtNumAn(spare))} ${esc(unit||'')}</b></span>
-      <span class="q-pack-f" title="${intel.rate ? `Sells about ${esc(fmtNumAn(Math.round(intel.rate*10)/10))} a day over the last 30 days` : 'Nothing invoiced in the last 30 days to read a pace from'}"><span>Spare clears in</span><b>${clears}</b></span>
+      <span class="q-pack-f"><span>Spare to shelf</span><b>${spare > 0 ? `${esc(fmtNumAn(spare))} ${esc(unit||'')}` : 'none'}</b></span>
+      ${spare > 0 ? `<span class="q-pack-f" title="${intel.rate ? `Sells about ${esc(fmtNumAn(Math.round(intel.rate*10)/10))} a day over the last 30 days` : 'Nothing invoiced in the last 30 days to read a pace from'}"><span>Spare clears in</span><b>${clears}</b></span>` : ''}
     </div>`;
   }
 
