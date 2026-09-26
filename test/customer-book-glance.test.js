@@ -89,7 +89,10 @@ const scope = compileScope([
   const html = scoped.customerNeedsTodayHTML(all);
   const names = [...html.matchAll(/class="cu-td-n"[^>]*>([^<]+)</g)].map((m) => m[1]);
   eq(names, ['T1', 'Q1', 'Q2', 'Q3'], 'money past terms first, then the quiet, four shown');
-  t.check(/1 more in the book below/.test(html), 'and the one not shown is counted, not dropped');
+  /* Counted in the panel's header -- "worst first · 5" over four rows --
+     as the design board draws it, rather than in a sentence under the
+     list: the fifth is named by the count, not dropped. */
+  t.check(/worst first &middot; 5</.test(html), 'and the one not shown is counted, not dropped');
   t.check(/worst first &middot; 5/.test(html), 'the head counts everybody flagged');
   t.check(/Paid 90d<\/p><b class="ow-fig">1,000/.test(html) && /Owed<\/p><b class="ow-fig ow-bad">900/.test(html),
     'the totals underneath are the whole book, not the four shown');

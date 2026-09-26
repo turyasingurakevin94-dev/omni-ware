@@ -1187,7 +1187,12 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'cc-id', 'cc-meta', 'cc-actions', 'cc-details', 'cc-row', 'cc-notes', 'cc-both',
                 'cc-debt-row', 'cc-debt-label', 'cc-debt-value', 'cc-debt-actions', 'cc-debt-btn',
                 'cc-last-activity', 'pc-icon-btn', 'btn-icon', 'empty', 'field'],
-      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-f', 'ow-f-l', 'ow-f-in',
+      /* No ow-ph-help and no ow-f-l since the book was built to the design
+         board: its header is the name, the count and the search, with the
+         magnifier saying what the field is (its label is aria-label), and
+         the paragraph that sat behind the "i" said in words what the map
+         and the columns now show. */
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-f', 'ow-f-in',
              'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-seg', 'ow-seg-b', 'ow-seg-n'],
       renders: ['renderCustomers', 'customerRegisterRowHTML', 'customerNeedsTodayHTML',
                 'renderCustomerAccount', 'customerHeroHTML', 'customerKpiHTML',

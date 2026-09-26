@@ -52,6 +52,11 @@ const scope = compileScope([
   extractFunction(src, 'listPagerHTML', 'index.html'),
   extractFunction(src, 'listPageSlice', 'index.html'),
   extractFunction(src, 'listMoreButtonHTML', 'index.html'),
+  // The lists drawn to their own design (the customer book) keep the
+  // same pages and state; only their buttons are drawn differently.
+  extractDeclaration(src, 'LIST_PAGER', 'index.html'),
+  extractFunction(src, 'custPagerHTML', 'index.html'),
+  extractFunction(src, 'invPageWindow', 'index.html'),
   'function __expand(id, v){ listPageExpanded[id] = v; }',
   'function __sizes(){ return LIST_PAGE_SIZES; }',
   'function __default(){ return LIST_PAGE_DEFAULT; }',

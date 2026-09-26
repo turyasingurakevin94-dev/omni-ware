@@ -46,7 +46,7 @@ const FROM = '2026-06-01', TO = '2026-09-14';
 /* ---------- 1. the same document the shop sees ------------------------ */
 {
   const adminRows = (log, debt) => compileScope(
-    [extractFunction(app, 'customerStatementRows', 'index.html')],
+    [extractFunction(app, 'customerStatementRows', 'index.html'), extractFunction(app, 'customerLogQuoteResolver', 'index.html'), extractFunction(app, 'invoiceNumberLabel', 'index.html')],
     { data: { customers: [{ id: 'C1', debt, debtLog: log }] } },
     ['customerStatementRows'],
   ).customerStatementRows('C1', FROM, TO);

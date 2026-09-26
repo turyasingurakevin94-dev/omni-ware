@@ -67,7 +67,7 @@ const env = {
   customerInvoiceStatementHTML: (id, st, tools) => { captured.invoice = { id, st, tools }; return 'BY-INVOICE'; },
 };
 const scope = compileScope([
-  extractFunction(src, 'customerStatementRows', 'index.html'),
+  extractFunction(src, 'customerStatementRows', 'index.html'), extractFunction(src, 'customerLogQuoteResolver', 'index.html'), extractFunction(src, 'invoiceNumberLabel', 'index.html'),
   extractFunction(src, 'customerInvoiceStatementRows', 'index.html'),
   extractFunction(src, 'customerPaySpeed', 'index.html'),
 ], env, ['customerStatementRows', 'customerInvoiceStatementRows', 'customerPaySpeed']);
@@ -136,10 +136,13 @@ const charge = (id, date, amount, quoteId) => ({ id, date, type: 'charge', amoun
     quoteItemSellPrice: (it) => it.sellPrice || 0,
     printedShopName: () => 'Shop',
     waComposeUrl: () => 'https://wa.me/',
-    reportPagerHTML: (attr, page, pages, total, from, shown, noun) => { cap.pager = { attr, page, pages, total, from, shown, noun }; return 'PAGER'; },
+    /* The ledger's pager is the design board's (custPagerHTML): it is
+       handed the attributes that turn to a page, and the first and last
+       line showing. Caught here the same way the shared pager was. */
+    custPagerHTML: (on, page, pages, total, from, to, noun) => { cap.pager = { attr: on(page).split('=')[0], page, pages, total, from, shown: to - from + 1, noun }; return 'PAGER'; },
   });
   const sc = compileScope([
-    extractFunction(src, 'customerStatementRows', 'index.html'),
+    extractFunction(src, 'customerStatementRows', 'index.html'), extractFunction(src, 'customerLogQuoteResolver', 'index.html'), extractFunction(src, 'invoiceNumberLabel', 'index.html'),
     extractFunction(src, 'customerInvoiceStatementRows', 'index.html'),
     extractFunction(src, 'statementRowDetail', 'index.html'),
     extractFunction(src, 'custPaymentMethod', 'index.html'),
@@ -266,7 +269,7 @@ const charge = (id, date, amount, quoteId) => ({ id, date, type: 'charge', amoun
   const panel = extractFunction(src, 'customerStatementPanelHTML', 'index.html');
   const send = extractFunction(src, 'sendCustomerStatementPdf', 'index.html');
   const share = extractFunction(src, 'shareStatementPdf', 'index.html');
-  t.check(/data-cact="wapdf"[^>]*>[\s\S]*?Send on WhatsApp<\/button>/.test(panel) && !/waComposeUrl/.test(panel),
+  t.check(/data-cact="wapdf"[^>]*>[\s\S]*?Send PDF on WhatsApp<\/button>/.test(panel) && !/waComposeUrl/.test(panel),
     'the button sends the file; it no longer opens a chat with text alone');
   t.check(/if\(name === 'wapdf'\) return sendCustomerStatementPdf\(id\);/.test(src), 'and the account hands it the customer');
   t.check(/customerStatementSheet\(customerId\)/.test(send) && /shareStatementPdf\(sheet\.st, sheet\.side, /.test(send)
@@ -274,7 +277,7 @@ const charge = (id, date, amount, quoteId) => ({ id, date, type: 'charge', amoun
     'the file is built from the same sheet the printer gets');
   t.check(/navigator\.canShare\(\{ files: \[file\] \}\)[\s\S]*?navigator\.share\(\{ files: \[file\], text \}\)/.test(share),
     'where the phone can share a file, the PDF goes into the share sheet with the balance line');
-  t.check(/AbortError'\) return;/.test(share), 'backing out of the share sheet is left alone');
+  t.check(/AbortError'\) return 'cancelled';/.test(share), 'backing out of the share sheet is left alone');
   t.check(/a\.download = name;[\s\S]*?waComposeUrl\(side\.who\.phone, text\)/.test(share),
     'elsewhere the PDF is saved and the customer\'s chat opened, ready to attach it');
 
