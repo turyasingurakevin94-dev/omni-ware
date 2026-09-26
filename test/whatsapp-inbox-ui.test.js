@@ -183,11 +183,19 @@ if (!scope) process.exit(1);
 {
   t.check(/waWaitingConvs\(waInbox\.convs, waInbox\.allMsgs, nowMs\)/.test(src),
     'the queue is built from who is waiting, not from who is unread');
-  t.check(/class="ow-q-r wa-ask-r"/.test(src) && /class="ow-q-x"/.test(src),
-    'each ask is a work-queue row that opens in place, like every other queue in the app');
-  t.check(/waThreadGroups\(waInbox\.msgs, nowMs\)\.map\(g=>/.test(src)
-    && /class="wa-tx-day">\$\{esc\(g\.label\)\}/.test(src),
-    'the thread renders as a dated transcript, not as bubbles');
+  /* THE CHAT APP. The owner asked for Chats to read like the chat app
+     they already use: a list of chats, the open one beside it as
+     bubbles, who it is to the shop on the other side. The row that
+     opened in place and the transcript were decisions of an earlier
+     design; this is the one that replaced them. */
+  t.check(/class="ow-mi-ci wa-ask-r/.test(src) && /id="wa_thread"/.test(src),
+    'each chat is a row in a list, and the open one fills the middle');
+  t.check(/waThreadGroups\(thread, nowMs\)\.map\(g=>/.test(src)
+    && /class="wa-tx-day">\$\{esc\(g\.label\)\}/.test(src)
+    && /ow-mi-bin/.test(src) && /ow-mi-bout/.test(src),
+    'the thread is dated bubbles, theirs and the shop\'s told apart');
+  t.check(/Only you see this/.test(src) && /presetWaNotes/.test(src),
+    'a note on a chat says it is the shop\'s alone');
   t.check(/\$\{m\.direction==='out' \? waTickHTML\(m\.status\) : ''\}/.test(src),
     'ticks ride outbound lines only');
   t.check(/waConvUnreadCount\(c, waInbox\.allMsgs\)/.test(src),
@@ -220,10 +228,12 @@ if (!scope) process.exit(1);
 
   /* The bubbles, the hues and the tab strip are gone, and staying gone
      is the point: each was a decision, not an accident. */
-  t.check(!/waInitials|waAvatarHue|wc-avatar/.test(src),
-    'no avatar, and no hue that identifies nobody');
+  /* A face now, as a chat app has -- but never a hue that identifies
+     nobody: the tint says only whether the number is a customer. */
+  t.check(!/waInitials|waAvatarHue|wc-avatar/.test(src) && /ow-mi-cav\$\{cust \? ' ow-mi-cav-c' : ''\}/.test(src),
+    'initials, tinted only for a customer on file — no hue that identifies nobody');
   t.check(!/class="wa-msg|wa-tabs|wa-tab-badge|wa-stat/.test(src),
-    'no bubbles, no tab strip, no bordered stat cards');
+    'none of the old bubbles, tab strip or bordered stat cards came back');
   /* The strip that replaced the stat cards has gone too, with the page
      it headed: the chats are a view of Messages, whose band already
      reads the day. What stays true is that no bordered card came back. */
@@ -235,6 +245,21 @@ if (!scope) process.exit(1);
   const waJs = src.slice(src.indexOf('function waRenderInbox'), src.indexOf('async function waOpenConv'));
   eq((waJs.match(/btn-accent/g) || []).length, 1,
     'exactly one oxide button in the queue and its open row: Send');
+}
+
+/* ---------- 9. the chat app's own bookkeeping --------------------------- */
+{
+  t.check(/presetWaPins: Array\.isArray\(presets\.waPins\)/.test(src) && /waPins:d\.presetWaPins\|\|\[\]/.test(src)
+    && /waSnooze:d\.presetWaSnooze\|\|\{\}/.test(src) && /waNotes:d\.presetWaNotes\|\|\[\]/.test(src),
+    'pins, chats put off, and notes load and save with the shop settings');
+  const wire = (/function waBindChatConsole\(\)\{[\s\S]*?\n\}/.exec(src) || [''])[0];
+  const qr = wire.slice(wire.indexOf(".ow-mi-qr[data-qr]"), wire.indexOf(".ow-mi-openrec"));
+  t.check(qr.length > 0 && /ta\.value = /.test(qr) && !/waSendReply|wa-send|invoke\(/.test(qr),
+    'a quick reply goes into the box and never out of it — Send is still the only way anything leaves');
+  t.check(/function waSnoozedUntil\(c, nowMs\)/.test(src) && /waiting\.filter\(e=> !snoozed\(e\.conv\)\)/.test(src),
+    'a chat put off leaves Waiting only until its time, and comes back by itself');
+  t.check(/class="wa-cmp\$\{w\.open \? '' : ' ow-mi-cmpoff'\}"/.test(src) && /Paid template replies are not set up in this app yet/.test(src),
+    'a shut window says so in place of the reply box, and does not pretend a paid reply exists');
 }
 
 process.exit(t.done() ? 1 : 0);
