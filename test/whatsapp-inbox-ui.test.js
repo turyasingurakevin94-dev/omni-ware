@@ -262,4 +262,18 @@ if (!scope) process.exit(1);
     'a shut window says so in place of the reply box, and does not pretend a paid reply exists');
 }
 
+/* ---------- 10. a follow-up shared from the chat ------------------------ */
+{
+  t.check(/function waChatFollowUpNews\(customerId\)/.test(src) && /followUpHubDigest\(\{ name: row\.name, items \}, \{\}\)/.test(src),
+    'the news a customer is owed is worded by the queue\'s own digest, not a second copy of it');
+  const wire = (/function waBindChatConsole\(\)\{[\s\S]*?\n\}/.exec(src) || [''])[0];
+  const ins = wire.slice(wire.indexOf('.ow-mi-fupins'), wire.indexOf('.ow-mi-openrec'));
+  t.check(/ta\.value = /.test(ins) && !/recordFollowUpContact|waSendReply|invoke\(/.test(ins),
+    'sharing puts the news in the reply box and records nothing yet');
+  const send = (/async function waSendReply\([\s\S]*?\n\}/.exec(src) || [''])[0];
+  t.check(/if\(!pend\.line \|\| text\.includes\(pend\.line\)\)\{\s*pend\.items\.forEach\(i=> recordFollowUpContact\(i\.id, i\.kind\)\)/.test(send)
+    && send.indexOf('recordFollowUpContact') > send.indexOf('if(error)'),
+    'the telling is stamped only after the reply went, and only if the news was still in it');
+}
+
 process.exit(t.done() ? 1 : 0);
