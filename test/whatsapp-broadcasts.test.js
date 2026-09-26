@@ -132,7 +132,7 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
      the names it is about to pay to reach. */
   t.check(/\$\{c\.opt_out \? '<span class="ow-cp">No promos<\/span>' : ''\}/.test(src),
     'an opted-out conversation says so in the list');
-  t.check(/Estimate only — Meta bills per delivered marketing message/.test(src),
+  t.check(/Meta bills each delivered message at its own rates, so the cost is an estimate/.test(src),
     'the estimate is labelled as one');
 }
 
