@@ -6,9 +6,10 @@
  * This app is being redesigned screen by screen, and some of that work
  * will be done by people and agents who did not sit through the year of
  * decisions behind it. A document explaining the house style is a
- * document; this is a gate. Anything that widens the palette, the type
- * ramp, the radii or the shadows fails here, and `npm test` fails with
- * it.
+ * document; this is a gate. Anything that widens the type ramp, the
+ * radii or the shadows fails here, and `npm test` fails with it. The
+ * palette is the exception: the owner lifted its ceiling, so colours are
+ * counted and reported, and held to contrast rather than to a number.
  *
  * TWO HALVES, and the split matters.
  *
@@ -246,8 +247,22 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        outside the palette and always was. It is carried because the
        screen was asked for as it was, not because the palette grew, and
        no new screen may spend any of the six. */
-    'distinct colours': [114, /#[0-9A-Fa-f]{6}\b/g],
+    /* NO CEILING ON COLOURS -- the owner's ruling, and the last of the
+       hue quota. Everything above is the history of a count that could
+       only fall; it stopped being a rule when the owner said a layout
+       may carry as many colours as its information needs. The count is
+       still REPORTED below, so a rise is visible in every run, but it
+       no longer fails anything.
+
+       What still guards colour is what was always the real guard: every
+       pair the system sets as text is held to 4.5:1 in the contrast
+       block, and a new family joins that list when it is added. More
+       colours was allowed; unreadable ones never were. */
   };
+  {
+    const hexes = new Set([...css.matchAll(/#[0-9A-Fa-f]{6}\b/g)].map(m => m[0].toUpperCase()));
+    t.check(true, `distinct colours: ${hexes.size} (no ceiling — reported, not limited)`);
+  }
   /* RESOLVE THE TOKENS BEFORE COUNTING.
    *
    * This gate counts distinct declaration TEXT, and that was wrong in a
@@ -331,7 +346,25 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
     ['--ow-plum', PAPER, 4.5, 'Insight — its ink as text'],
     ['--ow-verdigris', hex('--ow-verdigris-soft'), 4.5, 'Catalogue — its ink on its own tint'],
     ['--ow-ink-600', hex('--ow-rule-soft'), 4.5, 'Setup — the neutral door, ink on its tint'],
+
+    /* THE SUPPLIER HUES. Identity, like the category palette: on the
+       Invoices screen each supplier keeps one colour across its bar
+       segment, its join and its bill. Six families -- the three category
+       inks plus teal, violet and slate -- each checked as ink on its
+       tint, ink as text, and white on the ink, which is how a PAID
+       segment carries its initials. */
+    ['--ow-teal', hex('--ow-teal-soft'), 4.5, 'supplier teal — ink on its tint'],
+    ['--ow-teal', PAPER, 4.5, 'supplier teal — ink as text'],
+    ['--ow-violet', hex('--ow-violet-soft'), 4.5, 'supplier violet — ink on its tint'],
+    ['--ow-violet', PAPER, 4.5, 'supplier violet — ink as text'],
+    ['--ow-slate', hex('--ow-slate-soft'), 4.5, 'supplier slate — ink on its tint'],
+    ['--ow-slate', PAPER, 4.5, 'supplier slate — ink as text'],
+    ['--ow-sky', hex('--ow-sky-soft'), 4.5, 'Money, and a part-paid chip — ink on its tint'],
   ];
+  ['--ow-indigo', '--ow-sky', '--ow-plum', '--ow-teal', '--ow-violet', '--ow-slate'].forEach((tok) => {
+    const r = hex(tok) ? ratio(PAPER, hex(tok)) : 0;
+    t.check(r >= 4.5, `${r}:1 — white on ${tok} · a paid supplier segment's initials`);
+  });
   PAIRS.forEach(([tok, ground, floor, why]) => {
     const c = hex(tok);
     const r = c && ground ? ratio(c, ground) : 0;
@@ -620,7 +653,16 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                    the merge brought in. They draw markup, so the ratchet follows
                    them too. */
                 'renderFollowUpQuietLine', 'renderMessagesSide', 'msgLaneHTML', 'msgLaneRow',
-                'msgThreadHTML', 'fupPromiseHTML', 'msgPostOpenHTML',
+                'msgThreadHTML', 'fupPromiseHTML', 'msgPostOpenHTML', 'msgPostRailHTML', 'msgRegTrackHTML', 'renderFollowUpScore',
+                /* And the intelligence center's readings: the band over every
+                   lane, a row's signal and odds, the dossier an opened row
+                   carries, the lanes' own bands and the Intelligence view.
+                   They draw markup on this screen, so the ratchet follows
+                   them -- none of them may bring back a retired family. */
+                'msgBandHTML', 'msgSignalHTML', 'msgOddsHTML', 'msgWindowHTML', 'msgDossierHTML',
+                'msgHeldSummaryHTML', 'msgPromiseWeekHTML', 'msgReadsHTML', 'msgAnswerBandHTML',
+                'msgReadsBandHTML', 'msgRecordHTML', 'msgPromiseCalendarHTML', 'msgPostBandHTML',
+                'renderMessagesIntel', 'msgTplChipsHTML', 'msgTplFilledHTML', 'renderMessagesTemplates',
                 'renderFollowUpScore', 'fupHeldPanelHTML', 'fupCp',
                 'briefStripHTML', 'briefWhyHTML', 'customerBriefPanelHTML',
                 'briefNoteBody', 'briefLeftOffHTML'],
