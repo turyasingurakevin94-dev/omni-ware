@@ -1132,8 +1132,16 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
          assertion's meaning ("this screen is built on the layer") is
          unchanged, and what changed is how many functions that screen
          is now spread across. */
+      /* AND THE STRIP AND THE PANELS, which the redesign lifted out
+         of renderInvoices into invStripHTML and invPanelsHTML so that
+         they are drawn from the whole range while the table beside
+         them is drawn from what its column filters let through. The
+         strip still emits the same tiles (.ow-mt, -l, -v, -s); a spec
+         that stopped at renderInvoices would now miss them and report
+         the tiles gone when they had only moved. The meaning -- "this
+         screen is built on the layer" -- is unchanged. */
       renders: ['renderInvoices', 'renderInvoicesUnified',
-                'invStatusChip', 'invProgressCell'],
+                'invStatusChip', 'invProgressCell', 'invStripHTML', 'invPanelsHTML'],
       rendersUses: ['ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-tbl', 'ow-tbl-h', 'ow-tbl-r',
                     'ow-tbl-g', 'ow-tbl-f', 'ow-tbl-c', 'ow-tbl-n', 'ow-tbl-a', 'ow-tbl-note',
                     'ow-tbl-p', 'ow-fig', 'ow-fig-b', 'ow-cp', 'ow-link', 'ow-empty'],

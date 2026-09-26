@@ -11529,7 +11529,7 @@
      this shop could plausibly raise -- a hundred and nineteen million --
      is 114. The slack left over is the fifth act's, and the money keeps
      enough that it can never be the thing that gives way. */
-  .ow-tbl.inv-tbl{--ow-tbl-cols:34px 68px 74px minmax(150px,520px) 126px 148px 168px auto;}
+  .ow-tbl.inv-tbl{--ow-tbl-cols:36px 32px 100px 92px minmax(120px,1fr) 136px 156px 150px auto;}
   .inv-tbl .ow-tbl-r{align-items:center;}
   .inv-tbl .ow-tbl-h,.inv-tbl .ow-tbl-r,.inv-tbl .ow-tbl-f{gap:var(--ow-sp-10);}
   .inv-c-ck{display:flex;align-items:center;}
@@ -11838,6 +11838,137 @@
     background:var(--ow-paper);}
   .inv-tbl .ow-tbl-g{position:sticky;top:calc(var(--inv-hh, 134px) + 26px);z-index:3;}
   .inv-foot-l{color:var(--ow-ink-600);font-weight:var(--ow-fw-600);white-space:nowrap;}
+
+  /* ==================================================================
+     THE REGISTER AS A SPREADSHEET. The owner reads this list the way a
+     ledger is read -- down a column, across a row -- and asked for it to
+     look like one: every cell edged, a row number down the side, the
+     column names sorting, a filter under each. The same vocabulary the
+     quote document's line grid already speaks (.q-doc at the console),
+     so the app has one spreadsheet, not two.
+     ================================================================== */
+  .inv-c-rn{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-11);color:var(--ow-ink-600);justify-content:center;text-align:center;}
+  .inv-c-rn .icon{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;}
+  .inv-shc{padding:0;}
+  .inv-sh{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:var(--ow-sp-4);
+    width:100%;min-width:0;font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;}
+  .ow-tbl-n.inv-shc .inv-sh{justify-content:flex-end;}
+  .inv-sh:hover{color:var(--ow-ink-900);}
+  .inv-sh:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:2px;}
+  .inv-sh-a{flex:none;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .inv-sh-on{color:var(--ow-ink-900);}
+  .inv-sh-on .inv-sh-a{color:var(--ow-ink-900);}
+  .inv-fr .ow-f-in{width:100%;min-width:0;height:30px;font-size:var(--ow-t-12);}
+  .inv-fr .inv-colf.is-on{border-color:var(--ow-steel-950);background:var(--ow-paper-2);font-weight:var(--ow-fw-600);}
+  .inv-none{display:block;}
+  @media (min-width:821px){
+    .inv-tbl .ow-tbl-h,.inv-tbl .ow-tbl-r:not(.inv-none),.inv-tbl .ow-tbl-f{gap:0;padding:0;}
+    .inv-tbl .ow-tbl-h > *,.inv-tbl .ow-tbl-r:not(.inv-none) > *,.inv-tbl .ow-tbl-f > *{
+      align-self:stretch;justify-self:stretch;display:flex;align-items:center;min-width:0;box-sizing:border-box;
+      padding:var(--ow-sp-6) var(--ow-sp-10);border-right:1px solid var(--ow-rule-soft);}
+    .inv-tbl .ow-tbl-h > :last-child,.inv-tbl .ow-tbl-r > :last-child,.inv-tbl .ow-tbl-f > :last-child{border-right:0;}
+    .inv-tbl .ow-tbl-h > .ow-tbl-n,.inv-tbl .ow-tbl-r > .ow-tbl-n,.inv-tbl .ow-tbl-f > .ow-tbl-n{justify-content:flex-end;}
+    .inv-tbl .ow-tbl-r > .inv-c-who{flex-direction:column;align-items:stretch;justify-content:center;}
+    .inv-tbl .ow-tbl-r > .ow-tbl-n{flex-direction:column;align-items:flex-end;justify-content:center;}
+    .inv-tbl .ow-tbl-h > .inv-c-rn,.inv-tbl .ow-tbl-r > .inv-c-rn,.inv-tbl .ow-tbl-f > :first-child{
+      justify-content:center;background:var(--ow-paper-2);}
+    .inv-tbl .ow-tbl-h{min-height:34px;background:var(--ow-paper-2);}
+    .inv-tbl .ow-tbl-r.inv-r{min-height:44px;}
+    .inv-tbl .ow-tbl-r.inv-r:hover{background:var(--ow-paper-2);}
+    .inv-tbl .ow-tbl-r.inv-fr{background:var(--ow-paper);border-bottom:1px solid var(--ow-rule);}
+    .inv-tbl .ow-tbl-r.inv-fr > *{padding:var(--ow-sp-4);}
+    .ow-seg.inv-lens-ph{display:none;}
+  }
+  /* The bar over the table: the filters that are on, each removable, and
+     how much of the range got through them. */
+  .inv-fbar{display:flex;align-items:center;flex-wrap:wrap;gap:var(--ow-sp-8);
+    padding:var(--ow-sp-8) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);
+    font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .inv-fbar:empty{display:none;}
+  .btn.ow-sm.inv-fbtn{gap:var(--ow-sp-6);}
+  .btn.ow-sm.inv-fbtn.is-on{background:var(--ow-steel-950);border-color:var(--ow-steel-950);color:var(--ow-paper);}
+  .inv-fbtn-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-11);background:var(--ow-oxide);color:var(--ow-paper);border-radius:var(--ow-r-pill);padding:0 var(--ow-sp-6);}
+  .inv-fch{display:inline-flex;align-items:center;gap:var(--ow-sp-4);min-height:28px;padding:0 var(--ow-sp-4) 0 var(--ow-sp-10);
+    border:1px solid var(--ow-steel-950);border-radius:var(--ow-r-pill);color:var(--ow-ink-900);background:var(--ow-paper);}
+  .inv-fch b{font-weight:var(--ow-fw-600);}
+  .inv-fch-sort{border-style:dashed;}
+  .inv-fch-x{all:unset;cursor:pointer;width:22px;height:22px;display:grid;place-items:center;border-radius:50%;
+    font-size:var(--ow-t-14);color:var(--ow-ink-600);}
+  .inv-fch-x:hover{background:var(--ow-steel-950);color:var(--ow-paper);}
+  .inv-fch-x:focus-visible,.inv-fclear:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:2px;}
+  .inv-fclear{all:unset;cursor:pointer;font-weight:var(--ow-fw-600);color:var(--ow-oxide-deep);}
+  .inv-fclear:hover{text-decoration:underline;}
+  .inv-fbar-sp{flex:1 1 auto;}
+  .inv-fbar-n b{color:var(--ow-ink-900);}
+  .inv-rpp{display:inline-flex;align-items:center;gap:var(--ow-sp-6);}
+  .inv-rpp .ow-f-in{height:30px;width:auto;font-size:var(--ow-t-12);}
+
+  /* THE STRIP, DRAWN. Each tile keeps its figure and basis; the shape of
+     the figure sits between them. */
+  .inv-viz{height:30px;display:flex;align-items:flex-end;margin:var(--ow-sp-6) 0 var(--ow-sp-4);position:relative;}
+  .inv-days{gap:2px;border-bottom:1px solid var(--ow-steel-100);}
+  .inv-days i{flex:1 1 0;min-width:1px;display:block;border-radius:2px;background:var(--ow-oxide-soft);}
+  .inv-days i.is-peak{background:var(--ow-oxide);}
+  .inv-days i.is-none{background:var(--ow-rule);}
+  .inv-hbar{flex:1 1 auto;height:10px;margin-bottom:var(--ow-sp-6);display:flex;border-radius:3px;
+    background:var(--ow-rule-soft);position:relative;overflow:visible;}
+  .inv-hbar i{display:block;height:100%;border-radius:3px;background:var(--ow-ink-400);}
+  .inv-hbar i.is-good{background:var(--ow-verdigris);}
+  .inv-hbar i.is-bad{background:var(--ow-crimson);}
+  .inv-hbar i.is-muted{background:var(--ow-slate);}
+  .inv-tick{position:absolute;top:-4px;bottom:-4px;border-left:2px dashed var(--ow-ink-900);}
+  .inv-blocks{gap:2px;align-items:stretch;height:20px;margin-top:var(--ow-sp-10);}
+  .inv-blk{all:unset;cursor:pointer;display:block;flex:1 1 0;min-width:3px;border-radius:2px;background:var(--ow-ink-400);}
+  .inv-blk.is-bad{background:var(--ow-crimson);}
+  .inv-blk.is-warn{background:var(--ow-amber);}
+  .inv-blk.is-rest{cursor:default;background:var(--ow-steel-100);}
+  .inv-blk:hover,.inv-blk:focus-visible{outline:2px solid var(--ow-ink-900);outline-offset:1px;}
+  .inv-key{display:inline-flex;align-items:center;gap:var(--ow-sp-4);margin-right:var(--ow-sp-10);white-space:nowrap;}
+  .inv-key i{width:8px;height:8px;border-radius:2px;background:var(--ow-ink-400);display:inline-block;}
+  .inv-key i.is-bad{background:var(--ow-crimson);}
+  .inv-key i.is-warn{background:var(--ow-amber);}
+
+  /* The two panels between the strip and the table. */
+  .inv-panels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--ow-sp-16);margin-bottom:var(--ow-sp-16);}
+  .inv-panels[hidden],.inv-panels:empty{display:none;}
+  .inv-panel-b{padding:var(--ow-sp-12) var(--ow-sp-16);display:flex;flex-direction:column;gap:var(--ow-sp-4);}
+  .inv-spd-hd{display:flex;align-items:baseline;gap:var(--ow-sp-10);margin-bottom:var(--ow-sp-6);}
+  .inv-spd-avg{font-size:var(--ow-t-20);}
+  .inv-spd-sub{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .inv-spd-ax,.inv-spd-r,.inv-owe-r{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr) 88px;gap:var(--ow-sp-12);align-items:center;}
+  .inv-spd-sc{position:relative;height:14px;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .inv-spd-sc span{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap;}
+  .inv-spd-sc span:first-child{transform:none;}
+  .inv-spd-sc span:last-child{transform:translateX(-100%);}
+  .inv-spd-sc .is-terms{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
+  .inv-spd-r,.inv-owe-r{all:unset;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr) 88px;
+    gap:var(--ow-sp-12);align-items:center;min-height:30px;cursor:pointer;border-radius:var(--ow-r-sm);font-size:var(--ow-t-13);}
+  .inv-spd-r:hover,.inv-owe-r:hover{background:var(--ow-paper-2);}
+  .inv-spd-r:focus-visible,.inv-owe-r:focus-visible{outline:2px solid var(--ow-steel-950);}
+  .inv-spd-n,.inv-owe-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .inv-spd-t{position:relative;height:26px;}
+  .inv-spd-t::before{content:'';position:absolute;left:0;right:0;top:50%;border-top:1px solid var(--ow-rule-soft);}
+  .inv-spd-terms{position:absolute;top:0;bottom:0;border-left:2px dashed var(--ow-crimson);}
+  .inv-spd-rg{position:absolute;top:10px;height:6px;border-radius:3px;background:var(--ow-steel-100);}
+  .inv-spd-rg.is-warn{background:var(--ow-amber-soft);}
+  .inv-spd-rg.is-bad{background:var(--ow-crimson-soft);}
+  .inv-spd-dot{position:absolute;top:7px;width:12px;height:12px;box-sizing:border-box;border-radius:50%;transform:translateX(-50%);
+    background:var(--ow-ink-900);border:2px solid var(--ow-paper);}
+  .inv-spd-dot.is-warn{background:var(--ow-amber);}
+  .inv-spd-dot.is-bad{background:var(--ow-crimson);}
+  .inv-spd-v{text-align:right;}
+  .inv-spd-v.is-warn{color:var(--ow-amber);}
+  .inv-spd-v.is-bad{color:var(--ow-crimson);}
+  .inv-owe-r .ow-fig{text-align:right;}
+  .inv-owe-r{grid-template-columns:minmax(0,150px) minmax(0,1fr) auto;}
+  .inv-tbl .ow-tbl-f .ow-fig-b{white-space:nowrap;}
+  .inv-owe-t{height:10px;display:flex;}
+  .inv-owe-t i{display:block;height:100%;border-radius:3px;background:var(--ow-slate);}
+  .inv-owe-t i.is-warn{background:var(--ow-amber);}
+  .inv-owe-t i.is-bad{background:var(--ow-crimson);}
   /* The icon-only act: the EXISTING ghost button, squared off -- not a
      fourteenth button family. */
   .btn.ow-sm.inv-ib{width:28px;padding:0;flex:none;}
@@ -11889,6 +12020,31 @@
      column name they lost. The acts are a thumb-sized row at the
      foot, and Receive -- the only one with a word on it -- leads. ---- */
   .ow-tbl.inv-tbl{--ow-tbl-cols:minmax(0,1fr);}
+  /* ---- THE SPREADSHEET, ON THE PHONE. No row numbers and no headings
+     to sort -- the lens segment above does the ordering -- and the filter
+     row becomes a panel of labelled pickers above the cards. ---- */
+  .inv-tbl .inv-c-rn{display:none;}
+  .inv-tbl .ow-tbl-r.inv-fr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--ow-sp-8);
+    padding:var(--ow-sp-12);background:var(--ow-paper-2);}
+  .inv-tbl .ow-tbl-r.inv-fr > :empty{display:none;}
+  .inv-fr .ow-f-in{min-height:var(--ow-tap);font-size:14px;}
+  .inv-panels{grid-template-columns:minmax(0,1fr);}
+  /* The work comes first on the phone: the register opens under the
+     strip, and the two panels -- reading, not doing -- follow it. */
+  #inv_sales_pane{display:flex;flex-direction:column;}
+  #inv_sales_pane > .inv-panels{order:9;margin-top:var(--ow-sp-16);}
+  .ow-seg.inv-lens-ph{flex:1 1 100%;}
+  .ow-seg.inv-lens-ph .ow-seg-b{flex:1;min-height:var(--ow-tap);}
+  .inv-owe-r{grid-template-columns:minmax(0,1fr) auto;row-gap:var(--ow-sp-4);padding:var(--ow-sp-6) 0;}
+  .inv-owe-t{grid-column:1 / -1;grid-row:2;}
+  .inv-spd-ax,.inv-spd-r,.inv-owe-r{grid-template-columns:minmax(0,110px) minmax(0,1fr) 72px;}
+  .inv-spd-r,.inv-owe-r{min-height:var(--ow-tap);font-size:14px;}
+  .inv-fbar{padding:var(--ow-sp-12);}
+  .btn.ow-sm.inv-fbtn{min-height:var(--ow-tap);}
+  .inv-fch{min-height:var(--ow-tap);}
+  .inv-fch-x{width:var(--ow-tap);height:var(--ow-tap);}
+  .inv-rpp .ow-f-in{min-height:var(--ow-tap);}
+  .inv-blocks{height:28px;}
   .inv-tbl .ow-tbl-r{padding:var(--ow-sp-12);row-gap:var(--ow-sp-6);}
   /* The checkbox is the card's own, up beside the number it selects,
      and at a size a thumb can find. */
@@ -23940,6 +24096,10 @@
            it is. -->
       <div class="ow-strip" id="inv_strip"></div>
       <div class="inv-u-attention" id="inv_u_attention" hidden></div>
+      <!-- TWO FACTS ONLY THE DOCUMENTS HOLD: how fast each customer turns
+           an invoice into cash, and who is holding the most of this
+           range's open money. Pressing a name narrows the table to it. -->
+      <div class="inv-panels" id="inv_panels"></div>
 
       <!-- Together shows the sale-to-bill relationship without merging the records. -->
       <div id="inv_paired_pane" hidden>
@@ -23952,11 +24112,11 @@
       <div class="ow-pan inv-pan" id="inv_register_pan">
         <div class="ow-pan-h an-tbh">
           <span class="ow-pan-t">The register</span>
-          <!-- The order, named so it can be argued with -- and one
-               mechanism for it, working the same on both designs.
-               Clickable column headings were a second mechanism that
-               disappeared entirely on the phone, where the headings do. -->
-          <div class="ow-seg" id="inv_lens" role="tablist" aria-label="How the register is ordered">
+          <!-- THE ORDER, ON THE PHONE. On the console the column headings
+               sort, the way a spreadsheet's do; the phone has no headings,
+               so this segment carries the same order there. Both write
+               INV_LENS_STATE, so they cannot disagree. -->
+          <div class="ow-seg inv-lens-ph" id="inv_lens" role="tablist" aria-label="How the register is ordered">
             <button type="button" class="ow-seg-b ow-on" role="tab" aria-selected="true" data-lens="open">Open first</button>
             <button type="button" class="ow-seg-b" role="tab" aria-selected="false" data-lens="date">Newest</button>
             <button type="button" class="ow-seg-b" role="tab" aria-selected="false" data-lens="big">Biggest</button>
@@ -23981,6 +24141,9 @@
           </div>
         </div>
 
+        <!-- The filters that are on, the order when it is not the
+             default, and how much of the range survived them. -->
+        <div class="inv-fbar" id="inv_fbar"></div>
         <div id="invoicesWrap"></div>
       </div>
       </div>
@@ -51203,19 +51366,368 @@ function invoiceOpenDays(q){
   const days = Math.floor((Date.parse(todayISO()) - Date.parse(d)) / 86400000);
   return days >= 0 ? days : 0;
 }
-const INV_LENS_STATE = {key:'open'};
+const INV_LENS_STATE = {key:'open', dir:-1};
 let invLastRows = [];
+/* THE REGISTER'S COLUMN FILTERS. One per column, the way a spreadsheet
+   filters -- and they narrow the TABLE only. The strip above is the
+   range the date and search bar matched, because a position that shrinks
+   when somebody leaves a column filter on is a position nobody can
+   trust; the bar over the table says how many of that range survived. */
+const INV_COLF = {st:'', who:'', age:'', amt:'', due:''};
+let invColfShown = false;
+const INV_COLF_LABEL = {st:'Status', who:'Customer', age:'Open for', amt:'Invoiced', due:'Still due'};
+function invColfOpts(){
+  const terms = Math.max(0, Number(data.presetChaseAfterDays) || 0);
+  return {
+    st: [['','Any status'],['open','Open'],['part','Part paid'],
+      ...(terms > 0 ? [['late',`Past ${terms}-day terms`]] : []),
+      ['settled','Settled'],['unpriced','Unpriced'],['voided','Voided']],
+    age: [['','Any age'],['0-7','0–7 days'],['8-14','8–14 days'],['15-30','15–30 days'],['31+','Over 30 days']],
+    amt: [['','Any amount'],['s','Under 500,000'],['m','500,000 – 2,000,000'],['l','Over 2,000,000']],
+    due: [['','Any balance'],['owing','Still owing'],['clear','Nothing owed']],
+  };
+}
+function invColfActive(){ return Object.keys(INV_COLF).filter(k=>INV_COLF[k]); }
+function invColfTest(q, k, v){
+  const total = savedQuoteTotal(q), paid = Number(q.amountPaid)||0, g = invGroupOf(q);
+  if(k === 'who') return String(q.client && q.client.name || '').toLowerCase().includes(String(v).toLowerCase());
+  if(k === 'st'){
+    if(v === 'voided') return !!q.voided;
+    if(q.voided) return false;
+    if(v === 'unpriced') return total <= 0;
+    if(v === 'settled') return g === 'settled';
+    if(v === 'part') return g === 'open' && paid > 0.5;
+    if(v === 'late'){
+      const terms = Math.max(0, Number(data.presetChaseAfterDays) || 0);
+      return g === 'open' && terms > 0 && (invoiceOpenDays(q) || 0) > terms;
+    }
+    return g === 'open';
+  }
+  if(k === 'age'){
+    /* Age is the age of MONEY STILL OPEN, as everywhere on this screen,
+       so a settled document is in no age band at all. */
+    if(g !== 'open' || q.voided) return false;
+    const a = invoiceOpenDays(q) || 0;
+    return v === '0-7' ? a <= 7 : v === '8-14' ? (a >= 8 && a <= 14) : v === '15-30' ? (a >= 15 && a <= 30) : a > 30;
+  }
+  if(k === 'amt') return v === 's' ? total < 500000 : v === 'm' ? (total >= 500000 && total <= 2000000) : total > 2000000;
+  if(k === 'due'){
+    const bal = q.voided ? 0 : Math.max(0, total - paid);
+    return v === 'owing' ? bal > 0.5 : bal <= 0.5;
+  }
+  return true;
+}
+function invColumnFilter(list){
+  const act = invColfActive();
+  return act.length ? list.filter(q=>act.every(k=>invColfTest(q, k, INV_COLF[k]))) : list;
+}
+function invColfValueLabel(k){
+  if(k === 'who') return `“${INV_COLF.who}”`;
+  const hit = (invColfOpts()[k] || []).find(o=>o[0] === INV_COLF[k]);
+  return hit ? hit[1] : INV_COLF[k];
+}
+/* THE COLUMNS THAT SORT, and which way each starts. Words start A to Z;
+   money and dates start with the biggest and the newest, because that is
+   the question those columns are opened with. */
+const INV_SORT_COLS = {doc:{l:'Doc No.', d:-1}, date:{l:'Date', d:-1}, who:{l:'Customer', d:1},
+  big:{l:'Invoiced', d:-1}, due:{l:'Still due', d:-1}, status:{l:'Status', d:1}};
+function invSortBy(key){
+  if(key === 'open'){ INV_LENS_STATE.key = 'open'; INV_LENS_STATE.dir = -1; }
+  else if(INV_LENS_STATE.key === key) INV_LENS_STATE.dir = -(INV_LENS_STATE.dir || -1);
+  else { INV_LENS_STATE.key = key; INV_LENS_STATE.dir = (INV_SORT_COLS[key] || {d:-1}).d; }
+  document.querySelectorAll('#inv_lens .ow-seg-b').forEach(b=>{
+    const on = b.dataset.lens === INV_LENS_STATE.key;
+    b.classList.toggle('ow-on', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  renderInvoices(invSearchValue());
+}
+/* A column heading that sorts. The heading is the control -- the arrow
+   says which column and which way, and a plain ↕ on the others says
+   they can. */
+function invSortHead(key, cls){
+  const col = INV_SORT_COLS[key];
+  const on = INV_LENS_STATE.key === key;
+  const dir = INV_LENS_STATE.dir || -1;
+  const arrow = on ? (dir > 0 ? '↑' : '↓') : '↕';
+  const how = on ? `Sorted by ${col.l}, ${dir > 0 ? 'smallest or A first' : 'biggest, newest or Z first'} — press to turn it round`
+    : `Sort by ${col.l}`;
+  return `<div class="${cls} inv-shc"><button type="button" class="inv-sh${on ? ' inv-sh-on' : ''}" data-sort="${key}" title="${esc(how)}" aria-label="${esc(how)}">${esc(col.l)}<span class="inv-sh-a" aria-hidden="true">${arrow}</span></button></div>`;
+}
+
+/* WHAT THE RANGE WAS BILLED, drawn as well as said. The four figures and
+   their bases are unchanged; under each is the shape of it:
+     - Invoiced: what was billed each day, so a busy week and a dead one
+       read at a glance rather than hiding inside one total.
+     - Received: how far through the range's money the shop has got.
+     - Still open: ONE BLOCK PER OPEN INVOICE, sized by what is left on
+       it and coloured by the shop's own terms -- past them is crimson,
+       inside three days of them amber. Pressing a block narrows the table
+       to that customer.
+     - Oldest open: its age against the terms, with the terms marked. */
+function invStripHTML(all){
+  const terms = Math.max(0, Number(data.presetChaseAfterDays) || 0);
+  let billed = 0, received = 0, due = 0, nOpen = 0, nDocs = 0, oldest = null;
+  const open = [];
+  const byDay = new Map();
+  all.forEach(q=>{
+    if(q.voided) return;
+    const total = savedQuoteTotal(q);
+    const paid = Number(q.amountPaid)||0;
+    billed += total; received += paid; nDocs++;
+    const d = String(q.invoicedAt || q.date || '').slice(0,10);
+    if(d) byDay.set(d, (byDay.get(d) || 0) + total);
+    if(invGroupOf(q) === 'open'){
+      nOpen++;
+      const bal = Math.max(0, total - paid);
+      due += bal;
+      const age = invoiceOpenDays(q);
+      open.push({q, bal, age: age || 0});
+      if(age != null && (!oldest || age > oldest.age)) oldest = {age, q};
+    }
+  });
+  const pctIn = billed > 0 ? Math.round(received/billed*100) : null;
+  const overIn = received - billed;
+  const mt = (label, value, basis, viz, tone)=> `<div class="ow-mt${tone?' '+tone:''}">
+    <p class="ow-mt-l">${esc(label)}</p>
+    <p class="ow-mt-v">${value}</p>
+    ${viz || ''}
+    <p class="ow-mt-s">${basis}</p></div>`;
+  const money = (n)=> `${Number(Math.round(n)).toLocaleString('en-UG')}<span class="ow-u">UGX</span>`;
+
+  /* The days of the range, each with what was billed on it. A range too
+     long for a bar a day is drawn a bar a week, and says so. */
+  let {from, to} = invDocGetDateRange();
+  const days = [...byDay.keys()].sort();
+  if(!from) from = days[0] || todayISO();
+  if(!to) to = days[days.length-1] || todayISO();
+  const span = Math.max(1, Math.round((Date.parse(to) - Date.parse(from)) / 86400000) + 1);
+  const step = span > 62 ? 7 : 1;
+  const bars = [];
+  for(let i = 0; i < span && bars.length < 70; i += step){
+    let sum = 0;
+    for(let j = 0; j < step; j++){ const d = anShiftDate(from, i + j); if(d > to) break; sum += byDay.get(d) || 0; }
+    bars.push({d: anShiftDate(from, i), sum});
+  }
+  const peak = bars.reduce((m,b)=>Math.max(m, b.sum), 0);
+  const busiest = peak > 0 ? bars.find(b=>b.sum === peak) : null;
+  const dayViz = billed > 0 ? `<div class="inv-viz inv-days" aria-hidden="true">${bars.map(b=>
+      `<i class="${b === busiest ? 'is-peak' : b.sum > 0 ? '' : 'is-none'}" style="height:${b.sum > 0 ? Math.max(8, Math.round(b.sum/peak*100)) : 6}%" title="${esc(fmtShortDate(b.d))}${step>1?' week':''} · ${esc(fmtUGX(Math.round(b.sum)))}"></i>`).join('')}</div>` : '';
+  const dayBasis = `${nDocs} invoice${nDocs===1?'':'s'}${busiest ? ` · busiest ${step>1?'week of ':''}${esc(fmtShortDate(busiest.d))}` : ''}`;
+
+  const inViz = pctIn === null ? '' : `<div class="inv-viz"><div class="inv-hbar" role="progressbar" aria-label="Received" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.min(100, pctIn)}"><i class="is-good" style="width:${Math.min(100, pctIn)}%"></i></div></div>`;
+
+  /* One block per open invoice, oldest first so the ones that matter
+     most sit at the left where the eye starts. */
+  open.sort((a,b)=>b.age - a.age);
+  const late = o=> terms > 0 && o.age > terms;
+  const soon = o=> terms > 0 && !late(o) && terms - o.age <= 3;
+  const cap = 48;
+  const blocks = open.slice(0, cap);
+  const rest = open.slice(cap).reduce((n,o)=>n+o.bal, 0);
+  const openViz = due > 0.5 ? `<div class="inv-viz inv-blocks" role="group" aria-label="One block per open invoice">${blocks.map(o=>{
+      const who = o.q.client && o.q.client.name || 'Unnamed client';
+      const tone = late(o) ? 'is-bad' : soon(o) ? 'is-warn' : '';
+      const when = terms > 0 ? (late(o) ? `${o.age - terms} day${o.age-terms===1?'':'s'} past terms` : `${terms - o.age} day${terms-o.age===1?'':'s'} left of terms`) : `open ${o.age} day${o.age===1?'':'s'}`;
+      const t = `${invoiceNumberLabel(o.q)} · ${who} · ${fmtUGX(Math.round(o.bal))} · ${when}`;
+      return `<button type="button" class="inv-blk ${tone}" style="flex-grow:${Math.max(1, Math.round(o.bal/due*1000))}" data-inv-who="${esc(who)}" title="${esc(t)}" aria-label="${esc(t)}"></button>`;
+    }).join('')}${rest > 0.5 ? `<span class="inv-blk is-rest" style="flex-grow:${Math.max(1, Math.round(rest/due*1000))}" title="${esc(`${open.length - cap} more · ${fmtUGX(Math.round(rest))}`)}"></span>` : ''}</div>` : '';
+  const nLate = open.filter(late).length, nSoon = open.filter(soon).length;
+  const openBasis = !nOpen ? 'everything here is settled'
+    : terms > 0 ? `<span class="inv-key"><i class="is-bad"></i>${nLate} late</span><span class="inv-key"><i class="is-warn"></i>${nSoon} late within 3 days</span><span class="inv-key"><i></i>${nOpen - nLate - nSoon} inside terms</span>`
+    : `on ${nOpen} invoice${nOpen===1?'':'s'} · no payment terms set, so none is called late`;
+
+  const oldViz = (oldest && terms > 0) ? (()=>{
+    const spanD = Math.max(oldest.age, terms) || 1;
+    return `<div class="inv-viz"><div class="inv-hbar" aria-hidden="true"><i class="${oldest.age > terms ? 'is-bad' : 'is-muted'}" style="width:${Math.round(oldest.age/spanD*100)}%"></i><span class="inv-tick" style="left:${Math.round(terms/spanD*100)}%" title="${terms}-day terms"></span></div></div>`;
+  })() : '';
+
+  return mt('Invoiced', money(billed), dayBasis, dayViz)
+    + mt('Received', money(received), pctIn===null ? 'nothing to take a share of'
+        : overIn > 0.5 ? `${fmtUGX(Math.round(overIn))} more than was invoiced`
+        : `${pctIn}% of what was invoiced`, inViz)
+    + mt('Still open', money(due), openBasis, openViz)
+    + (oldest
+      ? mt('Oldest open', oldest.age === 0 ? 'today' : `${oldest.age}<span class="ow-u">days</span>`,
+          `${esc(invoiceNumberLabel(oldest.q))} · ${esc(oldest.q.client.name || 'Unnamed client')}${terms > 0 ? (oldest.age > terms ? ` · ${oldest.age - terms} past terms` : ` · inside ${terms}-day terms`) : ''}`,
+          oldViz, (terms > 0 && oldest.age > terms) ? 'ow-bad' : '')
+      : mt('Oldest open', '<span class="ow-fig-none">—</span>', 'nothing in this range is still open'));
+}
+
+/* HOW FAST EACH CUSTOMER TURNS AN INVOICE INTO CASH, and who is sitting
+   on the most right now. Neither is a verdict on anybody -- Debtors owns
+   the ageing and the chasing -- but both are facts only the documents
+   hold, and both answer who to give credit to.
+
+   The speed is MEASURED, never guessed: an invoice counts only once it
+   is fully paid, and its time is from the day it was raised to the day
+   of the payment that finished it. An invoice still open has no speed
+   yet and is left out, rather than counted as fast. */
+function invPaySpeeds(){
+  const since = anShiftDate(todayISO(), -180);
+  const by = new Map();
+  (data.savedQuotes||[]).forEach(q=>{
+    if(!(q.status === 'completed' && q.invoiced) || q.voided) return;
+    const raised = String(q.invoicedAt || q.date || '').slice(0,10);
+    if(!raised || raised < since) return;
+    const total = savedQuoteTotal(q);
+    const paid = Number(q.amountPaid)||0;
+    if(total <= 0 || paid + 0.5 < total) return;
+    const dates = (q.payments||[]).map(p=>String(p.date||'').slice(0,10)).filter(Boolean).sort();
+    if(!dates.length) return;
+    const days = Math.max(0, Math.round((Date.parse(dates[dates.length-1]) - Date.parse(raised)) / 86400000));
+    const name = (q.client && q.client.name) || 'Unnamed client';
+    const e = by.get(name) || {name, n:0, sum:0, lo:Infinity, hi:0};
+    e.n++; e.sum += days; e.lo = Math.min(e.lo, days); e.hi = Math.max(e.hi, days);
+    by.set(name, e);
+  });
+  return [...by.values()].map(e=>({...e, avg: e.sum / e.n}));
+}
+function invPanelsHTML(all){
+  const terms = Math.max(0, Number(data.presetChaseAfterDays) || 0);
+  const speeds = invPaySpeeds();
+  let speedBody;
+  if(!speeds.length){
+    speedBody = '<div class="ow-empty">No invoice raised in the last 180 days has been paid off yet, so there is nothing to time. The first one that is will show here.</div>';
+  } else {
+    const rows = speeds.slice().sort((a,b)=>b.n - a.n || b.avg - a.avg).slice(0, 7).sort((a,b)=>a.avg - b.avg);
+    const n = speeds.reduce((s,e)=>s+e.n, 0);
+    const avg = speeds.reduce((s,e)=>s+e.sum, 0) / n;
+    const scale = Math.max(30, terms * 2, ...rows.map(r=>r.hi)) || 30;
+    const x = d=> Math.min(100, d / scale * 100).toFixed(1) + '%';
+    const tone = d=> terms > 0 ? (d > terms ? 'is-bad' : terms - d <= 3 ? 'is-warn' : '') : (d > 30 ? 'is-warn' : '');
+    speedBody = `<div class="inv-spd-hd"><span class="ow-fig inv-spd-avg">${Math.round(avg)}<span class="ow-u">days</span></span><span class="inv-spd-sub">from invoice to cash, on average, over ${n} paid-off invoice${n===1?'':'s'}</span></div>
+      <div class="inv-spd-ax" aria-hidden="true"><span></span><span class="inv-spd-sc"><span style="left:0">0d</span>${terms > 0 ? `<span class="is-terms" style="left:${x(terms)}">${terms}d terms</span>` : ''}<span style="left:100%">${Math.round(scale)}d</span></span><span></span></div>
+      ${rows.map(r=>{
+        const t = `${r.name} · ${Math.round(r.avg)} days on average over ${r.n} invoice${r.n===1?'':'s'} · fastest ${r.lo}, slowest ${r.hi}`;
+        return `<button type="button" class="inv-spd-r" data-inv-who="${esc(r.name)}" title="${esc(t)}" aria-label="${esc(t)}">
+          <span class="inv-spd-n">${esc(r.name)}</span>
+          <span class="inv-spd-t">${terms > 0 ? `<i class="inv-spd-terms" style="left:${x(terms)}"></i>` : ''}<i class="inv-spd-rg ${tone(r.avg)}" style="left:${x(r.lo)};width:calc(${x(r.hi)} - ${x(r.lo)} + 2px)"></i><i class="inv-spd-dot ${tone(r.avg)}" style="left:${x(r.avg)}"></i></span>
+          <span class="ow-fig inv-spd-v ${tone(r.avg)}">${Math.round(r.avg)}d</span>
+        </button>`;
+      }).join('')}`;
+  }
+  /* Who is holding the most of this range's open money. */
+  const owe = new Map();
+  all.forEach(q=>{
+    if(q.voided || invGroupOf(q) !== 'open') return;
+    const bal = Math.max(0, savedQuoteTotal(q) - (Number(q.amountPaid)||0));
+    if(bal <= 0.5) return;
+    const name = (q.client && q.client.name) || 'Unnamed client';
+    const e = owe.get(name) || {name, bal:0, n:0, age:0};
+    e.bal += bal; e.n++; e.age = Math.max(e.age, invoiceOpenDays(q) || 0);
+    owe.set(name, e);
+  });
+  const top = [...owe.values()].sort((a,b)=>b.bal - a.bal).slice(0, 6);
+  const most = top.length ? top[0].bal : 0;
+  const oweBody = top.length ? top.map(e=>{
+    const tone = terms > 0 ? (e.age > terms ? 'is-bad' : terms - e.age <= 3 ? 'is-warn' : '') : '';
+    const t = `${e.name} · ${fmtUGX(Math.round(e.bal))} on ${e.n} invoice${e.n===1?'':'s'} · oldest open ${e.age} day${e.age===1?'':'s'}`;
+    return `<button type="button" class="inv-owe-r" data-inv-who="${esc(e.name)}" title="${esc(t)}" aria-label="${esc(t)}">
+      <span class="inv-owe-n">${esc(e.name)}</span>
+      <span class="inv-owe-t"><i class="${tone}" style="width:${Math.max(2, Math.round(e.bal/most*100))}%"></i></span>
+      <span class="ow-fig">${fmtUGX(Math.round(e.bal))}</span>
+    </button>`;
+  }).join('') : '<div class="ow-empty">Nobody owes anything in this range.</div>';
+  return `<section class="ow-pan inv-panel">
+      <div class="ow-pan-h"><span class="ow-pan-t">How fast customers pay you</span><span class="ow-pan-n">last 180 days</span></div>
+      <div class="inv-panel-b">${speedBody}</div>
+    </section>
+    <section class="ow-pan inv-panel">
+      <div class="ow-pan-h"><span class="ow-pan-t">Who owes most</span><span class="ow-pan-n">${owe.size} customer${owe.size===1?'':'s'}</span></div>
+      <div class="inv-panel-b">${oweBody}</div>
+    </section>`;
+}
+
+/* THE BAR OVER THE TABLE: the filters that are on, each one removable,
+   the order when it is not the default, and how much of the range
+   survived them. The rows-per-page choice lives here too, because it is
+   a question about this table and nothing else. */
+function invFbarHTML(all, shown){
+  const act = invColfActive();
+  const chips = act.map(k=>`<span class="inv-fch"><span>${esc(INV_COLF_LABEL[k])}: <b>${esc(invColfValueLabel(k))}</b></span><button type="button" class="inv-fch-x" data-colf-clear="${k}" aria-label="Remove the ${esc(INV_COLF_LABEL[k])} filter">×</button></span>`).join('');
+  const key = INV_LENS_STATE.key;
+  const sortChip = key !== 'open'
+    ? `<span class="inv-fch inv-fch-sort"><span>Sorted by <b>${esc((INV_SORT_COLS[key]||{l:key}).l)} ${(INV_LENS_STATE.dir||-1) > 0 ? '↑' : '↓'}</b></span><button type="button" class="inv-fch-x" data-sort-reset aria-label="Back to open money first">×</button></span>` : '';
+  let bal = 0;
+  shown.forEach(q=>{ if(!q.voided) bal += Math.max(0, savedQuoteTotal(q) - (Number(q.amountPaid)||0)); });
+  const size = listPageSize('invoices');
+  return `<button type="button" class="btn btn-ghost ow-sm inv-fbtn${invColfShown ? ' is-on' : ''}" id="inv_colf_toggle" aria-pressed="${invColfShown}">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M3 4h18l-7 9v7l-4-2v-5z"/></svg>Filters${act.length ? `<span class="inv-fbtn-n">${act.length}</span>` : ''}</button>
+    ${chips}${sortChip}
+    ${act.length ? '<button type="button" class="inv-fclear" data-colf-clear="all">Clear filters</button>' : ''}
+    <span class="inv-fbar-sp"></span>
+    <span class="inv-fbar-n"><b class="ow-fig">${shown.length}</b> of <b class="ow-fig">${all.length}</b> match · <b class="ow-fig">${fmtUGX(Math.round(bal))}</b> still open</span>
+    <span class="inv-rpp"><span class="inv-rpp-l" id="inv_rpp_l">Rows</span><select class="ow-f-in" id="inv_rpp" aria-labelledby="inv_rpp_l">${[10,24,50,100].map(n=>`<option value="${n}"${n===size?' selected':''}>${n}</option>`).join('')}</select></span>`;
+}
+/* The filter row, drawn under the column names and in their columns. */
+function invColfRowHTML(){
+  const o = invColfOpts();
+  const sel = (k)=> `<select class="ow-f-in inv-colf${INV_COLF[k] ? ' is-on' : ''}" data-colf="${k}" aria-label="Filter ${esc(INV_COLF_LABEL[k])}">${o[k].map(([v,l])=>`<option value="${esc(v)}"${v===INV_COLF[k]?' selected':''}>${esc(l)}</option>`).join('')}</select>`;
+  return `<div class="ow-tbl-r inv-fr">
+    <div class="ow-tbl-c inv-c-rn"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18l-7 9v7l-4-2v-5z"/></svg></div>
+    <div class="ow-tbl-c"></div>
+    <div class="ow-tbl-c"></div>
+    <div class="ow-tbl-c">${sel('age')}</div>
+    <div class="ow-tbl-c"><input class="ow-f-in inv-colf${INV_COLF.who ? ' is-on' : ''}" id="inv_colf_who" data-colf="who" value="${esc(INV_COLF.who)}" placeholder="Name contains…" aria-label="Filter customer"></div>
+    <div class="ow-tbl-c">${sel('amt')}</div>
+    <div class="ow-tbl-c">${sel('due')}</div>
+    <div class="ow-tbl-c">${sel('st')}</div>
+    <div class="ow-tbl-c"></div>
+  </div>`;
+}
+/* Every control the register draws around itself, bound once per draw. */
+function invBindRegisterChrome(){
+  const again = ()=> renderInvoices(invSearchValue());
+  document.querySelectorAll('#tab-invoices [data-sort]').forEach(b=>b.addEventListener('click', ()=>invSortBy(b.dataset.sort)));
+  document.querySelectorAll('#tab-invoices [data-sort-reset]').forEach(b=>b.addEventListener('click', ()=>invSortBy('open')));
+  document.querySelectorAll('#inv_strip [data-inv-who], #inv_panels [data-inv-who]').forEach(b=>b.addEventListener('click', ()=>{
+    INV_COLF.who = INV_COLF.who === b.dataset.invWho ? '' : b.dataset.invWho;
+    again();
+    const pan = document.getElementById('inv_register_pan');
+    if(pan && pan.scrollIntoView) pan.scrollIntoView({block:'start', behavior:'smooth'});
+  }));
+  const tog = document.getElementById('inv_colf_toggle');
+  if(tog) tog.addEventListener('click', ()=>{ invColfShown = !invColfShown; again(); });
+  document.querySelectorAll('#tab-invoices [data-colf-clear]').forEach(b=>b.addEventListener('click', ()=>{
+    const k = b.dataset.colfClear;
+    if(k === 'all') Object.keys(INV_COLF).forEach(x=>{ INV_COLF[x] = ''; });
+    else INV_COLF[k] = '';
+    again();
+  }));
+  document.querySelectorAll('#invoicesWrap select[data-colf]').forEach(s=>s.addEventListener('change', ()=>{ INV_COLF[s.dataset.colf] = s.value; again(); }));
+  const who = document.getElementById('inv_colf_who');
+  if(who) who.addEventListener('input', ()=>{
+    INV_COLF.who = who.value;
+    const at = who.selectionStart;
+    again();
+    /* The row is drawn again under the typing hand; give it back its
+       place, or every letter would have to be clicked for. */
+    const again2 = document.getElementById('inv_colf_who');
+    if(again2){ again2.focus(); try{ again2.setSelectionRange(at, at); }catch(e){} }
+  });
+  const rpp = document.getElementById('inv_rpp');
+  if(rpp) rpp.addEventListener('change', ()=>{ LIST_PAGE_SIZES.invoices = Number(rpp.value) || 24; listPageNum.invoices = 1; again(); });
+}
 
 // Shows only quotes that reached Step 4 (Completed) AND were explicitly
 // converted to an invoice via the "Make invoice" button on Saved Quotes.
 function renderInvoices(filter=''){
   const wrap = document.getElementById('invoicesWrap');
   const lens = INV_LENS_STATE.key;
-  let invoices = invRangedInvoices(filter);
+  /* The range the bar matched, and the part of it the column filters
+     let through. The strip and the panels speak for the first; the
+     table, its totals and the printed list for the second. */
+  const rangeAll = invRangedInvoices(filter);
+  let invoices = invColumnFilter(rangeAll);
   invLastRows = invoices;
+  const panels = document.getElementById('inv_panels');
+  const fbar = document.getElementById('inv_fbar');
 
-  if(invoices.length===0){
+  if(rangeAll.length===0){
     document.getElementById('inv_strip').innerHTML = '';
+    if(panels) panels.innerHTML = '';
+    if(fbar) fbar.innerHTML = '';
     document.getElementById('inv_pan_n').textContent = '';
     /* Nothing to select and nothing to act on in bulk. A "Select all 24
        shown" left over from the last render is a label about a list that
@@ -51287,7 +51799,6 @@ function renderInvoices(filter=''){
      Debtors, which clamps per invoice; two screens disagreeing about
      one pile of money is what syncInvoiceDebtCharge exists to prevent. */
   let totalAmt=0, totalPaid=0, totalDue=0;
-  let oldest = null;
   invoices.forEach(q=>{
     if(q.voided) return;
     const g = invGroupOf(q);
@@ -51295,36 +51806,12 @@ function renderInvoices(filter=''){
     const paid = Number(q.amountPaid)||0;
     totalAmt += total; totalPaid += paid; totalDue += Math.max(0, total - paid);
     tally[g].sum += g==='open' ? Math.max(0, total-paid) : total;
-    if(g==='open'){
-      const age = invoiceOpenDays(q);
-      if(age != null && (!oldest || age > oldest.age)) oldest = {age, q};
-    }
   });
-  /* WHAT THE RANGE WAS BILLED. Four tiles, and the fourth earns its
-     place: the oldest document still open is a fact about the paper
-     that the customer-level Debtors screen cannot state, and it names
-     where to look next. Past the shop's own terms it is genuinely bad
-     and wears the one tone that says so; inside them it is a size. */
-  const terms = Math.max(0, Number(data.presetChaseAfterDays) || 0);
-  const pctIn = totalAmt > 0 ? Math.round(totalPaid/totalAmt*100) : null;
-  const overIn = totalPaid - totalAmt;
-  const mt = (label, value, basis, tone)=> `<div class="ow-mt${tone?' '+tone:''}">
-    <p class="ow-mt-l">${esc(label)}</p>
-    <p class="ow-mt-v">${value}</p>
-    <p class="ow-mt-s">${basis}</p></div>`;
-  const money = (n)=> `${Number(Math.round(n)).toLocaleString('en-UG')}<span class="ow-u">UGX</span>`;
   const fig = (n)=> `<span class="ow-fig">${fmtUGX(Math.round(n))}</span>`;
-  document.getElementById('inv_strip').innerHTML =
-    mt('Invoiced', money(totalAmt), `${tally.open.n + tally.settled.n} invoice${tally.open.n+tally.settled.n===1?'':'s'} in this range`)
-    + mt('Received', money(totalPaid), pctIn===null ? 'nothing to take a share of'
-        : overIn > 0.5 ? `${fmtUGX(Math.round(overIn))} more than was invoiced`
-        : `${pctIn}% of what was invoiced`)
-    + mt('Still open', money(totalDue), tally.open.n ? `on ${tally.open.n} invoice${tally.open.n===1?'':'s'}` : 'everything here is settled')
-    + (oldest
-      ? mt('Oldest open', oldest.age === 0 ? 'today' : `${oldest.age}<span class="ow-u">days</span>`,
-          `${esc(invoiceNumberLabel(oldest.q))} · ${esc(oldest.q.client.name || 'Unnamed client')}`,
-          (terms > 0 && oldest.age > terms) ? 'ow-bad' : '')
-      : mt('Oldest open', '<span class="ow-fig-none">—</span>', 'nothing in this range is still open'));
+  /* WHAT THE RANGE WAS BILLED, and its shape -- see invStripHTML. */
+  document.getElementById('inv_strip').innerHTML = invStripHTML(rangeAll);
+  if(panels) panels.innerHTML = invPanelsHTML(rangeAll);
+  if(fbar) fbar.innerHTML = invFbarHTML(rangeAll, invoices);
 
   const shown = listPageSlice('invoices', invoices);
   /* A page is being shown, so both of these have to say so. A "Total"
@@ -51332,6 +51819,9 @@ function renderInvoices(filter=''){
      can only reach what is drawn must not imply the other forty-six --
      the bulk actions behind it include voiding. */
   const cut = shown.length < invoices.length;
+  /* Where this page starts in the whole list, so a row's number is its
+     place in the register and not on the page. */
+  const pageStart = (cut && LIST_PAGED.invoices) ? (listPageAt('invoices', invoices.length) - 1) * listPageSize('invoices') : 0;
   const totalLabel = cut ? `Total (all ${invoices.length})` : 'Total';
   const selectAllLabel = cut ? `Select all ${shown.length} shown` : 'Select all';
   document.querySelector('.inv-tb').style.display = '';
@@ -51349,7 +51839,7 @@ function renderInvoices(filter=''){
   let lastGroup = null;
   const icon = (cls, id, title, path)=>
     `<button type="button" class="btn btn-ghost ow-sm inv-ib ${cls}" data-id="${id}" title="${esc(title)}" aria-label="${esc(title)}"><svg class="icon" viewBox="0 0 24 24">${path}</svg></button>`;
-  const rowsHtml = shown.map((q)=>{
+  const rowsHtml = shown.map((q, i)=>{
     const total = savedQuoteTotal(q);
     const paid = Number(q.amountPaid)||0;
     const due = total - paid;
@@ -51424,6 +51914,7 @@ function renderInvoices(filter=''){
         ? `<span class="ow-fig-b">${fmtUGX(Math.round(paid))} received</span>` : '');
     const links = orderPurchaseInvoiceLinksHTML(q);
     return head + `<div class="ow-tbl-r inv-r${q.voided?' inv-r-voided':''}" data-id="${q.id}">
+      <div class="ow-tbl-c inv-c-rn">${pageStart + i + 1}</div>
       <div class="ow-tbl-c inv-c-ck"><input type="checkbox" class="sq-card-check inv-doc-check" data-id="${q.id}" aria-label="Select ${esc(invoiceNumberLabel(q))}"></div>
       <div class="ow-tbl-c inv-c-doc" data-l="Doc No."><button type="button" class="ow-link inv-doc-view" data-id="${q.id}">${esc(invoiceNumberLabel(q))}</button></div>
       <div class="ow-tbl-n inv-c-date" data-l="Date">${esc(q.invoicedAt || q.date || '—')}</div>
@@ -51438,19 +51929,28 @@ function renderInvoices(filter=''){
     </div>` + noteRow(q);
   }).join('');
 
+  /* THE COLUMN NAMES SORT. On the console the heading is the control,
+     the way a spreadsheet's is; on the phone the headings go, so the
+     lens segment above the table carries the same order there. One
+     state behind both -- INV_LENS_STATE -- so the two can never
+     disagree about what order the register is in. */
+  const emptyRow = invoices.length ? '' : `<div class="ow-tbl-r inv-none"><div class="ow-empty">No invoice in this range matches these filters. <button type="button" class="ow-link" data-colf-clear="all">Clear the filters</button></div></div>`;
   wrap.innerHTML = `<div class="ow-tbl inv-tbl">
     <div class="ow-tbl-h">
+      <div class="ow-tbl-c inv-c-rn">#</div>
       <div class="ow-tbl-c"></div>
-      <div class="ow-tbl-c">Doc No.</div>
-      <div class="ow-tbl-n">Date</div>
-      <div class="ow-tbl-c">Customer</div>
-      <div class="ow-tbl-n">Invoiced</div>
-      <div class="ow-tbl-n">Still due</div>
-      <div class="ow-tbl-c">Status</div>
+      ${invSortHead('doc','ow-tbl-c')}
+      ${invSortHead('date','ow-tbl-n')}
+      ${invSortHead('who','ow-tbl-c')}
+      ${invSortHead('big','ow-tbl-n')}
+      ${invSortHead('due','ow-tbl-n')}
+      ${invSortHead('status','ow-tbl-c')}
       <div class="ow-tbl-c"></div>
     </div>
-    ${rowsHtml}
+    ${invColfShown ? invColfRowHTML() : ''}
+    ${emptyRow}${rowsHtml}
     <div class="ow-tbl-f">
+      <div class="ow-tbl-c"></div>
       <div class="ow-tbl-c"></div>
       <div class="ow-tbl-c inv-foot-l">${esc(totalLabel)}</div>
       <div class="ow-tbl-n"></div>
@@ -51464,6 +51964,7 @@ function renderInvoices(filter=''){
   ${listMoreButtonHTML('invoices', invoices.length, 'invoices')}`;
 
   invBindDocActions(wrap);
+  invBindRegisterChrome();
   invSyncStickyOffset();
   const selectAllTh = document.getElementById('inv_doc_select_all_th');
   if(selectAllTh){
@@ -51513,11 +52014,19 @@ function invRangedInvoices(filter){
      The other two lenses are flat orders on purpose: the lens IS the
      order, and grouping underneath it would fight it. */
   const lens = INV_LENS_STATE.key;
+  /* The direction a column heading was pressed into. -1 is biggest,
+     newest or Z first; +1 the other way round. */
+  const dir = INV_LENS_STATE.dir || -1;
   const dateOf = (q)=> q.invoicedAt || q.date || '';
   const GROUP_RANK = {open:0, settled:1, voided:2};
+  const balOf = (q)=> q.voided ? 0 : Math.max(0, savedQuoteTotal(q) - (Number(q.amountPaid)||0));
   invoices = invoices.slice().sort((a,b)=>{
-    if(lens==='big') return savedQuoteTotal(b) - savedQuoteTotal(a) || dateOf(b).localeCompare(dateOf(a));
-    if(lens==='date') return dateOf(b).localeCompare(dateOf(a)) || b.id - a.id;
+    if(lens==='big') return dir * (savedQuoteTotal(a) - savedQuoteTotal(b)) || dateOf(b).localeCompare(dateOf(a));
+    if(lens==='date') return dir * dateOf(a).localeCompare(dateOf(b)) || dir * (a.id - b.id);
+    if(lens==='doc') return dir * (a.id - b.id);
+    if(lens==='who') return dir * String(a.client && a.client.name || '').localeCompare(String(b.client && b.client.name || '')) || dateOf(b).localeCompare(dateOf(a));
+    if(lens==='due') return dir * (balOf(a) - balOf(b)) || dateOf(a).localeCompare(dateOf(b));
+    if(lens==='status') return dir * (GROUP_RANK[invGroupOf(a)] - GROUP_RANK[invGroupOf(b)]) || dateOf(a).localeCompare(dateOf(b));
     const ga = invGroupOf(a), gb = invGroupOf(b);
     if(ga !== gb) return GROUP_RANK[ga] - GROUP_RANK[gb];
     if(ga === 'open') return dateOf(a).localeCompare(dateOf(b)) || a.id - b.id;
@@ -52463,6 +52972,8 @@ function invApplySide(){
   if(strip) strip.classList.toggle('inv-u-strip', paired);
   const attention = document.getElementById('inv_u_attention');
   if(attention) attention.hidden = !paired;
+  const panels = document.getElementById('inv_panels');
+  if(panels) panels.hidden = paired;
   document.querySelectorAll('#iv_side .ow-seg-b').forEach(b=>{
     /* Three buttons now, so the lit one is the one whose name matches
        rather than "not the other one" -- which lit two of them. */
@@ -52534,6 +53045,7 @@ document.querySelectorAll('#iv_side .ow-seg-b').forEach(btn=>{
 document.querySelectorAll('#inv_lens .ow-seg-b').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     INV_LENS_STATE.key = btn.dataset.lens;
+    INV_LENS_STATE.dir = -1;
     /* #inv_lens, not #iv_lens. The two were one id until Inventory's
        lens was renamed off this one, and this line kept the old spelling
        -- so pressing Newest reordered the register but lit nothing, and
