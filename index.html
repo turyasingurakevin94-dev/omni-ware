@@ -7843,29 +7843,6 @@
     .q-doc .q-foot-v{grid-column:8;}
     .q-doc .q-foot-x{display:none;}
   }
-  /* THE PHONE CARD, in the same order: name; who from; how many, what
-     it costs and what it sells for side by side; then what it keeps
-     and what it comes to. Seven stacked label rows became four. */
-  @media (max-width:820px){
-    .q-doc .ow-tbl-r.q-line:not(.q-charge){grid-template-columns:22px repeat(3,minmax(0,1fr)) 36px;row-gap:var(--ow-sp-8);}
-    .q-doc .q-line:not(.q-charge) .q-row-num{grid-column:1;grid-row:1;}
-    .q-doc .q-line:not(.q-charge) > .q-name-cell{grid-column:2/5;grid-row:1;}
-    .q-doc .q-line:not(.q-charge) .q-remove-icon{grid-column:5;grid-row:1;justify-self:end;}
-    .q-doc .q-line:not(.q-charge) > :nth-child(6){grid-column:1/-1;grid-row:2;}
-    .q-doc .q-line:not(.q-charge) > :nth-child(3){grid-column:1/3;grid-row:3;}
-    .q-doc .q-line:not(.q-charge) > :nth-child(7){grid-column:3/4;grid-row:3;}
-    .q-doc .q-line:not(.q-charge) > :nth-child(4){grid-column:4/6;grid-row:3;}
-    .q-doc .q-line:not(.q-charge) > :nth-child(3),
-    .q-doc .q-line:not(.q-charge) > :nth-child(7),
-    .q-doc .q-line:not(.q-charge) > :nth-child(4){flex-direction:column;align-items:stretch;justify-content:flex-start;gap:2px;}
-    .q-doc .q-line:not(.q-charge) > :nth-child(3) .ow-gi,
-    .q-doc .q-line:not(.q-charge) > :nth-child(7) .ow-gi,
-    .q-doc .q-line:not(.q-charge) > :nth-child(4) .ow-gi{max-width:none;width:100%;min-height:var(--ow-tap);box-sizing:border-box;text-align:right;}
-    .q-doc .q-line:not(.q-charge) > :nth-child(8){grid-column:1/4;grid-row:4;}
-    .q-doc .q-line:not(.q-charge) > :nth-child(5){grid-column:4/6;grid-row:4;}
-    .q-doc .q-line:not(.q-charge) > .q-line-flag{grid-column:1/-1;grid-row:5;justify-content:flex-start;}
-    .q-doc .q-line:not(.q-charge) .q-qty-cell{display:flex;align-items:center;gap:6px;}
-  }
   /* The picker's keep line: what the two boxes above leave, and the
      save offer when the buy price typed is not the one on file. */
   .q-ip-keep{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ow-sp-8);margin:calc(-1 * var(--ow-sp-6)) 0 var(--ow-sp-10);font-size:12px;}
@@ -8411,7 +8388,10 @@
     background:var(--ow-amber-faint);font-size:var(--ow-t-12);color:var(--ow-amber-ink);}
   .q-stale-sum > span:nth-child(2){flex:1;min-width:0;}
   .q-stale-mk{width:0;height:0;border-top:9px solid var(--ow-amber);border-right:9px solid transparent;flex:none;}
-  .q-flag-mark{display:none;}
+  .q-flag-mark{all:unset;cursor:pointer;position:absolute;left:0;top:0;width:14px;height:14px;
+    display:block;background:linear-gradient(135deg,var(--ow-amber) 50%,transparent 50%);}
+  .q-flag-mark:hover{background:linear-gradient(135deg,var(--ow-amber-ink) 50%,transparent 50%);}
+  .q-flag-mark:focus-visible{outline:2px solid var(--ow-oxide);outline-offset:1px;}
   @media (min-width:821px){
     /* The words share what is left, two to one; the figures keep their width. */
     .q-doc .ow-tbl{--ow-tbl-cols:36px minmax(160px,2fr) minmax(104px,1fr) 92px 96px 124px 76px minmax(116px,auto);}
@@ -8455,10 +8435,6 @@
     /* The old price: a mark in the corner of its cell, and the note
        behind it opened below the row on a tap -- never a row of its own. */
     .q-doc .q-line > [data-l="Buy each"]{position:relative;}
-    .q-flag-mark{all:unset;cursor:pointer;position:absolute;left:0;top:0;width:14px;height:14px;
-      display:block;background:linear-gradient(135deg,var(--ow-amber) 50%,transparent 50%);}
-    .q-flag-mark:hover{background:linear-gradient(135deg,var(--ow-amber-ink) 50%,transparent 50%);}
-    .q-flag-mark:focus-visible{outline:2px solid var(--ow-oxide);outline-offset:1px;}
     .q-doc .q-line-flag.is-old{display:none;position:absolute;right:196px;top:calc(100% - 2px);z-index:20;
       width:300px;margin:0;box-sizing:border-box;padding:var(--ow-sp-12);flex-direction:column;align-items:stretch;
       gap:var(--ow-sp-10);background:var(--ow-paper);border:1px solid var(--ow-steel-100);
@@ -8473,6 +8449,90 @@
       border-top:1px dashed var(--ow-rule-soft);}
     .q-doc .q-foot-l{padding-right:var(--ow-sp-10);}
     .q-doc .q-foot-v{padding-right:var(--ow-sp-10);}
+  }
+  /* THE SAME SHEET ON THE PHONE. Eight columns do not fit in 390px, and
+     the card that stacked them made every line a different shape. So
+     the phone gets the sheet too, the way a spreadsheet app does it:
+     the columns keep their widths and the sheet slides sideways under
+     a frozen # and Item, so a line is always read against its name.
+     Rows are a thumb high; the add rows, the old-price count and the
+     foot stay put at the width of the screen while the figures slide. */
+  @media (max-width:820px){
+    .q-doc .ow-tbl{display:grid;--ow-tbl-cols:32px 148px 124px 96px 100px 128px 76px 136px;
+      grid-template-columns:var(--ow-tbl-cols);overflow-x:auto;overscroll-behavior-x:contain;
+      container-type:inline-size;scrollbar-width:thin;}
+    .q-doc .ow-tbl > .ow-tbl-h,.q-doc .ow-tbl > .ow-tbl-r.q-line{display:grid;grid-column:1/-1;
+      grid-template-columns:var(--ow-tbl-cols);gap:0;padding:0;align-items:stretch;
+      border-top:1px solid var(--ow-rule-soft);font-size:var(--ow-t-14);}
+    .q-doc .ow-tbl > .ow-tbl-h{min-height:36px;background:var(--ow-paper-2);border-top:0;
+      border-bottom:1px solid var(--ow-rule);}
+    .q-doc .ow-tbl > .ow-tbl-r.q-line{min-height:var(--ow-tap);position:relative;}
+    .q-doc .ow-tbl > .q-line.q-row-margin-warn,.q-doc .ow-tbl > .q-line.q-row-margin-danger{background:transparent;}
+    .q-doc .ow-tbl > .ow-tbl-h > *,.q-doc .ow-tbl > .q-line > :not(.q-line-flag){display:flex;align-items:center;
+      grid-column:auto;grid-row:auto;justify-self:stretch;min-width:0;box-sizing:border-box;
+      padding:0 var(--ow-sp-10);border-right:1px solid var(--ow-rule-soft);}
+    .q-doc .ow-tbl > .ow-tbl-h > :not(.q-gutter){display:block;line-height:36px;font-size:var(--ow-t-11);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .q-doc .ow-tbl > .ow-tbl-h > .ow-tbl-n{text-align:right;}
+    .q-doc .ow-tbl > .ow-tbl-h > .ow-tbl-n,.q-doc .ow-tbl > .q-line > .ow-tbl-n{justify-content:flex-end;}
+    .q-doc .ow-tbl > .ow-tbl-h > :nth-child(5),.q-doc .ow-tbl > .q-line > :nth-child(5){border-right:0;}
+    /* the console's order: what, from whom, how many, cost, price, margin, total */
+    .q-doc .ow-tbl > .ow-tbl-h > :nth-child(6),.q-doc .ow-tbl > .q-line > :nth-child(6){order:3;}
+    .q-doc .ow-tbl > .ow-tbl-h > :nth-child(3),.q-doc .ow-tbl > .q-line > :nth-child(3){order:4;}
+    .q-doc .ow-tbl > .ow-tbl-h > :nth-child(7),.q-doc .ow-tbl > .q-line > :nth-child(7){order:5;}
+    .q-doc .ow-tbl > .ow-tbl-h > :nth-child(4),.q-doc .ow-tbl > .q-line > :nth-child(4){order:6;}
+    .q-doc .ow-tbl > .ow-tbl-h > :nth-child(8),.q-doc .ow-tbl > .q-line > :nth-child(8){order:7;}
+    .q-doc .ow-tbl > .ow-tbl-h > :nth-child(5),.q-doc .ow-tbl > .q-line > :nth-child(5){order:8;}
+    .q-doc .ow-tbl > .ow-tbl-h > .q-shop-first,.q-doc .ow-tbl > .q-line > .q-shop-first{border-left:0;}
+    /* frozen: the number and the name */
+    .q-doc .ow-tbl > .ow-tbl-h > .q-gutter,.q-doc .ow-tbl > .q-line > .q-gutter{position:sticky;left:0;z-index:2;
+      justify-content:center;padding:0;background:var(--ow-paper);}
+    .q-doc .ow-tbl > .ow-tbl-h > :nth-child(2),.q-doc .ow-tbl > .q-line > .q-name-cell{position:sticky;left:32px;z-index:2;
+      background:var(--ow-paper);border-right:1px solid var(--ow-steel-100);}
+    .q-doc .ow-tbl > .ow-tbl-h > .q-gutter,.q-doc .ow-tbl > .ow-tbl-h > :nth-child(2){background:var(--ow-paper-2);}
+    .q-doc .ow-tbl > .q-line > .q-name-cell{flex-direction:row;gap:var(--ow-sp-6);}
+    .q-doc .ow-tbl > .q-line > .q-name-cell > .ow-tbl-p{flex:0 1 auto;min-width:0;font-size:var(--ow-t-14);}
+    .q-doc .ow-tbl > .q-line:not(.q-charge) .q-item-sub{margin-top:0;flex:none;}
+    .q-doc .ow-tbl > .q-line:not(.q-charge) .q-item-sub .q-item-unit{display:none;}
+    .q-doc .ow-tbl > .q-line .q-row-num{display:inline;}
+    .q-doc .ow-tbl > .q-line .q-remove-icon{display:none;}
+    /* the cells themselves */
+    .q-doc .ow-tbl > .q-line .ow-gi{font-size:16px;min-height:36px;max-width:none;width:100%;border-radius:0;flex:1 1 auto;}
+    .q-doc .ow-tbl > .q-line > [data-l="Qty"]{padding:0 var(--ow-sp-6);}
+    .q-doc .ow-tbl .q-qty-cell{width:100%;display:flex;align-items:center;gap:var(--ow-sp-4);}
+    .q-doc .ow-tbl .q-qty-cell .ow-gi{min-width:36px;}
+    .q-doc .ow-tbl .q-qty-unit{flex:0 0 auto;max-width:40px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .q-doc .ow-tbl .q-qty-pack{display:none;}
+    .q-doc .ow-tbl .q-sell-cell .ow-gi{min-width:72px;}
+    .q-doc .ow-tbl .q-supplier-picker{max-width:none;}
+    .q-doc .ow-tbl .q-sup-text{text-align:left;font-size:var(--ow-t-14);padding-left:0;}
+    .q-doc .ow-tbl > .q-line > [data-l="Buy each"]{position:relative;}
+    .q-doc .ow-tbl > .q-charge > *{display:flex;}
+    .q-doc .ow-tbl .q-has-flag .q-price{border-color:transparent;}
+    /* what does not slide: the width of the screen, pinned to its left */
+    .q-doc .ow-tbl > .q-add-row-trailing,.q-doc .ow-tbl > .q-stale-sum,.q-doc .ow-tbl > .ow-tbl-f,
+    .q-doc .ow-tbl > .q-line > .q-line-flag{position:sticky;left:0;width:100cqw;box-sizing:border-box;
+      grid-column:1/-1;justify-self:start;}
+    .q-doc .ow-tbl > .ow-tbl-f{display:flex;align-items:baseline;justify-content:space-between;gap:var(--ow-sp-12);
+      padding:var(--ow-sp-8) var(--ow-sp-12);}
+    .q-doc .ow-tbl > .ow-tbl-f .q-foot-x{display:none;}
+    .q-doc .ow-tbl > .q-line > .q-line-flag{margin:0;padding:var(--ow-sp-8) var(--ow-sp-12);justify-content:flex-start;
+      border-top:1px dashed var(--ow-rule-soft);z-index:3;}
+    .q-doc .ow-tbl > .q-line > .q-line-flag.is-old{display:none;background:var(--ow-amber-faint);}
+    .q-doc .ow-tbl > .q-line.q-flag-open > .q-line-flag.is-old{display:flex;}
+    .q-doc .ow-tbl .q-line-flag.is-old .q-flag-t{padding:0;background:transparent;font-weight:var(--ow-fw-500);}
+    .q-doc .ow-tbl .q-line-flag .btn.ow-sm{flex:none;min-width:0;}
+    /* The column says what a cell is; the card's per-cell label goes. */
+    .q-doc .ow-tbl > .q-line > [data-l]::before{content:none;display:none;}
+    .q-doc .ow-tbl > .q-line > [data-l]{align-items:center;}
+    .q-doc .ow-tbl > .q-stale-sum .btn.ow-sm{flex:none;min-width:0;}
+    .q-doc .ow-tbl > .q-line .q-row-num{align-self:center;padding-top:0;}
+    /* A tap leaves :hover behind on a touch screen; only the cell being
+       typed in is edged, never the whole row that was touched. */
+    .q-doc .ow-tbl > .ow-tbl-r.q-line:hover .ow-gi{border-color:transparent;background:transparent;}
+    .q-doc .ow-tbl > .ow-tbl-r.q-line .ow-gi:focus{border-color:var(--ow-steel-950);background:var(--ow-paper);
+      outline:1px solid var(--ow-steel-950);outline-offset:-2px;}
+    .q-doc .ow-tbl > .q-line:hover .q-sup-text{border-color:transparent;background:transparent;}
   }
   .q-margin-pill{
     display:inline-flex;align-items:center;height:18px;padding:0 var(--ow-sp-6);border-radius:var(--ow-r-sm);
