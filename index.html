@@ -14909,6 +14909,12 @@
   .cu-inv .ow-tbl-r.cu-inv-open{background:var(--ow-amber-faint);}
   .cu-inv-late{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
   .cu-inv-none b{display:block;margin-bottom:var(--ow-sp-6);}
+  /* An invoice named on the statement is a link to it. Not .ow-link --
+     that is oxide, and the accent on this screen is Record a payment. */
+  .cu-inv-a{all:unset;cursor:pointer;font:inherit;color:var(--ow-ink-900);
+    text-decoration:underline;text-decoration-color:var(--ow-rule);text-underline-offset:3px;}
+  .cu-inv-a:hover{text-decoration-color:var(--ow-ink-900);}
+  .cu-inv-a:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:2px;}
 
   /* The balance, drawn. Neutral ink for the account and crimson only
      for the floor that has not cleared, because that floor is the one
@@ -47836,6 +47842,9 @@ function customerStatementRows(customerId, fromISO, toISO){
       running += delta(e);
       return {
         date: e.date || '', note: e.note || '', type: e.type,
+        /* Which invoice the line belongs to, when it names one -- so the
+           line on screen can open that invoice. */
+        quoteId: e.quoteId != null ? e.quoteId : null,
         charge: e.type === 'charge' ? (Number(e.amount)||0) : 0,
         payment: e.type === 'payment' ? (Number(e.amount)||0) : 0,
         balance: running,
@@ -64360,9 +64369,14 @@ function statementLedgerHTML(st, side, extra){
      dash stays on the console, where the column exists and an empty
      cell would read as a figure that failed to load. */
   const cell = (v, label)=> `<span class="ow-tbl-n${v === none ? ' cu-nil' : ''}" data-l="${label}">${v}</span>`;
-  const row = (date, detail, charge, payment, balance, cls)=> `<div class="ow-tbl-r${cls || ''}">
+  /* A line that belongs to an invoice opens it: the words are the link,
+     so there is no second control to find. Supplier lines carry no
+     quoteId and stay plain. */
+  const row = (date, detail, charge, payment, balance, cls, qid)=> `<div class="ow-tbl-r${cls || ''}">
     <span class="cu-led-d">${esc(fmtShortDate(date))}</span>
-    <span class="ow-tbl-c"><span class="ow-tbl-p" title="${esc(detail)}">${esc(detail)}</span></span>
+    <span class="ow-tbl-c"><span class="ow-tbl-p" title="${esc(detail)}">${qid != null
+      ? `<button type="button" class="cu-inv-a" data-cinv="${esc(String(qid))}" title="Open ${esc(detail)}">${esc(detail)}</button>`
+      : esc(detail)}</span></span>
     ${cell(charge, 'Charged')}${cell(payment, 'Paid')}${cell(balance, 'Balance')}
   </div>`;
   return `
@@ -64382,7 +64396,7 @@ function statementLedgerHTML(st, side, extra){
         ${st.rows.map(r=> row(r.date, statementRowDetail(r, payWord),
           r.charge ? `<span class="ow-fig">${money(r.charge)}</span>` : none,
           r.payment ? `<span class="ow-fig">${money(r.payment)}</span>` : none,
-          `<span class="ow-fig">${money(r.balance)}</span>`)).join('')}
+          `<span class="ow-fig">${money(r.balance)}</span>`, '', r.quoteId)).join('')}
         ${st.rows.length ? '' : `<div class="ow-tbl-r cu-led-none">
           <span class="cu-led-d"></span>
           <span class="ow-tbl-c">Nothing was charged or paid in this period.</span>
@@ -64536,7 +64550,7 @@ function customerInvoiceStatementHTML(customerId, st, tools){
       </div>
       ${shown.map(r=> `<div class="ow-tbl-r${r.due > 0.5 ? ' cu-inv-open' : ''}">
         <span class="cu-led-d">${esc(fmtShortDate(r.date))}</span>
-        <span class="ow-tbl-c"><span class="ow-tbl-p">${esc(r.no)}</span></span>
+        <span class="ow-tbl-c"><span class="ow-tbl-p"><button type="button" class="cu-inv-a" data-cinv="${esc(String(r.q.id))}" title="Open ${esc(r.no)}">${esc(r.no)}</button></span></span>
         ${settled(r)}
         <span class="ow-tbl-n" data-l="Amount"><span class="ow-fig">${money(r.total)}</span></span>
         <span class="ow-tbl-n cu-inv-paid" data-l="Paid"><span class="ow-fig">${money(r.paid)}</span></span>
@@ -65028,6 +65042,14 @@ function printSupplierStatement(supplierId){
         const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
         pan.scrollIntoView({block:'start', behavior: reducedMotion ? 'auto' : 'smooth'});
       }
+      return;
+    }
+    /* An invoice named on the statement opens that invoice, on the
+       Invoices screen, through the reveal every other screen uses. */
+    const ci = e.target.closest('[data-cinv]');
+    if(ci){
+      const q = (data.savedQuotes || []).find(x=> String(x.id) === ci.dataset.cinv);
+      if(q) revealInvoice(q.id); else toast('That invoice is no longer on file');
       return;
     }
     const b = e.target.closest('[data-cact]');
