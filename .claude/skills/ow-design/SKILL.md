@@ -19,9 +19,11 @@ how densely it works.
 
 **§2 was then reopened by the owner** and the hue quota removed. Colour
 is now governed by which of four questions a value answers, not by how
-many values there are — see §2. The contrast floor and the ratchet did
-not move with it: a wider palette is held to the same arithmetic, and
-the gate still makes a new hue argue for itself.
+many values there are — see §2. **And there is no ceiling on how many
+colours a layout carries**: the owner lifted it. The design-system test
+counts and reports the palette but no longer fails on its size. What did
+NOT move is the contrast floor: every ink set as text clears 4.5:1, and
+a new family joins the test's contrast list when it is added.
 
 **Read this whole file before you draw or build.** Then run
 `node test/design-system.test.js` — it enforces mechanically most of
@@ -86,7 +88,7 @@ action is now fine; a second oxide *button* competing for "do this" is
 still wrong. And a category hue beside the accent is not competition,
 because the two answer different questions.
 
-### The 29 values
+### The named values (a starting set, not a limit)
 
 ```
 --ow-steel-950  #16203C   the rail / navy chrome
@@ -167,9 +169,16 @@ Insight    --ow-plum-soft   / --ow-plum           6.96:1
 Setup      --ow-rule-soft   / --ow-ink-600        4.66:1
 ```
 
-Three reuse families that already existed. A hue you already have is
-cheaper than a hue you do not — reach for a new one only when no
-existing family fits the meaning.
+Three reuse families that already existed. There is no cap on adding
+more: when a screen has more identities to tell apart than these six —
+the Invoices screen's suppliers are the first case — add a family (a tint
+and its ink, as tokens), use it wherever that identity appears, and add
+its pairs to the contrast list in `test/design-system.test.js`.
+
+The supplier hues, added that way: `--ow-teal` / `--ow-teal-soft`,
+`--ow-violet` / `--ow-violet-soft`, `--ow-slate` / `--ow-slate-soft`, and
+reused `indigo`, `sky`, `plum`. Each clears 4.5:1 as ink on its tint, as
+text on paper, and as white on the ink.
 
 **A category hue never carries status.** Sell's door is red because
 Sell is red, not because anything is wrong; if a Sell screen has a
@@ -378,8 +387,9 @@ liars.
    commit. Every selector in the layer starts `.ow-` and stays there —
    a rule that must reach outside the namespace lives beside the code it
    couples to, not in the layer.
-3. **Every colour answers one of the four questions**, per §2. A new
-   value needs a role and the contrast arithmetic, not permission.
+3. **Every colour answers one of the four questions**, per §2. There is
+   no limit on how many; a new value needs a role and the contrast
+   arithmetic, not permission.
 
 ---
 
