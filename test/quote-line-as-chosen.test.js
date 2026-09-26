@@ -328,8 +328,13 @@ const H = compileScope([
 
   /* Not through f(): the picture prints the count as it is. */
   const paint = extractFunction(src, 'briefPaintList', 'index.html');
-  t.check(/ctx\.fillText\(Number\(it\.theirQty\)\.toLocaleString\('en-UG'\), cellR\(4\)/.test(paint),
-    'the picture prints YOU TAKE without rounding it');
+  /* The picture no longer has a YOU TAKE column: the count is drawn
+     after a × beside the blocks that show it. The claim is unchanged --
+     the figure is printed as it is, never rounded through f() -- so it is
+     asserted on the count itself rather than on the column it used to
+     sit in. */
+  t.check(/ctx\.fillText\(`×\$\{Number\(it\.theirQty\)\.toLocaleString\('en-UG'\)\}`/.test(paint),
+    'the picture prints what they take without rounding it');
   const html = extractFunction(src, 'briefStripHTML', 'index.html');
   t.check(/it\.theirQty != null \? Number\(it\.theirQty\)\.toLocaleString\('en-UG'\)/.test(html),
     'and so does its HTML twin');
