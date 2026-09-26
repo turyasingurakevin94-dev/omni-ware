@@ -5431,6 +5431,168 @@
     .iv-fl-kn{text-align:left;}
   }
 
+  /* ================= INVENTORY, THE LANES VIEW ========================
+     One map, three lanes, and the open line beside them. The map is the
+     whole shelf on two axes -- days it lasts, money in it -- so its three
+     zones ARE the three lanes under it, and a dot and its card are the
+     same line. Colour is state only: crimson for Buy now (running out is
+     the one outcome that loses a sale), amber for Dead money, ink for
+     healthy. Shape carries it too: dead money is hatched, not just tinted. */
+  .iv-view{flex:none;}
+  .iv-map{padding:var(--ow-sp-12) 0 var(--ow-sp-8);margin-bottom:var(--ow-sp-12);}
+  .iv-map-h{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--ow-sp-16);
+    padding:0 var(--ow-sp-16) var(--ow-sp-10);}
+  .iv-map-v{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .iv-map-v .ow-mt-l{margin:0;}
+  .iv-map-v b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-size:var(--ow-t-20);font-weight:600;line-height:var(--ow-lh-tight);}
+  .iv-map-s,.iv-map-k{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .iv-map-k{text-align:right;}
+  .iv-map-p{position:relative;height:260px;margin:0 var(--ow-sp-16) 0 56px;}
+  .iv-zn{position:absolute;top:0;bottom:22px;}
+  .iv-zn span{position:absolute;top:var(--ow-sp-6);left:var(--ow-sp-8);font-size:var(--ow-t-11);font-weight:600;
+    letter-spacing:.09em;text-transform:uppercase;white-space:nowrap;}
+  .iv-zn-buy{background:var(--ow-amber-faint);border-right:1.5px dashed var(--ow-amber);}
+  .iv-zn-buy span{color:var(--ow-crimson);}
+  .iv-zn-ok span{color:var(--ow-ink-600);}
+  .iv-zn-dead{background:repeating-linear-gradient(135deg,var(--ow-steel-050) 0 6px,var(--ow-paper-2) 6px 12px);}
+  .iv-zn-dead span{color:var(--ow-amber-ink);}
+  .iv-gl{position:absolute;left:0;right:0;height:1px;background:var(--ow-rule-soft);}
+  .iv-gy{position:absolute;left:-52px;width:46px;text-align:right;transform:translateY(-50%);
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .iv-gx{position:absolute;bottom:2px;transform:translateX(-50%);white-space:nowrap;
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .iv-dot{position:absolute;width:14px;height:14px;padding:0;border-radius:50%;transform:translate(-50%,-50%);
+    border:2px solid var(--ow-paper);cursor:pointer;transition:opacity .15s;}
+  .iv-dot-buy{background:var(--ow-crimson);}
+  .iv-dot-ok{background:var(--ow-ink-600);}
+  .iv-dot-dead{background:var(--ow-amber);}
+  .iv-dot.ow-on{outline:3px solid var(--ow-steel-950);outline-offset:1px;z-index:2;}
+  .iv-dot:focus-visible{outline:3px solid var(--ow-steel-950);outline-offset:1px;}
+  .iv-dl{position:absolute;transform:translate(10px,-50%);font-size:var(--ow-t-11);font-weight:600;
+    white-space:nowrap;pointer-events:none;transition:opacity .15s;}
+  .iv-dl-l{transform:translate(calc(-100% - 10px),-50%);}
+  .iv-dl-buy{color:var(--ow-crimson);}
+  .iv-dl-ok{color:var(--ow-ink-900);}
+  .iv-dl-dead{color:var(--ow-amber-ink);}
+  .iv-dim{opacity:.18;}
+  .iv-map-a{display:flex;justify-content:space-between;margin:2px var(--ow-sp-16) 0 56px;
+    font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .iv-map-n{margin:var(--ow-sp-8) var(--ow-sp-16) 0;font-size:var(--ow-t-11);color:var(--ow-ink-600);
+    max-width:var(--ow-measure);}
+  .iv-zb{display:none;}
+
+  .iv-lanes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));}
+  .iv-ln{display:flex;flex-direction:column;min-width:0;border-left:1px solid var(--ow-rule-soft);}
+  .iv-ln:first-child{border-left:0;}
+  .iv-ln.ow-on .iv-lh{background:var(--ow-paper-2);border-bottom:2px solid var(--ow-ink-900);}
+  .iv-lh{display:flex;flex-direction:column;gap:4px;padding:var(--ow-sp-10) var(--ow-sp-12);text-align:left;
+    border:0;border-bottom:1px solid var(--ow-rule-soft);background:none;font:inherit;color:inherit;cursor:pointer;}
+  .iv-lh:hover{background:var(--ow-paper-2);}
+  .iv-lh-t{display:flex;align-items:center;gap:var(--ow-sp-6);font-size:var(--ow-t-11);font-weight:600;
+    letter-spacing:.09em;text-transform:uppercase;}
+  .iv-lh-t i{width:9px;height:9px;border-radius:50%;}
+  .iv-ln-buy .iv-lh-t{color:var(--ow-crimson);}
+  .iv-ln-buy .iv-lh-t i{background:var(--ow-crimson);}
+  .iv-ln-ok .iv-lh-t{color:var(--ow-ink-600);}
+  .iv-ln-ok .iv-lh-t i{background:var(--ow-ink-600);}
+  .iv-ln-dead .iv-lh-t{color:var(--ow-amber-ink);}
+  .iv-ln-dead .iv-lh-t i{background:var(--ow-amber);}
+  .iv-lh-v{display:flex;align-items:baseline;gap:var(--ow-sp-8);min-width:0;}
+  .iv-lh-v > b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-20);font-weight:600;letter-spacing:-.02em;}
+  .iv-lh-v > span{font-size:var(--ow-t-12);color:var(--ow-ink-600);min-width:0;}
+  .iv-lh-v > span b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    color:var(--ow-ink-900);font-weight:600;}
+  .iv-cd{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:var(--ow-sp-10);row-gap:5px;
+    padding:9px var(--ow-sp-12);text-align:left;border:0;border-bottom:1px solid var(--ow-rule-soft);
+    background:none;font:inherit;color:inherit;cursor:pointer;width:100%;}
+  .iv-cd:hover{background:var(--ow-paper-2);}
+  .iv-cd.ow-on{background:var(--ow-steel-050);border-left:3px solid var(--ow-ink-900);padding-left:9px;}
+  .iv-cd-n{font-size:var(--ow-t-13);font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .iv-cd-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-12);font-weight:600;letter-spacing:-.02em;text-align:right;white-space:nowrap;}
+  .iv-cd-t{position:relative;height:6px;border-radius:var(--ow-r-pill);background:var(--ow-rule-soft);align-self:center;overflow:hidden;}
+  .iv-cd-t i{position:absolute;left:0;top:0;bottom:0;border-radius:var(--ow-r-pill);}
+  .iv-cd-t-buy i{background:var(--ow-crimson);}
+  .iv-cd-t-ok i{background:var(--ow-ink-600);}
+  .iv-cd-t-dead i{background:repeating-linear-gradient(90deg,var(--ow-amber) 0 4px,var(--ow-amber-soft) 4px 7px);}
+  .iv-cs{font-size:var(--ow-t-11);color:var(--ow-ink-600);text-align:right;white-space:nowrap;}
+  .iv-cs-buy{color:var(--ow-crimson);font-weight:600;}
+  .iv-cs-dead{color:var(--ow-amber-ink);font-weight:600;}
+  .iv-more{padding:var(--ow-sp-8) var(--ow-sp-12);border:0;border-bottom:1px solid var(--ow-rule-soft);
+    background:none;font:inherit;font-size:var(--ow-t-12);font-weight:600;color:var(--ow-ink-900);
+    text-align:left;cursor:pointer;}
+  .iv-more:hover{background:var(--ow-paper-2);}
+  .iv-lf{margin-top:auto;padding:var(--ow-sp-10) var(--ow-sp-12);background:var(--ow-paper-2);}
+  .iv-go{border-style:dashed;border-color:var(--ow-amber);color:var(--ow-amber-ink);}
+  .iv-lf .iv-go{width:100%;box-sizing:border-box;justify-content:center;}
+  .iv-calm{display:flex;align-items:center;gap:var(--ow-sp-6);font-size:var(--ow-t-12);font-weight:600;color:var(--ow-verdigris);}
+  .iv-calm svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+
+  /* The open line. On the desk it is the rail; on the phone it opens
+     under its own card, since a panel below the whole list is a panel
+     nobody scrolls to. */
+  .iv-dx{display:flex;flex-direction:column;gap:var(--ow-sp-10);padding:var(--ow-sp-16);min-width:0;}
+  .iv-dx-ph{display:none;}
+  .iv-zc{align-self:flex-start;font-size:var(--ow-t-11);font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+    padding:2px var(--ow-sp-8);border-radius:var(--ow-r-sm);}
+  .iv-zc-buy{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .iv-zc-ok{background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+  .iv-zc-dead{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .iv-dx-n{margin:0;font-size:var(--ow-t-16);font-weight:700;line-height:var(--ow-lh-snug);}
+  .iv-dx-m{margin:-6px 0 0;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .iv-dx-big{margin:0;display:flex;align-items:baseline;gap:var(--ow-sp-8);}
+  .iv-dx-big b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-28);font-weight:600;letter-spacing:-.02em;line-height:1;}
+  .iv-dx-big-buy{color:var(--ow-crimson);}
+  .iv-dx-big-dead{color:var(--ow-amber-ink);}
+  .iv-dx-big span{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .iv-dx-fg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--ow-rule-soft);
+    border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);overflow:hidden;}
+  .iv-dx-fg span{display:flex;flex-direction:column;gap:2px;padding:var(--ow-sp-8) var(--ow-sp-10);background:var(--ow-paper);min-width:0;}
+  .iv-dx-fg small{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .iv-dx-fg b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-14);font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+  .iv-dx-fg .iv-u{display:inline;margin-left:3px;font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-11);
+    font-weight:400;color:var(--ow-ink-600);letter-spacing:0;}
+  .iv-dx-k{margin:0 0 var(--ow-sp-6);font-size:var(--ow-t-11);font-weight:600;letter-spacing:.09em;
+    text-transform:uppercase;color:var(--ow-ink-600);}
+  .iv-dx-lb{display:flex;gap:2px;height:18px;margin-bottom:var(--ow-sp-6);}
+  .iv-dx-lb i{display:flex;align-items:center;justify-content:center;border-radius:var(--ow-r-sm);font-style:normal;
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-size:var(--ow-t-11);font-weight:600;
+    color:var(--ow-paper);overflow:hidden;white-space:nowrap;min-width:0;}
+  .iv-lot-0{background:var(--ow-ink-600);}
+  .iv-lot-1{background:var(--ow-steel-400);}
+  .iv-lot-2{background:var(--ow-steel-100);color:var(--ow-ink-900) !important;}
+  .iv-dx-lr{margin:0;display:flex;justify-content:space-between;gap:var(--ow-sp-8);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .iv-dx-lr b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;color:var(--ow-ink-900);}
+  .iv-dx-a{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--ow-sp-8);}
+  .iv-dx-a .btn{box-sizing:border-box;justify-content:center;min-width:0;white-space:normal;height:auto;min-height:30px;}
+  .iv-dx-a .iv-go{grid-column:1 / -1;}
+
+  @media (max-width:820px){
+    .iv-map-p,.iv-map-a,.iv-map-k{display:none;}
+    .iv-zb{display:flex;gap:2px;height:14px;margin:0 var(--ow-sp-16);}
+    .iv-zb i{display:block;height:100%;border-radius:3px;}
+    .iv-zb-buy{background:var(--ow-crimson);}
+    .iv-zb-ok{background:var(--ow-ink-600);}
+    .iv-zb-dead{background:var(--ow-amber);}
+    .iv-lanes{grid-template-columns:1fr;}
+    .iv-ln{border-left:0;border-top:1px solid var(--ow-rule);}
+    .iv-ln:first-child{border-top:0;}
+    .iv-lh{min-height:var(--ow-tap);}
+    .iv-cd{min-height:56px;padding:var(--ow-sp-10) var(--ow-sp-16);}
+    .iv-cd-n{font-size:15px;}
+    .iv-cd-v{font-size:var(--ow-t-14);}
+    .iv-cs{font-size:var(--ow-t-12);}
+    .iv-lf .iv-go,.iv-dx-a .btn{min-height:var(--ow-tap);font-size:15px;}
+    .iv-more{min-height:var(--ow-tap);font-size:var(--ow-t-14);}
+    .iv-dx-desk{display:none;}
+    .iv-dx-ph{display:block;border-bottom:1px solid var(--ow-rule);background:var(--ow-paper-2);}
+    .iv-view .ow-seg-b{min-height:var(--ow-tap);}
+  }
+
   /* ================= PRODUCTS, AS THE REGISTER ========================
      The card grid is gone here for the same reason it went from
      Inventory: 270px cards of unequal height meant no two figures ever
@@ -23722,6 +23884,14 @@
         </div>
         <div class="ow-f"><span class="ow-f-l">Category</span><span class="ow-f-in"><select class="ow-f-sel" id="inv_category_filter"><option value="">All categories</option></select></span></div>
         <div class="ow-f"><span class="ow-f-l">Sort</span><span class="ow-f-in"><select class="ow-f-sel" id="inv_sort"></select></span></div>
+        <!-- LANES OR LIST. Lanes sorts the shelf into what to buy, what is
+             fine and what is sitting still, with the line you press open
+             beside it; List is the register, row by row, with its pager.
+             Same filters, same figures -- two ways of reading one shelf. -->
+        <div class="ow-seg iv-view" id="iv_view" role="group" aria-label="How to show the shelf">
+          <button type="button" class="ow-seg-b ow-on" data-invview="lanes" aria-pressed="true">Lanes</button>
+          <button type="button" class="ow-seg-b" data-invview="list" aria-pressed="false">List</button>
+        </div>
         <!-- On by default. This screen answers "what is on the shelf",
              and a shop with 300 sellable lines and 5 in stock opened it
              to 295 rows of nothing. The line under the bar says how many
@@ -86262,7 +86432,12 @@ function renderInventory(){
   const allLines = allProductVariantEntries([]).map(({p, variantIdx})=> inventoryLineFor(p, variantIdx));
   const all = inventoryLineStats(allLines);
   invShelfValue = all.value;
-  renderInvRail(allLines);
+  /* The two views share every filter and every figure above; they differ
+     in what they draw with them. Lanes zones the WHOLE shelf once, for
+     the map, and the lanes take the lines the filters left. */
+  const zrAll = invView === 'lanes' ? invZoneRows(allLines) : null;
+  if(invView === 'lanes') renderInvDrawer(zrAll);
+  else renderInvRail(allLines);
   /* THE COUNTS ON THE LENS. The shelf's is what is ON it, not what is on
      file -- the same figure the strip's own "Lines on the shelf" tile
      reads, so pressing a tab can never open a list of a different size.
@@ -86281,6 +86456,7 @@ function renderInventory(){
      shop look like a broken app rather than an empty one. The screen
      says what to do instead, below. */
   if(strip && all.lines === 0){ strip.innerHTML = ''; }
+  else if(strip && invView === 'lanes'){ strip.innerHTML = invMapHTML(zrAll, all, withFloor); }
   else if(strip){
     /* ONE FIGURE AND ONE BAR. What the shop holds, in money, beside the
        whole shelf drawn as the states its lines are in -- healthy, under
@@ -86385,6 +86561,9 @@ function renderInventory(){
       document.getElementById('inv_hide_zero').checked = false;
       invRefilter();
     });
+  } else if(invView === 'lanes'){
+    const listed = new Set(lines.map(l=> stockKey(l.p.id, l.variantIdx==null ? null : l.variantIdx)));
+    wrap.innerHTML = invLanesHTML(zrAll.filter(z=> listed.has(z.key)));
   } else {
     wrap.innerHTML = `<div class="iv-h"><span></span><span></span><span>Line</span><span class="iv-r">On shelf</span><span class="iv-r">Cost each</span><span class="iv-r">Value here</span></div>`
       + `<div class="iv-q">${pageLines.map(invLineHTML).join('')}</div>`
@@ -86658,6 +86837,285 @@ function renderInvRail(allLines){
   }));
 }
 
+/* ================= THE SHELF, TRIAGED (the Lanes view) =================
+   Every line on the shelf answers two questions at once: how long will it
+   last, and how much money is sitting in it. Drawn on those two axes, the
+   shelf sorts itself into three zones, and each zone has exactly one thing
+   to do about it:
+
+     Buy now     it runs out inside the shop's cover, or is under the
+                 floor the shop set                      -> the buying plan
+     Healthy     selling, with cover to spare            -> nothing
+     Dead money  no sale inside the quiet window, or more stock than that
+                 window at its own pace                  -> a clearance
+
+   So the screen is one map and three lanes, and the line you press opens
+   beside them rather than pushing the list down. The List view is the
+   register as it was -- every row, the state bar, the pager -- one press
+   away, for the job of reading the shelf top to bottom.
+
+   DERIVED, NEVER INVENTED. The pace is restockRiskRows' own (thirty days
+   of the shop's sales off the shelf), "dead" is stockAgeRows' own -- the
+   rule the Pricing screen's clearance reads -- and the cover and the
+   floor are the shop's settings. A line with no pace has no day count and
+   is never given one: it is named and counted, not placed. */
+let invView = 'lanes';
+// A lane pressed: its dots stay lit on the map, the others fade.
+let invZone = null;
+const INV_ZONES = [
+  { key:'buy',  label:'Buy now' },
+  { key:'ok',   label:'Healthy' },
+  { key:'dead', label:'Dead money' },
+];
+function invCoverDays(rule){
+  return rule && rule.coverDays > 0 ? rule.coverDays : Math.max(1, Number(data.presetRestockCoverDays) || 14);
+}
+/* One zone per line, with the figures the lanes and the map draw it by.
+   Read once per render: both helpers walk the whole book. */
+function invZoneRows(lines){
+  const risk = new Map(), age = new Map();
+  try { restockRiskRows().forEach(r=> risk.set(r.key, r)); } catch(e){}
+  try { stockAgeRows().forEach(r=> age.set(r.key, r)); } catch(e){}
+  const quietWindow = deadStockQuietDays();
+  return lines.map(l=>{
+    const vidx = l.variantIdx == null ? null : l.variantIdx;
+    const key = stockKey(l.p.id, vidx);
+    const r = risk.get(key), a = age.get(key);
+    const daysLeft = r ? r.daysLeft : null;
+    const rate = r ? r.dailyRate : 0;
+    const cover = invCoverDays(l.rule);
+    const floor = l.rule && l.rule.minUnits ? l.rule.minUnits : 0;
+    let zone;
+    if(!(l.qty > 0)) zone = 'empty';
+    else if(l.uncosted) zone = 'nocost';
+    else if(l.belowFloor || (daysLeft != null && daysLeft < cover)) zone = 'buy';
+    /* A line with a pace sold inside the last thirty days, so it is not
+       idle whatever the age record says; it is dead money only when that
+       pace would take longer than the quiet window to clear the shelf. */
+    else if(daysLeft == null ? !!(a && a.dead) : daysLeft > quietWindow) zone = 'dead';
+    else zone = 'ok';
+    /* What would see the line through its cover AND back over its floor,
+       at the cost the shop last paid. Only for Buy now, and only where
+       there is a cost to multiply -- otherwise the sum is left short and
+       says so, rather than counting a line at nothing. */
+    const need = zone === 'buy' ? Math.max(0, Math.ceil(Math.max(rate * cover, floor) - l.qty)) : 0;
+    return { l, key, vidx, zone, daysLeft, rate, cover, floor,
+      quiet: a && a.daysQuiet != null ? a.daysQuiet : null, sold: !!(a && a.lastSold),
+      need, needCost: need && l.unitCost != null ? need * l.unitCost : null };
+  });
+}
+function invLineName(l){
+  const v = l.variantIdx == null ? null : (l.p.variants || [])[l.variantIdx];
+  return v ? `${l.p.name} — ${variantLabel(v.combo)}` : l.p.name;
+}
+// A figure for a sentence or a column: the currency is said once, around it.
+function invFig(v){ return fmtUGX(Math.round(v)).replace(/\s*UGX$/, ''); }
+function invShortMoney(v){
+  if(v >= 1e6) return `${Math.round(v / 1e5) / 10}M`;
+  if(v >= 1e3) return `${Math.round(v / 1e3)}k`;
+  return String(Math.round(v));
+}
+function invDaysSay(d){ return d < 1 ? 'under a day' : `${Math.floor(d)} d`; }
+
+/* THE MAP. Across: how many days the shelf lasts at its own pace, on a
+   scale that spends its width where the decisions are -- the first two
+   weeks get as much room as the next two months. Up: the money in the
+   line, on a square-root scale, so one line holding five million does
+   not flatten every other dot onto the floor. */
+const INV_MAP_X = [[0,0],[7,.14],[14,.30],[30,.50],[60,.74]];
+function invMapFx(d){
+  if(d <= 0) return 0;
+  for(let i = 1; i < INV_MAP_X.length; i++){
+    if(d <= INV_MAP_X[i][0]){
+      const [d0, f0] = INV_MAP_X[i - 1], [d1, f1] = INV_MAP_X[i];
+      return f0 + (d - d0) / (d1 - d0) * (f1 - f0);
+    }
+  }
+  return .74;
+}
+function invMapHTML(zr, all, withFloor){
+  const zoned = zr.filter(z=> z.zone === 'buy' || z.zone === 'ok' || z.zone === 'dead');
+  const still = zoned.filter(z=> z.zone === 'dead' && (z.daysLeft == null || z.daysLeft > 60))
+    .sort((a, b)=> (b.l.value || 0) - (a.l.value || 0));
+  const top = Math.max(1, ...zoned.map(z=> z.l.value || 0));
+  const dots = [];
+  let noPace = 0;
+  zoned.forEach(z=>{
+    let fx;
+    if(still.includes(z)){
+      const i = still.indexOf(z);
+      fx = .79 + (still.length > 1 ? i / (still.length - 1) : .5) * .17;
+    } else if(z.daysLeft == null){
+      // Under its floor with no sales to pace it: urgent, and at the wall.
+      if(z.zone === 'buy') fx = .015; else { noPace++; return; }
+    } else fx = invMapFx(z.daysLeft);
+    dots.push({ z, fx, fy: Math.sqrt((z.l.value || 0) / top) });
+  });
+  const biggest = new Set(dots.slice().sort((a, b)=> (b.z.l.value || 0) - (a.z.l.value || 0)).slice(0, 3).map(d=> d.z.key));
+  const shopCover = Math.max(1, Number(data.presetRestockCoverDays) || 14);
+  const coverFx = invMapFx(shopCover);
+  const pct = (f)=> (f * 100).toFixed(2);
+  const yPct = (fy)=> (94 - fy * 84).toFixed(2);
+  const dotHTML = dots.map(({ z, fx, fy })=>{
+    const name = invLineName(z.l);
+    const on = invOpenKey === z.key;
+    const dim = invZone && invZone !== z.zone;
+    const say = `${name}: ${z.l.value != null ? invFig(z.l.value) + ' UGX' : 'not valued'}, ${
+      z.daysLeft != null ? 'about ' + invDaysSay(z.daysLeft) + ' left' : z.zone === 'dead' ? 'not selling' : 'no sales to pace it'}`;
+    const label = z.zone === 'buy' || biggest.has(z.key) || on;
+    return `<button type="button" class="iv-dot iv-dot-${z.zone}${on ? ' ow-on' : ''}${dim ? ' iv-dim' : ''}" data-invpick="${esc(z.key)}"
+        style="left:${pct(fx)}%;top:${yPct(fy)}%" title="${esc(say)}" aria-label="${esc(say)}"></button>${
+      label ? `<span class="iv-dl iv-dl-${z.zone}${fx > .8 ? ' iv-dl-l' : ''}${dim ? ' iv-dim' : ''}" style="left:${pct(fx)}%;top:${yPct(fy)}%" aria-hidden="true">${esc(name.split(' (')[0])}</span>` : ''}`;
+  }).join('');
+  const gridY = [1, .5, .25].map(fy=> `<span class="iv-gl" style="top:${yPct(fy)}%"></span><span class="iv-gy" style="top:${yPct(fy)}%">${invShortMoney(top * fy * fy)}</span>`).join('');
+  const gridX = [[0,'0'],[7,'7 d'],[14,'14 d'],[30,'30 d'],[60,'60 d']].map(([d, t])=>
+    `<span class="iv-gx" style="left:${pct(invMapFx(d))}%">${t}</span>`).join('') + `<span class="iv-gx" style="left:87.5%">not selling</span>`;
+  /* The phone reads the same zones as one bar of the shop's money,
+     split three ways. */
+  const money = (k)=> zoned.filter(z=> z.zone === k).reduce((n, z)=> n + (z.l.value || 0), 0);
+  const phoneBar = INV_ZONES.map(zn=> money(zn.key) > 0 ? `<i class="iv-zb-${zn.key}" style="flex-grow:${Math.round(money(zn.key))}"></i>` : '').join('');
+  const nocost = zr.filter(z=> z.zone === 'nocost').length;
+  const empty = zr.filter(z=> z.zone === 'empty').length;
+  const notes = [
+    noPace ? `${noPace} ${noPace === 1 ? 'line has' : 'lines have'} no sales in 30 days to pace, so ${noPace === 1 ? 'it is' : 'they are'} in the lanes but not on the map` : '',
+    nocost ? `${nocost} ${nocost === 1 ? 'line holds' : 'lines hold'} stock with no cost on file, so the figure above leaves ${nocost === 1 ? 'it' : 'them'} out` : '',
+    empty ? `${empty} ${empty === 1 ? 'line is' : 'lines are'} empty` : '',
+  ].filter(Boolean);
+  return `<div class="ow-pan iv-map">
+    <div class="iv-map-h">
+      <span class="iv-map-v"><span class="ow-mt-l">Ours on the shelf</span><b>${esc(fmtUGX(Math.round(all.value)))}</b>
+        <span class="iv-map-s">at what you paid &middot; ${all.lines - all.zero} of ${all.lines} on file are on the shelf</span></span>
+      <span class="iv-map-k" aria-hidden="true">every line by how long it lasts and what it holds &middot; press a dot</span>
+    </div>
+    <div class="iv-map-p">
+      <div class="iv-zn iv-zn-buy" style="left:0;width:${pct(coverFx)}%"><span>Buy now</span></div>
+      <div class="iv-zn iv-zn-ok" style="left:${pct(coverFx)}%;width:${pct(.74 - coverFx)}%"><span>Healthy</span></div>
+      <div class="iv-zn iv-zn-dead" style="left:74%;right:0"><span>Dead money</span></div>
+      ${gridY}${gridX}${dotHTML}
+    </div>
+    <p class="iv-map-a" aria-hidden="true"><span>&uarr; money in the line</span><span>days the shelf lasts at the last 30 days&rsquo; pace &rarr;</span></p>
+    <div class="iv-zb" aria-hidden="true">${phoneBar}</div>
+    ${notes.length || !withFloor ? `<p class="iv-map-n">${esc(notes.join(' · '))}${notes.length && !withFloor ? ' · ' : ''}${
+      withFloor ? '' : 'No line has a restock floor yet, so a line can only land in Buy now by its pace.'}</p>` : ''}
+  </div>`;
+}
+
+/* THE LANES. The zones as three columns, each with its count, its money
+   and its one move. A lane shows its first eight and names the rest
+   rather than dropping them -- a lane of three hundred healthy lines is
+   the List's job, one press away. */
+const INV_LANE_MAX = 8;
+function invLanesHTML(zr){
+  const lane = (key)=>{
+    const rows = zr.filter(z=> z.zone === key).sort((a, b)=>
+      key === 'dead' ? (b.l.value || 0) - (a.l.value || 0)
+        : (a.daysLeft == null ? -1 : a.daysLeft) - (b.daysLeft == null ? -1 : b.daysLeft));
+    const value = rows.reduce((n, z)=> n + (z.l.value || 0), 0);
+    const needCost = rows.reduce((n, z)=> n + (z.needCost || 0), 0);
+    const unpriced = rows.filter(z=> z.need > 0 && z.needCost == null).length;
+    const zn = INV_ZONES.find(x=> x.key === key);
+    const say = key === 'buy'
+      ? (rows.length ? `about <b>${esc(invFig(needCost))}</b> UGX to bring back${unpriced ? `, and ${unpriced} with no cost to price` : ''}` : 'nothing runs out inside your cover')
+      : key === 'ok' ? `<b>${esc(invFig(value))}</b> UGX, selling`
+      : (rows.length ? `<b>${esc(invFig(value))}</b> UGX not moving` : `nothing has sat for ${deadStockQuietDays()} days`);
+    const card = (z)=>{
+      const name = invLineName(z.l);
+      const on = invOpenKey === z.key;
+      const d = z.daysLeft;
+      const w = key === 'dead' ? 100 : d == null ? 4 : Math.max(4, Math.min(d, 60) / 60 * 100);
+      const tone = key === 'buy' ? ' iv-cs-buy' : key === 'dead' ? ' iv-cs-dead' : '';
+      const when = key === 'dead'
+        ? (d != null && d <= 60 && z.sold ? `${Math.round(d)} d of stock` : z.quiet != null ? `last sold ${z.quiet} d ago` : 'never sold here')
+        : d == null ? (z.l.belowFloor ? 'under floor' : 'no sales to pace') : invDaysSay(d) + (z.l.belowFloor && key === 'buy' ? ' · under floor' : '');
+      return `<button type="button" class="iv-cd${on ? ' ow-on' : ''}" data-invpick="${esc(z.key)}" aria-pressed="${on}">
+        <span class="iv-cd-n" title="${esc(name)}">${esc(name)}</span>
+        <span class="iv-cd-v">${z.l.value != null ? esc(invFig(z.l.value)) : '&mdash;'}</span>
+        <span class="iv-cd-t iv-cd-t-${key}" aria-hidden="true"><i style="width:${w.toFixed(1)}%"></i></span>
+        <span class="iv-cs${tone}">${esc(when)}</span>
+      </button>${on ? `<div class="iv-dx-ph">${invDetailHTML(z)}</div>` : ''}`;
+    };
+    const shown = rows.slice(0, INV_LANE_MAX);
+    const more = rows.length - shown.length;
+    const act = key === 'buy' && rows.length
+      ? `<button type="button" class="btn btn-ghost ow-sm iv-go" data-invgo="forecasts">Plan the buying for ${rows.length === 1 ? 'this line' : `these ${rows.length}`}</button>`
+      : key === 'dead' && rows.length
+        ? `<button type="button" class="btn btn-ghost ow-sm iv-go" data-invgo="pricing">Plan a clearance for ${rows.length === 1 ? 'this line' : `these ${rows.length}`}</button>`
+        : key === 'ok' && rows.length
+          ? '<span class="iv-calm"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>Nothing to do here</span>' : '';
+    return `<section class="iv-ln iv-ln-${key}${invZone === key ? ' ow-on' : ''}">
+      <button type="button" class="iv-lh" data-invzone="${key}" aria-pressed="${invZone === key}">
+        <span class="iv-lh-t"><i aria-hidden="true"></i>${esc(zn.label)}</span>
+        <span class="iv-lh-v"><b>${rows.length}</b><span>${say}</span></span>
+      </button>
+      ${shown.map(card).join('')}
+      ${more ? `<button type="button" class="iv-more" data-invlist="1">${more} more &mdash; in the list</button>` : ''}
+      ${act ? `<div class="iv-lf">${act}</div>` : ''}
+    </section>`;
+  };
+  return `<div class="iv-lanes">${INV_ZONES.map(z=> lane(z.key)).join('')}</div>`;
+}
+
+/* THE OPEN LINE, beside the lanes on the desk and under its own card on
+   the phone -- one call, so the two can never say different things. */
+function invDetailHTML(z){
+  const { l, key } = z;
+  const name = invLineName(l);
+  const zn = INV_ZONES.find(x=> x.key === z.zone);
+  const d = z.daysLeft;
+  const big = d != null && z.zone !== 'dead' ? invDaysSay(d)
+    : z.zone === 'dead' && z.quiet != null ? `${z.quiet} d` : '&mdash;';
+  const bigSay = d != null && z.zone !== 'dead' ? (z.zone === 'buy' ? 'until the shelf is empty' : 'of stock at this pace')
+    : z.zone === 'dead' ? (z.quiet != null ? 'since it last sold' : 'and it has never sold here') : 'no sales in 30 days to pace it';
+  const chart = invShelfChartHTML(key, z.floor || null) || '<p class="ow-q-note">No movement recorded against this line yet.</p>';
+  const unit = l.costUnit ? `<span class="iv-u">${esc(l.costUnit)}</span>` : '';
+  const cell = (label, value)=> `<span><small>${label}</small><b>${value}</b></span>`;
+  /* The cost layers as they will be sold: oldest first, because the shelf
+     sells FIFO and the cost of the next sale is the oldest layer's. */
+  const lots = ((data.stockLots || {})[key] || []).filter(q=> Number(q.qty) > 0);
+  const lotsHTML = lots.length ? `<div class="iv-dx-lots">
+      <p class="iv-dx-k">Cost layers &middot; oldest sells first</p>
+      <div class="iv-dx-lb" aria-hidden="true">${lots.map((q, i)=> `<i class="iv-lot-${Math.min(i, 2)}" style="flex-grow:${Number(q.qty)}">${fmtStockQty(Number(q.qty))}</i>`).join('')}</div>
+      ${lots.map((q)=> `<p class="iv-dx-lr"><span>${fmtStockQty(Number(q.qty))} at ${q.cost != null ? `<b>${esc(invFig(q.cost))}</b>` : 'no cost'}${q.consign ? ' &middot; held for others' : ''}</span><b>${q.cost != null ? esc(invFig(Number(q.qty) * q.cost)) : '&mdash;'}</b></p>`).join('')}
+    </div>` : '';
+  const move = z.zone === 'buy'
+    ? `<button type="button" class="btn btn-ghost ow-sm iv-go" data-invgo="forecasts">${z.need ? `Plan buying ${fmtStockQty(z.need)}${l.costUnit ? ' ' + esc(l.costUnit) : ''}` : 'Plan the buying'}</button>`
+    : z.zone === 'dead' ? '<button type="button" class="btn btn-ghost ow-sm iv-go" data-invgo="pricing">Plan a clearance</button>' : '';
+  const k = esc(key);
+  return `<div class="iv-dx">
+    <span class="iv-zc iv-zc-${z.zone}">${esc(zn ? zn.label : '')}</span>
+    <p class="iv-dx-n">${esc(name)}</p>
+    <p class="iv-dx-m">${esc([l.p.category, l.p.id, z.floor ? `floor ${z.floor}` : ''].filter(Boolean).join(' · '))}</p>
+    <p class="iv-dx-big"><b class="iv-dx-big-${z.zone}">${big}</b><span>${bigSay}</span></p>
+    ${chart}
+    <div class="iv-dx-fg">
+      ${cell('On the shelf', `${Math.round(l.qty)}${unit}`)}
+      ${cell('Selling', z.rate > 0 ? `${Math.round(z.rate * 10) / 10}<span class="iv-u">a day</span>` : 'none in 30 d')}
+      ${cell('Cost each', l.unitCost != null ? esc(invFig(l.unitCost)) : '&mdash;')}
+      ${cell('Money in it', l.value != null ? esc(invFig(l.value)) : '&mdash;')}
+    </div>
+    ${lotsHTML}
+    <div class="iv-dx-a">
+      ${move}
+      <button type="button" class="btn btn-ghost ow-sm" data-invact="purchase" data-invkey="${k}">Receive more</button>
+      <button type="button" class="btn btn-ghost ow-sm" data-invact="putright" data-invkey="${k}">Put it right</button>
+      <button type="button" class="btn btn-ghost ow-sm" data-invact="reorder" data-invkey="${k}">${z.floor ? `Change the floor of ${z.floor}` : 'Set a restock floor'}</button>
+      <button type="button" class="btn btn-ghost ow-sm" data-invact="pricerule" data-invkey="${k}">Override the price rule</button>
+    </div>
+  </div>`;
+}
+/* The panel beside the lanes shows the line you pressed, or -- before you
+   press anything -- the one that runs out first, which is the one you
+   were going to press. */
+function renderInvDrawer(zr){
+  const rail = document.getElementById('invRail');
+  if(!rail) return;
+  const lanes = zr.filter(z=> z.zone === 'buy' || z.zone === 'ok' || z.zone === 'dead');
+  const firstBuy = lanes.filter(z=> z.zone === 'buy').sort((a, b)=> (a.daysLeft == null ? -1 : a.daysLeft) - (b.daysLeft == null ? -1 : b.daysLeft))[0];
+  const z = lanes.find(x=> x.key === invOpenKey) || firstBuy || lanes[0];
+  rail.innerHTML = z ? `<div class="ow-pan iv-dx-desk">${invDetailHTML(z)}</div>`
+    : '<div class="ow-pan"><div class="ow-empty">Nothing on the shelf yet. Receive a delivery and each line lands in a lane.</div></div>';
+}
+
 /* The screen's own two acts. The accent appears ONCE, on receiving --
    the thing done here most often -- and it is the same picker the row's
    own "Receive more of this" opens, with no line chosen yet. */
@@ -86710,6 +87168,51 @@ function invApplyLens(){
     b.setAttribute('aria-pressed', isOn ? 'true' : 'false');
   });
 }
+/* The Lanes view's controls, delegated from the screen because the
+   lanes, the map and the open line are all redrawn on every render. */
+document.getElementById('tab-inventory').addEventListener('click', (e)=>{
+  if(!e.target.closest) return;
+  const view = e.target.closest('[data-invview]');
+  if(view){
+    if(view.dataset.invview === invView) return;
+    invView = view.dataset.invview;
+    // The state bar is List's; a state left pressed there would narrow
+    // the lanes with no control on screen to say so.
+    if(invView === 'lanes') invHealth = null;
+    document.querySelectorAll('#iv_view .ow-seg-b').forEach(b=>{
+      const on = b.dataset.invview === invView;
+      b.classList.toggle('ow-on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    invRefilter();
+    return;
+  }
+  const pick = e.target.closest('[data-invpick]');
+  if(pick){
+    invOpenKey = invOpenKey === pick.dataset.invpick && !pick.classList.contains('iv-dot') ? null : pick.dataset.invpick;
+    renderInventory();
+    return;
+  }
+  const zone = e.target.closest('[data-invzone]');
+  if(zone){ invZone = invZone === zone.dataset.invzone ? null : zone.dataset.invzone; renderInventory(); return; }
+  const go = e.target.closest('[data-invgo]');
+  if(go){ goToTab(go.dataset.invgo); return; }
+  if(e.target.closest('[data-invlist]')){
+    const listBtn = document.querySelector('#iv_view [data-invview="list"]');
+    if(listBtn) listBtn.click();
+    return;
+  }
+  const act = e.target.closest('[data-invact][data-invkey]');
+  if(act){
+    const [id, vs] = String(act.dataset.invkey).split('::');
+    const vidx = vs === undefined ? null : Number(vs);
+    const a = act.dataset.invact;
+    if(a === 'reorder') openReorderEditor(id, vidx);
+    else if(a === 'pricerule') openPriceRuleEditor(id, vidx);
+    else if(a === 'putright') openPutItRightForItem(id, vidx);
+    else openInventoryModal(id, vidx, a);
+  }
+});
 const invLensBar = document.getElementById('iv_lens');
 if(invLensBar) invLensBar.addEventListener('click', (e)=>{
   const b = e.target.closest('[data-invlens]');
