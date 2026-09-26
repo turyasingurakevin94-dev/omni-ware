@@ -8007,6 +8007,7 @@
   .q-pack-grid i{width:5px;height:5px;border-radius:2px;background:var(--ow-amber-soft);}
   .q-pack-grid i.on{background:var(--ow-amber);}
   .q-pack-t{display:flex;flex-direction:column;gap:1px;margin-right:auto;font-size:11px;}
+  .q-pack-fs{display:flex;gap:14px;}
   .q-pack-t b{font-size:12px;font-weight:700;}
   .q-pack-f{display:flex;flex-direction:column;gap:1px;padding-left:14px;border-left:1px solid var(--ow-amber-soft);font-size:11px;}
   .q-pack-f b{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;color:var(--ow-ink-900);font-variant-numeric:tabular-nums;}
@@ -8018,8 +8019,32 @@
     .q-stage-compact .q-ip-id{flex:1 1 0;}
     .q-ip-price{flex:1 1 auto;width:auto;height:44px;}
     .q-ip-gauges{gap:16px;}
+    /* THE PHONE'S OWN PICKER. The tags run as one line that scrolls
+       sideways instead of stacking five rows above the work; how many and
+       what for sit side by side; and Add stays under the thumb, full
+       width, at the foot of the sheet however far it is scrolled. */
+    .q-ip-chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;}
+    .q-ip-chips::-webkit-scrollbar{display:none;}
+    .q-ip-chips > *{flex-shrink:0;}
+    .q-stage-compact .q-ip-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 10px;align-items:end;}
+    .q-stage-compact .q-ip-row > .q-ip-l{grid-column:1;grid-row:1;}
+    .q-stage-compact .q-ip-row > .q-step{grid-column:1;grid-row:2;width:100%;}
+    .q-stage-compact .q-ip-row > .q-step input{flex:1 1 auto;width:auto;min-width:0;}
+    .q-stage-compact .q-ip-row > .q-ip-sell{grid-column:2;grid-row:1 / span 2;flex-direction:column;align-items:stretch;gap:6px;}
+    .q-stage-compact .q-ip-row > .q-unit-seg,.q-stage-compact .q-ip-row > .q-unit-one{grid-column:1 / -1;grid-row:3;justify-content:stretch;}
+    .q-stage-compact .q-ip-row > .q-unit-seg .q-unit-b{flex:1 1 0;text-align:center;}
+    .q-stage-compact .q-ip-row > .q-ip-last{grid-column:1 / -1;grid-row:4;}
+    .q-stage-compact .q-ip-row > .q-ip-sell .q-ip-price{width:100%;}
+    .q-pack-t{flex:1 1 0;min-width:0;}
+    .q-pack-fs{flex:1 1 100%;gap:12px;}
+    .q-pack-f{flex:1 1 0;min-width:0;}
+    .q-pack-f b{font-size:13px;white-space:nowrap;}
+    .q-stage-compact .q-ip-row > .q-unit-one{justify-content:center;}
+    .q-pack-fs > .q-pack-f:first-child{padding-left:0;border-left:0;}
+    .q-stage-compact .q-add-row{position:sticky;bottom:0;z-index:1;flex-wrap:wrap;gap:8px;margin:0;padding:10px 0 12px;background:var(--ow-paper);}
+    .q-stage-compact .q-add-row .qbar-save{flex:1 1 100%;justify-content:center;min-height:48px;margin:0;}
     .q-rec-cards.q-rec-chips .q-rec-card.q-rec-chip{height:var(--ow-tap);}
-    .q-pack{flex-wrap:wrap;gap:10px 12px;}
+    .q-pack{flex-wrap:wrap;gap:12px;}
     .q-step{height:44px;}.q-step-b{width:44px;}
     .q-unit-b{height:38px;}
     .q-sup-h,.q-sup-row{grid-template-columns:20px minmax(0,1fr) 88px;gap:8px;padding:8px 10px;min-height:var(--ow-tap);}
@@ -44056,9 +44081,9 @@ function renderIpStage(){
     packStripHTML = `<div class="q-pack">
       <span class="q-pack-grid" role="img" aria-label="${esc(fmtNumAn(qty))} of ${esc(fmtNumAn(outlay.units))} ${esc(unit||'units')} used, ${esc(fmtNumAn(spare))} spare">${dots}</span>
       <span class="q-pack-t"><b>${title}</b><span>${sub}</span></span>
-      <span class="q-pack-f"><span>Ties up</span><b>${esc(fmtNumAn(Math.round(outlay.cash)))}</b></span>
+      <span class="q-pack-fs"><span class="q-pack-f"><span>Ties up</span><b>${esc(fmtNumAn(Math.round(outlay.cash)))}</b></span>
       <span class="q-pack-f"><span>Spare to shelf</span><b>${spare > 0 ? `${esc(fmtNumAn(spare))} ${esc(unit||'')}` : 'none'}</b></span>
-      ${spare > 0 ? `<span class="q-pack-f" title="${intel.rate ? `Sells about ${esc(fmtNumAn(Math.round(intel.rate*10)/10))} a day over the last 30 days` : 'Nothing invoiced in the last 30 days to read a pace from'}"><span>Clears in</span><b>${clears}</b></span>` : ''}
+      ${spare > 0 ? `<span class="q-pack-f" title="${intel.rate ? `Sells about ${esc(fmtNumAn(Math.round(intel.rate*10)/10))} a day over the last 30 days` : 'Nothing invoiced in the last 30 days to read a pace from'}"><span>Clears in</span><b>${clears}</b></span>` : ''}</span>
     </div>`;
   }
   /* The other suppliers are offered only when there is nobody in the
