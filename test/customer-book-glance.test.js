@@ -2,7 +2,7 @@
 'use strict';
 /*
  * The customer book at a glance: the strip, the share of the 90 days,
- * the three lanes of "needs you", and the rhythm track on every row.
+ * and the rhythm track on every row.
  *
  * The screen used to say all of this in sentences -- a paragraph per
  * flagged customer, a paragraph under the register, "last bought" and
@@ -16,9 +16,10 @@
  *                  to the figure printed above them, exactly.
  *   share          only drawn once there are four buyers: with three,
  *                  "the top three" is the whole list, not a finding.
- *   lanes          each reason goes to the lane for its job -- money to
- *                  chase, going quiet, bought once -- and nothing is
- *                  listed twice or dropped.
+ *   no band        the three lanes of "needs you" are gone, at the
+ *                  owner's word: they listed the late, the quiet and the
+ *                  bought-once a third time, after the map and the
+ *                  register. What is pinned now is that they stay gone.
  *   rhythm         the dot sits at how long it has been against three
  *                  times their own gap, green within the gap and amber
  *                  past twice it: the same line custAttentionReason
@@ -39,7 +40,6 @@ const ago = (d) => new Date(Date.parse(TODAY + 'T00:00:00Z') - d * 864e5).toISOS
 const env = {
   data,
   CUST_WINDOW_DAYS: 90,
-  CUST_ATTENTION_SHOWN: 5,
   CUST_DOTS_MAX: 48,
   todayISO: () => TODAY,
   daysBetweenISO: (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 864e5),
@@ -52,17 +52,14 @@ const env = {
   customerOldestOpenChargeDate: () => null,
   custTermsPhrase: () => 'past your 30-day terms',
   custTermsDays: () => 30,
-  custActionHTML: (r, act) => act ? `<button data-cact="${act.act}">${act.label}</button>` : '',
   esc: (s) => String(s),
 };
 const scope = compileScope([
   extractFunction(src, 'customerBookRow', 'index.html'),
   extractFunction(src, 'customerPulseHTML', 'index.html'),
   extractFunction(src, 'customerShareHTML', 'index.html'),
-  extractFunction(src, 'customerAttentionHTML', 'index.html'),
-  extractFunction(src, 'custAttentionRank', 'index.html'),
   extractFunction(src, 'custRhythmTrackHTML', 'index.html'),
-], env, ['customerBookRow', 'customerPulseHTML', 'customerShareHTML', 'customerAttentionHTML', 'custRhythmTrackHTML']);
+], env, ['customerBookRow', 'customerPulseHTML', 'customerShareHTML', 'custRhythmTrackHTML']);
 
 /* ---------- 1. the weeks add up to the figure --------------------------- */
 {
@@ -93,36 +90,15 @@ const scope = compileScope([
   t.check(/cu-sh-r/.test(html) && /1 other/.test(html), 'and the rest is one segment, counted, never dropped');
 }
 
-/* ---------- 3. every reason in its lane, once --------------------------- */
+/* ---------- 3. no band of "needs you" -------------------------------
+   It repeated the map and the register as three columns of cards; the
+   owner asked for it gone. Its container, its builder and its drawing
+   call all went, so it cannot come back half-wired. */
 {
-  const row = (id, key, extra) => ({ id, name: id, phones: ['0700'], debt: 0, ageDays: -1, spend: 0, spendPrev: 0,
-    daysSinceLast: 10, everyDays: 4, stats: { average: 0, sales: 0 }, __key: key, ...extra });
-  const reason = (r) => ({
-    terms: { key: 'terms', tone: 'ow-bad', fig: '1,000', weight: 1000, act: { act: 'chase', label: 'Draft the chase' } },
-    nophone: { key: 'nophone', tone: 'ow-bad', fig: '500', weight: 500, act: { act: 'edit', label: 'Add a number' } },
-    quiet: { key: 'quiet', tone: 'ow-warn', fig: '40', weight: 90, act: { act: 'tel', label: 'Ring them' } },
-    spend_down: { key: 'spend_down', tone: 'ow-warn', fig: '−40%', weight: 80, act: { act: 'open', label: 'Open' } },
-    first_order: { key: 'first_order', tone: '', fig: '9', weight: 9, act: { act: 'follow', label: 'Add a follow-up' } },
-  })[r.__key] || null;
-  const scoped = compileScope([extractFunction(src, 'customerAttentionHTML', 'index.html'),
-    extractFunction(src, 'custAttentionRank', 'index.html'), extractFunction(src, 'custRhythmTrackHTML', 'index.html')],
-    { ...env, custAttentionReason: reason }, ['customerAttentionHTML']);
-  const rows = [row('T', 'terms', { debt: 1000, ageDays: 52 }), row('N', 'nophone', { debt: 500, phones: [] }),
-    row('Q', 'quiet'), row('S', 'spend_down'), row('F', 'first_order'), row('OK', 'none')];
-  const html = scoped.customerAttentionHTML(rows);
-  const lanes = html.split('class="ow-pan cu-lane').slice(1);
-  eq(lanes.length, 3, 'three lanes');
-  const names = (lane) => [...lane.matchAll(/class="cu-lr-n"[^>]*>([^<]+)</g)].map((m) => m[1]);
-  eq(names(lanes[0]), ['T', 'N'], 'money to chase holds the late and the unreachable, worst first');
-  eq(names(lanes[1]), ['Q', 'S'], 'going quiet holds the quiet and the shrinking');
-  eq(names(lanes[2]), ['F'], 'and the first buyers who did not come back have their own');
-  t.check(/Money to chase[\s\S]*1,500 UGX/.test(lanes[0]), 'the chase lane says how much money it holds');
-  t.check(/cu-age-t/.test(lanes[0]) && /left:33\.3%/.test(lanes[0]), 'the age bar marks the shop\'s own terms');
-  t.check(!/>OK</.test(html), 'a customer with no reason is not in any lane');
-  eq((html.match(/class="cu-lr-n"/g) || []).length, 5, 'nobody listed twice');
-  t.check(/cu-lanes cu-lanes-3/.test(html), 'and the layout knows how many lanes it is laying out');
-  const one = scoped.customerAttentionHTML([row('F', 'first_order')]);
-  t.check(/cu-lanes-1/.test(one) && !/Money to chase/.test(one), 'an empty lane is not drawn');
+  const render = extractFunction(src, 'renderCustomers', 'index.html');
+  t.check(!/customerAttentionHTML/.test(src), 'the band builder is gone from the file');
+  t.check(!/id="custAttentionWrap"/.test(src), 'and so is the place it was drawn');
+  t.check(!/custAttentionWrap/.test(render), 'and the screen no longer shows or hides it');
 }
 
 /* ---------- 4. the rhythm track ----------------------------------------- */

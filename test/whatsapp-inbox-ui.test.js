@@ -224,8 +224,11 @@ if (!scope) process.exit(1);
     'no avatar, and no hue that identifies nobody');
   t.check(!/class="wa-msg|wa-tabs|wa-tab-badge|wa-stat/.test(src),
     'no bubbles, no tab strip, no bordered stat cards');
-  t.check(/id="wa_strip"/.test(src) && /class="ow-strip ow-strip-5"/.test(src),
-    'the figures ride the layer\'s own strip: one row, hairline dividers, no cards');
+  /* The strip that replaced the stat cards has gone too, with the page
+     it headed: the chats are a view of Messages, whose band already
+     reads the day. What stays true is that no bordered card came back. */
+  t.check(!/id="wa_strip"/.test(src),
+    'no strip of its own on Chats — Messages\' band reads the day');
   /* One accent per screen. btn-accent may appear once in the whole
      WhatsApp section's markup and once in its render -- the Send
      button. Everything else is a ghost. */
