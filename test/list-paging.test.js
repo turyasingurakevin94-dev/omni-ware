@@ -299,14 +299,33 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
       `${fn}: and the rows are drawn from the page, not from everything`);
     t.check(new RegExp(`invoices\\.forEach\\([\\s\\S]{0,220}${totalOf}\\(`).test(body),
       `${fn}: the totalling pass reads the unsliced list`);
-    t.check(!/shown\.forEach\(|shown\.reduce\(/.test(body),
+    /* Sales' footer sums its page ON PURPOSE and says so (below); the
+       rule holds everywhere a footer does not name itself. */
+    if(fn !== 'renderInvoices') t.check(!/shown\.forEach\(|shown\.reduce\(/.test(body),
       `${fn}: and nothing is summed from the page — that is the whole hazard`);
+    /* THE SALES REGISTER IS A SPREADSHEET NOW, drawn to the owner's
+       canvas: its own pager (rows per page, first / previous / numbers /
+       next / last) instead of the shared More button, and a footer that
+       is the PAGE's -- labelled "Page total · 10 sales", naming exactly
+       what it adds, with the whole match's still-open figure on the bar
+       over the table. The hazard this block guards -- an unlabelled
+       "Total" beside a page, read as the total of the filter -- is the
+       one that label closes; the pager is still told the FULL count. */
+    if(fn === 'renderInvoices'){
+      t.check(/invGridPagerHTML\('invoices', invoices\.length/.test(body),
+        `${fn}: the pager is told the FULL count, so its pages and "of N" are the whole match`);
+      t.check(/const totalLabel = cut \? `Page total · \$\{shown\.length\}/.test(body),
+        `${fn}: and a cut page's footer says it is the page's total`);
+      t.check(/invFbarHTML\(rangeAll, invoices\)/.test(body),
+        `${fn}: while the bar over the table carries the whole match's figure`);
+    } else {
     t.check(new RegExp(`listMoreButtonHTML\\('${id}', invoices\\.length`).test(body),
       `${fn}: the button promises the FULL count, which is what pressing it delivers`);
     /* A footer reading "Total" beside two dozen rows reads as their
        total. When a page is cut it has to say which total it is. */
     t.check(/const totalLabel = cut \? `Total \(all \$\{invoices\.length\}\)` : 'Total';/.test(body),
       `${fn}: and the footer says so when a page is being shown`);
+    }
     /* Selection can only reach drawn checkboxes, and the bulk actions
        behind it include voiding. The label must not imply the rest.
        ASKED OF THE REGISTER THAT STILL HAS ONE. Purchase invoices no

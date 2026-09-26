@@ -1121,7 +1121,12 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'inv-status-cell', 'inv-row-voided', 'inv-total-row', 'inv-total-label',
                 'deb-card-prog'],
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-f', 'ow-f-l', 'ow-f-in',
-             'ow-strip', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-seg', 'ow-seg-b', 'ow-tb'],
+             'ow-strip', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-seg', 'ow-seg-b'],
+      /* .ow-tb LEFT WITH THE "BULK OPERATION" DROPDOWN. The redesign the
+         owner drew puts a selection's acts on a dark bar that appears
+         only once something is ticked (.inv-selbar), and the select-all
+         box moved into the table's own header -- so the always-there
+         toolbar row it styled is gone from the markup, not restyled. */
       /* FIVE NAMED FUNCTIONS NOW, not one. The screen grew a third lens
          -- a sale beside the bills it raised -- and the chip, the
          progress bar, the range-and-order and the row's acts were
@@ -1142,9 +1147,15 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
          screen is built on the layer" -- is unchanged. */
       renders: ['renderInvoices', 'renderInvoicesUnified',
                 'invStatusChip', 'invProgressCell', 'invStripHTML', 'invPanelsHTML'],
+      /* .ow-tbl-g and .ow-fig-b WENT WITH THE OPEN / SETTLED / VOIDED
+         BANDS. The owner's canvas is a flat spreadsheet ordered by any
+         column -- balance first by default -- with Status and Collected
+         as columns of their own, so there is no band to head and no
+         "received" line to set under a figure. The row's own note for a
+         document that disagrees with itself (.ow-tbl-note) stays. */
       rendersUses: ['ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-tbl', 'ow-tbl-h', 'ow-tbl-r',
-                    'ow-tbl-g', 'ow-tbl-f', 'ow-tbl-c', 'ow-tbl-n', 'ow-tbl-a', 'ow-tbl-note',
-                    'ow-tbl-p', 'ow-fig', 'ow-fig-b', 'ow-cp', 'ow-link', 'ow-empty'],
+                    'ow-tbl-f', 'ow-tbl-c', 'ow-tbl-n', 'ow-tbl-a', 'ow-tbl-note',
+                    'ow-tbl-p', 'ow-fig', 'ow-cp', 'ow-link', 'ow-empty'],
     },
     /* Customers. The screen was a second debt book -- a grid of cards
        whose largest figure was a debt balance, on a question Debtors
