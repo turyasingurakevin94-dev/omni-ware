@@ -29,7 +29,7 @@
  *   the phone       its own account, the board's phone board, not the
  *                   desk stacked into a column.
  *   sent            "Statement sent on WhatsApp" is a row written when
- *                   the owner presses Send, and only once 0099 is in.
+ *                   the owner presses Send, and only once 0101 is in.
  *
  * Run: node test/customer-canvas-live.test.js   (or: npm test)
  */
@@ -123,7 +123,7 @@ const sc = compileScope([
 
 /* ---------- 5. a statement sent is remembered ------------------------ */
 {
-  const mig = path.join(__dirname, '..', 'supabase', 'migrations', '0099_statements_sent.sql');
+  const mig = path.join(__dirname, '..', 'supabase', 'migrations', '0101_statements_sent.sql');
   t.check(fs.existsSync(mig) && /create table if not exists statements_sent/.test(fs.readFileSync(mig, 'utf8')),
     'the table has its migration');
   const rec = extractFunction(src, 'recordStatementSent', 'index.html');

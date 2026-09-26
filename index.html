@@ -31815,7 +31815,7 @@ let paymentPromisesTable = false;
    shop's to fix. */
 let productLinksTable = false;
 let briefsSentTable = false;
-// Set by loadData from 0099: false until statements_sent exists.
+// Set by loadData from 0101: false until statements_sent exists.
 let statementsSentTable = false;
 let siteStageColumn = false;
 // Set by loadData, both from 0096. See the probes there for why a write
@@ -69200,9 +69200,9 @@ async function sendCustomerStatementPdf(customerId){
 
 /* The record the account's notes read: the day the statement went, and
    the balance it carried. Written when the owner presses Send -- the one
-   moment the app sees -- and quietly skipped until 0099 is in. */
+   moment the app sees -- and quietly skipped until 0101 is in. */
 function recordStatementSent(customerId, st){
-  if(!statementsSentTable) return { ok: false, why: 'Paste supabase/migrations/0099_statements_sent.sql into the Supabase SQL editor and reload.' };
+  if(!statementsSentTable) return { ok: false, why: 'Paste supabase/migrations/0101_statements_sent.sql into the Supabase SQL editor and reload.' };
   if(!data.statementsSent) data.statementsSent = [];
   data.statementsSent.push({ id: allocRowId('statementSent'), customerId: String(customerId), sentOn: todayISO(),
     due: Math.round(Number(st.closing) || 0), periodFrom: st.from || '', createdAt: new Date().toISOString() });
