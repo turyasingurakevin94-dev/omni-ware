@@ -258,7 +258,7 @@ if (!scope) process.exit(1);
     'a quick reply goes into the box and never out of it — Send is still the only way anything leaves');
   t.check(/function waSnoozedUntil\(c, nowMs\)/.test(src) && /waiting\.filter\(e=> !snoozed\(e\.conv\)\)/.test(src),
     'a chat put off leaves Waiting only until its time, and comes back by itself');
-  t.check(/class="wa-cmp\$\{w\.open \? '' : ' ow-mi-cmpoff'\}"/.test(src) && /Paid template replies are not set up in this app yet/.test(src),
+  t.check(/class="wa-cmp ow-mi-cmp\$\{w\.open \? '' : ' ow-mi-cmpoff'\}"/.test(src) && /Paid template replies are not set up in this app yet/.test(src),
     'a shut window says so in place of the reply box, and does not pretend a paid reply exists');
 }
 

@@ -24077,7 +24077,7 @@
   .ow-mi-ev.ow-good{background:var(--ow-verdigris);}
   .ow-mi-ev.ow-warn{background:var(--ow-amber);}
   /* ---- CHATS, AS A CHAT APP: the list, the open chat, who it is ---- */
-  .ow-mi-chat{display:grid;grid-template-columns:320px minmax(0,1fr) 320px;height:calc(100vh - 230px);min-height:560px;
+  .ow-mi-chat{display:grid;grid-template-columns:320px minmax(0,1fr) 320px;height:calc(100vh - 200px);min-height:600px;
     background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);overflow:hidden;}
   .ow-mi-chl{display:flex;flex-direction:column;min-height:0;min-width:0;border-right:1px solid var(--ow-rule);}
   /* Wraps rather than scrolls: a filter pushed off the edge is a filter
@@ -24148,6 +24148,7 @@
   .ow-mi-ag3{background:var(--ow-crimson);}
   .ow-mi-agbl{display:flex;justify-content:space-between;margin-top:var(--ow-sp-4);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
   .ow-mi-fupins{white-space:normal;text-align:left;}
+  .ow-mi-cmp{max-width:none;}
   .ow-mi-cmpoff{display:none;}
   .ow-mi-call{flex:none;white-space:nowrap;}
   .ow-mi-thnm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--ow-t-16);font-weight:var(--ow-fw-700);}
@@ -24158,7 +24159,7 @@
   .ow-mi-wcb.ow-mi-thwb{width:110px;}
   .ow-mi-chtb{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;padding:0 var(--ow-sp-16) var(--ow-sp-12);}
   .ow-mi-the{flex:1 1 auto;display:flex;align-items:center;justify-content:center;background:var(--ow-steel-050);}
-  .ow-mi-tx{flex:1 0 280px;display:flex;flex-direction:column;min-height:0;max-width:none;margin:0 calc(-1 * var(--ow-sp-16)) var(--ow-sp-12);
+  .ow-mi-tx{flex:1 1 0;min-height:160px;display:flex;flex-direction:column;min-height:0;max-width:none;margin:0 calc(-1 * var(--ow-sp-16)) var(--ow-sp-12);
     border:0;border-bottom:1px solid var(--ow-rule);border-radius:0;background:var(--ow-steel-050);}
   .ow-mi-bubs{flex:1 1 auto;min-height:0;max-height:none;overflow-y:auto;display:flex;flex-direction:column;gap:var(--ow-sp-6);padding:var(--ow-sp-12) var(--ow-sp-16);}
   .ow-mi-bday{align-self:center;padding:2px var(--ow-sp-10);border-radius:var(--ow-r-sm);background:var(--ow-rule-soft);}
@@ -24190,7 +24191,10 @@
   .ow-mi-stb{flex:1 1 0;height:30px;padding:0 var(--ow-sp-12);border:0;border-radius:var(--ow-r-sm);background:transparent;
     font-family:inherit;font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);color:var(--ow-ink-600);cursor:pointer;}
   .ow-mi-stb.ow-on{background:var(--ow-steel-950);color:var(--ow-paper);font-weight:var(--ow-fw-600);}
-  .ow-mi-chsp{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:var(--ow-sp-12);padding:0 var(--ow-sp-12) var(--ow-sp-12);}
+  /* A grid, not a flex column: a column squeezed the panels to fit and
+     cut their rows off; grid rows keep each panel whole and the pane
+     scrolls instead. */
+  .ow-mi-chsp{flex:1 1 auto;min-height:0;overflow-y:auto;display:grid;grid-auto-rows:max-content;align-content:start;gap:var(--ow-sp-12);padding:0 var(--ow-sp-12) var(--ow-sp-12);}
   .ow-mi-cb.ow-mi-cbv{grid-template-columns:minmax(0,1fr);margin:0;}
   .ow-mi-cbv .ow-mi-cbc{border-left:0;border-top:1px solid var(--ow-rule-soft);}
   .ow-mi-cbv .ow-mi-cbc:first-child{border-top:0;}
@@ -37581,7 +37585,10 @@ function waChatBandHTML(waiting, nowMs){
       <span class="ow-mi-chmc"><b class="ow-fig${open ? ' ow-mi-vgood' : ''}">${open}</b><span class="ow-mi-s">free to reply</span></span>
       <span class="ow-mi-chmc"><b class="ow-fig">${med == null ? '&mdash;' : esc(waFmtMins(med))}</b><span class="ow-mi-s">median answer</span></span>
     </div>`;
-  return { mini, full: `<div class="ow-mi-cb ow-mi-cbv">${waitCell}${winCell}${dayCell}${speedCell}</div>` };
+  /* The Number opens on the day, as the canvas does. Who is waiting and
+     who can still be answered free are the list's own strip, so they are
+     not drawn twice. */
+  return { mini, full: `<div class="ow-mi-cb ow-mi-cbv">${dayCell}${speedCell}</div>` };
 }
 function waRenderChatBand(waiting, nowMs){
   const el = document.getElementById('wa_band');
@@ -37906,7 +37913,7 @@ function waOpenRowHTML(c, nowMs){
         <span>A reply can go only once they write again. Paid template replies are not set up in this app yet.</span></span>
       <a class="btn btn-ghost ow-sm ow-mi-call" href="tel:+${esc(String(c.wa_id))}">Call them</a>
     </div>`}
-    <div class="wa-cmp${w.open ? '' : ' ow-mi-cmpoff'}">
+    <div class="wa-cmp ow-mi-cmp${w.open ? '' : ' ow-mi-cmpoff'}">
       <div class="ow-mi-cmpt">
         <button type="button" class="ow-mi-ib ow-mi-pcard" aria-label="Add a product's price to the reply" title="Add a product's price"><svg class="ow-mi-ibi" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg></button>
         <button type="button" class="ow-mi-ib ow-mi-photo" aria-label="Send a photo" title="Send a photo"><svg class="ow-mi-ibi" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 8"/></svg></button>
