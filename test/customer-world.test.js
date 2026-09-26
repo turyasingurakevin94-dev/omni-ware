@@ -265,4 +265,16 @@ const row = (id, o) => Object.assign({ id, name: id, c: { id, phone: '0772 000 0
     'the reorder card offers it when they have usual lines');
 }
 
+/* ---------- an invoice on the statement opens that invoice ---------- */
+{
+  const byInv = extractFunction(src, 'customerInvoiceStatementHTML', 'index.html');
+  const led = extractFunction(src, 'statementLedgerHTML', 'index.html');
+  t.check(/class="cu-inv-a" data-cinv="\$\{esc\(String\(r\.q\.id\)\)\}"/.test(byInv), 'each invoice on the By invoice reading is a link to it');
+  t.check(/qid != null/.test(led) && /r\.quoteId\)\)\.join/.test(led), 'and each ledger line that belongs to an invoice is too');
+  t.check(/quoteId: e\.quoteId != null \? e\.quoteId : null/.test(extractFunction(src, 'customerStatementRows', 'index.html')),
+    'the ledger line carries the invoice it belongs to');
+  t.check(/closest\('\[data-cinv\]'\)[\s\S]{0,200}revealInvoice\(q\.id\)/.test(src),
+    'and following it opens the Invoices screen on that invoice, the way every other screen does');
+}
+
 process.exit(t.done() ? 1 : 0);
