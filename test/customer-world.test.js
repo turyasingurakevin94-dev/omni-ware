@@ -163,4 +163,28 @@ const row = (id, o) => Object.assign({ id, name: id, c: { id, phone: '0772 000 0
   t.check(!/wa\.me|waComposeUrl|fetch\(/.test(moves), 'no next move sends anything: each opens a page or a form, or rings');
 }
 
+/* ---------- the book: placed by rhythm, the rest counted -------------- */
+{
+  const map = compileScope([
+    'const CUST_MAP_LABELS = 10;',
+    extractFunction(src, 'customerMapHTML', 'index.html'),
+    extractFunction(src, 'custHealthRingHTML', 'index.html'),
+    extractFunction(src, 'custWeeksHTML', 'index.html'),
+  ], { esc: (s) => String(s) }, ['customerMapHTML', 'custHealthRingHTML', 'custWeeksHTML']);
+  const b = (id, gap, since, spend) => ({ id, name: id, everyDays: gap, daysSinceLast: since, spend, spendPrev: 0 });
+  const none = { id: 'N', name: 'N', everyDays: null, daysSinceLast: null, spend: 0, spendPrev: 0 };
+  eq(map.customerMapHTML([b('A', 10, 5, 100), b('B', 10, 25, 50), none], new Map()), '',
+    'two customers with a rhythm is not a picture of the book');
+  const html = map.customerMapHTML([b('A', 10, 5, 100), b('B', 10, 25, 50), b('C', 20, 70, 900), none], new Map());
+  eq((html.match(/<circle class="cu-mp-d/g) || []).length, 3, 'only customers with a rhythm are placed');
+  t.check(/1 customer has one order or none/.test(html), 'and the one who cannot be placed is counted, not dropped');
+  t.check(/data-cact="statement" data-cid="C"/.test(html), 'a dot opens that customer\'s account');
+  eq(map.custHealthRingHTML(null), '', 'no reading, no ring -- not a ring at zero');
+  eq(map.custWeeksHTML({ everInvoiced: true, spend: 0, weeks: [0] }), '', 'no spend in the window, no weekly bars');
+  const render = extractFunction(src, 'renderCustomers', 'index.html');
+  t.check(/const health = new Map\(all\.map\(r=> \[r\.id, customerHealth\(r, all\)\]\)\);/.test(render),
+    'the rows and the map read health over the same whole book the account ranks against');
+  t.check(/customerRegisterRowHTML\(r, health\.get\(r\.id\)\)/.test(render), 'every row carries it');
+}
+
 process.exit(t.done() ? 1 : 0);
