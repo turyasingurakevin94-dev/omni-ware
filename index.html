@@ -5107,11 +5107,26 @@
     font-family:inherit;font-size:var(--ow-t-14);color:var(--ow-ink-900);padding:0;}
   .iv-fb input::placeholder{color:var(--ow-ink-600);}
   .iv-find .ow-f-in{height:44px;}
+  /* One height for the whole bar, and each dropdown says what it is
+     inside itself: "Category  All categories  v", "Sort  Most money  v". */
+  .iv-sel{position:relative;display:flex;align-items:center;gap:var(--ow-sp-8);height:44px;min-width:0;
+    padding:0 34px 0 var(--ow-sp-12);box-sizing:border-box;background:var(--ow-paper);
+    border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);}
+  .iv-sel:focus-within{border-color:var(--ow-steel-950);}
+  .iv-sel-l{font-size:var(--ow-t-12);color:var(--ow-ink-600);white-space:nowrap;cursor:pointer;}
+  .iv-sel-v{appearance:none;-webkit-appearance:none;border:0;background:none;outline:0;margin:0;padding:0;
+    height:100%;min-width:0;max-width:190px;font-family:inherit;font-size:var(--ow-t-13);font-weight:600;
+    color:var(--ow-ink-900);cursor:pointer;text-overflow:ellipsis;}
+  .iv-sel-c{position:absolute;right:var(--ow-sp-12);width:14px;height:14px;fill:none;stroke:var(--ow-ink-600);
+    stroke-width:2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;}
+  .iv-find .iv-view{align-self:center;}
   .iv-tog{display:flex;align-items:center;gap:var(--ow-sp-8);height:44px;
     padding:0 var(--ow-sp-12);box-sizing:border-box;background:var(--ow-paper);
     border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
     font-size:var(--ow-t-13);color:var(--ow-ink-900);white-space:nowrap;cursor:pointer;}
   .iv-tog input{width:16px;height:16px;accent-color:var(--ow-steel-950);cursor:pointer;}
+  /* The filter reads as ON when it is on: the chip takes the ink. */
+  .iv-tog:has(input:checked){border-color:var(--ow-steel-950);background:var(--ow-steel-050);font-weight:600;}
 
   /* What the search actually did, said before the money. "Nothing
      matches" is never allowed to stand for "it matched and a filter hid
@@ -5123,6 +5138,11 @@
   .iv-fr button{all:unset;cursor:pointer;color:var(--ow-ink-900);font-weight:600;
     text-decoration:underline;text-underline-offset:2px;}
   .iv-fr button:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:2px;}
+  .iv-fr{align-items:center;}
+  .iv-fr-n{color:var(--ow-ink-900);}
+  .iv-fr-b{display:inline-flex;gap:2px;width:120px;height:8px;flex:none;}
+  .iv-fr-b i{display:block;height:100%;border-radius:var(--ow-r-pill);background:var(--ow-steel-100);}
+  .iv-fr-b i.iv-fr-on{background:var(--ow-ink-600);}
 
   /* THE REPAIR LINE. Two crimson banners, 470px of them, stood above
      every figure on this screen on an ordinary Tuesday. Crimson is for
@@ -5446,9 +5466,13 @@
        title, so the shelf and its history are one thumb apart. */
     #iv_lens{flex:1 1 100%;}
     .iv-find{flex-direction:column;gap:var(--ow-sp-8);}
-    .iv-fb{height:52px;}
+    .iv-fb{height:52px;flex:none;}
     .iv-fb input{font-size:16px;}
     .iv-find .ow-f,.iv-tog{min-height:var(--ow-tap);}
+    .iv-sel{min-height:var(--ow-tap);height:auto;}
+    .iv-sel-v{max-width:none;flex:1;font-size:16px;text-align:right;}
+    .iv-find .iv-view{align-self:stretch;}
+    .iv-find .iv-view .ow-seg-b{flex:1;}
     .iv-find .ow-f{flex-direction:row;align-items:center;justify-content:space-between;gap:var(--ow-sp-8);}
     .iv-fr{font-size:13px;}
     /* the drawer's rows stop being rows: the button drops under the
@@ -24155,8 +24179,11 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
           <input id="inv_table_search" placeholder="Name a line, a variant or a code" autocomplete="off">
         </div>
-        <div class="ow-f"><span class="ow-f-l">Category</span><span class="ow-f-in"><select class="ow-f-sel" id="inv_category_filter"><option value="">All categories</option></select></span></div>
-        <div class="ow-f"><span class="ow-f-l">Sort</span><span class="ow-f-in"><select class="ow-f-sel" id="inv_sort"></select></span></div>
+        <!-- The two dropdowns say what they are INSIDE themselves, one line
+             tall like everything else in the bar, instead of each carrying
+             a caps label above it that made the bar two rows deep. -->
+        <div class="iv-sel"><label class="iv-sel-l" for="inv_category_filter">Category</label><select class="iv-sel-v" id="inv_category_filter"><option value="">All categories</option></select><svg class="iv-sel-c" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div>
+        <div class="iv-sel"><label class="iv-sel-l" for="inv_sort">Sort</label><select class="iv-sel-v" id="inv_sort"></select><svg class="iv-sel-c" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div>
         <!-- LANES OR LIST. Lanes sorts the shelf into what to buy, what is
              fine and what is sitting still, with the line you press open
              beside it; List is the register, row by row, with its pager.
@@ -24170,7 +24197,7 @@
              to 295 rows of nothing. The line under the bar says how many
              it is holding back and offers them, so the filter can never
              quietly answer "nothing matches" for something on file. -->
-        <label class="iv-tog"><input type="checkbox" id="inv_hide_zero" checked>Hide no stock</label>
+        <label class="iv-tog"><input type="checkbox" id="inv_hide_zero" checked>Hide empty</label>
       </div>
       <p class="iv-fr" id="invFound"></p>
 
@@ -87038,12 +87065,17 @@ function renderInventory(){
   else if(foundEl){
     const stateSay = invHealth
       ? ` &middot; only the ones ${(INV_HEALTH.find(h=> h.key === invHealth) || {}).label} <button type="button" id="inv_clear_health">show every state</button>` : '';
+    /* Said as a count and a bar, not a sentence: how many the search
+       found, how many of those are on the shelf (solid) and how many have
+       nothing on the shelf (the rest), and the one press that shows them. */
+    const split = (on, of)=> of > 0 ? `<span class="iv-fr-b" aria-hidden="true"><i class="iv-fr-on" style="flex-grow:${on}"></i>${
+      of - on > 0 ? `<i style="flex-grow:${of - on}"></i>` : ''}</span>` : '';
     foundEl.innerHTML = hiddenByZero > 0
-      ? `<b>${lines.length}</b> line${lines.length===1?'':'s'} listed of <b>${foundBeforeHideZero}</b> found &middot;
-         <b>${hiddenByZero}</b> ${hiddenByZero===1?'is':'are'} hidden because ${hiddenByZero===1?'it has':'they have'} nothing on the shelf
-         <button type="button" id="inv_show_zero">show ${hiddenByZero===1?'it':'them'}</button>`
-      : `<b>${lines.length}</b> line${lines.length===1?'':'s'} listed${
-          tokens.length || categoryFilter ? ` of <b>${all.lines}</b> on file` : ''}${stateSay}`;
+      ? `<span class="iv-fr-n"><b>${foundBeforeHideZero}</b> found</span>${split(lines.length, foundBeforeHideZero)}
+         <span><b>${lines.length}</b> on the shelf &middot; <b>${hiddenByZero}</b> with nothing on the shelf</span>
+         <button type="button" id="inv_show_zero">Show ${hiddenByZero===1?'it':`all ${foundBeforeHideZero}`}</button>`
+      : `<span class="iv-fr-n"><b>${lines.length}</b> listed</span>${
+          tokens.length || categoryFilter ? `${split(lines.length, all.lines)}<span>of <b>${all.lines}</b> on file</span>` : ''}${stateSay}`;
     const showBtn = document.getElementById('inv_show_zero');
     if(showBtn) showBtn.addEventListener('click', ()=>{
       document.getElementById('inv_hide_zero').checked = false;
