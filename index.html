@@ -82,6 +82,17 @@
     --ow-sky-soft:#DCEAF8;
     --ow-plum:#7A3268;
     --ow-plum-soft:#F6E4F1;
+    /* THE SUPPLIER HUES. Identity again, not state: on Invoices each
+       supplier keeps one colour on its bar segment, its join and its
+       bill, so "which supplier" is read before a name is. Three more
+       families beside indigo, sky and plum, each held to 4.5:1 as ink on
+       its tint, as text, and under white -- design-system.test.js. */
+    --ow-teal:#0E6470;
+    --ow-teal-soft:#DDF1F3;
+    --ow-violet:#5D3FA0;
+    --ow-violet-soft:#ECE6FA;
+    --ow-slate:#3E4C63;
+    --ow-slate-soft:#E3E8EF;
 
     --ow-ink-900:#1C2233;
     --ow-ink-600:#5F6980;
@@ -11586,16 +11597,26 @@
   .inv-m-top.inv-m-none{width:100%;background:none;border-style:dashed;}
   .inv-m-top i,.inv-m-seg i{display:block;height:100%;background:var(--ow-verdigris);}
   .inv-m-bot{display:flex;gap:2px;height:13px;min-width:0;}
-  .inv-m-seg{flex:0 1 auto;min-width:3px;background:var(--ow-indigo-soft);border:1px solid var(--ow-rule);}
-  .inv-m-seg b{position:absolute;left:4px;top:-1px;font-size:var(--ow-t-11);line-height:13px;font-weight:var(--ow-fw-700);color:var(--ow-indigo);}
+  .inv-sup-0{--sup:var(--ow-indigo);--sup-soft:var(--ow-indigo-soft);}
+  .inv-sup-1{--sup:var(--ow-teal);--sup-soft:var(--ow-teal-soft);}
+  .inv-sup-2{--sup:var(--ow-plum);--sup-soft:var(--ow-plum-soft);}
+  .inv-sup-3{--sup:var(--ow-sky);--sup-soft:var(--ow-sky-soft);}
+  .inv-sup-4{--sup:var(--ow-violet);--sup-soft:var(--ow-violet-soft);}
+  .inv-sup-5{--sup:var(--ow-slate);--sup-soft:var(--ow-slate-soft);}
+  .inv-m-seg{flex:0 1 auto;min-width:3px;background:var(--sup-soft,var(--ow-indigo-soft));border:1px solid var(--sup,var(--ow-rule));}
+  .inv-m-seg i{background:var(--sup,var(--ow-indigo));}
+  .inv-m-seg b{position:absolute;left:4px;top:-1px;font-size:var(--ow-t-11);line-height:13px;font-weight:var(--ow-fw-700);color:var(--sup,var(--ow-indigo));}
   .inv-m-seg b.on-fill{color:var(--ow-paper);}
   .inv-m-shelf,.inv-lg-shelf{background:repeating-linear-gradient(135deg,var(--ow-paper) 0 3px,var(--ow-rule-soft) 3px 6px);border:1px solid var(--ow-ink-400);box-sizing:border-box;}
   .inv-m-void{opacity:.4;}
   .inv-u-legend{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:var(--ow-sp-6) var(--ow-sp-16);padding:var(--ow-sp-4) var(--ow-sp-6) var(--ow-sp-8);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
   .inv-u-legend i{display:inline-block;width:14px;height:8px;margin-right:var(--ow-sp-6);vertical-align:middle;}
   .inv-lg-sale{background:var(--ow-oxide-soft);border:1px solid var(--ow-rule);box-sizing:border-box;}
-  .inv-lg-bill{background:var(--ow-indigo-soft);border:1px solid var(--ow-rule);box-sizing:border-box;}
+  .inv-lg-bill{display:inline-flex;gap:2px;margin-right:var(--ow-sp-6);vertical-align:middle;}
+  .inv-lg-bill i{width:8px;margin:0;background:var(--sup-soft);border:1px solid var(--sup);box-sizing:border-box;}
   .inv-lg-done{background:var(--ow-verdigris);}
+  .inv-lg-paid{display:inline-flex;gap:2px;margin-right:var(--ow-sp-6);vertical-align:middle;}
+  .inv-lg-paid i{width:8px;margin:0;background:var(--sup);}
   .inv-u-detail{border-top:1px solid var(--ow-rule-soft);padding:var(--ow-sp-12) var(--ow-sp-12) var(--ow-sp-12) 44px;background:var(--ow-paper-2);}
   .inv-u-detail[hidden]{display:none;}
   /* THE BRIDGE. Fixed row heights -- 52 a line, 64 + 8 a bill -- are
@@ -11612,16 +11633,30 @@
   .inv-b-fig{display:flex;flex-direction:column;align-items:flex-end;flex:none;text-align:right;}
   .inv-b-fig .inv-u-sub{margin-top:0;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;}
   .inv-b-d{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);margin-top:2px;}
-  .inv-b-to{display:none;color:var(--ow-indigo);font-weight:var(--ow-fw-600);}
+  .inv-b-to{display:none;color:var(--sup,var(--ow-indigo));font-weight:var(--ow-fw-600);}
   .inv-b-joins{display:block;}
-  .inv-b-joins path{fill:none;stroke:var(--ow-indigo);stroke-opacity:.28;stroke-linecap:round;}
+  .inv-b-joins path{fill:none;stroke:var(--sup,var(--ow-indigo));stroke-opacity:.38;stroke-linecap:round;}
   .inv-b-bills{display:flex;flex-direction:column;gap:var(--ow-sp-8);min-width:0;}
   .inv-b-bill{height:64px;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:var(--ow-sp-12);padding:0 var(--ow-sp-12);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);background:var(--ow-paper);}
-  .inv-b-bill .ow-link{font-size:var(--ow-t-13);text-align:left;}
+  .inv-b-bill .ow-link{font-size:var(--ow-t-13);text-align:left;color:var(--sup,var(--ow-oxide));}
+  .inv-b-mono{display:inline-flex;align-items:center;justify-content:center;flex:none;width:28px;height:28px;border-radius:var(--ow-r-sm);background:var(--sup-soft);color:var(--sup);font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);}
+  .inv-b-who{display:flex;align-items:center;gap:var(--ow-sp-10);min-width:0;}
+  .inv-u-case .inv-u-head .inv-u-doc{color:var(--ow-oxide-deep);}
+  .inv-u-case.is-bill .inv-u-head .inv-u-doc{color:var(--sup,var(--ow-indigo));}
+  .inv-u-bad{color:var(--ow-crimson);}
+  .inv-b-d.is-good{color:var(--ow-verdigris);}
+  .inv-b-d.is-bad{color:var(--ow-crimson);}
+  .ow-cp.inv-cp-part{background:var(--ow-sky-soft);color:var(--ow-sky);}
+  .inv-u-group span:first-child::before{content:"";display:inline-block;width:8px;height:8px;margin-right:var(--ow-sp-8);border-radius:var(--ow-r-pill);background:var(--ow-oxide);vertical-align:middle;}
+  .inv-u-group.is-buy span:first-child::before{background:var(--ow-indigo);}
+  .inv-u-strip .ow-mt:nth-child(2) .inv-u-meter{background:var(--ow-indigo-soft);}
+  .inv-u-strip .ow-mt:nth-child(2) .inv-u-meter-fill{background:var(--ow-indigo);}
+  .inv-u-strip .ow-mt:nth-child(1) .inv-u-meter{background:var(--ow-oxide-soft);}
+  .inv-u-pos{color:var(--ow-verdigris);}
   .inv-b-bill.is-void .inv-u-doc{text-decoration:line-through;color:var(--ow-ink-400);}
   .inv-b-bill .inv-b-fig .inv-u-value{font-size:var(--ow-t-13);}
-  .inv-b-paid{display:block;width:120px;height:5px;margin-top:6px;border-radius:var(--ow-r-pill);background:var(--ow-indigo-soft);overflow:hidden;}
-  .inv-b-paid i{display:block;height:100%;background:var(--ow-verdigris);}
+  .inv-b-paid{display:block;width:120px;height:5px;margin-top:6px;border-radius:var(--ow-r-pill);background:var(--sup-soft,var(--ow-indigo-soft));overflow:hidden;}
+  .inv-b-paid i{display:block;height:100%;background:var(--sup,var(--ow-verdigris));}
   .inv-b-act{display:flex;justify-content:flex-end;min-width:64px;}
   .inv-b-none{padding:var(--ow-sp-10);border:1px dashed var(--ow-rule);border-radius:var(--ow-r);color:var(--ow-ink-600);font-size:var(--ow-t-12);}
   .inv-u-foot{display:flex;align-items:center;justify-content:space-between;gap:var(--ow-sp-10);flex-wrap:wrap;margin-top:var(--ow-sp-12);padding-top:var(--ow-sp-10);border-top:1px solid var(--ow-rule-soft);}
@@ -50962,9 +50997,20 @@ function invStatusChip(q){
   const status = invoicePaymentStatusLabel(q);
   return q.voided ? '<span class="ow-cp ow-bad"><i class="ow-cp-d"></i>Voided</span>'
       : total <= 0 ? '<span class="ow-cp ow-warn"><i class="ow-cp-d"></i>Unpriced</span>'
-      : status.cls === 'settled' ? '<span class="ow-cp">Settled</span>'
-      : status.cls === 'partial' ? '<span class="ow-cp">Part paid</span>'
+      : status.cls === 'settled' ? '<span class="ow-cp ow-good">Settled</span>'
+      : status.cls === 'partial' ? '<span class="ow-cp inv-cp-part">Part paid</span>'
+      : invOpenDays(q) > 30 ? `<span class="ow-cp ow-warn"><i class="ow-cp-d"></i>Open ${invOpenDays(q)} days</span>`
       : '<span class="ow-cp">Open</span>';
+}
+/* How long an unpaid invoice has been out. Past thirty days the chip
+   turns amber and says the number: caution, not alarm -- the shop set no
+   terms on most sales, so "late" would be a judgement this screen has
+   not earned. Debtors owns the ageing; this is only the glance. */
+function invOpenDays(q){
+  const d = q && (q.invoicedAt || q.date);
+  if(!d) return 0;
+  const ms = new Date(todayISO() + 'T00:00:00') - new Date(String(d).slice(0,10) + 'T00:00:00');
+  return Number.isFinite(ms) ? Math.max(0, Math.round(ms / 86400000)) : 0;
 }
 
 /* THE ROW'S ACTS, BOUND. Both lenses draw the same buttons from the
@@ -51163,7 +51209,7 @@ function renderInvoicesUnified(filter=''){
   const cashNet = cashIn - cashOut;
   const cashMetric = `<div class="ow-mt">
     <div class="inv-u-metric-top"><p class="ow-mt-l">Cash on these sales</p><span class="inv-u-metric-scope">in − out</span></div>
-    <p class="ow-mt-v${cashNet < -0.5 ? ' inv-u-neg' : ''}">${cashNet < -0.5 ? '−' : cashNet > 0.5 ? '+' : ''}${money(Math.abs(cashNet))}</p>
+    <p class="ow-mt-v${cashNet < -0.5 ? ' inv-u-neg' : cashNet > 0.5 ? ' inv-u-pos' : ''}">${cashNet < -0.5 ? '−' : cashNet > 0.5 ? '+' : ''}${money(Math.abs(cashNet))}</p>
     <div class="inv-u-meter-legend"><span>${number(cashIn)} in</span><span>${number(cashOut)} out${cashNet < -0.5 ? ' · fronted' : ''}</span></div>
   </div>`;
   strip.innerHTML = metric('Customer payments', `${visibleSales.length} shown sales`, toCollect,
@@ -51197,6 +51243,15 @@ function renderInvoicesUnified(filter=''){
      bill is a cancelled document, not a cost: it is left out of the bar
      and listed, struck through, when the sale is opened. */
   const paidOn = pi=>Math.min(purchaseInvoiceTotal(pi), Math.max(0, Number(pi.amountPaid)||0));
+  /* ONE COLOUR PER SUPPLIER, the same one wherever that supplier appears
+     -- its segment, its join, its bill. Taken from the supplier's place
+     in the directory so it does not change as the filter does. */
+  const supHue = pi=>{
+    const id = String(pi && pi.supplierId || pi && pi.supplierName || '');
+    const at = (data.suppliers||[]).findIndex(x=>String(x.id)===id);
+    const n = at >= 0 ? at : [...id].reduce((h,ch)=>(h*31+ch.charCodeAt(0))>>>0, 7);
+    return `inv-sup-${n % 6}`;
+  };
   const pct = (n, of)=> of>0 ? Math.max(0, Math.min(100, n/of*100)).toFixed(2)+'%' : '0%';
   const saleLines = (q, bills)=>(q.items||[]).map(it=>{
     const qty = Number(it.qty)||0;
@@ -51216,7 +51271,7 @@ function renderInvoicesUnified(filter=''){
       : '<span class="inv-m-top inv-m-none"></span>';
     const segs = live.map(pi=>{
       const t = purchaseInvoiceTotal(pi), share = t/scale;
-      return `<span class="inv-m-seg" style="width:${pct(t,scale)}"><i style="width:${pct(paidOn(pi),t)}"></i>${share>=0.14?`<b${paidOn(pi)>t/2?' class="on-fill"':''}>${esc(nameInitials(pi.supplierName))}</b>`:''}</span>`;
+      return `<span class="inv-m-seg ${supHue(pi)}" style="width:${pct(t,scale)}"><i style="width:${pct(paidOn(pi),t)}"></i>${share>=0.14?`<b${paidOn(pi)>t/2?' class="on-fill"':''}>${esc(nameInitials(pi.supplierName))}</b>`:''}</span>`;
     }).join('') + (shelfSold>0 ? `<span class="inv-m-seg inv-m-shelf" style="width:${pct(shelfSold,scale)}"></span>` : '');
     return `<span class="inv-m${voided?' inv-m-void':''}" role="img" aria-label="${esc(aria)}" title="${esc(aria)}">${topHtml}<span class="inv-m-bot">${segs}</span></span>`;
   };
@@ -51225,15 +51280,16 @@ function renderInvoicesUnified(filter=''){
      has fronted -- paid for goods before being paid for them -- and that
      is the one figure here that earns a colour. */
   const cashChip = net=> net < -0.5 ? `<span class="ow-cp ow-warn">−${esc(number(-net))} fronted</span>`
-    : net > 0.5 ? `<span class="ow-cp">+${esc(number(net))} in hand</span>`
+    : net > 0.5 ? `<span class="ow-cp ow-good">+${esc(number(net))} in hand</span>`
     : '<span class="inv-u-sub">nothing moved</span>';
   const chev = '<svg class="icon inv-u-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
   const bridgeBill = pi=>{
     const t = purchaseInvoiceTotal(pi);
     const due = pi.voided ? 0 : Math.max(0,purchaseInvoiceBalanceDue(pi));
-    return `<div class="inv-b-bill${pi.voided?' is-void':''}">
-      <span class="inv-b-main"><button type="button" class="ow-link inv-u-doc" data-pi-open="${pi.id}">${esc(purchaseInvoiceNumberLabel(pi))}</button>
-        <span class="inv-u-sub inv-b-ell" title="${esc(pi.supplierName||'Unnamed supplier')}">${esc(pi.supplierName||'Unnamed supplier')}</span></span>
+    return `<div class="inv-b-bill ${supHue(pi)}${pi.voided?' is-void':''}">
+      <span class="inv-b-who"><span class="inv-b-mono" aria-hidden="true">${esc(nameInitials(pi.supplierName))}</span>
+        <span class="inv-b-main"><button type="button" class="ow-link inv-u-doc" data-pi-open="${pi.id}">${esc(purchaseInvoiceNumberLabel(pi))}</button>
+        <span class="inv-u-sub inv-b-ell" title="${esc(pi.supplierName||'Unnamed supplier')}">${esc(pi.supplierName||'Unnamed supplier')}</span></span></span>
       <span class="inv-b-fig"><span class="inv-u-value">${esc(number(t))}</span>
         ${pi.voided ? '<span class="inv-u-sub">voided</span>' : `<span class="inv-b-paid"><i style="width:${pct(paidOn(pi),t)}"></i></span>`}</span>
       <span class="inv-b-act">${pi.voided ? '' : due>0.5 ? `<button type="button" class="btn btn-ghost ow-sm pi-doc-pay" data-id="${pi.id}">Pay</button>` : '<span class="ow-cp ow-good">Paid</span>'}</span>
@@ -51252,7 +51308,7 @@ function renderInvoicesUnified(filter=''){
       const due = voided ? 0 : purchaseInvoiceBalanceDue(pi);
       const status = invBillChip(pi) || (due>0.5 ? '<span class="ow-cp">Open</span>' : '');
       const kind = pi.quoteId==null ? 'Stock purchase' : 'Linked sale outside view';
-      return `<article class="inv-u-case"><button type="button" class="inv-u-head" data-unified-key="${key}" aria-expanded="${open}">
+      return `<article class="inv-u-case is-bill ${supHue(pi)}"><button type="button" class="inv-u-head" data-unified-key="${key}" aria-expanded="${open}">
         ${chev}
         <span class="inv-u-id"><span class="inv-u-ident"><span class="inv-u-doc">${esc(label)}</span>${status}</span>
           <span class="inv-u-sub inv-b-ell">${kind} · ${esc(who)} · ${esc(c.date||'No date')}</span></span>
@@ -51289,7 +51345,7 @@ function renderInvoicesUnified(filter=''){
       <span class="inv-u-id"><span class="inv-u-ident"><span class="inv-u-doc">${esc(label)}</span>${invStatusChip(q)}</span>
         <span class="inv-u-sub inv-b-ell" title="${esc(who)}">${esc(who)} · ${esc(c.date||'No date')}</span></span>
       ${mirror({sale:total, received, live:voided?[]:live, shelfSold, voided, aria})}
-      <span class="inv-u-diff"><span class="inv-u-value">${diff==null||voided?'—':esc(number(diff))}</span><span class="inv-u-sub">${diffSub}</span></span>
+      <span class="inv-u-diff"><span class="inv-u-value${diff!=null && diff < -0.5 && !voided ? ' inv-u-bad' : ''}">${diff==null||voided?'—':(diff<0?'−':'')+esc(number(Math.abs(diff)))}</span><span class="inv-u-sub">${diffSub}</span></span>
       <span class="inv-u-cash">${voided ? '<span class="inv-u-sub">voided</span>' : cashChip(received-paidOut)}</span>
       <span class="inv-u-head-amount"><span class="inv-u-value">${voided?'—':over>0.5?'+'+esc(number(over)):esc(number(due))}</span>
         <span class="inv-u-sub">${voided?'voided':over>0.5?'overpaid':due>0.5?'to collect · UGX':'settled'}</span></span>
@@ -51305,16 +51361,16 @@ function renderInvoicesUnified(filter=''){
       const j = l.bill ? c.bills.indexOf(l.bill) : -1;
       if(j<0) return '';
       const y1 = 26+52*i, y2 = 32+72*j;
-      return `<path d="M0 ${y1}C60 ${y1} 60 ${y2} 120 ${y2}" stroke-width="${2+Math.round(10*(l.bought||0)/heaviest)}"/>`;
+      return `<path class="${supHue(l.bill)}" d="M0 ${y1}C60 ${y1} 60 ${y2} 120 ${y2}" stroke-width="${2+Math.round(10*(l.bought||0)/heaviest)}"/>`;
     }).join('');
     const lineRow = l=>{
       const name = l.it.productName || 'Item';
       const bought = l.shelf ? '<span class="inv-u-sub">from the shelf · no bill</span>'
         : l.bought==null ? `<span class="inv-u-sub">on ${l.bill?esc(purchaseInvoiceNumberLabel(l.bill)):'no live bill'}</span>`
-        : `<span class="inv-b-d">${l.sold-l.bought>=0?'+':'−'}${esc(number(Math.abs(l.sold-l.bought)))}</span>`;
+        : `<span class="inv-b-d ${l.sold-l.bought>=0?'is-good':'is-bad'}">${l.sold-l.bought>=0?'+':'−'}${esc(number(Math.abs(l.sold-l.bought)))}</span>`;
       return `<div class="inv-b-line">
         <span class="inv-b-main"><span class="inv-b-name inv-b-ell" title="${esc(name)}">${esc(name)}</span>
-          <span class="inv-u-sub">${esc(number(l.qty))} ${esc(l.it.unit||'')}${l.bill?` <span class="inv-b-to">→ ${esc(purchaseInvoiceNumberLabel(l.bill))}</span>`:''}</span></span>
+          <span class="inv-u-sub">${esc(number(l.qty))} ${esc(l.it.unit||'')}${l.bill?` <span class="inv-b-to ${supHue(l.bill)}">→ ${esc(purchaseInvoiceNumberLabel(l.bill))}</span>`:''}</span></span>
         <span class="inv-b-fig"><span class="inv-u-sub">${esc(number(l.sold))}${l.bought!=null?` → ${esc(number(l.bought))}`:''}</span>${bought}</span>
       </div>`;
     };
@@ -51341,12 +51397,14 @@ function renderInvoicesUnified(filter=''){
     ['Other supplier bills', shown.filter(c=>c.type==='bill' && c.pi.quoteId!=null)],
   ];
   const legend = `<div class="inv-u-legend" aria-hidden="true">
-    <span><i class="inv-lg-sale"></i>sale, open</span><span><i class="inv-lg-bill"></i>bill, open</span>
-    <span><i class="inv-lg-done"></i>settled</span><span><i class="inv-lg-shelf"></i>from the shelf</span></div>
+    <span><i class="inv-lg-sale"></i>sale, open</span><span><i class="inv-lg-done"></i>received</span>
+    <span><span class="inv-lg-bill"><i class="inv-sup-0"></i><i class="inv-sup-1"></i><i class="inv-sup-2"></i></span>bill owed · a colour per supplier</span>
+    <span><span class="inv-lg-paid"><i class="inv-sup-0"></i><i class="inv-sup-1"></i><i class="inv-sup-2"></i></span>bill paid</span>
+    <span><i class="inv-lg-shelf"></i>from the shelf</span></div>
     <div class="inv-u-cols" aria-hidden="true"><span></span><span>Document</span><span>Sale ▲ · bills ▼</span>
     <span>Difference</span><span>Cash so far</span><span>Still open</span></div>`;
   wrap.innerHTML = `<div class="inv-u-list">${legend}${groups.filter(([,rows])=>rows.length).map(([name,rows])=>
-    `<div class="inv-u-group"><span>${name}</span><span>${rows.length}</span></div>${rows.map(caseHTML).join('')}`).join('')}
+    `<div class="inv-u-group${name.startsWith('Sales')?'':' is-buy'}"><span>${name}</span><span>${rows.length}</span></div>${rows.map(caseHTML).join('')}`).join('')}
     ${listMoreButtonHTML('invoices',cases.length,'invoices')}</div>`;
   wrap.querySelectorAll('[data-unified-key]').forEach(btn=>btn.addEventListener('click',()=>{
     invUnifiedOpenKey = invUnifiedOpenKey===btn.dataset.unifiedKey ? null : btn.dataset.unifiedKey;
