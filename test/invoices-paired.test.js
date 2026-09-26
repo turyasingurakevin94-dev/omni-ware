@@ -83,9 +83,11 @@ assert.match(strip.innerHTML,/Who pays first/,'the insights time both sides of t
 /* SHOW, AS THE OWNER DREW IT: Everything, Still to collect, Past terms,
    Cash went out first and Bills to review, each with how many and what
    they come to. "Bills due or late" left the row: when a bill falls due
-   is the Purchases lens's calendar now, where it is drawn by the day. */
-assert.match(attention.innerHTML,/Still to collect <b>1 · 590,000<\/b>/,'what is still to collect is a count and a sum');
-assert.match(attention.innerHTML,/Cash went out first <b>1 · −60,000<\/b>/,'paying a supplier ahead of the customer is its own filter, with the money fronted');
+   is the Purchases lens's calendar now, where it is drawn by the day.
+   The sum sits in a span of its own and the long label beside a short
+   one, because the phone draws the same chips as name and count only. */
+assert.match(attention.innerHTML,/Still to collect <b>1<span class="inv-att-sum"> · 590,000<\/span><\/b>/,'what is still to collect is a count and a sum');
+assert.match(attention.innerHTML,/Cash went out first<\/span><span class="inv-lbl-ph">Cash out first<\/span> <b>1<span class="inv-att-sum"> · −60,000<\/span><\/b>/,'paying a supplier ahead of the customer is its own filter, with the money fronted');
 assert.match(attention.innerHTML,/Bills to review <b>1<\/b>/,'the existing bill findings feed the same row');
 /* The owed bill is matched to its sale, under the customer it waits on,
    and the act offered is to chase the customer. */
