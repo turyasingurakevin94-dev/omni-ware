@@ -657,8 +657,14 @@ let SECTION2_PRODUCTS = null;
      waQuoteText, composed by code from lines the owner approved by
      tapping). Anything else calling the send with text it made up is
      the bug this pin exists to catch. The slice starts at the receipt
-     twins, where send-capable code now begins. */
-  t.check(!/waSendReply\((?!textOverride|replyText|d\.text|textTwin|\))/.test(src.slice(src.indexOf('function waOrderReceiptText'))),
+     twins, where send-capable code now begins.
+
+     A FIFTH ROAD, and why it belongs on the list: Messages › Waiting on
+     you drafts each answer into a textarea on the lane itself, and its
+     Send reply sends laneReply -- the value of THAT textarea, read at the
+     tap. It is the same kind of road as the composer: words the owner is
+     looking at and can edit, never text the code made up at send time. */
+  t.check(!/waSendReply\((?!textOverride|replyText|d\.text|textTwin|laneReply|\))/.test(src.slice(src.indexOf('function waOrderReceiptText'))),
     'and nothing else calls the send with fabricated text');
   t.check(/waInbox\.drafts\[convId\] = suggested;/.test(src),
     'the match lands in the composer as an editable draft, never as a sent message');
