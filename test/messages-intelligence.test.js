@@ -196,6 +196,21 @@ const S = scope;
     'and neither the band nor the held-back lane competes with the one primary action');
 }
 
+/* ---------- 8b. each lane is drawn by its own canvas builder ----------
+   Waiting on you, Came back and They promised each have a builder of
+   their own. Rebuilding one lane once deleted the routes to the other
+   two, and both quietly fell back to the old inbox rows -- the screen
+   still rendered, so nothing else noticed. */
+{
+  const lane = extractFunction(src, 'msgLaneHTML', 'index.html');
+  t.check(/if\(lane === 'inbox'\) return msgWaitLaneHTML\(nowMs\);/.test(lane),
+    'Waiting on you is drawn by its own builder, not the old inbox rows');
+  t.check(/if\(lane === 'back'\) return msgBackLaneHTML\(nowMs\);/.test(lane),
+    'Came back is drawn by its own builder, as the exchange and its decision');
+  t.check(/if\(lane === 'promised'\) return msgPromLaneHTML\(nowMs, msgPromisedLane\(nowMs\)\);/.test(lane),
+    'They promised is drawn by its own builder, from the list its tile counts');
+}
+
 /* ---------- 9. templates: words filled from the books, and judged ---------- */
 {
   const T = compileScope([
