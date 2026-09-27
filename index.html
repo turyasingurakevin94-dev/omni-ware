@@ -116708,7 +116708,7 @@ function msgPostOpenHTML(p, i, view){
       ${reasons.length > 4 ? `<p class="ow-mini">and ${reasons.length - 4} more</p>` : ''}
     </div>`;
   const q = Number(p.qty) || 0, ex = p.expectedUnits;
-  const pct = ex != null && q > 0 ? Math.max(4, Math.round(Math.min(1, ex / q) * 100)) : 0;
+  const pct = ex > 0 && q > 0 ? Math.max(4, Math.round(Math.min(1, ex / q) * 100)) : 0;
   const bring = `<div class="ow-mi-card">
       <p class="ow-mq-l">What it could bring</p>
       ${p.toOrder
@@ -116716,9 +116716,9 @@ function msgPostOpenHTML(p, i, view){
            <p class="ow-mq-note">Orders, not stock: nothing is expected of an order line until a few have gone out.</p>`
         : ex != null ? `<div class="fup-pl">
             <span class="fup-pl-h"><span>Likely to go in ${lift} days</span><span>on the shelf <b class="ow-fig">${esc(fig(q))}</b></span></span>
-            <span class="fup-pl-bar"><i class="fup-pl-f" style="--fup-w:${pct}%"><b class="ow-fig">${esc(fig(ex))}</b></i></span>
+            <span class="fup-pl-bar"><i class="fup-pl-f" style="--fup-w:${pct}%">${ex > 0 ? `<b class="ow-fig">${esc(fig(ex))}</b>` : ''}</i></span>
             <span class="fup-pl-s">${p.cappedBy != null ? 'capped by the shelf' : (p.est && p.est.pooled ? 'the median of what went after posts like this one' : 'from this product’s own past posts')} &mdash; an expectation, not a promise</span></div>
-            ${p.marginUnit != null ? `<p class="ow-mq-note">Keeps <b class="ow-fig">${esc(fig(p.marginUnit))}</b> each &mdash; <b class="ow-fig">+${esc(fig(p.marginUnit * ex))}</b> if ${esc(fig(ex))} go.</p>` : ''}`
+            ${p.marginUnit != null && ex > 0 ? `<p class="ow-mq-note">Keeps <b class="ow-fig">${esc(fig(p.marginUnit))}</b> each &mdash; <b class="ow-fig">+${esc(fig(p.marginUnit * ex))}</b> if ${esc(fig(ex))} go.</p>` : ''}`
         : `<p class="ow-mq-note">No past posts to go on yet &mdash; the first posts are how the shop learns.</p>`}
     </div>`;
 
@@ -116932,7 +116932,7 @@ function msgPostRowHTML(p, i, cap, postedToday, view){
     + (p.toOrder ? '<span class="ow-cp ow-mi-c-order" title="None on the shelf: it posts as an order line">to order</span>' : '');
   const shelf = p.toOrder
     ? `<span class="ow-mi-shh"><span>orders, not stock</span><span class="ow-fig">0 on shelf</span></span><span class="ow-mi-bar ow-mi-hbar"></span>`
-    : `<span class="ow-mi-shh"><span>${ex != null ? `<b class="ow-fig">${esc(fig(ex))}</b> likely` : 'no record yet'}</span><span class="ow-fig">${esc(fig(q))} on shelf</span></span><span class="ow-mi-bar"><i class="ow-mi-bf ow-good" style="width:${ex != null && q > 0 ? msgPct(Math.max(.04, Math.min(1, ex / q))) : '0%'}"></i></span>`;
+    : `<span class="ow-mi-shh"><span>${ex != null ? `<b class="ow-fig">${esc(fig(ex))}</b> likely` : 'no record yet'}</span><span class="ow-fig">${esc(fig(q))} on shelf</span></span><span class="ow-mi-bar"><i class="ow-mi-bf ow-good" style="width:${ex > 0 && q > 0 ? msgPct(Math.max(.04, Math.min(1, ex / q))) : '0%'}"></i></span>`;
   const ready = fix.length
     ? `<span class="ow-mi-rdy ow-warn" title="${esc(fix.join(', '))}"><i class="ow-mi-rdyd"></i>${fix.length} to fix</span>`
     : '<span class="ow-mi-rdy ow-good"><i class="ow-mi-rdyd"></i>ready</span>';
