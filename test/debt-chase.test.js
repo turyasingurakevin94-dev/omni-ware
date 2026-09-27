@@ -302,14 +302,28 @@ if (scope) {
         instrument the old screen had that the card did not: the owner
         checks the lines add to the balance BEFORE the demand goes. It is
         drawn from row.chase.invoices -- debtChaseInvoices, the same
-        reading the message itself is written from. */
-  t.check(/What the message quotes/.test(contact)
-    && /ch\.invoices\.slice\(0, DEBT_CHASE_INVOICE_LINES\)/.test(contact),
+        reading the message itself is written from.
+
+        WHERE IT MOVED, AND WHY THE ASSERTION FOLLOWED IT. It was a table
+        inside the account block of renderFollowUpsContact, ending on a
+        "Balance" footer row. The Today canvas draws the same reading as
+        the first card of the opened row's dossier: "What the 1,840,000
+        is" -- the balance named in the card's own title, one bar split by
+        invoice so the pieces are SEEN to make the whole, then the lines
+        (and what is carried with no invoice). The old claims meant: the
+        lines are on the card, they come from the chase's own invoices,
+        they are checked against the balance, and a balance they do not
+        stand behind says which of the two reasons it is. Every one still
+        holds; they are asserted where the card is now drawn. */
+  const dossier = extractFunction(src, 'msgDossierHTML', 'index.html');
+  t.check(/msgDossierHTML\(row, now\)/.test(contact)
+    && /ch\.invoices/.test(dossier) && /inv\.slice\(0, DEBT_CHASE_INVOICE_LINES\)/.test(dossier),
     'the invoices behind the demand are on the client’s card, so the arithmetic can be read before it is sent');
-  t.check(/class="ow-tbl-f"><div class="ow-tbl-c">Balance/.test(contact),
-    'ending with the balance they add to, which is what makes it a check rather than a list');
-  t.check(/The invoices on file add up to more than this balance/.test(contact)
-    && /No invoice stands behind this balance/.test(contact),
+  t.check(/listed <= ch\.debt \+ 0\.5/.test(dossier) && /What the \$\{fig\(ch\.debt\)\} is/.test(dossier)
+    && /width:\$\{msgPct\(v \/ ch\.debt\)\}/.test(dossier),
+    'checked against the balance they add to -- named in the card\u2019s title, and split by invoice in one bar -- which is what makes it a check rather than a list');
+  t.check(/The invoices on file add up to more than this balance/.test(dossier)
+    && /No invoice stands behind this balance/.test(dossier),
     'and where they do NOT stand behind the balance it says which of the two reasons it is — the same two '
     + 'the message itself distinguishes, rather than printing a breakdown the shop cannot stand behind');
 
