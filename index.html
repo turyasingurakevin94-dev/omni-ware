@@ -24210,6 +24210,22 @@
   .ow-mi-tbf{display:block;height:100%;border-radius:var(--ow-r-pill);background:var(--ow-ink-900);}
   .ow-mi-tn{font-size:var(--ow-t-11);font-weight:var(--ow-fw-400);color:var(--ow-ink-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
   .ow-mi-fill{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ow-sp-6);margin-top:var(--ow-sp-6);}
+  .ow-mi-tlist{display:flex;flex-direction:column;border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);overflow:hidden;}
+  .ow-mi-trow{display:grid;grid-template-columns:14px minmax(0,1fr) 88px 52px;gap:var(--ow-sp-10);align-items:center;min-height:40px;
+    padding:0 var(--ow-sp-12);border:0;border-top:1px solid var(--ow-rule-soft);background:var(--ow-paper);font:inherit;color:inherit;text-align:left;cursor:pointer;}
+  .ow-mi-trow:first-child{border-top:0;}
+  .ow-mi-trow:hover{background:var(--ow-paper-2);}
+  .ow-mi-trow.ow-on{background:var(--ow-steel-050);box-shadow:inset 3px 0 0 var(--ow-steel-950);}
+  .ow-mi-trd{display:block;width:14px;height:14px;border-radius:50%;border:1.5px solid var(--ow-steel-400);box-sizing:border-box;}
+  .ow-mi-trow.ow-on .ow-mi-trd{border:4px solid var(--ow-steel-950);}
+  .ow-mi-trn{font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-mi-trow.ow-on .ow-mi-trn{font-weight:var(--ow-fw-600);}
+  .ow-mi-trb{display:block;height:6px;border-radius:var(--ow-r-pill);background:var(--ow-rule-soft);overflow:hidden;}
+  .ow-mi-trb .ow-mi-tbf{background:var(--ow-steel-400);}
+  .ow-mi-trow.ow-on .ow-mi-trb .ow-mi-tbf{background:var(--ow-ink-900);}
+  .ow-mi-trp{text-align:right;font-size:var(--ow-t-12);}
+  .ow-mi-tcant{margin:var(--ow-sp-6) 0 0;font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.4;}
+  @media (max-width:820px){ .ow-mi-trow{min-height:var(--ow-tap);} }
   .ow-mi-fv2{display:inline-flex;align-items:baseline;gap:var(--ow-sp-4);padding:2px var(--ow-sp-6);border-radius:var(--ow-r-sm);
     background:var(--ow-sky-soft);color:var(--ow-sky);font-size:var(--ow-t-11);min-width:0;max-width:100%;}
   .ow-mi-fk{white-space:nowrap;}
@@ -118220,17 +118236,27 @@ function msgTplChipsHTML(row, now){
   const res = msgTplOutcomes(now);
   const step = row.chase ? msgCadenceStep(row, now) : null;
   const steps = row.chase ? msgCadence() : [];
-  const chip = (t)=>{
+  /* ONE RANKED LIST, NOT A WALL OF CARDS. The words are compared on one
+     thing -- how often they worked -- so they sit one per line with the
+     bars in a single column, best first; the chosen one is marked as a
+     radio is. Words the books cannot fill for this person cannot be
+     chosen, so they wait on one quiet line underneath, saying why. */
+  const scored = list.map(t=>{
     const fill = t.auto ? {text: 'x', missing: []} : msgTplFill(t, row);
-    const r = res[t.id];
-    const rate = r && r.pct != null
-      ? `<span class="ow-mi-tb"><i class="ow-mi-tbf" style="width:${r.pct}%"></i></span><b class="ow-fig">${r.pct}%</b>`
-      : `<span class="ow-mi-tb"></span><span class="ow-mi-tn">${r && r.uses ? r.uses + ' sent' : 'no record'}</span>`;
+    return {t, fill, r: res[t.id]};
+  });
+  const usable = scored.filter(x=> x.fill.text)
+    .sort((a, b)=> ((b.r && b.r.pct != null ? b.r.pct : -1) - (a.r && a.r.pct != null ? a.r.pct : -1))
+      || ((b.r ? b.r.uses : 0) - (a.r ? a.r.uses : 0)));
+  const cant = scored.filter(x=> !x.fill.text);
+  const chip = ({t, r})=>{
     const on = cur && cur.id === t.id;
-    return `<button type="button" class="ow-mi-tc msg-tpl-pick${on ? ' ow-on' : ''}" data-cust="${esc(cid)}" data-tpl="${esc(String(t.id))}"${fill.text ? '' : ' disabled'} aria-pressed="${on ? 'true' : 'false'}"
-      title="${esc(fill.text ? (r && r.n ? `${r.k} of ${r.n} ${kind === 'money' ? 'paid within ' + CHASE_WINDOW + ' days' : 'bought within ' + TELL_WORKED_DAYS + ' days'}` : 'Not enough sent on it yet to call a rate') : 'The books cannot fill {' + fill.missing.join('}, {') + '} for them')}">
-      <span class="ow-mi-tcn">${esc(t.name)}</span>
-      ${fill.text ? `<span class="ow-mi-tcr">${rate}</span>` : `<span class="ow-mi-tn">can&rsquo;t fill {${esc(fill.missing[0])}}</span>`}</button>`;
+    const rate = r && r.pct != null
+      ? `<span class="ow-mi-trb"><i class="ow-mi-tbf" style="width:${r.pct}%"></i></span><b class="ow-fig ow-mi-trp">${r.pct}%</b>`
+      : `<span class="ow-mi-trb"></span><span class="ow-mi-tn ow-mi-trp">${r && r.uses ? r.uses + ' sent' : 'no record'}</span>`;
+    return `<button type="button" role="radio" class="ow-mi-trow msg-tpl-pick${on ? ' ow-on' : ''}" data-cust="${esc(cid)}" data-tpl="${esc(String(t.id))}" aria-checked="${on ? 'true' : 'false'}"
+      title="${esc(r && r.n ? `${r.k} of ${r.n} ${kind === 'money' ? 'paid within ' + CHASE_WINDOW + ' days' : 'bought within ' + TELL_WORKED_DAYS + ' days'}` : 'Not enough sent on it yet to call a rate')}">
+      <i class="ow-mi-trd"></i><span class="ow-mi-trn">${esc(t.name)}</span>${rate}</button>`;
   };
   const cadence = row.chase && step !== null ? (step === 'broken'
     ? `<p class="ow-mq-note">They broke a day they named, so the cadence opens on its own words for that.</p>`
@@ -118241,8 +118267,9 @@ function msgTplChipsHTML(row, now){
      label for whoever asks why. */
   const why = cadence.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
   return `<div class="ow-mi-tpls">
-    <p class="ow-mq-l"${why ? ` title="${esc(why)}"` : ''}>Template <span class="ow-mq-lr">${kind === 'money' ? 'paid within ' + CHASE_WINDOW + 'd' : 'bought within ' + TELL_WORKED_DAYS + 'd'}</span></p>
-    <div class="ow-mi-tcs">${list.map(chip).join('')}</div>
+    <p class="ow-mq-l"${why ? ` title="${esc(why)}"` : ''}>Template <span class="ow-mq-lr">best first &middot; ${kind === 'money' ? 'paid within ' + CHASE_WINDOW + 'd' : 'bought within ' + TELL_WORKED_DAYS + 'd'}</span></p>
+    <div class="ow-mi-tlist" role="radiogroup" aria-label="Template">${usable.map(chip).join('')}</div>
+    ${cant.length ? `<p class="ow-mi-tcant">Can&rsquo;t fill for them: ${cant.map(x=> `<span title="The books cannot fill {${esc(x.fill.missing.join('}, {'))}} for them">${esc(x.t.name)} ({${esc(x.fill.missing[0])}})</span>`).join(', ')}</p>` : ''}
   </div>`;
 }
 /* EVERY FIGURE IN THE WORDS, AND WHERE IT CAME FROM. A textarea cannot
