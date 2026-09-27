@@ -753,15 +753,24 @@ const stockMove = (before, after, whenDays) => {
   t.check(/fupHubRowsNow\(\)/.test(summary) && /fupHubRowsNow\(\)/.test(contact),
     'and the strip and the queue are drawn from the same hub rows, computed once per render');
 
-  /* Keyed on the customer and NOTHING else. `byCustomer` being mentioned
-     proved nothing: a map keyed per row still has the name and still
-     builds groups, it just builds one per item -- which is the flat list
-     again wearing a group's clothes. */
-  t.check(/const key = String\(f\.customerId\);\s*\n\s*if\(!byCustomer\.has\(key\)\)/.test(all),
-    'the full list groups by client alone — the flat one repeated a name down the page while splitting the two things one person was waiting for');
-  t.check(/ow-tbl-g/.test(all), 'and renders them as groups — the layer’s group heading inside its table, not a private card');
-  t.check(/followUpStatePill/.test(all) && /fupCp\(/.test(all),
-    'and state is a chip, not a sentence in grey among other sentences in grey');
+  /* GROUPED BY THE THING, EACH THING ONE ROW THAT OPENS ONTO ITS PEOPLE.
+     These three checks said the register grouped by client, drew the
+     groups as the layer's group headings, and named each ask's state
+     with the pill in a chip. The "Register redesign" canvas reads the
+     record as demand instead: one row per thing asked for -- its road
+     to the shelf, who waits on it, what it is worth, its one act -- and
+     the row opens in place onto the people waiting, each with their own
+     silence named. What the old checks protected still holds, at that
+     shape: nobody's two asks are merged into one line, a person is
+     never listed apart from the thing they wait for, and the state is a
+     visible mark (the ring's colour AND its words), never grey prose. */
+  t.check(/msgRegThingKey\(f\)/.test(all) && /msgRegThing\(items, now\)/.test(all),
+    'the register groups by the thing asked for — one key per thing, read by one builder');
+  t.check(/fup-rg-pcs/.test(all) && /\(openIt \? t\.people : \[\]\)\.map\(p=>/.test(all),
+    'and each thing opens in place onto everyone waiting on it');
+  const person = extractFunction(src, 'msgRegPerson', 'index.html');
+  t.check(/tone/.test(person) && /never told a word/.test(person) && /fup-rg-av-\$\{p\.tone\}/.test(all) && /fup-rg-ps-\$\{p\.tone\}/.test(all),
+    'and each person’s state is a mark and its words — the ring’s colour and the state named beside it');
 
   /* The initials used to be a private 38px square painting the brand
      accent on navy -- 2.7:1 at 14px bold, which is under the floor and

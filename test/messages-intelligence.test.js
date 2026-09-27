@@ -385,7 +385,12 @@ const S = scope;
 
   const reg = extractFunction(src, 'renderFollowUpsAll', 'index.html');
   t.check(!/btn-accent/.test(reg), 'the register carries no accent — nothing on it is an act');
-  t.check(/fup-reg-tell/.test(reg) && /msgRegTrackHTML/.test(reg), 'and groups by the thing asked for, each ask drawn as a line through time');
+  /* The line through time -- asked, told, news, closed, as five kinds of
+     mark on a shared axis -- was hard to read, and the canvas replaced
+     it with the one measure it was drawn to show: how long each person
+     has gone without a word, against the quiet rule. */
+  t.check(/fup-reg-tell/.test(reg) && /How long since they heard from you/.test(reg) && /followUpQuietDays\(\)/.test(reg),
+    'and groups by the thing asked for, each waiting person drawn as their silence against the quiet rule');
   const wireAll = extractFunction(src, 'wireFollowUpsScreen', 'index.html');
   const door = wireAll.slice(wireAll.indexOf("closest('.fup-reg-tell')"), wireAll.indexOf("closest('.fup-reg-tell')") + 300);
   t.check(/fupTab = 'contact'/.test(door) && !/openWa|wa\.me|recordBriefSent|followUpContact/.test(door),
