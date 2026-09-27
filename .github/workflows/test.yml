@@ -1,14 +1,25 @@
 name: Tests
 
-# Every push and every PR, on all branches. Deliberately no `paths:` filter:
+# Every PR, and every push to main. Deliberately no `paths:` filter:
 # these tests read the app HTML, the shared worker, the edge functions AND
 # the migrations, and several assert that two of those agree with each other
 # -- so almost any change can break them, and a filter would mostly serve to
 # hide the ones that did.
+#
+# `push` is limited to main because a push to a PR branch already fires
+# `pull_request`; running on both tested every PR commit twice. A branch
+# with no PR yet can still be run by hand (workflow_dispatch).
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch: {}
+
+# A newer push to the same PR/branch makes the older run moot: cancel it
+# rather than let it finish and bill the minutes.
+concurrency:
+  group: tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
