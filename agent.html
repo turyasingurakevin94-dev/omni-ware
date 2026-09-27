@@ -1710,6 +1710,18 @@
   .fd-chip:focus-visible{outline:2px solid #fff;outline-offset:2px;}
   .fd-chip-mint{background:#6FE0A6;color:#05070D;}
   .fd-chip-gold{background:#FFD27A;color:#3A2410;}
+  .fd-chip-white{background:#fff;color:#0A0F1E;}
+  .fd-rank{background:#1B1F3F;}
+  .fd-rankbig{display:flex;align-items:baseline;gap:8px;}
+  .fd-rankbig b{font-size:72px;font-weight:700;line-height:1;}
+  .fd-rankbig span{font-size:16px;font-weight:700;color:rgba(255,255,255,.62);}
+  .fd-ladder{display:flex;flex-direction:column;gap:6px;width:100%;max-width:300px;}
+  .fd-lad{display:flex;align-items:center;gap:12px;min-height:40px;padding:0 14px;border-radius:14px;background:rgba(255,255,255,.06);font-size:15px;}
+  .fd-lad b{width:34px;color:rgba(255,255,255,.62);}
+  .fd-lad span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .fd-lad.me{background:#6FE0A6;color:#05070D;font-weight:800;}
+  .fd-lad.me b{color:#05070D;}
+  .fd-sticker-up{background:#6FE0A6;color:#05070D;}
   /* pinned by the shop: the owner's own word on top of the picture */
   .fd-pin-tag{position:absolute;top:18px;left:16px;display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:12px;
     background:#fff;color:#0A0F1E;font-size:12px;font-weight:900;letter-spacing:.08em;transform:rotate(-4deg);}
@@ -3634,6 +3646,56 @@ function feedLogShown(card){
   feedLog(card, 'shown');
 }
 
+/* Notifications (0103, agent-nudge). The phone is asked once, from a
+   button he pressed -- never on load -- and the answer is stored against
+   his own login. What gets sent, and when, is decided on the server:
+   only in working hours, a few a day at most, each moment once. */
+function agentPushSupported(){
+  return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+}
+function agentPushState(){
+  if(!agentPushSupported()) return 'unsupported';
+  if(Notification.permission === 'denied') return 'denied';
+  let on = false;
+  try{ on = localStorage.getItem(agentLocalKey('agentPushOn')) === '1'; }catch(_e){}
+  return on && Notification.permission === 'granted' ? 'on' : 'off';
+}
+function urlB64ToBytes(b64){
+  const pad = '='.repeat((4 - b64.length % 4) % 4);
+  const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from([...raw].map(c=> c.charCodeAt(0)));
+}
+async function enableAgentPush(){
+  if(!agentPushSupported()){ toast('This phone cannot show notifications from the browser'); return false; }
+  try{
+    const perm = await Notification.requestPermission();
+    if(perm !== 'granted'){ toast('Notifications stay off -- you can turn them on in the browser settings'); return false; }
+    const reg = await navigator.serviceWorker.register('/agent-sw.js', { scope: '/agent.html' });
+    await navigator.serviceWorker.ready;
+    const { data: cfg, error: cfgErr } = await sb.functions.invoke('agent-nudge', { body: { action: 'config' } });
+    if(cfgErr || !cfg || !cfg.publicKey) throw new Error('the shop has not finished setting notifications up');
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToBytes(cfg.publicKey) });
+    const j = sub.toJSON();
+    const { error } = await sb.from('agent_push_subscriptions').upsert({
+      shop_id: currentShopId, agent_id: myAgent.id, user_id: currentUser.id,
+      endpoint: j.endpoint, p256dh: j.keys.p256dh, auth_key: j.keys.auth,
+    }, { onConflict: 'endpoint' });
+    if(error) throw error;
+    try{ localStorage.setItem(agentLocalKey('agentPushOn'), '1'); }catch(_e){}
+    toast("Notifications on -- you'll hear when something is worth a tap");
+    return true;
+  }catch(err){
+    toast(`Could not turn notifications on: ${err.message || err}`);
+    return false;
+  }
+}
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.addEventListener('message', (e)=>{
+    if(e.data && e.data.type === 'open' && e.data.tab === 'feed') switchTab('feed');
+  });
+}
+
 /* Items the shop has put in front of its agents (0102), live until their
    end date. Read once a session; a failed read just means no pinned card. */
 let feedPins = [], feedPinsLoaded = false;
@@ -3962,6 +4024,17 @@ function buildFeedCards(now){
   if(taste.orders >= 6 && prefs.about !== 'no') extras.push({ at: 3, card: { kind:'about', key:'about', taste } });
   extras.push({ at: 4, card: { kind:'goal', key:'goal', picks } });
 
+  // Where he stands this month, when there is a board to stand on.
+  const lb = (typeof leaderboard !== 'undefined') ? leaderboard : null;
+  if(lb && lb.you && lb.totalAgents >= 2){
+    let lastRank = null;
+    try{ lastRank = Number(localStorage.getItem(agentLocalKey('agentFeedLastRank'))) || null; }catch(_e){}
+    const orders = Number(lb.you.completedOrders)||0;
+    const typical = orders ? (Number(lb.you.amount)||0) / orders : 0;
+    extras.push({ at: 5, card: { kind:'rank', key:`rank:${lb.period}:${lb.you.rank}`, lb,
+      movedUp: lastRank != null && lb.you.rank < lastRank, typical } });
+  }
+
   const lesson = feedLesson(taste, prefs);
   if(lesson) extras.push({ at: 5, card: { kind:'lesson', key:`lesson:${lesson.id}`, lesson } });
 
@@ -4085,6 +4158,8 @@ function feedCardHTML(card, i, cards){
         const chips = [];
         if(asks) chips.push(`<button type="button" class="fd-chip fd-chip-mint" data-fd-jump="${askAt}">${fdIcon('bell')}${asks} asked you</button>`);
         if(wAt >= 0) chips.push(`<button type="button" class="fd-chip fd-chip-gold" data-fd-jump="${wAt}">${fdIcon('box')}+${fmtCompactUGX(wSum)} waiting</button>`);
+        // Last: asking for something is never ahead of money waiting.
+        if(agentPushState() === 'off') chips.push(`<button type="button" class="fd-chip fd-chip-white" data-fd-act="push-on">${fdIcon('bell')}Alert me</button>`);
         return chips.length ? `<div class="fd-chips">${chips.join('')}</div>` : '';
       })()}
       ${stories ? `<div class="fd-stories">${stories}</div>` : ''}
@@ -4230,6 +4305,26 @@ function feedCardHTML(card, i, cards){
       <button type="button" class="fd-cta fd-cta-mint" data-fd-act="win-ok">Keep going</button>
     </section>`;
   }
+  if(card.kind === 'rank'){
+    const lb = card.lb, you = lb.you;
+    const gap = Number(you.gapToNext);
+    const oneSale = card.typical > 0 && gap > 0 && gap <= card.typical * 1.5;
+    const rows = (lb.top||[]).slice(0,5);
+    const youInTop = rows.some(r=>r.isYou);
+    const ladder = rows.map(r=>`<div class="fd-lad${r.isYou?' me':''}"><b class="fd-m">#${r.rank}</b><span>${r.isYou ? 'You' : esc(r.displayName)}</span></div>`).join('')
+      + (youInTop ? '' : `<div class="fd-lad me"><b class="fd-m">#${you.rank}</b><span>You</span></div>`);
+    return `<section class="fd-card fd-rank" ${d}>
+      <span class="fd-k fd-k-c">${esc(monthLabel(currentMonthKey()).split(' ')[0].toUpperCase())} BOARD</span>
+      ${card.movedUp ? `<span class="fd-sticker-w fd-sticker-up">MOVED UP</span>` : ''}
+      <div class="fd-rankbig"><b class="fd-m">#${you.rank}</b><span>of ${lb.totalAgents}</span></div>
+      <div class="fd-ladder">${ladder}</div>
+      ${you.rank === 1
+        ? `<span class="fd-pill fd-pill-mint fd-center"><b>Top</b> of the board</span>`
+        : gap > 0 ? `<span class="fd-pill fd-pill-mint fd-center"><b>${fmtCompactUGX(gap)}</b> to #${you.rank - 1}</span>` : ''}
+      ${oneSale ? `<span class="fd-s fd-center">about one good sale</span>` : ''}
+      <button type="button" class="fd-cta fd-cta-mint" data-fd-act="rank-go">${you.rank === 1 ? 'Keep it' : 'Close the gap'}</button>
+    </section>`;
+  }
   if(card.kind === 'lesson'){
     const l = card.lesson;
     const max = Math.max(l.them, l.you, 1);
@@ -4318,6 +4413,7 @@ async function openFeedView(){
   if(!feedClaimsLoaded) feedEnsureClaims().then(()=>{ if(lastMainTab === 'feed') renderFeed(); });
   if(!feedPinsLoaded) feedEnsurePins().then(()=>{ if(lastMainTab === 'feed' && feedPins.length) renderFeed(); });
   if(!feedPrefsSynced) feedSyncPrefs().then(()=>{ if(lastMainTab === 'feed') renderFeed(); });
+  if(!leaderboard) ensureLeaderboardLoaded();
   if(!catalog.length || !browseDataLoaded){
     view.innerHTML = `<div class="fd-scroller"><section class="fd-card fd-hello"><div class="fd-ring-c fd-loading"><span class="ag-spinner"></span></div></section></div>`;
     await ensureBrowseDataLoaded();
@@ -4438,6 +4534,7 @@ document.getElementById('ag_feedView').addEventListener('click', async (e)=>{
   const card = sec ? feedCards[Number(sec.dataset.fdI)] : null;
   const act = btn.dataset.fdAct;
   if(act === 'goal'){ openGoalSheet(); return; }
+  if(act === 'push-on'){ if(await enableAgentPush()) renderFeed(); return; }
   if(act === 'sell'){ switchTab('sell'); return; }
   if(!card) return;
   const LOG = { notme:'notme', cluster:'cluster', share:'shared', quote:'quoted', client:'acted', 'ask-reply':'acted', similar:'acted' };
@@ -4498,6 +4595,11 @@ document.getElementById('ag_feedView').addEventListener('click', async (e)=>{
     const p = feedPrefs(); p.about = act === 'about-yes' ? 'yes' : 'no'; saveFeedPrefs(p);
     toast(act === 'about-yes' ? 'Noted' : 'Thanks -- I will keep learning');
     feedJump(Number(sec.dataset.fdI) + 1);
+    return;
+  }
+  if(act === 'rank-go'){
+    try{ localStorage.setItem(agentLocalKey('agentFeedLastRank'), String(card.lb.you.rank)); }catch(_e){}
+    feedJump(1);
     return;
   }
   if(act === 'win-ok'){
@@ -4841,6 +4943,7 @@ async function ensureLeaderboardLoaded(){
     // Standing both read `leaderboard`, and this arrives after the first
     // paint of either.
     if(lastMainTab === 'home') renderHomeRank();
+    if(lastMainTab === 'feed' && typeof renderFeed === 'function') renderFeed();
     if(document.getElementById('ag_standingView').style.display !== 'none') renderStanding();
   }catch(_err){ /* the board just stays hidden */ }
 }
@@ -9147,7 +9250,9 @@ async function boot(){
   restoreQuoteDraft();
   updateCartBadge();
   const savedTab = localStorage.getItem('agentLastTab');
-  switchTab(TABS.includes(savedTab) ? savedTab : 'feed');
+  // A tapped notification opens here with ?open=feed.
+  const openParam = new URLSearchParams(location.search).get('open');
+  switchTab(openParam === 'feed' ? 'feed' : TABS.includes(savedTab) ? savedTab : 'feed');
   document.body.classList.remove('app-loading');
 }
 boot();

@@ -250,3 +250,39 @@ for this one, `shop_payment_providers` holds them per-shop.
    each provider's sandbox test MSISDNs (MTN and Airtel both publish
    numbers in their sandbox docs that auto-approve or auto-reject, for
    testing both the success and failure paths without a real phone).
+
+## 6. Agent notifications (agent-nudge, Web Push)
+
+Agents use `agent.html` in a phone browser, so their notifications are
+standard Web Push, not the workers' FCM. Needs migration `0103_agent_push.sql`.
+
+1. Make a VAPID key pair once (any machine with Node):
+   ```
+   npx web-push generate-vapid-keys
+   ```
+2. Set the secrets. The private key and the cron secret are sensitive --
+   never commit them or paste them into chat:
+   ```
+   supabase secrets set VAPID_PUBLIC_KEY="..." VAPID_PRIVATE_KEY="..." \
+     VAPID_SUBJECT="mailto:you@yourshop.com" AGENT_NUDGE_SECRET="<a long random string>"
+   ```
+3. Deploy (no JWT: the app reads the public key before an agent action, and
+   the schedule cannot present one -- the run action is closed by
+   `AGENT_NUDGE_SECRET` instead, and refuses to run at all without it):
+   ```
+   supabase functions deploy agent-nudge --no-verify-jwt
+   supabase functions deploy agent-leaderboard
+   ```
+4. Schedule it hourly: Dashboard -> Integrations -> Cron -> New job ->
+   type "Supabase Edge Function", `agent-nudge`, POST, schedule `0 * * * *`,
+   body `{"action":"run"}`, header `x-cron-secret: <AGENT_NUDGE_SECRET>`.
+
+It sends nothing before 07:00 or from 20:00 Kampala time, at most three a
+day per agent, and each moment once (a request on their catalogue page, an
+item the shop pinned, a client who is due, being one good sale from the
+next place, a bonus in their cluster ending). To see what it WOULD send
+without sending, call it with `{"action":"run","dryRun":true}`.
+
+An agent turns notifications on from the **Alert me** chip on their Feed.
+On an iPhone that only works once the app has been added to the Home
+Screen (Safari's rule, iOS 16.4+).
