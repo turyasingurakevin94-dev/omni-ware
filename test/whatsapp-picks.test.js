@@ -645,7 +645,7 @@ const THU = '2026-08-06', MON = '2026-08-03';
    still names its record, and the record stays correctable.
 */
 {
-  t.check(/WA_EVIDENCE_SOURCE\[r\.kind\]/.test(src) && /class="ow-mi-ev"/.test(src),
+  t.check(/WA_EVIDENCE_SOURCE\[r\.kind\]/.test(src) && /class="ow-mi-evr"/.test(src),
     'each reason reaches the owner with where it was read from');
   const sources = (/const WA_EVIDENCE_SOURCE = \{[\s\S]*?\n\};/.exec(src) || [''])[0];
   ['asked', 'inbox', 'justin', 'drop', 'rival', 'catalogue', 'waseller', 'sitting', 'fast',

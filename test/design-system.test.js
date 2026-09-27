@@ -653,7 +653,7 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                    the merge brought in. They draw markup, so the ratchet follows
                    them too. */
                 'renderFollowUpQuietLine', 'renderMessagesSide', 'msgLaneHTML', 'msgLaneRow',
-                'msgThreadHTML', 'fupPromiseHTML', 'msgPostOpenHTML', 'msgPostRailHTML', 'msgRegTrackHTML', 'renderFollowUpScore',
+                'msgThreadHTML', 'fupPromiseHTML', 'msgPostOpenHTML', 'msgPostRailHTML', 'msgPostLaneHTML', 'msgPostSlotsHTML', 'msgPostRowHTML', 'msgRegTrackHTML', 'renderFollowUpScore',
                 /* And the intelligence center's readings: the band over every
                    lane, a row's signal and odds, the dossier an opened row
                    carries, the lanes' own bands and the Intelligence view.

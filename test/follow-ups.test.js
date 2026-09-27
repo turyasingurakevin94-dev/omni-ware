@@ -732,7 +732,10 @@ const stockMove = (before, after, whenDays) => {
     'the inbox and reply tiles are counted off the same call their filter opens');
   t.check(/msgPromisedLane\(/.test(summary) && /msgPromisedLane\(/.test(lane),
     'and the diary tile reads the promise book, which is the list its filter opens');
-  t.check(/msgPostLane\(/.test(summary) && /msgPostLane\(/.test(lane),
+  /* The post lane is drawn by its own builder now; the lane hands over
+     to it, and it reads the same picks the tile counts. */
+  t.check(/msgPostLane\(/.test(summary) && /msgPostLaneHTML\(/.test(lane)
+    && /msgPostLane\(/.test(extractFunction(src, 'msgPostLaneHTML', 'index.html')),
     'and the post tile reads the day’s picks, which is the list its filter opens');
   t.check(/fupRowLenses/.test(contact),
     'and the person lanes still filter through one reading of one row');
