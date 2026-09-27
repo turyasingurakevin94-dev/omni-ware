@@ -1536,6 +1536,9 @@
   .fd-card.fd-gone{opacity:0;transform:translateX(-40px);}
   .fd-bonus,.fd-addon{background:#1A1410;justify-content:flex-end;align-items:stretch;}
   .fd-hello{background:#0A0F1E;}
+  .fd-ask{background:#0D2B25;}
+  .fd-waiting{background:#12240F;}
+  .fd-bulk{background:#1A1410;justify-content:flex-end;align-items:stretch;}
   .fd-due{background:#0F2A3F;}
   .fd-about{background:#14183A;}
   .fd-goal{background:#22173F;}
@@ -1700,6 +1703,43 @@
   .fd-done .fd-big{font-family:inherit;font-size:30px;}
   .fd-pk{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
   .fd-pk i{width:14px;height:14px;border-radius:50%;background:#6FE0A6;}
+
+  .fd-chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
+  .fd-chip{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px;border-radius:22px;font-size:14px;font-weight:800;}
+  .fd-chip .fd-i svg{width:18px;height:18px;}
+  .fd-chip:focus-visible{outline:2px solid #fff;outline-offset:2px;}
+  .fd-chip-mint{background:#6FE0A6;color:#05070D;}
+  .fd-chip-gold{background:#FFD27A;color:#3A2410;}
+  /* a request from his catalogue page: who, what they said, what it matches */
+  .fd-badge-mint{background:#6FE0A6;color:#05070D;}
+  .fd-av-mint{border-color:#6FE0A6;background:#E4F4EA;color:#0F6B43;}
+  .fd-bubble{max-width:300px;padding:12px 14px;border-radius:18px 18px 18px 4px;background:#fff;color:#1C2233;font-size:16px;line-height:1.35;align-self:center;}
+  .fd-reg .fd-m{color:#6FE0A6;font-weight:800;flex:none;}
+
+  /* money waiting: one number, then the rows that release it */
+  .fd-stack{position:relative;width:120px;height:90px;}
+  .fd-stack i{position:absolute;left:10px;right:10px;height:22px;border-radius:50%;
+    background:#FFD27A;box-shadow:0 3px 0 #C9982E;}
+  .fd-wrows{align-self:stretch;display:flex;flex-direction:column;gap:8px;margin-top:6px;}
+  .fd-wrow{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 14px 8px 8px;
+    border-radius:16px;background:rgba(255,255,255,.07);}
+  .fd-wrow:focus-visible{outline:2px solid #fff;outline-offset:2px;}
+  .fd-wic{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex:none;}
+  .fd-wic .fd-i svg{width:20px;height:20px;}
+  .fd-wic-claim{background:#FFB86B;color:#3A2410;} .fd-wic-pickup{background:#4FA3E0;color:#05070D;} .fd-wic-prepay{background:#B794F6;color:#1A1233;}
+  .fd-wb{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;font-size:12px;color:rgba(255,255,255,.62);}
+  .fd-wb b{font-size:15px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .fd-wrow > b{font-size:17px;}
+
+  /* bulk: what his usual order pays against what the tier line pays */
+  .fd-tier{position:absolute;top:120px;left:16px;display:flex;align-items:flex-end;gap:14px;padding:12px 14px;border-radius:18px;background:rgba(0,0,0,.5);}
+  .fd-tier > div{display:flex;flex-direction:column;align-items:center;gap:5px;}
+  .fd-tier b{font-size:16px;}
+  .fd-tier i{display:block;width:54px;border-radius:9px 9px 3px 3px;background:rgba(255,255,255,.3);}
+  .fd-tier i.hi{background:#6FE0A6;}
+  .fd-tier span{font-size:12px;font-weight:700;color:rgba(255,255,255,.75);}
+  .fd-tier-arrow{align-self:center;transform:rotate(90deg);color:#FFD27A;}
+  .fd-bulk .fd-earn{top:66px;}
 
   /* more like this: a sheet over the card */
   .fd-sheet-wrap{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;}
@@ -3617,6 +3657,62 @@ function feedDaysLeft(endsAt){
   return days >= 0 ? days : null;
 }
 
+/* What a catalogue request is about: the item it was sent from, or --
+   when it came in as words -- the catalogue items those words name. */
+function feedInquiryMatch(q){
+  let item = null;
+  if(q.product_id) item = catalogEntry(q.product_id, q.variant_idx==null || q.variant_idx==='' ? null : Number(q.variant_idx));
+  let matches = [];
+  if(!item && q.message){
+    const words = String(q.message).toLowerCase().match(/[a-z0-9]{4,}/g) || [];
+    if(words.length){
+      matches = catalog.map(it=>{
+        const name = `${it.name} ${it.variantLabel||''} ${it.category||''}`.toLowerCase();
+        return { it, hits: words.filter(w=> name.includes(w)).length };
+      }).filter(x=>x.hits > 0).sort((a,b)=> b.hits - a.hits).slice(0, 3).map(x=>x.it);
+    }
+  }
+  return { item, matches };
+}
+
+/* Money that is already his and waits on one move: a finished month's
+   bonus nobody has claimed, an order at the counter with his name on it,
+   and a prepaid order the shop will not start until he pays. */
+let feedClaimsLoaded = false;
+async function feedEnsureClaims(){
+  if(feedClaimsLoaded) return;
+  try{
+    const { data, error } = await sb.from('agent_commission_claims').select('*')
+      .eq('shop_id', currentShopId).eq('agent_id', myAgent.id);
+    if(error) throw error;
+    myClaims = data || [];
+    feedClaimsLoaded = true;
+  }catch(_e){ /* the claim row is left out rather than guessed */ }
+}
+function feedMoneyWaiting(now){
+  const rows = [];
+  if(feedClaimsLoaded){
+    const cur = currentMonthKey();
+    for(let k = 1; k <= 3; k++){
+      const m = shiftMonth(cur, -k);
+      const bonus = monthEarnings(m).bonus;
+      if(bonus > 0 && !findClaim(m)) rows.push({ kind:'claim', month: m, amount: bonus, earn: bonus });
+    }
+  }
+  myOrders.filter(o=>!o.voided && o.status==='pending_delivery' && o.deliveryMode==='agent_pickup').forEach(o=>{
+    rows.push({ kind:'pickup', order: o, client: agentClients.find(c=>String(c.id)===String(o.agentClientId)) || null,
+      amount: orderTotal(o), earn: orderEarnings(o).margin });
+  });
+  if(myAgent && myAgent.paymentTerm === 'prepay'){
+    myOrders.filter(o=>!o.voided && o.status==='draft' && o.agentPaymentStatus!=='paid').forEach(o=>{
+      const shopTotal = (o.items||[]).reduce((s,it)=> s + (Number(it.sellPrice)||0) * (Number(it.qty)||0), 0);
+      rows.push({ kind:'prepay', order: o, client: agentClients.find(c=>String(c.id)===String(o.agentClientId)) || null,
+        amount: Math.max(0, shopTotal - (Number(o.amountPaid)||0)), earn: orderEarnings(o).margin });
+    });
+  }
+  return rows.sort((a,b)=> b.earn - a.earn);
+}
+
 /* The whole feed, ranked. Money cards compete on what one sale pays him,
    weighted by how much of his living that aisle already is and by what
    he has done with cards like it; the rest have fixed places so the feed
@@ -3710,10 +3806,47 @@ function buildFeedCards(now){
       });
     });
 
+  // Buying a few more would drop his cost to the next tier. Only for
+  // things a client buys again and again (a regular), only when the
+  // usual order sits under the tier line, and only when crossing it pays
+  // HIM more than the usual order does.
+  agentClients.forEach(c=>{
+    const regs = clientRegulars(counts.get(c.id)||[]);
+    regs.forEach(r=>{
+      const it = catalogEntry(r.productId, r.variantIdx);
+      if(!it || it.bestTierMinQty == null) return;
+      const tierQty = Number(it.bestTierMinQty), tierCost = Number(it.bestTierPrice) || 0;
+      const floor = Number(it.floorPrice) || 0, our = Number(it.ourPrice) || 0;
+      const usual = usualQty(r.qtys);
+      // A step he can ask for, not a leap: past three times the usual
+      // order it stops being an upsell and becomes a different customer.
+      if(!(usual > 0) || usual >= tierQty || tierQty > usual * 3 || !(tierCost > 0) || tierCost >= floor || our <= 0) return;
+      const nowEarn = usual * Math.max(0, our - floor);
+      const tierEarn = tierQty * Math.max(0, our - tierCost);
+      if(tierEarn <= nowEarn) return;
+      const key = `bulk:${c.id}:${feedItemKey(it.productId, it.variantIdx)}`;
+      if(hidden(key)) return;
+      money.push({ kind:'bulk', key, item: it, client: c, usual, tierQty, tierCost, nowEarn, tierEarn,
+        earn: { total: tierEarn - nowEarn },
+        score: (tierEarn - nowEarn) * lift(itemCategory(it)) * 1.1 });
+    });
+  });
+
   money.sort((a,b)=> b.score - a.score);
   const picks = money.slice(0, FEED_MAX_MONEY_CARDS);
 
   const cards = [{ kind:'hello', key:'hello', picks }];
+
+  // Warm leads first: someone asked, on his own catalogue page, and every
+  // hour unanswered makes them likelier to buy somewhere else.
+  (myInquiries||[]).filter(q=>!q.handled_at)
+    .sort((a,b)=> String(b.created_at||'').localeCompare(String(a.created_at||'')))
+    .slice(0, 3)
+    .forEach(q=> cards.push({ kind:'ask', key:`ask:${q.id}`, inq: q, ...feedInquiryMatch(q) }));
+
+  // Money already his, waiting on one move from him.
+  const waiting = feedMoneyWaiting(now);
+  if(waiting.length) cards.push({ kind:'waiting', key:'waiting', rows: waiting });
   const extras = [];
 
   const achievements = computeAchievements();
@@ -3768,6 +3901,9 @@ const FD_ICON = {
   check: '<svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg>',
   plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
   clock: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  bell: '<svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4"/></svg>',
+  box: '<svg viewBox="0 0 24 24"><path d="M3 8l9-4 9 4-9 4-9-4z"/><path d="M3 8v8l9 4 9-4V8"/></svg>',
+  lock: '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
   phone: '<svg viewBox="0 0 24 24"><path d="M5 4h4l2 5-3 2a11 11 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>',
   flame: '<svg viewBox="0 0 24 24"><path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 1-9z"/></svg>',
   trophy: '<svg viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4M12 14v4M8 21h8"/></svg>',
@@ -3782,6 +3918,12 @@ function fdRing(pct, size, stroke, color, track){
     <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${track}" stroke-width="${stroke}"/>
     <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}"
       stroke-linecap="round" stroke-dasharray="${on.toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 ${size/2} ${size/2})"/></svg>`;
+}
+// "1 box", "10 boxes" -- a count is read aloud, so it has to sound right.
+function fdUnits(n, unit){
+  const u = String(unit||'unit').trim();
+  if(Number(n) === 1 || /s$/i.test(u)) return `${n} ${u}`;
+  return `${n} ${/(x|ch|sh)$/i.test(u) ? u + 'es' : u + 's'}`;
 }
 function fdMedia(it){
   return it && it.image
@@ -3804,22 +3946,23 @@ function feedCardHTML(card, i, cards){
   const d = `data-fd-i="${i}"`;
   if(card.kind === 'hello'){
     const reach = card.picks.reduce((s,p)=> s + (p.earn.total||0), 0);
-    const parts = { bonus:0, due:0, addon:0 };
+    const parts = { bonus:0, due:0, addon:0, bulk:0 };
     card.picks.forEach(p=>{ parts[p.kind] = (parts[p.kind]||0) + (p.earn.total||0); });
     const g = fdGoalState(now);
     const streak = computeSellingStreak();
-    const segs = [['bonus','#FFB86B'],['due','#4FA3E0'],['addon','#B794F6']];
+    const segs = [['bonus','#FFB86B'],['due','#4FA3E0'],['addon','#B794F6'],['bulk','#FFD27A']];
     let acc = 0;
     const r = 120, c = 2*Math.PI*r;
     const arcs = reach > 0 ? segs.map(([k,col])=>{
       const len = parts[k] / reach * c; const s = `<circle cx="150" cy="150" r="${r}" fill="none" stroke="${col}" stroke-width="26" stroke-dasharray="0 ${acc.toFixed(1)} ${len.toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 150 150)"/>`;
       acc += len; return s; }).join('') : '';
     const stories = card.picks.slice(0, 4).map((p, k)=>{
-      const col = p.kind==='bonus' ? '#FFB86B' : p.kind==='due' ? '#4FA3E0' : '#B794F6';
+      const col = p.kind==='bonus' ? '#FFB86B' : p.kind==='due' ? '#4FA3E0' : p.kind==='bulk' ? '#FFD27A' : '#B794F6';
       const inner = p.kind==='due'
         ? `<span class="fd-st-in fd-st-tx">${esc(clientInitials(p.client.name))}</span>`
         : `<span class="fd-st-in">${p.item.image ? `<img src="${esc(p.item.image)}" alt="">` : categoryIconSVG(itemCategory(p.item))}</span>`;
-      return `<button type="button" class="fd-st" data-fd-jump="${k+1}" style="--fd-ring:${col}" aria-label="Go to pick ${k+1}">${inner}<b>+${fmtCompactUGX(p.earn.total)}</b></button>`;
+      const at = cards.findIndex(x=>x===p);
+      return `<button type="button" class="fd-st" data-fd-jump="${at}" style="--fd-ring:${col}" aria-label="Go to pick ${k+1}">${inner}<b>+${fmtCompactUGX(p.earn.total)}</b></button>`;
     }).join('');
     return `<section class="fd-card fd-hello" ${d}>
       <div class="fd-top"><span class="fd-me">${esc(agentInitials())}</span><b class="fd-hi">${esc(fxGreetName())}</b>
@@ -3830,8 +3973,17 @@ function feedCardHTML(card, i, cards){
         <div class="fd-ring-c"><span class="fd-k">${reach > 0 ? 'IN REACH' : 'TODAY'}</span><b class="fd-big fd-mint">${reach > 0 ? fmtCompactUGX(reach) : '&mdash;'}</b>
           <span class="fd-s">${reach > 0 ? `${card.picks.length} pick${card.picks.length===1?'':'s'}` : 'nothing picked yet'}</span></div>
       </div>
+      ${(()=>{
+        const askAt = cards.findIndex(x=>x.kind==='ask'), asks = cards.filter(x=>x.kind==='ask').length;
+        const wAt = cards.findIndex(x=>x.kind==='waiting');
+        const wSum = wAt >= 0 ? cards[wAt].rows.reduce((s2,r)=> s2 + (r.earn||0), 0) : 0;
+        const chips = [];
+        if(asks) chips.push(`<button type="button" class="fd-chip fd-chip-mint" data-fd-jump="${askAt}">${fdIcon('bell')}${asks} asked you</button>`);
+        if(wAt >= 0) chips.push(`<button type="button" class="fd-chip fd-chip-gold" data-fd-jump="${wAt}">${fdIcon('box')}+${fmtCompactUGX(wSum)} waiting</button>`);
+        return chips.length ? `<div class="fd-chips">${chips.join('')}</div>` : '';
+      })()}
       ${stories ? `<div class="fd-stories">${stories}</div>` : ''}
-      <button type="button" class="fd-cta fd-cta-mint" data-fd-jump="1">${card.picks.length ? 'Swipe up to start' : 'See what is new'}${fdIcon('up')}</button>
+      <button type="button" class="fd-cta fd-cta-mint" data-fd-jump="1">${cards.length > 2 ? 'Swipe up to start' : 'See what is new'}${fdIcon('up')}</button>
     </section>`;
   }
   if(card.kind === 'bonus'){
@@ -3967,6 +4119,59 @@ function feedCardHTML(card, i, cards){
       <button type="button" class="fd-cta fd-cta-amber" data-fd-act="lesson-ok">${l.id==='cluster' ? 'Show me the bonus items' : 'Got it'}</button>
     </section>`;
   }
+  if(card.kind === 'ask'){
+    const q = card.inq;
+    const phone = String(q.customer_phone||'').replace(/[^\d+]/g,'');
+    const shown = card.item ? [card.item] : card.matches;
+    return `<section class="fd-card fd-ask" ${d}>
+      <div class="fd-top"><span class="fd-badge fd-badge-mint">${fdIcon('bell')}asked ${esc(inquiryAgoLabel(q.created_at))}</span></div>
+      <div class="fd-who"><span class="fd-av fd-av-lg fd-av-mint">${esc(clientInitials(q.customer_name||'?'))}</span><b>${esc(q.customer_name||'Someone')}</b></div>
+      <div class="fd-bubble">${q.message ? esc(q.message) : 'Asked you to get in touch'}</div>
+      ${shown.length ? `<div class="fd-regs">${shown.map(it=>`<span class="fd-reg">${it.image ? `<img src="${esc(it.image)}" alt="">` : categoryIconSVG(itemCategory(it))}<b>${esc(it.name)}</b><span class="fd-m">${fmtCompactUGX(it.ourPrice || it.floorPrice)}</span></span>`).join('')}</div>` : ''}
+      <div class="fd-rail">
+        ${phone ? `<a class="fd-rb" href="tel:${esc(phone)}">${fdIcon('phone')}<span>Call</span></a>` : ''}
+        ${shown.length ? `<button type="button" class="fd-rb" data-fd-act="quote">${fdIcon('plus')}<span>Quote</span></button>` : ''}
+        <button type="button" class="fd-rb" data-fd-act="ask-done">${fdIcon('check')}<span>Done</span></button></div>
+      ${phone ? `<button type="button" class="fd-cta fd-cta-wa" data-fd-act="ask-reply"><span class="fd-avs"><span class="fd-av">${esc(clientInitials(q.customer_name||'?'))}</span></span><span class="fd-cta-t">Reply to ${esc(firstWord(q.customer_name||'them'))}</span><span class="fd-cta-i">${FD_ICON.send}</span></button>`
+        : `<button type="button" class="fd-cta fd-cta-white" data-fd-act="ask-done">Mark as handled</button>`}
+    </section>`;
+  }
+  if(card.kind === 'waiting'){
+    const total = card.rows.reduce((s,r)=> s + (r.earn||0), 0);
+    const LABEL = { claim:'bonus to claim', pickup:'ready at the shop', prepay:'pay to start' };
+    const ICON = { claim:'star', pickup:'box', prepay:'lock' };
+    return `<section class="fd-card fd-waiting" ${d}>
+      <span class="fd-k fd-k-c">WAITING FOR YOU</span>
+      <div class="fd-stack" aria-hidden="true">${card.rows.slice(0,5).map((r,k)=>`<i style="bottom:${k*14}px"></i>`).join('')}</div>
+      <b class="fd-big fd-mint fd-center">+${fmtCompactUGX(total)}</b>
+      <span class="fd-s fd-center">yours, one move away</span>
+      <div class="fd-wrows">${card.rows.slice(0,4).map((r,k)=>`
+        <button type="button" class="fd-wrow" data-fd-act="waiting" data-fd-row="${k}">
+          <span class="fd-wic fd-wic-${r.kind}">${fdIcon(ICON[r.kind])}</span>
+          <span class="fd-wb"><b>${r.kind==='claim' ? esc(monthName(r.month)) : esc(r.client ? r.client.name : 'Your order')}</b><span>${LABEL[r.kind]}${r.kind!=='claim' && r.amount ? ` &middot; <span class="fd-m">${fmtCompactUGX(r.amount)}</span>` : ''}</span></span>
+          <b class="fd-m fd-mint">+${fmtCompactUGX(r.earn)}</b>
+        </button>`).join('')}</div>
+    </section>`;
+  }
+  if(card.kind === 'bulk'){
+    const it = card.item, c = card.client;
+    const max = Math.max(card.tierEarn, 1);
+    return `<section class="fd-card fd-bulk" ${d}>
+      ${fdMedia(it)}<span class="fd-shade"></span>
+      <div class="fd-who fd-who-tl"><span class="fd-av">${esc(clientInitials(c.name))}</span><b>${esc(firstWord(c.name))}</b><span class="fd-badge fd-badge-amber">buys ${card.usual}</span></div>
+      <div class="fd-tier" aria-label="${card.usual} earns you ${fmtCompactUGX(card.nowEarn)}; ${card.tierQty} earns you ${fmtCompactUGX(card.tierEarn)}">
+        <div><b class="fd-m">${fmtCompactUGX(card.nowEarn)}</b><i style="height:${Math.max(10, Math.round(card.nowEarn/max*130))}px"></i><span>${esc(fdUnits(card.usual, it.unit))}</span></div>
+        <span class="fd-tier-arrow">${fdIcon('up')}</span>
+        <div><b class="fd-m fd-mint">${fmtCompactUGX(card.tierEarn)}</b><i class="hi" style="height:130px"></i><span>${esc(fdUnits(card.tierQty, it.unit))}</span></div>
+      </div>
+      <div class="fd-earn"><span class="fd-pill fd-pill-mint"><b>+${fmtCompactUGX(card.earn.total)}</b> more</span></div>
+      <div class="fd-rail">
+        <button type="button" class="fd-rb" data-fd-act="notme">${fdIcon('no')}<span>Not me</span></button></div>
+      <div class="fd-cap"><b>${esc(it.name)} &middot; <span class="fd-m">${card.tierQty}+</span> costs you <span class="fd-m">${fmtNum(card.tierCost)}</span></b>
+        <span class="fd-tags"><span>#was${fmtNum(it.floorPrice)}</span><span>#bulkPrice</span></span></div>
+      <button type="button" class="fd-cta fd-cta-wa" data-fd-act="quote"><span class="fd-avs"><span class="fd-av">${esc(clientInitials(c.name))}</span></span><span class="fd-cta-t">Quote ${esc(firstWord(c.name))} ${card.tierQty}</span><span class="fd-cta-i">${FD_ICON.plus}</span></button>
+    </section>`;
+  }
   if(card.kind === 'done'){
     const reach = card.picks.reduce((s,p)=> s + (p.earn.total||0), 0);
     const g = fdGoalState(now);
@@ -3985,6 +4190,7 @@ function feedCardHTML(card, i, cards){
 let feedCards = [];
 async function openFeedView(){
   const view = document.getElementById('ag_feedView');
+  if(!feedClaimsLoaded) feedEnsureClaims().then(()=>{ if(lastMainTab === 'feed') renderFeed(); });
   if(!catalog.length || !browseDataLoaded){
     view.innerHTML = `<div class="fd-scroller"><section class="fd-card fd-hello"><div class="fd-ring-c fd-loading"><span class="ag-spinner"></span></div></section></div>`;
     await ensureBrowseDataLoaded();
@@ -4115,7 +4321,31 @@ document.getElementById('ag_feedView').addEventListener('click', async (e)=>{
   if(act === 'quote'){
     feedRemember(card, 'acted');
     if(card.client) selectClient(card.client);
-    openAddItemPanel(card.item);
+    const item = card.item || (card.matches && card.matches[0]);
+    if(item) openAddItemPanel(item, card.kind === 'bulk' ? { qty: card.tierQty } : undefined);
+    return;
+  }
+  if(act === 'ask-reply'){
+    const q = card.inq;
+    const phone = String(q.customer_phone||'').replace(/[^\d]/g,'');
+    const it = card.item || (card.matches && card.matches[0]);
+    const text = `Hello ${firstWord(q.customer_name||'')}, thanks for asking.`
+      + (it ? ` ${it.name}${it.variantLabel ? ' ' + it.variantLabel : ''} is UGX ${fmtNum(it.ourPrice || it.floorPrice)}.` : '')
+      + ` How many do you need?`;
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
+    return;
+  }
+  if(act === 'ask-done'){
+    await toggleInquiryHandled(Number(card.inq.id));
+    const i = Number(sec.dataset.fdI);
+    renderFeed(); feedJump(Math.min(i, feedCards.length-1));
+    return;
+  }
+  if(act === 'waiting'){
+    const r = card.rows[Number(btn.dataset.fdRow)];
+    if(!r) return;
+    if(r.kind === 'claim'){ switchTab('earnings'); return; }
+    openOrderHistoryScreen('feed');
     return;
   }
   if(act === 'client'){

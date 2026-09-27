@@ -87,6 +87,8 @@ const fn = (name) => extractFunction(src, name, 'agent.html');
     promotedMap: () => new Map(promotions.map((p) => [`${p.productId}::`, p])),
     computeAchievements: () => [],
     seenAchievementIds: () => new Set(),
+    myInquiries: [], usualQty: () => 0, feedInquiryMatch: () => ({ item: null, matches: [] }),
+    feedMoneyWaiting: () => [],
   };
   let api;
   try { api = compileScope(names.map(fn), env, ['buildFeedCards', 'feedPrefs', 'saveFeedPrefs']); }
@@ -113,6 +115,71 @@ const fn = (name) => extractFunction(src, name, 'agent.html');
     t.check(api.buildFeedCards(new Date()).some((c) => c.kind === 'bonus'),
       'and it comes back once the 30 days are up');
   }
+}
+
+/* ---------- 5. a catalogue request finds what it is about -------------- */
+{
+  const catalog = [
+    { productId: 'cg', variantIdx: null, name: 'Cordless grinder 18V', category: 'Power tools' },
+    { productId: 'd', variantIdx: null, name: 'Cutting discs', category: 'Accessories' },
+  ];
+  let feedInquiryMatch;
+  try {
+    ({ feedInquiryMatch } = compileScope([fn('feedInquiryMatch')], {
+      catalog, catalogEntry: (pid) => catalog.find((c) => c.productId === pid) || null,
+    }, ['feedInquiryMatch']));
+  } catch (e) { /* reported below */ }
+  t.check(typeof feedInquiryMatch === 'function', 'feedInquiryMatch compiles');
+  if (feedInquiryMatch) {
+    t.check(feedInquiryMatch({ product_id: 'd' }).item === catalog[1], 'a request sent from an item is about that item');
+    const m = feedInquiryMatch({ message: 'Do you have a cordless grinder?' });
+    t.check(m.item === null && m.matches[0] === catalog[0], 'a request in words is matched to the items it names');
+    t.check(feedInquiryMatch({ message: 'hi' }).matches.length === 0, 'and a greeting matches nothing rather than everything');
+  }
+}
+
+/* ---------- 6. money waiting on one move ------------------------------ */
+{
+  const now = new Date('2026-09-27T10:00:00');
+  const orders = [
+    { id: 1, status: 'pending_delivery', deliveryMode: 'agent_pickup', agentClientId: 1, items: [] },
+    { id: 2, status: 'draft', agentPaymentStatus: 'unpaid', amountPaid: 50, agentClientId: 1,
+      items: [{ sellPrice: 100, qty: 3 }] },
+    { id: 3, status: 'draft', agentPaymentStatus: 'paid', items: [] },
+    { id: 4, status: 'pending_delivery', deliveryMode: 'agent_pickup', voided: true, items: [] },
+  ];
+  const env = {
+    feedClaimsLoaded: true, myOrders: orders, agentClients: [{ id: 1, name: 'John' }],
+    myAgent: { paymentTerm: 'prepay' },
+    currentMonthKey: () => '2026-09',
+    shiftMonth: (m, d) => ({ '-1': '2026-08', '-2': '2026-07', '-3': '2026-06' })[String(d)],
+    monthEarnings: (m) => ({ bonus: m === '2026-08' ? 7000 : m === '2026-07' ? 3000 : 0 }),
+    findClaim: (m) => (m === '2026-07' ? { month: m } : null),
+    orderTotal: () => 900, orderEarnings: (o) => ({ margin: o.id * 1000 }),
+  };
+  let feedMoneyWaiting;
+  try { ({ feedMoneyWaiting } = compileScope([fn('feedMoneyWaiting')], env, ['feedMoneyWaiting'])); } catch (e) { /* below */ }
+  t.check(typeof feedMoneyWaiting === 'function', 'feedMoneyWaiting compiles');
+  if (feedMoneyWaiting) {
+    const rows = feedMoneyWaiting(now);
+    const kinds = rows.map((r) => r.kind).sort().join(',');
+    t.check(kinds === 'claim,pickup,prepay', `a finished month's unclaimed bonus, an order at the counter and a prepay to start (${kinds})`);
+    t.check(!rows.some((r) => r.kind === 'claim' && r.month === '2026-07'), 'a month already claimed is not asked for again');
+    t.check(rows.find((r) => r.kind === 'prepay').amount === 250, 'the prepay row is what is still owed to start it');
+    t.check(rows[0].earn >= rows[rows.length - 1].earn, 'what pays him most comes first');
+  }
+}
+
+/* ---------- 7. a bulk nudge is a step, and it pays him ------------------ */
+{
+  const block = (/\/\/ Buying a few more would drop his cost[\s\S]*?money\.sort/.exec(src) || [''])[0];
+  t.check(/usual >= tierQty/.test(block), 'no nudge when the usual order already reaches the tier');
+  t.check(/tierQty > usual \* 3/.test(block), 'nor when the tier is more than three times the usual order');
+  t.check(/if\(tierEarn <= nowEarn\) return;/.test(block), 'and only when crossing the line pays him more than the usual order');
+  let fdUnits;
+  try { ({ fdUnits } = compileScope([fn('fdUnits')], {}, ['fdUnits'])); } catch (e) { /* below */ }
+  t.check(fdUnits && fdUnits(1, 'box') === '1 box' && fdUnits(10, 'box') === '10 boxes' && fdUnits(3, 'pc') === '3 pcs',
+    'counts read aloud correctly: 1 box, 10 boxes, 3 pcs');
 }
 
 /* ---------- 4. Feed is a tab of its own, and the first one ------------- */
