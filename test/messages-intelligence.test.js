@@ -252,6 +252,18 @@ const S = scope;
     'the phone sends through the lane\'s own send, with the words it shows');
 }
 
+/* ---------- 8e. Intelligence is drawn as its canvas ----------
+   The strip, three findings, and six readings in pairs -- each its own
+   builder, so one that cannot read its books says so without taking the
+   page down with it. */
+{
+  const intel = extractFunction(src, 'renderMessagesIntel', 'index.html');
+  ['msgIntelStripHTML', 'msgIntelGoodsFind', 'msgIntelPairFind', 'msgIntelSlipFind', 'msgIntelReasonsHTML', 'msgIntelHeatHTML',
+   'msgIntelSleepingHTML', 'msgIntelAsksHTML', 'msgIntelDueHTML', 'msgIntelEarnsHTML']
+    .forEach((n) => t.check(new RegExp(n + '\\(').test(intel), `Intelligence draws ${n}`));
+  t.check(/const safe = \(f, name\)=>\{ try\{/.test(intel), 'and each reading fails on its own, by name');
+}
+
 /* ---------- 9. templates: words filled from the books, and judged ---------- */
 {
   const T = compileScope([

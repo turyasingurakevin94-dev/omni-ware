@@ -497,8 +497,21 @@ const bookRow = (id, reason, held) => ({ id, name: (data.customers.find((c) => c
   t.check(/data-fuptab="tpls"/.test(sec) && /id="fup_tpl_pane"/.test(sec), 'and Templates has its own pane');
   t.check(/data-fuptab="intel"/.test(sec) && /id="fup_intel_pane"/.test(sec),
     'and the middle one is Intelligence, with its own pane');
+  /* ONE ACCENT PER READING, NOT NONE. This said the page carries no
+     accent at all, because nothing on a page of readings was a next
+     move. The "Desktop · Intelligence" canvas changed that on purpose:
+     a finding now ends in the one act it calls for -- ring the big
+     buyer who stopped, keep an asked-for item stocked, open To post for
+     money sleeping on the shelf -- and that act is red, as a lane's one
+     send is. The claim the old check protected still holds, at the
+     size of a panel: the page itself (renderMessagesIntel) draws no
+     accent, and no reading carries more than one KIND of red act. */
   t.check(!/btn-accent/.test(extractFunction(src, 'renderMessagesIntel', 'index.html')),
-    'which carries no accent — nothing on a page of readings is the next move');
+    'the page itself carries no accent — each reading brings its own act');
+  ['msgIntelStripHTML', 'msgIntelGoodsFind', 'msgIntelPairFind', 'msgIntelReasonsHTML', 'msgIntelHeatHTML', 'msgIntelDueHTML', 'msgIntelEarnsHTML']
+    .forEach((n) => t.check(!/btn-accent/.test(extractFunction(src, n, 'index.html')), `${n} is a reading with no red act`));
+  ['msgIntelSlipFind', 'msgIntelSleepingHTML', 'msgIntelAsksHTML']
+    .forEach((n) => t.check(((extractFunction(src, n, 'index.html').match(/btn btn-accent/g)) || []).length === 1, `${n} ends in one red act, as its canvas draws it`));
   /* STILL THE REGISTER'S RAIL, drawn beside the history it measures --
      but the rail is the SCREEN's now, not one this view builds for
      itself. The Messages console stands one .ow-grid and one .ow-side in
