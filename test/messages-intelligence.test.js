@@ -221,6 +221,19 @@ const S = scope;
     'the band is cleared for the lanes with heads of their own and drawn for To message -- one if/else chain, nothing wedged inside it');
 }
 
+/* ---------- 8d. Waiting on you has a phone of its own ----------
+   The phone draws the "Phone · Waiting on you" canvas, and its Send
+   reads the words the owner can see: the edited ones, or the quick
+   answer they picked -- never a copy they cannot. */
+{
+  const contact = extractFunction(src, 'renderFollowUpsContact', 'index.html');
+  t.check(/msgIsPhone\(\) && fupWhy === 'inbox' \? msgPhoneWaitHTML\(now\) : msgLaneHTML\(fupWhy, now\)/.test(contact),
+    'on the phone Waiting on you is drawn by its phone builder; the desk keeps its own');
+  const ph = extractFunction(src, 'msgPhoneWaitHTML', 'index.html');
+  t.check(/msg-wait-send/.test(ph) && /msgWaitDraftOf\(up\)/.test(ph),
+    'the phone sends through the lane\'s own send, with the words it shows');
+}
+
 /* ---------- 9. templates: words filled from the books, and judged ---------- */
 {
   const T = compileScope([
