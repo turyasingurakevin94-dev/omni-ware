@@ -1503,7 +1503,7 @@
   /* ---- the tab bar ---- */
   .fx-tabbar{position:fixed;bottom:0;left:0;right:0;z-index:50;height:64px;
     max-width:520px;margin:0 auto;background:var(--fx-card);border-top:1px solid var(--fx-line);
-    display:grid;grid-template-columns:repeat(3,1fr);align-items:center;}
+    display:grid;grid-template-columns:repeat(4,1fr);align-items:center;}
   .fx-tab{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;
     align-items:center;justify-content:center;gap:4px;min-height:44px;height:100%;
     color:var(--fx-ink-3);font-size:11px;font-weight:600;}
@@ -1517,6 +1517,216 @@
     font-size:11px;font-weight:700;line-height:17px;text-align:center;}
   .fx-tab.active{color:var(--fx-ink);}
   .fx-tab.active .icon{fill:currentColor;stroke:none;}
+
+  /* ---- Feed: one full-screen card at a time, swipe up for the next ----
+     Dark, like the thing it borrows its shape from, and every card one
+     picture, one number and one button. The tab bar stays: the feed is a
+     place, not a mode he has to find his way out of. */
+  /* Pinned between the top of the screen and the tab bar, so no banner
+     or wrapper padding above it can push the bottom of a card -- where
+     its one button lives -- underneath the bar. */
+  #ag_feedView{position:fixed;left:0;right:0;top:0;bottom:64px;z-index:5;background:#05070D;}
+  .fd-scroller{height:100%;overflow-y:auto;
+    scroll-snap-type:y mandatory;overscroll-behavior:contain;max-width:520px;margin:0 auto;
+    scrollbar-width:none;}
+  .fd-scroller::-webkit-scrollbar{display:none;}
+  .fd-card{position:relative;height:100%;scroll-snap-align:start;scroll-snap-stop:always;overflow:hidden;
+    color:#fff;background:#0A0F1E;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:14px;padding:64px 16px 88px;transition:opacity .25s, transform .25s;}
+  .fd-card.fd-gone{opacity:0;transform:translateX(-40px);}
+  .fd-bonus,.fd-addon{background:#1A1410;justify-content:flex-end;align-items:stretch;}
+  .fd-hello{background:#0A0F1E;}
+  .fd-due{background:#0F2A3F;}
+  .fd-about{background:#14183A;}
+  .fd-goal{background:#22173F;}
+  .fd-win{background:#0E2E22;}
+  .fd-lesson{background:#2E1C0C;}
+  .fd-m{font-family:var(--font-money);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+  .fd-mint{color:#6FE0A6;}
+  .fd-center{align-self:center;text-align:center;}
+  .fd-k{font-size:12px;font-weight:800;letter-spacing:.12em;color:rgba(255,255,255,.65);}
+  .fd-k-c{position:absolute;top:18px;left:0;right:0;text-align:center;}
+  .fd-big{font-family:var(--font-money);font-variant-numeric:tabular-nums;font-size:48px;font-weight:700;line-height:1;letter-spacing:-.03em;}
+  .fd-s{font-size:14px;font-weight:600;color:rgba(255,255,255,.62);}
+  .fd-i{display:inline-flex;}
+  .fd-i svg,.fd-cta-i svg,.fd-x svg,.fd-bigcheck svg,.fd-pc-star svg,.fd-pc-add svg,.fd-tray-n svg,.fd-trophy svg,.fd-bdg svg{
+    width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+
+  /* the picture, full bleed, and a shade so the words on it read */
+  .fd-media{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+  .fd-media-icon{display:flex;align-items:center;justify-content:center;background:#1B2540;color:#9AA3B5;}
+  .fd-media-icon svg{width:46%;height:46%;fill:none;stroke:currentColor;stroke-width:1.2;}
+  .fd-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.35) 0%,rgba(0,0,0,0) 22%,rgba(0,0,0,0) 45%,rgba(0,0,0,.78) 100%);}
+
+  .fd-top{position:absolute;top:14px;left:16px;right:16px;display:flex;align-items:center;gap:10px;}
+  .fd-me{width:40px;height:40px;border-radius:50%;background:#F6E4F1;color:#7A3268;font-weight:800;
+    display:flex;align-items:center;justify-content:center;border:2px solid #6FE0A6;flex:none;}
+  .fd-me-lg{width:96px;height:96px;font-size:32px;border-width:4px;border-color:#B794F6;}
+  .fd-hi{font-size:18px;flex:1;min-width:0;}
+  .fd-stk{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:999px;background:#FFB86B;color:#3A2410;transform:rotate(4deg);}
+  .fd-stk .fd-i svg{width:16px;height:16px;}
+  .fd-goalchip{all:unset;cursor:pointer;position:absolute;top:66px;left:16px;display:inline-flex;align-items:center;gap:8px;
+    padding:5px 12px 5px 5px;border-radius:999px;background:rgba(255,255,255,.1);font-family:var(--font-money);font-size:14px;}
+  .fd-done .fd-goalchip{position:static;}
+
+  .fd-ring{position:relative;width:300px;height:300px;max-width:78vw;max-height:78vw;}
+  .fd-ring svg{width:100%;height:100%;}
+  .fd-ring-c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;}
+  .fd-loading{position:static;}
+  .fd-stories{display:flex;gap:12px;justify-content:center;}
+  .fd-st{all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;font-family:var(--font-money);font-size:13px;color:#6FE0A6;}
+  .fd-st-in{width:62px;height:62px;border-radius:50%;border:3px solid #05070D;box-shadow:0 0 0 3px var(--fd-ring,#fff);
+    background:#1B2540;color:#C9D1E4;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .fd-st-in img{width:100%;height:100%;object-fit:cover;}
+  .fd-st-in svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:1.6;}
+  .fd-st-tx{font-family:inherit;font-weight:800;color:#fff;font-size:16px;}
+
+  /* the one thing to do, always at the bottom, always a pill */
+  .fd-cta{all:unset;box-sizing:border-box;cursor:pointer;position:absolute;left:16px;right:16px;bottom:20px;min-height:54px;border-radius:27px;
+    display:flex;align-items:center;justify-content:center;gap:10px;padding:0 8px;font-size:16px;font-weight:800;text-align:center;}
+  .fd-cta:focus-visible{outline:3px solid #fff;outline-offset:2px;}
+  .fd-cta .fd-i svg{width:20px;height:20px;}
+  .fd-cta-mint{background:#6FE0A6;color:#05070D;}
+  .fd-cta-wa{background:#25A35A;color:#fff;justify-content:flex-start;padding-left:14px;}
+  .fd-cta-white{background:#fff;color:#0A0F1E;}
+  .fd-cta-ghost{background:transparent;color:#fff;box-shadow:inset 0 0 0 2px rgba(255,255,255,.3);}
+  .fd-cta-purple{background:#B794F6;color:#1A1233;}
+  .fd-cta-amber{background:#FFB86B;color:#2E1C0C;}
+  .fd-cta-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .fd-cta-i{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;flex:none;}
+  .fd-cta-i svg{width:20px;height:20px;}
+  .fd-two{position:absolute;left:16px;right:16px;bottom:20px;display:flex;gap:10px;}
+  .fd-two .fd-cta{position:static;flex:1;}
+  .fd-avs{display:flex;padding-left:9px;flex:none;}
+  .fd-av{width:30px;height:30px;border-radius:50%;background:#E3EEF7;color:#1A5A8A;border:2px solid currentColor;
+    display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;margin-left:-9px;flex:none;}
+  .fd-av-lg{width:88px;height:88px;font-size:30px;margin:0;border:4px solid #4FA3E0;}
+
+  /* stickers and pills on top of the picture */
+  .fd-sticker{position:absolute;top:18px;left:16px;display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:14px;
+    background:#FFB86B;color:#3A2410;transform:rotate(-5deg);}
+  .fd-sticker:empty{display:none;}
+  .fd-sticker > span:first-child{display:flex;flex-direction:column;line-height:1;}
+  .fd-sticker small{font-size:11px;font-weight:900;letter-spacing:.08em;}
+  .fd-sticker b{font-family:var(--font-money);font-size:24px;}
+  .fd-cd{position:relative;display:flex;}
+  .fd-cd b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;}
+  .fd-earn{position:absolute;top:110px;right:16px;display:flex;flex-direction:column;align-items:flex-end;gap:10px;}
+  .fd-earn-l{position:static;align-items:center;}
+  .fd-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:800;}
+  .fd-pill b{font-family:var(--font-money);font-size:22px;}
+  .fd-pill-mint{background:#6FE0A6;color:#05070D;transform:rotate(3deg);}
+  .fd-coins{display:flex;align-items:flex-end;gap:4px;}
+  .fd-coins i{display:block;width:20px;border-radius:7px;background:#FFD27A;}
+  .fd-coins i.on{background:#6FE0A6;}
+  .fd-coins b{font-family:var(--font-money);font-size:18px;color:#6FE0A6;margin-left:6px;text-shadow:0 1px 4px rgba(0,0,0,.6);}
+
+  /* the right rail: icons first, a word under each */
+  .fd-rail{position:absolute;right:10px;bottom:170px;display:flex;flex-direction:column;align-items:center;gap:16px;}
+  .fd-rb{all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12px;font-weight:700;color:#fff;
+    min-width:48px;min-height:44px;text-shadow:0 1px 3px rgba(0,0,0,.6);text-decoration:none;}
+  .fd-rb .fd-i svg{width:30px;height:30px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));}
+  .fd-rb.on{color:#FFB86B;}
+  .fd-rb.on .fd-i svg{fill:currentColor;}
+  .fd-rb-hot .fd-i{animation:fdPulse 1.6s ease-in-out infinite;}
+  @keyframes fdPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.15);}}
+  .fd-rb:focus-visible{outline:2px solid #fff;outline-offset:2px;border-radius:8px;}
+  .fd-cap{position:absolute;left:16px;right:80px;bottom:90px;display:flex;flex-direction:column;gap:6px;text-shadow:0 1px 4px rgba(0,0,0,.6);}
+  .fd-cap > b{font-size:17px;}
+  .fd-tags{display:flex;flex-wrap:wrap;gap:10px;font-size:13px;font-weight:800;color:#FFD27A;}
+
+  .fd-who{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:20px;}
+  .fd-who-tl{position:absolute;top:14px;left:16px;flex-direction:row;font-size:14px;padding:4px 10px 4px 12px;border-radius:999px;background:rgba(0,0,0,.45);}
+  .fd-who-tl .fd-av{margin:0;}
+  .fd-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:800;}
+  .fd-badge .fd-i svg{width:16px;height:16px;}
+  .fd-badge-blue{background:#4FA3E0;color:#0A0F1E;}
+  .fd-badge-amber{background:#FFB86B;color:#3A2410;}
+  .fd-rhythm{display:flex;flex-direction:column;align-items:center;gap:10px;}
+  .fd-trail{display:flex;align-items:center;gap:18px;position:relative;}
+  .fd-trail::before{content:"";position:absolute;left:0;right:0;top:50%;height:2px;background:rgba(255,255,255,.2);}
+  .fd-trail i{position:relative;width:14px;height:14px;border-radius:50%;background:#4FA3E0;}
+  .fd-trail i.now{width:22px;height:22px;background:transparent;border:3px dashed #6FE0A6;}
+  .fd-rh-n{display:flex;align-items:baseline;gap:6px;}
+  .fd-rh-n b{font-size:40px;}
+  .fd-rh-n span{font-size:15px;color:rgba(255,255,255,.62);font-weight:700;}
+  .fd-regs{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:340px;}
+  .fd-reg{display:flex;align-items:center;gap:6px;padding:4px 10px 4px 4px;border-radius:999px;background:rgba(255,255,255,.1);font-size:13px;max-width:100%;}
+  .fd-reg img,.fd-reg svg{width:28px;height:28px;border-radius:50%;object-fit:cover;flex:none;}
+  .fd-reg svg{fill:none;stroke:#C9D1E4;stroke-width:1.6;padding:4px;background:#1B2540;}
+  .fd-reg b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .fd-dots{position:absolute;top:66px;right:16px;display:grid;grid-template-columns:repeat(5,12px);gap:4px;padding:10px;border-radius:14px;background:rgba(0,0,0,.45);transform:rotate(3deg);}
+  .fd-dots i{width:12px;height:12px;border-radius:50%;background:#6FE0A6;}
+  .fd-dots b{grid-column:1/-1;font-family:var(--font-money);font-size:13px;text-align:center;}
+  .fd-addon .fd-earn{top:170px;}
+
+  /* about: him in the middle, what he is good at around him */
+  .fd-orbit{position:relative;width:320px;height:340px;max-width:90vw;display:flex;align-items:center;justify-content:center;}
+  .fd-orbit::before{content:"";position:absolute;width:240px;height:240px;border-radius:50%;border:2px dashed rgba(255,255,255,.1);}
+  .fd-bub{position:absolute;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;font-weight:700;color:rgba(255,255,255,.78);max-width:110px;text-align:center;}
+  .fd-bub i{font-style:normal;width:74px;height:74px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-money);font-weight:700;font-size:20px;}
+  .fd-bub-0{top:0;left:6px;} .fd-bub-1{top:10px;right:6px;} .fd-bub-2{bottom:10px;right:14px;} .fd-bub-3{bottom:0;left:14px;}
+  .fd-bub-a{background:#FFB86B;color:#3A2410;} .fd-bub-b{background:#B794F6;color:#1A1233;font-size:16px;}
+  .fd-bub-c{background:#6FE0A6;color:#05070D;} .fd-bub-d{background:#4FA3E0;color:#05070D;}
+
+  .fd-goalring{position:relative;width:260px;height:260px;}
+  .fd-goalring svg{width:100%;height:100%;}
+  .fd-days{display:flex;gap:8px;}
+  .fd-day{width:30px;height:30px;border-radius:50%;box-shadow:inset 0 0 0 2px rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;}
+  .fd-day.on{background:#fff;color:#22173F;box-shadow:none;}
+
+  .fd-sticker-w{position:absolute;top:18px;left:50%;transform:translateX(-50%) rotate(-3deg);padding:6px 14px;border-radius:10px;background:#fff;color:#0E2E22;font-weight:900;letter-spacing:.08em;}
+  .fd-trophy{width:140px;height:140px;border-radius:50%;background:#FFB86B;color:#3A2410;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 14px rgba(255,184,107,.14);}
+  .fd-trophy svg{width:70px;height:70px;}
+  .fd-win .fd-big{font-family:inherit;font-size:30px;}
+  .fd-badges{display:flex;gap:12px;align-items:center;}
+  .fd-bdg{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 3px rgba(255,255,255,.25);}
+  .fd-bdg.on{background:#4FA3E0;color:#05070D;box-shadow:none;}
+
+  .fd-lesson .fd-top{justify-content:flex-start;}
+  .fd-bars{display:flex;gap:30px;align-items:flex-end;height:180px;}
+  .fd-bars > div{display:flex;flex-direction:column;align-items:center;gap:6px;}
+  .fd-bars b{font-size:20px;}
+  .fd-bars i{display:block;width:72px;border-radius:10px 10px 4px 4px;background:rgba(255,255,255,.3);}
+  .fd-bars i.hi{background:#FFB86B;}
+  .fd-bars span{font-size:12px;font-weight:700;color:rgba(255,255,255,.7);}
+  .fd-say{position:relative;align-self:stretch;margin:10px 20px 0;padding:14px;border-radius:18px 18px 4px 18px;background:#DCF8C6;color:#1C2233;box-shadow:0 0 0 4px #FFB86B;}
+  .fd-say p{margin:0;font-size:17px;line-height:1.35;}
+  .fd-say-tag{position:absolute;top:-14px;left:-8px;padding:3px 10px;border-radius:999px;background:#FFB86B;color:#3A2410;font-weight:900;font-size:12px;transform:rotate(-8deg);}
+
+  .fd-bigcheck{width:150px;height:150px;border-radius:50%;background:#0F6B43;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 40px rgba(15,107,67,.18);margin-bottom:24px;}
+  .fd-bigcheck svg{width:80px;height:80px;stroke-width:3;}
+  .fd-done .fd-big{font-family:inherit;font-size:30px;}
+  .fd-pk{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
+  .fd-pk i{width:14px;height:14px;border-radius:50%;background:#6FE0A6;}
+
+  /* more like this: a sheet over the card */
+  .fd-sheet-wrap{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;}
+  .fd-sheet{width:100%;max-width:520px;max-height:82vh;background:#111827;color:#fff;border-radius:24px 24px 0 0;display:flex;flex-direction:column;}
+  .fd-grab{display:block;width:40px;height:5px;border-radius:3px;background:rgba(255,255,255,.25);margin:8px auto 0;}
+  .fd-sheet-h{display:flex;align-items:center;padding:10px 16px;}
+  .fd-sheet-h b{flex:1;font-size:18px;}
+  .fd-x{all:unset;cursor:pointer;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;}
+  .fd-x svg{width:18px;height:18px;}
+  .fd-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:0 16px 12px;overflow-y:auto;}
+  .fd-pc{position:relative;border-radius:16px;background:#1B2335;overflow:hidden;display:flex;flex-direction:column;}
+  .fd-pc-im{height:96px;background:#243049;display:flex;align-items:center;justify-content:center;color:#9AA3B5;}
+  .fd-pc-im img{width:100%;height:100%;object-fit:cover;}
+  .fd-pc-im svg{width:44px;height:44px;fill:none;stroke:currentColor;stroke-width:1.4;}
+  .fd-pc-tag{position:absolute;left:8px;top:8px;padding:3px 8px;border-radius:8px;background:#FFB86B;color:#3A2410;font-size:11px;font-weight:900;}
+  .fd-pc-star{all:unset;cursor:pointer;position:absolute;right:6px;top:6px;width:44px;height:44px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);color:#FFB86B;}
+  .fd-pc-star.on{background:#FFB86B;color:#3A2410;}
+  .fd-pc-b{padding:8px 52px 10px 10px;display:flex;flex-direction:column;gap:2px;font-size:12px;color:#9AA3B5;min-width:0;}
+  .fd-pc-b b{font-size:13px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .fd-pc-e{color:#6FE0A6;font-weight:800;font-size:13px;}
+  .fd-pc-add{all:unset;cursor:pointer;position:absolute;right:6px;bottom:6px;width:44px;height:44px;border-radius:50%;background:#fff;color:#111827;display:flex;align-items:center;justify-content:center;}
+  .fd-empty{padding:20px 16px;color:#9AA3B5;}
+  .fd-tray{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px 18px;border-top:1px solid rgba(255,255,255,.08);background:#0B1020;}
+  .fd-tray-n{display:flex;align-items:center;gap:6px;color:#FFB86B;font-weight:700;}
+  .fd-tray-n svg{width:18px;height:18px;fill:currentColor;}
+  .fd-tray-n b{font-family:var(--font-money);color:#fff;}
 
 </style>
 </head>
@@ -2106,7 +2316,14 @@
 </div>
 </div>
 
+<div id="ag_feedView" style="display:none;"></div>
+
 <nav class="fx-tabbar" id="ag_tabbar">
+  <button type="button" class="fx-tab" data-tab="feed">
+    <svg class="icon" viewBox="0 0 24 24" data-off><rect x="5.5" y="2.8" width="13" height="18.4" rx="2.6"/><path d="M10.2 9.2l4.4 2.8-4.4 2.8z"/></svg>
+    <svg class="icon" viewBox="0 0 24 24" data-on style="display:none;"><path fill-rule="evenodd" d="M8.1 2h7.8A3.1 3.1 0 0 1 19 5.1v13.8a3.1 3.1 0 0 1-3.1 3.1H8.1A3.1 3.1 0 0 1 5 18.9V5.1A3.1 3.1 0 0 1 8.1 2zm2.4 6.6a.8.8 0 0 0-1.2.7v5.4a.8.8 0 0 0 1.2.7l4.3-2.7a.8.8 0 0 0 0-1.4z"/></svg>
+    Feed
+  </button>
   <button type="button" class="fx-tab" data-tab="home">
     <svg class="icon" viewBox="0 0 24 24" data-off><path d="M6 16.2a6 6 0 0 1 12 0"/><path d="M3 19.6h18"/><path d="M12 3.8v2.2M5.1 7.1l1.6 1.6M18.9 7.1l-1.6 1.6"/></svg>
     <svg class="icon" viewBox="0 0 24 24" data-on style="display:none;"><path fill-rule="evenodd" d="M12 2.6a1 1 0 0 1 1 1v2.2a1 1 0 1 1-2 0V3.6a1 1 0 0 1 1-1zM4.4 5.8a1 1 0 0 1 1.4 0l1.5 1.5a1 1 0 1 1-1.4 1.4L4.4 7.2a1 1 0 0 1 0-1.4zM19.6 5.8a1 1 0 0 1 0 1.4l-1.5 1.5a1 1 0 0 1-1.4-1.4l1.5-1.5a1 1 0 0 1 1.4 0zM12 9.4a6.2 6.2 0 0 0-6.1 5.2h12.2A6.2 6.2 0 0 0 12 9.4zM2.6 17.6a1 1 0 0 1 1-1h16.8a1 1 0 1 1 0 2H3.6a1 1 0 0 1-1-1zM6.6 20.6a1 1 0 0 1 1-1h8.8a1 1 0 1 1 0 2H7.6a1 1 0 0 1-1-1z"/></svg>
@@ -3269,8 +3486,664 @@ async function loadAgentHomeData(){
   if(sessionProvenFresh) saveOfflineCache(true);
 }
 
+/* ================= FEED =================
+   One card at a time, full screen, swipe up for the next -- the shape
+   people already know from their phones, filled with the only things
+   worth an agent's thumb: a bonus item that pays HIM, a client whose
+   rhythm says they are due, the add-on a recent sale is missing, his own
+   goal, a win, one lesson. Then it ends. "All caught up" is a card of its
+   own, because a feed that never stops is time he is not spending with
+   customers.
+
+   Everything here is DERIVED from what the app already holds -- the
+   catalogue, the shop's promotions, his cluster, his orders, his clients'
+   own buying rhythm, his goal -- and nothing is invented. A figure that
+   needs history he does not have yet is not drawn at all.
+
+   What he does with a card is remembered on this device (the same
+   per-login key the dismissed opportunities use): "Not for me" hides that
+   item for 30 days and lowers its aisle; acting on a card lifts its
+   aisle. His sales do the rest -- the aisles he actually earns in rank
+   first. */
+
+const FEED_NOT_ME_DAYS = 30;
+const FEED_MAX_MONEY_CARDS = 8;
+
+function feedPrefs(){
+  try{
+    const p = JSON.parse(localStorage.getItem(agentLocalKey('agentFeedPrefs')) || '{}');
+    return { notMe: p.notMe || {}, acted: p.acted || {}, lessons: p.lessons || {}, about: p.about || null };
+  }catch(_e){ return { notMe:{}, acted:{}, lessons:{}, about:null }; }
+}
+function saveFeedPrefs(p){
+  try{ localStorage.setItem(agentLocalKey('agentFeedPrefs'), JSON.stringify(p)); }catch(_e){}
+}
+
+function feedItemKey(productId, variantIdx){
+  return `${productId}::${variantIdx==null?'':variantIdx}`;
+}
+
+/* What ONE sale of an item puts in his pocket: the room between his cost
+   and the shop's suggested price, plus the bonus if the shop is running
+   one on it. A percentage bonus is taken on the suggested price, the same
+   base the earnings screen quotes it against. */
+function feedEarnEach(it, promo){
+  const floor = Number(it && it.floorPrice) || 0;
+  const our = Number(it && it.ourPrice) || 0;
+  const margin = Math.max(0, our - floor);
+  let bonus = 0;
+  if(promo){
+    const v = Number(promo.bonusValue) || 0;
+    bonus = promo.bonusType === 'fixed' ? v : Math.round((our || floor) * v / 100);
+  }
+  return { margin, bonus, total: margin + bonus };
+}
+
+/* His taste, from his own sales: which aisles he earns in, what he has
+   sold and how often, the weekday his orders land on, and whether his
+   bigger baskets pay. */
+function feedTaste(orders, catalogItems){
+  const live = (orders||[]).filter(o=>!o.voided);
+  const byCat = new Map(), sold = new Map(), dayCount = [0,0,0,0,0,0,0];
+  let total = 0;
+  const lookup = new Map((catalogItems||[]).map(it=>[feedItemKey(it.productId, it.variantIdx), it]));
+  const multi = [], single = [];
+  live.forEach(o=>{
+    const d = orderDate(o);
+    if(d) dayCount[new Date(d+'T00:00:00').getDay()]++;
+    const lines = o.items || [];
+    const earn = orderEarnings(o).margin;
+    (lines.length >= 2 ? multi : single).push(earn);
+    lines.forEach(li=>{
+      const key = feedItemKey(li.productId, li.variantIdx);
+      sold.set(key, (sold.get(key)||0) + 1);
+      const ce = lookup.get(key);
+      const cat = ce ? itemCategory(ce) : AGENT_OTHER_CATEGORY;
+      const m = agentLinePriced(li)
+        ? Math.max(0, (Number(li.agentSellPrice) - (Number(li.sellPrice)||0)) * (Number(li.qty)||0)) : 0;
+      byCat.set(cat, (byCat.get(cat)||0) + m);
+      total += m;
+    });
+  });
+  const share = new Map();
+  byCat.forEach((v,k)=> share.set(k, total > 0 ? v/total : 0));
+  const topCat = [...byCat.entries()].sort((a,b)=>b[1]-a[1])[0] || null;
+  let bestDay = -1, bestDayN = 0;
+  dayCount.forEach((n,i)=>{ if(n > bestDayN){ bestDay = i; bestDayN = n; } });
+  const avg = (xs)=> xs.length ? xs.reduce((s,x)=>s+x,0)/xs.length : 0;
+  return {
+    orders: live.length, share, sold, topCat: topCat ? topCat[0] : null,
+    topCatShare: topCat && total > 0 ? topCat[1]/total : 0,
+    bestDay, bestDayShare: live.length ? bestDayN / live.length : 0,
+    multiAvg: avg(multi), singleAvg: avg(single), multiN: multi.length, singleN: single.length,
+  };
+}
+
+/* Which of his clients have bought this item before, the longest-waiting
+   first -- the people a card about it is worth sending to. */
+function feedBuyersOf(productId, variantIdx){
+  const key = feedItemKey(productId, variantIdx);
+  const last = new Map();
+  myOrders.filter(o=>!o.voided && o.agentClientId).forEach(o=>{
+    if(!(o.items||[]).some(li=>feedItemKey(li.productId, li.variantIdx)===key)) return;
+    const d = orderDate(o) || '';
+    const prev = last.get(String(o.agentClientId));
+    if(!prev || d > prev) last.set(String(o.agentClientId), d);
+  });
+  return [...last.entries()]
+    .map(([id, d])=>({ client: agentClients.find(c=>String(c.id)===id), last: d }))
+    .filter(x=>x.client)
+    .sort((a,b)=> String(a.last).localeCompare(String(b.last)));
+}
+
+/* Items bought together in his own orders. An add-on card needs a pair
+   seen at least twice -- once is a coincidence. */
+function feedPairs(orders){
+  const pairs = new Map();
+  (orders||[]).filter(o=>!o.voided).forEach(o=>{
+    const keys = [...new Set((o.items||[]).map(li=>feedItemKey(li.productId, li.variantIdx)))];
+    keys.forEach(a=> keys.forEach(b=>{
+      if(a===b) return;
+      if(!pairs.has(a)) pairs.set(a, new Map());
+      pairs.get(a).set(b, (pairs.get(a).get(b)||0) + 1);
+    }));
+  });
+  return pairs;
+}
+
+function feedDaysLeft(endsAt){
+  if(!endsAt) return null;
+  const days = Math.ceil((new Date(endsAt+'T00:00:00Z') - Date.now()) / 86400000);
+  return days >= 0 ? days : null;
+}
+
+/* The whole feed, ranked. Money cards compete on what one sale pays him,
+   weighted by how much of his living that aisle already is and by what
+   he has done with cards like it; the rest have fixed places so the feed
+   never becomes a wall of products. */
+function buildFeedCards(now){
+  now = now || new Date();
+  const prefs = feedPrefs();
+  const hidden = (key)=>{
+    const t = prefs.notMe[key];
+    return t && (Date.now() - t) < FEED_NOT_ME_DAYS * 86400000;
+  };
+  const taste = feedTaste(myOrders, catalog);
+  // "Not for me" on an item lowers its whole aisle a little, for as long
+  // as the item itself stays hidden.
+  const notMeByCat = new Map();
+  Object.keys(prefs.notMe).forEach(k=>{
+    if(!hidden(k) || k.indexOf('::') < 0) return;
+    const [pid, vi] = k.split('::');
+    const ce = catalogEntry(pid, vi===''?null:Number(vi));
+    if(ce) notMeByCat.set(itemCategory(ce), (notMeByCat.get(itemCategory(ce))||0) + 1);
+  });
+  const lift = (cat)=>{
+    const s = taste.share.get(cat) || 0;
+    const acted = Number(prefs.acted[cat]) || 0;
+    const notMe = notMeByCat.get(cat) || 0;
+    return (0.6 + s * 1.4) * (1 + Math.min(acted, 5) * 0.12) * Math.pow(0.8, Math.min(notMe, 4));
+  };
+  const money = [];
+
+  // Bonus items: only ones he can earn on today.
+  promotions.forEach(p=>{
+    const it = catalogEntry(p.productId, p.variantIdx);
+    if(!it) return;
+    const key = feedItemKey(it.productId, it.variantIdx);
+    if(hidden(key)) return;
+    const earn = feedEarnEach(it, p);
+    if(!(earn.total > 0)) return;
+    const soldN = taste.sold.get(key) || 0;
+    money.push({
+      kind:'bonus', key: `bonus:${key}`, itemKey: key, item: it, promo: p, earn,
+      soldN, buyers: feedBuyersOf(it.productId, it.variantIdx).slice(0, 4),
+      daysLeft: feedDaysLeft(p.endsAt), inCluster: isInCluster(it.productId, it.variantIdx),
+      wait: clusterEligibility(it.productId, it.variantIdx),
+      score: earn.total * lift(itemCategory(it)) * (soldN ? 1.3 : 1),
+    });
+  });
+
+  // Clients whose own rhythm says they are due, with what they always buy.
+  const counts = clientOrderCounts();
+  agentClients.forEach(c=>{
+    const cad = clientCadence(c, counts, now);
+    if(!cad || cad.daysSince < cad.avgGapDays || cad.daysSince >= 60) return;
+    const key = `due:${c.id}:${cad.lastDateKey}`;
+    if(hidden(key)) return;
+    const regulars = clientRegulars(counts.get(c.id)||[]).slice(0, 3)
+      .map(r=>({ r, it: catalogEntry(r.productId, r.variantIdx) })).filter(x=>x.it);
+    money.push({
+      kind:'due', key, client: c, cad, regulars,
+      earn: { total: Math.round(cad.avgMargin) },
+      score: cad.avgMargin * (cad.daysSince >= cad.avgGapDays * 1.5 ? 1.3 : 1.1),
+    });
+  });
+
+  // The add-on a recent sale is missing: bought together at least twice
+  // in his own orders, absent from a sale in the last 14 days.
+  const pairs = feedPairs(myOrders);
+  const cutoff = new Date(now.getTime() - 14*86400000).toISOString().slice(0,10);
+  const seenAddon = new Set();
+  myOrders.filter(o=>!o.voided && o.agentClientId && (orderDate(o)||'') >= cutoff)
+    .sort((a,b)=> String(orderDate(b)).localeCompare(String(orderDate(a))))
+    .forEach(o=>{
+      const client = agentClients.find(c=>String(c.id)===String(o.agentClientId));
+      if(!client) return;
+      const have = new Set((o.items||[]).map(li=>feedItemKey(li.productId, li.variantIdx)));
+      (o.items||[]).forEach(li=>{
+        const a = feedItemKey(li.productId, li.variantIdx);
+        (pairs.get(a) || new Map()).forEach((n, b)=>{
+          if(n < 2 || have.has(b)) return;
+          const key = `addon:${client.id}:${b}`;
+          if(seenAddon.has(key) || hidden(key) || hidden(b)) return;
+          const [pid, vi] = b.split('::');
+          const it = catalogEntry(pid, vi===''?null:Number(vi));
+          const base = catalogEntry(li.productId, li.variantIdx);
+          if(!it || !base) return;
+          const promo = promotedMap().get(b);
+          const earn = feedEarnEach(it, promo);
+          seenAddon.add(key);
+          money.push({ kind:'addon', key, itemKey: b, item: it, base, client, together: n, promo, earn,
+            score: Math.max(earn.total, 1) * lift(itemCategory(it)) * 1.2 });
+        });
+      });
+    });
+
+  money.sort((a,b)=> b.score - a.score);
+  const picks = money.slice(0, FEED_MAX_MONEY_CARDS);
+
+  const cards = [{ kind:'hello', key:'hello', picks }];
+  const extras = [];
+
+  const achievements = computeAchievements();
+  const seen = seenAchievementIds();
+  const fresh = achievements.filter(a=>a.unlocked && !seen.has(a.id));
+  const next = achievements.filter(a=>!a.unlocked).sort((a,b)=> (b.current/b.target) - (a.current/a.target))[0] || null;
+  if(fresh.length) extras.push({ at: 2, card: { kind:'win', key:`win:${fresh.map(a=>a.id).join(',')}`, fresh, next } });
+
+  if(taste.orders >= 6 && prefs.about !== 'no') extras.push({ at: 3, card: { kind:'about', key:'about', taste } });
+  extras.push({ at: 4, card: { kind:'goal', key:'goal', picks } });
+
+  const lesson = feedLesson(taste, prefs);
+  if(lesson) extras.push({ at: 5, card: { kind:'lesson', key:`lesson:${lesson.id}`, lesson } });
+
+  const body = picks.slice();
+  extras.sort((a,b)=>a.at-b.at).forEach(x=> body.splice(Math.min(x.at, body.length), 0, x.card));
+  cards.push(...body);
+  cards.push({ kind:'done', key:'done', picks });
+  return cards;
+}
+
+/* One lesson at a time, chosen from HIS numbers, and only when his
+   numbers make the case -- a lesson he has already learned is not shown. */
+function feedLesson(taste, prefs){
+  const lessons = [];
+  if(taste.multiN >= 3 && taste.singleN >= 3 && taste.multiAvg > taste.singleAvg * 1.2){
+    lessons.push({ title:'Ask for the add-on', id:'addon',
+      them: Math.round(taste.multiAvg), you: Math.round(taste.singleAvg),
+      themL:'2+ items', youL:'1 item',
+      say:'Great &mdash; shall I add what goes with it? Saves you a second trip.',
+      gain: Math.round(taste.multiAvg - taste.singleAvg) });
+  }
+  const promoCount = promotions.length;
+  const clusterCount = cluster.length;
+  if(promoCount >= 2 && clusterCount < promoCount){
+    lessons.push({ title:'Star the bonus items', id:'cluster',
+      them: promoCount, you: clusterCount, themL:'on bonus', youL:'in your cluster',
+      say:'A bonus only pays on items in your cluster. Star them before you sell.',
+      gain: 0 });
+  }
+  return lessons.find(l=> !prefs.lessons[l.id]) || null;
+}
+
+/* ---- drawing ---- */
+const FD_DAY = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const FD_ICON = {
+  send: '<svg viewBox="0 0 24 24"><path d="M4 12l16-8-6 16-2-7z"/></svg>',
+  star: '<svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>',
+  grid: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M17.5 14v7M14 17.5h7"/></svg>',
+  no: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M6 6l12 12"/></svg>',
+  up: '<svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg>',
+  check: '<svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg>',
+  plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+  clock: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  phone: '<svg viewBox="0 0 24 24"><path d="M5 4h4l2 5-3 2a11 11 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>',
+  flame: '<svg viewBox="0 0 24 24"><path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 1-9z"/></svg>',
+  trophy: '<svg viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4M12 14v4M8 21h8"/></svg>',
+  bulb: '<svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>',
+  x: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+};
+function fdIcon(name){ return `<span class="fd-i">${FD_ICON[name]||''}</span>`; }
+function fdRing(pct, size, stroke, color, track){
+  const r = (size - stroke) / 2, c = 2 * Math.PI * r;
+  const on = Math.max(0, Math.min(1, pct)) * c;
+  return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" aria-hidden="true">
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${track}" stroke-width="${stroke}"/>
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}"
+      stroke-linecap="round" stroke-dasharray="${on.toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 ${size/2} ${size/2})"/></svg>`;
+}
+function fdMedia(it){
+  return it && it.image
+    ? `<img class="fd-media" src="${esc(it.image)}" alt="" loading="lazy">`
+    : `<span class="fd-media fd-media-icon">${categoryIconSVG(itemCategory(it||{}))}</span>`;
+}
+function fdAvatars(buyers){
+  return buyers.map(b=>`<span class="fd-av">${esc(clientInitials(b.client.name))}</span>`).join('');
+}
+function fdGoalState(now){
+  const earned = monthEarnings(currentMonthKey()).total;
+  const target = Number(myGoals && myGoals.monthly_target) || 0;
+  const best = target ? null : fxBestMonth();
+  const aim = target || (best ? best.total : 0);
+  return { earned, target, aim, days: fxDaysLeftInMonth(now) };
+}
+
+function feedCardHTML(card, i, cards){
+  const now = new Date();
+  const d = `data-fd-i="${i}"`;
+  if(card.kind === 'hello'){
+    const reach = card.picks.reduce((s,p)=> s + (p.earn.total||0), 0);
+    const parts = { bonus:0, due:0, addon:0 };
+    card.picks.forEach(p=>{ parts[p.kind] = (parts[p.kind]||0) + (p.earn.total||0); });
+    const g = fdGoalState(now);
+    const streak = computeSellingStreak();
+    const segs = [['bonus','#FFB86B'],['due','#4FA3E0'],['addon','#B794F6']];
+    let acc = 0;
+    const r = 120, c = 2*Math.PI*r;
+    const arcs = reach > 0 ? segs.map(([k,col])=>{
+      const len = parts[k] / reach * c; const s = `<circle cx="150" cy="150" r="${r}" fill="none" stroke="${col}" stroke-width="26" stroke-dasharray="0 ${acc.toFixed(1)} ${len.toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 150 150)"/>`;
+      acc += len; return s; }).join('') : '';
+    const stories = card.picks.slice(0, 4).map((p, k)=>{
+      const col = p.kind==='bonus' ? '#FFB86B' : p.kind==='due' ? '#4FA3E0' : '#B794F6';
+      const inner = p.kind==='due'
+        ? `<span class="fd-st-in fd-st-tx">${esc(clientInitials(p.client.name))}</span>`
+        : `<span class="fd-st-in">${p.item.image ? `<img src="${esc(p.item.image)}" alt="">` : categoryIconSVG(itemCategory(p.item))}</span>`;
+      return `<button type="button" class="fd-st" data-fd-jump="${k+1}" style="--fd-ring:${col}" aria-label="Go to pick ${k+1}">${inner}<b>+${fmtCompactUGX(p.earn.total)}</b></button>`;
+    }).join('');
+    return `<section class="fd-card fd-hello" ${d}>
+      <div class="fd-top"><span class="fd-me">${esc(agentInitials())}</span><b class="fd-hi">${esc(fxGreetName())}</b>
+        ${streak >= 2 ? `<span class="fd-stk">${fdIcon('flame')}<b>${streak}</b></span>` : ''}</div>
+      ${g.aim ? `<button type="button" class="fd-goalchip" data-fd-act="goal">${fdRing(g.earned/g.aim, 30, 4, '#6FE0A6', 'rgba(255,255,255,.2)')}<b>${fmtCompactUGX(g.earned)} / ${fmtCompactUGX(g.aim)}</b></button>` : ''}
+      <div class="fd-ring">
+        <svg viewBox="0 0 300 300" aria-hidden="true"><circle cx="150" cy="150" r="${r}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="26"/>${arcs}</svg>
+        <div class="fd-ring-c"><span class="fd-k">${reach > 0 ? 'IN REACH' : 'TODAY'}</span><b class="fd-big fd-mint">${reach > 0 ? fmtCompactUGX(reach) : '&mdash;'}</b>
+          <span class="fd-s">${reach > 0 ? `${card.picks.length} pick${card.picks.length===1?'':'s'}` : 'nothing picked yet'}</span></div>
+      </div>
+      ${stories ? `<div class="fd-stories">${stories}</div>` : ''}
+      <button type="button" class="fd-cta fd-cta-mint" data-fd-jump="1">${card.picks.length ? 'Swipe up to start' : 'See what is new'}${fdIcon('up')}</button>
+    </section>`;
+  }
+  if(card.kind === 'bonus'){
+    const it = card.item, p = card.promo;
+    const tags = [];
+    if(card.soldN) tags.push(`#soldIt${card.soldN}x`);
+    if(card.daysLeft != null && card.daysLeft <= 7) tags.push(card.daysLeft === 0 ? '#endsToday' : `#ends${card.daysLeft}d`);
+    if(card.buyers.length) tags.push(`#${card.buyers.length}clientsBuyIt`);
+    const coins = [1,2,3,4,5].map(n=>`<i style="height:${10+n*10}px"${n===5?' class="on"':''}></i>`).join('');
+    const clusterBtn = card.inCluster
+      ? `<button type="button" class="fd-rb on" data-fd-act="cluster">${fdIcon('star')}<span>${card.wait && !card.wait.eligible ? `${card.wait.daysLeft}d` : 'Live'}</span></button>`
+      : `<button type="button" class="fd-rb fd-rb-hot" data-fd-act="cluster">${fdIcon('star')}<span>Cluster</span></button>`;
+    const send = card.buyers.length
+      ? `<button type="button" class="fd-cta fd-cta-wa" data-fd-act="share"><span class="fd-avs">${fdAvatars(card.buyers)}</span><span class="fd-cta-t">Send to ${card.buyers.length === 1 ? esc(firstWord(card.buyers[0].client.name)) : `${card.buyers.length} clients`}</span><span class="fd-cta-i">${FD_ICON.send}</span></button>`
+      : `<button type="button" class="fd-cta fd-cta-wa" data-fd-act="share"><span class="fd-cta-t">Share on WhatsApp</span><span class="fd-cta-i">${FD_ICON.send}</span></button>`;
+    return `<section class="fd-card fd-bonus" ${d}>
+      ${fdMedia(it)}<span class="fd-shade"></span>
+      <div class="fd-sticker">${card.earn.bonus > 0 ? `<span><small>BONUS</small><b>+${fmtCompactUGX(card.earn.bonus)}</b></span>` : ''}
+        ${card.daysLeft != null ? `<span class="fd-cd">${fdRing(Math.min(1, card.daysLeft/7), 38, 4, '#3A2410', 'rgba(58,36,16,.2)')}<b>${card.daysLeft}d</b></span>` : ''}</div>
+      <div class="fd-earn"><span class="fd-pill fd-pill-mint"><b>+${fmtCompactUGX(card.earn.total)}</b> each</span>
+        <span class="fd-coins" aria-label="Sell 5 and you make ${fmtCompactUGX(card.earn.total*5)}">${coins}<b>${fmtCompactUGX(card.earn.total*5)}</b></span></div>
+      <div class="fd-rail">${clusterBtn}
+        <button type="button" class="fd-rb" data-fd-act="similar">${fdIcon('grid')}<span>Similar</span></button>
+        <button type="button" class="fd-rb" data-fd-act="quote">${fdIcon('plus')}<span>Quote</span></button>
+        <button type="button" class="fd-rb" data-fd-act="notme">${fdIcon('no')}<span>Not me</span></button></div>
+      <div class="fd-cap"><b>${esc(it.name)}${it.variantLabel ? ` ${esc(it.variantLabel)}` : ''} &middot; <span class="fd-m">${fmtNum(it.ourPrice || it.floorPrice)}</span></b>
+        ${tags.length ? `<span class="fd-tags">${tags.map(t=>`<span>${esc(t)}</span>`).join('')}</span>` : ''}</div>
+      ${send}
+    </section>`;
+  }
+  if(card.kind === 'due'){
+    const c = card.client, cad = card.cad;
+    const dots = Math.min(6, cad.orders.length);
+    const trail = cad.orders.slice(-dots).map(()=>`<i></i>`).join('') + `<i class="now"></i>`;
+    return `<section class="fd-card fd-due" ${d}>
+      <div class="fd-who"><span class="fd-av fd-av-lg">${esc(clientInitials(c.name))}</span><b>${esc(c.name)}</b><span class="fd-badge fd-badge-blue">due</span></div>
+      <div class="fd-rhythm" aria-label="Buys about every ${Math.round(cad.avgGapDays)} days; ${Math.round(cad.daysSince)} days since the last order">
+        <div class="fd-trail">${trail}</div>
+        <div class="fd-rh-n"><b class="fd-m">${Math.round(cad.daysSince)}</b><span>/ ${Math.round(cad.avgGapDays)} days</span></div>
+      </div>
+      <div class="fd-regs">${card.regulars.map(x=>`<span class="fd-reg">${x.it.image ? `<img src="${esc(x.it.image)}" alt="">` : categoryIconSVG(itemCategory(x.it))}<b>${esc(x.it.name)}</b></span>`).join('')}</div>
+      <div class="fd-earn fd-earn-l"><span class="fd-pill fd-pill-mint"><b>+${fmtCompactUGX(card.earn.total)}</b> usual</span></div>
+      <div class="fd-rail">
+        ${c.phone ? `<a class="fd-rb" href="tel:${esc(c.phone)}">${fdIcon('phone')}<span>Call</span></a>` : ''}
+        <button type="button" class="fd-rb" data-fd-act="notme">${fdIcon('no')}<span>Later</span></button></div>
+      <button type="button" class="fd-cta fd-cta-wa" data-fd-act="client"><span class="fd-avs"><span class="fd-av">${esc(clientInitials(c.name))}</span></span><span class="fd-cta-t">Start ${esc(possessive(firstWord(c.name)))} order</span><span class="fd-cta-i">${FD_ICON.send}</span></button>
+    </section>`;
+  }
+  if(card.kind === 'addon'){
+    const it = card.item, c = card.client;
+    const dotsOn = Math.min(10, card.together);
+    return `<section class="fd-card fd-addon" ${d}>
+      ${fdMedia(it)}<span class="fd-shade"></span>
+      <div class="fd-who fd-who-tl"><span class="fd-av">${esc(clientInitials(c.name))}</span><b>${esc(firstWord(c.name))}</b><span class="fd-badge fd-badge-blue">bought ${esc(card.base.name)}</span></div>
+      <div class="fd-dots" aria-label="Sold together ${card.together} times">${Array.from({length:dotsOn},()=>'<i></i>').join('')}<b>${card.together}&times; together</b></div>
+      <div class="fd-earn"><span class="fd-pill fd-pill-mint"><b>+${fmtCompactUGX(card.earn.total)}</b></span></div>
+      <div class="fd-rail">
+        <button type="button" class="fd-rb" data-fd-act="similar">${fdIcon('grid')}<span>Similar</span></button>
+        <button type="button" class="fd-rb" data-fd-act="notme">${fdIcon('no')}<span>Not me</span></button></div>
+      <div class="fd-cap"><b>${esc(it.name)} &middot; <span class="fd-m">${fmtNum(it.ourPrice || it.floorPrice)}</span></b><span class="fd-tags"><span>#goesWith</span></span></div>
+      <button type="button" class="fd-cta fd-cta-wa" data-fd-act="quote"><span class="fd-avs"><span class="fd-av">${esc(clientInitials(c.name))}</span></span><span class="fd-cta-t">Add for ${esc(firstWord(c.name))}</span><span class="fd-cta-i">${FD_ICON.plus}</span></button>
+    </section>`;
+  }
+  if(card.kind === 'about'){
+    const t = card.taste;
+    const bubbles = [];
+    if(t.topCat) bubbles.push({ big: `${Math.round(t.topCatShare*100)}%`, l: t.topCat, cls:'a' });
+    if(t.bestDay >= 0 && t.bestDayShare >= 0.2) bubbles.push({ big: FD_DAY[t.bestDay].slice(0,3).toUpperCase(), l: 'your day', cls:'b' });
+    if(t.multiN >= 3 && t.singleN >= 3 && t.singleAvg > 0) bubbles.push({ big: `${(t.multiAvg / t.singleAvg).toFixed(1)}&times;`, l: 'bigger baskets', cls:'c' });
+    bubbles.push({ big: String(t.orders), l: 'orders', cls:'d' });
+    return `<section class="fd-card fd-about" ${d}>
+      <span class="fd-k fd-k-c">YOU, BY YOUR ${t.orders} ORDERS</span>
+      <div class="fd-orbit"><span class="fd-me fd-me-lg">${esc(agentInitials())}</span>
+        ${bubbles.map((b,k)=>`<span class="fd-bub fd-bub-${k}"><i class="fd-bub-${b.cls}">${b.big}</i><span>${esc(b.l)}</span></span>`).join('')}</div>
+      <div class="fd-two"><button type="button" class="fd-cta fd-cta-white" data-fd-act="about-yes">That&rsquo;s me</button>
+        <button type="button" class="fd-cta fd-cta-ghost" data-fd-act="about-no">Not quite</button></div>
+    </section>`;
+  }
+  if(card.kind === 'goal'){
+    const g = fdGoalState(now);
+    const reach = card.picks.reduce((s,p)=> s + (p.earn.total||0), 0);
+    if(!g.aim){
+      return `<section class="fd-card fd-goal" ${d}>
+        <span class="fd-k fd-k-c">THIS MONTH</span>
+        <div class="fd-goalring">${fdRing(0, 260, 30, '#B794F6', 'rgba(255,255,255,.08)')}
+          <div class="fd-ring-c"><b class="fd-big">${fmtCompactUGX(g.earned)}</b><span class="fd-s">so far</span></div></div>
+        <button type="button" class="fd-cta fd-cta-purple" data-fd-act="goal">Set my goal</button>
+      </section>`;
+    }
+    const pct = g.earned / g.aim;
+    const left = Math.max(0, g.aim - g.earned);
+    const size = 260, stroke = 30, r = (size-stroke)/2, cc = 2*Math.PI*r;
+    const done = Math.min(1, pct) * cc;
+    const inReach = Math.min(cc - done, reach / g.aim * cc);
+    const days = Array.from({length: Math.min(7, g.days)}, (_,k)=>`<span class="fd-day${k===0?' on':''}">${FD_DAY[(now.getDay()+k+1)%7][0]}</span>`).join('');
+    return `<section class="fd-card fd-goal" ${d}>
+      <div class="fd-top"><b class="fd-k">${esc(monthLabel(currentMonthKey()).split(' ')[0].toUpperCase())} ${g.target ? 'GOAL' : 'BEST MONTH'}</b>
+        <span class="fd-badge fd-badge-amber">${g.days} day${g.days===1?'':'s'} left</span></div>
+      <div class="fd-goalring"><svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" aria-hidden="true">
+        <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="${stroke}"/>
+        <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="#B794F6" stroke-width="${stroke}" stroke-dasharray="${done.toFixed(1)} ${cc.toFixed(1)}" transform="rotate(-90 ${size/2} ${size/2})"/>
+        ${inReach > 0 ? `<circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="#6FE0A6" stroke-width="${stroke}" stroke-dasharray="0 ${done.toFixed(1)} ${inReach.toFixed(1)} ${cc.toFixed(1)}" transform="rotate(-90 ${size/2} ${size/2})"/>` : ''}
+        </svg><div class="fd-ring-c"><b class="fd-big">${fmtCompactUGX(g.earned)}</b><span class="fd-s">of ${fmtCompactUGX(g.aim)}</span></div></div>
+      ${left > 0 && reach > 0 ? `<span class="fd-pill fd-pill-mint fd-center"><b>${card.picks.length}</b> in reach &rarr; <b>+${fmtCompactUGX(reach)}</b></span>` : left <= 0 ? `<span class="fd-pill fd-pill-mint fd-center"><b>Passed</b> &mdash; all extra now</span>` : ''}
+      ${days ? `<div class="fd-days">${days}</div>` : ''}
+      <button type="button" class="fd-cta fd-cta-purple" data-fd-jump="1">${left > 0 ? `Line up my ${card.picks.length}` : 'Keep going'}</button>
+    </section>`;
+  }
+  if(card.kind === 'win'){
+    const a = card.fresh[0];
+    return `<section class="fd-card fd-win" ${d}>
+      <span class="fd-sticker-w">UNLOCKED</span>
+      <div class="fd-trophy">${ACHIEVEMENT_ICONS[a.id] || FD_ICON.trophy}</div>
+      <b class="fd-big fd-center">${esc(a.title)}</b>
+      <span class="fd-s fd-center">${esc(a.desc)}</span>
+      <div class="fd-badges">${card.fresh.slice(0,3).map(x=>`<span class="fd-bdg on">${ACHIEVEMENT_ICONS[x.id]||''}</span>`).join('')}
+        ${card.next ? `<span class="fd-bdg">${fdRing(card.next.current/card.next.target, 54, 4, '#6FE0A6', 'rgba(255,255,255,.15)')}</span>` : ''}</div>
+      ${card.next ? `<span class="fd-s fd-center">Next: ${esc(card.next.title)}</span>` : ''}
+      <button type="button" class="fd-cta fd-cta-mint" data-fd-act="win-ok">Keep going</button>
+    </section>`;
+  }
+  if(card.kind === 'lesson'){
+    const l = card.lesson;
+    const max = Math.max(l.them, l.you, 1);
+    return `<section class="fd-card fd-lesson" ${d}>
+      <div class="fd-top"><span class="fd-badge fd-badge-amber">${fdIcon('bulb')}${esc(l.title)}</span></div>
+      <div class="fd-bars">
+        <div><b class="fd-m">${l.id==='addon' ? fmtCompactUGX(l.them) : l.them}</b><i style="height:${Math.round(l.them/max*120)}px" class="hi"></i><span>${esc(l.themL)}</span></div>
+        <div><b class="fd-m">${l.id==='addon' ? fmtCompactUGX(l.you) : l.you}</b><i style="height:${Math.max(8, Math.round(l.you/max*120))}px"></i><span>${esc(l.youL)}</span></div>
+      </div>
+      <div class="fd-say"><span class="fd-say-tag">SAY THIS</span><p>${l.say}</p></div>
+      ${l.gain > 0 ? `<span class="fd-pill fd-pill-mint fd-center"><b>+${fmtCompactUGX(l.gain)}</b> an order</span>` : ''}
+      <button type="button" class="fd-cta fd-cta-amber" data-fd-act="lesson-ok">${l.id==='cluster' ? 'Show me the bonus items' : 'Got it'}</button>
+    </section>`;
+  }
+  if(card.kind === 'done'){
+    const reach = card.picks.reduce((s,p)=> s + (p.earn.total||0), 0);
+    const g = fdGoalState(now);
+    return `<section class="fd-card fd-done" ${d}>
+      <span class="fd-bigcheck">${FD_ICON.check}</span>
+      <b class="fd-big fd-center">All caught up</b>
+      ${reach > 0 ? `<span class="fd-s fd-center"><b class="fd-mint">+${fmtCompactUGX(reach)}</b> in reach from ${card.picks.length} pick${card.picks.length===1?'':'s'}</span>` : ''}
+      <div class="fd-pk">${card.picks.map(()=>'<i></i>').join('')}</div>
+      ${g.aim ? `<span class="fd-goalchip fd-center">${fdRing(g.earned/g.aim, 30, 4, '#6FE0A6', 'rgba(255,255,255,.2)')}<b>${Math.round(g.earned/g.aim*100)}%</b> of your goal</span>` : ''}
+      <button type="button" class="fd-cta fd-cta-white" data-fd-act="sell">Go sell</button>
+    </section>`;
+  }
+  return '';
+}
+
+let feedCards = [];
+async function openFeedView(){
+  const view = document.getElementById('ag_feedView');
+  if(!catalog.length || !browseDataLoaded){
+    view.innerHTML = `<div class="fd-scroller"><section class="fd-card fd-hello"><div class="fd-ring-c fd-loading"><span class="ag-spinner"></span></div></section></div>`;
+    await ensureBrowseDataLoaded();
+  }
+  renderFeed();
+}
+function renderFeed(){
+  const view = document.getElementById('ag_feedView');
+  feedCards = buildFeedCards(new Date());
+  view.innerHTML = `<div class="fd-scroller" id="ag_feedScroller">${feedCards.map(feedCardHTML).join('')}</div>`;
+}
+function feedJump(i){
+  const sc = document.getElementById('ag_feedScroller');
+  const el = sc && sc.querySelector(`[data-fd-i="${i}"]`);
+  if(el) sc.scrollTo({ top: el.offsetTop, behavior: 'smooth' });
+}
+function feedRemember(card, how){
+  const p = feedPrefs();
+  const cat = card.item ? itemCategory(card.item) : null;
+  if(how === 'notme'){
+    p.notMe[card.itemKey || card.key] = Date.now();
+  } else if(how === 'acted' && cat){
+    p.acted[cat] = (Number(p.acted[cat])||0) + 1;
+  }
+  saveFeedPrefs(p);
+}
+
+/* Shared by the bonus card and the similar sheet: a message a client can
+   read on its own -- what it is, what it costs -- sent through whatever
+   the phone shares with, which is WhatsApp for nearly everyone. One
+   client with a number goes straight to their chat. */
+function feedShareItem(it, buyers){
+  const price = Number(it.ourPrice || it.floorPrice) || 0;
+  const text = `${it.name}${it.variantLabel ? ' ' + it.variantLabel : ''} -- UGX ${fmtNum(price)}. In stock now. Shall I set some aside for you?`;
+  const one = buyers && buyers.length === 1 && buyers[0].client.phone
+    ? String(buyers[0].client.phone).replace(/[^\d]/g, '') : '';
+  if(one){ window.open(`https://wa.me/${one}?text=${encodeURIComponent(text)}`, '_blank'); return; }
+  if(navigator.share){ navigator.share({ text }).catch(()=>{}); return; }
+  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+}
+
+/* More like this: the same aisle (the same shelf first), what pays him
+   most first. A bonus item can be starred into his cluster right here;
+   anything can go straight into a quote. */
+function feedSimilarItems(it){
+  const cat = itemCategory(it), sub = it.subcategory || null;
+  const promoted = promotedMap();
+  const self = feedItemKey(it.productId, it.variantIdx);
+  return catalog
+    .filter(x=> feedItemKey(x.productId, x.variantIdx) !== self && itemCategory(x) === cat)
+    .map(x=>{
+      const promo = promoted.get(feedItemKey(x.productId, x.variantIdx));
+      return { it: x, promo, earn: feedEarnEach(x, promo), sameShelf: !!(sub && x.subcategory === sub) };
+    })
+    .sort((a,b)=> (b.sameShelf?1:0)-(a.sameShelf?1:0) || (b.promo?1:0)-(a.promo?1:0) || b.earn.total - a.earn.total)
+    .slice(0, 12);
+}
+function openFeedSimilar(it){
+  const el = document.createElement('div');
+  el.className = 'fd-sheet-wrap';
+  const paint = ()=>{
+    const rows = feedSimilarItems(it);
+    const inCluster = rows.filter(r=>r.promo && isInCluster(r.it.productId, r.it.variantIdx));
+    const clusterEarn = inCluster.reduce((s,r)=>s + r.earn.total, 0);
+    el.innerHTML = `<div class="fd-sheet" role="dialog" aria-label="More like ${esc(it.name)}">
+      <i class="fd-grab"></i>
+      <div class="fd-sheet-h"><b>More like this</b><button type="button" class="fd-x" data-fd-close aria-label="Close">${FD_ICON.x}</button></div>
+      ${rows.length ? `<div class="fd-grid">${rows.map((r,k)=>{
+        const on = r.promo && isInCluster(r.it.productId, r.it.variantIdx);
+        return `<div class="fd-pc">
+          <span class="fd-pc-im">${r.it.image ? `<img src="${esc(r.it.image)}" alt="" loading="lazy">` : categoryIconSVG(itemCategory(r.it))}</span>
+          ${r.promo ? `<span class="fd-pc-tag">${esc(bonusFlagLabel(r.promo))}</span>` : ''}
+          ${r.promo ? `<button type="button" class="fd-pc-star${on?' on':''}" data-fd-star="${k}" aria-label="${on?'Remove from':'Add to'} your cluster">${on ? FD_ICON.check : FD_ICON.star}</button>` : ''}
+          <span class="fd-pc-b"><b>${esc(r.it.name)}${r.it.variantLabel ? ` ${esc(r.it.variantLabel)}` : ''}</b>
+            <span class="fd-m">${fmtNum(r.it.ourPrice || r.it.floorPrice)}</span>
+            ${r.earn.total > 0 ? `<span class="fd-m fd-pc-e">+${fmtNum(r.earn.total)}</span>` : ''}</span>
+          <button type="button" class="fd-pc-add" data-fd-add="${k}" aria-label="Add ${esc(r.it.name)} to a quote">${FD_ICON.plus}</button>
+        </div>`; }).join('')}</div>`
+        : `<div class="fd-empty">Nothing else in ${esc(itemCategory(it))} yet.</div>`}
+      <div class="fd-tray"><span class="fd-tray-n">${FD_ICON.star}<b>${cluster.length}</b> in your cluster</span>
+        ${clusterEarn > 0 ? `<b class="fd-m fd-mint">+${fmtNum(clusterEarn)}</b>` : ''}</div>
+    </div>`;
+    el.querySelector('[data-fd-close]').addEventListener('click', close);
+    el.querySelectorAll('[data-fd-star]').forEach(b=> b.addEventListener('click', async ()=>{
+      const r = rows[Number(b.dataset.fdStar)];
+      await toggleClusterMembership(r.it.productId, r.it.variantIdx);
+      paint();
+    }));
+    el.querySelectorAll('[data-fd-add]').forEach(b=> b.addEventListener('click', ()=>{
+      const r = rows[Number(b.dataset.fdAdd)];
+      close();
+      openAddItemPanel(r.it);
+    }));
+  };
+  const close = ()=>{ if(el.parentNode) document.body.removeChild(el); renderFeed(); };
+  el.addEventListener('mousedown', (e)=>{ if(e.target === el) close(); });
+  document.body.appendChild(el);
+  paint();
+}
+
+document.getElementById('ag_feedView').addEventListener('click', async (e)=>{
+  const jump = e.target.closest('[data-fd-jump]');
+  if(jump){ feedJump(Number(jump.dataset.fdJump)); return; }
+  const btn = e.target.closest('[data-fd-act]');
+  if(!btn) return;
+  const sec = btn.closest('[data-fd-i]');
+  const card = sec ? feedCards[Number(sec.dataset.fdI)] : null;
+  const act = btn.dataset.fdAct;
+  if(act === 'goal'){ openGoalSheet(); return; }
+  if(act === 'sell'){ switchTab('sell'); return; }
+  if(!card) return;
+  if(act === 'notme'){
+    feedRemember(card, 'notme');
+    sec.classList.add('fd-gone');
+    toast(card.kind === 'due' ? 'Moved out of today' : 'Got it -- fewer like this');
+    setTimeout(()=>{ const i = Number(sec.dataset.fdI); renderFeed(); feedJump(Math.min(i, feedCards.length-1)); }, 260);
+    return;
+  }
+  if(act === 'cluster'){
+    await toggleClusterMembership(card.item.productId, card.item.variantIdx);
+    feedRemember(card, 'acted');
+    const i = Number(sec.dataset.fdI);
+    renderFeed(); feedJump(i);
+    return;
+  }
+  if(act === 'similar'){ openFeedSimilar(card.item); return; }
+  if(act === 'share'){ feedRemember(card, 'acted'); feedShareItem(card.item, card.buyers); return; }
+  if(act === 'quote'){
+    feedRemember(card, 'acted');
+    if(card.client) selectClient(card.client);
+    openAddItemPanel(card.item);
+    return;
+  }
+  if(act === 'client'){
+    selectClient(card.client);
+    switchTab('sell');
+    toast(`Quote started for ${card.client.name}`);
+    return;
+  }
+  if(act === 'about-yes' || act === 'about-no'){
+    const p = feedPrefs(); p.about = act === 'about-yes' ? 'yes' : 'no'; saveFeedPrefs(p);
+    toast(act === 'about-yes' ? 'Noted' : 'Thanks -- I will keep learning');
+    feedJump(Number(sec.dataset.fdI) + 1);
+    return;
+  }
+  if(act === 'win-ok'){
+    markAchievementsSeen(card.fresh.map(a=>a.id));
+    feedJump(Number(sec.dataset.fdI) + 1);
+    return;
+  }
+  if(act === 'lesson-ok'){
+    const p = feedPrefs(); p.lessons[card.lesson.id] = Date.now(); saveFeedPrefs(p);
+    if(card.lesson.id === 'cluster'){ switchTab('sell'); return; }
+    feedJump(Number(sec.dataset.fdI) + 1);
+  }
+});
+
 /* ================= NAVIGATION ================= */
-// Home / Sell / Clients are the three tab-bar slots. Earnings was a
+// Feed / Home / Sell / Clients are the four tab-bar slots. Earnings was a
 // fourth and is not any more: Home opens on this month's figure, so the
 // earnings screen is what you get by TAPPING that figure -- the detail
 // behind the number rather than a place of its own. Quote, Account and
@@ -3282,13 +4155,13 @@ async function loadAgentHomeData(){
 // tab name to the view id it actually shows. Everything in TAB_VIEW is
 // reachable; only what is in TABS gets a slot, and only what is in TABS
 // may be restored as the opening screen on the next launch.
-const TABS = ['home','sell','customers'];
+const TABS = ['feed','home','sell','customers'];
 const TAB_VIEW = {
-  home: 'ag_homeView', sell: 'ag_browseView', customers: 'ag_clientsListView',
+  feed: 'ag_feedView', home: 'ag_homeView', sell: 'ag_browseView', customers: 'ag_clientsListView',
   earnings: 'ag_earningsView', quote: 'ag_quoteView', account: 'ag_accountView',
   standing: 'ag_standingView'
 };
-const ALL_VIEWS = ['ag_homeView','ag_browseView','ag_quoteView','ag_earningsView','ag_accountView','ag_clientsListView','ag_clientView','ag_orderHistoryListView','ag_standingView'];
+const ALL_VIEWS = ['ag_feedView','ag_homeView','ag_browseView','ag_quoteView','ag_earningsView','ag_accountView','ag_clientsListView','ag_clientView','ag_orderHistoryListView','ag_standingView'];
 let lastMainTab = 'home';
 
 function showOnlyView(id){
@@ -3313,6 +4186,7 @@ function switchTab(tab){
   lastMainTab = tab;
   localStorage.setItem('agentLastTab', tab);
   window.scrollTo(0, 0);
+  if(tab==='feed') openFeedView();
   if(tab==='home'){ renderHome(); ensureLeaderboardLoaded(); }
   if(tab==='sell') openBrowseView();
   // Arriving at the tab clears any query left from the last visit, which
@@ -7903,7 +8777,7 @@ async function boot(){
   restoreQuoteDraft();
   updateCartBadge();
   const savedTab = localStorage.getItem('agentLastTab');
-  switchTab(TABS.includes(savedTab) ? savedTab : 'home');
+  switchTab(TABS.includes(savedTab) ? savedTab : 'feed');
   document.body.classList.remove('app-loading');
 }
 boot();
