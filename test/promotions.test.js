@@ -62,9 +62,19 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
  *
  * `card` is kept as the name: promotionRowHTML emits a row that .ow-tbl
  * turns back into a card on a phone, from the same call. */
-const card = (/function promotionRowHTML\(promo\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
 const render = (/function renderAgentPromotions\(\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
-const posHTML = (/function promotionPositionHTML\(\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+/* THE TABLE OF ARRANGEMENTS BECAME SPONSORED ITEMS. The canvas asks the
+   question the table's figures were for -- since a supplier started
+   paying a bonus on an item, do agents sell more of it? -- so the
+   promotions are drawn one card per ITEM (sponsoredItems groups them,
+   sponsoredCardHTML draws one), and the note under the table became the
+   strip over the cards. What needs a decision -- two promotions on one
+   item, one nobody has sold on -- moved into Needs you, where every other
+   thing that needs a decision already was. So `card` is now the item's
+   builders, and `queue` the rows that carry the faults. */
+const card = ['sponsoredItems', 'sponsoredCardHTML'].map((n)=> (new RegExp(`function ${n}\\(\\w*\\)\\{[\\s\\S]*?\\n\\}\\n`).exec(code) || [''])[0]).join('');
+const queue = (/function agentAttentionRows\(\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+const posHTML = render;
 const save = (/promo_save'\)\.addEventListener[\s\S]*?\n\}\);/.exec(code) || [''])[0];
 const del = (/async function deletePromotion\(id\)\{[\s\S]*?\n\}/.exec(code) || [''])[0];
 
@@ -204,8 +214,10 @@ if (scope) {
   eq(scope.promotionClashes(all[3], all, TODAY).length, 0,
     'and a switched-off promotion is not itself in a clash');
 
-  t.check(/Only one of them pays, and which is not decided anywhere/.test(card),
-    'and the card says the ambiguity is unresolved, not merely that there are two');
+  t.check(/Only one of them pays, and which is not decided anywhere/.test(queue),
+    'and Needs you says the ambiguity is unresolved, not merely that there are two');
+  t.check(/overlaps, see Needs you/.test(card),
+    'while the item\'s card marks each clashing sponsor and says where it is dealt with');
   /* Pinned on the guard, not the words inside it: `if(false && ...)`
      leaves every string present and unreachable. */
   t.check(/if\(clashing\.length && !confirm\(/.test(save),
@@ -232,8 +244,12 @@ if (scope) {
   eq(p.total, 3, 'while the promotions are still all counted');
   eq(p.running, 3, 'and all three are running');
   eq(p.clashes, 2, 'with both halves of the clashing pair flagged');
-  t.check(/The figures above cover the product, not this promotion alone/.test(card),
-    'and the card says whose figures they are when two share a product');
+  /* The card is per item now, so its figures are the item's by
+     construction -- the thing the old sentence had to explain -- and the
+     bonus is read once for the item, never once per promotion on it. */
+  t.check(/groups\.set\(key, \[\]\)/.test(card) && /const key = promotionKey\(p\.product_id, p\.variant_idx\);/.test(card)
+    && /const bonus = promotionEarnings\(p0\)\.bonus;/.test(card),
+    'and an item\'s card counts its bonus once, however many promotions share it');
 }
 
 /* ---------- 6. the roster of promotions at a glance ------------------ */
@@ -258,21 +274,28 @@ if (scope) {
      is now the first clause of the note under the table, because it is a
      sentence about the table rather than a heading over it. Same claim,
      same lead: how many are paying, not how many exist. */
-  t.check(/are actually paying today/.test(posHTML),
-    'the note leads with how many are paying rather than how many exist');
-  t.check(/never been sold on/.test(posHTML), 'and names the ones producing nothing');
+  /* The note under the table became the strip over the cards, and it
+     leads with what the money did rather than how many arrangements
+     exist; one nobody has sold on is named in Needs you. */
+  t.check(/Selling faster since sponsored/.test(posHTML) && /Bonus to agents &middot; paid by suppliers/.test(posHTML),
+    'the strip leads with what the sponsorships did rather than how many exist');
+  t.check(/no agent has sold one yet/.test(queue), 'and Needs you names the ones producing nothing');
 }
 
 /* ---------- 7. ordered by what needs doing --------------------------- */
 {
-  t.check(/const rank = \{ never: 0, ended: 1, running: 2, scheduled: 3, off: 4 \};/.test(render),
-    'a promotion that has stopped paying comes first, because it is the one needing a decision');
+  /* The order is the canvas's now: the items being paid for today come
+     first, because the question the cards answer is whether that money
+     is working. The ones needing a decision (clashing, unsold) are no
+     longer found by sorting -- they are rows in Needs you. */
+  t.check(/const rank = \{ running: 0, scheduled: 1, ended: 2, never: 3, off: 4 \};/.test(render),
+    'an item being paid for today comes first');
   /* Pinned on the comparison, not the table above it: replacing the
      branch with `if(false)` left the ranks sitting in the file unread
      while the check went on passing. */
   t.check(/if\(sa !== sb\) return rank\[sa\] - rank\[sb\];/.test(render),
     'and the ranking is actually applied');
-  t.check(/if\(sa === 'running' && ea !== eb\) return ea - eb;/.test(render),
+  t.check(/if\(sa === 'running' && la !== lb\) return la - lb;/.test(render),
     'and among the live ones the least productive rises, rather than the busiest');
   t.check(!/agentPromotions\.map\(promotionCardHTML\)/.test(render),
     'so the order is no longer whichever was typed last');
@@ -311,18 +334,24 @@ if (scope) {
    sentence as a banner under each row and again in the footnote, and
    the product led with its stock code. */
 {
-  t.check(/const pname = product \? productVariantLabel\(product, variantIdx\)/.test(card),
+  t.check(/const name = product \? productVariantLabel\(product, variantIdx\)/.test(card),
     'the product is named as the shop says it, not code-first');
   t.check(!/Running, and no agent has sold one yet\. Nobody is earning from it and its funder is getting nothing\.<\/div>'/.test(card),
     'a running promotion nobody has sold on is no longer a banner under its row');
-  t.check(/const unsold = running && !clash\.length && earned\.units === 0;/.test(card) && /class="agv-chip0"/.test(card),
-    'it is a "0 sold" chip in the units column instead');
-  t.check(/running && !promo\.ends_at \? 'no end date' : when/.test(card) && /class="agv-open"/.test(card),
-    'an open-ended window is drawn as running, not cut off mid-sentence');
-  t.check(/never been sold on/.test(posHTML), 'and the footnote still counts them, once');
-  const claims = (/function renderCommissionClaims\(\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
-  t.check(/Nothing waiting on you/.test(claims) && /You settle it into the Cash Book/.test(claims),
-    'with no claim waiting, the panel says so first and draws how a claim arrives');
+  /* The "0 sold" chip became the item's own chip over its chart, and the
+     window is said in the sponsor chip's title, from promotionWhenLabel
+     -- which already says "No end date — runs until switched off" rather
+     than cutting an open window off mid-sentence. */
+  t.check(/'nothing sold yet'/.test(card) && /No agent has sold one while it was sponsored\./.test(card),
+    'an item nobody has sold on says so on its card, once');
+  t.check(/promotionWhenLabel\(p, st\)/.test(card), 'and each sponsor says its own window, open-ended ones included');
+  /* THE CLAIMS PANEL IS GONE, and nothing it said is lost: a claim
+     waiting is a row in Needs you with its Settle, the header's one
+     accent settles them all, and the position card says what you owe --
+     or, with none waiting, that every claim is settled. */
+  const pos = (/function agentRosterPositionHTML\(\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+  t.check(/every bonus claim is settled/.test(pos) && /verb:'Settle'/.test(queue),
+    'with no claim waiting, the screen says so, and a waiting one is settled from Needs you');
 }
 
 process.exit(t.done() ? 1 : 0);
