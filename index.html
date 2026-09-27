@@ -24664,6 +24664,21 @@
   .ow-pan-note{min-width:0;font-size:var(--ow-t-12);color:var(--ow-ink-600);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .ow-mq-hd .ow-pan-t,.ow-mq-hd .ow-pan-n{flex:none;white-space:nowrap;}
+  /* The queue's pages: where you are, the money on this page against
+     the whole queue, rows per page, and the page buttons. */
+  .ow-mq-pg{display:flex;align-items:center;gap:var(--ow-sp-8);min-height:44px;padding:0 var(--ow-sp-12);
+    border-top:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-mq-pgs{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-mq-pgr{display:inline-flex;align-items:center;gap:var(--ow-sp-6);white-space:nowrap;}
+  .ow-mq-pgsel{height:28px;padding:0 var(--ow-sp-6);border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
+    font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);color:var(--ow-ink-900);}
+  .ow-mq-pgb{min-width:28px;height:28px;padding:0 var(--ow-sp-8);border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
+    display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
+    font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);color:var(--ow-ink-900);}
+  .ow-mq-pgb.ow-on{background:var(--ow-steel-950);border-color:var(--ow-steel-950);color:var(--ow-paper);}
+  .ow-mq-pgb:disabled{opacity:.45;cursor:default;}
+  .ow-mq-pgb:focus-visible,.ow-mq-pgsel:focus-visible{outline:2px solid var(--ow-sky);outline-offset:1px;}
+  .ow-mq-pgi{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
   .ow-mq-h .ow-mq-r{text-align:right;}
   /* The row's own two lines: the name, and one line of everything true
      about them today -- including the part this message will not carry. */
@@ -122859,6 +122874,67 @@ if(msgPhoneMQ && msgPhoneMQ.addEventListener) msgPhoneMQ.addEventListener('chang
   if(sec && sec.style.display !== 'none') renderFollowUps();
 });
 
+/* PAGES OF THE QUEUE. Ranked dearest first, so page 1 is always the
+   people whose silence costs most and a later page only ever holds what
+   matters less. The page is wherever the OPEN row is -- a row the owner
+   is reading never disappears onto another page under them -- and
+   turning a page opens that page's first row. How many rows a page holds
+   is remembered on this device, like the other view settings. */
+const MSG_QUEUE_PER_CHOICES = [7, 15, 30];
+let msgQueuePage = 0;
+function msgQueuePerPage(){
+  let n = 7;
+  try{ n = Number(localStorage.getItem('msgQueuePerPage')) || 7; }catch(_e){}
+  return MSG_QUEUE_PER_CHOICES.includes(n) ? n : 7;
+}
+function msgQueuePageOf(count, per, page, selIndex){
+  const pages = Math.max(1, Math.ceil(count / per));
+  let p = selIndex >= 0 ? Math.floor(selIndex / per) : page;
+  p = Math.max(0, Math.min(pages - 1, p || 0));
+  const from = p * per;
+  return { page: p, pages, from, to: Math.min(count, from + per) };
+}
+function msgQueuePagerHTML(pg, shown){
+  const per = msgQueuePerPage();
+  if(shown.length <= MSG_QUEUE_PER_CHOICES[0]) return '';
+  const sum = (list)=> list.reduce((t, r)=>{ const st = msgRowStake(r); return t + (st ? Number(st.v) || 0 : 0); }, 0);
+  const all = sum(shown), here = sum(shown.slice(pg.from, pg.to));
+  const lo = Math.max(0, Math.min(pg.page - 2, pg.pages - 5)), hi = Math.min(pg.pages, lo + 5);
+  const nums = [];
+  for(let i = lo; i < hi; i++){
+    nums.push(`<button type="button" class="ow-mq-pgb${i === pg.page ? ' ow-on' : ''}" data-q-page="${i}"${i === pg.page ? ' aria-current="page"' : ''} aria-label="Page ${i + 1}">${i + 1}</button>`);
+  }
+  const arrow = (to, dis, label, d)=> `<button type="button" class="ow-mq-pgb" data-q-page="${to}"${dis ? ' disabled' : ''} aria-label="${label}"><svg class="ow-mq-pgi" viewBox="0 0 24 24"><path d="${d}"/></svg></button>`;
+  // A div, not a <nav>: the app styles every nav as the side rail.
+  return `<div class="ow-mq-pg" role="navigation" aria-label="Pages of the queue">
+    <span class="ow-mq-pgs"><b class="ow-fig">${pg.from + 1}&ndash;${pg.to}</b> of <b class="ow-fig">${shown.length}</b>${all > 0 ? ` &middot; <b class="ow-fig">${esc(msgFigK(here))}</b> of ${esc(msgFigK(all))} at stake on this page` : ''}</span>
+    <span class="ow-pan-sp"></span>
+    <span class="ow-mq-pgr"><span id="msg_q_per_l">Rows</span><select class="ow-mq-pgsel" id="msg_q_per" aria-labelledby="msg_q_per_l">${MSG_QUEUE_PER_CHOICES.map(n=> `<option value="${n}"${n === per ? ' selected' : ''}>${n}</option>`).join('')}</select></span>
+    ${arrow(pg.page - 1, pg.page === 0, 'Previous page', 'M15 6l-6 6 6 6')}
+    ${nums.join('')}
+    ${arrow(pg.page + 1, pg.page >= pg.pages - 1, 'Next page', 'M9 6l6 6-6 6')}
+  </div>`;
+}
+let msgQueueRowsForPager = [];
+document.addEventListener('click', (e)=>{
+  const b = e.target.closest && e.target.closest('.ow-mq-pg [data-q-page]');
+  if(!b || b.disabled) return;
+  const per = msgQueuePerPage();
+  const p = Math.max(0, Number(b.dataset.qPage) || 0);
+  const first = msgQueueRowsForPager[p * per];
+  if(!first) return;
+  msgQueuePage = p;
+  fupSelectedCustomerId = first.customerId;
+  renderFollowUpsContact();
+  const q = document.querySelector('.fup-queue');
+  if(q && q.scrollIntoView) q.scrollIntoView({ block: 'start' });
+});
+document.addEventListener('change', (e)=>{
+  if(!e.target || e.target.id !== 'msg_q_per') return;
+  try{ localStorage.setItem('msgQueuePerPage', String(Number(e.target.value) || 7)); }catch(_e){}
+  renderFollowUpsContact();
+});
+
 function renderFollowUpsContact(){
   const wrap = document.getElementById('fup_contact_list');
   if(!wrap) return;
@@ -123199,8 +123275,12 @@ function renderFollowUpsContact(){
      squeezed the reading into two columns and left a third of the
      screen empty. The queue is the full width now and the opened row is
      read where it is ranked -- the draft is still only ever drawn once. */
+  msgQueueRowsForPager = shown;
+  const pg = msgQueuePageOf(shown.length, msgQueuePerPage(), msgQueuePage,
+    shown.findIndex(r=> String(r.customerId) === String(fupSelectedCustomerId)));
+  msgQueuePage = pg.page;
   const body = shown.length
-    ? shown.map(r=> queueRow(r, String(r.customerId) === String(fupSelectedCustomerId) ? work : '')).join('')
+    ? shown.slice(pg.from, pg.to).map(r=> queueRow(r, String(r.customerId) === String(fupSelectedCustomerId) ? work : '')).join('')
     : emptyHTML;
   const queueHTML = `<div class="ow-pan ow-mq fup-queue">
     <div class="ow-pan-h ow-mq-hd"><span class="ow-pan-t">${fupWhy === 'all' ? 'To message' : esc(whyLabel)}</span>
@@ -123211,7 +123291,7 @@ function renderFollowUpsContact(){
       <span class="ow-mq-hc">Signal</span><span class="ow-mq-hc ow-mq-r">At stake</span>
       <span class="ow-mq-hc" title="How often this reason has been followed by a sale within ${TELL_WORKED_DAYS} days">Odds</span>
       <span class="ow-mq-hc">Window</span><span class="ow-mq-hc ow-mq-r">Wait</span></div>` : ''}
-    ${body}${undo}
+    ${body}${msgQueuePagerHTML(pg, shown)}${undo}
   </div>`;
   if(msgIsPhone() && fupWhy === 'all'){
     const person = msgPhonePerson != null && shown.find(r=> String(r.customerId) === String(msgPhonePerson));
