@@ -152,4 +152,25 @@ const { ofCompile, ofRenderNodes, OF_TEMPLATE } = ctx.__of;
   t.check(forbidden.length === 0, `autopilot never invoices, takes a payment or orders stock on its own${forbidden.length ? ' — called ' + forbidden.join(', ') : ''}`);
 }
 
+/* ---------- 4. what the first week on real orders showed ---------------- */
+{
+  ctx.data = shop();
+  const q7 = ctx.data.savedQuotes.find((q) => q.id === 7);
+  q7.amountPaid = 40000;                       // a 50,000 order, 40,000 already taken
+  const b2 = new ctx.OrderFlowBoard({});
+  b2.state.openId = 'SO-0007';
+  let v2 = b2.renderVals();
+  t.check(v2.dw.road.collect === '0.01M', `On the road collects what is still owed, not the order value (${v2.dw.road.collect})`);
+  t.check(v2.dw.paid === '0.04M', `and Paid counts money taken before the invoice (${v2.dw.paid})`);
+  q7.assignedDeliveryId = 'W1';                // a packer driving it, not on the delivery roster
+  let threw = null; try { v2 = b2.renderVals(); } catch (e) { threw = e.message; }
+  t.check(!threw && v2.dw.road.who === 'Musa', `an order carried by someone off the delivery roster opens and names them${threw ? ' — ' + threw : ''}`);
+  b2.state.openId = null; b2.state.auto = false;
+  v2 = b2.renderVals();
+  const ready = v2.lanes[0].cards.find((c) => c.id === 'SO-0001');
+  t.check(/^Your move/.test(ready.autoText) && ready._needs && !ready._auto,
+    'with autopilot OFF a ready card says it is the owner’s move and counts as needing them, not as moving itself');
+  t.check(v2.lanes[3].rule === 'moves when you mark it delivered', 'nobody signs in the app: On the road moves when the owner marks it delivered');
+}
+
 process.exit(t.done() ? 1 : 0);
