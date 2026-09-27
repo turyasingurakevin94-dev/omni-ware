@@ -229,6 +229,16 @@ const S = scope;
     'They promised is drawn by its own builder, from the list its tile counts');
 }
 
+/* ---------- 8c. the day's band is drawn on To message ----------
+   A lane's own head was once inserted between the "clear the band" line
+   and the else-branch that draws it, so the band only drew when a
+   missing element was missing -- never. The screen still rendered. */
+{
+  const contact = extractFunction(src, 'renderFollowUpsContact', 'index.html');
+  t.check(/if\(band && \(fupWhy === 'post'[^\n]*band\.innerHTML = '';\n\s*else if\(band && msgIsPhone\(\) && fupWhy === 'all'\)\{[\s\S]*?\n\s*else if\(band\)\{\n\s*try\{ band\.innerHTML = msgBandHTML\(/.test(contact),
+    'the band is cleared for the lanes with heads of their own and drawn for To message -- one if/else chain, nothing wedged inside it');
+}
+
 /* ---------- 9. templates: words filled from the books, and judged ---------- */
 {
   const T = compileScope([
