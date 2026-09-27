@@ -11440,6 +11440,14 @@
   .msg-seg5{display:flex;gap:2px;}
   .msg-seg5 > i{display:block;width:7px;height:9px;border-radius:2px;background:var(--ow-rule);}
   .msg-seg5 > i.ow-on{background:var(--ow-ink-900);}
+  .msg-pc-cps{display:flex;flex-wrap:wrap;gap:var(--ow-sp-4);min-width:0;}
+  .msg-why{display:flex;flex-direction:column;gap:var(--ow-sp-6);padding:var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);}
+  .msg-why-h{display:flex;align-items:center;gap:var(--ow-sp-8);font-size:var(--ow-t-12);}
+  .msg-why-h .ow-mq-l{margin:0;flex:1 1 auto;}
+  .msg-why-r{display:flex;align-items:flex-start;gap:var(--ow-sp-8);font-size:var(--ow-t-12);}
+  .msg-why-r .ow-cp{flex:none;}
+  .msg-why-t{display:flex;flex-direction:column;min-width:0;line-height:1.35;}
+  .msg-why-t em{font-style:normal;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
   .msg-pc-n{font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .msg-kv{display:flex;gap:var(--ow-sp-10);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
   .msg-kv > span{display:flex;flex-direction:column;min-width:0;}
@@ -118121,13 +118129,15 @@ function msgPostLaneHTML(nowMs){
     msgPostEnrich(p);
     const real = msgPostReasons(p);
     const top = real[0];
-    const chip = p.toOrder ? '<span class="ow-cp ow-mi-c-order">To order</span>'
-      : top ? `<span class="ow-cp ow-good" title="${esc(top.text)}">${esc(MSG_POST_REASON_LABELS[top.kind] || top.text)}</span>` : '<span class="ow-cp">no reason on file</span>';
+    /* THE REASON IS THE CARD'S FIRST WORD. Up to two, in the picker's
+       own order; an order line says so as well, since it posts as one. */
+    const chip = (real.length ? real.slice(0, 2).map(r=> `<span class="ow-cp ow-good" title="${esc(r.text)}">${esc(MSG_POST_REASON_LABELS[r.kind] || r.text)}</span>`).join('') : '<span class="ow-cp">no reason on file</span>')
+      + (p.toOrder ? '<span class="ow-cp ow-mi-c-order" title="None on the shelf: it posts as an order line">to order</span>' : '');
     const str = Math.min(5, real.length + (p.image ? 1 : 0));
     const margin = p.marginUnit != null && Number(p.price) > 0 ? Math.round(p.marginUnit / Number(p.price) * 100) : null;
     return `<button type="button" class="msg-pc msg-post-pick${i === sel ? ' ow-on' : ''}" data-pick="${esc(String(i))}" aria-pressed="${i === sel ? 'true' : 'false'}">
       ${msgPostPicThumb(p, 96)}
-      <span class="msg-pc-h">${chip}<span class="ow-pan-sp"></span><span class="msg-seg5" title="${real.length} reason${real.length === 1 ? '' : 's'}${p.image ? ', with a photo' : ''}">${Array.from({length: 5}, (_, k)=> `<i class="${k < str ? 'ow-on' : ''}"></i>`).join('')}</span></span>
+      <span class="msg-pc-h"><span class="msg-pc-cps">${chip}</span><span class="ow-pan-sp"></span><span class="msg-seg5" title="${real.length} reason${real.length === 1 ? '' : 's'}${p.image ? ', with a photo' : ''}">${Array.from({length: 5}, (_, k)=> `<i class="${k < str ? 'ow-on' : ''}"></i>`).join('')}</span></span>
       <span class="msg-pc-n" title="${esc(p.name || '')}">${esc(p.name || 'a product')}</span>
       <span class="msg-kv"><span>price<b class="ow-fig">${Number(p.price) > 0 ? esc(fig(p.price)) : '&mdash;'}</b></span><span>${p.toOrder ? 'on shelf<b class="ow-fig msg-sub-warn">0</b>' : `on shelf<b class="ow-fig">${esc(fig(p.qty))}</b>`}</span><span>margin<b class="ow-fig">${margin != null ? margin + '%' : '&mdash;'}</b></span></span>
     </button>`;
@@ -118181,6 +118191,7 @@ function msgPostSideHTML(nowMs){
     const shop = typeof printedShopName === 'function' ? printedShopName() : '';
     const draft = msgPostDraft(p);
     const slotAt = (MSG_POST_SLOT_TIMES[Math.min(todayN, cap - 1)] || [])[1];
+    const why = msgPostReasons(p);
     prev = `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">As your status shows it</span></div>
       <div class="msg-st-w"><div class="msg-st"><span class="msg-st-bars">${Array.from({length: cap}, (_, k)=> `<i class="${k <= todayN ? 'ow-on' : ''}"></i>`).join('')}</span>
         <span class="msg-st-ph">${p.image ? `<img class="msg-pic-i" src="${esc(String(p.image))}" alt="">`
@@ -118188,6 +118199,12 @@ function msgPostSideHTML(nowMs){
         <span class="msg-st-c"><b>${esc(p.toOrder ? p.name + ' — order yours' : p.dropped ? p.name + ' — new lower price' : p.name || 'a product')}</b>
           <span class="ow-fig msg-st-p">UGX ${esc(fig(p.price))}</span>
           <span class="msg-st-m">${[p.unit ? 'per ' + esc(p.unit) : '', p.toOrder ? (p.leadDays ? 'ready in about ' + p.leadDays + ' days' : 'to order') : esc(fig(p.qty)) + ' in stock', esc(shop)].filter(Boolean).join(' &middot; ')}</span></span></div></div>
+      <div class="msg-why">
+        <div class="msg-why-h"><span class="ow-mq-l">Why this one</span><span class="ow-mi-segs">${Array.from({length: 4}, (_, k)=> `<i class="ow-mi-sgi${k < Math.min(4, why.length) ? ' ow-on' : ''}"></i>`).join('')}</span>
+          <b>${why.length === 0 ? 'no reason on file' : why.length === 1 ? 'one reason — a weak pick' : why.length + ' reasons'}</b></div>
+        ${why.slice(0, 4).map(r=> `<div class="msg-why-r"><span class="ow-cp ow-good">${esc(MSG_POST_REASON_LABELS[r.kind] || r.kind)}</span><span class="msg-why-t">${esc(r.text)}<em>from ${esc(WA_EVIDENCE_SOURCE[r.kind] || 'the shop’s own records')}</em></span></div>`).join('')}
+        ${why.length > 4 ? `<p class="ow-mini">and ${why.length - 4} more</p>` : ''}
+      </div>
       <div class="msg-st-f">
         <span class="fup-best"><svg class="fup-bi" viewBox="0 0 24 24"><path d="M4 12.5l5.5 5.5L20 6.5"/></svg>Price and stock read from the books at ${esc(hm)}</span>
         ${slotAt ? `<span class="fup-best"><svg class="fup-bi" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Slot ${Math.min(todayN, cap - 1) + 1} is planned for ${esc(slotAt)}</span>` : ''}
