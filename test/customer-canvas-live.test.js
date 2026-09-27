@@ -138,4 +138,31 @@ const sc = compileScope([
   t.check(/Statement sent on WhatsApp/.test(extractFunction(src, 'customerRailHTML', 'index.html')), 'and the account\'s notes say so');
 }
 
+/* ---------- 6. the map zooms along either axis ----------------------- */
+{
+  const sc = compileScope([
+    'const CUST_MAP_LABELS = 10; let custMapView = null; let custMapLast = null;',
+    'function __view(v){ custMapView = v; }',
+    extractFunction(src, 'customerMapHTML', 'index.html'),
+  ], { esc: (s) => String(s) }, ['customerMapHTML', '__view']);
+  const b = (id, gap, since, spend) => ({ id, name: id, everyDays: gap, daysSinceLast: since, spend, spendPrev: 0 });
+  const book = [b('A', 10, 2, 100), b('B', 10, 5, 400), b('C', 10, 25, 900), b('D', 10, 40, 50)];
+  const whole = sc.customerMapHTML(book, new Map());
+  eq((whole.match(/<circle class="cu-mp-d/g) || []).length, 4, 'fitted, everyone is on the map');
+  t.check(/data-cmz="fit" disabled/.test(whole) && /data-cmz="xin"/.test(whole) && /data-cmz="yin"/.test(whole),
+    'it offers Time and Value steps, and Fit is spent while everyone shows');
+  t.check(/data-cmzone="both"/.test(whole) && /data-cmzone="x"/.test(whole) && /data-cmzone="y"/.test(whole),
+    'a box can be dragged over the map, or along either axis alone');
+  sc.__view({ x0: 0, x1: 1, y0: 0, y1: 900, top: 900 });
+  const zoomed = sc.customerMapHTML(book, new Map());
+  eq((zoomed.match(/<circle class="cu-mp-d/g) || []).length, 2, 'zoomed to their usual gap, only the two on time are drawn');
+  t.check(/2 of 4 in view/.test(zoomed) && /class="cu-mz-b cu-mz-fit ow-on" data-cmz="fit">/.test(zoomed),
+    'and it says so, with Fit lit to bring everyone back');
+  sc.__view({ x0: 0, x1: 3, y0: 0, y1: 900, top: 1 });
+  eq((sc.customerMapHTML(book, new Map()).match(/<circle class="cu-mp-d/g) || []).length, 4,
+    'a window drawn on a different book is dropped, not applied to this one');
+  t.check(/customerMapZoom\('fit'\)/.test(src) && /customerMapStep\(z\.dataset\.cmz\)/.test(src) && /e\.pointerType === 'touch'/.test(src),
+    'the controls are wired, and a finger on a phone still scrolls the page');
+}
+
 process.exit(t.done() ? 1 : 0);

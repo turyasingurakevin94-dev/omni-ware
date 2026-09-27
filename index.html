@@ -15865,6 +15865,21 @@
   .cu-mp-q.cu-mp-qs{fill:var(--ow-amber);}
   .cu-mp-q.cu-mp-ql{fill:var(--ow-sky);}
   .cu-mp-c{font-size:var(--ow-t-11);fill:var(--ow-ink-600);}
+  .cu-mz-k{margin-left:var(--ow-sp-8);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .cu-mz{margin-left:auto;display:inline-flex;align-items:center;gap:var(--ow-sp-4);}
+  .cu-mz-l{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);margin:0 var(--ow-sp-2) 0 var(--ow-sp-6);}
+  .cu-mz-b{min-width:24px;height:24px;padding:0 var(--ow-sp-6);border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);background:var(--ow-paper);
+    font:inherit;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;}
+  .cu-mz-b:hover:not(:disabled){background:var(--ow-paper-2);}
+  .cu-mz-b.cu-mz-fit{margin-left:var(--ow-sp-6);}
+  .cu-mz-b:disabled{color:var(--ow-ink-600);cursor:default;}
+  .cu-mz-b.cu-mz-fit.ow-on{background:var(--ow-steel-950);border-color:var(--ow-steel-950);color:var(--ow-paper);}
+  .cu-mz-hit{fill:transparent;cursor:crosshair;}
+  .cu-mz-hit.cu-mz-hx{cursor:ew-resize;}
+  .cu-mz-hit.cu-mz-hy{cursor:ns-resize;}
+  .cu-mz-br{fill:var(--ow-sky);fill-opacity:.08;stroke:var(--ow-sky);stroke-dasharray:3 3;pointer-events:none;}
+  .cu-mp-svg{user-select:none;}
+  @media (max-width:820px){ .cu-mz-l{display:none;} .cu-mz-k{display:none;} .cu-mz-b{min-width:36px;height:36px;} }
   .cu-mp-t{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-size:var(--ow-t-11);
     fill:var(--ow-ink-600);}
   .cu-mp-nm{font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);
@@ -67224,40 +67239,75 @@ function custRhythmTrackHTML(r){
    account. The middle line is this book's own middle customer, so
    "worth a lot" means worth a lot HERE. */
 const CUST_MAP_LABELS = 10;
+/* THE MAP ZOOMS, along either axis. A book of a hundred customers piles
+   most of them into one corner; the owner draws a box over the pile (or
+   along one axis, to stretch only time or only money), or steps with
+   the Time and Value buttons, and the map redraws on that window with
+   its ticks, regions and names -- more names fit as it opens up. Fit,
+   or a double-click, is everyone again. The window is held here, in
+   the axes' own units (x: time since last order over their gap, 0 to
+   3; y: paid in 180 days), and is dropped whenever the book it was
+   drawn on changes shape. */
+let custMapView = null;
+let custMapLast = null;
 function customerMapHTML(all, health){
   const placed = all.filter(r=> r.everyDays !== null && r.daysSinceLast !== null);
   if(placed.length < 3) return '';
+  custMapLast = { all, health };
   const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
   const short = (n)=> n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(Math.round(n));
+  const money = (v)=> v <= 0 ? '0' : v >= 1e6 ? String(+(v / 1e6).toFixed(2)) + 'M' : v >= 1e3 ? String(+(v / 1e3).toFixed(1)) + 'k' : String(Math.round(v));
   /* Drawn at the width it is shown at, beside Needs you today, so its
      words print at their own size rather than shrunk. */
   const W = 740, H = 340, L = 50, R = 12, T = 14, B = 300;
   const XMAX = 3;
   const worth = (r)=> r.spend + r.spendPrev;
   const top = Math.max(...placed.map(worth), 1);
-  const X = (r)=> L + Math.min(XMAX, r.daysSinceLast / r.everyDays) / XMAX * (W - L - R);
+  const gapOf = (r)=> Math.min(XMAX, r.daysSinceLast / r.everyDays);
+  const v = custMapView && custMapView.top === top ? custMapView : { x0: 0, x1: XMAX, y0: 0, y1: top, top };
+  const full = v.x0 <= 0 && v.x1 >= XMAX && v.y0 <= 0 && v.y1 >= top;
+  const X = (g)=> L + (g - v.x0) / (v.x1 - v.x0) * (W - L - R);
   /* A square-root scale: one contractor paying ten times the rest would
-     otherwise press everybody else flat against the floor. */
-  const Y = (v)=> B - Math.sqrt(Math.max(0, v) / top) * (B - T);
+     otherwise press everybody else flat against the floor. Zoomed, it is
+     the same scale over the window. */
+  const s0 = Math.sqrt(Math.max(0, v.y0)), s1 = Math.sqrt(v.y1);
+  const Y = (m)=> B - (Math.sqrt(Math.max(0, m)) - s0) / Math.max(1e-9, s1 - s0) * (B - T);
+  const cx = (x)=> Math.max(L, Math.min(W - R, x)), cy = (y)=> Math.max(T, Math.min(B, y));
   const ys = placed.map(worth).sort((a, b)=> a - b);
   const mid = ys[ys.length >> 1];
-  const x1 = L + (W - L - R) / XMAX, x2 = L + 2 * (W - L - R) / XMAX, ym = Y(mid);
-  /* Round figures up the side -- 2M, 4M, 6M -- rather than the one
-     middle customer, so the height reads as money without a legend. */
-  const mag = Math.pow(10, Math.floor(Math.log10(top / 3 || 1)));
-  const step = [1, 2, 2.5, 5, 10].map(k=> k * mag).find(v=> top / v <= 4) || mag * 10;
-  const ticks = [];
-  for(let v = 0; v <= top + 0.5; v += step) ticks.push(v);
-  const pts = placed.map(r=> ({ r, x: X(r), y: Y(worth(r)), h: health.get(r.id) }));
+  const xg = X(1), ym = Y(mid);
+  const zx = Math.max(1, XMAX / (v.x1 - v.x0)), zy = Math.max(1, s1 && Math.sqrt(top) / (s1 - s0));
+  /* Round figures up the side over whatever window is showing. */
+  const nice = (span, want, steps)=> steps.find(s=> span / s <= want) || steps[steps.length - 1];
+  const mag = Math.pow(10, Math.floor(Math.log10((v.y1 - v.y0) / 3 || 1)));
+  const ystep = nice(v.y1 - v.y0, 4, [1, 2, 2.5, 5, 10].map(k=> k * mag));
+  const yTicks = [];
+  for(let m = Math.ceil(v.y0 / ystep) * ystep; m <= v.y1 + 0.5; m += ystep) yTicks.push(m);
+  const xstep = nice(v.x1 - v.x0, 6, [0.1, 0.25, 0.5, 1]);
+  const xName = (g)=> Math.abs(g) < 1e-9 ? 'just bought' : Math.abs(g - 1) < 1e-9 ? 'at their usual gap' : Math.abs(g - XMAX) < 1e-9 ? '3&#215;+' : `${+g.toFixed(2)}&#215;`;
+  const xTicks = [];
+  for(let g = Math.ceil(v.x0 / xstep - 1e-9) * xstep; g <= v.x1 + 1e-9; g += xstep) xTicks.push(+g.toFixed(4));
+  const inView = (p)=> p.g >= v.x0 - 1e-9 && p.g <= v.x1 + 1e-9 && p.m >= v.y0 && p.m <= v.y1 + 0.5;
+  const pts = placed.map(r=> ({ r, g: gapOf(r), m: worth(r), h: health.get(r.id) }))
+    .map(p=> Object.assign(p, { x: X(p.g), y: Y(p.m) })).filter(inView);
   /* Names only where they fit: the slipping ones first, then the rest by
-     what they are worth, and never two labels on top of each other. */
+     what they are worth, and never two labels on top of each other. The
+     more the map is opened up, the more names it has room for. */
   const byNeed = pts.slice().sort((a, b)=>
-    ((b.x > x1 && worth(b.r) >= mid) - (a.x > x1 && worth(a.r) >= mid)) || (worth(b.r) - worth(a.r)));
-  /* The four region names are taken ground too. */
-  const taken = [{ x0: L + 8, y: T + 16, w: 50 }, { x0: x1 + 8, y: T + 16, w: 240 }, { x0: L + 8, y: ym + 16, w: 80 }, { x0: x1 + 8, y: ym + 16, w: 80 }];
+    ((b.g > 1 && b.m >= mid) - (a.g > 1 && a.m >= mid)) || (b.m - a.m));
+  /* The region names are taken ground too, where they are drawn. */
+  const regions = [
+    ['CORE', 'cu-mp-qc', cx(X(0)), cy(Y(Infinity)), xg, ym],
+    ['SLIPPING &#8212; VALUABLE, LATE', 'cu-mp-qs', cx(xg), cy(Y(Infinity)), W - R, ym],
+    ['GROWING', 'cu-mp-ql', cx(X(0)), cy(ym), xg, B],
+    ['SLEEPING', '', cx(xg), cy(ym), W - R, B],
+  ].map(([t, cls, x0, y0, x1, y1])=> ({ t, cls, x0, y0, w: Math.min(W - R, x1) - x0, h: Math.min(B, y1) - y0 }))
+    .filter(q=> q.w > 90 && q.h > 26);
+  const taken = regions.map(q=> ({ x0: q.x0 + 8, y: q.y0 + 16, w: q.t.length > 10 ? 240 : 80 }));
+  const cap = Math.round(CUST_MAP_LABELS * Math.min(4, Math.max(zx, zy)));
   const labels = [];
   byNeed.forEach(p=>{
-    if(labels.length >= CUST_MAP_LABELS) return;
+    if(labels.length >= cap) return;
     const name = p.r.name.length > 22 ? p.r.name.slice(0, 21) + '…' : p.r.name;
     const w = name.length * 7 + 4, ly = p.y + 4;
     const fits = (x0)=> x0 >= L && x0 + w <= W - R
@@ -67268,32 +67318,89 @@ function customerMapHTML(all, health){
     taken.push({ x0: side[1], y: ly, w });
     labels.push(`<text class="cu-mp-nm" x="${(side[0] === 'start' ? p.x + 11 : p.x - 11).toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="${side[0]}">${esc(name)}</text>`);
   });
-  const dots = pts.sort((a, b)=> worth(a.r) - worth(b.r)).map(p=>
-    `<circle class="cu-mp-d ${p.h ? p.h.tone : ''}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="7" data-cact="statement" data-cid="${esc(p.r.id)}"><title>${esc(p.r.name)} · last order ${p.r.daysSinceLast} days ago, usually every ${p.r.everyDays} · ${f(worth(p.r))} UGX in 180 days${p.h ? ` · health ${p.h.score}` : ''}</title></circle>`).join('');
+  const dots = pts.sort((a, b)=> a.m - b.m).map(p=>
+    `<circle class="cu-mp-d ${p.h ? p.h.tone : ''}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="7" data-cact="statement" data-cid="${esc(p.r.id)}"><title>${esc(p.r.name)} · last order ${p.r.daysSinceLast} days ago, usually every ${p.r.everyDays} · ${f(p.m)} UGX in 180 days${p.h ? ` · health ${p.h.score}` : ''}</title></circle>`).join('');
   const off = all.length - placed.length;
-  const zone = (cls, x, y, w, h)=> `<rect class="cu-mp-z ${cls}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}"/>`;
+  const zone = (cls, x0, y0, x1, y1)=>{
+    const a = cx(x0), b = cx(x1), c = cy(y0), d = cy(y1);
+    return b - a > 0.5 && d - c > 0.5 ? `<rect class="cu-mp-z ${cls}" x="${a.toFixed(1)}" y="${c.toFixed(1)}" width="${(b - a).toFixed(1)}" height="${(d - c).toFixed(1)}"/>` : '';
+  };
+  const zb = (k, label, text)=> `<button type="button" class="cu-mz-b" data-cmz="${k}" aria-label="${label}" title="${label}">${text}</button>`;
   return `<div class="ow-pan cu-mp">
     <div class="ow-pan-h"><span class="ow-pan-t">Where everyone stands</span>
-      <span class="ow-pan-n" title="${placed.length} with a buying rhythm${off ? `; ${off} with one order or none are in the book below` : ''}. Tap a dot to open them.">dot = customer &middot; colour = health</span></div>
+      <span class="cu-mz-k" title="${placed.length} with a buying rhythm${off ? `; ${off} with one order or none are in the book below` : ''}. Tap a dot to open them.">dot = customer &middot; colour = health</span>
+      <span class="cu-mz" role="group" aria-label="Zoom the map">
+        <span class="cu-mz-l">Time</span>${zb('xout', 'Zoom time out', '&minus;')}${zb('xin', 'Zoom time in', '+')}
+        <span class="cu-mz-l">Value</span>${zb('yout', 'Zoom value out', '&minus;')}${zb('yin', 'Zoom value in', '+')}
+        <button type="button" class="cu-mz-b cu-mz-fit${full ? '' : ' ow-on'}" data-cmz="fit"${full ? ' disabled' : ''}>Fit</button>
+      </span></div>
     <div class="cu-tl-sc"><svg class="cu-mp-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${placed.length} customers placed by how late they are against their own gap and what they paid in 180 days">
-      ${zone('cu-mp-core', L, T, x1 - L, ym - T)}${zone('cu-mp-slip', x1, T, W - R - x1, ym - T)}
-      ${zone('cu-mp-light', L, ym, x1 - L, B - ym)}${zone('cu-mp-sleep', x1, ym, W - R - x1, B - ym)}
-      <text class="cu-mp-q cu-mp-qc" x="${L + 8}" y="${T + 16}">CORE</text>
-      <text class="cu-mp-q cu-mp-qs" x="${x1 + 8}" y="${T + 16}">SLIPPING &#8212; VALUABLE, LATE</text>
-      <text class="cu-mp-q cu-mp-ql" x="${L + 8}" y="${ym + 16}">GROWING</text>
-      <text class="cu-mp-q" x="${x1 + 8}" y="${ym + 16}">SLEEPING</text>
+      ${zone('cu-mp-core', X(0), T, xg, ym)}${zone('cu-mp-slip', xg, T, W - R, ym)}
+      ${zone('cu-mp-light', X(0), ym, xg, B)}${zone('cu-mp-sleep', xg, ym, W - R, B)}
+      ${regions.map(q=> `<text class="cu-mp-q ${q.cls}" x="${(q.x0 + 8).toFixed(1)}" y="${(q.y0 + 16).toFixed(1)}">${q.t}</text>`).join('')}
       <line class="cu-mp-ax" x1="${L}" x2="${W - R}" y1="${B}" y2="${B}"/>
       <line class="cu-mp-ax" x1="${L}" x2="${L}" y1="${T}" y2="${B}"/>
-      <line class="cu-mp-gap" x1="${x1.toFixed(1)}" x2="${x1.toFixed(1)}" y1="${T}" y2="${B}"/>
-      <text class="cu-mp-t" x="${L}" y="${B + 16}" text-anchor="start">just bought</text>
-      <text class="cu-mp-t" text-anchor="middle" x="${x1.toFixed(1)}" y="${B + 16}">at their usual gap</text>
-      <text class="cu-mp-t" text-anchor="middle" x="${x2.toFixed(1)}" y="${B + 16}">2&#215;</text>
-      <text class="cu-mp-t" x="${W - R}" y="${B + 16}" text-anchor="end">3&#215;+</text>
-      ${ticks.map(v=> `<text class="cu-mp-t" x="${L - 8}" y="${(Y(v) + 4).toFixed(1)}" text-anchor="end">${v ? short(v).replace('.0M', 'M') : '0'}</text>`).join('')}
-      <text class="cu-mp-c" text-anchor="middle" x="${((L + W - R) / 2).toFixed(1)}" y="${H - 4}">time since last order, measured against each customer&#8217;s own gap &#8594;</text>
+      ${xg >= L && xg <= W - R ? `<line class="cu-mp-gap" x1="${xg.toFixed(1)}" x2="${xg.toFixed(1)}" y1="${T}" y2="${B}"/>` : ''}
+      ${xTicks.map(g=>{ const x = X(g); return `<text class="cu-mp-t" x="${x.toFixed(1)}" y="${B + 16}" text-anchor="${x < L + 30 ? 'start' : x > W - R - 30 ? 'end' : 'middle'}">${xName(g)}</text>`; }).join('')}
+      ${yTicks.map(m=> `<text class="cu-mp-t" x="${L - 8}" y="${(Y(m) + 4).toFixed(1)}" text-anchor="end">${m ? (full ? short(m).replace('.0M', 'M') : money(m)) : '0'}</text>`).join('')}
+      <text class="cu-mp-c" text-anchor="middle" x="${((L + W - R) / 2).toFixed(1)}" y="${H - 4}">${full
+        ? 'time since last order, measured against each customer&#8217;s own gap &#8594;'
+        : `zoomed to ${xName(+v.x0.toFixed(2)).replace('just bought', '0&#215;')} &#8211; ${xName(+v.x1.toFixed(2))} their gap &middot; ${money(v.y0)} &#8211; ${money(v.y1)} paid &middot; ${pts.length} of ${placed.length} in view &middot; double-click to see everyone`}</text>
+      <rect class="cu-mz-hit" data-cmzone="both" x="${L}" y="${T}" width="${W - L - R}" height="${B - T}"><title>Drag a box to zoom into it; double-click to see everyone</title></rect>
+      <rect class="cu-mz-hit cu-mz-hx" data-cmzone="x" x="${L}" y="${B + 1}" width="${W - L - R}" height="22"><title>Drag along the time axis to zoom time only</title></rect>
+      <rect class="cu-mz-hit cu-mz-hy" data-cmzone="y" x="0" y="${T}" width="${L - 1}" height="${B - T}"><title>Drag along the value axis to zoom value only</title></rect>
       ${dots}${labels.join('')}
+      <rect class="cu-mz-br" x="0" y="0" width="0" height="0"/>
     </svg></div>
   </div>`;
+}
+
+/* Turning the window. Held within the book: never past "just bought" or
+   3x, never below nothing or above the biggest customer, and never so
+   narrow that one day or one shilling fills the map. */
+function customerMapZoom(next){
+  const last = custMapLast;
+  if(!last) return;
+  const placed = last.all.filter(r=> r.everyDays !== null && r.daysSinceLast !== null);
+  const top = Math.max(...placed.map(r=> r.spend + r.spendPrev), 1);
+  const cur = custMapView && custMapView.top === top ? custMapView : { x0: 0, x1: 3, y0: 0, y1: top, top };
+  if(next === 'fit'){ custMapView = null; }
+  else {
+    const v = Object.assign({}, cur, next);
+    const clamp = (a, b, lo, hi, min)=>{
+      let x = Math.max(lo, Math.min(a, b)), y = Math.min(hi, Math.max(a, b));
+      if(y - x < min){ const m = (x + y) / 2; x = Math.max(lo, m - min / 2); y = Math.min(hi, x + min); x = Math.max(lo, y - min); }
+      return [x, y];
+    };
+    [v.x0, v.x1] = clamp(v.x0, v.x1, 0, 3, 0.1);
+    [v.y0, v.y1] = clamp(v.y0, v.y1, 0, top, top / 200);
+    custMapView = v.x0 <= 0 && v.x1 >= 3 && v.y0 <= 0 && v.y1 >= top ? null : v;
+  }
+  const box = document.querySelector('#custStripWrap .cu-mp');
+  if(box) box.outerHTML = customerMapHTML(last.all, last.health);
+}
+/* A step on one axis: in by half or out by double, about the middle of
+   what is showing. The value axis steps on the square-root scale it is
+   drawn on, so a step looks the same size wherever it is taken. */
+function customerMapStep(k){
+  const last = custMapLast;
+  if(!last) return;
+  const placed = last.all.filter(r=> r.everyDays !== null && r.daysSinceLast !== null);
+  const top = Math.max(...placed.map(r=> r.spend + r.spendPrev), 1);
+  const v = custMapView && custMapView.top === top ? custMapView : { x0: 0, x1: 3, y0: 0, y1: top, top };
+  const by = /in$/.test(k) ? 0.5 : 2;
+  if(k[0] === 'x'){
+    const m = (v.x0 + v.x1) / 2, h = (v.x1 - v.x0) / 2 * by;
+    let a = m - h, b = m + h;
+    if(a < 0){ b -= a; a = 0; } if(b > 3){ a -= b - 3; b = 3; }
+    customerMapZoom({ x0: a, x1: b });
+  } else {
+    const s0 = Math.sqrt(v.y0), s1 = Math.sqrt(v.y1), st = Math.sqrt(top);
+    const m = (s0 + s1) / 2, h = (s1 - s0) / 2 * by;
+    let a = m - h, b = m + h;
+    if(a < 0){ b -= a; a = 0; } if(b > st){ a -= b - st; b = st; }
+    customerMapZoom({ y0: a * a, y1: b * b });
+  }
 }
 
 /* A customer's health, as a ring the size of a line of text: the same
@@ -69692,6 +69799,57 @@ async function sendSupplierStatementPdf(supplierId){
   };
   wrap.addEventListener('click', onClick);
   if(band) band.addEventListener('click', onClick);
+  /* The map's zoom: the Time and Value steps and Fit, a double-click for
+     everyone, and a box dragged over the map -- or along one axis -- to
+     open that window. A finger on a phone scrolls the page as it always
+     did; the buttons zoom there. */
+  if(band){
+    band.addEventListener('click', (e)=>{
+      const z = e.target.closest('[data-cmz]');
+      if(!z || z.disabled) return;
+      if(z.dataset.cmz === 'fit') customerMapZoom('fit'); else customerMapStep(z.dataset.cmz);
+    });
+    band.addEventListener('dblclick', (e)=>{ if(e.target.closest('.cu-mp-svg')) customerMapZoom('fit'); });
+    band.addEventListener('pointerdown', (e)=>{
+      const hit = e.target.closest('[data-cmzone]');
+      if(!hit || e.pointerType === 'touch' || e.button !== 0) return;
+      const svg = hit.ownerSVGElement, br = svg.querySelector('.cu-mz-br');
+      const mode = hit.dataset.cmzone;
+      const at = (ev)=>{ const m = svg.getScreenCTM(); const pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY; return m ? pt.matrixTransform(m.inverse()) : { x: 0, y: 0 }; };
+      /* The plot's own box, as customerMapHTML draws it. */
+      const L = 50, R = 740 - 12, T = 14, B = 300;
+      const clampX = (x)=> Math.max(L, Math.min(R, x)), clampY = (y)=> Math.max(T, Math.min(B, y));
+      const p0 = at(e), a = { x: clampX(p0.x), y: clampY(p0.y) };
+      let b = { x: a.x, y: a.y };
+      const draw = ()=>{
+        const x = mode === 'y' ? L : Math.min(a.x, b.x), y = mode === 'x' ? T : Math.min(a.y, b.y);
+        const w = mode === 'y' ? R - L : Math.abs(b.x - a.x), h = mode === 'x' ? B - T : Math.abs(b.y - a.y);
+        br.setAttribute('x', x); br.setAttribute('y', y); br.setAttribute('width', w); br.setAttribute('height', h);
+      };
+      const move = (ev)=>{ const p = at(ev); b = { x: clampX(p.x), y: clampY(p.y) }; draw(); };
+      const up = ()=>{
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+        const dx = Math.abs(b.x - a.x), dy = Math.abs(b.y - a.y);
+        br.setAttribute('width', 0); br.setAttribute('height', 0);
+        const next = {};
+        const last = custMapLast;
+        if(!last) return;
+        const placed = last.all.filter(r=> r.everyDays !== null && r.daysSinceLast !== null);
+        const top = Math.max(...placed.map(r=> r.spend + r.spendPrev), 1);
+        const v = custMapView && custMapView.top === top ? custMapView : { x0: 0, x1: 3, y0: 0, y1: top, top };
+        const g = (x)=> v.x0 + (x - L) / (R - L) * (v.x1 - v.x0);
+        const s0 = Math.sqrt(v.y0), s1 = Math.sqrt(v.y1);
+        const m = (y)=> Math.pow(s0 + (B - y) / (B - T) * (s1 - s0), 2);
+        if(mode !== 'y' && dx > 8){ next.x0 = g(Math.min(a.x, b.x)); next.x1 = g(Math.max(a.x, b.x)); }
+        if(mode !== 'x' && dy > 8){ next.y0 = m(Math.max(a.y, b.y)); next.y1 = m(Math.min(a.y, b.y)); }
+        if(Object.keys(next).length) customerMapZoom(next);
+      };
+      e.preventDefault();
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+    });
+  }
   const acct = document.getElementById('custAccountWrap');
   if(acct) acct.addEventListener('click', onClick);
   /* Escape leaves an account, the way it used to close the dialog this

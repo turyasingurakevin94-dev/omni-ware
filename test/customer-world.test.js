@@ -158,6 +158,9 @@ const row = (id, o) => Object.assign({ id, name: id, c: { id, phone: '0772 000 0
 {
   const map = compileScope([
     'const CUST_MAP_LABELS = 10;',
+    // The zoom window the map draws on (none = everyone) and the book it
+    // last drew, which the zoom controls redraw from.
+    'let custMapView = null; let custMapLast = null;',
     extractFunction(src, 'customerMapHTML', 'index.html'),
     extractFunction(src, 'custHealthRingHTML', 'index.html'),
   ], { esc: (s) => String(s) }, ['customerMapHTML', 'custHealthRingHTML']);
