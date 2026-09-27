@@ -686,7 +686,18 @@ const stockMove = (before, after, whenDays) => {
      Held back counts followUpHeldBack's list and opens that list. */
   eq((summary.match(/\$\{tile\(/g) || []).length, 6,
     'and there are six of them — the five stages of the loop, and who is deliberately held out of it');
-  t.check(/followUpHeldBack\(now, rows\)\.list/.test(summary)
+  /* WHY THE TILE NO LONGER READS followUpHeldBack DIRECTLY. The "Lane ·
+     Held back" canvas counts past-terms debtors BESIDE the lane, not in
+     it: they are not a hold anybody releases -- they get the statement
+     on the money lane instead of news -- so the lane says "also kept off
+     news: N" and its count is the rest. Both the tile and the lane now
+     read that split from one function, msgHeldSplit, which reads
+     followUpHeldBack; the old assertion pinned the list, this one pins
+     that the tile and the lane read the same split of it. */
+  const heldPanel = extractFunction(src, 'fupHeldPanelHTML', 'index.html');
+  t.check(/msgHeldSplit\(now, rows\)/.test(summary)
+    && /msgHeldSplit\(nowMs, rows\)/.test(heldPanel)
+    && /followUpHeldBack\(nowMs, rows\)/.test(extractFunction(src, 'msgHeldSplit', 'index.html'))
     && /lane === 'held'\) return fupHeldPanelHTML\(nowMs, fupHubRowsNow\(\)\)/.test(lane),
     'and Held back counts the same list its lane opens');
   /* WHAT THE FIVE TILES NAME, AND WHY IT CHANGED.

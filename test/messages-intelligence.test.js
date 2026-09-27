@@ -194,6 +194,24 @@ const S = scope;
   t.check(!/btn-accent/.test(extractFunction(src, 'msgBandHTML', 'index.html'))
     && !/btn-accent/.test(extractFunction(src, 'fupHeldPanelHTML', 'index.html')),
     'and neither the band nor the held-back lane competes with the one primary action');
+  /* WHERE HELD BACK'S ONE ACCENT LIVES, argued rather than slipped past
+     the check above. The "Lane · Held back" canvas gives the lane one red
+     button: "Save the number", on the Fix it now card. It is the only act
+     on that lane -- the queue's own send is not on screen while Held back
+     is open -- so it IS the lane's primary action, not a competitor. The
+     card is drawn once, by msgHeldFixHTML (the rail shows it on the
+     desktop, the lane on the phone, and 820px shows exactly one of the
+     two), and only the FIRST waiting person's card wears the accent: a
+     second red "Save" would be two primary actions. The rows themselves,
+     which the assertion above reads, stay accent-free. And typing a
+     number sends nothing: it is written to their record, no more. */
+  {
+    const fix = extractFunction(src, 'msgHeldFixHTML', 'index.html');
+    t.check(/const btn = first \? 'btn btn-accent' : 'btn btn-ghost ow-sm'/.test(fix)
+      && (fix.match(/btn-accent/g) || []).length === 1,
+      'Held back has one accent: the first Fix it now card, and nowhere else in the lane');
+    t.check(!/\.send\(|wa-send|window\.open/.test(fix), 'and saving a number sends nothing');
+  }
 }
 
 /* ---------- 8b. each lane is drawn by its own canvas builder ----------
