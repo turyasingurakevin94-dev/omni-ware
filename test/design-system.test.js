@@ -689,7 +689,15 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                     'ow-mq-td', 'ow-mq-tl', 'ow-mq-ts', 'ow-mq-hold', 'ow-mq-ht', 'ow-mq-hp',
                     'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-msg',
                     'ow-cp', 'ow-cp-d', 'ow-av', 'ow-sr', 'ow-sr-k', 'ow-sr-v',
-                    'ow-tbl', 'ow-tbl-g', 'ow-tbl-r', 'ow-tbl-a', 'ow-fig',
+                    /* 'ow-tbl-g' left this list with the Register's group
+                       rows. They grouped asks by thing or by customer; the
+                       "Register redesign" canvas draws each thing as ONE
+                       row of the layer's table (its road, who waits, its
+                       worth, its act) that opens in place onto its people,
+                       so there is no group header left to wear the class.
+                       The table itself -- .ow-tbl, its rows and action
+                       cell -- is still the layer's, and still asserted. */
+                    'ow-tbl', 'ow-tbl-r', 'ow-tbl-a', 'ow-fig',
                     'ow-empty', 'ow-mini',
                     /* The reasoning under a picture makes three different
                        demands on the owner -- go and fix, weigh before
