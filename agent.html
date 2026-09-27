@@ -1710,6 +1710,13 @@
   .fd-chip:focus-visible{outline:2px solid #fff;outline-offset:2px;}
   .fd-chip-mint{background:#6FE0A6;color:#05070D;}
   .fd-chip-gold{background:#FFD27A;color:#3A2410;}
+  /* pinned by the shop: the owner's own word on top of the picture */
+  .fd-pin-tag{position:absolute;top:18px;left:16px;display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:12px;
+    background:#fff;color:#0A0F1E;font-size:12px;font-weight:900;letter-spacing:.08em;transform:rotate(-4deg);}
+  .fd-pin-tag .fd-i svg{width:16px;height:16px;}
+  .fd-pin-tag b{font-family:var(--font-money);padding-left:6px;border-left:1px solid rgba(10,15,30,.2);}
+  .fd-pin .fd-earn{top:160px;}
+  .fd-pin-note{position:absolute;top:74px;left:16px;right:120px;padding:10px 12px;border-radius:16px 16px 16px 4px;background:#fff;color:#1C2233;font-size:15px;line-height:1.3;}
   /* a request from his catalogue page: who, what they said, what it matches */
   .fd-badge-mint{background:#6FE0A6;color:#05070D;}
   .fd-av-mint{border-color:#6FE0A6;background:#E4F4EA;color:#0F6B43;}
@@ -3557,6 +3564,88 @@ function feedPrefs(){
 }
 function saveFeedPrefs(p){
   try{ localStorage.setItem(agentLocalKey('agentFeedPrefs'), JSON.stringify(p)); }catch(_e){}
+  feedPushPrefsSoon();
+}
+
+/* The same preferences, on the server (0102), so a new phone starts from
+   what this agent has already taught the feed. The phone's copy is the
+   working copy; the server's is merged in once per session and written
+   back a moment after each change. Merging keeps the LATER of any two
+   "Not for me"s, the larger of two act counts, every finished lesson, and
+   a yes/no about the profile card only where this phone has none. */
+function mergeFeedPrefs(local, remote){
+  const out = { notMe: { ...(remote.notMe||{}) }, acted: { ...(remote.acted||{}) },
+    lessons: { ...(remote.lessons||{}) }, about: local.about || remote.about || null };
+  Object.entries(local.notMe||{}).forEach(([k,v])=>{ out.notMe[k] = Math.max(Number(out.notMe[k])||0, Number(v)||0); });
+  Object.entries(local.acted||{}).forEach(([k,v])=>{ out.acted[k] = Math.max(Number(out.acted[k])||0, Number(v)||0); });
+  Object.entries(local.lessons||{}).forEach(([k,v])=>{ out.lessons[k] = Math.max(Number(out.lessons[k])||0, Number(v)||0); });
+  return out;
+}
+let feedPrefsSynced = false, feedPrefsTimer = null;
+async function feedSyncPrefs(){
+  if(feedPrefsSynced || !myAgent || !currentShopId) return;
+  try{
+    const { data, error } = await sb.from('agent_feed_prefs').select('prefs')
+      .eq('shop_id', currentShopId).eq('agent_id', myAgent.id).maybeSingle();
+    if(error) throw error;
+    feedPrefsSynced = true;
+    const merged = mergeFeedPrefs(feedPrefs(), (data && data.prefs) || {});
+    try{ localStorage.setItem(agentLocalKey('agentFeedPrefs'), JSON.stringify(merged)); }catch(_e){}
+    feedPushPrefsSoon();
+  }catch(_e){ /* offline, or the table is not there yet: the phone's copy carries on */ }
+}
+function feedPushPrefsSoon(){
+  if(!feedPrefsSynced) return;
+  clearTimeout(feedPrefsTimer);
+  feedPrefsTimer = setTimeout(async ()=>{
+    try{
+      await sb.from('agent_feed_prefs').upsert({ shop_id: currentShopId, agent_id: myAgent.id,
+        prefs: feedPrefs(), updated_at: new Date().toISOString() }, { onConflict: 'shop_id,agent_id' });
+    }catch(_e){ /* the next change tries again */ }
+  }, 1500);
+}
+
+/* What he did with a card, for the shop's Feed studio. Fire and forget:
+   a lost event costs the owner one row of a chart, and waiting on it
+   would cost the agent a tap that feels slow. "Shown" is written once a
+   card per day, however often he scrolls past it. */
+function feedLog(card, action){
+  if(!card || !myAgent || !currentShopId) return;
+  const item = card.item || (card.matches && card.matches[0]) || null;
+  const row = { shop_id: currentShopId, agent_id: myAgent.id, card_kind: card.kind, action,
+    item_key: card.itemKey || (item ? feedItemKey(item.productId, item.variantIdx) : ''),
+    client_id: card.client ? String(card.client.id) : null };
+  try{ sb.from('agent_feed_events').insert(row).then(()=>{}, ()=>{}); }catch(_e){}
+}
+const feedShownToday = new Set();
+function feedLogShown(card){
+  const day = new Date().toISOString().slice(0,10);
+  const key = `${day}|${card.key}`;
+  if(feedShownToday.has(key)) return;
+  feedShownToday.add(key);
+  let seen = {};
+  try{ seen = JSON.parse(localStorage.getItem(agentLocalKey('agentFeedShown')) || '{}'); }catch(_e){}
+  if(seen[key]) return;
+  // Only today's keys are kept; yesterday's would just grow the store.
+  Object.keys(seen).forEach(k=>{ if(!k.startsWith(day)) delete seen[k]; });
+  seen[key] = 1;
+  try{ localStorage.setItem(agentLocalKey('agentFeedShown'), JSON.stringify(seen)); }catch(_e){}
+  if(['hello','done'].includes(card.kind)) return;
+  feedLog(card, 'shown');
+}
+
+/* Items the shop has put in front of its agents (0102), live until their
+   end date. Read once a session; a failed read just means no pinned card. */
+let feedPins = [], feedPinsLoaded = false;
+async function feedEnsurePins(){
+  if(feedPinsLoaded) return;
+  try{
+    const { data, error } = await sb.from('agent_feed_pins').select('*').eq('shop_id', currentShopId);
+    if(error) throw error;
+    const today = new Date().toISOString().slice(0,10);
+    feedPins = (data||[]).filter(p=> !p.ends_on || p.ends_on >= today);
+    feedPinsLoaded = true;
+  }catch(_e){ /* no pins shown rather than a broken feed */ }
 }
 
 function feedItemKey(productId, variantIdx){
@@ -3847,6 +3936,21 @@ function buildFeedCards(now){
   // Money already his, waiting on one move from him.
   const waiting = feedMoneyWaiting(now);
   if(waiting.length) cards.push({ kind:'waiting', key:'waiting', rows: waiting });
+
+  // What the shop has pinned: the owner's own word, so it comes before
+  // anything the feed worked out for itself.
+  const promotedNow = promotedMap();
+  (typeof feedPins !== 'undefined' ? feedPins : []).forEach(pin=>{
+    const it = catalogEntry(pin.product_id, pin.variant_idx === '' || pin.variant_idx == null ? null : Number(pin.variant_idx));
+    if(!it) return;
+    const itemKey = feedItemKey(it.productId, it.variantIdx);
+    const key = `pin:${pin.id}`;
+    if(hidden(key)) return;
+    const promo = promotedNow.get(itemKey);
+    cards.push({ kind:'pin', key, pin, itemKey, item: it, promo, earn: feedEarnEach(it, promo),
+      buyers: feedBuyersOf(it.productId, it.variantIdx).slice(0, 4),
+      inCluster: isInCluster(it.productId, it.variantIdx) });
+  });
   const extras = [];
 
   const achievements = computeAchievements();
@@ -3901,6 +4005,7 @@ const FD_ICON = {
   check: '<svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg>',
   plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
   clock: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  pin: '<svg viewBox="0 0 24 24"><path d="M9 3h6l-1 6 4 4H6l4-4zM12 13v8"/></svg>',
   bell: '<svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4"/></svg>',
   box: '<svg viewBox="0 0 24 24"><path d="M3 8l9-4 9 4-9 4-9-4z"/><path d="M3 8v8l9 4 9-4V8"/></svg>',
   lock: '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
@@ -3984,6 +4089,26 @@ function feedCardHTML(card, i, cards){
       })()}
       ${stories ? `<div class="fd-stories">${stories}</div>` : ''}
       <button type="button" class="fd-cta fd-cta-mint" data-fd-jump="1">${cards.length > 2 ? 'Swipe up to start' : 'See what is new'}${fdIcon('up')}</button>
+    </section>`;
+  }
+  if(card.kind === 'pin'){
+    const it = card.item;
+    const until = card.pin.ends_on ? feedDaysLeft(card.pin.ends_on) : null;
+    const send = card.buyers.length
+      ? `<button type="button" class="fd-cta fd-cta-wa" data-fd-act="share"><span class="fd-avs">${fdAvatars(card.buyers)}</span><span class="fd-cta-t">Send to ${card.buyers.length === 1 ? esc(firstWord(card.buyers[0].client.name)) : `${card.buyers.length} clients`}</span><span class="fd-cta-i">${FD_ICON.send}</span></button>`
+      : `<button type="button" class="fd-cta fd-cta-wa" data-fd-act="share"><span class="fd-cta-t">Share on WhatsApp</span><span class="fd-cta-i">${FD_ICON.send}</span></button>`;
+    return `<section class="fd-card fd-bonus fd-pin" ${d}>
+      ${fdMedia(it)}<span class="fd-shade"></span>
+      <div class="fd-pin-tag">${fdIcon('pin')}<span>FROM THE SHOP</span>${until != null ? `<b>${until}d</b>` : ''}</div>
+      ${card.pin.note ? `<div class="fd-pin-note">${esc(card.pin.note)}</div>` : ''}
+      ${card.earn.total > 0 ? `<div class="fd-earn"><span class="fd-pill fd-pill-mint"><b>+${fmtCompactUGX(card.earn.total)}</b> each</span></div>` : ''}
+      <div class="fd-rail">
+        ${card.promo ? `<button type="button" class="fd-rb${card.inCluster ? ' on' : ' fd-rb-hot'}" data-fd-act="cluster">${fdIcon('star')}<span>${card.inCluster ? 'Live' : 'Cluster'}</span></button>` : ''}
+        <button type="button" class="fd-rb" data-fd-act="similar">${fdIcon('grid')}<span>Similar</span></button>
+        <button type="button" class="fd-rb" data-fd-act="quote">${fdIcon('plus')}<span>Quote</span></button>
+        <button type="button" class="fd-rb" data-fd-act="notme">${fdIcon('no')}<span>Not me</span></button></div>
+      <div class="fd-cap"><b>${esc(it.name)}${it.variantLabel ? ` ${esc(it.variantLabel)}` : ''} &middot; <span class="fd-m">${fmtNum(it.ourPrice || it.floorPrice)}</span></b></div>
+      ${send}
     </section>`;
   }
   if(card.kind === 'bonus'){
@@ -4191,6 +4316,8 @@ let feedCards = [];
 async function openFeedView(){
   const view = document.getElementById('ag_feedView');
   if(!feedClaimsLoaded) feedEnsureClaims().then(()=>{ if(lastMainTab === 'feed') renderFeed(); });
+  if(!feedPinsLoaded) feedEnsurePins().then(()=>{ if(lastMainTab === 'feed' && feedPins.length) renderFeed(); });
+  if(!feedPrefsSynced) feedSyncPrefs().then(()=>{ if(lastMainTab === 'feed') renderFeed(); });
   if(!catalog.length || !browseDataLoaded){
     view.innerHTML = `<div class="fd-scroller"><section class="fd-card fd-hello"><div class="fd-ring-c fd-loading"><span class="ag-spinner"></span></div></section></div>`;
     await ensureBrowseDataLoaded();
@@ -4201,6 +4328,17 @@ function renderFeed(){
   const view = document.getElementById('ag_feedView');
   feedCards = buildFeedCards(new Date());
   view.innerHTML = `<div class="fd-scroller" id="ag_feedScroller">${feedCards.map(feedCardHTML).join('')}</div>`;
+  const sc = document.getElementById('ag_feedScroller');
+  if('IntersectionObserver' in window){
+    const io = new IntersectionObserver((entries)=>{
+      entries.forEach(en=>{
+        if(!en.isIntersecting) return;
+        const c = feedCards[Number(en.target.dataset.fdI)];
+        if(c) feedLogShown(c);
+      });
+    }, { root: sc, threshold: 0.6 });
+    sc.querySelectorAll('[data-fd-i]').forEach(el=> io.observe(el));
+  }
 }
 function feedJump(i){
   const sc = document.getElementById('ag_feedScroller');
@@ -4302,6 +4440,8 @@ document.getElementById('ag_feedView').addEventListener('click', async (e)=>{
   if(act === 'goal'){ openGoalSheet(); return; }
   if(act === 'sell'){ switchTab('sell'); return; }
   if(!card) return;
+  const LOG = { notme:'notme', cluster:'cluster', share:'shared', quote:'quoted', client:'acted', 'ask-reply':'acted', similar:'acted' };
+  if(LOG[act]) feedLog(card, LOG[act]);
   if(act === 'notme'){
     feedRemember(card, 'notme');
     sec.classList.add('fd-gone');

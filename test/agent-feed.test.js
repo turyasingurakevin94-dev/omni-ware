@@ -88,7 +88,7 @@ const fn = (name) => extractFunction(src, name, 'agent.html');
     computeAchievements: () => [],
     seenAchievementIds: () => new Set(),
     myInquiries: [], usualQty: () => 0, feedInquiryMatch: () => ({ item: null, matches: [] }),
-    feedMoneyWaiting: () => [],
+    feedMoneyWaiting: () => [], feedPushPrefsSoon: () => {},
   };
   let api;
   try { api = compileScope(names.map(fn), env, ['buildFeedCards', 'feedPrefs', 'saveFeedPrefs']); }
@@ -180,6 +180,30 @@ const fn = (name) => extractFunction(src, name, 'agent.html');
   try { ({ fdUnits } = compileScope([fn('fdUnits')], {}, ['fdUnits'])); } catch (e) { /* below */ }
   t.check(fdUnits && fdUnits(1, 'box') === '1 box' && fdUnits(10, 'box') === '10 boxes' && fdUnits(3, 'pc') === '3 pcs',
     'counts read aloud correctly: 1 box, 10 boxes, 3 pcs');
+}
+
+/* ---------- 8. what the feed learnt follows him to a new phone --------- */
+{
+  let mergeFeedPrefs;
+  try { ({ mergeFeedPrefs } = compileScope([fn('mergeFeedPrefs')], {}, ['mergeFeedPrefs'])); } catch (e) { /* below */ }
+  t.check(typeof mergeFeedPrefs === 'function', 'mergeFeedPrefs compiles');
+  if (mergeFeedPrefs) {
+    const m = mergeFeedPrefs(
+      { notMe: { a: 200 }, acted: { Tools: 2 }, lessons: {}, about: null },
+      { notMe: { a: 100, b: 50 }, acted: { Tools: 5, Paint: 1 }, lessons: { addon: 9 }, about: 'yes' });
+    t.check(m.notMe.a === 200 && m.notMe.b === 50, '"Not for me" from either copy survives, the later one wins');
+    t.check(m.acted.Tools === 5 && m.acted.Paint === 1, 'act counts keep the larger of the two');
+    t.check(m.lessons.addon === 9, 'a lesson finished on the old phone stays finished');
+    t.check(m.about === 'yes', 'and his answer about the profile card carries over');
+  }
+  const sql = read('supabase/migrations/0102_agent_feed.sql');
+  t.check(/create policy "agent manages own feed prefs" on agent_feed_prefs\s+for all using \(agent_id = current_agent_id\(shop_id\)\)/.test(sql),
+    'the prefs row is the agent\'s own and nobody else\'s');
+  t.check(/"admins read feed events" on agent_feed_events\s+for select using \(is_shop_admin\(shop_id\)\)/.test(sql)
+    && !/on agent_feed_events\s+for (update|delete|all)/.test(sql),
+    'events: the shop reads them, and nobody edits or deletes one');
+  t.check(/"agents read feed pins" on agent_feed_pins\s+for select using \(is_shop_agent\(shop_id\)\)/.test(sql),
+    'pins: the shop writes them, its agents only read them');
 }
 
 /* ---------- 4. Feed is a tab of its own, and the first one ------------- */
