@@ -57077,6 +57077,13 @@ function renderOrderFlow() {
 }
 window.renderOrderFlow = renderOrderFlow;
 window.ofBoardLogic = function () { return ofBoard && ofBoard.logic; };
+/* The board's post, for anything outside it that posts an order: the
+   same words the Post sheet opens with (sources grouped, no prices), so
+   the group reads one template whichever screen sent it. */
+window.ofPostMessage = function (qid) {
+  var q = (data.savedQuotes || []).find(function (x) { return String(x.id) === String(qid); });
+  return q ? postMsg(ofOrder(q), false, true) : null;
+};
 window.OrderFlowBoard = OrderFlowBoard;
 window.ofOpenOrder = function (qid) {
   if (!ofBoard) renderOrderFlow();
@@ -131154,9 +131161,13 @@ function dsNoteOrderPosted(q, text){
 /* An ORDER is anything past a draft that has not been voided; the day
    it came in is the day it was first saved. */
 function dsOrderDay(q){
+  /* A late entry belongs to the day it went out, not the day it was typed
+     in: that is the day the group heard about it, if it ever did. */
+  if(dsIsLate(q)) return String(q.date).slice(0, 10);
   const c = q.createdAt || q.savedAt;
   return c ? String(c).slice(0, 10) : String(q.date || '').slice(0, 10);
 }
+function dsIsLate(q){ return typeof orderIsBackdated === 'function' && !!q.date && orderIsBackdated(q); }
 function dsOrderLine(q){
   const parts = (q.items || []).map(it=> `${String(it.productName || 'Item').split(' (')[0]} × ${Number(it.qty) || 0}`);
   return parts.slice(0, 2).join(', ') + (parts.length > 2 ? ` +${parts.length - 2} more` : '');
@@ -131176,11 +131187,15 @@ function dsRecords(from, to){
     if(!(q.invoiced || (q.status && q.status !== 'draft'))) return;
     const d = dsOrderDay(q);
     if(!d || d < from || d > to) return;
-    const t = dsHM(q.createdAt || q.savedAt) || '';
+    /* Its clock is the moment it was typed in, which is not when it
+       happened -- so a late entry carries no time rather than a wrong one. */
+    const late = dsIsLate(q);
+    const t = late ? '' : dsHM(q.createdAt || q.savedAt) || '';
     const key = 'q:' + q.id;
     const p = posts[key];
     const postedAt = q.announcedAt || (p && p.at) || null;
-    out.push({ key, kind: 'order', d, t, min: dsMin(t), ref: '#' + q.id, who: quoteClientName(q), what: dsOrderLine(q),
+    out.push({ key, kind: 'order', d, t, min: dsMin(t), ref: '#' + q.id, who: quoteClientName(q),
+      what: (late ? `late entry, typed in ${dsNice(String(q.createdAt || q.savedAt).slice(0, 10))} · ` : '') + dsOrderLine(q),
       amt: Math.round(savedQuoteTotal(q)), q, qid: q.id, posted: postedAt ? dsHM(postedAt) : null, postedAt, alloc: [] });
   });
   const txnById = new Map((data.cashTxns || []).map(t=> [t.id, t]));
