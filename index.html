@@ -131189,23 +131189,42 @@ function dsRecords(from, to){
     pieces.push({ txn: t.id, d, time: t.time || '', account: t.account || 'cash', cid: c ? c.id : null,
       name: c ? c.name : quoteClientName(q), amt: Number(p.amount) || 0, qid: q.id, note: p.note || '', postedAt: p.postedAt || null, pm: p });
   }));
+  /* A PAYMENT ON THE LEDGER is one the owner wrote: type payment, not an
+     invoice's echo, not the drift repair's correction. Its cashTxnId is
+     NOT persisted -- debt_log has no column for it -- so after a reload
+     the link is gone and the brief's gate (collectionLedgerRow) would drop
+     every one of them. Here the receipt is found again instead: the
+     unclaimed receipt of that day for that customer, the same amount
+     first. Found, it gives the clock and the method; not found, the
+     payment still counts, its time and method unknown. */
+  const claimed = new Set(pieces.map(p=> p.txn));
+  (data.customers || []).forEach(c=> (c.debtLog || []).forEach(l=>{ if(l && l.cashTxnId != null) claimed.add(l.cashTxnId); }));
+  const findReceipt = (c, l, d)=>{
+    const amt = Number(l.amount) || 0, name = String(c.name || '').trim().toLowerCase();
+    const pool = (data.cashTxns || []).filter(t=> t && !claimed.has(t.id) && String(t.date || '').slice(0, 10) === d
+      && cashIsMoneyIn(t) && t.quoteId == null && t.category !== 'Agent Payment' && t.transferId == null && (Number(t.amount) || 0) >= amt - 0.5);
+    const named = (t)=> name && String(t.description || '').toLowerCase().includes(name);
+    return pool.find(t=> named(t) && Math.abs(t.amount - amt) < 0.5) || pool.find(t=> Math.abs(t.amount - amt) < 0.5 && /payment/i.test(t.category || ''))
+      || pool.find(named) || null;
+  };
   (data.customers || []).forEach(c=> (c.debtLog || []).forEach(l=>{
-    if(!collectionLedgerRow(l)) return;
+    if(!l || l.type !== 'payment' || debtLogIsInvoiceOwned(l) || /^Balance correction/.test(String(l.note || ''))) return;
     const d = String(l.date || '').slice(0, 10);
     if(!d || d < from || d > to) return;
-    const t = txnById.get(l.cashTxnId);
-    pieces.push({ txn: l.cashTxnId, d, time: t ? t.time || '' : '', account: t ? t.account || 'cash' : 'cash', cid: c.id, name: c.name,
+    const t = l.cashTxnId != null ? txnById.get(l.cashTxnId) : findReceipt(c, l, d);
+    if(t) claimed.add(t.id);
+    pieces.push({ txn: t ? t.id : null, lid: l.id, d, time: t ? t.time || '' : '', account: t ? t.account || 'cash' : '', cid: c.id, name: c.name,
       amt: t ? Number(t.amount) || 0 : Number(l.amount) || 0, qid: null, note: l.note || '' });
   }));
   const groups = new Map();
   pieces.forEach(p=>{
-    const g = [p.cid != null ? 'c' + p.cid : 'n' + p.name, p.d, p.time, p.account].join('|');
+    const g = p.txn == null ? 'l' + p.lid : [p.cid != null ? 'c' + p.cid : 'n' + p.name, p.d, p.time, p.account].join('|');
     if(!groups.has(g)) groups.set(g, []);
     groups.get(g).push(p);
   });
   groups.forEach(ps=>{
-    const first = ps.slice().sort((a, b)=> (Number(a.txn) || 0) - (Number(b.txn) || 0))[0];
-    const key = 't:' + first.txn;
+    const first = ps.slice().sort((a, b)=> (a.txn == null) - (b.txn == null) || (Number(a.txn) || 0) - (Number(b.txn) || 0))[0];
+    const key = first.txn != null ? 't:' + first.txn : 'l:' + first.lid;
     const alloc = [];
     ps.forEach(p=>{ if(p.qid != null){ const a = alloc.find(x=> x.qid === p.qid); if(a) a.amt += p.amt; else alloc.push({ qid: p.qid, amt: p.amt }); } });
     const amt = ps.reduce((s, p)=> s + p.amt, 0);
@@ -131220,7 +131239,7 @@ function dsRecords(from, to){
     const post = posts[key];
     const stamped = ps.reduce((m, p)=> Math.max(m, Number(p.postedAt) || 0), 0);
     const postedAt = post ? post.at : stamped || null;
-    out.push({ key, kind: 'pay', d: first.d, t: first.time, min: dsMin(first.time), ref: DS_ACC_SHORT[first.account] || accountLabel(first.account),
+    out.push({ key, kind: 'pay', d: first.d, t: first.time, min: dsMin(first.time), ref: first.account ? DS_ACC_SHORT[first.account] || accountLabel(first.account) : 'Paid',
       who: first.name, what: what + (alloc.length && onAcc > 0.5 ? ` + ${dsF(onAcc)} on account` : '') + (first.note && !/^Payment —/.test(first.note) ? ` · ${first.note}` : ''),
       amt: Math.round(amt), account: first.account, cid: first.cid, alloc, onAcc, stamps: ps.map(p=> p.pm).filter(Boolean),
       posted: postedAt ? dsHM(postedAt) : null, postedAt });
@@ -131249,7 +131268,7 @@ function dsCompare(r){
     rows.push({ k: 'Total', ours: dsF(now.total), theirs: snap ? dsF(snap.total) : '—' });
     return { rows, known: !!snap };
   }
-  const ours = [['From', r.who], ['Method', DS_ACC_LONG[r.account] || accountLabel(r.account)], ['Amount', dsF(r.amt)]];
+  const ours = [['From', r.who], ['Method', r.account ? DS_ACC_LONG[r.account] || accountLabel(r.account) : 'Not on record'], ['Amount', dsF(r.amt)]];
   return { rows: ours.map(([k, v], i)=> ({ k, ours: v, theirs: snap ? [snap.who, DS_ACC_LONG[snap.account] || snap.account, dsF(snap.amt)][i] : '—' })), known: !!snap };
 }
 

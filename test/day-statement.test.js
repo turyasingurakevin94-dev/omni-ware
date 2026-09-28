@@ -146,4 +146,27 @@ t.check(/const msg = text == null \|\| text === '' \? salesGroupOrderMessage\(q\
   && /salesGroupOrderMessage\(q\)/.test(extractFunction(src, 'dsNoteOrderPosted', 'index.html')),
   'and posting an order from the day statement (or any announce) sends those words, not the old quote table');
 
+/* THE RELOAD. debt_log keeps no cashTxnId, so after a reload a payment
+   on the ledger has lost its receipt. It must still count, find its
+   receipt again for the clock and the method, and the drift repair's
+   correction rows must stay out. (Milly, 60,000 on 26 Aug, was missing.) */
+{
+  const milly = { id: 9, name: 'Milly', debt: 100000, debtLog: [
+    { id: 1, date: today, type: 'payment', amount: 60000, note: '' },
+    { id: 2, date: today, type: 'payment', amount: 5000, note: 'Balance correction — history did not add up to the balance shown' },
+    { id: 3, date: today, type: 'payment', amount: 20000, note: '' },
+  ] };
+  data.customers.push(milly);
+  data.cashTxns.push({ id: 77, date: today, type: 'receipt', account: 'momo', category: 'Debt Payment', amount: 60000, time: '14:20', description: 'Payment — Milly', quoteId: null });
+  const mine = scope.dsRecords(today, today).filter(r=> r.who === 'Milly');
+  const found = mine.find(r=> r.amt === 60000);
+  t.check(found && found.key === 't:77' && found.t === '14:20' && found.account === 'momo',
+    'a ledger payment whose receipt link was lost on reload still counts, and finds its receipt again for the time and the method');
+  t.check(!mine.some(r=> r.amt === 5000), 'a balance correction is not money and stays out');
+  const bare = mine.find(r=> r.amt === 20000);
+  t.check(bare && bare.key === 'l:3' && bare.ref === 'Paid' && bare.t === '',
+    'and a payment with no receipt to be found still shows, its time and method unknown rather than invented');
+  data.customers.pop(); data.cashTxns.pop();
+}
+
 t.done();
