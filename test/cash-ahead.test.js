@@ -524,6 +524,8 @@ const build = (data, extraSrc, names, over) => compileScope(
       DAY_TYPICAL_MIN: 3,
       dayWeekday: () => 'Thursday',
       dayClosing: () => ({ act: null }),
+      // The Today lens's count reads the day statement now.
+      dsOpenToday: () => 0,
       credOpenInvoices: () => [],
     }, over || {}), ['fcRenderRoof']).fcRenderRoof();
     return roofEl.innerHTML;
@@ -554,10 +556,13 @@ const build = (data, extraSrc, names, over) => compileScope(
      A count that meant three different kinds of thing would mean
      nothing, so each lens's is named: today's open act, the lines the
      plan would buy, the bills carrying no day. */
+  /* Today's lens is the day statement now, and what wants a decision
+     there is each of today's records nobody has ticked yet -- not the
+     day spine's one closing act, which that lens no longer shows. */
   drawRoof({ credOpenInvoices: () => [{ dueOn: null }, { dueOn: null }, { dueOn: '2026-09-01' }],
-             dayClosing: () => ({ act: { label: 'Count the till' } }) });
+             dsOpenToday: () => 3 });
   eq(counts.fc_n_cash.textContent, '2', 'the Cash lens counts the bills nobody has named a day for');
-  eq(counts.fc_n_today.textContent, '1', 'and Today counts what is still open on it');
+  eq(counts.fc_n_today.textContent, '3', 'and Today counts the records still waiting for the owner\'s tick');
   eq(counts.fc_n_stock.textContent, '', 'and a lens with nothing to decide carries no count at all');
 }
 

@@ -47,6 +47,8 @@ const scope = compileScope([
   extractFunction(sharedJs, 'orderIncomingLines', 'shared-worker.js'),
   extractFunction(sharedJs, 'orderAwaitsGoods', 'shared-worker.js'),
   extractFunction(sharedJs, 'goodsBlockPreparing', 'shared-worker.js'),
+  // The queue skips a late entry (an order entered after it was delivered).
+  extractFunction(sharedJs, 'orderIsBackdated', 'shared-worker.js'),
   extractFunction(sharedJs, 'agentPaymentBlocksPreparing', 'shared-worker.js'),
   extractFunction(sharedJs, 'workerPickQueue', 'shared-worker.js'),
   extractFunction(sharedJs, 'autoAssignNextOrder', 'shared-worker.js'),
