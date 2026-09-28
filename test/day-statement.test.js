@@ -50,7 +50,7 @@ const scope = compileScope([
   quoteClientName: (q)=> (q.client && q.client.name) || 'Unnamed client',
   accountLabel: (k)=> k,
   todayISO: ()=> today,
-  buildSalesGroupQuoteMessage: ()=> 'msg',
+  salesGroupOrderMessage: ()=> 'msg',
   customerOutstandingInvoices: (cid)=> data.savedQuotes.filter(q=> q.customerId === cid && q.invoiced && !q.voided && lineTotal(q) - q.amountPaid > 0),
   esc: (s)=> String(s), toast: ()=>{}, saveData: ()=>{},
 }, ['dsRecords', 'dsStatusOf', 'dsStateOf', 'dsLogR', 'dsLogW', 'dsCompare', 'dsNoteOrderPosted', 'dsReceivePlan', 'dsOrderDay']);
@@ -114,7 +114,7 @@ globalThis.__ = null;
 const plan = (sel, amt)=>{
   const vm = compileScope([moduleSrc, 'dsRv = __rv;'], Object.assign({}, {
     data, savedQuoteTotal: lineTotal, quoteItemSellPrice: (it)=> it.sellPrice, quoteClientName: (q)=> q.client.name,
-    accountLabel: (k)=> k, todayISO: ()=> today, buildSalesGroupQuoteMessage: ()=> 'msg', esc: String, toast: ()=>{}, saveData: ()=>{},
+    accountLabel: (k)=> k, todayISO: ()=> today, salesGroupOrderMessage: ()=> 'msg', esc: String, toast: ()=>{}, saveData: ()=>{},
     customerOutstandingInvoices: (cid)=> data.savedQuotes.filter(q=> q.customerId === cid && q.invoiced && !q.voided && lineTotal(q) - q.amountPaid > 0),
     invoiceBalanceDue: (q)=> Math.max(0, lineTotal(q) - q.amountPaid),
     __rv: { cid: 7, sel, amt },
@@ -138,5 +138,12 @@ t.check(/if\(fcLens === 'today'\) renderDayStatement\(\);/.test(src) && /data-fc
 t.check(!/data-tab="daystatement"/.test(src) && !/id="tab-daystatement"/.test(src)
   && /if\(tab === 'daystatement'\)\{ fcLens = 'today'; return 'forecasts'; \}/.test(src),
   'and the page it briefly was is gone, its old door landing on the lens');
+
+/* One template for an order in the group, whichever screen posts it. */
+t.check(/window\.ofPostMessage = function \(qid\) \{[\s\S]{0,200}postMsg\(ofOrder\(q\), false, true\)/.test(src),
+  'the order board shares its post, as its Post sheet opens it');
+t.check(/const msg = text == null \|\| text === '' \? salesGroupOrderMessage\(q\)/.test(extractFunction(src, 'shareOrderToSalesGroup', 'index.html'))
+  && /salesGroupOrderMessage\(q\)/.test(extractFunction(src, 'dsNoteOrderPosted', 'index.html')),
+  'and posting an order from the day statement (or any announce) sends those words, not the old quote table');
 
 t.done();

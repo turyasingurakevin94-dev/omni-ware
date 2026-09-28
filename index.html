@@ -49547,6 +49547,12 @@ document.getElementById('q_whatsapp_btn').addEventListener('click', ()=>{
 // group opens automatically with the quote already copied to the clipboard.
 // Change this if the group link ever changes.
 const SALES_GROUP_WA_LINK = 'https://chat.whatsapp.com/DdAAC9RCXJg4TDXw3mDPwX?s=cl&p=a&ilr=1';
+/* An order's message to the sales group: the order board's template
+   when the board is loaded, the older quote table otherwise. */
+function salesGroupOrderMessage(q){
+  const m = typeof window.ofPostMessage === 'function' ? window.ofPostMessage(q.id) : null;
+  return m || buildSalesGroupQuoteMessage(q.items || [], q.client, q);
+}
 function buildSalesGroupQuoteMessage(items, client, q){
   const W_ITEM=14, W_QTY=6;
   const DIVIDER = '-'.repeat(W_ITEM+W_QTY+1);
@@ -50266,7 +50272,7 @@ function copyTextInTap(text){
 function shareOrderToSalesGroup(q, text){
   /* What the owner READ is what goes, not what the app drafted: the
      announce dialog hands the edited text straight through. */
-  const msg = text == null || text === '' ? buildSalesGroupQuoteMessage(q.items, q.client, q) : String(text);
+  const msg = text == null || text === '' ? salesGroupOrderMessage(q) : String(text);
   const copied = copyTextInTap(msg);
   const win = window.open(SALES_GROUP_WA_LINK, '_blank');
   if(!win){
@@ -54156,7 +54162,7 @@ function otRunsSpec(){
 function otAnnounceSpec(id){
   const q = (data.savedQuotes || []).find(x=> String(x.id) === String(id));
   if(!q) return null;
-  const draft = otAnnounceDraft == null ? buildSalesGroupQuoteMessage(q.items, q.client, q) : otAnnounceDraft;
+  const draft = otAnnounceDraft == null ? salesGroupOrderMessage(q) : otAnnounceDraft;
   return {
     w: 620,
     title: `Announce · ${esc(quoteClientName(q))} #${q.id}`,
@@ -57038,6 +57044,13 @@ function renderOrderFlow() {
 }
 window.renderOrderFlow = renderOrderFlow;
 window.ofBoardLogic = function () { return ofBoard && ofBoard.logic; };
+/* The board's post, for anything outside it that posts an order: the
+   same words the Post sheet opens with (sources grouped, no prices), so
+   the group reads one template whichever screen sent it. */
+window.ofPostMessage = function (qid) {
+  var q = (data.savedQuotes || []).find(function (x) { return String(x.id) === String(qid); });
+  return q ? postMsg(ofOrder(q), false, true) : null;
+};
 window.OrderFlowBoard = OrderFlowBoard;
 window.ofOpenOrder = function (qid) {
   if (!ofBoard) renderOrderFlow();
@@ -131105,7 +131118,7 @@ function dsOrderSnap(q){
 function dsNoteOrderPosted(q, text){
   const L = dsLogW();
   L.posts['q:' + q.id] = { at: q.announcedAt || Date.now(),
-    text: text == null || text === '' ? buildSalesGroupQuoteMessage(q.items || [], q.client, q) : String(text),
+    text: text == null || text === '' ? salesGroupOrderMessage(q) : String(text),
     snap: dsOrderSnap(q) };
 }
 
