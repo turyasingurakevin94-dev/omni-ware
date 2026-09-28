@@ -51128,8 +51128,29 @@ function customerStatementRows(customerId, fromISO, toISO){
 
   let running = opening;
   const quoteOf = customerLogQuoteResolver(customerId);
-  const rows = log
-    .filter(e=>{ const d = String(e.date||''); return d >= fromISO && d <= toISO; })
+  const inPeriod = log.filter(e=>{ const d = String(e.date||''); return d >= fromISO && d <= toISO; });
+  /* AN INVOICE UNDONE AND RAISED AGAIN is not two sales and a refund.
+     Undo writes a credit for the whole invoice and re-invoicing writes
+     the same charge straight back, so the statement read "Payment --
+     clears INV-0287" for money that never came in, then charged the
+     invoice a second time. A credit followed at once by a charge of the
+     same amount, on the same day, for the same invoice, nets to nothing
+     and says nothing true -- so the pair is left off. Removing a
+     recorded payment writes the same shape and is left off the same way.
+     Both sides go, so the running balance and the totals are untouched;
+     the debt book itself is not changed. */
+  const cancelled = new Set();
+  for(let i = 0; i + 1 < inPeriod.length; i++){
+    const a = inPeriod[i], b = inPeriod[i + 1];
+    if(a.type !== 'payment' || b.type !== 'charge') continue;
+    if(String(a.date||'') !== String(b.date||'')) continue;
+    if(Math.abs((Number(a.amount)||0) - (Number(b.amount)||0)) >= 1) continue;
+    const qa = quoteOf(a);
+    if(qa == null || String(qa) !== String(quoteOf(b))) continue;
+    cancelled.add(a); cancelled.add(b); i++;
+  }
+  const rows = inPeriod
+    .filter(e=> !cancelled.has(e))
     .map(e=>{
       running += delta(e);
       return {

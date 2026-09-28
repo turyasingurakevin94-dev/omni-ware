@@ -314,4 +314,48 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     'and an unreferenced payment still takes the right word');
 }
 
+/* ---------- an invoice undone and raised again ------------------------ */
+/* Shadia's book on the live shop: INV-0287 invoiced, undone, invoiced
+   again three seconds later, then 610,000 paid. The undo-redo pair is not
+   a payment and a second sale, so the statement leaves both lines off. */
+{
+  data.savedQuotes = [{ id: 287, invoiced: true, customerId: 'C1' }];
+  const inv = 'Auto-sync — INV-0287';
+  customer([
+    charge(13428, '2026-09-03', 615000, inv),
+    payment(13458, '2026-09-03', 615000, inv),
+    charge(13459, '2026-09-03', 615000, inv),
+    payment(13460, '2026-09-03', 610000, inv),
+  ], 5000);
+  const st = scope.customerStatementRows('C1', '2026-09-01', '2026-09-28');
+  eq(st.rows.map((r) => r.type + ' ' + r.amount).join(', '), 'charge 615000, payment 610000',
+    'the undo and the redo are both left off; the sale and the real payment stay');
+  eq(st.closing, 5000, 'the balance is what the book says');
+  eq(st.charged + '/' + st.paid, '615000/610000', 'and the totals no longer count the invoice twice');
+  eq(st.agrees, true, 'and still agrees with the debt book');
+
+  // Not a cancelling pair: different amounts, different days, or no invoice.
+  customer([
+    charge(1, '2026-09-03', 615000, inv),
+    payment(2, '2026-09-03', 615000, 'Cash'),
+    charge(3, '2026-09-03', 615000, 'Manual charge'),
+  ], 615000);
+  eq(scope.customerStatementRows('C1', '2026-09-01', '2026-09-28').rows.length, 3,
+    'a payment and a charge that name no invoice are shown as they are');
+  customer([
+    charge(1, '2026-09-03', 615000, inv),
+    payment(2, '2026-09-03', 615000, inv),
+    charge(3, '2026-09-04', 615000, inv),
+  ], 615000);
+  eq(scope.customerStatementRows('C1', '2026-09-01', '2026-09-28').rows.length, 3,
+    'an undo and a re-invoice on different days are shown as they are');
+  customer([
+    charge(1, '2026-09-03', 615000, inv),
+    payment(2, '2026-09-03', 615000, inv),
+  ], 0);
+  eq(scope.customerStatementRows('C1', '2026-09-01', '2026-09-28').rows.length, 2,
+    'an invoice undone and NOT raised again still shows both lines');
+  data.savedQuotes = [];
+}
+
 process.exit(t.done() ? 1 : 0);
