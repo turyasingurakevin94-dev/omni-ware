@@ -52,7 +52,7 @@ if (fns) {
    * table that can stop saving, and the failure is silent apart from a
    * toast that fades — so this is checked by name rather than trusted.
    */
-  const build = code.slice(code.indexOf('function buildSyncRows'), code.indexOf('function initLastSynced'));
+  const build = code.slice(code.indexOf('function debtLogToRow'), code.indexOf('function initLastSynced'));
   t.check(build.length > 0, 'found buildSyncRows');
 
   [

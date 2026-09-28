@@ -39,6 +39,7 @@ const scope = compileScope([
   moduleSrc,
   extractFunction(src, 'collectionInvoiceTxn', 'index.html'),
   extractFunction(src, 'collectionLedgerRow', 'index.html'),
+  extractFunction(src, 'linkLedgerPaymentsToReceipts', 'index.html'),
   extractFunction(src, 'debtLogIsInvoiceOwned', 'index.html'),
   extractFunction(src, 'cashIsMoneyIn', 'index.html'),
   extractFunction(src, 'invoiceNumberLabel', 'index.html'),
@@ -53,7 +54,7 @@ const scope = compileScope([
   salesGroupOrderMessage: ()=> 'msg',
   customerOutstandingInvoices: (cid)=> data.savedQuotes.filter(q=> q.customerId === cid && q.invoiced && !q.voided && lineTotal(q) - q.amountPaid > 0),
   esc: (s)=> String(s), toast: ()=>{}, saveData: ()=>{},
-}, ['dsRecords', 'dsStatusOf', 'dsStateOf', 'dsLogR', 'dsLogW', 'dsCompare', 'dsNoteOrderPosted', 'dsReceivePlan', 'dsOrderDay']);
+}, ['dsRecords', 'dsStatusOf', 'dsStateOf', 'dsLogR', 'dsLogW', 'dsCompare', 'dsNoteOrderPosted', 'dsReceivePlan', 'dsOrderDay', 'linkLedgerPaymentsToReceipts']);
 
 const cust = { id: 7, name: 'Kato Construction', debt: 0, debtLog: [] };
 data.customers.push(cust);
@@ -146,10 +147,11 @@ t.check(/const msg = text == null \|\| text === '' \? salesGroupOrderMessage\(q\
   && /salesGroupOrderMessage\(q\)/.test(extractFunction(src, 'dsNoteOrderPosted', 'index.html')),
   'and posting an order from the day statement (or any announce) sends those words, not the old quote table');
 
-/* THE RELOAD. debt_log keeps no cashTxnId, so after a reload a payment
-   on the ledger has lost its receipt. It must still count, find its
-   receipt again for the clock and the method, and the drift repair's
-   correction rows must stay out. (Milly, 60,000 on 26 Aug, was missing.) */
+/* THE RELOAD. Rows saved before 0104 come back with no cashTxnId; the
+   load re-links them (linkLedgerPaymentsToReceipts), and the day
+   statement reads the link. The payment must count with the clock and
+   the method, and the drift repair's correction rows must stay out.
+   (Milly, 60,000 on 26 Aug, was missing.) */
 {
   const milly = { id: 9, name: 'Milly', debt: 100000, debtLog: [
     { id: 1, date: today, type: 'payment', amount: 60000, note: '' },
@@ -158,6 +160,9 @@ t.check(/const msg = text == null \|\| text === '' \? salesGroupOrderMessage\(q\
   ] };
   data.customers.push(milly);
   data.cashTxns.push({ id: 77, date: today, type: 'receipt', account: 'momo', category: 'Debt Payment', amount: 60000, time: '14:20', description: 'Payment — Milly', quoteId: null });
+  t.check(scope.linkLedgerPaymentsToReceipts(data) === 1 && milly.debtLog[0].cashTxnId === 77
+    && milly.debtLog[1].cashTxnId == null && milly.debtLog[2].cashTxnId == null,
+    'the load re-links the payment to its receipt, and leaves the correction and the receipt-less payment alone');
   const mine = scope.dsRecords(today, today).filter(r=> r.who === 'Milly');
   const found = mine.find(r=> r.amt === 60000);
   t.check(found && found.key === 't:77' && found.t === '14:20' && found.account === 'momo',

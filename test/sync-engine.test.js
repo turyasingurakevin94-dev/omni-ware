@@ -441,6 +441,7 @@ const row = (id, name) => ({ id, shop_id: 'shop-1', name });
       // The debt heal has its own test file (debtor-balance-reconciliation);
       // here it only needs to not be a ReferenceError inside the refresh.
       reconcileCustomerDebts: () => [],
+      linkLedgerPaymentsToReceipts: () => 0,
       reportDebtReconciliation: () => {},
       console: { error: () => { log.push('error'); } },
     }, over || {});

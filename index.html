@@ -33274,7 +33274,7 @@ async function loadData(shopId){
     stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR,
     savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR,
     mediaR, mediaFoldersR, waPostsR,
-    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, followUpsR, rivalPricesR, paymentPromisesR, productLinksR, briefsSentR, statementsSentR, variantColR, imageColR, askedColR, transferColR, lotConsignColR, rivalSideColR, stageColR, managerNotesR, linkSizeColR, coversColR, clientAccountsR, termsColR, waPostKindsColR
+    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, followUpsR, rivalPricesR, paymentPromisesR, productLinksR, briefsSentR, statementsSentR, variantColR, imageColR, askedColR, transferColR, lotConsignColR, rivalSideColR, stageColR, managerNotesR, linkSizeColR, coversColR, clientAccountsR, termsColR, waPostKindsColR, debtLogCashColR
   ] = await Promise.all([
     sel('suppliers'), sel('staff'), sel('customers'), sel('customer_debt_log'), sel('products'), sel('prices'),
     sel('stock'), sel('stock_lots'), sel('stock_log'), sel('cash_days'), sel('cash_txns'),
@@ -33304,7 +33304,10 @@ async function loadData(shopId){
     sb.from('customers').select('terms_days, credit_limit').limit(1),
     /* 0098, why each post was picked. Probed alone: a wa_posts upsert
        carrying a column the table lacks would fail every post save. */
-    sb.from('wa_posts').select('kinds').limit(1)
+    sb.from('wa_posts').select('kinds').limit(1),
+    /* 0104, the receipt a ledger payment's money arrived on. Probed
+       alone: every debt-log row goes up on every save. */
+    sb.from('customer_debt_log').select('cash_txn_id').limit(1)
   ]);
   [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR, mediaR, mediaFoldersR, waPostsR, rentAgreementsR, duesR, placesR]
     .forEach(r=>{ if(r.error) throw r.error; });
@@ -33371,6 +33374,11 @@ async function loadData(shopId){
      running cost pays for. Without the columns the entry still saves,
      and the statement counts it on the day it was paid, as before. */
   cashCoversColumns = !(coversColR && coversColR.error);
+  /* 0104, the same busy-write guard. Without it a ledger payment still
+     saves, and its receipt link lives only until the next load --
+     linkLedgerPaymentsToReceipts() finds it again on every load, so the
+     brief and the statement read the same either way. */
+  debtLogCashTxnColumn = !(debtLogCashColR && debtLogCashColR.error);
   // sourcing_leads is out of the list for the same reason.
   const sourcingLeadRows = (sourcingLeadsR && !sourcingLeadsR.error && sourcingLeadsR.data) || [];
   // And follow_ups (0077), newest of the lot. A shop whose migration has
@@ -33427,7 +33435,7 @@ async function loadData(shopId){
 
   const debtByCustomer = {};
   (debtLogR.data||[]).forEach(l=>{
-    (debtByCustomer[l.customer_id] ||= []).push({id:l.id, date:l.date, type:l.type, amount:Number(l.amount)||0, note:l.note||''});
+    (debtByCustomer[l.customer_id] ||= []).push(debtLogFromRow(l));
   });
 
   const stock = {};
@@ -33896,6 +33904,7 @@ let linkSizeColumn = false;
 let waPostKindsColumn = false;
 let cashTransferColumn = false;
 let cashCoversColumns = false;
+let debtLogCashTxnColumn = false;
 
 // cloneJSON() / keyRowsById() now live in shared-worker.js.
 
@@ -33929,11 +33938,23 @@ function dateOrNull(v){
   const s = v == null ? '' : String(v).trim();
   return s === '' ? null : s;
 }
+/* One debt-log row across the boundary, both ways, so the two sides
+   cannot drift apart again. cashTxnId is the receipt a payment's money
+   arrived on; before 0104 it was dropped here and lost on every load,
+   and every payment against an opening balance fell out of the brief. */
+function debtLogFromRow(l){
+  return {id:l.id, date:l.date, type:l.type, amount:Number(l.amount)||0, note:l.note||'',
+    cashTxnId: l.cash_txn_id != null ? Number(l.cash_txn_id) : null};
+}
+function debtLogToRow(l, customerId, shopId, withCashTxn){
+  return {
+    id:l.id, shop_id:shopId, customer_id:customerId, date:dateOrNull(l.date), type:l.type, amount:l.amount, note:l.note,
+    ...(withCashTxn ? {cash_txn_id: l.cashTxnId != null ? l.cashTxnId : null} : {})
+  };
+}
 function buildSyncRows(d, shopId){
   const debtLogRows = [];
-  d.customers.forEach(c=> (c.debtLog||[]).forEach(l=> debtLogRows.push({
-    id:l.id, shop_id:shopId, customer_id:c.id, date:dateOrNull(l.date), type:l.type, amount:l.amount, note:l.note
-  })));
+  d.customers.forEach(c=> (c.debtLog||[]).forEach(l=> debtLogRows.push(debtLogToRow(l, c.id, shopId, debtLogCashTxnColumn))));
   return {
     suppliers: d.suppliers.map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, phone2:s.phone2||null, location:s.location, shop_no:s.shopNo||null, notes:s.notes, commission_pct: s.commissionPct==null ? null : s.commissionPct})),
     staff: (d.staff||[]).map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, role:s.role, notes:s.notes, unavailable:!!s.unavailable,
@@ -51736,6 +51757,47 @@ function collectionInvoiceTxn(p, txnById){
 }
 function collectionLedgerRow(l){
   return !!(l && l.type === 'payment' && !debtLogIsInvoiceOwned(l) && l.cashTxnId != null);
+}
+/* THE LINK, found again. Ledger payments written before 0104 (or on a
+   shop still without it) come back from the database with no cashTxnId,
+   so collectionLedgerRow drops them and the statement's Method reads
+   "—". Each is matched to the unclaimed receipt of its day: the
+   customer's name in the description at the same amount first, then the
+   same amount on a payment category, then the name alone (the receipt
+   holds the full sum handed over, the row only what the balance fell by).
+   Owner-written payments only -- an invoice's echo and the drift
+   repair's corrections carry no money and must stay unlinked. Run after
+   the load snapshot, so a link found here diffs as an edit and the next
+   save writes it for good; with the column absent it is simply found
+   again on the next load. Returns how many were linked. */
+function linkLedgerPaymentsToReceipts(d){
+  const txns = (d && d.cashTxns) || [];
+  const claimed = new Set();
+  const claim = (id)=>{ if(id != null) claimed.add(id); };
+  (d.savedQuotes || []).forEach(q=> (q.payments || []).forEach(p=> claim(p && p.cashTxnId)));
+  (d.purchaseInvoices || []).forEach(pi=> (pi.payments || []).forEach(p=> claim(p && p.cashTxnId)));
+  (d.loans || []).forEach(ln=>{ claim(ln && ln.cashTxnId); ((ln && ln.repayments) || []).forEach(r=> claim(r && r.cashTxnId)); });
+  (d.customers || []).forEach(c=> (c.debtLog || []).forEach(l=> claim(l && l.cashTxnId)));
+  let linked = 0;
+  (d.customers || []).forEach(c=> (c.debtLog || []).forEach(l=>{
+    if(!l || l.cashTxnId != null || l.type !== 'payment' || debtLogIsInvoiceOwned(l)
+      || /^Balance correction/.test(String(l.note || ''))) return;
+    const day = String(l.date || '').slice(0, 10);
+    if(!day) return;
+    const amt = Number(l.amount) || 0, name = String(c.name || '').trim().toLowerCase();
+    const pool = txns.filter(t=> t && !claimed.has(t.id) && String(t.date || '').slice(0, 10) === day
+      && cashIsMoneyIn(t) && t.quoteId == null && t.category !== 'Agent Payment' && t.transferId == null
+      && (Number(t.amount) || 0) >= amt - 0.5);
+    const named = (t)=> name && String(t.description || '').toLowerCase().includes(name);
+    const same = (t)=> Math.abs((Number(t.amount) || 0) - amt) < 0.5;
+    const t = pool.find(t=> named(t) && same(t)) || pool.find(t=> same(t) && /payment/i.test(t.category || ''))
+      || pool.find(named) || null;
+    if(!t) return;
+    l.cashTxnId = t.id;
+    claimed.add(t.id);
+    linked++;
+  }));
+  return linked;
 }
 /* Every day each customer paid money, from fromISO on, through the same
    gates as the day's brief: Map customerId(string) -> Set of dates. */
@@ -131178,29 +131240,16 @@ function dsRecords(from, to){
       name: c ? c.name : quoteClientName(q), amt: Number(p.amount) || 0, qid: q.id, note: p.note || '', postedAt: p.postedAt || null, pm: p });
   }));
   /* A PAYMENT ON THE LEDGER is one the owner wrote: type payment, not an
-     invoice's echo, not the drift repair's correction. Its cashTxnId is
-     NOT persisted -- debt_log has no column for it -- so after a reload
-     the link is gone and the brief's gate (collectionLedgerRow) would drop
-     every one of them. Here the receipt is found again instead: the
-     unclaimed receipt of that day for that customer, the same amount
-     first. Found, it gives the clock and the method; not found, the
-     payment still counts, its time and method unknown. */
-  const claimed = new Set(pieces.map(p=> p.txn));
-  (data.customers || []).forEach(c=> (c.debtLog || []).forEach(l=>{ if(l && l.cashTxnId != null) claimed.add(l.cashTxnId); }));
-  const findReceipt = (c, l, d)=>{
-    const amt = Number(l.amount) || 0, name = String(c.name || '').trim().toLowerCase();
-    const pool = (data.cashTxns || []).filter(t=> t && !claimed.has(t.id) && String(t.date || '').slice(0, 10) === d
-      && cashIsMoneyIn(t) && t.quoteId == null && t.category !== 'Agent Payment' && t.transferId == null && (Number(t.amount) || 0) >= amt - 0.5);
-    const named = (t)=> name && String(t.description || '').toLowerCase().includes(name);
-    return pool.find(t=> named(t) && Math.abs(t.amount - amt) < 0.5) || pool.find(t=> Math.abs(t.amount - amt) < 0.5 && /payment/i.test(t.category || ''))
-      || pool.find(named) || null;
-  };
+     invoice's echo, not the drift repair's correction. Its receipt link
+     is persisted (0104) and re-found on load for older rows
+     (linkLedgerPaymentsToReceipts), so it gives the clock and the method;
+     a payment with no receipt to be found still counts, its time and
+     method unknown. */
   (data.customers || []).forEach(c=> (c.debtLog || []).forEach(l=>{
     if(!l || l.type !== 'payment' || debtLogIsInvoiceOwned(l) || /^Balance correction/.test(String(l.note || ''))) return;
     const d = String(l.date || '').slice(0, 10);
     if(!d || d < from || d > to) return;
-    const t = l.cashTxnId != null ? txnById.get(l.cashTxnId) : findReceipt(c, l, d);
-    if(t) claimed.add(t.id);
+    const t = l.cashTxnId != null ? txnById.get(l.cashTxnId) : null;
     pieces.push({ txn: t ? t.id : null, lid: l.id, d, time: t ? t.time || '' : '', account: t ? t.account || 'cash' : '', cid: c.id, name: c.name,
       amt: t ? Number(t.amount) || 0 : Number(l.amount) || 0, qid: null, note: l.note || '' });
   }));
@@ -131996,6 +132045,9 @@ async function boot(){
     // so the next save pushes it to the server for every device, instead
     // of each device quietly re-correcting its own copy for ever.
     reportDebtReconciliation(reconcileCustomerDebts(data));
+    // Same side of the snapshot, same reason: a receipt link found here
+    // must diff as an edit so the next save writes it (when 0104 is in).
+    linkLedgerPaymentsToReceipts(data);
     // Reserve this session's row id blocks before anything can be created.
     // Awaited so the first save of the session already uses server-issued
     // ids rather than falling back; it swallows its own errors, so a failed
@@ -132302,6 +132354,7 @@ async function pollForUpdatesNow(){
     // corrects after initLastSynced: the correction has to diff as an
     // outstanding edit so the next save carries it to the server.
     reportDebtReconciliation(reconcileCustomerDebts(fresh));
+    linkLedgerPaymentsToReceipts(fresh);
     data = fresh;
     lastSynced = freshSynced;
     /* The guards above were read BEFORE the load, and a load on a shop's
