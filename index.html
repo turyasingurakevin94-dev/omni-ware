@@ -19274,7 +19274,35 @@
     #agHeadAct .agv-settle{position:fixed;left:var(--ow-sp-16);right:var(--ow-sp-16);bottom:calc(var(--mobile-bottomnav-h) + env(safe-area-inset-bottom) + var(--ow-sp-12));
       z-index:80;height:48px;justify-content:center;font-size:15px;}
   }
-  /* ORDER-FLOW-CSS:BEGIN */
+  /* PAYMENT-POST -- the sheet that tells the sales group a payment came in.
+   Teal is WhatsApp's door in this app (the order board's Post uses it too);
+   the slip above the message is the payment at a glance: who, how much,
+   and each invoice's bar filling toward paid. */
+.pp-modal{max-width:520px}
+.pp-mark{width:34px;height:34px;border-radius:50%;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;background:var(--ow-teal-soft);color:var(--ow-teal);margin-right:10px}
+.pp-head{display:flex;flex-direction:column;gap:2px;min-width:0;flex-grow:1}
+.pp-head h2{margin:0}
+.pp-sub{font-size:12px;color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.pp-body{display:flex;flex-direction:column;gap:10px}
+.pp-slip{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper)}
+.pp-slip-top{display:flex;align-items:baseline;gap:8px}
+.pp-slip-amt{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:20px;font-weight:600;color:var(--ow-verdigris);white-space:nowrap;flex-shrink:0}
+.pp-slip-who{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex-grow:1}
+.pp-slip-how{font-size:12px;color:var(--ow-ink-600);flex-shrink:0}
+.pp-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;font-size:12px}
+.pp-row-name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.pp-row-fig{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;color:var(--ow-ink-600);white-space:nowrap}
+.pp-bar{grid-column:1 / -1;height:6px;border-radius:var(--ow-r-pill);background:var(--ow-rule-soft);overflow:hidden;display:flex}
+.pp-bar-was{background:var(--ow-verdigris-soft)}
+.pp-bar-now{background:var(--ow-verdigris)}
+.pp-label{font-size:11px;font-weight:600;color:var(--ow-ink-600);text-transform:uppercase;letter-spacing:.04em}
+.pp-text{width:100%;box-sizing:border-box;resize:vertical;border:1px solid var(--ow-rule);border-radius:var(--ow-r);padding:10px 12px;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-size:12px;line-height:1.5;color:var(--ow-ink-900);background:var(--ow-paper-2)}
+.pp-opts{display:flex;flex-wrap:wrap;gap:6px 16px}
+.pp-opt{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ow-ink-900)}
+.pp-send{background:var(--ow-teal);color:#FFFFFF;border:0;display:inline-flex;align-items:center;gap:8px}
+.pp-send .icon{width:16px;height:16px}
+/* PAYMENT-POST:END */
+/* ORDER-FLOW-CSS:BEGIN */
 /* ORDER TRACKING -- the order flow board. Everything it draws is styled on
    the element, as it was designed; these are the few rules an element cannot
    carry itself (hover, scrollbars, a pulse), all under .of-root. The board
@@ -30615,6 +30643,40 @@
     <div class="modal-foot">
       <button class="btn btn-ghost" id="agentPrepayCancel">Cancel</button>
       <button class="btn btn-accent" id="agentPrepayConfirm">Mark as paid &amp; continue</button>
+    </div>
+  </div>
+</div>
+<!-- TELLING THE SALES GROUP A PAYMENT CAME IN. Offered the moment a
+     payment is saved, from every screen that takes one: the invoice's
+     Receive payment, a customer's payment, Cash in with a customer, an
+     agent's payment and an agent's prepayment. A WhatsApp group link cannot
+     carry text, so the message is written here, copied, and the group
+     opened inside the tap; the owner pastes and sends. Nothing posts
+     itself, and "Not now" costs nothing: the payment is already saved. -->
+<div class="modal-overlay" id="payPostModal">
+  <div class="modal pp-modal" role="dialog" aria-labelledby="ppTitle">
+    <div class="modal-head">
+      <span class="pp-mark"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 19.2L4 20Z"/><path d="M9.5 9.5c.3 1.8 2.2 3.8 4 4.1l1.1-1.1 1.6.8c-.3 1.2-1.3 1.7-2.4 1.5-2.8-.5-5-2.7-5.6-5.6-.2-1.1.3-2.1 1.5-2.4l.8 1.6-1 1.1Z"/></svg></span>
+      <div class="pp-head">
+        <h2 id="ppTitle">Post the payment to the sales group</h2>
+        <span class="pp-sub" id="ppSub"></span>
+      </div>
+      <button class="modal-close" id="payPostClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body pp-body">
+      <div class="pp-slip" id="ppSlip"></div>
+      <label class="pp-label" for="ppText">Message · edit before it goes</label>
+      <textarea id="ppText" class="pp-text" rows="7"></textarea>
+      <div class="pp-opts">
+        <label class="pp-opt"><input type="checkbox" id="ppOwes" checked> Show what they still owe</label>
+        <label class="pp-opt"><input type="checkbox" id="ppAsk" checked> Ask after every payment</label>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="payPostSkip">Not now</button>
+      <button class="btn pp-send" id="payPostSend"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 19.2L4 20Z"/><path d="M9.5 9.5c.3 1.8 2.2 3.8 4 4.1l1.1-1.1 1.6.8c-.3 1.2-1.3 1.7-2.4 1.5-2.8-.5-5-2.7-5.6-5.6-.2-1.1.3-2.1 1.5-2.4l.8 1.6-1 1.1Z"/></svg>Copy &amp; open the group</button>
     </div>
   </div>
 </div>
@@ -49938,6 +50000,7 @@ function promptAgentPrepayment(q){
   pendingPrepayOrderId = q.id;
   openModal('agentPrepayModal');
 }
+let prepayPost = null;
 document.getElementById('agentPrepayConfirm').addEventListener('click', ()=>{
   const q = data.savedQuotes.find(x=>x.id===pendingPrepayOrderId);
   closeModal('agentPrepayModal');
@@ -49959,13 +50022,18 @@ document.getElementById('agentPrepayConfirm').addEventListener('click', ()=>{
     if(!q.payments) q.payments = [];
     const cashTxnId = addCashReceipt('cash', owed, 'Agent Payment',
       `Cash payment from ${agent ? agent.name : (q.originAgentId || 'agent')} — order #${q.id}`);
-    q.payments.push({ date: todayISO(), amount: owed, note: 'Cash', cashTxnId });
+    const payment = { date: todayISO(), amount: owed, note: 'Cash', cashTxnId };
+    q.payments.push(payment);
     q.amountPaid = (Number(q.amountPaid)||0) + owed;
+    prepayPost = paymentPostFromInvoices([{ q, payment }], 'cash', todayISO(),
+      `${(q.client && q.client.name) || 'Customer'} (${agent ? agent.name : 'agent'})`);
+    prepayPost.lines[0].label = `Order #${q.id} prepaid`;
   }
   saveData();
   // The gate that asked for the money is open now. A ready draft leaves
   // Taken as the app's own move; anything else re-attempts the step.
   if(!orderLeaveDraft(q, { auto:true })) stepSavedQuoteStatus(q.id, 1);
+  if(prepayPost){ offerPaymentPost(prepayPost); prepayPost = null; }
 });
 document.getElementById('agentPrepayCancel').addEventListener('click', ()=>closeModal('agentPrepayModal'));
 document.getElementById('agentPrepayModalClose').addEventListener('click', ()=>closeModal('agentPrepayModal'));
@@ -52017,6 +52085,108 @@ function announceOrderToGroup(id, text){
   q.announcedAt = Date.now();
   saveData();
   renderSavedQuotes();
+}
+
+/* ---- A payment, told to the sales group --------------------------------
+   One sheet, offered by every screen that takes money in, the moment the
+   payment is saved. Each caller hands over what it just recorded:
+     { who, amount, account, date, lines: [{ label, paid, left, total }],
+       onAccount, owes, stamp: [payment objects] }
+   and the sheet writes the message, shows it as a slip, and on the tap
+   copies it and opens the group. The payments it names are stamped
+   postedAt, so a receipt can later say it was announced. */
+let payPost = null;
+function paymentPostDate(iso){
+  const d = new Date(String(iso || todayISO()) + 'T12:00:00');
+  return iso === todayISO() ? 'today' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+function paymentPostText(p, withOwes){
+  const n = (v)=> Math.round(Number(v) || 0).toLocaleString('en-US');
+  const out = [`*Payment in · UGX ${n(p.amount)}*`, `${p.who} · ${accountLabel(p.account)} · ${paymentPostDate(p.date)}`];
+  (p.lines || []).forEach(l=>{
+    out.push(`• ${l.label} — ${n(l.paid)}` + (withOwes ? (l.left > 0.5 ? ` · ${n(l.left)} left` : ' · paid in full') : ''));
+  });
+  if(p.onAccount > 0.5) out.push(`• On account — ${n(p.onAccount)}`);
+  if(withOwes && p.owes != null) out.push(p.owes > 0.5 ? `Still owes UGX ${n(p.owes)}` : 'All settled');
+  return out.join('\n');
+}
+function renderPaymentPostSlip(p){
+  const n = (v)=> fmtUGX(Math.round(Number(v) || 0));
+  const bars = (p.lines || []).map(l=>{
+    const total = Math.max(1, Number(l.total) || (Number(l.paid) + Number(l.left)));
+    const was = Math.max(0, total - l.left - l.paid), now = Math.max(0, l.paid);
+    return `<div class="pp-row"><span class="pp-row-name">${esc(l.label)}</span>
+      <span class="pp-row-fig">+${esc(n(l.paid))} · ${l.left > 0.5 ? esc(n(l.left)) + ' left' : 'paid'}</span>
+      <span class="pp-bar" title="${esc(l.label)}: ${esc(n(total - l.left))} of ${esc(n(total))} paid">
+        <span class="pp-bar-was" style="width:${(was / total * 100).toFixed(1)}%"></span><span class="pp-bar-now" style="width:${(now / total * 100).toFixed(1)}%"></span>
+      </span></div>`;
+  }).join('');
+  const acc = p.onAccount > 0.5 ? `<div class="pp-row"><span class="pp-row-name">On account</span><span class="pp-row-fig">+${esc(n(p.onAccount))}</span></div>` : '';
+  return `<div class="pp-slip-top"><span class="pp-slip-amt">${esc(n(p.amount))}</span>
+    <span class="pp-slip-who">${esc(p.who)}</span><span class="pp-slip-how">${esc(accountLabel(p.account))} · ${esc(paymentPostDate(p.date))}</span></div>${bars}${acc}`;
+}
+function offerPaymentPost(p){
+  if(!p || !(Number(p.amount) > 0)) return;
+  if(lsGet('owPayPostAsk') === '0') return;
+  payPost = p;
+  const owes = document.getElementById('ppOwes');
+  owes.checked = true;
+  document.getElementById('ppAsk').checked = true;
+  document.getElementById('ppSub').textContent = `${p.who} · ${fmtUGX(Math.round(p.amount))}`;
+  document.getElementById('ppSlip').innerHTML = renderPaymentPostSlip(p);
+  document.getElementById('ppText').value = paymentPostText(p, true);
+  openModal('payPostModal');
+}
+function closePaymentPost(){
+  if(!document.getElementById('ppAsk').checked){ lsSet('owPayPostAsk', '0'); toast('Payments will not ask to be posted on this device — tick it again on the next one you post from here', 5000); }
+  payPost = null;
+  closeModal('payPostModal');
+}
+document.getElementById('ppOwes').addEventListener('change', (e)=>{
+  if(payPost) document.getElementById('ppText').value = paymentPostText(payPost, e.target.checked);
+});
+document.getElementById('payPostSkip').addEventListener('click', closePaymentPost);
+document.getElementById('payPostClose').addEventListener('click', closePaymentPost);
+document.getElementById('payPostSend').addEventListener('click', ()=>{
+  if(!payPost) return;
+  const text = document.getElementById('ppText').value;
+  /* Both inside the tap, or the browser blocks the group from opening. */
+  const copied = copyTextInTap(text);
+  const win = window.open(SALES_GROUP_WA_LINK, '_blank');
+  if(!win){ toast('WhatsApp was blocked from opening — allow pop-ups for this site, then send again', 6000); return; }
+  const at = Date.now();
+  (payPost.stamp || []).forEach(pm=>{ if(pm) pm.postedAt = at; });
+  if((payPost.stamp || []).length) saveData();
+  closePaymentPost();
+  toast(copied ? 'Message copied — paste it in the sales group' : 'Open the sales group and paste the payment', 4000);
+});
+/* The customer an invoice belongs to, and what they owe now. */
+function paymentPostCustomer(q){
+  return (data.customers || []).find(c=> q && ((q.customerId != null && c.id === q.customerId) || (q.client && c.name === q.client.name))) || null;
+}
+function paymentPostFromInvoices(entries, account, date, who){
+  const lines = entries.map(({ q, payment })=> ({ label: invoiceNumberLabel(q), paid: payment.amount, left: invoiceBalanceDue(q), total: savedQuoteTotal(q) }));
+  const first = entries[0] && entries[0].q;
+  const c = paymentPostCustomer(first);
+  return { who: who || (first && first.client && first.client.name) || 'Customer', amount: lines.reduce((t, l)=> t + l.paid, 0),
+    account, date, lines, onAccount: 0, owes: c ? Number(c.debt) || 0 : lines.reduce((t, l)=> t + l.left, 0),
+    stamp: entries.map(e=> e.payment) };
+}
+/* recordCustomerPayment spreads one amount over invoices and the account;
+   this reads back what it did, for the message. Taken BEFORE the call. */
+function paymentPostWatch(customerId, selections){
+  const qs = (selections || []).map(s=> data.savedQuotes.find(x=> x.id === s.quoteId)).filter(Boolean);
+  const had = new Map(qs.map(q=> [q.id, (q.payments || []).length]));
+  return function(amount, account, date){
+    const c = (data.customers || []).find(x=> x.id === customerId);
+    const entries = [];
+    qs.forEach(q=> (q.payments || []).slice(had.get(q.id)).forEach(payment=> entries.push({ q, payment })));
+    const p = paymentPostFromInvoices(entries, account, date, c ? c.name : null);
+    p.onAccount = Math.max(0, Number(amount) - p.amount);
+    p.amount = Number(amount);
+    p.owes = c ? Number(c.debt) || 0 : p.owes;
+    return p;
+  };
 }
 
 /* WHAT NEEDS YOU. A decision only the owner can make, or a chore the
@@ -58889,6 +59059,7 @@ document.getElementById('ip_save').addEventListener('click', ()=>{
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
   renderDebtorsList();
   toast('Payment recorded' + paymentDatedSuffix(paidOn));
+  offerPaymentPost(paymentPostFromInvoices([{ q, payment }], account, paidOn));
   /* Money in, paper out -- the supermarket moment, and the only one that
      prints without being asked. Last, so a printer that is off or a
      dialog that is cancelled cannot cost the shop the payment record
@@ -68752,6 +68923,13 @@ function agentConfirmPay(){
   refreshAgentsScreen();
   renderDebtorsList();
   toast(`${fmtUGX(Math.round(total))} received — recorded in the Cash Book`);
+  {
+    const ag = (data.agents || []).find(x=> printed[0][0] && x.id === printed[0][0].originAgentId);
+    const post = paymentPostFromInvoices(printed.map(([q, payment])=> ({ q, payment })), printed[0][1].method, todayISO(),
+      ag ? `${ag.name} (agent)` : null);
+    if(printed.length > 1 || ag) post.owes = null;
+    offerPaymentPost(post);
+  }
   if(data.presetAutoPrintReceipt) printed.forEach(([q, p])=> printReceipt(q, p, q.payments.length-1));
 }
 
@@ -79178,6 +79356,7 @@ function resetCustomerDebtForm(){
   document.getElementById('cd_invoice_picker_section').style.display = 'none';
   document.getElementById('cd_invoice_picker_wrap').innerHTML = '';
 }
+let customerDebtPost = null;
 document.getElementById('cd_save').addEventListener('click', ()=>{
   const c = data.customers.find(x=>x.id===editingCustomerDebtId); if(!c) return;
   const amount = Number(document.getElementById('cd_amount').value)||0;
@@ -79203,7 +79382,9 @@ document.getElementById('cd_save').addEventListener('click', ()=>{
     // over (debt never tied to an invoice, e.g. a manual charge) reduces
     // c.debt directly.
     // The seventh argument has always been there. Only the form was silent.
+    const told = paymentPostWatch(c.id, selections);
     recordCustomerPayment(c.id, amount, account, note, selections, null, happenedOn);
+    customerDebtPost = told(amount, account, happenedOn);
   }
   saveData();
   closeModal('customerDebtModal'); resetCustomerDebtForm();
@@ -79211,6 +79392,7 @@ document.getElementById('cd_save').addEventListener('click', ()=>{
   renderDebtorsList();
   toast((editingCustomerDebtType==='charge' ? 'Charge recorded' : 'Payment recorded')
     + paymentDatedSuffix(happenedOn));
+  if(customerDebtPost){ offerPaymentPost(customerDebtPost); customerDebtPost = null; }
 });
 document.getElementById('cd_cancel').addEventListener('click', ()=>closeModalAndReset('customerDebtModal', resetCustomerDebtForm));
 document.getElementById('customerDebtModalClose').addEventListener('click', ()=>closeModalAndReset('customerDebtModal', resetCustomerDebtForm));
@@ -95589,7 +95771,9 @@ async function saveCashTxn(column){
       const selections = pickerVisible ? invoicePickerSelections(document.getElementById('cb_in_invoice_picker_wrap')) : [];
       const allocated = selections.reduce((s,a)=>s+a.amount, 0);
       if(allocated > amount + 0.01){ toast('Allocated amount exceeds the amount entered'); return; }
+      const told = paymentPostWatch(customer.id, selections);
       recordCustomerPayment(customer.id, amount, account, description, selections, category, currentCbDate());
+      const cashInPost = told(amount, account, currentCbDate());
       saveData();
       closeModal('cashInModal');
       resetCashTxnForms();
@@ -95597,6 +95781,7 @@ async function saveCashTxn(column){
       renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
       renderDebtorsList();
       toast('Cash in recorded');
+      offerPaymentPost(cashInPost);
       return;
     }
   }
