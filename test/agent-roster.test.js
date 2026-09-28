@@ -77,6 +77,11 @@ const card = row + body;
 const render = (/function renderAgents\(filter=''\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
 const posHTML = (/function agentRosterPositionHTML\(\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
 const retire = (/function retireAgent\(id\)\{[\s\S]*?\n\}/.exec(code) || [''])[0];
+/* The terms were a <select> inside the open row, and its change handler
+   lived in renderAgents. The canvas made them two buttons -- Prepay and
+   Pay on delivery -- so the decision moved into setAgentTerm, which both
+   buttons call. Section 5 reads it there. */
+const setTerm = (/function setAgentTerm\(id, term\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
 const pause = (/function toggleAgentAvailability\(id\)\{[\s\S]*?\n\}/.exec(code) || [''])[0];
 
 const agent = (id, over) => Object.assign({ id, name: id, phone: '', location: 'Ntinda',
@@ -219,18 +224,22 @@ if (scope) {
   t.check(/cannot be prepared until the money is in/.test(scope.agentTermConsequence('prepay').text),
     'described by what it stops');
 
-  t.check(/if\(sel\.value === 'pay_on_delivery' && prior !== 'pay_on_delivery'\)\{/.test(render),
+  t.check(/if\(term === 'pay_on_delivery' && prior !== 'pay_on_delivery'\)\{/.test(setTerm),
     'the question is asked when the terms are LOOSENED');
   /* Tightening needs no confirmation -- there is nothing to warn about
      in asking somebody to pay first, and a question there would train
      people to dismiss the one that matters. */
-  t.check(/sel\.value = prior; return;/.test(render), 'and declining puts the dropdown back rather than leaving it lying');
-  t.check(/s\.owed > 0 \? `\\n\\nThey already owe \$\{fmtUGX\(Math\.round\(s\.owed\)\)\}\.`/.test(render),
+  /* It was "put the dropdown back". Two buttons have nothing to put
+     back: declining must simply write nothing, and the pressed button
+     is redrawn from paymentTerm, which is still the old term. */
+  t.check(/\)\)\{\s*return;\s*\}\s*\}\s*a\.paymentTerm = term;/.test(setTerm),
+    'and declining writes nothing, so the terms stay as they were');
+  t.check(/s\.owed > 0 \? `\\n\\nThey already owe \$\{fmtUGX\(Math\.round\(s\.owed\)\)\}\.`/.test(setTerm),
     'with what they already owe named, since that is the figure the answer turns on');
-  t.check(/s\.idleDays == null \? '\\n\\nThey have never sold anything yet\.'/.test(render),
+  t.check(/s\.idleDays == null \? '\\n\\nThey have never sold anything yet\.'/.test(setTerm),
     'and an agent who has never sold flagged, because that is the other way this goes wrong');
   /* The toast said "payment terms updated" for both directions. */
-  t.check(/can now take goods before paying/.test(render) && /must now pay before anything is prepared/.test(render),
+  t.check(/can now take goods before paying/.test(setTerm) && /must now pay before anything is prepared/.test(setTerm),
     'and the confirmation says which way it went');
 }
 
@@ -336,7 +345,12 @@ if (scope) {
      where somebody deciding what to do about the money is reading. */
   t.check(/They take goods before paying, so their orders are prepared and handed over before any money arrives/.test(card),
     'and credit exposure named as exposure');
-  t.check(/They made <b>\$\{money\(s\.earned\)\}<\/b> of their own on top of your prices/.test(card),
+  /* It was a sentence -- "They made X of their own on top of your
+     prices". The canvas draws it: two figures side by side, "Came to
+     you" and "They kept", over one bar split between them, with their
+     markup against the other agents'. The claim is unchanged: the
+     margin is theirs, and it is labelled as theirs. */
+  t.check(/They kept<\/span><b>\$\{agNum\(s\.earned\)\}<\/b>/.test(card) && /Came to you<\/span><b>\$\{agNum\(s\.revenue\)\}<\/b>/.test(card),
     'while the agent\'s own margin is shown as theirs, not as the shop\'s takings');
   t.check(!/<div class="sc-notes">\$\{esc\(a\.email\)\}<\/div>/.test(card),
     'and the email, which nobody was deciding anything from, is off the card');
@@ -421,8 +435,15 @@ if (scope) {
   t.check(/agv-av-n/.test(jr.agentAvatarHTML(henry, true)) && />AG</.test(jr.agentAvatarHTML(agent('AG x', { name: 'Anna Grace' }), false)),
     'a new agent wears a dashed ring; initials come from the name');
   const row = (/function agentRowHTML\(a\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
-  t.check(/const unstarted = s\.orders === 0 && !retired;/.test(row) && /agv-span" data-l="Progress"/.test(row),
-    'the row draws the journey in place of four empty charts for anybody who has not ordered');
+  /* The table row is a row of a table now -- ten columns every agent
+     fills the same way, where somebody who has not ordered reads as
+     dashes and "Not started". The journey moved to where there is room
+     to draw it: the phone card, in place of its two figures, and the
+     first column of the row once it is opened. */
+  const pcard = (/function agentCardHTML\(a\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+  t.check(/never && !retired \? agentJourneyHTML\(agentJourney\(a, s\), false\)/.test(pcard)
+    && /if\(s\.orders === 0 && !retired\)\{[\s\S]{0,120}agentJourneyHTML\(j, true\)/.test(card),
+    'the journey is drawn for anybody who has not ordered, in place of figures they do not have');
   const body = (/function agentOpenHTML\(a, s\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
   t.check(/The invite took; what is missing is a first sale/.test(body),
     'and an agent who has signed in is not called an invite that did not take');
