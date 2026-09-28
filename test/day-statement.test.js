@@ -132,7 +132,11 @@ t.check(/dayLog:d\.presetDayLog\|\|\{\}/.test(src) && /presetDayLog: \(presets\.
   'the ticks save and load with the shop\'s settings');
 t.check(/q\.announcedAt = Date\.now\(\);[\s\S]{0,300}dsNoteOrderPosted\(q, text\)/.test(extractFunction(src, 'announceOrderToGroup', 'index.html')),
   'an order announced from the board keeps its words and figures for the day statement');
-t.check(/if\(tab==='daystatement'\) renderDayStatement\(\);/.test(src) && /data-tab="daystatement"/.test(src),
-  'the screen has a door in the rail and draws on entry');
+t.check(/if\(fcLens === 'today'\) renderDayStatement\(\);/.test(src) && /data-fclens="today">Day statement</.test(src)
+  && /<div class="ow-fc-pane" id="fc_pane_today" hidden>[\s\S]{0,400}<div id="ds_root"><\/div>/.test(src),
+  'it is the Today lens of Forecasts, not a page of its own');
+t.check(!/data-tab="daystatement"/.test(src) && !/id="tab-daystatement"/.test(src)
+  && /if\(tab === 'daystatement'\)\{ fcLens = 'today'; return 'forecasts'; \}/.test(src),
+  'and the page it briefly was is gone, its old door landing on the lens');
 
 t.done();
