@@ -169,4 +169,15 @@ t.check(/const msg = text == null \|\| text === '' \? salesGroupOrderMessage\(q\
   data.customers.pop(); data.cashTxns.pop();
 }
 
+/* THE HOUR LANES stay readable on a busy day. */
+{
+  const body = src.slice(src.indexOf('THE CLOCK FITS THE DAY'), src.indexOf('const chartPanel', src.indexOf('THE CLOCK FITS THE DAY')));
+  t.check(/const h1 = Math\.max\(18, ms\.length \? Math\.ceil\(\(Math\.max\(\.\.\.ms\) \+ 1\) \/ 60\)/.test(body),
+    'the clock runs to the hour after the last record, so nothing after six is pinned to the edge');
+  t.check(/for\(let k = 0; k < 3; k\+\+\)/.test(body), 'dots that would overlap take another of three rows');
+  t.check(/if\(dsOpenKey !== p\.key && dsOpenKey !== o\.key\) return;/.test(body), 'and lines are drawn only for the record that is open');
+  t.check(/data-ds-zoom=/.test(src) && /overflow-x:auto/.test(src.slice(src.indexOf('.ow-ds-scr{'), src.indexOf('.ow-ds-scr{') + 80)),
+    'a zoom of three hours or one scrolls sideways through the day');
+}
+
 t.done();
