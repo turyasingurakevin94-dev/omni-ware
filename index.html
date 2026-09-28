@@ -19392,12 +19392,16 @@
   .ow-ds-is{font-size:var(--ow-t-11);color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;}
   .ow-ds-lanes{display:grid;grid-template-columns:72px minmax(0,1fr);row-gap:var(--ow-sp-8);align-items:center;}
   .ow-ds-ln{display:flex;flex-direction:column;gap:var(--ow-sp-4);font-size:var(--ow-t-12);font-weight:600;}
-  .ow-ds-ln span{height:28px;line-height:28px;}
+  .ow-ds-ln{gap:var(--ow-sp-8);align-self:start;}
+  .ow-ds-ln span{height:46px;line-height:46px;}
   .ow-ds-ln .ow-ds-o{color:var(--ow-oxide-deep);} .ow-ds-ln .ow-ds-p{color:var(--ow-sky);}
-  .ow-ds-lane{position:relative;height:60px;}
-  .ow-ds-lane svg{position:absolute;inset:0;display:block;width:100%;height:60px;}
-  .ow-ds-row{position:absolute;left:0;right:0;height:28px;}
-  .ow-ds-row.ow-ds-r2{top:32px;}
+  .ow-ds-scr{min-width:0;overflow-x:auto;overflow-y:hidden;padding-bottom:var(--ow-sp-4);}
+  .ow-ds-in2{position:relative;min-width:100%;}
+  .ow-ds-lane{position:relative;height:100px;}
+  .ow-ds-lane svg{position:absolute;inset:0;display:block;width:100%;height:100px;}
+  .ow-ds-band{position:absolute;top:0;bottom:0;background:var(--ow-amber-faint);border-radius:var(--ow-r-sm);}
+  .ow-ds-dl.ow-on{color:var(--ow-ink-900);font-weight:600;}
+  .ow-ds-zm{margin-right:var(--ow-sp-8);}
   .ow-ds-dot{position:absolute;top:50%;padding:0;box-sizing:border-box;cursor:pointer;border-radius:50%;transform:translate(-50%,-50%);background:var(--ow-paper);border:2px solid var(--ow-ink-400);}
   .ow-ds-dot.ow-ds-pay{border-radius:0;transform:translate(-50%,-50%) rotate(45deg);}
   .ow-ds-dot.ow-ds-ok{background:var(--ow-verdigris);border-color:var(--ow-verdigris);}
@@ -57073,6 +57077,13 @@ function renderOrderFlow() {
 }
 window.renderOrderFlow = renderOrderFlow;
 window.ofBoardLogic = function () { return ofBoard && ofBoard.logic; };
+/* The board's post, for anything outside it that posts an order: the
+   same words the Post sheet opens with (sources grouped, no prices), so
+   the group reads one template whichever screen sent it. */
+window.ofPostMessage = function (qid) {
+  var q = (data.savedQuotes || []).find(function (x) { return String(x.id) === String(qid); });
+  return q ? postMsg(ofOrder(q), false, true) : null;
+};
 window.OrderFlowBoard = OrderFlowBoard;
 window.ofOpenOrder = function (qid) {
   if (!ofBoard) renderOrderFlow();
@@ -131089,6 +131100,7 @@ function syncTodayDot(){
 let dsFrom = null, dsTo = null, dsAnchor = null, dsMonth = null, dsPicker = false;
 let dsOpenKey = null, dsType = 'all', dsStatus = 'all', dsQ = '', dsSort = { key: 'time', dir: 1 };
 let dsRv = null, dsPhShow = 'todo';
+let dsZoom = 'day', dsScrollLeft = 0, dsBusyAt = null, dsZoomJump = false, dsLastOpen = null;
 
 const DS_MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'July', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
 const DS_DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -131149,9 +131161,13 @@ function dsNoteOrderPosted(q, text){
 /* An ORDER is anything past a draft that has not been voided; the day
    it came in is the day it was first saved. */
 function dsOrderDay(q){
+  /* A late entry belongs to the day it went out, not the day it was typed
+     in: that is the day the group heard about it, if it ever did. */
+  if(dsIsLate(q)) return String(q.date).slice(0, 10);
   const c = q.createdAt || q.savedAt;
   return c ? String(c).slice(0, 10) : String(q.date || '').slice(0, 10);
 }
+function dsIsLate(q){ return typeof orderIsBackdated === 'function' && !!q.date && orderIsBackdated(q); }
 function dsOrderLine(q){
   const parts = (q.items || []).map(it=> `${String(it.productName || 'Item').split(' (')[0]} × ${Number(it.qty) || 0}`);
   return parts.slice(0, 2).join(', ') + (parts.length > 2 ? ` +${parts.length - 2} more` : '');
@@ -131171,11 +131187,15 @@ function dsRecords(from, to){
     if(!(q.invoiced || (q.status && q.status !== 'draft'))) return;
     const d = dsOrderDay(q);
     if(!d || d < from || d > to) return;
-    const t = dsHM(q.createdAt || q.savedAt) || '';
+    /* Its clock is the moment it was typed in, which is not when it
+       happened -- so a late entry carries no time rather than a wrong one. */
+    const late = dsIsLate(q);
+    const t = late ? '' : dsHM(q.createdAt || q.savedAt) || '';
     const key = 'q:' + q.id;
     const p = posts[key];
     const postedAt = q.announcedAt || (p && p.at) || null;
-    out.push({ key, kind: 'order', d, t, min: dsMin(t), ref: '#' + q.id, who: quoteClientName(q), what: dsOrderLine(q),
+    out.push({ key, kind: 'order', d, t, min: dsMin(t), ref: '#' + q.id, who: quoteClientName(q),
+      what: (late ? `late entry, typed in ${dsNice(String(q.createdAt || q.savedAt).slice(0, 10))} · ` : '') + dsOrderLine(q),
       amt: Math.round(savedQuoteTotal(q)), q, qid: q.id, posted: postedAt ? dsHM(postedAt) : null, postedAt, alloc: [] });
   });
   const txnById = new Map((data.cashTxns || []).map(t=> [t.id, t]));
@@ -131442,38 +131462,81 @@ function renderDayStatement(){
         <span class="ow-ds-cn">${span <= 14 ? dsDow(d).slice(0, 2) : ''}</span></button>`;
     }).join('')}</div>`;
   } else {
-    const x = (min)=> Math.max(0, Math.min(100, ((min == null ? 420 : min) - 420) / 660 * 100));
+    /* THE CLOCK FITS THE DAY: the hour before the first record to the
+       hour after the last, never less than 07:00-18:00. A fixed 07-18
+       axis pinned everything after six to its right edge. */
+    const ms = recs.map(r=> r.min).filter(m=> m != null);
+    const h0 = Math.min(7, ms.length ? Math.floor(Math.min(...ms) / 60) : 7);
+    const h1 = Math.max(18, ms.length ? Math.ceil((Math.max(...ms) + 1) / 60) : 18);
+    const spanH = h1 - h0;
+    /* ZOOM: the whole day, or a window of hours the lanes scroll through. */
+    const shownH = dsZoom === 'day' ? spanH : Math.min(spanH, Number(dsZoom));
+    const innerPct = spanH / shownH * 100;
+    const pxW = 780 * spanH / shownH;                 // the width the spread is worked in
+    const xPct = (min)=> ((min == null ? h0 * 60 : min) - h0 * 60) / (spanH * 60) * 100;
+    const xPx = (min)=> xPct(min) / 100 * pxW;
     const maxAmt = Math.max(1, ...recs.map(r=> r.amt));
-    const dot = (r)=>{
-      const sz = Math.round(12 + 10 * Math.sqrt(r.amt / maxAmt));
-      const s = st(r);
-      const cls = s === 'ok' ? ' ow-ds-ok' : s === 'diff' ? ' ow-ds-diff' : !r.posted ? ' ow-ds-miss' : '';
-      const title = `${r.t || '—'} · ${r.ref} ${r.who} · ${dsF(r.amt)}`;
-      return `<button type="button" class="ow-ds-dot${r.kind === 'pay' ? ' ow-ds-pay' : ''}${cls}${dsOpenKey === r.key ? ' ow-on' : ''}" data-ds-open="${esc(r.key)}"
-        style="left:${x(r.min).toFixed(2)}%;width:${sz}px;height:${sz}px" title="${esc(title)}" aria-label="${esc(title)}"></button>
-        <span class="ow-ds-dl" style="left:calc(${x(r.min).toFixed(2)}% + ${sz / 2 + 4}px)">${dsShort(r.amt)}</span>`;
+    const pos = {};
+    /* SPREAD, NEVER STACK: a dot takes the first of three rows where it
+       clears its neighbour; an amount is written only where it has room. */
+    const lane = (list, ys)=>{
+      const rows = [[], [], []];
+      const sorted = list.slice().sort((a, b)=> (a.min == null ? -1 : a.min) - (b.min == null ? -1 : b.min));
+      return sorted.map((r, i)=>{
+        const sz = Math.round(10 + 8 * Math.sqrt(r.amt / maxAmt));
+        const px = xPx(r.min);
+        let row = -1;
+        for(let k = 0; k < 3; k++){ const last = rows[k][rows[k].length - 1]; if(!last || px - last.px >= (sz + last.sz) / 2 + 4){ row = k; break; } }
+        if(row < 0) row = [0, 1, 2].sort((a, b)=> rows[a][rows[a].length - 1].px - rows[b][rows[b].length - 1].px)[0];
+        rows[row].push({ px, sz });
+        const y = ys[row];
+        pos[r.key] = { x: xPct(r.min) * 10, y };
+        const next = sorted[i + 1];
+        const roomy = !next || xPx(next.min) - px > 60;
+        const s = st(r), on = dsOpenKey === r.key;
+        const cls = s === 'ok' ? ' ow-ds-ok' : s === 'diff' ? ' ow-ds-diff' : !r.posted ? ' ow-ds-miss' : '';
+        const title = `${r.t || '—'} · ${r.ref} ${r.who} · ${dsF(r.amt)}`;
+        return `<button type="button" class="ow-ds-dot${r.kind === 'pay' ? ' ow-ds-pay' : ''}${cls}${on ? ' ow-on' : ''}" data-ds-open="${esc(r.key)}"
+          style="left:${xPct(r.min).toFixed(3)}%;top:${y}px;width:${sz}px;height:${sz}px" title="${esc(title)}" aria-label="${esc(title)}"></button>`
+          + ((roomy && row === 0) || on ? `<span class="ow-ds-dl${on ? ' ow-on' : ''}" style="left:calc(${xPct(r.min).toFixed(3)}% + ${sz / 2 + 4}px);top:${y}px">${dsShort(r.amt)}</span>` : '');
+      }).join('');
     };
+    const oDots = lane(orders, [23, 9, 37]), pDots = lane(pays, [77, 63, 91]);
+    /* LINES ONLY FOR WHAT IS OPEN: the order and the payments against it.
+       Every line at once was a web that crossed the whole day. */
     const links = [];
     pays.forEach(p=> p.alloc.forEach(a=>{
       const o = orderRec(a.qid); if(!o) return;
+      if(dsOpenKey !== p.key && dsOpenKey !== o.key) return;
+      const A = pos[o.key], B = pos[p.key]; if(!A || !B) return;
       const full = dsOrderOwed(o.q) <= 0.5;
-      const xo = x(o.min) * 10, xp = x(p.min) * 10, on = dsOpenKey === p.key || dsOpenKey === o.key;
-      links.push(`<path d="M${xo.toFixed(1)},14 C${xo.toFixed(1)},38 ${xp.toFixed(1)},22 ${xp.toFixed(1)},46" fill="none" stroke="${on ? 'var(--ow-ink-900)' : 'var(--ow-ink-400)'}" stroke-width="${on ? 2.5 : 1.5}"${full ? '' : ' stroke-dasharray="5 4"'} vector-effect="non-scaling-stroke"/>`);
+      links.push(`<path d="M${A.x.toFixed(1)},${A.y} C${A.x.toFixed(1)},${(A.y + B.y) / 2} ${B.x.toFixed(1)},${(A.y + B.y) / 2} ${B.x.toFixed(1)},${B.y}" fill="none" stroke="var(--ow-ink-900)" stroke-width="2"${full ? '' : ' stroke-dasharray="5 4"'} vector-effect="non-scaling-stroke"/>`);
     }));
-    const hours = [7, 9, 11, 13, 15, 17].map(hh=> `<span class="ow-ds-hr" style="left:${((hh * 60 - 420) / 660 * 100).toFixed(2)}%">${String(hh).padStart(2, '0')}:00</span>`).join('');
+    const byH = {};
+    recs.forEach(r=>{ if(r.min != null){ const k = Math.floor(r.min / 60); byH[k] = (byH[k] || 0) + 1; } });
+    const bestH = Object.keys(byH).sort((a, b)=> byH[b] - byH[a])[0];
+    dsBusyAt = bestH != null ? xPct(bestH * 60) : null;
+    const band = bestH != null && byH[bestH] > 2 ? `<i class="ow-ds-band" style="left:${xPct(bestH * 60).toFixed(3)}%;width:${(100 / spanH).toFixed(3)}%" title="Busiest hour · ${byH[bestH]} records"></i>` : '';
+    const every = pxW / spanH >= 56 ? 1 : 2;
+    const hours = [];
+    /* The two end labels sit inside the lane rather than half off it. */
+    for(let hh = h0; hh <= h1; hh += every) hours.push(`<span class="ow-ds-hr" style="left:${xPct(hh * 60).toFixed(3)}%${hh === h0 ? ';transform:none' : hh === h1 ? ';transform:translateX(-100%)' : ''}">${String(hh).padStart(2, '0')}:00</span>`);
     chart = `<div class="ow-ds-lanes">
       <div class="ow-ds-ln"><span class="ow-ds-o">Orders</span><span class="ow-ds-p">Payments</span></div>
-      <div class="ow-ds-lane">
-        <svg viewBox="0 0 1000 60" preserveAspectRatio="none" aria-hidden="true"><line x1="0" y1="30" x2="1000" y2="30" stroke="var(--ow-rule-soft)" stroke-width="1" vector-effect="non-scaling-stroke"/>${links.join('')}</svg>
-        <div class="ow-ds-row">${orders.map(dot).join('')}</div>
-        <div class="ow-ds-row ow-ds-r2">${pays.map(dot).join('')}</div>
-      </div>
-      <span></span><div class="ow-ds-hrs">${hours}</div>
+      <div class="ow-ds-scr" id="ds_scr"><div class="ow-ds-in2" style="width:${innerPct.toFixed(2)}%">
+        <div class="ow-ds-lane">${band}
+          <svg viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true"><line x1="0" y1="50" x2="1000" y2="50" stroke="var(--ow-rule-soft)" stroke-width="1" vector-effect="non-scaling-stroke"/>${links.join('')}</svg>
+          ${oDots}${pDots}
+        </div>
+        <div class="ow-ds-hrs">${hours.join('')}</div>
+      </div></div>
     </div>
-    <p class="ow-ds-fn"><svg width="22" height="8" viewBox="0 0 22 8" aria-hidden="true"><path d="M1 1 C 8 1, 14 7, 21 7" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>a line joins a payment to the order it paid · dashed = part paid</p>`;
+    <p class="ow-ds-fn"><svg width="22" height="8" viewBox="0 0 22 8" aria-hidden="true"><path d="M1 1 C 8 1, 14 7, 21 7" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>tap a dot to see the order it paid, or what paid it · dashed = part paid${dsZoom === 'day' ? '' : ' · scroll sideways through the day'}</p>`;
   }
   const chartPanel = `<section class="ow-ds-pan ow-ds-chart" aria-label="${isRange ? 'Day by day' : 'Hour by hour'}">
     <div class="ow-ds-lg"><span class="ow-ds-l">${isRange ? 'Day by day' : 'Hour by hour'}</span>
+      ${isRange ? '' : `<span class="ow-seg ow-ds-zm" role="group" aria-label="How much of the day to show">${[['day', 'Whole day'], ['3', '3 hours'], ['1', '1 hour']].map(([k, label])=>
+        `<button type="button" class="ow-seg-b${dsZoom === k ? ' ow-on' : ''}" data-ds-zoom="${k}" aria-pressed="${dsZoom === k}">${label}</button>`).join('')}</span>`}
       <span class="ow-ds-li"><i class="ow-ds-k-ok"></i>Matches</span><span class="ow-ds-li"><i class="ow-ds-k-diff"></i>Differs</span>
       <span class="ow-ds-li"><i class="ow-ds-k-open"></i>Not checked</span><span class="ow-ds-li"><i class="ow-ds-k-miss"></i>Not in group</span></div>
     <div class="ow-ds-ins">${insights}</div>
@@ -131673,6 +131736,19 @@ function renderDayStatement(){
     ${phone}
     ${dsRv ? dsReceiveHTML() : ''}
   </div>`;
+  /* The lanes keep their place across a redraw; a new zoom opens on the
+     busiest hour, and a record opened from the table is brought into view. */
+  const scr = document.getElementById('ds_scr');
+  if(scr){
+    const inner = scr.firstElementChild;
+    const openPos = dsOpenKey && dsOpenKey !== dsLastOpen ? scr.querySelector(`[data-ds-open="${CSS.escape(dsOpenKey)}"]`) : null;
+    if(dsZoomJump && dsBusyAt != null) scr.scrollLeft = Math.max(0, inner.offsetWidth * dsBusyAt / 100 - scr.clientWidth * 0.15);
+    else if(openPos && dsZoom !== 'day') scr.scrollLeft = Math.max(0, openPos.offsetLeft - scr.clientWidth / 2);
+    else scr.scrollLeft = dsScrollLeft;
+    dsZoomJump = false;
+    scr.addEventListener('scroll', ()=>{ dsScrollLeft = scr.scrollLeft; }, { passive: true });
+  }
+  dsLastOpen = dsOpenKey;
 }
 
 /* ---- the receive panel: one payment, spread across the invoices the
@@ -131870,6 +131946,7 @@ function wireDayStatement(root){
       dsMonth = new Date(Date.UTC(my, mm - 1 + Number(b.dataset.dsMon), 1)).toISOString().slice(0, 7);
       renderDayStatement(); return;
     }
+    if((b = el('[data-ds-zoom]'))){ dsZoom = b.dataset.dsZoom; dsZoomJump = true; renderDayStatement(); return; }
     if((b = el('[data-ds-status]'))){ dsStatus = b.dataset.dsStatus; renderDayStatement(); return; }
     if((b = el('[data-ds-type]'))){ dsType = b.dataset.dsType; renderDayStatement(); return; }
     if((b = el('[data-ds-ph]'))){ dsPhShow = b.dataset.dsPh; renderDayStatement(); return; }

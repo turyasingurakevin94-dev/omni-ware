@@ -169,4 +169,30 @@ t.check(/const msg = text == null \|\| text === '' \? salesGroupOrderMessage\(q\
   data.customers.pop(); data.cashTxns.pop();
 }
 
+/* THE HOUR LANES stay readable on a busy day. */
+{
+  const body = src.slice(src.indexOf('THE CLOCK FITS THE DAY'), src.indexOf('const chartPanel', src.indexOf('THE CLOCK FITS THE DAY')));
+  t.check(/const h1 = Math\.max\(18, ms\.length \? Math\.ceil\(\(Math\.max\(\.\.\.ms\) \+ 1\) \/ 60\)/.test(body),
+    'the clock runs to the hour after the last record, so nothing after six is pinned to the edge');
+  t.check(/for\(let k = 0; k < 3; k\+\+\)/.test(body), 'dots that would overlap take another of three rows');
+  t.check(/if\(dsOpenKey !== p\.key && dsOpenKey !== o\.key\) return;/.test(body), 'and lines are drawn only for the record that is open');
+  t.check(/data-ds-zoom=/.test(src) && /overflow-x:auto/.test(src.slice(src.indexOf('.ow-ds-scr{'), src.indexOf('.ow-ds-scr{') + 80)),
+    'a zoom of three hours or one scrolls sideways through the day');
+}
+
+/* A LATE ENTRY sits on the day it went out, with no invented clock. */
+{
+  const late = compileScope([moduleSrc, 'function orderIsBackdated(q){ return String(q.date) < String(q.createdAt).slice(0, 10); }'], {
+    data: { customers: [], cashTxns: [], savedQuotes: [{ id: 50, status: 'completed', invoiced: true, voided: false, amountPaid: 0, date: '2026-09-08',
+      createdAt: '2026-09-28T10:00:00.000Z', client: { name: 'B110 Original' }, items: [{ productName: 'Runners', qty: 2, sellPrice: 1000 }], payments: [] }] },
+    savedQuoteTotal: lineTotal, quoteItemSellPrice: (it)=> it.sellPrice, quoteClientName: (q)=> q.client.name, accountLabel: (k)=> k,
+    todayISO: ()=> today, salesGroupOrderMessage: ()=> 'msg', esc: String, toast: ()=>{}, saveData: ()=>{},
+    invoiceBalanceDue: (q)=> lineTotal(q) - q.amountPaid, invoiceNumberLabel: (q)=> 'INV-' + q.id,
+    collectionInvoiceTxn: ()=> null, collectionLedgerRow: ()=> false, debtLogIsInvoiceOwned: ()=> false, cashIsMoneyIn: ()=> true,
+  }, ['dsRecords']);
+  t.check(late.dsRecords('2026-09-08', '2026-09-08').some(r=> r.key === 'q:50' && r.t === '' && /^late entry/.test(r.what))
+    && !late.dsRecords(today, today).some(r=> r.key === 'q:50'),
+    'a late entry sits on the day it went out, not the day it was typed in, and carries no invented time');
+}
+
 t.done();
