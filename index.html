@@ -19354,6 +19354,329 @@
 #rpModal .rp-scroll > *{flex-shrink:0}
 @media (max-width:820px){ #rpModal.show{align-items:flex-end;padding:0} }
 /* RECEIVE-PAY-CSS:END */
+  /* ---- DAY STATEMENT ----------------------------------------------------
+     Every order and every payment of a day, one row each, checked by the
+     owner against the sales group. Drawn from the Day Statement canvas.
+     Three new near-tints and nothing else: a faint Money ground for the
+     receive panel's picked invoice, the lighter Money bar for "what this
+     payment adds", and a faint crimson for a row that differs. None of
+     them carries text.
+
+     It sits just BEFORE the OW layer rather than inside it: the rows,
+     cells and panels are styled through their own element children
+     (b, i, span inside a named part), which the layer's one-class-per-
+     piece law does not allow, and the ceilings above count the whole
+     stylesheet either way. */
+  :root{ --ow-sky-faint:#F5F9FD; --ow-sky-mid:#7FB3DC; --ow-crimson-faint:#FFF8F7; }
+  .ow-ds{display:flex;flex-direction:column;gap:var(--ow-sp-16);}
+  .ow-ds-ph{display:none;}
+  .ow-ds-h{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--ow-sp-16);}
+  .ow-ds-days{display:flex;gap:var(--ow-sp-6);}
+  .ow-ds-day{width:62px;height:62px;padding:0;border-radius:var(--ow-r);border:1px solid var(--ow-rule);background:var(--ow-paper);color:var(--ow-ink-900);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--ow-sp-4);cursor:pointer;font:inherit;}
+  .ow-ds-day:hover{background:var(--ow-paper-2);}
+  .ow-ds-day.ow-on{border:2px solid var(--ow-ink-900);}
+  .ow-ds-day.ow-ds-in{background:var(--ow-steel-050);}
+  .ow-ds-day.ow-ds-nil{opacity:.55;}
+  .ow-ds-dw{font-size:var(--ow-t-11);font-weight:600;color:var(--ow-ink-600);}
+  .ow-ds-dn{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-16);font-weight:600;line-height:1;}
+  .ow-ds-db{display:block;width:36px;height:4px;border-radius:999px;background:var(--ow-rule-soft);overflow:hidden;}
+  .ow-ds-db i{display:block;height:4px;}
+  .ow-ds-acts{display:flex;gap:var(--ow-sp-8);position:relative;}
+  .ow-ds-acts .btn{display:inline-flex;align-items:center;gap:var(--ow-sp-8);white-space:nowrap;}
+  .ow-ds-acts .icon{width:16px;height:16px;}
+  .btn.ow-ds-rcv{color:var(--ow-sky);border-color:var(--ow-sky);}
+  .ow-ds-rng{min-width:196px;justify-content:space-between;}
+  .ow-ds-rng span{flex:1 1 auto;text-align:left;}
+  .ow-ds-pop{position:absolute;top:44px;right:0;z-index:40;width:520px;background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);box-shadow:var(--ow-lift);display:grid;grid-template-columns:148px minmax(0,1fr);}
+  .ow-ds-pre{border-right:1px solid var(--ow-rule-soft);padding:var(--ow-sp-10);display:flex;flex-direction:column;gap:var(--ow-sp-2);}
+  .ow-ds-pre button{font:inherit;text-align:left;height:32px;padding:0 var(--ow-sp-10);border:0;border-radius:var(--ow-r-sm);background:transparent;font-size:var(--ow-t-13);color:var(--ow-ink-900);cursor:pointer;}
+  .ow-ds-pre button:hover{background:var(--ow-steel-050);}
+  .ow-ds-pre button.ow-on{background:var(--ow-ink-900);color:var(--ow-paper);font-weight:600;}
+  .ow-ds-cal{padding:var(--ow-sp-12) var(--ow-sp-16) var(--ow-sp-12);display:flex;flex-direction:column;gap:var(--ow-sp-10);}
+  .ow-ds-mh{display:flex;align-items:center;gap:var(--ow-sp-8);}
+  .ow-ds-mh b{flex:1 1 auto;text-align:center;font-size:var(--ow-t-14);font-weight:600;}
+  .ow-ds-nav{font:inherit;width:32px;height:32px;padding:0;border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);color:var(--ow-ink-900);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;}
+  .ow-ds-nav:disabled{opacity:.35;cursor:default;}
+  .ow-ds-nav .icon{width:16px;height:16px;}
+  .ow-ds-cg{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));row-gap:var(--ow-sp-2);text-align:center;}
+  .ow-ds-cw{font-size:var(--ow-t-11);font-weight:600;color:var(--ow-ink-600);height:24px;line-height:24px;}
+  .ow-ds-cd{font:inherit;height:40px;padding:0;border:0;background:transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-13);color:var(--ow-ink-900);}
+  .ow-ds-cd:disabled{color:var(--ow-ink-400);opacity:.5;cursor:default;}
+  .ow-ds-cd.ow-ds-span{background:var(--ow-rule-soft);}
+  .ow-ds-cd.ow-ds-edge{background:var(--ow-ink-900);color:var(--ow-paper);border-radius:var(--ow-r);}
+  .ow-ds-cd.ow-ds-now{outline:1.5px solid var(--ow-ink-900);outline-offset:-2px;border-radius:var(--ow-r);}
+  .ow-ds-cd.ow-ds-blank{visibility:hidden;}
+  .ow-ds-cm{display:block;width:4px;height:4px;border-radius:50%;}
+  .ow-ds-cm.ow-good{background:var(--ow-verdigris);} .ow-ds-cm.ow-bad{background:var(--ow-crimson);} .ow-ds-cm.ow-ds-o{background:var(--ow-ink-400);}
+  .ow-ds-edge .ow-ds-cm{background:var(--ow-paper);}
+  .ow-ds-pf{display:flex;align-items:center;gap:var(--ow-sp-8);border-top:1px solid var(--ow-rule-soft);padding-top:var(--ow-sp-10);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-ds-pf span{flex:1 1 auto;}
+
+  .ow-ds-fig{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);min-height:88px;}
+  .ow-ds-fc{padding:var(--ow-sp-12) var(--ow-sp-20);display:flex;flex-direction:column;gap:var(--ow-sp-6);border-right:1px solid var(--ow-rule-soft);min-width:0;}
+  .ow-ds-fc:last-child{border-right:0;}
+  .ow-ds-l{font-size:var(--ow-t-11);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ow-ink-600);}
+  .ow-ds-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:22px;font-weight:600;color:var(--ow-ink-900);}
+  .ow-ds-v small{font-size:var(--ow-t-12);color:var(--ow-ink-600);margin-left:var(--ow-sp-4);font-weight:500;}
+  .ow-ds-v.ow-ds-sky{color:var(--ow-sky);} .ow-ds-v.ow-bad{color:var(--ow-crimson);} .ow-ds-v.ow-good{color:var(--ow-verdigris);}
+  .ow-ds-s{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-ds-bar{display:flex;height:6px;border-radius:999px;overflow:hidden;background:var(--ow-rule-soft);gap:2px;}
+  .ow-ds-bar i{display:block;height:6px;}
+  .ow-ds-bar.ow-ds-tight{gap:0;}
+
+  .ow-ds-body{display:flex;gap:var(--ow-sp-16);align-items:flex-start;}
+  .ow-ds-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:var(--ow-sp-16);}
+  .ow-ds-side{width:304px;flex:none;display:flex;flex-direction:column;gap:var(--ow-sp-16);}
+  .ow-ds-pan{background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);}
+  .ow-ds-chart{padding:var(--ow-sp-12) var(--ow-sp-20) var(--ow-sp-12);}
+  .ow-ds-lg{display:flex;align-items:center;gap:var(--ow-sp-16);margin-bottom:var(--ow-sp-10);}
+  .ow-ds-lg .ow-ds-l{flex:1 1 auto;}
+  .ow-ds-li{display:inline-flex;align-items:center;gap:var(--ow-sp-6);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-ds-li i{display:inline-block;width:10px;height:10px;border-radius:50%;box-sizing:border-box;}
+  .ow-ds-li .ow-ds-k-ok{background:var(--ow-verdigris);} .ow-ds-li .ow-ds-k-diff{background:var(--ow-crimson);}
+  .ow-ds-li .ow-ds-k-open{border:2px solid var(--ow-ink-400);} .ow-ds-li .ow-ds-k-miss{border:2px dashed var(--ow-amber);}
+  .ow-ds-ins{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--ow-sp-8);margin-bottom:var(--ow-sp-12);}
+  .ow-ds-in{font:inherit;text-align:left;border:0;cursor:pointer;display:flex;flex-direction:column;gap:var(--ow-sp-2);padding:var(--ow-sp-8) var(--ow-sp-12);border-radius:var(--ow-r);min-width:0;background:var(--ow-steel-050);color:var(--ow-ink-900);}
+  .ow-ds-in.ow-warn{background:var(--ow-amber-faint);} .ow-ds-in.ow-bad{background:var(--ow-crimson-soft);}
+  .ow-ds-ik{font-size:var(--ow-t-11);font-weight:600;color:var(--ow-ink-600);}
+  .ow-ds-iv{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-16);font-weight:600;}
+  .ow-ds-in.ow-warn .ow-ds-iv{color:var(--ow-amber);} .ow-ds-in.ow-bad .ow-ds-iv{color:var(--ow-crimson);}
+  .ow-ds-is{font-size:var(--ow-t-11);color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;}
+  .ow-ds-lanes{display:grid;grid-template-columns:72px minmax(0,1fr);row-gap:var(--ow-sp-8);align-items:center;}
+  .ow-ds-ln{display:flex;flex-direction:column;gap:var(--ow-sp-4);font-size:var(--ow-t-12);font-weight:600;}
+  .ow-ds-ln span{height:28px;line-height:28px;}
+  .ow-ds-ln .ow-ds-o{color:var(--ow-oxide-deep);} .ow-ds-ln .ow-ds-p{color:var(--ow-sky);}
+  .ow-ds-lane{position:relative;height:60px;}
+  .ow-ds-lane svg{position:absolute;inset:0;display:block;width:100%;height:60px;}
+  .ow-ds-row{position:absolute;left:0;right:0;height:28px;}
+  .ow-ds-row.ow-ds-r2{top:32px;}
+  .ow-ds-dot{position:absolute;top:50%;padding:0;box-sizing:border-box;cursor:pointer;border-radius:50%;transform:translate(-50%,-50%);background:var(--ow-paper);border:2px solid var(--ow-ink-400);}
+  .ow-ds-dot.ow-ds-pay{border-radius:0;transform:translate(-50%,-50%) rotate(45deg);}
+  .ow-ds-dot.ow-ds-ok{background:var(--ow-verdigris);border-color:var(--ow-verdigris);}
+  .ow-ds-dot.ow-ds-diff{background:var(--ow-crimson);border-color:var(--ow-crimson);}
+  .ow-ds-dot.ow-ds-miss{border-style:dashed;border-color:var(--ow-amber);}
+  .ow-ds-dot.ow-on{outline:2px solid var(--ow-ink-900);outline-offset:3px;}
+  .ow-ds-dl{position:absolute;top:50%;transform:translateY(-50%);font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-11);color:var(--ow-ink-600);pointer-events:none;white-space:nowrap;}
+  .ow-ds-hrs{position:relative;height:16px;margin-top:var(--ow-sp-8);}
+  .ow-ds-hr{position:absolute;top:0;transform:translateX(-50%);font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-ds-fn{margin:var(--ow-sp-10) 0 0;font-size:var(--ow-t-11);color:var(--ow-ink-600);display:flex;align-items:center;gap:var(--ow-sp-6);}
+  .ow-ds-cols{display:flex;align-items:flex-end;gap:var(--ow-sp-4);height:118px;}
+  .ow-ds-col{font:inherit;flex:1 1 0;min-width:0;height:118px;border:0;background:transparent;padding:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:var(--ow-sp-4);}
+  .ow-ds-cn{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-ds-cn.ow-ds-now{color:var(--ow-ink-900);font-weight:600;}
+  .ow-ds-cs{display:flex;flex-direction:column;width:60%;max-width:36px;min-height:2px;overflow:hidden;border-radius:0;}
+  .ow-ds-cs.ow-ds-nil{background:var(--ow-rule-soft);}
+  .ow-ds-cs i{display:block;width:100%;}
+  .ow-ds-cs .ow-ds-k-ok{background:var(--ow-verdigris);} .ow-ds-cs .ow-ds-k-diff{background:var(--ow-crimson);}
+  .ow-ds-cs .ow-ds-k-open{background:var(--ow-paper);border:1.5px solid var(--ow-ink-400);box-sizing:border-box;}
+
+  .ow-ds-tbl{overflow:hidden;}
+  .ow-ds-tabs{display:flex;gap:var(--ow-sp-4);padding:0 var(--ow-sp-12);border-bottom:1px solid var(--ow-rule);}
+  .ow-ds-tab{font:inherit;height:44px;padding:0 var(--ow-sp-12);border:0;border-bottom:2px solid transparent;margin-bottom:-1px;background:transparent;font-size:var(--ow-t-13);font-weight:600;color:var(--ow-ink-600);display:inline-flex;align-items:center;gap:var(--ow-sp-8);cursor:pointer;}
+  .ow-ds-tab:hover{color:var(--ow-ink-900);}
+  .ow-ds-tab.ow-on{color:var(--ow-ink-900);border-bottom-color:var(--ow-ink-900);}
+  .ow-ds-tab.ow-on.ow-ds-t-ok{border-bottom-color:var(--ow-verdigris);} .ow-ds-tab.ow-on.ow-ds-t-diff{border-bottom-color:var(--ow-crimson);}
+  .ow-ds-tab.ow-on.ow-ds-t-missing{border-bottom-color:var(--ow-amber);} .ow-ds-tab.ow-on.ow-ds-t-todo{border-bottom-color:var(--ow-ink-400);}
+  .ow-ds-td{width:8px;height:8px;border-radius:50%;display:inline-block;}
+  .ow-ds-td.ow-ds-t-ok{background:var(--ow-verdigris);} .ow-ds-td.ow-ds-t-diff{background:var(--ow-crimson);}
+  .ow-ds-td.ow-ds-t-missing{background:var(--ow-amber);} .ow-ds-td.ow-ds-t-todo{background:var(--ow-ink-400);}
+  .ow-ds-tn{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-11);font-weight:600;min-width:20px;height:20px;padding:0 var(--ow-sp-6);box-sizing:border-box;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+  .ow-ds-tab.ow-on .ow-ds-tn{background:var(--ow-ink-900);color:var(--ow-paper);}
+  .ow-ds-tools{display:flex;align-items:center;gap:var(--ow-sp-12);padding:var(--ow-sp-10) var(--ow-sp-20);border-bottom:1px solid var(--ow-rule);background:var(--ow-paper-2);}
+  .ow-ds-shown{flex:1 1 auto;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-ds-clr{font:inherit;border:0;background:transparent;font-size:var(--ow-t-12);font-weight:600;color:var(--ow-oxide-deep);cursor:pointer;height:28px;}
+  .ow-ds-srch{display:flex;align-items:center;gap:var(--ow-sp-6);height:32px;padding:0 var(--ow-sp-10);border:1px solid var(--ow-rule);border-radius:var(--ow-r);width:220px;box-sizing:border-box;color:var(--ow-ink-600);background:var(--ow-paper);}
+  .ow-ds-srch .icon{width:14px;height:14px;flex:none;}
+  .ow-ds-srch input{border:0;outline:0;font:inherit;font-size:var(--ow-t-13);width:100%;min-width:0;color:var(--ow-ink-900);background:transparent;padding:0;}
+  .ow-ds-tr{display:grid;grid-template-columns:48px 84px 48px minmax(0,1.3fr) minmax(0,1fr) 100px 108px 92px;gap:var(--ow-sp-10);align-items:center;min-height:46px;padding:0 var(--ow-sp-20);}
+  .ow-ds-th{min-height:36px;background:var(--ow-paper-2);border-bottom:1px solid var(--ow-rule);}
+  .ow-ds-sort{font:inherit;border:0;background:transparent;padding:0;height:36px;display:inline-flex;align-items:center;gap:var(--ow-sp-4);cursor:pointer;font-size:var(--ow-t-11);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ow-ink-600);}
+  .ow-ds-sort:hover,.ow-ds-sort.ow-on{color:var(--ow-ink-900);}
+  .ow-ds-sort i{font-style:normal;font-size:var(--ow-t-11);opacity:.45;}
+  .ow-ds-sort.ow-on i{opacity:1;}
+  .ow-ds-hn{display:flex;justify-content:flex-end;} .ow-ds-hc{display:flex;justify-content:center;}
+  .ow-ds-rec{border-top:1px solid var(--ow-rule-soft);}
+  .ow-ds-rec:first-of-type{border-top:0;}
+  .ow-ds-rec.ow-ds-rdiff{background:var(--ow-crimson-faint);}
+  .ow-ds-rec.ow-open{background:var(--ow-paper-2);}
+  .ow-ds-tm{display:flex;flex-direction:column;line-height:1.2;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-13);color:var(--ow-ink-600);}
+  .ow-ds-tm b{font-size:var(--ow-t-11);color:var(--ow-ink-900);font-weight:600;}
+  .ow-ds-kd{display:inline-flex;align-items:center;gap:var(--ow-sp-6);font-size:var(--ow-t-12);font-weight:600;color:var(--ow-oxide-deep);}
+  .ow-ds-kd i{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ow-oxide-deep);}
+  .ow-ds-kd.ow-ds-pay{color:var(--ow-sky);}
+  .ow-ds-kd.ow-ds-pay i{background:var(--ow-sky);border-radius:0;transform:rotate(45deg);}
+  .ow-ds-ref{font-size:var(--ow-t-13);font-weight:600;white-space:nowrap;}
+  .ow-ds-who{font:inherit;text-align:left;border:0;background:transparent;padding:0;cursor:pointer;color:inherit;display:flex;align-items:center;gap:var(--ow-sp-6);min-width:0;height:44px;}
+  .ow-ds-who .icon{width:14px;height:14px;flex:none;color:var(--ow-ink-600);transition:transform .15s;}
+  .ow-ds-rec.ow-open .ow-ds-who .icon{transform:rotate(90deg);}
+  .ow-ds-wn{font-size:var(--ow-t-13);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  .ow-ds-wh{font-size:var(--ow-t-12);color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  .ow-ds-am{display:flex;flex-direction:column;align-items:flex-end;line-height:1.25;}
+  .ow-ds-amv{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-13);font-weight:600;}
+  .ow-ds-amv.ow-ds-sky{color:var(--ow-sky);}
+  .ow-ds-ow{font-size:var(--ow-t-11);font-weight:600;color:var(--ow-amber);}
+  .ow-ds-ow.ow-good{color:var(--ow-verdigris);} .ow-ds-ow.ow-ds-mut{color:var(--ow-ink-600);}
+  .ow-ds-gc{justify-self:start;font-size:var(--ow-t-12);font-weight:600;padding:3px var(--ow-sp-10);border-radius:999px;background:var(--ow-rule-soft);color:var(--ow-ink-600);white-space:nowrap;}
+  .ow-ds-gc.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .ow-ds-ck{display:flex;justify-content:center;justify-self:center;border-radius:var(--ow-r);overflow:hidden;}
+  .ow-ds-cb{font:inherit;width:44px;height:32px;padding:0;border:1px solid var(--ow-rule);background:var(--ow-paper);color:var(--ow-ink-600);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;}
+  .ow-ds-cb:last-child{margin-left:-1px;}
+  .ow-ds-cb:hover{background:var(--ow-steel-050);color:var(--ow-ink-900);}
+  .ow-ds-cb:disabled{cursor:default;opacity:.6;}
+  .ow-ds-cb .icon{width:16px;height:16px;}
+  .ow-ds-cb.ow-ds-cok{background:var(--ow-verdigris);border-color:var(--ow-verdigris);color:var(--ow-paper);}
+  .ow-ds-cb.ow-ds-cdf{background:var(--ow-crimson);border-color:var(--ow-crimson);color:var(--ow-paper);}
+  .ow-ds-x{margin:0 var(--ow-sp-20) var(--ow-sp-16) 68px;display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:var(--ow-sp-16);}
+  .ow-ds-cmp{border:1px solid var(--ow-rule);border-radius:var(--ow-r);overflow:hidden;background:var(--ow-paper);align-self:start;}
+  .ow-ds-cr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 24px;gap:var(--ow-sp-12);padding:0 var(--ow-sp-12);min-height:34px;align-items:center;border-top:1px solid var(--ow-rule-soft);}
+  .ow-ds-cr.ow-ds-ch{min-height:32px;background:var(--ow-paper-2);border-top:0;border-bottom:1px solid var(--ow-rule);}
+  .ow-ds-cr.ow-ds-cx{background:var(--ow-crimson-soft);}
+  .ow-ds-ck2{font-size:var(--ow-t-12);color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  .ow-ds-cv{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-13);min-width:0;overflow-wrap:anywhere;}
+  .ow-ds-cr.ow-ds-cx .ow-ds-cv.ow-ds-th2{color:var(--ow-crimson);font-weight:600;}
+  .ow-ds-cv.ow-ds-mut{color:var(--ow-ink-600);}
+  .ow-ds-cm2{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-16);font-weight:600;text-align:center;color:var(--ow-verdigris);}
+  .ow-ds-cm2.ow-bad{color:var(--ow-crimson);}
+  .ow-ds-xs{display:flex;flex-direction:column;gap:var(--ow-sp-8);min-width:0;}
+  .ow-ds-msg{white-space:pre-line;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-12);line-height:1.5;padding:var(--ow-sp-12) var(--ow-sp-12);border-radius:var(--ow-r);background:var(--ow-verdigris-soft);color:var(--ow-ink-900);overflow-wrap:anywhere;max-height:220px;overflow:auto;}
+  .ow-ds-msg.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .ow-ds-owe{display:flex;align-items:center;gap:var(--ow-sp-10);padding:var(--ow-sp-10) var(--ow-sp-12);border:1px solid var(--ow-sky-soft);background:var(--ow-sky-faint);border-radius:var(--ow-r);}
+  .ow-ds-owe > div{flex:1 1 auto;display:flex;flex-direction:column;gap:var(--ow-sp-4);min-width:0;}
+  .ow-ds-owe b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-16);font-weight:600;}
+  .ow-ds-owe i{display:block;height:4px;border-radius:999px;background:var(--ow-rule-soft);}
+  .ow-ds-owe i i{background:var(--ow-sky);}
+  .btn.ow-ds-sky-b{background:var(--ow-sky);border-color:var(--ow-sky);color:var(--ow-paper);}
+  .ow-ds-xa{display:flex;gap:var(--ow-sp-8);flex-wrap:wrap;}
+  .ow-ds-empty{padding:var(--ow-sp-32) var(--ow-sp-20);display:flex;flex-direction:column;align-items:center;gap:var(--ow-sp-10);border-top:1px solid var(--ow-rule-soft);}
+  .ow-ds-empty b{font-size:var(--ow-t-14);font-weight:600;}
+  .ow-ds-tf{display:grid;grid-template-columns:minmax(0,1fr) 104px 196px;gap:var(--ow-sp-10);align-items:center;min-height:44px;padding:0 var(--ow-sp-20);background:var(--ow-paper-2);border-top:1px solid var(--ow-ink-900);font-size:var(--ow-t-13);font-weight:600;}
+  .ow-ds-tf .ow-ds-cv{text-align:right;font-weight:600;}
+  .ow-ds-tf span:last-child{font-size:var(--ow-t-12);color:var(--ow-ink-600);font-weight:500;}
+
+  .ow-ds-close{padding:var(--ow-sp-12) var(--ow-sp-20) var(--ow-sp-16);display:flex;flex-direction:column;gap:var(--ow-sp-12);}
+  .ow-ds-ring{display:flex;align-items:center;gap:var(--ow-sp-16);}
+  .ow-ds-rc{display:flex;flex-direction:column;gap:var(--ow-sp-6);font-size:var(--ow-t-13);}
+  .ow-ds-rc span{display:flex;gap:var(--ow-sp-8);align-items:center;}
+  .ow-ds-rc i{width:8px;height:8px;border-radius:0;display:inline-block;box-sizing:border-box;}
+  .ow-ds-rc b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:600;}
+  .ow-ds-gates{list-style:none;margin:0;padding:var(--ow-sp-12) 0 0;border-top:1px solid var(--ow-rule-soft);display:flex;flex-direction:column;gap:var(--ow-sp-8);}
+  .ow-ds-gates li{display:flex;align-items:center;gap:var(--ow-sp-10);font-size:var(--ow-t-13);color:var(--ow-ink-900);font-weight:600;}
+  .ow-ds-gates li.ow-good{color:var(--ow-ink-600);font-weight:400;}
+  .ow-ds-gd{width:20px;height:20px;border-radius:50%;flex:none;display:inline-flex;align-items:center;justify-content:center;color:var(--ow-paper);background:var(--ow-amber);}
+  .ow-good .ow-ds-gd{background:var(--ow-verdigris);}
+  .ow-ds-gd .icon{width:12px;height:12px;}
+  .ow-ds-cbtn{width:100%;box-sizing:border-box;min-height:44px;justify-content:center;display:inline-flex;align-items:center;gap:var(--ow-sp-8);font-size:var(--ow-t-14);}
+  .ow-ds-cbtn:disabled{opacity:.5;cursor:not-allowed;}
+  .ow-ds-cbtn .icon{width:16px;height:16px;}
+  .ow-ds-mth{padding:var(--ow-sp-12) var(--ow-sp-20);display:flex;flex-direction:column;gap:var(--ow-sp-12);}
+  .ow-ds-mr{display:grid;grid-template-columns:96px minmax(0,1fr) 88px;gap:var(--ow-sp-10);align-items:center;font-size:var(--ow-t-13);}
+  .ow-ds-mr i{display:block;height:8px;border-radius:999px;background:var(--ow-rule-soft);}
+  .ow-ds-mr i i{background:var(--ow-sky);}
+  .ow-ds-mr .ow-ds-m-cash{background:var(--ow-ink-600);} .ow-ds-mr .ow-ds-m-bank{background:var(--ow-indigo);}
+  .ow-ds-bar .ow-ds-m-cash{background:var(--ow-ink-600);} .ow-ds-bar .ow-ds-m-momo{background:var(--ow-sky);} .ow-ds-bar .ow-ds-m-bank{background:var(--ow-indigo);}
+  .ow-ds-mr .ow-ds-amv{text-align:right;}
+  .ow-ds-look{padding:var(--ow-sp-12) var(--ow-sp-20);display:flex;flex-direction:column;gap:var(--ow-sp-4);}
+  .ow-ds-lk{font:inherit;text-align:left;border:0;border-top:1px solid var(--ow-rule-soft);background:transparent;padding:0;cursor:pointer;color:inherit;display:flex;align-items:center;gap:var(--ow-sp-10);min-height:44px;}
+  .ow-ds-lk .ow-cp{flex:none;}
+  .ow-ds-lkn{flex:1 1 auto;min-width:0;font-size:var(--ow-t-13);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-ds-lkn b{font-weight:600;}
+  .ow-ds-fine{font-size:var(--ow-t-13);color:var(--ow-verdigris);font-weight:600;padding:var(--ow-sp-8) 0;}
+
+  .ow-ds-scrim{position:fixed;inset:0;z-index:140;background:rgba(22,32,60,.38);display:flex;justify-content:flex-end;}
+  .ow-ds-scrim > .ow-ds-shut{flex:1 1 auto;border:0;background:transparent;cursor:default;}
+  .ow-ds-dr{width:440px;max-width:100%;height:100%;background:var(--ow-paper);display:flex;flex-direction:column;box-shadow:var(--ow-lift);}
+  .ow-ds-drh{min-height:64px;flex:none;display:flex;align-items:center;gap:var(--ow-sp-12);padding:0 var(--ow-sp-20);border-bottom:1px solid var(--ow-rule);}
+  .ow-ds-drh > div{flex:1 1 auto;min-width:0;}
+  .ow-ds-drh b{font-size:var(--ow-t-16);font-weight:700;display:block;}
+  .ow-ds-drh span{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-ds-dri{width:32px;height:32px;border-radius:var(--ow-r);background:var(--ow-sky-soft);color:var(--ow-sky);display:inline-flex;align-items:center;justify-content:center;flex:none;}
+  .ow-ds-dri .icon{width:18px;height:18px;}
+  .ow-ds-drb{flex:1 1 auto;overflow:auto;padding:var(--ow-sp-20);display:flex;flex-direction:column;gap:var(--ow-sp-16);}
+  .ow-ds-fl{display:flex;flex-direction:column;gap:var(--ow-sp-6);}
+  .ow-ds-fl select{font:inherit;font-size:var(--ow-t-14);height:44px;padding:0 var(--ow-sp-12);border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);color:var(--ow-ink-900);}
+  .ow-ds-fh{display:flex;align-items:baseline;gap:var(--ow-sp-8);}
+  .ow-ds-fh .ow-ds-l{flex:1 1 auto;}
+  .ow-ds-tall{font:inherit;border:0;background:transparent;font-size:var(--ow-t-12);font-weight:600;color:var(--ow-sky);cursor:pointer;height:24px;padding:0;}
+  .ow-ds-tg{font:inherit;text-align:left;cursor:pointer;color:inherit;display:flex;align-items:center;gap:var(--ow-sp-12);min-height:60px;padding:var(--ow-sp-8) var(--ow-sp-12);border-radius:var(--ow-r);border:1.5px solid var(--ow-rule);background:var(--ow-paper);}
+  .ow-ds-tg.ow-on{border-color:var(--ow-sky);background:var(--ow-sky-faint);}
+  .ow-ds-tgb{width:22px;height:22px;border-radius:var(--ow-r-sm);flex:none;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-12);font-weight:600;border:1.5px solid var(--ow-ink-600);}
+  .ow-ds-tg.ow-on .ow-ds-tgb{background:var(--ow-sky);border-color:var(--ow-sky);color:var(--ow-paper);}
+  .ow-ds-tgm{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:5px;}
+  .ow-ds-tgt{display:flex;gap:var(--ow-sp-8);align-items:baseline;min-width:0;}
+  .ow-ds-tgt b{font-size:var(--ow-t-13);font-weight:600;flex:none;}
+  .ow-ds-tgt span{font-size:var(--ow-t-12);color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  .ow-ds-tgk{display:flex;height:6px;border-radius:999px;background:var(--ow-rule-soft);overflow:hidden;}
+  .ow-ds-tgk i{display:block;height:6px;background:var(--ow-sky);}
+  .ow-ds-tgk i + i{background:var(--ow-sky-mid);}
+  .ow-ds-tgs{font-size:var(--ow-t-11);font-weight:600;color:var(--ow-amber);}
+  .ow-ds-tgs.ow-good{color:var(--ow-verdigris);} .ow-ds-tgs.ow-bad{color:var(--ow-crimson);}
+  .ow-ds-tgo{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-12);font-weight:600;flex:none;color:var(--ow-ink-600);}
+  .ow-ds-none{font-size:var(--ow-t-13);color:var(--ow-ink-600);padding:var(--ow-sp-12);border:1px dashed var(--ow-rule);border-radius:var(--ow-r);}
+  .ow-ds-amt{display:flex;align-items:center;height:52px;border:1.5px solid var(--ow-ink-900);border-radius:var(--ow-r);padding:0 var(--ow-sp-12);gap:var(--ow-sp-8);}
+  .ow-ds-amt input{border:0;outline:0;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:22px;font-weight:600;width:100%;min-width:0;color:var(--ow-ink-900);background:transparent;padding:0;}
+  .ow-ds-amt span{font-size:var(--ow-t-12);color:var(--ow-ink-600);font-weight:600;}
+  .ow-ds-qk{display:flex;gap:var(--ow-sp-6);flex-wrap:wrap;}
+  .ow-ds-qk button{font:inherit;height:28px;padding:0 var(--ow-sp-10);border:1px solid var(--ow-rule);border-radius:999px;background:var(--ow-paper);font-size:var(--ow-t-12);font-weight:600;color:var(--ow-ink-600);cursor:pointer;}
+  .ow-ds-mt{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--ow-sp-2);background:var(--ow-rule-soft);border-radius:var(--ow-r);padding:3px;}
+  .ow-ds-mt button{font:inherit;height:36px;border:0;border-radius:var(--ow-r-sm);background:transparent;font-size:var(--ow-t-12);font-weight:600;color:var(--ow-ink-600);cursor:pointer;}
+  .ow-ds-mt button.ow-on{background:var(--ow-paper);color:var(--ow-ink-900);}
+  .ow-ds-ref2{height:40px;border:1px solid var(--ow-rule);border-radius:var(--ow-r);padding:0 var(--ow-sp-12);font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-13);outline:0;color:var(--ow-ink-900);}
+  .ow-ds-pv{display:flex;flex-direction:column;gap:var(--ow-sp-6);padding:var(--ow-sp-12);border-radius:var(--ow-r);background:var(--ow-steel-050);}
+  .ow-ds-pv div{display:flex;justify-content:space-between;gap:var(--ow-sp-12);font-size:var(--ow-t-13);}
+  .ow-ds-pv b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:600;}
+  .ow-ds-pv b.ow-good{color:var(--ow-verdigris);} .ow-ds-pv b.ow-warn{color:var(--ow-amber);} .ow-ds-pv b.ow-bad{color:var(--ow-crimson);}
+  .ow-ds-post{font:inherit;text-align:left;border:0;background:transparent;padding:0;cursor:pointer;color:inherit;display:flex;align-items:center;gap:var(--ow-sp-10);min-height:44px;}
+  .ow-ds-pb{width:20px;height:20px;border-radius:var(--ow-r-sm);flex:none;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;border:1.5px solid var(--ow-ink-400);color:transparent;}
+  .ow-ds-post.ow-on .ow-ds-pb{background:var(--ow-ink-900);border-color:var(--ow-ink-900);color:var(--ow-paper);}
+  .ow-ds-pb .icon{width:12px;height:12px;}
+  .ow-ds-post b{font-size:var(--ow-t-13);font-weight:600;display:block;}
+  .ow-ds-post span span{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-ds-drf{flex:none;display:flex;gap:var(--ow-sp-8);padding:var(--ow-sp-12) var(--ow-sp-20);border-top:1px solid var(--ow-rule);}
+  .ow-ds-drf .btn{min-height:44px;}
+  .ow-ds-drf .btn-accent{flex:1 1 auto;justify-content:center;font-size:var(--ow-t-14);}
+  .ow-ds-drf .btn-accent:disabled{opacity:.5;cursor:not-allowed;}
+  @media (max-width:1180px){
+    .ow-ds-body{flex-direction:column;}
+    .ow-ds-side{width:auto;align-self:stretch;}
+  }
+  @media(max-width:820px){
+    .ow-ds-desk{display:none;}
+    .ow-ds-ph{display:flex;flex-direction:column;gap:var(--ow-sp-12);}
+    .ow-ds-pdays{display:flex;gap:var(--ow-sp-6);overflow-x:auto;}
+    .ow-ds-pdays .ow-ds-day{flex:none;width:52px;height:60px;}
+    .ow-ds-pdays .ow-ds-db{width:30px;}
+    .ow-ds-psum{background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);padding:var(--ow-sp-16);display:flex;flex-direction:column;gap:var(--ow-sp-12);}
+    .ow-ds-psum .ow-ds-ring{gap:var(--ow-sp-16);}
+    .ow-ds-pst{display:flex;flex-direction:column;gap:var(--ow-sp-4);font-size:var(--ow-t-16);}
+    .ow-ds-pst b{font-weight:700;}
+    .ow-ds-pst .ow-good{color:var(--ow-verdigris);font-weight:600;} .ow-ds-pst .ow-bad{color:var(--ow-crimson);font-weight:600;} .ow-ds-pst .ow-ds-mut{color:var(--ow-ink-600);}
+    .ow-ds-p2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-top:1px solid var(--ow-rule-soft);padding-top:var(--ow-sp-12);}
+    .ow-ds-p2 > div{display:flex;flex-direction:column;gap:var(--ow-sp-2);min-width:0;}
+    .ow-ds-p2 > div + div{border-left:1px solid var(--ow-rule-soft);padding-left:var(--ow-sp-12);}
+    .ow-ds-p2 .ow-ds-v{font-size:var(--ow-t-16);}
+    .ow-ds-pf2{display:flex;gap:var(--ow-sp-4);background:var(--ow-rule-soft);border-radius:var(--ow-r);padding:var(--ow-sp-4);}
+    .ow-ds-pf2 button{font:inherit;flex:1 1 0;min-height:var(--ow-tap);border:0;border-radius:var(--ow-r-sm);background:transparent;font-size:var(--ow-t-14);font-weight:600;color:var(--ow-ink-600);cursor:pointer;}
+    .ow-ds-pf2 button.ow-on{background:var(--ow-paper);color:var(--ow-ink-900);}
+    .ow-ds-pc{background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);padding:var(--ow-sp-12) var(--ow-sp-16);display:flex;flex-direction:column;gap:var(--ow-sp-12);}
+    .ow-ds-pc.ow-bad{border-color:var(--ow-crimson);}
+    .ow-ds-pct{display:flex;align-items:center;gap:var(--ow-sp-8);}
+    .ow-ds-pct .ow-ds-tm{font-size:var(--ow-t-13);}
+    .ow-ds-pct .ow-ds-kd{font-size:var(--ow-t-13);flex:1 1 auto;}
+    .ow-ds-pcm{display:flex;align-items:baseline;gap:var(--ow-sp-12);}
+    .ow-ds-pcm > div{flex:1 1 auto;min-width:0;}
+    .ow-ds-pcn{font-size:var(--ow-t-16);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;}
+    .ow-ds-pcw{font-size:var(--ow-t-13);color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;}
+    .ow-ds-pcm .ow-ds-amv{font-size:var(--ow-t-16);flex:none;}
+    .ow-ds-pdf{background:var(--ow-crimson-soft);border-radius:var(--ow-r);padding:var(--ow-sp-10) var(--ow-sp-12);font-size:var(--ow-t-13);color:var(--ow-crimson);display:flex;flex-direction:column;gap:var(--ow-sp-4);}
+    .ow-ds-pdf div{display:flex;justify-content:space-between;gap:var(--ow-sp-8);}
+    .ow-ds-pdf s{color:var(--ow-ink-600);}
+    .ow-ds-pbt{display:flex;gap:var(--ow-sp-8);}
+    .ow-ds-big{font:inherit;flex:1 1 0;min-height:var(--ow-tap);border-radius:var(--ow-r);border:1px solid var(--ow-rule);background:var(--ow-paper);color:var(--ow-ink-900);font-size:var(--ow-t-14);font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:var(--ow-sp-8);cursor:pointer;}
+    .ow-ds-big .icon{width:18px;height:18px;}
+    .ow-ds-big.ow-ds-cok{background:var(--ow-verdigris);border-color:var(--ow-verdigris);color:var(--ow-paper);}
+    .ow-ds-big.ow-ds-cdf{background:var(--ow-crimson);border-color:var(--ow-crimson);color:var(--ow-paper);}
+    .ow-ds-dr{width:100%;}
+  }
 /* ==================================================================
      THE OW LAYER — tokens and components for the console.
 
@@ -27978,7 +28301,7 @@
              yet. A count that meant three different things would mean
              nothing. -->
         <div class="ow-seg ow-fc-lens" id="fc_lens" role="tablist" aria-label="Which horizon">
-          <button type="button" class="ow-seg-b" role="tab" aria-selected="false" data-fclens="today">Today<span class="ow-seg-n" id="fc_n_today"></span></button>
+          <button type="button" class="ow-seg-b" role="tab" aria-selected="false" data-fclens="today">Day statement<span class="ow-seg-n" id="fc_n_today"></span></button>
           <button type="button" class="ow-seg-b" role="tab" aria-selected="false" data-fclens="stock">Stock<span class="ow-seg-n" id="fc_n_stock"></span></button>
           <button type="button" class="ow-seg-b" role="tab" aria-selected="false" data-fclens="cash">Cash<span class="ow-seg-n" id="fc_n_cash"></span></button>
         </div>
@@ -28038,8 +28361,13 @@
       <div class="ow-fc-roof" id="fc_roof"></div>
 
       <div class="ow-fc-pane" id="fc_pane_today" hidden>
-        <div id="dayBody"></div>
-        <div id="dayMeetingWrap"></div>
+        <!-- THE DAY STATEMENT is this lens: every order and payment of a
+             day, checked against the sales group. The day spine it
+             replaced keeps its two mounts, hidden, because its walk
+             buttons are bound by id at parse time. -->
+        <div id="ds_root"></div>
+        <div id="dayBody" hidden></div>
+        <div id="dayMeetingWrap" hidden></div>
       </div>
       <div class="ow-fc-pane" id="fc_pane_stock" hidden>
         <div id="buy_plan"></div>
@@ -33453,6 +33781,8 @@ async function loadData(shopId){
        synchronous -- reading it from the journal would make the whole
        buy chain async, tool and dashboard alert included. */
     presetBuyHolds: (presets.buyHolds && typeof presets.buyHolds === 'object') ? presets.buyHolds : {},
+    /* The day statement's ticks, posts and closed days -- see dsLogR. */
+    presetDayLog: (presets.dayLog && typeof presets.dayLog === 'object') ? presets.dayLog : {},
     /* Orders raised from the buy plan and not yet arrived. Same blob as
        the holds and for the same reason: the record is the owner's own
        working state, it is small, and it is swept away once it has
@@ -33876,7 +34206,7 @@ function buildSyncRows(d, shopId){
     })),
     settings: {
       shop_id: shopId,
-      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, stageAlerts:!!d.presetStageAlerts, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, manager:d.presetManager||{}, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, reorderRules:d.presetReorderRules||{}, buyHolds:d.presetBuyHolds||{}, buyOrders:d.presetBuyOrders||{}, deadStockDays:d.presetDeadStockDays, clearance:d.presetClearance||{}, targetMarginPct:d.presetTargetMarginPct, services:d.presetServices||[], chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, creditPct:d.presetCreditPct, debtChases:d.presetDebtChases||{}, chaseLog:d.presetChaseLog||[], msgTemplates:d.presetMsgTemplates||[], msgUseLog:d.presetMsgUseLog||[], waPins:d.presetWaPins||[], waSnooze:d.presetWaSnooze||{}, waNotes:d.presetWaNotes||[], waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate, waNeverPost:d.presetWaNeverPost||[], waAliases:d.presetWaAliases||[], waAliasNo:d.presetWaAliasNo||[],
+      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, stageAlerts:!!d.presetStageAlerts, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, manager:d.presetManager||{}, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, reorderRules:d.presetReorderRules||{}, buyHolds:d.presetBuyHolds||{}, dayLog:d.presetDayLog||{}, buyOrders:d.presetBuyOrders||{}, deadStockDays:d.presetDeadStockDays, clearance:d.presetClearance||{}, targetMarginPct:d.presetTargetMarginPct, services:d.presetServices||[], chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, creditPct:d.presetCreditPct, debtChases:d.presetDebtChases||{}, chaseLog:d.presetChaseLog||[], msgTemplates:d.presetMsgTemplates||[], msgUseLog:d.presetMsgUseLog||[], waPins:d.presetWaPins||[], waSnooze:d.presetWaSnooze||{}, waNotes:d.presetWaNotes||[], waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate, waNeverPost:d.presetWaNeverPost||[], waAliases:d.presetWaAliases||[], waAliasNo:d.presetWaAliasNo||[],
         shopLegalName:d.presetShopLegalName||'', shopAddress:d.presetShopAddress||'', shopPhone:d.presetShopPhone||'',
         shopTin:d.presetShopTin||'', receiptFooter:d.presetReceiptFooter||'', autoPrintReceipt:!!d.presetAutoPrintReceipt,
         idCounters:d.idCounters||{}},
@@ -40229,6 +40559,9 @@ function resolveTab(tab){
      Loans boots into getElementById('tab-loans').style and throws before
      anything renders. */
   if(tab === 'loans') return 'assets';
+  /* The day statement was briefly a page of its own; it is the Today
+     lens of Forecasts now, so its door lands there. */
+  if(tab === 'daystatement'){ fcLens = 'today'; return 'forecasts'; }
   /* AND WORTH TELLING. It was its own page: a fortnight's queue of
      clients with one true reason each, and the rules and the score in
      its rail. Every one of those reasons is one of the six this hub
@@ -49224,6 +49557,12 @@ document.getElementById('q_whatsapp_btn').addEventListener('click', ()=>{
 // group opens automatically with the quote already copied to the clipboard.
 // Change this if the group link ever changes.
 const SALES_GROUP_WA_LINK = 'https://chat.whatsapp.com/DdAAC9RCXJg4TDXw3mDPwX?s=cl&p=a&ilr=1';
+/* An order's message to the sales group: the order board's template
+   when the board is loaded, the older quote table otherwise. */
+function salesGroupOrderMessage(q){
+  const m = typeof window.ofPostMessage === 'function' ? window.ofPostMessage(q.id) : null;
+  return m || buildSalesGroupQuoteMessage(q.items || [], q.client, q);
+}
 function buildSalesGroupQuoteMessage(items, client, q){
   const W_ITEM=14, W_QTY=6;
   const DIVIDER = '-'.repeat(W_ITEM+W_QTY+1);
@@ -49943,7 +50282,7 @@ function copyTextInTap(text){
 function shareOrderToSalesGroup(q, text){
   /* What the owner READ is what goes, not what the app drafted: the
      announce dialog hands the edited text straight through. */
-  const msg = text == null || text === '' ? buildSalesGroupQuoteMessage(q.items, q.client, q) : String(text);
+  const msg = text == null || text === '' ? salesGroupOrderMessage(q) : String(text);
   const copied = copyTextInTap(msg);
   const win = window.open(SALES_GROUP_WA_LINK, '_blank');
   if(!win){
@@ -52093,6 +52432,9 @@ function announceOrderToGroup(id, text){
   /* A blocked open told nobody, so it is not stamped as told. */
   if(shareOrderToSalesGroup(q, text) === false) return;
   q.announcedAt = Date.now();
+  /* The day statement keeps the words and the figures that went, so a
+     later edit to the order shows as a difference against the group. */
+  if(typeof dsNoteOrderPosted === 'function') dsNoteOrderPosted(q, text);
   saveData();
   renderSavedQuotes();
 }
@@ -53830,7 +54172,7 @@ function otRunsSpec(){
 function otAnnounceSpec(id){
   const q = (data.savedQuotes || []).find(x=> String(x.id) === String(id));
   if(!q) return null;
-  const draft = otAnnounceDraft == null ? buildSalesGroupQuoteMessage(q.items, q.client, q) : otAnnounceDraft;
+  const draft = otAnnounceDraft == null ? salesGroupOrderMessage(q) : otAnnounceDraft;
   return {
     w: 620,
     title: `Announce · ${esc(quoteClientName(q))} #${q.id}`,
@@ -56712,6 +57054,13 @@ function renderOrderFlow() {
 }
 window.renderOrderFlow = renderOrderFlow;
 window.ofBoardLogic = function () { return ofBoard && ofBoard.logic; };
+/* The board's post, for anything outside it that posts an order: the
+   same words the Post sheet opens with (sources grouped, no prices), so
+   the group reads one template whichever screen sent it. */
+window.ofPostMessage = function (qid) {
+  var q = (data.savedQuotes || []).find(function (x) { return String(x.id) === String(qid); });
+  return q ? postMsg(ofOrder(q), false, true) : null;
+};
 window.OrderFlowBoard = OrderFlowBoard;
 window.ofOpenOrder = function (qid) {
   if (!ofBoard) renderOrderFlow();
@@ -104856,15 +105205,7 @@ const FC_SUB = {
   /* THE READING TIME IS SAID, because it is the one thing on the lens
      that goes stale: the sub is never folded behind the "i", and nothing
      refreshes it -- re-reading is a reload, as everywhere else. */
-  today: ()=> {
-    const d = dayShown || todayISO();
-    const today = todayISO();
-    const now = new Date();
-    const clock = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
-    if(d > today) return `${esc(dayLongDate(d))} has not happened yet — nothing here is a forecast.`;
-    if(d === today) return `${esc(dayLongDate(d))}, read at <b>${clock}</b> — still trading, so the day has no verdict yet.`;
-    return `${esc(dayLongDate(d))} — as the books recorded it, not as things stand now.`;
-  },
+  today: ()=> (typeof dsSubHTML === 'function' ? dsSubHTML() : ''),
   stock: ()=> 'What runs out, and what it costs to have it back in time.',
   cash: ()=> 'What you have already promised, against what you hold.',
 };
@@ -104880,7 +105221,9 @@ function fcApplyLens(){
     const pane = document.getElementById('fc_pane_' + k);
     if(pane) pane.hidden = k !== fcLens;
     const acts = document.getElementById('fc_acts_' + k);
-    if(acts) acts.hidden = k !== fcLens;
+    /* The day statement draws its own date, receive and print controls,
+       so the day spine's header acts stay put away. */
+    if(acts) acts.hidden = k !== fcLens || k === 'today';
   });
   document.querySelectorAll('#fc_lens .ow-seg-b[data-fclens]').forEach(b=>{
     const on = b.dataset.fclens === fcLens;
@@ -104892,7 +105235,7 @@ function fcApplyLens(){
   /* Opens on today unless the owner has already walked back to a day --
      coming back to the lens you left should show the day you left it
      on, not silently jump to now. */
-  if(fcLens === 'today') dayGo(dayShown || todayISO());
+  if(fcLens === 'today') renderDayStatement();
   if(fcLens === 'stock') renderPurchasePlanPanel();
   if(fcLens === 'cash') renderAhead();
 }
@@ -105005,7 +105348,7 @@ function fcRenderRoof(){
      TODAY even while an earlier day is being read, because that is the
      one the owner can still do something about. */
   const undated = credOpenInvoices().filter(x=> !x.dueOn).length;
-  const act = dayClosing(today).act ? 1 : 0;
+  const act = dsOpenToday();
   const setN = (id, n)=> { const x = document.getElementById(id); if(x) x.textContent = n ? String(n) : ''; };
   setN('fc_n_today', act);
   setN('fc_n_stock', plan.lines.length);
@@ -130706,6 +131049,892 @@ function syncTodayDot(){
   const b = dot.closest('.mbn-btn');
   if(b) b.setAttribute('aria-label', n > 0 ? `Today — ${n} need${n === 1 ? 's' : ''} you` : 'Today');
 }
+/* ================= DAY STATEMENT =================
+
+   Every order that came in and every payment that was received on a
+   day, one row each, and the owner's tick against each one: it MATCHES
+   what the sales group was told, or it DIFFERS. A day is closed once
+   every row is ticked and nothing differs. Drawn from the Day Statement
+   canvas, desktop and phone boards.
+
+   THE APP CANNOT READ THE GROUP. A WhatsApp group link carries no text
+   and nothing reads a group back, so what this screen knows about the
+   group is what went out THROUGH the app: when an order or a payment was
+   posted, the words that were sent, and a snapshot of the figures at
+   that moment. The owner's tick is the reconciliation; the snapshot only
+   points at what moved since.
+
+   WHERE THE TICKS LIVE. data.presetDayLog, in app_settings.presets:
+     checks  key -> { s: 'ok'|'diff', at }   the owner's tick
+     posts   key -> { at, text, snap }        what the app posted
+     closed  day -> { at }                    a closed day
+   A record's key is 'q:<order id>' or 't:<first cash receipt id>'. An
+   order's announcement stamp (q.announcedAt) stays where it was; the
+   post entry adds the words and the snapshot beside it.
+
+   NOTHING SENDS ITSELF. Posting copies the message and opens the group
+   inside the owner's own tap, the same way the order board does. */
+let dsFrom = null, dsTo = null, dsAnchor = null, dsMonth = null, dsPicker = false;
+let dsOpenKey = null, dsType = 'all', dsStatus = 'all', dsQ = '', dsSort = { key: 'time', dir: 1 };
+let dsRv = null, dsPhShow = 'todo';
+
+const DS_MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'July', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
+const DS_DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DS_DOW_LONG = { Sun: 'Sunday', Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday', Sat: 'Saturday' };
+const DS_ACC_SHORT = { cash: 'Cash', momo: 'MoMo', bank: 'Bank' };
+const DS_ACC_LONG = { cash: 'Cash', momo: 'Mobile money', bank: 'Bank' };
+const dsT = (s)=> Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10));
+const dsAdd = (s, n)=> new Date(dsT(s) + n * 864e5).toISOString().slice(0, 10);
+const dsDow = (s)=> DS_DOW[new Date(dsT(s)).getUTCDay()];
+const dsNice = (s, y)=> (+s.slice(8, 10)) + ' ' + DS_MON[+s.slice(5, 7) - 1] + (y ? ' ' + s.slice(0, 4) : '');
+const dsF = (n)=> Number(Math.round(n || 0)).toLocaleString('en-UG');
+const dsShort = (n)=> n >= 1e6 ? (Math.round(n / 1e4) / 100).toString() + 'm' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(Math.round(n));
+const dsHM = (ts)=>{ const d = new Date(ts); return isNaN(d.getTime()) ? '' : d.toTimeString().slice(0, 5); };
+const dsMin = (hm)=>{ const m = /^(\d{1,2}):(\d{2})/.exec(String(hm || '')); return m ? +m[1] * 60 + +m[2] : null; };
+const DS_ICON = {
+  check: '<svg class="icon" viewBox="0 0 24 24" stroke-width="2.2"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  ne: '<svg class="icon" viewBox="0 0 24 24" stroke-width="2.2"><path d="M5 9h14M5 15h14M15 5L9 19"/></svg>',
+  caret: '<svg class="icon" viewBox="0 0 24 24" stroke-width="1.8"><path d="M9 6l6 6-6 6"/></svg>',
+  cash: '<svg class="icon" viewBox="0 0 24 24" stroke-width="1.8"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9v.01M18 15v.01"/></svg>',
+  cal: '<svg class="icon" viewBox="0 0 24 24" stroke-width="1.8"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>',
+  down: '<svg class="icon" viewBox="0 0 24 24" stroke-width="1.8"><path d="M6 9l6 6 6-6"/></svg>',
+  print: '<svg class="icon" viewBox="0 0 24 24" stroke-width="1.8"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>',
+  lock: '<svg class="icon" viewBox="0 0 24 24" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+  left: '<svg class="icon" viewBox="0 0 24 24" stroke-width="1.8"><path d="M15 6l-6 6 6 6"/></svg>',
+  right: '<svg class="icon" viewBox="0 0 24 24" stroke-width="1.8"><path d="M9 6l6 6-6 6"/></svg>',
+  x: '<svg class="icon" viewBox="0 0 24 24" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  search: '<svg class="icon" viewBox="0 0 24 24" stroke-width="1.8"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>',
+  bang: '<svg class="icon" viewBox="0 0 24 24" stroke-width="3"><path d="M12 7v6M12 17h.01"/></svg>',
+};
+
+/* The log, read without writing: a screen that is only looked at must
+   not turn into a settings save. dsLogW() is the writer's door. */
+function dsLogR(){
+  const L = (data && data.presetDayLog && typeof data.presetDayLog === 'object') ? data.presetDayLog : {};
+  return { checks: L.checks || {}, posts: L.posts || {}, closed: L.closed || {} };
+}
+function dsLogW(){
+  if(!data.presetDayLog || typeof data.presetDayLog !== 'object') data.presetDayLog = {};
+  const L = data.presetDayLog;
+  ['checks', 'posts', 'closed'].forEach(k=>{ if(!L[k] || typeof L[k] !== 'object') L[k] = {}; });
+  return L;
+}
+
+/* What an order said, frozen: the lines and the total the group saw. */
+function dsOrderSnap(q){
+  return { items: (q.items || []).map(it=> [String(it.productName || it.productId || 'Item'), Number(it.qty) || 0, Math.round(quoteItemSellPrice(it))]),
+    total: Math.round(savedQuoteTotal(q)) };
+}
+/* Called by announceOrderToGroup, after the stamp: the words that went
+   and the figures they carried. */
+function dsNoteOrderPosted(q, text){
+  const L = dsLogW();
+  L.posts['q:' + q.id] = { at: q.announcedAt || Date.now(),
+    text: text == null || text === '' ? salesGroupOrderMessage(q) : String(text),
+    snap: dsOrderSnap(q) };
+}
+
+/* An ORDER is anything past a draft that has not been voided; the day
+   it came in is the day it was first saved. */
+function dsOrderDay(q){
+  const c = q.createdAt || q.savedAt;
+  return c ? String(c).slice(0, 10) : String(q.date || '').slice(0, 10);
+}
+function dsOrderLine(q){
+  const parts = (q.items || []).map(it=> `${String(it.productName || 'Item').split(' (')[0]} × ${Number(it.qty) || 0}`);
+  return parts.slice(0, 2).join(', ') + (parts.length > 2 ? ` +${parts.length - 2} more` : '');
+}
+function dsOrderOwed(q){ return Math.max(0, savedQuoteTotal(q) - (Number(q.amountPaid) || 0)); }
+
+/* THE DAY'S RECORDS, from the books. Payments go through the same two
+   gates as the morning brief (collectionInvoiceTxn, collectionLedgerRow),
+   so the two can never count a day's money differently -- and one
+   payment split across invoices lands as several receipts at the same
+   minute, which are read back here as the one payment they were. */
+function dsRecords(from, to){
+  const out = [];
+  const posts = dsLogR().posts;
+  (data.savedQuotes || []).forEach(q=>{
+    if(!q || q.voided) return;
+    if(!(q.invoiced || (q.status && q.status !== 'draft'))) return;
+    const d = dsOrderDay(q);
+    if(!d || d < from || d > to) return;
+    const t = dsHM(q.createdAt || q.savedAt) || '';
+    const key = 'q:' + q.id;
+    const p = posts[key];
+    const postedAt = q.announcedAt || (p && p.at) || null;
+    out.push({ key, kind: 'order', d, t, min: dsMin(t), ref: '#' + q.id, who: quoteClientName(q), what: dsOrderLine(q),
+      amt: Math.round(savedQuoteTotal(q)), q, qid: q.id, posted: postedAt ? dsHM(postedAt) : null, postedAt, alloc: [] });
+  });
+  const txnById = new Map((data.cashTxns || []).map(t=> [t.id, t]));
+  const pieces = [];
+  (data.savedQuotes || []).forEach(q=> (q.payments || []).forEach(p=>{
+    const d = String((p && p.date) || '').slice(0, 10);
+    if(!d || d < from || d > to) return;
+    const t = collectionInvoiceTxn(p, txnById);
+    if(!t) return;
+    const c = q.customerId != null ? (data.customers || []).find(x=> x.id === q.customerId) : null;
+    pieces.push({ txn: t.id, d, time: t.time || '', account: t.account || 'cash', cid: c ? c.id : null,
+      name: c ? c.name : quoteClientName(q), amt: Number(p.amount) || 0, qid: q.id, note: p.note || '', postedAt: p.postedAt || null, pm: p });
+  }));
+  (data.customers || []).forEach(c=> (c.debtLog || []).forEach(l=>{
+    if(!collectionLedgerRow(l)) return;
+    const d = String(l.date || '').slice(0, 10);
+    if(!d || d < from || d > to) return;
+    const t = txnById.get(l.cashTxnId);
+    pieces.push({ txn: l.cashTxnId, d, time: t ? t.time || '' : '', account: t ? t.account || 'cash' : 'cash', cid: c.id, name: c.name,
+      amt: t ? Number(t.amount) || 0 : Number(l.amount) || 0, qid: null, note: l.note || '' });
+  }));
+  const groups = new Map();
+  pieces.forEach(p=>{
+    const g = [p.cid != null ? 'c' + p.cid : 'n' + p.name, p.d, p.time, p.account].join('|');
+    if(!groups.has(g)) groups.set(g, []);
+    groups.get(g).push(p);
+  });
+  groups.forEach(ps=>{
+    const first = ps.slice().sort((a, b)=> (Number(a.txn) || 0) - (Number(b.txn) || 0))[0];
+    const key = 't:' + first.txn;
+    const alloc = [];
+    ps.forEach(p=>{ if(p.qid != null){ const a = alloc.find(x=> x.qid === p.qid); if(a) a.amt += p.amt; else alloc.push({ qid: p.qid, amt: p.amt }); } });
+    const amt = ps.reduce((s, p)=> s + p.amt, 0);
+    const onAcc = amt - alloc.reduce((s, a)=> s + a.amt, 0);
+    const label = (qid)=> invoiceNumberLabel({ id: qid });
+    const what = alloc.length > 1 ? 'split: ' + alloc.map(a=> label(a.qid)).join(', ')
+      : alloc.length ? (() => { const q = data.savedQuotes.find(x=> x.id === alloc[0].qid);
+          return (q && invoiceBalanceDue(q) <= 0.5 ? 'clears ' : 'part of ') + label(alloc[0].qid); })()
+      : 'on account';
+    /* Posted from here (the log) or from the payment sheet every other
+       screen offers, which stamps the payment itself. */
+    const post = posts[key];
+    const stamped = ps.reduce((m, p)=> Math.max(m, Number(p.postedAt) || 0), 0);
+    const postedAt = post ? post.at : stamped || null;
+    out.push({ key, kind: 'pay', d: first.d, t: first.time, min: dsMin(first.time), ref: DS_ACC_SHORT[first.account] || accountLabel(first.account),
+      who: first.name, what: what + (alloc.length && onAcc > 0.5 ? ` + ${dsF(onAcc)} on account` : '') + (first.note && !/^Payment —/.test(first.note) ? ` · ${first.note}` : ''),
+      amt: Math.round(amt), account: first.account, cid: first.cid, alloc, onAcc, stamps: ps.map(p=> p.pm).filter(Boolean),
+      posted: postedAt ? dsHM(postedAt) : null, postedAt });
+  });
+  out.forEach(r=>{ r.sk = r.d + ' ' + (r.t || '99:99'); });
+  return out;
+}
+
+function dsStateOf(r, checks){ const c = checks[r.key]; return c && (c.s === 'ok' || c.s === 'diff') ? c.s : 'open'; }
+function dsStatusOf(r, checks){ const s = dsStateOf(r, checks); return s === 'open' ? (r.posted ? 'todo' : 'missing') : s; }
+
+/* Our books against what the group was sent, field by field. */
+function dsCompare(r){
+  const post = dsLogR().posts[r.key];
+  const snap = post && post.snap;
+  if(r.kind === 'order'){
+    const now = dsOrderSnap(r.q);
+    const rows = [];
+    const n = Math.max(now.items.length, snap ? snap.items.length : 0);
+    for(let i = 0; i < n && i < 8; i++){
+      const a = now.items[i], b = snap ? snap.items[i] : null;
+      const fmt = (x)=> x ? `${x[1]} × ${dsF(x[2])}` : '—';
+      rows.push({ k: (a || b)[0], ours: fmt(a), theirs: snap ? fmt(b) : '—' });
+    }
+    if(n > 8) rows.push({ k: `+${n - 8} more lines`, ours: '', theirs: '' });
+    rows.push({ k: 'Total', ours: dsF(now.total), theirs: snap ? dsF(snap.total) : '—' });
+    return { rows, known: !!snap };
+  }
+  const ours = [['From', r.who], ['Method', DS_ACC_LONG[r.account] || accountLabel(r.account)], ['Amount', dsF(r.amt)]];
+  return { rows: ours.map(([k, v], i)=> ({ k, ours: v, theirs: snap ? [snap.who, DS_ACC_LONG[snap.account] || snap.account, dsF(snap.amt)][i] : '—' })), known: !!snap };
+}
+
+function dsPaymentText(r){
+  /* The same words the payment sheet writes, so the group reads one
+     format whichever screen the money came in on. */
+  if(typeof paymentPostText === 'function'){
+    const lines = r.alloc.map(a=>{ const q = (data.savedQuotes || []).find(x=> x.id === a.qid);
+      return { label: invoiceNumberLabel({ id: a.qid }), paid: a.amt, left: q ? invoiceBalanceDue(q) : 0 }; });
+    const c = (data.customers || []).find(x=> x.id === r.cid);
+    return paymentPostText({ who: r.who, amount: r.amt, account: r.account, date: r.d || todayISO(), lines,
+      onAccount: r.alloc.length ? r.onAcc : 0, owes: c ? Number(c.debt) || 0 : null }, true);
+  }
+  const lines = [`*${r.who}* paid ${dsF(r.amt)} · ${DS_ACC_LONG[r.account] || accountLabel(r.account)}`];
+  r.alloc.forEach(a=> lines.push(`${invoiceNumberLabel({ id: a.qid })} ${dsF(a.amt)}`));
+  if(r.onAcc > 0.5 && r.alloc.length) lines.push(`On account ${dsF(r.onAcc)}`);
+  return lines.join('\n');
+}
+/* Posting a payment: the owner's tap copies the words and opens the
+   group, exactly as an order's announcement does. */
+function dsPostPayment(r){
+  const text = dsPaymentText(r);
+  const copied = copyTextInTap(text);
+  const win = window.open(SALES_GROUP_WA_LINK, '_blank');
+  if(!win){ toast('WhatsApp was blocked from opening — allow pop-ups for this site, then post again', 6000); return false; }
+  const L = dsLogW();
+  const at = Date.now();
+  L.posts[r.key] = { at, text, snap: { who: r.who, account: r.account, amt: r.amt } };
+  (r.stamps || []).forEach(pm=>{ pm.postedAt = at; });
+  saveData();
+  toast(copied ? 'Message copied — paste it in the sales group' : 'Open the sales group and paste the payment', 4000);
+  return true;
+}
+
+function dsRange(){
+  const today = todayISO();
+  if(!dsFrom || !dsTo){ dsFrom = dsTo = today; }
+  if(!dsMonth) dsMonth = dsTo.slice(0, 7);
+  return { from: dsFrom, to: dsTo, today };
+}
+
+/* ---- the one renderer: desktop and phone from one reading ---- */
+function renderDayStatement(){
+  const root = document.getElementById('ds_root');
+  if(!root) return;
+  if(!root.dataset.wired){ wireDayStatement(root); root.dataset.wired = '1'; }
+  const { from, to, today } = dsRange();
+  const isRange = from !== to;
+  const L = dsLogR();
+  const checks = L.checks;
+  const recs = dsRecords(from, to);
+  const st = (r)=> dsStateOf(r, checks);
+  const stx = (r)=> dsStatusOf(r, checks);
+  const all = recs.length, allD = Math.max(1, all);
+  const okN = recs.filter(r=> st(r) === 'ok').length, diffN = recs.filter(r=> st(r) === 'diff').length;
+  const doneN = okN + diffN, openN = all - doneN;
+  const orders = recs.filter(r=> r.kind === 'order'), pays = recs.filter(r=> r.kind === 'pay');
+  const oSum = orders.reduce((s, r)=> s + r.amt, 0), pSum = pays.reduce((s, r)=> s + r.amt, 0);
+  const byKey = new Map(recs.map(r=> [r.key, r]));
+  const orderRec = (qid)=> byKey.get('q:' + qid);
+  const closedOf = (d)=> !!L.closed[d];
+
+  /* ---- day strip: the last seven days, each with how far it is checked ---- */
+  const stripDays = [];
+  for(let k = 6; k >= 0; k--) stripDays.push(dsAdd(today, -k));
+  const weekRecs = dsRecords(stripDays[0], today);
+  const dayStat = (d, list)=>{
+    const rs = list.filter(r=> r.d === d);
+    const o = rs.filter(r=> st(r) === 'ok').length, x = rs.filter(r=> st(r) === 'diff').length;
+    return { n: rs.length, ok: o, diff: x, open: rs.length - o - x };
+  };
+  const barOf = (ds)=>{
+    if(!ds.n) return '';
+    const a = ds.ok / ds.n * 100, b = (ds.ok + ds.diff) / ds.n * 100;
+    return `<i style="width:100%;background:linear-gradient(90deg,var(--ow-verdigris) ${a}%,var(--ow-crimson) ${a}% ${b}%,transparent ${b}%)"></i>`;
+  };
+  const dayBtn = (d)=>{
+    const ds = dayStat(d, weekRecs), on = d >= from && d <= to;
+    return `<button type="button" class="ow-ds-day${on ? ' ow-on' : ''}${on && isRange ? ' ow-ds-in' : ''}${ds.n ? '' : ' ow-ds-nil'}" data-ds-day="${d}" aria-pressed="${on}"
+      aria-label="${esc(dsDow(d) + ' ' + dsNice(d) + (ds.n ? `, ${ds.ok + ds.diff} of ${ds.n} checked` : ', nothing recorded'))}">
+      <span class="ow-ds-dw">${dsDow(d)}</span><span class="ow-ds-dn">${+d.slice(8)}</span><i class="ow-ds-db">${barOf(ds)}</i></button>`;
+  };
+
+  /* ---- the range picker ---- */
+  const mondayOf = (d)=> dsAdd(d, -((new Date(dsT(d)).getUTCDay() + 6) % 7));
+  const lastMonthEnd = dsAdd(today.slice(0, 8) + '01', -1);
+  const presetDef = [['Today', today, today], ['Yesterday', dsAdd(today, -1), dsAdd(today, -1)], ['This week', mondayOf(today), today],
+    ['Last 7 days', dsAdd(today, -6), today], ['This month', today.slice(0, 8) + '01', today],
+    ['Last month', lastMonthEnd.slice(0, 8) + '01', lastMonthEnd], ['Last 30 days', dsAdd(today, -29), today]];
+  const preset = presetDef.find(p=> p[1] === from && p[2] === to);
+  const rangeShort = preset ? preset[0] + (isRange ? '' : ' · ' + dsNice(from)) : isRange ? dsNice(from) + ' – ' + dsNice(to) : dsDow(from) + ' ' + dsNice(from);
+  const span = Math.round((dsT(to) - dsT(from)) / 864e5) + 1;
+  let pop = '';
+  if(dsPicker){
+    const mo = dsMonth, my = +mo.slice(0, 4), mm = +mo.slice(5, 7);
+    const lead = (new Date(dsT(mo + '-01')).getUTCDay() + 6) % 7;
+    const dim = new Date(Date.UTC(my, mm, 0)).getUTCDate();
+    const monthRecs = dsRecords(mo + '-01', mo + '-' + String(dim).padStart(2, '0'));
+    let cells = '';
+    for(let j = 0; j < lead; j++) cells += '<span class="ow-ds-cd ow-ds-blank" aria-hidden="true"></span>';
+    for(let dn = 1; dn <= dim; dn++){
+      const d = mo + '-' + String(dn).padStart(2, '0');
+      const future = d > today, on = d >= from && d <= to, edge = d === from || d === to, ds = dayStat(d, monthRecs);
+      const mark = !ds.n ? '' : ds.diff ? 'ow-bad' : ds.open ? 'ow-ds-o' : 'ow-good';
+      cells += `<button type="button" class="ow-ds-cd${edge ? ' ow-ds-edge' : on ? ' ow-ds-span' : d === today ? ' ow-ds-now' : ''}" data-ds-cal="${d}"${future ? ' disabled' : ''}
+        aria-pressed="${on}" aria-label="${esc(dsDow(d) + ' ' + dsNice(d, true))}"><span>${dn}</span><i class="ow-ds-cm ${mark}"></i></button>`;
+    }
+    pop = `<div class="ow-ds-pop" role="dialog" aria-label="Pick a day or a range">
+      <div class="ow-ds-pre">${presetDef.map((p, i)=> `<button type="button" data-ds-pre="${i}" class="${preset === p ? 'ow-on' : ''}" aria-pressed="${preset === p}">${p[0]}</button>`).join('')}</div>
+      <div class="ow-ds-cal">
+        <div class="ow-ds-mh"><button type="button" class="ow-ds-nav" data-ds-mon="-1" aria-label="Previous month">${DS_ICON.left}</button>
+          <b>${DS_MON[mm - 1]} ${my}</b>
+          <button type="button" class="ow-ds-nav" data-ds-mon="1"${mo >= today.slice(0, 7) ? ' disabled' : ''} aria-label="Next month">${DS_ICON.right}</button></div>
+        <div class="ow-ds-cg">${['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(w=> `<span class="ow-ds-cw">${w}</span>`).join('')}${cells}</div>
+        <div class="ow-ds-pf"><span>${dsAnchor ? 'Now tap the last day of the range' : 'Tap a day, or two days for a range'}</span>
+          <button type="button" class="btn btn-accent ow-sm" data-ds-act="picker">Show ${esc(rangeShort)}</button></div>
+      </div></div>`;
+  }
+
+  /* ---- the four figures ---- */
+  const methods = ['cash', 'momo', 'bank'].map(k=> ({ k, sum: pays.filter(r=> r.account === k).reduce((s, r)=> s + r.amt, 0) }));
+  const mPeak = Math.max(1, ...methods.map(m=> m.sum));
+  const figs = `<section class="ow-ds-fig" aria-label="The day in figures">
+    <div class="ow-ds-fc"><span class="ow-ds-l">Orders in · ${orders.length}</span><span class="ow-ds-v">${dsF(oSum)}<small>UGX</small></span>
+      <span class="ow-ds-s">${orders.filter(r=> r.posted).length} of ${orders.length} posted in the group</span></div>
+    <div class="ow-ds-fc"><span class="ow-ds-l">Money in · ${pays.length}</span><span class="ow-ds-v ow-ds-sky">${dsF(pSum)}<small>UGX</small></span>
+      <i class="ow-ds-bar">${methods.filter(m=> m.sum > 0).map(m=> `<i class="ow-ds-m-${m.k}" style="flex-grow:${m.sum}" title="${esc(DS_ACC_LONG[m.k] + ' ' + dsF(m.sum))}"></i>`).join('')}</i></div>
+    <div class="ow-ds-fc"><span class="ow-ds-l">Checked against the group</span><span class="ow-ds-v">${doneN}<small>/ ${all}</small></span>
+      <i class="ow-ds-bar ow-ds-tight"><i style="width:${okN / allD * 100}%;background:var(--ow-verdigris)"></i><i style="width:${diffN / allD * 100}%;background:var(--ow-crimson)"></i></i></div>
+    <div class="ow-ds-fc"><span class="ow-ds-l">Differ from the group</span><span class="ow-ds-v ${diffN ? 'ow-bad' : 'ow-good'}">${diffN}</span>
+      <span class="ow-ds-s">${recs.filter(r=> !r.posted).length} not posted at all</span></div>
+  </section>`;
+
+  /* ---- the chart: four facts, then the day's lanes or the days' bars ---- */
+  const paidOn = (qid)=> recs.filter(p=> p.kind === 'pay').reduce((s, p)=> s + p.alloc.filter(a=> a.qid === qid).reduce((t, a)=> t + a.amt, 0), 0);
+  const onCredit = orders.reduce((s, r)=> s + dsOrderOwed(r.q), 0);
+  const otherBills = pays.reduce((s, p)=> s + p.amt - p.alloc.filter(a=> orderRec(a.qid)).reduce((t, a)=> t + a.amt, 0), 0);
+  const unposted = recs.filter(r=> !r.posted);
+  const lagOf = (r)=>{ const a = dsMin(r.posted), b = r.min; return a != null && b != null && a >= b ? a - b : -1; };
+  const slow = recs.filter(r=> lagOf(r) >= 0).sort((a, b)=> lagOf(b) - lagOf(a))[0];
+  const bucket = {};
+  let bestK = null;
+  recs.forEach(r=>{ const k = r.d; bucket[k] = (bucket[k] || 0) + 1; if(bestK === null || bucket[k] > bucket[bestK]) bestK = k; });
+  const tile = (k, v, s, tone, act)=> `<button type="button" class="ow-ds-in${tone ? ' ow-' + tone : ''}"${act ? ` data-ds-ins="${esc(act)}"` : ''} title="${esc(s)}">
+    <span class="ow-ds-ik">${esc(k)}</span><span class="ow-ds-iv">${esc(v)}</span><span class="ow-ds-is">${esc(s)}</span></button>`;
+  const insights = [
+    tile(isRange ? 'Left on credit' : 'Left on credit today', dsF(onCredit), 'of ' + dsF(oSum) + ' ordered', onCredit > 0.5 ? 'warn' : ''),
+    tile('Paid on other bills', dsF(otherBills), 'old debts, not these orders', ''),
+    tile('Not in the group', unposted.length ? dsF(unposted.reduce((s, r)=> s + r.amt, 0)) : 'None',
+      unposted.length ? `${unposted.length} records · ${[...new Set(unposted.map(r=> r.who))].join(', ')}` : 'every record was posted',
+      unposted.length ? 'bad' : '', unposted.length ? 'missing' : ''),
+    isRange
+      ? tile('Busiest day', bestK ? dsDow(bestK) + ' ' + dsNice(bestK) : '—', bestK ? bucket[bestK] + ' records' : 'nothing recorded', '', bestK ? 'day:' + bestK : '')
+      : tile('Slowest to the group', slow && lagOf(slow) >= 0 ? lagOf(slow) + ' min' : '—',
+          slow ? `${slow.t} ${slow.ref} ${slow.who}` : 'nothing posted yet', slow && lagOf(slow) > 15 ? 'warn' : '', slow ? 'open:' + slow.key : ''),
+  ].join('');
+  let chart;
+  if(isRange){
+    const cols = [];
+    for(let i = 0; i < span && i < 62; i++) cols.push(dsAdd(from, i));
+    const stats = cols.map(d=> dayStat(d, recs));
+    const peak = Math.max(1, ...stats.map(s=> s.n));
+    const h = (n)=> Math.round(n / peak * 72);
+    chart = `<div class="ow-ds-cols">${cols.map((d, i)=>{
+      const s = stats[i];
+      const segs = (s.open ? `<i class="ow-ds-k-open" style="height:${h(s.open)}px"></i>` : '') + (s.diff ? `<i class="ow-ds-k-diff" style="height:${h(s.diff)}px"></i>` : '') + (s.ok ? `<i class="ow-ds-k-ok" style="height:${h(s.ok)}px"></i>` : '');
+      const title = `${dsDow(d)} ${dsNice(d)} · ${s.n ? `${s.n} records, ${s.ok} match, ${s.diff} differ` : 'nothing recorded'}`;
+      return `<button type="button" class="ow-ds-col" data-ds-day="${d}" title="${esc(title)}" aria-label="${esc(title)}">
+        <span class="ow-ds-cn">${s.n || ''}</span><i class="ow-ds-cs${s.n ? '' : ' ow-ds-nil'}">${segs}</i>
+        <span class="ow-ds-cn${d === today ? ' ow-ds-now' : ''}">${span > 20 && i % 2 ? '' : +d.slice(8)}</span>
+        <span class="ow-ds-cn">${span <= 14 ? dsDow(d).slice(0, 2) : ''}</span></button>`;
+    }).join('')}</div>`;
+  } else {
+    const x = (min)=> Math.max(0, Math.min(100, ((min == null ? 420 : min) - 420) / 660 * 100));
+    const maxAmt = Math.max(1, ...recs.map(r=> r.amt));
+    const dot = (r)=>{
+      const sz = Math.round(12 + 10 * Math.sqrt(r.amt / maxAmt));
+      const s = st(r);
+      const cls = s === 'ok' ? ' ow-ds-ok' : s === 'diff' ? ' ow-ds-diff' : !r.posted ? ' ow-ds-miss' : '';
+      const title = `${r.t || '—'} · ${r.ref} ${r.who} · ${dsF(r.amt)}`;
+      return `<button type="button" class="ow-ds-dot${r.kind === 'pay' ? ' ow-ds-pay' : ''}${cls}${dsOpenKey === r.key ? ' ow-on' : ''}" data-ds-open="${esc(r.key)}"
+        style="left:${x(r.min).toFixed(2)}%;width:${sz}px;height:${sz}px" title="${esc(title)}" aria-label="${esc(title)}"></button>
+        <span class="ow-ds-dl" style="left:calc(${x(r.min).toFixed(2)}% + ${sz / 2 + 4}px)">${dsShort(r.amt)}</span>`;
+    };
+    const links = [];
+    pays.forEach(p=> p.alloc.forEach(a=>{
+      const o = orderRec(a.qid); if(!o) return;
+      const full = dsOrderOwed(o.q) <= 0.5;
+      const xo = x(o.min) * 10, xp = x(p.min) * 10, on = dsOpenKey === p.key || dsOpenKey === o.key;
+      links.push(`<path d="M${xo.toFixed(1)},14 C${xo.toFixed(1)},38 ${xp.toFixed(1)},22 ${xp.toFixed(1)},46" fill="none" stroke="${on ? 'var(--ow-ink-900)' : 'var(--ow-ink-400)'}" stroke-width="${on ? 2.5 : 1.5}"${full ? '' : ' stroke-dasharray="5 4"'} vector-effect="non-scaling-stroke"/>`);
+    }));
+    const hours = [7, 9, 11, 13, 15, 17].map(hh=> `<span class="ow-ds-hr" style="left:${((hh * 60 - 420) / 660 * 100).toFixed(2)}%">${String(hh).padStart(2, '0')}:00</span>`).join('');
+    chart = `<div class="ow-ds-lanes">
+      <div class="ow-ds-ln"><span class="ow-ds-o">Orders</span><span class="ow-ds-p">Payments</span></div>
+      <div class="ow-ds-lane">
+        <svg viewBox="0 0 1000 60" preserveAspectRatio="none" aria-hidden="true"><line x1="0" y1="30" x2="1000" y2="30" stroke="var(--ow-rule-soft)" stroke-width="1" vector-effect="non-scaling-stroke"/>${links.join('')}</svg>
+        <div class="ow-ds-row">${orders.map(dot).join('')}</div>
+        <div class="ow-ds-row ow-ds-r2">${pays.map(dot).join('')}</div>
+      </div>
+      <span></span><div class="ow-ds-hrs">${hours}</div>
+    </div>
+    <p class="ow-ds-fn"><svg width="22" height="8" viewBox="0 0 22 8" aria-hidden="true"><path d="M1 1 C 8 1, 14 7, 21 7" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>a line joins a payment to the order it paid · dashed = part paid</p>`;
+  }
+  const chartPanel = `<section class="ow-ds-pan ow-ds-chart" aria-label="${isRange ? 'Day by day' : 'Hour by hour'}">
+    <div class="ow-ds-lg"><span class="ow-ds-l">${isRange ? 'Day by day' : 'Hour by hour'}</span>
+      <span class="ow-ds-li"><i class="ow-ds-k-ok"></i>Matches</span><span class="ow-ds-li"><i class="ow-ds-k-diff"></i>Differs</span>
+      <span class="ow-ds-li"><i class="ow-ds-k-open"></i>Not checked</span><span class="ow-ds-li"><i class="ow-ds-k-miss"></i>Not in group</span></div>
+    <div class="ow-ds-ins">${insights}</div>
+    ${chart}
+  </section>`;
+
+  /* ---- the table: status tabs, type and search, sortable columns ---- */
+  const needle = dsQ.trim().toLowerCase();
+  const passType = (r)=> dsType === 'all' || r.kind === dsType;
+  const passQ = (r)=> !needle || (r.who + ' ' + r.ref + ' ' + r.what + ' ' + (r.qid != null ? invoiceNumberLabel({ id: r.qid }) : '')).toLowerCase().includes(needle);
+  const passSt = (r)=>{ const x = stx(r); return dsStatus === 'all' || x === dsStatus || (dsStatus === 'todo' && x === 'missing'); };
+  const base = recs.filter(r=> passType(r) && passQ(r));
+  const sortVal = (r)=>{
+    const k = dsSort.key;
+    if(k === 'amt') return r.amt;
+    if(k === 'kind') return r.kind;
+    if(k === 'ref') return r.ref;
+    if(k === 'who') return String(r.who).toLowerCase();
+    if(k === 'group') return r.posted ? r.d + r.posted : '~';
+    if(k === 'check') return { diff: 0, missing: 1, todo: 2, ok: 3 }[stx(r)];
+    return r.sk;
+  };
+  const list = base.filter(passSt).sort((a, b)=>{
+    const x = sortVal(a), y = sortVal(b);
+    const d = typeof x === 'string' ? x.localeCompare(y) : x - y;
+    return (d || a.sk.localeCompare(b.sk)) * dsSort.dir;
+  });
+  const filtered = list.length !== recs.length;
+  const chips = [['all', 'All'], ['todo', 'To check'], ['ok', 'Matches'], ['diff', 'Differs'], ['missing', 'Not posted']].map(([k, label])=>{
+    const n = base.filter(r=>{ const x = stx(r); return k === 'all' || x === k || (k === 'todo' && x === 'missing'); }).length;
+    const on = dsStatus === k;
+    return `<button type="button" role="tab" class="ow-ds-tab ow-ds-t-${k}${on ? ' ow-on' : ''}" data-ds-status="${k}" aria-selected="${on}">${k === 'all' ? '' : `<i class="ow-ds-td ow-ds-t-${k}"></i>`}${label} <span class="ow-ds-tn">${n}</span></button>`;
+  }).join('');
+  const types = [['all', 'All'], ['order', 'Orders'], ['pay', 'Payments']].map(([k, label])=>
+    `<button type="button" class="ow-seg-b${dsType === k ? ' ow-on' : ''}" data-ds-type="${k}" aria-pressed="${dsType === k}">${label}</button>`).join('');
+  const head = [['time', 'Time'], ['kind', 'Type'], ['ref', 'Ref'], ['who', 'Customer'], [null, 'Details'], ['amt', 'Amount', 'n'], ['group', 'In group'], ['check', 'Check', 'c']].map(([k, label, al])=>{
+    if(!k) return `<span class="ow-ds-l">${label}</span>`;
+    const on = dsSort.key === k;
+    return `<span class="${al === 'n' ? 'ow-ds-hn' : al === 'c' ? 'ow-ds-hc' : ''}" role="columnheader" aria-sort="${on ? (dsSort.dir === 1 ? 'ascending' : 'descending') : 'none'}">
+      <button type="button" class="ow-ds-sort${on ? ' ow-on' : ''}" data-ds-sort="${k}">${label}<i>${on ? (dsSort.dir === 1 ? '▲' : '▼') : '↕'}</i></button></span>`;
+  }).join('');
+  const rowHTML = (r)=>{
+    const s = st(r), open = dsOpenKey === r.key, pay = r.kind === 'pay', locked = closedOf(r.d);
+    let owed = '', owedCls = '';
+    if(pay){ owed = r.alloc.length > 1 ? `to ${r.alloc.length} invoices` : r.alloc.length ? 'to ' + invoiceNumberLabel({ id: r.alloc[0].qid }) : 'on account'; owedCls = ' ow-ds-mut'; }
+    else { const w = dsOrderOwed(r.q); owed = w <= 0.5 ? 'paid' : w >= r.amt - 0.5 ? 'unpaid' : dsShort(w) + ' left'; owedCls = w <= 0.5 ? ' ow-good' : ''; }
+    let x = '';
+    if(open){
+      const cmp = dsCompare(r);
+      const post = dsLogR().posts[r.key];
+      const cmpRows = cmp.rows.map(c=>{
+        const missing = c.theirs === '—' || c.theirs === '';
+        const same = missing || c.ours === c.theirs;
+        return `<div class="ow-ds-cr${!same ? ' ow-ds-cx' : ''}"><span class="ow-ds-ck2" title="${esc(c.k)}">${esc(c.k)}</span><span class="ow-ds-cv">${esc(c.ours)}</span>
+          <span class="ow-ds-cv ow-ds-th2${missing ? ' ow-ds-mut' : ''}">${esc(c.theirs)}</span><span class="ow-ds-cm2${same ? '' : ' ow-bad'}">${missing ? '' : same ? '=' : '≠'}</span></div>`;
+      }).join('');
+      const msg = post && post.text ? post.text
+        : r.posted ? 'Posted at ' + r.posted + ' — the message itself was not kept, so only the time is on record.'
+        : `No message in the sales group matches this ${pay ? 'payment' : 'order'}.`;
+      const w = pay ? 0 : dsOrderOwed(r.q);
+      const canFix = s === 'diff' || !r.posted;
+      x = `<div class="ow-ds-x">
+        <div class="ow-ds-cmp"><div class="ow-ds-cr ow-ds-ch"><span></span><span class="ow-ds-l">Our books</span><span class="ow-ds-l">Sales group</span><span></span></div>${cmpRows}</div>
+        <div class="ow-ds-xs">
+          <span class="ow-ds-l">${r.posted ? 'The group message · ' + esc(r.posted) : 'Nothing in the group'}</span>
+          <div class="ow-ds-msg${r.posted ? '' : ' ow-warn'}">${esc(msg)}</div>
+          ${!pay && w > 0.5 && r.q.invoiced ? `<div class="ow-ds-owe"><div><span class="ow-ds-s">Still owed on ${esc(invoiceNumberLabel(r.q))}</span><b>${dsF(w)}</b>
+            <i><i style="display:block;height:4px;width:${Math.round((r.amt - w) / Math.max(1, r.amt) * 100)}%"></i></i></div>
+            <button type="button" class="btn ow-sm ow-ds-sky-b" data-ds-rcv="${esc(String(r.q.customerId == null ? '' : r.q.customerId))}" data-ds-rcvq="${r.q.id}">Receive</button></div>` : ''}
+          ${canFix ? `<div class="ow-ds-xa">
+            <button type="button" class="btn btn-ghost ow-sm" data-ds-edit="${esc(r.key)}">${pay ? 'Open the cash book' : r.q.invoiced ? 'Open the invoice' : 'Open the order'}</button>
+            <button type="button" class="btn btn-ghost ow-sm" data-ds-post="${esc(r.key)}">${r.posted ? 'Correct the group' : 'Post to the group'}</button></div>` : ''}
+        </div></div>`;
+    }
+    return `<div class="ow-ds-rec${open ? ' ow-open' : s === 'diff' ? ' ow-ds-rdiff' : ''}" role="row">
+      <div class="ow-ds-tr">
+        <span class="ow-ds-tm">${isRange ? `<b>${dsDow(r.d)} ${+r.d.slice(8)}</b>` : ''}${esc(r.t || '—')}</span>
+        <span class="ow-ds-kd${pay ? ' ow-ds-pay' : ''}"><i></i>${pay ? 'Payment' : 'Order'}</span>
+        <span class="ow-ds-ref" title="${esc(r.qid != null ? invoiceNumberLabel({ id: r.qid }) : r.ref)}">${esc(r.ref)}</span>
+        <button type="button" class="ow-ds-who" data-ds-open="${esc(r.key)}" aria-expanded="${open}">${DS_ICON.caret}<span class="ow-ds-wn" title="${esc(r.who)}">${esc(r.who)}</span></button>
+        <span class="ow-ds-wh" title="${esc(r.what)}">${esc(r.what)}</span>
+        <span class="ow-ds-am"><span class="ow-ds-amv${pay ? ' ow-ds-sky' : ''}">${dsF(r.amt)}</span><span class="ow-ds-ow${owedCls}">${esc(owed)}</span></span>
+        <span class="ow-ds-gc${r.posted ? '' : ' ow-warn'}">${r.posted ? 'Posted ' + esc(r.posted) : 'Not posted'}</span>
+        <span class="ow-ds-ck" role="group" aria-label="${esc('Check ' + r.ref + ' ' + r.who)}">
+          <button type="button" class="ow-ds-cb${s === 'ok' ? ' ow-ds-cok' : ''}" data-ds-check="ok" data-ds-key="${esc(r.key)}" aria-pressed="${s === 'ok'}" aria-label="Matches the group"${locked ? ' disabled' : ''}>${DS_ICON.check}</button>
+          <button type="button" class="ow-ds-cb${s === 'diff' ? ' ow-ds-cdf' : ''}" data-ds-check="diff" data-ds-key="${esc(r.key)}" aria-pressed="${s === 'diff'}" aria-label="Differs from the group"${locked ? ' disabled' : ''}>${DS_ICON.ne}</button>
+        </span>
+      </div>${x}</div>`;
+  };
+  const lo = list.filter(r=> r.kind === 'order').reduce((s, r)=> s + r.amt, 0);
+  const lp = list.filter(r=> r.kind === 'pay').reduce((s, r)=> s + r.amt, 0);
+  const net = filtered ? lo - lp : oSum - pSum;
+  const empty = list.length ? '' : `<div class="ow-ds-empty"><b>${recs.length ? 'No record fits these filters.' : `Nothing was ordered or paid ${isRange ? 'in this range' : 'on this day'}.`}</b>
+    ${recs.length ? '<button type="button" class="btn btn-ghost ow-sm" data-ds-act="clear">Show every record</button>'
+      : from !== today || to !== today ? '<button type="button" class="btn btn-ghost ow-sm" data-ds-act="today">Go to today</button>' : ''}</div>`;
+  const table = `<section class="ow-ds-pan ow-ds-tbl" aria-label="Every record">
+    <div class="ow-ds-tabs" role="tablist" aria-label="Status">${chips}</div>
+    <div class="ow-ds-tools">
+      <div class="ow-seg" role="group" aria-label="Type">${types}</div>
+      <span class="ow-ds-shown">${filtered ? `Showing ${list.length} of ${recs.length} records` : `${recs.length} records`}</span>
+      ${filtered ? '<button type="button" class="ow-ds-clr" data-ds-act="clear">Clear filters</button>' : ''}
+      <label class="ow-ds-srch">${DS_ICON.search}<input type="search" id="ds_search" value="${esc(dsQ)}" placeholder="Search customer, #, item" aria-label="Search the records"></label>
+    </div>
+    <div class="ow-ds-tr ow-ds-th" role="row">${head}</div>
+    ${list.map(rowHTML).join('')}
+    ${empty}
+    <div class="ow-ds-tf"><span>${filtered ? `Showing ${list.length} of ${recs.length} · orders less money in` : `${isRange ? span + " days' close" : "Day's close"} · orders less money in`}</span>
+      <span class="ow-ds-cv">${net < 0 ? '−' : ''}${dsF(Math.abs(net))}</span><span>${net < 0 ? 'more came in than was ordered' : 'ordered on credit'}</span></div>
+  </section>`;
+
+  /* ---- the rail: close the day, money by method, what needs a look ---- */
+  const closeDay = isRange ? (today >= from && today <= to ? today : null) : from;
+  const dRecs = closeDay ? recs.filter(r=> r.d === closeDay) : [];
+  const dOpen = dRecs.filter(r=> st(r) === 'open').length, dDiff = dRecs.filter(r=> st(r) === 'diff').length;
+  const isClosed = closeDay && closedOf(closeDay);
+  const C = 2 * Math.PI * 38, okL = C * okN / allD, dL = C * diffN / allD;
+  const ring = (w)=> `<svg width="${w}" height="${w}" viewBox="0 0 92 92" role="img" aria-label="${doneN} of ${all} records checked">
+    <circle cx="46" cy="46" r="38" fill="none" stroke="var(--ow-rule-soft)" stroke-width="10"/>
+    <circle cx="46" cy="46" r="38" fill="none" stroke="var(--ow-verdigris)" stroke-width="10" stroke-dasharray="${okL.toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 46 46)"/>
+    <circle cx="46" cy="46" r="38" fill="none" stroke="var(--ow-crimson)" stroke-width="10" stroke-dasharray="${dL.toFixed(1)} ${C.toFixed(1)}" stroke-dashoffset="${(-okL).toFixed(1)}" transform="rotate(-90 46 46)"/>
+    <text x="46" y="52" text-anchor="middle" style="font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:600;fill:var(--ow-ink-900)">${w < 90 ? `${doneN}/${all}` : Math.round(doneN / allD * 100) + '%'}</text></svg>`;
+  const gates = !closeDay ? [[false, 'Pick one day to close it']]
+    : isClosed ? [[true, `Closed at ${dsHM(L.closed[closeDay].at)}`]]
+    : [[dOpen === 0, dOpen === 0 ? 'Every record checked' : `${dOpen} still to check${isRange ? ' today' : ''}`],
+       [dDiff === 0, dDiff === 0 ? 'Nothing differs from the group' : `${dDiff} ${dDiff === 1 ? 'difference' : 'differences'} to settle`]];
+  const canClose = closeDay && !isClosed && closeDay <= today && dOpen === 0 && dDiff === 0 && dRecs.length > 0;
+  const closePanel = `<section class="ow-ds-pan ow-ds-close" aria-label="Close the day">
+    <span class="ow-ds-l">${isClosed ? 'This day is closed' : 'Close the day'}</span>
+    <div class="ow-ds-ring">${ring(92)}<div class="ow-ds-rc">
+      <span><i style="background:var(--ow-verdigris)"></i><b>${okN}</b> match</span>
+      <span><i style="background:var(--ow-crimson)"></i><b>${diffN}</b> differ</span>
+      <span><i style="background:var(--ow-rule-soft);border:1px solid var(--ow-rule)"></i><b>${openN}</b> to check</span></div></div>
+    <ul class="ow-ds-gates" aria-label="Before the day can close">${gates.map(([ok, text])=> `<li class="${ok ? 'ow-good' : ''}"><span class="ow-ds-gd">${ok ? DS_ICON.check : DS_ICON.bang}</span>${esc(text)}</li>`).join('')}</ul>
+    <button type="button" class="btn btn-accent ow-ds-cbtn" data-ds-act="close"${canClose ? '' : ' disabled'}>${DS_ICON.lock}${isClosed ? 'Closed' : closeDay ? 'Close ' + dsDow(closeDay) + ' ' + dsNice(closeDay) : 'Close one day at a time'}</button>
+  </section>`;
+  const methodPanel = `<section class="ow-ds-pan ow-ds-mth" aria-label="Money in by how it came"><span class="ow-ds-l">Money in, by how it came</span>
+    ${methods.map(m=> `<div class="ow-ds-mr"><span>${DS_ACC_LONG[m.k]}</span><i><i class="ow-ds-m-${m.k}" style="display:block;height:8px;border-radius:999px;width:${Math.round(m.sum / mPeak * 100)}%"></i></i><span class="ow-ds-amv">${dsF(m.sum)}</span></div>`).join('')}
+  </section>`;
+  const look = recs.filter(r=> st(r) === 'diff' || (!r.posted && st(r) !== 'ok'));
+  const lookPanel = `<section class="ow-ds-pan ow-ds-look" aria-label="Needs a look"><span class="ow-ds-l">Needs a look</span>
+    ${look.length ? look.map(r=>{ const d = st(r) === 'diff';
+      return `<button type="button" class="ow-ds-lk" data-ds-open="${esc(r.key)}"><span class="ow-cp ${d ? 'ow-bad' : 'ow-warn'}">${d ? 'Differs' : 'Not posted'}</span>
+        <span class="ow-ds-lkn" title="${esc(r.who)}"><b>${esc(r.ref)}</b> ${esc(r.who)}</span><span class="ow-ds-amv">${dsF(r.amt)}</span></button>`; }).join('')
+      : `<div class="ow-ds-fine">${recs.length ? 'Everything matches the group.' : 'Nothing to look at.'}</div>`}
+  </section>`;
+
+  /* ---- the phone: its own design, not the desk squeezed ---- */
+  const phList = recs.filter(r=>{ const s = st(r); return dsPhShow === 'all' ? true : dsPhShow === 'todo' ? s !== 'ok' : s === 'ok'; })
+    .sort((a, b)=> a.sk.localeCompare(b.sk));
+  const phone = `<div class="ow-ds-ph">
+    <div class="ow-ds-pdays" role="group" aria-label="Pick a day">${stripDays.slice(1).map(dayBtn).join('')}</div>
+    <section class="ow-ds-psum" aria-label="The day in figures">
+      <div class="ow-ds-ring">${ring(76)}<div class="ow-ds-pst"><b>${esc(isRange ? rangeShort : dsDow(from) + ' ' + dsNice(from))}</b>
+        <span class="ow-good">${okN} match</span><span class="ow-bad">${diffN} differ</span><span class="ow-ds-mut">${openN} to check</span></div></div>
+      <div class="ow-ds-p2"><div><span class="ow-ds-l">Orders · ${orders.length}</span><span class="ow-ds-v">${dsF(oSum)}</span></div>
+        <div><span class="ow-ds-l">Money in · ${pays.length}</span><span class="ow-ds-v ow-ds-sky">${dsF(pSum)}</span></div></div>
+    </section>
+    <div class="ow-ds-pf2" role="group" aria-label="Show">${[['todo', 'To check · ' + (all - okN)], ['ok', 'Matched · ' + okN], ['all', 'All · ' + all]].map(([k, label])=>
+      `<button type="button" data-ds-ph="${k}" class="${dsPhShow === k ? 'ow-on' : ''}" aria-pressed="${dsPhShow === k}">${label}</button>`).join('')}</div>
+    ${phList.map(r=>{
+      const s = st(r), pay = r.kind === 'pay', cmp = s === 'diff' || dsLogR().posts[r.key] ? dsCompare(r) : null;
+      const diffs = cmp && cmp.known ? cmp.rows.filter(c=> c.theirs !== '—' && c.theirs !== '' && c.ours !== c.theirs) : [];
+      const locked = closedOf(r.d);
+      return `<article class="ow-ds-pc${s === 'diff' ? ' ow-bad' : ''}">
+        <div class="ow-ds-pct"><span class="ow-ds-tm">${esc(r.t || '—')}</span><span class="ow-ds-kd${pay ? ' ow-ds-pay' : ''}"><i></i>${pay ? 'Payment' : 'Order'}</span>
+          <span class="ow-ds-gc${r.posted ? '' : ' ow-warn'}">${r.posted ? 'Posted ' + esc(r.posted) : 'Not posted'}</span></div>
+        <div class="ow-ds-pcm"><div><span class="ow-ds-pcn" title="${esc(r.who)}">${esc(r.ref)} · ${esc(r.who)}</span><span class="ow-ds-pcw" title="${esc(r.what)}">${esc(r.what)}</span></div>
+          <span class="ow-ds-amv${pay ? ' ow-ds-sky' : ''}">${dsF(r.amt)}</span></div>
+        ${diffs.length ? `<div class="ow-ds-pdf">${diffs.map(c=> `<div><span>${esc(c.k)}</span><span class="ow-ds-cv"><s>${esc(c.ours)}</s> → <b>${esc(c.theirs)}</b> in group</span></div>`).join('')}</div>` : ''}
+        <div class="ow-ds-pbt">
+          <button type="button" class="ow-ds-big${s === 'ok' ? ' ow-ds-cok' : ''}" data-ds-check="ok" data-ds-key="${esc(r.key)}" aria-pressed="${s === 'ok'}"${locked ? ' disabled' : ''}>${DS_ICON.check}Matches</button>
+          <button type="button" class="ow-ds-big${s === 'diff' ? ' ow-ds-cdf' : ''}" data-ds-check="diff" data-ds-key="${esc(r.key)}" aria-pressed="${s === 'diff'}"${locked ? ' disabled' : ''}>${DS_ICON.ne}Differs</button>
+        </div></article>`;
+    }).join('') || `<div class="ow-ds-none">${recs.length ? 'Nothing here.' : 'Nothing was ordered or paid on this day.'}</div>`}
+  </div>`;
+
+  /* The page header is Forecasts'; its sub says which day this is. */
+  const sub = document.getElementById('fc_sub');
+  if(sub && typeof fcLens !== 'undefined' && fcLens === 'today') sub.innerHTML = dsSubHTML();
+  root.innerHTML = `<div class="ow-ds">
+    <div class="ow-ds-desk">
+      <header class="ow-ds-h">
+        <div class="ow-ds-days" role="group" aria-label="Pick a day">${stripDays.map(dayBtn).join('')}</div>
+        <div class="ow-ds-acts">
+          <button type="button" class="btn btn-ghost ow-sm ow-ds-rcv" data-ds-act="receive">${DS_ICON.cash}Receive a payment</button>
+          <button type="button" class="btn btn-ghost ow-sm ow-ds-rng" data-ds-act="picker" aria-expanded="${dsPicker}" aria-haspopup="dialog">${DS_ICON.cal}<span>${esc(rangeShort)}</span>${DS_ICON.down}</button>
+          <button type="button" class="btn btn-ghost ow-sm" data-ds-act="print">${DS_ICON.print}Print</button>
+          ${pop}
+        </div>
+      </header>
+      ${figs}
+      <div class="ow-ds-body">
+        <div class="ow-ds-main">${chartPanel}${table}</div>
+        <aside class="ow-ds-side">${closePanel}${methodPanel}${lookPanel}</aside>
+      </div>
+    </div>
+    ${phone}
+    ${dsRv ? dsReceiveHTML() : ''}
+  </div>`;
+}
+
+/* ---- the receive panel: one payment, spread across the invoices the
+   owner ticks, in the order they were ticked, until it runs out ---- */
+function dsReceivePlan(){
+  const R = dsRv;
+  const invs = R.cid != null ? customerOutstandingInvoices(R.cid) : [];
+  const sel = R.sel.filter(id=> invs.some(q=> q.id === id));
+  let rest = R.amt || 0;
+  const plan = {};
+  sel.forEach(id=>{ const q = invs.find(x=> x.id === id); const take = Math.min(invoiceBalanceDue(q), rest); plan[id] = take; rest -= take; });
+  return { invs, sel, plan, rest };
+}
+function dsReceiveHTML(){
+  const R = dsRv;
+  const { invs, sel, plan, rest } = dsReceivePlan();
+  const amt = R.amt || 0;
+  const people = (data.customers || []).slice()
+    .sort((a, b)=> (Number(b.debt) || 0) - (Number(a.debt) || 0) || String(a.name || '').localeCompare(String(b.name || '')));
+  const selOwed = sel.reduce((s, id)=> s + invoiceBalanceDue(invs.find(q=> q.id === id)), 0);
+  const allOwed = invs.reduce((s, q)=> s + invoiceBalanceDue(q), 0);
+  const targets = invs.map(q=>{
+    const pos = sel.indexOf(q.id), on = pos >= 0, owed = invoiceBalanceDue(q), total = Math.max(1, savedQuoteTotal(q));
+    const take = on ? plan[q.id] : 0;
+    const clears = on && amt > 0 && take >= owed - 0.5, starved = on && amt > 0 && take <= 0.5;
+    const note = !on ? '' : !(amt > 0) ? 'ticked' : clears ? 'clears it · ' + dsF(take) : starved ? 'nothing left for it' : dsF(take) + ' · leaves ' + dsF(owed - take);
+    const raised = String(q.invoicedAt || q.date || '').slice(0, 10);
+    return `<button type="button" class="ow-ds-tg${on ? ' ow-on' : ''}" data-ds-tick="${q.id}" aria-pressed="${on}">
+      <span class="ow-ds-tgb">${on ? pos + 1 : ''}</span>
+      <span class="ow-ds-tgm"><span class="ow-ds-tgt"><b>${esc(invoiceNumberLabel(q))}</b><span title="${esc(dsOrderLine(q))}">${esc((raised ? dsDow(raised) + ' ' + dsNice(raised) + ' · ' : '') + dsOrderLine(q))}</span></span>
+        <i class="ow-ds-tgk"><i style="width:${((total - owed) / total * 100).toFixed(1)}%"></i><i style="width:${(take / total * 100).toFixed(1)}%"></i></i>
+        ${note ? `<span class="ow-ds-tgs${clears ? ' ow-good' : starved ? ' ow-bad' : ''}">${esc(note)}</span>` : ''}</span>
+      <span class="ow-ds-tgo">${dsF(owed)} owed</span></button>`;
+  }).join('');
+  const pv = [];
+  if(amt > 0){
+    sel.forEach(id=>{ const q = invs.find(x=> x.id === id), t = plan[id]; if(t > 0.5) pv.push([invoiceNumberLabel(q), dsF(t) + (t >= invoiceBalanceDue(q) - 0.5 ? ' · paid in full' : ' · part'), t >= invoiceBalanceDue(q) - 0.5 ? 'ow-good' : 'ow-warn']); });
+    if(rest > 0.5) pv.push([sel.length ? 'Left over, onto their account' : 'All of it onto their account', dsF(rest), '']);
+    if(sel.length && amt < selOwed - 0.5) pv.push(['Still owed on the ticked invoices', dsF(selOwed - amt), 'ow-bad']);
+  } else pv.push(['Type what they paid', '', '']);
+  const quick = [];
+  if(sel.length) quick.push(['sel', 'Ticked total · ' + dsF(selOwed)]);
+  if(invs.length > 1) quick.push(['all', 'Everything they owe · ' + dsF(allOwed)]);
+  const who = (data.customers || []).find(c=> c.id === R.cid);
+  return `<div class="ow-ds-scrim">
+    <button type="button" class="ow-ds-shut" data-ds-act="rv-close" aria-label="Close"></button>
+    <div class="ow-ds-dr" role="dialog" aria-label="Receive a payment">
+      <div class="ow-ds-drh"><span class="ow-ds-dri">${DS_ICON.cash}</span><div><b>Receive a payment</b><span>Today · ${dsHM(Date.now())}</span></div>
+        <button type="button" class="ow-ds-nav" data-ds-act="rv-close" aria-label="Close">${DS_ICON.x}</button></div>
+      <div class="ow-ds-drb">
+        <div class="ow-ds-fl"><label class="ow-ds-l" for="ds_rv_who">From</label>
+          <select id="ds_rv_who">${R.cid == null ? '<option value="">Pick the customer</option>' : ''}${people.map(c=> `<option value="${esc(String(c.id))}"${c.id === R.cid ? ' selected' : ''}>${esc(c.name || '(unnamed)')}${(Number(c.debt) || 0) > 0.5 ? ' · owes ' + dsF(c.debt) : ''}</option>`).join('')}</select></div>
+        <div class="ow-ds-fl"><div class="ow-ds-fh"><span class="ow-ds-l">Invoices it pays</span>${invs.length ? '<button type="button" class="ow-ds-tall" data-ds-act="rv-all">Tick all, oldest first</button>' : ''}</div>
+          ${invs.length ? `<span class="ow-ds-s">${sel.length > 1 ? 'Paid in the order you ticked · 1 first' : 'Tick one or more · paid in the order you tick'}</span>${targets}`
+            : `<div class="ow-ds-none">${who ? 'No open invoices. The money goes on their account.' : 'Pick who paid to see their open invoices.'}</div>`}</div>
+        <div class="ow-ds-fl"><label class="ow-ds-l" for="ds_rv_amt">Amount</label>
+          <div class="ow-ds-amt"><input type="text" inputmode="numeric" id="ds_rv_amt" value="${amt ? dsF(amt) : ''}" placeholder="0" aria-label="Amount received"><span>UGX</span></div>
+          ${quick.length ? `<div class="ow-ds-qk">${quick.map(([k, label])=> `<button type="button" data-ds-quick="${k}">${esc(label)}</button>`).join('')}</div>` : ''}</div>
+        <div class="ow-ds-fl"><span class="ow-ds-l">How it came</span>
+          <div class="ow-ds-mt" role="group" aria-label="Method">${['cash', 'momo', 'bank'].map(k=> `<button type="button" data-ds-method="${k}" class="${R.account === k ? 'ow-on' : ''}" aria-pressed="${R.account === k}">${DS_ACC_LONG[k]}</button>`).join('')}</div>
+          ${R.account !== 'cash' ? `<input type="text" class="ow-ds-ref2" id="ds_rv_ref" value="${esc(R.ref || '')}" placeholder="${R.account === 'momo' ? 'MoMo transaction ID' : 'Bank reference'}" aria-label="${R.account === 'momo' ? 'MoMo transaction ID' : 'Bank reference'}">` : ''}</div>
+        <div class="ow-ds-pv" aria-live="polite">${pv.map(([k, v, c])=> `<div><span>${esc(k)}</span><b class="${c}">${esc(v)}</b></div>`).join('')}</div>
+        <button type="button" class="ow-ds-post${R.post ? ' ow-on' : ''}" data-ds-act="rv-post" aria-pressed="${R.post}"><span class="ow-ds-pb">${DS_ICON.check}</span>
+          <span><b>Post it to the sales group</b><span>Copies the message and opens the group, one paste</span></span></button>
+      </div>
+      <div class="ow-ds-drf"><button type="button" class="btn btn-ghost" data-ds-act="rv-close">Cancel</button>
+        <button type="button" class="btn btn-accent" data-ds-act="rv-save"${amt > 0 && who ? '' : ' disabled'}>${amt > 0 ? 'Receive ' + dsF(amt) : 'Receive'}</button></div>
+    </div></div>`;
+}
+function dsStartReceive(cid, qid){
+  const c = cid != null && cid !== '' ? (data.customers || []).find(x=> String(x.id) === String(cid)) : null;
+  const invs = c ? customerOutstandingInvoices(c.id) : [];
+  const first = qid != null ? invs.find(q=> String(q.id) === String(qid)) : invs[0];
+  dsPicker = false;
+  dsRv = { cid: c ? c.id : null, sel: first ? [first.id] : [], amt: first ? Math.round(invoiceBalanceDue(first)) : 0, account: 'momo', ref: '', post: true };
+  renderDayStatement();
+}
+function dsSaveReceive(){
+  const R = dsRv;
+  const c = (data.customers || []).find(x=> x.id === R.cid);
+  if(!c || !(R.amt > 0)){ toast('Pick who paid and type the amount'); return; }
+  const { invs, sel, plan } = dsReceivePlan();
+  const selections = sel.filter(id=> plan[id] > 0.5).map(id=> ({ quoteId: id, amount: plan[id] }));
+  const note = R.ref ? `${DS_ACC_LONG[R.account]} ${R.ref}` : '';
+  const before = new Set((data.cashTxns || []).map(t=> t.id));
+  const today = todayISO();
+  recordCustomerPayment(c.id, R.amt, R.account, note, selections, null, today);
+  const fresh = (data.cashTxns || []).filter(t=> !before.has(t.id)).map(t=> t.id).sort((a, b)=> a - b);
+  const key = fresh.length ? 't:' + fresh[0] : null;
+  if(R.post && key){
+    const freshSet = new Set(fresh);
+    const stamps = [];
+    (data.savedQuotes || []).forEach(q=> (q.payments || []).forEach(p=>{ if(p && freshSet.has(p.cashTxnId)) stamps.push(p); }));
+    const rec = { key, who: c.name, amt: Math.round(R.amt), account: R.account, cid: c.id, d: today, stamps,
+      alloc: selections.map(s=> ({ qid: s.quoteId, amt: s.amount })), onAcc: R.amt - selections.reduce((s, x)=> s + x.amount, 0) };
+    dsPostPayment(rec);
+  }
+  saveData();
+  dsRv = null;
+  dsFrom = dsTo = today;
+  dsStatus = 'all'; dsType = 'all'; dsQ = '';
+  if(key) dsOpenKey = key;
+  if(typeof renderDebtorsList === 'function') renderDebtorsList();
+  refreshNavBadges();
+  renderDayStatement();
+  toast(`Payment of ${dsF(R.amt)} recorded` + (invs.length && selections.length ? ` against ${selections.length} ${selections.length === 1 ? 'invoice' : 'invoices'}` : ''));
+}
+
+function dsSetCheck(key, s){
+  const L = dsLogW();
+  const cur = L.checks[key] && L.checks[key].s;
+  if(cur === s) delete L.checks[key];
+  else L.checks[key] = { s, at: Date.now() };
+  saveData();
+  renderDayStatement();
+  renderDayStmtBadge();
+}
+function dsCloseDay(){
+  const { from, to, today } = dsRange();
+  const day = from !== to ? (today >= from && today <= to ? today : null) : from;
+  if(!day) return;
+  const L = dsLogW();
+  L.closed[day] = { at: Date.now() };
+  saveData();
+  renderDayStatement();
+  toast(`${dsDow(day)} ${dsNice(day)} is closed`);
+}
+function dsPrint(){
+  const { from, to } = dsRange();
+  const checks = dsLogR().checks;
+  const recs = dsRecords(from, to).sort((a, b)=> a.sk.localeCompare(b.sk));
+  const w = window.open('', '_blank');
+  if(!w){ toast('Allow pop-ups for this site to print'); return; }
+  const mark = { ok: 'Matches', diff: 'Differs', todo: 'To check', missing: 'Not posted' };
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Day statement ${from}${from !== to ? ' – ' + to : ''}</title>
+    <style>body{font-family:Figtree,system-ui,sans-serif;font-size:12px;color:#1C2233;margin:24px;}h1{font-size:18px;margin:0 0 4px;}p{margin:0 0 12px;color:#5F6980;}
+    table{width:100%;border-collapse:collapse;}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid #E6E3DD;}th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#5F6980;}
+    td.n{text-align:right;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}</style></head><body>
+    <h1>Day statement</h1><p>${esc(from === to ? dsDow(from) + ' ' + dsNice(from, true) : dsNice(from, true) + ' – ' + dsNice(to, true))} · ${recs.length} records</p>
+    <table><thead><tr><th>Date</th><th>Time</th><th>Type</th><th>Ref</th><th>Customer</th><th>Details</th><th style="text-align:right">Amount</th><th>In group</th><th>Check</th></tr></thead><tbody>
+    ${recs.map(r=> `<tr><td>${esc(dsNice(r.d))}</td><td>${esc(r.t || '')}</td><td>${r.kind === 'pay' ? 'Payment' : 'Order'}</td><td>${esc(r.ref)}</td><td>${esc(r.who)}</td><td>${esc(r.what)}</td><td class="n">${dsF(r.amt)}</td><td>${r.posted ? 'Posted ' + esc(r.posted) : 'Not posted'}</td><td>${mark[dsStatusOf(r, checks)]}</td></tr>`).join('')}
+    </tbody></table></body></html>`);
+  w.document.close();
+  w.focus();
+  w.print();
+}
+
+/* The lens's count: today's records nobody has ticked yet -- the thing
+   on this lens that wants a decision. */
+function dsOpenToday(){
+  if(!data) return 0;
+  const today = todayISO();
+  const checks = dsLogR().checks;
+  return dsRecords(today, today).filter(r=> dsStateOf(r, checks) === 'open').length;
+}
+function renderDayStmtBadge(){
+  const b = document.getElementById('fc_n_today');
+  if(!b || !data) return;
+  const n = dsOpenToday();
+  b.textContent = n ? String(n) : '';
+}
+/* The Forecasts header's sub while this lens is open. */
+function dsSubHTML(){
+  const { from, to } = dsRange();
+  const span = Math.round((dsT(to) - dsT(from)) / 864e5) + 1;
+  const title = from !== to ? `${dsDow(from)} ${dsNice(from)} – ${dsDow(to)} ${dsNice(to, true)} · ${span} days`
+    : `${DS_DOW_LONG[dsDow(from)]} ${dsNice(from, true)}`;
+  return `<b>${esc(title)}</b> · every order and payment, checked against the sales group`;
+}
+
+/* ONE delegated listener, wired once: the markup is rebuilt on every
+   render and a listener bound to a button would be gone with it. */
+function wireDayStatement(root){
+  root.addEventListener('click', (e)=>{
+    const el = (sel)=> e.target.closest(sel);
+    let b;
+    if((b = el('[data-ds-check]'))){ dsSetCheck(b.dataset.dsKey, b.dataset.dsCheck); return; }
+    if((b = el('[data-ds-day]'))){ dsFrom = dsTo = b.dataset.dsDay; dsAnchor = null; dsOpenKey = null; dsMonth = dsFrom.slice(0, 7); renderDayStatement(); return; }
+    if((b = el('[data-ds-cal]'))){
+      const d = b.dataset.dsCal;
+      if(!dsAnchor){ dsFrom = dsTo = dsAnchor = d; }
+      else if(d < dsAnchor){ dsFrom = d; dsTo = dsAnchor; dsAnchor = null; }
+      else { dsFrom = dsAnchor; dsTo = d; dsAnchor = null; }
+      dsOpenKey = null; renderDayStatement(); return;
+    }
+    if((b = el('[data-ds-pre]'))){
+      const today = todayISO(), lastEnd = dsAdd(today.slice(0, 8) + '01', -1);
+      const monday = dsAdd(today, -((new Date(dsT(today)).getUTCDay() + 6) % 7));
+      const p = [[today, today], [dsAdd(today, -1), dsAdd(today, -1)], [monday, today], [dsAdd(today, -6), today],
+        [today.slice(0, 8) + '01', today], [lastEnd.slice(0, 8) + '01', lastEnd], [dsAdd(today, -29), today]][+b.dataset.dsPre];
+      dsFrom = p[0]; dsTo = p[1]; dsAnchor = null; dsOpenKey = null; dsMonth = dsTo.slice(0, 7); renderDayStatement(); return;
+    }
+    if((b = el('[data-ds-mon]'))){
+      const my = +dsMonth.slice(0, 4), mm = +dsMonth.slice(5, 7);
+      dsMonth = new Date(Date.UTC(my, mm - 1 + Number(b.dataset.dsMon), 1)).toISOString().slice(0, 7);
+      renderDayStatement(); return;
+    }
+    if((b = el('[data-ds-status]'))){ dsStatus = b.dataset.dsStatus; renderDayStatement(); return; }
+    if((b = el('[data-ds-type]'))){ dsType = b.dataset.dsType; renderDayStatement(); return; }
+    if((b = el('[data-ds-ph]'))){ dsPhShow = b.dataset.dsPh; renderDayStatement(); return; }
+    if((b = el('[data-ds-sort]'))){
+      const k = b.dataset.dsSort;
+      dsSort = dsSort.key === k ? { key: k, dir: -dsSort.dir } : { key: k, dir: k === 'amt' ? -1 : 1 };
+      renderDayStatement(); return;
+    }
+    if((b = el('[data-ds-ins]'))){
+      const a = b.dataset.dsIns;
+      if(a === 'missing') dsStatus = 'missing';
+      else if(a.startsWith('day:')){ dsFrom = dsTo = a.slice(4); dsOpenKey = null; }
+      else if(a.startsWith('open:')) dsOpenKey = a.slice(5);
+      renderDayStatement(); return;
+    }
+    if((b = el('[data-ds-open]'))){ const k = b.dataset.dsOpen; dsOpenKey = dsOpenKey === k ? null : k; renderDayStatement(); return; }
+    if((b = el('[data-ds-rcv]'))){ dsStartReceive(b.dataset.dsRcv, b.dataset.dsRcvq); return; }
+    if((b = el('[data-ds-edit]'))){
+      const k = b.dataset.dsEdit;
+      if(k.startsWith('q:')){
+        const q = (data.savedQuotes || []).find(x=> String(x.id) === k.slice(2));
+        if(!q){ toast('That order is no longer on file'); return; }
+        if(q.invoiced) revealInvoice(q.id);
+        else { goToTab('quote-saved'); otOpenRow(q.id); }
+      } else goToTab('cashbook');
+      return;
+    }
+    if((b = el('[data-ds-post]'))){
+      const k = b.dataset.dsPost;
+      const { from, to } = dsRange();
+      const r = dsRecords(from, to).find(x=> x.key === k);
+      if(!r) return;
+      if(r.kind === 'order') announceOrderToGroup(r.q.id, null);
+      else dsPostPayment(r);
+      renderDayStatement(); return;
+    }
+    if((b = el('[data-ds-tick]'))){
+      const id = Number(b.dataset.dsTick);
+      const i = dsRv.sel.indexOf(id);
+      if(i >= 0) dsRv.sel.splice(i, 1); else dsRv.sel.push(id);
+      renderDayStatement(); return;
+    }
+    if((b = el('[data-ds-quick]'))){
+      const { invs, sel } = dsReceivePlan();
+      if(b.dataset.dsQuick === 'all'){ dsRv.sel = invs.map(q=> q.id); dsRv.amt = Math.round(invs.reduce((s, q)=> s + invoiceBalanceDue(q), 0)); }
+      else dsRv.amt = Math.round(sel.reduce((s, id)=> s + invoiceBalanceDue(invs.find(q=> q.id === id)), 0));
+      renderDayStatement(); return;
+    }
+    if((b = el('[data-ds-method]'))){ dsRv.account = b.dataset.dsMethod; renderDayStatement(); return; }
+    if((b = el('[data-ds-act]'))){
+      const a = b.dataset.dsAct;
+      if(a === 'picker'){ dsPicker = !dsPicker; dsAnchor = null; if(dsPicker) dsMonth = (dsTo || todayISO()).slice(0, 7); }
+      else if(a === 'clear'){ dsStatus = 'all'; dsType = 'all'; dsQ = ''; }
+      else if(a === 'today'){ dsFrom = dsTo = todayISO(); dsOpenKey = null; }
+      else if(a === 'print'){ dsPrint(); return; }
+      else if(a === 'close'){ dsCloseDay(); return; }
+      else if(a === 'receive'){ dsStartReceive(null, null); return; }
+      else if(a === 'rv-close') dsRv = null;
+      else if(a === 'rv-all'){ const { invs } = dsReceivePlan(); dsRv.sel = invs.map(q=> q.id); }
+      else if(a === 'rv-post') dsRv.post = !dsRv.post;
+      else if(a === 'rv-save'){ dsSaveReceive(); return; }
+      renderDayStatement(); return;
+    }
+  });
+  /* Typing re-renders, so focus and caret are put back on the same box. */
+  const keep = (id, fn)=> (e)=>{
+    if(e.target.id !== id) return;
+    const at = e.target.selectionStart;
+    fn(e.target.value);
+    renderDayStatement();
+    const again = document.getElementById(id);
+    if(again){ again.focus(); try{ const p = Math.min(at, again.value.length); again.setSelectionRange(p, p); }catch(_){} }
+  };
+  root.addEventListener('input', (e)=>{
+    if(e.target.id === 'ds_search') return keep('ds_search', (v)=>{ dsQ = v; })(e);
+    if(e.target.id === 'ds_rv_ref'){ dsRv.ref = e.target.value; return; }
+    if(e.target.id === 'ds_rv_amt'){
+      const before = e.target.value.length, at = e.target.selectionStart;
+      dsRv.amt = Number(String(e.target.value).replace(/[^0-9]/g, '')) || 0;
+      renderDayStatement();
+      const again = document.getElementById('ds_rv_amt');
+      if(again){ again.focus(); const p = Math.max(0, Math.min(again.value.length, at + (again.value.length - before))); try{ again.setSelectionRange(p, p); }catch(_){} }
+    }
+  });
+  root.addEventListener('change', (e)=>{
+    if(e.target.id === 'ds_rv_who'){
+      const c = (data.customers || []).find(x=> String(x.id) === e.target.value);
+      const invs = c ? customerOutstandingInvoices(c.id) : [];
+      dsRv.cid = c ? c.id : null;
+      dsRv.sel = invs[0] ? [invs[0].id] : [];
+      dsRv.amt = invs[0] ? Math.round(invoiceBalanceDue(invs[0])) : 0;
+      renderDayStatement();
+    }
+  });
+}
+
 function refreshNavBadges(){
   updateOrderStatusBar();
   syncTodayDot();
@@ -130714,6 +131943,7 @@ function refreshNavBadges(){
   renderConsignBadge();
   renderPricingBadge();
   renderFollowUpBadge();
+  renderDayStmtBadge();
 }
 function renderAll(){
   renderPresets();
