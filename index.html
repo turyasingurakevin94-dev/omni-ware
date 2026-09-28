@@ -19347,6 +19347,13 @@
   .of-root .of-drawer{position:fixed !important;inset:52px 8px 68px 8px !important;width:auto !important;z-index:800 !important}
 }
 /* ORDER-FLOW-CSS:END */
+/* RECEIVE-PAY-CSS:BEGIN */
+/* RECEIVE PAYMENT -- everything is styled on the element, as designed; the
+   overlay centres it on a desk and sits it on the bottom edge on a phone. */
+#rpModal.show{display:flex;align-items:center;justify-content:center}
+#rpModal .rp-scroll > *{flex-shrink:0}
+@media (max-width:820px){ #rpModal.show{align-items:flex-end;padding:0} }
+/* RECEIVE-PAY-CSS:END */
   /* ---- DAY STATEMENT ----------------------------------------------------
      Every order and every payment of a day, one row each, checked by the
      owner against the sales group. Drawn from the Day Statement canvas.
@@ -30981,6 +30988,9 @@
      carry text, so the message is written here, copied, and the group
      opened inside the tap; the owner pastes and sends. Nothing posts
      itself, and "Not now" costs nothing: the payment is already saved. -->
+<!-- RECEIVE-PAY:BEGIN -->
+<div class="modal-overlay" id="rpModal"><div id="rpRoot"></div></div>
+<!-- RECEIVE-PAY:END -->
 <div class="modal-overlay" id="payPostModal">
   <div class="modal pp-modal" role="dialog" aria-labelledby="ppTitle">
     <div class="modal-head">
@@ -59103,6 +59113,7 @@ function invPaymentSummaryHTML(q){
 }
 let invPaymentId = null;
 function openInvoicePaymentModal(id){
+  if(typeof openReceivePayment === 'function' && openReceivePayment({ quoteId: id })) return;
   const q = data.savedQuotes.find(x=>x.id===id);
   if(!q) return;
   invPaymentId = id;
@@ -79671,6 +79682,7 @@ function updateCdPickerSummary(){
 }
 document.getElementById('cd_amount').addEventListener('input', updateCdPickerSummary);
 function openCustomerDebtModal(id, type){
+  if(type === 'payment' && typeof openReceivePayment === 'function' && openReceivePayment({ customerId: id })) return;
   const c = data.customers.find(x=>x.id===id); if(!c) return;
   editingCustomerDebtId = id;
   editingCustomerDebtType = type;
@@ -136125,6 +136137,296 @@ document.addEventListener('visibilitychange', ()=>{
 });
 
 boot();
+/* RECEIVE-PAY-JS:BEGIN */
+/* ==== RECEIVE PAYMENT: one popup for every payment against invoices ======
+   Designed on the "Receive Payment Redesign" canvas and ported as drawn:
+   the date first, the customer's debt before and after, the invoices as a
+   table the payment is spread over (oldest first, only the ticked ones),
+   the account as three tiles, and telling the sales group in the same tap.
+   openInvoicePaymentModal (one invoice) and openCustomerDebtModal(...,
+   'payment') (a customer) both open it; the older popups stay for what this
+   one does not do (a charge on a customer). Drawn by the order board's
+   template engine (ofMount/OfLogic). */
+const RP_TEMPLATE = "<div style=\"{{v.root}}\">\n  <sc-if value=\"{{v.entering}}\" hint-placeholder-val=\"{{true}}\">\n    <div style=\"display: flex; align-items: flex-start; gap: 12px; padding: 18px 20px 14px\">\n      <div style=\"display: flex; flex-direction: column; gap: 6px; min-width: 0; flex-grow: 1\">\n        <div style=\"display: flex; align-items: center; gap: 6px; flex-wrap: wrap\">\n          <span style=\"font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #5F6980\">Receive payment</span>\n          <span style=\"{{v.docChip}}\">{{v.docLabel}}</span>\n          <span style=\"{{v.termsChip}}\">{{v.termsText}}</span>\n        </div>\n        <span style=\"font-size: 22px; font-weight: 700; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis\">{{v.who}}</span>\n        <div title=\"{{v.debtTip}}\" style=\"display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 8px 10px; border-radius: 10px; background: #FBF7F2; border: 1px solid #F1DFC9; min-width: 0\">\n          <span style=\"font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: #7A4A02; white-space: nowrap\">Debt balance</span>\n          <span style=\"font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600; color: #1C2233; white-space: nowrap\">{{v.debtBefore}}</span>\n          <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#767F91\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"flex-shrink: 0\" aria-label=\"after this payment\"><path d=\"M5 12h14M13 6l6 6-6 6\"></path></svg>\n          <span style=\"{{v.debtAfterStyle}}\">{{v.debtAfter}}</span>\n          <span style=\"flex-grow: 1\"></span>\n          <span style=\"font-size: 11px; color: #7A4A02; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0\">{{v.debtMeta}}</span>\n        </div>\n      </div>\n      <button type=\"button\" aria-label=\"Close\" onClick=\"{{v.close}}\" style=\"width: 40px; height: 40px; flex-shrink: 0; border-radius: 9px; border: 1px solid #E6E3DD; background: #FFFFFF; color: #5F6980; display: flex; align-items: center; justify-content: center; cursor: pointer\">\n        <svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M6 6l12 12M18 6 6 18\"></path></svg>\n      </button>\n    </div>\n    <div class=\"rp-scroll\" style=\"display: flex; flex-direction: column; gap: 14px; padding: 0 20px 16px; flex-grow: 1; min-height: 0; overflow-y: auto\">\n      <div style=\"{{v.dateBox}}\">\n        <div style=\"display: flex; align-items: center; gap: 10px; min-width: 0\">\n          <svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#16203C\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"flex-shrink: 0\"><rect x=\"3.5\" y=\"5\" width=\"17\" height=\"15\" rx=\"2\"></rect><path d=\"M3.5 10h17M8 3v4M16 3v4\"></path></svg>\n          <div style=\"display: flex; flex-direction: column; gap: 1px; min-width: 0\">\n            <label for=\"paydate\" style=\"font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: #5F6980\">Payment date</label>\n            <span style=\"font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis\">{{v.dateLong}}</span>\n          </div>\n        </div>\n        <div style=\"display: flex; align-items: center; gap: 6px; padding-left: 30px\">\n          <sc-for list=\"{{v.days}}\" as=\"d\" hint-placeholder-count=\"2\">\n            <button type=\"button\" onClick=\"{{d.pick}}\" aria-pressed=\"{{d.pressed}}\" style=\"{{d.style}}\">{{d.label}}</button>\n          </sc-for>\n          <input id=\"paydate\" type=\"date\" value=\"{{v.dateISO}}\" max=\"{{v.todayISO}}\" onInput=\"{{v.onDate}}\" aria-label=\"Pick the payment date\" style=\"height: 34px; min-width: 0; flex: 1 1 auto; max-width: 170px; padding: 0 8px; border-radius: 9px; border: 1px solid #E6E3DD; background: #FFFFFF; font: inherit; font-size: 13px; color: #1C2233; box-sizing: border-box\">\n        </div>\n      </div>\n      <div style=\"display: flex; flex-direction: column; border: 1px solid #E6E3DD; border-radius: 12px; overflow: hidden\">\n        <div style=\"{{v.headRow}}\">\n          <sc-if value=\"{{v.pickable}}\" hint-placeholder-val=\"{{true}}\">\n            <input type=\"checkbox\" aria-label=\"Pick every invoice\" checked=\"{{v.allOn}}\" onClick=\"{{v.toggleAll}}\" style=\"width: 18px; height: 18px; margin: 0; accent-color: #16203C; cursor: pointer\">\n          </sc-if>\n          <span>Invoice</span><span style=\"text-align: right\">Balance</span><span style=\"text-align: right\">Paying</span><span style=\"text-align: right\">After</span>\n        </div>\n        <sc-for list=\"{{v.rows}}\" as=\"r\" hint-placeholder-count=\"3\">\n          <label style=\"{{r.rowStyle}}\">\n            <sc-if value=\"{{v.pickable}}\" hint-placeholder-val=\"{{true}}\">\n              <input type=\"checkbox\" checked=\"{{r.on}}\" onClick=\"{{r.toggle}}\" aria-label=\"Pay {{r.label}}\" style=\"width: 18px; height: 18px; margin: 0; accent-color: #16203C; cursor: pointer\">\n            </sc-if>\n            <span style=\"display: flex; flex-direction: column; min-width: 0\">\n              <span style=\"font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; white-space: nowrap\">{{r.label}}</span>\n              <span style=\"{{r.ageStyle}}\">{{r.age}}</span>\n            </span>\n            <span style=\"font-family: 'IBM Plex Mono', monospace; font-size: 13px; text-align: right; white-space: nowrap\">{{r.balance}}</span>\n            <span style=\"display: flex; flex-direction: column; align-items: flex-end; gap: 1px\">\n              <span style=\"{{r.payStyle}}\">{{r.pay}}</span>\n              <sc-if value=\"{{r.dated}}\" hint-placeholder-val=\"{{true}}\"><span style=\"font-size: 10px; font-weight: 600; color: #0F6B43; white-space: nowrap\">{{v.dateShort}}</span></sc-if>\n            </span>\n            <span style=\"{{r.afterStyle}}\">{{r.after}}</span>\n          </label>\n        </sc-for>\n        <div style=\"{{v.footRow}}\">\n          <sc-if value=\"{{v.pickable}}\" hint-placeholder-val=\"{{true}}\"><span></span></sc-if>\n          <span style=\"font-weight: 700\">{{v.pickedText}}</span>\n          <span style=\"font-family: 'IBM Plex Mono', monospace; font-weight: 600; text-align: right; white-space: nowrap\">{{v.balanceSum}}</span>\n          <span style=\"font-family: 'IBM Plex Mono', monospace; font-weight: 700; text-align: right; white-space: nowrap; color: #0F6B43\">{{v.paySum}}</span>\n          <span style=\"{{v.afterSumStyle}}\">{{v.afterSum}}</span>\n        </div>\n        <sc-if value=\"{{v.paged}}\" hint-placeholder-val=\"{{false}}\">\n          <div style=\"display: flex; align-items: center; gap: 6px; padding: 6px 8px 6px 12px; border-top: 1px solid #EFECE6; background: #FFFFFF\">\n            <span style=\"font-size: 12px; color: #5F6980; flex-grow: 1; white-space: nowrap\">{{v.pageText}}</span>\n            <sc-for list=\"{{v.dots}}\" as=\"dt\" hint-placeholder-count=\"2\">\n              <button type=\"button\" onClick=\"{{dt.go}}\" aria-label=\"{{dt.aria}}\" aria-current=\"{{dt.current}}\" style=\"{{dt.style}}\"></button>\n            </sc-for>\n            <button type=\"button\" onClick=\"{{v.prev}}\" disabled=\"{{v.atStart}}\" aria-label=\"Previous invoices\" style=\"{{v.prevStyle}}\">\n              <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 18l-6-6 6-6\"></path></svg>\n            </button>\n            <button type=\"button\" onClick=\"{{v.next}}\" disabled=\"{{v.atEnd}}\" aria-label=\"Next invoices\" style=\"{{v.nextStyle}}\">\n              <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 18l6-6-6-6\"></path></svg>\n            </button>\n          </div>\n        </sc-if>\n        <sc-if value=\"{{v.hasOnAccount}}\" hint-placeholder-val=\"{{false}}\">\n          <div style=\"display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-top: 1px dashed #CFC8BB; font-size: 12px; background: #F4F8FC\">\n            <svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#1A5A8A\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 5v14M5 12h14\"></path></svg>\n            <span style=\"color: #1A5A8A; font-weight: 600; flex-grow: 1\">More than the picked invoices owe — the rest goes on account</span>\n            <span style=\"font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: #1A5A8A\">{{v.onAccount}}</span>\n          </div>\n        </sc-if>\n      </div>\n      <div style=\"display: flex; flex-direction: column; gap: 8px\">\n        <label for=\"amt\" style=\"font-size: 12px; font-weight: 600; color: #5F6980\">Amount received</label>\n        <div style=\"{{v.amountBox}}\">\n          <span style=\"font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 500; color: #767F91\">UGX</span>\n          <input id=\"amt\" inputmode=\"numeric\" value=\"{{v.amountText}}\" onInput=\"{{v.onAmount}}\" style=\"border: 0; outline: 0; background: transparent; min-width: 0; flex-grow: 1; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-size: 28px; font-weight: 600; letter-spacing: -.02em; color: #1C2233\">\n        </div>\n      </div>\n      <div style=\"display: flex; flex-direction: column; gap: 8px\">\n        <span style=\"font-size: 12px; font-weight: 600; color: #5F6980\">Received into</span>\n        <div style=\"display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px\">\n          <sc-for list=\"{{v.accounts}}\" as=\"a\" hint-placeholder-count=\"3\">\n            <button type=\"button\" onClick=\"{{a.pick}}\" aria-pressed=\"{{a.pressed}}\" style=\"{{a.style}}\">\n              <svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"{{a.icon}}\"></path></svg>\n              <span style=\"font-size: 13px; font-weight: 600\">{{a.name}}</span>\n            </button>\n          </sc-for>\n        </div>\n      </div>\n      <div style=\"display: flex; align-items: center; gap: 6px\">\n        <span style=\"flex-grow: 1\"></span>\n        <sc-if value=\"{{v.noNote}}\" hint-placeholder-val=\"{{true}}\">\n          <button type=\"button\" onClick=\"{{v.openNote}}\" style=\"height: 34px; padding: 0 10px; border-radius: 9px; border: 0; background: transparent; color: #1A5A8A; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px\">\n            <svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 5v14M5 12h14\"></path></svg>Note\n          </button>\n        </sc-if>\n      </div>\n      <sc-if value=\"{{v.noteOpen}}\" hint-placeholder-val=\"{{false}}\">\n        <label style=\"display: flex; flex-direction: column; gap: 6px\">\n          <span style=\"font-size: 12px; font-weight: 600; color: #5F6980\">Note</span>\n          <input value=\"{{v.noteText}}\" onInput=\"{{v.onNote}}\" placeholder=\"Reference, who brought it…\" style=\"height: 42px; padding: 0 12px; border-radius: 9px; border: 1px solid #E6E3DD; font: inherit; font-size: 14px; color: #1C2233; box-sizing: border-box\">\n        </label>\n      </sc-if>\n      <div style=\"{{v.postBox}}\">\n        <div style=\"display: flex; align-items: center; gap: 10px\">\n          <span style=\"width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #DDF1F0; color: #0E6A6A\">\n            <svg width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 20l1.3-3.9A8 8 0 1 1 8 19.2L4 20Z\"></path><path d=\"M9.5 9.5c.3 1.8 2.2 3.8 4 4.1l1.1-1.1 1.6.8c-.3 1.2-1.3 1.7-2.4 1.5-2.8-.5-5-2.7-5.6-5.6-.2-1.1.3-2.1 1.5-2.4l.8 1.6-1 1.1Z\"></path></svg>\n          </span>\n          <div style=\"display: flex; flex-direction: column; gap: 1px; min-width: 0; flex-grow: 1\">\n            <span style=\"font-size: 14px; font-weight: 600\">Tell the sales group</span>\n            <span style=\"{{v.postPreviewStyle}}\">{{v.postPreview}}</span>\n          </div>\n          <sc-if value=\"{{v.post}}\" hint-placeholder-val=\"{{true}}\">\n            <button type=\"button\" onClick=\"{{v.toggleEdit}}\" style=\"height: 32px; padding: 0 10px; border-radius: 8px; border: 0; background: transparent; color: #0E6A6A; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer\">{{v.editLabel}}</button>\n          </sc-if>\n          <button type=\"button\" role=\"switch\" aria-checked=\"{{v.postStr}}\" aria-label=\"Tell the sales group\" onClick=\"{{v.togglePost}}\" style=\"{{v.switchTrack}}\"><span style=\"{{v.switchKnob}}\"></span></button>\n        </div>\n        <sc-if value=\"{{v.editing}}\" hint-placeholder-val=\"{{false}}\">\n          <textarea value=\"{{v.msg}}\" onInput=\"{{v.onMsg}}\" rows=\"5\" aria-label=\"Message to the sales group\" style=\"width: 100%; box-sizing: border-box; resize: none; border: 1px solid #B9DCD8; border-radius: 9px; padding: 10px 12px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; line-height: 1.5; color: #1C2233; background: #FFFFFF\"></textarea>\n        </sc-if>\n      </div>\n    </div>\n    <div style=\"display: flex; gap: 8px; padding: 14px 20px; border-top: 1px solid #EFECE6; background: #FCFBF9\">\n      <button type=\"button\" onClick=\"{{v.close}}\" style=\"height: 48px; padding: 0 18px; border-radius: 10px; border: 1px solid #E6E3DD; background: #FFFFFF; color: #1C2233; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer\">Cancel</button>\n      <button type=\"button\" onClick=\"{{v.record}}\" style=\"{{v.recordStyle}}\">\n        <svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m5 12 5 5L20 7\"></path></svg>\n        <span>{{v.recordLabel}}</span>\n      </button>\n    </div>\n  </sc-if>\n  <sc-if value=\"{{v.done}}\" hint-placeholder-val=\"{{false}}\">\n    <div style=\"display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 24px 20px 16px; text-align: center\">\n      <span style=\"width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #E4F4EA; color: #0F6B43\">\n        <svg width=\"32\" height=\"32\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m5 12 5 5L20 7\"></path></svg>\n      </span>\n      <div style=\"display: flex; flex-direction: column; gap: 4px\">\n        <span style=\"font-family: 'IBM Plex Mono', monospace; font-size: 30px; font-weight: 600; letter-spacing: -.02em; color: #0F6B43\">{{v.doneAmount}}</span>\n        <span style=\"font-size: 14px; color: #5F6980\">from {{v.who}} · {{v.doneHow}}</span>\n        <span style=\"font-size: 13px; font-weight: 600; color: #1C2233\">Dated {{v.dateLong}} on {{v.datedOn}}</span>\n      </div>\n      <div style=\"width: 100%; text-align: left\">\n      <div style=\"display: flex; flex-direction: column; border: 1px solid #E6E3DD; border-radius: 12px; overflow: hidden\">\n        <div style=\"{{v.headRow}}\">\n          <sc-if value=\"{{v.pickable}}\" hint-placeholder-val=\"{{true}}\">\n            <input type=\"checkbox\" aria-label=\"Pick every invoice\" checked=\"{{v.allOn}}\" onClick=\"{{v.toggleAll}}\" style=\"width: 18px; height: 18px; margin: 0; accent-color: #16203C; cursor: pointer\">\n          </sc-if>\n          <span>Invoice</span><span style=\"text-align: right\">Balance</span><span style=\"text-align: right\">Paying</span><span style=\"text-align: right\">After</span>\n        </div>\n        <sc-for list=\"{{v.rows}}\" as=\"r\" hint-placeholder-count=\"3\">\n          <label style=\"{{r.rowStyle}}\">\n            <sc-if value=\"{{v.pickable}}\" hint-placeholder-val=\"{{true}}\">\n              <input type=\"checkbox\" checked=\"{{r.on}}\" onClick=\"{{r.toggle}}\" aria-label=\"Pay {{r.label}}\" style=\"width: 18px; height: 18px; margin: 0; accent-color: #16203C; cursor: pointer\">\n            </sc-if>\n            <span style=\"display: flex; flex-direction: column; min-width: 0\">\n              <span style=\"font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; white-space: nowrap\">{{r.label}}</span>\n              <span style=\"{{r.ageStyle}}\">{{r.age}}</span>\n            </span>\n            <span style=\"font-family: 'IBM Plex Mono', monospace; font-size: 13px; text-align: right; white-space: nowrap\">{{r.balance}}</span>\n            <span style=\"display: flex; flex-direction: column; align-items: flex-end; gap: 1px\">\n              <span style=\"{{r.payStyle}}\">{{r.pay}}</span>\n              <sc-if value=\"{{r.dated}}\" hint-placeholder-val=\"{{true}}\"><span style=\"font-size: 10px; font-weight: 600; color: #0F6B43; white-space: nowrap\">{{v.dateShort}}</span></sc-if>\n            </span>\n            <span style=\"{{r.afterStyle}}\">{{r.after}}</span>\n          </label>\n        </sc-for>\n        <div style=\"{{v.footRow}}\">\n          <sc-if value=\"{{v.pickable}}\" hint-placeholder-val=\"{{true}}\"><span></span></sc-if>\n          <span style=\"font-weight: 700\">{{v.pickedText}}</span>\n          <span style=\"font-family: 'IBM Plex Mono', monospace; font-weight: 600; text-align: right; white-space: nowrap\">{{v.balanceSum}}</span>\n          <span style=\"font-family: 'IBM Plex Mono', monospace; font-weight: 700; text-align: right; white-space: nowrap; color: #0F6B43\">{{v.paySum}}</span>\n          <span style=\"{{v.afterSumStyle}}\">{{v.afterSum}}</span>\n        </div>\n        <sc-if value=\"{{v.paged}}\" hint-placeholder-val=\"{{false}}\">\n          <div style=\"display: flex; align-items: center; gap: 6px; padding: 6px 8px 6px 12px; border-top: 1px solid #EFECE6; background: #FFFFFF\">\n            <span style=\"font-size: 12px; color: #5F6980; flex-grow: 1; white-space: nowrap\">{{v.pageText}}</span>\n            <sc-for list=\"{{v.dots}}\" as=\"dt\" hint-placeholder-count=\"2\">\n              <button type=\"button\" onClick=\"{{dt.go}}\" aria-label=\"{{dt.aria}}\" aria-current=\"{{dt.current}}\" style=\"{{dt.style}}\"></button>\n            </sc-for>\n            <button type=\"button\" onClick=\"{{v.prev}}\" disabled=\"{{v.atStart}}\" aria-label=\"Previous invoices\" style=\"{{v.prevStyle}}\">\n              <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 18l-6-6 6-6\"></path></svg>\n            </button>\n            <button type=\"button\" onClick=\"{{v.next}}\" disabled=\"{{v.atEnd}}\" aria-label=\"Next invoices\" style=\"{{v.nextStyle}}\">\n              <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 18l6-6-6-6\"></path></svg>\n            </button>\n          </div>\n        </sc-if>\n        <sc-if value=\"{{v.hasOnAccount}}\" hint-placeholder-val=\"{{false}}\">\n          <div style=\"display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-top: 1px dashed #CFC8BB; font-size: 12px; background: #F4F8FC\">\n            <svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#1A5A8A\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 5v14M5 12h14\"></path></svg>\n            <span style=\"color: #1A5A8A; font-weight: 600; flex-grow: 1\">More than the picked invoices owe — the rest goes on account</span>\n            <span style=\"font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: #1A5A8A\">{{v.onAccount}}</span>\n          </div>\n        </sc-if>\n      </div>\n      </div>\n      <sc-if value=\"{{v.post}}\" hint-placeholder-val=\"{{true}}\">\n        <div style=\"display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 12px; box-sizing: border-box; border-radius: 10px; background: #DDF1F0; color: #0E6A6A; font-size: 13px; font-weight: 600; text-align: left\">\n          <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 20l1.3-3.9A8 8 0 1 1 8 19.2L4 20Z\"></path></svg>\n          <span style=\"flex-grow: 1\">{{v.postedText}}</span>\n        </div>\n      </sc-if>\n    </div>\n    <div style=\"display: flex; gap: 8px; padding: 14px 20px; border-top: 1px solid #EFECE6; background: #FCFBF9\">\n      <button type=\"button\" onClick=\"{{v.print}}\" style=\"height: 48px; padding: 0 16px; border-radius: 10px; border: 1px solid #E6E3DD; background: #FFFFFF; color: #1C2233; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px\">\n        <svg width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M6 9V4h12v5\"></path><rect x=\"4\" y=\"9\" width=\"16\" height=\"7\" rx=\"1.5\"></rect><path d=\"M8 13h8v7H8z\"></path></svg>Print receipt\n      </button>\n      <button type=\"button\" onClick=\"{{v.close}}\" style=\"flex-grow: 1; height: 48px; border-radius: 10px; border: 0; background: #16203C; color: #FFFFFF; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer\">Done</button>\n    </div>\n  </sc-if>\n</div>";
+(function(){
+
+var ACCOUNTS = [
+  { key: 'cash', name: 'Cash', icon: 'M3 7h18v10H3zM12 12m-2.2 0a2.2 2.2 0 1 0 4.4 0a2.2 2.2 0 1 0-4.4 0M6 7v10M18 7v10' },
+  { key: 'momo', name: 'Mobile money', icon: 'M8 3h8a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM11 18h2' },
+  { key: 'bank', name: 'Bank', icon: 'M3 10 12 4l9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18' }
+];
+function n(v) { return Math.round(v).toLocaleString('en-US'); }
+function mm(v) { return v >= 1e6 ? (v / 1e6).toFixed(2) + 'M' : Math.round(v / 1000) + 'k'; }
+class RpSheet extends OfLogic {
+  open(set) {
+    this.set = set;
+    var t0 = new Date();
+    this.state = { date: t0.getFullYear() + '-' + String(t0.getMonth() + 1).padStart(2, '0') + '-' + String(t0.getDate()).padStart(2, '0'),
+      amount: String(Math.round(set.start || 0)), sel: set.invoices.map(function (i) { return i.label; }), account: 'cash',
+      note: false, noteText: '', post: lsGet('owPayPostAsk') !== '0', editing: false, msg: null, done: false, page: 0, made: [], postedText: '' };
+    if (this._ofSchedule) this._ofSchedule();
+  }
+  renderVals() {
+    var self = this, s = this.state, set = this.set, phone = window.innerWidth <= 820;
+    if (!set) return { v: { entering: false, done: false } };
+    var amount = Math.max(0, Number(String(s.amount).replace(/[^0-9]/g, '')) || 0);
+    var sel = s.sel || [], isOn = function (inv) { return sel.indexOf(inv.label) >= 0; };
+    var owedAll = set.invoices.reduce(function (t, i) { return t + i.total - i.paid; }, 0);
+    // Only the PICKED invoices take money, oldest first, until it runs out.
+    var due = set.invoices.filter(isOn).reduce(function (t, i) { return t + i.total - i.paid; }, 0);
+    var left = amount, lines = set.invoices.map(function (inv) {
+      var owed = inv.total - inv.paid, take = isOn(inv) ? Math.min(owed, left) : 0; left -= take;
+      return { inv: inv, owed: owed, on: isOn(inv), take: take, after: owed - take };
+    });
+    var onAccount = left;
+    var acc = ACCOUNTS.find(function (a) { return a.key === s.account; });
+    // ONE date, the one the owner set: it is what every payment line on every
+    // picked invoice is written with, and what the group is told.
+    var iso = function (d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+    var today = iso(new Date()), yest = iso(new Date(Date.now() - 864e5));
+    var dt = new Date(s.date + 'T12:00:00');
+    var WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], MO = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    var dateShort = dt.getDate() + ' ' + MO[dt.getMonth()] + ' ' + dt.getFullYear();
+    var dateLong = WD[dt.getDay()] + ' ' + dateShort + (s.date === today ? ' · today' : s.date === yest ? ' · yesterday' : '');
+    var dayLabel = s.date === today ? 'today' : s.date === yest ? 'yesterday' : WD[dt.getDay()] + ' ' + dt.getDate() + ' ' + MO[dt.getMonth()];
+    // The customer's whole debt: every open invoice, not only the ones in view.
+    var other = set.other || { owed: 0, count: 0 };
+    var debtNow = owedAll + other.owed, openCount = set.invoices.length + other.count;
+    var tableAfter = owedAll - (amount - onAccount);
+    var owesAfter = Math.max(0, debtNow - amount), credit = Math.max(0, amount - debtNow);
+    var oldest = set.invoices.map(function (i) { return parseInt(i.age, 10); }).concat(other.oldest ? [parseInt(other.oldest, 10)] : []).reduce(function (a, b) { return Math.max(a, b); }, 0);
+    var auto = ['*Payment in · UGX ' + n(amount) + '*', set.who + ' · ' + acc.name + ' · ' + dayLabel]
+      .concat(lines.filter(function (l) { return l.take > 0; }).map(function (l) { return '• ' + l.inv.label + ' — ' + n(l.take) + ' · ' + (l.after > 0 ? n(l.after) + ' left' : 'paid in full'); }))
+      .concat(onAccount > 0 ? ['• On account — ' + n(onAccount)] : [])
+      .concat([owesAfter > 0 ? 'Still owes UGX ' + n(owesAfter) : 'All settled']).join('\n');
+    var msg = s.msg == null ? auto : s.msg;
+    var pick = set.invoices.length > 1, fw = phone ? '76px' : '92px', cols = (pick ? '18px ' : '') + 'minmax(0, 1fr) ' + fw + ' ' + fw + ' ' + fw;
+    var PAGE = 3, pages = Math.max(1, Math.ceil(set.invoices.length / PAGE)), pg = Math.min(s.page || 0, pages - 1);
+    var pagerBtn = function (off) { return 'width: 32px; height: 32px; border-radius: 8px; border: 1px solid #E6E3DD; background: #FFFFFF; display: flex; align-items: center; justify-content: center; padding: 0; color: ' + (off ? '#CFC8BB' : '#1C2233') + '; cursor: ' + (off ? 'default' : 'pointer') + ';'; };
+    var chipBase = 'height: 34px; padding: 0 12px; border-radius: 999px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; ';
+    var on = function (x) { return x ? 'border: 1.5px solid #16203C; background: #16203C; color: #FFFFFF;' : 'border: 1px solid #E6E3DD; background: #FFFFFF; color: #1C2233;'; };
+    var quick = (this.props.mode === 'customer'
+      ? [['All picked', due], ['All they owe', owedAll]]
+      : [['Full', due], ['Half', Math.round(due / 2 / 1000) * 1000]]).map(function (q) {
+      var sel = amount === q[1];
+      return { label: q[0], value: mm(q[1]), pressed: sel ? 'true' : 'false', style: chipBase + on(sel), pick: function () { self.setState({ amount: String(q[1]), msg: null }); } };
+    });
+    return {
+      v: {
+        root: 'width: ' + (phone ? '100vw' : '520px') + '; max-height: ' + (phone ? '92vh' : 'min(820px, 92vh)') + '; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; font-family: Figtree, system-ui, sans-serif; color: #1C2233; background: #FFFFFF; border-radius: ' + (phone ? '16px 16px 0 0' : '14px') + ';',
+        entering: !s.done, done: s.done,
+        who: set.who, docLabel: set.doc, termsText: set.terms,
+        docChip: 'font-family: IBM Plex Mono, monospace; font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: #EFECE6; color: #1C2233;',
+        termsChip: 'font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; ' + (set.termsBad ? 'background: #FBE5E2; color: #8E2A22;' : 'background: #E4F4EA; color: #0F6B43;'),
+        debtBefore: n(debtNow),
+        debtAfter: credit > 0 ? 'Settled + ' + mm(credit) + ' credit' : owesAfter > 0 ? n(owesAfter) : 'Settled',
+        debtAfterStyle: "font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 700; white-space: nowrap; color: " + (owesAfter > 0 ? '#95530C' : '#0F6B43') + ';',
+        debtMeta: openCount + ' open invoice' + (openCount === 1 ? '' : 's') + ' · oldest ' + oldest + 'd',
+        debtTip: 'Everything ' + set.who + ' owes, on every open invoice: ' + n(debtNow) + ' now, ' + n(owesAfter) + ' after this payment',
+        pickable: pick,
+        paged: pages > 1,
+        pageText: (pg * PAGE + 1) + '–' + Math.min(lines.length, pg * PAGE + PAGE) + ' of ' + lines.length + ' · oldest first',
+        atStart: pg === 0, atEnd: pg >= pages - 1,
+        prev: function () { if (pg > 0) self.setState({ page: pg - 1 }); },
+        next: function () { if (pg < pages - 1) self.setState({ page: pg + 1 }); },
+        prevStyle: pagerBtn(pg === 0), nextStyle: pagerBtn(pg >= pages - 1),
+        dots: Array.apply(null, Array(pages)).map(function (x, k) {
+          var cur = k === pg, paying = lines.slice(k * PAGE, k * PAGE + PAGE).some(function (l) { return l.take > 0; });
+          return { go: function () { self.setState({ page: k }); }, aria: 'Page ' + (k + 1) + (paying ? ', money going in' : ''), current: cur ? 'page' : 'false',
+            style: 'width: ' + (cur ? 18 : 8) + 'px; height: 8px; padding: 0; border: 0; border-radius: 999px; cursor: pointer; transition: width .15s; background: ' + (cur ? '#16203C' : paying ? '#0F6B43' : '#D6D1C7') + ';' };
+        }),
+        headRow: 'display: grid; grid-template-columns: ' + cols + '; column-gap: 10px; align-items: center; padding: 8px 12px; background: #F7F5F2; border-bottom: 1px solid #E6E3DD; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: #5F6980;',
+        footRow: 'display: grid; grid-template-columns: ' + cols + '; column-gap: 10px; align-items: center; padding: 10px 12px; background: #FCFBF9; border-top: 1px solid #E6E3DD; font-size: 13px;',
+        allOn: sel.length === set.invoices.length,
+        toggleAll: function () { self.setState({ sel: sel.length === set.invoices.length ? [] : set.invoices.map(function (i) { return i.label; }), msg: null }); },
+        rows: lines.slice(pg * PAGE, pg * PAGE + PAGE).map(function (l) {
+          return {
+            label: l.inv.label, age: l.inv.age + ' old', on: l.on, dated: l.take > 0,
+            toggle: function () { var nx = l.on ? sel.filter(function (x) { return x !== l.inv.label; }) : sel.concat([l.inv.label]); self.setState({ sel: set.invoices.map(function (i) { return i.label; }).filter(function (x) { return nx.indexOf(x) >= 0; }), msg: null }); },
+            rowStyle: 'display: grid; grid-template-columns: ' + cols + '; column-gap: 10px; align-items: center; padding: 10px 12px; border-bottom: 1px solid #EFECE6; cursor: ' + (pick ? 'pointer' : 'default') + '; background: ' + (l.on ? '#FFFFFF' : '#FAF9F7') + ';' + (l.on ? '' : ' color: #767F91;'),
+            ageStyle: 'font-size: 11px; color: ' + (parseInt(l.inv.age, 10) > 14 ? '#8E2A22' : '#767F91') + ';',
+            balance: n(l.owed),
+            pay: l.take > 0 ? n(l.take) : '—',
+            payStyle: "font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; text-align: right; white-space: nowrap; color: " + (l.take > 0 ? '#0F6B43' : '#B9B4AB') + ';',
+            after: !l.on ? n(l.owed) : l.after > 0 ? n(l.after) : 'Paid',
+            afterStyle: "font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; text-align: right; white-space: nowrap; color: " + (!l.on ? '#767F91' : l.after > 0 ? '#95530C' : '#0F6B43') + ';'
+          };
+        }),
+        pickedText: pick ? sel.length + ' of ' + set.invoices.length + ' picked' : 'Total',
+        balanceSum: n(owedAll), paySum: n(amount - onAccount),
+        afterSum: tableAfter > 0 ? n(tableAfter) : 'Settled',
+        afterSumStyle: "font-family: 'IBM Plex Mono', monospace; font-weight: 700; text-align: right; white-space: nowrap; color: " + (tableAfter > 0 ? '#95530C' : '#0F6B43') + ';',
+        hasOnAccount: onAccount > 0, onAccount: mm(onAccount),
+        amountText: amount ? n(amount) : '',
+        amountBox: 'display: flex; align-items: center; gap: 10px; height: 60px; padding: 0 16px; border-radius: 12px; box-sizing: border-box; border: 2px solid ' + (amount ? '#16203C' : '#E6E3DD') + '; background: #FFFFFF;',
+        onAmount: function (e) { self.setState({ amount: e.target.value, msg: null }); },
+        quick: quick,
+        accounts: ACCOUNTS.map(function (a) {
+          var sel = a.key === s.account;
+          return { name: a.name, icon: a.icon, pressed: sel ? 'true' : 'false', pick: function () { self.setState({ account: a.key, msg: null }); },
+            style: 'height: 72px; border-radius: 12px; font: inherit; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; ' + (sel ? 'border: 2px solid #16203C; background: #F7F5F2; color: #16203C;' : 'border: 1px solid #E6E3DD; background: #FFFFFF; color: #5F6980;') };
+        }),
+        days: [[today, 'Today'], [yest, 'Yesterday']].map(function (d) {
+          var sel = s.date === d[0];
+          return { label: d[1], pressed: sel ? 'true' : 'false', style: chipBase + on(sel) + ' flex-shrink: 0;', pick: function () { self.setState({ date: d[0], msg: null }); } };
+        }),
+        dateISO: s.date, todayISO: today, dateLong: dateLong, dateShort: dateShort,
+        onDate: function (e) { if (e.target.value) self.setState({ date: e.target.value, msg: null }); },
+        dateBox: 'display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-radius: 12px; border: 1.5px solid #16203C; background: #F7F5F2;',
+        datedOn: lines.filter(function (l) { return l.take > 0; }).map(function (l) { return l.inv.label; }).join(', ') || 'no invoice',
+        noNote: !s.note, noteOpen: s.note, openNote: function () { self.setState({ note: true }); },
+        hasHistory: set.history.length > 0,
+        history: set.history.map(function (h) { var a = ACCOUNTS.find(function (x) { return x.key === h.account; }); return { date: h.date, amount: mm(h.amount), icon: a.icon, tip: a.name + ' · UGX ' + n(h.amount) }; }),
+        post: s.post, postStr: s.post ? 'true' : 'false', editing: s.post && s.editing, msg: msg,
+        editLabel: s.editing ? 'Done' : 'Edit',
+        postPreview: s.post ? msg.split('\n').slice(0, 3).join('  ·  ').replace(/\*/g, '') : 'Off — the group will not hear about it',
+        postPreviewStyle: 'font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: ' + (s.post ? '#0E6A6A' : '#767F91') + ';' + (s.post ? " font-family: 'IBM Plex Mono', monospace;" : ''),
+        postBox: 'display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 12px; ' + (s.post ? 'background: #F2FAF8; border: 1px solid #B9DCD8;' : 'background: #FFFFFF; border: 1px solid #E6E3DD;'),
+        togglePost: function () { self.setState({ post: !s.post, editing: false }); },
+        toggleEdit: function () { self.setState({ editing: !s.editing }); },
+        onMsg: function (e) { self.setState({ msg: e.target.value }); },
+        switchTrack: 'width: 46px; height: 28px; flex-shrink: 0; border-radius: 999px; border: 0; padding: 0; position: relative; cursor: pointer; background: ' + (s.post ? '#0E6A6A' : '#CFC8BB') + ';',
+        switchKnob: 'position: absolute; top: 3px; left: ' + (s.post ? '21px' : '3px') + '; width: 22px; height: 22px; border-radius: 50%; background: #FFFFFF; transition: left .15s;',
+        recordLabel: amount ? (s.post ? 'Record ' + n(amount) + ' & post' : 'Record ' + n(amount)) : 'Enter the amount',
+        recordStyle: 'flex-grow: 1; height: 48px; border-radius: 10px; border: 0; font: inherit; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; ' + (amount ? 'background: #C93A30; color: #FFFFFF; cursor: pointer;' : 'background: #E6E2D9; color: #5F6980; cursor: default;'),
+        record: function () { if (amount) self.commit({ lines: lines, amount: amount, onAccount: onAccount, msg: msg, dayLabel: dayLabel }); },
+        again: function () { self.setState({ done: false }); },
+        close: function () { closeReceivePayment(); },
+        print: function () { (s.made || []).forEach(function (m) { printReceipt(m[0], m[1], m[0].payments.indexOf(m[1])); }); },
+        noteText: s.noteText || '', onNote: function (e) { self.setState({ noteText: e.target.value }); },
+        postedText: s.postedText || '',
+        doneAmount: 'UGX ' + n(amount), doneHow: acc.name + ' · ' + dayLabel
+      }
+    };
+  }
+}
+
+/* ---- The live half ------------------------------------------------------
+   What the popup draws, read from the books, and what Record writes: one
+   Cash Book receipt and one payment line per invoice the money reaches, each
+   with its account, the date the owner set and its own receipt number --
+   exactly what the invoice's own Receive payment always wrote -- and anything
+   beyond the picked invoices onto the customer's account, the way a
+   customer payment always did. */
+function rpAgeDays(q) {
+  var t = q.invoicedTs || (q.invoicedAt ? new Date(q.invoicedAt + 'T12:00:00').getTime() : null) || q.savedAt || q.createdAt || Date.now();
+  return Math.max(0, Math.floor((Date.now() - t) / 864e5));
+}
+function rpInvoice(q) {
+  var total = savedQuoteTotal(q), bal = invoiceBalanceDue(q);
+  return { label: invoiceNumberLabel(q), total: total, paid: total - bal, age: rpAgeDays(q) + 'd', q: q };
+}
+function rpTerms(c, oldest) {
+  var terms = c ? Number(c.termsDays) || 0 : 0;
+  if (terms > 0) {
+    var over = oldest - terms;
+    return over > 0 ? { text: over + 'd past terms', bad: true } : { text: 'pays in ' + terms + 'd', bad: false };
+  }
+  return { text: 'no credit terms', bad: oldest > 0 };
+}
+function rpSetFor(target) {
+  var c = null, invoices = [], focus = null;
+  if (target.quoteId != null) {
+    focus = (data.savedQuotes || []).find(function (x) { return x.id === target.quoteId; });
+    if (!focus) return null;
+    c = typeof paymentPostCustomer === 'function' ? paymentPostCustomer(focus) : null;
+    invoices = [rpInvoice(focus)];
+  } else {
+    c = (data.customers || []).find(function (x) { return x.id === target.customerId; });
+    if (!c) return null;
+    invoices = customerOutstandingInvoices(c.id).map(rpInvoice).sort(function (a, b) { return parseInt(b.age, 10) - parseInt(a.age, 10); });
+  }
+  var inView = invoices.reduce(function (t, i) { return t + i.total - i.paid; }, 0);
+  // Everything else the customer owes: their other open invoices, and debt
+  // that was never an invoice (a charge, an opening balance).
+  var others = c && focus ? customerOutstandingInvoices(c.id).filter(function (q) { return q.id !== focus.id; }) : [];
+  var debt = c ? Math.max(Number(c.debt) || 0, inView) : inView;
+  var oldestOther = others.reduce(function (m, q) { return Math.max(m, rpAgeDays(q)); }, 0);
+  var oldest = Math.max(oldestOther, invoices.reduce(function (m, i) { return Math.max(m, parseInt(i.age, 10)); }, 0));
+  var terms = rpTerms(c, oldest);
+  return {
+    who: c ? c.name : ((focus && focus.client && focus.client.name) || 'Customer'),
+    customerId: c ? c.id : null,
+    doc: focus ? invoiceNumberLabel(focus) : invoices.length + ' open invoice' + (invoices.length === 1 ? '' : 's'),
+    terms: terms.text, termsBad: terms.bad,
+    invoices: invoices, history: [],
+    other: { owed: Math.max(0, debt - inView), count: others.length, oldest: oldestOther ? oldestOther + 'd' : null },
+    start: focus ? inView : debt,
+    category: focus ? 'Invoice Payment' : 'Debt Payment'
+  };
+}
+RpSheet.prototype.commit = function (p) {
+  var s = this.state, set = this.set, self = this;
+  var date = s.date, account = s.account, note = String(s.noteText || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date > todayISO()) { toast('Pick the day the money arrived — it cannot be in the future'); return; }
+  if (p.onAccount > 0.5 && !set.customerId) {
+    toast('That is more than ' + set.doc + ' owes, and there is no customer account to hold the rest — lower the amount', 6000);
+    return;
+  }
+  var made = [];
+  p.lines.forEach(function (l) {
+    if (!(l.take > 0)) return;
+    var q = l.inv.q;
+    if (!q.payments) q.payments = [];
+    var cashTxnId = addCashReceipt(account, l.take, set.category, note || ('Payment — ' + invoiceNumberLabel(q)), date, q.id);
+    var payment = { date: date, amount: l.take, note: note, cashTxnId: cashTxnId, method: account, id: nextPaymentId(q) };
+    q.payments.push(payment);
+    q.amountPaid = (Number(q.amountPaid) || 0) + l.take;
+    syncInvoiceDebtCharge(q);
+    made.push([q, payment]);
+  });
+  if (p.onAccount > 0.5) recordCustomerPayment(set.customerId, p.onAccount, account, note, [], set.category, date);
+  // Telling the group happens inside this same tap, or the browser blocks it.
+  var postedText = '';
+  if (s.post) {
+    var copied = copyTextInTap(s.editing || s.msg != null ? p.msg : p.msg);
+    var win = window.open(SALES_GROUP_WA_LINK, '_blank');
+    if (win) {
+      var at = Date.now();
+      made.forEach(function (m) { m[1].postedAt = at; });
+      postedText = copied ? 'Message copied and the group is open — paste and send' : 'The group is open — paste the payment from here';
+    } else {
+      postedText = 'WhatsApp was blocked from opening — allow pop-ups, then post it from the invoice';
+    }
+  }
+  saveData();
+  var q0 = document.getElementById('inv_doc_search');
+  if (typeof invRenderSide === 'function') invRenderSide();
+  if (typeof renderCustomers === 'function') renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
+  if (typeof renderDebtorsList === 'function') renderDebtorsList();
+  if (typeof renderSavedQuotes === 'function') renderSavedQuotes();
+  var cb = document.getElementById('tab-cashbook');
+  if (cb && cb.style.display !== 'none' && typeof renderCbTransactions === 'function') { renderCbTransactions(); renderCbSummary(); renderCbTriggers(); }
+  toast('Payment recorded' + (typeof paymentDatedSuffix === 'function' ? paymentDatedSuffix(date) : ''));
+  this.setState({ done: true, editing: false, made: made, postedText: postedText });
+  if (data.presetAutoPrintReceipt) made.forEach(function (m) { printReceipt(m[0], m[1], m[0].payments.indexOf(m[1])); });
+};
+
+var rpView = null;
+function openReceivePayment(target) {
+  var set = rpSetFor(target || {});
+  if (!set) return false;
+  var root = document.getElementById('rpRoot');
+  if (!root) return false;
+  if (!rpView) {
+    var logic = new RpSheet({});
+    logic.set = set;
+    logic.open(set);
+    rpView = { logic: logic, view: ofMount(root, RP_TEMPLATE, logic) };
+  } else {
+    rpView.logic.open(set);
+  }
+  openModal('rpModal');
+  return true;
+}
+function closeReceivePayment() { closeModal('rpModal'); }
+window.openReceivePayment = openReceivePayment;
+window.closeReceivePayment = closeReceivePayment;
+window.rpSetFor = rpSetFor;
+window.rpLogic = function () { return rpView && rpView.logic; };
+
+})();
+/* RECEIVE-PAY-JS:END */
 </script>
 </body>
 </html>
