@@ -131171,7 +131171,7 @@ function dsRecords(from, to){
     if(!t) return;
     const c = q.customerId != null ? (data.customers || []).find(x=> x.id === q.customerId) : null;
     pieces.push({ txn: t.id, d, time: t.time || '', account: t.account || 'cash', cid: c ? c.id : null,
-      name: c ? c.name : quoteClientName(q), amt: Number(p.amount) || 0, qid: q.id, note: p.note || '' });
+      name: c ? c.name : quoteClientName(q), amt: Number(p.amount) || 0, qid: q.id, note: p.note || '', postedAt: p.postedAt || null, pm: p });
   }));
   (data.customers || []).forEach(c=> (c.debtLog || []).forEach(l=>{
     if(!collectionLedgerRow(l)) return;
@@ -131199,11 +131199,15 @@ function dsRecords(from, to){
       : alloc.length ? (() => { const q = data.savedQuotes.find(x=> x.id === alloc[0].qid);
           return (q && invoiceBalanceDue(q) <= 0.5 ? 'clears ' : 'part of ') + label(alloc[0].qid); })()
       : 'on account';
+    /* Posted from here (the log) or from the payment sheet every other
+       screen offers, which stamps the payment itself. */
     const post = posts[key];
+    const stamped = ps.reduce((m, p)=> Math.max(m, Number(p.postedAt) || 0), 0);
+    const postedAt = post ? post.at : stamped || null;
     out.push({ key, kind: 'pay', d: first.d, t: first.time, min: dsMin(first.time), ref: DS_ACC_SHORT[first.account] || accountLabel(first.account),
       who: first.name, what: what + (alloc.length && onAcc > 0.5 ? ` + ${dsF(onAcc)} on account` : '') + (first.note && !/^Payment —/.test(first.note) ? ` · ${first.note}` : ''),
-      amt: Math.round(amt), account: first.account, cid: first.cid, alloc, onAcc,
-      posted: post ? dsHM(post.at) : null, postedAt: post ? post.at : null });
+      amt: Math.round(amt), account: first.account, cid: first.cid, alloc, onAcc, stamps: ps.map(p=> p.pm).filter(Boolean),
+      posted: postedAt ? dsHM(postedAt) : null, postedAt });
   });
   out.forEach(r=>{ r.sk = r.d + ' ' + (r.t || '99:99'); });
   return out;
@@ -131234,6 +131238,15 @@ function dsCompare(r){
 }
 
 function dsPaymentText(r){
+  /* The same words the payment sheet writes, so the group reads one
+     format whichever screen the money came in on. */
+  if(typeof paymentPostText === 'function'){
+    const lines = r.alloc.map(a=>{ const q = (data.savedQuotes || []).find(x=> x.id === a.qid);
+      return { label: invoiceNumberLabel({ id: a.qid }), paid: a.amt, left: q ? invoiceBalanceDue(q) : 0 }; });
+    const c = (data.customers || []).find(x=> x.id === r.cid);
+    return paymentPostText({ who: r.who, amount: r.amt, account: r.account, date: r.d || todayISO(), lines,
+      onAccount: r.alloc.length ? r.onAcc : 0, owes: c ? Number(c.debt) || 0 : null }, true);
+  }
   const lines = [`*${r.who}* paid ${dsF(r.amt)} · ${DS_ACC_LONG[r.account] || accountLabel(r.account)}`];
   r.alloc.forEach(a=> lines.push(`${invoiceNumberLabel({ id: a.qid })} ${dsF(a.amt)}`));
   if(r.onAcc > 0.5 && r.alloc.length) lines.push(`On account ${dsF(r.onAcc)}`);
@@ -131247,7 +131260,9 @@ function dsPostPayment(r){
   const win = window.open(SALES_GROUP_WA_LINK, '_blank');
   if(!win){ toast('WhatsApp was blocked from opening — allow pop-ups for this site, then post again', 6000); return false; }
   const L = dsLogW();
-  L.posts[r.key] = { at: Date.now(), text, snap: { who: r.who, account: r.account, amt: r.amt } };
+  const at = Date.now();
+  L.posts[r.key] = { at, text, snap: { who: r.who, account: r.account, amt: r.amt } };
+  (r.stamps || []).forEach(pm=>{ pm.postedAt = at; });
   saveData();
   toast(copied ? 'Message copied — paste it in the sales group' : 'Open the sales group and paste the payment', 4000);
   return true;
@@ -131714,7 +131729,10 @@ function dsSaveReceive(){
   const fresh = (data.cashTxns || []).filter(t=> !before.has(t.id)).map(t=> t.id).sort((a, b)=> a - b);
   const key = fresh.length ? 't:' + fresh[0] : null;
   if(R.post && key){
-    const rec = { key, who: c.name, amt: Math.round(R.amt), account: R.account,
+    const freshSet = new Set(fresh);
+    const stamps = [];
+    (data.savedQuotes || []).forEach(q=> (q.payments || []).forEach(p=>{ if(p && freshSet.has(p.cashTxnId)) stamps.push(p); }));
+    const rec = { key, who: c.name, amt: Math.round(R.amt), account: R.account, cid: c.id, d: today, stamps,
       alloc: selections.map(s=> ({ qid: s.quoteId, amt: s.amount })), onAcc: R.amt - selections.reduce((s, x)=> s + x.amount, 0) };
     dsPostPayment(rec);
   }
