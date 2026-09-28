@@ -40235,6 +40235,14 @@ function resolveTab(tab){
   if(tab === 'day'){ fcLens = 'today'; return 'forecasts'; }
   return tab;
 }
+/* A redraw of the screen already showing -- a background refresh, or
+   the assistant after it wrote something -- is not the owner arriving.
+   It must not close the customer or supplier they have open. */
+let tabRedrawing = false;
+function redrawCurrentTab(){
+  tabRedrawing = true;
+  try { goToTab(currentActiveTab); } finally { tabRedrawing = false; }
+}
 function goToTab(tab){
   tab = resolveTab(tab);
   if(currentActiveTab === 'followups' && tab !== 'followups') fupLeave();
@@ -40321,9 +40329,9 @@ function goToTab(tab){
   /* Arriving from the rail is a request for the book, not for whoever
      was open last time. */
   if(tab==='pairings') renderPairings();
-  if(tab==='customers' && !custEntering){ custViewId = null; }
+  if(tab==='customers' && !custEntering && !tabRedrawing){ custViewId = null; }
   if(tab==='customers') renderCustomers(document.getElementById('c_search').value);
-  if(tab==='suppliers' && !supEntering){ supViewId = null; }
+  if(tab==='suppliers' && !supEntering && !tabRedrawing){ supViewId = null; }
   if(tab==='suppliers') renderSuppliers(document.getElementById('s_search').value);
   if(tab==='staff') renderStaff(document.getElementById('st_search').value);
   if(tab==='agents'){ refreshAgentsScreen(); loadAgentSignIns().then(()=> refreshAgentsScreen()); }
@@ -130782,7 +130790,7 @@ async function pollForUpdatesNow(){
        out rather than left to the frame the observer would wait for, so a
        refresh never shows the screen at the start of itself first. */
     const pageX = window.scrollX, pageY = window.scrollY;
-    goToTab(currentActiveTab);
+    redrawCurrentTab();
     owScrollGiveBack();
     if(window.scrollX !== pageX || window.scrollY !== pageY) window.scrollTo(pageX, pageY);
     // goToTab redraws ONE screen. The rail's counts describe collections
@@ -134309,7 +134317,7 @@ async function apRunLoop(){
         /* The idiom the poll itself uses after swapping data: re-render
            the visible tab and the rail counts, through the app's own
            calls. goToTab is idempotent for the current tab. */
-        goToTab(currentActiveTab);
+        redrawCurrentTab();
         refreshNavBadges();
       }
       assistantThread.push({ role: 'user', content: results });

@@ -429,6 +429,7 @@ const row = (id, name) => ({ id, shop_id: 'shop-1', name });
       loadData: async () => { log.push('load'); return serverState(); },
       buildLastSynced: (d) => ({ savedQuotes: Object.fromEntries((d.savedQuotes || []).map((q) => [String(q.id), q])) }),
       goToTab: () => {},
+      redrawCurrentTab: () => {},
       refreshNavBadges: () => {},
       // The refresh holds off while a control is being used -- a redraw
       // replaces it under the owner's hands, and an open dropdown cannot
