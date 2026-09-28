@@ -173,4 +173,27 @@ const { ofCompile, ofRenderNodes, OF_TEMPLATE } = ctx.__of;
   t.check(v2.lanes[3].rule === 'moves when you mark it delivered', 'nobody signs in the app: On the road moves when the owner marks it delivered');
 }
 
+/* ---------- 5. posting to the sales group -------------------------------- */
+{
+  ctx.data = shop();
+  ctx.data.suppliers = [{ id: 'S3', name: 'Supplier S3', location: 'Nakawa, Kampala' }];
+  ctx.data.savedQuotes.find((q) => q.id === 3).announcedAt = Date.now();
+  let announced = null;
+  ctx.announceOrderToGroup = (id, text) => { announced = { id, text }; ctx.data.savedQuotes.find((q) => q.id === id).announcedAt = Date.now(); };
+  const b3 = new ctx.OrderFlowBoard({});
+  let v3 = b3.renderVals();
+  const quoted = v3.lanes[0].cards, buying = v3.lanes[1].cards;
+  t.check(quoted.every((c) => c.notPosted) && /^\d\d:\d\d$/.test(buying.find((c) => c.id === 'SO-0003').postedAt),
+    'an order is posted when announcedAt says so, shown as the time; a quote never posted says so');
+  b3.state.openId = 'SO-0002';
+  v3 = b3.renderVals();
+  v3.dw.openPost();
+  b3._q.forEach((u) => Object.assign(b3.state, typeof u === 'function' ? u(b3.state) : u)); b3._q.length = 0;
+  v3 = b3.renderVals();
+  t.check(/\*Supplier S3 \(Nakawa\)\*\n\u2022 Pipe \u00d7 5/.test(v3.pv.text), `the message groups items under where to get them, the supplier's area named (${JSON.stringify(v3.pv.text.split('\n')[3])})`);
+  v3.pv.send();
+  t.check(announced && announced.id === 2 && /Supplier S3/.test(announced.text),
+    'Copy & open hands the edited message to announceOrderToGroup — the app\u2019s one way of telling the group');
+}
+
 process.exit(t.done() ? 1 : 0);
