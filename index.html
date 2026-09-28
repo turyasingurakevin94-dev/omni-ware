@@ -17272,6 +17272,9 @@
   .cu-dw-s span{color:var(--ow-ink-600);}
   .cu-dw-s b{font-weight:var(--ow-fw-500);}
   .cu-dw-s p{margin:0;font-size:var(--ow-t-12);color:var(--ow-ink-400);}
+  .cu-dw-bar{display:block;height:6px;border-radius:3px;background:var(--ow-rule-soft);overflow:hidden;}
+  .cu-dw-bar > i{display:block;height:100%;background:var(--ow-verdigris);}
+  .ow-db-set{display:flex;flex-direction:column;align-items:flex-start;gap:var(--ow-sp-6);}
   .cu-dw-a{margin-top:auto;display:flex;gap:var(--ow-sp-8);padding:var(--ow-sp-12) var(--ow-sp-16);border-top:1px solid var(--ow-rule-soft);}
 
   /* The rail. */
@@ -72283,7 +72286,8 @@ function customerStatementPanelHTML(r){
     const isOpen = due > 0.5;
     const note = isOpen
       ? `Open ${row && row.ageDays != null ? row.ageDays : daysSinceDate(q.invoicedAt || q.date)} days.${open.length && String(open[0].q.id) === String(q.id) ? ' The next payment settles this one first.' : ''}`
-      : row && row.settledOn ? `Paid ${fmtShortDate(row.settledOn)} &mdash; ${row.days} ${plural(row.days, 'day', 'days')}.` : 'Paid.';
+      : row && row.settledOn ? `Paid in full ${fmtShortDate(row.settledOn)}${row.days > 0 ? ` &mdash; ${row.days} ${plural(row.days, 'day', 'days')} after it was raised` : ', the day it was raised'}.` : 'Paid in full.';
+    const paidPct = total > 0.5 ? Math.max(0, Math.min(100, Math.round((total - due) / total * 100))) : 100;
     drawer = `<div class="cu-dw" role="dialog" aria-label="${esc(invoiceNumberLabel(q))}">
       <div class="cu-dw-h">
         <div><p class="ow-mt-l">Invoice</p><b class="ow-fig cu-dw-no">${esc(invoiceNumberLabel(q))}</b></div>
@@ -72297,8 +72301,10 @@ function customerStatementPanelHTML(r){
         <div class="cu-tr cu-tf cu-t-dw2"><span>Total</span><span class="n ow-fig">${f(total)}</span></div>
       </div>
       <div class="cu-dw-s">
+        <i class="cu-dw-bar" role="img" aria-label="${paidPct}% paid"><i style="width:${paidPct}%"></i></i>
         <div><span>Paid</span><b class="ow-fig cu-sp-paid">${f(total - due)}</b></div>
-        <div><span>Still due</span><b class="ow-fig${isOpen ? ' ow-bad' : ''}">${f(due)}</b></div>
+        ${isOpen ? `<div><span>Still due</span><b class="ow-fig ow-bad">${f(due)}</b></div>`
+          : '<div><span>Left to pay</span><b class="ow-fig cu-sp-paid">Nothing</b></div>'}
         <p>${note}</p>
       </div>
       <div class="cu-dw-a">
@@ -81694,6 +81700,8 @@ function renderDebtorsList(){
   const pickableOf = (r)=> new Set(customerOutstandingInvoices(r.id).map(q=> String(q.id)));
   const allocTable = (r, amount)=>{
     const invs = invsOf.get(r.id) || [];
+    if(r.debt <= 0.5 && !invs.length) return `<div class="ow-db-set"><span class="ow-cp ow-good"><span class="ow-cp-d"></span>Settled &mdash; nothing to demand</span>
+      <p class="ow-q-note">${r.lastPaid ? `Their last payment, ${esc(fmtShortDate(r.lastPaid))}, cleared the account.` : 'Every invoice is paid.'} Their statement lists what each payment cleared.</p></div>`;
     if(!invs.length) return `<p class="ow-q-note">No open invoice stands behind this balance &mdash; it was recorded straight onto their account. Their debt history on the customer page says where it came from.</p>`;
     const al = debAllocatePayment(r.debt, invs, pickableOf(r), amount);
     const listed = invs.reduce((s,i)=> s + i.due, 0);
@@ -81740,7 +81748,7 @@ function renderDebtorsList(){
             aria-label="What ${esc(r.name)} is paying, to see what it clears"><span class="ow-f-u">UGX</span></span></label>
         <div class="ow-db-res" data-res="${esc(r.id)}" aria-live="polite">${allocResult(r, amount)}</div>
         <div class="ow-q-a">
-          <button type="button" class="btn btn-accent ow-sm ow-db-pb deb-receive" data-id="${esc(r.id)}">${receiveLabel(amount)}</button>
+          <button type="button" class="btn ${r.debt > 0.5 ? 'btn-accent' : 'btn-ghost'} ow-sm ow-db-pb deb-receive" data-id="${esc(r.id)}">${receiveLabel(amount)}</button>
           <button type="button" class="btn btn-ghost ow-sm ow-db-pb" data-stats="${esc(r.id)}">Their statement</button>
         </div>
       </div>
