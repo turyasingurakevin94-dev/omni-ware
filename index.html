@@ -17272,8 +17272,6 @@
   .cu-dw-s span{color:var(--ow-ink-600);}
   .cu-dw-s b{font-weight:var(--ow-fw-500);}
   .cu-dw-s p{margin:0;font-size:var(--ow-t-12);color:var(--ow-ink-400);}
-  .cu-dw-bar{display:block;height:6px;border-radius:3px;background:var(--ow-rule-soft);overflow:hidden;}
-  .cu-dw-bar > i{display:block;height:100%;background:var(--ow-verdigris);}
   .ow-db-set{display:flex;flex-direction:column;align-items:flex-start;gap:var(--ow-sp-6);}
   .cu-dw-a{margin-top:auto;display:flex;gap:var(--ow-sp-8);padding:var(--ow-sp-12) var(--ow-sp-16);border-top:1px solid var(--ow-rule-soft);}
 
@@ -72287,7 +72285,6 @@ function customerStatementPanelHTML(r){
     const note = isOpen
       ? `Open ${row && row.ageDays != null ? row.ageDays : daysSinceDate(q.invoicedAt || q.date)} days.${open.length && String(open[0].q.id) === String(q.id) ? ' The next payment settles this one first.' : ''}`
       : row && row.settledOn ? `Paid in full ${fmtShortDate(row.settledOn)}${row.days > 0 ? ` &mdash; ${row.days} ${plural(row.days, 'day', 'days')} after it was raised` : ', the day it was raised'}.` : 'Paid in full.';
-    const paidPct = total > 0.5 ? Math.max(0, Math.min(100, Math.round((total - due) / total * 100))) : 100;
     drawer = `<div class="cu-dw" role="dialog" aria-label="${esc(invoiceNumberLabel(q))}">
       <div class="cu-dw-h">
         <div><p class="ow-mt-l">Invoice</p><b class="ow-fig cu-dw-no">${esc(invoiceNumberLabel(q))}</b></div>
@@ -72301,7 +72298,6 @@ function customerStatementPanelHTML(r){
         <div class="cu-tr cu-tf cu-t-dw2"><span>Total</span><span class="n ow-fig">${f(total)}</span></div>
       </div>
       <div class="cu-dw-s">
-        <i class="cu-dw-bar" role="img" aria-label="${paidPct}% paid"><i style="width:${paidPct}%"></i></i>
         <div><span>Paid</span><b class="ow-fig cu-sp-paid">${f(total - due)}</b></div>
         ${isOpen ? `<div><span>Still due</span><b class="ow-fig ow-bad">${f(due)}</b></div>`
           : '<div><span>Left to pay</span><b class="ow-fig cu-sp-paid">Nothing</b></div>'}
