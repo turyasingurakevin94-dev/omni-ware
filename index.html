@@ -19457,6 +19457,27 @@
   .ow-ds-kd i{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ow-oxide-deep);}
   .ow-ds-kd.ow-ds-pay{color:var(--ow-sky);}
   .ow-ds-kd.ow-ds-pay i{background:var(--ow-sky);border-radius:0;transform:rotate(45deg);}
+  /* AN INVOICE RAISED FOR AN EARLIER ORDER: the order's own red, drawn as
+     a hollow page -- a square, where the order is a disc and a payment a
+     diamond -- because it is that sale a step later, not a new one, and
+     never a record to check. */
+  .ow-ds-kd.ow-ds-inv{color:var(--ow-oxide-deep);}
+  .ow-ds-kd.ow-ds-inv i,.ow-ds-li .ow-ds-k-inv,.ow-ds-ivt .ow-ds-k-inv{background:var(--ow-paper);border:2px solid var(--ow-oxide-deep);border-radius:2px;box-sizing:border-box;}
+  .ow-ds-dot.ow-ds-inv{border-radius:3px;border-color:var(--ow-oxide-deep);}
+  .ow-ds-rinv .ow-ds-amv.ow-ds-mut,.ow-ds-rinv .ow-ds-gc.ow-ds-mut,.ow-ds-rinv .ow-ds-ck.ow-ds-mut{color:var(--ow-ink-600);}
+  .ow-ds-rinv .ow-ds-ck.ow-ds-mut{justify-content:center;}
+  .ow-ds-ivn{font:inherit;font-size:var(--ow-t-12);color:var(--ow-oxide-deep);background:none;border:0;padding:0;margin-top:var(--ow-sp-2);cursor:pointer;text-align:left;display:inline-flex;align-items:baseline;flex-wrap:wrap;column-gap:var(--ow-sp-6);}
+  .ow-ds-ivn i{display:inline-block;flex:0 0 auto;width:8px;height:8px;border:2px solid var(--ow-oxide-deep);border-radius:2px;box-sizing:border-box;}
+  .ow-ds-ivn b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:600;white-space:nowrap;}
+  .ow-ds-rinv .ow-ds-msg{background:var(--ow-steel-050);color:var(--ow-ink-600);font-family:inherit;letter-spacing:0;}
+  .ow-ds-ivn:hover{text-decoration:underline;}
+  .ow-ds-ivx{display:flex;flex-direction:column;gap:var(--ow-sp-12);}
+  .ow-ds-ivt{display:flex;align-items:center;gap:var(--ow-sp-10);}
+  .ow-ds-ivt span{display:flex;flex-direction:column;gap:var(--ow-sp-2);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-ds-ivt b{font-size:var(--ow-t-13);color:var(--ow-ink-900);font-weight:600;}
+  .ow-ds-ivt span i{display:inline-block;width:10px;height:10px;margin-bottom:var(--ow-sp-2);}
+  .ow-ds-ivt .ow-ds-k-ord{border-radius:50%;background:var(--ow-oxide-deep);}
+  .ow-ds-ivl{flex:1 1 auto;height:0;border-top:2px dashed var(--ow-rule);min-width:24px;}
   .ow-ds-ref{font-size:var(--ow-t-13);font-weight:600;white-space:nowrap;}
   .ow-ds-who{font:inherit;text-align:left;border:0;background:transparent;padding:0;cursor:pointer;color:inherit;display:flex;align-items:center;gap:var(--ow-sp-6);min-width:0;height:44px;}
   .ow-ds-who .icon{width:14px;height:14px;flex:none;color:var(--ow-ink-600);transition:transform .15s;}
@@ -131312,6 +131333,30 @@ function dsRecords(from, to){
   return out;
 }
 
+/* INVOICES RAISED IN THE RANGE for orders that came in outside it. An
+   order sits on the day it came in, and invoicing it later is not a new
+   order -- so INV-0386, taken on the 19th and invoiced on the 24th, was
+   on the 19th and nowhere on the 24th, the day the owner remembered
+   raising it. These lines say so on the day it happened. They are not
+   records to check: an invoice is never posted to the sales group, so
+   they carry no check, count in no total, and never hold a day open. An
+   order invoiced on a day inside the range already shows as that order. */
+function dsInvoiceRecords(from, to){
+  const out = [];
+  (data.savedQuotes || []).forEach(q=>{
+    if(!q || q.voided || !q.invoiced) return;
+    const d = String(q.invoicedAt || '').slice(0, 10);
+    if(!d || d < from || d > to) return;
+    const od = dsOrderDay(q);
+    if(od && od >= from && od <= to) return;
+    const t = q.invoicedTs ? dsHM(q.invoicedTs) : '';
+    out.push({ key: 'i:' + q.id, kind: 'inv', d, t, min: dsMin(t), ref: '#' + q.id, who: quoteClientName(q),
+      what: `${invoiceNumberLabel(q)} · order from ${od ? dsNice(od) : 'an earlier day'} · ${dsOrderLine(q)}`,
+      amt: Math.round(savedQuoteTotal(q)), q, qid: q.id, od, posted: null, postedAt: null, alloc: [], sk: d + ' ' + (t || '99:99') });
+  });
+  return out;
+}
+
 function dsStateOf(r, checks){ const c = checks[r.key]; return c && (c.s === 'ok' || c.s === 'diff') ? c.s : 'open'; }
 function dsStatusOf(r, checks){ const s = dsStateOf(r, checks); return s === 'open' ? (r.posted ? 'todo' : 'missing') : s; }
 
@@ -131391,6 +131436,9 @@ function renderDayStatement(){
   const doneN = okN + diffN, openN = all - doneN;
   const orders = recs.filter(r=> r.kind === 'order'), pays = recs.filter(r=> r.kind === 'pay');
   const oSum = orders.reduce((s, r)=> s + r.amt, 0), pSum = pays.reduce((s, r)=> s + r.amt, 0);
+  const invs = dsInvoiceRecords(from, to);
+  const iSum = invs.reduce((s, r)=> s + r.amt, 0);
+  const shown = recs.concat(invs);
   const byKey = new Map(recs.map(r=> [r.key, r]));
   const orderRec = (qid)=> byKey.get('q:' + qid);
   const closedOf = (d)=> !!L.closed[d];
@@ -131457,7 +131505,7 @@ function renderDayStatement(){
   const mPeak = Math.max(1, ...methods.map(m=> m.sum));
   const figs = `<section class="ow-ds-fig" aria-label="The day in figures">
     <div class="ow-ds-fc"><span class="ow-ds-l">Orders in · ${orders.length}</span><span class="ow-ds-v">${dsF(oSum)}<small>UGX</small></span>
-      <span class="ow-ds-s">${orders.filter(r=> r.posted).length} of ${orders.length} posted in the group</span></div>
+      <span class="ow-ds-s">${orders.filter(r=> r.posted).length} of ${orders.length} posted in the group${invs.length ? `</span><button type="button" class="ow-ds-s ow-ds-ivn" data-ds-type="inv"><i></i><span>+ ${invs.length} invoiced for earlier orders</span><b>${dsF(iSum)}</b></button>` : '</span>'}</div>
     <div class="ow-ds-fc"><span class="ow-ds-l">Money in · ${pays.length}</span><span class="ow-ds-v ow-ds-sky">${dsF(pSum)}<small>UGX</small></span>
       <i class="ow-ds-bar">${methods.filter(m=> m.sum > 0).map(m=> `<i class="ow-ds-m-${m.k}" style="flex-grow:${m.sum}" title="${esc(DS_ACC_LONG[m.k] + ' ' + dsF(m.sum))}"></i>`).join('')}</i></div>
     <div class="ow-ds-fc"><span class="ow-ds-l">Checked against the group</span><span class="ow-ds-v">${doneN}<small>/ ${all}</small></span>
@@ -131509,7 +131557,7 @@ function renderDayStatement(){
     /* THE CLOCK FITS THE DAY: the hour before the first record to the
        hour after the last, never less than 07:00-18:00. A fixed 07-18
        axis pinned everything after six to its right edge. */
-    const ms = recs.map(r=> r.min).filter(m=> m != null);
+    const ms = shown.map(r=> r.min).filter(m=> m != null);
     const h0 = Math.min(7, ms.length ? Math.floor(Math.min(...ms) / 60) : 7);
     const h1 = Math.max(18, ms.length ? Math.ceil((Math.max(...ms) + 1) / 60) : 18);
     const spanH = h1 - h0;
@@ -131519,7 +131567,7 @@ function renderDayStatement(){
     const pxW = 780 * spanH / shownH;                 // the width the spread is worked in
     const xPct = (min)=> ((min == null ? h0 * 60 : min) - h0 * 60) / (spanH * 60) * 100;
     const xPx = (min)=> xPct(min) / 100 * pxW;
-    const maxAmt = Math.max(1, ...recs.map(r=> r.amt));
+    const maxAmt = Math.max(1, ...shown.map(r=> r.amt));
     const pos = {};
     /* SPREAD, NEVER STACK: a dot takes the first of three rows where it
        clears its neighbour; an amount is written only where it has room. */
@@ -131538,14 +131586,14 @@ function renderDayStatement(){
         const next = sorted[i + 1];
         const roomy = !next || xPx(next.min) - px > 60;
         const s = st(r), on = dsOpenKey === r.key;
-        const cls = s === 'ok' ? ' ow-ds-ok' : s === 'diff' ? ' ow-ds-diff' : !r.posted ? ' ow-ds-miss' : '';
-        const title = `${r.t || '—'} · ${r.ref} ${r.who} · ${dsF(r.amt)}`;
+        const cls = r.kind === 'inv' ? ' ow-ds-inv' : s === 'ok' ? ' ow-ds-ok' : s === 'diff' ? ' ow-ds-diff' : !r.posted ? ' ow-ds-miss' : '';
+        const title = `${r.t || '—'} · ${r.kind === 'inv' ? invoiceNumberLabel(r.q) + ' raised · ' : r.ref + ' '}${r.who} · ${dsF(r.amt)}`;
         return `<button type="button" class="ow-ds-dot${r.kind === 'pay' ? ' ow-ds-pay' : ''}${cls}${on ? ' ow-on' : ''}" data-ds-open="${esc(r.key)}"
           style="left:${xPct(r.min).toFixed(3)}%;top:${y}px;width:${sz}px;height:${sz}px" title="${esc(title)}" aria-label="${esc(title)}"></button>`
           + ((roomy && row === 0) || on ? `<span class="ow-ds-dl${on ? ' ow-on' : ''}" style="left:calc(${xPct(r.min).toFixed(3)}% + ${sz / 2 + 4}px);top:${y}px">${dsShort(r.amt)}</span>` : '');
       }).join('');
     };
-    const oDots = lane(orders, [23, 9, 37]), pDots = lane(pays, [77, 63, 91]);
+    const oDots = lane(orders.concat(invs), [23, 9, 37]), pDots = lane(pays, [77, 63, 91]);
     /* LINES ONLY FOR WHAT IS OPEN: the order and the payments against it.
        Every line at once was a web that crossed the whole day. */
     const links = [];
@@ -131582,7 +131630,7 @@ function renderDayStatement(){
       ${isRange ? '' : `<span class="ow-seg ow-ds-zm" role="group" aria-label="How much of the day to show">${[['day', 'Whole day'], ['3', '3 hours'], ['1', '1 hour']].map(([k, label])=>
         `<button type="button" class="ow-seg-b${dsZoom === k ? ' ow-on' : ''}" data-ds-zoom="${k}" aria-pressed="${dsZoom === k}">${label}</button>`).join('')}</span>`}
       <span class="ow-ds-li"><i class="ow-ds-k-ok"></i>Matches</span><span class="ow-ds-li"><i class="ow-ds-k-diff"></i>Differs</span>
-      <span class="ow-ds-li"><i class="ow-ds-k-open"></i>Not checked</span><span class="ow-ds-li"><i class="ow-ds-k-miss"></i>Not in group</span></div>
+      <span class="ow-ds-li"><i class="ow-ds-k-open"></i>Not checked</span><span class="ow-ds-li"><i class="ow-ds-k-miss"></i>Not in group</span>${invs.length ? '<span class="ow-ds-li"><i class="ow-ds-k-inv"></i>Invoiced</span>' : ''}</div>
     <div class="ow-ds-ins">${insights}</div>
     ${chart}
   </section>`;
@@ -131591,8 +131639,8 @@ function renderDayStatement(){
   const needle = dsQ.trim().toLowerCase();
   const passType = (r)=> dsType === 'all' || r.kind === dsType;
   const passQ = (r)=> !needle || (r.who + ' ' + r.ref + ' ' + r.what + ' ' + (r.qid != null ? invoiceNumberLabel({ id: r.qid }) : '')).toLowerCase().includes(needle);
-  const passSt = (r)=>{ const x = stx(r); return dsStatus === 'all' || x === dsStatus || (dsStatus === 'todo' && x === 'missing'); };
-  const base = recs.filter(r=> passType(r) && passQ(r));
+  const passSt = (r)=>{ if(r.kind === 'inv') return dsStatus === 'all'; const x = stx(r); return dsStatus === 'all' || x === dsStatus || (dsStatus === 'todo' && x === 'missing'); };
+  const base = shown.filter(r=> passType(r) && passQ(r));
   const sortVal = (r)=>{
     const k = dsSort.key;
     if(k === 'amt') return r.amt;
@@ -131600,7 +131648,7 @@ function renderDayStatement(){
     if(k === 'ref') return r.ref;
     if(k === 'who') return String(r.who).toLowerCase();
     if(k === 'group') return r.posted ? r.d + r.posted : '~';
-    if(k === 'check') return { diff: 0, missing: 1, todo: 2, ok: 3 }[stx(r)];
+    if(k === 'check') return r.kind === 'inv' ? 4 : { diff: 0, missing: 1, todo: 2, ok: 3 }[stx(r)];
     return r.sk;
   };
   const list = base.filter(passSt).sort((a, b)=>{
@@ -131608,13 +131656,13 @@ function renderDayStatement(){
     const d = typeof x === 'string' ? x.localeCompare(y) : x - y;
     return (d || a.sk.localeCompare(b.sk)) * dsSort.dir;
   });
-  const filtered = list.length !== recs.length;
+  const filtered = list.length !== shown.length;
   const chips = [['all', 'All'], ['todo', 'To check'], ['ok', 'Matches'], ['diff', 'Differs'], ['missing', 'Not posted']].map(([k, label])=>{
-    const n = base.filter(r=>{ const x = stx(r); return k === 'all' || x === k || (k === 'todo' && x === 'missing'); }).length;
+    const n = base.filter(r=>{ if(r.kind === 'inv') return k === 'all'; const x = stx(r); return k === 'all' || x === k || (k === 'todo' && x === 'missing'); }).length;
     const on = dsStatus === k;
     return `<button type="button" role="tab" class="ow-ds-tab ow-ds-t-${k}${on ? ' ow-on' : ''}" data-ds-status="${k}" aria-selected="${on}">${k === 'all' ? '' : `<i class="ow-ds-td ow-ds-t-${k}"></i>`}${label} <span class="ow-ds-tn">${n}</span></button>`;
   }).join('');
-  const types = [['all', 'All'], ['order', 'Orders'], ['pay', 'Payments']].map(([k, label])=>
+  const types = [['all', 'All'], ['order', 'Orders'], ['pay', 'Payments']].concat(invs.length || dsType === 'inv' ? [['inv', 'Invoiced']] : []).map(([k, label])=>
     `<button type="button" class="ow-seg-b${dsType === k ? ' ow-on' : ''}" data-ds-type="${k}" aria-pressed="${dsType === k}">${label}</button>`).join('');
   const head = [['time', 'Time'], ['kind', 'Type'], ['ref', 'Ref'], ['who', 'Customer'], [null, 'Details'], ['amt', 'Amount', 'n'], ['group', 'In group'], ['check', 'Check', 'c']].map(([k, label, al])=>{
     if(!k) return `<span class="ow-ds-l">${label}</span>`;
@@ -131622,7 +131670,41 @@ function renderDayStatement(){
     return `<span class="${al === 'n' ? 'ow-ds-hn' : al === 'c' ? 'ow-ds-hc' : ''}" role="columnheader" aria-sort="${on ? (dsSort.dir === 1 ? 'ascending' : 'descending') : 'none'}">
       <button type="button" class="ow-ds-sort${on ? ' ow-on' : ''}" data-ds-sort="${k}">${label}<i>${on ? (dsSort.dir === 1 ? '▲' : '▼') : '↕'}</i></button></span>`;
   }).join('');
+  const invRowHTML = (r)=>{
+    const open = dsOpenKey === r.key, w = dsOrderOwed(r.q);
+    const owed = w <= 0.5 ? 'paid' : w >= r.amt - 0.5 ? 'unpaid' : dsShort(w) + ' left';
+    const paid = r.amt - w;
+    const x = open ? `<div class="ow-ds-x">
+        <div class="ow-ds-cmp ow-ds-ivx">
+          <div class="ow-ds-ivt" role="img" aria-label="${esc(`Order taken ${r.od ? dsNice(r.od) : 'earlier'}, invoiced ${dsNice(r.d)}`)}">
+            <span><i class="ow-ds-k-ord"></i><b>${r.od ? esc(dsDow(r.od) + ' ' + dsNice(r.od)) : '—'}</b>Order taken</span>
+            <i class="ow-ds-ivl"></i>
+            <span><i class="ow-ds-k-inv"></i><b>${esc(dsDow(r.d) + ' ' + dsNice(r.d))}</b>Invoiced${r.t ? ' ' + esc(r.t) : ''}</span>
+          </div>
+          <div class="ow-ds-owe"><div><span class="ow-ds-s">${w > 0.5 ? 'Still owed on ' : 'Settled · '}${esc(invoiceNumberLabel(r.q))}</span><b>${dsF(w > 0.5 ? w : r.amt)}</b>
+            <i><i style="display:block;height:4px;width:${Math.round(paid / Math.max(1, r.amt) * 100)}%"></i></i></div>
+            ${w > 0.5 ? `<button type="button" class="btn ow-sm ow-ds-sky-b" data-ds-rcv="${esc(String(r.q.customerId == null ? '' : r.q.customerId))}" data-ds-rcvq="${r.q.id}">Receive</button>` : ''}</div>
+        </div>
+        <div class="ow-ds-xs">
+          <span class="ow-ds-l">Not a record to check</span>
+          <div class="ow-ds-msg">The order is checked against the group on ${r.od ? esc(dsNice(r.od)) : 'the day it came in'}. An invoice is not posted to the group.</div>
+          <div class="ow-ds-xa"><button type="button" class="btn btn-ghost ow-sm" data-ds-edit="${esc(r.key)}">Open the invoice</button>
+            ${r.od ? `<button type="button" class="btn btn-ghost ow-sm" data-ds-ins="day:${esc(r.od)}">Go to ${esc(dsNice(r.od))}</button>` : ''}</div>
+        </div></div>` : '';
+    return `<div class="ow-ds-rec ow-ds-rinv${open ? ' ow-open' : ''}" role="row">
+      <div class="ow-ds-tr">
+        <span class="ow-ds-tm">${isRange ? `<b>${dsDow(r.d)} ${+r.d.slice(8)}</b>` : ''}${esc(r.t || '—')}</span>
+        <span class="ow-ds-kd ow-ds-inv"><i></i>Invoiced</span>
+        <span class="ow-ds-ref" title="${esc(invoiceNumberLabel(r.q))}">${esc(r.ref)}</span>
+        <button type="button" class="ow-ds-who" data-ds-open="${esc(r.key)}" aria-expanded="${open}">${DS_ICON.caret}<span class="ow-ds-wn" title="${esc(r.who)}">${esc(r.who)}</span></button>
+        <span class="ow-ds-wh" title="${esc(r.what)}">${esc(r.what)}</span>
+        <span class="ow-ds-am"><span class="ow-ds-amv ow-ds-mut">${dsF(r.amt)}</span><span class="ow-ds-ow${w <= 0.5 ? ' ow-good' : ''}">${esc(owed)}</span></span>
+        <span class="ow-ds-gc ow-ds-mut">Not for the group</span>
+        <span class="ow-ds-ck ow-ds-mut" aria-label="Nothing to check">—</span>
+      </div>${x}</div>`;
+  };
   const rowHTML = (r)=>{
+    if(r.kind === 'inv') return invRowHTML(r);
     const s = st(r), open = dsOpenKey === r.key, pay = r.kind === 'pay', locked = closedOf(r.d);
     let owed = '', owedCls = '';
     if(pay){ owed = r.alloc.length > 1 ? `to ${r.alloc.length} invoices` : r.alloc.length ? 'to ' + invoiceNumberLabel({ id: r.alloc[0].qid }) : 'on account'; owedCls = ' ow-ds-mut'; }
@@ -131673,21 +131755,21 @@ function renderDayStatement(){
   const lo = list.filter(r=> r.kind === 'order').reduce((s, r)=> s + r.amt, 0);
   const lp = list.filter(r=> r.kind === 'pay').reduce((s, r)=> s + r.amt, 0);
   const net = filtered ? lo - lp : oSum - pSum;
-  const empty = list.length ? '' : `<div class="ow-ds-empty"><b>${recs.length ? 'No record fits these filters.' : `Nothing was ordered or paid ${isRange ? 'in this range' : 'on this day'}.`}</b>
-    ${recs.length ? '<button type="button" class="btn btn-ghost ow-sm" data-ds-act="clear">Show every record</button>'
+  const empty = list.length ? '' : `<div class="ow-ds-empty"><b>${shown.length ? 'No record fits these filters.' : `Nothing was ordered or paid ${isRange ? 'in this range' : 'on this day'}.`}</b>
+    ${shown.length ? '<button type="button" class="btn btn-ghost ow-sm" data-ds-act="clear">Show every record</button>'
       : from !== today || to !== today ? '<button type="button" class="btn btn-ghost ow-sm" data-ds-act="today">Go to today</button>' : ''}</div>`;
   const table = `<section class="ow-ds-pan ow-ds-tbl" aria-label="Every record">
     <div class="ow-ds-tabs" role="tablist" aria-label="Status">${chips}</div>
     <div class="ow-ds-tools">
       <div class="ow-seg" role="group" aria-label="Type">${types}</div>
-      <span class="ow-ds-shown">${filtered ? `Showing ${list.length} of ${recs.length} records` : `${recs.length} records`}</span>
+      <span class="ow-ds-shown">${filtered ? `Showing ${list.length} of ${shown.length} records` : `${shown.length} records`}</span>
       ${filtered ? '<button type="button" class="ow-ds-clr" data-ds-act="clear">Clear filters</button>' : ''}
       <label class="ow-ds-srch">${DS_ICON.search}<input type="search" id="ds_search" value="${esc(dsQ)}" placeholder="Search customer, #, item" aria-label="Search the records"></label>
     </div>
     <div class="ow-ds-tr ow-ds-th" role="row">${head}</div>
     ${list.map(rowHTML).join('')}
     ${empty}
-    <div class="ow-ds-tf"><span>${filtered ? `Showing ${list.length} of ${recs.length} · orders less money in` : `${isRange ? span + " days' close" : "Day's close"} · orders less money in`}</span>
+    <div class="ow-ds-tf"><span>${filtered ? `Showing ${list.length} of ${shown.length} · orders less money in` : `${isRange ? span + " days' close" : "Day's close"} · orders less money in`}</span>
       <span class="ow-ds-cv">${net < 0 ? '−' : ''}${dsF(Math.abs(net))}</span><span>${net < 0 ? 'more came in than was ordered' : 'ordered on credit'}</span></div>
   </section>`;
 
@@ -131728,7 +131810,7 @@ function renderDayStatement(){
   </section>`;
 
   /* ---- the phone: its own design, not the desk squeezed ---- */
-  const phList = recs.filter(r=>{ const s = st(r); return dsPhShow === 'all' ? true : dsPhShow === 'todo' ? s !== 'ok' : s === 'ok'; })
+  const phList = shown.filter(r=>{ if(r.kind === 'inv') return dsPhShow === 'all'; const s = st(r); return dsPhShow === 'all' ? true : dsPhShow === 'todo' ? s !== 'ok' : s === 'ok'; })
     .sort((a, b)=> a.sk.localeCompare(b.sk));
   const phone = `<div class="ow-ds-ph">
     <div class="ow-ds-pdays" role="group" aria-label="Pick a day">${stripDays.slice(1).map(dayBtn).join('')}</div>
@@ -131737,10 +131819,18 @@ function renderDayStatement(){
         <span class="ow-good">${okN} match</span><span class="ow-bad">${diffN} differ</span><span class="ow-ds-mut">${openN} to check</span></div></div>
       <div class="ow-ds-p2"><div><span class="ow-ds-l">Orders · ${orders.length}</span><span class="ow-ds-v">${dsF(oSum)}</span></div>
         <div><span class="ow-ds-l">Money in · ${pays.length}</span><span class="ow-ds-v ow-ds-sky">${dsF(pSum)}</span></div></div>
+      ${invs.length ? `<button type="button" class="ow-ds-ivn" data-ds-ph="all"><i></i><span>+ ${invs.length} invoiced for earlier orders</span><b>${dsF(iSum)}</b></button>` : ''}
     </section>
-    <div class="ow-ds-pf2" role="group" aria-label="Show">${[['todo', 'To check · ' + (all - okN)], ['ok', 'Matched · ' + okN], ['all', 'All · ' + all]].map(([k, label])=>
+    <div class="ow-ds-pf2" role="group" aria-label="Show">${[['todo', 'To check · ' + (all - okN)], ['ok', 'Matched · ' + okN], ['all', 'All · ' + shown.length]].map(([k, label])=>
       `<button type="button" data-ds-ph="${k}" class="${dsPhShow === k ? 'ow-on' : ''}" aria-pressed="${dsPhShow === k}">${label}</button>`).join('')}</div>
     ${phList.map(r=>{
+      if(r.kind === 'inv'){ const w = dsOrderOwed(r.q);
+        return `<article class="ow-ds-pc ow-ds-rinv">
+        <div class="ow-ds-pct"><span class="ow-ds-tm">${esc(r.t || '—')}</span><span class="ow-ds-kd ow-ds-inv"><i></i>Invoiced</span>
+          <span class="ow-ds-gc ow-ds-mut">Order from ${r.od ? esc(dsNice(r.od)) : 'earlier'}</span></div>
+        <div class="ow-ds-pcm"><div><span class="ow-ds-pcn" title="${esc(r.who)}">${esc(invoiceNumberLabel(r.q))} · ${esc(r.who)}</span><span class="ow-ds-pcw" title="${esc(dsOrderLine(r.q))}">${esc(w <= 0.5 ? 'paid' : dsF(w) + ' still owed')}</span></div>
+          <span class="ow-ds-amv ow-ds-mut">${dsF(r.amt)}</span></div>
+        <div class="ow-ds-pbt"><button type="button" class="ow-ds-big" data-ds-edit="${esc(r.key)}">Open the invoice</button></div></article>`; }
       const s = st(r), pay = r.kind === 'pay', cmp = s === 'diff' || dsLogR().posts[r.key] ? dsCompare(r) : null;
       const diffs = cmp && cmp.known ? cmp.rows.filter(c=> c.theirs !== '—' && c.theirs !== '' && c.ours !== c.theirs) : [];
       const locked = closedOf(r.d);
@@ -131754,7 +131844,7 @@ function renderDayStatement(){
           <button type="button" class="ow-ds-big${s === 'ok' ? ' ow-ds-cok' : ''}" data-ds-check="ok" data-ds-key="${esc(r.key)}" aria-pressed="${s === 'ok'}"${locked ? ' disabled' : ''}>${DS_ICON.check}Matches</button>
           <button type="button" class="ow-ds-big${s === 'diff' ? ' ow-ds-cdf' : ''}" data-ds-check="diff" data-ds-key="${esc(r.key)}" aria-pressed="${s === 'diff'}"${locked ? ' disabled' : ''}>${DS_ICON.ne}Differs</button>
         </div></article>`;
-    }).join('') || `<div class="ow-ds-none">${recs.length ? 'Nothing here.' : 'Nothing was ordered or paid on this day.'}</div>`}
+    }).join('') || `<div class="ow-ds-none">${recs.length ? 'Nothing here.' : invs.length ? 'Nothing to check. The invoices raised for earlier orders are under All.' : 'Nothing was ordered or paid on this day.'}</div>`}
   </div>`;
 
   /* The page header is Forecasts'; its sub says which day this is. */
@@ -131923,7 +132013,7 @@ function dsCloseDay(){
 function dsPrint(){
   const { from, to } = dsRange();
   const checks = dsLogR().checks;
-  const recs = dsRecords(from, to).sort((a, b)=> a.sk.localeCompare(b.sk));
+  const recs = dsRecords(from, to).concat(dsInvoiceRecords(from, to)).sort((a, b)=> a.sk.localeCompare(b.sk));
   const w = window.open('', '_blank');
   if(!w){ toast('Allow pop-ups for this site to print'); return; }
   const mark = { ok: 'Matches', diff: 'Differs', todo: 'To check', missing: 'Not posted' };
@@ -131933,7 +132023,7 @@ function dsPrint(){
     td.n{text-align:right;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}</style></head><body>
     <h1>Day statement</h1><p>${esc(from === to ? dsDow(from) + ' ' + dsNice(from, true) : dsNice(from, true) + ' – ' + dsNice(to, true))} · ${recs.length} records</p>
     <table><thead><tr><th>Date</th><th>Time</th><th>Type</th><th>Ref</th><th>Customer</th><th>Details</th><th style="text-align:right">Amount</th><th>In group</th><th>Check</th></tr></thead><tbody>
-    ${recs.map(r=> `<tr><td>${esc(dsNice(r.d))}</td><td>${esc(r.t || '')}</td><td>${r.kind === 'pay' ? 'Payment' : 'Order'}</td><td>${esc(r.ref)}</td><td>${esc(r.who)}</td><td>${esc(r.what)}</td><td class="n">${dsF(r.amt)}</td><td>${r.posted ? 'Posted ' + esc(r.posted) : 'Not posted'}</td><td>${mark[dsStatusOf(r, checks)]}</td></tr>`).join('')}
+    ${recs.map(r=> `<tr><td>${esc(dsNice(r.d))}</td><td>${esc(r.t || '')}</td><td>${r.kind === 'pay' ? 'Payment' : r.kind === 'inv' ? 'Invoiced' : 'Order'}</td><td>${esc(r.ref)}</td><td>${esc(r.who)}</td><td>${esc(r.what)}</td><td class="n">${dsF(r.amt)}</td><td>${r.kind === 'inv' ? '—' : r.posted ? 'Posted ' + esc(r.posted) : 'Not posted'}</td><td>${r.kind === 'inv' ? '—' : mark[dsStatusOf(r, checks)]}</td></tr>`).join('')}
     </tbody></table></body></html>`);
   w.document.close();
   w.focus();
@@ -132010,7 +132100,7 @@ function wireDayStatement(root){
     if((b = el('[data-ds-rcv]'))){ dsStartReceive(b.dataset.dsRcv, b.dataset.dsRcvq); return; }
     if((b = el('[data-ds-edit]'))){
       const k = b.dataset.dsEdit;
-      if(k.startsWith('q:')){
+      if(k.startsWith('q:') || k.startsWith('i:')){
         const q = (data.savedQuotes || []).find(x=> String(x.id) === k.slice(2));
         if(!q){ toast('That order is no longer on file'); return; }
         if(q.invoiced) revealInvoice(q.id);

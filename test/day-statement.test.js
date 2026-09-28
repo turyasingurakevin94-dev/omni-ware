@@ -195,4 +195,37 @@ t.check(/const msg = text == null \|\| text === '' \? salesGroupOrderMessage\(q\
     'a late entry sits on the day it went out, not the day it was typed in, and carries no invented time');
 }
 
+{
+  /* INVOICED ON A LATER DAY: Maria's INV-0386 -- taken on the 19th, typed
+     in on the 22nd, invoiced on the 24th. It is an order on the 19th and,
+     on the 24th, a line saying it was invoiced -- never an order twice,
+     and never something to check against the group. */
+  const q386 = { id: 386, status: 'completed', invoiced: true, voided: false, amountPaid: 465000, date: '2026-09-19',
+    savedAt: '2026-09-22T07:29:43.900Z', invoicedAt: '2026-09-24', invoicedTs: Date.parse('2026-09-24T13:06:27'),
+    client: { name: 'Maria' }, items: [{ productName: 'Normal Mulper', qty: 3, sellPrice: 155000 }, { productName: 'Brackets', qty: 10, sellPrice: 12000 }, { productName: 'ABC Black Screws', qty: 20, sellPrice: 11500 }], payments: [] };
+  const sameDay = { id: 387, status: 'completed', invoiced: true, voided: false, amountPaid: 0, date: '2026-09-24', createdAt: '2026-09-24T09:00:00.000Z',
+    invoicedAt: '2026-09-24', client: { name: 'Kato' }, items: [{ productName: 'Cement', qty: 1, sellPrice: 1000 }], payments: [] };
+  const voidedInv = Object.assign({}, q386, { id: 388, voided: true });
+  const notYet = Object.assign({}, q386, { id: 389, invoiced: false, invoicedAt: null });
+  const inv = compileScope([moduleSrc, 'function orderIsBackdated(q){ const m = q.createdAt || q.savedAt; return !!m && String(q.date) < String(m).slice(0, 10); }'], {
+    data: { customers: [], cashTxns: [], savedQuotes: [q386, sameDay, voidedInv, notYet] },
+    savedQuoteTotal: lineTotal, quoteItemSellPrice: (it)=> it.sellPrice, quoteClientName: (q)=> q.client.name, accountLabel: (k)=> k,
+    todayISO: ()=> today, salesGroupOrderMessage: ()=> 'msg', esc: String, toast: ()=>{}, saveData: ()=>{},
+    invoiceBalanceDue: (q)=> lineTotal(q) - q.amountPaid, invoiceNumberLabel: (q)=> 'INV-' + String(q.id).padStart(4, '0'),
+    collectionInvoiceTxn: ()=> null, collectionLedgerRow: ()=> false, debtLogIsInvoiceOwned: ()=> false, cashIsMoneyIn: ()=> true,
+  }, ['dsRecords', 'dsInvoiceRecords']);
+  const on24 = inv.dsInvoiceRecords('2026-09-24', '2026-09-24');
+  t.check(on24.length === 1 && on24[0].key === 'i:386' && on24[0].kind === 'inv' && on24[0].amt === 815000 && on24[0].od === '2026-09-19',
+    `INV-0386 shows on the 24th, the day it was invoiced, as an invoice for the order of the 19th (got ${JSON.stringify(on24.map((r)=> [r.key, r.amt, r.od]))})`);
+  t.check(/^INV-0386 · order from 19 Sept/.test(on24[0] ? on24[0].what : ''), 'and says which order it was, and when that came in');
+  t.check(!inv.dsRecords('2026-09-24', '2026-09-24').some((r)=> r.key === 'q:386'),
+    'it is not counted as an order on the 24th, so the day\'s orders and its checks are untouched');
+  t.check(inv.dsRecords('2026-09-19', '2026-09-19').some((r)=> r.key === 'q:386') && !inv.dsInvoiceRecords('2026-09-19', '2026-09-19').length,
+    'the order itself still sits on the 19th, where it is checked against the group');
+  t.check(!inv.dsInvoiceRecords('2026-09-19', '2026-09-24').some((r)=> r.key === 'i:386'),
+    'over a range holding both days it is one line, the order, not two');
+  t.check(!on24.some((r)=> r.key === 'i:387'), 'an order invoiced the day it came in is already that day\'s order line');
+  t.check(!on24.some((r)=> r.key === 'i:388' || r.key === 'i:389'), 'a voided invoice, or an order not invoiced, adds nothing');
+}
+
 t.done();
