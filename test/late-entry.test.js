@@ -49,8 +49,11 @@ const src = read('index.html');
     'it is invoiced on its own date, not the day it was typed in');
 
   const rp = src.slice(src.indexOf('/* RECEIVE-PAY-JS:BEGIN */'), src.indexOf('/* RECEIVE-PAY-JS:END */'));
-  t.check(/defaultDate: focus && typeof orderIsBackdated === 'function' && orderIsBackdated\(focus\) \? \(focus\.invoicedAt \|\| focus\.date\) : null/.test(rp)
+  t.check(/var late = invoices\.length && invoices\.every\(function \(i\) \{ return typeof orderIsBackdated === 'function' && orderIsBackdated\(i\.q\); \}\);/.test(rp)
+    && /defaultDate: lateOn \|\| null/.test(rp)
     && /date: set\.defaultDate \|\|/.test(rp), 'Receive payment opens on the invoice’s own date, so the Cash Book gets the day it was paid');
+  t.check(!/defaultDate: focus/.test(rp),
+    'the same date is recommended whether it is opened from the invoice or from the customer — not one rule per entry point');
 
   const board = src.slice(src.indexOf('/* ORDER-FLOW-JS:BEGIN */'), src.indexOf('/* ORDER-FLOW-JS:END */'));
   t.check(/'\*RECORD ONLY — already delivered ' \+ o\.backdatedLabel \+ '\. Nothing to pack or deliver\.\*/.test(board),

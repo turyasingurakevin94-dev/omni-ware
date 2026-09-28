@@ -136356,6 +136356,12 @@ function rpSetFor(target) {
   var oldestOther = others.reduce(function (m, q) { return Math.max(m, rpAgeDays(q)); }, 0);
   var oldest = Math.max(oldestOther, invoices.reduce(function (m, i) { return Math.max(m, parseInt(i.age, 10)); }, 0));
   var terms = rpTerms(c, oldest);
+  // A late entry was paid when it happened, not today. Whichever way the
+  // popup is opened -- one invoice, or the customer's open invoices -- it
+  // reads the same rule: when every invoice in it is a late entry, it opens
+  // on the latest of their own dates; otherwise on today.
+  var late = invoices.length && invoices.every(function (i) { return typeof orderIsBackdated === 'function' && orderIsBackdated(i.q); });
+  var lateOn = late ? invoices.reduce(function (m, i) { var d = i.q.invoicedAt || i.q.date; return d > m ? d : m; }, '') : null;
   return {
     who: c ? c.name : ((focus && focus.client && focus.client.name) || 'Customer'),
     customerId: c ? c.id : null,
@@ -136365,9 +136371,7 @@ function rpSetFor(target) {
     other: { owed: Math.max(0, debt - inView), count: others.length, oldest: oldestOther ? oldestOther + 'd' : null },
     start: focus ? inView : debt,
     category: focus ? 'Invoice Payment' : 'Debt Payment',
-    // A late entry was paid when it happened, not today: the popup opens on
-    // the invoice's own date, and the owner moves it if the money came later.
-    defaultDate: focus && typeof orderIsBackdated === 'function' && orderIsBackdated(focus) ? (focus.invoicedAt || focus.date) : null
+    defaultDate: lateOn || null
   };
 }
 RpSheet.prototype.commit = function (p) {
