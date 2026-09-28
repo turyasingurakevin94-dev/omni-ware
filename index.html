@@ -33143,7 +33143,14 @@ async function loadData(shopId){
       client:{name:'', phone:''}, items:[], savedAt:null, payments:[], customerId:null, debtCharged:0,
       charges:[], credit:null,
       ...(q.payload||{})
-    })),
+    })).map(q=>{
+      /* Orders moved back off Completed after being invoiced, before
+         setSavedQuoteStatus refused that: still invoiced, charged and
+         paid against, but missing from the Invoices register. Put back
+         where the invoice says they are; the next save writes it. */
+      if(q.invoiced && q.status!=='completed') q.status = 'completed';
+      return q;
+    }),
     nextSavedQuoteId: (savedQuotesR.data||[]).length ? Math.max(0,...savedQuotesR.data.map(q=>q.id||0))+1 : 1,
     /* Credit notes ride inside their invoice's payload, so their counter
        is the highest number among them, read back the same way. */
@@ -49792,6 +49799,16 @@ function setSavedQuoteStatus(id, status){
   if(!SQ_STATUSES[status]) return;
   const q = data.savedQuotes.find(x=>x.id===id);
   if(!q) return;
+  /* An invoice is a completed sale, and it stays one until the invoice
+     itself is undone. Moving an invoiced order back used to be allowed:
+     the charge, the payments and the stock all stayed, but the Invoices
+     register lists completed orders only -- so the invoice vanished from
+     the register while the customer's statement went on charging it, and
+     "Undo invoice" (also completed-only) could no longer reach it. */
+  if(q.invoiced && status!=='completed'){
+    toast(`${invoiceNumberLabel(q)} is invoiced — undo the invoice before moving the order back`, 5000);
+    return;
+  }
   // Moving an order ON out of Being Prepared ends the pick, whoever moved it
   // and for whatever reason. Here rather than in stepSavedQuoteStatus,
   // because this is the one place a status actually changes.
@@ -50623,6 +50640,12 @@ function orderNeedsDelivery(q){
 function stepSavedQuoteStatus(id, dir){
   const q = data.savedQuotes.find(x=>x.id===id);
   if(!q) return;
+  /* Refused here as well as in setSavedQuoteStatus, before the backward
+     branch below clears the driver and the pick. */
+  if(dir<0 && q.invoiced){
+    toast(`${invoiceNumberLabel(q)} is invoiced — undo the invoice before moving the order back`, 5000);
+    return;
+  }
   const idx = SQ_STATUS_ORDER.indexOf(q.status);
   // A status that isn't in the sequence has no next or previous step.
   // Without this, indexOf()'s -1 plus a forward step lands on 0 and
@@ -52291,7 +52314,7 @@ function orderRowBodyHTML(q){
     ghost('preview', 'Preview'),
     q.status === 'draft' && orderSupplierGroups(q).length ? ghost('confirm', 'Every supplier') : '',
     ghost('edit', 'Edit lines', ICON_EDIT),
-    idx > 0 ? ghost('prev', 'Move back') : '',
+    idx > 0 && !q.invoiced ? ghost('prev', 'Move back') : '',
     q.status === 'completed' && q.invoiced ? ghost('invoice', 'Undo invoice') : '',
     /* Delete for a Taken order that was a mistake; Cancel once it has
        moved, because by then goods may have arrived and a delete would
@@ -56545,7 +56568,7 @@ function renderSavedQuotes(){
         </div>
       </div>
       <div class="sq-card-actions-row">
-        <button type="button" class="sq-stage-arrow sq-stage-prev" data-id="${q.id}" ${SQ_STATUS_ORDER.indexOf(q.status)===0?'disabled':''} title="Move back to ${SQ_STATUS_ORDER.indexOf(q.status)>0?esc(SQ_STATUSES[SQ_STATUS_ORDER[SQ_STATUS_ORDER.indexOf(q.status)-1]].label):''}">
+        <button type="button" class="sq-stage-arrow sq-stage-prev" data-id="${q.id}" ${SQ_STATUS_ORDER.indexOf(q.status)===0 || q.invoiced?'disabled':''} title="${q.invoiced ? 'Invoiced — undo the invoice to move it back' : 'Move back to ' + (SQ_STATUS_ORDER.indexOf(q.status)>0?esc(SQ_STATUSES[SQ_STATUS_ORDER[SQ_STATUS_ORDER.indexOf(q.status)-1]].label):'')}">
           <svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
         <div class="sq-card-icons">

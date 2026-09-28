@@ -75,6 +75,7 @@ const env = {
      the stage and the pick. */
   openAssignStaffModal: (id, toStatus, role) => { calls.assignAsked = { id, toStatus, role }; },
   openOrderPreview: (id) => { calls.openedDialog = id; },
+  invoiceNumberLabel: (q) => 'INV-' + String(q.id).padStart(4, '0'),
 };
 
 const NAMES = ['agentPaymentBlocksPreparing', 'quoteAgedOffBoard', 'setSavedQuoteStatus', 'stepSavedQuoteStatus'];
@@ -340,5 +341,30 @@ const ONDELIVERY = [{ id: 'AG1', paymentTerm: 'pay_on_delivery' }];
  * rather than three named rules. shared-worker.js is the entire worker app,
  * and everything in it outside those three was going unchecked.
  */
+
+/* ---------- 8. an invoiced order stays Completed ------------------------ */
+/*
+ * The Invoices register lists completed orders only, while the customer's
+ * statement is built from the debt book. Moving an invoiced order back
+ * left its charge on the statement and took it off the register -- and
+ * "Undo invoice" is completed-only, so nothing could reach it.
+ */
+{
+  const inv = () => mkQuote({ status: 'completed', invoiced: true, assignedWorkerId: 'ST1', assignedDeliveryId: 'ST2' });
+  reset(inv());
+  stepSavedQuoteStatus(1, -1);
+  t.check(status() === 'completed' && calls.toasts.some((m) => /INV-0001 is invoiced/.test(m)),
+    `the back arrow refuses an invoiced order and says why (got ${status()})`);
+  t.check(data.savedQuotes[0].assignedDeliveryId === 'ST2',
+    'and the refusal comes before the backward move clears the driver');
+  reset(inv());
+  setSavedQuoteStatus(1, 'pending_delivery');
+  t.check(status() === 'completed', `no other route moves it back either (got ${status()})`);
+  reset(mkQuote({ status: 'completed', invoiced: false }));
+  stepSavedQuoteStatus(1, -1);
+  t.check(status() === 'pending_delivery', `an order not yet invoiced still moves back (got ${status()})`);
+  t.check(/if\(q\.invoiced && q\.status!=='completed'\) q\.status = 'completed';/.test(adminSrc),
+    'orders stranded before this rule are put back on Completed when the shop loads');
+}
 
 process.exit(t.done() ? 1 : 0);
