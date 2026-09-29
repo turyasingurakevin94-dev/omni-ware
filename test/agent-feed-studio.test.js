@@ -85,7 +85,13 @@ const d = (days) => new Date(now - days * DAY).toISOString().slice(0, 10);
 
 /* ---------- 3. the panel is on the screen, and never acts by itself ---- */
 {
-  t.check(/<div class="ow-pan ow-fs" id="agFeedPan">/.test(src), 'the Sales agents screen carries the feed panel');
+  /* The studio no longer stands open on the screen: the canvas put the
+     feed in the rail as a funnel, and "Open feed" there opens this
+     panel. It is still in the markup and still drawn with the screen;
+     it waits, hidden, for the owner to ask for it. */
+  t.check(/<div class="ow-pan ow-fs" id="agFeedPan" hidden>/.test(src), 'the Sales agents screen carries the feed panel, opened from the rail');
+  t.check(/function agentFeedCardHTML\(\)\{[\s\S]*?id="agFeedOpen"/.test(src) && /fp\.hidden = !fp\.hidden/.test(src),
+    'and the rail\'s feed card is the door to it');
   t.check(/loadAgentFeedTables\(\);\s*renderAgentFeedStudio\(\);/.test(src), 'and it is read and drawn with the rest of the screen');
   const start = (/getElementById\('agFeedStartBonus'\)[\s\S]*?openModal\('promoModal'\);/.exec(src) || [''])[0];
   t.check(/openModal\('promoModal'\)/.test(start) && !/agent_promotions/.test(start),

@@ -198,4 +198,29 @@ const line = (over)=> Object.assign({ dailyRate: 10, units30: 300, leadDays: 0, 
     'and nowhere is there a single-class rule for it that would quietly lose');
 }
 
+/* ---------- the next price break, on its own ------------------------ *
+ * cmpNextBreak was written for Compare prices and outlived it: the plan
+ * reads it to decide whether a rung ahead is worth reaching. These are
+ * the checks that screen's test held on it, moved here when it went.
+ */
+{
+  const nb = s.cmpNextBreak({ packQty: 0, tiers: [{ minQty: 1, price: 35000 }, { minQty: 100, price: 29000 }] }, 80);
+  t.check(!!nb, 'a cheaper rung ahead is found');
+  eq(nb && nb.more, 20, 'saying how many more it takes to reach it');
+  eq(nb && nb.price, 29000, 'and what it drops to');
+  t.check(s.cmpNextBreak({ packQty: 0, tiers: [{ minQty: 1, price: 35000 }, { minQty: 100, price: 29000 }] }, 100) === null,
+    'once reached there is nothing ahead to report');
+  t.check(s.cmpNextBreak({ packQty: 0, tiers: [{ minQty: 1, price: 35000 }] }, 5) === null,
+    'and a flat price has no break to reach');
+  /* A rung ahead that costs MORE is not a break. */
+  t.check(s.cmpNextBreak({ packQty: 0,
+    tiers: [{ minQty: 1, price: 36000 }, { minQty: 50, price: 38000 }] }, 10) === null,
+    'a dearer rung ahead is not offered as a saving');
+  /* A rung BEHIND the quantity is not ahead of it: on an inverted ladder
+     the cheaper rung sixty back must not come out as "-59 more". */
+  t.check(s.cmpNextBreak({ packQty: 0,
+    tiers: [{ minQty: 1, price: 30000 }, { minQty: 50, price: 35000 }] }, 60) === null,
+    'and a cheaper rung already behind them is not offered as one ahead');
+}
+
 process.exit(t.done() ? 1 : 0);

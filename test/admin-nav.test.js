@@ -89,7 +89,7 @@ const INDEX = railIndex();
     /* WhatsApp is not in this list any more: it is the Chats view of
        Messages. Section 2 below holds what that merge could lose. */
     'dashboard', 'quote', 'quote-saved', 'invoices', 'customers', 'agents',
-    'compare', 'sourcing', 'suppliers',
+    'sourcing', 'suppliers',
     /* Purchase invoices is NOT in this list, and that is deliberate. An
        order, the invoice it becomes and the bills it raises against its
        suppliers are ONE THING moving through the business --
@@ -332,9 +332,13 @@ const INDEX = railIndex();
      What is left under Buy is what the group was always for: CHOOSING
      what to buy and who from. Neither screen was lost, and neither door
      was: resolveTab presses the right lens for both old keys. */
-  t.check(groupOf['compare'] === 'Buy' && groupOf['suppliers'] === 'Buy'
-    && groupOf['sourcing'] === 'Buy',
-    'choosing what to buy, and from whom, is one job across three screens');
+  /* Compare prices was removed from Buy; resolveTab lands its old key on
+     the Price Registry so a saved last-tab still boots. */
+  t.check(groupOf['suppliers'] === 'Buy' && groupOf['sourcing'] === 'Buy',
+    'choosing what to buy, and from whom, is one job across the Buy screens');
+  t.check(!INDEX.some((x) => x.tab === 'compare') && !/id="tab-compare"/.test(src)
+    && /if\(tab === 'compare'\) return 'prices';/.test(src),
+    'Compare prices is gone, and its old door lands on the Price Registry');
   t.check(!INDEX.some((x) => x.tab === 'buying') && !/id="tab-buying"/.test(src),
     'What to buy is not a destination any more, and has no section left behind');
   t.check(/if\(tab === 'buying'\)\{ fcLens = 'stock'; return 'forecasts'; \}/

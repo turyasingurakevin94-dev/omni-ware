@@ -839,11 +839,27 @@ function myPackedOrders(){
    that moves an order into this queue. stageEnteredAt rather than savedAt,
    because savedAt is rewritten by every edit and an order corrected once
    used to go to the back of the line. */
+/* A LATE ENTRY. An order dated earlier than the day it was first saved is
+   one the shop forgot to enter at the time -- it was usually packed and
+   delivered long ago. Nobody is sent to pack it, its invoice carries its
+   own date, and the sales group is told it is a record, not a job. Read
+   from what the order already stores (date, createdAt); nothing new. */
+function orderIsBackdated(q){
+  if(!q || !/^\d{4}-\d{2}-\d{2}$/.test(String(q.date || ''))) return false;
+  const made = q.createdAt || q.savedAt;
+  if(!made) return false;
+  const d = new Date(made);
+  if(isNaN(d.getTime())) return false;
+  const madeISO = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  return q.date < madeISO;
+}
+
 function workerPickQueue(){
   const waitingSince = (q)=> q.stageEnteredAt || new Date(q.savedAt||0).getTime() || 0;
   return data.savedQuotes
     .filter(q=> !q.voided && !quoteAgedOffBoard(q) && q.status==='preparing' && !q.assignedWorkerId
-      && q.pickingStatus !== 'done' && !agentPaymentBlocksPreparing(q) && !goodsBlockPreparing(q))
+      && q.pickingStatus !== 'done' && !agentPaymentBlocksPreparing(q) && !goodsBlockPreparing(q)
+      && !orderIsBackdated(q))
     .sort((a, b)=> waitingSince(a) - waitingSince(b));
 }
 
