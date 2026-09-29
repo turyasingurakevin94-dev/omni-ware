@@ -17829,13 +17829,14 @@
   .su-ln.su-ln-o{border-top:2px dashed var(--ow-ink-400);}
   .su-weeks-acct i{background:var(--su-soft);}
   .su-weeks-acct i.su-wk-now{background:var(--su-ink);}
-  .su-tl{position:relative;display:block;height:30px;margin:0 var(--ow-sp-10);}
+  .su-tl{position:relative;display:block;height:44px;margin:0 var(--ow-sp-10);}
   .su-tl i,.su-tl b,.su-tl em{position:absolute;}
   .su-tl-axis{left:0;right:0;top:14px;height:2px;background:var(--ow-steel-100);}
   .su-tl-30{left:var(--x);top:8px;width:1px;height:14px;background:var(--ow-ink-400);}
-  .su-tl em{left:var(--x);top:-4px;transform:translateX(-50%);font-style:normal;font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;}
+  .su-tl em{left:var(--x);top:28px;transform:translateX(-50%);font-style:normal;font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;}
+  .su-ask-more{align-self:flex-start;margin:var(--ow-sp-10) var(--ow-sp-16) 0;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);}
   .su-tl-now{right:0;top:2px;width:2px;height:26px;background:var(--ow-ink-900);}
-  .su-tl em.su-tl-nowl{left:auto;right:0;transform:none;top:-4px;font-weight:var(--ow-fw-700);color:var(--ow-ink-900);padding-right:6px;}
+  .su-tl em.su-tl-nowl{left:auto;right:0;transform:none;top:28px;font-weight:var(--ow-fw-700);color:var(--ow-ink-900);padding-right:6px;}
   .su-tl-dot{left:var(--x);top:15px;width:var(--s);height:var(--s);transform:translate(-50%,-50%);border-radius:50%;border:2px solid var(--ow-paper);box-sizing:content-box;}
   .su-tl-dot.su-dot-good{background:var(--ow-verdigris);}
   .su-tl-dot.su-dot-warn{background:var(--ow-amber);}
@@ -66768,7 +66769,11 @@ function supplierAskBlockHTML(supplierId, list){
   const rows = list || supplierAskList(supplierId);
   if(!rows.length) return '';
   const today = todayISO();
-  const body = rows.map(x=>{
+  /* A long list is the register's job; the rail shows the worst few and
+     says how many more wait, the way the book's cards do. */
+  const RAIL = 8, all = !!(supAcct && supAcct.askAll);
+  const shown = all ? rows : rows.slice(0, RAIL);
+  const body = shown.map(x=>{
     const late = x.ageDays === null ? null : Math.max(0, Math.round(x.ageDays - x.limit));
     const checked = x.ageDays === null ? null : custAddDaysISO(today, -x.ageDays);
     return `<div class="ow-tbl-r ow-tbl-k" role="button" tabindex="0" data-sprice="${x.row.id}" title="Update ${esc(x.row.pname)}">
@@ -66784,6 +66789,7 @@ function supplierAskBlockHTML(supplierId, list){
       <div class="ow-tbl-h"><span>Line</span><span class="ow-tbl-n">Checked</span><span class="ow-tbl-n">Overdue</span><span></span></div>
       ${body}
     </div>
+    ${rows.length > RAIL ? `<button type="button" class="su-lnk su-ask-more" data-saskall>${all ? 'Show the worst ' + RAIL : rows.length - RAIL + ' more'}</button>` : ''}
     <div class="su-key su-key-rail"><span class="su-key-i"><i class="su-dot su-dot-bad"></i>you buy on it</span><span class="su-key-i"><i class="su-dot su-dot-warn"></i>not relied on</span>
       <span class="ow-ph-sp"></span><button type="button" class="su-lnk" data-sact="reply" data-sid="${esc(supplierId)}">Enter what they said</button></div>
   </div>`;
@@ -67063,6 +67069,7 @@ function supAcctClick(e){
   const hit = (sel)=> t.closest(sel);
   let b;
   if((b = hit('[data-smore]'))){ s.more = !s.more; supAcctRedraw(); return true; }
+  if((b = hit('[data-saskall]'))){ s.askAll = !s.askAll; supAcctRedraw(); return true; }
   if(s.more && !hit('.su-menu')){ s.more = false; }
   if((b = hit('[data-sbsort]'))){ const k = b.dataset.sbsort; s.buy = { ...s.buy, key: k, dir: s.buy.key === k ? -s.buy.dir : (k === 'name' ? 1 : -1), page: 1 }; supAcctRedraw(); return true; }
   if((b = hit('[data-sbpage]'))){ s.buy.page = Number(b.dataset.sbpage) || 1; supAcctRedraw(); return true; }
