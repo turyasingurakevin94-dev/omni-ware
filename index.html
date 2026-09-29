@@ -18715,7 +18715,7 @@
   .pr-lseg-l{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
   .pr-lseg{height:32px;padding:0 var(--ow-sp-10);border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
     font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
-  .ow-tbl.pr-ltbl{--ow-tbl-cols:28px minmax(0,1fr) 92px 72px 64px 96px minmax(0,96px) 60px 112px;}
+  .ow-tbl.pr-ltbl{--ow-tbl-cols:28px minmax(0,1fr) 92px 80px 76px 96px minmax(0,96px) 60px 112px;}
   .pr-ltbl .ow-tbl-h,.pr-ltbl .ow-tbl-r{gap:0;}
   .pr-ltbl .ow-tbl-h > span,.pr-ltbl .ow-tbl-r > span{padding-left:var(--ow-sp-10);padding-right:var(--ow-sp-10);min-width:0;}
   .pr-ltbl .ow-tbl-r{cursor:pointer;align-items:center;min-height:56px;}
@@ -18817,6 +18817,9 @@
   .pr-map .pr-tbl .ow-tbl-r{padding-left:0;padding-right:var(--ow-sp-8);}
   .pr-dlg-body .pr-verbs2{grid-template-columns:repeat(auto-fit,minmax(136px,1fr));}
   .pr-sp i{max-width:28px;}
+  .pr-lstat-slot .pr-lstat{margin:0;}
+  .pr-lstat-slot:empty{display:none;}
+  .pr-ltbl .pr-lr-t{width:100%;max-width:56px;}
   /* The list scrolls inside its own panel, so the map and the rail stay
      beside the product being read rather than a hundred rows above it. */
   #pairListWrap{max-height:calc(100vh - 300px);min-height:360px;overflow-y:auto;overscroll-behavior:contain;}
@@ -18885,6 +18888,7 @@
     .pr-dlg-lock{flex-basis:100%;}
     .pr-dlg-s{display:none;}
     .pr-lstat{justify-content:flex-start;flex-wrap:wrap;}
+    .pr-lstat-slot{flex-basis:100%;}
     .pr-lmain{grid-template-columns:minmax(0,1fr);}
     .pr-lpan > .ow-pan-h{height:auto;flex-wrap:wrap;padding:var(--ow-sp-10) var(--ow-sp-12);}
     .pr-ltbl .ow-tbl-r{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--ow-sp-6) var(--ow-sp-10);padding:var(--ow-sp-12);}
@@ -28545,6 +28549,7 @@
         <p class="ow-ph-sub">Pick a product: every rule on it, drawn &mdash; and checked against your own invoices.</p>
         <p class="ow-ph-help">A rule is one sentence about one product: it goes with that, needs so many of this per one, is part of one job with those, runs out after so many days. <b>A rule counts from both ends</b> &mdash; cement goes with sand means sand goes with cement, so it is written once and read on both products; only <b>needs</b> softens on the way back, since sheets need nails while nails merely go with sheets. Pick the product on the left and everything the shop knows about it is on the right. Where both products come in sizes, the grid under a rule says which size goes with which &mdash; a tick is a rule for that pair, the figure inside it is how many of your orders carried both, and Match by size fills the diagonal. A size with no tick and no match is marked open: that size&rsquo;s picture leaves the second thing off rather than guess. The figure is the point: eight nails per sheet is what lets a picture turn a hundred and forty sheets into eleven hundred nails, and where you give no figure the thing is named with no quantity. Your own invoices check every rule and offer the pairs they keep seeing. A rule never changes a price, moves stock or places an order.</p>
         <span class="ow-ph-sp"></span>
+        <span class="pr-lstat-slot" id="pairLstat"></span>
         <button type="button" class="btn btn-accent ow-sm" id="pair_add_btn">
           <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
           Write a rule
@@ -79567,12 +79572,17 @@ function renderPairings(){
   if(pairLens === 'learned'){
     if(strip) strip.innerHTML = '';
     wrap.innerHTML = pairLearnedHTML();
+    /* The learning line sits in the page head, where the map keeps its
+       button: it is the state of the whole lens, not of one panel. */
+    const slot = document.getElementById('pairLstat'), st = wrap.querySelector('.pr-lstat');
+    if(slot && st){ slot.innerHTML = ''; slot.appendChild(st); }
     return;
   }
   const all = pairProductRows();
   const withRules = all.filter(x=> x.rules);
   const observed = observedPairs();
   if(strip) strip.innerHTML = pairStripHTML(all, withRules);
+  const lslot = document.getElementById('pairLstat'); if(lslot) lslot.innerHTML = '';
 
   if(!productLinksTable){
     wrap.innerHTML = `<div class="ow-pan"><div class="ow-empty">
