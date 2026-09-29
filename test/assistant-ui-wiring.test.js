@@ -75,7 +75,7 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
     'Cancel becomes a declined result — not an error, so the model acknowledges instead of retrying');
   t.check((loop.match(/assistantThread\.push\(\{ role: 'user', content: results \}\)/g) || []).length === 1,
     'ALL tool results of a turn go back in ONE user message');
-  t.check(/goToTab\(currentActiveTab\)/.test(loop) && /refreshNavBadges\(\)/.test(loop),
+  t.check(/redrawCurrentTab\(\)/.test(loop) && /refreshNavBadges\(\)/.test(loop),
     'a confirmed write refreshes the visible tab through the app’s own idiom');
   t.check(/AP_MAX_STEPS/.test(loop) && /too many steps/.test(loop),
     'and the loop is bounded, with a sentence when the bound bites');
