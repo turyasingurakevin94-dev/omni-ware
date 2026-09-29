@@ -948,30 +948,25 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        above it a demand map of every item, and beside it who is
        waiting as bars. The archive is still one folded line that opens
        on its search, because browsing a hundred listed items is what
-       Products is for. */
+       Products is for.
+
+       Then rebuilt from the design canvas the owner signed off: capture,
+       the five-step board with a popup per item, each item's verdict and
+       plan, today's checklist, recommendations for every item and the
+       demand map. It lives in sourcing-console.js and draws with that
+       canvas's own markup (its classes renamed into ow-sv-), so the
+       section is only a mount point and renderSourcing only mounts it.
+       The layer entries below said "built from ow-ph and the ow-sf table"
+       and that is no longer what ships; what still holds -- none of the
+       families it retired may come back -- is kept. The console's own
+       rules are pinned in test/sourcing-console.test.js. */
     'sourcing': {
       retired: ['page-head', 'panel', 'qp-panel', 'sq-board-tools', 'sq-select-all-label',
                 'sq-board', 'sq-col', 'sq-card', 'sq-stepper', 'sf-card', 'sf-facts', 'sf-fact',
                 'sf-listed', 'sf-dropped', 'sf-meta-row', 'sf-days', 'sf-ask-count', 'empty'],
-      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp'],
-      renders: ['renderSourcing', 'sourcingRowHTML', 'sourcingStageHTML', 'sourcingStripHTML',
-                'sourcingRailHTML', 'sourcingOpenBodyHTML', 'sourcingArchiveHTML', 'listedRowHTML', 'renderSourcingListedBody', 'sourcingPhotoHTML', 'sourcingThumbHTML',
-                'sourcingFilterHTML', 'sourcingKnownHTML', 'sourcingGaugeHTML', 'sourcingSpreadHTML', 'sourcingMapSVG'],
-      rendersUses: ['ow-grid', 'ow-side', 'ow-stack', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n',
-                    'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t', 'ow-q-who', 'ow-q-v',
-                    'ow-q-f', 'ow-q-b', 'ow-q-note', 'ow-q-why', 'ow-q-a', 'ow-cp',
-                    'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-n', 'ow-tbl-c',
-                    'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-mini', 'ow-empty', 'ow-seg', 'ow-seg-b', 'ow-seg-n',
-                    /* what this screen owns: the column heads, the stage
-                       as segments inside an open row, the action column,
-                       the archive's fold and its rows -- and the drawn
-                       parts: the pipeline strip and its squares, the
-                       four squares of what is known, days in the step
-                       against the limit, the price spread, and who is
-                       waiting as bars */
-                    'ow-sf', 'ow-sf-h', 'ow-sf-st', 'ow-sf-sg',
-                    'ow-sf-a', 'ow-sf-arc', 'ow-sf-lr', 'ow-sf-more', 'ow-sf-say', 'ow-sf-x', 'ow-sf-ph', 'ow-thumb',
-                    'ow-sf-pl-row', 'ow-sf-sq', 'ow-sf-kn', 'ow-sf-kq', 'ow-sf-gg', 'ow-sf-sp', 'ow-sf-wr', 'ow-sf-src-b'],
+      uses: [],
+      renders: ['renderSourcing'],
+      rendersUses: [],
     },
     /* Assets & loans. Two screens for one question: the van on Assets,
        the loan that bought the van on Loans, neither page mentioning the

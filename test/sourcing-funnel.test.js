@@ -2317,14 +2317,16 @@ async function main() {
   t.check(/SOURCING_STATUS_ORDER\.map\(/.test(stageBar)
     && !/'asked'|'looking'|'sourced'|'priced'/.test(stageBar),
     'the stage bar is generated from SOURCING_STATUS_ORDER, never a hand-written list of stages');
-  const render = extractFunction(src, 'renderSourcing', 'index.html');
-  /* Every band starts from sourcingBoardLeads(), which is what drops the
-     voided ones -- so a dropped lead cannot survive in one band by being
-     filtered in a different place from the others. */
-  t.check(/const leads = sourcingBoardLeads\(\);/.test(render)
-    && (render.match(/leads\.filter\(/g) || []).length >= 2
-    && !/sourcingLeadsAll\(\)\.filter\(/.test(render),
-    'and every band is filtered out of the one already-dropped-free set');
+  /* The page is the console now (sourcing-console.js). The guard is the
+     same one: a dropped lead must not survive in one part of the screen
+     by being filtered somewhere else. The console reads "dropped" from
+     the lead's own voided flag, and every live part of it -- the board,
+     the checklist, recommendations, the map -- starts from LIVE, which
+     is filtered on that one list. */
+  const consoleSrc = read('sourcing-console.js');
+  t.check(/if \(l\.voided\) d\.dropped\.push\(rank\);/.test(consoleSrc)
+    && /const LIVE = ALL\.filter\(it => it\.stage < 4 && !this\.state\.dropped\.includes\(it\.rank\)\);/.test(consoleSrc),
+    'and every part of the screen is filtered out of the one already-dropped-free set');
 }
 
 /* ---------- 9. the three doors ---------------------------------------- */
@@ -2484,9 +2486,12 @@ async function main() {
     eq(S.sourcingWaitDays(asked, now), 30, 'the wait is the FIRST person’s, not the latest ask');
     eq(S.sourcingWaitDays(lead({ requests: [] }), now), 0, 'and an item with no asks has nobody waiting');
 
+    /* One primary action on the screen: on the console that is the
+       capture form's button, and no other button is filled with the
+       accent (checked over the whole markup in sourcing-console.test). */
     const render = extractFunction(src, 'renderSourcing', 'index.html');
-    t.check(/sourcingRowHTML\(l, now, i === 0\)/.test(render),
-      'only the top row of the list is handed the accent — one primary action on the screen');
+    t.check(/renderSourcingConsole\(\)/.test(render) && /capGoStyle: `[^`]*#C93A30/.test(read('sourcing-console.js')),
+      'only one move on the screen is handed the accent — one primary action on the screen');
     const row = extractFunction(src, 'sourcingRowHTML', 'index.html');
     t.check(/primary \? 'btn-accent' : 'btn-ghost'/.test(row) && !/btn-primary/.test(row),
       'and every other move on the list is a ghost button');

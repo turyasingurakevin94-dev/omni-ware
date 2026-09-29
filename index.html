@@ -16058,6 +16058,36 @@
     @keyframes fg-studio-enter{from{opacity:0;}to{opacity:1;}}
   }
 
+  /* ---------------- The Sourcing console ----------------
+     The page itself draws with inline styles taken from the design
+     canvas (sourcing-console.js); these are the handful of shared rules
+     that canvas kept in its own head. Box sizing reverts to the browser's
+     own, because the canvas was drawn without the app's global
+     border-box and its fixed widths assume that. */
+  .ow-sv-root{display:flex;flex-direction:column;gap:20px;font-size:13px;line-height:1.35;color:#1C2233;font-family:'Figtree',system-ui,sans-serif;}
+  .ow-sv-root *{box-sizing:revert;}
+  .ow-sv-root a{color:#C93A30;}
+  .ow-sv-root a:hover{color:#A82D24;}
+  .ow-sv-mono{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+  .ow-sv-ell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  .ow-sv-qrow:hover{background:#FCFBF9;}
+  .ow-sv-btn{font:inherit;cursor:pointer;}
+  .ow-sv-ws{display:none;}
+  .ow-sv-sr{position:absolute;width:1px;height:1px;margin:0;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;}
+  .ow-sv-desk{display:flex;flex-direction:column;gap:20px;}
+  .ow-sv-phone{display:none;}
+  @media (max-width:820px){
+    .ow-sv-desk{display:none;}
+    .ow-sv-phone{display:flex;flex-direction:column;gap:16px;}
+  }
+  .ow-sv-print-host{display:none;}
+  @media print{
+    .ow-sv-printing > *:not(.ow-sv-print-host){display:none!important;}
+    .ow-sv-print-host{display:block;}
+    .ow-sv-print-host .ow-sv-ws,.ow-sv-print-host .ow-sv-ps{display:block!important;}
+    .ow-sv-noprint{display:none!important;}
+  }
+
   /* ---------------- Sourcing funnel ----------------
      Only what the order board does not already carry. The board, the
      rail, the lanes, the cards and the phone one-lane view all come free
@@ -29625,14 +29655,9 @@
 
     <!-- SOURCING -->
     <section id="tab-sourcing" style="display:none;">
-      <div class="ow-ph">
-        <h1 class="ow-ph-t">Sourcing</h1>
-        <p class="ow-ph-sub">Things people asked for that you do not sell yet.</p>
-        <p class="ow-ph-help">Every item a client asked for that is not in the catalogue, followed until it is — who has it, what they charge, how it is packed. The screen is ordered by what needs you rather than by stage: what is priced and ready to list, then what nobody is researching, then what somebody is already on. Nothing here is ever deleted, so the next person to ask about a thing starts from what you already found.</p>
-        <span class="ow-ph-sp"></span>
-        <label class="ow-sf-drop"><input type="checkbox" id="src_show_dropped"> Show dropped</label>
-        <button type="button" class="btn btn-ghost ow-sm" id="src_add_btn">Add an item to source</button>
-      </div>
+      <!-- The console draws its own heading; this one is for the phone's
+           title bar, which names the screen once its header scrolls away. -->
+      <p class="ow-ph-t ow-sv-sr" aria-hidden="true">Sourcing</p>
       <div id="sourcingWrap"></div>
     </section>
 
@@ -32109,6 +32134,7 @@
 <script src="https://cdn.jsdelivr.net/npm/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="shared-worker.js"></script>
+<script src="sourcing-console.js"></script>
 <script>
 // Supabase appends #...&type=invite (or type=recovery) to the redirect URL
 // when a login session was established from an invite/password-reset email
@@ -32839,6 +32865,23 @@ const SOURCING_STATUSES = {
   listed:  { label:'Step 5. Listed',      color:'#0F6B43' }
 };
 const SOURCING_STATUS_ORDER = ['asked','looking','sourced','priced','listed'];
+/* Research rows stored in candidates: one {kind:'rival'} per competitor
+   price, one {kind:'meta'} for everything else the console keeps. */
+function sourcingResearchFrom(rows){
+  const all = Array.isArray(rows) ? rows : [];
+  const meta = all.find(c=> c && c.kind === 'meta');
+  return {
+    rivals: all.filter(c=> c && c.kind === 'rival').map(c=>{ const o = {...c}; delete o.kind; return o; }),
+    meta: meta ? (()=>{ const o = {...meta}; delete o.kind; return o; })() : {},
+  };
+}
+function sourcingResearchRows(research){
+  if(!research) return [];
+  const rows = (research.rivals||[]).map(r=> ({kind:'rival', ...r}));
+  const meta = research.meta || {};
+  if(Object.keys(meta).length) rows.push({kind:'meta', ...meta});
+  return rows;
+}
 const SOURCING_SHORT_LABELS = {asked:'Asked For', looking:'Looking', sourced:'Source Found', priced:'Priced', listed:'Listed'};
 
 // SQ_BOARD_HIDE_AFTER_MS / quoteAgedOffBoard() now live in shared-worker.js
@@ -33250,7 +33293,12 @@ async function loadData(shopId){
       // an error -- the same tolerance every newer column here gets.
       image: r.image || null,
       variantAttrs: Array.isArray(r.variant_attrs) ? r.variant_attrs : [],
-      candidates: Array.isArray(r.candidates) ? r.candidates : [],
+      /* The console's research -- competitor prices, a snooze, the
+         activity log -- rides in the same list under a `kind`, and is
+         lifted out here so every supplier-reading function in the app
+         only ever sees suppliers. saveData() puts it back. */
+      candidates: (Array.isArray(r.candidates) ? r.candidates : []).filter(c=> !(c && c.kind)),
+      research: sourcingResearchFrom(r.candidates),
       voided: !!r.voided, droppedReason:r.dropped_reason||'', droppedAt:r.dropped_at,
     })),
     followUps: followUpRows.map(r=>({
@@ -33349,6 +33397,9 @@ async function loadData(shopId){
     // the limits themselves ship unset, so there would be nothing to
     // alert about anyway.
     presetStageAlerts: !!presets.stageAlerts,
+    /* Days allowed in each sourcing step, set from the Sourcing page.
+       Rides in presets like the order board's limits, so no migration. */
+    presetSourcingStageLimits: (presets.sourcingStageLimits && typeof presets.sourcingStageLimits === 'object') ? presets.sourcingStageLimits : {},
     // Rides in the same presets blob as everything above it, so the
     // review's two settings need no column and no migration.
     presetPriceReview: presets.priceReview || {},
@@ -33753,7 +33804,7 @@ function buildSyncRows(d, shopId){
       product_id: l.productId||null, graduated_at: l.graduatedAt||null,
       created_at: l.createdAt||null,
       stage_entered_at: l.stageEnteredAt==null ? null : Number(l.stageEnteredAt),
-      requests: l.requests||[], candidates: l.candidates||[],
+      requests: l.requests||[], candidates: [...(l.candidates||[]), ...sourcingResearchRows(l.research)],
       ...(sourcingVariantColumn ? {variant_attrs: l.variantAttrs||[]} : {}),
       ...(sourcingImageColumn ? {image: l.image||null} : {}),
       voided: !!l.voided, dropped_reason: l.droppedReason||null, dropped_at: l.droppedAt||null,
@@ -33813,7 +33864,7 @@ function buildSyncRows(d, shopId){
     })),
     settings: {
       shop_id: shopId,
-      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, stageAlerts:!!d.presetStageAlerts, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, manager:d.presetManager||{}, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, reorderRules:d.presetReorderRules||{}, buyHolds:d.presetBuyHolds||{}, dayLog:d.presetDayLog||{}, buyOrders:d.presetBuyOrders||{}, deadStockDays:d.presetDeadStockDays, clearance:d.presetClearance||{}, targetMarginPct:d.presetTargetMarginPct, services:d.presetServices||[], chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, creditPct:d.presetCreditPct, debtChases:d.presetDebtChases||{}, chaseLog:d.presetChaseLog||[], msgTemplates:d.presetMsgTemplates||[], msgUseLog:d.presetMsgUseLog||[], waPins:d.presetWaPins||[], waSnooze:d.presetWaSnooze||{}, waNotes:d.presetWaNotes||[], waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate, waNeverPost:d.presetWaNeverPost||[], waAliases:d.presetWaAliases||[], waAliasNo:d.presetWaAliasNo||[],
+      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, sourcingStageLimits:d.presetSourcingStageLimits||{}, stageAlerts:!!d.presetStageAlerts, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, manager:d.presetManager||{}, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, reorderRules:d.presetReorderRules||{}, buyHolds:d.presetBuyHolds||{}, dayLog:d.presetDayLog||{}, buyOrders:d.presetBuyOrders||{}, deadStockDays:d.presetDeadStockDays, clearance:d.presetClearance||{}, targetMarginPct:d.presetTargetMarginPct, services:d.presetServices||[], chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, creditPct:d.presetCreditPct, debtChases:d.presetDebtChases||{}, chaseLog:d.presetChaseLog||[], msgTemplates:d.presetMsgTemplates||[], msgUseLog:d.presetMsgUseLog||[], waPins:d.presetWaPins||[], waSnooze:d.presetWaSnooze||{}, waNotes:d.presetWaNotes||[], waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate, waNeverPost:d.presetWaNeverPost||[], waAliases:d.presetWaAliases||[], waAliasNo:d.presetWaAliasNo||[],
         shopLegalName:d.presetShopLegalName||'', shopAddress:d.presetShopAddress||'', shopPhone:d.presetShopPhone||'',
         shopTin:d.presetShopTin||'', receiptFooter:d.presetReceiptFooter||'', autoPrintReceipt:!!d.presetAutoPrintReceipt,
         idCounters:d.idCounters||{}},
@@ -127402,91 +127453,11 @@ function sourcingArchiveHTML(leads){
 
 /* ---------------- The screen ---------------- */
 let sourcingOpenId = null;
+/* The Sourcing page is the console in sourcing-console.js: capture, the
+   funnel, each item's verdict and plan, today's checklist and the demand
+   map, drawn from the same leads everything below reads and writes. */
 function renderSourcing(){
-  const wrap = document.getElementById('sourcingWrap');
-  if(!wrap) return;
-  const all = sourcingLeadsAll();
-  const dropped = all.filter(l=> l.voided);
-  const leads = sourcingBoardLeads();
-  const now = Date.now();
-
-  const droppedLabel = document.querySelector('.ow-sf-drop');
-  if(droppedLabel) droppedLabel.style.display = dropped.length ? '' : 'none';
-
-  if(all.length === 0){
-    wrap.innerHTML = `<div class="ow-stack">${sourcingStripHTML(leads, now)}
-      <div class="ow-pan">
-        <div class="ow-empty">
-          <b>Nobody has asked for anything you do not stock.</b>
-          <p class="ow-sf-say">When somebody does it lands here on its own — from a quote search that found nothing, from a WhatsApp message you could not answer, or from the counter. It is followed until it is a product you sell, and every shop you find on the way is kept.</p>
-        </div>
-      </div></div>`;
-    return;
-  }
-  if(leads.length === 0 && !sourcingShowDropped){
-    wrap.innerHTML = `<div class="ow-stack">${sourcingStripHTML(leads, now)}
-      <div class="ow-pan"><div class="ow-empty">
-        <b>Every item has been dropped.</b>
-        <p class="ow-sf-say">Tick “Show dropped” to see the ${dropped.length} you set aside — nothing here is ever deleted, so the next person to ask starts from what you already found.</p>
-      </div></div></div>`;
-    return;
-  }
-
-  /* ONE LIST, ONE MOVE PER ROW. Ready to sell leads -- it is the only
-     work here that turns research into stock -- and after it, the most
-     people times the longest wait, which is the same ranking the map
-     draws as its top-right corner. The filter narrows the list and dims
-     the map; the counts on it are over the whole board. */
-  const live = leads.filter(l=> l.status !== 'listed');
-  const counts = {
-    all: live.length,
-    ready: live.filter(l=> sourcingFilterMatch(l, now, 'ready')).length,
-    over: live.filter(l=> sourcingFilterMatch(l, now, 'over')).length,
-    nobody: live.filter(l=> sourcingFilterMatch(l, now, 'nobody')).length,
-  };
-  const worth = (l)=> leadDistinctAskers(l) * Math.max(1, sourcingWaitDays(l, now));
-  const shown = leads.filter(l=> l.status !== 'listed' && sourcingFilterMatch(l, now, sourcingFilter))
-    .sort((a,b)=> (sourcingReadyToList(b)?1:0) - (sourcingReadyToList(a)?1:0) || worth(b) - worth(a)
-      || (a.stageEnteredAt||0) - (b.stageEnteredAt||0));
-
-  const head = `<div class="ow-sf-h">
-    <span></span><span></span><span>Item</span><span>Known</span><span>Days in step</span>
-    <span class="ow-sf-h-r">Waiting</span><span class="ow-sf-h-r">Next move</span>
-  </div>`;
-  const list = shown.length
-    ? head + shown.map((l, i)=> sourcingRowHTML(l, now, i === 0)).join('')
-    : `<div class="ow-empty">${live.length
-        ? `${({ ready:'Nothing is ready to sell yet.', over:'Nothing is over the time you allow.', nobody:'Every item has somebody on it.' })[sourcingFilter] || 'Nothing matches.'} <button type="button" class="ow-sf-all" data-sf-filter="all">Show all ${live.length}</button>`
-        : 'Everything asked for is on sale now.'}</div>`;
-
-  const droppedPanel = (sourcingShowDropped && dropped.length) ? `<div class="ow-pan">
-    <div class="ow-pan-h"><span class="ow-pan-t">Dropped — kept, not deleted</span><span class="ow-pan-n">${dropped.length}</span></div>
-    ${dropped.map(l=> `<button type="button" class="ow-sf-lr" data-lead-open="${esc(l.id)}">
-      <span class="ow-sf-lr-n" title="${esc(l.name)}">${esc(l.name)}</span>
-      <span class="ow-sf-lr-m">${esc(SOURCING_SHORT_LABELS[l.status])} when you set it aside${
-        l.droppedReason ? ' &middot; ' + esc(l.droppedReason) : ''}</span>
-      <span class="ow-sf-lr-p">${leadDistinctAskers(l)} asked</span>
-    </button>`).join('')}
-  </div>` : '';
-
-  wrap.innerHTML = `<div class="ow-stack">${sourcingStripHTML(leads, now)}
-    <div class="ow-grid">
-      <div class="ow-stack">
-        ${live.length ? `<div class="ow-pan">
-          <div class="ow-pan-h"><span class="ow-pan-t">Demand map</span><span class="ow-pan-nt">bigger bubble, more asked for</span></div>
-          <div class="ow-sf-mapw">${sourcingMapSVG(live, now, false)}${sourcingMapSVG(live, now, true)}</div>
-        </div>
-        <div class="ow-pan ow-sf">
-          <div class="ow-pan-h"><span class="ow-pan-t">Next moves</span>${sourcingFilterHTML(counts)}<span class="ow-pan-n">${shown.length}</span></div>
-          ${list}
-        </div>` : ''}
-        ${sourcingArchiveHTML(leads)}
-        ${droppedPanel}
-        <p class="ow-mini"><span>Nothing here is ever deleted. Items you drop are kept, so the next person to ask starts from what you already found.</span></p>
-      </div>
-      ${sourcingRailHTML(leads, now)}
-    </div></div>`;
-  if(sourcingArchiveOpen) renderSourcingListedBody();
+  if(typeof renderSourcingConsole === 'function') renderSourcingConsole();
 }
 
 /* ---------------- The lead's own screen ----------------
@@ -128224,11 +128195,6 @@ function fillGraduateFromCandidate(c){
 }
 
 /* ---------------- Wiring ---------------- */
-document.getElementById('src_add_btn').addEventListener('click', ()=> openSourcingLead(null));
-document.getElementById('src_show_dropped').addEventListener('change', (e)=>{
-  sourcingShowDropped = e.target.checked;
-  renderSourcing();
-});
 /* Delegated on the tab, which outlives every rebuild -- the lane's search
    box is replaced whenever the board is redrawn, so a listener bound to
    the input itself would be bound to a discarded element. */
