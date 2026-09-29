@@ -33,7 +33,7 @@
  *
  * Run: node test/supplier-statement.test.js   (or: npm test)
  */
-const { read, extractFunction, compileScope, createReporter } = require('./_extract');
+const { read, extractFunction, extractDeclaration, compileScope, createReporter } = require('./_extract');
 
 const t = createReporter('supplier statement');
 const src = read('index.html');
@@ -41,8 +41,11 @@ const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join(
 const data = { suppliers: [], purchaseInvoices: [] };
 
 const NAMES = ['supplierStatementRows', 'purchaseInvoiceTotal', 'purchaseInvoiceBalanceDue',
-  'creditorTotalOwed', 'purchaseInvoiceNumberLabel', 'creditorOutstandingInvoices'];
-const scope = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html')), { data }, NAMES);
+  'creditorTotalOwed', 'purchaseInvoiceNumberLabel', 'creditorOutstandingInvoices', 'supPaymentMethod'];
+// Each payment row names how it was paid (cash, mobile money or bank),
+// read off the cash-book entry the payment wrote.
+const scope = compileScope([extractDeclaration(src, 'SUP_METHOD', 'index.html')]
+  .concat(NAMES.map((n) => extractFunction(src, n, 'index.html'))), { data }, NAMES);
 
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 const inv = (id, date, amount, over) => Object.assign({
@@ -251,17 +254,25 @@ const paid = (date, amount, note) => ({ date, amount, note: note || '', cashTxnI
   const printer = extractFunction(src, 'printSupplierStatement', 'index.html');
   const print = extractFunction(src, 'supplierStatementSheet', 'index.html');
 
-  t.check(/statementLedgerHTML\(supplierStatementRows\(supplierId, from, to\)/.test(panel),
-    'the account renders through the shared ledger');
+  /* The screen now draws its own tabular statement (orders, payments,
+     how each was paid, a running balance), but off the same rows the
+     sheet prints -- the guarantee that matters is one builder. */
+  t.check(/supplierStatementRows\(supplierId, from, to\)/.test(panel),
+    'the account renders the rows the sheet prints');
   t.check(/supplierStatementSheet\(supplierId\)/.test(printer) && /printStatementSheet\(sheet\.st, sheet\.side\)/.test(printer),
     'and the print through the shared sheet');
   t.check(/supplierStatementRows\(supplierId, from, to\)/.test(print),
     'both off the same builder, so the sheet cannot disagree with the screen');
-  t.check(/customerStatementRange\(\)/.test(print) && /customerStatementRange\(\)/.test(panel),
-    'over the same six-month window as the customer statement');
+  /* The range is the one picked on screen, so the paper totals what
+     the screen totals; with no account open it falls back to the
+     customer statement's window. */
+  const range = extractFunction(src, 'supStmtRange', 'index.html');
+  t.check(/supStmtRange\(supplierId\)/.test(print) && /supStmtRange\(supplierId\)/.test(panel)
+    && /customerStatementRange\(\)/.test(range),
+    'over the range picked on screen, falling back to the customer statement window');
 
   // The one word that flips.
-  t.check(/payWord: 'Payment made'/.test(panel) && /payWord: 'Payment made'/.test(print),
+  t.check(/payWord: 'Payment made'/.test(print) && !/received/i.test(panel) && /'Payment'/.test(panel),
     'money leaving the shop is not "received" — on screen and on paper alike');
   t.check(/owesLine: \(m\)=> `\$\{esc\(printedShopName\(\)\)\} owes/.test(print),
     'and the closing sentence says the shop owes them, not the reverse');
@@ -279,7 +290,9 @@ const paid = (date, amount, note) => ({ date, amount, note: note || '', cashTxnI
   const acct = extractFunction(src, 'renderSupplierAccount', 'index.html');
   t.check(/\$\{r\.everInvoiced \? `<button type="button" class="btn btn-ghost ow-sm" data-sact="print"/.test(acct),
     'the print button is withheld from a supplier with no purchase invoice');
-  t.check(/\$\{r\.everInvoiced \? `<button[^`]*data-sact="print"[^`]*data-sact="wapdf"[^`]*` : ''\}/.test(acct),
+  /* Send PDF moved into the statement panel, which is itself only
+     drawn behind the same gate. */
+  t.check(/\$\{r\.everInvoiced \? supplierStatementBlockHTML\(r\.id\)/.test(acct) && /data-sact="wapdf"/.test(panel),
     'and so is Send on WhatsApp, inside the same gate: no invoice, no PDF of nothing');
   t.check(/const ask = r\.ask\.length\s*\n?\s*\? `<button/.test(acct),
     'while asking for a price is offered on its own terms, which a supplier with no invoice can very much have');
@@ -341,10 +354,16 @@ const paid = (date, amount, note) => ({ date, amount, note: note || '', cashTxnI
      actually be bought from, how many priced lines have a second quote,
      what has been spent, and how many prices are past their own age.
      Not one of them is Creditors'. */
-  t.check(/You can buy from/.test(render) && /Lines with a choice/.test(render)
-    && /Spent in 90 days/.test(render) && /Prices to confirm/.test(render),
+  /* Redrawn as pictures of the same questions: which prices moved,
+     how many quotes each line has, what was spent week by week, and
+     how many prices are past their age. The strip is built by
+     supStripHTML, which renderSuppliers calls. */
+  const strip = extractFunction(src, 'supStripHTML', 'index.html');
+  t.check(/supStripHTML\(/.test(render)
+    && /Price moves/.test(strip) && /Quotes per line/.test(strip)
+    && /Spent &middot; 90 days/.test(strip) && /Prices to confirm/.test(strip),
     'the four figures are named for what they count');
-  t.check(!/Total suppliers/.test(render) && !/Total you owe/.test(render),
+  t.check(!/Total suppliers/.test(render + strip) && !/Total you owe/.test(render + strip),
     'and none of them restates the figure Creditors exists to give');
 
   /* What is owed is still shown -- it is one column of the register,
