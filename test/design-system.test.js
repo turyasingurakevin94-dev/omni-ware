@@ -1193,12 +1193,14 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
     pairings: {
       retired: [],
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-sm'],
-      /* Two panes now: the product list and the product's rules are
-         drawn by their own builders beside the screen builder, and the
-         size grid and the draft by theirs. */
-      renders: ['renderPairings', 'pairListHTML', 'pairProductHTML', 'pairRowHTML',
-                'pairEditorHTML', 'pairGridHTML', 'pairDraftHTML',
-                'pairObservedHTML', 'pairOffHTML'],
+      /* Three columns under a strip now, and a second lens: the strip,
+         the list's tabs, the rail's panel, and the Learned lens with its
+         patterns are each drawn by their own builder beside the screen
+         builder, and the size grid and the draft by theirs. */
+      renders: ['renderPairings', 'pairStripHTML', 'pairTabsHTML', 'pairListHTML',
+                'pairProductHTML', 'pairRowHTML', 'pairEditorHTML', 'pairGridHTML',
+                'pairDraftHTML', 'pairObservedHTML', 'pairUsedHTML', 'pairOffHTML',
+                'pairLearnedHTML', 'pairPatternsHTML'],
       rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-u',
                     'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-tbl', 'ow-tbl-h',
                     'ow-tbl-r', 'ow-tbl-n', 'ow-tbl-a', 'ow-fig', 'ow-fig-b',
