@@ -73,7 +73,8 @@ const ctx = {
   saveData: log('saveData'), renderSavedQuotes() {},
   variantLabel: () => '', productUnitLabel: (id) => id === 'P1' ? 'Bag' : 'Kg',
   getStockQty: (id) => STOCK[id] || 0, getFIFOUnitCost: (id) => COST[id] || 0,
-  rankedPriceRows: (id) => id === 'P2' ? [{ supplierId: 'S7', retail: 4200, wholesale: 4000 }] : [],
+  rankedPriceRows: (id) => id === 'P2' ? [{ supplierId: 'S7', retail: 4200, wholesale: 4000, packUnit: 'Box', packQty: 25 }] : [],
+  customerOrdersFor: (cid) => data.savedQuotes.filter((q) => q.customerId === cid),
   effectiveMarkupRule: (p) => p.retailMarkupValue ? { type: p.retailMarkupType, value: p.retailMarkupValue, source: 'product' } : null,
   effectiveStockMarkupRule: (p) => p.retailMarkupValue ? { type: p.retailMarkupType, value: p.retailMarkupValue, source: 'product' } : null,
   tillSuggestedPrice: () => null, searchTokens: (q) => String(q).split(/\s+/),
@@ -161,7 +162,26 @@ function walk(i, scope, live, label) {
   const cq = data.savedQuotes.find((x) => x.customerId === 'C1');
   t.check(cq && cq.amountPaid === 0 && data.cashTxns.length === txBefore && data.customers[0].debt === 34500, 'On account writes no receipt and the regular owes it');
 
+  /* ---------- a regular's usual, and counting by the pack --------------- */
+  data.savedQuotes.push(
+    { id: 50, customerId: 'C3', client: { name: 'Ssali Mason' }, status: 'completed', invoiced: true, invoicedTs: now - 9e8, items: [{ productId: 'P1', qty: 4, sellPrice: 34500 }] },
+    { id: 51, customerId: 'C3', client: { name: 'Ssali Mason' }, status: 'completed', invoiced: true, invoicedTs: now - 8e8, items: [{ productId: 'P1', qty: 6, sellPrice: 34500 }, { productId: 'P2', qty: 1, sellPrice: 5000 }] });
+  board._csUsual = null;
+  v = set({ who: 'Ssali Mason', reg: 'Ssali Mason' });
+  t.check(/usually buys/.test(v.cs.tilesHead) && v.cs.tiles.length === 1 && v.cs.tiles[0].item === 'Cement' && v.cs.tiles[0].usual === '×6',
+    `a regular's tiles are what they buy on two visits or more, at their usual quantity (${v.cs.tilesHead}: ${v.cs.tiles.map((x) => x.item + ' ' + x.usual)})`);
+  v.cs.addUsual(); await flush(); t.check(board.state.counter.cart.length === 1 && board.state.counter.cart[0].qty === 6, 'Add their usual puts it in at that quantity');
+  STOCK.P2 = 100; board.csShelf();
+  v = set({ cart: [{ item: 'Nails', qty: 30 }] });
+  t.check(v.cs.lines[0].canSwitch && /Count in Boxes of 25/.test(v.cs.lines[0].switchTip), `an item sold by the pack can be counted in it (${v.cs.lines[0].switchTip})`);
+  v.cs.lines[0].switchUnit(); await flush(); v = board.renderVals();
+  t.check(v.cs.lines[0].qty === 2 && v.cs.lines[0].unit === 'Boxes' && v.cs.lines[0].priceText === '125,000', `30 kg becomes 2 boxes at 25 × the unit price (${v.cs.lines[0].qty} ${v.cs.lines[0].unit} @ ${v.cs.lines[0].priceText})`);
+  board.csSell(board.state.counter, board.state.counter.cart, 250000); await flush(); await flush();
+  const pl = data.savedQuotes[data.savedQuotes.length - 1].items[0];
+  t.check(pl.qty === 50 && pl.sellPrice === 5000 && pl.qtyIn === 'pack' && pl.packQty === 25 && pl.packUnit === 'Box', 'sold by the box, it is recorded in kg and marked as counted by the pack, as a quote records it');
+
   /* ---------- Make it an order ------------------------------------------ */
+  STOCK.P2 = 0; board.state.counter = null; board.csShelf();
   const n = data.savedQuotes.length;
   set({ cart: [{ item: 'Nails', qty: 3 }], who: '' });
   board.csToOrder(board.state.counter, board.state.counter.cart); await flush(); await flush();
