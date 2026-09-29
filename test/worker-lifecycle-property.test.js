@@ -59,6 +59,8 @@ const SOURCES = [
   extractFunction(sharedJs, 'orderIncomingLines', 'shared-worker.js'),
   extractFunction(sharedJs, 'orderAwaitsGoods', 'shared-worker.js'),
   extractFunction(sharedJs, 'goodsBlockPreparing', 'shared-worker.js'),
+  // The queue skips a late entry (an order entered after it was delivered).
+  extractFunction(sharedJs, 'orderIsBackdated', 'shared-worker.js'),
   extractFunction(sharedJs, 'quoteAgedOffBoard', 'shared-worker.js'),
   extractFunction(sharedJs, 'agentPaymentBlocksPreparing', 'shared-worker.js'),
   extractFunction(sharedJs, 'itemPickAnswered', 'shared-worker.js'),

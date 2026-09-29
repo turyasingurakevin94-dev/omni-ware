@@ -47,8 +47,8 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
 const KNOWN = [
   /* agent.html addresses this one by id and styles it nowhere. */
   'ag-lb-you',
-  'assign-staff-self', 'buy-why', 'cf-duplicate', 'cf-phone', 'cmp-ask-product',
-  'cmp-ask-qty', 'cst-print', 'ip-item', 'ls-tidy', 'panel-head',
+  'assign-staff-self', 'buy-why', 'cf-duplicate', 'cf-phone',
+  'cst-print', 'ip-item', 'ls-tidy', 'panel-head',
   'pr-bulk-tier-price', 'q-more-btn', 'sf-card', 'sf-phone', 'sf-role-warn',
   'stock-log-edit', 'wa-desk-main', 'wv-active-header', 'wv-eyebrow',
 ];

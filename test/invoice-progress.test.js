@@ -163,9 +163,14 @@ if (scope) {
      bar. "Emitted exactly once" is asked of THIS renderer, which is
      what it always meant -- the paired lens calling the same function
      is the opposite of a second template to drift from. */
-  t.check(/<div class="ow-tbl-c inv-c-st" data-l="Status">[\s\S]{0,120}?invProgressCell\(q\)/.test(render),
-    'the bar lives in the status cell of the one row template, labelled so the phone card names it');
-  t.check((render.match(/invProgressCell\(q\)/g) || []).length === 1,
+  /* THE OWNER'S CANVAS GAVE THE BAR A COLUMN OF ITS OWN -- Collected,
+     a track and the percentage beside it -- instead of sharing the
+     status cell. The two things asked are unchanged: it is emitted from
+     one cell of the one row template, and that cell is labelled so the
+     phone card says what the figure is. */
+  t.check(/<div class="ow-tbl-c inv-c-coll" data-l="Collected"><span class="inv-pb">/.test(render),
+    'the bar lives in the Collected cell of the one row template, labelled so the phone card names it');
+  t.check((render.match(/class="inv-pb"/g) || []).length === 1,
     'and is emitted exactly once — there is no second template to drift from');
   /* And the three reasons it can give were hover-only titles, which is
      to say invisible on the phone. They are rows of the register now,

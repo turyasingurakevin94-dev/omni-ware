@@ -230,7 +230,11 @@ const reset = () => {
     'the supplier account reads it through the helper rather than subtracting the two itself');
   t.check(/linked\.net > 0 \? `<b>\$\{f\(linked\.net\)\}<\/b> your way/.test(src),
     'and reads its sign the same way round, so the two accounts cannot contradict each other');
-  t.check(/both: bothSidesPosition\(c\),/.test(src) && /\$\{r\.both \? `<p class="ow-q-note">/.test(src),
+  /* The line moved from the row that opened in place (gone: a row opens
+     the account now) to the account's own rail, as a Both sides panel.
+     Still drawn only when the helper found a counterpart. */
+  t.check(/both: bothSidesPosition\(c\),/.test(src)
+    && /\$\{r\.both \? `<div class="ow-pan">[\s\S]{0,120}Both sides/.test(extractFunction(src, 'customerRailHTML', 'index.html')),
     'and the customer account draws the line only when the helper found one');
 
   /* Both foreign keys are gone: each was half of a cycle, and even the

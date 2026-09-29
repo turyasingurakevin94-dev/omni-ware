@@ -44,7 +44,7 @@ const names = fs.readdirSync(FN_DIR)
   .filter((n) => fs.statSync(path.join(FN_DIR, n)).isDirectory())
   .sort();
 
-t.check(names.length === 18, `all ${names.length} functions found`);
+t.check(names.length === 19, `all ${names.length} functions found`);
 
 const open = [];   // no incoming Authorization — must be verify_jwt = false
 const closed = [];

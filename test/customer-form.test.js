@@ -395,7 +395,13 @@ if (scope) {
      helper is still the only source, and the account still lists all of
      them rather than the first. Asserting the old call site would have
      asked for the shape rather than the guarantee. */
-  t.check(/\$\{contactPhones\(c\)\.map\(ph=>/.test(src),
+  /* The customer account went the same way when it became the hero at
+     the head of the account: every number is read ONCE into
+     customerBookRow through the helper, and the hero lists them all from
+     there. The guarantee is unchanged; only the call site moved. */
+  const cusRow = extractFunction(src, 'customerBookRow', 'index.html');
+  const hero = extractFunction(src, 'customerHeroHTML', 'index.html');
+  t.check(/phones: contactPhones\(c\),/.test(cusRow) && /\$\{phones\.map\(ph=>/.test(hero),
     'the customer account lists every number on the record, not just the first');
   const supRow = extractFunction(src, 'supplierBookRow', 'index.html');
   t.check(/phones: contactPhones\(s\),/.test(supRow),
@@ -403,7 +409,7 @@ if (scope) {
   const supRail = extractFunction(src, 'supplierAccountRailHTML', 'index.html');
   t.check(/r\.phones\.map\(ph=>/.test(supRail),
     'so the supplier account lists all of them too, and not only the first');
-  t.check(/\$\{\(!contactPhones\(c\)\.length && !c\.location && !c\.notes\)/.test(src),
+  t.check(/!phones\.length && !c\.location/.test(hero),
     'and "no contact details" counts the second number as contact details');
 }
 

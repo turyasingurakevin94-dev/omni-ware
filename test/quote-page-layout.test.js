@@ -288,9 +288,9 @@ const src = read('index.html');
 {
   t.check(/class="q-item-search-dd searchable-select" id="q_item_search_dd"/.test(src),
     'the dropdown carries the searchable-select scope — hover, sid spacing, variant notes');
-  t.check(/#ip_list \.suggestion-item, #cmp_suggestions \.suggestion-item, \.q-item-search-dd \.suggestion-item\{display:flex/.test(src),
+  t.check(/#ip_list \.suggestion-item, \.q-item-search-dd \.suggestion-item\{display:flex/.test(src),
     'and joins the picker list’s own flex-row rule rather than duplicating it');
-  t.check(/#ip_list \.ip-item-main, #cmp_suggestions \.ip-item-main, \.q-item-search-dd \.ip-item-main\{flex:1/.test(src)
+  t.check(/#ip_list \.ip-item-main, \.q-item-search-dd \.ip-item-main\{flex:1/.test(src)
     && /, \.q-item-search-dd \.ip-item-price\{flex-shrink:0/.test(src),
     'name and price cells included, so the row lays out like every other suggestion row');
 }

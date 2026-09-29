@@ -75,12 +75,16 @@ const sec = (/<section id="tab-invoices"[\s\S]*?\n    <\/section>/.exec(src) || 
   t.check(/\.inv-crumb\[hidden\]\{display:none;\}/.test(src),
     'including on the crumb, whose own display:flex would otherwise win');
 
-  t.check(/sub\.textContent = sales/.test(side) && /box\.placeholder = paired/.test(side),
+  /* The sub is now the range and what it holds -- "Last 30 days · 96
+     sales" -- so it is written wherever the counts change, by
+     invHeadRefresh, which the lens calls. */
+  const head = extractFunction(src, 'invHeadRefresh', 'index.html');
+  t.check(/invHeadRefresh\(\)/.test(side) && /sub\.textContent = invSide === 'paired'/.test(head) && /box\.placeholder = paired/.test(side),
     'the words around the register follow it — the sub, and what the search box says it searches');
   /* Reached through the section, not by id: an id on a paragraph is an
      id another screen can one day repeat, and this file has already
      shipped that fault twice. */
-  t.check(/document\.querySelector\('#tab-invoices \.ow-ph-sub'\)/.test(side)
+  t.check(/document\.querySelector\('#tab-invoices \.ow-ph-sub'\)/.test(head)
     && /#tab-invoices \.ow-ph-help/.test(side),
     'and it reaches them through the section rather than by ids nobody else may take');
 }
@@ -100,9 +104,13 @@ const sec = (/<section id="tab-invoices"[\s\S]*?\n    <\/section>/.exec(src) || 
     'and one keystroke in it draws whichever register is open');
 
   const side = extractFunction(src, 'invApplySide', 'index.html');
-  t.check(/classList\.toggle\('btn-accent', invSide==='sales'\)/.test(side)
-    && /classList\.toggle\('btn-ghost', invSide!=='sales'\)/.test(side),
-    'the printed sheet is prominent on Sales and quiet on Together and Purchases');
+  /* THE OWNER'S CANVAS spends the one accent on Print on the two sales
+     lenses -- "Print…" on Sales, "Print list" on Together -- and gives
+     the Purchases header to Record a bill, with that list's own Print…
+     on its Bills panel. */
+  t.check(/print\.hidden = !sales/.test(side) && /print\.classList\.add\('btn-accent'\)/.test(side)
+    && /newBill\.hidden = sales/.test(side),
+    'the printed sheet is the accent on Sales and Together, and Purchases\' header is Record a bill');
   t.check((sec.match(/btn-accent/g) || []).length === 1,
     'and the screen carries exactly one of them in its markup');
 }
@@ -122,8 +130,12 @@ const sec = (/<section id="tab-invoices"[\s\S]*?\n    <\/section>/.exec(src) || 
     'under a focus the list is that order\'s bills');
   t.check(/if\(tokens\.length && !focusOrder\)/.test(pr),
     'and the range and the search do not narrow it — a bill raised last month is still one of them');
-  t.check(/const seg = focusOrder \? '' :/.test(pr),
-    'the kind segment is not drawn under a focus, where two of its three choices could only empty the list');
+  /* The All / For an order / For the shelf segment became the For
+     column's filter in the owner's canvas. The rule it kept still holds
+     for what replaced it: under a focus no filter narrows the order's
+     bills, and the filter row is not drawn. */
+  t.check(/if\(colf\.length && !focusOrder\)/.test(pr) && /piColfShown && !focusOrder \? piColfRowHTML/.test(pr),
+    'the column filters are not applied or drawn under a focus, where they could only empty the list');
 
   const crumb = extractFunction(src, 'invRenderCrumb', 'index.html');
   t.check(/invoiceNumberLabel\(q\)/.test(crumb) && /Back to Sales/.test(crumb),

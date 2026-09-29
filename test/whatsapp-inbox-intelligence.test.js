@@ -183,11 +183,11 @@ const said = (conv, body, hour, auto) => ({ conversation_id: conv, direction: 'o
      not comparable — the system only ever takes questions where a
      product was named outright — so the panel says so in words, and
      withholds the widening offer entirely until there is enough. */
-  t.check(/it only ever takes the questions where a customer named a product outright/.test(src),
+  t.check(/Not a fair race: the system only takes products named outright, the easy ones/.test(src),
     'the panel says out loud why its own two rows cannot be raced against each other');
   t.check(/led\.total >= WA_LEDGER_MIN \? `<div class="wa-ra"[\s\S]{0,200}?id="wa_dry"/.test(src),
     'and the offer to widen autonomy does not appear before there is evidence to read');
-  t.check(/led\.total < WA_LEDGER_MIN[\s\S]{0,220}?narrowest setting until there are about \$\{WA_LEDGER_MIN\}/.test(src),
+  t.check(/led\.total < WA_LEDGER_MIN[\s\S]{0,220}?narrowest setting until about \$\{WA_LEDGER_MIN\}/.test(src),
     'a shop with too few questions is told that, rather than shown a figure that means nothing');
 }
 

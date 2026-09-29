@@ -469,7 +469,49 @@ const bookRow = (id, reason, held) => ({ id, name: (data.customers.find((c) => c
   const sec = (/<section id="tab-followups"[\s\S]*?<\/section>/.exec(src) || [''])[0];
   t.check(!/data-fuptab="score"/.test(sec) && !/id="fup_score_pane"/.test(sec),
     'the measurement is not a view of its own any more');
-  eq((sec.match(/class="ow-seg-b/g) || []).length, 2, 'two views — the work, and the register that records it');
+  /* THREE VIEWS NOW, AND THE CLAIM ABOVE STILL HOLDS. The old assertion
+     meant: the measurement is not a peer of the work, because as a peer
+     it brought a strip of its own and moved the page's furniture. The
+     Intelligence view is a peer -- but it brings NO strip of its own
+     (renderMessagesIntel draws .ow-mi-strip, a reading, not the lane
+     filter), the lane strip stays on every view, and "Did it work"
+     still lives in the Register's rail beside the history it measures.
+     What changed is that the screen now has something to say about the
+     WHOLE record -- reason bars, when customers write, the money
+     ladder, the rules as days -- that is read weekly and would crowd
+     the work if it sat above it. So: the work, what it all came to, and
+     the register that records it. */
+  /* AND FOUR: the words themselves. Templates is a view because the
+     words are edited and judged away from the work -- a library, an
+     editor checked against today's real list, and each template's own
+     record -- and like Intelligence it brings no strip of its own. */
+  /* AND FIVE: the chats. WhatsApp was a page; what it said twice (who is
+     waiting, who wrote back, today's post) was already lanes here, and
+     what only it had -- the thread you reply in, the connection, the
+     number's settings -- came here as Chats. It brings no strip either:
+     the old page's five-figure strip went, because the band on Today
+     already reads the day. */
+  eq((sec.match(/class="ow-seg-b/g) || []).length, 5, 'five views — the work, the chats, what it came to, the words it is said in, and the register that records it');
+  t.check(/data-fuptab="chats"/.test(sec) && /id="fup_chat_pane"/.test(sec) && !/id="wa_strip"/.test(sec),
+    'the chats are a view with no strip of their own');
+  t.check(/data-fuptab="tpls"/.test(sec) && /id="fup_tpl_pane"/.test(sec), 'and Templates has its own pane');
+  t.check(/data-fuptab="intel"/.test(sec) && /id="fup_intel_pane"/.test(sec),
+    'and the middle one is Intelligence, with its own pane');
+  /* ONE ACCENT PER READING, NOT NONE. This said the page carries no
+     accent at all, because nothing on a page of readings was a next
+     move. The "Desktop · Intelligence" canvas changed that on purpose:
+     a finding now ends in the one act it calls for -- ring the big
+     buyer who stopped, keep an asked-for item stocked, open To post for
+     money sleeping on the shelf -- and that act is red, as a lane's one
+     send is. The claim the old check protected still holds, at the
+     size of a panel: the page itself (renderMessagesIntel) draws no
+     accent, and no reading carries more than one KIND of red act. */
+  t.check(!/btn-accent/.test(extractFunction(src, 'renderMessagesIntel', 'index.html')),
+    'the page itself carries no accent — each reading brings its own act');
+  ['msgIntelStripHTML', 'msgIntelGoodsFind', 'msgIntelPairFind', 'msgIntelReasonsHTML', 'msgIntelHeatHTML', 'msgIntelDueHTML', 'msgIntelEarnsHTML']
+    .forEach((n) => t.check(!/btn-accent/.test(extractFunction(src, n, 'index.html')), `${n} is a reading with no red act`));
+  ['msgIntelSlipFind', 'msgIntelSleepingHTML', 'msgIntelAsksHTML']
+    .forEach((n) => t.check(((extractFunction(src, n, 'index.html').match(/btn btn-accent/g)) || []).length === 1, `${n} ends in one red act, as its canvas draws it`));
   /* STILL THE REGISTER'S RAIL, drawn beside the history it measures --
      but the rail is the SCREEN's now, not one this view builds for
      itself. The Messages console stands one .ow-grid and one .ow-side in

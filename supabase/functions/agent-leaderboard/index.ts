@@ -122,13 +122,17 @@ Deno.serve(async (req) => {
       .map((a, idx) => ({ ...a, rank: idx + 1 }));
 
     const you = ranked.find((a) => a.id === callingAgentId) || null;
+    // How far to the next place up -- the one number that turns a rank
+    // into something to do today. Null at the top, and never negative.
+    const above = you && you.rank > 1 ? ranked[you.rank - 2] : null;
+    const gapToNext = above ? Math.max(0, above.amount - you!.amount) : null;
     const top = ranked.slice(0, 5).map((a) => ({ rank: a.rank, displayName: displayName(a.name), isYou: a.id === callingAgentId }));
 
     return json({
       ok: true,
       period: monthKey,
       totalAgents: ranked.length,
-      you: you ? { rank: you.rank, amount: you.amount, completedOrders: you.completedOrders } : null,
+      you: you ? { rank: you.rank, amount: you.amount, completedOrders: you.completedOrders, gapToNext } : null,
       top,
     });
   } catch (err) {

@@ -171,7 +171,9 @@ const { nameInitials } = compileScope(
      straight to the shared function. */
   t.check(!/function agentInitials\(/.test(src),
     'the admin app keeps no private initials function of its own');
-  t.check(/<span class="ow-av">\$\{esc\(nameInitials\(r\.who\)\)\}<\/span>/.test(src),
+  /* The queue's avatar is the canvas's now -- .agv-qa, tinted by the
+     row's key -- and still lettered by the shared function. */
+  t.check(/<span class="agv-qa[^"]*"[^>]*>\$\{esc\(nameInitials\(r\.who\)\)\}<\/span>/.test(src),
     'and its agent avatar is lettered by the shared one');
 }
 
@@ -230,7 +232,10 @@ const { nameInitials } = compileScope(
   const row = extractFunction(src, 'supplierRegisterRowHTML', 'index.html');
   t.check(/ow-fig su-win\$\{r\.wins \? '' : ' su-nil'\}/.test(row),
     'a supplier who wins nothing is marked rather than shown a green zero');
-  t.check(/\$\{r\.priced\s*\n?\s*\?[\s\S]{0,120}?: dash\}/.test(row),
+  // The ring beside the count made the priced branch longer, and the
+  // dash now carries an "Add a price" link after it -- the claim pinned
+  // is unchanged: nothing priced, no count, a dash.
+  t.check(/\$\{r\.priced\s*\n?\s*\?[\s\S]{0,400}?:\s*(dash\}|`\$\{dash\})/.test(row),
     'and one with nothing priced shows a dash, because "cheapest on none" is a claim the app cannot make without a price');
 
   /* .su-win and .su-win.su-nil do NOT tie -- the second is (0,2,0)

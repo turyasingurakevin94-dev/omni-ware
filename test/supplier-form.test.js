@@ -142,10 +142,16 @@ const save = (/__btn_s_save\.addEventListener[\s\S]*?\n\}\)\);/.exec(code) || ['
      the field still rendered at 14px, because `input[type=text]` does
      not match an <input> that declares no type. winningDeclaration
      resolves the cascade the way a browser does. */
-  eq(winningDeclaration(src, 's_name', 'font-size').value, '19px',
+  /* The redesigned form sets the name apart by weight and by its box
+     (46px, a heavier border) rather than by a bigger font -- the phone
+     rule lifts every field to 16px so iOS does not zoom, which a size
+     comparison cannot see past. Weight is what the phone rule leaves
+     alone, so weight is what is measured. */
+  eq(winningDeclaration(src, 's_name', 'font-weight').value, '600',
     'and the name actually renders set apart from the fields that describe it');
-  eq(winningDeclaration(src, 's_phone', 'font-size').value, '14px',
-    'which only means something because those fields do not');
+  t.check(/\.sp-namebox\{height:46px;\}/.test(src) && /\.sp-in\{height:42px;/.test(src)
+    && !/id="s_phone"[^>]*class="[^"]*sup-name/.test(src),
+    'which only means something because those fields do not -- a lighter, shorter box');
 }
 
 /* ---------- 6. the place is one of the shop's, not free text --------- *
@@ -199,7 +205,7 @@ const save = (/__btn_s_save\.addEventListener[\s\S]*?\n\}\)\);/.exec(code) || ['
  * it rides all the way to the label the collecting worker reads.
  */
 {
-  t.check(/<input id="s_shopno"[^>]*placeholder="Shop no\. inside the building/.test(modal),
+  t.check(/<input id="s_shopno"[^>]*placeholder="Shop no\. /.test(modal),
     'the form asks for the shop no., separate from the place');
   t.check(/shopNo: document\.getElementById\('s_shopno'\)\.value\.trim\(\),/.test(save),
     'and saving records it, trimmed');

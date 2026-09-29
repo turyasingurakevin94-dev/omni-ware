@@ -45,28 +45,35 @@ const { read, extractFunction, createReporter } = require('./_extract');
 
 const t = createReporter('invoice undo');
 const src = read('index.html');
-const render = extractFunction(src, 'renderInvoices', 'index.html');
+/* THE ACT LIVES IN THE OPENED INVOICE NOW. The owner's redesign strips
+   the register's row to one pencil, and everything done to a single
+   document -- edit it, void it, undo it, print it -- is in the editor the
+   pencil opens (invEdRender draws it, invEdAct carries it out). Every
+   question below is unchanged; what moved is where they are asked. */
+const render = extractFunction(src, 'invEdRender', 'index.html') + extractFunction(src, 'invEdAct', 'index.html');
+const register = extractFunction(src, 'renderInvoices', 'index.html');
 const toggle = extractFunction(src, 'toggleQuoteInvoiced', 'index.html');
 const bind = extractFunction(src, 'invBindDocActions', 'index.html');
 
 /* ---------- 1. the act is on the row, and it is the same act ---------- */
 {
-  t.check(/inv-doc-unbill/.test(render),
-    'the register\'s row carries an undo-invoice control');
+  t.check(/data-ed-act="undo"/.test(render) && /inv-doc-open/.test(register),
+    'the invoice the row\'s pencil opens carries an undo-invoice control');
   /* The BINDING moved to invBindDocActions when the paired lens arrived
      -- both lenses draw this row, and a second copy of the wiring is
      exactly how one lens comes to reverse what the other only prints.
      The button is still emitted by renderInvoices (checked above); this
      asks the same question of the one place that now binds it. */
-  t.check(/\.inv-doc-unbill'\)[\s\S]{0,200}toggleQuoteInvoiced\(Number\(btn\.dataset\.id\)\)/.test(bind),
+  t.check(/act === 'undo'\) return closeThen\(\(\)=>toggleQuoteInvoiced\(q\.id\)\)/.test(render),
     'and it calls the same toggleQuoteInvoiced the Order tracking board calls');
+  void bind;
   /* Not a private reversal beside the shared one. If this screen ever
      starts putting stock back or removing payments itself, these two
      paths will drift the way voiding once did. */
   ['reverseQuoteStockDeduction', 'removeCashTxnsByIds', 'removePurchaseInvoicesForQuote']
     .forEach((fn) => {
-      t.check(!new RegExp(`${fn}\\(`).test(render),
-        `renderInvoices does not reverse anything itself — ${fn} stays in the one place that owns it`);
+      t.check(!new RegExp(`${fn}\\(`).test(register) && !new RegExp(`${fn}\\(`).test(render),
+        `neither the register nor the editor reverses anything itself — ${fn} stays in the one place that owns it`);
     });
 }
 
@@ -76,9 +83,10 @@ const bind = extractFunction(src, 'invBindDocActions', 'index.html');
      at the end of the row, so the one case where offering both would be
      incoherent has to be closed: a voided invoice is already cancelled,
      and Unvoid is the act that belongs to it. */
-  t.check(/q\.voided \? '' : icon\('inv-doc-unbill'/.test(render),
-    'a voided row is offered Unvoid, never Undo invoice');
-  t.check(/icon\('inv-doc-void danger'[\s\S]{0,80}q\.voided \? 'Unvoid invoice' : 'Void invoice'/.test(render),
+  t.check(/\$\{q\.voided \? '' : '<button type="button" data-ed-act="undo"/.test(render),
+    'a voided invoice is offered Unvoid, never Undo invoice');
+  t.check(/q\.voided \? '<button type="button" class="btn btn-ghost inv-ed-void" data-ed-act="void">Unvoid invoice<\/button>'/.test(render)
+    && />Void invoice<\/button>/.test(render),
     'and the void control still says which of the two it is about to do');
   /* The tooltip is the only place the difference is spelled out on the
      row itself, so it must name the consequence rather than the verb. */

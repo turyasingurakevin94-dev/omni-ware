@@ -37,7 +37,7 @@ const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join(
 const data = { customers: [] };
 
 const scope = compileScope([
-  extractFunction(src, 'customerStatementRows', 'index.html'),
+  extractFunction(src, 'customerStatementRows', 'index.html'), extractFunction(src, 'customerLogQuoteResolver', 'index.html'), extractFunction(src, 'invoiceNumberLabel', 'index.html'),
 ], { data }, ['customerStatementRows']);
 
 const charge = (id, date, amount, note) => ({ id, date, type: 'charge', amount, note: note || '' });
@@ -160,10 +160,14 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
    identical on both documents. Every claim below is the one it always
    was; it is now made about the builder the customer print calls. */
 {
-  const caller = (/function printCustomerStatement[\s\S]*?\n\}/.exec(code) || [''])[0];
+  /* The customer's words moved into customerStatementSheet when the
+     statement also became a PDF: the print and the file take them from
+     the one builder, so both claims are asked of it. */
+  const print = (/function printCustomerStatement[\s\S]*?\n\}/.exec(code) || [''])[0];
+  const caller = (/function customerStatementSheet[\s\S]*?\n\}/.exec(code) || [''])[0];
   const p = (/function printStatementSheet[\s\S]*?\n\}/.exec(code) || [''])[0];
-  t.check(caller.length > 0 && p.length > 0, 'there is a print path');
-  t.check(/printStatementSheet\(st, \{/.test(caller),
+  t.check(print.length > 0 && caller.length > 0 && p.length > 0, 'there is a print path');
+  t.check(/customerStatementSheet\(customerId\)/.test(print) && /printStatementSheet\(sheet\.st, sheet\.side\)/.test(print),
     'and it goes through the shared sheet rather than laying out its own');
   t.check(/clearInjectedPrintStyles\(\);/.test(p),
     'it clears a stale page size from another printout first');
@@ -209,89 +213,47 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
    Built from customerStatementRows, the same builder the print calls, so
    the sheet handed over the counter cannot carry different figures from
    the screen it was read off. */
+/* REBUILT TO THE DESIGN BOARD. The statement on screen is now one ruled
+   table per reading (customerStatementPanelHTML), and every guarantee
+   below is the one this section was written for, asked of the builder
+   that now draws it: the same statement-builder as the print, over the
+   same period as the print, no second sum over the log, charges and
+   payments in their own columns, the balance running down, the carried
+   line and the closing line labelled, an empty period said in words,
+   and the disagreement on screen. statementLedgerHTML still draws the
+   supplier's statement and keeps its own pins in section 9. */
 {
-  const block = extractFunction(src, 'customerStatementBlockHTML', 'index.html');
-  // Repointed for the same reason as section 7: the ledger's markup moved
-  // into statementLedgerHTML when the supplier statement was built.
-  const led = extractFunction(src, 'statementLedgerHTML', 'index.html');
-  t.check(block.length > 0 && led.length > 0, 'the panel has a statement block');
+  const panel = extractFunction(src, 'customerStatementPanelHTML', 'index.html');
+  const lines = extractFunction(src, 'customerLedgerLines', 'index.html');
+  const print = extractFunction(src, 'customerStatementSheet', 'index.html');
+  t.check(panel.length > 0 && lines.length > 0, 'the account has a statement');
 
-  t.check(/customerStatementRows\(customerId, from, to\)/.test(block),
+  t.check(/customerStatementRows\(c\.id, from, to\)/.test(panel),
     'it calls the same builder as the print rather than totting the log up again');
-  t.check(/statementLedgerHTML\(/.test(block),
-    'and renders it through the shared ledger, so the two accounts are one table');
-  t.check(/customerStatementRange\(\)/.test(block),
-    'over the same six-month window, so the two documents cover the same period');
-  t.check(!/debtLog/.test(block) && !/savedQuotes/.test(block),
-    'and does no arithmetic of its own — a second sum over the same log is a second answer waiting to happen');
+  t.check(/const \{ from, to \} = customerStatementPeriod\(c\);/.test(panel) && /customerStatementPeriod\(cRec\)/.test(print),
+    'over the same period the print covers, so the two documents cannot differ');
+  t.check(!/debtLog/.test(panel) && !/debtLog/.test(lines),
+    'and does no arithmetic of its own over the log — a second sum is a second answer waiting to happen');
 
-  /* The three things asked for, each on screen. */
-  t.check(/st\.rows\.map/.test(led), 'every entry in the period is listed');
-  /* The two columns are now passed into one row builder rather than
-     written inline twice -- which is what stops the charge column and
-     the payment column drifting apart, since they are the same code
-     with different arguments. The condition each still guards is
-     unchanged: a zero prints as a dash, not as 0. */
-  t.check(/r\.charge \? `<span class="ow-fig">\$\{money\(r\.charge\)\}<\/span>` : none/.test(led)
-       && /r\.payment \? `<span class="ow-fig">\$\{money\(r\.payment\)\}<\/span>` : none/.test(led),
-    'with charges and payments in their own columns');
-  t.check(/money\(r\.balance\)/.test(led), 'and the balance running down beside them');
-  t.check(/money\(st\.opening\)/.test(led) && /Balance brought forward/.test(led),
+  t.check(/st\.rows\.forEach/.test(lines), 'every entry in the period is listed');
+  t.check(/l\.charge \? `<span class="ow-fig">\$\{f\(l\.charge\)\}<\/span>` : '<span class="cu-dash">&mdash;<\/span>'/.test(panel)
+       && /l\.pay \? `<span class="ow-fig cu-sp-paid">\$\{f\(l\.pay\)\}<\/span>` : '<span class="cu-dash">&mdash;<\/span>'/.test(panel),
+    'with charges and payments in their own columns, a zero shown as a dash');
+  t.check(/bal: r\.balance/.test(lines) && /f\(l\.bal\)/.test(panel), 'and the balance running down beside them');
+  t.check(/bal: st\.opening/.test(lines) && /Balance brought forward/.test(lines),
     'anything older is carried in as one labelled line, not dropped');
-  t.check(/money\(st\.closing\)/.test(led) && /Balance now due/.test(led),
-    'closing on what is owed now');
-
-  /* An empty period is a real answer to "what do I owe" and must not
-     render as a table with a head and nothing under it. */
-  t.check(/st\.rows\.length \? '' :/.test(led) && /Nothing was charged or paid/.test(led),
+  t.check(/f\(st\.closing\)/.test(panel) && /Balance now due/.test(panel), 'closing on what is owed now');
+  t.check(/st\.rows\.length \? '' :/.test(panel) && /Nothing was charged or paid/.test(panel),
     'a period with no movement says so rather than showing an empty table');
-
-  // The disagreement is surfaced here too. A shopkeeper who only reads
-  // the screen must not be the one person not told.
-  t.check(/st\.agrees \? '' :/.test(led),
+  t.check(/!st\.agrees/.test(panel) && /ok \? '' : customerOffBookHTML\(s\)/.test(panel),
     'and the log-versus-balance disagreement is shown on screen, not only on paper');
 
-  /* The ledger reads its own window off the statement it was handed
-     rather than calling the range again. Two calls either side of
-     midnight would date the header and the rows differently. */
-  /* Read through fmtShortDate now, because the ledger is on screen
-     beside every other date in the app and an ISO string beside them
-     reads as machine output. The pin is what it always was: the dates
-     come from the statement it was HANDED, never from a second reading
-     of the clock -- two calls either side of midnight would date the
-     header and the rows differently. */
-  t.check(/st\.from/.test(led) && /st\.to/.test(led) && !/customerStatementRange\(\)/.test(led),
-    'the ledger dates itself from the statement it was given, not from a second reading of the clock');
-
-  // Wired in, and guarded: the panel can be opened for a customer whose
-  // record has gone.
-  const html = extractFunction(src, 'customerStatsHTML', 'index.html');
-  t.check(/customerStatementBlockHTML\(s\.customer && s\.customer\.id\)/.test(html),
-    'the panel renders it');
-  t.check(/if\(customerId == null\) return '';/.test(block),
-    'and a missing customer gives nothing rather than throwing inside a template');
-
-  /* The panel short-circuits to a plain sentence when there are no
-     invoiced orders, on the grounds that a wall of zeros reads as a
-     broken screen. That is true of the STATISTICS and false of the
-     account: three customers in this shop have a charged-and-settled
-     history in the log against invoices never linked back to their
-     record, and were being told there was nothing to show. */
-  /* The marker moved with the markup. The tiles left this function for
-     customerFiguresHTML -- the register's open row and the account
-     screen draw the same four, and two copies is how they come to
-     disagree -- so what follows the branch is now the off-book flag and
-     the statement. Sliced at that, or the check reads the whole
-     function and passes on the strength of the branch it is meant to be
-     isolating. */
-  const empty = html.slice(0, html.indexOf('return customerOffBookHTML(s)'));
-  t.check(empty.length > 0 && /if\(!s\.orderCount\)\{/.test(empty), 'the no-orders branch is found');
-  t.check(/const hasLedger = !!\(c && Array\.isArray\(c\.debtLog\) && c\.debtLog\.length\);/.test(empty),
-    'it checks whether there is a ledger at all');
-  t.check(/\$\{hasLedger \? customerStatementBlockHTML\(c\.id\) : ''\}/.test(empty),
-    'and shows the account even with no invoiced order to build statistics from');
-  t.check(!/>Figures here are built from invoices/.test(html),
-    'while no longer claiming every figure on the panel needs an invoice — the account below does not');
+  /* Guarded, and shown even without an invoiced order. */
+  const acct = extractFunction(src, 'renderCustomerAccount', 'index.html');
+  t.check(/const hasLedger = !!\(Array\.isArray\(c\.debtLog\) && c\.debtLog\.length\);/.test(acct)
+    && /s\.orderCount \|\| hasLedger \? customerStatementPanelHTML\(r\)/.test(acct),
+    'a customer with a ledger but no invoiced order still gets their account');
+  t.check(/if\(!c\)\{[\s\S]*?no longer on file/.test(acct), 'and a customer whose record has gone gives a sentence, not a throw');
 }
 
 /* ---------- 9. what a line says it is --------------------------------

@@ -240,9 +240,16 @@ export function creditLine(payload: any) {
 // THE FIGURE EVERY DOCUMENT THE CUSTOMER HOLDS IS DRAWN FROM.
 export function orderTotal(payload: any): number {
   const credit = creditLine(payload);
-  return goodsTotal(payload)
-    + chargeLines(payload).reduce((s: number, l: any) => s + l.amount, 0)
-    + (credit ? credit.amount : 0);
+  const gross = goodsTotal(payload)
+    + chargeLines(payload).reduce((s: number, l: any) => s + l.amount, 0);
+  // Less what the shop took off: a discount agreed on the invoice, and the
+  // credit notes raised against it since -- the same two deductions the
+  // console's savedQuoteTotal makes, so the customer's screen never asks
+  // for more than the shop's own books say they owe.
+  const discount = Math.min(Math.max(0, Number(payload && payload.discount) || 0), gross);
+  const credited = ((payload && payload.creditNotes) || [])
+    .reduce(function (s: number, cn: any) { return s + (cn && !cn.voided ? Number(cn.amount) || 0 : 0); }, 0);
+  return gross - discount + (credit ? credit.amount : 0) - credited;
 }
 
 // Oldest unpaid day, from the debt log rather than from a stored age.

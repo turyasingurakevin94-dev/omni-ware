@@ -37,7 +37,8 @@ const { read, extractFunction, createReporter } = require('./_extract');
 const t = createReporter('sell headers');
 const src = read('index.html');
 
-const SELL = ['quote', 'quote-saved', 'invoices', 'customers', 'followups', 'agents', 'whatsapp'];
+/* WhatsApp left this list when it became the Chats view of Messages. */
+const SELL = ['quote', 'quote-saved', 'invoices', 'customers', 'followups', 'agents'];
 const sectionOf = (tab) => {
   const i = src.indexOf(`<section id="tab-${tab}"`);
   const next = src.slice(i + 10).search(/<section id="tab-/);
@@ -67,13 +68,12 @@ const sectionOf = (tab) => {
   const today = sectionOf('dashboard');
   t.check(/<p class="ow-ph-sub" id="dash_asof">/.test(today),
     'Today\'s one-liner is a sub, not a help — it is the reading time, and it must stay on screen');
-  /* Same rule, same reason, on the screen where the fact rots fastest:
-     "The shop's online front desk" was as true of an empty inbox as of
-     nine unanswered customers. It names the queue now, and it is a sub
-     rather than a help so no fold can hide it. */
-  const wa = sectionOf('whatsapp');
-  t.check(/<p class="ow-ph-sub" id="wa_ph_sub">/.test(wa),
-    'and WhatsApp\'s is who is waiting — a fact that goes stale, so it never folds');
+  /* WhatsApp's sub named who was waiting, so it could never fold. That
+     page is the Chats view of Messages now, and who is waiting is a
+     count on the Chats segment and the "Waiting on you" lane -- both on
+     screen, neither foldable. */
+  t.check(!/id="wa_ph_sub"/.test(src) && /id="fupSegChats"/.test(sectionOf('followups')),
+    'and who is waiting on WhatsApp is a count on Messages\' Chats segment, not a header line');
   t.check(!/ow-ph-help/.test(today), 'and Today has no folded help at all');
 
   t.check(/foldInstruction\(h1, p, 'What this screen is for'\)/.test(fn),
@@ -109,8 +109,9 @@ const sectionOf = (tab) => {
       'how a quote becomes an invoice, and how long it lingers'],
     ['agents', "clients' identities stay private to them",
       "the agent privacy rule"],
-    ['whatsapp', "counted live from the shop's own records",
-      'the derived-never-invented claim, on the screen that most needs it'],
+    /* The claim WhatsApp's header made came with its chats to Messages. */
+    ['followups', "counted live from the shop's own records",
+      'the derived-never-invented claim, for the chats that came from WhatsApp'],
     ['quote', 'shows the cheapest supplier and a suggested price',
       'what each line of a quote is telling you'],
     ['quote-saved', 'each prints on its own A5 page',
@@ -128,7 +129,10 @@ const sectionOf = (tab) => {
   kept.forEach(([tab, needle, why]) => {
     const sec = sectionOf(tab);
     t.check(sec.includes(needle), `${tab} keeps ${why}`);
-    const help = (/<p class="ow-ph-help">([\s\S]*?)<\/p>/.exec(sec) || ['', ''])[1];
+    /* Every marked paragraph, not only the first: the fold takes them
+       all (section 1), and Messages carries several -- the claim that
+       came with its chats is in the paragraph about Chats. */
+    const help = [...sec.matchAll(/<p class="ow-ph-help">([\s\S]*?)<\/p>/g)].map((m) => m[1]).join(' ');
     t.check(help.includes(needle), `and it is behind the "i" rather than loose on the page`);
   });
 

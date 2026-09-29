@@ -616,55 +616,50 @@ const THU = '2026-08-06', MON = '2026-08-03';
   eq(scope.waPostDeskStats([{ id: 1, date: '2026-08-03', name: 'Mon' }], THU).lastDaysAgo, 3,
     'quiet since Monday reads as 3 days ago');
 
-  /* worn by the render.
-     The desk head used to be a room of its own behind a tab: a kicker,
-     the date at 19px/800, a status pill, a lead card at 42% width, a
-     grid of alternates and three side panels. It answers ONE question
-     -- has today's gone out, and what should it be -- so it is one
-     304px rail panel now, and the machinery above it is untouched. */
-  t.check(/waPostDeskStats\(data\.waPosts, today\)/.test(src)
-    && /id="wa_post_pan"/.test(src),
-    'the post panel is derived at render, from the same rows as the rotation');
-  t.check(/\$\{desk\.postedTodayName \? 'sent' : 'not sent'\}/.test(src),
+  /* worn by the render -- which is Messages' To post lane now. The
+     desk head was a room behind a tab, then a 304px panel on a WhatsApp
+     page; that page became the Chats view of Messages, and To post was
+     already the same question asked there: has today's gone out, and
+     what should it be. So the panel went and the lane carries it, read
+     from the same rows the rotation is. */
+  const lane = extractFunction(src, 'msgPostLane', 'index.html');
+  t.check(/waPickView\(today\)/.test(lane) && /data\.waPosts/.test(lane),
+    'the post lane is derived at render, from the same rows as the rotation');
+  t.check(!/id="wa_post_pan"/.test(src) && !/function renderWhatsApp\b/.test(src),
+    'and the panel it replaced is gone rather than drawing into nothing');
+  t.check(/\$\{postedToday\} of \$\{cap\} stamped/.test(src),
     'and its header states the fact rather than colouring a pill');
 }
 
-/* ---------- 9. the pick wears the evidence, and its arithmetic -------
-   WHAT THIS SECTION USED TO ASSERT, twice over. First a two-column
-   board: the lead rendered large with a rank in words, every reason
-   worn as a chip in one of TEN colours. Then, after that board became
-   a 304px rail panel, that the reasons still reached the owner as a
-   sentence.
+/* ---------- 9. the pick wears the evidence -----------------------------
+   WHAT THIS SECTION USED TO ASSERT, three times over. A two-column board
+   with every reason a chip in one of TEN colours; then a rail panel
+   where the reasons reached the owner as a sentence; then a co-lead
+   panel where each reason carried where it was read from, with the
+   rotation bench and the record's history beside it.
 
-   Both are gone because the panel is a co-lead now and the reasons are
-   no longer decoration on a recommendation -- they are the EVIDENCE
-   under it, each one carrying where it was read from. A shop owner who
-   cannot trace a claim about money has to take it on faith, and this
-   screen does not ask for faith about money.
+   That panel went with the WhatsApp page, and what it held is on To
+   post in Messages now. The law it argued stays the law: a shop owner
+   who cannot trace a claim about money has to take it on faith, and
+   this screen does not ask for faith about money -- so every reason
+   still names its record, and the record stays correctable.
 */
 {
-  t.check(/waPostDeskStats\(data\.waPosts, today\)/.test(src) && /id="wa_post_pan"/.test(src),
-    'the post panel is derived at render, from the same rows as the rotation');
-  t.check(/\$\{desk\.postedTodayName \? 'sent' : 'not sent'\}/.test(src),
-    'and its header states the fact rather than colouring a pill');
-
-  /* Every reason, with its source. */
-  t.check(/lead\.reasons\.map\(r=> `<div class="po-ev">/.test(src)
-    && /WA_EVIDENCE_SOURCE\[r\.kind\]/.test(src),
+  t.check(/WA_EVIDENCE_SOURCE\[r\.kind\]/.test(src) && /class="ow-mi-evr"/.test(src),
     'each reason reaches the owner with where it was read from');
   const sources = (/const WA_EVIDENCE_SOURCE = \{[\s\S]*?\n\};/.exec(src) || [''])[0];
   ['asked', 'inbox', 'justin', 'drop', 'rival', 'catalogue', 'waseller', 'sitting', 'fast',
     'weekday', 'fresh', 'nophoto'].forEach((k) =>
     t.check(new RegExp(`\\b${k}:`).test(sources), `the ${k} claim can be traced to its record`));
+  t.check(/reasons\.length > 4 \? `<p class="ow-mini">and \$\{reasons\.length - 4\} more<\/p>`/.test(src),
+    'and reasons past the fourth are counted, not dropped');
 
-  t.check(/\$\{others\.length \? '<button[^']*id="wa_swap"/.test(src),
+  t.check(/msg-post-skip/.test(src) && /waSkipKeys\.push\(key\)/.test(src),
     'the alternates are one press away');
-  /* A missing photo is a FACT about the post, so the placeholder says
-     "no photo" rather than spelling the first two letters of the name
-     -- which produced "AD" for Adjustable Stands and read as an advert. */
-  t.check(/title="No photo — it posts as a text card"/.test(src)
-    && /<rect x="3" y="4" width="18" height="16" rx="2"\/>/.test(src),
-    'a photo-less pick draws a picture mark, not a broken image and not its own initials');
+  /* A missing photo is a FACT about the post: the slot says so before
+     anybody opens it, and the open pick offers the fix. */
+  t.check(/needs a photo/.test(src) && /class="ow-mi-addph msg-post-photo"/.test(src),
+    'a photo-less pick says it needs a photo and offers to add one');
 
   /* The gaps moved to the panel that already reports the catalogue
      count -- one fact, one place -- and kept the way to fix them. */
@@ -675,34 +670,40 @@ const THU = '2026-08-06', MON = '2026-08-03';
     'the photo gap says plainly that a photo is wanted, not required');
   t.check(/selling too fast to advertise/.test(src),
     'the depth skips are shown with the way to fix them');
-  t.check(/resting after a recent post/.test(src) && /back in \$\{WA_ROTATION_DAYS - e\.daysAgo\}d/.test(src),
-    'and the rotation bench is still visible — what is resting, and when it returns');
+  t.check(/\['Posted in the last 14 days', \(view\.excluded \|\| \[\]\)\.length\]/.test(src),
+    'and the rotation bench is still visible — what is resting after a recent post');
+  /* "Never post" is a list the owner can take things off again; the
+     button that did it was on the panel that went. */
+  t.check(/class="fup-link fup-inline msg-post-unbar"/.test(src)
+    && /closest\('\.msg-post-unbar'\)\)\{\s*\n\s*data\.presetWaNeverPost = \[\];/.test(src),
+    'and what you said never to post can be allowed again, from the lane that says it is left out');
 
-  /* The record has to stay correctable: a post entered by mistake now
-     skews every median it touches, which it never did before. */
-  t.check(/class="wa-rl-x wa-hist-del"/.test(src)
+  /* The record has to stay correctable: a post entered by mistake
+     skews every median it touches. */
+  t.check(/class="fup-link fup-inline ow-mi-undo msg-post-unstamp"/.test(src)
     && /stops counting towards what posting has taught the shop/.test(src),
     'a record can still be removed, and the warning says what removing it costs');
-  t.check(/\.po-n\{[^}]*text-overflow:ellipsis/.test(src)
-    && /class="po-n" title="\$\{esc\(lead\.name\)\}"/.test(src),
-    'and a name too long for the column is cut with a mark, not clipped mid-word');
+  t.check(/\.ow-mi-sn2\{[^}]*text-overflow:ellipsis/.test(src),
+    'and a name too long for its slot is cut with a mark, not clipped mid-word');
 }
 
 /* ---------- 10. all of it is REACHED ---------------------------------- */
 {
-  /* waInboxEnter draws every panel once it knows whether the number is
-     linked. Drawing the rail before that answer arrives showed a shop
-     its daily post above a desk it had not connected. */
-  t.check(/if\(tab==='whatsapp'\)\{ waInboxEnter\(\); \}/.test(src), 'the tab renders on entry')
-  /* The inbox grew an intelligence of its own -- the autonomy ledger
-     and the vocabulary -- so entry now draws five panels, not three. */
-  t.check(/waRenderInbox\(\);\n  renderWaInsights\(\);\n  waRenderHeadline\(\);\n  renderWhatsApp\(\);\n  waRenderAnswering\(\);\n  waRenderWords\(\);\n  waRenderChannel\(\);\n  waRenderBroadcasts\(\);/.test(src),
-    'and entry draws the queue, the strip, the headline and every panel on both sides');
-  /* One rail entry is enough now: the phone sheet is generated from the
-     rail, so a screen listed once is reachable on both. Counting two
-     copies was counting the duplicate that has since been removed. */
-  t.check((src.match(/data-tab="whatsapp"/g) || []).length >= 1,
+  /* Messages is the door now. Entering it starts the desk; the Chats
+     view draws the queue and the four panels that govern the number
+     only once it knows the number is linked -- drawing them before that
+     answer arrives showed a shop a desk it had not connected. */
+  t.check(/if\(tab==='followups'\)\{ renderFollowUps\(\); waInboxEnter\(\); \}/.test(src),
+    'the screen renders on entry');
+  t.check(/waRenderInbox\(\);\n  waRenderAnswering\(\);\n  waRenderWords\(\);\n  waRenderChannel\(\);\n  waRenderBroadcasts\(\);/.test(src),
+    'and Chats draws the queue and every panel beside it');
+  /* One rail entry is enough: the phone sheet is generated from the
+     rail, so a screen listed once is reachable on both. */
+  t.check((src.match(/data-tab="followups"/g) || []).length >= 1,
     'on the rail, which is what the phone sheet is built from');
+  /* Marking a post re-reads the lane it was stamped from. */
+  t.check(/toast\('Recorded — rotation now knows'\);\n  if\(currentActiveTab === 'followups'\) renderFollowUps\(\);/.test(src),
+    'and stamping a post redraws Messages, where the slot fills');
 
   const posted = (/wp_posted'\)\.addEventListener\('click', \(\)=>\{[\s\S]*?\n\}\);/.exec(src) || [''])[0];
   t.check(/allocRowId\('waPost'\)/.test(posted) && /date: todayISO\(\)/.test(posted),
@@ -731,6 +732,21 @@ const THU = '2026-08-06', MON = '2026-08-03';
     'an absent waPosts collection is refused from the sync, not read as empty');
   t.check(/waPost:\s*\{kind:'row:wa_post',\s*counter:'nextWaPostId'\}/.test(src),
     'with an id kind named the way every other kind is');
+}
+
+/* ---------- a post's kinds survive a reload (0098) ---------- */
+{
+  const mig = read('supabase/migrations/0098_wa_post_kinds.sql');
+  t.check(/alter table wa_posts add column if not exists kinds text\[\];/.test(mig),
+    'the kinds get a column, safe to paste twice');
+  t.check(/sb\.from\('wa_posts'\)\.select\('kinds'\)\.limit\(1\)/.test(src)
+    && /waPostKindsColumn = !\(waPostKindsColR && waPostKindsColR\.error\);/.test(src),
+    'the app probes for it rather than assuming the migration landed');
+  t.check(/\.\.\.\(waPostKindsColumn \? \{ kinds:/.test(src),
+    'and writes it only where it exists -- an unknown column would fail every post save');
+  t.check(/kinds: Array\.isArray\(w\.kinds\) \? w\.kinds\.map\(String\) : null,/.test(src),
+    'read back as a list, or null for a post from before -- never an empty list that claims no reason');
+  t.check(/kinds: p\.reasons\.map\(r=> r\.kind\)/.test(src), 'the stamp still writes them');
 }
 
 process.exit(t.done() ? 1 : 0);

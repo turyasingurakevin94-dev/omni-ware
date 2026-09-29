@@ -315,11 +315,15 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${got}, want $
  *
  * Every guarantee below is the one this section was written for. Only
  * the function it is asked of has changed.
+ *
+ * AND AGAIN, to the design board: a row opens the account now rather
+ * than an account in place, so the owed figure lives in one place only --
+ * the account's five figures, customerKpiHTML, headed "Owed now".
  */
 {
-  const figs = extractFunction(src, 'customerFiguresHTML', 'index.html');
+  const figs = extractFunction(src, 'customerKpiHTML', 'index.html');
   const off = extractFunction(src, 'customerOffBookHTML', 'index.html');
-  const owedAt = figs.indexOf("Owed to you now");
+  const owedAt = figs.indexOf("Owed now");
   t.check(owedAt > -1, 'the panel has an owed figure');
   const owed = figs.slice(owedAt, owedAt + 260);
 
@@ -343,8 +347,8 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${got}, want $
     'the disagreement is put on screen rather than resolved by a formula that cannot know which record is right');
   /* And it is spoken about on the screen a shopkeeper actually reads,
      not only inside a function nobody calls. */
-  t.check(/customerOffBookHTML\(s\)/.test(extractFunction(src, 'customerStatsHTML', 'index.html')),
-    'and the account draws it');
+  t.check(/customerOffBookHTML\(s\)/.test(extractFunction(src, 'customerStatementPanelHTML', 'index.html')),
+    'and the account draws it, under the statement');
 }
 
 process.exit(t.done() ? 1 : 0);

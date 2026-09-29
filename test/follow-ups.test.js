@@ -676,8 +676,30 @@ const stockMove = (before, after, whenDays) => {
     'the tiles are the layer’s, drawn from one template rather than five copies of a box');
   eq((summary.match(/data-fupwhy=/g) || []).length, 1,
     'and every one of them is the filter, from that same template — the six chips under the search are gone');
-  eq((summary.match(/\$\{tile\(/g) || []).length, 5,
-    'and there are five of them — the queue, and then what the queue is made of');
+  /* SIX NOW. The five named the loop in the order it runs; the sixth is
+     the part of the loop the screen deliberately skips -- who has a
+     reason and is NOT being messaged, and until when. It was a panel in
+     the rail with names and no dates; it became a lane because the date
+     each hold lets go, and the one or two holds only a person can lift,
+     are work the owner plans around. The claim is unchanged: every tile
+     is a stage that can be pressed, and opens exactly what it counts --
+     Held back counts followUpHeldBack's list and opens that list. */
+  eq((summary.match(/\$\{tile\(/g) || []).length, 6,
+    'and there are six of them — the five stages of the loop, and who is deliberately held out of it');
+  /* WHY THE TILE NO LONGER READS followUpHeldBack DIRECTLY. The "Lane ·
+     Held back" canvas counts past-terms debtors BESIDE the lane, not in
+     it: they are not a hold anybody releases -- they get the statement
+     on the money lane instead of news -- so the lane says "also kept off
+     news: N" and its count is the rest. Both the tile and the lane now
+     read that split from one function, msgHeldSplit, which reads
+     followUpHeldBack; the old assertion pinned the list, this one pins
+     that the tile and the lane read the same split of it. */
+  const heldPanel = extractFunction(src, 'fupHeldPanelHTML', 'index.html');
+  t.check(/msgHeldSplit\(now, rows\)/.test(summary)
+    && /msgHeldSplit\(nowMs, rows\)/.test(heldPanel)
+    && /followUpHeldBack\(nowMs, rows\)/.test(extractFunction(src, 'msgHeldSplit', 'index.html'))
+    && /lane === 'held'\) return fupHeldPanelHTML\(nowMs, fupHubRowsNow\(\)\)/.test(lane),
+    'and Held back counts the same list its lane opens');
   /* WHAT THE FIVE TILES NAME, AND WHY IT CHANGED.
 
      They used to name To message, Promised, Money, News and Worth a
@@ -699,7 +721,7 @@ const stockMove = (before, after, whenDays) => {
 
      The claim underneath is unchanged and is asserted right below: a
      tile that is pressable must open exactly what it counted. */
-  ['Waiting on you', 'To message', 'Came back', 'They promised', 'To post'].forEach((k) => {
+  ['Waiting on you', 'To message', 'Came back', 'They promised', 'To post', 'Held back'].forEach((k) => {
     t.check(summary.includes(k), `the strip names ${k.toLowerCase()} — a stage of the loop, each one work that can be done`);
   });
   t.check(/renderFollowUpQuietLine\(\)/.test(summary),
@@ -721,22 +743,34 @@ const stockMove = (before, after, whenDays) => {
     'the inbox and reply tiles are counted off the same call their filter opens');
   t.check(/msgPromisedLane\(/.test(summary) && /msgPromisedLane\(/.test(lane),
     'and the diary tile reads the promise book, which is the list its filter opens');
-  t.check(/msgPostLane\(/.test(summary) && /msgPostLane\(/.test(lane),
+  /* The post lane is drawn by its own builder now; the lane hands over
+     to it, and it reads the same picks the tile counts. */
+  t.check(/msgPostLane\(/.test(summary) && /msgPostLaneHTML\(/.test(lane)
+    && /msgPostLane\(/.test(extractFunction(src, 'msgPostLaneHTML', 'index.html')),
     'and the post tile reads the day’s picks, which is the list its filter opens');
   t.check(/fupRowLenses/.test(contact),
     'and the person lanes still filter through one reading of one row');
   t.check(/fupHubRowsNow\(\)/.test(summary) && /fupHubRowsNow\(\)/.test(contact),
     'and the strip and the queue are drawn from the same hub rows, computed once per render');
 
-  /* Keyed on the customer and NOTHING else. `byCustomer` being mentioned
-     proved nothing: a map keyed per row still has the name and still
-     builds groups, it just builds one per item -- which is the flat list
-     again wearing a group's clothes. */
-  t.check(/const key = String\(f\.customerId\);\s*\n\s*if\(!byCustomer\.has\(key\)\)/.test(all),
-    'the full list groups by client alone — the flat one repeated a name down the page while splitting the two things one person was waiting for');
-  t.check(/ow-tbl-g/.test(all), 'and renders them as groups — the layer’s group heading inside its table, not a private card');
-  t.check(/followUpStatePill/.test(all) && /fupCp\(/.test(all),
-    'and state is a chip, not a sentence in grey among other sentences in grey');
+  /* GROUPED BY THE THING, EACH THING ONE ROW THAT OPENS ONTO ITS PEOPLE.
+     These three checks said the register grouped by client, drew the
+     groups as the layer's group headings, and named each ask's state
+     with the pill in a chip. The "Register redesign" canvas reads the
+     record as demand instead: one row per thing asked for -- its road
+     to the shelf, who waits on it, what it is worth, its one act -- and
+     the row opens in place onto the people waiting, each with their own
+     silence named. What the old checks protected still holds, at that
+     shape: nobody's two asks are merged into one line, a person is
+     never listed apart from the thing they wait for, and the state is a
+     visible mark (the ring's colour AND its words), never grey prose. */
+  t.check(/msgRegThingKey\(f\)/.test(all) && /msgRegThing\(items, now\)/.test(all),
+    'the register groups by the thing asked for — one key per thing, read by one builder');
+  t.check(/fup-rg-pcs/.test(all) && /\(openIt \? t\.people : \[\]\)\.map\(p=>/.test(all),
+    'and each thing opens in place onto everyone waiting on it');
+  const person = extractFunction(src, 'msgRegPerson', 'index.html');
+  t.check(/tone/.test(person) && /never told a word/.test(person) && /fup-rg-av-\$\{p\.tone\}/.test(all) && /fup-rg-ps-\$\{p\.tone\}/.test(all),
+    'and each person’s state is a mark and its words — the ring’s colour and the state named beside it');
 
   /* The initials used to be a private 38px square painting the brand
      accent on navy -- 2.7:1 at 14px bold, which is under the floor and

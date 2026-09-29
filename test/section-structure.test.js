@@ -39,8 +39,10 @@ const starts = [...src.matchAll(/<section id="tab-([a-z0-9-]+)"/g)];
    The floor sits two screens under the real total so that removing one
    does not have to be argued here -- and merging three into one did have
    to be. What's coming, What to buy and The day became the three lenses
-   of Forecasts, so the total went 37 -> 35 and the floor 35 -> 33. */
-t.check(starts.length > 33, `every screen is checked (${starts.length})`);
+   of Forecasts, so the total went 37 -> 35 and the floor 35 -> 33.
+   WhatsApp then became the Chats view of Messages, 34 -> 33, which left
+   the floor at the total rather than two under it -> 31. */
+t.check(starts.length > 31, `every screen is checked (${starts.length})`);
 
 /* The screens live under <main>; the slice for each runs to the next
    one, which is how goToTab's own sibling assumption reads too. */

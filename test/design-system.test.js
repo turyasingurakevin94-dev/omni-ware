@@ -6,9 +6,10 @@
  * This app is being redesigned screen by screen, and some of that work
  * will be done by people and agents who did not sit through the year of
  * decisions behind it. A document explaining the house style is a
- * document; this is a gate. Anything that widens the palette, the type
- * ramp, the radii or the shadows fails here, and `npm test` fails with
- * it.
+ * document; this is a gate. Anything that widens the type ramp, the
+ * radii or the shadows fails here, and `npm test` fails with it. The
+ * palette is the exception: the owner lifted its ceiling, so colours are
+ * counted and reported, and held to contrast rather than to a number.
  *
  * TWO HALVES, and the split matters.
  *
@@ -246,8 +247,22 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        outside the palette and always was. It is carried because the
        screen was asked for as it was, not because the palette grew, and
        no new screen may spend any of the six. */
-    'distinct colours': [114, /#[0-9A-Fa-f]{6}\b/g],
+    /* NO CEILING ON COLOURS -- the owner's ruling, and the last of the
+       hue quota. Everything above is the history of a count that could
+       only fall; it stopped being a rule when the owner said a layout
+       may carry as many colours as its information needs. The count is
+       still REPORTED below, so a rise is visible in every run, but it
+       no longer fails anything.
+
+       What still guards colour is what was always the real guard: every
+       pair the system sets as text is held to 4.5:1 in the contrast
+       block, and a new family joins that list when it is added. More
+       colours was allowed; unreadable ones never were. */
   };
+  {
+    const hexes = new Set([...css.matchAll(/#[0-9A-Fa-f]{6}\b/g)].map(m => m[0].toUpperCase()));
+    t.check(true, `distinct colours: ${hexes.size} (no ceiling — reported, not limited)`);
+  }
   /* RESOLVE THE TOKENS BEFORE COUNTING.
    *
    * This gate counts distinct declaration TEXT, and that was wrong in a
@@ -331,7 +346,25 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
     ['--ow-plum', PAPER, 4.5, 'Insight — its ink as text'],
     ['--ow-verdigris', hex('--ow-verdigris-soft'), 4.5, 'Catalogue — its ink on its own tint'],
     ['--ow-ink-600', hex('--ow-rule-soft'), 4.5, 'Setup — the neutral door, ink on its tint'],
+
+    /* THE SUPPLIER HUES. Identity, like the category palette: on the
+       Invoices screen each supplier keeps one colour across its bar
+       segment, its join and its bill. Six families -- the three category
+       inks plus teal, violet and slate -- each checked as ink on its
+       tint, ink as text, and white on the ink, which is how a PAID
+       segment carries its initials. */
+    ['--ow-teal', hex('--ow-teal-soft'), 4.5, 'supplier teal — ink on its tint'],
+    ['--ow-teal', PAPER, 4.5, 'supplier teal — ink as text'],
+    ['--ow-violet', hex('--ow-violet-soft'), 4.5, 'supplier violet — ink on its tint'],
+    ['--ow-violet', PAPER, 4.5, 'supplier violet — ink as text'],
+    ['--ow-slate', hex('--ow-slate-soft'), 4.5, 'supplier slate — ink on its tint'],
+    ['--ow-slate', PAPER, 4.5, 'supplier slate — ink as text'],
+    ['--ow-sky', hex('--ow-sky-soft'), 4.5, 'Money, and a part-paid chip — ink on its tint'],
   ];
+  ['--ow-indigo', '--ow-sky', '--ow-plum', '--ow-teal', '--ow-violet', '--ow-slate'].forEach((tok) => {
+    const r = hex(tok) ? ratio(PAPER, hex(tok)) : 0;
+    t.check(r >= 4.5, `${r}:1 — white on ${tok} · a paid supplier segment's initials`);
+  });
   PAIRS.forEach(([tok, ground, floor, why]) => {
     const c = hex(tok);
     const r = c && ground ? ratio(c, ground) : 0;
@@ -620,7 +653,16 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                    the merge brought in. They draw markup, so the ratchet follows
                    them too. */
                 'renderFollowUpQuietLine', 'renderMessagesSide', 'msgLaneHTML', 'msgLaneRow',
-                'msgThreadHTML', 'fupPromiseHTML', 'msgPostOpenHTML',
+                'msgThreadHTML', 'fupPromiseHTML', 'msgPostOpenHTML', 'msgPostRailHTML', 'msgPostLaneHTML', 'msgPostSlotsHTML', 'msgPostRowHTML', 'msgRegTrackHTML', 'renderFollowUpScore',
+                /* And the intelligence center's readings: the band over every
+                   lane, a row's signal and odds, the dossier an opened row
+                   carries, the lanes' own bands and the Intelligence view.
+                   They draw markup on this screen, so the ratchet follows
+                   them -- none of them may bring back a retired family. */
+                'msgBandHTML', 'msgSignalHTML', 'msgOddsHTML', 'msgWindowHTML', 'msgDossierHTML',
+                'msgHeldSummaryHTML', 'msgPromiseWeekHTML', 'msgReadsHTML', 'msgAnswerBandHTML',
+                'msgReadsBandHTML', 'msgRecordHTML', 'msgPromiseCalendarHTML', 'msgPostBandHTML',
+                'renderMessagesIntel', 'msgTplChipsHTML', 'msgTplFilledHTML', 'renderMessagesTemplates',
                 'renderFollowUpScore', 'fupHeldPanelHTML', 'fupCp',
                 'briefStripHTML', 'briefWhyHTML', 'customerBriefPanelHTML',
                 'briefNoteBody', 'briefLeftOffHTML'],
@@ -647,7 +689,15 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                     'ow-mq-td', 'ow-mq-tl', 'ow-mq-ts', 'ow-mq-hold', 'ow-mq-ht', 'ow-mq-hp',
                     'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-msg',
                     'ow-cp', 'ow-cp-d', 'ow-av', 'ow-sr', 'ow-sr-k', 'ow-sr-v',
-                    'ow-tbl', 'ow-tbl-g', 'ow-tbl-r', 'ow-tbl-a', 'ow-fig',
+                    /* 'ow-tbl-g' left this list with the Register's group
+                       rows. They grouped asks by thing or by customer; the
+                       "Register redesign" canvas draws each thing as ONE
+                       row of the layer's table (its road, who waits, its
+                       worth, its act) that opens in place onto its people,
+                       so there is no group header left to wear the class.
+                       The table itself -- .ow-tbl, its rows and action
+                       cell -- is still the layer's, and still asserted. */
+                    'ow-tbl', 'ow-tbl-r', 'ow-tbl-a', 'ow-fig',
                     'ow-empty', 'ow-mini',
                     /* The reasoning under a picture makes three different
                        demands on the owner -- go and fix, weigh before
@@ -898,30 +948,25 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        above it a demand map of every item, and beside it who is
        waiting as bars. The archive is still one folded line that opens
        on its search, because browsing a hundred listed items is what
-       Products is for. */
+       Products is for.
+
+       Then rebuilt from the design canvas the owner signed off: capture,
+       the five-step board with a popup per item, each item's verdict and
+       plan, today's checklist, recommendations for every item and the
+       demand map. It lives in sourcing-console.js and draws with that
+       canvas's own markup (its classes renamed into ow-sv-), so the
+       section is only a mount point and renderSourcing only mounts it.
+       The layer entries below said "built from ow-ph and the ow-sf table"
+       and that is no longer what ships; what still holds -- none of the
+       families it retired may come back -- is kept. The console's own
+       rules are pinned in test/sourcing-console.test.js. */
     'sourcing': {
       retired: ['page-head', 'panel', 'qp-panel', 'sq-board-tools', 'sq-select-all-label',
                 'sq-board', 'sq-col', 'sq-card', 'sq-stepper', 'sf-card', 'sf-facts', 'sf-fact',
                 'sf-listed', 'sf-dropped', 'sf-meta-row', 'sf-days', 'sf-ask-count', 'empty'],
-      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp'],
-      renders: ['renderSourcing', 'sourcingRowHTML', 'sourcingStageHTML', 'sourcingStripHTML',
-                'sourcingRailHTML', 'sourcingOpenBodyHTML', 'sourcingArchiveHTML', 'listedRowHTML', 'renderSourcingListedBody', 'sourcingPhotoHTML', 'sourcingThumbHTML',
-                'sourcingFilterHTML', 'sourcingKnownHTML', 'sourcingGaugeHTML', 'sourcingSpreadHTML', 'sourcingMapSVG'],
-      rendersUses: ['ow-grid', 'ow-side', 'ow-stack', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n',
-                    'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t', 'ow-q-who', 'ow-q-v',
-                    'ow-q-f', 'ow-q-b', 'ow-q-note', 'ow-q-why', 'ow-q-a', 'ow-cp',
-                    'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-n', 'ow-tbl-c',
-                    'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-mini', 'ow-empty', 'ow-seg', 'ow-seg-b', 'ow-seg-n',
-                    /* what this screen owns: the column heads, the stage
-                       as segments inside an open row, the action column,
-                       the archive's fold and its rows -- and the drawn
-                       parts: the pipeline strip and its squares, the
-                       four squares of what is known, days in the step
-                       against the limit, the price spread, and who is
-                       waiting as bars */
-                    'ow-sf', 'ow-sf-h', 'ow-sf-st', 'ow-sf-sg',
-                    'ow-sf-a', 'ow-sf-arc', 'ow-sf-lr', 'ow-sf-more', 'ow-sf-say', 'ow-sf-x', 'ow-sf-ph', 'ow-thumb',
-                    'ow-sf-pl-row', 'ow-sf-sq', 'ow-sf-kn', 'ow-sf-kq', 'ow-sf-gg', 'ow-sf-sp', 'ow-sf-wr', 'ow-sf-src-b'],
+      uses: [],
+      renders: ['renderSourcing'],
+      rendersUses: [],
     },
     /* Assets & loans. Two screens for one question: the van on Assets,
        the loan that bought the van on Loans, neither page mentioning the
@@ -1079,7 +1124,12 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'inv-status-cell', 'inv-row-voided', 'inv-total-row', 'inv-total-label',
                 'deb-card-prog'],
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-f', 'ow-f-l', 'ow-f-in',
-             'ow-strip', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-seg', 'ow-seg-b', 'ow-tb'],
+             'ow-strip', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-seg', 'ow-seg-b'],
+      /* .ow-tb LEFT WITH THE "BULK OPERATION" DROPDOWN. The redesign the
+         owner drew puts a selection's acts on a dark bar that appears
+         only once something is ticked (.inv-selbar), and the select-all
+         box moved into the table's own header -- so the always-there
+         toolbar row it styled is gone from the markup, not restyled. */
       /* FIVE NAMED FUNCTIONS NOW, not one. The screen grew a third lens
          -- a sale beside the bills it raised -- and the chip, the
          progress bar, the range-and-order and the row's acts were
@@ -1090,11 +1140,25 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
          assertion's meaning ("this screen is built on the layer") is
          unchanged, and what changed is how many functions that screen
          is now spread across. */
+      /* AND THE STRIP AND THE PANELS, which the redesign lifted out
+         of renderInvoices into invStripHTML and invPanelsHTML so that
+         they are drawn from the whole range while the table beside
+         them is drawn from what its column filters let through. The
+         strip still emits the same tiles (.ow-mt, -l, -v, -s); a spec
+         that stopped at renderInvoices would now miss them and report
+         the tiles gone when they had only moved. The meaning -- "this
+         screen is built on the layer" -- is unchanged. */
       renders: ['renderInvoices', 'renderInvoicesUnified',
-                'invStatusChip', 'invProgressCell'],
+                'invStatusChip', 'invProgressCell', 'invStripHTML', 'invPanelsHTML'],
+      /* .ow-tbl-g and .ow-fig-b WENT WITH THE OPEN / SETTLED / VOIDED
+         BANDS. The owner's canvas is a flat spreadsheet ordered by any
+         column -- balance first by default -- with Status and Collected
+         as columns of their own, so there is no band to head and no
+         "received" line to set under a figure. The row's own note for a
+         document that disagrees with itself (.ow-tbl-note) stays. */
       rendersUses: ['ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-tbl', 'ow-tbl-h', 'ow-tbl-r',
-                    'ow-tbl-g', 'ow-tbl-f', 'ow-tbl-c', 'ow-tbl-n', 'ow-tbl-a', 'ow-tbl-note',
-                    'ow-tbl-p', 'ow-fig', 'ow-fig-b', 'ow-cp', 'ow-link', 'ow-empty'],
+                    'ow-tbl-f', 'ow-tbl-c', 'ow-tbl-n', 'ow-tbl-a', 'ow-tbl-note',
+                    'ow-tbl-p', 'ow-fig', 'ow-cp', 'ow-link', 'ow-empty'],
     },
     /* Customers. The screen was a second debt book -- a grid of cards
        whose largest figure was a debt balance, on a question Debtors
@@ -1122,23 +1186,35 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        Anything that drew a second copy of either would be free to
        disagree with the first, which is the drift this list exists to
        stop. */
+    /* Rebuilt to the design board: a row opens the account (no account
+       in place any more, so customerAccountHTML, its figures and its
+       action row went), the account is hero, five figures, next moves,
+       timeline, the statement as a ruled table and a rail, and the book
+       is the map beside Needs you today over a table. The layer still
+       carries the frame of all of it -- panels, the strip, chips, the
+       segmented lenses, the grid -- and the table rows are this screen's
+       own ruled table, drawn once for the book and once for the
+       statement. */
     customers: {
       retired: ['panel', 'panel-head-row', 'search-bar', 'dir-summary-row', 'dir-summary-card',
                 'customer-grid', 'customer-card', 'cc-head', 'cc-avatar', 'cc-title', 'cc-name',
                 'cc-id', 'cc-meta', 'cc-actions', 'cc-details', 'cc-row', 'cc-notes', 'cc-both',
                 'cc-debt-row', 'cc-debt-label', 'cc-debt-value', 'cc-debt-actions', 'cc-debt-btn',
                 'cc-last-activity', 'pc-icon-btn', 'btn-icon', 'empty', 'field'],
-      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-f', 'ow-f-l', 'ow-f-in',
-             'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-seg', 'ow-seg-b', 'ow-seg-n', 'ow-tb'],
-      renders: ['renderCustomers', 'customerRegisterRowHTML', 'customerAttentionHTML',
-                'customerAccountHTML', 'customerFiguresHTML', 'renderCustomerAccount',
-                'customerAccountRailHTML', 'customerStatsHTML'],
-      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-tbl', 'ow-tbl-h',
-                    'ow-tbl-r', 'ow-tbl-c', 'ow-tbl-p', 'ow-tbl-s', 'ow-tbl-n', 'ow-tbl-a',
-                    'ow-fig', 'ow-fig-b', 'ow-cp', 'ow-cp-d', 'ow-empty', 'ow-mini', 'ow-q-why',
-                    'ow-q-note', 'ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-sp', 'ow-grid',
-                    'ow-stack', 'ow-side', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-sr',
-                    'ow-sr-k', 'ow-sr-v'],
+      /* No ow-ph-help and no ow-f-l since the book was built to the design
+         board: its header is the name, the count and the search, with the
+         magnifier saying what the field is (its label is aria-label), and
+         the paragraph that sat behind the "i" said in words what the map
+         and the columns now show. */
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-f', 'ow-f-in',
+             'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-seg', 'ow-seg-b', 'ow-seg-n'],
+      renders: ['renderCustomers', 'customerRegisterRowHTML', 'customerNeedsTodayHTML',
+                'renderCustomerAccount', 'customerHeroHTML', 'customerKpiHTML',
+                'customerStatementPanelHTML', 'customerRailHTML'],
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-tbl-p', 'ow-tbl-s',
+                    'ow-fig', 'ow-cp', 'ow-cp-d', 'ow-empty', 'ow-mini', 'ow-q-note', 'ow-ph-t',
+                    'ow-grid', 'ow-stack', 'ow-side', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n',
+                    'ow-seg', 'ow-seg-b'],
     },
     /* Suppliers. The last Buy screen on the legacy shell, and the shell
        was the smaller half of it: the headline was an instruction about

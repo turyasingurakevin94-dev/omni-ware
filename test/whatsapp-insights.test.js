@@ -109,82 +109,50 @@ const NOW = Date.parse('2026-08-06T12:00:00Z');
   eq(scope.waFmtMins(90), '1.5 h', 'and hours as hours');
 }
 
-/* ---------- 4. the strip is REACHED, and the rooms are gone ----------
+/* ---------- 4. the rooms are gone, and so is the page ----------
 
-   THREE ROOMS BEHIND A TAB STRIP is what this section used to hold:
+   THREE ROOMS BEHIND A TAB STRIP is what this section once held:
    Inbox, Today's post, Broadcasts, each a pane, switched by waSetView.
-   That strip was a THIRD level of navigation under the rail and the
-   page header, and two of its three rooms answered one question each
-   -- has today's post gone out; who can we broadcast to and what did
-   the last one cost. Questions that size are rail panels, not rooms.
-   So the tab strip is gone, the panes are gone with it, and this
-   section now pins that the two demoted rooms are still DRAWN and
-   still reachable, which is the thing that would actually be lost. */
+   They became rail panels on one WhatsApp page, and that page has now
+   gone the same way: it is the Chats view of Messages. Most of it was
+   Messages said twice -- who is waiting and who wrote back are lanes
+   there, today's post is its To post lane -- so what this section pins
+   is that the rest is still DRAWN and still REACHED, and that the chats
+   are fetched by the screen that reads them, which is the thing that
+   would actually be lost.
+
+   THE FIVE-FIGURE STRIP WENT WITH THE PAGE. It was argued for here at
+   length; what it read has homes that do not need it. Who is waiting
+   and how long is the Chats segment's count and the Waiting on you
+   lane; what posting moved is To post's "What posts brought"; the
+   system's share of the talking is still on every row it applies to
+   and in the Answered panel's header. */
 {
-  t.check(/if\(tab==='whatsapp'\)\{ waInboxEnter\(\); \}/.test(src),
-    'entering the tab starts the desk');
+  t.check(/if\(tab==='followups'\)\{ renderFollowUps\(\); waInboxEnter\(\); \}/.test(src),
+    'entering Messages starts the desk -- its lanes read the chats, and nothing else fetches them');
   t.check(/waFetchInsightMsgs\(\);/.test(src) && /order\('sent_at', \{ ascending: false \}\)\.limit\(500\)/.test(src),
-    'one aggregate read feeds the strip — the per-thread fetches only know the open thread');
+    'one aggregate read feeds the lanes and the queue — the per-thread fetches only know the open thread');
   const entry = (/async function waInboxEnter\(\)\{[\s\S]*?\n\}/.exec(src) || [''])[0];
-  t.check(/await waFetchInsightMsgs\(\);/.test(entry) && /renderWaInsights\(\);/.test(entry),
-    'and the strip renders once real data arrives');
-  t.check(/renderWhatsApp\(\);/.test(entry) && /waRenderChannel\(\);/.test(entry)
-    && /waRenderBroadcasts\(\);/.test(entry),
-    'the daily post and broadcasts are still drawn — as rail panels, not as rooms');
+  t.check(/await waFetchInsightMsgs\(\);/.test(entry) && /renderFollowUps\(\);/.test(entry),
+    'and Messages draws again once real data arrives, so its lanes are not left empty');
+  t.check(/await waPublishQuotePack\(\);/.test(entry),
+    'and the list the server answers from is republished whenever Messages is opened');
+  const chats = (/function waRenderChats\(\)\{[\s\S]*?\n\}/.exec(src) || [''])[0];
+  t.check(/waRenderInbox\(\);/.test(chats) && /waRenderAnswering\(\);/.test(chats)
+    && /waRenderWords\(\);/.test(chats) && /waRenderChannel\(\);/.test(chats)
+    && /waRenderBroadcasts\(\);/.test(chats),
+    'the queue and the four panels that govern the number are still drawn — on Chats');
+  t.check(/waRenderConnect\(\);/.test(chats),
+    'and before the number is linked, Chats is the connection and nothing else');
   t.check(!/data-waview|wa_pane_inbox|wa_pane_post|wa_pane_bc|function waSetView/.test(src),
     'and the tab strip that made them rooms is gone, panes and switcher with it');
-
-  /* The unread badge moved to the rail, where it is one of many and
-     reads against the other screens competing for the same attention.
-     A badge on a tab inside the screen you are already looking at was
-     telling you something you could already see. */
-  t.check(/refreshNavBadges\(\);/.test(src.slice(src.indexOf('function renderWaInsights'),
-    src.indexOf('function waRenderHeadline'))),
-    'and the count the tab badge carried now rides the rail, where it competes with the other screens');
-
-  /* The post outcomes are HANDED IN rather than read off `data` inside
-     the function, so the strip's fifth tile leans on exactly the same
-     measure of lift the picker ranks on -- one definition in the file,
-     not two -- while waInsightStats stays a function of its arguments
-     and can still be compiled alone by this suite. */
-  t.check(/waInsightStats\(waInbox\.convs, waInbox\.allMsgs, data\.savedQuotes, now,\s*\n\s*waPostOutcomes\(data\.waPosts, data\.savedQuotes, todayISO\(\)\)\)/.test(src),
-    'the strip is computed from live records at render time — derived, never stored');
-
-  /* THE FIGURES THEMSELVES CHANGED, and the two that went are worth
-     naming. "Answered by the system: 100%" read as a score for a
-     number that is the share of replies the shop did NOT write; it is
-     "2 of 4" now, which cannot be mistaken for a grade. And "WhatsApp
-     sales this month: —" over "0 orders all time · 0 UGX" was three
-     ways of saying nothing; it is a figure with one honest sentence
-     under it. The tile that replaced them is the one the screen exists
-     for: how long the person waiting longest has waited. */
-  const strip = (/function renderWaInsights\(\)\{[\s\S]*?\n\}/.exec(src) || [''])[0];
-  t.check(/tile\('Waiting for an answer', String\(st\.waitingCount\)/.test(strip)
-    && /longest \$\{esc\(waFmtWait\(st\.longestWaitMins\)\)\} · \$\{esc\(st\.longestWaitName\)\}/.test(strip),
-    'the strip leads with who is waiting and how long the worst of them has waited');
-  t.check(/st\.waitingCount \? 'ow-warn' : ''/.test(strip),
-    'and it is amber only when somebody actually is');
-  /* THE FIFTH TILE CHANGED HANDS, and the argument is worth keeping.
-     "Answered by the system" is a TRUST fact -- how much of the talking
-     a machine does in the shop's name -- and it survives in two places
-     that are closer to it than a strip: an amber chip on every queue
-     row it applies to, and the Answered panel's own header ("6 by you,
-     3 by the system"). What took the slot is the thing this screen now
-     exists to argue, and the thing the picker was missing entirely: a
-     post record that says whether posting moves stock at all.
-
-     It is UNITS, deliberately, not money. Money would need the caveat
-     chain that lives under the learning panel, and a strip sub is no
-     place for it -- so the tile reports what was counted and says the
-     span it was counted over. */
-  t.check(/tile\('Moved after posting'/.test(strip)
-    && /st\.postLift/.test(strip) && /st\.postRipe/.test(strip),
-    'the fifth tile is what posting moved, counted the week after each post');
-  t.check(/no post has a week of trading behind it yet/.test(strip),
-    'and it says so plainly rather than showing a zero, when nothing is ripe');
-  t.check(!/100%|autoShare\*100/.test(strip),
-    'the percentage that read as a score is gone, not merely relabelled');
-  /* Gone from the strip, still on the screen. */
+  t.check(!/id="wa_strip"/.test(src) && !/function renderWaInsights/.test(src),
+    'the strip is gone rather than left drawing into nothing');
+  t.check(/waWaitingConvs\(waInbox\.convs, waInbox\.allMsgs, Date\.now\(\)\)\.length/.test(
+      (/function waRenderChatsCount\(\)\{[\s\S]*?\n\}/.exec(src) || [''])[0]),
+    'and who is waiting is counted on the Chats segment by the same reading as the queue');
+  t.check(!/100%|autoShare\*100/.test(src.slice(src.indexOf('function waRenderAnswered'), src.indexOf('function waRenderAnswered') + 4000)),
+    'the percentage that read as a score has not come back');
   t.check(/class="ow-cp wa-cp-auto">Answered by the system/.test(src)
     && /by you, \$\{autoN\} by the system/.test(src),
     'and the system\'s share survives on the rows and in the Answered panel it describes');

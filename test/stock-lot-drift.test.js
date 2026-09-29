@@ -156,8 +156,17 @@ if (fns) {
     'every time it renders, so a repair elsewhere cannot leave a stale warning');
   const banner = (/function renderStockLotDrift[\s\S]*?\n\}/.exec(code) || [''])[0];
   const fix = (/function fixStockLotDrift[\s\S]*?\n\}/.exec(code) || [''])[0];
-  t.check(/\$\{rows\.map\(r=>/.test(banner) && !/rows\.slice\(/.test(banner),
-    'listing every product adrift rather than a first few — the buttons act on what is named');
+  /* The rows are listed in groups now -- the shelf says empty, the
+     record carries more, the record carries less -- rather than as one
+     flat run. What this check held still holds and is what it pins:
+     every line adrift is listed, none cut to a first few. The three
+     groups between them take every row, and each lists ALL of its own. */
+  t.check(/rows\.filter\(r=> !\(r\.onShelf > 0\) && r\.inLots > 0\)/.test(banner)
+      && /rows\.filter\(r=> r\.onShelf > 0 && r\.inLots > r\.onShelf\)/.test(banner)
+      && /rows\.filter\(r=> r\.inLots < r\.onShelf\)/.test(banner),
+    'the groups between them take every line adrift — empty shelf, record over, record under');
+  t.check(/\$\{g\.rows\.map\(r=> rowHTML\(r, g\)\)\.join\(''\)\}/.test(banner) && !/\.slice\(/.test(banner),
+    'and each group lists every one of its lines rather than a first few — the buttons act on what is named');
   /* Action before mechanism. The first version led with the FIFO queue
      and repeated the same explanation under every row; the shop read it
      and asked what it was supposed to do. What a reader must DECIDE now
@@ -165,12 +174,20 @@ if (fns) {
      said once — in the confirm, where it is about to matter. */
   t.check(/Is the shelf count right\?/.test(banner),
     'the banner opens on the one question the reader has to answer');
-  t.check(banner.indexOf('Is the shelf count right?') < banner.indexOf('rows.map'),
+  t.check(banner.indexOf('Is the shelf count right?') < banner.indexOf('${groups.map(groupHTML)'),
     'asked before the list, not after it');
   t.check(!/first-in-first-out/.test(banner),
     'and the FIFO explanation is not repeated under every row');
-  t.check(/This changes no stock count, no money, and no figure on your statements/.test(banner),
+  /* Said as ticks now rather than a sentence, and still said before a
+     single row: what matching leaves alone is the fear, so it is on
+     screen, not behind the confirm. */
+  t.check(/keeps every stock count/.test(banner) && /moves no money/.test(banner)
+      && /leaves your statements as they are/.test(banner) && /never touches consignment/.test(banner),
     'while what it does NOT touch is said plainly, since that is the fear');
+  t.check(banner.indexOf('moves no money') < banner.indexOf('${groups.map(groupHTML)'),
+    'and said before the rows it is about');
+  t.check(/Array\.isArray\(key\) \? rows\.filter\(r=> key\.includes\(r\.key\)\)/.test(fix),
+    'a group\'s "Match all" matches exactly the lines that group names, and no others');
   t.check(/what is still on the shelf is \nthe newest stock|the oldest entries are dropped/.test(fix),
     'the mechanism is kept for the confirm, where it is about to be acted on');
 

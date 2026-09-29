@@ -183,11 +183,19 @@ if (!scope) process.exit(1);
 {
   t.check(/waWaitingConvs\(waInbox\.convs, waInbox\.allMsgs, nowMs\)/.test(src),
     'the queue is built from who is waiting, not from who is unread');
-  t.check(/class="ow-q-r wa-ask-r"/.test(src) && /class="ow-q-x"/.test(src),
-    'each ask is a work-queue row that opens in place, like every other queue in the app');
-  t.check(/waThreadGroups\(waInbox\.msgs, nowMs\)\.map\(g=>/.test(src)
-    && /class="wa-tx-day">\$\{esc\(g\.label\)\}/.test(src),
-    'the thread renders as a dated transcript, not as bubbles');
+  /* THE CHAT APP. The owner asked for Chats to read like the chat app
+     they already use: a list of chats, the open one beside it as
+     bubbles, who it is to the shop on the other side. The row that
+     opened in place and the transcript were decisions of an earlier
+     design; this is the one that replaced them. */
+  t.check(/class="ow-mi-ci wa-ask-r/.test(src) && /id="wa_thread"/.test(src),
+    'each chat is a row in a list, and the open one fills the middle');
+  t.check(/waThreadGroups\(thread, nowMs\)\.map\(g=>/.test(src)
+    && /class="wa-tx-day">\$\{esc\(g\.label\)\}/.test(src)
+    && /ow-mi-bin/.test(src) && /ow-mi-bout/.test(src),
+    'the thread is dated bubbles, theirs and the shop\'s told apart');
+  t.check(/Only you see this/.test(src) && /presetWaNotes/.test(src),
+    'a note on a chat says it is the shop\'s alone');
   t.check(/\$\{m\.direction==='out' \? waTickHTML\(m\.status\) : ''\}/.test(src),
     'ticks ride outbound lines only');
   t.check(/waConvUnreadCount\(c, waInbox\.allMsgs\)/.test(src),
@@ -220,18 +228,69 @@ if (!scope) process.exit(1);
 
   /* The bubbles, the hues and the tab strip are gone, and staying gone
      is the point: each was a decision, not an accident. */
-  t.check(!/waInitials|waAvatarHue|wc-avatar/.test(src),
-    'no avatar, and no hue that identifies nobody');
+  /* A face now, as a chat app has -- but never a hue that identifies
+     nobody: the tint says only whether the number is a customer. */
+  t.check(!/waInitials|waAvatarHue|wc-avatar/.test(src) && /ow-mi-cav\$\{cust \? ' ow-mi-cav-c' : ''\}/.test(src),
+    'initials, tinted only for a customer on file — no hue that identifies nobody');
   t.check(!/class="wa-msg|wa-tabs|wa-tab-badge|wa-stat/.test(src),
-    'no bubbles, no tab strip, no bordered stat cards');
-  t.check(/id="wa_strip"/.test(src) && /class="ow-strip ow-strip-5"/.test(src),
-    'the figures ride the layer\'s own strip: one row, hairline dividers, no cards');
+    'none of the old bubbles, tab strip or bordered stat cards came back');
+  /* The strip that replaced the stat cards has gone too, with the page
+     it headed: the chats are a view of Messages, whose band already
+     reads the day. What stays true is that no bordered card came back. */
+  t.check(!/id="wa_strip"/.test(src),
+    'no strip of its own on Chats — Messages\' band reads the day');
   /* One accent per screen. btn-accent may appear once in the whole
      WhatsApp section's markup and once in its render -- the Send
      button. Everything else is a ghost. */
   const waJs = src.slice(src.indexOf('function waRenderInbox'), src.indexOf('async function waOpenConv'));
   eq((waJs.match(/btn-accent/g) || []).length, 1,
     'exactly one oxide button in the queue and its open row: Send');
+}
+
+/* ---------- 9. the chat app's own bookkeeping --------------------------- */
+{
+  t.check(/presetWaPins: Array\.isArray\(presets\.waPins\)/.test(src) && /waPins:d\.presetWaPins\|\|\[\]/.test(src)
+    && /waSnooze:d\.presetWaSnooze\|\|\{\}/.test(src) && /waNotes:d\.presetWaNotes\|\|\[\]/.test(src),
+    'pins, chats put off, and notes load and save with the shop settings');
+  const wire = (/function waBindChatConsole\(\)\{[\s\S]*?\n\}/.exec(src) || [''])[0];
+  const qr = wire.slice(wire.indexOf(".ow-mi-qr[data-qr]"), wire.indexOf(".ow-mi-openrec"));
+  t.check(qr.length > 0 && /ta\.value = /.test(qr) && !/waSendReply|wa-send|invoke\(/.test(qr),
+    'a quick reply goes into the box and never out of it — Send is still the only way anything leaves');
+  t.check(/function waSnoozedUntil\(c, nowMs\)/.test(src) && /waiting\.filter\(e=> !snoozed\(e\.conv\)\)/.test(src),
+    'a chat put off leaves Waiting only until its time, and comes back by itself');
+  t.check(/class="wa-cmp ow-mi-cmp\$\{w\.open \? '' : ' ow-mi-cmpoff'\}"/.test(src) && /Paid template replies are not set up in this app yet/.test(src),
+    'a shut window says so in place of the reply box, and does not pretend a paid reply exists');
+}
+
+/* ---------- 10. a follow-up shared from the chat ------------------------ */
+{
+  t.check(/function waChatFollowUpNews\(customerId\)/.test(src) && /followUpHubDigest\(\{ name: row\.name, items \}, \{\}\)/.test(src),
+    'the news a customer is owed is worded by the queue\'s own digest, not a second copy of it');
+  const wire = (/function waBindChatConsole\(\)\{[\s\S]*?\n\}/.exec(src) || [''])[0];
+  const ins = wire.slice(wire.indexOf('.ow-mi-fupins'), wire.indexOf('.ow-mi-openrec'));
+  t.check(/ta\.value = /.test(ins) && !/recordFollowUpContact|waSendReply|invoke\(/.test(ins),
+    'sharing puts the news in the reply box and records nothing yet');
+  const send = (/async function waSendReply\([\s\S]*?\n\}/.exec(src) || [''])[0];
+  t.check(/if\(!pend\.line \|\| text\.includes\(pend\.line\)\)\{\s*pend\.items\.forEach\(i=> recordFollowUpContact\(i\.id, i\.kind\)\)/.test(send)
+    && send.indexOf('recordFollowUpContact') > send.indexOf('if(error)'),
+    'the telling is stamped only after the reply went, and only if the news was still in it');
+}
+
+/* ---------- 11. the canvas's last pieces -------------------------------- */
+{
+  t.check(/<th>Yard<\/th><th><\/th><\/tr>/.test(src) && /function waYardHTML\(m\)/.test(src),
+    'a matched line says what the yard holds of it');
+  const photo = (/async function waSendChatPhoto\(file\)\{[\s\S]*?\n\}/.exec(src) || [''])[0];
+  t.check(photo.indexOf('confirm(') > -1 && photo.indexOf('confirm(') < photo.indexOf("invoke('wa-send'"),
+    'a photo is asked about before it goes — choosing a file is not sending one');
+  const wire = (/function waBindChatConsole\(\)\{[\s\S]*?\n\}/.exec(src) || [''])[0];
+  const mk = wire.slice(wire.indexOf('.ow-mi-mkord'), wire.indexOf('.ow-mi-photo'));
+  t.check(/confirm\(/.test(mk) && mk.indexOf('confirm(') < mk.indexOf('waCreateOrderFromChat('),
+    'an order from the match is asked about first, since its receipt goes to them');
+  t.check(/laneBar\.style\.display = chats \? 'none' : ''/.test(src),
+    'Chats gives the lanes\' row back to the chats');
+  t.check(/function waNamedDayISO\(word, nowMs\)/.test(src) && /data-day="\$\{iso\}"/.test(src),
+    'a named day reads as a date, and the promise prompt opens on it');
 }
 
 process.exit(t.done() ? 1 : 0);
