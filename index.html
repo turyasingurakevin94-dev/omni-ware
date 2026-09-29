@@ -49647,6 +49647,25 @@ function buildQuoteRecord({quoteId, client, date, items, charges, existing}){
   };
 }
 
+/* THE CUSTOMER FOLLOWS THE NAME. An order keeps the customer it was
+   first linked to (customerId), and the form carries only a name and a
+   phone -- so re-saving an order under a different name used to keep the
+   OLD link: the lists showed the new name while the old customer's
+   statement, balance and chase list kept the sale and its debt. When the
+   name on the form no longer names the linked customer, whatever this
+   order has charged the old customer is settled first, and the link is
+   dropped so the debt sync finds (or adds) the customer the name does
+   name -- the same move the invoice editor makes on a change of customer. */
+function relinkQuoteCustomer(record){
+  if(record.customerId == null || record.customerId === '') return;
+  const linked = (data.customers||[]).find(c=>String(c.id)===String(record.customerId));
+  const name = String(record.client && record.client.name || '').trim().toLowerCase();
+  if(!linked || !name) return;
+  if(String(linked.name||'').trim().toLowerCase() === name) return;
+  applyInvoiceDebtCharge(record, 0);
+  record.customerId = null;
+}
+
 const __btn_q_save_btn = document.getElementById('q_save_btn');
 __btn_q_save_btn.addEventListener('click', saveOnceAtATime(__btn_q_save_btn, async ()=>{
   ensureQuote();
@@ -49668,6 +49687,7 @@ __btn_q_save_btn.addEventListener('click', saveOnceAtATime(__btn_q_save_btn, asy
   const idx = data.savedQuotes.findIndex(q=>q.id===record.id);
   const wasUpdate = idx>-1;
   if(wasUpdate) data.savedQuotes[idx] = record; else data.savedQuotes.push(record);
+  relinkQuoteCustomer(record);
   syncInvoiceDebtCharge(record);
 
   /* Saving no longer tells the sales group.
