@@ -18590,7 +18590,9 @@
   .pr-in-t b{font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .pr-in-t span{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
   .pr-in-c .btn .icon{width:12px;height:12px;}
-  .pr-add-phone{display:none;}
+  .pr-head .btn.pr-add-phone,.pr-head .btn.pr-back{display:none;}
+  .pr-found > .ow-pan-h .ow-pan-t,.pr-used > .ow-pan-h .ow-pan-t{font-size:var(--ow-t-12);font-weight:var(--ow-fw-700);
+    letter-spacing:0;text-transform:none;color:var(--ow-ink-900);}
 
   /* FOUND IN YOUR ORDERS: one tap judges a pair -- the kind, by its
      shape, writes it; the cross says they are not a pair. */
@@ -18631,6 +18633,10 @@
   .pr-dc-t b{font-size:15px;font-weight:var(--ow-fw-700);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .pr-dc-t span{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-size:var(--ow-t-11);color:var(--ow-ink-400);white-space:nowrap;}
   .pr-dc-lead .pr-dc-t span{color:var(--ow-steel-100);}
+  .pr-dc-i{flex:none;width:42px;height:42px;border-radius:var(--ow-r);display:flex;align-items:center;justify-content:center;
+    background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+  .pr-dc-lead .pr-dc-i{background:var(--ow-indigo-soft);color:var(--ow-indigo);}
+  .pr-dc-i svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
   .pr-dc-ch{all:unset;cursor:pointer;flex:none;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);text-decoration:underline;}
   .pr-dlg-line{flex:1 1 0;min-width:80px;position:relative;height:84px;display:flex;align-items:center;justify-content:center;}
   .pr-dlg-line::before{content:"";position:absolute;left:var(--ow-sp-12);right:var(--ow-sp-12);top:50%;border-top:var(--pr-line);}
@@ -18798,6 +18804,8 @@
   .pr-sp{display:flex;align-items:flex-end;gap:3px;height:34px;}
   .pr-sp i{flex:1 1 0;height:var(--pr-h,3px);border-radius:2px;background:var(--ow-rule);}
   .pr-sp i.pr-sp-on{background:var(--ow-ink-900);}
+  .pr-sp-g i.pr-sp-on{background:var(--ow-verdigris);}
+  .pr-sp-b i.pr-sp-on{background:var(--ow-sky);}
   .pr-pat-c{font-size:var(--ow-t-11);color:var(--ow-ink-400);}
   .pr-pat > .btn{margin-top:auto;align-self:flex-start;}
   .pr-found .pr-obs{align-items:stretch;text-align:left;}
@@ -18816,8 +18824,11 @@
   .pr-map .pr-tbl .pr-vb{min-width:0;width:100%;padding:0;font-size:10px;letter-spacing:.04em;border-radius:6px;}
   .pr-map .pr-tbl .ow-tbl-r{padding-left:0;padding-right:var(--ow-sp-8);}
   .pr-dlg-body .pr-verbs2{grid-template-columns:repeat(auto-fit,minmax(136px,1fr));}
-  .pr-sp i{max-width:28px;}
   .pr-lstat-slot .pr-lstat{margin:0;}
+  .pr-lstat-sp{width:64px;height:20px;flex:none;}
+  .pr-lstat-sp polyline{fill:none;stroke:var(--ow-verdigris);stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round;}
+  .pr-lstat-up{color:var(--ow-verdigris);font-weight:var(--ow-fw-600);}
+  .pr-rule-sep{color:var(--ow-rule);}
   .pr-lstat-slot:empty{display:none;}
   .pr-ltbl .pr-lr-t{width:100%;max-width:56px;}
   /* The list scrolls inside its own panel, so the map and the rail stay
@@ -18875,7 +18886,7 @@
     .pr-spine .pr-slot::before,.pr-inr::before,.pr-inr::after{display:none;}
     .pr-inr{flex-wrap:wrap;padding:var(--ow-sp-6) var(--ow-sp-12);}
     .pr-in-h{padding:var(--ow-sp-10) var(--ow-sp-12) 2px;}
-    .pr-head .pr-add-phone{display:inline-flex;}
+    .pr-head .btn.pr-add-phone,.pr-head .btn.pr-back{display:inline-flex;}
     .pr-dlg-band{padding:var(--ow-sp-16);}
     .pr-dlg-rule{flex-direction:column;align-items:stretch;}
     .pr-dc,.pr-dc.pr-dc-lead,.pr-dlg-rule .pr-say-to{flex:none;}
@@ -79727,9 +79738,19 @@ function pairLearnedHTML(){
       <div class="pr-why-f"><span>Suggested as</span>${r.weak ? '<span class="pr-vb pr-none">not a pair</span>' : `<span class="pr-vb pr-${r.kind}">${KIND[r.kind]}</span>`}<span class="cu-sp"></span>
         ${r.weak ? '' : `<button type="button" class="btn btn-ghost ow-sm pr-why-add" data-obs="keep" data-verb="${r.kind}" data-from="${esc(r.from)}" data-to="${esc(r.to)}">Add this rule</button>`}</div>
     </div>`; })() : '';
+  /* KEPT OVER EIGHT WEEKS, read from the date each rule was written:
+     how many rules stood at the end of each week, and how many of them
+     are new since the first. */
+  const keptAt = (t)=> links.filter(l=> l.active !== false && l.createdAt && Date.parse(l.createdAt) <= t).length;
+  const wk = Array.from({ length: 8 }, (_, i)=> keptAt(Date.now() - (7 - i) * 7 * 864e5));
+  const wkLo = Math.min(...wk), wkHi = Math.max(wkLo + 1, ...wk);
+  const wkPts = wk.map((v, i)=> `${Math.round(i * 64 / 7)},${(18 - (v - wkLo) / (wkHi - wkLo) * 16).toFixed(1)}`).join(' ');
+  const since = links.filter(l=> l.active !== false && l.createdAt && Date.parse(l.createdAt) > Date.now() - 56 * 864e5).length;
   return `<div class="pr-lstat">
-      <span>${judged ? `<b class="ow-fig">${Math.round(kept / judged * 100)}%</b> of the pairs you judged were kept <span class="pr-dim">(${kept} of ${judged})</span>` : 'Nothing judged yet'}</span>
-      <span class="pr-dim">|</span><span>learning from <b class="ow-fig">${L.N.toLocaleString('en-US')}</b> invoices</span>
+      <span>${judged ? `<b class="ow-fig">${Math.round(kept / judged * 100)}%</b> of suggestions kept` : 'Nothing judged yet'}</span>
+      ${judged ? `<svg class="pr-lstat-sp" viewBox="0 0 64 20" role="img" aria-label="rules kept, last 8 weeks"><polyline points="${wkPts}"/></svg>
+      <span class="pr-lstat-up">+${since} in 8 weeks</span>` : ''}
+      <span class="pr-rule-sep">|</span><span>learning from <b class="ow-fig">${L.N.toLocaleString('en-US')}</b> invoices</span>
     </div>
     <div class="pr-lmain">
       <div class="ow-pan pr-lpan">
@@ -79750,7 +79771,7 @@ function pairLearnedHTML(){
 /* FIVE OTHER PATTERNS, one finding and one action each. A pattern the
    books cannot see yet says so rather than showing a guess. */
 function pairPatternsHTML(L){
-  const bars = (vals, hi)=>{ const top = Math.max(1, ...vals); return `<span class="pr-sp">${vals.map((v, i)=> `<i class="${hi.includes(i) ? 'pr-sp-on' : ''}" style="--pr-h:${Math.max(3, Math.round(v / top * 34))}px"></i>`).join('')}</span>`; };
+  const bars = (vals, hi, tone)=>{ const top = Math.max(1, ...vals); return `<span class="pr-sp${tone ? ' pr-sp-' + tone : ''}">${vals.map((v, i)=> `<i class="${hi.includes(i) ? 'pr-sp-on' : ''}" style="--pr-h:${Math.max(3, Math.round(v / top * 34))}px"></i>`).join('')}</span>`; };
   const card = (kind, fig, figCls, text, spark, cap, action)=> `<div class="ow-pan pr-pat">
     <span class="pr-lbl">${kind}</span>
     <span class="pr-pat-t">${fig != null ? `<b class="ow-fig ${figCls}">${fig}</b>` : ''}<span>${text}</span></span>
@@ -79790,7 +79811,7 @@ function pairPatternsHTML(L){
     });
   });
   out.push(worst ? card('Quantity check', '~' + worst.short.toLocaleString('en-US'), 'pr-warn-t', `${esc(briefShortName(productLinkName(worst.l.toId)))} short on ${esc((worst.q.client && worst.q.client.name) || 'an open quote')} for ${worst.a} ${esc(briefShortName(productLinkName(worst.l.fromId)))}.`,
-      bars([worst.have, worst.want], [1]), `has ${worst.have} &middot; the rule expects ${worst.want}`, '')
+      bars([worst.have, worst.want], [1], 'g'), `has ${worst.have} &middot; the rule expects ${worst.want}`, '')
     : card('Quantity check', null, '', 'Every open quote carries what its rules expect.', '', ''));
   // 4. swap: same category, the same customers, never on one invoice
   const buyers = new Map(), together = pairCooccurrence();
@@ -79807,7 +79828,7 @@ function pairPatternsHTML(L){
     if(shared >= 3 && (!swap || shared > swap.shared)) swap = { a: ids[i], b: ids[j], shared, onlyA: A.size - shared, onlyB: B.size - shared };
   }
   out.push(swap ? card('Swap', swap.shared, '', `customers buy ${esc(briefShortName(productLinkName(swap.a)))} or ${esc(briefShortName(productLinkName(swap.b)))} &mdash; never both on one invoice.`,
-      bars([swap.onlyA, swap.shared, swap.onlyB], [1]), 'only the first &middot; both, apart &middot; only the second',
+      bars([swap.onlyA, swap.shared, swap.onlyB], [1], 'b'), 'only the first &middot; both, apart &middot; only the second',
       `<button type="button" class="btn btn-ghost ow-sm" data-obs="keep" data-verb="instead" data-from="${esc(swap.a)}" data-to="${esc(swap.b)}">Add as swap</button>`)
     : card('Swap', null, '', 'No two products share three customers while never meeting on an invoice.', '', ''));
   // 5. seasonal: the strongest pair, month by month over a year
@@ -79824,7 +79845,7 @@ function pairPatternsHTML(L){
     const rest = counts.filter((c, i)=> !peaks.includes(i));
     const ratio = peaks.length && rest.length ? (peaks.reduce((t, i)=> t + counts[i], 0) / peaks.length) / Math.max(0.5, rest.reduce((a, b)=> a + b, 0) / rest.length) : 0;
     out.push(months >= 6 && peaks.length ? card('Seasonal', ratio.toFixed(1) + '&times;', '', `more ${esc(briefShortName(productLinkName(top.from)))} + ${esc(briefShortName(productLinkName(top.to)))} in ${peaks.map(i=> pairMonthLabel(span[i])).join(', ')}.`,
-        bars(counts, peaks), `${pairMonthLabel(span[0])} &ndash; ${pairMonthLabel(span[11])}`, '')
+        bars(counts, peaks, 'b'), `${pairMonthLabel(span[0])} &ndash; ${pairMonthLabel(span[11])}`, '')
       : card('Seasonal', null, '', months < 6 ? 'Not enough history yet &mdash; a season shows after six months of invoices with this pair.' : 'No month stands out for its strongest pair.', months ? bars(counts, []) : '', ''));
   } else out.push(card('Seasonal', null, '', 'No pair is strong enough yet to read a season from.', '', ''));
   return out.join('');
@@ -80142,7 +80163,7 @@ function pairDraftHTML(d){
   const card = (p, lead)=>{
     const n = pairOrdersOf(p.id).length;
     const sz = Array.isArray(p.variants) && p.variants.length > 1 ? `${p.variants.length} sizes` : 'one size';
-    return `<span class="pr-dc${lead ? ' pr-dc-lead' : ''}"><span class="pr-dc-t"><b title="${esc(p.name)}">${esc(p.name)}</b><span>${sz} &middot; ${n} order${n === 1 ? '' : 's'}</span></span>
+    return `<span class="pr-dc${lead ? ' pr-dc-lead' : ''}"><span class="pr-dc-i"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><span class="pr-dc-t"><b title="${esc(p.name)}">${esc(p.name)}</b><span>${sz} &middot; ${n} order${n === 1 ? '' : 's'}</span></span>
       ${lead ? '' : '<button type="button" class="pr-dc-ch" data-pair="unpick">Change</button>'}</span>`;
   };
   /* THE RULE AS A DIALOG, drawn the way the map draws it: this product,
