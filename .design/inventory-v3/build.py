@@ -20,9 +20,6 @@ TH = {
 }
 
 def fill(html, view=None):
-    html = html.replace('__PH__', read('_ph_shelf.html'))
-    find = read('_find.html').replace('__VL__', 'ow-on' if view == 'lanes' else '').replace('__VR__', 'ow-on' if view == 'list' else '')
-    html = html.replace('__FIND__', find).replace('__POS__', read('_pos.html')).replace('__FIX__', read('_fix.html'))
     for k, v in TH.items(): html = html.replace('__TH_%s__' % k, v)
     return html
 
@@ -39,9 +36,6 @@ def build(out, title, body, css, w, h, rail, where=None, view=None):
     open(out, 'w', encoding='utf-8').write('\n'.join(parts) + '\n'); print('built', out)
 
 D = ['_chrome.css', '_inv.css']
-build('Main.dc.html',      'Inventory — the shelf in lanes',              'body_main.html',      D, 1440, 1320, True, 'Inventory', 'lanes')
-build('Register.dc.html',  'Inventory — the register, one line open',      'body_list.html',      D, 1440, 1560, True, 'Inventory', 'list')
-build('Movements.dc.html', 'Inventory — movements',                        'body_moves.html',     D, 1440, 1180, True, 'Inventory')
-build('States.dc.html',    'Inventory — settled, hidden, failed, brand new','body_states.html',    D, 1440, 1560, True, 'Inventory')
-build('Phone.dc.html',     'Inventory on the phone',                       'body_phone.html',     D + ['_phone.css'], 390, 844, False)
-build('PhoneLine.dc.html', 'One line, on the phone',                       'body_phoneline.html', D + ['_phone.css'], 390, 844, False)
+build('Main.dc.html',      'Inventory — the shelf',   'body_main.html',  D, 1440, 1310, True, 'Inventory')
+build('Movements.dc.html', 'Inventory — movements',   'body_moves.html', D, 1440, 1200, True, 'Inventory')
+build('Phone.dc.html',     'Inventory on the phone',  'body_phone.html', D + ['_phone.css'], 390, 844, False)

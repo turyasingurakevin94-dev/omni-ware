@@ -1,17 +1,14 @@
-# Inventory page — design canvas, third pass
+# Inventory page — design canvas, third pass (simplified)
 
 Working files for the visual-first redesign of the Inventory screen. Each
 `*.dc.html` is one artboard; `canvas.json` lays them out.
 
-- `Main.dc.html`      — the desktop console (1440) with the shelf in lanes: the
-                        position strip, the map, the three lanes, the open line
-- `Register.dc.html`  — the same screen as a register, every row carrying its
-                        cover bar, share bar and 30-day bars; one line open
-- `Movements.dc.html` — the Movements lens: kinds as counted chips, in/out by
-                        day, the log with a size bar per row
-- `States.dc.html`    — settled, filtered-empty, failed read, brand new
+- `Main.dc.html`      — the desktop console (1440): four tiles with one picture
+                        each, one row of tools, one table with a cover bar on
+                        every row, and the pressed line open on the right
+- `Movements.dc.html` — the Movements lens: two tiles and the in/out chart,
+                        kinds as counted chips, the log with a size bar per row
 - `Phone.dc.html`     — the phone (390), its own design per the two-designs law
-- `PhoneLine.dc.html` — one line opened on the phone
 
 These are mockups, not app code. Nothing here is loaded by `index.html`.
 Values are lifted from the `--ow-*` tokens and the `.ow-` component layer so
