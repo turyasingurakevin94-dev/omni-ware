@@ -71,17 +71,17 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
 
 /* ---------- 1. the slice ---------------------------------------------- */
 {
-  __expand('prices', false);
-  eq(listPageSlice('prices', rows(276)).length, listPageSize('prices'),
+  __expand('registry', false);
+  eq(listPageSlice('registry', rows(276)).length, listPageSize('registry'),
     'a long list is cut to one page');
-  eq(listPageSlice('prices', rows(5)).length, 5,
+  eq(listPageSlice('registry', rows(5)).length, 5,
     'a short one is left whole rather than padded or cut');
-  eq(listPageSlice('prices', []).length, 0, 'and an empty one stays empty');
+  eq(listPageSlice('registry', []).length, 0, 'and an empty one stays empty');
 
-  __expand('prices', true);
-  eq(listPageSlice('prices', rows(276)).length, 276,
+  __expand('registry', true);
+  eq(listPageSlice('registry', rows(276)).length, 276,
     'expanded, every row is handed over — these pages have no cap above them');
-  __expand('prices', false);
+  __expand('registry', false);
 
   /* The slice must not reorder or replace anything: the caller has already
      filtered, sorted and (on the price registry) grouped these.
@@ -93,9 +93,9 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
      newest entries, which on every one of these pages is the half
      somebody is looking for. */
   const long = Array.from({ length: 40 }, (_, i) => ({ tag: 'r' + i }));
-  __expand('prices', false);
-  const cut = listPageSlice('prices', long);
-  const size = listPageSize('prices');
+  __expand('registry', false);
+  const cut = listPageSlice('registry', long);
+  const size = listPageSize('registry');
   t.check(cut.length === size && cut[0] === long[0] && cut[size - 1] === long[size - 1],
     `the page is the FRONT of the list, in order, by identity (first is ${cut[0] && cut[0].tag}, want r0)`);
 
@@ -105,25 +105,25 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
 
 /* ---------- 2. the control tells the truth ---------------------------- */
 {
-  __expand('prices', false);
-  const btn = listMoreButtonHTML('prices', 276, 'price entries');
+  __expand('registry', false);
+  const btn = listMoreButtonHTML('registry', 276, 'price entries');
   t.check(/Show all 276 price entries/.test(btn),
     `the label names what matched, not what is on screen (${btn.slice(0, 80)})`);
-  t.check(/data-list-more="prices"/.test(btn), 'and carries which list it belongs to');
+  t.check(/data-list-more="registry"/.test(btn), 'and carries which list it belongs to');
   t.check(/aria-expanded="false"/.test(btn), 'and its state');
 
-  __expand('prices', true);
-  t.check(/Show fewer/.test(listMoreButtonHTML('prices', 276, 'price entries')),
+  __expand('registry', true);
+  t.check(/Show fewer/.test(listMoreButtonHTML('registry', 276, 'price entries')),
     'expanded, it offers the way back');
-  t.check(/aria-expanded="true"/.test(listMoreButtonHTML('prices', 276, 'price entries')),
+  t.check(/aria-expanded="true"/.test(listMoreButtonHTML('registry', 276, 'price entries')),
     'and says so');
-  __expand('prices', false);
+  __expand('registry', false);
 
-  eq(listMoreButtonHTML('prices', 24, 'price entries'), '',
+  eq(listMoreButtonHTML('registry', 24, 'price entries'), '',
     'a list that exactly fits gets no button');
-  eq(listMoreButtonHTML('prices', 3, 'price entries'), '',
+  eq(listMoreButtonHTML('registry', 3, 'price entries'), '',
     'nor does a short one');
-  t.check(listMoreButtonHTML('prices', 25, 'price entries') !== '',
+  t.check(listMoreButtonHTML('registry', 25, 'price entries') !== '',
     'one row over the page is enough to offer the rest');
 }
 
@@ -169,7 +169,7 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     'a search that changes the row count starts again on page 1');
 
   eq(listMoreButtonHTML('invoices', size, 'invoices'), '', 'a register that fits one page has no pager');
-  t.check(/Show all 276 price entries/.test(listMoreButtonHTML('prices', 276, 'price entries')),
+  t.check(/Show all 276 price entries/.test(listMoreButtonHTML('registry', 276, 'price entries')),
     'and the other lists keep their plain Show all');
 }
 
@@ -206,14 +206,19 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
  * the page while claiming to describe the search.
  */
 {
+  /* The price registry pages whole LINES now, through its own pager (the
+     owner's redraw: one card per line, 4 · 8 · 16 a page). The risk this
+     section is about is unchanged, so it is pinned the same way: the
+     strip is worked out over every quote that matched, the lines are
+     grouped before anything is cut, and the pager counts every line. */
   const prices = (/function renderPrices\([\s\S]*?\n\}/.exec(code) || [''])[0];
-  t.check(/const s = priceRegistryStats\(rows\);/.test(prices),
+  t.check(/strip\.innerHTML = prxStripHTML\(all, ordered\);/.test(prices),
     'the price registry totals every row that matched, not the page');
-  t.check(/const ordered = priceGroupsFor\(rows, sortMode\)\.flatMap\(g=> g\.rows\);/.test(prices)
-    && /listPageSlice\('prices', ordered\)/.test(prices),
-    'and slices AFTER grouping, so a product’s competing quotes are not cut in half at the boundary');
-  t.check(/listMoreButtonHTML\('prices', ordered\.length,/.test(prices),
-    'the button counts the grouped set it actually paged, not some other list');
+  t.check(/const groups = priceGroupsFor\(rows, sortMode\);/.test(prices)
+    && prices.indexOf('priceGroupsFor(rows, sortMode)') < prices.indexOf('lines.slice('),
+    'and slices AFTER grouping, so a line is never cut in half at the boundary');
+  t.check(/prxPagerHTML\(lines\.length\)/.test(prices),
+    'the pager counts the grouped set it actually paged, not some other list');
 
   const products = (/function renderProducts\([\s\S]*?\n\}/.exec(code) || [''])[0];
   t.check(/listPageSlice\('products', rows\)/.test(products)
