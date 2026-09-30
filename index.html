@@ -5357,6 +5357,15 @@
   .prx-ring b{position:relative;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-size:var(--ow-t-14);}
   .prx-ring small{position:relative;font-size:9px;font-weight:var(--ow-fw-600);text-transform:uppercase;letter-spacing:.05em;color:var(--ow-ink-400);}
   .prx-vol-h{display:flex;align-items:baseline;gap:8px;margin:6px 0 6px;}
+  .prx-pack-say{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:10px 0 0;padding:10px 12px;border-radius:var(--ow-r);background:var(--ow-paper-2);border:1px solid var(--ow-rule-soft);font-size:var(--ow-t-13);}
+  .prx-pack-say:empty{display:none;}
+  .prx-ps-t b{font-weight:var(--ow-fw-700);}
+  .prx-ps-dots{display:inline-flex;align-items:center;gap:2px;padding:3px 5px;border:1.5px solid var(--ow-steel-950);border-radius:5px;}
+  .prx-ps-dots i{width:5px;height:5px;border-radius:50%;background:var(--ow-steel-950);}
+  .prx-ps-dots em{font-style:normal;font:600 10px 'IBM Plex Mono',ui-monospace,Menlo,monospace;margin-left:3px;}
+  .prx-ps-u{margin-left:auto;font-size:var(--ow-t-12);}
+  .prx-ps-u.prx-ok{color:var(--ow-verdigris);}
+  .prx-ps-u.prx-no{color:var(--ow-amber-ink);}
   .prx-vol-h b{font-size:var(--ow-t-13);}
   .prx-vol-h span{font-size:var(--ow-t-12);color:var(--ow-ink-400);}
   .prx-l-t{font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);letter-spacing:.08em;text-transform:uppercase;color:#B3BCD2;}
@@ -33096,6 +33105,7 @@
             <!-- Rewritten by setPrBulkMode for each mode; this is the
                  single-entry wording, so the stale sentence is never on
                  screen even for the moment before that runs. -->
+            <div class="prx-pack-say" id="prx_pack_say" aria-live="polite"></div>
             <p class="pfx-note pfx-quiet" id="pr_pack_note">Leave Pack unit and Units per pack blank if this is only ever quoted by the single unit.</p>
           </div>
         </li>
@@ -96712,6 +96722,16 @@ function prxPmRender(){
     const which = d === todayISO() ? 'today' : d === y ? 'yesterday' : 'pick';
     seg.innerHTML = [['today', 'Today'], ['yesterday', 'Yesterday'], ['pick', 'Pick…']].map(o=> `<button type="button" role="radio" aria-checked="${which === o[0]}" class="${which === o[0] ? 'ow-on' : ''}" data-prx-date="${o[0]}">${o[1]}</button>`).join('');
     modal.querySelector('.prx-date').classList.toggle('prx-pick', which === 'pick');
+  }
+  /* the packing, said in words with a picture of the pack */
+  const say = document.getElementById('prx_pack_say');
+  if(say){
+    const others = c.productId ? productPriceRows(c.productId, c.variantIdx).filter(r=> String(r.supplierId) !== String(c.supplierId)) : [];
+    const units = new Set(others.map(r=> String(r.unit || '').toLowerCase()).filter(Boolean));
+    const same = !c.unit || !units.size || units.has(c.unit.toLowerCase());
+    say.innerHTML = c.packQty > 0 && c.packUnit
+      ? `<span class="prx-ps-t"><b>1 ${esc(c.packUnit)}</b> has <b>${c.packQty} ${esc(unit)}</b></span><span class="prx-ps-dots" aria-hidden="true">${'<i></i>'.repeat(Math.min(24, Math.round(c.packQty)))}${c.packQty > 24 ? '<em>+' + Math.round(c.packQty - 24) + '</em>' : ''}</span>${units.size ? `<span class="prx-ps-u ${same ? 'prx-ok' : 'prx-no'}">${same ? '✓ Same unit as the other quotes' : '! The others are per ' + esc([...units].join(', '))}</span>` : ''}`
+      : `<span class="prx-ps-t">Sold singly — every price is per ${esc(unit)}</span>`;
   }
   /* the two figures */
   const two = document.getElementById('prx_two');
