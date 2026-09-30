@@ -194,24 +194,19 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
  * cards silently killed the Sort by dropdown.
  */
 {
-  t.check(/priceCardHTML/.test(code), 'the registry is drawn as cards again');
-  t.check(/priceGroupsFor\(rows, sortMode\)\.flatMap\(g=> g\.rows\)/.test(code),
+  /* Redrawn again on the owner's canvas: ONE card per line, its quotes
+     inside it, so a product's competing prices are not merely adjacent
+     but side by side in one table. What must still not go is
+     priceGroupsFor: the cards are its groups, in its order, so the Sort
+     dropdown and "undated last" survive the redraw. The only thing
+     between the groups and the cards is the quick view and the page. */
+  t.check(/prxCardHTML/.test(code), 'the registry is drawn as one card per line');
+  t.check(/const groups = priceGroupsFor\(rows, sortMode\);/.test(code),
     'through priceGroupsFor, so the chosen sort still applies');
-  /* And a product's competing quotes stay consecutive in the grid, which
-     is the one thing the grouped layout had that a plain card grid did
-     not. Flattening the groups keeps it for free.
-
-     This was one expression until the registry started showing a page of
-     twenty-four rather than all 276. The chain is now broken over a
-     binding and a slice, so the check is on the ORDER SURVIVING that
-     journey rather than on its punctuation: the flattened groups go into
-     `ordered`, and the only thing between `ordered` and the cards is the
-     page. Anything else inserted there -- a re-sort, a filter, a second
-     grouping -- fails this. */
-  t.check(/const ordered = priceGroupsFor\(rows, sortMode\)\.flatMap\(g=> g\.rows\);/.test(code),
-    'the flattened groups are what gets rendered');
-  t.check(/listPageSlice\('prices', ordered\)\.map\(r=> priceCardHTML\(r, tokens\)\)/.test(code),
-    'and one product\'s quotes land next to each other rather than scattered by date — nothing but the page sits between grouping and drawing');
+  t.check(/const all = groups\.map\(g=> prxLineAt\(g, prxQty\)\);/.test(code),
+    'every group becomes a line priced at the quantity being bought, in the grouped order');
+  t.check(/wrap\.innerHTML = `<div class="prx-grid">\$\{page\.map\(prxCardHTML\)\.join\(''\)\}<\/div>/.test(code),
+    'and one product\'s quotes land in one card rather than scattered by date — nothing but the page sits between grouping and drawing');
 
   /* .price-card and .price-grid are NOT dead with it. They were worn by
      three screens: this registry, the agent promotions and the
