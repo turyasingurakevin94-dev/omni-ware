@@ -39,4 +39,6 @@ D = ['_chrome.css', '_inv.css']
 build('Main.dc.html',      'Inventory — the shelf',   'body_main.html',  D, 1440, 1370, True, 'Inventory')
 build('Movements.dc.html', 'Inventory — movements',   'body_moves.html', D, 1440, 1200, True, 'Inventory')
 build('Consigned.dc.html', 'A consigned line, opened', 'body_consign.html', D, 400, 900, False)
+build('Count.dc.html', 'Count the shelf — the dialog', 'body_count.html', D, 1040, 900, False)
+build('Dialogs.dc.html', 'Receive, correct the count, change the floor', 'body_dialogs.html', D, 1440, 720, False)
 build('Phone.dc.html',     'Inventory on the phone',  'body_phone.html', D + ['_phone.css'], 390, 844, False)
