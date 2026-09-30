@@ -36,6 +36,7 @@ def build(out, title, body, css, w, h, rail, where=None, view=None):
     open(out, 'w', encoding='utf-8').write('\n'.join(parts) + '\n'); print('built', out)
 
 D = ['_chrome.css', '_inv.css']
-build('Main.dc.html',      'Inventory — the shelf',   'body_main.html',  D, 1440, 1310, True, 'Inventory')
+build('Main.dc.html',      'Inventory — the shelf',   'body_main.html',  D, 1440, 1370, True, 'Inventory')
 build('Movements.dc.html', 'Inventory — movements',   'body_moves.html', D, 1440, 1200, True, 'Inventory')
+build('Consigned.dc.html', 'A consigned line, opened', 'body_consign.html', D, 400, 900, False)
 build('Phone.dc.html',     'Inventory on the phone',  'body_phone.html', D + ['_phone.css'], 390, 844, False)

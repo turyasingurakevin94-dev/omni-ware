@@ -8,6 +8,8 @@ Working files for the visual-first redesign of the Inventory screen. Each
                         every row, and the pressed line open on the right
 - `Movements.dc.html` — the Movements lens: two tiles and the in/out chart,
                         kinds as counted chips, the log with a size bar per row
+- `Consigned.dc.html` — the open-line panel for a line holding goods on
+                        consignment: ownership bar, settle and return
 - `Phone.dc.html`     — the phone (390), its own design per the two-designs law
 
 These are mockups, not app code. Nothing here is loaded by `index.html`.
