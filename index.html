@@ -18591,6 +18591,7 @@
   .pr-in-t span{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
   .pr-in-c .btn .icon{width:12px;height:12px;}
   .pr-head .btn.pr-add-phone,.pr-head .btn.pr-back{display:none;}
+  .pr-settle{display:none;}
   .pr-found > .ow-pan-h .ow-pan-t,.pr-used > .ow-pan-h .ow-pan-t{font-size:var(--ow-t-12);font-weight:var(--ow-fw-700);
     letter-spacing:0;text-transform:none;color:var(--ow-ink-900);}
 
@@ -18876,6 +18877,32 @@
     .pr-panes.pr-has .pr-left{display:none;}
     .pr-panes:not(.pr-has) .pr-right{display:none;}
     .pr-panes:not(.pr-has) .pr-side{display:none;}
+    /* One product open on the phone is its own screen: the strip, the
+       page's own line and its button give way to the product's. */
+    #tab-pairings.pr-open #pairStripWrap,#tab-pairings.pr-open .ow-ph-sub,#tab-pairings.pr-open #pair_add_btn{display:none;}
+    .pr-map .ow-tbl.pr-tbl{--ow-tbl-cols:78px minmax(0,1fr) 60px;}
+    .pr-map .pr-tbl .ow-tbl-r > .pr-vb{grid-area:1 / 1 / 3 / 2;align-self:center;}
+    .pr-map .pr-tbl .ow-tbl-r > .pr-sent{grid-area:1 / 2;}
+    .pr-map .pr-tbl .ow-tbl-r > .ow-tbl-n{grid-area:2 / 2;justify-self:start;text-align:left;}
+    .pr-map .pr-tbl .ow-tbl-r > .pr-ev{grid-area:1 / 3 / 3 / 4;align-self:center;}
+    .pr-map .pr-ev-t b{display:none;}
+    .pr-map .pr-ev-t{justify-content:flex-end;}
+    .pr-map .pr-ev-agree .pr-ev-t .ow-fig{color:var(--ow-verdigris);font-weight:var(--ow-fw-600);}
+    .pr-map .pr-ev-argue .pr-ev-t .ow-fig{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
+    .pr-map .pr-nofig{text-align:left;}
+    .pr-map .pr-tbl .ow-tbl-r{display:grid;grid-template-columns:78px minmax(0,1fr) 60px;align-items:center;}
+    .pr-map .pr-tbl .ow-tbl-r > .cu-cr{display:none;}
+    .pr-settle{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:var(--ow-sp-10);min-height:52px;
+      margin:var(--ow-sp-12);padding:var(--ow-sp-10) 14px;border:1px solid var(--ow-amber-soft);border-radius:var(--ow-r-lg);background:var(--ow-amber-faint);}
+    .pr-settle:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
+    .pr-settle-d{width:10px;height:10px;flex:none;border-radius:var(--ow-r-pill);background:var(--ow-amber);}
+    .pr-settle-t{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:2px;}
+    .pr-settle-t b{font-size:14px;font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+    .pr-settle-t span{font-size:var(--ow-t-12);color:var(--ow-amber-ink);}
+    .pr-settle svg{width:18px;height:18px;flex:none;fill:none;stroke:var(--ow-amber-ink);stroke-width:1.8;stroke-linecap:round;}
+    .pr-map .pr-tbl .pr-vb{width:78px;height:22px;}
+    .pr-map .pr-tbl .ow-tbl-r{padding:var(--ow-sp-12) var(--ow-sp-12) var(--ow-sp-12) var(--ow-sp-20);gap:var(--ow-sp-6) var(--ow-sp-10);}
+    .pr-map .pr-tbl .ow-tbl-n{overflow:visible;}
     #pairListWrap{max-height:none;min-height:0;overflow:visible;}
     .pr-strip .ow-mt{flex-wrap:wrap;gap:var(--ow-sp-8);}
     .pr-strip .pr-mt-c{flex-basis:100%;}
@@ -79580,6 +79607,7 @@ function renderPairings(){
   const strip = document.getElementById('pairStripWrap');
   const tab = document.getElementById('tab-pairings');
   if(tab) tab.classList.toggle('pr-learned', pairLens === 'learned');
+  if(tab) tab.classList.toggle('pr-open', pairLens === 'map' && !!pairSelectedId && window.innerWidth <= 820);
   if(pairLens === 'learned'){
     if(strip) strip.innerHTML = '';
     wrap.innerHTML = pairLearnedHTML();
@@ -79907,6 +79935,10 @@ function pairProductHTML(productId){
       || (b.st.key === 'agree') - (a.st.key === 'agree') || productLinkName(a.r.toId).localeCompare(productLinkName(b.r.toId)));
   const reach = pairReachingRules(productId);
   const orders = pairOrdersOf(productId).length;
+  /* ONE THING TO SETTLE: the first size, on the first rule, that nothing
+     follows yet -- the phone's one tap into the grid that fixes it. */
+  let settle = null;
+  stands.some(x=>{ const g = pairGrid(x.r); const row = g && g.rows.find(r=> r.open); if(row){ settle = { r: x.r, row }; return true; } return false; });
   /* THE PRODUCT AS A MAP. The product is the node; every rule written on
      it branches off one spine, and the line itself says which kind of
      rule it is -- heavy for needs, thin for goes with, dashed for
@@ -79935,6 +79967,9 @@ function pairProductHTML(productId){
         ${pairReachHTML(productId, reach)}
       </div>
     </div>
+    ${settle ? `<button type="button" class="pr-settle" data-pairopen="${esc(String(settle.r.lead.id))}">
+      <span class="pr-settle-d"></span><span class="pr-settle-t"><b>${esc(settle.row.label)} &rarr; no ${esc(briefShortName(productLinkName(settle.r.toId)))} follows</b><span>tap to pick a size</span></span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>` : ''}
     <p class="ow-mini pr-foot"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>A rule never changes a price, stock or an order &mdash; it only lets a picture say a second thing.</p>
   </div>
   ${off.length ? pairOffHTML(off) : ''}`;
