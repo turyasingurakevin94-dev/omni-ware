@@ -18435,7 +18435,7 @@
   .pr-menu-r:first-child{border-top:0;}
   .pr-menu-r:hover,.pr-menu-r:focus-visible{background:var(--ow-paper-2);}
   .pr-menu-n{flex:1 1 0;min-width:0;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .pr-menu-n mark{background:var(--ow-amber-soft);color:inherit;}
+  .pr-menu-n mark{background:var(--ow-amber-soft);color:var(--ow-amber-ink);padding:0 1px;border-radius:2px;}
   .pr-menu-s{flex:none;font-size:var(--ow-t-11);color:var(--ow-ink-600);max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .pr-menu-e{padding:var(--ow-sp-10) var(--ow-sp-12);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
   .pr-menu-f{padding:var(--ow-sp-6) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);font-size:var(--ow-t-11);color:var(--ow-ink-400);}
@@ -18620,6 +18620,14 @@
   /* THE RULE, AS A DIALOG. The band draws it the way the map does:
      the product, the line in its kind with the badge on it, the other. */
   .pr-dlg-h{gap:var(--ow-sp-12);}
+  /* The product search opens a list that may be taller than what is
+     left of the dialog, so the dialog lets it hang over its own edge;
+     head and foot carry the corners the clip used to cut. */
+  .ow-dlg.pr-dlg{overflow:visible;}
+  .pr-dlg > .ow-dlg-h{border-top-left-radius:var(--ow-r-lg);border-top-right-radius:var(--ow-r-lg);}
+  .pr-dlg > .pr-dlg-f{border-bottom-left-radius:var(--ow-r-lg);border-bottom-right-radius:var(--ow-r-lg);}
+  .pr-dlg-rule .pr-say-to .pr-menu{left:auto;right:0;width:360px;min-width:0;max-width:calc(100vw - 48px);z-index:6;}
+  .pr-dlg-rule .pr-menu-s{max-width:45%;}
   .pr-dlg-i{flex:none;width:30px;height:30px;border-radius:var(--ow-r-sm);background:var(--ow-steel-950);color:var(--ow-paper);
     display:flex;align-items:center;justify-content:center;}
   .pr-dlg-h svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;}
@@ -18964,6 +18972,7 @@
     .pr-say-to{flex-basis:100%;max-width:none;}
     .pr-say > .btn{flex:0 0 auto;width:auto;min-height:40px;}
     .pr-say-to .pr-menu{min-width:0;}
+    .pr-dlg-rule .pr-say-to .pr-menu{left:0;right:0;width:auto;max-width:none;}
     .pr-grid{grid-template-columns:56px repeat(var(--pr-cols,1),minmax(44px,88px)) minmax(120px,1fr);min-width:0;}
     .pr-grid.pr-wide{grid-template-columns:56px 130px repeat(var(--pr-cols,1),minmax(44px,88px));min-width:max-content;}
     .pr-wide .pr-gc-say,.pr-wide .pr-gc-sayh{left:56px;}
@@ -80188,7 +80197,12 @@ function pairDraftHTML(d){
   const tp = d.toId ? productById(d.toId) : null;
   const verb = pairVerb(d.verb) || {};
   const q = String(d.search || '').trim().toLowerCase();
-  const hits = !tp && q ? (data.products || []).filter(p=> p.id !== d.fromId && p.name.toLowerCase().includes(q)).slice(0, 8) : [];
+  /* Names that start with what was typed come first, then a word that
+     starts with it, then anywhere inside: "s" finds Soft Close before
+     the s at the end of Casters. */
+  const rank = (name)=>{ const n = name.toLowerCase(); return n.startsWith(q) ? 0 : n.split(/[^a-z0-9]+/).some(w=> w.startsWith(q)) ? 1 : 2; };
+  const hits = !tp && q ? (data.products || []).filter(p=> p.id !== d.fromId && p.name.toLowerCase().includes(q))
+    .sort((a, b)=> rank(a.name) - rank(b.name) || a.name.localeCompare(b.name)).slice(0, 8) : [];
   const already = new Set(pairRulesOf(d.fromId).map(r=> r.verb + ' ' + r.toId));
   const rule = tp ? { fromId: d.fromId, verb: d.verb, toId: d.toId, rows: [], ticks: [], general: null, lead: { id: 'draft', qty: d.qty, per: d.per } } : null;
   const grid = rule && !verb.self ? pairGrid(rule) : null;
@@ -80208,7 +80222,7 @@ function pairDraftHTML(d){
      How many sits right under the line; what the invoices say and what a
      customer will be shown sit under the kinds. Nothing is written until
      the red button. */
-  return `<div class="ow-dlg-sc" data-pair-backdrop="1"><div class="ow-dlg ow-dlg-w800" role="dialog" aria-modal="true" aria-label="New rule for ${esc(fp.name)}">
+  return `<div class="ow-dlg-sc" data-pair-backdrop="1"><div class="ow-dlg ow-dlg-w800 pr-dlg" role="dialog" aria-modal="true" aria-label="New rule for ${esc(fp.name)}">
     <div class="ow-dlg-h pr-dlg-h">
       <span class="pr-dlg-i"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="3"/><circle cx="18" cy="12" r="3"/><path d="M9 12h6"/></svg></span>
       <span class="ow-dlg-t">New rule</span><span class="pr-dlg-s">say it the way you would at the counter</span>
