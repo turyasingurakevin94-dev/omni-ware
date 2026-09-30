@@ -59,9 +59,12 @@ const modal = (/<div class="modal-overlay" id="priceModal">[\s\S]*?\n<\/div>/.ex
   const productAt = modal.indexOf('id="pr_product_search"');
   t.check(productAt < packAt, 'and the product comes before both');
 
-  // The steps are numbered in that order, not merely present in it.
-  const nums = [...modal.matchAll(/class="pfx-num">(\d)</g)].map((m) => m[1]);
-  t.check(nums.join('') === '123', `three steps, numbered in order (${nums.join('')})`);
+  /* Laid out as the owner's design board draws it: what, who, packing,
+     their prices -- sections in that order, not numbered steps. */
+  const order = ['id="pr_product_search"', 'id="pr_supplier_search"', 'id="prx_eq"', 'id="pr_tiers_label_text"', 'id="prx_more_t"'].map((k) => modal.indexOf(k));
+  t.check(order.every((x, i) => x > -1 && (i === 0 || x > order[i - 1])),
+    `product, supplier, packing, prices, then the folded details, in that order (${order.join(', ')})`);
+  t.check(!/class="pfx-num"/.test(modal), 'as sections of the board, not numbered steps');
 }
 
 /* ---------- 3. the copy points the right way ------------------------- */
@@ -104,9 +107,9 @@ const modal = (/<div class="modal-overlay" id="priceModal">[\s\S]*?\n<\/div>/.ex
     'with an empty note collapsing rather than leaving a gap');
 }
 
-/* ---------- 5. both modes still live in step 3 ----------------------- */
+/* ---------- 5. both modes still live in the prices section ----------- */
 {
-  const step3 = (/<li class="pfx-step">[\s\S]*?id="pr_tiers_label_text"[\s\S]*?<\/li>/.exec(modal) || [''])[0];
+  const step3 = (/<section class="prx-sec">\s*<div class="prx-sec-h"><h3 id="pr_tiers_label_text">[\s\S]*?<\/section>/.exec(modal) || [''])[0];
   t.check(/id="pr_tiers_wrap"/.test(step3), 'the tier ladder is in the pricing step');
   t.check(/id="pr_bulk_wrap"/.test(step3),
     'and so is the per-variant list — they are two shapes of the same step, not two steps');
