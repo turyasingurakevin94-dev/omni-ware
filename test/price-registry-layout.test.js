@@ -238,16 +238,21 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
      line can hold different numbers of units, so per-carton figures are
      not comparable and per-unit ones are. A card that dropped it could
      not explain its own "Cheapest" chip. */
-  t.check(/class="ow-fig ow-fig-lg[^"]*"[^>]*>\$\{fmtPriceCompactPack\(r\.wholesale, r\)\}/.test(code),
-    'and the wholesale one is quoted by the pack, as every other screen quotes it');
-  t.check(/class="pr-fig-b"[^>]*>\$\{fmtPriceCompact\(r\.wholesale, r\.unit\)\}/.test(code),
-    'with the base rate kept under it — the rate the ranking is really made at');
+  /* Redrawn per LINE: the card is now a comparison table, so every
+     figure on it is the per-unit rate the ranking is made at -- two
+     cartons can hold different numbers of units, and only per-unit
+     figures read across suppliers -- and the card says which unit, once,
+     beside the headline. The pack price, which is how wholesale is
+     quoted and thought about, is kept where one supplier's wholesale is
+     read on its own: the line popup's wholesale figure. */
+  t.check(/<small> \/\$\{esc\(unit \|\| 'unit'\)\}<\/small>/.test(code),
+    'the card names the unit its figures are per, beside the headline');
+  t.check(/Wholesale · by the pack<\/span><span class="prx-kpi-v">\$\{bw == null \? '—' : fmtPriceCompactPack\(bw, best\.r\)\}/.test(code),
+    'and the wholesale one is quoted by the pack where it is read on its own, as every other screen quotes it');
   t.check(/\.pr-fig-b\{[^}]*font-variant-numeric:tabular-nums;/.test(src),
     'tabular too, since it is the figure being read down a column of cards');
-  /* And the delta beside them is per UNIT, which had to start saying so
-     the moment the figure above it became per pack. */
-  t.check(/\+\$\{fmtPriceCompact\(buy - best\)\}<\/span>\$\{r\.unit \? `<span class="prc-unit">\/\$\{esc\(r\.unit\)\}<\/span>` : ''\} vs cheapest/.test(code),
-    'the "vs cheapest" gap names its unit, because it is per unit while the figure above it is per pack');
+  t.check(/<span class="prx-vs">\+\$\{prxMoney\(w - bw\)\}<\/span>/.test(code),
+    'the "vs best" gap is per unit, like every figure in the table it sits in');
 
   // Same gap the Presets page had: a summary that only drew at boot.
   t.check(/if\(tab==='prices'\)\{ refreshPriceDropdowns\(\); triggerPricesRender\(\); \}/.test(code),

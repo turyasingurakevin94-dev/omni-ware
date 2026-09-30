@@ -597,9 +597,14 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'form-panel', 'form-panel-head', 'fp-icon', 'form-grid', 'pw-controls', 'pw-tail', 'pw-list', 'pw-row', 'pw-empty',
                 'btn-row', 'rv-group', 'rv-vrow', 'rv-mrow', 'rv-entry', 'rv-in', 'pp-facts', 'pp-why', 'pp-more'],
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-seg', 'ow-seg-b', 'ow-tb', 'ow-f', 'ow-f-l', 'ow-f-in'],
-      renders: ['renderPrices', 'priceCardHTML', 'priceRailHTML', 'renderPriceWatch', 'renderMarket'],
-      rendersUses: ['ow-strip', 'ow-mt', 'ow-grid', 'ow-cards', 'ow-card', 'ow-fig', 'ow-sigs', 'ow-sig', 'ow-cp',
-                    'ow-pan', 'ow-sr', 'ow-empty'],
+      /* Redrawn on the owner's canvas: the registry is one card per LINE
+         (its own .prx-card, a grid of four, not the layer's .ow-cards of
+         quotes), Paid is one table and Rivals the engine's move rows, so
+         priceCardHTML and priceRailHTML went and the card-grid classes
+         with them. What stays is the layer's strip, chip, panel, side
+         row and empty state -- the parts every converted screen shares. */
+      renders: ['renderPrices', 'renderPriceWatch', 'renderMarket'],
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-cp', 'ow-pan', 'ow-sr', 'ow-empty'],
     },
     /* Follow-ups. A wall of cards -- one white block per client, each
        with its own avatar, its own coloured item stripes, its own flag
