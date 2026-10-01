@@ -247,8 +247,8 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
      read on its own: the line popup's wholesale figure. */
   t.check(/<small> \/\$\{esc\(unit \|\| 'unit'\)\}<\/small>/.test(code),
     'the card names the unit its figures are per, beside the headline');
-  t.check(/Wholesale · by the pack<\/span><span class="prx-kpi-v">\$\{bw == null \? '—' : fmtPriceCompactPack\(bw, best\.r\)\}/.test(code),
-    'and the wholesale one is quoted by the pack where it is read on its own, as every other screen quotes it');
+  t.check(/' · ' \+ prxMoney\(x\.at \* r\.packQty\) \+ ' a ' \+ String\(r\.packUnit\)\.toLowerCase\(\)/.test(code),
+    'and each supplier’s wholesale is quoted by the pack in the popup row, where it is read on its own, as every other screen quotes it');
   t.check(/\.pr-fig-b\{[^}]*font-variant-numeric:tabular-nums;/.test(src),
     'tabular too, since it is the figure being read down a column of cards');
   t.check(/<span class="prx-vs">\+\$\{prxMoney\(w - bw\)\}<\/span>/.test(code),
