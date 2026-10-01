@@ -264,11 +264,14 @@ const build = (data, extraSrc, names, over) => compileScope(
   s.renderMarket();
   const html = el.innerHTML;
 
-  t.check(paged.includes('marketUnder') && paged.includes('marketLift') && paged.includes('market'),
-    'all three lists are paged, each under its own name — one id shared between two lists pages them together');
-  t.check(/Where they are cheaper than you/.test(html), 'the screen names where a rival undercuts us');
-  t.check(/Where you are cheapest/.test(html), 'and where every shop we checked is dearer');
-  t.check(html.indexOf('Where they are cheaper') < html.indexOf('rv-groups'),
+  /* One list of moves, ranked by money as the design board draws it, and
+     the record below it -- each paged under its own name, since one id
+     shared between two lists pages them together. */
+  t.check(paged.includes('marketMoves') && paged.includes('market'),
+    'the moves and the record are both paged, each under its own name');
+  t.check(/data-mk-kind-pick="defend">Defend/.test(html), 'the screen names where a rival undercuts us — Defend');
+  t.check(/data-mk-kind-pick="gain">Gain/.test(html), 'and where every shop we checked is dearer — Gain');
+  t.check(html.indexOf('data-mk-kind="defend"') > -1 && html.indexOf('data-mk-kind="defend"') < html.indexOf('rv-groups'),
     'ABOVE the record: the answer first, the evidence under it');
   t.check(/at stake this month/.test(html) && html.includes('70,000'),
     'with what it comes to across the lot, in the strip');

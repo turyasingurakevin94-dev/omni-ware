@@ -5313,7 +5313,9 @@
   .ow-sr.pw-once{display:grid;grid-template-columns:minmax(0,1fr) 150px 84px;gap:12px;align-items:center;min-height:40px;padding:0 16px;border-bottom:1px solid var(--ow-rule-soft);}
   .pw-once-n{font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .pw-once-s{display:flex;align-items:center;gap:5px;font-size:var(--ow-t-12);color:var(--ow-ink-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
-  .pw-once-w{font-size:var(--ow-t-11);color:var(--ow-ink-400);text-align:right;white-space:nowrap;}
+  .pw-once-w{display:inline-flex;justify-content:flex-end;gap:4px;}
+  .pw-once-w i{width:8px;height:8px;border-radius:50%;background:var(--ow-steel-950);}
+  .pw-once-w i.pw-dash{box-sizing:border-box;background:none;border:1.5px dashed var(--ow-ink-400);}
   .pw-read{padding:10px 16px 0;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
   .pw-read summary{cursor:pointer;}
   .pw-acc .ow-mini{padding:8px 16px 12px;margin:0;}
@@ -5369,6 +5371,10 @@
   .prx-vol-h{display:flex;align-items:baseline;gap:8px;margin:6px 0 6px;}
   .prx-pack-say{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--ow-rule-soft);font-size:var(--ow-t-12);}
   .prx-pack-say:empty{display:none;}
+  .mk-sel.mk-sel-r{align-items:center;}
+  .mk-sel-r .mk-av{flex:none;}
+  .mk-sel-r .mk-tag{margin-left:auto;flex:none;}
+  .mk-sel-m{font-size:var(--ow-t-11);color:var(--ow-ink-400);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   /* the phone's own Quotes design; the desktop never draws these */
   .prx-pc,.prx-week{display:none;}
   .prx-pg-per{display:contents;}
@@ -5626,7 +5632,9 @@
   .mk-pill.mk-stake{background:var(--ow-paper);color:var(--ow-crimson);}
   .mk-arrow{align-self:center;width:18px;height:18px;color:#B9B4AA;}
   .mk-th,.mk-mv{display:grid;grid-template-columns:84px minmax(0,1fr) 190px 84px 22px 128px;column-gap:12px;align-items:center;padding:0 16px;}
-  .mk-mv{grid-template-areas:"badge head lad mo sure acts" "badge why why mo sure acts";row-gap:6px;}
+  .mk-mv{grid-template-areas:"badge head lad mo sure acts";row-gap:6px;}
+  .mk-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;}
+  .mk-why-h .mk-rs{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .mk-mv > .mk-badge{grid-area:badge;}
   .mk-mv > .mk-why-h{grid-area:head;display:flex;flex-direction:column;gap:3px;min-width:0;align-self:start;}
   .mk-mv > .mk-lad{grid-area:lad;}
@@ -35952,7 +35960,7 @@ function fmtUGXPerUnitPack(n, row){
 // the first screen of the app, not a grid to browse. The other four are
 // grids somebody scans.
 const LIST_PAGE_SIZES = { products: 24, customers: 24, suppliers: 10, dashAlerts: 5, sessions: 6, buyPlan: 5, 
-  market: 8, marketUnder: 5, marketLift: 5, ahead: 12, invoices: 10, purchaseInvoices: 10,
+  market: 8, marketMoves: 4, ahead: 12, invoices: 10, purchaseInvoices: 10,
   pricing: 8 };
 const LIST_PAGE_DEFAULT = 24;
 // Sticky per list, and deliberately NOT reset when the filter changes:
@@ -35975,7 +35983,7 @@ const listPageExpanded = {};
 /* The Rivals lists too: the moves and the record page through their
    rows rather than hiding the rest behind one "Show all". */
 const LIST_PAGED = { invoices: true, purchaseInvoices: true, customers: true, products: true, suppliers: true,
-  market: true, marketUnder: true, marketLift: true };
+  market: true, marketMoves: true };
 const listPageNum = {};
 const listPageSeen = {};
 
@@ -36027,6 +36035,16 @@ function listMoreButtonHTML(id, total, noun){
    and the same turning -- only the buttons look different. The customer
    book's are the design board's: arrows, the numbers, what is showing. */
 const LIST_PAGER = {
+  /* The Rivals moves, as the board draws them: what is showing, how it is
+     ranked, then the page buttons -- no "Show all" on a list read in fours. */
+  marketMoves: (id, total)=>{
+    const size = listPageSize(id), at = listPageAt(id, total), pages = Math.ceil(total / size);
+    const nums = Array.from({ length: pages }, (_, i)=> i + 1).filter(n=> pages <= 7 || n === 1 || n === pages || Math.abs(n - at) <= 1);
+    let last = 0, btns = '';
+    nums.forEach(n=>{ if(n - last > 1) btns += '<span class="prx-pg-l">…</span>'; btns += `<button type="button" class="prx-pgb${n === at ? ' ow-on' : ''}" data-list-page="${esc(id)}" data-page="${n}" aria-label="Page ${n}"${n === at ? ' aria-current="page"' : ''}>${n}</button>`; last = n; });
+    return `<nav class="prx-pg" aria-label="Pages of moves"><span>Showing <b>${(at - 1) * size + 1}–${Math.min(total, at * size)}</b> of <b>${total}</b> · ranked by money a month</span><span class="prx-pg-sp"></span>
+      <button type="button" class="prx-pgb" data-list-page="${esc(id)}" data-page="${at - 1}" aria-label="Previous page"${at <= 1 ? ' disabled' : ''}><svg class="icon" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></button>${btns}<button type="button" class="prx-pgb" data-list-page="${esc(id)}" data-page="${at + 1}" aria-label="Next page"${at >= pages ? ' disabled' : ''}><svg class="icon" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button></nav>`;
+  },
   customers: (id, total, noun)=>{
     const size = listPageSize(id), at = listPageAt(id, total);
     return custPagerHTML((n)=> `data-list-page="${esc(id)}" data-page="${n}"`, at, Math.ceil(total / size),
@@ -36040,8 +36058,7 @@ const LIST_PAGE_RERENDER = {
   dashAlerts: ()=> renderDashboard(),
   buyPlan: ()=> renderPurchasePlanPanel(),
   market: ()=> renderMarket(),
-  marketUnder: ()=> renderMarket(),
-  marketLift: ()=> renderMarket(),
+  marketMoves: ()=> renderMarket(),
   ahead: ()=> renderAhead(),
   pricing: ()=> renderPricing(),
   // The lens, not the register: on Paired, redrawing renderInvoices
@@ -92434,7 +92451,7 @@ function renderMarket(){
         : `You would keep ${m.keptPct}%.`;
     return { m,
       text: `<div class="rv-move${!m.pays ? ' none' : (m.thin ? ' thin' : '')}">${mode === 'under' ? 'Match' : 'Lift to'} ${esc(x.shop)}’s ${f(x.theirs)} — costs you ${f(m.cost)}. ${verdict}</div>`,
-      act: m.pays ? `<button type="button" class="btn btn-ghost ow-sm rv-match mk-act-${mode}" data-pid="${esc(String(x.productId))}" data-vi="${x.variantIdx == null ? '' : esc(String(x.variantIdx))}" data-side="${esc(x.side)}" data-to="${esc(String(x.theirs))}">Charge ${f(x.theirs)} ${esc(rivalSideLabel(x.side))}</button>` : '',
+      act: m.pays ? `<button type="button" class="btn btn-ghost ow-sm rv-match mk-act-${mode}" data-pid="${esc(String(x.productId))}" data-vi="${x.variantIdx == null ? '' : esc(String(x.variantIdx))}" data-side="${esc(x.side)}" data-to="${esc(String(x.theirs))}" title="Charge ${f(x.theirs)} ${esc(rivalSideLabel(x.side))}">Set ${prxMoney(x.theirs)}</button>` : '',
     };
   };
   /* How sure the engine is: the freshest sighting behind the move and how
@@ -92460,8 +92477,6 @@ function renderMarket(){
       <i class="${t.k === 'rival' ? shopHue(t.name) : ''}">${t.k === 'rival' ? ini(t.name) : t.k === 'you' ? '◆' : t.k === 'new' ? (verb === 'RAISE' ? '▲' : '=') : '–'}</i>
       <span class="mk-rn">${esc(t.name)}</span><span class="mk-rs">${esc(t.note || '')}</span><b>${prxMoney(t.p)}</b></span>`).join('')}</span>`;
   };
-  const staleNote = (list)=> list.some(x=> x.stale)
-    ? ` A sighting seen over ${RIVAL_STALE_DAYS} days ago is worth checking again before you act on it.` : '';
   const moveRow = (x, mode)=>{
     const mv = moveLine(x, mode);
     const pays = mv.m && mv.m.pays;
@@ -92470,15 +92485,19 @@ function renderMarket(){
     const why = mode === 'under'
       ? `A customer buying your month’s ${x.units30} at ${esc(x.shop)}’s price saves ${f(x.atStake)}.`
       : `Lifting to just under ${esc(x.shop)}’s ${f(x.theirs)} would add up to ${f(x.atStake)} a month, at the same volume.`;
+    /* Two short lines, as the board draws a move: who, at what, how fresh
+       and what it says; then what it rests on. The whole argument is in
+       the row's title and read out to a screen reader. */
+    const full = `${why} ${String(mv.text || '').replace(/<[^>]+>/g, '')} ${x.shop} · ${seen(x.daysOld)} · ${x.units30} sold ${x.side === 'retail' ? 'by the piece' : 'by the pack'} in 30 days · your ${rivalSideLabel(x.side)}.`;
+    const keep = mv.m ? (mv.m.pays ? `margin ${mv.m.keptPct}%` : 'below your cost') : 'no cost on file';
     return `<div class="mk-mv${U.gone[key] ? ' mk-gone' : ''}" data-mk-kind="${mode === 'lift' ? 'gain' : 'defend'}">
       <span class="mk-badge mk-${verb.toLowerCase()}"><b>${verb === 'RAISE' ? '▲' : verb === 'MATCH' ? '=' : '■'}</b>${verb}</span>
-      <span class="mk-why-h"><b class="mk-ln" title="${esc(x.line)}">${esc(x.line)}</b>
-        <span class="mk-ft"><span>${x.ours == null ? '—' : prxMoney(x.ours)}</span>${pays ? ` → <b class="mk-${verb.toLowerCase()}-i">${prxMoney(x.theirs)}</b>` : ' <b>keep</b>'}</span></span>
-      <span class="mk-why">
-        <span class="mk-rs rv-why">${why}</span>
-        ${mv.text}
+      <span class="mk-why-h" title="${esc(full)}"><b class="mk-ln">${esc(x.line)}</b>
+        <span class="mk-ft"><span>${x.ours == null ? '—' : prxMoney(x.ours)}</span>${pays ? ` → <b class="mk-${verb.toLowerCase()}-i">${prxMoney(x.theirs)}</b>` : ' <b>keep</b>'}</span>
+        <span class="mk-rs${x.stale ? ' rv-stale' : ''}">${esc(prxShortName(x.shop))} ${prxMoney(x.theirs)} · ${x.daysOld == null ? 'undated' : x.daysOld + ' d'} · ${verb.toLowerCase()}</span>
+        <span class="mk-rs">${x.units30} lately · ${keep}</span>
         ${x.packQty > 1 ? `<span class="mk-rs rv-basis">${f(x.theirsSaid)} a ${esc(x.packUnit)} of ${x.packQty} = ${f(x.theirs)} each</span>` : ''}
-        <span class="mk-rs${x.stale ? ' rv-stale' : ''}">${esc(x.shop)} · ${seen(x.daysOld)} · ${x.units30} sold ${x.side === 'retail' ? 'by the piece' : 'by the pack'} in 30 days · your ${esc(rivalSideLabel(x.side))}</span></span>
+        <span class="mk-sr">${esc(full)}</span></span>
       ${ladder(x, pays ? x.theirs : null, verb)}
       <span class="mk-mo"><b class="${mode === 'under' ? 'pw-bad' : 'pw-good'}">${mode === 'under' ? '−' : '+'}${prxMoney(x.atStake)}</b><span>${mode === 'under' ? 'exposed' : 'up to'}</span></span>
       ${bars(sureOf(x))}
@@ -92487,15 +92506,13 @@ function renderMarket(){
   };
   const scoutRow = (n)=> `<div class="mk-mv" data-mk-kind="scout">
       <span class="mk-badge mk-scout"><b>?</b>SCOUT</span>
-      <span class="mk-why-h"><b class="mk-ln" title="${esc(n.line)}">${esc(n.line)}</b><span class="mk-ft"><span>${n.ours == null ? 'no price of your own' : prxMoney(n.ours)}</span> → <b>go look</b></span></span>
-      <span class="mk-why"><span class="mk-rs">No rival price on file — a blind spot. It earned ${f(n.earned30)} in 30 days.</span></span>
+      <span class="mk-why-h" title="No rival price on file — a blind spot. It earned ${esc(f(n.earned30))} in 30 days."><b class="mk-ln">${esc(n.line)}</b><span class="mk-ft"><span>${n.ours == null ? 'no price of your own' : prxMoney(n.ours)}</span> → <b>go look</b></span><span class="mk-rs">Nobody has looked · blind spot</span><span class="mk-rs">earned ${prxMoney(n.earned30)} in 30 d</span></span>
       <span class="mk-lad"><span class="mk-lr mk-you"><i>◆</i><span class="mk-rn">You</span><span class="mk-rs"></span><b>${n.ours == null ? '—' : prxMoney(n.ours)}</b></span><span class="mk-lr mk-dim"><i>?</i><span class="mk-rn">Every rival</span><span class="mk-rs">never seen</span><b>—</b></span></span>
       <span class="mk-mo"><b>?</b><span>unknown</span></span>
       ${bars(0)}
       <span class="mk-acts"><button type="button" class="btn btn-ghost ow-sm mk-scout-go" data-key="${esc(n.key)}"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg>Log a sighting</button></span>
     </div>`;
 
-  const under = listPageSlice('marketUnder', v.under), lift = listPageSlice('marketLift', v.lift);
   const scouts = never.slice(0, 6);
   const tally = { match: v.under.filter(x=> { const m = priceRuleForTarget(x.productId, x.variantIdx, x.theirs, x.side); return m && m.pays; }).length };
   tally.hold = v.under.length - tally.match; tally.raise = v.lift.length; tally.scout = scouts.length;
@@ -92513,9 +92530,17 @@ function renderMarket(){
       <span class="mk-stage mk-says"><span class="mk-st-l">Says</span><span class="mk-pills">${[['match', '=', tally.match], ['hold', '■', tally.hold], ['raise', '▲', tally.raise], ['scout', '?', tally.scout]].filter(t=> t[2]).map(t=> chip(t[1] + ' ' + t[2] + ' ' + t[0], 'mk-' + t[0])).join('') || chip('nothing to do', 'mk-soft')}${v.atStake ? chip(`at stake this month ${prxMoney(v.atStake)}`, 'mk-stake') : ''}</span></span>
     </div>
     <div class="mk-th"><span>Move</span><span>Line · why</span><span>Price ladder</span><span class="pw-r">Money / mo</span><span>Sure</span><span></span></div>`;
-  if(v.under.length) movesHTML += `<div class="pw-grp pw-grp-off mk-g" data-mk-kind="defend"><i></i>Where they are cheaper than you<b>${v.under.length}</b><span class="mk-g-s">Worst first, by what a month of your own sales is worth at their price.${staleNote(v.under)}</span></div>${under.map(x=> moveRow(x, 'under')).join('')}${listMoreButtonHTML('marketUnder', v.under.length, 'lines')}`;
-  if(v.lift.length) movesHTML += `<div class="pw-grp pw-grp-ok mk-g" data-mk-kind="gain"><i></i>Where you are cheapest<b>${v.lift.length}</b><span class="mk-g-s">Every shop you have checked charges more. What lifting would add assumes you keep selling the same amount, which is the part nothing here can promise.${staleNote(v.lift)}</span></div>${lift.map(x=> moveRow(x, 'lift')).join('')}${listMoreButtonHTML('marketLift', v.lift.length, 'lines')}`;
-  if(scouts.length) movesHTML += `<div class="pw-grp mk-g mk-g-scout" data-mk-kind="scout"><i></i>Blind spots — sells, nobody has looked<b>${never.length}</b></div>${scouts.map(scoutRow).join('')}`;
+  /* ONE LIST, ranked by money a month as the board draws it: where they
+     are cheaper than you (defend) and where you are cheapest (gain)
+     together, worst money first, then the blind spots nobody has looked
+     at (scout). The kind switch narrows it before it is paged, so a page
+     is always full of the kind asked for. */
+  const moves = [].concat(
+    v.under.map(x=> ({ k: 'defend', m: x.atStake, html: ()=> moveRow(x, 'under') })),
+    v.lift.map(x=> ({ k: 'gain', m: x.atStake, html: ()=> moveRow(x, 'lift') }))
+  ).sort((a,b)=> b.m - a.m).concat(scouts.map(n=> ({ k: 'scout', m: -1, html: ()=> scoutRow(n) })));
+  const shownMoves = moves.filter(x=> U.kind === 'all' || x.k === U.kind);
+  movesHTML += listPageSlice('marketMoves', shownMoves).map(x=> x.html()).join('');
   if(!nMoves) movesHTML += `<div class="ow-empty"><b>Nothing recorded yet.</b><br>So nothing here says you are the cheapest — only that nobody has looked.</div>`;
   if(v.noRule){
     movesHTML += `<p class="pr-note mk-note">${v.noRule} ${v.noRule === 1 ? 'sighting names a side' : 'sightings name a side'} this line has no price rule for, so ${
@@ -92526,7 +92551,9 @@ function renderMarket(){
     movesHTML += `<p class="pr-note mk-note">${v.notCompared} ${v.notCompared === 1 ? 'sighting was' : 'sightings were'} recorded in a unit that does not match how you price the line, so ${
       v.notCompared === 1 ? 'it is' : 'they are'} on the record below but in neither list.</p>`;
   }
-  movesHTML += `<div class="mk-foot"><span>${stale ? `${stale} sighting${stale === 1 ? '' : 's'} seen over ${RIVAL_STALE_DAYS} days ago — worth checking again first` : 'ranked by money a month'}</span></div></div>`;
+  movesHTML += shownMoves.length ? listMoreButtonHTML('marketMoves', shownMoves.length, 'moves') || `<div class="mk-foot"><span>Showing 1–${shownMoves.length} of ${shownMoves.length} · ranked by money a month</span></div>` : '';
+  if(stale) movesHTML += `<p class="pr-note mk-note">${stale} sighting${stale === 1 ? '' : 's'} seen over ${RIVAL_STALE_DAYS} days ago — worth checking again before you act on ${stale === 1 ? 'it' : 'them'}.</p>`;
+  movesHTML += `</div>`;
 
   /* ---- who the rivals are ---- */
   const byShop = new Map();
@@ -92651,6 +92678,15 @@ function renderMarket(){
       <label class="mk-fl">${numStep(1)}Which rival <small>· search or add</small></label>
       <div class="mk-combo"><span class="mk-in"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg><input type="text" id="mk_shop" placeholder="Search rivals, or type a new shop" value="${esc(mkShop)}" autocomplete="off"></span>
         <div class="mk-list" id="mk_shop_list" hidden></div></div>
+      ${(()=>{
+        /* The rival picked, as a card: who they are to you, by the same
+           threat rule the profiles below use. A new shop says so. */
+        if(!mkShop) return '';
+        const pf = profiles.find(p=> p.g.shop.toLowerCase() === String(mkShop).trim().toLowerCase());
+        if(!pf) return `<div class="mk-sel mk-sel-r"><i class="mk-av ${shopHue(mkShop)}">${ini(mkShop)}</i><span class="mk-sel-id"><b>${esc(mkShop)}</b><small class="mk-sel-m">a new shop · no sightings yet</small></span></div>`;
+        const lvl = pf.stake > maxStake * 0.5 && pf.stake > 0 ? ['High threat', 'mk-bad'] : pf.stake > 0 || pf.lose ? ['Watch', 'mk-amb'] : ['Low threat', 'mk-good'];
+        return `<div class="mk-sel mk-sel-r"><i class="mk-av ${shopHue(pf.g.shop)}">${ini(pf.g.shop)}</i><span class="mk-sel-id"><b>${esc(pf.g.shop)}</b><small class="mk-sel-m">${pf.n} sighting${pf.n === 1 ? '' : 's'} · ${pf.nLines} line${pf.nLines === 1 ? '' : 's'} · last ${pf.fresh} d ago</small></span><span class="mk-tag ${lvl[1]}">${lvl[0]}</span></div>`;
+      })()}
       <label class="mk-fl">${numStep(2)}Which product <small>· from your records</small></label>
       <div class="mk-combo"><span class="mk-in"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg><input type="text" id="mk_line_q" placeholder="Search your products" value="${esc(U.lineQ)}" autocomplete="off"></span>
         <input type="hidden" id="mk_line" value="${esc(U.lineKey)}">
@@ -112649,6 +112685,10 @@ function renderPriceWatch(){
   const w = supplierPriceWatch(todayISO());
   const daysEl = document.getElementById('pw_days');
   if(daysEl && document.activeElement !== daysEl) daysEl.value = w.days;
+  /* The board offers the four windows; a window typed in by hand before
+     keeps its box, so it can still be seen and changed back. */
+  const daysBox = daysEl && daysEl.closest('label');
+  if(daysBox && document.activeElement !== daysEl) daysBox.style.display = [30, 90, 180, 365].includes(w.days) ? 'none' : '';
   const seg = document.getElementById('pw_days_seg');
   if(seg) seg.innerHTML = [[30, '30 d'], [90, '90 d'], [180, '180 d'], [365, '1 yr']].map(o=>
     `<button type="button" role="radio" aria-checked="${w.days === o[0]}" class="${w.days === o[0] ? 'ow-on' : ''}" data-pw-days="${o[0]}">${o[1]}</button>`).join('');
@@ -112690,7 +112730,7 @@ function renderPriceWatch(){
     ].filter(Boolean).join(' and ');
     const why = { once: 'bought once', sameDay: 'one day only', unitSplit: 'unit changed' };
     return `<div class="ow-pan pw-acc"><div class="ow-pan-h"><span class="ow-pan-t">Not compared yet</span><span class="ow-pan-n">needs a 2nd bill</span></div>
-      ${notYetRows.slice(0, 6).map(sr=> `<div class="ow-sr pw-once"><span class="pw-once-n" title="${esc(label(sr))}">${esc(label(sr))}</span><span class="pw-once-s">${sw(sr.supplierId)}${who(sr)}</span><span class="pw-once-w">${why[sr.silence] || ''}</span></div>`).join('')}
+      ${notYetRows.slice(0, 6).map(sr=> `<div class="ow-sr pw-once"><span class="pw-once-n" title="${esc(label(sr))}">${esc(label(sr))}</span><span class="pw-once-s">${sw(sr.supplierId)}${who(sr)}</span><span class="pw-once-w" title="${why[sr.silence] || ''} — needs a second bill" aria-label="${why[sr.silence] || ''}"><i></i><i class="pw-dash"></i></span></div>`).join('')}
       ${notYetRows.length > 6 ? `<p class="pw-account-note">and ${notYetRows.length - 6} more pair${notYetRows.length - 6 === 1 ? '' : 's'} like these</p>` : ''}
       <details class="pw-read"><summary>Read <b>${r.linesRead}</b> purchase line${r.linesRead===1?'':'s'} in these ${w.days} days, making <b>${r.pairs}</b> pair${r.pairs===1?'':'s'}</summary>
       <div class="pw-account">${accountLines().map(b=>
