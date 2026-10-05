@@ -41,5 +41,5 @@ build('Movements.dc.html', 'Inventory — movements',   'body_moves.html', D, 14
 build('Consigned.dc.html', 'A consigned line, opened', 'body_consign.html', D, 400, 900, False)
 build('Count.dc.html', 'Count the shelf — the dialog', 'body_count.html', D, 1040, 900, False)
 build('Dialogs.dc.html', 'Correct the count, change the floor', 'body_dialogs.html', D, 960, 620, False)
-build('Receive.dc.html', 'Receive — suppliers stacked, units switch', 'body_receive.html', D, 1040, 940, False)
+build('Receive.dc.html', 'Receive — suppliers stacked, units switch', 'body_receive.html', D, 1040, 680, False)
 build('Phone.dc.html',     'Inventory on the phone',  'body_phone.html', D + ['_phone.css'], 390, 844, False)
