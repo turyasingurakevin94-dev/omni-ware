@@ -12,8 +12,10 @@ Working files for the visual-first redesign of the Inventory screen. Each
                         consignment: ownership bar, settle and return
 - `Count.dc.html`     — Count the shelf as a count sheet: scope, one row per line,
                         the difference and its cost filled in, only counted lines saved
-- `Dialogs.dc.html`   — Receive, Correct the count and Change the floor, each one
-                        small dialog with one question and one button
+- `Receive.dc.html`   — Receive a delivery: suppliers as stacked cards, one switch that
+                        counts in bags or pallets with price and total following
+- `Dialogs.dc.html`   — Correct the count and Change the floor, each one small dialog
+                        with one question and one button
 - `Phone.dc.html`     — the phone (390), its own design per the two-designs law
 
 These are mockups, not app code. Nothing here is loaded by `index.html`.
