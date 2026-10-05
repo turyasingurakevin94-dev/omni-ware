@@ -26457,7 +26457,7 @@
   .ow-iv-kp-b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.02em;color:var(--ow-ink-900);}
   .ow-iv-kp-fine{margin-top:auto;color:var(--ow-ink-600);}
   .ow-iv-wk{display:grid;grid-template-columns:auto repeat(5,minmax(0,1fr));gap:6px 8px;align-items:center;margin-top:6px;}
-  .ow-iv-wk-h{font-size:var(--ow-t-11);color:var(--ow-ink-600);text-align:right;white-space:nowrap;}
+  .ow-iv-wk-h{font-size:10px;color:var(--ow-ink-600);text-align:right;white-space:nowrap;}
   .ow-iv-wk-l{display:inline-flex;align-items:center;gap:6px;font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;padding-right:6px;}
   .ow-iv-wk-i{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none;}
   .ow-iv-wk-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-size:var(--ow-t-13);font-weight:500;letter-spacing:-.02em;color:var(--ow-ink-600);text-align:right;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis;}
@@ -26665,7 +26665,7 @@
     .ow-iv-phk{display:flex;flex-wrap:wrap;gap:var(--ow-sp-6) 10px;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
     .ow-iv-phk-b{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;}
     .ow-iv-phk-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.02em;color:var(--ow-ink-900);}
-    .ow-iv-ph .ow-ph-t{font-size:var(--ow-t-20);}
+    .ow-iv-ph .ow-ph-t{display:none;}
     .ow-iv-pos{display:block;margin:0 0 var(--ow-sp-12);font-size:var(--ow-t-13);color:var(--ow-ink-600);line-height:1.45;}
     .ow-iv-pos-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:600;color:var(--ow-ink-900);}
     .ow-iv-pos-w{color:var(--ow-amber-ink);font-weight:600;}
@@ -26683,7 +26683,7 @@
     .ow-iv-card-c + .ow-iv-card-c{padding-left:var(--ow-sp-12);}
     .ow-iv-card-l{display:block;margin-bottom:3px;font-size:var(--ow-t-11);font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ow-ink-600);}
     .ow-iv-card-v{display:block;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-size:var(--ow-t-22);font-weight:600;letter-spacing:-.03em;line-height:1.1;}
-    .ow-iv-card-v .ow-iv-u{margin-left:-2px;font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-12);font-weight:400;color:var(--ow-ink-600);letter-spacing:0;}
+    .ow-iv-card-v .ow-iv-u{margin-left:-9px;font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-12);font-weight:400;color:var(--ow-ink-600);letter-spacing:0;}
     .ow-iv-card-v.ow-iv-thin{color:var(--ow-crimson);} .ow-iv-card-v.ow-none{color:var(--ow-ink-600);font-weight:500;}
     .ow-iv-card-r{grid-column:1 / -1;display:flex;align-items:center;gap:10px;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
     .ow-iv-tf{border-top:0;padding:var(--ow-sp-12) var(--ow-sp-4);}
@@ -100658,10 +100658,15 @@ function invDetailHTML(z){
   const drift = stockLotDrift().find(r=> r.key === key);
   if(drift){
     const emptyShelf = !(drift.onShelf > 0);
-    warn.push(`<div class="ow-iv-wn"><svg class="icon ow-iv-wn-i" viewBox="0 0 24 24"><path d="M10.3 3.9 1.9 18a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
-      <span>The cost record carries <b class="ow-iv-wn-b">${fmtStockQty(drift.inLots)}</b>${pl(drift.inLots)} against <b class="ow-iv-wn-b">${fmtStockQty(drift.onShelf)}</b> on the shelf, and it will price your next sales wrong. ${emptyShelf
-        ? 'The shelf says empty, so count before you match. <button type="button" class="ow-iv-lk" data-lotcount="' + esc(key) + '">Count it</button>'
-        : `Matching changes no count and no money. <button type="button" class="ow-iv-lk" data-lotfix="${esc(key)}">Match it to ${fmtStockQty(drift.onShelf)}</button>`}</span></div>`);
+    /* Said as the canvas says it, in one line; the rest of what the shop
+       has to know before pressing sits on the box itself (hover or long
+       press) and in the confirm that always follows the press. */
+    warn.push(`<div class="ow-iv-wn" title="${emptyShelf
+        ? 'The cost record will price your next sales wrong. The shelf says empty, so count before you match.'
+        : 'The cost record will price your next sales wrong. Matching changes no count and no money.'}"><svg class="icon ow-iv-wn-i" viewBox="0 0 24 24"><path d="M10.3 3.9 1.9 18a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+      <span>The cost record carries <b class="ow-iv-wn-b">${fmtStockQty(drift.inLots)}</b>${pl(drift.inLots)} against ${fmtStockQty(drift.onShelf)} here. ${emptyShelf
+        ? '<button type="button" class="ow-iv-lk" data-lotcount="' + esc(key) + '">Count it first</button>'
+        : `<button type="button" class="ow-iv-lk" data-lotfix="${esc(key)}">Match it to ${fmtStockQty(drift.onShelf)}</button>`}</span></div>`);
   }
   const unc = uncostedStockRows().find(r=> r.key === key && r.qty > 0);
   if(unc){

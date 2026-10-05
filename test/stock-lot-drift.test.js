@@ -170,6 +170,11 @@ if (fns) {
      on the screen any more; the function behind it still takes a list,
      and a line is repaired one press at a time from its own panel.
 
+     (The longer wording -- what the cost record will do and what matching
+     leaves alone -- sits on the warning's own title, and the confirm after
+     the press says it again, so the visible line stays the canvas's one
+     sentence.)
+
      WHAT THE NEW ASSERTIONS MEAN: the open line asks stockLotDrift about
      itself on every render (so a repair elsewhere cannot leave a stale
      warning), splits on the shelf being empty exactly as the groups did,
