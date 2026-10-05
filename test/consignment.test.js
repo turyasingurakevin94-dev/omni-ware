@@ -602,7 +602,10 @@ if (scope) {
      open. This is the assertion that changed in substance: the old one
      said "a card of its own, not a debt-chase row", and a card of its
      own is precisely what stopped working at ten of them. */
-  t.check(/class="ow-q" data-id=/.test(render) && !/class="cons-card"/.test(render)
+  /* The row carries the screen's own family beside the layer's queue
+     class now (cn-q, and its consignor's hue), so the assertion reads
+     the class list rather than demanding it be exactly one word. */
+  t.check(/class="ow-q cn-q[^"]*" data-id=/.test(render) && !/class="cons-card"/.test(render)
     && !/class="chase-row"/.test(render),
     'a consignor is a queue row that opens in place, not a card that is always open');
   /* The layer's queue emits the desk row AND the phone card from one
@@ -611,14 +614,22 @@ if (scope) {
      hid two of its columns -- a reflow, not a second design. */
   t.check(/class="ow-q-r ow-qtog"/.test(render) && /class="ow-q-card ow-qtog"/.test(render),
     'and the desk row and the phone card come from that one call');
-  t.check(/class="ow-strip"/.test(render) && !/class="sum-strip"/.test(render),
+  /* The strip is the phone's 2x2 now. On the desk the same four parts
+     are the ends of the flow under the headline, which says what a row
+     of tiles could not -- that they are stages, and only what sold can
+     be owed. It is still the layer's strip, not a private one. */
+  t.check(/class="ow-strip cn-p4"/.test(render) && !/class="sum-strip"/.test(render),
     'the figures the screen exists for are in the strip every other screen uses for them');
   /* The four figures of one consignment are still together and still
      comparable -- they are the strip's four tiles now rather than a
      private stat strip inside each card, so they are read once for the
      whole screen instead of once per consignor. */
-  t.check(/'Owed to consignors'/.test(render) && /'Of it, already billed'/.test(render)
-    && /'Their goods here'/.test(render) && /'Consignors'/.test(render)
+  /* The four that make up the whole holding: where their money is, from
+     shelf to paid. These are the tiles now -- the old four (owed, of it
+     billed, their goods, consignors) were two figures and two counts,
+     and the headline and the list carry the counts. */
+  t.check(/tile\('To settle'/.test(render) && /tile\('Billed, unpaid'/.test(render)
+    && /tile\('On your shelf'/.test(render) && /tile\('Paid'/.test(render)
     && !/class="sc-stats"/.test(render),
     'and the four that make up the whole holding sit together where they can be compared');
   t.check(/class="ow-tbl cons-tbl"/.test(render) && !/cons-goods-table/.test(render)
@@ -658,7 +669,7 @@ if (scope) {
      of its own from the data-l it was emitted with, so the media query
      and its 560px companion are gone and nothing is hidden from anybody. */
   t.check(!/\.cons-goods-table tr\{display:grid/.test(src)
-    && /data-l="On shelf"/.test(render) && /data-l="Worth to them"/.test(render),
+    && /data-l="Units"/.test(render) && /data-l="Worth to them"/.test(render),
     'and on a phone the goods carry their column names instead of losing two columns to a media query');
 }
 
@@ -791,19 +802,22 @@ if (scope) {
   // it exists to explain.
   t.check(!/of your cash is theirs/.test(render.replace(/\/\*[\s\S]*?\*\//g, '')),
     'the screen no longer calls a liability cash');
-  t.check(/'Owed to consignors'/.test(render), 'it calls it what it is');
+  t.check(/>Owed to consignors now</.test(render), 'it calls it what it is');
   /* The same three derived figures, moved from a paragraph under the
      strip into the rail's own rows, where they read as the arithmetic
      behind the headline rather than as a caveat trailing it. The
      shortfall is now stated outright -- dueTotal against
      cashOnHandByAccount -- which is the question the old sentence was
      reaching for and never actually answered. */
-  t.check(/Still out with customers/.test(render)
+  /* The rail's three rows became the cover panel: the sum written out
+     (cash you are holding, less what is owed) and the way out -- what
+     customers still owe on the invoices those goods went out on. */
+  t.check(/Customers still owe you/.test(render)
     && /Cash you are holding/.test(render)
     && /const cashHeld = cashOnHandByAccount\(\)\.total;/.test(render)
     && /you would be \$\{esc\(f\(short\)\)\} short/.test(render),
     'and answers the question that sentence was reaching for, out of figures it can actually derive');
-  t.check(/'Of it, already billed'/.test(render) && /still to pay, on their bill/.test(render),
+  t.check(/>Of it, already billed</.test(render) && /still to pay, on their bill/.test(render),
     'billed and paid are two facts, and the screen carries both');
   /* And the headline is the whole debt, not the half of it that has no
      bill yet. It read "0 UGX · nothing owed" the moment Settle was

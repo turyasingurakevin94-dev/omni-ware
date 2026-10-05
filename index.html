@@ -11556,7 +11556,7 @@
      button column takes what it needs. .ow-tbl.cons-tbl, not .cons-tbl:
      the layer sets the same custom property on .ow-tbl and a bare class
      would lose the cascade to it on document order. */
-  .ow-tbl.cons-tbl{--ow-tbl-cols:minmax(0,1fr) 76px 112px 128px auto;
+  .ow-tbl.cons-tbl{--ow-tbl-cols:minmax(180px,1.3fr) minmax(170px,1.1fr) 132px 116px auto;
     border-bottom:1px solid var(--ow-rule-soft);margin-bottom:var(--ow-sp-10);}
 
   /* A ZERO IS NOT GOOD NEWS, AND IT IS NOT AN ORDINARY FIGURE EITHER.
@@ -11608,6 +11608,421 @@
   .cons-mark-foot{display:flex;align-items:center;justify-content:space-between;gap:14px;
     flex-wrap:wrap;margin-top:14px;}
   .cons-mark-note{margin:0;flex:1 1 260px;font-size:11.5px;color:var(--ink-soft);line-height:1.5;}
+  /* ---- Consignment, the intelligence screen ---------------------------
+     Outside the layer on purpose: these rules reach into elements and
+     paint the screen's own stage colours, and a rule that reaches outside
+     the namespace lives beside the code it couples to. They keep to the
+     layer's discipline anyway -- tokens for every radius, size and
+     weight, tabular figures, three-part truncation.
+     Four questions in the order the owner asks them: how much do I owe
+     them, could I pay it today, is it getting worse, and -- per
+     consignor -- where is their money and what do I do next. The rail
+     carries three pictures of the shelf itself.
+
+     The stage colours are the screen's one vocabulary and every picture
+     on it speaks it: hatched steel for goods still on the shelf (not
+     sold, not owed), amber for sold-and-not-billed (the caution: work to
+     do), sky for billed-and-unpaid (it is Money's business now -- the
+     Invoices screen), and a pale verdigris for paid (done, so it
+     recedes). Fills only; no text is ever set on them.
+
+     The consignor's hue is identity, never state -- the supplier
+     families Invoices already uses, one per consignor by name. */
+  .cn{--cn-shelf:#C3CAD7;--cn-shelf-2:#E3E7EE;--cn-settle:#D08A2E;--cn-settle-2:#F6E2C6;
+    --cn-billed:var(--ow-sky);--cn-paid:#9FCFB3;--cn-sold:#6B7385;--cn-in:#3C4560;
+    --cn-short:#F3C9C4;display:flex;flex-direction:column;gap:var(--ow-sp-16);}
+  .cn-h0{--cn-ink:var(--ow-teal);--cn-soft:var(--ow-teal-soft);}
+  .cn-h1{--cn-ink:var(--ow-indigo);--cn-soft:var(--ow-indigo-soft);}
+  .cn-h2{--cn-ink:var(--ow-plum);--cn-soft:var(--ow-plum-soft);}
+  .cn-h3{--cn-ink:var(--ow-violet);--cn-soft:var(--ow-violet-soft);}
+  .cn-h4{--cn-ink:var(--ow-slate);--cn-soft:var(--ow-slate-soft);}
+  .cn-s-shelf{background:repeating-linear-gradient(135deg,var(--cn-shelf) 0 3px,var(--cn-shelf-2) 3px 6px);}
+  .cn-s-settle{background:var(--cn-settle);}
+  .cn-s-unrec{background:repeating-linear-gradient(135deg,var(--cn-settle) 0 2px,var(--cn-settle-2) 2px 5px);}
+  .cn-s-billed{background:var(--cn-billed);}
+  .cn-s-paid{background:var(--cn-paid);}
+  .cn-key{display:inline-block;width:10px;height:10px;border-radius:var(--ow-r-pill);flex:none;}
+  .cn-key.is-cash{background:var(--ow-verdigris);}
+  .cn-key.is-owed{background:var(--ow-ink-900);}
+  .cn-k{margin:0;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.06em;
+    text-transform:uppercase;color:var(--ow-ink-600);}
+  .cn-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+  .cn-basis{margin:0;font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:var(--ow-lh-normal);max-width:var(--ow-measure);}
+  .cn-neg{color:var(--ow-crimson);}
+  .cn-pos{color:var(--ow-verdigris);}
+
+  /* THE HEADLINE. The figure, its two parts, and the flow under it. */
+  .cn-hero{display:flex;flex-wrap:wrap;}
+  .cn-owed{flex:999 1 520px;min-width:0;padding:var(--ow-sp-20) var(--ow-sp-24);
+    display:flex;flex-direction:column;gap:var(--ow-sp-16);}
+  .cn-top{display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--ow-sp-12) var(--ow-sp-32);}
+  .cn-big{margin:var(--ow-sp-4) 0 0;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-28);
+    font-weight:var(--ow-fw-600);line-height:var(--ow-lh-tight);color:var(--ow-ink-900);}
+  .cn-big .ow-u{font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);
+    color:var(--ow-ink-600);margin-left:var(--ow-sp-6);letter-spacing:0;}
+  .cn-splits{display:flex;gap:var(--ow-sp-24);padding-bottom:var(--ow-sp-4);}
+  .cn-spl{margin:0;display:flex;align-items:center;gap:var(--ow-sp-6);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .cn-splits b{display:block;margin-top:2px;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-16);font-weight:var(--ow-fw-500);}
+  .cn-pbar,.ow-strip.cn-p4{display:none;}
+
+  /* The flow: received, then sold or not, then where it is now. The
+     ribbons are drawn in one SVG stretched to the box; every word on it
+     is HTML positioned over it, so the text never stretches with it. */
+  .cn-flow{display:flex;flex-direction:column;gap:var(--ow-sp-6);}
+  .cn-fcap{position:relative;height:18px;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
+    letter-spacing:.04em;text-transform:uppercase;color:var(--ow-ink-600);}
+  .cn-fcap > span{position:absolute;white-space:nowrap;}
+  .cn-fcap b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:0;text-transform:none;color:var(--ow-ink-900);}
+  .cn-fc2{left:33.33%;}
+  .cn-fc3{left:60%;}
+  .cn-fbox{position:relative;height:220px;}
+  .cn-fbox svg{position:absolute;inset:0;width:100%;height:100%;display:block;}
+  .cn-f-shelf{fill:var(--cn-shelf);fill-opacity:.55;}
+  .cn-f-sold{fill:var(--cn-sold);fill-opacity:.22;}
+  .cn-f-settle{fill:var(--cn-settle);fill-opacity:.45;}
+  .cn-f-billed{fill:var(--cn-billed);fill-opacity:.45;}
+  .cn-f-paid{fill:var(--cn-paid);fill-opacity:.6;}
+  .cn-b-in{fill:var(--cn-in);}
+  .cn-b-shelf{fill:var(--cn-shelf);}
+  .cn-b-sold{fill:var(--cn-sold);}
+  .cn-b-settle{fill:var(--cn-settle);}
+  .cn-b-billed{fill:var(--cn-billed);}
+  .cn-b-paid{fill:var(--cn-paid);}
+  .cn-fband{position:absolute;left:calc(62% + 4px);right:0;border-radius:var(--ow-r-sm);
+    background:var(--ow-steel-050);border:1px solid var(--ow-rule);}
+  .cn-ftag{position:absolute;right:var(--ow-sp-8);transform:translateY(-50%);font-size:10px;
+    font-weight:var(--ow-fw-700);letter-spacing:.04em;text-transform:uppercase;color:var(--ow-ink-900);}
+  .cn-fmid{position:absolute;right:calc(66.67% + 6px);transform:translateY(-50%);padding:2px var(--ow-sp-8);
+    border-radius:var(--ow-r-pill);background:var(--ow-paper);border:1px solid var(--ow-rule);
+    font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;}
+  .cn-fmid b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .cn-fend{position:absolute;left:calc(62% + 12px);right:52px;transform:translateY(-50%);
+    display:flex;align-items:baseline;gap:var(--ow-sp-8);min-width:0;}
+  .cn-fl{font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);color:var(--ow-ink-600);min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cn-fv{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);color:var(--ow-ink-900);white-space:nowrap;}
+  .cn-fend.is-owed .cn-fl,.cn-fend.is-owed .cn-fv{font-weight:var(--ow-fw-700);color:var(--ow-ink-900);}
+
+  /* COULD YOU PAY THEM ALL TODAY. */
+  .cn-cov{flex:1 1 320px;min-width:0;padding:var(--ow-sp-20) var(--ow-sp-24);border-left:1px solid var(--ow-rule-soft);
+    background:var(--ow-paper-2);display:flex;flex-direction:column;gap:var(--ow-sp-12);}
+  .cn-ch2{display:flex;justify-content:space-between;align-items:center;gap:var(--ow-sp-8);}
+  .cn-gauge{position:relative;width:220px;height:122px;align-self:center;}
+  .cn-gauge svg{display:block;width:220px;height:122px;}
+  .cn-g0{fill:none;stroke:var(--ow-crimson-soft);stroke-width:16;}
+  .cn-g1{fill:none;stroke:var(--ow-verdigris);stroke-width:16;}
+  .cn-gv{position:absolute;left:0;right:0;bottom:4px;display:flex;flex-direction:column;align-items:center;}
+  .cn-gv b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-size:var(--ow-t-28);font-weight:var(--ow-fw-600);line-height:1;color:var(--ow-ink-900);}
+  .cn-gv span{font-size:var(--ow-t-11);color:var(--ow-ink-600);margin-top:3px;}
+  .cn-sum{display:grid;grid-template-columns:minmax(0,1fr) 12px minmax(0,1fr) 12px minmax(0,1fr);
+    align-items:end;gap:var(--ow-sp-4);}
+  .cn-sum > span{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .cn-sum > span .cn-key{width:8px;height:8px;margin-right:var(--ow-sp-4);}
+  .cn-sl{display:block;}
+  .cn-sum b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);white-space:nowrap;}
+  .cn-sum > .cn-op{align-items:center;font-size:var(--ow-t-14);padding-bottom:1px;}
+  .cn-sum > .cn-neg{padding:var(--ow-sp-4) var(--ow-sp-8);border-radius:var(--ow-r-sm);background:var(--ow-crimson-soft);
+    color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
+  .cn-sum > .cn-neg b{color:var(--ow-crimson);}
+  .cn-sum > .cn-pos{padding:var(--ow-sp-4) var(--ow-sp-8);border-radius:var(--ow-r-sm);background:var(--ow-verdigris-soft);
+    color:var(--ow-verdigris);font-weight:var(--ow-fw-600);}
+  .cn-sum > .cn-pos b{color:var(--ow-verdigris);}
+  .cn-out{display:flex;flex-direction:column;gap:var(--ow-sp-8);padding:var(--ow-sp-12);border-radius:var(--ow-r);
+    background:var(--ow-paper);border:1px solid var(--ow-rule);}
+  .cn-oh{display:flex;justify-content:space-between;align-items:baseline;gap:var(--ow-sp-8);
+    font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .cn-oh b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+  .cn-os{font-size:var(--ow-t-11);font-weight:var(--ow-fw-400);color:var(--ow-ink-600);}
+  .cn-ob{position:relative;height:12px;border-radius:var(--ow-r-pill);background:var(--ow-sky-soft);}
+  .cn-ob i{position:absolute;left:0;top:0;bottom:0;background:var(--ow-sky);border-radius:var(--ow-r-pill);}
+  .cn-om{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ow-ink-900);}
+  .ow-link.cn-chase{align-self:flex-start;font-size:var(--ow-t-12);}
+  .ow-link.cn-all{font-size:var(--ow-t-12);}
+  .cn-wn{margin:0;font-size:var(--ow-t-12);color:var(--ow-ink-600);line-height:var(--ow-lh-normal);}
+  .cn-wn b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;color:var(--ow-verdigris);}
+
+  /* IS IT GETTING WORSE. */
+  .cn-tr{display:flex;flex-wrap:wrap;}
+  .cn-tr > .ow-mini{flex:1 1 100%;}
+  .cn-tr > .ow-pan-h{flex:1 1 100%;}
+  .cn-trc{flex:999 1 560px;min-width:0;padding:var(--ow-sp-12) var(--ow-sp-16);}
+  .cn-trh{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ow-sp-8) var(--ow-sp-16);margin-bottom:var(--ow-sp-10);}
+  .cn-trt{margin-right:auto;font-size:var(--ow-t-13);font-weight:var(--ow-fw-700);}
+  .cn-trt span{font-weight:var(--ow-fw-500);color:var(--ow-ink-600);}
+  .cn-lg{display:inline-flex;align-items:center;gap:var(--ow-sp-6);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .cn-lg i{display:inline-block;width:14px;height:0;border-top:2.5px solid var(--ow-ink-900);}
+  .cn-lg i.is-cash{border-top:2.5px dashed var(--ow-verdigris);}
+  .cn-lg i.is-short{width:12px;height:10px;border:0;background:var(--cn-short);border-radius:var(--ow-r-pill);}
+  .cn-lg i.is-paid{width:8px;height:8px;border:0;background:var(--ow-verdigris);border-radius:50%;}
+  .cn-trg{display:grid;grid-template-columns:40px minmax(0,1fr);gap:var(--ow-sp-6);}
+  .cn-ty{position:relative;height:160px;}
+  .cn-ty span{position:absolute;right:0;transform:translateY(-50%);font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:10px;color:var(--ow-ink-600);}
+  .cn-plot{position:relative;height:160px;}
+  .cn-plot > i{position:absolute;left:0;right:0;border-top:1px solid var(--ow-rule-soft);}
+  .cn-plot svg{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible;}
+  .cn-t-short{fill:var(--cn-short);}
+  .cn-t-area{fill:var(--ow-ink-900);fill-opacity:.06;}
+  .cn-t-cash{fill:none;stroke:var(--ow-verdigris);stroke-width:2;stroke-dasharray:5 4;vector-effect:non-scaling-stroke;}
+  .cn-t-owed{fill:none;stroke:var(--ow-ink-900);stroke-width:2.5;stroke-linejoin:round;vector-effect:non-scaling-stroke;}
+  .cn-t-pl{position:absolute;top:0;bottom:0;border-left:1px dotted var(--ow-verdigris);}
+  .cn-t-pd{position:absolute;width:10px;height:10px;transform:translate(-50%,-50%);border-radius:50%;
+    background:var(--ow-verdigris);border:2px solid var(--ow-paper);}
+  .cn-t-pt{position:absolute;top:2px;transform:translateX(4px);font-size:10px;font-weight:var(--ow-fw-600);
+    color:var(--ow-verdigris);white-space:nowrap;}
+  .cn-t-end{position:absolute;right:0;width:9px;height:9px;border-radius:50%;background:var(--ow-ink-900);transform:translate(50%,-50%);}
+  .cn-tx{position:relative;height:16px;}
+  .cn-tx span{position:absolute;transform:translateX(-50%);font-size:10px;color:var(--ow-ink-600);white-space:nowrap;}
+  .cn-tx span.is-first{transform:none;}
+  .cn-tx span.is-last{transform:translateX(-100%);}
+  .cn-trr{flex:1 1 240px;min-width:0;padding:var(--ow-sp-12) var(--ow-sp-16);border-left:1px solid var(--ow-rule-soft);
+    background:var(--ow-paper-2);display:flex;flex-direction:column;justify-content:center;gap:var(--ow-sp-12);}
+  .cn-trr p{margin:0;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .cn-trr b{display:block;margin-top:2px;font-size:var(--ow-t-20);font-weight:var(--ow-fw-700);color:var(--ow-ink-900);}
+  .cn-trr b.cn-neg{color:var(--ow-crimson);}
+  .cn-trr b.cn-pos{font-size:var(--ow-t-14);color:var(--ow-verdigris);}
+  .cn-tw{font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
+  .cn-trn{padding-top:var(--ow-sp-10);border-top:1px solid var(--ow-rule-soft);}
+  .cn-trn b{font-size:15px;}
+
+  /* THE CONSIGNORS. The desk row keeps its own tracks and leaves room on
+     the right for the next move, which sits OUTSIDE the toggle -- a
+     button inside a button is not a button. */
+  .cn-list > .ow-pan-h{flex-wrap:wrap;height:auto;min-height:34px;padding-top:var(--ow-sp-6);padding-bottom:var(--ow-sp-6);}
+  .cn-fl{display:flex;gap:var(--ow-sp-6);margin-left:auto;flex-wrap:wrap;}
+  .cn-fb{display:inline-flex;align-items:center;gap:var(--ow-sp-6);height:28px;padding:0 var(--ow-sp-10);
+    border-radius:var(--ow-r-pill);border:1px solid var(--ow-rule);background:var(--ow-paper);color:var(--ow-ink-900);
+    font-family:inherit;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);cursor:pointer;}
+  .cn-fb span{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);}
+  .cn-fb[aria-pressed="true"]{background:var(--ow-steel-950);border-color:var(--ow-steel-950);color:var(--ow-paper);}
+  .cn-fb:disabled{cursor:default;color:var(--ow-ink-600);background:var(--ow-paper-2);}
+  .cn-scroll{overflow-x:auto;}
+  .cn-min{min-width:796px;}
+  .cn-ch,.cn-q .ow-q-r{grid-template-columns:18px minmax(180px,1.5fr) minmax(216px,1.3fr) 76px 120px;gap:var(--ow-sp-12);}
+  .cn-ch{display:grid;align-items:center;height:32px;padding:0 136px 0 var(--ow-sp-12);background:var(--ow-paper-2);
+    border-bottom:1px solid var(--ow-rule-soft);font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
+    letter-spacing:.04em;text-transform:uppercase;color:var(--ow-ink-600);position:relative;}
+  .cn-ch > span:nth-child(6){text-align:right;}
+  .cn-ch > span:last-child{position:absolute;right:var(--ow-sp-12);width:112px;text-align:right;}
+  .cn-ch .cn-st{text-align:center;letter-spacing:0;text-transform:none;font-size:var(--ow-t-11);white-space:nowrap;}
+  .cn-q{position:relative;}
+  .cn-q .ow-q-r{min-height:60px;padding:var(--ow-sp-6) 136px var(--ow-sp-6) var(--ow-sp-12);}
+  .cn-who{display:flex;align-items:center;gap:var(--ow-sp-10);min-width:0;}
+  .cn-mg{flex:none;width:32px;height:32px;border-radius:var(--ow-r);background:var(--cn-soft);color:var(--cn-ink);
+    display:grid;place-items:center;font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);}
+  .cn-wt{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .cn-nm{font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cn-l2{display:flex;align-items:center;gap:var(--ow-sp-6);min-width:0;}
+  .cn-l2 .ow-cp{flex:none;}
+  .cn-sub{font-size:var(--ow-t-12);color:var(--ow-ink-600);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cn-sub.is-quiet{color:var(--ow-amber-ink);}
+  .cn-st{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--ow-sp-4);align-items:start;}
+  .cn-sc{display:flex;flex-direction:column;align-items:center;gap:var(--ow-sp-4);min-width:0;padding:5px var(--ow-sp-6);
+    border-radius:var(--ow-r-sm);background:none;}
+  .cn-sc.cn-s-shelf,.cn-sc.cn-s-settle,.cn-sc.cn-s-billed,.cn-sc.cn-s-paid{background-image:none;background-color:transparent;}
+  .cn-sc.cn-s-settle.is-on{background-color:var(--ow-amber-soft);}
+  .cn-sc.cn-s-billed.is-on{background-color:var(--ow-sky-soft);}
+  .cn-sv{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-size:var(--ow-t-12);color:var(--ow-ink-600);white-space:nowrap;}
+  .cn-sc.is-on .cn-sv{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  .cn-sb{display:block;width:100%;height:4px;border-radius:var(--ow-r-pill);background:var(--ow-rule-soft);overflow:hidden;}
+  .cn-sb i{display:block;height:100%;border-radius:var(--ow-r-pill);}
+  .cn-s-shelf .cn-sb i{background:var(--ow-steel-400);}
+  .cn-s-settle .cn-sb i{background:var(--cn-settle);}
+  .cn-s-billed .cn-sb i{background:var(--cn-billed);}
+  .cn-s-paid .cn-sb i{background:var(--ow-verdigris);}
+  .cn-sx{font-size:10px;font-weight:var(--ow-fw-600);color:var(--ow-amber-ink);white-space:nowrap;}
+  .cn-sell{display:flex;align-items:center;gap:var(--ow-sp-8);min-width:0;}
+  .cn-ring{flex:none;width:28px;height:28px;border-radius:50%;
+    background:conic-gradient(var(--cn-in) 0 var(--p),var(--ow-rule-soft) var(--p) 100%);
+    -webkit-mask:radial-gradient(farthest-side,transparent 62%,black 63%);mask:radial-gradient(farthest-side,transparent 62%,black 63%);}
+  .cn-pc{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);}
+  .cn-q .ow-q-f{font-size:15px;}
+  .cn-nx{position:absolute;top:0;right:var(--ow-sp-12);width:112px;height:60px;display:flex;align-items:center;justify-content:flex-end;}
+  .cn-go{display:inline-flex;align-items:center;gap:var(--ow-sp-6);white-space:nowrap;}
+  .cn-go svg{width:12px;height:12px;}
+  .cn-ok{display:inline-flex;align-items:center;gap:5px;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-verdigris);}
+  .cn-ok svg{width:14px;height:14px;}
+  .cn-q .ow-q-x{padding:0 var(--ow-sp-16) var(--ow-sp-16) 52px;background:var(--ow-paper-2);border-top:1px solid var(--ow-rule-soft);}
+  .cn-q .ow-q-x > *{margin-top:var(--ow-sp-12);}
+  .cn-act{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ow-sp-12);}
+  .cn-act .ow-q-note{margin:0;}
+
+  /* Their goods. */
+  .cn-q .ow-tbl.cons-tbl{background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r);
+    overflow:hidden;margin-bottom:0;}
+  .cn-uh{display:flex;align-items:center;gap:var(--ow-sp-10);}
+  .cn-uh span{display:inline-flex;align-items:center;gap:var(--ow-sp-4);text-transform:none;letter-spacing:0;font-weight:var(--ow-fw-500);}
+  .cn-uh i{display:inline-block;width:8px;height:8px;border-radius:var(--ow-r-pill);}
+  .cn-uh i.is-sold,.cn-ub i.is-sold{background:var(--cn-in);}
+  .cn-uh i.is-left,.cn-ub i.is-left{background:repeating-linear-gradient(135deg,var(--cn-shelf) 0 3px,var(--cn-shelf-2) 3px 6px);}
+  .cn-u{display:flex;flex-direction:column;gap:5px;min-width:0;}
+  .cn-ub{display:flex;height:10px;gap:2px;border-radius:var(--ow-r-pill);overflow:hidden;}
+  .cn-ub i{display:block;}
+  .cn-ub i.is-left{flex:1;}
+  .cn-ut{display:flex;justify-content:space-between;gap:var(--ow-sp-8);font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .cn-ut b{font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .cn-pace{display:flex;flex-direction:column;min-width:0;}
+  .cn-pace b{font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .cn-pace.is-idle b{color:var(--ow-amber-ink);}
+  .cn-pace > span{display:flex;align-items:center;gap:5px;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .cn-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--cn-shelf);flex:none;}
+  .cn-dot.is-aging{background:var(--cn-settle-2);}
+  .cn-dot.is-idle{background:var(--cn-settle);}
+  .cn-w{display:flex;flex-direction:column;align-items:flex-end;gap:5px;}
+  .cn-share{display:flex;justify-content:flex-end;width:100%;height:3px;border-radius:var(--ow-r-pill);background:var(--ow-rule-soft);overflow:hidden;}
+  .cn-share i{display:block;background:var(--cn-ink);}
+  .ow-tbl-r.cn-idle{background:var(--ow-amber-faint);}
+  .cn-ib{width:32px;padding:0;justify-content:center;}
+  .cons-tbl .btn.ow-sm svg{width:14px;height:14px;}
+
+  /* The relationship, left to right. */
+  .cn-tl{padding:var(--ow-sp-12) var(--ow-sp-16) var(--ow-sp-16);background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r);}
+  .cn-tl ol{list-style:none;margin:var(--ow-sp-12) 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:var(--ow-sp-12) var(--ow-sp-16);}
+  .cn-ev{position:relative;min-width:0;padding-top:20px;display:flex;flex-direction:column;}
+  .cn-ev::before{content:'';position:absolute;left:12px;right:-16px;top:5px;height:1.5px;background:var(--ow-steel-100);}
+  .cn-ev:last-child::before{display:none;}
+  .cn-ev > i{position:absolute;left:0;top:0;width:12px;height:12px;border-radius:50%;border:2px solid var(--ow-paper);
+    outline:1px solid var(--ow-steel-100);background:var(--cn-shelf);}
+  .cn-ev.is-billed > i{background:var(--cn-billed);}
+  .cn-ev.is-paid > i{background:var(--ow-verdigris);}
+  .cn-ev.is-settle > i{background:var(--cn-settle);}
+  .cn-ev > span{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .cn-ev > b{font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
+  .cn-ev.is-now > b{color:var(--ow-ink-900);}
+  .cn-ev > .cn-n{font-size:var(--ow-t-12);color:var(--ow-ink-900);}
+
+  /* The phone's card. Absent on the desk. */
+  .cn-cw{display:flex;align-items:center;gap:var(--ow-sp-10);}
+  .cn-cw .cn-wt{flex:1;}
+  .cn-cw .ow-q-ct{display:block;margin:0;}
+  .cn-cw .ow-q-cv{text-align:right;display:flex;flex-direction:column;}
+  .cn-cb{display:flex;height:10px;gap:2px;margin-top:var(--ow-sp-10);border-radius:var(--ow-r-pill);overflow:hidden;}
+  .cn-cb i{display:block;}
+  .cn-cs{display:flex;align-items:center;gap:var(--ow-sp-8);margin-top:var(--ow-sp-10);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .cn-csb{flex:1;height:6px;border-radius:var(--ow-r-pill);background:var(--ow-rule-soft);overflow:hidden;}
+  .cn-csb i{display:block;height:100%;background:var(--cn-in);}
+  .cn-cs b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;color:var(--ow-ink-900);}
+  .cn-ny{display:none;}
+  .cn-nyr{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:var(--ow-sp-12);width:100%;min-height:60px;
+    padding:0 var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);cursor:pointer;}
+  .cn-nyr:first-of-type{border-top:0;}
+  .cn-nyr .cn-mg{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .cn-nyr .cn-wt{flex:1;}
+  .cn-nyr b{font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .cn-nyr:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
+
+  /* THE RAIL. */
+  .cn-qg{display:grid;grid-template-columns:18px minmax(0,1fr);gap:var(--ow-sp-4);padding:var(--ow-sp-12) var(--ow-sp-16) var(--ow-sp-12) var(--ow-sp-8);}
+  .cn-qy{writing-mode:vertical-rl;transform:rotate(180deg);font-size:10px;color:var(--ow-ink-600);text-align:center;}
+  .cn-qp{position:relative;height:196px;border-left:1px solid var(--ow-steel-100);border-bottom:1px solid var(--ow-steel-100);
+    background:linear-gradient(var(--ow-rule-soft),var(--ow-rule-soft)) 50% 0/1px 100% no-repeat,
+      linear-gradient(var(--ow-rule-soft),var(--ow-rule-soft)) 0 50%/100% 1px no-repeat;}
+  .cn-q1,.cn-q2{position:absolute;font-size:10px;font-weight:var(--ow-fw-600);}
+  .cn-q1{left:6px;top:4px;color:var(--ow-verdigris);}
+  .cn-q2{right:6px;top:calc(50% + 4px);color:var(--ow-amber-ink);}
+  .cn-bub{position:absolute;transform:translate(-50%,50%);border-radius:50%;background:var(--cn-soft);
+    border:1.5px solid var(--cn-ink);color:var(--cn-ink);display:grid;place-items:center;font-size:10px;font-weight:var(--ow-fw-700);}
+  .cn-qx{display:flex;justify-content:space-between;font-size:10px;color:var(--ow-ink-600);}
+  .cn-agl{display:flex;flex-direction:column;gap:var(--ow-sp-4);padding:var(--ow-sp-10) var(--ow-sp-12) 0;}
+  .cn-agr{display:flex;flex-direction:column;gap:5px;padding:var(--ow-sp-8);border-radius:var(--ow-r-sm);border:1px solid transparent;}
+  .cn-agr.is-idle{background:var(--ow-amber-faint);border-color:var(--ow-amber-soft);}
+  .cn-agt{display:grid;grid-template-columns:76px minmax(0,1fr) 52px;white-space:nowrap;gap:var(--ow-sp-8);align-items:center;
+    font-size:var(--ow-t-12);color:var(--ow-ink-900);}
+  .cn-agt b{text-align:right;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-weight:var(--ow-fw-500);}
+  .cn-agr.is-idle .cn-agt{color:var(--ow-amber-ink);font-weight:var(--ow-fw-700);}
+  .cn-agr.is-idle .cn-agt b{font-weight:var(--ow-fw-700);}
+  .cn-agb{display:flex;height:14px;border-radius:var(--ow-r-pill);overflow:hidden;background:var(--ow-steel-050);}
+  .cn-agb > span{display:flex;gap:1px;}
+  .cn-agb i{display:block;background:var(--cn-ink);}
+  .cn-tags{display:flex;flex-wrap:wrap;gap:var(--ow-sp-4);padding-left:84px;}
+  .cn-tag{display:inline-flex;align-items:center;gap:var(--ow-sp-4);height:18px;padding:0 var(--ow-sp-6) 0 var(--ow-sp-4);
+    border-radius:var(--ow-r-pill);background:var(--cn-soft);color:var(--cn-ink);font-size:10px;font-weight:var(--ow-fw-700);}
+  .cn-tag span{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-weight:var(--ow-fw-500);}
+  .cn-agf{display:flex;align-items:center;gap:var(--ow-sp-10);margin:var(--ow-sp-12) var(--ow-sp-12) var(--ow-sp-12);
+    padding-top:var(--ow-sp-10);border-top:1px solid var(--ow-rule-soft);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .cn-agf > span{flex:1;min-width:0;}
+  .cn-agf b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;color:var(--ow-amber-ink);}
+  .cn-agf .btn{flex:none;}
+  .cn-mvl{list-style:none;margin:0;padding:var(--ow-sp-12) var(--ow-sp-12) 0;display:flex;flex-direction:column;}
+  .cn-mc{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:var(--ow-sp-10);align-items:center;
+    padding:var(--ow-sp-8) var(--ow-sp-10);border-radius:var(--ow-r);border:1px solid transparent;}
+  .cn-mc.is-owed{background:var(--ow-paper-2);border-color:var(--ow-rule);}
+  .cn-mc b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);}
+  .cn-mc.is-owed b,.cn-mc.is-owed .cn-mt{font-weight:var(--ow-fw-700);}
+  .cn-mt{font-size:var(--ow-t-12);color:var(--ow-ink-900);}
+  .cn-mi{width:34px;height:34px;border-radius:var(--ow-r);display:grid;place-items:center;}
+  .cn-mi svg{width:18px;height:18px;}
+  .cn-m-shelf{background:var(--ow-steel-050);color:var(--ow-ink-600);}
+  .cn-m-settle{background:var(--ow-amber-soft);color:var(--ow-amber);}
+  .cn-m-billed{background:var(--ow-sky-soft);color:var(--ow-sky);}
+  .cn-m-paid{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .cn-pp{display:flex;padding-left:var(--ow-sp-6);}
+  .cn-pp i{width:24px;height:24px;margin-left:-4px;border-radius:50%;background:var(--cn-soft,var(--ow-steel-050));
+    color:var(--cn-ink,var(--ow-ink-600));border:2px solid var(--ow-paper);display:grid;place-items:center;
+    font-style:normal;font-size:9px;font-weight:var(--ow-fw-700);}
+  .cn-hop{display:grid;grid-template-columns:34px minmax(0,1fr);gap:var(--ow-sp-10);height:34px;align-items:center;padding:0 var(--ow-sp-10);}
+  .cn-hl{justify-self:center;height:100%;border-left:1.5px dashed var(--cn-shelf);}
+  .cn-hop > span:last-child{display:flex;align-items:center;gap:var(--ow-sp-6);font-size:var(--ow-t-11);color:var(--ow-ink-600);min-width:0;}
+  .cn-hop b{flex:none;height:18px;padding:0 7px;border-radius:var(--ow-r-pill);background:var(--ow-rule-soft);color:var(--ow-ink-600);
+    font-size:10px;font-weight:var(--ow-fw-700);display:inline-flex;align-items:center;}
+  .cn-hop b.is-you{background:var(--ow-steel-950);color:var(--ow-paper);}
+  .cn-back{display:flex;align-items:center;gap:var(--ow-sp-8);margin:var(--ow-sp-8) var(--ow-sp-12) var(--ow-sp-12);
+    padding-top:var(--ow-sp-10);border-top:1px solid var(--ow-rule-soft);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .cn-back svg{width:16px;height:16px;flex:none;}
+
+  @media (max-width:820px){
+    /* THE PHONE IS ITS OWN DESIGN. The figure, one bar with its four
+       parts in the strip's 2x2, the verdict, what needs a thumb, then a
+       card per consignor with its money readable without opening it. */
+    .cn{gap:var(--ow-sp-12);}
+    .cn-owed,.cn-cov{padding:var(--ow-sp-16);}
+    .cn-cov{border-left:0;border-top:1px solid var(--ow-rule-soft);}
+    .cn-splits,.cn-flow{display:none;}
+    .cn-pbar{display:flex;height:22px;gap:2px;border-radius:var(--ow-r-sm);overflow:hidden;}
+    .cn-pbar i{display:block;}
+    .ow-strip.cn-p4{display:grid;border:0;border-radius:0;border-top:1px solid var(--ow-rule-soft);}
+    .cn-p4 .ow-mt{padding:var(--ow-sp-10) var(--ow-sp-10) var(--ow-sp-10) 0;}
+    .cn-p4 .ow-mt-l{display:flex;align-items:center;gap:var(--ow-sp-6);letter-spacing:.04em;}
+    .cn-p4 .cn-key{width:9px;height:9px;}
+    .cn-p4 .ow-mt-v{font-size:var(--ow-t-16);}
+    .cn-ny{display:block;}
+    .cn-trr{border-left:0;border-top:1px solid var(--ow-rule-soft);}
+    .cn-plot,.cn-ty{height:140px;}
+    .cn-scroll{overflow:visible;}
+    .cn-min{min-width:0;}
+    .cn-ch,.cn-nx{display:none;}
+    .cn-q .ow-q-x{padding:0 var(--ow-sp-12) var(--ow-sp-12);}
+    .cn-act .btn{min-height:var(--ow-tap);flex:1 1 100%;}
+    .cn-fl{margin-left:0;width:100%;}
+    .cn-fb{flex:1 1 auto;justify-content:center;min-height:var(--ow-tap);}
+    .cn-ib{width:auto;padding:0 var(--ow-sp-12);}
+    .cn-agf{flex-wrap:wrap;}
+    .cn-agf .btn{min-height:var(--ow-tap);flex:1 1 100%;}
+    .cn-tl ol{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .cn-ev::before{display:none;}
+    .cn-t-pt{display:none;}
+    .cn-fl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}
+    .cn-agf > span{flex:1 1 100%;}
+    /* The table's phone cards line a labelled cell up as label-then-value
+       on one row. Units and pace are a bar and two lines, so they stack
+       under their label instead of being squeezed beside it. */
+    .cons-tbl .cn-u[data-l],.cons-tbl .cn-pace[data-l]{display:flex;flex-direction:column;align-items:stretch;gap:var(--ow-sp-4);}
+    .cons-tbl .cn-u[data-l]::before,.cons-tbl .cn-pace[data-l]::before{margin-right:0;}
+    .cons-tbl .cn-ub{width:100%;}
+  }
 
   /* Goods on our shelf that are not ours. Shaped after .both-tag -- a
      fact about the thing, trailing its name -- and carried on AMBER
@@ -84284,11 +84699,21 @@ function renderDebtorsPosition(){
    BELOW one owed two hundred thousand unbilled, and the order was
    answering a different question from the column it sat next to. On a
    screen whose whole job is ranking what you owe, that is the defect. */
+/* Which consignors the list is showing: all of them, those owed money,
+   those with something to look at, or those settled up. Kept between
+   renders so a settle or a return does not throw the owner's view away. */
+let consFilter = 'all';
 function renderConsignment(){
   const el = document.getElementById('consign_body');
   if(!el) return;
   const rows = consignmentRows();
   const f = n=> fmtUGX(Math.round(n));
+  // A bare figure, the unit said once beside it rather than on every number.
+  const fig = n=> esc(fmtUGX(Math.round(n)).replace(/\s*UGX$/, ''));
+  // Short form for the places a column is narrow: 2.76M, 640k.
+  const mfig = v=> Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(2) + 'M' : (Math.abs(v) >= 1000 ? Math.round(v / 1000) + 'k' : String(Math.round(v)));
+  const pct = (v, of)=> (of > 0 ? Math.max(0, Math.min(100, v / of * 100)) : 0).toFixed(2) + '%';
+  const r1 = v=> Math.round(v * 10) / 10;
 
   /* THE MARKING FORM, folded out of the header.
 
@@ -84336,10 +84761,11 @@ function renderConsignment(){
       It takes effect within half a minute, without reloading.</div></div>` : '';
 
   if(!rows.length){
-    /* NOT A STRIP OF ZEROS. Four tiles reading nothing fills the screen
-       with figures that mean nothing and makes an empty screen look like
-       a broken one. The panel head carries the whole count, and the
-       empty state names the next action rather than describing itself. */
+    /* NOT A SCREEN OF ZEROS. A flow, a gauge and a chart all reading
+       nothing fill the screen with figures that mean nothing and make an
+       empty screen look like a broken one. The panel head carries the
+       whole count, and the empty state names the next action rather
+       than describing itself. */
     el.innerHTML = blocked + `<div class="ow-pan">
         <div class="ow-pan-h"><span class="ow-pan-t">Consignors</span><span class="ow-pan-n">none</span></div>
         <div class="cons-empty">
@@ -84357,7 +84783,7 @@ function renderConsignment(){
         </div>
       </div>`;
     const door = document.getElementById('cons_empty_door');
-    if(door) door.onclick = ()=> go('inventory');
+    if(door) door.onclick = ()=> goToTab('inventory');
     return;
   }
 
@@ -84372,14 +84798,9 @@ function renderConsignment(){
      The units are not CLAIMED for the consignor: goods sold before
      anybody marked them may have been the shop's own. It is put to the
      owner with the count, the money and the invoices, and marked only
-     when they say so.
-
-     Its button is GHOST now, on the layer's amber note. It was oxide,
-     and it sat above the money, so on any account with a finding the
-     loudest thing on the screen was a correction to the record rather
-     than the debt the screen is about. */
-  const gapHTML = (r)=>{
-    const gaps = consignmentUnmarkedSales(r.supplierId);
+     when they say so. Its button is ghost: a correction to the record
+     is not the debt the screen is about. */
+  const gapHTML = (r, gaps)=>{
     if(!gaps.length) return '';
     /* Two findings, written out separately rather than one wearing the
        other's sentence. Where nothing is markable the fixable wording
@@ -84413,10 +84834,8 @@ function renderConsignment(){
 
   /* WHAT KIND OF MONEY THE FIGURE IS.
 
-     Four states, and the old card showed one figure for all four with
-     the difference buried in a footnote at its bottom edge. They are the
-     whole triage of this screen, so they belong under the figure where
-     the column can be read down:
+     Four states, and they are the whole triage of this screen, so they
+     sit under the figure where the column can be read down:
 
        to settle            sold, and no bill raised for it yet
        billed, not yet paid the bill exists; it is on Purchase invoices
@@ -84436,205 +84855,625 @@ function renderConsignment(){
     return {basis: 'nothing sold yet', nil: true};
   };
 
-  /* Their goods, on the layer's table rather than a private one. Five
-     columns of figures on a phone came to more than 375px however
-     tightly they were set and the right-hand end simply left the screen;
-     the old answer was a media query that hid two of them. .ow-tbl needs
-     no such thing -- the header row goes and every cell carries the
-     column name it was emitted with, so one call draws the desk's table
-     and the phone's cards and they cannot say different things. */
-  const goodsHTML = (r, held)=> !held.length ? '' : `<div class="ow-tbl cons-tbl">
-      <div class="ow-tbl-h">
-        <div class="ow-tbl-c">Their goods on your shelf</div>
-        <span class="ow-tbl-n">On shelf</span>
-        <span class="ow-tbl-n">Each</span>
-        <span class="ow-tbl-n">Worth to them</span>
-        <span class="ow-tbl-a"></span>
-      </div>${held.map((h,i)=> `
-      <div class="ow-tbl-r">
-        <div class="ow-tbl-c"><span class="ow-tbl-p" title="${esc(h.name)}">${esc(h.name)}</span></div>
-        <span class="ow-tbl-n" data-l="On shelf">${Math.round(h.qty)}</span>
-        <span class="ow-tbl-n" data-l="Each">${f(h.cost)}</span>
-        <span class="ow-tbl-n" data-l="Worth to them">${f(h.qty * h.cost)}</span>
-        <span class="ow-tbl-a"><button type="button" class="btn btn-ghost ow-sm cons-return"
-          data-sup="${esc(r.supplierId)}" data-i="${i}">Send back</button></span>
-      </div>`).join('')}
+  /* EVERYTHING EACH ROW NEEDS, READ ONCE.
+
+     The hue is identity, not state: one consignor keeps one tint on its
+     monogram, its bubble and its share of the shelf-age bars, so "whose"
+     is read before a name is. Assigned by name so a consignor keeps its
+     colour as the ranking moves under it. */
+  const byName = rows.map(r=> r.supplierId).sort((a,b)=> supplierName(a).localeCompare(supplierName(b)));
+  const views = rows.map(r=>{
+    const gaps = consignmentUnmarkedSales(r.supplierId);
+    const lines = consignmentLineView(r.supplierId);
+    const bills = consignmentSettlements(r.supplierId);
+    const unpaid = bills.filter(pi=> purchaseInvoiceBalanceDue(pi) > 0.5)
+      .sort((a,b)=> String(a.date||'') < String(b.date||'') ? -1 : 1);
+    const billAge = unpaid.length ? consignmentDaysSince(unpaid[0].date) : null;
+    const last = consignmentLastSale(r.supplierId);
+    const quietFor = last ? consignmentDaysSince(last) : (lines.length ? Math.max(...lines.map(l=> l.daysHere || 0)) : 0);
+    const markable = gaps.reduce((n,g)=> n + Math.round(g.qty), 0);
+    const markableValue = gaps.reduce((n,g)=> n + (g.qty > 0 ? g.value : 0), 0);
+    const traceless = gaps.reduce((n,g)=> n + Math.round(g.unrecorded||0), 0);
+    const words = r.name.split(/\s+/).filter(Boolean);
+    return { r, gaps, lines, unpaid, billAge, last, quietFor, markable, markableValue, traceless,
+      dueNow: consignmentDueNow(r), st: stateOf(r),
+      paid: Math.max(0, r.settled - r.settlementDue),
+      hue: byName.indexOf(r.supplierId) % 5,
+      mono: (words.length > 1 ? words[0][0] + words[1][0] : r.name.slice(0, 2)).toUpperCase(),
+      idleLines: lines.filter(l=> l.idle) };
+  });
+
+  /* ONE EXCEPTION PER CONSIGNOR, AND ONLY AN EXCEPTION.
+
+     The old card painted every consignor's figure oxide the moment
+     anything was owed, which is a device that marks everything and
+     therefore marks nothing. The chip names the one thing that is wrong
+     -- sales nobody recorded, a bill left unpaid, goods that do not
+     move -- and a consignor with nothing wrong and nothing owed reads
+     as settled. Amber throughout: each is a caution with a fix, not a
+     loss. */
+  const chipOf = (v)=>{
+    if(v.markable) return { t: `${v.markable} sold, unrecorded`, c: 'ow-warn' };
+    if(v.traceless) return { t: `${v.traceless} sold without a trace`, c: 'ow-warn' };
+    if(v.billAge != null && v.billAge >= 30) return { t: `Bill ${v.billAge} days unpaid`, c: 'ow-warn' };
+    if(v.r.heldQty > 0 && v.quietFor >= 60) return { t: `${v.quietFor} days, no sale`, c: 'ow-warn' };
+    if(v.st.nil && v.r.soldQty > 0) return { t: 'settled', c: 'ow-good' };
+    return null;
+  };
+  /* THE ONE NEXT MOVE, read from the row's own state in the order a
+     shop would take them: put the record right before billing from it,
+     bill what has sold, pay what is billed, send back what does not move.
+     It opens the row on that act rather than performing it -- nothing on
+     this screen sends or pays by itself. */
+  const nextOf = (v)=>{
+    if(v.markable) return { t: `Record ${v.markable}`, act: 'cons-gap-fix', aria: `Record ${v.markable} unrecorded sales as ${v.r.name}'s` };
+    if(v.r.owed > 0.5) return { t: 'Settle', act: 'cons-settle', aria: `Settle with ${v.r.name}` };
+    if(v.r.settlementDue > 0.5) return { t: 'Pay bill', act: 'cons-pay', aria: `Pay ${v.r.name}'s bill` };
+    if(v.idleLines.length) return { t: 'Send back', act: 'cons-return', aria: `Send ${v.r.name}'s idle goods back` };
+    return null;
+  };
+  views.forEach(v=>{ v.chip = chipOf(v); v.next = nextOf(v); });
+
+  // The four places their money can be, summed over every consignor.
+  const T = views.reduce((t,v)=>{
+    t.shelf += v.r.heldValue; t.settle += Math.max(0, v.r.owed);
+    t.billed += Math.max(0, v.r.settlementDue); t.paid += v.paid;
+    t.heldQty += v.r.heldQty; t.uncollected += Math.max(0, v.r.uncollected || 0);
+    return t;
+  }, { shelf: 0, settle: 0, billed: 0, paid: 0, heldQty: 0, uncollected: 0 });
+  const total = T.shelf + T.settle + T.billed + T.paid;
+  /* The strip totals the same reading the rows do, so the headline and
+     the queue under it cannot disagree about one figure. */
+  const dueTotal = rows.reduce((n,r)=> n + consignmentDueNow(r), 0);
+  const cashHeld = cashOnHandByAccount().total;
+  const short = dueTotal - cashHeld;
+  const withWork = views.filter(v=> v.dueNow > 0.5).length;
+  const STAGE = [
+    { k: 'shelf', label: 'On your shelf', v: T.shelf },
+    { k: 'settle', label: 'To settle', v: T.settle },
+    { k: 'billed', label: 'Billed, unpaid', v: T.billed },
+    { k: 'paid', label: 'Paid', v: T.paid },
+  ];
+
+  /* ================= THE HEADLINE AND WHERE IT COMES FROM ================
+
+     WHAT THE HEADLINE IS, SAID PROPERLY. It once read "of your cash is
+     theirs", and that was wrong three ways: the debt falls due on the
+     INVOICE, so a sale on credit owes the consignor while the shop is
+     holding nothing for them; money that was collected is not set aside;
+     and the figure can be larger than everything in the drawer. It is a
+     liability, so it says owed.
+
+     Under it, the flow: every shilling of their goods, from received to
+     where it is now. A flat bar put four amounts side by side as if they
+     were the same kind of thing; the flow shows they are stages, that
+     only what has SOLD can be owed, and how much of what sold is already
+     paid. The two owed ends sit in one band, so the headline is visibly
+     their sum. */
+  const flowHTML = (()=>{
+    if(!(total > 0.5)) return '';
+    const H = 220, X2 = 200, X3 = 360, B = 12, g2 = 10, g3 = 8;
+    const sold = T.settle + T.billed + T.paid;
+    const live = [['settle', T.settle], ['billed', T.billed], ['paid', T.paid]].filter(p=> p[1] > 0.5);
+    const shelf2 = sold > 0.5 ? (H - g2) * T.shelf / total : H;
+    const c1cut = H * T.shelf / total;
+    const sold2 = [shelf2 + (sold > 0.5 ? g2 : 0), H];
+    const soldH = H - sold2[0];
+    const rib = (xa, a, xb, b)=>{ const m = (xa + xb) / 2;
+      return `M${xa},${r1(a[0])} C${m},${r1(a[0])} ${m},${r1(b[0])} ${xb},${r1(b[0])} L${xb},${r1(b[1])} C${m},${r1(b[1])} ${m},${r1(a[1])} ${xa},${r1(a[1])} Z`; };
+    const paths = [], bars = [], ends = [];
+    if(T.shelf > 0.5){
+      paths.push(`<path class="cn-f-shelf" d="${rib(B, [0, c1cut], X2, [0, shelf2])}"/>`);
+      paths.push(`<path class="cn-f-shelf" d="${rib(X2 + B, [0, shelf2], X3, [0, shelf2])}"/>`);
+      bars.push(`<rect class="cn-b-shelf" x="${X2}" y="0" width="${B}" height="${r1(shelf2)}"/>`,
+        `<rect class="cn-b-shelf" x="${X3}" y="0" width="${B}" height="${r1(shelf2)}"/>`);
+      ends.push({ top: shelf2 / 2, label: 'On your shelf', v: T.shelf, owed: false });
+    }
+    let band = null;
+    if(sold > 0.5){
+      paths.push(`<path class="cn-f-sold" d="${rib(B, [c1cut, H], X2, sold2)}"/>`);
+      bars.push(`<rect class="cn-b-sold" x="${X2}" y="${r1(sold2[0])}" width="${B}" height="${r1(soldH)}"/>`);
+      const avail = soldH - g3 * (live.length - 1);
+      let y2 = sold2[0], y3 = sold2[0];
+      live.forEach(([k, v])=>{
+        const h2 = soldH * v / sold, h3 = avail * v / sold;
+        const a = [y2, y2 + h2], b = [y3, y3 + h3];
+        paths.push(`<path class="cn-f-${k}" d="${rib(X2 + B, a, X3, b)}"/>`);
+        bars.push(`<rect class="cn-b-${k}" x="${X3}" y="${r1(b[0])}" width="${B}" height="${r1(Math.max(1, h3))}"/>`);
+        const owed = k !== 'paid';
+        ends.push({ top: (b[0] + b[1]) / 2, label: STAGE.find(s=> s.k === k).label, v, owed });
+        if(owed) band = band ? [band[0], b[1]] : [b[0], b[1]];
+        y2 += h2; y3 += h3 + g3;
+      });
+    }
+    bars.unshift(`<rect class="cn-b-in" x="0" y="0" width="${B}" height="${H}"/>`);
+    const mids = [];
+    if(T.shelf > 0.5 && sold > 0.5) mids.push({ top: shelf2 / 2, v: T.shelf, t: 'not sold' });
+    if(sold > 0.5) mids.push({ top: (sold2[0] + H) / 2, v: sold, t: 'sold' });
+    return `<div class="cn-flow">
+        <div class="cn-fcap"><span>Received <b>${fig(total)}</b></span><span class="cn-fc2">Sold?</span><span class="cn-fc3">Where it is now</span></div>
+        <div class="cn-fbox" role="img" aria-label="${esc(`Of ${f(total)} of consigned goods: ${STAGE.map(s=> `${s.label} ${f(s.v)}`).join(', ')}`)}">
+          <svg viewBox="0 0 600 ${H}" preserveAspectRatio="none" aria-hidden="true">${paths.join('')}${bars.join('')}</svg>
+          ${band ? `<span class="cn-fband" style="top:${r1(band[0] - 6)}px;height:${r1(band[1] - band[0] + 12)}px"></span>
+          <span class="cn-ftag" style="top:${r1((band[0] + band[1]) / 2)}px">owed</span>` : ''}
+          ${mids.map(m=> `<span class="cn-fmid" style="top:${r1(m.top)}px"><b>${fig(m.v)}</b> ${m.t}</span>`).join('')}
+          ${ends.map(e=> `<span class="cn-fend${e.owed ? ' is-owed' : ''}" style="top:${r1(e.top)}px"><span class="cn-fl">${esc(e.label)}</span><span class="cn-fv">${fig(e.v)}</span></span>`).join('')}
+        </div>
+      </div>`;
+  })();
+  // The phone's version of the same picture: one bar, and its four parts
+  // in the strip's 2x2 under it. The flow needs width a phone does not have.
+  const pbar = total > 0.5 ? `<div class="cn-pbar" role="img" aria-label="${esc(STAGE.map(s=> `${s.label} ${f(s.v)}`).join(', '))}">${
+      STAGE.filter(s=> s.v > 0.5).map(s=> `<i class="cn-s-${s.k}" style="width:${pct(s.v, total)}"></i>`).join('')}</div>` : '';
+  const tile = (label, value, k)=> `<div class="ow-mt"><p class="ow-mt-l"><i class="cn-key cn-s-${k}"></i>${esc(label)}</p><span class="ow-mt-v">${value}</span></div>`;
+  const strip = `<div class="ow-strip cn-p4">
+      ${tile('To settle', fig(T.settle), 'settle')}
+      ${tile('Billed, unpaid', fig(T.billed), 'billed')}
+      ${tile('On your shelf', fig(T.shelf), 'shelf')}
+      ${tile('Paid', fig(T.paid), 'paid')}
     </div>`;
 
-  /* ONE CONSIGNOR, AS A QUEUE ROW.
+  /* COULD THE SHOP PAY THEM ALL TODAY?
 
-     The desk row and the phone card come from this one call, which is
-     the layer's rule for a queue and the reason the two designs cannot
-     drift apart. Both carry the name, the exception chip and the figure
-     with its basis; both open the same body. */
-  const row = (r)=>{
-    const held = consignmentHeldLines(r.supplierId);
-    const gap = gapHTML(r);
-    const dueNow = consignmentDueNow(r);
-    const st = stateOf(r);
-    const gaps = consignmentUnmarkedSales(r.supplierId);
-    /* One chip, and only for an exception. The old card painted every
-       consignor's figure oxide the moment anything was owed, which is a
-       device that marks everything and therefore marks nothing. */
-    const markable = gaps.reduce((n,g)=> n + Math.round(g.qty), 0);
-    const traceless = gaps.reduce((n,g)=> n + Math.round(g.unrecorded||0), 0);
-    const chip = markable
-      ? `<span class="ow-cp ow-warn"><span class="ow-cp-d"></span>${markable} sold, unrecorded</span>`
-      : traceless
-        ? `<span class="ow-cp ow-warn"><span class="ow-cp-d"></span>${traceless} sold without a trace</span>`
-        : (st.nil && r.soldQty > 0 ? '<span class="ow-cp ow-good">settled</span>' : '');
-    const shelf = r.heldQty > 0
-      ? `${r.lines} line${r.lines===1?'':'s'} on your shelf, ${Math.round(r.heldQty)} unit${Math.round(r.heldQty)===1?'':'s'}`
-      : 'nothing of theirs left on the shelf';
-    const money = f(dueNow);
-    const nil = st.nil ? ' cons-nil' : '';
+     The owner's real question, answered as a verdict, a gauge and the
+     sum written out -- then the way out, because a shortfall the shop
+     cannot see a route through is only bad news. Every figure is
+     derived: dueTotal against cashOnHandByAccount, and what customers
+     still owe on the invoices those goods went out on. */
+  const coverHTML = (()=>{
+    const coverage = dueTotal > 0.5 ? Math.max(0, Math.min(1, cashHeld / dueTotal)) : 1;
+    const ARC = 276.46;
+    const verdict = dueTotal <= 0.5 ? '<span class="ow-cp ow-good">Nothing owed</span>'
+      : short > 0.5 ? '<span class="ow-cp ow-bad">Not yet</span>' : '<span class="ow-cp ow-good">Yes</span>';
+    const out = Math.min(T.uncollected, dueTotal);
+    const way = !(short > 0.5) ? (dueTotal > 0.5
+        ? `<p class="cn-wn">There is enough cash on hand to meet all of it today${short < -0.5 ? `, with <b>${fig(-short)}</b> to spare` : ''}.</p>` : '')
+      : out > 0.5 ? `<div class="cn-out">
+          <div class="cn-oh"><span>Customers still owe you</span><b>${fig(out)}</b></div>
+          <div class="cn-ob"><i style="width:${pct(Math.min(short, out), out)}"></i><span class="cn-om" style="left:${pct(Math.min(short, out), out)}"></span></div>
+          <div class="cn-oh cn-os"><span>${out >= short
+              ? `The first <b>${fig(short)}</b> closes the gap`
+              : `Collecting all of it still leaves <b>${fig(short - out)}</b> short`}</span>${
+              out >= short ? `<span class="ow-good-t">+${fig(out - short)} spare</span>` : ''}</div>
+          <button type="button" class="ow-link cn-chase">Chase those debts</button>
+        </div>`
+      : `<p class="cn-wn">Nothing is out with customers to close it — every shilling of it has been collected.</p>`;
+    return `<div class="cn-cov">
+        <div class="cn-ch2"><span class="cn-k">Could you pay them all today?</span>${verdict}</div>
+        ${dueTotal > 0.5 ? `<div class="cn-gauge">
+          <svg viewBox="0 0 220 122" role="img" aria-label="${esc(`${Math.round(coverage * 100)}% of what you owe is covered by cash`)}">
+            <path class="cn-g0" d="M 22 110 A 88 88 0 0 1 198 110"/>
+            <path class="cn-g1" d="M 22 110 A 88 88 0 0 1 198 110" stroke-dasharray="${(coverage * ARC).toFixed(1)} ${ARC}"/>
+          </svg>
+          <span class="cn-gv"><b>${Math.round(coverage * 100)}%</b><span>covered by cash</span></span>
+        </div>
+        <div class="cn-sum">
+          <span><span class="cn-sl"><i class="cn-key is-cash"></i>Cash you are holding</span><b>${fig(cashHeld)}</b></span>
+          <span class="cn-op">−</span>
+          <span><span class="cn-sl"><i class="cn-key is-owed"></i>Owed</span><b>${fig(dueTotal)}</b></span>
+          <span class="cn-op">=</span>
+          <span class="${short > 0.5 ? 'cn-neg' : 'cn-pos'}">${short > 0.5 ? 'Short' : 'Over'}<b>${short > 0.5 ? '−' : '+'}${fig(Math.abs(short))}</b></span>
+        </div>` : '<p class="cn-wn">Nothing has sold that is not settled, so there is nothing to find.</p>'}
+        ${way}
+        <p class="cn-basis">Counted from the invoice, not the payment — their goods are owed for the moment they leave the shelf. ${
+          short > 0.5 ? `If every consignor came today you would be ${esc(f(short))} short.` : ''}</p>
+      </div>`;
+  })();
 
-    /* Why this row says what it says, in one sentence, from the same
-        figures the strip is built on. */
-    const why = r.owed > 0.5
-      ? `${Math.round(r.soldQty)} of their units have sold. ${f(r.owed)} of that has no bill behind it yet — settling raises an ordinary supplier bill for it, which you then pay the usual way.`
-      : (r.settlementDue > 0.5
-        ? `Everything that has sold is on a bill. ${f(r.settlementDue)} of it is still to pay, on their bill on Invoices, under Purchases — nothing more is owed from here.`
-        : (r.soldQty > 0
-          ? `${Math.round(r.soldQty)} of their units have sold and every shilling of it has been billed and paid. They are listed because their goods are still standing on your shelf.`
-          : 'Nothing of theirs has sold yet, so nothing is owed. Their goods are on your shelf and are not counted in what your stock is worth.'));
+  const heroHTML = `<section class="ow-pan cn-hero" aria-label="What you owe consignors">
+      <div class="cn-owed">
+        <div class="cn-top">
+          <div><p class="cn-k">Owed to consignors now</p>
+            <p class="cn-big">${fig(dueTotal)}<span class="ow-u">UGX</span></p></div>
+          <div class="cn-splits">
+            <div><p class="cn-spl"><i class="cn-key cn-s-settle"></i>Sold, to settle</p><b>${fig(T.settle)}</b></div>
+            <div><p class="cn-spl"><i class="cn-key cn-s-billed"></i>Of it, already billed</p><b>${fig(T.billed)}</b></div>
+          </div>
+        </div>
+        ${pbar}${strip}${flowHTML}
+        <p class="cn-basis">Their goods on your shelf — ${Math.round(T.heldQty)} unit${Math.round(T.heldQty)===1?'':'s'} — are not counted in what your stock is worth.${
+          T.billed > 0.5 ? ` What is billed is still to pay, on their bill on Invoices, under Purchases.` : ''}</p>
+      </div>
+      ${coverHTML}
+    </section>`;
 
-    /* The state sentence gets its own line, and it says where money went
-       when it left this screen. Once everything had sold and been billed
-       the card used to go quiet -- "nothing owed right now" -- while the
-       whole amount was still sitting unpaid on that bill. What is owed
-       did not go away; it moved to Purchase invoices, and the row says
-       so. */
-    const note = r.owed > 0.5
-      ? 'Nothing is sent yet. Settling raises the bill, then asks how much you are paying now. Unsold goods can go back at any time, owing nothing.'
-      : (r.settlementDue > 0.5
-        ? `All of it is billed — ${f(r.settlementDue)} still to pay, on their bill on Invoices, under Purchases.`
-        : (gap ? 'nothing recorded as owed — see above' : 'nothing owed right now'));
+  /* ================= IS IT GETTING WORSE? =================
 
-    return `<div class="ow-q" data-id="${esc(r.supplierId)}">
-      <button type="button" class="ow-q-r ow-qtog">${OW_CARET}
-        <span class="ow-q-t" title="${esc(r.name)}"><span class="ow-q-who">${esc(r.name)}</span><span class="ow-q-sep">·</span><span class="ow-q-rest">${esc(shelf)}</span></span>
-        <span class="ow-q-m">${chip}</span>
-        <span class="ow-q-v${nil}"><b class="ow-q-f">${esc(money)}</b><span class="ow-q-b">${esc(st.basis)}</span></span>
-      </button>
-      <button type="button" class="ow-q-card ow-qtog">
-        <span class="ow-q-cm">${chip}${OW_CARET_C}</span>
-        <p class="ow-q-ct">${esc(r.name)}</p>
-        <span class="ow-q-cv${nil}">${esc(money)}<span class="ow-q-b">${esc(st.basis)}</span></span>
-      </button>
-      <div class="ow-q-x">
-        <p class="ow-q-why">${esc(why)}</p>
-        ${gap}
-        ${goodsHTML(r, held)}
-        <p class="ow-q-note">${esc(note)}</p>
-        <div class="ow-q-a">${r.owed > 0.5
-          ? `<button type="button" class="btn btn-accent ow-sm cons-settle" data-sup="${esc(r.supplierId)}">Settle ${esc(f(r.owed))}</button>`
-          : ''}</div>
+     The cards that sat here only said what was wrong today, and the list
+     says that already. What the screen did not have was time: twelve
+     weeks of the same headline against the cash, the weeks it ran above
+     it shaded, and the payments to consignors marked where they bent
+     the line. Read from consignmentDueAsOf and the cash book as at each
+     week, so its last point is the figure at the top. */
+  const trendHTML = (()=>{
+    const tr = consignmentTrend(12);
+    if(!tr.any) return `<section class="ow-pan cn-tr"><div class="ow-pan-h"><span class="ow-pan-t">Owed to them, against your cash</span><span class="ow-pan-n">12 weeks</span></div>
+        <p class="ow-mini">Nothing was owed to a consignor at any point in the last twelve weeks, so there is no line to draw yet.</p></section>`;
+    const P = tr.points, n = P.length - 1, H = 160;
+    const top = Math.max(...P.map(p=> Math.max(p.owed, p.cash)), 1);
+    const step = Math.pow(10, Math.floor(Math.log10(top)));
+    const MAX = Math.ceil(top / step * 2) / 2 * step;
+    const X = i=> i / n * 1000, Y = v=> H - Math.max(0, v) / MAX * (H - 8);
+    const line = key=> P.map((p,i)=> `${i ? 'L' : 'M'}${r1(X(i))},${r1(Y(p[key]))}`).join(' ');
+    // The weeks owed ran above cash, as areas between the two lines.
+    const shorts = [];
+    let poly = null;
+    const close = ()=>{ if(poly){ shorts.push(`<path class="cn-t-short" d="M${poly.top.join(' L')} L${poly.bot.reverse().join(' L')} Z"/>`); poly = null; } };
+    for(let i = 0; i < n; i++){
+      const a = P[i].owed - P[i].cash, b = P[i+1].owed - P[i+1].cash;
+      const pt = t=>{ const o = P[i].owed + (P[i+1].owed - P[i].owed) * t, c = P[i].cash + (P[i+1].cash - P[i].cash) * t, x = r1(X(i + t));
+        return [`${x},${r1(Y(o))}`, `${x},${r1(Y(c))}`]; };
+      const add = t=>{ const q = pt(t); poly.top.push(q[0]); poly.bot.push(q[1]); };
+      if(a > 0 && !poly){ poly = { top: [], bot: [] }; add(0); }
+      if((a > 0) !== (b > 0)){ const t = a / (a - b); if(!poly) poly = { top: [], bot: [] }; add(t); if(a > 0) close(); }
+      if(b > 0) add(1);
+    }
+    close();
+    const dayX = d=>{ const span = consignmentDaysSince(P[0].day, P[n].day) || 1; return Math.max(0, Math.min(1, consignmentDaysSince(P[0].day, d) / span)); };
+    const owedAt = d=>{ let i = 0; while(i < n && P[i+1].day <= d) i++; return P[i].owed; };
+    const short3 = tr.pays.slice(-3);
+    const marks = tr.pays.map(p=>{ const x = dayX(p.day) * 100, lab = short3.indexOf(p) >= 0;
+      return `<span class="cn-t-pl" style="left:${x.toFixed(2)}%"></span>
+        <span class="cn-t-pd" style="left:${x.toFixed(2)}%;top:${r1(Y(owedAt(p.day)))}px" title="${esc(`Paid ${supplierName(p.supplierId)} ${f(p.amount)} on ${p.day}`)}"></span>${
+        lab ? `<span class="cn-t-pt" style="left:${x.toFixed(2)}%">${esc(supplierName(p.supplierId).split(/\s+/)[0])} ${mfig(p.amount)}</span>` : ''}`; }).join('');
+    const dm = d=> new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    const xt = [0, Math.round(n / 3), Math.round(2 * n / 3), n].map((i,k,a)=> `<span class="${k === 0 ? 'is-first' : k === a.length - 1 ? 'is-last' : ''}" style="left:${(i / n * 100).toFixed(2)}%">${esc(k === a.length - 1 ? 'Today' : dm(P[i].day))}</span>`).join('');
+    const yt = [0, MAX / 2, MAX].map(v=> `<span style="top:${r1(Y(v))}px">${v ? mfig(v) : '0'}</span>`).join('');
+    const yl = [0, MAX / 2, MAX].map(v=> `<i style="top:${r1(Y(v))}px"></i>`).join('');
+    const over = P[n].owed > P[n].cash + 0.5;
+    return `<section class="ow-pan cn-tr" aria-label="Owed against cash, last 12 weeks">
+        <div class="cn-trc">
+          <div class="cn-trh"><span class="cn-trt">Owed to them, against your cash <span>· last 12 weeks</span></span>
+            <span class="cn-lg"><i class="is-owed"></i>Owed</span><span class="cn-lg"><i class="is-cash"></i>Cash</span>
+            <span class="cn-lg"><i class="is-short"></i>Short</span><span class="cn-lg"><i class="is-paid"></i>You paid them</span></div>
+          <div class="cn-trg">
+            <div class="cn-ty">${yt}</div>
+            <div class="cn-plot">${yl}
+              <svg viewBox="0 0 1000 ${H}" preserveAspectRatio="none" aria-hidden="true">${shorts.join('')}
+                <path class="cn-t-area" d="${line('owed')} L1000,${H} L0,${H} Z"/>
+                <path class="cn-t-cash" d="${line('cash')}"/>
+                <path class="cn-t-owed" d="${line('owed')}"/></svg>
+              ${marks}<span class="cn-t-end" style="top:${r1(Y(P[n].owed))}px"></span>
+            </div>
+            <span></span><div class="cn-tx">${xt}</div>
+          </div>
+        </div>
+        <div class="cn-trr">
+          <div><p>Owed has been above your cash for</p><b class="${over ? 'cn-neg' : 'cn-pos'}">${over
+            ? (tr.weeksOver ? `<span class="cn-n">${tr.weeksOver}</span> week${tr.weeksOver === 1 ? '' : 's'}` : 'this week')
+            : 'no time — cash covers it'}</b></div>
+          <div><p>${tr.lastPaid ? `Since you last paid them (${esc(dm(tr.lastPaid))})` : 'No payment to a consignor in these 12 weeks'}</p>${
+            tr.perWeek != null ? `<b><span class="cn-n">${tr.perWeek >= 0 ? '+' : '−'}${mfig(Math.abs(tr.perWeek))}</span> <span class="cn-tw">a week</span></b>` : '<b>—</b>'}</div>
+          ${tr.perWeek != null && tr.perWeek > 0.5 ? `<div class="cn-trn"><p>If sales keep this pace, next week</p><b class="cn-n">≈ ${mfig(P[n].owed + tr.perWeek)} owed</b></div>` : ''}
+        </div>
+      </section>`;
+  })();
+
+  /* ================= THE CONSIGNORS =================
+
+     One queue row per consignor, ranked by what is due now. The desk row
+     and the phone card come from this one call, which is the layer's rule
+     for a queue and the reason the two designs cannot drift apart.
+
+     Where their money is reads as four small figures under the column
+     names -- shelf, to settle, billed, paid -- each with a bar on one
+     scale for the whole list, so a column can be read down. The owed
+     two are tinted, because they are what the row is about. */
+  const stageMax = Math.max(1, ...views.map(v=> Math.max(v.r.heldValue, Math.max(0, v.r.owed) + v.markableValue, v.r.settlementDue, v.paid)));
+  const cardMax = Math.max(1, ...views.map(v=> v.r.heldValue + Math.max(0, v.r.owed) + v.markableValue + v.r.settlementDue + v.paid));
+  const stagesHTML = (v)=> [['shelf', v.r.heldValue], ['settle', Math.max(0, v.r.owed)], ['billed', v.r.settlementDue], ['paid', v.paid]]
+    .map(([k, val])=>{
+      const on = val > 0.5;
+      const owedStage = k === 'settle' || k === 'billed';
+      return `<span class="cn-sc cn-s-${k}${on && owedStage ? ' is-on' : ''}${on ? '' : ' is-nil'}">
+          <span class="cn-sv">${on ? mfig(val) : '—'}</span>
+          <span class="cn-sb"><i style="width:${on ? Math.max(4, val / stageMax * 100).toFixed(1) : 0}%"></i></span>${
+          k === 'settle' && v.markableValue > 0.5 ? `<span class="cn-sx">+${mfig(v.markableValue)} unrecorded</span>` : ''}
+        </span>`;
+    }).join('');
+
+  /* Their goods, on the layer's table: the desk's columns and the phone's
+     cards from one call, every cell carrying the column name it was
+     emitted with.
+
+     Units is one bar -- sold against still here -- in place of three
+     columns of counts. Pace is read from the sales over the days since
+     the item arrived: how long the shelf would take to clear at that
+     rate. A line that has stopped moving is tinted and offers to go back;
+     the rest keep a quieter return so one is never more than a tap away. */
+  const goodsHTML = (v)=>{
+    if(!v.lines.length) return '<p class="ow-mini">Nothing of theirs is left on your shelf.</p>';
+    const top = Math.max(...v.lines.map(l=> l.value), 1);
+    const totSold = v.lines.reduce((n,l)=> n + l.sold, 0);
+    const totShelf = v.lines.reduce((n,l)=> n + l.shelf, 0);
+    const back = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>';
+    return `<div class="ow-tbl cons-tbl">
+      <div class="ow-tbl-h">
+        <div class="ow-tbl-c">Their goods here</div>
+        <span class="cn-uh">Units <span><i class="is-sold"></i>sold</span><span><i class="is-left"></i>left</span></span>
+        <span>Pace</span>
+        <span class="ow-tbl-n">Worth to them</span>
+        <span class="ow-tbl-a"></span>
+      </div>${v.lines.map(l=>{
+        const pctSold = Math.round(l.sellThrough * 100);
+        const pace = l.clears == null ? (l.sold ? 'Pace not known' : 'No sale yet') : (l.clears <= 1 ? 'Clears today' : `~${l.clears}d to clear`);
+        const age = l.daysHere == null ? 'arrival date not on file' : `${l.daysHere} days here`;
+        return `
+      <div class="ow-tbl-r${l.idle ? ' cn-idle' : ''}">
+        <div class="ow-tbl-c"><span class="ow-tbl-p" title="${esc(l.name)}">${esc(l.name)}</span><span class="ow-tbl-s">${fig(l.each)} each</span></div>
+        <span class="ow-tbl-c cn-u" data-l="Units" title="${esc(`${Math.round(l.sold)} sold, ${Math.round(l.shelf)} still on your shelf — ${pctSold}% sold through`)}">
+          <span class="cn-ub"><i class="is-sold" style="width:${pctSold}%"></i><i class="is-left"></i></span>
+          <span class="cn-ut"><span><b>${Math.round(l.sold)}</b> sold</span><span><b>${Math.round(l.shelf)}</b> left · ${pctSold}%</span></span>
+        </span>
+        <span class="ow-tbl-c cn-pace${l.idle ? ' is-idle' : ''}" data-l="Pace"><b>${esc(pace)}</b><span><i class="cn-dot${l.idle ? ' is-idle' : l.daysHere >= 60 ? ' is-aging' : ''}"></i>${esc(age)}</span></span>
+        <span class="ow-tbl-n cn-w" data-l="Worth to them">${fig(l.value)}<i class="cn-share"><i style="width:${pct(l.value, top)}"></i></i></span>
+        <span class="ow-tbl-a">${l.idle
+          ? `<button type="button" class="btn btn-ghost ow-sm cons-return" data-sup="${esc(v.r.supplierId)}" data-key="${esc(l.key)}">${back}Send back</button>`
+          : `<button type="button" class="btn btn-ghost ow-sm cons-return cn-ib" data-sup="${esc(v.r.supplierId)}" data-key="${esc(l.key)}" aria-label="${esc(`Send some of ${l.name} back`)}" title="Send some back">${back}</button>`}</span>
+      </div>`; }).join('')}
+      <div class="ow-tbl-f">
+        <div class="ow-tbl-c">${v.lines.length} line${v.lines.length === 1 ? '' : 's'}</div>
+        <span class="ow-tbl-c cn-ut" data-l="Units"><span><b>${Math.round(totSold)}</b> sold · <b>${Math.round(totShelf)}</b> left</span></span>
+        <span class="ow-tbl-c" data-l="Idle">${v.idleLines.length ? `${v.idleLines.length} idle` : 'all moving'}</span>
+        <span class="ow-tbl-n" data-l="Worth to them">${fig(v.r.heldValue)}</span>
+        <span class="ow-tbl-a"></span>
       </div>
     </div>`;
   };
 
-  /* THE FIGURES THE SCREEN EXISTS FOR, in the strip every other screen
-     uses for exactly this.
+  /* The relationship, left to right: when their goods came, what was
+     billed and paid, and what is waiting today. A consignor asking "what
+     have I had from you" is answered from the same records the money is. */
+  const timelineHTML = (v)=>{
+    const ev = [];
+    const del = consignmentDeliveries(v.r.supplierId);
+    if(del.length){
+      const units = del.reduce((n,d)=> n + d.qty, 0);
+      ev.push({ day: del[0].day || del[0].date, t: del.length > 1 ? 'First delivery' : 'Delivered', a: `${Math.round(del[0].qty)} units`, k: 'shelf' });
+      if(del.length > 1) ev.push({ day: del[del.length - 1].date, t: `Latest of ${del.length} deliveries`, a: `${Math.round(units)} units in all`, k: 'shelf' });
+    }
+    consignmentSettlements(v.r.supplierId).forEach(pi=>{
+      ev.push({ day: String(pi.date||''), t: `Bill ${purchaseInvoiceNumberLabel(pi)} raised`, a: fig(purchaseInvoiceTotal(pi)), k: 'billed' });
+      (Array.isArray(pi.payments) ? pi.payments : []).filter(p=> (Number(p.amount)||0) > 0).forEach(p=>
+        ev.push({ day: String(p.date||''), t: purchaseInvoiceBalanceDue(pi) > 0.5 ? 'Part paid' : 'Paid', a: fig(p.amount), k: 'paid' }));
+    });
+    ev.forEach(e=>{ if(!e.day) e.day = e.date || ''; });
+    ev.sort((a,b)=> a.day < b.day ? -1 : a.day > b.day ? 1 : 0);
+    const shown = ev.slice(-5);
+    if(v.r.owed > 0.5) shown.push({ day: '', t: 'Sold since, no bill yet', a: fig(v.r.owed), k: 'settle', now: true });
+    if(v.r.settlementDue > 0.5) shown.push({ day: '', t: v.billAge != null ? `Unpaid for ${v.billAge} days` : 'Still to pay', a: fig(v.r.settlementDue), k: 'billed', now: true });
+    if(v.markable) shown.push({ day: '', t: `${v.markable} sold, unrecorded`, a: fig(v.markableValue), k: 'settle', now: true });
+    if(!shown.length) return '';
+    const dm = d=> d ? new Date(d.slice(0,10) + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'Today';
+    return `<div class="cn-tl"><p class="cn-k">With ${esc(v.r.name)}, so far</p>
+        <ol>${shown.map(e=> `<li class="cn-ev is-${e.k}${e.now ? ' is-now' : ''}"><i></i><span>${esc(e.now ? 'Today' : dm(e.day))}</span><b>${esc(e.t)}</b><span class="cn-n">${e.a}</span></li>`).join('')}</ol>
+        ${ev.length > 5 ? `<p class="ow-mini">${ev.length - 5} earlier event${ev.length - 5 === 1 ? '' : 's'} not shown.</p>` : ''}
+      </div>`;
+  };
 
-     WHAT THE HEADLINE IS, SAID PROPERLY. It read "of your cash is
-     theirs", and that was wrong three ways. The debt falls due on the
-     INVOICE, so a sale on credit owes the consignor while the shop is
-     holding nothing for them. Money that was collected is not set aside
-     and may already be spent. And the figure can be larger than
-     everything in the drawer, which makes the sentence arithmetically
-     impossible.
+  const row = (v)=>{
+    const r = v.r;
+    const dueNow = consignmentDueNow(r);
+    const money = f(dueNow);
+    const st = v.st;
+    const nil = st.nil ? ' cons-nil' : '';
+    const chipHTML = v.chip ? `<span class="ow-cp ${v.chip.c}"><span class="ow-cp-d"></span>${esc(v.chip.t)}</span>` : '';
+    const sub = r.soldQty > 0
+      ? `sold ${Math.round(r.soldQty)} of ${Math.round(r.soldQty + r.heldQty)}${v.last ? ` · last sale ${daysAgoLabel(v.last).toLowerCase()}` : ''}`
+      : (r.heldQty > 0 ? `${Math.round(r.heldQty)} unit${Math.round(r.heldQty)===1?'':'s'} here · no sale yet` : 'nothing of theirs left on the shelf');
+    const quiet = !(r.soldQty > 0) || v.quietFor >= 60;
+    const sell = r.soldQty + r.heldQty > 0 ? Math.round(r.soldQty / (r.soldQty + r.heldQty) * 100) : 0;
+    const filters = [dueNow > 0.5 ? 'owed' : '', v.chip && v.chip.c === 'ow-warn' ? 'attention' : '', st.nil && r.soldQty > 0 ? 'settled' : ''].filter(Boolean).join(' ');
 
-     It is a liability. So the label says owed, and the rail earns back
-     what the owner actually wanted to know -- how much of the drawer is
-     not theirs -- out of figures the app can derive: how much is still
-     out with customers, and what is actually held.
+    /* The state sentence, saying where money went when it left this
+       screen. Once everything had sold and been billed the card used to
+       go quiet -- "nothing owed right now" -- while the whole amount was
+       still sitting unpaid on that bill. It moved to Purchase invoices,
+       and the row says so. */
+    const note = r.owed > 0.5
+      ? 'Nothing is sent yet. Settling raises the bill, then asks how much you are paying now. Unsold goods can go back at any time, owing nothing.'
+      : (r.settlementDue > 0.5
+        ? `All of it is billed — ${f(r.settlementDue)} still to pay, on their bill on Invoices, under Purchases.`
+        : (v.gaps.length ? 'nothing recorded as owed — see above' : 'nothing owed right now'));
+    const pay = v.unpaid.length ? `<button type="button" class="btn btn-ghost ow-sm cons-pay" data-pi="${esc(v.unpaid[0].id)}">Pay the bill</button>` : '';
+    const segs = [['shelf', r.heldValue], ['settle', Math.max(0, r.owed)], ['unrec', v.markableValue], ['billed', r.settlementDue], ['paid', v.paid]].filter(s=> s[1] > 0.5);
+    const segTitle = segs.map(([k, val])=> `${{ shelf: 'On your shelf', settle: 'To settle', unrec: 'Sold, unrecorded', billed: 'Billed, unpaid', paid: 'Paid' }[k]} ${f(val)}`).join(' · ');
+    const cardTotal = segs.reduce((n,s)=> n + s[1], 0);
 
-     The strip totals the same reading the rows do, so the headline and
-     the queue under it cannot disagree about one figure. */
-  const heldValue = rows.reduce((n,r)=> n + r.heldValue, 0);
-  const heldQty = rows.reduce((n,r)=> n + r.heldQty, 0);
-  const billedUnpaid = rows.reduce((n,r)=> n + Math.max(0, r.settlementDue||0), 0);
-  const uncollected = rows.reduce((n,r)=> n + Math.max(0, r.uncollected||0), 0);
-  const cashHeld = cashOnHandByAccount().total;
-  const dueTotal = rows.reduce((n,r)=> n + consignmentDueNow(r), 0);
-  const withWork = rows.filter(r=> consignmentDueNow(r) > 0.5).length;
-  const withGaps = rows.filter(r=> consignmentUnmarkedSales(r.supplierId).length).length;
-  const short = dueTotal - cashHeld;
+    return `<div class="ow-q cn-q cn-h${v.hue}" data-id="${esc(r.supplierId)}" data-f="${filters}">
+      <button type="button" class="ow-q-r ow-qtog">${OW_CARET}
+        <span class="cn-who"><span class="cn-mg">${esc(v.mono)}</span><span class="cn-wt">
+          <span class="cn-nm" title="${esc(r.name)}">${esc(r.name)}</span>
+          <span class="cn-l2">${chipHTML}<span class="cn-sub${quiet && r.heldQty > 0 ? ' is-quiet' : ''}" title="${esc(sub)}">${esc(sub)}</span></span></span></span>
+        <span class="cn-st" title="${esc(segTitle)}">${stagesHTML(v)}</span>
+        <span class="cn-sell" title="${esc(`${Math.round(r.soldQty)} of ${Math.round(r.soldQty + r.heldQty)} units sold`)}"><i class="cn-ring" style="--p:${sell}%"></i><span class="cn-pc">${sell}%</span></span>
+        <span class="ow-q-v${nil}"><b class="ow-q-f">${esc(money)}</b><span class="ow-q-b">${esc(st.basis)}</span></span>
+      </button>
+      <span class="cn-nx">${v.next
+        ? `<button type="button" class="btn btn-ghost ow-sm cn-go" data-act="${v.next.act}" aria-label="${esc(v.next.aria)}">${esc(v.next.t)}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></button>`
+        : `<span class="cn-ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>All square</span>`}</span>
+      <button type="button" class="ow-q-card ow-qtog">
+        <span class="ow-q-cm">${chipHTML}${OW_CARET_C}</span>
+        <span class="cn-cw"><span class="cn-mg">${esc(v.mono)}</span>
+          <span class="cn-wt"><span class="ow-q-ct">${esc(r.name)}</span><span class="cn-sub">${esc(sub)}</span></span>
+          <span class="ow-q-cv${nil}">${esc(money)}<span class="ow-q-b">${esc(st.basis)}</span></span></span>
+        <span class="cn-cb" style="width:${pct(cardTotal, cardMax)}">${segs.map(([k, val])=> `<i class="cn-s-${k}" style="width:${pct(val, cardTotal)}"></i>`).join('')}</span>
+        <span class="cn-cs"><span>Sold through</span><span class="cn-csb"><i style="width:${sell}%"></i></span><b>${sell}%</b></span>
+      </button>
+      <div class="ow-q-x">
+        ${gapHTML(r, v.gaps)}
+        ${goodsHTML(v)}
+        <div class="cn-act">${r.owed > 0.5
+          ? `<button type="button" class="btn btn-accent ow-sm cons-settle" data-sup="${esc(r.supplierId)}">Settle ${esc(f(r.owed))}</button>`
+          : ''}${pay}<p class="ow-q-note">${esc(note)}</p></div>
+        ${timelineHTML(v)}
+      </div>
+    </div>`;
+  };
 
-  const tile = (label, value, sub, tone)=> `<div class="ow-mt${tone ? ' ' + tone : ''}">
-    <p class="ow-mt-l">${esc(label)}</p><span class="ow-mt-v">${value}</span><p class="ow-mt-s">${sub}</p></div>`;
-  const fig = (n)=> `${esc(fmtUGX(Math.round(n)).replace(/\s*UGX$/, ''))}<span class="ow-u">UGX</span>`;
-
-  /* The ONE amber thing on this screen, and only when it is true: the
-     debt is larger than the cash there is to meet it. That is the single
-     fact on the page that is genuinely a caution, and painting it when
-     it is false would make the tone mean nothing. */
-  const strip = `<div class="ow-strip">
-    ${tile('Owed to consignors', fig(dueTotal),
-      dueTotal <= 0.5 ? 'nothing has sold that is not settled'
-        /* "More than the 0 UGX you are holding in cash" is true and
-           unreadable. A shop with an empty till is told so plainly. */
-        : (cashHeld < 0.5 ? 'And there is no cash on hand at all to meet it'
-          : (short > 0.5
-            ? `More than the ${esc(f(cashHeld))} you are holding in cash`
-            : `Against ${esc(f(cashHeld))} you are holding in cash`)),
-      dueTotal > 0.5 && short > 0.5 ? 'ow-warn' : '')}
-    ${tile('Of it, already billed', fig(billedUnpaid),
-      billedUnpaid > 0.5
-        ? 'Part of the figure at left — on bills on Invoices, under Purchases'
-        : 'nothing raised as a bill and still unpaid')}
-    ${tile('Their goods here', fig(heldValue),
-      `${Math.round(heldQty)} unit${Math.round(heldQty)===1?'':'s'} — not counted in what your stock is worth`)}
-    ${tile('Consignors', String(rows.length),
-      `${withWork} with money owed${withGaps ? `, ${withGaps} with sales unrecorded` : ''}`)}
-  </div>`;
-
-  /* THE RAIL. The basis and the arithmetic behind the headline, which
-     used to be a paragraph blocking the top of the screen, plus what
-     settling actually does -- the prose that was in the page head.
-
-     Every figure here is derived. The shortfall in particular: it is
-     what the owner asked this screen for, and it is dueTotal against
-     cashOnHandByAccount, not a guess dressed as one. */
-  const rail = `<div class="ow-side">
-    <div class="ow-pan">
-      <div class="ow-pan-h"><span class="ow-pan-t">How this is counted</span></div>
-      <p class="ow-mini">Counted from the invoice, not the payment — their goods are owed for the moment they leave the shelf, whether or not the customer has paid you yet.</p>
-      <div class="ow-sr"><span class="ow-sr-k">Owed to consignors</span><span class="ow-sr-v">${esc(f(dueTotal))}</span></div>
-      <div class="ow-sr"><span class="ow-sr-k">Still out with customers</span><span class="ow-sr-v">${esc(f(Math.min(uncollected, dueTotal)))}</span></div>
-      <div class="ow-sr"><span class="ow-sr-k">Cash you are holding</span><span class="ow-sr-v${short > 0.5 ? ' ow-warn' : ''}">${esc(f(cashHeld))}</span></div>
-      <p class="ow-mini">${dueTotal > 0.5
-        ? (short > 0.5
-          ? `So the whole debt is not sitting in the drawer. If every consignor came today you would be ${esc(f(short))} short.`
-          : 'There is enough cash on hand to meet all of it today.')
-        : 'Nothing is owed, so there is nothing to find.'}</p>
-    </div>
-    <div class="ow-pan">
-      <div class="ow-pan-h"><span class="ow-pan-t">What settling does</span></div>
-      <p class="ow-mini">It raises an ordinary supplier bill for what has sold. The money then reaches Creditors, the payables and the cash book by the route every other bill takes.</p>
-      <p class="ow-mini">Nothing is paid by settling. You pay that bill the usual way, in full or in part.</p>
-      <p class="ow-mini">Unsold goods can go back at any time, owing nothing.</p>
-    </div>
-  </div>`;
-
+  const counts = {
+    all: views.length,
+    owed: views.filter(v=> v.dueNow > 0.5).length,
+    attention: views.filter(v=> v.chip && v.chip.c === 'ow-warn').length,
+    settled: views.filter(v=> v.st.nil && v.r.soldQty > 0).length,
+  };
+  if(!counts[consFilter] && consFilter !== 'all') consFilter = 'all';
+  const FILTERS = [['all', 'All'], ['owed', 'Owed'], ['attention', 'Needs a look'], ['settled', 'Settled']];
+  const shown = views.filter(v=> consFilter === 'all' || (consFilter === 'owed' && v.dueNow > 0.5)
+    || (consFilter === 'attention' && v.chip && v.chip.c === 'ow-warn') || (consFilter === 'settled' && v.st.nil && v.r.soldQty > 0));
   /* Consignors owed nothing are still listed, and the foot says why
      rather than leaving the owner to wonder whether the list is short.
      Named rather than dropped. */
-  const quiet = rows.length - withWork;
+  const quiet = views.length - withWork;
 
-  el.innerHTML = blocked + strip + `<div class="ow-grid">
-    <div class="ow-pan">
-      <div class="ow-pan-h">
-        <span class="ow-pan-t">Consignors</span>
-        <span class="ow-pan-n">ranked by what is due now</span>
-      </div>
-      ${rows.map(row).join('')}${quiet
-        ? `<p class="ow-mini">${quiet} of them ${quiet === 1 ? 'is' : 'are'} owed nothing — listed because their goods are standing on your shelf, and that is worth knowing before you count what your stock is worth.</p>`
-        : ''}
+  /* On the phone the exceptions lead, a thumb's reach from the top: the
+     chips say the same thing on each card, but a list of thirty cards is
+     not where a problem should have to be found. The desk has the whole
+     ledger in view and does not need them twice. */
+  const needs = views.filter(v=> v.chip && v.chip.c === 'ow-warn');
+  const needsHTML = needs.length ? `<section class="ow-pan cn-ny" aria-label="Needs you">
+      <div class="ow-pan-h"><span class="ow-pan-t">Needs you</span><span class="ow-pan-n">${needs.length}</span></div>
+      ${needs.map(v=> `<button type="button" class="cn-nyr" data-open="${esc(v.r.supplierId)}"><span class="cn-mg">${esc(v.mono)}</span>
+        <span class="cn-wt"><b>${esc(v.chip.t)}</b><span class="cn-sub">${esc(v.r.name)}${v.dueNow > 0.5 ? ` · ${esc(f(v.dueNow))}` : ''}</span></span>${OW_CARET_C}</button>`).join('')}
+    </section>` : '';
+
+  const listHTML = `<section class="ow-pan cn-list" aria-label="Consignors">
+      <div class="ow-pan-h"><span class="ow-pan-t">Consignors</span><span class="ow-pan-nt">ranked by what is due now</span>
+        <span class="cn-fl" role="group" aria-label="Show">${FILTERS.map(([k, label])=>
+          `<button type="button" class="cn-fb" data-f="${k}" aria-pressed="${consFilter === k}"${!counts[k] && k !== 'all' ? ' disabled' : ''}>${label} <span>${counts[k]}</span></button>`).join('')}</span></div>
+      <div class="cn-scroll"><div class="cn-min">
+        <div class="cn-ch"><span></span><span>Consignor</span><span class="cn-st"><span>Shelf</span><span>To settle</span><span>Billed</span><span>Paid</span></span><span>Sold</span><span>Due now</span><span>Next</span></div>
+        ${shown.map(row).join('')}
+      </div></div>
+      ${quiet ? `<p class="ow-mini">${quiet} of ${views.length} ${quiet === 1 ? 'is' : 'are'} owed nothing — listed because their goods are standing on your shelf, and that is worth knowing before you count what your stock is worth.</p>` : ''}
+      ${shown.length < views.length ? `<p class="ow-mini">Showing ${shown.length} of ${views.length}. <button type="button" class="ow-link cn-all">Show all</button></p>` : ''}
+    </section>`;
+
+  /* ================= THE RAIL: THREE PICTURES OF THE SHELF =================
+
+     SELLING OR SITTING. Each consignor placed by how much of what they
+     brought has sold, against how long their goods have stood -- top left
+     is earning its shelf, bottom right is the conversation about taking
+     it back. The bubble is what they have here. */
+  const quadHTML = (()=>{
+    const pts = views.filter(v=> v.r.heldQty > 0).map(v=>{
+      const known = v.lines.filter(l=> l.daysHere != null);
+      const w = known.reduce((n,l)=> n + l.value, 0);
+      const days = w > 0 ? known.reduce((n,l)=> n + l.daysHere * l.value, 0) / w : null;
+      return { v, days, sell: v.r.soldQty / (v.r.soldQty + v.r.heldQty) };
+    });
+    const placed = pts.filter(p=> p.days != null);
+    const unplaced = pts.length - placed.length;
+    const heldMax = Math.max(1, ...placed.map(p=> p.v.r.heldValue));
+    return `<section class="ow-pan" aria-label="Selling or sitting">
+        <div class="ow-pan-h"><span class="ow-pan-t">Selling or sitting</span><span class="ow-pan-nt">bubble = goods held</span></div>
+        ${placed.length ? `<div class="cn-qg"><span class="cn-qy">sold through →</span>
+          <div class="cn-qp">
+            <span class="cn-q1">Earning its shelf</span><span class="cn-q2">Send back?</span>
+            ${placed.map(p=>{ const d = Math.round(18 + 18 * Math.sqrt(p.v.r.heldValue / heldMax));
+              return `<span class="cn-bub cn-h${p.v.hue}" style="left:${Math.min(94, Math.max(6, p.days / 120 * 100)).toFixed(1)}%;bottom:${Math.max(8, Math.min(94, p.sell * 100)).toFixed(1)}%;width:${d}px;height:${d}px"
+                title="${esc(`${p.v.r.name} · ${Math.round(p.sell * 100)}% sold through · ${Math.round(p.days)} days on the shelf · ${f(p.v.r.heldValue)} held`)}">${esc(p.v.mono)}</span>`; }).join('')}
+          </div>
+          <span></span><div class="cn-qx"><span>0</span><span>60 days</span><span>on the shelf →</span></div></div>`
+          : '<p class="ow-mini">No delivery dates on file yet, so nothing can be placed.</p>'}
+        ${unplaced ? `<p class="ow-mini">${unplaced} not placed — their goods were marked as theirs after arriving, so there is no delivery date to measure from.</p>` : ''}
+      </section>`;
+  })();
+
+  /* HOW LONG THEIR GOODS HAVE SAT, and whose they are. Four bars by age,
+     each split by consignor, so the stale stock has an owner and not only
+     a size. The last band is the one to act on: returning it owes
+     nothing. */
+  const ageHTML = (()=>{
+    const B = [['0–30 days', 0, 30], ['31–60 days', 31, 60], ['61–90 days', 61, 90], ['90+ days', 91, Infinity]];
+    const buckets = B.map(b=> ({ b, parts: new Map(), total: 0 }));
+    let unknown = 0;
+    views.forEach(v=> v.lines.forEach(l=>{
+      if(l.daysHere == null){ unknown += l.value; return; }
+      const bk = buckets.find(x=> l.daysHere >= x.b[1] && l.daysHere <= x.b[2]);
+      bk.parts.set(v, (bk.parts.get(v) || 0) + l.value); bk.total += l.value;
+    }));
+    const top = Math.max(1, ...buckets.map(x=> x.total));
+    const idle = buckets[3].total;
+    return `<section class="ow-pan" aria-label="How long their goods have sat">
+        <div class="ow-pan-h"><span class="ow-pan-t">How long their goods have sat</span><span class="ow-pan-n">${fig(T.shelf)}</span></div>
+        <div class="cn-agl">${buckets.map((x,i)=>{
+          const parts = [...x.parts.entries()].sort((a,b)=> b[1] - a[1]);
+          return `<div class="cn-agr${i === 3 && x.total > 0.5 ? ' is-idle' : ''}">
+            <div class="cn-agt"><span>${x.b[0]}</span><span class="cn-agb"><span style="width:${pct(x.total, top)}">${
+              parts.map(([v, val])=> `<i class="cn-h${v.hue}" style="flex:${Math.round(val)}" title="${esc(`${v.r.name} · ${f(val)}`)}"></i>`).join('')}</span></span><b>${x.total > 0.5 ? mfig(x.total) : '—'}</b></div>
+            ${parts.length ? `<span class="cn-tags">${parts.map(([v, val])=> `<span class="cn-tag cn-h${v.hue}" title="${esc(v.r.name)}">${esc(v.mono)} <span>${mfig(val)}</span></span>`).join('')}</span>` : ''}
+          </div>`; }).join('')}</div>
+        ${unknown > 0.5 ? `<p class="ow-mini">${fig(unknown)} has no arrival date on file — marked as a consignor's after it came in.</p>` : ''}
+        ${idle > 0.5 ? `<div class="cn-agf"><span><b>${fig(idle)}</b> hasn't sold in 90 days. Sending it back costs nothing.</span>
+          <button type="button" class="btn btn-ghost ow-sm cn-returns">Review returns</button></div>` : ''}
+      </section>`;
+  })();
+
+  /* HOW THEIR MONEY MOVES. The four stages as they stand today -- what
+     sits in each and whose -- with each hop named by who makes it. The
+     two hops that are the owner's are marked so, because nothing on this
+     screen moves money by itself. */
+  const movesHTML = (()=>{
+    const ICON = {
+      shelf: '<path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/>',
+      settle: '<path d="M20.6 13.4L13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
+      billed: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6"/><path d="M9 12h6"/>',
+      paid: '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16 10"/>',
+    };
+    const HOP = { shelf: ['Customer', 'buys — owed from the invoice, paid or not', false],
+      settle: ['You', 'tap Settle — raises an ordinary bill', true],
+      billed: ['You', 'pay the bill, all or part', true] };
+    const who = k=> views.filter(v=> ({ shelf: v.r.heldValue, settle: v.r.owed, billed: v.r.settlementDue, paid: v.paid })[k] > 0.5);
+    return `<section class="ow-pan" aria-label="How their money moves">
+        <div class="ow-pan-h"><span class="ow-pan-t">How their money moves</span><span class="ow-pan-nt">who is where now</span></div>
+        <ol class="cn-mvl">${STAGE.map(s=>{
+          const people = who(s.k);
+          const owed = s.k === 'settle' || s.k === 'billed';
+          return `<li><div class="cn-mc${owed ? ' is-owed' : ''}">
+              <span class="cn-mi cn-m-${s.k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[s.k]}</svg></span>
+              <span class="cn-wt"><span class="cn-mt">${esc(s.label)}</span><b>${fig(s.v)}</b></span>
+              <span class="cn-pp" title="${esc(people.map(v=> v.r.name).join(', '))}">${people.slice(0, 4).map(v=> `<i class="cn-h${v.hue}">${esc(v.mono)}</i>`).join('')}${people.length > 4 ? `<i>+${people.length - 4}</i>` : ''}</span>
+            </div>${HOP[s.k] ? `<div class="cn-hop"><span class="cn-hl"></span><span><b class="${HOP[s.k][2] ? 'is-you' : ''}">${HOP[s.k][0]}</b>${HOP[s.k][1]}</span></div>` : ''}</li>`; }).join('')}</ol>
+        <p class="cn-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>Anything still on the shelf can go back at any step, owing nothing.</p>
+      </section>`;
+  })();
+
+  el.innerHTML = blocked + `<div class="cn">
+    ${heroHTML}
+    ${needsHTML}
+    ${trendHTML}
+    <div class="ow-grid">
+      ${listHTML}
+      <div class="ow-side">${quadHTML}${ageHTML}${movesHTML}</div>
     </div>
-    ${rail}
   </div>`;
+
+  /* ---- wiring ---- */
+  const openRow = (sup, act)=>{
+    const q = [...el.querySelectorAll('.cn-q')].find(x=> x.dataset.id === sup);
+    if(!q) return;
+    q.classList.add('ow-open');
+    const target = act ? q.querySelector(`.ow-q-x .${act}`) : null;
+    (target || q).scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    if(target) target.focus({ preventScroll: true });
+  };
+  el.querySelectorAll('.cn-go').forEach(btn=> btn.addEventListener('click', ()=>
+    openRow(btn.closest('.cn-q').dataset.id, btn.dataset.act)));
+  el.querySelectorAll('.cn-nyr').forEach(btn=> btn.addEventListener('click', ()=> openRow(btn.dataset.open, null)));
+  el.querySelectorAll('.cn-fb').forEach(btn=> btn.addEventListener('click', ()=>{
+    consFilter = btn.dataset.f; renderConsignment(); }));
+  const all = el.querySelector('.cn-all');
+  if(all) all.addEventListener('click', ()=>{ consFilter = 'all'; renderConsignment(); });
+  const chase = el.querySelector('.cn-chase');
+  if(chase) chase.addEventListener('click', ()=> goToTab('chase'));
+  const returns = el.querySelector('.cn-returns');
+  if(returns) returns.addEventListener('click', ()=>{
+    const first = views.find(v=> v.idleLines.length);
+    consFilter = 'all'; renderConsignment();
+    if(first) openRow(first.r.supplierId, 'cons-return');
+  });
+  el.querySelectorAll('.cons-pay').forEach(btn=> btn.addEventListener('click', ()=> openPiPaymentModal(Number(btn.dataset.pi) || btn.dataset.pi)));
 
   /* One tap, and still asked for first. The count and the money are read
      back from the plan rather than from the button, so the figure the
@@ -84684,14 +85523,14 @@ function renderConsignment(){
 
   el.querySelectorAll('.cons-return').forEach(btn=> btn.addEventListener('click', async ()=>{
     const sup = btn.dataset.sup;
-    const line = consignmentHeldLines(sup)[Number(btn.dataset.i)];
+    const line = consignmentLineView(sup).find(l=> l.key === btn.dataset.key);
     if(!line) return;
     const raw = prompt(`Send back to ${supplierName(sup)}\n\n`
-      + `${line.name} — ${Math.round(line.qty)} of theirs on the shelf.\n`
+      + `${line.name} — ${Math.round(line.shelf)} of theirs on the shelf.\n`
       + `How many are going back? Nothing is owed on returned goods.`,
-      String(Math.round(line.qty)));
+      String(Math.round(line.shelf)));
     if(raw == null) return;
-    const qty = Math.min(line.qty, Number(raw) || 0);
+    const qty = Math.min(line.shelf, Number(raw) || 0);
     if(!(qty > 0)){ toast('Nothing was sent back'); return; }
     const taken = returnConsignedStock(line.productId, line.variantIdx, sup, qty);
     if(!taken){ toast('Nothing was sent back'); return; }
@@ -106749,6 +107588,165 @@ function consignmentOwedTotal(asOf){
    no second leg to double against -- it shows the whole relationship. */
 function consignmentDueNow(r){
   return Math.max(0, r && r.owed || 0) + Math.max(0, r && r.settlementDue || 0);
+}
+
+/* ================= THE CONSIGNMENT SCREEN'S OWN READINGS =================
+
+   The intelligence the screen draws -- how fast each shelf is selling,
+   how long their goods have stood, what each relationship has done, and
+   whether what is owed is outrunning the cash -- all of it read from
+   records the shop already keeps. Nothing below is stored; a reading the
+   books cannot support says so (null) rather than guessing.
+
+   Deliveries: the restock rows the Inventory screen writes when goods
+   arrive on consignment. The row carries `consign` while the session
+   lasts and its note names the consignor once it has been saved and
+   reloaded, so both are read. Goods marked as a consignor's after the
+   fact have no delivery behind them, and their age is reported as not
+   known rather than invented. */
+function consignmentDeliveries(supplierId){
+  const said = `Received on consignment from ${supplierName(supplierId)}`;
+  return (data.stockLog||[]).filter(l=> l && l.type === 'restock' && Number(l.delta) > 0 && l.date
+    && (l.consign === supplierId || String(l.note||'').indexOf(said) === 0))
+    .map(l=> ({ key: l.key, qty: Number(l.delta)||0, date: String(l.date).slice(0,10) }))
+    .sort((a,b)=> a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+}
+
+// Their units that have gone out on an invoice, line by line, with the day.
+function consignmentSales(supplierId, asOf){
+  const out = [];
+  (data.savedQuotes||[]).forEach(q=>{
+    if(!q.invoiced || q.voided) return;
+    const day = String(q.invoicedAt || q.date || '').slice(0,10);
+    if(asOf && day > asOf) return;
+    (q.items||[]).forEach(it=>{
+      (it._stockLots||[]).forEach(l=>{
+        if(l.consign !== supplierId) return;
+        out.push({ key: stockKey(it.productId, it.variantIdx==null?null:it.variantIdx),
+          qty: Number(l.qty)||0, value: (Number(l.qty)||0) * (Number(l.cost)||0), date: day });
+      });
+    });
+  });
+  return out;
+}
+
+function consignmentDaysSince(day, asOf){
+  if(!day) return null;
+  const a = new Date(String(day).slice(0,10) + 'T00:00:00'), b = new Date((asOf || todayISO()) + 'T00:00:00');
+  if(isNaN(a.getTime()) || isNaN(b.getTime())) return null;
+  return Math.max(0, Math.round((b - a) / 86400000));
+}
+
+/* One consignor's shelf, one row per item (the cost lots of one item
+   folded together, since a return takes from them all):
+
+     shelf, sold    units still here, and units that have gone
+     daysHere       how long the OLDEST unit still standing has been here
+                    -- the deliveries are walked newest first until they
+                    cover what is on the shelf, because the oldest lots
+                    sell first
+     pace           units sold a day since the item first arrived, and
+                    the days the shelf would take to clear at that pace
+     idle           nothing has gone in 90 days, or nothing at all in 60
+                    -- the lines worth sending back, which owes nothing */
+function consignmentLineView(supplierId){
+  const held = new Map();
+  consignmentHeldLines(supplierId).forEach(h=>{
+    const rec = held.get(h.key) || { key: h.key, productId: h.productId, variantIdx: h.variantIdx,
+      name: h.name, shelf: 0, value: 0 };
+    rec.shelf += h.qty; rec.value += h.qty * h.cost;
+    held.set(h.key, rec);
+  });
+  const sold = new Map();
+  consignmentSales(supplierId).forEach(s=> sold.set(s.key, (sold.get(s.key)||0) + s.qty));
+  const deliveries = consignmentDeliveries(supplierId);
+  return [...held.values()].map(r=>{
+    const mine = deliveries.filter(d=> d.key === r.key);
+    let covered = 0, oldestStanding = null;
+    for(let i = mine.length - 1; i >= 0; i--){
+      covered += mine[i].qty; oldestStanding = mine[i].date;
+      if(covered >= r.shelf) break;
+    }
+    const daysHere = consignmentDaysSince(oldestStanding);
+    const span = mine.length ? consignmentDaysSince(mine[0].date) : null;
+    const soldQty = sold.get(r.key) || 0;
+    const perDay = span && span > 0 ? soldQty / span : null;
+    const clears = perDay && perDay > 0 ? Math.ceil(r.shelf / perDay) : null;
+    const total = r.shelf + soldQty;
+    const idle = daysHere != null && ((daysHere >= 90 && (!perDay || clears > 90)) || (soldQty === 0 && daysHere >= 60));
+    return { ...r, each: r.shelf > 0 ? r.value / r.shelf : 0, sold: soldQty,
+      sellThrough: total > 0 ? soldQty / total : 0, daysHere, clears, idle };
+  }).sort((a,b)=> b.value - a.value);
+}
+
+// The last day one of their units went out on an invoice, or null.
+function consignmentLastSale(supplierId){
+  return consignmentSales(supplierId).reduce((m,s)=> (!m || s.date > m) ? s.date : m, null);
+}
+
+/* What a settlement bill still owed ON A DAY, from its payment history.
+   purchaseInvoiceBalanceDue reads today's balance, which is right for
+   today and wrong for every week before it -- a bill paid yesterday was
+   owed in full last month. */
+function consignmentBillDueAsOf(pi, asOf){
+  const total = purchaseInvoiceTotal(pi);
+  const pays = Array.isArray(pi.payments) ? pi.payments : null;
+  const paid = pays && pays.length
+    ? pays.filter(p=> String(p.date||'') <= asOf).reduce((s,p)=> s + (Number(p.amount)||0), 0)
+    : (String(pi.date||'') <= asOf ? Number(pi.amountPaid)||0 : 0);
+  return Math.max(0, total - paid);
+}
+// The same "what is due to consignors" the screen headlines, as at a day.
+function consignmentDueAsOf(asOf){
+  const accrued = new Map();
+  consignmentAccrued(null, asOf).forEach(a=> accrued.set(a.supplierId, a.value));
+  const billed = new Map();
+  let billsDue = 0;
+  consignmentSettlements(null, asOf).forEach(pi=>{
+    billed.set(pi.supplierId, (billed.get(pi.supplierId)||0) + purchaseInvoiceTotal(pi));
+    billsDue += consignmentBillDueAsOf(pi, asOf);
+  });
+  let unbilled = 0;
+  accrued.forEach((v, id)=>{ unbilled += Math.max(0, v - (billed.get(id)||0)); });
+  return unbilled + billsDue;
+}
+function consignmentCashAsOf(asOf){
+  return (typeof ACCOUNTS !== 'undefined' ? ACCOUNTS : []).reduce((s,a)=> s + (Number(cashOnHandFor(a.key, asOf))||0), 0);
+}
+
+/* Twelve weeks of the headline against the cash, a reading a week, and
+   the payments to consignors that fall inside them. The last point is
+   today, so it agrees with the figure at the top of the screen. */
+function consignmentTrend(weeks){
+  const n = weeks || 12;
+  const today = todayISO();
+  const dayAt = (k)=>{ const d = new Date(today + 'T00:00:00'); d.setDate(d.getDate() - 7 * (n - k)); return d.toISOString().slice(0,10); };
+  const points = [];
+  for(let k = 0; k <= n; k++){
+    const day = k === n ? today : dayAt(k);
+    points.push({ day, owed: consignmentDueAsOf(day), cash: consignmentCashAsOf(day) });
+  }
+  const from = points[0].day;
+  const pays = [];
+  consignmentSettlements(null).forEach(pi=>{
+    (Array.isArray(pi.payments) ? pi.payments : []).forEach(p=>{
+      const d = String(p.date||'').slice(0,10);
+      if(d && d >= from && d <= today && (Number(p.amount)||0) > 0)
+        pays.push({ day: d, amount: Number(p.amount)||0, supplierId: pi.supplierId });
+    });
+  });
+  pays.sort((a,b)=> a.day < b.day ? -1 : 1);
+  let weeksOver = 0;
+  for(let i = points.length - 1; i >= 0 && points[i].owed > points[i].cash + 0.5 && points[i].owed > 0.5; i--) weeksOver++;
+  // How fast it has grown since the last payment to any consignor.
+  const last = pays.length ? pays[pays.length - 1] : null;
+  let perWeek = null;
+  if(last){
+    const span = consignmentDaysSince(last.day, today) / 7;
+    if(span >= 1) perWeek = (points[points.length - 1].owed - consignmentDueAsOf(last.day)) / span;
+  }
+  const any = points.some(p=> p.owed > 0.5);
+  return { points, pays, weeksOver: Math.max(0, weeksOver - 1), lastPaid: last ? last.day : null, perWeek, any };
 }
 
 /* What ONE shelf is worth, and how much of what stands on it is not the

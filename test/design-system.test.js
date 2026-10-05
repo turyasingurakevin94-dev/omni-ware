@@ -736,10 +736,21 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'sc-avatar', 'sc-title', 'sc-name', 'sc-stats', 'sc-stat', 'chase-row'],
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp'],
       renders: 'renderConsignment',
+      /* Then it became the intelligence screen the owner asked for: the
+         headline with the flow of their money under it, the cover gauge,
+         twelve weeks of owed-against-cash, and a rail of three pictures
+         of the shelf. The rail's .ow-sr rows went with it -- the
+         arithmetic they listed is the cover gauge's written-out sum now
+         -- and so did .ow-q-why: the row's state sentence sits beside
+         Settle instead. Everything else is still the layer's: the strip
+         (the phone's 2x2), the queue and its card, the goods table and
+         its total, the panels. .cn-* is this screen's own family, beside
+         the consignment rules rather than in the layer, because it
+         reaches into elements and paints its own stage colours. */
       rendersUses: ['ow-strip', 'ow-mt', 'ow-grid', 'ow-side', 'ow-pan', 'ow-pan-h', 'ow-pan-t',
-                    'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-why', 'ow-q-note', 'ow-q-a',
+                    'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-note', 'ow-q-a',
                     'ow-q-un', 'ow-cp', 'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-n', 'ow-tbl-a',
-                    'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-mini'],
+                    'ow-tbl-f', 'ow-mini', 'cn', 'cn-hero', 'cn-cov', 'cn-tr', 'cn-q'],
     },
     /* INVENTORY. A grid of cards, four columns wide -- so no two figures
        on the shelf ever lined up, and a column of money that does not
