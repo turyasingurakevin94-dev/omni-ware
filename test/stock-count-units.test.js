@@ -104,19 +104,26 @@ if (fns) {
 
 /* ---------- 5. the screen asks, converts, and says it back ----------- */
 {
+  /* The count dialog was drawn again (Correct the count: what the record
+     says, what you counted, the difference). The unit <select> became a
+     two-button switch beside the figure, which converts what is typed when
+     it is pressed, and the sentence that says the count back in both
+     units now leads the line under the ladder. Every assertion below
+     says what it always said, against the new elements. */
   const stage = code.slice(code.indexOf('function renderInvStage'), code.indexOf('function renderInvPurchaseStage'));
-  t.check(/id="inv_actual_unit"/.test(stage), 'the count box carries a unit selector');
-  t.check(/packCtx\.hasPack \? `<select id="inv_actual_unit"/.test(stage),
+  t.check(/data-countunit/.test(stage) && /invDlgSwitchHTML\(modes, mode, 'countunit'\)/.test(stage),
+    'the count box carries a unit switch');
+  t.check(/const modes = packCtx\.hasPack \?/.test(stage) && /\$\{modes \? `/.test(stage),
     'offered only where the product actually comes in packs');
-  t.check(/const typedAsBase = \(\)=> invPurchaseQtyValue\(actualInput\.value,/.test(stage),
+  t.check(/const typedAsBase = \(\)=> invPurchaseQtyValue\(actualInput\.value, mode, packCtx\.packQty\);/.test(stage),
     'and converts through the same function the purchase screen uses, so a carton means one thing');
   t.check(/const actual = typedAsBase\(\);/.test(stage),
     'the save reads the converted figure, not the raw box');
   t.check(!/const actual = Number\(actualInput\.value\)\|\|0;/.test(stage),
     'the unconverted read that set a 2,000-pair shelf to ten is gone');
-  t.check(/That is \$\{invQtyInBothUnits\(actual, packCtx\)\} on the shelf, against \$\{invQtyInBothUnits\(current, packCtx\)\} recorded\./.test(stage),
+  t.check(/That is \$\{esc\(invQtyInBothUnits\(actual, packCtx\)\)\} on the shelf, against \$\{esc\(invQtyInBothUnits\(current, packCtx\)\)\} recorded\./.test(stage),
     'and the screen says the count back in both units, against what is recorded, before anything is saved');
-  t.check(/updatePreview\(\);/.test(stage),
+  t.check(/^  refresh\(\);$/m.test(stage),
     'said on open too, not only after a keystroke');
 }
 

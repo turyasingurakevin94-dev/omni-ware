@@ -147,7 +147,10 @@ if (fns) {
 
 /* ---------- 6. wired into the count, and asked before anything moves - */
 {
-  const save = code.slice(code.indexOf("getElementById('inv_save_btn')"));
+  /* The handler is found by its listener now: the count dialog also
+     writes the button's label from a refresh function, which names the
+     same element earlier in the file. */
+  const save = code.slice(code.indexOf("getElementById('inv_save_btn').addEventListener('click'"));
   const body = save.slice(0, save.indexOf('\n  });'));
   t.check(/const billWarning = stockCountBillWarning\(invProductId, invVariantIdx, d\);/.test(body),
     'the count screen asks the question');
@@ -160,6 +163,17 @@ if (fns) {
      handler. Prose about the code is not the code. */
   t.check(body.indexOf('stockCountBillWarning(invProductId') < body.indexOf('applyStockDelta(invProductId'),
     'asked BEFORE the stock moves, not after — a warning that follows the act is a receipt');
+
+  /* The count SHEET counts many lines at once, so the question is asked
+     once for the sheet -- naming every line it applies to -- and before
+     any line is written, rather than once per line (which on forty lines
+     is a question nobody reads). */
+  const sheet = code.slice(code.indexOf("const save = (keepOpen)=>{"));
+  const sheetBody = sheet.slice(0, sheet.indexOf('document.getElementById(\'ct_keep\')'));
+  t.check(/stockCountBillWarning\(r\.z\.l\.p\.id, r\.z\.vidx, r\.c\.d\)/.test(sheetBody) && /!confirm\(/.test(sheetBody),
+    'the count sheet asks the same question, once for the sheet');
+  t.check(sheetBody.indexOf('!confirm(') < sheetBody.indexOf('applyStockDelta('),
+    'and asks it before the first line is written');
 }
 
 process.exit(t.done() ? 1 : 0);

@@ -148,44 +148,48 @@ if (fns) {
 
 /* ---------- 7. the shape of the screen ------------------------------- */
 {
-  t.check(/function renderStockLotDrift\(\)/.test(code), 'the Inventory screen reports the drift');
-  /* What matters is that renderInventory drives it every time, not what
-     sits between -- the uncosted-stock banner is rendered from the same
-     place and had to be allowed to. */
-  t.check(/renderStockLotDrift\(\);\s*\n\s*renderUncostedStock\(\);\s*\n\s*const wrap = document\.getElementById\('invTableWrap'\);/.test(code),
+  /* THE DRIFT BANNER IS RETIRED, and the assertions about it moved with
+     what it said. They read: the screen reports the drift, every render
+     drives it, three groups take every line adrift (empty shelf, record
+     over, record under) and each lists all of its lines, the banner opens
+     on "Is the shelf count right?" before the list, the FIFO explanation
+     is not repeated per row, and what matching does NOT touch is said
+     before the rows.
+
+     WHAT THEY MEANT: a cost record that no longer matches the shelf will
+     price the next sales wrong, so the shop has to be told, shown which
+     lines, asked the one question that decides the repair (is the count
+     right?), and reassured about what the repair leaves alone.
+
+     WHY THEY STOPPED BEING TRUE: the screen was drawn again from a canvas
+     in which a problem with a line is said on THAT line, in its open
+     panel, instead of as a banner above forty others. The groups are the
+     line's own state -- the shelf says empty, so count first, otherwise
+     match -- and "lists every line" is true because every line carries
+     its own warning when it is open. The bulk "Match all" button is not
+     on the screen any more; the function behind it still takes a list,
+     and a line is repaired one press at a time from its own panel.
+
+     WHAT THE NEW ASSERTIONS MEAN: the open line asks stockLotDrift about
+     itself on every render (so a repair elsewhere cannot leave a stale
+     warning), splits on the shelf being empty exactly as the groups did,
+     says what matching leaves alone before the button, and the confirm
+     and the mechanism stay where they were. */
+  const detail = (/function invDetailHTML[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/const drift = stockLotDrift\(\)\.find\(r=> r\.key === key\);/.test(detail),
+    'the open line asks about its own drift');
+  t.check(/rail\.innerHTML = data\.products\.length && dk \? invDetailHTML\(m\.zByKey\.get\(dk\)\) : '';/.test(code),
     'every time it renders, so a repair elsewhere cannot leave a stale warning');
-  const banner = (/function renderStockLotDrift[\s\S]*?\n\}/.exec(code) || [''])[0];
   const fix = (/function fixStockLotDrift[\s\S]*?\n\}/.exec(code) || [''])[0];
-  /* The rows are listed in groups now -- the shelf says empty, the
-     record carries more, the record carries less -- rather than as one
-     flat run. What this check held still holds and is what it pins:
-     every line adrift is listed, none cut to a first few. The three
-     groups between them take every row, and each lists ALL of its own. */
-  t.check(/rows\.filter\(r=> !\(r\.onShelf > 0\) && r\.inLots > 0\)/.test(banner)
-      && /rows\.filter\(r=> r\.onShelf > 0 && r\.inLots > r\.onShelf\)/.test(banner)
-      && /rows\.filter\(r=> r\.inLots < r\.onShelf\)/.test(banner),
-    'the groups between them take every line adrift — empty shelf, record over, record under');
-  t.check(/\$\{g\.rows\.map\(r=> rowHTML\(r, g\)\)\.join\(''\)\}/.test(banner) && !/\.slice\(/.test(banner),
-    'and each group lists every one of its lines rather than a first few — the buttons act on what is named');
-  /* Action before mechanism. The first version led with the FIFO queue
-     and repeated the same explanation under every row; the shop read it
-     and asked what it was supposed to do. What a reader must DECIDE now
-     comes before anything they merely have to KNOW, and the theory is
-     said once — in the confirm, where it is about to matter. */
-  t.check(/Is the shelf count right\?/.test(banner),
-    'the banner opens on the one question the reader has to answer');
-  t.check(banner.indexOf('Is the shelf count right?') < banner.indexOf('${groups.map(groupHTML)'),
-    'asked before the list, not after it');
-  t.check(!/first-in-first-out/.test(banner),
-    'and the FIFO explanation is not repeated under every row');
-  /* Said as ticks now rather than a sentence, and still said before a
-     single row: what matching leaves alone is the fear, so it is on
-     screen, not behind the confirm. */
-  t.check(/keeps every stock count/.test(banner) && /moves no money/.test(banner)
-      && /leaves your statements as they are/.test(banner) && /never touches consignment/.test(banner),
-    'while what it does NOT touch is said plainly, since that is the fear');
-  t.check(banner.indexOf('moves no money') < banner.indexOf('${groups.map(groupHTML)'),
-    'and said before the rows it is about');
+  t.check(/const emptyShelf = !\(drift\.onShelf > 0\);/.test(detail)
+      && /data-lotcount=/.test(detail) && /data-lotfix=/.test(detail),
+    'a shelf that says empty is counted before it is matched; any other is matched — the old groups, on the line itself');
+  t.check(/will price your next sales wrong/.test(detail) && /The shelf says empty, so count before you match/.test(detail),
+    'the line says what is wrong, and the one question that decides the repair, before the button');
+  t.check(/Matching changes no count and no money/.test(detail)
+      && detail.indexOf('Matching changes no count and no money') < detail.indexOf('data-lotfix'),
+    'while what matching does NOT touch is said before the press, since that is the fear');
+  t.check(!/first-in-first-out/.test(detail), 'and the FIFO explanation is not repeated on every line');
   t.check(/Array\.isArray\(key\) \? rows\.filter\(r=> key\.includes\(r\.key\)\)/.test(fix),
     'a group\'s "Match all" matches exactly the lines that group names, and no others');
   t.check(/what is still on the shelf is \nthe newest stock|the oldest entries are dropped/.test(fix),

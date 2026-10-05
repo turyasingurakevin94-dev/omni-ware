@@ -91,30 +91,26 @@ const src = read('index.html');
 
 /* ---------- 3. every place a movement is shown uses it ---------------- */
 {
+  /* The log was rebuilt as the Movements lens, so the pins moved to its
+     cells. What they were ever about is unchanged: no column may print a
+     raw 0.8500000000000001 while the one beside it is clean. The change
+     goes through invSigned(d, fmtStockQty), the shelf before and after
+     through fmtStockQty, and the old "totals in units" are gone with the
+     units -- the lens's tiles are money -- so nothing there can arrive raw. */
   const log = extractFunction(src, 'renderStockLog', 'index.html');
-  t.check(/\$\{e\.delta>0\?'\+':''\}\$\{fmtStockQty\(e\.delta\)\}/.test(log),
+  t.check(/invSigned\(d, v=> fmtStockQty\(v\)\)/.test(log),
     'the Change column formats the delta');
-  /* The cell moved from a <td class="price"> to the layer table's
-     figure cell when the log was rebuilt on .ow-tbl. What the
-     assertion was ever about is unchanged: the column beside Change
-     cannot be the one that prints a raw 0.8500000000000001. */
-  t.check(/data-l="Stock after">\$\{fmtStockQty\(e\.qtyAfter\)\}</.test(log),
-    'and Stock after formats too — the column beside it cannot be the honest one alone');
+  t.check(/fmtStockQty\(before\)/.test(log) && /fmtStockQty\(e\.qtyAfter\)/.test(log),
+    'and the shelf before and after format too — the column beside it cannot be the honest one alone');
   t.check(!/\$\{e\.delta\}/.test(log) && !/\$\{e\.qtyAfter\}/.test(log),
-    'no raw quantity is left anywhere on the screen — desktop table or phone card');
-  /* The three totals were formatted one call each while they were a run
-     of inline text beside the page name. They are the Movements lens's
-     strip now and all three go through ONE sign(), which is where
-     fmtStockQty is called -- so the claim is stronger than it was: not
-     "each of these three is formatted" but "there is one road, and it
-     formats". A fourth figure added to that strip cannot arrive raw. */
-  t.check(/const sign = \(n, s\)=> \(n \? s : ''\) \+ fmtStockQty\(n\);/.test(log)
-    && /sign\(t\.inQty/.test(log) && /sign\(t\.outQty/.test(log) && /sign\(t\.net/.test(log),
-    'the in / out / net figures are formatted as well, where the tails would otherwise add up');
+    'no raw quantity is left anywhere on the screen — desktop row or phone card');
+  const story = extractFunction(src, 'invMoveStory', 'index.html');
+  t.check(/fmtStockQty\(e\.qtyAfter\)/.test(story) && /fmtStockQty\(before\)/.test(story) && !/\$\{e\.delta\}/.test(story),
+    'and the words that describe a count ("Counted 41, the record said 44") are formatted as well');
 
-  const inv = extractFunction(src, 'invOpenHTML', 'index.html');
-  t.check(/fmtStockQty\(Math\.abs\(d\)\)/.test(inv),
-    'and "This line, lately" on the Inventory card, which shows the same movements');
+  const inv = extractFunction(src, 'invDetailHTML', 'index.html');
+  t.check(/fmtStockQty\(/.test(inv) && !/\$\{l\.qty\}/.test(inv) && !/[>\s]\$\{z\.need\}[<\s]/.test(inv),
+    'and the open line on the Inventory screen, which shows the same quantities');
 }
 
 /* ---------- 4. the pack a screen offers is the pack the ledger keeps -- */

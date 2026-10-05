@@ -1,5 +1,5 @@
 /*
- * Inventory's Lanes view: the shelf sorted into Buy now, Healthy and
+ * Inventory's three states: the shelf sorted into Buy now, Healthy and
  * Dead money.
  *
  * What these checks hold is the one thing the view could get wrong
@@ -88,16 +88,40 @@ t.check(unpriced.need === 18 && unpriced.needCost === null,
 eq(scope.invZoneRows([line('fine', { rule: { coverDays: 30 } })])[0].zone, 'buy',
   'a line that carries its own 30-day cover is Buy now at 20 days left');
 
-// The wiring the view depends on.
+// The wiring the screen depends on.
+/* THE LANES VIEW IS GONE, AND THESE FOUR ASSERTIONS CHANGED WITH IT.
+   They read "the whole shelf is zoned once per render, for the map",
+   "the lanes take only the lines the filters left", "List keeps its rail;
+   Lanes puts the open line in its place" and "a long lane names what it
+   does not show".
+
+   WHAT THEY MEANT: the screen had two views of the same shelf, a list and
+   three side-by-side lanes, and the zoning had to be done once and shared
+   or the two would disagree about which lane a line was in; a lane that
+   was capped had to say so or it looked like the whole lane.
+
+   WHY THEY STOPPED BEING TRUE: the screen was drawn again from a canvas
+   (.design/inventory-v3) as one table with a state segment above it. The
+   three lanes became three presses on that segment -- Buy now, Healthy,
+   Dead money -- so there is no second view to drift from the first and no
+   capped lane to explain. The zoning itself, which is what the checks
+   above hold, is unchanged and is still the only place that decides
+   which state a line is in.
+
+   WHAT THE NEW ASSERTIONS MEAN: the shelf is zoned once, in the model
+   that both the tiles and the table read; the segment is a filter over
+   the zones; and its counts are taken over what the search and category
+   left, so "Buy now 3" beside a search means three of THOSE. */
+const model = extractFunction(src, 'invModel', 'index.html');
+t.check(/const zr = invZoneRows\(lines\);/.test(model) && /zByKey/.test(model),
+  'the whole shelf is zoned once, in the one model the tiles and the table both read');
 const render = extractFunction(src, 'renderInventory', 'index.html');
-t.check(/const zrAll = invView === 'lanes' \? invZoneRows\(allLines\) : null;/.test(render),
-  'the whole shelf is zoned once per render, for the map');
-t.check(/invLanesHTML\(zrAll\.filter\(z=> listed\.has\(z\.key\)\)\)/.test(render),
-  'and the lanes take only the lines the filters left');
-t.check(/renderInvRail\(allLines\)/.test(render) && /renderInvDrawer\(zrAll\)/.test(render),
-  'List keeps its rail; Lanes puts the open line in its place');
-const lanes = extractFunction(src, 'invLanesHTML', 'index.html');
-t.check(/INV_LANE_MAX/.test(lanes) && /more &mdash; in the list/.test(lanes),
-  'a long lane names what it does not show, rather than dropping it');
+t.check((render.match(/invModel\(\)/g) || []).length === 1,
+  'and a render builds that model once rather than once per piece of the screen');
+t.check(/\(m\.zByKey\.get\(invKeyOf\(l\)\) \|\| \{\}\)\.zone === invZone/.test(render),
+  'a pressed state lists only the lines in it');
+t.check(/const matched = m\.lines\.filter\(l=> \(!hits \|\| hits\.has\(invKeyOf\(l\)\)\) && \(!categoryFilter \|\| l\.p\.category === categoryFilter\)\);/.test(render)
+     && /matched\.forEach\(l=>\{/.test(render),
+  'and the segment counts what the search and category left, not the whole shelf');
 
 process.exit(t.done() ? 1 : 0);

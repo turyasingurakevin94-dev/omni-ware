@@ -361,7 +361,14 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   t.check(/\.log-more-row\{/.test(src),
     'one style for the control, wherever it appears');
   const uses = (src.match(/class="log-more-row"/g) || []).length;
-  t.check(uses >= 2, `used by both the stock log and the shared helper (${uses} places)`);
+  /* WAS "used by both the stock log and the shared helper (>= 2)". The
+     stock log's own expand control was replaced when Movements was drawn
+     again: it pages by WEEK with a "Show the next week" button in the
+     table footer, a different control for a different cut of the list, so
+     it no longer wears this one. The assertion's point -- the shared
+     paging helper must not grow a private copy of the control -- is
+     unchanged, so what is pinned now is that the helper still wears it. */
+  t.check(uses >= 1, `worn by the shared paging helper (${uses} places)`);
 }
 
 process.exit(t.done() ? 1 : 0);

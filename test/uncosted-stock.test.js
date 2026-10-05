@@ -202,77 +202,59 @@ if (fns) {
   }
 }
 
-/* ---------- 7c. the banner reads as English at one unit ------------ */
-/* One unit on one shelf is the commonest way a shop first meets this
-   screen, and the plural verb made it read "1 unit across 1 product have
-   no cost on file" — the kind of sentence that costs a paragraph its
-   credibility. Found by rendering it, not by reading the code. */
+/* ---------- 7c. the warning reads as English at one unit ------------ */
+/* One unit on one shelf is the commonest way a shop first meets this, and
+   the plural verb made it read "1 unit across 1 product have no cost on
+   file" -- the kind of sentence that costs a paragraph its credibility.
+
+   THE BANNER IS GONE and this section moved with it. It rendered
+   renderUncostedStock into a banner above the list and was checked by
+   running it at one unit, many units and two products. The same fact is
+   now said on the line it is about, in its open panel, so there is no
+   "across N products" to get wrong -- the spread sentence went with the
+   banner -- and what is left to pin is the agreement between the count
+   and its verb, which is read off the source because the panel is DOM. */
 {
-  const capture = { innerHTML: '', querySelectorAll: () => [] };
-  const NAMES2 = ['uncostedStockRows', 'stockKey', 'productVariantLabel', 'variantLabel', 'renderUncostedStock'];
-  const store2 = { stock: {}, stockLots: {}, products: [{ id: 'P042', name: 'Ceiling Tile 600x600' }], stockLog: [] };
-  const r = compileScope(NAMES2.map((n) => extractFunction(src, n, 'index.html')), {
-    data: store2, todayISO: () => '2026-08-28', allocRowId: () => 1,
-    fmtUGX: (n) => `${Math.round(n)} UGX`,
-    esc: (x) => String(x == null ? '' : x),
-    rankedPriceRows: () => [], purchasePriceAtQty: () => 0,
-    document: { getElementById: () => capture },
-  }, NAMES2);
-  const text = (stock, lots) => {
-    store2.stock = stock; store2.stockLots = lots;
-    r.renderUncostedStock();
-    return capture.innerHTML.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-  };
-
-  const one = text({ P042: 1 }, { P042: [{ qty: 1, cost: null }] });
-  t.check(/1 unit has no cost on file\./.test(one), `one unit takes a singular verb (${one.slice(0, 60)})`);
-  t.check(!/across 1 product/.test(one), 'and "across 1 product" is not said at all — there is nothing to spread across');
-  t.check(/What did it cost you\?/.test(one), 'the question does not ask what ONE thing cost "each"');
-  t.check(/it is valued at nothing/.test(one) && /when it sells/.test(one), 'and the consequence agrees with it throughout');
-  t.check(/Put a cost on it/.test(one), 'down to the button');
-
-  const many = text({ P042: 50 }, { P042: [{ qty: 40, cost: null }, { qty: 10, cost: 31500 }] });
-  t.check(/40 units have no cost on file\./.test(many), 'many units still take the plural');
-  t.check(!/across 1 product/.test(many), 'and one product is still not counted out loud');
-  t.check(/they cost you, each\?/.test(many), 'where "each" now earns its place');
-
-  const two = text({ P042: 40, 'P051::0': 12 },
-    { P042: [{ qty: 40, cost: null }], 'P051::0': [{ qty: 12, cost: null }] });
-  t.check(/across 2 products/.test(two), 'and the spread is named once there genuinely is one');
+  const detail = (/function invDetailHTML[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/Math\.round\(unc\.qty\) === 1 \? 'unit has' : 'units have'/.test(detail),
+    'one unit takes a singular verb and many take the plural');
+  t.check(/Math\.round\(unc\.qty\) === 1 \? 'it is' : 'they are'/.test(detail) && /valued at nothing/.test(detail),
+    'and the consequence agrees with it throughout');
+  t.check(/Put a cost on \$\{Math\.round\(unc\.qty\) === 1 \? 'it' : 'them'\}/.test(detail), 'down to the button');
+  t.check(!/across \$\{/.test(detail), 'and "across N products" is not said at all — the warning belongs to one line');
 }
 
 /* ---------- 8. the two doors are actually wired to the screen ------- */
 {
-  t.check(/function renderUncostedStock\(\)/.test(code), 'the Inventory screen reports the uncosted units');
-  t.check(/id="invUncosted"/.test(src), 'into an element that exists');
-  t.check(/renderUncostedStock\(\);/.test(code.slice(code.indexOf('function renderInventory'))) ||
-    /renderStockLotDrift\(\);\s*\n\s*renderUncostedStock\(\);/.test(code),
-    'every time the screen renders, so pricing one cannot leave a stale banner');
-  t.check(/data-costfix=/.test(code) && /askUncostedStockPrice\(btn\.dataset\.costfix\)/.test(code),
-    'each row carries its own button, so one product is answered at a time');
+  const detail = (/function invDetailHTML[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/const unc = uncostedStockRows\(\)\.find\(r=> r\.key === key && r\.qty > 0\);\s*\r?\n\s*if\(unc\)\{/.test(detail),
+    'the open line reports its own uncosted units, and only when it has some');
+  t.check(/rail\.innerHTML = data\.products\.length && dk \? invDetailHTML\(/.test(code),
+    'every time the screen renders, so pricing one cannot leave a stale warning');
+  t.check(/data-costfix=/.test(detail) && /askUncostedStockPrice\(cost\.dataset\.costfix\)/.test(code),
+    'the line carries its own button, so one product is answered at a time');
+  t.check(/class="ow-iv-d-nocost"|ow-iv-d-\$\{key\}/.test(code) && /no cost on file/.test(code),
+    'and the shelf-health tile counts them as a state of their own, which is also a filter');
 
-  /* The banner has to say what it will NOT do. "Correcting stock" is
-     exactly what this is not, and a shop pressing it has to be sure. */
-  const banner = code.slice(code.indexOf('function renderUncostedStock'),
-    code.indexOf('function askUncostedStockPrice'));
-  t.check(/moves no stock and no\s*\n?\s*money/.test(banner) || /no stock and no/.test(banner),
-    'and says plainly that it moves neither stock nor money');
-  t.check(/valued at nothing/.test(banner) && /understated/.test(banner),
-    'naming what the state is currently costing, rather than only that it exists');
-
+  /* What the repair will NOT do is said in the question itself, where it
+     is about to be acted on: "Correcting stock" is exactly what this is
+     not, and a shop pressing it has to be sure. */
   const ask = code.slice(code.indexOf('function askUncostedStockPrice'));
-  t.check(/Consignment screen/.test(ask.slice(0, ask.indexOf('\n}'))),
-    'and the question names where a consignor’s goods are settled instead');
+  const askBody = ask.slice(0, ask.indexOf('\n}'));
+  t.check(/This changes no stock count and moves no money/.test(askBody) && /being valued at nothing/.test(askBody),
+    'the question says plainly that it moves neither stock nor money, and what it stops');
+  t.check(/Consignment screen/.test(askBody),
+    'and names where a consignor’s goods are settled instead');
 
   // The cost field on the count screen: present, and only when the count
   // goes UP, since only then are units being added that could carry one.
-  t.check(/id="inv_cost_wrap"/.test(src) && /id="inv_cost"/.test(src),
+  t.check(/id="inv_cost_wrap"/.test(code) && /id="inv_cost"/.test(code),
     'the stock count asks what the goods cost');
-  t.check(/costWrap\.style\.display = adjusted > 0 \? '' : 'none';/.test(code),
+  t.check(/getElementById\('inv_cost_wrap'\)\.style\.display = up \? '' : 'none';/.test(code),
     'only when the count goes up — asking on a count down is a question with no meaning behind it');
-  t.check(/const costPerUnit = d > 0 && costInput/.test(code),
+  t.check(/const costPerUnit = d > 0 \? costPerBase\(\) : null;/.test(code),
     'and it is only read then, so a figure left in the box cannot ride along on a count down');
-  t.check(/Leave blank if you do not know/.test(src) || /Blank is a real answer/.test(src),
+  t.check(/Leave blank if you do not know/.test(code) || /Blank is a real answer/.test(code),
     'blank is offered as a real answer, because sometimes nobody knows');
 }
 

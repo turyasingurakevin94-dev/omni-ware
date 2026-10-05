@@ -215,10 +215,13 @@ if (scope) {
      beside the level it is under. The action is named in words now
      rather than drawn as one of four unlabelled glyphs, which is the
      point of the reshape. */
-  const inv = extractFunction(src, 'invLineHTML', 'index.html')
-    + extractFunction(src, 'invOpenHTML', 'index.html')
-    + extractFunction(src, 'wireInventoryRows', 'index.html');
-  t.check(/data-invact="reorder"/.test(inv) && /openReorderEditor\(id, vidx\)/.test(inv),
+  /* The functions were renamed with the redraw: the row is built by
+     invLineParts (and drawn by invRowHTML), its acts live in the open
+     line's panel (invDetailHTML), and the press is handled by the
+     screen's one delegated listener. The two things checked are the same. */
+  const inv = extractFunction(src, 'invLineParts', 'index.html')
+    + extractFunction(src, 'invDetailHTML', 'index.html');
+  t.check(/data-invact="reorder"/.test(inv) && /if\(a === 'reorder'\) openReorderEditor\(id, vidx\);/.test(src),
     'opened from the shelf, where a level is decided');
   t.check(/\$\{short\} short/.test(inv) && /floor \$\{l\.rule\.minUnits\}/.test(inv),
     'and a line under its floor says how far under it is, beside the level it is under');

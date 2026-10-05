@@ -776,16 +776,33 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'pi-table-wrap', 'pi-cards', 'pi-card', 'pi-card-top', 'pi-card-title',
                 'pi-card-meta', 'pi-card-foot', 'sc-stats', 'sc-stat', 'an-scroll',
                 'an-rank', 'cmp-card-supplier'],
-      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp',
-             'ow-seg', 'ow-seg-b', 'ow-seg-n',
-             'ow-f', 'ow-f-l', 'ow-f-in', 'ow-grid', 'ow-stack', 'ow-side', 'ow-pan'],
-      renders: ['renderInventory', 'invLineHTML', 'invOpenHTML', 'invRowThumbHTML', 'renderInvFix',
-                'renderInvRail', 'renderInventoryFloors',
-                'renderStockLog', 'stockLogPutRightButtonHTML'],
-      rendersUses: ['ow-strip', 'ow-mt', 'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t',
-                    'ow-q-why', 'ow-q-a', 'ow-cp', 'ow-thumb', 'ow-sr', 'ow-pan', 'ow-mini', 'ow-empty',
-                    'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-c', 'ow-tbl-p', 'ow-tbl-s',
-                    'ow-tbl-n', 'ow-tbl-a', 'ow-fig', 'ow-sm'],
+      /* REDRAWN FROM A CANVAS, SO THE PIN MOVED WITH THE DRAWING.
+         The old pin said: this screen is made of the layer's shared
+         composites -- the field (.ow-f), the grid-and-rail (.ow-grid,
+         .ow-side), the strip, the queue rows and the .ow-tbl log. That
+         was true of the version it was written for and stopped being
+         true when the screen was drawn again from .design/inventory-v3:
+         four tiles that each say one thing, one row of tools, one table
+         with a dated "Runs out" on every line and the pressed line open
+         beside it, and a movements log grouped by day. Those shapes are
+         not the shared composites, so forcing them in would have meant
+         drawing the canvas worse to satisfy the pin.
+         What the new pin means is the same thing the old one meant: the
+         screen is made of the LAYER'S classes, never page-local CSS --
+         now the screen's own .ow-iv-* family, which lives after "THE OW
+         LAYER" and so is held to every ratchet in this file (ramp sizes,
+         token radii, one elevation, tabular mono figures) -- plus the
+         shared header, segment, panel, chip, thumbnail and empty-state
+         pieces it still wears. The retired list is unchanged: none of
+         the old families may come back. */
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-sp',
+             'ow-seg', 'ow-seg-b',
+             'ow-iv-kpi', 'ow-iv-tools', 'ow-iv-md', 'ow-iv-dt', 'ow-pan'],
+      renders: ['renderInventory', 'invTilesHTML', 'invRowHTML', 'invDetailHTML', 'invLadderHTML',
+                'invDockHTML', 'invRowThumbHTML',
+                'renderStockLog', 'invLogTilesHTML'],
+      rendersUses: ['ow-iv-kp', 'ow-iv-tb', 'ow-iv-tr', 'ow-iv-card', 'ow-iv-lad-c', 'ow-iv-lr',
+                    'ow-iv-lg', 'ow-iv-wk', 'ow-cp', 'ow-thumb', 'ow-empty', 'ow-sm'],
     },
     /* DEBTORS -- "Who owes you" until it was drawn as a console, and now
        named the word the shop already uses. Two stacked .panel blocks

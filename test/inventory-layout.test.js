@@ -207,72 +207,60 @@ const reset = () => { data.stock = {}; data.stockLots = {}; };
      this screen answers three questions per line. */
   t.check(!/class="inv-card"/.test(code) && !/class="inv-grid"/.test(code),
     'the private card grid is gone from the screen');
-  t.check(/class="ow-q-r" data-invopen=/.test(code) && /class="ow-q-card" data-invopen=/.test(code),
+  /* THE SCREEN WAS DRAWN AGAIN FROM A CANVAS, and every assertion below
+     this line that read the old queue, strip and bar was rewritten, not
+     deleted. Each says what its predecessor meant, in the new shapes.
+
+     "The desk row and the phone card are emitted from one call" meant
+     there is one function whose output is both, so the two can never say
+     different things. invRowHTML still returns both -- a table row and a
+     card -- and the render takes both from the same call. */
+  const rowFn = (/function invRowHTML\([\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/const tr = `/.test(rowFn) && /const card = `/.test(rowFn) && /return \{ tr, card \};/.test(rowFn),
     'and the desk row and the phone card are emitted from one call, so they cannot say different things');
-  t.check(/Value here/.test(code) && /fmtUGX\(Math\.round\(l\.value\)\)/.test(code),
-    'the line value survived the reshape — it is a column now rather than a third stat');
-  t.check(/\.iv-f\{[^}]*IBM Plex Mono/.test(src) && /\.iv-f\{[^}]*tabular-nums/.test(src),
+  const render = (/function renderInventory\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/invRowHTML\(m\.zByKey\.get\(invKeyOf\(l\)\), dk\)/.test(render)
+       && /rows\.map\(r=> r\.tr\)/.test(render) && /rows\.map\(r=> r\.card\)/.test(render),
+    'and the render reads both halves of that one call');
+  const parts = (/function invLineParts\([\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/Value<\/th>/.test(render) && /const valueTxt = l\.value != null \? esc\(invFig\(l\.value\)\) : '—';/.test(parts),
+    'the line value survived the reshape — it is a column, and a line that cannot be valued says so with a dash, never a nought');
+  t.check(/\.ow-iv-num\{[^}]*IBM Plex Mono/.test(src) && /\.ow-iv-num\{[^}]*tabular-nums/.test(src),
     'and the figures are mono and tabular, so a column of money lines up — which is the whole reason for the reshape');
-  t.check(/\.iv-f\.iv-c1\{grid-column:4;\}/.test(src) && /minmax\(0,1fr\) 108px 104px 152px/.test(src),
+  t.check(/\.ow-iv-tb\{[^}]*table-layout:fixed/.test(src)
+       && /\.ow-iv-w2\{width:100px;\}/.test(src) && /\.ow-iv-w5\{width:150px;\}/.test(src) && /\.ow-iv-w6\{width:28px;\}/.test(src),
     'the figure columns are fixed and only the name column flexes, so a name is cut before a figure ever is');
 
-  /* THE STRIP IS THE WHOLE SHELF NOW, and this is the second reversal.
-     It used to be checked as `strip.innerHTML = lines.length ?` with the
-     reasoning "counts follow the filters — a strip that ignored the
-     filters would contradict the rows underneath it."
+  /* THE TILES ARE THE WHOLE SHELF AND THE FOOTER IS WHAT IS LISTED. This
+     used to be checked as `listN.textContent = lines.length` beside a
+     `const all = inventoryLineStats(allLines)` strip, under the rule that
+     two figures on one screen only contradict each other if both claim
+     to be the same figure. That rule is unchanged: the tiles are built
+     from the model of the WHOLE shelf and never move with a filter, and
+     the footer under the table says "Showing a–b of N lines" for what is
+     listed. Each says which of the two it is. */
+  t.check(/const m = invModel\(\);/.test(render) && /strip\.innerHTML = invTilesHTML\(m\);/.test(render),
+    'the tiles are counted over the WHOLE shelf, unfiltered');
+  t.check(/Showing <b class="ow-iv-tf-b">\$\{from \+ 1\}&ndash;\$\{from \+ pageLines\.length\}<\/b> of <b class="ow-iv-tf-b">\$\{lines\.length\}<\/b>/.test(render),
+    'while what is LISTED is counted after the filters have run, and said so under the list it describes');
+  const model = (/function invModel\(\)\{[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/allProductVariantEntries\(\[\]\)\.map\(\(\{p, variantIdx\}\)=> inventoryLineFor\(p, variantIdx\)\)/.test(model),
+    'and the whole shelf is read through the same line builder the balance sheet uses');
+  const tiles = (/function invTilesHTML\([\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/yours, at cost/.test(tiles) && /Sold, 30 days/.test(tiles),
+    'and the money tiles say what they are the money OF');
 
-     THAT FEAR IS REAL and it is answered differently rather than
-     ignored. Two figures on one screen only contradict each other if
-     both claim to be the same figure. The strip now says what the shop
-     HOLDS and never moves when a filter does; the panel header over the
-     list says what is LISTED under it. Each is labelled as what it is.
-
-     The reason for the change is the one Pricing had already learned: a
-     position that shrinks because somebody left a filter on is a
-     position nobody can trust, and the shelf total is read against the
-     balance sheet, which does not know what was typed in a search box. */
-  const render = (/function renderInventory\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
-  t.check(/const s = inventoryLineStats\(lines\);/.test(render),
-    'what is LISTED is still counted after the filters have run');
-  t.check(/listN\.textContent = lines\.length/.test(render),
-    'and that total is shown on the list it describes, not above it');
-  t.check(/const all = inventoryLineStats\(allLines\);/.test(render)
-       && /allProductVariantEntries\(\[\]\)\.map\(\(\{p, variantIdx\}\)=> inventoryLineFor\(p, variantIdx\)\)/.test(render),
-    'while the strip is counted over the WHOLE shelf, unfiltered');
-  t.check(/at what you paid/.test(render) && /of \$\{all\.lines\} on file/.test(render),
-    'and both figures say which of the two they are');
-
-  /* THE TILES ARE A BAR NOW, and this is the third reversal on this
-     strip. It was checked as `else tiles.push(mt('Costed'` and
-     `else if(withFloor) tiles.push(mt('With a floor set'`, under the
-     rule "no tile ever reads 0 -- a count that would be zero is
-     replaced by the fact that makes it good news, never simply dropped,
-     which would leave the strip a different shape on a good day."
-
-     WHAT THAT MEANT: four bare numbers, and a nought among them reads
-     as a broken app. Swapping the nought for its good-news reading kept
-     four tiles on screen every day.
-
-     WHY IT STOPPED BEING TRUE: the complaint is no longer about noughts.
-     "3 below their floor" and "1 valued by nothing" were counts with
-     nothing to measure them by -- three of how many? -- said a second
-     time by the amber repair line under them and a third by the
-     sentence under the search. The owner asked for the shelf's state to
-     be SHOWN rather than listed. Every line on file is exactly one of
-     four states, so the shelf is one bar whose segments add up to it,
-     and a good day is not "a different shape": it is a bar that is all
-     one colour, which is the good news drawn.
-
-     WHAT THE NEW ASSERTIONS MEAN: a state with no lines is not drawn --
-     the old rule's intent, no nought on screen -- and every line is
-     counted in exactly one state, with a precedence rather than a
-     guess, so the segments can never add up to more than the shelf. */
-  t.check(/const segs = INV_HEALTH\.filter\(h=> counts\[h\.key\] > 0\);/.test(render),
-    'a state with no lines in it is not drawn, so the band never shows a nought');
-  t.check(/allLines\.forEach\(l=>\{ const k = invHealthOf\(l\); counts\[k\] = \(counts\[k\] \|\| 0\) \+ 1; \}\);/.test(render),
-    'and every line on the WHOLE shelf is counted into exactly one state, so the bar adds up to the shelf');
-  t.check(/No line has a restock floor yet/.test(render) && /\$\{withFloor \? '' :/.test(render),
-    'the warning the zero-floors tile carried survives — a shelf with no floors is told nothing can warn it');
+  /* THE HEALTH BAR BECAME FOUR COUNTS, each a filter. What the bar's
+     assertions meant: a state with no lines is not drawn (no nought on
+     screen), and every line is counted in exactly one state so the parts
+     can never add up to more than the shelf. Both still hold; the shape
+     they hold in is four cells instead of one bar. */
+  t.check(/n > 0 \? `<button type="button" class="ow-iv-hq-c/.test(tiles),
+    'a state with no lines in it is not drawn, so the tile never shows a nought');
+  t.check(/m\.lines\.forEach\(l=>\{ const k = invHealthOf\(l\); counts\[k\] = \(counts\[k\] \|\| 0\) \+ 1; \}\);/.test(tiles),
+    'and every line on the WHOLE shelf is counted into exactly one state, so the four counts add up to the shelf');
+  t.check(/No line has a restock floor yet/.test(tiles) && /\$\{withFloor \? '' :/.test(tiles),
+    'the warning the zero-floors tile carried survives — a shelf with no floors is told nothing but pace can warn it');
   {
     const h = compileScope([extractFunction(src, 'invHealthOf', 'index.html')], {}, ['invHealthOf']).invHealthOf;
     eq(h({ belowFloor: true, uncosted: true, qty: 2 }), 'floor', 'under the floor wins over a missing cost — running out is what costs a sale');
@@ -281,11 +269,12 @@ const reset = () => { data.stock = {}; data.stockLots = {}; };
     eq(h({ belowFloor: false, uncosted: false, qty: 0 }), 'empty', 'nothing on the shelf and no floor is empty');
     eq(h({ belowFloor: false, uncosted: false, qty: 5 }), 'ok', 'and everything else is healthy');
   }
-  /* The bar is the filter, and pressing a state must be able to list
-     empty lines -- so while one is pressed, "hide no stock" steps aside
+  /* The cell is the filter, and pressing a state must be able to list
+     empty lines -- so while one is pressed, the empty shelves stay in
      rather than emptying the very list that was asked for. */
-  t.check(/checked && !invHealth;/.test(render) && /if\(invHealth\) lines = lines\.filter\(l=> invHealthOf\(l\) === invHealth\);/.test(render),
-    'a pressed state is the filter, and hide-no-stock gives way to it');
+  t.check(/const emptyHeld = noState && !invShowEmpty \? lines\.filter\(l=> !\(l\.qty > 0\)\)\.length : 0;/.test(render)
+       && /if\(invHealth\) return invHealthOf\(l\) === invHealth;/.test(render),
+    'a pressed state is the filter, and hiding empty shelves gives way to it');
 
   // Every option offered is one the sort understands.
   const sorts = (/const INVENTORY_SORTS = \[([\s\S]*?)\];/.exec(code) || ['', ''])[1];
@@ -338,61 +327,73 @@ const reset = () => { data.stock = {}; data.stockLots = {}; };
   const render = (/function renderInventory\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
   t.check(/if\(invPage > pageCount\) invPage = pageCount;/.test(render),
     'the page is CLAMPED, because a filter can shrink the list under the page you are on');
-  t.check(/const pageLines = lines\.slice\(from, from \+ INVENTORY_PAGE\);/.test(render)
-       && /pageLines\.map\(invLineHTML\)/.test(render),
+  t.check(/const pageLines = lines\.slice\(from, from \+ invPageSize\);/.test(render)
+       && /pageLines\.map\(l=> invRowHTML\(/.test(render),
     'only the page is drawn');
-  t.check(/listN\.textContent = lines\.length[\s\S]{0,120}fmtUGX\(Math\.round\(s\.value\)\)/.test(render),
-    'while the header still counts the whole filtered list and its whole value — money that moved as you paged would be the worst kind of wrong');
+  /* This used to pin the header counting "the whole filtered list and its
+     whole value -- money that moved as you paged would be the worst kind
+     of wrong". The footer still counts the whole filtered list, and the
+     tiles above are built from the whole shelf and never from the page;
+     the list no longer carries a total of its own to move. */
+  t.check(/of <b class="ow-iv-tf-b">\$\{lines\.length\}<\/b>/.test(render) && !/pageLines\.reduce/.test(render),
+    'while the footer still counts the whole filtered list — and no money is summed over the page, which would move as you paged');
 
   /* Every control that changes WHAT is listed goes back to page one.
      Without it, narrowing 166 lines to 3 while on page 5 leaves an empty
      list that is not empty, which reads as the search having failed. */
   t.check(/function invRefilter\(\)\{ invPage = 1; renderInventory\(\); \}/.test(code),
     'there is one way back to the first page');
-  ['inv_table_search', 'inv_category_filter', 'inv_hide_zero'].forEach((id) => {
-    t.check(new RegExp(`${id}[\\s\\S]{0,80}?addEventListener\\('(?:input|change)', invRefilter\\)`).test(code),
-      `${id} takes it`);
-  });
+  t.check(/invTableSearchEl\.addEventListener\('input', invRefilter\)/.test(code), 'inv_table_search takes it');
+  t.check(/getElementById\('inv_category_filter'\)\.addEventListener\('change', invRefilter\)/.test(code), 'inv_category_filter takes it');
+  t.check(/data-invzone/.test(code) && /invRefilter\(\); return; \}/.test(code), 'and so does every press on the state segment');
   t.check(/sel\.addEventListener\('change', invRefilter\);/.test(code), 'and so does the sort');
 }
 
-/* ---------- 5b. the repair drawer ------------------------------------ */
+/* ---------- 5b. what is wrong with a line ----------------------------- */
 {
-  /* Two crimson banners, about 470px of them, stood over every figure on
-     this screen on an ordinary Tuesday. Crimson is the app's colour for
-     the genuinely bad and none of this is bad -- it is admin. They are
-     one amber line now, and when there is nothing in it there is no
-     line at all rather than a line reading zero. */
-  const fix = (/function renderInvFix\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
-  t.check(fix.length > 0, 'the repair line exists');
-  t.check(/if\(!kinds\)\{ line\.innerHTML = ''; body\.hidden = true;/.test(fix),
-    'and it is GONE when there is nothing in it, rather than showing zeros');
-  /* Retired from THIS SCREEN, not from the file: the cash book's broken
-     chain and the Manager's missing-notes warning are both genuinely
-     bad and still wear it properly. Only the two inventory repairs may
-     not emit it again. */
-  const repairs = code.slice(code.indexOf('function renderStockLotDrift'),
-                             code.indexOf('function renderInventory('));
-  t.check(!/cb-chain-break/.test(repairs),
-    'the crimson banners are gone from the two inventory repairs');
-  /* The ORDER of the drawer is a rule, not a ranking, and it is said out
-     loud: matching a cost record to the shelf can leave new units with
-     no cost behind it, so matching comes before pricing. The old screen
-     depended on the shop doing them in that order and never said so. */
-  t.check(/matching a cost record to the shelf can leave new units/.test(fix),
-    'the drawer says why its sections are in the order they are');
+  /* THE REPAIR DRAWER IS RETIRED, and these assertions moved with what it
+     held. It read: "the repair line exists", "and it is GONE when there is
+     nothing in it, rather than showing zeros", "the drawer says why its
+     sections are in the order they are", and three about the below-floor
+     queue's rate and ordering.
 
-  /* The third repair is new. Seven lines under their floor were a red
-     pill on seven cards scattered through 192; they are a queue now,
-     ranked by how soon each RUNS OUT at the rate it has actually sold --
-     not by how far under it is, because two short of a line that sells
-     twice a year is not a problem and four days of paint is. */
-  const floors = (/function invFloorRows\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
-  t.check(/restockRiskRows\(\)\.forEach\(r=> rate\.set\(r\.key, r\)\)/.test(floors),
+     WHAT THEY MEANT: the two shelf repairs (the cost record that no
+     longer matches the shelf, and stock nobody put a cost on) lived in
+     one amber drawer above the list, and a drawer with nothing in it must
+     not be drawn. The below-floor queue ranked lines by how soon each
+     RUNS OUT at the rate it has actually sold, never by how far under it
+     is, and never invented a day count for a line with no rate.
+
+     WHY THEY STOPPED BEING TRUE: a repair is about ONE line, so it now
+     stands inside that line's open panel, said only when that line has it,
+     and the queue is the "Buy now" tile and the "Runs out" date on every
+     row. A drawer above forty rows was the same fact said away from the
+     row it belonged to.
+
+     WHAT THE NEW ASSERTIONS MEAN: the warnings are drawn only for the
+     line that has them (so there is never a zero to show), they still
+     carry their one-press repair, the crimson banner is still gone from
+     this screen, and the ranking still reads the shop's own thirty days
+     and still refuses to guess. */
+  const detail = (/function invDetailHTML\([\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/const drift = stockLotDrift\(\)\.find\(r=> r\.key === key\);\s*\r?\n\s*if\(drift\)\{/.test(detail)
+       && /const unc = uncostedStockRows\(\)\.find\(r=> r\.key === key && r\.qty > 0\);\s*\r?\n\s*if\(unc\)\{/.test(detail),
+    'the repair warnings are drawn only for the line that has them, so there is never a zero to show');
+  t.check(/data-lotfix=/.test(detail) && /data-lotcount=/.test(detail) && /data-costfix=/.test(detail),
+    'and each carries its one-press repair, or sends you to count first when the shelf says empty');
+  t.check(!/cb-chain-break/.test(detail) && !/cb-chain-break/.test(render5b()),
+    'the crimson banners are gone from the inventory repairs');
+  function render5b(){ return (/function renderInventory\(\)[\s\S]*?\n\}/.exec(code) || [''])[0]; }
+  t.check(/Matching changes no count and no money/.test(detail) && /The shelf says empty, so count before you match/.test(detail),
+    'and the order is still said in words: an empty shelf is counted before its cost record is matched, because matching can leave new units with no cost behind them');
+
+  const zones = (/function invZoneRows\([\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/restockRiskRows\(\)/.test(zones) || /restockRiskRows\(/.test(zones),
     'the below-floor queue reads the shop’s own thirty days of sales for its rate');
-  t.check(/if\(a\.daysLeft == null\) return b\.daysLeft == null \? 0 : 1;/.test(floors),
+  const buyRows = (/function invBuyRows\([\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/if\(a\.daysLeft == null\) return b\.daysLeft == null \? 0 : 1;/.test(buyRows),
     'and a line with no rate sorts LAST rather than being given a guessed day count');
-  t.check(/nothing sold in 30 days/.test(code),
+  t.check(/no sales to pace it/.test(code) && /below floor/.test(code),
     'saying so in words where the day count would have been');
 }
 
@@ -455,30 +456,32 @@ const reset = () => { data.stock = {}; data.stockLots = {}; };
   t.check(/return collect\(\(hay\)=> tokens\.every\(tk=> matchesSubsequence\(hay, tk\)\)\);/.test(fn),
     'the loose pass is the fallback, and every word typed must still match');
 
-  /* Hide no stock is on by default -- and that turns a search for
-     something out of stock into an empty screen. Saying "no matching
-     products" there is a lie: the product matched perfectly well. */
-  t.check(/id="inv_hide_zero" checked/.test(code),
-    'the shelf filter starts on, so the screen opens on what is actually there');
-  /* Checked as an ORDER, not as two lines that exist. Both survive being
-     swapped, and swapped they make hiddenByZero permanently zero -- the
-     count is taken from the already-filtered list, so the screen goes
-     back to claiming nothing matched. */
+  /* EMPTY SHELVES ARE HIDDEN UNTIL ASKED FOR, and the footer says how
+     many are held back. This used to be a checkbox that started on, with
+     the count taken BEFORE the filter ("what the search found is counted
+     before the shelf filter takes a view") so that a search for
+     something out of stock could say "N lines match -- they have nothing
+     on the shelf" instead of "no products match", which is a lie: the
+     product matched perfectly well.
+
+     The checkbox became a link in the footer, so the order is now carried
+     by one expression: the empties are COUNTED from the lines that
+     survived the search, state and category, and only then removed. The
+     empty state reports that count and offers them back. */
   const render = (/function renderInventory\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
-  const countedAt = render.indexOf('const foundBeforeHideZero = entries.length;');
-  const filteredAt = render.indexOf('if(hideZero) entries = entries.filter(');
-  t.check(countedAt > -1 && filteredAt > -1 && countedAt < filteredAt,
-    `what the search found is counted BEFORE the shelf filter takes a view (${countedAt} < ${filteredAt})`);
-  t.check(/const hiddenByZero = foundBeforeHideZero - entries\.length;/.test(render),
-    'and the difference is what the empty state reports');
-  t.check(/hiddenByZero > 0/.test(code) && /nothing on the shelf/.test(code),
+  const heldAt = render.indexOf('const emptyHeld = noState && !invShowEmpty');
+  const cutAt = render.indexOf('if(noState && !invShowEmpty) lines = lines.filter(l=> l.qty > 0);');
+  t.check(heldAt > -1 && cutAt > -1 && heldAt < cutAt,
+    `what the search found is counted BEFORE the empty shelves are taken out (${heldAt} < ${cutAt})`);
+  t.check(/let invShowEmpty = false;/.test(code),
+    'the empty shelves start hidden, so the screen opens on what is actually there');
+  t.check(/emptyHeld > 0/.test(render) && /nothing on the shelf/.test(render),
     'and an empty result names the filter that emptied it rather than denying the match');
-  /* Through invRefilter rather than renderInventory: lifting the shelf
-     filter changes WHAT is listed, and every such change returns to the
-     first page. Without that, lifting it while on page 5 of a 1-page
-     result shows an empty list that is not empty -- which reads as the
-     press having done nothing. */
-  t.check(/id="inv_show_zero"/.test(code) && /checked = false;\s*\r?\n\s*invRefilter\(\);/.test(code),
+  /* Through invRefilter rather than renderInventory: lifting the filter
+     changes WHAT is listed, and every such change returns to the first
+     page, or lifting it while on page 5 of a 1-page result shows an
+     empty list that is not empty. */
+  t.check(/data-invempty="show"/.test(render) && /invShowEmpty = empty\.dataset\.invempty === 'show'; invRefilter\(\); return;/.test(code),
     'with one press to lift it, and that press goes back to the first page');
 }
 

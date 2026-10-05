@@ -318,16 +318,37 @@ if (scope) {
   t.check(/ip-consign/.test(fn('invPaymentSummaryHTML')),
     'the receive-payment modal carries the note');
 
-  /* The shelf is a queue now rather than a grid of cards, so the row
-     that carries this marker is built by invLineHTML and the figure that
-     names the money is in invOpenHTML -- both split out of
-     renderInventory when it was rebuilt on the layer. The rule is
-     unchanged and so is the marker: it is the app's own consignTagHTML,
-     the same tag the order board, the preview and the payment modal
-     wear, rather than a private chip that could drift from them. */
-  const inv = fn('invLineHTML') + fn('invOpenHTML');
-  t.check(/consignTagHTML\(l\.consign, false\)/.test(inv), 'the inventory row carries the marker');
-  t.check(/Not ours/.test(inv), 'and names the money that left its value');
+  /* THE INVENTORY MARKER CHANGED SHAPE, ON PURPOSE, and this is argued
+     rather than quietly edited. It read: the row carries the app's own
+     consignTagHTML(l.consign, false), "the same tag the order board, the
+     preview and the payment modal wear, rather than a private chip that
+     could drift from them", and the open line names "Not ours".
+
+     WHAT THAT MEANT: whose goods these are must be visible on the shelf,
+     in the same mark every other screen uses, and the money that left the
+     shelf's value must be named rather than dropped.
+
+     WHY THE SHAPE STOPPED BEING TRUE: the shelf was drawn again from a
+     canvas, drawn after the owner objected that the first version "does
+     not consider items held on consignment". Its answer is a chip that
+     says WHO ("held for Haidery") in the layer's slate, a state of the
+     shelf in the segment (Held), a line in the shelf-value tile for the
+     money held for others, and in the open line an ownership split
+     (yours / held) with the owed figure. That is the same intent said
+     louder, and on this screen the amber consign-tag would have competed
+     with the amber that already means "short" and "no cost".
+
+     WHAT THE NEW ASSERTIONS MEAN: the row still carries a marker that
+     names the consignor, it is the layer's own .ow-cp chip (not a
+     page-local one), and the money that is not the shop's is named
+     rather than dropped, both on the row and in the open line. */
+  const inv = fn('invLineParts') + fn('invDetailHTML');
+  t.check(/class="ow-cp ow-iv-held"[^>]*>held for \$\{esc\(held\.many \? 'others' : held\.first\)\}/.test(inv),
+    'the inventory row carries the marker, and it names the consignor');
+  t.check(/Held, not counted/.test(inv) && /held for others|held for \$\{esc\(held\.many \? 'others' : held\.all\)\}/.test(inv),
+    'and names the money that left its value, in the open line');
+  t.check(/Held for others/.test(fn('invTilesHTML')),
+    'and the shelf-value tile says how much of the shelf is held for others, so the total is never read as all the shop\'s');
 
   /* One template now: the quote's row is the layer's table row, and
      below 820px the same row becomes the phone card. The tag appears

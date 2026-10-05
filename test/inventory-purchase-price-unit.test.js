@@ -173,64 +173,71 @@ const { invPurchaseQtyValue, invPurchasePriceValue, invPurchasePriceNote } = sco
 }
 
 /* ---------- 6. the form is wired to the converter ---------------------- */
+/* THE RECEIVE DIALOG WAS DRAWN AGAIN, and the form lost its second unit
+   selector on purpose. It read: the price field has a unit selector of
+   its own, offers the pack, and "both selectors are live"; switching the
+   quantity unit carries the price unit with it but leaves it overridable
+   ("for the shop that buys a carton and thinks in boxes").
+
+   WHAT THAT PROTECTED: a carton price typed while the box says per piece
+   is the whole trap this file exists for -- the price and the quantity
+   must never be read in different units without the screen saying so.
+
+   WHY THE SHAPE CHANGED: the owner asked for one unit switch inside the
+   quantity field, because "unit switching shouldn't consume this much
+   space". With one switch the two units cannot disagree, which removes
+   the override and with it the only way to get the trap by choice. The
+   price field now names its unit in the label ("UGX / pallet") and states
+   the other reading under it ("= 32,400 a bag"), so the conversion is on
+   screen rather than hidden in a selector.
+
+   WHAT THE NEW ASSERTIONS MEAN: there is still exactly one place the unit
+   is decided, the price follows it by assignment (not by a second
+   control), Save converts through invPurchasePriceValue with that mode,
+   the auto-fill is restated in it, the conversion line exists and is
+   written as the price is typed, and switching re-renders so the figure
+   in the field is restated rather than reinterpreted. */
 {
   const stage = stripComments(extractFunction(src, 'renderInvPurchaseStage', 'index.html'));
 
-  t.check(/id="inv_purchase_price_unit"/.test(stage),
-    'the price field has a unit selector of its own');
-  t.check(/priceUnitOptionsHTML/.test(stage) && /per \$\{esc\(packUnit\)\}/.test(stage),
-    'offering the pack unit, not only the base one');
+  t.check(/invDlgSwitchHTML\(modes, invPurchaseQtyUnitMode, 'qtyunit'\)/.test(stage) && !/id="inv_purchase_price_unit"/.test(stage),
+    'the quantity field carries the one unit switch, and the price has no selector that could disagree with it');
+  t.check(/invUnitPl\(packUnit, 2\)/.test(stage) && /UGX \/ \$\{esc\(priceInPack \? packUnit : \(unit \|\| 'unit'\)\)\}/.test(stage),
+    'offering the pack unit, and the price field names the unit it is asking in');
   t.check(!/Price purchased at \(UGX per/.test(stage),
     'and the label no longer hardcodes the base unit it can no longer promise');
 
-  // The save path is the one that matters: a selector nothing reads is
-  // worse than no selector, because it looks like it was honoured.
-  t.check(/invPurchasePriceValue\(priceInput\.value,\s*priceUnitSel\.value,\s*packQty\)/.test(stage),
+  // The save path is the one that matters: a control nothing reads is
+  // worse than none, because it looks like it was honoured.
+  t.check(/invPurchasePriceValue\(priceInput\.value,\s*invPurchasePriceUnitMode,\s*packQty\)/.test(stage),
     'and Save converts through invPurchasePriceValue with the chosen unit');
   t.check(!/const price = priceRaw===''\s*\?\s*null\s*:\s*Number\(priceRaw\)/.test(stage),
     'rather than taking the raw number as though it were always per unit');
 
-  // Auto-fill has to speak the unit the field is asking in, or the trap
-  // simply reverses: the per-unit figure sitting under a "per Ctn" label.
-  // Through rowPerUnit first, because the row itself may be priced by
-  // the shelf's pack (see stock-ledger-one-unit.test.js).
+  // Auto-fill speaks the unit the field is asking in, or the trap simply
+  // reverses: the per-unit figure sitting under a "per Ctn" label.
   t.check(/rowPerUnit\(selectedRow, selectedRow\.purchasePrice\) \* \(priceInPack \? packQty : 1\)/.test(stage),
     'the auto-filled price is restated in whichever unit the field is asking for');
-  // And "which unit the field is asking in" is the PRICE mode, not the
-  // quantity mode. The two agree by default, which is exactly why reading
-  // the wrong one would look correct until somebody overrides the price
-  // unit on its own -- and then silently multiply the figure by the pack.
   t.check(/const priceInPack = invPurchasePriceUnitMode==='pack' && packQty>0;/.test(stage),
-    'and it reads the price unit to decide that, not the quantity unit that merely seeds it');
+    'and it reads the price unit to decide that');
+  // One decision point: the price mode is assigned from the quantity mode
+  // every time the stage draws, so the two can never drift apart.
+  t.check(/invPurchasePriceUnitMode = invPurchaseQtyUnitMode;/.test(stage),
+    'switching the quantity unit carries the price unit with it, by assignment, so the two cannot differ');
 
-  // The conversion line needs an element to live in, wired to the id the
-  // input handler writes to. A style with nothing to style styles nothing.
-  t.check(/id="inv_purchase_price_note"/.test(stage) && /class="q-price-per-unit"/.test(stage),
+  // The conversion line needs an element to live in, wired to what writes it.
+  t.check(/id="inv_purchase_price_note"/.test(stage) && /q-price-per-unit/.test(stage),
     'the conversion line is rendered, in the element its handler updates');
-  t.check(/getElementById\('inv_purchase_price_note'\)\.innerHTML =\s*invPurchasePriceNote\(priceInput\.value, unit, packQty, invPurchasePriceUnitMode\)/.test(stage),
-    'and it recomputes from what is in the field, in the unit the price selector is on');
-  // The line above only proves the updater EXISTS. Nothing was listening
-  // to the price input and every check still passed, because the body of
-  // refreshPriceNote matched whether or not anything ever called it -- so
-  // the conversion would freeze at whatever the stage opened with while a
-  // different number was typed over it.
-  t.check(/priceInput\.addEventListener\('input', refreshPriceNote\);/.test(stage),
+  t.check(/getElementById\('inv_purchase_price_note'\)\.innerHTML = priceInPack/.test(stage) && /a \$\{|invA\(unit\)/.test(stage),
+    'and it recomputes from what is in the field, in the unit the switch is on');
+  t.check(/priceInput\.addEventListener\('input', refresh\);/.test(stage) && /qtyInput\.addEventListener\('input', refresh\);/.test(stage),
     'and something is actually listening, so it follows what is being typed');
 
-  // Changing what you count in changes what you are quoted in.
-  t.check(/invPurchasePriceUnitMode = qtyUnitSel\.value;/.test(stage),
-    'switching the quantity unit carries the price unit with it');
-  t.check(/qtyUnitSel\.addEventListener\('change'/.test(stage) && /priceUnitSel\.addEventListener\('change'/.test(stage),
-    'and both selectors are live');
-
-  // Changing the price unit has to RESTATE the figure in the field, not
-  // merely record the new mode. Left un-restated, 44,000 typed as a box
-  // price stays on screen under a "per Ctn" label and is then divided
-  // again on Save -- 8,800 a box, wrong in the opposite direction and by
-  // the same mechanism.
-  const priceUnitHandler = /priceUnitSel\.addEventListener\('change',[\s\S]*?\}\);/.exec(stage);
-  t.check(!!priceUnitHandler && /renderInvPurchaseStage\(/.test(priceUnitHandler[0]),
-    'and changing the price unit re-renders, so the number in the field is restated rather than reinterpreted');
+  // Switching converts the figure in the box and re-renders, so the number
+  // is restated rather than reinterpreted: 40 bags becomes 1 pallet, not 40 pallets.
+  const switchHandler = /querySelectorAll\('\[data-qtyunit\]'\)[\s\S]*?\}\)\);/.exec(stage);
+  t.check(!!switchHandler && /to === 'pack' \? v \/ packQty : v \* packQty/.test(switchHandler[0]) && /renderInvPurchaseStage\(/.test(switchHandler[0]),
+    'and switching converts what is in the quantity box and re-renders, so the number is restated rather than reinterpreted');
 
   // The log note was the only record of the mistake and could not name it.
   t.check(/@ \$\{fmtUGX\(price\)\} per \$\{unit\|\|'unit'\}/.test(stage),
@@ -245,15 +252,20 @@ const { invPurchaseQtyValue, invPurchasePriceValue, invPurchasePriceNote } = sco
   const resets = (code.match(/invPurchasePriceUnitMode = 'unit';/g) || []).length;
   t.check(resets >= 2,
     `the price unit is reset alongside the quantity unit when the stage is left or a new item picked (found ${resets})`);
-  // Every reset of the quantity mode must reset this one too, or a pack
-  // price sticks to the next item -- which may have no pack at all.
+  /* WAS "both modes are cleared in the same places (equal counts)". The
+     stage's own fallback now resets only the quantity mode and then
+     DERIVES the price mode from it (section 6), so the counts differ by
+     exactly that one place; the property -- a pack price cannot stick to
+     the next item -- is carried by the assignment instead of by a second
+     reset. The places that reset the stage from outside still reset both. */
   const qtyResets = (code.match(/invPurchaseQtyUnitMode = 'unit';/g) || []).length;
-  t.check(resets === qtyResets,
-    `both modes are cleared in the same places (${resets} price vs ${qtyResets} quantity)`);
+  t.check(qtyResets - resets === 1,
+    `every outside reset clears both modes; the one extra quantity reset is the stage's own fallback (${resets} price vs ${qtyResets} quantity)`);
 
   const stage = stripComments(extractFunction(src, 'renderInvPurchaseStage', 'index.html'));
-  t.check(/if\(invPurchasePriceUnitMode==='pack' && !hasPack\) invPurchasePriceUnitMode = 'unit';/.test(stage),
-    'and a pack mode left over from an item that had packs falls back on one that does not');
+  t.check(/if\(invPurchaseQtyUnitMode === 'pack' && !hasPack\) invPurchaseQtyUnitMode = 'unit';/.test(stage)
+       && stage.indexOf("invPurchaseQtyUnitMode = 'unit';") < stage.indexOf('invPurchasePriceUnitMode = invPurchaseQtyUnitMode;'),
+    'and a pack mode left over from an item that had packs falls back on one that does not, before the price follows it');
 }
 
 /* ---------- 8. the note cannot displace the fields ------------------- */
@@ -262,15 +274,15 @@ const { invPurchaseQtyValue, invPurchasePriceValue, invPurchasePriceNote } = sco
   t.check(/\.q-price-per-unit\{/.test(css), 'the conversion line has a style of its own');
   t.check(/\.q-price-per-unit:empty\{display:none;\}/.test(css),
     'and takes no space when there is nothing to convert');
-  // .q-qty-row aligns its fields at flex-end, which lines two label+input
-  // columns up by their inputs. A column carrying an extra line below is
-  // taller, so flex-end would push the OTHER input down to meet it -- and
-  // the line comes and goes with the unit, so the quantity box would jump.
-  t.check(/\.q-qty-row-noted\{align-items:flex-start;\}/.test(css),
-    'the row carrying it aligns at the top so the quantity field does not move when it appears');
+  /* The row used to need align-items:flex-start so a note under one field
+     did not push the other input down. The two fields are a two-column
+     grid now (.ow-dg-two), which aligns the tops by construction, and each
+     note is its own line under its own input. */
+  t.check(/\.ow-dg-two\{display:grid;grid-template-columns:1fr 1fr;/.test(css),
+    'the two fields sit in a grid that aligns their tops, so the quantity box does not move when the note appears');
   const stage = stripComments(extractFunction(src, 'renderInvPurchaseStage', 'index.html'));
-  t.check(/class="q-qty-row q-qty-row-noted"/.test(stage),
-    'and the purchase row asks for that alignment');
+  t.check(/class="ow-dg-two"/.test(stage) && /class="ow-dg-fh q-price-per-unit" id="inv_purchase_price_note"/.test(stage),
+    'and the purchase row asks for it, with the note as a line under its own field');
 }
 
 process.exit(t.done() ? 1 : 0);
