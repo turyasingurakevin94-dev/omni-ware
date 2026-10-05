@@ -26477,6 +26477,7 @@
   .ow-iv-doc{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);font-weight:600;letter-spacing:-.01em;color:var(--ow-ink-900);border:1px solid var(--ow-rule);
     border-radius:var(--ow-r-sm);padding:0 5px;line-height:16px;background:var(--ow-paper);flex:none;}
   .ow-iv-lgfix{height:22px;padding:0 var(--ow-sp-8);font-size:var(--ow-t-11);flex:none;opacity:0;}
+  .ow-iv-lr.ow-count .ow-iv-lgfix{opacity:1;}
   .ow-iv-lr:hover .ow-iv-lgfix,.ow-iv-lgfix:focus-visible{opacity:1;}
   .ow-iv-lq{justify-self:end;width:max-content;display:inline-flex;align-items:center;gap:3px;height:24px;padding:0 var(--ow-sp-8);border-radius:var(--ow-r-sm);
     font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-size:var(--ow-t-13);font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
@@ -100347,15 +100348,16 @@ function invTilesHTML(m){
   const deadValue = dead.reduce((n, z)=> n + (z.l.value || 0), 0);
   const share = all.value > 0 ? Math.round(deadValue / all.value * 100) : 0;
   const arrow = (up)=> `<svg class="icon ow-iv-dl-i" viewBox="0 0 24 24" aria-hidden="true"><path d="${up ? 'M12 19V5M5 12l7-7 7 7' : 'M12 5v14M5 12l7 7 7-7'}"/></svg>`;
-  const chipTitle = `Bought in ${invFig(flow.inCost)}, sold off at cost ${invFig(flow.outCost)}. Counts and write-offs are not in this figure.`;
+  const pct = all.value - net > 0 ? Math.round(Math.abs(net) / (all.value - net) * 100) : null;
+  const chipTitle = `Bought in ${invFig(flow.inCost)}, sold off at cost ${invFig(flow.outCost)}. Counts and write-offs are not in this figure, so the month-ago value is a close estimate.`;
 
   // 1. what the shelf is worth
   const t1 = `<div class="ow-iv-kp">
     <p class="ow-iv-kp-l">Shelf value<span class="ow-iv-kp-a">yours, at cost</span></p>
     <div class="ow-iv-kp-v">${esc(invFig(all.value))}<small class="ow-iv-kp-u">UGX</small></div>
-    ${hasFlow ? `<span class="ow-iv-dl" title="${esc(chipTitle)}">${net === 0 ? '' : arrow(net > 0)}<b>${esc(invFig(Math.abs(net)))}</b> ${net === 0 ? 'steady' : 'net'} in 30 days</span>` : ''}
+    ${hasFlow ? `<span class="ow-iv-dl" title="${esc(chipTitle)}">${net === 0 ? '' : arrow(net > 0)}<b class="ow-iv-dl-b">${esc(invFig(Math.abs(net)))}</b> ${net === 0 ? 'steady in' : 'in'} 30 days${pct != null && net !== 0 ? ` <b class="ow-iv-dl-b">${net > 0 ? '+' : '\u2212'}${pct}%</b>` : ''}</span>` : ''}
     <div class="ow-iv-ks">
-      ${hasFlow ? `<div class="ow-iv-ks-c"><span class="ow-iv-ks-l">Sold, 30 days</span><span class="ow-iv-ks-v">${esc(invFig(flow.outCost))}</span><span class="ow-iv-ks-s">at cost</span></div>` : ''}
+      ${hasFlow ? `<div class="ow-iv-ks-c" title="${esc(chipTitle)}"><span class="ow-iv-ks-l">30 days ago</span><span class="ow-iv-ks-v">${esc(invFig(Math.max(0, all.value - net)))}</span></div>` : ''}
       ${all.consigned > 0
         ? `<div class="ow-iv-ks-c"><span class="ow-iv-ks-l">Held for others</span><span class="ow-iv-ks-v ow-iv-held-v">${esc(invFig(all.consigned))}</span><span class="ow-iv-ks-s">${invPlural(all.consignedLines, 'line')}</span></div>`
         : (hasFlow ? `<div class="ow-iv-ks-c"><span class="ow-iv-ks-l">Bought in, 30 days</span><span class="ow-iv-ks-v">${esc(invFig(flow.inCost))}</span><span class="ow-iv-ks-s">at what you paid</span></div>` : '')}
@@ -101124,7 +101126,7 @@ function renderStockLog(){
         : s.cost != null ? `<span class="ow-iv-lgc">${invSigned(s.cost, v=> esc(invFig(v)))}</span>`
         : '<span class="ow-iv-lgc ow-none">—</span>';
       const before = (Number(e.qtyAfter) || 0) - d;
-      return `<div class="ow-iv-lr" data-logid="${esc(String(e.id))}">
+      return `<div class="ow-iv-lr${kind === 'count' && d !== 0 ? ' ow-count' : ''}" data-logid="${esc(String(e.id))}">
         <span class="ow-iv-lt">${esc(invTimeOf(e))}</span>
         <span class="ow-iv-kb ow-${kind}" title="${esc(kt)}">${invKindIcon(kind)}</span>
         <span class="ow-iv-lline">${p ? invRowThumbHTML(p, vidx, name) : `<span class="ow-thumb ow-none ow-iv-th" aria-hidden="true">${IV_PHOTO_MARK}</span>`}<span class="ow-iv-lnn"><span class="ow-iv-ln" title="${esc(name)}">${esc(name)}</span><span class="ow-iv-lc2"><span>${esc(code)}</span>${tags}</span></span></span>

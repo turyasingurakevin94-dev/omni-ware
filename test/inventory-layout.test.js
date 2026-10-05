@@ -247,8 +247,12 @@ const reset = () => { data.stock = {}; data.stockLots = {}; };
   t.check(/allProductVariantEntries\(\[\]\)\.map\(\(\{p, variantIdx\}\)=> inventoryLineFor\(p, variantIdx\)\)/.test(model),
     'and the whole shelf is read through the same line builder the balance sheet uses');
   const tiles = (/function invTilesHTML\([\s\S]*?\n\}/.exec(code) || [''])[0];
-  t.check(/yours, at cost/.test(tiles) && /Sold, 30 days/.test(tiles),
-    'and the money tiles say what they are the money OF');
+  /* "Sold, 30 days" became "30 days ago" when the shelf-value tile was made
+     to match the canvas: the value a month back, next to the change since.
+     It is derived (value now less the month's receipts and sales at cost),
+     and the cell's tooltip says counts and write-offs are not in it. */
+  t.check(/yours, at cost/.test(tiles) && /30 days ago/.test(tiles) && /close estimate/.test(tiles),
+    'and the money tiles say what they are the money OF, and that the month-ago figure is an estimate');
 
   /* THE HEALTH BAR BECAME FOUR COUNTS, each a filter. What the bar's
      assertions meant: a state with no lines is not drawn (no nought on
