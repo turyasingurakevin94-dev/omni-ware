@@ -23657,12 +23657,6 @@
      customer who never started is a different thing from one who has
      gone quiet, and only the first is a reason not to sell to them
      again. */
-  /* The share-of-book bar under each balance. Neutral ink: size is the
-     message, and colour is already spent on the age beside it. */
-  .ow-db .ow-q-v{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:var(--ow-sp-4);}
-  .ow-db-sh{display:block;width:100%;max-width:96px;height:3px;border-radius:var(--ow-r-sm);background:var(--ow-rule-soft);overflow:hidden;}
-  .ow-db-sh-f{display:block;height:100%;border-radius:var(--ow-r-sm);background:var(--ow-steel-800);}
-  .ow-q-card>.ow-db-sh{max-width:none;margin:var(--ow-sp-6) 0 var(--ow-sp-2);}
   .ow-db-lp{min-width:0;font-size:var(--ow-t-11);line-height:1.3;color:var(--ow-ink-600);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .ow-db-lp-d{display:block;font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);
@@ -84089,8 +84083,8 @@ function debCreditPanelHTML(inline){
        book that plainly holds money reads as the screen contradicting
        itself. */
     read = debAgingProfile().total > 0.5
-      ? `No invoice on credit to price yet.`
-      : `Nothing is waiting on credit.`;
+      ? `None of what you are owed sits on an invoice, so there is nothing here to price yet. This is what credit will cost when you give it.`
+      : `Nothing is owed to you, so nothing is waiting. This is what credit will cost when you give it.`;
   } else if(!(r.pct > 0)) {
     read = `<span class="ow-fig">${f(r.out)}</span> is out on credit and none of it is priced— the shop is lending at no charge. `
       + (r.over > 0 ? `<span class="ow-fig">${f(r.over)}</span> of it is already past your terms.` : `Put a rate in the box and every order you agree on credit carries it.`);
@@ -84195,7 +84189,7 @@ function renderDebtorsPosition(){
   const tile = `<div class="ow-mt">
     <p class="ow-mt-l">Owed to you</p>
     <span class="ow-mt-v">${f(p.total)} <span class="ow-u">UGX</span></span>
-    <p class="ow-mt-s">${p.customers} customer${p.customers===1?'':'s'} &middot; the whole book</p>
+    <p class="ow-mt-s">Across ${p.customers} customer${p.customers===1?'':'s'} &middot; the whole book, whatever the list below is filtered to</p>
     ${facts ? `<div class="ow-db-hls">${facts}</div>` : ''}
   </div>`;
 
@@ -85735,7 +85729,7 @@ function renderDebtorsList(){
       return `<span class="ow-db-st-d ow-band-${agingBandFor(a)}" style="width:${d}px;height:${d}px;left:clamp(${d/2}px,${at}%,calc(100% - ${d/2}px))" title="${esc(i.no)} · ${esc(fmtUGX(Math.round(i.due)))} · ${esc(agingDaysLabel(a))}"></span>`;
     }).join('');
     const none = r.debt > 0.5 && !dots
-      ? `<span class="ow-db-st-n">${invs.length ? 'undated' : 'no invoice'}</span>` : '';
+      ? `<span class="ow-db-st-n">${invs.length ? 'no date on its invoices' : 'not on an invoice'}</span>` : '';
     return `<span class="ow-db-st-t">${dots}${none}</span>`;
   };
 
@@ -85765,7 +85759,7 @@ function renderDebtorsList(){
      the first is a reason not to sell to them again. */
   const paidCell = (r)=> r.lastPaid
     ? `<span class="ow-db-lp"><span class="ow-db-lp-d">${esc(fmtShortDate(r.lastPaid))}</span>${esc(agingDaysLabel(daysSinceDate(r.lastPaid)))} ago</span>`
-    : '<span class="ow-db-lp ow-db-never"><span class="ow-db-lp-d">Never paid</span></span>';
+    : '<span class="ow-db-lp ow-db-never"><span class="ow-db-lp-d">Never paid</span>not once</span>';
 
   /* ---- one debtor, opened ----
      The invoices behind the balance, from the same reading the demand
@@ -85842,11 +85836,6 @@ function renderDebtorsList(){
   /* ONE CALL, TWO SKINS. The 44px console row and the phone card are
      emitted together from this one function, so neither can drift from
      the other -- the guarantee .ow-q was built to give. */
-  const maxDebt = rows.reduce((m, r)=> Math.max(m, r.debt), 1);
-  /* How big this balance is against the biggest one in view: a bar the
-     eye can run down the column, so "who owes most" is seen, not read. */
-  const shareBar = (r)=> r.debt > 0.5
-    ? `<span class="ow-db-sh" aria-hidden="true"><b class="ow-db-sh-f" style="width:${Math.max(3, Math.round(r.debt / maxDebt * 100))}%"></b></span>` : '';
   const rowHTML = (r)=>{
     const open = r.id === debOpenId;
     const meta = [r.location,
@@ -85861,7 +85850,7 @@ function renderDebtorsList(){
         <span class="ow-db-st">${stripHTML(r)}${ageChip(r, true)}</span>
         <span class="ow-db-pr">${progressCell(r)}</span>
         ${paidCell(r)}
-        <span class="ow-q-v"><span class="ow-q-f">${f(r.debt)}</span>${shareBar(r)}</span>
+        <span class="ow-q-v"><span class="ow-q-f">${f(r.debt)}</span></span>
       </button>
       <button type="button" class="ow-q-card" data-open="${esc(r.id)}" aria-expanded="${open}">
         <div class="ow-q-cm">${ageChip(r)}
@@ -85869,7 +85858,6 @@ function renderDebtorsList(){
         <p class="ow-q-ct">${esc(r.name)}</p>
         <span class="ow-q-cv">${f(r.debt)}<span class="ow-q-b">${
           r.ageDays >= 0 ? 'owing ' + esc(agingDaysLabel(r.ageDays)) : 'age not on record'}</span></span>
-        ${shareBar(r)}
         ${r.debt > 0.5 ? `<span class="ow-db-cst">${stripHTML(r)}</span>` : ''}
         <p class="ow-q-note ow-db-cmeta">${esc(meta)}</p>
       </button>
