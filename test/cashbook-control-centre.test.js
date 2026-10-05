@@ -35,6 +35,16 @@ t.check(at('id="cbTxnTableWrap"') < at('id="cbSummaryWrap"'), 'then closing the 
 t.check(at('id="cbSummaryWrap"') < at('id="cbLists"'), 'then what needs you and what is coming');
 t.check(at('id="cbLists"') < at('id="cbInAnalytics"'), 'and the rings last — analytics never above the money itself');
 
+/* The calendar opens OUT of the command card's lower strip, so nothing
+   on that strip or the card may clip what overflows it. A clip-path there
+   once hid the open calendar entirely -- it drew, and every tap on it
+   landed on the page beneath. */
+{
+  const rule = (sel) => ((new RegExp('\\.' + sel + '\\{([^}]*)\\}').exec(src)) || ['', ''])[1];
+  t.check(!/clip-path|overflow:\s*(hidden|clip)/.test(rule('cbv-cmd-bot')) && !/clip-path|overflow:\s*(hidden|clip)/.test(rule('cbv-cmd')),
+    'the command card does not clip, so the calendar it opens can be seen and tapped');
+}
+
 /* ---------- 2. one red action ------------------------------------------ */
 const accents = (section.replace(/<!--[\s\S]*?-->/g, '').match(/btn-accent/g) || []).length;
 t.check(accents === 1, `exactly one accent button on the page (got ${accents})`);
