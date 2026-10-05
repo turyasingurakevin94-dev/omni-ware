@@ -38,7 +38,7 @@ const src = read('index.html');
 const NAMES = ['mediaFmtBytes', 'mediaUsageIndex', 'mediaUsage', 'mediaUserLabel',
   'findMediaBySha', 'mediaStripStats', 'mediaBackfillPlan', 'mediaFolderRemovalPlan',
   'mediaVisibleRows', 'mediaCardLabel', 'mediaWeeklyAdds', 'mediaDupBytes',
-  'mediaStorageSplit', 'mediaBadName'];
+  'mediaBadName'];
 const env = {
   data: { products: [], presetCategories: [], media: [], mediaFolders: [] },
   mlState: { folder: 'all', filter: 'all', search: '' },
@@ -289,25 +289,9 @@ const eqJ = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(w
   ]), 500, 'the cheapest copy of each group is kept, the rest is recoverable; unhashed photos never count');
 }
 
-/* ---------- 6f. the storage donut adds up -------------------------
-   Its status slices are disjoint: of each set of identical copies the
-   cheapest counts as the photo and the rest are "extra copies", used or
-   not. So the three slices always sum to the library's known bytes. */
-{
-  const rows = [
-    { id: 1, url: 'ua', bytes: 300, sha256: 'a' },   // used, the dearer copy
-    { id: 2, url: 'ub', bytes: 100, sha256: 'a' },   // unused, the cheaper copy -- kept
-    { id: 3, url: 'uc', bytes: 50, sha256: null },   // used
-    { id: 4, url: 'ud', bytes: 70, sha256: null },   // unused
-    { id: 5, url: 'ue', bytes: null, sha256: null }, // unsized, unused
-  ];
-  const usage = new Map([['ua', [{ kind: 'product', name: 'X' }]], ['uc', [{ kind: 'product', name: 'Y' }]]]);
-  const sp = scope.mediaStorageSplit(rows, usage);
-  eqJ(sp.extra, { n: 1, bytes: 300 }, 'the dearer of two identical copies is the extra one, whether or not it is used');
-  eqJ(sp.use, { n: 1, bytes: 50 }, 'in use counts only what is not an extra copy');
-  eqJ(sp.unused, { n: 3, bytes: 170 }, 'used nowhere includes the kept copy and an unsized photo, at its known size');
-  eq(sp.use.bytes + sp.unused.bytes + sp.extra.bytes, 520, 'and the slices add up to the bytes the library knows');
-}
+/* (6f, the storage donut's slices, went with the donut: the owner had
+   the band of storage, recent and housekeeping panels taken off the
+   Media screen, and the helper had no other caller.) */
 
 /* ---------- 6g. a name that says nothing --------------------------- */
 {
