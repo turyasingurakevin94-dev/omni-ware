@@ -11551,6 +11551,44 @@
      not a squeezed table any more: .ow-q emits a row AND a card from one
      call, so the two designs cannot say different things. */
 
+
+  /* VISUAL LAYER. The strip says the figures; this shows them. One meter
+     puts what is owed (to settle, billed) against the cash in the drawer
+     on a single scale, and each consignor row carries a hairline whose
+     length is its share of the largest debt, so the ranking reads
+     without reading a number. Ink and the Money category hue only; the
+     one amber is the shortfall, and only when there is one. */
+  .cons-meter{display:flex;flex-direction:column;gap:var(--ow-sp-10);
+    padding:var(--ow-sp-12) var(--ow-sp-16) var(--ow-sp-16);}
+  .cons-mrow{display:grid;grid-template-columns:96px minmax(0,1fr);align-items:center;gap:var(--ow-sp-12);}
+  .cons-mk{font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
+  .cons-track{display:flex;height:20px;border-radius:var(--ow-r-sm);overflow:hidden;
+    background:var(--ow-rule-soft);}
+  .cons-seg{display:block;height:100%;min-width:0;}
+  .cons-seg.settle{background:var(--ow-ink-900);}
+  .cons-seg.billed{background:var(--ow-sky);}
+  .cons-seg.cash{background:var(--ow-ink-600);}
+  .cons-seg.short{background:repeating-linear-gradient(135deg,var(--ow-amber-soft) 0 5px,var(--ow-paper) 5px 10px);
+    border:1px solid var(--ow-amber);box-sizing:border-box;}
+  .cons-key{display:flex;flex-wrap:wrap;gap:var(--ow-sp-6) var(--ow-sp-16);
+    padding-left:108px;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .cons-key span{display:inline-flex;align-items:center;gap:var(--ow-sp-6);white-space:nowrap;}
+  .cons-key i{width:10px;height:10px;display:inline-block;}
+  .cons-key b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .cons-key .short b{color:var(--ow-amber-ink);}
+  @media (max-width:820px){
+    .cons-mrow{grid-template-columns:1fr;gap:var(--ow-sp-6);}
+    .cons-key{padding-left:0;}
+  }
+  #consign_body .ow-q-r{position:relative;}
+  .cons-share{position:absolute;left:0;bottom:0;height:3px;
+    background:var(--ow-ink-900);opacity:.85;pointer-events:none;}
+  .cons-share.billed{background:var(--ow-sky);}
+  .cons-share-c{display:block;height:4px;margin-top:var(--ow-sp-8);
+    background:var(--ow-rule-soft);overflow:hidden;}
+  .cons-share-c i{display:block;height:100%;background:var(--ow-ink-900);}
+
   /* Their goods, inside an open row. Name takes the slack; the three
      figure columns are fixed so they line up down the list, and the
      button column takes what it needs. .ow-tbl.cons-tbl, not .cons-tbl:
@@ -84488,6 +84526,10 @@ function renderConsignment(){
       : 'nothing of theirs left on the shelf';
     const money = f(dueNow);
     const nil = st.nil ? ' cons-nil' : '';
+    const top = rows.reduce((m,x)=> Math.max(m, consignmentDueNow(x)), 0);
+    const pctOfTop = top > 0 ? Math.max(dueNow > 0.5 ? 2 : 0, dueNow / top * 100) : 0;
+    const bar = pctOfTop > 0 ? `<i class="cons-share${r.owed > 0.5 ? '' : ' billed'}" style="width:${pctOfTop.toFixed(1)}%" aria-hidden="true"></i>` : '';
+    const barC = pctOfTop > 0 ? `<span class="cons-share-c" aria-hidden="true"><i style="width:${pctOfTop.toFixed(1)}%"></i></span>` : '';
 
     /* Why this row says what it says, in one sentence, from the same
         figures the strip is built on. */
@@ -84515,12 +84557,12 @@ function renderConsignment(){
       <button type="button" class="ow-q-r ow-qtog">${OW_CARET}
         <span class="ow-q-t" title="${esc(r.name)}"><span class="ow-q-who">${esc(r.name)}</span><span class="ow-q-sep">·</span><span class="ow-q-rest">${esc(shelf)}</span></span>
         <span class="ow-q-m">${chip}</span>
-        <span class="ow-q-v${nil}"><b class="ow-q-f">${esc(money)}</b><span class="ow-q-b">${esc(st.basis)}</span></span>
+        <span class="ow-q-v${nil}"><b class="ow-q-f">${esc(money)}</b><span class="ow-q-b">${esc(st.basis)}</span></span>${bar}
       </button>
       <button type="button" class="ow-q-card ow-qtog">
         <span class="ow-q-cm">${chip}${OW_CARET_C}</span>
         <p class="ow-q-ct">${esc(r.name)}</p>
-        <span class="ow-q-cv${nil}">${esc(money)}<span class="ow-q-b">${esc(st.basis)}</span></span>
+        <span class="ow-q-cv${nil}">${esc(money)}<span class="ow-q-b">${esc(st.basis)}</span></span>${barC}
       </button>
       <div class="ow-q-x">
         <p class="ow-q-why">${esc(why)}</p>
@@ -84618,12 +84660,36 @@ function renderConsignment(){
     </div>
   </div>`;
 
+  /* THE METER. Owed against cash on one scale, so "are we short?" is a
+     length rather than a sentence. Owed is split into what is still to
+     settle and what is already billed; the shortfall is hatched amber. */
+  const toSettle = Math.max(0, dueTotal - billedUnpaid);
+  const scale = Math.max(dueTotal, cashHeld, 1);
+  const w = n=> (Math.max(0, n) / scale * 100).toFixed(2) + '%';
+  const covered = Math.min(cashHeld, dueTotal);
+  const gapAmt = Math.max(0, dueTotal - Math.max(cashHeld, 0));
+  const meter = dueTotal > 0.5 || cashHeld > 0.5 ? `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">Owed against cash</span>
+      <span class="ow-pan-n">${short > 0.5 ? esc(f(short)) + ' short' : 'covered'}</span></div>
+    <div class="cons-meter" role="img" aria-label="Owed to consignors ${esc(f(dueTotal))}, cash held ${esc(f(cashHeld))}">
+      <div class="cons-mrow"><span class="cons-mk">Owed</span>
+        <div class="cons-track"><i class="cons-seg settle" style="width:${w(toSettle)}"></i><i class="cons-seg billed" style="width:${w(billedUnpaid)}"></i></div></div>
+      <div class="cons-mrow"><span class="cons-mk">Cash held</span>
+        <div class="cons-track"><i class="cons-seg cash" style="width:${w(covered)}"></i>${gapAmt > 0.5 ? `<i class="cons-seg short" style="width:${w(gapAmt)}"></i>` : ''}</div></div>
+      <div class="cons-key">
+        <span><i style="background:var(--ow-ink-900)"></i>To settle <b>${esc(f(toSettle))}</b></span>
+        <span><i style="background:var(--ow-sky)"></i>Billed, unpaid <b>${esc(f(billedUnpaid))}</b></span>
+        <span><i style="background:var(--ow-ink-600)"></i>Cash <b>${esc(f(Math.max(cashHeld,0)))}</b></span>
+        ${gapAmt > 0.5 ? `<span class="short"><i style="background:var(--ow-amber)"></i>Short <b>${esc(f(gapAmt))}</b></span>` : ''}
+      </div>
+    </div></div>` : '';
+
   /* Consignors owed nothing are still listed, and the foot says why
      rather than leaving the owner to wonder whether the list is short.
      Named rather than dropped. */
   const quiet = rows.length - withWork;
 
-  el.innerHTML = blocked + strip + `<div class="ow-grid">
+  el.innerHTML = blocked + strip + meter + `<div class="ow-grid">
     <div class="ow-pan">
       <div class="ow-pan-h">
         <span class="ow-pan-t">Consignors</span>
