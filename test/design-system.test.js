@@ -388,6 +388,19 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
      is a LARGE-TEXT colour and there is no room for a third grey: the
      next value that clears 4.5 on the ground is --ow-ink-600 itself.
      So small text uses ink-600, and this is where that is enforced. */
+  /* AN EXCEPTION THE OWNER ASKED FOR, kept narrow and named. The Inventory
+     canvas (.design/inventory-v3) sets these muted labels, table headers
+     and secondary figures in --ow-ink-400, and the instruction for that
+     screen was to match the canvas exactly, 100%. The first build
+     substituted ink-600 to keep to this rule and was sent back for being
+     visibly different, so the canvas's grey is used again on THESE
+     selectors only, and each one is listed here so the exception cannot
+     grow by accident. Nothing else in the layer may use ink-400 for text
+     under 14px; the contrast cost (3.12:1 on paper) is accepted for these
+     secondary labels by the owner's own instruction. */
+  const CANVAS_MUTED = ['.ow-iv-kp-a', '.ow-iv-kp-u', '.ow-iv-ks-s', '.ow-iv-h', '.ow-iv-lh', '.ow-ct-h',
+    '.ow-iv-wk-v.ow-now', '.ow-iv-b4', '.ow-iv-lgc.ow-none', '.ow-iv-num.ow-none', '.ow-iv-phc-u',
+    '.ow-iv-pg-g', '.ow-ct-m.ow-none'];
   const small = [];
   [...layer.matchAll(/([^{}]+)\{([^}]*)\}/g)].forEach((m) => {
     const sel = m[1].trim(), body = m[2];
@@ -395,7 +408,7 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
     const fs = /font-size:\s*(?:var\(--ow-t-(\d+)\)|([\d.]+)px)/.exec(body);
     if (!fs) return;                       // inherits; judged by its parent
     const px = Number(fs[1] || fs[2]);
-    if (px < 14) small.push(`${sel} (${px}px)`);
+    if (px < 14 && !CANVAS_MUTED.some((c) => sel === c || sel.endsWith(' ' + c))) small.push(`${sel} (${px}px)`);
   });
   t.check(small.length === 0,
     `no rule in the layer puts text under 14px in --ow-ink-400${small.length ? ' — ' + small.slice(0, 6).join(', ') : ''}`);
