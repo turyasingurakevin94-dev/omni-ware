@@ -90,8 +90,13 @@ eq(scope.invZoneRows([line('fine', { rule: { coverDays: 30 } })])[0].zone, 'buy'
 
 // The wiring the view depends on.
 const render = extractFunction(src, 'renderInventory', 'index.html');
-t.check(/const zrAll = invView === 'lanes' \? invZoneRows\(allLines\) : null;/.test(render),
-  'the whole shelf is zoned once per render, for the map');
+/* It read "invView === 'lanes' ? invZoneRows(allLines) : null" -- zoned
+   only for the Lanes view's map. The map is gone (the position band
+   replaced it in BOTH views) and the List now wears every line's state
+   as a column, so the zoning is needed in both: still once per render,
+   still over the whole shelf. */
+t.check(/const zrAll = invZoneRows\(allLines\);/.test(render),
+  'the whole shelf is zoned once per render, for the band, the rows and the lanes');
 t.check(/invLanesHTML\(zrAll\.filter\(z=> listed\.has\(z\.key\)\)\)/.test(render),
   'and the lanes take only the lines the filters left');
 t.check(/renderInvRail\(allLines\)/.test(render) && /renderInvDrawer\(zrAll\)/.test(render),

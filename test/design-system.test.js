@@ -784,9 +784,13 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp',
              'ow-seg', 'ow-seg-b', 'ow-seg-n',
              'ow-f', 'ow-f-l', 'ow-f-in', 'ow-grid', 'ow-stack', 'ow-side', 'ow-pan'],
+      /* The state chip, the state column and the position band are
+         drawn by builders of their own now, so they come with the
+         renderers -- the ratchet follows the markup. */
       renders: ['renderInventory', 'invLineHTML', 'invOpenHTML', 'invRowThumbHTML', 'renderInvFix',
                 'renderInvRail', 'renderInventoryFloors',
-                'renderStockLog', 'stockLogPutRightButtonHTML'],
+                'renderStockLog', 'stockLogPutRightButtonHTML',
+                'invBandHTML', 'invStateCellHTML', 'invStateChipHTML'],
       rendersUses: ['ow-strip', 'ow-mt', 'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t',
                     'ow-q-why', 'ow-q-a', 'ow-cp', 'ow-thumb', 'ow-sr', 'ow-pan', 'ow-mini', 'ow-empty',
                     'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-c', 'ow-tbl-p', 'ow-tbl-s',

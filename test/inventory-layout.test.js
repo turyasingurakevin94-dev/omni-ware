@@ -213,7 +213,11 @@ const reset = () => { data.stock = {}; data.stockLots = {}; };
     'the line value survived the reshape — it is a column now rather than a third stat');
   t.check(/\.iv-f\{[^}]*IBM Plex Mono/.test(src) && /\.iv-f\{[^}]*tabular-nums/.test(src),
     'and the figures are mono and tabular, so a column of money lines up — which is the whole reason for the reshape');
-  t.check(/\.iv-f\.iv-c1\{grid-column:4;\}/.test(src) && /minmax\(0,1fr\) 108px 104px 152px/.test(src),
+  /* Seven columns now, where it was six: the line's STATE took a column
+     of its own (see 5's band below), and the figure columns gave up a
+     few pixels each to pay for it. The rule this pins is unchanged --
+     every column but the name is fixed, so the name is cut first. */
+  t.check(/\.iv-f\.iv-c1\{grid-column:5;\}/.test(src) && /minmax\(0,1fr\) 128px 100px 100px 140px/.test(src),
     'the figure columns are fixed and only the name column flexes, so a name is cut before a figure ever is');
 
   /* THE STRIP IS THE WHOLE SHELF NOW, and this is the second reversal.
@@ -239,8 +243,10 @@ const reset = () => { data.stock = {}; data.stockLots = {}; };
   t.check(/const all = inventoryLineStats\(allLines\);/.test(render)
        && /allProductVariantEntries\(\[\]\)\.map\(\(\{p, variantIdx\}\)=> inventoryLineFor\(p, variantIdx\)\)/.test(render),
     'while the strip is counted over the WHOLE shelf, unfiltered');
-  t.check(/at what you paid/.test(render) && /of \$\{all\.lines\} on file/.test(render),
-    'and both figures say which of the two they are');
+  const band = (/function invBandHTML\([\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/invBandHTML\(zrAll, all, withFloor, uncostedUnits\)/.test(render)
+       && /at what you paid/.test(band) && /of \$\{all\.lines\} on file/.test(band),
+    'and both figures say which of the two they are — the band is handed the WHOLE shelf');
 
   /* THE TILES ARE A BAR NOW, and this is the third reversal on this
      strip. It was checked as `else tiles.push(mt('Costed'` and
@@ -267,24 +273,43 @@ const reset = () => { data.stock = {}; data.stockLots = {}; };
      the old rule's intent, no nought on screen -- and every line is
      counted in exactly one state, with a precedence rather than a
      guess, so the segments can never add up to more than the shelf. */
-  t.check(/const segs = INV_HEALTH\.filter\(h=> counts\[h\.key\] > 0\);/.test(render),
+  /* THE FOURTH REVERSAL ON THIS STRIP, and it is about vocabulary, not
+     shape. These checks read "const segs = INV_HEALTH.filter(...)" and
+     pinned invHealthOf's precedence: floor, then no cost, then empty,
+     then healthy.
+
+     WHAT THAT MEANT: every line in exactly one of four states, so the
+     bar adds up to the shelf and never draws a nought.
+
+     WHY IT STOPPED BEING TRUE: the Lanes view, one press away, sorted
+     the same lines into Buy now / Healthy / Dead money by a different
+     rule -- so "healthy" meant one thing on the bar and another on the
+     lane, and a line two units over its floor that would run out in
+     three days was green in one view and Buy now in the other. Two
+     answers to "how is this line doing" on one screen is one too many.
+
+     WHAT THE NEW CHECKS MEAN: one vocabulary of five, read from
+     invZoneRows (whose precedence inventory-lanes pins: empty, no cost,
+     buy, dead, healthy), counted over the WHOLE shelf into the band.
+     Below-the-floor is not lost -- it is the strongest reason a line is
+     Buy now, and the row still says how many short. Everything the old
+     checks protected still holds: no nought, one state per line, the
+     no-floors warning, and a pressed state lifting hide-no-stock. */
+  t.check(/const segs = INV_STATES\.filter\(h=> by\[h\.key\]\.n > 0\);/.test(band),
     'a state with no lines in it is not drawn, so the band never shows a nought');
-  t.check(/allLines\.forEach\(l=>\{ const k = invHealthOf\(l\); counts\[k\] = \(counts\[k\] \|\| 0\) \+ 1; \}\);/.test(render),
+  t.check(/zr\.forEach\(z=>\{\s*const b = by\[z\.zone\]; if\(!b\) return;\s*b\.n\+\+;/.test(band)
+       && /const zrAll = invZoneRows\(allLines\);/.test(render),
     'and every line on the WHOLE shelf is counted into exactly one state, so the bar adds up to the shelf');
-  t.check(/No line has a restock floor yet/.test(render) && /\$\{withFloor \? '' :/.test(render),
+  t.check(/No line has a restock floor yet/.test(band) && /\$\{withFloor \? '' :/.test(band),
     'the warning the zero-floors tile carried survives — a shelf with no floors is told nothing can warn it');
   {
-    const h = compileScope([extractFunction(src, 'invHealthOf', 'index.html')], {}, ['invHealthOf']).invHealthOf;
-    eq(h({ belowFloor: true, uncosted: true, qty: 2 }), 'floor', 'under the floor wins over a missing cost — running out is what costs a sale');
-    eq(h({ belowFloor: true, uncosted: false, qty: 0 }), 'floor', 'an empty shelf WITH a floor is under it, not merely empty');
-    eq(h({ belowFloor: false, uncosted: true, qty: 5 }), 'nocost', 'stock nobody costed is its own state');
-    eq(h({ belowFloor: false, uncosted: false, qty: 0 }), 'empty', 'nothing on the shelf and no floor is empty');
-    eq(h({ belowFloor: false, uncosted: false, qty: 5 }), 'ok', 'and everything else is healthy');
+    const states = (/const INV_STATES = \[([\s\S]*?)\];/.exec(code) || ['', ''])[1];
+    eq([...states.matchAll(/key:'([a-z]+)'/g)].map((m) => m[1]).join(','), 'buy,ok,dead,nocost,empty',
+      'five states, the same five invZoneRows assigns');
+    t.check(!/INV_HEALTH|invHealthOf|invHealth\b/.test(code),
+      'and the second vocabulary is gone — no line can be healthy in one view and Buy now in the other');
   }
-  /* The bar is the filter, and pressing a state must be able to list
-     empty lines -- so while one is pressed, "hide no stock" steps aside
-     rather than emptying the very list that was asked for. */
-  t.check(/checked && !invHealth;/.test(render) && /if\(invHealth\) lines = lines\.filter\(l=> invHealthOf\(l\) === invHealth\);/.test(render),
+  t.check(/checked && !invZone;/.test(render) && /if\(invZone\) lines = lines\.filter\(l=> invStateOf\(l\) === invZone\);/.test(render),
     'a pressed state is the filter, and hide-no-stock gives way to it');
 
   // Every option offered is one the sort understands.
