@@ -16117,6 +16117,41 @@
     height:30px;padding:0 var(--ow-sp-8);border:1px solid var(--ow-rule);
     border-radius:var(--ow-r);font-family:inherit;font-size:var(--ow-t-12);}
 
+
+  /* ---- Media, drawn rather than written ---- */
+  .ml-meter{display:block;height:6px;border-radius:3px;background:var(--ow-steel-100);
+    overflow:hidden;margin:var(--ow-sp-6) 0 var(--ow-sp-2);}
+  .ml-meter i{display:block;height:100%;background:var(--ow-verdigris);border-radius:3px;}
+  .ml-meter.ml-meter-n i{background:var(--ow-ink-400);}
+  .ml-bar{display:flex;gap:2px;height:6px;border-radius:3px;overflow:hidden;
+    background:var(--ow-steel-100);margin:var(--ow-sp-6) 0 var(--ow-sp-2);}
+  .ml-bar i{display:block;min-width:0;}
+  .ml-b-use{background:var(--ow-steel-800);}
+  .ml-b-idle{background:var(--ow-amber);}
+  .ml-key{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:var(--ow-sp-4);}
+  .ml-k-use{background:var(--ow-steel-800);}
+  .ml-k-idle{background:var(--ow-amber);}
+  .ml-top{display:grid;gap:var(--ow-sp-4);margin-top:var(--ow-sp-8);max-width:440px;}
+  .ml-top-i{display:grid;grid-template-columns:minmax(0,140px) minmax(0,1fr) auto;
+    align-items:center;gap:var(--ow-sp-8);font-size:var(--ow-t-11);color:var(--ow-ink-900);}
+  .ml-top-k{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ml-top-bar{display:block;height:6px;border-radius:3px;background:var(--ow-steel-100);overflow:hidden;}
+  .ml-top-bar i{display:block;height:100%;background:var(--ow-steel-800);border-radius:3px;}
+  .ml-top-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;color:var(--ow-ink-600);
+    min-width:2ch;text-align:right;}
+  .ml-fr{position:relative;}
+  .ml-fr-b{position:absolute;left:0;bottom:0;height:2px;background:var(--ow-steel-100);}
+  .ml-fr.ml-on .ml-fr-b{background:var(--ow-steel-950);}
+  .media-card .mc-ph{position:relative;display:block;}
+  .media-card.mc-idle .mc-ph{border-bottom:3px solid var(--ow-amber);}
+  .media-card .mc-dup{position:absolute;top:var(--ow-sp-6);left:var(--ow-sp-6);display:inline-flex;
+    align-items:center;gap:var(--ow-sp-4);height:20px;padding:0 var(--ow-sp-6);
+    border-radius:var(--ow-r-pill);background:var(--ow-paper);color:var(--ow-ink-900);
+    border:1px solid var(--ow-rule);font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);}
+  .media-card .mc-dup svg{width:12px;height:12px;}
+  @media (max-width:820px){ .ml-top{display:none;} }
+
   .mp-folder{height:30px;padding:0 var(--ow-sp-8);border:1px solid var(--ow-rule);
     border-radius:var(--ow-r);background:var(--ow-paper);font-family:inherit;
     font-size:var(--ow-t-12);color:var(--ow-ink-900);max-width:220px;}
@@ -34255,6 +34290,15 @@ function mediaGapRows(products, savedQuotes, todayISO, windowDays){
     .sort((a,b)=> b.units - a.units || String(a.name||'').localeCompare(String(b.name||'')));
 }
 
+/* How much of the catalogue is photographed. Same test as the gap list
+   (a product, or any variant of it, carries a photo), so the meter and
+   the band beneath it can never disagree about who is missing one. */
+function mediaCoverage(products){
+  const rows = products || [];
+  const covered = rows.filter(p=> p.image || (p.variants||[]).some(v=> v.image)).length;
+  return { total: rows.length, covered };
+}
+
 // Which storage objects still need a library row. Pure: the backfill's
 // whole decision, minus the network. An object already indexed (by URL)
 // is skipped, so the backfill self-terminates like the base64 migration.
@@ -36657,6 +36701,15 @@ function renderMediaStrip(usage){
   const dupNote = nothingYet ? 'Nothing uploaded yet'
     : s.dupExtras ? `${mediaFmtBytes(mediaDupBytes(data.media||[])) || '0 B'} you could get back`
     : 'No picture is stored twice';
+  const cov = mediaCoverage(data.products||[]);
+  const dupBytes = mediaDupBytes(data.media||[]);
+  const usedBytes = Math.max(0, s.bytes - s.unusedBytes);
+  const pct = (n, d)=> d > 0 ? Math.min(100, Math.round(n / d * 100)) : 0;
+  const covPct = pct(cov.covered, cov.total);
+  const storageNote = nothingYet ? unsized
+    : `<span class="ml-key ml-k-use"></span>${mediaFmtBytes(usedBytes) || '0 B'} in use`
+      + ` <span class="ml-key ml-k-idle"></span>${tiedUp} used nowhere`
+      + (s.unsized ? ` · ${s.unsized} unsized` : '');
   document.getElementById('mediaStrip').innerHTML = `
     <div class="ow-mt">
       <p class="ow-mt-l">Photos</p>
@@ -36665,19 +36718,23 @@ function renderMediaStrip(usage){
         : `In ${(data.mediaFolders||[]).length} folder${(data.mediaFolders||[]).length===1?'':'s'}`}</p>
     </div>
     <div class="ow-mt">
+      <p class="ow-mt-l">Products with a photo</p>
+      <span class="ow-mt-v">${cov.covered} <span class="ow-u">of ${cov.total}</span></span>
+      <span class="ml-meter" role="img" aria-label="${covPct}% of products have a photo"><i style="width:${covPct}%"></i></span>
+      <p class="ow-mt-s">${!cov.total ? 'No products yet'
+        : cov.covered === cov.total ? 'Every product has one'
+        : `${cov.total - cov.covered} still go out as text`}</p>
+    </div>
+    <div class="ow-mt">
       <p class="ow-mt-l">Storage used</p>
       <span class="ow-mt-v">${mediaSizeTile(s.bytes)}</span>
-      <p class="ow-mt-s">${unsized}</p>
-    </div>
-    <div class="ow-mt ${s.unusedCount?'ow-warn':''}">
-      <p class="ow-mt-l">Used nowhere</p>
-      <span class="ow-mt-v">${s.unusedCount}</span>
-      <p class="ow-mt-s">${nothingYet ? 'Nothing uploaded yet'
-        : s.unusedCount ? `${tiedUp} tied up in them` : 'Every photo is on something'}</p>
+      <span class="ml-bar" role="img" aria-label="${mediaFmtBytes(usedBytes) || '0 B'} in use, ${tiedUp} used nowhere"><i class="ml-b-use" style="flex:${usedBytes}"></i><i class="ml-b-idle" style="flex:${s.unusedBytes}"></i></span>
+      <p class="ow-mt-s">${storageNote}</p>
     </div>
     <div class="ow-mt">
       <p class="ow-mt-l">Duplicate copies</p>
       <span class="ow-mt-v">${s.dupExtras}</span>
+      <span class="ml-meter ml-meter-n" role="img" aria-label="${pct(dupBytes, s.bytes)}% of storage is repeat copies"><i style="width:${pct(dupBytes, s.bytes)}%"></i></span>
       <p class="ow-mt-s">${dupNote}</p>
     </div>`;
   /* The phone gets the same figures as one line. Storage housekeeping is
@@ -36720,10 +36777,17 @@ function renderMediaGap(){
   const basis = sold
     ? `${sold} of them sold in the last 30 days. Ranked by what the books say you actually shift.`
     : 'None of them has sold in the last 30 days, so they are listed by name.';
+  /* The ranking, drawn: bar length is units sold in the window, so the
+     yard sees which missing photo costs the most before reading a word. */
+  const top = gap.filter(g=> g.units > 0).slice(0, 4);
+  const topMax = top.reduce((m, g)=> Math.max(m, g.units), 0) || 1;
+  const topHTML = top.length ? `<div class="ml-top" aria-label="Missing photos, most sold first">${top.map(g=>
+    `<span class="ml-top-i" title="${esc(g.name)} — ${g.units} sold in 30 days"><span class="ml-top-k">${esc(g.name)}</span><span class="ml-top-bar"><i style="width:${Math.max(4, Math.round(g.units / topMax * 100))}%"></i></span><span class="ml-top-n">${g.units}</span></span>`).join('')}</div>` : '';
   wrap.innerHTML = `<div class="ml-gap">
     <div class="ml-gap-b">
       <div class="ml-gap-t"><b>${gap.length} product${gap.length===1?'':'s'}</b> ${gap.length===1?'has':'have'} no photo</div>
       <span class="ml-gap-s">${gap.length===1?'Its':'Their'} quote lines and WhatsApp posts go out as text.<span class="ml-gap-x"> ${basis}</span></span>
+      ${topHTML}
     </div>
     <span class="ow-ph-sp"></span>
     <button type="button" class="btn btn-accent ow-sm" id="ml_gap_btn">Show the ${gap.length}</button>
@@ -36784,6 +36848,7 @@ function renderMediaRail(){
       <span class="ml-fr-a" data-mlrename="${key}" title="Rename folder">${ICON_EDIT}</span>
       <span class="ml-fr-a" data-mldelfolder="${key}" title="Remove folder">${ICON_TRASH}</span>` : ''}
       <span class="ml-fr-n">${count}</span>
+      ${rows.length && key !== 'all' ? `<i class="ml-fr-b" style="width:${Math.round(count / rows.length * 100)}%"></i>` : ''}
     </button>`;
   };
   let html = item('all', 'All photos', rows.length);
@@ -36895,15 +36960,18 @@ function renderMediaRail(){
 function mediaCardHTML(m, users, dupCount, selected){
   const size = mediaFmtBytes(m.bytes);
   const label = mediaCardLabel(m, users);
-  return `<button type="button" class="media-card ${selected?'selected':''}" data-mid="${m.id}">
-    <img class="mc-thumb" loading="lazy" src="${esc(m.url)}" alt="">
+  /* A twin is marked ON the picture, where two identical thumbnails are
+     being compared, rather than in a line of text below it. */
+  const twin = dupCount > 1
+    ? `<span class="mc-dup" title="${dupCount} rows in the library hold this exact picture"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>${dupCount} copies</span>` : '';
+  return `<button type="button" class="media-card ${selected?'selected':''} ${users.length?'':'mc-idle'}" data-mid="${m.id}">
+    <span class="mc-ph"><img class="mc-thumb" loading="lazy" src="${esc(m.url)}" alt="">${twin}</span>
     <div class="mc-body">
       <div class="mc-name" title="${esc(m.name)}">${esc(label)}</div>
       <div class="mc-meta">
         <span class="mc-size">${size || 'size unknown'}</span>
         ${mediaUsedBadge(users)}
       </div>
-      ${dupCount > 1 ? `<div class="mc-meta"><span class="ow-cp" title="${dupCount} rows in the library hold this exact picture">${dupCount} copies</span></div>` : ''}
     </div>
   </button>`;
 }
