@@ -26388,6 +26388,7 @@
   .ow-iv-pg-g{align-self:center;color:var(--ow-ink-400);padding:0 2px;}
   .ow-iv-cards{display:none;}
   .ow-iv-pos{display:none;}
+  .ow-iv-cl{display:none;}
   .ow-iv-empty{padding:40px var(--ow-sp-24);text-align:center;}
   .ow-iv-empty-t{margin:0 0 6px;font-size:var(--ow-t-14);font-weight:700;}
   .ow-iv-empty-p{margin:0 auto var(--ow-sp-16);max-width:52ch;font-size:var(--ow-t-13);color:var(--ow-ink-600);line-height:1.5;}
@@ -26649,7 +26650,8 @@
     .ow-iv-pane .ow-iv-kpi{order:2;display:block;margin:0;}
     .ow-iv-pane .ow-iv-kpi > .ow-iv-kp{display:none;}
     .ow-iv-md{order:3;display:block;}
-    .ow-iv-dockslot{order:4;}
+    .ow-iv-dockslot{position:fixed;left:var(--ow-sp-16);right:var(--ow-sp-16);bottom:calc(var(--mobile-bottomnav-h) + env(safe-area-inset-bottom, 0px) + var(--ow-sp-12));z-index:5;}
+    .ow-iv-pane{padding-bottom:84px;}
     .ow-iv-fb{flex:1 1 100%;min-width:0;height:48px;}
     .ow-iv-fb-in{font-size:var(--ow-t-16);}
     .ow-iv-segf{flex:1 1 100%;min-width:0;overflow-x:auto;}
@@ -26666,6 +26668,8 @@
     .ow-iv-phk-b{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;}
     .ow-iv-phk-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.02em;color:var(--ow-ink-900);}
     .ow-iv-ph .ow-ph-t{display:none;}
+    .ow-iv:not(.ow-iv-mv) .ow-iv-ph{display:none;}
+    .ow-iv-cl{display:flex;}
     .ow-iv-pos{display:block;margin:0 0 var(--ow-sp-12);font-size:var(--ow-t-13);color:var(--ow-ink-600);line-height:1.45;}
     .ow-iv-pos-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:600;color:var(--ow-ink-900);}
     .ow-iv-pos-w{color:var(--ow-amber-ink);font-weight:600;}
@@ -26701,7 +26705,7 @@
     .ow-iv-dt-h .ow-iv-th{width:56px;height:56px;}
     .ow-iv-big{font-size:var(--ow-t-28);}
     .ow-iv-ab{font-size:var(--ow-t-13);}
-    .ow-bk.ow-iv-dock{display:flex;flex-wrap:nowrap;margin-top:0;}
+    .ow-bk.ow-iv-dock{display:flex;flex-wrap:nowrap;margin-top:0;position:static;}
     .ow-bk.ow-iv-dock .ow-bk-a{flex:0 0 auto;}
     .ow-iv-dockb{height:var(--ow-tap);padding:0 var(--ow-sp-16);font-size:var(--ow-t-14);}
     .ow-bk-b{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -100687,9 +100691,10 @@ function invDetailHTML(z){
         : `<button type="button" class="btn btn-ghost ow-iv-ab" data-invact="purchase" data-invkey="${esc(key)}"${z.need > 0 ? ` data-invqty="${z.need}"` : ''}>${z.need > 0 ? `Receive ${fmtStockQty(z.need)} more` : 'Receive more'}</button>`}
        <button type="button" class="btn btn-ghost ow-iv-ab ow-iv-quiet" data-invact="adjust" data-invkey="${esc(key)}">Correct the count</button>
        <button type="button" class="btn btn-ghost ow-iv-ab ow-iv-quiet" data-invact="reorder" data-invkey="${esc(key)}">${z.floor ? `Change the floor of ${fmtStockQty(z.floor)}` : 'Set a restock floor'}</button>`;
+  const countAll = `<button type="button" class="ow-iv-link ow-iv-cl" data-invcount="1">Count the whole shelf${IV_CHEV}</button>`;
   const link = `<button type="button" class="ow-iv-link" data-invmoves="${esc(key)}">${mv.n ? `All ${mv.n} movement${mv.n === 1 ? '' : 's'} of this line, under Movements` : 'No movement recorded against this line yet'}${IV_CHEV}</button>`;
   return `<button type="button" class="ow-iv-sheet-x" data-invsheet="close">${'<svg class="icon ow-iv-sheet-i" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>'}Back to the shelf</button>
-    <div class="ow-iv-dt-b">${head}${big}${ladder}${fs}${pace}${warn.join('')}${note}<div class="ow-iv-acts">${acts}</div>${link}</div>`;
+    <div class="ow-iv-dt-b">${head}${big}${ladder}${fs}${pace}${warn.join('')}${note}<div class="ow-iv-acts">${acts}</div>${link}${countAll}</div>`;
 }
 
 /* The phone's one act, in the thumb zone: receive the line you are on.
@@ -100846,6 +100851,8 @@ function invApplyLens(){
   const oh = document.getElementById('inv_onhand_pane');
   const mv = document.getElementById('inv_moves_pane');
   if(oh) oh.style.display = on ? '' : 'none';
+  const root = document.getElementById('tab-inventory');
+  if(root) root.classList.toggle('ow-iv-mv', !on);
   if(mv) mv.style.display = on ? 'none' : '';
   /* The two acts belong to the shelf, not to its history, and a shop with
      no products has nothing to count or receive against: its one accent
@@ -100888,6 +100895,7 @@ document.getElementById('tab-inventory').addEventListener('click', (e)=>{
   if(e.target.closest('.img-zoomable, .ow-zoom')) return;
   const pick = t.closest('[data-invpick], [data-invopen]');
   if(pick){ invOpenKey = pick.dataset.invpick || pick.dataset.invopen; invSheet = true; renderInventory(); return; }
+  if(t.closest('[data-invcount]')){ invSheet = false; renderInventory(); openCountSheet(); return; }
   const go = t.closest('[data-invgo]');
   if(go){ goToTab(go.dataset.invgo); return; }
   const moves = t.closest('[data-invmoves]');
