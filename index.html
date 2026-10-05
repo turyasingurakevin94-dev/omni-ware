@@ -9071,6 +9071,7 @@
   .cbv-doc svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
   .cbv-doc.is-flat{cursor:default;color:var(--ow-ink-600);}
   .cbv-nil{font-size:var(--ow-t-13);color:#C9C4BB;}
+  .cbv-dcell{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .cbv-by{justify-self:center;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:var(--ow-t-11);
     font-weight:var(--ow-fw-700);background:#F1EEE8;color:var(--ow-ink-600);}
   .cbv-by.is-me{background:var(--ow-steel-950);color:var(--ow-paper);}
@@ -102538,8 +102539,18 @@ function cbSettles(t, idn){
   }
   if(idn.doc) return { line: idn.doc, sub: 'Not on file' };
   const held = cashTxnDependents([t.id]);
-  if(held.length) return { line: held[0].what, sub: held[0].where, doc: true };
-  return null;
+  if(!held.length) return null;
+  /* Named by the document itself in the column, as an invoice row is:
+     its number when it has one, else what it is -- a wage or a rent --
+     rather than the name of the screen it was posted from. */
+  const code = /^(P?INV-\d+)/.exec(held[0].what);
+  const due = code ? null : (data.dues || []).find(d=> (d.payments || []).some(p=> p.cashTxnId === t.id));
+  const label = code ? code[1] : due ? (due.kind === 'rent' ? 'Rent' : 'Wages') : held[0].where;
+  const q = code && /^INV-/.test(code[1]) ? (data.savedQuotes || []).find(x=> invoiceNumberLabel(x) === code[1]) : null;
+  const pi = code && /^PINV-/.test(code[1]) ? (data.purchaseInvoices || []).find(x=> purchaseInvoiceNumberLabel(x) === code[1]) : null;
+  return { line: held.map(h=> h.what).join(' · '), sub: held[0].where, doc: true,
+    label: held.length > 1 ? `${label} +${held.length - 1}` : label,
+    docKind: q ? 'inv' : pi ? 'pinv' : null, docId: q ? q.id : pi ? pi.id : null };
 }
 
 /* THE ROWS, as the table draws them. A transfer is ONE row -- the shop's
@@ -102768,7 +102779,10 @@ function cbLedgerRowHTML(r, zebra){
     ? (idn.docKind == null
       ? `<span class="cbv-doc is-flat" title="${esc(idn.doc)} is not on file">${esc(idn.doc)}</span>`
       : `<button type="button" class="cbv-doc" data-doc-kind="${esc(idn.docKind)}" data-doc-id="${idn.docId}" title="${esc(idn.posted ? `Posted by ${idn.posted} — opens ${idn.doc}` : `Opens ${idn.doc}`)}">${esc(idn.doc)}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></button>`)
-    : (r.settles ? `<span class="cbv-doc is-flat" title="${esc(r.settles.line)}">${esc(r.settles.sub || 'Payroll')}</span>` : '<span class="cbv-nil">&mdash;</span>');
+    : !r.settles ? '<span class="cbv-nil">&mdash;</span>'
+    : r.settles.docKind
+      ? `<button type="button" class="cbv-doc" data-doc-kind="${esc(r.settles.docKind)}" data-doc-id="${r.settles.docId}" title="${esc(`${r.settles.line} — posted by ${r.settles.sub}`)}">${esc(r.settles.label)}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></button>`
+      : `<span class="cbv-doc is-flat" title="${esc(`${r.settles.line} — posted by ${r.settles.sub}`)}">${esc(r.settles.label)}</span>`;
   const amounts = x
     ? `<span class="cbv-amt moved">&#8644; ${cbMoney(r.amount)} moved</span>`
     : `<span class="cbv-amt in${r.isIn ? '' : ' empty'}">${r.isIn ? '+' + cbMoney(r.amount) : ''}</span><span class="cbv-amt out${r.isIn ? ' empty' : ''}">${r.isIn ? '' : '&minus;' + cbMoney(r.amount)}</span>`;
