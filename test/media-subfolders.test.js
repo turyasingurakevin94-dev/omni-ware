@@ -176,9 +176,9 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   t.check(/mediaFolderSubtreeIds\(data\.mediaFolders\|\|\[\], mpState\.folder\)/.test(picker),
     'and so does the picker, or a photo would be unpickable from its parent');
 
-  /* The flat dropdowns have no room to indent, so they carry paths. There
-     are three now -- the record's Folder, the picker's folder filter and
-     the selection bar's Move to -- and all three are built by ONE helper,
+  /* The flat dropdowns have no room to indent, so they carry paths. The
+     inspector's Folder and the selection bar's Move to are both built by
+     ONE helper,
      so a fourth cannot be added that forgets the path. WAS: a count of
      exactly two inline mediaFolderPath calls, which held while there were
      exactly two dropdowns and each built its own options. */
@@ -187,9 +187,17 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     && /mediaFolderPath\(data\.mediaFolders\|\|\[\], f\.id\)/.test(opts),
     'the folder options are drawn in tree order and name the full path rather than a bare leaf');
   t.check(/<option value="">No folder<\/option>\s*\$\{mediaFolderOptionsHTML\(m\.folderId\)\}/.test(code)
-    && /<option value="all">All folders<\/option>` \+ mediaFolderOptionsHTML\(null\)/.test(code)
     && /<option value="none">No folder<\/option>`\s*\+ mediaFolderOptionsHTML\(null\)/.test(code),
-    'and the record, the picker and the selection bar all draw their dropdown from it');
+    'and the inspector and the selection bar draw their dropdown from it');
+  /* WAS: the picker's folder dropdown was the third user of the helper.
+     The picker now lists folders in its own left-hand column, so the
+     same promise is held there instead: tree order, indented by depth,
+     and the full path on every row. */
+  const pickerNav = extractFunction(src, 'renderMediaPicker', 'index.html');
+  t.check(/mediaFolderTree\(data\.mediaFolders\|\|\[\]\)/.test(pickerNav)
+    && /padding-left:\$\{10 \+ depth\*12\}px/.test(pickerNav)
+    && /title="\$\{esc\(mediaFolderPath\(data\.mediaFolders\|\|\[\], f\.id\)\)\}"/.test(pickerNav),
+    'and the picker lists its folders in tree order, indented, each carrying its full path');
   t.check(!/<option value="\$\{f\.id\}"[^>]*>\$\{esc\(f\.name\)\}<\/option>/.test(code),
     'no folder dropdown is built from a bare leaf name');
 }
