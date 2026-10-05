@@ -87613,12 +87613,13 @@ function renderConsignment(){
     const markable = gaps.reduce((n,g)=> n + Math.round(g.qty), 0);
     const markableValue = gaps.reduce((n,g)=> n + (g.qty > 0 ? g.value : 0), 0);
     const traceless = gaps.reduce((n,g)=> n + Math.round(g.unrecorded||0), 0);
-    const words = r.name.split(/\s+/).filter(Boolean);
+    // Words that start with a letter or digit, so "Dorcus - Roto" reads DR, not D-.
+    const words = r.name.split(/\s+/).filter(w=> /^[A-Za-z0-9]/.test(w));
     return { r, gaps, lines, unpaid, billAge, last, quietFor, markable, markableValue, traceless,
       dueNow: consignmentDueNow(r), st: stateOf(r),
       paid: Math.max(0, r.settled - r.settlementDue),
       hue: byName.indexOf(r.supplierId) % 5,
-      mono: (words.length > 1 ? words[0][0] + words[1][0] : r.name.slice(0, 2)).toUpperCase(),
+      mono: (words.length > 1 ? words[0][0] + words[1][0] : (words[0] || r.name).slice(0, 2)).toUpperCase(),
       idleLines: lines.filter(l=> l.idle) };
   });
 
