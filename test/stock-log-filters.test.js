@@ -332,13 +332,35 @@ const reset = () => {
      here at all. If the panes could ever both be on screen the screen
      would be the stack it was pulled apart for. */
   const lens = extractFunction(code, 'invApplyLens', 'index.html');
-  t.check(/oh\.style\.display = on \? '' : 'none'/.test(lens)
-    && /mv\.style\.display = on \? 'none' : ''/.test(lens),
+  /* THREE LENSES NOW, where there were two. These read "oh.style.display
+     = on ? '' : 'none'" and the mirror for the log, ".iv-act').forEach(b=>
+     b.style.display = on ? '' : 'none')", and found the moves sub inside
+     invApplyLens.
+
+     WHAT THEY MEANT: exactly one pane is ever on screen; the shelf's acts
+     (count, receive) do not appear on the record, which acts on nothing;
+     and the sub names the question being answered.
+
+     WHY THEY STOPPED BEING TRUE: the owner's canvas splits the shelf
+     into the register and the intelligence that reads it, so there are
+     three panes behind the tabs, not two -- and the intelligence DOES
+     act (it is where a reorder, a count or a clearance is ranked), so
+     the two acts show there too, while Export belongs to the register
+     alone. The subs moved into one table beside the titles.
+
+     WHAT THE NEW CHECKS MEAN: the same three rules for three panes.
+     Every pane is shown only when it is THE lens, so one at a time; the
+     acts are hidden on Movements and Export everywhere but the register;
+     and the Movements sub is still the one the screen says. */
+  t.check(/const panes = \{ onhand: 'inv_onhand_pane', intel: 'inv_intel_pane', moves: 'inv_moves_pane' \};/.test(lens)
+    && /el\.style\.display = k === invLens \? '' : 'none';/.test(lens),
     'and exactly one of them is ever on screen — the stack this screen was split up for cannot come back');
-  t.check(/\.iv-act'\)\.forEach\(b=> b\.style\.display = on \? '' : 'none'\)/.test(lens),
+  t.check(/\.iv-act'\)\.forEach\(b=>\{/.test(lens)
+    && /b\.classList\.contains\('iv-act-reg'\) \? invLens === 'onhand' : invLens !== 'moves'/.test(lens),
     'the two acts belong to the shelf: nothing on the record acts, so it carries no accent');
-  t.check(/Every change to the shelf, and what caused it\./.test(lens),
-    'and the sub says which of the two questions is being answered, since it is the one line never folded away');
+  t.check(/moves:\s*\['Movements', 'Every change to the shelf, and what caused it\.'\]/.test(code)
+    && /sub\.textContent = head\[1\]/.test(lens),
+    'and the sub says which of the questions is being answered, since it is the one line never folded away');
 
   /* THE ID IS THIS SCREEN'S OWN. "inv" is Invoices AND Inventory in this
      file, and the first spelling of this bar was #inv_lens -- which the
