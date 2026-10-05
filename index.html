@@ -16067,159 +16067,432 @@
   .wv-footer{text-align:center;font-size:13px;color:var(--ink-soft);padding:18px 0 4px;cursor:pointer;}
   /* ---------------- Media library ----------------
 
-     The console vocabulary, not a private one. The strip is .ow-strip,
-     the regions are .ow-pan, the states are .ow-cp, and the filters are
-     the existing .btn family with a pressed state -- there is no
-     fourteenth button family here and no second metric strip.
+     Drawn from the question, not from the old layout. The owner opens
+     this screen to learn three things, in this order:
 
-     What is local to this screen is the folder row, the card, and the
-     band that names the photo gap. */
+       1. how much of the catalogue goes out with a picture -- the ring,
+          and the products that do not, ranked by what they sell;
+       2. what the storage holds and how much of it is dead weight --
+          one bar split by what is used and what is not;
+       3. whether the photographing is keeping up -- twelve weeks of
+          additions, one column a week.
 
-  /* THE GAP BAND -- the one oxide element on this screen. It is not
-     "add photos", which happens whether or not anything needs one; it is
-     the products going out on a quote as a line of text because nobody
-     has photographed them. Counted from the products register. */
-  .ml-gap{display:flex;align-items:center;gap:var(--ow-sp-12);min-height:var(--ow-tap);
-    padding:var(--ow-sp-8) var(--ow-sp-12) var(--ow-sp-8) var(--ow-sp-16);
-    background:var(--ow-paper);border:1px solid var(--ow-rule-soft);
-    border-left:3px solid var(--ow-oxide);border-radius:var(--ow-r-lg);
-    margin-bottom:var(--ow-sp-16);}
-  .ml-gap-b{min-width:0;}
-  .ml-gap-t{font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);letter-spacing:-.005em;}
-  .ml-gap-t b{font-weight:var(--ow-fw-600);}
-  .ml-gap-s{display:block;font-size:var(--ow-t-11);color:var(--ow-ink-600);
-    margin-top:var(--ow-sp-2);max-width:var(--ow-measure);}
+     Then the library itself: folders, a toolbar that says what the
+     grid is filtered and sorted by, a grid or a dense list, and a
+     selection bar for doing the housekeeping in one pass rather than
+     one photo at a time.
 
-  /* The work column, its folders, and the record of whichever photo is
-     open. Three tracks rather than .ow-grid's two: the folders are
-     navigation and the record is context, and they are not the same
-     thing standing on different sides. */
+     The console vocabulary throughout: .ow-pan regions, .ow-seg
+     filters, .ow-cp chips, .btn buttons. No fourteenth button family. */
+
+  /* THE INSIGHT ROW -- three panels, one question each. */
+  .ml-ins{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr);
+    gap:var(--ow-sp-16);margin-bottom:var(--ow-sp-16);align-items:stretch;}
+  .ml-ins > .ow-pan{display:flex;flex-direction:column;min-width:0;}
+  .ml-ins-b{padding:var(--ow-sp-12) var(--ow-sp-16) var(--ow-sp-16);flex:1;
+    display:flex;flex-direction:column;gap:var(--ow-sp-12);min-width:0;}
+  .ml-big{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-size:var(--ow-t-28);font-weight:var(--ow-fw-500);
+    line-height:var(--ow-lh-tight);color:var(--ow-ink-900);}
+  .ml-big .ow-u{font-size:.5em;color:var(--ow-ink-600);margin-left:.3em;letter-spacing:0;}
+  .ml-cap{font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:var(--ow-lh-snug);margin:0;}
+  .ml-mono{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;}
+
+  /* Coverage: a ring, then the gap ranked by what it sells. */
+  .ml-cov-b{flex-direction:row;align-items:flex-start;gap:var(--ow-sp-20);}
+  .ml-ring{position:relative;flex:none;width:112px;height:112px;}
+  .ml-ring svg{width:112px;height:112px;display:block;transform:rotate(-90deg);}
+  .ml-ring-tr{stroke:var(--ow-rule-soft);}
+  .ml-ring-arc{stroke:var(--ow-steel-950);transition:stroke-dashoffset .4s ease;}
+  .ml-ring.ml-full .ml-ring-arc{stroke:var(--ow-verdigris);}
+  .ml-ring-c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;text-align:center;}
+  .ml-ring-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-size:var(--ow-t-20);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);
+    line-height:var(--ow-lh-tight);}
+  .ml-ring-v small{font-size:.6em;color:var(--ow-ink-600);font-weight:var(--ow-fw-500);}
+  .ml-ring-s{font-size:var(--ow-t-11);color:var(--ow-ink-600);margin-top:var(--ow-sp-2);}
+  .ml-cov-r{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--ow-sp-8);}
+  .ml-cov-t{font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);
+    line-height:var(--ow-lh-snug);margin:0;}
+  .ml-cov-t .ow-cp{margin-left:var(--ow-sp-6);vertical-align:2px;}
+  .ml-cov-f{display:flex;align-items:center;gap:var(--ow-sp-10);margin-top:auto;padding-top:var(--ow-sp-4);
+    flex-wrap:wrap;}
+  .ml-cov-f .ml-cap{flex:1 1 160px;min-width:0;}
+
+  /* A ranked row with a bar: name, the bar, the figure. Used by the
+     coverage panel, the gap list and the place sheet, so "what it
+     sells" is drawn the same way in all three. */
+  .ml-rk{display:grid;grid-template-columns:minmax(0,1fr) 72px 44px;align-items:center;
+    column-gap:var(--ow-sp-10);min-height:26px;width:100%;border:0;background:none;padding:0;
+    font-family:inherit;text-align:left;cursor:pointer;color:var(--ow-ink-900);}
+  .ml-rk:hover .ml-rk-k{text-decoration:underline;}
+  .ml-rk-k{font-size:var(--ow-t-12);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ml-bar{height:6px;border-radius:var(--ow-r-pill);background:var(--ow-rule-soft);overflow:hidden;}
+  .ml-bar > i{display:block;height:100%;border-radius:var(--ow-r-pill);background:var(--ow-steel-950);}
+  .ml-rk-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-size:var(--ow-t-11);color:var(--ow-ink-600);text-align:right;white-space:nowrap;}
+  .ml-rk-v b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+
+  /* Storage: one bar, split by what the bytes are doing. */
+  .ml-stack{display:flex;height:10px;border-radius:var(--ow-r-pill);overflow:hidden;
+    background:var(--ow-rule-soft);gap:2px;}
+  .ml-stack > i{display:block;height:100%;min-width:3px;}
+  .ml-sw-use{background:var(--ow-steel-950);}
+  .ml-sw-unused{background:var(--ow-amber);}
+  .ml-sw-dup{background:repeating-linear-gradient(135deg,var(--ow-steel-400) 0 2px,var(--ow-paper) 2px 4px);
+    box-sizing:border-box;border:1px solid var(--ow-steel-400);}
+  .ml-lg{display:flex;flex-direction:column;}
+  .ml-lg-r{display:grid;grid-template-columns:10px minmax(0,1fr) auto auto;align-items:center;
+    column-gap:var(--ow-sp-8);min-height:28px;padding:0 var(--ow-sp-6);margin:0 calc(var(--ow-sp-6) * -1);
+    border:0;background:none;border-radius:var(--ow-r-sm);font-family:inherit;text-align:left;
+    font-size:var(--ow-t-12);color:var(--ow-ink-900);}
+  button.ml-lg-r{cursor:pointer;}
+  button.ml-lg-r:hover{background:var(--ow-paper-2);}
+  button.ml-lg-r.ml-on{background:var(--ow-steel-050);font-weight:var(--ow-fw-600);}
+  .ml-lg-sw{width:10px;height:10px;border-radius:2px;}
+  .ml-lg-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-size:var(--ow-t-11);color:var(--ow-ink-600);text-align:right;min-width:28px;}
+  .ml-lg-b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-size:var(--ow-t-12);color:var(--ow-ink-900);text-align:right;
+    white-space:nowrap;min-width:64px;}
+
+  /* Activity: twelve weeks, one column each. */
+  .ml-wk{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:4px;align-items:end;height:64px;}
+  .ml-wk > i{display:block;background:var(--ow-steel-400);border-radius:2px;min-height:2px;}
+  .ml-wk > i.ml-wk-on{background:var(--ow-steel-950);}
+  .ml-wk > i.ml-wk-0{background:var(--ow-rule-soft);}
+  .ml-wk-ax{display:flex;justify-content:space-between;font-size:var(--ow-t-11);color:var(--ow-ink-600);
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;margin-top:calc(var(--ow-sp-8) * -1);}
+
+  /* THE LIBRARY: folders, then the work column, then the record of
+     whichever photo is open. Three tracks rather than .ow-grid's two:
+     the folders are navigation and the record is context. */
   .ml-lay{display:grid;grid-template-columns:220px minmax(0,1fr);
     gap:var(--ow-sp-16);align-items:start;}
-  .ml-lay.ml-open{grid-template-columns:220px minmax(0,1fr) 304px;}
+  .ml-lay.ml-open{grid-template-columns:220px minmax(0,1fr) 320px;}
+  #mediaRecordRail{position:sticky;top:calc(var(--topbar-h) + var(--ow-sp-16));
+    max-height:calc(100vh - var(--topbar-h) - var(--ow-sp-32));overflow-y:auto;}
 
-  .ml-fr{display:flex;align-items:center;gap:var(--ow-sp-8);width:100%;height:30px;
+  .ml-fr{display:flex;align-items:center;gap:var(--ow-sp-8);width:100%;height:32px;
     padding:0 var(--ow-sp-12);border:0;background:none;cursor:pointer;text-align:left;
     font-family:inherit;font-size:var(--ow-t-12);color:var(--ow-ink-900);}
   .ml-fr:hover{background:var(--ow-paper-2);}
   /* Navy, not oxide: which folder you are in is a position, not the
-     thing to do next. The accent is spent once, on the band above. */
+     thing to do next. */
   .ml-fr.ml-on{background:var(--ow-steel-050);font-weight:var(--ow-fw-600);
     box-shadow:inset 2px 0 0 var(--ow-steel-950);}
+  .ml-fr-ic{width:15px;height:15px;flex:none;color:var(--ow-ink-600);fill:none;stroke:currentColor;
+    stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .ml-fr.ml-on .ml-fr-ic{color:var(--ow-steel-950);}
   .ml-fr-k{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .ml-fr-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
     font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
   .ml-fr-a{display:none;border:0;background:none;padding:0;cursor:pointer;
     color:var(--ow-ink-400);}
   .ml-fr:hover .ml-fr-a,.ml-fr:focus-within .ml-fr-a{display:inline-flex;}
+  .ml-fr-a:hover{color:var(--ow-ink-900);}
   .ml-fr-a svg{width:14px;height:14px;}
   .ml-fr-i{width:calc(100% - var(--ow-sp-24));margin:var(--ow-sp-4) var(--ow-sp-12);
     height:30px;padding:0 var(--ow-sp-8);border:1px solid var(--ow-rule);
     border-radius:var(--ow-r);font-family:inherit;font-size:var(--ow-t-12);}
+  .ml-fr-new{color:var(--ow-ink-600);border-top:1px solid var(--ow-rule-soft);height:36px;}
+  /* Drop a photo on a folder to file it there. */
+  .ml-fr.ml-drop-on{background:var(--ow-sky-soft);outline:1.5px dashed var(--ow-sky);outline-offset:-2px;}
 
-  .mp-folder{height:30px;padding:0 var(--ow-sp-8);border:1px solid var(--ow-rule);
+  .mp-folder,.ml-sort{height:30px;padding:0 var(--ow-sp-8);border:1px solid var(--ow-rule);
     border-radius:var(--ow-r);background:var(--ow-paper);font-family:inherit;
     font-size:var(--ow-t-12);color:var(--ow-ink-900);max-width:220px;}
   .ml-ctx{display:none;}
-  /* The header is a plain label on the desk: same height, same type, and
-     the control it becomes on the phone is inert here. */
+  /* The header is a plain label on the desk: the control it becomes on
+     the phone is inert here. */
   .ml-fold-h{width:100%;border:0;border-bottom:1px solid var(--ow-rule-soft);
     font-family:inherit;text-align:left;cursor:default;}
   .ml-fold-now,.ml-fold-c{display:none;}
-  @media (max-width:820px){ .ml-gap-x{display:none;} }
-  .ml-chips{display:flex;gap:var(--ow-sp-6);flex-wrap:wrap;}
+
+  /* The toolbar: find, filter, sort, view. Left to right in the order
+     they narrow the grid. */
   .ml-tb{display:flex;align-items:center;gap:var(--ow-sp-8);flex-wrap:wrap;
     padding:var(--ow-sp-8) var(--ow-sp-12);border-bottom:1px solid var(--ow-rule-soft);
     background:var(--ow-paper-2);}
   .ml-find{flex:1 1 200px;min-width:0;display:flex;align-items:center;gap:var(--ow-sp-8);
     height:30px;padding:0 var(--ow-sp-10);border:1px solid var(--ow-rule);
     border-radius:var(--ow-r);background:var(--ow-paper);}
+  .ml-find:focus-within{border-color:var(--ow-steel-400);}
   .ml-find svg{width:15px;height:15px;flex:none;color:var(--ow-ink-600);}
   .ml-find input{flex:1;min-width:0;border:0;background:none;outline:none;
     font-family:inherit;font-size:var(--ow-t-12);color:var(--ow-ink-900);}
-  /* The count is what stops a filter being clicked into an empty grid. */
-  .ml-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
-    font-variant-numeric:tabular-nums;color:var(--ow-ink-600);font-weight:var(--ow-fw-500);}
+  .ml-tb .ow-seg{height:30px;}
+  .ml-tb .ow-seg-b{font-size:var(--ow-t-12);padding:0 var(--ow-sp-10);}
+  .ml-view .ow-seg-b{padding:0 var(--ow-sp-8);}
+  .ml-view svg{width:15px;height:15px;}
+  /* A pressed .btn wears the quiet paper -- other screens lean on this too. */
   .btn[aria-pressed="true"]{background:var(--ow-steel-050);border-color:var(--ow-rule);
     color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  .ml-sel-all{display:inline-flex;align-items:center;gap:var(--ow-sp-6);font-size:var(--ow-t-12);
+    color:var(--ow-ink-600);cursor:pointer;white-space:nowrap;}
 
-  /* 176 rather than 160: at 160 the size and the "Used nowhere" chip
-     came to 142px of a 144px row and the chip dropped to a second line
-     on most cards, so the grid read as two different card designs. */
-  .media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(176px,1fr));
+  /* THE GRID. 184 rather than 160: at 160 the size and the usage count
+     came to the edge of the card and the grid read as two designs. */
+  .media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(184px,1fr));
     gap:var(--ow-sp-12);padding:var(--ow-sp-12);}
-  .media-card{border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);
+  .media-card{position:relative;border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);
     overflow:hidden;cursor:pointer;background:var(--ow-paper);text-align:left;padding:0;
-    font-family:inherit;display:flex;flex-direction:column;}
+    font-family:inherit;display:flex;flex-direction:column;color:var(--ow-ink-900);}
   .media-card:hover{border-color:var(--ow-steel-400);}
+  .media-card:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
   .media-card.selected{border-color:var(--ow-steel-950);
     box-shadow:0 0 0 1px var(--ow-steel-950);}
+  .mc-fr{position:relative;display:block;}
   .media-card .mc-thumb{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;
     background:var(--ow-steel-050);}
-  .media-card .mc-body{padding:var(--ow-sp-8) var(--ow-sp-10);}
-  .media-card .mc-name{font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);
+  /* State sits ON the picture, where the eye already is. */
+  .mc-flags{position:absolute;left:var(--ow-sp-8);bottom:var(--ow-sp-8);right:var(--ow-sp-8);
+    display:flex;gap:var(--ow-sp-4);flex-wrap:wrap;pointer-events:none;}
+  .mc-flags .ow-cp{border:1px solid var(--ow-paper);}
+  .mc-chk{position:absolute;top:var(--ow-sp-8);left:var(--ow-sp-8);width:22px;height:22px;
+    border-radius:var(--ow-r-sm);background:var(--ow-paper);border:1.5px solid var(--ow-steel-400);
+    display:flex;align-items:center;justify-content:center;color:var(--ow-paper);
+    opacity:0;transition:opacity .12s;cursor:pointer;}
+  .mc-chk svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.4;
+    stroke-linecap:round;stroke-linejoin:round;}
+  .media-card:hover .mc-chk,.media-grid.ml-picking .mc-chk,.media-card.ml-picked .mc-chk{opacity:1;}
+  .media-card.ml-picked{border-color:var(--ow-sky);outline:1px solid var(--ow-sky);}
+  .media-card.ml-picked .mc-chk{background:var(--ow-sky);border-color:var(--ow-sky);}
+  .media-card .mc-body{display:block;padding:var(--ow-sp-8) var(--ow-sp-10) var(--ow-sp-10);}
+  .media-card .mc-name{display:block;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);
     color:var(--ow-ink-900);line-height:var(--ow-lh-snug);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  /* The chip wrapped onto a second line at this card width and shoved the
-     size out of the row. It keeps its own line now, under the size. */
   /* A SIZE IS NEVER CUT AND NEVER WRAPPED. "1.2 MB" broken over two
-     lines reads as two figures, and "421" on its own line is a wrong
-     number that looks entirely plausible. So the size holds its width
-     and the chip drops to its own line when the card is too narrow for
-     both -- the chip is the thing that gives way. */
-  .media-card .mc-meta{display:flex;gap:var(--ow-sp-6);align-items:center;
-    flex-wrap:wrap;margin-top:var(--ow-sp-4);min-width:0;}
+     lines reads as two figures. The usage count gives way first. */
+  .media-card .mc-meta{display:flex;gap:var(--ow-sp-8);align-items:center;
+    margin-top:var(--ow-sp-4);min-width:0;}
   .media-card .mc-size{flex:none;white-space:nowrap;
     font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
     font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);color:var(--ow-ink-600);
     letter-spacing:-.02em;}
-  .media-card .mc-meta .ow-cp{flex:none;margin-left:auto;}
+  .mc-use{display:inline-flex;align-items:center;gap:var(--ow-sp-4);margin-left:auto;min-width:0;
+    font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;overflow:hidden;}
+  .mc-use svg{width:13px;height:13px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round;}
+  .mc-use b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+
+  /* THE LIST -- the desk's dense alternative. Same rows, same order,
+     one line each, the figures in columns. */
+  .ml-list{display:flex;flex-direction:column;}
+  .ml-lr{display:grid;grid-template-columns:28px 44px minmax(0,1.6fr) minmax(0,1fr) max-content 76px 88px;
+    align-items:center;column-gap:var(--ow-sp-12);min-height:52px;padding:var(--ow-sp-4) var(--ow-sp-12);
+    border:0;border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper);width:100%;
+    font-family:inherit;text-align:left;font-size:var(--ow-t-12);color:var(--ow-ink-900);cursor:pointer;}
+  .ml-lr:hover{background:var(--ow-paper-2);}
+  .ml-lr.selected{background:var(--ow-steel-050);box-shadow:inset 2px 0 0 var(--ow-steel-950);}
+  .ml-lr.ml-picked{background:var(--ow-sky-soft);}
+  .ml-lr-h{min-height:32px;cursor:default;background:var(--ow-paper-2);font-size:var(--ow-t-11);
+    font-weight:var(--ow-fw-600);letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+  .ml-lr-h:hover{background:var(--ow-paper-2);}
+  .ml-lr .mc-chk{position:static;opacity:1;}
+  .ml-lr.ml-picked .mc-chk{background:var(--ow-sky);border-color:var(--ow-sky);}
+  .ml-lr-th{width:44px;height:36px;object-fit:cover;border-radius:var(--ow-r-sm);display:block;
+    background:var(--ow-steel-050);}
+  .ml-lr-k{min-width:0;}
+  .ml-lr-k b,.ml-lr-k span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ml-lr-k b{font-weight:var(--ow-fw-600);}
+  .ml-lr-k span{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ml-lr-c{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ow-ink-600);}
+  .ml-lr-c .ow-cp{white-space:nowrap;}
+  /* With the record open the list keeps what identifies a photo and what
+     it weighs; the folder and the date are in the record beside it. */
+  .ml-open .ml-lr{grid-template-columns:28px 44px minmax(0,1fr) max-content 76px;}
+  .ml-open .ml-lr > :nth-child(4),.ml-open .ml-lr > :nth-child(7){display:none;}
+  .ml-lr-f{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;text-align:right;white-space:nowrap;}
+
+  /* THE SELECTION BAR -- housekeeping in one pass. Floats at the foot
+     of the window while anything is picked, the one thing on this screen
+     that genuinely floats, so it wears the layer's one elevation. */
+  .ml-bulk{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--ow-sp-24);z-index:90;
+    display:none;align-items:center;width:max-content;max-width:calc(100vw - var(--ow-sp-32));
+    gap:var(--ow-sp-10);padding:var(--ow-sp-8) var(--ow-sp-8) var(--ow-sp-8) var(--ow-sp-16);
+    background:var(--ow-steel-950);color:var(--ow-paper);border-radius:var(--ow-r-lg);
+    box-shadow:var(--ow-lift);font-size:var(--ow-t-13);flex-wrap:wrap;}
+  .ml-bulk.ml-on{display:flex;}
+  .ml-bulk b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-weight:var(--ow-fw-600);}
+  .ml-bulk-s{color:#B3BCD2;font-size:var(--ow-t-12);}
+  .ml-bulk .ml-sort{background:var(--ow-steel-800);border-color:var(--ow-steel-800);color:var(--ow-paper);}
+  .ml-bulk .btn{background:var(--ow-steel-800);border-color:var(--ow-steel-800);color:var(--ow-paper);}
+  .ml-bulk .btn:hover{background:var(--ow-paper);color:var(--ow-ink-900);}
+  .ml-bulk .btn:disabled{opacity:.5;cursor:default;}
+  .ml-bulk .btn:disabled:hover{background:var(--ow-steel-800);color:var(--ow-paper);}
+
+  /* Drop anywhere on the screen to add. */
+  .ml-dropzone{position:fixed;inset:var(--ow-sp-16);z-index:95;display:none;align-items:center;
+    justify-content:center;flex-direction:column;gap:var(--ow-sp-8);pointer-events:none;
+    border:2px dashed var(--ow-sky);border-radius:var(--ow-r-lg);background:var(--ow-sky-soft);
+    color:var(--ow-sky);font-size:var(--ow-t-16);font-weight:var(--ow-fw-600);}
+  .ml-dropzone svg{width:32px;height:32px;fill:none;stroke:currentColor;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round;}
+  .ml-dropzone span{font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);}
+  .ml-dropzone.ml-on{display:flex;}
+
+  /* Empty states: a mark, a sentence, the way in. */
   .media-empty{padding:var(--ow-sp-32) var(--ow-sp-16);text-align:center;
-    color:var(--ow-ink-600);font-size:var(--ow-t-13);line-height:var(--ow-lh-normal);}
+    color:var(--ow-ink-600);font-size:var(--ow-t-13);line-height:var(--ow-lh-normal);
+    max-width:var(--ow-measure);margin:0 auto;}
   .media-empty b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  .media-empty .ml-e-ic{width:44px;height:44px;margin:0 auto var(--ow-sp-12);display:flex;
+    align-items:center;justify-content:center;border-radius:var(--ow-r-pill);background:var(--ow-steel-050);
+    color:var(--ow-ink-600);}
+  .media-empty .ml-e-ic svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round;}
   .media-empty .ml-e-a{display:flex;gap:var(--ow-sp-8);justify-content:center;
-    margin-top:var(--ow-sp-16);}
-  /* the picker */
-  .mp-tabs{display:flex;gap:0;border-bottom:1px solid var(--line);margin-bottom:14px;}
-  .mp-tab{border:none;background:none;padding:9px 16px;font-size:13.5px;color:var(--ink-soft);
-    cursor:pointer;font-family:inherit;border-bottom:2px solid transparent;margin-bottom:-1px;}
-  .mp-tab.active{color:var(--ink);font-weight:600;border-bottom-color:var(--accent);}
-  #mp_grid{max-height:46vh;overflow-y:auto;}
-  .mp-upload-box{border:1.5px dashed var(--line);border-radius:10px;padding:34px 20px;
-    display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;color:var(--ink-soft);}
-  .mp-upload-box p{margin:0;font-size:13px;line-height:1.5;}
+    margin-top:var(--ow-sp-16);flex-wrap:wrap;}
+
+  /* THE UPLOAD TRAY -- every file named, every outcome said. A file
+     that was already in the library says so; a failure says why. */
+  .ml-tray{position:fixed;right:var(--ow-sp-24);bottom:var(--ow-sp-24);z-index:96;width:340px;
+    max-width:calc(100vw - var(--ow-sp-32));background:var(--ow-paper);border:1px solid var(--ow-rule);
+    border-radius:var(--ow-r-lg);box-shadow:var(--ow-lift);display:none;overflow:hidden;}
+  .ml-tray.ml-on{display:block;}
+  .ml-tray-h{display:flex;align-items:center;gap:var(--ow-sp-8);padding:var(--ow-sp-10) var(--ow-sp-12);
+    border-bottom:1px solid var(--ow-rule-soft);font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);}
+  .ml-tray-h .ml-cap{margin-left:auto;}
+  .ml-tray-x{border:0;background:none;padding:var(--ow-sp-2);cursor:pointer;color:var(--ow-ink-600);display:flex;}
+  .ml-tray-x svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;}
+  .ml-tray-p{height:3px;background:var(--ow-rule-soft);}
+  .ml-tray-p > i{display:block;height:100%;background:var(--ow-steel-950);transition:width .25s ease;}
+  .ml-tray-l{max-height:240px;overflow-y:auto;}
+  .ml-tray-r{display:grid;grid-template-columns:32px minmax(0,1fr) auto;align-items:center;
+    column-gap:var(--ow-sp-10);padding:var(--ow-sp-6) var(--ow-sp-12);font-size:var(--ow-t-12);
+    border-bottom:1px solid var(--ow-rule-soft);}
+  .ml-tray-r:last-child{border-bottom:0;}
+  .ml-tray-r img{width:32px;height:32px;object-fit:cover;border-radius:var(--ow-r-sm);
+    background:var(--ow-steel-050);display:block;}
+  .ml-tray-r img:not([src]){visibility:visible;border:1px solid var(--ow-rule-soft);}
+  .ml-tray-k{min-width:0;}
+  .ml-tray-k b,.ml-tray-k span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ml-tray-k b{font-weight:var(--ow-fw-500);}
+  .ml-tray-k span{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ml-spin{width:14px;height:14px;border-radius:var(--ow-r-pill);border:2px solid var(--ow-rule);
+    border-top-color:var(--ow-steel-950);animation:ml-spin .8s linear infinite;}
+  @keyframes ml-spin{to{transform:rotate(360deg);}}
+  @media (prefers-reduced-motion: reduce){ .ml-spin{animation:none;} .ml-ring-arc{transition:none;} }
+
+  /* ---- THE PICKER ---- */
+  .mp-tabs{margin-bottom:var(--ow-sp-12);}
+  .mp-tb{display:flex;align-items:center;gap:var(--ow-sp-8);flex-wrap:wrap;margin-bottom:var(--ow-sp-10);}
+  #mp_grid{max-height:46vh;overflow-y:auto;border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);
+    background:var(--ow-paper-2);}
+  #mp_grid .media-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));}
+  .mp-upload-box{border:1.5px dashed var(--ow-rule);border-radius:var(--ow-r-lg);padding:var(--ow-sp-32) var(--ow-sp-20);
+    display:flex;flex-direction:column;align-items:center;gap:var(--ow-sp-12);text-align:center;
+    color:var(--ow-ink-600);background:var(--ow-paper-2);transition:background .12s,border-color .12s;}
+  .mp-upload-box.ml-drop-on{border-color:var(--ow-sky);background:var(--ow-sky-soft);color:var(--ow-sky);}
+  .mp-upload-box p{margin:0;font-size:var(--ow-t-13);line-height:var(--ow-lh-normal);max-width:52ch;}
+  .mp-upload-box .ml-e-ic{width:52px;height:52px;display:flex;align-items:center;justify-content:center;
+    border-radius:var(--ow-r-pill);background:var(--ow-paper);border:1px solid var(--ow-rule-soft);color:var(--ow-ink-900);}
+  .mp-upload-box .ml-e-ic svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round;}
+  .mp-steps{display:flex;gap:var(--ow-sp-16);flex-wrap:wrap;justify-content:center;font-size:var(--ow-t-11);
+    color:var(--ow-ink-600);}
+  .mp-steps span{display:inline-flex;align-items:center;gap:var(--ow-sp-6);}
+  .mp-steps i{font-style:normal;width:18px;height:18px;border-radius:var(--ow-r-pill);background:var(--ow-paper);
+    border:1px solid var(--ow-rule);display:inline-flex;align-items:center;justify-content:center;
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-11);color:var(--ow-ink-900);}
+  .mp-foot{display:flex;align-items:center;gap:var(--ow-sp-10);margin-top:var(--ow-sp-12);min-height:44px;}
+  .mp-sel{flex:1;min-width:0;display:flex;align-items:center;gap:var(--ow-sp-10);}
+  .mp-sel img{width:44px;height:44px;object-fit:cover;border-radius:var(--ow-r-sm);display:block;
+    background:var(--ow-steel-050);flex:none;}
+  .mp-sel-k{min-width:0;font-size:var(--ow-t-12);}
+  .mp-sel-k b,.mp-sel-k span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mp-sel-k b{font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .mp-sel-k span{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+
   /* ---- ONE PHOTO'S RECORD ----
 
-     Emitted once, hosted twice: on the desk it fills the 304px rail
-     beside the grid, on the phone it fills the modal. A modal over the
-     grid on a wide screen loses your place in it and lets you compare
-     nothing -- which is exactly the question a photo library is asked
-     ("is this the same picture as that one"). */
-  .md-ph{width:100%;height:190px;object-fit:contain;display:block;
-    background:var(--ow-steel-050);border-bottom:1px solid var(--ow-rule-soft);}
+     Emitted once, hosted twice: on the desk it fills the rail beside the
+     grid, on the phone it fills the modal. A modal over the grid on a
+     wide screen loses your place in it and lets you compare nothing --
+     which is exactly the question a photo library is asked ("is this
+     the same picture as that one"). */
+  .md-nav{display:inline-flex;gap:var(--ow-sp-2);}
+  .md-nav .btn{width:28px;padding:0;justify-content:center;}
+  .md-nav svg{width:15px;height:15px;}
+  .md-stage{position:relative;display:block;width:100%;padding:0;border:0;cursor:zoom-in;
+    border-bottom:1px solid var(--ow-rule-soft);
+    background:repeating-conic-gradient(var(--ow-steel-050) 0 25%,var(--ow-paper) 0 50%) 0 0/16px 16px;}
+  .md-ph{width:100%;height:210px;object-fit:contain;display:block;}
+  .md-zoom{position:absolute;right:var(--ow-sp-8);bottom:var(--ow-sp-8);width:28px;height:28px;
+    border-radius:var(--ow-r-sm);background:var(--ow-paper);border:1px solid var(--ow-rule);
+    display:flex;align-items:center;justify-content:center;color:var(--ow-ink-900);}
+  .md-zoom svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
   .md-f{padding:var(--ow-sp-10) var(--ow-sp-12) 0;}
-  .md-f:last-of-type{padding-bottom:var(--ow-sp-12);}
   .md-f label{display:block;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
     letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);
     margin-bottom:var(--ow-sp-4);}
   .md-f input,.md-f select{width:100%;height:32px;padding:0 var(--ow-sp-10);
     border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
     font-family:inherit;font-size:var(--ow-t-13);color:var(--ow-ink-900);}
-  .md-meta{padding:var(--ow-sp-10) var(--ow-sp-12);font-size:var(--ow-t-11);
-    color:var(--ow-ink-600);line-height:var(--ow-lh-normal);
-    border-top:1px solid var(--ow-rule-soft);}
+  /* The specification: four facts as four tiles, figures in the figure
+     face, rather than a sentence of them run together. */
+  .md-spec{display:grid;grid-template-columns:1fr 1fr;margin:var(--ow-sp-12);border:1px solid var(--ow-rule-soft);
+    border-radius:var(--ow-r);overflow:hidden;}
+  .md-spec > div{padding:var(--ow-sp-8) var(--ow-sp-10);min-width:0;border-right:1px solid var(--ow-rule-soft);
+    border-bottom:1px solid var(--ow-rule-soft);}
+  .md-spec > div:nth-child(2n){border-right:0;}
+  .md-spec > div:nth-last-child(-n+2){border-bottom:0;}
+  .md-spec span{display:block;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .md-spec b{display:block;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);color:var(--ow-ink-900);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:var(--ow-sp-2);}
+  .md-spec b.md-none{font-family:inherit;color:var(--ow-ink-600);font-weight:var(--ow-fw-400);}
+  .md-meta{padding:0 var(--ow-sp-12) var(--ow-sp-10);font-size:var(--ow-t-11);
+    color:var(--ow-ink-600);line-height:var(--ow-lh-normal);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .md-meta .md-mono{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
     font-variant-numeric:tabular-nums;letter-spacing:-.02em;color:var(--ow-ink-900);}
-  .md-u{display:flex;align-items:center;gap:var(--ow-sp-8);min-height:30px;
+  /* What uses it, drawn as what it is: a photo with lines out to the
+     things that show it. */
+  .md-tree{position:relative;margin:0 var(--ow-sp-12) var(--ow-sp-4);padding-left:var(--ow-sp-16);}
+  .md-tree::before{content:"";position:absolute;left:5px;top:0;bottom:15px;border-left:1.5px solid var(--ow-rule);}
+  .md-u{position:relative;display:flex;align-items:center;gap:var(--ow-sp-8);min-height:32px;
     padding:var(--ow-sp-4) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);
     font-size:var(--ow-t-12);color:var(--ow-ink-900);}
+  .md-tree .md-u{padding:var(--ow-sp-4) 0;border-top:0;}
+  .md-tree .md-u::before{content:"";position:absolute;left:-11px;top:50%;width:9px;border-top:1.5px solid var(--ow-rule);}
+  .md-u-ic{flex:none;width:24px;height:24px;border-radius:var(--ow-r-sm);display:flex;align-items:center;
+    justify-content:center;background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .md-u-ic svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .md-u-ic.md-k-variant{background:var(--ow-indigo-soft);color:var(--ow-indigo);}
+  .md-u-ic.md-k-category{background:var(--ow-plum-soft);color:var(--ow-plum);}
+  .md-u-ic.md-k-sourcing{background:var(--ow-sky-soft);color:var(--ow-sky);}
   .md-u-k{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .md-u-k small{display:block;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
   /* The chip and the action hold their width; the NAME is the thing that
-     gives way, and it is the only thing here that may. Without this the
-     row shrank all three and "Steel Nails 3 inch" came out as "Steel
-     Na...", which reads as a different product rather than as a
-     shortened one. */
-  .md-u > .ow-cp,.md-u > .btn{flex:none;}
+     gives way, and it is the only thing here that may. */
+  .md-u > .ow-cp,.md-u > .btn,.md-u > .ml-bar{flex:none;}
+  .md-u > .ml-bar{width:64px;}
+  .md-u-n{flex:none;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-size:var(--ow-t-11);color:var(--ow-ink-600);min-width:52px;text-align:right;}
+  .md-u-n b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  .md-u-rk{flex:none;width:20px;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .md-free{display:flex;align-items:center;gap:var(--ow-sp-10);margin:0 var(--ow-sp-12) var(--ow-sp-12);
+    padding:var(--ow-sp-10) var(--ow-sp-12);border:1px dashed var(--ow-rule);border-radius:var(--ow-r);
+    font-size:var(--ow-t-12);color:var(--ow-ink-600);line-height:var(--ow-lh-snug);}
+  .md-free .ow-cp{flex:none;}
+  /* The twins, side by side, so "the same picture" can be seen. */
+  .md-twins{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--ow-sp-8);
+    padding:var(--ow-sp-10) var(--ow-sp-12);}
+  .md-twin{border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);overflow:hidden;cursor:pointer;
+    background:var(--ow-paper);padding:0;font-family:inherit;text-align:left;min-width:0;}
+  .md-twin:hover{border-color:var(--ow-steel-400);}
+  .md-twin img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;background:var(--ow-steel-050);}
+  .md-twin span{display:block;padding:var(--ow-sp-4) var(--ow-sp-6);font-size:var(--ow-t-11);color:var(--ow-ink-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   /* Crimson, because it is a refusal. It names every blocker rather than
      saying "in use" and leaving the shop to hunt for where. */
   .md-refuse{margin:var(--ow-sp-12);padding:var(--ow-sp-10) var(--ow-sp-12);
@@ -16227,10 +16500,79 @@
     font-size:var(--ow-t-12);line-height:var(--ow-lh-normal);}
   .md-refuse b{font-weight:var(--ow-fw-600);}
   .md-refuse div{margin-top:var(--ow-sp-4);}
-  .md-acts{display:flex;justify-content:flex-end;padding:var(--ow-sp-10) var(--ow-sp-12);
-    border-top:1px solid var(--ow-rule-soft);}
+  .md-acts{display:flex;align-items:center;gap:var(--ow-sp-6);padding:var(--ow-sp-10) var(--ow-sp-12);
+    border-top:1px solid var(--ow-rule-soft);flex-wrap:wrap;}
+  .md-acts .ow-ph-sp{flex:1;}
   .md-acts #md_delete{color:var(--ow-crimson);}
   .md-acts #md_delete:hover{border-color:var(--ow-crimson);}
+
+  /* The gap list and the place sheet: a summary line, then ranked rows. */
+  .md-sum{display:flex;align-items:center;gap:var(--ow-sp-16);padding:var(--ow-sp-12) var(--ow-sp-12) var(--ow-sp-16);}
+  .md-sum .ml-ring,.md-sum .ml-ring svg{width:72px;height:72px;}
+  .md-sum .ml-ring-v{font-size:var(--ow-t-14);}
+  .md-sum-k{flex:1;min-width:0;font-size:var(--ow-t-13);line-height:var(--ow-lh-normal);color:var(--ow-ink-600);}
+  .md-sum-k b{display:block;font-size:var(--ow-t-16);color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  .md-shot{display:grid;grid-template-columns:120px minmax(0,1fr);gap:var(--ow-sp-12);align-items:center;
+    padding:var(--ow-sp-12);border-bottom:1px solid var(--ow-rule-soft);}
+  .md-shot img{width:120px;height:90px;object-fit:cover;border-radius:var(--ow-r);display:block;
+    background:var(--ow-steel-050);}
+  .md-shot-k{min-width:0;font-size:var(--ow-t-12);color:var(--ow-ink-600);line-height:var(--ow-lh-normal);}
+  .md-shot-k b{display:block;font-size:var(--ow-t-14);color:var(--ow-ink-900);font-weight:var(--ow-fw-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .md-shot-k .ow-cp{margin-top:var(--ow-sp-4);}
+  .md-sec{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.07em;text-transform:uppercase;
+    color:var(--ow-ink-600);padding:var(--ow-sp-12) var(--ow-sp-12) var(--ow-sp-4);margin:0;}
+  #mediaDetailModal .modal-body{padding:0;}
+  #mediaDetailModal .modal-body > .ow-mini{padding:var(--ow-sp-12);}
+
+  /* ---- THE CONFIRMATION ----
+     What is about to go, shown rather than described: the pictures
+     themselves, what they free, and anything that is kept back. */
+  #mediaConfirmModal,#mediaViewModal{z-index:120;}
+  .mc-conf{padding:var(--ow-sp-20) var(--ow-sp-20) var(--ow-sp-16);}
+  .mc-conf-ic{width:40px;height:40px;border-radius:var(--ow-r-pill);display:flex;align-items:center;justify-content:center;
+    background:var(--ow-crimson-soft);color:var(--ow-crimson);margin-bottom:var(--ow-sp-12);}
+  .mc-conf-ic.mc-conf-n{background:var(--ow-steel-050);color:var(--ow-ink-900);}
+  .mc-conf-ic svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .mc-conf h3{margin:0;font-size:var(--ow-t-16);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .mc-conf p{margin:var(--ow-sp-6) 0 0;font-size:var(--ow-t-13);color:var(--ow-ink-600);line-height:var(--ow-lh-normal);
+    max-width:var(--ow-measure);}
+  .mc-conf-th{display:flex;gap:var(--ow-sp-6);margin-top:var(--ow-sp-16);flex-wrap:wrap;}
+  .mc-conf-th img{width:56px;height:56px;object-fit:cover;border-radius:var(--ow-r-sm);display:block;
+    background:var(--ow-steel-050);border:1px solid var(--ow-rule-soft);}
+  .mc-conf-th span{width:56px;height:56px;border-radius:var(--ow-r-sm);display:flex;align-items:center;justify-content:center;
+    background:var(--ow-steel-050);font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .mc-conf-fig{display:flex;gap:var(--ow-sp-24);margin-top:var(--ow-sp-16);padding-top:var(--ow-sp-12);
+    border-top:1px solid var(--ow-rule-soft);}
+  .mc-conf-fig div span{display:block;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .mc-conf-fig div b{display:block;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-16);font-weight:var(--ow-fw-500);
+    color:var(--ow-ink-900);margin-top:var(--ow-sp-2);}
+  .mc-conf-keep{margin-top:var(--ow-sp-12);padding:var(--ow-sp-10) var(--ow-sp-12);border-radius:var(--ow-r);
+    background:var(--ow-amber-faint);border:1px solid var(--ow-amber-soft);font-size:var(--ow-t-12);
+    color:var(--ow-amber-ink);line-height:var(--ow-lh-normal);}
+  .mc-conf-keep b{font-weight:var(--ow-fw-600);}
+  .mc-conf-keep div{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .btn.ml-danger{background:var(--ow-crimson);border-color:var(--ow-crimson);color:var(--ow-paper);}
+  .btn.ml-danger:hover{background:var(--ow-oxide-deep);border-color:var(--ow-oxide-deep);}
+
+  /* ---- THE VIEWER -- the photo at full size, on navy. ---- */
+  #mediaViewModal{background:rgba(22,32,60,.97);padding:0;}
+  .mv-shell{position:relative;width:100%;height:100%;display:flex;flex-direction:column;}
+  .mv-top{display:flex;align-items:center;gap:var(--ow-sp-12);padding:var(--ow-sp-12) var(--ow-sp-16);color:var(--ow-paper);}
+  .mv-top b{font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mv-top span{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-size:var(--ow-t-12);color:#B3BCD2;white-space:nowrap;}
+  .mv-top .ow-ph-sp{flex:1;}
+  .mv-b{all:unset;cursor:pointer;width:40px;height:40px;border-radius:var(--ow-r-pill);display:flex;align-items:center;
+    justify-content:center;color:var(--ow-paper);background:rgba(255,255,255,0.08);flex:none;}
+  .mv-b:hover{background:rgba(255,255,255,0.18);}
+  .mv-b svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .mv-stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;gap:var(--ow-sp-16);
+    padding:0 var(--ow-sp-16) var(--ow-sp-24);}
+  .mv-stage img{max-width:calc(100% - 128px);max-height:100%;object-fit:contain;display:block;
+    border-radius:var(--ow-r-sm);background:var(--ow-paper);}
 
   /* ==================================================================
      THE PHONE.
@@ -16238,23 +16580,41 @@
      A different screen, not this one reflowed. The desk question is
      housekeeping -- what is here, what is wasted, what is duplicated.
      The yard question is a camera: photograph the thing in front of you
-     and put it on the product it belongs to. So the figures shrink to
-     one line, the folder rail becomes one row, and the bottom of the
-     screen is the camera.
+     and put it on the product it belongs to. So the coverage ring stays
+     (it is the reason to pick up the camera), storage shrinks to one
+     line, the folder rail becomes one row, and the bottom of the screen
+     is the camera.
      ================================================================== */
   @media (max-width:820px){
+    .ml-ins{grid-template-columns:minmax(0,1fr);gap:var(--ow-sp-12);margin-bottom:var(--ow-sp-12);}
+    .ml-ins > .ml-sto,.ml-ins > .ml-act{display:none;}
+    .ml-cov .ow-pan-h{display:none;}
+    /* The ring beside the sentence it measures, and the ranked rows under
+       both at full width -- at 390px a name squeezed beside a ring and a
+       bar came out as "Ridge Cap ...", which names nothing. */
+    .ml-cov-b{display:grid;grid-template-columns:72px minmax(0,1fr);align-items:center;
+      column-gap:var(--ow-sp-16);row-gap:var(--ow-sp-8);padding:var(--ow-sp-16);}
+    .ml-cov-r{display:contents;}
+    .ml-cov-r > .ml-rk,.ml-cov-r > .ml-cov-f,.ml-cov-r > .ml-cap{grid-column:1/-1;}
+    .ml-ring,.ml-ring svg{width:72px;height:72px;}
+    .ml-ring-v{font-size:var(--ow-t-16);}
+    .ml-ring-s{display:none;}
+    .ml-cov-t{font-size:15px;}
+    .ml-rk{min-height:32px;}
+    .ml-rk-k{font-size:var(--ow-t-13);}
+    .ml-cov-r .ml-rk:nth-child(n+4){display:none;}
+    .ml-cov-f .ml-cap{display:none;}
+    /* Two accents is one too many. In the yard the oxide is the camera;
+       the gap is stated in ink and still opens on a tap. */
+    .ml-cov-f .btn-accent{flex:1 1 100%;height:var(--ow-tap);
+      background:var(--ow-paper);border-color:var(--ow-rule);color:var(--ow-ink-900);
+      font-weight:var(--ow-fw-600);font-size:15px;justify-content:center;}
     .ml-lay,.ml-lay.ml-open{grid-template-columns:minmax(0,1fr);gap:var(--ow-sp-12);}
-    /* Storage housekeeping is desk work. On the phone it is one line of
-       context, and the panel of folders becomes a single row. */
-    #mediaStrip{display:none;}
+    #mediaRecordRail{position:static;max-height:none;}
     .ml-ctx{display:block;font-size:var(--ow-t-12);color:var(--ow-ink-600);margin:0 0 var(--ow-sp-10);}
     .ml-ctx .md-mono{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
       font-variant-numeric:tabular-nums;color:var(--ow-ink-900);
       font-weight:var(--ow-fw-500);letter-spacing:-.02em;}
-    .ml-gap{min-height:56px;margin-bottom:var(--ow-sp-12);border-left-width:1px;
-      border-left-color:var(--ow-rule-soft);}
-    .ml-gap-t{font-size:15px;line-height:var(--ow-lh-snug);}
-    .ml-gap-s{font-size:var(--ow-t-12);}
     .ml-fr{height:var(--ow-tap);font-size:15px;}
     .ml-fr-n{font-size:var(--ow-t-13);}
     /* Collapsed to the one row that says where you are; the rest open
@@ -16267,29 +16627,20 @@
       transition:transform .13s;}
     #mediaFolders[aria-expanded] .ml-fold-c{transform:rotate(180deg);}
     #mediaFolders:not(.ml-fold-open) #mediaFolderRail{display:none;}
-    /* Two accents is one too many. In the yard the oxide is the camera;
-       the gap is stated in ink and still opens on a tap. */
-    .ml-gap{flex-wrap:wrap;}
-    .ml-gap-b{flex:1 1 100%;}
-    .ml-gap .ow-ph-sp{display:none;}
-    .ml-gap .btn-accent{flex:1 1 100%;height:var(--ow-tap);margin-top:var(--ow-sp-8);
-      background:var(--ow-paper);border-color:var(--ow-rule);color:var(--ow-ink-900);
-      font-weight:var(--ow-fw-600);font-size:15px;justify-content:center;}
     .ml-tb{padding:var(--ow-sp-10) var(--ow-sp-12);}
     .ml-find{flex:1 1 100%;height:var(--ow-tap);}
     .ml-find input{font-size:15px;}
-    /* One row of three, not three rows of one: stacked full-width filters
-       pushed the first photograph most of a screen down. */
-    .ml-chips{flex:1 1 100%;flex-wrap:nowrap;}
-    /* Duplicates is a desk question -- what the bucket is paying for --
-       and the third button did not fit beside the other two without
-       cutting one of them off. The yard filters by "has this been used";
-       it does not audit storage. */
-    .ml-chips [data-mlfilter="dupes"]{display:none;}
-    .ml-tb .btn{flex:1;min-width:0;height:var(--ow-tap);font-size:var(--ow-t-12);
-      justify-content:center;padding:0 var(--ow-sp-6);}
-    .media-grid{grid-template-columns:1fr 1fr;}
+    /* One row of two, not rows of one: stacked full-width filters pushed
+       the first photograph most of a screen down. Duplicates, sort and
+       the list view are desk questions -- the yard filters by "has this
+       been used"; it does not audit storage. */
+    .ml-tb .ow-seg{flex:1 1 100%;height:var(--ow-tap);}
+    .ml-tb .ow-seg-b{flex:1;justify-content:center;font-size:var(--ow-t-13);}
+    .ml-tb [data-mlfilter="dupes"],.ml-tb .ml-sort,.ml-tb .ml-view,.ml-sel-all{display:none;}
+    .media-grid{grid-template-columns:1fr 1fr;gap:var(--ow-sp-10);padding:var(--ow-sp-10);}
     .media-card .mc-name{font-size:var(--ow-t-14);}
+    .mc-chk,.ml-bulk,.ml-bulk.ml-on{display:none;}
+    .mc-use span{display:none;}
     /* Room for the camera bar, which floats over the end of the list. */
     .ml-pad{height:88px;}
     /* THE ONE ACCENT ON THE PHONE, and it sits in the thumb zone rather
@@ -16301,17 +16652,24 @@
       font-weight:var(--ow-fw-600);display:flex;align-items:center;justify-content:center;
       gap:var(--ow-sp-10);box-shadow:var(--ow-lift);cursor:pointer;}
     .ml-cam svg{width:22px;height:22px;}
+    .ml-tray{left:var(--ow-sp-16);right:var(--ow-sp-16);width:auto;
+      bottom:calc(var(--mobile-bottomnav-h) + env(safe-area-inset-bottom) + 80px);}
     .md-ph{height:240px;}
     .md-f input,.md-f select{height:var(--ow-tap);font-size:15px;}
     .md-u{min-height:var(--ow-tap);font-size:var(--ow-t-13);}
+    .md-u > .ml-bar{display:none;}
     .md-acts .btn{height:var(--ow-tap);font-size:15px;}
+    .md-shot{grid-template-columns:96px minmax(0,1fr);}
+    .md-shot img{width:96px;height:72px;}
+    .mv-stage img{max-width:100%;}
+    .mv-stage .mv-b{display:none;}
+    .mp-foot{flex-wrap:wrap;}
+    .mp-sel{flex:1 1 100%;}
     /* The layer's phone rule makes .btn.ow-sm half-width and growing --
        right for the two actions inside an open queue row, wrong for a
-       button sharing a line with a name that must stay readable. It won
-       on source order, took 178px of a 346px row, and cut "Steel Nails
-       3 inch" down to "Steel Na..." -- a different product, not a
-       shortened one. Beaten here on specificity rather than edited
-       there, since every queue on the app depends on it. */
+       button sharing a line with a name that must stay readable. Beaten
+       here on specificity rather than edited there, since every queue on
+       the app depends on it. */
     .md-u > .btn.ow-sm{flex:none;min-width:0;height:var(--ow-tap);}
   }
   /* The camera belongs to this screen only, and only on the phone. It
@@ -30474,25 +30832,31 @@
     <!-- MEDIA LIBRARY -->
     <!-- MEDIA: THE SHOP'S PHOTOGRAPHS.
 
-         The page is the library and its housekeeping, and it keeps that
-         job. What changed is where the accent points. Oxide used to sit
-         on "Add photos" -- an act the shop performs whether or not
-         anything needs one -- while three of five figures glowed amber
-         at once, so colour marked everything and therefore nothing.
+         Redrawn from the questions the screen is opened to answer, in the
+         order they are asked:
 
-         It now points at the one thing on this screen that costs money:
-         the products whose quotes and posts go out as a line of text
-         because nobody has photographed them. That figure is derived
-         from the products register and ranked from the books; it is
-         never typed in, and when there is no gap the band does not
-         appear at all. -->
+           How much of what we sell goes out with a picture?  The ring,
+           and the products that do not, ranked by what they sell. The
+           screen's one accent sits here -- on the photo gap, which is
+           the only thing on the page that costs money.
+
+           What is the storage holding, and how much is dead weight?  One
+           bar, split by what the bytes are doing; each part a filter.
+
+           Is the photographing keeping up?  Twelve weeks of additions.
+
+         Then the library: folders, a toolbar that says how the grid is
+         narrowed and ordered, a grid or a dense list, and a selection bar
+         for doing the housekeeping in one pass. Every figure is derived
+         from the products register and the library rows; nothing is typed
+         in, and nothing is moved or deleted until it is confirmed. -->
     <section id="tab-media" style="display:none;">
       <div class="ow-ph">
         <div>
           <h1 class="ow-ph-t">Media</h1>
           <p class="ow-ph-sub">Every photo the shop has, and what uses it.</p>
         </div>
-        <p class="ow-ph-help">Wherever the app asks for a photo it is chosen from here, so the same picture never has to be uploaded twice — and a photo put on a product appears in this library on its own. Nothing is uploaded, moved or deleted until you say so.</p>
+        <p class="ow-ph-help">Wherever the app asks for a photo it is chosen from here, so the same picture never has to be uploaded twice — and a photo put on a product appears in this library on its own. Drop photos anywhere on this screen to add them. Nothing is uploaded, moved or deleted until you say so.</p>
         <span class="ow-ph-sp"></span>
         <button class="btn ow-sm btn-icon" id="ml_add_btn">
           <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"/></svg>
@@ -30500,8 +30864,11 @@
         </button>
       </div>
 
-      <div id="mediaGap"></div>
-      <div class="ow-strip" id="mediaStrip"></div>
+      <div class="ml-ins" id="mediaInsights">
+        <div class="ow-pan ml-cov" id="mediaGap"></div>
+        <div class="ow-pan ml-sto" id="mediaStrip"></div>
+        <div class="ow-pan ml-act" id="mediaActivity"></div>
+      </div>
       <p class="ml-ctx" id="mediaCtx"></p>
 
       <div class="ml-lay" id="mediaLayout">
@@ -30517,7 +30884,7 @@
           </button>
           <div id="mediaFolderRail"></div>
         </div>
-        <div class="ow-pan">
+        <div class="ow-pan" id="mediaWork">
           <div class="ow-pan-h">
             <span class="ow-pan-t" id="ml_where">All photos</span>
             <span class="ow-pan-n" id="ml_where_n"></span>
@@ -30527,17 +30894,48 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
               <input id="ml_search" placeholder="Search by name, or by what uses it">
             </label>
-            <div class="ml-chips" id="ml_chips">
-              <button type="button" class="btn ow-sm" aria-pressed="true" data-mlfilter="all">All <span class="ml-n" data-mlcount="all"></span></button>
-              <button type="button" class="btn ow-sm" aria-pressed="false" data-mlfilter="unused">Used nowhere <span class="ml-n" data-mlcount="unused"></span></button>
-              <button type="button" class="btn ow-sm" aria-pressed="false" data-mlfilter="dupes">Duplicates <span class="ml-n" data-mlcount="dupes"></span></button>
+            <div class="ow-seg" id="ml_chips" role="group" aria-label="Show">
+              <button type="button" class="ow-seg-b ow-on" aria-pressed="true" data-mlfilter="all">All<span class="ow-seg-n" data-mlcount="all"></span></button>
+              <button type="button" class="ow-seg-b" aria-pressed="false" data-mlfilter="unused">Used nowhere<span class="ow-seg-n" data-mlcount="unused"></span></button>
+              <button type="button" class="ow-seg-b" aria-pressed="false" data-mlfilter="dupes">Duplicates<span class="ow-seg-n" data-mlcount="dupes"></span></button>
+            </div>
+            <select class="ml-sort" id="ml_sort" aria-label="Order">
+              <option value="new">Newest first</option>
+              <option value="old">Oldest first</option>
+              <option value="big">Largest first</option>
+              <option value="name">Name, A–Z</option>
+            </select>
+            <div class="ow-seg ml-view" id="ml_view" role="group" aria-label="View">
+              <button type="button" class="ow-seg-b ow-on" data-mlview="grid" aria-pressed="true" title="Grid">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6.5" height="6.5" rx="1.2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.2"/></svg>
+              </button>
+              <button type="button" class="ow-seg-b" data-mlview="list" aria-pressed="false" title="List">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6.5H20M9.5 12H20M9.5 17.5H20"/><rect x="4" y="5" width="3" height="3" rx=".6"/><rect x="4" y="10.5" width="3" height="3" rx=".6"/><rect x="4" y="16" width="3" height="3" rx=".6"/></svg>
+              </button>
             </div>
           </div>
           <div id="ml_grid"></div>
+          <!-- THE SELECTION BAR. Appears only while photos are picked. -->
+          <div class="ml-bulk" id="ml_bulk" role="region" aria-label="Selected photos">
+            <span><b id="ml_bulk_n">0</b> selected</span>
+            <span class="ml-bulk-s" id="ml_bulk_s"></span>
+            <span class="ow-ph-sp"></span>
+            <select class="ml-sort" id="ml_bulk_move" aria-label="Move the selected photos"></select>
+            <button type="button" class="btn ow-sm btn-icon" id="ml_bulk_del">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M5 7h14M10 7V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2M7 7l1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13"/></svg>
+              <span id="ml_bulk_del_l">Delete</span>
+            </button>
+            <button type="button" class="btn ow-sm" id="ml_bulk_clear">Clear</button>
+          </div>
         </div>
         <aside class="ow-pan" id="mediaRecordRail" style="display:none;"></aside>
       </div>
       <div class="ml-pad"></div>
+
+      <div class="ml-dropzone" id="ml_dropzone">
+        <svg viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
+        Drop to add to <span id="ml_drop_where">the library</span>
+      </div>
 
       <input type="file" id="ml_file_input" accept="image/*" multiple style="display:none;">
       <!-- The yard's own button. `capture` opens the camera rather than the
@@ -32069,33 +32467,39 @@
       </button>
     </div>
     <div class="modal-body">
-      <div class="mp-tabs">
-        <button type="button" id="mp_tab_lib" class="mp-tab active">From your library</button>
-        <button type="button" id="mp_tab_up" class="mp-tab">Upload new</button>
+      <div class="ow-seg mp-tabs" role="tablist" aria-label="Where the photo comes from">
+        <button type="button" id="mp_tab_lib" class="ow-seg-b active ow-on">From your library<span class="ow-seg-n" id="mp_lib_n"></span></button>
+        <button type="button" id="mp_tab_up" class="ow-seg-b">Upload new</button>
       </div>
       <div id="mp_lib_pane">
-        <div class="ml-tb" style="border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);margin-bottom:var(--ow-sp-10);">
+        <div class="mp-tb">
           <label class="ml-find">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
             <input id="mp_search" placeholder="Search by name, or by what uses it">
           </label>
-          <select id="mp_folder" class="mp-folder"></select>
+          <select id="mp_folder" class="mp-folder" aria-label="Folder"></select>
         </div>
         <div id="mp_grid"></div>
       </div>
       <div id="mp_up_pane" style="display:none;">
-        <div class="mp-upload-box">
-          <svg class="icon" style="width:28px;height:28px;" viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"/></svg>
-          <p>The photo joins the library first, then goes on whatever you are editing.<br>If it is one you already have, the existing copy is used and nothing is uploaded twice.</p>
+        <div class="mp-upload-box" id="mp_drop">
+          <span class="ml-e-ic"><svg viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg></span>
+          <p><b>Drop a photo here</b>, or choose one from this device.</p>
           <button class="btn btn-accent btn-icon" id="mp_file_btn">
             <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"/></svg>
             Choose a file
           </button>
           <input type="file" id="mp_file_input" accept="image/*" style="display:none;">
-          <div class="img-upload-hint" id="mp_up_hint">A photo off the phone is fine — it is shrunk to 1200px before anything is stored.</div>
+          <div class="mp-steps" aria-label="What happens">
+            <span><i>1</i>Checked against the library</span>
+            <span><i>2</i>Shrunk to 1200px</span>
+            <span><i>3</i>Put on what you are editing</span>
+          </div>
+          <div class="img-upload-hint" id="mp_up_hint">If it is one you already have, the existing copy is used and nothing is uploaded twice.</div>
         </div>
       </div>
-      <div class="btn-row" style="justify-content:flex-end;margin-top:14px;">
+      <div class="mp-foot">
+        <div class="mp-sel" id="mp_sel"></div>
         <button class="btn" id="mp_cancel">Cancel</button>
         <button class="btn btn-accent" id="mp_use" disabled>Use this photo</button>
       </div>
@@ -32103,7 +32507,7 @@
   </div>
 </div>
 
-<!-- ONE PHOTO'S RECORD -->
+<!-- ONE PHOTO'S RECORD (and, on the phone, the gap list and the place sheet) -->
 <div class="modal-overlay" id="mediaDetailModal">
   <div class="modal modal-wide">
     <div class="modal-head">
@@ -32114,6 +32518,41 @@
     </div>
     <div class="modal-body" id="md_body"></div>
   </div>
+</div>
+
+<!-- A CONFIRMATION THAT SHOWS WHAT IS ABOUT TO GO -->
+<div class="modal-overlay" id="mediaConfirmModal" role="alertdialog" aria-modal="true" aria-labelledby="mc_title">
+  <div class="modal">
+    <div class="mc-conf" id="mc_body"></div>
+    <div class="modal-foot">
+      <button type="button" class="btn" id="mc_cancel">Cancel</button>
+      <button type="button" class="btn ml-danger" id="mc_ok">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- THE PHOTO AT FULL SIZE -->
+<div class="modal-overlay" id="mediaViewModal" aria-modal="true" aria-label="Photo">
+  <div class="mv-shell">
+    <div class="mv-top">
+      <b id="mv_name"></b><span id="mv_meta"></span>
+      <span class="ow-ph-sp"></span>
+      <button type="button" class="mv-b" id="mv_close" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="mv-stage">
+      <button type="button" class="mv-b" id="mv_prev" aria-label="Previous photo"><svg viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></button>
+      <img id="mv_img" alt="">
+      <button type="button" class="mv-b" id="mv_next" aria-label="Next photo"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
+    </div>
+  </div>
+</div>
+
+<!-- THE UPLOAD TRAY: every file named, every outcome said -->
+<div class="ml-tray" id="mediaTray" role="status" aria-live="polite">
+  <div class="ml-tray-h"><span id="mt_title">Adding photos</span><span class="ml-cap ml-mono" id="mt_n"></span>
+    <button type="button" class="ml-tray-x" id="mt_close" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="ml-tray-p"><i id="mt_bar" style="width:0%"></i></div>
+  <div class="ml-tray-l" id="mt_list"></div>
 </div>
 
 <!-- THE FINISHED POST -->
@@ -36552,11 +36991,26 @@ document.addEventListener('keydown', (e)=>{
 });
 
 /* ---------------- Media library: the screen ---------------- */
-let mlState = { folder: 'all', filter: 'all', search: '' };
+let mlState = { folder: 'all', filter: 'all', search: '', sort: lsGet('mlSort') || 'new',
+  view: lsGet('mlView') === 'list' ? 'list' : 'grid' };
 let mlRailEdit = null;   // {type:'new'} | {type:'rename', id}
 let mediaDetailId = null;
+/* The photos picked for a bulk move or delete. Ids, not rows, so a
+   re-render never holds on to a row that has since gone. */
+const mlPicked = new Set();
 
 function mediaFolderById(id){ return (data.mediaFolders||[]).find(f=> f.id === id) || null; }
+
+/* Every folder dropdown on the screen -- the record's, the picker's and
+   the selection bar's -- is built here, in tree order with full paths. A
+   flat list has no room to indent, and a bare "Handles" does not say
+   which folder's Handles it is. */
+function mediaFolderOptionsHTML(selectedId){
+  return mediaFolderTree(data.mediaFolders||[]).map(({folder:f})=>
+    `<option value="${f.id}" ${selectedId===f.id?'selected':''}>${esc(mediaFolderPath(data.mediaFolders||[], f.id))}</option>`).join('');
+}
+
+const ML_SORTS = { new: 'newest first', old: 'oldest first', big: 'largest first', name: 'by name' };
 
 function mediaVisibleRows(usage){
   let rows = (data.media||[]).slice();
@@ -36588,8 +37042,17 @@ function mediaVisibleRows(usage){
     return String(m.name||'').toLowerCase().includes(q)
       || users.some(u=> String(u.name||'').toLowerCase().includes(q));
   });
+  const newest = (a,b)=> String(b.createdAt||'').localeCompare(String(a.createdAt||''));
+  /* Largest first is the storage question -- what to delete to get the
+     most back. An unsized photo sorts last there rather than as zero
+     bytes pretending to be small. */
+  if(mlState.sort === 'big') return rows.sort((a,b)=>
+    (b.bytes==null ? -1 : Number(b.bytes)||0) - (a.bytes==null ? -1 : Number(a.bytes)||0) || newest(a,b));
+  if(mlState.sort === 'old') return rows.sort((a,b)=> newest(b,a));
+  if(mlState.sort === 'name') return rows.sort((a,b)=>
+    mediaCardLabel(a, usage.get(a.url)||[]).localeCompare(mediaCardLabel(b, usage.get(b.url)||[])) || newest(a,b));
   // Newest first: the photo just added is the one being looked for.
-  return rows.sort((a,b)=> String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+  return rows.sort(newest);
 }
 
 /* The state chip the rest of the app uses. Amber for "used nowhere",
@@ -36626,66 +37089,14 @@ function mediaCardLabel(m, users){
   return users.length === 1 ? users[0].name : `${users.length} things use this`;
 }
 
-/* THE STRIP: four figures, not five.
-
-   "used nowhere" and "tied up in those" were the same fact counted
-   twice and given two tiles; the bytes are the BASIS of the count, so
-   they sit under it where every other basis line in the app sits.
-
-   Only "used nowhere" is marked. Duplicate copies are a fact about the
-   bucket, not a caution -- and a strip where three of five tiles glow
-   at once has stopped saying anything. */
-/* Figure, then unit, then basis -- a size on the strip is a figure with
-   a unit, not a string. "7.6 MB" set whole in the 22px mono puts the MB
-   at the same weight as the number it qualifies. */
+/* Figure, then unit, then basis -- a size is a figure with a unit, not
+   a string. "7.6 MB" set whole in the figure face puts the MB at the
+   same weight as the number it qualifies. */
 function mediaSizeTile(n){
   const txt = mediaFmtBytes(n) || '0 B';
   const at = txt.lastIndexOf(' ');
   return at < 0 ? esc(txt)
     : `${esc(txt.slice(0, at))}<span class="ow-u">${esc(txt.slice(at+1))}</span>`;
-}
-
-function renderMediaStrip(usage){
-  const s = mediaStripStats(data.media||[], usage);
-  // An empty library makes no claims about photos it does not have.
-  // "Every photo is on something" is true of nothing, and reads as a
-  // screen that has not noticed it is empty.
-  const nothingYet = s.count === 0;
-  const unsized = nothingYet ? 'Nothing uploaded yet'
-    : s.unsized ? `${s.unsized} never sized, not counted` : 'Every photo has a recorded size';
-  const tiedUp = mediaFmtBytes(s.unusedBytes) || '0 B';
-  const dupNote = nothingYet ? 'Nothing uploaded yet'
-    : s.dupExtras ? `${mediaFmtBytes(mediaDupBytes(data.media||[])) || '0 B'} you could get back`
-    : 'No picture is stored twice';
-  document.getElementById('mediaStrip').innerHTML = `
-    <div class="ow-mt">
-      <p class="ow-mt-l">Photos</p>
-      <span class="ow-mt-v">${s.count}</span>
-      <p class="ow-mt-s">${nothingYet ? 'Nothing uploaded yet'
-        : `In ${(data.mediaFolders||[]).length} folder${(data.mediaFolders||[]).length===1?'':'s'}`}</p>
-    </div>
-    <div class="ow-mt">
-      <p class="ow-mt-l">Storage used</p>
-      <span class="ow-mt-v">${mediaSizeTile(s.bytes)}</span>
-      <p class="ow-mt-s">${unsized}</p>
-    </div>
-    <div class="ow-mt ${s.unusedCount?'ow-warn':''}">
-      <p class="ow-mt-l">Used nowhere</p>
-      <span class="ow-mt-v">${s.unusedCount}</span>
-      <p class="ow-mt-s">${nothingYet ? 'Nothing uploaded yet'
-        : s.unusedCount ? `${tiedUp} tied up in them` : 'Every photo is on something'}</p>
-    </div>
-    <div class="ow-mt">
-      <p class="ow-mt-l">Duplicate copies</p>
-      <span class="ow-mt-v">${s.dupExtras}</span>
-      <p class="ow-mt-s">${dupNote}</p>
-    </div>`;
-  /* The phone gets the same figures as one line. Storage housekeeping is
-     desk work; in the yard it is context, not the screen's subject. */
-  const ctx = document.getElementById('mediaCtx');
-  if(ctx) ctx.innerHTML = `<span class="md-mono">${s.count}</span> photo${s.count===1?'':'s'}`
-    + ` &nbsp;·&nbsp; <span class="md-mono">${s.unusedCount}</span> used nowhere`
-    + ` &nbsp;·&nbsp; <span class="md-mono">${mediaFmtBytes(s.bytes) || '0 B'}</span>`;
 }
 
 /* What the redundant copies weigh. The strip counts the copies you could
@@ -36708,27 +37119,163 @@ function mediaDupBytes(rows){
   return out;
 }
 
-/* THE GAP BAND -- the screen's one accent, and it is absent when there
-   is nothing to point at. "Not enough is an answer": a band saying zero
-   products need a photo is a band saying nothing. */
+/* Photos added per week, for the last `weeks` weeks ending with the week
+   that holds `todayISO` (weeks start on Monday). Pure. A photo with no
+   recorded date is counted apart, never dropped into a week it may not
+   belong to -- named rather than dropped. */
+function mediaWeeklyAdds(rows, todayISO, weeks){
+  const n = weeks == null ? 12 : weeks;
+  const day = 86400000;
+  const today = Date.parse(todayISO);
+  const dow = (new Date(today).getUTCDay() + 6) % 7;      // Monday = 0
+  const thisWeek = today - dow*day;
+  const first = thisWeek - (n-1)*7*day;
+  const out = Array.from({length:n}, (_, i)=> ({ start: new Date(first + i*7*day).toISOString().slice(0,10), n: 0 }));
+  let undated = 0, earlier = 0;
+  (rows||[]).forEach(m=>{
+    const t = Date.parse(String(m.createdAt||'').slice(0,10));
+    if(!(t === t)){ undated++; return; }
+    if(t < first){ earlier++; return; }
+    const i = Math.floor((t - first) / (7*day));
+    if(i >= 0 && i < n) out[i].n++;
+  });
+  return { weeks: out, undated, earlier };
+}
+
+/* A ring for a share. Drawn, not described: the owner reads a fraction
+   of a circle faster than they read "6 of 18". */
+function mediaRingSVG(share, size){
+  const r = 42, c = 2*Math.PI*r;
+  const s = Math.max(0, Math.min(1, share||0));
+  return `<svg viewBox="0 0 100 100" aria-hidden="true">
+    <circle class="ml-ring-tr" cx="50" cy="50" r="${r}" fill="none" stroke-width="10"/>
+    <circle class="ml-ring-arc" cx="50" cy="50" r="${r}" fill="none" stroke-width="10" stroke-linecap="round"
+      stroke-dasharray="${c.toFixed(2)}" stroke-dashoffset="${(c*(1-s)).toFixed(2)}"${s===0?' style="display:none"':''}/>
+  </svg>`;
+}
+
+/* THE STORAGE PANEL -- what the bytes are doing, as one bar.
+
+   "Used nowhere" and "tied up in those" are the same fact, so they are
+   one row: the count, and the size beside it. Each row of the legend IS
+   the filter for that set, so seeing "14 used nowhere" and looking at
+   them is one tap. Only "used nowhere" is marked; duplicate copies are a
+   fact about the bucket, not a caution. */
+function renderMediaStrip(usage){
+  const s = mediaStripStats(data.media||[], usage);
+  const nothingYet = s.count === 0;
+  const folders = (data.mediaFolders||[]).length;
+  const useBytes = Math.max(0, s.bytes - s.unusedBytes);
+  const dupBytes = mediaDupBytes(data.media||[]);
+  const pct = n=> s.bytes ? Math.max(0, n / s.bytes * 100) : 0;
+  const leg = (key, sw, label, count, bytes)=> {
+    const tag = key ? 'button' : 'div';
+    return `<${tag} ${key?`type="button" data-mlleg="${key}" title="Show only these"`:''} class="ml-lg-r ${key && mlState.filter===key?'ml-on':''}">
+      <span class="ml-lg-sw ${sw}"></span><span>${label}</span>
+      <span class="ml-lg-n">${count}</span><span class="ml-lg-b">${mediaFmtBytes(bytes) || '0 B'}</span>
+    </${tag}>`;
+  };
+  document.getElementById('mediaStrip').innerHTML = `
+    <div class="ow-pan-h"><span class="ow-pan-t">Storage</span>
+      <span class="ow-pan-n"><span class="ml-mono">${s.count}</span> photo${s.count===1?'':'s'} · <span class="ml-mono">${folders}</span> folder${folders===1?'':'s'}</span></div>
+    <div class="ml-ins-b">
+      <div class="ml-big">${mediaSizeTile(s.bytes)}</div>
+      ${nothingYet ? `<p class="ml-cap">Nothing uploaded yet.</p>` : `
+      <div class="ml-stack" role="img" aria-label="${mediaFmtBytes(useBytes)||'0 B'} in use, ${mediaFmtBytes(s.unusedBytes)||'0 B'} used nowhere">
+        ${useBytes ? `<i class="ml-sw-use" style="width:${pct(useBytes).toFixed(2)}%"></i>` : ''}
+        ${s.unusedBytes ? `<i class="ml-sw-unused" style="width:${pct(s.unusedBytes).toFixed(2)}%"></i>` : ''}
+      </div>
+      <div class="ml-lg">
+        ${leg('', 'ml-sw-use', 'In use', s.count - s.unusedCount, useBytes)}
+        ${leg('unused', 'ml-sw-unused', 'Used nowhere', s.unusedCount, s.unusedBytes)}
+        ${leg('dupes', 'ml-sw-dup', 'Extra copies', s.dupExtras, dupBytes)}
+      </div>
+      <p class="ml-cap">${s.unsized ? `<span class="ml-mono">${s.unsized}</span> never sized, so not counted.` : 'Every photo has a recorded size.'}${dupBytes ? ` Deleting the extra copies gives back <span class="ml-mono">${mediaFmtBytes(dupBytes)}</span>.` : ''}</p>`}
+    </div>`;
+  document.querySelectorAll('#mediaStrip [data-mlleg]').forEach(b=> b.addEventListener('click', ()=>{
+    mlState.filter = mlState.filter === b.dataset.mlleg ? 'all' : b.dataset.mlleg;
+    renderMedia();
+  }));
+  /* The phone gets the same figures as one line. Storage housekeeping is
+     desk work; in the yard it is context, not the screen's subject. */
+  const ctx = document.getElementById('mediaCtx');
+  if(ctx) ctx.innerHTML = `<span class="md-mono">${s.count}</span> photo${s.count===1?'':'s'}`
+    + ` &nbsp;·&nbsp; <span class="md-mono">${s.unusedCount}</span> used nowhere`
+    + ` &nbsp;·&nbsp; <span class="md-mono">${mediaFmtBytes(s.bytes) || '0 B'}</span>`;
+}
+
+/* THE ACTIVITY PANEL -- is the photographing keeping up. */
+function renderMediaActivity(){
+  const wrap = document.getElementById('mediaActivity');
+  if(!wrap) return;
+  const w = mediaWeeklyAdds(data.media||[], todayISO(), 12);
+  const max = Math.max(1, ...w.weeks.map(x=> x.n));
+  const last4 = w.weeks.slice(-4).reduce((s,x)=> s+x.n, 0);
+  const fmtD = iso=> new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', {day:'numeric', month:'short', timeZone:'UTC'});
+  wrap.innerHTML = `
+    <div class="ow-pan-h"><span class="ow-pan-t">Added</span><span class="ow-pan-n">last 12 weeks</span></div>
+    <div class="ml-ins-b">
+      <div class="ml-big">${last4}<span class="ow-u">in 4 weeks</span></div>
+      <div class="ml-wk" role="img" aria-label="Photos added each week">
+        ${w.weeks.map((x, i)=> `<i class="${x.n ? (i === w.weeks.length-1 ? 'ml-wk-on' : '') : 'ml-wk-0'}" style="height:${x.n ? Math.max(8, x.n/max*100).toFixed(1) : 3}%" title="Week of ${fmtD(x.start)}: ${x.n} added"></i>`).join('')}
+      </div>
+      <div class="ml-wk-ax"><span>${fmtD(w.weeks[0].start)}</span><span>this week</span></div>
+      ${w.undated ? `<p class="ml-cap"><span class="ml-mono">${w.undated}</span> with no date recorded, not drawn.</p>` : ''}
+    </div>`;
+}
+
+/* THE COVERAGE PANEL -- the screen's one accent, and the reason it exists.
+
+   The products whose quote line and WhatsApp post go out as text because
+   nothing has been photographed, ranked by what the books say they sell.
+   "Not enough is an answer": with no gap the ring closes in verdigris and
+   there is no button, because there is nothing to do. */
 function renderMediaGap(){
   const wrap = document.getElementById('mediaGap');
   if(!wrap) return;
+  const total = (data.products||[]).length;
   const gap = mediaGapRows(data.products||[], data.savedQuotes||[], todayISO());
-  if(!gap.length){ wrap.innerHTML = ''; return; }
+  const have = total - gap.length;
+  const share = total ? have / total : 0;
+  const pct = total ? Math.round(share*100) : 0;
+  const full = total > 0 && !gap.length;
+  const top = gap.slice(0, 4);
+  const maxU = Math.max(1, ...top.map(g=> g.units));
   const sold = gap.filter(g=> g.units > 0).length;
-  const basis = sold
-    ? `${sold} of them sold in the last 30 days. Ranked by what the books say you actually shift.`
-    : 'None of them has sold in the last 30 days, so they are listed by name.';
-  wrap.innerHTML = `<div class="ml-gap">
-    <div class="ml-gap-b">
-      <div class="ml-gap-t"><b>${gap.length} product${gap.length===1?'':'s'}</b> ${gap.length===1?'has':'have'} no photo</div>
-      <span class="ml-gap-s">${gap.length===1?'Its':'Their'} quote lines and WhatsApp posts go out as text.<span class="ml-gap-x"> ${basis}</span></span>
-    </div>
-    <span class="ow-ph-sp"></span>
-    <button type="button" class="btn btn-accent ow-sm" id="ml_gap_btn">Show the ${gap.length}</button>
-  </div>`;
-  document.getElementById('ml_gap_btn').addEventListener('click', ()=> openMediaGapList());
+  const ring = `<div class="ml-ring ${full?'ml-full':''}">${mediaRingSVG(share)}
+      <div class="ml-ring-c"><span class="ml-ring-v">${total ? pct : '—'}<small>${total ? '%' : ''}</small></span>
+      <span class="ml-ring-s">${total ? `<span class="ml-mono">${have}</span> of <span class="ml-mono">${total}</span>` : 'no products'}</span></div>
+    </div>`;
+  const body = !total
+    ? `<div class="ml-cov-r"><p class="ml-cov-t">No products yet</p>
+        <p class="ml-cap">Once products are added, this shows how many of them go out on quotes and posts with a picture.</p>
+        <div class="ml-cov-f"><button type="button" class="btn ow-sm" id="ml_gap_prod">Go to Products</button></div></div>`
+    : full
+    ? `<div class="ml-cov-r"><p class="ml-cov-t">Every product has a photo <span class="ow-cp ow-good">Complete</span></p>
+        <p class="ml-cap">Every quote line, catalogue page and WhatsApp post goes out with a picture.</p></div>`
+    : `<div class="ml-cov-r">
+        <p class="ml-cov-t">${gap.length} product${gap.length===1?'':'s'} ${gap.length===1?'has':'have'} no photo</p>
+        ${top.map(g=> `<button type="button" class="ml-rk" data-mlgapopen="${esc(String(g.id))}" title="Open ${esc(g.name)}">
+            <span class="ml-rk-k">${esc(g.name)}</span>
+            <span class="ml-bar"><i style="width:${g.units ? Math.max(4, g.units/maxU*100).toFixed(1) : 0}%"></i></span>
+            <span class="ml-rk-v">${g.units ? `<b>${g.units}</b> sold` : 'none sold'}</span>
+          </button>`).join('')}
+        <div class="ml-cov-f">
+          <span class="ml-cap">${sold ? 'Ranked by units sold in the last 30 days.' : 'None has sold in the last 30 days, so they are listed by name.'}</span>
+          <button type="button" class="btn btn-accent ow-sm" id="ml_gap_btn">Show ${gap.length > top.length ? `all ${gap.length}` : (gap.length===1 ? 'it' : `the ${gap.length}`)}</button>
+        </div>
+      </div>`;
+  wrap.innerHTML = `
+    <div class="ow-pan-h"><span class="ow-pan-t">Catalogue coverage</span><span class="ow-pan-n">products with a photo</span></div>
+    <div class="ml-ins-b ml-cov-b">${ring}${body}</div>`;
+  const btn = document.getElementById('ml_gap_btn');
+  if(btn) btn.addEventListener('click', ()=> openMediaGapList());
+  const prod = document.getElementById('ml_gap_prod');
+  if(prod) prod.addEventListener('click', ()=> goToTab('products'));
+  wrap.querySelectorAll('[data-mlgapopen]').forEach(b=> b.addEventListener('click', ()=>{
+    goToTab('products');
+    editProduct(b.dataset.mlgapopen);
+  }));
 }
 
 /* The camera bar says what taking a photo is FOR when the shop has a
@@ -36740,19 +37287,37 @@ function renderMediaCamLabel(){
   el.textContent = gap.length ? `Photograph ${gap[0].name}` : 'Photograph a product';
 }
 
+/* A ranked row: position, name, a bar for what it sold, the figure, the
+   action. Drawn the same way in the gap list and the place sheet. */
+function mediaRankRowHTML(g, i, maxU, action){
+  return `<div class="md-u">
+    <span class="md-u-rk">${i+1}</span>
+    <span class="md-u-k" title="${esc(g.name)}">${esc(g.name)}</span>
+    <span class="ml-bar"><i style="width:${g.units ? Math.max(4, g.units/maxU*100).toFixed(1) : 0}%"></i></span>
+    <span class="md-u-n">${g.units ? `<b>${g.units}</b> sold` : 'none sold'}</span>
+    ${action}
+  </div>`;
+}
+
 /* The list itself. Naming what is missing is the whole point, so it
    names every one of them rather than a top handful -- and says what
    each has sold, which is why it is in that order. */
 function openMediaGapList(){
   const gap = mediaGapRows(data.products||[], data.savedQuotes||[], todayISO());
+  const total = (data.products||[]).length;
+  const have = total - gap.length;
+  const maxU = Math.max(1, ...gap.map(g=> g.units));
   document.getElementById('md_title').textContent = `${gap.length} product${gap.length===1?'':'s'} with no photo`;
   document.getElementById('md_body').innerHTML = `
-    <p class="ow-mini" style="border-top:0;padding-left:0;">Photographing one of these puts it on the quote, the catalogue and the WhatsApp post at once. Open the product to give it a photo — nothing is changed from here.</p>
-    ${gap.map(g=> `<div class="md-u">
-      <span class="md-u-k">${esc(g.name)}</span>
-      ${g.units ? `<span class="ow-cp">${g.units} sold</span>` : '<span class="ow-cp">none sold</span>'}
-      <button type="button" class="btn ow-sm" data-mlgapopen="${esc(String(g.id))}">Open</button>
-    </div>`).join('')}`;
+    <div class="md-sum">
+      <div class="ml-ring">${mediaRingSVG(total ? have/total : 0)}
+        <div class="ml-ring-c"><span class="ml-ring-v">${total ? Math.round(have/total*100) : 0}<small>%</small></span></div></div>
+      <div class="md-sum-k"><b><span class="ml-mono">${have}</span> of <span class="ml-mono">${total}</span> products have a photo</b>
+        Photographing one of these puts it on the quote, the catalogue and the WhatsApp post at once. Open the product to give it a photo — nothing is changed from here.</div>
+    </div>
+    <p class="md-sec">Ranked by units sold, last 30 days</p>
+    ${gap.map((g, i)=> mediaRankRowHTML(g, i, maxU,
+      `<button type="button" class="btn ow-sm" data-mlgapopen="${esc(String(g.id))}">Open</button>`)).join('')}`;
   document.getElementById('md_body').querySelectorAll('[data-mlgapopen]').forEach(b=>
     b.addEventListener('click', ()=>{
       closeModal('mediaDetailModal');
@@ -36760,6 +37325,54 @@ function openMediaGapList(){
       editProduct(b.dataset.mlgapopen);
     }));
   openModal('mediaDetailModal');
+}
+
+/* THE CONFIRMATION -- shows what is about to go rather than describing
+   it: the pictures themselves, what deleting them frees, and anything
+   that is being kept back and why. Resolves true only on the owner's tap. */
+function mediaConfirm(o){
+  return new Promise(resolve=>{
+    const photos = (o.photos||[]);
+    const shown = photos.slice(0, 7);
+    document.getElementById('mc_body').innerHTML = `
+      <div class="mc-conf-ic ${o.danger===false?'mc-conf-n':''}">${o.danger===false
+        ? '<svg viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></svg>'
+        : '<svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2M7 7l1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13"/></svg>'}</div>
+      <h3 id="mc_title">${esc(o.title)}</h3>
+      ${o.lead ? `<p>${o.lead}</p>` : ''}
+      ${shown.length ? `<div class="mc-conf-th">${shown.map(m=> `<img src="${esc(m.url)}" alt="" title="${esc(m.name)}">`)
+        .concat(photos.length > shown.length ? [`<span>+${photos.length - shown.length}</span>`] : []).join('')}</div>` : ''}
+      ${(o.figs||[]).length ? `<div class="mc-conf-fig">${o.figs.map(f=> `<div><span>${esc(f[0])}</span><b>${esc(f[1])}</b></div>`).join('')}</div>` : ''}
+      ${o.keep ? `<div class="mc-conf-keep">${o.keep}</div>` : ''}`;
+    const ok = document.getElementById('mc_ok');
+    ok.textContent = o.ok || 'Delete';
+    ok.classList.toggle('ml-danger', o.danger !== false);
+    ok.classList.toggle('btn-accent', o.danger === false);
+    const done = v=>{ closeModal('mediaConfirmModal'); ok.onclick = null;
+      document.getElementById('mc_cancel').onclick = null; resolve(v); };
+    ok.onclick = ()=> done(true);
+    document.getElementById('mc_cancel').onclick = ()=> done(false);
+    openModal('mediaConfirmModal');
+    ok.focus();
+  });
+}
+
+const ML_ICON_FOLDER = '<svg class="ml-fr-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></svg>';
+const ML_ICON_ALL = '<svg class="ml-fr-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="m4 18 5-5 4 4 2.5-2.5L20 19"/></svg>';
+const ML_ICON_LOOSE = '<svg class="ml-fr-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" stroke-dasharray="3 2.5"/></svg>';
+
+/* Moves photos into a folder (or out of every folder). One save, one
+   render, one sentence saying what moved where. */
+function mediaMoveTo(ids, folderId){
+  const set = new Set(ids);
+  let n = 0;
+  (data.media||[]).forEach(m=>{ if(set.has(m.id) && m.folderId !== folderId){ m.folderId = folderId; n++; } });
+  if(!n){ toast('Already there — nothing moved.'); return; }
+  saveData();
+  const where = folderId == null ? 'No folder' : mediaFolderPath(data.mediaFolders||[], folderId);
+  toast(`Moved ${n} photo${n===1?'':'s'} to ${where}.`);
+  renderMedia();
+  if(mediaDetailId != null && set.has(mediaDetailId)) openMediaDetail(mediaDetailId);
 }
 
 function renderMediaRail(){
@@ -36778,8 +37391,9 @@ function renderMediaRail(){
   const item = (key, label, count, depth=0)=>{
     const active = mlState.folder === key;
     const editable = typeof key === 'number';
+    const ic = key === 'all' ? ML_ICON_ALL : key === 'none' ? ML_ICON_LOOSE : ML_ICON_FOLDER;
     return `<button type="button" class="ml-fr ${active?'ml-on':''}" data-mlfolder="${key}" style="padding-left:${12 + depth*12}px;" title="${esc(label)}">
-      <span class="ml-fr-k">${esc(label)}</span>
+      ${ic}<span class="ml-fr-k">${esc(label)}</span>
       ${editable ? `<span class="ml-fr-a" data-mlsub="${key}" title="Add a folder inside this one">${ICON_PLUS_SM}</span>
       <span class="ml-fr-a" data-mlrename="${key}" title="Rename folder">${ICON_EDIT}</span>
       <span class="ml-fr-a" data-mldelfolder="${key}" title="Remove folder">${ICON_TRASH}</span>` : ''}
@@ -36802,7 +37416,7 @@ function renderMediaRail(){
   if(counts.get('none')) html += item('none', 'No folder', counts.get('none'));
   html += mlRailEdit && mlRailEdit.type==='new' && mlRailEdit.parentId == null
     ? `<input type="text" class="ml-fr-i mr-name-input" data-mlfid="new" placeholder="Folder name">`
-    : `<button type="button" class="ml-fr" id="ml_new_folder"><span class="ml-fr-k" style="color:var(--ow-ink-600);">+ New folder</span></button>`;
+    : `<button type="button" class="ml-fr ml-fr-new" id="ml_new_folder">${ICON_PLUS_SM.replace('class="icon"', 'class="ml-fr-ic"')}<span class="ml-fr-k">New folder</span></button>`;
   wrap.innerHTML = html;
   /* The panel header carries how many folders there are; the rows carry
      how many photos are in each. Two different counts, kept apart. */
@@ -36814,16 +37428,34 @@ function renderMediaRail(){
     : (mediaFolderById(mlState.folder)
         ? mediaFolderPath(data.mediaFolders||[], mlState.folder) : 'All photos');
 
-  wrap.querySelectorAll('.ml-fr[data-mlfolder]').forEach(btn=> btn.addEventListener('click', e=>{
-    if(e.target.closest('.ml-fr-a')) return;
-    // Picking a folder on the phone closes the list: the answer to
-    // "which folder" is the photographs, not the folder list again.
-    const pan = document.getElementById('mediaFolders');
-    if(pan) pan.classList.remove('ml-fold-open');
+  wrap.querySelectorAll('.ml-fr[data-mlfolder]').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      if(e.target.closest('.ml-fr-a')) return;
+      // Picking a folder on the phone closes the list: the answer to
+      // "which folder" is the photographs, not the folder list again.
+      const pan = document.getElementById('mediaFolders');
+      if(pan) pan.classList.remove('ml-fold-open');
+      const raw = btn.dataset.mlfolder;
+      mlState.folder = (raw==='all'||raw==='none') ? raw : Number(raw);
+      renderMedia();
+    });
+    /* A photo dragged from the grid files itself in the folder it is
+       dropped on -- the picked set with it, if it was one of them. */
     const raw = btn.dataset.mlfolder;
-    mlState.folder = (raw==='all'||raw==='none') ? raw : Number(raw);
-    renderMedia();
-  }));
+    if(raw === 'all') return;
+    btn.addEventListener('dragover', e=>{
+      if(!e.dataTransfer || ![...e.dataTransfer.types].includes('text/x-ml-ids')) return;
+      e.preventDefault(); btn.classList.add('ml-drop-on');
+    });
+    btn.addEventListener('dragleave', ()=> btn.classList.remove('ml-drop-on'));
+    btn.addEventListener('drop', e=>{
+      const ids = String(e.dataTransfer.getData('text/x-ml-ids')||'').split(',').filter(Boolean).map(Number);
+      btn.classList.remove('ml-drop-on');
+      if(!ids.length) return;
+      e.preventDefault(); e.stopPropagation();
+      mediaMoveTo(ids, raw === 'none' ? null : Number(raw));
+    });
+  });
   wrap.querySelectorAll('[data-mlsub]').forEach(el=> el.addEventListener('click', e=>{
     e.stopPropagation();
     mlRailEdit = {type:'new', parentId: Number(el.dataset.mlsub)};
@@ -36836,13 +37468,24 @@ function renderMediaRail(){
     renderMediaRail();
     const inp = wrap.querySelector('.mr-name-input'); if(inp){ inp.focus(); inp.select(); }
   }));
-  wrap.querySelectorAll('[data-mldelfolder]').forEach(el=> el.addEventListener('click', e=>{
+  wrap.querySelectorAll('[data-mldelfolder]').forEach(el=> el.addEventListener('click', async e=>{
     e.stopPropagation();
     const f = mediaFolderById(Number(el.dataset.mldelfolder));
     if(!f) return;
     const plan = mediaFolderRemovalPlan(data.mediaFolders||[], data.media||[], f.id);
     const inside = plan.movePhotoIds.length;
-    if(!confirm(`Remove the folder "${f.name}"?${inside ? ` The ${inside} photo${inside===1?'':'s'} inside move${inside===1?'s':''} out of it — nothing is deleted.` : ''}`)) return;
+    const subs = plan.reparentFolderIds.length;
+    const to = plan.newParent == null ? 'the top level' : `“${esc(mediaFolderPath(data.mediaFolders||[], plan.newParent))}”`;
+    const ok = await mediaConfirm({
+      title: `Remove the folder “${f.name}”?`,
+      lead: inside || subs
+        ? `Nothing is deleted. What is inside moves up to ${to}.`
+        : 'The folder is empty, so nothing moves.',
+      photos: (data.media||[]).filter(m=> plan.movePhotoIds.includes(m.id)),
+      figs: [['Photos that move', String(inside)], ['Folders that move up', String(subs)]],
+      ok: 'Remove folder', danger: false,
+    });
+    if(!ok) return;
     (data.media||[]).forEach(m=>{ if(plan.movePhotoIds.includes(m.id)) m.folderId = plan.newParent; });
     (data.mediaFolders||[]).forEach(x=>{ if(plan.reparentFolderIds.includes(x.id)) x.parentId = plan.newParent; });
     data.mediaFolders = data.mediaFolders.filter(x=> x.id !== f.id);
@@ -36882,29 +37525,56 @@ function renderMediaRail(){
   });
 }
 
+const ML_ICON_CHECK = '<svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
+const ML_ICON_LINK = '<svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>';
+
 /* THE CARD.
 
-   Name, then size, then what uses it. The used-by badge is .ow-cp --
-   the app's own state chip -- rather than a pill this screen invented,
-   and it truncates rather than wrapping onto a second line and shoving
-   the size out of the row, which is what it did at this card width.
+   The picture first, and the photo's state ON the picture, where the eye
+   already is: amber "Used nowhere" for the ones that can go, and "2
+   copies" for a picture stored twice -- so a photo never sits beside its
+   own twin with nothing to say they are the same. Under it, what the
+   photo IS, its size in the figure face, and how many things show it.
 
-   A duplicate says so on the card. It was findable only through a
-   filter before, so a photo could sit beside its own twin in the grid
-   with nothing to say they were the same picture. */
-function mediaCardHTML(m, users, dupCount, selected){
+   The tick in the corner picks it for the selection bar; once anything
+   is picked, a tap anywhere on a card picks rather than opens. */
+function mediaCardHTML(m, users, dupCount, selected, pickable){
   const size = mediaFmtBytes(m.bytes);
   const label = mediaCardLabel(m, users);
-  return `<button type="button" class="media-card ${selected?'selected':''}" data-mid="${m.id}">
-    <img class="mc-thumb" loading="lazy" src="${esc(m.url)}" alt="">
-    <div class="mc-body">
-      <div class="mc-name" title="${esc(m.name)}">${esc(label)}</div>
-      <div class="mc-meta">
+  const picked = pickable && mlPicked.has(m.id);
+  const flags = [
+    users.length ? '' : '<span class="ow-cp ow-warn">Used nowhere</span>',
+    dupCount > 1 ? `<span class="ow-cp" title="${dupCount} rows in the library hold this exact picture">${dupCount} copies</span>` : '',
+  ].join('');
+  return `<button type="button" class="media-card ${selected?'selected':''} ${picked?'ml-picked':''}" data-mid="${m.id}" ${pickable?'draggable="true"':''} aria-label="${esc(label)}">
+    <span class="mc-fr">
+      <img class="mc-thumb" loading="lazy" src="${esc(m.url)}" alt="">
+      ${pickable ? `<span class="mc-chk" data-mlpick="${m.id}" role="checkbox" aria-checked="${picked}" title="Select">${ML_ICON_CHECK}</span>` : ''}
+      ${flags ? `<span class="mc-flags">${flags}</span>` : ''}
+    </span>
+    <span class="mc-body">
+      <span class="mc-name" title="${esc(m.name)}">${esc(label)}</span>
+      <span class="mc-meta">
         <span class="mc-size">${size || 'size unknown'}</span>
-        ${mediaUsedBadge(users)}
-      </div>
-      ${dupCount > 1 ? `<div class="mc-meta"><span class="ow-cp" title="${dupCount} rows in the library hold this exact picture">${dupCount} copies</span></div>` : ''}
-    </div>
+        ${users.length ? `<span class="mc-use" title="Used by ${users.length} thing${users.length===1?'':'s'}">${ML_ICON_LINK}<b>${users.length}</b><span>in use</span></span>` : ''}
+      </span>
+    </span>
+  </button>`;
+}
+
+/* THE LIST ROW -- the same photo, one line, its facts in columns. */
+function mediaListRowHTML(m, users, dupCount, selected){
+  const picked = mlPicked.has(m.id);
+  const f = m.folderId == null ? null : mediaFolderById(m.folderId);
+  const added = m.createdAt ? String(m.createdAt).slice(0,10) : '—';
+  return `<button type="button" class="ml-lr ${selected?'selected':''} ${picked?'ml-picked':''}" data-mid="${m.id}" draggable="true">
+    <span class="mc-chk" data-mlpick="${m.id}" role="checkbox" aria-checked="${picked}" title="Select">${ML_ICON_CHECK}</span>
+    <img class="ml-lr-th" loading="lazy" src="${esc(m.url)}" alt="">
+    <span class="ml-lr-k"><b title="${esc(mediaCardLabel(m, users))}">${esc(mediaCardLabel(m, users))}</b><span title="${esc(m.name)}">${esc(m.name)}</span></span>
+    <span class="ml-lr-c" title="${f ? esc(mediaFolderPath(data.mediaFolders||[], f.id)) : 'No folder'}">${f ? esc(f.name) : 'No folder'}</span>
+    <span class="ml-lr-c">${mediaUsedBadge(users)}${dupCount > 1 ? ` <span class="ow-cp">${dupCount} copies</span>` : ''}</span>
+    <span class="ml-lr-f">${mediaFmtBytes(m.bytes) || '—'}</span>
+    <span class="ml-lr-f">${esc(added)}</span>
   </button>`;
 }
 
@@ -36929,17 +37599,53 @@ function mediaFilterCounts(usage){
   };
 }
 
+/* THE SELECTION BAR. It says how many are picked and what they weigh,
+   and its Delete says how many of them it will actually delete -- a
+   photo still in use is never one of them. */
+function renderMediaBulk(usage){
+  const bar = document.getElementById('ml_bulk');
+  if(!bar) return;
+  // A photo deleted or filtered away elsewhere stops being picked.
+  const live = new Set((data.media||[]).map(m=> m.id));
+  [...mlPicked].forEach(id=>{ if(!live.has(id)) mlPicked.delete(id); });
+  const rows = (data.media||[]).filter(m=> mlPicked.has(m.id));
+  bar.classList.toggle('ml-on', rows.length > 0);
+  if(!rows.length) return;
+  const bytes = rows.reduce((s,m)=> s + (m.bytes==null ? 0 : Number(m.bytes)||0), 0);
+  const free = rows.filter(m=> !(usage.get(m.url)||[]).length);
+  document.getElementById('ml_bulk_n').textContent = rows.length;
+  document.getElementById('ml_bulk_s').textContent = `${mediaFmtBytes(bytes) || '0 B'} · ${rows.length - free.length} in use`;
+  document.getElementById('ml_bulk_move').innerHTML = `<option value="">Move to folder…</option><option value="none">No folder</option>`
+    + mediaFolderOptionsHTML(null);
+  const del = document.getElementById('ml_bulk_del');
+  del.disabled = !free.length;
+  document.getElementById('ml_bulk_del_l').textContent = free.length ? `Delete ${free.length} unused` : 'All in use';
+  del.title = free.length ? '' : 'Every picked photo is used by something, so none can be deleted';
+}
+
 function renderMedia(){
   const usage = mediaUsageIndex();
-  renderMediaStrip(usage);
   renderMediaGap();
+  renderMediaStrip(usage);
+  renderMediaActivity();
   renderMediaCamLabel();
   renderMediaRail();
   const counts = mediaFilterCounts(usage);
   document.querySelectorAll('#ml_chips [data-mlfilter]').forEach(b=>{
-    b.setAttribute('aria-pressed', String(b.dataset.mlfilter === mlState.filter));
+    const on = b.dataset.mlfilter === mlState.filter;
+    b.setAttribute('aria-pressed', String(on));
+    b.classList.toggle('ow-on', on);
     const n = b.querySelector('[data-mlcount]');
     if(n) n.textContent = counts[b.dataset.mlcount || b.dataset.mlfilter] ?? '';
+  });
+  const sortSel = document.getElementById('ml_sort');
+  if(sortSel) sortSel.value = mlState.sort in ML_SORTS ? mlState.sort : 'new';
+  /* The list is a desk view. The phone always gets the grid, whatever the
+     desk last chose. */
+  const view = mediaWideEnoughForRail() ? mlState.view : 'grid';
+  document.querySelectorAll('#ml_view [data-mlview]').forEach(b=>{
+    const on = b.dataset.mlview === view;
+    b.classList.toggle('ow-on', on); b.setAttribute('aria-pressed', String(on));
   });
 
   const rows = mediaVisibleRows(usage);
@@ -36949,11 +37655,13 @@ function renderMedia(){
     : mlState.folder === 'none' ? 'No folder'
     : (folder ? mediaFolderPath(data.mediaFolders||[], folder.id) : 'All photos');
   document.getElementById('ml_where').textContent = where;
+  const dropWhere = document.getElementById('ml_drop_where');
+  if(dropWhere) dropWhere.textContent = folder ? where : 'the library';
   /* Named rather than dropped: the header says how many the grid is
-     showing AND how it is ordered, which was decided in code and never
-     said anywhere. */
+     showing AND how it is ordered. */
   document.getElementById('ml_where_n').textContent = rows.length
-    ? `${rows.length}${rows.length === total ? '' : ' of ' + total} · newest first` : '';
+    ? `${rows.length}${rows.length === total ? '' : ' of ' + total} · ${ML_SORTS[mlState.sort] || ML_SORTS.new}` : '';
+  renderMediaBulk(usage);
 
   const grid = document.getElementById('ml_grid');
   if(!rows.length){
@@ -36969,11 +37677,14 @@ function renderMedia(){
       mlState.folder !== 'all' ? `the folder <b>${esc(where)}</b>` : null,
     ].filter(Boolean);
     grid.innerHTML = total
-      ? `<div class="media-empty">No photos match ${hidingBy.length ? hidingBy.join(' and ') : 'this view'}.<br>
+      ? `<div class="media-empty">
+          <div class="ml-e-ic"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg></div>
+          No photos match ${hidingBy.length ? hidingBy.join(' and ') : 'this view'}.<br>
           <b>${total}</b> photo${total===1?' is':'s are'} in the library — clear the search, or look in All photos.
           <div class="ml-e-a"><button type="button" class="btn ow-sm" id="ml_clear_btn">Clear the search and filters</button></div>
         </div>`
       : `<div class="media-empty">
+          <div class="ml-e-ic">${ML_ICON_ALL.replace('class="ml-fr-ic" ', '')}</div>
           <b>No photos yet.</b><br>
           Add photos here, or put one on a product — every photo already on a product appears in this library on its own, so nothing has to be uploaded twice.
           <div class="ml-e-a">
@@ -36995,11 +37706,31 @@ function renderMedia(){
     return;
   }
   const dups = mediaDupCounts(data.media||[]);
-  grid.innerHTML = `<div class="media-grid">${rows.map(m=>
-    mediaCardHTML(m, usage.get(m.url)||[], dups.get(m.sha256)||0)).join('')}</div>`;
-  grid.querySelectorAll('.media-card').forEach(card=>{
-    card.classList.toggle('selected', Number(card.dataset.mid) === mediaDetailId);
-    card.addEventListener('click', ()=> openMediaDetail(Number(card.dataset.mid)));
+  const picking = mlPicked.size > 0;
+  grid.innerHTML = view === 'list'
+    ? `<div class="ml-list">
+        <div class="ml-lr ml-lr-h"><span></span><span></span><span>Photo</span><span>Folder</span><span>Used by</span><span class="ml-lr-f">Size</span><span class="ml-lr-f">Added</span></div>
+        ${rows.map(m=> mediaListRowHTML(m, usage.get(m.url)||[], dups.get(m.sha256)||0, m.id === mediaDetailId)).join('')}
+      </div>`
+    : `<div class="media-grid ${picking?'ml-picking':''}">${rows.map(m=>
+        mediaCardHTML(m, usage.get(m.url)||[], dups.get(m.sha256)||0, m.id === mediaDetailId, true)).join('')}</div>`;
+  grid.querySelectorAll('[data-mid]').forEach(card=>{
+    const id = Number(card.dataset.mid);
+    card.addEventListener('click', e=>{
+      // The tick, or any tap once a selection has begun, picks.
+      if(e.target.closest('[data-mlpick]') || (mlPicked.size && mediaWideEnoughForRail())
+          || (mediaWideEnoughForRail() && (e.metaKey || e.ctrlKey))){
+        mlPicked.has(id) ? mlPicked.delete(id) : mlPicked.add(id);
+        renderMedia();
+        return;
+      }
+      openMediaDetail(id);
+    });
+    card.addEventListener('dragstart', e=>{
+      const ids = mlPicked.has(id) ? [...mlPicked] : [id];
+      e.dataTransfer.setData('text/x-ml-ids', ids.join(','));
+      e.dataTransfer.effectAllowed = 'move';
+    });
   });
 }
 
@@ -37011,7 +37742,155 @@ document.querySelectorAll('#ml_chips [data-mlfilter]').forEach(chip=> chip.addEv
   mlState.filter = chip.dataset.mlfilter;
   renderMedia();
 }));
+document.getElementById('ml_sort').addEventListener('change', e=>{
+  mlState.sort = e.target.value; lsSet('mlSort', mlState.sort);
+  renderMedia();
+});
+document.querySelectorAll('#ml_view [data-mlview]').forEach(b=> b.addEventListener('click', ()=>{
+  mlState.view = b.dataset.mlview; lsSet('mlView', mlState.view);
+  renderMedia();
+}));
 document.getElementById('ml_add_btn').addEventListener('click', ()=> document.getElementById('ml_file_input').click());
+
+/* The selection bar's three moves. */
+document.getElementById('ml_bulk_clear').addEventListener('click', ()=>{ mlPicked.clear(); renderMedia(); });
+document.getElementById('ml_bulk_move').addEventListener('change', e=>{
+  const v = e.target.value;
+  if(!v) return;
+  mediaMoveTo([...mlPicked], v === 'none' ? null : Number(v));
+  mlPicked.clear(); renderMedia();
+});
+document.getElementById('ml_bulk_del').addEventListener('click', async ()=>{
+  const usage = mediaUsageIndex();
+  const rows = (data.media||[]).filter(m=> mlPicked.has(m.id));
+  /* The same refuse-and-name guard as the record's own Delete, applied
+     to every picked photo: anything still in use is kept and named. */
+  const blocked = rows.filter(m=> (usage.get(m.url)||[]).length);
+  const free = rows.filter(m=> !(usage.get(m.url)||[]).length);
+  if(!free.length) return;
+  const bytes = free.reduce((s,m)=> s + (m.bytes==null ? 0 : Number(m.bytes)||0), 0);
+  const ok = await mediaConfirm({
+    title: `Delete ${free.length} photo${free.length===1?'':'s'}?`,
+    lead: 'Nothing in the shop points at these, so deleting them breaks nothing. They are removed from storage — this cannot be undone.',
+    photos: free,
+    figs: [['Photos', String(free.length)], ['Space freed', mediaFmtBytes(bytes) || '0 B']],
+    keep: blocked.length ? `<b>${blocked.length} kept</b> — still in use:${blocked.slice(0, 4).map(m=>
+      `<div>• ${esc(mediaCardLabel(m, usage.get(m.url)||[]))}</div>`).join('')}${blocked.length > 4 ? `<div>and ${blocked.length - 4} more</div>` : ''}` : '',
+    ok: `Delete ${free.length}`,
+  });
+  if(!ok) return;
+  for(const m of free){
+    // Asked again at the moment of deleting, not trusted from when the
+    // dialog opened.
+    if(mediaUsage(m.url).length) continue;
+    await performMediaDelete(m);
+    mlPicked.delete(m.id);
+    if(mediaDetailId === m.id) mediaCloseRecordRail();
+  }
+  toast(`Deleted ${free.length} photo${free.length===1?'':'s'} — ${mediaFmtBytes(bytes) || '0 B'} freed.`);
+  mlPicked.clear();
+  renderMedia();
+});
+
+/* ---------------- ADDING PHOTOS: the tray ----------------
+
+   Every file named, every outcome said. The old way toasted only the
+   exceptions, so five photos going up said nothing about the four that
+   worked and was gone before the fifth's error could be read. */
+let mlTray = null;   // {items:[{name, thumb, state, msg}]}
+let mlTrayTimer = null;
+
+function renderMediaTray(){
+  const el = document.getElementById('mediaTray');
+  if(!el) return;
+  if(!mlTray){ el.classList.remove('ml-on'); return; }
+  const items = mlTray.items;
+  const done = items.filter(i=> i.state !== 'wait' && i.state !== 'up').length;
+  const failed = items.filter(i=> i.state === 'fail').length;
+  const finished = done === items.length;
+  document.getElementById('mt_title').textContent = finished
+    ? (failed ? `${failed} of ${items.length} did not go up` : `${items.length} photo${items.length===1?'':'s'} added`)
+    : `Adding photo${items.length===1?'':'s'}…`;
+  document.getElementById('mt_n').textContent = `${done}/${items.length}`;
+  document.getElementById('mt_bar').style.width = `${items.length ? done/items.length*100 : 0}%`;
+  const chip = i=> i.state === 'up' ? '<span class="ml-spin" aria-label="Uploading"></span>'
+    : i.state === 'wait' ? '<span class="ow-cp">Waiting</span>'
+    : i.state === 'new' ? '<span class="ow-cp ow-good">Added</span>'
+    : i.state === 'reused' ? '<span class="ow-cp" title="This exact picture is already in the library, so nothing was uploaded twice">Already here</span>'
+    : '<span class="ow-cp ow-bad">Failed</span>';
+  document.getElementById('mt_list').innerHTML = items.map(i=> `<div class="ml-tray-r">
+    ${i.thumb ? `<img src="${esc(i.thumb)}" alt="">` : '<img alt="">'}
+    <span class="ml-tray-k"><b title="${esc(i.name)}">${esc(i.name)}</b><span title="${esc(i.msg||'')}">${esc(i.msg||'')}</span></span>
+    ${chip(i)}
+  </div>`).join('');
+  el.classList.add('ml-on');
+}
+function closeMediaTray(){
+  clearTimeout(mlTrayTimer);
+  if(mlTray) mlTray.items.forEach(i=>{ try{ if(i.blob) URL.revokeObjectURL(i.thumb); }catch(e){} });
+  mlTray = null;
+  renderMediaTray();
+}
+document.getElementById('mt_close').addEventListener('click', closeMediaTray);
+
+async function mlUploadFiles(files, folderId){
+  const list = [...files].filter(f=> /^image\//.test(f.type || 'image/'));
+  if(!list.length){ toast('Only photos can be added here.'); return; }
+  clearTimeout(mlTrayTimer);
+  const thumb = f=>{ try{ return URL.createObjectURL(f); }catch(e){ return ''; } };
+  mlTray = { items: list.map(f=> ({ name: f.name, thumb: thumb(f), blob: true, state: 'wait', msg: '' })) };
+  renderMediaTray();
+  for(let k = 0; k < list.length; k++){
+    const it = mlTray.items[k];
+    it.state = 'up'; renderMediaTray();
+    try{
+      const res = await addMediaFromFile(list[k], folderId);
+      it.state = res.reused ? 'reused' : 'new';
+      it.msg = res.reused ? `Same picture as “${res.media.name}”` : (mediaFmtBytes(res.media.bytes) || '');
+    }catch(err){
+      // A failure names itself rather than leaving a screen that looks
+      // like nothing happened.
+      it.state = 'fail'; it.msg = (err && err.message) || String(err);
+    }
+    renderMediaTray();
+  }
+  renderMedia();
+  // A clean run tidies itself away; a failure stays until it is read.
+  if(!mlTray.items.some(i=> i.state === 'fail')) mlTrayTimer = setTimeout(closeMediaTray, 6000);
+}
+
+/* Drop photos anywhere on the screen. The overlay says where they will
+   land -- the folder that is open, or the library. */
+(function wireMediaDrop(){
+  const tab = document.getElementById('tab-media');
+  const zone = document.getElementById('ml_dropzone');
+  let depth = 0;
+  const hasFiles = e=> e.dataTransfer && [...e.dataTransfer.types].includes('Files');
+  tab.addEventListener('dragenter', e=>{ if(!hasFiles(e)) return; depth++; zone.classList.add('ml-on'); });
+  tab.addEventListener('dragleave', e=>{ if(!hasFiles(e)) return; depth = Math.max(0, depth-1); if(!depth) zone.classList.remove('ml-on'); });
+  tab.addEventListener('dragover', e=>{ if(hasFiles(e)) e.preventDefault(); });
+  tab.addEventListener('drop', e=>{
+    if(!hasFiles(e)) return;
+    e.preventDefault(); depth = 0; zone.classList.remove('ml-on');
+    const folderId = typeof mlState.folder === 'number' ? mlState.folder : null;
+    mlUploadFiles(e.dataTransfer.files, folderId);
+  });
+})();
+
+/* The desk's keys: arrows walk the record through the grid, Escape lets
+   go of the record and then of the selection. Never while typing. */
+document.addEventListener('keydown', e=>{
+  const tab = document.getElementById('tab-media');
+  if(!tab || tab.style.display === 'none' || !mediaWideEnoughForRail()) return;
+  if(e.target.closest && e.target.closest('input,textarea,select,[contenteditable]')) return;
+  if(document.querySelector('.modal-overlay.show')) return;
+  if((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && mediaDetailId != null){
+    e.preventDefault(); mediaStep(e.key === 'ArrowRight' ? 1 : -1);
+  } else if(e.key==='Escape'){
+    if(mediaDetailId != null) mediaCloseRecordRail();
+    else if(mlPicked.size){ mlPicked.clear(); renderMedia(); }
+  }
+});
 
 /* ---------------- THE YARD ----------------
 
@@ -37062,22 +37941,27 @@ function openMediaPlaceSheet(reused){
   if(!m) return;
   const gap = mediaGapRows(data.products||[], data.savedQuotes||[], todayISO());
   const top = gap.slice(0, 3);
+  const maxU = Math.max(1, ...top.map(g=> g.units));
   document.getElementById('md_title').textContent = 'What is this a photo of?';
   document.getElementById('md_body').innerHTML = `
-    <img class="md-ph" src="${esc(m.url)}" alt="">
-    ${reused ? `<p class="ow-mini">This exact picture was already in the library, so nothing was uploaded twice. It is “${esc(m.name)}”.</p>` : ''}
-    <p class="ow-mini" style="border-top:0;">Nothing is put on a product until you tap it below. ${top.length
-      ? `These are the products with no photo that the books say you sell most.`
-      : `Every product already has a photo — the picture is in the library.`}</p>
-    ${top.map(g=> `<div class="md-u">
-      <span class="md-u-k" title="${esc(g.name)}">${esc(g.name)}</span>
-      <span class="ow-cp">${g.units ? `${g.units} sold` : 'none sold'}</span>
-      <button type="button" class="btn ow-sm" data-mlplace="${esc(String(g.id))}">Put it here</button>
-    </div>`).join('')}
+    <div class="md-shot">
+      <img src="${esc(m.url)}" alt="">
+      <div class="md-shot-k"><b title="${esc(m.name)}">${esc(m.name)}</b>
+        <span class="ml-mono">${mediaFmtBytes(m.bytes) || 'size unknown'}</span>
+        ${reused ? `<br><span class="ow-cp" title="This exact picture was already in the library, so nothing was uploaded twice">Already in the library</span>`
+          : '<br><span class="ow-cp ow-good">In the library</span>'}
+      </div>
+    </div>
+    <p class="ow-mini" style="border-top:0;">Nothing is put on a product until you tap it below.</p>
+    ${top.length ? `<p class="md-sec">No photo yet · sells most</p>
+      ${top.map((g, i)=> mediaRankRowHTML(g, i, maxU,
+        `<button type="button" class="btn ow-sm" data-mlplace="${esc(String(g.id))}">Put it here</button>`)).join('')}`
+      : `<p class="ow-mini" style="border-top:0;">Every product already has a photo — the picture is in the library.</p>`}
     <div class="md-f"><label for="ml_place_search">Or another product</label>
       <input id="ml_place_search" placeholder="Search all ${(data.products||[]).length} products"></div>
     <div id="ml_place_hits"></div>
-    <div class="md-acts" style="justify-content:space-between;">
+    <div class="md-acts">
+      <span class="ow-ph-sp"></span>
       <button type="button" class="btn ow-sm" id="ml_place_none">Keep it in the library only</button>
     </div>`;
 
@@ -37124,69 +38008,87 @@ document.getElementById('ml_file_input').addEventListener('change', async e=>{
   e.target.value = '';
   if(!files.length) return;
   const folderId = typeof mlState.folder === 'number' ? mlState.folder : null;
-  for(const file of files){
-    try{
-      const res = await addMediaFromFile(file, folderId);
-      if(res.reused) toast(`Already in the library — "${res.media.name}"`);
-    }catch(err){
-      toast(`${file.name}: ${(err && err.message) || err}`);
-    }
-  }
-  renderMedia();
+  await mlUploadFiles(files, folderId);
 });
 
 /* ONE PHOTO'S RECORD, EMITTED ONCE.
 
-   The desk gets it in the 304px rail beside the grid; the phone gets it
-   in the modal. Same call, same markup, so the two can never come to
-   say different things -- the rule the work queue already keeps between
-   its row and its card.
+   The desk gets it in the rail beside the grid; the phone gets it in the
+   modal. Same call, same markup, so the two can never come to say
+   different things -- the rule the work queue already keeps between its
+   row and its card.
 
    The rail rather than a modal on the desk is the change that matters.
    A photo library is asked "is this the same picture as that one", and
    a modal over the grid answers it by hiding the grid. */
+const MD_KIND = {
+  product:  ['Product',  '<svg viewBox="0 0 24 24"><path d="M3.5 12.5V4.5h8l9 9-8 8z"/><circle cx="8" cy="9" r="1.5"/></svg>'],
+  variant:  ['Variant',  '<svg viewBox="0 0 24 24"><path d="M12 3 3 7.5l9 4.5 9-4.5z"/><path d="m3 12 9 4.5 9-4.5M3 16.5 12 21l9-4.5"/></svg>'],
+  category: ['Category default', '<svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/><circle cx="16.5" cy="7.5" r="3.5"/><path d="M4 20l3.5-6 3.5 6z"/></svg>'],
+  sourcing: ['Sourcing lead', '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>'],
+};
 function mediaRecordHTML(m, users, dupes){
   const added = m.createdAt ? String(m.createdAt).slice(0,10) : null;
-  const folderOpts = mediaFolderTree(data.mediaFolders||[]);
   const px = (m.width && m.height) ? `${m.width} × ${m.height}` : null;
+  const type = m.mime ? String(m.mime).replace(/^image\//, '').toUpperCase() : null;
+  const tile = (k, v)=> `<div><span>${k}</span>${v ? `<b>${esc(v)}</b>` : '<b class="md-none">not recorded</b>'}</div>`;
   return `
     <div class="ow-pan-h">
       <span class="ow-pan-t">The photo</span>
       <span class="ow-pan-n" id="md_pos"></span>
-      <button type="button" class="btn btn-ghost ow-sm" id="md_rail_close" title="Close" aria-label="Close">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
+      <span class="md-nav">
+        <button type="button" class="btn btn-ghost ow-sm" id="md_prev" title="Previous (←)" aria-label="Previous photo"><svg class="icon" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></button>
+        <button type="button" class="btn btn-ghost ow-sm" id="md_next" title="Next (→)" aria-label="Next photo"><svg class="icon" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
+        <button type="button" class="btn btn-ghost ow-sm" id="md_rail_close" title="Close (Esc)" aria-label="Close"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </span>
     </div>
-    <img class="md-ph" src="${esc(m.url)}" alt="${esc(m.name)}">
+    <button type="button" class="md-stage" id="md_stage" title="See it full size">
+      <img class="md-ph" src="${esc(m.url)}" alt="${esc(m.name)}">
+      <span class="md-zoom"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg></span>
+    </button>
     <div class="md-f"><label for="md_name">Name</label><input id="md_name" value="${esc(m.name)}"></div>
     <div class="md-f"><label for="md_folder">Folder</label><select id="md_folder">
       <option value="">No folder</option>
-      ${folderOpts.map(({folder:f})=> `<option value="${f.id}" ${m.folderId===f.id?'selected':''}>${esc(mediaFolderPath(data.mediaFolders||[], f.id))}</option>`).join('')}
+      ${mediaFolderOptionsHTML(m.folderId)}
     </select></div>
-    <div class="md-meta">
-      <span class="md-mono">${mediaFmtBytes(m.bytes) || 'size unknown'}</span>${m.mime?` &nbsp;·&nbsp; ${esc(m.mime)}`:''}${px?` &nbsp;·&nbsp; <span class="md-mono">${px}</span>`:''}<br>
-      ${added?`Added <span class="md-mono">${esc(added)}</span> &nbsp;·&nbsp; `:''}<span class="md-mono">${esc(m.name)}</span>
+    <div class="md-spec">
+      ${tile('Size', mediaFmtBytes(m.bytes))}
+      ${tile('Dimensions', px)}
+      ${tile('Type', type)}
+      ${tile('Added', added)}
     </div>
     <div class="ow-pan-h" style="border-top:1px solid var(--ow-rule-soft);">
       <span class="ow-pan-t">Used by</span><span class="ow-pan-n">${users.length}</span>
     </div>
     ${users.length
-      ? users.map(u=> `<div class="md-u"><span class="md-u-k" title="${esc(mediaUserLabel(u))}">${esc(mediaUserLabel(u))}</span></div>`).join('')
-      : `<p class="ow-mini">Nothing in the shop points at it, so deleting it breaks nothing.</p>`}
+      ? `<div class="md-tree">${users.map(u=>{
+          const k = MD_KIND[u.kind] || MD_KIND.product;
+          return `<div class="md-u"><span class="md-u-ic md-k-${esc(u.kind)}">${k[1]}</span>
+            <span class="md-u-k" title="${esc(mediaUserLabel(u))}">${esc(u.name)}<small>${k[0]}</small></span></div>`;
+        }).join('')}</div>`
+      : `<div class="md-free" style="margin-top:var(--ow-sp-12);"><span class="ow-cp ow-warn">Used nowhere</span>Nothing in the shop points at it, so deleting it breaks nothing.</div>`}
     ${dupes.length ? `
       <div class="ow-pan-h" style="border-top:1px solid var(--ow-rule-soft);">
         <span class="ow-pan-t">Same picture as</span><span class="ow-pan-n">${dupes.length}</span>
       </div>
-      ${dupes.map(d=> `<div class="md-u">
-        <button type="button" class="md-u-k" style="all:unset;flex:1;min-width:0;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:underline;" data-mldupe="${d.id}" title="${esc(d.name)}">${esc(d.name)}</button>
-        ${mediaUsedBadge(mediaUsage(d.url))}
-      </div>`).join('')}
+      <div class="md-twins">${dupes.map(d=> `<button type="button" class="md-twin" data-mldupe="${d.id}" title="${esc(d.name)}">
+          <img src="${esc(d.url)}" alt=""><span>${mediaUsage(d.url).length ? `Used by ${mediaUsage(d.url).length}` : 'Used nowhere'}</span>
+        </button>`).join('')}</div>
       <p class="ow-mini">Byte for byte the same picture. Deleting a copy nothing uses frees its size and breaks nothing.</p>` : ''}
     <div id="md_refuse"></div>
     <div class="md-acts">
+      <button type="button" class="btn btn-ghost ow-sm btn-icon" id="md_copy" title="Copy the photo's web address">
+        <svg class="icon" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+        Copy link
+      </button>
+      <a class="btn btn-ghost ow-sm btn-icon" href="${esc(m.url)}" target="_blank" rel="noopener" title="Open the original in a new tab">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
+        Original
+      </a>
+      <span class="ow-ph-sp"></span>
       <button class="btn btn-ghost ow-sm btn-icon" id="md_delete">
         <svg class="icon" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"/></svg>
-        Delete photo
+        Delete
       </button>
     </div>`;
 }
@@ -37203,7 +38105,18 @@ function mediaCloseRecordRail(){
   if(rail){ rail.style.display = 'none'; rail.innerHTML = ''; }
   const lay = document.getElementById('mediaLayout');
   if(lay) lay.classList.remove('ml-open');
-  document.querySelectorAll('#ml_grid .media-card.selected').forEach(c=> c.classList.remove('selected'));
+  document.querySelectorAll('#ml_grid .selected').forEach(c=> c.classList.remove('selected'));
+}
+
+/* The next or previous photo in the set actually on screen. */
+function mediaStep(dir){
+  const shown = mediaVisibleRows(mediaUsageIndex());
+  const at = shown.findIndex(x=> x.id === mediaDetailId);
+  if(at < 0 || !shown.length) return;
+  const next = shown[(at + dir + shown.length) % shown.length];
+  openMediaDetail(next.id);
+  const card = document.querySelector(`#ml_grid [data-mid="${next.id}"]`);
+  if(card && card.scrollIntoView) card.scrollIntoView({block:'nearest'});
 }
 
 function openMediaDetail(id){
@@ -37224,12 +38137,12 @@ function openMediaDetail(id){
     /* The modal supplies its own header and close, so the record's do not
        appear twice on the phone. */
     document.getElementById('md_body').innerHTML =
-      mediaRecordHTML(m, users, dupes).replace(/<div class="ow-pan-h">[\s\S]*?<\/div>\s*<img/, '<img');
+      mediaRecordHTML(m, users, dupes).replace(/<div class="ow-pan-h">[\s\S]*?<\/div>\s*<button type="button" class="md-stage"/, '<button type="button" class="md-stage"');
     openModal('mediaDetailModal');
   }
   const scope = host || document.getElementById('md_body');
 
-  document.querySelectorAll('#ml_grid .media-card').forEach(c=>
+  document.querySelectorAll('#ml_grid [data-mid]').forEach(c=>
     c.classList.toggle('selected', Number(c.dataset.mid) === id));
   const pos = scope.querySelector('#md_pos');
   if(pos){
@@ -37241,6 +38154,14 @@ function openMediaDetail(id){
   }
   const railClose = scope.querySelector('#md_rail_close');
   if(railClose) railClose.addEventListener('click', ()=>{ mediaCloseRecordRail(); });
+  const prev = scope.querySelector('#md_prev'), next = scope.querySelector('#md_next');
+  if(prev) prev.addEventListener('click', ()=> mediaStep(-1));
+  if(next) next.addEventListener('click', ()=> mediaStep(1));
+  scope.querySelector('#md_stage').addEventListener('click', ()=> openMediaViewer(id));
+  scope.querySelector('#md_copy').addEventListener('click', async ()=>{
+    try{ await navigator.clipboard.writeText(m.url); toast('Link copied.'); }
+    catch(e){ toast('Could not copy — open the original and copy its address instead.'); }
+  });
 
   scope.querySelectorAll('[data-mldupe]').forEach(b=>
     b.addEventListener('click', ()=> openMediaDetail(Number(b.dataset.mldupe))));
@@ -37270,14 +38191,72 @@ function openMediaDetail(id){
       </div>`;
       return;
     }
-    if(!confirm(`Delete "${m.name}"? The photo is removed from storage — this cannot be undone.`)) return;
+    const ok = await mediaConfirm({
+      title: `Delete “${m.name}”?`,
+      lead: 'Nothing in the shop points at it, so deleting it breaks nothing. The photo is removed from storage — this cannot be undone.',
+      photos: [m],
+      figs: [['Space freed', mediaFmtBytes(m.bytes) || 'size unknown'], ['Copies left after', String(dupes.length)]],
+      ok: 'Delete photo',
+    });
+    if(!ok) return;
     await performMediaDelete(m);
+    mlPicked.delete(m.id);
     mediaCloseRecordRail();
     closeModal('mediaDetailModal');
     renderMedia();
   });
 }
 document.getElementById('md_close').addEventListener('click', ()=> closeModal('mediaDetailModal'));
+
+/* THE VIEWER -- the picture at full size, walked with the arrows. */
+let mvList = [];
+let mvAt = 0;
+function openMediaViewer(id){
+  mvList = mediaVisibleRows(mediaUsageIndex());
+  if(!mvList.some(x=> x.id === id)){
+    const m = (data.media||[]).find(x=> x.id === id);
+    mvList = m ? [m] : [];
+  }
+  mvAt = Math.max(0, mvList.findIndex(x=> x.id === id));
+  renderMediaViewer();
+  openModal('mediaViewModal');
+}
+function renderMediaViewer(){
+  const m = mvList[mvAt];
+  if(!m) return;
+  document.getElementById('mv_img').src = m.url;
+  document.getElementById('mv_img').alt = m.name;
+  document.getElementById('mv_name').textContent = mediaCardLabel(m, mediaUsage(m.url));
+  document.getElementById('mv_meta').textContent = [
+    mvList.length > 1 ? `${mvAt+1} / ${mvList.length}` : '',
+    mediaFmtBytes(m.bytes) || '',
+    (m.width && m.height) ? `${m.width} × ${m.height}` : '',
+  ].filter(Boolean).join('  ·  ');
+  const many = mvList.length > 1;
+  document.getElementById('mv_prev').style.visibility = many ? '' : 'hidden';
+  document.getElementById('mv_next').style.visibility = many ? '' : 'hidden';
+}
+function mediaViewerStep(dir){
+  if(mvList.length < 2) return;
+  mvAt = (mvAt + dir + mvList.length) % mvList.length;
+  renderMediaViewer();
+}
+document.getElementById('mv_close').addEventListener('click', ()=> closeModal('mediaViewModal'));
+document.getElementById('mv_prev').addEventListener('click', ()=> mediaViewerStep(-1));
+document.getElementById('mv_next').addEventListener('click', ()=> mediaViewerStep(1));
+document.getElementById('mediaViewModal').addEventListener('click', e=>{
+  if(e.target.classList.contains('mv-stage')) closeModal('mediaViewModal');
+});
+document.addEventListener('keydown', e=>{
+  if(!document.getElementById('mediaViewModal').classList.contains('show')) return;
+  if(e.key === 'ArrowRight'){ e.preventDefault(); mediaViewerStep(1); }
+  else if(e.key === 'ArrowLeft'){ e.preventDefault(); mediaViewerStep(-1); }
+  else if(e.key==='Escape'){ e.preventDefault(); closeModal('mediaViewModal'); }
+});
+document.addEventListener('keydown', e=>{
+  if(e.key !== 'Escape' || !document.getElementById('mediaConfirmModal').classList.contains('show')) return;
+  e.preventDefault(); document.getElementById('mc_cancel').click();
+});
 
 /* ---------------- The media picker ----------------
    What every "photo" button in the app opens. Selecting hands the chosen
@@ -37286,26 +38265,41 @@ document.getElementById('md_close').addEventListener('click', ()=> closeModal('m
 let mpState = null;   // {onPick, sessionTrack, selectedId, search, folder}
 
 function mpSetTab(up){
-  document.getElementById('mp_tab_lib').classList.toggle('active', !up);
-  document.getElementById('mp_tab_up').classList.toggle('active', up);
+  ['mp_tab_lib', 'mp_tab_up'].forEach((tid, i)=>{
+    const on = i === 1 ? up : !up;
+    const b = document.getElementById(tid);
+    b.classList.toggle('active', on);
+    b.classList.toggle('ow-on', on);
+    b.setAttribute('aria-selected', String(on));
+  });
   document.getElementById('mp_lib_pane').style.display = up ? 'none' : '';
   document.getElementById('mp_up_pane').style.display = up ? '' : 'none';
   document.getElementById('mp_use').style.display = up ? 'none' : '';
+  document.getElementById('mp_sel').style.visibility = up ? 'hidden' : '';
 }
 
 function openMediaPicker(opts){
   mpState = { onPick: opts.onPick, sessionTrack: !!opts.sessionTrack, selectedId: null, search: '', folder: 'all' };
   document.getElementById('mp_search').value = '';
-  // Tree order and full paths: a bare "Handles" in a flat list does not
-  // say which folder's Handles it is.
-  document.getElementById('mp_folder').innerHTML = `<option value="all">All folders</option>` +
-    mediaFolderTree(data.mediaFolders||[]).map(({folder:f})=>
-      `<option value="${f.id}">${esc(mediaFolderPath(data.mediaFolders||[], f.id))}</option>`).join('');
+  document.getElementById('mp_folder').innerHTML = `<option value="all">All folders</option>` + mediaFolderOptionsHTML(null);
+  document.getElementById('mp_lib_n').textContent = (data.media||[]).length || '';
   // Straight to Upload when the library is empty -- an empty grid with
   // the way out hidden behind a second tab helps nobody.
   mpSetTab(!(data.media||[]).length);
   renderMediaPickerGrid();
   openModal('mediaPickerModal');
+}
+
+/* What is picked, said at the foot beside the button that uses it -- so
+   "Use this photo" never means a photo scrolled out of sight. */
+function renderMediaPickerSel(){
+  const el = document.getElementById('mp_sel');
+  const m = mpState && mpState.selectedId != null ? (data.media||[]).find(x=> x.id === mpState.selectedId) : null;
+  if(!m){ el.innerHTML = `<span class="ml-cap">Pick a photo, or double-click to use it straight away.</span>`; return; }
+  const users = mediaUsage(m.url);
+  el.innerHTML = `<img src="${esc(m.url)}" alt="">
+    <span class="mp-sel-k"><b title="${esc(m.name)}">${esc(mediaCardLabel(m, users))}</b>
+    <span>${mediaFmtBytes(m.bytes) || 'size unknown'} · ${users.length ? `already used by ${users.length}` : 'used nowhere yet'}</span></span>`;
 }
 
 function renderMediaPickerGrid(){
@@ -37318,10 +38312,9 @@ function renderMediaPickerGrid(){
   }
   const q = mpState.search.trim().toLowerCase();
   /* Matched against what the card SAYS as well as what the row is
-     called, because the picker now draws the library's card: searching
+     called, because the picker draws the library's card: searching
      "Soft Close Mulper" has to find the card reading "Soft Close
-     Mulper", not only the row named after a UUID. The filename still
-     matches, so nothing that used to be findable stopped being. */
+     Mulper", not only the row named after a UUID. */
   if(q) rows = rows.filter(m=>{
     const users = usage.get(m.url) || [];
     return String(m.name||'').toLowerCase().includes(q)
@@ -37333,14 +38326,11 @@ function renderMediaPickerGrid(){
   if(!rows.length){
     grid.innerHTML = `<div class="media-empty">${(data.media||[]).length
       ? 'No photos match — clear the search or pick another folder.'
-      : 'The library is empty — use "Upload new".'}</div>`;
+      : 'The library is empty — use “Upload new”.'}</div>`;
   } else {
     grid.innerHTML = `<div class="media-grid">${rows.map(m=>
-      /* The library's card, not a second one. The picker drew its own --
-         titled with esc(m.name), so it showed the storage object's UUID
-         where the library beside it showed "Soft Close Mulper", and its
-         size was not mono. The rule about what a photo IS belongs to the
-         card, so there is one card. */
+      /* The library's card, not a second one: the rule about what a
+         photo IS belongs to the card, so there is one card. */
       mediaCardHTML(m, usage.get(m.url)||[], mpDupes.get(m.sha256)||0,
         mpState.selectedId===m.id)).join('')}</div>`;
     grid.querySelectorAll('.media-card').forEach(card=>{
@@ -37348,11 +38338,13 @@ function renderMediaPickerGrid(){
         mpState.selectedId = Number(card.dataset.mid);
         grid.querySelectorAll('.media-card').forEach(c=> c.classList.toggle('selected', c===card));
         document.getElementById('mp_use').disabled = false;
+        renderMediaPickerSel();
       });
       card.addEventListener('dblclick', ()=> mpUseSelected());
     });
   }
   document.getElementById('mp_use').disabled = mpState.selectedId == null;
+  renderMediaPickerSel();
 }
 
 function mpFinish(m){
@@ -37365,6 +38357,34 @@ function mpUseSelected(){
   if(!mpState || mpState.selectedId == null) return;
   const m = (data.media||[]).find(x=> x.id === mpState.selectedId);
   if(m) mpFinish(m);
+}
+
+/* One way in for a new photo, whether it was chosen or dropped. */
+async function mpUploadFile(file){
+  if(!file || !mpState) return;
+  const btn = document.getElementById('mp_file_btn');
+  const hint = document.getElementById('mp_up_hint');
+  const was = hint.textContent;
+  btn.disabled = true;
+  hint.textContent = `Adding “${file.name}”…`;
+  try{
+    const res = await addMediaFromFile(file, null);
+    if(res.reused){
+      const n = mediaUsage(res.media.url).length;
+      toast(`You already have this photo — "${res.media.name}"${n?`, used by ${n}`:''}. Using that one instead.`, 4500);
+    } else if(mpState.sessionTrack){
+      // Only a genuinely new upload is a candidate for the abandoned-
+      // form cleanup. A reused photo existed before this form opened and
+      // must survive a cancel.
+      sessionUploadedMediaIds.push(res.media.id);
+    }
+    mpFinish(res.media);
+  }catch(err){
+    toast((err && err.message) || String(err));
+  }finally{
+    btn.disabled = false;
+    hint.textContent = was;
+  }
 }
 
 document.getElementById('mp_search').addEventListener('input', e=>{
@@ -37387,26 +38407,18 @@ document.getElementById('mp_file_input').addEventListener('change', async e=>{
   const file = e.target.files && e.target.files[0];
   e.target.value = '';
   if(!file || !mpState) return;
-  const btn = document.getElementById('mp_file_btn');
-  btn.disabled = true;
-  try{
-    const res = await addMediaFromFile(file, null);
-    if(res.reused){
-      const n = mediaUsage(res.media.url).length;
-      toast(`You already have this photo — "${res.media.name}"${n?`, used by ${n}`:''}. Using that one instead.`, 4500);
-    } else if(mpState.sessionTrack){
-      // Only a genuinely new upload is a candidate for the abandoned-
-      // form cleanup. A reused photo existed before this form opened and
-      // must survive a cancel.
-      sessionUploadedMediaIds.push(res.media.id);
-    }
-    mpFinish(res.media);
-  }catch(err){
-    toast((err && err.message) || String(err));
-  }finally{
-    btn.disabled = false;
-  }
+  await mpUploadFile(file);
 });
+(function wirePickerDrop(){
+  const box = document.getElementById('mp_drop');
+  box.addEventListener('dragover', e=>{ e.preventDefault(); box.classList.add('ml-drop-on'); });
+  box.addEventListener('dragleave', ()=> box.classList.remove('ml-drop-on'));
+  box.addEventListener('drop', e=>{
+    e.preventDefault(); box.classList.remove('ml-drop-on');
+    const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if(file) mpUploadFile(file);
+  });
+})();
 
 /* ---------------- WhatsApp: today's post ----------------
 

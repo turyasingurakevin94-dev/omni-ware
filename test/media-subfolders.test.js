@@ -176,9 +176,22 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   t.check(/mediaFolderSubtreeIds\(data\.mediaFolders\|\|\[\], mpState\.folder\)/.test(picker),
     'and so does the picker, or a photo would be unpickable from its parent');
 
-  // The two flat dropdowns have no room to indent, so they carry paths.
-  t.check((code.match(/mediaFolderPath\(data\.mediaFolders\|\|\[\], f\.id\)/g) || []).length === 2,
-    'both folder dropdowns name the full path rather than a bare leaf');
+  /* The flat dropdowns have no room to indent, so they carry paths. There
+     are three now -- the record's Folder, the picker's folder filter and
+     the selection bar's Move to -- and all three are built by ONE helper,
+     so a fourth cannot be added that forgets the path. WAS: a count of
+     exactly two inline mediaFolderPath calls, which held while there were
+     exactly two dropdowns and each built its own options. */
+  const opts = extractFunction(src, 'mediaFolderOptionsHTML', 'index.html');
+  t.check(/mediaFolderTree\(data\.mediaFolders\|\|\[\]\)/.test(opts)
+    && /mediaFolderPath\(data\.mediaFolders\|\|\[\], f\.id\)/.test(opts),
+    'the folder options are drawn in tree order and name the full path rather than a bare leaf');
+  t.check(/<option value="">No folder<\/option>\s*\$\{mediaFolderOptionsHTML\(m\.folderId\)\}/.test(code)
+    && /<option value="all">All folders<\/option>` \+ mediaFolderOptionsHTML\(null\)/.test(code)
+    && /<option value="none">No folder<\/option>`\s*\+ mediaFolderOptionsHTML\(null\)/.test(code),
+    'and the record, the picker and the selection bar all draw their dropdown from it');
+  t.check(!/<option value="\$\{f\.id\}"[^>]*>\$\{esc\(f\.name\)\}<\/option>/.test(code),
+    'no folder dropdown is built from a bare leaf name');
 }
 
 process.exit(t.done() ? 1 : 0);
