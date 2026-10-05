@@ -8028,14 +8028,17 @@
     background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 11px;
     transition:border-color .15s ease,background .15s ease;}
   .till-acct:hover{background:var(--bg);}
-  .till-acct.on{border-color:var(--ink);background:var(--bg);box-shadow:inset 0 0 0 1px var(--ink);}
+  /* The chosen account wears its own colour, the same one it wears on
+     the page behind the dialog. */
+  .till-acct.on{border-color:var(--cb-ac,var(--ink));background:var(--cb-ac-soft,var(--bg));
+    outline:1px solid var(--cb-ac,var(--ink));outline-offset:-2px;}
   .till-acct-name{font-size:12.5px;font-weight:700;color:var(--ink);}
   .till-acct-bal{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-soft);
     font-variant-numeric:tabular-nums;}
 
   /* What this does to that account, in one line, live. */
-  .till-effect{font-size:12.5px;color:var(--ink-soft);display:flex;align-items:center;gap:7px;
-    flex-wrap:wrap;min-height:17px;}
+  .till-effect{font-size:12.5px;color:var(--ink-soft);display:flex;flex-direction:column;gap:7px;
+    min-height:17px;}
   .till-effect b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;color:var(--ink);}
   .till-effect .till-arrow{color:var(--ink-soft);}
   .till-warn{font-size:12.5px;line-height:1.45;border-radius:9px;padding:9px 11px;
@@ -8283,144 +8286,9 @@
     .att-edit-why input{width:100%;}
     .att-edit-why{display:grid;grid-template-columns:auto 1fr;}
   }
-  /* ===== Cash Book — opening wizard ===== */
-  /* Opening the day. One panel, four fields -- see the markup for why
-     it stopped being four screens. Narrow, because it is a short form
-     and a 900px card holding three number boxes reads as an empty page
-     with a form lost in it. */
-  .cb-open-panel{max-width:560px;margin:0 auto 20px;}
-  .cb-open-head h2{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0 0 5px;color:var(--ink);letter-spacing:0.2px;}
-  .cb-open-sub{margin:0 0 18px;color:var(--ink-soft);font-size:13px;line-height:1.55;}
-  .cb-open-date{max-width:220px;margin-bottom:18px;}
-  .cb-open-accounts{display:flex;flex-direction:column;gap:14px;}
-  /* Label, figure and the note that explains where the figure came from,
-     stacked so the explanation sits under the number it is about rather
-     than in a screen of its own. */
-  .cb-open-acct{padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:#FBFCFD;}
-  .cb-open-acct label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;
-    letter-spacing:0.5px;color:var(--ink-soft);margin-bottom:6px;}
-  .cb-open-acct input{width:100%;box-sizing:border-box;font-size:19px;font-weight:600;
-    font-family:'IBM Plex Mono',monospace;padding:9px 11px;border:1px solid var(--line);
-    border-radius:8px;background:#fff;}
-  .cb-open-acct input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent);}
-  .cb-open-foot{display:flex;align-items:center;justify-content:space-between;gap:14px;
-    flex-wrap:wrap;margin-top:20px;padding-top:16px;border-top:1px solid var(--line);}
-  .cb-open-total{font-size:13px;color:var(--ink-soft);}
-  .cb-open-total b{font-family:'IBM Plex Mono',monospace;color:var(--ink);font-size:15px;}
   /* Muted and non-interactive: this sits where a delete button would be,
      so it must not read as something you can press. */
   .debt-log-locked{display:inline-flex;align-items:center;color:var(--ink-soft);opacity:.7;cursor:default;padding:0 2px;}
-  .cb-carried-note{margin-top:10px;color:var(--ink-soft);font-size:12.5px;line-height:1.5;}
-  .cb-carried-first{color:var(--ink-soft);opacity:.8;font-style:italic;}
-  /* A broken chain is the one thing this screen must not let past quietly:
-     the day-level variance below only ever measures a day against its own
-     opening figure, so a wrong opening reconciles perfectly. */
-  /* ================= THE CASH BOOK =================================
-     Four stacked panels, in the order the day is worked: the position,
-     what moved, what the drawer says at close, and where it went. The
-     screen was rebuilt as a console -- a page head, a metric strip, an
-     always-open entry line and a right rail -- and the owner asked for
-     the page back as it was. What follows is the pre-console block,
-     restored: the day stepper and its five acts live in the position
-     panel, the movements are a full-width table, and money is logged
-     through the Cash In / Cash Out dialogs the acts open. */
-
-  .cb-position{padding:16px 20px 18px;}
-  .cb-day{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;}
-  .cb-day-nav{display:flex;align-items:center;gap:6px;}
-  .cb-daybtn{
-    all:unset;box-sizing:border-box;cursor:pointer;width:30px;height:30px;border-radius:8px;
-    display:flex;align-items:center;justify-content:center;color:var(--ow-ink-600);
-    border:1px solid var(--ow-rule);background:var(--ow-paper);flex:none;
-  }
-  .cb-daybtn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
-    stroke-linecap:round;stroke-linejoin:round;}
-  .cb-daybtn:hover:not([disabled]){color:var(--ow-ink-900);border-color:var(--ow-ink-400);}
-  .cb-daybtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
-  .cb-daybtn[disabled]{opacity:.35;cursor:not-allowed;}
-  .cb-day-label{display:flex;flex-direction:column;padding:0 6px;}
-  .cb-day-date{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;
-    font-variant-numeric:tabular-nums;}
-  .cb-day-rel{font-size:11px;color:var(--ow-verdigris);font-weight:700;margin-top:1px;}
-  .cb-day-actions{display:flex;gap:8px;}
-
-  /* The five acts of the screen, as buttons rather than a rail. Money in
-     is the accent; money out is the soft red beside it, because the pair
-     is read as a pair. */
-  .lbtn{
-    all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:7px;
-    padding:9px 15px;border-radius:9px;font-size:13.5px;font-weight:700;
-    border:1px solid var(--ow-rule);background:var(--ow-paper);color:var(--ow-ink-900);white-space:nowrap;
-  }
-  .lbtn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
-    stroke-linecap:round;stroke-linejoin:round;}
-  .lbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
-  .lbtn.acc{background:var(--ow-oxide);border-color:var(--ow-oxide);color:#fff;}
-  .lbtn.acc:hover{background:var(--ow-oxide-deep);border-color:var(--ow-oxide-deep);}
-  .lbtn.out{background:var(--ow-crimson-soft);border-color:#EAC7C1;color:var(--ow-crimson);}
-  .lbtn.gh{color:var(--ow-ink-600);}
-  .lbtn.gh:hover{color:var(--ow-ink-900);border-color:var(--ow-ink-400);}
-
-  /* WHAT YOU HAVE. Money on hand on a tinted ground and in the accent's
-     own ink, then the three accounts, which are not interchangeable --
-     money in the bank does not buy cement from a yard wanting cash. */
-  .cb-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--ow-rule);
-    border:1px solid var(--ow-rule);border-radius:12px;overflow:hidden;}
-  .cb-tile{background:var(--ow-paper);padding:14px 16px;}
-  .cb-tile-label{font-size:10.5px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;
-    color:var(--ow-ink-600);}
-  .cb-tile-value{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:700;
-    font-variant-numeric:tabular-nums;line-height:1.15;margin-top:5px;}
-  .cb-tile-sub{font-size:11px;color:var(--ow-ink-600);margin-top:5px;line-height:1.5;}
-  .cb-tile.is-total{background:var(--ow-oxide-soft);}
-  .cb-tile.is-total .cb-tile-label{color:var(--ow-oxide-deep);}
-  .cb-tile.is-total .cb-tile-value{font-size:26px;color:var(--ow-oxide-deep);}
-  .cb-up{color:var(--ow-verdigris);font-weight:700;}
-  .cb-down{color:var(--ow-crimson);font-weight:700;}
-  .cb-unc{color:var(--ow-amber-ink);font-weight:700;}
-
-  .cb-close-state{font-size:12px;font-weight:600;color:var(--ow-ink-600);}
-
-  .cb-counts{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
-  .cb-count{border:1px solid var(--ow-rule);border-radius:12px;padding:14px 16px;background:var(--ow-paper);}
-  .cb-count.ok{border-color:#BFD9D1;}
-  .cb-count.over{border-color:#EBD8AE;}
-  .cb-count.short{border-color:#EAC7C1;}
-  .cb-count-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
-    margin-bottom:8px;}
-  .cb-count-head h4{font-size:15px;font-weight:700;margin:0;}
-  .cb-count-state{font-size:9.5px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;
-    padding:3px 7px;border-radius:5px;background:var(--ow-steel-050);color:var(--ow-ink-600);
-    white-space:nowrap;}
-  .cb-count.ok .cb-count-state{background:var(--good-bg);color:var(--good);}
-  .cb-count.over .cb-count-state{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
-  .cb-count.short .cb-count-state{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
-  .cb-count-maths{border-top:1px solid var(--ow-rule-soft);padding-top:8px;}
-  .cb-cm-row{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;
-    color:var(--ow-ink-600);padding:3px 0;}
-  .cb-cm-row b{font-family:'IBM Plex Mono',monospace;color:var(--ow-ink-900);
-    font-variant-numeric:tabular-nums;}
-  .cb-cm-total{border-top:1px solid var(--ow-rule-soft);margin-top:4px;padding-top:7px;
-    color:var(--ow-ink-900);font-weight:600;}
-  .cb-cm-total b{font-size:15px;}
-  .cb-count-input{display:flex;flex-direction:column;gap:4px;margin-top:12px;}
-  .cb-count-input span{font-size:11px;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;
-    color:var(--ow-ink-600);}
-  .cb-count-input input{
-    width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--ow-rule);border-radius:8px;
-    font-family:'IBM Plex Mono',monospace;font-size:19px;font-weight:600;background:#fff;
-  }
-  .cb-count-input input:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent);}
-  .cb-count-verdict{margin-top:10px;display:flex;flex-direction:column;gap:3px;font-size:12.5px;}
-  .cb-count-diff{font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:700;}
-  .cb-count.over .cb-count-diff{color:var(--ow-amber-ink);}
-  .cb-count.short .cb-count-diff{color:var(--ow-crimson);}
-  .cb-count-why{color:var(--ow-ink-600);line-height:1.45;}
-  .cb-count-fix{display:flex;flex-direction:column;gap:6px;margin-top:11px;padding-top:11px;
-    border-top:1px solid var(--ow-rule-soft);font-size:12.5px;}
-  .cb-count-fix .cb-var-record{align-self:flex-start;}
-  .cb-count-note{margin:14px 0 0;font-size:11.5px;color:var(--ow-ink-600);line-height:1.45;
-    max-width:76ch;}
   @media (max-width:820px){
     .assistant-panel{
       inset:0;width:auto;border-left:none;z-index:96;
@@ -8428,14 +8296,6 @@
     }
     .assistant-panel.open{transform:translateY(0);}
   }
-
-  .cb-chain-break{
-    display:flex;flex-direction:column;gap:4px;margin-bottom:14px;padding:12px 14px;
-    border:1px solid var(--danger);border-left-width:4px;border-radius:10px;
-    background:rgba(192,57,43,.06);font-size:13px;line-height:1.5;
-  }
-  .cb-chain-break b{color:var(--danger);}
-  .cb-chain-break .cb-chain-fix{align-self:flex-start;margin-top:6px;}
   /* One drifted customer: their figures, what the records point to, and
      the two repairs -- which act on this customer alone. */
   .deb-drift-row{
@@ -8457,23 +8317,6 @@
      signal, and never disabling the other one: the shopkeeper knows
      things the ledger cannot, and this is a hint, not a verdict. */
   .deb-drift-acts .deb-drift-lean{border-color:var(--danger);font-weight:600;}
-
-  /* ===== Cash Book — day header ===== */
-  .cb-day-summary .panel-head-row{align-items:flex-start;}
-  .cb-open-recap{display:flex;gap:18px;flex-wrap:wrap;margin-top:8px;}
-  .cb-recap-chip{font-size:12.5px;color:var(--ink-soft);}
-  .cb-recap-chip b{color:var(--ink);font-family:'IBM Plex Mono',monospace;font-weight:700;}
-
-  .cb-btn-in{background:var(--good);color:#fff;}
-  .cb-btn-in:hover{background:#256b41;}
-  .cb-btn-out{background:var(--danger);color:#fff;}
-  .cb-btn-out:hover{background:#a3352a;}
-
-  /* ===== Cash Book — income/expense category analytics (above Cash In / Cash Out cards) ===== */
-  .cb-analytics-head{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--ink-soft);margin:0 0 10px 0;}
-  .cb-donut-svg circle{transition:stroke-dasharray .25s ease;}
-  .cb-analytics-empty{font-size:13px;color:var(--ink-soft);padding:10px 2px 2px;}
-
   /* THE WARNING BAND. Named for the cash book's old opening bar, which
      is gone with the console -- but Mobile Money's stuck prompts, the
      shop's unset settings and the duplicate-supplier band are all drawn
@@ -8491,124 +8334,541 @@
   .cb-openbar-a{display:flex;gap:7px;flex:none;align-self:center;flex-wrap:wrap;}
   .cb-openbar-a .btn-ghost{background:var(--ow-paper);border-color:#E0C994;color:var(--ow-amber-ink);}
 
-  /* ================= THE CASH BOOK, THE REST OF IT ==================
-     The movements table, the two rings and the phone. The console's day
-     stepper, entry line, rail, spine and phone cards are gone with the
-     console; what is here is the pre-console screen's own CSS. */
+  /* ================= THE CASH BOOK =================================
+     Drawn from what the owner asks on opening it, in that order: what
+     have I got and where is it (the position), how did the day get here
+     (the bridge and the day's line), what moved (the movements), does
+     the drawer agree (close the day), and where did it come from and go
+     (the rail). Built on the layer -- .ow-ph, .ow-pan, .ow-grid, .ow-seg,
+     .ow-cp -- with only what is this screen's own below.
 
-  .cb-ledger-filters{display:flex;gap:2px;background:var(--ow-steel-050);border:1px solid var(--ow-rule);
-    border-radius:9px;padding:3px;flex-wrap:wrap;}
-  .cb-ledger-filters button{
-    all:unset;box-sizing:border-box;cursor:pointer;padding:5px 11px;border-radius:6px;
-    font-size:12.5px;font-weight:600;color:var(--ow-ink-600);white-space:nowrap;
-  }
-  .cb-ledger-filters button.on{background:var(--ow-paper);color:var(--ow-ink-900);
-    box-shadow:0 1px 2px rgba(20,30,40,0.08);}
-  .cb-ledger-filters button:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+     THE ACCOUNTS HAVE COLOURS. Cash, Mobile Money and Bank appear on
+     every panel of this page and in every dialog it opens, and are told
+     apart before they are read: teal, violet, indigo, from the identity
+     families. Identity only -- a red account does not exist, and how an
+     account is DOING is said in the state colours, in the same places
+     as everywhere else. In and out keep the page's own pair: green for
+     money arriving, red for money leaving, always with an arrow or a
+     sign beside it so the colour is never the only carrier. */
+  .cb-ac-cash{--cb-ac:var(--ow-teal);--cb-ac-soft:var(--ow-teal-soft);}
+  .cb-ac-momo{--cb-ac:var(--ow-violet);--cb-ac-soft:var(--ow-violet-soft);}
+  .cb-ac-bank{--cb-ac:var(--ow-indigo);--cb-ac-soft:var(--ow-indigo-soft);}
+  .cb-ac-dot{display:inline-block;flex:none;width:8px;height:8px;border-radius:50%;
+    background:var(--cb-ac,var(--ow-ink-400));}
+  .cb-main .icon,.cb-ph svg,.cb-till-modal .icon,.cb-ask-modal .icon{stroke-width:1.8;}
 
-  /* THE DAY'S MOVEMENTS. Time, account, type, what it was for, in, out,
-     and the running balance of that row's own account. */
-  .cb-ledger{width:100%;border-collapse:collapse;font-size:13px;margin-top:14px;}
-  .cb-ledger th{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;
-    color:var(--ow-ink-600);text-align:left;padding:0 10px 8px;
-    border-bottom:1px solid var(--ow-rule);white-space:nowrap;}
-  .cb-ledger th.r{text-align:right;}
-  .cb-ledger td{padding:9px 10px;border-bottom:1px solid var(--ow-rule-soft);vertical-align:top;}
-  .cb-ledger td.price{text-align:right;font-family:'IBM Plex Mono',monospace;
-    font-variant-numeric:tabular-nums;white-space:nowrap;}
-  .cb-ledger .cb-led-time{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ow-ink-600);
-    font-variant-numeric:tabular-nums;}
-  .cb-ledger .cb-led-desc{font-size:11.5px;color:var(--ow-ink-600);margin-top:2px;}
-  .cb-ledger .cb-in-cell{color:var(--ow-verdigris);font-weight:600;}
-  .cb-ledger .cb-out-cell{color:var(--ow-crimson);font-weight:600;}
-  .cb-ledger .cb-bal{font-family:'IBM Plex Mono',monospace;font-weight:700;}
-  .cb-ledger tr.cb-led-open td{color:var(--ow-ink-600);font-style:italic;}
-  .cb-ledger tfoot td{border-top:2px solid var(--ow-rule);font-weight:700;border-bottom:0;}
+  /* ---- the header: the day, and the five acts ---- */
+  .cb-ph{align-items:center;}
+  .cb-day-nav{display:flex;align-items:center;gap:var(--ow-sp-4);margin-left:var(--ow-sp-12);position:relative;}
+  .cb-daybtn{all:unset;box-sizing:border-box;cursor:pointer;width:32px;height:32px;border-radius:var(--ow-r);
+    display:flex;align-items:center;justify-content:center;color:var(--ow-ink-600);
+    border:1px solid var(--ow-rule);background:var(--ow-paper);flex:none;}
+  .cb-daybtn svg,.cb-day-pick svg,.cb-tool svg,.cb-go svg,.cb-led-find svg,.till-foot-note svg,
+  .till-more summary svg,.till-collect-ic svg,.cb-x-arrow svg{width:16px;height:16px;fill:none;
+    stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none;}
+  .cb-daybtn:hover:not([disabled]),.cb-day-pick:hover{color:var(--ow-ink-900);border-color:var(--ow-ink-400);}
+  .cb-daybtn:focus-visible,.cb-day-pick:focus-visible,.cb-tool:focus-visible,.cb-today:focus-visible{
+    outline:2px solid var(--ow-steel-950);outline-offset:2px;}
+  .cb-daybtn[disabled]{opacity:.35;cursor:not-allowed;}
+  .cb-day-pick{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:var(--ow-sp-8);
+    height:32px;padding:0 var(--ow-sp-12);border:1px solid var(--ow-rule);border-radius:var(--ow-r);
+    background:var(--ow-paper);color:var(--ow-ink-600);}
+  .cb-day-label{display:flex;align-items:center;gap:var(--ow-sp-8);white-space:nowrap;}
+  .cb-day-date{font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .cb-day-rel{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-verdigris);}
+  .cb-day-rel.is-past{color:var(--ow-amber-ink);background:var(--ow-amber-soft);border-radius:var(--ow-r-sm);
+    padding:1px var(--ow-sp-6);}
+  /* Holds the day; opened by the button beside it, so it is present
+     for showPicker() and invisible otherwise. */
+  .cb-day-input{position:absolute;left:36px;bottom:0;width:1px;height:1px;opacity:0;pointer-events:none;border:0;padding:0;}
+  .cb-today{all:unset;cursor:pointer;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-sky);
+    padding:0 var(--ow-sp-6);white-space:nowrap;}
+  .cb-today:hover{text-decoration:underline;}
+  .cb-acts{display:flex;align-items:center;gap:var(--ow-sp-4);}
+  .cb-tool{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:var(--ow-sp-6);
+    height:34px;padding:0 var(--ow-sp-10);border-radius:var(--ow-r);font-size:var(--ow-t-13);
+    font-weight:var(--ow-fw-600);color:var(--ow-ink-600);border:1px solid transparent;}
+  .cb-tool:hover{color:var(--ow-ink-900);background:var(--ow-paper);border-color:var(--ow-rule);}
+  .cb-go{display:inline-flex;align-items:center;gap:var(--ow-sp-6);height:36px;padding:0 var(--ow-sp-16);
+    box-sizing:border-box;font-size:var(--ow-t-13);border-radius:var(--ow-r);}
+  .cb-go-out{margin-left:var(--ow-sp-6);background:var(--ow-paper);color:var(--ow-ink-900);border-color:var(--ow-steel-100);}
+
+  .cb-main{display:flex;flex-direction:column;gap:var(--ow-sp-16);}
+
+  /* ---- 1 + 2. the position ---- */
+  .cb-pos{background:var(--ow-paper);border:1px solid var(--ow-steel-100);border-radius:var(--ow-r-lg);overflow:hidden;}
+  .cb-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);}
+  .cb-hero-main{display:flex;flex-direction:column;gap:var(--ow-sp-8);padding:var(--ow-sp-20) var(--ow-sp-24);
+    border-right:1px solid var(--ow-rule-soft);min-width:0;}
+  .cb-hero-l,.cb-ln-t{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.09em;
+    text-transform:uppercase;color:var(--ow-ink-600);}
+  .cb-hero-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-28);font-weight:var(--ow-fw-600);letter-spacing:-.03em;line-height:var(--ow-lh-tight);
+    color:var(--ow-ink-900);}
+  .cb-hero-v.is-neg,.cb-acct-v.is-neg{color:var(--ow-crimson);}
+  .cb-hero-u{font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);color:var(--ow-ink-600);margin-left:var(--ow-sp-6);letter-spacing:0;}
+  .cb-hero-s{font-size:var(--ow-t-12);color:var(--ow-ink-600);line-height:var(--ow-lh-normal);}
+  .cb-unc-go{font-size:var(--ow-t-12);}
+  .cb-net{display:inline-flex;align-items:center;gap:var(--ow-sp-2);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .cb-net .icon{width:12px;height:12px;}
+  /* Where it sits: one bar, split by account, gaps between the parts. */
+  .cb-comp{display:flex;gap:2px;height:8px;border-radius:var(--ow-r-pill);overflow:hidden;
+    background:var(--ow-rule-soft);margin-top:var(--ow-sp-4);}
+  .cb-comp i{display:block;height:100%;background:var(--cb-ac);}
+  /* The bridge: four bars on one scale. */
+  .cb-bridge{display:flex;flex-direction:column;gap:var(--ow-sp-6);margin-top:var(--ow-sp-8);}
+  .cb-br{display:grid;grid-template-columns:64px minmax(0,1fr) auto;align-items:center;gap:var(--ow-sp-10);
+    font-size:var(--ow-t-12);}
+  .cb-br-l{color:var(--ow-ink-600);white-space:nowrap;}
+  .cb-br-t{position:relative;height:10px;background:var(--ow-steel-050);border-radius:2px;}
+  .cb-br-t i{position:absolute;top:0;bottom:0;border-radius:2px;min-width:2px;}
+  .cb-br.is-open i{background:var(--ow-steel-300);}
+  .cb-br.is-in i{background:var(--ow-verdigris);}
+  .cb-br.is-out i{background:var(--ow-crimson);}
+  .cb-br.is-now i{background:var(--ow-steel-950);}
+  .cb-br-v{min-width:96px;text-align:right;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;color:var(--ow-ink-600);white-space:nowrap;}
+  .cb-br.is-now .cb-br-v{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  .cb-br.is-in .cb-br-v{color:var(--ow-verdigris);}
+  .cb-br.is-out .cb-br-v{color:var(--ow-crimson);}
+  .cb-br-x{display:flex;align-items:center;gap:var(--ow-sp-6);font-size:var(--ow-t-11);color:var(--ow-ink-600);
+    margin-top:var(--ow-sp-2);}
+  .cb-br-x .icon{width:14px;height:14px;color:var(--ow-slate);}
+  .cb-br-x b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+
+  /* The day's line. */
+  .cb-hero-chart{display:flex;flex-direction:column;min-width:0;padding:var(--ow-sp-16) var(--ow-sp-20) var(--ow-sp-12);}
+  .cb-ln{display:flex;flex-direction:column;height:100%;}
+  .cb-ln-h{display:flex;align-items:center;justify-content:space-between;gap:var(--ow-sp-8);flex-wrap:wrap;}
+  .cb-ln-k{display:flex;gap:var(--ow-sp-12);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .cb-ln-k span{display:inline-flex;align-items:center;gap:var(--ow-sp-4);}
+  .cb-ln-k i{display:inline-block;width:8px;height:8px;border-radius:50%;}
+  .cb-ln-k i.up{background:var(--ow-verdigris);}
+  .cb-ln-k i.down{background:var(--ow-crimson);}
+  .cb-ln-k i.ref{width:12px;height:0;border-radius:0;border-top:1px dashed var(--ow-steel-400);}
+  .cb-ln-plot{position:relative;flex:1;min-height:160px;margin-top:var(--ow-sp-20);}
+  .cb-ln-plot svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;}
+  .cb-ln-a{fill:var(--ow-sky-soft);opacity:.6;}
+  .cb-ln-l{fill:none;stroke:var(--ow-sky);stroke-width:2;stroke-linejoin:round;vector-effect:non-scaling-stroke;}
+  .cb-ln-o{fill:none;stroke:var(--ow-steel-400);stroke-width:1;stroke-dasharray:4 4;vector-effect:non-scaling-stroke;}
+  .cb-ln-r{fill:none;stroke-width:3;stroke-linecap:round;vector-effect:non-scaling-stroke;}
+  .cb-ln-r.up{stroke:var(--ow-verdigris);}
+  .cb-ln-r.down{stroke:var(--ow-crimson);}
+  .cb-ln-d{position:absolute;width:10px;height:10px;box-sizing:border-box;border-radius:50%;
+    transform:translate(-50%,-50%);background:var(--ow-paper);border:2px solid var(--ow-ink-600);
+    transition:transform .12s ease;}
+  .cb-ln-d.up{border-color:var(--ow-verdigris);}
+  .cb-ln-d.down{border-color:var(--ow-crimson);}
+  .cb-ln-d:hover{transform:translate(-50%,-50%) scale(1.5);}
+  .cb-ln-end{position:absolute;width:14px;height:14px;box-sizing:border-box;border-radius:50%;
+    transform:translate(-50%,-50%);background:var(--ow-sky);border:3px solid var(--ow-sky-soft);
+    background-clip:padding-box;}
+  .cb-ln-endv,.cb-ln-ov{position:absolute;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;white-space:nowrap;pointer-events:none;}
+  .cb-ln-endv{transform:translate(10px,-140%);font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .cb-ln-endv.is-left{transform:translate(calc(-100% - 10px),-140%);}
+  .cb-ln-ov{right:0;transform:translateY(-130%);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .cb-ln-blank{border:1px dashed var(--ow-rule);border-radius:var(--ow-r-lg);}
+  .cb-ln-none{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .cb-ln-ax{position:relative;height:16px;margin-top:var(--ow-sp-6);font-size:var(--ow-t-11);color:var(--ow-ink-600);
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;}
+  .cb-ln-ax span{position:absolute;transform:translateX(-50%);white-space:nowrap;}
+
+  /* The three accounts, which are also the ledger's account filter. */
+  .cb-accts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--ow-rule-soft);}
+  .cb-acct{all:unset;box-sizing:border-box;cursor:pointer;position:relative;display:flex;flex-direction:column;
+    gap:var(--ow-sp-6);min-width:0;padding:var(--ow-sp-12) var(--ow-sp-20) var(--ow-sp-16);
+    border-left:1px solid var(--ow-rule-soft);}
+  .cb-acct:first-child{border-left:0;}
+  .cb-acct:hover{background:var(--ow-paper-2);}
+  .cb-acct.is-on{background:var(--cb-ac-soft);}
+  .cb-acct.is-on::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:var(--cb-ac);}
+  .cb-acct:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
+  .cb-acct-h{display:flex;align-items:center;gap:var(--ow-sp-6);min-width:0;}
+  .cb-acct-n{flex:1;min-width:0;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cb-acct-h .ow-cp .icon,.cb-count-state .icon{width:12px;height:12px;}
+  .cb-acct-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-20);font-weight:var(--ow-fw-600);letter-spacing:-.03em;line-height:var(--ow-lh-tight);
+    color:var(--ow-ink-900);}
+  .cb-acct-bar{display:block;height:4px;border-radius:var(--ow-r-pill);background:var(--ow-rule-soft);overflow:hidden;}
+  .cb-acct-bar i{display:block;height:100%;border-radius:var(--ow-r-pill);background:var(--cb-ac);}
+  .cb-acct-s{font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:var(--ow-lh-snug);}
+  .cb-acct-s b{font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .cb-up{color:var(--ow-verdigris);font-weight:700;}
+  .cb-down{color:var(--ow-crimson);font-weight:700;}
+  .cb-unc{color:var(--ow-amber-ink);font-weight:700;}
+
+  .cb-grid{align-items:start;}
+
+  /* ---- 3. the movements ---- */
+  .cb-led-tools{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ow-sp-8);
+    padding:var(--ow-sp-10) var(--ow-sp-12);border-bottom:1px solid var(--ow-rule-soft);}
+  .cb-seg .cb-ac-dot{margin-right:calc(-1 * var(--ow-sp-2));}
+  .cb-led-find{flex:1 1 180px;display:flex;align-items:center;gap:var(--ow-sp-6);min-width:0;height:34px;
+    box-sizing:border-box;padding:0 var(--ow-sp-10);border:1px solid var(--ow-rule);border-radius:var(--ow-r);
+    background:var(--ow-paper);color:var(--ow-ink-600);}
+  .cb-led-find:focus-within{border-color:var(--ow-steel-950);}
+  .cb-led-find input{all:unset;flex:1;min-width:0;font-size:var(--ow-t-13);color:var(--ow-ink-900);}
+  .cb-led-find input::placeholder{color:var(--ow-ink-600);}
+  .cb-ledger{display:flex;flex-direction:column;}
+  .cb-r{display:grid;grid-template-columns:44px 24px minmax(0,1fr) 112px 108px 116px 60px;align-items:center;
+    gap:var(--ow-sp-8);min-height:48px;box-sizing:border-box;padding:var(--ow-sp-8) var(--ow-sp-12);
+    border-bottom:1px solid var(--ow-rule-soft);}
+  .cb-r:hover{background:var(--ow-paper-2);}
+  .cb-r-h{min-height:32px;padding-top:var(--ow-sp-6);padding-bottom:var(--ow-sp-6);background:var(--ow-paper-2);
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+  .cb-r-t{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .cb-r-h .cb-r-t{font-family:inherit;font-size:inherit;}
+  .cb-r-ic{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none;
+    background:var(--ow-steel-050);color:var(--ow-ink-600);}
+  .cb-r-ic .icon{width:14px;height:14px;}
+  .cb-r-h .cb-r-ic{background:none;}
+  .is-in .cb-r-ic{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .is-out .cb-r-ic{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .is-xfer .cb-r-ic{background:var(--ow-slate-soft);color:var(--ow-slate);}
+  .is-adj .cb-r-ic{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .cb-r-w{display:flex;flex-direction:column;gap:var(--ow-sp-2);min-width:0;}
+  .cb-r-who{font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cb-r-d{display:flex;align-items:center;gap:var(--ow-sp-6);min-width:0;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .cb-r-cat{flex:none;height:16px;line-height:16px;padding:0 var(--ow-sp-6);border-radius:var(--ow-r-sm);
+    background:var(--ow-steel-050);font-weight:var(--ow-fw-600);white-space:nowrap;}
+  .cb-r-rest{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cb-r-cov{white-space:nowrap;}
+  .cb-r-a{display:flex;align-items:center;gap:var(--ow-sp-6);min-width:0;font-size:var(--ow-t-12);color:var(--ow-ink-600);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cb-r-amt,.cb-r-b{text-align:right;white-space:nowrap;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-13);}
+  .cb-r-amt{font-weight:var(--ow-fw-600);}
+  .cb-r-b{color:var(--ow-ink-900);}
+  .cb-r-h .cb-r-amt,.cb-r-h .cb-r-b{font-family:inherit;font-size:inherit;font-weight:inherit;letter-spacing:inherit;color:inherit;}
+  .is-in .cb-r-amt{color:var(--ow-verdigris);}
+  .is-out .cb-r-amt{color:var(--ow-crimson);}
+  .is-xfer .cb-r-amt{color:var(--ow-ink-600);}
+  .is-adj .cb-r-amt{color:var(--ow-amber-ink);}
+  .cb-r-m{display:none;}
+  .cb-r-x{display:flex;justify-content:flex-end;gap:var(--ow-sp-2);opacity:0;transition:opacity .12s ease;}
+  .cb-r:hover .cb-r-x,.cb-r:focus-within .cb-r-x{opacity:1;}
+  .cb-r-x button{all:unset;box-sizing:border-box;cursor:pointer;width:26px;height:26px;border-radius:var(--ow-r-sm);
+    display:flex;align-items:center;justify-content:center;color:var(--ow-ink-600);}
+  .cb-r-x button:hover{background:var(--ow-steel-050);color:var(--ow-ink-900);}
+  .cb-r-x button.danger:hover{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .cb-r-x button:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
+  .cb-r-x .icon{width:14px;height:14px;}
+  @media (hover:none){ .cb-r-x{opacity:1;} }
+  .cb-r-open{background:var(--ow-paper-2);}
+  .cb-r-open .cb-r-who{font-weight:var(--ow-fw-500);color:var(--ow-ink-600);}
+  .cb-r-foot{display:flex;align-items:center;justify-content:space-between;gap:var(--ow-sp-12);flex-wrap:wrap;
+    padding:var(--ow-sp-10) var(--ow-sp-12);background:var(--ow-paper-2);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .cb-r-foot-f{display:flex;align-items:baseline;gap:var(--ow-sp-12);font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-13);}
+  .cb-r-foot-b{font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-12);}
+  .cb-r-foot-b b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
   /* The document the row came from, when another screen wrote it. */
   .cb-led-doc{
-    all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:4px;
-    font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:11.5px;
+    all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:4px;flex:none;
+    font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);
     font-weight:600;color:var(--ow-ink-900);border-bottom:1px dotted var(--ow-rule);
   }
   .cb-led-doc:hover{border-bottom-color:var(--ow-ink-400);}
   .cb-led-doc.is-flat{cursor:default;border-bottom:0;color:var(--ow-ink-600);font-weight:400;}
   .cb-led-doc:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
   .cb-led-doc .icon{width:12px;height:12px;color:var(--ow-ink-400);}
+  .cb-led-empty{display:flex;flex-direction:column;align-items:center;gap:var(--ow-sp-6);text-align:center;
+    padding:var(--ow-sp-32) var(--ow-sp-16);font-size:var(--ow-t-13);color:var(--ow-ink-600);}
+  .cb-led-empty-ic{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    background:var(--ow-steel-050);color:var(--ow-ink-600);margin-bottom:var(--ow-sp-4);}
+  .cb-led-empty-ic .icon{width:20px;height:20px;}
+  .cb-led-empty b{font-size:var(--ow-t-14);color:var(--ow-ink-900);}
+  .cb-led-empty > span{max-width:56ch;line-height:var(--ow-lh-normal);}
+  .cb-led-empty .cb-led-empty-a{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--ow-sp-8);margin-top:var(--ow-sp-8);}
 
-  .rowa{display:flex;gap:6px;}
-  .rowa button{
-    all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:4px;
-    font-size:11.5px;font-weight:600;padding:4px 8px;border:1px solid var(--ow-rule);
-    border-radius:6px;background:var(--ow-paper);color:var(--ow-ink-600);white-space:nowrap;
-  }
-  .rowa button:hover{color:var(--ow-ink-900);border-color:var(--ow-ink-400);}
-  .rowa button.danger{color:var(--ow-crimson);border-color:#EAC7C1;}
-  .rowa button:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
-  .rowa svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.8;
-    stroke-linecap:round;stroke-linejoin:round;}
-  .cb-led-empty{padding:26px 16px 22px;text-align:center;color:var(--ow-ink-600);font-size:13px;}
-  .cb-led-empty b{display:block;font-size:14px;color:var(--ow-ink-900);margin-bottom:6px;}
-  .cb-led-empty span{display:block;max-width:56ch;margin:0 auto;line-height:1.55;}
+  /* ---- 4. close the day ---- */
+  .cb-close-state{margin-left:auto;}
+  .cb-cl-prog{display:flex;flex-direction:column;gap:var(--ow-sp-6);padding:var(--ow-sp-12);
+    border-bottom:1px solid var(--ow-rule-soft);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .cb-cl-segs{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--ow-sp-4);}
+  .cb-cl-segs i{display:block;height:6px;border-radius:var(--ow-r-pill);background:var(--ow-steel-100);}
+  .cb-cl-segs i.ok{background:var(--ow-verdigris);}
+  .cb-cl-segs i.over{background:var(--ow-amber);}
+  .cb-cl-segs i.short{background:var(--ow-crimson);}
+  .cb-counts{display:flex;flex-direction:column;}
+  .cb-count{display:flex;flex-direction:column;gap:var(--ow-sp-8);padding:var(--ow-sp-12);
+    border-bottom:1px solid var(--ow-rule-soft);}
+  .cb-count:last-child{border-bottom:0;}
+  .cb-count-head{display:flex;align-items:center;gap:var(--ow-sp-6);}
+  .cb-count-head h4{flex:1;margin:0;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .cb-count-state{display:inline-flex;align-items:center;gap:3px;height:18px;padding:0 var(--ow-sp-6);
+    border-radius:var(--ow-r-sm);background:var(--ow-steel-050);color:var(--ow-ink-600);
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);white-space:nowrap;}
+  .cb-count.ok .cb-count-state{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .cb-count.over .cb-count-state{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .cb-count.short .cb-count-state{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .cb-count-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--ow-sp-8);align-items:end;}
+  .cb-count-book{display:flex;flex-direction:column;gap:var(--ow-sp-2);min-width:0;}
+  .cb-count-book span,.cb-count-input span{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
+  .cb-count-book b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-16);font-weight:var(--ow-fw-600);letter-spacing:-.02em;color:var(--ow-ink-900);
+    line-height:34px;white-space:nowrap;}
+  .cb-count-input{display:flex;flex-direction:column;gap:var(--ow-sp-2);margin:0;min-width:0;}
+  .cb-count-input input{width:100%;box-sizing:border-box;height:34px;padding:0 var(--ow-sp-10);
+    border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);text-align:right;
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .cb-count-input input::placeholder{font-family:'Figtree',system-ui,sans-serif;font-weight:var(--ow-fw-400);color:var(--ow-ink-600);}
+  .cb-count-input input:focus{outline:none;border-color:var(--ow-steel-950);box-shadow:0 0 0 3px var(--ow-oxide-soft);}
+  .cb-count-sum{font-size:var(--ow-t-11);color:var(--ow-ink-600);font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+  .cb-count-sum .cb-up,.cb-count-sum .cb-down{font-weight:var(--ow-fw-600);}
+  .cb-count-verdict{display:flex;flex-direction:column;gap:var(--ow-sp-2);padding:var(--ow-sp-8) var(--ow-sp-10);
+    border-radius:var(--ow-r-sm);background:var(--ow-crimson-soft);}
+  .cb-count.over .cb-count-verdict{background:var(--ow-amber-faint);}
+  .cb-count-diff{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);}
+  .cb-count.over .cb-count-diff{color:var(--ow-amber-ink);}
+  .cb-count.short .cb-count-diff{color:var(--ow-crimson);}
+  .cb-count-why{font-size:var(--ow-t-11);line-height:var(--ow-lh-snug);color:var(--ow-ink-900);}
+  .cb-count-fix{display:flex;flex-direction:column;gap:var(--ow-sp-6);}
+  .cb-count-fix .cb-var-record{align-self:stretch;font-size:var(--ow-t-13);padding:var(--ow-sp-8) var(--ow-sp-12);}
+  .cb-count-fix .cb-count-why{color:var(--ow-ink-600);}
+  /* A broken chain is the one thing this screen must not let past
+     quietly: the count below only ever measures a day against its own
+     opening figure, so a wrong opening reconciles perfectly. */
+  .cb-chain-break{display:flex;flex-direction:column;gap:var(--ow-sp-4);margin:var(--ow-sp-12) var(--ow-sp-12) 0;
+    padding:var(--ow-sp-10) var(--ow-sp-12);border-radius:var(--ow-r-sm);background:var(--ow-crimson-soft);
+    font-size:var(--ow-t-12);line-height:var(--ow-lh-snug);color:var(--ow-ink-900);}
+  .cb-chain-break b{color:var(--ow-crimson);}
+  .cb-chain-break .cb-chain-fix{align-self:flex-start;margin-top:var(--ow-sp-6);background:var(--ow-paper);
+    font-size:var(--ow-t-12);padding:var(--ow-sp-6) var(--ow-sp-10);}
 
-  /* THE TWO RINGS. Ten hues that belong to nothing were the reason these
-     were re-drawn once; they are back because the page is back, and the
-     ring and its list read the same way round. */
-  .cb-analytics-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
-  .cb-analytics-total{display:flex;align-items:baseline;justify-content:space-between;margin:10px 0 14px;}
-  .cb-analytics-total-label{font-size:12.5px;color:var(--ow-ink-600);}
-  .cb-analytics-total-val{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700;
+  /* ---- 5. where it came from, where it went ---- */
+  .cb-cats{display:flex;flex-direction:column;padding:var(--ow-sp-6) 0;}
+  .cb-cat{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto 36px;
+    grid-template-areas:"n v p" "b b b";align-items:baseline;gap:var(--ow-sp-4) var(--ow-sp-8);
+    padding:var(--ow-sp-6) var(--ow-sp-12);}
+  .cb-cat:hover{background:var(--ow-paper-2);}
+  .cb-cat:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
+  .cb-cat-n{grid-area:n;min-width:0;font-size:var(--ow-t-12);color:var(--ow-ink-900);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cb-cat-v{grid-area:v;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);letter-spacing:-.02em;white-space:nowrap;}
+  .cb-cat-p{grid-area:p;text-align:right;font-size:var(--ow-t-11);color:var(--ow-ink-600);font-variant-numeric:tabular-nums;}
+  .cb-cat-bar{grid-area:b;display:block;height:6px;border-radius:var(--ow-r-pill);background:var(--ow-steel-050);overflow:hidden;}
+  .cb-cat-bar i{display:block;height:100%;border-radius:var(--ow-r-pill);}
+  .cb-cats.in .cb-cat-bar i{background:var(--ow-verdigris);}
+  .cb-cats.out .cb-cat-bar i{background:var(--ow-crimson);}
+  .cb-cat-empty{padding:var(--ow-sp-16) var(--ow-sp-12);text-align:center;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+
+  /* ---- seven days ---- */
+  .cb-wk{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:var(--ow-sp-4);
+    padding:var(--ow-sp-12) var(--ow-sp-10) var(--ow-sp-4);}
+  .cb-wk-d{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;align-items:center;
+    gap:var(--ow-sp-4);padding:var(--ow-sp-4) 0;border-radius:var(--ow-r-sm);}
+  .cb-wk-d:hover{background:var(--ow-paper-2);}
+  .cb-wk-d:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
+  .cb-wk-bars{display:flex;align-items:flex-end;justify-content:center;gap:2px;width:100%;height:64px;
+    border-bottom:1px solid var(--ow-rule);}
+  .cb-wk-bars i{display:block;width:7px;border-radius:2px;}
+  .cb-wk-bars i.up,.cb-wk-k i.up{background:var(--ow-verdigris);}
+  .cb-wk-bars i.down,.cb-wk-k i.down{background:var(--ow-crimson);}
+  .cb-wk-l{display:flex;flex-direction:column;align-items:center;font-size:var(--ow-t-11);color:var(--ow-ink-600);
+    line-height:var(--ow-lh-tight);}
+  .cb-wk-l b{display:flex;align-items:center;justify-content:center;width:22px;height:22px;margin-top:2px;
+    border-radius:50%;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);
     font-variant-numeric:tabular-nums;}
-  .cb-analytics-total-val.in{color:var(--ow-verdigris);}
-  .cb-analytics-total-val.out{color:var(--ow-crimson);}
-  .cb-flow{display:flex;gap:20px;align-items:center;position:relative;}
-  .cb-donut-wrap{position:relative;flex:none;width:140px;height:140px;}
-  .cb-donut-svg{width:140px;height:140px;display:block;}
-  /* The round button floats over the top-right of this list, and in the
-     screen as it stood it sat ON the first row's figure: "1,120,000"
-     read as "1,12" with a button over the rest. A covered figure is not
-     a shortened figure, it is a wrong one. The list keeps the button's
-     width clear, so every value lands left of it and they all still line
-     up with each other. */
-  .cb-legend-list{flex:1;min-width:0;padding-right:46px;}
-  .cb-legend-row{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:4px 0;min-width:0;}
-  .cb-legend-dot{width:9px;height:9px;border-radius:50%;flex:none;}
-  .cb-legend-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .cb-legend-val{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-weight:600;
-    font-variant-numeric:tabular-nums;white-space:nowrap;}
-  /* The way money is logged from this panel: one round button per side,
-     opening the dialog that side is about. */
-  .cb-analytics-fab{
-    all:unset;box-sizing:border-box;cursor:pointer;position:absolute;right:0;top:-4px;
-    width:38px;height:38px;border-radius:50%;background:var(--ow-verdigris);color:#fff;
-    display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600;
-    box-shadow:var(--ow-lift);
-  }
-  .cb-analytics-fab.out{background:var(--ow-crimson);}
-  .cb-analytics-fab:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .cb-wk-d.is-on .cb-wk-l b{background:var(--ow-steel-950);color:var(--ow-paper);}
+  .cb-wk-k{display:flex;flex-wrap:wrap;gap:var(--ow-sp-12);padding:var(--ow-sp-6) var(--ow-sp-12) var(--ow-sp-12);
+    font-size:var(--ow-t-11);color:var(--ow-ink-600);font-variant-numeric:tabular-nums;}
+  .cb-wk-k span{display:inline-flex;align-items:center;gap:var(--ow-sp-4);}
+  .cb-wk-k i{display:inline-block;width:8px;height:8px;border-radius:2px;}
 
-  /* ---- THE PHONE. The table scrolls sideways inside its panel rather
-     than becoming a second set of cards that could disagree with it; the
-     acts, the tiles, the counts and the rings all go to one column. ---- */
+  /* ---- the dialogs: one head for all five ---- */
+  .modal.cb-till-modal{max-width:560px;}
+  .modal.cb-till-modal.cb-till-wide{max-width:920px;}
+  .modal.cb-ask-modal{max-width:460px;}
+  .modal-head.cb-mh{justify-content:flex-start;gap:var(--ow-sp-12);}
+  .modal-head.cb-mh .modal-close{margin-left:auto;}
+  .cb-mh-ic{display:flex;align-items:center;justify-content:center;flex:none;width:36px;height:36px;border-radius:50%;
+    background:var(--ow-steel-050);color:var(--ow-ink-600);}
+  .cb-mh-ic svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .cb-mh-ic.in{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .cb-mh-ic.out,.cb-mh-ic.bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .cb-mh-ic.xfer{background:var(--ow-slate-soft);color:var(--ow-slate);}
+  .cb-mh-ic.open{background:var(--ow-sky-soft);color:var(--ow-sky);}
+  .cb-mh-ic.warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .cb-mh-t{display:flex;flex-direction:column;align-items:flex-start;gap:var(--ow-sp-2);min-width:0;}
+  .modal-head.cb-mh h2{font-size:var(--ow-t-16);font-weight:var(--ow-fw-700);text-transform:none;letter-spacing:-.01em;
+    color:var(--ow-ink-900);}
+  .cb-mh-day{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .cb-mh-day:empty{display:none;}
+  .cb-mh-day.is-past{font-weight:var(--ow-fw-600);color:var(--ow-amber-ink);background:var(--ow-amber-soft);
+    border-radius:var(--ow-r-sm);padding:1px var(--ow-sp-6);}
+  .cb-mf .cb-save{min-width:180px;}
+  .cb-ask-modal .cb-save{background:var(--ow-crimson);}
+  .cb-ask-modal .cb-save:hover{background:var(--ow-oxide-deep);}
+
+  /* Two columns on a desk: the entry, and what turns it into a sale or a
+     settled debt. */
+  .till-2col{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:var(--ow-sp-20);align-items:start;}
+  .till-main,.till-aside{display:flex;flex-direction:column;gap:18px;min-width:0;}
+  .till-2col > .till-foot-note{grid-column:1 / -1;}
+  .till-label-row{display:flex;align-items:center;justify-content:space-between;gap:var(--ow-sp-8);flex-wrap:wrap;}
+  .till-kind{height:28px;}
+  .till-kind .ow-seg-b{font-size:var(--ow-t-12);padding:0 var(--ow-sp-10);}
+  .till-collect-ic{display:flex;color:var(--ow-ink-600);}
+  .till-collect-head .till-label{flex:1;}
+  .till-acct-name{display:flex;align-items:center;gap:var(--ow-sp-6);}
+  .till-acct[disabled]{opacity:.4;cursor:not-allowed;}
+  .till-eff-t{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+  .till-eff-bar{display:flex;height:8px;border-radius:var(--ow-r-pill);background:var(--ow-steel-050);overflow:hidden;}
+  .till-eff-bar i{display:block;height:100%;}
+  .till-eff-bar .base{background:var(--cb-ac,var(--ow-ink-600));}
+  .till-eff-bar .add{background:var(--ow-verdigris);}
+  .till-eff-bar .cut{background:repeating-linear-gradient(45deg,var(--ow-crimson) 0 3px,var(--ow-crimson-soft) 3px 6px);}
+  .till-amount.xfer{background:var(--ow-slate-soft);border-color:var(--ow-rule);}
+  .till-amount.xfer .till-amount-label,.till-amount.xfer .till-words{color:var(--ow-slate);}
+  /* Paying for several days at once is the exception, so it is folded
+     until somebody needs it -- and opens by itself on an entry that has
+     it. */
+  .till-more{border:1px solid var(--line);border-radius:var(--ow-r-lg);background:var(--ow-paper);}
+  .till-more summary{display:flex;align-items:center;gap:var(--ow-sp-8);cursor:pointer;list-style:none;
+    padding:var(--ow-sp-10) var(--ow-sp-12);font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .till-more summary::-webkit-details-marker{display:none;}
+  .till-more summary svg{color:var(--ow-ink-600);}
+  .till-more summary .till-collect-hint{margin-left:auto;font-weight:var(--ow-fw-400);}
+  .till-more[open] summary{border-bottom:1px solid var(--ow-rule-soft);}
+  .till-more .till-covers{border-top:0;padding:var(--ow-sp-10) var(--ow-sp-12);}
+
+  /* The transfer: out of, an arrow, into -- and both balances moving. */
+  .cb-x-route{display:grid;grid-template-columns:minmax(0,1fr) 28px minmax(0,1fr);gap:var(--ow-sp-8);align-items:end;}
+  .cb-x-list{display:flex;flex-direction:column;gap:var(--ow-sp-6);}
+  .cb-x-list .till-acct{flex-direction:row;align-items:center;justify-content:space-between;gap:var(--ow-sp-8);}
+  .cb-x-arrow{display:flex;justify-content:center;align-self:center;color:var(--ow-ink-600);padding-top:var(--ow-sp-20);}
+  .cb-x-effect{display:flex;flex-direction:column;gap:var(--ow-sp-8);padding:var(--ow-sp-12);
+    border-radius:var(--ow-r-lg);background:var(--ow-steel-050);}
+  .cb-x-row{display:grid;grid-template-columns:118px minmax(0,1fr) auto;align-items:center;gap:var(--ow-sp-10);
+    font-size:var(--ow-t-12);}
+  .cb-x-n{display:flex;align-items:center;gap:var(--ow-sp-6);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .cb-x-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;color:var(--ow-ink-600);white-space:nowrap;}
+  .cb-x-v b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  .cb-x-hint{font-size:var(--ow-t-12);color:var(--ow-ink-600);text-align:center;}
+  .cb-x-why{margin:0;}
+
+  /* The opening figures. */
+  .cb-open-sub{margin:0 0 var(--ow-sp-16);max-width:var(--ow-measure);font-size:var(--ow-t-13);
+    line-height:var(--ow-lh-normal);color:var(--ow-ink-600);}
+  .cb-open-accounts{display:flex;flex-direction:column;gap:var(--ow-sp-10);}
+  .cb-open-acct{display:grid;grid-template-columns:minmax(0,1fr) 180px;grid-template-areas:"l i" "n d";
+    align-items:center;gap:var(--ow-sp-6) var(--ow-sp-12);padding:var(--ow-sp-12) var(--ow-sp-16);
+    border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);background:var(--ow-paper);}
+  .cb-open-acct:focus-within{border-color:var(--cb-ac);}
+  .cb-open-acct label{grid-area:l;display:flex;align-items:center;gap:var(--ow-sp-8);
+    font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .cb-open-acct input{grid-area:i;width:100%;box-sizing:border-box;height:40px;padding:0 var(--ow-sp-12);
+    border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);text-align:right;
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-16);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .cb-open-acct input,.cb-count-input input{-moz-appearance:textfield;appearance:textfield;}
+  .cb-open-acct input::-webkit-inner-spin-button,.cb-count-input input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+  .till-label .till-collect-hint{margin-left:var(--ow-sp-6);text-transform:none;letter-spacing:0;font-weight:var(--ow-fw-400);}
+  .cb-open-acct input:focus{outline:none;border-color:var(--cb-ac);box-shadow:0 0 0 3px var(--ow-oxide-soft);}
+  .cb-open-diff{grid-area:d;justify-self:end;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);
+    font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .cb-open-diff.is-off{color:var(--ow-amber-ink);}
+  .cb-open-diff.is-same{color:var(--ow-verdigris);}
+  .cb-carried-note{grid-area:n;font-size:var(--ow-t-11);line-height:var(--ow-lh-snug);color:var(--ow-ink-600);}
+  .cb-carried-first{font-style:italic;}
+  .cb-open-total{display:flex;flex-direction:column;gap:var(--ow-sp-8);margin-top:var(--ow-sp-16);}
+  .cb-open-total-row{display:flex;align-items:baseline;justify-content:space-between;font-size:var(--ow-t-13);color:var(--ow-ink-600);}
+  .cb-open-total-row b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-16);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+
+  /* The entry, drawn in the question that deletes it. */
+  .cb-ask-row{display:grid;grid-template-columns:24px minmax(0,1fr) auto;align-items:center;gap:var(--ow-sp-10);
+    padding:var(--ow-sp-10) var(--ow-sp-12);margin-bottom:var(--ow-sp-8);border:1px solid var(--ow-rule);
+    border-radius:var(--ow-r-lg);}
+  .cb-ask-w{display:flex;flex-direction:column;min-width:0;}
+  .cb-ask-w b{font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cb-ask-w small{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .cb-ask-amt{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);white-space:nowrap;}
+  .cb-ask-row.is-in .cb-ask-amt{color:var(--ow-verdigris);}
+  .cb-ask-row.is-out .cb-ask-amt{color:var(--ow-crimson);}
+  .cb-ask-p{margin:var(--ow-sp-8) 0 0;max-width:var(--ow-measure);font-size:var(--ow-t-13);
+    line-height:var(--ow-lh-normal);color:var(--ow-ink-900);}
+
+  /* ---- THE PHONE. Its own design, not the desk squeezed: the five
+     acts become a bar above the tab bar where a thumb already is; the
+     position stacks; the accounts read as rows; the ledger is cards
+     drawn from the same row element; the rail falls below the work. ---- */
   @media (max-width:820px){
-    .cb-tiles{grid-template-columns:1fr 1fr;}
-    .cb-tile.is-total{grid-column:1 / -1;}
-    .cb-counts{grid-template-columns:1fr;}
-    /* minmax(0,1fr), never 1fr: 1fr floors at the column's min-content,
-       and the 140px ring beside its legend put the page 8px past a 390px
-       phone. The ring goes above its list, and the round button stops
-       floating over the ring and becomes the last thing in the column,
-       at the thumb floor. */
-    .cb-analytics-grid{grid-template-columns:minmax(0,1fr);gap:20px;}
-    .cb-flow{flex-direction:column;align-items:center;gap:14px;}
-    .cb-legend-list{width:100%;padding-right:0;}
-    .cb-analytics-fab{position:static;align-self:flex-end;width:44px;height:44px;}
-    .cb-ledger-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-    .cb-ledger{min-width:760px;}
-    .cb-count-input input{height:44px;}
-    .cb-count-fix .btn{width:100%;height:44px;font-size:14px;}
-    .cb-day{flex-direction:column;align-items:stretch;}
-    .cb-day-actions{display:grid;grid-template-columns:1fr 1fr;}
-    .lbtn{justify-content:center;height:44px;}
+    .cb-day-nav{order:3;width:100%;margin-left:0;}
+    .cb-day-pick{flex:1;justify-content:center;height:44px;}
+    .cb-daybtn{width:44px;height:44px;}
+    .cb-today{order:4;}
+    .cb-acts{position:fixed;left:0;right:0;z-index:40;
+      bottom:calc(var(--mobile-bottomnav-h) + env(safe-area-inset-bottom));
+      display:grid;grid-template-columns:40px 40px 40px minmax(0,1fr) minmax(0,1fr);gap:var(--ow-sp-6);
+      padding:var(--ow-sp-8) var(--ow-sp-16);background:var(--ow-paper);border-top:1px solid var(--ow-steel-100);}
+    .cb-tool{justify-content:center;width:40px;height:44px;padding:0;border-color:var(--ow-rule);background:var(--ow-paper);}
+    .cb-tool span{display:none;}
+    .cb-go{justify-content:center;height:44px;padding:0 var(--ow-sp-8);font-size:var(--ow-t-14);white-space:nowrap;}
+    .cb-go-out{margin-left:0;}
+    .cb-main{padding-bottom:72px;}
+
+    .cb-hero{grid-template-columns:minmax(0,1fr);}
+    .cb-hero-main{border-right:0;border-bottom:1px solid var(--ow-rule-soft);padding:var(--ow-sp-16);}
+    .cb-hero-chart{padding:var(--ow-sp-12) var(--ow-sp-16);}
+    .cb-ln-plot{min-height:120px;}
+    .cb-accts{grid-template-columns:minmax(0,1fr);}
+    .cb-acct{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"h v" "bar bar" "s s";
+      align-items:center;border-left:0;border-top:1px solid var(--ow-rule-soft);padding:var(--ow-sp-12) var(--ow-sp-16);}
+    .cb-acct:first-child{border-top:0;}
+    .cb-acct-h{grid-area:h;}
+    .cb-acct-v{grid-area:v;font-size:var(--ow-t-16);}
+    .cb-acct-bar{grid-area:bar;}
+    .cb-acct-s{grid-area:s;}
+
+    .cb-led-tools{padding:var(--ow-sp-10) var(--ow-sp-12);}
+    #cbLedgerFilter{display:flex;flex-wrap:nowrap;overflow-x:auto;width:100%;}
+    #cbLedgerFilter .ow-seg-b{flex:none;padding:0 var(--ow-sp-12);}
+    #cbLedgerDir{width:100%;}
+    .cb-led-find{flex-basis:100%;height:44px;}
+    .cb-led-find input{font-size:16px;}
+    .cb-r-h{display:none;}
+    .cb-r{grid-template-columns:32px minmax(0,1fr) auto;grid-template-areas:"ic w amt" "ic m x";
+      gap:var(--ow-sp-2) var(--ow-sp-10);padding:var(--ow-sp-12) var(--ow-sp-16);align-items:center;}
+    .cb-r-t,.cb-r-a,.cb-r-b{display:none;}
+    .cb-r-ic{grid-area:ic;align-self:start;width:32px;height:32px;}
+    .cb-r-ic .icon{width:16px;height:16px;}
+    .cb-r-w{grid-area:w;}
+    .cb-r-who{font-size:var(--ow-t-14);}
+    .cb-r-amt{grid-area:amt;font-size:var(--ow-t-14);}
+    .cb-r-m{grid-area:m;display:block;min-width:0;font-size:var(--ow-t-11);color:var(--ow-ink-600);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .cb-r-m .cb-ac-dot{margin-right:3px;vertical-align:1px;}
+    .cb-r-x{grid-area:x;opacity:1;}
+    .cb-r-x button{width:40px;height:40px;}
+    .cb-r-open .cb-r-b{display:block;grid-area:amt;}
+    .cb-r-foot{padding:var(--ow-sp-12) var(--ow-sp-16);}
+
+    .cb-count-input input{height:44px;font-size:16px;}
+    .cb-count-book b{line-height:44px;}
+    .cb-count-fix .btn{height:44px;font-size:14px;}
+
+    .till-2col{grid-template-columns:minmax(0,1fr);}
+    .cb-x-route{grid-template-columns:minmax(0,1fr);}
+    .cb-x-arrow{transform:rotate(90deg);padding-top:0;}
+    .cb-x-row{grid-template-columns:minmax(0,1fr) auto;}
+    .cb-x-row .till-eff-bar{grid-column:1 / -1;grid-row:2;}
+    .cb-open-acct{grid-template-columns:minmax(0,1fr) 150px;padding:var(--ow-sp-12);}
+    .cb-open-acct input{height:44px;font-size:16px;}
+    .cb-mf .cb-save{flex:1;min-width:0;}
   }
 
 
@@ -30752,107 +31012,93 @@
 
     <!-- CASH BOOK -->
     <section id="tab-cashbook" style="display:none;">
-      <!-- THE CASH BOOK.
+      <!-- THE CASH BOOK, drawn from what the owner is asking when they
+           open it, in the order they ask it:
 
-           Four stacked panels: the position, the day's movements, the
-           close, and where the day went. It was rebuilt as a console --
-           a page head with the day in it, a metric strip, an always-open
-           entry line, and a right rail carrying the close, a checks list
-           and a seven-day spine -- and the owner asked for the page back
-           as it was. This is that page.
+             1. what have I got, and where is it      the position
+             2. how did the day get here              the bridge and the day's line
+             3. what moved                            the movements
+             4. does the drawer agree                 close the day
+             5. where did it come from, where did it go, and how does
+                today sit against the week            the rail
 
-           Money is logged through the Cash In / Cash Out dialogs, which
-           the two acts in the position panel open and the two round
-           buttons on the rings open as well. -->
-      <div class="page-head">
-        <h1>Cash Book</h1>
-        <p>Track cash, mobile money, and bank for the day &mdash; open the books with your starting balances, log cash in and cash out, and reconcile at close.</p>
-      </div>
-
-      <!-- CHANGING THE OPENING FIGURES. Not a gate any more: on every
-           morning but the first, all three are already carried from the
-           day before, so the book is drawn from them and this panel is
-           opened only when a figure really needs changing. -->
-      <div class="panel cb-open-panel" id="cbWizard" style="display:none;">
-        <header class="cb-open-head">
-          <h2 id="cbOpenTitle">Open the day</h2>
-          <p class="cb-open-sub" id="cbOpenSub"></p>
-        </header>
-
-        <div class="field cb-open-date"><label>Which day</label>
-          <input type="date" id="cb_wiz_date"></div>
-
-        <div class="cb-open-accounts">
-          <div class="cb-open-acct">
-            <label for="cb_wiz_cash">Cash</label>
-            <input type="number" id="cb_wiz_cash" min="0" step="any" placeholder="0" inputmode="numeric">
-            <div class="cb-carried-note" id="cb_wiz_cash_carried"></div>
-          </div>
-          <div class="cb-open-acct">
-            <label for="cb_wiz_momo">Mobile Money</label>
-            <input type="number" id="cb_wiz_momo" min="0" step="any" placeholder="0" inputmode="numeric">
-            <div class="cb-carried-note" id="cb_wiz_momo_carried"></div>
-          </div>
-          <div class="cb-open-acct">
-            <label for="cb_wiz_bank">Bank</label>
-            <input type="number" id="cb_wiz_bank" min="0" step="any" placeholder="0" inputmode="numeric">
-            <div class="cb-carried-note" id="cb_wiz_bank_carried"></div>
-          </div>
+           The header carries the day and the five acts, and it is sticky,
+           so Money in is one press from anywhere on the page. Logging
+           money is still the Cash In / Cash Out dialogs; a transfer and
+           the opening figures are dialogs too now, rather than three
+           browser prompts and a panel that replaced the page. -->
+      <div class="ow-ph cb-ph">
+        <h1 class="ow-ph-t">Cash Book</h1>
+        <p class="ow-ph-help">Cash, mobile money and bank for one day: what each opened with, every shilling in and out with the running balance of its own account, and the count at close. Every figure is worked out from the entries &mdash; open a past day with the arrows or the date.</p>
+        <div class="cb-day-nav" role="group" aria-label="Which day">
+          <button type="button" class="cb-daybtn" id="cb_day_prev" title="The day before" aria-label="Previous day"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+          <button type="button" class="cb-day-pick" id="cb_day_pick" title="Pick a day">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+            <span class="cb-day-label">
+              <span class="cb-day-date" id="cbDayLabel"></span>
+              <span class="cb-day-rel" id="cbDayRel"></span>
+            </span>
+          </button>
+          <input type="date" id="cb_wiz_date" class="cb-day-input" tabindex="-1" aria-hidden="true">
+          <button type="button" class="cb-daybtn" id="cb_day_next" title="The day after" aria-label="Next day"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+          <button type="button" class="cb-today" id="cb_day_today">Back to today</button>
         </div>
-
-        <div class="cb-open-foot">
-          <div class="cb-open-total" id="cbOpenTotal"></div>
-          <button type="button" class="btn btn-ghost" id="cb_wiz_back">Back to the day</button>
-          <button class="btn btn-accent" id="cb_wiz_next">Open the books</button>
+        <span class="ow-ph-sp"></span>
+        <div class="cb-acts">
+          <button type="button" class="cb-tool" id="cb_transfer" title="Move money between the shop&#39;s own accounts"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10h11l-3-3"/><path d="M17 14H6l3 3"/></svg><span>Transfer</span></button>
+          <button type="button" class="cb-tool" id="cb_edit_opening" title="Change the day&#39;s starting balances"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L18.5 9.5a2.121 2.121 0 1 0-3-3L5 17v3z"/></svg><span>Opening</span></button>
+          <button type="button" class="cb-tool" id="cb_print" title="Print the day&#39;s report"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg><span>Print</span></button>
+          <button type="button" class="btn btn-ghost cb-go cb-go-out" id="cb_money_out"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg>Money out</button>
+          <button type="button" class="btn btn-accent cb-go" id="cb_money_in"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>Money in</button>
         </div>
       </div>
 
-      <div id="cbMain">
+      <div id="cbMain" class="cb-main">
 
-        <!-- THE POSITION. Which day, the five things that can be done to
-             it, and what is in each account right now. -->
-        <div class="panel cb-position">
-          <div class="cb-day">
-            <div class="cb-day-nav">
-              <button type="button" class="cb-daybtn" id="cb_day_prev" title="The day before" aria-label="Previous day"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
-              <div class="cb-day-label">
-                <span class="cb-day-date" id="cbDayLabel"></span>
-                <span class="cb-day-rel" id="cbDayRel"></span>
+        <!-- 1 + 2. THE POSITION. One figure, where it sits, how the day
+             got there, and the day as a line. Drawn by renderCbDayHeader. -->
+        <div class="cb-pos" id="cbTiles"></div>
+
+        <div class="ow-grid cb-grid">
+          <!-- 3. WHAT MOVED. -->
+          <div class="ow-pan cb-led-pan">
+            <div class="ow-pan-h">
+              <span class="ow-pan-t">Movements</span>
+              <span class="ow-pan-n" id="cbLedCount"></span>
+            </div>
+            <div class="cb-led-tools">
+              <div class="ow-seg cb-seg" id="cbLedgerFilter" role="group" aria-label="Which account"></div>
+              <div class="ow-seg cb-seg" id="cbLedgerDir" role="group" aria-label="Which way"></div>
+              <label class="cb-led-find">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+                <input type="search" id="cbLedgerQuery" placeholder="Find a name, category or amount" autocomplete="off" aria-label="Find a movement">
+              </label>
+            </div>
+            <div id="cbTxnTableWrap"></div>
+          </div>
+
+          <div class="ow-side">
+            <!-- 4. DOES THE DRAWER AGREE. -->
+            <div class="ow-pan">
+              <div class="ow-pan-h">
+                <span class="ow-pan-t">Close the day</span>
+                <span class="cb-close-state" id="cbCloseState"></span>
               </div>
-              <button type="button" class="cb-daybtn" id="cb_day_next" title="The day after" aria-label="Next day"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
-              <button type="button" class="lbtn gh" id="cb_day_today">Today</button>
+              <div id="cbSummaryWrap"></div>
             </div>
-            <div class="cb-day-actions">
-              <button type="button" class="lbtn acc" id="cb_money_in"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>Money in</button>
-              <button type="button" class="lbtn out" id="cb_money_out"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg>Money out</button>
-              <button type="button" class="lbtn gh" id="cb_transfer" title="Move money between the shop&#39;s own accounts"><svg viewBox="0 0 24 24"><path d="M7 10h11l-3-3"/><path d="M17 14H6l3 3"/></svg>Transfer</button>
-              <button type="button" class="lbtn gh" id="cb_edit_opening" title="Change the day&#39;s starting balances"><svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.121 2.121 0 1 0-3-3L5 17v3z"/></svg>Opening</button>
-              <button type="button" class="lbtn gh" id="cb_print" title="Print the day&#39;s report"><svg viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>Print</button>
+            <!-- 5. WHERE IT CAME FROM, WHERE IT WENT. -->
+            <div class="ow-pan">
+              <div class="ow-pan-h"><span class="ow-pan-t">Where it came from</span><span class="ow-pan-n" id="cbInTotal"></span></div>
+              <div id="cbInAnalytics"></div>
             </div>
-          </div>
-          <div class="cb-tiles" id="cbTiles"></div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-head-row">
-            <h2 style="margin-bottom:0;">The day&#39;s movements</h2>
-            <div class="cb-ledger-filters" id="cbLedgerFilter"></div>
-          </div>
-          <div id="cbTxnTableWrap"></div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-head-row">
-            <h2 style="margin-bottom:0;">Closing the day</h2>
-            <span class="cb-close-state" id="cbCloseState"></span>
-          </div>
-          <div id="cbSummaryWrap" style="margin-top:14px;"></div>
-        </div>
-
-        <div class="panel">
-          <div class="cb-analytics-grid">
-            <div id="cbInAnalytics"></div>
-            <div id="cbOutAnalytics"></div>
+            <div class="ow-pan">
+              <div class="ow-pan-h"><span class="ow-pan-t">Where it went</span><span class="ow-pan-n" id="cbOutTotal"></span></div>
+              <div id="cbOutAnalytics"></div>
+            </div>
+            <div class="ow-pan">
+              <div class="ow-pan-h"><span class="ow-pan-t">Seven days</span><span class="ow-pan-n" id="cbWeekNote"></span></div>
+              <div id="cbWeek"></div>
+            </div>
           </div>
         </div>
 
@@ -33762,93 +34008,111 @@
   </div>
 </div>
 
-<!-- CASH IN MODAL -->
+<!-- CASH IN MODAL
+     Two columns on a desk: the entry on the left -- amount, account,
+     what it was for -- and on the right the two things that turn money
+     arriving into a sale or a settled debt. On a phone they stack, in
+     the same order. -->
 <div class="modal-overlay" id="cashInModal">
-  <div class="modal modal-wide">
-    <div class="modal-head">
-      <h2 id="cbInTitle">Cash In</h2>
+  <div class="modal modal-wide cb-till-modal cb-till-wide" role="dialog" aria-modal="true" aria-labelledby="cbInTitle">
+    <div class="modal-head cb-mh">
+      <span class="cb-mh-ic in" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span>
+      <div class="cb-mh-t">
+        <h2 id="cbInTitle">Cash In</h2>
+        <span class="cb-mh-day" id="cb_in_datenote"></span>
+      </div>
       <button class="modal-close" id="cashInModalClose" aria-label="Close">
         <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
     </div>
     <div class="modal-body">
-      <div class="till">
-        <div class="till-amount in">
-          <span class="till-amount-label">Money coming in</span>
-          <div class="till-amount-row">
-            <input type="text" id="cb_in_amount" class="till-input" placeholder="0" inputmode="decimal" autocomplete="off">
-            <span class="till-cur">UGX</span>
+      <div class="till till-2col">
+        <div class="till-main">
+          <div class="till-amount in">
+            <span class="till-amount-label">Money coming in</span>
+            <div class="till-amount-row">
+              <input type="text" id="cb_in_amount" class="till-input" placeholder="0" inputmode="decimal" autocomplete="off">
+              <span class="till-cur">UGX</span>
+            </div>
+            <div class="till-words" id="cb_in_words"></div>
           </div>
-          <div class="till-words" id="cb_in_words"></div>
+
+          <div class="till-block">
+            <span class="till-label">Into which account</span>
+            <div class="till-accounts" id="cb_in_accounts"></div>
+            <input type="hidden" id="cb_in_account" value="cash">
+            <div class="till-effect" id="cb_in_effect"></div>
+          </div>
+
+          <div class="till-block">
+            <span class="till-label">What is it for</span>
+            <div class="till-cats" id="cb_in_cats"></div>
+            <div class="till-newcat" id="cb_in_newcat_wrap">
+              <input type="text" id="cb_in_category" placeholder="Name the new category, then press Enter" autocomplete="off">
+            </div>
+          </div>
+
+          <div class="till-block">
+            <span class="till-label">Description</span>
+            <input type="text" id="cb_in_desc" placeholder="e.g. Payment from Katwe client" autocomplete="off">
+          </div>
         </div>
 
-        <div class="till-block">
-          <span class="till-label">Into which account</span>
-          <div class="till-accounts" id="cb_in_accounts"></div>
-          <input type="hidden" id="cb_in_account" value="cash">
-          <div class="till-effect" id="cb_in_effect"></div>
-        </div>
-
-        <div class="till-block">
-          <span class="till-label">What is it for</span>
-          <div class="till-cats" id="cb_in_cats"></div>
-          <div class="till-newcat" id="cb_in_newcat_wrap">
-            <input type="text" id="cb_in_category" placeholder="Name the new category, then press Enter" autocomplete="off">
+        <div class="till-aside">
+          <!-- What was actually sold. Filling this in is what turns a
+               receipt into a sale the rest of the app can see. -->
+          <div class="till-collect till-sale">
+            <div class="till-collect-head">
+              <span class="till-collect-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6.2"/><circle cx="10" cy="20.5" r="1"/><circle cx="17" cy="20.5" r="1"/></svg></span>
+              <span class="till-label">What did they buy?</span>
+              <span class="till-collect-hint" id="cb_in_sale_hint">Fills in the amount</span>
+            </div>
+            <div class="till-pick">
+              <input type="text" id="cb_in_item_search" placeholder="Search a product to add it" autocomplete="off">
+              <div class="till-pick-list" id="cb_in_item_list"></div>
+            </div>
+            <div id="cb_in_sale_lines"></div>
           </div>
-        </div>
 
-        <div class="till-block">
-          <span class="till-label">Description</span>
-          <input type="text" id="cb_in_desc" placeholder="e.g. Payment from Katwe client" autocomplete="off">
-        </div>
-
-        <!-- What was actually sold. Filling this in is what turns a
-             receipt into a sale the rest of the app can see. -->
-        <div class="till-collect till-sale">
-          <div class="till-collect-head">
-            <span class="till-label">What did they buy?</span>
-            <span class="till-collect-hint" id="cb_in_sale_hint">Recording the items fills in the amount</span>
-          </div>
-          <div class="till-pick">
-            <input type="text" id="cb_in_item_search" placeholder="Search a product to add it" autocomplete="off">
-            <div class="till-pick-list" id="cb_in_item_list"></div>
-          </div>
-          <div id="cb_in_sale_lines"></div>
-        </div>
-
-        <div class="till-collect">
-          <div class="till-collect-head">
-            <span class="till-label">Settling a customer's debt?</span>
-            <span class="till-collect-hint">Optional</span>
-          </div>
-          <input type="text" id="cb_in_customer" list="dl_cb_in_customers" placeholder="Type their name to put this against their unpaid invoices" autocomplete="off">
-          <div id="cb_in_invoice_picker_section" style="display:none;">
-            <div class="section-label-row form-section-label" style="margin-top:10px;">Apply to invoice(s)</div>
-            <div id="cb_in_invoice_picker_wrap"></div>
-            <div class="field-hint" id="cb_in_invoice_picker_summary" style="margin-top:6px;"></div>
+          <div class="till-collect">
+            <div class="till-collect-head">
+              <span class="till-collect-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
+              <span class="till-label">Settling a customer's debt?</span>
+              <span class="till-collect-hint">Optional</span>
+            </div>
+            <input type="text" id="cb_in_customer" list="dl_cb_in_customers" placeholder="Type their name to put this against their unpaid invoices" autocomplete="off">
+            <div id="cb_in_invoice_picker_section" style="display:none;">
+              <div class="section-label-row form-section-label" style="margin-top:10px;">Apply to invoice(s)</div>
+              <div id="cb_in_invoice_picker_wrap"></div>
+              <div class="field-hint" id="cb_in_invoice_picker_summary" style="margin-top:6px;"></div>
+            </div>
           </div>
         </div>
 
         <div class="till-foot-note">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
           <span>Recorded at</span>
           <input type="time" id="cb_in_time">
-          <span id="cb_in_datenote"></span>
         </div>
       </div>
       <datalist id="dl_cb_in_customers"></datalist>
     </div>
-    <div class="modal-foot">
+    <div class="modal-foot cb-mf">
       <button class="btn btn-ghost" id="cb_in_cancel" style="display:none;">Cancel edit</button>
-      <button class="btn cb-btn-in" id="cb_in_save">Add cash in</button>
+      <button class="btn btn-accent cb-save" id="cb_in_save">Add cash in</button>
     </div>
   </div>
 </div>
 
 <!-- CASH OUT MODAL -->
 <div class="modal-overlay" id="cashOutModal">
-  <div class="modal modal-wide">
-    <div class="modal-head">
-      <h2 id="cbOutTitle">Cash Out</h2>
+  <div class="modal cb-till-modal" role="dialog" aria-modal="true" aria-labelledby="cbOutTitle">
+    <div class="modal-head cb-mh">
+      <span class="cb-mh-ic out" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg></span>
+      <div class="cb-mh-t">
+        <h2 id="cbOutTitle">Cash Out</h2>
+        <span class="cb-mh-day" id="cb_out_datenote"></span>
+      </div>
       <button class="modal-close" id="cashOutModalClose" aria-label="Close">
         <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
@@ -33873,7 +34137,20 @@
         </div>
 
         <div class="till-block">
-          <span class="till-label">What is it for</span>
+          <div class="till-label-row">
+            <span class="till-label">What is it for</span>
+            <!-- How the ledger files it. A choice of two, so it is two
+                 buttons rather than a dropdown; the select stays as the
+                 value the save reads. -->
+            <div class="ow-seg cb-seg till-kind" id="cb_out_kind" role="group" aria-label="Show in the ledger as">
+              <button type="button" class="ow-seg-b" data-kind="payment">Payment</button>
+              <button type="button" class="ow-seg-b" data-kind="expense">Expense</button>
+            </div>
+            <select id="cb_out_type" hidden aria-hidden="true" tabindex="-1">
+              <option value="payment">Payment</option>
+              <option value="expense">Expense</option>
+            </select>
+          </div>
           <div class="till-cats" id="cb_out_cats"></div>
           <div class="till-newcat" id="cb_out_newcat_wrap">
             <input type="text" id="cb_out_category" placeholder="Name the new category, then press Enter" autocomplete="off">
@@ -33885,31 +34162,152 @@
           <input type="text" id="cb_out_desc" placeholder="e.g. Supplier payment" autocomplete="off">
         </div>
 
-        <div class="till-foot-note">
-          <span>Pays for the days</span>
-          <input type="date" id="cb_out_covers_from" aria-label="Covers from">
-          <span>to</span>
-          <input type="date" id="cb_out_covers_to" aria-label="Covers to">
-          <span class="till-covers-note">Optional. A licence, insurance or several months&rsquo; rent paid at once: the profit and loss spreads it across those days, the cash book keeps it on the day it left.</span>
-        </div>
+        <details class="till-more" id="cb_out_covers">
+          <summary>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+            Pays for several days at once?
+            <span class="till-collect-hint">Licence, insurance, rent ahead</span>
+          </summary>
+          <div class="till-foot-note till-covers">
+            <span>From</span>
+            <input type="date" id="cb_out_covers_from" aria-label="Covers from">
+            <span>to</span>
+            <input type="date" id="cb_out_covers_to" aria-label="Covers to">
+            <span class="till-covers-note">The profit and loss spreads it across those days; the cash book keeps it on the day it left.</span>
+          </div>
+        </details>
 
         <div class="till-foot-note">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
           <span>Recorded at</span>
           <input type="time" id="cb_out_time">
-          <span id="cb_out_datenote"></span>
-          <span style="margin-left:auto;display:flex;align-items:center;gap:6px;">
-            <label for="cb_out_type" style="font-size:11.5px;">Show in the ledger as</label>
-            <select id="cb_out_type">
-              <option value="payment">Payment</option>
-              <option value="expense">Expense</option>
-            </select>
-          </span>
         </div>
       </div>
     </div>
-    <div class="modal-foot">
+    <div class="modal-foot cb-mf">
       <button class="btn btn-ghost" id="cb_out_cancel" style="display:none;">Cancel edit</button>
-      <button class="btn cb-btn-out" id="cb_out_save">Add cash out</button>
+      <button class="btn btn-accent cb-save" id="cb_out_save">Add cash out</button>
+    </div>
+  </div>
+</div>
+
+<!-- TRANSFER. The shop's own money moving between its own accounts,
+     asked in the order it is thought about -- how much, out of which,
+     into which -- with both balances shown moving before it is saved.
+     It used to be three browser prompts in a row. -->
+<div class="modal-overlay" id="cashTransferModal">
+  <div class="modal cb-till-modal" role="dialog" aria-modal="true" aria-labelledby="cbXTitle">
+    <div class="modal-head cb-mh">
+      <span class="cb-mh-ic xfer" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 10h11l-3-3"/><path d="M17 14H6l3 3"/></svg></span>
+      <div class="cb-mh-t">
+        <h2 id="cbXTitle">Move money between accounts</h2>
+        <span class="cb-mh-day" id="cb_x_datenote"></span>
+      </div>
+      <button class="modal-close" id="cashTransferModalClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="till">
+        <div class="till-amount xfer">
+          <span class="till-amount-label">Amount moving</span>
+          <div class="till-amount-row">
+            <input type="text" id="cb_x_amount" class="till-input" placeholder="0" inputmode="decimal" autocomplete="off">
+            <span class="till-cur">UGX</span>
+          </div>
+          <div class="till-words" id="cb_x_words"></div>
+        </div>
+
+        <div class="cb-x-route">
+          <div class="till-block">
+            <span class="till-label">Out of</span>
+            <div class="cb-x-list" id="cb_x_from"></div>
+          </div>
+          <span class="cb-x-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+          <div class="till-block">
+            <span class="till-label">Into</span>
+            <div class="cb-x-list" id="cb_x_to"></div>
+          </div>
+        </div>
+
+        <div class="cb-x-effect" id="cb_x_effect"></div>
+
+        <div class="till-block">
+          <span class="till-label">Note <span class="till-collect-hint">Optional</span></span>
+          <input type="text" id="cb_x_note" placeholder="e.g. Banking the morning's takings" autocomplete="off">
+        </div>
+        <p class="till-covers-note cb-x-why">Moves nothing in or out of the business: one entry leaves the first account, its twin lands in the second, and neither counts as income or spending.</p>
+      </div>
+    </div>
+    <div class="modal-foot cb-mf">
+      <button class="btn btn-ghost" id="cb_x_cancel">Cancel</button>
+      <button class="btn btn-accent cb-save" id="cb_x_save">Move money</button>
+    </div>
+  </div>
+</div>
+
+<!-- THE OPENING FIGURES. Not a gate: on every morning but the first all
+     three are carried from the day before, and this is opened only when
+     one really needs changing. It was a panel that replaced the whole
+     page; it is a dialog over it now, so the day stays in view. -->
+<div class="modal-overlay" id="cbOpenModal">
+  <div class="modal cb-till-modal" role="dialog" aria-modal="true" aria-labelledby="cbOpenTitle">
+    <div class="modal-head cb-mh">
+      <span class="cb-mh-ic open" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.121 2.121 0 1 0-3-3L5 17v3z"/></svg></span>
+      <div class="cb-mh-t">
+        <h2 id="cbOpenTitle">Open the day</h2>
+        <span class="cb-mh-day" id="cbOpenDay"></span>
+      </div>
+      <button class="modal-close" id="cbOpenModalClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="cb-open-sub" id="cbOpenSub"></p>
+      <div class="cb-open-accounts">
+        <div class="cb-open-acct cb-ac-cash">
+          <label for="cb_wiz_cash"><span class="cb-ac-dot"></span>Cash</label>
+          <input type="number" id="cb_wiz_cash" min="0" step="any" placeholder="0" inputmode="numeric">
+          <span class="cb-open-diff" id="cb_wiz_cash_diff"></span>
+          <div class="cb-carried-note" id="cb_wiz_cash_carried"></div>
+        </div>
+        <div class="cb-open-acct cb-ac-momo">
+          <label for="cb_wiz_momo"><span class="cb-ac-dot"></span>Mobile Money</label>
+          <input type="number" id="cb_wiz_momo" min="0" step="any" placeholder="0" inputmode="numeric">
+          <span class="cb-open-diff" id="cb_wiz_momo_diff"></span>
+          <div class="cb-carried-note" id="cb_wiz_momo_carried"></div>
+        </div>
+        <div class="cb-open-acct cb-ac-bank">
+          <label for="cb_wiz_bank"><span class="cb-ac-dot"></span>Bank</label>
+          <input type="number" id="cb_wiz_bank" min="0" step="any" placeholder="0" inputmode="numeric">
+          <span class="cb-open-diff" id="cb_wiz_bank_diff"></span>
+          <div class="cb-carried-note" id="cb_wiz_bank_carried"></div>
+        </div>
+      </div>
+      <div class="cb-open-total" id="cbOpenTotal"></div>
+    </div>
+    <div class="modal-foot cb-mf">
+      <button type="button" class="btn btn-ghost" id="cb_wiz_back">Cancel</button>
+      <button class="btn btn-accent cb-save" id="cb_wiz_next">Open the books</button>
+    </div>
+  </div>
+</div>
+
+<!-- ASKING BEFORE A ROW GOES. The entry itself is drawn in the question,
+     so what is about to be deleted is seen rather than remembered. -->
+<div class="modal-overlay" id="cbAskModal">
+  <div class="modal cb-ask-modal" role="alertdialog" aria-modal="true" aria-labelledby="cbAskTitle">
+    <div class="modal-head cb-mh">
+      <span class="cb-mh-ic bad" id="cbAskIc" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg></span>
+      <div class="cb-mh-t"><h2 id="cbAskTitle"></h2></div>
+      <button class="modal-close" id="cbAskClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="cbAskBody"></div>
+    <div class="modal-foot cb-mf">
+      <button type="button" class="btn btn-ghost" id="cbAskNo">Keep it</button>
+      <button type="button" class="btn btn-accent cb-save" id="cbAskYes">Delete</button>
     </div>
   </div>
 </div>
@@ -98580,10 +98978,14 @@ function initCashBook(){
   showCbMain();
 }
 
+/* The opening figures are a dialog over the day, not a panel that
+   replaces it: the book stays in view behind the three boxes, so the
+   figure being changed can be read against what the day already did. */
 function showCbWizard(resetSteps){
-  document.getElementById('cbWizard').style.display = 'block';
-  document.getElementById('cbMain').style.display = 'none';
   if(resetSteps) fillCbWizardFromRecord();
+  openModal('cbOpenModal');
+  const first = document.getElementById('cb_wiz_cash');
+  if(first && first.focus) first.focus();
 }
 
 // Pre-fills the three amounts and says where each came from. An opening
@@ -98611,7 +99013,8 @@ function fillCbWizardFromRecord(){
      book is; on every morning after, the figures are already worked out
      and the job is to confirm them. Same fields, different sentence. */
   const first = !carried;
-  document.getElementById('cbOpenTitle').textContent = first ? 'Start the cash book' : 'Open the day';
+  document.getElementById('cbOpenTitle').textContent = first ? 'Start the cash book' : 'Opening balances';
+  document.getElementById('cbOpenDay').textContent = cbDayHeadLabel(date);
   document.getElementById('cbOpenSub').textContent = first
     ? 'Count what is in each account right now. Everything the book says afterwards is measured from these three figures.'
     : 'These are carried from the last day on file. Check them against what is actually there, change any that differ, and open the day.';
@@ -98619,20 +99022,48 @@ function fillCbWizardFromRecord(){
 }
 // What the three come to, so the figure being committed to is visible
 // before the button rather than only after it.
+// What the three come to, so the figure being committed to is visible
+// before the button rather than only after it -- and, per account, how
+// far a typed figure sits from what the day before left, which is the
+// one thing worth checking before pressing it.
 function cbRenderOpenTotal(){
   const el = document.getElementById('cbOpenTotal');
   if(!el) return;
-  const total = ACCOUNTS.reduce((s,a)=>
-    s + (Number(document.getElementById(`cb_wiz_${a.key}`).value)||0), 0);
-  el.innerHTML = `Opening with <b>${fmtUGX(Math.round(total))}</b> across the three accounts`;
+  const carried = carriedOpening(currentCbDate());
+  const vals = ACCOUNTS.map(a=> ({ key: a.key, label: a.label,
+    value: Number(document.getElementById(`cb_wiz_${a.key}`).value)||0 }));
+  const total = vals.reduce((s,x)=> s + x.value, 0);
+  vals.forEach(x=>{
+    const diff = document.getElementById(`cb_wiz_${x.key}_diff`);
+    if(!diff) return;
+    if(!carried){ diff.className = 'cb-open-diff'; diff.innerHTML = ''; return; }
+    const gap = Math.round(x.value - (Number(carried.values[x.key])||0));
+    diff.className = 'cb-open-diff' + (gap ? ' is-off' : ' is-same');
+    diff.innerHTML = gap
+      ? `${gap > 0 ? '+' : '&minus;'}${cbMoney(Math.abs(gap))} against carried`
+      : 'as carried';
+  });
+  const held = vals.reduce((s,x)=> s + Math.max(x.value, 0), 0);
+  el.innerHTML = `<div class="cb-open-total-row"><span>Opening with</span><b>${fmtUGX(Math.round(total))}</b></div>`
+    + cbCompBarHTML(vals, held);
 }
-document.getElementById('cb_wiz_date').addEventListener('change', fillCbWizardFromRecord);
+/* The date in the header is the way to any day: pressing it opens the
+   picker on the hidden input that has always held the day on screen. */
+document.getElementById('cb_wiz_date').addEventListener('change', (e)=>{
+  const v = e.target.value;
+  if(!v) return;
+  cbGoToDay(v > todayISO() ? todayISO() : v);
+});
+document.getElementById('cb_day_pick').addEventListener('click', ()=>{
+  const input = document.getElementById('cb_wiz_date');
+  input.max = todayISO();
+  try { input.showPicker(); } catch(e){ input.focus(); }
+});
 ACCOUNTS.forEach(a=>{
   const el = document.getElementById(`cb_wiz_${a.key}`);
   if(el) el.addEventListener('input', cbRenderOpenTotal);
 });
 document.getElementById('cb_wiz_next').addEventListener('click', ()=>{
-  if(!document.getElementById('cb_wiz_date').value){ toast('Pick the day you are opening'); return; }
   finishCbWizard();
 });
 function finishCbWizard(){
@@ -98645,14 +99076,19 @@ function finishCbWizard(){
   };
   rec.openingSet = true;
   saveData();
+  closeModal('cbOpenModal');
   toast('Opening balances saved — books are open for the day');
   showCbMain();
 }
 document.getElementById('cb_edit_opening').addEventListener('click', ()=> showCbWizard(true));
-document.getElementById('cb_wiz_back').addEventListener('click', ()=> showCbMain());
+['cb_wiz_back', 'cbOpenModalClose'].forEach(id=>
+  document.getElementById(id).addEventListener('click', ()=> closeModal('cbOpenModal')));
+document.getElementById('cbOpenModal').addEventListener('mousedown', (e)=>{
+  if(e.target.id === 'cbOpenModal') closeModal('cbOpenModal');
+});
 
 function showCbMain(){
-  document.getElementById('cbWizard').style.display = 'none';
+  closeModal('cbOpenModal');
   document.getElementById('cbMain').style.display = 'block';
   renderCbDayHeader();
   resetCashTxnForms();
@@ -98837,40 +99273,266 @@ function renderCbDayHeader(){
   const date = currentCbDate();
   const pos = cbDayPosition(date);
   const rel = cbDayRelLabel(date);
-  document.getElementById('cbDayLabel').textContent = date;
+  const isToday = date === todayISO();
+  document.getElementById('cbDayLabel').textContent = cbDayHeadLabel(date);
   const relEl = document.getElementById('cbDayRel');
   relEl.textContent = rel;
+  relEl.classList.toggle('is-past', !isToday);
   // Forward is disabled on today: a cash book has no tomorrow to open,
   // and a control that does nothing should look like it.
   document.getElementById('cb_day_next').disabled = date >= todayISO();
   document.getElementById('cb_day_today').style.display = date === todayISO() ? 'none' : '';
+  document.getElementById('cb_wiz_date').max = todayISO();
 
   const rec = getDayRecord(date);
 
-  /* THE POSITION. Money on hand on the tinted tile because "what have I
-     got" is one figure before it is three; the three accounts after it,
-     because they are not interchangeable -- money in the bank does not
-     buy cement from a yard that wants cash this morning.
+  /* THE POSITION, read in the order the question is asked: the one
+     figure, where it sits, and how the day got there. The three accounts
+     follow as their own cells because they are not interchangeable --
+     money in the bank does not buy cement from a yard that wants cash
+     this morning. Each cell is also the ledger's account filter.
 
      Each account says its gross in and out for the day. A side that did
      not move is left out rather than printed as a zero. */
   const unc = rec.openingSet ? '' : '<span class="cb-unc">unconfirmed</span> &middot; ';
-  const tile = (label, value, sub, total)=> `<div class="cb-tile${total?' is-total':''}">
-    <div class="cb-tile-label">${esc(label)}</div>
-    <div class="cb-tile-value">${cbMoney(value)}</div>
-    <div class="cb-tile-sub">${sub}</div>
-  </div>`;
   const moved = (inn, out)=>{
     const parts = [];
     if(inn) parts.push(`<span class="cb-up">+${cbMoney(inn)}</span> in`);
     if(out) parts.push(`<span class="cb-down">&minus;${cbMoney(out)}</span> out`);
     return parts.length ? parts.join(' &middot; ') : 'nothing moved today';
   };
-  document.getElementById('cbTiles').innerHTML =
-    tile('Money on hand', pos.closing,
-      `${unc}opened at ${cbMoney(pos.opening)}${(pos.in||pos.out) ? ' &middot; ' + moved(pos.in, pos.out) : ''}`,
-      true)
-    + pos.accounts.map(a=> tile(a.label, a.closing, moved(a.in, a.out))).join('');
+  const flow = cbDayFlow(date);
+  const held = pos.accounts.reduce((s,a)=> s + Math.max(a.closing, 0), 0);
+  const net = Math.round(pos.closing - pos.opening);
+
+  const acct = (a)=>{
+    const share = held > 0 ? Math.max(a.closing, 0) / held : 0;
+    const v = cbVarianceMeaning(a);
+    const on = cbLedgerAccount === a.key;
+    const chip = v.state === 'pending' ? '<span class="ow-cp">Not counted</span>'
+      : v.state === 'ok' ? `<span class="ow-cp ow-good">${CB_ICON_TICK}Counted</span>`
+      : `<span class="ow-cp ${v.state === 'short' ? 'ow-bad' : 'ow-warn'}">${v.state === 'short' ? 'Short' : 'Over'} ${cbMoney(Math.abs(a.variance))}</span>`;
+    return `<button type="button" class="cb-acct cb-ac-${esc(a.key)}${on ? ' is-on' : ''}" data-cb-acct="${esc(a.key)}"
+        aria-pressed="${on}" title="${on ? 'Show every account in the movements' : `Show only ${esc(a.label)} in the movements`}">
+      <span class="cb-acct-h"><span class="cb-ac-dot"></span><span class="cb-acct-n">${esc(a.label)}</span>${chip}</span>
+      <span class="cb-acct-v${a.closing < 0 ? ' is-neg' : ''}">${cbMoney(a.closing)}</span>
+      <span class="cb-acct-bar"><i style="width:${(share * 100).toFixed(1)}%"></i></span>
+      <span class="cb-acct-s"><b>${Math.round(share * 100)}%</b> of the money &middot; ${moved(a.in, a.out)}</span>
+    </button>`;
+  };
+
+  const netHTML = !net
+    ? '<span class="cb-net">level with the opening</span>'
+    : `<span class="cb-net ${net > 0 ? 'up' : 'down'}">${net > 0 ? CB_ICON_UP : CB_ICON_DOWN}${cbMoney(Math.abs(net))} ${net > 0 ? 'more' : 'less'} than it opened with</span>`;
+
+  document.getElementById('cbTiles').innerHTML = `<div class="cb-hero">
+      <div class="cb-hero-main">
+        <div class="cb-hero-l">Money on hand${isToday ? '' : `, close of ${esc(cbShortDate(date))}`}</div>
+        <div class="cb-hero-v${pos.closing < 0 ? ' is-neg' : ''}">${cbMoney(pos.closing)}<span class="cb-hero-u">UGX</span></div>
+        <div class="cb-hero-s">${unc}opened at ${cbMoney(pos.opening)}${rec.openingSet ? '' : ' <button type="button" class="ow-link cb-unc-go" data-cb-open>Check it</button>'} &middot; ${netHTML}</div>
+        ${cbCompBarHTML(pos.accounts.map(a=> ({ key: a.key, label: a.label, value: a.closing })), held)}
+        ${cbBridgeHTML(pos, flow, isToday)}
+      </div>
+      <div class="cb-hero-chart">${cbDayLineHTML(date, pos)}</div>
+    </div>
+    <div class="cb-accts">${pos.accounts.map(acct).join('')}</div>`;
+
+  document.querySelectorAll('#cbTiles [data-cb-open]').forEach(b=> b.addEventListener('click', ()=> showCbWizard(true)));
+  document.querySelectorAll('#cbTiles [data-cb-acct]').forEach(b=> b.addEventListener('click', ()=>{
+    cbLedgerAccount = cbLedgerAccount === b.dataset.cbAcct ? '' : b.dataset.cbAcct;
+    renderCbTransactions();
+    renderCbDayHeader();
+  }));
+}
+/* ---- The pieces the position is drawn from ---- */
+
+/* A transfer is the shop's own money changing drawers. Both legs are in
+   the book, because each drawer really moved -- but the pair is neither
+   money earned nor money spent, so the day-level pictures leave it out
+   and say so, rather than counting the same shillings in and out. */
+function cbIsTransfer(t){
+  return !!t && (t.transferId != null || t.category === CASH_TRANSFER_CATEGORY);
+}
+// The day's movement with transfers taken out: what came into the
+// business, what left it, and what only moved inside it.
+function cbDayFlow(date){
+  let inn = 0, out = 0, moved = 0;
+  (data.cashTxns||[]).forEach(t=>{
+    if(t.date !== date) return;
+    const amt = Number(t.amount) || 0;
+    if(cbIsTransfer(t)){ if(!cashIsMoneyIn(t)) moved += amt; return; }
+    if(cashIsMoneyIn(t)) inn += amt; else out += amt;
+  });
+  return { in: inn, out, moved };
+}
+
+/* Where the money sits, as one bar split by account. Only what is
+   actually held: an account run below zero has no share of anything,
+   and drawing it as one would make the others look smaller than they
+   are. */
+function cbCompBarHTML(parts, held){
+  if(!(held > 0)) return '<div class="cb-comp is-empty" aria-hidden="true"></div>';
+  const label = parts.map(p=> `${p.label} ${Math.round(Math.max(p.value, 0) / held * 100)}%`).join(', ');
+  return `<div class="cb-comp" role="img" aria-label="${esc(label)}">${parts.filter(p=> p.value > 0).map(p=>
+    `<i class="cb-ac-${esc(p.key)}" style="width:${(p.value / held * 100).toFixed(2)}%" title="${esc(p.label)} ${cbMoney(p.value)}"></i>`).join('')}</div>`;
+}
+
+/* HOW THE DAY GOT HERE, as a waterfall laid on its side: the opening,
+   what came in stacked on it, what went out taken off the top, and
+   where that leaves the drawer. Four bars on one scale say in a glance
+   what "opened at 4,035,000, +2,047,500, -693,000" makes somebody add
+   up. */
+function cbBridgeHTML(pos, flow, isToday){
+  const open = pos.opening, inn = flow.in, out = flow.out, close = pos.closing;
+  const top = Math.max(open, open + inn, close, 1);
+  const pct = (v)=> Math.max(0, Math.min(100, v / top * 100));
+  const row = (cls, label, from, to, fig)=>{
+    const l = pct(Math.min(from, to)), w = pct(Math.max(from, to)) - l;
+    return `<div class="cb-br ${cls}">
+      <span class="cb-br-l">${label}</span>
+      <span class="cb-br-t"><i style="left:${l.toFixed(2)}%;width:${w.toFixed(2)}%${w > 0 ? '' : ';display:none'}"></i></span>
+      <span class="cb-br-v">${fig}</span>
+    </div>`;
+  };
+  return `<div class="cb-bridge">
+    ${row('is-open', 'Opened', 0, open, cbMoney(open))}
+    ${row('is-in', 'Came in', open, open + inn, inn ? '+' + cbMoney(inn) : '&mdash;')}
+    ${row('is-out', 'Went out', open + inn - out, open + inn, out ? '&minus;' + cbMoney(out) : '&mdash;')}
+    ${row('is-now', isToday ? 'Now' : 'Closed', 0, close, cbMoney(close))}
+    ${flow.moved ? `<div class="cb-br-x">${CB_ICON_XFER}<span><b>${cbMoney(flow.moved)}</b> moved between your own accounts &mdash; not counted as in or out</span></div>` : ''}
+  </div>`;
+}
+
+function cbMinutes(time){
+  const m = /^(\d{1,2}):(\d{2})/.exec(String(time || ''));
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+}
+function cbHourLabel(min){ return String(Math.floor(min / 60)).padStart(2, '0') + ':00'; }
+
+/* THE DAY AS A LINE. Money on hand across all three accounts, stepping
+   at every entry -- up in green, down in red -- from the opening at the
+   left to now, or to the close on a past day. It answers the question a
+   list of times cannot: when did the drawer fill, and when did it empty.
+
+   The line is drawn in an SVG that stretches to the panel; the dots,
+   the hours and the hover readings are HTML laid over it at the same
+   percentages, so text never stretches with it. A transfer moves no
+   money in total, so it steps nothing and gets no dot. */
+function cbDayLineHTML(date, pos){
+  const isToday = date === todayISO();
+  const now = new Date();
+  const nowMin = isToday ? now.getHours() * 60 + now.getMinutes() : null;
+  const rows = (data.cashTxns||[]).filter(t=> t.date === date).slice()
+    .sort((a,b)=> String(a.time||'').localeCompare(String(b.time||'')) || (Number(a.id||0) - Number(b.id||0)));
+  /* A day with nothing in it and nothing to open with has no line to
+     draw -- a flat stroke along zero reads as a chart of a broken shop.
+     Said in words instead, with the way to start. */
+  if(!rows.length && !Math.round(pos.opening)){
+    return `<div class="cb-ln">
+      <div class="cb-ln-h"><span class="cb-ln-t">Through the day</span></div>
+      <div class="cb-ln-plot cb-ln-blank"><span class="cb-ln-none">${isToday
+        ? 'The line starts at the opening count and steps with every entry.'
+        : 'Nothing was on file for this day.'}</span></div>
+    </div>`;
+  }
+  let total = pos.opening, last = 8 * 60;
+  const pts = rows.map(t=>{
+    const m = cbMinutes(t.time);
+    if(m != null) last = m;
+    const amt = Number(t.amount) || 0;
+    const isIn = cashIsMoneyIn(t);
+    const before = total;
+    total += isIn ? amt : -amt;
+    return { m: last, before, after: total, t, isIn, amt };
+  });
+  const times = pts.map(p=> p.m);
+  let x0 = Math.min(7 * 60, times.length ? Math.min(...times) - 30 : 7 * 60);
+  let x1 = Math.max(19 * 60, times.length ? Math.max(...times) + 30 : 0, nowMin != null ? nowMin + 15 : 0);
+  x0 = Math.max(0, Math.floor(x0 / 60) * 60);
+  x1 = Math.min(24 * 60, Math.ceil(x1 / 60) * 60);
+  const vals = [pos.opening, ...pts.map(p=> p.after)];
+  const vMin = Math.min(...vals), vMax = Math.max(...vals);
+  const spread = (vMax - vMin) || Math.max(Math.abs(vMax), 1) * 0.2;
+  let lo = vMin - spread * 0.3, hi = vMax + spread * 0.2;
+  if(vMin >= 0 && lo < 0) lo = 0;
+  const X = (m)=> (m - x0) / (x1 - x0) * 1000;
+  const Y = (v)=> 200 - (v - lo) / (hi - lo) * 200;
+  const f = (n)=> n.toFixed(1);
+  const endMin = isToday ? Math.max(Math.min(nowMin, x1), times.length ? Math.max(...times) : x0) : x1;
+
+  let line = `M0 ${f(Y(pos.opening))}`;
+  pts.forEach(p=>{ line += ` H${f(X(p.m))} V${f(Y(p.after))}`; });
+  line += ` H${f(X(endMin))}`;
+  const area = `${line} V200 H0 Z`;
+  const risers = pts.filter(p=> !cbIsTransfer(p.t)).map(p=>
+    `<path class="cb-ln-r ${p.isIn ? 'up' : 'down'}" d="M${f(X(p.m))} ${f(Y(p.before))} V${f(Y(p.after))}"/>`).join('');
+
+  const pc = (x)=> (x / 10).toFixed(2);
+  const dots = pts.filter(p=> !cbIsTransfer(p.t)).map(p=>{
+    const idn = cbRowIdentity(p.t);
+    const say = `${p.t.time || ''} · ${p.isIn ? '+' : '−'}${cbMoney(p.amt)} · ${idn.who} · ${accountLabel(p.t.account)}`;
+    return `<i class="cb-ln-d ${p.isIn ? 'up' : 'down'}" style="left:${pc(X(p.m))}%;top:${(Y(p.after) / 2).toFixed(2)}%" title="${esc(say)}"></i>`;
+  }).join('');
+  const step = (x1 - x0) > 12 * 60 ? 180 : 120;
+  const hours = [];
+  for(let m = Math.ceil(x0 / step) * step; m <= x1; m += step){
+    hours.push(`<span style="left:${pc(X(m))}%">${cbHourLabel(m)}</span>`);
+  }
+  const endX = pc(X(endMin)), endY = (Y(total) / 2).toFixed(2);
+  const openY = (Y(pos.opening) / 2).toFixed(2);
+
+  return `<div class="cb-ln">
+    <div class="cb-ln-h">
+      <span class="cb-ln-t">Through the day</span>
+      <span class="cb-ln-k"><span><i class="up"></i>in</span><span><i class="down"></i>out</span><span><i class="ref"></i>opening</span></span>
+    </div>
+    <div class="cb-ln-plot">
+      <svg viewBox="0 0 1000 200" preserveAspectRatio="none" aria-hidden="true">
+        <path class="cb-ln-a" d="${area}"/>
+        <path class="cb-ln-o" d="M0 ${f(Y(pos.opening))} H1000"/>
+        <path class="cb-ln-l" d="${line}"/>
+        ${risers}
+      </svg>
+      ${dots}
+      <i class="cb-ln-end" style="left:${endX}%;top:${endY}%"></i>
+      <span class="cb-ln-endv${Number(endX) > 72 ? ' is-left' : ''}" style="left:${endX}%;top:${endY}%">${cbMoney(total)}</span>
+      <span class="cb-ln-ov" style="top:${openY}%">${cbMoney(pos.opening)}</span>
+      ${pts.length ? '' : `<span class="cb-ln-none">${isToday ? 'Nothing has moved yet today' : 'Nothing moved on this day'}</span>`}
+    </div>
+    <div class="cb-ln-ax">${hours.join('')}</div>
+  </div>`;
+}
+
+/* SEVEN DAYS. The day on screen against the six before it, in and out
+   side by side, so a quiet Tuesday or a heavy pay-out reads as one
+   before any figure is. Each day is the way to it. Transfers are left
+   out for the same reason as everywhere else on this page. */
+function renderCbWeek(){
+  const wrap = document.getElementById('cbWeek');
+  if(!wrap) return;
+  const date = currentCbDate();
+  const days = [];
+  for(let i = 6; i >= 0; i--) days.push(anShiftDate(date, -i));
+  const flows = days.map(d=> ({ d, ...cbDayFlow(d) }));
+  const top = Math.max(1, ...flows.map(x=> Math.max(x.in, x.out)));
+  const sumIn = flows.reduce((s,x)=> s + x.in, 0), sumOut = flows.reduce((s,x)=> s + x.out, 0);
+  const note = document.getElementById('cbWeekNote');
+  const net = Math.round(sumIn - sumOut);
+  if(note) note.innerHTML = net ? `<span class="${net > 0 ? 'cb-up' : 'cb-down'}">${net > 0 ? '+' : '&minus;'}${cbMoney(Math.abs(net))}</span> net` : '';
+  const h = (v)=> (v / top * 100).toFixed(1);
+  wrap.innerHTML = `<div class="cb-wk">${flows.map(x=>{
+      const dt = new Date(x.d + 'T00:00:00');
+      const wd = isNaN(dt) ? '' : dt.toLocaleDateString('en-GB', { weekday: 'short' });
+      return `<button type="button" class="cb-wk-d${x.d === date ? ' is-on' : ''}" data-cb-day="${esc(x.d)}"
+          title="${esc(cbShortDate(x.d))} — in ${cbMoney(x.in)}, out ${cbMoney(x.out)}">
+        <span class="cb-wk-bars"><i class="up" style="height:${h(x.in)}%"></i><i class="down" style="height:${h(x.out)}%"></i></span>
+        <span class="cb-wk-l">${esc(wd)}<b>${isNaN(dt) ? '' : dt.getDate()}</b></span>
+      </button>`;
+    }).join('')}</div>
+    <div class="cb-wk-k"><span><i class="up"></i>In ${cbMoney(sumIn)}</span><span><i class="down"></i>Out ${cbMoney(sumOut)}</span></div>`;
+  wrap.querySelectorAll('[data-cb-day]').forEach(b=> b.addEventListener('click', ()=>{
+    if(b.dataset.cbDay <= todayISO()) cbGoToDay(b.dataset.cbDay);
+  }));
 }
 
 // Pulled out of renderCbSummary so the chain-break warning can sit with
@@ -98909,101 +99571,80 @@ function cbShowCount(){
 }
 
 /* ---- Trigger card totals (kept as the refresh hook for the category charts) ---- */
+/* ---- The refresh hook ----
+   Every screen that writes a cash entry calls renderCbTransactions,
+   renderCbSummary and this, in that order. The position at the top was
+   never in that list, so a sale logged from the Cash In dialog left the
+   figures above it a sale behind until the day was changed. It is drawn
+   from here now, with the rail. */
 function renderCbTriggers(){
   renderCbFlowAnalytics();
+  renderCbDayHeader();
+  renderCbWeek();
 }
 
-/* ---- Cash flow analytics (shown inside the Cash In / Cash Out modals) ----
-   Shows a donut chart + legend breaking down today's transactions by
-   income/expense category, so the person can see which classes of money
-   in/out are driving the numbers. */
+// A figure in thousands or millions, for a label too small for seven digits.
 function fmtShort(n){
   n = Number(n)||0;
   if(n>=1000000) return (n/1000000).toFixed(n%1000000===0?0:1)+'M';
   if(n>=1000) return Math.round(n/1000)+'K';
   return String(n);
 }
-function cbCategoryBreakdown(date, types){
-  const rows = data.cashTxns.filter(t=>t.date===date && types.includes(t.type));
-  const map = new Map();
-  rows.forEach(t=>{
-    const cat = (t.category && String(t.category).trim()) || 'Uncategorized';
-    map.set(cat, (map.get(cat)||0) + (Number(t.amount)||0));
-  });
-  const entries = [...map.entries()].sort((a,b)=>b[1]-a[1]);
-  const total = entries.reduce((s,[,v])=>s+v,0);
-  return {entries, total};
-}
-/* THE RINGS.
-
-   They carried ten colours in the pre-console screen, then were redrawn
-   on one hue per side in the house palette. The page is back as it was,
-   so these are the ten again: a category keeps the same colour on both
-   sides, which is what lets Transfer be read as the same thing in the
-   in-ring and the out-ring. */
-const CB_RING = ['#2F7D4F','#F2A93C','#3B82C4','#C0392B','#8E5FD1',
-                 '#0E9594','#D06A1F','#5B6ABF','#8A9A3B','#B4418E'];
-function cbRingColor(rank){ return CB_RING[rank % CB_RING.length]; }
-function cbDonutSVG(entries, total){
-  const size=140, cx=70, cy=70, r=54, sw=18;
-  const circ = 2*Math.PI*r;
-  if(total<=0){
-    return `<svg viewBox="0 0 ${size} ${size}" class="cb-donut-svg"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--ow-steel-100)" stroke-width="${sw}"/></svg>`;
-  }
-  let offset=0, arcs='', rank=0;
-  entries.forEach(([,val])=>{
-    const colour = cbRingColor(rank++);
-    const frac = val/total;
-    const dash = Math.max(frac*circ, val>0?1.5:0);
-    arcs += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${colour}" stroke-width="${sw}" stroke-dasharray="${dash} ${Math.max(circ-dash,0)}" stroke-dashoffset="${-offset}" transform="rotate(-90 ${cx} ${cy})" stroke-linecap="butt"/>`;
-    offset += dash;
-  });
-  return `<svg viewBox="0 0 ${size} ${size}" class="cb-donut-svg">${arcs}</svg>`;
-}
+/* WHERE IT CAME FROM, WHERE IT WENT. One bar per category, as a share
+   of the side's total, largest first. Rings were here before: a ring
+   asks the eye to compare angles, and a column of bars on one baseline
+   is read in the time it takes to look down it. Each bar is also the
+   way into those entries. */
 function cbAnalyticsHTML(title, types, emptyHint, kind){
   const date = currentCbDate();
-  const {entries, total} = cbCategoryBreakdown(date, types);
-  const isIn = kind==='in';
-  /* The round button is how money is logged from this panel, as it was.
-     It opens the same dialog the act at the top of the page opens. */
-  const fab = `<button type="button" class="cb-analytics-fab${isIn?'':' out'}" data-cb-till="${isIn?'in':'out'}"
-    title="${isIn?'Log money in':'Log money out'}" aria-label="${isIn?'Log money in':'Log money out'}">${isIn?'+':'&minus;'}</button>`;
-  const head = `<div class="cb-analytics-head">${esc(title)}</div>
-    <div class="cb-analytics-total">
-      <span class="cb-analytics-total-label">Total ${isIn?'Cash In':'Cash Out'}</span>
-      <span class="cb-analytics-total-val ${isIn?'in':'out'}">UGX ${cbMoney(total)}</span>
-    </div>`;
-  if(!entries.length){
-    return `${head}<div class="cb-flow"><div class="cb-analytics-empty">${esc(emptyHint)}</div>${fab}</div>`;
-  }
-  let rank = 0;
-  const legend = entries.map(([cat,val])=>{
-    const colour = cbRingColor(rank++);
-    return `<div class="cb-legend-row">
-      <span class="cb-legend-dot" style="background:${colour}"></span>
-      <span class="cb-legend-name" title="${esc(cat)}">${esc(cat)}</span>
-      <span class="cb-legend-val">${cbMoney(val)}</span>
-    </div>`;
-  }).join('');
-  return `${head}
-    <div class="cb-flow">
-      <div class="cb-donut-wrap">${cbDonutSVG(entries, total)}</div>
-      <div class="cb-legend-list">${legend}</div>
-      ${fab}
-    </div>`;
+  const map = new Map();
+  (data.cashTxns||[]).forEach(t=>{
+    if(t.date !== date || !types.includes(t.type) || cbIsTransfer(t)) return;
+    const cat = (t.category && String(t.category).trim()) || 'Uncategorized';
+    map.set(cat, (map.get(cat) || 0) + (Number(t.amount) || 0));
+  });
+  const entries = [...map.entries()].sort((a,b)=> b[1] - a[1]);
+  const total = entries.reduce((s,[,v])=> s + v, 0);
+  const totalEl = document.getElementById(kind === 'in' ? 'cbInTotal' : 'cbOutTotal');
+  if(totalEl) totalEl.textContent = total ? cbMoney(total) : '';
+  if(!entries.length) return `<div class="cb-cat-empty">${esc(emptyHint)}</div>`;
+  return `<div class="cb-cats ${kind === 'in' ? 'in' : 'out'}" aria-label="${esc(title)}">${entries.map(([cat, val])=>{
+      const share = total > 0 ? val / total : 0;
+      return `<button type="button" class="cb-cat" data-cb-cat="${esc(cat)}" title="Show ${esc(cat)} in the movements">
+        <span class="cb-cat-n">${esc(cat)}</span>
+        <span class="cb-cat-v">${cbMoney(val)}</span>
+        <span class="cb-cat-bar"><i style="width:${(share * 100).toFixed(1)}%"></i></span>
+        <span class="cb-cat-p">${Math.round(share * 100)}%</span>
+      </button>`;
+    }).join('')}</div>`;
 }
 function renderCbFlowAnalytics(){
+  const today = currentCbDate() === todayISO();
   document.getElementById('cbInAnalytics').innerHTML = cbAnalyticsHTML(
     'Cash In by Category', ['receipt','in'],
-    'Nothing has come in today yet.', 'in'
+    today ? 'Nothing has come in today yet.' : 'Nothing came in on this day.', 'in'
   );
   document.getElementById('cbOutAnalytics').innerHTML = cbAnalyticsHTML(
     'Cash Out by Category', ['payment','expense','out'],
-    'Nothing has gone out today yet.', 'out'
+    today ? 'Nothing has gone out today yet.' : 'Nothing went out on this day.', 'out'
   );
-  document.querySelectorAll('[data-cb-till]').forEach(b=>{
-    b.addEventListener('click', ()=>{ resetCashTxnForms(); openTill(b.dataset.cbTill); });
+  document.querySelectorAll('#tab-cashbook [data-cb-cat]').forEach(b=>{
+    b.addEventListener('click', ()=> cbFindInLedger(b.dataset.cbCat));
   });
+}
+// From a category bar to its entries: the search is set to it and the
+// movements brought into view, with any account or direction filter
+// that could hide them taken off.
+function cbFindInLedger(q){
+  cbLedgerQ = q;
+  cbLedgerDir = '';
+  cbLedgerAccount = '';
+  const box = document.getElementById('cbLedgerQuery');
+  if(box) box.value = q;
+  renderCbTransactions();
+  renderCbDayHeader();
+  const pan = document.querySelector('#tab-cashbook .cb-led-pan');
+  if(pan && pan.scrollIntoView) pan.scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
 
 function accountLabel(key){ const a = ACCOUNTS.find(x=>x.key===key); return a? a.label : key; }
@@ -99015,21 +99656,46 @@ function typeClass(type){ return type==='receipt' ? 'txn-receipt' : (type==='pay
    single total across cash, mobile money and bank would match nothing
    anybody could ever count. */
 let cbLedgerAccount = '';
+// Which way, and what was typed in the find box. Both narrow what is
+// shown; neither changes a balance, because every balance is worked out
+// from the whole day before anything is hidden.
+let cbLedgerDir = '';
+let cbLedgerQ = '';
+function wireCbLedgerQuery(){
+  document.getElementById('cbLedgerQuery').addEventListener('input', (e)=>{
+    cbLedgerQ = e.target.value;
+    renderCbTransactions();
+  });
+}
+wireCbLedgerQuery();
 
 function renderCbLedgerFilter(){
   const wrap = document.getElementById('cbLedgerFilter');
   if(!wrap) return;
-  const counts = {};
-  (data.cashTxns||[]).filter(t=> t.date === currentCbDate())
-    .forEach(t=>{ const k = t.account||'cash'; counts[k] = (counts[k]||0) + 1; });
-  const total = Object.values(counts).reduce((a,b)=> a+b, 0);
-  const btn = (key, label, n)=> `<button type="button" class="${cbLedgerAccount===key?'on':''}" data-account="${esc(key)}">
-    ${esc(label)}${n ? ` ${n}` : ''}</button>`;
-  wrap.innerHTML = btn('', 'All', total)
-    + ACCOUNTS.map(a=> btn(a.key, a.label, counts[a.key]||0)).join('');
-  wrap.querySelectorAll('button').forEach(b=>{
-    b.addEventListener('click', ()=>{ cbLedgerAccount = b.dataset.account; renderCbTransactions(); });
+  const date = currentCbDate();
+  const counts = {}, dirs = { in: 0, out: 0 };
+  (data.cashTxns||[]).filter(t=> t.date === date).forEach(t=>{
+    const k = t.account || 'cash';
+    counts[k] = (counts[k] || 0) + 1;
+    if(!cbLedgerAccount || k === cbLedgerAccount) dirs[cashIsMoneyIn(t) ? 'in' : 'out']++;
   });
+  const total = Object.values(counts).reduce((a,b)=> a + b, 0);
+  const seg = (attr, on, key, label, n, dot)=> `<button type="button" class="ow-seg-b${on ? ' ow-on' : ''}" data-${attr}="${esc(key)}" aria-pressed="${on}">${
+      dot ? `<span class="cb-ac-dot cb-ac-${esc(key)}"></span>` : ''}${esc(label)}${n ? ` <span class="ow-seg-n">${n}</span>` : ''}</button>`;
+  wrap.innerHTML = seg('account', !cbLedgerAccount, '', 'All', total, false)
+    + ACCOUNTS.map(a=> seg('account', cbLedgerAccount === a.key, a.key, a.label, counts[a.key] || 0, true)).join('');
+  wrap.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{ cbLedgerAccount = b.dataset.account; renderCbTransactions(); renderCbDayHeader(); });
+  });
+  const dir = document.getElementById('cbLedgerDir');
+  if(dir){
+    dir.innerHTML = seg('dir', !cbLedgerDir, '', 'Both', 0, false)
+      + seg('dir', cbLedgerDir === 'in', 'in', 'In', dirs.in, false)
+      + seg('dir', cbLedgerDir === 'out', 'out', 'Out', dirs.out, false);
+    dir.querySelectorAll('button').forEach(b=>{
+      b.addEventListener('click', ()=>{ cbLedgerDir = b.dataset.dir; renderCbTransactions(); });
+    });
+  }
 }
 
 /* What a ledger line should SAY during reconciling: the stored
@@ -99144,102 +99810,162 @@ function cbDocHTML(idn){
 }
 const CB_ICON_EDIT = '<svg class="icon" viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.121 2.121 0 1 0-3-3L5 17v3z"/></svg>';
 const CB_ICON_TRASH = '<svg class="icon" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>';
+// The marks the page draws with. Arrows for the way money went, two
+// arrows for money that only changed drawers, a scale for a count
+// difference booked, a flag for where an account's day starts.
+const CB_ICON_UP = '<svg class="icon" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
+const CB_ICON_DOWN = '<svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg>';
+const CB_ICON_XFER = '<svg class="icon" viewBox="0 0 24 24"><path d="M7 10h11l-3-3"/><path d="M17 14H6l3 3"/></svg>';
+const CB_ICON_ADJ = '<svg class="icon" viewBox="0 0 24 24"><path d="M12 4v16M5 20h14M6 8h12M6 8l-3 6a3 3 0 0 0 6 0zM18 8l-3 6a3 3 0 0 0 6 0z"/></svg>';
+const CB_ICON_FLAG = '<svg class="icon" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>';
+const CB_ICON_TICK = '<svg class="icon" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const CB_ICON_BOOK = '<svg class="icon" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M8 7h7M8 11h7"/></svg>';
+const CB_ICON_FIND = '<svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>';
 
 function renderCbTransactions(){
   const date = currentCbDate();
   const wrap = document.getElementById('cbTxnTableWrap');
   renderCbLedgerFilter();
-  const rows = cbLedgerFor(date, cbLedgerAccount || null);
+  const all = cbLedgerFor(date, cbLedgerAccount || null);
+  const rows = all.filter(r=> (!cbLedgerDir || (cbLedgerDir === 'in') === r.isIn) && cbRowMatches(r, cbLedgerQ));
   const rec = getDayRecord(date);
+  const filtered = !!(cbLedgerDir || cbLedgerQ);
+  const countEl = document.getElementById('cbLedCount');
+  if(countEl) countEl.textContent = rows.length === all.length
+    ? `${all.length} movement${all.length === 1 ? '' : 's'}`
+    : `${rows.length} of ${all.length} shown`;
 
-  if(rows.length===0){
-    wrap.innerHTML = cbLedgerAccount
-      ? `<div class="cb-led-empty"><b>Nothing has moved through ${esc(accountLabel(cbLedgerAccount))} today</b>
-          <span>The other accounts may still have movements &mdash; press All above to see them.</span></div>`
-      : `<div class="cb-led-empty"><b>Nothing has moved today</b>
-          <span>The first sale, the first expense, the first payment in &mdash; press Money in or Money out above and it
-          appears here with a running balance. Money taken on an invoice or paid on a supplier bill lands here by itself.</span></div>`;
+  if(all.length === 0){
+    const where = cbLedgerAccount ? esc(accountLabel(cbLedgerAccount)) : '';
+    wrap.innerHTML = `<div class="cb-led-empty">
+        <span class="cb-led-empty-ic">${CB_ICON_BOOK}</span>
+        <b>${cbLedgerAccount ? `Nothing has moved through ${where} on this day` : (date === todayISO() ? 'Nothing has moved today' : 'Nothing moved on this day')}</b>
+        <span>${cbLedgerAccount
+          ? 'The other accounts may still have movements.'
+          : 'Each sale, expense or payment lands here with the running balance of its account. Money taken on an invoice or paid on a supplier bill arrives by itself.'}</span>
+        <span class="cb-led-empty-a">${cbLedgerAccount
+          ? '<button type="button" class="btn btn-ghost ow-sm" data-cb-clear>Show every account</button>'
+          : '<button type="button" class="btn btn-ghost ow-sm" data-cb-till="in">Log money in</button><button type="button" class="btn btn-ghost ow-sm" data-cb-till="out">Log money out</button>'}</span>
+      </div>`;
+    cbWireLedger(wrap);
+    return;
+  }
+  if(rows.length === 0){
+    wrap.innerHTML = `<div class="cb-led-empty">
+        <span class="cb-led-empty-ic">${CB_ICON_FIND}</span>
+        <b>No movement matches${cbLedgerQ ? ` &ldquo;${esc(cbLedgerQ)}&rdquo;` : ''}</b>
+        <span class="cb-led-empty-a"><button type="button" class="btn btn-ghost ow-sm" data-cb-clear>Clear the filters</button></span>
+      </div>`;
+    cbWireLedger(wrap);
     return;
   }
 
   /* The opening line is part of the ledger, not a heading above it. A
      running balance that starts at the first transaction cannot be
      checked against anything; starting it at the opening figure is what
-     lets somebody follow the day from the drawer count to now. */
-  const openingRow = cbLedgerAccount
-    ? `<tr class="cb-led-open">
-        <td>&mdash;</td><td colspan="3">Opening balance, ${esc(accountLabel(cbLedgerAccount))}</td>
-        <td class="price"></td><td class="price"></td>
-        <td class="price cb-bal">${cbMoney(Number(rec.opening[cbLedgerAccount])||0)}</td><td></td>
-      </tr>`
+     lets somebody follow the day from the drawer count to now. Only
+     when one account is shown and nothing is filtered out: a balance
+     column with rows missing from it cannot be followed. */
+  const openingRow = (cbLedgerAccount && !filtered)
+    ? `<div class="cb-r cb-r-open cb-ac-${esc(cbLedgerAccount)}">
+        <span class="cb-r-t">&mdash;</span>
+        <span class="cb-r-ic">${CB_ICON_FLAG}</span>
+        <span class="cb-r-w"><span class="cb-r-who">Opening balance</span><span class="cb-r-d">${esc(accountLabel(cbLedgerAccount))}${rec.openingSet ? '' : ' &middot; <span class="cb-unc">unconfirmed</span>'}</span></span>
+        <span class="cb-r-a"></span><span class="cb-r-amt"></span>
+        <span class="cb-r-b">${cbMoney(Number(rec.opening[cbLedgerAccount])||0)}</span><span class="cb-r-x"></span>
+      </div>`
     : '';
-
-  const acts = (id)=> `<div class="rowa">
-      <button type="button" title="Edit this entry" onclick="editCashTxn(${id})">${CB_ICON_EDIT}Edit</button>
-      <button type="button" class="danger" title="Delete this entry" onclick="deleteCashTxn(${id})">${CB_ICON_TRASH}Delete</button>
-    </div>`;
-
-  /* CATEGORY, then the note under it. The category is what the rings and
-     every report read, so it leads; the note says which walk-in, which
-     bill, which two men. cbTxnDisplayDesc is what puts the client's name
-     on a row whose note is only an invoice number. */
-  const cell = (t)=>{
-    const idn = cbRowIdentity(t);
-    const desc = cbTxnDisplayDesc(t);
-    const covers = (t.coversFrom && t.coversTo)
-      ? ` &middot; pays for ${esc(t.coversFrom)} to ${esc(t.coversTo)}` : '';
-    /* The number is printed once. "Payment — PINV-0231 — Katende Steel"
-       already names the bill, so appending the chip after it said PINV-0231
-       twice on one line; the chip is only added when the note does not
-       carry the number itself. */
-    const doc = (idn.doc && desc.indexOf(idn.doc) === -1) ? cbDocHTML(idn) : '';
-    return `<div>${esc(t.category || 'Uncategorized')}</div>`
-      + ((desc || doc || covers)
-          ? `<div class="cb-led-desc">${esc(desc)}${doc ? (desc ? ' &middot; ' : '') + doc : ''}${covers}</div>`
-          : '');
-  };
-
-  const row = (r)=>{
-    const t = r.txn;
-    return `<tr>
-      <td class="cb-led-time">${esc(t.time||'')}</td>
-      <td>${esc(accountLabel(t.account))}</td>
-      <td>${typeLabel(t.type)}</td>
-      <td>${cell(t)}</td>
-      <td class="price cb-in-cell">${r.isIn ? cbMoney(r.amount) : ''}</td>
-      <td class="price cb-out-cell">${r.isIn ? '' : cbMoney(r.amount)}</td>
-      <td class="price cb-bal">${cbMoney(r.balanceAfter)}</td>
-      <td>${acts(t.id)}</td>
-    </tr>`;
-  };
 
   const inTotal = rows.filter(r=> r.isIn).reduce((s,r)=> s + r.amount, 0);
   const outTotal = rows.filter(r=> !r.isIn).reduce((s,r)=> s + r.amount, 0);
+  const sides = [];
+  if(inTotal) sides.push(`<span class="cb-up">+${cbMoney(inTotal)}</span>`);
+  if(outTotal) sides.push(`<span class="cb-down">&minus;${cbMoney(outTotal)}</span>`);
 
-  wrap.innerHTML = `<div class="cb-ledger-wrap"><table class="cb-ledger">
-  <thead><tr>
-    <th>Time</th><th>Account</th><th>Type</th><th>Category</th>
-    <th class="r">In</th><th class="r">Out</th>
-    <!-- Named for what it is. Across all three accounts each row shows
-         ITS OWN account's balance, and a column headed plainly "Balance"
-         would be read as one running total -- a number matching nothing
-         anybody could count. -->
-    <th class="r">${cbLedgerAccount ? 'Balance' : 'That account now'}</th><th></th>
-  </tr></thead><tbody>
+  /* Named for what it is. Across all three accounts each row shows ITS
+     OWN account's balance, and a column headed plainly "Balance" would
+     be read as one running total -- a number matching nothing anybody
+     could count. */
+  wrap.innerHTML = `<div class="cb-ledger" role="table" aria-label="The day's movements">
+    <div class="cb-r cb-r-h" role="row">
+      <span class="cb-r-t">Time</span><span class="cb-r-ic"></span><span class="cb-r-w">Entry</span>
+      <span class="cb-r-a">Account</span><span class="cb-r-amt">Amount</span>
+      <span class="cb-r-b">${cbLedgerAccount ? 'Balance' : 'That account now'}</span><span class="cb-r-x"></span>
+    </div>
     ${openingRow}
-    ${rows.map(row).join('')}
-  </tbody>
-  <tfoot><tr>
-    <td colspan="4">${rows.length} movement${rows.length===1?'':'s'}${cbLedgerAccount?` in ${esc(accountLabel(cbLedgerAccount))}`:''}</td>
-    <td class="price cb-in-cell">${cbMoney(inTotal)}</td>
-    <td class="price cb-out-cell">${cbMoney(outTotal)}</td>
-    <td class="price cb-bal">${cbLedgerAccount
-      ? cbMoney(cbDayPosition(date).accounts.find(a=> a.key===cbLedgerAccount).closing)
-      : ''}</td>
-    <td></td>
-  </tr></tfoot>
-  </table></div>`;
+    ${rows.map(cbLedgerRowHTML).join('')}
+    <div class="cb-r-foot">
+      <span>${rows.length} movement${rows.length === 1 ? '' : 's'}${cbLedgerAccount ? ` in ${esc(accountLabel(cbLedgerAccount))}` : ''}</span>
+      <span class="cb-r-foot-f">${sides.join('')}${(cbLedgerAccount && !filtered)
+        ? `<span class="cb-r-foot-b">closes at <b>${cbMoney(cbDayPosition(date).accounts.find(a=> a.key === cbLedgerAccount).closing)}</b></span>` : ''}</span>
+    </div>
+  </div>`;
+  cbWireLedger(wrap);
+}
+// Which ledger rows a search keeps: every word typed has to be found in
+// what the row says -- who, what for, which account, or the figure with
+// or without its commas.
+function cbRowMatches(r, q){
+  const words = String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
+  if(!words.length) return true;
+  const t = r.txn;
+  const idn = cbRowIdentity(t);
+  const hay = [idn.who, idn.detail, idn.doc || '', t.category || '', t.description || '',
+    accountLabel(t.account), String(Math.round(r.amount)), cbMoney(r.amount)].join(' ').toLowerCase();
+  return words.every(w=> hay.includes(w));
+}
+// What kind of movement a row is, for its mark: money in, money out, the
+// shop's own money changing drawers, or a count difference booked.
+function cbRowKind(t){
+  if(cbIsTransfer(t)) return 'xfer';
+  if(t.category === CASH_SHORTAGE_CATEGORY || t.category === CASH_OVERAGE_CATEGORY) return 'adj';
+  return cashIsMoneyIn(t) ? 'in' : 'out';
+}
+function cbKindIcon(kind){
+  return kind === 'xfer' ? CB_ICON_XFER : kind === 'adj' ? CB_ICON_ADJ : kind === 'in' ? CB_ICON_UP : CB_ICON_DOWN;
+}
 
+/* ONE ROW, BOTH DESIGNS. The desk reads it across seven columns; the
+   phone reads the same element as a card -- mark, who, the signed
+   figure, and a second line of when, where and the balance after. The
+   phone-only line is emitted here beside the columns it repeats, so the
+   two can never say different things.
+
+   WHO LEADS. The identifying thing -- the client, the supplier, or what
+   was bought -- is the row's name; the category is a chip under it,
+   because the bars in the rail and the filters already answer
+   "which category", and a column of the word "Sale" answers nothing. */
+function cbLedgerRowHTML(r){
+  const t = r.txn;
+  const idn = cbRowIdentity(t);
+  const kind = cbRowKind(t);
+  const category = String(t.category || '').trim() || 'Uncategorized';
+  let rest = idn.detail || '';
+  if(rest === category) rest = '';
+  else if(rest.indexOf(category + ' — ') === 0) rest = rest.slice(category.length + 3);
+  const covers = (t.coversFrom && t.coversTo)
+    ? `<span class="cb-r-cov">pays for ${esc(t.coversFrom)} to ${esc(t.coversTo)}</span>` : '';
+  const doc = (idn.doc && rest.indexOf(idn.doc) === -1 && idn.who.indexOf(idn.doc) === -1) ? cbDocHTML(idn) : '';
+  const sign = r.isIn ? '+' : '&minus;';
+  return `<div class="cb-r is-${kind}" role="row">
+    <span class="cb-r-t">${esc(t.time || '')}</span>
+    <span class="cb-r-ic" title="${kind === 'xfer' ? 'Moved between your own accounts' : kind === 'adj' ? 'A count difference, booked' : (r.isIn ? 'Money in' : 'Money out')}">${cbKindIcon(kind)}</span>
+    <span class="cb-r-w">
+      <span class="cb-r-who" title="${esc(idn.who)}">${esc(idn.who)}</span>
+      <span class="cb-r-d"><span class="cb-r-cat">${esc(category)}</span>${rest ? `<span class="cb-r-rest" title="${esc(rest)}">${esc(rest)}</span>` : ''}${doc}${covers}</span>
+    </span>
+    <span class="cb-r-a cb-ac-${esc(r.account)}"><span class="cb-ac-dot"></span>${esc(accountLabel(r.account))}</span>
+    <span class="cb-r-amt">${sign}${cbMoney(r.amount)}</span>
+    <span class="cb-r-b" title="${esc(accountLabel(r.account))} after this entry">${cbMoney(r.balanceAfter)}</span>
+    <span class="cb-r-m">${esc(t.time || '')} &middot; <span class="cb-ac-${esc(r.account)}"><span class="cb-ac-dot"></span>${esc(accountLabel(r.account))}</span> &middot; ${cbMoney(r.balanceAfter)} after</span>
+    <span class="cb-r-x">
+      <button type="button" title="Edit this entry" aria-label="Edit this entry" onclick="editCashTxn(${t.id})">${CB_ICON_EDIT}</button>
+      <button type="button" class="danger" title="Delete this entry" aria-label="Delete this entry" onclick="deleteCashTxn(${t.id})">${CB_ICON_TRASH}</button>
+    </span>
+  </div>`;
+}
+
+function cbWireLedger(wrap){
   /* Opens the DOCUMENT, not the screen it lives on. Landing somebody on
      the register with 34 other bills on it and leaving them to find the
      one they pressed is not a link, it is a signpost. */
@@ -99250,6 +99976,15 @@ function renderCbTransactions(){
       else if(b.dataset.docKind === 'pinv') revealPurchaseInvoice(id);
     });
   });
+  wrap.querySelectorAll('[data-cb-till]').forEach(b=> b.addEventListener('click', ()=>{
+    resetCashTxnForms(); openTill(b.dataset.cbTill);
+  }));
+  wrap.querySelectorAll('[data-cb-clear]').forEach(b=> b.addEventListener('click', ()=>{
+    cbLedgerAccount = ''; cbLedgerDir = ''; cbLedgerQ = '';
+    const box = document.getElementById('cbLedgerQuery');
+    if(box) box.value = '';
+    renderCbTransactions(); renderCbDayHeader();
+  }));
 }
 
 /* ---- Cash In / Cash Out forms (inside popup modals) ---- */
@@ -99262,7 +99997,7 @@ function resetCashTxnForms(){
   document.getElementById('cb_in_desc').value = '';
   document.getElementById('cb_in_time').value = new Date().toTimeString().slice(0,5);
   document.getElementById('cb_in_cancel').style.display = 'none';
-  document.getElementById('cbInTitle').textContent = 'Cash In';
+  document.getElementById('cbInTitle').textContent = 'Money in';
   document.getElementById('cb_in_customer').value = '';
   document.getElementById('cb_in_invoice_picker_section').style.display = 'none';
   document.getElementById('cb_in_invoice_picker_wrap').innerHTML = '';
@@ -99279,8 +100014,10 @@ function resetCashTxnForms(){
   document.getElementById('cb_out_time').value = new Date().toTimeString().slice(0,5);
   document.getElementById('cb_out_covers_from').value = '';
   document.getElementById('cb_out_covers_to').value = '';
+  document.getElementById('cb_out_covers').open = false;
+  document.getElementById('cb_out_type').value = 'payment';
   document.getElementById('cb_out_cancel').style.display = 'none';
-  document.getElementById('cbOutTitle').textContent = 'Cash Out';
+  document.getElementById('cbOutTitle').textContent = 'Money out';
 
   // Both accounts back to cash, both new-category boxes shut, and the
   // balances re-read -- they move whenever anything else is recorded.
@@ -99472,9 +100209,9 @@ function tillRenderAccounts(column){
   if(!wrap) return;
   const chosen = document.getElementById(`cb_${column}_account`).value || 'cash';
   const bal = tillAccountBalances();
-  wrap.innerHTML = ACCOUNTS.map(a=> `<button type="button" class="till-acct${a.key===chosen?' on':''}"
+  wrap.innerHTML = ACCOUNTS.map(a=> `<button type="button" class="till-acct cb-ac-${esc(a.key)}${a.key===chosen?' on':''}"
       data-account="${esc(a.key)}" aria-pressed="${a.key===chosen}">
-      <span class="till-acct-name">${esc(a.label)}</span>
+      <span class="till-acct-name"><span class="cb-ac-dot"></span>${esc(a.label)}</span>
       <span class="till-acct-bal">${fmtUGX(Math.round(bal[a.key]||0))}</span>
     </button>`).join('');
   wrap.querySelectorAll('.till-acct').forEach(b=> b.addEventListener('click', ()=>{
@@ -99532,10 +100269,13 @@ function tillUpdate(column){
   const after = Math.round(now + (isIn ? amount : -amount));
   const eff = document.getElementById(`cb_${column}_effect`);
   if(eff){
+    /* Said AND drawn: the sentence is exact, and the bar beside it shows
+       the size of the move against what the account holds, which is the
+       part a sentence of two seven-digit figures cannot. */
     eff.innerHTML = amount > 0
-      ? `${esc(TILL_ACCOUNT_LABELS[account] || account)} goes from <b>${fmtUGX(now)}</b>
-         <span class="till-arrow">→</span> <b>${fmtUGX(after)}</b>`
-      : `${esc(TILL_ACCOUNT_LABELS[account] || account)} holds <b>${fmtUGX(now)}</b> right now.`;
+      ? `<span class="till-eff-t">${esc(TILL_ACCOUNT_LABELS[account] || account)} goes from <b>${fmtUGX(now)}</b>
+         <span class="till-arrow">→</span> <b>${fmtUGX(after)}</b></span>${tillEffectBar(now, after, isIn, account)}`
+      : `<span class="till-eff-t">${esc(TILL_ACCOUNT_LABELS[account] || account)} holds <b>${fmtUGX(now)}</b> right now.</span>`;
   }
 
   /* Paying out more than the account holds. A WARNING and never a block:
@@ -99552,6 +100292,26 @@ function tillUpdate(column){
          it usually means money came in that has not been logged yet.</div>`
       : '';
   }
+
+  /* The button says what it will do, with the figure in it, so the last
+     thing read before pressing is the amount being committed. */
+  const saveBtn = document.getElementById(`cb_${column}_save`);
+  if(saveBtn){
+    const editing = editingCashTxnId && editingCashTxnColumn === column;
+    saveBtn.textContent = editing ? 'Save changes'
+      : amount > 0 ? `Record ${cbMoney(amount)} ${isIn ? 'in' : 'out'}`
+      : (isIn ? 'Add cash in' : 'Add cash out');
+  }
+}
+/* Before and after, on one scale. In: what the account held, and the
+   piece this adds on the end. Out: what will be left, and the piece
+   being taken off it, struck through. */
+function tillEffectBar(now, after, isIn, key){
+  const top = Math.max(now, after, 1);
+  const w = (v)=> (Math.max(v, 0) / top * 100).toFixed(1);
+  return isIn
+    ? `<span class="till-eff-bar cb-ac-${esc(key)}" aria-hidden="true"><i class="base" style="width:${w(now)}%"></i><i class="add" style="width:${w(after - Math.max(now, 0))}%"></i></span>`
+    : `<span class="till-eff-bar cb-ac-${esc(key)}" aria-hidden="true"><i class="base" style="width:${w(after)}%"></i><i class="cut" style="width:${w(Math.max(now, 0) - Math.max(after, 0))}%"></i></span>`;
 }
 
 /* Opening one. The balances are re-read every time because they move
@@ -99570,11 +100330,29 @@ function tillRefresh(column){
   const note = document.getElementById(`cb_${column}_datenote`);
   if(note){
     const d = currentCbDate();
-    note.textContent = d === todayISO() ? 'today' : `on ${fmtShortDate(d)}`;
+    /* A past day is said in the header, in amber: an entry made while
+       looking at last Tuesday lands on last Tuesday, and that should be
+       impossible to miss rather than a footnote under the time. */
+    note.textContent = d === todayISO() ? 'Today' : `Entered against ${fmtShortDate(d)}`;
+    note.classList.toggle('is-past', d !== todayISO());
+  }
+  if(column === 'out'){
+    const type = document.getElementById('cb_out_type').value || 'payment';
+    document.querySelectorAll('#cb_out_kind [data-kind]').forEach(b=>{
+      b.classList.toggle('ow-on', b.dataset.kind === type);
+      b.setAttribute('aria-pressed', String(b.dataset.kind === type));
+    });
+    const covers = document.getElementById('cb_out_covers');
+    if(covers && (document.getElementById('cb_out_covers_from').value || document.getElementById('cb_out_covers_to').value)) covers.open = true;
   }
   tillUpdate(column);
 }
 
+// Payment or expense, as two buttons over the select the save reads.
+document.querySelectorAll('#cb_out_kind [data-kind]').forEach(b=> b.addEventListener('click', ()=>{
+  document.getElementById('cb_out_type').value = b.dataset.kind;
+  tillRefresh('out');
+}));
 // Wiring, once, for both tills.
 ['in','out'].forEach(column=>{
   const amount = document.getElementById(`cb_${column}_amount`);
@@ -99974,6 +100752,9 @@ document.addEventListener('keydown', (e)=>{
   if(e.key!=='Escape') return;
   if(document.getElementById('cashInModal').classList.contains('show')){ resetCashTxnForms(); closeModal('cashInModal'); }
   if(document.getElementById('cashOutModal').classList.contains('show')){ resetCashTxnForms(); closeModal('cashOutModal'); }
+  if(document.getElementById('cashTransferModal').classList.contains('show')) closeModal('cashTransferModal');
+  if(document.getElementById('cbOpenModal').classList.contains('show')) closeModal('cbOpenModal');
+  if(document.getElementById('cbAskModal').classList.contains('show')) cbAskDone(false);
 });
 
 function editCashTxn(id){
@@ -99992,7 +100773,7 @@ function editCashTxn(id){
     document.getElementById('cb_out_covers_from').value = t.coversFrom || '';
     document.getElementById('cb_out_covers_to').value = t.coversTo || '';
   }
-  document.getElementById(column==='in' ? 'cbInTitle' : 'cbOutTitle').textContent = column==='in' ? 'Edit cash in' : 'Edit cash out';
+  document.getElementById(column==='in' ? 'cbInTitle' : 'cbOutTitle').textContent = column==='in' ? 'Edit money in' : 'Edit money out';
   document.getElementById(prefix+'cancel').style.display = 'inline-block';
   /* Drawn AFTER the record is loaded, so the account button and the
      category chip come up already chosen rather than reset to cash. */
@@ -100026,34 +100807,141 @@ function editCashTxn(id){
    same wherever the shop is asked to -- and the FROM step shows what is
    in each, because "have I got it in the bank" is the question that
    starts a transfer in the first place. */
-async function openAccountTransfer(){
-  const from = await promptCashAccount('Move money out of which account?',
-    'The shop\'s own money moving between its own tills — this changes neither what it has earned nor what it has spent.');
-  if(!from) return;
-
-  const have = Math.round(cashOnHandFor(from));
-  const typed = prompt(`How much is moving out of ${accountLabel(from)}?\n${fmtUGX(have)} on hand.`, '');
-  if(typed === null) return;
-  const amount = Math.round(Number(typed)||0);
-  if(!(amount > 0)){ toast('Enter an amount greater than 0'); return; }
-
-  /* Said, not blocked. The shop may be moving money it knows is landing,
-     and refusing would make the book disagree with what actually
-     happened -- the same rule the till picker follows. */
-  if(amount > have){
-    toast(`${accountLabel(from)} holds ${fmtUGX(have)} — this will take it ${fmtUGX(amount-have)} below zero.`, 6000);
+/* The transfer, asked in the order it is thought about: how much, which
+   account it leaves, which it lands in -- with both balances shown
+   moving before anything is written. It was three browser prompts in a
+   row, the last asking "What was it for?" in a grey system box. */
+let cbXfer = { from: 'cash', to: 'bank' };
+function openAccountTransfer(){
+  cbXfer = { from: 'cash', to: 'bank' };
+  document.getElementById('cb_x_amount').value = '';
+  document.getElementById('cb_x_note').value = '';
+  const note = document.getElementById('cb_x_datenote');
+  if(note){
+    const d = currentCbDate();
+    note.textContent = d === todayISO() ? 'Today' : `Entered against ${fmtShortDate(d)}`;
+    note.classList.toggle('is-past', d !== todayISO());
   }
+  cbXferRender();
+  openModal('cashTransferModal');
+  document.getElementById('cb_x_amount').focus();
+}
+function cbXferAmount(){
+  return Number(String(document.getElementById('cb_x_amount').value).replace(/,/g, '')) || 0;
+}
+function cbXferRender(){
+  const bal = tillAccountBalances();
+  const amount = cbXferAmount();
+  if(cbXfer.to === cbXfer.from) cbXfer.to = (ACCOUNTS.find(a=> a.key !== cbXfer.from) || {}).key;
+  const list = (side)=> ACCOUNTS.map(a=>{
+    const on = cbXfer[side] === a.key;
+    const off = side === 'to' && a.key === cbXfer.from;
+    return `<button type="button" class="till-acct cb-ac-${esc(a.key)}${on ? ' on' : ''}" data-x-side="${side}" data-account="${esc(a.key)}"
+        aria-pressed="${on}"${off ? ' disabled title="The money is leaving this account"' : ''}>
+      <span class="till-acct-name"><span class="cb-ac-dot"></span>${esc(a.label)}</span>
+      <span class="till-acct-bal">${fmtUGX(Math.round(bal[a.key] || 0))}</span>
+    </button>`;
+  }).join('');
+  ['from', 'to'].forEach(side=>{
+    const el = document.getElementById(`cb_x_${side}`);
+    el.innerHTML = list(side);
+    el.querySelectorAll('[data-x-side]').forEach(b=> b.addEventListener('click', ()=>{
+      cbXfer[b.dataset.xSide] = b.dataset.account;
+      cbXferRender();
+    }));
+  });
+  document.getElementById('cb_x_words').textContent = tillAmountWords(amount);
 
-  const to = await promptCashAccount('And into which account?',
-    `Moving ${fmtUGX(amount)} out of ${accountLabel(from)}.`, {excludeKey: from});
-  if(!to) return;
-  if(to === from){ toast('That is the same account — nothing to move'); return; }
-
-  const note = (prompt('What was it for? (optional)', '') || '').trim();
-  const res = transferBetweenAccounts(from, to, amount, note);
+  const from = Math.round(bal[cbXfer.from] || 0), to = Math.round(bal[cbXfer.to] || 0);
+  const eff = document.getElementById('cb_x_effect');
+  const line = (key, now, after, isIn)=> `<div class="cb-x-row">
+      <span class="cb-x-n cb-ac-${esc(key)}"><span class="cb-ac-dot"></span>${esc(accountLabel(key))}</span>
+      ${tillEffectBar(now, after, isIn, key)}
+      <span class="cb-x-v">${cbMoney(now)} <span class="till-arrow">→</span> <b class="${after < 0 ? 'cb-down' : ''}">${cbMoney(after)}</b></span>
+    </div>`;
+  eff.innerHTML = amount > 0
+    ? line(cbXfer.from, from, from - amount, false) + line(cbXfer.to, to, to + amount, true)
+      + (from - amount < 0 ? `<div class="till-warn">${esc(accountLabel(cbXfer.from))} holds <b>${fmtUGX(from)}</b> — this takes it
+          <b>${fmtUGX(amount - from)}</b> below zero. Record it if that is what happened.</div>` : '')
+    : `<div class="cb-x-hint">Type an amount to see both balances move.</div>`;
+  document.getElementById('cb_x_save').textContent = amount > 0
+    ? `Move ${cbMoney(amount)} to ${accountLabel(cbXfer.to)}` : 'Move money';
+}
+function cbXferSave(){
+  const amount = Math.round(cbXferAmount());
+  if(!(amount > 0)){ toast('Enter an amount greater than 0'); return; }
+  if(!cbXfer.from || !cbXfer.to || cbXfer.from === cbXfer.to){ toast('That is the same account — nothing to move'); return; }
+  const note = document.getElementById('cb_x_note').value.trim();
+  /* Dated to the day on screen, as Money in and Money out are: a
+     transfer entered while looking at yesterday belongs to yesterday. */
+  const res = transferBetweenAccounts(cbXfer.from, cbXfer.to, amount, note, currentCbDate());
   if(!res){ toast('Nothing moved'); return; }
+  closeModal('cashTransferModal');
   renderCbTransactions(); renderCbSummary(); renderCbTriggers();
-  toast(`${fmtUGX(amount)} moved — ${accountLabel(from)} to ${accountLabel(to)}`);
+  toast(`${fmtUGX(amount)} moved — ${accountLabel(cbXfer.from)} to ${accountLabel(cbXfer.to)}`);
+}
+function wireCbTransfer(){
+  const amount = document.getElementById('cb_x_amount');
+  amount.addEventListener('input', ()=>{ tillFormatInput(amount); cbXferRender(); });
+  ['cb_x_amount', 'cb_x_note'].forEach(id=> document.getElementById(id).addEventListener('keydown', (e)=>{
+    if(e.key !== 'Enter') return;
+    e.preventDefault();
+    cbXferSave();
+  }));
+  document.getElementById('cb_x_save').addEventListener('click', cbXferSave);
+  ['cb_x_cancel', 'cashTransferModalClose'].forEach(id=>
+    document.getElementById(id).addEventListener('click', ()=> closeModal('cashTransferModal')));
+  document.getElementById('cashTransferModal').addEventListener('mousedown', (e)=>{
+    if(e.target.id === 'cashTransferModal') closeModal('cashTransferModal');
+  });
+}
+wireCbTransfer();
+
+/* ASKING BEFORE A ROW GOES. The browser's confirm() showed a sentence in
+   a grey box over the page; this draws the entry itself in the question,
+   so what is about to be deleted is seen rather than remembered. One
+   question at a time, resolved exactly once however it is answered. */
+let cbAskResolve = null;
+function cbAsk(opts){
+  return new Promise((resolve)=>{
+    if(cbAskResolve) cbAskResolve(false);
+    document.getElementById('cbAskTitle').textContent = opts.title;
+    document.getElementById('cbAskBody').innerHTML = opts.html;
+    document.getElementById('cbAskIc').className = 'cb-mh-ic ' + (opts.tone || 'bad');
+    const yes = document.getElementById('cbAskYes');
+    yes.textContent = opts.yes || '';
+    yes.hidden = !opts.yes;
+    document.getElementById('cbAskNo').textContent = opts.no || 'Keep it';
+    cbAskResolve = resolve;
+    openModal('cbAskModal');
+    document.getElementById('cbAskNo').focus();
+  });
+}
+function cbAskDone(answer){
+  closeModal('cbAskModal');
+  const r = cbAskResolve;
+  cbAskResolve = null;
+  if(r) r(answer);
+}
+function wireCbAsk(){
+  document.getElementById('cbAskYes').addEventListener('click', ()=> cbAskDone(true));
+  ['cbAskNo', 'cbAskClose'].forEach(id=> document.getElementById(id).addEventListener('click', ()=> cbAskDone(false)));
+  document.getElementById('cbAskModal').addEventListener('mousedown', (e)=>{
+    if(e.target.id === 'cbAskModal') cbAskDone(false);
+  });
+}
+wireCbAsk();
+// One entry, drawn the way the ledger draws it, for the question.
+function cbEntryCardHTML(t){
+  const idn = cbRowIdentity(t);
+  const kind = cbRowKind(t);
+  const isIn = cashIsMoneyIn(t);
+  return `<div class="cb-ask-row is-${kind}">
+    <span class="cb-r-ic">${cbKindIcon(kind)}</span>
+    <span class="cb-ask-w"><b>${esc(idn.who)}</b>
+      <small>${esc(t.time || '')} &middot; ${esc(accountLabel(t.account))} &middot; ${esc(t.category || 'Uncategorized')}</small></span>
+    <span class="cb-ask-amt">${isIn ? '+' : '&minus;'}${cbMoney(Number(t.amount) || 0)}</span>
+  </div>`;
 }
 function transferBetweenAccounts(from, to, amount, note, date){
   const amt = Math.round(Number(amount)||0);
@@ -100114,6 +101002,7 @@ function cashTxnDependents(ids){
 }
 function deleteCashTxn(id){
   const t = data.cashTxns.find(x=> x.id === id);
+  if(!t) return;
   /* The other half of a transfer, if this is one. Deleting a single leg
      takes money out of one till and puts it in none, which the day
      reconciles as a shortfall nobody can account for -- so the pair goes
@@ -100131,13 +101020,25 @@ function deleteCashTxn(id){
       + `Reverse the payment on ${one.where} instead — that removes this entry too.`, 11000);
     return;
   }
+  const outLeg = twin && cashIsMoneyIn(t) ? twin : t;
+  const inLeg = twin ? (outLeg === t ? twin : t) : null;
   const ask = twin
-    ? `Delete this transfer? Both sides go — ${fmtUGX(Math.round(t.amount))} out of ${accountLabel(t.account)} and into ${accountLabel(twin.account)}.`
+    ? `Delete this transfer? Both sides go — ${fmtUGX(Math.round(t.amount))} out of ${accountLabel(outLeg.account)} and into ${accountLabel(inLeg.account)}.`
     : 'Delete this transaction?';
-  if(!confirm(ask)) return;
-  data.cashTxns = data.cashTxns.filter(x=> !gone.has(x.id));
-  saveData(); renderCbTransactions(); renderCbSummary(); renderCbTriggers();
-  toast(twin ? 'Transfer deleted — both sides' : 'Transaction deleted');
+  /* Asked in the dialog, with the entry drawn in it. Chained with .then
+     rather than awaited, so nothing here waits on anything but the
+     answer. */
+  cbAsk({
+    title: twin ? 'Delete this transfer?' : 'Delete this entry?',
+    yes: twin ? 'Delete both sides' : 'Delete entry',
+    html: cbEntryCardHTML(outLeg) + (inLeg ? cbEntryCardHTML(inLeg) : '')
+      + `<p class="cb-ask-p">${twin ? esc(ask.replace(/^Delete this transfer\? /, '')) + ' ' : ''}The day&rsquo;s balances are worked out again without ${twin ? 'them' : 'it'}. This cannot be undone.</p>`,
+  }).then((ok)=>{
+    if(!ok) return;
+    data.cashTxns = data.cashTxns.filter(x=> !gone.has(x.id));
+    saveData(); renderCbTransactions(); renderCbSummary(); renderCbTriggers();
+    toast(twin ? 'Transfer deleted — both sides' : 'Transaction deleted');
+  });
 }
 
 function cbAccountTotals(date, account){
@@ -100187,6 +101088,14 @@ function cbChainBreakHTML(date, rec){
    One card per account instead, each reading as the sentence somebody
    actually says while standing at the drawer: the book expects THIS, I
    counted THAT, so the difference is this and here is what it means. */
+/* Closing the day.
+
+   Was one table eight columns wide, and then three cards whose arithmetic
+   took four lines each. In the rail it is what somebody actually does
+   standing at the drawer: the book says THIS, I counted THAT, and the
+   card goes green, amber or red on the difference. A bar of three across
+   the top says how far through the close the day is before any card is
+   read. */
 function renderCbSummary(){
   const date = currentCbDate();
   const pos = cbDayPosition(date);
@@ -100194,37 +101103,35 @@ function renderCbSummary(){
 
   const card = (a)=>{
     const meaning = cbVarianceMeaning(a);
-    return `<article class="cb-count ${meaning.state}">
+    const sum = [`opened ${cbMoney(a.opening)}`];
+    if(a.in) sum.push(`<span class="cb-up">+${cbMoney(a.in)}</span>`);
+    if(a.out) sum.push(`<span class="cb-down">&minus;${cbMoney(a.out)}</span>`);
+    return `<article class="cb-count ${meaning.state} cb-ac-${esc(a.key)}">
       <header class="cb-count-head">
+        <span class="cb-ac-dot"></span>
         <h4>${esc(a.label)}</h4>
         <span class="cb-count-state">${
-          meaning.state==='ok' ? 'Counted &amp; agrees'
+          meaning.state==='ok' ? CB_ICON_TICK + 'Agrees'
           : meaning.state==='pending' ? 'Not counted'
           : meaning.state==='over' ? 'Over' : 'Short'}</span>
       </header>
-
-      <div class="cb-count-maths">
-        <div class="cb-cm-row"><span>Opened with</span><b>${cbMoney(a.opening)}</b></div>
-        <div class="cb-cm-row"><span>Money in</span><b class="cb-up">+${cbMoney(a.in)}</b></div>
-        <div class="cb-cm-row"><span>Money out</span><b class="cb-down">&minus;${cbMoney(a.out)}</b></div>
-        <div class="cb-cm-row cb-cm-total"><span>The book says</span><b>${cbMoney(a.closing)}</b></div>
+      <div class="cb-count-grid">
+        <div class="cb-count-book">
+          <span>The book says</span>
+          <b>${cbMoney(a.closing)}</b>
+        </div>
+        <label class="cb-count-input">
+          <span>You counted</span>
+          <input type="number" min="0" step="any" inputmode="decimal" data-account="${esc(a.key)}" class="cb-actual-input"
+            value="${a.counted===null?'':a.counted}" placeholder="Count it" aria-label="What you counted in ${esc(a.label)}">
+        </label>
       </div>
-
-      <label class="cb-count-input">
-        <span>What did you count?</span>
-        <input type="number" min="0" step="any" data-account="${esc(a.key)}" class="cb-actual-input"
-          value="${a.counted===null?'':a.counted}" placeholder="Count it and type it here">
-      </label>
-
-      <div class="cb-count-verdict">${
-        meaning.state==='pending'
-          ? `<span class="variance-pending">${esc(meaning.text)}</span>`
-          : meaning.state==='ok'
-            ? `<span class="variance-ok">${esc(meaning.text)}</span>`
-            : `<span class="cb-count-diff">${a.variance>0?'+':'&minus;'}${cbMoney(Math.abs(a.variance))}</span>
-               <span class="cb-count-why">${esc(meaning.text)}</span>`
-      }</div>
+      <div class="cb-count-sum">${sum.join(' ')}</div>
       ${meaning.state==='over' || meaning.state==='short' ? `
+      <div class="cb-count-verdict">
+        <span class="cb-count-diff">${a.variance>0?'+':'&minus;'}${cbMoney(Math.abs(a.variance))}</span>
+        <span class="cb-count-why">${esc(meaning.text)}</span>
+      </div>
       <div class="cb-count-fix">
         <button type="button" class="btn btn-ghost cb-var-record" data-account="${esc(a.key)}">Book the ${
           meaning.state==='short' ? 'missing' : 'extra'} ${cbMoney(Math.abs(a.variance))}</button>
@@ -100233,11 +101140,20 @@ function renderCbSummary(){
     </article>`;
   };
 
+  const n = pos.countedAccounts, total = pos.accounts.length;
+  const off = pos.accounts.filter(a=> a.counted !== null && Math.abs(a.variance) >= 1);
+  const sentence =
+    n === 0 ? `Nothing counted yet — ${total} accounts to check`
+    : n < total ? `${n} of ${total} counted${off.length ? `, ${off.length} not matching` : ''}`
+    : off.length ? `All counted — ${off.length} ${off.length===1?'account does':'accounts do'} not match`
+    : 'All counted and everything matches';
+  const segs = pos.accounts.map(a=> `<i class="${cbVarianceMeaning(a).state}" title="${esc(a.label)}"></i>`).join('');
+
   /* The broken-chain warning heads this panel: the count below measures
      the day against its own opening, so a wrong opening passes it. */
   wrap.innerHTML = cbChainBreakHTML(date, getDayRecord(date))
-    + `<div class="cb-counts">${pos.accounts.map(card).join('')}</div>`
-    + `<p class="cb-count-note">Booking a difference writes a real entry, so the book comes down to what you counted and the loss shows on the profit and loss. Do it only for money you cannot trace &mdash; if you can still name it, enter it as what it was, dated the day it happened.</p>`;
+    + `<div class="cb-cl-prog"><div class="cb-cl-segs">${segs}</div><span>${esc(sentence)}</span></div>`
+    + `<div class="cb-counts">${pos.accounts.map(card).join('')}</div>`;
   const fix = document.getElementById('cb_chain_fix');
   if(fix) fix.addEventListener('click', cbApplyCarriedOpening);
 
@@ -100255,20 +101171,17 @@ function renderCbSummary(){
     btn.addEventListener('click', ()=> recordCountVariance(btn.dataset.account));
   });
 
-  /* The one line that says whether the day is closed. Counting two of
+  /* The one mark that says whether the day is closed. Counting two of
      three accounts and going home is the normal failure, and nothing on
      the old screen said so -- the missing account simply showed a dash
      among seven other columns. */
   const stateEl = document.getElementById('cbCloseState');
   if(stateEl){
-    const n = pos.countedAccounts, total = pos.accounts.length;
-    const off = pos.accounts.filter(a=> a.counted !== null && Math.abs(a.variance) >= 1);
-    stateEl.className = 'cb-close-state' + (n === 0 ? '' : off.length ? ' bad' : n < total ? ' part' : ' ok');
-    stateEl.textContent =
-      n === 0 ? `Nothing counted yet — ${total} accounts to check`
-      : n < total ? `${n} of ${total} counted${off.length ? `, ${off.length} not matching` : ''}`
-      : off.length ? `All counted — ${off.length} ${off.length===1?'account does':'accounts do'} not match`
-      : 'All counted and everything matches';
+    stateEl.className = 'cb-close-state ow-cp' + (n === 0 ? '' : off.length ? ' ow-bad' : n < total ? ' ow-warn' : ' ow-good');
+    stateEl.textContent = n === 0 ? 'Not started'
+      : n < total ? `${n} of ${total}`
+      : off.length ? `${off.length} off` : 'Closed';
+    stateEl.title = sentence;
   }
 }
 
