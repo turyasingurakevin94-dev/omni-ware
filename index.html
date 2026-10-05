@@ -9126,6 +9126,7 @@
   .cbv-close{display:inline-flex;align-items:center;gap:var(--ow-sp-8);height:40px;padding:0 var(--ow-sp-16);border-radius:var(--ow-r);
     background:var(--ow-steel-950);color:var(--ow-paper);border:0;font-size:var(--ow-t-13);font-weight:var(--ow-fw-700);}
   .cbv-close[hidden]{display:none;}
+  .cbv-close[disabled]{opacity:.45;cursor:not-allowed;}
   .cbv-close svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
   .cbv-counts{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--ow-sp-16);padding:0 var(--ow-sp-24) var(--ow-sp-24);}
   .cbv-count{display:flex;flex-direction:column;gap:var(--ow-sp-16);padding:var(--ow-sp-20);border-radius:var(--ow-r-lg);background:var(--ow-paper-2);border:1px solid var(--ow-rule-soft);}
@@ -99604,7 +99605,8 @@ function addCashReceipt(account, amount, category, description, date, quoteId){
     category: category || 'Customer Payment',
     amount,
     description: description || '',
-    time: new Date().toTimeString().slice(0,5),
+    // The Record dialog's chosen time, while it is saving; otherwise now.
+    time: (typeof cbRecTimeNow === 'string' && cbRecTimeNow) || new Date().toTimeString().slice(0,5),
     // The invoice this money belongs to, when the caller knows it. The
     // basis-gap reads the invoices' own payment records as the truth, so
     // this is a convenience for anything reading the txn alone.
@@ -99640,7 +99642,8 @@ function addCashPayment(account, amount, category, description, date){
     category: category || 'Supplier Payment',
     amount,
     description: description || '',
-    time: new Date().toTimeString().slice(0,5),
+    // The Record dialog's chosen time, while it is saving; otherwise now.
+    time: (typeof cbRecTimeNow === 'string' && cbRecTimeNow) || new Date().toTimeString().slice(0,5),
     enteredBy: (typeof cbWhoAmI === 'function') ? cbWhoAmI() : null,
   });
   saveData();
@@ -100394,6 +100397,8 @@ function renderCbSummary(){
   const closeBtn = document.getElementById('cb_close_day');
   if(closeBtn){
     closeBtn.hidden = !(allAgree && !rec.closedAt);
+    closeBtn.disabled = !cashCloseColumns;
+    closeBtn.title = cashCloseColumns ? '' : 'Closing a day is kept once the 0105 update is applied';
     const lab = document.getElementById('cbCloseLabel');
     if(lab) lab.textContent = `Close ${cbShortDate(date)}`;
   }
@@ -100478,6 +100483,9 @@ function cbSetDayClosed(date, closed){
     const pos = cbDayPosition(date);
     if(pos.countedAccounts < pos.accounts.length){ toast('Count every account first'); return; }
     if(pos.accounts.some(a=> Math.abs(a.variance) >= 1)){ toast('An account does not agree yet — book or find the difference first'); return; }
+    /* Without 0105 the mark has nowhere to be kept: the next refresh from
+       the server would quietly reopen the day. Said, not pretended. */
+    if(!cashCloseColumns){ toast('Closing a day is kept once the 0105 update is applied — every account already agrees'); return; }
     rec.closedAt = new Date().toISOString();
     rec.closedBy = cbWhoAmI();
   } else {
@@ -100486,9 +100494,7 @@ function cbSetDayClosed(date, closed){
   }
   saveData();
   renderCbSummary(); renderCbDayHeader(); renderCbLists();
-  toast(closed
-    ? (cashCloseColumns ? `${cbShortDate(date)} closed` : `${cbShortDate(date)} closed on this device — the closing mark is kept once the 0105 update is applied`)
-    : `${cbShortDate(date)} reopened`);
+  toast(closed ? `${cbShortDate(date)} closed` : `${cbShortDate(date)} reopened`);
 }
 
 /* ---- 5. WHAT NEEDS ME, AND WHAT IS COMING ----
@@ -100548,7 +100554,7 @@ function cbNeedsItems(){
         title: `${a.label} not counted`, sub: 'The day closes once every account is counted',
         amt: cbMoney(a.closing), amtCls: 'mute', act: `Count ${a.label}`, run: ()=> cbFocusCount(a.key) }));
     }
-    if(!left.length && !pos.accounts.some(a=> Math.abs(a.variance) >= 1)){
+    if(!left.length && !pos.accounts.some(a=> Math.abs(a.variance) >= 1) && cashCloseColumns){
       items.push({ kind: 'finish', tile: { top: 'Close', main: `${pos.accounts.length}/${pos.accounts.length}`, cls: 'dark' },
         title: 'Ready to close the day', sub: 'Every account agrees with the book',
         amt: cbMoney(pos.closing), amtCls: '', act: 'Close the day', run: ()=> cbSetDayClosed(date, true) });
@@ -102629,6 +102635,9 @@ function cbOpenDayLine(){
    a supplier, transferBetweenAccounts for a move -- so nothing written
    here can disagree with the Invoices screen about what was paid. */
 let cbRec = null;
+// Read by addCashReceipt / addCashPayment while a Record save runs, so every
+// entry it writes carries the chosen time from its very first save.
+var cbRecTimeNow = null;
 function cbRecFresh(mode){
   return { mode: mode || 'in', party: null, name: '', amount: 0, ticks: null, noDoc: false, cat: '',
     acct: mode === 'out' ? 'cash' : 'cash', to: 'bank', photo: null, listOpen: false };
@@ -102929,6 +102938,8 @@ async function cbRecSave(andPrint){
   const docs = cbRecDocs();
   const name = String(cbRec.name || '').trim();
   let said = '';
+  cbRecTimeNow = time;
+  try {
 
   if(m === 'x'){
     if(cbRec.acct === cbRec.to){ toast('That is the same account — nothing to move'); return; }
@@ -102970,6 +102981,7 @@ async function cbRecSave(andPrint){
     saveData();
     said = isIn ? 'Money in recorded' : 'Money out recorded';
   }
+  } finally { cbRecTimeNow = null; }
   // Every entry this save wrote carries the time it was given, and the
   // photo if one was attached.
   const made = (data.cashTxns || []).filter(t=> !before.has(t.id));
@@ -102981,7 +102993,7 @@ async function cbRecSave(andPrint){
   renderCbTransactions(); renderCbSummary(); renderCbTriggers();
   toast(said);
   if(photo && made.length) cbAttachPhoto(made[0].id, photo);
-  if(andPrint && made.length) cbPrintTxn(made[0].id);
+  if(andPrint && made.length) cbPrintTxns(made.map(t=> t.id));
 }
 
 /* ================= THE COMMAND CARD'S TOOLS ========================= */
@@ -103028,6 +103040,34 @@ function cbExportShown(){
 /* A RECEIPT FOR ONE ENTRY. Money taken on an invoice prints that
    invoice's own receipt, with what is still owed on it; anything else
    prints a slip of the entry itself, on the same 80mm roll. */
+/* A payment shared across several documents is several entries, but the
+   person paid ONE amount -- so it gets one slip with every document on it
+   and the whole figure, never a receipt for its first part. */
+function cbPrintTxns(ids){
+  const ts = (ids || []).map(id=> (data.cashTxns || []).find(x=> x.id === id)).filter(Boolean)
+    .filter(t=> !(cbIsTransfer(t) && cashIsMoneyIn(t) && ids.length > 1));
+  if(ts.length <= 1){ if(ts[0]) cbPrintTxn(ts[0].id); return; }
+  clearInjectedPrintStyles();
+  const t0 = ts[0], isIn = cashIsMoneyIn(t0);
+  const total = ts.reduce((s, t)=> s + (Number(t.amount) || 0), 0);
+  const shop = String(data.presetShopLegalName || '').trim();
+  const lines = ts.map(t=>{ const idn = cbRowIdentity(t); return `<div style="display:flex;justify-content:space-between;gap:8px"><span>${esc(idn.doc || t.category || '')}</span><span>${cbMoney(t.amount)}</span></div>`; }).join('');
+  document.getElementById('printArea').innerHTML = `<div style="width:72mm;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#000">
+    ${shop ? `<div style="font-weight:700;font-size:14px;text-align:center">${esc(shop)}</div>` : ''}
+    <div style="text-align:center;margin:4px 0 10px">${isIn ? 'Money received' : 'Money paid out'}</div>
+    <div>${esc(cbShortDate(t0.date))} ${esc(t0.time || '')}</div>
+    <div style="margin:6px 0">${esc(cbRowIdentity(t0).who)}</div>
+    <div>${esc(accountLabel(t0.account))}</div>
+    <div style="margin:8px 0;border-top:1px dashed #000;border-bottom:1px dashed #000;padding:4px 0">${lines}</div>
+    <div style="font-size:18px;font-weight:700;margin:6px 0">UGX ${cbMoney(total)}</div>
+    <div style="font-size:11px">${esc(tillAmountWords(total))}</div>
+  </div>`;
+  const st = document.createElement('style');
+  st.id = 'receipt80PrintStyle';
+  st.textContent = '@page{size:80mm 140mm;margin:0}';
+  document.head.appendChild(st);
+  window.print();
+}
 function cbPrintTxn(id){
   const t = (data.cashTxns || []).find(x=> x.id === id);
   if(!t) return;
