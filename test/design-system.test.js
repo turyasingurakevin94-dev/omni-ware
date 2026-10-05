@@ -174,7 +174,12 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
 
        Two rulings, two rises, both the owner's, both kept whole so the
        next reader can weigh each on its own. */
-    'shadows': [61, /box-shadow:\s*([^;}]+)/g],
+    /* 60, not 61: the cash book's redesign spent none and dropped
+       two. The chosen account in the till wears its own colour as an
+       outline now rather than a one-pixel inset shadow in ink, and the
+       ledger's old account filter, with its raised "on" button, became
+       the layer's .ow-seg, which marks the chosen one by fill. */
+    'shadows': [60, /box-shadow:\s*([^;}]+)/g],
     /* 103, not 104: the product form's type cards carried #FFF9EF -- a
        cream that existed only to tint the selected option, and that made
        the selection one of four things on that form wearing a warm colour

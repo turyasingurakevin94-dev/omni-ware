@@ -58,7 +58,14 @@ const src = read('index.html');
       periodLabel: (p) => String(p || ''),
       accountLabel: (a) => String(a || 'cash'),
       toast: (m) => said.push(String(m)),
-      confirm: () => true,
+      /* The question moved from the browser's confirm() into the cash
+         book's own dialog, which draws the entry being deleted. The shop
+         still says yes here; the answer arrives through the dialog's
+         promise instead, so the stub resolves it at once. */
+      cbAsk: () => ({ then: (yes) => yes(true) }),
+      cbEntryCardHTML: () => '',
+      cashIsMoneyIn: (x) => x.type === 'receipt' || x.type === 'in',
+      esc: (x) => String(x),
       saveData: () => {},
       renderCbTransactions: () => {}, renderCbSummary: () => {}, renderCbTriggers: () => {},
       document: { getElementById: () => null },
