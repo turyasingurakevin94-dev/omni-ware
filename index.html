@@ -30643,13 +30643,11 @@
     color:var(--ow-paper);font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);letter-spacing:.02em;}
   .ow-cx-bar .ow-cr-rb-s.ow-none{--cr-c:var(--ow-ink-600);}
   .ow-cx-seg-f{position:absolute;inset:0;background:var(--su-ink,var(--ow-ink-600));}
-  .ow-cx-seg-st{position:absolute;left:0;right:0;top:0;height:5px;background:var(--cr-c);}
-  .ow-cx-bar .ow-cr-rb-s.ow-none .ow-cx-seg-st{background:var(--ow-steel-100);}
   .ow-cx-seg-l{position:relative;}
   .ow-cx-left.ow-clear{background:var(--ow-verdigris-soft);}
   .ow-cx-left.ow-clear .ow-cx-lbl,.ow-cx-left.ow-clear .ow-cx-eq-v,.ow-cx-left.ow-clear .ow-cx-eq-s{color:var(--ow-verdigris);}
   .ow-cx-veil{position:absolute;top:0;bottom:0;right:0;pointer-events:none;
-    background:repeating-linear-gradient(135deg,rgba(255,255,255,.55) 0 5px,rgba(255,255,255,.15) 5px 10px);}
+    background:rgba(255,255,255,.62);}
   .ow-cx-mk{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ow-steel-950);pointer-events:none;}
   .ow-cx-br{display:flex;margin-top:var(--ow-sp-8);font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);}
   .ow-cx-br-c{flex:0 0 auto;min-width:0;border-top:2px solid var(--ow-verdigris);padding-top:var(--ow-sp-4);color:var(--ow-verdigris);
@@ -30659,8 +30657,7 @@
   .ow-cx-key{display:flex;flex-wrap:wrap;gap:var(--ow-sp-16);margin:var(--ow-sp-10) 0 0;}
   .ow-cx-key .ow-cr-rb-k{color:var(--ow-ink-600);}
   .ow-cx-key .ow-cr-rb-k::before{border-radius:var(--ow-r-2);}
-  .ow-cx-bar .ow-cx-key .ow-cr-rb-k:not(.ow-out)::before{height:5px;}
-  .ow-cx-bar .ow-cx-key .ow-cr-rb-k.ow-none::before{background:var(--ow-steel-100);}
+  .ow-cx-bar .ow-cx-key .ow-cr-rb-k.ow-out::before{background:var(--ow-indigo);opacity:.38;border:0;}
   .ow-cx-key .ow-cr-rb-k.ow-none{--cr-c:var(--ow-ink-600);}
   .ow-cx-key .ow-cr-rb-k.ow-cash::before{background:var(--ow-sky-soft);border-top:2px solid var(--ow-sky);box-sizing:border-box;}
   .ow-cx-key .ow-cr-rb-k.ow-warn::before{background:var(--ow-amber-soft);border-top:2px solid var(--ow-amber);box-sizing:border-box;}
@@ -95028,11 +95025,11 @@ function renderCreditorsPosition(){
       : o.covered > 0.5 ? ` · ${f(o.covered)} of it in today’s plan` : ' · beyond today’s plan';
     const label = `${i + 1}. ${r.name} — ${f(o.owed)}${state}`;
     const wide = plan.total > 0 && o.owed / plan.total >= 0.05;
-    /* WHO by the supplier's own hue, WHY by the stripe along the top: a
-       book where nobody has been given a day is still nine suppliers,
-       not one grey slab. */
+    /* Each supplier in their own hue, so a book where nobody has been
+       given a day is still nine suppliers, not one grey slab. Why each
+       stands where they do is the reason column's job, not the bar's. */
     return `<button type="button" class="ow-cr-rb-s ${credRowTone(r)}" style="flex-grow:${o.owed}"
-      data-cr-open="${esc(r.id)}" title="${esc(label)}"><span class="ow-cx-seg-f su-h-${supHue(r.id)}" aria-hidden="true"></span><span class="ow-cx-seg-st" aria-hidden="true"></span>${wide ? `<span class="ow-cx-seg-l" aria-hidden="true">${esc(supInitials(r.name))}</span>` : ''}<span class="sr-only">${esc(label)}</span></button>`;
+      data-cr-open="${esc(r.id)}" title="${esc(label)}"><span class="ow-cx-seg-f su-h-${supHue(r.id)}" aria-hidden="true"></span>${wide ? `<span class="ow-cx-seg-l" aria-hidden="true">${esc(supInitials(r.name))}</span>` : ''}<span class="sr-only">${esc(label)}</span></button>`;
   }).join('');
   const at = plan.total > 0 ? Math.max(0, Math.min(1, plan.amount / plan.total)) : 0;
   const atPct = (at * 100).toFixed(2);
@@ -95040,13 +95037,7 @@ function renderCreditorsPosition(){
   const crossRow = plan.order.find(o=> o.row.id === plan.crossId);
   const reachText = plan.amount > 0.5
     ? `Reaches ${plan.full} in full${crossRow && plan.part ? `, part of ${esc(crossRow.row.name)}` : ''}` : '';
-  const tones = new Set(plan.order.map(o=> credRowTone(o.row)));
-  const key = [
-    tones.has('ow-bad') ? '<span class="ow-cr-rb-k ow-bad">Past the day you named</span>' : '',
-    tones.has('ow-warn') ? '<span class="ow-cr-rb-k ow-warn">Day named, coming</span>' : '',
-    tones.has('ow-none') ? '<span class="ow-cr-rb-k ow-none">No day named</span>' : '',
-    plan.left > 0.5 ? '<span class="ow-cr-rb-k ow-out">Beyond what the plan reaches</span>' : '',
-  ].join('');
+  const key = plan.left > 0.5 ? '<span class="ow-cr-rb-k ow-out">Beyond what the plan reaches</span>' : '';
   const bar = `<div class="ow-cx-bar">
       <div class="ow-cx-mk-l"><span class="ow-cx-mk-p${at > 0.8 ? ' ow-end' : ''}" style="left:${atPct}%"><svg class="ow-cr-ic" viewBox="0 0 24 24"><path d="M4 6h16l-8 12z"/></svg><span class="ow-cx-mono">${esc(markLabel)}</span></span></div>
       <div class="ow-cx-bar-t">
