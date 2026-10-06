@@ -161,6 +161,9 @@ const src = read('index.html');
      its question. */
   const clear = (/q_clear_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(src) || [''])[0];
   t.check(/confirm\(/.test(clear), 'Clear still confirms before destroying a quote');
+  const moreMenu = (/const btn = document\.getElementById\('q_more_btn'\);[\s\S]*?\n\}\n\n\/\/ ipStageThumbHTML/.exec(src) || [''])[0];
+  t.check(/e\.key !== 'Escape'[\s\S]*?close\(\);[\s\S]*?btn\.focus\(\);/.test(moreMenu),
+    'Escape closes the More menu and returns keyboard focus to its trigger');
   // The old chip toolbar is gone as a component, not merely restyled.
   t.check(!/\.qp-tbtn\{/.test(src) && !/class="qp-toolbar"/.test(src),
     'the icon-over-label chip toolbar no longer exists');

@@ -54882,6 +54882,17 @@ function quoteItemSearchPick(sel){
     document.addEventListener('click', (e)=>{
       if(!e.target.closest('.q-more-wrap')) close();
     });
+    // A menu opened from the keyboard must also have a keyboard way out.
+    // Without this, Escape (the standard menu-dismissal key) did nothing
+    // and left the action list covering the quote until the user clicked
+    // elsewhere. Return focus to the trigger so the next Tab continues
+    // from the control that opened it.
+    document.addEventListener('keydown', (e)=>{
+      if(e.key !== 'Escape' || menu.style.display==='none') return;
+      e.preventDefault();
+      close();
+      btn.focus();
+    });
   }
 }
 
