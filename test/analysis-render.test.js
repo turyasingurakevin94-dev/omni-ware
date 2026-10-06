@@ -46,6 +46,14 @@
  * reach for a name that is not there. So all seven are extracted and
  * compiled together, and the two call paths run the whole set.
  *
+ * AND AGAIN, AS A WORKLIST. The owner read the ranked findings with a
+ * chart inside every one as "graphs everywhere, no clear information",
+ * and the screen was redrawn on the design canvas: a sentence and four
+ * figures, the findings as a paged list beside the one that is open,
+ * cash as a statement. Twelve functions draw it now instead of seven,
+ * so the scope hazard grew again -- and every one of them is compiled
+ * and run below, down both call paths, as before.
+ *
  * Run: node test/analysis-render.test.js   (or: npm test)
  */
 const { read, extractFunction, compileScope, createReporter } = require('./_extract');
@@ -68,6 +76,9 @@ const el = (id) => ({
 });
 const nodes = {};
 const document = { getElementById: (id) => (nodes[id] || (nodes[id] = el(id))) };
+/* The screen opens a finding beside the list and inside the phone's card
+   at once; the list, the open finding and the sentence each have a node. */
+const drawn = () => written.dash_findings || '';
 
 /* A context shaped like dashboardContext's, carrying the fields the
    findings read off it. The point is the WIRING, not the arithmetic --
@@ -96,6 +107,7 @@ const dctx = {
 const data = {
   customers: [{ name: 'Mulongo', debt: 3330000 }, { name: 'Dad', debt: 1436000 }, { name: 'Paid up', debt: 0 }],
   prices: [{}, {}, {}],
+  presetAnalysisMarks: {},
 };
 
 const marginRows = () => {
@@ -140,13 +152,28 @@ const env = {
     { label: 'W2', inAmt: 6000, outAmt: 9000 }],
   dashGetRange: () => { rangeAsked++; return { from: '2026-08-01', to: '2026-08-30' }; },
   dashboardContext: () => { contextBuilt++; return dctx; },
+  /* The worklist's own world: the marks the owner puts on findings, the
+     bills the shop owes, and the Cash Book entries the statement splits
+     by category. */
+  AN_AREAS: ['Pricing', 'Stock', 'Money', 'Customers'],
+  AN_SNOOZE_DAYS: 7, AN_HANDLED_DAYS: 30,
+  lsGet: () => null,
+  anShiftDate: (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); },
+  credDueRows: () => ({ undated: [], ahead: [{ dueOn: '2026-09-02', due: 400000 }],
+    missed: [{ dueOn: '2026-08-20', due: 250000 }], total: 650000, count: 2 }),
+  dashWeeklyBuckets: () => [{ from: '2026-08-03', to: '2026-08-09', label: 'W1' }, { from: '2026-08-10', to: '2026-08-16', label: 'W2' }],
+  dashCashTxnsInRange: () => [
+    { type: 'receipt', category: 'Sales Revenue', amount: 14000 },
+    { type: 'payment', category: 'Supplier payments', amount: 12000 },
+    { type: 'expense', category: 'Wages', amount: 4000 }],
 };
 
 /* EVERY function the screen is built from, compiled together. One of
    them reaching for a name that is not there is the whole point of
    this file, and seven functions is seven chances to do it. */
-const NAMES = ['analysisWorth', 'dashNetCashSVG', 'anEv', 'anSum', 'anBar', 'anPriceLineSVG', 'anIconSVG',
-  'analysisFindings', 'analysisRowHTML', 'renderAnalysis'];
+const NAMES = ['analysisWorth', 'anN', 'axShort', 'analysisFindings', 'anCashCategories', 'anMarks', 'anMarkOf',
+  'anState', 'anLists', 'anStatusOf', 'anTagHTML', 'anFigOf', 'anRowHTML', 'anDetailBodyHTML', 'anActionsHTML',
+  'anDetailHTML', 'anKpisHTML', 'anCashHTML', 'anBasisHTML', 'renderAnalysis', 'anDraw'];
 const scope = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html')), env, NAMES);
 
 /* ---------- 1. called with a context, as renderDashboard calls it ---------- */
@@ -158,17 +185,22 @@ const scope = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html'
     'and it does not read the same window a second time — the caller already paid for that pass');
   /* What the five old panel assertions meant, kept: the screen is
      really filled, so a stub that silently did nothing cannot pass. */
-  t.check(/Cement OPC/.test(written.dash_findings), 'the margin finding reads the lines that sold');
-  t.check(/Mulongo/.test(written.dash_findings), 'the debt and quiet findings read the customers');
-  t.check(/Barbed wire/.test(written.dash_findings), 'and breadth reads its own list');
-  t.check(/Iron sheets G28/.test(written.dash_findings), 'and the stale-price finding reads the registry');
-  t.check(!/Paid up/.test(written.dash_findings),
+  t.check(/Cement OPC/.test(drawn()), 'the margin finding reads the lines that sold');
+  t.check(/Mulongo/.test(drawn()), 'the debt and quiet findings read the customers');
+  t.check(/Barbed wire/.test(drawn()), 'and breadth reads its own list');
+  t.check(/Iron sheets G28/.test(drawn()), 'and the stale-price finding reads the registry');
+  t.check(!/Paid up/.test(drawn()),
     'the debt finding shows only those who owe — a customer at zero is not a finding');
+  /* The sentence states the two kinds of money as two figures. */
+  t.check(/a year/.test(written.ax_summary || '') && /once/.test(written.ax_summary || ''),
+    'the sentence above the list states what fixing it is worth, a year and once, as two figures');
+  t.check(/Below your rule|At or above your rule/.test(written.dash_position || ''),
+    'and every figure under it carries its verdict in words');
 }
 
 /* ---------- 2. the ranking, and the rule it runs on ---------- */
 {
-  const html = written.dash_findings;
+  const html = drawn();
   /* TWO KINDS OF MONEY, NEVER ADDED. A margin comes back every month;
      cash owed or locked in stock comes back once. The ranking counts
      everything over a year so the two can be ORDERED, and every row
@@ -182,7 +214,9 @@ const scope = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html'
     'nothing is worth nothing — a zero cannot be ranked, and is not');
 
   /* The rows come out in descending order of what a fix is worth. */
-  const order = [...html.matchAll(/data-fid="([a-z]+)"/g)].map((m) => m[1]);
+  /* A kind can now be more than one finding -- three lines under their
+     rule are three prices to change -- so the ids carry a number. */
+  const order = [...html.matchAll(/data-fid="([a-z0-9-]+)"/g)].map((m) => m[1]);
   const found = scope.analysisFindings(dctx);
   const worths = new Map(found.map((f) => [f.id, f.worth]));
   const ranked = order.filter((id) => worths.get(id) != null);
@@ -196,7 +230,7 @@ const scope = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html'
   const quiet = found.find((f) => f.id === 'quiet');
   t.check(quiet && quiet.worth === null && quiet.unpriced === true,
     'a finding the books cannot price carries no figure rather than a guessed one');
-  t.check(/The books cannot price these/.test(html),
+  t.check(/the books cannot price these/i.test(html),
     'and it is drawn under a band that says why, rather than dropped');
 
   /* Net cash over eight weeks is neither a month twelve times nor a
@@ -204,13 +238,14 @@ const scope = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html'
   const cash = found.find((f) => f.id === 'cash');
   t.check(cash && cash.worth === null && cash.position === true,
     'net cash is a position, not a fix, so it is not ranked');
-  /* WHERE IT SAYS SO MOVED. It was a band at the foot of the list,
-     under a row that had to be opened to show the one chart on the
-     screen. The chart is now always open in the rail, and the rail
-     panel carries the words instead of the list -- the claim is the
-     same, that cash is drawn but never ranked; only where it is said
-     changed. So the list must NOT carry it, and the rail must. */
-  t.check(/Position, not a fix/.test(written.dash_cash || ''), 'and the rail panel it is drawn in says exactly that');
+  /* WHERE IT IS DRAWN MOVED AGAIN. It was a chart in the rail with a
+     chip saying "Position, not a fix". The redesign drew it as what it
+     is -- a statement, in and out by category and the net under a rule,
+     below the worklist -- and the chip went with the chart. The claim
+     is unchanged: cash is drawn, never ranked. So the list must not
+     carry it, and the statement must, with its net. */
+  t.check(/Net/.test(written.dash_cash || '') && /Supplier payments/.test(written.dash_cash || ''),
+    'it is drawn as a statement below the list, split by the category each entry was filed under');
   t.check(!/data-fid="cash"/.test(html), 'and it is not drawn in the ranked list at all');
 
   /* THE ACCENT APPEARS ONCE, AND ON THE RIGHT ROW.
@@ -223,6 +258,15 @@ const scope = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html'
   const lead = html.slice(0, html.indexOf('data-fid', html.indexOf('data-fid') + 1));
   t.check(accents === 0 || /btn-accent/.test(lead),
     'and it is on the top-ranked finding, whichever finding that turns out to be');
+  /* The desk opens the finding beside the list instead of inside it, and
+     it opens the top one: the same single accent, on the same finding. */
+  const det = written.ax_detail || '';
+  const detAccents = (det.match(/btn-accent/g) || []).length;
+  t.check(detAccents === 1, `the open finding beside the list carries the one accent (found ${detAccents})`);
+  const top = order.find((id) => worths.get(id) != null);
+  const topF = found.find((f) => f.id === top);
+  t.check(!!topF && det.indexOf(topF.title.replace(/&/g, '&amp;')) >= 0,
+    'and the finding open by default is the top-ranked one');
 }
 
 /* ---------- 3. the account, which has to partition ---------- */
@@ -231,9 +275,9 @@ const scope = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html'
      say. It is worthless unless it adds up: 2 lines read + 7 with no
      cost = 9, split into 2 under their rule, 0 at or above, 7 unjudged. */
   const acct = written.dash_account;
-  t.check(/>9<\/span> lines sold/.test(acct.replace(/\s+/g, ' ')) || /9<\/span> lines sold/.test(acct),
+  t.check(/Lines sold<\/dt><dd[^>]*><span class="ow-acct-n">9<\/span>/.test(acct),
     'the account counts every line it read, costed or not');
-  t.check(/7<\/span> judged by nothing/.test(acct),
+  t.check(/7<\/span> lines sold have no cost on file/.test(acct),
     'and names the ones nothing can judge rather than leaving them out of the total');
 }
 
@@ -247,7 +291,7 @@ const scope = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html'
   /* The two callers must not diverge: a screen that shows one thing
      when reached through the dashboard and another when opened
      directly is worse than one that is simply wrong. */
-  t.check(/Cement OPC/.test(written.dash_findings),
+  t.check(/Cement OPC/.test(drawn()),
     'and it fills the same screen the same way down both paths');
 }
 
@@ -283,7 +327,8 @@ const scope = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html'
   const app = src + read('shared-worker.js');
   const stubbed = ['marginRows', 'deadStockRows', 'deadStockQuietDays', 'priceReviewCandidates',
     'priceReviewProgress', 'priceReviewStaleDays', 'dashCashBridgeData', 'dashGetRange',
-    'dashboardContext', 'fmtShortDate', 'fmtUGX', 'todayISO', 'goToTab', 'esc', 'targetMarginPct'];
+    'dashboardContext', 'fmtShortDate', 'fmtUGX', 'todayISO', 'goToTab', 'esc', 'targetMarginPct',
+    'lsGet', 'anShiftDate', 'credDueRows', 'dashWeeklyBuckets', 'dashCashTxnsInRange'];
   const missing = stubbed.filter((n) => !new RegExp('function ' + n + '\\s*\\(').test(app));
   t.check(missing.length === 0,
     `every function this file stubs really exists in the app${missing.length ? ' — missing: ' + missing.join(', ') : ''}`);
@@ -303,7 +348,9 @@ const scope = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html'
   const READS = {
     dashCashBridgeData: ['label', 'inAmt', 'outAmt'],
     anOverallTotals: ['sales'],
-    stockAgeRows: ['line', 'value', 'daysQuiet'],
+    stockAgeRows: ['line', 'value', 'daysQuiet', 'qty', 'clearance'],
+    dashWeeklyBuckets: ['from', 'to'],
+    credDueRows: ['undated', 'ahead', 'missed'],
     marginRows: ['line', 'units30', 'earned30', 'keptPct', 'target', 'cost',
       'price', 'targetPrice', 'atStake', 'thin'],
     dashGoingQuietCustomers: ['name', 'avgGapDays', 'sinceLastDays'],

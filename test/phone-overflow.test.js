@@ -81,21 +81,32 @@ const rule = (sel) => {
  *
  * The two assertions that survive unchanged are about the controls above
  * the list, which are the same controls on both designs.
+ *
+ * AND THEN THE CARD BECAME ITS OWN MARKUP. On the owner's canvas the phone
+ * is a different design outright: staffPersonHTML emits the desktop row
+ * (.sx-r) and the phone card (.sx-pc) in one call, from the same figures,
+ * and the phone block hides the table and shows the cards. So the checks
+ * ask that the TABLE never reaches the phone, that the card stacks, and
+ * that its buttons are thumb-sized -- the same three faults this section
+ * was written against, asked of the shape that now has to avoid them.
  */
 {
-  const phone = (/@media \(max-width:820px\)\{[\s\S]*?\n  \}/.exec(src.slice(src.indexOf('.rost-actions{'))) || [''])[0];
-  t.check(/grid-template-areas:"who" "state" "stats" "actions";/.test(phone),
+  const at = src.indexOf('Staff on the phone: its own design');
+  const phone = (/@media \(max-width:820px\)\{[\s\S]*?\n  \}/.exec(src.slice(at)) || [''])[0];
+  t.check(at > 0 && /\.sx-board,\.sx-side,\.sx-reg,\.sx-tbl,/.test(phone),
+    'the desktop table never reaches the phone, so no row is squeezed into two columns');
+  t.check(/\.sx-pc\{[^}]*flex-direction:column;/.test(phone),
     'the card stacks in reading order rather than putting the name beside the status');
-  t.check(/\.rost-row\{grid-template-columns:minmax\(0,1fr\);/.test(phone),
-    'in one column, so the name has the whole width to be read in');
-  t.check(/\.rost-filters, \.rost-period\{overflow-x:auto/.test(phone),
-    'the filter chips scroll rather than being cut off at "Unavailable"');
-  t.check(/\.rost-actions\{flex-wrap:wrap;/.test(phone),
-    'and a row of buttons wraps rather than running past the card');
-  t.check(/\.rost-actions \.pc-icon-btn\{width:var\(--ow-tap\);height:var\(--ow-tap\);\}/.test(phone),
-    'with every one of them a thumb-sized target, not a 26px pointer one');
-  t.check(/\.rost-search\{min-width:0/.test(phone),
-    'while the search box stops insisting on 190px it has not got');
+  t.check(/\.sx-pc-w\{flex:1;min-width:0;\}/.test(phone),
+    'and the name has the width left beside its face to be read in');
+  t.check(/#tab-staff \.sx-filters\{[^}]*overflow-x:auto;/.test(phone),
+    'the filter chips scroll rather than being cut off at "Can\u2019t be sent"');
+  t.check(/\.sx-pbtn\{min-height:var\(--ow-tap\);/.test(phone),
+    'with every button on the card a thumb-sized target, not a 26px pointer one');
+  t.check(/\.sx-pbtn-i\{flex:0 0 44px;width:44px;/.test(phone),
+    'icon buttons included');
+  t.check(/#tab-staff \.sx-srch/.test(phone),
+    'while the search box, which has no room on a phone, steps aside instead of insisting on width it has not got');
 }
 
 /* ---------- 3. the statements column ---------------------------------- */
