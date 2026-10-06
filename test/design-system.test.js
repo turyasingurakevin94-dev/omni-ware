@@ -1044,9 +1044,23 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'st-vital-label', 'st-vital-note', 'rost-period', 'rost-per', 'empty'],
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp',
              'ow-seg', 'ow-seg-b', 'ow-f', 'ow-f-l', 'ow-f-in', 'ow-f-v', 'ow-f-sel'],
-      renders: ['stOverview', 'stBreakevenHTML', 'stTrendChartHTML'],
-      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-u',
-                    'ow-grid', 'ow-side', 'ow-stack', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n'],
+      /* THE PERFORMANCE HUB. The shop asked for the canvas design, line
+         for line: eight views (Overview, profit and loss, break-even,
+         cash flow, balance sheet, ratios, drivers, what if), each a
+         ruled table in the accounting form with the figure that answers
+         it on top. A ruled statement is not the layer's strip, panel and
+         two-column grid -- it is a document, with its own column rules,
+         sub-totals and grand totals -- so the views draw from the
+         screen's own .sh-* family (shTable, shStatement, shHead) and
+         reach the layer only for its button size. Holding them to
+         .ow-strip/.ow-pan would mean drawing a strip nobody asked for on
+         top of a table that already says it. What stays pinned: the
+         page header and period controls above (uses), every retired
+         class staying gone from every view (renders), and the one
+         button family. */
+      renders: ['stOverview', 'stBreakevenHTML', 'stProfitAndLoss', 'shBreakEven', 'stCashFlow',
+                'stBalanceSheet', 'shRatios', 'shDrivers', 'shWhatIf'],
+      rendersUses: ['ow-sm'],
     },
     /* FORECASTS — the three screens that answer "what is coming".
 
