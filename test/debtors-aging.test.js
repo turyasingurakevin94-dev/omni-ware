@@ -334,7 +334,13 @@ const countIn = (key) => scope.debAgingProfile().bands.find((b) => b.key === key
   const pos = (/function renderDebtorsPosition[\s\S]*?\n\}\n/.exec(code) || [''])[0];
   t.check(/flex-grow:\$\{b\.amount\}/.test(pos),
     'segment widths come from the money in each band, not from how many rows it fills');
-  t.check(/live = p\.bands\.filter\(b=> b\.amount > 0\)/.test(pos),
+  /* WAS live = p.bands -- the bands of debAgingProfile, which put a
+     customer's WHOLE balance in the band of their oldest charge. The bar
+     is now drawn from the money's own age, charge by charge off the same
+     ledger walk (debDx().bands), so a customer with one old invoice and
+     one new one is split across two bands rather than painted old all
+     through. The rule pinned is unchanged: an empty band is left off. */
+  t.check(/live = mb\.filter\(b=> b\.amount > 0\)/.test(pos) && /const mb = dx\.bands;/.test(pos),
     'a band holding nothing is left off the bar rather than drawn as a sliver of zero');
   t.check(/min-width:14px/.test(src),
     'and a band too small to see still has something to click');
@@ -490,14 +496,16 @@ const countIn = (key) => scope.debAgingProfile().bands.find((b) => b.key === key
 
 /* ---------- 12. what the cell says ----------------------------------- */
 {
-  const render = (/function renderDebtorsList[\s\S]*?\n\}\n/.exec(code) || [''])[0];
-  /* WAS <th>Paid off</th>. There is no <thead> in a queue of rows, so
-     the column names are a header band on the same grid tracks the rows
-     use -- and it is hidden on the phone, where each card carries its
-     own labels instead. The requirement is that the column be NAMED,
-     not that it be named in a table. */
-  t.check(/<div class="ow-db-h">[\s\S]*?>Paid off</.test(render),
-    'the list names the column it draws the bar in');
+  /* MOVED FROM THE ROW TO THE OPEN CUSTOMER. The register's columns are
+     now the money by age, twelve weeks of balance and the last payment;
+     how far through their current debt a customer is reads beside the
+     balance and the credit limit it is a fact about, in the rail
+     (renderDebtorsRail). Every property below is the same property,
+     pinned where it is drawn now -- including that it is NAMED: the bar
+     says "paid off" beside its percentage rather than standing bare. */
+  const render = (/function renderDebtorsRail[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+  t.check(/<span class="deb-prog-pct">\$\{pct\}% paid off<\/span>/.test(render),
+    'the bar says what it measures');
   t.check(/deb-prog-fill" style="width:\$\{pct\}%"/.test(render),
     'drawn as a bar whose width is the share paid');
   /* A dash, not an empty bar: an empty bar reads as "has paid nothing",

@@ -64,6 +64,17 @@
     --ow-amber-ink:#7A4A02;
     --ow-crimson:#8E2A22;
     --ow-crimson-soft:#FBE5E2;
+    /* THE AGE OF MONEY OWED. State, not identity: one fill per age band,
+       young to old, so Debtors' bar, columns, cells, jars and map are one
+       ramp. Grey is ordinary trade, amber is past terms, the two reds are
+       old, and money with no date behind it is its own sand -- never
+       folded into "young". Fills first; where text sits on one, the pair
+       is held to 4.5:1 in design-system.test.js. */
+    --ow-age-0:#D3D7DF;
+    --ow-age-1:#B9BFCB;
+    --ow-age-2:#C98B3E;
+    --ow-age-3:#B5473D;
+    --ow-age-nd:#EBCB9F;
 
     /* THE CATEGORY PALETTE. A fourth role, added deliberately.
        ---------------------------------------------------------------
@@ -25637,6 +25648,558 @@
      ================================================================== */
 
   .ow-cr-strip{margin-bottom:var(--ow-sp-16);}
+  /* ---- DEBTORS — the intelligence center (.ow-dx-*) ----------------
+     Two views over one book. Every colour answers one of the four
+     questions: the age fills are STATE (young to old, grey through
+     amber to crimson, and no-date as its own sand); the standing chips
+     are state too (act now crimson, late-paying amber, a promise dashed
+     grey because a debtor's word is not a commitment). Nothing here is
+     coloured to be seen. Depth is hairlines; the two things that float
+     -- the map's preview and the week card -- wear the one lift. */
+  .ow-dx{display:flex;flex-direction:column;gap:var(--ow-sp-20);}
+  .ow-dx[hidden]{display:none;}
+  .ow-dx-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+  .ow-dx-u{font-size:var(--ow-t-11);color:var(--ow-ink-600);margin-left:var(--ow-sp-4);}
+  .ow-dx-ell{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  .ow-dx-bad{color:var(--ow-crimson);}
+  .ow-dx-warn{color:var(--ow-amber-ink);}
+  .ow-dx-good{color:var(--ow-verdigris);}
+  .ow-dx-word{color:var(--ow-ink-600);}
+  .ow-dx-nd{color:var(--ow-amber-ink);}
+  .ow-dx-ic{width:18px;height:18px;flex:none;}
+  .ow-dx-cap{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+
+  /* the header: two views, and the glance both keep */
+  .ow-dx-ph-a{display:flex;align-items:center;gap:var(--ow-sp-12);flex-wrap:wrap;}
+  .ow-dx-gl{display:inline-flex;align-items:baseline;gap:var(--ow-sp-6);}
+  .ow-dx-gl-k{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-dx-gl-v{font-size:var(--ow-t-16);font-weight:var(--ow-fw-600);}
+  .ow-dx-gl-a{display:inline-flex;gap:var(--ow-sp-8);}
+  .ow-dx-vt{display:flex;gap:var(--ow-sp-4);border-bottom:1px solid var(--ow-rule);margin:0;position:relative;z-index:1;}
+  .ow-dx-vt-b{display:inline-flex;align-items:center;gap:var(--ow-sp-8);height:42px;padding:0 var(--ow-sp-12);margin-bottom:-1px;
+    border:0;border-bottom:2px solid transparent;background:none;color:var(--ow-ink-600);font:inherit;font-size:var(--ow-t-14);
+    font-weight:var(--ow-fw-500);cursor:pointer;}
+  .ow-dx-vt-b:hover{color:var(--ow-ink-900);}
+  .ow-dx-vt-b.ow-on{color:var(--ow-ink-900);border-bottom-color:var(--ow-steel-950);font-weight:var(--ow-fw-700);}
+  .ow-dx-vt-c{white-space:nowrap;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);padding:1px var(--ow-sp-6);border-radius:var(--ow-r-pill);
+    background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+  .ow-dx-vt-c.ow-dx-vt-hot{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+
+  /* the standings, wherever they are worn */
+  .ow-cp.ow-dx-s-act{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .ow-cp.ow-dx-s-watch{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .ow-cp.ow-dx-s-prom{background:var(--ow-paper);color:var(--ow-ink-600);border:1px dashed var(--ow-ink-600);}
+  .ow-cp.ow-dx-s-check{background:var(--ow-amber-faint);color:var(--ow-amber-ink);border:1px dashed var(--ow-amber);}
+  .ow-cp.ow-dx-s-terms{background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+  .ow-dx-sw{width:10px;height:10px;border-radius:50%;flex:none;box-sizing:border-box;display:inline-block;}
+  .ow-dx-sw.ow-dx-s-act,.ow-dx-dot.ow-dx-s-act{background:var(--ow-crimson);}
+  .ow-dx-sw.ow-dx-s-watch,.ow-dx-dot.ow-dx-s-watch{background:var(--ow-age-2);}
+  .ow-dx-sw.ow-dx-s-prom,.ow-dx-dot.ow-dx-s-prom{background:var(--ow-paper);border:1.5px dashed var(--ow-ink-600);}
+  .ow-dx-sw.ow-dx-s-check,.ow-dx-dot.ow-dx-s-check{background:var(--ow-age-nd);}
+  .ow-dx-sw.ow-dx-s-terms,.ow-dx-dot.ow-dx-s-terms{background:var(--ow-age-0);}
+  .ow-dx-sw.ow-band-b30{background:var(--ow-age-0);}
+  .ow-dx-sw.ow-band-b60{background:var(--ow-age-2);}
+  .ow-dx-sw.ow-band-b90{background:var(--ow-age-3);}
+  .ow-dx-sw.ow-band-b90p{background:var(--ow-crimson);}
+  .ow-dx-sw.ow-band-unknown{background:var(--ow-age-nd);}
+  .ow-dx-av{width:40px;height:40px;border-radius:var(--ow-r);display:grid;place-items:center;flex:none;box-sizing:border-box;
+    font-size:var(--ow-t-14);font-weight:var(--ow-fw-700);background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+  .ow-dx-av.ow-dx-s-act{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .ow-dx-av.ow-dx-s-watch{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .ow-dx-av.ow-dx-s-prom{background:var(--ow-paper);border:1.5px dashed var(--ow-ink-600);}
+  .ow-dx-av.ow-dx-s-check{background:var(--ow-amber-faint);color:var(--ow-amber-ink);border:1.5px dashed var(--ow-amber);}
+  .ow-dx-lgs{display:flex;flex-wrap:wrap;gap:var(--ow-sp-6) var(--ow-sp-12);align-items:center;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-dx-lgs-i{display:inline-flex;align-items:center;gap:var(--ow-sp-4);}
+  .ow-dx-lgs .ow-dx-n{color:var(--ow-ink-900);}
+
+  /* ---- the age of the money ---- */
+  .ow-dx-age{display:flex;flex-wrap:wrap;overflow:hidden;}
+  .ow-dx-age-l{flex:1 0 260px;max-width:300px;box-sizing:border-box;padding:var(--ow-sp-16) var(--ow-sp-20);display:flex;flex-direction:column;
+    gap:var(--ow-sp-10);border-right:1px solid var(--ow-rule-soft);}
+  .ow-dx-age-k{font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-crimson);}
+  .ow-dx-age-v .ow-dx-n{font-size:var(--ow-t-28);font-weight:var(--ow-fw-600);color:var(--ow-crimson);line-height:1.1;}
+  .ow-dx-meter{display:flex;height:12px;gap:2px;border-radius:var(--ow-r-pill);overflow:hidden;}
+  .ow-dx-meter-s{flex-basis:0;min-width:3px;}
+  .ow-dx-kvs{display:flex;flex-direction:column;gap:var(--ow-sp-6);}
+  .ow-dx-kv{display:grid;grid-template-columns:10px minmax(0,1fr) auto 36px;gap:var(--ow-sp-8);align-items:center;font-size:var(--ow-t-12);}
+  .ow-dx-kv-k{color:var(--ow-ink-600);}
+  .ow-dx-kv-p{text-align:right;color:var(--ow-ink-600);font-size:var(--ow-t-11);}
+  .ow-dx-age-f{margin-top:auto;padding-top:var(--ow-sp-10);border-top:1px solid var(--ow-rule-soft);display:flex;flex-direction:column;
+    gap:var(--ow-sp-2);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-dx-age-f .ow-dx-em{color:var(--ow-ink-900);}
+  .ow-dx-age-f .ow-dx-bad{color:var(--ow-crimson);}
+  .ow-dx-age-r{flex:999 1 520px;min-width:0;padding:var(--ow-sp-12) var(--ow-sp-20) var(--ow-sp-12);display:flex;flex-direction:column;gap:var(--ow-sp-6);}
+  .ow-dx-age-h{display:flex;align-items:center;gap:var(--ow-sp-12);flex-wrap:wrap;min-height:28px;}
+  .ow-dx-age-me{margin-left:auto;display:inline-flex;align-items:center;gap:var(--ow-sp-6);}
+  .ow-dx-me{width:12px;height:12px;background:var(--ow-rule-soft);box-shadow:0 0 0 2px var(--ow-steel-950) inset;}
+  .ow-dx-cols{position:relative;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;align-items:end;height:214px;}
+  .ow-dx-late{position:absolute;top:0;bottom:0;left:calc((100% - 56px) / 5 + 7px);right:calc((100% - 56px) / 5 + 7px);
+    background:var(--ow-crimson-soft);border-left:1.5px dashed var(--ow-crimson);border-radius:0;}
+  .ow-dx-late-t{position:absolute;top:var(--ow-sp-6);left:var(--ow-sp-10);font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);
+    letter-spacing:.06em;text-transform:uppercase;color:var(--ow-crimson);}
+  .ow-dx-col{position:relative;z-index:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;gap:var(--ow-sp-6);
+    background:none;border:0;padding:0;cursor:pointer;font:inherit;color:inherit;}
+  .ow-dx-col.ow-dx-dim{opacity:.4;}
+  .ow-dx-col:hover{opacity:1;}
+  .ow-dx-col-a{display:flex;flex-direction:column;align-items:center;}
+  .ow-dx-col-a .ow-dx-n{font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);}
+  .ow-dx-col.ow-band-b60 .ow-dx-col-a .ow-dx-n,.ow-dx-col.ow-band-unknown .ow-dx-col-a .ow-dx-n{color:var(--ow-amber-ink);}
+  .ow-dx-col.ow-band-b90 .ow-dx-col-a .ow-dx-n,.ow-dx-col.ow-band-b90p .ow-dx-col-a .ow-dx-n{color:var(--ow-crimson);}
+  .ow-dx-col-p{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-dx-stack{display:flex;flex-direction:column-reverse;margin:0 12%;border-radius:var(--ow-r-sm);overflow:hidden;}
+  .ow-dx-col.ow-on .ow-dx-stack{outline:3px solid var(--ow-steel-950);outline-offset:2px;}
+  .ow-dx-sl{flex-basis:0;min-height:3px;display:flex;align-items:center;justify-content:center;padding:0 var(--ow-sp-4);
+    border-top:1px solid var(--ow-paper);font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);overflow:hidden;min-width:0;}
+  .ow-dx-sl.ow-on{box-shadow:0 0 0 2px var(--ow-steel-950) inset;font-weight:var(--ow-fw-700);}
+  .ow-dx-sl-n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  .ow-dx-axis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;border-top:1px solid var(--ow-ink-900);padding-top:var(--ow-sp-8);}
+  .ow-dx-axl{display:flex;flex-direction:column;align-items:center;text-align:center;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-dx-axl-t{font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .ow-dx-axl.ow-band-b60 .ow-dx-axl-t,.ow-dx-axl.ow-band-unknown .ow-dx-axl-t{color:var(--ow-amber-ink);}
+  .ow-dx-axl.ow-band-b90 .ow-dx-axl-t,.ow-dx-axl.ow-band-b90p .ow-dx-axl-t{color:var(--ow-crimson);}
+  .ow-dx-age > .ow-db-cr{flex:1 1 100%;border-top:1px solid var(--ow-rule-soft);}
+
+  /* ---- the register ---- */
+  .ow-dx-reg{overflow:hidden;}
+  .ow-dx-st{display:flex;gap:var(--ow-sp-4);padding:var(--ow-sp-8);border-bottom:1px solid var(--ow-rule-soft);overflow-x:auto;background:var(--ow-steel-050);}
+  .ow-dx-st-b{display:inline-flex;align-items:center;gap:var(--ow-sp-8);height:34px;padding:0 var(--ow-sp-12);border-radius:var(--ow-r);
+    border:1px solid transparent;background:none;white-space:nowrap;font:inherit;font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);
+    color:var(--ow-ink-900);cursor:pointer;flex:none;}
+  .ow-dx-st-b:hover{background:var(--ow-paper);border-color:var(--ow-rule);}
+  .ow-dx-st-b.ow-on{background:var(--ow-paper);border-color:var(--ow-rule);font-weight:var(--ow-fw-700);}
+  .ow-dx-st-n{font-size:var(--ow-t-11);color:var(--ow-ink-600);font-weight:var(--ow-fw-500);}
+  .ow-dx-dot{width:8px;height:8px;border-radius:50%;flex:none;box-sizing:border-box;}
+  .ow-dx-dot.ow-dx-s-all{background:var(--ow-steel-950);}
+  .ow-dx-scroll{overflow-x:auto;}
+  .ow-dx-h,.ow-q-r.ow-dx-r{grid-template-columns:minmax(150px,1.5fr) 104px minmax(180px,1.4fr) 84px 104px 132px;gap:14px;}
+  .ow-dx-h{display:grid;align-items:end;padding:var(--ow-sp-8) var(--ow-sp-16);font-size:var(--ow-t-11);color:var(--ow-ink-600);
+    text-transform:none;letter-spacing:0;font-weight:var(--ow-fw-500);background:none;
+    border-bottom:1px solid var(--ow-steel-100);min-width:780px;}
+  .ow-dx-h-age{display:flex;flex-direction:column;gap:3px;}
+  .ow-dx-h-b{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;text-align:center;}
+  .ow-dx-h-w{color:var(--ow-amber-ink);}
+  .ow-dx-h-x{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
+  .ow-dx-q{min-width:780px;}
+  .ow-q-r.ow-dx-r{min-height:52px;padding:0 var(--ow-sp-16);align-items:center;}
+  .ow-dx-q.ow-open .ow-dx-r{background:var(--ow-steel-050);box-shadow:inset 3px 0 0 var(--ow-steel-950);}
+  .ow-dx-r .ow-q-t{display:flex;flex-direction:column;}
+  .ow-dx-r .ow-q-who{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-dx-agec{display:block;min-width:0;}
+  .ow-dx-cells{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;}
+  .ow-dx-cell{height:28px;border-radius:var(--ow-r-sm);display:flex;align-items:center;justify-content:center;font-size:var(--ow-t-11);
+    font-weight:var(--ow-fw-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+  .ow-dx-cell.ow-dx-c0{background:var(--ow-steel-050);color:var(--ow-ink-600);font-weight:var(--ow-fw-400);}
+  .ow-dx-cell.ow-band-b30{background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+  .ow-dx-cell.ow-band-b60{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .ow-dx-cell.ow-band-b90,.ow-dx-cell.ow-band-b90p{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .ow-dx-cell.ow-band-b30.ow-dx-strong{background:var(--ow-age-1);color:var(--ow-ink-900);}
+  .ow-dx-cell.ow-band-b60.ow-dx-strong{background:var(--ow-age-2);color:var(--ow-ink-900);}
+  .ow-dx-cell.ow-band-b90.ow-dx-strong{background:var(--ow-age-3);color:var(--ow-paper);}
+  .ow-dx-cell.ow-band-b90p.ow-dx-strong{background:var(--ow-crimson);color:var(--ow-paper);}
+  .ow-dx-cell.ow-dx-cnd{margin-top:3px;background:var(--ow-amber-faint);border:1px dashed var(--ow-amber);color:var(--ow-amber-ink);}
+  .ow-dx-sp{width:84px;height:26px;display:block;}
+  .ow-dx-sp-l{fill:none;stroke:var(--ow-ink-600);stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round;}
+  .ow-dx-sp-d{fill:var(--ow-ink-600);}
+  .ow-dx-sp.ow-dx-up .ow-dx-sp-l{stroke:var(--ow-crimson);}
+  .ow-dx-sp.ow-dx-up .ow-dx-sp-d{fill:var(--ow-crimson);}
+  .ow-db-lp.ow-dx-bad .ow-db-lp-d{color:var(--ow-crimson);}
+  .ow-dx-card,.ow-dx-pt{display:none;}
+
+  /* ---- one customer, opened ---- */
+  .ow-dx-dos{overflow:hidden;}
+  .ow-dx-who{display:flex;gap:var(--ow-sp-10);align-items:center;padding:var(--ow-sp-16) var(--ow-sp-16) var(--ow-sp-10);}
+  .ow-dx-who-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--ow-sp-2);}
+  .ow-dx-who-n{display:block;font-size:var(--ow-t-16);font-weight:var(--ow-fw-700);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-dx-who-s{display:block;font-size:var(--ow-t-12);color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .btn.ow-sm.ow-dx-icb{width:32px;height:32px;padding:0;justify-content:center;flex:none;}
+  .ow-dx-vd{display:flex;flex-wrap:wrap;gap:5px;padding:0 var(--ow-sp-16) var(--ow-sp-12);border-bottom:1px solid var(--ow-rule-soft);}
+  .ow-dx-std{display:flex;gap:14px;align-items:center;padding:var(--ow-sp-12) var(--ow-sp-16);border-bottom:1px solid var(--ow-rule-soft);}
+  .ow-dx-ring{position:relative;width:68px;height:68px;flex:none;}
+  .ow-dx-ring-s{width:68px;height:68px;transform:rotate(-90deg);}
+  .ow-dx-ring-t,.ow-dx-ring-u,.ow-dx-ring-o{fill:none;stroke-width:8;}
+  .ow-dx-ring-t{stroke:var(--ow-rule-soft);}
+  .ow-dx-ring-u{stroke:var(--ow-steel-800);}
+  .ow-dx-ring-u.ow-dx-ring-w{stroke:var(--ow-age-2);}
+  .ow-dx-ring-o{stroke:var(--ow-crimson);}
+  .ow-dx-ring-l{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;}
+  .ow-dx-ring-v{font-size:var(--ow-t-14);}
+  .ow-dx-ring-k{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-dx-std-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
+  .ow-dx-std-v .ow-dx-n{font-size:var(--ow-t-20);font-weight:var(--ow-fw-600);}
+  .ow-dx-std-s{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-dx-std-s .ow-dx-em{color:var(--ow-ink-900);}
+  .ow-dx-std-s .ow-dx-em.ow-dx-bad{color:var(--ow-crimson);}
+  .ow-dx-prog{display:flex;align-items:center;gap:var(--ow-sp-8);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-dx-prog-t{flex:1;max-width:120px;height:6px;border-radius:var(--ow-r-pill);background:var(--ow-rule-soft);overflow:hidden;display:block;}
+  .ow-dx-prog-f{display:block;height:100%;background:var(--ow-verdigris);}
+  .ow-dx-prog-n{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-dx-dt{display:flex;align-items:center;gap:var(--ow-sp-2);padding:0 var(--ow-sp-8) 0 var(--ow-sp-10);border-bottom:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+  .ow-dx-dt-b{height:38px;padding:0 var(--ow-sp-10);margin-bottom:-1px;border:0;border-bottom:2px solid transparent;background:none;
+    color:var(--ow-ink-600);font:inherit;font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);cursor:pointer;white-space:nowrap;}
+  .ow-dx-dt-b.ow-on{color:var(--ow-ink-900);border-bottom-color:var(--ow-steel-950);font-weight:var(--ow-fw-700);}
+  .ow-dx-nav{margin-left:auto;display:flex;align-items:center;gap:var(--ow-sp-4);}
+  .ow-dx-dv{padding:var(--ow-sp-12) var(--ow-sp-16);display:flex;flex-direction:column;gap:var(--ow-sp-10);}
+  .ow-dx-jars{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:var(--ow-sp-12);align-items:end;}
+  .ow-dx-jar{display:flex;flex-direction:column;gap:var(--ow-sp-6);min-width:0;}
+  .ow-dx-jar-v{font-size:var(--ow-t-13);}
+  .ow-dx-jar-b{position:relative;display:block;border-radius:var(--ow-r-sm);overflow:hidden;border:2px solid var(--ow-age-1);background:var(--ow-steel-050);box-sizing:border-box;}
+  .ow-dx-jar-b.ow-band-b60{border-color:var(--ow-age-2);background:var(--ow-amber-faint);}
+  .ow-dx-jar-b.ow-band-b90{border-color:var(--ow-age-3);background:var(--ow-crimson-soft);}
+  .ow-dx-jar-b.ow-band-b90p{border-color:var(--ow-crimson);background:var(--ow-crimson-soft);}
+  .ow-dx-jar-b.ow-band-unknown{border-style:dashed;border-color:var(--ow-amber);background:var(--ow-amber-faint);}
+  .ow-dx-jar-f{position:absolute;left:0;right:0;bottom:0;background:var(--ow-verdigris);transition:height .25s;}
+  .ow-dx-jar-o{position:absolute;left:5px;top:5px;font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);padding:1px var(--ow-sp-6);
+    border-radius:var(--ow-r-pill);background:var(--ow-paper);color:var(--ow-ink-900);}
+  .ow-dx-jar-k{position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;color:var(--ow-paper);}
+  .ow-dx-jar-m{display:flex;gap:var(--ow-sp-6);align-items:center;min-width:0;}
+  .ow-dx-jar-m .ow-dx-n{font-size:var(--ow-t-11);}
+  .ow-cp.ow-dx-agechip{font-size:var(--ow-t-11);padding:0 var(--ow-sp-6);background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+  .ow-cp.ow-dx-agechip.ow-band-b60{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .ow-cp.ow-dx-agechip.ow-band-b90,.ow-cp.ow-dx-agechip.ow-band-b90p{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .ow-cp.ow-dx-agechip.ow-band-unknown{background:var(--ow-amber-faint);color:var(--ow-amber-ink);}
+  .ow-dx-jar-w{display:block;font-size:var(--ow-t-11);color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-dx-jar-x{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
+  .ow-dx-jar-x.ow-dx-good{color:var(--ow-verdigris);}
+  .ow-dx-hint{margin:0;padding:var(--ow-sp-8) var(--ow-sp-10);border-radius:var(--ow-r);background:var(--ow-steel-050);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-dx-hint.ow-dx-hint-on{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .ow-dx-hl{margin:0;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-dx-tl{position:relative;height:160px;}
+  .ow-dx-tl-q{position:absolute;top:0;height:110px;background:var(--ow-amber-faint);}
+  .ow-dx-tl-q.ow-dx-tl-qb{background:var(--ow-crimson-soft);}
+  .ow-dx-tl-br{position:absolute;top:132px;height:6px;border:1.5px solid currentColor;border-top:0;box-sizing:border-box;}
+  .ow-dx-tl-bt{position:absolute;top:var(--ow-sp-8);left:0;right:0;text-align:center;font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);white-space:nowrap;}
+  .ow-dx-tl-k{position:absolute;left:0;font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);}
+  .ow-dx-tl-ku{top:0;color:var(--ow-steel-800);}
+  .ow-dx-tl-kd{top:94px;color:var(--ow-verdigris);}
+  .ow-dx-tl-ax{position:absolute;left:0;right:0;top:56px;height:2px;background:var(--ow-ink-900);}
+  .ow-dx-tl-now{position:absolute;top:0;height:126px;border-left:1.5px dashed var(--ow-ink-900);}
+  .ow-dx-tl-up{position:absolute;bottom:102px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;color:var(--ow-steel-800);}
+  .ow-dx-tl-up .ow-dx-n,.ow-dx-tl-dn .ow-dx-n{font-size:var(--ow-t-11);white-space:nowrap;}
+  .ow-dx-tl-st{width:1.5px;background:currentColor;opacity:.6;}
+  .ow-dx-tl-sq{width:10px;height:10px;background:var(--ow-steel-800);}
+  .ow-dx-tl-dn{position:absolute;top:52px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;}
+  .ow-dx-tl-dot{border-radius:50%;box-sizing:border-box;}
+  .ow-dx-tl-paid{color:var(--ow-verdigris);}
+  .ow-dx-tl-paid .ow-dx-tl-dot{background:var(--ow-verdigris);border:2px solid var(--ow-paper);}
+  .ow-dx-tl-broke{color:var(--ow-crimson);}
+  .ow-dx-tl-broke .ow-dx-tl-dot{background:var(--ow-paper);border:2px solid var(--ow-crimson);}
+  .ow-dx-tl-word{color:var(--ow-ink-600);}
+  .ow-dx-tl-word .ow-dx-tl-dot{background:var(--ow-paper);border:1.5px dashed var(--ow-ink-600);}
+  .ow-dx-tl-m{position:absolute;top:113px;transform:translateX(-50%);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-dx-tl-m.ow-dx-tl-today{font-weight:var(--ow-fw-700);color:var(--ow-ink-900);}
+  .ow-dx-act{padding:var(--ow-sp-12) var(--ow-sp-16) 14px;display:flex;flex-direction:column;gap:var(--ow-sp-8);background:var(--ow-paper-2);border-top:1px solid var(--ow-rule-soft);}
+  .ow-dx-pay{display:flex;gap:var(--ow-sp-8);}
+  .ow-f-in.ow-dx-pay-in{flex:1;min-width:0;height:44px;box-sizing:border-box;}
+  .ow-dx-pay-in .ow-f-v{flex:1;width:auto;min-width:0;font-size:var(--ow-t-16);font-weight:var(--ow-fw-600);}
+  .btn.ow-dx-rcv{height:44px;white-space:nowrap;}
+  .ow-dx-qk{display:flex;gap:var(--ow-sp-6);flex-wrap:wrap;align-items:center;}
+  .ow-cp.ow-dx-qb{display:inline-flex;align-items:center;gap:var(--ow-sp-4);width:auto;cursor:pointer;background:var(--ow-paper);
+    border:1px solid var(--ow-rule);color:var(--ow-ink-900);font:inherit;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);}
+  .ow-cp.ow-dx-qb:hover{border-color:var(--ow-ink-600);}
+  .ow-dx-pl{margin-left:auto;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-dx-pl .ow-dx-n{color:var(--ow-ink-900);}
+  .btn.ow-dx-chase{justify-content:center;}
+
+  /* ---- the intelligence ---- */
+  .ow-dx-phone{display:none;}
+  .ow-dx-hd{display:flex;flex-wrap:wrap;overflow:hidden;}
+  .ow-dx-hd-a,.ow-dx-hd-b,.ow-dx-hd-c{min-width:0;box-sizing:border-box;padding:var(--ow-sp-16) var(--ow-sp-20);display:flex;flex-direction:column;gap:var(--ow-sp-10);}
+  .ow-dx-hd-a{flex:1.4 1 340px;border-right:1px solid var(--ow-rule-soft);}
+  .ow-dx-hd-b{flex:1 1 300px;border-right:1px solid var(--ow-rule-soft);}
+  .ow-dx-hd-c{flex:1 1 300px;}
+  .ow-dx-hd-k{display:flex;justify-content:space-between;align-items:center;gap:var(--ow-sp-8);font-size:var(--ow-t-12);
+    font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
+  .ow-dx-hd-v{display:flex;align-items:baseline;gap:var(--ow-sp-6);}
+  .ow-dx-hd-v .ow-dx-n{font-size:var(--ow-t-28);font-weight:var(--ow-fw-600);line-height:1.05;}
+  .ow-dx-hd-d{display:flex;align-items:center;gap:var(--ow-sp-8);flex-wrap:wrap;}
+  .ow-dx-wk{position:relative;height:112px;margin-top:var(--ow-sp-6);}
+  .ow-dx-wk-svg{position:absolute;inset:0;width:100%;height:100%;}
+  .ow-dx-wk-base{stroke:var(--ow-steel-100);}
+  .ow-dx-wk-mid{stroke:var(--ow-rule-soft);stroke-dasharray:3 3;vector-effect:non-scaling-stroke;}
+  .ow-dx-wk-a{fill:var(--ow-rule);}
+  .ow-dx-wk-o{fill:var(--ow-crimson);}
+  .ow-dx-wk-l{fill:none;stroke:var(--ow-steel-800);stroke-width:1.8;vector-effect:non-scaling-stroke;}
+  .ow-dx-wk-ml{position:absolute;left:2px;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-dx-wk-end{position:absolute;right:0;font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);color:var(--ow-steel-800);background:var(--ow-paper);
+    padding:0 var(--ow-sp-4);border-radius:var(--ow-r-sm);}
+  .ow-dx-wk-end.ow-dx-wk-eo{background:var(--ow-crimson);color:var(--ow-paper);}
+  .ow-dx-wk-cur{position:absolute;top:0;bottom:0;border-left:1.5px solid var(--ow-ink-900);pointer-events:none;}
+  .ow-dx-wk-pt{position:absolute;width:9px;height:9px;transform:translate(-50%,-50%);border-radius:50%;background:var(--ow-paper);
+    border:2px solid var(--ow-steel-800);pointer-events:none;}
+  .ow-dx-wk-pt.ow-dx-wk-po{border-color:var(--ow-crimson);}
+  .ow-dx-wk-card{position:absolute;top:-4px;width:172px;padding:var(--ow-sp-8) var(--ow-sp-10);background:var(--ow-paper);border:1px solid var(--ow-rule);
+    border-radius:var(--ow-r);box-shadow:var(--ow-lift);pointer-events:none;display:flex;flex-direction:column;gap:3px;z-index:3;font-size:var(--ow-t-12);}
+  .ow-dx-wk-r{display:flex;justify-content:space-between;gap:var(--ow-sp-8);}
+  .ow-dx-wk-k{color:var(--ow-ink-600);}
+  .ow-dx-wk-r.ow-dx-bad .ow-dx-wk-k{color:var(--ow-crimson);}
+  .ow-dx-wk-hit{position:absolute;inset:0;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));}
+  .ow-dx-wk-h{cursor:crosshair;}
+  .ow-dx-wk-x{display:flex;justify-content:space-between;align-items:center;gap:var(--ow-sp-8);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-dx-wk-x .ow-dx-em{color:var(--ow-ink-900);}
+  .ow-dx-lg{display:inline-flex;gap:var(--ow-sp-6);align-items:center;}
+  .ow-dx-lg-l{width:12px;height:2px;background:var(--ow-steel-800);}
+  .ow-dx-lg-o{width:10px;height:10px;background:var(--ow-crimson);margin-left:var(--ow-sp-6);}
+  .ow-dx-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--ow-sp-8);padding-top:var(--ow-sp-10);border-top:1px solid var(--ow-rule-soft);}
+  .ow-dx-fact{display:flex;flex-direction:column;gap:1px;min-width:0;}
+  .ow-dx-facts .ow-dx-n{font-size:var(--ow-t-16);}
+  .ow-dx-facts .ow-dx-n.ow-dx-warn{color:var(--ow-amber-ink);}
+  .ow-dx-tm{position:relative;height:210px;border-radius:var(--ow-r-sm);overflow:hidden;}
+  .ow-dx-tm-b{position:absolute;padding:0;border:2px solid var(--ow-paper);border-radius:var(--ow-r-sm);box-sizing:border-box;cursor:pointer;
+    overflow:hidden;text-align:left;font:inherit;background:var(--ow-age-0);color:var(--ow-ink-900);}
+  .ow-dx-tm-b.ow-dx-s-act{background:var(--ow-crimson);color:var(--ow-paper);}
+  .ow-dx-tm-b.ow-dx-s-watch{background:var(--ow-age-2);color:var(--ow-ink-900);}
+  .ow-dx-tm-b.ow-dx-s-prom{background:var(--ow-steel-050);color:var(--ow-ink-900);outline:1.5px dashed var(--ow-ink-600);outline-offset:-4px;}
+  .ow-dx-tm-b.ow-dx-s-check{background:var(--ow-age-nd);color:var(--ow-amber-ink);}
+  .ow-dx-tm-b.ow-on{box-shadow:0 0 0 2px var(--ow-steel-950) inset;border-color:var(--ow-steel-950);}
+  .ow-dx-tm-b:hover{filter:brightness(1.08);}
+  .ow-dx-tm-t{position:absolute;left:var(--ow-sp-8);top:7px;right:var(--ow-sp-6);display:flex;flex-direction:column;gap:var(--ow-sp-2);line-height:1.15;min-width:0;}
+  .ow-dx-tm-n{display:block;font-size:var(--ow-t-12);font-weight:var(--ow-fw-700);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-dx-tm-v{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);white-space:nowrap;}
+  .ow-dx-tm-i{position:absolute;inset:0;display:grid;place-items:center;font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);}
+  .ow-dx-tm-a{position:absolute;left:var(--ow-sp-6);right:var(--ow-sp-6);bottom:var(--ow-sp-6);height:5px;display:flex;gap:1px;border-radius:var(--ow-r-pill);overflow:hidden;}
+  .ow-dx-tm-s{flex-basis:0;}
+  .ow-dx-tm-a .ow-band-b30{background:var(--ow-rule);}
+  .ow-dx-tm-a .ow-band-b60{background:var(--ow-age-2);}
+  .ow-dx-tm-a .ow-band-b90{background:var(--ow-age-3);}
+  .ow-dx-tm-a .ow-band-b90p{background:var(--ow-ink-900);}
+  .ow-dx-tm-a .ow-band-unknown{background:var(--ow-paper);}
+  .ow-dx-lgs-a{margin-left:auto;}
+  .ow-dx-agebar{width:18px;height:5px;border-radius:var(--ow-r-pill);background:linear-gradient(90deg,var(--ow-rule) 0 33%,var(--ow-age-2) 33% 66%,var(--ow-age-3) 66%);}
+  .ow-dx-gg{display:flex;align-items:center;gap:14px;}
+  .ow-dx-gg-svg{width:140px;height:80px;flex:none;}
+  .ow-dx-gg-1,.ow-dx-gg-2,.ow-dx-gg-3{fill:none;stroke-width:12;}
+  .ow-dx-gg-1{stroke:var(--ow-verdigris);}
+  .ow-dx-gg-2{stroke:var(--ow-age-2);}
+  .ow-dx-gg-3{stroke:var(--ow-crimson);}
+  .ow-dx-gg-t{stroke:var(--ow-paper);stroke-width:2.5;}
+  .ow-dx-gg-n{stroke:var(--ow-ink-900);stroke-width:3;stroke-linecap:round;}
+  .ow-dx-gg-c{fill:var(--ow-ink-900);}
+  .ow-dx-gg-r{display:flex;flex-direction:column;gap:var(--ow-sp-2);min-width:0;}
+  .ow-dx-gg-v{font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);}
+  .ow-dx-gg-v .ow-dx-n{font-size:var(--ow-t-28);line-height:1;}
+  .ow-dx-gg-s{font-size:var(--ow-t-12);}
+  .ow-dx-l30{display:flex;flex-direction:column;gap:var(--ow-sp-6);padding-top:var(--ow-sp-10);border-top:1px solid var(--ow-rule-soft);}
+  .ow-dx-l30-h{display:flex;justify-content:space-between;align-items:center;gap:var(--ow-sp-8);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-dx-bar{height:10px;border-radius:var(--ow-r-pill);background:var(--ow-steel-050);overflow:hidden;display:flex;}
+  .ow-dx-bar-f{background:var(--ow-verdigris);}
+  .ow-grid.ow-dx-igrid{grid-template-columns:minmax(0,1fr) 340px;}
+  .ow-grid.ow-dx-grid{grid-template-columns:minmax(0,1fr) 380px;}
+  .ow-dx-col-main{display:flex;flex-direction:column;gap:var(--ow-sp-20);min-width:0;}
+  .ow-dx-two{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:var(--ow-sp-20);align-items:start;}
+
+  /* the risk map */
+  .ow-pan-h.ow-dx-map-h{height:auto;min-height:42px;flex-wrap:wrap;padding-top:var(--ow-sp-6);padding-bottom:var(--ow-sp-6);}
+  .ow-dx-map,.ow-dx-old,.ow-dx-agn,.ow-dx-sig{overflow:hidden;}
+  .ow-dx-ring-none .ow-dx-ring-v{color:var(--ow-ink-600);}
+  .ow-dx-map-z{margin-left:auto;display:flex;align-items:center;gap:var(--ow-sp-6);}
+  .ow-cp.ow-dx-crop-c{background:var(--ow-steel-950);color:var(--ow-paper);}
+  .ow-dx-map-g{display:grid;grid-template-columns:44px minmax(0,1fr) 84px;padding:14px var(--ow-sp-16) var(--ow-sp-8) var(--ow-sp-4);}
+  .ow-dx-ya{position:relative;height:320px;}
+  .ow-dx-ya-t,.ow-dx-ya-n,.ow-dx-ya-0{position:absolute;right:var(--ow-sp-8);transform:translateY(50%);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-dx-ya-n{top:2px;transform:none;text-align:right;line-height:1.1;}
+  .ow-dx-ya-0{bottom:0;transform:none;}
+  .ow-dx-plot{position:relative;height:320px;border-left:1px solid var(--ow-steel-100);border-bottom:1px solid var(--ow-steel-100);overflow:hidden;cursor:crosshair;user-select:none;}
+  .ow-dx-z-act{position:absolute;right:0;top:0;background:var(--ow-crimson-soft);}
+  .ow-dx-z-late{position:absolute;right:0;bottom:0;background:var(--ow-amber-faint);}
+  .ow-dx-z-never{position:absolute;left:0;right:0;top:0;height:12%;border-bottom:1px dashed var(--ow-steel-100);}
+  .ow-dx-gy{position:absolute;left:0;right:0;border-top:1px solid var(--ow-rule-soft);}
+  .ow-dx-gx{position:absolute;top:0;bottom:0;border-left:1px solid var(--ow-rule-soft);}
+  .ow-dx-tx{position:absolute;top:0;bottom:0;border-left:1.5px dashed var(--ow-crimson);}
+  .ow-dx-ty{position:absolute;right:0;border-top:1.5px dashed var(--ow-amber);}
+  .ow-dx-zn{position:absolute;font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);text-transform:uppercase;letter-spacing:.06em;pointer-events:none;white-space:nowrap;}
+  .ow-dx-zn-act{top:calc(12% + 8px);color:var(--ow-crimson);}
+  .ow-dx-zn-late{right:var(--ow-sp-10);bottom:var(--ow-sp-6);color:var(--ow-amber-ink);}
+  .ow-dx-zn-in{left:var(--ow-sp-8);top:calc(12% + 8px);color:var(--ow-ink-600);}
+  .ow-dx-bub{position:absolute;transform:translate(-50%,50%);border-radius:50%;border:2px solid var(--ow-paper);box-sizing:border-box;padding:0;
+    cursor:pointer;background:var(--ow-age-0);transition:left .3s,bottom .3s,width .3s,height .3s;}
+  .ow-dx-bub.ow-dx-s-act{background:var(--ow-crimson);}
+  .ow-dx-bub.ow-dx-s-watch{background:var(--ow-age-2);}
+  .ow-dx-bub.ow-dx-s-prom{background:var(--ow-paper);border:2px dashed var(--ow-ink-600);}
+  .ow-dx-bub.ow-dx-s-check{background:var(--ow-age-nd);border:2px dashed var(--ow-amber);}
+  .ow-dx-bub.ow-on{outline:3px solid var(--ow-steel-950);outline-offset:2px;}
+  .ow-dx-bub:hover{filter:brightness(1.1);}
+  .ow-dx-bub-l{position:absolute;transform:translateY(50%);font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);
+    white-space:nowrap;pointer-events:none;background:var(--ow-paper);padding:1px var(--ow-sp-4);border-radius:var(--ow-r-sm);}
+  .ow-dx-crop{position:absolute;border:1.5px dashed var(--ow-steel-950);background:rgba(26,90,138,.10);border-radius:var(--ow-r-sm);pointer-events:none;}
+  .ow-dx-crop-t{position:absolute;left:var(--ow-sp-4);top:var(--ow-sp-4);font-size:var(--ow-t-11);color:var(--ow-steel-950);background:var(--ow-paper);
+    padding:1px var(--ow-sp-6);border-radius:var(--ow-r-sm);white-space:nowrap;}
+  .ow-dx-tip{position:absolute;width:248px;padding:var(--ow-sp-12);background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
+    box-shadow:var(--ow-lift);pointer-events:none;display:flex;flex-direction:column;gap:var(--ow-sp-8);z-index:5;font-size:var(--ow-t-12);}
+  .ow-dx-tip-h{display:flex;gap:var(--ow-sp-8);align-items:center;}
+  .ow-dx-tip .ow-dx-av{width:30px;height:30px;font-size:var(--ow-t-12);border-radius:var(--ow-r-sm);}
+  .ow-dx-tip-n{flex:1;min-width:0;display:flex;flex-direction:column;}
+  .ow-dx-tip-v{display:flex;align-items:baseline;justify-content:space-between;gap:var(--ow-sp-8);}
+  .ow-dx-tip-v .ow-dx-n{font-size:var(--ow-t-16);}
+  .ow-dx-tip-c{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;}
+  .ow-dx-tip-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;height:30px;border-radius:var(--ow-r-sm);font-size:var(--ow-t-11);}
+  .ow-dx-tip-cell.ow-dx-c0{background:var(--ow-steel-050);color:var(--ow-ink-600);}
+  .ow-dx-tip-cell.ow-band-b30{background:var(--ow-age-1);color:var(--ow-ink-900);}
+  .ow-dx-tip-cell.ow-band-b60{background:var(--ow-age-2);color:var(--ow-ink-900);}
+  .ow-dx-tip-cell.ow-band-b90{background:var(--ow-age-3);color:var(--ow-paper);}
+  .ow-dx-tip-cell.ow-band-b90p{background:var(--ow-crimson);color:var(--ow-paper);}
+  .ow-dx-tip-f{display:grid;grid-template-columns:1fr 1fr;gap:var(--ow-sp-6);}
+  .ow-dx-tip-fi{display:flex;flex-direction:column;}
+  .ow-dx-tip-s{padding:var(--ow-sp-6) var(--ow-sp-8);border-radius:var(--ow-r-sm);}
+  .ow-dx-tip-go{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-sky);}
+  .ow-dx-t-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .ow-dx-t-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .ow-dx-t-word{background:var(--ow-steel-050);color:var(--ow-ink-600);}
+  .ow-dx-lane{position:relative;height:320px;margin-left:var(--ow-sp-10);border:1px dashed var(--ow-amber);border-radius:var(--ow-r-sm);background:var(--ow-amber-faint);}
+  .ow-dx-lane-t{position:absolute;top:var(--ow-sp-8);left:0;right:0;text-align:center;font-size:var(--ow-t-11);color:var(--ow-amber-ink);}
+  .ow-dx-lane-n{position:absolute;left:var(--ow-sp-4);right:var(--ow-sp-4);text-align:center;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);line-height:1.2;}
+  .ow-dx-xa{position:relative;height:34px;}
+  .ow-dx-xa-t,.ow-dx-xa-0,.ow-dx-xa-k{position:absolute;top:var(--ow-sp-6);font-size:var(--ow-t-11);color:var(--ow-ink-600);transform:translateX(-50%);white-space:nowrap;}
+  .ow-dx-xa-0{left:0;transform:none;}
+  .ow-dx-xa-t.ow-dx-bad{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
+  .ow-dx-xa-k{left:0;right:0;top:20px;transform:none;text-align:center;}
+  .ow-dx-map-f{margin:0 var(--ow-sp-16) var(--ow-sp-12);padding:var(--ow-sp-8) var(--ow-sp-12);border-radius:var(--ow-r);background:var(--ow-steel-050);
+    display:flex;flex-wrap:wrap;align-items:center;gap:var(--ow-sp-6) 14px;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-dx-map-f .ow-dx-em,.ow-dx-map-f .ow-dx-n{color:var(--ow-ink-900);}
+  .ow-dx-map-f .ow-dx-lgs{margin-left:auto;}
+
+  /* is the book getting older */
+  .ow-dx-old-b{padding:14px var(--ow-sp-16);display:flex;flex-direction:column;gap:14px;}
+  .ow-dx-old-v{display:flex;gap:var(--ow-sp-12);align-items:center;}
+  .ow-dx-yes{flex:none;display:grid;place-items:center;width:48px;height:48px;border-radius:var(--ow-r-lg);font-weight:var(--ow-fw-700);
+    font-size:var(--ow-t-16);background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+  .ow-dx-yes.ow-dx-s-act{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .ow-dx-yes.ow-dx-s-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .ow-dx-old-t{flex:1;min-width:0;font-size:var(--ow-t-12);line-height:1.4;}
+  .ow-dx-old-s{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:var(--ow-sp-2);font-size:var(--ow-t-11);}
+  .ow-dx-old-svg{width:84px;height:30px;}
+  .ow-dx-old-sa{fill:var(--ow-crimson-soft);}
+  .ow-dx-old-sl{fill:none;stroke:var(--ow-crimson);stroke-width:1.8;stroke-linejoin:round;}
+  .ow-dx-prs{display:flex;flex-direction:column;gap:var(--ow-sp-6);}
+  .ow-dx-pr{display:grid;grid-template-columns:48px minmax(0,1fr) 48px;gap:var(--ow-sp-8);align-items:center;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-dx-pr.ow-on{color:var(--ow-ink-900);font-weight:var(--ow-fw-700);}
+  .ow-dx-pr .ow-dx-n{text-align:right;}
+  .ow-dx-pr-b{display:flex;height:22px;gap:2px;border-radius:var(--ow-r-sm);overflow:hidden;}
+  .ow-dx-pr-s{flex-basis:0;display:flex;align-items:center;justify-content:center;font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+  .ow-dx-pr-s.ow-band-b30{background:var(--ow-age-0);color:var(--ow-ink-900);}
+  .ow-dx-pr-s.ow-band-b60{background:var(--ow-age-2);color:var(--ow-ink-900);}
+  .ow-dx-pr-s.ow-band-b90p{background:var(--ow-crimson);color:var(--ow-paper);}
+  .ow-dx-prs .ow-dx-lgs{padding-left:56px;}
+  .ow-dx-drv{display:flex;flex-direction:column;gap:var(--ow-sp-2);padding-top:var(--ow-sp-10);border-top:1px solid var(--ow-rule-soft);}
+  .ow-dx-drv-h{display:flex;justify-content:space-between;align-items:baseline;gap:var(--ow-sp-8);padding-bottom:var(--ow-sp-4);font-size:var(--ow-t-12);}
+  .ow-dx-drv-r{display:grid;grid-template-columns:minmax(0,1fr) 90px 76px;gap:var(--ow-sp-10);align-items:center;padding:7px var(--ow-sp-4);border:0;
+    background:none;border-radius:var(--ow-r-sm);text-align:left;cursor:pointer;font:inherit;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .ow-dx-drv-r:hover{background:var(--ow-paper-2);}
+  .ow-dx-drv-b{height:8px;border-radius:var(--ow-r-pill);background:var(--ow-steel-050);overflow:hidden;display:flex;}
+  .ow-dx-drv-o{background:var(--ow-age-3);}
+  .ow-dx-drv-n{background:var(--ow-crimson);}
+  .ow-dx-drv-v{display:flex;flex-direction:column;align-items:flex-end;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);}
+  .ow-dx-drv-v .ow-dx-n{font-size:var(--ow-t-12);}
+
+  /* the next fourteen days */
+  .ow-dx-agn-b{padding:14px var(--ow-sp-16);display:flex;flex-direction:column;gap:var(--ow-sp-12);}
+  .ow-dx-agn-2{display:grid;grid-template-columns:1fr 1fr;gap:var(--ow-sp-8);}
+  .ow-dx-agn-w,.ow-dx-agn-l{padding:var(--ow-sp-10) var(--ow-sp-12);border-radius:var(--ow-r);display:flex;flex-direction:column;gap:var(--ow-sp-2);
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);}
+  .ow-dx-agn-w{border:1.5px dashed var(--ow-ink-600);color:var(--ow-ink-600);}
+  .ow-dx-agn-l{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .ow-dx-agn-w .ow-dx-n,.ow-dx-agn-l .ow-dx-n{font-size:var(--ow-t-16);}
+  .ow-dx-cal{display:grid;grid-template-columns:repeat(14,minmax(0,1fr));gap:3px;}
+  .ow-dx-cal-d{display:flex;flex-direction:column;align-items:center;gap:3px;padding:var(--ow-sp-4) 0 5px;border-radius:var(--ow-r-sm);font-size:var(--ow-t-11);
+    color:var(--ow-ink-600);box-sizing:border-box;}
+  .ow-dx-cal-d .ow-dx-n{font-size:var(--ow-t-12);font-weight:var(--ow-fw-400);}
+  .ow-dx-cal-d.ow-dx-cal-has{background:var(--ow-steel-050);color:var(--ow-ink-900);}
+  .ow-dx-cal-d.ow-dx-cal-has .ow-dx-n{font-weight:var(--ow-fw-600);}
+  .ow-dx-cal-d.ow-on{background:var(--ow-paper);border:1.5px solid var(--ow-steel-950);color:var(--ow-ink-900);font-weight:var(--ow-fw-700);}
+  .ow-dx-cal-m{display:flex;gap:2px;height:8px;align-items:center;}
+  .ow-dx-mk-w{width:8px;height:8px;border-radius:50%;border:1.5px dashed var(--ow-ink-600);box-sizing:border-box;flex:none;}
+  .ow-dx-mk-l{width:8px;height:8px;background:var(--ow-age-2);flex:none;}
+  .ow-dx-it{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:var(--ow-sp-10);align-items:center;padding:var(--ow-sp-8) 0;border-top:1px solid var(--ow-rule-soft);}
+  .ow-dx-it-d{display:flex;flex-direction:column;font-size:var(--ow-t-12);}
+  .ow-dx-it-t{display:flex;flex-direction:column;min-width:0;border:0;background:none;padding:0;text-align:left;cursor:pointer;font:inherit;
+    font-size:var(--ow-t-13);color:var(--ow-ink-900);}
+  .ow-dx-it-w{display:flex;gap:var(--ow-sp-6);align-items:center;font-size:var(--ow-t-12);min-width:0;}
+
+  /* what needs you */
+  .ow-dx-sig-r{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:var(--ow-sp-10);align-items:start;padding:var(--ow-sp-10) var(--ow-sp-16);border:0;
+    border-bottom:1px solid var(--ow-rule-soft);background:none;width:100%;text-align:left;cursor:pointer;font:inherit;color:var(--ow-ink-900);}
+  .ow-dx-sig-r:hover{background:var(--ow-paper-2);}
+  .ow-dx-sig-i{width:22px;height:22px;border-radius:var(--ow-r-sm);display:grid;place-items:center;}
+  .ow-dx-sig-svg{width:14px;height:14px;}
+  .ow-dx-sig-i.ow-dx-t-word{background:var(--ow-paper);border:1.5px dashed var(--ow-ink-600);box-sizing:border-box;}
+  .ow-dx-sig-t{display:flex;flex-direction:column;gap:var(--ow-sp-2);min-width:0;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-dx-sig-t .ow-dx-ell{font-size:var(--ow-t-13);color:var(--ow-ink-900);}
+  .ow-dx-sig-v{font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);white-space:nowrap;}
+
+  @media (max-width:820px){
+    /* THE PHONE IS ITS OWN DESIGN: a segmented switch, a card for what
+       is owed, standings as pills, customers as cards with their acts
+       visible, and one customer as a sheet with Receive in the thumb
+       zone. The intelligence opens on the book, its age and four
+       readings, then what needs you. */
+    .ow-dx-vt{display:grid;grid-template-columns:1fr 1fr;gap:var(--ow-sp-4);padding:var(--ow-sp-4);margin:0 0 var(--ow-sp-16);
+      background:var(--ow-rule-soft);border:0;border-radius:var(--ow-r-lg);}
+    .ow-dx-vt-b{justify-content:center;height:var(--ow-tap);min-height:var(--ow-tap);margin:0;border:0;border-radius:var(--ow-r);}
+    .ow-dx-vt-b.ow-on{background:var(--ow-paper);}
+    .ow-dx-vt-b .ow-dx-ic{display:none;}
+    .ow-dx-age,.ow-dx-posw,.ow-dx-ph-a{display:none;}
+    .ow-dx-pt{display:flex;align-items:center;flex-wrap:wrap;gap:var(--ow-sp-4) var(--ow-sp-12);padding:var(--ow-sp-12) 14px;margin-bottom:14px;
+      background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);}
+    .ow-dx-pt-k{flex:1 1 100%;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+    .ow-dx-pt-v{flex:1;}
+    .ow-dx-pt-v .ow-dx-n{font-size:var(--ow-t-20);font-weight:var(--ow-fw-600);}
+    .ow-dx-reg{border:0;background:none;overflow:visible;}
+    .ow-dx-reg > .ow-pan-h{display:none;}
+    .ow-dx-st{background:none;border:0;padding:0 0 var(--ow-sp-10);gap:var(--ow-sp-6);}
+    .ow-dx-st-b{min-height:var(--ow-tap);border-radius:var(--ow-r-pill);border:1px solid var(--ow-rule);background:var(--ow-paper);font-size:var(--ow-t-14);}
+    .ow-dx-st-b.ow-on{background:var(--ow-steel-950);border-color:var(--ow-steel-950);color:var(--ow-paper);}
+    .ow-dx-st-b.ow-on .ow-dx-st-n{color:var(--ow-steel-100);}
+    .ow-dx-h{display:none;}
+    .ow-dx-q,.ow-dx-h{min-width:0;}
+    .ow-dx-q{border:0;margin-bottom:var(--ow-sp-10);}
+    .ow-q-card.ow-dx-card{display:block;padding:0;border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);background:var(--ow-paper);overflow:hidden;}
+    .ow-dx-q.ow-open .ow-dx-card{border-color:var(--ow-steel-950);}
+    .ow-dx-card-o{display:flex;flex-direction:column;gap:var(--ow-sp-8);width:100%;padding:14px 14px var(--ow-sp-10);border:0;background:none;
+      text-align:left;font:inherit;color:inherit;cursor:pointer;}
+    .ow-dx-card-t{display:flex;justify-content:space-between;align-items:center;gap:var(--ow-sp-8);}
+    .ow-dx-card-p{font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
+    .ow-dx-card-p.ow-dx-bad{color:var(--ow-crimson);}
+    .ow-dx-card-o .ow-q-who{font-size:var(--ow-t-16);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-dx-card-v{display:flex;align-items:baseline;gap:var(--ow-sp-8);flex-wrap:wrap;}
+    .ow-dx-card-v .ow-q-f{font-size:var(--ow-t-20);}
+    .ow-dx-card-v .ow-q-b{display:inline;}
+    .ow-dx-card-a{display:grid;grid-template-columns:1fr 1fr 44px;gap:var(--ow-sp-8);padding:0 14px 14px;}
+    .btn.ow-dx-cb{min-height:var(--ow-tap);justify-content:center;}
+    .ow-dx-grid > .ow-dx-rail{display:none;}
+    .ow-dx-grid > .ow-dx-rail.ow-dx-sheet-on{display:block;position:fixed;inset:0;z-index:900;}
+    .ow-dx-veil{position:absolute;inset:0;border:0;padding:0;background:rgba(22,32,60,.5);cursor:pointer;}
+    .ow-dx-rail.ow-dx-sheet-on .ow-dx-dos{position:absolute;left:0;right:0;bottom:0;max-height:calc(100% - 52px);overflow-y:auto;
+      border-radius:var(--ow-r-lg);border:0;}
+    .ow-dx-act{position:sticky;bottom:0;}
+    .btn.ow-dx-rcv{min-height:var(--ow-tap);}
+    .ow-dx-hd,.ow-dx-col-main{display:none;}
+    .ow-dx-phone{display:flex;flex-direction:column;gap:14px;margin-bottom:14px;}
+    .ow-dx-ph-h{position:relative;padding:var(--ow-sp-16);display:flex;flex-direction:column;gap:var(--ow-sp-10);}
+    .ow-dx-ph-br{position:relative;display:block;padding:0 0 var(--ow-sp-4) var(--ow-sp-4);border-left:1.5px solid var(--ow-crimson);font-size:var(--ow-t-12);color:var(--ow-crimson);}
+    .ow-dx-ph-bar{display:flex;height:32px;border-radius:var(--ow-r-sm);overflow:hidden;gap:2px;}
+    .ow-dx-ph-seg{flex-basis:0;min-width:8px;border:0;padding:0;cursor:pointer;}
+    .ow-dx-ph-seg.ow-band-b30{background:var(--ow-age-1);}
+    .ow-dx-ph-seg.ow-band-b60{background:var(--ow-age-2);}
+    .ow-dx-ph-seg.ow-band-b90{background:var(--ow-age-3);}
+    .ow-dx-ph-seg.ow-band-b90p{background:var(--ow-crimson);}
+    .ow-dx-ph-seg.ow-band-unknown{background:var(--ow-age-nd);}
+    .ow-dx-ph-lg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--ow-sp-2) var(--ow-sp-12);}
+    .ow-dx-ph-lgb{display:flex;align-items:center;gap:var(--ow-sp-8);min-height:36px;border:0;background:none;padding:0 var(--ow-sp-6);font:inherit;
+      font-size:var(--ow-t-12);color:var(--ow-ink-600);text-align:left;cursor:pointer;}
+    .ow-dx-ph-lgl{flex:1;}
+    .ow-dx-ph-lg .ow-dx-n{color:var(--ow-ink-900);}
+    .ow-dx-ph-4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}
+    .ow-dx-ph-c{display:flex;flex-direction:column;gap:var(--ow-sp-4);padding:14px;border-bottom:1px solid var(--ow-rule-soft);}
+    .ow-dx-ph-c:nth-child(odd){border-right:1px solid var(--ow-rule-soft);}
+    .ow-dx-ph-c:nth-child(n+3){border-bottom:0;}
+    .ow-dx-ph-4 .ow-dx-n{font-size:var(--ow-t-20);}
+    .ow-dx-ph-4 .ow-dx-n.ow-dx-word{text-decoration:underline dashed var(--ow-ink-600) 1.5px;text-underline-offset:5px;}
+    .ow-grid.ow-dx-igrid,.ow-grid.ow-dx-grid{grid-template-columns:minmax(0,1fr);}
+    .ow-dx-sig-r{min-height:var(--ow-tap);}
+    .btn.ow-sm.ow-dx-icb{width:var(--ow-tap);min-width:var(--ow-tap);min-height:var(--ow-tap);flex:none;padding:0;}
+    .ow-dx-who-t{flex:1 1 auto;}
+  }
+
   .ow-cr-ag-pan,.ow-cr-clear{margin-bottom:var(--ow-sp-16);}
 
   /* SIX COLUMNS. The reason column is the widest fixed one: "12 days
@@ -30999,29 +31562,36 @@
     <section id="tab-analytics-debtors" style="display:none;">
       <div class="ow-ph">
         <h1 class="ow-ph-t">Debtors</h1>
-        <p class="ow-ph-sub">Everyone who owes you, oldest money first</p>
-        <p class="ow-ph-help">Every customer carrying a balance, with the age of the money beside it. A balance is the charges not yet paid, walked oldest first the way a ledger settles &mdash; so the age here is the age of the money still open, not the date the customer last came in. The bands split the whole book by age and narrow the list when you tap one; the search box narrows it further; the printed sheet always carries the whole book's profile and says which customers it is listing. Each dot on a row is one invoice still open, placed by how old it is and sized by what is left on it; the bracket over the bar is the money past your own terms. Type what a customer is paying into their open row to see which invoices it clears, oldest first &mdash; the payment form then opens with those invoices ticked, and nothing is recorded until you save it. It posts straight to the cash book. Asking for the money is a different screen: Messages has everyone past your terms under <b>Money</b>, with the words already written, and nothing sends itself.</p>
+        <p class="ow-ph-sub">Everyone who owes you, how old the money is, and who to act on today</p>
+        <p class="ow-ph-help"><b>Debtors</b> is the register: how old the money is, everyone carrying a balance, and one customer opened beside the list. A balance is the charges not yet paid, walked oldest first the way a ledger settles &mdash; so an age here is the age of the money still open, not the day the customer last came in. Tap an age to list only the customers with money that old; the standings above the list say who to act on (late and gone quiet), who named a day, who is late but still paying, and whose balance needs a look before anybody is asked for it. Open a customer to see their invoices as jars, oldest first: type what they are paying and the green fills the jars in the order the payment form will tick them &mdash; nothing is recorded until you save that form, and it posts straight to the cash book. <b>Intelligence</b> reads the whole book: what is owed and how it moved, who holds it, how fast money comes back against your terms, a risk map you can crop by dragging a box, whether the book is getting older and who is making it so, and what the next fortnight brings. Asking for the money is a different screen: Follow-ups has everyone past your terms under <b>Money</b>, with the words already written, and nothing sends itself.</p>
         <span class="ow-ph-sp"></span>
+        <div class="ow-dx-ph-a" id="debHeadWrap"></div>
       </div>
 
-      <div class="ow-db">
-        <!-- What you are owed. Always the whole book: the search box and
-             the band filter act on the list further down, never on this.
-             A position that shrinks because somebody left a filter on is
-             a position nobody can trust. -->
-        <div id="debPositionWrap"></div>
+      <div class="ow-db ow-dx">
+        <div class="ow-dx-vt" role="tablist" aria-label="Debtors views" id="debViewTabs"></div>
 
-        <div class="ow-grid">
-          <!-- The register, its toolbar, and the drift banner that has to
-               sit above the rows whose credibility it is about. -->
-          <div id="deb_tableWrap"></div>
-          <div class="ow-side" id="debRailWrap"></div>
+        <!-- THE REGISTER. What you are owed by age (always the whole book:
+             the standings, the search and the age filter act on the list
+             below, never on this), the list, and one customer opened in
+             the rail -- a sheet on the phone. -->
+        <div id="debViewDebtors" class="ow-dx">
+          <div id="debPositionWrap" class="ow-dx-posw"></div>
+          <div class="ow-grid ow-dx-grid">
+            <div id="deb_tableWrap"></div>
+            <div class="ow-side ow-dx-rail" id="debRailWrap"></div>
+          </div>
+          <!-- The age filter is echoed down here where the rows it removed
+               would have been, with the way out beside it. A filter you
+               cannot see is a filter you forget you set. -->
+          <div id="debFilterNote"></div>
         </div>
 
-        <!-- The band filter is echoed down here where the rows it removed
-             would have been, with the way out beside it. A filter you
-             cannot see is a filter you forget you set. -->
-        <div id="debFilterNote"></div>
+        <!-- THE INTELLIGENCE. The reading of the whole book, every panel
+             ending in names that open on the register. -->
+        <div id="debViewIntel" class="ow-dx" hidden>
+          <div id="debIntelWrap"></div>
+        </div>
       </div>
     </section>
 
@@ -87290,20 +87860,274 @@ function wireDebCreditRate(wrap){
   });
 }
 
+/* ================= DEBTORS — THE INTELLIGENCE CENTER =================
+
+   Two views over one book. DEBTORS is the register: how old the money
+   is, everyone who owes it, and one customer opened beside the list with
+   the act that settles them. INTELLIGENCE is the reading of the whole
+   book: how much, who holds it, how fast it comes back, where the risk
+   sits, whether it is getting older, and what the next fortnight brings.
+
+   Every figure below is read from records the shop already keeps -- the
+   debt ledger walked oldest first (customerOpenCharges), the invoices
+   still open (debtChaseInvoices), the promises customers named
+   (promisesFor / promiseState), the chase log, each customer's credit
+   limit, and the shop's own terms. Nothing is typed in as a total, and
+   nothing here sends itself: Receive opens the payment form, and the
+   chase is drafted on Follow-ups for the owner to send. */
+
+/* Which view is showing, which standing the list is narrowed to, and
+   which half of the open customer's evidence is up. Kept between renders
+   so a payment saved does not throw the owner's place away. */
+let debView = 'debtors';
+let debSeg = 'all';
+let debDview = 'inv';
+/* The phone opens a customer as a sheet over the list; the desk keeps
+   them in the rail. */
+let debSheet = false;
+/* The risk map's crop: the window it is zoomed to, the windows it was
+   zoomed through (so Zoom out steps back one), and the box being drawn. */
+let debMapView = null;
+let debMapStack = [];
+let debMapDrag = null;
+let debMapHover = '';
+/* The week under the pointer on the owed chart. */
+let debWeekHover = -1;
+
+/* One reading of the whole book per render. Every panel on the screen
+   draws from it, so no two of them can work a figure out differently. */
+let debDxMemo = null;
+function debDxReset(){ debDxMemo = null; }
+
+const DEB_SEG = {
+  act:      { label: 'Act now',      cls: 'ow-dx-s-act',   rank: 0 },
+  check:    { label: 'Check first',  cls: 'ow-dx-s-check', rank: 1 },
+  promised: { label: 'Promised',     cls: 'ow-dx-s-prom',  rank: 2 },
+  watch:    { label: 'Late, paying', cls: 'ow-dx-s-watch', rank: 3 },
+  terms:    { label: 'In terms',     cls: 'ow-dx-s-terms', rank: 4 },
+};
+const DEB_SEG_ORDER = ['act', 'check', 'promised', 'watch', 'terms'];
+/* The age fills, one per band, young to old, and the no-date band last.
+   Tokens, so the bar, the columns, the cells and the map are one palette. */
+const DEB_AGE_FILL = { b30: 'var(--ow-age-1)', b60: 'var(--ow-age-2)', b90: 'var(--ow-age-3)',
+  b90p: 'var(--ow-crimson)', unknown: 'var(--ow-age-nd)' };
+const DEB_AGE_INK = { b30: 'var(--ow-ink-900)', b60: 'var(--ow-ink-900)', b90: 'var(--ow-paper)',
+  b90p: 'var(--ow-paper)', unknown: 'var(--ow-amber-ink)' };
+
+function debM(n){
+  const v = (Number(n) || 0) / 1e6;
+  if(Math.abs(Number(n) || 0) < 500) return '0';
+  if(Math.abs(v) < 1) return Math.round((Number(n) || 0) / 1000) + 'k';
+  return (Math.abs(v) >= 10 ? v.toFixed(1) : v.toFixed(2)).replace(/\.?0+$/, '') + 'm';
+}
+function debShort(name){
+  return String(name || '').split(/\s+/).slice(0, 2).join(' ').replace(/[&.,]+$/, '').trim() || 'Unnamed';
+}
+function debInitials(name){
+  return String(name || '?').replace(/[^A-Za-z ]/g, '').split(/\s+/).filter(Boolean)
+    .slice(0, 2).map((w)=> w[0]).join('').toUpperCase() || '?';
+}
+/* Days from today to a day still ahead -- 0 today, negative once past. */
+function debDaysAhead(iso){ return iso ? daysBetweenISO(todayISO(), iso) : null; }
+
+/* What one customer owed at the end of each of the last `weeks` weeks:
+   their own ledger replayed up to that day through the walk that ages
+   today's balance. Summed over everybody it is debBookHistory. */
+function debCustomerHistory(c, weeks){
+  const t0 = Date.parse(todayISO() + 'T00:00:00Z');
+  const log = (c.debtLog || []).filter((l)=> l.date);
+  const out = [];
+  for(let w = weeks - 1; w >= 0; w--){
+    const asOf = new Date(t0 - w * 7 * 86400000).toISOString().slice(0, 10);
+    const upto = log.filter((l)=> l.date <= asOf);
+    let total = 0, old = 0;
+    if(upto.length){
+      customerOpenCharges({ ...c, debtLog: upto }).forEach((ch)=>{
+        total += ch.remaining;
+        if(ch.date && daysBetweenISO(ch.date, asOf) >= 60) old += ch.remaining;
+      });
+    }
+    out.push({ asOf, total, old });
+  }
+  return out;
+}
+
+function debDx(){
+  if(debDxMemo) return debDxMemo;
+  const grace = Math.max(0, Number(data.presetChaseAfterDays) || 0);
+  const chases = data.presetDebtChases || {};
+  const WEEKS = 12;
+  const rows = debAllRows();
+  const owing = rows.filter((r)=> r.debt > 0.5);
+  const xs = owing.map((r)=>{
+    const c = (data.customers || []).find((y)=> y.id === r.id) || {};
+    const drift = customerDebtDrift(c);
+    const charges = customerOpenCharges(c).map((ch)=> ({ ...ch, age: ch.date ? daysSinceDate(ch.date) : -1 }));
+    const dated = charges.filter((ch)=> ch.age >= 0);
+    const buckets = { b30: 0, b60: 0, b90: 0, b90p: 0, unknown: 0 };
+    dated.forEach((ch)=> { buckets[agingBandFor(ch.age)] += ch.remaining; });
+    /* What the dated charges do not explain -- an undated row, or a
+       balance its ledger disagrees with -- is money of no known age. It
+       is named as that, never folded into the youngest band. */
+    const onDated = dated.reduce((s, ch)=> s + ch.remaining, 0);
+    buckets.unknown = Math.max(0, r.debt - onDated);
+    if(buckets.unknown < 0.5) buckets.unknown = 0;
+    const paidDays = r.lastPaid ? daysSinceDate(r.lastPaid) : null;
+    const promises = promisesFor(r.id).map((p)=> ({ ...p, state: promiseState(p, c) }));
+    const latest = promises[0] || null;
+    const kept = promises.filter((p)=> p.state === 'kept').length;
+    const broken = promises.filter((p)=> p.state === 'broken');
+    const limit = (c.creditLimit == null || c.creditLimit === '') ? null : Number(c.creditLimit);
+    const late = dated.filter((ch)=> ch.age >= grace).reduce((s, ch)=> s + ch.remaining, 0);
+    let seg;
+    if(!(r.ageDays >= 0) || drift !== 0) seg = 'check';
+    else if(latest && latest.state === 'waiting') seg = 'promised';
+    else if(r.ageDays < grace) seg = 'terms';
+    else if(paidDays === null || paidDays > grace || (latest && latest.state === 'broken')) seg = 'act';
+    else seg = 'watch';
+    const hist = debCustomerHistory(c, WEEKS);
+    return {
+      id: r.id, name: r.name, short: debShort(r.name), initials: debInitials(r.name),
+      location: r.location, phone: String(c.phone || c.phone2 || '').trim(),
+      debt: r.debt, ageDays: r.ageDays, band: r.band, lastPaid: r.lastPaid, paidDays,
+      progress: r.progress, limit: limit > 0 ? limit : null,
+      overBy: limit > 0 ? r.debt - limit : 0,
+      seg, drift, charges, dated, buckets, late,
+      old: buckets.b90 + buckets.b90p,
+      hist, oldThen: hist[0] ? hist[0].old : 0,
+      promise: latest, promises, kept, brokenN: broken.length,
+      lastBroken: broken.length ? broken.reduce((a, p)=> (!a || p.promisedOn > a.promisedOn) ? p : a, null) : null,
+      lastChased: chases[r.id] || null,
+    };
+  });
+  const byId = new Map(xs.map((x)=> [x.id, x]));
+  const total = xs.reduce((s, x)=> s + x.debt, 0);
+  const bands = AGING_BANDS.map((b)=> {
+    const per = xs.filter((x)=> x.buckets[b.key] > 0.5).map((x)=> ({ x, amt: x.buckets[b.key] }))
+      .sort((a, b2)=> b2.amt - a.amt);
+    return { key: b.key, label: b.label, short: b.short,
+      amount: per.reduce((s, p)=> s + p.amt, 0), count: per.length, per };
+  });
+  const bandAmt = (k)=> (bands.find((b)=> b.key === k) || { amount: 0 }).amount;
+  const late = xs.reduce((s, x)=> s + x.late, 0);
+  const hist = debBookHistory(WEEKS);
+  const logsIn = (type, from, to)=> (data.customers || []).reduce((s, c)=> s + (c.debtLog || [])
+    .filter((l)=> l.type === type && l.date)
+    .filter((l)=> { const d = daysSinceDate(l.date); return d >= from && d < to; })
+    .reduce((a, l)=> a + (Number(l.amount) || 0), 0), 0);
+  const collected30 = logsIn('payment', 0, 31), charged30 = logsIn('charge', 0, 31);
+  /* HOW FAST THE MONEY COMES BACK: the book divided by a day's credit
+     sales over the last ninety days -- days of selling the book is
+     carrying. The same sum twelve weeks ago, from that day's book. */
+  const sold90 = logsIn('charge', 0, 90), sold90Then = logsIn('charge', 77, 167);
+  const datedNow = hist.length ? hist[hist.length - 1].total : 0;
+  const dso = sold90 > 0 ? Math.round(datedNow / (sold90 / 90)) : null;
+  const dsoThen = sold90Then > 0 && hist.length ? Math.round(hist[0].total / (sold90Then / 90)) : null;
+  /* The fortnight: promises with a day in it, and charges that cross the
+     shop's terms in it if nothing is paid. */
+  const events = [];
+  xs.forEach((x)=> {
+    if(x.promise && x.promise.state === 'waiting'){
+      const n = debDaysAhead(x.promise.promisedOn);
+      if(n != null && n >= 0 && n <= 13) events.push({ n, kind: 'word', x, amt: Number(x.promise.amount) || x.debt });
+    }
+    x.dated.forEach((ch)=> {
+      const n = grace - ch.age;
+      if(ch.age < grace && n >= 1 && n <= 13) events.push({ n, kind: 'late', x, amt: ch.remaining, quoteId: ch.quoteId });
+    });
+  });
+  events.sort((a, b)=> a.n - b.n || b.amt - a.amt);
+  /* WHAT NEEDS YOU -- one line per customer, the worst thing first. */
+  const signals = [];
+  xs.forEach((x)=> {
+    const why = []; let tone = null, rank = 9;
+    if(x.paidDays === null && x.ageDays >= grace && x.seg !== 'check'){ why.push('has never paid — open ' + x.ageDays + ' days'); tone = 'bad'; rank = 0; }
+    if(x.overBy > 0.5){ why.push(fmtUGX(Math.round(x.overBy)) + ' over their ' + debM(x.limit) + ' limit'); tone = 'bad'; rank = Math.min(rank, 1); }
+    if(x.lastBroken){ why.push('broke the promise for ' + fmtShortDate(x.lastBroken.promisedOn)); tone = 'bad'; rank = Math.min(rank, 1); }
+    if(x.paidDays !== null && x.paidDays > 60 && x.ageDays >= grace){ why.push('no payment in ' + x.paidDays + ' days'); tone = 'bad'; rank = Math.min(rank, 1); }
+    if(!tone && x.seg === 'check'){ why.push(x.drift !== 0 ? 'the balance does not match its own history — check it first' : 'no date behind it — check before you chase'); tone = 'warn'; rank = 3; }
+    if(!tone){
+      const soon = x.dated.filter((ch)=> ch.age < grace && grace - ch.age <= 3);
+      if(soon.length){ const n = grace - soon[0].age; why.push('turns late ' + (n === 1 ? 'tomorrow' : 'in ' + n + ' days')); tone = 'warn'; rank = 4; }
+    }
+    if(!tone && x.promise && x.promise.state === 'waiting'){
+      const n = debDaysAhead(x.promise.promisedOn);
+      if(n != null && n <= 7) { why.push('said ' + (x.promise.amount ? fmtUGX(Math.round(x.promise.amount)) : 'the balance') + ' by ' + fmtShortDate(x.promise.promisedOn)); tone = 'word'; rank = 5; }
+    }
+    if(tone) signals.push({ id: x.id, name: x.name, text: why.join(' · '), tone, rank, fig: x.debt });
+  });
+  signals.sort((a, b)=> a.rank - b.rank || b.fig - a.fig);
+  const sorted = xs.slice().sort((a, b)=> b.debt - a.debt);
+  debDxMemo = {
+    grace, xs, byId, total, bands, bandAmt, late, old: bandAmt('b90') + bandAmt('b90p'),
+    hist, collected30, charged30, dso, dsoThen, events, signals,
+    top3: sorted.slice(0, 3).reduce((s, x)=> s + x.debt, 0), top3Names: sorted.slice(0, 3).map((x)=> x.short.split(' ')[0]),
+    promised14: events.filter((e)=> e.kind === 'word').reduce((s, e)=> s + e.amt, 0),
+    turning14: events.filter((e)=> e.kind === 'late').reduce((s, e)=> s + e.amt, 0),
+  };
+  return debDxMemo;
+}
+
+/* THE HEADER'S SHARE: the two views, and the one glance both of them
+   keep -- what is owed and how much of it is late -- with the two things
+   that leave the screen beside the list they print. */
+function renderDebtorsHead(){
+  const dx = debDx();
+  const head = document.getElementById('debHeadWrap');
+  const tabs = document.getElementById('debViewTabs');
+  const pct = dx.total > 0 ? Math.round(dx.late / dx.total * 100) : 0;
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  if(head){
+    head.innerHTML = `<span class="ow-dx-gl"><span class="ow-dx-gl-k">Owed</span><b class="ow-dx-n ow-dx-gl-v">${f(dx.total)}</b><span class="ow-dx-gl-k">UGX</span></span>
+      ${dx.total > 0 ? `<span class="ow-cp ow-bad">${pct}% past terms</span>` : ''}
+      ${debView === 'debtors' && dx.xs.length ? `<span class="ow-dx-gl-a ow-hide-sm">
+        <button type="button" class="btn btn-ghost ow-sm" id="deb_print_btn">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>Print the book</button>
+        <button type="button" class="btn btn-ghost ow-sm" id="deb_export_btn">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v11m0 0l-4-4m4 4l4-4"/><path d="M4 19h16"/></svg>Export CSV</button>
+      </span>` : ''}`;
+    const prt = head.querySelector('#deb_print_btn');
+    if(prt) prt.addEventListener('click', debPrintList);
+    const exp = head.querySelector('#deb_export_btn');
+    if(exp) exp.addEventListener('click', debExportCSV);
+  }
+  if(tabs){
+    const views = [
+      { k: 'debtors', label: 'Debtors', badge: String(dx.xs.length), icon: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M3 14h18M9 9v11"/>' },
+      { k: 'intel', label: 'Intelligence', badge: dx.signals.length + (dx.signals.length === 1 ? ' signal' : ' signals'),
+        icon: '<circle cx="7" cy="15" r="2.5"/><circle cx="15" cy="8" r="3.5"/><circle cx="18" cy="17" r="1.8"/><path d="M3 21h18"/>' },
+    ];
+    tabs.innerHTML = views.map((v)=> `<button type="button" role="tab" class="ow-dx-vt-b${debView === v.k ? ' ow-on' : ''}" aria-selected="${debView === v.k}" data-view="${v.k}">
+      <svg class="ow-dx-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${v.icon}</svg>
+      ${v.label}<span class="ow-dx-vt-c${v.k === 'intel' && dx.signals.length ? ' ow-dx-vt-hot' : ''}">${esc(v.badge)}</span></button>`).join('');
+    tabs.querySelectorAll('[data-view]').forEach((b)=> b.addEventListener('click', ()=> {
+      debView = b.dataset.view; debSheet = false; renderDebtorsList();
+    }));
+  }
+  const vd = document.getElementById('debViewDebtors'), vi = document.getElementById('debViewIntel');
+  if(vd) vd.hidden = debView !== 'debtors';
+  if(vi) vi.hidden = debView !== 'intel';
+}
+
+/* THE AGE OF THE MONEY.
+
+   One column per age, as tall as the money at that age, and each column
+   stacked from the customers whose money it is -- so the panel answers
+   how much is late, where it piles up, and whose it is, in one look. It
+   is read charge by charge off the ledger walk: a customer with one old
+   invoice and one new one stands in two columns, which is the truth
+   about their money, rather than in the oldest one with everything.
+
+   Always the whole book. The search box and the standing tabs act on
+   the list below, never on this; a position that shrinks because
+   somebody left a filter on is a position nobody can trust. */
 function renderDebtorsPosition(){
   const wrap = document.getElementById('debPositionWrap');
   if(!wrap) return;
   const p = debAgingProfile();
-
   if(!p.customers){
-    /* NO STRIP OF ZEROS. Four tiles reading 0 is data slop: it fills a
-       settled screen with figures that mean nothing, and makes a book
-       that is straight look like a screen that is broken. One sentence
-       is the whole state.
-
-       A shop with no customers yet has not "settled up" -- it has not
-       started. Saying the second to somebody on their first day reads
-       as the app misunderstanding what it is looking at. */
+    /* NO STRIP OF ZEROS. A shop with no customers yet has not "settled
+       up" -- it has not started. */
     const any = (data.customers||[]).length > 0;
     wrap.innerHTML = `<div class="ow-pan ow-db-clear">
       <div class="ow-empty"><b>${any ? 'Nobody owes you anything.' : 'Nothing is owed to you yet.'}</b>
@@ -87313,96 +88137,69 @@ function renderDebtorsPosition(){
     wireDebCreditRate(wrap);
     return;
   }
-
-  const f = n=> Number(Math.round(n)).toLocaleString('en-UG');
-  const share = (n)=> p.total > 0 ? n / p.total : 0;
-  const pct = (n)=> Math.round(share(n) * 100);
-  const live = p.bands.filter(b=> b.amount > 0);
-  const owingRows = debAllRows().filter(r=> r.debt > 0.5);
-
-  /* ---- the figure, and two facts about it ----
-     Ink, not crimson. Being owed money by a shop's own customers is
-     trade, not a warning. The oldest balance and the largest one used
-     to be tiles of their own beside it; they are facts ABOUT this
-     figure, so they are lines under it. */
-  const dated = owingRows.filter(r=> r.ageDays >= 0);
+  const dx = debDx();
+  const d = debOpenId && dx.byId.get(debOpenId);
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const pct = (n)=> p.total > 0 ? Math.round(n / p.total * 100) : 0;
+  const mb = dx.bands;
+  const live = mb.filter(b=> b.amount > 0);
+  const dated = dx.xs.filter((x)=> x.ageDays >= 0);
   const oldest = dated.reduce((m,r)=> (!m || r.ageDays > m.ageDays) ? r : m, null);
   /* How exposed the shop is to one name. Withheld when there is only one
-     debtor: "largest single debt, 100% of the total" is not a finding
-     when it is also the only debt, it is the same number twice. */
+     debtor: the largest of one is the same number twice. */
   const big = p.customers > 1 ? p.biggest : null;
-  const oldTone = !oldest ? '' : oldest.ageDays >= 60 ? ' ow-bad' : oldest.ageDays >= 30 ? ' ow-warn' : '';
-  const facts = [
-    oldest ? `<div class="ow-db-hl"><span class="ow-cp${oldTone}">${oldest.ageDays} d</span>
-      <span class="ow-db-hl-n" title="${esc(oldest.name)}">oldest &middot; <b class="ow-db-hl-b">${esc(oldest.name)}</b></span></div>` : '',
-    big ? `<div class="ow-db-hl"><span class="ow-cp">${pct(big.debt)}%</span>
-      <span class="ow-db-hl-n" title="${esc(big.name)} · ${esc(fmtUGX(Math.round(big.debt)))}">largest &middot; <b class="ow-db-hl-b">${esc(big.name)}</b></span></div>` : '',
-  ].filter(Boolean).join('');
-  const tile = `<div class="ow-mt">
-    <p class="ow-mt-l">Owed to you</p>
-    <span class="ow-mt-v">${f(p.total)} <span class="ow-u">UGX</span></span>
-    <p class="ow-mt-s">Across ${p.customers} customer${p.customers===1?'':'s'} &middot; the whole book, whatever the list below is filtered to</p>
-    ${facts ? `<div class="ow-db-hls">${facts}</div>` : ''}
-  </div>`;
-
-  /* ---- the age of the money: ONE device, a bar with a legend ----
-     Widths come from the money in each band, because one big old
-     balance is the problem and three small fresh ones are not. A floor
-     keeps a 1% band from collapsing into a line nobody can hit: it
-     distorts the picture slightly, and a segment too small to click is
-     worse. */
-  const segs = live.map(b=> `<button type="button" class="ow-db-ag-s ow-band-${b.key}${debBandFilter===b.key?' ow-on':''}"
-      style="flex-grow:${b.amount}"
-      data-band="${esc(b.key)}"
-      title="${esc(b.label)}: ${esc(fmtUGX(Math.round(b.amount)))} from ${b.count} customer${b.count===1?'':'s'}">
-      <span class="sr-only">${esc(b.label)}</span></button>`).join('');
-
-  const legend = live.map(b=> `<button type="button" class="ow-db-ag-b ow-band-${b.key}${debBandFilter===b.key?' ow-on':''}"
-      data-band="${esc(b.key)}">
-      <span class="ow-db-ag-t">${esc(b.short)}</span>
-      <span class="ow-db-ag-v">${f(b.amount)}</span>
-      <span class="ow-db-ag-m">${b.count} customer${b.count===1?'':'s'} &middot; ${pct(b.amount)}%</span>
-    </button>`).join('');
-
-  /* ---- the bracket: how much of it is past the shop's own terms ----
-     The same grace the money queue waits out before it chases, read
-     from the same setting, never re-typed. The bands run young to old
-     with the undated band last, so the dated money at or past the terms
-     is the run just before it -- which is where the bracket is drawn,
-     as a share of the whole bar. A bracket and not a colour: the bands
-     already carry age, and this says which of them are LATE. */
-  const grace = Math.max(0, Number(data.presetChaseAfterDays) || 0);
-  const late = dated.filter(r=> r.ageDays >= grace).reduce((s,r)=> s + r.debt, 0);
-  const unknownAmt = (p.bands.find(b=> b.key === 'unknown') || {amount:0}).amount;
-  let bracket = '';
-  if(late > 0.5){
-    const right = share(unknownAmt) * 100, width = share(late) * 100;
-    const left = Math.max(0, 100 - right - width);
-    /* A label that starts past the middle would run off the right edge,
-       so it hangs from the bracket's right end instead. */
-    const at = left > 50 ? `right:${right.toFixed(2)}%` : `left:${left.toFixed(2)}%`;
-    const name = grace > 0 ? `Past your ${grace}&#8209;day terms` : 'All due &mdash; you give no days of grace';
-    bracket = `<div class="ow-db-br" aria-hidden="true">
-      ${left > 30 ? `<span class="ow-db-br-in ow-hide-sm">Within terms</span>` : ''}
-      <span class="ow-db-br-l" style="left:${left.toFixed(2)}%;width:${width.toFixed(2)}%"></span>
-      <span class="ow-db-br-t" style="${at}"><b class="ow-db-br-k">${name}</b><span class="ow-db-br-f">${f(late)}</span>${pct(late)}%</span>
-    </div>`;
-  } else if(dated.length){
-    bracket = `<div class="ow-db-br"><span class="ow-db-br-in">Nothing is past your ${grace}&#8209;day terms</span></div>`;
-  }
-
-  wrap.innerHTML = `<div class="ow-strip ow-db-hero" role="group" aria-label="What you are owed">
-    ${tile}
-    <div class="ow-db-hx">
-      ${bracket}
-      <div class="ow-db-ag">
-        <div class="ow-db-ag-bar" role="group" aria-label="What you are owed, split by age — tap a band to list only it">${segs}</div>
-        <div class="ow-db-ag-l">${legend}</div>
+  const grace = dx.grace;
+  const inTerms = dx.bandAmt('b30') && grace > 0 ? dated.reduce((s, x)=> s + x.dated.filter((ch)=> ch.age < grace).reduce((a, ch)=> a + ch.remaining, 0), 0) : 0;
+  const unk = dx.bandAmt('unknown');
+  const meter = live.map(b=> `<span class="ow-dx-meter-s" style="flex-grow:${b.amount};background:${DEB_AGE_FILL[b.key]}" title="${esc(b.label)}: ${esc(fmtUGX(Math.round(b.amount)))}"></span>`).join('');
+  const kv = [
+    { k: 'In terms', v: inTerms, sw: 'var(--ow-age-1)', cls: '' },
+    { k: 'Late', v: dx.late, sw: 'var(--ow-crimson)', cls: ' ow-dx-bad' },
+    { k: 'No date', v: unk, sw: 'var(--ow-age-nd)', cls: ' ow-dx-nd' },
+  ].filter((r)=> r.v > 0.5).map((r)=> `<span class="ow-dx-kv"><span class="ow-dx-sw" style="background:${r.sw}"></span><span class="ow-dx-kv-k">${r.k}</span><b class="ow-dx-n${r.cls}">${debM(r.v)}</b><span class="ow-dx-n ow-dx-kv-p">${pct(r.v)}%</span></span>`).join('');
+  /* THE COLUMNS. Heights on one scale -- the biggest age is the full
+     height -- so a short column is a small amount, not a short label. */
+  const colMax = Math.max(1, ...live.map((b)=> b.amount));
+  const cols = mb.map((b)=> {
+    const on = debBandFilter === b.key;
+    const h = b.amount > 0 ? Math.max(8, Math.round(b.amount / colMax * 150)) : 2;
+    const slices = b.per.map((s)=> {
+      const px = s.amt / (b.amount || 1) * h;
+      const mine = d && s.x.id === d.id;
+      return `<span class="ow-dx-sl${mine ? ' ow-on' : ''}" style="flex-grow:${s.amt}" title="${esc(s.x.name)} · ${esc(fmtUGX(Math.round(s.amt)))}">${px >= 20 || (mine && px >= 13) ? `<span class="ow-dx-sl-n">${esc(s.x.short)}</span>` : ''}</span>`;
+    }).join('');
+    return `<button type="button" class="ow-dx-col ow-band-${b.key}${on ? ' ow-on' : ''}${debBandFilter && !on ? ' ow-dx-dim' : ''}" data-band="${esc(b.key)}" aria-pressed="${on}"
+      aria-label="${esc(b.label)}: ${esc(fmtUGX(Math.round(b.amount)))} from ${b.count} customer${b.count===1?'':'s'} — list only these">
+      <span class="ow-dx-col-a"><b class="ow-dx-n">${b.amount > 0 ? debM(b.amount) : '—'}</b><span class="ow-dx-col-p">${pct(b.amount)}% of the book</span></span>
+      <span class="ow-dx-stack" style="height:${h}px;background:${DEB_AGE_FILL[b.key]};color:${DEB_AGE_INK[b.key]}">${slices}</span>
+    </button>`;
+  }).join('');
+  const axis = mb.map((b)=> `<span class="ow-dx-axl ow-band-${b.key}"><b class="ow-dx-axl-t">${esc(b.label)}</b><span>${b.count} customer${b.count===1?'':'s'}</span></span>`).join('');
+  wrap.innerHTML = `<section class="ow-pan ow-dx-age" aria-label="How old the money is">
+    <div class="ow-dx-age-l">
+      <span class="ow-pan-t">How old the money is</span>
+      <span class="ow-dx-age-k">${grace > 0 ? `Late &middot; past your ${grace}&#8209;day terms` : 'Late &middot; you give no days of grace'}</span>
+      <span class="ow-dx-age-v"><b class="ow-dx-n">${f(dx.late)}</b><span class="ow-dx-u">UGX</span></span>
+      <span class="ow-dx-meter" aria-hidden="true">${meter}</span>
+      <span class="ow-dx-kvs">${kv}</span>
+      <span class="ow-dx-age-f">
+        ${oldest ? `<span>Oldest &middot; <b class="ow-dx-em">${esc(oldest.name)}</b> <b class="ow-dx-n ow-dx-bad">${oldest.ageDays} days</b></span>` : ''}
+        ${big ? `<span>Largest &middot; <b class="ow-dx-em">${esc(big.name)}</b> <b class="ow-dx-n">${pct(big.debt)}%</b></span>` : ''}
+      </span>
+    </div>
+    <div class="ow-dx-age-r">
+      <div class="ow-dx-age-h">
+        <span class="ow-dx-cap">Each block is one customer&rsquo;s money at that age &middot; tap an age to list only it</span>
+        ${d ? `<span class="ow-dx-cap ow-dx-age-me"><span class="ow-dx-me" aria-hidden="true"></span>${esc(d.short)} is outlined</span>` : ''}
       </div>
+      <div class="ow-dx-cols" role="group" aria-label="Owed by age">
+        <span class="ow-dx-late" aria-hidden="true"><b class="ow-dx-late-t">Late &middot; ${debM(dx.late)} &middot; ${pct(dx.late)}%</b></span>
+        ${cols}
+      </div>
+      <div class="ow-dx-axis">${axis}</div>
     </div>
     ${debCreditPanelHTML(true)}
-  </div>`;
-
+  </section>`;
   wireDebCreditRate(wrap);
   wrap.querySelectorAll('[data-band]').forEach(el=> el.addEventListener('click', ()=>{
     // Clicking the band you are already in takes the filter off, so the
@@ -87411,6 +88208,944 @@ function renderDebtorsPosition(){
     renderDebtorsList();
   }));
 }
+
+/* THE REGISTER.
+
+   One row per debtor, and the same call emits the phone's card -- so the
+   console and the phone can never say different things about what
+   somebody owes. A row says who, how they stand, how their money is
+   spread across the ages, which way their balance has gone for twelve
+   weeks, when they last paid, and what they owe against their limit.
+   Choosing one opens them in the rail (a sheet, on the phone): the
+   evidence and the act live there, not in the row. */
+function renderDebtorsList(){
+  debDxReset();
+  const wrap = document.getElementById('deb_tableWrap');
+  if(!wrap) return;
+  renderDebtorsHead();
+  const dx = debDx();
+  let rows = debRowsForList(debSearch);
+  if(debSeg !== 'all') rows = rows.filter((r)=> { const x = dx.byId.get(r.id); return x && x.seg === debSeg; });
+  debLastRows = rows;
+  if(!debOpenId || !dx.byId.has(debOpenId)) debOpenId = rows.find((r)=> dx.byId.has(r.id)) ? rows.find((r)=> dx.byId.has(r.id)).id : (dx.xs[0] ? dx.xs[0].id : null);
+  renderDebtorsPosition();
+  renderDebtorsRail();
+  renderDebFilterNote(rows.length);
+  const f = n=> Number(Math.round(n)).toLocaleString('en-UG');
+  const totalDebt = rows.reduce((s,r)=>s+r.debt, 0);
+  const allRows = debAllRows();
+  const owingAll = allRows.filter(r=> r.debt > 0.5);
+  const bandDef = debBandFilter ? agingBandDef(debBandFilter) : null;
+
+  /* ---- the standings: who to act on, at a tap ---- */
+  const segs = ['all'].concat(DEB_SEG_ORDER).map((k)=> {
+    const list = k === 'all' ? dx.xs : dx.xs.filter((x)=> x.seg === k);
+    if(k !== 'all' && !list.length) return '';
+    const on = debSeg === k;
+    return `<button type="button" role="tab" class="ow-dx-st-b${on ? ' ow-on' : ''}" aria-selected="${on}" data-seg="${k}">
+      <span class="ow-dx-dot ${k === 'all' ? 'ow-dx-s-all' : DEB_SEG[k].cls}"></span>${k === 'all' ? 'Everyone' : DEB_SEG[k].label}
+      <span class="ow-dx-n ow-dx-st-n">${list.length} &middot; ${debM(list.reduce((s, x)=> s + x.debt, 0))}</span></button>`;
+  }).join('');
+
+  /* ---- the toolbar: find, order, and what is narrowing the list ---- */
+  const toolbar = `<div class="ow-tb">
+    <label class="ow-f ow-f-grow ow-tb-s${debSearch ? ' ow-set' : ''}">
+      <span class="ow-f-l">Find a customer</span>
+      <span class="ow-f-in">
+        <svg class="ow-f-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
+        <input class="ow-f-v ow-f-t" id="deb_search" type="text" placeholder="Name or place" value="${esc(debSearch)}">
+      </span>
+    </label>
+    <div class="ow-f">
+      <span class="ow-f-l">Order</span>
+      <span class="ow-f-in">
+        <select class="ow-f-sel" id="deb_sort" aria-label="How the list is ordered">
+          ${DEB_SORT_CHOICES.map(c=> `<option value="${c.key}"${DEB_SORT_STATE.key===c.key?' selected':''}>${esc(c.label)}</option>`).join('')}
+        </select>
+      </span>
+    </div>
+    <button type="button" class="btn btn-ghost ow-sm ow-db-tg${debHideSettled ? ' ow-on' : ''}"
+      id="deb_hide_no_debt" role="switch" aria-checked="${debHideSettled}">
+      <svg class="icon" viewBox="0 0 24 24">${debHideSettled
+        ? '<path d="M4 12.5l5 5L20 6.5"/>'
+        : '<rect x="4" y="4" width="16" height="16" rx="2"/>'}</svg>
+      Hide settled</button>
+    ${debBandFilter ? `<button type="button" class="ow-cp ow-warn ow-db-fc" id="deb_band_chip"
+      title="Showing only ${esc(bandDef ? bandDef.label.toLowerCase() : 'one band')} — tap to show everyone">
+      ${esc(bandDef ? bandDef.short : 'one band')} only
+      <svg class="ow-db-fc-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>` : ''}
+    <span class="ow-tb-n ow-pan-n">${rows.length} of ${owingAll.length} owing</span>
+  </div>`;
+
+  /* ---- one row: who, standing, the money by age, twelve weeks, last
+     payment, and the balance against the limit ---- */
+  const cellsHTML = (x)=> {
+    if(!x) return '<span class="ow-dx-cells"><span class="ow-dx-cell ow-dx-c0">settled</span></span>';
+    const keys = ['b30', 'b60', 'b90', 'b90p'];
+    const cellMax = Math.max(1, ...dx.xs.map((y)=> Math.max(...keys.map((k)=> y.buckets[k]))));
+    const cells = x.dated.length ? `<span class="ow-dx-cells">${keys.map((k)=> {
+      const v = x.buckets[k];
+      if(!(v > 0.5)) return '<span class="ow-dx-cell ow-dx-c0" aria-hidden="true">&ndash;</span>';
+      const strong = v / cellMax >= 0.35;
+      const inv = x.dated.filter((ch)=> agingBandFor(ch.age) === k);
+      return `<span class="ow-dx-cell ow-dx-n ow-band-${k}${strong ? ' ow-dx-strong' : ''}" title="${esc((agingBandDef(k)||{}).label || '')}: ${inv.length} charge${inv.length===1?'':'s'}, ${esc(fmtUGX(Math.round(v)))}">${debM(v)}</span>`;
+    }).join('')}</span>` : '';
+    const nd = x.buckets.unknown > 0.5 ? `<span class="ow-dx-cell ow-dx-cnd">No date &middot; ${debM(x.buckets.unknown)}</span>` : '';
+    return cells + nd;
+  };
+  const sparkHTML = (x)=> {
+    if(!x || !x.hist.length) return '<span class="ow-dx-sp"></span>';
+    const top = Math.max(...x.hist.map((h)=> h.total), x.debt) * 1.1 || 1;
+    const pts = x.hist.map((h, i)=> [(3 + i * 78 / (x.hist.length - 1)).toFixed(1), (23 - h.total / top * 20).toFixed(1)]);
+    const up = x.hist[x.hist.length - 1].total > x.hist[0].total * 1.05;
+    const last = pts[pts.length - 1];
+    return `<svg class="ow-dx-sp${up ? ' ow-dx-up' : ''}" viewBox="0 0 84 26" aria-hidden="true"><polyline class="ow-dx-sp-l" points="${pts.map((q)=> q.join(',')).join(' ')}"/><circle class="ow-dx-sp-d" cx="${last[0]}" cy="${last[1]}" r="2.6"/></svg>`;
+  };
+  /* When somebody last paid ANYTHING -- and never-paid is the one value
+     in this column worth stopping on. */
+  const paidCell = (r)=> r.lastPaid
+    ? `<span class="ow-db-lp${daysSinceDate(r.lastPaid) > 60 ? ' ow-dx-bad' : ''}"><span class="ow-db-lp-d">${esc(agingDaysLabel(daysSinceDate(r.lastPaid)))} ago</span>${esc(fmtShortDate(r.lastPaid))}</span>`
+    : '<span class="ow-db-lp ow-db-never"><span class="ow-db-lp-d">Never paid</span>not once</span>';
+  const limitNote = (x)=> !x ? '' : x.limit == null ? '<span class="ow-q-b">no limit set</span>'
+    : x.overBy > 0.5 ? `<span class="ow-q-b ow-dx-bad">${debM(x.overBy)} over limit</span>`
+    : `<span class="ow-q-b">${Math.round(x.debt / x.limit * 100)}% of limit</span>`;
+  const chip = (x)=> x ? `<span class="ow-cp ow-dx-chip ${DEB_SEG[x.seg].cls}">${DEB_SEG[x.seg].label}</span>` : '<span class="ow-cp">Settled</span>';
+  const rowHTML = (r)=> {
+    const x = dx.byId.get(r.id);
+    const open = r.id === debOpenId;
+    return `<div class="ow-q ow-dx-q${open ? ' ow-open' : ''}" data-row="${esc(r.id)}">
+      <button type="button" class="ow-q-r ow-dx-r" data-open="${esc(r.id)}" aria-pressed="${open}">
+        <span class="ow-q-t" title="${esc(r.name)}${r.location ? ' · ' + esc(r.location) : ''}"><span class="ow-q-who">${esc(r.name)}</span><span class="ow-q-b">${esc(r.location || '—')}</span></span>
+        <span>${chip(x)}</span>
+        <span class="ow-dx-agec">${cellsHTML(x)}</span>
+        ${sparkHTML(x)}
+        ${paidCell(r)}
+        <span class="ow-q-v"><span class="ow-q-f">${f(r.debt)}</span>${limitNote(x)}</span>
+      </button>
+      <div class="ow-q-card ow-dx-card">
+        <button type="button" class="ow-dx-card-o" data-open="${esc(r.id)}">
+          <span class="ow-dx-card-t">${chip(x)}<span class="ow-dx-card-p${!r.lastPaid || daysSinceDate(r.lastPaid) > 60 ? ' ow-dx-bad' : ''}">${r.lastPaid ? 'Paid ' + esc(agingDaysLabel(daysSinceDate(r.lastPaid))) + ' ago' : 'Never paid'}</span></span>
+          <span class="ow-q-who">${esc(r.name)}</span>
+          <span class="ow-dx-card-v"><b class="ow-q-f">${f(r.debt)}</b><span class="ow-q-b">${r.ageDays >= 0 ? 'oldest ' + r.ageDays + ' d' : 'age not on record'}</span>${x && x.overBy > 0.5 ? `<span class="ow-q-b ow-dx-bad">${debM(x.overBy)} over</span>` : ''}</span>
+          <span class="ow-dx-agec">${cellsHTML(x)}</span>
+        </button>
+        <div class="ow-q-a ow-dx-card-a">
+          <button type="button" class="btn btn-ghost ow-sm ow-dx-cb" data-receive="${esc(r.id)}">Receive</button>
+          <button type="button" class="btn btn-ghost ow-sm ow-dx-cb" data-chase="${esc(r.id)}">Draft the chase</button>
+          ${x && x.phone ? `<a class="btn btn-ghost ow-sm ow-dx-icb ow-dx-cb" href="tel:${esc(x.phone)}" aria-label="Call ${esc(r.name)}"><svg class="icon" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2"/></svg></a>` : ''}
+        </div>
+      </div>
+    </div>`;
+  };
+
+  /* THE COLUMN NAMES. A queue of rows has no <thead> to say them in.
+     Hidden on the phone, where every card says what it holds. */
+  const head = `<div class="ow-db-h ow-dx-h">
+    <span>Customer</span><span>Standing</span>
+    <span class="ow-dx-h-age"><span>Owing for, by age</span><span class="ow-dx-h-b"><span>&lt; 30 d</span><span class="ow-dx-h-w">30&ndash;60</span><span class="ow-dx-h-x">60&ndash;90</span><span class="ow-dx-h-x">90 +</span></span></span>
+    <span>12 weeks</span><span>Last payment</span><span class="ow-db-h-r">Owes</span>
+  </div>`;
+
+  /* Named rather than dropped: what the filters removed is said where it
+     would have been, with the figure it takes with it. */
+  const hiddenCount = owingAll.length - rows.filter(r=> r.debt > 0.5).length;
+  const hiddenSum = owingAll.reduce((s,r)=>s+r.debt,0) - totalDebt;
+  const foot = rows.length && hiddenCount > 0
+    ? `<p class="ow-mini">${debBandFilter ? `Showing <b>${esc(bandDef ? bandDef.label.toLowerCase() : 'one band')}</b> only. ` : ''}${
+        debSeg !== 'all' ? `Showing <b>${esc(DEB_SEG[debSeg].label.toLowerCase())}</b> only. ` : ''}${
+        hiddenCount} customer${hiddenCount===1?'':'s'} owing <b>${f(hiddenSum)}</b> ${hiddenCount===1?'is':'are'} not listed${
+        debSearch ? ' by the search and the filters' : ''}. A printed sheet says the same on its face.</p>`
+    : '';
+
+  const empty = data.customers.length === 0
+    ? '<div class="ow-empty"><b>No customers yet.</b> Add one on the Customers screen, or just sell to somebody by name &mdash; a balance appears here the moment they take goods on credit.</div>'
+    : debBandFilter
+      ? `<div class="ow-empty"><b>Nobody is in the ${esc((agingBandDef(debBandFilter)||{}).label || 'chosen')} band${debSearch ? ' under this search' : ''}.</b> Tap the lit age above to show everyone.</div>`
+      : debSeg !== 'all'
+        ? `<div class="ow-empty"><b>Nobody stands at &ldquo;${esc(DEB_SEG[debSeg].label)}&rdquo;${debSearch ? ' under this search' : ''}.</b> <button type="button" class="ow-db-go" data-seg="all">Show everyone</button></div>`
+      : debSearch
+        ? `<div class="ow-empty"><b>No customer matches &ldquo;${esc(debSearch)}&rdquo;.</b> Search a name or a place.</div>`
+        : debHideSettled
+          ? `<div class="ow-empty">Nothing to list. <b>Hide settled</b> is on, so the ${data.customers.length} settled customer${data.customers.length===1?'':'s'} on file ${data.customers.length===1?'is':'are'} not shown &mdash; turn it off to see everyone.</div>`
+          : '<div class="ow-empty">No customer on file is carrying a balance.</div>';
+
+  /* The phone's opening card: what is owed, and how much of it is late,
+     above the list it belongs to. */
+  const phoneTop = dx.total > 0 ? `<div class="ow-dx-pt"><span class="ow-dx-pt-k">Owed to you &middot; ${dx.xs.length} customer${dx.xs.length===1?'':'s'}</span>
+    <span class="ow-dx-pt-v"><b class="ow-dx-n">${f(dx.total)}</b><span class="ow-dx-u">UGX</span></span>
+    <span class="ow-cp ow-bad">${Math.round(dx.late / dx.total * 100)}% late</span></div>` : '';
+
+  wrap.innerHTML = `${phoneTop}<div class="ow-pan ow-dx-reg">
+    <div class="ow-pan-h">
+      <span class="ow-pan-t">Debtors</span>
+      <span class="ow-pan-n">${rows.length ? `${rows.length}${
+        rows.length !== owingAll.length ? ' of ' + owingAll.length : ''} &middot; ${f(totalDebt)}${
+        debBandFilter || debSearch || debSeg !== 'all' ? ' shown' : ''}` : 'none'}</span>
+    </div>
+    <div class="ow-dx-st" role="tablist" aria-label="Who to show">${segs}</div>
+    ${toolbar}
+    ${debtDriftBannerHTML()}
+    ${rows.length ? `<div class="ow-dx-scroll">${head}${rows.map(rowHTML).join('')}</div>${foot}` : empty}
+  </div>`;
+
+  wireDebToolbar(wrap);
+  /* Drift can exist on a customer the current filter hides, so the fix
+     has to be reachable from the empty path too, not just the populated
+     one. */
+  wireDebtDriftFix(wrap);
+
+  wrap.querySelectorAll('[data-seg]').forEach((b)=> b.addEventListener('click', ()=> {
+    debSeg = b.dataset.seg; renderDebtorsList();
+  }));
+  wrap.querySelectorAll('[data-open]').forEach(btn=> btn.addEventListener('click', ()=>{
+    if(debOpenId !== btn.dataset.open) debPay = {id: null, amount: 0};
+    debOpenId = btn.dataset.open;
+    debSheet = window.matchMedia && window.matchMedia('(max-width:820px)').matches;
+    renderDebtorsList();
+    if(!debSheet){
+      const rail = document.getElementById('debRailWrap');
+      if(rail && rail.getBoundingClientRect().top < 0) rail.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }
+  }));
+  wrap.querySelectorAll('[data-receive]').forEach(btn=> btn.addEventListener('click', ()=> debOpenReceive(btn.dataset.receive, 0)));
+  wrap.querySelectorAll('[data-chase]').forEach(btn=> btn.addEventListener('click', ()=> goToTab('chase')));
+  /* The register is drawn whichever view is up -- it is hidden, not
+     skipped, under Intelligence -- so the drift fix above is wired on
+     every render and switching back never shows a stale list. */
+  if(debView === 'intel') renderDebtorsIntel();
+}
+
+/* The toolbar is rendered with the list, so its controls are wired after
+   every render rather than once at parse time -- the pattern the drift
+   fix already uses. Search keeps focus and caret across the re-render it
+   causes, or typing a second letter would put the caret back at the
+   start. */
+function wireDebToolbar(wrap){
+  const box = wrap.querySelector('#deb_search');
+  if(box){
+    box.addEventListener('input', (e)=>{
+      const at = e.target.selectionStart;
+      debSearch = e.target.value;
+      renderDebtorsList();
+      const again = document.getElementById('deb_search');
+      if(again){ again.focus(); try{ again.setSelectionRange(at, at); }catch(_){} }
+    });
+  }
+  const sort = wrap.querySelector('#deb_sort');
+  if(sort) sort.addEventListener('change', (e)=>{
+    DEB_SORT_STATE.key = e.target.value;
+    DEB_SORT_STATE.dir = DEB_SORT_FIRST_DIR[e.target.value] || -1;
+    renderDebtorsList();
+  });
+  const tg = wrap.querySelector('#deb_hide_no_debt');
+  if(tg) tg.addEventListener('click', ()=>{ debHideSettled = !debHideSettled; renderDebtorsList(); });
+  const chip = wrap.querySelector('#deb_band_chip');
+  if(chip) chip.addEventListener('click', ()=>{ debBandFilter = ''; renderDebtorsList(); });
+}
+
+/* ONE CUSTOMER, OPENED.
+
+   Read top to bottom in the order the owner decides: who they are, how
+   bad it is, the evidence behind it (their invoices, or how they have
+   paid), and the act. On the desk it stands in the rail beside the list;
+   on the phone it is a sheet over it.
+
+   The invoices are drawn as jars, oldest first, because that is the
+   order a payment fills them: type what they are paying and the green
+   rises in the first jar, then spills into the next -- the same order
+   the payment form will tick them in when Receive opens it. Nothing is
+   recorded here; the form is where a payment is saved. */
+function renderDebtorsRail(){
+  const el = document.getElementById('debRailWrap');
+  if(!el) return;
+  const dx = debDx();
+  const d = debOpenId && dx.byId.get(debOpenId);
+  if(!d){
+    /* Nobody owing is said once, by the age panel; the rail does not
+       repeat it. With people owing, it says how to open one. */
+    el.innerHTML = dx.xs.length ? `<div class="ow-pan"><div class="ow-empty">Choose a customer in the list to see what they owe, why, and how they pay.</div></div>` : '';
+    el.classList.remove('ow-dx-sheet-on');
+    return;
+  }
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const grace = dx.grace;
+  const ids = debLastRows.filter((r)=> dx.byId.has(r.id)).map((r)=> r.id);
+  const idx = ids.indexOf(d.id);
+
+  /* ---- the verdict, as facts ---- */
+  const V = (text, cls)=> `<span class="ow-cp ${cls}">${esc(text)}</span>`;
+  const verdict = [];
+  if(d.buckets.unknown > 0.5) verdict.push(V('No date behind ' + debM(d.buckets.unknown), 'ow-dx-s-check'));
+  if(d.ageDays >= 0) verdict.push(d.ageDays >= grace
+    ? V('Oldest money ' + d.ageDays + ' d', d.ageDays >= 60 ? 'ow-bad' : 'ow-warn')
+    : V('Within terms', ''));
+  if(d.paidDays === null) verdict.push(V('Never paid', 'ow-bad'));
+  else if(d.paidDays > grace) verdict.push(V('Quiet ' + d.paidDays + ' days', d.paidDays > 60 ? 'ow-bad' : 'ow-warn'));
+  else verdict.push(V('Paid ' + agingDaysLabel(d.paidDays) + ' ago', 'ow-good'));
+  if(d.overBy > 0.5) verdict.push(V(debM(d.overBy) + ' over limit', 'ow-bad'));
+  if(d.lastBroken) verdict.push(V('Broke the ' + fmtShortDate(d.lastBroken.promisedOn) + ' promise', 'ow-bad'));
+  if(d.promises.length && !d.brokenN && d.kept === d.promises.length) verdict.push(V('Kept ' + d.kept + ' of ' + d.promises.length + ' promises', 'ow-good'));
+  if(d.promise && d.promise.state === 'waiting') verdict.push(V('Said ' + (d.promise.amount ? debM(d.promise.amount) : 'the balance') + ' by ' + fmtShortDate(d.promise.promisedOn), 'ow-dx-s-prom'));
+
+  /* ---- standing: what they owe against what you allowed ---- */
+  const C = 2 * Math.PI * 28;
+  let ring;
+  if(d.limit){
+    const base = Math.max(d.limit, d.debt);
+    const use = Math.min(d.debt, d.limit) / base * C, over = Math.max(0, d.debt - d.limit) / base * C;
+    ring = `<span class="ow-dx-ring" aria-hidden="true"><svg class="ow-dx-ring-s" viewBox="0 0 68 68">
+        <circle cx="34" cy="34" r="28" class="ow-dx-ring-t"/>
+        <circle cx="34" cy="34" r="28" class="ow-dx-ring-u${d.overBy <= 0 && d.debt / d.limit > 0.8 ? ' ow-dx-ring-w' : ''}" stroke-dasharray="${use.toFixed(1)} ${C.toFixed(1)}"/>
+        <circle cx="34" cy="34" r="28" class="ow-dx-ring-o" stroke-dasharray="${over.toFixed(1)} ${C.toFixed(1)}" stroke-dashoffset="${(-use).toFixed(1)}"/>
+      </svg><span class="ow-dx-ring-l"><b class="ow-dx-n ow-dx-ring-v${d.overBy > 0.5 ? ' ow-dx-bad' : ''}">${Math.round(d.debt / d.limit * 100)}%</b><span class="ow-dx-ring-k">of limit</span></span></span>`;
+  } else {
+    ring = `<span class="ow-dx-ring ow-dx-ring-none" aria-hidden="true"><svg class="ow-dx-ring-s" viewBox="0 0 68 68"><circle cx="34" cy="34" r="28" class="ow-dx-ring-t"/></svg><span class="ow-dx-ring-l"><b class="ow-dx-ring-v">No</b><span class="ow-dx-ring-k">limit set</span></span></span>`;
+  }
+  /* How far through their CURRENT debt they are. Absent rather than
+     empty when there is nothing to measure it from: a bar at zero would
+     say they have paid nothing, which is a claim about somebody's
+     conduct the records do not support. */
+  const p = d.progress;
+  let progressCell;
+  if(!p || p.pct === null){
+    const why = (p && p.reason === 'drift')
+      ? 'This balance does not match its own history, so anything measured from that history would describe a different figure. Fix it with the note above the list.'
+      : 'No dated charges behind this balance, so there is nothing to measure against.';
+    progressCell = `<span class="ow-dx-prog-n deb-prog-none" title="${esc(why)}">paid off &mdash; not measurable</span>`;
+  } else {
+    const pct = Math.round(p.pct*100);
+    progressCell = `<span class="ow-dx-prog deb-prog" title="${esc(fmtUGX(Math.round(p.paid)))} paid of ${esc(fmtUGX(Math.round(p.charged)))} charged on what is still open">
+      <span class="ow-dx-prog-t deb-prog-track"><span class="ow-dx-prog-f deb-prog-fill" style="width:${pct}%"></span></span>
+      <span class="deb-prog-pct">${pct}% paid off</span></span>`;
+  }
+
+  /* ---- the evidence: invoices as jars, and the payment poured in ---- */
+  const amount = debPay.id === d.id ? debPay.amount : 0;
+  const invs = debtChaseInvoices(d.id);
+  const pickable = new Set(customerOutstandingInvoices(d.id).map(q=> String(q.id)));
+  const al = debAllocatePayment(d.debt, invs, pickable, amount);
+  const jMax = Math.max(1, ...invs.map((i)=> i.due));
+  const ORD = ['1st', '2nd', '3rd'];
+  const jars = invs.length ? al.lines.map((l, k)=> {
+    const a = daysSinceDate(l.date);
+    const band = agingBandFor(a);
+    const done = l.clears > 0 && l.rest <= 0.5;
+    const h = Math.round(30 + 44 * Math.sqrt(l.due / jMax));
+    return `<span class="ow-dx-jar" title="${esc(l.no)}${l.what ? ' · ' + esc(l.what) : ''} · ${esc(fmtUGX(Math.round(l.due)))} open">
+      <b class="ow-dx-n ow-dx-jar-v${done ? ' ow-dx-good' : ''}">${done ? 'cleared' : f(l.rest)}</b>
+      <span class="ow-dx-jar-b ow-band-${band}" style="height:${h}px">
+        <span class="ow-dx-jar-f" style="height:${l.due > 0 ? Math.round(l.clears / l.due * 100) : 0}%"></span>
+        <span class="ow-dx-jar-o">${ORD[k] || (k + 1) + 'th'}</span>
+        ${done ? '<svg class="ow-dx-jar-k" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : ''}
+      </span>
+      <span class="ow-dx-jar-m"><span class="ow-cp ow-band-${band} ow-dx-agechip">${a >= 0 ? a + ' d' : 'no date'}</span><b class="ow-dx-n">${esc(l.no)}</b></span>
+      ${l.what ? `<span class="ow-dx-jar-w" title="${esc(l.what)}">${esc(l.what)}</span>` : ''}
+      <span class="ow-dx-jar-x${l.clears > 0 ? ' ow-dx-good' : ''}">${!l.can ? 'pay it on the invoice' : l.clears <= 0 ? 'nothing yet' : done ? 'this payment clears it' : f(l.clears) + ' goes here'}</span>
+    </span>`;
+  }).join('') : '';
+  const carried = d.debt - invs.reduce((s, i)=> s + i.due, 0);
+  const hint = amount > 0
+    ? (amount >= d.debt ? `${f(amount)} clears every invoice${amount > d.debt ? ' — ' + f(amount - d.debt) + ' more than they owe' : ''}`
+      : `${f(amount)} fills the oldest first — ${al.cleared ? al.cleared + ' cleared, ' : ''}${f(al.leftOwing)} still owed`)
+    : 'A payment fills the oldest invoice first. Type an amount below to watch it fill.';
+  const invView = `<div class="ow-dx-dv">
+    ${invs.length ? `<div class="ow-dx-jars">${jars}</div>` : `<p class="ow-q-note">No open invoice stands behind this balance &mdash; it was recorded straight onto their account. Their statement says where it came from.</p>`}
+    ${Math.abs(carried) > 0.5 && invs.length ? `<p class="ow-q-note">${carried > 0 ? f(carried) + ' is carried from before these invoices.' : 'The invoices come to ' + f(-carried) + ' more than the balance.'}</p>` : ''}
+    <p class="ow-dx-hint${amount > 0 ? ' ow-dx-hint-on' : ''}">${hint}</p>
+  </div>`;
+
+  /* ---- their history: what they bought above the line, what they paid
+     below it, and the silence since their last payment ---- */
+  const SPAN = 150, TOT = SPAN + 14;
+  const xp = (ago)=> ((SPAN - ago) / TOT * 100);
+  const cust = (data.customers || []).find((c)=> c.id === d.id) || {};
+  const logs = (cust.debtLog || []).filter((l)=> l.date && daysSinceDate(l.date) <= SPAN);
+  const buys = logs.filter((l)=> l.type === 'charge'), pays = logs.filter((l)=> l.type === 'payment');
+  const payMax = Math.max(1, ...pays.map((l)=> Number(l.amount) || 0));
+  const level = (evs)=> { let px = -99, pl = 1; evs.sort((a, b)=> a.xn - b.xn).forEach((e)=> { e.lv = (e.xn - px < 12) ? 1 - pl : 0; pl = e.lv; px = e.xn; }); return evs; };
+  const up = level(buys.map((l)=> ({ xn: xp(daysSinceDate(l.date)), lab: debM(l.amount), t: 'Bought ' + fmtUGX(Math.round(l.amount)) + ' on ' + fmtShortDate(l.date) })));
+  const low = pays.map((l)=> ({ xn: xp(daysSinceDate(l.date)), lab: debM(l.amount), t: 'Paid ' + fmtUGX(Math.round(l.amount)) + ' on ' + fmtShortDate(l.date), k: 'paid', s: Math.round(10 + 6 * Math.sqrt((Number(l.amount) || 0) / payMax)) }));
+  d.promises.forEach((pr)=> {
+    const ago = daysSinceDate(pr.promisedOn), ahead = debDaysAhead(pr.promisedOn);
+    if(pr.state === 'broken' && ago <= SPAN) low.push({ xn: xp(ago), lab: 'broke', t: 'Said they would pay by ' + fmtShortDate(pr.promisedOn) + ' — did not', k: 'broke', s: 12 });
+    if(pr.state === 'waiting' && ahead != null && ahead >= 0 && ahead <= 14) low.push({ xn: (SPAN + ahead) / TOT * 100, lab: 'said ' + (pr.amount ? debM(pr.amount) : 'all'), t: 'Said ' + (pr.amount ? fmtUGX(Math.round(pr.amount)) : 'the balance') + ' by ' + fmtShortDate(pr.promisedOn), k: 'word', s: 12 });
+  });
+  level(low);
+  const quietFrom = d.paidDays !== null ? d.paidDays : (d.ageDays >= 0 ? d.ageDays : null);
+  const quiet = quietFrom !== null && quietFrom > grace;
+  const qx = quiet ? xp(Math.min(quietFrom, SPAN)) : 0;
+  const t0 = Date.parse(todayISO() + 'T00:00:00Z');
+  const months = [];
+  for(let k = 0; k < 6; k++){
+    const dt = new Date(t0); dt.setUTCDate(1); dt.setUTCMonth(dt.getUTCMonth() - k);
+    const ago = Math.round((t0 - dt.getTime()) / 86400000);
+    if(ago <= SPAN - 4 && ago > 12) months.push({ x: xp(ago), l: dt.toLocaleDateString('en-UG', { month: 'short', timeZone: 'UTC' }) });
+  }
+  const bought = buys.reduce((s, l)=> s + (Number(l.amount) || 0), 0), paidBack = pays.reduce((s, l)=> s + (Number(l.amount) || 0), 0);
+  const histView = `<div class="ow-dx-dv">
+    <p class="ow-dx-hl">Last payment <b class="${d.paidDays === null || d.paidDays > 60 ? 'ow-dx-bad' : d.paidDays > grace ? 'ow-dx-warn' : 'ow-dx-good'}">${d.paidDays === null ? 'never' : agingDaysLabel(d.paidDays) + ' ago'}</b>${
+      bought > 0 ? ` &middot; paid back <b class="ow-dx-n">${Math.round(paidBack / bought * 100)}%</b> of what they bought in five months (${paidBack > 0 ? debM(paidBack) : 'nothing'} of ${debM(bought)})` : ''}</p>
+    ${logs.length ? `<div class="ow-dx-tl" role="img" aria-label="Five months of buying and paying for ${esc(d.name)}">
+      ${quiet ? `<span class="ow-dx-tl-q${quietFrom > 60 ? ' ow-dx-tl-qb' : ''}" style="left:${qx.toFixed(1)}%;width:${(xp(0) - qx).toFixed(1)}%"></span>
+        <span class="ow-dx-tl-br${quietFrom > 60 ? ' ow-dx-bad' : ' ow-dx-warn'}" style="left:${qx.toFixed(1)}%;width:${(xp(0) - qx).toFixed(1)}%"><span class="ow-dx-tl-bt">${quietFrom} days &mdash; nothing paid</span></span>` : ''}
+      <span class="ow-dx-tl-k ow-dx-tl-ku">Bought &uarr;</span><span class="ow-dx-tl-k ow-dx-tl-kd">Paid &darr;</span>
+      <span class="ow-dx-tl-ax"></span>
+      <span class="ow-dx-tl-now" style="left:${xp(0).toFixed(1)}%"></span>
+      ${up.map((e)=> `<span class="ow-dx-tl-up" style="left:${e.xn.toFixed(1)}%" title="${esc(e.t)}"><b class="ow-dx-n">${esc(e.lab)}</b><span class="ow-dx-tl-st" style="height:${e.lv ? 22 : 6}px"></span><span class="ow-dx-tl-sq"></span></span>`).join('')}
+      ${low.map((e)=> `<span class="ow-dx-tl-dn ow-dx-tl-${e.k}" style="left:${e.xn.toFixed(1)}%" title="${esc(e.t)}"><span class="ow-dx-tl-dot" style="width:${e.s}px;height:${e.s}px"></span><span class="ow-dx-tl-st" style="height:${e.lv ? 18 : 3}px"></span><b class="ow-dx-n">${esc(e.lab)}</b></span>`).join('')}
+      ${months.map((m)=> `<span class="ow-dx-tl-m" style="left:${m.x.toFixed(1)}%">${esc(m.l)}</span>`).join('')}
+      <span class="ow-dx-tl-m ow-dx-tl-today" style="left:${xp(0).toFixed(1)}%">Today</span>
+    </div>` : `<p class="ow-q-note ow-dx-nd">No dated history &mdash; this balance was typed straight onto the account, so there is nothing to draw.</p>`}
+  </div>`;
+
+  const quick = [];
+  if(invs.length){
+    quick.push({ label: 'Oldest invoice', v: invs[0].due });
+    const lateAmt = invs.filter((i)=> daysSinceDate(i.date) >= grace).reduce((s, i)=> s + i.due, 0);
+    if(lateAmt > 0 && Math.round(lateAmt) !== Math.round(d.debt) && Math.round(lateAmt) !== Math.round(invs[0].due)) quick.push({ label: 'Everything late', v: lateAmt });
+  }
+  if(!invs.length || Math.round(d.debt) !== Math.round(invs[0].due)) quick.push({ label: 'All of it', v: d.debt });
+  const payLine = amount > 0 ? (amount >= d.debt ? '<b class="ow-dx-good">clears it all</b>' : `leaves <b class="ow-dx-n">${f(d.debt - Math.min(amount, d.debt))}</b>`) : '';
+
+  el.classList.toggle('ow-dx-sheet-on', !!debSheet);
+  el.innerHTML = `${debSheet ? '<button type="button" class="ow-dx-veil" data-close aria-label="Close"></button>' : ''}
+  <section class="ow-pan ow-dx-dos" aria-label="${esc(d.name)}">
+    <div class="ow-dx-who">
+      <span class="ow-dx-av ${DEB_SEG[d.seg].cls}">${esc(d.initials)}</span>
+      <span class="ow-dx-who-t"><b class="ow-dx-who-n" title="${esc(d.name)}">${esc(d.name)}</b><span class="ow-dx-who-s">${esc(d.location || '—')}${d.phone ? ' &middot; <span class="ow-dx-n">' + esc(d.phone) + '</span>' : ''}</span></span>
+      ${d.phone ? `<a class="btn btn-ghost ow-sm ow-dx-icb" href="tel:${esc(d.phone)}" aria-label="Call ${esc(d.name)}"><svg class="icon" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2"/></svg></a>` : ''}
+      <button type="button" class="btn btn-ghost ow-sm ow-dx-icb" data-stats="${esc(d.id)}" aria-label="Their statement"><svg class="icon" viewBox="0 0 24 24"><path d="M7 3h8l4 4v14H7z"/><path d="M10 11h6M10 15h6"/></svg></button>
+      ${debSheet ? '<button type="button" class="btn btn-ghost ow-sm ow-dx-icb" data-close aria-label="Close"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' : ''}
+    </div>
+    <div class="ow-dx-vd">${verdict.join('')}</div>
+    <div class="ow-dx-std">
+      ${ring}
+      <span class="ow-dx-std-t">
+        <span class="ow-mt-l">Owes you</span>
+        <span class="ow-dx-std-v"><b class="ow-dx-n">${f(d.debt)}</b><span class="ow-dx-u">UGX</span></span>
+        <span class="ow-dx-std-s">${d.limit ? `Limit <span class="ow-dx-n">${f(d.limit)}</span> &middot; <b class="ow-dx-em${d.overBy > 0.5 ? ' ow-dx-bad' : ''}">${d.overBy > 0.5 ? 'over by' : 'headroom'} <span class="ow-dx-n">${f(Math.abs(d.limit - d.debt))}</span></b>` : 'No credit limit set for them'}</span>
+        ${progressCell}
+      </span>
+    </div>
+    <div class="ow-dx-dt" role="tablist" aria-label="Details">
+      <button type="button" role="tab" class="ow-dx-dt-b${debDview === 'inv' ? ' ow-on' : ''}" aria-selected="${debDview === 'inv'}" data-dview="inv">Invoices &middot; ${invs.length}</button>
+      <button type="button" role="tab" class="ow-dx-dt-b${debDview === 'hist' ? ' ow-on' : ''}" aria-selected="${debDview === 'hist'}" data-dview="hist">Payment history</button>
+      <span class="ow-dx-nav"><span class="ow-dx-n ow-pan-n" title="${idx >= 0 ? 'Customer ' + (idx + 1) + ' of ' + ids.length + ' in this list' : 'Not in the list as filtered'}">${idx >= 0 ? (idx + 1) + ' / ' + ids.length : '&mdash;'}</span>
+        <button type="button" class="btn btn-ghost ow-sm ow-dx-icb" data-step="-1" aria-label="Previous customer"><svg class="icon" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <button type="button" class="btn btn-ghost ow-sm ow-dx-icb" data-step="1" aria-label="Next customer"><svg class="icon" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button></span>
+    </div>
+    ${debDview === 'hist' ? histView : invView}
+    <div class="ow-dx-act">
+      <div class="ow-dx-pay">
+        <label class="ow-f-in ow-dx-pay-in"><input class="ow-f-v ow-dx-n" type="text" inputmode="numeric" autocomplete="off" data-pay="${esc(d.id)}"
+          placeholder="They are paying…" value="${amount > 0 ? f(amount) : ''}" aria-label="What ${esc(d.name)} is paying, to see what it clears"><span class="ow-f-u">UGX</span></label>
+        <button type="button" class="btn btn-accent ow-dx-rcv deb-receive" data-id="${esc(d.id)}">${amount > 0 ? 'Receive ' + f(amount) : 'Receive'}</button>
+      </div>
+      <div class="ow-dx-qk">
+        ${quick.map((k)=> `<button type="button" class="ow-cp ow-dx-qb" data-quick="${Math.round(k.v)}">${esc(k.label)} <span class="ow-dx-n">${debM(k.v)}</span></button>`).join('')}
+        <span class="ow-dx-pl" aria-live="polite">${payLine}</span>
+      </div>
+      <button type="button" class="btn btn-ghost ow-sm ow-dx-chase" data-chase="${esc(d.id)}">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M5 5h14v10H9l-4 4z"/><path d="M9 9h6M9 12h4"/></svg>Draft the chase &mdash; you send it</button>
+    </div>
+  </section>`;
+
+  el.querySelectorAll('[data-close]').forEach((b)=> b.addEventListener('click', ()=> { debSheet = false; renderDebtorsRail(); }));
+  el.querySelectorAll('[data-dview]').forEach((b)=> b.addEventListener('click', ()=> { debDview = b.dataset.dview; renderDebtorsRail(); }));
+  el.querySelectorAll('[data-step]').forEach((b)=> b.addEventListener('click', ()=> {
+    if(!ids.length) return;
+    const i = idx < 0 ? 0 : (idx + Number(b.dataset.step) + ids.length) % ids.length;
+    debOpenId = ids[i]; debPay = {id: null, amount: 0};
+    renderDebtorsList();
+  }));
+  el.querySelectorAll('[data-stats]').forEach((b)=> b.addEventListener('click', ()=> openCustomerStats(b.dataset.stats)));
+  el.querySelectorAll('[data-chase]').forEach((b)=> b.addEventListener('click', ()=> goToTab('chase')));
+  el.querySelectorAll('[data-quick]').forEach((b)=> b.addEventListener('click', ()=> {
+    debPay = {id: d.id, amount: Number(b.dataset.quick) || 0};
+    renderDebtorsRail();
+  }));
+  /* Typing redraws the rail but keeps the box and its caret, so nothing
+     jumps while somebody is counting notes. */
+  const inp = el.querySelector('[data-pay]');
+  if(inp){
+    inp.addEventListener('input', ()=>{
+      const at = inp.selectionStart, len = inp.value.length;
+      const v = Math.round(Number(String(inp.value).replace(/[^0-9.]/g, '')) || 0);
+      debPay = {id: d.id, amount: v};
+      renderDebtorsRail();
+      const again = el.querySelector('[data-pay]');
+      if(again){ again.focus(); const pos = Math.max(0, again.value.length - (len - at)); try{ again.setSelectionRange(pos, pos); }catch(_){} }
+    });
+  }
+  const rcv = el.querySelector('.deb-receive');
+  if(rcv) rcv.addEventListener('click', ()=> debOpenReceive(d.id, debPay.id === d.id ? debPay.amount : 0));
+}
+
+/* The band filter lives up in the age panel, so its effect is echoed
+   down here where the rows it removed would have been -- with the way
+   out beside it. A filter you cannot see is a filter you forget you set,
+   and then you trust a total that is a slice. */
+function renderDebFilterNote(shown){
+  const el = document.getElementById('debFilterNote');
+  if(!el) return;
+  if(!debBandFilter){ el.innerHTML = ''; return; }
+  const def = agingBandDef(debBandFilter);
+  el.innerHTML = `<div class="ow-pan ow-db-note">
+    <span>Showing only <b class="ow-db-em">${esc(def ? def.label.toLowerCase() : 'one band')}</b> &mdash; ${shown} customer${shown===1?'':'s'}. The figures above are still the whole book.</span>
+    <button type="button" class="btn btn-ghost ow-sm" id="debClearBand">Show everyone</button>
+  </div>`;
+  el.querySelector('#debClearBand').addEventListener('click', ()=>{
+    debBandFilter = '';
+    renderDebtorsList();
+  });
+}
+
+/* THE INTELLIGENCE.
+
+   The reading of the whole book, each panel ending in names the owner
+   can act on: how much is owed and how it moved, who holds it, how fast
+   it comes back, where the risk sits, whether it is getting older and
+   who is making it so, what the next fortnight brings, and what needs
+   them today. A name anywhere here opens that customer on the Debtors
+   tab, beside their invoices. */
+function renderDebtorsIntel(){
+  const wrap = document.getElementById('debIntelWrap');
+  if(!wrap) return;
+  const dx = debDx();
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const pct = (n)=> dx.total > 0 ? Math.round(n / dx.total * 100) : 0;
+  if(!dx.xs.length){
+    const any = (data.customers||[]).length > 0;
+    wrap.innerHTML = `<div class="ow-pan"><div class="ow-empty"><b>${any ? 'Nobody owes you anything.' : 'Nothing is owed to you yet.'}</b>
+      ${any ? 'There is nothing to read until somebody takes goods on credit.' : 'Debts appear here once a customer takes goods on credit.'}</div></div>`;
+    return;
+  }
+  const H = dx.hist, WN = H.length, first = 0, last = WN - 1;
+  const fromLbl = H.length ? fmtShortDate(H[0].asOf).replace(/ \d{4}$/, '') : '';
+
+  /* ---- A. the whole book, week by week ---- */
+  const wTop = Math.max(1, ...H.map((h)=> h.total)) * 1.08;
+  const yv = (v)=> (88 - v / wTop * 86);
+  const pathOf = (vals)=> vals.map((v, i)=> (i ? 'L' : 'M') + (i * 360 / (WN - 1)).toFixed(1) + ' ' + yv(v).toFixed(1)).join(' ');
+  const lineT = pathOf(H.map((h)=> h.total)), lineO = pathOf(H.map((h)=> h.old));
+  const delta = H.length ? H[last].total - H[first].total : 0;
+  const owingAt = (k)=> dx.xs.filter((x)=> x.hist[k] && x.hist[k].total > 0.5).length;
+  const moreOwing = owingAt(last) - owingAt(first);
+  const midV = Math.max(1e6, Math.round(wTop / 2 / 1e6) * 1e6);
+  const hw = debWeekHover;
+  const wkCard = hw >= 0 && H[hw] ? (()=> {
+    const x = hw / (WN - 1) * 100;
+    return `<span class="ow-dx-wk-cur" style="left:${x.toFixed(1)}%"></span>
+      <span class="ow-dx-wk-pt" style="left:${x.toFixed(1)}%;top:${(yv(H[hw].total) / 90 * 100).toFixed(1)}%"></span>
+      <span class="ow-dx-wk-pt ow-dx-wk-po" style="left:${x.toFixed(1)}%;top:${(yv(H[hw].old) / 90 * 100).toFixed(1)}%"></span>
+      <span class="ow-dx-wk-card" style="${x > 50 ? 'right:calc(' + (100 - x).toFixed(1) + '% + 10px)' : 'left:calc(' + x.toFixed(1) + '% + 10px)'}">
+        <b>${hw === last ? 'This week' : 'Week of ' + esc(fmtShortDate(H[hw].asOf))}</b>
+        <span class="ow-dx-wk-r"><span class="ow-dx-wk-k">Owed</span><b class="ow-dx-n">${f(H[hw].total)}</b></span>
+        <span class="ow-dx-wk-r ow-dx-bad"><span class="ow-dx-wk-k">Over 60 days</span><b class="ow-dx-n">${f(H[hw].old)} &middot; ${H[hw].total > 0 ? Math.round(H[hw].old / H[hw].total * 100) : 0}%</b></span>
+        <span class="ow-dx-wk-r"><span class="ow-dx-wk-k">Customers owing</span><b class="ow-dx-n">${owingAt(hw)}</b></span>
+      </span>`;
+  })() : `<span class="ow-dx-wk-end ow-dx-n" style="top:calc(${(yv(H[last].total) / 90 * 100).toFixed(1)}% - 22px)">${debM(H[last].total)}</span>
+      <span class="ow-dx-wk-end ow-dx-wk-eo ow-dx-n" style="top:calc(${(yv(H[last].old) / 90 * 100).toFixed(1)}% + 4px)">${debM(H[last].old)} old</span>`;
+  const blockA = `<div class="ow-dx-hd-a">
+    <span class="ow-dx-hd-k">Owed to you <span class="ow-dx-cap">${dx.xs.length} customers</span></span>
+    <span class="ow-dx-hd-v"><b class="ow-dx-n">${f(dx.total)}</b><span class="ow-dx-u">UGX</span></span>
+    <span class="ow-dx-hd-d"><span class="ow-cp ${delta > 0.5 ? 'ow-bad' : delta < -0.5 ? 'ow-good' : ''}">${delta >= 0 ? '+' : '&minus;'}${debM(Math.abs(delta))} since ${esc(fromLbl)}</span>
+      <span class="ow-dx-cap">from ${debM(H[first] ? H[first].total : 0)} &mdash; ${Math.abs(moreOwing)} ${moreOwing >= 0 ? 'more' : 'fewer'} customer${Math.abs(moreOwing) === 1 ? '' : 's'} owing</span></span>
+    <div class="ow-dx-wk" id="debWeekChart">
+      <svg class="ow-dx-wk-svg" viewBox="0 0 360 90" preserveAspectRatio="none" role="img" aria-label="What you are owed over twelve weeks, with the part over 60 days in crimson">
+        <line x1="0" y1="89.5" x2="360" y2="89.5" class="ow-dx-wk-base"/>
+        <line x1="0" y1="${yv(midV).toFixed(1)}" x2="360" y2="${yv(midV).toFixed(1)}" class="ow-dx-wk-mid"/>
+        <path d="${lineT} L360 90 L0 90 Z" class="ow-dx-wk-a"/>
+        <path d="${lineO} L360 90 L0 90 Z" class="ow-dx-wk-o"/>
+        <path d="${lineT}" class="ow-dx-wk-l"/>
+      </svg>
+      <span class="ow-dx-wk-ml ow-dx-n" style="top:calc(${(yv(midV) / 90 * 100).toFixed(1)}% - 15px)">${debM(midV)}</span>
+      ${wkCard}
+      <span class="ow-dx-wk-hit">${H.map((_, k)=> `<span class="ow-dx-wk-h" data-week="${k}"></span>`).join('')}</span>
+    </div>
+    <span class="ow-dx-wk-x"><span>${esc(fromLbl)}</span><span class="ow-dx-lg"><span class="ow-dx-lg-l"></span>owed <span class="ow-dx-lg-o"></span>over 60 days</span><b class="ow-dx-em">Today</b></span>
+    <span class="ow-dx-facts">
+      <span class="ow-dx-fact"><span class="ow-dx-cap">Average balance</span><b class="ow-dx-n">${debM(dx.total / dx.xs.length)}</b><span class="ow-dx-cap">per customer owing</span></span>
+      <span class="ow-dx-fact"><span class="ow-dx-cap">Biggest three</span><b class="ow-dx-n${pct(dx.top3) >= 40 ? ' ow-dx-warn' : ''}">${pct(dx.top3)}%</b><span class="ow-dx-cap ow-dx-ell" title="${esc(dx.top3Names.join(', '))}">${esc(dx.top3Names.join(', '))}</span></span>
+      <span class="ow-dx-fact"><span class="ow-dx-cap">Past terms</span><b class="ow-dx-n ow-dx-bad">${pct(dx.late)}%</b><span class="ow-dx-cap">${debM(dx.late)} late</span></span>
+    </span>
+    ${dx.total - (H[last] ? H[last].total : 0) > 0.5 ? `<span class="ow-dx-cap">${debM(dx.total - H[last].total)} with no date behind it is in the total but not on the line.</span>` : ''}
+  </div>`;
+
+  /* ---- B. who holds your money: grouped by standing, one block each ---- */
+  const TW = 320, THh = 210;
+  const squarify = (items, X0, Y0, W0, H0)=> {
+    const tot = items.reduce((t, r)=> t + r.v, 0) || 1;
+    const rest = items.map((r)=> ({ ...r, a: r.v / tot * W0 * H0 }));
+    const out = []; let rx = X0, ry = Y0, rw = W0, rh = H0;
+    const worst = (row, side)=> { const sm = row.reduce((t, r)=> t + r.a, 0), mx = Math.max(...row.map((r)=> r.a)), mn = Math.min(...row.map((r)=> r.a));
+      return Math.max(side * side * mx / (sm * sm), (sm * sm) / (side * side * mn)); };
+    while(rest.length){
+      const side = Math.min(rw, rh);
+      const row = [rest.shift()];
+      while(rest.length && worst(row.concat([rest[0]]), side) <= worst(row, side)) row.push(rest.shift());
+      const sm = row.reduce((t, r)=> t + r.a, 0);
+      if(rw >= rh){ const cw = sm / rh; let cy = ry; row.forEach((r)=> { const hh = r.a / cw; out.push({ it: r, x: rx, y: cy, w: cw, h: hh }); cy += hh; }); rx += cw; rw -= cw; }
+      else { const ch = sm / rw; let cx = rx; row.forEach((r)=> { const ww = r.a / ch; out.push({ it: r, x: cx, y: ry, w: ww, h: ch }); cx += ww; }); ry += ch; rh -= ch; }
+    }
+    return out;
+  };
+  const groups = DEB_SEG_ORDER.map((k)=> ({ k, v: dx.xs.filter((x)=> x.seg === k).reduce((s, x)=> s + x.debt, 0) })).filter((g)=> g.v > 0.5);
+  const rects = [];
+  squarify(groups, 0, 0, TW, THh).forEach((gr)=> {
+    squarify(dx.xs.filter((x)=> x.seg === gr.it.k).sort((a, b)=> b.debt - a.debt).map((x)=> ({ x, v: x.debt })), gr.x, gr.y, gr.w, gr.h)
+      .forEach((r)=> rects.push(r));
+  });
+  const word = (x)=> { const w = x.short.split(' '); return w[0].length <= 3 ? (w[1] || x.short) : w[0]; };
+  const tm = rects.map((r)=> {
+    const x = r.it.x;
+    const big = r.w >= 70 && r.h >= 46, mid = r.w >= 48 && r.h >= 30;
+    const ages = ['b30', 'b60', 'b90', 'b90p', 'unknown'].filter((k)=> x.buckets[k] > 0.5);
+    return `<button type="button" class="ow-dx-tm-b ${DEB_SEG[x.seg].cls}${debOpenId === x.id ? ' ow-on' : ''}" data-go="${esc(x.id)}"
+      style="left:${(r.x / TW * 100).toFixed(2)}%;top:${(r.y / THh * 100).toFixed(2)}%;width:${(r.w / TW * 100).toFixed(2)}%;height:${(r.h / THh * 100).toFixed(2)}%"
+      title="${esc(x.name)} · ${esc(fmtUGX(Math.round(x.debt)))} · ${pct(x.debt)}% of the book · ${esc(DEB_SEG[x.seg].label)}" aria-label="${esc(x.name)}, ${esc(fmtUGX(Math.round(x.debt)))}">
+      ${mid ? `<span class="ow-dx-tm-t"><span class="ow-dx-tm-n">${esc(r.w >= 100 ? x.short : word(x))}</span>${big ? `<span class="ow-dx-tm-v"><span class="ow-dx-n">${debM(x.debt)}</span> ${pct(x.debt)}%</span>` : ''}</span>`
+        : (r.w >= 18 && r.h >= 16 ? `<span class="ow-dx-tm-i">${esc(x.initials)}</span>` : '')}
+      ${big && ages.length ? `<span class="ow-dx-tm-a">${ages.map((k)=> `<span class="ow-dx-tm-s ow-band-${k}" style="flex-grow:${x.buckets[k]}"></span>`).join('')}</span>` : ''}
+    </button>`;
+  }).join('');
+  const blockB = `<div class="ow-dx-hd-b">
+    <span class="ow-dx-hd-k">Who holds your money <span class="ow-dx-cap">click a block to open</span></span>
+    <div class="ow-dx-tm" role="group" aria-label="Customers sized by what they owe, grouped by standing">${tm}</div>
+    <span class="ow-dx-lgs">${groups.map((g)=> `<span class="ow-dx-lgs-i"><span class="ow-dx-sw ${DEB_SEG[g.k].cls}"></span>${esc(DEB_SEG[g.k].label)} <b class="ow-dx-n">${pct(g.v)}%</b></span>`).join('')}
+      <span class="ow-dx-lgs-a"><span class="ow-dx-agebar" aria-hidden="true"></span>strip = age of their money</span></span>
+  </div>`;
+
+  /* ---- C. how fast you get paid ---- */
+  let blockC;
+  if(dx.dso == null){
+    blockC = `<div class="ow-dx-hd-c"><span class="ow-dx-hd-k">How fast you get paid</span>
+      <p class="ow-empty">Not enough credit sales in the last ninety days to say how fast the money comes back.</p></div>`;
+  } else {
+    const GL = Math.PI * 60, ang = (v)=> Math.PI * Math.min(v, 120) / 120;
+    const at = (v, r)=> [70 - r * Math.cos(ang(v)), 70 - r * Math.sin(ang(v))];
+    const nd = at(dx.dso, 50), t1 = at(dx.grace, 53), t2 = at(dx.grace, 67);
+    const slower = dx.dsoThen != null && dx.dso > dx.dsoThen + 1, faster = dx.dsoThen != null && dx.dso < dx.dsoThen - 1;
+    const owedMonthAgo = H[WN - 5] ? H[WN - 5].total : 0;
+    const rate = owedMonthAgo > 0 ? Math.round(dx.collected30 / owedMonthAgo * 100) : null;
+    const net = dx.charged30 - dx.collected30;
+    blockC = `<div class="ow-dx-hd-c">
+      <span class="ow-dx-hd-k">How fast you get paid ${dx.dsoThen != null ? `<span class="ow-cp ${slower ? 'ow-bad' : faster ? 'ow-good' : ''}">${slower ? (dx.dso - dx.dsoThen) + ' d slower than 12 wks ago' : faster ? (dx.dsoThen - dx.dso) + ' d faster than 12 wks ago' : 'same as 12 wks ago'}</span>` : ''}</span>
+      <span class="ow-dx-gg">
+        <svg class="ow-dx-gg-svg" viewBox="0 0 140 80" role="img" aria-label="It takes ${dx.dso} days on average to get paid, against terms of ${dx.grace} days">
+          <path d="M10 70 A60 60 0 0 1 130 70" class="ow-dx-gg-1" stroke-dasharray="${(GL * Math.min(dx.grace, 120) / 120).toFixed(1)} ${GL.toFixed(1)}"/>
+          <path d="M10 70 A60 60 0 0 1 130 70" class="ow-dx-gg-2" stroke-dasharray="${(GL * Math.max(0, Math.min(60, 120) - Math.min(dx.grace, 60)) / 120).toFixed(1)} ${GL.toFixed(1)}" stroke-dashoffset="${(-GL * Math.min(dx.grace, 60) / 120).toFixed(1)}"/>
+          <path d="M10 70 A60 60 0 0 1 130 70" class="ow-dx-gg-3" stroke-dasharray="${(GL * 60 / 120).toFixed(1)} ${GL.toFixed(1)}" stroke-dashoffset="${(-GL * 60 / 120).toFixed(1)}"/>
+          <line x1="${t1[0].toFixed(1)}" y1="${t1[1].toFixed(1)}" x2="${t2[0].toFixed(1)}" y2="${t2[1].toFixed(1)}" class="ow-dx-gg-t"/>
+          <line x1="70" y1="70" x2="${nd[0].toFixed(1)}" y2="${nd[1].toFixed(1)}" class="ow-dx-gg-n"/>
+          <circle cx="70" cy="70" r="5" class="ow-dx-gg-c"/>
+        </svg>
+        <span class="ow-dx-gg-r"><span class="ow-dx-gg-v"><b class="ow-dx-n ${dx.dso > 60 ? 'ow-dx-bad' : dx.dso > dx.grace ? 'ow-dx-warn' : 'ow-dx-good'}">${dx.dso}</b> days</span>
+          <span class="ow-dx-cap">to get paid, on average</span>
+          <span class="ow-dx-gg-s">Your terms are <b>${dx.grace} days</b> &mdash; ${dx.dso > dx.grace ? (dx.dso - dx.grace) + ' days slower than you allow' : 'inside what you allow'}</span></span>
+      </span>
+      <span class="ow-dx-l30">
+        <span class="ow-dx-l30-h"><b>Last 30 days</b><span class="ow-cp ${net > 0.5 ? 'ow-warn' : 'ow-good'}">${net > 0.5 ? 'Book grew ' + debM(net) : 'Book shrank ' + debM(-net)}</span></span>
+        ${rate != null ? `<span class="ow-dx-bar"><span class="ow-dx-bar-f" style="width:${Math.min(100, rate)}%"></span></span>` : ''}
+        <span class="ow-dx-cap">Collected <b class="ow-dx-n ow-dx-good">${debM(dx.collected30)}</b>${rate != null ? ` &mdash; <b>${rate}%</b> of the ${debM(owedMonthAgo)} owed a month ago` : ''}. Sold <b class="ow-dx-n">${debM(dx.charged30)}</b> more on credit.</span>
+      </span>
+    </div>`;
+  }
+
+  /* ---- the phone's own opening: the book, its age, and four readings ---- */
+  const live = dx.bands.filter((b)=> b.amount > 0);
+  const lateLeft = dx.total > 0 ? dx.bandAmt('b30') / dx.total * 100 : 0;
+  const phone = `<div class="ow-dx-phone">
+    <section class="ow-pan ow-dx-ph-h">
+      <span class="ow-dx-hd-k">Owed to you <span class="ow-cp ${delta > 0.5 ? 'ow-bad' : 'ow-good'}">${delta >= 0 ? '+' : '&minus;'}${debM(Math.abs(delta))}</span></span>
+      <span class="ow-dx-hd-v"><b class="ow-dx-n">${f(dx.total)}</b><span class="ow-dx-u">UGX</span></span>
+      <span class="ow-dx-cap">${dx.xs.length} customers &middot; tap an age to list only it</span>
+      <span class="ow-dx-ph-br" style="left:${lateLeft.toFixed(1)}%"><b>Late &middot; ${pct(dx.late)}%</b></span>
+      <span class="ow-dx-ph-bar">${live.map((b)=> `<button type="button" class="ow-dx-ph-seg ow-band-${b.key}" style="flex-grow:${b.amount}" data-pband="${b.key}" aria-label="${esc(b.label)}: ${esc(fmtUGX(Math.round(b.amount)))}"></button>`).join('')}</span>
+      <span class="ow-dx-ph-lg">${live.map((b)=> `<button type="button" class="ow-dx-ph-lgb" data-pband="${b.key}"><span class="ow-dx-sw ow-band-${b.key}"></span><span class="ow-dx-ph-lgl">${esc(b.label)}</span><b class="ow-dx-n">${debM(b.amount)}</b></button>`).join('')}</span>
+    </section>
+    <section class="ow-pan ow-dx-ph-4">
+      <span class="ow-dx-ph-c"><span class="ow-dx-cap">Act now</span><b class="ow-dx-n ow-dx-bad">${dx.xs.filter((x)=> x.seg === 'act').length}</b><span class="ow-dx-cap">${debM(dx.xs.filter((x)=> x.seg === 'act').reduce((s, x)=> s + x.debt, 0))}</span></span>
+      <span class="ow-dx-ph-c"><span class="ow-dx-cap">Over 60 days</span><b class="ow-dx-n">${debM(dx.old)}</b><span class="ow-dx-cap">${pct(dx.old)}% of the book</span></span>
+      <span class="ow-dx-ph-c"><span class="ow-dx-cap">Collected &middot; 30 d</span><b class="ow-dx-n">${debM(dx.collected30)}</b><span class="ow-dx-cap">of ${debM(dx.charged30)} charged</span></span>
+      <span class="ow-dx-ph-c"><span class="ow-dx-cap">Promised &middot; 14 d</span><b class="ow-dx-n ow-dx-word">${debM(dx.promised14)}</b><span class="ow-dx-cap">their word, not cash</span></span>
+    </section>
+  </div>`;
+
+  /* ---- is the book getting older, and who is making it so ---- */
+  const oldShare = H.map((h)=> h.total > 0 ? h.old / h.total : 0);
+  const older = oldShare[last] > oldShare[first] + 0.02, younger = oldShare[last] < oldShare[first] - 0.02;
+  const oldUp = H[first] && H[first].old > 0 ? H[last].old / H[first].old - 1 : null;
+  const growTxt = oldUp == null ? 'from nothing' : oldUp >= 1 ? Math.round(oldUp + 1) + ' times as much' : (oldUp >= 0 ? '+' : '') + Math.round(oldUp * 100) + '%';
+  const pairMax = Math.max(1, H[first] ? H[first].total : 0, H[last] ? H[last].total : 0);
+  const pairRow = (h, when, now)=> {
+    const mid = h.mid || 0, fresh = Math.max(0, h.total - h.old - mid);
+    const seg = (v, cls, nm)=> v > 0.5 ? `<span class="ow-dx-pr-s ${cls}" style="flex-grow:${v}" title="${nm}: ${esc(fmtUGX(Math.round(v)))}">${v / pairMax >= 0.14 ? debM(v) : ''}</span>` : '';
+    return `<span class="ow-dx-pr${now ? ' ow-on' : ''}"><span class="ow-dx-pr-k">${esc(when)}</span>
+      <span class="ow-dx-pr-b" style="width:${(h.total / pairMax * 100).toFixed(1)}%">${seg(fresh, 'ow-band-b30', 'under 30 days')}${seg(mid, 'ow-band-b60', '30–60 days')}${seg(h.old, 'ow-band-b90p', 'over 60 days')}</span>
+      <b class="ow-dx-n">${debM(h.total)}</b></span>`;
+  };
+  const sMax = Math.max(...oldShare) || 1;
+  const sPts = oldShare.map((v, i)=> [(2 + i * 80 / Math.max(1, WN - 1)).toFixed(1), (28 - v / sMax * 24).toFixed(1)]);
+  const drv = dx.xs.filter((x)=> x.old > 0.5).map((x)=> ({ x, now: x.old, fresh: Math.max(0, x.old - x.oldThen), stale: Math.min(x.old, x.oldThen) }))
+    .sort((a, b)=> b.now - a.now).slice(0, 5);
+  const drvMax = Math.max(1, ...drv.map((r)=> r.now));
+  const olderPanel = `<section class="ow-pan ow-dx-old" aria-label="Is the book getting older">
+    <div class="ow-pan-h"><span class="ow-pan-t">Is the book getting older?</span><span class="ow-pan-n">${esc(fromLbl)} &rarr; today</span></div>
+    <div class="ow-dx-old-b">
+      <div class="ow-dx-old-v">
+        <span class="ow-dx-yes ${older ? 'ow-dx-s-act' : younger ? 'ow-dx-s-good' : 'ow-dx-s-terms'}">${older ? 'Yes' : younger ? 'No' : 'Flat'}</span>
+        <span class="ow-dx-old-t">Money over 60 days went from ${debM(H[first] ? H[first].old : 0)} to ${debM(H[last] ? H[last].old : 0)} &mdash; ${growTxt}.</span>
+        <span class="ow-dx-old-s" title="Share of the book over 60 days, week by week"><svg class="ow-dx-old-svg" viewBox="0 0 84 30" aria-hidden="true"><path d="M${sPts.map((q)=> q.join(' ')).join(' L')} L${sPts[sPts.length - 1][0]} 30 L2 30 Z" class="ow-dx-old-sa"/><polyline points="${sPts.map((q)=> q.join(',')).join(' ')}" class="ow-dx-old-sl"/></svg>
+          <b class="ow-dx-bad">${Math.round(oldShare[first] * 100)}% &rarr; ${Math.round(oldShare[last] * 100)}% old</b></span>
+      </div>
+      <div class="ow-dx-prs">${H[first] ? pairRow(H[first], fromLbl, false) : ''}${H[last] ? pairRow(H[last], 'Today', true) : ''}
+        <span class="ow-dx-lgs"><span class="ow-dx-lgs-i"><span class="ow-dx-sw ow-band-b30"></span>under 30 d</span><span class="ow-dx-lgs-i"><span class="ow-dx-sw ow-band-b60"></span>30&ndash;60 d</span><span class="ow-dx-lgs-i"><span class="ow-dx-sw ow-band-b90p"></span>over 60 d</span></span></div>
+      <div class="ow-dx-drv">
+        <span class="ow-dx-drv-h"><b>Who is making it older</b><span class="ow-dx-cap">over 60 days &middot; new since ${esc(fromLbl)}</span></span>
+        ${drv.length ? drv.map((r)=> `<button type="button" class="ow-dx-drv-r" data-go="${esc(r.x.id)}" title="Open ${esc(r.x.name)}">
+          <span class="ow-dx-ell">${esc(r.x.name)}</span>
+          <span class="ow-dx-drv-b"><span class="ow-dx-drv-o" style="width:${(r.stale / drvMax * 100).toFixed(1)}%"></span><span class="ow-dx-drv-n" style="width:${(r.fresh / drvMax * 100).toFixed(1)}%"></span></span>
+          <span class="ow-dx-drv-v"><b class="ow-dx-n">${debM(r.now)}</b><span class="ow-dx-bad">${r.fresh <= 0.5 ? 'was already old' : r.fresh >= r.now - 0.5 ? 'all new' : '+' + debM(r.fresh) + ' new'}</span></span>
+        </button>`).join('') : '<p class="ow-mini">Nobody owes money over 60 days old.</p>'}
+      </div>
+    </div>
+  </section>`;
+
+  /* ---- the next fourteen days, as an agenda ---- */
+  const WD1 = ['S','M','T','W','T','F','S'];
+  const t0 = Date.parse(todayISO() + 'T00:00:00Z');
+  const dayIso = (n)=> new Date(t0 + n * 86400000).toISOString().slice(0, 10);
+  const cells = [];
+  for(let n = 0; n < 14; n++){
+    const dt = new Date(t0 + n * 86400000), es = dx.events.filter((e)=> e.n === n);
+    cells.push(`<span class="ow-dx-cal-d${n === 0 ? ' ow-on' : ''}${es.length ? ' ow-dx-cal-has' : ''}" title="${esc(fmtShortDate(dayIso(n)))}${es.length ? ': ' + esc(es.map((e)=> e.x.short + (e.kind === 'word' ? ' said ' : ' turns late, ') + fmtUGX(Math.round(e.amt))).join('; ')) : ': nothing due'}">
+      <span>${WD1[dt.getUTCDay()]}</span><b class="ow-dx-n">${dt.getUTCDate()}</b>
+      <span class="ow-dx-cal-m">${es.some((e)=> e.kind === 'word') ? '<span class="ow-dx-mk-w"></span>' : ''}${es.some((e)=> e.kind === 'late') ? '<span class="ow-dx-mk-l"></span>' : ''}</span></span>`);
+  }
+  const dayWord = (n)=> n === 0 ? 'Today' : n === 1 ? 'Tomorrow' : new Date(t0 + n * 86400000).toLocaleDateString('en-UG', { weekday: 'short', timeZone: 'UTC' });
+  const quoteNo = (qid)=> { const q = qid != null ? (data.savedQuotes || []).find((y)=> String(y.id) === String(qid)) : null; return q ? invoiceNumberLabel(q) : ''; };
+  const lateN = new Set(dx.events.filter((e)=> e.kind === 'late').map((e)=> e.x.id)).size;
+  const wordN = new Set(dx.events.filter((e)=> e.kind === 'word').map((e)=> e.x.id)).size;
+  const agenda = `<section class="ow-pan ow-dx-agn" aria-label="The next fourteen days">
+    <div class="ow-pan-h"><span class="ow-pan-t">The next 14 days</span><span class="ow-pan-n">${esc(fmtShortDate(dayIso(0)).replace(/ \d{4}$/, ''))} &ndash; ${esc(fmtShortDate(dayIso(13)).replace(/ \d{4}$/, ''))}</span></div>
+    <div class="ow-dx-agn-b">
+      <div class="ow-dx-agn-2">
+        <span class="ow-dx-agn-w"><span>They said they&rsquo;d pay</span><b class="ow-dx-n">${f(dx.promised14)}</b><span>${wordN} customer${wordN===1?'':'s'} &middot; their word</span></span>
+        <span class="ow-dx-agn-l"><span>Turns late if unpaid</span><b class="ow-dx-n">${f(dx.turning14)}</b><span>${lateN} customer${lateN===1?'':'s'} &middot; remind before it does</span></span>
+      </div>
+      <div class="ow-dx-cal">${cells.join('')}</div>
+      <div class="ow-dx-agn-l2">${dx.events.length ? dx.events.map((e)=> `<div class="ow-dx-it">
+        <span class="ow-dx-it-d"><b class="${e.n <= 1 ? 'ow-dx-bad' : ''}">${esc(dayWord(e.n))}</b><span class="ow-dx-cap">${esc(fmtShortDate(dayIso(e.n)).replace(/ \d{4}$/, ''))}</span></span>
+        <button type="button" class="ow-dx-it-t" data-go="${esc(e.x.id)}"><b class="ow-dx-ell">${esc(e.x.name)}</b>
+          <span class="ow-dx-it-w ${e.kind === 'word' ? 'ow-dx-word' : 'ow-dx-warn'}"><span class="${e.kind === 'word' ? 'ow-dx-mk-w' : 'ow-dx-mk-l'}"></span><span class="ow-dx-ell">${e.kind === 'word'
+            ? 'said ' + esc(fmtUGX(Math.round(e.amt))) + (e.x.promises.length > 1 ? ' · kept ' + e.x.kept + ' of ' + (e.x.promises.length - 1) + ' before' : '')
+            : (quoteNo(e.quoteId) ? esc(quoteNo(e.quoteId)) + ' · ' : '') + esc(fmtUGX(Math.round(e.amt))) + ' passes your ' + dx.grace + '-day terms'}</span></span></button>
+        ${e.kind === 'late' ? `<button type="button" class="btn btn-ghost ow-sm" data-remind="${esc(e.x.id)}">Remind</button>` : `<button type="button" class="btn btn-ghost ow-sm" data-go="${esc(e.x.id)}">Open</button>`}
+      </div>`).join('') : '<p class="ow-mini">Nothing falls due and nobody named a day in the next fortnight.</p>'}</div>
+    </div>
+  </section>`;
+
+  /* ---- what needs you ---- */
+  const TONE_ICON = {
+    bad: '<path d="M12 8v5"/><path d="M12 17h.01"/>',
+    warn: '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>',
+    word: '<path d="M5 5h14v10H9l-4 4z"/>',
+  };
+  const sig = `<section class="ow-pan ow-dx-sig" aria-label="What needs you">
+    <div class="ow-pan-h"><span class="ow-pan-t">What needs you</span><span class="ow-pan-n">${dx.signals.length} signal${dx.signals.length===1?'':'s'} &middot; tap to open</span></div>
+    ${dx.signals.length ? dx.signals.slice(0, 10).map((g)=> `<button type="button" class="ow-dx-sig-r" data-go="${esc(g.id)}">
+      <span class="ow-dx-sig-i ow-dx-t-${g.tone}"><svg class="ow-dx-sig-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${TONE_ICON[g.tone]}</svg></span>
+      <span class="ow-dx-sig-t"><b class="ow-dx-ell">${esc(g.name)}</b><span>${esc(g.text)}</span></span>
+      <b class="ow-dx-n ow-dx-sig-v">${debM(g.fig)}</b>
+    </button>`).join('') : '<div class="ow-empty">Nothing needs you today. Nobody is late and quiet, nobody broke a promise, and nothing turns late in the next three days.</div>'}
+  </section>`;
+
+  wrap.innerHTML = `${phone}
+    <section class="ow-pan ow-dx-hd" aria-label="What you are owed">${blockA}${blockB}${blockC}</section>
+    <div class="ow-grid ow-dx-igrid">
+      <div class="ow-dx-col-main">
+        <div id="debMapWrap"></div>
+        <div class="ow-dx-two">${olderPanel}${agenda}</div>
+      </div>
+      <div class="ow-side">${sig}</div>
+    </div>`;
+  renderDebMap();
+
+  const go = (id)=> { debOpenId = id; debPay = {id: null, amount: 0}; debView = 'debtors'; debSheet = window.matchMedia && window.matchMedia('(max-width:820px)').matches; renderDebtorsList(); };
+  wrap.querySelectorAll('[data-go]').forEach((b)=> b.addEventListener('click', ()=> go(b.dataset.go)));
+  wrap.querySelectorAll('[data-remind]').forEach((b)=> b.addEventListener('click', ()=> goToTab('chase')));
+  wrap.querySelectorAll('[data-pband]').forEach((b)=> b.addEventListener('click', ()=> {
+    debBandFilter = b.dataset.pband; debView = 'debtors'; renderDebtorsList();
+  }));
+  const wk = wrap.querySelector('#debWeekChart');
+  if(wk){
+    wk.querySelectorAll('[data-week]').forEach((s)=> s.addEventListener('mouseenter', ()=> {
+      const k = Number(s.dataset.week);
+      if(debWeekHover !== k){ debWeekHover = k; renderDebtorsIntel(); }
+    }));
+    wk.addEventListener('mouseleave', ()=> { if(debWeekHover !== -1){ debWeekHover = -1; renderDebtorsIntel(); } });
+  }
+}
+
+/* THE RISK MAP. How old a customer's oldest money is, across; how long
+   since they paid anything, up; the size of the dot is what they owe.
+   Top right is late AND gone quiet -- act now. Drag a box over any part
+   to crop the map to it; Zoom out steps back one crop. Resting on a dot
+   previews the customer; clicking opens them. Drawn into its own box so
+   dragging and hovering redraw the map alone, not the screen. */
+function renderDebMap(){
+  const wrap = document.getElementById('debMapWrap');
+  if(!wrap) return;
+  const dx = debDx();
+  const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  const dated = dx.xs.filter((x)=> x.ageDays >= 0);
+  const nice = (v)=> Math.ceil(v / 30) * 30;
+  const FULL = { x0: 0, x1: Math.max(150, nice(Math.max(0, ...dated.map((x)=> x.ageDays)) * 1.08)),
+    y0: 0, y1: Math.max(120, nice(Math.max(0, ...dated.map((x)=> x.paidDays || 0)) * 1.08)) };
+  const V = debMapView || FULL;
+  const xw = Math.max(1, V.x1 - V.x0), yw = Math.max(1, V.y1 - V.y0);
+  const X = (age)=> (age - V.x0) / xw * 100;
+  const Y = (lp)=> lp === null ? 94 : 3 + (lp - V.y0) / yw * 78;
+  const inView = (x)=> x.ageDays >= V.x0 && x.ageDays <= V.x1 && (x.paidDays === null || (x.paidDays >= V.y0 && x.paidDays <= V.y1));
+  const stepFor = (w)=> [5, 10, 15, 30, 60, 90, 120].find((st)=> w / st <= 6) || 180;
+  const xs = stepFor(xw), ys = stepFor(yw);
+  const xT = [], yT = [];
+  /* A tick too close to the corner label would sit on top of it. */
+  for(let v = Math.ceil((V.x0 + 0.001) / xs) * xs; v <= V.x1; v += xs) if((v - V.x0) / xw > 0.06) xT.push(v);
+  for(let v = Math.ceil((V.y0 + 0.001) / ys) * ys; v < V.y1; v += ys) if((v - V.y0) / yw > 0.06) yT.push(v);
+  const g = dx.grace;
+  const tx = Math.max(0, Math.min(100, X(g))), ty = Math.max(0, Math.min(88, Y(g)));
+  const zoomed = !!debMapView;
+  const maxDue = Math.max(1, ...dx.xs.map((x)=> x.debt));
+  const zk = Math.min(1.6, Math.sqrt(FULL.x1 / xw));
+  const size = (x)=> Math.round((14 + 34 * Math.sqrt(x.debt / maxDue)) * zk);
+  const shown = dated.filter(inView);
+  const dots = shown.slice().sort((a, b)=> b.debt - a.debt).map((x)=> {
+    const xp = X(x.ageDays), yp = Y(x.paidDays), s = size(x);
+    const label = zoomed || x.seg === 'act' || x.seg === 'promised' || x.debt / dx.total >= 0.08 || x.id === debOpenId;
+    const left = xp > 72;
+    return `<button type="button" class="ow-dx-bub ${DEB_SEG[x.seg].cls}${x.id === debOpenId ? ' ow-on' : ''}" data-go="${esc(x.id)}" data-hov="${esc(x.id)}"
+        style="left:${xp.toFixed(1)}%;bottom:${yp.toFixed(1)}%;width:${s}px;height:${s}px"
+        aria-label="${esc(x.name)}: owes ${esc(fmtUGX(Math.round(x.debt)))}, oldest ${x.ageDays} days, ${x.paidDays === null ? 'never paid' : 'last paid ' + x.paidDays + ' days ago'}"></button>
+      ${label ? `<span class="ow-dx-bub-l" style="bottom:${yp.toFixed(1)}%;${left ? 'right:calc(' + (100 - xp).toFixed(1) + '% + ' + (s / 2 + 6) + 'px)' : 'left:calc(' + xp.toFixed(1) + '% + ' + (s / 2 + 6) + 'px)'}">${esc(x.short)}</span>` : ''}`;
+  }).join('');
+  const undated = dx.xs.filter((x)=> x.ageDays < 0).sort((a, b)=> b.debt - a.debt).slice(0, 4);
+  const lane = undated.map((x, i)=> {
+    const at = 78 - i * (70 / Math.max(1, undated.length));
+    return `<button type="button" class="ow-dx-bub ow-dx-s-check" data-go="${esc(x.id)}" style="left:50%;bottom:${at.toFixed(1)}%;width:${Math.min(40, size(x))}px;height:${Math.min(40, size(x))}px" aria-label="${esc(x.name)}: owes ${esc(fmtUGX(Math.round(x.debt)))}, no date on record"></button><span class="ow-dx-lane-n" style="bottom:calc(${at.toFixed(1)}% - ${Math.min(40, size(x)) / 2 + 18}px)">${esc(x.short)}</span>`;
+  }).join('');
+  /* the crop box being drawn */
+  const dr = debMapDrag;
+  const box = dr ? { x0: Math.min(dr.x0, dr.x1), x1: Math.max(dr.x0, dr.x1), y0: Math.min(dr.y0, dr.y1), y1: Math.max(dr.y0, dr.y1) } : null;
+  const toAge = (px)=> V.x0 + px / 100 * xw, toLp = (py)=> V.y0 + Math.max(0, Math.min(78, py - 3)) / 78 * yw;
+  const bd = box ? { x0: Math.round(toAge(box.x0)), x1: Math.round(toAge(box.x1)), y0: Math.round(toLp(box.y0)), y1: Math.round(toLp(box.y1)) } : null;
+  const inBox = bd ? dated.filter((x)=> x.ageDays >= bd.x0 && x.ageDays <= bd.x1 && (x.paidDays === null ? box.y1 >= 88 : x.paidDays >= bd.y0 && x.paidDays <= bd.y1)).length : 0;
+  /* the preview of the customer under the pointer */
+  const hv = debMapHover && !dr ? shown.find((x)=> x.id === debMapHover) : null;
+  let tip = '';
+  if(hv){
+    const xp = X(hv.ageDays), yp = Y(hv.paidDays), off = size(hv) / 2 + 10;
+    const sg = dx.signals.find((s)=> s.id === hv.id);
+    /* Beside the dot, on whichever side has room, and kept inside the
+       plot top to bottom -- a preview cut off by its own map is no
+       preview. */
+    const pos = (xp > 55 ? 'right:calc(' + (100 - xp).toFixed(1) + '% + ' + off + 'px);' : 'left:calc(' + xp.toFixed(1) + '% + ' + off + 'px);')
+      + 'top:clamp(6px, calc(' + (100 - yp).toFixed(1) + '% - 60px), 30px);';
+    tip = `<div class="ow-dx-tip" style="${pos}">
+      <span class="ow-dx-tip-h"><span class="ow-dx-av ${DEB_SEG[hv.seg].cls}">${esc(hv.initials)}</span><span class="ow-dx-tip-n"><b class="ow-dx-ell">${esc(hv.name)}</b><span class="ow-dx-cap ow-dx-ell">${esc(hv.location || '—')}</span></span><span class="ow-cp ow-dx-chip ${DEB_SEG[hv.seg].cls}">${esc(DEB_SEG[hv.seg].label)}</span></span>
+      <span class="ow-dx-tip-v"><span><b class="ow-dx-n">${f(hv.debt)}</b> <span class="ow-dx-u">UGX</span></span><b class="${hv.overBy > 0.5 ? 'ow-dx-bad' : ''}">${hv.limit ? (hv.overBy > 0.5 ? debM(hv.overBy) + ' over limit' : Math.round(hv.debt / hv.limit * 100) + '% of limit') : 'no limit set'}</b></span>
+      <span class="ow-dx-tip-c">${[['b30', '&lt; 30 d'], ['b60', '30&ndash;60'], ['b90', '60&ndash;90'], ['b90p', '90 +']].map(([k, l])=> hv.buckets[k] > 0.5 ? `<span class="ow-dx-tip-cell ow-band-${k} ow-dx-strong"><b class="ow-dx-n">${debM(hv.buckets[k])}</b>${l}</span>` : `<span class="ow-dx-tip-cell ow-dx-c0"><b>&ndash;</b>${l}</span>`).join('')}</span>
+      <span class="ow-dx-tip-f"><span class="ow-dx-tip-fi"><span class="ow-dx-cap">Oldest money</span><b class="${hv.ageDays >= 60 ? 'ow-dx-bad' : hv.ageDays >= g ? 'ow-dx-warn' : ''}">${hv.ageDays} days</b></span><span class="ow-dx-tip-fi"><span class="ow-dx-cap">Last paid</span><b class="${hv.paidDays === null || hv.paidDays > 60 ? 'ow-dx-bad' : ''}">${hv.paidDays === null ? 'Never' : hv.paidDays + ' days ago'}</b></span></span>
+      ${sg ? `<span class="ow-dx-tip-s ow-dx-t-${sg.tone}">${esc(sg.text.charAt(0).toUpperCase() + sg.text.slice(1))}</span>` : ''}
+      <span class="ow-dx-tip-go">Click to open in Debtors &rarr;</span>
+    </div>`;
+  }
+  const outside = dated.length - shown.length;
+  wrap.innerHTML = `<section class="ow-pan ow-dx-map" aria-label="Risk map">
+    <div class="ow-pan-h ow-dx-map-h">
+      <span class="ow-pan-t">Risk map</span>
+      <span class="ow-dx-cap ow-hide-sm">how old their money is &times; how long since they paid &middot; size is what they owe</span>
+      <span class="ow-dx-map-z">${zoomed
+        ? `<span class="ow-cp ow-dx-crop-c">${V.x0}&ndash;${V.x1} d old &middot; paid ${V.y0}&ndash;${V.y1} d ago</span>
+           <button type="button" class="btn btn-ghost ow-sm" data-zoom="back">Zoom out</button>
+           <button type="button" class="btn btn-ghost ow-sm" data-zoom="all">Show everyone</button>`
+        : '<span class="ow-dx-cap">Drag a box over the map to zoom into it</span>'}</span>
+    </div>
+    <div class="ow-dx-map-g">
+      <span class="ow-dx-ya"><span class="ow-dx-ya-n">Never<br>paid</span>${yT.map((v)=> `<span class="ow-dx-n ow-dx-ya-t" style="bottom:${Y(v).toFixed(1)}%">${v} d</span>`).join('')}<span class="ow-dx-n ow-dx-ya-0">${V.y0 > 0 ? V.y0 + ' d' : '0'}</span></span>
+      <div class="ow-dx-plot" id="debPlot">
+        <span class="ow-dx-z-act" style="left:${tx.toFixed(1)}%;bottom:${ty.toFixed(1)}%"></span>
+        <span class="ow-dx-z-late" style="left:${tx.toFixed(1)}%;height:${ty.toFixed(1)}%"></span>
+        <span class="ow-dx-z-never"></span>
+        ${yT.map((v)=> `<span class="ow-dx-gy" style="bottom:${Y(v).toFixed(1)}%"></span>`).join('')}
+        ${xT.map((v)=> `<span class="ow-dx-gx" style="left:${X(v).toFixed(1)}%"></span>`).join('')}
+        ${X(g) > 0 && X(g) < 100 ? `<span class="ow-dx-tx" style="left:${tx.toFixed(1)}%"></span>` : ''}
+        ${Y(g) > 3 && Y(g) < 88 ? `<span class="ow-dx-ty" style="left:${tx.toFixed(1)}%;bottom:${ty.toFixed(1)}%"></span>` : ''}
+        ${X(g) < 70 && Y(g) < 70 ? `<span class="ow-dx-zn ow-dx-zn-act" style="left:calc(${tx.toFixed(1)}% + 10px)">Act now &middot; late and gone quiet</span>` : ''}
+        ${X(g) < 70 && Y(g) > 12 ? '<span class="ow-dx-zn ow-dx-zn-late">Late, still paying</span>' : ''}
+        ${X(g) >= 18 ? '<span class="ow-dx-zn ow-dx-zn-in">In terms</span>' : ''}
+        ${dots}
+        ${box && (box.x1 - box.x0 > 1 || box.y1 - box.y0 > 1) ? `<span class="ow-dx-crop" style="left:${box.x0.toFixed(1)}%;bottom:${box.y0.toFixed(1)}%;width:${(box.x1 - box.x0).toFixed(1)}%;height:${(box.y1 - box.y0).toFixed(1)}%"><b class="ow-dx-crop-t">${bd.x0}&ndash;${bd.x1} d &middot; ${inBox} customer${inBox===1?'':'s'}</b></span>` : ''}
+        ${tip}
+      </div>
+      <div class="ow-dx-lane"><b class="ow-dx-lane-t">No date</b>${lane}</div>
+      <span></span>
+      <span class="ow-dx-xa"><span class="ow-dx-n ow-dx-xa-0">${V.x0} d</span>${xT.map((v)=> `<span class="ow-dx-n ow-dx-xa-t${v === g ? ' ow-dx-bad' : ''}" style="left:${X(v).toFixed(1)}%">${v === g ? v + ' d · terms' : v + ' d'}</span>`).join('')}<span class="ow-dx-xa-k">Age of their oldest unpaid money &rarr;</span></span>
+      <span></span>
+    </div>
+    <div class="ow-dx-map-f"><span>In view: <b class="ow-dx-em">${shown.length} customer${shown.length===1?'':'s'}</b> &middot; <b class="ow-dx-n">${f(shown.reduce((s, x)=> s + x.debt, 0))}</b> UGX</span>
+      ${outside > 0 ? `<span>${outside} outside this view${zoomed ? ' &mdash; Zoom out to bring them back' : ''}</span>` : ''}
+      <span class="ow-dx-lgs"><span class="ow-dx-lgs-i"><span class="ow-dx-sw ow-dx-s-act"></span>Act now</span><span class="ow-dx-lgs-i"><span class="ow-dx-sw ow-dx-s-watch"></span>Late, paying</span><span class="ow-dx-lgs-i"><span class="ow-dx-sw ow-dx-s-prom"></span>Promised</span><span class="ow-dx-lgs-i"><span class="ow-dx-sw ow-dx-s-terms"></span>In terms</span></span></div>
+  </section>`;
+
+  const plot = wrap.querySelector('#debPlot');
+  const pt = (e)=> { const r = plot.getBoundingClientRect(); return {
+    x: Math.max(0, Math.min(100, (e.clientX - r.left) / r.width * 100)),
+    y: Math.max(0, Math.min(100, (r.bottom - e.clientY) / r.height * 100)) }; };
+  const finish = ()=> {
+    const b = debMapDrag; debMapDrag = null;
+    if(!b) return;
+    const bx = { x0: Math.min(b.x0, b.x1), x1: Math.max(b.x0, b.x1), y0: Math.min(b.y0, b.y1), y1: Math.max(b.y0, b.y1) };
+    const d2 = { x0: Math.round(toAge(bx.x0)), x1: Math.round(toAge(bx.x1)), y0: Math.round(toLp(bx.y0)), y1: Math.round(toLp(bx.y1)) };
+    if(bx.x1 - bx.x0 > 3 && bx.y1 - bx.y0 > 3 && d2.x1 - d2.x0 >= 3 && d2.y1 - d2.y0 >= 3){
+      debMapStack.push(debMapView); debMapView = d2; debMapHover = '';
+    }
+    renderDebMap();
+  };
+  plot.addEventListener('mousedown', (e)=> {
+    if(e.button !== 0 || e.target.closest('.ow-dx-bub')) return;
+    const p = pt(e); debMapDrag = { x0: p.x, y0: p.y, x1: p.x, y1: p.y }; debMapHover = '';
+    e.preventDefault();
+  });
+  plot.addEventListener('mousemove', (e)=> {
+    if(!debMapDrag){
+      if(debMapHover && !e.target.closest('.ow-dx-bub')){ debMapHover = ''; renderDebMap(); }
+      return;
+    }
+    const p = pt(e);
+    if(Math.abs(p.x - debMapDrag.x1) + Math.abs(p.y - debMapDrag.y1) < 0.6) return;
+    debMapDrag.x1 = p.x; debMapDrag.y1 = p.y; renderDebMap();
+  });
+  plot.addEventListener('mouseup', finish);
+  plot.addEventListener('mouseleave', ()=> { if(debMapDrag) finish(); else if(debMapHover){ debMapHover = ''; renderDebMap(); } });
+  wrap.querySelectorAll('[data-hov]').forEach((b)=> {
+    const on = ()=> { if(!debMapDrag && debMapHover !== b.dataset.hov){ debMapHover = b.dataset.hov; renderDebMap(); } };
+    b.addEventListener('mouseenter', on); b.addEventListener('focus', on);
+  });
+  wrap.querySelectorAll('[data-zoom]').forEach((b)=> b.addEventListener('click', ()=> {
+    if(b.dataset.zoom === 'all'){ debMapView = null; debMapStack = []; }
+    else { debMapView = debMapStack.length ? debMapStack.pop() : null; }
+    debMapHover = ''; renderDebMap();
+  }));
+  wrap.querySelectorAll('[data-go]').forEach((b)=> b.addEventListener('click', ()=> {
+    debOpenId = b.dataset.go; debPay = {id: null, amount: 0}; debView = 'debtors';
+    debSheet = window.matchMedia && window.matchMedia('(max-width:820px)').matches;
+    renderDebtorsList();
+  }));
+}
+
 
 /* THE CONSIGNMENT CONSOLE.
 
@@ -89205,361 +90940,12 @@ function debOpenReceive(id, amount){
   updateCdPickerSummary();
 }
 
-function renderDebtorsList(){
-  const wrap = document.getElementById('deb_tableWrap');
-  if(!wrap) return;
-  const rows = debRowsForList(debSearch);
-  debLastRows = rows;
-  renderDebtorsPosition();
-  renderDebtorsRail();
-  renderDebFilterNote(rows.length);
-
-  const f = n=> Number(Math.round(n)).toLocaleString('en-UG');
-  const totalDebt = rows.reduce((s,r)=>s+r.debt, 0);
-  const allRows = debAllRows();
-  const owingAll = allRows.filter(r=> r.debt > 0.5);
-  const bandDef = debBandFilter ? agingBandDef(debBandFilter) : null;
-
-  /* The open invoices behind each balance, read once per render: the
-     dots on the row, and the table and payment preview in an open one,
-     all come from this one reading -- the same one the demand names
-     them by, so this screen and the message cannot list a customer's
-     invoices differently. Dots are sized against the biggest invoice
-     in view, so a size means the same thing all the way down. */
-  const invsOf = new Map(rows.map(r=> [r.id, r.debt > 0.5 ? debtChaseInvoices(r.id) : []]));
-  const maxInv = [...invsOf.values()].reduce((m, l)=> l.reduce((mm, i)=> Math.max(mm, i.due), m), 1);
-
-  /* ---- the toolbar ----
-     Search, the toggle, the sort and the two things that leave the
-     screen, in one band directly above the rows they act on. All four
-     already existed; they were unfindable because search sat in a form
-     field with a floating label, and Print and Export sat up in the
-     panel head, one heading away from the list and ABOVE the search box
-     that decides what they will contain. */
-  const sortLabel = (DEB_SORT_CHOICES.find(c=> c.key === DEB_SORT_STATE.key) || DEB_SORT_CHOICES[0]).label;
-  const toolbar = `<div class="ow-tb">
-    <label class="ow-f ow-f-grow ow-tb-s${debSearch ? ' ow-set' : ''}">
-      <span class="ow-f-l">Find a customer</span>
-      <span class="ow-f-in">
-        <svg class="ow-f-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
-        <input class="ow-f-v ow-f-t" id="deb_search" type="text" placeholder="Name or place" value="${esc(debSearch)}">
-      </span>
-    </label>
-    <div class="ow-f">
-      <span class="ow-f-l">Order</span>
-      <span class="ow-f-in">
-        <select class="ow-f-sel" id="deb_sort" aria-label="How the list is ordered">
-          ${DEB_SORT_CHOICES.map(c=> `<option value="${c.key}"${DEB_SORT_STATE.key===c.key?' selected':''}>${esc(c.label)}</option>`).join('')}
-        </select>
-      </span>
-    </div>
-    <button type="button" class="btn btn-ghost ow-sm ow-db-tg${debHideSettled ? ' ow-on' : ''}"
-      id="deb_hide_no_debt" role="switch" aria-checked="${debHideSettled}">
-      <svg class="icon" viewBox="0 0 24 24">${debHideSettled
-        ? '<path d="M4 12.5l5 5L20 6.5"/>'
-        : '<rect x="4" y="4" width="16" height="16" rx="2"/>'}</svg>
-      Hide settled</button>
-    ${debBandFilter ? `<button type="button" class="ow-cp ow-warn ow-db-fc" id="deb_band_chip"
-      title="Showing only ${esc(bandDef ? bandDef.label.toLowerCase() : 'one band')} — tap to show everyone">
-      ${esc(bandDef ? bandDef.short : 'one band')} only
-      <svg class="ow-db-fc-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
-    </button>` : ''}
-    ${rows.length ? `<span class="ow-tb-n">
-      <button type="button" class="btn btn-ghost ow-sm" id="deb_print_btn">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>
-        ${debBandFilter || debSearch ? `Print these ${rows.length}` : 'Print list'}</button>
-      <button type="button" class="btn btn-ghost ow-sm" id="deb_export_btn">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v11m0 0l-4-4m4 4l4-4"/><path d="M4 19h16"/></svg>
-        Export CSV</button>
-    </span>` : ''}
-  </div>`;
-
-  /* ---- the age chip ----
-     ONE device for the age, and toned only where the tone means
-     something: crimson past sixty days, amber past thirty and on a
-     balance whose age cannot be worked out at all, plain otherwise. A
-     figure under a month is ordinary trade and is not marked. */
-  const ageChip = (r, short)=>{
-    if(r.debt <= 0.5) return '<span class="ow-cp">Settled</span>';
-    const tone = r.ageDays < 0 ? ' ow-warn'
-      : r.ageDays >= 60 ? ' ow-bad'
-      : r.ageDays >= 30 ? ' ow-warn' : '';
-    const text = r.ageDays >= 0 ? (short ? r.ageDays + ' d' : agingDaysLabel(r.ageDays))
-      : (short ? 'no date' : 'Not dated');
-    return `<span class="ow-cp${tone}" title="${esc(r.ageDays >= 0 ? 'Oldest money owing ' + agingDaysLabel(r.ageDays) : 'No date on record behind this balance')}">${esc(text)}</span>`;
-  };
-
-  /* ---- the open invoices, by age ----
-     One dot per invoice still open, on a 0-to-120-day line, sized by
-     what is left on it. Past 120 days a dot sits at the end of the line
-     rather than off it. A balance with nothing dated behind it says so
-     in the line instead of drawing an empty one, which would read as a
-     customer who owes nothing. */
-  const stripHTML = (r)=>{
-    const invs = invsOf.get(r.id) || [];
-    const dots = invs.map(i=>{
-      const a = daysSinceDate(i.date);
-      if(!(a >= 0)) return '';
-      const d = Math.round(8 + 10 * Math.sqrt(Math.max(0, i.due) / maxInv));
-      const at = (Math.min(a, 120) / 120 * 100).toFixed(1);
-      return `<span class="ow-db-st-d ow-band-${agingBandFor(a)}" style="width:${d}px;height:${d}px;left:clamp(${d/2}px,${at}%,calc(100% - ${d/2}px))" title="${esc(i.no)} · ${esc(fmtUGX(Math.round(i.due)))} · ${esc(agingDaysLabel(a))}"></span>`;
-    }).join('');
-    const none = r.debt > 0.5 && !dots
-      ? `<span class="ow-db-st-n">${invs.length ? 'no date on its invoices' : 'not on an invoice'}</span>` : '';
-    return `<span class="ow-db-st-t">${dots}${none}</span>`;
-  };
-
-  /* How far through their CURRENT debt they are. Absent rather than
-     empty when there is nothing to measure it from: a bar at zero would
-     say they have paid nothing, which is a claim about somebody's
-     conduct the records do not support. */
-  const progressCell = (r)=>{
-    const p = r.progress;
-    if(!p || p.pct === null){
-      const why = (p && p.reason === 'drift')
-        ? 'This balance does not match its own history, so anything measured from that history would describe a different figure. Fix it with the note above.'
-        : 'No dated charges behind this balance, so there is nothing to measure against.';
-      return `<span class="deb-prog-none" title="${esc(why)}">&mdash;</span>`;
-    }
-    const pct = Math.round(p.pct*100);
-    return `<div class="deb-prog" title="${esc(fmtUGX(Math.round(p.paid)))} paid of ${esc(fmtUGX(Math.round(p.charged)))} charged on what is still open">
-      <div class="deb-prog-track"><div class="deb-prog-fill" style="width:${pct}%"></div></div>
-      <span class="deb-prog-pct">${pct}%</span>
-    </div>`;
-  };
-
-  /* When somebody last paid ANYTHING. The single best read on whether a
-     customer has gone quiet -- and never-paid is crimson because it is
-     the one value in this column worth stopping on: a customer who never
-     started is a different thing from one who has gone quiet, and only
-     the first is a reason not to sell to them again. */
-  const paidCell = (r)=> r.lastPaid
-    ? `<span class="ow-db-lp"><span class="ow-db-lp-d">${esc(fmtShortDate(r.lastPaid))}</span>${esc(agingDaysLabel(daysSinceDate(r.lastPaid)))} ago</span>`
-    : '<span class="ow-db-lp ow-db-never"><span class="ow-db-lp-d">Never paid</span>not once</span>';
-
-  /* ---- one debtor, opened ----
-     The invoices behind the balance, from the same reading the demand
-     names them by (debtChaseInvoices), so this screen and the message
-     that goes out cannot list a customer's invoices differently. This is what the screen is for: seeing WHY the figure
-     is what it is before anybody is asked for it. */
-  /* ---- one debtor, opened ----
-     The invoices behind the balance, and what a payment would do to
-     them. "It clears their oldest invoice first" used to be a paragraph
-     in the rail; it is the table now: type what they are paying and
-     each invoice's bar fills with what it would clear.
-
-     NOTHING HERE THAT THE ROW ALREADY SAYS. The balance, the age and the
-     paid-off share are on the row that was just opened; what an open
-     row adds is the evidence and the act. */
-  const pickableOf = (r)=> new Set(customerOutstandingInvoices(r.id).map(q=> String(q.id)));
-  const allocTable = (r, amount)=>{
-    const invs = invsOf.get(r.id) || [];
-    if(r.debt <= 0.5 && !invs.length) return `<div class="ow-db-set"><span class="ow-cp ow-good"><span class="ow-cp-d"></span>Settled &mdash; nothing to demand</span>
-      <p class="ow-q-note">${r.lastPaid ? `Their last payment, ${esc(fmtShortDate(r.lastPaid))}, cleared the account.` : 'Every invoice is paid.'} Their statement lists what each payment cleared.</p></div>`;
-    if(!invs.length) return `<p class="ow-q-note">No open invoice stands behind this balance &mdash; it was recorded straight onto their account. Their debt history on the customer page says where it came from.</p>`;
-    const al = debAllocatePayment(r.debt, invs, pickableOf(r), amount);
-    const listed = invs.reduce((s,i)=> s + i.due, 0);
-    const carried = r.debt - listed;
-    return `<div class="ow-tbl ow-db-al-tbl">
-      <div class="ow-tbl-h"><span class="ow-tbl-c">Invoice &middot; oldest first</span><span class="ow-tbl-c">Dated</span><span class="ow-tbl-c">This payment</span><span class="ow-tbl-n">Still open</span></div>
-      ${al.lines.map(l=>{
-        const a = daysSinceDate(l.date);
-        const share = l.due > 0 ? Math.round(l.clears / l.due * 100) : 0;
-        const note = !l.can ? 'pay it on the invoice'
-          : l.clears <= 0 ? '' : l.rest <= 0.5 ? 'cleared' : f(l.clears) + ' of it';
-        return `<div class="ow-tbl-r">
-        <span class="ow-tbl-c"><span class="ow-tbl-p">${esc(l.no)}</span>${l.what ? `<span class="ow-tbl-s">${esc(l.what)}</span>` : ''}</span>
-        <span class="ow-tbl-c" data-l="Dated"><span class="ow-db-al-d">${esc(l.date ? fmtShortDate(l.date) : 'no date')}</span>${a >= 0 ? `<span class="ow-tbl-s">${esc(agingDaysLabel(a))}</span>` : ''}</span>
-        <span class="ow-tbl-c" data-l="This payment"><span class="ow-db-al-b">
-          <span class="ow-db-al-tk" style="width:${Math.max(24, Math.round(l.due / maxInv * 88))}px"><span class="ow-db-al-f" style="width:${share}%"></span></span>
-          <span class="ow-db-al-n">${esc(note)}</span></span></span>
-        <span class="ow-tbl-n" data-l="Still open"><span class="ow-db-al-d">${f(l.rest)}</span>${l.clears > 0 ? `<span class="ow-db-al-w">was ${f(l.due)}</span>` : ''}</span>
-      </div>`;}).join('')}
-      ${Math.abs(carried) > 0.5 ? `<div class="ow-tbl-f">
-        <span class="ow-tbl-c">${carried > 0 ? 'Carried from before these invoices' : 'The invoices come to more than the balance'}</span>
-        <span class="ow-tbl-c"></span><span class="ow-tbl-c"></span><span class="ow-tbl-n">${f(Math.abs(carried))}</span></div>` : ''}
-    </div>`;
-  };
-  const allocResult = (r, amount)=>{
-    if(!(amount > 0)) return `<div class="ow-db-res-r">Owing now<b class="ow-db-res-v">${f(r.debt)}</b></div>`;
-    const al = debAllocatePayment(r.debt, invsOf.get(r.id) || [], pickableOf(r), amount);
-    return [
-      al.onInvoices > 0.5 ? `<div class="ow-db-res-r">${al.cleared ? `Onto invoices &middot; ${al.cleared} cleared` : 'Onto their invoices'}<b class="ow-db-res-v ow-good">${f(al.onInvoices)}</b></div>` : '',
-      al.toAccount > 0.5 ? `<div class="ow-db-res-r">Off the balance, not an invoice<b class="ow-db-res-v">${f(al.toAccount)}</b></div>` : '',
-      `<div class="ow-db-res-r">Left owing<b class="ow-db-res-v${al.leftOwing <= 0.5 ? ' ow-good' : ''}">${al.leftOwing <= 0.5 ? 'nothing' : f(al.leftOwing)}</b></div>`,
-      al.over > 0.5 ? `<div class="ow-db-res-r">More than they owe<b class="ow-db-res-v ow-warn">${f(al.over)}</b></div>` : '',
-    ].join('');
-  };
-  const receiveLabel = (amount)=> amount > 0 ? `Receive ${f(amount)}` : 'Receive a payment';
-  const openBody = (r)=>{
-    const amount = debPay.id === r.id ? debPay.amount : 0;
-    return `<div class="ow-q-x"><div class="ow-db-x">
-      <div data-al="${esc(r.id)}">${allocTable(r, amount)}</div>
-      <div class="ow-db-pay">
-        <label class="ow-f"><span class="ow-f-l">They are paying</span>
-          <span class="ow-f-in"><input class="ow-f-v" type="text" inputmode="numeric" autocomplete="off" data-pay="${esc(r.id)}"
-            placeholder="Type an amount" value="${amount > 0 ? f(amount) : ''}"
-            aria-label="What ${esc(r.name)} is paying, to see what it clears"><span class="ow-f-u">UGX</span></span></label>
-        <div class="ow-db-res" data-res="${esc(r.id)}" aria-live="polite">${allocResult(r, amount)}</div>
-        <div class="ow-q-a">
-          <button type="button" class="btn ${r.debt > 0.5 ? 'btn-accent' : 'btn-ghost'} ow-sm ow-db-pb deb-receive" data-id="${esc(r.id)}">${receiveLabel(amount)}</button>
-          <button type="button" class="btn btn-ghost ow-sm ow-db-pb" data-stats="${esc(r.id)}">Their statement</button>
-        </div>
-      </div>
-    </div></div>`;
-  };
-
-  /* ONE CALL, TWO SKINS. The 44px console row and the phone card are
-     emitted together from this one function, so neither can drift from
-     the other -- the guarantee .ow-q was built to give. */
-  const rowHTML = (r)=>{
-    const open = r.id === debOpenId;
-    const meta = [r.location,
-      r.lastPaid ? 'last paid ' + fmtShortDate(r.lastPaid) : 'never paid',
-      r.progress && r.progress.pct !== null ? Math.round(r.progress.pct*100) + '% paid off' : '',
-    ].filter(Boolean).join(' · ');
-    return `<div class="ow-q${open ? ' ow-open' : ''}" data-row="${esc(r.id)}">
-      <button type="button" class="ow-q-r" data-open="${esc(r.id)}" aria-expanded="${open}">
-        <svg class="ow-q-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-        <span class="ow-q-t" title="${esc(r.name)}${r.location ? ' · ' + esc(r.location) : ''}"><span class="ow-q-who">${esc(r.name)}</span>${
-          r.location ? `<span class="ow-q-sep">&middot;</span><span class="ow-q-rest">${esc(r.location)}</span>` : ''}</span>
-        <span class="ow-db-st">${stripHTML(r)}${ageChip(r, true)}</span>
-        <span class="ow-db-pr">${progressCell(r)}</span>
-        ${paidCell(r)}
-        <span class="ow-q-v"><span class="ow-q-f">${f(r.debt)}</span></span>
-      </button>
-      <button type="button" class="ow-q-card" data-open="${esc(r.id)}" aria-expanded="${open}">
-        <div class="ow-q-cm">${ageChip(r)}
-          <svg class="ow-q-cc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
-        <p class="ow-q-ct">${esc(r.name)}</p>
-        <span class="ow-q-cv">${f(r.debt)}<span class="ow-q-b">${
-          r.ageDays >= 0 ? 'owing ' + esc(agingDaysLabel(r.ageDays)) : 'age not on record'}</span></span>
-        ${r.debt > 0.5 ? `<span class="ow-db-cst">${stripHTML(r)}</span>` : ''}
-        <p class="ow-q-note ow-db-cmeta">${esc(meta)}</p>
-      </button>
-      ${open ? openBody(r) : ''}
-    </div>`;
-  };
-
-  /* THE COLUMN NAMES. Five columns of which three are figures need
-     saying, and a queue of rows has no <thead> to say them in. Hidden on
-     the phone, where every cell that had a name carries its own. */
-  const head = `<div class="ow-db-h">
-    <span></span><span>Customer</span>
-    <span>Owing for &middot; days<span class="ow-db-ax" aria-hidden="true"><span class="ow-db-ax-t ow-db-ax-a" style="left:25%">30</span><span class="ow-db-ax-t ow-db-ax-c" style="left:50%">60</span><span class="ow-db-ax-t ow-db-ax-c" style="left:75%">90</span></span></span>
-    <span>Paid off</span><span>Last payment</span><span class="ow-db-h-r">Owing</span>
-  </div>`;
-
-  /* Named rather than dropped: what the filters removed is said where it
-     would have been, with the figure it takes with it. */
-  const hiddenCount = owingAll.length - rows.filter(r=> r.debt > 0.5).length;
-  const hiddenSum = owingAll.reduce((s,r)=>s+r.debt,0) - totalDebt;
-  const foot = rows.length && hiddenCount > 0
-    ? `<p class="ow-mini">${debBandFilter ? `Showing <b>${esc(bandDef ? bandDef.label.toLowerCase() : 'one band')}</b> only. ` : ''}${
-        hiddenCount} customer${hiddenCount===1?'':'s'} owing <b>${f(hiddenSum)}</b> ${hiddenCount===1?'is':'are'} not listed${
-        debSearch ? ' by the search and the filters' : ''}. A printed sheet says the same on its face.</p>`
-    : '';
-
-  const empty = data.customers.length === 0
-    ? '<div class="ow-empty"><b>No customers yet.</b> Add one on the Customers screen, or just sell to somebody by name &mdash; a balance appears here the moment they take goods on credit.</div>'
-    : debBandFilter
-      ? `<div class="ow-empty"><b>Nobody is in the ${esc((agingBandDef(debBandFilter)||{}).label || 'chosen')} band${debSearch ? ' under this search' : ''}.</b> Tap the lit band above to show everyone.</div>`
-      : debSearch
-        ? `<div class="ow-empty"><b>No customer matches &ldquo;${esc(debSearch)}&rdquo;.</b> Search a name or a place.</div>`
-        /* The panel above has already said nobody owes anything, and
-           saying it again here is the screen agreeing with itself out
-           loud. What is left to say is what this panel is hiding. */
-        : debHideSettled
-          ? `<div class="ow-empty">Nothing to list. <b>Hide settled</b> is on, so the ${data.customers.length} settled customer${data.customers.length===1?'':'s'} on file ${data.customers.length===1?'is':'are'} not shown &mdash; turn it off to see everyone.</div>`
-          : '<div class="ow-empty">No customer on file is carrying a balance.</div>';
-
-  wrap.innerHTML = `<div class="ow-pan">
-    <div class="ow-pan-h">
-      <span class="ow-pan-t">Debtors</span>
-      <span class="ow-pan-n">${rows.length ? `${rows.length}${
-        rows.length !== owingAll.length ? ' of ' + owingAll.length : ''} &middot; ${f(totalDebt)}${
-        debBandFilter || debSearch ? ' shown' : ''}` : 'none'}</span>
-    </div>
-    ${toolbar}
-    ${debtDriftBannerHTML()}
-    ${rows.length ? head + rows.map(rowHTML).join('') + foot : empty}
-  </div>`;
-
-  wireDebToolbar(wrap);
-  /* Drift can exist on a customer the current filter hides, so the fix
-     has to be reachable from the empty path too, not just the populated
-     one. */
-  wireDebtDriftFix(wrap);
-
-  wrap.querySelectorAll('[data-open]').forEach(btn=> btn.addEventListener('click', ()=>{
-    // Clicking the row that is open closes it: the way out is the way in.
-    debOpenId = (debOpenId === btn.dataset.open) ? null : btn.dataset.open;
-    if(debPay.id !== debOpenId) debPay = {id: null, amount: 0};
-    renderDebtorsList();
-  }));
-  /* Typing an amount redraws the open row's preview in place, not the
-     list: the box keeps its caret, and nothing else on the screen moves
-     while somebody is counting notes. */
-  wrap.querySelectorAll('[data-pay]').forEach(inp=>{
-    const id = inp.dataset.pay;
-    const r = rows.find(x=> x.id === id);
-    const box = inp.closest('.ow-q-x');
-    if(!r || !box) return;
-    inp.addEventListener('input', ()=>{
-      const v = Math.round(Number(String(inp.value).replace(/[^0-9.]/g, '')) || 0);
-      debPay = {id, amount: v};
-      const al = box.querySelector('[data-al]'), res = box.querySelector('[data-res]');
-      if(al) al.innerHTML = allocTable(r, v);
-      if(res) res.innerHTML = allocResult(r, v);
-      const btn = box.querySelector('.deb-receive');
-      if(btn) btn.textContent = receiveLabel(v);
-    });
-    inp.addEventListener('change', ()=>{ inp.value = debPay.amount > 0 ? f(debPay.amount) : ''; });
-  });
-  wrap.querySelectorAll('.deb-receive').forEach(btn=> btn.addEventListener('click', (e)=>{
-    e.stopPropagation();
-    const id = btn.dataset.id;
-    debOpenReceive(id, debPay.id === id ? debPay.amount : 0);
-  }));
-  // Before chasing somebody it helps to see who they are and what they
-  // have bought. The statement to hand them prints from there too.
-  wrap.querySelectorAll('[data-stats]').forEach(btn=> btn.addEventListener('click', (e)=>{
-    e.stopPropagation();
-    openCustomerStats(btn.dataset.stats);
-  }));
-}
 
 /* The toolbar is rendered with the list, so its controls are wired after
    every render rather than once at parse time -- the pattern the drift
    fix already uses. Search keeps focus and caret across the re-render it
    causes, or typing a second letter would put the caret back at the
    start. */
-function wireDebToolbar(wrap){
-  const box = wrap.querySelector('#deb_search');
-  if(box){
-    box.addEventListener('input', (e)=>{
-      const at = e.target.selectionStart;
-      debSearch = e.target.value;
-      renderDebtorsList();
-      const again = document.getElementById('deb_search');
-      if(again){ again.focus(); try{ again.setSelectionRange(at, at); }catch(_){} }
-    });
-  }
-  const sort = wrap.querySelector('#deb_sort');
-  if(sort) sort.addEventListener('change', (e)=>{
-    DEB_SORT_STATE.key = e.target.value;
-    DEB_SORT_STATE.dir = DEB_SORT_FIRST_DIR[e.target.value] || -1;
-    renderDebtorsList();
-  });
-  const tg = wrap.querySelector('#deb_hide_no_debt');
-  if(tg) tg.addEventListener('click', ()=>{ debHideSettled = !debHideSettled; renderDebtorsList(); });
-  const chip = wrap.querySelector('#deb_band_chip');
-  if(chip) chip.addEventListener('click', ()=>{ debBandFilter = ''; renderDebtorsList(); });
-  const prt = wrap.querySelector('#deb_print_btn');
-  if(prt) prt.addEventListener('click', debPrintList);
-  const exp = wrap.querySelector('#deb_export_btn');
-  if(exp) exp.addEventListener('click', debExportCSV);
-}
 
 /* IS THE BOOK GETTING OLDER? What the ledger said was owed at the end of
    each of the last `weeks` weeks, and how much of it was already sixty
@@ -89579,16 +90965,20 @@ function debBookHistory(weeks){
   const points = [];
   for(let w = weeks - 1; w >= 0; w--){
     const asOf = iso(t0 - w * 7 * 86400000);
-    let total = 0, old = 0;
+    let total = 0, old = 0, mid = 0;
     logs.forEach(({ c, log })=>{
       const upto = log.filter(l=> l.date <= asOf);
       if(!upto.length) return;
       customerOpenCharges({ ...c, debtLog: upto }).forEach(ch=>{
         total += ch.remaining;
-        if(ch.date && daysBetweenISO(ch.date, asOf) >= 60) old += ch.remaining;
+        const age = ch.date ? daysBetweenISO(ch.date, asOf) : -1;
+        if(age >= 60) old += ch.remaining;
+        else if(age >= 30) mid += ch.remaining;
       });
     });
-    points.push({ asOf, total, old });
+    /* mid is the 30-to-60-day part: Intelligence draws then-against-now
+       in three ages, and the young part is what is left. */
+    points.push({ asOf, total, old, mid });
   }
   return points;
 }
@@ -89599,142 +90989,11 @@ function debBookHistory(weeks){
    rule about how a balance is worked out lives behind the page's "i",
    and what a payment does is drawn in the open row, where it happens.
    Derived, never invented: every number here is read from the books. */
-function renderDebtorsRail(){
-  const el = document.getElementById('debRailWrap');
-  if(!el) return;
-  const f = n=> Number(Math.round(n)).toLocaleString('en-UG');
-  const p = debAgingProfile();
-  const q = debtChaseRows();
-  const dueSum = q.due.reduce((s,r)=> s + r.debt, 0);
-  const initials = (name)=> String(name || '?').trim().split(/\s+/).slice(0, 2).map(w=> w[0] || '').join('').toUpperCase();
-
-  /* ---- who is due a call today ----
-     The money queue's own list, not a second reading of it: the same
-     grace, the same rest, the same customers held back for a look. */
-  const faces = q.due.slice(0, 4).map(r=> `<span class="ow-db-av-i" title="${esc(r.name)}">${esc(initials(r.name))}</span>`).join('')
-    + (q.due.length > 4 ? `<span class="ow-db-av-i" title="and ${q.due.length - 4} more">+${q.due.length - 4}</span>` : '');
-  const waiting = [
-    q.promised.length ? `${q.promised.length} named a day` : '',
-    q.resting.length ? `${q.resting.length} asked recently` : '',
-    q.blocked.length ? `${q.blocked.length} held for a look` : '',
-  ].filter(Boolean).join(' &middot; ');
-  const chase = `<div class="ow-pan">
-    <div class="ow-pan-h"><span class="ow-pan-t">To chase today</span>
-      <span class="ow-pan-n">past your ${q.graceDays}&#8209;day terms</span></div>
-    <div class="ow-db-rk">
-      ${q.due.length
-        ? `<div class="ow-db-rk-v"><span class="ow-db-rk-f ow-bad">${f(dueSum)}</span><span>${q.due.length} customer${q.due.length===1?'':'s'}</span></div>`
-        : `<div class="ow-db-rk-v"><span class="ow-db-rk-f ow-good">Nobody</span><span>${p.customers ? 'is past your terms today' : 'owes you anything'}</span></div>`}
-      ${waiting ? `<div class="ow-db-rk-v"><span>${waiting}</span></div>` : ''}
-      <div class="ow-db-av"><span class="ow-db-av-s">${faces}</span>
-        <button type="button" class="ow-db-go" id="deb_to_chase">${q.due.length ? 'Chase in Follow-ups' : 'Open Follow-ups'} &rarr;</button></div>
-    </div>
-  </div>`;
-  if(!p.customers){
-    el.innerHTML = chase;
-    const go0 = el.querySelector('#deb_to_chase');
-    if(go0) go0.addEventListener('click', ()=> goToTab('chase'));
-    return;
-  }
-
-  /* ---- is the book getting older ---- */
-  const hist = debBookHistory(12);
-  const drawn = hist.filter(h=> h.total > 0.5).length;
-  let trend;
-  if(drawn < 3){
-    /* Not enough is an answer. Three weeks with money on the books is
-       the least a line can be drawn through without inventing a shape. */
-    trend = `<div class="ow-empty">Not enough dated history yet to draw a trend. It fills in week by week as charges and payments are recorded.</div>`;
-  } else {
-    const W = 272, H = 88;
-    const top = Math.max(...hist.map(h=> h.total)) * 1.08 || 1;
-    const x = (i)=> (i * W / (hist.length - 1)).toFixed(1);
-    const y = (v)=> (H - 2 - v / top * (H - 6)).toFixed(1);
-    const line = (k)=> hist.map((h,i)=> `${i ? 'L' : 'M'}${x(i)} ${y(h[k])}`).join(' ');
-    const area = (k)=> `${line(k)} L${W} ${H} L0 ${H} Z`;
-    const first = hist[0], last = hist[hist.length - 1];
-    /* The verdict is the old money, then against now -- because a book
-       that grows while its old part shrinks is a busy shop, and one
-       whose old part grows is the problem this rail exists to show. */
-    let verdict;
-    if(last.old <= 0.5 && first.old <= 0.5){
-      verdict = `<b class="ow-db-tr-m ow-good">None</b> of it has been over 60 days in twelve weeks`;
-    } else if(first.old <= 0.5){
-      verdict = `<b class="ow-db-tr-m ow-bad"><svg class="ow-db-tr-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>${f(last.old)}</b> over 60 days, from none on ${esc(fmtDayMonth(first.asOf))}`;
-    } else {
-      const ratio = last.old / first.old;
-      const up = ratio > 1.05, down = ratio < 0.95;
-      const mark = up ? '<path d="M12 19V5M6 11l6-6 6 6"/>' : down ? '<path d="M12 5v14M6 13l6 6 6-6"/>' : '<path d="M5 12h14"/>';
-      const said = up || down ? (ratio >= 1.95 || ratio <= 0.5 ? (up ? ratio.toFixed(1) + '×' : Math.round((1 - ratio) * 100) + '%') : Math.round(Math.abs(ratio - 1) * 100) + '%') : 'level';
-      verdict = `<b class="ow-db-tr-m ${up ? 'ow-bad' : down ? 'ow-good' : ''}"><svg class="ow-db-tr-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${mark}</svg>${said}</b> money over 60 days since ${esc(fmtDayMonth(first.asOf))}`;
-    }
-    const gap = Math.abs(last.total - p.total) > 0.5
-      ? `<p class="ow-mini">Drawn from the debt ledger, which accounts for ${f(last.total)} of the ${f(p.total)} owed today.</p>` : '';
-    trend = `<div class="ow-db-rk">
-      <div class="ow-db-tr-v">${verdict}</div>
-      <svg class="ow-db-tr" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
-        aria-label="Owed at each week's end rose or fell from ${esc(f(first.total))} to ${esc(f(last.total))}; the part over 60 days from ${esc(f(first.old))} to ${esc(f(last.old))}">
-        <path class="ow-db-tr-all" d="${area('total')}"/>
-        <path class="ow-db-tr-all-l" d="${line('total')}" vector-effect="non-scaling-stroke"/>
-        <path class="ow-db-tr-old" d="${area('old')}"/>
-        <path class="ow-db-tr-old-l" d="${line('old')}" vector-effect="non-scaling-stroke"/>
-      </svg>
-      <div class="ow-db-tr-k"><span>${esc(fmtDayMonth(first.asOf))}</span><span>today</span></div>
-      <div class="ow-db-tr-k">
-        <span><span class="ow-db-tr-sw"></span>all owed <b class="ow-db-tr-f">${f(last.total)}</b></span>
-        <span><span class="ow-db-tr-sw ow-bad"></span>over 60 days <b class="ow-db-tr-f ow-bad">${f(last.old)}</b></span></div>
-      ${gap}
-    </div>`;
-  }
-  const older = `<div class="ow-pan">
-    <div class="ow-pan-h"><span class="ow-pan-t">Getting older?</span><span class="ow-pan-n">12 weeks</span></div>
-    ${trend}
-  </div>`;
-
-  /* ---- whose hands it is in ----
-     Withheld with one debtor, for the same reason the largest-debt line
-     is: one name holding all of it is the same number said twice. */
-  let hold = '';
-  if(p.customers > 1){
-    const owing = debAllRows().filter(r=> r.debt > 0.5).sort((a,b)=> b.debt - a.debt);
-    const shareOf = (n)=> p.total > 0 ? n / p.total : 0;
-    const topN = owing.slice(0, 4);
-    const rest = owing.slice(4);
-    const restSum = rest.reduce((s,r)=> s + r.debt, 0);
-    const parts = topN.map((r,i)=> ({ name: r.name, amt: r.debt, cls: 'ow-db-w' + i }))
-      .concat(rest.length ? [{ name: `${rest.length} other${rest.length===1?'':'s'}`, amt: restSum, cls: 'ow-db-w4' }] : []);
-    const top3 = Math.round(owing.slice(0, 3).reduce((s,r)=> s + shareOf(r.debt), 0) * 100);
-    hold = `<div class="ow-pan">
-      <div class="ow-pan-h"><span class="ow-pan-t">Who holds it</span>
-        ${owing.length > 3 ? `<span class="ow-cp${top3 >= 50 ? ' ow-warn' : ''}" style="margin-left:auto">top 3 hold ${top3}%</span>` : ''}</div>
-      <div class="ow-db-rk"><div class="ow-db-hb" aria-hidden="true">${parts.map(x=> `<span class="ow-db-hs ${x.cls}" style="flex-grow:${x.amt}" title="${esc(x.name)}"></span>`).join('')}</div></div>
-      ${parts.map(x=> `<div class="ow-sr"><span class="ow-db-sw ${x.cls}"></span><span class="ow-sr-k" title="${esc(x.name)}">${esc(x.name)}</span><span class="ow-sr-v">${Math.round(shareOf(x.amt) * 100)}%</span></div>`).join('')}
-    </div>`;
-  }
-
-  el.innerHTML = chase + older + hold;
-  const go = el.querySelector('#deb_to_chase');
-  if(go) go.addEventListener('click', ()=> goToTab('chase'));
-}
 
 /* The band filter lives up in the position panel, so its effect is
    echoed down here where the rows it removed would have been -- with the
    way out beside it. A filter you cannot see is a filter you forget you
    set, and then you trust a total that is a slice. */
-function renderDebFilterNote(shown){
-  const el = document.getElementById('debFilterNote');
-  if(!el) return;
-  if(!debBandFilter){ el.innerHTML = ''; return; }
-  const def = agingBandDef(debBandFilter);
-  el.innerHTML = `<div class="ow-pan ow-db-note">
-    <span>Showing only <b class="ow-db-em">${esc(def ? def.label.toLowerCase() : 'one band')}</b> &mdash; ${shown} customer${shown===1?'':'s'}. The figures above are still the whole book.</span>
-    <button type="button" class="btn btn-ghost ow-sm" id="debClearBand">Show everyone</button>
-  </div>`;
-  el.querySelector('#debClearBand').addEventListener('click', ()=>{
-    debBandFilter = '';
-    renderDebtorsList();
-  });
-}
 function debExportCSV(){
   const rows = debLastRows;
   if(rows.length===0){ toast('No debtors to export'); return; }
