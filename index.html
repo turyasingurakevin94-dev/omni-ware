@@ -27480,6 +27480,8 @@
     border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);background:var(--ow-paper);cursor:pointer;
     font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
   .ow-pr-lc:hover{background:var(--ow-paper-2);}
+  .ow-pr-lc.ow-more{cursor:default;border-style:dashed;color:var(--ow-ink-600);}
+  .ow-pr-lc.ow-more:hover{background:var(--ow-paper);}
   .ow-pr-lc:focus-visible{outline:2px solid var(--ow-steel-950);}
   .btn.ow-pr-rb{min-height:40px;border-color:var(--ow-steel-950);color:var(--ow-steel-950);font-size:var(--ow-t-13);font-weight:var(--ow-fw-700);}
   .btn.ow-pr-rb:hover{background:var(--ow-paper-2);color:var(--ow-steel-950);}
@@ -90050,7 +90052,14 @@ function renderPricing(){
     return 'ow-none';
   };
   const categoryOf = (k)=>{ const parts = buyKeyParts(k); return (parts && parts.product && String(parts.product.category || '').trim()) || 'Other'; };
-  const short = (s)=> String(s || '').split(',')[0];
+  /* A line's working name: what comes before the first comma or dash,
+     which on this shop's catalogue is the part a person says out loud
+     ("SHORT-SINGLELOCK", not "SHORT-SINGLELOCK — ELEPHANT King (Short /
+     Single Lock)"). The full name always rides along in a title. */
+  const short = (s)=>{
+    const t = String(s || '').split(/,| \u2014 | - /)[0].trim();
+    return t.length > 24 ? t.slice(0, 23) + '\u2026' : t;
+  };
   const unitOf = (r)=> r.kind === 'wholesale' ? 'pack' : 'piece';
 
   /* ---- the totals, always the whole shelf, never the filtered list ---- */
@@ -90222,7 +90231,7 @@ function renderPricing(){
         style="left:50%;top:${y.toFixed(1)}%;width:${sz.toFixed(0)}px;height:${sz.toFixed(0)}px"
         ${tip(r.line, r.daysQuiet == null ? 'never' : r.daysQuiet + ' days', r.daysQuiet == null ? 'sold' : 'quiet for', String(r.qty), 'on the shelf', f(r.value), 'at cost', toneOf(r.key))}></button>`;
     }).join('');
-    const labelKeys = all.thin.slice().sort((a, b)=> b.worth - a.worth).slice(0, 4).map(x=> x.src.key);
+    const labelKeys = all.thin.slice().sort((a, b)=> b.worth - a.worth).slice(0, 3).map(x=> x.src.key);
     if(selKey && sells(selKey) && !labelKeys.includes(selKey)) labelKeys.push(selKey);
     /* Labels that would land on each other are walked apart, a line at
        a time, so a cluster of thin lines still reads as named. Measured
@@ -90718,7 +90727,7 @@ function renderPricing(){
         ${cards.length ? cards.map(c=> `<div class="ow-pr-rc">
           <div class="ow-pr-rc-h"><span class="ow-pr-rc-t">${titles[c.g]} &middot; ${c.n}</span><span class="ow-pr-fig ow-pr-rc-v">+${f(c.worth)}</span><span class="ow-pr-rc-u">/mo</span></div>
           <div class="ow-pr-rc-r"><span class="ow-pr-fig ow-pr-rl${c.done ? ' ow-was' : ''}">${c.from}</span>${arrow}<span class="ow-pr-fig ow-pr-rl ow-to">cost + ${c.to}%</span></div>
-          <div class="ow-pr-rc-l">${c.lines.map(l=> `<button type="button" class="ow-pr-lc" data-pick="${esc(l.key)}" title="${esc(l.line)}">${esc(short(l.line))}</button>`).join('')}</div>
+          <div class="ow-pr-rc-l">${c.lines.slice(0, 8).map(l=> `<button type="button" class="ow-pr-lc" data-pick="${esc(l.key)}" title="${esc(l.line)}">${esc(short(l.line))}</button>`).join('')}${c.lines.length > 8 ? ` <span class="ow-pr-lc ow-more">+${c.lines.length - 8} more</span>` : ''}</div>
           ${c.done
             ? `<div class="ow-pr-ok">${tick} <span class="ow-pr-ok-t">${plural(c.n, 'line')} now on cost + ${c.to}%</span><button type="button" class="ow-pr-un pr-undo-rule" data-group="${c.g}">Undo</button></div>`
             : `<button type="button" class="btn btn-ghost ow-pr-bt ow-pr-rb pr-rule" data-group="${c.g}">Put ${c.n === 1 ? 'this one' : 'these ' + c.n} on cost + ${c.to}%</button>`}
