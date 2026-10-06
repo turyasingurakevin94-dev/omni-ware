@@ -108582,7 +108582,7 @@ function invCountRecords(){
   Object.keys(data.presetStockCounts || {}).forEach(key=>{
     ((data.presetStockCounts || {})[key] || []).forEach(r=>{
       if(!r || !r.date) return;
-      out.push({ key, date: r.date, at: r.at || r.date, found: Number(r.found) || 0, record: Number(r.record) || 0 });
+      out.push({ key, date: r.date, at: r.at || r.date, found: Number(r.found) || 0, record: Number(r.record) || 0, kept: true });
       seen.add(`${key}|${r.at || r.date}`);
     });
   });
@@ -108590,7 +108590,11 @@ function invCountRecords(){
     if(!e || e.type !== 'correction' || !e.key || !e.date || !Number(e.delta)) return;
     if(INV_NOT_A_COUNT.test(String(e.note || '')) || seen.has(`${e.key}|${e.at || e.date}`)) return;
     const after = Number(e.qtyAfter) || 0;
-    out.push({ key: e.key, date: e.date, at: e.at || e.date, found: after, record: after - (Number(e.delta) || 0) });
+    const before = after - (Number(e.delta) || 0);
+    /* Against an empty record it is the first stock put on file, not a
+       check of a shelf the book already described. */
+    if(!(before > 0)) return;
+    out.push({ key: e.key, date: e.date, at: e.at || e.date, found: after, record: before });
   });
   return out.sort((a, b)=> String(b.at).localeCompare(String(a.at)));
 }
@@ -108877,9 +108881,10 @@ function invLineHTML(l){
   const silent = wk.every(x=> x === 0);
   const max = Math.max(1, ...wk);
   const spark = wk.map((x, i)=> `${i ? 'L' : 'M'}${(i / 7 * 58 + 1).toFixed(1)} ${(19 - x / max * 16).toFixed(1)}`).join(' ');
-  const rate = silent ? 'none' : `${Math.round((f.perDay || wk.reduce((n, x)=> n + x, 0) / 56) * 10) / 10}/day`;
+  const perDay = f.perDay || wk.reduce((n, x)=> n + x, 0) / 56;
+  const rate = silent ? 'none' : perDay < 0.05 ? '&lt;0.1/day' : `${Math.round(perDay * 10) / 10}/day`;
   const valueTxt = l.value != null ? esc(invFig(l.value)) : '<span class="iv-nv">no cost</span>';
-  const gm = f.gmroi == null ? '—' : `${f.gmroi.toFixed(1)}×`;
+  const gm = f.gmroi == null ? '—' : `${f.gmroi.toFixed(Math.abs(f.gmroi) < 1 ? 2 : 1)}×`;
   const gmCls = f.gmroi == null ? ' ow-none' : f.gmroi < 1 ? ' iv-bad' : f.gmroi >= 2.5 ? ' iv-good' : '';
   const act = invRowAction(l, z, st, f);
   const thumb = invThumbHTML(l);
@@ -108917,7 +108922,9 @@ function invOutlook(l, z, st){
   const on = (n)=>{ const t = new Date(todayISO()); t.setDate(t.getDate() + Math.floor(n));
     return t.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }); };
   if(st === 'buy') return l.belowFloor ? 'Below floor' : d != null ? `Out ${on(d)}` : 'Running low';
-  if(st === 'ok') return d != null ? `Lasts to ${on(d).replace(/^\w+,? /, '')}` : 'Selling';
+  // No pace: the age record says it sold inside the quiet window, so it
+  // is not dead -- but "selling" would claim a pace it does not have.
+  if(st === 'ok') return d != null ? `Lasts to ${on(d).replace(/^\w+,? /, '')}` : z && z.quiet != null ? `Sold ${z.quiet} d ago` : 'No sale in 30 d';
   if(st === 'dead') return d != null ? `${Math.round(d)} d to clear` : 'Not selling';
   if(st === 'nocost') return 'No cost';
   return 'Empty';
@@ -109000,7 +109007,7 @@ function invOpenHTML(l, name, key){
   const st = invStateOf(l);
   const d = z ? z.daysLeft : null;
   const pill = st === 'buy' ? (d != null ? `Runs out in ${Math.max(0, Math.floor(d))} day${Math.floor(d) === 1 ? '' : 's'}` : l.belowFloor ? 'Below its floor' : 'Running low')
-    : st === 'ok' ? (d != null ? `${Math.floor(d)} days of stock` : 'Healthy')
+    : st === 'ok' ? (d != null ? `${Math.floor(d)} days of stock` : z && z.quiet != null ? `Last sold ${z.quiet} days ago` : 'No sale in 30 days')
     : st === 'dead' ? (d != null ? `${Math.round(d)} days to clear` : 'Not selling')
     : st === 'nocost' ? 'No cost on file' : 'Nothing on the shelf';
   const moves = (data.stockLog||[]).filter(e=> e.key === key).slice(-3).reverse();
@@ -109171,7 +109178,10 @@ function invVitalsHTML(allLines, B, all, toCount){
   const covAt = (ago)=> stocked.length ? stocked.filter(k=> (B.counts.get(k) || []).some(d=>{ const age = waDaysBetween(d, B.today); return age >= ago && age < ago + 90; })).length / stocked.length * 100 : null;
   const cov = AGO.map(covAt);
   const counts90 = [...B.counts.values()].reduce((n, a)=> n + a.filter(d=> waDaysBetween(d, B.today) < 90).length, 0);
-  const accAt = (ago)=>{ const rs = B.countRecs.filter(r=>{ const a = waDaysBetween(r.date, B.today); return a >= ago && a < ago + 90; });
+  /* Accuracy only from counts kept since matched counts were recorded:
+     the log only ever saw a count that moved the shelf, so reading it
+     would put every old count down as a miss. */
+  const accAt = (ago)=>{ const rs = B.countRecs.filter(r=> r.kept).filter(r=>{ const a = waDaysBetween(r.date, B.today); return a >= ago && a < ago + 90; });
     return rs.length ? rs.filter(r=> r.found === r.record).length / rs.length * 100 : null; };
   const acc = AGO.map(accAt);
   const t0 = turns[6], tFirst = turns.find(v=> v != null);
@@ -109439,11 +109449,16 @@ function invBridgeHTML(allLines, B, all){
     if(!dlt) return;
     const c = e.cost != null && e.cost !== '' ? Number(e.cost) : (B.each.get(e.key) || 0);
     const v = dlt * c;
-    if(e.type === 'restock'){ rec += v; recN++; if(e.supplierId) sups.add(e.supplierId); }
+    if(e.type === 'restock'){ rec += v; recN++; }
     else if(e.type === 'sale' || e.type === 'reversal'){ sold -= v; soldU -= dlt; if(e.type === 'sale') soldN++; }
     else if(e.type === 'damaged'){ off -= v; offN++; }
     else if(e.type === 'correction'){ adj += v; adjN++; }
     else other += v;
+  });
+  /* Who it came from is read off the bills: the movement log does not
+     keep its supplier through a sync. */
+  (data.purchaseInvoices || []).forEach(pi=>{
+    if(!pi.voided && !pi.consignSettlement && pi.date && pi.supplierId && waDaysBetween(pi.date, B.today) < P) sups.add(pi.supplierId);
   });
   const close = all.value;
   const open = close - rec + sold + off - adj - other;
@@ -109560,7 +109575,7 @@ function invStocktakeHTML(allLines, B, toCount){
   const counted90 = allLines.filter(l=> l.qty > 0 && (()=>{ const d = invCountedDays(invFactsOf(l)); return d != null && d < 90; })()).length;
   const missing30 = B.countRecs.filter(r=> waDaysBetween(r.date, B.today) < 30 && r.found < r.record)
     .reduce((n, r)=> n + (r.record - r.found) * (B.each.get(r.key) || 0), 0);
-  const matched = B.countRecs.filter(r=> waDaysBetween(r.date, B.today) < 90);
+  const matched = B.countRecs.filter(r=> r.kept && waDaysBetween(r.date, B.today) < 90);
   const accuracy = matched.length ? matched.filter(r=> r.found === r.record).length / matched.length * 100 : null;
   const last = B.countRecs.slice(0, 5);
   const thumb = (l)=> invThumbHTML(l, 'ix-tk-th');
