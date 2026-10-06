@@ -4579,7 +4579,7 @@
 
   /* the board: next order + today's work */
   .sx-board{margin-bottom:16px;}
-  .sx-board:empty,.sx-ptop:empty,.sx-pwage:empty{display:none;}
+  .sx-board:empty,.sx-ptop:empty{display:none;}
   .sx-board-in{display:grid;grid-template-columns:320px minmax(0,1fr);overflow:hidden;}
   .sx-first{position:relative;padding:20px 22px 18px;display:flex;flex-direction:column;gap:16px;
     background:var(--ow-steel-950);color:var(--ow-paper);overflow:hidden;}
@@ -4863,7 +4863,7 @@
     color:var(--ow-amber-ink);font-weight:600;}
 
   /* phone-only pieces stay out of the desktop */
-  .sx-ptop,.sx-cards,.sx-pwage{display:none;}
+  .sx-ptop,.sx-cards{display:none;}
 
   @media (max-width:1100px){
     .sx-board-in{grid-template-columns:minmax(0,1fr);}
@@ -4878,13 +4878,13 @@
   /* ---- Staff on the phone: its own design, not the console squeezed.
      A 2x2 of where everybody is, the next person, a roll of faces that
      marks who is in today, the team as cards with their actions showing,
-     the month's wages -- and Add staff in the thumb's reach. ---- */
+     and Add staff in the thumb's reach. The board comes along in the
+     phone's shape: the same navy card, the day's four steps as a 2x2. ---- */
   @media (max-width:820px){
     #tab-staff{padding-bottom:84px;}
     .sx-board,.sx-side,.sx-reg,.sx-tbl,#tab-staff .sx-srch,#tab-staff .sx-period,.sx-pan-nt{display:none;}
     .sx-ptop{display:flex;flex-direction:column;gap:14px;margin-bottom:14px;}
     .sx-cards{display:flex;flex-direction:column;gap:12px;}
-    .sx-pwage{display:block;margin-top:14px;}
     .sx-d-long{display:none;}
     .sx-d-short{display:inline;}
     #tab-staff .sx-ph-sub{font-size:13px;}
@@ -4892,38 +4892,33 @@
       z-index:30;height:52px;padding:0 20px 0 16px;border-radius:var(--ow-r-pill);font-size:15px;box-shadow:var(--ow-lift);
       width:auto;min-width:0;flex:none;}
     .sx-pcard{background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);}
-    .sx-ready-bar{display:flex;gap:3px;padding:14px 14px 0;}
-    .sx-ready-bar i{height:8px;border-radius:var(--ow-r-4);}
-    .sx-lb-free{background:var(--ow-verdigris);}
-    .sx-lb-busy{background:var(--ow-steel-800);}
-    .sx-lb-absent{background:var(--ow-amber);}
-    .sx-lb-block{background:repeating-linear-gradient(135deg,var(--ow-steel-300) 0 3px,var(--ow-rule-soft) 3px 6px);}
+    .sx-pwork-h{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--ow-rule-soft);}
+    .sx-pwork-h .sx-flow-sum{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
     .sx-q2{display:grid;grid-template-columns:1fr 1fr;}
     .sx-qc{padding:12px 14px 14px;display:flex;flex-direction:column;gap:6px;min-width:0;}
     .sx-qc:nth-child(odd){border-right:1px solid var(--ow-rule-soft);}
     .sx-qc:nth-child(-n+2){border-bottom:1px solid var(--ow-rule-soft);}
-    .sx-qc-h{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;}
-    .sx-qc-h i{width:8px;height:8px;border-radius:var(--ow-r-2);}
-    .sx-qc-m{display:flex;align-items:center;justify-content:space-between;gap:6px;}
-    .sx-qc-m b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
-      font-size:28px;font-weight:600;line-height:1;}
-    .sx-faces{display:flex;}
-    .sx-faces span{width:24px;height:24px;margin-right:-6px;border-radius:50%;border:2px solid var(--ow-paper);box-sizing:content-box;
-      display:grid;place-items:center;font-size:11px;font-weight:700;}
-    .sx-face-free{background:var(--ow-verdigris);color:var(--ow-paper);}
-    .sx-face-busy{background:var(--ow-steel-800);color:var(--ow-paper);}
-    .sx-face-absent{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
-    .sx-face-block{background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+    .sx-qc-h{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ow-ink-600);}
+    .sx-qc-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:28px;font-weight:600;line-height:1;color:var(--ow-ink-900);}
     .sx-qc-s{font-size:12px;color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
-    .sx-next{display:flex;align-items:center;gap:12px;padding:14px;}
+    .sx-qc-s.is-warn{color:var(--ow-amber-ink);font-weight:600;}
+    .sx-next{position:relative;display:flex;align-items:center;gap:14px;padding:16px;overflow:hidden;
+      background:var(--ow-steel-950);border-color:var(--ow-steel-950);color:var(--ow-paper);}
+    .sx-next::before{content:'';position:absolute;inset:0;pointer-events:none;
+      background:radial-gradient(120% 70% at 0% 0%,rgba(15,107,67,.28),transparent 60%);}
+    .sx-next > *{position:relative;}
     .sx-next-av{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;flex:none;font-size:14px;font-weight:700;
-      background:var(--ow-verdigris-soft);color:var(--ow-verdigris);outline:2px solid var(--ow-verdigris);outline-offset:2px;}
-    .sx-next-av.is-held{background:var(--ow-rule-soft);color:var(--ow-ink-600);outline-color:var(--ow-rule);}
+      background:var(--ow-verdigris-soft);color:var(--ow-verdigris);outline:2px solid var(--ow-good-on-navy);outline-offset:3px;}
+    .sx-next-av.is-held{background:var(--ow-steel-800);color:var(--ow-navy-line);outline-color:var(--ow-navy-mute);}
     .sx-next-w{min-width:0;flex:1;}
-    .sx-next-n{font-size:16px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .sx-next-s{font-size:13px;color:var(--ow-ink-600);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .sx-next-go{width:44px;height:44px;border-radius:var(--ow-r-lg);border:1px solid var(--ow-rule);background:var(--ow-paper);
-      display:grid;place-items:center;color:var(--ow-sky);cursor:pointer;flex:none;padding:0;}
+    .sx-next-k{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ow-navy-mute);}
+    .sx-next-n{font-size:16px;font-weight:700;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .sx-next-s{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12px;color:var(--ow-navy-ink);min-width:0;}
+    .sx-next-then{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+    .sx-next-s .sx-first-chip{flex:none;}
+    .sx-next-go{width:44px;height:44px;border-radius:var(--ow-r-lg);border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);
+      display:grid;place-items:center;color:var(--ow-paper);cursor:pointer;flex:none;padding:0;}
     .sx-next-go .sx-i{width:18px;height:18px;}
     .sx-sect{display:flex;align-items:baseline;gap:8px;padding:4px 2px 0;}
     .sx-sect-t{font-size:15px;font-weight:700;color:var(--ow-ink-900);}
@@ -4990,25 +4985,6 @@
     .sx-pc .sx-menu{min-width:200px;}
     .sx-pc .sx-menu button{min-height:var(--ow-tap);}
 
-    .sx-pwage-in{padding:14px;display:flex;flex-direction:column;gap:10px;}
-    .sx-pwage-h{display:flex;align-items:center;}
-    .sx-due{margin-left:auto;font-size:12px;font-weight:600;color:var(--ow-sky);background:var(--ow-sky-soft);border-radius:var(--ow-r-sm);padding:4px 8px;}
-    .sx-pwage-v b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
-      font-size:28px;font-weight:600;line-height:1;}
-    .sx-pwage-v b.is-quiet{font-family:inherit;font-size:16px;color:var(--ow-ink-600);}
-    .sx-wbar{display:flex;height:10px;border-radius:var(--ow-r-pill);overflow:hidden;
-      background:repeating-linear-gradient(135deg,var(--ow-steel-200) 0 3px,var(--ow-steel-050) 3px 6px);}
-    .sx-wbar-r{background:var(--ow-steel-800);}
-    .sx-wbar-d{background:var(--ow-amber);}
-    .sx-wbar-n{background:repeating-linear-gradient(135deg,var(--ow-steel-300) 0 2px,var(--ow-steel-050) 2px 4px);}
-    .sx-wr{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ow-ink-600);}
-    .sx-wr i{width:10px;height:10px;border-radius:var(--ow-r-3);flex:none;}
-    .sx-wr b{margin-left:auto;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
-      color:var(--ow-ink-900);font-weight:600;white-space:nowrap;}
-    .sx-wr b.is-warn{color:var(--ow-amber-ink);}
-    .sx-plink{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:6px;min-height:var(--ow-tap);
-      font-size:14px;font-weight:600;color:var(--ow-sky);}
-    .sx-plink .sx-i{width:16px;height:16px;}
   }
 
   /* The preset pane's own action, on the right of its heading. */
@@ -35284,7 +35260,6 @@
              no button of its own. -->
         <aside class="sx-side" id="staffRail"></aside>
       </div>
-      <div class="sx-pwage" id="staffPhoneWage"></div>
 
       <!-- Days worked. Below the work, not above it: the question you
            open Staff to ask is who can take the next order, and this is
@@ -77394,6 +77369,46 @@ function staffFirstStats(s, p){
   ];
 }
 
+/* TODAY'S WORK as four steps an order walks through, with the chip that
+   weighs what is waiting against who is free. One reading, drawn twice:
+   as the desktop's flow, and as the phone's 2x2. */
+function staffWorkStages(line){
+  const w = staffTodaysWork();
+  const who = (id)=> { const x = (data.staff||[]).find(s=> String(s.id) === String(id)); return x ? nameInitials(x.name) : '?'; };
+  const oldest = w.waiting.reduce((m, q)=> Math.max(m, sxMinsSince(q.stageEnteredAt || q.savedAt)), 0);
+  const pickers = new Set(w.picking.map(q=> String(q.assignedWorkerId))).size;
+  const top3 = (rows, more)=> rows.slice(0, 3).join('') + (rows.length > 3 ? `<span class="sx-sg-more">+${rows.length - 3} ${more}</span>` : '');
+  const item = (lead, leadCls, client, t, tCls)=> `<div class="sx-sg-i"><span class="sx-sg-lead ${leadCls}">${esc(lead)}</span>
+      <span class="sx-sg-c" title="${esc(client)}">${esc(client)}</span><span class="sx-sg-t${tCls ? ' ' + tCls : ''}">${esc(t)}</span></div>`;
+  const none = '<span class="sx-sg-more">none right now</span>';
+  const doneValue = w.done.reduce((n, q)=> n + (savedQuoteTotal(q) || 0), 0);
+  const stages = [
+    { label:'Waiting for a picker', short:'Waiting', icon:ICON_SX_CLOCK, n:w.waiting.length,
+      sub: w.waiting.length ? `oldest ${oldest} min` : 'queue clear', subCls: oldest > 15 ? 'is-warn' : '',
+      list: w.waiting.length ? top3(w.waiting.map(q=> { const m = sxMinsSince(q.stageEnteredAt || q.savedAt);
+        return item(sxOrderNo(q), 'is-ord', quoteClientName(q), `${m} min`, m > 15 ? 'is-warn' : ''); }), 'more') : none },
+    { label:'Being picked', short:'Being picked', icon:ICON_SX_PICK, n:w.picking.length,
+      sub: w.picking.length ? `by ${pickers} ${pickers === 1 ? 'person' : 'people'}` : 'nobody picking',
+      list: w.picking.length ? top3(w.picking.map(q=> item(who(q.assignedWorkerId), 'is-busy', quoteClientName(q),
+        sxSince(q.pickingAssignedAt || q.stageEnteredAt), '')), 'more') : none },
+    { label:'Out for delivery', short:'Out', icon:ICON_SX_DRIVE, n:w.out.length,
+      sub: w.out.length ? 'on the road' : 'nobody out',
+      list: w.out.length ? top3(w.out.map(q=> item(who(q.assignedDeliveryId), 'is-busy', quoteClientName(q),
+        sxSince(q.stageEnteredAt), '')), 'more') : none },
+    { label:'Done today', short:'Done today', icon:ICON_SX_TICK, n:w.done.length,
+      sub: w.done.length ? `${fmtUGX(Math.round(doneValue))}` : 'nothing finished yet',
+      list: w.done.length ? w.done.slice(0, 3).map(q=> item(who(q.assignedDeliveryId || q.assignedWorkerId), 'is-done',
+        quoteClientName(q), sxClock(Number(q.stageEnteredAt)), '')).join('')
+        + (w.done.length > 3 ? `<span class="sx-sg-more">+${w.done.length - 3} earlier</span>` : '') : none },
+  ];
+  const freeN = line.filter(x=> x.st.key === 'free').length;
+  const sum = w.waiting.length
+    ? `${w.waiting.length} waiting · ${freeN ? `${freeN} free to take ${w.waiting.length === 1 ? 'it' : 'them'}` : 'nobody free'}`
+    : 'Nothing waiting';
+
+  return { stages, sum, warn: w.waiting.length > freeN };
+}
+
 function staffBoardHTML(){
   const line = staffInLine();
   const range = staffPeriodRange();
@@ -77420,42 +77435,10 @@ function staffBoardHTML(){
     </div>`;
 
   /* TODAY'S WORK, four steps an order walks through. */
-  const w = staffTodaysWork();
-  const who = (id)=> { const x = (data.staff||[]).find(s=> String(s.id) === String(id)); return x ? nameInitials(x.name) : '?'; };
-  const oldest = w.waiting.reduce((m, q)=> Math.max(m, sxMinsSince(q.stageEnteredAt || q.savedAt)), 0);
-  const pickers = new Set(w.picking.map(q=> String(q.assignedWorkerId))).size;
-  const top3 = (rows, more)=> rows.slice(0, 3).join('') + (rows.length > 3 ? `<span class="sx-sg-more">+${rows.length - 3} ${more}</span>` : '');
-  const item = (lead, leadCls, client, t, tCls)=> `<div class="sx-sg-i"><span class="sx-sg-lead ${leadCls}">${esc(lead)}</span>
-      <span class="sx-sg-c" title="${esc(client)}">${esc(client)}</span><span class="sx-sg-t${tCls ? ' ' + tCls : ''}">${esc(t)}</span></div>`;
-  const none = '<span class="sx-sg-more">none right now</span>';
-  const doneValue = w.done.reduce((n, q)=> n + (savedQuoteTotal(q) || 0), 0);
-  const stages = [
-    { label:'Waiting for a picker', icon:ICON_SX_CLOCK, n:w.waiting.length,
-      sub: w.waiting.length ? `oldest ${oldest} min` : 'queue clear', subCls: oldest > 15 ? 'is-warn' : '',
-      list: w.waiting.length ? top3(w.waiting.map(q=> { const m = sxMinsSince(q.stageEnteredAt || q.savedAt);
-        return item(sxOrderNo(q), 'is-ord', quoteClientName(q), `${m} min`, m > 15 ? 'is-warn' : ''); }), 'more') : none },
-    { label:'Being picked', icon:ICON_SX_PICK, n:w.picking.length,
-      sub: w.picking.length ? `by ${pickers} ${pickers === 1 ? 'person' : 'people'}` : 'nobody picking',
-      list: w.picking.length ? top3(w.picking.map(q=> item(who(q.assignedWorkerId), 'is-busy', quoteClientName(q),
-        sxSince(q.pickingAssignedAt || q.stageEnteredAt), '')), 'more') : none },
-    { label:'Out for delivery', icon:ICON_SX_DRIVE, n:w.out.length,
-      sub: w.out.length ? 'on the road' : 'nobody out',
-      list: w.out.length ? top3(w.out.map(q=> item(who(q.assignedDeliveryId), 'is-busy', quoteClientName(q),
-        sxSince(q.stageEnteredAt), '')), 'more') : none },
-    { label:'Done today', icon:ICON_SX_TICK, n:w.done.length,
-      sub: w.done.length ? `${fmtUGX(Math.round(doneValue))}` : 'nothing finished yet',
-      list: w.done.length ? w.done.slice(0, 3).map(q=> item(who(q.assignedDeliveryId || q.assignedWorkerId), 'is-done',
-        quoteClientName(q), sxClock(Number(q.stageEnteredAt)), '')).join('')
-        + (w.done.length > 3 ? `<span class="sx-sg-more">+${w.done.length - 3} earlier</span>` : '') : none },
-  ];
-  const freeN = line.filter(x=> x.st.key === 'free').length;
-  const sum = w.waiting.length
-    ? `${w.waiting.length} waiting · ${freeN ? `${freeN} free to take ${w.waiting.length === 1 ? 'it' : 'them'}` : 'nobody free'}`
-    : 'Nothing waiting';
-
+  const { stages, sum, warn } = staffWorkStages(line);
   const flow = `<div class="sx-flow">
       <div class="sx-flow-h"><span class="sx-cap">Today’s work</span>
-        <span class="sx-flow-sum${w.waiting.length > freeN ? ' is-warn' : ''}"><i></i>${esc(sum)}</span></div>
+        <span class="sx-flow-sum${warn ? ' is-warn' : ''}"><i></i>${esc(sum)}</span></div>
       <div class="sx-stages">${stages.map(g=> `<div class="sx-stage">
           <div class="sx-sg-h">${g.icon}<span>${esc(g.label)}</span></div>
           <div class="sx-sg-n"><b>${g.n}</b><span class="${g.subCls || ''}">${esc(g.sub)}</span></div>
@@ -77726,23 +77709,14 @@ function staffWageMonth(){
     dPct: gross > 0 ? Math.max(docked >= 0.5 ? 1 : 0, Math.round(share * docked / gross * 100)) : 0 };
 }
 
-/* THE PHONE'S TOP: where everybody is as a 2x2, the next person, and a
-   roll of faces that marks who is in today -- the job a phone in the
-   yard is actually picked up for. */
+/* THE PHONE'S TOP, the desktop's board in the phone's own shape: the
+   next person on the same navy card, the day's orders as a 2x2 of the
+   same four steps, and a roll of faces that marks who is in today -- the
+   job a phone in the yard is actually picked up for. */
 function staffPhoneTopHTML(){
   const line = staffInLine();
-  const by = (f)=> line.filter(f);
-  const free = by(x=> x.st.key === 'free'), busy = by(x=> x.st.key === 'busy'),
-    absent = by(x=> x.st.key === 'absent'), block = by(x=> x.st.key === 'nologin' || x.st.key === 'off');
-  const inHand = busy.reduce((n, x)=> n + x.st.active.length, 0);
-  const names = (xs)=> xs.map(x=> firstName(x.s.name)).join(', ') || 'nobody';
-  const lanes = [
-    { k:'free', label:'Free', rows:free, sub:names(free) },
-    { k:'busy', label:'Carrying', rows:busy, sub:`${inHand} order${inHand===1?'':'s'} in hand` },
-    { k:'absent', label:'Absent', rows:absent, sub:names(absent) },
-    { k:'block', label:'Can’t be sent', rows:block, sub:'no login · unavailable' },
-  ];
   const f0 = line[0];
+  const { stages, sum, warn } = staffWorkStages(line);
   const today = todayISO();
   const roll = (data.staff||[]).slice().sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''))).map(s=>{
     const onPay = PAY_BASES.includes(s.payBasis);
@@ -77752,43 +77726,28 @@ function staffPhoneTopHTML(){
     return `<button type="button" class="sx-rf" data-staff="${esc(s.id)}" ${dim ? 'disabled' : ''}
       aria-pressed="${out}" aria-label="${esc(s.name)}${dim ? (s.unavailable ? ', unavailable' : ', not on the payroll') : out ? ', absent — tap to mark in' : ', in — tap to mark absent'}">
       <span class="sx-rf-a${dim ? ' is-dim' : out ? ' is-out' : ''}">${esc(nameInitials(s.name))}</span>
-      <span class="sx-rf-n${out ? ' is-out' : ''}">${esc(label)}</span></button>`;
+      <span class="sx-rf-n${out && !dim ? ' is-out' : ''}">${esc(label)}</span></button>`;
   }).join('');
   const wm = staffWageMonth();
-  return `<div class="sx-pcard" role="region" aria-label="Who can take the next order">
-      <div class="sx-ready-bar" role="img" aria-label="${lanes.map(l=> `${l.rows.length} ${l.label.toLowerCase()}`).join(', ')}">${lanes.map(l=>
-        `<i class="sx-lb-${l.k}" style="flex-grow:${Math.max(l.rows.length, 0.6)}"></i>`).join('')}</div>
-      <div class="sx-q2">${lanes.map(l=> `<div class="sx-qc">
-          <div class="sx-qc-h"><i class="sx-lb-${l.k}"></i><span>${esc(l.label)}</span></div>
-          <div class="sx-qc-m"><b>${l.rows.length}</b><span class="sx-faces">${l.rows.slice(0, 3).map(x=>
-            `<span class="sx-face-${l.k}">${esc(nameInitials(x.s.name))}</span>`).join('')}</span></div>
-          <span class="sx-qc-s">${esc(l.sub)}</span></div>`).join('')}</div>
-    </div>
-    <div class="sx-pcard sx-next">
+  const chipCls = f0.st.key === 'free' ? 'is-free' : f0.st.key === 'busy' ? 'is-busy' : 'is-warn';
+  return `<div class="sx-pcard sx-next" role="region" aria-label="Next order goes to">
       <span class="sx-next-av${f0.st.key === 'free' ? '' : ' is-held'}">${esc(nameInitials(f0.s.name))}</span>
-      <div class="sx-next-w"><div class="sx-cap">Next order goes to</div><div class="sx-next-n">${esc(f0.s.name)}</div>
-        <div class="sx-next-s">${esc(f0.st.text)}${line.length > 1 ? ` · then ${esc(line.slice(1, 3).map(x=> firstName(x.s.name)).join(', '))}` : ''}</div></div>
+      <div class="sx-next-w"><div class="sx-next-k">Next order goes to</div><div class="sx-next-n">${esc(f0.s.name)}</div>
+        <div class="sx-next-s"><span class="sx-first-chip ${chipCls}"><i></i>${esc(f0.st.text)}</span>${
+          line.length > 1 ? `<span class="sx-next-then">then ${esc(line.slice(1, 3).map(x=> firstName(x.s.name)).join(', '))}</span>` : ''}</div></div>
       <button type="button" class="sx-next-go" data-go="quote-saved" aria-label="Hand over on Order tracking">${ICON_SX_ARROW}</button>
+    </div>
+    <div class="sx-pcard" role="region" aria-label="Today’s work">
+      <div class="sx-pwork-h"><span class="sx-sect-t">Today’s work</span><span class="sx-flow-sum${warn ? ' is-warn' : ''}"><i></i>${esc(sum)}</span></div>
+      <div class="sx-q2">${stages.map(g=> `<div class="sx-qc">
+          <div class="sx-qc-h">${g.icon}<span>${esc(g.short)}</span></div>
+          <b class="sx-qc-n">${g.n}</b>
+          <span class="sx-qc-s${g.subCls ? ' ' + g.subCls : ''}">${esc(g.sub)}</span></div>`).join('')}</div>
     </div>
     <div class="sx-sect"><span class="sx-sect-t">Who is in today</span><span class="sx-sect-n">tap a face to mark absent</span></div>
     <div class="sx-pcard">
       <div class="sx-roll">${roll}</div>
       <div class="sx-roll-f">${ICON_SX_CLOCK}<span>Absent days dock this month’s wage: <b>${esc(fmtUGX(Math.round(wm.docked)))}</b></span></div>
-    </div>`;
-}
-
-/* The phone's wage card, after the team. */
-function staffPhoneWageHTML(){
-  const wm = staffWageMonth();
-  if(!wm.on) return '';
-  return `<div class="sx-pcard sx-pwage-in" role="region" aria-label="${esc(periodLabel(wm.period))} wages">
-      <div class="sx-pwage-h"><span class="sx-sect-t">${esc(periodLabel(wm.period))} wages</span><span class="sx-due">${esc(wm.due)}</span></div>
-      <div class="sx-pwage-v">${wm.raised >= 0.5 || !wm.unraised ? `<b>${esc(fmtUGX(Math.round(wm.raised)))}</b>` : '<b class="is-quiet">not raised yet</b>'}</div>
-      <div class="sx-wbar" role="img" aria-label="Raised ${esc(fmtUGX(Math.round(wm.raised)))}, docked ${esc(fmtUGX(Math.round(wm.docked)))}"><span class="sx-wbar-r" style="width:${wm.rPct}%"></span><span class="sx-wbar-d" style="width:${wm.dPct}%"></span></div>
-      <div class="sx-wr"><i class="sx-wbar-r"></i>Raised<b>${esc(fmtUGX(Math.round(wm.raised)))}</b></div>
-      <div class="sx-wr"><i class="sx-wbar-d"></i>Docked, days missed<b class="is-warn">− ${esc(fmtUGX(Math.round(wm.docked)))}</b></div>
-      ${wm.unraised || wm.uncosted ? `<div class="sx-wr"><i class="sx-wbar-n"></i>Not raised yet<b>${wm.unraised + wm.uncosted} ${wm.unraised + wm.uncosted === 1 ? 'person' : 'people'}</b></div>` : ''}
-      <button type="button" class="sx-plink" data-go="payroll">Payroll &amp; rent${ICON_SX_ARROW}</button>
     </div>`;
 }
 
@@ -78355,7 +78314,6 @@ function renderStaff(filter=''){
   const sub = document.getElementById('staffPhSub');
   const board = document.getElementById('staffBoard');
   const ptop = document.getElementById('staffPhoneTop');
-  const pwage = document.getElementById('staffPhoneWage');
   const rail = document.getElementById('staffRail');
 
   /* THE HEADER'S LINE: the day, who is in, how much is in hand. A
@@ -78372,7 +78330,6 @@ function renderStaff(filter=''){
   }
   if(board) board.innerHTML = all.length ? staffBoardHTML() : '';
   if(ptop) ptop.innerHTML = all.length ? staffPhoneTopHTML() : '';
-  if(pwage) pwage.innerHTML = all.length ? staffPhoneWageHTML() : '';
   if(rail) rail.innerHTML = all.length ? staffRailHTML() : '';
   renderAttendance();
 
