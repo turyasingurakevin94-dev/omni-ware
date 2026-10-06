@@ -34074,6 +34074,567 @@
     .ow-cx-py{min-height:var(--ow-tap);}
     .ow-cx-ag-r,.ow-cx-cn-r,.ow-cx-dchip,.ow-cx-dset{min-height:var(--ow-tap);}
   }
+  /* ==================================================================
+     FORECASTS, REDRAWN -- the Cash and Stock lenses as the canvas drew
+     them. .ow-fx is the wrapper both lenses draw into; everything here
+     is scoped under it or named for it, so neither lens can restyle a
+     screen it does not own. Shapes rather than bars wherever a bar was
+     standing in for a proportion: a ring for "how much of the drawer is
+     left", lanes for "which of these can I move", tokens for "how many
+     lines, and which fit".                                             */
+  .ow-fx{display:flex;flex-direction:column;gap:var(--ow-sp-16);}
+  .ow-fx .ow-ah-run{margin-bottom:0;}
+  .ow-fx .ow-grid{margin:0;}
+  .ow-fx-i{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;
+    stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .ow-fx-fig{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:var(--ow-fw-600);}
+  .ow-fx-cap{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.06em;
+    text-transform:uppercase;color:var(--ow-ink-600);}
+  .ow-fx-good-t{color:var(--ow-verdigris);}
+  .ow-fx-bad-t{color:var(--ow-crimson);}
+  .ow-fx-wide{width:100%;box-sizing:border-box;justify-content:center;gap:var(--ow-sp-8);}
+  .ow-fx-pad{padding:var(--ow-sp-10) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);}
+
+  /* ---- the line ---- */
+  .ow-fx-hz{display:flex;align-items:center;gap:var(--ow-sp-8);margin-left:auto;}
+  .ow-fx .ow-ah-run .ow-pan-h{flex-wrap:wrap;height:auto;min-height:44px;row-gap:var(--ow-sp-6);padding-top:var(--ow-sp-6);padding-bottom:var(--ow-sp-6);}
+  .ow-fx .ow-ah-lg{border-top:0;border-bottom:1px solid var(--ow-rule-soft);}
+  .ow-fx .ow-ah-line{stroke:var(--ow-sky);stroke-width:2.25;}
+  .ow-fx .ow-ah-ghost{stroke:var(--ow-verdigris);stroke-width:2;stroke-dasharray:5 4;}
+  .ow-fx .ow-ah-dot{stroke:var(--ow-sky);}
+  .ow-fx .ow-ah-dot.ow-ah-low{fill:var(--ow-paper);stroke:var(--ow-verdigris);stroke-width:2.5;}
+  .ow-fx .ow-ah-rail.ow-ah-rail-low{fill:var(--ow-verdigris);}
+  .ow-fx .ow-ah-lowlab{fill:var(--ow-verdigris);}
+  .ow-fx .ow-ah-lowlab.ow-bad{fill:var(--ow-crimson);}
+  .ow-fx .ow-ah-lg-k{border-top-color:var(--ow-sky);}
+  .ow-fx .ow-ah-lg-k.ow-ah-lg-g{border-top:2px dashed var(--ow-verdigris);}
+  .ow-fx-lg-ring{width:10px;height:10px;box-sizing:border-box;border:2px solid var(--ow-verdigris);
+    border-radius:var(--ow-r-pill);}
+  .ow-fx .ow-ah-lg-k.ow-fx-lg-ring{border-top:2px solid var(--ow-verdigris);}
+  .ow-fx-area{fill:var(--ow-sky);fill-opacity:.07;stroke:none;}
+  .ow-fx-tdrop{stroke:var(--ow-verdigris);stroke-width:1.5;stroke-dasharray:3 3;}
+  .ow-fx-stepv{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);fill:var(--ow-sky);}
+  .ow-fx-stepw{font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-11);fill:var(--ow-ink-600);}
+
+  /* ---- the levers, as lanes on the line's own clock ---- */
+  .ow-fx-lanes{position:relative;margin:0 var(--ow-sp-12) var(--ow-sp-12);
+    border-top:1px solid var(--ow-rule);}
+  .ow-fx-lanes-tight{position:absolute;top:0;bottom:36px;width:0;
+    border-left:1.5px dashed var(--ow-verdigris);pointer-events:none;z-index:1;}
+  .ow-fx-lanes-after{position:absolute;top:0;bottom:36px;right:0;background:var(--ow-paper-2);
+    pointer-events:none;}
+  .ow-fx-lane{position:relative;height:50px;border-bottom:1px solid var(--ow-rule-soft);}
+  .ow-fx-lane-k{position:absolute;left:0;top:0;bottom:0;width:7.4%;min-width:76px;
+    display:flex;flex-direction:column;justify-content:center;gap:2px;
+    padding-left:var(--ow-sp-10);box-sizing:border-box;border-left:4px solid currentColor;
+    background:transparent;}
+  .ow-fx-lane-l{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);}
+  .ow-fx-lane-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);
+    color:var(--ow-ink-900);}
+  .ow-fx-chip{position:absolute;top:7px;z-index:2;transform:translateX(-50%);height:36px;
+    padding:0 var(--ow-sp-10);display:inline-flex;flex-direction:column;align-items:center;
+    justify-content:center;line-height:1.2;border:1px solid transparent;border-radius:var(--ow-r-sm);
+    cursor:pointer;font-family:'Figtree',system-ui,sans-serif;white-space:nowrap;}
+  .ow-fx-chip:hover{border-color:currentColor;}
+  .ow-fx-chip.ow-on{background:var(--ow-paper);border:2px solid var(--ow-steel-950);box-shadow:var(--ow-lift);}
+  .ow-fx-chip:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
+  .ow-fx-chip-n{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);}
+  .ow-fx-chip-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);color:var(--ow-ink-900);}
+  .ow-fx-lanes-f{display:flex;align-items:center;gap:var(--ow-sp-12);flex-wrap:wrap;
+    min-height:36px;padding-top:var(--ow-sp-8);}
+  .ow-fx-lanes-key{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-fx-lift{display:inline-flex;align-items:center;gap:var(--ow-sp-6);flex-wrap:wrap;
+    font-size:var(--ow-t-12);color:var(--ow-ink-900);}
+  .ow-fx-lift .ow-fx-i{color:var(--ow-sky);}
+  .ow-fx-lv-move-t{color:var(--ow-sky);}
+  .ow-fx-lv-move{color:var(--ow-sky);}
+  .ow-fx-lv-arr{color:var(--ow-indigo);}
+  .ow-fx-lv-fix{color:var(--ow-ink-600);}
+  .ow-fx-lv-late{color:var(--ow-crimson);}
+  .ow-fx-lv-word{color:var(--ow-verdigris);}
+  .ow-fx-chip.ow-fx-lv-move{background:var(--ow-sky-soft);}
+  .ow-fx-chip.ow-fx-lv-arr{background:var(--ow-indigo-soft);}
+  .ow-fx-chip.ow-fx-lv-fix{background:var(--ow-rule-soft);}
+  .ow-fx-chip.ow-fx-lv-late{background:var(--ow-crimson-soft);}
+  .ow-fx-chip.ow-fx-lv-word{background:var(--ow-verdigris-soft);border:1px dashed var(--ow-verdigris);}
+  /* The phone's version: the five totals and the one sentence. */
+  .ow-fx-levers{padding:var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);}
+  .ow-fx-levers-t{display:block;margin-bottom:var(--ow-sp-8);font-size:var(--ow-t-11);
+    font-weight:var(--ow-fw-600);letter-spacing:.06em;text-transform:uppercase;color:var(--ow-ink-600);}
+  .ow-fx-levers-c{display:flex;flex-wrap:wrap;gap:var(--ow-sp-6);margin-bottom:var(--ow-sp-8);}
+  .ow-fx-lvc{display:inline-flex;align-items:center;gap:var(--ow-sp-4);min-height:28px;
+    padding:0 var(--ow-sp-10);border-radius:var(--ow-r-sm);font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);}
+  .ow-fx-lvc-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;}
+  .ow-fx-lvc.ow-fx-lv-move{background:var(--ow-sky-soft);}
+  .ow-fx-lvc.ow-fx-lv-arr{background:var(--ow-indigo-soft);}
+  .ow-fx-lvc.ow-fx-lv-fix{background:var(--ow-rule-soft);}
+  .ow-fx-lvc.ow-fx-lv-late{background:var(--ow-crimson-soft);}
+  .ow-fx-lvc.ow-fx-lv-word{background:var(--ow-verdigris-soft);border:1px dashed var(--ow-verdigris);}
+
+  /* ---- the ledger: a ring where the bar was ---- */
+  .ow-fx .ow-ah-lr,.ow-fx .ow-ah-h{grid-template-columns:96px minmax(0,1fr) 116px 232px;}
+  .ow-fx-what{display:flex;align-items:center;gap:var(--ow-sp-10);}
+  .ow-fx-what-t{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-ah-said .ow-fx-what-t{white-space:normal;overflow:visible;text-overflow:clip;}
+  .ow-fx-ki{width:30px;height:30px;flex:none;display:inline-flex;align-items:center;justify-content:center;
+    border-radius:var(--ow-r-sm);background:var(--ow-rule-soft);color:var(--ow-ink-600);box-sizing:border-box;}
+  .ow-fx-ki.ow-fx-ki-late{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .ow-fx-ki.ow-fx-ki-arr{background:var(--ow-indigo-soft);color:var(--ow-indigo);}
+  .ow-fx-ki.ow-fx-ki-w{background:var(--ow-paper);color:var(--ow-verdigris);border:1px dashed var(--ow-verdigris);}
+  .ow-fx-lvt{display:inline-block;margin-right:var(--ow-sp-4);padding:0 var(--ow-sp-6);
+    border-radius:var(--ow-r-4);font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);}
+  .ow-fx-lvt.ow-fx-lv-move{background:var(--ow-sky-soft);}
+  .ow-fx-lvt.ow-fx-lv-arr{background:var(--ow-indigo-soft);}
+  .ow-fx-lvt.ow-fx-lv-fix{background:var(--ow-rule-soft);}
+  .ow-fx-lvt.ow-fx-lv-late{background:var(--ow-crimson-soft);}
+  .ow-fx-lvt.ow-fx-lv-word{background:var(--ow-verdigris-soft);}
+  .ow-fx-broke{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
+  .ow-ah-said .ow-ah-out.ow-fx-in{color:var(--ow-verdigris);}
+  .ow-fx .ow-ah-out{color:var(--ow-ink-900);font-size:var(--ow-t-13);}
+  .ow-fx-bal{display:flex;align-items:center;justify-content:flex-start;gap:var(--ow-sp-10);text-align:left;}
+  .ow-fx-ring{width:30px;height:30px;flex:none;}
+  .ow-fx-ring-t{fill:none;stroke:var(--ow-rule-soft);stroke-width:3.5;}
+  .ow-fx-ring-f{fill:none;stroke:var(--ow-steel-800);stroke-width:3.5;stroke-linecap:round;}
+  .ow-fx-ring-f.ow-fx-ring-low{stroke:var(--ow-verdigris);}
+  .ow-fx-ring-f.ow-fx-ring-bad{stroke:var(--ow-crimson);}
+  .ow-fx-ring-f.ow-fx-ring-w{stroke:var(--ow-verdigris);stroke-dasharray:2 3.5;stroke-linecap:butt;}
+  .ow-fx-bal-t{display:flex;flex-direction:column;min-width:0;line-height:1.3;}
+  .ow-fx-bal-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .ow-fx-bal-v.ow-fx-bal-w{font-family:'Figtree',system-ui,sans-serif;font-weight:var(--ow-fw-400);
+    font-style:italic;color:var(--ow-ink-600);font-size:var(--ow-t-12);}
+  .ow-fx-bal-v .ow-ah-bal-b{display:inline-block;margin-left:var(--ow-sp-6);padding:0 var(--ow-sp-6);
+    border-radius:var(--ow-r-4);background:var(--ow-verdigris);color:var(--ow-paper);font-weight:var(--ow-fw-600);}
+  .ow-ah-lr.ow-bad .ow-fx-bal-v .ow-ah-bal-b{background:var(--ow-crimson);color:var(--ow-paper);}
+  .ow-ah-lr.ow-ah-tight .ow-fx-bal-v .ow-ah-bal-b{color:var(--ow-paper);}
+  .ow-fx-bal-s{font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-11);font-weight:var(--ow-fw-400);
+    letter-spacing:0;color:var(--ow-ink-600);white-space:normal;}
+  .ow-ah-lr.ow-ah-tight .ow-fx-bal-s{color:var(--ow-verdigris);font-weight:var(--ow-fw-600);}
+  .ow-ah-said .ow-fx-bal-s{font-style:normal;color:var(--ow-verdigris);}
+  .ow-fx .ow-ah-lr.ow-ah-tight{background:var(--ow-verdigris-soft);}
+
+  /* ---- safe to spend, as one ring ---- */
+  .ow-fx-worked-b{display:flex;flex-direction:column;align-items:center;gap:var(--ow-sp-16);
+    padding:var(--ow-sp-20) var(--ow-sp-16) var(--ow-sp-16);}
+  .ow-fx-donut{position:relative;width:156px;height:156px;flex:none;}
+  .ow-fx-donut-svg{display:block;width:156px;height:156px;}
+  .ow-fx-donut-t{fill:none;stroke:var(--ow-rule-soft);stroke-width:3.8;}
+  .ow-fx-donut-a{fill:none;stroke-width:3.8;}
+  .ow-fx-donut-a.ow-fx-donut-due{stroke:var(--ow-steel-200);}
+  .ow-fx-donut-a.ow-fx-donut-ord{stroke:var(--ow-indigo);}
+  .ow-fx-donut-a.ow-fx-donut-safe{stroke:var(--ow-verdigris);}
+  .ow-fx-donut-c{position:absolute;top:0;right:0;bottom:0;left:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;line-height:1.2;}
+  .ow-fx-donut-k{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-verdigris);}
+  .ow-fx-donut-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-size:var(--ow-t-20);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .ow-fx-donut-s{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-fx-sum{width:100%;display:flex;flex-direction:column;gap:var(--ow-sp-8);}
+  .ow-fx-sum-r{display:flex;align-items:center;gap:var(--ow-sp-8);font-size:var(--ow-t-12);}
+  .ow-fx-sum-k{flex:1;min-width:0;color:var(--ow-ink-600);}
+  .ow-fx-sum-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;color:var(--ow-ink-900);white-space:nowrap;}
+  .ow-fx-sum-tot{padding-top:var(--ow-sp-8);border-top:1px solid var(--ow-rule);}
+  .ow-fx-sum-tot .ow-fx-sum-k,.ow-fx-sum-tot .ow-fx-sum-v{font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .ow-fx-sum-tot .ow-fx-sum-v.ow-fx-good-t{color:var(--ow-verdigris);}
+  .ow-fx-sum-tot .ow-fx-sum-v.ow-fx-bad-t{color:var(--ow-crimson);}
+  .ow-fx-key{width:10px;height:10px;flex:none;border-radius:var(--ow-r-2);box-sizing:border-box;}
+  .ow-fx-key.ow-fx-key-hand{border:1.5px solid var(--ow-steel-200);}
+  .ow-fx-key.ow-fx-key-due{background:var(--ow-steel-200);}
+  .ow-fx-key.ow-fx-key-ord{background:var(--ow-indigo);}
+  .ow-fx-key.ow-fx-key-word{border:1.5px dashed var(--ow-verdigris);}
+  .ow-fx-key.ow-fx-key-safe{background:var(--ow-verdigris);}
+  .ow-fx-tight{align-self:stretch;margin:0;display:flex;align-items:center;gap:var(--ow-sp-8);
+    padding:var(--ow-sp-8) var(--ow-sp-10);border-radius:var(--ow-r-sm);background:var(--ow-verdigris-soft);
+    font-size:var(--ow-t-12);color:var(--ow-ink-900);}
+  .ow-fx-tight-b{padding:0 var(--ow-sp-6);border-radius:var(--ow-r-4);background:var(--ow-verdigris);
+    color:var(--ow-paper);font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);}
+  .ow-fx-feed{display:flex;flex-direction:column;gap:var(--ow-sp-8);width:100%;padding:var(--ow-sp-12) var(--ow-sp-16);
+    text-align:left;cursor:pointer;font-family:'Figtree',system-ui,sans-serif;color:var(--ow-ink-900);
+    border-color:var(--ow-indigo-soft);}
+  .ow-fx-feed:hover{background:var(--ow-paper-2);}
+  .ow-fx-feed-h{display:flex;align-items:center;gap:var(--ow-sp-8);}
+  .ow-fx-feed-h .ow-fx-i{margin-left:auto;color:var(--ow-indigo);}
+  .ow-fx-feed-s{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-fx-feed-s .ow-fx-fig{color:var(--ow-indigo);}
+  .ow-fx-mono{width:22px;height:22px;flex:none;display:inline-flex;align-items:center;justify-content:center;
+    border-radius:var(--ow-r-6);font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);}
+  .ow-fx-mono.ow-fx-mono-buy{background:var(--ow-indigo-soft);color:var(--ow-indigo);}
+  .ow-fx-next{display:flex;flex-direction:column;gap:var(--ow-sp-12);padding:var(--ow-sp-16);}
+  .ow-fx-next-r{display:flex;align-items:flex-start;gap:var(--ow-sp-12);}
+  .ow-fx-next-age{width:44px;height:44px;flex:none;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;border-radius:var(--ow-r);background:var(--ow-steel-950);color:var(--ow-navy-ink);
+    font-size:var(--ow-t-11);line-height:1.1;}
+  .ow-fx-next-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-16);color:var(--ow-paper);}
+  .ow-fx-next-t{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-fx-next-s{font-size:var(--ow-t-13);color:var(--ow-ink-900);}
+  .ow-fx-tall{min-height:42px;}
+
+  /* ---- money with no date ---- */
+  .ow-fx-push{margin-left:auto;}
+  .ow-fx-nodate-b{display:flex;flex-wrap:wrap;gap:var(--ow-sp-24);padding:var(--ow-sp-16);}
+  .ow-fx-nodate-l{flex:1 1 300px;max-width:420px;min-width:0;display:flex;flex-direction:column;gap:var(--ow-sp-12);}
+  .ow-fx-nodate-r{flex:999 1 480px;min-width:0;}
+  .ow-fx-pools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--ow-sp-12);}
+  .ow-fx-pool{display:flex;flex-direction:column;align-items:center;gap:var(--ow-sp-8);
+    padding:var(--ow-sp-12) var(--ow-sp-10);border-radius:var(--ow-r-lg);background:var(--ow-paper-2);min-width:0;}
+  .ow-fx-pool.ow-fx-pool-in{background:var(--ow-sky-faint);}
+  .ow-fx-cap.ow-fx-cap-in{color:var(--ow-sky);}
+  .ow-fx-pool-r{position:relative;width:108px;height:108px;}
+  .ow-fx-pool-svg{display:block;width:108px;height:108px;}
+  .ow-fx-pool-t{fill:none;stroke:var(--ow-paper);stroke-width:3.8;}
+  .ow-fx-pool-a{fill:none;stroke-width:3.8;}
+  .ow-fx-pool-a.ow-fx-in0{stroke:var(--ow-sky-soft);}
+  .ow-fx-pool-a.ow-fx-in1{stroke:var(--ow-sky-mid);}
+  .ow-fx-pool-a.ow-fx-in2{stroke:var(--ow-sky);}
+  .ow-fx-pool-a.ow-fx-out0{stroke:var(--ow-steel-200);}
+  .ow-fx-pool-a.ow-fx-out1{stroke:var(--ow-ink-400);}
+  .ow-fx-pool-a.ow-fx-out2{stroke:var(--ow-steel-950);}
+  .ow-fx-key.ow-fx-in0{background:var(--ow-sky-soft);}
+  .ow-fx-key.ow-fx-in1{background:var(--ow-sky-mid);}
+  .ow-fx-key.ow-fx-in2{background:var(--ow-sky);}
+  .ow-fx-key.ow-fx-out0{background:var(--ow-steel-200);}
+  .ow-fx-key.ow-fx-out1{background:var(--ow-ink-400);}
+  .ow-fx-key.ow-fx-out2{background:var(--ow-steel-950);}
+  .ow-fx-pool-c{position:absolute;top:0;right:0;bottom:0;left:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;line-height:1.2;}
+  .ow-fx-pool-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-16);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .ow-fx-pool-s{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-fx-pool-k{width:100%;display:flex;flex-direction:column;gap:3px;}
+  .ow-fx-pool-kr{display:flex;align-items:center;gap:var(--ow-sp-6);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-fx-pool-kl{flex:1;min-width:0;}
+  .ow-fx-pool-kv{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;color:var(--ow-ink-900);}
+  .ow-fx-net{display:flex;align-items:center;gap:var(--ow-sp-10);padding:var(--ow-sp-10) var(--ow-sp-12);
+    border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);}
+  .ow-fx-net-k{flex:1;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-fx-net-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-16);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .ow-fx .ow-fx-pool-say{margin:0;padding:0;}
+  .ow-fx-who{display:flex;flex-direction:column;}
+  .ow-fx-who-h{padding-bottom:var(--ow-sp-6);}
+  .ow-fx-who-r{display:flex;align-items:center;gap:var(--ow-sp-10);padding:var(--ow-sp-8) 0;
+    border-top:1px solid var(--ow-rule-soft);min-width:0;}
+  .ow-fx-ava{width:28px;height:28px;flex:none;display:inline-flex;align-items:center;justify-content:center;
+    border-radius:var(--ow-r-pill);background:var(--ow-sky-soft);color:var(--ow-sky);
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);}
+  .ow-fx-who-t{display:flex;flex-direction:column;flex:1;min-width:0;}
+  .ow-fx-who-n{min-width:0;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-fx-who-s{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-fx-who-s.ow-fx-good-t{color:var(--ow-verdigris);}
+  .ow-fx-who-s.ow-fx-bad-t{color:var(--ow-crimson);}
+  .ow-fx-who-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);white-space:nowrap;}
+  .ow-fx-shelves{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--ow-sp-12);}
+  .ow-fx-shelf{display:flex;flex-direction:column;gap:var(--ow-sp-8);min-width:0;}
+  .ow-fx-shelf-k{display:block;height:4px;border-radius:var(--ow-r-2);}
+  .ow-fx-shelf-k.ow-fx-out2{background:var(--ow-steel-950);}
+  .ow-fx-shelf-k.ow-fx-out1{background:var(--ow-ink-400);}
+  .ow-fx-shelf-k.ow-fx-out0{background:var(--ow-steel-200);}
+  .ow-fx-shelf-h{display:flex;align-items:baseline;gap:var(--ow-sp-8);}
+  .ow-fx-shelf-v{margin-left:auto;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);}
+  .ow-fx-shelf-more{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-fx-bill{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px var(--ow-sp-10);width:100%;
+    padding:var(--ow-sp-10) var(--ow-sp-12);box-sizing:border-box;text-align:left;cursor:pointer;
+    font-family:'Figtree',system-ui,sans-serif;background:var(--ow-paper);color:var(--ow-ink-900);
+    border:1px solid var(--ow-rule);border-radius:var(--ow-r);min-height:var(--ow-tap);}
+  .ow-fx-bill:hover{background:var(--ow-paper-2);border-color:var(--ow-steel-200);}
+  .ow-fx-bill.ow-on{border:2px solid var(--ow-steel-950);}
+  .ow-fx-bill:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
+  .ow-fx-bill-n{min-width:0;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-fx-bill-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);text-align:right;}
+  .ow-fx-bill-s{min-width:0;font-size:var(--ow-t-11);color:var(--ow-ink-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-fx-bill-go{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-sky);text-align:right;}
+  .ow-fx-edit-h{border-top:1px solid var(--ow-rule);}
+
+  /* ---- the strip's own shapes ---- */
+  .ow-fx-toks{display:flex;align-items:center;gap:var(--ow-sp-4);margin-top:var(--ow-sp-6);flex-wrap:wrap;}
+  .ow-fx-tok{width:20px;height:20px;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;
+    border-radius:var(--ow-r-6);background:var(--ow-steel-800);color:var(--ow-paper);font-style:normal;
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);}
+  .ow-fx-tok.ow-fx-tok-over{background:var(--ow-amber-faint);color:var(--ow-amber-ink);border:1.5px dashed var(--ow-amber);}
+  .ow-fx-tok-cut{display:inline-block;width:2px;height:24px;margin:0 var(--ow-sp-4);
+    border-radius:var(--ow-r-2);background:var(--ow-steel-950);}
+  .ow-fx-tok-more{font-style:normal;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
+  .ow-fx-mtring{display:flex;align-items:center;gap:var(--ow-sp-8);margin-top:var(--ow-sp-4);
+    font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-fx-mtring-svg{display:block;width:28px;height:28px;flex:none;}
+  .ow-fx-mtring-t{fill:none;stroke:var(--ow-verdigris-soft);stroke-width:5;}
+  .ow-fx-mtring-f{fill:none;stroke:var(--ow-indigo);stroke-width:5;}
+  .ow-fx-mtring-f.ow-fx-mtring-bad{stroke:var(--ow-crimson);}
+
+  @media (max-width:820px){
+    .ow-fx{gap:var(--ow-sp-12);}
+    .ow-fx .ow-pan-h{height:auto;min-height:34px;flex-wrap:wrap;row-gap:var(--ow-sp-2);padding-top:var(--ow-sp-8);padding-bottom:var(--ow-sp-8);}
+    .ow-fx .ow-pan-n{white-space:normal;}
+    .ow-fx-push{margin-left:0;}
+    .ow-fx-hz{margin-left:0;width:100%;}
+    .ow-fx .ow-ah-lr{grid-template-columns:minmax(0,1fr) auto;}
+    .ow-fx-bal{justify-content:flex-start;}
+    .ow-fx-what-t{white-space:normal;overflow:visible;text-overflow:clip;}
+    .ow-fx-nodate-b{padding:var(--ow-sp-12);gap:var(--ow-sp-16);}
+    .ow-fx-nodate-l{max-width:none;}
+    .ow-fx-pool-r,.ow-fx-pool-svg{width:96px;height:96px;}
+    .ow-fx-shelves{display:flex;overflow-x:auto;gap:var(--ow-sp-10);padding-bottom:var(--ow-sp-4);}
+    .ow-fx-shelf{flex:0 0 220px;}
+    .ow-fx-bill{min-height:var(--ow-tap);}
+    .ow-fx-chip,.ow-fx-feed{min-height:var(--ow-tap);}
+    .ow-fx-donut,.ow-fx-donut-svg{width:168px;height:168px;}
+    .ow-fx-donut-v{font-size:var(--ow-t-20);}
+  }
+
+  /* ---- STOCK: the budget, as a console ---- */
+  .ow-fx-con{display:flex;flex-wrap:wrap;align-items:stretch;background:var(--ow-steel-950);
+    border-color:var(--ow-steel-950);color:var(--ow-paper);overflow:hidden;}
+  .ow-fx-con-src{flex:1 1 260px;min-width:0;display:flex;flex-direction:column;gap:var(--ow-sp-10);
+    padding:var(--ow-sp-20) var(--ow-sp-24);border-right:1px solid var(--ow-steel-800);}
+  .ow-fx-con-k{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.08em;
+    text-transform:uppercase;color:var(--ow-navy-mute);}
+  .ow-fx-con-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-size:var(--ow-t-28);font-weight:var(--ow-fw-600);line-height:1.1;color:var(--ow-paper);}
+  .ow-fx-con-v .ow-u{margin-left:var(--ow-sp-6);font-family:'Figtree',system-ui,sans-serif;
+    font-size:var(--ow-t-12);color:var(--ow-navy-mute);letter-spacing:0;}
+  .ow-fx-con .ow-sr{border-color:var(--ow-steel-800);padding-left:0;padding-right:0;}
+  .ow-fx-con .ow-sr-k{color:var(--ow-navy-ink);}
+  .ow-fx-con .ow-sr-v{color:var(--ow-paper);}
+  .ow-fx-con .ow-sr.ow-fx-tot .ow-sr-k,.ow-fx-con .ow-sr.ow-fx-tot .ow-sr-v{color:var(--ow-paper);font-weight:var(--ow-fw-600);}
+  .ow-fx-con .ow-sr.ow-fx-tot{background:transparent;border-top:1px solid var(--ow-steel-800);}
+  .ow-fx-con .ow-mini{color:var(--ow-navy-ink);padding:0;margin:0;}
+  .ow-fx-con-g{flex:0 0 220px;display:flex;align-items:center;justify-content:center;padding:var(--ow-sp-16) var(--ow-sp-12);}
+  .ow-fx-dial{position:relative;width:176px;height:176px;}
+  .ow-fx-dial-svg{display:block;width:176px;height:176px;}
+  .ow-fx-dial-t{fill:none;stroke:var(--ow-steel-800);stroke-width:3.2;stroke-linecap:round;}
+  .ow-fx-dial-f{fill:none;stroke:var(--ow-paper);stroke-width:3.2;}
+  .ow-fx-dial-l{fill:none;stroke:var(--ow-good-on-navy);stroke-width:3.2;}
+  .ow-fx-dial-c{position:absolute;top:0;right:0;bottom:0;left:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;line-height:1.15;}
+  .ow-fx-dial-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-28);font-weight:var(--ow-fw-600);color:var(--ow-paper);}
+  .ow-fx-dial-k{margin-top:var(--ow-sp-4);font-size:var(--ow-t-11);color:var(--ow-navy-mute);}
+  .ow-fx-dial-s{margin-top:var(--ow-sp-8);font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-good-ink-on-navy);}
+  .ow-fx-con-l{flex:1 1 260px;min-width:0;display:flex;flex-direction:column;gap:var(--ow-sp-4);
+    padding:var(--ow-sp-20) var(--ow-sp-24);border-left:1px solid var(--ow-steel-800);}
+  .ow-fx-con-r{display:flex;align-items:center;gap:var(--ow-sp-10);padding:var(--ow-sp-4) 0;min-width:0;}
+  .ow-fx-con-t{width:20px;height:20px;flex:none;display:inline-flex;align-items:center;justify-content:center;
+    border-radius:var(--ow-r-6);background:var(--ow-paper);color:var(--ow-steel-950);font-style:normal;
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);box-sizing:border-box;}
+  .ow-fx-con-left .ow-fx-con-t{background:transparent;border:1.5px solid var(--ow-good-on-navy);}
+  .ow-fx-con-n{flex:1;min-width:0;font-size:var(--ow-t-13);color:var(--ow-paper);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-fx-con-a{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-paper);white-space:nowrap;}
+  .ow-fx-con-left .ow-fx-con-n{color:var(--ow-navy-ink);}
+  .ow-fx-con-left .ow-fx-con-a{color:var(--ow-good-ink-on-navy);}
+  .ow-fx-con-more{font-size:var(--ow-t-11);color:var(--ow-navy-mute);padding-left:30px;}
+  .ow-fx-con-cut{display:flex;align-items:center;gap:var(--ow-sp-8);margin-top:var(--ow-sp-6);
+    padding-top:var(--ow-sp-8);border-top:1px dashed var(--ow-steel-800);font-size:var(--ow-t-11);
+    font-weight:var(--ow-fw-600);letter-spacing:.08em;text-transform:uppercase;color:var(--ow-warn-ink-on-navy);}
+  .ow-fx-con-cutv{margin-left:auto;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:0;color:var(--ow-warn-ink-on-navy);}
+  .ow-fx-con-chips{display:flex;flex-wrap:wrap;gap:var(--ow-sp-6);}
+  .ow-fx-con-chip{display:inline-flex;align-items:center;gap:var(--ow-sp-6);min-height:26px;padding:0 var(--ow-sp-8);
+    border:1px dashed var(--ow-warn-on-navy);border-radius:var(--ow-r-6);font-size:var(--ow-t-12);color:var(--ow-warn-ink-on-navy);}
+  .ow-fx-con-chipn{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;}
+  .ow-fx-con-chipv{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    color:var(--ow-navy-ink);}
+  .ow-fx-say{margin:0;}
+
+  /* ---- STOCK: the plan, as a shopping list ---- */
+  .ow-tbl.ow-fx-tbl{--ow-tbl-cols:28px minmax(0,1fr) 132px 112px 112px auto;}
+  .ow-fx-sl-it{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .ow-fx-sl-n{display:flex;align-items:baseline;gap:var(--ow-sp-6);min-width:0;}
+  .ow-fx-sl-rk{flex:none;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-fx-sl-n .ow-tbl-p{min-width:0;font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-fx-sl-sh{display:flex;flex-direction:column;align-items:flex-start;gap:var(--ow-sp-4);}
+  .ow-fx-sl-lead{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-fx-sl-q{display:flex;flex-direction:column;align-items:flex-end;}
+  .ow-fx-sl.ow-fx-sl-over .ow-fx-cost .ow-fig{color:var(--ow-amber-ink);}
+  .ow-fx-foot{display:flex;align-items:baseline;gap:var(--ow-sp-12);padding:var(--ow-sp-12) var(--ow-sp-16);
+    border-top:1px solid var(--ow-rule);background:var(--ow-paper-2);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-fx-foot-k{margin-left:auto;font-weight:var(--ow-fw-600);}
+  .ow-fx-foot-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-16);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .ow-fx-foot.ow-fx-foot-over{background:var(--ow-amber-faint);color:var(--ow-amber-ink);}
+  .ow-fx-foot.ow-fx-foot-over .ow-fx-foot-v{color:var(--ow-amber-ink);}
+  .ow-fx-list-over .ow-pan-h{background:var(--ow-amber-faint);}
+  .ow-fx-list{overflow:hidden;}
+  .ow-fx-phone{overflow:hidden;}
+  .ow-bk.ow-fx-bkbar{display:none;}
+  .ow-fx-cant-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));}
+  .ow-fx-cant-c{display:flex;flex-direction:column;gap:var(--ow-sp-6);padding:var(--ow-sp-12) var(--ow-sp-16);
+    border-right:1px solid var(--ow-rule-soft);min-width:0;}
+  .ow-fx-cant-c:last-child{border-right:0;}
+
+  /* ---- STOCK: the rail ---- */
+  .ow-fx-bk-g{display:flex;flex-direction:column;gap:var(--ow-sp-4);padding:var(--ow-sp-10) var(--ow-sp-16);
+    border-bottom:1px solid var(--ow-rule-soft);}
+  .ow-fx-bk-h{display:flex;align-items:center;gap:var(--ow-sp-8);min-width:0;}
+  .ow-fx-bk-s{flex:1;min-width:0;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-fx-bk-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);}
+  .ow-fx-bk-l{display:flex;gap:var(--ow-sp-8);padding-left:30px;font-size:var(--ow-t-12);color:var(--ow-ink-600);min-width:0;}
+  .ow-fx-bk-ln{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-fx-bk-lq{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .ow-fx-bk-tot{display:flex;align-items:baseline;justify-content:space-between;gap:var(--ow-sp-8);
+    padding:var(--ow-sp-10) var(--ow-sp-16) 0;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-fx-bk-totv{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;color:var(--ow-ink-900);}
+  .ow-fx-bk-totv.ow-fx-bad-t{color:var(--ow-crimson);}
+  .ow-fx-bk-a{display:flex;flex-direction:column;align-items:stretch;gap:var(--ow-sp-6);padding:var(--ow-sp-10) var(--ow-sp-16) 0;}
+  .ow-fx-bk-clear{align-self:center;}
+  .ow-fc-roof .ow-fx-dot{flex:none;width:10px;height:10px;border-radius:var(--ow-r-2);}
+  .ow-fx-bk-e{display:flex;flex-direction:column;align-items:center;gap:var(--ow-sp-6);}
+  .ow-fx-ord{padding:var(--ow-sp-12) var(--ow-sp-16);border-bottom:1px solid var(--ow-rule-soft);
+    display:flex;flex-direction:column;gap:var(--ow-sp-12);}
+  .ow-fx-ord-h{display:flex;align-items:center;gap:var(--ow-sp-10);min-width:0;}
+  .ow-fx-ord-i{width:36px;height:36px;flex:none;display:inline-flex;align-items:center;justify-content:center;
+    border-radius:var(--ow-r);background:var(--ow-indigo-soft);color:var(--ow-indigo);}
+  .ow-fx-ord-t{display:flex;flex-direction:column;flex:1;min-width:0;}
+  .ow-fx-ord-s{font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);}
+  .ow-fx-ord-l{min-width:0;font-size:var(--ow-t-11);color:var(--ow-ink-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-fx-ord-c{width:46px;height:46px;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    border-radius:var(--ow-r-lg);background:var(--ow-steel-950);color:var(--ow-navy-ink);font-size:var(--ow-t-11);line-height:1.1;}
+  .ow-fx-ord-cn{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-16);color:var(--ow-paper);}
+  .ow-fx-ord-c.ow-fx-ord-late{background:var(--ow-crimson);color:var(--ow-paper);}
+  .ow-fx-sts{display:flex;flex-direction:column;}
+  .ow-fx-st{display:flex;gap:var(--ow-sp-10);position:relative;padding-bottom:var(--ow-sp-10);}
+  .ow-fx-st:last-child{padding-bottom:0;}
+  .ow-fx-st::before{content:'';position:absolute;left:8px;top:18px;bottom:0;width:2px;background:var(--ow-rule);}
+  .ow-fx-st:last-child::before{display:none;}
+  .ow-fx-st.ow-fx-st-done::before{background:var(--ow-verdigris);}
+  .ow-fx-st-d{width:18px;height:18px;flex:none;display:inline-flex;align-items:center;justify-content:center;
+    border-radius:var(--ow-r-pill);box-sizing:border-box;border:2px solid var(--ow-steel-200);background:var(--ow-paper);
+    color:var(--ow-paper);position:relative;}
+  .ow-fx-st-d .ow-fx-i{width:11px;height:11px;stroke-width:3;}
+  .ow-fx-st-done .ow-fx-st-d{background:var(--ow-verdigris);border-color:var(--ow-verdigris);}
+  .ow-fx-st-cur .ow-fx-st-d{border:2.5px solid var(--ow-indigo);background:var(--ow-indigo-soft);}
+  .ow-fx-st-late .ow-fx-st-d{border:2.5px solid var(--ow-crimson);}
+  .ow-fx-st-t{display:flex;flex-direction:column;min-width:0;line-height:1.3;}
+  .ow-fx-st-l{font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);}
+  .ow-fx-st-s{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-fx-st-cur .ow-fx-st-l{color:var(--ow-indigo);}
+  .ow-fx-st-late .ow-fx-st-l{color:var(--ow-crimson);}
+  .ow-fx-st-todo .ow-fx-st-l{color:var(--ow-ink-600);}
+  .ow-fx-ord-a{display:flex;flex-wrap:wrap;gap:var(--ow-sp-6);}
+
+  /* ---- the send sheet ---- */
+  .ow-fx-sendm.ow-fx-sendw{max-width:1000px;border-radius:var(--ow-r-lg);}
+  .ow-fx-sendm .ow-fx-hide{display:none;}
+  .ow-fx-send{display:flex;flex-direction:column;gap:var(--ow-sp-16);}
+  .ow-fx-send-steps{display:flex;flex-wrap:wrap;gap:var(--ow-sp-8);}
+  .ow-fx-step{display:flex;align-items:center;gap:var(--ow-sp-10);min-width:0;padding:var(--ow-sp-6) var(--ow-sp-12) var(--ow-sp-6) var(--ow-sp-6);
+    border:1px solid transparent;border-radius:var(--ow-r-pill);background:var(--ow-paper-2);cursor:pointer;
+    font-family:'Figtree',system-ui,sans-serif;text-align:left;color:var(--ow-ink-900);}
+  .ow-fx-step.ow-on{background:var(--ow-paper);border:1.5px solid var(--ow-steel-950);}
+  .ow-fx-step-d{width:28px;height:28px;flex:none;display:inline-flex;align-items:center;justify-content:center;
+    border-radius:var(--ow-r-pill);background:var(--ow-steel-200);color:var(--ow-ink-600);font-size:var(--ow-t-12);font-weight:var(--ow-fw-700);}
+  .ow-fx-step.ow-on .ow-fx-step-d{background:var(--ow-steel-950);color:var(--ow-paper);}
+  .ow-fx-step.ow-fx-step-done .ow-fx-step-d{background:var(--ow-verdigris);color:var(--ow-paper);}
+  .ow-fx-step-t{display:flex;flex-direction:column;min-width:0;line-height:1.25;}
+  .ow-fx-step-n{font-size:var(--ow-t-13);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  .ow-fx-step-s{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-fx-sendm .ow-fx-send-b{display:flex;flex-wrap:wrap;gap:var(--ow-sp-24);margin:0;border:0;border-radius:0;
+    border-top:1px solid var(--ow-rule-soft);padding:var(--ow-sp-16) 0 0;}
+  .ow-fx-send-l{flex:999 1 420px;min-width:0;display:flex;flex-direction:column;gap:var(--ow-sp-10);}
+  .ow-fx-send-r{flex:1 1 280px;display:flex;justify-content:center;padding:var(--ow-sp-16);border-radius:var(--ow-r-lg);
+    background:var(--ow-paper-2);}
+  .ow-fx-send-line{display:flex;align-items:center;gap:var(--ow-sp-12);padding:var(--ow-sp-12);
+    border-radius:var(--ow-r-lg);background:var(--ow-paper-2);}
+  .ow-fx-send-li{width:40px;height:40px;flex:none;display:inline-flex;align-items:center;justify-content:center;
+    border-radius:var(--ow-r);background:var(--ow-paper);border:1px solid var(--ow-rule);color:var(--ow-indigo);}
+  .ow-fx-send-lt{display:flex;flex-direction:column;flex:1;min-width:0;}
+  .ow-fx-send-ln{min-width:0;font-size:var(--ow-t-14);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-fx-send-ls{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-fx-send-lv{min-width:96px;text-align:right;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);}
+  .ow-fx-stepper{display:inline-flex;align-items:center;gap:var(--ow-sp-4);padding:var(--ow-sp-4);
+    border:1px solid var(--ow-rule);border-radius:var(--ow-r-pill);background:var(--ow-paper);}
+  .ow-fx-stepb{width:30px;height:30px;border:0;border-radius:var(--ow-r-pill);background:var(--ow-rule-soft);
+    color:var(--ow-ink-900);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;}
+  .ow-fx-stepb:hover{background:var(--ow-steel-100);}
+  .ow-fx-qty{width:72px;border:0;background:transparent;text-align:center;
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .ow-fx-send-when{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ow-sp-8);}
+  .ow-fx-pill{min-height:34px;padding:0 var(--ow-sp-12);border:1px solid var(--ow-rule);border-radius:var(--ow-r-pill);
+    background:var(--ow-paper);font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);
+    color:var(--ow-ink-900);cursor:pointer;}
+  .ow-fx-pill.ow-on{background:var(--ow-steel-950);border-color:var(--ow-steel-950);color:var(--ow-paper);}
+  .ow-fx-date{height:34px;padding:0 var(--ow-sp-8);border:1px dashed var(--ow-steel-200);
+    border-radius:var(--ow-r-pill);font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);color:var(--ow-ink-900);background:var(--ow-paper);}
+  .ow-fx-send-hint{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-fx-send-ch{display:flex;gap:var(--ow-sp-10);}
+  .ow-fx-opt{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:var(--ow-sp-4);
+    padding:var(--ow-sp-12);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);background:var(--ow-paper-2);
+    font-family:'Figtree',system-ui,sans-serif;text-align:left;cursor:pointer;color:var(--ow-ink-900);}
+  .ow-fx-opt-n{font-size:var(--ow-t-13);}
+  .ow-fx-opt-s{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-fx-opt.ow-on{background:var(--ow-paper);border:1.5px solid var(--ow-steel-950);}
+  .ow-fx-opt-i{width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;
+    border-radius:var(--ow-r);background:var(--ow-paper);color:var(--ow-ink-600);}
+  .ow-fx-opt.ow-on .ow-fx-opt-i{background:var(--ow-steel-950);color:var(--ow-paper);}
+  .ow-fx-phone{width:270px;padding:10px;box-sizing:border-box;border-radius:var(--ow-r-lg);background:var(--ow-steel-950);}
+  .ow-fx-phone-h{display:flex;align-items:center;gap:var(--ow-sp-10);padding:var(--ow-sp-12);
+    background:var(--ow-paper);border-bottom:1px solid var(--ow-rule);}
+  .ow-fx-phone-n{display:flex;flex-direction:column;min-width:0;line-height:1.2;}
+  .ow-fx-phone-nn{min-width:0;font-size:var(--ow-t-12);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-fx-phone-ns{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-fx-phone-b{display:flex;flex-direction:column;gap:var(--ow-sp-4);min-height:360px;justify-content:flex-end;
+    padding:var(--ow-sp-12) var(--ow-sp-10);background:var(--ow-rule-soft);}
+  .ow-fx-phone-day{align-self:center;padding:2px var(--ow-sp-8);border-radius:var(--ow-r-pill);background:var(--ow-paper);
+    font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-fx-bubble{align-self:flex-end;max-width:94%;padding:var(--ow-sp-10) var(--ow-sp-12);
+    border-radius:var(--ow-r-lg);background:var(--ow-verdigris-soft);
+    font-size:var(--ow-t-11);line-height:1.5;white-space:pre-line;color:var(--ow-ink-900);overflow-wrap:anywhere;}
+  .ow-fx-phone-st{align-self:flex-end;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-fx-send-f{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ow-sp-12);padding-top:var(--ow-sp-16);
+    border-top:1px solid var(--ow-rule-soft);}
+  .ow-fx-send-ft{display:flex;flex-direction:column;flex:1 1 200px;line-height:1.3;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-fx-send-ftv{font-size:var(--ow-t-20);color:var(--ow-ink-900);}
+  .ow-fx-send-go{min-width:240px;justify-content:center;gap:var(--ow-sp-8);}
+  .ow-fx-send-done{align-items:center;text-align:center;padding:var(--ow-sp-24) 0;}
+  .ow-fx-send-ok{width:64px;height:64px;display:inline-flex;align-items:center;justify-content:center;
+    border-radius:var(--ow-r-pill);background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .ow-fx-send-ok .ow-fx-i{width:30px;height:30px;}
+  .ow-fx-send-dt{font-size:var(--ow-t-20);}
+  .ow-fx-send-dl{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--ow-sp-10);}
+  .ow-fx-send-dc{display:inline-flex;align-items:center;gap:var(--ow-sp-8);padding:var(--ow-sp-8) var(--ow-sp-12);
+    border-radius:var(--ow-r-lg);background:var(--ow-paper-2);font-size:var(--ow-t-12);}
+
+  @media (max-width:820px){
+    .ow-fx-con-src,.ow-fx-con-l{border:0;padding:var(--ow-sp-16);}
+    .ow-fx-con-g{flex:1 1 100%;order:-1;padding-bottom:0;}
+    .ow-fx-con-src{order:-2;}
+    .ow-fx-send-r{display:none;}
+    .ow-fx-send-ch{flex-direction:row;}
+    .ow-fx-opt{align-items:center;}
+    .ow-fx-opt-s{display:none;}
+    .ow-fx-send-go{flex:1 1 100%;min-height:var(--ow-tap);}
+    .ow-fx-stepb,.ow-fx-pill,.ow-fx-step{min-height:var(--ow-tap);}
+    .ow-fx-stepb{width:var(--ow-tap);}
+    .ow-fx-tap{min-height:var(--ow-tap);}
+    .ow-bk.ow-fx-bkbar{display:flex;}
+    .ow-fx-bk-a{display:none;}
+  }
+
 </style>
 </head>
 <body class="app-loading">
@@ -38662,9 +39223,9 @@
      writes the record and opens a WhatsApp draft; the shop's own hand
      presses send. -->
 <div class="modal-overlay" id="buyOrderModal">
-  <div class="modal modal-wide">
+  <div class="modal modal-wide ow-fx-sendm ow-fx-sendw">
     <div class="modal-head">
-      <h2 id="buyOrderTitle">Order these</h2>
+      <h2 id="buyOrderTitle">Send the orders</h2>
       <button class="modal-close" id="buyOrderClose" aria-label="Close">
         <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
@@ -38672,7 +39233,7 @@
     <div class="modal-body">
       <p class="cs-read cs-muted" id="buyOrderNote"></p>
       <div id="buyOrderGroups"></div>
-      <div class="btn-row">
+      <div class="btn-row ow-fx-hide">
         <button type="button" class="btn btn-ghost" id="buyOrderCancel">Close</button>
       </div>
     </div>
@@ -123285,8 +123846,10 @@ function aheadRunwaySVG(a, small){
      column / W -- and at 1000 units in the ~800px column this panel
      actually gets, every 11px label was rendering at 8.8px. Sized to
      the column, the type comes out at the size the ramp says, and on a
-     wider screen it scales UP rather than down. */
-  const W = small ? 358 : 800, H = small ? 196 : 280;
+     wider screen it scales UP rather than down.
+     The line now runs the whole width of the lens rather than sharing
+     it with the rail, so the desk's column is ~1080, not ~800. */
+  const W = small ? 358 : 1080, H = small ? 196 : 300;
   const padL = small ? 54 : 88, padR = small ? 12 : 100,
         padT = small ? 14 : 30, padB = small ? 66 : 80;
   const iw = W - padL - padR, ih = H - padT - padB;
@@ -123346,6 +123909,8 @@ function aheadRunwaySVG(a, small){
      clipped figure is a WRONG figure, so the small chart says 5.0M and
      the exact figures stay where they already are -- the strip above it
      and the ledger below. */
+  const ylabShort = (v)=> Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(2).replace(/0+$/, '').replace(/\.$/, '') + 'M'
+    : Math.abs(v) >= 1e3 ? Math.round(v / 1e3) + 'K' : n(v);
   const ylab = (v)=> !small ? n(v)
     : Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(1).replace(/\.0$/, '') + 'M'
     : Math.abs(v) >= 1e3 ? Math.round(v / 1e3) + 'k' : n(v);
@@ -123425,8 +123990,36 @@ function aheadRunwaySVG(a, small){
     });
   }
 
+  /* THE MONEY UNDER THE LINE, as a faint field, so the shape of what
+     is held reads before any one step is read. */
+  g += `<path class="ow-fx-area" d="${step(solid)} L${X(days).toFixed(1)},${Y(Math.max(lo, 0)).toFixed(1)} L${X(0).toFixed(1)},${Y(Math.max(lo, 0)).toFixed(1)} Z"/>`;
   if(ghost) g += `<path class="ow-ah-ghost" d="${step(ghost)}"/>`;
   g += `<path class="ow-ah-line" d="${step(solid)}"/>`;
+  /* EVERY STEP SAYS WHAT IT LEAVES. On the desk there is room to put
+     the figure on the step itself, so the line can be read without the
+     pointer; a step too close to the last one to clear it stays quiet,
+     and the tightest day has its own label. */
+  if(!small){
+    let lastX = -1e9;
+    const tightD = a.commitments.length ? dayOf(a.tightest.date) : -1;
+    const tops = new Map();
+    solid.forEach((p, i)=>{ if(i > 0 && i < solid.length - 1) tops.set(p[0], p[1]); });
+    [...tops.entries()].sort((x, y)=> x[0] - y[0]).forEach(([d, v])=>{
+      if(d === tightD) return;
+      const x = X(d);
+      if(x - lastX < 78) return;
+      lastX = x;
+      const day = rail.find(r=> r.d === d);
+      const who = day && day.items.length === 1
+        ? (day.items[0].kind === 'rent' ? 'rent' : day.items[0].kind === 'wage' ? 'wages' : day.items[0].kind === 'loan' ? 'loan'
+          : day.items[0].kind === 'order' ? 'the order' : String(day.items[0].label || '').split(' — ')[0].split(' ')[0])
+        : day ? day.items.length + ' payments' : '';
+      /* Under the step, inside the field it leaves: above it is where
+         the promised line runs, and a figure there sits on a dash. */
+      g += `<text class="ow-fx-stepv" x="${(x + 6).toFixed(1)}" y="${(Y(v) + 15).toFixed(1)}">${esc(ylabShort(v))}</text>`
+        + (who ? `<text class="ow-fx-stepw" x="${(x + 6).toFixed(1)}" y="${(Y(v) + 27).toFixed(1)}">after ${esc(who)}</text>` : '');
+    });
+  }
   g += `<circle class="ow-ah-dot ow-ah-start" cx="${X(0).toFixed(1)}" cy="${Y(a.onHand).toFixed(1)}" r="${small ? 3 : 3.5}">`
     + `<title>Today, ${esc(fmtShortDate(a.from))} — ${esc(n(a.onHand))} in hand</title></circle>`;
 
@@ -123447,7 +124040,10 @@ function aheadRunwaySVG(a, small){
   });
   if(low){
     const lx = X(low.p[0]), ly = Y(low.p[1]), under = low.p[1] < 0;
-    g += `<circle class="ow-ah-dot ow-ah-low" cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="${small ? 3.8 : 4.5}"/>`;
+    /* The tightest day carried down to the axis, so it can be read off
+       the dates under it as well as off the label above it. */
+    g += `<line class="ow-fx-tdrop" x1="${lx.toFixed(1)}" y1="${ly.toFixed(1)}" x2="${lx.toFixed(1)}" y2="${baseY}"/>`;
+    g += `<circle class="ow-ah-dot ow-ah-low" cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="${small ? 4.5 : 6}"/>`;
     if(small){ /* the hero and the ledger name the day in words */ }
     else {
     g += `<line class="ow-ah-lowrule" x1="${lx.toFixed(1)}" y1="${(padT + 34).toFixed(1)}" x2="${lx.toFixed(1)}" y2="${ly.toFixed(1)}"/>`;
@@ -123499,6 +124095,51 @@ function aheadRunwaySVG(a, small){
    does that stop being true -- so the shape of the answer leads and
    everything under it is the detail behind it. */
 let aheadDayEditId = null;   // the bill having a day named on it
+/* ON ORDER IS ON THE LINE.
+
+   An order that is out has not left the drawer yet, and nothing is owed
+   for it until the lorry comes -- but the money WILL leave on the day it
+   arrives, and a safe-to-spend that ignores it tells the owner they can
+   spend money a supplier is already loading onto a truck. The plan has
+   always held it back from its own budget; this puts it where the owner
+   reads the budget from, on the cash line itself.
+
+   DERIVED, NEVER INVENTED. Each open order steps the line down on the
+   day somebody named for it, or today when nobody has, which is the
+   cautious reading of "it could come any day". An order due after the
+   window is not on this window's line. Nothing in cashAhead moved: this
+   is a reading over its answer, so the Manager, the tool and the plan
+   keep the figure they have always been handed. */
+function fcAheadWithOrders(a, dateISO){
+  if(!a || typeof buyOrdersOpenRows !== 'function') return a;
+  const from = a.from || dateISO || todayISO();
+  const to = a.to || from;
+  const orders = buyOrdersOpenRows(from)
+    .map(o=>{
+      const when = o.expectedOn && o.expectedOn > from ? o.expectedOn : from;
+      return { date: when, dueOn: o.expectedOn || from, overdue: !!o.late, kind: 'order',
+        label: o.supplier + ' — order', amount: Math.round(Number(o.total) || 0), unknown: false,
+        raised: true, orderId: o.id, sentAt: o.sentAt || null,
+        lines: (o.lines || []).map(l=> l.name).filter(Boolean) };
+    })
+    .filter(c=> c.amount > 0 && String(c.date) <= String(to));
+  if(!orders.length) return a;
+  let balance = a.onHand;
+  const commitments = a.commitments.map(c=> ({ ...c })).concat(orders)
+    .sort((x, y)=> String(x.date).localeCompare(String(y.date)) || (y.amount - x.amount))
+    .map(c=>{
+      balance -= c.amount;
+      return { ...c, balanceAfter: Math.round(balance),
+        inDays: Math.max(0, daysBetweenISO(from, c.date)) };
+    });
+  let tightest = { date: from, balance: a.onHand };
+  commitments.forEach(c=>{ if(c.balanceAfter < tightest.balance) tightest = { date: c.date, balance: c.balanceAfter }; });
+  return { ...a, commitments,
+    committed: Math.round(commitments.reduce((n, c)=> n + c.amount, 0)),
+    onOrder: Math.round(orders.reduce((n, c)=> n + c.amount, 0)),
+    tightest, safeToSpend: Math.max(0, tightest.balance) };
+}
+
 /* ================= FORECASTS — the three horizons ===================
 
    One screen, three lenses, and one strip across all three.
@@ -123572,12 +124213,18 @@ function fcRenderRoof(){
 
   /* ---- what the cash line says ---- */
   const days = cashAheadDays();
-  const a = cashAhead(today, days);
+  /* The line as the Cash lens draws it, with what is on order on it --
+     so the tile and the lens below it cannot quote two figures. The
+     plan is still handed the engine's own reading: it holds the same
+     orders back from its budget itself, and handing it both would count
+     an order twice. */
+  const a0 = cashAhead(today, days);
+  const a = (typeof fcAheadWithOrders === 'function') ? fcAheadWithOrders(a0, today) : a0;
   /* The plan spends the 30-day figure whatever window the Cash lens is
      set to look over, so when the two differ the tile says which one it
      is showing. Two figures called "safe to spend" that are not the same
      figure is exactly the confusion this strip exists to end. */
-  const planAhead = days === CASH_AHEAD_DAYS ? a : cashAhead(today, CASH_AHEAD_DAYS);
+  const planAhead = days === CASH_AHEAD_DAYS ? a0 : cashAhead(today, CASH_AHEAD_DAYS);
   const short = a.tightest.balance < 0;
 
   /* ---- what the shelf will need ---- */
@@ -123619,8 +124266,36 @@ function fcRenderRoof(){
       a.tightest.balance < 0 ? `<i class="fc-zl-u" style="left:${low}%;width:${(z - low).toFixed(1)}%"></i>` : ''}<i class="fc-zl-z" style="left:${z}%"></i><i class="fc-zl-h" style="left:${hand}%" title="In hand: ${f(a.onHand)}"></i><i class="${a.tightest.balance < 0 ? 'fc-zl-l fc-zl-bad' : 'fc-zl-l'}" style="left:${low}%" title="Lowest point: ${f(a.tightest.balance)}"></i></span>`;
   })();
 
+  /* ONE TOKEN PER LINE, in the plan's own order: solid fits the budget,
+     open does not, and a rule stands where the money runs out. Counted
+     at a glance, and numbered as the list below numbers them. */
+  const tokens = (()=>{
+    if(!(need > 0)) return '';
+    const fit = plan.lines.slice(0, 6), out = plan.didNotFit.slice(0, Math.max(0, 8 - fit.length));
+    let k = 0;
+    const tok = (l, cls)=> `<i class="ow-fx-tok${cls}" title="${esc(l.name)} · ${f(l.cost)}">${++k}</i>`;
+    const more = all.length - fit.length - out.length;
+    return `<span class="ow-fx-toks">${fit.map(l=> tok(l, '')).join('')}${
+      fit.length && out.length ? '<i class="ow-fx-tok-cut" title="Where the budget runs out"></i>' : ''}${
+      out.map(l=> tok(l, ' ow-fx-tok-over')).join('')}${more > 0 ? `<i class="ow-fx-tok-more">+${more}</i>` : ''}</span>`;
+  })();
+  /* ON THE STOCK LENS THE FIRST TILE IS NET OF THE ORDER BEING BUILT.
+     What the owner has ticked is about to leave, so the figure that
+     answers "what can I still commit" is what is left after it -- and it
+     moves as they tick. */
+  const onStock = typeof fcLens !== 'undefined' && fcLens === 'stock';
+  const basketTot = (onStock && typeof buyOrderBasket !== 'undefined')
+    ? all.filter(l=> buyOrderBasket.has(String(l.tag))).reduce((n, l)=> n + (Number(l.cost) || 0), 0) : 0;
+  const planBud = plan.budget == null ? 0 : plan.budget;
+  const afterPlan = planBud - basketTot;
+  const planPct = planBud > 0 ? Math.min(100, basketTot / planBud * 100) : (basketTot > 0 ? 100 : 0);
+  const stockTile = tile('Safe to spend &middot; after the plan',
+    `${afterPlan < 0 ? '&minus;' : ''}${f(Math.abs(afterPlan))}<span class="ow-u">UGX</span>`,
+    `${f(planBud)} safe &minus; <b>${f(basketTot)}</b> ticked in the plan`,
+    afterPlan < 0 ? 'ow-bad' : 'ow-good',
+    `<span class="ow-fx-mtring" aria-hidden="true"><svg class="ow-fx-mtring-svg" viewBox="0 0 36 36"><g transform="rotate(-90 18 18)"><circle class="ow-fx-mtring-t" cx="18" cy="18" r="15.9155"/><circle class="ow-fx-mtring-f${afterPlan < 0 ? ' ow-fx-mtring-bad' : ''}" cx="18" cy="18" r="15.9155" pathLength="100" stroke-dasharray="${planPct.toFixed(1)} 100"/></g></svg><span>${Math.round(planPct)}% of it planned</span></span>`);
   el.innerHTML = `<div class="ow-strip">
-    ${tile('Safe to spend', `${f(a.safeToSpend)}<span class="ow-u">UGX</span>`,
+    ${onStock && !short ? stockTile : tile('Safe to spend', `${f(a.safeToSpend)}<span class="ow-u">UGX</span>`,
       (short
         /* BOTH FACTS, because the two tiles this replaced carried two:
            that you cannot cover what you have promised, and by how much.
@@ -123639,7 +124314,7 @@ function fcRenderRoof(){
           `${all.length} ${all.length === 1 ? 'line runs' : 'lines run'} short inside ${plan.coverDays} days &middot; ${
             over > 0 ? `<b>${f(over)}</b> of it over the budget` : 'every one of them fits the budget'}`,
           over > 0 ? 'ow-warn' : '',
-          need > 0 ? `<span class="fc-bar"><i class="fc-bar-f" style="flex-grow:${Math.max(0, need - over)}"></i><i class="fc-bar-f fc-bar-over" style="flex-grow:${over}"></i></span>` : '')
+          tokens)
       : none('To have back in time', `nothing on the shelf runs short inside ${plan.coverDays} days`)}
     ${tile('Run out', String(outLines.length),
       /* ONE NAME AND A COUNT. Two names and a tail ran to three lines in
@@ -123652,7 +124327,7 @@ function fcRenderRoof(){
       + (nextUp ? ` &middot; next is ${esc(nextUp.name)}, in ${Math.max(0, Math.floor(nextUp.daysLeft))} days` : ''),
       outLines.length ? 'ow-bad' : '',
       all.length ? `<span class="fc-dots">${all.slice().sort((x, y)=> (x.daysLeft == null ? 99 : x.daysLeft) - (y.daysLeft == null ? 99 : y.daysLeft)).slice(0, 12).map(l=>
-        `<i class="${l.daysLeft != null && l.daysLeft <= 0 ? 'fc-dot fc-dot-out' : l.daysLeft != null && l.daysLeft < 3 ? 'fc-dot fc-dot-soon' : 'fc-dot'}" title="${esc(l.name)}${l.daysLeft == null ? '' : ' · ' + Math.max(0, Math.floor(l.daysLeft)) + ' days left'}"></i>`).join('')}</span>` : '')}
+        `<i class="${l.daysLeft != null && l.daysLeft <= 0 ? 'fc-dot fc-dot-out' : l.daysLeft != null && l.daysLeft < 3 ? 'fc-dot fc-dot-soon' : 'fc-dot'} ow-fx-dot" title="${esc(l.name)}${l.daysLeft == null ? '' : ' · ' + Math.max(0, Math.floor(l.daysLeft)) + ' days left'}"></i>`).join('')}</span>` : '')}
     ${tile('Today so far', `${f(d.sold.total)}<span class="ow-u">UGX</span>`,
       `${d.sold.count === 1 ? '1 sale' : d.sold.count + ' sales'} by ${clock} &middot; ${
         hasTyp ? `a typical ${weekday} ends at <b>${f(typ.sales)}</b>`
@@ -123694,64 +124369,135 @@ function renderAhead(){
   if(!el) return;
   const f = (n)=> fmtUGX(Math.round(n));
   const b = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
+  /* A figure short enough for a chip or the middle of a ring. The exact
+     figure is always one hover away, and in the ledger beside it. */
+  const M = (n)=>{
+    const v = Math.abs(Math.round(n)), sign = n < 0 ? '−' : '';
+    if(v >= 1e6) return sign + (v / 1e6).toFixed(2).replace(/0+$/, '').replace(/\.$/, '') + 'M';
+    if(v >= 1e3) return sign + Math.round(v / 1e3) + 'K';
+    return sign + String(v);
+  };
   const days = cashAheadDays();
-  const a = cashAhead(todayISO(), days);
+  const today = todayISO();
+  const a = (typeof fcAheadWithOrders === 'function') ? fcAheadWithOrders(cashAhead(today, days), today) : cashAhead(today, days);
   const short = a.tightest.balance < 0;
   const owed = a.owedByYou;
   const undated = credOpenInvoices().filter(x=> !x.dueOn)
     .sort((x, y)=> (y.ageDays - x.ageDays) || (y.due - x.due));
+  const ordersOut = a.commitments.filter(c=> c.kind === 'order');
+  const onOrder = Math.round(ordersOut.reduce((n, c)=> n + c.amount, 0));
+  const dueTotal = Math.max(0, a.committed - onOrder);
 
   /* ---- NO STRIP OF ITS OWN ----
-     This lens had four tiles: safe to spend, in hand today, what falls
-     due in the window, and the tightest day. The screen's strip is the
-     one above all three lenses now, and it leads with the same figure
-     this one led with -- so the question is what became of the other
-     three, and the answer is that every one of them was already said
-     twice on this screen.
+     The screen's strip is the one above all three lenses, and it leads
+     with the same figure this lens leads with. Two strips stacked is the
+     fault this console was built to end. */
 
-     In hand today and Falls due in the window are the first two rows of
-     "How the line is worked out", in the rail, under the sentence that
-     explains them. The tightest day is the basis line under safe to
-     spend, the inked dot on the runway, the dashed rule that drops from
-     it, and the badge on its own row in the ledger. Nothing is lost; a
-     second 64px band of figures is.
-
-     Two strips stacked is the fault this console was built to end: 128px
-     of numbers before the work starts, on the screen whose whole answer
-     is a shape. */
+  /* ---- THE LEVERS ----
+     Every payment before the tightest day is one of five things, and
+     they are not equally movable. A bill is on the line on a day the
+     owner named, so it is the owner's to move; rent, wages and a loan
+     instalment are not; a late one is already a broken word; an order
+     leaves when the lorry comes; a promise is somebody else's word and
+     was never counted. Saying which is which turns "the line dips" into
+     "here is what you can do about it". */
+  const lever = (c)=> c.overdue ? 'late' : c.kind === 'order' ? 'arrive' : c.kind === 'bill' ? 'move' : 'fixed';
+  const LV = {
+    move: ['Movable', 'ow-fx-lv-move'], arrive: ['On arrival', 'ow-fx-lv-arr'], fixed: ['Fixed', 'ow-fx-lv-fix'],
+    late: ['Late', 'ow-fx-lv-late'], word: ['Their word', 'ow-fx-lv-word'],
+  };
+  const tightOn = String(a.tightest.date);
+  const beforeTight = a.commitments.filter(c=> String(c.date) <= tightOn);
+  const sumOf = (k)=> k === 'word'
+    ? a.promised.filter(p=> String(p.date) <= tightOn).reduce((n, p)=> n + p.amount, 0)
+    : beforeTight.filter(c=> lever(c) === k).reduce((n, c)=> n + c.amount, 0);
+  /* What re-dating the movable ones would do, walked rather than added:
+     take them off the line and read the floor again. */
+  let liftRun = a.onHand, liftLow = a.onHand;
+  a.commitments.forEach(c=>{
+    if(lever(c) === 'move' && String(c.date) <= tightOn) return;
+    liftRun -= c.amount; liftLow = Math.min(liftLow, liftRun);
+  });
+  const liftTo = Math.max(0, Math.round(liftLow));
+  const movable = sumOf('move');
+  const shortName = (c)=> c.kind === 'rent' ? 'Rent' : c.kind === 'wage' ? 'Wages' : c.kind === 'loan' ? 'Loan'
+    : String(c.label || '').split(' — ')[0].split(' ')[0] || 'Bill';
 
   /* ---- the runway ----
-     THE READING, WHERE THE POINTER IS. The line answers "when does it
-     get tight" at a glance and then leaves every other day to be
-     guessed at between two gridlines. Pointing at a day now says what
-     that day holds, what leaves on it and who it goes to -- on the
-     phone by dragging along the chart, which is why the plot allows a
-     vertical scroll through it and takes only the sideways part. */
+     THE READING, WHERE THE POINTER IS. Pointing at a day says what that
+     day holds, what leaves on it and who it goes to -- on the phone by
+     dragging along the chart. */
   const tipHTML = `<div class="ow-ah-tip" hidden>
         <p class="ow-ah-tip-d"></p>
         <p class="ow-ah-tip-v"></p>
         <div class="ow-ah-tip-l"></div>
       </div>`;
+  const horizon = [30, 60, 90].map(n=> `<button type="button" class="ow-an-wb fc-hz" data-days="${n}" aria-pressed="${days === n}">${n} days</button>`).join('');
+
+  /* THE LANES. The same clock as the line above them -- the plot's own
+     left margin and inner width, 88 and 892 of 1080 -- so every chip sits
+     under the step it is. If aheadRunwaySVG's desktop margins move,
+     these two numbers move with them. */
+  const PL = 88, IW = 892, VW = 1080;
+  const xPct = (iso)=> ((PL + Math.min(a.days, Math.max(0, daysBetweenISO(a.from, iso))) / Math.max(1, a.days) * IW) / VW * 100);
+  const chipsFor = (k)=>{
+    const items = k === 'word'
+      ? a.promised.map(p=> ({ date: p.date, amount: p.amount, name: String(p.name || '').split(' ')[0], full: p.name, sign: '+' }))
+      : a.commitments.filter(c=> lever(c) === k).map(c=> ({ date: c.date, amount: c.amount, name: shortName(c), full: c.label, sign: '−' }));
+    /* Two on one day are one chip, or they would sit exactly on top of
+       each other and read as one. */
+    const byDay = new Map();
+    items.forEach(it=>{
+      const e = byDay.get(it.date) || { date: it.date, amount: 0, names: [], fulls: [], sign: it.sign };
+      e.amount += it.amount; e.names.push(it.name); e.fulls.push(it.full + ' ' + b(it.amount)); byDay.set(it.date, e);
+    });
+    return [...byDay.values()].map(e=> `<button type="button" class="ow-fx-chip ${LV[k][1]}" data-x="${xPct(e.date).toFixed(2)}" style="left:${xPct(e.date).toFixed(2)}%" title="${esc(fmtShortDate(e.date) + ' — ' + e.fulls.join('; '))}"><span class="ow-fx-chip-n">${esc(e.names.length > 1 ? e.names.length + ' ' + (k === 'word' ? 'promises' : 'payments') : e.names[0])}</span><span class="ow-fx-chip-v">${e.sign}${esc(M(e.amount))}</span></button>`).join('');
+  };
+  const laneKeys = ['move', 'arrive', 'fixed', 'late', 'word']
+    .filter(k=> k === 'word' ? a.promised.length : a.commitments.some(c=> lever(c) === k));
+  const lanes = !laneKeys.length ? '' : `<div class="ow-fx-lanes ow-hide-sm">
+      <span class="ow-fx-lanes-tight" style="left:${xPct(tightOn).toFixed(2)}%" aria-hidden="true"></span>
+      <span class="ow-fx-lanes-after" style="left:${xPct(tightOn).toFixed(2)}%" aria-hidden="true"></span>
+      ${laneKeys.map(k=> `<div class="ow-fx-lane">
+        <span class="ow-fx-lane-k ${LV[k][1]}"><span class="ow-fx-lane-l">${LV[k][0]}</span><span class="ow-fx-lane-v">${esc(M(sumOf(k)))}</span></span>
+        ${chipsFor(k)}
+      </div>`).join('')}
+      <div class="ow-fx-lanes-f">
+        <span class="ow-fx-lanes-key">Shaded: after the tightest day</span>
+        ${movable > 0 && liftTo > a.safeToSpend ? `<span class="ow-fx-lift"><svg class="ow-fx-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l6-6 4 4 6-7"/><path d="M15 8h5v5"/></svg>Move the <b class="ow-fx-lv-move-t">movable</b> bills past <b>${esc(fmtShortDate(tightOn))}</b> and safe to spend rises to <b class="ow-fx-fig">${b(liftTo)}</b></span>` : ''}
+      </div>
+    </div>`;
+  /* The phone has no room for lanes, so it gets their totals. */
+  const leverSum = !laneKeys.length ? '' : `<div class="ow-fx-levers ow-ah-sm">
+      <span class="ow-fx-levers-t">Before the tightest day</span>
+      <span class="ow-fx-levers-c">${laneKeys.map(k=> `<span class="ow-fx-lvc ${LV[k][1]}">${LV[k][0]} <b class="ow-fx-lvc-v">${esc(M(sumOf(k)))}</b></span>`).join('')}</span>
+      ${movable > 0 && liftTo > a.safeToSpend ? `<span class="ow-fx-lift">Move the movable bills past ${esc(fmtShortDate(tightOn))} and safe to spend rises to <b class="ow-fx-fig">${b(liftTo)}</b></span>` : ''}
+    </div>`;
+
   const runway = `<div class="ow-pan ow-ah-run">
     <div class="ow-pan-h">
       <span class="ow-pan-t">The next ${days} days</span>
       <span class="ow-pan-n">${a.commitments.length
-        ? `${a.commitments.length} payment${a.commitments.length === 1 ? '' : 's'}${short ? ' &middot; the line goes under on ' + esc(fmtShortDate(a.tightest.date)) : ''}`
+        ? `${a.commitments.length} payment${a.commitments.length === 1 ? '' : 's'}${a.promised.length ? ` &middot; ${a.promised.length} promise${a.promised.length === 1 ? '' : 's'}` : ''}${short ? ' &middot; the line goes under on ' + esc(fmtShortDate(a.tightest.date)) : ' &middot; tightest on ' + esc(fmtShortDate(a.tightest.date))}`
         : 'nothing falls due'}</span>
-    </div>
-    <div class="ow-ah-runwrap">
-      <div class="ow-ah-plot ow-hide-sm">${aheadRunwaySVG(a)}${tipHTML}</div>
-      <div class="ow-ah-plot ow-ah-sm">${aheadRunwaySVG(a, true)}${tipHTML}</div>
+      <span class="ow-fx-hz"><span class="ow-an-win" role="group" aria-label="How far ahead to look">${horizon}</span>
+        <input class="ow-ah-set-f" id="ah_days" type="number" min="1" max="365" step="1" value="${days}" aria-label="How many days ahead to look"></span>
     </div>
     <div class="ow-ah-lg">
       <span class="ow-ah-lg-i"><span class="ow-ah-lg-k"></span>What you will hold</span>
       ${a.promised.length ? '<span class="ow-ah-lg-i"><span class="ow-ah-lg-k ow-ah-lg-g"></span>If every promise is kept</span>' : ''}
       ${a.commitments.length ? '<span class="ow-ah-lg-i"><span class="ow-ah-lg-k ow-ah-lg-b"></span>What leaves that day</span>' : ''}
+      <span class="ow-ah-lg-i"><span class="ow-ah-lg-k ow-fx-lg-ring"></span>The tightest day</span>
       ${short ? '<span class="ow-ah-lg-i"><span class="ow-ah-lg-k ow-ah-lg-n"></span>Below nothing</span>' : ''}
       <span class="ow-ah-lg-t">${a.promised.length
         ? 'Safe to spend is read off the <b class="ow-ah-lg-s">solid</b> line only. <b class="ow-ah-lg-s">Not counted in what is safe to spend.</b> A day somebody named is worth knowing and is still not money you hold &mdash; buying stock against it is how a shop ends up short.'
         : 'Safe to spend is the lowest point this line reaches, not what it ends on.'}</span>
     </div>
+    <div class="ow-ah-runwrap">
+      <div class="ow-ah-plot ow-hide-sm">${aheadRunwaySVG(a)}${tipHTML}</div>
+      <div class="ow-ah-plot ow-ah-sm">${aheadRunwaySVG(a, true)}${tipHTML}</div>
+    </div>
+    ${lanes}${leverSum}
   </div>`;
 
   /* ---- the ledger: the same walk, in words ----
@@ -123762,11 +124508,28 @@ function renderAhead(){
   const events = a.commitments.map(c=> ({ ...c, said: false }))
     .concat(a.promised.map(p=> ({ ...p, said: true, dueOn: p.date, label: p.name })))
     .sort((x, y)=> String(x.date).localeCompare(String(y.date)) || (x.said ? 1 : -1));
-  let run = a.onHand;
-  events.forEach(e=>{ if(!e.said){ run -= e.amount; e.balanceAfter = Math.round(run); } });
+  let run = a.onHand, ghostRun = a.onHand;
+  events.forEach(e=>{
+    if(!e.said){ run -= e.amount; ghostRun -= e.amount; e.balanceAfter = Math.round(run); }
+    else { ghostRun += e.amount; }
+    e.ghostAfter = Math.round(ghostRun);
+  });
 
   const kindLabel = (c)=> c.kind === 'loan' ? 'loan repayment' : c.kind === 'wage' ? 'wages'
-    : c.kind === 'bill' ? 'supplier bill' : 'rent';
+    : c.kind === 'bill' ? 'supplier bill' : c.kind === 'order' ? 'order on the way' : 'rent';
+  /* WHAT IS LEFT OF TODAY'S CASH, as a ring rather than a bar: a full
+     ring is the morning's drawer, and the ring empties as the walk goes
+     down the list. */
+  const ring = (pct, cls)=> `<svg class="ow-fx-ring" viewBox="0 0 24 24" aria-hidden="true"><circle class="ow-fx-ring-t" cx="12" cy="12" r="9"/><circle class="ow-fx-ring-f${cls ? ' ' + cls : ''}" cx="12" cy="12" r="9" pathLength="100" stroke-dasharray="${Math.max(0, Math.min(100, pct)).toFixed(1)} 100" transform="rotate(-90 12 12)"/></svg>`;
+  const kindIcon = (c)=> c.said
+    ? '<path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M9 10.5l2 2 4-4"/>'
+    : c.kind === 'rent' ? '<path d="M4 11l8-6 8 6"/><path d="M6 10v10h12V10"/><path d="M10 20v-5h4v5"/>'
+    : c.kind === 'wage' ? '<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 5a3 3 0 010 6"/><path d="M21 20c0-2.6-1.6-4.8-4-5.6"/>'
+    : c.kind === 'loan' ? '<path d="M3 10l9-5 9 5"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 20h18"/>'
+    : c.kind === 'order' ? '<path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>'
+    : '<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4"/><path d="M10 12h6M10 16h4"/>';
+  const icon = (c)=> `<span class="ow-fx-ki${c.said ? ' ow-fx-ki-w' : c.overdue ? ' ow-fx-ki-late' : c.kind === 'order' ? ' ow-fx-ki-arr' : ''}"><svg class="ow-fx-i" viewBox="0 0 24 24" aria-hidden="true">${kindIcon(c)}</svg></span>`;
+  const onHandBase = Math.max(1, a.onHand);
   const eventRow = (e)=>{
     if(e.said){
       /* MARKING A PROMISE. "Received it" opens the same payment door
@@ -123776,129 +124539,57 @@ function renderAhead(){
       return `<div class="ow-ah-lr ow-ah-said">
         <span class="ow-ah-when"><span class="ow-ah-when-d">${esc(fmtShortDate(e.date))}</span>${
           e.inDays === 0 ? 'today' : 'in ' + e.inDays + (e.inDays === 1 ? ' day' : ' days')}</span>
-        <span class="ow-ah-what">${esc(e.name)}<span class="ow-ah-what-s">said they would pay &mdash; ${
+        <span class="ow-ah-what ow-fx-what">${icon(e)}<span class="ow-fx-what-t">${esc(e.name)}<span class="ow-ah-what-s"><span class="ow-fx-lvt ow-fx-lv-word">Their word</span> said they would pay &mdash; ${
           e.whole ? 'the whole balance' : 'the figure they named'}${
-          e.brokenBefore ? ` &middot; <b style="color:var(--ow-crimson);font-weight:600">${e.brokenBefore} broken before</b>` : ''}</span>
+          e.brokenBefore ? ` &middot; <b class="ow-fx-broke">${e.brokenBefore} broken before</b>` : ''}</span>
           <span class="ow-ah-said-a">
             <button type="button" class="btn btn-ghost ow-sm ah-got" data-cust="${esc(e.customerId)}">Received it</button>
             <button type="button" class="btn btn-ghost ow-sm ah-nogot" data-cust="${esc(e.customerId)}" data-name="${esc(e.name)}">It did not come</button>
-          </span></span>
-        <span class="ow-ah-out">${b(e.amount)}</span>
-        <span class="ow-ah-bal">their word, not cash</span>
+          </span></span></span>
+        <span class="ow-ah-out ow-fx-in">+${b(e.amount)}</span>
+        <span class="ow-ah-bal ow-fx-bal">${ring(e.ghostAfter / onHandBase * 100, 'ow-fx-ring-w')} <span class="ow-fx-bal-t"><span class="ow-fx-bal-v ow-fx-bal-w">their word, not cash</span><span class="ow-fx-bal-s">if kept: ${b(e.ghostAfter)}</span></span></span>
       </div>`;
     }
-    const tight = e.dueOn === a.tightest.date && e.balanceAfter === a.tightest.balance;
+    const tight = e.date === a.tightest.date && e.balanceAfter === a.tightest.balance;
     const under = e.balanceAfter < 0;
+    const k = lever(e);
     return `<div class="ow-ah-lr${under ? ' ow-bad' : ''}${tight ? ' ow-ah-tight' : ''}">
       <span class="ow-ah-when${e.overdue ? ' ow-bad' : ''}"><span class="ow-ah-when-d">${esc(fmtShortDate(e.dueOn))}</span>${
         e.overdue ? 'overdue' : e.inDays === 0 ? 'today' : 'in ' + e.inDays + (e.inDays === 1 ? ' day' : ' days')}</span>
-      <span class="ow-ah-what">${esc(e.label)}<span class="ow-ah-what-s">${esc(kindLabel(e))}${
+      <span class="ow-ah-what ow-fx-what">${icon(e)}<span class="ow-fx-what-t">${esc(e.label)}<span class="ow-ah-what-s"><span class="ow-fx-lvt ${LV[k][1]}">${LV[k][0]}</span> ${esc(kindLabel(e))}${
         e.kind === 'bill' ? (e.overdue ? ' &middot; the day you named has gone by' : ' &middot; the day you named') : ''}${
+        e.kind === 'order' ? (e.dueOn > today ? ' &middot; paid when it arrives' : ' &middot; no day named, so counted from today') : ''}${
         e.partPaid ? ' &middot; what is left of it after what you have already paid' : ''}${
-        e.raised ? '' : ' &middot; not raised yet'}</span></span>
-      <span class="ow-ah-out">${e.unknown ? '<i class="ow-ah-uncosted">not costed yet</i>' : b(e.amount)}</span>
-      <span class="ow-ah-bal">${e.unknown ? '&mdash;' : b(e.balanceAfter)}${
+        e.raised ? '' : ' &middot; not raised yet'}</span></span></span>
+      <span class="ow-ah-out">${e.unknown ? '<i class="ow-ah-uncosted">not costed yet</i>' : '−' + b(e.amount)}</span>
+      <span class="ow-ah-bal ow-fx-bal">${e.unknown ? '&mdash;' : `${ring(e.balanceAfter / onHandBase * 100, under ? 'ow-fx-ring-bad' : tight ? 'ow-fx-ring-low' : '')} <span class="ow-fx-bal-t"><span class="ow-fx-bal-v">${b(e.balanceAfter)}${
         tight ? '<span class="ow-ah-bal-b">the tightest day</span>'
-          : under ? '<span class="ow-ah-bal-b">under water</span>' : ''}</span>
+          : under ? '<span class="ow-ah-bal-b">under water</span>' : ''}</span><span class="ow-fx-bal-s">${
+        tight ? 'what it leaves is safe to spend' : under ? 'short of what is promised' : Math.round(e.balanceAfter / onHandBase * 100) + '% of today&rsquo;s cash'}</span></span>`}</span>
     </div>`;
   };
 
-  const ledger = a.commitments.length || a.promised.length ? `<div class="ow-pan" style="margin-bottom:16px">
+  const ledger = a.commitments.length || a.promised.length ? `<div class="ow-pan">
     <div class="ow-pan-h">
       <span class="ow-pan-t">What falls due, and what it leaves</span>
       <span class="ow-pan-n">the same walk, in words</span>
     </div>
-    <div class="ow-ah-h"><span>Day</span><span>What</span><span class="ow-ah-h-r">Out</span><span class="ow-ah-h-r">Leaves you</span></div>
+    <div class="ow-ah-h"><span>Day</span><span>What</span><span class="ow-ah-h-r">Out</span><span>Leaves you</span></div>
     ${listPageSlice('ahead', events).map(eventRow).join('')}
     ${listMoreButtonHTML('ahead', events.length, 'lines')}
     ${a.unknown ? `<p class="ow-mini">${a.unknown} of these ${a.unknown === 1 ? 'is' : 'are'} not costed yet, so ${
       a.unknown === 1 ? 'it counts' : 'they count'} as nothing on the line and the line is generous by whatever ${
       a.unknown === 1 ? 'it' : 'they'} turn out to be. Set the days worked on <b>Payroll</b> and the figure joins it.</p>` : ''}
     ${a.wagesNotRaised.length ? `<p class="ow-mini">Wages for ${a.wagesNotRaised.map(x=> esc(periodLabel(x))).join(' and ')} have not been raised yet, so they are not on the line at all. A month is not costed until somebody counts the days, and this will not guess at it. <button type="button" class="ow-db-go" id="ah_to_payroll">Open Payroll</button></p>` : ''}
-  </div>` : `<div class="ow-pan fc-clear" style="margin-bottom:16px"><div class="ow-empty">
+  </div>` : `<div class="ow-pan fc-clear"><div class="ow-empty">
     <b>Nothing falls due in the next ${days} days.</b>
     <span>No rent, wages, loan repayment or dated supplier bill lands inside the window, so every shilling you hold is yours to commit. That is not the same as nothing being owed &mdash; the undated bills below are real, and each becomes part of this line the day you name one.</span></div></div>`;
-
-  /* ---- money with no date, and the act that dates it ----
-     Two POOLS said as pools, then the bills themselves with the control
-     that puts them on the line. The screen used to describe the journey
-     -- "open that supplier on Creditors and tap Name a day" -- for the
-     single act that changes what it is showing. */
-  const dayCell = (x)=>{
-    const id = String(x.invoice.id);
-    if(aheadDayEditId === id) return `<span class="ow-ah-dy">
-      <input class="ow-ah-dy-f" type="date" id="ah_day_field" value="${esc(todayISO())}" aria-label="The day you will pay this bill">
-      <button type="button" class="btn btn-accent ow-sm ah-day-save" data-id="${esc(id)}">Write it down</button>
-      <button type="button" class="btn btn-ghost ow-sm ah-day-cancel">Cancel</button>
-    </span>`;
-    return '';
-  };
-  const undatedRow = (x)=> `<div class="ow-ah-lr${aheadDayEditId === String(x.invoice.id) ? ' ow-open' : ''}">
-    <span class="ow-ah-when"><span class="ow-ah-when-d">${x.ageDays >= 0 ? esc(agingDaysLabel(x.ageDays)) : '&mdash;'}</span>since the bill</span>
-    <span class="ow-ah-what">${esc(supplierName(x.supplierId) || 'Supplier')}<span class="ow-ah-what-s">${esc(purchaseInvoiceNumberLabel(x.invoice))}${
-      x.invoice.date ? ' &middot; dated ' + esc(fmtShortDate(x.invoice.date)) : ''}</span>${dayCell(x)}${
-      aheadDayEditId === String(x.invoice.id)
-        ? `<span class="ow-ah-note">Writing this down puts <b class="ow-ah-fig">${f(x.due)}</b> on the line for the day you choose, and what is safe to spend drops by it. It does not pay anything and it tells nobody &mdash; it is your own note of what you intend.</span>` : ''}</span>
-    <span class="ow-ah-out">${b(x.due)}</span>
-    <span class="ow-ah-bal">${aheadDayEditId === String(x.invoice.id) ? '' :
-      `<button type="button" class="btn btn-ghost ow-sm ah-day-set" data-id="${esc(x.invoice.id)}">Name a day</button>`}</span>
-  </div>`;
-
-  /* THE BILLS AS BLOCKS. Ten rows each saying "Name a day" was a table
-     whose one control was the same on every line. A block per bill, aged
-     by shade, takes the same tap; the row with the date field opens only
-     for the bill that was tapped. */
-  const blocks = undated.slice(0, 10);
-  const shown = blocks;
-  const editing = undated.find(x=> aheadDayEditId === String(x.invoice.id)) || null;
-  const pools = `<div class="ow-pan">
-    <div class="ow-pan-h">
-      <span class="ow-pan-t">Money with no date on it</span>
-      <span class="ow-pan-n">not on the line, because nobody has named a day for it</span>
-    </div>
-    ${(a.owedToYou.total > 0 || owed.undatedTotal > 0) ? (()=>{
-      const top = Math.max(1, a.owedToYou.total, owed.undatedTotal);
-      return `<div class="fc-pools">
-        <span class="fc-pools-k">Owed to you</span><span class="fc-pools-t"><i class="fc-pools-f fc-pools-in" style="width:${(a.owedToYou.total / top * 100).toFixed(1)}%"></i></span><b class="fc-pools-v">${b(a.owedToYou.total)}</b>
-        <span class="fc-pools-k">Owed by you</span><span class="fc-pools-t"><i class="fc-pools-f fc-pools-out" style="width:${(owed.undatedTotal / top * 100).toFixed(1)}%"></i></span><b class="fc-pools-v">${b(owed.undatedTotal)}</b>
-      </div>`; })() : ''}
-    <div class="ow-ah-pool">
-      <div class="ow-ah-pool-c">
-        <p class="ow-ah-pool-l">Owed to you</p>
-        <span class="ow-ah-pool-v">${b(a.owedToYou.total)}</span>
-        <p class="ow-ah-pool-s">${a.owedToYou.count} customer${a.owedToYou.count === 1 ? '' : 's'}${
-          a.owedToYou.oldestDays ? `, the oldest waiting <b class="ow-ah-pool-n">${a.owedToYou.oldestDays}</b> days` : ''}. When one names a day, tap <b class="ow-ah-pool-n">They promised&hellip;</b> on <b class="ow-ah-pool-n">Follow-ups</b> and it joins the line as their word.</p>
-      </div>
-      <div class="ow-ah-pool-c">
-        <p class="ow-ah-pool-l">Owed by you</p>
-        <span class="ow-ah-pool-v">${b(owed.undatedTotal)}</span>
-        <p class="ow-ah-pool-s">${owed.undated} bill${owed.undated === 1 ? '' : 's'} with no day named${
-          owed.undatedOldestDays ? `, the oldest <b class="ow-ah-pool-n">${owed.undatedOldestDays}</b> days old` : ''}. Naming a day puts it on the line and drops what is safe to spend, which is the point of saying it.</p>
-      </div>
-    </div>
-    ${blocks.length ? `<div class="fc-bills">
-      <p class="fc-bills-t">The undated bills, oldest first &mdash; darker is older. Tap one to <b>Name a day</b> for it.</p>
-      <div class="fc-bills-g">${blocks.map(x=> `<button type="button" class="${x.ageDays > 60 ? 'fc-bill fc-bill-old' : x.ageDays > 30 ? 'fc-bill fc-bill-mid' : 'fc-bill'}${aheadDayEditId === String(x.invoice.id) ? ' fc-bill-on' : ''} ah-day-set" data-id="${esc(x.invoice.id)}" title="${esc((supplierName(x.supplierId) || 'Supplier') + ' · ' + b(x.due) + (x.ageDays >= 0 ? ' · ' + x.ageDays + ' days since the bill' : ''))}">
-        <span class="fc-bill-a">${x.ageDays >= 0 ? x.ageDays + 'd' : '&mdash;'}</span><span class="fc-bill-n">${esc(supplierName(x.supplierId) || 'Supplier')}</span><span class="fc-bill-v">${b(x.due)}</span></button>`).join('')}</div>
-    </div>` : ''}
-    ${editing ? `<div class="ow-ah-h" style="border-top:1px solid var(--ow-rule-soft)">
-      <span>Undated</span><span>Supplier</span><span class="ow-ah-h-r">Still open</span><span class="ow-ah-h-r">Name a day</span>
-    </div>${undatedRow(editing)}` : ''}
-    <p class="ow-mini">${owed.count === 0 ? 'You owe nothing on any open bill.'
-      : `You owe <b>${f(owed.total)}</b> on ${owed.count} open ${owed.count === 1 ? 'bill' : 'bills'} in all. ${
-        owed.dated ? `${owed.dated} of them, <b>${f(owed.datedTotal)}</b>, ${owed.dated === 1 ? 'carries a day you named and is' : 'carry days you named and are'} already on the line above &mdash; not counted twice.`
-          : 'None of them carries a day yet, so none of it is on the line above.'}${
-        undated.length > shown.length ? ` The ${undated.length - shown.length} not listed here are on <b>Creditors</b>.` : ''}`}
-      <button type="button" class="ow-db-go" id="ah_to_cred">Open Creditors</button></p>
-    ${owed.missedOwnWord ? `<p class="ow-mini"><b>${owed.missedOwnWord} ${owed.missedOwnWord === 1 ? 'bill has' : 'bills have'} gone past the day you named.</b> That is your own word rather than the supplier&rsquo;s patience, and it is what costs a shop its credit. ${
-      owed.missedOwnWord === 1 ? 'It counts' : 'They count'} against today on the line above until paid or re-dated.</p>` : ''}
-  </div>`;
 
   /* ---- the rail ---- */
   const cover = short ? debtsCovering(Math.abs(a.tightest.balance), collectableDebts()) : null;
   const gap = short ? Math.abs(a.tightest.balance) : 0;
   let ringRun = 0;
-  const ring = short ? `<div class="ow-pan">
+  const chase = short ? `<div class="ow-pan">
     <div class="ow-pan-h">
       <span class="ow-pan-t">Who to ring today</span>
       <span class="ow-pan-n">to close ${b(gap)}</span>
@@ -123917,34 +124608,212 @@ function renderAhead(){
         <span class="ow-ah-ring-m">${r.ageDays >= 0 ? 'waiting ' + esc(agingDaysLabel(r.ageDays)) : 'age not on record'} &middot; ${
           covers ? 'this one closes it' : Math.round(ringRun / gap * 100) + '% of the gap so far'}</span>
       </div>`; }).join('')}</div>
-    <div style="padding:10px 12px;border-top:1px solid var(--ow-rule-soft)">
-      <button type="button" class="btn btn-accent ow-sm" id="ah_chase" style="width:100%;justify-content:center">Chase ${cover.rows.length === 1 ? 'them' : 'these ' + cover.rows.length}</button>
+    <div class="ow-fx-pad">
+      <button type="button" class="btn btn-accent ow-sm ow-fx-wide" id="ah_chase">Chase ${cover.rows.length === 1 ? 'them' : 'these ' + cover.rows.length}</button>
     </div>
     <p class="ow-mini">Nothing is sent from here. It opens <b>Follow-ups</b> under <b>Money</b>, where each message is written for your own thumb.</p>`
     : `<p class="ow-mini">Nobody on the books is carrying a collectable debt, so there is nobody to ring. The gap has to come from trading, or from re-naming a day you have given.</p>`}
   </div>` : '';
 
-  /* THE LINE, AS A KEY. Three panels of prose explained a step chart
-     that explains itself once its two marks are named: a step down is a
-     day something falls due, and the ring is the lowest point, which is
-     what is safe to spend. How far ahead to look is a switch. */
-  const horizon = [30, 60, 90].map(n=> `<button type="button" class="ow-an-wb fc-hz" data-days="${n}" aria-pressed="${days === n}">${n} days</button>`).join('');
-  const rail = `${ring}<div class="ow-pan">
-    <div class="ow-pan-h"><span class="ow-pan-t">The line</span></div>
-    <div class="fc-key">
-      <span class="fc-key-i"><svg class="fc-key-s" viewBox="0 0 28 14" aria-hidden="true"><path d="M1 3h9v8h9v-5h8"/></svg>steps down on each day something falls due</span>
-      <span class="fc-key-i"><svg class="fc-key-s" viewBox="0 0 28 14" aria-hidden="true"><circle cx="14" cy="7" r="4.5"/></svg>its lowest point is what is safe to spend</span>
+  /* SAFE TO SPEND, WORKED OUT, as one ring. The whole ring is the cash
+     in hand; what is promised inside the window, what is on order, and
+     what is yours are its three arcs, and the rows under it are the sum
+     the ring is a picture of. */
+  const safe = a.safeToSpend;
+  const pDue = Math.min(100, dueTotal / onHandBase * 100);
+  const pOrd = Math.min(100 - pDue, onOrder / onHandBase * 100);
+  const pSafe = a.onHand > 0 ? Math.min(100 - pDue - pOrd, safe / onHandBase * 100) : 0;
+  const arc = (pct, off, cls)=> pct > 0.2 ? `<circle class="ow-fx-donut-a ${cls}" cx="18" cy="18" r="15.9155" pathLength="100" stroke-dasharray="${Math.max(0, pct - 0.8).toFixed(1)} 100" stroke-dashoffset="${(-off).toFixed(1)}"/>` : '';
+  const yours = a.onHand > 0 ? Math.round(safe / a.onHand * 100) : 0;
+  const worked = `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">Safe to spend, worked out</span></div>
+    <div class="ow-fx-worked-b">
+      <div class="ow-fx-donut">
+        <svg class="ow-fx-donut-svg" viewBox="0 0 36 36" aria-hidden="true"><g transform="rotate(-90 18 18)">
+          <circle class="ow-fx-donut-t" cx="18" cy="18" r="15.9155"/>
+          ${arc(pDue, 0, 'ow-fx-donut-due')}${arc(pOrd, pDue, 'ow-fx-donut-ord')}${arc(pSafe, pDue + pOrd, 'ow-fx-donut-safe')}
+        </g></svg>
+        <span class="ow-fx-donut-c">${short
+          ? `<span class="ow-fx-donut-k ow-fx-bad-t">short</span><span class="ow-fx-donut-v ow-fx-bad-t">${esc(M(gap))}</span><span class="ow-fx-donut-s">by ${esc(fmtShortDate(a.tightest.date))}</span>`
+          : `<span class="ow-fx-donut-k">${yours}% yours</span><span class="ow-fx-donut-v">${esc(M(safe))}</span><span class="ow-fx-donut-s">of ${esc(M(a.onHand))}</span>`}</span>
+      </div>
+      <div class="ow-fx-sum">
+        <div class="ow-fx-sum-r"><span class="ow-fx-key ow-fx-key-hand"></span><span class="ow-fx-sum-k">In hand today</span><span class="ow-fx-sum-v">${b(a.onHand)} UGX</span></div>
+        <div class="ow-fx-sum-r"><span class="ow-fx-key ow-fx-key-due"></span><span class="ow-fx-sum-k">Falls due in the window</span><span class="ow-fx-sum-v">${b(dueTotal)} UGX</span></div>
+        ${onOrder ? `<div class="ow-fx-sum-r"><span class="ow-fx-key ow-fx-key-ord"></span><span class="ow-fx-sum-k">On order, paid on arrival</span><span class="ow-fx-sum-v">${b(onOrder)} UGX</span></div>` : ''}
+        ${a.promised.length ? `<div class="ow-fx-sum-r"><span class="ow-fx-key ow-fx-key-word"></span><span class="ow-fx-sum-k">Promised to you, if kept</span><span class="ow-fx-sum-v">${b(a.promisedTotal)} UGX</span></div>
+        <div class="ow-fx-sum-r"><span class="ow-fx-key"></span><span class="ow-fx-sum-k">Of that, in safe to spend</span><span class="ow-fx-sum-v">0 UGX</span></div>` : ''}
+        <div class="ow-fx-sum-r ow-fx-sum-tot"><span class="ow-fx-key ow-fx-key-safe"></span><span class="ow-fx-sum-k">Safe to spend</span><span class="ow-fx-sum-v${short ? ' ow-fx-bad-t' : ' ow-fx-good-t'}">${b(safe)} UGX</span></div>
+      </div>
+      <p class="ow-fx-tight"><span class="ow-fx-tight-b">the tightest day</span>${esc(fmtShortDate(a.tightest.date))}${short ? `, short ${b(gap)}` : ''}</p>
     </div>
-    <div class="ow-sr"><span class="ow-sr-k">In hand today</span><span class="ow-sr-v">${b(a.onHand)} UGX</span></div>
-    <div class="ow-sr"><span class="ow-sr-k">Falls due in the window</span><span class="ow-sr-v">${b(a.committed)} UGX</span></div>
-    ${a.promised.length ? `<div class="ow-sr"><span class="ow-sr-k">Promised to you, if kept</span><span class="ow-sr-v">${b(a.promisedTotal)} UGX</span></div>
-    <div class="ow-sr"><span class="ow-sr-k">Of that, in safe to spend</span><span class="ow-sr-v">0 UGX</span></div>` : ''}
-    <div class="fc-hzr"><div class="ow-an-win" role="group" aria-label="How far ahead to look">${horizon}</div>
-      <input class="ow-ah-set-f" id="ah_days" type="number" min="1" max="365" step="1" value="${days}" aria-label="How many days ahead to look"></div>
-    ${days === CASH_AHEAD_DAYS ? '' : `<p class="ow-mini"><b>What to buy</b> still budgets from the ${CASH_AHEAD_DAYS}-day figure.</p>`}
   </div>`;
 
-  el.innerHTML = `<div class="ow-grid"><div class="ow-stack">${runway}${ledger}${pools}</div><div class="ow-side">${rail}</div></div>`;
+  /* WHERE THE PLAN BUYS FROM. The plan has always held what is on order
+     back from its own budget; the Cash lens now counts it on the line,
+     so the two figures are the same money read from two ends. */
+  const planBudget = days === CASH_AHEAD_DAYS ? safe : null;
+  const feeds = `<button type="button" class="ow-pan ow-fx-feed" data-golens="stock">
+    <span class="ow-fx-feed-h"><span class="ow-fx-mono ow-fx-mono-buy">B</span><span class="ow-pan-t">Feeds the Stock plan</span>
+      <svg class="ow-fx-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+    <span class="ow-fx-feed-s">${planBudget != null
+      ? `The plan buys with <b class="ow-fx-fig">${b(planBudget)}</b>${onOrder ? ` &middot; the ${b(onOrder)} on order is already counted` : ''}`
+      : `<b>What to buy</b> still budgets from the ${CASH_AHEAD_DAYS}-day figure.`}</span>
+  </button>`;
+
+  /* THE NEXT MOVE. The act that changes what this screen shows is
+     naming a day for a bill nobody has dated -- so the oldest is put in
+     front of the owner with the control on it. Only while nothing is
+     short (then ringing debtors is the move) and nothing is being dated
+     (then the date field is). */
+  const oldest = undated[0];
+  const next = (!short && oldest && !aheadDayEditId) ? `<div class="ow-pan ow-fx-next">
+    <span class="ow-fx-cap">Your next move</span>
+    <div class="ow-fx-next-r">
+      <span class="ow-fx-next-age"><b class="ow-fx-next-n">${oldest.ageDays >= 0 ? oldest.ageDays : '&mdash;'}</b>days</span>
+      <span class="ow-fx-next-t"><b class="ow-fx-next-s">${esc(supplierName(oldest.supplierId) || 'Supplier')}</b><span><span class="ow-fx-fig">${b(oldest.due)}</span> owed with no day named &mdash; the oldest of ${undated.length}.</span></span>
+    </div>
+    <button type="button" class="btn btn-accent ow-fx-wide ow-fx-tall ah-day-set" data-id="${esc(oldest.invoice.id)}"><svg class="ow-fx-i" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9h16M9 3v4M15 3v4"/></svg>Name a day for it</button>
+  </div>` : '';
+
+  /* ---- money with no date, and the act that dates it ----
+     Two POOLS said as pools -- each a ring split by age, darker older --
+     then who the money is with, then the bills themselves on shelves by
+     age with the control that puts them on the line. */
+  const dayCell = (x)=>{
+    const id = String(x.invoice.id);
+    if(aheadDayEditId === id) return `<span class="ow-ah-dy">
+      <input class="ow-ah-dy-f" type="date" id="ah_day_field" value="${esc(todayISO())}" aria-label="The day you will pay this bill">
+      <button type="button" class="btn btn-accent ow-sm ah-day-save" data-id="${esc(id)}">Write it down</button>
+      <button type="button" class="btn btn-ghost ow-sm ah-day-cancel">Cancel</button>
+    </span>`;
+    return '';
+  };
+  const undatedRow = (x)=> `<div class="ow-ah-lr${aheadDayEditId === String(x.invoice.id) ? ' ow-open' : ''}">
+    <span class="ow-ah-when"><span class="ow-ah-when-d">${x.ageDays >= 0 ? esc(agingDaysLabel(x.ageDays)) : '&mdash;'}</span>since the bill</span>
+    <span class="ow-ah-what">${esc(supplierName(x.supplierId) || 'Supplier')}<span class="ow-ah-what-s">${esc(purchaseInvoiceNumberLabel(x.invoice))}${
+      x.invoice.date ? ' &middot; dated ' + esc(fmtShortDate(x.invoice.date)) : ''}</span>${dayCell(x)}${
+      aheadDayEditId === String(x.invoice.id)
+        ? `<span class="ow-ah-note">Writing this down puts <b class="ow-ah-fig">${f(x.due)}</b> on the line for the day you choose, and what is safe to spend drops by it if that day falls inside the window &mdash; to <b class="ow-ah-fig">${f(Math.max(0, safe - x.due))}</b>. It does not pay anything and it tells nobody &mdash; it is your own note of what you intend.</span>` : ''}</span>
+    <span class="ow-ah-out">${b(x.due)}</span>
+    <span class="ow-ah-bal">${aheadDayEditId === String(x.invoice.id) ? '' :
+      `<button type="button" class="btn btn-ghost ow-sm ah-day-set" data-id="${esc(x.invoice.id)}">Name a day</button>`}</span>
+  </div>`;
+  const editing = undated.find(x=> aheadDayEditId === String(x.invoice.id)) || null;
+
+  /* The pools by age. Under 30 days, 30 to 60, over 60: the same three
+     shelves the bills sit on, so "darker is older" means one thing. */
+  const promisedIds = new Set(a.promised.map(p=> String(p.customerId)));
+  const debtsAll = collectableDebts();
+  const debtsUndated = debtsAll.filter(d=> !promisedIds.has(String(d.id)));
+  const ageSplit = (rows, amt, age)=>{
+    const s = [0, 0, 0];
+    rows.forEach(r=>{ const d = age(r); s[d > 60 ? 2 : d > 30 ? 1 : 0] += amt(r); });
+    return s;
+  };
+  const splitIn = ageSplit(debtsUndated, (d)=> d.debt, (d)=> d.ageDays);
+  const splitOut = ageSplit(undated, (x)=> x.due, (x)=> x.ageDays);
+  const poolRing = (split, cls)=>{
+    const tot = split.reduce((n, v)=> n + v, 0);
+    let at = 0;
+    const arcs = tot > 0 ? split.map((v, i)=>{
+      const p = v / tot * 100, o = at; at += p;
+      return p > 0.2 ? `<circle class="ow-fx-pool-a ${cls}${i}" cx="18" cy="18" r="15.9155" pathLength="100" stroke-dasharray="${Math.max(0, p - 1).toFixed(1)} 100" stroke-dashoffset="${(-o).toFixed(1)}"/>` : '';
+    }).join('') : '';
+    return `<svg class="ow-fx-pool-svg" viewBox="0 0 36 36" aria-hidden="true"><g transform="rotate(-90 18 18)"><circle class="ow-fx-pool-t" cx="18" cy="18" r="15.9155"/>${arcs}</g></svg>`;
+  };
+  const ageKey = (split, cls)=> ['Under 30 days', '30 &ndash; 60 days', 'Over 60 days'].map((lab, i)=>
+    `<span class="ow-fx-pool-kr"><span class="ow-fx-key ${cls}${i}"></span><span class="ow-fx-pool-kl">${lab}</span><span class="ow-fx-pool-kv">${esc(M(split[i]))}</span></span>`).join('');
+  const pools2 = (a.owedToYou.total > 0 || owed.undatedTotal > 0) ? `<div class="ow-fx-pools">
+      <div class="ow-fx-pool ow-fx-pool-in">
+        <span class="ow-fx-cap ow-fx-cap-in">Owed to you</span>
+        <span class="ow-fx-pool-r">${poolRing(splitIn, 'ow-fx-in')}<span class="ow-fx-pool-c"><span class="ow-fx-pool-v">${esc(M(a.owedToYou.total))}</span><span class="ow-fx-pool-s">${a.owedToYou.count} customer${a.owedToYou.count === 1 ? '' : 's'}</span></span></span>
+        <span class="ow-fx-pool-k">${ageKey(splitIn, 'ow-fx-in')}</span>
+      </div>
+      <div class="ow-fx-pool">
+        <span class="ow-fx-cap">Owed by you</span>
+        <span class="ow-fx-pool-r">${poolRing(splitOut, 'ow-fx-out')}<span class="ow-fx-pool-c"><span class="ow-fx-pool-v">${esc(M(owed.undatedTotal))}</span><span class="ow-fx-pool-s">${owed.undated} bill${owed.undated === 1 ? '' : 's'}</span></span></span>
+        <span class="ow-fx-pool-k">${ageKey(splitOut, 'ow-fx-out')}</span>
+      </div>
+    </div>` : '';
+  const net = a.owedToYou.total - owed.undatedTotal;
+  const top = debtsAll.slice().sort((x, y)=> y.debt - x.debt).slice(0, 3);
+  const promiseOf = new Map(a.promised.map(p=> [String(p.customerId), p]));
+  /* The app's one lettering, so "Reagan - Stuart" is RS and not R-. */
+  const initials = (s)=> typeof nameInitials === 'function' ? nameInitials(s) : '?';
+  const who = top.length ? `<div class="ow-fx-who">
+      <div class="ow-fx-who-h"><span class="ow-fx-cap">Largest owed to you</span></div>
+      ${top.map(d=>{
+        const p = promiseOf.get(String(d.id));
+        return `<div class="ow-fx-who-r"><span class="ow-fx-ava">${esc(initials(d.name))}</span><span class="ow-fx-who-t"><span class="ow-fx-who-n">${esc(d.name)}</span><span class="ow-fx-who-s${p ? ' ow-fx-good-t' : d.ageDays > 60 ? ' ow-fx-bad-t' : ''}">${
+          p ? 'promised ' + esc(fmtShortDate(p.date)) + (p.brokenBefore ? ' &middot; broke ' + p.brokenBefore + ' before' : '')
+            : d.ageDays >= 0 ? 'waiting ' + esc(agingDaysLabel(d.ageDays)) + ' &middot; no day named' : 'age not on record'}</span></span><span class="ow-fx-who-v">${b(d.debt)}</span></div>`;
+      }).join('')}
+    </div>` : '';
+  const shelf = (name, rows, cls)=> `<div class="ow-fx-shelf">
+      <span class="ow-fx-shelf-k ${cls}"></span>
+      <span class="ow-fx-shelf-h"><span class="ow-fx-cap">${name}</span><span class="ow-fx-shelf-v">${rows.length ? b(rows.reduce((n, x)=> n + x.due, 0)) : '&mdash;'}</span></span>
+      ${rows.slice(0, 4).map(x=> `<button type="button" class="ow-fx-bill ah-day-set${aheadDayEditId === String(x.invoice.id) ? ' ow-on' : ''}" data-id="${esc(x.invoice.id)}" title="${esc((supplierName(x.supplierId) || 'Supplier') + ' · ' + b(x.due) + (x.ageDays >= 0 ? ' · ' + x.ageDays + ' days since the bill' : ''))}">
+        <span class="ow-fx-bill-n">${esc(supplierName(x.supplierId) || 'Supplier')}</span><span class="ow-fx-bill-v">${b(x.due)}</span>
+        <span class="ow-fx-bill-s">${esc(purchaseInvoiceNumberLabel(x.invoice))} &middot; ${x.ageDays >= 0 ? x.ageDays + ' days' : 'no date'}</span><span class="ow-fx-bill-go">Name a day</span>
+      </button>`).join('')}
+      ${rows.length > 4 ? `<span class="ow-fx-shelf-more">and ${rows.length - 4} more on Creditors</span>` : ''}
+    </div>`;
+  const shelves = undated.length ? `<div class="ow-fx-shelves">
+      ${shelf('Over 60 days', undated.filter(x=> x.ageDays > 60), 'ow-fx-out2')}
+      ${shelf('30 &ndash; 60 days', undated.filter(x=> x.ageDays > 30 && x.ageDays <= 60), 'ow-fx-out1')}
+      ${shelf('Under 30 days', undated.filter(x=> !(x.ageDays > 30)), 'ow-fx-out0')}
+    </div>` : '';
+  const pools = `<div class="ow-pan">
+    <div class="ow-pan-h">
+      <span class="ow-pan-t">Money with no date on it</span>
+      <span class="ow-pan-n">not on the line, because nobody has named a day for it</span>
+      <button type="button" class="ow-db-go ow-fx-push" id="ah_to_cred">Open Creditors</button>
+    </div>
+    <div class="ow-fx-nodate-b">
+      <div class="ow-fx-nodate-l">
+        ${pools2}
+        ${(a.owedToYou.total > 0 || owed.undatedTotal > 0) ? `<div class="ow-fx-net"><span class="ow-fx-net-k">${net >= 0 ? 'Net, in your favour' : 'Net, against you'}</span><span class="ow-fx-net-v${net < 0 ? ' ow-fx-bad-t' : ''}">${net >= 0 ? '+' : '−'}${b(Math.abs(net))}</span></div>` : ''}
+        <p class="ow-mini ow-fx-pool-say"><b>Owed to you:</b> ${a.owedToYou.count} customer${a.owedToYou.count === 1 ? '' : 's'}${
+          a.owedToYou.oldestDays ? `, the oldest waiting <b class="ow-ah-pool-n">${a.owedToYou.oldestDays}</b> days` : ''}. When one names a day, tap <b class="ow-ah-pool-n">They promised&hellip;</b> on <b class="ow-ah-pool-n">Follow-ups</b> and it joins the line as their word.
+          <b>Owed by you:</b> ${owed.undated} bill${owed.undated === 1 ? '' : 's'} with no day named${
+          owed.undatedOldestDays ? `, the oldest <b class="ow-ah-pool-n">${owed.undatedOldestDays}</b> days old` : ''}. Naming a day puts it on the line and drops what is safe to spend, which is the point of saying it.</p>
+        ${who}
+      </div>
+      <div class="ow-fx-nodate-r">${shelves || '<p class="ow-mini">Every open bill carries a day you named &mdash; nothing to date here.</p>'}</div>
+    </div>
+    ${editing ? `<div class="ow-ah-h ow-fx-edit-h">
+      <span>Undated</span><span>Supplier</span><span class="ow-ah-h-r">Still open</span><span class="ow-ah-h-r">Name a day</span>
+    </div>${undatedRow(editing)}` : ''}
+    <p class="ow-mini">${owed.count === 0 ? 'You owe nothing on any open bill.'
+      : `You owe <b>${f(owed.total)}</b> on ${owed.count} open ${owed.count === 1 ? 'bill' : 'bills'} in all. ${
+        owed.dated ? `${owed.dated} of them, <b>${f(owed.datedTotal)}</b>, ${owed.dated === 1 ? 'carries a day you named and is' : 'carry days you named and are'} already on the line above &mdash; not counted twice.`
+          : 'None of them carries a day yet, so none of it is on the line above.'}${
+        undated.length > 12 ? ` The rest of the ${undated.length} are on <b>Creditors</b>.` : ''}`}</p>
+    ${owed.missedOwnWord ? `<p class="ow-mini"><b>${owed.missedOwnWord} ${owed.missedOwnWord === 1 ? 'bill has' : 'bills have'} gone past the day you named.</b> That is your own word rather than the supplier&rsquo;s patience, and it is what costs a shop its credit. ${
+      owed.missedOwnWord === 1 ? 'It counts' : 'They count'} against today on the line above until paid or re-dated.</p>` : ''}
+  </div>`;
+
+  const rail = `${chase}${worked}${feeds}${next}`;
+  el.innerHTML = `<div class="ow-fx">${runway}<div class="ow-grid"><div class="ow-stack">${ledger}</div><div class="ow-side">${rail}</div></div>${pools}</div>`;
+
+  /* A CHIP IS A DAY ON THE LINE. Pressing one reads that day off the
+     chart above, through the same pointer path a finger takes, so the
+     reading can never come from a second calculation. */
+  el.querySelectorAll('.ow-fx-chip').forEach(btn=> btn.addEventListener('click', ()=>{
+    const svg = el.querySelector('.ow-ah-plot.ow-hide-sm .ow-ah-svg');
+    if(!svg || typeof PointerEvent !== 'function') return;
+    const r = svg.getBoundingClientRect();
+    const x = r.left + r.width * (Number(btn.dataset.x) || 0) / 100;
+    svg.dispatchEvent(new PointerEvent('pointermove', { clientX: x, clientY: r.top + r.height / 2, bubbles: true, pointerType: 'mouse' }));
+    el.querySelectorAll('.ow-fx-chip.ow-on').forEach(c=> c.classList.remove('ow-on'));
+    btn.classList.add('ow-on');
+  }));
+  el.querySelectorAll('[data-golens]').forEach(btn=> btn.addEventListener('click', ()=>{
+    if(typeof fcLens === 'undefined') return;
+    fcLens = btn.dataset.golens;
+    renderForecasts();
+  }));
 
   /* ---- reading a day off the line ----
 
@@ -132103,6 +132972,15 @@ function renderPurchasePlanPanel(){
       <span class="bp-tier-l">The shelf needs ${l.needQty} ${esc(l.unit || 'pc')}; the rest is the volume price.</span>
       <button type="button" class="btn btn-ghost ow-sm bp-tier-drop" data-tag="${esc(String(l.tag))}">Back to ${l.needQty}</button>
     </div>`;
+  /* A SHOPPING LIST, NOT A REPORT. One row per thing to buy, read left
+     to right the way a list is: the tick, what and from whom, how the
+     shelf stands, how many at what, and what it comes to. The argument
+     for each line stays on the row, under the instruction, because a
+     line that says buy without saying why is an order nobody can check. */
+  const lead = (l)=>{
+    const d = Number(l.leadDays);
+    return d > 0 ? 'lorry in ' + Math.round(d) + (Math.round(d) === 1 ? ' day' : ' days') : 'no lead time on file';
+  };
   const row = (l, list, i)=> {
     const picked = buyOrderBasket.has(String(l.tag));
     const transit = l.inTransit
@@ -132110,162 +132988,238 @@ function renderPurchasePlanPanel(){
       : '';
     const why = buyLineWhy(l);
     const fs = facts(l);
-    return `${holdBand(l)}<div class="ow-tbl-r bp-line${picked ? ' picked' : ''}">
+    const rank = (list === 'didNotFit' ? plan.lines.length : 0) + i + 1;
+    return `${holdBand(l)}<div class="ow-tbl-r bp-line ow-fx-sl${picked ? ' picked' : ''}${list === 'didNotFit' ? ' ow-fx-sl-over' : ''}">
       <div class="ow-tbl-c bp-pick"><button type="button" class="bp-ck buy-pick${picked ? ' on' : ''}" data-tag="${esc(String(l.tag))}" data-t="${picked ? 'On the order' : 'Order it'}" aria-pressed="${picked ? 'true' : 'false'}" title="${picked ? 'On the order — take it off' : 'Put it on the order'}"></button></div>
-      <div class="ow-tbl-c bp-when">${chip(l)}${
-        /* Days left as a bar against the cover asked for: the tick is
-           the cover, and a line that has run out has no bar at all. */
-        l.daysLeft != null ? `<span class="fc-left" title="${Math.max(0, Math.floor(l.daysLeft))} days left of ${plan.coverDays} asked for"><i class="${l.daysLeft <= 0 ? 'fc-left-f fc-left-out' : l.daysLeft < 2 ? 'fc-left-f fc-left-soon' : 'fc-left-f'}" style="width:${Math.max(0, Math.min(100, l.daysLeft / (plan.coverDays * 1.25) * 100)).toFixed(1)}%"></i><i class="fc-left-k" style="left:80%"></i></span>` : ''}</div>
-      <div class="ow-tbl-c bp-it">
-        <span class="ow-tbl-p" title="${esc(l.name)}">${esc(l.name)}</span>
+      <div class="ow-tbl-c bp-it ow-fx-sl-it">
+        <span class="ow-fx-sl-n"><span class="ow-fx-sl-rk">${rank}.</span><span class="ow-tbl-p" title="${esc(l.name)}">${esc(l.name)}</span></span>
         <span class="bp-do">Buy <b>${l.buyQty} ${esc(l.unit || 'pc')}</b>${packNote(l)} from <b>${esc(l.supplier)}</b> at ${f(l.unitCost)} each</span>
         <span class="bp-w" title="${esc(transit.replace(/<[^>]+>/g, '') + why)}">${transit}${esc(why)}${fs ? '<span class="bp-d">|</span>' + fs : ''}</span>
       </div>
-      <div class="ow-tbl-n bp-cost" data-l="Line cost"><span class="ow-fig">${num(l.cost)}</span><span class="ow-fig-b">${l.buyQty} × ${num(l.unitCost)}</span></div>
+      <div class="ow-tbl-c bp-when ow-fx-sl-sh">${chip(l)} <span class="ow-fx-sl-lead">${lead(l)}</span></div>
+      <div class="ow-tbl-n ow-fx-sl-q" data-l="Quantity"><span class="ow-fig">${l.buyQty} ${esc(l.unit || 'pc')}</span><span class="ow-fig-b">× ${num(l.unitCost)}</span></div>
+      <div class="ow-tbl-n bp-cost ow-fx-cost" data-l="Line cost"><span class="ow-fig">${num(l.cost)}</span></div>
       <div class="ow-tbl-a"><button type="button" class="btn btn-ghost ow-sm buy-act" data-list="${list}" data-i="${i}">Buy it</button></div>
     </div>${takenBand(l)}${tierBand(l)}`;
   };
-  const table = (rows)=> `<div class="ow-tbl bp-tbl">
-      <div class="ow-tbl-h"><div class="ow-tbl-c"></div><div class="ow-tbl-c">When</div><div class="ow-tbl-c">Item · supplier</div><div class="ow-tbl-n">Line cost</div><div class="ow-tbl-c"></div></div>
+  const table = (rows)=> `<div class="ow-tbl bp-tbl ow-fx-tbl">
+      <div class="ow-tbl-h"><div class="ow-tbl-c"></div><div class="ow-tbl-c">Item</div><div class="ow-tbl-c">Shelf</div><div class="ow-tbl-n">Quantity</div><div class="ow-tbl-n">Total</div><div class="ow-tbl-c"></div></div>
       ${rows}</div>`;
 
   /* ---- the position ---- */
   const left = plan.budget == null ? null : Math.max(0, plan.budget - plan.spend);
-  const out = plan.lines.concat(plan.didNotFit).filter(l=> l.kind !== 'stock' && l.daysLeft <= 0).length;
   const open = buyOrdersOpenRows(todayISO());
+  const overTot = plan.didNotFit.reduce((t, l)=> t + (l.cost || 0), 0);
   /* ---- NO STRIP OF ITS OWN ----
-     This lens had four tiles: what the plan comes to, what is left of
-     the budget, what is on order, and how many lines have run out. The
-     screen's strip is the one above all three lenses now, and it already
-     carries the two of those that are not about this lens alone -- what
-     the shelf needs back in time, and what has run out.
+     The screen's strip is the one above all three Forecasts lenses. The
+     plan's total sits on the head of the panel that lists it, and what
+     is left of the budget is the last row of the sum that works the
+     budget out -- now the console at the top of the lens. */
 
-     The other two go where their arithmetic already lives rather than
-     into a second band of figures: the plan's total onto the head of the
-     panel that lists it, and what is left of the budget onto the foot of
-     "Where the budget came from", which is the sum it belongs to. What
-     is on order was always said twice over -- the "On the way" panel
-     heads with it, and the note under that panel says what it does to
-     the budget. */
+  /* ---- THE BUDGET, SPENT ----
+     A console, because this is the one figure the whole lens is built
+     on: where the money comes from on the left, how much of it the plan
+     has spoken for in the middle, and what it buys and what it cannot on
+     the right. The sum is the same rows it always was. */
+  const lateCount = ahead.commitments.filter(c=> c.overdue).length;
+  const nextUp = ahead.commitments.find(c=> !c.overdue);
+  const sr = (k, v, tot)=> `<div class="ow-sr${tot ? ' bp-tot ow-fx-tot' : ''}"><span class="ow-sr-k">${k}</span><span class="ow-sr-v">${v}</span></div>`;
+  const bud = plan.budget == null ? 0 : plan.budget;
+  const fits = plan.spend || 0;
+  const pct = bud > 0 ? Math.round(fits / bud * 100) : (fits > 0 ? 100 : 0);
+  /* The dial is three quarters of a ring, so its empty quarter reads as
+     "the bottom of the dial" rather than as a missing slice. */
+  const arcFit = bud > 0 ? Math.min(75, fits / bud * 75) : 0;
+  const arcLeft = bud > 0 && left ? Math.min(75 - arcFit, left / bud * 75) : 0;
+  const inside = plan.lines.slice(0, 5);
+  const beyond = plan.didNotFit.slice(0, 4);
+  const shortN = (s)=> String(s || '').split(/[\s(,]/)[0];
+  const consoleHTML = `<div class="ow-pan ow-fx-con">
+    <div class="ow-fx-con-src">
+      <span class="ow-fx-con-k">The plan works to</span>
+      <span class="ow-fx-con-v">${num(bud)}<span class="ow-u">UGX</span></span>
+      <div class="ow-fx-con-sum">
+      ${buyBudget == null
+        ? sr('Cash in hand', num(cash))
+          + (ahead.committed > 0 ? sr(`Promised, next ${ahead.days} days`, '−' + num(ahead.committed)) : '')
+          + sr('Safe to spend', num(ahead.safeToSpend), true)
+        : sr('You typed', num(buyBudget), true)}
+      ${plan.onOrder ? sr(`Out on ${open.length} ${open.length === 1 ? 'order' : 'orders'}`, '−' + num(plan.onOrder)) : ''}
+      ${sr('The plan works to', num(plan.budget == null ? 0 : plan.budget), true)}
+      ${/* AND WHAT IS LEFT OF IT -- the last row of the sum, where a reader
+           who has just watched the budget be worked out can see what the
+           plan did not spend. */
+        plan.budget == null ? '' : sr('Left of it', num(left), true)}
+      </div>
+      ${buyBudget == null
+        ? (ahead.committed > 0
+          ? `<p class="ow-mini">Budget is ${f(ahead.safeToSpend)}, not the ${f(cash)} in hand: ${
+              f(ahead.committed)} is already promised in the next ${ahead.days} days${
+              lateCount ? `, ${lateCount} of them already overdue` : ''}${
+              nextUp ? `, the ${lateCount ? 'next' : 'first'} on ` + esc(fmtShortDate(nextUp.dueOn)) : ''
+            }. What&#39;s coming has the dates — or type a budget above to overrule it.</p>`
+          : `<p class="ow-mini">Nothing is promised inside the next ${ahead.days} days, so the cash in hand is what is safe to spend. Type a budget above to work to a different figure.</p>`)
+        : '<p class="ow-mini">Typed by you. Clear the box above to go back to what the cash line says is safe to spend.</p>'}
+    </div>
+    <div class="ow-fx-con-g">
+      <span class="ow-fx-dial">
+        <svg class="ow-fx-dial-svg" viewBox="0 0 40 40" aria-hidden="true"><g transform="rotate(135 20 20)">
+          <circle class="ow-fx-dial-t" cx="20" cy="20" r="16" pathLength="100" stroke-dasharray="75 100"/>
+          ${arcFit > 0.3 ? `<circle class="ow-fx-dial-f" cx="20" cy="20" r="16" pathLength="100" stroke-dasharray="${Math.max(0, arcFit - 0.6).toFixed(1)} 100"/>` : ''}
+          ${arcLeft > 0.3 ? `<circle class="ow-fx-dial-l" cx="20" cy="20" r="16" pathLength="100" stroke-dasharray="${Math.max(0, arcLeft - 0.6).toFixed(1)} 100" stroke-dashoffset="${(-arcFit).toFixed(1)}"/>` : ''}
+        </g></svg>
+        <span class="ow-fx-dial-c"><span class="ow-fx-dial-v">${pct}%</span><span class="ow-fx-dial-k">of the budget planned</span>${
+          left != null ? `<span class="ow-fx-dial-s">${num(left)} left</span>` : ''}</span>
+      </span>
+    </div>
+    <div class="ow-fx-con-l">
+      <span class="ow-fx-con-k">Inside the budget</span>
+      ${inside.length ? inside.map((l, i)=> `<span class="ow-fx-con-r"><i class="ow-fx-con-t">${i + 1}</i><span class="ow-fx-con-n" title="${esc(l.name)}">${esc(l.name)}</span><span class="ow-fx-con-a">${num(l.cost)}</span></span>`).join('')
+        : '<span class="ow-fx-con-r"><span class="ow-fx-con-n">Nothing fits inside it yet</span></span>'}
+      ${plan.lines.length > inside.length ? `<span class="ow-fx-con-more">and ${plan.lines.length - inside.length} more</span>` : ''}
+      ${left ? `<span class="ow-fx-con-r ow-fx-con-left"><i class="ow-fx-con-t"></i><span class="ow-fx-con-n">Left</span><span class="ow-fx-con-a">${num(left)}</span></span>` : ''}
+      ${plan.didNotFit.length ? `<span class="ow-fx-con-cut"><span>Beyond it</span><b class="ow-fx-con-cutv">+${num(overTot)}</b></span>
+      <span class="ow-fx-con-chips">${beyond.map((l, i)=> `<span class="ow-fx-con-chip" title="${esc(l.name)} · ${num(l.cost)}"><b class="ow-fx-con-chipn">${plan.lines.length + i + 1}</b> ${esc(shortN(l.name))} <span class="ow-fx-con-chipv">${num(l.cost)}</span></span>`).join(' ')} ${
+        plan.didNotFit.length > beyond.length ? `<span class="ow-fx-con-chip">+${plan.didNotFit.length - beyond.length}</span>` : ''}</span>` : ''}
+    </div>
+  </div>`;
 
-  /* ---- on the way, FIRST: a buyer who cannot see it buys it twice ---- */
+  /* ---- on the way: a delivery tracker per order ----
+     Four stages, the one it is at lit, and the days until the day they
+     named. A buyer who cannot see what is coming buys it twice. */
+  const dTo = (iso)=> Math.round((Date.parse(iso + 'T00:00:00Z') - Date.parse(todayISO() + 'T00:00:00Z')) / 86400000);
+  const tick = '<svg class="ow-fx-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  const stage = (state, label, sub)=> `<div class="ow-fx-st ow-fx-st-${state}"><span class="ow-fx-st-d">${state === 'done' ? tick : ''}</span><span class="ow-fx-st-t"><b class="ow-fx-st-l">${label}</b><span class="ow-fx-st-s">${sub}</span></span></div>`;
   const ordPanel = !open.length ? '' : `<div class="ow-pan">
     <div class="ow-pan-h"><span class="ow-pan-t">On the way</span><span class="ow-pan-n">${open.length} ${open.length === 1 ? 'order' : 'orders'} · ${num(open.reduce((t, o)=> t + o.total, 0))}</span></div>
     ${open.map(o=> {
       const names = o.lines.map(l=> `${esc(l.name)} — ${l.qty} ${esc(l.unit || 'pc')}`).join(' · ');
-      const when = o.late
-        ? `Was due ${esc(fmtShortDate(o.expectedOn))}`
-        : (o.expectedOn ? `Due ${esc(fmtShortDate(o.expectedOn))}` : 'No day named');
-      const placed = o.days === 0 ? 'ordered today'
-        : (o.days === 1 ? 'ordered yesterday' : `ordered ${o.days} days ago`);
-      return `<div class="bp-ord${o.late ? ' late' : ''}" data-id="${esc(o.id)}">
-        <div class="bp-ord-m">
-          <div class="bp-ord-s">${esc(o.supplier)} <span class="ow-cp${o.late ? ' ow-bad' : ''}">${when}</span></div>
-          <div class="bp-ord-l" title="${esc(o.lines.map(l=> l.name + ' — ' + l.qty + ' ' + (l.unit || 'pc')).join(' · '))}">${names} · ${esc(placed)}${o.sentAt ? '' : ' — the message was never opened'}</div>
+      const until = o.expectedOn ? dTo(o.expectedOn) : null;
+      const placed = o.days === 0 ? 'today' : (o.days === 1 ? 'yesterday' : `${o.days} days ago`);
+      return `<div class="bp-ord${o.late ? ' late' : ''} ow-fx-ord" data-id="${esc(o.id)}">
+        <div class="ow-fx-ord-h">
+          <span class="ow-fx-ord-i"><svg class="ow-fx-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/></svg></span>
+          <span class="ow-fx-ord-t"><span class="bp-ord-s ow-fx-ord-s">${esc(o.supplier)}</span><span class="bp-ord-l ow-fx-ord-l" title="${esc(o.lines.map(l=> l.name + ' — ' + l.qty + ' ' + (l.unit || 'pc')).join(' · '))}">${names} · <span class="ow-fig">${num(o.total)}</span></span></span>
+          <span class="ow-fx-ord-c${o.late ? ' ow-fx-ord-late' : ''}">${until == null ? '<b class="ow-fx-ord-cn">&mdash;</b><span>no day</span>'
+            : o.late ? `<b class="ow-fx-ord-cn">${-until}</b><span>days late</span>` : `<b class="ow-fx-ord-cn">${until}</b><span>${until === 1 ? 'day' : 'days'}</span>`}</span>
         </div>
-        <div class="bp-ord-t"><span class="ow-fig">${num(o.total)}</span></div>
-        <div class="bp-ord-a">
-          <button type="button" class="btn btn-accent ow-sm ord-came" data-id="${esc(o.id)}">It came</button>
-          <button type="button" class="btn btn-ghost ow-sm ord-again" data-id="${esc(o.id)}">Message them</button>
-          <button type="button" class="btn btn-ghost ow-sm ord-when" data-id="${esc(o.id)}">${o.expectedOn ? 'Change the day' : 'When is it due?'}</button>
-          <button type="button" class="btn btn-ghost ow-sm ord-drop" data-id="${esc(o.id)}">It is off</button>
+        <div class="ow-fx-sts">
+          ${stage('done', 'Ordered', esc(placed))}
+          ${stage(o.sentAt ? 'done' : 'cur', o.sentAt ? 'Message opened' : 'Message not sent', o.sentAt ? 'the supplier has it' : 'the message was never opened')}
+          ${stage(o.sentAt ? (o.late ? 'late' : 'cur') : 'todo', o.late ? `Was due ${esc(fmtShortDate(o.expectedOn))}` : (o.expectedOn ? `Due ${esc(fmtShortDate(o.expectedOn))}` : 'No day named'), 'paid when it arrives')}
+          ${stage('todo', 'On the shelf', 'tap It came when the lorry is in')}
+        </div>
+        <div class="bp-ord-a ow-fx-ord-a">
+          <button type="button" class="btn btn-ghost ow-sm ow-fx-tap ord-came" data-id="${esc(o.id)}">It came</button>
+          <button type="button" class="btn btn-ghost ow-sm ow-fx-tap ord-again" data-id="${esc(o.id)}">Message them</button>
+          <button type="button" class="btn btn-ghost ow-sm ow-fx-tap ord-when" data-id="${esc(o.id)}">${o.expectedOn ? 'Change the day' : 'When is it due?'}</button>
+          <button type="button" class="btn btn-ghost ow-sm ow-fx-tap ord-drop" data-id="${esc(o.id)}">It is off</button>
         </div>
       </div>`;
     }).join('')}
-    <p class="ow-mini">${plan.onOrder ? `${f(plan.onOrder)} is already out on ${open.length === 1 ? 'an order' : open.length + ' orders'} that ${open.length === 1 ? 'has' : 'have'} not arrived, so the plan is working to ${f(plan.budget)} rather than ${f(plan.budgetBefore)}. ` : ''}Nothing has left the drawer for it yet — it comes off the cash line only when the goods arrive and you name the day you will pay.</p>
+    <p class="ow-mini">${plan.onOrder ? `${f(plan.onOrder)} is already out on ${open.length === 1 ? 'an order' : open.length + ' orders'} that ${open.length === 1 ? 'has' : 'have'} not arrived, so the plan is working to ${f(plan.budget)} rather than ${f(plan.budgetBefore)}. ` : ''}It sits on the cash line on the day it is due, and nothing is owed for it until the goods arrive.</p>
   </div>`;
 
   /* ---- the plan ---- */
-  const picked = plan.lines.concat(plan.didNotFit).filter(l=> buyOrderBasket.has(String(l.tag))).length;
+  const pickedN = plan.lines.concat(plan.didNotFit).filter(l=> buyOrderBasket.has(String(l.tag))).length;
   const ranOut = plan.ranOut || [];
   const nothing = !plan.lines.length && !plan.sourceFirst.length && !ranOut.length && !plan.didNotFit.length;
-  let work = ordPanel;
+  let work = consoleHTML;
   if(nothing){
     work += `<div class="ow-pan"><div class="ow-empty"><b>Nothing to buy.</b><br>${plan.coming.length
       ? 'Everything that was running short is on an order already out.'
       : `Nothing on the shelf runs out within ${days(plan.coverDays)}, and nothing is being bought in order after order.`}</div></div>`;
   } else {
-    if(plan.budget === 0 && buyBudget == null) work += `<p class="ow-mini"><b>There is nothing safe to spend, so the plan is empty.</b>
+    if(plan.budget === 0 && buyBudget == null) work += `<p class="ow-mini ow-fx-say">There is nothing safe to spend, so the plan is empty.
       Every shilling in the drawer is already promised to a day inside the next ${ahead.days}. What is below is what the shop would buy
       the moment there is something to buy it with. Collecting is what makes it affordable, and Follow-ups has who to ring —
       <b>What collecting would pay for</b>, beside, works out which of them, and exactly what their money would buy.
       Or type a budget above to overrule this.</p>`;
     /* The best few, by what they earn. The rest are one tap away --
        the owner asked for a recommendation, not a catalogue. */
-    work += `<div class="ow-pan">
-      <div class="ow-pan-h"><span class="ow-pan-t">Buy these, in this order</span><span class="ow-pan-n">${plan.lines.length} ${plan.lines.length === 1 ? 'line' : 'lines'}${plan.lines.length ? ' · ' + num(plan.spend) : ''}${picked ? ` · ${picked} ticked` : ''}</span></div>
+    work += `<div class="ow-pan ow-fx-list">
+      <div class="ow-pan-h"><span class="ow-pan-t">Buy these, in this order</span><span class="ow-pan-n">ranked by what each earned in the last 30 days &middot; ${plan.lines.length} ${plan.lines.length === 1 ? 'line' : 'lines'}${plan.lines.length ? ' · ' + num(plan.spend) : ''}${pickedN ? ` · ${pickedN} ticked` : ''}</span></div>
       ${plan.lines.length
         ? table(listPageSlice('buyPlan', plan.lines).map((l,i)=> row(l, 'lines', i)).join('')) + listMoreButtonHTML('buyPlan', plan.lines.length, 'lines')
+          + `<div class="ow-fx-foot"><span>${plan.lines.length} ${plan.lines.length === 1 ? 'line' : 'lines'} · inside the budget</span><span class="ow-fx-foot-k">Subtotal</span><span class="ow-fx-foot-v">${num(plan.spend)}</span></div>`
         : '<p class="ow-mini">Nothing fits inside the budget. What is below is what the shop would buy with more.</p>'}
     </div>`;
-    if(plan.didNotFit.length) work += `<div class="ow-pan">
-      <div class="ow-pan-h"><span class="ow-pan-t">Over this budget</span><span class="ow-pan-n">${plan.didNotFit.length} ${plan.didNotFit.length === 1 ? 'line' : 'lines'} · ${num(plan.didNotFit.reduce((t,l)=> t + l.cost, 0))}</span></div>
+    if(plan.didNotFit.length) work += `<div class="ow-pan ow-fx-list ow-fx-list-over">
+      <div class="ow-pan-h"><span class="ow-pan-t">Over this budget</span><span class="ow-pan-n">would be bought next, with more money &middot; ${plan.didNotFit.length} ${plan.didNotFit.length === 1 ? 'line' : 'lines'}</span></div>
       ${table(plan.didNotFit.slice(0, 3).map((l,i)=> row(l, 'didNotFit', i)).join(''))}${
       plan.didNotFit.length > 3 ? `<p class="ow-mini">and ${plan.didNotFit.length - 3} more.</p>` : ''}
+      <div class="ow-fx-foot ow-fx-foot-over"><span>${plan.didNotFit.length} ${plan.didNotFit.length === 1 ? 'line' : 'lines'} · past the budget</span><span class="ow-fx-foot-k">More needed</span><span class="ow-fx-foot-v">${num(overTot)}</span></div>
     </div>`;
   }
-  /* READ AND ANSWERED, NOT BOUGHT. What the lines above cannot be used
-     without and the shelf still holds: named so the owner can see the
-     pairing was read, and nothing is added to the spend for it. */
+  /* READ AND ANSWERED, NOT BOUGHT. */
   if(plan.alongside && plan.alongside.length) work += `<div class="ow-pan">
     <div class="ow-pan-h"><span class="ow-pan-t">Goes with what is being bought</span><span class="ow-pan-n">${plan.alongside.length} &middot; already on the shelf</span></div>
     ${plan.alongside.slice(0, 5).map(a=> `<div class="ow-sr"><span class="ow-sr-k">${esc(a.name)} &mdash; ${esc(a.with)} cannot be used without it</span><span class="ow-sr-v">${a.stock == null ? 'not counted' : num(Math.round(a.stock)) + ' on the shelf'}</span></div>`).join('')}
     <p class="ow-mini">Nothing is bought for these: the shelf has them. They are named because what is being bought needs them, and running out of one empties the other.</p>
   </div>`;
-
-  /* ---- the rail: where the budget came from, and what would change it ---- */
-  /* WHAT IS LATE AND WHAT IS NEXT ARE TWO DIFFERENT FACTS. cashCommitments
-     clamps an overdue payment's date to today so it sits at the head of
-     the line, keeping the day it was really due behind it -- so reading
-     the first row's dueOn printed "already promised in the next 30 days,
-     the first on 31 Jul 2026" onto a screen dated 29 August, a sentence
-     arguing with itself. Money already late is the more urgent half of
-     that and gets said first; the next day something actually falls is
-     found among the rows that are still ahead. */
-  const lateCount = ahead.commitments.filter(c=> c.overdue).length;
-  const nextUp = ahead.commitments.find(c=> !c.overdue);
-  const sr = (k, v, tot)=> `<div class="ow-sr${tot ? ' bp-tot' : ''}"><span class="ow-sr-k">${k}</span><span class="ow-sr-v">${v}</span></div>`;
-  let rail = `<div class="ow-pan">
-    <div class="ow-pan-h"><span class="ow-pan-t">Where the budget came from</span></div>
-    ${(()=>{
-      /* The plan against the budget as one bar: what fits, and what
-         does not, hatched, so an over-budget plan is seen at once. */
-      const fits = plan.spend || 0;
-      const over = plan.didNotFit.reduce((t, l)=> t + (l.cost || 0), 0);
-      if(!(fits + over > 0)) return '';
-      return `<div class="fc-bud"><span class="fc-bar"><i class="fc-bar-f" style="flex-grow:${fits}"></i><i class="fc-bar-f fc-bar-over" style="flex-grow:${over}"></i></span>
-        <span class="fc-bud-k"><span>fits ${num(fits)}</span>${over > 0 ? `<span class="fc-bud-o">does not fit ${num(over)}</span>` : ''}</span></div>`;
-    })()}
-    ${buyBudget == null
-      ? sr('Cash in hand', num(cash))
-        + (ahead.committed > 0 ? sr(`Promised, next ${ahead.days} days`, '−' + num(ahead.committed)) : '')
-        + sr('Safe to spend', num(ahead.safeToSpend), true)
-      : sr('You typed', num(buyBudget), true)}
-    ${plan.onOrder ? sr(`Out on ${open.length} ${open.length === 1 ? 'order' : 'orders'}`, '−' + num(plan.onOrder)) : ''}
-    ${sr('The plan works to', num(plan.budget == null ? 0 : plan.budget), true)}
-    ${/* AND WHAT IS LEFT OF IT -- the last row of the sum, where a reader
-         who has just watched the budget be worked out can see what the
-         plan did not spend. It was a strip tile 600px above, with
-         nothing around it to check it against. */
-      plan.budget == null ? '' : sr('Left of it', num(left), true)}
-    ${buyBudget == null
-      ? (ahead.committed > 0
-        ? `<p class="ow-mini">Budget is ${f(ahead.safeToSpend)}, not the ${f(cash)} in hand: ${
-            f(ahead.committed)} is already promised in the next ${ahead.days} days${
-            lateCount ? `, ${lateCount} of them already overdue` : ''}${
-            nextUp ? `, the ${lateCount ? 'next' : 'first'} on ` + esc(fmtShortDate(nextUp.dueOn)) : ''
-          }. What&#39;s coming has the dates — or type a budget above to overrule it.</p>`
-        : `<p class="ow-mini">Nothing is promised inside the next ${ahead.days} days, so the cash in hand is what is safe to spend. Type a budget above to work to a different figure.</p>`)
-      : '<p class="ow-mini">Typed by you. Clear the box above to go back to what the cash line says is safe to spend.</p>'}
+  /* SELLING, BUT CANNOT BE PLANNED YET. Two different facts and two
+     different doors, side by side: no supplier price on file (the price
+     form), and a price on file from a supplier who has none (the
+     registry). Costed figures are deliberately absent from both. */
+  if(plan.sourceFirst.length || ranOut.length) work += `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">Selling, but cannot be planned yet</span><span class="ow-pan-n">named rather than guessed at</span></div>
+    <div class="ow-fx-cant-g">
+    ${plan.sourceFirst.length ? `<div class="ow-fx-cant-c">
+      <span class="ow-fx-cap">Selling, no supplier price on file &middot; ${plan.sourceFirst.length}</span>
+      ${plan.sourceFirst.slice(0, 3).map((sf,i)=> `<div class="bp-sr">
+        <span class="bp-sr-n"><b title="${esc(sf.name)}">${esc(sf.name)}</b><em title="${sf.units30} sold in 30 days, about ${Math.ceil(sf.qty)} needed">${sf.units30} sold in 30 days · ${Math.ceil(sf.qty)} needed</em></span>
+        <button type="button" class="btn btn-ghost ow-sm buy-price" data-i="${i}">Add a price</button>
+      </div>`).join('')}
+      ${plan.sourceFirst.length > 3 ? `<p class="ow-mini">and ${plan.sourceFirst.length - 3} more.</p>` : ''}
+    </div>` : ''}
+    ${ranOut.length ? `<div class="ow-fx-cant-c">
+      <span class="ow-fx-cap">Selling, but the supplier has none &middot; ${ranOut.length}</span>
+      ${ranOut.slice(0, 3).map((sf,i)=> `<div class="bp-sr">
+        <span class="bp-sr-n"><b title="${esc(sf.name)}">${esc(sf.name)}</b><em title="${sf.units30} sold in 30 days, about ${Math.ceil(sf.qty)} needed">${sf.units30} sold in 30 days · ${Math.ceil(sf.qty)} needed</em>
+          <span class="bp-sr-w">${esc(sf.markedOut.who)} ${
+            sf.markedOut.days == null ? 'marked out of stock'
+              : sf.markedOut.days === 0 ? 'marked out of stock today'
+              : `marked out of stock ${sf.markedOut.days} day${sf.markedOut.days === 1 ? '' : 's'} ago`}, last at ${
+            fmtUGXPerUnit(sf.markedOut.unitCost, sf.markedOut.unit)}</span></span>
+        <button type="button" class="btn btn-ghost ow-sm buy-oos" data-i="${i}">Open the registry</button>
+      </div>`).join('')}
+      ${ranOut.length > 3 ? `<p class="ow-mini">and ${ranOut.length - 3} more.</p>` : ''}
+    </div>` : ''}
+    </div>
+    <p class="ow-mini">Nothing here can be costed until a supplier can be asked at a price, so none of it is in the figures above.</p>
   </div>`;
-  if(buyBudget == null && ahead.commitments.length){
-    const shown = ahead.commitments.slice(0, 5);
-    rail += `<div class="ow-pan">
-      <div class="ow-pan-h"><span class="ow-pan-t">What is promised</span><span class="ow-pan-n">${num(ahead.committed)}</span></div>
-      ${shown.map(c=> sr(`${esc(c.label || 'Payment')}${c.overdue ? ' <span class="ow-cp ow-bad">overdue</span>' : (c.dueOn ? ' — ' + esc(fmtShortDate(c.dueOn)) : '')}`, num(c.amount || 0))).join('')}
-      ${ahead.commitments.length > shown.length ? `<p class="ow-mini">and ${ahead.commitments.length - shown.length} more — What's coming has them all.</p>` : ''}
-    </div>`;
-  }
+
+  /* ---- the rail: the order being built, what is coming, what would pay ---- */
+  /* THE BASKET, grouped the way it will be sent. Keys that no longer
+     resolve are dropped here rather than carried into the review -- a
+     line the plan has stopped recommending is not a line to order on the
+     strength of a figure nobody can still see. */
+  const pool = plan.lines.concat(plan.didNotFit);
+  const basket = [...buyOrderBasket].map(k=> pool.find(l=> String(l.tag) === k)).filter(Boolean);
+  const bySup = new Map();
+  basket.forEach(l=>{
+    const k = String(l.supplierId);
+    if(!bySup.has(k)) bySup.set(k, { supplier: l.supplier, lines: [], total: 0 });
+    const g = bySup.get(k); g.lines.push(l); g.total += l.cost;
+  });
+  const basketTot = basket.reduce((n, l)=> n + l.cost, 0);
+  const sups = bySup.size;
+  const over = bud > 0 && basketTot > bud;
+  let rail = `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">The order you are building</span>${basket.length ? `<span class="ow-pan-n">${basket.length} ${basket.length === 1 ? 'line' : 'lines'}</span>` : ''}</div>
+    ${basket.length ? `${[...bySup.values()].map(g=> `<div class="ow-fx-bk-g">
+        <span class="ow-fx-bk-h"><span class="ow-fx-mono ow-fx-mono-buy">${esc(String(g.supplier || '?').charAt(0).toUpperCase())}</span><span class="ow-fx-bk-s" title="${esc(g.supplier)}">${esc(g.supplier)}</span><span class="ow-fx-bk-v">${num(g.total)}</span></span>
+        ${g.lines.map(l=> `<span class="ow-fx-bk-l"><span class="ow-fx-bk-ln" title="${esc(l.name)}">${esc(l.name)}</span><span class="ow-fx-bk-lq">${l.buyQty} ${esc(l.unit || 'pc')}</span></span>`).join('')}
+      </div>`).join('')}
+      <div class="ow-fx-bk-tot"><span>Of the ${num(bud)} budget</span><b class="ow-fx-bk-totv${over ? ' ow-fx-bad-t' : ''}">${num(basketTot)}</b></div>
+      <div class="ow-fx-bk-a">
+        <button type="button" class="btn btn-accent ow-fx-wide ow-fx-tall" id="buy_basket_go"><svg class="ow-fx-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v12H4z"/><path d="M4 7l8 6 8-6"/></svg>Draft ${sups} ${sups === 1 ? 'order' : 'orders'} &middot; ${num(basketTot)}</button>
+        <button type="button" class="btn ow-sm bp-bk-clear ow-fx-bk-clear" id="buy_basket_clear">Clear</button>
+      </div>
+      <p class="ow-mini">${sups === 1 ? 'One message' : sups + ' messages'} to send, one delivery each. Each opens for you to send; nothing is owed until it arrives.</p>`
+    : `<div class="ow-empty ow-fx-bk-e"><svg class="ow-fx-i" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12l3 3 5-6"/></svg><span>Tick a line to put it on an order.</span></div>`}
+  </div>`;
+  rail += ordPanel;
   /* AND WHAT WOULD PAY FOR THEM. The screen used to end the argument
      at "collecting is what makes it affordable" and leave the owner
      to work out who and how much. This does the arithmetic. */
@@ -132277,59 +133231,16 @@ function renderPurchasePlanPanel(){
     ${plan.coming.slice(0, 5).map(c=> `<div class="bp-sr"><span class="bp-sr-n"><b>${esc(c.name)}</b><em>${c.qty}${c.unit ? ' ' + esc(c.unit) : ''} ordered against the ${c.needed} needed</em></span></div>`).join('')}
     ${plan.coming.length > 5 ? `<p class="ow-mini">and ${plan.coming.length - 5} more.</p>` : ''}
   </div>`;
-  if(plan.sourceFirst.length) rail += `<div class="ow-pan">
-    <div class="ow-pan-h"><span class="ow-pan-t">Selling, no supplier price on file</span><span class="ow-pan-n">${plan.sourceFirst.length}</span></div>
-    ${plan.sourceFirst.slice(0, 3).map((sf,i)=> `<div class="bp-sr">
-      <span class="bp-sr-n"><b title="${esc(sf.name)}">${esc(sf.name)}</b><em title="${sf.units30} sold in 30 days, about ${Math.ceil(sf.qty)} needed">${sf.units30} sold in 30 days · ${Math.ceil(sf.qty)} needed</em></span>
-      <button type="button" class="btn btn-ghost ow-sm buy-price" data-i="${i}">Add a price</button>
-    </div>`).join('')}
-    <p class="ow-mini">Nothing here can be costed until a supplier price exists, so it is named rather than guessed at.</p>
-    ${plan.sourceFirst.length > 3 ? `<p class="ow-mini">and ${plan.sourceFirst.length - 3} more.</p>` : ''}
-  </div>`;
-  /* THE PRICE IS ON FILE; THE SUPPLIER HAS NONE. A different fact from
-     the panel above and a different door: the registry, where the mark
-     is cleared, rather than the form where a price is typed. Costed
-     figures are deliberately absent — nobody can be sent to buy this,
-     so a cost here would be a plan for an order that cannot be placed.
-     What it shows instead is who, since when, and what they last
-     quoted, which is the evidence for doubting a stale mark. */
-  if(ranOut.length) rail += `<div class="ow-pan">
-    <div class="ow-pan-h"><span class="ow-pan-t">Selling, but the supplier has none</span><span class="ow-pan-n">${ranOut.length}</span></div>
-    ${ranOut.slice(0, 3).map((sf,i)=> `<div class="bp-sr">
-      <span class="bp-sr-n"><b title="${esc(sf.name)}">${esc(sf.name)}</b><em title="${sf.units30} sold in 30 days, about ${Math.ceil(sf.qty)} needed">${sf.units30} sold in 30 days · ${Math.ceil(sf.qty)} needed</em>
-        <span class="bp-sr-w">${esc(sf.markedOut.who)} ${
-          sf.markedOut.days == null ? 'marked out of stock'
-            : sf.markedOut.days === 0 ? 'marked out of stock today'
-            : `marked out of stock ${sf.markedOut.days} day${sf.markedOut.days === 1 ? '' : 's'} ago`}, last at ${
-          fmtUGXPerUnit(sf.markedOut.unitCost, sf.markedOut.unit)}</span></span>
-      <button type="button" class="btn btn-ghost ow-sm buy-oos" data-i="${i}">Open the registry</button>
-    </div>`).join('')}
-    <p class="ow-mini">These carry a price — the mark says the supplier has none, not that the registry is empty. Clear it for anyone who can send again, or add a second supplier. Until then none of it can be ordered, so none of it is in the figures above.</p>
-    ${ranOut.length > 3 ? `<p class="ow-mini">and ${ranOut.length - 3} more.</p>` : ''}
-  </div>`;
 
-  let html = `<div class="ow-grid"><div class="ow-stack">${work}</div><div class="ow-side">${rail}</div></div>`;
-
-  /* THE BASKET, at the foot, only while something is in it. A bar and
-     not a panel: there is nothing to dismiss and nothing left behind.
-     Keys that no longer resolve are dropped here rather than carried
-     into the review -- a line the plan has stopped recommending is not
-     a line to order on the strength of a figure nobody can still see. */
-  const pool = plan.lines.concat(plan.didNotFit);
-  const basket = [...buyOrderBasket].map(k=> pool.find(l=> String(l.tag) === k)).filter(Boolean);
-  if(basket.length){
-    const sups = new Set(basket.map(l=> String(l.supplierId))).size;
-    const tot = basket.reduce((n, l)=> n + l.cost, 0);
-    html += `<div class="ow-bk bp-bk">
+  /* THE THUMB'S COPY OF THE ACT. On the phone the rail is under the
+     whole list, so the order being built rides in the layer's own
+     basket bar at the foot of the screen, where a thumb already is. */
+  const bar = basket.length ? `<div class="ow-bk bp-bk ow-fx-bkbar">
       <span class="ow-bk-say"><span class="ow-bk-b">${basket.length}</span> ${basket.length === 1 ? 'line' : 'lines'} from
-        <span class="ow-bk-b">${sups}</span> ${sups === 1 ? 'supplier' : 'suppliers'}, <span class="ow-bk-m">${f(tot)}</span> —
-        ${sups === 1 ? 'one message' : sups + ' messages'} to send, ${sups === 1 ? 'one delivery' : 'one delivery each'}, nothing owed until they come.</span>
-      <span class="ow-bk-a">
-        <button type="button" class="btn ow-sm bp-bk-clear" id="buy_basket_clear">Clear</button>
-        <button type="button" class="btn btn-accent" id="buy_basket_go">Review the order</button>
-      </span>
-    </div>`;
-  }
+        <span class="ow-bk-b">${sups}</span> ${sups === 1 ? 'supplier' : 'suppliers'} &middot; <span class="ow-bk-m">${f(basketTot)}</span></span>
+      <span class="ow-bk-a"><button type="button" class="btn btn-accent bp-bk-go">Draft ${sups} ${sups === 1 ? 'order' : 'orders'}</button></span>
+    </div>` : '';
+  let html = `<div class="ow-fx"><div class="ow-grid"><div class="ow-stack">${work}</div><div class="ow-side">${rail}</div></div>${bar}</div>`;
   el.innerHTML = html;
   /* ORDERING is a basket and not a button, because an order is per
      supplier and the plan is per line: ticking four lines that come
@@ -132347,6 +133258,8 @@ function renderPurchasePlanPanel(){
     if(!k) return;
     if(buyOrderBasket.has(k)) buyOrderBasket.delete(k); else buyOrderBasket.add(k);
     renderPurchasePlanPanel();
+    /* The strip's first tile is net of the order being built. */
+    if(typeof fcRenderRoof === 'function') fcRenderRoof();
   }));
   /* TAKING A RUNG CHANGES ONE NUMBER and redraws. It does not tick the
      line onto the order: choosing how much and choosing to order are
@@ -132364,10 +133277,12 @@ function renderPurchasePlanPanel(){
   }));
   const goBtn = document.getElementById('buy_basket_go');
   if(goBtn) goBtn.addEventListener('click', ()=> openBuyOrderReview());
+  el.querySelectorAll('.bp-bk-go').forEach(btn=> btn.addEventListener('click', ()=> openBuyOrderReview()));
   const clearBtn = document.getElementById('buy_basket_clear');
   if(clearBtn) clearBtn.addEventListener('click', ()=>{
     buyOrderBasket = new Set();
     renderPurchasePlanPanel();
+    if(typeof fcRenderRoof === 'function') fcRenderRoof();
   });
   /* AN ORDER'S OWN FOUR ANSWERS: it came, ask them again, name the day,
      it is off. Only the first two touch anything outside the record --
@@ -132516,15 +133431,39 @@ function buyOrderReviewLines(){
     .map(k=> pool.find(l=> String(l.tag) === k))
     .filter(Boolean);
 }
+/* THE SEND SHEET. One supplier at a time, because that is how each one
+   is sent: the suppliers as steps across the top, the one being written
+   below -- its lines with a stepper on each quantity, the day to ask
+   for, how to send it -- and the message itself on the right, exactly
+   as the supplier will read it. What the owner changes here is held
+   across redraws, so a stepper press never throws away a typed day. */
+let buyReviewSel = null;            // the supplier being written
+let buyReviewChan = 'wa';           // 'wa' | 'sms' | 'copy'
+let buyReviewQty = new Map();       // row tag -> quantity the owner set
+let buyReviewWhen = new Map();      // supplier id -> day they were asked for
+let buyReviewSent = [];             // what this sheet has already sent
 function renderBuyOrderReview(){
   const wrap = document.getElementById('buyOrderGroups');
   const note = document.getElementById('buyOrderNote');
   if(!wrap) return;
   const f = n=> fmtUGX(Math.round(n));
+  const num = n=> Number(Math.round(n)).toLocaleString('en-UG');
   const lines = buyOrderReviewLines();
+  const today = todayISO();
+  const shift = (n)=> new Date(Date.parse(today + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10);
+  const day = (iso)=> fmtShortDate(iso);
+  const tick = '<svg class="ow-fx-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
   if(!lines.length){
-    wrap.innerHTML = '';
-    if(note) note.textContent = 'Nothing is ticked. Close this and tick the lines you want to order.';
+    if(note) note.textContent = buyReviewSent.length ? 'Nothing is owed for any of it until it arrives.' : 'Nothing is ticked. Close this and tick the lines you want to order.';
+    wrap.innerHTML = buyReviewSent.length ? `<div class="ow-fx-send ow-fx-send-done">
+      <span class="ow-fx-send-ok">${tick}</span>
+      <b class="ow-fx-send-dt">${buyReviewSent.length === 1 ? 'The order is out' : buyReviewSent.length + ' orders are out'}</b>
+      <span class="ow-fx-send-dl">${buyReviewSent.map(o=> `<span class="ow-fx-send-dc"><b>${esc(o.supplier)}</b><span class="ow-fx-fig">${num(o.total)}</span><span>${o.expectedOn ? 'due ' + esc(day(o.expectedOn)) : 'no day named'}</span></span>`).join('')}</span>
+      <span class="ow-mini">Listed under On the way. Each comes off safe to spend on its day, and nothing is owed until you tap It came.</span>
+      <button type="button" class="btn" id="bo_done">Back to the plan</button>
+    </div>` : '';
+    const done = document.getElementById('bo_done');
+    if(done) done.addEventListener('click', ()=> closeModal('buyOrderModal'));
     return;
   }
   const by = new Map();
@@ -132534,48 +133473,103 @@ function renderBuyOrderReview(){
     by.get(k).lines.push(l);
   });
   const groups = [...by.values()];
-  /* The warning that used to stand here -- "this product is on the
-     order twice" -- is gone, because the thing it warned about is gone:
-     purchasePlan merges the two arguments into one line before the
-     screen ever sees them (see buyLineMerge). A message nothing can
-     reach is clutter for the next reader, and the guard that matters
-     survives where it belongs: every row carries its own id, so an
-     order can only ever be for the row that was ticked. */
-  if(note) note.textContent = groups.length === 1
-    ? 'One supplier, one message. Placing it writes the order down and opens WhatsApp — you read the draft and press send.'
-    : `${groups.length} suppliers, so ${groups.length} orders and ${groups.length} messages. Each one is placed on its own.`;
-  wrap.innerHTML = groups.map(g=>{
-    const total = g.lines.reduce((n, l)=> n + l.buyQty * l.unitCost, 0);
-    const noPhone = !supplierWaNumber(g.supplierId);
-    return `<div class="bo-group" data-sup="${esc(String(g.supplierId))}">
-      <div class="bo-group-head">
-        <span class="bo-sup">${esc(g.supplier)}</span>
-        <span class="bo-total">${f(total)}</span>
-      </div>
-      <table class="bo-table">
-        <thead><tr><th>Item</th><th class="r">How many</th><th class="r">Each</th><th class="r">Comes to</th></tr></thead>
-        <tbody>${g.lines.map(l=> `<tr>
-          <td>${esc(l.name)}${l.packQty > 1 ? `<span class="bo-drop"> · ${esc(l.packUnit || 'pack')} of ${l.packQty}</span>` : ''}</td>
-          <td class="r"><input type="number" class="bo-qty" data-tag="${esc(String(l.tag))}" min="0" step="any" value="${l.buyQty}"></td>
-          <td class="r num">${f(l.unitCost)}</td>
-          <td class="r num">${f(l.buyQty * l.unitCost)}</td>
-        </tr>`).join('')}</tbody>
-      </table>
-      <div class="bo-when">
-        <label for="bo_when_${esc(String(g.supplierId))}">When did they say it would come?</label>
-        <input type="date" id="bo_when_${esc(String(g.supplierId))}" class="bo-date">
-        <span class="bo-drop">Leave it empty if they have not said — an undated order is never called late.</span>
-      </div>
-      <div class="bo-acts">
-        ${noPhone ? '<span class="bo-drop">No WhatsApp number on file for them — the order is still written down, and the draft opens with no number.</span>' : ''}
-        <button type="button" class="btn btn-accent bo-place" data-sup="${esc(String(g.supplierId))}">Order it — open WhatsApp</button>
-      </div>
-    </div>`;
+  if(!groups.some(g=> String(g.supplierId) === String(buyReviewSel))) buyReviewSel = String(groups[0].supplierId);
+  const g = groups.find(x=> String(x.supplierId) === String(buyReviewSel));
+  const qtyOf = (l)=> buyReviewQty.has(String(l.tag)) ? buyReviewQty.get(String(l.tag)) : l.buyQty;
+  const totalOf = (grp)=> grp.lines.reduce((n, l)=> n + qtyOf(l) * l.unitCost, 0);
+  const whenOf = (grp)=> buyReviewWhen.has(String(grp.supplierId)) ? buyReviewWhen.get(String(grp.supplierId)) : '';
+  const total = totalOf(g);
+  const when = whenOf(g);
+  const all = groups.reduce((n, x)=> n + totalOf(x), 0);
+  if(note) note.textContent = `${groups.length} ${groups.length === 1 ? 'supplier' : 'suppliers'} · ${f(all)} · one message each, and nothing is owed until the goods arrive.`;
+  const first = String(g.supplier || 'them').split(' ')[0];
+  const phone = supplierWaNumber(g.supplierId);
+  const chans = [['wa', 'WhatsApp', 'Opens the chat', '<path d="M4 20l1.5-4A8 8 0 1 1 9 19.5z"/>'],
+    ['sms', 'SMS', 'From your phone', '<path d="M4 5h16v11H10l-5 4v-4H4z"/>'],
+    ['copy', 'Copy text', 'Paste it anywhere', '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 00-1-1H5a1 1 0 00-1 1v10a1 1 0 001 1h3"/>']];
+  const msg = buyOrderMessage({ supplier: g.supplier, total,
+    expectedOn: when || null,
+    lines: g.lines.map(l=> ({ name: l.name, qty: qtyOf(l), unit: l.unit, packQty: l.packQty, packUnit: l.packUnit, unitCost: l.unitCost })) });
+  const quick = [[1, 'Tomorrow'], [2, null], [3, null]].map(([n, lab])=> {
+    const iso = shift(n);
+    return `<button type="button" class="ow-fx-pill bo-quick${when === iso ? ' ow-on' : ''}" data-when="${iso}" aria-pressed="${when === iso}">${lab ? lab + ' · ' : ''}${esc(day(iso))}</button>`;
   }).join('');
+  wrap.innerHTML = `<div class="ow-fx-send">
+    <div class="ow-fx-send-steps">${buyReviewSent.map((o, i)=> `<span class="ow-fx-step ow-fx-step-done"><span class="ow-fx-step-d">${tick}</span><span class="ow-fx-step-t"><b class="ow-fx-step-n">${esc(o.supplier)}</b><span class="ow-fx-step-s">sent</span></span></span>`).join('')}${
+      groups.map((x, i)=> `<button type="button" class="ow-fx-step bo-step${String(x.supplierId) === String(buyReviewSel) ? ' ow-on' : ''}" data-sup="${esc(String(x.supplierId))}" aria-pressed="${String(x.supplierId) === String(buyReviewSel)}"><span class="ow-fx-step-d">${buyReviewSent.length + i + 1}</span><span class="ow-fx-step-t"><b class="ow-fx-step-n">${esc(x.supplier)}</b><span class="ow-fx-step-s"><span class="ow-fx-fig">${num(totalOf(x))}</span> · ${String(x.supplierId) === String(buyReviewSel) ? 'writing now' : 'next'}</span></span></button>`).join('')}</div>
+    <div class="bo-group ow-fx-send-b" data-sup="${esc(String(g.supplierId))}">
+      <div class="ow-fx-send-l">
+        <span class="ow-fx-cap">The order</span>
+        ${g.lines.map(l=>{
+          const step = l.packQty > 1 ? l.packQty : 1;
+          const q = qtyOf(l);
+          return `<div class="ow-fx-send-line">
+            <span class="ow-fx-send-li"><svg class="ow-fx-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/></svg></span>
+            <span class="ow-fx-send-lt"><b class="ow-fx-send-ln" title="${esc(l.name)}">${esc(l.name)}</b><span class="ow-fx-send-ls"><span class="ow-fx-fig">${num(l.unitCost)}</span> per ${esc(l.unit || 'pc')}${l.packQty > 1 ? ` · ${esc(l.packUnit || 'pack')} of ${l.packQty}` : ''}${q !== l.buyQty ? ` · the plan asked for ${l.buyQty}` : ''}</span></span>
+            <span class="ow-fx-stepper">
+              <button type="button" class="bo-less ow-fx-stepb" data-tag="${esc(String(l.tag))}" data-step="${step}" aria-label="Fewer"><svg class="ow-fx-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+              <input type="number" class="bo-qty ow-fx-qty" data-tag="${esc(String(l.tag))}" min="0" step="any" value="${q}" aria-label="How many ${esc(l.name)}">
+              <button type="button" class="bo-more ow-fx-stepb" data-tag="${esc(String(l.tag))}" data-step="${step}" aria-label="More"><svg class="ow-fx-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+            </span>
+            <span class="ow-fx-send-lv">${num(q * l.unitCost)}</span>
+          </div>`;
+        }).join('')}
+        <span class="ow-fx-cap">Deliver by</span>
+        <div class="ow-fx-send-when">${quick}
+          <input type="date" id="bo_when_${esc(String(g.supplierId))}" class="bo-date ow-fx-date" value="${esc(when)}" aria-label="The day they said it would come">
+        </div>
+        <span class="ow-fx-send-hint">Leave it empty if they have not said &mdash; an undated order is never called late.</span>
+        <span class="ow-fx-cap">Send with</span>
+        <div class="ow-fx-send-ch">${chans.map(c=> `<button type="button" class="ow-fx-opt bo-chan${buyReviewChan === c[0] ? ' ow-on' : ''}" data-chan="${c[0]}" aria-pressed="${buyReviewChan === c[0]}">
+          <span class="ow-fx-opt-i"><svg class="ow-fx-i" viewBox="0 0 24 24" aria-hidden="true">${c[3]}</svg></span><b class="ow-fx-opt-n">${c[1]}</b><span class="ow-fx-opt-s">${c[2]}</span></button>`).join('')}</div>
+        ${!phone && buyReviewChan !== 'copy' ? '<span class="ow-fx-send-hint">No number on file for them &mdash; the order is still written down, and the draft opens with no number.</span>' : ''}
+      </div>
+      <div class="ow-fx-send-r">
+        <div class="ow-fx-phone">
+          <div class="ow-fx-phone-h"><span class="ow-fx-ava">${esc(String(g.supplier || '?').charAt(0).toUpperCase())}</span><span class="ow-fx-phone-n"><b class="ow-fx-phone-nn">${esc(g.supplier)}</b><span class="ow-fx-phone-ns">${phone ? esc(phone) : 'no number on file'}</span></span></div>
+          <div class="ow-fx-phone-b"><span class="ow-fx-phone-day">Today</span><div class="ow-fx-bubble">${esc(msg)}</div><span class="ow-fx-phone-st">not sent yet</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="ow-fx-send-f">
+      <span class="ow-fx-send-ft"><span>This order</span><b class="ow-fx-fig ow-fx-send-ftv">${num(total)}</b></span>
+      ${groups.length > 1 ? '<button type="button" class="btn ow-fx-tall bo-skip">Skip this one</button>' : ''}
+      <button type="button" class="btn btn-accent ow-fx-tall ow-fx-send-go bo-place" data-sup="${esc(String(g.supplierId))}"><svg class="ow-fx-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l16-8-6 16-2-7z"/></svg>${
+        buyReviewChan === 'copy' ? 'Copy the order for ' + esc(first) : 'Send to ' + esc(first) + ' on ' + (buyReviewChan === 'sms' ? 'SMS' : 'WhatsApp')}</button>
+    </div>
+  </div>`;
+  const keep = ()=>{
+    const d = wrap.querySelector('.bo-date');
+    if(d) buyReviewWhen.set(String(g.supplierId), d.value);
+    wrap.querySelectorAll('.bo-qty').forEach(i=> buyReviewQty.set(String(i.dataset.tag), Math.max(0, Number(i.value) || 0)));
+  };
+  wrap.querySelectorAll('.bo-step').forEach(btn=> btn.addEventListener('click', ()=>{ keep(); buyReviewSel = String(btn.dataset.sup); renderBuyOrderReview(); }));
+  wrap.querySelectorAll('.bo-less,.bo-more').forEach(btn=> btn.addEventListener('click', ()=>{
+    keep();
+    const k = String(btn.dataset.tag), st = Number(btn.dataset.step) || 1;
+    const cur = buyReviewQty.has(k) ? buyReviewQty.get(k) : 0;
+    buyReviewQty.set(k, Math.max(0, cur + (btn.classList.contains('bo-more') ? st : -st)));
+    renderBuyOrderReview();
+  }));
+  wrap.querySelectorAll('.bo-qty').forEach(i=> i.addEventListener('change', ()=>{ keep(); renderBuyOrderReview(); }));
+  wrap.querySelectorAll('.bo-quick').forEach(btn=> btn.addEventListener('click', ()=>{
+    keep(); buyReviewWhen.set(String(g.supplierId), btn.dataset.when); renderBuyOrderReview();
+  }));
+  const dEl = wrap.querySelector('.bo-date');
+  if(dEl) dEl.addEventListener('change', ()=>{ keep(); renderBuyOrderReview(); });
+  wrap.querySelectorAll('.bo-chan').forEach(btn=> btn.addEventListener('click', ()=>{ keep(); buyReviewChan = btn.dataset.chan; renderBuyOrderReview(); }));
+  const skip = wrap.querySelector('.bo-skip');
+  if(skip) skip.addEventListener('click', ()=>{
+    keep();
+    const i = groups.findIndex(x=> String(x.supplierId) === String(buyReviewSel));
+    buyReviewSel = String(groups[(i + 1) % groups.length].supplierId);
+    renderBuyOrderReview();
+  });
   wrap.querySelectorAll('.bo-place').forEach(btn=> btn.addEventListener('click', ()=> placeBuyOrderFromReview(btn.dataset.sup)));
 }
 function openBuyOrderReview(){
   if(!buyOrderReviewLines().length){ toast('Nothing is ticked'); return; }
+  buyReviewSel = null; buyReviewQty = new Map(); buyReviewWhen = new Map(); buyReviewSent = [];
   renderBuyOrderReview();
   openModal('buyOrderModal');
 }
@@ -132607,13 +133601,24 @@ function placeBuyOrderFromReview(supplierId){
   if(!ordered.length){ toast('Every line on this order is zero — nothing to order'); return; }
   const o = placeBuyOrder(supplierId, ordered, dateEl ? dateEl.value : '');
   if(!o){ toast('That order could not be written down'); return; }
-  lines.forEach(l=> buyOrderBasket.delete(String(l.tag)));
+  lines.forEach(l=>{ buyOrderBasket.delete(String(l.tag)); buyReviewQty.delete(String(l.tag)); });
   markBuyOrderSent(o.id);
-  window.open(buyOrderWaUrl(o), '_blank');
+  /* THE OWNER'S HAND SENDS IT, whichever way they chose. Each opens a
+     draft or puts the words on the clipboard; nothing leaves by itself. */
+  const text = buyOrderMessage(o);
+  if(buyReviewChan === 'copy'){
+    try { navigator.clipboard.writeText(text); } catch(e){ /* the toast still says what to do */ }
+  } else if(buyReviewChan === 'sms'){
+    window.open('sms:' + (supplierWaNumber(o.supplierId) || '') + '?body=' + encodeURIComponent(text), '_blank');
+  } else {
+    window.open(buyOrderWaUrl(o), '_blank');
+  }
+  buyReviewSent.push({ supplier: o.supplier, total: o.total, expectedOn: o.expectedOn });
+  buyReviewSel = null;
   renderBuyOrderReview();
-  if(!buyOrderReviewLines().length) closeModal('buyOrderModal');
   renderPurchasePlanPanel();
-  toast(`${fmtUGX(o.total)} ordered from ${o.supplier} — send the message to finish. Nothing is owed until it arrives.`, 7000);
+  if(typeof fcRenderRoof === 'function') fcRenderRoof();
+  toast(`${fmtUGX(o.total)} ordered from ${o.supplier} — ${buyReviewChan === 'copy' ? 'the message is copied, paste and send it' : 'send the message'} to finish. Nothing is owed until it arrives.`, 7000);
 }
 document.getElementById('buyOrderClose').addEventListener('click', ()=> closeModal('buyOrderModal'));
 document.getElementById('buyOrderCancel').addEventListener('click', ()=> closeModal('buyOrderModal'));
