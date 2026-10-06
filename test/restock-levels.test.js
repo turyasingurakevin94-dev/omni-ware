@@ -215,9 +215,16 @@ if (scope) {
      beside the level it is under. The action is named in words now
      rather than drawn as one of four unlabelled glyphs, which is the
      point of the reshape. */
+  /* invDoAct joins the three. The register's acts -- on a row, in the
+     product popup, on an Intelligence card -- all go through that one
+     function now (the canvas's popup offers "Set a restock floor" as a
+     link under its two buttons), so it is where the floor editor is
+     opened from; it was the screen's click listener before, which read
+     the same data-invact and called the same openReorderEditor. */
   const inv = extractFunction(src, 'invLineHTML', 'index.html')
     + extractFunction(src, 'invOpenHTML', 'index.html')
-    + extractFunction(src, 'wireInventoryRows', 'index.html');
+    + extractFunction(src, 'wireInventoryRows', 'index.html')
+    + extractFunction(src, 'invDoAct', 'index.html');
   t.check(/data-invact="reorder"/.test(inv) && /openReorderEditor\(id, vidx\)/.test(inv),
     'opened from the shelf, where a level is decided');
   t.check(/\$\{short\} short/.test(inv) && /floor \$\{l\.rule\.minUnits\}/.test(inv),
