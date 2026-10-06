@@ -891,52 +891,52 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
     /* Payroll and rent. The screen answered "what did the month cost?"
        when the question you open it with is "can I pay them?", and it
        carried no cash figure at all. Three .panel blocks became a strip,
-       one queue and a rail: the position panel whose headline was set in
-       Archivo Black at 34px above five bordered .pr-cell tiles and up to
-       five stacked .age-verdict paragraphs; a nine-column .age-table
-       with a bare <input> in one cell and a .pr-state pill repeating
-       what the balance column had already said; and the co-equal Rent
-       agreements panel with the screen's second oxide button. Paying
-       went through prompt() and then a second dialog for the account;
-       both are one panel inside the month's own row now.
+       one queue and a rail, then a runway over the queue.
 
-       .pr-name, .pr-quiet, .age-table and .age-amt are NOT retired from
-       the FILE -- renderRentAgreements still wears them behind the
-       rail's door, and that table is unconverted on purpose -- only from
-       this screen's markup and from what the four renderers below emit,
-       which is what this list means. */
+       Then rebuilt from the design canvas the owner worked through
+       comment by comment, and this entry says what ships now, not what
+       the console it replaced was made of. The strip-runway-queue-rail
+       (.ow-py-rw, .ow-py-mt, the .ow-q rows, the .ow-py-at rail, the
+       rent table behind its door) is gone; the screen is one mount,
+       #prConsole, drawn by renderPayrollConsole into one of three views
+       in the canvas's own vocabulary, renamed into ow-pc-:
+
+         board     the hero (enough by payday, the runway with the
+                   preview of whatever section is clicked, the payroll's
+                   share of gross profit), when the money leaves, and the
+                   payout board
+         pay       one month: how the person did, how the figure is
+                   worked out, the days that change it, the last six
+                   months, and paying it in three steps
+         premises  the rent band, the lease dials and the next ninety
+                   days, a card per premises, the payment record, and
+                   adding premises with what it does to the month
+
+       What still holds from the old entry -- none of the families it
+       retired may come back, the month stepper stays in the head -- is
+       kept; the queue's own families join the retired list. */
     payroll: {
       retired: ['page-head', 'panel', 'panel-head-row', 'btn-row', 'btn-icon', 'field', 'empty',
                 'age-pos', 'age-pos-head', 'age-pos-total', 'age-pos-label', 'age-pos-meta',
                 'age-pos-clear', 'age-verdict', 'age-table', 'age-amt', 'age-act',
                 'pr-cells', 'pr-cell', 'pr-cell-label', 'pr-cell-note', 'pr-table', 'pr-settled',
                 'pr-state', 'pr-miss', 'pr-miss-off', 'pr-days', 'pr-name', 'pr-sub', 'pr-quiet',
-                'pr-gross', 'pr-accrued', 'row-actions', 'an-scroll', 'pi-table-wrap', 'price'],
-      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-py', 'ow-py-ms',
-             'ow-grid', 'ow-side', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-py-rent'],
-      renders: ['renderPayrollPosition', 'renderPayrollDues', 'renderPayrollRail', 'payrollGroups',
-                'payrollMonthTrackHTML', 'payrollStripHTML', 'payrollDayGridHTML'],
-      /* No .ow-strip here any more, and that is a decision, not a patch.
-         The strip was four tiles -- in hand, still to pay, late, next due
-         -- that left the owner to do the one sum the screen exists for.
-         It is replaced by the RUNWAY (.ow-py-rw): the same figures, plus
-         the bar that does the sum, today's cash marked on it, and the
-         month's days (.ow-py-mt) under it. Each row carries its own month
-         as ticks (.ow-py-ds), a daily month is counted by tapping
-         (.ow-py-dg), and the rail's derived figures became bars
-         (.ow-py-mx). Holding this list to .ow-strip would have kept the
-         tiles alive beside the bar that answers them. */
-      rendersUses: ['ow-py-rw', 'ow-py-mt', 'ow-py-ds', 'ow-py-dg', 'ow-py-mx', 'ow-u',
-                    'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n',
-                    'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t', 'ow-q-who', 'ow-q-v',
-                    'ow-q-f', 'ow-q-b', 'ow-q-note', 'ow-q-a', 'ow-cp',
-                    'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-f', 'ow-tbl-c', 'ow-tbl-n',
-                    /* the six this screen owns: why a month is where it
-                       is, how far today's cash reaches, the days box and
-                       the days themselves, paying without a dialog, and
-                       the decisions that were five stacked paragraphs */
-                    'ow-py-rz', 'ow-py-wl', 'ow-py-dy', 'ow-py-dl', 'ow-py-pp', 'ow-py-at',
-                    'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-mini', 'ow-empty', 'ow-db-go', 'ow-db-rl'],
+                'pr-gross', 'pr-accrued', 'row-actions', 'an-scroll', 'pi-table-wrap', 'price',
+                'ow-py', 'ow-py-rw', 'ow-py-mt', 'ow-py-ds', 'ow-py-dg', 'ow-py-mx', 'ow-py-rz',
+                'ow-py-wl', 'ow-py-dy', 'ow-py-dl', 'ow-py-pp', 'ow-py-at', 'ow-py-rent',
+                'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-py-ms', 'ow-pc', 'ow-pc-head'],
+      renders: ['renderPayrollConsole', 'renderPayrollPosition', 'renderPayrollSheet', 'renderPayrollPremises',
+                'prHeroHTML', 'prEnoughHTML', 'prRunwayHTML', 'prPreviewHTML', 'prGaugeHTML',
+                'prTimelineHTML', 'prBoardHTML', 'prCardHTML', 'prDotsHTML', 'prPhoneHTML',
+                'prReviewHTML', 'prWorkedOutHTML', 'prDaysHTML', 'prHistoryHTML', 'prPayHTML',
+                'prRentSchedHTML', 'payrollGroups', 'payrollDayGridHTML'],
+      rendersUses: ['ow-pc-pan', 'ow-pc-ph', 'ow-pc-pt', 'ow-pc-pn', 'ow-pc-fig', 'ow-pc-chip', 'ow-pc-empty',
+                    'ow-pc-desk', 'ow-pc-ph-only', 'ow-pc-hero', 'ow-pc-ok', 'ow-pc-rw', 'ow-pc-pv', 'ow-pc-gg',
+                    'ow-pc-tl-g', 'ow-pc-tl-sg', 'ow-pc-tip', 'ow-pc-bd', 'ow-pc-col', 'ow-pc-card', 'ow-pc-dots',
+                    'ow-pc-m-c', 'ow-pc-rv', 'ow-pc-sum', 'ow-pc-dy', 'ow-pc-seg', 'ow-pc-hs', 'ow-pc-st',
+                    'ow-pc-am', 'ow-pc-qp', 'ow-pc-ac', 'ow-pc-slip', 'ow-pc-band', 'ow-pc-dial', 'ow-pc-nx',
+                    'ow-pc-pc', 'ow-pc-rec', 'ow-pc-add', 'ow-pc-sched', 'ow-pc-dd', 'ow-pc-dg'],
     },
     /* Order tracking is NOT in this list, and that is the entry.
 
