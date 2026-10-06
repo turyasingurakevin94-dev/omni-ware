@@ -18407,12 +18407,17 @@
   /* ---------------- The map ----------------
 
      The screen is not about a map. It is about PLACES: the map is one
-     view of them and the list below is the other, which is why "not
+     view of them and the list beside it is the other, which is why "not
      placed yet" is not a mode here -- it is a row in the same list that
      happens to be missing a position, keeping its figures and its rank.
 
+     THREE COLUMNS, ONE READING. The list, the map and the place you are
+     on sit side by side: a row picked on the left rings its marker in
+     the middle and opens on the right. The list used to sit under the
+     map, a scroll away from the picture it ranks, so a place could be
+     read or seen but never both at once.
+
      Everything below follows from that. */
-  .mp-layers{display:flex;gap:6px;}
   /* Layer and filter used to be the same pill, 300px apart, meaning
      different things: one changes what the screen is ABOUT, the other
      which rows are listed. They are now one segmented control used
@@ -18422,15 +18427,44 @@
     border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);padding:2px;gap:2px;
     box-sizing:border-box;min-height:26px;align-items:center;flex-wrap:wrap;}
   .mp-seg button{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;
-    align-items:center;gap:5px;height:20px;padding:0 9px;border-radius:var(--ow-r-sm);
-    font-size:11px;font-weight:600;color:var(--ow-ink-600);white-space:nowrap;}
+    align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:7px;
+    font-size:12px;font-weight:600;color:var(--ow-ink-600);white-space:nowrap;}
   .mp-seg button:hover{color:var(--ow-ink-900);}
-  .mp-seg button.active{background:var(--ow-paper);color:var(--ow-ink-900);}
+  .mp-seg button.active{background:var(--ow-paper);color:var(--ow-ink-900);
+    box-shadow:0 1px 2px rgba(20,30,40,0.05);}
+  .mp-seg button:focus-visible{outline:2px solid var(--ow-sky);outline-offset:1px;}
   .mp-seg .mp-seg-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
-    font-variant-numeric:tabular-nums;font-size:10px;font-weight:600;color:var(--ow-ink-400);}
+    font-variant-numeric:tabular-nums;font-size:11px;font-weight:600;color:var(--ow-ink-400);}
   .mp-seg button.active .mp-seg-n{color:var(--ow-ink-600);}
-  .mp-seg svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;
+  .mp-seg svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
     stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+  /* ---- the workspace ---- */
+  .mpw-work{display:grid;grid-template-columns:340px minmax(0,1fr) 320px;
+    gap:var(--ow-sp-16);align-items:stretch;}
+  /* The list is as tall as the map beside it and scrolls inside that,
+     rather than setting the row's height itself: contain:size takes its
+     own content out of the sum, so the stretch decides. Without it two
+     hundred places make a two-thousand-pixel map. */
+  .mpw-list{display:flex;flex-direction:column;min-width:0;contain:size;}
+  .mpw-mappan{display:flex;flex-direction:column;min-width:0;}
+  .ow-pan-h.mpw-ph{height:44px;background:var(--ow-paper);padding:0 14px;flex:none;}
+  .mpw-pt{font-size:var(--ow-t-13);font-weight:var(--ow-fw-700);color:var(--ow-ink-900);white-space:nowrap;}
+  .ow-pan-h.mp-headbar{height:auto;min-height:44px;background:var(--ow-paper);padding:6px 14px;
+    flex-wrap:wrap;gap:8px 12px;box-sizing:border-box;}
+  /* The map's own head carries a sentence, not a count. */
+  .ow-pan-h.mp-headbar .ow-pan-n{font-family:'Figtree',system-ui,sans-serif;font-size:12px;
+    white-space:normal;text-align:right;}
+  .mp-bar{display:flex;flex-direction:column;gap:8px;padding:10px 14px;flex:none;
+    border-bottom:1px solid var(--ow-rule-soft);}
+  .mp-bar .mp-seg{display:flex;width:100%;flex-wrap:nowrap;}
+  .mp-bar .mp-seg button{flex:1;justify-content:center;padding:0 6px;}
+  .mp-bar[hidden]{display:none;}
+  .mp-search{max-width:none;}
+  .mp-search input{height:32px;}
+  /* Scrolls rather than truncates: a row that is not rendered is a place
+     that cannot be moved or removed. */
+  .mpw-list #mp_results{flex:1 1 0;min-height:0;overflow-y:auto;}
 
   /* z-index:0 is load-bearing, not decoration. Leaflet stacks its own
      panes and controls up to 1000, and the app's top bar sits at 60 --
@@ -18439,45 +18473,55 @@
      one; it takes a z-index as well. With it, every Leaflet layer is
      confined inside this box however high it counts. */
   .mp-canvas{position:relative;z-index:0;min-width:0;}
-  #mp_map{height:520px;width:100%;background:var(--ow-steel-050);}
+  #mp_map{height:620px;width:100%;background:#EFEBE3;}
+  /* The controls float on the map, so they are the one place in this
+     screen with a lift -- a hairline alone reads as printed on the
+     tiles. Leaflet's own zoom is dressed the same, so the top of the map
+     is one family of white controls rather than two. */
+  #tab-map .mp-canvas .leaflet-control-zoom{border:1px solid var(--ow-rule);border-radius:var(--ow-r);
+    overflow:hidden;box-shadow:0 1px 3px rgba(20,30,40,0.14);}
+  #tab-map .mp-canvas .leaflet-control-zoom a{width:32px;height:32px;line-height:30px;color:var(--ow-ink-900);
+    border-radius:0;border-bottom-color:var(--ow-rule-soft);}
+  .mp-canvas .leaflet-control-scale-line{border-color:var(--ow-ink-600);color:var(--ow-ink-600);
+    background:rgba(255,255,255,.88);font:500 10px/1.4 'IBM Plex Mono',ui-monospace,Menlo,monospace;}
+  .mp-canvas .leaflet-control-attribution{font-size:10px;color:var(--ow-ink-600);}
+  /* The map's own controls sit at 650: over Leaflet's marker pane (600),
+     so a marker can never cover a button, and still inside .mp-canvas's
+     stacking context, so nothing here competes with the app's menus. */
   /* Clear of Leaflet's zoom control, which owns the same corner: both sat
      at left:10px/top:10px and the zoom painted over "Str", so the button
      read "eets". 54px is its 34px width plus its own 10px margin plus a
      10px gap -- beside it rather than below, so the top of the map stays
      one row: zoom, basemap, then the compass at the far right. */
-  .mp-bases{position:absolute;left:54px;top:10px;z-index:500;display:flex;gap:3px;
-    background:var(--panel);border:1px solid var(--line);border-radius:var(--ow-r);padding:3px;}
+  .mp-bases{position:absolute;left:54px;top:10px;z-index:650;display:flex;gap:2px;
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--ow-r);padding:3px;
+    box-shadow:0 1px 3px rgba(20,30,40,0.14);}
   /* Zoom, basemap and compass want 339px in one row and a phone's map is
      about 290, so the basemap drops to its own line under the zoom. */
   @media (max-width: 560px){
     .mp-bases{left:10px;top:84px;}
   }
   .mp-base{all:unset;box-sizing:border-box;cursor:pointer;font-size:11px;font-weight:600;
-    padding:5px 10px;border-radius:var(--ow-r-sm);color:var(--ink-soft);}
+    height:24px;display:inline-flex;align-items:center;padding:0 10px;border-radius:7px;color:var(--ink-soft);}
   .mp-base:hover{background:var(--ow-steel-050);color:var(--ink);}
   .mp-base.active{background:var(--ow-steel-100);color:var(--ink);}
-  /* Sits opposite nothing now: the legend came off the map, so the only
-     things on it are Leaflet's own zoom and attribution and these two. */
-  .mp-compass{position:absolute;right:10px;top:10px;z-index:500;display:flex;gap:2px;
-    background:var(--panel);border:1px solid var(--line);border-radius:var(--ow-r);padding:3px;}
+  .mp-compass{position:absolute;right:10px;top:10px;z-index:650;display:flex;gap:2px;
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--ow-r);padding:3px;
+    box-shadow:0 1px 3px rgba(20,30,40,0.14);}
   .mp-compass button{all:unset;box-sizing:border-box;cursor:pointer;display:flex;
-    flex-direction:column;align-items:center;justify-content:center;min-width:26px;height:26px;
-    border-radius:var(--ow-r-sm);color:var(--ink-soft);}
+    flex-direction:column;align-items:center;justify-content:center;min-width:28px;height:28px;
+    border-radius:7px;color:var(--ink-soft);}
   .mp-compass button:hover{background:var(--ow-steel-050);color:var(--ink);}
   .mp-compass svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;
     stroke-linecap:round;stroke-linejoin:round;}
+  .mpw-csep{width:1px;background:var(--ow-rule-soft);margin:4px 2px;}
   #mp_rot_north{min-width:34px;gap:1px;}
   /* The needle points where north actually IS on screen, which is the
      bearing itself -- see mapBearingLabel. Drawn, not a glyph. */
-  .mp-needle{display:block;width:13px;height:13px;fill:none;stroke:var(--ow-oxide);
+  .mp-needle{display:block;width:12px;height:12px;fill:none;stroke:var(--ow-oxide);
     stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .18s ease;}
   .mp-bearing{display:block;font-size:9px;line-height:1;font-weight:600;color:var(--ink);
     font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;}
-  .mp-scale{position:absolute;right:10px;bottom:26px;z-index:500;display:flex;
-    flex-direction:column;align-items:flex-end;gap:2px;font-size:10px;color:var(--ink-soft);
-    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
-    background:rgba(255,255,255,.86);padding:3px 6px;border-radius:var(--ow-r-sm);}
-  .mp-scale i{display:block;width:64px;height:5px;border:1px solid var(--ink-soft);border-top:0;}
 
   /* A ground that will not load says so, over the map it failed to
      draw. Amber: something wants doing, and it is not the shop's fault. */
@@ -18485,7 +18529,7 @@
      basemap toggle and the compass at 1440 and would have run into both
      on a narrower map -- and there is no width at which a notice about
      the ground should sit on top of the buttons that change it. */
-  .mp-tiles{position:absolute;left:50%;top:52px;transform:translateX(-50%);z-index:520;
+  .mp-tiles{position:absolute;left:50%;top:52px;transform:translateX(-50%);z-index:660;
     max-width:min(420px, calc(100% - 24px));box-sizing:border-box;
     background:var(--ow-amber-soft);border:1px solid #EBD9B4;border-radius:var(--ow-r);
     padding:8px 12px;font-size:11px;line-height:1.45;color:var(--ow-amber-ink);}
@@ -18516,6 +18560,26 @@
   .mp-empty b{font-size:14px;font-weight:600;color:var(--ink);}
   .mp-empty p{margin:0;font-size:12px;color:var(--ink-soft);line-height:1.5;max-width:46ch;}
 
+  /* OFF THE FRAME. A place further out than the map is drawn for is an
+     arrow on the map's own edge, on the side it lies, carrying what is
+     owed there -- the list said "Lira, 340 km", the edge says which way. */
+  .mpw-edges{position:absolute;inset:0;z-index:640;pointer-events:none;overflow:hidden;}
+  .mpw-edge{all:unset;box-sizing:border-box;position:absolute;pointer-events:auto;cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px 0 6px;
+    border-radius:var(--ow-r-pill);background:var(--ow-paper);border:1px solid var(--ow-rule);
+    font-size:12px;color:var(--ow-ink-900);white-space:nowrap;transform:translate(-50%,-50%);
+    box-shadow:0 1px 3px rgba(20,30,40,0.14);}
+  .mpw-edge:hover{border-color:var(--ow-ink-400);}
+  .mpw-edge:focus-visible{outline:2px solid var(--ow-sky);outline-offset:1px;}
+  .mpw-edge.mpw-on{box-shadow:0 0 0 2px var(--ow-steel-950) inset;}
+  .mpw-edge svg{width:14px;height:14px;fill:none;stroke:var(--ow-steel-950);stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round;flex:none;}
+  .mpw-edge i{width:8px;height:8px;border-radius:50%;flex:none;box-sizing:border-box;}
+  .mpw-edge i.mp-sq{border-radius:2px;}
+  .mpw-edge b{font-weight:600;}
+  .mpw-edge small{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:11px;color:var(--ow-ink-600);letter-spacing:-.02em;}
+
   /* THE LEGEND IS UNDER THE MAP, NOT ON IT.
 
      Floated bottom-left it covered the corner of the picture it is a key
@@ -18524,99 +18588,109 @@
      Below the map it is one readable row at every width, there is no
      corner left to collide in, and it has room to carry the two things a
      reader cannot deduce: that circle size is headcount, and that the
-     square is the shop. */
-  .mp-legend{display:flex;align-items:center;gap:6px 14px;flex-wrap:wrap;padding:8px 12px;
+     square is the shop. Each entry counts the places it describes, so the
+     key is also a reading. */
+  .mp-legend{display:flex;align-items:center;gap:6px 16px;flex-wrap:wrap;padding:10px 14px;
     border-top:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
   .mp-legend b{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
     color:var(--ow-ink-400);}
-  .mp-legend div{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-soft);}
-  .mp-legend i{display:inline-block;width:9px;height:9px;border-radius:50%;flex:none;}
+  .mp-legend div{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-soft);}
+  .mp-legend i{display:inline-block;width:9px;height:9px;border-radius:50%;flex:none;box-sizing:border-box;}
+  .mp-legend i.mp-sq{border-radius:2px;}
+  .mp-legend i.mp-big{width:14px;height:14px;}
+  .mp-legend i.mp-ring{background:none;border:1.5px solid var(--ow-ink-400);}
+  .mp-legend i.mp-shop{width:10px;height:10px;border-radius:3px;background:var(--ow-steel-950);}
+  .mp-legend i.mp-line{width:18px;height:3px;border-radius:2px;background:var(--ow-indigo);opacity:.45;}
+  .mp-legend i.mp-dash{width:18px;height:0;border-radius:0;border-top:2px dashed var(--ow-ink-400);}
+  .mp-legend i.mp-tw{width:12px;height:12px;background:var(--ow-verdigris);}
   /* Nothing owed is HOLLOW, not a second verdigris. The old legend had
      two entries painted #0F6B43 and it signalled nothing at all. */
   .mp-legend i.mp-hollow{background:var(--panel);border:1.5px solid var(--line);}
-  .mp-legend em{font-style:normal;margin-left:auto;font-size:11px;color:var(--ow-ink-400);}
+  .mp-legend .mp-legend-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:11px;color:var(--ow-ink-400);}
+  .mp-legend em{font-style:normal;margin-left:auto;display:flex;align-items:center;gap:6px;
+    font-size:12px;color:var(--ink-soft);}
+  .mp-legend em i + span{margin-right:8px;}
 
-  /* ---- the rail: the selected place, and what is off the frame ---- */
-  .mp-side{min-width:0;}
-  .mp-side-empty{padding:14px 12px;font-size:12px;color:var(--ink-soft);line-height:1.55;}
-  .mp-rh{display:flex;align-items:flex-start;gap:8px;padding:11px 12px 9px;}
-  .mp-rh-dot{width:10px;height:10px;border-radius:50%;flex:none;margin-top:5px;}
-  .mp-rh-dot.mp-hollow{background:var(--panel);border:1.5px solid var(--line);}
-  .mp-rh h3{font-size:15px;font-weight:700;line-height:1.2;margin:0;min-width:0;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .mp-rh p{font-size:11px;color:var(--ink-soft);margin:2px 0 0;line-height:1.4;}
-  .mp-rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
-    padding:7px 12px;border-top:1px solid var(--ow-rule-soft);}
-  .mp-rf span{font-size:11px;color:var(--ink-soft);min-width:0;}
-  .mp-rf b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
-    font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;letter-spacing:-.02em;
-    white-space:nowrap;}
-  .mp-rf b.mp-warn{color:var(--ow-amber-ink);}
-  .mp-rf b.mp-bad{color:var(--ow-crimson);}
-  .mp-acts{display:flex;gap:6px;flex-wrap:wrap;padding:9px 12px;
-    border-top:1px solid var(--ow-rule-soft);}
-  /* A person or an order at the selected place. */
-  .mp-person{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;
-    column-gap:10px;width:100%;min-height:44px;padding:6px 12px;box-sizing:border-box;
-    border-top:1px solid var(--ow-rule-soft);cursor:pointer;background:none;text-align:left;}
-  .mp-person:hover{background:var(--ow-paper-2);}
-  .mp-person-name{font-size:13px;font-weight:500;line-height:1.3;min-width:0;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .mp-person-sub{grid-column:1;font-size:11px;color:var(--ink-soft);line-height:1.35;
-    margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .mp-person-amt{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
-    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
-    font-size:13px;font-weight:600;letter-spacing:-.02em;}
-  .mp-person-amt.mp-zero{color:var(--ow-ink-400);font-weight:400;}
-  .mp-person-amt small{display:block;font-family:'Figtree',system-ui,sans-serif;font-size:11px;
-    font-weight:400;color:var(--ink-soft);letter-spacing:0;margin-top:1px;}
-  .mp-note{margin:0;padding:9px 12px;font-size:11px;color:var(--ink-soft);line-height:1.5;
-    border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
-  .mp-note b{color:var(--ink);font-weight:600;}
-  /* A row that has to say WHY it is not on the map cannot ellipsis the
-     reason away -- the sentence is the whole point of the row. */
-  .mp-wrapm .mp-person-sub{white-space:normal;overflow:visible;}
+  /* ---- the strip: five readings, each with its own small picture ---- */
+  .ow-strip.mpw-strip{grid-template-columns:repeat(5,minmax(0,1fr));}
+  .mpw-strip .ow-mt{min-width:0;padding:var(--ow-sp-12) var(--ow-sp-16);}
+  .mpw-strip .ow-mt-v{font-weight:var(--ow-fw-600);white-space:nowrap;}
+  .mpw-strip .ow-mt-l{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .mpw-strip .ow-mt-s{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mpw-strip .mpw-mt-am .ow-mt-s{color:var(--ow-amber-ink);}
+  .ow-cp.mpw-home{height:28px;padding:0 10px;border-radius:var(--ow-r-sm);background:var(--ow-paper);
+    border:1px solid var(--ow-rule);color:var(--ow-ink-600);font-size:12px;gap:6px;}
+  .ow-cp.mpw-home i{width:10px;height:10px;border-radius:3px;background:var(--ow-steel-950);flex:none;}
+  .ow-cp.mpw-home b{color:var(--ow-ink-900);font-weight:600;}
+  .mpw-ring-r{display:flex;align-items:center;justify-content:space-between;gap:var(--ow-sp-8);}
+  .mpw-mt-warn{background:var(--ow-amber-faint);}
+  .mpw-mt-warn .ow-mt-l,.mpw-mt-warn .ow-mt-s{color:var(--ow-amber-ink);}
+  .mpw-viz{display:flex;height:6px;border-radius:3px;overflow:hidden;gap:2px;
+    background:var(--ow-rule-soft);margin:var(--ow-sp-8) 0 2px;}
+  .mpw-viz i{display:block;min-width:2px;}
+  .mpw-ticks{display:flex;gap:2px;margin:var(--ow-sp-8) 0 2px;}
+  .mpw-ticks i{flex:1;height:6px;border-radius:2px;background:var(--ow-steel-800);}
+  .mpw-ticks i.mp-todo{background:var(--ow-paper);border:1px dashed var(--ow-amber);box-sizing:border-box;}
+  .mpw-ticks i.mp-dim{background:var(--ow-steel-100);}
+  /* Where the oldest debt sits on the book's own 0-120 day reading,
+     the four age bands as the ground under it. */
+  .mpw-scale{position:relative;height:6px;border-radius:3px;margin:var(--ow-sp-8) 0 2px;
+    background:linear-gradient(90deg,var(--ow-verdigris-soft) 0 25%,var(--ow-amber-soft) 25% 50%,
+      var(--ow-oxide-soft) 50% 75%,var(--ow-crimson-soft) 75% 100%);}
+  .mpw-scale i{position:absolute;top:-3px;width:3px;height:12px;margin-left:-1.5px;border-radius:2px;
+    background:var(--ow-crimson);}
+  .mpw-ring{flex:none;width:34px;height:34px;margin:-6px 0 -4px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+  .mpw-ring span{width:26px;height:26px;border-radius:50%;background:var(--ow-paper);display:flex;
+    align-items:center;justify-content:center;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:9px;font-weight:600;color:var(--ow-ink-900);letter-spacing:-.03em;}
+  /* Two-way: what the shop owes on the left of the line, what it is
+     owed on the right, on one scale. */
+  .mpw-dv{display:flex;align-items:center;height:12px;}
+  .mpw-strip .mpw-dv{margin:5px 0 0;}
+  .mpw-dv > span{flex:1;display:flex;}
+  .mpw-dv > span:first-child{justify-content:flex-end;}
+  .mpw-dv i{display:block;height:6px;}
+  .mpw-dv i{border-radius:3px;}
+  .mpw-dv > span:first-child i{background:var(--ow-indigo);}
+  .mpw-dv > span:last-child i{background:var(--ow-verdigris);}
+  .mpw-dv em{width:2px;height:12px;background:var(--ow-ink-900);margin:0 1px;flex:none;}
 
   /* ---- the list: every place, and what to do about it ---- */
-  .mp-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:40px;
-    padding:6px 12px;border-bottom:1px solid var(--ow-rule-soft);}
-  .mp-bar .mp-bar-sp{flex:1;}
-  .mp-search{max-width:230px;}
-  .mp-results{display:flex;flex-direction:column;}
-  /* Scrolls rather than truncates: a row that is not rendered is a place
-     that cannot be moved or removed. */
-  .mp-results{max-height:320px;overflow-y:auto;}
-  /* Two rows, and every cell says which one it is in. Left to
-     auto-placement the sub-line landed in a row of its own and read as
-     the sub-line of the place BELOW it. */
-  .mp-result{display:grid;grid-template-columns:16px minmax(0,1fr) 128px 96px auto;
-    grid-template-rows:auto auto;align-items:center;column-gap:12px;
-    min-height:44px;padding:6px 12px;box-sizing:border-box;
-    border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;}
-  .mp-result:last-child{border-bottom:none;}
-  .mp-result.mp-on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
-  .mp-result-name{grid-column:2;grid-row:1;font-size:13px;font-weight:500;line-height:1.3;
-    min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .mp-result-sub{grid-column:2;grid-row:2;font-size:11px;color:var(--ink-soft);line-height:1.35;
-    margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mp-result{border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;}
+  .mp-result.mpw-on{background:var(--ow-steel-050);border-left-color:var(--ow-steel-950);}
+  .mp-result-main{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;
+    gap:10px;width:100%;min-height:52px;padding:8px 14px 8px 11px;}
+  .mp-result:not(.mpw-on) .mp-result-main:hover{background:var(--ow-paper-2);}
+  .mp-result-main:focus-visible{outline:2px solid var(--ow-sky);outline-offset:-2px;}
+  .mp-rank{flex:none;width:16px;text-align:right;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:11px;color:var(--ow-ink-400);}
+  .mp-result-body{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1;}
+  .mp-result-l{display:flex;align-items:center;gap:8px;min-width:0;}
+  .mp-result-name{font-size:13px;font-weight:600;line-height:1.3;min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mp-result-sub{font-size:11px;color:var(--ink-soft);line-height:1.35;min-width:0;flex:1;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   /* Money is sized to its content and the NAME gives way, because a
      clipped figure is not a shortened figure -- "1,240,00" is a tenth of
      "1,240,000" and looks entirely plausible. */
-  .mp-result-v{grid-row:1 / span 2;text-align:right;white-space:nowrap;}
-  .mp-result-v b{display:block;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
-    font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;letter-spacing:-.02em;}
-  .mp-result-v small{display:block;font-size:11px;color:var(--ink-soft);margin-top:1px;}
-  .mp-result-v.mp-zero b{color:var(--ow-ink-400);font-weight:400;}
-  .mp-result-acts{grid-column:5;grid-row:1 / span 2;display:flex;gap:6px;flex-wrap:wrap;
-    align-items:center;justify-content:flex-end;flex:0 0 auto;}
-  .mp-result-hd{display:grid;grid-template-columns:16px minmax(0,1fr) 128px 96px auto;
-    gap:12px;padding:7px 12px;border-bottom:1px solid var(--ow-rule-soft);
-    background:var(--ow-paper-2);}
-  .mp-result-hd span{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
-    color:var(--ow-ink-400);}
-  .mp-result-hd span.mp-r{text-align:right;}
-  .mp-dot{grid-column:1;grid-row:1 / span 2;width:10px;height:10px;border-radius:50%;
-    flex:0 0 auto;justify-self:center;}
+  .mp-result-v{margin-left:auto;flex:none;white-space:nowrap;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;letter-spacing:-.02em;color:var(--ow-ink-900);}
+  .mp-result-v.mp-zero{color:var(--ow-ink-400);font-weight:400;}
+  .mp-mag{flex:none;width:64px;height:3px;border-radius:2px;background:var(--ow-rule-soft);overflow:hidden;}
+  .mp-mag i{display:block;height:100%;border-radius:2px;background:var(--ow-steel-800);}
+  .mp-mag i.mp-todo{background:var(--ow-amber);}
+  .mp-mag i.mp-sq{background:var(--ow-indigo);}
+  .mpw-tw{display:inline-flex;align-items:center;gap:3px;height:18px;padding:0 5px;border-radius:5px;flex:none;
+    background:var(--ow-verdigris-soft);color:var(--ow-verdigris);font-size:10px;font-weight:700;letter-spacing:.04em;}
+  .mpw-tw svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;}
+  /* The row's work, under the row it is about: shown on the place you
+     have open and on every place still to be placed -- the two rows where
+     moving, removing or placing is the next thing anybody does. */
+  .mp-result-acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:0 14px 10px 51px;}
+  .mp-result:not(.mpw-on):not(.mp-todo) .mp-result-acts{display:none;}
+  .mp-dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto;box-sizing:border-box;}
+  .mp-dot.mp-sq{border-radius:3px;}
   /* The dot carries the aging BAND, the same colour as the marker -- not
      a binary placed/unplaced, which told you the one thing the row
      already said and none of what the map was coloured by. */
@@ -18626,7 +18700,7 @@
 
   /* A SUGGESTION, DRAWN SO IT CANNOT BE MISTAKEN FOR A FACT.
      The app has looked the name up; it has written nothing. */
-  .mp-sg{padding:2px 12px 12px 43px;background:var(--ow-paper-2);
+  .mp-sg{padding:2px 14px 12px 51px;background:var(--ow-paper-2);
     border-bottom:1px solid var(--ow-rule-soft);}
   .mp-sg-b{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1px solid var(--line);
     border-radius:var(--ow-r);background:var(--panel);padding:9px 12px;}
@@ -18637,75 +18711,310 @@
   .mp-sg-t small{display:block;font-size:11px;color:var(--ink-soft);margin-top:2px;}
   .mp-sg-a{display:flex;gap:6px;flex:none;flex-wrap:wrap;}
 
+  /* ---- the runs: the deliveries layer's list ---- */
+  .mpw-run{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:12px;width:100%;
+    padding:14px 14px 16px 11px;border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;}
+  .mpw-run:hover{background:var(--ow-paper-2);}
+  .mpw-run.mpw-on{background:var(--ow-steel-050);border-left-color:var(--ow-steel-950);}
+  .mpw-run:focus-visible{outline:2px solid var(--ow-sky);outline-offset:-2px;}
+  .mpw-run-h{display:flex;align-items:center;gap:8px;min-width:0;}
+  .mpw-run-h b{font-size:14px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mpw-tag{flex:none;height:22px;padding:0 8px;border-radius:6px;display:inline-flex;align-items:center;
+    background:var(--run-soft);color:var(--run);font-size:11px;font-weight:700;letter-spacing:.04em;}
+  .mpw-run-h .mpw-fig{margin-left:auto;flex:none;}
+  .mpw-route{display:flex;align-items:flex-start;}
+  .mpw-route > span{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:40px;max-width:84px;}
+  .mpw-route > span em{font-style:normal;font-size:10px;color:var(--ow-ink-900);max-width:100%;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mpw-route > span:first-child em{color:var(--ow-ink-600);}
+  .mpw-route > i{flex:1;min-width:6px;height:2px;margin-top:8px;background:var(--run);}
+  .mpw-route .mpw-home{width:14px;height:14px;border-radius:4px;background:var(--ow-steel-950);margin-top:2px;}
+  .mpw-n{width:18px;height:18px;border-radius:50%;background:var(--run);color:#fff;display:flex;
+    align-items:center;justify-content:center;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:10px;font-weight:600;}
+  .mpw-run-f{display:flex;gap:14px;font-size:11px;color:var(--ow-ink-600);}
+  .mpw-run-f b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    color:var(--ow-ink-900);font-weight:600;}
+  .mpw-run-f span:last-child{margin-left:auto;}
+  .mpw-off{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--ow-rule-soft);}
+  .mpw-off.mp-warn{background:var(--ow-amber-faint);}
+  .mpw-off-i{width:30px;height:30px;border-radius:8px;flex:none;display:flex;align-items:center;justify-content:center;
+    background:var(--ow-rule-soft);box-sizing:border-box;}
+  .mpw-off.mp-warn .mpw-off-i{background:none;border:1.5px dashed var(--ow-amber);}
+  .mpw-off-i svg{width:16px;height:16px;fill:none;stroke:var(--ow-ink-600);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .mpw-off.mp-warn .mpw-off-i svg{stroke:var(--ow-amber);}
+  .mpw-off-t{display:flex;flex-direction:column;min-width:0;flex:1;}
+  .mpw-off-t b{font-size:13px;font-weight:600;}
+  .mpw-off-t span{font-size:11px;color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mpw-off.mp-warn .mpw-off-t b,.mpw-off.mp-warn .mpw-off-t span{color:var(--ow-amber-ink);}
+
+  /* ---- the rail: the place you are on ---- */
+  .mpw-side{background:var(--ow-paper);border:1px solid var(--ow-steel-100);border-radius:var(--ow-r-lg);
+    overflow:hidden;display:flex;flex-direction:column;min-width:0;}
+  .mpw-side > .ow-pan{border:0;border-radius:0;border-bottom:1px solid var(--ow-rule-soft);}
+  .mpw-fig{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-weight:600;white-space:nowrap;}
+  .mpw-lbl{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ow-ink-400);}
+  .mpw-rh{display:flex;gap:10px;align-items:flex-start;padding:14px 16px 12px;}
+  .mpw-rh-dot{width:12px;height:12px;border-radius:50%;margin-top:5px;flex:none;box-sizing:border-box;}
+  .mpw-rh-dot.mp-sq{border-radius:3px;}
+  .mpw-rh-dot.mp-hollow{background:var(--panel);border:1.5px solid var(--line);}
+  .mpw-rh-dot.off{background:var(--panel);border:1.5px dashed var(--ow-amber);}
+  .mpw-rh-t{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;}
+  .mpw-rh h3{margin:0;font-size:16px;font-weight:700;line-height:1.2;min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mpw-rh p{margin:0;font-size:12px;color:var(--ow-ink-600);line-height:1.4;}
+  .mpw-dir{flex:none;width:38px;height:38px;border-radius:50%;border:1px solid var(--ow-rule);
+    background:var(--ow-paper-2);display:flex;align-items:center;justify-content:center;}
+  .mpw-dir svg{width:18px;height:18px;fill:none;stroke:var(--ow-steel-950);stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round;}
+  .mpw-money{padding:12px 16px 14px;border-top:1px solid var(--ow-rule-soft);display:flex;flex-direction:column;gap:10px;}
+  .mpw-money-h{display:flex;align-items:baseline;justify-content:space-between;}
+  .mpw-money-h small{font-size:11px;color:var(--ow-ink-400);}
+  .mpw-big{font-size:26px;line-height:1;color:var(--ow-ink-900);}
+  .mpw-bar8{display:flex;height:8px;border-radius:4px;overflow:hidden;gap:2px;background:var(--ow-rule-soft);}
+  .mpw-bar8 i{display:block;min-width:2px;}
+  .mpw-bands{display:flex;flex-direction:column;gap:4px;}
+  .mpw-bands div{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ow-ink-600);}
+  .mpw-bands i{width:8px;height:8px;border-radius:50%;flex:none;}
+  .mpw-bands b{margin-left:auto;font-weight:500;font-size:12px;color:var(--ow-ink-900);}
+  .mpw-money p{margin:0;font-size:12px;color:var(--ow-ink-600);line-height:1.45;}
+  .mpw-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-top:1px solid var(--ow-rule-soft);}
+  .mpw-two > div{padding:10px 16px;display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .mpw-two > div + div{border-left:1px solid var(--ow-rule-soft);}
+  .mpw-two span{font-size:11px;color:var(--ow-ink-400);}
+  .mpw-two b{font-size:14px;}
+  .mpw-two b.mp-bad{color:var(--ow-crimson);}
+  .mpw-two b.mp-warn{color:var(--ow-amber-ink);}
+  .mpw-two b.mp-good{color:var(--ow-verdigris);}
+  .mpw-two b.mp-zero{color:var(--ow-ink-400);font-weight:400;}
+  .mpw-sh{height:36px;flex:none;display:flex;align-items:center;padding:0 16px;
+    border-top:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);}
+  .mpw-sh .mpw-fig{margin-left:auto;font-size:11px;color:var(--ow-ink-600);font-weight:500;}
+  .mpw-people{max-height:260px;overflow-y:auto;}
+  .mpw-who{all:unset;box-sizing:border-box;cursor:pointer;width:100%;display:flex;flex-direction:column;gap:5px;
+    padding:9px 16px;border-top:1px solid var(--ow-rule-soft);}
+  .mpw-people .mpw-who:first-child{border-top:0;}
+  .mpw-who:hover{background:var(--ow-paper-2);}
+  .mpw-who:focus-visible{outline:2px solid var(--ow-sky);outline-offset:-2px;}
+  .mpw-who-l{display:flex;align-items:center;gap:8px;min-width:0;}
+  .mpw-who-n{font-size:13px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mpw-who-v{font-size:13px;min-width:84px;text-align:right;color:var(--ow-ink-900);}
+  .mpw-who-v.mp-zero{color:var(--ow-ink-400);font-weight:400;}
+  .mpw-who-bar{height:3px;border-radius:2px;background:var(--ow-rule-soft);overflow:hidden;}
+  .mpw-who-bar i{display:block;height:100%;border-radius:2px;}
+  .mpw-who.mpw-sup{flex-direction:row;align-items:center;gap:10px;}
+  .mpw-who.mpw-sup > span:last-child{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1;}
+  .mpw-mono{width:28px;height:28px;border-radius:7px;flex:none;display:flex;align-items:center;justify-content:center;
+    background:var(--sup-soft);color:var(--sup);font-size:11px;font-weight:700;}
+  .mpw-age{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:11px;font-weight:600;padding:1px 6px;border-radius:6px;white-space:nowrap;flex:none;
+    background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+  .mpw-age.b30{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .mpw-age.b60{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .mpw-age.b90{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+  .mpw-age.b90p{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .mpw-empty{padding:12px 16px;font-size:12px;color:var(--ow-ink-600);line-height:1.5;}
+  .mpw-tws{padding:10px 16px 12px;display:flex;flex-direction:column;gap:12px;border-top:1px solid var(--ow-rule-soft);}
+  .mpw-twr{display:flex;flex-direction:column;gap:5px;}
+  .mpw-twr-h{display:flex;align-items:baseline;gap:8px;min-width:0;}
+  .mpw-twr-h b{font-size:12px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mpw-twr-h span{font-size:11px;font-weight:600;white-space:nowrap;}
+  .mpw-twr-h span.mp-in{color:var(--ow-verdigris);}
+  .mpw-twr-h span.mp-out{color:var(--ow-indigo);}
+  .mpw-twr-l{display:flex;justify-content:space-between;gap:8px;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:11px;color:var(--ow-ink-600);}
+  /* The placing question's own rows, inside the rail while a run is on. */
+  .mp-rh{display:flex;align-items:flex-start;gap:8px;padding:11px 16px 9px;}
+  .mp-rh h3{font-size:15px;font-weight:700;line-height:1.2;margin:0;min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mp-rh p{font-size:11px;color:var(--ink-soft);margin:2px 0 0;line-height:1.4;}
+  .mp-rf{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+    padding:7px 16px;border-top:1px solid var(--ow-rule-soft);}
+  .mp-rf span{font-size:11px;color:var(--ink-soft);min-width:0;}
+  .mp-rf b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;letter-spacing:-.02em;white-space:nowrap;}
+  .mp-rf b.mp-warn{color:var(--ow-amber-ink);}
+  .mp-acts{display:flex;gap:6px;flex-wrap:wrap;padding:9px 16px;border-top:1px solid var(--ow-rule-soft);}
+  .mpw-acts{margin-top:auto;padding:12px 16px;border-top:1px solid var(--ow-rule-soft);display:flex;flex-direction:column;gap:8px;}
+  .mpw-acts .btn{width:100%;justify-content:center;box-sizing:border-box;}
+  .mpw-acts-r{display:flex;gap:8px;}
+  .mpw-acts-r .btn{flex:1 1 0;min-width:0;}
+  .mpw-see{display:none;}
+  /* A run, stop by stop: the van's day as a line with the money on it. */
+  .mpw-stops{list-style:none;margin:0;padding:14px 16px 6px;display:flex;flex-direction:column;}
+  .mpw-stops li{display:grid;grid-template-columns:24px minmax(0,1fr);column-gap:12px;}
+  .mpw-stops li > span{display:flex;flex-direction:column;align-items:center;}
+  .mpw-stops li > span > i{flex:1;width:2px;background:var(--run);margin:4px 0;min-height:10px;}
+  .mpw-stops li > span > i.mp-back{width:0;background:none;border-left:2px dashed var(--ow-ink-400);}
+  .mpw-stops .mpw-n{width:22px;height:22px;font-size:11px;}
+  .mpw-stops .mpw-home{width:14px;height:14px;border-radius:4px;background:var(--ow-steel-950);margin-top:2px;}
+  .mpw-stops .mpw-home.mp-ret{background:none;border:2px solid var(--ow-steel-950);box-sizing:border-box;}
+  .mpw-stop-b{padding-bottom:14px;display:flex;flex-direction:column;gap:6px;min-width:0;}
+  .mpw-stop-h{display:flex;align-items:baseline;gap:6px;font-size:13px;}
+  .mpw-stop-h b{font-weight:600;}
+  .mpw-stop-h small{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:11px;color:var(--ow-ink-600);}
+  .mpw-orders{border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);overflow:hidden;}
+  .mpw-order{all:unset;box-sizing:border-box;cursor:pointer;width:100%;display:flex;align-items:center;gap:8px;padding:7px 10px;}
+  .mpw-order + .mpw-order{border-top:1px solid var(--ow-rule-soft);}
+  .mpw-order:hover{background:var(--ow-paper-2);}
+  .mpw-order > span:first-child{display:flex;flex-direction:column;min-width:0;flex:1;}
+  .mpw-order b{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mpw-order small{font-size:11px;color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mpw-order small.mp-warn{color:var(--ow-amber-ink);}
+  .mpw-order .mpw-fig{font-size:12px;}
+  .mpw-paid{font-size:11px;font-weight:600;padding:1px 6px;border-radius:6px;background:var(--ow-verdigris-soft);color:var(--ow-verdigris);flex:none;}
+
   /* the markers themselves */
   /* The one thing on this screen that genuinely floats: a marker sits
      above the tiles, and without the lift it reads as printed on them.
      One declaration, shared by every shape a marker takes -- the count
      circle, the hollow one, and the shop's square. */
   .mp-marker, .mp-marker-home{box-shadow:0 1px 3px rgba(20,26,33,0.35);}
-  .mp-marker{border-radius:50%;display:flex;align-items:center;justify-content:center;
+  .mp-marker{border-radius:50%;display:flex;align-items:center;justify-content:center;box-sizing:border-box;
     color:#fff;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
     font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.02em;
     border:2px solid rgba(255,255,255,0.92);}
   .mp-marker.mp-none{background:var(--panel);color:var(--ink-soft);border-color:var(--ow-steel-400);}
-  .mp-marker-sel{border-radius:50%;border:2px solid var(--ow-steel-950);box-sizing:border-box;}
+  /* A supplier is a SQUARE in the Buy door's indigo: the shape says which
+     layer you are reading before the colour does. */
+  .mp-marker.mp-sq{border-radius:7px;}
+  .mp-marker.mpw-on{outline:2px solid var(--ow-steel-950);outline-offset:3px;}
+  .mpw-pin{position:relative;width:100%;height:100%;}
+  .mpw-pin .mp-marker{width:100%;height:100%;}
+  .mpw-pin-l{position:absolute;left:50%;top:100%;transform:translate(-50%,3px);font-family:'Figtree',system-ui,sans-serif;
+    font-size:11px;font-weight:600;color:var(--ow-ink-600);white-space:nowrap;pointer-events:none;
+    text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 2px #fff;}
+  .mpw-pin-l.mpw-on{color:var(--ow-steel-950);font-weight:700;}
+  .mpw-pin-l b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    color:var(--ow-indigo);font-weight:600;letter-spacing:-.02em;margin-left:3px;}
+  .mpw-twb{position:absolute;right:-7px;top:-7px;width:16px;height:16px;border-radius:50%;background:var(--ow-verdigris);
+    border:2px solid #fff;box-sizing:border-box;display:flex;align-items:center;justify-content:center;}
+  .mpw-twb svg{width:9px;height:9px;fill:none;stroke:#fff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;}
+  /* A stop on a run: its number in the run's colour, and a small dot
+     saying whether anybody is taking it -- amber for not yet. */
+  .mpw-stop-m{position:relative;width:100%;height:100%;border-radius:50%;background:var(--run);color:#fff;
+    border:2px solid #fff;box-sizing:border-box;display:flex;align-items:center;justify-content:center;
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;
+    box-shadow:0 1px 3px rgba(20,26,33,0.35);}
+  .mpw-stop-m.mp-dim{opacity:.8;}
+  .mpw-stop-m > i{position:absolute;right:-4px;top:-4px;width:10px;height:10px;border-radius:50%;border:2px solid #fff;}
+  /* The selected place, said on the map: what it is and what is owed,
+     floated above its own marker. */
+  .mpw-call{position:absolute;left:0;transform:translateX(-50%);background:var(--ow-paper);border:1px solid var(--ow-rule);
+    border-radius:var(--ow-r);padding:7px 10px;white-space:nowrap;pointer-events:none;
+    font-family:'Figtree',system-ui,sans-serif;box-shadow:var(--ow-lift);}
+  .mpw-call-h{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--ow-ink-900);}
+  .mpw-call-h i{width:9px;height:9px;border-radius:50%;flex:none;}
+  .mpw-call-h i.mp-sq{border-radius:2px;}
+  .mpw-call-h span{font-weight:400;font-size:11px;color:var(--ow-ink-600);}
+  .mpw-call-v{display:flex;align-items:baseline;gap:4px;margin-top:3px;font-size:11px;color:var(--ow-ink-600);}
+  .mpw-call-v b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:14px;font-weight:600;color:var(--ow-ink-900);letter-spacing:-.02em;}
+  .mpw-ring-l{position:absolute;transform:translate(-50%,-50%);font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-size:10px;color:var(--ow-ink-600);background:rgba(255,255,255,.85);padding:0 4px;border-radius:4px;
+    white-space:nowrap;pointer-events:none;}
   /* The shop is a SQUARE. It is not a place that owes anything; it is
      where everything else is measured from. */
-  .mp-marker-home{width:16px;height:16px;border-radius:var(--ow-r-sm);
+  .mp-marker-home{width:18px;height:18px;border-radius:5px;box-sizing:border-box;
     background:var(--ow-steel-950);border:2px solid #fff;}
+  .mpw-home-l{position:absolute;left:100%;top:50%;transform:translate(5px,-50%);font-family:'Figtree',system-ui,sans-serif;
+    font-size:11px;font-weight:700;color:var(--ow-steel-950);white-space:nowrap;pointer-events:none;
+    text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 2px #fff;}
   /* The ghost pin: dashed and hollow, so a proposal can never read as a
      pin that has been set. */
   .mp-marker-ghost{width:38px;height:38px;border-radius:50%;border:2px dashed var(--ow-oxide);
     background:rgba(178,58,38,.10);display:flex;align-items:center;justify-content:center;}
   .mp-marker-ghost svg{width:17px;height:17px;fill:none;stroke:var(--ow-oxide);stroke-width:1.9;
     stroke-linecap:round;stroke-linejoin:round;}
+  .mpw-go-x{display:none;}
 
-  /* ---- the phone is its own design, not this one reflowed ---- */
+  /* Below the widest screens the place you are on moves under the list
+     and the map rather than squeezing them. */
+  @media (max-width: 1240px){
+    .mpw-work{grid-template-columns:300px minmax(0,1fr);}
+    .mpw-side{grid-column:1 / -1;}
+  }
+
+  /* ---- the phone is its own design, not this one reflowed ----
+
+     The map first and edge to edge, the place you tapped as a sheet over
+     its bottom edge, the four readings as one 2x2 card, then the list --
+     and the one thing to do in the thumb's reach above the tab bar. The
+     order is set here rather than in the markup, so the desktop keeps its
+     three columns and the phone its one reading top to bottom. */
   @media (max-width: 820px){
-    #mp_map{height:210px;}
+    #tab-map .mpw-stack{gap:0;}
+    #tab-map #mp_home_note{display:none;}
+    .mpw-work{display:contents;}
+    .mpw-mappan{order:1;margin:0 -16px;border-radius:0;border-left:0;border-right:0;}
+    .mpw-side{order:2;margin:-22px -16px 0;position:relative;z-index:1;border-radius:16px 16px 0 0;
+      border-left:0;border-right:0;border-bottom:0;box-shadow:0 -4px 16px rgba(20,30,40,0.06);}
+    .mpw-side::before{content:"";display:block;width:36px;height:4px;border-radius:2px;background:var(--ow-steel-100);
+      margin:8px auto 0;}
+    #tab-map #mp_strip{order:3;margin:0 -16px;padding:0 16px 16px;background:var(--ow-paper);}
+    .mpw-list{order:4;contain:none;margin-top:16px;}
+    #mp_map{height:300px;}
     /* The panel head is a 34px single row by design, which is right for a
        title and a count and wrong for a three-way switch plus a summary:
        at 390 the switch alone is wider than the head, so "Customers" and
        "Deliveries" were simply cut off the ends. Only the map's own head
        wraps, and only here -- the shared component is untouched. */
-    .ow-pan-h.mp-headbar{height:auto;min-height:34px;flex-wrap:wrap;
-      align-items:flex-start;padding:8px 12px;gap:8px;}
-    .ow-pan-h.mp-headbar .ow-pan-n{margin-left:0;white-space:normal;}
+    .ow-pan-h.mp-headbar{padding:12px 16px 10px;gap:8px;}
+    .ow-pan-h.mp-headbar .ow-pan-n{display:none;}
     .mp-seg{width:100%;}
-    .mp-seg button{flex:1;justify-content:center;height:30px;font-size:12px;}
+    .mp-seg button{flex:1;justify-content:center;height:34px;font-size:13px;}
+    .mp-legend{display:none;}
     .mp-search{max-width:none;flex:1 1 100%;}
-    .mp-result{grid-template-columns:14px minmax(0,1fr) auto;
-      grid-template-rows:auto auto auto;row-gap:2px;padding:12px;min-height:60px;}
-    .mp-result-name{font-size:15px;font-weight:600;}
+    .mp-search input{height:44px;font-size:15px;}
+    .mpw-list #mp_results{flex:none;overflow:visible;}
+    /* Two fingers turn the map on a phone; the buttons for it are the
+       desk's. North and Frame stay -- the two a thumb needs. */
+    #mp_rot_left,#mp_rot_right,.mpw-csep{display:none;}
+    /* The sheet carries the reading, not the ledger: the people and the
+       two-way accounts open from its own button. */
+    .mpw-rh h3{font-size:20px;}
+    .mpw-rh p{font-size:13px;}
+    .mpw-big{font-size:22px;}
+    .mpw-bands{flex-direction:row;flex-wrap:wrap;gap:4px 14px;}
+    .mpw-bands b{margin-left:4px;}
+    .mpw-side:not(.mp-open) .mpw-two,.mpw-side:not(.mp-open) .mpw-sh,
+    .mpw-side:not(.mp-open) .mpw-people,.mpw-side:not(.mp-open) .mpw-tws,
+    .mpw-side:not(.mp-open) .mpw-stops{display:none;}
+    .mpw-see{display:flex;}
+    /* The sheet says what the callout says, a thumb's width away. */
+    .mpw-call{display:none;}
+    .mpw-acts .btn,.mpw-acts-r .btn{min-height:var(--ow-tap);font-size:15px;}
+    .mpw-who,.mpw-order{min-height:var(--ow-tap);}
+    /* Four readings, 2x2, in one card: the third desktop reading (the
+       biggest single place) is the sheet's own job on a phone. */
+    .ow-strip.mpw-strip{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .mpw-strip .mpw-mt-x{display:none;}
+    .mpw-strip .ow-mt{padding:var(--ow-sp-12) 14px;border-top:1px solid var(--ow-rule-soft);border-left:0;}
+    .mpw-strip .mpw-p1,.mpw-strip .mpw-p2{border-top:0;}
+    .mpw-strip .mpw-p2,.mpw-strip .mpw-p4{border-left:1px solid var(--ow-rule-soft);}
+    .mpw-strip .ow-mt-s{white-space:normal;}
+    .mp-result-main{min-height:60px;padding:12px 14px 12px 11px;}
+    .mp-result-name{font-size:15px;}
     .mp-result-sub{font-size:12px;}
-    .mp-result-v{grid-column:3;grid-row:1 / span 2;}
-    .mp-result-v b{font-size:15px;}
-    /* The oldest-age column is dropped rather than squeezed: it is in the
-       row's own sub-line already, and a third figure at this width makes
-       all three unreadable. */
-    .mp-result > .mp-result-age{display:none;}
-    /* ONE action per row on a phone. Three of them stacked to 150px a row
-       and turned a scannable list into a wall of buttons -- which is the
-       desktop reflowed, exactly what the two-designs rule forbids. The
-       row keeps its primary action; moving and removing a pin live in the
-       place's own panel, where you are already reading that place.
-       Nothing becomes unreachable, which is the rule that matters here:
-       a pin that cannot be removed because its button is not drawn is a
-       bug this screen has already shipped once. */
-    /* .btn.ow-sm is declared in the OW layer, which is LATER in this file
-       and carries the same (0,2,0) specificity -- so a tie goes to it and
-       ".mp-result-acts .mp-second{display:none}" silently lost. Naming
-       the button class as well takes the rule to (0,3,0) and it wins on
-       merit rather than on ordering. Measured, not assumed: the buttons
-       stayed on screen until this changed. */
-    .mp-result-acts{grid-column:1 / -1;grid-row:3;justify-content:flex-start;padding-top:6px;}
-    .mp-result-acts .btn.mp-second{display:none;}
+    .mp-result-v{font-size:15px;}
+    .mp-rank{display:none;}
+    .mp-result-acts{padding:0 14px 12px 34px;}
     .mp-result-acts .btn.ow-sm{min-height:var(--ow-tap);padding:0 14px;}
-    .mp-result-hd{display:none;}
-    .mp-results{max-height:none;}
     .mp-sg{padding:2px 12px 12px;}
-    .mp-legend em{margin-left:0;flex:1 1 100%;}
+    /* The one thing to do, in the thumb's reach: above the tab bar, the
+       width of the screen, with what is waiting at the places it means. */
+    #tab-map{padding-bottom:76px;}
+    #tab-map #mp_place_all .btn{position:fixed;left:16px;right:16px;z-index:45;justify-content:center;
+      bottom:calc(var(--mobile-bottomnav-h) + env(safe-area-inset-bottom) + 10px);height:48px;font-size:15px;}
+    .mpw-go-x{display:inline;}
   }
+  /* The one map rule kept from the media picker's era: both screens wear
+     .mp-note, and the picker's note has always read through this one. */
+  .mp-note{margin:0;padding:9px 12px;font-size:11px;color:var(--ink-soft);line-height:1.5;
+    border-top:1px solid var(--ow-rule-soft);max-width:var(--ow-measure);}
+  .mp-note b{color:var(--ink);font-weight:600;}
 
   /* ---------------- WhatsApp: the front desk ----------------
 
@@ -34156,17 +34465,38 @@
       <div class="ow-ph">
         <h1 class="ow-ph-t">Map</h1>
         <p class="ow-ph-sub" id="mp_sub">Where your money is, and what is going out today.</p>
-        <p class="ow-ph-help">One marker per PLACE, not per person: forty-five customers in sixteen places is sixteen markers, because &ldquo;Bwaise: 3 customers, 1.2m owed&rdquo; is the sentence somebody actually wants. Every figure is counted from the invoices themselves at the moment the screen was drawn &mdash; nothing about money is stored on a place, so this and the Debtors list cannot drift apart. Markers are coloured by the oldest unpaid thing at the place, on the same bands Debtors uses, and sized by how many people are there; a place where money is owed but nothing carries a date is grey, never &ldquo;under 30 days&rdquo;. The shop itself is the black square everything else is measured from. Places further than 40km out are listed beside the map rather than drawn with it, because fitting Lira and Bwaise on one screen makes the twenty places that matter a single dot. Nothing on this screen chases anybody or hands out an order: those are taps of yours, on Debtors and on Order tracking.</p>
+        <p class="ow-ph-help">One marker per PLACE, not per person: forty-five customers in sixteen places is sixteen markers, because &ldquo;Bwaise: 3 customers, 1.2m owed&rdquo; is the sentence somebody actually wants. Every figure is counted from the invoices themselves at the moment the screen was drawn &mdash; nothing about money is stored on a place, so this and the Debtors list cannot drift apart. Markers are coloured by the oldest unpaid thing at the place, on the same bands Debtors uses, and sized by how many people are there; a place where money is owed but nothing carries a date is grey, never &ldquo;under 30 days&rdquo;. The shop itself is the navy square everything else is measured from, and the dashed rings around it are 5 and 10 km. Places further than 40km out are drawn as arrows on the edge of the map, pointing the way they are, because fitting Lira and Bwaise on one screen makes the twenty places that matter a single dot. Nothing on this screen chases anybody or hands out an order: those are taps of yours, on Debtors and on Order tracking.</p>
         <span class="ow-ph-sp"></span>
         <span id="mp_home_note"></span>
         <span id="mp_place_all"></span>
       </div>
 
-      <div class="ow-stack">
+      <div class="ow-stack mpw-stack">
         <div id="mp_strip"></div>
 
-        <div class="ow-grid">
-          <div class="ow-pan">
+        <!-- THE WORKSPACE. The list, the map and the place you are on, side
+             by side: a row picked on the left rings its marker in the
+             middle and opens on the right, so the three are one reading
+             rather than three panels that happen to share a page. -->
+        <div class="mpw-work">
+          <div class="ow-pan mpw-list">
+            <div class="ow-pan-h mpw-ph">
+              <span class="mpw-pt" id="mp_list_t">Places</span>
+              <span class="ow-pan-nt" id="mp_list_nt">most owed first</span>
+              <span class="ow-pan-n" id="mp_list_n"></span>
+            </div>
+            <div class="mp-bar" id="mp_bar">
+              <div class="mp-seg" id="mp_filters">
+                <button type="button" class="active" data-filter="all"><span>All</span><b class="mp-seg-n" id="mp_n_all"></b></button>
+                <button type="button" data-filter="placed"><span>On the map</span><b class="mp-seg-n" id="mp_n_placed"></b></button>
+                <button type="button" data-filter="todo"><span>Not placed</span><b class="mp-seg-n" id="mp_n_todo"></b></button>
+              </div>
+              <div class="search-bar mp-search"><input id="mp_place_search" placeholder="Find a place" aria-label="Find a place"></div>
+            </div>
+            <div id="mp_results"></div>
+          </div>
+
+          <div class="ow-pan mpw-mappan">
             <div class="ow-pan-h mp-headbar">
               <div class="mp-seg" id="mp_layers">
                 <button type="button" class="active" data-layer="customers">
@@ -34190,45 +34520,29 @@
                 <button type="button" class="mp-base" data-base="satellite">Satellite</button>
               </div>
               <div class="mp-compass" id="mp_compass">
-                <button type="button" id="mp_rot_left" title="Turn the map left">
+                <button type="button" id="mp_rot_left" title="Turn the map left" aria-label="Turn the map left">
                   <svg viewBox="0 0 24 24"><path d="M20 8a9 9 0 1 0 1.5 6"></path><path d="M20 3v5h-5"></path></svg>
                 </button>
-                <button type="button" id="mp_rot_north" title="Put north back at the top">
+                <button type="button" id="mp_rot_north" title="Put north back at the top" aria-label="Put north back at the top">
                   <svg class="mp-needle" id="mp_needle" viewBox="0 0 24 24"><path d="M12 4 17 19 12 15 7 19 Z"></path></svg>
                   <span class="mp-bearing" id="mp_bearing">N</span>
                 </button>
-                <button type="button" id="mp_rot_right" title="Turn the map right">
+                <button type="button" id="mp_rot_right" title="Turn the map right" aria-label="Turn the map right">
                   <svg viewBox="0 0 24 24"><path d="M4 8a9 9 0 1 1-1.5 6"></path><path d="M4 3v5h5"></path></svg>
                 </button>
-                <button type="button" id="mp_fit" title="Frame everything on this layer">
+                <span class="mpw-csep"></span>
+                <button type="button" id="mp_fit" title="Frame everything on this layer" aria-label="Frame everything on this layer">
                   <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"></path></svg>
                 </button>
               </div>
-              <div class="mp-scale"><span>2 km</span><i></i></div>
+              <div class="mpw-edges" id="mp_edges"></div>
               <div class="mp-tiles" id="mp_tiles" hidden></div>
               <div class="mp-empty" id="mp_empty" hidden></div>
             </div>
             <div class="mp-legend" id="mp_legend"></div>
           </div>
-          <aside class="ow-side" id="mp_side"></aside>
-        </div>
 
-        <div class="ow-pan">
-          <div class="ow-pan-h">
-            <span class="ow-pan-t" id="mp_list_t">Places</span>
-            <span class="ow-pan-nt" id="mp_list_nt">most owed first</span>
-            <span class="ow-pan-n" id="mp_list_n"></span>
-          </div>
-          <div class="mp-bar">
-            <div class="mp-seg" id="mp_filters">
-              <button type="button" class="active" data-filter="all"><span>All</span><b class="mp-seg-n" id="mp_n_all"></b></button>
-              <button type="button" data-filter="todo"><span>Not placed</span><b class="mp-seg-n" id="mp_n_todo"></b></button>
-              <button type="button" data-filter="placed"><span>On the map</span><b class="mp-seg-n" id="mp_n_placed"></b></button>
-            </div>
-            <span class="mp-bar-sp"></span>
-            <div class="search-bar mp-search"><input id="mp_place_search" placeholder="Find a place, or a customer"></div>
-          </div>
-          <div id="mp_results"></div>
+          <aside class="mpw-side" id="mp_side" aria-label="The place you are on"></aside>
         </div>
       </div>
     </section>
@@ -50234,56 +50548,248 @@ function mapMoneyAt(r, layer){
 function mapFigure(n){
   return String(fmtUGX(Math.round(n))).replace(/\s*UGX\s*$/, '');
 }
-function mapTile(label, value, unit, sub, tone){
-  return `<div class="ow-mt${tone ? ' ' + tone : ''}">
+function mapTile(label, value, unit, sub, tone, viz, cls){
+  return `<div class="ow-mt${tone ? ' ' + tone : ''}${cls ? ' ' + cls : ''}">
     <p class="ow-mt-l">${esc(label)}</p>
     <span class="ow-mt-v">${esc(value)}${unit ? ` <span class="ow-u">${esc(unit)}</span>` : ''}</span>
+    ${viz || ''}
     <p class="ow-mt-s">${sub}</p></div>`;
 }
+/* ---- the console's own arithmetic ----------------------------------- */
+/* A figure short enough for a tile, a chip or a marker label: millions
+   to two places, thousands whole. The full figure is one click away in
+   the rail, where there is room for every digit. */
+function mapShort(n){
+  n = Math.round(Number(n) || 0);
+  if(Math.abs(n) >= 1e6) return (n / 1e6).toFixed(2) + 'm';
+  if(Math.abs(n) >= 1e3) return Math.round(n / 1e3) + 'k';
+  return String(n);
+}
+/* Which way one pin lies from another, in degrees clockwise from north:
+   the initial great-circle bearing, so it is right at 3 km and at 300. */
+function mapBearingDeg(a, b){
+  if(!a || !b) return null;
+  const rad = Math.PI / 180;
+  const y = Math.sin((b.lng - a.lng) * rad) * Math.cos(b.lat * rad);
+  const x = Math.cos(a.lat * rad) * Math.sin(b.lat * rad)
+    - Math.sin(a.lat * rad) * Math.cos(b.lat * rad) * Math.cos((b.lng - a.lng) * rad);
+  return (Math.atan2(y, x) / rad + 360) % 360;
+}
+function mapCompassPoint(deg){
+  return deg == null ? '' : MAP_COMPASS_POINTS[Math.round(deg / 45) % 8];
+}
+/* One customer's balance split by age, exactly as Debtors splits it: the
+   open charges by their own dates, and whatever the dated charges do not
+   explain named as money of no known age -- never folded into the
+   youngest band. Two screens that disagree about how old a debt is
+   would each be believed by somebody. */
+const MAP_AGE_ORDER = ['b90p', 'b90', 'b60', 'b30', 'unknown'];
+function mapCustomerAges(c){
+  const out = { b30: 0, b60: 0, b90: 0, b90p: 0, unknown: 0 };
+  const debt = Math.max(0, Number(c && c.debt) || 0);
+  if(debt <= 0.5) return out;
+  let onDated = 0;
+  customerOpenCharges(c).forEach(ch=>{
+    if(!ch.date) return;
+    const age = daysSinceDate(ch.date);
+    if(!(age >= 0)) return;
+    out[agingBandFor(age)] += ch.remaining;
+    onDated += ch.remaining;
+  });
+  out.unknown = Math.max(0, debt - onDated);
+  if(out.unknown < 0.5) out.unknown = 0;
+  return out;
+}
+function mapAgesAt(people){
+  const out = { b30: 0, b60: 0, b90: 0, b90p: 0, unknown: 0 };
+  (people || []).forEach(c=>{
+    const a = mapCustomerAges(c);
+    Object.keys(out).forEach(k=>{ out[k] += a[k]; });
+  });
+  return out;
+}
+/* Bar segments, one per non-empty part, sized by flex so the parts are
+   in proportion without anybody computing a percentage that rounds to a
+   hundred and one. */
+function mapSegs(parts){
+  return parts.filter(p=> p.v > 0.5)
+    .map(p=> `<i${p.cls ? ` class="${p.cls}"` : ''} style="flex:${Math.round(p.v)} 0 0;background:${p.c};"${
+      p.t ? ` title="${esc(p.t)}"` : ''}></i>`).join('');
+}
+/* A supplier who is also a customer: what the shop owes them and what
+   they owe the shop, side by side. Neither figure is netted anywhere --
+   settling one against the other is the owner's decision, on Creditors. */
+function mapTwoWay(){
+  return (data.customers || []).filter(c=> c.linkedSupplierId).map(c=>{
+    const s = (data.suppliers || []).find(x=> x.id === c.linkedSupplierId);
+    if(!s) return null;
+    const owe = Math.max(0, creditorTotalOwed(s.id));
+    const owed = Math.max(0, Number(c.debt) || 0);
+    return { name: s.name || c.name, customer: c, supplier: s, owe, owed };
+  }).filter(x=> x && (x.owe > 0.5 || x.owed > 0.5))
+    .sort((a,b)=> (b.owe + b.owed) - (a.owe + a.owed));
+}
+function mapTwoWayIds(){
+  return new Set((data.customers || []).map(c=> c.linkedSupplierId).filter(Boolean).map(String));
+}
+/* The place the rail is open on. Never empty while there is something to
+   read: with nothing picked it is the place holding the most money on
+   this layer -- the screen's own question, answered before anybody
+   clicks. */
+function mapPickPlace(rows, layer){
+  const picked = mpSelected ? rows.find(r=> r.name === mpSelected) : null;
+  if(picked) return picked;
+  return rows.filter(r=> mapPeopleAt(r, layer) > 0)
+    .sort((a,b)=> mapMoneyAt(b, layer) - mapMoneyAt(a, layer)
+      || mapPeopleAt(b, layer) - mapPeopleAt(a, layer) || a.name.localeCompare(b.name))[0] || null;
+}
+function mapSupplierMarkerSize(money){
+  return Math.min(64, Math.round(22 + Math.sqrt(Math.max(0, money) / 1e6) * 9));
+}
+const MAP_TW_ICON = '<svg viewBox="0 0 24 24"><path d="M4 8h14l-4-4"></path><path d="M20 16H6l4 4"></path></svg>';
 function renderMapStrip(rows, unpinned, layer){
   const el = document.getElementById('mp_strip');
   if(!el) return;
+  const sup = layer === 'suppliers';
+  const home = mapHomePin() || mapCentrePin(rows);
   const money = rows.reduce((n,r)=> n + mapMoneyAt(r, layer), 0);
   const people = rows.reduce((n,r)=> n + mapPeopleAt(r, layer), 0);
   const withMoney = rows.filter(r=> mapMoneyAt(r, layer) > 0.5);
-  const owedWord = layer === 'suppliers' ? 'You owe' : 'Owed to you';
-  /* The concentration figure the old screen could never say: one place
-     holding a third of everything owed is where a collection round
-     starts, and no list sorted by name will ever tell you that. */
-  const top = withMoney.slice().sort((a,b)=> mapMoneyAt(b, layer) - mapMoneyAt(a, layer))[0];
-  const share = (top && money > 0.5) ? Math.round(mapMoneyAt(top, layer) / money * 100) : 0;
-  /* Oldest is a customer-side idea: nothing dates what the shop owes. */
-  let oldest = null, oldestAt = null;
-  if(layer === 'customers'){
-    rows.forEach(r=>{ if(r.oldestDays != null && (oldest == null || r.oldestDays > oldest)){
-      oldest = r.oldestDays; oldestAt = r; } });
-  }
-  const undrawnMoney = unpinned.reduce((n,r)=> n + mapMoneyAt(r, layer), 0);
-  const tiles = [
-    mapTile(owedWord, mapFigure(money), 'UGX',
-      `${people} ${layer === 'suppliers' ? 'supplier' : 'customer'}${people === 1 ? '' : 's'}, across ${withMoney.length} place${withMoney.length === 1 ? '' : 's'}`,
-      money > 0.5 ? '' : 'ow-good'),
-  ];
-  if(layer === 'customers'){
-    tiles.push(oldest == null
-      ? mapTile('Oldest debt', '—', '', 'no unpaid invoice carries a date', '')
-      : mapTile('Oldest debt', String(oldest), oldest === 1 ? 'day' : 'days',
-          `at ${esc(oldestAt.name)}`, oldest >= 90 ? 'ow-bad' : oldest >= 30 ? 'ow-warn' : 'ow-good'));
+  const placesOn = rows.filter(r=> mapPeopleAt(r, layer) > 0).length;
+  const tiles = [];
+
+  /* 1. The total, and what it is made of: by age for what customers owe,
+     by supplier for what the shop owes -- the split each side is read by. */
+  let mix = '';
+  if(sup){
+    const owed = [];
+    rows.forEach(r=> r.suppliers.forEach(s=>{
+      const v = Math.max(0, creditorTotalOwed(s.id));
+      if(v > 0.5) owed.push({ s, v });
+    }));
+    owed.sort((a,b)=> b.v - a.v);
+    const rest = owed.slice(4).reduce((n,x)=> n + x.v, 0);
+    mix = mapSegs(owed.slice(0, 4).map(x=> ({ v: x.v, c: 'var(--sup)', cls: invSupHue({ supplierId: x.s.id }), t: x.s.name }))
+      .concat([{ v: rest, c: 'var(--ow-steel-100)', t: 'Everyone else' }]));
   } else {
-    tiles.push(mapTile('Places you buy from', String(rows.filter(r=> r.suppliers.length).length), 'places',
-      'holding at least one supplier', ''));
+    const ages = mapAgesAt([].concat(...rows.map(r=> r.customers)));
+    mix = mapSegs(MAP_AGE_ORDER.map(k=> ({ v: ages[k], c: mapBandColour(k), t: (agingBandDef(k) || {}).short })));
   }
-  tiles.push(top
-    ? mapTile('Most in one place', mapFigure(mapMoneyAt(top, layer)), 'UGX',
-        `${esc(top.name)} — ${share}% of the total`, '')
-    : mapTile('Most in one place', '—', '', 'nothing is owed anywhere', 'ow-good'));
-  tiles.push(unpinned.length
-    ? mapTile('Not on the map yet', String(unpinned.length), unpinned.length === 1 ? 'place' : 'places',
-        undrawnMoney > 0.5
-          ? `${esc(fmtUGX(Math.round(undrawnMoney)))} at them, undrawn`
-          : 'nothing owed at them', 'ow-warn')
-    : mapTile('Not on the map yet', '0', 'places', `all ${rows.length} placed`, 'ow-good'));
-  el.innerHTML = `<div class="ow-strip">${tiles.join('')}</div>`;
+  tiles.push({ html: mapTile(sup ? 'You owe' : 'Owed to you', mapShort(money), 'UGX',
+    `${people} ${sup ? 'supplier' : 'customer'}${people === 1 ? '' : 's'} · ${placesOn} place${placesOn === 1 ? '' : 's'} · by ${sup ? 'supplier' : 'age'}`,
+    money > 0.5 ? '' : 'ow-good', money > 0.5 ? `<div class="mpw-viz" role="img" aria-label="Split by ${sup ? 'supplier' : 'age'}">${mix}</div>` : '') });
+
+  /* 2. The oldest debt, on the book's own 0-120 day reading -- or, for
+     the shop's own debts, which nothing dates, the one creditor holding
+     the most of it. */
+  if(sup){
+    let big = null;
+    rows.forEach(r=> r.suppliers.forEach(s=>{
+      const v = Math.max(0, creditorTotalOwed(s.id));
+      if(v > 0.5 && (!big || v > big.v)) big = { s, v };
+    }));
+    tiles.push({ phoneHide: true, html: big
+      ? mapRingTile('Biggest creditor', mapShort(big.v), 'UGX', esc(big.s.name), Math.round(big.v / money * 100),
+          'var(--sup)', invSupHue({ supplierId: big.s.id }))
+      : mapTile('Biggest creditor', '—', '', 'nothing is owed to anybody', 'ow-good') });
+  } else {
+    let oldest = null;
+    rows.forEach(r=> r.customers.forEach(c=>{
+      const d = customerOldestDebtDays(c);
+      if(d != null && (!oldest || d > oldest.d)) oldest = { d, c, r };
+    }));
+    tiles.push({ html: oldest
+      ? mapTile('Oldest debt', String(oldest.d), oldest.d === 1 ? 'day' : 'days',
+          `at ${esc(oldest.c.name || oldest.c.id)}, ${esc(oldest.r.name)}`,
+          oldest.d >= 90 ? 'ow-bad' : oldest.d >= 30 ? 'ow-warn' : 'ow-good',
+          `<div class="mpw-scale" role="img" aria-label="${oldest.d} days on a 0 to 120 day scale"><i style="left:${Math.min(100, oldest.d / 120 * 100).toFixed(1)}%;background:${mapBandColour(agingBandFor(oldest.d))};"></i></div>`)
+      : mapTile('Oldest debt', '—', '', 'no unpaid invoice carries a date', '') });
+  }
+
+  /* 3. The single place holding the most -- where a round starts. On the
+     suppliers layer the strip says how far the money is instead, so
+     this slot is the distance reading and the two-way one follows. */
+  const top = withMoney.slice().sort((a,b)=> mapMoneyAt(b, layer) - mapMoneyAt(a, layer))[0];
+  if(!sup){
+    tiles.push({ phoneHide: true, html: top
+      ? mapRingTile('Most in one place', mapShort(mapMoneyAt(top, layer)), 'UGX', `${esc(top.name)} — start a round here`,
+          Math.round(mapMoneyAt(top, layer) / money * 100), 'var(--ow-steel-950)', '')
+      : mapTile('Most in one place', '—', '', 'nothing is owed anywhere', 'ow-good') });
+  }
+
+  /* 4. How far the money is. Near to far in the neutrals, and what sits
+     at places with no pin in amber, because that part cannot be measured
+     until somebody places it. */
+  const d = { a: 0, b: 0, c: 0, far: 0, todo: 0 };
+  rows.forEach(r=>{
+    const v = mapMoneyAt(r, layer);
+    if(v <= 0.5) return;
+    if(!r.pin){ d.todo += v; return; }
+    const km = home ? pinDistanceKm(home, r.pin) : null;
+    if(km == null) d.todo += v;
+    else if(km > MAP_CORE_RADIUS_KM) d.far += v;
+    else if(km <= 5) d.a += v;
+    else if(km <= 10) d.b += v;
+    else d.c += v;
+  });
+  tiles.push({ html: (home && money > 0.5)
+    ? mapTile('Within 10 km', String(Math.round((d.a + d.b) / money * 100)), sup ? '% of what you owe' : '% of the money',
+        'near → far · amber not placed', '',
+        `<div class="mpw-viz" role="img" aria-label="Split by distance from the shop">${mapSegs([
+          { v: d.a, c: 'var(--ow-steel-800)', t: 'Within 5 km' }, { v: d.b, c: 'var(--ow-ink-600)', t: '5 to 10 km' },
+          { v: d.c, c: '#A3AABA', t: `10 to ${MAP_CORE_RADIUS_KM} km` }, { v: d.far, c: '#D5D9E1', t: `Further than ${MAP_CORE_RADIUS_KM} km` },
+          { v: d.todo, c: 'var(--ow-amber)', t: 'At places not on the map' }])}</div>`)
+    : mapTile('Within 10 km', '—', '', home ? 'nothing is owed to measure' : 'nothing placed to measure from', '') });
+
+  if(sup){
+    const tw = mapTwoWay();
+    const owe = tw.reduce((n,x)=> n + x.owe, 0), owed = tw.reduce((n,x)=> n + x.owed, 0);
+    const max = Math.max(owe, owed, 1);
+    tiles.push({ html: tw.length
+      ? mapTile('Two-way accounts', String(tw.length), 'also customers',
+          `you owe ${mapShort(owe)} ⟷ they owe ${mapShort(owed)}`, '',
+          `<div class="mpw-dv" role="img" aria-label="You owe them ${mapShort(owe)}, they owe you ${mapShort(owed)}"><span><i style="width:${(owe / max * 100).toFixed(1)}%"></i></span><em></em><span><i style="width:${(owed / max * 100).toFixed(1)}%"></i></span></div>`)
+      : mapTile('Two-way accounts', '0', '', 'no supplier here is also a customer', '') });
+  }
+
+  /* 5. How much of the book has a position. One tick per place, so the
+     count reads as a picture; dashed amber for the ones still to place. */
+  // Counted over the places this layer lists -- the same set as the list.
+  const listed = sup ? rows.filter(r=> r.suppliers.length) : rows;
+  const todo = listed.filter(r=> !r.pin);
+  const placed = listed.length - todo.length;
+  const undrawn = todo.reduce((n,r)=> n + mapMoneyAt(r, layer), 0);
+  const ticks = listed.length <= 48
+    ? listed.slice().sort((a,b)=> (b.pin ? 1 : 0) - (a.pin ? 1 : 0)).map(r=> `<i${r.pin ? '' : ' class="mp-todo"'}></i>`).join('')
+    : `<i style="flex:${placed};"></i><i class="mp-todo" style="flex:${todo.length};"></i>`;
+  tiles.push({ html: mapTile('On the map', String(placed), `of ${listed.length} place${listed.length === 1 ? '' : 's'}`,
+    todo.length
+      ? (undrawn > 0.5 ? `${esc(mapShort(undrawn))} sits at unplaced places` : 'nothing owed at the unplaced ones')
+      : `all ${listed.length} placed`,
+    '', listed.length ? `<div class="mpw-ticks" role="img" aria-label="${placed} placed, ${todo.length} not placed">${ticks}</div>` : '',
+    todo.length && undrawn > 0.5 ? 'mpw-mt-am' : '') });
+
+  el.innerHTML = mapStripHtml(tiles);
+}
+/* The strip's frame. Each tile carries its desktop position and, unless
+   the phone drops it, its place in the phone's 2x2 -- so the hairlines
+   between the four that stay are drawn where they actually meet. */
+function mapStripHtml(tiles){
+  let p = 0;
+  return `<div class="ow-strip mpw-strip">${tiles.map(t=>{
+    const cls = t.phoneHide ? 'mpw-mt-x' : `mpw-p${++p}`;
+    return t.html.replace('class="ow-mt', `class="${cls} ow-mt`);
+  }).join('')}</div>`;
+}
+/* A tile whose reading is a share of the whole: the figure on the left,
+   the share as a ring on the right. */
+function mapRingTile(label, value, unit, sub, pct, colour, cls){
+  const p = Math.max(0, Math.min(100, pct || 0));
+  return `<div class="ow-mt mpw-mt-ring${cls ? ' ' + cls : ''}">
+    <p class="ow-mt-l">${esc(label)}</p>
+    <div class="mpw-ring-r"><span class="ow-mt-v">${esc(value)}${unit ? ` <span class="ow-u">${esc(unit)}</span>` : ''}</span>
+      <div class="mpw-ring" role="img" aria-label="${p} percent of the total" style="background:conic-gradient(${colour} 0 ${p}%, var(--ow-rule-soft) ${p}% 100%);"><span>${p}%</span></div></div>
+    <p class="ow-mt-s">${sub}</p></div>`;
 }
 
 /* ---- the header: the counts, and the one thing to do next ---------- */
@@ -50292,42 +50798,52 @@ function renderMapHead(rows, unpinned){
   const supp = rows.reduce((n,r)=> n + r.suppliers.length, 0);
   const { runs } = deliveryMapRuns();
   const drops = runs.reduce((n,r)=> n + r.orders.length, 0);
+  const home = mapHomePin() || mapCentrePin(rows);
+  const routes = deliveryMapRoutes(runs, home);
   const set = (id, txt)=>{ const e = document.getElementById(id); if(e) e.textContent = txt; };
   set('mp_n_cust', String(cust));
   set('mp_n_supp', String(supp));
   set('mp_n_del', String(drops));
-  set('mp_n_all', String(rows.length));
-  set('mp_n_todo', String(unpinned.length));
-  set('mp_n_placed', String(rows.length - unpinned.length));
+  // The filter counts are the list's own, and the list is the layer's.
+  const listed = mpLayer === 'suppliers' ? rows.filter(r=> r.suppliers.length) : rows;
+  const listedTodo = listed.filter(r=> !r.pin).length;
+  set('mp_n_all', String(listed.length));
+  set('mp_n_todo', String(listedTodo));
+  set('mp_n_placed', String(listed.length - listedTodo));
   set('mp_sub', mpLayer === 'deliveries'
-    ? (drops ? `${drops} order${drops === 1 ? '' : 's'} going out today, to ${runs.length} place${runs.length === 1 ? '' : 's'}.`
+    ? (drops ? `${drops} order${drops === 1 ? '' : 's'} going out today, to ${runs.length} place${runs.length === 1 ? '' : 's'}${
+        routes.length ? ` on ${routes.length} run${routes.length === 1 ? '' : 's'}` : ''}.`
              : 'Nothing is waiting for delivery today.')
     : mapPlacingActive() ? `Placing the ${mpPlacing.queue.length} place${mpPlacing.queue.length === 1 ? '' : 's'} that are not on the map yet.`
+    : mpLayer === 'suppliers' ? 'Where you buy from, and what you owe there.'
     : 'Where your money is, and what is going out today.');
 
   /* Where everything is measured from, said out loud rather than left
-     for somebody to infer from a black square. */
+     for somebody to infer from a navy square. */
   const homeEl = document.getElementById('mp_home_note');
   if(homeEl){
     const named = canonicalLocation(data.presetShopLocation || data.presetShopAddress || '');
     const pin = mapHomePin();
     homeEl.innerHTML = (named && pin)
-      ? `<span class="ow-cp" title="Everything is measured from here">The shop is in ${esc(named)}</span>`
+      ? `<span class="ow-cp mpw-home" title="Everything is measured from here"><i></i>${
+          mpLayer === 'deliveries' ? 'Runs leave from the shop' : 'Measured from the shop'} · <b>${esc(named)}</b></span>`
       : `<span class="ow-cp ow-warn" title="Set the shop's location in Presets">Shop not placed — distances are from the middle of your pins</span>`;
   }
 
   /* THE ACCENT, AND THE ONLY ONE. It is the next thing to do, so when
      there is nothing to do it is not there at all and the screen carries
-     no accent -- which is correct, not a gap. */
+     no accent -- which is correct, not a gap. On the phone it says what
+     is waiting at the places it would put on the map. */
   const act = document.getElementById('mp_place_all');
   if(!act) return;
   if(mapPlacingActive()){
     act.innerHTML = `<button class="btn btn-ghost ow-sm" id="mp_stop_placing">Stop placing</button>`;
     document.getElementById('mp_stop_placing').addEventListener('click', mapStopPlacing);
   } else if(unpinned.length && mpLayer !== 'deliveries'){
+    const waiting = unpinned.reduce((n,r)=> n + mapMoneyAt(r, mpLayer), 0);
     act.innerHTML = `<button class="btn btn-accent ow-sm" id="mp_place_go">
       <svg class="icon" viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"></path><path d="M9.6 10.2 11.4 12l3.2-3.4"></path></svg>
-      Place ${unpinned.length} remaining</button>`;
+      Place ${unpinned.length} remaining${waiting > 0.5 ? `<span class="mpw-go-x">&nbsp;· ${esc(mapShort(waiting))} there</span>` : ''}</button>`;
     document.getElementById('mp_place_go').addEventListener('click', ()=>{
       if(!mpMap){ toast('The map needs to load before places can be put on it'); return; }
       mapPlacingStart(unpinned.map(r=> r.name));
@@ -50341,27 +50857,104 @@ function renderMapHead(rows, unpinned){
 /* One place, drawn: the count in the band's colour, a ring if it is the
    one being read, and the name under it so the picture can be read
    without clicking every circle. */
-function mapMarkerHtml(count, colour, hollow){
-  const d = mapMarkerRadius(count) * 2;
-  return { d, html: `<div class="mp-marker${hollow ? ' mp-none' : ''}" style="width:${d}px;height:${d}px;`
+function mapMarkerHtml(count, colour, hollow, opts){
+  const o = opts || {};
+  const d = o.size || mapMarkerRadius(count) * 2;
+  return { d, html: `<div class="mp-marker${hollow ? ' mp-none' : ''}${o.square ? ' mp-sq' : ''}${o.on ? ' mpw-on' : ''}" style="width:${d}px;height:${d}px;`
     + `${hollow ? '' : `background:${colour};`}font-size:${d > 32 ? 13 : 11}px;">${count}</div>` };
 }
-function mapAddMarker(r, count, colour, hollow, label, onClick){
-  const { d, html } = mapMarkerHtml(count, colour, hollow);
-  const sel = mpSelected === label;
-  const size = sel ? d + 14 : d;
-  const inner = sel
-    ? `<div class="mp-marker-sel" style="width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;">${html}</div>`
-    : html;
-  const icon = L.divIcon({ className: '', iconSize: [size, size], iconAnchor: [size/2, size/2], html: inner });
-  L.marker([r.pin.lat, r.pin.lng], { icon, title: label })
+/* One place, drawn: the count in the band's colour, a ring if it is the
+   one being read, and the name under it so the picture can be read
+   without clicking every circle. Returns the drawn size, which the
+   callout above it needs to clear. */
+function mapAddMarker(r, count, colour, hollow, label, onClick, opts){
+  const o = opts || {};
+  const sel = o.on != null ? !!o.on : mpSelected === label;
+  const { d, html } = mapMarkerHtml(count, colour, hollow, Object.assign({}, o, { on: sel }));
+  const tw = o.twoWay ? `<span class="mpw-twb" title="Also a customer">${MAP_TW_ICON}</span>` : '';
+  const name = `<span class="mpw-pin-l${sel ? ' mpw-on' : ''}">${esc(label)}${o.tag ? `<b>${esc(o.tag)}</b>` : ''}</span>`;
+  const icon = L.divIcon({ className: '', iconSize: [d, d], iconAnchor: [d/2, d/2],
+    html: `<div class="mpw-pin">${html}${tw}${name}</div>` });
+  L.marker([r.pin.lat, r.pin.lng], { icon, title: label, zIndexOffset: sel ? 900 : 0 })
     .on('click', onClick).addTo(mpMarkers);
+  return d;
 }
 function mapAddHome(home){
   if(!home) return;
-  const icon = L.divIcon({ className: '', iconSize: [16, 16], iconAnchor: [8, 8],
-    html: '<div class="mp-marker-home" title="Your shop"></div>' });
-  L.marker([home.lat, home.lng], { icon, title: 'Your shop' }).addTo(mpMarkers);
+  const real = !!mapHomePin();
+  const icon = L.divIcon({ className: '', iconSize: [18, 18], iconAnchor: [9, 9],
+    html: `<div class="mp-marker-home" title="${real ? 'Your shop' : 'The middle of your pins'}"></div>`
+      + `<span class="mpw-home-l">${real ? 'Shop' : 'Middle of your pins'}</span>` });
+  L.marker([home.lat, home.lng], { icon, title: real ? 'Your shop' : 'The middle of your pins', zIndexOffset: 800 }).addTo(mpMarkers);
+}
+/* The selected place, said on the map: floated above its own marker, so
+   the eye that found it in the list finds it in the picture too. */
+function mapAddCallout(pin, d, head, sub, figure, note, dot){
+  const icon = L.divIcon({ className: '', iconSize: [0, 0], iconAnchor: [0, 0],
+    html: `<div class="mpw-call" style="bottom:${Math.round(d / 2 + 12)}px;">
+      <div class="mpw-call-h">${dot || ''}${esc(head)}${sub ? `<span>· ${esc(sub)}</span>` : ''}</div>
+      <div class="mpw-call-v"><b>${esc(figure)}</b>${esc(note)}</div></div>` });
+  L.marker([pin.lat, pin.lng], { icon, interactive: false, keyboard: false, zIndexOffset: 1000 }).addTo(mpMarkers);
+}
+/* How far is near: dashed rings at 5 and 10 km round the shop, drawn in
+   real metres, so "a short run" is something you can see. */
+function mapAddRings(home){
+  if(!home) return;
+  [5, 10].forEach(km=>{
+    L.circle([home.lat, home.lng], { radius: km * 1000, color: '#16203C', weight: 1,
+      opacity: km === 5 ? 0.32 : 0.22, dashArray: '4 5', fill: false, interactive: false }).addTo(mpMarkers);
+    L.marker([home.lat + km / 111.32, home.lng], { interactive: false, keyboard: false,
+      icon: L.divIcon({ className: '', iconSize: [0, 0], iconAnchor: [0, 0], html: `<span class="mpw-ring-l">${km} km</span>` }) })
+      .addTo(mpMarkers);
+  });
+}
+/* OFF THE FRAME, ON ITS EDGE. Places further out than the map is drawn
+   for become chips on the map's own border, on the side they lie and
+   pointing at them -- recomputed whenever the map is moved or turned, so
+   the arrow is true for the picture on the screen, not the one it
+   opened on. */
+let mpEdgeRows = [];
+function mapDrawEdges(){
+  const el = document.getElementById('mp_edges');
+  if(!el) return;
+  const W = el.clientWidth, H = el.clientHeight;
+  if(!mpMap || !mpEdgeRows.length || !W || !H){ el.innerHTML = ''; return; }
+  const c = mpMap.getCenter();
+  const centre = { lat: c.lat, lng: c.lng };
+  const turn = mpMap.getBearing ? mapNormaliseBearing(mpMap.getBearing()) : 0;
+  const from = mapHomeFrom();
+  el.innerHTML = mpEdgeRows.map(x=> `<button type="button" class="mpw-edge${x.on ? ' mpw-on' : ''}" data-edge="${esc(x.name)}"
+      title="${esc(x.name)} — ${Math.round(x.km)} km ${esc(from)}">
+      <svg viewBox="0 0 24 24"><path d="M12 19V5"></path><path d="M6 11l6-6 6 6"></path></svg>
+      <i class="${x.square ? 'mp-sq' : ''}" style="background:${x.colour};"></i><b>${esc(x.name)}</b>
+      <small>${Math.round(x.km)} km${x.money > 0.5 ? ` · ${esc(mapShort(x.money))}` : ''}</small></button>`).join('');
+  const placed = [];
+  [...el.children].forEach((chip, i)=>{
+    const x = mpEdgeRows[i];
+    const a = ((mapBearingDeg(centre, x.pin) || 0) + turn) % 360;
+    chip.querySelector('svg').style.transform = `rotate(${Math.round(a)}deg)`;
+    const w = chip.offsetWidth, h = chip.offsetHeight;
+    const dx = Math.sin(a * Math.PI / 180), dy = -Math.cos(a * Math.PI / 180);
+    // Clear of the control row along the top and the scale and credit
+    // along the bottom: an arrow may sit on the edge, never on a button.
+    const minX = w / 2 + 10, maxX = W - w / 2 - 10, minY = h / 2 + 52, maxY = H - h / 2 - 34;
+    const cx = W / 2, cy = H / 2;
+    const tx = dx > 0.001 ? (maxX - cx) / dx : dx < -0.001 ? (minX - cx) / dx : Infinity;
+    const ty = dy > 0.001 ? (maxY - cy) / dy : dy < -0.001 ? (minY - cy) / dy : Infinity;
+    const t = Math.min(tx, ty);
+    let px = cx + t * dx, py = cy + t * dy;
+    for(let k = 0; k < 8 && placed.some(p=> Math.abs(p.x - px) < (p.w + w) / 2 + 4 && Math.abs(p.y - py) < h + 4); k++){
+      if(t === tx) py = Math.min(maxY, Math.max(minY, py + (py > cy ? -(h + 6) : h + 6)));
+      else px = Math.min(maxX, Math.max(minX, px + (px > cx ? -(w + 6) : w + 6)));
+    }
+    placed.push({ x: px, y: py, w });
+    chip.style.left = `${Math.round(px)}px`;
+    chip.style.top = `${Math.round(py)}px`;
+  });
+  el.querySelectorAll('.mpw-edge').forEach(b=> b.addEventListener('click', ()=>{
+    mpSelected = b.dataset.edge;
+    renderMap();
+  }));
 }
 /* The suggestion, on the map: dashed, hollow, and never written. */
 function mapAddGhost(){
@@ -50409,30 +51002,39 @@ function renderMap(){
      nothing to configure. */
   const home = mapHomePin() || mapCentrePin(rows);
   const { core, far, unpinned } = mapPlaceSplit(rows, home);
+  const sup = mpLayer === 'suppliers';
   const shown = core.filter(r=> mpLayer === 'customers' ? r.customers.length : r.suppliers.length);
+  const picked = mapPickPlace(rows, mpLayer);
+  const twoWayIds = mapTwoWayIds();
+  const isTwoWay = (r)=> r.suppliers.some(s=> twoWayIds.has(String(s.id)));
 
   renderMapHead(rows, unpinned);
   renderMapStrip(rows, unpinned, mpLayer);
 
-  const totalPeople = rows.reduce((n,r)=> n + mapPeopleAt(r, mpLayer), 0);
-  document.getElementById('mp_summary').textContent =
-    `${shown.length} of ${rows.length} places drawn · ${totalPeople} ${mpLayer === 'customers' ? 'customers' : 'suppliers'}`;
+  document.getElementById('mp_summary').textContent = sup
+    ? 'Squares are where you buy · sized by what you owe'
+    : 'Coloured by oldest unpaid · sized by people';
 
   /* The key, under the map rather than on it, and honest: "nothing owed"
-     is a hollow ring, not a second verdigris. */
-  document.getElementById('mp_legend').innerHTML = mpLayer === 'customers'
+     is a hollow ring, not a second verdigris. Every entry counts the
+     places it describes, so the key is a reading as well as a key. */
+  const n = (f)=> `<span class="mp-legend-n">${shown.filter(f).length}</span>`;
+  document.getElementById('mp_legend').innerHTML = !sup
     /* AGING_BANDS already ends with the unknown band, short-labelled
        "Age not known" -- so the legend is the bands themselves plus the
        one state that is not a band. Adding an "Owed, but undated" row of
        my own put the same band on the key twice in the same colour,
        which is the exact fault this legend was rewritten to remove. */
-    ? `<b>Oldest debt at the place</b>`
-      + AGING_BANDS.map(b=> `<div><i style="background:${mapBandColour(b.key)}"></i>${esc(b.short)}</div>`).join('')
-      + `<div><i class="mp-hollow"></i>Nothing owed</div>`
-      + `<em>Circle size is how many are there · the square is your shop</em>`
-    : `<b>Suppliers</b><div><i style="background:#C93A30"></i>You owe them</div>`
-      + `<div><i class="mp-hollow"></i>Nothing owed</div>`
-      + `<em>Circle size is how many are there · the square is your shop</em>`;
+    ? `<b>Oldest unpaid</b>`
+      + AGING_BANDS.map(b=> `<div><i style="background:${mapBandColour(b.key)}"></i>${esc(b.short)}${
+          n(r=> r.owed > 0.5 && r.band === b.key)}</div>`).join('')
+      + `<div><i class="mp-hollow"></i>Nothing owed${n(r=> !(r.owed > 0.5))}</div>`
+      + `<em><i class="mp-ring"></i><i class="mp-ring mp-big"></i><span>people</span><i class="mp-shop"></i><span>shop</span></em>`
+    : `<b>Key</b><div><i class="mp-sq" style="background:var(--ow-indigo)"></i>You owe there${n(r=> r.owing > 0.5)}</div>`
+      + `<div><i class="mp-sq mp-hollow"></i>Nothing owed${n(r=> !(r.owing > 0.5))}</div>`
+      + `<div><i class="mp-tw"></i>Also a customer${n(isTwoWay)}</div>`
+      + `<div><i class="mp-line"></i>Line weight is the amount</div>`
+      + `<em><i class="mp-shop"></i><span>shop</span></em>`;
 
   if(typeof L === 'undefined'){
     document.getElementById('mp_map').innerHTML =
@@ -50459,23 +51061,61 @@ function renderMap(){
       mpMap.setView([0.3152, 32.5816], 12);
       mapSetBasemap(lsGet(MAP_BASEMAP_KEY));
       mpMarkers = L.layerGroup().addTo(mpMap);
+      /* A real scale, measured by the map at the zoom it is at -- the
+         old one was a fixed "2 km" that was true at one zoom only. */
+      L.control.scale({ position: 'bottomleft', imperial: false, maxWidth: 90 }).addTo(mpMap);
       // Two fingers on a phone and shift-drag on a desktop both turn the
       // map without touching the compass, so the readout has to follow.
       mpMap.on('rotate rotateend', mapSyncCompass);
+      mpMap.on('moveend zoomend rotate rotateend resize', mapDrawEdges);
       mapSyncCompass();
     }
     mpMarkers.clearLayers();
+    mapAddRings(home);
+    const maxOwing = Math.max(1, ...shown.map(r=> r.owing));
+    if(sup && home){
+      /* Where the shop's money goes: a line from the shop to each place
+         it owes, thicker for more. Under the markers, and quiet. */
+      shown.filter(r=> r.owing > 0.5).forEach(r=>{
+        L.polyline([[home.lat, home.lng], [r.pin.lat, r.pin.lng]], { color: '#3A3F9B',
+          weight: 1 + 4 * Math.sqrt(r.owing / maxOwing), opacity: 0.35, interactive: false }).addTo(mpMarkers);
+      });
+    }
+    let pickedSize = 0;
     shown.forEach(r=>{
-      const n = mapPeopleAt(r, mpLayer);
+      const cnt = mapPeopleAt(r, mpLayer);
       const owed = mapMoneyAt(r, mpLayer);
       const hollow = owed <= 0.5;
-      const colour = mpLayer === 'customers' ? mapBandColour(r.band) : '#C93A30';
-      mapAddMarker(r, n, colour, hollow, r.name, ()=>{ mpSelected = r.name; renderMapSide(); });
+      const on = !!picked && picked.name === r.name;
+      const colour = sup ? '#3A3F9B' : mapBandColour(r.band);
+      const d = mapAddMarker(r, cnt, colour, hollow, r.name, ()=>{ mpSelected = r.name; renderMap(); },
+        sup ? { on, square: true, size: mapSupplierMarkerSize(owed), twoWay: isTwoWay(r), tag: owed > 0.5 ? mapShort(owed) : '' }
+            : { on });
+      if(on) pickedSize = d;
     });
     mapAddHome(home);
     mapAddGhost();
+    if(picked && picked.pin && pickedSize){
+      const owed = mapMoneyAt(picked, mpLayer);
+      const np = mapPeopleAt(picked, mpLayer);
+      const dot = sup ? `<i class="mp-sq" style="background:#3A3F9B"></i>`
+        : `<i style="background:${owed > 0.5 ? mapBandColour(picked.band) : 'var(--ow-steel-100)'}"></i>`;
+      mapAddCallout(picked.pin, pickedSize, picked.name,
+        `${np} ${sup ? 'supplier' : 'customer'}${np === 1 ? '' : 's'}`,
+        owed > 0.5 ? mapShort(owed) : '0',
+        sup ? (owed > 0.5 ? `you owe · ${Math.round(owed / Math.max(1, rows.reduce((t,x)=> t + x.owing, 0)) * 100)}% of all` : 'nothing owed')
+            : (owed > 0.5 ? `owed · ${picked.oldestDays != null ? `oldest ${picked.oldestDays} d` : 'no date'}` : 'nothing owed'), dot);
+    }
+    mpEdgeRows = far.filter(r=> mapPeopleAt(r, mpLayer) > 0).map(r=> ({
+      name: r.name, pin: r.pin, km: r.km, money: mapMoneyAt(r, mpLayer), square: sup,
+      colour: sup ? '#3A3F9B' : (r.owed > 0.5 ? mapBandColour(r.band) : 'var(--ow-steel-100)'),
+      on: !!picked && picked.name === r.name }));
+    /* The box may have just been shown, or changed width with the
+       layout; Leaflet frames against the size it last measured, so it
+       measures again first or it frames a map a third the real size. */
+    mpMap.invalidateSize();
     mapFitTo(shown.map(r=> [r.pin.lat, r.pin.lng]), mpLayer, false);
-    setTimeout(()=> mpMap.invalidateSize(), 0);
+    setTimeout(()=>{ mpMap.invalidateSize(); mapDrawEdges(); }, 0);
   }
   mapEmptyState(rows, shown, unpinned, mpLayer);
 
@@ -50483,10 +51123,43 @@ function renderMap(){
   renderMapResults();
 }
 
-/* The delivery board, drawn. One marker per destination, sized by how
-   many drops are there, and coloured by whether anybody is taking them:
-   a stop with no driver is the thing an owner can act on before the van
-   leaves, which is why it is the colour that means "look at this". */
+/* TODAY'S STOPS, AS RUNS. deliveryRuns() already answers "which orders
+   go to the same place"; this answers the next question -- which places
+   are on the same road out. Stops are grouped by the quarter of the
+   compass they lie in from the shop and ordered nearest first, so each
+   group is a line a van could actually drive, lettered biggest first.
+
+   It is a grouping, not a dispatch: nothing here assigns a driver or
+   sends anybody anywhere. The distance is the straight line between the
+   stops and back, which a road is never shorter than -- said as such. */
+const MAP_RUN_HUES = [['#3A3F9B', '#E4E6FA'], ['#1A5A8A', '#DCEAF8'], ['#7A3268', '#F6E4F1'],
+  ['#0E6470', '#DDF1F3'], ['#5D3FA0', '#ECE6FA'], ['#3E4C63', '#E3E8EF']];
+const MAP_RUN_SECTORS = ['North', 'East', 'South', 'West'];
+function deliveryMapRoutes(runs, home){
+  if(!home) return [];
+  const by = new Map();
+  (runs || []).filter(r=> r.pin).forEach(r=>{
+    const s = Math.round((mapBearingDeg(home, r.pin) || 0) / 90) % 4;
+    if(!by.has(s)) by.set(s, []);
+    by.get(s).push(Object.assign({ km: pinDistanceKm(home, r.pin) }, r));
+  });
+  const routes = [...by.entries()].map(([s, stops])=>{
+    stops.sort((a,b)=> a.km - b.km);
+    let km = 0, at = home;
+    stops.forEach(x=>{ km += pinDistanceKm(at, x.pin); at = x.pin; });
+    km += pinDistanceKm(at, home);
+    return { key: s, dir: MAP_RUN_SECTORS[s], stops, km,
+      orders: stops.reduce((n,x)=> n + x.orders.length, 0),
+      toCollect: stops.reduce((n,x)=> n + x.toCollect, 0) };
+  }).sort((a,b)=> b.orders - a.orders || b.toCollect - a.toCollect || a.key - b.key);
+  routes.forEach((r,i)=>{ r.letter = String.fromCharCode(65 + i % 26); r.hue = MAP_RUN_HUES[i % MAP_RUN_HUES.length]; });
+  return routes;
+}
+let mpStop = null;
+function mapPickRoute(routes){
+  const key = (typeof mpSelected === 'string' && mpSelected.indexOf('run:') === 0) ? Number(mpSelected.slice(4)) : null;
+  return routes.find(r=> r.key === key) || routes[0] || null;
+}
 function renderDeliveryMap(){
   const { runs, collected, unknown } = deliveryMapRuns();
   const rows = mapPlaceRows();
@@ -50494,55 +51167,107 @@ function renderDeliveryMap(){
   const drawable = runs.filter(r=> r.pin);
   const drops = runs.reduce((n,r)=> n + r.orders.length, 0);
   const money = runs.reduce((n,r)=> n + r.toCollect, 0);
-  const noDriver = runs.reduce((n,r)=> n + (r.unassigned || 0), 0);
   const { unpinned } = mapPlaceSplit(rows, home);
+  const routes = deliveryMapRoutes(runs, home);
+  const route = mapPickRoute(routes);
 
   renderMapHead(rows, unpinned);
 
   /* The layer changes the question, so it changes the figures. */
   const stripEl = document.getElementById('mp_strip');
   if(stripEl){
-    const furthest = drawable.map(r=> Object.assign({ km: home ? pinDistanceKm(home, r.pin) : null }, r))
-      .filter(r=> r.km != null).sort((a,b)=> b.km - a.km)[0];
-    stripEl.innerHTML = `<div class="ow-strip">`
-      + mapTile('Going out today', String(drops), drops === 1 ? 'order' : 'orders',
-          drops ? `to ${runs.length} place${runs.length === 1 ? '' : 's'}` : 'nothing waiting', drops ? '' : 'ow-good')
-      + mapTile('To collect on delivery', mapFigure(money), 'UGX',
-          'balances still unpaid, not order value', '')
-      + (noDriver
-          ? mapTile('No driver yet', String(noDriver), noDriver === 1 ? 'order' : 'orders',
-              'hand these out before the van leaves', 'ow-warn')
-          : mapTile('No driver yet', '0', 'orders', 'every drop is taken', 'ow-good'))
-      + (furthest
-          ? mapTile('Furthest stop', String(Math.round(furthest.km * 10) / 10), 'km',
-              `${esc(furthest.label)} — ${furthest.orders.length} drop${furthest.orders.length === 1 ? '' : 's'}, ${mapHomeFrom()}`, '')
-          : mapTile('Furthest stop', '—', '', 'no stop can be measured yet', ''))
-      + `</div>`;
+    const ticks = (n, c)=> Array.from({ length: n }, ()=> `<i style="background:${c};"></i>`).join('');
+    const off = runs.filter(r=> !r.pin).reduce((n,r)=> n + r.orders.length, 0);
+    const owing = runs.reduce((n,r)=> n + r.orders.filter(q=> invoiceBalanceDue(q) > 0.5).length, 0);
+    const km = routes.reduce((n,r)=> n + r.km, 0);
+    stripEl.innerHTML = mapStripHtml([
+      { html: mapTile('Going out today', String(drops), drops === 1 ? 'order' : 'orders',
+          drops ? (routes.map(r=> `${r.orders} on Run ${r.letter}`).join(' · ') || `to ${runs.length} place${runs.length === 1 ? '' : 's'}`)
+            : 'nothing waiting', drops ? '' : 'ow-good',
+          drops && drops <= 48 ? `<div class="mpw-ticks" role="img" aria-label="Orders by run">${
+            routes.map(r=> ticks(r.orders, r.hue[0])).join('')}${ticks(off, '#D5D9E1')}</div>` : '') },
+      { html: mapTile('Cash to collect', mapShort(money), 'UGX',
+          money > 0.5 ? `on ${owing} of ${drops} order${drops === 1 ? '' : 's'} · the rest paid` : 'nothing to collect today', '',
+          money > 0.5 ? `<div class="mpw-viz" role="img" aria-label="To collect, by run">${mapSegs(
+            routes.map(r=> ({ v: r.toCollect, c: r.hue[0], t: `Run ${r.letter}` }))
+              .concat([{ v: runs.filter(r=> !r.pin).reduce((n,r)=> n + r.toCollect, 0), c: '#D5D9E1', t: 'Stops not on the map' }]))}</div>` : '') },
+      { html: routes.length
+          ? mapTile('Distance', (Math.round(km * 10) / 10).toFixed(1), 'km round trip',
+              `straight line · ${routes.map(r=> `${r.letter} ${(Math.round(r.km * 10) / 10).toFixed(1)}`).join(' · ')}`, '',
+              `<div class="mpw-viz" role="img" aria-label="Distance by run">${mapSegs(routes.map(r=> ({ v: r.km * 100, c: r.hue[0], t: `Run ${r.letter}` })))}</div>`)
+          : mapTile('Distance', '—', '', 'no stop can be measured yet', '') },
+      { phoneHide: true, html: mapTile('At the counter', String(collected.length), collected.length === 1 ? 'order' : 'orders',
+          'collected in person — not a stop', '',
+          collected.length && collected.length <= 48 ? `<div class="mpw-ticks">${ticks(collected.length, '#A3AABA')}</div>` : '') },
+      { html: unknown.length
+          ? mapTile('Cannot plan', String(unknown.length), unknown.length === 1 ? 'order' : 'orders',
+              `no destination on ${esc(invoiceNumberLabel(unknown[0]))}${unknown.length > 1 ? ` and ${unknown.length - 1} more` : ''}`,
+              'ow-warn', '', 'mpw-mt-warn')
+          : mapTile('Cannot plan', '0', 'orders', 'every order has a destination', 'ow-good') },
+    ]);
   }
 
   document.getElementById('mp_summary').textContent = drops
-    ? `${drawable.length} of ${runs.length} stops drawn · ${fmtUGX(Math.round(money))} to collect`
+    ? 'Numbered in the order the stops are reached'
     : 'Nothing waiting for delivery';
   document.getElementById('mp_legend').innerHTML =
-    '<b>Today\'s round</b>'
-    + '<div><i style="background:#95530C"></i>No driver yet</div>'
-    + '<div><i style="background:#0F6B43"></i>Driver assigned</div>'
-    + '<em>Circle size is how many drops · the square is your shop</em>';
+    '<b>Runs</b>'
+    + routes.map(r=> `<div><i class="mp-line" style="background:${r.hue[0]};opacity:1;"></i>Run ${r.letter}</div>`).join('')
+    + (routes.length ? '<div><i class="mp-dash"></i>Back to the shop</div>' : '')
+    + '<em><i style="background:#95530C"></i><span>no driver yet</span><i style="background:#0F6B43"></i><span>driver assigned</span>'
+    + '<i class="mp-shop"></i><span>shop</span></em>';
 
   if(mpMap){
     mpMarkers.clearLayers();
+    mpEdgeRows = [];
+    /* The places with nothing going out today, kept as quiet dots so
+       the runs are read against the town rather than against nothing. */
+    const stopAt = new Set(drawable.map(r=> canonicalLocation(r.label)));
+    rows.filter(x=> x.pin && !stopAt.has(x.name)).forEach(x=>{
+      L.circleMarker([x.pin.lat, x.pin.lng], { radius: 4, stroke: false, fillColor: '#B9BDC6',
+        fillOpacity: 1, interactive: false }).addTo(mpMarkers);
+    });
+    routes.forEach(rt=>{
+      const on = !!route && rt.key === route.key;
+      const line = [[home.lat, home.lng]].concat(rt.stops.map(s=> [s.pin.lat, s.pin.lng]));
+      if(on) L.polyline(line, { color: '#FFFFFF', weight: 9, opacity: 1, interactive: false }).addTo(mpMarkers);
+      L.polyline(line, { color: rt.hue[0], weight: on ? 5 : 4, opacity: on ? 1 : 0.5, interactive: false }).addTo(mpMarkers);
+      const last = rt.stops[rt.stops.length - 1].pin;
+      L.polyline([[last.lat, last.lng], [home.lat, home.lng]], { color: rt.hue[0], weight: 2, dashArray: '6 6',
+        opacity: on ? 0.6 : 0.4, interactive: false }).addTo(mpMarkers);
+    });
+    let callout = null;
     drawable.forEach(r=>{
       /* Amber is the one that wants doing; verdigris is the one that is
          handled. Both are the app's own state colours -- the blue this
          used to draw was not one of the palette's values and meant
-         nothing anywhere else in the app. */
+         nothing anywhere else in the app. On a run they are the small
+         dot on the stop: the stop itself wears its run's colour. */
       const colour = r.unassigned > 0 ? '#95530C' : '#0F6B43';
-      mapAddMarker(r, r.orders.length, colour, false, r.label,
-        ()=>{ mpSelected = r.label; renderDeliverySide(); });
+      const rt = routes.find(x=> x.stops.some(s=> s.label === r.label));
+      if(!rt) return;
+      const i = rt.stops.findIndex(s=> s.label === r.label) + 1;
+      const on = !!route && rt.key === route.key;
+      const d = on ? 28 : 24;
+      const icon = L.divIcon({ className: '', iconSize: [d, d], iconAnchor: [d/2, d/2],
+        html: `<div class="mpw-pin"><div class="mpw-stop-m${on ? '' : ' mp-dim'}" style="--run:${rt.hue[0]};">${i}`
+          + `<i style="background:${colour};" title="${r.unassigned > 0 ? `${r.unassigned} with no driver yet` : 'Every order here has a driver'}"></i></div>`
+          + `<span class="mpw-pin-l${on ? ' mpw-on' : ''}">${esc(r.label)}</span></div>` });
+      L.marker([r.pin.lat, r.pin.lng], { icon, title: `Run ${rt.letter}, stop ${i}: ${r.label}`, zIndexOffset: on ? 900 : 0 })
+        .on('click', ()=>{ mpSelected = 'run:' + rt.key; mpStop = r.label; renderDeliveryMap(); })
+        .addTo(mpMarkers);
+      if(on && mpStop === r.label) callout = { r, rt, i, d };
     });
     mapAddHome(home);
+    if(callout){
+      const c = callout;
+      mapAddCallout(c.r.pin, c.d, c.r.label, `${c.r.orders.length} order${c.r.orders.length === 1 ? '' : 's'}`,
+        mapFigure(c.r.toCollect), c.r.toCollect > 0.5 ? 'to collect' : 'nothing to collect',
+        `<span class="mpw-tag" style="--run:${c.rt.hue[0]};--run-soft:${c.rt.hue[1]};height:18px;padding:0 5px;">${c.rt.letter}${c.i}</span>`);
+    }
+    mpMap.invalidateSize();
     mapFitTo(drawable.map(r=> [r.pin.lat, r.pin.lng]), 'deliveries', false);
-    setTimeout(()=> mpMap.invalidateSize(), 0);
+    setTimeout(()=>{ mpMap.invalidateSize(); mapDrawEdges(); }, 0);
   }
   const emptyEl = document.getElementById('mp_empty');
   if(emptyEl){
@@ -50561,73 +51286,115 @@ function renderDeliveryMap(){
   }
 
   renderDeliverySide();
-  renderMapResults();
 }
 
 /* Everything the map cannot show, said out loud. A run whose place has
    no pin is not missing from today -- it is missing from the MAP, and
-   the difference matters when somebody is counting the van's stops. */
+   the difference matters when somebody is counting the van's stops.
+   The list column carries the runs and what is on none of them; the
+   rail carries the run you are on, stop by stop. */
 function renderDeliverySide(){
   const el = document.getElementById('mp_side');
   const { runs, collected, unknown } = deliveryMapRuns();
-  const r = mpSelected ? runs.find(x=> x.label === mpSelected) : null;
+  const rows = mapPlaceRows();
+  const home = mapHomePin() || mapCentrePin(rows);
+  const routes = deliveryMapRoutes(runs, home);
+  const rt = mapPickRoute(routes);
   const noPin = runs.filter(x=> !x.pin);
+  const plural = (n, w)=> `${n} ${w}${n === 1 ? '' : 's'}`;
+  const runStyle = (r)=> `--run:${r.hue[0]};--run-soft:${r.hue[1]};`;
 
-  const panels = [];
-  if(!r){
-    panels.push(`<div class="ow-pan"><div class="mp-side-empty">${runs.length
-      ? 'Click a stop to see the orders going there.'
-      : 'Nothing is waiting for delivery today. An order joins the round once it is invoiced and marked for delivery rather than collection.'}</div></div>`);
-  } else {
-    panels.push(`<div class="ow-pan">
-      <div class="mp-rh">
-        <span class="mp-rh-dot" style="background:${r.unassigned > 0 ? '#95530C' : '#0F6B43'};"></span>
-        <div style="min-width:0;">
-          <h3>${esc(r.label)}</h3>
-          <p>${r.orders.length} order${r.orders.length === 1 ? '' : 's'}${
-            r.unassigned ? ` · ${r.unassigned} with no driver` : ' · all taken'}</p>
-        </div>
-      </div>
-      <div class="mp-rf"><span>Order value</span><b>${esc(fmtUGX(Math.round(r.value)))}</b></div>
-      <div class="mp-rf"><span>To collect on delivery</span><b>${esc(fmtUGX(Math.round(r.toCollect)))}</b></div>
-      ${r.orders.map(q=>{
-        const due = Math.max(0, invoiceBalanceDue(q));
-        const driver = q.assignedDeliveryId ? deliveryAssigneeLabel(q) : null;
-        return `<button type="button" class="mp-person" data-order="${esc(String(q.id))}">
-          <span class="mp-person-name">${esc((q.client && q.client.name) || 'Order')}</span>
-          <span class="mp-person-sub">${esc(invoiceNumberLabel(q))}${driver ? ` · ${esc(driver)}` : ' · no driver yet'}</span>
-          <span class="mp-person-amt${due > 0.5 ? '' : ' mp-zero'}">${due > 0.5 ? esc(fmtUGX(Math.round(due))) : 'paid'}<small>${
-            due > 0.5 ? 'to collect' : 'nothing to collect'}</small></span>
-        </button>`;
-      }).join('')}
-      <p class="mp-note">Handing an order to a driver happens on Order tracking, and it is
-        always a tap of yours. <b>Nothing here dispatches anybody.</b></p>
-    </div>`);
+  /* ---- the list column: the runs, and what is on none of them ---- */
+  const bar = document.getElementById('mp_bar');
+  if(bar) bar.hidden = true;
+  const setT = (id, txt)=>{ const e = document.getElementById(id); if(e) e.textContent = txt; };
+  setT('mp_list_t', 'Today’s runs');
+  setT('mp_list_nt', 'by direction from the shop');
+  setT('mp_list_n', String(routes.length));
+  const list = document.getElementById('mp_results');
+  if(list){
+    const offN = noPin.length + (unknown.length ? 1 : 0) + (collected.length ? 1 : 0);
+    list.innerHTML = (routes.map(r=>{
+      const on = !!rt && r.key === rt.key;
+      return `<button type="button" class="mpw-run${on ? ' mpw-on' : ''}" data-run="${r.key}" aria-pressed="${on}" style="${runStyle(r)}">
+        <span class="mpw-run-h"><span class="mpw-tag">RUN ${r.letter}</span><b>${esc(r.dir)}</b>
+          <span class="mpw-fig">${esc(mapFigure(r.toCollect))}</span></span>
+        <span class="mpw-route"><span><span class="mpw-home"></span><em>Shop</em></span>${
+          r.stops.map((s, i)=> `<i></i><span><span class="mpw-n">${i + 1}</span><em title="${esc(s.label)}">${esc(s.label)}</em></span>`).join('')}</span>
+        <span class="mpw-run-f"><span><b>${r.orders}</b> order${r.orders === 1 ? '' : 's'}</span><span><b>${r.stops.length}</b> stop${r.stops.length === 1 ? '' : 's'}</span>
+          <span><b>${(Math.round(r.km * 10) / 10).toFixed(1)}</b> km</span><span>to collect</span></span>
+      </button>`;
+    }).join('') || (runs.length ? '' : `<div class="mp-results-more">Nothing is waiting for delivery today. An order joins the round once it is invoiced and marked for delivery rather than collection.</div>`))
+    + (offN ? `<div class="mpw-sh"><span class="mpw-lbl">Not on a run</span><span class="mpw-fig">${offN}</span></div>`
+      + noPin.map(x=> `<div class="mpw-off mp-warn">
+          <span class="mpw-off-i"><svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"></path><path d="M12 7v4"></path><path d="M12 14h.01"></path></svg></span>
+          <span class="mpw-off-t"><b>${esc(x.label)} — not placed</b><span>${plural(x.orders.length, 'order')} — the stop exists, the pin does not</span></span>
+          <span class="mpw-fig">${esc(mapFigure(x.toCollect))}</span></div>`).join('')
+      + (collected.length ? `<div class="mpw-off">
+          <span class="mpw-off-i"><svg viewBox="0 0 24 24"><path d="M4 10h16"></path><path d="M5 10V20h14V10"></path><path d="M3 10l2-5h14l2 5"></path></svg></span>
+          <span class="mpw-off-t"><b>Collected at the counter</b><span>${plural(collected.length, 'order')} being collected in person — never a stop on a run</span></span>
+          <span class="mpw-fig">${collected.length}</span></div>` : '')
+      + (unknown.length ? `<div class="mpw-off mp-warn">
+          <span class="mpw-off-i"><svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"></path><path d="M12 7v4"></path><path d="M12 14h.01"></path></svg></span>
+          <span class="mpw-off-t"><b>No destination</b><span>${unknown.map(q=> `${esc(invoiceNumberLabel(q))} · ${esc((q.client && q.client.name) || 'Order')}`).join(', ')} — nobody can plan a drop for ${unknown.length === 1 ? 'it' : 'them'}</span></span>
+          <button type="button" class="btn btn-ghost ow-sm" data-order="${esc(String(unknown[0].id))}">Open the order</button></div>` : '')
+      : '');
+    list.querySelectorAll('.mpw-run').forEach(b=> b.addEventListener('click', ()=>{
+      mpSelected = 'run:' + b.dataset.run;
+      mpStop = null;
+      renderDeliveryMap();
+    }));
+    list.querySelectorAll('button[data-order]').forEach(b=> b.addEventListener('click', ()=>{
+      goToTab('quote-saved');
+      loadSavedQuote(Number(b.dataset.order));
+    }));
   }
 
-  if(noPin.length || unknown.length || collected.length){
-    panels.push(`<div class="ow-pan mp-wrapm">
-      <div class="ow-pan-h"><span class="ow-pan-t">Not on the round</span>
-        <span class="ow-pan-n">${noPin.length + unknown.length + collected.length}</span></div>
-      ${noPin.map(x=> `<div class="mp-person" style="cursor:default;">
-        <span class="mp-person-name">${esc(x.label)} <span class="ow-cp ow-warn">Not placed</span></span>
-        <span class="mp-person-sub">${x.orders.length} order${x.orders.length === 1 ? '' : 's'} — the stop exists, the pin does not</span>
-        <span class="mp-person-amt">${esc(fmtUGX(Math.round(x.toCollect)))}</span></div>`).join('')}
-      ${unknown.length ? `<div class="mp-person" style="cursor:default;">
-        <span class="mp-person-name">${unknown.length} order${unknown.length === 1 ? '' : 's'} <span class="ow-cp ow-warn">No destination</span></span>
-        <span class="mp-person-sub">nothing on file says where these go — nobody can plan a drop for them</span>
-        <span class="mp-person-amt mp-zero">—</span></div>` : ''}
-      ${collected.length ? `<div class="mp-person" style="cursor:default;">
-        <span class="mp-person-name">${collected.length} being collected in person</span>
-        <span class="mp-person-sub">no drop needed — these were never a stop on a run</span>
-        <span class="mp-person-amt mp-zero">—</span></div>` : ''}
-    </div>`);
+  /* ---- the rail: the run you are on, stop by stop ---- */
+  if(!rt){
+    el.innerHTML = `<div class="mpw-rh"><div class="mpw-rh-t"><h3>${runs.length ? 'No run can be drawn yet' : 'Nothing going out today'}</h3>
+      <p>${runs.length
+        ? `${plural(runs.length, 'stop')} going out, and none of their places has a pin. Each is listed beside the map, with what to collect.`
+        : 'An order joins the round once it is invoiced and marked for delivery rather than collection.'}</p></div></div>`;
+    el.classList.remove('mp-open');
+    return;
   }
-  el.innerHTML = panels.join('');
-  el.querySelectorAll('.mp-person[data-order]').forEach(row=> row.addEventListener('click', ()=>{
+  const paid = rt.stops.reduce((n,s)=> n + s.orders.filter(q=> !(invoiceBalanceDue(q) > 0.5)).length, 0);
+  el.innerHTML = `<div class="mpw-rh" style="${runStyle(rt)}">
+      <div class="mpw-rh-t"><div class="mpw-run-h"><span class="mpw-tag">RUN ${rt.letter}</span><h3>${esc(rt.dir)}</h3></div>
+        <p>${plural(rt.stops.length, 'stop')} · ${plural(rt.orders, 'order')} · ${(Math.round(rt.km * 10) / 10).toFixed(1)} km round trip</p></div>
+      <div class="mpw-dir" role="img" aria-label="Heading ${esc(rt.dir.toLowerCase())} from the shop"><svg viewBox="0 0 24 24" style="transform:rotate(${rt.key * 90}deg);"><path d="M12 19V5"></path><path d="M7 10l5-5 5 5"></path></svg></div>
+    </div>
+    <div class="mpw-two">
+      <div><span>Cash to collect</span><b class="mpw-fig">${esc(mapFigure(rt.toCollect))}</b></div>
+      <div><span>Already paid</span><b class="mpw-fig${paid ? ' mp-good' : ' mp-zero'}">${paid} of ${rt.orders}</b></div>
+    </div>
+    <div class="mpw-sh"><span class="mpw-lbl">Stop by stop</span><span class="mpw-fig">${rt.stops.length}</span></div>
+    <ol class="mpw-stops" style="${runStyle(rt)}">
+      <li><span><span class="mpw-home"></span><i></i></span><div class="mpw-stop-b"><div class="mpw-stop-h"><b>Shop</b></div></div></li>
+      ${rt.stops.map((s, i)=> `<li><span><span class="mpw-n">${i + 1}</span><i${i === rt.stops.length - 1 ? ' class="mp-back"' : ''}></i></span>
+        <div class="mpw-stop-b"><div class="mpw-stop-h"><b>${esc(s.label)}</b><small>${(Math.round(s.km * 10) / 10).toFixed(1)} km</small></div>
+          <div class="mpw-orders">${s.orders.map(q=>{
+            const due = Math.max(0, invoiceBalanceDue(q));
+            const driver = q.assignedDeliveryId ? deliveryAssigneeLabel(q) : null;
+            return `<button type="button" class="mpw-order" data-order="${esc(String(q.id))}">
+              <span><b>${esc((q.client && q.client.name) || 'Order')}</b>
+                <small${driver ? '' : ' class="mp-warn"'}>${esc(invoiceNumberLabel(q))}${driver ? ` · ${esc(driver)}` : ' · no driver yet'}</small></span>
+              ${due > 0.5 ? `<span class="mpw-fig">${esc(mapFigure(due))}</span>` : '<span class="mpw-paid">paid</span>'}
+            </button>`;
+          }).join('')}</div></div></li>`).join('')}
+      <li><span><span class="mpw-home mp-ret"></span></span><div class="mpw-stop-b"><div class="mpw-stop-h"><b style="color:var(--ow-ink-600);">Back at the shop</b></div></div></li>
+    </ol>
+    <div class="mpw-acts">
+      <button type="button" class="btn btn-ghost mpw-see" id="mp_rail_see">See the ${plural(rt.stops.length, 'stop')}</button>
+      <button type="button" class="btn btn-ghost" id="mp_rail_orders">Open Order tracking</button>
+    </div>`;
+  el.querySelectorAll('.mpw-order[data-order]').forEach(row=> row.addEventListener('click', ()=>{
     goToTab('quote-saved');
     loadSavedQuote(Number(row.dataset.order));
   }));
+  document.getElementById('mp_rail_orders').addEventListener('click', ()=> goToTab('quote-saved'));
+  document.getElementById('mp_rail_see').addEventListener('click', ()=> el.classList.toggle('mp-open'));
 }
 
 /* Dropping a pin by hand: the next click on the map is the place's
@@ -50703,22 +51470,36 @@ function mapRemovePin(name){
   }
 }
 
-/* The list under the map: every place, searchable, with what to do to it.
-   ONE list doing both jobs -- finding a place you have, and placing one
-   you have not. An unplaced place is not exiled to a strip at the
-   bottom; it keeps its figures and its rank and carries one action. */
+/* The list beside the map: every place, searchable, ranked by the money
+   the layer is about, with a bar so the ranking is seen and not only
+   read. ONE list doing both jobs -- finding a place you have, and
+   placing one you have not. An unplaced place is not exiled to a strip
+   at the bottom; it keeps its figures and its rank and carries one
+   action. */
 function renderMapResults(){
   const el = document.getElementById('mp_results');
   if(!el) return;
+  const bar = document.getElementById('mp_bar');
+  if(bar) bar.hidden = mpLayer === 'deliveries';
+  // The deliveries layer lists runs, not places -- renderDeliverySide.
+  if(mpLayer === 'deliveries') return;
   const q = document.getElementById('mp_place_search').value;
-  const rows = mapPlaceRows();
+  /* The suppliers layer lists the places you buy from; a place with only
+     customers at it is not one of them, and twenty rows of dashes said
+     so twenty times. */
+  const rows = mpLayer === 'suppliers' ? mapPlaceRows().filter(r=> r.suppliers.length) : mapPlaceRows();
   const layer = mpLayer === 'deliveries' ? 'customers' : mpLayer;
+  const sup = layer === 'suppliers';
   const all = mapPlaceSearch(rows, q, mpFilter, layer);
+  const rank = new Map(mapPlaceSearch(rows, '', 'all', layer).map((r, i)=> [r.name, i + 1]));
   const tokens = searchTokens(q);
+  const home = mapHomePin() || mapCentrePin(rows);
+  const picked = mapPickPlace(rows, layer);
+  const twoWayIds = mapTwoWayIds();
   const tEl = document.getElementById('mp_list_t');
   const ntEl = document.getElementById('mp_list_nt');
   const nEl = document.getElementById('mp_list_n');
-  if(tEl) tEl.textContent = 'Places';
+  if(tEl) tEl.textContent = sup ? 'Places you buy from' : 'Places';
   if(ntEl) ntEl.textContent = mpFilter === 'todo' ? 'still to place' : 'most owed first';
   if(nEl) nEl.textContent = `${all.length} of ${rows.length}`;
   // Every match is rendered; the box scrolls. Cutting the list at twelve
@@ -50732,49 +51513,51 @@ function renderMapResults(){
         : 'No places on file yet. A place appears here as soon as a customer or supplier names one.'}</div></div>`;
     return;
   }
-  el.innerHTML = `<div class="mp-result-hd">
-      <span></span><span>Place</span><span class="mp-r">${layer === 'suppliers' ? 'You owe' : 'Owed to you'}</span>
-      <span class="mp-r">Oldest</span><span></span>
-    </div>
-    <div class="mp-results">${shown.map(r=>{
+  const max = Math.max(1, ...shown.map(r=> mapMoneyAt(r, layer)));
+  el.innerHTML = `<div class="mp-results">${shown.map(r=>{
       const money = mapMoneyAt(r, layer);
+      const on = !!picked && picked.name === r.name;
       const dot = !r.pin ? 'off' : (money > 0.5 ? '' : 'mp-hollow');
-      const colour = (r.pin && money > 0.5)
-        ? (layer === 'customers' ? mapBandColour(r.band) : '#C93A30') : '';
-      const age = layer === 'customers' ? r.oldestDays : null;
-      const ageColour = age == null ? '' : age >= 90 ? '#8E2A22' : age >= 60 ? '#C93A30'
-        : age >= 30 ? '#7A4A02' : '#0F6B43';
-      const bits = [];
-      if(r.customers.length) bits.push(`${r.customers.length} customer${r.customers.length === 1 ? '' : 's'}`);
-      if(r.suppliers.length) bits.push(`${r.suppliers.length} supplier${r.suppliers.length === 1 ? '' : 's'}`);
-      if(!bits.length) bits.push('nobody here yet');
-      bits.push(r.pin ? 'on the map' : 'not placed');
-      return `<div class="mp-result${mpSelected === r.name ? ' mp-on' : ''}">
-        <span class="mp-dot ${dot}"${colour ? ` style="background:${colour};"` : ''} title="${r.pin ? 'On the map' : 'Not placed yet'}"></span>
-        <div class="mp-result-name">${highlightTokens(r.name, tokens)}</div>
-        <div class="mp-result-sub">${esc(bits.join(' · '))}</div>
-        <div class="mp-result-v${money > 0.5 ? '' : ' mp-zero'}">
-          <b>${money > 0.5 ? esc(mapFigure(money)) : '—'}</b>
-          <small>${money > 0.5 ? 'UGX' : 'nothing owed'}</small></div>
-        <div class="mp-result-v mp-result-age${age == null ? ' mp-zero' : ''}">
-          <b${ageColour ? ` style="color:${ageColour};"` : ''}>${age == null ? '—' : age}</b>
-          <small>${age == null ? '' : age === 1 ? 'day' : 'days'}</small></div>
+      const colour = (r.pin && money > 0.5) ? (sup ? '#3A3F9B' : mapBandColour(r.band)) : '';
+      const n = mapPeopleAt(r, layer);
+      const km = (home && r.pin) ? pinDistanceKm(home, r.pin) : null;
+      const where = !r.pin ? 'not placed yet'
+        : km == null ? 'on the map'
+        : km > MAP_CORE_RADIUS_KM ? `${Math.round(km)} km ${mapCompassPoint(mapBearingDeg(home, r.pin))} · off the frame`
+        : `${(Math.round(km * 10) / 10).toFixed(1)} km ${mapCompassPoint(mapBearingDeg(home, r.pin))}`;
+      const who = n ? `${n} ${sup ? 'supplier' : 'customer'}${n === 1 ? '' : 's'}`
+        : (r.count ? `nobody on this layer` : 'nobody here yet');
+      const tw = sup && r.suppliers.some(s=> twoWayIds.has(String(s.id)))
+        ? `<span class="mpw-tw" title="A supplier here is also a customer">${MAP_TW_ICON}TWO-WAY</span>` : '';
+      return `<div class="mp-result${on ? ' mpw-on' : ''}${r.pin ? '' : ' mp-todo'}">
+        <button type="button" class="mp-result-main" data-pick="${esc(r.name)}" aria-pressed="${on}">
+          <span class="mp-rank">${rank.get(r.name) || ''}</span>
+          <span class="mp-dot ${dot}${sup ? ' mp-sq' : ''}"${colour ? ` style="background:${colour};"` : ''} title="${r.pin ? 'On the map' : 'Not placed yet'}"></span>
+          <span class="mp-result-body">
+            <span class="mp-result-l"><span class="mp-result-name" title="${esc(r.name)}">${highlightTokens(r.name, tokens)}</span>${tw}
+              <span class="mp-result-v${money > 0.5 ? '' : ' mp-zero'}">${money > 0.5 ? esc(mapFigure(money)) : '—'}</span></span>
+            <span class="mp-result-l"><span class="mp-result-sub">${esc(who)} · ${esc(where)}</span>
+              <span class="mp-mag"><i class="${!r.pin ? 'mp-todo' : sup ? 'mp-sq' : ''}" style="width:${Math.round(money / max * 100)}%;"></i></span></span>
+          </span>
+        </button>
         <div class="mp-result-acts">
-          ${r.pin ? `<button type="button" class="btn btn-ghost ow-sm mp-go" data-name="${esc(r.name)}">Show</button>` : ''}
-          <button type="button" class="btn btn-ghost ow-sm mp-place${r.pin ? ' mp-second' : ''}" data-name="${esc(r.name)}">${
+          <button type="button" class="btn btn-ghost ow-sm mp-place" data-name="${esc(r.name)}">${
             mpPinning === r.name ? 'Click the map…' : (r.pin ? 'Move' : 'Place')}</button>
-          ${r.pin ? `<button type="button" class="btn btn-ghost ow-sm mp-clear mp-second" data-name="${esc(r.name)}">Remove</button>` : ''}
+          ${r.pin ? `<button type="button" class="btn btn-ghost ow-sm mp-clear" data-name="${esc(r.name)}">Remove</button>` : ''}
         </div>
       </div>${mapSuggestionRow(r.name)}`;
     }).join('')}</div>`;
 
   el.querySelectorAll('.mp-place').forEach(b=> b.addEventListener('click', ()=> mapPlaceOne(b.dataset.name)));
   el.querySelectorAll('.mp-clear').forEach(b=> b.addEventListener('click', ()=> mapRemovePin(b.dataset.name)));
-  el.querySelectorAll('.mp-go').forEach(b=> b.addEventListener('click', ()=>{
-    const r = mapPlaceRows().find(x=> x.name === b.dataset.name);
-    if(r && r.pin && mpMap) mpMap.setView([r.pin.lat, r.pin.lng], 15);
-    mpSelected = b.dataset.name;
-    if(mpLayer !== 'deliveries') renderMap(); else renderDeliverySide();
+  el.querySelectorAll('.mp-result-main').forEach(b=> b.addEventListener('click', ()=>{
+    const r = mapPlaceRows().find(x=> x.name === b.dataset.pick);
+    mpSelected = b.dataset.pick;
+    /* A row picks its place; the map only moves when the place is not
+       already in view, so reading down the list does not jerk the
+       picture about. */
+    if(r && r.pin && mpMap && !mpMap.getBounds().contains([r.pin.lat, r.pin.lng])) mpMap.panTo([r.pin.lat, r.pin.lng]);
+    renderMap();
   }));
   mapWireSuggestion(el);
 }
@@ -50810,18 +51593,21 @@ function mapWireSuggestion(el){
   el.querySelectorAll('.mp-sg-skip').forEach(b=> b.addEventListener('click', mapPlacingNext));
 }
 
-/* The rail. It does NOT open empty: with nothing selected it answers the
-   screen's own question -- where the money is -- so a quarter of the
-   console is worth its width before anybody clicks anything. */
+/* The rail: the place you are on. It does NOT open empty -- with nothing
+   picked it is open on the place holding the most money, which is the
+   screen's own question answered before anybody clicks. Who it is, which
+   way and how far, what is owed and how old, who is there, and the
+   three things to do about it. */
 function renderMapSide(rowsIn, farIn, homeIn){
   const el = document.getElementById('mp_side');
   if(!el) return;
   const rows = rowsIn || mapPlaceRows();
   const home = homeIn || mapHomePin() || mapCentrePin(rows);
-  const far = farIn || mapPlaceSplit(rows, home).far;
   const layer = mpLayer === 'suppliers' ? 'suppliers' : 'customers';
-  const r = mpSelected ? rows.find(x=> x.name === mpSelected) : null;
+  const sup = layer === 'suppliers';
+  const r = mapPickPlace(rows, layer);
   const panels = [];
+  const plural = (n, w)=> `${n} ${w}${n === 1 ? '' : 's'}`;
 
   /* The placing question, beside the pin it is about. This is where the
      accent lives while a run is on, and it is the only accept there is. */
@@ -50859,73 +51645,115 @@ function renderMapSide(rowsIn, farIn, homeIn){
   }
 
   if(r){
-    const people = layer === 'customers' ? r.customers : r.suppliers;
+    const people = (sup ? r.suppliers : r.customers).slice();
     const money = mapMoneyAt(r, layer);
     const km = (home && r.pin) ? pinDistanceKm(home, r.pin) : null;
-    panels.push(`<div class="ow-pan">
-      <div class="mp-rh">
-        <span class="mp-rh-dot${money > 0.5 ? '' : ' mp-hollow'}"${money > 0.5
-          ? ` style="background:${layer === 'customers' ? mapBandColour(r.band) : '#C93A30'};"` : ''}></span>
-        <div style="min-width:0;">
-          <h3>${esc(r.name)}</h3>
-          <p>${r.customers.length} customer${r.customers.length === 1 ? '' : 's'} · ${r.suppliers.length} supplier${r.suppliers.length === 1 ? '' : 's'}${
-            km != null ? ` · ${Math.round(km * 10) / 10} km ${mapHomeFrom()}` : ' · not placed'}</p>
-        </div>
-      </div>
-      <div class="mp-rf"><span>They owe you</span><b>${esc(fmtUGX(Math.round(r.owed)))}</b></div>
-      <div class="mp-rf"><span>You owe them</span><b>${esc(fmtUGX(Math.round(r.owing)))}</b></div>
-      ${r.oldestDays != null ? `<div class="mp-rf"><span>Oldest unpaid</span><b class="${
-        r.oldestDays >= 90 ? 'mp-bad' : r.oldestDays >= 30 ? 'mp-warn' : ''}">${r.oldestDays} days</b></div>` : ''}
-      <div class="ow-pan-h" style="border-top:1px solid var(--ow-rule-soft);">
-        <span class="ow-pan-t">Who is here</span><span class="ow-pan-n">${people.length}</span></div>
-      ${people.length ? people.map(pp=>{
-        const isCust = layer === 'customers';
-        const amt = isCust ? Math.max(0, Number(pp.debt)||0) : Math.max(0, creditorTotalOwed(pp.id));
-        const age = isCust ? customerOldestDebtDays(pp) : null;
-        return `<button type="button" class="mp-person" data-open="${esc(pp.id)}">
-          <span class="mp-person-name">${esc(pp.name || pp.id)}</span>
-          <span class="mp-person-sub">${esc(pp.id)}${age != null ? ` · ${age} days` : ''}${
-            isCust && pp.linkedSupplierId ? ' · also a supplier' : ''}</span>
-          <span class="mp-person-amt${amt > 0.5 ? '' : ' mp-zero'}">${amt > 0.5 ? esc(fmtUGX(Math.round(amt))) : '—'}</span>
-        </button>`;
-      }).join('') : `<div class="mp-side-empty">Nobody on this layer is here.</div>`}
-      <div class="mp-acts">
-        <button type="button" class="btn btn-ghost ow-sm" id="mp_rail_place">${r.pin ? 'Move pin' : 'Place it'}</button>
-        ${r.pin ? `<button type="button" class="btn btn-ghost ow-sm" id="mp_rail_clear">Take off the map</button>` : ''}
-      </div>
-    </div>`);
-  } else if(!mapPlacingActive()){
-    /* The answer to the screen's own question, without a click. */
-    const top = rows.filter(x=> mapMoneyAt(x, layer) > 0.5)
-      .sort((a,b)=> mapMoneyAt(b, layer) - mapMoneyAt(a, layer)).slice(0, 5);
-    panels.push(`<div class="ow-pan">
-      <div class="ow-pan-h"><span class="ow-pan-t">Where the money is</span>
-        <span class="ow-pan-n">${top.length ? 'top ' + top.length : ''}</span></div>
-      ${top.length ? top.map(x=> `<button type="button" class="mp-person" data-place="${esc(x.name)}">
-        <span class="mp-person-name">${esc(x.name)}${x.pin ? '' : ' <span class="ow-cp ow-warn">Not placed</span>'}</span>
-        <span class="mp-person-sub">${mapPeopleAt(x, layer)} ${layer === 'suppliers' ? 'supplier' : 'customer'}${mapPeopleAt(x, layer) === 1 ? '' : 's'}${
-          x.oldestDays != null ? ` · ${x.oldestDays} days` : ''}</span>
-        <span class="mp-person-amt">${esc(fmtUGX(Math.round(mapMoneyAt(x, layer))))}</span>
-      </button>`).join('')
-        : `<div class="mp-side-empty">Nobody owes anything on this layer — and that is the good news, not an empty screen.</div>`}
-      <p class="mp-note">Click a marker or a row to open the place. Every figure is counted
-        from the invoices themselves; nothing about money is stored on a place.</p>
-    </div>`);
-  }
+    const deg = (home && r.pin) ? mapBearingDeg(home, r.pin) : null;
+    const dotCls = !r.pin ? 'off' : money > 0.5 ? '' : 'mp-hollow';
+    const dotBg = (r.pin && money > 0.5) ? `background:${sup ? '#3A3F9B' : mapBandColour(r.band)};` : '';
+    const where = km != null
+      ? `${(Math.round(km * 10) / 10).toFixed(1)} km ${mapCompassPoint(deg)} ${mapHomeFrom().replace(/^from /, 'of ')}`
+      : 'not placed yet';
+    const totalAll = rows.reduce((n,x)=> n + mapMoneyAt(x, layer), 0);
 
-  if(far.length){
-    panels.push(`<div class="ow-pan mp-wrapm">
-      <div class="ow-pan-h"><span class="ow-pan-t">Outside the frame</span>
-        <span class="ow-pan-n">${far.length}</span></div>
-      ${far.map(x=> `<button type="button" class="mp-person" data-fly="${esc(x.name)}">
-        <span class="mp-person-name">${esc(x.name)}</span>
-        <span class="mp-person-sub">${mapPeopleAt(x, layer)} ${layer === 'suppliers' ? 'supplier' : 'customer'}${mapPeopleAt(x, layer) === 1 ? '' : 's'} · ${Math.round(x.km)} km away</span>
-        <span class="mp-person-amt${mapMoneyAt(x, layer) > 0.5 ? '' : ' mp-zero'}">${
-          mapMoneyAt(x, layer) > 0.5 ? esc(fmtUGX(Math.round(mapMoneyAt(x, layer)))) : '—'}</span>
-      </button>`).join('')}
-      <p class="mp-note">Further than ${MAP_CORE_RADIUS_KM} km from the shop. Drawn with the rest they
-        would make the town a single dot, so they are counted in the figures above and listed here.</p>
-    </div>`);
+    /* What is owed here, and what it is made of. */
+    let mix, bands = '', note = '';
+    if(sup){
+      const owe = people.map(s=> ({ s, v: Math.max(0, creditorTotalOwed(s.id)) })).sort((a,b)=> b.v - a.v);
+      mix = mapSegs(owe.map(x=> ({ v: x.v, c: 'var(--sup)', cls: invSupHue({ supplierId: x.s.id }), t: x.s.name })));
+      note = money > 0.5 && totalAll > 0.5 ? `<p>${Math.round(money / totalAll * 100)}% of everything you owe sits here.</p>` : '';
+    } else {
+      const ages = mapAgesAt(people);
+      mix = mapSegs(MAP_AGE_ORDER.map(k=> ({ v: ages[k], c: mapBandColour(k), t: (agingBandDef(k) || {}).short })));
+      bands = `<div class="mpw-bands">${MAP_AGE_ORDER.filter(k=> ages[k] > 0.5).map(k=>
+        `<div><i style="background:${mapBandColour(k)};"></i>${esc((agingBandDef(k) || {}).short || k)}<b class="mpw-fig">${esc(mapFigure(ages[k]))}</b></div>`).join('')}</div>`;
+    }
+
+    /* Who is here, most owed first, each with a bar on one scale. */
+    const amt = (p)=> sup ? Math.max(0, creditorTotalOwed(p.id)) : Math.max(0, Number(p.debt) || 0);
+    people.sort((a,b)=> amt(b) - amt(a) || String(a.name || '').localeCompare(String(b.name || '')));
+    const top = Math.max(1, ...people.map(amt));
+    const who = people.map(p=>{
+      const v = amt(p);
+      if(sup){
+        return `<button type="button" class="mpw-who mpw-sup ${invSupHue({ supplierId: p.id })}" data-open="${esc(p.id)}">
+          <span class="mpw-mono">${esc(invInitials(p.name || p.id))}</span>
+          <span><span class="mpw-who-l"><span class="mpw-who-n" title="${esc(p.name || p.id)}">${esc(p.name || p.id)}</span>
+            <span class="mpw-who-v mpw-fig${v > 0.5 ? '' : ' mp-zero'}">${v > 0.5 ? esc(mapFigure(v)) : '—'}</span></span>
+          <span class="mpw-who-bar"><i style="width:${Math.round(v / top * 100)}%;background:var(--sup);"></i></span></span>
+        </button>`;
+      }
+      const age = customerOldestDebtDays(p);
+      const band = v > 0.5 ? (age == null ? 'unknown' : agingBandFor(age)) : null;
+      return `<button type="button" class="mpw-who" data-open="${esc(p.id)}">
+        <span class="mpw-who-l"><span class="mpw-who-n" title="${esc(p.name || p.id)}">${esc(p.name || p.id)}</span>
+          <span class="mpw-age${band ? ' ' + band : ''}">${v <= 0.5 ? 'paid' : age == null ? 'no date' : age + ' d'}</span>
+          <span class="mpw-who-v mpw-fig${v > 0.5 ? '' : ' mp-zero'}">${v > 0.5 ? esc(mapFigure(v)) : '—'}</span></span>
+        <span class="mpw-who-bar"><i style="width:${Math.round(v / top * 100)}%;background:${band ? mapBandColour(band) : 'transparent'};"></i></span>
+      </button>`;
+    }).join('');
+
+    /* Both ways at once: the suppliers who are also customers, what is
+       owed each way on one scale, and which way the difference runs. */
+    let twoWay = '';
+    if(sup){
+      const tw = mapTwoWay().slice(0, 4);
+      const twMax = Math.max(1, ...tw.map(x=> Math.max(x.owe, x.owed)));
+      if(tw.length){
+        twoWay = `<div class="mpw-sh"><span class="mpw-lbl">Two-way accounts</span><span class="mpw-fig">${mapTwoWay().length}</span></div>
+          <div class="mpw-tws">${tw.map(x=>{
+            const net = x.owed - x.owe;
+            return `<div class="mpw-twr">
+              <div class="mpw-twr-h"><b title="${esc(x.name)}">${esc(x.name)}</b><span class="${net >= 0 ? 'mp-in' : 'mp-out'}">${
+                net >= 0 ? 'net they owe' : 'net you owe'} <span class="mpw-fig">${esc(mapFigure(Math.abs(net)))}</span></span></div>
+              <div class="mpw-dv" role="img" aria-label="You owe ${esc(mapFigure(x.owe))}; they owe you ${esc(mapFigure(x.owed))}">
+                <span><i style="width:${(x.owe / twMax * 100).toFixed(1)}%"></i></span><em></em><span><i style="width:${(x.owed / twMax * 100).toFixed(1)}%"></i></span></div>
+              <div class="mpw-twr-l"><span>you owe ${esc(mapFigure(x.owe))}</span><span>they owe ${esc(mapFigure(x.owed))}</span></div>
+            </div>`;
+          }).join('')}</div>`;
+      }
+    }
+
+    const oldTone = r.oldestDays == null ? 'mp-zero' : r.oldestDays >= 90 ? 'mp-bad' : r.oldestDays >= 30 ? 'mp-warn' : 'mp-good';
+    panels.push(`<div class="mpw-rh">
+        <span class="mpw-rh-dot ${dotCls}${sup ? ' mp-sq' : ''}" style="${dotBg}"></span>
+        <div class="mpw-rh-t"><h3 title="${esc(r.name)}">${esc(r.name)}</h3>
+          <p>${esc(plural(people.length, sup ? 'supplier' : 'customer'))} · ${esc(where)}</p></div>
+        ${deg != null ? `<div class="mpw-dir" role="img" aria-label="${esc(mapCompassPoint(deg))} ${esc(mapHomeFrom().replace(/^from /, 'of '))}">
+          <svg viewBox="0 0 24 24" style="transform:rotate(${Math.round(deg)}deg);"><path d="M12 19V5"></path><path d="M7 10l5-5 5 5"></path></svg></div>` : ''}
+      </div>
+      <div class="mpw-money">
+        <div class="mpw-money-h"><span class="mpw-lbl">${sup ? 'You owe them' : 'They owe you'}</span><small>UGX</small></div>
+        <span class="mpw-fig mpw-big">${esc(money > 0.5 ? mapFigure(money) : '0')}</span>
+        ${money > 0.5 ? `<div class="mpw-bar8" role="img" aria-label="Split by ${sup ? 'supplier' : 'age'}">${mix}</div>${bands}${note}` : ''}
+      </div>
+      <div class="mpw-two">
+        ${sup
+          ? `<div><span>They owe you</span><b class="mpw-fig${r.owed > 0.5 ? '' : ' mp-zero'}">${r.owed > 0.5 ? esc(mapFigure(r.owed)) : '—'}</b></div>
+             <div><span>Share of all you owe</span><b class="mpw-fig${money > 0.5 ? '' : ' mp-zero'}">${money > 0.5 && totalAll > 0.5 ? Math.round(money / totalAll * 100) + '%' : '—'}</b></div>`
+          : `<div><span>Oldest unpaid</span><b class="mpw-fig ${oldTone}">${r.oldestDays == null ? '—' : plural(r.oldestDays, 'day')}</b></div>
+             <div><span>You owe them</span><b class="mpw-fig${r.owing > 0.5 ? '' : ' mp-zero'}">${r.owing > 0.5 ? esc(mapFigure(r.owing)) : '—'}</b></div>`}
+      </div>
+      <div class="mpw-sh"><span class="mpw-lbl">Who is here</span><span class="mpw-fig">${people.length}</span></div>
+      <div class="mpw-people">${who || `<div class="mpw-empty">Nobody on this layer is here.</div>`}</div>
+      ${twoWay}
+      <div class="mpw-acts">
+        <button type="button" class="btn btn-ghost mpw-see" id="mp_rail_see">See the ${esc(plural(people.length, sup ? 'supplier' : 'customer'))}</button>
+        <button type="button" class="btn btn-ghost" id="mp_rail_open">${sup ? 'Open Creditors' : `Open ${esc(r.name)} in Debtors`}
+          <svg class="icon" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg></button>
+        <div class="mpw-acts-r">
+          <button type="button" class="btn btn-ghost ow-sm" id="mp_rail_place">${r.pin ? 'Move pin' : 'Place it'}</button>
+          ${r.pin ? `<button type="button" class="btn btn-ghost ow-sm" id="mp_rail_clear">Take off the map</button>` : ''}
+        </div>
+      </div>`);
+  } else if(!mapPlacingActive()){
+    /* Two different empties, said differently: no place on file at all,
+       or places on file with nobody on this layer at any of them. */
+    panels.push(rows.length
+      ? `<div class="mpw-rh"><div class="mpw-rh-t"><h3>Nobody here yet</h3>
+          <p>${esc(plural(rows.length, 'place'))} on file, and no ${sup ? 'supplier' : 'customer'} at any of them. A place opens here as soon as one names it.</p></div></div>`
+      : `<div class="mpw-rh"><div class="mpw-rh-t"><h3>No places yet</h3>
+          <p>A place appears here as soon as a customer or supplier names one.</p></div></div>`);
   }
 
   el.innerHTML = panels.join('');
@@ -50939,22 +51767,21 @@ function renderMapSide(rowsIn, farIn, homeIn){
   if(railPlace && r) railPlace.addEventListener('click', ()=> mapPlaceOne(r.name));
   const railClear = document.getElementById('mp_rail_clear');
   if(railClear && r) railClear.addEventListener('click', ()=> mapRemovePin(r.name));
-  el.querySelectorAll('.mp-person[data-open]').forEach(row2=> row2.addEventListener('click', ()=>{
+  const railSee = document.getElementById('mp_rail_see');
+  if(railSee) railSee.addEventListener('click', ()=> el.classList.toggle('mp-open'));
+  /* Debtors searches by name OR place, so opening it on this place's name
+     opens it on exactly the people listed above. Creditors searches by
+     supplier only, so it opens whole. */
+  const railOpen = document.getElementById('mp_rail_open');
+  if(railOpen && r) railOpen.addEventListener('click', ()=>{
+    if(sup){ goToTab('analytics-creditors'); return; }
+    debSearch = r.name;
+    goToTab('analytics-debtors');
+  });
+  el.querySelectorAll('.mpw-who[data-open]').forEach(row2=> row2.addEventListener('click', ()=>{
     const id = row2.dataset.open;
     if(layer === 'customers'){ goToTab('customers'); editCustomer(id); }
     else { goToTab('suppliers'); editSupplier(id); }
-  }));
-  el.querySelectorAll('.mp-person[data-place]').forEach(row2=> row2.addEventListener('click', ()=>{
-    const x = rows.find(y=> y.name === row2.dataset.place);
-    if(x && x.pin && mpMap) mpMap.setView([x.pin.lat, x.pin.lng], 14);
-    mpSelected = row2.dataset.place;
-    renderMap();
-  }));
-  el.querySelectorAll('.mp-person[data-fly]').forEach(row2=> row2.addEventListener('click', ()=>{
-    const x = rows.find(y=> y.name === row2.dataset.fly);
-    if(x && x.pin && mpMap) mpMap.setView([x.pin.lat, x.pin.lng], 12);
-    mpSelected = row2.dataset.fly;
-    renderMap();
   }));
 }
 
@@ -50995,6 +51822,9 @@ document.getElementById('mp_layers').addEventListener('click', (e)=>{
      Customers is not a stop on the delivery round, and carrying the name
      across opens a panel about something that is not there. */
   mpSelected = null;
+  mpStop = null;
+  const side = document.getElementById('mp_side');
+  if(side) side.classList.remove('mp-open');
   renderMap();
 });
 
