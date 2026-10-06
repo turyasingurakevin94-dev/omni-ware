@@ -18985,12 +18985,12 @@
   .ow-pc-rw{flex:999 1 460px;min-width:0;padding:var(--ow-sp-20) var(--ow-sp-24) var(--ow-sp-16);
     display:flex;flex-direction:column;gap:var(--ow-sp-10);}
   .ow-pc-rw-h{display:flex;align-items:baseline;gap:var(--ow-sp-10);flex-wrap:wrap;}
-  .ow-pc-rw-plot{position:relative;padding-top:22px;}
+  .ow-pc-rw-plot{position:relative;padding-top:22px;--ow-rw-l:74px;}
   .ow-pc-rw-mk{position:absolute;top:0;bottom:18px;width:0;border-left:2px solid var(--ow-ink-900);z-index:2;}
   .ow-pc-rw-mt{position:absolute;top:0;transform:translateX(-50%);font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);
     background:var(--ow-ink-900);color:var(--ow-paper);padding:2px 7px;border-radius:var(--ow-r-sm);white-space:nowrap;z-index:3;}
   .ow-pc-rw-end{position:absolute;top:30px;bottom:18px;width:0;border-left:1.5px dashed var(--ow-crimson);z-index:2;}
-  .ow-pc-rw-g{display:grid;grid-template-columns:74px minmax(0,1fr);row-gap:var(--ow-sp-10);align-items:center;}
+  .ow-pc-rw-g{display:grid;grid-template-columns:var(--ow-rw-l) minmax(0,1fr);row-gap:var(--ow-sp-10);align-items:center;}
   .ow-pc-rw-l{font-size:10px;font-weight:var(--ow-fw-600);letter-spacing:.06em;text-transform:uppercase;color:var(--ow-ink-600);}
   .ow-pc-rw-row{display:flex;height:34px;gap:2px;}
   .ow-pc-rw-s{display:flex;align-items:center;flex-shrink:0;min-width:0;height:100%;padding:0 var(--ow-sp-8);box-sizing:border-box;
@@ -19009,7 +19009,7 @@
   .ow-pc-rw-s.ow-short{color:var(--ow-crimson);}
   .ow-pc-rw-s.ow-unk{background:var(--ow-steel-100);color:var(--ow-ink-600);}
   .ow-pc-rw-s.ow-late{border-top:3px solid var(--ow-crimson);}
-  .ow-pc-rw-sc{position:relative;height:18px;margin-left:74px;margin-top:var(--ow-sp-6);border-top:1px solid var(--ow-rule);}
+  .ow-pc-rw-sc{position:relative;height:18px;margin-left:var(--ow-rw-l);margin-top:var(--ow-sp-6);border-top:1px solid var(--ow-rule);}
   .ow-pc-rw-sc span{position:absolute;top:4px;font-size:10px;color:var(--ow-ink-600);transform:translateX(-50%);}
   .ow-pc-rw-sc span:first-child{transform:none;}
   .ow-pc-pv{margin-top:auto;border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
@@ -92982,11 +92982,15 @@ function prRunwayHTML(period, g, down, cash, cashAcc, expect, coveredSum, notCov
   const owed = down.reduce((s,x)=> s + x.r.bal, 0);
   const scale = Math.max(owed, (cash || 0) + expect.total, 1);
   const pc = (v)=> prPct(v, scale).toFixed(2);
+  /* A marker on the plot sits over the bars, which start after the label column. */
+  const at = (v)=> `calc(var(--ow-rw-l) + (100% - var(--ow-rw-l)) * ${pc(v)} / 100)`;
   const firstDue = down[0] ? 'due:' + down[0].r.id : null;
   const keys = [...down.map(x=> 'due:' + x.r.id), ...(cashAcc||[]).map(a=> 'acct:' + a.key), ...(expect.total > 0.5 ? ['exp'] : [])];
   if(!prSel || !keys.includes(prSel)) prSel = firstDue || keys[0] || null;
   const sel = (k)=> k === prSel ? ' ow-on' : '';
-  const accRow = cash === null
+  const accRow = cash === null && period < currentPeriod()
+    ? `<span class="ow-pc-rw-s ow-unk ow-first ow-last" style="flex:1">A past month · today&rsquo;s cash not counted</span>`
+    : cash === null
     ? `<button type="button" class="ow-pc-rw-s ow-unk ow-first ow-last ow-pc-go-cash" style="flex:1">Cash in hand not known · open today&rsquo;s cash book</button>`
     : cashAcc.filter(a=> (Number(a.closing)||0) > 0.5).map((a, i, arr)=> `<button type="button" class="ow-pc-rw-s ow-acc${ACCOUNTS.findIndex(x=> x.key===a.key)}${i===0?' ow-first':''}${i===arr.length-1 && !(expect.total > 0.5)?' ow-last':''}${sel('acct:'+a.key)} ow-pc-sel"
         data-sel="acct:${esc(a.key)}" title="${esc(a.label)} ${prF(a.closing)}" style="flex-basis:${pc(a.closing)}%">${prFits(pc(a.closing)) ? `${esc(a.key === 'momo' ? 'MoMo' : a.label)} · ${prK(a.closing)}` : ''}</button>`).join('')
@@ -93000,8 +93004,8 @@ function prRunwayHTML(period, g, down, cash, cashAcc, expect, coveredSum, notCov
     <div class="ow-pc-rw-h"><span class="ow-pc-pt">Paying down the list, in order</span>
       <span class="ow-pc-pn">one scale · cash on top, what is owed below · click a section for its details</span></div>
     <div class="ow-pc-rw-plot">
-      ${cash !== null && cash < owed ? `<span class="ow-pc-rw-mk" style="left:${pc(cash)}%"></span><span class="ow-pc-rw-mt" style="left:${pc(cash)}%">Cash runs out</span>` : ''}
-      ${owed > 0.5 ? `<span class="ow-pc-rw-end" style="left:${pc(owed)}%"></span>` : ''}
+      ${cash !== null && cash < owed ? `<span class="ow-pc-rw-mk" style="left:${at(cash)}"></span><span class="ow-pc-rw-mt" style="left:${at(cash)}">Cash runs out</span>` : ''}
+      ${owed > 0.5 ? `<span class="ow-pc-rw-end" style="left:${at(owed)}"></span>` : ''}
       <div class="ow-pc-rw-g">
         <span class="ow-pc-rw-l">In hand</span><div class="ow-pc-rw-row">${accRow}
           <span style="flex:1"></span></div>
@@ -93041,7 +93045,7 @@ function prPreviewHTML(down, cash, cashAcc, expect){
       else rows.push(row('Days missed', 'none'));
     } else rows.push(row(r.overdue ? 'Was due' : 'Due', `${prWeekday(d.dueDate)} ${prDayOf(d.dueDate)} ${periodLabel(d.period).split(' ')[0].slice(0, 3)}`));
     rows.push(row('Paid so far', (Number(d.paid)||0) > 0.5 ? prF(d.paid) : '0'));
-    rows.push(row('In the order', `${ord(i + 1)} · ${cash === null ? 'cash not known' : x.covered ? 'covered' : left > 0.5 ? `${prF(r.bal - left)} short` : 'not covered'}`));
+    rows.push(row('In the order', `${ord(i + 1)} · ${cash === null ? (d.period < currentPeriod() ? 'a past month' : 'cash not known') : x.covered ? 'covered' : left > 0.5 ? `${prF(r.bal - left)} short` : 'not covered'}`));
     const usual = prUsualAccount(d);
     const chip = r.overdue ? `<span class="ow-pc-chip ow-bad">${-daysBetweenISO(todayISO(), d.dueDate)} days late</span>`
       : cash === null ? '' : x.covered ? '<span class="ow-pc-chip ow-good">covered</span>' : '<span class="ow-pc-chip ow-bad">not covered</span>';
@@ -93343,7 +93347,7 @@ function prBoardHTML(period, g, down, cash){
       ${col({title:'Late', cards: late.map(x=> x.r), total: sum(late), sub: late.length ? (cash !== null && late.every(x=> x.covered) ? 'pay first · covered by today&rsquo;s cash' : 'pay first') : 'nothing is late',
         dot:'background:var(--ow-crimson)', bar:'var(--ow-crimson)', share: prPct(sum(late), owed), none:'Nothing past its day.'})}
       ${col({title: cash === null ? 'Still to pay' : 'Covered for payday', cards: (cash === null ? [...cov, ...short] : cov).map(x=> x.r), total: sum(cash === null ? [...cov, ...short] : cov),
-        sub: cash === null ? `due by ${weekday} · today&rsquo;s cash not known` : `${weekday} · today&rsquo;s cash reaches ${cov.length === 1 ? 'it' : `all ${cov.length}`}`,
+        sub: cash === null ? (period < currentPeriod() ? `was due by ${weekday}` : `due by ${weekday} · today&rsquo;s cash not known`) : `${weekday} · today&rsquo;s cash reaches ${cov.length === 1 ? 'it' : `all ${cov.length}`}`,
         dot:'background:var(--ow-verdigris)', bar:'var(--ow-verdigris)', share: prPct(sum(cash === null ? [...cov, ...short] : cov), owed), none:'Nothing covered yet.'})}
       ${cash !== null ? col({title:'Not covered yet', cards: short.map(x=> x.r), total: sum(short), cut: short.length > 0, sub: short.length ? 'needs this week&rsquo;s takings or customer money' : 'today&rsquo;s cash reaches everybody',
         dot:'background:var(--ow-crimson-soft);border:1.5px solid var(--ow-crimson);box-sizing:border-box', bar:'', barCls:'ow-pc-hatch', share: prPct(sum(short), owed), none:'Everybody is covered.'}) : ''}
@@ -93366,6 +93370,7 @@ function prPhoneHTML(period, p, g, down, cash, cashAcc, expect){
   const pct = cash === null || owed <= 0.5 ? null : Math.min(100, cash / owed * 100);
   const C = 2 * Math.PI * 40;
   const verdict = owed <= 0.5 ? `<b class="ow-pc-fig ow-good">All paid</b><strong>${esc(periodLabel(period))}</strong>`
+    : cash === null && period < currentPeriod() ? `<b class="ow-pc-fig">${prF(owed)}</b><strong>still owed · ${esc(periodLabel(period))}</strong>`
     : cash === null ? `<b class="ow-pc-fig">${prF(owed)}</b><strong>to pay · cash not known</strong>`
     : cash >= owed ? `<b class="ow-pc-fig ow-good">Covered</b><strong>${prF(cash - owed)} to spare</strong>`
     : `<b class="ow-pc-fig ow-bad">${prF(owed - cash)}</b><strong style="color:var(--ow-crimson)">short today</strong>`;
@@ -93396,7 +93401,7 @@ function prPhoneHTML(period, p, g, down, cash, cashAcc, expect){
         <span class="ow-pc-m-acc">${cashAcc.map((a, i)=> `<i style="flex:${Math.max(0, Number(a.closing)||0)};background:${['var(--ow-slate)','var(--ow-ink-600)','var(--ow-steel-800)'][i] || 'var(--ow-slate)'}"></i>`).join('')}${expect.total > 0.5 ? `<i style="flex:${expect.total};border:1.5px dashed var(--ow-sky);box-sizing:border-box"></i>` : ''}</span>
         <span class="ow-pc-m-acck">
           ${cashAcc.map(a=> `<span>${esc(a.key === 'momo' ? 'MoMo' : a.label)} <b class="ow-pc-fig">${prK(a.closing)}</b></span>`).join('')}${expect.total > 0.5 ? `<span style="color:var(--ow-sky);font-weight:600">+${prK(expect.total)} due in</span>` : ''}</span>
-      </div>` : `<button type="button" class="btn btn-ghost ow-pc-go-cash">Open today&rsquo;s cash book</button>`}
+      </div>` : period < currentPeriod() ? '' : `<button type="button" class="btn btn-ghost ow-pc-go-cash">Open today&rsquo;s cash book</button>`}
     </section>
     ${cards.length ? `<div class="ow-pc-m-h"><b>Next out</b><span>in the order it leaves</span></div>${cards.join('')}` : ''}
     ${others.length ? `<div class="ow-pc-m-h"><b>The rest of ${esc(periodLabel(period).split(' ')[0])}</b><span>${others.length}</span></div>
@@ -93894,7 +93899,7 @@ function renderPayrollPremises(){
     const z = dr ? payrollReason(dr) : {head: 'Not running this month', tone: ''};
     const share = monthly > 0 && live.includes(a) ? (Number(a.amount)||0) / monthly * 100 : 0;
     const ongoing = !a.endMonth;
-    const nd = (()=>{ const day = Math.min(28, Math.max(1, Number(a.dueDay)||1)); const p = due && !dueIsSettled(due) ? cur : periodShift(cur, 1); return `${p}-${String(day).padStart(2, '0')}`; })();
+    const nd = (()=>{ const day = Math.min(28, Math.max(1, Number(a.dueDay)||1)); const p = due && !dueIsSettled(due) && !dueIsOverdue(due) ? cur : periodShift(cur, 1); return `${p}-${String(day).padStart(2, '0')}`; })();
     return `<article class="ow-pc-pan ow-pc-pc" aria-label="${esc(a.premises)}">
       <div class="ow-pc-pc-h"><span class="ow-pc-pc-ic"><svg class="ow-pc-ic" viewBox="0 0 24 24"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/></svg></span>
         <span class="ow-pc-pc-n"><b title="${esc(a.premises)}">${esc(a.premises)}</b><span>${esc(a.landlord || 'Landlord not recorded')} · ${ongoing ? 'since ' + esc(periodLabel(a.startMonth)) : 'lease to ' + esc(periodLabel(a.endMonth))}</span>
