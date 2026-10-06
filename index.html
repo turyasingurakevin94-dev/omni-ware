@@ -18941,6 +18941,7 @@
   .ow-pc-ok-bar{position:relative;padding-top:18px;}
   .ow-pc-ok-need{position:absolute;top:0;transform:translateX(-100%);font-size:10px;font-weight:var(--ow-fw-700);
     color:var(--ow-crimson);white-space:nowrap;}
+  .ow-pc-ok-need.ow-r{transform:translateX(var(--ow-sp-4));}
   .ow-pc-ok-line{position:absolute;top:14px;bottom:-4px;border-left:2px solid var(--ow-crimson);z-index:2;}
   .ow-pc-ok-trk{display:flex;gap:2px;height:22px;border-radius:var(--ow-r-pill);overflow:hidden;background:var(--ow-rule-soft);}
   .ow-pc-ok-have{background:var(--ow-slate);}
@@ -19397,7 +19398,7 @@
   .ow-pc-rec-g{display:grid;gap:var(--ow-sp-6);align-items:center;min-width:820px;}
   .ow-pc-rec-mh{text-align:center;font-size:10px;font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
   .ow-pc-rec-mh.ow-now{color:var(--ow-ink-900);}
-  .ow-pc-rec-n{display:flex;flex-direction:column;gap:1px;min-width:0;}
+  .ow-pc-rec-n{display:flex;flex-direction:column;gap:1px;min-width:0;position:sticky;left:0;z-index:1;background:var(--ow-paper);align-self:stretch;justify-content:center;}
   .ow-pc-rec-n b{font-size:var(--ow-t-13);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .ow-pc-rec-n span{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
   .ow-pc-rec-c{height:40px;border-radius:var(--ow-r-sm);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;
@@ -19407,6 +19408,7 @@
   .ow-pc-rec-c.ow-early{background:#CFE9D9;}
   .ow-pc-rec-c.ow-late{background:#F8DCC2;color:var(--ow-amber-ink);}
   .ow-pc-rec-c.ow-owed{background:var(--ow-crimson);color:var(--ow-paper);}
+  .ow-pc-rec-c.ow-sbs{background:var(--ow-rule-soft);color:var(--ow-ink-600);}
   .ow-pc-rec-c.ow-due{background:var(--ow-paper);color:var(--ow-slate);border:1.5px solid var(--ow-slate);box-sizing:border-box;}
   .ow-pc-rec-c.ow-pre{background-image:repeating-linear-gradient(135deg,var(--ow-paper) 0 4px,var(--ow-steel-050) 4px 8px);
     border:1px solid var(--ow-rule-soft);box-sizing:border-box;}
@@ -19459,6 +19461,9 @@
   .ow-pc-sh-dock{display:none;}
   @media (max-width:820px){
     .ow-pc-desk{display:none;}
+    .ow-pc-rec{padding-left:0;}
+    .ow-pc-rec-g{--ow-rec-n:104px;min-width:780px;}
+    .ow-pc-rec-n{padding-left:var(--ow-sp-16);}
     .ow-pc-ph-only{display:flex;flex-direction:column;gap:var(--ow-sp-12);}
     .ow-pc-head .btn{min-height:var(--ow-tap);}
     .ow-py-ms{height:var(--ow-tap);flex:1;}
@@ -91472,10 +91477,19 @@ const PR_PAYROLL_CATS = ['Rent', 'Salaries & Wages'];
 const prF = (n)=> Number(Math.round(n||0)).toLocaleString('en-UG');
 const prK = (n)=>{
   const v = Math.round(Number(n)||0);
-  if(Math.abs(v) >= 1000000) return (v/1000000).toFixed(v % 1000000 === 0 ? 0 : 2).replace(/\.?0+$/, '') + 'M';
+  if(Math.abs(v) >= 999500) return (v/1000000).toFixed(2).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '') + 'M';
   if(Math.abs(v) >= 1000) return Math.round(v/1000) + 'k';
   return String(v);
 };
+/* For a label with room for three or four characters: whole millions from ten million up. */
+const prKs = (n)=>{
+  const v = Math.round(Number(n)||0);
+  if(Math.abs(v) >= 9950000) return Math.round(v/1000000) + 'M';
+  if(Math.abs(v) >= 999500) return (v/1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+  return prK(v);
+};
+/* A slice of the runway too narrow to hold its name keeps it on hover and in the preview. */
+const prFits = (pct)=> Number(pct) >= 8;
 const prPct = (a, b)=> b > 0 ? Math.max(0, Math.min(100, a / b * 100)) : 0;
 function prInitials(name){
   const w = String(name||'').replace(/[^A-Za-z\s]/g, ' ').trim().split(/\s+/).filter(Boolean);
@@ -91740,7 +91754,7 @@ function prEnoughHTML(period, p, cash){
       <span><b class="ow-pc-ok-h ow-${tone}">${head}</b><span class="ow-pc-ok-s">${sub}</span></span></div>
     <div role="img" aria-label="You have ${prF(cash)}. ${usual > 0 ? `${left} usual days add ${prF(usual * left)}. ` : ''}You need ${prF(owed)}." style="display:flex;flex-direction:column;gap:6px">
       <div class="ow-pc-ok-bar">
-        <span class="ow-pc-ok-need" style="left:${needPct.toFixed(1)}%">Need ${prK(owed)}</span>
+        <span class="ow-pc-ok-need${needPct < 30 ? ' ow-r' : ''}" style="left:${needPct.toFixed(1)}%">Need ${prK(owed)}</span>
         <span class="ow-pc-ok-line" style="left:${needPct.toFixed(1)}%"></span>
         <div class="ow-pc-ok-trk"><i class="ow-pc-ok-have" style="flex:0 0 ${havePct.toFixed(1)}%"></i>${usual > 0 && left > 0 ? '<i class="ow-pc-ok-earn"></i>' : ''}</div>
       </div>
@@ -91749,9 +91763,9 @@ function prEnoughHTML(period, p, cash){
     </div>
     ${nights.length ? `<div class="ow-pc-ok-days">
       <span class="ow-pc-ok-dt">Cash you&rsquo;ll have each night, at <b class="ow-pc-fig">+${prK(usual)}</b> a day</span>
-      <div class="ow-pc-ok-tiles">${nights.map(n=> `<span class="ow-pc-ok-t${n.on ? ' ow-on' : ''}"><span class="ow-pc-ok-t-d">${esc(n.d)}</span>
+      <div class="ow-pc-ok-tiles">${nights.map(n=> `<span class="ow-pc-ok-t${n.on ? ' ow-on' : ''}" title="${esc(n.d)} night · ${prF(n.v)}"><span class="ow-pc-ok-t-d">${esc(n.d)}</span>
         <span class="ow-pc-ok-t-b"><i style="height:${Math.max(6, prPct(n.v - lo, hi - lo)).toFixed(0)}%"></i></span>
-        <span class="ow-pc-ok-t-v ow-pc-fig">${prK(n.v)}</span></span>`).join('')}</div>
+        <span class="ow-pc-ok-t-v ow-pc-fig">${prKs(n.v)}</span></span>`).join('')}</div>
       <span class="ow-pc-ok-note">Usual = the last 4 weeks of the cash book, after other spending</span>
     </div>` : ''}
   </div>`;
@@ -91772,10 +91786,10 @@ function prRunwayHTML(period, g, down, cash, cashAcc, expect, coveredSum, notCov
   const accRow = cash === null
     ? `<button type="button" class="ow-pc-rw-s ow-unk ow-first ow-last ow-pc-go-cash" style="flex:1">Cash in hand not known · open today&rsquo;s cash book</button>`
     : cashAcc.filter(a=> (Number(a.closing)||0) > 0.5).map((a, i, arr)=> `<button type="button" class="ow-pc-rw-s ow-acc${ACCOUNTS.findIndex(x=> x.key===a.key)}${i===0?' ow-first':''}${i===arr.length-1 && !(expect.total > 0.5)?' ow-last':''}${sel('acct:'+a.key)} ow-pc-sel"
-        data-sel="acct:${esc(a.key)}" title="${esc(a.label)} ${prF(a.closing)}" style="flex-basis:${pc(a.closing)}%">${esc(a.key === 'momo' ? 'MoMo' : a.label)} · ${prK(a.closing)}</button>`).join('')
-      + (expect.total > 0.5 ? `<button type="button" class="ow-pc-rw-s ow-exp ow-last${sel('exp')} ow-pc-sel" data-sel="exp" title="Due in from ${expect.rows.length} customer${expect.rows.length===1?'':'s'} by payday, ${prF(expect.total)}" style="flex-basis:${pc(expect.total)}%">+${prK(expect.total)} due in from customers</button>` : '');
+        data-sel="acct:${esc(a.key)}" title="${esc(a.label)} ${prF(a.closing)}" style="flex-basis:${pc(a.closing)}%">${prFits(pc(a.closing)) ? `${esc(a.key === 'momo' ? 'MoMo' : a.label)} · ${prK(a.closing)}` : ''}</button>`).join('')
+      + (expect.total > 0.5 ? `<button type="button" class="ow-pc-rw-s ow-exp ow-last${sel('exp')} ow-pc-sel" data-sel="exp" title="Due in from ${expect.rows.length} customer${expect.rows.length===1?'':'s'} by payday, ${prF(expect.total)}" style="flex-basis:${pc(expect.total)}%">${prFits(pc(expect.total)) ? `+${prK(expect.total)} due in from customers` : ''}</button>` : '');
   const payRow = down.map((x, i)=> `<button type="button" class="ow-pc-rw-s ${cash === null ? 'ow-unk' : x.covered ? 'ow-cov' : 'ow-short ow-pc-hatch'}${x.r.overdue ? ' ow-late' : ''}${i===0?' ow-first':''}${i===down.length-1?' ow-last':''}${sel('due:'+x.r.id)} ow-pc-sel"
-      data-sel="due:${esc(x.r.id)}" title="${esc(dueName(x.r.due))} · ${prF(x.r.bal)}${x.r.overdue ? ' · late' : ''}" style="flex-basis:${pc(x.r.bal)}%">${esc(prFirst(x.r))}</button>`).join('');
+      data-sel="due:${esc(x.r.id)}" title="${esc(dueName(x.r.due))} · ${prF(x.r.bal)}${x.r.overdue ? ' · late' : ''}" style="flex-basis:${pc(x.r.bal)}%">${prFits(pc(x.r.bal)) ? esc(prFirst(x.r)) : ''}</button>`).join('');
   const ticks = [];
   const step = scale > 8000000 ? 2000000 : scale > 3000000 ? 1000000 : scale > 1200000 ? 500000 : 250000;
   for(let v = 0; v <= scale; v += step) ticks.push(`<span class="ow-pc-fig" style="left:${pc(v)}%">${v ? prK(v) : '0'}</span>`);
@@ -92611,9 +92625,12 @@ function renderPayrollPremises(){
     const ended = !ongoing && leftDays < 0;
     const warn = !ongoing && !ended && leftDays <= 90;
     const ds = rentDues.filter(d=> String(d.refId) === String(a.id));
-    const settled = ds.filter(d=> dueIsSettled(d));
+    /* A month marked settled from before the system has no payment behind it,
+       so it is neither money paid nor a day it was paid on time. */
+    const before = ds.filter(d=> dueIsSettled(d) && (d.payments||[]).length && (d.payments||[]).every(x=> x.settledBeforeSystem));
+    const settled = ds.filter(d=> dueIsSettled(d) && !before.includes(d));
     const onTime = settled.filter(d=>{ const p = (d.payments||[]).slice(-1)[0]; return p && p.date && String(p.date) <= String(d.dueDate); });
-    const paidAll = ds.reduce((s,d)=> s + (Number(d.paid)||0), 0);
+    const paidAll = ds.reduce((s,d)=> s + (d.payments||[]).filter(x=> !x.settledBeforeSystem).reduce((a,x)=> a + (Number(x.amount)||0), 0), 0);
     const yrs = Math.floor(elapsed / 12), mos = Math.floor(elapsed % 12);
     const big = ongoing ? (yrs ? `${yrs}y ${mos}m` : `${mos}m`) : ended ? 'Ended' : String(leftDays);
     const unit = ongoing ? 'so far' : ended ? periodLabel(a.endMonth) : 'days left';
@@ -92630,7 +92647,7 @@ function renderPayrollPremises(){
       </div>
       <div class="ow-pc-dial-s">
         <span><span class="ow-pc-lbl">A month</span><b class="ow-pc-fig">${prK(a.amount)}</b><em>due the ${esc(ordinalDay(a.dueDay))}</em></span>
-        <span><span class="ow-pc-lbl">Paid so far</span><b class="ow-pc-fig">${prK(paidAll)}</b><em>${settled.length} month${settled.length===1?'':'s'}</em></span>
+        <span><span class="ow-pc-lbl">Paid so far</span><b class="ow-pc-fig">${prK(paidAll)}</b><em>${settled.length} month${settled.length===1?'':'s'}${before.length ? ` · ${before.length} marked settled` : ''}</em></span>
         <span><span class="ow-pc-lbl">On time</span><b class="ow-pc-fig">${settled.length ? Math.round(onTime.length / settled.length * 100) + '%' : '—'}</b><em>${onTime.length} of ${settled.length}</em></span>
       </div>
       <span class="ow-pc-dial-f">${warn
@@ -92704,6 +92721,9 @@ function renderPayrollPremises(){
       if(!d) return `<span class="ow-pc-rec-c ow-pre" title="${esc(periodLabel(per))} · ${per < a.startMonth ? 'before the lease' : 'not raised'}"></span>`;
       due++;
       const last = (d.payments||[]).filter(x=> x.date).slice(-1)[0];
+      if(dueIsSettled(d) && (d.payments||[]).length && (d.payments||[]).every(x=> x.settledBeforeSystem)){
+        return `<span class="ow-pc-rec-c ow-sbs" title="${esc(periodLabel(per))} · marked settled, from before the system"><b>&#10003;</b><span>settled</span></span>`;
+      }
       if(dueIsSettled(d) && last){
         const lateBy = daysBetweenISO(d.dueDate, String(last.date));
         if(lateBy <= 0) on++;
@@ -92714,7 +92734,7 @@ function renderPayrollPremises(){
       if(dueIsOverdue(d)) return `<span class="ow-pc-rec-c ow-owed" title="${esc(periodLabel(per))} · owed, ${-daysBetweenISO(todayISO(), d.dueDate)} days late"><b>owed</b><span class="ow-pc-fig">${-daysBetweenISO(todayISO(), d.dueDate)}d late</span></span>`;
       return `<span class="ow-pc-rec-c ow-due" title="${esc(periodLabel(per))} · due the ${day}"><b class="ow-pc-fig">${day}</b><span>due</span></span>`;
     }).join('');
-    const settledN = mons.filter(per=>{ const d = findDue('rent', a.id, per); return d && dueIsSettled(d); }).length;
+    const settledN = mons.filter(per=>{ const d = findDue('rent', a.id, per); return d && dueIsSettled(d) && !((d.payments||[]).length && (d.payments||[]).every(x=> x.settledBeforeSystem)); }).length;
     const score = settledN ? Math.round(on / settledN * 100) : null;
     return `<span class="ow-pc-rec-n"><b title="${esc(a.premises)}">${esc(a.premises)}</b><span>due the ${esc(ordinalDay(day))}</span></span>${cells}
       <span class="ow-pc-rec-sc"><b class="ow-pc-fig" style="color:${score === null ? 'var(--ow-ink-600)' : score >= 90 ? 'var(--ow-verdigris)' : 'var(--ow-amber-ink)'}">${score === null ? '—' : score + '%'}</b><span>on time</span></span>`;
@@ -92722,14 +92742,14 @@ function renderPayrollPremises(){
   const record = ags.length ? `<section class="ow-pc-pan" aria-label="Payment record">
     <div class="ow-pc-ph"><span class="ow-pc-pt">Payment record</span><span class="ow-pc-pn">the day each month&rsquo;s rent was paid · last 12 months</span></div>
     <div class="ow-pc-rec">
-      <div class="ow-pc-rec-g" style="grid-template-columns:150px repeat(12,minmax(40px,1fr)) 64px">
-        <span></span>${mons.map(per=> `<span class="ow-pc-rec-mh${per === cur ? ' ow-now' : ''}">${esc(periodLabel(per).split(' ')[0].slice(0, 3))}</span>`).join('')}<span></span>
+      <div class="ow-pc-rec-g" style="grid-template-columns:var(--ow-rec-n,150px) repeat(12,minmax(40px,1fr)) 64px">
+        <span class="ow-pc-rec-n"></span>${mons.map(per=> `<span class="ow-pc-rec-mh${per === cur ? ' ow-now' : ''}">${esc(periodLabel(per).split(' ')[0].slice(0, 3))}</span>`).join('')}<span></span>
         ${recRows}
       </div>
       <div class="ow-pc-key" style="margin-top:12px">
         <span><i class="ow-pc-sw" style="background:#CFE9D9"></i>early</span><span><i class="ow-pc-sw" style="background:var(--ow-verdigris-soft)"></i>on the day</span>
         <span><i class="ow-pc-sw" style="background:#F8DCC2"></i>late · days shown</span><span><i class="ow-pc-sw" style="background:var(--ow-crimson)"></i>owed and late</span>
-        <span><i class="ow-pc-sw ow-pc-rec-c ow-pre" style="height:10px"></i>before the lease</span><span>The number in each square is the day it was paid</span>
+        <span><i class="ow-pc-sw ow-pc-rec-c ow-sbs" style="height:10px"></i>marked settled</span><span><i class="ow-pc-sw ow-pc-rec-c ow-pre" style="height:10px"></i>before the lease</span><span>The number in each square is the day it was paid</span>
       </div>
     </div>
   </section>` : '';
@@ -92760,6 +92780,8 @@ function renderPayrollPremises(){
     ${cards.length ? `<div class="ow-pc-pcs">${cards.join('')}</div>` : `<div class="ow-pc-pan"><div class="ow-pc-empty"><b>No premises yet.</b>Add one below and its rent is raised on its day every month.</div></div>`}
     ${record}${add}
   </div>`;
+  /* On a phone the record scrolls; open it on the months that matter, the latest. */
+  wrap.querySelectorAll('.ow-pc-rec').forEach(el=> { el.scrollLeft = el.scrollWidth; });
   wirePayrollList(wrap);
 }
 
