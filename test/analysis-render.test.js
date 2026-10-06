@@ -171,7 +171,7 @@ const env = {
 /* EVERY function the screen is built from, compiled together. One of
    them reaching for a name that is not there is the whole point of
    this file, and seven functions is seven chances to do it. */
-const NAMES = ['analysisWorth', 'anN', 'anShort', 'analysisFindings', 'anCashCategories', 'anMarks', 'anMarkOf',
+const NAMES = ['analysisWorth', 'anN', 'axShort', 'analysisFindings', 'anCashCategories', 'anMarks', 'anMarkOf',
   'anState', 'anLists', 'anStatusOf', 'anTagHTML', 'anFigOf', 'anRowHTML', 'anDetailBodyHTML', 'anActionsHTML',
   'anDetailHTML', 'anKpisHTML', 'anCashHTML', 'anBasisHTML', 'renderAnalysis', 'anDraw'];
 const scope = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html')), env, NAMES);
