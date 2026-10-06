@@ -569,7 +569,14 @@ const reset = () => {
   t.check(/const shown = all;/.test(rr2),
     'every match is rendered — a row that is not drawn is a pin that cannot be moved or removed');
   t.check(!/all\.slice\(0, ?\d+\)/.test(rr2), 'nothing silently truncates the list');
-  t.check(/\.mp-results\{max-height:320px;overflow-y:auto;\}/.test(src),
+  /* WAS: .mp-results{max-height:320px;overflow-y:auto;}. That box was a
+     fixed 320px because the list sat UNDER the map, a panel of its own.
+     It now sits beside the map as the workspace's first column and is
+     exactly as tall as the map is, so the scroll moved to the column's
+     results box and the fixed height went with it. What this asserts is
+     unchanged: every row is rendered and the box scrolls rather than
+     cutting the list. */
+  t.check(/\.mpw-list #mp_results\{[^}]*overflow-y:auto;/.test(src),
     'the list scrolls instead, so a long one is still all there');
   t.check(/mapPlaceSearch\(rows, q, mpFilter, layer\)/.test(rr2),
     'and the chosen half, ranked by the money the current layer is about, is what it asks for');

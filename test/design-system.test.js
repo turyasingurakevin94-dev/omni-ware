@@ -1098,26 +1098,39 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        file, so their families are retired from the screen AND from what
        the renderers emit. */
     'assets': {
+      /* VERSION 2. The register stopped opening in place and the five
+         pictures above it went: the screen is a list on the left, grouped
+         by what each thing needs from the owner, and ONE workspace on the
+         right for whatever is picked -- where it stands as a sum, the
+         repayment form, the payments left, and two what-ifs (paying some
+         off early, selling it). The owner signed it off on the design
+         canvas. So the first console's own families are retired here
+         the way the two old modals' were: the fifth column and its names,
+         the in-place queue rows, the position bar, the falls-due columns
+         and the worth chart.
+
+         The page header loses .ow-ph-sub. It used to say what was behind;
+         the late banner under the answers says that now, once, with the
+         way into the thing that is late, and a sub repeating it would be
+         the second door onto the same row that the reminder test warns
+         against. */
       retired: ['page-head', 'panel', 'panel-head', 'sc-stats', 'fa-summary', 'pi-table-wrap',
-                'fa-name', 'fa-sub', 'fa-tag', 'fa-gone', 'empty', 'ln-due-banner', 'sp-lead'],
-      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-stack', 'ow-grid', 'ow-side'],
-      /* Drawn rather than listed: the four tiles and the Position list
-         became one picture of who owns what the shop owns and one of
-         what falls due by month, so .ow-strip/.ow-mt and the .ow-sr
-         rows left the screen; the worth-less-owed sum (.ow-ar) became
-         the chart it summarised. */
-      renders: ['renderAssetsLoans', 'alRows', 'alRowHTML', 'alFig', 'alTbl', 'alLoanBody', 'alAssetBody',
-                'alBarHTML', 'alPayFormHTML', 'alPaidListHTML', 'alPipsHTML', 'alInstalmentBarsHTML', 'alWorthChartSVG'],
-      rendersUses: ['ow-pan', 'ow-pan-h', 'ow-pan-t',
-                    'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-why', 'ow-q-un', 'ow-q-a', 'ow-cp',
-                    'ow-ev', 'ow-ev-h', 'ow-ev-t', 'ow-ev-row', 'ow-tbl', 'ow-tbl-r', 'ow-tbl-n',
-                    'ow-mini', 'ow-empty', 'ow-al-top', 'ow-al-ob', 'ow-al-dc', 'ow-al-bar', 'ow-al-ch', 'ow-al-pips',
-                    /* the five this screen owns: the fifth column and its
-                       names, the crest and two-line title beside it, the
-                       dash that is not a nought, the band under which
-                       settled and sold things live, and the repayment
-                       form that is the one place it takes typing */
-                    'ow-al', 'ow-al-h', 'ow-al-nm', 'ow-al-none', 'ow-al-sect', 'ow-al-pay'],
+                'fa-name', 'fa-sub', 'fa-tag', 'fa-gone', 'empty', 'ln-due-banner', 'sp-lead',
+                'ow-al', 'ow-al-h', 'ow-al-nm', 'ow-al-none', 'ow-al-sect', 'ow-al-pay',
+                'ow-al-top', 'ow-al-ob', 'ow-al-dc', 'ow-al-bar', 'ow-al-ch', 'ow-al-pips',
+                'ow-q-r', 'ow-q-card', 'ow-strip', 'ow-mt'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-help', 'ow-ph-sp', 'ow-a2'],
+      renders: ['renderAssetsLoans', 'alRows', 'alRegisterHTML', 'alItemHTML', 'alAheadHTML',
+                'alWorkspaceHTML', 'alStandsHTML', 'alRecordHTML', 'alScheduleHTML', 'alEarlyHTML',
+                'alLifeHTML', 'alSellHTML', 'alPaidListHTML', 'alTbl', 'alPaintAgreement', 'openAssetDepreciation'],
+      rendersUses: ['ow-pan', 'ow-empty', 'ow-tbl', 'ow-tbl-r', 'ow-tbl-n', 'ow-mini', 'ow-link',
+                    /* the screen's own: the four answers, the late banner, the two
+                       halves, the register and its entries, the month ahead and its
+                       one chart, and the workspace's sum, repayment, schedule and
+                       what-ifs */
+                    'ow-a2-ans', 'ow-a2-alert', 'ow-a2-cols', 'ow-a2-left', 'ow-a2-ws', 'ow-a2-reg',
+                    'ow-a2-it', 'ow-a2-ahead', 'ow-a2-ag', 'ow-a2-six', 'ow-a2-sum', 'ow-a2-eq',
+                    'ow-a2-rec', 'ow-a2-tbl', 'ow-a2-tr', 'ow-a2-early', 'ow-a2-res', 'ow-a2-sell', 'ow-a2-num'],
     },
     /* STATEMENTS. Five documents over one period, and a page that had
        grown a wrapper around itself: one .panel holding a tab tray, a

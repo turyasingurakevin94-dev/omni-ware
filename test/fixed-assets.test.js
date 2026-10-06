@@ -268,16 +268,22 @@ const asset = (over) => Object.assign({
      "open Edit and scroll past the notes", it must go through the one
      form, and it must never be offered on something already sold. What
      is no longer asserted is that the door is an icon in a <td>; that
-     table does not exist. */
-  t.check(/class="btn btn-ghost ow-sm al-fa-sell" data-id="\$\{a\.id\}"/.test(src)
-    && /Sell or scrap it/.test(src),
+     table does not exist.
+
+     AND AGAIN, FOR VERSION 2. Nothing opens in place any more: picking a
+     thing opens its workspace, and Sell or dispose is a named button in
+     that workspace's header, beside Edit. The three guarantees are the
+     same three, read off the new code: the words are on the button, the
+     button opens the one asset form in its selling mode, and a thing
+     already sold is never offered it. */
+  t.check(/acts\.push\(\['sell', 'Sell or dispose'\]\)/.test(src),
     'selling is offered on the thing itself, named in words');
-  t.check(/\.al-fa-sell'\)\.forEach\(b=> b\.addEventListener\('click', \(\)=> openAssetForm\(Number\(b\.dataset\.id\), true\)\)\)/.test(src),
+  t.check(/else if\(k === 'sell'\) openAssetForm\(sel\.a\.id, true\);/.test(src),
     'through the same form, told what it was opened for');
 
-  /* Not on something already sold: the row says "sold" and carries the
+  /* Not on something already sold: the entry says "sold" and carries the
      gain, and a second disposal would bank the proceeds twice. */
-  t.check(/\$\{gone \? '' : `<button type="button" class="btn btn-ghost ow-sm al-fa-sell"/.test(src),
+  t.check(/if\(a && !r\.gone\) acts\.push\(\['sell', 'Sell or dispose'\]\);/.test(src),
     'and never on one already sold, which would bank the proceeds a second time');
 
   /* One form, not a second sale dialog -- two places writing the
@@ -287,7 +293,7 @@ const asset = (over) => Object.assign({
     'selling reuses the asset form rather than a second dialog of its own');
   t.check(/const selling = !!sell && !!a;/.test(open),
     'and "sell" means nothing on an asset that does not exist yet');
-  t.check(/selling \? 'Sell or scrap this asset' : \(a \? 'Edit asset' : 'Add an asset'\)/.test(open),
+  t.check(/selling \? 'Sell or dispose' : \(a \? 'Edit asset' : 'Add an asset'\)/.test(open),
     'the heading says which of the three it was opened as');
 
   /* The disposal fields sit past the cost, the life and the notes, so

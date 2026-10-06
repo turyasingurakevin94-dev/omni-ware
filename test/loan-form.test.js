@@ -55,11 +55,17 @@ const verdict = (/function lnfRenderVerdict[\s\S]*?\n\}\n/.exec(code) || [''])[0
      it is the thing being decided, not a footnote under everything. */
   t.check(modal.indexOf('id="ln_verdict"') < modal.indexOf('id="ln_started"'),
     'stated before the paperwork details rather than last');
-  t.check(modal.indexOf('id="ln_verdict"') > modal.indexOf('id="ln_fees"'),
+  /* Version 2: the popup asks the few figures that decide a loan and
+     folds the fee, the charge and the date under one link. The verdict
+     follows the last figure that is always on screen, and the folded
+     ones still redraw it (section 1). */
+  t.check(modal.indexOf('id="ln_verdict"') > modal.indexOf('id="ln_term"'),
     'and after the figures it is worked out from');
-  t.check(/\.lnf-verdict-head b\{font-family:'Archivo Black'/.test(src)
-    && /font-size:30px/.test((/\.lnf-verdict-head b\{[^}]*\}/.exec(src) || [''])[0]),
-    'set at a size that matches what it is worth to somebody deciding whether to sign');
+  /* The 30px figure in a coloured card was the version-1 form, where the
+     verdict competed with nine boxes. In the small popup it is the box
+     under the terms, its figures in mono and its ground the tone. */
+  t.check(/class="ow-pop-res\$\{tone === 'bad' \? ' ow-pop-res-bad' : tone === 'warn' \? ' ow-pop-res-warn' : ''\}"/.test(verdict),
+    'set apart as the result of the form, toned by how far the paperwork is from the truth');
 
   t.check(/loanTrueCostRate\(l\)/.test(verdict),
     'and it is the TRUE cost — after fees — not the rate on the paperwork');
@@ -68,17 +74,17 @@ const verdict = (/function lnfRenderVerdict[\s\S]*?\n\}\n/.exec(code) || [''])[0
   t.check(/overstated >= 5 \? 'bad' : \(overstated >= 1 \? 'warn' : 'ok'\)/.test(verdict),
     'and coloured by how far apart the two are, so an honest loan is not alarmed over');
 
-  /* The three figures a borrower actually weighs. "You repay" was
-     nowhere on the old form -- only a monthly payment and an interest
-     total, which have to be multiplied in the head to mean anything. */
-  t.check(/You receive/.test(verdict) && /You repay/.test(verdict) && /Every \$\{esc\(freq\.each/.test(verdict),
-    'with what you get, what you give back and what it takes each period — named in the loan\'s own rhythm, not always a month');
-  /* "You repay" counted principal and interest only, which on a loan
-     with a charge on every payment understated it by more than the whole
-     interest bill -- in the one cell a borrower reads to decide. */
-  t.check(/const repaid = l\.principal \+ interest \+ recurring;/.test(verdict),
-    'the repayment being everything handed over: principal, interest AND recurring charges');
-  t.check(/loanNetAdvanced\(l\)/.test(verdict),
+  /* What it takes each period, named in the loan's own rhythm, and what
+     it costs on top of the sum -- the two lines the version-2 popup
+     draws. What reaches you is a third line only when a fee is kept
+     back, the one case where it differs from the amount typed. */
+  t.check(/\$\{esc\(freq\.each\)\}/.test(verdict) && /in interest and fees/.test(verdict),
+    'with what it takes each period — named in the loan\'s own rhythm, not always a month — and what it costs on top');
+  /* Interest alone understated a loan with a charge on every payment by
+     more than its whole interest bill. */
+  t.check(/const costs = interest \+ recurring;/.test(verdict),
+    'the cost being everything on top of the sum: interest AND recurring charges');
+  t.check(/loanNetAdvanced\(l\)/.test(verdict) && /reaches you, after/.test(verdict),
     'and what you receive being net of anything kept back');
 }
 
@@ -87,13 +93,15 @@ const verdict = (/function lnfRenderVerdict[\s\S]*?\n\}\n/.exec(code) || [''])[0
   /* Two different causes, and a borrower can act on the difference: a
      flat rate is the agreement's shape, a fee is a number they might
      negotiate. Collapsing them into one sentence loses that. */
-  t.check(/Flat interest and the fee kept back both push it up\./.test(verdict),
+  /* Version 2 says the reason as the tail of the cost line ("71.1% a
+     year is what it really costs — ..."), so the words are lower case. */
+  t.check(/flat interest and the fee kept back both push it up/.test(verdict),
     'both causes are named when both apply');
-  t.check(/even the part you have paid back/.test(verdict),
+  t.check(/even on the part you have paid back/.test(verdict),
     'flat interest is explained in terms of what it does, not by its name');
-  t.check(/The fee kept back is part of what the money costs\./.test(verdict),
+  t.check(/the fee kept back is part of what the money costs/.test(verdict),
     'and a fee on an honest rate is named on its own');
-  t.check(/Which is what the agreement says\./.test(verdict),
+  t.check(/which is what the agreement says/.test(verdict),
     'while a loan that costs what it claims is told so plainly');
 }
 
@@ -167,11 +175,16 @@ const verdict = (/function lnfRenderVerdict[\s\S]*?\n\}\n/.exec(code) || [''])[0
      the field still rendered at 14px, because `input[type=text]` does
      not match an <input> that declares no type. winningDeclaration
      resolves the cascade the way a browser does. */
-  eq(winningDeclaration(src, 'ln_lender', 'font-size').value, '18px', 'as is the lender');
-  eq(winningDeclaration(src, 'ln_principal', 'font-size').value, '22px',
-    'and the amount borrowed actually renders as the subject of the form');
-  eq(winningDeclaration(src, 'ln_rate', 'font-size').value, '14px',
-    'which only means something because the fields describing the loan do not');
+  /* Version 2: the popup holds only the fields that decide a loan, so
+     they share one size -- 15px, as drawn -- and the figures are set
+     in mono. The lender and the amount lead by place, the first row. */
+  eq(winningDeclaration(src, 'ln_lender', 'font-size').value, '15px', 'the lender renders at the popup\'s field size');
+  eq(winningDeclaration(src, 'ln_principal', 'font-size').value, '15px',
+    'and so does the amount borrowed');
+  t.check(/IBM Plex Mono/.test(winningDeclaration(src, 'ln_principal', 'font-family').value),
+    'in figures that line up');
+  eq(winningDeclaration(src, 'ln_rate', 'font-size').value, '15px',
+    'and the rate beside them, so no box shouts over another');
   t.check(/document\.getElementById\('ln_lender'\)\.focus\(\);/.test(code),
     'and the cursor lands on the first thing to type');
 }
@@ -248,7 +261,7 @@ const verdict = (/function lnfRenderVerdict[\s\S]*?\n\}\n/.exec(code) || [''])[0
      "Figures rounded to" -- 59px and one unrelated row from the box it
      describes, reading as though rounding were what the lender kept
      back. */
-  const terms = (/<div class="lnf-terms">[\s\S]*?\n          <\/div>/.exec(src) || [''])[0];
+  const terms = (/<div class="lnf-terms[^"]*">[\s\S]*?\n          <\/div>/.exec(src) || [''])[0];
   t.check(/Insurance, arrangement and paperwork/.test(terms),
     'the fee explanation is inside the terms block, with the fields');
   const feeAt = terms.indexOf('id="ln_fees"');
