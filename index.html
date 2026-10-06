@@ -75893,7 +75893,16 @@ function panRowsByItem(invoices){
   const map = new Map();
   invoices.forEach(pi=>{
     (pi.items||[]).forEach(it=>{
-      const key = (it.variantIdx==null || it.variantIdx==='') ? it.productId : `${it.productId}::${it.variantIdx}`;
+      const unit = String(it.unit || productUnitLabel(it.productId, it.variantIdx==null?null:it.variantIdx) || '').trim();
+      /* THE UNIT IS PART OF WHAT THE LINE IS. The same runner bought by
+         the carton last month and by the pair this month is not one price
+         that fell 95%: found on the live books, where a carton at 80,000
+         was "compared" with a pair at 3,600 and the screen reported a
+         111 million cut. A quantity and a price only mean anything in
+         their unit, so a line is the item IN a unit -- "ctn" and "Ctn"
+         being the same unit typed twice. */
+      const key = ((it.variantIdx==null || it.variantIdx==='') ? it.productId : `${it.productId}::${it.variantIdx}`)
+        + '@' + unit.toLowerCase();
       const product = data.products.find(p=>p.id===it.productId);
       const variant = (product && it.variantIdx!=null && product.variants) ? product.variants[it.variantIdx] : null;
       if(!map.has(key)){
@@ -75905,7 +75914,7 @@ function panRowsByItem(invoices){
           name: product ? product.name : (it.productName||''),
           variant: variant ? variantLabel(variant.combo) : '--',
           category: product ? (product.category||'') : '',
-          unit: it.unit || productUnitLabel(it.productId, it.variantIdx==null?null:it.variantIdx) || '',
+          unit,
           amt: 0, purchased: 0, sups: new Set()
         });
       }
