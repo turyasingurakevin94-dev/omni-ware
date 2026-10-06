@@ -365,6 +365,21 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
     ['--ow-slate', hex('--ow-slate-soft'), 4.5, 'supplier slate — ink on its tint'],
     ['--ow-slate', PAPER, 4.5, 'supplier slate — ink as text'],
     ['--ow-sky', hex('--ow-sky-soft'), 4.5, 'Money, and a part-paid chip — ink on its tint'],
+    /* PRICING'S NAVY BAND AND ITS TILES. The band speaks for the whole
+       shelf on the rail's own navy, so its text wears the rail's inks
+       and its two state inks are the light ones made for that ground;
+       the treemap and the month grid set state ink on a tile one step
+       deeper than each state's soft ground. Every one of them is text. */
+    ['--ow-navy-ink', NAVY, 4.5, 'secondary text on the navy band'],
+    ['--ow-navy-mute', NAVY, 4.5, 'the band\'s eyebrows and month names'],
+    ['--ow-navy-line', NAVY, 4.5, 'the band\'s slider labels'],
+    ['--ow-navy-ink', hex('--ow-steel-900'), 4.5, 'a phone tile\'s caption, on the raised navy'],
+    ['--ow-good-ink-on-navy', NAVY, 4.5, 'a monthly gain, set on navy'],
+    ['--ow-warn-ink-on-navy', NAVY, 4.5, 'a caution, set on navy'],
+    ['--ow-verdigris-deep', hex('--ow-verdigris-tile'), 4.5, 'a keeping line\'s name on its tile'],
+    ['--ow-verdigris-deep', hex('--ow-verdigris-tile-2'), 4.5, 'a month well over the bar'],
+    ['--ow-amber-ink', hex('--ow-amber-tile'), 4.5, 'a thin line\'s name on its tile'],
+    ['--ow-crimson', hex('--ow-crimson-tile'), 4.5, 'a still line\'s name on its tile, and a month under half the bar'],
   ];
   ['--ow-indigo', '--ow-sky', '--ow-plum', '--ow-teal', '--ow-violet', '--ow-slate'].forEach((tok) => {
     const r = hex(tok) ? ratio(PAPER, hex(tok)) : 0;

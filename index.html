@@ -105,6 +105,21 @@
     --ow-ink-400:#767F91;
     --ow-rule:#E6E3DD;
     --ow-rule-soft:#EFECE6;
+    /* PRICING'S NAVY BAND, and the shelf drawn as tiles.
+       The band sits on the rail's own navy, so it reads text in the
+       rail's own inks -- named here rather than left as the three hand-
+       written literals the rail carries -- and carries good / caution /
+       bad as LIGHTER fills of the same three states, because the light
+       state inks are made for paper and vanish on navy. The tiles are
+       one step deeper than each state's soft ground, so a treemap of
+       forty lines still separates into its three states at a glance.
+       Every ink here is held to 4.5:1 in test/design-system.test.js. */
+    --ow-steel-900:#1C2848;
+    --ow-navy-ink:#B3BCD2; --ow-navy-mute:#8D99B5; --ow-navy-line:#C5CDDF;
+    --ow-good-on-navy:#5FC59A; --ow-warn-on-navy:#E9A35A; --ow-bad-on-navy:#F08A80;
+    --ow-good-ink-on-navy:#8FE0BC; --ow-warn-ink-on-navy:#F2C08A;
+    --ow-verdigris-tile:#CFE7D9; --ow-verdigris-tile-2:#C4E3D0; --ow-verdigris-deep:#0B5233;
+    --ow-amber-tile:#F6D9BC; --ow-crimson-tile:#F1CFCA;
 
     /* Aliases -- admin surface */
     --bg: var(--ow-steel-050);
@@ -23979,6 +23994,11 @@
        visible at the call site rather than hidden behind an index. */
     --ow-t-11:11px; --ow-t-12:12px; --ow-t-13:13px; --ow-t-14:14px;
     --ow-t-16:16px; --ow-t-20:20px; --ow-t-28:28px;
+    /* One display step above the ramp, for the single figure a screen
+       leads with when that figure IS the screen -- Pricing's monthly
+       leak. 40px was already in the stylesheet, so this names a size
+       rather than adding one. */
+    --ow-t-40:40px;
     --ow-lh-tight:1.2; --ow-lh-snug:1.35; --ow-lh-normal:1.5;
     /* 700 is the ceiling on purpose: the @import at the top of this
        file loads Inter 400/500/600/700, and the 12 uses of 800 and 8
@@ -27016,414 +27036,571 @@
   }
 
   /* ==================================================================
-     THE PRICING CONSOLE
+     THE PRICING CONSOLE -- an intelligence centre over one shelf.
 
-     Margin and Clearance were the same question asked twice about one
-     shelf, and neither could see the other's half. A line you stock is
-     in exactly one of three states: selling and keeping enough, selling
-     but THIN, or not selling at all. The first needs nothing. The other
-     two are both price decisions -- lift it, or cut it and find
-     somebody who has bought it before -- so they are one queue.
+     A line you stock is in exactly one of three states: selling and
+     keeping enough, selling but THIN, or not selling at all. The first
+     needs nothing; the other two are both price decisions, so they are
+     one queue. Around that queue the screen draws what the queue cannot
+     say on its own: how much of the money taken keeps the bar and which
+     way that has gone (the band), where every line sits by speed and
+     share kept (the map), where the shelf's money is (the treemap), the
+     bar month by month per category (the grid), and the rule behind the
+     leak with the switch that fixes it.
 
      TWO KINDS OF MONEY ON ONE LIST, which is the whole design problem.
      A thin line's figure is income PER MONTH and it repeats; a dead
      line's is cash locked in the shelf and comes back ONCE. Nothing
-     here ever sums them: every row's basis line says which it is, and
-     the ranking runs on one stated clock -- what a fix is worth over a
-     year -- said out loud in the rail so it can be argued with.
+     here ever sums them: every row carries x12 or x1 beside its figure.
 
-     Almost all of this is the layer as it stands. What is new is the
-     segment control, the arithmetic strip inside an open line, and the
-     buyers who have taken a line before, drawn on that line.
+     The band is navy, the rail's own ground, because it is the one
+     place on the screen that speaks for the whole shelf. On it, state
+     colours are carried by lighter fills of the same three states
+     (--ow-*-on-navy), and text by the rail's own inks.
      ================================================================== */
 
-  .ow-pr-strip{margin-bottom:var(--ow-sp-16);}
+  .ow-pr{display:flex;flex-direction:column;gap:var(--ow-sp-16);}
+  .ow-pr-none .ow-pr-viz{display:none;}
+  .ow-pr-none .ow-pr-g2{grid-template-columns:minmax(0,1fr);}
+  .ow-pr-g2{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:var(--ow-sp-16);align-items:start;}
+  .ow-pr-g3{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr) minmax(0,1fr);gap:var(--ow-sp-16);align-items:stretch;}
+  .ow-pr-g3 > .ow-pr-cell{display:flex;min-width:0;}
+  .ow-pr-cell > .ow-pr-p{flex:1 1 auto;}
+  .ow-pr-sp{flex:1 1 auto;}
+  .ow-pr-fig{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+  .ow-pr-u{font-size:var(--ow-t-12);font-weight:var(--ow-fw-400);margin-left:2px;opacity:.75;}
+  .ow-pr-i{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .ow-pr-pn{display:none;}
+  .ow-pr-hd{display:flex;align-items:center;gap:var(--ow-sp-8);}
+  .ow-pr-rd{display:inline-flex;align-items:center;gap:var(--ow-sp-6);height:32px;padding:0 var(--ow-sp-10);box-sizing:border-box;
+    border:1px solid var(--ow-rule);border-radius:var(--ow-r-pill);background:var(--ow-paper);font-size:var(--ow-t-12);color:var(--ow-ink-600);white-space:nowrap;}
+  .ow-pr-rd-d{width:7px;height:7px;border-radius:50%;background:var(--ow-verdigris);}
+  .ow-pr-hd .btn.ow-sm{min-height:36px;box-sizing:border-box;display:inline-flex;align-items:center;}
 
-  /* FIVE COLUMNS, the buy side's tracks. The reason a line is on this
-     screen is the basis of the order, so it takes a fixed width and
-     never truncates; the name gives way, because a name may be cut and
-     a reason may not -- and money never is. */
-  .ow-pr .ow-q-r{grid-template-columns:18px minmax(0,1fr) 176px 132px 146px;min-height:52px;}
-  .ow-pr-h{display:grid;grid-template-columns:18px minmax(0,1fr) 176px 132px 146px;
-    gap:var(--ow-sp-10);padding:var(--ow-sp-6) var(--ow-sp-12);
-    border-bottom:1px solid var(--ow-rule);background:var(--ow-paper-2);
-    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.06em;
-    text-transform:uppercase;color:var(--ow-ink-600);}
-  .ow-pr-h-r{text-align:right;}
+  /* A panel of this console: a hairline box with a 48px head that says
+     what it is in words, not in small caps. */
+  .ow-pr-p{background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
+    min-width:0;overflow:hidden;display:flex;flex-direction:column;}
+  .ow-pr-p-h{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ow-sp-6) var(--ow-sp-12);min-height:48px;box-sizing:border-box;
+    padding:var(--ow-sp-8) var(--ow-sp-16);border-bottom:1px solid var(--ow-rule-soft);}
+  .ow-pr-p-t{font-size:var(--ow-t-14);font-weight:var(--ow-fw-700);color:var(--ow-ink-900);}
+  .ow-pr-p-n{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-pr-p-f{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-pr-p-f.ow-good{color:var(--ow-verdigris);font-weight:var(--ow-fw-600);}
 
-  /* WHY THIS LINE IS HERE. Same two-line anatomy as the buy side's, so
-     the row keeps its rhythm, and toned only where the tone means
-     something: crimson for a line far under its target or long dead,
-     amber for one close, plain for stock nobody has ever bought. */
-  .ow-pr-rz{min-width:0;font-size:var(--ow-t-11);line-height:1.3;color:var(--ow-ink-600);
+  /* ---- the band ---- */
+  .ow-pr-hero{display:grid;grid-template-columns:minmax(0,1.35fr) 200px minmax(0,1fr) 280px;
+    background:var(--ow-steel-950);color:var(--ow-paper);border-radius:var(--ow-r-lg);overflow:hidden;}
+  .ow-pr-hc{padding:var(--ow-sp-24);display:flex;flex-direction:column;gap:var(--ow-sp-16);min-width:0;}
+  .ow-pr-hc + .ow-pr-hc{border-left:1px solid rgba(255,255,255,.09);}
+  .ow-pr-eye{font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);letter-spacing:.08em;text-transform:uppercase;color:var(--ow-navy-mute);}
+  .ow-pr-mn{display:flex;flex-direction:column;gap:var(--ow-sp-8);}
+  .ow-pr-mn-h{display:flex;align-items:baseline;flex-wrap:wrap;gap:var(--ow-sp-10);}
+  .ow-pr-big{font-size:var(--ow-t-40);font-weight:var(--ow-fw-600);line-height:1;}
+  .ow-pr-mid{font-size:26px;font-weight:var(--ow-fw-600);line-height:1;}
+  .ow-pr-mn-u{font-size:var(--ow-t-13);color:var(--ow-navy-ink);}
+  .ow-pr-mn-s{font-size:var(--ow-t-12);color:var(--ow-navy-ink);}
+  .ow-pr-mn-s .ow-pr-fig{font-weight:var(--ow-fw-500);color:var(--ow-paper);}
+  .ow-pr-12{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:3px;height:14px;max-width:460px;}
+  .ow-pr-12-m{background:rgba(233,163,90,.3);}
+  .ow-pr-12-m:first-child{background:var(--ow-warn-on-navy);}
+  .ow-pr-12.ow-good .ow-pr-12-m{background:rgba(95,197,154,.4);}
+  .ow-pr-rule{height:1px;background:rgba(255,255,255,.09);}
+  .ow-pr-sb{display:flex;gap:3px;height:14px;max-width:460px;overflow:hidden;}
+  .ow-pr-sb.ow-sm{height:6px;border-radius:var(--ow-r-pill);}
+  .ow-pr-sb-m{background:rgba(255,255,255,.16);}
+  .ow-pr-sb-d{background:var(--ow-bad-on-navy);}
+  .ow-pr-ph2{display:none;}
+
+  .ow-pr-ring{align-items:center;justify-content:center;gap:var(--ow-sp-10);}
+  .ow-pr-rg-w{position:relative;width:148px;height:148px;}
+  .ow-pr-rg-s{display:block;}
+  .ow-pr-rg-k,.ow-pr-rg-ok,.ow-pr-rg-th{fill:none;stroke-width:14;}
+  .ow-pr-rg-k{stroke:rgba(255,255,255,.1);}
+  .ow-pr-rg-ok{stroke:var(--ow-good-on-navy);}
+  .ow-pr-rg-th{stroke:var(--ow-warn-on-navy);}
+  .ow-pr-rg-c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+  .ow-pr-rg-v{font-size:var(--ow-t-28);font-weight:var(--ow-fw-600);line-height:1;}
+  .ow-pr-rg-l{margin-top:var(--ow-sp-4);font-size:var(--ow-t-11);line-height:1.3;color:var(--ow-navy-ink);}
+  .ow-pr-hl{display:flex;gap:var(--ow-sp-12);font-size:var(--ow-t-11);color:var(--ow-navy-ink);}
+  .ow-pr-sw{display:inline-block;width:8px;height:8px;margin-right:5px;}
+  .ow-pr-sw.ow-good{background:var(--ow-good-on-navy);}
+  .ow-pr-sw.ow-warn{background:var(--ow-warn-on-navy);}
+
+  .ow-pr-trend{gap:var(--ow-sp-10);}
+  .ow-pr-tr-h{display:flex;align-items:baseline;flex-wrap:wrap;gap:var(--ow-sp-10);}
+  .ow-pr-tr-v{font-size:var(--ow-t-28);font-weight:var(--ow-fw-600);line-height:1;}
+  .ow-pr-dl{font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);padding:2px var(--ow-sp-8);border-radius:var(--ow-r-pill);
+    background:rgba(95,197,154,.18);color:var(--ow-good-ink-on-navy);}
+  .ow-pr-dl.ow-warn{background:rgba(233,163,90,.18);color:var(--ow-warn-ink-on-navy);}
+  .ow-pr-tr{display:block;}
+  .ow-pr-tr-z{fill:rgba(233,163,90,.08);}
+  .ow-pr-tr-t{stroke:var(--ow-navy-mute);stroke-width:1.2;stroke-dasharray:4 4;}
+  .ow-pr-tr-a{fill:rgba(255,255,255,.07);}
+  .ow-pr-tr-l{fill:none;stroke:var(--ow-paper);stroke-width:2.4;stroke-linejoin:round;stroke-linecap:round;}
+  .ow-pr-tr-d{fill:var(--ow-steel-950);stroke:var(--ow-paper);stroke-width:2.4;}
+  .ow-pr-tr-x{fill:var(--ow-navy-ink);font-size:var(--ow-t-11);font-family:'Figtree',system-ui,sans-serif;}
+  .ow-pr-mo{display:flex;justify-content:space-between;font-size:var(--ow-t-11);color:var(--ow-navy-mute);}
+  .ow-pr-mo.ow-lt{color:var(--ow-ink-600);}
+
+  .ow-pr-bars{background:rgba(255,255,255,.03);}
+  .ow-pr-br{display:flex;flex-direction:column;gap:var(--ow-sp-4);}
+  .ow-pr-br-h{display:flex;align-items:baseline;justify-content:space-between;gap:var(--ow-sp-8);}
+  .ow-pr-br-l{font-size:var(--ow-t-12);color:var(--ow-navy-line);}
+  .ow-pr-br-v{font-size:var(--ow-t-20);font-weight:var(--ow-fw-600);}
+  .ow-pr-br-n{font-size:var(--ow-t-11);color:var(--ow-warn-ink-on-navy);}
+  .ow-pr-rg-d{width:100%;height:28px;margin:0;accent-color:var(--ow-paper);cursor:pointer;}
+  .btn.ow-pr-hb{display:flex;align-items:center;justify-content:center;gap:var(--ow-sp-8);min-height:var(--ow-tap);box-sizing:border-box;
+    padding:0 var(--ow-sp-12);border-radius:var(--ow-r);border:1px solid rgba(255,255,255,.28);background:transparent;
+    color:var(--ow-paper);font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);}
+  .btn.ow-pr-hb:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.45);color:var(--ow-paper);}
+  .ow-pr-ses{display:flex;align-items:center;gap:var(--ow-sp-8);padding:var(--ow-sp-6) var(--ow-sp-6) var(--ow-sp-6) var(--ow-sp-12);
+    border:1px solid rgba(95,197,154,.35);border-radius:var(--ow-r);font-size:var(--ow-t-12);color:var(--ow-paper);}
+  .ow-pr-ses-t{flex:1 1 auto;}
+  .ow-pr-ses .ow-pr-i{color:var(--ow-good-on-navy);}
+  .ow-pr-ses .ow-pr-un{color:var(--ow-paper);}
+  .ow-pr-step{display:none;}
+
+  /* An undo is a word in a sentence, underlined, not a fourth button. */
+  .ow-pr-un{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;min-height:32px;padding:0 var(--ow-sp-6);
+    cursor:pointer;font-size:var(--ow-t-12);font-weight:var(--ow-fw-700);text-decoration:underline;color:inherit;}
+  .ow-pr-un:focus-visible{outline:2px solid currentColor;}
+  .ow-pr-ses .ow-pr-un,.ow-pr-ok .ow-pr-un{white-space:nowrap;flex:none;}
+
+  /* ---- the shelf map ---- */
+  .ow-pr-lgd{display:inline-flex;flex-wrap:wrap;align-items:center;gap:var(--ow-sp-4) var(--ow-sp-12);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-pr-k{display:inline-block;width:10px;height:10px;margin-right:5px;vertical-align:-1px;border-radius:50%;}
+  .ow-pr-lgd.ow-sq .ow-pr-k{border-radius:0;}
+  .ow-pr-lgd .ow-pr-fig{font-weight:var(--ow-fw-500);color:var(--ow-ink-900);}
+  .ow-pr-k.ow-good{background:var(--ow-verdigris);}
+  .ow-pr-k.ow-warn{background:var(--ow-amber);}
+  .ow-pr-k.ow-bad{background:var(--ow-crimson);}
+  .ow-pr-k.ow-none{background:var(--ow-rule);}
+  .ow-pr-lgd.ow-sq .ow-pr-k.ow-good{background:var(--ow-verdigris-tile);}
+  .ow-pr-lgd.ow-sq .ow-pr-k.ow-warn{background:var(--ow-amber-tile);}
+  .ow-pr-lgd.ow-sq .ow-pr-k.ow-bad{background:var(--ow-crimson-tile);}
+  .ow-pr-k.ow-o{border:1.5px solid var(--ow-ink-600);box-sizing:border-box;width:12px;height:12px;}
+  .ow-pr-k.ow-o.ow-sm{width:6px;height:6px;margin-right:2px;}
+  .ow-pr-mp{position:relative;display:flex;padding:var(--ow-sp-20) var(--ow-sp-20) var(--ow-sp-8) var(--ow-sp-8);}
+  .ow-pr-mp-y{position:relative;flex:0 0 40px;height:360px;}
+  .ow-pr-mp-yl{position:absolute;right:8px;transform:translateY(-50%);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-pr-mp-l{position:relative;flex:0 0 100px;height:360px;background:rgba(142,42,34,.04);
+    border:1px solid var(--ow-rule-soft);border-right:0;border-radius:var(--ow-r-lg) 0 0 var(--ow-r-lg);}
+  .ow-pr-mp-lt{position:absolute;left:0;right:0;top:8px;text-align:center;font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);color:var(--ow-crimson);}
+  .ow-pr-mp-lm{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-pr-mp-p{position:relative;flex:1 1 auto;min-width:0;height:360px;border:1px solid var(--ow-rule-soft);border-radius:0 var(--ow-r-lg) var(--ow-r-lg) 0;}
+  .ow-pr-mp-z{position:absolute;left:0;right:0;bottom:0;background:var(--ow-amber-faint);}
+  .ow-pr-mp-h{position:absolute;right:0;bottom:0;background:var(--ow-amber-soft);opacity:.7;}
+  .ow-pr-mp-gy{position:absolute;left:0;right:0;height:1px;background:var(--ow-rule-soft);}
+  .ow-pr-mp-gx{position:absolute;top:0;bottom:0;width:1px;background:var(--ow-rule-soft);}
+  .ow-pr-mp-xl{position:absolute;bottom:-22px;transform:translateX(-50%);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-pr-mp-s{position:absolute;top:0;bottom:0;border-left:1px dashed var(--ow-steel-300);}
+  .ow-pr-mp-t{position:absolute;left:0;right:0;border-top:2px dashed var(--ow-ink-900);}
+  .ow-pr-mp-tg{position:absolute;left:10px;transform:translateY(-50%);padding:2px var(--ow-sp-8);border-radius:var(--ow-r-pill);
+    background:var(--ow-ink-900);color:var(--ow-paper);font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);white-space:nowrap;}
+  .ow-pr-mp-q{position:absolute;font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);letter-spacing:.04em;text-transform:uppercase;color:var(--ow-ink-600);pointer-events:none;}
+  .ow-pr-mp-q.ow-good{color:var(--ow-verdigris);}
+  .ow-pr-mp-q.ow-warn{color:var(--ow-amber-ink);}
+  .ow-pr-mp-q.ow-tl{left:12px;top:10px;}
+  .ow-pr-mp-q.ow-tr{right:12px;top:10px;}
+  .ow-pr-mp-q.ow-bl{left:12px;bottom:10px;}
+  .ow-pr-mp-q.ow-br{right:12px;bottom:10px;}
+  .ow-pr-dot{all:unset;position:absolute;transform:translate(-50%,-50%);box-sizing:border-box;border-radius:50%;
+    border:1.5px solid var(--ow-paper);cursor:pointer;background:rgba(118,127,145,.55);}
+  .ow-pr-dot.ow-good{background:rgba(15,107,67,.8);}
+  .ow-pr-dot.ow-warn{background:rgba(149,83,12,.86);}
+  .ow-pr-dot.ow-bad{background:rgba(142,42,34,.9);}
+  .ow-pr-dot.ow-on{border:3px solid var(--ow-steel-950);}
+  .ow-pr-dot:hover{outline:5px solid rgba(22,32,60,.16);}
+  .ow-pr-dot:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:2px;}
+  .ow-pr-dt{position:absolute;transform:translateY(-50%);white-space:nowrap;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);pointer-events:none;}
+  .ow-pr-dt.ow-l{transform:translate(-100%,-50%);}
+  .ow-pr-tip{position:absolute;z-index:5;width:220px;box-sizing:border-box;padding:var(--ow-sp-12) 14px;display:flex;flex-direction:column;gap:var(--ow-sp-6);
+    background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r);box-shadow:var(--ow-lift);pointer-events:none;}
+  .ow-pr-tip[hidden]{display:none;}
+  .ow-pr-tip-n{font-size:var(--ow-t-13);font-weight:var(--ow-fw-700);line-height:1.3;color:var(--ow-ink-900);}
+  .ow-pr-tip-r{display:flex;justify-content:space-between;gap:var(--ow-sp-8);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-pr-tip-r .ow-pr-fig{color:var(--ow-ink-900);}
+  .ow-pr-tip-r .ow-pr-fig.ow-good{color:var(--ow-verdigris);}
+  .ow-pr-tip-r .ow-pr-fig.ow-warn{color:var(--ow-amber-ink);}
+  .ow-pr-tip-r .ow-pr-fig.ow-bad{color:var(--ow-crimson);}
+  .ow-pr-mp-xc{display:flex;justify-content:space-between;padding:var(--ow-sp-24) var(--ow-sp-20) var(--ow-sp-16) 148px;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-pr-mp-xt{font-weight:var(--ow-fw-600);}
+
+  /* ---- the shelf at cost ---- */
+  .ow-pr-tm-w{padding:14px var(--ow-sp-16) var(--ow-sp-16);display:flex;flex-direction:column;gap:var(--ow-sp-12);}
+  .ow-pr-tm{position:relative;width:100%;height:352px;border-radius:var(--ow-r-sm);overflow:hidden;}
+  .ow-pr-tl{all:unset;position:absolute;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;
+    padding:var(--ow-sp-6) 7px;border:2px solid var(--ow-paper);cursor:pointer;background:var(--ow-rule);color:var(--ow-ink-600);}
+  .ow-pr-tl.ow-rest{cursor:default;}
+  .ow-pr-tl.ow-good{background:var(--ow-verdigris-tile);color:var(--ow-verdigris-deep);}
+  .ow-pr-tl.ow-warn{background:var(--ow-amber-tile);color:var(--ow-amber-ink);}
+  .ow-pr-tl.ow-bad{background:var(--ow-crimson-tile);color:var(--ow-crimson);}
+  .ow-pr-tl:hover{filter:brightness(.96);}
+  .ow-pr-tl.ow-rest:hover{filter:none;}
+  .ow-pr-tl.ow-on{outline:2px solid var(--ow-steel-950);outline-offset:-4px;}
+  .ow-pr-tl:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-4px;}
+  .ow-pr-tl-n{display:block;max-width:100%;font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);line-height:1.25;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .ow-pr-rz-h{display:block;font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);
-    color:var(--ow-ink-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .ow-pr-rz.ow-bad .ow-pr-rz-h{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
-  .ow-pr-rz.ow-warn .ow-pr-rz-h{color:var(--ow-amber-ink);font-weight:var(--ow-fw-600);}
-  .ow-pr-rz.ow-none .ow-pr-rz-h{color:var(--ow-ink-600);}
-  /* HOW FAR PAST THE BAR, drawn. One meter for both halves of the
-     shelf: the fill is where the line stands, the tick is the bar the
-     owner set -- kept share against the target for a thin line, days
-     quiet against the window for a dead one. The same picture answers
-     both questions, so the eye learns it once. Never sold is a dashed
-     track: there is no position to fill. */
-  .ow-pr-wy{display:flex;flex-direction:column;gap:3px;min-width:0;
-    overflow:visible;white-space:normal;}
-  .ow-pr-wy.ow-bad .ow-pr-rz-h{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
-  .ow-pr-wy.ow-warn .ow-pr-rz-h{color:var(--ow-amber-ink);font-weight:var(--ow-fw-600);}
-  .ow-pr-wy.ow-none .ow-pr-rz-h{color:var(--ow-ink-600);}
-  .ow-pr-rz-s{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .ow-pr-mt{position:relative;display:block;height:6px;margin:2px 0;border-radius:999px;
-    background:var(--ow-rule-soft);}
-  .ow-pr-mt.ow-none{background:repeating-linear-gradient(90deg,var(--ow-rule) 0 4px,var(--ow-paper) 4px 7px);}
-  .ow-pr-mt-f{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:var(--ow-ink-600);}
-  .ow-pr-mt-f.ow-bad{background:var(--ow-crimson);}
-  .ow-pr-mt-f.ow-warn{background:var(--ow-amber);}
+  .ow-pr-tl-v{font-size:var(--ow-t-11);opacity:.9;}
+
+  /* ---- what to fix first ---- */
+  .ow-pr-sg{display:inline-flex;padding:3px;gap:2px;border-radius:var(--ow-r);background:var(--ow-steel-050);border:1px solid var(--ow-rule-soft);}
+  .ow-pr-sg-b{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;gap:var(--ow-sp-4);height:30px;
+    padding:0 var(--ow-sp-12);border:1px solid transparent;border-radius:var(--ow-r-sm);cursor:pointer;
+    font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);white-space:nowrap;}
+  .ow-pr-sg-b:hover{color:var(--ow-ink-900);}
+  .ow-pr-sg-b.ow-on{background:var(--ow-paper);border-color:var(--ow-rule);color:var(--ow-ink-900);}
+  .ow-pr-sg-b:focus-visible{outline:2px solid var(--ow-steel-950);}
+  .ow-pr-sg-n{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-pr-qh{display:grid;grid-template-columns:30px minmax(0,1fr) 136px 164px 116px;gap:var(--ow-sp-12);padding:var(--ow-sp-8) var(--ow-sp-16);
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);background:var(--ow-paper-2);border-bottom:1px solid var(--ow-rule-soft);}
+  .ow-pr-qh-r{text-align:right;}
+  .ow-pr-qr{all:unset;box-sizing:border-box;display:grid;grid-template-columns:30px minmax(0,1fr) 136px 164px 116px;gap:var(--ow-sp-12);
+    align-items:center;width:100%;min-height:68px;padding:var(--ow-sp-10) var(--ow-sp-16);border-bottom:1px solid var(--ow-rule-soft);
+    cursor:pointer;color:var(--ow-ink-900);}
+  .ow-pr-qr:hover{background:var(--ow-paper-2);}
+  .ow-pr-qr.ow-on{background:var(--ow-steel-050);box-shadow:inset 3px 0 0 var(--ow-steel-950);}
+  .ow-pr-qr:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
+  .ow-pr-rk{width:30px;height:30px;border-radius:var(--ow-r-sm);display:flex;align-items:center;justify-content:center;
+    font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+  .ow-pr-rk.ow-top{background:var(--ow-steel-950);color:var(--ow-paper);}
+  .ow-pr-qn{display:flex;flex-direction:column;gap:3px;min-width:0;}
+  .ow-pr-qn-h{display:flex;align-items:center;gap:var(--ow-sp-8);min-width:0;}
+  .ow-pr-qn-t{min-width:0;font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-pr-qn-s{min-width:0;font-size:var(--ow-t-12);color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-pr-kt{flex:none;display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:var(--ow-r-sm);
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+  .ow-pr-kt.ow-lg{height:24px;padding:0 var(--ow-sp-8);font-size:var(--ow-t-12);}
+  .ow-pr-kt.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .ow-pr-kt.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .ow-pr-kt.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .ow-pr-kt.ow-nv{background:rgba(255,255,255,.1);color:var(--ow-navy-line);font-weight:var(--ow-fw-600);}
+  .ow-pr-dial{display:flex;align-items:center;gap:var(--ow-sp-10);}
+  .ow-pr-dial-w{position:relative;flex:0 0 44px;width:44px;height:44px;}
+  .ow-pr-dial-g{display:block;}
+  .ow-pr-dial-k,.ow-pr-dial-f{fill:none;stroke-width:5;}
+  .ow-pr-dial-k{stroke:var(--ow-rule-soft);}
+  .ow-pr-dial-f{stroke:var(--ow-steel-300);stroke-linecap:round;}
+  .ow-pr-dial.ow-good .ow-pr-dial-f{stroke:var(--ow-verdigris);}
+  .ow-pr-dial.ow-warn .ow-pr-dial-f{stroke:var(--ow-amber);}
+  .ow-pr-dial.ow-bad .ow-pr-dial-f{stroke:var(--ow-crimson);}
+  .ow-pr-dial-v{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
+  .ow-pr-dial-t{display:flex;flex-direction:column;line-height:1.3;min-width:0;}
+  .ow-pr-dial-h{font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);white-space:nowrap;}
+  .ow-pr-dial-s{font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;}
+  .ow-pr-dial.ow-good .ow-pr-dial-v,.ow-pr-dial.ow-good .ow-pr-dial-h{color:var(--ow-verdigris);}
+  .ow-pr-dial.ow-warn .ow-pr-dial-v,.ow-pr-dial.ow-warn .ow-pr-dial-h{color:var(--ow-amber-ink);}
+  .ow-pr-dial.ow-bad .ow-pr-dial-v,.ow-pr-dial.ow-bad .ow-pr-dial-h{color:var(--ow-crimson);}
+  .ow-pr-mv{display:flex;flex-direction:column;gap:3px;min-width:0;}
+  .ow-pr-mv-r{display:flex;align-items:center;gap:var(--ow-sp-6);color:var(--ow-ink-600);}
+  .ow-pr-mv-a{font-size:var(--ow-t-13);color:var(--ow-ink-600);}
+  .ow-pr-mv-b{font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);color:var(--ow-steel-950);}
+  .ow-pr-mv-r.ow-good,.ow-pr-mv-r.ow-good .ow-pr-mv-b{color:var(--ow-verdigris);}
+  .ow-pr-mv-n{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-pr-w{display:flex;flex-direction:column;align-items:flex-end;gap:3px;}
+  .ow-pr-w-v{font-size:var(--ow-t-16);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .ow-pr-w-v.ow-good{color:var(--ow-verdigris);}
+  .ow-pr-w-s{display:inline-flex;align-items:center;gap:var(--ow-sp-6);font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;}
+  .ow-pr-ck{display:inline-flex;align-items:center;height:18px;padding:0 var(--ow-sp-6);border-radius:var(--ow-r-sm);
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+  .ow-pr-ck.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .ow-pr-qc,.ow-pr-qx{display:none;}
+  .ow-pr-q-f{margin:0;padding:var(--ow-sp-10) var(--ow-sp-16);font-size:var(--ow-t-12);color:var(--ow-ink-600);background:var(--ow-paper-2);}
+  .ow-pr-q > .ow-empty{margin:var(--ow-sp-16);}
+
+  /* A meter: the fill is where a line stands, the tick is the owner's bar. */
+  .ow-pr-mt{position:relative;display:block;height:6px;border-radius:var(--ow-r-pill);background:var(--ow-rule-soft);}
+  .ow-pr-mt.ow-lg{height:10px;}
+  .ow-pr-mt.ow-nv{background:rgba(255,255,255,.12);}
+  .ow-pr-mt-f{position:absolute;left:0;top:0;bottom:0;border-radius:var(--ow-r-pill);background:var(--ow-steel-300);}
   .ow-pr-mt-f.ow-good{background:var(--ow-verdigris);}
-  .ow-pr-mt-t{position:absolute;top:-4px;width:2px;height:14px;margin-left:-1px;
-    background:var(--ow-ink-900);}
+  .ow-pr-mt-f.ow-warn{background:var(--ow-amber);}
+  .ow-pr-mt-f.ow-bad{background:var(--ow-crimson);}
+  .ow-pr-mt.ow-nv .ow-pr-mt-f.ow-good{background:var(--ow-good-on-navy);}
+  .ow-pr-mt.ow-nv .ow-pr-mt-f.ow-warn{background:var(--ow-warn-on-navy);}
+  .ow-pr-mt-t{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;background:var(--ow-ink-900);}
+  .ow-pr-mt.ow-nv .ow-pr-mt-t{background:var(--ow-paper);}
 
-  /* WORTH OVER A YEAR, as a length. The whole ranking argument in one
-     mark: a thin line's bar is twelve segments, because its figure is a
-     month that comes back every month; dead stock's is one solid block,
-     because its cash comes back once. Both run on one scale, so a row's
-     bar says why it sits where it sits without a sentence. Ink, not a
-     state colour -- a figure is a size, not a warning. */
-  .ow-pr-yr{display:flex;flex-direction:column;gap:3px;min-width:0;}
-  .ow-pr-yb{display:block;height:8px;min-width:3px;max-width:100%;}
-  .ow-pr-yb.ow-pr-mo{background:linear-gradient(90deg,var(--ow-steel-800) 0 78%,transparent 78%) 0 0/calc(100% / 12) 100% repeat-x;}
-  .ow-pr-yb.ow-pr-once{background:var(--ow-steel-800);}
-  .ow-pr-yr-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
-    font-variant-numeric:tabular-nums;letter-spacing:-.02em;
-    font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;}
-  .ow-pr-lg{display:inline-flex;align-items:center;gap:var(--ow-sp-6);
-    font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;}
-  .ow-pr-lg .ow-pr-yb{width:28px;}
+  /* ---- the line being decided ---- */
+  .ow-pr-in-h{display:flex;flex-direction:column;gap:var(--ow-sp-10);padding:18px 18px var(--ow-sp-20);background:var(--ow-steel-950);color:var(--ow-paper);}
+  .ow-pr-in-c{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ow-sp-6);}
+  .ow-pr-in-sd{font-size:var(--ow-t-11);color:var(--ow-navy-mute);}
+  .ow-pr-in-t{margin:0;font-size:var(--ow-t-20);font-weight:var(--ow-fw-700);line-height:1.3;color:var(--ow-paper);}
+  .ow-pr-in-f{font-size:var(--ow-t-12);color:var(--ow-navy-ink);}
+  .ow-pr-in-hv{display:flex;align-items:baseline;flex-wrap:wrap;gap:var(--ow-sp-10);margin-top:var(--ow-sp-4);}
+  .ow-pr-in-v{font-size:var(--ow-t-28);font-weight:var(--ow-fw-600);line-height:1;color:var(--ow-paper);}
+  .ow-pr-in-v.ow-good{color:var(--ow-good-ink-on-navy);}
+  .ow-pr-in-vn{font-size:var(--ow-t-12);color:var(--ow-navy-ink);}
+  .ow-pr-in-b{display:flex;flex-direction:column;gap:18px;padding:18px;}
 
-  /* THE SEGMENTS. Two halves of one shelf, and the counts on them are
-     the same reading the list is drawn from. */
-  .ow-pr-sg{display:inline-flex;flex:none;height:30px;border:1px solid var(--ow-rule);
-    border-radius:var(--ow-r-sm);overflow:hidden;background:var(--ow-paper);}
-  .ow-pr-sg-b{all:unset;box-sizing:border-box;display:inline-block;line-height:28px;
-    height:100%;padding:0 var(--ow-sp-10);cursor:pointer;
-    border-left:1px solid var(--ow-rule);font-family:'Figtree',system-ui,sans-serif;
-    font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);color:var(--ow-ink-600);white-space:nowrap;}
-  .ow-pr-sg-b:first-child{border-left:0;}
-  .ow-pr-sg-b:hover{background:var(--ow-paper-2);color:var(--ow-ink-900);}
-  .ow-pr-sg-b:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
-  .ow-pr-sg-b.ow-on{background:var(--ow-steel-950);color:var(--ow-paper);font-weight:var(--ow-fw-600);}
-  .ow-pr-sg-b.ow-on:hover{background:var(--ow-steel-800);color:var(--ow-paper);}
-  .ow-pr-sg-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
-    font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-11);
-    color:var(--ow-ink-600);}
-  .ow-pr-sg-b.ow-on .ow-pr-sg-n{color:var(--ow-steel-100);}
+  .ow-pr-ld{position:relative;height:96px;}
+  .ow-pr-ld-ax{position:absolute;left:0;right:0;top:47px;height:2px;background:var(--ow-steel-100);}
+  .ow-pr-ld-g{position:absolute;top:40px;height:16px;border-radius:var(--ow-r-sm);background:var(--ow-verdigris-soft);}
+  .ow-pr-ld-b{position:absolute;top:44px;height:8px;border-radius:var(--ow-r-pill);background:var(--ow-steel-300);}
+  .ow-pr-ld-b.ow-warn{background:var(--ow-amber);}
+  .ow-pr-ld-b.ow-bad{background:var(--ow-crimson);}
+  .ow-pr-ld-b.ow-good{background:var(--ow-verdigris);}
+  .ow-pr-ld-x{position:absolute;left:0;top:40px;height:16px;border-radius:var(--ow-r-sm);background:var(--ow-crimson-soft);}
+  .ow-pr-ld-m{position:absolute;top:36px;width:2px;height:24px;margin-left:-1px;background:var(--ow-ink-600);}
+  .ow-pr-ld-l{position:absolute;display:flex;flex-direction:column;align-items:center;transform:translateX(-50%);white-space:nowrap;color:var(--ow-ink-600);}
+  .ow-pr-ld-l.ow-up{top:0;}
+  .ow-pr-ld-l.ow-dn{top:62px;}
+  .ow-pr-ld-l.ow-l{transform:none;align-items:flex-start;}
+  .ow-pr-ld-l.ow-r{transform:translateX(-100%);align-items:flex-end;}
+  .ow-pr-ld-c{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-pr-ld-l .ow-pr-fig{font-size:var(--ow-t-13);font-weight:var(--ow-fw-700);}
+  .ow-pr-ld-m.ow-good{background:var(--ow-verdigris);} .ow-pr-ld-l.ow-good .ow-pr-fig{color:var(--ow-verdigris);}
+  .ow-pr-ld-m.ow-warn{background:var(--ow-amber);} .ow-pr-ld-l.ow-warn .ow-pr-fig{color:var(--ow-amber-ink);}
+  .ow-pr-ld-m.ow-bad{background:var(--ow-crimson);} .ow-pr-ld-l.ow-bad .ow-pr-fig{color:var(--ow-crimson);}
+  .ow-pr-ld-m.ow-nv{background:var(--ow-steel-950);} .ow-pr-ld-l.ow-nv .ow-pr-fig{color:var(--ow-steel-950);}
+  .ow-pr-ld-d{position:absolute;top:41px;width:14px;height:14px;box-sizing:border-box;border-radius:50%;transform:translateX(-50%);
+    border:2px solid var(--ow-paper);outline:1px solid var(--ow-steel-950);background:var(--ow-steel-950);}
 
-  /* THE ARITHMETIC, laid out so it can be CHECKED rather than trusted,
-     and drawn rather than written. One price line: where it costs,
-     where you charge and where the target sits, with the share you keep
-     as a band between the first two and the share you could keep as a
-     dashed band out to the third. The gap is the finding, and it is
-     visible before a figure is read. Cost is labelled under the line,
-     the prices over it, so the two marks that sit closest never share
-     a row of labels. */
-  .ow-pr-lx{display:flex;align-items:flex-end;gap:var(--ow-sp-24);flex-wrap:wrap;
-    margin:var(--ow-sp-4) 0 var(--ow-sp-12);}
-  .ow-pr-ld{position:relative;flex:1 1 360px;max-width:460px;height:96px;}
-  .ow-pr-ld-ax{position:absolute;left:0;right:0;top:47px;height:2px;background:var(--ow-rule);}
-  .ow-pr-ld-z{position:absolute;left:0;top:30px;height:36px;background:var(--ow-crimson-soft);}
-  .ow-pr-ld-g{position:absolute;top:36px;height:24px;box-sizing:border-box;
-    background:var(--ow-verdigris-soft);border:1px dashed var(--ow-verdigris);}
-  .ow-pr-ld-b{position:absolute;top:41px;height:14px;box-sizing:border-box;
-    background:var(--ow-amber-soft);border:1px solid var(--ow-amber);}
-  .ow-pr-ld-b.ow-bad{background:var(--ow-crimson-soft);border-color:var(--ow-crimson);}
-  .ow-pr-ld-m{position:absolute;top:32px;width:2px;height:32px;margin-left:-1px;background:var(--ow-ink-900);}
-  .ow-pr-ld-m.ow-warn{background:var(--ow-amber);}
-  .ow-pr-ld-m.ow-good{background:var(--ow-verdigris);}
-  .ow-pr-ld-m.ow-bad{background:var(--ow-crimson);}
-  .ow-pr-ld-m.ow-none{background:var(--ow-ink-600);}
-  .ow-pr-ld-d{position:absolute;top:41px;width:14px;height:14px;margin-left:-7px;box-sizing:border-box;
-    border-radius:50%;border:3px solid var(--ow-paper);background:var(--ow-verdigris);}
-  .ow-pr-ld-d.ow-bad{background:var(--ow-crimson);}
-  .ow-pr-ld-t{position:absolute;left:0;width:max-content;transform:translateX(-50%);
-    text-align:center;font-size:var(--ow-t-11);line-height:1.25;color:var(--ow-ink-600);}
-  .ow-pr-ld-t.ow-up{bottom:calc(100% + 2px);}
-  .ow-pr-ld-t.ow-dn{top:calc(100% + 2px);}
-  .ow-pr-ld-d .ow-pr-ld-t.ow-up{bottom:calc(100% + 8px);left:5px;}
-  .ow-pr-of-u{display:inline-block;height:6px;margin-right:var(--ow-sp-6);vertical-align:middle;
-    background:var(--ow-steel-800);}
-  .ow-pr-ld-t.ow-l{transform:translateX(-4px);text-align:left;}
-  .ow-pr-ld-t.ow-r{transform:translateX(calc(-100% + 4px));text-align:right;}
-  .ow-pr-ld-n{display:block;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
-    font-variant-numeric:tabular-nums;letter-spacing:-.02em;
-    font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
-  .ow-pr-ld-m.ow-warn .ow-pr-ld-t,.ow-pr-ld-m.ow-warn .ow-pr-ld-n{color:var(--ow-amber-ink);}
-  .ow-pr-ld-m.ow-good .ow-pr-ld-t,.ow-pr-ld-m.ow-good .ow-pr-ld-n,
-  .ow-pr-ld-d .ow-pr-ld-t,.ow-pr-ld-d .ow-pr-ld-n{color:var(--ow-verdigris);}
-  .ow-pr-ld-d.ow-bad .ow-pr-ld-t,.ow-pr-ld-d.ow-bad .ow-pr-ld-n{color:var(--ow-crimson);}
+  .ow-pr-eq{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:var(--ow-sp-6);
+    padding:14px var(--ow-sp-12);border-radius:var(--ow-r);background:var(--ow-steel-050);}
+  .ow-pr-eq-c{display:flex;flex-direction:column;align-items:center;text-align:center;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-pr-eq-c .ow-pr-fig{font-size:var(--ow-t-16);font-weight:var(--ow-fw-700);color:var(--ow-ink-900);}
+  .ow-pr-eq-c.ow-good .ow-pr-fig{color:var(--ow-verdigris);}
+  .ow-pr-eq-o{font-size:var(--ow-t-16);color:var(--ow-ink-600);}
 
-  /* The month, as the sum it is: per unit, times what really sold,
-     equals the figure on the row. Three boxes, so it can be checked. */
-  .ow-pr-eq{display:flex;align-items:center;gap:var(--ow-sp-8);flex-wrap:wrap;
-    padding-bottom:var(--ow-sp-16);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
-  .ow-pr-eq-c{display:flex;flex-direction:column;align-items:center;gap:1px;
-    padding:var(--ow-sp-6) var(--ow-sp-10);border:1px solid var(--ow-rule);
-    border-radius:var(--ow-r-sm);line-height:1.3;white-space:nowrap;}
-  .ow-pr-eq-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
-    font-variant-numeric:tabular-nums;letter-spacing:-.02em;
-    font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
-  .ow-pr-eq-c.ow-good{background:var(--ow-verdigris-soft);border-color:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
-  .ow-pr-eq-c.ow-good .ow-pr-eq-n{color:var(--ow-verdigris);}
-  .ow-pr-eq-o{font-size:var(--ow-t-14);color:var(--ow-ink-600);}
+  .ow-pr-sk{display:flex;flex-direction:column;gap:var(--ow-sp-6);}
+  .ow-pr-sk-g{display:block;}
+  .ow-pr-sk-h{display:flex;justify-content:space-between;align-items:baseline;gap:var(--ow-sp-8);}
+  .ow-pr-sk-t{font-size:var(--ow-t-12);font-weight:var(--ow-fw-700);color:var(--ow-ink-900);}
+  .ow-pr-sk-r{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-pr-sk-z{fill:var(--ow-amber-faint);}
+  .ow-pr-sk-tl{stroke:var(--ow-ink-900);stroke-width:1.4;stroke-dasharray:4 4;}
+  .ow-pr-sk-l{fill:none;stroke:var(--ow-steel-300);stroke-width:2.4;stroke-linejoin:round;stroke-linecap:round;}
+  .ow-pr-sk-d{fill:var(--ow-paper);stroke:var(--ow-steel-300);stroke-width:2.4;}
+  .ow-pr-sk.ow-good .ow-pr-sk-l,.ow-pr-sk.ow-good .ow-pr-sk-d{stroke:var(--ow-verdigris);}
+  .ow-pr-sk.ow-warn .ow-pr-sk-l,.ow-pr-sk.ow-warn .ow-pr-sk-d{stroke:var(--ow-amber);}
+  .ow-pr-sk.ow-bad .ow-pr-sk-l,.ow-pr-sk.ow-bad .ow-pr-sk-d{stroke:var(--ow-crimson);}
+  .ow-pr-sk-p{margin:var(--ow-sp-4) 0 0;max-width:var(--ow-measure);font-size:var(--ow-t-12);line-height:1.5;color:var(--ow-ink-600);}
+  .ow-pr-sk-p .ow-pr-fig{color:var(--ow-ink-900);}
 
-  /* WHAT A TAP WILL TOUCH, as chips on the act rather than a sentence
-     under it: the two prices it moves, and the one it leaves. */
-  .ow-pr-tc{display:flex;align-items:center;gap:var(--ow-sp-6);flex-wrap:wrap;margin:0 0 var(--ow-sp-10);}
-  .ow-pr-tc-i{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2;
-    stroke-linecap:round;stroke-linejoin:round;}
+  .ow-pr-tc{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--ow-sp-6);padding-top:var(--ow-sp-16);border-top:1px solid var(--ow-rule-soft);}
+  .ow-pr-tc-c{display:flex;flex-direction:column;align-items:center;gap:2px;padding:var(--ow-sp-8) var(--ow-sp-4);border-radius:var(--ow-r-sm);
+    background:var(--ow-rule-soft);color:var(--ow-ink-600);font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);text-align:center;}
+  .ow-pr-tc-c.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .ow-pr-ac{display:flex;gap:var(--ow-sp-8);}
+  .btn.ow-pr-bt{display:flex;align-items:center;justify-content:center;gap:var(--ow-sp-4);min-height:48px;box-sizing:border-box;}
+  .btn.ow-pr-grow{flex:1 1 auto;}
+  .ow-pr-ac .btn.ow-sm{min-height:36px;}
+  .ow-pr-ok{display:flex;align-items:center;gap:var(--ow-sp-10);padding:var(--ow-sp-8) var(--ow-sp-6) var(--ow-sp-8) var(--ow-sp-12);
+    border-radius:var(--ow-r);background:var(--ow-verdigris-soft);color:var(--ow-verdigris);font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);}
+  .ow-pr-ok-t{flex:1 1 auto;}
 
-  /* A STALE FIXED MARK, measured: the mark the rule adds against the
-     mark the target needs, on one scale. Two bars say "it stopped
-     growing" faster than the paragraph did. */
-  .ow-pr-mk{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;
-    gap:var(--ow-sp-4) var(--ow-sp-10);max-width:420px;margin:var(--ow-sp-6) 0 var(--ow-sp-4);
-    font-size:var(--ow-t-11);}
-  .ow-pr-mk-b{display:block;height:6px;border-radius:999px;background:var(--ow-crimson);}
-  .ow-pr-mk-b.ow-good{background:var(--ow-verdigris);}
+  /* A line standing still, opened. */
+  .ow-pr-dd{display:flex;flex-direction:column;gap:var(--ow-sp-16);}
+  .ow-pr-pb{display:flex;flex-direction:column;gap:var(--ow-sp-6);padding:14px;border-radius:var(--ow-r);background:var(--ow-steel-050);}
+  .ow-pr-pb-h{display:flex;align-items:baseline;justify-content:space-between;gap:var(--ow-sp-8);}
+  .ow-pr-pb-l{font-size:var(--ow-t-12);font-weight:var(--ow-fw-700);color:var(--ow-ink-900);}
+  .ow-pr-pb-v{font-size:22px;font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .ow-pr-rng{width:100%;height:28px;margin:0;accent-color:var(--ow-steel-950);cursor:pointer;}
+  .ow-pr-pb-s{display:flex;justify-content:space-between;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-pr-vt{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;border-radius:var(--ow-r);overflow:hidden;}
+  .ow-pr-vt.ow-good{background:var(--ow-verdigris-tile);}
+  .ow-pr-vt.ow-bad{background:var(--ow-crimson-tile);}
+  .ow-pr-vt-c{display:flex;flex-direction:column;padding:var(--ow-sp-12);font-size:var(--ow-t-11);}
+  .ow-pr-vt-c .ow-pr-fig{font-size:var(--ow-t-16);font-weight:var(--ow-fw-700);}
+  .ow-pr-vt.ow-good .ow-pr-vt-c{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .ow-pr-vt.ow-bad .ow-pr-vt-c{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .ow-pr-vn{margin:var(--ow-sp-6) 0 0;max-width:var(--ow-measure);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-pr-vn.ow-none{margin:0;padding:var(--ow-sp-10) var(--ow-sp-12);border-radius:var(--ow-r);background:var(--ow-steel-050);}
+  .ow-pr-by{display:flex;flex-direction:column;border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);overflow:hidden;}
+  .ow-pr-by-h{display:flex;justify-content:space-between;align-items:baseline;gap:var(--ow-sp-8);padding:var(--ow-sp-10) var(--ow-sp-12);border-bottom:1px solid var(--ow-rule-soft);}
+  .ow-pr-by-ht{font-size:var(--ow-t-12);font-weight:var(--ow-fw-700);color:var(--ow-ink-900);}
+  .ow-pr-by-hn{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-pr-by-r{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:var(--ow-sp-10);width:100%;min-height:48px;
+    padding:var(--ow-sp-6) var(--ow-sp-12);border-bottom:1px solid var(--ow-rule-soft);cursor:pointer;color:var(--ow-ink-900);}
+  .ow-pr-by-r:hover{background:var(--ow-paper-2);}
+  .ow-pr-by-r:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
+  .ow-pr-by-r .ow-pr-cv{color:var(--ow-ink-600);}
+  .ow-pr-by-r.ow-open .ow-pr-cv{transform:rotate(90deg);}
+  .ow-pr-av{flex:0 0 30px;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    background:var(--ow-steel-100);color:var(--ow-steel-800);font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);}
+  .ow-pr-by-n{display:flex;flex-direction:column;flex:1 1 auto;min-width:0;}
+  .ow-pr-by-t{min-width:0;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-pr-by-s{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-pr-by-u{flex:none;height:6px;border-radius:var(--ow-r-pill);background:var(--ow-steel-800);}
+  .ow-pr-by-x{display:flex;flex-direction:column;gap:var(--ow-sp-8);padding:var(--ow-sp-4) var(--ow-sp-12) var(--ow-sp-12);border-bottom:1px solid var(--ow-rule-soft);}
+  .ow-pr-msg{width:100%;box-sizing:border-box;padding:var(--ow-sp-10) var(--ow-sp-12);border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-sm);
+    background:var(--ow-steel-050);color:var(--ow-ink-900);font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-12);line-height:1.5;resize:vertical;}
+  .ow-pr-msg:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
+  .ow-pr-by-p{margin:0;max-width:var(--ow-measure);font-size:var(--ow-t-11);line-height:1.45;color:var(--ow-ink-600);}
+  .ow-pr-by-p.ow-pad{padding:var(--ow-sp-12);font-size:var(--ow-t-12);}
+  .btn.ow-pr-full{width:100%;}
 
-  /* A finding with a fix attached: amber, and never the accent. */
-  .ow-pr-fx{display:flex;align-items:flex-start;gap:var(--ow-sp-8);
-    margin:0 0 var(--ow-sp-10);padding:var(--ow-sp-8) var(--ow-sp-10);
-    max-width:var(--ow-measure);background:var(--ow-amber-faint);
-    border:1px solid var(--ow-amber-soft);border-radius:var(--ow-r-sm);color:var(--ow-amber-ink);}
-  .ow-pr-fx-t{margin:0;font-size:var(--ow-t-12);line-height:1.45;}
-  .ow-pr-fx-n{margin:3px 0 0;font-size:var(--ow-t-11);line-height:1.45;}
-  .ow-pr-fig{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
-    font-variant-numeric:tabular-nums;letter-spacing:-.02em;
-    font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
-  .ow-pr-fx .ow-pr-fig{color:inherit;}
-  .ow-pr-ic{width:15px;height:15px;flex:none;margin-top:2px;fill:none;stroke:currentColor;
-    stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
-
-  /* THE PRICE YOU WOULD TAKE, on the line it belongs to. It replaced a
-     live number input on EVERY closed row -- twenty-two open fields
-     when one line is being decided, each with a placeholder an <input>
-     cannot ellipsis and so cut mid-word. */
-  .ow-pr-pf{display:flex;align-items:center;gap:var(--ow-sp-8);flex-wrap:wrap;
-    margin:0 0 var(--ow-sp-10);}
-  .ow-pr-pf-l{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
-  .ow-pr-pf-f{height:32px;width:120px;padding:0 var(--ow-sp-10);box-sizing:border-box;
-    border:1px solid var(--ow-steel-950);border-radius:var(--ow-r-sm);
-    background:var(--ow-paper);color:var(--ow-ink-900);
-    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
-    font-variant-numeric:tabular-nums;font-size:var(--ow-t-13);
-    font-weight:var(--ow-fw-600);letter-spacing:-.02em;}
-  .ow-pr-pf-g{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
-
-  /* WHAT THAT PRICE WOULD MEAN, said BEFORE the tap. Below cost is
-     named in shillings across the whole holding and never blocked:
-     cash now against stock forever is the owner's decision, and the
-     app's job is to make sure it is made with the eyes open. */
-  .ow-pr-vd{margin:0 0 var(--ow-sp-10);padding:var(--ow-sp-8) var(--ow-sp-10);
-    max-width:var(--ow-measure);border-radius:var(--ow-r-sm);
-    font-size:var(--ow-t-12);line-height:1.5;}
-  .ow-pr-vd.ow-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
-  .ow-pr-vd.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
-  .ow-pr-vd.ow-none{background:var(--ow-steel-050);color:var(--ow-ink-600);}
-  .ow-pr-vd .ow-pr-fig{color:inherit;}
-
-  /* WHO HAS TAKEN THIS LINE BEFORE, inside the line. An offer is about
-     ONE line, so it is written on that line beside the price it names.
-     The old screen gathered every marked line into a second console
-     below the list, away from the figure that produced it. */
-  .ow-pr-of{margin-top:var(--ow-sp-10);padding-top:var(--ow-sp-10);
-    border-top:1px solid var(--ow-rule-soft);}
-  .ow-pr-of-h{display:flex;align-items:baseline;gap:var(--ow-sp-8);margin:0 0 var(--ow-sp-8);}
-  .ow-pr-of-t{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.07em;
-    text-transform:uppercase;color:var(--ow-ink-600);}
-  .ow-pr-of-n{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
-  .ow-pr-of-l{display:flex;flex-direction:column;gap:1px;max-width:var(--ow-measure);
-    background:var(--ow-rule-soft);border:1px solid var(--ow-rule-soft);
-    border-radius:var(--ow-r-sm);overflow:hidden;}
-  .ow-pr-of-r{all:unset;box-sizing:border-box;display:grid;
-    grid-template-columns:minmax(0,1fr) 196px 18px;align-items:center;gap:var(--ow-sp-10);
-    min-height:var(--ow-tap);padding:var(--ow-sp-8) var(--ow-sp-10);cursor:pointer;
-    background:var(--ow-paper);font-family:'Figtree',system-ui,sans-serif;text-align:left;}
-  .ow-pr-of-r:hover{background:var(--ow-paper-2);}
-  .ow-pr-of-r:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
-  .ow-pr-of-r.ow-on{background:var(--ow-paper-2);}
-  .ow-pr-of-nm{min-width:0;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);
-    color:var(--ow-ink-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .ow-pr-of-ph{display:block;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
-    font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);font-weight:var(--ow-fw-400);
-    letter-spacing:-.02em;color:var(--ow-ink-600);
+  /* ---- the readings ---- */
+  .ow-pr-hk{display:inline-flex;align-items:center;gap:2px;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-pr-hk-k{display:inline-block;width:14px;height:10px;}
+  .ow-pr-hk-k:first-child{margin-left:var(--ow-sp-4);}
+  .ow-pr-hk-k:last-child{margin-right:var(--ow-sp-4);}
+  .ow-pr-hm{padding:14px var(--ow-sp-16) var(--ow-sp-16);}
+  .ow-pr-hm-g{display:grid;grid-template-columns:minmax(64px,84px) repeat(6,minmax(0,1fr)) minmax(40px,52px);gap:3px;width:100%;}
+  .ow-pr-hm-m{font-size:var(--ow-t-11);color:var(--ow-ink-600);text-align:center;}
+  .ow-pr-hm-m.ow-r{text-align:right;}
+  .ow-pr-hm-n{display:block;min-width:0;line-height:30px;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .ow-pr-of-ph.ow-pr-nonum{font-family:'Figtree',system-ui,sans-serif;color:var(--ow-ink-600);}
-  .ow-pr-of-b{min-width:0;font-size:var(--ow-t-11);line-height:1.3;color:var(--ow-ink-600);
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .ow-pr-of-x{padding:0 var(--ow-sp-10) var(--ow-sp-10);background:var(--ow-paper-2);}
+  .ow-pr-hm-c{display:flex;align-items:center;justify-content:center;height:30px;min-width:0;border-radius:var(--ow-r-sm);font-size:var(--ow-t-11);font-weight:var(--ow-fw-500);}
+  .ow-pr-hm-c.ow-now{outline:1.5px solid rgba(22,32,60,.35);outline-offset:-1.5px;}
+  .ow-h0{background:var(--ow-crimson-tile);color:var(--ow-crimson);}
+  .ow-h1{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .ow-h2{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .ow-h3{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .ow-h4{background:var(--ow-verdigris-tile-2);color:var(--ow-verdigris-deep);}
+  .ow-hx{background:var(--ow-steel-050);color:var(--ow-ink-600);}
+  .ow-pr-hm-s{display:flex;align-items:center;justify-content:flex-end;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-pr-hm-f{margin:var(--ow-sp-8) 0 0;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-pr-hm-f.ow-pad{margin:0;padding:var(--ow-sp-16);}
 
-  /* WHAT THIS SCREEN READ, as one bar. Every line read lands in exactly
-     one segment -- keeping the bar, thin, standing still, or no cost to
-     judge it by -- so how much of the shop the list speaks for is a
-     proportion seen at once, and the hatched part is what it could not
-     see. */
-  .ow-pr-ac{padding:var(--ow-sp-10) var(--ow-sp-12) var(--ow-sp-12);
-    background:var(--ow-paper-2);border-top:1px solid var(--ow-rule-soft);}
-  .ow-pr-ac-h{margin:0 0 var(--ow-sp-8);font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
-    letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
-  .ow-pr-ac-b{display:flex;gap:2px;height:10px;overflow:hidden;border-radius:999px;
-    background:var(--ow-rule-soft);}
-  .ow-pr-ac-s{min-width:3px;}
-  .ow-pr-ac-s.ow-good{background:var(--ow-verdigris);}
-  .ow-pr-ac-s.ow-warn{background:var(--ow-amber);}
-  .ow-pr-ac-s.ow-bad{background:var(--ow-crimson);}
-  .ow-pr-ac-s.ow-none{background:repeating-linear-gradient(45deg,var(--ow-rule) 0 3px,var(--ow-paper) 3px 6px);}
-  .ow-pr-ac-g{display:flex;flex-wrap:wrap;gap:var(--ow-sp-4) var(--ow-sp-20);margin-top:var(--ow-sp-8);
-    font-size:var(--ow-t-12);color:var(--ow-ink-600);}
-  .ow-pr-ac-g .ow-pr-fig.ow-good{color:var(--ow-verdigris);}
-  .ow-pr-ac-g .ow-pr-fig.ow-warn{color:var(--ow-amber);}
-  .ow-pr-ac-g .ow-pr-fig.ow-bad{color:var(--ow-crimson);}
+  .ow-pr-rf{display:flex;flex-direction:column;gap:var(--ow-sp-12);padding:var(--ow-sp-16);flex:1 1 auto;}
+  .ow-pr-cvb{display:grid;grid-template-columns:minmax(0,1fr) 28px minmax(0,1fr);align-items:center;gap:var(--ow-sp-6);
+    padding:var(--ow-sp-12) 14px;border-radius:var(--ow-r);background:var(--ow-steel-050);color:var(--ow-ink-600);}
+  .ow-pr-cvb .ow-pr-i{width:28px;height:28px;}
+  .ow-pr-cvb-c{display:flex;flex-direction:column;line-height:1.25;}
+  .ow-pr-cvb-c.ow-r{align-items:flex-end;}
+  .ow-pr-cvb-s{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-pr-cvb-v{font-size:22px;font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .ow-pr-cvb-v.ow-nv{color:var(--ow-steel-950);}
+  .ow-pr-rf-p{margin:0;max-width:var(--ow-measure);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-pr-rc{display:flex;flex-direction:column;gap:var(--ow-sp-10);padding:var(--ow-sp-12);border:1px solid var(--ow-rule);border-radius:var(--ow-r);}
+  .ow-pr-rc-h{display:flex;align-items:baseline;gap:var(--ow-sp-6);}
+  .ow-pr-rc-t{flex:1 1 auto;min-width:0;font-size:var(--ow-t-13);font-weight:var(--ow-fw-700);color:var(--ow-ink-900);}
+  .ow-pr-rc-v{font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);color:var(--ow-verdigris);}
+  .ow-pr-rc-u{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-pr-rc-r{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ow-sp-6);color:var(--ow-ink-600);}
+  .ow-pr-rl{display:inline-flex;align-items:center;height:24px;padding:0 var(--ow-sp-8);border-radius:var(--ow-r-sm);
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+  .ow-pr-rl.ow-to{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);font-weight:var(--ow-fw-700);}
+  .ow-pr-rl.ow-was{text-decoration:line-through;}
+  .ow-pr-rc-l{display:flex;flex-wrap:wrap;gap:var(--ow-sp-4);}
+  .ow-pr-lc{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;height:26px;padding:0 var(--ow-sp-8);
+    border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);background:var(--ow-paper);cursor:pointer;
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .ow-pr-lc:hover{background:var(--ow-paper-2);}
+  .ow-pr-lc:focus-visible{outline:2px solid var(--ow-steel-950);}
+  .btn.ow-pr-rb{min-height:40px;border-color:var(--ow-steel-950);color:var(--ow-steel-950);font-size:var(--ow-t-13);font-weight:var(--ow-fw-700);}
+  .btn.ow-pr-rb:hover{background:var(--ow-paper-2);color:var(--ow-steel-950);}
+  .ow-pr-rf-e{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--ow-sp-6);
+    padding:var(--ow-sp-16) 0;text-align:center;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-pr-rf-e .ow-pr-i{width:28px;height:28px;color:var(--ow-verdigris);}
+  .ow-pr-rf-eb{font-size:var(--ow-t-13);color:var(--ow-ink-900);}
 
-  /* THE SHELF AT A GLANCE. Four tiles of figure-and-sentence became
-     three pictures: the shelf as one bar split into what moves and what
-     stands still, the kept share against the owner's own target, and
-     the thin lines' month drawn as the first of twelve. The strip's old
-     subtitles are what these bars now say. */
-  .ow-pr-gl{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(0,1fr) minmax(0,1fr);
-    background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
-    margin-bottom:var(--ow-sp-16);}
-  .ow-pr-gl-c{display:flex;flex-direction:column;gap:var(--ow-sp-8);min-width:0;
-    padding:var(--ow-sp-12) var(--ow-sp-16);border-left:1px solid var(--ow-rule-soft);}
-  .ow-pr-gl-c:first-child{border-left:0;}
-  .ow-pr-gl-h{display:flex;align-items:baseline;gap:var(--ow-sp-8);}
-  .ow-pr-gl-l{margin:0;flex:1 1 auto;min-width:0;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
-    letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
-  .ow-pr-gl-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
-    font-variant-numeric:tabular-nums;letter-spacing:-.02em;white-space:nowrap;
-    font-size:var(--ow-t-20);font-weight:var(--ow-fw-500);color:var(--ow-ink-900);}
-  .ow-pr-gl-v.ow-warn{color:var(--ow-amber);}
-  .ow-pr-gl-v.ow-good{color:var(--ow-verdigris);}
-  .ow-pr-gl-u{margin-left:3px;font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-11);
-    font-weight:var(--ow-fw-500);color:var(--ow-ink-600);}
-  .ow-pr-gl-s{margin:0;display:flex;flex-wrap:wrap;justify-content:space-between;
-    gap:var(--ow-sp-4) var(--ow-sp-16);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
-  .ow-pr-gl-k{display:inline-flex;align-items:center;gap:var(--ow-sp-6);}
-  .ow-pr-gl-d{width:9px;height:9px;border-radius:50%;flex:none;background:var(--ow-steel-100);}
-  .ow-pr-gl-d.ow-bad{background:var(--ow-crimson);}
-  .ow-pr-sb{display:flex;gap:2px;height:16px;overflow:hidden;border-radius:var(--ow-r-sm);
-    background:var(--ow-rule-soft);}
-  .ow-pr-sb-m{background:var(--ow-steel-100);}
-  .ow-pr-sb-d{display:flex;align-items:center;justify-content:center;min-width:3px;overflow:hidden;
-    background:var(--ow-crimson);color:var(--ow-paper);
-    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
-    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);}
-  .ow-pr-gl .ow-pr-mt{height:8px;margin:5px 0;}
-  .ow-pr-gl .ow-pr-mt-t{top:-5px;height:18px;}
-  .ow-pr-12{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:3px;height:16px;}
-  .ow-pr-12-m{background:var(--ow-amber-soft);}
-  .ow-pr-12-m:first-child{background:var(--ow-amber);}
-  .ow-pr-12.ow-good .ow-pr-12-m{background:var(--ow-verdigris-soft);}
+  .ow-pr-sl{display:flex;flex-direction:column;flex:1 1 auto;}
+  .ow-pr-si{all:unset;box-sizing:border-box;display:flex;align-items:flex-start;gap:var(--ow-sp-12);width:100%;min-height:68px;
+    padding:14px var(--ow-sp-16);border-bottom:1px solid var(--ow-rule-soft);color:var(--ow-ink-900);}
+  .ow-pr-si.ow-go{cursor:pointer;}
+  .ow-pr-si.ow-go:hover{background:var(--ow-paper-2);}
+  .ow-pr-si:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
+  .ow-pr-si-i{flex:0 0 34px;width:34px;height:34px;border-radius:var(--ow-r);display:flex;align-items:center;justify-content:center;
+    background:var(--ow-steel-100);color:var(--ow-steel-800);}
+  .ow-pr-si-i .ow-pr-i{width:18px;height:18px;}
+  .ow-pr-si-i.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .ow-pr-si-i.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .ow-pr-si-x{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .ow-pr-si-h{font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);}
+  .ow-pr-si-s{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .ow-pr-si-f{display:flex;align-items:center;gap:var(--ow-sp-8);margin:0;padding:var(--ow-sp-12) var(--ow-sp-16);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .ow-pr-si-f .ow-pr-i{width:14px;height:14px;}
 
-  /* THE RAIL. The two definitions are sliders beside their own figure,
-     so the bar is moved by feel and set to the unit by typing; the
-     ranking rule is a picture of itself; and what a tap touches is a
-     grid of ticks rather than two paragraphs. */
-  .ow-pr-rl{display:flex;flex-direction:column;gap:var(--ow-sp-6);
-    padding:var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);}
-  .ow-pan-h + .ow-pr-rl{border-top:0;}
-  .ow-pr-rl-h{display:flex;align-items:center;gap:var(--ow-sp-8);}
-  .ow-pr-rl-l{flex:1 1 auto;min-width:0;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
-  .ow-pr-rl-u{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
-  .ow-pr-rl-n{margin:0;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
-  .ow-pr-rl-n.ow-warn{color:var(--ow-amber-ink);}
-  .ow-pr-rg{width:100%;margin:0;accent-color:var(--ow-steel-950);cursor:pointer;}
-  .ow-pr-set-f{height:30px;width:74px;padding:0 var(--ow-sp-8);box-sizing:border-box;flex:none;
-    border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);
-    background:var(--ow-paper);color:var(--ow-ink-900);
-    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
-    font-variant-numeric:tabular-nums;font-size:var(--ow-t-13);
-    font-weight:var(--ow-fw-600);letter-spacing:-.02em;}
-  .ow-pr-set-f:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
-  .ow-pr-ck{display:flex;flex-direction:column;gap:var(--ow-sp-10);padding:var(--ow-sp-12);}
-  .ow-pr-ck-r{display:flex;flex-direction:column;gap:var(--ow-sp-4);}
-  .ow-pr-ck-h{display:flex;justify-content:space-between;gap:var(--ow-sp-8);
-    font-size:var(--ow-t-12);color:var(--ow-ink-900);}
-  .ow-pr-ck-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .ow-pr-ck .ow-pr-yb{height:12px;}
-  .ow-pr-tp{display:grid;grid-template-columns:minmax(0,1fr) repeat(3,54px);align-items:center;
-    gap:var(--ow-sp-8) var(--ow-sp-4);padding:var(--ow-sp-12);
-    font-size:var(--ow-t-11);color:var(--ow-ink-600);text-align:center;}
-  .ow-pr-tp-k{text-align:left;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
-  .ow-pr-tp-i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;
-    stroke-linecap:round;stroke-linejoin:round;justify-self:center;}
-  .ow-pr-tp .ow-good{color:var(--ow-verdigris);}
-  .ow-pr-tp-f{grid-column:1 / -1;display:flex;align-items:center;justify-content:center;gap:var(--ow-sp-6);
-    padding-top:var(--ow-sp-8);border-top:1px solid var(--ow-rule-soft);}
-
-  /* NOTHING TO JUDGE YET, as the two inputs the list is made of. Both
-     empty, both named, each with the door that fills it -- and the one
-     act that fills both, which is the screen's single accent. */
+  /* The empty state: what the screen needs, and the one tap that fills it. */
   .ow-pr-em{display:grid;grid-template-columns:minmax(0,1fr) 20px minmax(0,1fr) 28px minmax(0,1.2fr);
-    align-items:center;gap:var(--ow-sp-8);padding:var(--ow-sp-20) var(--ow-sp-16) var(--ow-sp-16);}
+    align-items:center;gap:var(--ow-sp-12);padding:var(--ow-sp-20) var(--ow-sp-16);}
   .ow-pr-em-in{display:flex;flex-direction:column;align-items:flex-start;gap:var(--ow-sp-6);min-width:0;
-    padding:var(--ow-sp-16);border:1px dashed var(--ow-rule);border-radius:var(--ow-r-lg);}
+    padding:var(--ow-sp-16);border:1px dashed var(--ow-rule);border-radius:var(--ow-r);}
   .ow-pr-em-i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;
     stroke-linecap:round;stroke-linejoin:round;color:var(--ow-ink-600);}
   .ow-pr-em-l{font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
   .ow-pr-em-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
-    letter-spacing:-.02em;font-size:var(--ow-t-20);font-weight:var(--ow-fw-500);color:var(--ow-crimson);}
+    font-size:var(--ow-t-20);font-weight:var(--ow-fw-600);color:var(--ow-crimson);}
   .ow-pr-em-op{display:flex;justify-content:center;font-size:var(--ow-t-20);color:var(--ow-ink-600);}
   .ow-pr-em-sk{display:flex;flex-direction:column;gap:var(--ow-sp-10);padding:var(--ow-sp-16);
-    border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);background:var(--ow-paper-2);}
+    border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);background:var(--ow-paper-2);}
   .ow-pr-em-sk-r{display:block;height:8px;border-radius:999px;background:var(--ow-rule-soft);}
   .ow-pr-em-f{display:flex;align-items:center;gap:var(--ow-sp-12);flex-wrap:wrap;
     padding:var(--ow-sp-12) var(--ow-sp-16) var(--ow-sp-16);border-top:1px solid var(--ow-rule-soft);
     font-size:var(--ow-t-12);color:var(--ow-ink-600);}
   .ow-pr-em-f-t{flex:1 1 240px;}
 
+  @media (max-width:1180px){
+    .ow-pr-hero{grid-template-columns:minmax(0,1fr) minmax(0,1fr);}
+    .ow-pr-hc + .ow-pr-hc{border-left:0;}
+    .ow-pr-g2,.ow-pr-g3{grid-template-columns:minmax(0,1fr);}
+  }
+
+  /* THE PHONE. Its own design, not the desk squeezed: one navy card with
+     the month's leak and two small readings, the bar as a stepper under
+     the thumb, the queue as cards that open in place. The map, the
+     treemap and the readings are desk work; on the phone the cards
+     carry everything a decision needs. */
   @media (max-width:820px){
-    /* The column names go with the columns: every card carries its own. */
-    .ow-pr-h{display:none;}
+    .ow-pr{gap:14px;}
+    .ow-pr-map-g,.ow-pr-g3,.ow-pr-rail,.ow-pr-hd{display:none;}
+    .ow-pr-dk{display:none;}
+    .ow-pr-pn{display:inline;}
+    .ow-pr-hero{grid-template-columns:minmax(0,1fr);}
+    .ow-pr-ring,.ow-pr-trend,.ow-pr-bars{display:none;}
+    .ow-pr-hc{padding:18px;gap:14px;}
+    .ow-pr-big{font-size:var(--ow-t-28);}
+    .ow-pr-12{height:10px;max-width:none;}
+    .ow-pr-ph2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;border-radius:var(--ow-r);overflow:hidden;background:rgba(255,255,255,.09);}
+    .ow-pr-ph2-c{display:flex;flex-direction:column;gap:var(--ow-sp-6);padding:var(--ow-sp-10) var(--ow-sp-12);background:var(--ow-steel-900);}
+    .ow-pr-ph2-l{font-size:var(--ow-t-11);color:var(--ow-navy-ink);}
+    .ow-pr-ph2-v{font-size:var(--ow-t-20);font-weight:var(--ow-fw-600);line-height:1;color:var(--ow-paper);}
 
-    /* THE GLANCE, turned: the shelf bar takes the whole width, the two
-       smaller pictures share the row under it. */
-    .ow-pr-gl{grid-template-columns:1fr 1fr;}
-    .ow-pr-gl-c:first-child{grid-column:1 / -1;border-bottom:1px solid var(--ow-rule-soft);}
-    .ow-pr-gl-c:nth-child(2){border-left:0;}
-    .ow-pr-gl-v{font-size:var(--ow-t-16);}
-    /* Label over figure: a 170px cell cannot hold both on one line. */
-    .ow-pr-gl-h{flex-direction:column;align-items:flex-start;gap:2px;}
-    .ow-pr-eq{gap:var(--ow-sp-4);}
+    .ow-pr-step{display:flex;align-items:center;gap:var(--ow-sp-8);margin-top:14px;padding:var(--ow-sp-6) var(--ow-sp-6) var(--ow-sp-6) 14px;
+      background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);}
+    .ow-pr-step-t{display:flex;flex-direction:column;flex:1 1 auto;min-width:0;}
+    .ow-pr-step-l{font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
+    .ow-pr-step-s{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+    .ow-pr-step-s .ow-pr-fig{color:var(--ow-ink-900);}
+    .btn.ow-pr-stb{width:var(--ow-tap);min-height:var(--ow-tap);box-sizing:border-box;padding:0;display:flex;align-items:center;justify-content:center;
+      border-radius:var(--ow-r);font-size:var(--ow-t-20);color:var(--ow-ink-900);}
+    .ow-pr-step-v{width:56px;text-align:center;font-size:var(--ow-t-20);font-weight:var(--ow-fw-600);}
 
-    /* The ladder takes the card's full width, and the sum drops under it. */
-    .ow-pr-lx{flex-direction:column;align-items:stretch;gap:var(--ow-sp-8);}
-    .ow-pr-ld{flex:none;max-width:none;}
-    .ow-pr-eq{justify-content:center;}
-
-    /* A card carries its own meter under its chip. */
-    .ow-q-card .ow-pr-mt{margin:var(--ow-sp-6) 0 var(--ow-sp-4);}
-
-    /* The two inputs stack, and the arrow turns to point down the page. */
+    /* The queue loses its panel: the segments run full width, and every
+       line is its own card on the page ground. */
+    .ow-pr-q.ow-pr-p{background:transparent;border:0;border-radius:0;overflow:visible;}
+    .ow-pr-q .ow-pr-p-h{padding:0 0 14px;border:0;min-height:0;}
+    .ow-pr-q .ow-pr-p-t,.ow-pr-q .ow-pr-p-n,.ow-pr-q .ow-pr-p-h > .ow-pr-sp{display:none;}
+    .ow-pr-sg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;padding:3px;background:var(--ow-rule-soft);border:0;}
+    .ow-pr-sg-b{min-width:0;min-height:40px;font-size:var(--ow-t-14);}
+    .ow-pr-qh,.ow-pr-qr{display:none;}
+    .ow-pr-qw{background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);overflow:hidden;margin-bottom:14px;}
+    .ow-pr-qc{all:unset;box-sizing:border-box;display:flex;flex-direction:column;gap:var(--ow-sp-8);width:100%;min-height:var(--ow-tap);
+      padding:14px var(--ow-sp-16);cursor:pointer;color:var(--ow-ink-900);}
+    .ow-pr-qc:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
+    .ow-pr-qc-h{display:flex;align-items:center;gap:var(--ow-sp-8);}
+    .ow-pr-qc-h .ow-pr-cv{width:18px;height:18px;color:var(--ow-ink-600);}
+    .ow-pr-qw.ow-open .ow-pr-qc-h .ow-pr-cv{transform:rotate(90deg);}
+    .ow-pr-qc-b{display:flex;align-items:flex-end;gap:var(--ow-sp-12);}
+    .ow-pr-qc-n{display:flex;flex-direction:column;flex:1 1 auto;min-width:0;}
+    .ow-pr-qc-t{min-width:0;font-size:15px;font-weight:var(--ow-fw-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ow-pr-qc-s{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+    .ow-pr-qc-v{display:flex;flex-direction:column;align-items:flex-end;flex:none;}
+    .ow-pr-qc-f{font-size:17px;font-weight:var(--ow-fw-600);}
+    .ow-pr-qc-u{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+    .ow-pr-qx{display:flex;flex-direction:column;gap:var(--ow-sp-12);padding:var(--ow-sp-8) var(--ow-sp-16) var(--ow-sp-16);border-top:1px solid var(--ow-rule-soft);}
+    .ow-pr-qx .ow-pr-ld{height:84px;}
+    .ow-pr-qx .ow-pr-ld-l.ow-dn{top:54px;}
+    .ow-pr-qx .ow-pr-ld-ax{top:40px;}
+    .ow-pr-qx .ow-pr-ld-g{top:33px;}
+    .ow-pr-qx .ow-pr-ld-b{top:37px;}
+    .ow-pr-qx .ow-pr-ld-m{top:31px;height:20px;}
+    .ow-pr-qx .ow-pr-ld-x{top:33px;}
+    .ow-pr-qx .ow-pr-ld-d{top:34px;}
+    .ow-pr-qx .ow-pr-eq{padding:var(--ow-sp-10) var(--ow-sp-12);}
+    .btn.ow-pr-bt{min-height:48px;font-size:15px;}
+    .ow-pr-qx-n{font-size:var(--ow-t-13);color:var(--ow-ink-600);}
+    .ow-pr-qx-n .ow-pr-fig{color:var(--ow-ink-900);}
+    .ow-pr-q-f{border-radius:var(--ow-r);}
+    .ow-pr-rng,.ow-pr-rg-d{min-height:var(--ow-tap);}
+    .ow-pr-by-r{min-height:var(--ow-tap);}
+    .ow-pr-ac .btn.ow-sm{min-height:var(--ow-tap);flex:1 1 0;}
     .ow-pr-em{grid-template-columns:1fr;}
     .ow-pr-em-op .ow-pr-em-i{transform:rotate(90deg);}
-    .ow-pr-rg{min-height:var(--ow-tap);}
-
-    /* Done one-handed, so both fields and the segments are thumb-sized
-       rather than the 30px they are at a desk. The segments are a grid
-       of three equal columns: the button is inline-block (so the space
-       between a label and its count is a real character), and an
-       inline-block does not answer to flex:1. */
-    .ow-pr-pf-f,.ow-pr-set-f{height:var(--ow-tap);font-size:15px;}
-    .ow-pr-pf-f{flex:1 1 100%;width:auto;}
-    .ow-pr-sg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));height:auto;width:100%;}
-    /* min-width:0, or a grid item refuses to shrink below its content
-       and pushes its neighbours out of the box instead of truncating. */
-    .ow-pr-sg-b{min-width:0;min-height:var(--ow-tap);line-height:var(--ow-tap);
-      padding:0 var(--ow-sp-4);text-align:center;font-size:14px;
-      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .ow-pr-of-r{grid-template-columns:minmax(0,1fr) 18px;row-gap:var(--ow-sp-4);}
-    .ow-pr-of-b{grid-column:1 / -1;}
   }
 
   /* ==================================================================
@@ -32339,16 +32516,26 @@
     <section id="tab-pricing" style="display:none;">
       <div class="ow-ph">
         <h1 class="ow-ph-t">Pricing</h1>
-        <p class="ow-ph-sub">What your shelf keeps, and what it is not selling</p>
-        <p class="ow-ph-help">Every line that is losing you money, worst first. Two kinds sit on one list: a line you are selling too cheaply, where the fix is to charge more, and a line that is not selling at all, where the fix is to take less and offer it to somebody who has bought it before. Their figures are different money &mdash; a thin line&rsquo;s repeats every month, dead stock&rsquo;s comes back once &mdash; so nothing here ever adds them together, each row says which it is, and the order is worked out on one clock: what a fix would be worth over a year. Opening a line shows the arithmetic behind it, so you can check the figure rather than take it. Nothing changes until you tap it and confirm it, and no offer is ever sent by the app.</p>
+        <p class="ow-ph-sub">What your shelf keeps, what it leaks, and what is standing still</p>
+        <p class="ow-ph-help">The navy band at the top is the whole shelf: what thin prices leave behind every month, the cash standing still, how much of what you took kept your bar and which way that has gone, and the two bars themselves &mdash; slide either and the whole page redraws. The map puts every line by how fast it sells against what it keeps; the tiles beside it are the shelf at cost. Below them is what to fix first, worst money first: a thin line&rsquo;s figure repeats every month (&times;12) and dead stock&rsquo;s comes back once (&times;1), so the two are never added. Pick any line to see the arithmetic behind it. The grid shows the bar month by month for each category, and &ldquo;Fix the rule&rdquo; reprices a whole group of lines with one rule on cost. Nothing changes until you tap it and confirm it, every reprice can be put back from here, and no offer is ever sent by the app.</p>
         <span class="ow-ph-sp"></span>
+        <div class="ow-pr-hd" id="pr_head"></div>
       </div>
 
       <div class="ow-pr">
         <div id="pr_strip"></div>
-        <div class="ow-grid">
+        <div class="ow-pr-g2 ow-pr-map-g ow-pr-viz">
+          <div id="pr_map"></div>
+          <div id="pr_tree"></div>
+        </div>
+        <div class="ow-pr-g2">
           <div id="pr_body"></div>
-          <div class="ow-side" id="pr_rail"></div>
+          <div class="ow-pr-rail ow-pr-viz" id="pr_rail"></div>
+        </div>
+        <div class="ow-pr-g3 ow-pr-viz">
+          <div class="ow-pr-cell" id="pr_heat"></div>
+          <div class="ow-pr-cell" id="pr_rules"></div>
+          <div class="ow-pr-cell" id="pr_sig"></div>
         </div>
       </div>
     </section>
@@ -89669,33 +89856,49 @@ function renderConsignBadge(){
    reading of who is asked and what they are told. */
 /* ==================== PRICING =======================================
 
-   WHERE THE MONEY GOES, AND THE ONE TAP THAT MOVES IT.
+   AN INTELLIGENCE CENTRE OVER ONE SHELF, AND THE ONE TAP THAT MOVES IT.
 
-   This screen is Margin and Clearance, which were the same question
-   asked twice about one shelf and could never see each other's half. A
-   line you stock is in exactly one of three states: selling and keeping
-   enough, selling but THIN, or not selling at all. The first needs
-   nothing. The other two are both a price decision -- lift it, or cut
-   it and offer it to somebody who has bought it before -- so they are
-   one queue, ranked by what a fix is worth.
+   A line you stock is in exactly one of three states: selling and
+   keeping enough, selling but THIN, or not selling at all. The first
+   needs nothing. The other two are both a price decision -- lift it, or
+   cut it and offer it to somebody who has bought it before -- so they
+   are one queue, ranked by what a fix is worth.
+
+   The screen reads top to bottom in the order the owner asks:
+     the band     what the prices are leaving behind, how much of the
+                  money taken keeps the bar, which way that has gone,
+                  and the two bars themselves
+     the map      every line by how fast it sells against what it keeps,
+                  beside the whole shelf at cost as one picture
+     the queue    what to fix first, and the one line being decided
+     the readings the bar month by month per category, the rule behind
+                  the leak (and the switch that fixes it), and what
+                  moved under the shop
 
    TWO KINDS OF MONEY ON ONE LIST, which is the whole difficulty. A thin
    line's figure is income PER MONTH and it repeats. A dead line's is
-   cash locked in the shelf and it comes back ONCE. They are not the
-   same money, so nothing here ever sums them: every row's basis line
-   says which it is, and the order is worked out on one stated clock --
-   what a fix is worth over a year, a thin line's month counted twelve
-   times against dead stock's cash once. The rail says so in those
-   words, so the ranking can be argued with rather than trusted.
+   cash locked in the shelf and it comes back ONCE. Nothing here ever
+   sums them: every row carries ×12 or ×1 beside its figure, and the
+   order is worked out on one stated clock -- what a fix is worth over a
+   year.
 
    The derivations are untouched: marginRows(), deadStockRows(),
    marginLiftFor(), clearanceFor() and the two writes are the same
    readings the Manager is handed, so the meeting and the screen cannot
-   disagree about the same shelf. */
+   disagree about the same shelf. The six months behind the trend, the
+   sparkline and the category grid are waSalesByKey() read at six
+   thirty-day windows -- the same reading, older days -- never a
+   projection. */
 const PRICING_MONTHS_A_YEAR = 12;
+const PRICING_MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 let pricingSeg = 'all';      // all | thin | dead — the two halves of the shelf
-let pricingOpenKey = null;   // the one line being decided
+let pricingOpenKey = null;   // the line being decided; '' = the phone closed every card
 let pricingOfferId = null;   // the one buyer being written to, inside it
+let pricingClearOpen = null; // phone: the line whose clearing price is open
+/* Every reprice made from this screen this session, with the rule fields
+   as they stood before it, so "Undo" puts back exactly what was there
+   rather than a guess at it. */
+let pricingSession = [];
 
 /* ONE READING, BOTH HALVES. Each row carries what it is worth NOW (the
    honest figure the row shows) and what it is worth over a year (the
@@ -89717,415 +89920,616 @@ function pricingRows(){
   return all;
 }
 
+/* SIX WINDOWS OF THIRTY DAYS, oldest first, each the same sales reading
+   the list is drawn from, ending a month further back. A window with no
+   sale in it is a gap on the line, never a zero. */
+function pricingHistory(){
+  const today = todayISO();
+  return [5, 4, 3, 2, 1, 0].map(i=>{
+    const end = anShiftDate(today, -30 * i);
+    const d = new Date(end + 'T00:00:00Z');
+    return { end, label: PRICING_MONTH_NAMES[d.getUTCMonth()], sales: waSalesByKey(end) };
+  });
+}
+
+/* The shelf at cost as one picture: squarified, so the big lines read as
+   squares and nothing is a sliver. Laid out in a fixed box and placed in
+   per cent, so the picture keeps its proportions at any width. */
+function pricingSquarify(items, x, y, w, h, out){
+  if(!items.length || w <= 0 || h <= 0) return out;
+  const total = items.reduce((t, i)=> t + i.v, 0);
+  if(!(total > 0)) return out;
+  const scaled = items.map(it=> Object.assign({}, it, { a: it.v / total * w * h }));
+  const side = Math.min(w, h);
+  const worst = (row)=>{
+    const s = row.reduce((t, r)=> t + r.a, 0);
+    const mx = Math.max(...row.map(r=> r.a)), mn = Math.min(...row.map(r=> r.a));
+    return Math.max(side * side * mx / (s * s), (s * s) / (side * side * mn));
+  };
+  let row = [], best = Infinity, i = 0;
+  while(i < scaled.length){
+    const cand = row.concat([scaled[i]]);
+    const wv = worst(cand);
+    if(row.length && wv > best) break;
+    row = cand; best = wv; i++;
+  }
+  const s = row.reduce((t, r)=> t + r.a, 0);
+  if(w >= h){
+    const cw = s / h; let cy = y;
+    row.forEach(r=>{ const ch = r.a / cw; out.push(Object.assign({}, r, { x, y: cy, w: cw, h: ch })); cy += ch; });
+    return pricingSquarify(items.slice(i), x + cw, y, w - cw, h, out);
+  }
+  const rh = s / w; let cx = x;
+  row.forEach(r=>{ const cw = r.a / rh; out.push(Object.assign({}, r, { x: cx, y, w: cw, h: rh })); cx += cw; });
+  return pricingSquarify(items.slice(i), x, y + rh, w, h - rh, out);
+}
+
+/* A REPRICE THAT CAN BE TAKEN BACK. setLineMarginRule writes four fields
+   on the product or the variant -- the stock rule and the default rule
+   for one side -- so those four are read first and put back exactly,
+   including "was never set", rather than written over with a guess. */
+function pricingRuleSnapshot(productId, variantIdx, side){
+  const p = productById(productId);
+  if(!p) return null;
+  const tgt = variantIdx != null ? (p.variants || [])[variantIdx] : p;
+  if(!tgt) return null;
+  const S = side === 'retail' ? 'Retail' : 'Wholesale';
+  const was = {};
+  ['stock' + S + 'MarkupType', 'stock' + S + 'MarkupValue', side + 'MarkupType', side + 'MarkupValue']
+    .forEach(k=>{ was[k] = Object.prototype.hasOwnProperty.call(tgt, k) ? tgt[k] : undefined; });
+  return { productId, variantIdx, side, was };
+}
+function pricingRuleRestore(snap){
+  const p = productById(snap.productId);
+  if(!p) return false;
+  const tgt = snap.variantIdx != null ? (p.variants || [])[snap.variantIdx] : p;
+  if(!tgt) return false;
+  Object.keys(snap.was).forEach(k=>{ if(snap.was[k] === undefined) delete tgt[k]; else tgt[k] = snap.was[k]; });
+  saveData();
+  return true;
+}
+function pricingReprice(r, type, value, group){
+  const side = r.kind === 'retail' ? 'retail' : 'wholesale';
+  const snap = pricingRuleSnapshot(r.productId, r.variantIdx, side);
+  if(!setLineMarginRule(r.productId, r.variantIdx, r.kind, type, value)) return false;
+  if(snap) pricingSession.push(Object.assign(snap, { key: r.key, line: r.line, group: group || 'line', pct: type === 'fixed' ? null : value }));
+  return true;
+}
+/* Newest first, so a line repriced twice goes back through both. */
+function pricingUndo(match){
+  const keep = [];
+  pricingSession.slice().reverse().forEach(s=>{ if(match(s)) pricingRuleRestore(s); else keep.unshift(s); });
+  pricingSession = keep;
+}
+
 function renderPricing(){
   const body = document.getElementById('pr_body');
   if(!body) return;
   /* Bare, because fmtUGX() spells the unit itself: a tile carries UGX
-     once in its own .ow-u, a money column carries it in the header, and
-     a sentence uses fmtUGX where the unit belongs to the prose. Written
-     twice it reads "9,312,500 UGX UGX". */
+     once in its own unit span, a money column carries it in the header,
+     and a sentence uses fmtUGX where the unit belongs to the prose.
+     Written twice it reads "9,312,500 UGX UGX". */
   const f = (x)=> Number(Math.round(x)).toLocaleString('en-UG');
+  const fM = (x)=> x >= 1e6 ? (Math.round(x / 1e5) / 10) + 'M' : x >= 1e3 ? Math.round(x / 1e3) + 'k' : String(Math.round(x));
+  const pct = (v, of)=> of > 0 ? Math.max(0, Math.min(100, v / of * 100)).toFixed(1) : '0';
+  const plural = (n, one, many)=> `${n} ${n === 1 ? one : (many || one + 's')}`;
   const target = targetMarginPct();
   const quiet = deadStockQuietDays();
   const all = pricingRows();
-  const shelf = dashInventoryHealth();
-  const shelfLines = stockAgeRows().length;
+  const ages = stockAgeRows();
+  const shelfValue = ages.reduce((t, r)=> t + r.value, 0);
+  /* NOTHING READ MEANS NO PICTURES, rather than a band of zeros. A
+     screen that has read nothing and a shop with nothing wrong are
+     different states, and a row of zeros says neither. */
+  const nothingRead = all.margins.length === 0 && ages.length === 0;
+  const root = document.getElementById('tab-pricing');
+  const wrap = root ? root.querySelector('.ow-pr') : null;
+  if(wrap) wrap.classList.toggle('ow-pr-none', nothingRead);
+  const hist = nothingRead ? [] : pricingHistory();
 
-  /* What the shop kept on everything that moved, out of everything it
-     took -- both totals off the same reading the list is drawn from, so
-     the strip and the rows can never tell different stories. */
+  /* ---- every line, once, by its stock key ---- */
+  const thinKeys = new Set(all.thin.map(x=> x.src.key));
+  const deadKeys = new Set(all.dead.map(x=> x.src.key));
+  const marginByKey = new Map(all.margins.map(r=> [r.key, r]));
+  const ageByKey = new Map(ages.map(r=> [r.key, r]));
+  const sells = (k)=>{ const m = marginByKey.get(k); return !!(m && m.units30 > 0 && m.keptPct != null); };
+  const kindOf = (k)=> thinKeys.has(k) ? 'thin' : deadKeys.has(k) ? 'dead' : sells(k) ? 'ok' : 'slow';
+  /* The tone is what the NUMBERS say, not which list a line is on: a
+     line keeping under half the bar is bad, under the bar is caution,
+     at or over it is good; dead twice the window is bad. Stock nobody
+     has ever bought is a fact, not an alarm, and wears no tone. */
+  const toneOf = (k)=>{
+    const m = marginByKey.get(k);
+    if(sells(k)) return m.keptPct < target / 2 ? 'ow-bad' : m.keptPct < target ? 'ow-warn' : 'ow-good';
+    const a = ageByKey.get(k);
+    if(!a || a.daysQuiet == null) return 'ow-none';
+    if(deadKeys.has(k)) return a.daysQuiet >= quiet * 2 ? 'ow-bad' : 'ow-warn';
+    return 'ow-none';
+  };
+  const categoryOf = (k)=>{ const parts = buyKeyParts(k); return (parts && parts.product && String(parts.product.category || '').trim()) || 'Other'; };
+  const short = (s)=> String(s || '').split(',')[0];
+  const unitOf = (r)=> r.kind === 'wholesale' ? 'pack' : 'piece';
+
+  /* ---- the totals, always the whole shelf, never the filtered list ---- */
   const sold30 = all.margins.reduce((t, r)=> t + r.sold30, 0);
   const kept30 = all.margins.reduce((t, r)=> t + r.earned30, 0);
   const keptPct = sold30 > 0 ? Math.round(kept30 / sold30 * 1000) / 10 : null;
   const thinWorth = all.thin.reduce((t, r)=> t + r.worth, 0);
   const deadValue = all.dead.reduce((t, r)=> t + r.worth, 0);
+  const deadShare = shelfValue > 0 ? Math.round(deadValue / shelfValue * 100) : 0;
+  const okSold = all.margins.filter(r=> r.keptPct != null && r.keptPct >= target).reduce((t, r)=> t + r.sold30, 0);
+  const underSold = all.margins.filter(r=> r.keptPct != null && r.keptPct < target).reduce((t, r)=> t + r.sold30, 0);
+  const ringPct = sold30 > 0 ? Math.round(okSold / sold30 * 100) : null;
+  const afterPct = sold30 > 0 ? Math.round((kept30 + thinWorth) / (sold30 + thinWorth) * 1000) / 10 : null;
+  const never = !(Number(data && data.presetTargetMarginPct) > 0);
+  const sessionKeys = [...new Set(pricingSession.map(s=> s.key))];
 
-  /* NOTHING READ MEANS NO STRIP, rather than four tiles of zero. A
-     screen that has read nothing and a shop with nothing wrong are
-     different states, and a row of zeros says neither -- it just fills
-     a screen with figures that mean nothing and makes an app that
-     could not read look like a shop with a clean shelf. */
-  const nothingRead = all.margins.length === 0 && shelfLines === 0;
+  /* The kept share, window by window, across everything that sold. */
+  const histKept = hist.map(w=>{
+    let s = 0, k = 0;
+    w.sales.forEach(v=>{ if(v.sales30 > 0){ s += v.sales30; k += v.profit30; } });
+    return s > 0 ? k / s * 100 : null;
+  });
+  const lineHist = (k)=> hist.map(w=>{ const v = w.sales.get(k); return v && v.sales30 > 0 ? v.profit30 / v.sales30 * 100 : null; });
 
-  /* ---- the glance: the whole shelf, never the filtered list ----
-     Three pictures, not four tiles of figure-and-sentence. The shelf is
-     one bar split into what moves and what stands still; the kept share
-     is a meter with the owner's own target as its tick; the thin lines'
-     month is the first of twelve blocks, because it comes back every
-     month. Moving stock is a neutral fill, not a state colour: stock
-     you hold is a fact, and colouring it would make an ordinary Tuesday
-     look like an alarm. Only standing still is crimson. */
-  const pct = (v, of)=> of > 0 ? Math.max(0, Math.min(100, v / of * 100)).toFixed(1) : '0';
+  /* What the screen read, said where the page is named, and the door to
+     the shop default every line without a rule of its own is priced by. */
+  const headEl = document.getElementById('pr_head');
+  if(headEl) headEl.innerHTML = nothingRead ? '' : `<span class="ow-pr-rd"><i class="ow-pr-rd-d"></i>Last 30 days of sales &middot; ${plural(all.margins.length + ages.filter(r=> !sells(r.key)).length, 'line')} read</span>
+    <button type="button" class="btn btn-ghost ow-sm" data-pr-go="presets">Markup rules</button>`;
+
+  /* ================= THE BAND ================= */
   const strip = document.getElementById('pr_strip');
   if(strip && nothingRead) strip.innerHTML = '';
   else if(strip){
-    const moving = Math.max(0, shelf.totalValue - deadValue);
-    const movingLines = Math.max(0, shelfLines - all.dead.length);
-    const deadShare = shelf.totalValue > 0 ? Math.round(deadValue / shelf.totalValue * 100) : 0;
-    /* The target sits three quarters along the kept meter, so a shop
-       over its bar still has room to show by how much. */
+    const months = Array.from({ length: PRICING_MONTHS_A_YEAR }, ()=> '<span class="ow-pr-12-m"></span>').join('');
+    const moving = Math.max(0, shelfValue - deadValue);
+    const C = 2 * Math.PI * 62;
+    const okLen = sold30 > 0 ? okSold / sold30 * C : 0, underLen = sold30 > 0 ? underSold / sold30 * C : 0;
+    const known = histKept.map((v, i)=> v == null ? null : { v, i }).filter(Boolean);
+    const tMax = Math.max(target, ...known.map(p=> p.v)) * 1.22, tMin = Math.min(target, ...known.map(p=> p.v)) * 0.8;
+    const tx = (i)=> 6 + i * (288 / 5), ty = (v)=> 88 - (v - tMin) / ((tMax - tMin) || 1) * 80;
+    const linePts = known.map(p=> `${tx(p.i).toFixed(1)},${ty(p.v).toFixed(1)}`);
+    const last = known[known.length - 1], first = known[0];
+    const delta = last && first && last !== first ? last.v - first.v : null;
     const keptScale = Math.max(target * 4 / 3, keptPct || 0);
-    const keptTone = keptPct == null ? '' : keptPct < target ? 'ow-warn' : 'ow-good';
-    strip.innerHTML = `<div class="ow-pr-gl">
-    <div class="ow-pr-gl-c">
-      <div class="ow-pr-gl-h"><p class="ow-pr-gl-l">The shelf, at what it cost</p>
-        <span class="ow-pr-gl-v">${f(shelf.totalValue)}<span class="ow-pr-gl-u">UGX</span></span></div>
-      <div class="ow-pr-sb" role="img" aria-label="${deadShare}% of the shelf, ${f(deadValue)} UGX, has sold nothing in ${quiet} days">
-        ${moving > 0 ? `<span class="ow-pr-sb-m" style="flex:${Math.round(moving)} 1 0"></span>` : ''}
-        ${deadValue > 0 ? `<span class="ow-pr-sb-d" style="flex:${Math.round(deadValue)} 1 0">${deadShare >= 8 ? deadShare + '%' : ''}</span>` : ''}
+    const keptTone = keptPct == null ? 'ow-none' : keptPct < target ? 'ow-warn' : 'ow-good';
+    strip.innerHTML = `<section class="ow-pr-hero" aria-label="Where your prices stand">
+      <div class="ow-pr-hc">
+        <span class="ow-pr-eye"><span class="ow-pr-dk">Money your prices are leaving behind</span><span class="ow-pr-pn">Your prices leave behind</span></span>
+        <div class="ow-pr-mn">
+          <div class="ow-pr-mn-h"><span class="ow-pr-fig ow-pr-big">${f(thinWorth)}</span><span class="ow-pr-mn-u"><span class="ow-pr-dk">UGX a month, every month</span><span class="ow-pr-pn">a month</span></span></div>
+          <div class="ow-pr-12${thinWorth > 0 ? '' : ' ow-good'}" role="img" aria-label="${f(thinWorth)} UGX a month, every month: ${f(thinWorth * PRICING_MONTHS_A_YEAR)} over a year">${months}</div>
+          <span class="ow-pr-mn-s"><b class="ow-pr-fig">${all.thin.length}</b> thin line${all.thin.length === 1 ? '' : 's'}<span class="ow-pr-dk"> &middot; <b class="ow-pr-fig">${f(thinWorth * PRICING_MONTHS_A_YEAR)}</b> over a year if nothing changes</span><span class="ow-pr-pn"> &middot; every month</span></span>
+        </div>
+        <div class="ow-pr-rule ow-pr-dk"></div>
+        <div class="ow-pr-mn ow-pr-dk">
+          <div class="ow-pr-mn-h"><span class="ow-pr-fig ow-pr-mid">${f(deadValue)}</span><span class="ow-pr-mn-u">UGX locked in the shelf &middot; comes back once</span></div>
+          <div class="ow-pr-sb" role="img" aria-label="${deadShare}% of the shelf, ${f(deadValue)} UGX, has sold nothing in ${quiet} days">
+            ${moving > 0 ? `<span class="ow-pr-sb-m" style="flex:${Math.round(moving)} 1 0"></span>` : ''}
+            ${deadValue > 0 ? `<span class="ow-pr-sb-d" style="flex:${Math.round(deadValue)} 1 0"></span>` : ''}
+          </div>
+          <span class="ow-pr-mn-s"><b class="ow-pr-fig">${deadShare}%</b> of a <b class="ow-pr-fig">${f(shelfValue)}</b> shelf &middot; ${plural(all.dead.length, 'line')} past ${quiet} days</span>
+        </div>
+        <div class="ow-pr-ph2">
+          <div class="ow-pr-ph2-c">
+            <span class="ow-pr-ph2-l">Kept on sales</span>
+            <span class="ow-pr-fig ow-pr-ph2-v">${keptPct == null ? '&mdash;' : keptPct + '<span class="ow-pr-u">%</span>'}</span>
+            ${keptPct == null ? '' : `<span class="ow-pr-mt ow-nv" role="img" aria-label="Keeping ${keptPct}% against the ${target}% you set"><span class="ow-pr-mt-f ${keptTone}" style="width:${pct(Math.max(0, keptPct), keptScale)}%"></span><span class="ow-pr-mt-t" style="left:${pct(target, keptScale)}%"></span></span>`}
+          </div>
+          <div class="ow-pr-ph2-c">
+            <span class="ow-pr-ph2-l">Standing still</span>
+            <span class="ow-pr-fig ow-pr-ph2-v">${(deadValue / 1e6).toFixed(1)}<span class="ow-pr-u">M once</span></span>
+            <span class="ow-pr-sb ow-sm" role="img" aria-label="${deadShare}% of the shelf has sold nothing in ${quiet} days">${moving > 0 ? `<span class="ow-pr-sb-m" style="flex:${Math.round(moving)} 1 0"></span>` : ''}${deadValue > 0 ? `<span class="ow-pr-sb-d" style="flex:${Math.round(deadValue)} 1 0"></span>` : ''}</span>
+          </div>
+        </div>
       </div>
-      <p class="ow-pr-gl-s">
-        <span class="ow-pr-gl-k"><span class="ow-pr-gl-d"></span>Moving <b class="ow-pr-fig">${f(moving)}</b> &middot; ${movingLines} line${movingLines===1?'':'s'}</span>
-        <span class="ow-pr-gl-k"><span class="ow-pr-gl-d ow-bad"></span>Still ${quiet}+ days <b class="ow-pr-fig">${f(deadValue)}</b> &middot; ${all.dead.length} line${all.dead.length===1?'':'s'}${deadShare > 0 && deadShare < 8 ? ` &middot; ${deadShare}%` : ''}</span>
-      </p>
-    </div>
-    <div class="ow-pr-gl-c">
-      <div class="ow-pr-gl-h"><p class="ow-pr-gl-l">Kept on what sold</p>
-        <span class="ow-pr-gl-v ${keptTone}">${keptPct == null ? '&mdash;' : keptPct + '<span class="ow-pr-gl-u">%</span>'}</span></div>
-      ${keptPct == null
-        ? '<span class="ow-pr-mt ow-none"></span>'
-        : `<span class="ow-pr-mt" role="img" aria-label="Keeping ${keptPct}% against the ${target}% you set"><span class="ow-pr-mt-f ${keptTone}" style="width:${pct(Math.max(0, keptPct), keptScale)}%"></span><span class="ow-pr-mt-t" style="left:${pct(target, keptScale)}%"></span></span>`}
-      <p class="ow-pr-gl-s">${keptPct == null
-        ? '<span>Nothing sold in 30 days can be costed</span>'
-        : `<span><b class="ow-pr-fig">${f(kept30)}</b> of ${f(sold30)} taken</span><span>tick: your ${target}%</span>`}</p>
-    </div>
-    <div class="ow-pr-gl-c">
-      <div class="ow-pr-gl-h"><p class="ow-pr-gl-l">The thin lines leak</p>
-        <span class="ow-pr-gl-v">${f(thinWorth)}<span class="ow-pr-gl-u">/mo</span></span></div>
-      <div class="ow-pr-12${thinWorth > 0 ? '' : ' ow-good'}" role="img" aria-label="${f(thinWorth)} UGX a month, every month: ${f(thinWorth * PRICING_MONTHS_A_YEAR)} over a year">${'<span class="ow-pr-12-m"></span>'.repeat(PRICING_MONTHS_A_YEAR)}</div>
-      <p class="ow-pr-gl-s"><span>${all.thin.length} line${all.thin.length===1?'':'s'} &middot; every month</span><span><b class="ow-pr-fig">${f(thinWorth * PRICING_MONTHS_A_YEAR)}</b> a year</span></p>
-    </div>
-  </div>`;
+
+      <div class="ow-pr-hc ow-pr-ring">
+        <div class="ow-pr-rg-w" role="img" aria-label="${ringPct == null ? 'Nothing sold in 30 days can be costed' : `${ringPct}% of the last 30 days of sales came from lines keeping ${target}% or better`}">
+          <svg class="ow-pr-rg-s" viewBox="0 0 148 148" width="148" height="148">
+            <circle class="ow-pr-rg-k" cx="74" cy="74" r="62"></circle>
+            <circle class="ow-pr-rg-ok" cx="74" cy="74" r="62" stroke-dasharray="${okLen.toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 74 74)"></circle>
+            <circle class="ow-pr-rg-th" cx="74" cy="74" r="62" stroke-dasharray="${underLen.toFixed(1)} ${C.toFixed(1)}" stroke-dashoffset="${(-okLen).toFixed(1)}" transform="rotate(-90 74 74)"></circle>
+          </svg>
+          <span class="ow-pr-rg-c"><span class="ow-pr-fig ow-pr-rg-v">${ringPct == null ? '&mdash;' : ringPct + '<span class="ow-pr-u">%</span>'}</span><span class="ow-pr-rg-l">of sales<br>keep your bar</span></span>
+        </div>
+        <div class="ow-pr-hl"><span><i class="ow-pr-sw ow-good"></i>keeping</span><span><i class="ow-pr-sw ow-warn"></i>thin</span></div>
+      </div>
+
+      <div class="ow-pr-hc ow-pr-trend">
+        <span class="ow-pr-eye">Kept on what sold</span>
+        <div class="ow-pr-tr-h">
+          <span class="ow-pr-fig ow-pr-tr-v">${keptPct == null ? '&mdash;' : keptPct + '<span class="ow-pr-u">%</span>'}</span>
+          ${delta == null ? '' : `<span class="ow-pr-fig ow-pr-dl${delta < 0 ? ' ow-warn' : ''}">${delta >= 0 ? '+' : '&minus;'}${Math.abs(delta).toFixed(1)} pts since ${esc(hist[first.i].label)}</span>`}
+        </div>
+        ${known.length ? `<svg class="ow-pr-tr" viewBox="0 0 300 96" width="100%" height="96" role="img" aria-label="Kept ${first.v.toFixed(1)}% in the window to ${esc(hist[first.i].label)} and ${last.v.toFixed(1)}% now, against your ${target}%">
+          <rect class="ow-pr-tr-z" x="0" y="${ty(target).toFixed(1)}" width="300" height="${Math.max(0, 96 - ty(target)).toFixed(1)}"></rect>
+          <line class="ow-pr-tr-t" x1="0" x2="300" y1="${ty(target).toFixed(1)}" y2="${ty(target).toFixed(1)}"></line>
+          ${known.length > 1 ? `<polygon class="ow-pr-tr-a" points="${tx(first.i).toFixed(1)},96 ${linePts.join(' ')} ${tx(last.i).toFixed(1)},96"></polygon>
+          <polyline class="ow-pr-tr-l" points="${linePts.join(' ')}"></polyline>` : ''}
+          <circle class="ow-pr-tr-d" cx="${tx(last.i).toFixed(1)}" cy="${ty(last.v).toFixed(1)}" r="5"></circle>
+          <text class="ow-pr-tr-x" x="296" y="${(ty(target) - 6).toFixed(1)}" text-anchor="end">your ${target}%</text>
+        </svg>
+        <div class="ow-pr-fig ow-pr-mo">${hist.map(w=> `<span>${esc(w.label)}</span>`).join('')}</div>` : '<span class="ow-pr-mn-s">Nothing sold in six months can be costed.</span>'}
+      </div>
+
+      <div class="ow-pr-hc ow-pr-bars">
+        <span class="ow-pr-eye">Your two bars</span>
+        <div class="ow-pr-br">
+          <div class="ow-pr-br-h"><label class="ow-pr-br-l" for="pr_target_rg">Thin below</label><span class="ow-pr-fig ow-pr-br-v"><span id="pr_target_v">${target}</span><span class="ow-pr-u"> % kept</span></span></div>
+          <input class="ow-pr-rg-d" id="pr_target_rg" type="range" min="1" max="60" step="1" value="${Math.min(60, Math.max(1, Math.round(target)))}" aria-label="Target margin, per cent">
+          ${never ? `<span class="ow-pr-br-n">Never set &mdash; the app has judged your prices against ${target}% without asking you</span>` : ''}
+        </div>
+        <div class="ow-pr-br">
+          <div class="ow-pr-br-h"><label class="ow-pr-br-l" for="pr_days_rg">Still after</label><span class="ow-pr-fig ow-pr-br-v"><span id="pr_days_v">${quiet}</span><span class="ow-pr-u"> days</span></span></div>
+          <input class="ow-pr-rg-d" id="pr_days_rg" type="range" min="7" max="240" step="1" value="${Math.min(240, Math.max(7, quiet))}" aria-label="Standing still after, days">
+        </div>
+        ${all.thin.length ? `<button type="button" class="btn btn-ghost ow-pr-hb pr-lift-all">
+          <svg class="ow-pr-i" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+          <span>Lift all ${all.thin.length} to ${target}% &middot; <span class="ow-pr-fig">${afterPct}%</span> kept</span></button>` : ''}
+        ${sessionKeys.length ? `<div class="ow-pr-ses">
+          <svg class="ow-pr-i" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg>
+          <span class="ow-pr-ses-t">${plural(sessionKeys.length, 'line')} repriced this session</span>
+          <button type="button" class="ow-pr-un pr-undo-all">Undo all</button>
+        </div>` : ''}
+      </div>
+    </section>
+    <section class="ow-pr-step" aria-label="Your bar">
+      <span class="ow-pr-step-t"><span class="ow-pr-step-l">Thin below</span><span class="ow-pr-step-s"><b class="ow-pr-fig">${all.thin.length}</b> line${all.thin.length === 1 ? '' : 's'} under it</span></span>
+      <button type="button" class="btn btn-ghost ow-pr-stb pr-step" data-step="-1" aria-label="Lower the bar">&minus;</button>
+      <span class="ow-pr-fig ow-pr-step-v">${target}%</span>
+      <button type="button" class="btn btn-ghost ow-pr-stb pr-step" data-step="1" aria-label="Raise the bar">+</button>
+    </section>`;
   }
 
-  renderPricingRail(all, { target, quiet, thinWorth, deadValue, sold30, kept30, nothingRead });
+  /* ================= THE MAP ================= */
+  const selling = all.margins.filter(r=> r.units30 > 0 && r.keptPct != null);
+  const still = ages.filter(r=> !sells(r.key))
+    .sort((a, b)=> (b.value - a.value)).slice(0, 14)
+    .sort((a, b)=> (b.daysQuiet == null ? Infinity : b.daysQuiet) - (a.daysQuiet == null ? Infinity : a.daysQuiet));
+  const stillMore = ages.filter(r=> !sells(r.key)).length - still.length;
+  const queueKeys = all.map(x=> x.src.key);
+  const selKey = (pricingOpenKey && (marginByKey.has(pricingOpenKey) || ageByKey.has(pricingOpenKey))) ? pricingOpenKey : (queueKeys[0] || (selling[0] && selling[0].key) || (ages[0] && ages[0].key) || null);
+  const mapEl = document.getElementById('pr_map');
+  if(mapEl && nothingRead) mapEl.innerHTML = '';
+  else if(mapEl){
+    const yMax = Math.max(35, Math.ceil(target * 2.2 / 5) * 5);
+    const uMax = Math.max(100, ...selling.map(r=> r.units30));
+    const logMax = Math.log10(uMax * 1.4);
+    const xOf = (u)=> Math.log10(Math.max(u, 1)) / logMax * 100;
+    const yOf = (k)=> (1 - Math.max(0, Math.min(yMax, k)) / yMax) * 100;
+    const clamp = (v)=> Math.max(3, Math.min(97, v));
+    const sorted = selling.map(r=> r.units30).sort((a, b)=> a - b);
+    const median = sorted.length ? sorted[Math.floor(sorted.length / 2)] : 10;
+    const soldMax = Math.max(1, ...selling.map(r=> r.sold30));
+    const valMax = Math.max(1, ...still.map(r=> r.value));
+    const tip = (title, a, aLabel, b, bLabel, c, cLabel, tone)=> `data-tip-n="${esc(title)}" data-tip-a="${esc(a)}" data-tip-al="${esc(aLabel)}" data-tip-b="${esc(b)}" data-tip-bl="${esc(bLabel)}" data-tip-c="${esc(c)}" data-tip-cl="${esc(cLabel)}" data-tip-t="${tone}"`;
+    const dots = selling.map(r=>{
+      const sz = Math.min(34, 10 + Math.sqrt(r.sold30) / Math.sqrt(soldMax) * 24);
+      const thin = thinKeys.has(r.key);
+      return `<button type="button" class="ow-pr-dot ${toneOf(r.key)}${r.key === selKey ? ' ow-on' : ''}" data-pick="${esc(r.key)}" aria-label="${esc(r.line)}: ${r.units30} sold, keeping ${r.keptPct}%"
+        style="left:${clamp(xOf(r.units30)).toFixed(1)}%;top:${clamp(yOf(r.keptPct)).toFixed(1)}%;width:${sz.toFixed(0)}px;height:${sz.toFixed(0)}px"
+        ${tip(r.line, r.keptPct + '%', 'keeps', String(r.units30), 'sold in 30 days', thin ? '+' + f(r.atStake) + '/mo' : f(r.sold30), thin ? 'a fix is worth' : 'taken in 30 days', toneOf(r.key))}></button>`;
+    }).join('');
+    const lane = still.map((r, i)=>{
+      const sz = Math.min(30, 9 + Math.sqrt(r.value) / Math.sqrt(valMax) * 21);
+      const y = still.length > 1 ? 10 + i * 82 / (still.length - 1) : 50;
+      return `<button type="button" class="ow-pr-dot ${toneOf(r.key)}${r.key === selKey ? ' ow-on' : ''}" data-pick="${esc(r.key)}" aria-label="${esc(r.line)}: ${r.daysQuiet == null ? 'never sold' : 'quiet ' + r.daysQuiet + ' days'}, ${f(r.value)} at cost"
+        style="left:50%;top:${y.toFixed(1)}%;width:${sz.toFixed(0)}px;height:${sz.toFixed(0)}px"
+        ${tip(r.line, r.daysQuiet == null ? 'never' : r.daysQuiet + ' days', r.daysQuiet == null ? 'sold' : 'quiet for', String(r.qty), 'on the shelf', f(r.value), 'at cost', toneOf(r.key))}></button>`;
+    }).join('');
+    const labelKeys = all.thin.slice().sort((a, b)=> b.worth - a.worth).slice(0, 4).map(x=> x.src.key);
+    if(selKey && sells(selKey) && !labelKeys.includes(selKey)) labelKeys.push(selKey);
+    /* Labels that would land on each other are walked apart, a line at
+       a time, so a cluster of thin lines still reads as named. Measured
+       on a 560px plot, the width the desk gives it. */
+    const placed = [];
+    const labels = labelKeys.map(k=>{
+      const r = marginByKey.get(k);
+      const l = { text: short(r.line), dy: 0 };
+      const lx = clamp(xOf(r.units30)) * 5.6, w = l.text.length * 6.5 + 8;
+      const x0 = lx < 72 * 5.6 ? lx : lx - w, ly = clamp(yOf(r.keptPct)) * 3.6;
+      for(let guard = 0; guard < 8 && placed.some(p=> Math.abs(p.y - (ly + l.dy)) < 14 && p.x0 < x0 + w && x0 < p.x0 + p.w); guard++) l.dy += 14;
+      placed.push({ x0, w, y: ly + l.dy });
+      const x = clamp(xOf(r.units30)), y = clamp(yOf(r.keptPct));
+      const sz = Math.min(34, 10 + Math.sqrt(r.sold30) / Math.sqrt(soldMax) * 24);
+      const right = x < 72;
+      return `<span class="ow-pr-dt${right ? '' : ' ow-l'}" style="left:${x.toFixed(1)}%;top:${y.toFixed(1)}%;margin-left:${right ? Math.round(sz / 2 + 6) : -Math.round(sz / 2 + 6)}px;margin-top:${l.dy}px">${esc(l.text)}</span>`;
+    }).join('');
+    const yTicks = []; for(let v = 0; v <= yMax; v += 10) yTicks.push(v);
+    const xTicks = [1, 5, 10, 50, 100, 500, 1000, 5000, 10000].filter(u=> u <= uMax * 1.3 && xOf(u) > 4 && xOf(u) < 96);
+    const tY = yOf(target).toFixed(1), sX = xOf(median).toFixed(1);
+    mapEl.innerHTML = `<section class="ow-pr-p" aria-label="The shelf map">
+      <div class="ow-pr-p-h">
+        <span class="ow-pr-p-t">The shelf map</span>
+        <span class="ow-pr-p-n">speed against what it keeps &middot; hover or tap a dot</span>
+        <span class="ow-pr-sp"></span>
+        <span class="ow-pr-lgd"><span><i class="ow-pr-k ow-good"></i>keeping</span><span><i class="ow-pr-k ow-warn"></i>thin</span><span><i class="ow-pr-k ow-bad"></i>under half</span><span><i class="ow-pr-k ow-o ow-sm"></i><i class="ow-pr-k ow-o"></i>money through it</span></span>
+      </div>
+      <div class="ow-pr-mp">
+        <div class="ow-pr-mp-y">${yTicks.map(v=> `<span class="ow-pr-fig ow-pr-mp-yl" style="top:${yOf(v).toFixed(1)}%">${v}%</span>`).join('')}</div>
+        <div class="ow-pr-mp-l"><span class="ow-pr-mp-lt">Not moving</span>${lane}${stillMore > 0 ? `<span class="ow-pr-mp-lm">+${stillMore} more</span>` : ''}</div>
+        <div class="ow-pr-mp-p">
+          <span class="ow-pr-mp-z" style="top:${tY}%"></span>
+          <span class="ow-pr-mp-h" style="top:${tY}%;left:${sX}%"></span>
+          ${yTicks.map(v=> `<span class="ow-pr-mp-gy" style="top:${yOf(v).toFixed(1)}%"></span>`).join('')}
+          ${xTicks.map(u=> `<span class="ow-pr-mp-gx" style="left:${xOf(u).toFixed(1)}%"></span><span class="ow-pr-fig ow-pr-mp-xl" style="left:${xOf(u).toFixed(1)}%">${u}</span>`).join('')}
+          <span class="ow-pr-mp-s" style="left:${sX}%"></span>
+          <span class="ow-pr-mp-t" style="top:${tY}%"></span>
+          <span class="ow-pr-mp-tg" style="top:${tY}%">your bar ${target}%</span>
+          <span class="ow-pr-mp-q ow-tl">Slow &middot; healthy</span>
+          <span class="ow-pr-mp-q ow-tr ow-good">Fast &middot; healthy &mdash; protect</span>
+          <span class="ow-pr-mp-q ow-bl ow-warn">Slow &middot; thin &mdash; rethink</span>
+          <span class="ow-pr-mp-q ow-br ow-warn">Fast &middot; thin &mdash; lift these</span>
+          ${dots}${labels}
+        </div>
+        <div class="ow-pr-tip" hidden></div>
+      </div>
+      <div class="ow-pr-mp-xc"><span>&larr; sells slowly</span><span class="ow-pr-mp-xt">units sold in 30 days</span><span>sells fast &rarr;</span></div>
+    </section>`;
+  }
 
+  /* ================= THE SHELF AT COST ================= */
+  const treeEl = document.getElementById('pr_tree');
+  if(treeEl && nothingRead) treeEl.innerHTML = '';
+  else if(treeEl){
+    const TW = 368, TH = 352;
+    const byValue = ages.filter(r=> r.value > 0).sort((a, b)=> b.value - a.value);
+    const head = byValue.slice(0, 40), rest = byValue.slice(40);
+    const items = head.map(r=> ({ v: r.value, r }));
+    if(rest.length) items.push({ v: rest.reduce((t, r)=> t + r.value, 0), rest: rest.length });
+    const cells = pricingSquarify(items, 0, 0, TW, TH, []);
+    const sum = (k)=> fM(ages.filter(r=> kindOf(r.key) === k).reduce((t, r)=> t + r.value, 0));
+    const tiles = cells.map(c=>{
+      const box = `left:${(c.x / TW * 100).toFixed(2)}%;top:${(c.y / TH * 100).toFixed(2)}%;width:${(c.w / TW * 100).toFixed(2)}%;height:${(c.h / TH * 100).toFixed(2)}%`;
+      const roomy = c.w > 64 && c.h > 36;
+      if(c.rest) return `<span class="ow-pr-tl ow-none ow-rest" style="${box}" title="${c.rest} smaller lines, ${f(c.v)} at cost">${roomy ? `<span class="ow-pr-tl-n">${c.rest} more</span><span class="ow-pr-fig ow-pr-tl-v">${fM(c.v)}</span>` : ''}</span>`;
+      const r = c.r, k = kindOf(r.key);
+      const tone = k === 'ok' ? 'ow-good' : k === 'thin' ? 'ow-warn' : k === 'dead' ? 'ow-bad' : 'ow-none';
+      return `<button type="button" class="ow-pr-tl ${tone}${r.key === selKey ? ' ow-on' : ''}" data-pick="${esc(r.key)}" style="${box}" title="${esc(r.line)}: ${f(r.value)} at cost" aria-label="${esc(r.line)}: ${f(r.value)} at cost">${roomy ? `<span class="ow-pr-tl-n">${esc(short(r.line))}</span><span class="ow-pr-fig ow-pr-tl-v">${fM(r.value)}</span>` : ''}</button>`;
+    }).join('');
+    treeEl.innerHTML = `<section class="ow-pr-p" aria-label="Where the shelf money sits">
+      <div class="ow-pr-p-h"><span class="ow-pr-p-t">Where the shelf money sits</span><span class="ow-pr-sp"></span><span class="ow-pr-fig ow-pr-p-f">${f(shelfValue)} at cost</span></div>
+      <div class="ow-pr-tm-w">
+        <div class="ow-pr-tm" role="img" aria-label="The shelf at cost, ${f(shelfValue)} UGX, by line: ${sum('ok')} keeping, ${sum('thin')} thin, ${sum('dead')} still, ${sum('slow')} slowing">${tiles}</div>
+        <div class="ow-pr-lgd ow-sq">
+          <span><i class="ow-pr-k ow-good"></i>keeping &middot; <b class="ow-pr-fig">${sum('ok')}</b></span>
+          <span><i class="ow-pr-k ow-warn"></i>thin &middot; <b class="ow-pr-fig">${sum('thin')}</b></span>
+          <span><i class="ow-pr-k ow-bad"></i>still &middot; <b class="ow-pr-fig">${sum('dead')}</b></span>
+          <span><i class="ow-pr-k ow-none"></i>slowing &middot; <b class="ow-pr-fig">${sum('slow')}</b></span>
+        </div>
+      </div>
+    </section>`;
+  }
+
+  /* ================= THE QUEUE ================= */
   const rows = pricingSeg === 'thin' ? all.thin : pricingSeg === 'dead' ? all.dead : all;
+  const rankOf = new Map(all.map((x, i)=> [x.src.key, i + 1]));
+  const phoneOpen = pricingOpenKey === '' ? null : (pricingOpenKey || (rows[0] && rows[0].src.key) || null);
+  const DIAL = 2 * Math.PI * 18;
+  const tick = '<svg class="ow-pr-i" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg>';
+  const dash = '<svg class="ow-pr-i" viewBox="0 0 24 24"><path d="M6 12h12"/></svg>';
+  const arrow = '<svg class="ow-pr-i" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+  const caret = '<svg class="ow-pr-i ow-pr-cv" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
+  /* What the shelf asks today, from the same rule the till prices by --
+     retail, the price a walk-in pays. Null where that side has no rule. */
+  const askOf = (r)=> r.costKnown ? ourPriceFor(r.productId, r.variantIdx, 'retail') : null;
+  const stepOf = (r)=> (Number(r.unitCost) || 0) >= 20000 ? 500 : (Number(r.unitCost) || 0) >= 2000 ? 100 : 10;
+  const takeOf = (r)=> r.clearance != null ? r.clearance : Math.round((Number(r.unitCost) || 0) / stepOf(r)) * stepOf(r);
 
-  /* ---- the segments ---- */
-  const seg = (key, label, n)=> `<button type="button" class="ow-pr-sg-b${pricingSeg===key?' ow-on':''}"
-    data-seg="${key}" aria-pressed="${pricingSeg===key}">${label} <span class="ow-pr-sg-n">${n}</span></button>`;
-  const toolbar = `<div class="ow-tb">
-    <div class="ow-pr-sg" role="group" aria-label="Which half of the shelf">
-      ${seg('all', 'All', all.length)}${seg('thin', 'Thin', all.thin.length)}${seg('dead', 'Not moving', all.dead.length)}
-    </div>
-    <span class="ow-tb-n">
-      <span class="ow-pr-lg"><span class="ow-pr-yb ow-pr-mo"></span>a month, every month</span>
-      <span class="ow-pr-lg"><span class="ow-pr-yb ow-pr-once"></span>cash back once</span>
-    </span>
-  </div>`;
-
-  /* ---- why a line is where it is ----
-     The column the old screens did not have, now a meter as well as a
-     reason: the fill is where the line stands, the tick is the bar the
-     owner set. Toned only where the tone means something: a line
-     keeping less than half its target, or dead twice as long as the
-     window, is genuinely bad; close is amber; stock nobody has ever
-     bought is a fact, not an alarm, and has no position to fill. */
-  const meter = (row)=>{
-    const r = row.src;
-    if(row.kind === 'thin'){
-      if(r.keptPct == null) return '<span class="ow-pr-mt ow-none"></span>';
-      const scale = target * 4 / 3;
-      const tone = r.keptPct < target / 2 ? 'ow-bad' : 'ow-warn';
-      return `<span class="ow-pr-mt"><span class="ow-pr-mt-f ${tone}" style="width:${pct(Math.max(0, r.keptPct), scale)}%"></span><span class="ow-pr-mt-t" style="left:${pct(target, scale)}%"></span></span>`;
-    }
-    if(r.daysQuiet == null) return '<span class="ow-pr-mt ow-none"></span>';
-    const scale = quiet * 4;
-    const tone = r.daysQuiet >= quiet * 2 ? 'ow-bad' : 'ow-warn';
-    return `<span class="ow-pr-mt"><span class="ow-pr-mt-f ${tone}" style="width:${pct(r.daysQuiet, scale)}%"></span><span class="ow-pr-mt-t" style="left:${pct(quiet, scale)}%"></span></span>`;
-  };
-  const reason = (row)=>{
-    if(row.kind === 'thin'){
-      const r = row.src;
-      const tone = r.keptPct == null ? 'ow-none' : r.keptPct < target / 2 ? 'ow-bad' : 'ow-warn';
-      const head = r.keptPct == null ? 'Kept share not known' : `Keeping ${r.keptPct}% of ${target}%`;
-      const sub = r.staleFixed ? 'a fixed mark gone stale'
-        : !r.rule ? 'no rule set on this line'
-        : r.ruleYieldPct != null ? `rule worth ${r.ruleYieldPct}% today` : 'priced off a rule';
-      return `<span class="ow-pr-rz ow-pr-wy ${tone}"><span class="ow-pr-rz-h">${esc(head)}</span>${meter(row)}<span class="ow-pr-rz-s">${esc(sub)}</span></span>`;
-    }
-    const r = row.src;
-    const tone = r.daysQuiet == null ? 'ow-none' : r.daysQuiet >= quiet * 2 ? 'ow-bad' : 'ow-warn';
-    const head = r.daysQuiet == null ? 'Never sold' : `Quiet ${r.daysQuiet} days`;
-    const buyers = deadStockBuyers(r.key);
-    const sub = r.offeredOn ? 'offered ' + fmtShortDate(r.offeredOn)
-      : r.clearance != null ? 'marked to clear, not offered'
-      : buyers.length ? `${buyers.length} buyer${buyers.length===1?'':'s'} ${buyers.length===1?'has':'have'} taken it`
-      : 'nobody has ever bought this';
-    return `<span class="ow-pr-rz ow-pr-wy ${tone}"><span class="ow-pr-rz-h">${esc(head)}</span>${meter(row)}<span class="ow-pr-rz-s">${esc(sub)}</span></span>`;
-  };
-
-  /* ---- worth over a year, as a length ----
-     Every row on one scale, the longest fix on the list setting it. A
-     thin line's bar is twelve segments and a dead line's is one block,
-     so the reason a small monthly figure outranks a big locked one is
-     visible in the row itself. */
-  const maxYear = all.reduce((m, x)=> Math.max(m, x.yearWorth), 0);
-  const yearBar = (row)=> `<span class="ow-pr-yr">
-    <span class="ow-pr-yb ${row.kind === 'thin' ? 'ow-pr-mo' : 'ow-pr-once'}" style="width:${pct(row.yearWorth, maxYear)}%"></span>
-    <span class="ow-pr-yr-v">${f(row.yearWorth)} ${row.kind === 'thin' ? 'a year' : 'once'}</span></span>`;
-
-  /* ---- a price line, drawn ----
-     One axis from a little under the lowest mark to a little over the
-     highest. Bands are drawn first so the marks sit on them; a label
-     near either end is pinned inward so it never leaves the box. */
-  const ladder = (spec)=>{
-    const vals = spec.marks.map(m=> m.v).filter(v=> v != null && v > 0);
+  /* A price line, drawn: one axis from a little under the lowest mark to
+     a little over the highest, a label near either end pinned inward so
+     it never leaves the box. */
+  const ladder = (marks, opts)=>{
+    const vals = marks.map(m=> m.v).filter(v=> v != null && v > 0);
     if(vals.length < 2) return '';
-    const lo = Math.min(...vals) * (spec.loPad || 0.9), hi = Math.max(...vals) * 1.06;
+    const lo = Math.min(...vals) * (opts.loPad || 0.94), hi = Math.max(...vals) * 1.05;
     const at = (v)=> Math.max(0, Math.min(100, (v - lo) / (hi - lo) * 100));
-    const band = (cls, a, b)=> `<span class="${cls}" style="left:${Math.min(at(a), at(b)).toFixed(1)}%;width:${Math.abs(at(b) - at(a)).toFixed(1)}%"></span>`;
+    const band = (cls, a, b)=> a == null || b == null ? '' : `<span class="${cls}" style="left:${Math.min(at(a), at(b)).toFixed(1)}%;width:${Math.abs(at(b) - at(a)).toFixed(1)}%"></span>`;
     const mark = (m)=>{
       const x = at(m.v);
-      const edge = x < 12 ? ' ow-l' : x > 88 ? ' ow-r' : '';
-      const label = `<span class="ow-pr-ld-t ${m.up ? 'ow-up' : 'ow-dn'}${edge}">${m.label}<b class="ow-pr-ld-n">${f(m.v)}</b></span>`;
-      return m.dot
-        ? `<span class="ow-pr-ld-d ${m.tone || ''}" style="left:${x.toFixed(1)}%">${label}</span>`
-        : `<span class="ow-pr-ld-m ${m.tone || ''}" style="left:${x.toFixed(1)}%">${label}</span>`;
+      const edge = x < 14 ? ' ow-l' : x > 86 ? ' ow-r' : '';
+      return `<span class="ow-pr-ld-m ${m.tone || 'ow-none'}" style="left:${x.toFixed(1)}%"></span>
+        <span class="ow-pr-ld-l ${m.up ? 'ow-up' : 'ow-dn'} ${m.tone || 'ow-none'}${edge}" style="left:${x.toFixed(1)}%"><span class="ow-pr-ld-c">${m.label}</span><b class="ow-pr-fig">${f(m.v)}</b></span>`;
     };
-    return `<div class="ow-pr-ld" role="img" aria-label="${esc(spec.aria)}">
-      ${spec.zoneTo != null ? `<span class="ow-pr-ld-z" style="width:${at(spec.zoneTo).toFixed(1)}%"></span>` : ''}
+    return `<div class="ow-pr-ld" role="img" aria-label="${esc(opts.aria)}">
+      ${opts.loss != null ? `<span class="ow-pr-ld-x" style="width:${at(opts.loss).toFixed(1)}%"></span>` : ''}
       <span class="ow-pr-ld-ax"></span>
-      ${(spec.bands || []).map(b=> band(b.cls, b.from, b.to)).join('')}
-      ${spec.marks.filter(m=> m.v != null && m.v > 0).map(mark).join('')}
+      ${(opts.bands || []).map(b=> band(b.cls, b.from, b.to)).join('')}
+      ${marks.filter(m=> m.v != null && m.v > 0).map(mark).join('')}
+      ${opts.dot != null ? `<span class="ow-pr-ld-d" style="left:${at(opts.dot).toFixed(1)}%"></span>` : ''}
     </div>`;
   };
-  const tick = '<svg class="ow-pr-tc-i" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg>';
-  const dash = '<svg class="ow-pr-tc-i" viewBox="0 0 24 24"><path d="M6 12h12"/></svg>';
-
-  /* THE BASIS LINE THAT MAKES ONE QUEUE HONEST. A month, or once. It is
-     the only thing standing between a reader and adding two figures
-     that are not the same money. */
-  const value = (row)=> `<span class="ow-q-v">
-    <span class="ow-q-f">${row.kind === 'thin' ? '+' : ''}${f(row.worth)}</span>
-    <span class="ow-q-b">${row.kind === 'thin' ? 'a month, if you lift it' : 'locked up, once'}</span></span>`;
-
-  /* ---- a thin line, opened ----
-     The arithmetic laid out so it can be CHECKED rather than trusted:
-     what it costs, what you charge, what would keep the target, and
-     what the last thirty days would have returned at it. Never a
-     projection -- it says what really sold. */
-  const thinBody = (row)=>{
-    const r = row.src;
-    const lift = marginLiftFor(r, target);
-    const unit = r.kind === 'wholesale' ? 'pack' : 'piece';
-    const other = (lift ? lift.kind : r.kind) === 'retail' ? 'wholesale' : 'retail';
-    /* The mark the rule adds against the mark the target needs, on one
-       scale -- "it stopped growing" as two bars. */
-    const mkMax = lift && r.rule ? Math.max(Number(r.rule.value) || 0, lift.value) : 0;
-    const stale = r.staleFixed
-      ? `<div class="ow-pr-fx">
-          <svg class="ow-pr-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
-          <div>
-            <p class="ow-pr-fx-t"><b>A fixed mark gone stale.</b> Your rule adds <b class="ow-pr-fig">${fmtUGX(r.rule.value)}</b> a ${unit}${
-              r.ruleSource === 'default' ? ', the shop default' : r.ruleSource === 'variant' || r.ruleSource === 'variant-stock' ? ', set on this variant' : ''
-              } &mdash; <b class="ow-pr-fig">${r.ruleYieldPct}%</b> of the price it makes on a cost of <b class="ow-pr-fig">${fmtUGX(r.cost)}</b>.</p>
-            ${mkMax > 0 ? `<div class="ow-pr-mk">
-              <span>Your mark</span><span class="ow-pr-mk-b" style="width:${pct(Number(r.rule.value) || 0, mkMax)}%"></span><b class="ow-pr-fig">${f(r.rule.value)}</b>
-              <span>${target}% needs</span><span class="ow-pr-mk-b ow-good" style="width:${pct(lift.value, mkMax)}%"></span><b class="ow-pr-fig">${f(lift.value)}</b>
-            </div>` : ''}
-            <p class="ow-pr-fx-n">A fixed mark does not grow with the cost. It was a fair mark once, and nothing has repriced it since.</p>
-          </div>
-        </div>`
-      : '';
-    const est = r.estShare >= 20
-      ? `<p class="ow-q-note">${r.estShare}% of these units were costed by estimate, so the kept share is a good figure rather than a certain one.</p>`
-      : '';
-    /* Cost under the line, the two prices over it: the marks that sit
-       closest on a thin line are cost and price, so they never share a
-       row of labels. */
-    const under = r.price != null && r.price < r.cost;
-    const pic = lift && r.price != null ? ladder({
-      aria: `Costs ${f(r.cost)}, you charge ${f(r.price)}, keeping ${target}% needs ${f(lift.target)}`,
-      bands: [{ cls: 'ow-pr-ld-g', from: r.cost, to: lift.target },
-              { cls: 'ow-pr-ld-b' + (under ? ' ow-bad' : ''), from: r.cost, to: r.price }],
-      marks: [{ v: r.cost, label: 'costs', up: false },
-              { v: r.price, label: 'you charge', up: true, tone: under ? 'ow-bad' : 'ow-warn' },
-              { v: lift.target, label: `keeps ${target}%`, up: false, tone: 'ow-good' }] }) : '';
-    const sum = lift && r.price != null && r.atStake > 0 ? `<div class="ow-pr-eq">
-        <span class="ow-pr-eq-c"><b class="ow-pr-eq-n">+${f(lift.target - r.price)}</b>a ${unit}</span>
-        <span class="ow-pr-eq-o">&times;</span>
-        <span class="ow-pr-eq-c"><b class="ow-pr-eq-n">${r.units30}</b>sold in 30 days</span>
-        <span class="ow-pr-eq-o">=</span>
-        <span class="ow-pr-eq-c ow-good"><b class="ow-pr-eq-n">+${f(r.atStake)}</b>a month</span>
-      </div>` : '';
-    return `<div class="ow-q-x">
-      ${pic || sum ? `<div class="ow-pr-lx">${pic}${sum}</div>` : ''}
-      ${stale}${est}
-      ${lift ? `<div class="ow-pr-tc">
-        <span class="ow-cp ow-good">${tick}Your shelf</span>
-        <span class="ow-cp ow-good">${tick}Bought in to order</span>
-        <span class="ow-cp">${dash}${other[0].toUpperCase() + other.slice(1)} price untouched</span>
-      </div>` : ''}
-      <div class="ow-q-a">
-        ${lift ? `<button type="button" class="btn btn-accent ow-sm pr-lift" data-key="${esc(r.key)}">Charge ${f(lift.target)}</button>` : ''}
-        <button type="button" class="btn btn-ghost ow-sm pr-inv">Open the line</button>
-      </div>
-    </div>`;
-  };
+  const thinLadder = (r, lift)=> lift && r.price != null ? ladder([
+      { v: r.cost, label: 'costs you', up: false },
+      { v: r.price, label: 'you charge', up: true, tone: toneOf(r.key) },
+      { v: lift.target, label: `keeps ${target}%`, up: false, tone: 'ow-good' }], {
+    aria: `Costs ${f(r.cost)}, you charge ${f(r.price)}, keeping ${target}% needs ${f(lift.target)}`,
+    bands: [{ cls: 'ow-pr-ld-g', from: r.cost, to: lift.target }, { cls: 'ow-pr-ld-b ' + toneOf(r.key), from: r.cost, to: Math.max(r.cost, r.price) }] }) : '';
+  const equation = (r, lift)=> lift && r.price != null && r.atStake > 0 ? `<div class="ow-pr-eq">
+      <span class="ow-pr-eq-c"><b class="ow-pr-fig">+${f(lift.target - r.price)}</b>a ${unitOf(r)}</span>
+      <span class="ow-pr-eq-o">&times;</span>
+      <span class="ow-pr-eq-c"><b class="ow-pr-fig">${r.units30}</b>sold in 30 days</span>
+      <span class="ow-pr-eq-o">=</span>
+      <span class="ow-pr-eq-c ow-good"><b class="ow-pr-fig">+${f(r.atStake)}</b>a month</span>
+    </div>` : '';
 
   /* ---- a line that is not moving, opened ----
-     The price you would take, what that price would mean said BEFORE
-     the tap, and the people who have actually bought this line. An
-     offer is about ONE line, so it is written on that line beside the
-     figure it names -- not gathered into a second console below the
-     list, away from the price that produced it. */
-  const deadBody = (row)=>{
-    const r = row.src;
-    const cl = r.clearance == null ? null : clearanceFor(r, r.clearance);
-    /* What the shelf asks today, from the same rule the till prices by
-       -- retail, the price a walk-in pays. Null where that side has no
-       rule, and then the ladder draws only cost and the offer. */
-    const ask = r.costKnown ? ourPriceFor(r.productId, r.variantIdx, 'retail') : null;
-    const verdict = !cl ? ''
-      : !r.costKnown
-        ? `<div class="ow-pr-vd ow-none">No cost on file for this line, so nothing here can say what clearing it at <b class="ow-pr-fig">${fmtUGX(cl.target)}</b> would cost you. Price the stock on Inventory and this can speak.</div>`
-      : cl.owesConsignor > 0
-        ? `<div class="ow-pr-vd ow-bad"><b class="ow-pr-fig">${fmtUGX(cl.target)}</b> is under the <b class="ow-pr-fig">${fmtUGX(Math.round(cl.consignedCost))}</b> you will owe the consignor on these &mdash; <b class="ow-pr-fig">${fmtUGX(cl.owesConsignor)}</b> out of your own pocket across ${r.qty}. Their goods, your loss.</div>`
-      : cl.shortEach > 0
-        ? `<div class="ow-pr-vd ow-bad"><b class="ow-pr-fig">${fmtUGX(cl.shortEach)}</b> below what it cost you &mdash; <b class="ow-pr-fig">${fmtUGX(cl.shortAll)}</b> over the ${r.qty} you hold, and <b class="ow-pr-fig">${fmtUGX(cl.raises)}</b> back in the drawer. Cash now against stock forever is your call, and this will not stop you making it.</div>`
-        : `<div class="ow-pr-vd ow-good">You would keep <b class="ow-pr-fig">${cl.keptPct}%</b> &mdash; <b class="ow-pr-fig">${fmtUGX(cl.raises)}</b> back in the drawer if the lot goes. Nothing on your shelf changes: this writes the offer only.</div>`;
-
-    /* Who has taken this, and -- for a line nobody has taken -- who
-       has taken what it goes with. A shop clearing something with no
-       buyers had nobody to write to at all; the nearest thing to a
-       buyer is somebody who bought the other half of the job. */
-    const buyers = deadStockBuyers(r.key)
-      .concat(deadStockCompanionBuyers(r.key));
-    const mostUnits = buyers.reduce((m, b)=> Math.max(m, Number(b.units) || 0), 0);
-    const ident = shopIdentity();
-    const offers = !cl ? '' : buyers.length
-      ? `<div class="ow-pr-of">
-          <div class="ow-pr-of-h">
-            <span class="ow-pr-of-t">Who has taken this before</span>
-            <span class="ow-pr-of-n">${buyers.some(b=> b.via) ? 'those who took it, then those who took what it goes with' : 'most units first'} &mdash; a counter sale leaves nobody to write to</span>
-          </div>
-          <div class="ow-pr-of-l">${buyers.map((b, i)=>{
-            const id = String(b.customerId != null ? b.customerId : 'name:' + b.name.toLowerCase());
-            const open = pricingOfferId === id;
-            const wasPaid = lastClearancePricePaid(b, r.key);
-            const msg = clearanceOfferMessage(b, [{ line: r.line, clearance: r.clearance, qty: r.qty, wasPaid }], ident);
-            return `<button type="button" class="ow-pr-of-r${open?' ow-on':''}" data-offer="${esc(id)}" aria-expanded="${open}">
-                <span class="ow-pr-of-nm">${esc(b.name)}<span class="ow-pr-of-ph${b.phone?'':' ow-pr-nonum'}">${b.phone ? esc(b.phone) : 'no number on file'}</span></span>
-                <span class="ow-pr-of-b"><span class="ow-pr-of-u" style="width:${mostUnits > 0 ? Math.max(3, Math.round((Number(b.units) || 0) / mostUnits * 44)) : 0}px"></span>${b.via ? `took <b>${b.units}</b> ${esc(briefShortName(b.via))}, which this goes with` : `<b>${b.units}</b> taken before`}${b.lastBought ? ' &middot; last ' + esc(fmtShortDate(b.lastBought)) : ''}</span>
-                <svg class="ow-q-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-              </button>
-              ${open ? `<div class="ow-pr-of-x">
-                <textarea class="ow-msg" data-msg="${esc(id)}" rows="${Math.min(20, Math.max(9, msg.split('\\n').length + 1))}">${esc(msg)}</textarea>
-                <p class="ow-msg-n">Nothing has been sent. It names only this line, at the price you wrote above &mdash; change any of it before you send.${
-                  b.phone ? '' : ' There is no number on file for this buyer, so it can be copied but not sent.'}</p>
-                <div class="ow-q-a">
-                  ${b.phone ? `<button type="button" class="btn btn-accent ow-sm pr-send" data-who="${esc(id)}" data-phone="${esc(b.phone)}" data-key="${esc(r.key)}">Send on WhatsApp</button>` : ''}
-                  <button type="button" class="btn btn-ghost ow-sm pr-copy" data-who="${esc(id)}" data-key="${esc(r.key)}">Copy</button>
-                </div>
-              </div>` : ''}`;
-          }).join('')}</div>
-        </div>`
-      : `<p class="ow-q-note">Nobody on your books has bought this line &mdash; every sale of it was a counter sale, or the buyer was never recorded. There is nobody here to write to. A shop poster or a walk-in price is the tool for this one, not a message.</p>`;
-
-    return `<div class="ow-q-x">
-      <p class="ow-q-note"><b class="ow-pr-fig">${r.qty}</b> on the shelf at <b class="ow-pr-fig">${r.costKnown ? fmtUGX(r.unitCost) : '&mdash;'}</b> each${
-        r.daysQuiet == null ? ', and nothing has ever gone' : `, standing still for ${r.daysQuiet} days`}.${
-        r.costFrom === 'registry' ? ' Costed at what it would take to replace, because no purchase behind it says otherwise.' : ''}</p>
-      ${ask != null || r.clearance != null ? ladder({
-        aria: `Cost ${f(r.unitCost)}${ask != null ? ', you ask ' + f(ask) : ''}${r.clearance != null ? ', you would take ' + f(r.clearance) : ''}`,
-        loPad: 0.8, zoneTo: r.costKnown ? r.unitCost : null,
-        marks: [{ v: r.costKnown ? r.unitCost : null, label: 'cost you', up: false },
-                { v: ask, label: 'you ask', up: true, tone: 'ow-none' },
-                { v: r.clearance, label: 'you&rsquo;d take', up: true, dot: true,
-                  tone: r.costKnown && r.clearance < r.unitCost ? 'ow-bad' : '' }] }) : ''}
-      <div class="ow-pr-pf">
-        <label class="ow-pr-pf-l" for="pr_price_field">A price you would take</label>
-        <input class="ow-pr-pf-f" id="pr_price_field" type="number" min="0" step="any"
-          value="${r.clearance == null ? '' : r.clearance}" data-key="${esc(r.key)}">
-        <span class="ow-pr-pf-g">each${r.costKnown ? ` &middot; costs <b class="ow-pr-fig">${fmtUGX(r.unitCost)}</b>` : ''}</span>
-        <button type="button" class="btn btn-ghost ow-sm pr-price-save" data-key="${esc(r.key)}">Write it down</button>
-        ${r.clearance != null ? `<button type="button" class="btn btn-ghost ow-sm pr-price-clear" data-key="${esc(r.key)}">Not clearing it</button>` : ''}
+     The price you would take, what that price would mean said BEFORE the
+     tap, and the people who have actually bought this line. An offer is
+     about ONE line, so it is written on that line beside the figure it
+     names. BELOW COST IS SAID, NEVER BLOCKED: Cash now against stock
+     forever is your call, and the screen says the loss in shillings. */
+  const deadVerdict = (r, aim)=>{
+    const cl = clearanceFor(r, aim);
+    if(!cl) return '';
+    if(!r.costKnown) return `<p class="ow-pr-vn ow-none">No cost on file for this line, so nothing here can say what clearing it at <b class="ow-pr-fig">${fmtUGX(cl.target)}</b> would cost you. Price the stock on Inventory and this can speak.</p>`;
+    if(cl.owesConsignor > 0) return `<div class="ow-pr-vt ow-bad">
+        <span class="ow-pr-vt-c"><b class="ow-pr-fig">&minus;${f(cl.owesConsignor)}</b>out of your own pocket</span>
+        <span class="ow-pr-vt-c"><b class="ow-pr-fig">${f(Math.round(cl.consignedCost))}</b>owed the consignor on each</span>
+      </div><p class="ow-pr-vn">Under what you will owe the consignor on these. Cash now against stock forever is your call.</p>`;
+    if(cl.shortEach > 0) return `<div class="ow-pr-vt ow-bad">
+        <span class="ow-pr-vt-c"><b class="ow-pr-fig">&minus;${f(cl.shortAll)}</b>under cost, over ${r.qty}</span>
+        <span class="ow-pr-vt-c"><b class="ow-pr-fig">${f(cl.raises)}</b>still back in the drawer</span>
+      </div><p class="ow-pr-vn">Cash now against stock forever is your call.</p>`;
+    return `<div class="ow-pr-vt ow-good">
+        <span class="ow-pr-vt-c"><b class="ow-pr-fig">${f(cl.raises)}</b>back in the drawer</span>
+        <span class="ow-pr-vt-c"><b class="ow-pr-fig">${cl.keptPct}%</b>still kept on it</span>
+      </div>`;
+  };
+  const deadLadder = (r, aim)=>{
+    const ask = askOf(r);
+    return ladder([
+      { v: r.costKnown ? r.unitCost : null, label: 'cost you', up: false },
+      { v: ask, label: 'you ask', up: true },
+      { v: aim, label: 'you would take', up: !(ask != null && Math.abs(aim - ask) < Math.abs(aim - r.unitCost)), tone: r.costKnown && aim < r.unitCost ? 'ow-bad' : 'ow-nv' }], {
+      aria: `Cost ${f(r.unitCost)}${ask != null ? ', you ask ' + f(ask) : ''}, you would take ${f(aim)}`,
+      loPad: 0.82, loss: r.costKnown ? r.unitCost : null, dot: aim });
+  };
+  const ident = shopIdentity();
+  const deadBody = (r, where)=>{
+    const uid = (where || 'in') + '_' + r.key;
+    const aim = takeOf(r);
+    const ask = askOf(r);
+    const step = stepOf(r);
+    const lo = Math.max(step, Math.round((Number(r.unitCost) || aim) * 0.6 / step) * step);
+    const hi = Math.max(aim, Math.round(Math.max(ask || 0, (Number(r.unitCost) || aim) * 1.3) / step) * step);
+    const buyers = deadStockBuyers(r.key).concat(deadStockCompanionBuyers(r.key));
+    const direct = buyers.filter(b=> !b.via).length;
+    const most = buyers.reduce((m, b)=> Math.max(m, Number(b.units) || 0), 0);
+    const marked = r.clearance != null;
+    const offers = buyers.length ? buyers.map(b=>{
+      const id = String(b.customerId != null ? b.customerId : 'name:' + String(b.name).toLowerCase());
+      const open = pricingOfferId === id;
+      const wasPaid = lastClearancePricePaid(b, r.key);
+      const msg = clearanceOfferMessage(b, [{ line: r.line, clearance: aim, qty: r.qty, wasPaid }], ident);
+      const initials = nameInitials(b.name || '?');
+      return `<button type="button" class="ow-pr-by-r${open ? ' ow-open' : ''}" data-offer="${esc(id)}" aria-expanded="${open}">
+          <span class="ow-pr-av">${esc(initials)}</span>
+          <span class="ow-pr-by-n"><span class="ow-pr-by-t" title="${esc(b.name)}">${esc(b.name)}</span>
+            <span class="ow-pr-by-s">${b.via ? `took ${b.units} ${esc(briefShortName(b.via))}, which this goes with` : `took ${b.units}${b.lastBought ? ' &middot; last ' + esc(fmtShortDate(b.lastBought)) : ''}`}${b.phone ? '' : ' &middot; no number on file'}</span></span>
+          <span class="ow-pr-by-u" style="width:${most > 0 ? Math.max(4, Math.round((Number(b.units) || 0) / most * 56)) : 4}px"></span>
+          ${caret}
+        </button>
+        ${open ? `<div class="ow-pr-by-x">
+          <textarea class="ow-pr-msg" data-msg="${esc(id)}" rows="${Math.min(14, Math.max(5, msg.split('\n').length + 1))}" aria-label="The offer to ${esc(b.name)}">${esc(msg)}</textarea>
+          <p class="ow-pr-by-p">Nothing has been sent. It names only this line, at the price above &mdash; change any of it before you send.${b.phone ? '' : ' There is no number on file for this buyer, so it can be copied but not sent.'}${marked ? '' : ' Mark the price below first; an offer goes out at a price you have written down.'}</p>
+          ${marked ? `<div class="ow-pr-ac">
+            ${b.phone ? `<button type="button" class="btn btn-ghost ow-sm pr-send" data-who="${esc(id)}" data-phone="${esc(b.phone)}" data-key="${esc(r.key)}">Send on WhatsApp</button>` : ''}
+            <button type="button" class="btn btn-ghost ow-sm pr-copy" data-who="${esc(id)}" data-key="${esc(r.key)}">Copy</button>
+          </div>` : ''}
+        </div>` : ''}`;
+    }).join('')
+    : `<p class="ow-pr-by-p ow-pad">No buyer on your books &mdash; nobody has ever bought this by name, and nobody took what it goes with. A shop poster or a walk-in price is the tool for this one, not a message.</p>`;
+    return `<div class="ow-pr-dd" data-key="${esc(r.key)}">
+      <div class="ow-pr-dd-ld">${deadLadder(r, aim)}</div>
+      <div class="ow-pr-pb">
+        <div class="ow-pr-pb-h"><label class="ow-pr-pb-l" for="pr_take_${esc(uid)}">A price you would take</label><span class="ow-pr-fig ow-pr-pb-v"><span class="pr-take-v">${f(aim)}</span><span class="ow-pr-u"> each</span></span></div>
+        <input class="ow-pr-rng pr-take" id="pr_take_${esc(uid)}" type="range" min="${lo}" max="${hi}" step="${step}" value="${aim}" data-key="${esc(r.key)}">
+        <div class="ow-pr-fig ow-pr-pb-s"><span>${f(lo)}</span><span>${r.costKnown ? 'cost ' + f(r.unitCost) : 'no cost on file'}</span><span>${f(hi)}</span></div>
       </div>
-      ${verdict}${offers}
+      <div class="ow-pr-dd-v">${deadVerdict(r, aim)}</div>
+      <div class="ow-pr-by">
+        <div class="ow-pr-by-h"><span class="ow-pr-by-ht">${direct ? 'Who has taken this before' : buyers.length ? 'Who took what it goes with' : 'Who has taken this before'}</span><span class="ow-pr-by-hn">${direct ? 'most units first' : buyers.length ? 'nobody bought it by name' : ''}</span></div>
+        ${offers}
+      </div>
+      ${marked
+        ? `<div class="ow-pr-ok">${tick} <span class="ow-pr-ok-t">Marked to clear at <b class="ow-pr-fig">${f(r.clearance)}</b> &middot; ${r.offeredOn ? 'offered ' + esc(fmtShortDate(r.offeredOn)) : 'no offer sent'}</span><button type="button" class="ow-pr-un pr-price-clear" data-key="${esc(r.key)}">Not clearing it</button></div>`
+        : `<button type="button" class="btn btn-accent ow-pr-bt ow-pr-full pr-price-save" data-key="${esc(r.key)}">Mark to clear at <span class="ow-pr-fig pr-take-v">${f(aim)}</span></button>`}
     </div>`;
   };
 
-  /* ONE CALL, TWO SKINS. The 44px console row and the phone card are
-     emitted together, so neither can drift from the other. */
-  const rowHTML = (row)=>{
-    const open = row.key === pricingOpenKey;
-    const r = row.src;
-    const sub = row.kind === 'thin'
-      ? `${r.units30} sold in 30 days · ${r.kind === 'wholesale' ? 'by the pack' : 'by the piece'}`
-      : `${r.qty} on the shelf · ${r.costKnown ? f(r.unitCost) + ' each, at cost' : 'no cost on file'}`;
-    const chip = row.kind === 'thin'
-      ? (r.keptPct == null ? 'Kept share not known' : `Keeping ${r.keptPct}% of ${target}%`)
+  /* ---- the dial: how far off the bar, as a share of a circle ----
+     A thin line's dial fills with how much of the bar it keeps; a still
+     line's with how long it has stood, a full turn at three bars. */
+  const rowHTML = (item)=>{
+    const r = item.src, k = r.key;
+    const thin = item.kind === 'thin';
+    const tone = toneOf(k);
+    const rank = rankOf.get(k) || 0;
+    const lift = thin ? marginLiftFor(r, target) : null;
+    const share = thin ? Math.max(0, Math.min(1, (r.keptPct || 0) / target)) : r.daysQuiet == null ? 1 : Math.min(1, r.daysQuiet / (quiet * 3));
+    const ask = thin ? null : askOf(r);
+    const aim = thin ? null : takeOf(r);
+    const sub = thin
+      ? `${r.units30} sold in 30 days &middot; by the ${unitOf(r)}`
+      : r.clearance != null ? `marked to clear at ${f(r.clearance)} &middot; ${r.offeredOn ? 'offered ' + esc(fmtShortDate(r.offeredOn)) : 'not offered yet'}`
+      : `${r.qty} on the shelf &middot; ${r.costKnown ? f(r.unitCost) + ' each at cost' : 'no cost on file'}`;
+    const chip = thin ? (r.keptPct == null ? 'Kept share not known' : `Keeping ${r.keptPct}% of ${target}%`)
       : (r.daysQuiet == null ? 'Never sold' : `Quiet ${r.daysQuiet} days`);
-    const chipTone = row.kind === 'thin'
-      ? (r.keptPct == null ? '' : r.keptPct < target / 2 ? ' ow-bad' : ' ow-warn')
-      : (r.daysQuiet == null ? '' : r.daysQuiet >= quiet * 2 ? ' ow-bad' : ' ow-warn');
-    return `<div class="ow-q${open ? ' ow-open' : ''}" data-row="${esc(row.key)}">
-      <button type="button" class="ow-q-r" data-open="${esc(row.key)}" aria-expanded="${open}">
-        <svg class="ow-q-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-        <span class="ow-q-t" title="${esc(row.line)}"><span class="ow-q-who">${esc(row.line)}</span><span class="ow-q-sep">&middot;</span><span class="ow-q-rest">${esc(sub)}</span></span>
-        ${reason(row)}
-        ${yearBar(row)}
-        ${value(row)}
+    const fill = thin ? pct(Math.max(0, r.keptPct || 0), target * 4 / 3) : r.daysQuiet == null ? '100' : pct(r.daysQuiet, quiet * 4);
+    const tk = thin ? pct(target, target * 4 / 3) : pct(quiet, quiet * 4);
+    const fig = thin ? '+' + f(r.atStake) : f(r.value);
+    const open = k === phoneOpen;
+    const on = k === selKey;
+    const buyerN = thin ? 0 : deadStockBuyers(k).length;
+    const mateN = thin || buyerN ? 0 : deadStockCompanionBuyers(k).length;
+    return `<div class="ow-pr-qw${open ? ' ow-open' : ''}">
+      <button type="button" class="ow-pr-qr${on ? ' ow-on' : ''}" data-open="${esc(k)}" aria-pressed="${on}">
+        <span class="ow-pr-fig ow-pr-rk${rank <= 3 ? ' ow-top' : ''}">${rank < 10 ? '0' : ''}${rank}</span>
+        <span class="ow-pr-qn">
+          <span class="ow-pr-qn-h"><span class="ow-pr-qn-t" title="${esc(r.line)}">${esc(r.line)}</span><span class="ow-pr-kt ${tone}">${thin ? 'Thin' : 'Not moving'}</span></span>
+          <span class="ow-pr-qn-s">${sub}</span>
+        </span>
+        <span class="ow-pr-dial ${tone}" role="img" aria-label="${thin ? `Keeps ${r.keptPct}% against your ${target}%` : r.daysQuiet == null ? 'Never sold' : `Quiet ${r.daysQuiet} days against your ${quiet}`}">
+          <span class="ow-pr-dial-w"><svg class="ow-pr-dial-g" viewBox="0 0 44 44" width="44" height="44"><circle class="ow-pr-dial-k" cx="22" cy="22" r="18"></circle><circle class="ow-pr-dial-f" cx="22" cy="22" r="18" stroke-dasharray="${(share * DIAL).toFixed(1)} ${DIAL.toFixed(1)}" transform="rotate(-90 22 22)"></circle></svg>
+            <span class="ow-pr-fig ow-pr-dial-v">${thin ? (r.keptPct == null ? '&mdash;' : r.keptPct) : r.daysQuiet == null ? '&mdash;' : r.daysQuiet + 'd'}</span></span>
+          <span class="ow-pr-dial-t"><span class="ow-pr-dial-h">${thin ? Math.round(share * 100) + '% of bar' : r.daysQuiet == null ? 'Never sold' : (r.daysQuiet / quiet).toFixed(1) + '&times; bar'}</span>
+            <span class="ow-pr-dial-s">${thin ? `keeps ${r.keptPct} of ${target}%` : r.daysQuiet == null ? 'no sale on file' : `${r.daysQuiet} of ${quiet} days`}</span></span>
+        </span>
+        <span class="ow-pr-mv">
+          <span class="ow-pr-mv-r${thin ? ' ow-good' : ''}"><span class="ow-pr-fig ow-pr-mv-a">${thin ? (r.price != null ? f(r.price) : '&mdash;') : (ask != null ? f(ask) : '&mdash;')}</span>${arrow}<span class="ow-pr-fig ow-pr-mv-b">${thin ? (lift ? f(lift.target) : '&mdash;') : f(r.clearance != null ? r.clearance : aim)}</span></span>
+          <span class="ow-pr-mv-n">${thin ? (lift && r.price != null ? `+${f(lift.target - r.price)} a ${unitOf(r)} keeps ${target}%` : 'no price on file') : r.clearance != null ? 'marked to clear' : 'ask, to clear at cost'}</span>
+        </span>
+        <span class="ow-pr-w">
+          <span class="ow-pr-fig ow-pr-w-v${thin ? ' ow-good' : ''}">${fig}</span>
+          <span class="ow-pr-w-s"><span class="ow-pr-fig ow-pr-ck${thin ? ' ow-good' : ''}">&times;${thin ? 12 : 1}</span>${thin ? 'a month' : 'locked, once'}</span>
+        </span>
       </button>
-      <button type="button" class="ow-q-card" data-open="${esc(row.key)}" aria-expanded="${open}">
-        <div class="ow-q-cm"><span class="ow-cp${chipTone}">${esc(chip)}</span>
-          <svg class="ow-q-cc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
-        ${meter(row)}
-        <p class="ow-q-ct">${esc(row.line)}</p>
-        <span class="ow-q-cv">${row.kind === 'thin' ? '+' : ''}${f(row.worth)}<span class="ow-q-b">${
-          row.kind === 'thin' ? 'a month, if you lift it' : 'locked up, once'}</span></span>
-        <p class="ow-q-note">${esc(sub)}</p>
+      <button type="button" class="ow-pr-qc" data-open="${esc(k)}" data-phone-card="1" aria-expanded="${open}">
+        <span class="ow-pr-qc-h"><span class="ow-pr-kt ow-lg ${tone}">${esc(chip)}</span><span class="ow-pr-sp"></span>${caret}</span>
+        <span class="ow-pr-mt"><span class="ow-pr-mt-f ${tone}" style="width:${fill}%"></span><span class="ow-pr-mt-t" style="left:${tk}%"></span></span>
+        <span class="ow-pr-qc-b">
+          <span class="ow-pr-qc-n"><span class="ow-pr-qc-t" title="${esc(r.line)}">${esc(r.line)}</span><span class="ow-pr-qc-s">${thin ? `${r.units30} sold in 30 days` : `${r.qty} on the shelf at ${r.costKnown ? f(r.unitCost) : '&mdash;'}`}</span></span>
+          <span class="ow-pr-qc-v"><span class="ow-pr-fig ow-pr-qc-f">${fig}</span><span class="ow-pr-qc-u">${thin ? 'a month, if lifted' : 'locked up, once'}</span></span>
+        </span>
       </button>
-      ${open ? (row.kind === 'thin' ? thinBody(row) : deadBody(row)) : ''}
+      ${open ? `<div class="ow-pr-qx">
+        ${thin ? `${thinLadder(r, lift)}${equation(r, lift)}
+          ${lift ? `<button type="button" class="btn btn-accent ow-pr-bt pr-lift" data-key="${esc(k)}">Charge <span class="ow-pr-fig">${f(lift.target)}</span></button>` : ''}`
+        : pricingClearOpen === k ? deadBody(r, 'ph')
+        : `<span class="ow-pr-qx-n"><b class="ow-pr-fig">${buyerN || mateN}</b> ${buyerN ? 'buyers have taken it before' : mateN ? 'took what it goes with' : 'buyers on your books &mdash; nobody has ever bought this; a walk-in price is the tool'}</span>
+           <button type="button" class="btn btn-accent ow-pr-bt pr-clear-open" data-key="${esc(k)}">Set a clearing price</button>`}
+      </div>` : ''}
     </div>`;
   };
 
-  const head = `<div class="ow-pr-h">
-    <span></span><span>Line</span><span>How far past your bar</span><span>Over a year</span>
-    <span class="ow-pr-h-r">What a fix is worth</span>
-  </div>`;
+  const seg = (key, label, n)=> `<button type="button" class="ow-pr-sg-b${pricingSeg === key ? ' ow-on' : ''}" data-seg="${key}" aria-pressed="${pricingSeg === key}">${label} <span class="ow-pr-fig ow-pr-sg-n">${n}</span></button>`;
 
-  /* WHAT THIS SCREEN READ, and what it could not. Every line read lands
-     in exactly one of these. Margin accounted for itself and Clearance
-     did not; the account now covers both halves, because a list is only
+  /* WHAT THIS SCREEN READ, and what it could not. A list is only
      trustworthy about what it does NOT say if it says what it skipped. */
   const sk = all.margins.skipped || { noCost: 0, noSales: 0 };
-  const atOrOver = all.margins.length - all.thin.length;
-  const part = (n, tone)=> n > 0 ? `<span class="ow-pr-ac-s ${tone}" style="flex:${n} 1 0"></span>` : '';
-  const readTotal = atOrOver + all.thin.length + all.dead.length + sk.noCost;
-  const account = nothingRead ? '' : `<div class="ow-pr-ac">
-    <p class="ow-pr-ac-h">What this screen read &middot; ${readTotal} line${readTotal===1?'':'s'}</p>
-    <div class="ow-pr-ac-b" role="img" aria-label="${atOrOver} keeping ${target}% or better, ${all.thin.length} thin, ${all.dead.length} standing still, ${sk.noCost} with no cost on file">
-      ${part(atOrOver, 'ow-good')}${part(all.thin.length, 'ow-warn')}${part(all.dead.length, 'ow-bad')}${part(sk.noCost, 'ow-none')}
-    </div>
-    <div class="ow-pr-ac-g">
-      <span><b class="ow-pr-fig ow-good">${atOrOver}</b> selling, and keeping ${target}% or better</span>
-      <span><b class="ow-pr-fig ow-warn">${all.thin.length}</b> selling under your ${target}% target</span>
-      <span><b class="ow-pr-fig ow-bad">${all.dead.length}</b> holding stock with no sale in ${quiet} days</span>
-      <span><b class="ow-pr-fig">${sk.noCost}</b> with no cost on file, so nothing here can say what they kept</span>
-    </div>
-  </div>`;
+  const account = !nothingRead && sk.noCost > 0
+    ? `<p class="ow-pr-q-f"><b class="ow-pr-fig">${sk.noCost}</b> line${sk.noCost === 1 ? '' : 's'} sold with no cost on file, so nothing here can say what they kept &mdash; they are left off rather than counted as fine.</p>` : '';
 
   /* THREE EMPTY STATES, WORDED APART. Nothing read is not the same as
      nothing wrong, and a screen that says "everything is fine" when it
-     could not read the books is lying by omission. The third names the
-     lines it had to skip, and offers the door that fixes them. */
+     could not read the books is lying by omission. */
   const empty = !all.length
     ? (nothingRead
         ? `<div class="ow-pr-em" aria-label="Nothing has sold in the last 30 days that can be costed, and there is no stock on the shelf to judge.">
             <div class="ow-pr-em-in">
               <svg class="ow-pr-em-i" viewBox="0 0 24 24"><path d="M3 20h18M4 20V8M20 20V8M4 8h16M4 14h16"/></svg>
               <span class="ow-pr-em-l">Stock with a cost</span>
-              <span class="ow-pr-em-v">0<span class="ow-pr-gl-u">lines</span></span>
+              <span class="ow-pr-em-v">0<span class="ow-pr-u">lines</span></span>
               <button type="button" class="btn btn-ghost ow-sm" data-pr-go="inventory">Count the shelf</button>
             </div>
             <span class="ow-pr-em-op">+</span>
             <div class="ow-pr-em-in">
               <svg class="ow-pr-em-i" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h5"/></svg>
               <span class="ow-pr-em-l">Sales in 30 days, costed</span>
-              <span class="ow-pr-em-v">0<span class="ow-pr-gl-u">lines</span></span>
+              <span class="ow-pr-em-v">0<span class="ow-pr-u">lines</span></span>
               <button type="button" class="btn btn-ghost ow-sm" data-pr-go="invoices">Open invoices</button>
             </div>
             <span class="ow-pr-em-op"><svg class="ow-pr-em-i" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
@@ -90135,58 +90539,322 @@ function renderPricing(){
             <button type="button" class="btn btn-accent ow-sm" data-pr-go="purchase-invoices">Record a purchase</button></div>`
         : all.margins.length === 0
         ? `<div class="ow-empty"><b>Nothing that sold in the last 30 days can be costed.</b>
-            <span>${(all.margins.skipped||{}).noCost || 0} line${((all.margins.skipped||{}).noCost || 0) === 1 ? '' : 's'} sold with no cost on file behind ${((all.margins.skipped||{}).noCost || 0) === 1 ? 'it' : 'them'}, so nothing here can say what they kept. Price the stock on Inventory and this screen can speak.</span></div>`
+            <span>${sk.noCost || 0} line${(sk.noCost || 0) === 1 ? '' : 's'} sold with no cost on file behind ${(sk.noCost || 0) === 1 ? 'it' : 'them'}, so nothing here can say what they kept. Record what they cost on a purchase invoice and they come onto this list.</span></div>`
         : `<div class="ow-empty"><b>Every line you sold kept ${target}% or better, and nothing on your shelf has stood still.</b>
-            <span>There is no work on this screen today. Raise the target or narrow the quiet window in the rail if that reads as too easy a bar for this trade.</span></div>`)
+            <span>There is no work on this screen today. Raise the bar or narrow the quiet window above if that reads as too easy a bar for this trade.</span></div>`)
     : !rows.length
       ? `<div class="ow-empty"><b>Nothing in this half of the shelf.</b>
-          <span>Tap <b>All</b> above to see every line that needs a price looked at.</span></div>`
+          <span>Tap <b>All</b> to see every line that needs a price looked at.</span></div>`
       : '';
 
   const shown = listPageSlice('pricing', rows);
-  const listHTML = rows.length
-    ? head + shown.map(rowHTML).join('') + listMoreButtonHTML('pricing', rows.length, 'lines')
-    : empty;
-
-  body.innerHTML = `<div class="ow-pan">
-    <div class="ow-pan-h">
-      <span class="ow-pan-t">What to fix first</span>
-      <span class="ow-pan-n">${all.length ? `${rows.length}${rows.length !== all.length ? ' of ' + all.length : ''} line${rows.length===1?'':'s'} &middot; worst money first` : nothingRead ? 'nothing to judge yet' : 'nothing to fix'}</span>
+  const head = `<div class="ow-pr-qh"><span>#</span><span>Line</span><span>Against your bar</span><span>The move</span><span class="ow-pr-qh-r">A fix is worth</span></div>`;
+  body.innerHTML = `<section class="ow-pr-p ow-pr-q" aria-label="What to fix first">
+    <div class="ow-pr-p-h">
+      <span class="ow-pr-p-t">What to fix first</span>
+      <span class="ow-pr-p-n">${all.length ? `${rows.length}${rows.length !== all.length ? ' of ' + all.length : ''} line${rows.length === 1 ? '' : 's'} &middot; ranked by a year of money` : nothingRead ? 'nothing to judge yet' : 'nothing to fix'}</span>
+      <span class="ow-pr-sp"></span>
+      ${all.length ? `<div class="ow-pr-sg" role="group" aria-label="Which half of the shelf">${seg('all', 'All', all.length)}${seg('thin', 'Thin', all.thin.length)}${seg('dead', '<span class="ow-pr-dk">Not moving</span><span class="ow-pr-pn">Still</span>', all.dead.length)}</div>` : ''}
     </div>
-    ${all.length ? toolbar : ''}
-    ${all.length ? listHTML : empty}
+    ${all.length && rows.length ? head + shown.map(rowHTML).join('') + listMoreButtonHTML('pricing', rows.length, 'lines') : empty}
     ${account}
-  </div>`;
+  </section>`;
 
-  body.querySelectorAll('[data-seg]').forEach(btn=> btn.addEventListener('click', ()=>{
+  /* ================= THE LINE BEING DECIDED ================= */
+  const rail = document.getElementById('pr_rail');
+  if(rail){
+    const m = selKey ? marginByKey.get(selKey) : null;
+    const a = selKey ? ageByKey.get(selKey) : null;
+    const k = selKey ? kindOf(selKey) : null;
+    const tone = selKey ? toneOf(selKey) : 'ow-none';
+    const inSession = selKey ? pricingSession.some(s=> s.key === selKey) : false;
+    let headHTML = '', bodyHTML = '';
+    if(!selKey){
+      rail.innerHTML = '';
+    } else if(k === 'thin' || k === 'ok'){
+      const r = m;
+      const lift = marginLiftFor(r, target);
+      const h = lineHist(r.key);
+      const known = h.map((v, i)=> v == null ? null : { v, i }).filter(Boolean);
+      const maxV = Math.max(target, ...known.map(p=> p.v)) * 1.25;
+      const px = (i)=> 8 + i * (284 / 5), py = (v)=> 74 - Math.max(0, v) / maxV * 66;
+      const ruleText = !r.rule ? 'with no rule of its own'
+        : r.rule.type === 'fixed' ? `at cost + ${f(r.rule.value)} fixed` : `at cost + ${r.rule.value}%`;
+      const qty = a ? a.qty : 0;
+      const story = inSession && k === 'ok'
+        ? `At ${f(r.price)} this line keeps ${r.keptPct}% of what sold. Only the price on your shelf and bought in moved.`
+        : r.staleFixed
+          ? `A fixed mark does not grow with the cost. Your rule adds ${f(r.rule.value)} a ${unitOf(r)}${r.ruleSource === 'default' ? ', the shop default' : ''} &mdash; ${r.ruleYieldPct}% of the price it makes on a cost of ${f(r.cost)}. It was a fair mark once, and nothing has repriced it since.`
+        : k === 'thin' && r.rule && r.rule.type !== 'fixed'
+          ? `The rule adds ${r.rule.value}% on cost, which keeps ${r.ruleYieldPct}% of the price &mdash; under your ${target}% before a single cost moved.`
+        : k === 'thin' && !r.rule
+          ? `No rule of its own: this line is priced by hand, and the last thirty days kept ${r.keptPct}% of what it took.`
+        : k === 'thin'
+          ? `It kept ${r.keptPct}% of what it took in the last thirty days, against your ${target}%.`
+          : `Keeping ${r.keptPct}% against your ${target}%. Nothing to do here.`;
+      headHTML = `<span class="ow-pr-kt ${tone}">${k === 'thin' ? 'Thin &middot; #' + rankOf.get(r.key) : 'Keeping your bar'}</span>
+        <span class="ow-pr-kt ow-nv">${esc(categoryOf(r.key))}</span><span class="ow-pr-in-sd">by the ${unitOf(r)}</span>`;
+      const facts = `${r.units30} sold in 30 days &middot; ${qty ? f(qty) + ' on the shelf' : 'none on the shelf'} &middot; priced ${ruleText}`;
+      const hero = k === 'thin'
+        ? `<span class="ow-pr-fig ow-pr-in-v ow-good">+${f(r.atStake)}</span><span class="ow-pr-in-vn">a month, every month, at ${lift ? f(lift.target) : '&mdash;'}</span>`
+        : `<span class="ow-pr-fig ow-pr-in-v">${r.keptPct}%</span><span class="ow-pr-in-vn">kept, against your ${target}%</span>`;
+      bodyHTML = `${thinLadder(r, lift)}
+        ${k === 'thin' ? equation(r, lift) : ''}
+        <div class="ow-pr-sk ${tone}">
+          <div class="ow-pr-sk-h"><span class="ow-pr-sk-t">What it kept, six months</span><span class="ow-pr-fig ow-pr-sk-r">${known.length ? `${known[0].v.toFixed(1)}% &rarr; ${known[known.length - 1].v.toFixed(1)}%` : 'no sale to read'}</span></div>
+          ${known.length ? `<svg class="ow-pr-sk-g" viewBox="0 0 300 80" width="100%" height="80" role="img" aria-label="What this line kept in each of six thirty-day windows, against your ${target}%">
+            <rect class="ow-pr-sk-z" x="0" y="${py(target).toFixed(1)}" width="300" height="${Math.max(0, 80 - py(target)).toFixed(1)}"></rect>
+            <line class="ow-pr-sk-tl" x1="0" x2="300" y1="${py(target).toFixed(1)}" y2="${py(target).toFixed(1)}"></line>
+            ${known.length > 1 ? `<polyline class="ow-pr-sk-l" points="${known.map(p=> px(p.i).toFixed(1) + ',' + py(p.v).toFixed(1)).join(' ')}"></polyline>` : ''}
+            <circle class="ow-pr-sk-d" cx="${px(known[known.length - 1].i).toFixed(1)}" cy="${py(known[known.length - 1].v).toFixed(1)}" r="4.5"></circle>
+          </svg>
+          <div class="ow-pr-fig ow-pr-mo ow-lt">${hist.map(w=> `<span>${esc(w.label)}</span>`).join('')}</div>` : ''}
+          <p class="ow-pr-sk-p">${story}</p>
+          ${r.estShare >= 20 ? `<p class="ow-pr-sk-p">${r.estShare}% of these units were costed by estimate, so the kept share is a good figure rather than a certain one.</p>` : ''}
+        </div>
+        ${k === 'thin' && lift ? `<div class="ow-pr-tc">
+            <span class="ow-pr-tc-c ow-good">${tick}Your shelf</span>
+            <span class="ow-pr-tc-c ow-good">${tick}Bought in to order</span>
+            <span class="ow-pr-tc-c">${dash}${(lift.kind === 'retail' ? 'Wholesale' : 'Retail')} untouched</span>
+          </div>
+          <div class="ow-pr-ac">
+            <button type="button" class="btn btn-accent ow-pr-bt ow-pr-grow pr-lift" data-key="${esc(r.key)}">Charge <span class="ow-pr-fig">${f(lift.target)}</span></button>
+            <button type="button" class="btn btn-ghost ow-pr-bt pr-inv">Open the line</button>
+          </div>` : ''}
+        ${inSession ? `<div class="ow-pr-ok">${tick} <span class="ow-pr-ok-t">Now charging <b class="ow-pr-fig">${r.price != null ? f(r.price) : '&mdash;'}</b> &middot; keeps <b class="ow-pr-fig">${r.ruleYieldPct != null ? r.ruleYieldPct : r.keptPct}</b>%</span><button type="button" class="ow-pr-un pr-undo" data-key="${esc(r.key)}">Undo</button></div>` : ''}`;
+      rail.innerHTML = `<section class="ow-pr-p" aria-label="The line you are deciding">
+        <div class="ow-pr-in-h"><div class="ow-pr-in-c">${headHTML}</div><h2 class="ow-pr-in-t">${esc(r.line)}</h2><span class="ow-pr-in-f">${facts}</span><div class="ow-pr-in-hv">${hero}</div></div>
+        <div class="ow-pr-in-b">${bodyHTML}</div>
+      </section>`;
+    } else {
+      const r = a;
+      const dead = k === 'dead';
+      headHTML = `<span class="ow-pr-kt ${tone}">${dead ? 'Not moving &middot; #' + rankOf.get(r.key) : 'Slowing'}</span>
+        <span class="ow-pr-kt ow-nv">${esc(categoryOf(r.key))}</span>`;
+      const facts = `${r.qty} on the shelf at ${r.costKnown ? f(r.unitCost) + ' each' : 'no cost on file'} &middot; ${r.daysQuiet == null ? 'nothing has ever gone' : (dead ? 'standing still ' : 'quiet ') + r.daysQuiet + ' days'}${r.costFrom === 'registry' ? ' &middot; costed at what it would take to replace' : ''}`;
+      const hero = `<span class="ow-pr-fig ow-pr-in-v">${f(r.value)}</span><span class="ow-pr-in-vn">${dead ? 'locked in the shelf at cost &middot; comes back once' : 'on the shelf at cost &middot; not past your bar yet'}</span>`;
+      bodyHTML = dead ? deadBody(r, 'in')
+        : `<span class="ow-pr-mt ow-lg" role="img" aria-label="Quiet ${r.daysQuiet} days of a ${quiet}-day bar"><span class="ow-pr-mt-f ow-none" style="width:${pct(r.daysQuiet || 0, quiet * 1.5)}%"></span><span class="ow-pr-mt-t" style="left:${pct(quiet, quiet * 1.5)}%"></span></span>
+           <p class="ow-pr-sk-p">Quiet <b class="ow-pr-fig">${r.daysQuiet}</b> days, inside your <b class="ow-pr-fig">${quiet}</b>-day bar. Nothing to decide yet; it joins the list the day it crosses.</p>`;
+      rail.innerHTML = `<section class="ow-pr-p" aria-label="The line you are deciding">
+        <div class="ow-pr-in-h"><div class="ow-pr-in-c">${headHTML}</div><h2 class="ow-pr-in-t">${esc(r.line)}</h2><span class="ow-pr-in-f">${facts}</span><div class="ow-pr-in-hv">${hero}</div></div>
+        <div class="ow-pr-in-b">${bodyHTML}</div>
+      </section>`;
+    }
+  }
+
+  /* ================= KEPT, BY CATEGORY, MONTH BY MONTH ================= */
+  const heatEl = document.getElementById('pr_heat');
+  if(heatEl && nothingRead) heatEl.innerHTML = '';
+  else if(heatEl){
+    const cats = new Map();
+    hist.forEach((w, i)=> w.sales.forEach((v, key)=>{
+      if(!(v.sales30 > 0)) return;
+      const c = categoryOf(key);
+      const row = cats.get(c) || { name: c, s: [0, 0, 0, 0, 0, 0], k: [0, 0, 0, 0, 0, 0] };
+      row.s[i] += v.sales30; row.k[i] += v.profit30;
+      cats.set(c, row);
+    }));
+    const bucket = (v)=>{ const r = v / target; return r < 0.5 ? 'ow-h0' : r < 0.85 ? 'ow-h1' : r < 1 ? 'ow-h2' : r < 1.3 ? 'ow-h3' : 'ow-h4'; };
+    const heatRows = [...cats.values()].sort((a, b)=> (b.s[5] - a.s[5]) || (b.s.reduce((t, x)=> t + x, 0) - a.s.reduce((t, x)=> t + x, 0)));
+    const shownCats = heatRows.slice(0, 8);
+    heatEl.innerHTML = `<section class="ow-pr-p" aria-label="Kept by category, month by month">
+      <div class="ow-pr-p-h"><span class="ow-pr-p-t">Kept, by category, month by month</span><span class="ow-pr-sp"></span>
+        <span class="ow-pr-hk">under <i class="ow-pr-hk-k ow-h0"></i><i class="ow-pr-hk-k ow-h1"></i><i class="ow-pr-hk-k ow-h2"></i><i class="ow-pr-hk-k ow-h3"></i><i class="ow-pr-hk-k ow-h4"></i> over ${target}%</span></div>
+      <div class="ow-pr-hm">${shownCats.length ? `<div class="ow-pr-hm-g">
+        <span></span>${hist.map(w=> `<span class="ow-pr-fig ow-pr-hm-m">${esc(w.label)}</span>`).join('')}<span class="ow-pr-hm-m ow-r">sales</span>
+        ${shownCats.map(c=> `<span class="ow-pr-hm-n" title="${esc(c.name)}">${esc(c.name)}</span>${c.s.map((s, i)=> s > 0
+            ? `<span class="ow-pr-fig ow-pr-hm-c ${bucket(c.k[i] / s * 100)}${i === 5 ? ' ow-now' : ''}" title="${esc(c.name)}, ${esc(hist[i].label)}: kept ${(c.k[i] / s * 100).toFixed(1)}% of ${f(s)}">${(c.k[i] / s * 100).toFixed(1)}</span>`
+            : `<span class="ow-pr-fig ow-pr-hm-c ow-hx${i === 5 ? ' ow-now' : ''}" title="${esc(c.name)}, ${esc(hist[i].label)}: nothing sold">&mdash;</span>`).join('')}<span class="ow-pr-fig ow-pr-hm-s">${fM(c.s[5])}</span>`).join('')}
+      </div>${heatRows.length > shownCats.length ? `<p class="ow-pr-hm-f">${heatRows.length - shownCats.length} smaller categor${heatRows.length - shownCats.length === 1 ? 'y' : 'ies'} not shown</p>` : ''}`
+      : '<p class="ow-pr-hm-f">Nothing sold in six months can be costed, so there is no month to colour.</p>'}</div>
+    </section>`;
+  }
+
+  /* ================= FIX THE RULE, NOT THE LINE =================
+     Keeping a share of the PRICE is not the same as adding that share to
+     the COST, and shops mix the two up. The conversion is said once, in
+     figures, and every thin line is grouped by the kind of rule that
+     priced it -- so one switch reprices a whole group, and a rule on cost
+     moves the next time the cost does. */
+  const rulesEl = document.getElementById('pr_rules');
+  const markup = target < 100 ? target / (100 - target) * 100 : null;
+  const markupR = markup == null ? null : Math.ceil(markup * 2) / 2;
+  if(rulesEl && nothingRead) rulesEl.innerHTML = '';
+  else if(rulesEl){
+    const groupOf = (r)=> !r.rule ? 'none' : r.rule.type === 'fixed' ? 'fixed' : 'percent';
+    const titles = { fixed: 'Fixed amounts added to cost', percent: 'Percent rules set too low', none: 'Lines with no rule of their own' };
+    const rulePrice = (r)=> Math.ceil(r.cost * (1 + markupR / 100));
+    const cards = ['fixed', 'percent', 'none'].map(g=>{
+      const done = pricingSession.filter(s=> s.group === 'rule:' + g);
+      if(done.length){
+        const lines = [...new Map(done.map(s=> [s.key, s])).values()];
+        return { g, done: true, n: lines.length, worth: lines.reduce((t, s)=>{ const r = marginByKey.get(s.key); return t + (r ? Math.max(0, (r.atStake || 0)) : 0); }, 0),
+          from: 'was on its old rule', to: done[done.length - 1].pct,
+          lines: lines.map(s=> ({ key: s.key, line: s.line })) };
+      }
+      const ls = all.thin.map(x=> x.src).filter(r=> groupOf(r) === g && r.cost > 0);
+      if(!ls.length) return null;
+      const vals = ls.map(r=> r.rule ? Number(r.rule.value) || 0 : 0);
+      const lo = Math.min(...vals), hi = Math.max(...vals);
+      const from = g === 'fixed' ? `cost + ${f(lo)}${hi !== lo ? '&ndash;' + f(hi) : ''} fixed`
+        : g === 'percent' ? `cost + ${lo}${hi !== lo ? '&ndash;' + hi : ''}%` : 'priced by hand';
+      return { g, done: false, n: ls.length, worth: ls.reduce((t, r)=> t + Math.max(0, (rulePrice(r) - (r.price || 0)) * r.units30), 0),
+        from, to: markupR, lines: ls.sort((x, y)=> y.sold30 - x.sold30).map(r=> ({ key: r.key, line: r.line })) };
+    }).filter(Boolean).sort((x, y)=> (x.done - y.done) || (y.worth - x.worth));
+    const open = cards.filter(c=> !c.done).reduce((t, c)=> t + c.worth, 0);
+    rulesEl.innerHTML = `<section class="ow-pr-p" aria-label="Fix the rule, not the line">
+      <div class="ow-pr-p-h"><span class="ow-pr-p-t">Fix the rule, not the line</span><span class="ow-pr-sp"></span>${open > 0 ? `<span class="ow-pr-fig ow-pr-p-f ow-good">+${f(open)}/mo open</span>` : ''}</div>
+      <div class="ow-pr-rf">
+        ${markup != null ? `<div class="ow-pr-cvb" role="img" aria-label="Keeping ${target}% of the price means adding ${markup.toFixed(1)}% to the cost">
+          <span class="ow-pr-cvb-c"><span class="ow-pr-cvb-s">to keep</span><b class="ow-pr-fig ow-pr-cvb-v">${target}%</b><span class="ow-pr-cvb-s">of the price</span></span>
+          ${arrow}
+          <span class="ow-pr-cvb-c ow-r"><span class="ow-pr-cvb-s">add</span><b class="ow-pr-fig ow-pr-cvb-v ow-nv">${markup.toFixed(1)}%</b><span class="ow-pr-cvb-s">to the cost</span></span>
+        </div>` : ''}
+        <p class="ow-pr-rf-p">A rule written on cost moves when the cost moves. One switch reprices every line under it.</p>
+        ${cards.length ? cards.map(c=> `<div class="ow-pr-rc">
+          <div class="ow-pr-rc-h"><span class="ow-pr-rc-t">${titles[c.g]} &middot; ${c.n}</span><span class="ow-pr-fig ow-pr-rc-v">+${f(c.worth)}</span><span class="ow-pr-rc-u">/mo</span></div>
+          <div class="ow-pr-rc-r"><span class="ow-pr-fig ow-pr-rl${c.done ? ' ow-was' : ''}">${c.from}</span>${arrow}<span class="ow-pr-fig ow-pr-rl ow-to">cost + ${c.to}%</span></div>
+          <div class="ow-pr-rc-l">${c.lines.map(l=> `<button type="button" class="ow-pr-lc" data-pick="${esc(l.key)}" title="${esc(l.line)}">${esc(short(l.line))}</button>`).join('')}</div>
+          ${c.done
+            ? `<div class="ow-pr-ok">${tick} <span class="ow-pr-ok-t">${plural(c.n, 'line')} now on cost + ${c.to}%</span><button type="button" class="ow-pr-un pr-undo-rule" data-group="${c.g}">Undo</button></div>`
+            : `<button type="button" class="btn btn-ghost ow-pr-bt ow-pr-rb pr-rule" data-group="${c.g}">Put ${c.n === 1 ? 'this one' : 'these ' + c.n} on cost + ${c.to}%</button>`}
+        </div>`).join('')
+        : `<div class="ow-pr-rf-e">${tick}<b class="ow-pr-rf-eb">No rule is under ${target}%</b><span>Every line that sold kept your bar.</span></div>`}
+      </div>
+    </section>`;
+  }
+
+  /* ================= WHAT MOVED UNDER YOU ================= */
+  const sigEl = document.getElementById('pr_sig');
+  if(sigEl && nothingRead) sigEl.innerHTML = '';
+  else if(sigEl){
+    const sigs = [];
+    /* A supplier who put a price up on a line that sells here: the
+       watch's own reading, cut to the first one, and said against what
+       that line keeps now. */
+    let watch = null;
+    try{ watch = supplierPriceWatch(); }catch(e){ watch = null; }
+    const rise = watch && watch.up ? watch.up.find(s=> s.risePct > DASH_COST_RISE_PCT) : null;
+    if(rise){
+      const key = stockKey(rise.productId, rise.variantIdx == null ? null : rise.variantIdx);
+      const mr = marginByKey.get(key);
+      sigs.push({ icon: 'trend', tone: 'ow-warn', key: mr || ageByKey.has(key) ? key : null,
+        head: `${short(mr ? mr.line : rise.name)} cost up ${Math.round(rise.risePct)}% since ${fmtShortDate(rise.first.date)}`,
+        sub: mr ? `${rise.supplierName ? esc(rise.supplierName) + ' &middot; ' : ''}the price you charge now keeps ${mr.keptPct}%.` : `${rise.supplierName ? esc(rise.supplierName) : 'A supplier'} put it up, and it is not selling here this month.` });
+    }
+    const worst = all.thin.slice().sort((x, y)=> (x.src.keptPct || 0) - (y.src.keptPct || 0))[0];
+    if(worst) sigs.push({ icon: 'low', tone: 'ow-bad', key: worst.src.key,
+      head: `${short(worst.line)} keeps ${worst.src.keptPct}%`, sub: `The furthest under your ${target}% of any line that sells.` });
+    const lonely = all.dead.find(x=> !deadStockBuyers(x.src.key).length && deadStockCompanionBuyers(x.src.key).length);
+    const known = lonely ? null : all.dead.find(x=> deadStockBuyers(x.src.key).length);
+    if(lonely){
+      const n = deadStockCompanionBuyers(lonely.src.key).length;
+      sigs.push({ icon: 'people', tone: 'ow-plain', key: lonely.src.key,
+        head: `${short(lonely.line)} has no buyer by name`, sub: `${n} ${n === 1 ? 'person who took' : 'people who took'} what it goes with ${n === 1 ? 'is' : 'are'} the nearest thing to one.` });
+    } else if(known){
+      const n = deadStockBuyers(known.src.key).length;
+      sigs.push({ icon: 'people', tone: 'ow-plain', key: known.src.key,
+        head: `${n} ${n === 1 ? 'buyer has' : 'buyers have'} taken ${short(known.line)} before`, sub: `It has stood still ${known.src.daysQuiet == null ? 'since it came in' : known.src.daysQuiet + ' days'}; they are who to offer it to.` });
+    }
+    const icons = {
+      trend: '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+      low: '<circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/>',
+      people: '<circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M21 20c0-2.6-1.6-4.8-4-5.6"/>'
+    };
+    sigEl.innerHTML = `<section class="ow-pr-p" aria-label="What moved under you">
+      <div class="ow-pr-p-h"><span class="ow-pr-p-t">What moved under you</span></div>
+      <div class="ow-pr-sl">
+        ${sigs.length ? sigs.map(s=> `<${s.key ? 'button type="button"' : 'div'} class="ow-pr-si${s.key ? ' ow-go' : ''}"${s.key ? ` data-pick="${esc(s.key)}"` : ''}>
+          <span class="ow-pr-si-i ${s.tone}"><svg class="ow-pr-i" viewBox="0 0 24 24">${icons[s.icon]}</svg></span>
+          <span class="ow-pr-si-x"><span class="ow-pr-si-h">${esc(s.head)}</span><span class="ow-pr-si-s">${s.sub}</span></span>
+        </${s.key ? 'button' : 'div'}>`).join('')
+        : '<p class="ow-pr-hm-f ow-pad">Nothing moved: no supplier put a price up, and no line has slipped under your bar.</p>'}
+        <p class="ow-pr-si-f"><svg class="ow-pr-i" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Nothing changes until you tap it, and nothing sends itself.</p>
+      </div>
+    </section>`;
+  }
+
+  /* ================= WIRING =================
+     Every control below is drawn by this function, so every one is bound
+     here after the draw. */
+  const scope = root || body;
+  const each = (sel, fn)=> scope.querySelectorAll(sel).forEach(fn);
+  const redraw = ()=>{ renderPricing(); renderPricingBadge(); };
+
+  /* The two bars. The slider writes its figure as it moves and applies on
+     release -- redrawing every panel on each step of a drag would pull
+     the thumb out from under the finger. */
+  const commitBar = (apply)=>{ apply(); saveData(); pricingOpenKey = null; pricingOfferId = null; pricingClearOpen = null; redraw(); };
+  const tRg = document.getElementById('pr_target_rg'), dRg = document.getElementById('pr_days_rg');
+  if(tRg){
+    tRg.addEventListener('input', ()=>{ const v = document.getElementById('pr_target_v'); if(v) v.textContent = tRg.value; });
+    tRg.addEventListener('change', ()=> commitBar(()=>{ const v = Number(tRg.value) || 0; data.presetTargetMarginPct = (v > 0 && v < 100) ? v : 10; }));
+  }
+  if(dRg){
+    dRg.addEventListener('input', ()=>{ const v = document.getElementById('pr_days_v'); if(v) v.textContent = dRg.value; });
+    dRg.addEventListener('change', ()=> commitBar(()=>{ const n = Math.round(Number(dRg.value) || 0); data.presetDeadStockDays = n >= 1 ? n : 60; }));
+  }
+  each('.pr-step', btn=> btn.addEventListener('click', ()=> commitBar(()=>{
+    const v = Math.max(1, Math.min(60, Math.round(target) + Number(btn.dataset.step)));
+    data.presetTargetMarginPct = v;
+  })));
+
+  each('[data-seg]', btn=> btn.addEventListener('click', ()=>{
     pricingSeg = btn.dataset.seg;
     // A line opened in one half has no business surviving into another,
     // where it cannot be seen and its price field cannot be confirmed.
-    pricingOpenKey = null; pricingOfferId = null;
+    pricingOpenKey = null; pricingOfferId = null; pricingClearOpen = null;
     renderPricing();
   }));
-  body.querySelectorAll('[data-open]').forEach(btn=> btn.addEventListener('click', ()=>{
-    // Clicking the row that is open closes it: the way out is the way in.
-    pricingOpenKey = (pricingOpenKey === btn.dataset.open) ? null : btn.dataset.open;
-    pricingOfferId = null;
+  each('[data-open]', btn=> btn.addEventListener('click', ()=>{
+    const k = btn.dataset.open;
+    // On the phone, tapping the open card closes it: the way out is the way in.
+    if(btn.dataset.phoneCard && k === phoneOpen) pricingOpenKey = '';
+    else pricingOpenKey = k;
+    pricingOfferId = null; pricingClearOpen = null;
     renderPricing();
   }));
-  body.querySelectorAll('[data-offer]').forEach(btn=> btn.addEventListener('click', (e)=>{
+  each('[data-pick]', btn=> btn.addEventListener('click', ()=>{
+    pricingOpenKey = btn.dataset.pick; pricingOfferId = null; pricingClearOpen = null;
+    renderPricing();
+  }));
+  each('[data-offer]', btn=> btn.addEventListener('click', (e)=>{
     e.stopPropagation();
     pricingOfferId = (pricingOfferId === btn.dataset.offer) ? null : btn.dataset.offer;
     renderPricing();
   }));
-  body.querySelectorAll('.pr-inv').forEach(btn=> btn.addEventListener('click', (e)=>{
-    e.stopPropagation(); goToTab('inventory');
-  }));
-  body.querySelectorAll('[data-pr-go]').forEach(btn=> btn.addEventListener('click', ()=> goToTab(btn.dataset.prGo)));
+  each('.pr-clear-open', btn=> btn.addEventListener('click', ()=>{ pricingClearOpen = btn.dataset.key; renderPricing(); }));
+  each('.pr-inv', btn=> btn.addEventListener('click', (e)=>{ e.stopPropagation(); goToTab('inventory'); }));
+  each('[data-pr-go]', btn=> btn.addEventListener('click', ()=> goToTab(btn.dataset.prGo)));
+
+  /* The map's hover card: one card, moved and refilled, never a redraw. */
+  const mp = scope.querySelector('.ow-pr-mp');
+  const tipEl = mp ? mp.querySelector('.ow-pr-tip') : null;
+  if(mp && tipEl){
+    mp.querySelectorAll('.ow-pr-dot').forEach(dot=>{
+      dot.addEventListener('mouseenter', ()=>{
+        const d = dot.dataset;
+        tipEl.innerHTML = `<b class="ow-pr-tip-n">${esc(d.tipN)}</b>
+          <span class="ow-pr-tip-r"><span>${esc(d.tipAl)}</span><b class="ow-pr-fig ${esc(d.tipT)}">${esc(d.tipA)}</b></span>
+          <span class="ow-pr-tip-r"><span>${esc(d.tipBl)}</span><b class="ow-pr-fig">${esc(d.tipB)}</b></span>
+          <span class="ow-pr-tip-r"><span>${esc(d.tipCl)}</span><b class="ow-pr-fig">${esc(d.tipC)}</b></span>`;
+        const box = mp.getBoundingClientRect(), at = dot.getBoundingClientRect();
+        const x = at.left + at.width / 2 - box.left, y = at.top + at.height / 2 - box.top;
+        tipEl.hidden = false;
+        tipEl.style.left = (x > box.width * 0.6 ? x - tipEl.offsetWidth - 18 : x + 18) + 'px';
+        tipEl.style.top = (y > box.height * 0.6 ? y - tipEl.offsetHeight : y - 12) + 'px';
+      });
+      dot.addEventListener('mouseleave', ()=>{ tipEl.hidden = true; });
+    });
+  }
 
   /* ---- lifting a thin line ----
      Confirmed by name and by figure, and saying out loud that it moves
      BOTH prices -- the thing the market screen's own button does not do,
      and the reason a line bought in to order kept its old price there
      while the toast reported success. */
-  body.querySelectorAll('.pr-lift').forEach(btn=> btn.addEventListener('click', (e)=>{
+  each('.pr-lift', btn=> btn.addEventListener('click', (e)=>{
     e.stopPropagation();
     const r = all.margins.find(x=> x.key === btn.dataset.key);
     if(!r) return;
@@ -90196,26 +90864,70 @@ function renderPricing(){
       + `It costs ${fmtUGX(r.cost)}, so you would keep ${lift.keptPct}%.`
       + (lift.addsOverWindow ? ` Over the ${r.units30} that sold in the last 30 days that is ${fmtUGX(lift.addsOverWindow)} more.` : '')
       + `\n\nThis moves the ${lift.kind} price BOTH ways you sell it — off your own shelf and bought in to order. Your ${lift.kind === 'retail' ? 'wholesale' : 'retail'} price is not touched.`)) return;
-    if(!setLineMarginRule(r.productId, r.variantIdx, lift.kind, lift.type, lift.value)){
+    if(!pricingReprice(r, lift.type, lift.value, 'line')){
       toast('That line could not be repriced'); return;
     }
     const now = ourPriceFor(r.productId, r.variantIdx, lift.kind);
     toast(`Now ${fmtUGX(now)} ${lift.kind} — keeping ${lift.keptPct}%`, 6000);
-    pricingOpenKey = null;
-    renderPricing(); renderPricingBadge();
+    pricingOpenKey = r.key;
+    redraw();
   }));
+  /* Every thin line at once, in one question that names the count, the
+     money and both ways each price moves. */
+  each('.pr-lift-all', btn=> btn.addEventListener('click', ()=>{
+    const ls = all.thin.map(x=> x.src).map(r=> ({ r, lift: marginLiftFor(r, target) })).filter(x=> x.lift);
+    if(!ls.length) return;
+    const adds = ls.reduce((t, x)=> t + (x.lift.addsOverWindow || 0), 0);
+    if(!confirm(`Lift all ${ls.length} thin lines to keep ${target}%?\n\n`
+      + `Over what sold in the last 30 days that is ${fmtUGX(adds)} more a month.`
+      + `\n\nEach price moves BOTH ways you sell it — off your own shelf and bought in to order. The other side of each line is not touched, and each one can be put back from this screen.`)) return;
+    let done = 0;
+    ls.forEach(x=>{ if(pricingReprice(x.r, x.lift.type, x.lift.value, 'all')) done++; });
+    toast(`${done} line${done === 1 ? '' : 's'} repriced to keep ${target}%`, 6000);
+    redraw();
+  }));
+  /* One rule for a whole group: a percent on cost, so the next cost rise
+     carries through on its own. */
+  each('.pr-rule', btn=> btn.addEventListener('click', ()=>{
+    const g = btn.dataset.group;
+    const groupOf = (r)=> !r.rule ? 'none' : r.rule.type === 'fixed' ? 'fixed' : 'percent';
+    const ls = all.thin.map(x=> x.src).filter(r=> groupOf(r) === g && r.cost > 0);
+    if(!ls.length || markupR == null) return;
+    if(!confirm(`Put ${ls.length} line${ls.length === 1 ? '' : 's'} on cost + ${markupR}%?\n\n`
+      + ls.slice(0, 8).map(r=> `· ${r.line}`).join('\n') + (ls.length > 8 ? `\n· and ${ls.length - 8} more` : '')
+      + `\n\nCost + ${markupR}% keeps ${target}% of the price, and moves with the cost from now on. Each price moves BOTH ways you sell it — off your own shelf and bought in to order.`)) return;
+    let done = 0;
+    ls.forEach(r=>{ if(pricingReprice(r, 'percent', markupR, 'rule:' + g)) done++; });
+    toast(`${done} line${done === 1 ? '' : 's'} now on cost + ${markupR}%`, 6000);
+    redraw();
+  }));
+  each('.pr-undo', btn=> btn.addEventListener('click', (e)=>{ e.stopPropagation(); pricingUndo(s=> s.key === btn.dataset.key); toast('Put back as it was'); redraw(); }));
+  each('.pr-undo-rule', btn=> btn.addEventListener('click', ()=>{ pricingUndo(s=> s.group === 'rule:' + btn.dataset.group); toast('Put back as it was'); redraw(); }));
+  each('.pr-undo-all', btn=> btn.addEventListener('click', ()=>{ pricingUndo(()=> true); toast('Every price put back as it was'); redraw(); }));
 
+  /* ---- a clearing price, felt before it is written ----
+     The slider redraws only the figure, the price line and the verdict
+     beside it as it moves, so the finger never loses the thumb. */
+  each('.pr-take', rg=> rg.addEventListener('input', ()=>{
+    const dd = rg.closest('.ow-pr-dd');
+    const r = all.dead.map(x=> x.src).find(x=> x.key === rg.dataset.key);
+    if(!dd || !r) return;
+    const aim = Math.round(Number(rg.value) || 0);
+    dd.querySelectorAll('.pr-take-v').forEach(el=>{ el.textContent = f(aim); });
+    const ld = dd.querySelector('.ow-pr-dd-ld'); if(ld) ld.innerHTML = deadLadder(r, aim);
+    const vd = dd.querySelector('.ow-pr-dd-v'); if(vd) vd.innerHTML = deadVerdict(r, aim);
+  }));
   /* ---- writing down a clearance price ----
      Confirmed like every other price decision in this app, and the
-     below-cost case says the loss out loud in the question itself
-     rather than leaving it on the screen behind. */
-  body.querySelectorAll('.pr-price-save').forEach(btn=> btn.addEventListener('click', (e)=>{
+     below-cost case says the loss out loud in the question itself. */
+  each('.pr-price-save', btn=> btn.addEventListener('click', (e)=>{
     e.stopPropagation();
-    const box = document.getElementById('pr_price_field');
+    const dd = btn.closest('.ow-pr-dd');
+    const box = dd ? dd.querySelector('.pr-take') : null;
     const r = all.dead.map(x=> x.src).find(x=> x.key === btn.dataset.key);
     if(!r || !box) return;
     const aim = Math.round(Number(box.value) || 0);
-    if(!(aim > 0)){ setClearancePrice(r.key, 0); renderPricing(); renderPricingBadge(); return; }
+    if(!(aim > 0)){ setClearancePrice(r.key, 0); redraw(); return; }
     const cl = clearanceFor(r, aim);
     const warn = cl.owesConsignor > 0
       ? `\n\nThat is under the ${fmtUGX(Math.round(cl.consignedCost))} you will owe the consignor — ${fmtUGX(cl.owesConsignor)} out of your own pocket across ${r.qty}.`
@@ -90226,134 +90938,39 @@ function renderPricing(){
       renderPricing(); return;
     }
     setClearancePrice(r.key, aim);
-    renderPricing(); renderPricingBadge();
+    pricingOpenKey = r.key;
+    redraw();
   }));
-  body.querySelectorAll('.pr-price-clear').forEach(btn=> btn.addEventListener('click', (e)=>{
+  each('.pr-price-clear', btn=> btn.addEventListener('click', (e)=>{
     e.stopPropagation();
     setClearancePrice(btn.dataset.key, 0);
-    renderPricing(); renderPricingBadge();
+    redraw();
   }));
 
   /* ---- the offer ----
      Taken away, not sent: the app cannot see WhatsApp, so it records
      that the offer left the screen. What ships is what is IN THE BOX --
-     the owner's edits, never the app's draft. */
+     the owner's edits, never the app's draft. The phone and the desk can
+     both have a buyer open, so the box read is the one on screen. */
   const msgFor = (who)=>{
-    const box = body.querySelector(`[data-msg="${CSS.escape(who)}"]`);
+    const boxes = [...scope.querySelectorAll(`[data-msg="${CSS.escape(who)}"]`)];
+    const box = boxes.find(b=> b.offsetParent !== null) || boxes[0];
     return box ? box.value : '';
   };
-  body.querySelectorAll('.pr-send').forEach(btn=> btn.addEventListener('click', (e)=>{
+  each('.pr-send', btn=> btn.addEventListener('click', (e)=>{
     e.stopPropagation();
     window.open(waComposeUrl(btn.dataset.phone, msgFor(btn.dataset.who)), '_blank');
     markClearanceOffered(btn.dataset.key);
     toast('Marked as offered today');
-    renderPricing(); renderPricingBadge();
+    redraw();
   }));
-  body.querySelectorAll('.pr-copy').forEach(btn=> btn.addEventListener('click', async (e)=>{
+  each('.pr-copy', btn=> btn.addEventListener('click', async (e)=>{
     e.stopPropagation();
     try{ await navigator.clipboard.writeText(msgFor(btn.dataset.who)); toast('Offer copied'); }
     catch(err){ toast('Could not copy — select the text and copy it by hand'); return; }
     markClearanceOffered(btn.dataset.key);
-    renderPricing(); renderPricingBadge();
+    redraw();
   }));
-}
-
-/* THE RAIL. What the order is worked out on, the two definitions that
-   decide who is on the list at all, and what a price change actually
-   does. The two settings were a form panel apiece above the money, on
-   every visit, to hold a figure changed twice a year. */
-function renderPricingRail(all, t){
-  const rail = document.getElementById('pr_rail');
-  if(!rail) return;
-  const f = (x)=> Number(Math.round(x)).toLocaleString('en-UG');
-  const lead = all.thin[0], deadLead = all.dead[0];
-  const never = !(Number(data && data.presetTargetMarginPct) > 0);
-  const plural = (n, one, many)=> `${n} ${n === 1 ? one : many}`;
-  /* THE CLOCK, drawn. The biggest thin line and the biggest dead line on
-     one scale: twelve months of one against the single sum of the other.
-     Which of them is longer IS the ranking rule, so the rule is shown
-     working rather than explained. With only one half on the shelf there
-     is nothing to weigh, and the two bars become the legend. */
-  const top = lead && deadLead ? Math.max(lead.yearWorth, deadLead.yearWorth) : 0;
-  const w = (v)=> top > 0 ? Math.max(2, v / top * 100).toFixed(1) : '0';
-  const clock = lead && deadLead
-    ? `<div class="ow-pr-ck-r">
-        <div class="ow-pr-ck-h"><span class="ow-pr-ck-n" title="${esc(lead.line)}">${esc(briefShortName(lead.line))} &middot; a month</span><b class="ow-pr-fig">${f(lead.yearWorth)}</b></div>
-        <span class="ow-pr-yb ow-pr-mo" style="width:${w(lead.yearWorth)}%"></span>
-      </div>
-      <div class="ow-pr-ck-r">
-        <div class="ow-pr-ck-h"><span class="ow-pr-ck-n" title="${esc(deadLead.line)}">${esc(briefShortName(deadLead.line))} &middot; once</span><b class="ow-pr-fig">${f(deadLead.yearWorth)}</b></div>
-        <span class="ow-pr-yb ow-pr-once" style="width:${w(deadLead.yearWorth)}%"></span>
-      </div>
-      <p class="ow-pr-rl-n">${lead.yearWorth >= deadLead.yearWorth
-        ? 'So the smaller monthly leak ranks first. Each row still shows its own figure, and the two are never added.'
-        : 'So the stock standing still ranks first. Each row still shows its own figure, and the two are never added.'}</p>`
-    : `<div class="ow-pr-ck-r"><div class="ow-pr-ck-h"><span class="ow-pr-ck-n">A thin line: its month, twelve times</span></div><span class="ow-pr-yb ow-pr-mo" style="width:100%"></span></div>
-      <div class="ow-pr-ck-r"><div class="ow-pr-ck-h"><span class="ow-pr-ck-n">Dead stock: its cash, once</span></div><span class="ow-pr-yb ow-pr-once" style="width:40%"></span></div>`;
-  const yes = '<svg class="ow-pr-tp-i ow-good" viewBox="0 0 24 24" role="img" aria-label="changes"><path d="M5 12l5 5 9-10"/></svg>';
-  const no = '<svg class="ow-pr-tp-i" viewBox="0 0 24 24" role="img" aria-label="untouched"><path d="M6 12h12"/></svg>';
-
-  rail.innerHTML = `<div class="ow-pan">
-    <div class="ow-pan-h"><span class="ow-pan-t">Your two bars</span></div>
-    <div class="ow-pr-rl">
-      <div class="ow-pr-rl-h"><label class="ow-pr-rl-l" for="pr_target">Thin below</label>
-        <input class="ow-pr-set-f" id="pr_target" type="number" min="1" max="99" step="any" value="${t.target}" aria-label="Target margin, per cent"><span class="ow-pr-rl-u">% kept</span></div>
-      <input class="ow-pr-rg" id="pr_target_rg" type="range" min="1" max="60" step="1" value="${Math.min(60, Math.max(1, Math.round(t.target)))}" aria-label="Target margin, per cent, slider">
-      <p class="ow-pr-rl-n${never ? ' ow-warn' : ''}">${never
-        ? `Never set &mdash; the app has judged your prices against ${t.target}% without asking you`
-        : `${plural(all.thin.length, 'line', 'lines')} selling under it`}</p>
-    </div>
-    <div class="ow-pr-rl">
-      <div class="ow-pr-rl-h"><label class="ow-pr-rl-l" for="pr_days">Standing still after</label>
-        <input class="ow-pr-set-f" id="pr_days" type="number" min="1" step="1" value="${t.quiet}" aria-label="Quiet for, days"><span class="ow-pr-rl-u">days</span></div>
-      <input class="ow-pr-rg" id="pr_days_rg" type="range" min="7" max="240" step="1" value="${Math.min(240, Math.max(7, t.quiet))}" aria-label="Quiet for, days, slider">
-      <p class="ow-pr-rl-n">${plural(all.dead.length, 'line', 'lines')} past it &middot; most shops draw it at 60</p>
-    </div>
-  </div>
-
-  <div class="ow-pan">
-    <div class="ow-pan-h"><span class="ow-pan-t">One clock: a year</span></div>
-    <div class="ow-pr-ck">${clock}</div>
-  </div>
-
-  <div class="ow-pan">
-    <div class="ow-pan-h"><span class="ow-pan-t">What a tap changes</span></div>
-    <div class="ow-pr-tp">
-      <span></span><span>Shelf</span><span>Bought in</span><span>Offer</span>
-      <b class="ow-pr-tp-k">Charge more</b>${yes}${yes}${no}
-      <b class="ow-pr-tp-k">Clear it</b>${no}${no}${yes}
-      <span class="ow-pr-tp-f"><svg class="ow-pr-tp-i" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Nothing changes until you confirm, and nothing sends itself</span>
-    </div>
-  </div>`;
-
-  /* The two settings are bound after every render because the panels
-     they sit in are drawn by this function. They were top-level
-     addEventListener calls on ids in static markup; a field that moves
-     into rendered HTML cannot be bound once at load.
-
-     Each bar has two controls over ONE value: the box, for the exact
-     figure, and the slider, for feel. The slider writes its figure into
-     the box as it moves and applies on release -- redrawing the list on
-     every step of a drag would pull the rail out from under the thumb. */
-  const bind = (id, apply)=>{
-    const box = document.getElementById(id);
-    const rg = document.getElementById(id + '_rg');
-    if(!box) return;
-    const commit = (v)=>{
-      apply(Number(v) || 0);
-      saveData();
-      pricingOpenKey = null; pricingOfferId = null;
-      renderPricing();
-      renderPricingBadge();
-    };
-    box.addEventListener('change', ()=> commit(box.value));
-    if(rg){
-      rg.addEventListener('input', ()=>{ box.value = rg.value; });
-      rg.addEventListener('change', ()=> commit(rg.value));
-    }
-  };
-  bind('pr_target', v=> { data.presetTargetMarginPct = (v > 0 && v < 100) ? v : 10; });
-  bind('pr_days', v=> { const n = Math.round(v); data.presetDeadStockDays = n >= 1 ? n : 60; });
 }
 
 /* WHAT IS WAITING, both halves of it.
