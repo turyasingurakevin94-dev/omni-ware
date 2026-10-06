@@ -408,7 +408,11 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
 
 /* ---------- the layer keeps to the system ---------- */
 {
-  const RAMP = new Set([11, 12, 13, 14, 16, 20, 28, 19, 26, 15, 22, 21, 23]);
+  /* 18 joined the ramp with the Creditors redesign: the owner signed off a
+     design whose plan ring and payment total are set at 18px, between the
+     16 a row figure wears and the 20 a phone page name does. It was already
+     in the file outside the layer, so the file's size count does not move. */
+  const RAMP = new Set([11, 12, 13, 14, 16, 18, 20, 28, 19, 26, 15, 22, 21, 23]);
   const sizes = [...layer.matchAll(/font-size:\s*([\d.]+)px/g)].map((m) => Number(m[1]));
   const off = [...new Set(sizes.filter((n) => !RAMP.has(n)))];
   t.check(off.length <= 3,
@@ -921,10 +925,14 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
       renders: ['renderCreditorsList', 'renderCreditorsPosition', 'renderCreditorsRail', 'renderCredFilterNote',
                 'credWhenHTML'],
       rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s',
-                    'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-tb',
+                    'ow-pan', 'ow-pan-n', 'ow-tb',
                     'ow-q', 'ow-q-card', 'ow-q-x', 'ow-q-t', 'ow-q-who', 'ow-q-v',
                     'ow-q-f', 'ow-q-b', 'ow-q-note', 'ow-q-a', 'ow-cp', 'ow-db-ag-m',
-                    'ow-cr-rz', 'ow-cr-wl', 'ow-cr-dy',
+                    /* the day named on a bill is a chip that opens its own
+                       editor now (.ow-cx-dchip), and the 30-day panel has
+                       the design's 40px heading (.ow-cx-lh) rather than the
+                       34px .ow-pan-h band */
+                    'ow-cr-rz', 'ow-cr-wl', 'ow-cx-dchip', 'ow-cx-lh',
                     /* the screen's own: the sum and the bar, the tabs, the
                        plan, the table and its age cells, an opened
                        supplier's bills and six months, and the

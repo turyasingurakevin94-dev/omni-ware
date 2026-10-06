@@ -343,8 +343,11 @@ const reset = (suppliers, invoices) => {
      Pinned on the band CARD: the same phrasing sits in the bar segment's
      title attribute, and a looser check passed on that one while the
      card underneath said "suppliers". */
-  t.check(/<span class="ow-db-ag-m">\$\{b\.count\} invoice\$\{b\.count===1\?'':'s'\}/.test(pos),
-    'a band card says how many INVOICES are in it');
+  /* The signed-off design calls them bills, as the rest of the screen
+     does ("15 bills", "Tick the bills you are paying"); the point pinned
+     is unchanged -- the band counts the documents, not the suppliers. */
+  t.check(/<span class="ow-db-ag-m">&middot; \$\{b\.count\} bill\$\{b\.count===1\?'':'s'\}/.test(pos),
+    'a band card says how many BILLS are in it, not how many suppliers');
 }
 
 /* ---------- 8b. how far today's cash reaches ------------------------- *
@@ -440,8 +443,14 @@ const reset = (suppliers, invoices) => {
   /* Nothing in this app has payment terms, so nothing in it can be
      "overdue" -- the old heading claimed a due date nobody ever agreed. */
   t.check(!/Overdue/i.test(render), 'nothing claims to be overdue, since no terms are ever agreed');
-  t.check(/>Waiting/.test(render), 'it says how long the supplier has been waiting');
-  t.check(/>Last paid/.test(render), 'and when they were last paid');
+  /* Said on the row, in the design's words: a supplier with no day named
+     is "waiting N days" in the reason column, and every supplier's line
+     under their name says when they were last paid -- or "never paid". */
+  const why = (/function credCxReason[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/`waiting \$\{r\.ageDays\} day/.test(why) && /credCxReason\(r\)/.test(render),
+    'it says how long the supplier has been waiting');
+  t.check(/'paid ' \+ esc\(agingDaysLabel\(daysSinceDate\(r\.lastPaid\)\)\) \+ ' ago'/.test(render) && /never paid/.test(render),
+    'and when they were last paid');
   /* There is no <tfoot> to count in: the table became a queue of rows
      that open in place. The promise it was making is kept in two places
      instead -- the panel head carries "3 of 9 · 2,180,000 shown", and
@@ -542,28 +551,21 @@ const reset = (suppliers, invoices) => {
      its own charged-and-paid figures for the same reason. */
   t.check(!/<th>Paid off<\/th>/.test(render),
     'the queue row does not spend a column on how far through your own bill you are');
-  t.check(/of the way through paying them off/.test(render),
-    'and an opened supplier says it in words, with the figures behind it');
-
-  /* The dash means something DIFFERENT here from on the customer side.
-     A supplier balance is the sum of their own invoices, so it cannot
-     drift and cannot be typed in -- the only way to have no progress is
-     to owe nothing. Carrying the customer side's wording across would
-     tell somebody their supplier balance has no charges behind it, which
-     on the buy side is never the reason. */
-  t.check(/Nothing outstanding to this supplier/.test(render),
-    'a supplier with nothing owing is told that, not the customer-side reason');
-  t.check(/nothing to be part way through/.test(render),
-    'and told what that means rather than shown a dash');
+  /* THE SENTENCE IS GONE, and the owner's design is why. "You have paid
+     X of the Y invoiced -- N% of the way through" was the open row's one
+     reading of the supplier; the design replaced it with six months of
+     what was bought from them against what was paid them, and how long
+     their bills take to settle. That answers the same question -- is
+     this account being paid down -- with the trend instead of a single
+     ratio. What is pinned is that the open row reads it from their bills,
+     and that the customer-side wording still has no way in. */
+  t.check(/const h = credSupplierHistory\(r\.id\);/.test(render),
+    'an opened supplier shows what was bought and what was paid, from their bills');
+  const hist = (/function credSupplierHistory[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/purchaseInvoiceTotal\(pi\)/.test(hist) && /pi\.payments/.test(hist),
+    'and both figures come from the purchase invoices and their payments');
   t.check(!/No dated charges behind this balance/.test(render),
     'and the customer-side wording is not borrowed for a case it cannot describe');
-
-  // Invoiced, not charged: it is the buy side and the document is an
-  // invoice the shop received.
-  t.check(/invoiced on what is still open/.test(render),
-    'the figures behind the percentage are named in buy-side words');
-  t.check((render.match(/credBandFilter\s*\?\s*', in this band'\s*:\s*''/g) || []).length >= 2,
-    'and say so when a band has narrowed what is being measured — in both readings');
 }
 
 process.exit(t.done() ? 1 : 0);
