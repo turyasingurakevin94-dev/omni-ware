@@ -3542,6 +3542,15 @@
   .pan-tbl-item .ow-tbl-f .pan-foot-l{padding-left:30px;}
   .pan-tbl .pan-nototal{font-weight:var(--ow-fw-500);}
   .pan-band{align-items:center;height:34px;background:var(--ow-steel-050);border-top:1px solid var(--ow-rule-soft);}
+  /* The band is a button -- it folds its lines -- worn as the band. */
+  button.pan-band{width:100%;margin:0;border:0;border-top:1px solid var(--ow-rule-soft);box-sizing:border-box;
+    font:inherit;color:inherit;text-align:left;cursor:pointer;}
+  button.pan-band:hover{background:var(--ow-rule-soft);}
+  button.pan-band:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
+  .pan-band-c{flex:none;width:14px;height:14px;fill:none;stroke:var(--ow-ink-600);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+    transition:transform .15s;}
+  .pan-band[aria-expanded="false"] .pan-band-c{transform:rotate(-90deg);}
+  .pan-band-h{font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;}
   .pan-band-l{grid-column:1 / span 5;display:flex;align-items:center;gap:var(--ow-sp-8);min-width:0;}
   .pan-band-k{flex:none;width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;}
   .pan-band-k svg{width:9px;height:9px;}
@@ -3714,6 +3723,10 @@
     .pan-sh-t.pan-sh-w{flex:none;width:100%;}
     .pan-card-m{display:flex;justify-content:space-between;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
     .pan-card-m b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);font-size:var(--ow-t-13);}
+    .pan-cards button.pan-band{display:flex;align-items:center;gap:var(--ow-sp-8);height:auto;min-height:var(--ow-tap);
+      padding:0 var(--ow-sp-12);border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);}
+    .pan-cards .pan-band-l{flex:1;}
+    .pan-cards .pan-band-s{display:none;}
     .pan-cards-f{display:flex;justify-content:space-between;padding:0 var(--ow-sp-4);font-size:var(--ow-t-13);color:var(--ow-ink-600);}
     .pan-cards-f b{font-weight:var(--ow-fw-600);}
     .pan-lg-r{min-height:40px;font-size:var(--ow-t-14);}
@@ -4458,9 +4471,10 @@
   .pset-op svg{width:12px;height:12px;}
   .pset-mk-x{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--ow-rule);
     border-radius:var(--ow-r-sm);min-width:0;}
-  .pset-mk-in{box-sizing:border-box;flex:none;width:84px;height:32px;padding:0 10px;border:1px solid var(--line);border-radius:var(--ow-r);
+  .pset-mk-in{box-sizing:border-box;flex:none;width:96px;-moz-appearance:textfield;appearance:textfield;height:32px;padding:0 10px;border:1px solid var(--line);border-radius:var(--ow-r);
     font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:13px;
     text-align:right;background:var(--panel);color:var(--ink);}
+  .pset-mk-in::-webkit-inner-spin-button,.pset-mk-in::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
   .pset-mk-add{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
     letter-spacing:-.02em;font-size:12px;font-weight:600;color:var(--ow-sky);white-space:nowrap;}
   .pset-mk-add.is-none{color:var(--ow-ink-600);font-weight:400;font-family:'Figtree',system-ui,sans-serif;}
@@ -5745,6 +5759,7 @@
     .sx-pc > .sx-hold{padding:10px 12px;border-radius:var(--ow-r-10);background:var(--ow-steel-050);}
     .sx-pc .sx-hold-r{font-size:13px;}
     .sx-prec{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .sx-rec-empty.sx-prec-0{grid-column:auto;padding:12px;font-size:13px;}
     .sx-prec .sx-tile{padding:10px;gap:8px;border-color:var(--ow-rule-soft);border-radius:var(--ow-r-10);}
     .sx-prec .sx-tile.is-wide{grid-column:1 / -1;}
     .sx-prec .sx-tile-l{font-size:12px;}
@@ -19918,6 +19933,8 @@
   .mp-acts{display:flex;gap:6px;flex-wrap:wrap;padding:9px 16px;border-top:1px solid var(--ow-rule-soft);}
   .mpw-acts{margin-top:auto;padding:12px 16px;border-top:1px solid var(--ow-rule-soft);display:flex;flex-direction:column;gap:8px;}
   .mpw-acts .btn{width:100%;justify-content:center;box-sizing:border-box;}
+  .mpw-acts .btn svg{flex:none;}
+  .mpw-ell{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .mpw-acts-r{display:flex;gap:8px;}
   .mpw-acts-r .btn{flex:1 1 0;min-width:0;}
   .mpw-see{display:none;}
@@ -20043,8 +20060,11 @@
        wraps, and only here -- the shared component is untouched. */
     .ow-pan-h.mp-headbar{padding:12px 16px 10px;gap:8px;}
     .ow-pan-h.mp-headbar .ow-pan-n{display:none;}
-    .mp-seg{width:100%;}
-    .mp-seg button{flex:1;justify-content:center;height:34px;font-size:13px;}
+    .mp-seg{width:100%;flex-wrap:nowrap;}
+    .mp-seg button{flex:1 1 0;min-width:0;justify-content:center;height:34px;font-size:13px;padding:0 4px;}
+    /* Three layers with real counts do not fit one row with an icon each;
+       the words and the counts are what tell them apart. */
+    .mp-headbar .mp-seg svg{display:none;}
     .mp-legend{display:none;}
     .mp-search{max-width:none;flex:1 1 100%;}
     .mp-search input{height:44px;font-size:15px;}
@@ -29184,10 +29204,10 @@
   .ow-dx-wk-pt{position:absolute;width:9px;height:9px;transform:translate(-50%,-50%);border-radius:50%;background:var(--ow-paper);
     border:2px solid var(--ow-steel-800);pointer-events:none;}
   .ow-dx-wk-pt.ow-dx-wk-po{border-color:var(--ow-crimson);}
-  .ow-dx-wk-card{position:absolute;top:-4px;width:172px;padding:var(--ow-sp-8) var(--ow-sp-10);background:var(--ow-paper);border:1px solid var(--ow-rule);
+  .ow-dx-wk-card{position:absolute;top:-4px;width:212px;padding:var(--ow-sp-8) var(--ow-sp-10);background:var(--ow-paper);border:1px solid var(--ow-rule);
     border-radius:var(--ow-r);box-shadow:var(--ow-lift);pointer-events:none;display:flex;flex-direction:column;gap:3px;z-index:3;font-size:var(--ow-t-12);}
   .ow-dx-wk-r{display:flex;justify-content:space-between;gap:var(--ow-sp-8);}
-  .ow-dx-wk-k{color:var(--ow-ink-600);}
+  .ow-dx-wk-k{color:var(--ow-ink-600);white-space:nowrap;}
   .ow-dx-wk-r.ow-dx-bad .ow-dx-wk-k{color:var(--ow-crimson);}
   .ow-dx-wk-hit{position:absolute;inset:0;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));}
   .ow-dx-wk-h{cursor:crosshair;}
@@ -52899,8 +52919,12 @@ function mapTwoWay(){
   }).filter(x=> x && (x.owe > 0.5 || x.owed > 0.5))
     .sort((a,b)=> (b.owe + b.owed) - (a.owe + a.owed));
 }
+/* The suppliers marked two-way on the map and in the list: exactly the
+   accounts the strip counts and the rail sets out, so the badge, the key
+   and the figure cannot disagree. A link with nothing owed either way is
+   a fact about the directory, not something to read off a map. */
 function mapTwoWayIds(){
-  return new Set((data.customers || []).map(c=> c.linkedSupplierId).filter(Boolean).map(String));
+  return new Set(mapTwoWay().map(x=> String(x.supplier.id)));
 }
 /* The place the rail is open on. Never empty while there is something to
    read: with nothing picked it is the place holding the most money on
@@ -54009,7 +54033,7 @@ function renderMapSide(rowsIn, farIn, homeIn){
       ${twoWay}
       <div class="mpw-acts">
         <button type="button" class="btn btn-ghost mpw-see" id="mp_rail_see">See the ${esc(plural(people.length, sup ? 'supplier' : 'customer'))}</button>
-        <button type="button" class="btn btn-ghost" id="mp_rail_open">${sup ? 'Open Creditors' : `Open ${esc(r.name)} in Debtors`}
+        <button type="button" class="btn btn-ghost" id="mp_rail_open" title="${sup ? 'Open Creditors' : `Open ${esc(r.name)} in Debtors`}"><span class="mpw-ell">${sup ? 'Open Creditors' : `Open ${esc(r.name)} in Debtors`}</span>
           <svg class="icon" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg></button>
         <div class="mpw-acts-r">
           <button type="button" class="btn btn-ghost ow-sm" id="mp_rail_place">${r.pin ? 'Move pin' : 'Place it'}</button>
@@ -67958,6 +67982,16 @@ function renderOrderFlow() {
 }
 window.renderOrderFlow = renderOrderFlow;
 window.ofBoardLogic = function () { return ofBoard && ofBoard.logic; };
+/* The board's post, for anything outside it that posts an order: the
+   same words the Post sheet opens with (sources grouped, no prices), so
+   the group reads one template whichever screen sent it. Dropped twice
+   by rewrites of this block; salesGroupOrderMessage falls back to the old
+   quote table without it, so nothing breaks loudly -- the day statement
+   and every announce just quietly post a different message. */
+window.ofPostMessage = function (qid) {
+  var q = (data.savedQuotes || []).find(function (x) { return String(x.id) === String(qid); });
+  return q ? postMsg(ofOrder(q), false, true) : null;
+};
 window.OrderFlowBoard = OrderFlowBoard;
 window.ofOpenOrder = function (qid) {
   if (!ofBoard) renderOrderFlow();
@@ -76415,6 +76449,10 @@ let panHues = new Map();
 /* The largest price change on screen, in money: the scale every
    diverging bar is drawn against. */
 let panAddScale = 0;
+/* The bands folded shut ('rise', 'held', 'fall', 'new'). Kept for the
+   visit, across windows and searches, so a band put away stays away
+   while the reader works through the rest. */
+const panShut = new Set();
 /* The item view opens on what the price changes ADDED TO THE BILL, worst
    first; the supplier view keeps spend, because for a supplier the
    question is concentration and not movement. Both say which they are,
@@ -77183,11 +77221,17 @@ function panBandHTML(kind, g){
   const label = (PAN_BANDS.find(([k])=> k===kind) || [kind, kind])[1];
   const mark = { rise: PAN_ICON.up, fall: PAN_ICON.down, held: PAN_ICON.level, new: PAN_ICON.dashed }[kind];
   const add = kind === 'new' ? '—' : `${g.cost > 0 ? '+' : g.cost < 0 ? '−' : ''}${panMoney(Math.abs(g.cost))}`;
-  return `<div class="pan-band pan-b-${kind}">
-    <div class="pan-band-l"><span class="pan-band-k">${mark}</span><span class="pan-band-t">${esc(label)}</span><span class="pan-band-n">${g.count}</span></div>
+  /* A BUTTON: press it and the band's lines fold away. The band keeps
+     its count and both totals, and says how many lines it is hiding, so
+     a folded band never reads as an empty one. */
+  const shut = panShut.has(kind);
+  return `<button type="button" class="pan-band pan-b-${kind}" data-pan-band="${kind}" aria-expanded="${shut ? 'false' : 'true'}"
+      title="${shut ? 'Show these lines' : 'Hide these lines'}">
+    <span class="pan-band-l"><svg class="pan-band-c" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg><span class="pan-band-k">${mark}</span><span class="pan-band-t">${esc(label)}</span><span class="pan-band-n">${g.count}</span>${
+      shut ? `<span class="pan-band-h">${g.count} line${g.count === 1 ? '' : 's'} hidden</span>` : ''}</span>
     <span class="pan-band-a">${add}</span>
     <span class="pan-band-s">${panMoney(g.spent)}</span>
-  </div>`;
+  </button>`;
 }
 /* THE PHONE CARD. The same row, drawn for a thumb: what it is and what
    its price did, then the bar and the money it came to. Emitted from the
@@ -77347,17 +77391,35 @@ function renderPanTable(){
   ordered.forEach((r, i)=>{ r.__n = i + 1; });
   panAddScale = rows.reduce((m,r)=> Math.max(m, Math.abs(Number(r.priceCost)||0)), 0);
 
-  const pageCount = Math.max(1, Math.ceil(ordered.length / AN_PAGE_SIZE));
+  /* PAGES COUNT LINES, NOT BANDS. Every band's head is drawn even when
+     it is folded -- that is where it is opened again -- and a band that
+     runs onto the next page carries its head over with it. A folded
+     band's lines are simply not in the pages. */
+  const items = [];
+  if(grouped) PAN_BANDS.forEach(([k])=>{
+    if(!bands[k].count) return;
+    items.push({ band: k });
+    if(!panShut.has(k)) ordered.filter(r=> panMoveKind(r)===k).forEach(r=> items.push({ row: r }));
+  });
+  else ordered.forEach(r=> items.push({ row: r }));
+  const pages = [];
+  let cur = [], n = 0, lastBand = null;
+  items.forEach(it=>{
+    if(it.band){ lastBand = it.band; cur.push(it); return; }
+    if(n === AN_PAGE_SIZE){ pages.push(cur); cur = lastBand ? [{ band: lastBand }] : []; n = 0; }
+    cur.push(it); n++;
+  });
+  pages.push(cur);
+  const pageCount = pages.length;
   if(panPage > pageCount) panPage = pageCount;
   if(panPage < 1) panPage = 1;
-  const pageFrom = (panPage - 1) * AN_PAGE_SIZE;
-  const pageRows = ordered.slice(pageFrom, pageFrom + AN_PAGE_SIZE);
-  let lastBand = null;
-  const body = pageRows.map(r=>{
-    let band = '';
-    if(grouped){ const k = panMoveKind(r); if(k !== lastBand){ band = panBandHTML(k, bands[k]); lastBand = k; } }
-    return `${band}<div class="ow-tbl-r">${cols.map(c=> panCellHTML(c, r, false)).join('')}</div>`;
-  }).join('');
+  const pageItems = pages[panPage - 1];
+  const pageRows = pageItems.filter(it=> it.row).map(it=> it.row);
+  const shownTotal = items.filter(it=> it.row).length;
+  const pageFrom = pages.slice(0, panPage - 1).reduce((a,pg)=> a + pg.filter(it=> it.row).length, 0);
+  const body = pageItems.map(it=> it.band
+    ? panBandHTML(it.band, bands[it.band])
+    : `<div class="ow-tbl-r">${cols.map(c=> panCellHTML(c, it.row, false)).join('')}</div>`).join('');
   const th1 = panView==='item' ? `<div class="pan-th1" aria-hidden="true"><span></span><span>Volume</span><span class="pan-th1-3">Unit price</span><span class="pan-th1-2 pan-th1-e">Effect on this period&rsquo;s bill</span></div>` : '';
   wrap.innerHTML = `<div class="pan-scroll"><div class="ow-tbl pan-tbl pan-tbl-${panView}" style="--ow-tbl-cols:${PAN_TRACKS[panView]}">
     ${th1}
@@ -77376,10 +77438,12 @@ function renderPanTable(){
     ${panFootRowHTML(cols, rows)}
   </div></div>`;
   const mvAll = panMoveTotals(rows);
-  cards.innerHTML = pageRows.map(panCardHTML).join('') + `<div class="pan-cards-f">${panView==='item'
+  /* The phone gets the same bands, as full-width bars between the
+     cards, so a folded band is never a gap nobody can see. */
+  cards.innerHTML = pageItems.map(it=> it.band ? panBandHTML(it.band, bands[it.band]) : panCardHTML(it.row)).join('') + `<div class="pan-cards-f">${panView==='item'
     ? `<span>All <span class="an-d">${rows.length}</span> line${rows.length===1?'':'s'}</span>${mvAll.any ? `<span>net <b class="an-d${mvAll.cost > 0 ? ' pan-t-bad' : mvAll.cost < 0 ? ' pan-t-good' : ''}">${panSigned(mvAll.cost)}</b></span>` : ''}`
     : `<span>All <span class="an-d">${rows.length}</span> supplier${rows.length===1?'':'s'}</span><span>spent <b class="an-d">${panMoney(panVisibleTotals(rows).amt)}</b></span>`}</div>`;
-  pager.innerHTML = reportPagerHTML('data-panpg', panPage, pageCount, ordered.length, pageFrom, pageRows.length, panView==='item' ? 'line' : 'supplier');
+  pager.innerHTML = reportPagerHTML('data-panpg', panPage, pageCount, shownTotal, pageFrom, pageRows.length, panView==='item' ? 'line' : 'supplier');
   pager.querySelectorAll('[data-panpg]').forEach(btn=> btn.addEventListener('click', ()=>{
     panPage = Number(btn.dataset.panpg) || 1;
     renderPanTable();
@@ -77459,6 +77523,17 @@ document.querySelectorAll('#pan_subtabs .pan-seg-b').forEach(btn=>{
    view, "set rate" opens that supplier's commission, and the phone's
    export at the foot of the page is the header's export. */
 document.getElementById('tab-analytics-purchase').addEventListener('click', (e)=>{
+  const band = e.target.closest('[data-pan-band]');
+  if(band){
+    const k = band.dataset.panBand;
+    const where = band.closest('#pan_cards') ? 'pan_cards' : 'pan_tableWrap';
+    if(panShut.has(k)) panShut.delete(k); else panShut.add(k);
+    renderPanTable();
+    /* The button was redrawn; keep the reader's place on it. */
+    const again = document.querySelector(`#${where} [data-pan-band="${k}"]`);
+    if(again) again.focus({ preventScroll: true });
+    return;
+  }
   if(e.target.closest('[data-pan-sup]')){
     panSetView('supplier');
     const pan = document.querySelector('#tab-analytics-purchase .pan-tbl-pan');
@@ -80023,7 +80098,8 @@ function staffPersonHTML(s, range, maxCount){
       <div class="sx-pc-h">${av}<div class="sx-pc-w"><div class="sx-nm" title="${esc(s.name)}">${esc(s.name)}</div><div class="sx-caps">${capsHTML}</div></div>${chip}</div>
       <div class="sx-wk"><div class="sx-wk-l">${figHTML}<span class="sx-wk-b">${fig.basis}</span></div>${bar}</div>
       ${holds}
-      ${open && (p.picked || p.delivered) ? staffPhoneRecordHTML(s, p) : ''}
+      ${open ? (p.picked || p.delivered ? staffPhoneRecordHTML(s, p)
+        : `<div class="sx-rec-empty sx-prec-0">${ICON_SX_CLOCK}<span>No orders went through ${esc(firstName(s.name))} ${esc(range.label)}.</span></div>`) : ''}
       <div class="sx-pc-a">
         ${s.userId
           ? `<button type="button" class="sx-pbtn sx-open" aria-expanded="${open}">${open ? 'Close record' : 'Open record'}</button>`
@@ -80077,7 +80153,7 @@ function staffRecordHTML(s, p, range, st){
     </div>`;
 
   if(!p.picked && !p.delivered){
-    return `<div class="sx-rec">${facts}<div class="sx-rec-empty">${ICON_SX_KEY}<span>No orders went through ${esc(firstName(s.name))} ${esc(range.label)}.${
+    return `<div class="sx-rec">${facts}<div class="sx-rec-empty">${s.userId ? ICON_SX_CLOCK : ICON_SX_KEY}<span>No orders went through ${esc(firstName(s.name))} ${esc(range.label)}.${
       s.userId ? (p.activeNow ? ` They are on ${p.activeNow} right now — those count once the order is billed.` : '')
         : ' Once a login invite is accepted, they can be handed work.'}</span>${
       s.userId ? '' : `<button type="button" class="btn btn-ghost ow-sm" onclick="sendLoginInvite('${esc(s.id)}')">Send invite</button>`}</div></div>`;
@@ -80383,13 +80459,18 @@ function lsSortRows(rows, nowMs){
 }
 
 let lsRows = [];
+/* The read is capped, newest first. A shop that reaches the cap has MORE
+   signed in than was read -- so every count drawn from these rows says
+   "100+" rather than passing the cap off as the total. */
+const LS_READ_LIMIT = 100;
+function lsCapped(){ return Array.isArray(lsRows) && lsRows.length >= LS_READ_LIMIT; }
 async function loadLoginSessions(){
   try {
     const { data, error } = await sb.from('login_sessions')
       .select('id, user_id, device_id, app, label, started_at, last_seen_at, revoked_at')
       .eq('shop_id', currentShopId)
       .order('last_seen_at', { ascending: false })
-      .limit(100);
+      .limit(LS_READ_LIMIT);
     if(error) throw error;
     lsRows = data || [];
   } catch(e){
@@ -80516,6 +80597,8 @@ function renderLoginSessions(){
     </div>` : '') : '';
 
   wrap.innerHTML = answer
+    + (lsCapped() ? `<p class="ls-answer"><b>Only the ${LS_READ_LIMIT} most recently seen were read.</b> There are more
+        signed in than that, so every count here is a floor, not a total.</p>` : '')
     + (people.length ? `<div class="ls-grp">Who else is in<span class="ls-grp-n">${people.length}</span></div>`
         + people.map(personRow).join('') : '')
     + (mineRows.length ? `<div class="ls-grp">You<span class="ls-grp-n">${mineRows.length}</span></div>` + youRow : '');
@@ -94675,10 +94758,25 @@ function renderDebtorsRail(){
   const cust = (data.customers || []).find((c)=> c.id === d.id) || {};
   const logs = (cust.debtLog || []).filter((l)=> l.date && daysSinceDate(l.date) <= SPAN);
   const buys = logs.filter((l)=> l.type === 'charge'), pays = logs.filter((l)=> l.type === 'payment');
-  const payMax = Math.max(1, ...pays.map((l)=> Number(l.amount) || 0));
   const level = (evs)=> { let px = -99, pl = 1; evs.sort((a, b)=> a.xn - b.xn).forEach((e)=> { e.lv = (e.xn - px < 12) ? 1 - pl : 0; pl = e.lv; px = e.xn; }); return evs; };
-  const up = level(buys.map((l)=> ({ xn: xp(daysSinceDate(l.date)), lab: debM(l.amount), t: 'Bought ' + fmtUGX(Math.round(l.amount)) + ' on ' + fmtShortDate(l.date) })));
-  const low = pays.map((l)=> ({ xn: xp(daysSinceDate(l.date)), lab: debM(l.amount), t: 'Paid ' + fmtUGX(Math.round(l.amount)) + ' on ' + fmtShortDate(l.date), k: 'paid', s: Math.round(10 + 6 * Math.sqrt((Number(l.amount) || 0) / payMax)) }));
+  /* A customer who buys and pays every few days puts five labels on one
+     spot. Events closer than a few days fold into one mark carrying
+     their total and how many there were; its title lists each. */
+  const fold = (ls, verb)=> {
+    const g = [];
+    ls.slice().sort((a, b)=> a.date.localeCompare(b.date)).forEach((l)=> {
+      const xn = xp(daysSinceDate(l.date)), last = g[g.length - 1];
+      if(last && xn - last.x0 < 6){ last.sum += Number(l.amount) || 0; last.items.push(l); last.xn = (last.x0 + xn) / 2; }
+      else g.push({ x0: xn, xn, sum: Number(l.amount) || 0, items: [l] });
+    });
+    return g.map((e)=> ({ xn: e.xn, sum: e.sum, n: e.items.length,
+      lab: debM(e.sum) + (e.items.length > 1 ? ' ×' + e.items.length : ''),
+      t: e.items.map((l)=> verb + ' ' + fmtUGX(Math.round(l.amount)) + ' on ' + fmtShortDate(l.date)).join(' · ') }));
+  };
+  const up = level(fold(buys, 'Bought'));
+  const foldedPays = fold(pays, 'Paid');
+  const payTop = Math.max(1, ...foldedPays.map((e)=> e.sum));
+  const low = foldedPays.map((e)=> ({ ...e, k: 'paid', s: Math.round(10 + 6 * Math.sqrt(e.sum / payTop)) }));
   d.promises.forEach((pr)=> {
     const ago = daysSinceDate(pr.promisedOn), ahead = debDaysAhead(pr.promisedOn);
     if(pr.state === 'broken' && ago <= SPAN) low.push({ xn: xp(ago), lab: 'broke', t: 'Said they would pay by ' + fmtShortDate(pr.promisedOn) + ' — did not', k: 'broke', s: 12 });
@@ -94995,7 +95093,8 @@ function renderDebtorsIntel(){
   }
 
   /* ---- the phone's own opening: the book, its age, and four readings ---- */
-  const live = dx.bands.filter((b)=> b.amount > 0);
+  /* the same columns the Debtors tab draws, so the phone reads the same scale */
+  const live = debAgeScale(dx).cols.filter((b)=> b.amount > 0);
   /* The bar runs young to old with no-date last, so late money starts
      where the money still in terms ends -- the very left for a shop
      that gives no days of grace. */
@@ -95008,8 +95107,8 @@ function renderDebtorsIntel(){
       ${lateLeft > 60
         ? `<span class="ow-dx-ph-br ow-dx-ph-br-r" style="right:${(100 - lateLeft).toFixed(1)}%"><b>Late &middot; ${pct(dx.late)}%</b></span>`
         : `<span class="ow-dx-ph-br" style="left:${lateLeft.toFixed(1)}%"><b>Late &middot; ${pct(dx.late)}%</b></span>`}
-      <span class="ow-dx-ph-bar">${live.map((b)=> `<button type="button" class="ow-dx-ph-seg ow-band-${b.key}" style="flex-grow:${b.amount}" data-pband="${b.key}" aria-label="${esc(b.label)}: ${esc(fmtUGX(Math.round(b.amount)))}"></button>`).join('')}</span>
-      <span class="ow-dx-ph-lg">${live.map((b)=> `<button type="button" class="ow-dx-ph-lgb" data-pband="${b.key}"><span class="ow-dx-sw ow-band-${b.key}"></span><span class="ow-dx-ph-lgl">${esc(b.label)}</span><b class="ow-dx-n">${debM(b.amount)}</b></button>`).join('')}</span>
+      <span class="ow-dx-ph-bar">${live.map((b)=> `<button type="button" class="ow-dx-ph-seg ow-band-${b.tone}" style="flex-grow:${b.amount};background:${b.fill}" data-pband="${b.key}" aria-label="${esc(b.label)}: ${esc(fmtUGX(Math.round(b.amount)))}"></button>`).join('')}</span>
+      <span class="ow-dx-ph-lg">${live.map((b)=> `<button type="button" class="ow-dx-ph-lgb" data-pband="${b.key}"><span class="ow-dx-sw ow-band-${b.tone}" style="background:${b.fill}"></span><span class="ow-dx-ph-lgl">${esc(b.label)}</span><b class="ow-dx-n">${debM(b.amount)}</b></button>`).join('')}</span>
     </section>
     <section class="ow-pan ow-dx-ph-4">
       <span class="ow-dx-ph-c"><span class="ow-dx-cap">Act now</span><b class="ow-dx-n ow-dx-bad">${dx.xs.filter((x)=> x.seg === 'act').length}</b><span class="ow-dx-cap">${debM(dx.xs.filter((x)=> x.seg === 'act').reduce((s, x)=> s + x.debt, 0))}</span></span>
@@ -114714,6 +114813,7 @@ function presetIndexModel(){
   const devices = (typeof lsRows === 'undefined' || lsRows === null)
     ? null : lsRows.filter(r=> !r.revoked_at).length;
   const unread = devices === null ? 'not read' : null;
+  const plus = lsCapped() ? '+' : '';
   const quiet = devices === null ? 0 : lsStaleRows(lsRows, Date.now()).length;
   const named = String(data.presetShopLegalName||'').trim();
   const addr  = String(data.presetShopAddress||'').trim();
@@ -114722,7 +114822,7 @@ function presetIndexModel(){
       mark: (named && addr) ? 'good' : 'warn', jump:'pset_on_paper' },
     { name:'Mobile money', value: stuck ? `${stuck} pending` : momoState,
       mark: stuck ? 'warn' : (/live/.test(momoState) ? 'good' : null), jump:'pset_momo' },
-    { name:'Signed-in devices', value: unread || (quiet ? `${devices} · ${quiet} quiet` : String(devices)),
+    { name:'Signed-in devices', value: unread || (quiet ? `${devices}${plus} · ${quiet}${plus} quiet` : `${devices}${plus}`),
       mark: quiet ? 'warn' : (devices ? 'good' : null), jump:'pset_devices' },
   ];
 
@@ -114736,7 +114836,7 @@ function presetIndexModel(){
     { key:'expense', n:(data.presetExpenseCategories||[]).length },
     { key:'attributes', n:(data.presetAttributes||[]).length },
   ].map(w=> ({ ...w, mark: w.warn ? 'warn' : (w.n ? 'good' : null) }));
-  return { rules, shop, words, momoState, devices };
+  return { rules, shop, words, momoState, devices, plus };
 }
 
 function renderPresetIndex(){
@@ -114759,7 +114859,7 @@ function renderPresetIndex(){
      function again when they land. */
   const setN = (id, txt)=>{ const el = document.getElementById(id); if(el) el.textContent = txt; };
   setN('pset_momo_state', m.momoState);
-  const devWord = m.devices === null ? 'not read' : `${m.devices} signed in`;
+  const devWord = m.devices === null ? 'not read' : `${m.devices}${m.plus} signed in`;
   setN('pset_devices_n', devWord);
 
   /* A panel header with nothing on it is a door, which is the whole
@@ -114821,7 +114921,7 @@ function presetNeedsList(){
   if(Array.isArray(lsRows)){
     const quiet = lsStaleRows(lsRows, Date.now());
     if(quiet.length) out.push({ rgn:'shop', jump:'pset_devices', act:'Review', tag:'quiet',
-      name: `${quiet.length} device${quiet.length === 1 ? '' : 's'} quiet ${LS_STALE_DAYS}+ days`,
+      name: `${quiet.length}${lsCapped() ? '+' : ''} device${quiet.length === 1 ? '' : 's'} quiet ${LS_STALE_DAYS}+ days`,
       say: 'still signed in to this shop' });
   }
   return out;
@@ -114979,9 +115079,9 @@ function renderPresetTiles(){
           const live = lsIsLive(r, now);
           const q = quiet.has(r.id);
           return `<span class="pset-dv${q ? ' is-quiet' : ''}" title="${esc((LS_APP_LABELS[r.app] || r.app) + ' · ' + (r.label || 'Unknown device') + ' · ' + (lsAgo(r.last_seen_at, now) || 'never'))}">${r.app === 'admin' ? PSET_ICONS.laptop : PSET_ICONS.phone}<i class="pset-dv-d${live ? ' is-live' : q ? ' is-quiet' : ''}"></i></span>`;
-        }).join('')}${more > 0 ? `<span class="pset-dv-more">+${more}</span>` : ''}<span class="pset-tile-big pset-devs-n">${signed.length}</span></span>`,
+        }).join('')}${more > 0 ? `<span class="pset-dv-more">+${more}</span>` : ''}<span class="pset-tile-big pset-devs-n">${signed.length}${lsCapped() ? '+' : ''}</span></span>`,
       say: !signed.length ? 'nothing signed in yet'
-        : quiet.size ? `${quiet.size} quiet for ${LS_STALE_DAYS}+ days` : 'all heard from this week',
+        : quiet.size ? `${quiet.size}${lsCapped() ? '+' : ''} quiet for ${LS_STALE_DAYS}+ days` : 'all heard from this week',
       tone: quiet.size ? 'warn' : null,
     };
   }
@@ -122970,7 +123070,9 @@ function loanDuePosition(loan, asOfISO){
 function loansNeedingPayment(asOfISO){
   return (data.loans||[])
     .map(loan=> ({ loan, due: loanDuePosition(loan, asOfISO) }))
-    .filter(x=> x.due.status === 'overdue' || x.due.status === 'due')
+    /* A shilling or more. A rounding remainder a fraction of a shilling
+       still read as "due", and the reminder offered to Pay now 0 UGX. */
+    .filter(x=> (x.due.status === 'overdue' || x.due.status === 'due') && x.due.dueNow >= 1)
     .sort((a,b)=>
       (a.due.status === b.due.status ? 0 : (a.due.status === 'overdue' ? -1 : 1))
       || b.due.dueNow - a.due.dueNow);
@@ -128818,7 +128920,8 @@ function loanDueRowHTML({loan, due}){
       <div class="ld-lender">${esc(loan.lender)}</div>
       <div class="ld-note">${late
         ? `Behind by ${fmtUGX(Math.round(due.overdue))}${due.instalmentsBehind ? ` across ${due.instalmentsBehind} instalment${due.instalmentsBehind===1?'':'s'}` : ''}, and this month's instalment is on top of it.`
-        : `This month's instalment of ${fmtUGX(Math.round(due.thisMonth))}.`}</div>
+        : loanFrequency(loan) === 'monthly' ? `This month's instalment of ${fmtUGX(Math.round(due.thisMonth))}.`
+        : `This month's ${LOAN_FREQUENCIES[loanFrequency(loan)].label.toLowerCase()} payments come to ${fmtUGX(Math.round(due.thisMonth))}.`}</div>
     </div>
     <div class="ld-act">
       <div class="ld-amount">${fmtUGX(Math.round(due.dueNow))}</div>
@@ -129365,6 +129468,9 @@ function faUpdatePayment(){
   const label = TILL_ACCOUNT_LABELS[account] || account;
   const gap = Math.round(cost - financed - paid);
 
+  /* Editing something already on the register never touches the Cash
+     Book (the money side is hidden), so there is nothing to say here. */
+  if(editingAssetId != null){ out.className = 'ow-pop-rl'; out.textContent = ''; return; }
   if(!cost){ out.className = 'ow-pop-rl'; out.textContent = 'Put in what it cost and this will say what reaches the Cash Book.'; return; }
   const fig = (n)=> `<b class="ow-pop-fig ow-pop-rv">${esc(alNum(n))}</b>`;
 
@@ -131227,16 +131333,21 @@ function managerGrowthPhone(phone){
   return /^[1-9][0-9]{9,14}$/.test(digits) ? digits : null;
 }
 
-function dashGoingQuietCustomers(){
+/* One clock for the whole reading, and it can be handed in. It read
+   Date.now() itself while its history took a `now`, so a check pinned
+   to a date passed until that date went by -- an invoice dated "ten
+   days ahead" became a real one, and the customer stopped being quiet. */
+function dashGoingQuietCustomers(nowMs){
+  const now = nowMs || Date.now();
   const rows = [];
-  const history = managerPurchaseHistory();
+  const history = managerPurchaseHistory(now);
   data.customers.forEach(c=>{
     const orderTimes = (history.byCustomer.get(String(c.id)) || []).map(e=> e.at);
     if(orderTimes.length<2) return;
     const first = orderTimes[0], last = orderTimes[orderTimes.length-1];
     const avgGapDays = (last-first) / (orderTimes.length-1) / 86400000;
     if(avgGapDays<=0) return;
-    const sinceLastDays = (Date.now()-last) / 86400000;
+    const sinceLastDays = (now-last) / 86400000;
     const extraDays = sinceLastDays - avgGapDays;
     // Overdue by at least 50% of their usual gap, with a 7-day floor so a
     // customer who orders every couple of days isn't flagged over natural

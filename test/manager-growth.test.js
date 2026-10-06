@@ -44,7 +44,7 @@ function build(over={}){
   assert.equal(b.recentMatureCohort.returned,1);
   assert.equal(b.priorMatureCohort.rate,null,'empty cohorts have no rate');
   assert.equal(s.customerOrdersFor(2).length,1,'name collision cannot leak purchases');
-  assert.equal(s.dashGoingQuietCustomers().length,1,'invoiced dates establish the quiet customer');
+  assert.equal(s.dashGoingQuietCustomers(now).length,1,'invoiced dates establish the quiet customer');
   s=build({data:{savedQuotes:[invoice(1,1,45,{createdAt:iso(50)}),{id:2,createdAt:iso(45)},
     {id:3,createdAt:iso(40),voided:true},invoice(4,2,40,{createdAt:iso(40),counterSale:true})]}});
   b=s.managerGrowthBaseline(now);
