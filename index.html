@@ -27003,8 +27003,12 @@
     border-bottom:1px solid var(--ow-rule);white-space:nowrap;}
   .ow-ax-th:first-child{text-align:left;padding-left:0;}
   .ow-ax-th:last-child{padding-right:0;}
-  .ow-ax-td1{padding:7px var(--ow-sp-8) 7px 0;border-bottom:1px solid var(--ow-rule-soft);max-width:200px;min-width:0;
+  /* The name takes what the figures leave and gives way first: width
+     100% with max-width 0 is how a table cell is told to shrink. */
+  .ow-ax-td1{padding:7px var(--ow-sp-8) 7px 0;border-bottom:1px solid var(--ow-rule-soft);width:100%;max-width:0;min-width:0;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ow-ink-900);}
+  .ow-ax-tds{display:block;margin-top:1px;font-size:var(--ow-t-11);color:var(--ow-ink-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .ow-ax-tdm,.ow-ax-tdv{text-align:right;padding:7px var(--ow-sp-8);border-bottom:1px solid var(--ow-rule-soft);white-space:nowrap;
     font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
   .ow-ax-tdm{color:var(--ow-ink-600);}
@@ -139905,8 +139909,12 @@ function analysisFindings(dctx){
       steps: [step(`Check ${top.row.pname} with ${top.row.sname} first — it carries the most money`, 'prices', 'Open Price Registry'),
         step('Update each price as you confirm it'),
         prog && prog.target > prog.done ? step(`Check ${prog.target - prog.done} more this month to reach ${prog.target}`) : null].filter(Boolean),
-      table: { title: 'Most money first', cols: ['Item · supplier', 'Why it is here', 'Through it'],
-        rows: shown.map((f)=> [`${f.row.pname} · ${f.row.sname}`, f.reasons.join(' · '), M(f.moneyAtRisk)]),
+      /* Why each price is here goes UNDER its name, not in a column of
+         its own: the reasons are sentences, and a column of sentences
+         pushed the money off the edge of the table on the live books. */
+      table: { title: 'Most money first', cols: ['Item · supplier', 'Through it'],
+        rows: shown.map((f)=> [`${f.row.pname} · ${f.row.sname}`, M(f.moneyAtRisk)]),
+        subs: shown.map((f)=> f.reasons.join(' · ')),
         note: rest.length ? `${rest.length} more on the Price Registry, worth ${M(restWorth)} between them. Applies whatever period is chosen above.`
           : 'Applies whatever period is chosen above.' },
       action: { label: 'Open the Price Registry', tab: 'prices' },
@@ -140244,7 +140252,9 @@ function anDetailBodyHTML(f, tab, mode){
     const cols = f.table.cols;
     return `<div class="ow-ax-sec"><h3 class="ow-ax-h3">${esc(f.table.title)}</h3>
       <div class="ow-ax-tw"><table class="ow-ax-tbl"><thead><tr>${cols.map((c)=> `<th scope="col" class="ow-ax-th">${esc(c)}</th>`).join('')}</tr></thead>
-      <tbody>${f.table.rows.map((r)=> `<tr>${r.map((v, i)=> i === 0 ? `<td class="ow-ax-td1" title="${esc(v)}">${esc(v)}</td>`
+      <tbody>${f.table.rows.map((r, ri)=> `<tr>${r.map((v, i)=> i === 0
+        ? `<td class="ow-ax-td1" title="${esc(v)}">${esc(v)}${f.table.subs && f.table.subs[ri]
+          ? `<span class="ow-ax-tds" title="${esc(f.table.subs[ri])}">${esc(f.table.subs[ri])}</span>` : ''}</td>`
         : `<td class="${i === r.length - 1 ? 'ow-ax-tdv' : 'ow-ax-tdm'}">${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
       ${f.table.note ? `<p class="ow-ax-tn">${esc(f.table.note)}</p>` : ''}</div>`;
   })() : '';
@@ -140328,7 +140338,10 @@ function anKpisHTML(dctx, cash){
     const total = soon.reduce((n, b)=> n + b.due, 0) + late;
     const bills = soon.length + due.missed.length;
     tile('You owe, next 14 days', anN(total), `${bills} ${bills === 1 ? 'bill' : 'bills'}${due.undated.length ? ` · ${due.undated.length} with no date` : ''}`,
-      late > 0.5 ? `${anN(late)} already past your word` : 'Nothing overdue', late > 0.5 ? 'bad' : 'good');
+      late > 0.5 ? `${anN(late)} already past your word`
+        : total < 0.5 && due.undated.length ? `${due.undated.length} ${due.undated.length === 1 ? 'bill has' : 'bills have'} no pay-by date`
+        : 'Nothing overdue',
+      late > 0.5 ? 'bad' : total < 0.5 && due.undated.length ? 'warn' : 'good');
   } catch(e){ /* a shop with no bill book shows three figures, not a guessed fourth */ }
   if(cash){
     tile(`Net cash, ${cash.weeks} weeks`, (cash.net < 0 ? '−' : '') + anN(Math.abs(cash.net)),
