@@ -139806,7 +139806,7 @@ function analysisWorth(amount, kind){
 /* One number, as the shop reads it: whole shillings, grouped. */
 function anN(n){ return Math.round(Number(n) || 0).toLocaleString('en-UG'); }
 /* The short form a phone figure needs: 17.96M, 410K. */
-function anShort(n){
+function axShort(n){
   const v = Math.abs(Number(n) || 0), s = (Number(n) || 0) < 0 ? '−' : '';
   if(v >= 1e6) return s + (v / 1e6).toFixed(2).replace(/\.?0+$/, '') + 'M';
   if(v >= 1e3) return s + Math.round(v / 1e3) + 'K';
@@ -140223,7 +140223,7 @@ function anRowHTML(f, ctx){
           <span class="ow-ax-cw"><span class="ow-ax-cti">${esc(f.title)}</span><span class="ow-ax-cp">${esc(f.plain || '')}</span></span>
         </span>
         <span class="ow-ax-cm">${anTagHTML(f.area)} <span class="ow-ax-st ${st.cls}">${st.label}</span>${anyWin}
-          <span class="ow-ax-sp"></span><b class="ow-ax-cf${figCls}">${esc(f.unpriced ? '—' : f.gone ? (f.fig ? anShort(String(f.fig).replace(/,/g, '')) : '—') : anShort(f.amount))}</b><span class="ow-ax-cper">${esc(f.per === 'a year' ? '/ yr' : f.per || '')}</span></span>
+          <span class="ow-ax-sp"></span><b class="ow-ax-cf${figCls}">${esc(f.unpriced ? '—' : f.gone ? (f.fig ? axShort(String(f.fig).replace(/,/g, '')) : '—') : axShort(f.amount))}</b><span class="ow-ax-cper">${esc(f.per === 'a year' ? '/ yr' : f.per || '')}</span></span>
       </button>
       ${ctx.open ? `<div class="ow-ax-cb">${anDetailBodyHTML(f, ctx.tab, 'phone')}</div>` : ''}
     </div>`;
@@ -140332,7 +140332,7 @@ function anKpisHTML(dctx, cash){
   } catch(e){ /* a shop with no bill book shows three figures, not a guessed fourth */ }
   if(cash){
     tile(`Net cash, ${cash.weeks} weeks`, (cash.net < 0 ? '−' : '') + anN(Math.abs(cash.net)),
-      `in ${anShort(cash.cin)} · out ${anShort(cash.cout)}`,
+      `in ${axShort(cash.cin)} · out ${axShort(cash.cout)}`,
       cash.net < 0 ? (cash.run > 1 ? `Out more than in, ${cash.run} weeks running` : 'Out more than in') : 'In more than out',
       cash.net < 0 ? 'warn' : 'good');
   }
