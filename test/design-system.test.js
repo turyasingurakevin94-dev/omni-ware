@@ -797,14 +797,41 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'pi-table-wrap', 'pi-cards', 'pi-card', 'pi-card-top', 'pi-card-title',
                 'pi-card-meta', 'pi-card-foot', 'sc-stats', 'sc-stat', 'an-scroll',
                 'an-rank', 'cmp-card-supplier'],
+      /* WAS: ow-grid, ow-stack and ow-side as well -- the list beside a
+         304px rail, and the lanes beside the open line. The owner's canvas
+         took the rail away: the screen is three pages under one set of
+         tabs now (Stock register, Intelligence, Movements), the register
+         a full-width table and what the rail said moved to Intelligence,
+         where each question has a panel of its own. So the markup has no
+         grid-and-side to wear; what it must still be built from is the
+         page head, the segment the tabs are, the field the Movements bar
+         uses and the panel the register sits in. */
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp',
              'ow-seg', 'ow-seg-b', 'ow-seg-n',
-             'ow-f', 'ow-f-l', 'ow-f-in', 'ow-grid', 'ow-stack', 'ow-side', 'ow-pan'],
-      renders: ['renderInventory', 'invLineHTML', 'invOpenHTML', 'invRowThumbHTML', 'renderInvFix',
-                'renderInvRail', 'renderInventoryFloors',
-                'renderStockLog', 'stockLogPutRightButtonHTML'],
-      rendersUses: ['ow-strip', 'ow-mt', 'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t',
-                    'ow-q-why', 'ow-q-a', 'ow-cp', 'ow-thumb', 'ow-sr', 'ow-pan', 'ow-mini', 'ow-empty',
+             'ow-f', 'ow-f-l', 'ow-f-in', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n'],
+      /* The renderers of the screen as it now ships. renderInvRail,
+         invBandHTML and invStateCellHTML are gone from the file with the
+         rail, the band and the lanes' state column they drew; the
+         register's totals, pills, pager and drawn thumbnails, the product
+         popup and every Intelligence panel are drawn by builders of their
+         own, so they come with the renderers -- the ratchet follows the
+         markup, and none of them may emit a retired family either.
+         invStateChipHTML went with the canvas too: the state is the
+         outlook pill on the row and the popup, not a chip. */
+      renders: ['renderInventory', 'invLineHTML', 'invOpenHTML', 'invRowThumbHTML', 'invThumbHTML',
+                'renderInvFix', 'renderInventoryFloors', 'invTotalsHTML', 'invRenderPills', 'invPagerHTML',
+                'renderStockLog', 'stockLogPutRightButtonHTML',
+                'renderInvIntel', 'invVitalsHTML', 'invMovesHTML', 'invCalendarHTML', 'invMatrixHTML',
+                'invBridgeHTML', 'invConsignHTML', 'invSuppliersHTML', 'invStocktakeHTML'],
+      /* WAS: ow-q-x, ow-q-why, ow-sr and ow-mini as well. Those were the
+         row that opened in place onto a sentence and the rail's rows; a
+         register row now opens the product popup, and the rail is gone.
+         The row itself is still the layer's queue row with its phone card
+         emitted by the same call, which is the part that stops the two
+         from ever disagreeing about a line. ow-cp went with
+         invStateChipHTML: the state is the outlook pill now. */
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-t',
+                    'ow-q-a', 'ow-thumb', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-empty',
                     'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-c', 'ow-tbl-p', 'ow-tbl-s',
                     'ow-tbl-n', 'ow-tbl-a', 'ow-fig', 'ow-sm'],
     },
