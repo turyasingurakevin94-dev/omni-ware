@@ -209,28 +209,35 @@ const reset = () => { data.stock = {}; data.stockLots = {}; };
     'the private card grid is gone from the screen');
   t.check(/class="ow-q-r" data-invopen=/.test(code) && /class="ow-q-card" data-invopen=/.test(code),
     'and the desk row and the phone card are emitted from one call, so they cannot say different things');
-  t.check(/Value here/.test(code) && /fmtUGX\(Math\.round\(l\.value\)\)/.test(code),
-    'the line value survived the reshape — it is a column now rather than a third stat');
-  t.check(/\.iv-f\{[^}]*IBM Plex Mono/.test(src) && /\.iv-f\{[^}]*tabular-nums/.test(src),
-    'and the figures are mono and tabular, so a column of money lines up — which is the whole reason for the reshape');
-  t.check(/\.iv-f\.iv-c1\{grid-column:4;\}/.test(src) && /minmax\(0,1fr\) 108px 104px 152px/.test(src),
-    'the figure columns are fixed and only the name column flexes, so a name is cut before a figure ever is');
+  /* THE REGISTER IS A TABLE NOW, the owner's canvas. These read "Value
+     here" and fmtUGX(Math.round(l.value)) on the row, and pinned seven
+     grid columns -- 18px 28px minmax(0,1fr) 128px 100px 100px 140px --
+     with the figures at columns 5 to 7.
 
-  /* THE STRIP IS THE WHOLE SHELF NOW, and this is the second reversal.
-     It used to be checked as `strip.innerHTML = lines.length ?` with the
-     reasoning "counts follow the filters — a strip that ignored the
-     filters would contradict the rows underneath it."
+     WHAT THAT MEANT: the line's value is a column of its own, and every
+     column but the name is fixed, so a name is cut before a figure is.
 
-     THAT FEAR IS REAL and it is answered differently rather than
-     ignored. Two figures on one screen only contradict each other if
-     both claim to be the same figure. The strip now says what the shop
-     HOLDS and never moves when a filter does; the panel header over the
-     list says what is LISTED under it. Each is labelled as what it is.
+     WHY IT STOPPED BEING TRUE: the canvas the owner signed off draws
+     the register as ten columns under one header -- on shelf, reorder
+     at, cover, outlook, eight weeks of sales, value, GMROI, counted, and
+     the one action -- because a row that answers "what do I do about
+     this line" needs those side by side. The value is said in the
+     column's own unit (the header says UGX), so the row carries invFig,
+     the figure without the currency, rather than fmtUGX on every line.
 
-     The reason for the change is the one Pricing had already learned: a
-     position that shrinks because somebody left a filter on is a
-     position nobody can trust, and the shelf total is read against the
-     balance sheet, which does not know what was typed in a search box. */
+     WHAT THE NEW CHECKS MEAN: the same two rules, on the new table --
+     the value is still a column (with "no cost" where the books have
+     none, never a nought), and only the product column flexes. */
+  t.check(/Value \(UGX\)/.test(code) && /invFig\(l\.value\)/.test(code) && /no cost<\/span>/.test(code),
+    'the line value survived the reshape — it is a column of its own, and a line with no cost says so');
+  t.check(/\.iv-tbl \.iv-f\{[^}]*IBM Plex Mono/.test(src) && /\.iv-tbl \.iv-f\{[^}]*tabular-nums/.test(src),
+    'and the figures are mono and tabular, so a column of money lines up');
+  t.check(/36px minmax\(160px,1fr\) 88px 76px 64px 120px 112px 100px 60px 72px 112px/.test(src),
+    'the figure columns are fixed and only the product column flexes, so a name is cut before a figure ever is');
+
+  /* THE STRIP IS THE WHOLE SHELF, and this survives the canvas intact:
+     what the shop HOLDS never moves when a filter does, and the panel
+     header over the list says what is LISTED under it. */
   const render = (/function renderInventory\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
   t.check(/const s = inventoryLineStats\(lines\);/.test(render),
     'what is LISTED is still counted after the filters have run');
@@ -239,63 +246,72 @@ const reset = () => { data.stock = {}; data.stockLots = {}; };
   t.check(/const all = inventoryLineStats\(allLines\);/.test(render)
        && /allProductVariantEntries\(\[\]\)\.map\(\(\{p, variantIdx\}\)=> inventoryLineFor\(p, variantIdx\)\)/.test(render),
     'while the strip is counted over the WHOLE shelf, unfiltered');
-  t.check(/at what you paid/.test(render) && /of \$\{all\.lines\} on file/.test(render),
-    'and both figures say which of the two they are');
+  /* WAS: invBandHTML(zrAll, all, withFloor, uncostedUnits), with "at
+     what you paid" and "of N on file" in the band. The band went with
+     the canvas; its job -- saying which of the two figures is which --
+     is the totals strip's now, four cells over the WHOLE shelf. */
+  const totals = (/function invTotalsHTML\([\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/invTotalsHTML\(all\)/.test(render) && /of \$\{all\.lines\} on file/.test(totals) && /Value at cost/.test(totals),
+    'and both figures say which of the two they are — the strip is handed the WHOLE shelf');
 
-  /* THE TILES ARE A BAR NOW, and this is the third reversal on this
-     strip. It was checked as `else tiles.push(mt('Costed'` and
-     `else if(withFloor) tiles.push(mt('With a floor set'`, under the
-     rule "no tile ever reads 0 -- a count that would be zero is
-     replaced by the fact that makes it good news, never simply dropped,
-     which would leave the strip a different shape on a good day."
+  /* THE BAR IS PILLS NOW, the fifth reversal on this strip. These pinned
+     the band's segments: "const segs = INV_STATES.filter(h=> by[h.key].n
+     > 0)", every line counted into one zone, and the no-floors warning
+     under it.
 
-     WHAT THAT MEANT: four bare numbers, and a nought among them reads
-     as a broken app. Swapping the nought for its good-news reading kept
-     four tiles on screen every day.
+     WHAT THAT MEANT: no state is drawn reading nought; every line on the
+     shelf is in exactly one state; a shelf with no floors is told that
+     nothing can warn it.
 
-     WHY IT STOPPED BEING TRUE: the complaint is no longer about noughts.
-     "3 below their floor" and "1 valued by nothing" were counts with
-     nothing to measure them by -- three of how many? -- said a second
-     time by the amber repair line under them and a third by the
-     sentence under the search. The owner asked for the shelf's state to
-     be SHOWN rather than listed. Every line on file is exactly one of
-     four states, so the shelf is one bar whose segments add up to it,
-     and a good day is not "a different shape": it is a bar that is all
-     one colour, which is the good news drawn.
+     WHY IT STOPPED BEING TRUE: the canvas puts the states where they
+     are pressed -- a row of pills over the table, each with its count --
+     and puts the state ON the row, as the outlook pill and the dot on
+     the thumbnail. A bar of proportions above a table of the same lines
+     was the same fact drawn twice.
 
-     WHAT THE NEW ASSERTIONS MEAN: a state with no lines is not drawn --
-     the old rule's intent, no nought on screen -- and every line is
-     counted in exactly one state, with a precedence rather than a
-     guess, so the segments can never add up to more than the shelf. */
-  t.check(/const segs = INV_HEALTH\.filter\(h=> counts\[h\.key\] > 0\);/.test(render),
-    'a state with no lines in it is not drawn, so the band never shows a nought');
-  t.check(/allLines\.forEach\(l=>\{ const k = invHealthOf\(l\); counts\[k\] = \(counts\[k\] \|\| 0\) \+ 1; \}\);/.test(render),
-    'and every line on the WHOLE shelf is counted into exactly one state, so the bar adds up to the shelf');
-  t.check(/No line has a restock floor yet/.test(render) && /\$\{withFloor \? '' :/.test(render),
+     WHAT THE NEW CHECKS MEAN: the same three rules, on the pills. A pill
+     with no lines is not drawn; each line's state is still read from
+     the one zone row invZoneRows gives it over the WHOLE shelf; and the
+     no-floors warning is said beside them. */
+  const pills = (/function invRenderPills\([\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/if\(h\.key && !n\) return '';/.test(pills),
+    'a state with no lines in it is not drawn, so the pills never show a nought');
+  t.check(/const zrAll = invZoneRows\(allLines\);/.test(render) && /invZoneByKey = new Map\(zrAll\.map\(z=> \[z\.key, z\]\)\);/.test(render)
+       && /return z \? z\.zone :/.test(code),
+    'and every line on the WHOLE shelf is in exactly one state, read from its own zone row');
+  t.check(/No line has a restock floor yet/.test(pills) && /withFloor \? '' :/.test(pills),
     'the warning the zero-floors tile carried survives — a shelf with no floors is told nothing can warn it');
   {
-    const h = compileScope([extractFunction(src, 'invHealthOf', 'index.html')], {}, ['invHealthOf']).invHealthOf;
-    eq(h({ belowFloor: true, uncosted: true, qty: 2 }), 'floor', 'under the floor wins over a missing cost — running out is what costs a sale');
-    eq(h({ belowFloor: true, uncosted: false, qty: 0 }), 'floor', 'an empty shelf WITH a floor is under it, not merely empty');
-    eq(h({ belowFloor: false, uncosted: true, qty: 5 }), 'nocost', 'stock nobody costed is its own state');
-    eq(h({ belowFloor: false, uncosted: false, qty: 0 }), 'empty', 'nothing on the shelf and no floor is empty');
-    eq(h({ belowFloor: false, uncosted: false, qty: 5 }), 'ok', 'and everything else is healthy');
+    const states = (/const INV_STATES = \[([\s\S]*?)\];/.exec(code) || ['', ''])[1];
+    eq([...states.matchAll(/key:'([a-z]+)'/g)].map((m) => m[1]).join(','), 'buy,ok,dead,nocost,empty',
+      'five states, the same five invZoneRows assigns');
+    t.check(!/INV_HEALTH|invHealthOf|invHealth\b/.test(code),
+      'and the second vocabulary is gone — no line can be healthy in one view and Buy now in the other');
   }
-  /* The bar is the filter, and pressing a state must be able to list
-     empty lines -- so while one is pressed, "hide no stock" steps aside
-     rather than emptying the very list that was asked for. */
-  t.check(/checked && !invHealth;/.test(render) && /if\(invHealth\) lines = lines\.filter\(l=> invHealthOf\(l\) === invHealth\);/.test(render),
+  /* WAS: lines.filter(l=> invStateOf(l) === invZone). The pill can also
+     be one of the two that cut across the states -- consigned, A-class --
+     or a portfolio cell pressed on the Intelligence page, so the match
+     is one function now; for a state it is still invStateOf. */
+  t.check(/checked && !invZone;/.test(render) && /if\(invZone\) lines = lines\.filter\(l=> invPillMatch\(l, invZone\)\);/.test(render)
+       && /return invStateOf\(l\) === k;/.test(code),
     'a pressed state is the filter, and hide-no-stock gives way to it');
 
-  // Every option offered is one the sort understands.
+  /* WAS 'name,value,low'. The canvas's register sorts by when a line
+     runs out and by how long since it was counted as well -- the two
+     orders the Intelligence page ranks by -- so the shop can work down
+     either from the register itself. The rule pinned is unchanged:
+     every option offered is one the sort understands. */
   const sorts = (/const INVENTORY_SORTS = \[([\s\S]*?)\];/.exec(code) || ['', ''])[1];
   const keys = [...sorts.matchAll(/key:'([a-z]+)'/g)].map((m) => m[1]);
-  eq(keys.join(','), 'name,value,low', 'three sorts are offered');
+  eq(keys.join(','), 'name,value,low,runout,counted', 'five sorts are offered');
+  const sortFn = (/function sortInventoryLines\([\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(keys.every((k) => k === 'name' || new RegExp(`mode === '${k}'`).test(sortFn)),
+    'and the sort understands every one of them');
   t.check(/INVENTORY_SORTS\.map/.test(code),
     'and the dropdown is built from that list rather than written out twice');
 }
 
-/* ---------- 5a. twenty to a page -------------------------------------- */
+/* ---------- 5a. a page at a time (ten by default, 25 or 50 by choice) - */
 {
   /* A shelf of two hundred lines was two hundred rows. The answer to
      "what is on the shelf" is not something you scroll past: you search
