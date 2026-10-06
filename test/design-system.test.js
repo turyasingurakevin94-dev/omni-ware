@@ -365,6 +365,18 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
     ['--ow-slate', hex('--ow-slate-soft'), 4.5, 'supplier slate — ink on its tint'],
     ['--ow-slate', PAPER, 4.5, 'supplier slate — ink as text'],
     ['--ow-sky', hex('--ow-sky-soft'), 4.5, 'Money, and a part-paid chip — ink on its tint'],
+
+    /* THE AGE OF MONEY OWED. State fills, young to old, worn by Debtors'
+       columns, cells, jars, map and the blocks of who holds the money.
+       Mostly fills; where a figure or a name is set on one, this is the
+       ink it is set in, held like every other pair. */
+    ['--ow-ink-900', hex('--ow-age-0'), 4.5, 'age: a name on an in-terms block'],
+    ['--ow-ink-900', hex('--ow-age-1'), 4.5, 'age: a figure on a strong under-30 cell'],
+    ['--ow-ink-900', hex('--ow-age-2'), 4.5, 'age: a figure on a strong 30-60 cell'],
+    ['--ow-paper', hex('--ow-age-3'), 4.5, 'age: a figure on a strong 60-90 cell'],
+    ['--ow-amber-ink', hex('--ow-age-nd'), 4.5, 'age: a name on money with no date'],
+    ['--ow-ink-900', hex('--ow-steel-350'), 4.5, 'age: a name on a 2-to-4-weeks block, when the columns run in weeks'],
+
     /* PRICING'S NAVY BAND AND ITS TILES. The band speaks for the whole
        shelf on the rail's own navy, so its text wears the rail's inks
        and its two state inks are the light ones made for that ground;
@@ -873,24 +885,42 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'age-bands', 'age-band', 'age-verdict', 'age-filter-note', 'age-table', 'age-pill',
                 'age-name', 'age-where', 'age-amt', 'age-paid', 'age-never', 'age-act', 'age-card',
                 'pi-card', 'pi-cards', 'pi-table-wrap', 'inv-total-row'],
-      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-grid', 'ow-side', 'ow-db'],
-      renders: ['renderDebtorsList', 'renderDebtorsPosition', 'renderDebtorsRail', 'renderDebFilterNote'],
-      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s',
-                    'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n',
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-grid', 'ow-side', 'ow-db',
+             'ow-dx', 'ow-dx-vt', 'ow-dx-ph-a', 'ow-dx-grid', 'ow-dx-rail'],
+      /* THE INTELLIGENCE CENTER. Two views over one book -- the register
+         and the reading of it -- so the screen now draws through seven
+         renderers, not four: the header's glance and view switch, the
+         age panel, the register, the open customer, the band note, the
+         intelligence, and the risk map (drawn into its own box so a drag
+         or a hover redraws the map alone).
+
+         WHAT LEFT, AND WHY IT IS NOT A REGRESSION. The metric strip
+         (.ow-strip / .ow-mt-v / .ow-mt-s) answered "how much" with four
+         tiles; the age panel answers it with the late figure, a meter and
+         the money stacked by age and by customer, and Intelligence opens
+         on the book's twelve weeks, who holds it and how fast it comes
+         back. The open row's table (.ow-q-x / .ow-tbl-*) became the
+         customer in the rail -- their invoices as jars a payment fills
+         oldest first -- because the evidence and the act belong beside
+         the list, not inside it. The rail's dense rows (.ow-sr-*) became
+         "What needs you". The queue itself is unchanged in kind: the
+         desk row and the phone card still come from ONE call. */
+      renders: ['renderDebtorsHead', 'renderDebtorsList', 'renderDebtorsPosition', 'renderDebtorsRail',
+                'renderDebFilterNote', 'renderDebtorsIntel', 'renderDebMap'],
+      rendersUses: ['ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-mt-l',
                     'ow-tb', 'ow-tb-s', 'ow-tb-n', 'ow-f', 'ow-f-l', 'ow-f-in', 'ow-f-sel',
-                    /* No ow-q-why: an open debtor opens straight onto its
-                       invoices. The sentence that used to stand there
-                       repeated the row it had just opened -- the
-                       balance, the age and the paid-off share are all
-                       already on that row -- and the paragraph under it
-                       said the same thing about every debtor in the
-                       book. The reasoning a screen genuinely owes the
-                       reader is in the rail; what is left in an open
-                       row is the evidence. */
-                    'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t', 'ow-q-who', 'ow-q-v',
-                    'ow-q-f', 'ow-q-note', 'ow-q-a', 'ow-cp',
-                    'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-n',
-                    'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-mini', 'ow-empty'],
+                    'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-t', 'ow-q-who', 'ow-q-v',
+                    'ow-q-f', 'ow-q-b', 'ow-q-note', 'ow-q-a', 'ow-cp', 'ow-db-lp',
+                    'ow-mini', 'ow-empty',
+                    /* and what this screen owns: the age panel, the cells
+                       and twelve weeks on each row, the open customer and
+                       their jars and history, and the intelligence -- the
+                       headline, who holds it, how fast it comes back, the
+                       crop-to-zoom map with its preview, the agenda and
+                       what needs you */
+                    'ow-dx-age', 'ow-dx-cols', 'ow-dx-cells', 'ow-dx-sp', 'ow-dx-dos', 'ow-dx-jar',
+                    'ow-dx-tl', 'ow-dx-hd', 'ow-dx-tm', 'ow-dx-gg', 'ow-dx-map', 'ow-dx-plot',
+                    'ow-dx-tip', 'ow-dx-crop', 'ow-dx-agn', 'ow-dx-sig'],
     },
     /* CREDITORS -- "Who you owe" until it was drawn as a console, and
        now named the word the shop already uses, like its twin.
@@ -1127,9 +1157,23 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'st-vital-label', 'st-vital-note', 'rost-period', 'rost-per', 'empty'],
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp',
              'ow-seg', 'ow-seg-b', 'ow-f', 'ow-f-l', 'ow-f-in', 'ow-f-v', 'ow-f-sel'],
-      renders: ['stOverview', 'stBreakevenHTML', 'stTrendChartHTML'],
-      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s', 'ow-u',
-                    'ow-grid', 'ow-side', 'ow-stack', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n'],
+      /* THE PERFORMANCE HUB. The shop asked for the canvas design, line
+         for line: eight views (Overview, profit and loss, break-even,
+         cash flow, balance sheet, ratios, drivers, what if), each a
+         ruled table in the accounting form with the figure that answers
+         it on top. A ruled statement is not the layer's strip, panel and
+         two-column grid -- it is a document, with its own column rules,
+         sub-totals and grand totals -- so the views draw from the
+         screen's own .sh-* family (shTable, shStatement, shHead) and
+         reach the layer only for its button size. Holding them to
+         .ow-strip/.ow-pan would mean drawing a strip nobody asked for on
+         top of a table that already says it. What stays pinned: the
+         page header and period controls above (uses), every retired
+         class staying gone from every view (renders), and the one
+         button family. */
+      renders: ['stOverview', 'stBreakevenHTML', 'stProfitAndLoss', 'shBreakEven', 'stCashFlow',
+                'stBalanceSheet', 'shRatios', 'shDrivers', 'shWhatIf'],
+      rendersUses: ['ow-sm'],
     },
     /* FORECASTS — the three screens that answer "what is coming".
 

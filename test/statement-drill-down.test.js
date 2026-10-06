@@ -104,6 +104,9 @@ const NAMES = [
   // The real label pair — a stub here once hid that the stock preview
   // never found a product at all and printed raw keys instead of names.
   'productVariantLabel', 'variantLabel',
+  // The side view writes its figures the way the statement beside it
+  // does -- plain thousands, a chip for how the line moved.
+  'shNum', 'shChip',
 ];
 try {
   fns = compileScope(
@@ -118,6 +121,10 @@ try {
       extractDeclaration(src, 'DUE_KINDS', 'index.html'),
       // cashHas is a const arrow, so it is pulled as a declaration.
       extractDeclaration(src, 'cashHas', 'index.html'),
+      // What the statement knew about the line that opened the side
+      // view (its section, this period, the one before). The panel
+      // reads it for its header; empty here, as on a fresh page.
+      extractDeclaration(src, 'shDrillMeta', 'index.html'),
       'let stDrillKey = null; function setDrillKey(k){ stDrillKey = k; }',
       ...NAMES.map(n => extractFunction(src, n, 'index.html'))],
     env, [...NAMES, 'setDrillKey'],
@@ -422,8 +429,15 @@ if (fns) {
 
 /* ---------- 7. the wiring on the page -------------------------------- */
 {
-  t.check(/const drillable = stActiveTab !== 'ratios' && stActiveTab !== 'overview';/.test(code),
-    'the ratios and the overview stay full-width — ratios because every figure is derived, the overview by the shop\u2019s own request: it is the summary, and the records live on the statements its lines summarise');
+  /* Eight views now, not five documents (the Performance hub). The
+     records sit beside the three that ARE statements -- the profit and
+     loss (on its statement chapter, not its chart chapters), the cash
+     flow and the balance sheet. The rule this pinned is unchanged: the
+     overview and the ratios stay full-width, and so do break-even,
+     drivers and what-if, whose figures are all derived or hypothetical
+     and have no records of their own to open. */
+  t.check(/const drillable = stActiveTab === 'pl' \? shChap === 'statement' : \(stActiveTab === 'cf' \|\| stActiveTab === 'bs'\);/.test(code),
+    'only the statements open their records — the overview, ratios and the derived views stay full-width; the overview by the shop\u2019s own request: it is the summary, and the records live on the statements its lines summarise');
   /* No handle on a door that opens onto a wall: with no panel on the
      overview, none of its lines may carry a drill key. Matched over the
      whole of stOverview so a key added to any future line fails here. */

@@ -69,7 +69,11 @@ const printCss = (/@media print\{([\s\S]*?)\n  \}/.exec(src) || ['', ''])[1];
   ['overview', 'pl', 'bs', 'cf', 'ratios'].forEach((k) => {
     t.check(new RegExp(`key:'${k}'`).test(docs), `${k} is in the set`);
   });
-  t.check(/if\(!docs\.length\) return;/.test(printFn),
+  /* Three of the eight views (break-even, drivers, what if) are not
+     statements and have no printed form, so Print on them now says so
+     in a toast before returning -- a failure names itself -- rather
+     than returning silently. Still nothing printed. */
+  t.check(/if\(!docs\.length\)(?: return;|\{ toast\([^)]*\); return; \})/.test(printFn),
     'and an unknown key prints nothing rather than an empty sheet');
 }
 
