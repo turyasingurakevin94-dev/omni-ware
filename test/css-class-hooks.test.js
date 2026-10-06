@@ -49,7 +49,7 @@ const KNOWN = [
   'ag-lb-you',
   'assign-staff-self', 'buy-why', 'cf-duplicate', 'cf-phone',
   'cst-print', 'ip-item', 'ls-tidy', 'panel-head',
-  'pr-bulk-tier-price', 'q-more-btn', 'sf-card', 'sf-phone', 'sf-role-warn',
+  'pr-bulk-tier-price', 'q-more-btn', 'sf-card', 'sf-role-warn',
   'stock-log-edit', 'wa-desk-main', 'wv-active-header', 'wv-eyebrow',
 ];
 
