@@ -365,6 +365,33 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
     ['--ow-slate', hex('--ow-slate-soft'), 4.5, 'supplier slate — ink on its tint'],
     ['--ow-slate', PAPER, 4.5, 'supplier slate — ink as text'],
     ['--ow-sky', hex('--ow-sky-soft'), 4.5, 'Money, and a part-paid chip — ink on its tint'],
+
+    /* THE AGE OF MONEY OWED. State fills, young to old, worn by Debtors'
+       columns, cells, jars, map and the blocks of who holds the money.
+       Mostly fills; where a figure or a name is set on one, this is the
+       ink it is set in, held like every other pair. */
+    ['--ow-ink-900', hex('--ow-age-0'), 4.5, 'age: a name on an in-terms block'],
+    ['--ow-ink-900', hex('--ow-age-1'), 4.5, 'age: a figure on a strong under-30 cell'],
+    ['--ow-ink-900', hex('--ow-age-2'), 4.5, 'age: a figure on a strong 30-60 cell'],
+    ['--ow-paper', hex('--ow-age-3'), 4.5, 'age: a figure on a strong 60-90 cell'],
+    ['--ow-amber-ink', hex('--ow-age-nd'), 4.5, 'age: a name on money with no date'],
+    ['--ow-ink-900', hex('--ow-steel-350'), 4.5, 'age: a name on a 2-to-4-weeks block, when the columns run in weeks'],
+
+    /* PRICING'S NAVY BAND AND ITS TILES. The band speaks for the whole
+       shelf on the rail's own navy, so its text wears the rail's inks
+       and its two state inks are the light ones made for that ground;
+       the treemap and the month grid set state ink on a tile one step
+       deeper than each state's soft ground. Every one of them is text. */
+    ['--ow-navy-ink', NAVY, 4.5, 'secondary text on the navy band'],
+    ['--ow-navy-mute', NAVY, 4.5, 'the band\'s eyebrows and month names'],
+    ['--ow-navy-line', NAVY, 4.5, 'the band\'s slider labels'],
+    ['--ow-navy-ink', hex('--ow-steel-900'), 4.5, 'a phone tile\'s caption, on the raised navy'],
+    ['--ow-good-ink-on-navy', NAVY, 4.5, 'a monthly gain, set on navy'],
+    ['--ow-warn-ink-on-navy', NAVY, 4.5, 'a caution, set on navy'],
+    ['--ow-verdigris-deep', hex('--ow-verdigris-tile'), 4.5, 'a keeping line\'s name on its tile'],
+    ['--ow-verdigris-deep', hex('--ow-verdigris-tile-2'), 4.5, 'a month well over the bar'],
+    ['--ow-amber-ink', hex('--ow-amber-tile'), 4.5, 'a thin line\'s name on its tile'],
+    ['--ow-crimson', hex('--ow-crimson-tile'), 4.5, 'a still line\'s name on its tile, and a month under half the bar'],
   ];
   ['--ow-indigo', '--ow-sky', '--ow-plum', '--ow-teal', '--ow-violet', '--ow-slate'].forEach((tok) => {
     const r = hex(tok) ? ratio(PAPER, hex(tok)) : 0;
@@ -408,7 +435,11 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
 
 /* ---------- the layer keeps to the system ---------- */
 {
-  const RAMP = new Set([11, 12, 13, 14, 16, 20, 28, 19, 26, 15, 22, 21, 23]);
+  /* 18 joined the ramp with the Creditors redesign: the owner signed off a
+     design whose plan ring and payment total are set at 18px, between the
+     16 a row figure wears and the 20 a phone page name does. It was already
+     in the file outside the layer, so the file's size count does not move. */
+  const RAMP = new Set([11, 12, 13, 14, 16, 18, 20, 28, 19, 26, 15, 22, 21, 23]);
   const sizes = [...layer.matchAll(/font-size:\s*([\d.]+)px/g)].map((m) => Number(m[1]));
   const off = [...new Set(sizes.filter((n) => !RAMP.has(n)))];
   t.check(off.length <= 3,
@@ -797,14 +828,41 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'pi-table-wrap', 'pi-cards', 'pi-card', 'pi-card-top', 'pi-card-title',
                 'pi-card-meta', 'pi-card-foot', 'sc-stats', 'sc-stat', 'an-scroll',
                 'an-rank', 'cmp-card-supplier'],
+      /* WAS: ow-grid, ow-stack and ow-side as well -- the list beside a
+         304px rail, and the lanes beside the open line. The owner's canvas
+         took the rail away: the screen is three pages under one set of
+         tabs now (Stock register, Intelligence, Movements), the register
+         a full-width table and what the rail said moved to Intelligence,
+         where each question has a panel of its own. So the markup has no
+         grid-and-side to wear; what it must still be built from is the
+         page head, the segment the tabs are, the field the Movements bar
+         uses and the panel the register sits in. */
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp',
              'ow-seg', 'ow-seg-b', 'ow-seg-n',
-             'ow-f', 'ow-f-l', 'ow-f-in', 'ow-grid', 'ow-stack', 'ow-side', 'ow-pan'],
-      renders: ['renderInventory', 'invLineHTML', 'invOpenHTML', 'invRowThumbHTML', 'renderInvFix',
-                'renderInvRail', 'renderInventoryFloors',
-                'renderStockLog', 'stockLogPutRightButtonHTML'],
-      rendersUses: ['ow-strip', 'ow-mt', 'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t',
-                    'ow-q-why', 'ow-q-a', 'ow-cp', 'ow-thumb', 'ow-sr', 'ow-pan', 'ow-mini', 'ow-empty',
+             'ow-f', 'ow-f-l', 'ow-f-in', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n'],
+      /* The renderers of the screen as it now ships. renderInvRail,
+         invBandHTML and invStateCellHTML are gone from the file with the
+         rail, the band and the lanes' state column they drew; the
+         register's totals, pills, pager and drawn thumbnails, the product
+         popup and every Intelligence panel are drawn by builders of their
+         own, so they come with the renderers -- the ratchet follows the
+         markup, and none of them may emit a retired family either.
+         invStateChipHTML went with the canvas too: the state is the
+         outlook pill on the row and the popup, not a chip. */
+      renders: ['renderInventory', 'invLineHTML', 'invOpenHTML', 'invRowThumbHTML', 'invThumbHTML',
+                'renderInvFix', 'renderInventoryFloors', 'invTotalsHTML', 'invRenderPills', 'invPagerHTML',
+                'renderStockLog', 'stockLogPutRightButtonHTML',
+                'renderInvIntel', 'invVitalsHTML', 'invMovesHTML', 'invCalendarHTML', 'invMatrixHTML',
+                'invBridgeHTML', 'invConsignHTML', 'invSuppliersHTML', 'invStocktakeHTML'],
+      /* WAS: ow-q-x, ow-q-why, ow-sr and ow-mini as well. Those were the
+         row that opened in place onto a sentence and the rail's rows; a
+         register row now opens the product popup, and the rail is gone.
+         The row itself is still the layer's queue row with its phone card
+         emitted by the same call, which is the part that stops the two
+         from ever disagreeing about a line. ow-cp went with
+         invStateChipHTML: the state is the outlook pill now. */
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-t',
+                    'ow-q-a', 'ow-thumb', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-empty',
                     'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-c', 'ow-tbl-p', 'ow-tbl-s',
                     'ow-tbl-n', 'ow-tbl-a', 'ow-fig', 'ow-sm'],
     },
@@ -827,24 +885,42 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'age-bands', 'age-band', 'age-verdict', 'age-filter-note', 'age-table', 'age-pill',
                 'age-name', 'age-where', 'age-amt', 'age-paid', 'age-never', 'age-act', 'age-card',
                 'pi-card', 'pi-cards', 'pi-table-wrap', 'inv-total-row'],
-      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-grid', 'ow-side', 'ow-db'],
-      renders: ['renderDebtorsList', 'renderDebtorsPosition', 'renderDebtorsRail', 'renderDebFilterNote'],
-      rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s',
-                    'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n',
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-grid', 'ow-side', 'ow-db',
+             'ow-dx', 'ow-dx-vt', 'ow-dx-ph-a', 'ow-dx-grid', 'ow-dx-rail'],
+      /* THE INTELLIGENCE CENTER. Two views over one book -- the register
+         and the reading of it -- so the screen now draws through seven
+         renderers, not four: the header's glance and view switch, the
+         age panel, the register, the open customer, the band note, the
+         intelligence, and the risk map (drawn into its own box so a drag
+         or a hover redraws the map alone).
+
+         WHAT LEFT, AND WHY IT IS NOT A REGRESSION. The metric strip
+         (.ow-strip / .ow-mt-v / .ow-mt-s) answered "how much" with four
+         tiles; the age panel answers it with the late figure, a meter and
+         the money stacked by age and by customer, and Intelligence opens
+         on the book's twelve weeks, who holds it and how fast it comes
+         back. The open row's table (.ow-q-x / .ow-tbl-*) became the
+         customer in the rail -- their invoices as jars a payment fills
+         oldest first -- because the evidence and the act belong beside
+         the list, not inside it. The rail's dense rows (.ow-sr-*) became
+         "What needs you". The queue itself is unchanged in kind: the
+         desk row and the phone card still come from ONE call. */
+      renders: ['renderDebtorsHead', 'renderDebtorsList', 'renderDebtorsPosition', 'renderDebtorsRail',
+                'renderDebFilterNote', 'renderDebtorsIntel', 'renderDebMap'],
+      rendersUses: ['ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-mt-l',
                     'ow-tb', 'ow-tb-s', 'ow-tb-n', 'ow-f', 'ow-f-l', 'ow-f-in', 'ow-f-sel',
-                    /* No ow-q-why: an open debtor opens straight onto its
-                       invoices. The sentence that used to stand there
-                       repeated the row it had just opened -- the
-                       balance, the age and the paid-off share are all
-                       already on that row -- and the paragraph under it
-                       said the same thing about every debtor in the
-                       book. The reasoning a screen genuinely owes the
-                       reader is in the rail; what is left in an open
-                       row is the evidence. */
-                    'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t', 'ow-q-who', 'ow-q-v',
-                    'ow-q-f', 'ow-q-note', 'ow-q-a', 'ow-cp',
-                    'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-n',
-                    'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-mini', 'ow-empty'],
+                    'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-t', 'ow-q-who', 'ow-q-v',
+                    'ow-q-f', 'ow-q-b', 'ow-q-note', 'ow-q-a', 'ow-cp', 'ow-db-lp',
+                    'ow-mini', 'ow-empty',
+                    /* and what this screen owns: the age panel, the cells
+                       and twelve weeks on each row, the open customer and
+                       their jars and history, and the intelligence -- the
+                       headline, who holds it, how fast it comes back, the
+                       crop-to-zoom map with its preview, the agenda and
+                       what needs you */
+                    'ow-dx-age', 'ow-dx-cols', 'ow-dx-cells', 'ow-dx-sp', 'ow-dx-dos', 'ow-dx-jar',
+                    'ow-dx-tl', 'ow-dx-hd', 'ow-dx-tm', 'ow-dx-gg', 'ow-dx-map', 'ow-dx-plot',
+                    'ow-dx-tip', 'ow-dx-crop', 'ow-dx-agn', 'ow-dx-sig'],
     },
     /* CREDITORS -- "Who you owe" until it was drawn as a console, and
        now named the word the shop already uses, like its twin.
@@ -871,72 +947,96 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'age-bands', 'age-band', 'age-verdict', 'age-filter-note', 'age-table', 'age-pill',
                 'age-name', 'age-where', 'age-amt', 'age-paid', 'age-never', 'age-act', 'age-card',
                 'pi-card', 'pi-cards', 'pi-table-wrap', 'inv-total-row'],
-      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-grid', 'ow-side', 'ow-cr'],
+      /* REDRAWN AGAIN, from the design the owner signed off on the
+         canvas: the screen is now a position, two tabs and a table, so
+         the work-and-rail grid (.ow-grid / .ow-side) is gone from the
+         markup -- the rail's readings moved onto the Intelligence tab,
+         where they sit three abreast under the 30-day line, and the
+         pane switch is .ow-cx-pane.
+
+         What the renderers emit changed for the same reason, and the
+         list below is the new vocabulary rather than the old one kept
+         alive. The owner asked for the queue to be a TABLE with the age
+         of each bill as columns, so .ow-q-r's three-column row, the
+         .ow-tbl bill table, the .ow-f sort select and the borrowed
+         .ow-db-ag bar and .ow-db-lp cell gave way to .ow-cx-tbl (one
+         grid shared by the head, every row and the totals) and its age
+         cells. The rail's .ow-sr pocket rows went with the rail; which
+         pocket a payment comes from is chosen at the payment now. Still
+         worn, and so still pinned: the reason cell, the waterline, the
+         day chip, the band card's invoice count, the strip, the panel,
+         and the phone card and open row from .ow-q. */
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-cr', 'ow-cx-pane', 'ow-cx-trio'],
       renders: ['renderCreditorsList', 'renderCreditorsPosition', 'renderCreditorsRail', 'renderCredFilterNote',
                 'credWhenHTML'],
       rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s',
-                    'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n',
-                    'ow-tb', 'ow-tb-s', 'ow-tb-n', 'ow-f', 'ow-f-l', 'ow-f-in', 'ow-f-sel',
-                    'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t', 'ow-q-who', 'ow-q-v',
-                    'ow-q-f', 'ow-q-b', 'ow-q-note', 'ow-q-a', 'ow-cp',
-                    'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-n',
-                    /* the two borrowed whole from Debtors */
-                    'ow-db-ag', 'ow-db-lp',
-                    /* and the three this screen owns: why a supplier is
-                       ranked where it is, how far today's cash reaches,
-                       and naming a day on the bill it belongs to */
-                    'ow-cr-rz', 'ow-cr-wl', 'ow-cr-dy',
-                    'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-mini', 'ow-empty'],
+                    'ow-pan', 'ow-pan-n', 'ow-tb',
+                    'ow-q', 'ow-q-card', 'ow-q-x', 'ow-q-t', 'ow-q-who', 'ow-q-v',
+                    'ow-q-f', 'ow-q-b', 'ow-q-note', 'ow-q-a', 'ow-cp', 'ow-db-ag-m',
+                    /* the day named on a bill is a chip that opens its own
+                       editor now (.ow-cx-dchip), and the 30-day panel has
+                       the design's 40px heading (.ow-cx-lh) rather than the
+                       34px .ow-pan-h band */
+                    'ow-cr-rz', 'ow-cr-wl', 'ow-cx-dchip', 'ow-cx-lh',
+                    /* the screen's own: the sum and the bar, the tabs, the
+                       plan, the table and its age cells, an opened
+                       supplier's bills and six months, and the
+                       Intelligence tab's line, day preview and readings */
+                    'ow-cx-hero', 'ow-cx-eq', 'ow-cx-bar', 'ow-cx-tabs', 'ow-cx-plan',
+                    'ow-cx-tbl', 'ow-cx-th', 'ow-cx-tr', 'ow-cx-tt', 'ow-cx-ag',
+                    'ow-cx-x', 'ow-cx-bills', 'ow-cx-pb', 'ow-cx-hs',
+                    'ow-cx-line', 'ow-cx-day', 'ow-cx-pv', 'ow-cx-cn', 'ow-cx-wd',
+                    'ow-mini', 'ow-empty'],
     },
     /* Payroll and rent. The screen answered "what did the month cost?"
        when the question you open it with is "can I pay them?", and it
        carried no cash figure at all. Three .panel blocks became a strip,
-       one queue and a rail: the position panel whose headline was set in
-       Archivo Black at 34px above five bordered .pr-cell tiles and up to
-       five stacked .age-verdict paragraphs; a nine-column .age-table
-       with a bare <input> in one cell and a .pr-state pill repeating
-       what the balance column had already said; and the co-equal Rent
-       agreements panel with the screen's second oxide button. Paying
-       went through prompt() and then a second dialog for the account;
-       both are one panel inside the month's own row now.
+       one queue and a rail, then a runway over the queue.
 
-       .pr-name, .pr-quiet, .age-table and .age-amt are NOT retired from
-       the FILE -- renderRentAgreements still wears them behind the
-       rail's door, and that table is unconverted on purpose -- only from
-       this screen's markup and from what the four renderers below emit,
-       which is what this list means. */
+       Then rebuilt from the design canvas the owner worked through
+       comment by comment, and this entry says what ships now, not what
+       the console it replaced was made of. The strip-runway-queue-rail
+       (.ow-py-rw, .ow-py-mt, the .ow-q rows, the .ow-py-at rail, the
+       rent table behind its door) is gone; the screen is one mount,
+       #prConsole, drawn by renderPayrollConsole into one of three views
+       in the canvas's own vocabulary, renamed into ow-pc-:
+
+         board     the hero (enough by payday, the runway with the
+                   preview of whatever section is clicked, the payroll's
+                   share of gross profit), when the money leaves, and the
+                   payout board
+         pay       one month: how the person did, how the figure is
+                   worked out, the days that change it, the last six
+                   months, and paying it in three steps
+         premises  the rent band, the lease dials and the next ninety
+                   days, a card per premises, the payment record, and
+                   adding premises with what it does to the month
+
+       What still holds from the old entry -- none of the families it
+       retired may come back, the month stepper stays in the head -- is
+       kept; the queue's own families join the retired list. */
     payroll: {
       retired: ['page-head', 'panel', 'panel-head-row', 'btn-row', 'btn-icon', 'field', 'empty',
                 'age-pos', 'age-pos-head', 'age-pos-total', 'age-pos-label', 'age-pos-meta',
                 'age-pos-clear', 'age-verdict', 'age-table', 'age-amt', 'age-act',
                 'pr-cells', 'pr-cell', 'pr-cell-label', 'pr-cell-note', 'pr-table', 'pr-settled',
                 'pr-state', 'pr-miss', 'pr-miss-off', 'pr-days', 'pr-name', 'pr-sub', 'pr-quiet',
-                'pr-gross', 'pr-accrued', 'row-actions', 'an-scroll', 'pi-table-wrap', 'price'],
-      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-py', 'ow-py-ms',
-             'ow-grid', 'ow-side', 'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-py-rent'],
-      renders: ['renderPayrollPosition', 'renderPayrollDues', 'renderPayrollRail', 'payrollGroups',
-                'payrollMonthTrackHTML', 'payrollStripHTML', 'payrollDayGridHTML'],
-      /* No .ow-strip here any more, and that is a decision, not a patch.
-         The strip was four tiles -- in hand, still to pay, late, next due
-         -- that left the owner to do the one sum the screen exists for.
-         It is replaced by the RUNWAY (.ow-py-rw): the same figures, plus
-         the bar that does the sum, today's cash marked on it, and the
-         month's days (.ow-py-mt) under it. Each row carries its own month
-         as ticks (.ow-py-ds), a daily month is counted by tapping
-         (.ow-py-dg), and the rail's derived figures became bars
-         (.ow-py-mx). Holding this list to .ow-strip would have kept the
-         tiles alive beside the bar that answers them. */
-      rendersUses: ['ow-py-rw', 'ow-py-mt', 'ow-py-ds', 'ow-py-dg', 'ow-py-mx', 'ow-u',
-                    'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n',
-                    'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t', 'ow-q-who', 'ow-q-v',
-                    'ow-q-f', 'ow-q-b', 'ow-q-note', 'ow-q-a', 'ow-cp',
-                    'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-f', 'ow-tbl-c', 'ow-tbl-n',
-                    /* the six this screen owns: why a month is where it
-                       is, how far today's cash reaches, the days box and
-                       the days themselves, paying without a dialog, and
-                       the decisions that were five stacked paragraphs */
-                    'ow-py-rz', 'ow-py-wl', 'ow-py-dy', 'ow-py-dl', 'ow-py-pp', 'ow-py-at',
-                    'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-mini', 'ow-empty', 'ow-db-go', 'ow-db-rl'],
+                'pr-gross', 'pr-accrued', 'row-actions', 'an-scroll', 'pi-table-wrap', 'price',
+                'ow-py', 'ow-py-rw', 'ow-py-mt', 'ow-py-ds', 'ow-py-dg', 'ow-py-mx', 'ow-py-rz',
+                'ow-py-wl', 'ow-py-dy', 'ow-py-dl', 'ow-py-pp', 'ow-py-at', 'ow-py-rent',
+                'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-py-ms', 'ow-pc', 'ow-pc-head'],
+      renders: ['renderPayrollConsole', 'renderPayrollPosition', 'renderPayrollSheet', 'renderPayrollPremises',
+                'prHeroHTML', 'prEnoughHTML', 'prRunwayHTML', 'prPreviewHTML', 'prGaugeHTML',
+                'prTimelineHTML', 'prBoardHTML', 'prCardHTML', 'prDotsHTML', 'prPhoneHTML',
+                'prReviewHTML', 'prWorkedOutHTML', 'prDaysHTML', 'prHistoryHTML', 'prPayHTML',
+                'prRentSchedHTML', 'payrollGroups', 'payrollDayGridHTML'],
+      rendersUses: ['ow-pc-pan', 'ow-pc-ph', 'ow-pc-pt', 'ow-pc-pn', 'ow-pc-fig', 'ow-pc-chip', 'ow-pc-empty',
+                    'ow-pc-desk', 'ow-pc-ph-only', 'ow-pc-hero', 'ow-pc-ok', 'ow-pc-rw', 'ow-pc-pv', 'ow-pc-gg',
+                    'ow-pc-tl-g', 'ow-pc-tl-sg', 'ow-pc-tip', 'ow-pc-bd', 'ow-pc-col', 'ow-pc-card', 'ow-pc-dots',
+                    'ow-pc-m-c', 'ow-pc-rv', 'ow-pc-sum', 'ow-pc-dy', 'ow-pc-seg', 'ow-pc-hs', 'ow-pc-st',
+                    'ow-pc-am', 'ow-pc-qp', 'ow-pc-ac', 'ow-pc-slip', 'ow-pc-band', 'ow-pc-dial', 'ow-pc-nx',
+                    'ow-pc-pc', 'ow-pc-rec', 'ow-pc-add', 'ow-pc-sched', 'ow-pc-dd', 'ow-pc-dg'],
     },
     /* Order tracking is NOT in this list, and that is the entry.
 
