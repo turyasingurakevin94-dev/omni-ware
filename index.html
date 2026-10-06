@@ -29204,10 +29204,10 @@
   .ow-dx-wk-pt{position:absolute;width:9px;height:9px;transform:translate(-50%,-50%);border-radius:50%;background:var(--ow-paper);
     border:2px solid var(--ow-steel-800);pointer-events:none;}
   .ow-dx-wk-pt.ow-dx-wk-po{border-color:var(--ow-crimson);}
-  .ow-dx-wk-card{position:absolute;top:-4px;width:172px;padding:var(--ow-sp-8) var(--ow-sp-10);background:var(--ow-paper);border:1px solid var(--ow-rule);
+  .ow-dx-wk-card{position:absolute;top:-4px;width:212px;padding:var(--ow-sp-8) var(--ow-sp-10);background:var(--ow-paper);border:1px solid var(--ow-rule);
     border-radius:var(--ow-r);box-shadow:var(--ow-lift);pointer-events:none;display:flex;flex-direction:column;gap:3px;z-index:3;font-size:var(--ow-t-12);}
   .ow-dx-wk-r{display:flex;justify-content:space-between;gap:var(--ow-sp-8);}
-  .ow-dx-wk-k{color:var(--ow-ink-600);}
+  .ow-dx-wk-k{color:var(--ow-ink-600);white-space:nowrap;}
   .ow-dx-wk-r.ow-dx-bad .ow-dx-wk-k{color:var(--ow-crimson);}
   .ow-dx-wk-hit{position:absolute;inset:0;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));}
   .ow-dx-wk-h{cursor:crosshair;}
@@ -94758,10 +94758,25 @@ function renderDebtorsRail(){
   const cust = (data.customers || []).find((c)=> c.id === d.id) || {};
   const logs = (cust.debtLog || []).filter((l)=> l.date && daysSinceDate(l.date) <= SPAN);
   const buys = logs.filter((l)=> l.type === 'charge'), pays = logs.filter((l)=> l.type === 'payment');
-  const payMax = Math.max(1, ...pays.map((l)=> Number(l.amount) || 0));
   const level = (evs)=> { let px = -99, pl = 1; evs.sort((a, b)=> a.xn - b.xn).forEach((e)=> { e.lv = (e.xn - px < 12) ? 1 - pl : 0; pl = e.lv; px = e.xn; }); return evs; };
-  const up = level(buys.map((l)=> ({ xn: xp(daysSinceDate(l.date)), lab: debM(l.amount), t: 'Bought ' + fmtUGX(Math.round(l.amount)) + ' on ' + fmtShortDate(l.date) })));
-  const low = pays.map((l)=> ({ xn: xp(daysSinceDate(l.date)), lab: debM(l.amount), t: 'Paid ' + fmtUGX(Math.round(l.amount)) + ' on ' + fmtShortDate(l.date), k: 'paid', s: Math.round(10 + 6 * Math.sqrt((Number(l.amount) || 0) / payMax)) }));
+  /* A customer who buys and pays every few days puts five labels on one
+     spot. Events closer than a few days fold into one mark carrying
+     their total and how many there were; its title lists each. */
+  const fold = (ls, verb)=> {
+    const g = [];
+    ls.slice().sort((a, b)=> a.date.localeCompare(b.date)).forEach((l)=> {
+      const xn = xp(daysSinceDate(l.date)), last = g[g.length - 1];
+      if(last && xn - last.x0 < 6){ last.sum += Number(l.amount) || 0; last.items.push(l); last.xn = (last.x0 + xn) / 2; }
+      else g.push({ x0: xn, xn, sum: Number(l.amount) || 0, items: [l] });
+    });
+    return g.map((e)=> ({ xn: e.xn, sum: e.sum, n: e.items.length,
+      lab: debM(e.sum) + (e.items.length > 1 ? ' ×' + e.items.length : ''),
+      t: e.items.map((l)=> verb + ' ' + fmtUGX(Math.round(l.amount)) + ' on ' + fmtShortDate(l.date)).join(' · ') }));
+  };
+  const up = level(fold(buys, 'Bought'));
+  const foldedPays = fold(pays, 'Paid');
+  const payTop = Math.max(1, ...foldedPays.map((e)=> e.sum));
+  const low = foldedPays.map((e)=> ({ ...e, k: 'paid', s: Math.round(10 + 6 * Math.sqrt(e.sum / payTop)) }));
   d.promises.forEach((pr)=> {
     const ago = daysSinceDate(pr.promisedOn), ahead = debDaysAhead(pr.promisedOn);
     if(pr.state === 'broken' && ago <= SPAN) low.push({ xn: xp(ago), lab: 'broke', t: 'Said they would pay by ' + fmtShortDate(pr.promisedOn) + ' — did not', k: 'broke', s: 12 });
@@ -95078,7 +95093,8 @@ function renderDebtorsIntel(){
   }
 
   /* ---- the phone's own opening: the book, its age, and four readings ---- */
-  const live = dx.bands.filter((b)=> b.amount > 0);
+  /* the same columns the Debtors tab draws, so the phone reads the same scale */
+  const live = debAgeScale(dx).cols.filter((b)=> b.amount > 0);
   /* The bar runs young to old with no-date last, so late money starts
      where the money still in terms ends -- the very left for a shop
      that gives no days of grace. */
@@ -95091,8 +95107,8 @@ function renderDebtorsIntel(){
       ${lateLeft > 60
         ? `<span class="ow-dx-ph-br ow-dx-ph-br-r" style="right:${(100 - lateLeft).toFixed(1)}%"><b>Late &middot; ${pct(dx.late)}%</b></span>`
         : `<span class="ow-dx-ph-br" style="left:${lateLeft.toFixed(1)}%"><b>Late &middot; ${pct(dx.late)}%</b></span>`}
-      <span class="ow-dx-ph-bar">${live.map((b)=> `<button type="button" class="ow-dx-ph-seg ow-band-${b.key}" style="flex-grow:${b.amount}" data-pband="${b.key}" aria-label="${esc(b.label)}: ${esc(fmtUGX(Math.round(b.amount)))}"></button>`).join('')}</span>
-      <span class="ow-dx-ph-lg">${live.map((b)=> `<button type="button" class="ow-dx-ph-lgb" data-pband="${b.key}"><span class="ow-dx-sw ow-band-${b.key}"></span><span class="ow-dx-ph-lgl">${esc(b.label)}</span><b class="ow-dx-n">${debM(b.amount)}</b></button>`).join('')}</span>
+      <span class="ow-dx-ph-bar">${live.map((b)=> `<button type="button" class="ow-dx-ph-seg ow-band-${b.tone}" style="flex-grow:${b.amount};background:${b.fill}" data-pband="${b.key}" aria-label="${esc(b.label)}: ${esc(fmtUGX(Math.round(b.amount)))}"></button>`).join('')}</span>
+      <span class="ow-dx-ph-lg">${live.map((b)=> `<button type="button" class="ow-dx-ph-lgb" data-pband="${b.key}"><span class="ow-dx-sw ow-band-${b.tone}" style="background:${b.fill}"></span><span class="ow-dx-ph-lgl">${esc(b.label)}</span><b class="ow-dx-n">${debM(b.amount)}</b></button>`).join('')}</span>
     </section>
     <section class="ow-pan ow-dx-ph-4">
       <span class="ow-dx-ph-c"><span class="ow-dx-cap">Act now</span><b class="ow-dx-n ow-dx-bad">${dx.xs.filter((x)=> x.seg === 'act').length}</b><span class="ow-dx-cap">${debM(dx.xs.filter((x)=> x.seg === 'act').reduce((s, x)=> s + x.debt, 0))}</span></span>
