@@ -123024,7 +123024,9 @@ function loanDuePosition(loan, asOfISO){
 function loansNeedingPayment(asOfISO){
   return (data.loans||[])
     .map(loan=> ({ loan, due: loanDuePosition(loan, asOfISO) }))
-    .filter(x=> x.due.status === 'overdue' || x.due.status === 'due')
+    /* A shilling or more. A rounding remainder a fraction of a shilling
+       still read as "due", and the reminder offered to Pay now 0 UGX. */
+    .filter(x=> (x.due.status === 'overdue' || x.due.status === 'due') && x.due.dueNow >= 1)
     .sort((a,b)=>
       (a.due.status === b.due.status ? 0 : (a.due.status === 'overdue' ? -1 : 1))
       || b.due.dueNow - a.due.dueNow);
@@ -128868,7 +128870,8 @@ function loanDueRowHTML({loan, due}){
       <div class="ld-lender">${esc(loan.lender)}</div>
       <div class="ld-note">${late
         ? `Behind by ${fmtUGX(Math.round(due.overdue))}${due.instalmentsBehind ? ` across ${due.instalmentsBehind} instalment${due.instalmentsBehind===1?'':'s'}` : ''}, and this month's instalment is on top of it.`
-        : `This month's instalment of ${fmtUGX(Math.round(due.thisMonth))}.`}</div>
+        : loanFrequency(loan) === 'monthly' ? `This month's instalment of ${fmtUGX(Math.round(due.thisMonth))}.`
+        : `This month's ${LOAN_FREQUENCIES[loanFrequency(loan)].label.toLowerCase()} payments come to ${fmtUGX(Math.round(due.thisMonth))}.`}</div>
     </div>
     <div class="ld-act">
       <div class="ld-amount">${fmtUGX(Math.round(due.dueNow))}</div>
@@ -129415,6 +129418,9 @@ function faUpdatePayment(){
   const label = TILL_ACCOUNT_LABELS[account] || account;
   const gap = Math.round(cost - financed - paid);
 
+  /* Editing something already on the register never touches the Cash
+     Book (the money side is hidden), so there is nothing to say here. */
+  if(editingAssetId != null){ out.className = 'ow-pop-rl'; out.textContent = ''; return; }
   if(!cost){ out.className = 'ow-pop-rl'; out.textContent = 'Put in what it cost and this will say what reaches the Cash Book.'; return; }
   const fig = (n)=> `<b class="ow-pop-fig ow-pop-rv">${esc(alNum(n))}</b>`;
 
