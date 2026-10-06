@@ -74584,7 +74584,8 @@ function anShort(n){
   return String(Math.round(v));
 }
 function anInitials(name){
-  return String(name || '').replace(/\(.*?\)/g, '').split(/\s+/).filter(Boolean).slice(0, 2)
+  // Words only: "Kato - Brian" is KB, not K-.
+  return String(name || '').replace(/\(.*?\)/g, '').split(/\s+/).filter(w=> /^[\p{L}\p{N}]/u.test(w)).slice(0, 2)
     .map(w=> w[0].toUpperCase()).join('') || '·';
 }
 function anClientKey(q){
@@ -75262,7 +75263,11 @@ function anItemRowHTML(r, idx, ctx){
   const each = (v)=> qty > 0 ? (Number(v)||0) / qty : 0;
   const {pid, vIdx} = anItemParts(key);
   const sk = pid && pid !== '?' ? stockKey(pid, vIdx) : null;
-  const stocked = !!sk && (ctx.cover.has(sk) || Object.prototype.hasOwnProperty.call(data.stock || {}, sk));
+  /* A shelf line is one that sold off the shelf lately (Inventory's own
+     restock reading) or has units on it now. A line bought in for each
+     order keeps an empty count too, and calling that "none left" would
+     send somebody to restock a thing the shop never holds. */
+  const stocked = !!sk && (ctx.cover.has(sk) || (Number(getStockQty(pid, vIdx)) || 0) > 0);
   let stock = '<span class="an-sub">bought in</span>';
   if(stocked){
     const onHand = Number(getStockQty(pid, vIdx)) || 0;
