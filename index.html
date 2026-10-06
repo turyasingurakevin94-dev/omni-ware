@@ -21452,6 +21452,49 @@
     .ix-nx{min-height:var(--ow-tap);}
   }
 
+  /* ================= CONSIGNMENT, IN THE STOCK CANVAS'S DRAWING =======
+     The consignors as the canvas's table: who, what of theirs is held,
+     sell-through as a ring, what is owed, and the next step. The strip
+     wears the same hairline panel as the stock register's totals. */
+  #consign_body > .ow-strip{border-radius:var(--ow-r-lg);margin-bottom:var(--ow-sp-16);}
+  #consign_body > .ow-strip .ow-mt-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-20);font-weight:600;letter-spacing:-.02em;}
+  #consign_body .ow-pan{border-radius:var(--ow-r-lg);overflow:hidden;}
+  .cons-qh{display:grid;}
+  .cons-qh,.cons-rows .ow-q-r{grid-template-columns:18px minmax(0,1fr) 96px 150px 150px 96px;column-gap:var(--ow-sp-12);align-items:center;}
+  .cons-qh{padding:0 var(--ow-sp-12);min-height:32px;background:var(--ow-paper-2);border-bottom:1px solid var(--ow-rule-soft);}
+  .cons-qh span{font-size:var(--ow-t-11);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ow-ink-600);}
+  .cons-qh span:first-child{grid-column:1 / span 2;}
+  .cons-r{text-align:right;}
+  .cons-rows .ow-q-r{min-height:58px;}
+  .cons-rows .ow-q-t{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0;}
+  .cons-rows .ow-q-who{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  .cons-rows .ow-q-rest{font-size:var(--ow-t-11);color:var(--ow-ink-600);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  .cons-held{text-align:right;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-size:var(--ow-t-13);font-weight:600;}
+  .cons-st{display:flex;align-items:center;gap:var(--ow-sp-8);min-width:0;}
+  .cons-st-x{display:flex;flex-direction:column;min-width:0;}
+  .cons-st-x b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-size:var(--ow-t-13);}
+  .cons-st-x span{font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;}
+  .cons-ring{width:30px;height:30px;flex:none;}
+  .cons-ring circle{fill:none;stroke:var(--ow-rule-soft);stroke-width:5;}
+  .cons-ring circle.cons-ring-good{stroke:var(--ow-verdigris);}
+  .cons-ring circle.cons-ring-warn{stroke:var(--ow-amber);}
+  .cons-rows .ow-q-v{text-align:right;}
+  .cons-nx{justify-self:end;display:inline-flex;align-items:center;height:26px;padding:0 var(--ow-sp-10);border-radius:var(--ow-r-sm);
+    font-size:var(--ow-t-12);font-weight:600;white-space:nowrap;}
+  .cons-nx-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .cons-nx-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .cons-nx-mute{background:var(--ow-steel-050);color:var(--ow-ink-600);}
+  .cons-sig{margin:0;padding:var(--ow-sp-10) var(--ow-sp-16);border-top:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);
+    font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .cons-sig b{color:var(--ow-ink-900);font-weight:600;}
+  .cons-rows .ow-q-card .cons-st{margin-top:var(--ow-sp-8);}
+  .cons-rows .ow-q-card .cons-nx{margin-left:0;}
+  @media (max-width:820px){
+    .cons-qh{display:none;}
+    #consign_body > .ow-strip .ow-mt-v{font-size:var(--ow-t-16);}
+  }
+
 /* ==================================================================
      THE OW LAYER — tokens and components for the console.
 
@@ -84885,16 +84928,32 @@ function renderConsignment(){
         ? `All of it is billed — ${f(r.settlementDue)} still to pay, on their bill on Invoices, under Purchases.`
         : (gap ? 'nothing recorded as owed — see above' : 'nothing owed right now'));
 
+    /* THE CANVAS'S ROW: who, what of theirs is held, how fast it is
+       selling as a ring, what is owed, and the next step with them. The
+       ring is the one picture on the row because sell-through is the one
+       thing that decides between settling up and sending goods back. */
+    const total = r.soldQty + r.heldQty;
+    const sold = total > 0 ? r.soldQty / total * 100 : 0;
+    const slow = sold < 20 && r.heldQty > 0;
+    const next = r.owed > 0.5 ? ['good', 'Settle']
+      : r.settlementDue > 0.5 ? ['mute', 'Pay the bill']
+      : slow ? ['warn', `Return ${Math.round(r.heldQty)}`]
+      : r.heldQty > 0 ? ['mute', 'On track'] : ['mute', 'Cleared'];
+    const ring = `<svg class="cons-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15.915"/><circle class="cons-ring-${slow ? 'warn' : 'good'}" cx="18" cy="18" r="15.915" stroke-dasharray="${sold.toFixed(1)} ${(100 - sold).toFixed(1)}" stroke-dashoffset="25"/></svg>`;
+    const through = `<span class="cons-st">${ring} <span class="cons-st-x"><b>${Math.round(sold)}%</b> <span>${Math.round(r.soldQty)} of ${Math.round(total)} sold</span></span></span>`;
     return `<div class="ow-q" data-id="${esc(r.supplierId)}">
       <button type="button" class="ow-q-r ow-qtog">${OW_CARET}
-        <span class="ow-q-t" title="${esc(r.name)}"><span class="ow-q-who">${esc(r.name)}</span><span class="ow-q-sep">·</span><span class="ow-q-rest">${esc(shelf)}</span></span>
-        <span class="ow-q-m">${chip}</span>
+        <span class="ow-q-t" title="${esc(r.name)}"><span class="ow-q-who">${esc(r.name)}</span><span class="ow-q-rest">${esc(shelf)}</span> ${chip}</span>
+        <span class="cons-held">${esc(f(r.heldValue).replace(/\s*UGX$/, ''))}</span>
+        ${through}
         <span class="ow-q-v${nil}"><b class="ow-q-f">${esc(money)}</b><span class="ow-q-b">${esc(st.basis)}</span></span>
+        <span class="cons-nx cons-nx-${next[0]}">${esc(next[1])}</span>
       </button>
       <button type="button" class="ow-q-card ow-qtog">
-        <span class="ow-q-cm">${chip}${OW_CARET_C}</span>
+        <span class="ow-q-cm">${chip} <span class="cons-nx cons-nx-${next[0]}">${esc(next[1])}</span> ${OW_CARET_C}</span>
         <p class="ow-q-ct">${esc(r.name)}</p>
         <span class="ow-q-cv${nil}">${esc(money)}<span class="ow-q-b">${esc(st.basis)}</span></span>
+        ${through}
       </button>
       <div class="ow-q-x">
         <p class="ow-q-why">${esc(why)}</p>
@@ -85003,9 +85062,11 @@ function renderConsignment(){
         <span class="ow-pan-t">Consignors</span>
         <span class="ow-pan-n">ranked by what is due now</span>
       </div>
-      ${rows.map(row).join('')}${quiet
+      <div class="cons-qh" aria-hidden="true"><span>Consignor</span><span class="cons-r">Held (UGX)</span><span>Sell-through</span><span class="cons-r">Owed</span><span class="cons-r">Next</span></div>
+      <div class="cons-rows">${rows.map(row).join('')}</div>${quiet
         ? `<p class="ow-mini">${quiet} of them ${quiet === 1 ? 'is' : 'are'} owed nothing — listed because their goods are standing on your shelf, and that is worth knowing before you count what your stock is worth.</p>`
         : ''}
+      <p class="cons-sig"><b>Signal:</b> sell-through under 20% flags goods worth sending back before they tie up the shelf.</p>
     </div>
     ${rail}
   </div>`;
