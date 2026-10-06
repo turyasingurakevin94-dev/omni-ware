@@ -1431,6 +1431,22 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                     'ow-cp', 'ow-cp-d', 'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-msg',
                     'ow-empty', 'ow-mini'],
     },
+    /* STAFF, as the owner drew it on the canvas. The roster's rows
+       (.rost-*), the four lanes of people (.st-lane*), the wage panel and
+       the one-person calendar with its names column (.att-person,
+       .att-tg, .ow-st-att) went with the screen they clothed. What
+       replaced them is this screen's own .sx- family -- a navy card for
+       the next order, a four-step flow of the day's orders, a table that
+       opens in place, and a register a tap changes -- under the layer's
+       page header. The phone card is emitted by the same call as the
+       desktop row (staffPersonHTML), so the two cannot drift. */
+    staff: {
+      retired: ['rost-list', 'rost-item', 'rost-row', 'rost-bar', 'rost-filters', 'rost-filter',
+                'rost-period', 'rost-per', 'st-lanes', 'st-lane', 'st-pc', 'att-person', 'att-people',
+                'att-tg', 'att-cal', 'att-day', 'ow-st-att', 'empty'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp'],
+      renders: ['renderStaff', 'staffPersonHTML', 'renderAttendance'],
+    },
   };
   /* EXACT NAMES, NOT WORD BOUNDARIES. \b matches before a hyphen, so
      \bow-cb\b is satisfied by ow-cb-f -- and a bite test that renamed
