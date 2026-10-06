@@ -64,7 +64,7 @@ const scope = compileScope([
   data,
   todayISO: () => TODAY,
 }, ['agingBandFor', 'agingBandDef', 'debAllRows', 'debAgingProfile', 'customerLastPaymentDate',
-  'sortState', 'sortFirstDir', 'customerDebtProgress']);
+  'sortState', 'sortFirstDir', 'customerDebtProgress', 'customerOpenCharges']);
 
 let nextId = 1;
 // charges/payments are [daysAgo, amount] pairs.
@@ -241,6 +241,27 @@ const countIn = (key) => scope.debAgingProfile().bands.find((b) => b.key === key
   data.customers[0].debt = 285000;
   eq(scope.debAllRows()[0].ageDays, 8,
     'and one naming an invoice with no charge behind it is not silently dropped — it pays the oldest, because the money did arrive');
+
+  /* MONEY THAT ARRIVES BEFORE ITS CHARGE IS CREDIT, NOT LOST. Live, a
+     counter sale is often written down payment first and charge second
+     on the same day. The walk used to drop a payment that found nothing
+     open, so the charge behind it stood as owed forever: 3.6m of settled
+     customers looked unpaid in every history built on the walk, while
+     their balances said zero. */
+  data.customers[0].debtLog = [
+    pay(5, 300000),             // handed over first
+    inv(5, 300000),             // then the sale it paid for
+    inv(2, 120000),
+  ];
+  data.customers[0].debt = 120000;
+  const open = scope.customerOpenCharges(data.customers[0]);
+  eq(open.reduce((s, ch) => s + ch.remaining, 0), 120000,
+    'a payment logged before its charge pays that charge — what stays open is what the balance says');
+  eq(open.length, 1, 'and only the later sale is still open');
+  data.customers[0].debtLog = [pay(9, 500000), inv(6, 200000), inv(3, 200000)];
+  data.customers[0].debt = 0;
+  eq(scope.customerOpenCharges(data.customers[0]).length, 0,
+    'a deposit larger than what was bought after it leaves nothing open');
 }
 
 /* ---------- 5. when they last paid anything -------------------------- *

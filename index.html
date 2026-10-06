@@ -27282,6 +27282,7 @@
     .ow-dx-phone{display:flex;flex-direction:column;gap:14px;margin-bottom:14px;}
     .ow-dx-ph-h{position:relative;padding:var(--ow-sp-16);display:flex;flex-direction:column;gap:var(--ow-sp-10);}
     .ow-dx-ph-br{position:relative;display:block;padding:0 0 var(--ow-sp-4) var(--ow-sp-4);border-left:1.5px solid var(--ow-crimson);font-size:var(--ow-t-12);color:var(--ow-crimson);}
+    .ow-dx-ph-br.ow-dx-ph-br-r{padding:0 var(--ow-sp-4) var(--ow-sp-4) 0;border-left:0;border-right:1.5px solid var(--ow-crimson);text-align:right;}
     .ow-dx-ph-bar{display:flex;height:32px;border-radius:var(--ow-r-sm);overflow:hidden;gap:2px;}
     .ow-dx-ph-seg{flex-basis:0;min-width:8px;border:0;padding:0;cursor:pointer;}
     .ow-dx-ph-seg.ow-band-b30{background:var(--ow-age-1);}
@@ -88492,10 +88493,20 @@ function debAgingProfile(){
 function customerOpenCharges(c){
   const log = (c.debtLog||[]).slice().sort((a,b)=> (a.date||'').localeCompare(b.date||'') || (a.id-b.id));
   const open = [];
+  /* MONEY HANDED OVER BEFORE THERE WAS ANYTHING TO PAY. A payment that
+     finds nothing open -- a deposit, or a counter sale written down
+     payment-first on the same day -- used to fall out of the walk, so the
+     charge logged a moment later stood as owed forever. Live, that made
+     3.6m of settled customers look unpaid in every history built on this
+     walk, while their balances said zero. It is credit: the next charges
+     are paid out of it first. */
+  let credit = 0;
   log.forEach(entry=>{
     const amt = Number(entry.amount)||0;
     if(entry.type==='charge'){
-      open.push({date: entry.date, original: amt, remaining: amt, quoteId: entry.quoteId});
+      const take = Math.min(credit, amt);
+      credit -= take;
+      open.push({date: entry.date, original: amt, remaining: amt - take, quoteId: entry.quoteId});
     } else if(entry.type==='payment'){
       let rem = amt;
       /* A PAYMENT THAT NAMES AN INVOICE PAYS THAT INVOICE.
@@ -88532,6 +88543,7 @@ function customerOpenCharges(c){
         const take = Math.min(ch.remaining, rem);
         ch.remaining -= take; rem -= take;
       }
+      if(rem > 0) credit += rem;
     }
   });
   return open.filter(ch=>ch.remaining>0.5);
@@ -89253,6 +89265,8 @@ function debCreditPanelHTML(inline){
   const r = creditBookReading();
   const f = (n)=> fmtUGX(Math.round(n));
   const term = r.terms > 0 ? `${r.terms} days` : 'from day one';
+  /* "for your terms of from day one" is not a sentence. */
+  const termLbl = r.terms > 0 ? `for your terms of <span class="ow-fig">${esc(term)}</span>` : `with <span class="ow-fig">no days</span> of grace`;
   let read;
   if(r.out <= 0){
     /* Nothing on an INVOICE is out on credit -- which is not the same as
@@ -89264,13 +89278,13 @@ function debCreditPanelHTML(inline){
       ? `None of what you are owed sits on an invoice, so there is nothing here to price yet. This is what credit will cost when you give it.`
       : `Nothing is owed to you, so nothing is waiting. This is what credit will cost when you give it.`;
   } else if(!(r.pct > 0)) {
-    read = `<span class="ow-fig">${f(r.out)}</span> is out on credit and none of it is priced— the shop is lending at no charge. `
+    read = `<span class="ow-fig">${f(r.out)}</span> is open on unpaid invoices and none of it is priced — the shop is lending at no charge. `
       + (r.over > 0 ? `<span class="ow-fig">${f(r.over)}</span> of it is already past your terms.` : `Put a rate in the box and every order you agree on credit carries it.`);
   } else {
     const bits = [];
     if(r.priced > 0) bits.push(`<span class="ow-fig">${f(r.priced)}</span> of it was priced, earning <span class="ow-fig">${f(r.charged)}</span>`);
     if(r.unpriced > 0) bits.push(`<span class="ow-fig">${f(r.unpriced)}</span> was not — at ${r.pct}% that is <span class="ow-fig">${f(r.forgone)}</span> a term you did not charge`);
-    read = `<span class="ow-fig">${f(r.out)}</span> is out on credit. ${bits.join('; ')}.`;
+    read = `<span class="ow-fig">${f(r.out)}</span> is open on unpaid invoices. ${bits.join('; ')}.`;
     /* When every unpriced shilling is also overdue, the second sentence
        would be the first one's figures again under a different heading.
        It says the fact instead, and the figure stays said once. */
@@ -89284,7 +89298,7 @@ function debCreditPanelHTML(inline){
   const set = `<label class="ow-db-cr-set" for="deb_credit_pct">Credit costs
         <span class="ow-f-in ow-db-cr-in"><input type="number" id="deb_credit_pct" class="ow-f-v" min="0" max="100" step="any"
           value="${shopCreditPct() > 0 ? shopCreditPct() : ''}" placeholder="0" aria-label="What credit costs, as a percent of the bill"><span class="ow-f-u">%</span></span>
-        for your terms of <span class="ow-fig">${esc(term)}</span></label>`;
+        ${termLbl}</label>`;
   if(inline) return `<div class="ow-db-cr ow-db-cr-row">${set}<p class="ow-db-cr-r">${read}</p></div>`;
   return `<div class="ow-pan ow-db-cr-pan">
     <div class="ow-pan-h">
@@ -89295,7 +89309,7 @@ function debCreditPanelHTML(inline){
       <label class="ow-db-cr-set" for="deb_credit_pct">Credit costs
         <span class="ow-f-in ow-db-cr-in"><input type="number" id="deb_credit_pct" class="ow-f-v" min="0" max="100" step="any"
           value="${shopCreditPct() > 0 ? shopCreditPct() : ''}" placeholder="0" aria-label="What credit costs, as a percent of the bill"><span class="ow-f-u">%</span></span>
-        for your terms of <span class="ow-fig">${esc(term)}</span><span class="ow-db-cr-w">set with the chase rule, on Follow-ups</span></label>
+        ${termLbl}<span class="ow-db-cr-w">set with the chase rule, on Follow-ups</span></label>
       <p class="ow-db-cr-r">${read}</p>
     </div>
   </div>`;
@@ -89411,6 +89425,12 @@ function debCustomerHistory(c, weeks){
 function debDx(){
   if(debDxMemo) return debDxMemo;
   const grace = Math.max(0, Number(data.presetChaseAfterDays) || 0);
+  /* GONE QUIET is a month without money, or the shop's own terms if
+     those are longer. Measured against the terms alone, a shop that
+     gives no days of grace called somebody who paid yesterday "quiet",
+     and every one of its debtors stood at Act now. Somebody who has
+     never paid has been quiet since their oldest charge. */
+  const quiet = Math.max(grace, 30);
   const chases = data.presetDebtChases || {};
   const WEEKS = 12;
   const rows = debAllRows();
@@ -89439,7 +89459,7 @@ function debDx(){
     if(!(r.ageDays >= 0) || drift !== 0) seg = 'check';
     else if(latest && latest.state === 'waiting') seg = 'promised';
     else if(r.ageDays < grace) seg = 'terms';
-    else if(paidDays === null || paidDays > grace || (latest && latest.state === 'broken')) seg = 'act';
+    else if((paidDays === null ? r.ageDays : paidDays) > quiet || (latest && latest.state === 'broken')) seg = 'act';
     else seg = 'watch';
     const hist = debCustomerHistory(c, WEEKS);
     return {
@@ -89497,10 +89517,10 @@ function debDx(){
   const signals = [];
   xs.forEach((x)=> {
     const why = []; let tone = null, rank = 9;
-    if(x.paidDays === null && x.ageDays >= grace && x.seg !== 'check'){ why.push('has never paid — open ' + x.ageDays + ' days'); tone = 'bad'; rank = 0; }
+    if(x.paidDays === null && x.ageDays > quiet && x.seg !== 'check'){ why.push('has never paid — open ' + x.ageDays + ' day' + (x.ageDays === 1 ? '' : 's')); tone = 'bad'; rank = 0; }
     if(x.overBy > 0.5){ why.push(fmtUGX(Math.round(x.overBy)) + ' over their ' + debM(x.limit) + ' limit'); tone = 'bad'; rank = Math.min(rank, 1); }
     if(x.lastBroken){ why.push('broke the promise for ' + fmtShortDate(x.lastBroken.promisedOn)); tone = 'bad'; rank = Math.min(rank, 1); }
-    if(x.paidDays !== null && x.paidDays > 60 && x.ageDays >= grace){ why.push('no payment in ' + x.paidDays + ' days'); tone = 'bad'; rank = Math.min(rank, 1); }
+    if(x.paidDays !== null && x.paidDays > quiet && x.ageDays >= grace){ why.push('no payment in ' + x.paidDays + ' days'); tone = 'bad'; rank = Math.min(rank, 1); }
     if(!tone && x.seg === 'check'){ why.push(x.drift !== 0 ? 'the balance does not match its own history — check it first' : 'no date behind it — check before you chase'); tone = 'warn'; rank = 3; }
     if(!tone){
       const soon = x.dated.filter((ch)=> ch.age < grace && grace - ch.age <= 3);
@@ -89515,7 +89535,7 @@ function debDx(){
   signals.sort((a, b)=> a.rank - b.rank || b.fig - a.fig);
   const sorted = xs.slice().sort((a, b)=> b.debt - a.debt);
   debDxMemo = {
-    grace, xs, byId, total, bands, bandAmt, late, old: bandAmt('b90') + bandAmt('b90p'),
+    grace, quiet, xs, byId, total, bands, bandAmt, late, old: bandAmt('b90') + bandAmt('b90p'),
     hist, collected30, charged30, dso, dsoThen, events, signals,
     top3: sorted.slice(0, 3).reduce((s, x)=> s + x.debt, 0), top3Names: sorted.slice(0, 3).map((x)=> x.short.split(' ')[0]),
     promised14: events.filter((e)=> e.kind === 'word').reduce((s, e)=> s + e.amt, 0),
@@ -89619,17 +89639,27 @@ function renderDebtorsPosition(){
   const cols = mb.map((b)=> {
     const on = debBandFilter === b.key;
     const h = b.amount > 0 ? Math.max(8, Math.round(b.amount / colMax * 150)) : 2;
-    const slices = b.per.map((s)=> {
-      const px = s.amt / (b.amount || 1) * h;
+    /* A block too thin to tell apart is folded into one "+N" block on
+       top: eighteen hairlines read as stripes, not as eighteen people.
+       The open customer always keeps their own block. */
+    const pxOf = (s)=> s.amt / (b.amount || 1) * h;
+    const own = b.per.filter((s)=> pxOf(s) >= 18 || (d && s.x.id === d.id));
+    const rest = b.per.filter((s)=> !own.includes(s));
+    const restAmt = rest.reduce((a, s)=> a + s.amt, 0);
+    const slices = own.map((s)=> {
+      const px = pxOf(s);
       const mine = d && s.x.id === d.id;
       return `<span class="ow-dx-sl${mine ? ' ow-on' : ''}" style="flex-grow:${s.amt}" title="${esc(s.x.name)} · ${esc(fmtUGX(Math.round(s.amt)))}">${px >= 20 || (mine && px >= 13) ? `<span class="ow-dx-sl-n">${esc(s.x.short)}</span>` : ''}</span>`;
-    }).join('');
+    }).join('') + (rest.length ? `<span class="ow-dx-sl" style="flex-grow:${restAmt}" title="${rest.length} more customer${rest.length===1?'':'s'} · ${esc(fmtUGX(Math.round(restAmt)))}">${restAmt / (b.amount || 1) * h >= 14 ? `<span class="ow-dx-sl-n">+${rest.length} more</span>` : ''}</span>` : '');
     return `<button type="button" class="ow-dx-col ow-band-${b.key}${on ? ' ow-on' : ''}${debBandFilter && !on ? ' ow-dx-dim' : ''}" data-band="${esc(b.key)}" aria-pressed="${on}"
       aria-label="${esc(b.label)}: ${esc(fmtUGX(Math.round(b.amount)))} from ${b.count} customer${b.count===1?'':'s'} — list only these">
       <span class="ow-dx-col-a"><b class="ow-dx-n">${b.amount > 0 ? debM(b.amount) : '—'}</b><span class="ow-dx-col-p">${pct(b.amount)}% of the book</span></span>
       <span class="ow-dx-stack" style="height:${h}px;background:${DEB_AGE_FILL[b.key]};color:${DEB_AGE_INK[b.key]}">${slices}</span>
     </button>`;
   }).join('');
+  /* The bracket opens on the age column the terms fall in: under 30
+     days for a shop that gives no grace, 30 to 60 for a month's terms. */
+  const lateCol = Math.min(3, Math.floor(grace / 30));
   const axis = mb.map((b)=> `<span class="ow-dx-axl ow-band-${b.key}"><b class="ow-dx-axl-t">${esc(b.label)}</b><span>${b.count} customer${b.count===1?'':'s'}</span></span>`).join('');
   wrap.innerHTML = `<section class="ow-pan ow-dx-age" aria-label="How old the money is">
     <div class="ow-dx-age-l">
@@ -89649,7 +89679,7 @@ function renderDebtorsPosition(){
         ${d ? `<span class="ow-dx-cap ow-dx-age-me"><span class="ow-dx-me" aria-hidden="true"></span>${esc(d.short)} is outlined</span>` : ''}
       </div>
       <div class="ow-dx-cols" role="group" aria-label="Owed by age">
-        <span class="ow-dx-late" aria-hidden="true"><b class="ow-dx-late-t">Late &middot; ${debM(dx.late)} &middot; ${pct(dx.late)}%</b></span>
+        <span class="ow-dx-late" aria-hidden="true"${lateCol === 1 ? '' : ` style="left:${lateCol ? `calc((100% - 56px) / 5 * ${lateCol} + ${lateCol * 14 - 7}px)` : '0'}"`}><b class="ow-dx-late-t">Late &middot; ${debM(dx.late)} &middot; ${pct(dx.late)}%</b></span>
         ${cols}
       </div>
       <div class="ow-dx-axis">${axis}</div>
@@ -89937,7 +89967,7 @@ function renderDebtorsRail(){
     ? V('Oldest money ' + d.ageDays + ' d', d.ageDays >= 60 ? 'ow-bad' : 'ow-warn')
     : V('Within terms', ''));
   if(d.paidDays === null) verdict.push(V('Never paid', 'ow-bad'));
-  else if(d.paidDays > grace) verdict.push(V('Quiet ' + d.paidDays + ' days', d.paidDays > 60 ? 'ow-bad' : 'ow-warn'));
+  else if(d.paidDays > dx.quiet) verdict.push(V('Quiet ' + d.paidDays + ' days', d.paidDays > 60 ? 'ow-bad' : 'ow-warn'));
   else verdict.push(V('Paid ' + agingDaysLabel(d.paidDays) + ' ago', 'ow-good'));
   if(d.overBy > 0.5) verdict.push(V(debM(d.overBy) + ' over limit', 'ow-bad'));
   if(d.lastBroken) verdict.push(V('Broke the ' + fmtShortDate(d.lastBroken.promisedOn) + ' promise', 'ow-bad'));
@@ -90202,7 +90232,7 @@ function renderDebtorsIntel(){
         <span class="ow-dx-wk-r"><span class="ow-dx-wk-k">Customers owing</span><b class="ow-dx-n">${owingAt(hw)}</b></span>
       </span>`;
   })() : `<span class="ow-dx-wk-end ow-dx-n" style="top:calc(${(yv(H[last].total) / 90 * 100).toFixed(1)}% - 22px)">${debM(H[last].total)}</span>
-      <span class="ow-dx-wk-end ow-dx-wk-eo ow-dx-n" style="top:calc(${(yv(H[last].old) / 90 * 100).toFixed(1)}% + 4px)">${debM(H[last].old)} old</span>`;
+      ${H[last].old > 0.5 ? `<span class="ow-dx-wk-end ow-dx-wk-eo ow-dx-n" style="top:calc(${(yv(H[last].old) / 90 * 100).toFixed(1)}% + 4px)">${debM(H[last].old)} old</span>` : ''}`;
   const blockA = `<div class="ow-dx-hd-a">
     <span class="ow-dx-hd-k">Owed to you <span class="ow-dx-cap">${dx.xs.length} customers</span></span>
     <span class="ow-dx-hd-v"><b class="ow-dx-n">${f(dx.total)}</b><span class="ow-dx-u">UGX</span></span>
@@ -90299,25 +90329,30 @@ function renderDebtorsIntel(){
         </svg>
         <span class="ow-dx-gg-r"><span class="ow-dx-gg-v"><b class="ow-dx-n ${dx.dso > 60 ? 'ow-dx-bad' : dx.dso > dx.grace ? 'ow-dx-warn' : 'ow-dx-good'}">${dx.dso}</b> days</span>
           <span class="ow-dx-cap">to get paid, on average</span>
-          <span class="ow-dx-gg-s">Your terms are <b>${dx.grace} days</b> &mdash; ${dx.dso > dx.grace ? (dx.dso - dx.grace) + ' days slower than you allow' : 'inside what you allow'}</span></span>
+          <span class="ow-dx-gg-s">${dx.grace > 0 ? `Your terms are <b>${dx.grace} days</b> &mdash; ${dx.dso > dx.grace ? (dx.dso - dx.grace) + ' days slower than you allow' : 'inside what you allow'}` : 'You give <b>no days</b> of grace, so every day of it is late'}</span></span>
       </span>
       <span class="ow-dx-l30">
         <span class="ow-dx-l30-h"><b>Last 30 days</b><span class="ow-cp ${net > 0.5 ? 'ow-warn' : 'ow-good'}">${net > 0.5 ? 'Book grew ' + debM(net) : 'Book shrank ' + debM(-net)}</span></span>
         ${rate != null ? `<span class="ow-dx-bar"><span class="ow-dx-bar-f" style="width:${Math.min(100, rate)}%"></span></span>` : ''}
-        <span class="ow-dx-cap">Collected <b class="ow-dx-n ow-dx-good">${debM(dx.collected30)}</b>${rate != null ? ` &mdash; <b>${rate}%</b> of the ${debM(owedMonthAgo)} owed a month ago` : ''}. Sold <b class="ow-dx-n">${debM(dx.charged30)}</b> more on credit.</span>
+        <span class="ow-dx-cap">Collected <b class="ow-dx-n ow-dx-good">${debM(dx.collected30)}</b>${rate != null ? ` &mdash; ${rate > 150 ? `<b>${(dx.collected30 / owedMonthAgo).toFixed(1)}&times;</b>` : `<b>${rate}%</b> of`} the ${debM(owedMonthAgo)} owed a month ago` : ''}. Sold <b class="ow-dx-n">${debM(dx.charged30)}</b> more on credit.</span>
       </span>
     </div>`;
   }
 
   /* ---- the phone's own opening: the book, its age, and four readings ---- */
   const live = dx.bands.filter((b)=> b.amount > 0);
-  const lateLeft = dx.total > 0 ? dx.bandAmt('b30') / dx.total * 100 : 0;
+  /* The bar runs young to old with no-date last, so late money starts
+     where the money still in terms ends -- the very left for a shop
+     that gives no days of grace. */
+  const lateLeft = dx.total > 0 ? Math.max(0, dx.total - dx.late - dx.bandAmt('unknown')) / dx.total * 100 : 0;
   const phone = `<div class="ow-dx-phone">
     <section class="ow-pan ow-dx-ph-h">
       <span class="ow-dx-hd-k">Owed to you <span class="ow-cp ${delta > 0.5 ? 'ow-bad' : 'ow-good'}">${delta >= 0 ? '+' : '&minus;'}${debM(Math.abs(delta))}</span></span>
       <span class="ow-dx-hd-v"><b class="ow-dx-n">${f(dx.total)}</b><span class="ow-dx-u">UGX</span></span>
       <span class="ow-dx-cap">${dx.xs.length} customers &middot; tap an age to list only it</span>
-      <span class="ow-dx-ph-br" style="left:${lateLeft.toFixed(1)}%"><b>Late &middot; ${pct(dx.late)}%</b></span>
+      ${lateLeft > 60
+        ? `<span class="ow-dx-ph-br ow-dx-ph-br-r" style="right:${(100 - lateLeft).toFixed(1)}%"><b>Late &middot; ${pct(dx.late)}%</b></span>`
+        : `<span class="ow-dx-ph-br" style="left:${lateLeft.toFixed(1)}%"><b>Late &middot; ${pct(dx.late)}%</b></span>`}
       <span class="ow-dx-ph-bar">${live.map((b)=> `<button type="button" class="ow-dx-ph-seg ow-band-${b.key}" style="flex-grow:${b.amount}" data-pband="${b.key}" aria-label="${esc(b.label)}: ${esc(fmtUGX(Math.round(b.amount)))}"></button>`).join('')}</span>
       <span class="ow-dx-ph-lg">${live.map((b)=> `<button type="button" class="ow-dx-ph-lgb" data-pband="${b.key}"><span class="ow-dx-sw ow-band-${b.key}"></span><span class="ow-dx-ph-lgl">${esc(b.label)}</span><b class="ow-dx-n">${debM(b.amount)}</b></button>`).join('')}</span>
     </section>
@@ -90352,7 +90387,9 @@ function renderDebtorsIntel(){
     <div class="ow-dx-old-b">
       <div class="ow-dx-old-v">
         <span class="ow-dx-yes ${older ? 'ow-dx-s-act' : younger ? 'ow-dx-s-good' : 'ow-dx-s-terms'}">${older ? 'Yes' : younger ? 'No' : 'Flat'}</span>
-        <span class="ow-dx-old-t">Money over 60 days went from ${debM(H[first] ? H[first].old : 0)} to ${debM(H[last] ? H[last].old : 0)} &mdash; ${growTxt}.</span>
+        <span class="ow-dx-old-t">${(H[first] ? H[first].old : 0) <= 0.5 && (H[last] ? H[last].old : 0) <= 0.5
+          ? 'Nobody&rsquo;s money was over 60 days old then, and nobody&rsquo;s is now.'
+          : `Money over 60 days went from ${debM(H[first] ? H[first].old : 0)} to ${debM(H[last] ? H[last].old : 0)} &mdash; ${growTxt}.`}</span>
         <span class="ow-dx-old-s" title="Share of the book over 60 days, week by week"><svg class="ow-dx-old-svg" viewBox="0 0 84 30" aria-hidden="true"><path d="M${sPts.map((q)=> q.join(' ')).join(' L')} L${sPts[sPts.length - 1][0]} 30 L2 30 Z" class="ow-dx-old-sa"/><polyline points="${sPts.map((q)=> q.join(',')).join(' ')}" class="ow-dx-old-sl"/></svg>
           <b class="ow-dx-bad">${Math.round(oldShare[first] * 100)}% &rarr; ${Math.round(oldShare[last] * 100)}% old</b></span>
       </div>
@@ -90457,9 +90494,12 @@ function renderDebMap(){
   const dx = debDx();
   const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
   const dated = dx.xs.filter((x)=> x.ageDays >= 0);
-  const nice = (v)=> Math.ceil(v / 30) * 30;
-  const FULL = { x0: 0, x1: Math.max(150, nice(Math.max(0, ...dated.map((x)=> x.ageDays)) * 1.08)),
-    y0: 0, y1: Math.max(120, nice(Math.max(0, ...dated.map((x)=> x.paidDays || 0)) * 1.08)) };
+  /* THE WHOLE VIEW IS THE BOOK'S OWN RANGE, with the terms and the
+     quiet line always on it. A fixed 150 days put a young book -- every
+     debt under seven weeks -- in one corner, names on top of names. */
+  const nice = (v)=> v <= 90 ? Math.ceil(v / 15) * 15 : Math.ceil(v / 30) * 30;
+  const FULL = { x0: 0, x1: Math.max(30, nice(Math.max(dx.grace + 10, ...dated.map((x)=> x.ageDays)) * 1.12)),
+    y0: 0, y1: Math.max(30, nice(Math.max(dx.quiet + 10, ...dated.map((x)=> x.paidDays || 0)) * 1.12)) };
   const V = debMapView || FULL;
   const xw = Math.max(1, V.x1 - V.x0), yw = Math.max(1, V.y1 - V.y0);
   const X = (age)=> (age - V.x0) / xw * 100;
@@ -90471,16 +90511,42 @@ function renderDebMap(){
   /* A tick too close to the corner label would sit on top of it. */
   for(let v = Math.ceil((V.x0 + 0.001) / xs) * xs; v <= V.x1; v += xs) if((v - V.x0) / xw > 0.06) xT.push(v);
   for(let v = Math.ceil((V.y0 + 0.001) / ys) * ys; v < V.y1; v += ys) if((v - V.y0) / yw > 0.06) yT.push(v);
-  const g = dx.grace;
-  const tx = Math.max(0, Math.min(100, X(g))), ty = Math.max(0, Math.min(88, Y(g)));
+  const g = dx.grace, q = dx.quiet;
+  const tx = Math.max(0, Math.min(100, X(g))), ty = Math.max(0, Math.min(88, Y(q)));
+  /* Somebody who has never paid has been quiet since their oldest
+     charge, so on the never-paid row the act zone opens at the quiet
+     line on the age axis, not at the terms. */
+  const nx = Math.max(tx, Math.min(100, X(q)));
   const zoomed = !!debMapView;
   const maxDue = Math.max(1, ...dx.xs.map((x)=> x.debt));
   const zk = Math.min(1.6, Math.sqrt(FULL.x1 / xw));
   const size = (x)=> Math.round((14 + 34 * Math.sqrt(x.debt / maxDue)) * zk);
   const shown = dated.filter(inView);
+  /* NAMES THAT DO NOT LAND ON EACH OTHER. Biggest first, each name takes
+     its place only if it clears the names and the dots already placed --
+     an unreadable pile of names says less than one clear name and a
+     hover. The plot's size is read off the page; before the first paint
+     it is taken from the layout's own height and a console width. */
+  const prev = wrap.querySelector('#debPlot');
+  const PW = prev && prev.clientWidth > 100 ? prev.clientWidth : 700, PH = 320;
+  const taken = [];
+  const order = shown.slice().sort((a, b)=> (b.id === debOpenId) - (a.id === debOpenId) || b.debt - a.debt);
+  order.forEach((x)=> { const cx = X(x.ageDays) / 100 * PW, cy = (1 - Y(x.paidDays) / 100) * PH, r = size(x) / 2;
+    taken.push({ x0: cx - r, x1: cx + r, y0: cy - r, y1: cy + r, dot: x.id }); });
+  const named = new Set();
+  order.forEach((x)=> {
+    const want = zoomed || x.seg === 'act' || x.seg === 'promised' || x.debt / dx.total >= 0.08 || x.id === debOpenId;
+    if(!want) return;
+    const xp = X(x.ageDays), cx = xp / 100 * PW, cy = (1 - Y(x.paidDays) / 100) * PH, r = size(x) / 2;
+    const w = x.short.length * 6.6 + 4, left = xp > 72;
+    const box = left ? { x0: cx - r - 6 - w, x1: cx - r - 6, y0: cy - 9, y1: cy + 9 } : { x0: cx + r + 6, x1: cx + r + 6 + w, y0: cy - 9, y1: cy + 9 };
+    const others = taken.filter((o)=> o.dot !== x.id);
+    if(box.x1 > PW || box.x0 < 0) return;
+    if(others.every((o)=> box.x1 <= o.x0 || box.x0 >= o.x1 || box.y1 <= o.y0 || box.y0 >= o.y1)){ named.add(x.id); taken.push(box); }
+  });
   const dots = shown.slice().sort((a, b)=> b.debt - a.debt).map((x)=> {
     const xp = X(x.ageDays), yp = Y(x.paidDays), s = size(x);
-    const label = zoomed || x.seg === 'act' || x.seg === 'promised' || x.debt / dx.total >= 0.08 || x.id === debOpenId;
+    const label = named.has(x.id);
     const left = xp > 72;
     return `<button type="button" class="ow-dx-bub ${DEB_SEG[x.seg].cls}${x.id === debOpenId ? ' ow-on' : ''}" data-go="${esc(x.id)}" data-hov="${esc(x.id)}"
         style="left:${xp.toFixed(1)}%;bottom:${yp.toFixed(1)}%;width:${s}px;height:${s}px"
@@ -90532,15 +90598,17 @@ function renderDebMap(){
     <div class="ow-dx-map-g">
       <span class="ow-dx-ya"><span class="ow-dx-ya-n">Never<br>paid</span>${yT.map((v)=> `<span class="ow-dx-n ow-dx-ya-t" style="bottom:${Y(v).toFixed(1)}%">${v} d</span>`).join('')}<span class="ow-dx-n ow-dx-ya-0">${V.y0 > 0 ? V.y0 + ' d' : '0'}</span></span>
       <div class="ow-dx-plot" id="debPlot">
-        <span class="ow-dx-z-act" style="left:${tx.toFixed(1)}%;bottom:${ty.toFixed(1)}%"></span>
+        <span class="ow-dx-z-act" style="left:${tx.toFixed(1)}%;bottom:${ty.toFixed(1)}%;top:12%"></span>
+        ${nx > tx ? `<span class="ow-dx-z-late" style="left:${tx.toFixed(1)}%;width:${(nx - tx).toFixed(1)}%;top:0;height:12%"></span>` : ''}
+        ${nx < 100 ? `<span class="ow-dx-z-act" style="left:${nx.toFixed(1)}%;height:12%"></span>` : ''}
         <span class="ow-dx-z-late" style="left:${tx.toFixed(1)}%;height:${ty.toFixed(1)}%"></span>
         <span class="ow-dx-z-never"></span>
         ${yT.map((v)=> `<span class="ow-dx-gy" style="bottom:${Y(v).toFixed(1)}%"></span>`).join('')}
         ${xT.map((v)=> `<span class="ow-dx-gx" style="left:${X(v).toFixed(1)}%"></span>`).join('')}
         ${X(g) > 0 && X(g) < 100 ? `<span class="ow-dx-tx" style="left:${tx.toFixed(1)}%"></span>` : ''}
-        ${Y(g) > 3 && Y(g) < 88 ? `<span class="ow-dx-ty" style="left:${tx.toFixed(1)}%;bottom:${ty.toFixed(1)}%"></span>` : ''}
-        ${X(g) < 70 && Y(g) < 70 ? `<span class="ow-dx-zn ow-dx-zn-act" style="left:calc(${tx.toFixed(1)}% + 10px)">Act now &middot; late and gone quiet</span>` : ''}
-        ${X(g) < 70 && Y(g) > 12 ? '<span class="ow-dx-zn ow-dx-zn-late">Late, still paying</span>' : ''}
+        ${Y(q) > 3 && Y(q) < 88 ? `<span class="ow-dx-ty" style="left:${tx.toFixed(1)}%;bottom:${ty.toFixed(1)}%"></span>` : ''}
+        ${X(g) < 70 && Y(q) < 70 ? `<span class="ow-dx-zn ow-dx-zn-act" style="left:calc(${tx.toFixed(1)}% + 10px)">Act now &middot; late and gone quiet</span>` : ''}
+        ${X(g) < 70 && Y(q) > 12 ? '<span class="ow-dx-zn ow-dx-zn-late">Late, still paying</span>' : ''}
         ${X(g) >= 18 ? '<span class="ow-dx-zn ow-dx-zn-in">In terms</span>' : ''}
         ${dots}
         ${box && (box.x1 - box.x0 > 1 || box.y1 - box.y0 > 1) ? `<span class="ow-dx-crop" style="left:${box.x0.toFixed(1)}%;bottom:${box.y0.toFixed(1)}%;width:${(box.x1 - box.x0).toFixed(1)}%;height:${(box.y1 - box.y0).toFixed(1)}%"><b class="ow-dx-crop-t">${bd.x0}&ndash;${bd.x1} d &middot; ${inBox} customer${inBox===1?'':'s'}</b></span>` : ''}
