@@ -4471,9 +4471,10 @@
   .pset-op svg{width:12px;height:12px;}
   .pset-mk-x{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--ow-rule);
     border-radius:var(--ow-r-sm);min-width:0;}
-  .pset-mk-in{box-sizing:border-box;flex:none;width:84px;height:32px;padding:0 10px;border:1px solid var(--line);border-radius:var(--ow-r);
+  .pset-mk-in{box-sizing:border-box;flex:none;width:96px;-moz-appearance:textfield;appearance:textfield;height:32px;padding:0 10px;border:1px solid var(--line);border-radius:var(--ow-r);
     font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:13px;
     text-align:right;background:var(--panel);color:var(--ink);}
+  .pset-mk-in::-webkit-inner-spin-button,.pset-mk-in::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
   .pset-mk-add{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
     letter-spacing:-.02em;font-size:12px;font-weight:600;color:var(--ow-sky);white-space:nowrap;}
   .pset-mk-add.is-none{color:var(--ow-ink-600);font-weight:400;font-family:'Figtree',system-ui,sans-serif;}
@@ -80456,13 +80457,18 @@ function lsSortRows(rows, nowMs){
 }
 
 let lsRows = [];
+/* The read is capped, newest first. A shop that reaches the cap has MORE
+   signed in than was read -- so every count drawn from these rows says
+   "100+" rather than passing the cap off as the total. */
+const LS_READ_LIMIT = 100;
+function lsCapped(){ return Array.isArray(lsRows) && lsRows.length >= LS_READ_LIMIT; }
 async function loadLoginSessions(){
   try {
     const { data, error } = await sb.from('login_sessions')
       .select('id, user_id, device_id, app, label, started_at, last_seen_at, revoked_at')
       .eq('shop_id', currentShopId)
       .order('last_seen_at', { ascending: false })
-      .limit(100);
+      .limit(LS_READ_LIMIT);
     if(error) throw error;
     lsRows = data || [];
   } catch(e){
@@ -80589,6 +80595,8 @@ function renderLoginSessions(){
     </div>` : '') : '';
 
   wrap.innerHTML = answer
+    + (lsCapped() ? `<p class="ls-answer"><b>Only the ${LS_READ_LIMIT} most recently seen were read.</b> There are more
+        signed in than that, so every count here is a floor, not a total.</p>` : '')
     + (people.length ? `<div class="ls-grp">Who else is in<span class="ls-grp-n">${people.length}</span></div>`
         + people.map(personRow).join('') : '')
     + (mineRows.length ? `<div class="ls-grp">You<span class="ls-grp-n">${mineRows.length}</span></div>` + youRow : '');
@@ -114787,6 +114795,7 @@ function presetIndexModel(){
   const devices = (typeof lsRows === 'undefined' || lsRows === null)
     ? null : lsRows.filter(r=> !r.revoked_at).length;
   const unread = devices === null ? 'not read' : null;
+  const plus = lsCapped() ? '+' : '';
   const quiet = devices === null ? 0 : lsStaleRows(lsRows, Date.now()).length;
   const named = String(data.presetShopLegalName||'').trim();
   const addr  = String(data.presetShopAddress||'').trim();
@@ -114795,7 +114804,7 @@ function presetIndexModel(){
       mark: (named && addr) ? 'good' : 'warn', jump:'pset_on_paper' },
     { name:'Mobile money', value: stuck ? `${stuck} pending` : momoState,
       mark: stuck ? 'warn' : (/live/.test(momoState) ? 'good' : null), jump:'pset_momo' },
-    { name:'Signed-in devices', value: unread || (quiet ? `${devices} · ${quiet} quiet` : String(devices)),
+    { name:'Signed-in devices', value: unread || (quiet ? `${devices}${plus} · ${quiet}${plus} quiet` : `${devices}${plus}`),
       mark: quiet ? 'warn' : (devices ? 'good' : null), jump:'pset_devices' },
   ];
 
@@ -114809,7 +114818,7 @@ function presetIndexModel(){
     { key:'expense', n:(data.presetExpenseCategories||[]).length },
     { key:'attributes', n:(data.presetAttributes||[]).length },
   ].map(w=> ({ ...w, mark: w.warn ? 'warn' : (w.n ? 'good' : null) }));
-  return { rules, shop, words, momoState, devices };
+  return { rules, shop, words, momoState, devices, plus };
 }
 
 function renderPresetIndex(){
@@ -114832,7 +114841,7 @@ function renderPresetIndex(){
      function again when they land. */
   const setN = (id, txt)=>{ const el = document.getElementById(id); if(el) el.textContent = txt; };
   setN('pset_momo_state', m.momoState);
-  const devWord = m.devices === null ? 'not read' : `${m.devices} signed in`;
+  const devWord = m.devices === null ? 'not read' : `${m.devices}${m.plus} signed in`;
   setN('pset_devices_n', devWord);
 
   /* A panel header with nothing on it is a door, which is the whole
@@ -114894,7 +114903,7 @@ function presetNeedsList(){
   if(Array.isArray(lsRows)){
     const quiet = lsStaleRows(lsRows, Date.now());
     if(quiet.length) out.push({ rgn:'shop', jump:'pset_devices', act:'Review', tag:'quiet',
-      name: `${quiet.length} device${quiet.length === 1 ? '' : 's'} quiet ${LS_STALE_DAYS}+ days`,
+      name: `${quiet.length}${lsCapped() ? '+' : ''} device${quiet.length === 1 ? '' : 's'} quiet ${LS_STALE_DAYS}+ days`,
       say: 'still signed in to this shop' });
   }
   return out;
@@ -115052,9 +115061,9 @@ function renderPresetTiles(){
           const live = lsIsLive(r, now);
           const q = quiet.has(r.id);
           return `<span class="pset-dv${q ? ' is-quiet' : ''}" title="${esc((LS_APP_LABELS[r.app] || r.app) + ' · ' + (r.label || 'Unknown device') + ' · ' + (lsAgo(r.last_seen_at, now) || 'never'))}">${r.app === 'admin' ? PSET_ICONS.laptop : PSET_ICONS.phone}<i class="pset-dv-d${live ? ' is-live' : q ? ' is-quiet' : ''}"></i></span>`;
-        }).join('')}${more > 0 ? `<span class="pset-dv-more">+${more}</span>` : ''}<span class="pset-tile-big pset-devs-n">${signed.length}</span></span>`,
+        }).join('')}${more > 0 ? `<span class="pset-dv-more">+${more}</span>` : ''}<span class="pset-tile-big pset-devs-n">${signed.length}${lsCapped() ? '+' : ''}</span></span>`,
       say: !signed.length ? 'nothing signed in yet'
-        : quiet.size ? `${quiet.size} quiet for ${LS_STALE_DAYS}+ days` : 'all heard from this week',
+        : quiet.size ? `${quiet.size}${lsCapped() ? '+' : ''} quiet for ${LS_STALE_DAYS}+ days` : 'all heard from this week',
       tone: quiet.size ? 'warn' : null,
     };
   }
