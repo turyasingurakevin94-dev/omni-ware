@@ -5745,6 +5745,7 @@
     .sx-pc > .sx-hold{padding:10px 12px;border-radius:var(--ow-r-10);background:var(--ow-steel-050);}
     .sx-pc .sx-hold-r{font-size:13px;}
     .sx-prec{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .sx-rec-empty.sx-prec-0{grid-column:auto;padding:12px;font-size:13px;}
     .sx-prec .sx-tile{padding:10px;gap:8px;border-color:var(--ow-rule-soft);border-radius:var(--ow-r-10);}
     .sx-prec .sx-tile.is-wide{grid-column:1 / -1;}
     .sx-prec .sx-tile-l{font-size:12px;}
@@ -79462,7 +79463,8 @@ function staffPersonHTML(s, range, maxCount){
       <div class="sx-pc-h">${av}<div class="sx-pc-w"><div class="sx-nm" title="${esc(s.name)}">${esc(s.name)}</div><div class="sx-caps">${capsHTML}</div></div>${chip}</div>
       <div class="sx-wk"><div class="sx-wk-l">${figHTML}<span class="sx-wk-b">${fig.basis}</span></div>${bar}</div>
       ${holds}
-      ${open && (p.picked || p.delivered) ? staffPhoneRecordHTML(s, p) : ''}
+      ${open ? (p.picked || p.delivered ? staffPhoneRecordHTML(s, p)
+        : `<div class="sx-rec-empty sx-prec-0">${ICON_SX_CLOCK}<span>No orders went through ${esc(firstName(s.name))} ${esc(range.label)}.</span></div>`) : ''}
       <div class="sx-pc-a">
         ${s.userId
           ? `<button type="button" class="sx-pbtn sx-open" aria-expanded="${open}">${open ? 'Close record' : 'Open record'}</button>`
@@ -79516,7 +79518,7 @@ function staffRecordHTML(s, p, range, st){
     </div>`;
 
   if(!p.picked && !p.delivered){
-    return `<div class="sx-rec">${facts}<div class="sx-rec-empty">${ICON_SX_KEY}<span>No orders went through ${esc(firstName(s.name))} ${esc(range.label)}.${
+    return `<div class="sx-rec">${facts}<div class="sx-rec-empty">${s.userId ? ICON_SX_CLOCK : ICON_SX_KEY}<span>No orders went through ${esc(firstName(s.name))} ${esc(range.label)}.${
       s.userId ? (p.activeNow ? ` They are on ${p.activeNow} right now — those count once the order is billed.` : '')
         : ' Once a login invite is accepted, they can be handed work.'}</span>${
       s.userId ? '' : `<button type="button" class="btn btn-ghost ow-sm" onclick="sendLoginInvite('${esc(s.id)}')">Send invite</button>`}</div></div>`;
