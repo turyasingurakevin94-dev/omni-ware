@@ -18848,6 +18848,8 @@
   .mp-acts{display:flex;gap:6px;flex-wrap:wrap;padding:9px 16px;border-top:1px solid var(--ow-rule-soft);}
   .mpw-acts{margin-top:auto;padding:12px 16px;border-top:1px solid var(--ow-rule-soft);display:flex;flex-direction:column;gap:8px;}
   .mpw-acts .btn{width:100%;justify-content:center;box-sizing:border-box;}
+  .mpw-acts .btn svg{flex:none;}
+  .mpw-ell{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .mpw-acts-r{display:flex;gap:8px;}
   .mpw-acts-r .btn{flex:1 1 0;min-width:0;}
   .mpw-see{display:none;}
@@ -18973,8 +18975,11 @@
        wraps, and only here -- the shared component is untouched. */
     .ow-pan-h.mp-headbar{padding:12px 16px 10px;gap:8px;}
     .ow-pan-h.mp-headbar .ow-pan-n{display:none;}
-    .mp-seg{width:100%;}
-    .mp-seg button{flex:1;justify-content:center;height:34px;font-size:13px;}
+    .mp-seg{width:100%;flex-wrap:nowrap;}
+    .mp-seg button{flex:1 1 0;min-width:0;justify-content:center;height:34px;font-size:13px;padding:0 4px;}
+    /* Three layers with real counts do not fit one row with an icon each;
+       the words and the counts are what tell them apart. */
+    .mp-headbar .mp-seg svg{display:none;}
     .mp-legend{display:none;}
     .mp-search{max-width:none;flex:1 1 100%;}
     .mp-search input{height:44px;font-size:15px;}
@@ -51021,8 +51026,12 @@ function mapTwoWay(){
   }).filter(x=> x && (x.owe > 0.5 || x.owed > 0.5))
     .sort((a,b)=> (b.owe + b.owed) - (a.owe + a.owed));
 }
+/* The suppliers marked two-way on the map and in the list: exactly the
+   accounts the strip counts and the rail sets out, so the badge, the key
+   and the figure cannot disagree. A link with nothing owed either way is
+   a fact about the directory, not something to read off a map. */
 function mapTwoWayIds(){
-  return new Set((data.customers || []).map(c=> c.linkedSupplierId).filter(Boolean).map(String));
+  return new Set(mapTwoWay().map(x=> String(x.supplier.id)));
 }
 /* The place the rail is open on. Never empty while there is something to
    read: with nothing picked it is the place holding the most money on
@@ -52131,7 +52140,7 @@ function renderMapSide(rowsIn, farIn, homeIn){
       ${twoWay}
       <div class="mpw-acts">
         <button type="button" class="btn btn-ghost mpw-see" id="mp_rail_see">See the ${esc(plural(people.length, sup ? 'supplier' : 'customer'))}</button>
-        <button type="button" class="btn btn-ghost" id="mp_rail_open">${sup ? 'Open Creditors' : `Open ${esc(r.name)} in Debtors`}
+        <button type="button" class="btn btn-ghost" id="mp_rail_open" title="${sup ? 'Open Creditors' : `Open ${esc(r.name)} in Debtors`}"><span class="mpw-ell">${sup ? 'Open Creditors' : `Open ${esc(r.name)} in Debtors`}</span>
           <svg class="icon" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg></button>
         <div class="mpw-acts-r">
           <button type="button" class="btn btn-ghost ow-sm" id="mp_rail_place">${r.pin ? 'Move pin' : 'Place it'}</button>
