@@ -195,4 +195,4 @@ t.check(/const msg = text == null \|\| text === '' \? salesGroupOrderMessage\(q\
     'a late entry sits on the day it went out, not the day it was typed in, and carries no invented time');
 }
 
-t.done();
+process.exit(t.done() ? 1 : 0);

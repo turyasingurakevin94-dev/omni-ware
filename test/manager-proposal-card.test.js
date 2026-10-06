@@ -110,4 +110,4 @@ const s = compileScope([
   t.check(!/mgr-pp-back/.test(up) && /<details class="mgr-pp-why"/.test(up), 'an aim above it keeps its argument folded as before');
 }
 
-t.done();
+process.exit(t.done() ? 1 : 0);
