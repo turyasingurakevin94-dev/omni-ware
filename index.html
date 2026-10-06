@@ -2867,74 +2867,408 @@
 
 
 
-  /* ---- PURCHASE ANALYTICS, the console. Beside the screen it belongs
-     to and NOT in the .ow- layer, for the same reason the sales block
-     above is: the layer's second law is that every selector in it starts
-     .ow-. Everything the layer already had -- .ow-ph, .ow-strip, .ow-pan,
-     .ow-seg, .ow-tbl, .ow-tb, .ow-fig, .ow-mini -- is used as it stands,
-     and the chart shares .an-th/.an-no/.an-tbl with the sales side. What
-     is here is the concentration bar, which neither has. ---- */
+  /* ---- PURCHASE ANALYTICS, as drawn on the canvas. Beside the screen it
+     belongs to and NOT in the .ow- layer, for the same reason the sales
+     block above is: the layer's second law is that every selector in it
+     starts .ow-. The page header, the strip, the grid and the table's
+     bones are the layer's own (.ow-ph, .ow-strip/.ow-mt, .ow-grid,
+     .ow-tbl); what is here is what only this screen draws -- the range
+     buttons, the bridge of why spend moved, the ranked bands, the
+     diverging bars, the supplier colours and the phone cards. ---- */
 
-  /* THE ONE CHART: one bar, the period's spend cut by supplier, largest
-     first. MONOCHROME on purpose -- concentration is read as LENGTH, and
-     the palette has no categorical set to invent one from. Six steel
-     values already in the 23, darkest for the largest, each carrying ink
-     that clears 4.5:1 on it. */
-  .pan-cc-w{padding:var(--ow-sp-12) var(--ow-sp-12) var(--ow-sp-4);}
-  .pan-cc-bar{display:flex;height:34px;border-radius:var(--ow-r-sm);overflow:hidden;
-    border:1px solid var(--ow-rule-soft);box-sizing:border-box;}
-  .pan-cc-seg{display:flex;align-items:center;justify-content:center;min-width:0;box-sizing:border-box;}
-  .pan-cc-seg + .pan-cc-seg{border-left:1px solid rgba(255,255,255,.5);}
-  .pan-cc-seg span{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
-    font-variant-numeric:tabular-nums;letter-spacing:-.02em;
-    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
-    overflow:hidden;white-space:nowrap;padding:0 var(--ow-sp-4);}
-  .pan-cc-1{background:var(--ow-ink-900);} .pan-cc-1 span{color:var(--ow-paper);}
-  .pan-cc-2{background:var(--ow-steel-800);} .pan-cc-2 span{color:var(--ow-paper);}
-  .pan-cc-3{background:var(--ow-ink-600);} .pan-cc-3 span{color:var(--ow-paper);}
-  .pan-cc-4{background:var(--ow-steel-400);} .pan-cc-4 span{color:var(--ow-ink-900);}
-  .pan-cc-5{background:var(--ow-steel-100);} .pan-cc-5 span{color:var(--ow-ink-900);}
-  .pan-cc-6{background:var(--ow-steel-050);} .pan-cc-6 span{color:var(--ow-ink-600);}
-  /* The legend is rows, not chips: a name, its share, its money, in
-     columns that line up because the figures are tabular. */
-  .pan-cc-leg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
-    column-gap:var(--ow-sp-24);margin:var(--ow-sp-12) 0 0;padding:0;list-style:none;}
-  .pan-cc-l{display:flex;align-items:baseline;gap:var(--ow-sp-8);padding:var(--ow-sp-4) 0;
-    border-bottom:1px solid var(--ow-rule-soft);min-width:0;}
-  .pan-cc-k{width:9px;height:9px;border-radius:2px;flex:none;align-self:center;
-    border:1px solid var(--ow-rule-soft);box-sizing:border-box;}
-  /* Three declarations, never two, and min-width:0 so it yields inside
-     the flex parent rather than pushing the money out of the row. */
-  .pan-cc-n{flex:1;min-width:0;font-size:var(--ow-t-12);
+  /* WHO, IN COLOUR. Five supplier families, the five largest in the
+     window, and a neutral for everyone else. Identity, never state:
+     each is the supplier hues' own ink and tint, already held to
+     4.5:1 in the contrast test. */
+  #tab-analytics-purchase .pan-h0{--pan-h:var(--ow-teal);--pan-hs:var(--ow-teal-soft);--pan-hi:var(--ow-teal);}
+  #tab-analytics-purchase .pan-h1{--pan-h:var(--ow-violet);--pan-hs:var(--ow-violet-soft);--pan-hi:var(--ow-violet);}
+  #tab-analytics-purchase .pan-h2{--pan-h:var(--ow-slate);--pan-hs:var(--ow-slate-soft);--pan-hi:var(--ow-slate);}
+  #tab-analytics-purchase .pan-h3{--pan-h:var(--ow-sky);--pan-hs:var(--ow-sky-soft);--pan-hi:var(--ow-sky);}
+  #tab-analytics-purchase .pan-h4{--pan-h:var(--ow-plum);--pan-hs:var(--ow-plum-soft);--pan-hi:var(--ow-plum);}
+  #tab-analytics-purchase .pan-hx{--pan-h:#DCD7CE;--pan-hs:var(--ow-rule-soft);--pan-hi:var(--ow-ink-600);}
+  #tab-analytics-purchase .an-d{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+  .pan-w{color:var(--ow-amber-ink);}
+  .pan-t-bad{color:var(--ow-crimson);}
+  .pan-t-good{color:var(--ow-verdigris);}
+
+  /* ---- the header: the window as one row of buttons ---- */
+  .pan-door{display:none;}
+  .pan-rng{display:inline-flex;gap:var(--ow-sp-2);padding:3px;background:var(--ow-rule-soft);border-radius:var(--ow-r);}
+  .pan-rng-b{all:unset;box-sizing:border-box;height:30px;padding:0 var(--ow-sp-12);border:1px solid transparent;border-radius:7px;
+    display:inline-flex;align-items:center;justify-content:center;cursor:pointer;white-space:nowrap;
+    font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);color:var(--ow-ink-600);}
+  .pan-rng-b:hover{color:var(--ow-ink-900);}
+  .pan-rng-b:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
+  .pan-rng-b.ow-on{background:var(--ow-paper);border-color:var(--ow-rule);color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  .pan-rng-c{width:34px;padding:0;}
+  .pan-rs{display:none;}
+  select.pan-rng-sel{display:none;}
+  .pan-exp-ph{display:none;}
+
+  /* ---- the strip: four figures, each with the picture behind it ---- */
+  .ow-strip.pan-strip{border-radius:var(--ow-r-sm);border-color:var(--ow-rule);margin-bottom:var(--ow-sp-16);}
+  .pan-strip .ow-mt{display:flex;flex-direction:column;gap:6px;padding:var(--ow-sp-12) var(--ow-sp-16);border-left-color:var(--ow-rule);min-width:0;}
+  .pan-strip .ow-mt-l{margin:0;letter-spacing:.05em;}
+  .pan-strip .ow-mt-v{font-weight:var(--ow-fw-600);}
+  .pan-strip .ow-mt-v .ow-u{font-family:'Figtree',system-ui,sans-serif;font-weight:var(--ow-fw-600);font-size:var(--ow-t-11);}
+  .pan-strip .ow-mt-s{margin:0;}
+  .pan-strip .ow-mt-s b{font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .pan-ast{color:var(--ow-amber);font-size:var(--ow-t-14);margin-left:2px;cursor:help;}
+  .pan-pic{display:flex;gap:var(--ow-sp-2);height:4px;}
+  .pan-pic i{display:block;flex:1 1 0;border-radius:2px;background:var(--pan-h,var(--ow-steel-800));}
+  .pan-pic.pan-vs{flex-direction:column;gap:3px;height:auto;}
+  .pan-pic.pan-vs i{flex:none;height:4px;background:var(--ow-steel-800);}
+  .pan-pic.pan-vs i.pan-vs-b{background:#D6D1C7;}
+  .pan-pic.pan-tl{gap:3px;}
+  .pan-tl i.pan-tl-r{background:var(--ow-crimson);}
+  .pan-tl i.pan-tl-f{background:var(--ow-verdigris);}
+  .pan-tl i.pan-tl-l{background:#B9B3A8;}
+  .pan-tl i.pan-tl-n{background:transparent;border:1px dashed #B9B3A8;box-sizing:border-box;}
+  .pan-pic.pan-cov{gap:0;border-radius:2px;overflow:hidden;}
+  .pan-pic i.pan-cov-a,.pan-cov2 i.pan-cov-a{background:var(--ow-steel-800);border-radius:0;}
+  .pan-pic i.pan-cov-b,.pan-cov2 i.pan-cov-b{background:#D9893A;border-radius:0;}
+
+  /* ---- the panels: a hairline box with a 34px sentence-case head ---- */
+  .pan-pan{background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);min-width:0;}
+  .pan-pan[hidden]{display:none;}
+  .pan-pan-h{display:flex;align-items:center;gap:var(--ow-sp-8);height:34px;padding:0 var(--ow-sp-16);
+    border-bottom:1px solid var(--ow-rule-soft);box-sizing:border-box;}
+  .pan-pan-t{flex:1;min-width:0;margin:0;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .pan-cc-p{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
-    font-variant-numeric:tabular-nums;letter-spacing:-.02em;
-    font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;}
-  .pan-cc-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
-    font-variant-numeric:tabular-nums;letter-spacing:-.02em;
-    font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);white-space:nowrap;}
+  .pan-pan-n{font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;}
+  .pan-main{display:flex;flex-direction:column;gap:var(--ow-sp-16);min-width:0;}
+  .pan-side{min-width:0;}
 
-  /* A rise is money leaving and a fall is money kept -- the two state
-     colours the palette already has for exactly that, and the only
-     colour in this table. A non-answer ("level", "not bought before") is
-     grey and set in the interface face, because it is not a figure. */
-  .pan-none{color:var(--ow-ink-400);font-family:'Figtree',system-ui,-apple-system,sans-serif;
-    font-size:var(--ow-t-11);font-weight:var(--ow-fw-400);letter-spacing:0;}
-  /* A column that cannot honestly be totalled prints a dash and says why
-     on hover -- it never falls through to a generic sum. */
-  .pan-nototal{color:var(--ow-ink-400);cursor:help;font-weight:var(--ow-fw-400);}
-  .pan-partial-mark{color:var(--ow-amber-ink);font-weight:var(--ow-fw-700);
-    margin-left:2px;cursor:help;}
+  /* ---- WHY SPEND MOVED: one figure, one sentence, the bridge, the parts ---- */
+  .pan-why{padding:var(--ow-sp-16);display:flex;flex-direction:column;gap:18px;}
+  .pan-why-top{display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--ow-sp-12) 28px;}
+  .pan-why-k{display:flex;flex-direction:column;gap:var(--ow-sp-2);}
+  .pan-why-l{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);text-transform:uppercase;letter-spacing:.05em;}
+  .pan-why-v{display:flex;align-items:center;gap:var(--ow-sp-8);}
+  .pan-why-f{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-size:24px;font-weight:var(--ow-fw-600);line-height:1.1;color:var(--ow-ink-900);}
+  .pan-chip{display:inline-flex;align-items:center;height:22px;padding:0 7px;border-radius:var(--ow-r-sm);background:var(--ow-rule-soft);
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .pan-why-say{flex:1 1 260px;margin:0 0 var(--ow-sp-2);font-size:var(--ow-t-13);color:var(--ow-ink-600);max-width:60ch;line-height:1.5;}
+  .pan-why-say b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  .pan-why-say .an-d{font-weight:var(--ow-fw-600);}
+  .pan-br{display:grid;grid-template-columns:96px minmax(0,1fr) 104px;gap:14px;align-items:center;}
+  .pan-br-e{display:flex;flex-direction:column;line-height:1.3;min-width:0;}
+  .pan-br-then{align-items:flex-end;}
+  .pan-br-el{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .pan-br-ev{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
+  .pan-br-now .pan-br-ev{font-weight:var(--ow-fw-700);color:var(--ow-ink-900);}
+  .pan-br-bar{position:relative;padding:14px 0 10px;min-width:0;}
+  .pan-br-thick{display:flex;gap:var(--ow-sp-2);height:30px;border-radius:5px;overflow:hidden;}
+  .pan-br-thick i{display:flex;align-items:center;flex:1 1 0;min-width:0;padding-left:var(--ow-sp-10);box-sizing:border-box;overflow:hidden;
+    font-style:normal;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-paper);}
+  .pan-br-net{position:absolute;top:0;bottom:6px;width:2px;margin-left:-1px;background:var(--ow-ink-900);}
+  .pan-br-netl{position:absolute;top:-4px;transform:translateX(-50%);font-size:10px;font-weight:var(--ow-fw-700);
+    letter-spacing:.06em;text-transform:uppercase;color:var(--ow-ink-900);}
+  .pan-br-thin{position:absolute;right:0;bottom:2px;height:4px;display:flex;gap:1px;border-radius:2px;overflow:hidden;}
+  .pan-br-thin i{display:block;flex:1 1 0;}
+  .pan-d-vol{background:var(--ow-steel-800);}
+  .pan-d-new{background:var(--ow-steel-400);}
+  .pan-d-drop{background:#B9B3A8;}
+  .pan-d-rise{background:var(--ow-crimson);}
+  .pan-d-cut{background:var(--ow-verdigris);}
+  .pan-d-oth{background:#D6D1C7;}
+  .pan-drv{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--ow-rule-soft);
+    border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-sm);overflow:hidden;}
+  .pan-drv-c{background:var(--ow-paper);padding:var(--ow-sp-10) var(--ow-sp-12);display:flex;flex-direction:column;gap:3px;min-width:0;}
+  .pan-drv-l{display:flex;align-items:center;gap:var(--ow-sp-6);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .pan-drv-k{flex:none;width:10px;height:10px;border-radius:3px;}
+  .pan-drv-k.pan-k-thin{height:4px;border-radius:2px;}
+  .pan-drv-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .pan-drv-v.pan-t-bad{color:var(--ow-crimson);}
+  .pan-drv-v.pan-t-good{color:var(--ow-verdigris);}
+  .pan-drv-s{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
 
+  /* ---- the table panel's head: the lens, the declared order, the search ---- */
+  .pan-tbh{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ow-sp-8) var(--ow-sp-12);min-height:52px;
+    padding:var(--ow-sp-8) var(--ow-sp-16);border-bottom:1px solid var(--ow-rule-soft);box-sizing:border-box;}
+  .pan-seg{display:inline-flex;gap:var(--ow-sp-2);padding:3px;background:var(--ow-rule-soft);border-radius:var(--ow-r);}
+  .pan-seg-b{all:unset;box-sizing:border-box;height:30px;padding:0 var(--ow-sp-12);border:1px solid transparent;border-radius:7px;
+    display:inline-flex;align-items:center;justify-content:center;gap:var(--ow-sp-6);cursor:pointer;white-space:nowrap;
+    font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);color:var(--ow-ink-600);}
+  .pan-seg-b:hover{color:var(--ow-ink-900);}
+  .pan-seg-b:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
+  .pan-seg-b.ow-on{background:var(--ow-paper);border-color:var(--ow-rule);color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  .pan-seg-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-500);color:var(--ow-ink-600);}
+  .pan-order{display:flex;align-items:center;gap:var(--ow-sp-6);min-width:0;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .pan-order .icon{width:14px;height:14px;stroke-width:1.8;}
+  .pan-tbh-sp{flex:1;}
+  .pan-find{flex:0 1 220px;min-width:0;height:32px;display:flex;align-items:center;gap:var(--ow-sp-8);padding:0 var(--ow-sp-10);
+    border:1px solid var(--ow-rule);border-radius:var(--ow-r);color:var(--ow-ink-600);box-sizing:border-box;background:var(--ow-paper);}
+  .pan-find .icon{width:14px;height:14px;stroke-width:1.8;}
+  .pan-find input{flex:1;min-width:0;border:0;background:transparent;outline:none;font-family:inherit;font-size:var(--ow-t-12);color:var(--ow-ink-900);}
+  .pan-note{display:flex;gap:var(--ow-sp-6);align-items:flex-start;margin:0;padding:var(--ow-sp-10) var(--ow-sp-16);
+    border-top:1px solid var(--ow-rule-soft);font-size:var(--ow-t-11);line-height:1.45;color:var(--ow-ink-600);}
+  .pan-note .icon{width:14px;height:14px;stroke-width:1.8;margin-top:1px;}
+  .pan-note b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  #pan_pager:empty{display:none;}
+  #pan_pager .ow-pg{padding:var(--ow-sp-8) var(--ow-sp-16);border-top:1px solid var(--ow-rule-soft);}
+
+  /* ---- THE TABLE. Two tiers of head -- the family, then the column --
+     bands for what each price did, and every figure column fixed. ---- */
+  .pan-scroll{overflow-x:auto;}
+  .pan-tbl{min-width:720px;}
+  .pan-tbl .ow-tbl-h,.pan-tbl .ow-tbl-r,.pan-tbl .ow-tbl-f{gap:0 var(--ow-sp-10);padding:0 var(--ow-sp-16);}
+  .pan-th1,.pan-band{display:grid;grid-column:1/-1;grid-template-columns:var(--ow-tbl-cols);gap:0 var(--ow-sp-10);padding:0 var(--ow-sp-16);}
+  @supports (grid-template-columns:subgrid){ .pan-th1,.pan-band{grid-template-columns:subgrid;} }
+  .pan-th1{height:26px;align-items:end;background:var(--ow-paper-2);font-size:10px;font-weight:var(--ow-fw-700);
+    color:var(--ow-ink-600);text-transform:uppercase;letter-spacing:.08em;}
+  .pan-th1 > span{padding-bottom:var(--ow-sp-4);text-align:center;}
+  .pan-th1 > span:nth-child(2){text-align:right;border-bottom:1.5px solid #D6D1C7;}
+  .pan-th1 > span.pan-th1-3{grid-column:span 3;border-bottom:1.5px solid #D6D1C7;}
+  .pan-th1 > span.pan-th1-2{grid-column:span 2;}
+  .pan-th1 > span.pan-th1-e{border-bottom:1.5px solid var(--ow-ink-900);color:var(--ow-ink-900);}
+  .pan-tbl .ow-tbl-h{min-height:30px;padding-top:var(--ow-sp-4);padding-bottom:var(--ow-sp-4);background:var(--ow-paper-2);
+    text-transform:none;letter-spacing:0;font-size:var(--ow-t-11);}
+  .pan-tbl-item .ow-tbl-h > :first-child{padding-left:30px;}
+  .pan-tbl .ow-tbl-h .pan-th-mv{text-align:center;}
+  .pan-th-add{display:flex;align-items:center;gap:var(--ow-sp-8);}
+  .pan-th-add > span:last-child{flex:1;text-align:right;}
+  .pan-th-sc{flex:0 0 72px;display:flex;justify-content:space-between;font-size:10px;font-weight:var(--ow-fw-500);color:var(--ow-ink-600);}
+  .pan-tbl .ow-tbl-r{min-height:50px;padding-top:var(--ow-sp-6);padding-bottom:var(--ow-sp-6);box-sizing:border-box;border-top:1px solid var(--ow-rule-soft);}
+  .pan-tbl .ow-tbl-r:hover{background:var(--ow-paper-2);}
+  .pan-tbl .ow-tbl-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    text-align:right;white-space:nowrap;}
+  .pan-id{display:flex;align-items:center;gap:var(--ow-sp-10);min-width:0;}
+  .pan-rk{flex:none;width:20px;text-align:right;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .pan-id-t{display:flex;flex-direction:column;min-width:0;line-height:1.3;}
+  .pan-tbl .pan-id .ow-tbl-p{font-size:var(--ow-t-13);}
+  .pan-tbl .pan-id .ow-tbl-s{font-size:var(--ow-t-11);margin-top:0;}
+  .pan-tbl .pan-id .ow-tbl-s.pan-w{color:var(--ow-amber-ink);}
+  .pan-mono{flex:none;width:28px;height:28px;border-radius:var(--ow-r-sm);background:var(--pan-hs);color:var(--pan-hi);
+    display:flex;align-items:center;justify-content:center;font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);}
+  .pan-tbl .ow-tbl-n.pan-q{display:flex;flex-direction:column;align-items:flex-end;line-height:1.3;}
+  .pan-u{font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-11);color:var(--ow-ink-600);letter-spacing:0;
+    max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pan-tbl .pan-was{color:var(--ow-ink-600);}
+  .pan-tbl .ow-tbl-r .pan-paid{font-weight:var(--ow-fw-600);}
+  .pan-mvc{display:flex;justify-content:center;}
+  .pan-tbl .ow-tbl-n.pan-mvc{display:flex;}
+  #tab-analytics-purchase .an-delta,#tab-analytics-purchase .pan-lvl,#tab-analytics-purchase .pan-new{
+    display:inline-flex;align-items:center;justify-content:center;gap:3px;min-width:60px;height:22px;padding:0 var(--ow-sp-4);
+    box-sizing:border-box;border-radius:var(--ow-r-sm);font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:0;}
+  #tab-analytics-purchase .an-delta{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;}
+  #tab-analytics-purchase .an-delta svg{width:8px;height:8px;flex:none;}
+  #tab-analytics-purchase .an-delta.down{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  #tab-analytics-purchase .an-delta.up{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  #tab-analytics-purchase .pan-lvl{background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+  #tab-analytics-purchase .pan-new{border:1px dashed #B9B3A8;color:var(--ow-ink-600);cursor:help;}
+  /* The layer's figure cell sizes to its content and sits at the end of
+     its track; these two are drawn across the whole track instead. */
+  .pan-tbl .ow-tbl-n.pan-add,.pan-tbl .ow-tbl-n.pan-mvc,.pan-tbl .ow-tbl-h .pan-th-add{justify-self:stretch;}
+  .pan-tbl .ow-tbl-h .pan-th-mv{justify-self:center;}
+  .pan-tbl .ow-tbl-r .ow-tbl-n{font-weight:var(--ow-fw-400);}
+  .pan-tbl .ow-tbl-n.pan-add{display:flex;align-items:center;gap:var(--ow-sp-8);}
+  .pan-add-v{flex:1;text-align:right;font-weight:var(--ow-fw-600);}
+  .pan-dv{flex:0 0 72px;display:flex;align-items:center;height:20px;}
+  .pan-dv-h{flex:1;display:flex;height:8px;}
+  .pan-dv-h:first-child{justify-content:flex-end;}
+  .pan-dv-h i{display:block;height:100%;border-radius:2px;}
+  .pan-dv-a{flex:none;width:1px;height:20px;background:#B9B3A8;}
+  i.pan-dv-l{background:var(--ow-verdigris);}
+  i.pan-dv-r{background:var(--ow-crimson);}
+  .pan-sh{display:flex;align-items:center;gap:var(--ow-sp-10);}
+  .pan-sh-t{flex:0 0 120px;height:8px;background:var(--ow-rule-soft);border-radius:4px;overflow:hidden;display:block;}
+  .pan-sh-t i{display:block;height:100%;background:var(--pan-h);}
+  .pan-sh-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-12);}
+  .pan-tbl .ow-tbl-f{min-height:46px;box-sizing:border-box;background:var(--ow-paper-2);border-top:1.5px solid var(--ow-ink-900);font-weight:var(--ow-fw-700);}
+  .pan-tbl .ow-tbl-f .pan-foot-l{grid-column:1 / span var(--an-fs, 1);}
+  .pan-tbl-item .ow-tbl-f .pan-foot-l{padding-left:30px;}
+  .pan-tbl .pan-nototal{font-weight:var(--ow-fw-500);}
+  .pan-band{align-items:center;height:34px;background:var(--ow-steel-050);border-top:1px solid var(--ow-rule-soft);}
+  .pan-band-l{grid-column:1 / span 5;display:flex;align-items:center;gap:var(--ow-sp-8);min-width:0;}
+  .pan-band-k{flex:none;width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;}
+  .pan-band-k svg{width:9px;height:9px;}
+  .pan-band-t{font-size:var(--ow-t-12);font-weight:var(--ow-fw-700);color:var(--ow-ink-900);}
+  .pan-band-n{display:inline-flex;align-items:center;height:18px;padding:0 var(--ow-sp-6);border-radius:999px;background:var(--ow-paper);
+    border:1px solid var(--ow-rule);font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .pan-band-a,.pan-band-s{text-align:right;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-size:var(--ow-t-12);font-weight:var(--ow-fw-700);}
+  .pan-band-s{font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
+  .pan-b-rise .pan-band-k{background:var(--ow-crimson-soft);color:var(--ow-crimson);} .pan-b-rise .pan-band-a{color:var(--ow-crimson);}
+  .pan-b-held .pan-band-k{background:var(--ow-rule-soft);color:var(--ow-ink-600);} .pan-b-held .pan-band-a{color:var(--ow-ink-600);}
+  .pan-b-fall .pan-band-k{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);} .pan-b-fall .pan-band-a{color:var(--ow-verdigris);}
+  .pan-b-new .pan-band-k{background:var(--ow-paper);color:var(--ow-ink-600);border:1px dashed #B9B3A8;} .pan-b-new .pan-band-a{color:var(--ow-ink-600);}
+
+  /* ---- the phone's cards: hidden on the desk ---- */
+  .pan-cards{display:none;}
+
+  /* ---- WHERE THE MONEY WENT ---- */
+  .pan-cc{padding:var(--ow-sp-16);display:flex;flex-direction:column;gap:var(--ow-sp-12);}
+  .pan-say{margin:0;font-size:var(--ow-t-13);color:var(--ow-ink-900);line-height:1.45;}
+  .pan-say b{font-weight:var(--ow-fw-600);}
+  .pan-stk{display:flex;gap:var(--ow-sp-2);height:24px;border-radius:4px;overflow:hidden;}
+  .pan-stk i{display:flex;align-items:center;flex:1 1 0;min-width:0;padding-left:5px;box-sizing:border-box;overflow:hidden;
+    background:var(--pan-h);font-style:normal;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-paper);}
+  .pan-stk i.pan-hx{justify-content:flex-end;padding:0 var(--ow-sp-6) 0 0;color:var(--ow-ink-900);}
+  .pan-brk{height:6px;margin-top:var(--ow-sp-4);border:1.5px solid var(--ow-ink-600);border-top:0;box-sizing:border-box;}
+  .pan-brk-l{margin:var(--ow-sp-2) 0 0;font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;}
+  .pan-brk-l.pan-brk-c{text-align:center;}
+  .pan-brk-l b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  .pan-lg{display:flex;flex-direction:column;}
+  .pan-lg-r{display:flex;align-items:center;gap:var(--ow-sp-8);min-height:30px;border-top:1px solid var(--ow-rule-soft);font-size:var(--ow-t-13);}
+  .pan-lg-rest{min-height:40px;}
+  .pan-lg-k{flex:none;width:10px;height:10px;border-radius:3px;background:var(--pan-h);}
+  .pan-lg-n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pan-lg-2{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3;}
+  .pan-lg-s{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .pan-lg-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-12);white-space:nowrap;}
+  .pan-lg-more{color:var(--ow-ink-600);}
+  .pan-tail{display:flex;flex-direction:column;gap:var(--ow-sp-6);padding-top:var(--ow-sp-10);border-top:1px solid var(--ow-rule-soft);}
+  .pan-tail-h{display:flex;justify-content:space-between;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .pan-tail-b{display:flex;align-items:flex-end;gap:var(--ow-sp-2);height:44px;}
+  .pan-tail-b i{display:block;flex:1 1 0;min-width:0;background:var(--pan-h);}
+  .pan-tail-b i.pan-hx{background:#B9B3A8;}
+  .pan-more{all:unset;cursor:pointer;align-self:flex-start;display:inline-flex;align-items:center;gap:var(--ow-sp-4);min-height:28px;
+    font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-sky);}
+  .pan-more:hover{text-decoration:underline;}
+  .pan-more:focus-visible{outline:2px solid var(--ow-sky);outline-offset:2px;}
+  .pan-more .icon{width:14px;height:14px;stroke-width:1.8;}
+
+  /* ---- COMMISSION DUE TO YOU ---- */
+  .pan-cm{padding:var(--ow-sp-16);display:flex;flex-direction:column;gap:var(--ow-sp-12);}
+  .pan-cm-t{display:flex;align-items:baseline;flex-wrap:wrap;gap:var(--ow-sp-8);}
+  .pan-cm-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-size:22px;font-weight:var(--ow-fw-600);line-height:1.1;}
+  .pan-cm-v.ow-fig-none{font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-16);letter-spacing:0;}
+  .pan-cm-s{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .pan-cov2{display:flex;height:10px;gap:var(--ow-sp-2);border-radius:3px;overflow:hidden;}
+  .pan-cov2 i{display:block;flex:1 1 0;}
+  .pan-cov-l{display:flex;justify-content:space-between;margin-top:var(--ow-sp-4);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .pan-cm-p{flex:none;width:40px;text-align:right;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .pan-cm-a{flex:none;min-width:72px;text-align:right;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-size:var(--ow-t-12);}
+  .pan-cm-x{display:flex;align-items:center;gap:var(--ow-sp-8);min-height:44px;margin:0 calc(-1 * var(--ow-sp-16));padding:var(--ow-sp-4) var(--ow-sp-16);
+    border-top:1px solid var(--ow-rule-soft);background:var(--ow-amber-faint);font-size:var(--ow-t-13);}
+  .pan-cm-w{font-size:var(--ow-t-11);color:var(--ow-amber-ink);}
+  .pan-cm-xm{min-height:34px;color:var(--ow-amber-ink);}
+
+  /* ---- WHAT THESE FIGURES REST ON ---- */
+  .pan-basis{padding:var(--ow-sp-4) var(--ow-sp-16) var(--ow-sp-8);display:flex;flex-direction:column;}
+  .pan-bs{display:flex;gap:var(--ow-sp-10);align-items:flex-start;padding:var(--ow-sp-8) 0;font-size:var(--ow-t-13);}
+  .pan-bs + .pan-bs{border-top:1px solid var(--ow-rule-soft);}
+  .pan-bs .icon{width:16px;height:16px;margin-top:1px;stroke-width:1.8;color:var(--ow-ink-600);}
+  .pan-bs-t{display:flex;flex-direction:column;min-width:0;line-height:1.35;}
+  .pan-bs-s{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .pan-bs-w .icon,.pan-bs-w .pan-bs-s{color:var(--ow-amber-ink);}
+
+  /* ---- THE EMPTY WINDOW: an empty bar beside the window before ---- */
+  .pan-nothing-w[hidden]{display:none;}
+  .pan-nothing{display:grid;grid-template-columns:340px minmax(0,1fr);gap:40px;align-items:center;padding:var(--ow-sp-32);}
+  .pan-ec{display:flex;flex-direction:column;gap:var(--ow-sp-12);}
+  .pan-ec-bars{display:flex;align-items:flex-end;gap:var(--ow-sp-24);height:200px;padding:0 var(--ow-sp-16);border-bottom:1px solid var(--ow-rule);}
+  .pan-ec-col{flex:1;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:var(--ow-sp-6);}
+  .pan-ec-empty{width:100%;height:78%;border:1.5px dashed #B9B3A8;border-bottom:0;border-radius:8px 8px 0 0;box-sizing:border-box;
+    display:flex;align-items:center;justify-content:center;color:var(--ow-ink-600);}
+  .pan-ec-empty.pan-ec-low{height:30%;}
+  .pan-ec-empty .icon{width:28px;height:28px;stroke-width:1.8;}
+  .pan-ec-bar{width:100%;height:66%;background:var(--ow-steel-800);border-radius:8px 8px 0 0;}
+  .pan-ec-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);}
+  .pan-ec-lb{display:flex;gap:var(--ow-sp-24);padding:0 var(--ow-sp-16);text-align:center;}
+  .pan-ec-lb > span{flex:1;display:flex;flex-direction:column;font-size:var(--ow-t-13);}
+  .pan-ec-lb b{font-weight:var(--ow-fw-600);}
+  .pan-ec-lb > span > span{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .pan-et{display:flex;flex-direction:column;gap:20px;max-width:560px;}
+  .pan-et-h{display:flex;flex-direction:column;gap:var(--ow-sp-6);}
+  .pan-et h3{margin:0;font-size:var(--ow-t-20);font-weight:var(--ow-fw-700);line-height:1.25;}
+  .pan-et p{margin:0;font-size:var(--ow-t-14);color:var(--ow-ink-600);}
+  .pan-et p b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  .pan-why2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--ow-sp-12);}
+  .pan-rs-c{display:flex;gap:var(--ow-sp-12);align-items:flex-start;padding:14px;border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);}
+  .pan-rs-c.pan-rs-w{border-color:var(--ow-amber-soft);background:var(--ow-amber-faint);}
+  .pan-rs-i{flex:none;width:32px;height:32px;border-radius:var(--ow-r-sm);display:flex;align-items:center;justify-content:center;
+    background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+  .pan-rs-i .icon{width:18px;height:18px;stroke-width:1.8;}
+  .pan-rs-w .pan-rs-i{background:var(--ow-amber-soft);color:var(--ow-amber);}
+  .pan-rs-t{display:flex;flex-direction:column;line-height:1.35;font-size:var(--ow-t-13);}
+  .pan-rs-t b{font-weight:var(--ow-fw-600);}
+  .pan-rs-t > span{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .pan-rs-w .pan-rs-t > span{color:var(--ow-amber-ink);}
+  .pan-acts{display:flex;flex-wrap:wrap;gap:var(--ow-sp-10);}
+
+  /* ---- THE PHONE. Its own design, not the desk squeezed: the door's
+     name over the page name, the window as a full-width row of short
+     buttons, the figures 2x2 without their pictures, the bridge stacked,
+     the rows as cards, and the one action at the foot where the thumb
+     is. ---- */
   @media (max-width:820px){
-    /* The phone keeps the sentence and the bar -- a single stacked bar is
-       read as length, and length still reads at 390 where thirty daily
-       bars would be a smudge -- and drops the legend, which does not. */
-    .pan-cc-leg{display:none;}
-    .pan-cc-w{padding:var(--ow-sp-12);}
-    #pan_export_btn.btn-accent{background:transparent;color:var(--ow-ink-600);
-      border:1px solid var(--ow-rule);}
-    #pan_export_btn{flex:0 0 auto;min-width:0;margin-left:auto;}
+    .pan-door{display:flex;flex:0 0 100%;}
+    .pan-door > span{display:inline-flex;align-items:center;height:22px;padding:0 var(--ow-sp-8);border-radius:var(--ow-r-sm);
+      background:var(--ow-plum-soft);color:var(--ow-plum);font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);}
+    .pan-ph .ow-ph-sp{display:none;}
+    .pan-rng{display:flex;flex:1 1 100%;}
+    .pan-rng-b{flex:1 1 0;height:38px;padding:0 var(--ow-sp-4);font-size:var(--ow-t-13);}
+    .pan-rng-c{flex:0 0 44px;}
+    .pan-rl{display:none;}
+    .pan-rs{display:inline;}
+    #pan_export_btn{display:none;}
+    .btn.pan-exp-ph{display:flex;align-items:center;gap:var(--ow-sp-8);width:100%;box-sizing:border-box;justify-content:center;min-height:48px;margin-top:var(--ow-sp-16);font-size:15px;}
+    .btn.pan-exp-ph[hidden]{display:none;}
+    .ow-strip.pan-strip{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .pan-strip .ow-mt{padding:14px;gap:var(--ow-sp-4);}
+    .pan-strip .ow-mt:nth-child(3){border-left:0;}
+    .pan-strip .ow-mt:nth-child(n+3){border-top:1px solid var(--ow-rule);}
+    .pan-strip .ow-mt-v{font-size:18px;}
+    .pan-strip .pan-pic{display:none;}
+    .pan-why-f{font-size:22px;}
+    .pan-br{grid-template-columns:minmax(0,1fr) minmax(0,1fr);row-gap:var(--ow-sp-4);}
+    .pan-br-then{align-items:flex-start;grid-row:1;grid-column:1;}
+    .pan-br-now{align-items:flex-end;grid-row:1;grid-column:2;}
+    .pan-br-bar{grid-row:2;grid-column:1 / span 2;}
+    .pan-drv{grid-template-columns:minmax(0,1fr);gap:0;background:var(--ow-paper);border:0;border-radius:0;}
+    .pan-drv-c{flex-direction:row;align-items:center;min-height:34px;padding:0;border-top:1px solid var(--ow-rule-soft);}
+    .pan-drv-c:first-child{border-top:0;}
+    .pan-drv-l{flex:1;font-size:var(--ow-t-14);color:var(--ow-ink-900);gap:var(--ow-sp-10);}
+    .pan-drv-k{width:12px;height:12px;}
+    .pan-drv-s{display:none;}
+    .pan-tbh{padding:var(--ow-sp-12);}
+    .pan-seg{display:flex;flex:1 1 100%;}
+    .pan-seg-b{flex:1 1 0;height:38px;font-size:var(--ow-t-14);}
+    .pan-order{display:none;}
+    .pan-tbh-sp{display:none;}
+    .pan-find{flex:1 1 100%;height:44px;}
+    .pan-find input{font-size:16px;}
+    .pan-scroll{display:none;}
+    .pan-cards{display:flex;flex-direction:column;gap:var(--ow-sp-10);padding:var(--ow-sp-12);}
+    .pan-card{display:flex;flex-direction:column;gap:var(--ow-sp-10);padding:14px;border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);background:var(--ow-paper);}
+    .pan-card-h{display:flex;align-items:flex-start;gap:var(--ow-sp-10);}
+    .pan-card-id{flex:1;min-width:0;display:flex;flex-direction:column;}
+    .pan-card-t{font-size:15px;font-weight:var(--ow-fw-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+    .pan-card-s{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+    .pan-card-b{display:flex;align-items:center;gap:var(--ow-sp-12);}
+    .pan-card .pan-dv{flex:1 1 auto;height:18px;}
+    .pan-card .pan-dv-h{height:8px;}
+    .pan-card-v{flex:0 0 auto;min-width:96px;text-align:right;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:15px;font-weight:var(--ow-fw-600);}
+    .pan-card-p{flex:none;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+      font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);}
+    .pan-sh-t.pan-sh-w{flex:none;width:100%;}
+    .pan-card-m{display:flex;justify-content:space-between;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+    .pan-card-m b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);font-size:var(--ow-t-13);}
+    .pan-cards-f{display:flex;justify-content:space-between;padding:0 var(--ow-sp-4);font-size:var(--ow-t-13);color:var(--ow-ink-600);}
+    .pan-cards-f b{font-weight:var(--ow-fw-600);}
+    .pan-lg-r{min-height:40px;font-size:var(--ow-t-14);}
+    .pan-lg-k{width:12px;height:12px;}
+    .pan-cm-x .btn{flex:none;width:auto;min-height:var(--ow-tap);}
+    .pan-nothing{grid-template-columns:minmax(0,1fr);gap:var(--ow-sp-24);padding:var(--ow-sp-16);}
+    .pan-ec-bars{height:140px;}
+    .pan-why2{grid-template-columns:minmax(0,1fr);}
+    .pan-acts .btn{flex:1 1 100%;min-height:var(--ow-tap);justify-content:center;}
   }
 
   .an-subtabs{display:flex;gap:22px;margin-bottom:18px;border-bottom:1px solid var(--line);}
@@ -33344,31 +33678,30 @@
       </div>
     </section>
 
-    <!-- PURCHASE ANALYTICS. The buyer's screen, and it is asked one
-         question in four shapes: is a price going up, where is my money
-         going, what did a rise cost me, and am I owed commission.
+    <!-- PURCHASE ANALYTICS, as drawn on the canvas ("Purchase analytics
+         -- the buying console": a desktop board, a phone board, the empty
+         window and the suppliers panel at twenty-eight suppliers).
 
-         Four questions cannot each have a panel -- that is how a screen
-         becomes a dashboard nobody reads. So they are answered in one
-         order: the STRIP is what was spent, the CHART is who it went to,
-         the RANKING is what the changes cost, and commission is a column
-         on the supplier view where it belongs.
+         It answers four questions in one order. The STRIP is what was
+         spent and what that rests on, each figure with the small picture
+         behind it. WHY SPEND MOVED splits the change against the window
+         before into buying more, new lines, lines dropped, price rises and
+         price cuts -- the first thing a buyer wants to know is whether the
+         bill rose because they bought more or because they paid more.
+         PRICE WATCH is the ranking, grouped by what the price did. The
+         context rail says who the money went to, what commission it earns
+         and what every figure rests on.
 
-         THE RANKING IS THE DESIGN. It used to land ordered by total
-         spend, which only ever answers the second question -- cement is
-         first because cement is the biggest line, which the owner
-         already knew. It ranks on what the price change ADDED TO THIS
-         PERIOD'S BILL, in money, because a percentage cannot be
-         prioritised: binding wire moved +14.5% and cost 345,600, paint
-         moved +2.4% and cost 117,300, and ranked on the percentage you
-         deal with the wrong one. The money is the answer and the
-         percentage is the evidence for it.
-
-         Evidence, not a verdict, as Sales analytics settled. No findings
-         queue and no badges; the one thing it does is DECLARE ITS ORDER
-         in the panel header, so it can be argued with. -->
+         THE RANKING IS STILL THE DESIGN. It ranks on what the price change
+         ADDED TO THIS PERIOD'S BILL, in money, because a percentage cannot
+         be prioritised: binding wire moved +14.5% and cost 345,600, paint
+         moved +2.4% and cost 117,300, and ranked on the percentage you deal
+         with the wrong one. The money is the answer, the percentage the
+         evidence, and the order is declared in the panel so it can be argued
+         with. -->
     <section id="tab-analytics-purchase" style="display:none;">
-      <div class="ow-ph">
+      <div class="ow-ph pan-ph">
+        <span class="pan-door"><span>Insight</span></span>
         <h1 class="ow-ph-t">Purchase analytics</h1>
         <!-- Never folded, so it carries the one thing that goes stale:
              which window is on screen and how much of the book is in it. -->
@@ -33380,19 +33713,31 @@
           this one; a line first bought this period has not gone up, it has appeared, and says so rather
           than showing a rise.</p>
         <span class="ow-ph-sp"></span>
-        <div class="ow-f ow-ph-f an-f">
-          <label class="ow-f-l" for="pan_range_preset">Date range</label>
-          <select id="pan_range_preset" class="ow-f-in an-sel">
-            <option value="today">Today</option>
-            <option value="yesterday">Yesterday</option>
-            <option value="7">Last 7 days</option>
-            <option value="30" selected>Last 30 days</option>
-            <option value="90">Last 90 days</option>
-            <option value="month">This month</option>
-            <option value="all">All time</option>
-            <option value="custom">Custom</option>
-          </select>
+        <!-- THE WINDOW, as one row of buttons. The select underneath is
+             still what every reader of the range asks (panGetDateRange),
+             so the buttons only ever set it -- the range cannot be read
+             two ways. -->
+        <div class="pan-rng" id="pan_range" role="group" aria-label="Date range">
+          <button type="button" class="pan-rng-b" data-r="today">Today</button>
+          <button type="button" class="pan-rng-b" data-r="7"><span class="pan-rl">7 days</span><span class="pan-rs">7d</span></button>
+          <button type="button" class="pan-rng-b" data-r="30"><span class="pan-rl">30 days</span><span class="pan-rs">30d</span></button>
+          <button type="button" class="pan-rng-b" data-r="90"><span class="pan-rl">90 days</span><span class="pan-rs">90d</span></button>
+          <button type="button" class="pan-rng-b" data-r="month"><span class="pan-rl">This month</span><span class="pan-rs">Month</span></button>
+          <button type="button" class="pan-rng-b" data-r="all"><span class="pan-rl">All time</span><span class="pan-rs">All</span></button>
+          <button type="button" class="pan-rng-b pan-rng-c" data-r="custom" aria-label="Custom dates" title="Custom dates">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>
+          </button>
         </div>
+        <select id="pan_range_preset" class="pan-rng-sel" aria-hidden="true" tabindex="-1">
+          <option value="today">Today</option>
+          <option value="yesterday">Yesterday</option>
+          <option value="7">Last 7 days</option>
+          <option value="30" selected>Last 30 days</option>
+          <option value="90">Last 90 days</option>
+          <option value="month">This month</option>
+          <option value="all">All time</option>
+          <option value="custom">Custom</option>
+        </select>
         <div class="ow-f ow-ph-f an-f" id="pan_from_field" style="display:none;">
           <label class="ow-f-l" for="pan_from">From</label>
           <input type="date" id="pan_from" class="ow-f-in an-sel">
@@ -33403,55 +33748,86 @@
         </div>
         <!-- Only Custom needs this. Every preset re-renders the moment it
              is chosen, so a Search button standing there permanently was
-             a control that did nothing, wearing the screen's one accent
-             while it did it. -->
+             a control that did nothing. -->
         <button type="button" class="btn btn-ghost ow-sm" id="pan_apply_btn" style="display:none;">Search</button>
         <!-- THE ACCENT, and the only one on this screen. On a screen that
              exists to be read, taking the evidence away is the one thing
-             there is to do next. -->
+             there is to do next. On the phone it moves to the foot of the
+             page, where the thumb is (#pan_export_ph). -->
         <button type="button" class="btn btn-accent ow-sm" id="pan_export_btn">
           <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v11m0 0l-4-4m4 4l4-4"/><path d="M4 19h16"/></svg>
           Export CSV
         </button>
       </div>
 
-      <div class="ow-strip" id="pan_kpiGrid"></div>
-      <!-- What the four figures above rest on: the period compared
-           against, whether a search is narrowing them, which units are in
-           play, and how many lines have nothing to be compared with. -->
-      <p class="an-kpi-note" id="pan_kpiNote" style="display:none;"></p>
+      <!-- The four figures, each with the small picture behind it. -->
+      <div class="ow-strip pan-strip" id="pan_kpiGrid"></div>
 
-      <!-- THE ONE CHART, and the only thing here a table cannot show:
-           how much of the shop's buying sits with how few people. Not a
-           spend-per-day chart -- purchases are lumpy by nature and thirty
-           bars of a restock pattern is noise wearing a chart's clothes.
-           The sentence comes first and the bar proves it. -->
-      <div class="ow-pan" id="pan_concPan" style="display:none;">
-        <div class="ow-pan-h">
-          <span class="ow-pan-t">Where the money went</span>
-          <span class="ow-pan-n" id="pan_concRange"></span>
+      <!-- An empty window: what it knows, and the way out. Takes the
+           place of everything below it. -->
+      <div class="pan-pan pan-nothing-w" id="pan_empty" hidden></div>
+
+      <div class="ow-grid" id="pan_grid">
+        <div class="pan-main">
+          <section class="pan-pan" id="pan_whyPan" aria-labelledby="pan_why_t" hidden>
+            <div class="pan-pan-h">
+              <h2 class="pan-pan-t" id="pan_why_t">Why spend moved</h2>
+              <span class="pan-pan-n" id="pan_whyRange"></span>
+            </div>
+            <div id="pan_whyBody"></div>
+          </section>
+
+          <section class="pan-pan pan-tbl-pan" aria-label="The rows">
+            <div class="pan-tbh">
+              <div class="pan-seg" id="pan_subtabs" role="tablist" aria-label="What the rows are">
+                <button type="button" class="pan-seg-b ow-on" role="tab" aria-selected="true" data-view="item">Price watch <span class="pan-seg-n" id="pan_n_item"></span></button>
+                <button type="button" class="pan-seg-b" role="tab" aria-selected="false" data-view="supplier">Suppliers <span class="pan-seg-n" id="pan_n_supplier"></span></button>
+              </div>
+              <span class="pan-order">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M7 20l-3-3M7 20l3-3"/><path d="M14 6h7M14 11h5M14 16h3"/></svg>
+                <span id="pan_order"></span>
+              </span>
+              <span class="pan-tbh-sp"></span>
+              <label class="pan-find">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+                <input id="pan_table_search" placeholder="Search these rows" aria-label="Search these rows">
+              </label>
+            </div>
+            <div id="pan_tableWrap"></div>
+            <div id="pan_cards" class="pan-cards"></div>
+            <div id="pan_pager"></div>
+            <p class="pan-note" id="pan_tableNote"></p>
+          </section>
         </div>
-        <div id="pan_concBody"></div>
-        <p class="ow-mini"><span>Counted on the date of the purchase invoice, not the day you paid it.
-          Share is of what you bought, not of what you still owe &mdash; a supplier you use once for a big
-          job sits high here for one period and is gone the next.</span></p>
+
+        <aside class="ow-side pan-side">
+          <section class="pan-pan" id="pan_concPan" aria-labelledby="pan_conc_t" hidden>
+            <div class="pan-pan-h">
+              <h2 class="pan-pan-t" id="pan_conc_t">Where the money went</h2>
+              <span class="pan-pan-n" id="pan_concRange"></span>
+            </div>
+            <div id="pan_concBody"></div>
+          </section>
+          <section class="pan-pan" id="pan_comPan" aria-labelledby="pan_com_t" hidden>
+            <div class="pan-pan-h">
+              <h2 class="pan-pan-t" id="pan_com_t">Commission due to you</h2>
+              <span class="pan-pan-n">projection</span>
+            </div>
+            <div id="pan_comBody"></div>
+          </section>
+          <section class="pan-pan" id="pan_basisPan" aria-labelledby="pan_basis_t">
+            <div class="pan-pan-h">
+              <h2 class="pan-pan-t" id="pan_basis_t">What these figures rest on</h2>
+            </div>
+            <div class="pan-basis" id="pan_basis"></div>
+          </section>
+        </aside>
       </div>
 
-      <div class="ow-pan an-tbl-pan">
-        <div class="ow-pan-h an-tbh">
-          <div class="ow-seg" id="pan_subtabs" role="tablist" aria-label="What the rows are">
-            <button type="button" class="ow-seg-b ow-on" role="tab" aria-selected="true" data-view="item">By item</button>
-            <button type="button" class="ow-seg-b" role="tab" aria-selected="false" data-view="supplier">By supplier</button>
-          </div>
-          <span class="ow-pan-nt" id="pan_order"></span>
-          <span class="ow-pan-n" id="pan_count"></span>
-        </div>
-        <div class="ow-tb">
-          <input id="pan_table_search" class="ow-tb-s an-search" placeholder="Search these rows" aria-label="Search these rows">
-        </div>
-        <div id="pan_tableWrap"></div>
-        <p class="ow-mini" id="pan_tableNote"></p>
-      </div>
+      <button type="button" class="btn btn-accent pan-exp-ph" id="pan_export_ph">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m0 0l-4-4m4 4l4-4"/><path d="M4 19h16"/></svg>
+        Export CSV
+      </button>
     </section>
 
     <!-- DEBTORS LIST -->
@@ -72718,66 +73094,69 @@ const PAN_COLUMNS = {
     {key:'unit', label:'Unit'},
     {key:'amt', label:'Amt', numeric:true, money:true},
     {key:'purchased', label:'Purchased', numeric:true},
+    /* What the same line cost in the window before -- the other end of
+       the move, so "+14.5%" can be read as "21,000 then, 24,045 now"
+       without doing the arithmetic backwards. */
+    {key:'prevPrice', label:'Price last period', numeric:true, money:true},
     // The number a buyer actually works from, and the only one that says
     // whether this is getting worse.
     {key:'unitPrice', label:'Price paid', numeric:true, money:true},
     {key:'priceMove', label:'vs last period', numeric:true, pctMove:true},
-    /* WHAT THE RISE ACTUALLY COST, which is the column this screen was
-       missing and the one it now ranks on. The move was a bare
-       percentage, and a percentage cannot be prioritised: binding wire
-       at +14.5% cost 345,600 and paint at +2.4% cost 117,300, so ranked
-       on the percentage you deal with the wrong one first. Multiply the
-       move by what was actually bought and the two become comparable
-       money. */
-    {key:'priceCost', label:'Added to this period\u2019s bill', numeric:true, money:true, signed:true}
+    /* WHAT THE RISE ACTUALLY COST, which is the column this screen ranks
+       on. A percentage cannot be prioritised: binding wire at +14.5% cost
+       345,600 and paint at +2.4% cost 117,300, so ranked on the
+       percentage you deal with the wrong one first. Multiply the move by
+       what was actually bought and the two become comparable money. */
+    {key:'priceCost', label:'Added to this period’s bill', numeric:true, money:true, signed:true}
   ],
   supplier: [
     {key:'name', label:'Supplier name'},
     {key:'amt', label:'Amt', numeric:true, money:true},
     {key:'docCount', label:'Doc number', numeric:true},
-    // Concentration. The chart above says who is biggest; this is that
-    // chart with its arithmetic shown, which is why it is a column here
-    // and on no other view.
+    // Concentration, with its arithmetic shown.
     {key:'share', label:'Share of spend', numeric:true, pct:true},
     {key:'commission', label:'Expected commission', numeric:true, money:true}
   ]
 };
-/* What is DRAWN, out of PAN_COLUMNS. The table showed all eight columns
-   of the item view at 13px -- Item name, Variant, Category and Unit are
-   four text columns competing with four money columns, in a table where
-   the item name was the one that truncated. Variant and category belong
-   to the name and move into it; the export still writes every column,
-   because a spreadsheet is where the rest is actually read. */
+/* What is DRAWN, out of PAN_COLUMNS, in the canvas's order: how much,
+   then what it cost then and now, then what that did to the bill.
+   Variant, category and unit belong to the name and the quantity; the
+   export still writes every column. */
 const PAN_SCREEN = {
-  item:     ['name','unit','purchased','unitPrice','priceMove','priceCost','amt'],
-  supplier: ['name','docCount','amt','share','commission']
+  item:     ['name','purchased','prevPrice','unitPrice','priceMove','priceCost','amt'],
+  supplier: ['name','docCount','share','amt','commission']
 };
 /* The grid tracks per view. The figure columns are fixed and never give
    way; the identity column is the minmax(0,1fr) that yields. Money never
    truncates -- a clipped figure is not a shortened figure, it is a wrong
-   one. */
+   one. The rank sits inside the identity cell, not in a column of its own. */
 const PAN_TRACKS = {
-  item:     '36px minmax(0,1fr) 74px 92px 116px 104px 148px 148px',
-  supplier: '36px minmax(0,1fr) 96px 152px 88px 152px'
+  item:     'minmax(0,1fr) 76px 72px 72px 64px 156px 96px',
+  supplier: 'minmax(0,1fr) 84px 196px 112px 120px'
 };
 /* The head a column wears ON SCREEN. PAN_COLUMNS' labels are written for
    the export, where a column called "Amt" in a file with no other
-   context is worse than one called "Total spent" -- but the long names
-   overflow their tracks, and a column name lying across another is worse
-   than either. */
+   context is worse than one called "Total spent". */
 const PAN_HEAD = {
-  name:'Item', unit:'Unit', purchased:'Bought', unitPrice:'Price paid',
-  priceMove:'vs last', priceCost:'Added to bill', amt:'Spent',
-  docCount:'Purchases', share:'Share', commission:'Commission'
+  name:'Item', purchased:'Bought', prevPrice:'Was', unitPrice:'Paid',
+  priceMove:'Change', priceCost:'Added', amt:'Spent',
+  docCount:'Purchases', share:'Share of spend', commission:'Commission'
 };
 let panView = 'item'; // 'item' | 'supplier'
 let panLastEntries = [];
-/* IT LANDED ORDERED BY TOTAL SPEND, which only ever answers "where did
-   the money go" -- cement is first because cement is the biggest line,
-   which the buyer already knew. The item view opens on what the price
-   changes ADDED TO THE BILL, worst first; the supplier view keeps spend,
-   because for a supplier the question is concentration and not movement.
-   Both say which they are, in the panel header. */
+/* Who wears which colour. A supplier keeps one hue across the strip, the
+   bar of where the money went, the commission rows and its monogram in
+   the table -- the five largest in the window, by spend; everyone else
+   is the neutral "others". Worked out once per render, so the same
+   supplier cannot be teal in one panel and violet in the next. */
+let panHues = new Map();
+/* The largest price change on screen, in money: the scale every
+   diverging bar is drawn against. */
+let panAddScale = 0;
+/* The item view opens on what the price changes ADDED TO THE BILL, worst
+   first; the supplier view keeps spend, because for a supplier the
+   question is concentration and not movement. Both say which they are,
+   in the panel header. */
 const panSortState = {
   item: {key:'priceCost', dir:-1},
   supplier: {key:'amt', dir:-1}
@@ -72826,31 +73205,34 @@ function panRowsByItem(invoices){
           variant: variant ? variantLabel(variant.combo) : '--',
           category: product ? (product.category||'') : '',
           unit: it.unit || productUnitLabel(it.productId, it.variantIdx==null?null:it.variantIdx) || '',
-          amt: 0, purchased: 0
+          amt: 0, purchased: 0, sups: new Set()
         });
       }
       const row = map.get(key);
       const qty = Number(it.qty)||0;
       row.purchased += qty;
       row.amt += qty * (Number(it.price)||0);
+      if(pi.supplierId) row.sups.add(pi.supplierId);
     });
   });
   /* WHAT THE SHOP IS ACTUALLY PAYING. The row carried the total spent and
      the quantity bought and never the one number in between them, which
      is the number a buyer works from: 21,301,800 over 600 bags is 35,503
-     a bag. One division from data already on the row, and on no screen.
+     a bag.
 
      Null, not zero, when nothing was bought -- a price of zero is a
-     claim, and "we bought none" is not it. */
+     claim, and "we bought none" is not it.
+
+     And HOW MANY it was bought from: an item row spans every invoice in
+     the range, so naming one supplier would be false, while the count is
+     true and worth knowing when its price has moved. */
   return [...map.values()].map(r=>({
-    ...r, unitPrice: r.purchased > 0 ? r.amt / r.purchased : null,
+    ...r, sups: undefined, supCount: r.sups.size,
+    unitPrice: r.purchased > 0 ? r.amt / r.purchased : null,
   }));
 }
 
-/* What the same items cost in the period immediately before this one.
-   The Purchase Invoices are the only record of what the shop pays, this
-   is the page devoted to them, and it could not answer "is it going up?"
-   -- the question a buyer opens it with. */
+/* What the same items cost in the period immediately before this one. */
 function panPreviousUnitPrices(){
   const {from, to} = panGetDateRange();
   if(!from || !to) return null;
@@ -72866,9 +73248,7 @@ function panPreviousUnitPrices(){
 }
 /* How far a price has moved since then, as a share. Null when there is
    nothing to compare against -- an item bought for the first time this
-   period has not gone up, it has simply appeared, and reporting that as
-   a rise of anything would put a new line at the top of a list of
-   problems. */
+   period has not gone up, it has simply appeared. */
 function panPriceMove(row, prevPrices){
   if(!prevPrices || row.unitPrice == null) return null;
   const before = prevPrices.get(row.key);
@@ -72877,9 +73257,7 @@ function panPriceMove(row, prevPrices){
 }
 // The Commission column is a projection, not a lookup: rate% x however
 // much was actually bought from that supplier within the selected date
-// range, so it always matches whatever range is picked (a recorded
-// supplier_commissions entry is stamped to a calendar month, which won't
-// line up with an arbitrary "last 7 days" or custom range). Null means
+// range, so it always matches whatever range is picked. Null means
 // "no rate on file", kept distinct from an honest 0 so the table can show
 // "--" instead of implying nothing is owed.
 function panRowsBySupplier(invoices){
@@ -72909,8 +73287,7 @@ function panRowsBySupplier(invoices){
 function panRowsForView(){
   if(panView==='supplier') return panRowsBySupplier(panLastEntries);
   /* Attached to the row rather than worked out at render time, so it
-     sorts, filters and exports like any other column -- "show me what
-     has gone up most" is the whole reason to want it. */
+     sorts, filters and exports like any other column. */
   const prev = panPreviousUnitPrices();
   return panRowsByItem(panLastEntries)
     .map(r=>{
@@ -72922,7 +73299,7 @@ function panRowsForView(){
          on -- among the lines whose price genuinely held. */
       const cost = (move == null || before == null) ? null
         : (r.unitPrice - before) * (Number(r.purchased)||0);
-      return { ...r, priceMove: move, priceCost: cost };
+      return { ...r, prevPrice: before == null ? null : before, priceMove: move, priceCost: cost };
     });
 }
 // Same rows the table shows, filtered and sorted once. anFilterRows and
@@ -72936,13 +73313,8 @@ function panVisibleRows(){
 
 /* Totals over the rows in front of somebody.
 
-   QUANTITY IS NOT ALWAYS ADDABLE. The KPI said "Total stock 1,400" for a
-   period in which the shop bought 600 bags of cement, 200 sheets of iron
-   and 600 kilograms of nails -- three units added into one number, in the
-   largest type on the page. And the item table refused a totals row for
-   the AMOUNT, which is money and adds up perfectly, on the grounds that
-   an item-level total would be meaningless. It had it exactly backwards.
-
+   QUANTITY IS NOT ALWAYS ADDABLE. The KPI once said "Total stock 1,400"
+   for 600 bags of cement, 200 sheets of iron and 600 kilograms of nails.
    So: money and counts always total; quantity totals only when every row
    is in the same unit, and says so rather than adding bags to kilograms. */
 function panVisibleTotals(rows){
@@ -72956,14 +73328,10 @@ function panVisibleTotals(rows){
     qty: units.size === 1 ? t.purchased : null };
 }
 
-/* Expected commission, and what it does NOT cover.
-
-   panRowsBySupplier keeps a null for a supplier with no rate on file --
-   its own comment says null is "kept distinct from an honest 0 so the
-   table can show '--'" -- and then the totals row collapsed it back with
-   `Number(r.commission)||0`. Measured: a total of 723,054 printed under
-   33,901,800 of purchases, 8,400,000 of which was with a supplier who
-   has no rate at all. The row was honest; the line under it was not. */
+/* Expected commission, and what it does NOT cover. A supplier with no
+   rate on file is a null, never a zero: a total of 723,054 once printed
+   under 33,901,800 of purchases, 8,400,000 of which was with a supplier
+   who has no rate at all. */
 function panCommissionCoverage(rows){
   const rated = rows.filter(r=> r.commission != null);
   const unrated = rows.filter(r=> r.commission == null);
@@ -73010,9 +73378,21 @@ function panMoveTotals(rows){
     any: moved.length > 0
   };
 }
-/* Where the money went, largest first -- the one thing on this screen a
-   table cannot show. Five named, the rest gathered into a sixth that
-   says how many it is standing for. */
+/* What a price did, in the four words the table groups by. "Level" is
+   under half a per cent either way, which is also where the chip stops
+   printing a percentage. */
+function panMoveKind(r){
+  if(r.priceMove == null) return 'new';
+  const p = Number(r.priceMove) * 100;
+  if(Math.abs(p) < 0.5) return 'held';
+  return p > 0 ? 'rise' : 'fall';
+}
+const PAN_BANDS = [
+  ['rise', 'Price rose'], ['held', 'Held'], ['fall', 'Price fell'], ['new', 'New this period — not compared']
+];
+
+/* Where the money went, largest first. Five named, the rest gathered
+   into a sixth that says how many it is standing for. */
 function panConcentration(rows){
   const sorted = [...rows].sort((a,b)=> (Number(b.amt)||0) - (Number(a.amt)||0));
   const whole = sorted.reduce((a,r)=> a + (Number(r.amt)||0), 0);
@@ -73020,12 +73400,13 @@ function panConcentration(rows){
   const named = sorted.slice(0, 5);
   const rest = sorted.slice(5);
   const restAmt = rest.reduce((a,r)=> a + (Number(r.amt)||0), 0);
-  const segs = named.map(r=>({name: r.name, amt: r.amt, pct: (r.amt/whole)*100}));
+  const segs = named.map(r=>({id: r.supplierId, name: r.name, amt: r.amt, pct: (r.amt/whole)*100}));
   if(rest.length) segs.push({name: `${rest.length} other supplier${rest.length===1?'':'s'}`,
-    amt: restAmt, pct: (restAmt/whole)*100, rest: true});
+    amt: restAmt, pct: (restAmt/whole)*100, rest: true, count: rest.length,
+    maxPct: (Number(rest[0].amt)||0) / whole * 100});
   const topThree = sorted.slice(0,3);
   return {
-    segs, whole, count: sorted.length,
+    segs, whole, count: sorted.length, all: sorted,
     top: sorted[0],
     topPct: (sorted[0].amt/whole)*100,
     threePct: topThree.reduce((a,r)=> a + r.amt, 0)/whole*100,
@@ -73033,53 +73414,248 @@ function panConcentration(rows){
     threeCount: topThree.length
   };
 }
-/* The sentence comes first and the bar proves it. A share is a shape,
-   not a verdict -- nothing here is coloured to call it good or bad. */
+function panHueMap(){
+  const m = new Map();
+  panRowsBySupplier(panLastEntries)
+    .sort((a,b)=> (Number(b.amt)||0) - (Number(a.amt)||0))
+    .forEach((r,i)=> m.set(r.supplierId, i < 5 ? `pan-h${i}` : 'pan-hx'));
+  return m;
+}
+const panHue = (id)=> panHues.get(id) || 'pan-hx';
+const panMoney = (n)=> esc(fmtNumAn(Math.round(Number(n)||0)));
+const panSigned = (n)=> `${n > 0 ? '+' : n < 0 ? '−' : ''}${panMoney(Math.abs(n))}`;
+const PAN_ICON = {
+  arrow: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+  cal: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>',
+  search: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>',
+  fresh: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/><path d="M12 8v8M8 12h8"/></svg>',
+  units: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17L17 3l4 4L7 21H3z"/><path d="M13 7l2 2M10 10l2 2M7 13l2 2"/></svg>',
+  voided: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M5 20L19 6"/></svg>',
+  rate: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>',
+  info: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>',
+  up: '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1l4 7H1z" fill="currentColor"/></svg>',
+  down: '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 9L1 2h8z" fill="currentColor"/></svg>',
+  level: '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3.5h8M1 6.5h8" stroke="currentColor" stroke-width="1.6"/></svg>',
+  dashed: '<svg viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3.6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 1.6"/></svg>',
+  doc: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg>',
+  tick: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4L19 6"/></svg>',
+  box: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>'
+};
+
+/* ---- WHERE THE MONEY WENT. The sentence comes first and the bar proves
+   it. A share is a shape, not a verdict -- the colours are who, never
+   how it is doing. At more than five suppliers the five largest are
+   named and the rest are one neutral segment that says how many it
+   stands for, and a small chart of every supplier, largest to smallest,
+   shows whether the buying is concentrated or spread. ---- */
 function renderPanConc(){
   const pan = document.getElementById('pan_concPan');
   if(!pan) return;
   const suppliers = panRowsBySupplier(panLastEntries);
   const c = panConcentration(suppliers);
   /* One supplier is not a concentration, it is a fact already on the
-     row below. The panel goes rather than drawing a bar of one colour
-     across the whole width and calling it a chart. */
-  if(!c || c.count < 2){ pan.style.display = 'none'; return; }
-  pan.style.display = '';
-  const {from, to} = panGetDateRange();
-  document.getElementById('pan_concRange').textContent =
-    `${c.count} suppliers${(from && to) ? ` · ${fmtShortDate(from)} – ${fmtShortDate(to)}` : ''}`;
-  const money = n => `<span class="an-d">${esc(fmtUGX(Math.round(n)))}</span>`;
-  const three = c.count >= 3
-    ? ` Your three largest suppliers are <b>${c.threePct.toFixed(1)}%</b> of it, across <span class="an-d">${
-        c.threeDocs}</span> of <span class="an-d">${panLastEntries.length}</span> purchases.`
-    : '';
-  document.getElementById('pan_concBody').innerHTML = `<div class="pan-cc-w">
-    <p class="an-say"><b>${esc(c.top.name)} is ${c.topPct.toFixed(1)}% of your buying this period</b> — ${
-      money(c.top.amt)} of ${money(c.whole)}.${three}</p>
-    <div class="pan-cc-bar">${c.segs.map((g,i)=>
-      `<div class="pan-cc-seg pan-cc-${i+1}" style="width:${g.pct.toFixed(2)}%" title="${
-        esc(`${g.name} — ${fmtUGX(Math.round(g.amt))}, ${g.pct.toFixed(1)}% of the period`)}"><span>${
-        g.pct >= 5 ? g.pct.toFixed(1)+'%' : ''}</span></div>`).join('')}</div>
-    <ul class="pan-cc-leg">${c.segs.map((g,i)=>
-      `<li class="pan-cc-l"><span class="pan-cc-k pan-cc-${i+1}"></span><span class="pan-cc-n" title="${
-        esc(g.name)}">${esc(g.name)}</span><span class="pan-cc-p">${g.pct.toFixed(1)}%</span><span class="pan-cc-v">${
-        esc(fmtUGX(Math.round(g.amt)))}</span></li>`).join('')}</ul>
+     row below. */
+  if(!c || c.count < 2){ pan.hidden = true; return; }
+  pan.hidden = false;
+  document.getElementById('pan_concRange').textContent = `${c.count} suppliers`;
+  const many = c.count > 5;
+  const say = many
+    ? `<b>Your top 3 take <span class="an-d">${c.threePct.toFixed(1)}%</span>.</b> The other <span class="an-d">${c.count - 3}</span> share the rest.`
+    : `<b>${esc(c.top.name)} takes <span class="an-d">${c.topPct.toFixed(1)}%</span></b> of your buying.`;
+  const seg = (g, i)=> `<i class="${g.rest ? 'pan-hx' : panHue(g.id)}" style="flex-grow:${Math.max(0.001, g.pct).toFixed(3)}" title="${
+    esc(`${g.name} — ${fmtUGX(Math.round(g.amt))}, ${g.pct.toFixed(1)}%`)}">${g.pct >= 9 ? `${Math.round(g.pct)}%` : ''}</i>`;
+  const bracket = c.count >= 3 ? `<div class="pan-brk" style="width:${c.threePct.toFixed(2)}%"></div>
+      <p class="pan-brk-l${c.threePct >= 60 ? ' pan-brk-c' : ''}" style="width:${c.threePct.toFixed(2)}%">top 3 · <b class="an-d">${c.threePct.toFixed(1)}%</b>${
+        many ? '' : ` · <span class="an-d">${c.threeDocs}</span> of <span class="an-d">${panLastEntries.length}</span> purchases`}</p>` : '';
+  const row = (g)=> g.rest
+    ? `<div class="pan-lg-r pan-lg-rest"><span class="pan-lg-k pan-hx"></span><span class="pan-lg-2"><span><span class="an-d">${g.count}</span> other supplier${g.count===1?'':'s'}</span><span class="pan-lg-s">none above <span class="an-d">${g.maxPct.toFixed(1)}%</span> on its own</span></span><span class="pan-lg-v">${panMoney(g.amt)}</span></div>`
+    : `<div class="pan-lg-r"><span class="pan-lg-k ${panHue(g.id)}"></span><span class="pan-lg-n" title="${esc(g.name)}">${esc(g.name)}</span><span class="pan-lg-v">${panMoney(g.amt)}</span></div>`;
+  const top = Math.max(1, Number(c.all[0].amt) || 0);
+  const tail = many ? `<div class="pan-tail">
+      <div class="pan-tail-h"><span>All <span class="an-d">${c.count}</span>, largest to smallest</span><span>long tail</span></div>
+      <div class="pan-tail-b" role="img" aria-label="Spend by supplier, all ${c.count}, largest first">${c.all.slice(0, 120).map(r=>
+        `<i class="${panHue(r.supplierId)}" style="height:${Math.max(2, (Number(r.amt)||0) / top * 100).toFixed(1)}%"></i>`).join('')}</div>
+    </div>` : '';
+  document.getElementById('pan_concBody').innerHTML = `<div class="pan-cc">
+    <p class="pan-say">${say}</p>
+    <div><div class="pan-stk">${c.segs.map(seg).join('')}</div>${bracket}</div>
+    <div class="pan-lg">${c.segs.map(row).join('')}</div>
+    ${tail}
+    <button type="button" class="pan-more" data-pan-sup>See all <span class="an-d">${c.count}</span> in the table${PAN_ICON.arrow}</button>
   </div>`;
 }
+
+/* ---- COMMISSION DUE TO YOU. A projection: each supplier's rate times
+   what was bought from them in this window. How much of the spend a rate
+   covers is a bar, and every supplier without one is named, with what it
+   leaves out and the way to set one. ---- */
+function renderPanCom(){
+  const pan = document.getElementById('pan_comPan');
+  if(!pan) return;
+  const rows = panRowsBySupplier(panLastEntries);
+  if(!rows.length){ pan.hidden = true; return; }
+  pan.hidden = false;
+  const cov = panCommissionCoverage(rows);
+  const whole = cov.ratedSpend + cov.unratedSpend;
+  const ratedPct = whole > 0 ? cov.ratedSpend / whole * 100 : 0;
+  const rated = rows.filter(r=> r.commission != null).sort((a,b)=> b.commission - a.commission);
+  const unrated = rows.filter(r=> r.commission == null).sort((a,b)=> b.amt - a.amt);
+  const head = rated.length
+    ? `<span class="pan-cm-v">${panMoney(cov.total)}</span><span class="pan-cm-s">on <span class="an-d">${panMoney(cov.ratedSpend)}</span> rated</span>`
+    : `<span class="pan-cm-v ow-fig-none">None on file</span><span class="pan-cm-s">no supplier in this window has a rate</span>`;
+  const bar = whole > 0 ? `<div>
+      <div class="pan-cov2">${ratedPct > 0 ? `<i class="pan-cov-a" style="flex-grow:${ratedPct.toFixed(2)}"></i>` : ''}${
+        ratedPct < 100 ? `<i class="pan-cov-b" style="flex-grow:${(100 - ratedPct).toFixed(2)}"></i>` : ''}</div>
+      <div class="pan-cov-l"><span>rate on file <span class="an-d">${Math.round(ratedPct)}%</span></span>${
+        ratedPct < 100 ? `<span class="pan-w">no rate <span class="an-d">${Math.round(100 - ratedPct)}%</span></span>` : ''}</div>
+    </div>` : '';
+  const rr = rated.slice(0, 5).map(r=> `<div class="pan-lg-r"><span class="pan-lg-k ${panHue(r.supplierId)}"></span><span class="pan-lg-n" title="${esc(r.name)}">${esc(r.name)}</span><span class="pan-cm-p">${esc(String(r.commissionPct))}%</span><span class="pan-cm-a">${panMoney(r.commission)}</span></div>`).join('')
+    + (rated.length > 5 ? `<div class="pan-lg-r pan-lg-more"><span class="pan-lg-n"><span class="an-d">${rated.length - 5}</span> more with a rate</span><span class="pan-cm-a">${panMoney(rated.slice(5).reduce((a,r)=> a + r.commission, 0))}</span></div>` : '');
+  const ur = unrated.slice(0, 3).map(r=> `<div class="pan-cm-x">
+      <span class="pan-lg-k ${panHue(r.supplierId)}"></span>
+      <span class="pan-lg-2"><span class="pan-lg-n" title="${esc(r.name)}">${esc(r.name)}</span><span class="pan-cm-w"><span class="an-d">${panMoney(r.amt)}</span> earns nothing</span></span>
+      ${r.supplierId !== '__unknown__' ? `<button type="button" class="btn btn-ghost ow-sm" data-pan-rate="${esc(String(r.supplierId))}">Set rate</button>` : ''}
+    </div>`).join('')
+    + (unrated.length > 3 ? `<div class="pan-cm-x pan-cm-xm"><span class="pan-lg-n"><span class="an-d">${unrated.length - 3}</span> more without a rate</span><span class="pan-cm-a">${panMoney(unrated.slice(3).reduce((a,r)=> a + r.amt, 0))}</span></div>` : '');
+  document.getElementById('pan_comBody').innerHTML = `<div class="pan-cm">
+    <div class="pan-cm-t">${head}</div>
+    ${bar}
+    <div class="pan-lg">${rr}${ur}</div>
+  </div>`;
+}
+
+/* ---- WHY SPEND MOVED. The change against the window before, split
+   into what moved it. For every line bought in both windows,
+     (now qty - then qty) x then price   is buying more or less, and
+     (now price - then price) x now qty  is paying more or less,
+   which add up to exactly what that line's spend did. A line bought only
+   now is new; one bought only then was dropped; and whatever an invoice
+   carries beyond its lines -- delivery, less credits -- is its own part,
+   so the parts always add up to the change and nothing is invented. ---- */
+function panSpendBridge(){
+  const {from, to} = panGetDateRange();
+  if(!from || !to || !panLastEntries.length) return null;
+  const days = dashRangeSpanDays(from, to);
+  if(!(days > 0)) return null;
+  const prevTo = anShiftDate(from, -1);
+  const prevFrom = anShiftDate(prevTo, -(days-1));
+  const prevInv = panInvoicesInRange(prevFrom, prevTo);
+  if(!prevInv.length) return null;
+  const nowT = panOverallTotals(panLastEntries).amt, prevT = panOverallTotals(prevInv).amt;
+  const nowRows = panRowsByItem(panLastEntries);
+  const prevRows = new Map(panRowsByItem(prevInv).map(r=> [r.key, r]));
+  const nowKeys = new Set(nowRows.map(r=> r.key));
+  const d = { vol: 0, fresh: 0, drop: 0, rise: 0, cut: 0, other: 0 };
+  const n = { fresh: 0, drop: 0, rise: 0, cut: 0 };
+  nowRows.forEach(r=>{
+    const p = prevRows.get(r.key);
+    if(!p || !(p.unitPrice > 0) || r.unitPrice == null){ d.fresh += r.amt - (p ? p.amt : 0); n.fresh++; return; }
+    d.vol += (r.purchased - p.purchased) * p.unitPrice;
+    const c = (r.unitPrice - p.unitPrice) * r.purchased;
+    if(c > 0.5){ d.rise += c; n.rise++; }
+    else if(c < -0.5){ d.cut += c; n.cut++; }
+    else d.vol += c;
+  });
+  prevRows.forEach((p, k)=>{ if(!nowKeys.has(k)){ d.drop -= p.amt; n.drop++; } });
+  const net = nowT - prevT;
+  d.other = net - (d.vol + d.fresh + d.drop + d.rise + d.cut);
+  return { nowT, prevT, net, prevFrom, prevTo, d, n };
+}
+function renderPanWhy(){
+  const pan = document.getElementById('pan_whyPan');
+  if(!pan) return;
+  const filtered = !!document.getElementById('pan_table_search').value.trim();
+  /* Not under a search: the bridge is about the whole window, and a
+     search narrows the rows, not the bill. */
+  const b = filtered ? null : panSpendBridge();
+  if(!b || Math.abs(b.net) < 1){ pan.hidden = true; return; }
+  pan.hidden = false;
+  document.getElementById('pan_whyRange').textContent = `vs ${fmtShortDate(b.prevFrom)} – ${fmtShortDate(b.prevTo)}`;
+  const up = b.net > 0;
+  const pl = (k, one, many)=> `${k} ${k === 1 ? one : many}`;
+  const DRV = [
+    { k:'vol', v:b.d.vol, cls:'pan-d-vol', dark:true,
+      label: b.d.vol >= 0 ? 'Bought more' : 'Bought less',
+      sub: b.d.vol >= 0 ? 'same lines, more quantity' : 'same lines, less quantity',
+      say: b.d.vol >= 0 ? 'buying more of the same' : 'buying less of the same' },
+    { k:'fresh', v:b.d.fresh, cls:'pan-d-new', label:'New lines', sub:`${pl(b.n.fresh, 'line', 'lines')} not bought last period`, say:'new lines' },
+    { k:'drop', v:b.d.drop, cls:'pan-d-drop', label:'Stopped buying', sub:`${pl(b.n.drop, 'line', 'lines')} not bought this period`, say:'lines you stopped buying' },
+    { k:'rise', v:b.d.rise, cls:'pan-d-rise', dark:true, ink:'pan-t-bad', label:'Price rises', sub:`on ${pl(b.n.rise, 'line', 'lines')}`, say:'paying more for the same' },
+    { k:'cut', v:b.d.cut, cls:'pan-d-cut', dark:true, ink:'pan-t-good', label:'Price cuts', sub:`on ${pl(b.n.cut, 'line', 'lines')}, given back`, say:'paying less for the same' },
+    { k:'other', v:b.d.other, cls:'pan-d-oth', label:'Delivery & credits', sub:'on the invoices, not the lines', say:'delivery charges and credits' }
+  ].filter(x=> Math.abs(x.v) >= 1);
+  const thick = DRV.filter(x=> up ? x.v > 0 : x.v < 0);
+  const thin = DRV.filter(x=> up ? x.v < 0 : x.v > 0);
+  const thickSum = thick.reduce((a,x)=> a + Math.abs(x.v), 0);
+  const thinSum = thin.reduce((a,x)=> a + Math.abs(x.v), 0);
+  if(!(thickSum > 0)){ pan.hidden = true; return; }
+  const lead = thick.slice().sort((a,c)=> Math.abs(c.v) - Math.abs(a.v))[0];
+  const share = Math.abs(lead.v) / Math.abs(b.net);
+  let phrase = lead.say;
+  if(lead.k === 'vol' && up && b.d.rise < lead.v) phrase = 'buying more, not paying more';
+  const headline = share <= 1 ? `${Math.round(share * 100)}% of it is ${phrase}.` : `Mostly ${phrase}.`;
+  const tail = [];
+  if(b.d.rise > 0) tail.push(`Price rises added <span class="an-d pan-t-bad">${panMoney(b.d.rise)}</span>`);
+  if(b.d.cut < 0) tail.push(`${b.n.cut === 1 ? 'one cut' : `${b.n.cut} cuts`} gave <span class="an-d pan-t-good">${panMoney(-b.d.cut)}</span> back`);
+  const pct = b.prevT > 0 ? b.net / b.prevT * 100 : null;
+  const netAt = (thickSum - thinSum) / thickSum * 100;
+  const leadW = Math.abs(lead.v) / thickSum * 100;
+  const segs = thick.map(x=> `<i class="${x.cls}" style="flex-grow:${(Math.abs(x.v) / thickSum * 100).toFixed(3)}" title="${esc(`${x.label}: ${fmtUGX(Math.round(x.v))}`)}">${
+    x === lead && x.dark && share <= 1 && leadW >= 14 ? `${Math.round(share * 100)}%` : ''}</i>`).join('');
+  const thinBand = thin.length ? `<span class="pan-br-thin" style="width:${(thinSum / thickSum * 100).toFixed(2)}%">${thin.map(x=>
+    `<i class="${x.cls}" style="flex-grow:${Math.abs(x.v).toFixed(0)}" title="${esc(`${x.label}: ${fmtUGX(Math.round(x.v))}`)}"></i>`).join('')}</span>` : '';
+  const card = (x)=> `<div class="pan-drv-c">
+      <span class="pan-drv-l"><span class="pan-drv-k ${x.cls}${thin.includes(x) ? ' pan-k-thin' : ''}"></span>${esc(x.label)}</span>
+      <span class="pan-drv-v${x.ink ? ' ' + x.ink : ''}">${panSigned(x.v)}</span>
+      <span class="pan-drv-s">${esc(x.sub)}</span>
+    </div>`;
+  document.getElementById('pan_whyBody').innerHTML = `<div class="pan-why">
+    <div class="pan-why-top">
+      <div class="pan-why-k">
+        <span class="pan-why-l">Change in spend</span>
+        <span class="pan-why-v"><span class="pan-why-f">${panSigned(b.net)}</span>${
+          pct != null ? `<span class="pan-chip">${pct >= 0 ? '+' : '−'}${Math.abs(pct).toFixed(1)}%</span>` : ''}</span>
+      </div>
+      <p class="pan-why-say"><b>${headline}</b>${tail.length ? ` ${tail.join('; ')}.` : ''}</p>
+    </div>
+    <div class="pan-br">
+      <div class="pan-br-e pan-br-then"><span class="pan-br-el">Last period</span><span class="pan-br-ev">${panMoney(b.prevT)}</span></div>
+      <div class="pan-br-bar">
+        <span class="pan-br-thick">${segs}</span>
+        ${thin.length ? `<span class="pan-br-net" style="left:${netAt.toFixed(2)}%"></span><span class="pan-br-netl" style="left:${netAt.toFixed(2)}%">net</span>` : ''}
+        ${thinBand}
+      </div>
+      <div class="pan-br-e pan-br-now"><span class="pan-br-el">This period</span><span class="pan-br-ev">${panMoney(b.nowT)}</span></div>
+    </div>
+    <div class="pan-drv">${DRV.map(card).join('')}</div>
+  </div>`;
+}
+
+/* One line of "what these figures rest on": a mark, the fact, and the
+   consequence of it. */
+function panBasisRow(icon, main, sub, warn){
+  return `<div class="pan-bs${warn ? ' pan-bs-w' : ''}">${PAN_ICON[icon] || ''}<span class="pan-bs-t"><span>${main}</span>${
+    sub ? `<span class="pan-bs-s">${sub}</span>` : ''}</span></div>`;
+}
+/* The small picture under a figure. */
+function panPicHTML(parts, cls){
+  return `<span class="pan-pic ${cls}">${parts}</span>`;
+}
+
 function renderPanKpis(rows){
   const visible = rows || panVisibleRows();
   /* NO STRIP OF ZEROS. Four figures reading 0 in 22px mono says the shop
-     is broken; it is not, and the panel below says what it actually
-     knows instead. A position nobody can read is worse than no position. */
+     is broken; it is not, and the empty window below says what it
+     actually knows instead. */
   const grid = document.getElementById('pan_kpiGrid');
-  const zNote = document.getElementById('pan_kpiNote');
+  const basis = document.getElementById('pan_basis');
   const exp = document.getElementById('pan_export_btn');
   if(!panLastEntries.length){
     grid.innerHTML = ''; grid.style.display = 'none';
-    zNote.innerHTML = ''; zNote.style.display = 'none';
+    basis.innerHTML = '';
     /* And the accent goes with them. Exporting an empty file is not the
        thing to do next; widening the window is, and that button is in
-       the panel below. */
+       the empty panel. */
     exp.classList.remove('btn-accent'); exp.classList.add('btn-ghost');
     return;
   }
@@ -73087,53 +73663,92 @@ function renderPanKpis(rows){
   exp.classList.add('btn-accent'); exp.classList.remove('btn-ghost');
   const t = panVisibleTotals(visible);
   const prev = panPreviousTotals();
-  const filtered = !!document.getElementById('pan_table_search').value.trim();
+  const q = document.getElementById('pan_table_search').value.trim();
+  const filtered = !!q;
   const cmp = filtered ? null : prev;
   const cov = panView==='supplier' ? panCommissionCoverage(visible) : null;
   /* The move is worked out on the item rows whatever tab is open: it is
-     a fact about the period, not about which table is on screen, and
-     hiding it on the supplier tab would make the strip say two different
-     things about one window. */
-  const mv = panMoveTotals(panView==='item' ? visible : panRowsForViewItems());
+     a fact about the period, not about which table is on screen. */
+  const items = panView==='item' ? visible : panRowsForViewItems();
+  const mv = panMoveTotals(items);
+  const suppliers = panRowsBySupplier(panLastEntries);
+  const ugx = '<span class="ow-u">UGX</span>';
 
-  /* "Total stock 1,400" was 600 bags plus 200 sheets plus 600 kilograms.
-     A quantity only totals where every row shares a unit; otherwise the
-     honest second figure is how many lines were bought. */
-  const secondCell = t.qty != null
-    ? anMtHTML(`Bought (${esc(t.sameUnit)})`, fmtNumAn(t.qty),
-        t.units.size ? `in ${esc([...t.units].join(', '))}` : '')
-    : anMtHTML(panView==='supplier' ? 'Suppliers' : 'Items bought', fmtNumAn(visible.length),
-        t.units.size > 1 ? `in <span class="an-d">${t.units.size}</span> different units` : '');
-  /* A PRICE RISE IS MONEY LEAVING, which is the palette's own definition
-     of genuinely bad -- so this is the one figure on the screen that
-     carries a state colour, and a fall carries the other. Nothing to
-     compare with is not a rise of nothing: it says so instead. */
+  /* 1. SPENT, and the window before drawn under it on one scale. A
+     bigger bill is a size, not a warning: the delta is ink. */
+  const spentPic = cmp && cmp.amt > 0
+    ? panPicHTML(`<i style="width:${(t.amt / Math.max(t.amt, cmp.amt) * 100).toFixed(1)}%"></i><i class="pan-vs-b" style="width:${(cmp.amt / Math.max(t.amt, cmp.amt) * 100).toFixed(1)}%" title="${esc(`${fmtShortDate(cmp.from)} – ${fmtShortDate(cmp.to)}: ${fmtUGX(Math.round(cmp.amt))}`)}"></i>`, 'pan-vs')
+    : '';
+  const spentSub = cmp
+    ? (cmp.amt > 0
+        ? `<b class="an-d">${t.amt >= cmp.amt ? '+' : '−'}${Math.abs((t.amt - cmp.amt) / cmp.amt * 100).toFixed(1)}%</b> on <span class="an-d">${panMoney(cmp.amt)}</span>`
+        : anDeltaText(t.amt, cmp.amt))
+    : filtered ? 'the rows your search leaves' : 'nothing in the window before';
+  /* 2. PURCHASES, split by who they went to. */
+  const docs = suppliers.slice().sort((a,c)=> (Number(c.amt)||0) - (Number(a.amt)||0));
+  const restDocs = docs.slice(5).reduce((a,r)=> a + r.docCount, 0);
+  const purPic = panPicHTML(docs.slice(0, 5).map(r=> `<i class="${panHue(r.supplierId)}" style="flex-grow:${r.docCount}" title="${esc(`${r.name}: ${r.docCount}`)}"></i>`).join('')
+    + (restDocs ? `<i class="pan-hx" style="flex-grow:${restDocs}"></i>` : ''), 'pan-sp');
+  /* 3. WHAT THE PRICE CHANGES ADDED. A rise is money leaving, the
+     palette's own definition of genuinely bad -- so this is the figure
+     on the strip that carries a state colour. Nothing to compare with is
+     not a rise of nothing: it says so. */
+  const kinds = { rise: 0, fall: 0, held: 0, new: 0 };
+  items.forEach(r=>{ kinds[panMoveKind(r)]++; });
+  const marks = [['rise', 'pan-tl-r'], ['fall', 'pan-tl-f'], ['held', 'pan-tl-l'], ['new', 'pan-tl-n']];
+  const tally = items.length <= 16
+    ? marks.map(([k, c])=> `<i class="${c}"></i>`.repeat(kinds[k])).join('')
+    : marks.filter(([k])=> kinds[k]).map(([k, c])=> `<i class="${c}" style="flex-grow:${kinds[k]}"></i>`).join('');
+  const kindWords = [['rise', 'rose'], ['fall', 'fell'], ['held', 'level'], ['new', 'new']]
+    .filter(([k])=> kinds[k]).map(([k, w])=> `<span class="an-d">${kinds[k]}</span> ${w}`).join(' · ');
   const moveCell = !mv.any
     ? anMtHTML('Price changes added', '<span class="ow-fig-none">Not stated</span>',
         'no earlier period to compare with')
     : anMtHTML('Price changes added',
-        `${mv.cost > 0 ? '+' : ''}${esc(fmtUGX(Math.round(mv.cost)))}`,
-        `on the <span class="an-d">${mv.moved}</span> line${mv.moved===1?'':'s'} you also bought last period`,
-        mv.cost > 0 ? 'ow-bad' : mv.cost < 0 ? 'ow-good' : '');
-  document.getElementById('pan_kpiGrid').innerHTML = `
-    ${anMtHTML('Spent', esc(fmtUGX(Math.round(t.amt))), cmp ? anDeltaText(t.amt, cmp.amt) : '')}
+        `${mv.cost > 0 ? '+' : mv.cost < 0 ? '−' : ''}${panMoney(Math.abs(mv.cost))}${ugx}`,
+        kindWords,
+        mv.cost > 0 ? 'ow-bad' : mv.cost < 0 ? 'ow-good' : '',
+        panPicHTML(tally, 'pan-tl'));
+  /* 4. EXPECTED COMMISSION, and how much of the spend a rate covers. */
+  const scov = panCommissionCoverage(panView==='supplier' ? visible : suppliers);
+  const covWhole = scov.ratedSpend + scov.unratedSpend;
+  const covPct = covWhole > 0 ? scov.ratedSpend / covWhole * 100 : 0;
+  const anyRate = suppliers.some(r=> r.commission != null);
+  const comCell = !anyRate
+    ? anMtHTML('Expected commission', '<span class="ow-fig-none">None on file</span>', 'no supplier here has a rate')
+    : anMtHTML('Expected commission',
+        `${panMoney(scov.total)}${scov.complete ? '' : '<span class="pan-ast" title="Partial — not every supplier has a rate on file">*</span>'}`,
+        scov.complete ? 'every supplier here has a rate'
+          : `<span class="pan-w">covers <span class="an-d">${Math.round(covPct)}%</span> of spend · <span class="an-d">${scov.unratedCount}</span> supplier${scov.unratedCount===1?'':'s'} unrated</span>`,
+        '', panPicHTML(`${covPct > 0 ? `<i class="pan-cov-a" style="flex-grow:${covPct.toFixed(2)}"></i>` : ''}${covPct < 100 ? `<i class="pan-cov-b" style="flex-grow:${(100 - covPct).toFixed(2)}"></i>` : ''}`, 'pan-cov'));
+
+  grid.innerHTML = `
+    ${anMtHTML('Spent', `${panMoney(t.amt)}${ugx}`, spentSub, '', spentPic)}
     ${anMtHTML('Purchases', fmtNumAn(panLastEntries.length),
-      `from <span class="an-d">${panRowsBySupplier(panLastEntries).length}</span> suppliers`)}
-    ${secondCell}
+      `from <span class="an-d">${suppliers.length}</span> supplier${suppliers.length===1?'':'s'}${prev ? ` · <span class="an-d">${prev.count}</span> last period` : ''}`, '', purPic)}
     ${moveCell}
+    ${comCell}
   `;
 
-  const note = document.getElementById('pan_kpiNote');
+  /* WHAT THESE FIGURES REST ON: the period compared against, whether a
+     search is narrowing them, which units are in play, how many lines
+     have nothing to be compared with -- one line each, in the rail. */
+  const {from, to} = panGetDateRange();
   const bits = [];
-  if(filtered) bits.push(`<span class="an-note-filtered">Showing only what matches &ldquo;${esc(document.getElementById('pan_table_search').value.trim())}&rdquo; — clear the search to see the whole range.</span>`);
-  else if(prev) bits.push(`Against ${esc(fmtShortDate(prev.from))} – ${esc(fmtShortDate(prev.to))}: ${esc(fmtUGX(Math.round(prev.amt)))} spent across ${prev.count} purchase${prev.count===1?'':'s'}.`);
-  if(t.units.size > 1) bits.push(`Bought in ${t.units.size} different units (${esc([...t.units].join(', '))}), so there is no one quantity to total.`);
+  if(filtered) bits.push(panBasisRow('search', `Showing only what matches &ldquo;${esc(q)}&rdquo;`, 'clear the search to see the whole range'));
+  else if(prev) bits.push(panBasisRow('cal', `Compared with ${esc(fmtShortDate(prev.from))} – ${esc(fmtShortDate(prev.to))}`,
+    `<span class="an-d">${prev.count}</span> purchase${prev.count===1?'':'s'} · <span class="an-d">${panMoney(prev.amt)}</span>`));
+  else bits.push(panBasisRow('cal', 'Nothing to compare with', (from && to) ? 'no purchases in the window before' : 'all time has no window before it'));
   /* Named rather than dropped. A ranking built on a price change owes
      the reader an account of every line it could not rank. */
-  if(mv.uncompared > 0) bits.push(`${mv.uncompared} line${mv.uncompared===1?' was':'s were'} not bought in the period before, so no price change is claimed for ${mv.uncompared===1?'it':'them'}.`);
-  if(cov && !cov.complete) bits.push(`<span class="an-note-estimated">This covers ${esc(fmtUGX(Math.round(cov.ratedSpend)))} of purchases. ${cov.unratedCount} supplier${cov.unratedCount===1?' has':'s have'} no commission rate on file, so ${esc(fmtUGX(Math.round(cov.unratedSpend)))} of spending earns nothing here — set a rate to include ${cov.unratedCount===1?'them':'those'}.</span>`);
-  note.innerHTML = bits.join(' ');
-  note.style.display = bits.length ? '' : 'none';
+  if(mv.uncompared > 0) bits.push(panBasisRow('fresh', `<span class="an-d">${mv.uncompared}</span> line${mv.uncompared===1?' is':'s are'} new this period`,
+    `no price change is claimed for ${mv.uncompared===1?'it':'them'}`));
+  if(t.units.size > 1) bits.push(panBasisRow('units', `Bought in ${t.units.size} different units`, `${esc([...t.units].join(', '))} — so quantities are never added up`));
+  else if(t.qty != null) bits.push(panBasisRow('units', `Bought (${esc(t.sameUnit)}): <span class="an-d">${fmtNumAn(t.qty)}</span>`, 'one unit throughout, so the quantity adds up'));
+  bits.push(panBasisRow('voided', 'Voided invoices never counted', 'dated by the invoice, not the payment'));
+  if(cov && !cov.complete) bits.push(panBasisRow('rate', `${cov.unratedCount} supplier${cov.unratedCount===1?' has':'s have'} no commission rate on file, so ${esc(fmtUGX(Math.round(cov.unratedSpend)))} of spending earns nothing here`,
+    `set a rate to include ${cov.unratedCount===1?'them':'those'} · this covers ${esc(fmtUGX(Math.round(cov.ratedSpend)))}`, true));
+  basis.innerHTML = bits.join('');
 }
 /* The item rows for the current range, whichever tab is open. The strip
    needs them on the supplier tab too. */
@@ -73142,58 +73757,66 @@ function panRowsForViewItems(){
   return panRowsByItem(panLastEntries).map(r=>{
     const move = panPriceMove(r, prev && prev.prices);
     const before = prev && prev.prices ? prev.prices.get(r.key) : null;
-    return { ...r, priceMove: move,
+    return { ...r, prevPrice: before == null ? null : before, priceMove: move,
       priceCost: (move == null || before == null) ? null
         : (r.unitPrice - before) * (Number(r.purchased)||0) };
   });
 }
 function panFormatCell(col, value){
   // Expected commission is only meaningful once a supplier has a rate on
-  // file -- null (no rate) reads as "--", distinct from an honest 0.
-  if(col.key==='commission' && value==null) return '--';
+  // file -- null (no rate) reads as a dash, distinct from an honest 0.
+  if(col.key==='commission' && value==null) return '<span class="pan-none">—</span>';
   /* Nothing bought is not a price of nothing, and an item bought for the
-     first time this period has not gone up -- it has appeared. Both read
-     as a dash rather than as a figure nobody can act on. */
+     first time this period has not gone up -- it has appeared. It says
+     "new", and why on hover, rather than printing a figure nobody can
+     act on. */
   if(col.pctMove){
-    if(value == null) return '<span class="pan-none">not bought before</span>';
+    if(value == null) return '<span class="pan-none pan-new" title="not bought before — no price change is claimed">new</span>';
     const pct = Number(value)*100;
-    if(Math.abs(pct) < 0.5) return '<span class="pan-none">level</span>';
-    return `<span class="an-delta ${pct > 0 ? 'down' : 'up'}">${pct>0?'+':''}${pct.toFixed(0)}%</span>`;
+    if(Math.abs(pct) < 0.5) return '<span class="pan-none pan-lvl">level</span>';
+    const tri = pct > 0
+      ? '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1l4 7H1z" fill="currentColor"/></svg>'
+      : '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 9L1 2h8z" fill="currentColor"/></svg>';
+    return `<span class="an-delta ${pct > 0 ? 'down' : 'up'}">${tri}${pct>0?'+':'−'}${Math.abs(pct).toFixed(1)}%</span>`;
   }
   if(col.money && value == null) return '<span class="pan-none">—</span>';
   /* fmtNumAn, not fmtUGX: "UGX" on every cell of four money columns is
-     twenty-four repetitions of a fact the strip has already stated, and
-     it pushes the figures apart in a column that is read by scanning
-     down it. The strip, the notes and the export keep the currency. */
-  if(col.signed && value != null) return `${Number(value) > 0 ? '+' : ''}${fmtNumAn(Math.round(Number(value)||0))}`;
+     twenty-four repetitions of a fact the strip has already stated. */
+  if(col.signed && value != null) return `${Number(value) > 0 ? '+' : Number(value) < 0 ? '−' : ''}${fmtNumAn(Math.abs(Math.round(Number(value)||0)))}`;
   if(col.money) return fmtNumAn(Math.round(Number(value)||0));
   if(col.pct) return (Number(value)||0).toFixed(1) + '%';
   if(col.numeric) return fmtNumAn(value);
   return esc(value||'');
 }
 /* The identity cell: what the row IS, and the detail that tells two of
-   them apart. Variant and category were columns of their own, competing
-   with the money for width and truncating the name between them; they
-   belong to the name.
-
-   AND THE SUPPLIER IS NOT ON AN ITEM ROW. An item row groups a product
-   across every invoice in the range, so it spans suppliers -- naming one
-   would simply be false. How MANY it was bought from is both true and
-   the thing worth knowing when its price has moved. */
+   them apart. On an item, its place in the ranking, then variant,
+   category and how many suppliers it came from; on a supplier, its own
+   colour and whether a commission rate is on file. */
 function panIdentityHTML(row){
-  const meta = panView==='item'
-    ? [row.variant && row.variant!=='--' ? row.variant : '', row.category].filter(Boolean).join(' · ')
-    : (row.commissionPct != null ? `${row.commissionPct}% commission on file` : 'no commission rate on file');
   const name = esc(row.name || '—');
-  return `<div class="ow-tbl-c">
+  if(panView==='item'){
+    const meta = [row.variant && row.variant!=='--' ? row.variant : '', row.category,
+      row.supCount ? `${row.supCount} supplier${row.supCount===1?'':'s'}` : ''].filter(Boolean).join(' · ');
+    return `<div class="ow-tbl-c pan-id"><span class="pan-rk">${row.__n || ''}</span><span class="pan-id-t">
+      <span class="ow-tbl-p" title="${name}">${name}</span>
+      ${meta ? `<span class="ow-tbl-s" title="${esc(meta)}">${esc(meta)}</span>` : ''}
+    </span></div>`;
+  }
+  const rated = row.commissionPct != null;
+  const meta = rated ? `${row.commissionPct}% commission on file` : 'No commission rate on file';
+  return `<div class="ow-tbl-c pan-id"><span class="pan-mono ${panHue(row.supplierId)}">${esc(nameInitials(row.name || '?'))}</span><span class="pan-id-t">
     <span class="ow-tbl-p" title="${name}">${name}</span>
-    ${meta ? `<span class="ow-tbl-s" title="${esc(meta)}">${esc(meta)}</span>` : ''}
-  </div>`;
+    <span class="ow-tbl-s${rated ? '' : ' pan-w'}">${esc(meta)}</span>
+  </span></div>`;
+}
+/* A price change, in money, drawn from a centre line: savings to the
+   left in verdigris, rises to the right in crimson, all on one scale. */
+function panBarHTML(v){
+  const w = (v != null && panAddScale > 0) ? Math.min(100, Math.abs(v) / panAddScale * 100).toFixed(1) : '0';
+  return `<span class="pan-dv" aria-hidden="true"><span class="pan-dv-h"><i class="pan-dv-l" style="width:${v != null && v < 0 ? w : 0}%"></i></span><span class="pan-dv-a"></span><span class="pan-dv-h"><i class="pan-dv-r" style="width:${v != null && v > 0 ? w : 0}%"></i></span></span>`;
 }
 /* One cell, drawn from the column's own definition, so the header, the
-   row, the total and the export can never drift apart. data-l is what
-   turns the row into a card below 820px -- the label the cell lost when
-   the header row was hidden. */
+   row, the total and the export can never drift apart. */
 function panCellHTML(col, row, isFoot){
   const v = row[col.key];
   if(col.key==='name'){
@@ -73202,6 +73825,15 @@ function panCellHTML(col, row, isFoot){
   }
   if(!col.numeric){
     return `<div class="ow-tbl-c" data-l="${esc(PAN_HEAD[col.key]||col.label)}"><span class="ow-tbl-p">${esc(String(v||''))}</span></div>`;
+  }
+  const lab = esc(PAN_HEAD[col.key]||col.label);
+  /* The share is a length before it is a number. */
+  if(col.key==='share' && !isFoot){
+    return `<div class="ow-tbl-c pan-sh" data-l="${lab}"><span class="pan-sh-t"><i class="${panHue(row.supplierId)}" style="width:${Math.min(100, Number(v)||0).toFixed(1)}%"></i></span><span class="pan-sh-v">${(Number(v)||0).toFixed(1)}%</span></div>`;
+  }
+  /* A quantity always carries its unit -- 120 of what. */
+  if(col.key==='purchased' && !isFoot){
+    return `<div class="ow-tbl-n pan-q" data-l="${lab}"><span>${fmtNumAn(v)}</span><span class="pan-u">${esc(row.unit || '')}</span></div>`;
   }
   /* A RISE IS MONEY LEAVING AND A FALL IS MONEY KEPT. These are the two
      things on the row that are genuinely bad and genuinely good, so they
@@ -73216,13 +73848,17 @@ function panCellHTML(col, row, isFoot){
   const mark = partial
     ? `<span class="pan-partial-mark" title="${esc(row.panPartialWhy||'')}">*</span>` : '';
   if(partial) state = ' ow-fig ow-warn';
-  return `<div class="ow-tbl-n${state}${v==null?' pan-none':''}" data-l="${esc(PAN_HEAD[col.key]||col.label)}">${
+  if(col.key==='priceMove' && !isFoot) return `<div class="ow-tbl-n pan-mvc" data-l="${lab}">${panFormatCell(col, v)}</div>`;
+  if(col.key==='priceCost' && !isFoot){
+    return `<div class="ow-tbl-n pan-add${state}" data-l="${lab}">${panBarHTML(v)}<span class="pan-add-v${v==null?' pan-none':''}">${panFormatCell(col, v)}</span></div>`;
+  }
+  const extra = col.key==='prevPrice' ? ' pan-was' : col.key==='unitPrice' ? ' pan-paid' : '';
+  return `<div class="ow-tbl-n${state}${extra}${v==null?' pan-none':''}" data-l="${lab}">${
     panFormatCell(col, v)}${mark}</div>`;
 }
 /* A column that cannot honestly be totalled says so, and says WHY on
    hover. Nothing here falls through to a generic reduce: that is what
-   printed 35,503 + 42,000 + 7,000 = 84,503 as a "price paid" total, the
-   same mistake as adding bags to kilograms one column along. */
+   printed 35,503 + 42,000 + 7,000 = 84,503 as a "price paid" total. */
 function panNoTotalHTML(col, why){
   return `<div class="ow-tbl-n pan-nototal" data-l="${esc(PAN_HEAD[col.key]||col.label)}" title="${esc(why)}">—</div>`;
 }
@@ -73235,9 +73871,9 @@ function panFootRowHTML(cols, rows){
   const label = panView==='item'
     ? `All ${rows.length} line${rows.length===1?'':'s'}`
     : `All ${rows.length} supplier${rows.length===1?'':'s'}`;
-  const lead = 1 + cols.filter(c=>!c.numeric).length;
+  const lead = cols.filter(c=>!c.numeric).length;
   return `<div class="ow-tbl-f">
-    <div class="ow-tbl-c an-foot-l" style="--an-fs:${lead}"><span class="ow-tbl-p">${esc(label)}</span></div>
+    <div class="ow-tbl-c pan-foot-l" style="--an-fs:${lead}"><span class="ow-tbl-p">${esc(label)}</span></div>
     ${cols.filter(c=>c.numeric).map(c=>{
       // A quantity across bags, sheets and kilograms is not a number.
       if(c.key==='purchased' && pt.qty == null){
@@ -73252,13 +73888,11 @@ function panFootRowHTML(cols, rows){
           ? panNoTotalHTML(c, `Bought in ${units} — prices in different units cannot be averaged`)
           : panCellHTML(c, {[c.key]: avg}, true);
       }
+      // What it cost before is a price too, and is no more addable.
+      if(c.key==='prevPrice') return panNoTotalHTML(c, 'A price is per item — prices last period cannot be added either');
       // And a percentage has no total at all.
       if(c.pctMove) return panNoTotalHTML(c, 'A change is per item — there is no total of percentages');
-      /* A commission total is only the suppliers who HAVE a rate. This
-         used to fall through to `Number(r.commission)||0`, which counted
-         a missing rate as a zero and printed 723,054 under 33,901,800 of
-         purchases, 8,400,000 of it with a supplier who has no rate at
-         all. The row was honest; the line under it was not. */
+      /* A commission total is only the suppliers who HAVE a rate. */
       if(c.key==='commission'){
         return panCellHTML(c, {commission: cov ? cov.total : 0, panPartial: cov && !cov.complete,
           panPartialWhy: cov ? `${fmtUGX(Math.round(cov.unratedSpend))} of purchases is with ${cov.unratedCount} supplier${cov.unratedCount===1?' who has':'s who have'} no rate on file` : ''}, true);
@@ -73272,33 +73906,91 @@ function panFootRowHTML(cols, rows){
     }).join('')}
   </div>`;
 }
+/* A group band in the ranking: what the price did, how many lines, and
+   what they came to on the bill and in spend. */
+function panBandHTML(kind, g){
+  const label = (PAN_BANDS.find(([k])=> k===kind) || [kind, kind])[1];
+  const mark = { rise: PAN_ICON.up, fall: PAN_ICON.down, held: PAN_ICON.level, new: PAN_ICON.dashed }[kind];
+  const add = kind === 'new' ? '—' : `${g.cost > 0 ? '+' : g.cost < 0 ? '−' : ''}${panMoney(Math.abs(g.cost))}`;
+  return `<div class="pan-band pan-b-${kind}">
+    <div class="pan-band-l"><span class="pan-band-k">${mark}</span><span class="pan-band-t">${esc(label)}</span><span class="pan-band-n">${g.count}</span></div>
+    <span class="pan-band-a">${add}</span>
+    <span class="pan-band-s">${panMoney(g.spent)}</span>
+  </div>`;
+}
+/* THE PHONE CARD. The same row, drawn for a thumb: what it is and what
+   its price did, then the bar and the money it came to. Emitted from the
+   same rows in the same pass as the table, so the two cannot disagree. */
+function panCardHTML(r){
+  if(panView==='item'){
+    const chip = panFormatCell({pctMove:true}, r.priceMove);
+    const was = r.prevPrice != null ? `was ${panMoney(r.prevPrice)}` : 'first bought';
+    return `<div class="pan-card">
+      <div class="pan-card-h"><span class="pan-card-id"><span class="pan-card-t" title="${esc(r.name)}">${esc(r.name || '—')}</span>
+        <span class="pan-card-s"><span class="an-d">${fmtNumAn(r.purchased)}</span> ${esc(r.unit || '')} · <span class="an-d">${r.unitPrice != null ? panMoney(r.unitPrice) : '—'}</span> each · ${was}</span></span>
+        <span class="pan-mvc">${chip}</span></div>
+      <div class="pan-card-b">${panBarHTML(r.priceCost)}<span class="pan-card-v${r.priceCost > 0 ? ' pan-t-bad' : r.priceCost < 0 ? ' pan-t-good' : r.priceCost == null ? ' pan-none' : ''}">${
+        r.priceCost == null ? '—' : panSigned(r.priceCost)}</span></div>
+    </div>`;
+  }
+  const rated = r.commission != null;
+  return `<div class="pan-card">
+    <div class="pan-card-h"><span class="pan-mono ${panHue(r.supplierId)}">${esc(nameInitials(r.name || '?'))}</span><span class="pan-card-id"><span class="pan-card-t" title="${esc(r.name)}">${esc(r.name || '—')}</span>
+      <span class="pan-card-s"><span class="an-d">${r.docCount}</span> purchase${r.docCount===1?'':'s'} · ${rated ? `${esc(String(r.commissionPct))}% on file` : '<span class="pan-w">no rate on file</span>'}</span></span>
+      <span class="pan-card-p">${(Number(r.share)||0).toFixed(1)}%</span></div>
+    <span class="pan-sh-t pan-sh-w"><i class="${panHue(r.supplierId)}" style="width:${Math.min(100, Number(r.share)||0).toFixed(1)}%"></i></span>
+    <div class="pan-card-m"><span>Spent <b class="an-d">${panMoney(r.amt)}</b></span><span>Commission <b class="an-d">${rated ? panMoney(r.commission) : '—'}</b></span></div>
+  </div>`;
+}
 /* An empty window says what it knows, and names the next thing to do.
-   Four zeros in 22px mono says the shop is broken; it is not. */
+   Four zeros in 22px mono says the shop is broken; it is not. The
+   picture is the answer: an empty bar beside the window before. */
 function panNothingHereHTML(){
   const {from, to} = panGetDateRange();
   const prev = panPreviousTotals();
   const span = (from && to) ? dashRangeSpanDays(from, to) : null;
   /* The way out is only offered where there is one. On a window that is
      already thirty days -- or on All time, which cannot be widened at
-     all -- a button that "widens to the last 30 days" does nothing, and
-     a control that does nothing is the fault this screen's old Search
-     button had. */
+     all -- a button that "widens to the last 30 days" does nothing. */
   const narrow = span != null && span < 30;
-  return `<div class="an-nothing">
-    <h3>No purchase invoices in this range.</h3>
-    ${prev ? `<p>In the ${span} day${span===1?'':'s'} before this window you made <span class="an-nothing-n">${
-      prev.count}</span> purchase${prev.count===1?'':'s'} worth <span class="an-nothing-n">${
-      esc(fmtUGX(Math.round(prev.amt)))}</span>, so the books are reading fine.</p>` : ''}
-    <p>Two things bring you here: you genuinely bought nothing, or stock arrived and
-      <b>no purchase invoice was raised for it</b>. Goods received without an invoice do not
-      exist to this screen, and that is the one that catches people.</p>
-    ${narrow ? `<div class="an-nothing-a"><button type="button" class="btn btn-accent ow-sm" id="pan_widen">Widen to the last 30 days</button></div>` : ''}
+  const preset = document.getElementById('pan_range_preset').value;
+  const nowName = preset==='today' ? 'Today' : preset==='yesterday' ? 'Yesterday' : 'This window';
+  const prevName = span === 1 ? (preset==='today' ? 'Yesterday' : 'The day before') : span ? `The ${span} days before` : 'Before';
+  const when = preset==='today' ? 'today' : preset==='yesterday' ? 'yesterday' : 'in this range';
+  return `<div class="pan-nothing">
+    <div class="pan-ec" aria-hidden="true">
+      <div class="pan-ec-bars">
+        <div class="pan-ec-col"><div class="pan-ec-empty">${PAN_ICON.doc}</div></div>
+        <div class="pan-ec-col">${prev
+          ? `<span class="pan-ec-v">${panMoney(prev.amt)}</span><div class="pan-ec-bar"></div>`
+          : '<div class="pan-ec-empty pan-ec-low"></div>'}</div>
+      </div>
+      <div class="pan-ec-lb">
+        <span><b>${esc(nowName)}</b><span><span class="an-d">0</span> invoices</span></span>
+        <span><b>${esc(prevName)}</b><span><span class="an-d">${prev ? prev.count : 0}</span> invoice${prev && prev.count === 1 ? '' : 's'}</span></span>
+      </div>
+    </div>
+    <div class="pan-et">
+      <div class="pan-et-h">
+        <h3>No purchase invoices ${when}.</h3>
+        <p>${prev
+          ? `${esc(prevName)} had <b class="an-d">${prev.count}</b> worth <b class="an-d">${panMoney(prev.amt)}</b> — the books are reading fine.`
+          : span ? `Nothing in the ${span === 1 ? 'day' : `${span} days`} before either.` : 'No purchase invoice has been raised yet.'}</p>
+      </div>
+      <div class="pan-why2">
+        <div class="pan-rs-c"><span class="pan-rs-i">${PAN_ICON.tick}</span><span class="pan-rs-t"><b>Nothing was bought</b><span>Nothing to do.</span></span></div>
+        <div class="pan-rs-c pan-rs-w"><span class="pan-rs-i">${PAN_ICON.box}</span><span class="pan-rs-t"><b>Stock came in, no invoice</b><span>Invisible here until one is raised.</span></span></div>
+      </div>
+      <div class="pan-acts">
+        ${narrow ? '<button type="button" class="btn btn-accent ow-sm" id="pan_widen">Widen to the last 30 days</button>' : ''}
+        <button type="button" class="btn btn-ghost ow-sm" id="pan_raise">Raise a purchase invoice</button>
+      </div>
+    </div>
   </div>`;
 }
 function panWireNothingHere(){
   const b = document.getElementById('pan_widen');
-  if(!b) return;
-  b.addEventListener('click', ()=>{
+  if(b) b.addEventListener('click', ()=>{
     const sel = document.getElementById('pan_range_preset');
     sel.value = '30';
     document.getElementById('pan_from_field').style.display = 'none';
@@ -73306,12 +73998,14 @@ function panWireNothingHere(){
     document.getElementById('pan_apply_btn').style.display = 'none';
     renderPurchaseAnalytics();
   });
+  const r = document.getElementById('pan_raise');
+  if(r) r.addEventListener('click', ()=> openNewBill());
 }
 const PAN_ORDER_NOTE = {
-  item: 'ranked by what the price change added to the bill',
-  supplier: 'ranked by what you spent with them'
+  item: 'Ranked by what the price change added to the bill',
+  supplier: 'Ranked by what you spent with them'
 };
-/* PAGES, as on Sales analytics: the strip, the chart, the total and the
+/* PAGES, as on Sales analytics: the strip, the bridge, the total and the
    export read every row; only the rows drawn are paged. */
 let panPage = 1;
 function renderPanTable(){
@@ -73319,69 +74013,106 @@ function renderPanTable(){
   const all = PAN_COLUMNS[panView];
   const cols = PAN_SCREEN[panView].map(k=> all.find(c=>c.key===k)).filter(Boolean);
   const sort = panSortState[panView];
-  // The summary and the chart describe these rows, so all three are
+  // The summary and the panels describe these rows, so all of them are
   // handed the same list.
   renderPanKpis(rows);
+  renderPanWhy();
   renderPanConc();
+  renderPanCom();
+  const empty = panLastEntries.length === 0;
+  const emptyEl = document.getElementById('pan_empty');
+  document.getElementById('pan_grid').hidden = empty;
+  document.getElementById('pan_export_ph').hidden = empty;
+  const wrap = document.getElementById('pan_tableWrap');
+  const cards = document.getElementById('pan_cards');
+  const pager = document.getElementById('pan_pager');
+  const tnote = document.getElementById('pan_tableNote');
+  if(empty){
+    emptyEl.hidden = false;
+    emptyEl.innerHTML = panNothingHereHTML();
+    panWireNothingHere();
+    wrap.innerHTML = ''; cards.innerHTML = ''; pager.innerHTML = '';
+    return;
+  }
+  emptyEl.hidden = true; emptyEl.innerHTML = '';
+  document.getElementById('pan_n_item').textContent = panRowsByItem(panLastEntries).length;
+  document.getElementById('pan_n_supplier').textContent = panRowsBySupplier(panLastEntries).length;
   /* THE ORDER IS DECLARED, so it can be argued with. And when there is
      no earlier period there is no change to rank on -- the screen falls
-     back to spend and says so, rather than showing a column of dashes
-     and leaving the order looking deliberate. */
+     back to spend and says so. */
   const noCompare = panView==='item' && !panMoveTotals(rows).any;
   document.getElementById('pan_order').textContent = noCompare
-    ? 'ranked by spend — no price change can be worked out yet'
+    ? 'Ranked by spend — no price change can be worked out yet'
     : PAN_ORDER_NOTE[panView];
-  const noun = panView==='item' ? 'lines' : 'suppliers';
-  document.getElementById('pan_count').textContent = `${rows.length} ${noun}`;
-  const tnote = document.getElementById('pan_tableNote');
 
-  const wrap = document.getElementById('pan_tableWrap');
   if(rows.length===0){
-    wrap.innerHTML = panLastEntries.length===0
-      ? panNothingHereHTML()
-      : '<div class="ow-empty">No rows match your search.</div>';
-    if(panLastEntries.length===0) panWireNothingHere();
-    if(tnote){ tnote.innerHTML = ''; tnote.style.display = 'none'; }
+    wrap.innerHTML = '<div class="ow-empty">No rows match your search.</div>';
+    cards.innerHTML = ''; pager.innerHTML = '';
+    tnote.innerHTML = ''; tnote.style.display = 'none';
     return;
   }
   /* The footnote belongs to the table it qualifies, and it is where the
      commission asterisk is explained -- the mark is not decoration. */
-  if(tnote){
-    const cov = panView==='supplier' ? panCommissionCoverage(rows) : null;
-    tnote.innerHTML = (cov && !cov.complete)
-      ? `<span><span class="pan-partial-mark">*</span> This covers <b>${esc(fmtUGX(Math.round(cov.ratedSpend)))}</b> of purchases. <b>${cov.unratedCount} supplier${cov.unratedCount===1?' has':'s have'} no commission rate on file</b>, so ${esc(fmtUGX(Math.round(cov.unratedSpend)))} of your spending earns nothing here — set a rate on the supplier to include ${cov.unratedCount===1?'them':'those'}. The figure is a projection: the rate times what you actually bought inside this date range, not a recorded month&rsquo;s commission.</span>`
-      : panView==='item'
-        ? `<span><b>Added to this period&rsquo;s bill</b> is what the price move cost: the change in the price paid, times how much you bought. It is money, so it totals; the percentage beside it is not, and does not.</span>`
-        : '';
-    tnote.style.display = tnote.innerHTML ? '' : 'none';
-  }
-  const pageCount = Math.max(1, Math.ceil(rows.length / AN_PAGE_SIZE));
+  const cov = panView==='supplier' ? panCommissionCoverage(rows) : null;
+  tnote.innerHTML = (cov && !cov.complete)
+    ? `${PAN_ICON.info}<span><span class="pan-partial-mark">*</span> This covers <b>${esc(fmtUGX(Math.round(cov.ratedSpend)))}</b> of purchases. <b>${cov.unratedCount} supplier${cov.unratedCount===1?' has':'s have'} no commission rate on file</b>, so ${esc(fmtUGX(Math.round(cov.unratedSpend)))} of your spending earns nothing here — set a rate on the supplier to include ${cov.unratedCount===1?'them':'those'}. The figure is a projection: the rate times what you actually bought inside this date range, not a recorded month&rsquo;s commission.</span>`
+    : panView==='item'
+      ? `${PAN_ICON.info}<span><b>Added to bill</b> = the change in price paid × the quantity bought. It is money, so it totals; the percentage does not.</span>`
+      : '';
+  tnote.style.display = tnote.innerHTML ? '' : 'none';
+
+  /* THE RANKING, IN BANDS. In its own order -- worst first by what the
+     change added -- the lines fall into what their price did: rose, held,
+     fell, and new (nothing to compare). Each band says how many and what
+     they came to. Ordered any other way, the bands would cut the order
+     the reader asked for, so they go and the rows run straight. */
+  const grouped = panView==='item' && !noCompare && sort.key==='priceCost' && sort.dir===-1;
+  const ordered = grouped ? PAN_BANDS.flatMap(([k])=> rows.filter(r=> panMoveKind(r)===k)) : rows;
+  const bands = {};
+  if(grouped) PAN_BANDS.forEach(([k])=>{
+    const g = rows.filter(r=> panMoveKind(r)===k);
+    bands[k] = { count: g.length, cost: g.reduce((a,r)=> a + (Number(r.priceCost)||0), 0), spent: g.reduce((a,r)=> a + (Number(r.amt)||0), 0) };
+  });
+  ordered.forEach((r, i)=>{ r.__n = i + 1; });
+  panAddScale = rows.reduce((m,r)=> Math.max(m, Math.abs(Number(r.priceCost)||0)), 0);
+
+  const pageCount = Math.max(1, Math.ceil(ordered.length / AN_PAGE_SIZE));
   if(panPage > pageCount) panPage = pageCount;
   if(panPage < 1) panPage = 1;
   const pageFrom = (panPage - 1) * AN_PAGE_SIZE;
-  const pageRows = rows.slice(pageFrom, pageFrom + AN_PAGE_SIZE);
-  wrap.innerHTML = `<div class="ow-tbl an-tbl" style="--ow-tbl-cols:${PAN_TRACKS[panView]}">
+  const pageRows = ordered.slice(pageFrom, pageFrom + AN_PAGE_SIZE);
+  let lastBand = null;
+  const body = pageRows.map(r=>{
+    let band = '';
+    if(grouped){ const k = panMoveKind(r); if(k !== lastBand){ band = panBandHTML(k, bands[k]); lastBand = k; } }
+    return `${band}<div class="ow-tbl-r">${cols.map(c=> panCellHTML(c, r, false)).join('')}</div>`;
+  }).join('');
+  const th1 = panView==='item' ? `<div class="pan-th1" aria-hidden="true"><span></span><span>Volume</span><span class="pan-th1-3">Unit price</span><span class="pan-th1-2 pan-th1-e">Effect on this period&rsquo;s bill</span></div>` : '';
+  wrap.innerHTML = `<div class="pan-scroll"><div class="ow-tbl pan-tbl pan-tbl-${panView}" style="--ow-tbl-cols:${PAN_TRACKS[panView]}">
+    ${th1}
     <div class="ow-tbl-h">
-      <div class="ow-tbl-n">No.</div>
       ${cols.map(c=>{
         const on = sort.key===c.key;
         const head = (c.key==='name' && panView==='supplier') ? 'Supplier' : (PAN_HEAD[c.key] || c.label);
-        return `<div class="${c.numeric?'ow-tbl-n':'ow-tbl-c'} an-th${on?' an-on':''}"
+        const scale = c.key==='priceCost' ? '<span class="pan-th-sc" aria-hidden="true"><span>saved</span><span>added</span></span>' : '';
+        return `<div class="${c.numeric?'ow-tbl-n':'ow-tbl-c'} an-th${on?' an-on':''}${c.key==='priceCost'?' pan-th-add':''}${c.key==='priceMove'?' pan-th-mv':''}"
           data-key="${c.key}" role="button" tabindex="0"
-          title="Order the rows by ${esc(c.label)}">${esc(head)}${
-          on ? `<span class="an-arrow">${sort.dir===1?'▲':'▼'}</span>` : ''}</div>`;
+          title="Order the rows by ${esc(c.label)}">${scale}<span>${esc(head)}${
+          on ? `<span class="an-arrow">${sort.dir===1?'▲':'▼'}</span>` : ''}</span></div>`;
       }).join('')}
     </div>
-    ${pageRows.map((r,i)=>`<div class="ow-tbl-r">
-      <div class="ow-tbl-n an-no">${pageFrom+i+1}</div>
-      ${cols.map(c=> panCellHTML(c, r, false)).join('')}
-    </div>`).join('')}
+    ${body}
     ${panFootRowHTML(cols, rows)}
-  </div>${reportPagerHTML('data-panpg', panPage, pageCount, rows.length, pageFrom, pageRows.length, panView==='item' ? 'line' : 'supplier')}`;
-  wrap.querySelectorAll('[data-panpg]').forEach(btn=> btn.addEventListener('click', ()=>{
+  </div></div>`;
+  const mvAll = panMoveTotals(rows);
+  cards.innerHTML = pageRows.map(panCardHTML).join('') + `<div class="pan-cards-f">${panView==='item'
+    ? `<span>All <span class="an-d">${rows.length}</span> line${rows.length===1?'':'s'}</span>${mvAll.any ? `<span>net <b class="an-d${mvAll.cost > 0 ? ' pan-t-bad' : mvAll.cost < 0 ? ' pan-t-good' : ''}">${panSigned(mvAll.cost)}</b></span>` : ''}`
+    : `<span>All <span class="an-d">${rows.length}</span> supplier${rows.length===1?'':'s'}</span><span>spent <b class="an-d">${panMoney(panVisibleTotals(rows).amt)}</b></span>`}</div>`;
+  pager.innerHTML = reportPagerHTML('data-panpg', panPage, pageCount, ordered.length, pageFrom, pageRows.length, panView==='item' ? 'line' : 'supplier');
+  pager.querySelectorAll('[data-panpg]').forEach(btn=> btn.addEventListener('click', ()=>{
     panPage = Number(btn.dataset.panpg) || 1;
     renderPanTable();
-    const pan = wrap.closest('.ow-pan');
+    const pan = wrap.closest('.pan-pan');
     if(pan && pan.scrollIntoView) pan.scrollIntoView({block:'start', behavior:'smooth'});
   }));
   wrap.querySelectorAll('.an-th').forEach(th=>{
@@ -73395,10 +74126,31 @@ function renderPanTable(){
     th.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } });
   });
 }
+/* The range buttons are a face on the select, which stays the one place
+   the range is read from. */
+function panSyncRange(){
+  const v = document.getElementById('pan_range_preset').value;
+  document.querySelectorAll('#pan_range .pan-rng-b').forEach(b=>{
+    const on = b.dataset.r === v;
+    b.classList.toggle('ow-on', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+}
+function panSetView(view){
+  document.querySelectorAll('#pan_subtabs .pan-seg-b').forEach(b=>{
+    const on = b.dataset.view === view;
+    b.classList.toggle('ow-on', on); b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  panView = view;
+  panPage = 1;
+  renderPanTable();
+}
 function renderPurchaseAnalytics(){
   panPage = 1;
   const {from, to} = panGetDateRange();
   panLastEntries = panInvoicesInRange(from, to);
+  panHues = panHueMap();
+  panSyncRange();
   /* The sub is never folded, so it carries the one thing that goes
      stale: which window is on screen, and how much of the book is in
      it. */
@@ -73410,7 +74162,7 @@ function renderPurchaseAnalytics(){
       : `All time · ${n} purchase${n===1?'':'s'}`;
   }
   // renderPanTable works out the visible rows and hands them to the KPIs
-  // and the chart, so all three describe exactly the same list.
+  // and the panels, so all of them describe exactly the same list.
   renderPanTable();
 }
 document.getElementById('pan_range_preset').addEventListener('change', ()=>{
@@ -73419,20 +74171,32 @@ document.getElementById('pan_range_preset').addEventListener('change', ()=>{
   document.getElementById('pan_to_field').style.display = isCustom ? 'flex' : 'none';
   // The button exists for the two dates below it and for nothing else.
   document.getElementById('pan_apply_btn').style.display = isCustom ? '' : 'none';
+  panSyncRange();
   if(!isCustom) renderPurchaseAnalytics();
 });
+document.querySelectorAll('#pan_range .pan-rng-b').forEach(b=> b.addEventListener('click', ()=>{
+  const sel = document.getElementById('pan_range_preset');
+  sel.value = b.dataset.r;
+  sel.dispatchEvent(new Event('change'));
+}));
 document.getElementById('pan_apply_btn').addEventListener('click', renderPurchaseAnalytics);
 document.getElementById('pan_table_search').addEventListener('input', ()=>{ panPage = 1; renderPanTable(); });
-document.querySelectorAll('#pan_subtabs .ow-seg-b').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    document.querySelectorAll('#pan_subtabs .ow-seg-b').forEach(b=>{
-      b.classList.remove('ow-on'); b.setAttribute('aria-selected','false');
-    });
-    btn.classList.add('ow-on'); btn.setAttribute('aria-selected','true');
-    panView = btn.dataset.view;
-    panPage = 1;
-    renderPanTable();
-  });
+document.querySelectorAll('#pan_subtabs .pan-seg-b').forEach(btn=>{
+  btn.addEventListener('click', ()=> panSetView(btn.dataset.view));
+});
+/* The panels' own controls: "see all in the table" opens the supplier
+   view, "set rate" opens that supplier's commission, and the phone's
+   export at the foot of the page is the header's export. */
+document.getElementById('tab-analytics-purchase').addEventListener('click', (e)=>{
+  if(e.target.closest('[data-pan-sup]')){
+    panSetView('supplier');
+    const pan = document.querySelector('#tab-analytics-purchase .pan-tbl-pan');
+    if(pan && pan.scrollIntoView) pan.scrollIntoView({block:'start', behavior:'smooth'});
+    return;
+  }
+  const rate = e.target.closest('[data-pan-rate]');
+  if(rate){ openSupplierCommissionModal(rate.dataset.panRate); return; }
+  if(e.target.closest('#pan_export_ph')) document.getElementById('pan_export_btn').click();
 });
 document.getElementById('pan_export_btn').addEventListener('click', ()=>{
   const cols = PAN_COLUMNS[panView];
@@ -75525,6 +76289,9 @@ document.getElementById('scm_pct').addEventListener('change', ()=>{
   s.commissionPct = val==='' ? null : Math.min(100, Math.max(0, Number(val)||0));
   saveData();
   renderSuppliers(document.getElementById('s_search').value);
+  // Purchase analytics opens this from its commission panel; what it
+  // shows has just changed under it.
+  if(document.getElementById('tab-analytics-purchase').style.display !== 'none') renderPurchaseAnalytics();
 });
 document.getElementById('scm_close').addEventListener('click', ()=>closeModal('supplierCommissionModal'));
 document.getElementById('supplierCommissionModalClose').addEventListener('click', ()=>closeModal('supplierCommissionModal'));
