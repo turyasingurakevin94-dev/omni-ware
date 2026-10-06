@@ -3542,6 +3542,15 @@
   .pan-tbl-item .ow-tbl-f .pan-foot-l{padding-left:30px;}
   .pan-tbl .pan-nototal{font-weight:var(--ow-fw-500);}
   .pan-band{align-items:center;height:34px;background:var(--ow-steel-050);border-top:1px solid var(--ow-rule-soft);}
+  /* The band is a button -- it folds its lines -- worn as the band. */
+  button.pan-band{width:100%;margin:0;border:0;border-top:1px solid var(--ow-rule-soft);box-sizing:border-box;
+    font:inherit;color:inherit;text-align:left;cursor:pointer;}
+  button.pan-band:hover{background:var(--ow-rule-soft);}
+  button.pan-band:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
+  .pan-band-c{flex:none;width:14px;height:14px;fill:none;stroke:var(--ow-ink-600);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+    transition:transform .15s;}
+  .pan-band[aria-expanded="false"] .pan-band-c{transform:rotate(-90deg);}
+  .pan-band-h{font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;}
   .pan-band-l{grid-column:1 / span 5;display:flex;align-items:center;gap:var(--ow-sp-8);min-width:0;}
   .pan-band-k{flex:none;width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;}
   .pan-band-k svg{width:9px;height:9px;}
@@ -3714,6 +3723,10 @@
     .pan-sh-t.pan-sh-w{flex:none;width:100%;}
     .pan-card-m{display:flex;justify-content:space-between;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
     .pan-card-m b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);font-size:var(--ow-t-13);}
+    .pan-cards button.pan-band{display:flex;align-items:center;gap:var(--ow-sp-8);height:auto;min-height:var(--ow-tap);
+      padding:0 var(--ow-sp-12);border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);}
+    .pan-cards .pan-band-l{flex:1;}
+    .pan-cards .pan-band-s{display:none;}
     .pan-cards-f{display:flex;justify-content:space-between;padding:0 var(--ow-sp-4);font-size:var(--ow-t-13);color:var(--ow-ink-600);}
     .pan-cards-f b{font-weight:var(--ow-fw-600);}
     .pan-lg-r{min-height:40px;font-size:var(--ow-t-14);}
@@ -19919,6 +19932,8 @@
   .mp-acts{display:flex;gap:6px;flex-wrap:wrap;padding:9px 16px;border-top:1px solid var(--ow-rule-soft);}
   .mpw-acts{margin-top:auto;padding:12px 16px;border-top:1px solid var(--ow-rule-soft);display:flex;flex-direction:column;gap:8px;}
   .mpw-acts .btn{width:100%;justify-content:center;box-sizing:border-box;}
+  .mpw-acts .btn svg{flex:none;}
+  .mpw-ell{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .mpw-acts-r{display:flex;gap:8px;}
   .mpw-acts-r .btn{flex:1 1 0;min-width:0;}
   .mpw-see{display:none;}
@@ -20044,8 +20059,11 @@
        wraps, and only here -- the shared component is untouched. */
     .ow-pan-h.mp-headbar{padding:12px 16px 10px;gap:8px;}
     .ow-pan-h.mp-headbar .ow-pan-n{display:none;}
-    .mp-seg{width:100%;}
-    .mp-seg button{flex:1;justify-content:center;height:34px;font-size:13px;}
+    .mp-seg{width:100%;flex-wrap:nowrap;}
+    .mp-seg button{flex:1 1 0;min-width:0;justify-content:center;height:34px;font-size:13px;padding:0 4px;}
+    /* Three layers with real counts do not fit one row with an icon each;
+       the words and the counts are what tell them apart. */
+    .mp-headbar .mp-seg svg{display:none;}
     .mp-legend{display:none;}
     .mp-search{max-width:none;flex:1 1 100%;}
     .mp-search input{height:44px;font-size:15px;}
@@ -52900,8 +52918,12 @@ function mapTwoWay(){
   }).filter(x=> x && (x.owe > 0.5 || x.owed > 0.5))
     .sort((a,b)=> (b.owe + b.owed) - (a.owe + a.owed));
 }
+/* The suppliers marked two-way on the map and in the list: exactly the
+   accounts the strip counts and the rail sets out, so the badge, the key
+   and the figure cannot disagree. A link with nothing owed either way is
+   a fact about the directory, not something to read off a map. */
 function mapTwoWayIds(){
-  return new Set((data.customers || []).map(c=> c.linkedSupplierId).filter(Boolean).map(String));
+  return new Set(mapTwoWay().map(x=> String(x.supplier.id)));
 }
 /* The place the rail is open on. Never empty while there is something to
    read: with nothing picked it is the place holding the most money on
@@ -54010,7 +54032,7 @@ function renderMapSide(rowsIn, farIn, homeIn){
       ${twoWay}
       <div class="mpw-acts">
         <button type="button" class="btn btn-ghost mpw-see" id="mp_rail_see">See the ${esc(plural(people.length, sup ? 'supplier' : 'customer'))}</button>
-        <button type="button" class="btn btn-ghost" id="mp_rail_open">${sup ? 'Open Creditors' : `Open ${esc(r.name)} in Debtors`}
+        <button type="button" class="btn btn-ghost" id="mp_rail_open" title="${sup ? 'Open Creditors' : `Open ${esc(r.name)} in Debtors`}"><span class="mpw-ell">${sup ? 'Open Creditors' : `Open ${esc(r.name)} in Debtors`}</span>
           <svg class="icon" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg></button>
         <div class="mpw-acts-r">
           <button type="button" class="btn btn-ghost ow-sm" id="mp_rail_place">${r.pin ? 'Move pin' : 'Place it'}</button>
@@ -76416,6 +76438,10 @@ let panHues = new Map();
 /* The largest price change on screen, in money: the scale every
    diverging bar is drawn against. */
 let panAddScale = 0;
+/* The bands folded shut ('rise', 'held', 'fall', 'new'). Kept for the
+   visit, across windows and searches, so a band put away stays away
+   while the reader works through the rest. */
+const panShut = new Set();
 /* The item view opens on what the price changes ADDED TO THE BILL, worst
    first; the supplier view keeps spend, because for a supplier the
    question is concentration and not movement. Both say which they are,
@@ -77184,11 +77210,17 @@ function panBandHTML(kind, g){
   const label = (PAN_BANDS.find(([k])=> k===kind) || [kind, kind])[1];
   const mark = { rise: PAN_ICON.up, fall: PAN_ICON.down, held: PAN_ICON.level, new: PAN_ICON.dashed }[kind];
   const add = kind === 'new' ? '—' : `${g.cost > 0 ? '+' : g.cost < 0 ? '−' : ''}${panMoney(Math.abs(g.cost))}`;
-  return `<div class="pan-band pan-b-${kind}">
-    <div class="pan-band-l"><span class="pan-band-k">${mark}</span><span class="pan-band-t">${esc(label)}</span><span class="pan-band-n">${g.count}</span></div>
+  /* A BUTTON: press it and the band's lines fold away. The band keeps
+     its count and both totals, and says how many lines it is hiding, so
+     a folded band never reads as an empty one. */
+  const shut = panShut.has(kind);
+  return `<button type="button" class="pan-band pan-b-${kind}" data-pan-band="${kind}" aria-expanded="${shut ? 'false' : 'true'}"
+      title="${shut ? 'Show these lines' : 'Hide these lines'}">
+    <span class="pan-band-l"><svg class="pan-band-c" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg><span class="pan-band-k">${mark}</span><span class="pan-band-t">${esc(label)}</span><span class="pan-band-n">${g.count}</span>${
+      shut ? `<span class="pan-band-h">${g.count} line${g.count === 1 ? '' : 's'} hidden</span>` : ''}</span>
     <span class="pan-band-a">${add}</span>
     <span class="pan-band-s">${panMoney(g.spent)}</span>
-  </div>`;
+  </button>`;
 }
 /* THE PHONE CARD. The same row, drawn for a thumb: what it is and what
    its price did, then the bar and the money it came to. Emitted from the
@@ -77348,17 +77380,35 @@ function renderPanTable(){
   ordered.forEach((r, i)=>{ r.__n = i + 1; });
   panAddScale = rows.reduce((m,r)=> Math.max(m, Math.abs(Number(r.priceCost)||0)), 0);
 
-  const pageCount = Math.max(1, Math.ceil(ordered.length / AN_PAGE_SIZE));
+  /* PAGES COUNT LINES, NOT BANDS. Every band's head is drawn even when
+     it is folded -- that is where it is opened again -- and a band that
+     runs onto the next page carries its head over with it. A folded
+     band's lines are simply not in the pages. */
+  const items = [];
+  if(grouped) PAN_BANDS.forEach(([k])=>{
+    if(!bands[k].count) return;
+    items.push({ band: k });
+    if(!panShut.has(k)) ordered.filter(r=> panMoveKind(r)===k).forEach(r=> items.push({ row: r }));
+  });
+  else ordered.forEach(r=> items.push({ row: r }));
+  const pages = [];
+  let cur = [], n = 0, lastBand = null;
+  items.forEach(it=>{
+    if(it.band){ lastBand = it.band; cur.push(it); return; }
+    if(n === AN_PAGE_SIZE){ pages.push(cur); cur = lastBand ? [{ band: lastBand }] : []; n = 0; }
+    cur.push(it); n++;
+  });
+  pages.push(cur);
+  const pageCount = pages.length;
   if(panPage > pageCount) panPage = pageCount;
   if(panPage < 1) panPage = 1;
-  const pageFrom = (panPage - 1) * AN_PAGE_SIZE;
-  const pageRows = ordered.slice(pageFrom, pageFrom + AN_PAGE_SIZE);
-  let lastBand = null;
-  const body = pageRows.map(r=>{
-    let band = '';
-    if(grouped){ const k = panMoveKind(r); if(k !== lastBand){ band = panBandHTML(k, bands[k]); lastBand = k; } }
-    return `${band}<div class="ow-tbl-r">${cols.map(c=> panCellHTML(c, r, false)).join('')}</div>`;
-  }).join('');
+  const pageItems = pages[panPage - 1];
+  const pageRows = pageItems.filter(it=> it.row).map(it=> it.row);
+  const shownTotal = items.filter(it=> it.row).length;
+  const pageFrom = pages.slice(0, panPage - 1).reduce((a,pg)=> a + pg.filter(it=> it.row).length, 0);
+  const body = pageItems.map(it=> it.band
+    ? panBandHTML(it.band, bands[it.band])
+    : `<div class="ow-tbl-r">${cols.map(c=> panCellHTML(c, it.row, false)).join('')}</div>`).join('');
   const th1 = panView==='item' ? `<div class="pan-th1" aria-hidden="true"><span></span><span>Volume</span><span class="pan-th1-3">Unit price</span><span class="pan-th1-2 pan-th1-e">Effect on this period&rsquo;s bill</span></div>` : '';
   wrap.innerHTML = `<div class="pan-scroll"><div class="ow-tbl pan-tbl pan-tbl-${panView}" style="--ow-tbl-cols:${PAN_TRACKS[panView]}">
     ${th1}
@@ -77377,10 +77427,12 @@ function renderPanTable(){
     ${panFootRowHTML(cols, rows)}
   </div></div>`;
   const mvAll = panMoveTotals(rows);
-  cards.innerHTML = pageRows.map(panCardHTML).join('') + `<div class="pan-cards-f">${panView==='item'
+  /* The phone gets the same bands, as full-width bars between the
+     cards, so a folded band is never a gap nobody can see. */
+  cards.innerHTML = pageItems.map(it=> it.band ? panBandHTML(it.band, bands[it.band]) : panCardHTML(it.row)).join('') + `<div class="pan-cards-f">${panView==='item'
     ? `<span>All <span class="an-d">${rows.length}</span> line${rows.length===1?'':'s'}</span>${mvAll.any ? `<span>net <b class="an-d${mvAll.cost > 0 ? ' pan-t-bad' : mvAll.cost < 0 ? ' pan-t-good' : ''}">${panSigned(mvAll.cost)}</b></span>` : ''}`
     : `<span>All <span class="an-d">${rows.length}</span> supplier${rows.length===1?'':'s'}</span><span>spent <b class="an-d">${panMoney(panVisibleTotals(rows).amt)}</b></span>`}</div>`;
-  pager.innerHTML = reportPagerHTML('data-panpg', panPage, pageCount, ordered.length, pageFrom, pageRows.length, panView==='item' ? 'line' : 'supplier');
+  pager.innerHTML = reportPagerHTML('data-panpg', panPage, pageCount, shownTotal, pageFrom, pageRows.length, panView==='item' ? 'line' : 'supplier');
   pager.querySelectorAll('[data-panpg]').forEach(btn=> btn.addEventListener('click', ()=>{
     panPage = Number(btn.dataset.panpg) || 1;
     renderPanTable();
@@ -77460,6 +77512,17 @@ document.querySelectorAll('#pan_subtabs .pan-seg-b').forEach(btn=>{
    view, "set rate" opens that supplier's commission, and the phone's
    export at the foot of the page is the header's export. */
 document.getElementById('tab-analytics-purchase').addEventListener('click', (e)=>{
+  const band = e.target.closest('[data-pan-band]');
+  if(band){
+    const k = band.dataset.panBand;
+    const where = band.closest('#pan_cards') ? 'pan_cards' : 'pan_tableWrap';
+    if(panShut.has(k)) panShut.delete(k); else panShut.add(k);
+    renderPanTable();
+    /* The button was redrawn; keep the reader's place on it. */
+    const again = document.querySelector(`#${where} [data-pan-band="${k}"]`);
+    if(again) again.focus({ preventScroll: true });
+    return;
+  }
   if(e.target.closest('[data-pan-sup]')){
     panSetView('supplier');
     const pan = document.querySelector('#tab-analytics-purchase .pan-tbl-pan');
