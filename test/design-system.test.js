@@ -375,6 +375,7 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
     ['--ow-ink-900', hex('--ow-age-2'), 4.5, 'age: a figure on a strong 30-60 cell'],
     ['--ow-paper', hex('--ow-age-3'), 4.5, 'age: a figure on a strong 60-90 cell'],
     ['--ow-amber-ink', hex('--ow-age-nd'), 4.5, 'age: a name on money with no date'],
+    ['--ow-ink-900', hex('--ow-steel-350'), 4.5, 'age: a name on a 2-to-4-weeks block, when the columns run in weeks'],
 
     /* PRICING'S NAVY BAND AND ITS TILES. The band speaks for the whole
        shelf on the rail's own navy, so its text wears the rail's inks

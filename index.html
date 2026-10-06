@@ -89001,7 +89001,8 @@ function debRowsForList(filter=''){
   const tokens = searchTokens(filter);
   let rows = debAllRows();
   if(hideNoDebt) rows = rows.filter(r=>r.debt>0);
-  if(debBandFilter) rows = rows.filter(r=> r.band === debBandFilter);
+  const ageDef = debAgeFilterDef(debBandFilter);
+  if(ageDef) rows = rows.filter(ageDef.test);
   if(tokens.length) rows = rows.filter(r=>matchesAllTokens((r.name+' '+r.location).toLowerCase(), tokens));
   rows.sort((a,b)=>{
     const key = DEB_SORT_STATE.key;
@@ -89384,6 +89385,57 @@ const DEB_AGE_FILL = { b30: 'var(--ow-age-1)', b60: 'var(--ow-age-2)', b90: 'var
 const DEB_AGE_INK = { b30: 'var(--ow-ink-900)', b60: 'var(--ow-ink-900)', b90: 'var(--ow-paper)',
   b90p: 'var(--ow-paper)', unknown: 'var(--ow-amber-ink)' };
 
+/* THE SCALE FOLLOWS THE BOOK. A shop whose customers rarely run past
+   two months drew four columns of which two were always empty, and all
+   its money in one tall "under 30 days". When almost nothing is over
+   60 days, the columns are weeks where the money is, and one column for
+   whatever is older -- empty is then the good news it should read as.
+   A book with real old money keeps the classic 30 / 60 / 90. tone is the
+   classic band each column speaks for, so its label wears that colour. */
+const DEB_AGE_WEEKS = [
+  { key: 'd0',  label: 'Under a week',  lo: 0,  hi: 7,  fill: 'var(--ow-age-0)',     ink: 'var(--ow-ink-900)', tone: 'b30' },
+  { key: 'd7',  label: '1 to 2 weeks',  lo: 7,  hi: 14, fill: 'var(--ow-age-1)',     ink: 'var(--ow-ink-900)', tone: 'b30' },
+  { key: 'd14', label: '2 to 4 weeks',  lo: 14, hi: 30, fill: 'var(--ow-steel-350)', ink: 'var(--ow-ink-900)', tone: 'b30' },
+  { key: 'd30', label: '1 to 2 months', lo: 30, hi: 60, fill: 'var(--ow-age-2)',     ink: 'var(--ow-ink-900)', tone: 'b60' },
+  { key: 'd60', label: 'Over 2 months', lo: 60, hi: Infinity, fill: 'var(--ow-age-3)', ink: 'var(--ow-paper)', tone: 'b90' },
+];
+const DEB_AGE_CLASSIC = [
+  { key: 'b30',  lo: 0,  hi: 30 }, { key: 'b60', lo: 30, hi: 60 },
+  { key: 'b90',  lo: 60, hi: 90 }, { key: 'b90p', lo: 90, hi: Infinity },
+];
+function debAgeScale(dx){
+  const charges = [];
+  dx.xs.forEach((x)=> x.dated.forEach((ch)=> charges.push({ x, age: ch.age, amt: ch.remaining })));
+  const dated = charges.reduce((s, c)=> s + c.amt, 0);
+  const old = charges.filter((c)=> c.age >= 60).reduce((s, c)=> s + c.amt, 0);
+  const young = dated > 0.5 && old <= dated * 0.1;
+  const defs = young ? DEB_AGE_WEEKS : DEB_AGE_CLASSIC.map((c)=> {
+    const b = agingBandDef(c.key) || {};
+    return { ...c, label: b.label, fill: DEB_AGE_FILL[c.key], ink: DEB_AGE_INK[c.key], tone: c.key };
+  });
+  const cols = defs.map((c)=> {
+    const by = new Map();
+    charges.filter((ch)=> ch.age >= c.lo && ch.age < c.hi).forEach((ch)=> by.set(ch.x, (by.get(ch.x) || 0) + ch.amt));
+    const per = [...by].map(([x, amt])=> ({ x, amt })).filter((p)=> p.amt > 0.5).sort((a, b)=> b.amt - a.amt);
+    return { ...c, amount: per.reduce((s, p)=> s + p.amt, 0), count: per.length, per };
+  });
+  /* No date is a column only when something has no date: an empty one
+     says nothing about this book. */
+  const nd = dx.bands.find((b)=> b.key === 'unknown');
+  if(nd && nd.amount > 0.5) cols.push({ key: 'unknown', label: nd.label, lo: -1, hi: -1,
+    fill: DEB_AGE_FILL.unknown, ink: DEB_AGE_INK.unknown, tone: 'unknown', amount: nd.amount, count: nd.count, per: nd.per });
+  return { young, cols };
+}
+/* What an age filter means, on either scale: the customers whose OLDEST
+   money sits in that age -- the rule the classic bands always had. */
+function debAgeFilterDef(key){
+  if(!key) return null;
+  const w = DEB_AGE_WEEKS.find((c)=> c.key === key);
+  if(w) return { label: w.label, test: (r)=> r.ageDays >= w.lo && r.ageDays < w.hi };
+  const b = agingBandDef(key);
+  return b ? { label: b.label, test: (r)=> r.band === key } : null;
+}
+
 function debM(n){
   const v = (Number(n) || 0) / 1e6;
   if(Math.abs(Number(n) || 0) < 500) return '0';
@@ -89617,7 +89669,8 @@ function renderDebtorsPosition(){
   const d = debOpenId && dx.byId.get(debOpenId);
   const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
   const pct = (n)=> p.total > 0 ? Math.round(n / p.total * 100) : 0;
-  const mb = dx.bands;
+  const sc = debAgeScale(dx);
+  const mb = sc.cols;
   const live = mb.filter(b=> b.amount > 0);
   const dated = dx.xs.filter((x)=> x.ageDays >= 0);
   const oldest = dated.reduce((m,r)=> (!m || r.ageDays > m.ageDays) ? r : m, null);
@@ -89627,7 +89680,7 @@ function renderDebtorsPosition(){
   const grace = dx.grace;
   const inTerms = dx.bandAmt('b30') && grace > 0 ? dated.reduce((s, x)=> s + x.dated.filter((ch)=> ch.age < grace).reduce((a, ch)=> a + ch.remaining, 0), 0) : 0;
   const unk = dx.bandAmt('unknown');
-  const meter = live.map(b=> `<span class="ow-dx-meter-s" style="flex-grow:${b.amount};background:${DEB_AGE_FILL[b.key]}" title="${esc(b.label)}: ${esc(fmtUGX(Math.round(b.amount)))}"></span>`).join('');
+  const meter = live.map(b=> `<span class="ow-dx-meter-s" style="flex-grow:${b.amount};background:${b.fill}" title="${esc(b.label)}: ${esc(fmtUGX(Math.round(b.amount)))}"></span>`).join('');
   const kv = [
     { k: 'In terms', v: inTerms, sw: 'var(--ow-age-1)', cls: '' },
     { k: 'Late', v: dx.late, sw: 'var(--ow-crimson)', cls: ' ow-dx-bad' },
@@ -89651,16 +89704,19 @@ function renderDebtorsPosition(){
       const mine = d && s.x.id === d.id;
       return `<span class="ow-dx-sl${mine ? ' ow-on' : ''}" style="flex-grow:${s.amt}" title="${esc(s.x.name)} · ${esc(fmtUGX(Math.round(s.amt)))}">${px >= 20 || (mine && px >= 13) ? `<span class="ow-dx-sl-n">${esc(s.x.short)}</span>` : ''}</span>`;
     }).join('') + (rest.length ? `<span class="ow-dx-sl" style="flex-grow:${restAmt}" title="${rest.length} more customer${rest.length===1?'':'s'} · ${esc(fmtUGX(Math.round(restAmt)))}">${restAmt / (b.amount || 1) * h >= 14 ? `<span class="ow-dx-sl-n">+${rest.length} more</span>` : ''}</span>` : '');
-    return `<button type="button" class="ow-dx-col ow-band-${b.key}${on ? ' ow-on' : ''}${debBandFilter && !on ? ' ow-dx-dim' : ''}" data-band="${esc(b.key)}" aria-pressed="${on}"
+    return `<button type="button" class="ow-dx-col ow-band-${b.tone}${on ? ' ow-on' : ''}${debBandFilter && !on ? ' ow-dx-dim' : ''}" data-band="${esc(b.key)}" aria-pressed="${on}"
       aria-label="${esc(b.label)}: ${esc(fmtUGX(Math.round(b.amount)))} from ${b.count} customer${b.count===1?'':'s'} — list only these">
-      <span class="ow-dx-col-a"><b class="ow-dx-n">${b.amount > 0 ? debM(b.amount) : '—'}</b><span class="ow-dx-col-p">${pct(b.amount)}% of the book</span></span>
-      <span class="ow-dx-stack" style="height:${h}px;background:${DEB_AGE_FILL[b.key]};color:${DEB_AGE_INK[b.key]}">${slices}</span>
+      <span class="ow-dx-col-a"><b class="ow-dx-n">${b.amount > 0 ? debM(b.amount) : '—'}</b><span class="ow-dx-col-p">${b.amount > 0 ? (pct(b.amount) < 1 ? 'under 1%' : pct(b.amount) + '%') + ' of the book' : 'nobody'}</span></span>
+      <span class="ow-dx-stack" style="height:${h}px;background:${b.fill};color:${b.ink}">${slices}</span>
     </button>`;
   }).join('');
   /* The bracket opens on the age column the terms fall in: under 30
      days for a shop that gives no grace, 30 to 60 for a month's terms. */
-  const lateCol = Math.min(3, Math.floor(grace / 30));
-  const axis = mb.map((b)=> `<span class="ow-dx-axl ow-band-${b.key}"><b class="ow-dx-axl-t">${esc(b.label)}</b><span>${b.count} customer${b.count===1?'':'s'}</span></span>`).join('');
+  const dcols = mb.filter((b)=> b.key !== 'unknown');
+  const lateCol = Math.max(0, dcols.reduce((k, b, i)=> b.lo <= grace ? i : k, 0));
+  const n = mb.length, gaps = (n - 1) * 14, colW = `(100% - ${gaps}px) / ${n}`;
+  const lateStyle = `left:${lateCol ? `calc(${colW} * ${lateCol} + ${lateCol * 14 - 7}px)` : '0'};right:${n > dcols.length ? `calc(${colW} + 7px)` : '0'}`;
+  const axis = mb.map((b)=> `<span class="ow-dx-axl ow-band-${b.tone}"><b class="ow-dx-axl-t">${esc(b.label)}</b><span>${b.count} customer${b.count===1?'':'s'}</span></span>`).join('');
   wrap.innerHTML = `<section class="ow-pan ow-dx-age" aria-label="How old the money is">
     <div class="ow-dx-age-l">
       <span class="ow-pan-t">How old the money is</span>
@@ -89678,11 +89734,11 @@ function renderDebtorsPosition(){
         <span class="ow-dx-cap">Each block is one customer&rsquo;s money at that age &middot; tap an age to list only it</span>
         ${d ? `<span class="ow-dx-cap ow-dx-age-me"><span class="ow-dx-me" aria-hidden="true"></span>${esc(d.short)} is outlined</span>` : ''}
       </div>
-      <div class="ow-dx-cols" role="group" aria-label="Owed by age">
-        <span class="ow-dx-late" aria-hidden="true"${lateCol === 1 ? '' : ` style="left:${lateCol ? `calc((100% - 56px) / 5 * ${lateCol} + ${lateCol * 14 - 7}px)` : '0'}"`}><b class="ow-dx-late-t">Late &middot; ${debM(dx.late)} &middot; ${pct(dx.late)}%</b></span>
+      <div class="ow-dx-cols" role="group" aria-label="Owed by age" style="grid-template-columns:repeat(${n},minmax(0,1fr))">
+        <span class="ow-dx-late" aria-hidden="true" style="${lateStyle}"><b class="ow-dx-late-t">Late &middot; ${debM(dx.late)} &middot; ${pct(dx.late)}%</b></span>
         ${cols}
       </div>
-      <div class="ow-dx-axis">${axis}</div>
+      <div class="ow-dx-axis" style="grid-template-columns:repeat(${n},minmax(0,1fr))">${axis}</div>
     </div>
     ${debCreditPanelHTML(true)}
   </section>`;
@@ -89721,7 +89777,7 @@ function renderDebtorsList(){
   const totalDebt = rows.reduce((s,r)=>s+r.debt, 0);
   const allRows = debAllRows();
   const owingAll = allRows.filter(r=> r.debt > 0.5);
-  const bandDef = debBandFilter ? agingBandDef(debBandFilter) : null;
+  const bandDef = debAgeFilterDef(debBandFilter);
 
   /* ---- the standings: who to act on, at a tap ---- */
   const segs = ['all'].concat(DEB_SEG_ORDER).map((k)=> {
@@ -89847,7 +89903,7 @@ function renderDebtorsList(){
   const empty = data.customers.length === 0
     ? '<div class="ow-empty"><b>No customers yet.</b> Add one on the Customers screen, or just sell to somebody by name &mdash; a balance appears here the moment they take goods on credit.</div>'
     : debBandFilter
-      ? `<div class="ow-empty"><b>Nobody is in the ${esc((agingBandDef(debBandFilter)||{}).label || 'chosen')} band${debSearch ? ' under this search' : ''}.</b> Tap the lit age above to show everyone.</div>`
+      ? `<div class="ow-empty"><b>Nobody is in the ${esc((debAgeFilterDef(debBandFilter)||{}).label || 'chosen')} band${debSearch ? ' under this search' : ''}.</b> Tap the lit age above to show everyone.</div>`
       : debSeg !== 'all'
         ? `<div class="ow-empty"><b>Nobody stands at &ldquo;${esc(DEB_SEG[debSeg].label)}&rdquo;${debSearch ? ' under this search' : ''}.</b> <button type="button" class="ow-db-go" data-seg="all">Show everyone</button></div>`
       : debSearch
@@ -90176,7 +90232,7 @@ function renderDebFilterNote(shown){
   const el = document.getElementById('debFilterNote');
   if(!el) return;
   if(!debBandFilter){ el.innerHTML = ''; return; }
-  const def = agingBandDef(debBandFilter);
+  const def = debAgeFilterDef(debBandFilter);
   el.innerHTML = `<div class="ow-pan ow-db-note">
     <span>Showing only <b class="ow-db-em">${esc(def ? def.label.toLowerCase() : 'one band')}</b> &mdash; ${shown} customer${shown===1?'':'s'}. The figures above are still the whole book.</span>
     <button type="button" class="btn btn-ghost ow-sm" id="debClearBand">Show everyone</button>
@@ -93012,7 +93068,7 @@ function debPrintList(){
       <td class="n">${b.count}</td></tr>`).join('');
 
   const scope = debBandFilter
-    ? `${rows.length} customer${rows.length===1?'':'s'} in the ${esc(((agingBandDef(debBandFilter)||{}).label||'').toLowerCase())} band`
+    ? `${rows.length} customer${rows.length===1?'':'s'} in the ${esc(((debAgeFilterDef(debBandFilter)||{}).label||'').toLowerCase())} band`
     : `${rows.length} customer${rows.length===1?'':'s'}`;
 
   const win = window.open('', '_blank');

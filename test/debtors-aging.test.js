@@ -56,6 +56,12 @@ const scope = compileScope([
   extractFunction(src, 'agingBandDef', 'index.html'),
   extractFunction(src, 'debAllRows', 'index.html'),
   extractFunction(src, 'debAgingProfile', 'index.html'),
+  extractDeclaration(src, 'DEB_AGE_FILL', 'index.html'),
+  extractDeclaration(src, 'DEB_AGE_INK', 'index.html'),
+  extractDeclaration(src, 'DEB_AGE_WEEKS', 'index.html'),
+  extractDeclaration(src, 'DEB_AGE_CLASSIC', 'index.html'),
+  extractFunction(src, 'debAgeScale', 'index.html'),
+  extractFunction(src, 'debAgeFilterDef', 'index.html'),
   // compileScope hands back functions only, so the two sort constants
   // come out through accessors. Test-side wrappers, not app code.
   'function sortState(){ return DEB_SORT_STATE; }',
@@ -64,7 +70,7 @@ const scope = compileScope([
   data,
   todayISO: () => TODAY,
 }, ['agingBandFor', 'agingBandDef', 'debAllRows', 'debAgingProfile', 'customerLastPaymentDate',
-  'sortState', 'sortFirstDir', 'customerDebtProgress', 'customerOpenCharges']);
+  'sortState', 'sortFirstDir', 'customerDebtProgress', 'customerOpenCharges', 'debAgeScale', 'debAgeFilterDef']);
 
 let nextId = 1;
 // charges/payments are [daysAgo, amount] pairs.
@@ -350,6 +356,32 @@ const countIn = (key) => scope.debAgingProfile().bands.find((b) => b.key === key
     'naming the band when one is narrowing it');
 }
 
+/* ---------- 7b. the age columns follow the book ---------------------- *
+ *
+ * A shop whose customers rarely run past two months drew 60-90 and 90+
+ * as two columns that were always empty, and all of its money in one
+ * tall "under 30 days". Live, that was 95% of the book in one column.
+ */
+{
+  const dxOf = (charges, unknown = 0) => ({
+    xs: [{ id: 'A', dated: charges.map(([age, remaining]) => ({ age, remaining })) }],
+    bands: [{ key: 'unknown', label: 'No date on record', amount: unknown, count: unknown ? 1 : 0, per: [] }],
+  });
+  const young = scope.debAgeScale(dxOf([[2, 500], [9, 300], [20, 400], [40, 100]]));
+  t.check(young.young && young.cols.map((c) => c.key).join() === 'd0,d7,d14,d30,d60',
+    'a book with almost nothing past 60 days is drawn in weeks, with one column for anything older');
+  t.check(young.cols.map((c) => c.amount).join() === '500,300,400,100,0',
+    'and each charge lands in the week its own age says');
+  t.check(!young.cols.some((c) => c.key === 'unknown'),
+    'no "no date" column when nothing is undated — an empty column says nothing about this book');
+  const old = scope.debAgeScale(dxOf([[10, 500], [75, 200], [120, 300]], 50));
+  t.check(!old.young && old.cols.map((c) => c.key).join() === 'b30,b60,b90,b90p,unknown',
+    'a book with real old money keeps the classic 30 / 60 / 90, and its no-date column');
+  const wk = scope.debAgeFilterDef('d7'), cl = scope.debAgeFilterDef('b60');
+  t.check(wk && wk.test({ ageDays: 9 }) && !wk.test({ ageDays: 14 }) && cl && cl.test({ band: 'b60' }),
+    'tapping a column lists the customers whose oldest money is in it, on either scale');
+}
+
 /* ---------- 8. the bar is honest and reachable ----------------------- */
 {
   const pos = (/function renderDebtorsPosition[\s\S]*?\n\}\n/.exec(code) || [''])[0];
@@ -360,8 +392,11 @@ const countIn = (key) => scope.debAgingProfile().bands.find((b) => b.key === key
      is now drawn from the money's own age, charge by charge off the same
      ledger walk (debDx().bands), so a customer with one old invoice and
      one new one is split across two bands rather than painted old all
-     through. The rule pinned is unchanged: an empty band is left off. */
-  t.check(/live = mb\.filter\(b=> b\.amount > 0\)/.test(pos) && /const mb = dx\.bands;/.test(pos),
+     through. The rule pinned is unchanged: an empty band is left off.
+     THEN dx.bands, NOW debAgeScale(dx).cols: the same charge-by-charge
+     ages, on a scale that follows the book -- weeks for a shop whose money
+     rarely passes two months, the classic 30/60/90 otherwise. */
+  t.check(/live = mb\.filter\(b=> b\.amount > 0\)/.test(pos) && /const mb = sc\.cols;/.test(pos) && /const sc = debAgeScale\(dx\);/.test(pos),
     'a band holding nothing is left off the bar rather than drawn as a sliver of zero');
   t.check(/min-width:14px/.test(src),
     'and a band too small to see still has something to click');
