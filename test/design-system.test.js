@@ -871,22 +871,42 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
                 'age-bands', 'age-band', 'age-verdict', 'age-filter-note', 'age-table', 'age-pill',
                 'age-name', 'age-where', 'age-amt', 'age-paid', 'age-never', 'age-act', 'age-card',
                 'pi-card', 'pi-cards', 'pi-table-wrap', 'inv-total-row'],
-      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-grid', 'ow-side', 'ow-cr'],
+      /* REDRAWN AGAIN, from the design the owner signed off on the
+         canvas: the screen is now a position, two tabs and a table, so
+         the work-and-rail grid (.ow-grid / .ow-side) is gone from the
+         markup -- the rail's readings moved onto the Intelligence tab,
+         where they sit three abreast under the 30-day line, and the
+         pane switch is .ow-cx-pane.
+
+         What the renderers emit changed for the same reason, and the
+         list below is the new vocabulary rather than the old one kept
+         alive. The owner asked for the queue to be a TABLE with the age
+         of each bill as columns, so .ow-q-r's three-column row, the
+         .ow-tbl bill table, the .ow-f sort select and the borrowed
+         .ow-db-ag bar and .ow-db-lp cell gave way to .ow-cx-tbl (one
+         grid shared by the head, every row and the totals) and its age
+         cells. The rail's .ow-sr pocket rows went with the rail; which
+         pocket a payment comes from is chosen at the payment now. Still
+         worn, and so still pinned: the reason cell, the waterline, the
+         day chip, the band card's invoice count, the strip, the panel,
+         and the phone card and open row from .ow-q. */
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp', 'ow-cr', 'ow-cx-pane', 'ow-cx-trio'],
       renders: ['renderCreditorsList', 'renderCreditorsPosition', 'renderCreditorsRail', 'renderCredFilterNote',
                 'credWhenHTML'],
       rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s',
-                    'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n',
-                    'ow-tb', 'ow-tb-s', 'ow-tb-n', 'ow-f', 'ow-f-l', 'ow-f-in', 'ow-f-sel',
-                    'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t', 'ow-q-who', 'ow-q-v',
-                    'ow-q-f', 'ow-q-b', 'ow-q-note', 'ow-q-a', 'ow-cp',
-                    'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-n',
-                    /* the two borrowed whole from Debtors */
-                    'ow-db-ag', 'ow-db-lp',
-                    /* and the three this screen owns: why a supplier is
-                       ranked where it is, how far today's cash reaches,
-                       and naming a day on the bill it belongs to */
+                    'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n', 'ow-tb',
+                    'ow-q', 'ow-q-card', 'ow-q-x', 'ow-q-t', 'ow-q-who', 'ow-q-v',
+                    'ow-q-f', 'ow-q-b', 'ow-q-note', 'ow-q-a', 'ow-cp', 'ow-db-ag-m',
                     'ow-cr-rz', 'ow-cr-wl', 'ow-cr-dy',
-                    'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-mini', 'ow-empty'],
+                    /* the screen's own: the sum and the bar, the tabs, the
+                       plan, the table and its age cells, an opened
+                       supplier's bills and six months, and the
+                       Intelligence tab's line, day preview and readings */
+                    'ow-cx-hero', 'ow-cx-eq', 'ow-cx-bar', 'ow-cx-tabs', 'ow-cx-plan',
+                    'ow-cx-tbl', 'ow-cx-th', 'ow-cx-tr', 'ow-cx-tt', 'ow-cx-ag',
+                    'ow-cx-x', 'ow-cx-bills', 'ow-cx-pb', 'ow-cx-hs',
+                    'ow-cx-line', 'ow-cx-day', 'ow-cx-pv', 'ow-cx-cn', 'ow-cx-wd',
+                    'ow-mini', 'ow-empty'],
     },
     /* Payroll and rent. The screen answered "what did the month cost?"
        when the question you open it with is "can I pay them?", and it

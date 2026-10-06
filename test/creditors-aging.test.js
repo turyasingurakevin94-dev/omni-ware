@@ -320,8 +320,17 @@ const reset = (suppliers, invoices) => {
      crimson on it is the fault this screen was converted once to fix. */
   t.check(/class="ow-cr-rb-s \$\{credRowTone\(r\)\}" style="flex-grow:\$\{o\.owed\}"/.test(pos),
     'each supplier on the bar is exactly as wide as what is owed them');
-  t.check(/tile\('Short today', `\$\{f\(reach\.short\)\}<span class="ow-u">UGX<\/span>`,\s*`cash covers <b>\$\{pct\(Math\.max\(0, cash\)\)\}%<\/b> of what you owe`\)/.test(pos),
-    'and the gap between cash and debt is a figure in ink, not a warning');
+  /* THE GAP IS NOW "LEFT OWING AFTER THE PLAN", and that is the owner's
+     call in the design they signed off, not a patch. The old tile said
+     "Short today": what you owe less what you hold, with no plan in it.
+     The position is a sum now -- you owe, less cash in hand, equals what
+     is left owing after today's plan -- and that last figure is read off
+     the same walk as the bar, so the sum cannot say the money goes
+     further than the bar does. What is pinned is that it IS that walk's
+     figure, not a second piece of arithmetic. */
+  t.check(/Left owing after the plan<\/span><span class="ow-cx-eq-v">\$\{f\(plan\.left\)\}<\/span>/.test(pos)
+      && /const plan = credPlanWalk\(\);/.test(pos),
+    'and the gap between cash and debt is the plan walk\'s own figure');
   t.check(/const reach = credReach\(\);/.test(pos) && !/credRowsForList/.test(pos.replace(/function credOpenSupplier[\s\S]*/, '')),
     'the bar is measured on the whole book, never on the filtered list');
   t.check(/Nothing is owed by you yet/.test(pos) && /Every supplier invoice on file is settled/.test(pos),
