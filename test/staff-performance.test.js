@@ -232,7 +232,9 @@ const reset = () => {
      human being. */
   t.check(!/renderStaffGroup/.test(src), 'the two-grid renderer is gone');
   t.check(!/staffCardHTML/.test(src), 'and the card it built with it');
-  t.check(/id="staffRoster"/.test(src) && /class="rost-list"/.test(src),
+  /* rost-list became the canvas's table, .sx-tbl -- still one list of
+     people, one row each, filtered rather than split. */
+  t.check(/id="staffRoster"/.test(src) && /class="sx-tbl"/.test(src),
     'replaced by one list of people');
   t.check(/staffEligibleForRole\(s, 'worker'\)/.test(src) && /staffEligibleForRole\(s, 'delivery'\)/.test(src),
     'each row carrying whatever capacities that person has');
