@@ -94087,7 +94087,12 @@ function credCxReason(r){
     sub: r.ageDays >= 0 ? `waiting ${r.ageDays} day${r.ageDays===1?'':'s'}` : 'age not on record'};
 }
 function credOrd(n){ const t = n % 100; return (t > 10 && t < 14) ? 'th' : ({1: 'st', 2: 'nd', 3: 'rd'}[n % 10] || 'th'); }
-function credM(n){ return (Math.max(0, Number(n)||0) / 1e6).toFixed(2) + 'M'; }
+/* Millions to two places, as the design writes them -- except under
+   100,000, where "0.00M" would say a real 1,000 owed is nothing. */
+function credM(n){
+  const v = Math.max(0, Number(n) || 0);
+  return v < 1e5 ? Math.round(v).toLocaleString('en-UG') : (v / 1e6).toFixed(2) + 'M';
+}
 function credAddDaysISO(iso, n){ const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
 /* The age bands as the design names them. The boundaries are the app's
    own (AGING_BANDS): under 30, 30 to 60, 60 to 90, over 90. */
