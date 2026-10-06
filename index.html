@@ -3440,25 +3440,19 @@
     .pf-scroll{overflow:visible;}
   }
   /* ================= THE SHOP (was Presets) =========================
-     Twelve doors over three different kinds of thing: word lists that
-     only decide what a field suggests, rules that change what other
-     screens compute, and the shop's own identity, credentials and
-     sessions. Six of the twelve carried a count and six carried
-     nothing -- and the silent six were the ones that mattered.
+     Twelve doors over three different kinds of thing became one long
+     folded scroll, and the scroll became what the owner drew on the
+     canvas: four status tiles, the unset band as chains, three tabs that
+     each carry their state, and a map beside them.
 
-     Three regions on one scroll, no doors, and an index that carries
-     state on every row. The one thing kept from the old rail is
-     .pset-count, which renderPresetCounts still fills and which now
-     appears TWICE per list -- on the list and on the index -- from one
-     querySelectorAll, so the two can never disagree. */
+     The one thing kept from every earlier version is .pset-count, which
+     renderPresetCounts still fills and which appears TWICE per list --
+     on the list and on the map -- from one querySelectorAll, so the two
+     can never disagree. */
   .pset-count{
     font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;
-    font-variant-numeric:tabular-nums;color:var(--ow-ink-400);
+    font-variant-numeric:tabular-nums;color:var(--ow-ink-600);
   }
-  /* A type selector and its amount as one control (the default price rule). */
-  .input-pair{display:flex;gap:8px;}
-  .input-pair select{flex:0 0 auto;}
-  .input-pair input{flex:1;min-width:0;}
   /* Empty rather than a zero: a list nobody has filled in yet is not the
      same news as one deliberately emptied, and a column of 0s reads as a
      broken screen. */
@@ -3466,62 +3460,454 @@
 
   /* The search. Forty-odd settings behind one field, and it is the
      header's only control because the page has no single action. */
-  .pset-sf{display:flex;align-items:center;gap:8px;height:30px;padding:0 10px;width:264px;
+  .pset-sf{display:flex;align-items:center;gap:8px;height:32px;padding:0 10px;width:280px;
     box-sizing:border-box;border:1px solid var(--line);border-radius:var(--ow-r);background:var(--panel);}
   .pset-sf:focus-within{border-color:var(--navy);}
   .pset-sf > svg{width:16px;height:16px;fill:none;stroke:var(--ow-ink-400);stroke-width:1.8;
     stroke-linecap:round;stroke-linejoin:round;flex:none;}
-  .pset-sf input{all:unset;flex:1;min-width:0;font-size:12px;color:var(--ink);}
+  .pset-sf input{all:unset;flex:1;min-width:0;font-size:13px;color:var(--ink);}
   .pset-sf input::placeholder{color:var(--ow-ink-400);}
   .pset-sf-x{font-family:'IBM Plex Mono',monospace;font-size:11px;font-variant-numeric:tabular-nums;
     color:var(--ink-soft);white-space:nowrap;}
 
-  /* A region heading. Not Archivo Black: that face is the page name's,
-     and a second one at half the size competes with it. */
-  .pset-rgn + .pset-rgn{margin-top:24px;}
-  .pset-rg{display:flex;align-items:baseline;gap:12px;margin:0 0 10px;padding-bottom:8px;
-    border-bottom:1px solid var(--line);}
-  .pset-rg-t{font-size:13px;font-weight:700;margin:0;flex:none;color:var(--ink);}
-  .pset-rg-s{flex:1;min-width:0;font-size:11px;color:var(--ink-soft);line-height:1.45;
-    max-width:var(--ow-measure);}
+  /* ---- shared marks ------------------------------------------------ */
+  #tab-presets svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  /* A state dot: round and green is set, square and amber needs you,
+     hollow is read from another screen. Shape as well as hue, because
+     hue alone fails in the yard at midday. */
+  .pset-ix-d{width:7px;height:7px;flex:none;border-radius:50%;background:var(--ow-steel-100);display:inline-block;}
+  .pset-ix-d.is-good{background:var(--ow-verdigris);}
+  .pset-ix-d.is-warn{background:var(--ow-amber);border-radius:var(--ow-r-2);}
+  .pset-ix-d.is-read{background:transparent;border:1px solid var(--ow-ink-400);box-sizing:border-box;}
+  /* A door to another screen, tinted with the rail group it opens.
+     Identity, never status. */
+  .pset-door{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:4px;
+    height:22px;padding:0 8px;border-radius:var(--ow-r-pill);font-size:11px;font-weight:600;
+    white-space:nowrap;background:var(--ow-rule-soft);color:var(--ow-ink-600);max-width:100%;min-width:0;}
+  .pset-door:hover{filter:brightness(.96);}
+  .pset-door:focus-visible{outline:2px solid var(--ow-sky);outline-offset:2px;}
+  .pset-door svg{width:12px;height:12px;flex:none;}
+  .pset-d-sell{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+  .pset-d-buy{background:var(--ow-indigo-soft);color:var(--ow-indigo);}
+  .pset-d-cat{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .pset-d-money{background:var(--ow-sky-soft);color:var(--ow-sky);}
+  .pset-d-ins{background:var(--ow-plum-soft);color:var(--ow-plum);}
+  .pset-d-setup{background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+  .pset-door-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
-  /* Six lists on one screen instead of behind six doors. They are all
-     the same shape -- a list of words you add and delete -- so a door
-     each was six doors to see one kind of thing. */
-  .pset-wd{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}
-  .pset-wd-b{padding:12px;border-top:1px solid var(--ow-rule-soft);
+  /* ---- the four tiles ---------------------------------------------- */
+  .pset-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:16px;
+    background:var(--ow-paper);border:1px solid var(--ow-steel-100);border-radius:var(--ow-r-lg);overflow:hidden;}
+  .pset-tile{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:10px;
+    padding:14px 16px;min-width:0;border-left:1px solid var(--ow-rule-soft);color:var(--ink);}
+  .pset-tile:first-child{border-left:0;}
+  .pset-tile:hover{background:var(--ow-paper-2);}
+  .pset-tile:focus-visible{outline:2px solid var(--ow-sky);outline-offset:-2px;}
+  .pset-tile-h{display:flex;align-items:center;gap:8px;}
+  .pset-tile-ic{width:26px;height:26px;border-radius:var(--ow-r-7);background:var(--ow-rule-soft);
+    color:var(--ow-ink-600);display:flex;align-items:center;justify-content:center;flex:none;}
+  .pset-tile-ic svg{width:14px;height:14px;}
+  .pset-tile-t{font-size:12px;font-weight:600;flex:1;min-width:0;}
+  .pset-tile-go{color:var(--ow-ink-400);display:flex;}
+  .pset-tile-go svg{width:14px;height:14px;}
+  .pset-tile-v{display:flex;flex-direction:column;gap:8px;flex:1;min-width:0;}
+  .pset-tile-fig{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;}
+  .pset-tile-big{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-size:22px;font-weight:600;line-height:1;}
+  .pset-tile-of{font-size:12px;color:var(--ow-ink-600);}
+  .pset-tile-q{font-size:12px;color:var(--ow-ink-600);line-height:1.4;}
+  .pset-tile-s{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ow-ink-600);margin-top:auto;}
+  .pset-tile-s.is-warn{color:var(--ow-amber-ink);}
+  .pset-tile-s.is-good{color:var(--ow-verdigris);}
+  /* Coverage: what can sell, what waits on the rule, what waits on
+     something else. One bar, three inks. */
+  .pset-cov{display:flex;gap:2px;height:8px;border-radius:var(--ow-r-2);overflow:hidden;background:var(--ow-rule-soft);}
+  .pset-cov-ok{background:var(--ow-steel-800);}
+  .pset-cov-w{background:var(--ow-amber);}
+  .pset-cov-o{background:var(--ow-steel-300);}
+  /* The receipt, small enough to sit in a tile. */
+  .pset-tile-v:has(.pset-mini){flex-direction:row;align-items:flex-start;gap:12px;}
+  .pset-mini{flex:none;width:64px;display:flex;flex-direction:column;filter:drop-shadow(0 1px 1.5px rgba(27,36,56,.14));}
+  .pset-mini-p{display:flex;flex-direction:column;gap:3px;padding:7px 7px 5px;background:var(--ow-paper);
+    border-radius:var(--ow-r-2);}
+  .pset-mini-p i{display:block;height:2px;border-radius:var(--ow-r-2);background:var(--ow-steel-300);}
+  .pset-mini-name{align-self:center;width:38px;height:4px !important;background:var(--ow-ink-900) !important;}
+  .pset-mini-addr{align-self:center;width:44px;height:3px !important;background:var(--ow-steel-300);}
+  .pset-mini-tel{align-self:center;width:32px;}
+  .pset-mini-p .is-miss{background:var(--ow-amber) !important;}
+  .pset-mini-p .is-none{opacity:.35;}
+  .pset-mini-rule{height:1px !important;background:var(--ow-rule-soft) !important;margin:2px 0;}
+  .pset-mini-ln{width:100%;}
+  .pset-mini-ln.is-2{width:80%;}
+  .pset-mini-ln.is-3{width:90%;}
+  .pset-mini-tot{height:3px !important;background:var(--ow-ink-900) !important;}
+  .pset-mini-tear{display:block;width:64px;height:5px;}
+  .pset-mini-tear path{fill:var(--ow-paper);stroke:none;}
+  .pset-rls{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;font-size:12px;line-height:1.25;padding-top:2px;}
+  .pset-rl{display:flex;align-items:center;gap:6px;color:var(--ow-ink-600);min-width:0;}
+  .pset-rl > span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pset-rl svg{width:12px;height:12px;flex:none;color:var(--ow-verdigris);}
+  .pset-rl .pset-ix-d{margin:0 2px;}
+  .pset-rl.is-miss{color:var(--ow-amber-ink);font-weight:600;}
+  .pset-rl.is-print svg{color:var(--ow-ink-600);}
+  .pset-rl b{font-weight:600;color:var(--ow-ink-600);}
+  .pset-rl b.is-on{color:var(--ow-verdigris);}
+  /* A provider, the way the rail draws a group: a monogram, a name, and
+     its state as a dot and a word. */
+  .pset-pvs{display:flex;flex-direction:column;gap:6px;font-size:12px;}
+  .pset-pv{display:flex;align-items:center;gap:8px;}
+  .pset-pv-m{width:18px;height:18px;border-radius:var(--ow-r-4);background:var(--ow-rule-soft);color:var(--ow-ink-600);
+    font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;}
+  .pset-pv-m.is-live{background:var(--ow-steel-800);color:var(--ow-paper);}
+  .pset-pv-n{flex:1;min-width:0;}
+  .pset-pv-s{display:inline-flex;align-items:center;gap:5px;color:var(--ow-ink-600);}
+  .pset-pv-s i{width:7px;height:7px;border-radius:50%;border:1px solid var(--ow-ink-400);box-sizing:border-box;}
+  .pset-pv-s.is-live{color:var(--ow-verdigris);font-weight:600;}
+  .pset-pv-s.is-live i{background:var(--ow-verdigris);border-color:var(--ow-verdigris);}
+  .pset-pv-s.is-sandbox i{background:var(--ow-steel-300);border-color:var(--ow-steel-300);}
+  /* Every device signed in, and how lately it was heard from. */
+  .pset-devs{display:flex;align-items:flex-end;gap:10px;min-width:0;}
+  .pset-dv{display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--ow-ink-600);}
+  .pset-dv svg{width:18px;height:18px;}
+  .pset-dv.is-quiet{color:var(--ow-amber-ink);}
+  .pset-dv-d{width:6px;height:6px;border-radius:50%;background:var(--ow-steel-300);}
+  .pset-dv-d.is-live{background:var(--ow-verdigris);}
+  .pset-dv-d.is-quiet{background:var(--ow-amber);border-radius:var(--ow-r-2);}
+  .pset-dv-more{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:11px;color:var(--ow-ink-600);padding-bottom:10px;}
+  .pset-devs-n{margin-left:auto;}
+
+  /* ---- the band: one chain per unset setting ----------------------- */
+  .pset-band{background:var(--ow-amber-faint);border:1px solid #EBD9B4;border-radius:var(--ow-r-lg);
+    overflow:hidden;margin-bottom:16px;}
+  .pset-band-t{display:flex;align-items:center;gap:8px;margin:0;padding:10px 16px;font-size:13px;font-weight:600;
+    color:var(--ow-amber-ink);}
+  .pset-band-t svg{width:16px;height:16px;flex:none;}
+  .pset-ch{display:grid;grid-template-columns:200px 22px minmax(150px,200px) 22px minmax(0,1fr) auto;
+    align-items:center;gap:10px;padding:12px 16px;background:var(--ow-paper);border-top:1px solid #EBD9B4;}
+  .pset-ch-s{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0;}
+  .pset-ch-s b{font-weight:600;font-size:13px;}
+  .pset-ch-ar{color:var(--ow-ink-400);display:flex;}
+  .pset-ch-ar svg{width:18px;height:18px;}
+  .pset-ch-i{display:flex;align-items:center;gap:8px;min-width:0;}
+  .pset-ch-n{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-size:22px;font-weight:600;}
+  .pset-ch-ic{display:flex;color:var(--ow-ink-600);}
+  .pset-ch-ic svg{width:22px;height:22px;}
+  .pset-ch-w{font-size:12px;color:var(--ow-ink-600);line-height:1.3;}
+  .pset-ch-l{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0;}
+  .pset-ch-lead{font-size:11px;color:var(--ow-ink-600);margin-right:2px;}
+  .pset-lk{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:var(--ow-r-pill);
+    font-size:11px;font-weight:600;white-space:nowrap;}
+  .pset-lk svg{width:12px;height:12px;}
+  .pset-ch-a{justify-self:end;}
+
+  /* ---- the three tabs ---------------------------------------------- */
+  .pset-tabs{display:flex;flex-wrap:wrap;align-items:stretch;gap:4px;border-bottom:1px solid var(--ow-rule);margin:0 0 16px;}
+  .pset-tab{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:10px;height:58px;
+    padding:0 16px 0 10px;border-bottom:2px solid transparent;margin-bottom:-1px;color:var(--ow-ink-600);}
+  .pset-tab:hover{color:var(--ink);}
+  .pset-tab:focus-visible{outline:2px solid var(--ow-sky);outline-offset:-2px;border-radius:var(--ow-r-sm);}
+  .pset-tab.is-on{border-bottom-color:var(--ow-steel-950);color:var(--ink);}
+  .pset-tab-ic{width:30px;height:30px;border-radius:var(--ow-r-sm);background:var(--ow-rule-soft);color:var(--ow-ink-600);
+    display:flex;align-items:center;justify-content:center;flex:none;}
+  .pset-tab-ic svg{width:16px;height:16px;}
+  .pset-tab.is-on .pset-tab-ic{background:var(--ow-steel-950);color:var(--ow-paper);}
+  .pset-tab-b{display:flex;flex-direction:column;line-height:1.25;}
+  .pset-tab-t{font-size:14px;font-weight:600;}
+  .pset-tab-s{font-size:11px;color:var(--ow-ink-600);}
+  .pset-tab-n{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:var(--ow-r-pill);
+    font-size:11px;font-weight:600;white-space:nowrap;background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+  .pset-tab-n:empty{display:none;}
+  .pset-tab-n.is-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .pset-tab-n.is-hit{background:var(--ow-sky-soft);color:var(--ow-sky);}
+  /* While a search is running every tab's matches are on the page at
+     once, so no tab is "the one you are on". */
+  #tab-presets.is-searching .pset-tab-ic{background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+
+  /* ---- the regions and their panels -------------------------------- */
+  .pset-rgn{display:flex;flex-direction:column;gap:12px;}
+  .pset-rgn[hidden]{display:none;}
+  .pset-rgn + .pset-rgn:not([hidden]){margin-top:4px;}
+  .pset-pan{scroll-margin-top:150px;}
+  .pset-pan.is-flash{animation:psetFlash 1.4s ease-out 1;}
+  @keyframes psetFlash{0%{outline:3px solid var(--ow-sky-soft);}100%{outline:3px solid transparent;}}
+  .pset-pan .ow-pan-h{height:40px;}
+  .pset-pan .ow-pan-h .ow-cp:empty{display:none;}
+  .pset-pan-nt{margin-left:auto;}
+  .pset-pan .ow-pan-h .ow-cp + .pset-pan-nt{margin-left:auto;}
+  .pset-pan-hb{margin-left:8px;}
+  .pset-pan-m{padding:10px 14px;border-top:1px solid var(--ow-rule-soft);}
+  /* .ow-mini carries its own rule and gutter and is declared later in
+     the file; inside these panels the panel draws the rule, full width. */
+  #tab-presets .ow-mini.pset-pan-m{max-width:none;padding:10px 14px;}
+  #tab-presets .pset-pan-f > .ow-mini{border-top:0;padding:0;}
+  .pset-pan-f{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;border-top:1px solid var(--ow-rule-soft);}
+  .pset-pan-f > .ow-mini,.pset-pan-f > .pset-rr-c,.pset-pan-f > .pset-mk-ft{flex:1 1 240px;min-width:0;margin:0;}
+  .pset-drv{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;margin-left:auto;}
+  .pset-drv-l{font-size:11px;color:var(--ow-ink-600);}
+  .pset-g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start;}
+  /* Ink by default: renderPresetDefaultMarkup writes both "no default
+     set" and the rule in words into this one node, and painting the
+     first of those verdigris says a blank is good news. */
+  .pset-rr-c{margin:0;font-size:11px;color:var(--ink-soft);line-height:1.45;max-width:var(--ow-measure);}
+  .pset-rr-c:empty{display:none;}
+
+  /* ---- the default price rule, as a sum ----------------------------- */
+  .pset-mk{display:flex;flex-direction:column;gap:10px;padding:14px;}
+  .pset-mk-r{display:grid;grid-template-columns:96px minmax(0,1fr) 24px minmax(0,1.5fr) 24px minmax(0,1fr);
+    align-items:stretch;gap:10px;}
+  .pset-mk-l{display:flex;flex-direction:column;justify-content:center;}
+  .pset-mk-side{font-size:13px;font-weight:600;}
+  .pset-mk-per{font-size:11px;color:var(--ow-ink-600);}
+  .pset-mk-c,.pset-mk-out{display:flex;flex-direction:column;justify-content:center;gap:2px;padding:8px 12px;
+    border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);min-width:0;}
+  .pset-mk-c{background:var(--ow-paper-2);}
+  .pset-mk-k{font-size:11px;color:var(--ow-ink-600);}
+  .pset-mk-f{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-size:16px;font-weight:600;}
+  .pset-op{align-self:center;width:24px;height:24px;border-radius:50%;background:var(--ow-rule-soft);color:var(--ow-ink-600);
+    display:flex;align-items:center;justify-content:center;}
+  .pset-op svg{width:12px;height:12px;}
+  .pset-mk-x{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--ow-rule);
+    border-radius:var(--ow-r-sm);min-width:0;}
+  .pset-mk-in{box-sizing:border-box;flex:none;width:84px;height:32px;padding:0 10px;border:1px solid var(--line);border-radius:var(--ow-r);
+    font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:13px;
+    text-align:right;background:var(--panel);color:var(--ink);}
+  .pset-mk-add{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-size:12px;font-weight:600;color:var(--ow-sky);white-space:nowrap;}
+  .pset-mk-add.is-none{color:var(--ow-ink-600);font-weight:400;font-family:'Figtree',system-ui,sans-serif;}
+  /* The answer: solid navy once there is a rule, an open dashed box
+     while there is none -- a sum that has not been done yet. */
+  .pset-mk-out{border-style:dashed;border-color:var(--ow-steel-300);}
+  .pset-mk-out .pset-mk-f{font-size:18px;color:var(--ow-ink-600);}
+  .pset-mk-out.is-set{background:var(--ow-steel-950);border-style:solid;border-color:var(--ow-steel-950);}
+  .pset-mk-out.is-set .pset-mk-k{color:var(--ow-navy-ink);}
+  .pset-mk-out.is-set .pset-mk-f{color:var(--ow-paper);}
+  .pset-mk-ft{display:flex;flex-direction:column;gap:2px;}
+  .pset-mk-ex{font-size:11px;color:var(--ow-ink-600);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pset-mk-ex:empty{display:none;}
+  /* Two choices as one control, the shop's own segmented switch. */
+  .pset-seg2{display:flex;flex:none;border:1px solid var(--line);border-radius:var(--ow-r);overflow:hidden;height:32px;}
+  .pset-seg2-b{all:unset;box-sizing:border-box;cursor:pointer;min-width:40px;padding:0 10px;font-size:12px;font-weight:600;
+    color:var(--ow-ink-600);background:var(--ow-paper);display:flex;align-items:center;justify-content:center;}
+  .pset-seg2-b + .pset-seg2-b{border-left:1px solid var(--line);}
+  .pset-seg2-b.is-on{background:var(--ow-steel-950);color:var(--ow-paper);}
+  .pset-seg2-b:focus-visible{outline:2px solid var(--ow-sky);outline-offset:-2px;}
+
+  /* ---- the order board's steps -------------------------------------- */
+  .pset-pipe{display:flex;align-items:center;gap:8px;padding:16px 14px 14px;}
+  .pset-pipe-n{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;padding:10px 12px;
+    border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);background:var(--ow-paper);}
+  .pset-pipe-n.is-off{border-style:dashed;border-color:var(--ow-steel-300);background:var(--ow-paper-2);}
+  .pset-pipe-h{display:flex;align-items:center;gap:6px;min-width:0;}
+  .pset-pipe-i{width:18px;height:18px;border-radius:50%;background:var(--ow-steel-800);color:var(--ow-paper);
+    font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:11px;
+    display:flex;align-items:center;justify-content:center;flex:none;}
+  .pset-pipe-n.is-off .pset-pipe-i{background:transparent;border:1px solid var(--ow-ink-400);color:var(--ow-ink-600);box-sizing:border-box;}
+  .pset-pipe-t{font-size:12px;font-weight:600;min-width:0;line-height:1.2;}
+  .pset-pipe-n.is-off .pset-pipe-t{color:var(--ow-ink-600);}
+  .pset-pipe-v{display:flex;align-items:center;gap:6px;}
+  .pset-pipe-v input{box-sizing:border-box;flex:none;width:64px;height:30px;padding:0 8px;border:1px solid var(--line);
+    border-radius:var(--ow-r);font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-size:13px;text-align:right;background:var(--panel);color:var(--ink);}
+  .pset-pipe-u{font-size:11px;color:var(--ow-ink-600);white-space:nowrap;}
+  .pset-pipe-u:empty{display:none;}
+  .pset-pipe-ar{color:var(--ow-ink-400);display:flex;flex:none;}
+  .pset-pipe-ar svg{width:16px;height:16px;}
+
+  /* A switch: the box is the track, the dot is the thumb. A real
+     checkbox underneath, so it is reached and toggled by the keyboard. */
+  .pset-swl{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;border-top:1px solid var(--ow-rule-soft);
+    cursor:pointer;font-size:13px;}
+  .pset-swl-ic{width:16px;height:16px;flex:none;color:var(--ow-ink-600);}
+  .pset-swl-t{font-weight:600;flex:0 1 auto;min-width:0;}
+  .pset-switch{appearance:none;-webkit-appearance:none;margin:0;flex:none;width:38px;height:22px;border-radius:var(--ow-r-pill);
+    background:var(--ow-steel-300);position:relative;cursor:pointer;transition:background .15s;}
+  .pset-switch::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;
+    background:var(--ow-paper);transition:left .15s;}
+  .pset-switch:checked{background:var(--ow-verdigris);}
+  .pset-switch:checked::after{left:19px;}
+  .pset-switch:focus-visible{outline:2px solid var(--ow-sky);outline-offset:2px;}
+  .pset-sw-n{margin:0;padding:0 14px 12px 62px;font-size:11px;color:var(--ink-soft);line-height:1.5;max-width:var(--ow-measure);}
+  .pset-sw-n:empty,.pset-sw-n:not(:has(.pset-note-extra)){display:none;}
+
+  /* ---- agent share: the margin, forked ------------------------------ */
+  .pset-ag{display:flex;flex-direction:column;}
+  .pset-ag-r{display:flex;flex-direction:column;gap:8px;padding:12px 14px;}
+  .pset-ag-r + .pset-ag-r{border-top:1px solid var(--ow-rule-soft);}
+  .pset-ag-h{display:flex;align-items:center;gap:8px;}
+  .pset-ag-h .pset-mk-side{flex:1;}
+  .pset-step{display:flex;align-items:center;height:32px;border:1px solid var(--line);border-radius:var(--ow-r);overflow:hidden;}
+  .pset-step-b{all:unset;box-sizing:border-box;cursor:pointer;width:32px;height:30px;display:flex;align-items:center;
+    justify-content:center;color:var(--ow-ink-600);background:var(--ow-paper);}
+  .pset-step-b:hover{background:var(--ow-paper-2);color:var(--ink);}
+  .pset-step-b:focus-visible{outline:2px solid var(--ow-sky);outline-offset:-2px;}
+  .pset-step-b svg{width:12px;height:12px;}
+  .pset-step input{all:unset;box-sizing:border-box;width:40px;height:30px;text-align:right;
+    border-left:1px solid var(--line);font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-size:13px;font-weight:600;color:var(--ink);}
+  .pset-step-u{font-size:12px;font-weight:600;padding:0 6px 0 2px;border-right:1px solid var(--line);height:30px;
+    display:flex;align-items:center;color:var(--ow-ink-600);}
+  .pset-fork{display:grid;grid-template-columns:minmax(0,1fr) 28px minmax(0,1.2fr);align-items:center;}
+  .pset-fork-src{display:flex;flex-direction:column;padding:8px 10px;border:1px solid var(--ow-rule);
+    border-radius:var(--ow-r-sm);background:var(--ow-paper-2);min-width:0;}
+  .pset-fork-ln{width:28px;height:74px;color:var(--ow-steel-300);}
+  .pset-fork-out{display:flex;flex-direction:column;gap:6px;min-width:0;}
+  .pset-fork-k,.pset-fork-a{display:flex;align-items:center;gap:8px;padding:5px 10px;border-radius:var(--ow-r-sm);}
+  .pset-fork-k{background:var(--ow-sky-soft);color:var(--ow-sky);}
+  .pset-fork-a{background:var(--ow-indigo-soft);color:var(--ow-indigo);}
+  .pset-fork-k span,.pset-fork-a span{font-size:11px;font-weight:600;flex:1;}
+  .pset-fork-k b,.pset-fork-a b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-size:13px;font-weight:600;}
+
+  /* ---- one-number rules ---------------------------------------------- */
+  .pset-tr{display:flex;align-items:center;gap:12px;min-height:56px;padding:0 14px;border-top:1px solid var(--ow-rule-soft);}
+  .ow-pan-h + .pset-tr{border-top:0;}
+  .pset-tr-ic{width:18px;height:18px;flex:none;color:var(--ow-ink-600);}
+  .pset-tr-b{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:3px;}
+  .pset-tr-n{font-size:13px;font-weight:600;}
+  .pset-tr-b .pset-door{height:18px;}
+  .pset-tr-in{box-sizing:border-box;width:64px;height:32px;padding:0 8px;border:1px solid var(--line);border-radius:var(--ow-r);
+    font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:13px;
+    text-align:right;background:var(--panel);color:var(--ink);}
+  .pset-tr-u{width:40px;font-size:11px;color:var(--ow-ink-600);}
+
+  /* ---- read here, set there ------------------------------------------ */
+  .pset-el{display:grid;grid-template-columns:minmax(0,1fr) auto 128px;align-items:center;gap:12px;min-height:42px;
+    padding:0 14px;border-top:1px solid var(--ow-rule-soft);}
+  .pset-el:first-child{border-top:0;}
+  .pset-el-n{font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pset-el-v{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-size:13px;font-weight:600;white-space:nowrap;}
+  .pset-el-u{font-weight:400;color:var(--ow-ink-600);margin-left:3px;}
+  .pset-el-d{justify-content:space-between;width:128px;}
+
+  /* ---- what the shop charges for ------------------------------------- */
+  /* A service is a row of the same grammar as a rule -- what it is on the
+     left, what it comes to on the right. The name gives way and the
+     figure never does: a clipped amount is not a shortened amount, it is
+     a wrong one. */
+  .pset-sv{padding:0 14px;}
+  .pset-sv .preset-empty{padding:12px 0;}
+  .pset-sv-r{display:flex;align-items:center;gap:10px;min-height:44px;padding:6px 0;
+    border-bottom:1px solid var(--ow-rule-soft);}
+  .pset-sv-r:last-child{border-bottom:0;}
+  .pset-sv-n{flex:1;min-width:0;font-size:13px;color:var(--ink);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pset-sv-v{flex:none;display:flex;align-items:center;gap:6px;}
+  .pset-sv-v select{height:30px;padding:0 6px;border:1px solid var(--line);border-radius:var(--ow-r);
+    font-size:12px;font-family:inherit;background:var(--panel);color:var(--ink);}
+  .pset-sv-v input{box-sizing:border-box;width:96px;height:30px;padding:0 8px;border:1px solid var(--line);border-radius:var(--ow-r);
+    font-size:13px;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;text-align:right;background:var(--panel);color:var(--ink);}
+  .pset-sv-x{all:unset;box-sizing:border-box;cursor:pointer;flex:none;display:inline-flex;
+    align-items:center;justify-content:center;width:26px;height:26px;border-radius:var(--ow-r-6);
+    color:var(--ow-ink-400);}
+  .pset-sv-x:hover{background:var(--ow-paper-2);color:var(--ow-crimson);}
+  .pset-sv-x svg{width:15px;height:15px;}
+  /* The add row of a panel: a field and its button, on the panel's own
+     ground so it reads as the next line of the list. */
+  .pset-add{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--ow-paper-2);
+    border-top:1px solid var(--ow-rule-soft);max-width:none;margin:0;}
+  .pset-add input{flex:1;min-width:0;box-sizing:border-box;height:32px;padding:0 10px;border:1px solid var(--line);
+    border-radius:var(--ow-r);font:inherit;font-size:13px;background:var(--panel);color:var(--ink);}
+  .ow-pan-h + .pset-add{border-top:0;}
+
+  /* ---- on paper: the fields and the receipt they print --------------- */
+  .pset-paper{display:grid;grid-template-columns:minmax(0,1fr) 300px;}
+  .pset-paper-f{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:14px;align-content:start;}
+  .pset-fl{display:flex;flex-direction:column;gap:4px;min-width:0;}
+  .pset-fl-w{grid-column:1 / -1;}
+  .pset-fl > label{font-size:11px;font-weight:600;color:var(--ow-ink-600);}
+  .pset-fl-o{font-weight:400;}
+  .pset-fl input,.pset-fl textarea{box-sizing:border-box;width:100%;min-width:0;padding:7px 10px;border:1px solid var(--line);
+    border-radius:var(--ow-r);font:inherit;font-size:13px;background:var(--panel);color:var(--ink);}
+  .pset-fl input{height:34px;}
+  .pset-fl textarea{resize:vertical;}
+  .pset-fl input:placeholder-shown{border-color:var(--ow-steel-100);}
+  #preset_shop_address:placeholder-shown,#preset_shop_name:placeholder-shown{border-color:#E3C6A2;background:var(--ow-amber-faint);}
+  .pset-paper-f .pset-swl{border-top:1px solid var(--ow-rule-soft);padding:12px 0 0;}
+  .pset-rcpt-w{background:var(--ow-rule-soft);padding:20px 0;display:flex;justify-content:center;align-items:flex-start;
+    border-left:1px solid var(--ow-rule-soft);}
+  .pset-rcpt{width:220px;background:var(--ow-paper);padding:16px 14px 12px;position:relative;
+    box-shadow:var(--ow-lift);font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+    font-size:11px;line-height:1.5;color:var(--ink);}
+  .pset-rcpt p{margin:0;text-align:center;}
+  .pset-rc-name{font-family:'Figtree',system-ui,sans-serif;font-weight:700;font-size:13px;letter-spacing:.02em;}
+  .pset-rc-c{color:var(--ow-ink-600);overflow-wrap:anywhere;}
+  .pset-rc-gap{margin:3px auto !important;width:150px;padding:1px 0;border-radius:var(--ow-r-3);background:var(--ow-amber-soft);
+    color:var(--ow-amber-ink);font-family:'Figtree',system-ui,sans-serif;font-size:11px;}
+  .pset-rc-rule{display:block;height:0;border-top:1px dashed var(--ow-steel-300);margin:8px 0;}
+  .pset-rc-ln{display:flex;justify-content:space-between;gap:12px;margin:5px 0;}
+  .pset-rc-ln i{display:block;height:4px;border-radius:2px;background:var(--ow-steel-100);}
+  .pset-rc-ln i:first-child{width:60%;}
+  .pset-rc-ln i:last-child{width:22%;}
+  .pset-rc-ln.is-2 i:first-child{width:50%;}
+  .pset-rc-ln.is-3 i:first-child{width:66%;}
+  .pset-rc-tot{display:flex;justify-content:space-between;align-items:center;}
+  .pset-rc-tot b{font-weight:600;}
+  .pset-rc-tot i{display:block;width:26%;height:5px;border-radius:2px;background:var(--ow-ink-900);}
+  .pset-rc-tear{position:absolute;left:0;right:0;bottom:-6px;width:100%;height:6px;}
+  .pset-rc-tear path{fill:var(--ow-paper);stroke:none;}
+
+  /* ---- taking mobile money ------------------------------------------- */
+  .momo-answer{margin:0;padding:12px 14px;font-size:13px;line-height:1.5;color:var(--ink-soft);
+    background:var(--ow-paper-2);border-bottom:1px solid var(--ow-rule-soft);max-width:none;}
+  .momo-answer b{color:var(--ink);font-weight:600;}
+  #momoBand .cb-openbar{margin:12px 14px;}
+  .pset-act{display:grid;grid-template-columns:200px minmax(0,1fr);border-bottom:1px solid var(--ow-rule-soft);}
+  .pset-act-sum{padding:12px 14px;display:flex;flex-direction:column;gap:9px;border-right:1px solid var(--ow-rule-soft);}
+  .pset-act-sum:empty{display:none;}
+  .pset-act:has(.pset-act-sum:empty){grid-template-columns:minmax(0,1fr);}
+  .pset-act-l{font-size:11px;color:var(--ow-ink-600);}
+  .pset-act-r{display:flex;align-items:center;gap:8px;font-size:13px;}
+  .pset-act-r span{flex:1;}
+  .pset-act-r b,.pset-act-t b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:600;}
+  .pset-act-d{width:8px;height:8px;border-radius:50%;flex:none;}
+  .pset-act-d.is-ok{background:var(--ow-verdigris);}
+  .pset-act-d.is-wait{background:var(--ow-amber);border-radius:var(--ow-r-2);}
+  .pset-act-d.is-bad{background:var(--ow-crimson);border-radius:0;transform:rotate(45deg);}
+  .pset-act-t{display:flex;align-items:baseline;gap:6px;padding-top:8px;border-top:1px solid var(--ow-rule-soft);}
+  .pset-act-t span{flex:1;font-size:11px;color:var(--ow-ink-600);}
+  .pset-act .ow-tbl{min-width:0;overflow-x:auto;}
+  .pset-pr{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:12px;width:100%;
+    min-height:60px;padding:10px 14px;border-top:1px solid var(--ow-rule-soft);}
+  .pset-prov > .momo-p-h:first-child .pset-pr{border-top:0;}
+  .pset-pr:hover{background:var(--ow-paper-2);}
+  .pset-pr:focus-visible{outline:2px solid var(--ow-sky);outline-offset:-2px;}
+  .pset-pr-m{width:32px;height:32px;border-radius:var(--ow-r-sm);background:var(--ow-rule-soft);color:var(--ow-ink-600);
+    font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex:none;}
+  .pset-pr-m.is-live{background:var(--ow-steel-800);color:var(--ow-paper);}
+  .pset-pr-b{display:flex;flex-direction:column;gap:2px;flex:0 1 220px;min-width:0;}
+  .pset-pr-n{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;}
+  .pset-pr-s{font-size:11px;color:var(--ow-ink-600);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pset-keys{flex:1;min-width:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--ow-ink-600);}
+  .pset-key-s{display:inline-flex;align-items:center;gap:4px;}
+  .pset-key-s svg{width:14px;height:14px;flex:none;}
+  .pset-key-s.is-ok{color:var(--ink);}
+  .pset-key-s.is-ok svg{color:var(--ow-verdigris);}
+  .pset-key-ln{width:16px;height:0;border-top:1px dashed var(--ow-steel-300);}
+  .pset-key-ln.is-ok{border-top:1px solid var(--ow-verdigris);}
+  .pset-pr .ls-p-cv{width:14px;height:14px;flex:none;color:var(--ow-ink-400);}
+  .pset-pr.is-open .ls-p-cv{transform:rotate(90deg);}
+  .momo-x{background:var(--ow-paper-2);border-top:1px solid var(--ow-rule-soft);}
+
+  /* ---- the word lists ------------------------------------------------- */
+  /* Four flat lists side by side. They are all the same shape -- a list
+     of words you add and delete -- so they read as one row of columns. */
+  .pset-wd{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));}
+  .pset-wd-b{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:12px 14px;
     border-left:1px solid var(--ow-rule-soft);min-width:0;}
-  .pset-wd-b:nth-child(2n+1){border-left:0;}
-  /* Categories and Attributes are not flat lists of words: a category
-     carries its sub-categories and a default photo, an attribute carries
-     its values. Neither fits a 400px column beside a row of chips, so
-     the grid holds the four flat lists and the two-level ones take the
-     width. */
-  .pset-wd-w{padding:12px;border-top:1px solid var(--ow-rule-soft);}
-
-  /* ---- Folding ------------------------------------------------------
-     Most of this page is set once and never touched. Folded it is a
-     dozen lines; what keeps it from being the twelve doors again is
-     that these are not exclusive, every header carries its own state,
-     and the search opens what it finds. ------------------------------ */
-  .pset-fold-h{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;
-    gap:8px;width:100%;height:34px;padding:0 12px;background:var(--ow-paper-2);
-    border-bottom:1px solid transparent;}
-  .pset-fold.is-open > .pset-fold-h{border-bottom-color:var(--ow-rule-soft);}
-  .pset-fold-h:hover{background:var(--ow-steel-050);}
-  .pset-fold-h:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
-  .pset-fold-cv{width:11px;height:11px;flex:none;color:var(--ow-ink-400);fill:none;
-    stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
-  .pset-fold.is-open .pset-fold-cv{transform:rotate(90deg);}
-  /* A folded panel is one line, so it loses the shadow of a region and
-     reads as a row in a table of contents. */
-  .pset-fold:not(.is-open){border-radius:var(--ow-r-lg);}
-  .pset-fold:not(.is-open) > .pset-fold-h{border-radius:var(--ow-r-lg);}
-  .pset-fold-a{display:flex;justify-content:flex-end;padding:10px 12px 0;}
-  /* Two folded panels in a row sit as one list rather than as two
-     boxes with a gap between them. */
-  .pset-fold:not(.is-open) + .pset-fold.pset-pan-2:not(.is-open){margin-top:6px;}
-
+  .pset-wd-b:first-child{border-left:0;}
+  .pset-wd-b > *{max-width:100%;}
+  .pset-wd-b > div{align-self:stretch;}
+  .pset-wd-h{display:flex;align-items:baseline;gap:6px;}
+  .pset-wd-n{font-size:13px;font-weight:600;color:var(--ink);}
+  .pset-wd-b .preset-inline-add,.pset-add.preset-inline-add{margin:0;max-width:none;}
+  .pset-wd-b .preset-inline-add input{padding:6px 8px;font-size:12px;}
+  .pset-wd-b .preset-inline-add button{padding:6px 12px;}
+  .pset-pan .ow-pan-h .pset-count{margin-left:2px;}
+  .pset-pan .ow-pan-h .pset-count + .ow-pan-n{margin-left:auto;}
   /* ---- A category is a row you open, not a row that holds everything.
      Seventeen categories, 64 sub-categories and 39 of them under one
      name made the flat version 2,100px before the second list began.
@@ -3636,112 +4022,75 @@
   #psetWordsBand .cb-openbar-w b{color:var(--ink);}
   #psetWordsBand .cb-openbar-a .btn-ghost{background:var(--panel);
     border-color:var(--line);color:var(--ink-soft);}
-  .pset-wd-w .preset-row:last-child{border-bottom:0;}
-  .pset-wd-h{display:flex;align-items:baseline;gap:6px;margin-bottom:2px;}
-  .pset-wd-n{font-size:12px;font-weight:600;color:var(--ink);}
-  .pset-wd-u{margin:0 0 8px;font-size:11px;color:var(--ink-soft);line-height:1.45;
-    max-width:var(--ow-measure);}
-  .pset-wd-b .preset-inline-add,.pset-wd-w .preset-inline-add{margin-bottom:8px;}
-  .pset-wd-b .preset-inline-add input,.pset-wd-w .preset-inline-add input{padding:6px 8px;font-size:12px;}
-  .pset-wd-b .preset-inline-add button,.pset-wd-w .preset-inline-add button{padding:6px 12px;}
-
-  /* A rule is a row that states what it drives. That sentence is why
-     the old panes carried 87 words of prose above the field; beside the
-     control it is one line. */
-  .pset-rr{display:flex;align-items:flex-start;gap:16px;padding:10px 12px;
-    border-top:1px solid var(--ow-rule-soft);}
-  .pset-rr.is-unset{background:var(--ow-amber-faint);}
-  .pset-rr-b{flex:1;min-width:0;}
-  .pset-rr-n{font-size:13px;font-weight:500;color:var(--ink);line-height:1.3;}
-  .pset-rr-d{margin:2px 0 0;font-size:11px;color:var(--ink-soft);line-height:1.45;
-    max-width:var(--ow-measure);}
-  /* Ink by default: renderPresetDefaultMarkup writes both "no default
-     set" and the rule in words into this one node, and painting the
-     first of those verdigris says a blank is good news. The row's own
-     unset state is what carries the amber. */
-  .pset-rr-c{margin:4px 0 0;font-size:11px;color:var(--ink-soft);line-height:1.45;
-    max-width:var(--ow-measure);}
-  .pset-rr.is-unset .pset-rr-c{color:var(--ow-amber-ink);}
-  .pset-rr-c:empty{display:none;}
-  .pset-rr-w{margin:4px 0 0;font-size:11px;color:var(--ow-amber-ink);line-height:1.45;
-    max-width:var(--ow-measure);}
-  .pset-rr-v{flex:none;width:212px;display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
-  .pset-rr-p{display:flex;align-items:center;gap:6px;}
-  .pset-rr-u{font-size:11px;color:var(--ink-soft);white-space:nowrap;}
-  .pset-rr-p input,.pset-st .field input{
-    box-sizing:border-box;width:96px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;
-    font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;letter-spacing:-0.02em;
-    font-size:12.5px;text-align:right;background:var(--panel);color:var(--ink);}
-  .pset-rr-p .input-pair{width:196px;}
-  .pset-rr-p .input-pair input{width:auto;}
-  .pset-rr-p select{padding:6px 6px;border:1px solid var(--line);border-radius:6px;
-    font-size:12px;font-family:inherit;background:var(--panel);color:var(--ink);}
-  .pset-rr-ro{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
-    font-size:12.5px;font-weight:600;letter-spacing:-0.02em;color:var(--ink);white-space:nowrap;}
-
-  /* A service is a row of the same grammar as a rule -- what it is on the
-     left, what it comes to on the right -- but there are many of them and
-     they are added and removed, so they are a list rather than a pane.
-     The name gives way and the figure never does: a clipped amount is not
-     a shortened amount, it is a wrong one. */
-  .pset-sv-r{display:flex;align-items:center;gap:10px;padding:8px 0;
-    border-bottom:1px solid var(--ow-rule-soft);}
-  .pset-sv-r:last-child{border-bottom:0;}
-  .pset-sv-n{flex:1;min-width:0;font-size:12.5px;color:var(--ink);
+  /* ---- the map ------------------------------------------------------- */
+  .pset-map-hd{display:flex;align-items:center;gap:16px;padding:16px 14px 14px;}
+  .pset-ring{position:relative;width:72px;height:72px;flex:none;}
+  .pset-ring svg{width:72px;height:72px;transform:rotate(-90deg);}
+  .pset-ring circle{fill:none;stroke-width:7;stroke-linecap:butt;}
+  .pset-ring-t{stroke:var(--ow-rule-soft);}
+  .pset-ring-ok{stroke:var(--ow-steel-800);}
+  .pset-ring-w{stroke:var(--ow-amber);}
+  .pset-ring-c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;}
+  .pset-ring-c b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:18px;font-weight:600;}
+  .pset-ring-c span{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:11px;color:var(--ow-ink-600);}
+  .pset-bars{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;}
+  .pset-bar{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:44px minmax(0,1fr) 30px;
+    align-items:center;gap:8px;}
+  .pset-bar:focus-visible{outline:2px solid var(--ow-sky);outline-offset:2px;border-radius:var(--ow-r-4);}
+  .pset-bar-l{font-size:11px;font-weight:600;color:var(--ow-ink-600);}
+  .pset-bar.is-on .pset-bar-l{color:var(--ink);}
+  .pset-bar-t{display:flex;gap:1px;height:6px;border-radius:var(--ow-r-3);overflow:hidden;background:var(--ow-rule-soft);}
+  .pset-bar-ok{background:var(--ow-steel-800);}
+  .pset-bar-w{background:var(--ow-amber);}
+  .pset-bar-n{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:11px;color:var(--ow-ink-600);text-align:right;}
+  /* Needs you: every open item, whichever tab it is on, one press from
+     its fix. */
+  .pset-needs{margin:0 10px 10px;border:1px solid #EBD9B4;background:var(--ow-amber-faint);border-radius:var(--ow-r-sm);overflow:hidden;}
+  .pset-needs-t{display:flex;align-items:center;gap:6px;margin:0;padding:8px 10px;font-size:11px;font-weight:600;color:var(--ow-amber-ink);}
+  .pset-needs-t svg{width:13px;height:13px;}
+  .pset-needs-t span{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-weight:500;}
+  .pset-need{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:8px;width:100%;min-height:44px;
+    padding:6px 10px;background:var(--ow-paper);border-top:1px solid #EBD9B4;}
+  .pset-need:hover{background:var(--ow-paper-2);}
+  .pset-need:focus-visible{outline:2px solid var(--ow-sky);outline-offset:-2px;}
+  .pset-need-b{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25;}
+  .pset-need-b b{font-size:12px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pset-need-b span{font-size:11px;color:var(--ow-ink-600);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pset-need-a{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;color:var(--ink);}
+  .pset-need-a.is-first{color:var(--ow-oxide-deep);}
+  .pset-need-a svg{width:12px;height:12px;}
+  .pset-map-l{display:flex;align-items:center;gap:8px;padding:10px 14px 4px;border-top:1px solid var(--ow-rule-soft);
+    font-size:11px;font-weight:600;color:var(--ow-ink-600);}
+  .pset-map-l::after{content:'';flex:1;height:1px;background:var(--ow-rule-soft);}
+  .pset-ix-grp[hidden]{display:none;}
+  .pset-ix{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:8px;
+    width:100%;height:30px;padding:0 14px;}
+  .pset-ix:hover{background:var(--ow-paper-2);}
+  .pset-ix:focus-visible{outline:2px solid var(--ow-sky);outline-offset:-2px;}
+  .pset-ix-n{flex:1;min-width:0;font-size:12px;color:var(--ink);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .pset-sv-v{flex:none;display:flex;align-items:center;gap:6px;}
-  .pset-sv-v select{padding:6px 6px;border:1px solid var(--line);border-radius:6px;
-    font-size:12px;font-family:inherit;background:var(--panel);color:var(--ink);}
-  .pset-sv-v input{width:104px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;
-    font-size:12px;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
-    letter-spacing:-0.02em;text-align:right;background:var(--panel);color:var(--ink);}
-  .pset-sv-u{font-size:11px;color:var(--ink-soft);white-space:nowrap;width:34px;}
-  .pset-sv-x{all:unset;box-sizing:border-box;cursor:pointer;flex:none;display:inline-flex;
-    align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;
-    color:var(--ow-ink-400);}
-  .pset-sv-x:hover{background:var(--ow-paper-2);color:var(--ow-crimson);}
-  .pset-sv-x svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;
-    stroke-linecap:round;stroke-linejoin:round;}
-  @media (max-width:820px){
-    /* 820 is a switch, not a squeeze. Kept as one row, "Fetch from
-       Kikuubo" had about seventy pixels and read "Fetch fro…" -- the
-       truncation rule working exactly as written, on a design that
-       should not have asked it to. The name takes its own line and the
-       controls sit under it, which is the same card the charges block
-       wears on the phone. */
-    .pset-sv-r{flex-wrap:wrap;gap:var(--ow-sp-8);padding:var(--ow-sp-10) 0;}
-    .pset-sv-n{flex:1 0 100%;font-size:15px;}
-    /* Basis 0, not auto: the controls grow into what is left AFTER the
-       remove button has its 44, rather than taking the whole line and
-       pushing it onto one of its own where it reads as belonging to
-       nothing. */
-    .pset-sv-v{flex:1 1 0;min-width:0;}
-    .pset-sv-v input{flex:1 1 80px;width:auto;min-width:0;font-size:14px;}
-    .pset-sv-x{flex:0 0 auto;width:var(--ow-tap);height:var(--ow-tap);}
-  }
-  /* A door to the screen that owns the number, not a second control for
-     it: two controls for one setting is how they drift apart. */
-  .pset-door{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;
-    gap:4px;font-size:11.5px;font-weight:600;color:var(--ink-soft);white-space:nowrap;}
-  .pset-door:hover{color:var(--ink);}
-  .pset-door:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px;}
-  .pset-door svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.8;
-    stroke-linecap:round;stroke-linejoin:round;}
-
-  /* The six order steps, inside the rule that owns them. */
-  .pset-st{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 16px;padding:10px 12px 12px;
-    background:var(--ow-paper-2);border-top:1px solid var(--ow-rule-soft);align-items:center;}
-  .pset-st .field{flex-direction:row;align-items:center;justify-content:space-between;gap:8px;}
-  .pset-st .field label{font-size:11.5px;font-weight:400;color:var(--ink-soft);min-width:0;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .pset-st .field input{flex:none;}
-
-  /* A switch inside a panel takes the panel's gutter. */
-  .pset-sw{margin:0;padding:10px 12px;border-top:1px solid var(--ow-rule-soft);max-width:none;}
-  .pset-sw > span{max-width:var(--ow-measure);}
-  .pset-sw-n{margin:0;padding:0 12px 10px 36px;font-size:11px;color:var(--ink-soft);
-    line-height:1.5;max-width:var(--ow-measure);}
-  .pset-fg{max-width:none;padding:12px;grid-template-columns:repeat(2,minmax(0,1fr));}
+  .pset-ix-v{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;
+    font-variant-numeric:tabular-nums;color:var(--ink-soft);white-space:nowrap;}
+  .pset-ix-v.warn{color:var(--ow-amber-ink);}
+  .pset-key{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:10px 14px;margin-top:6px;
+    border-top:1px solid var(--ow-rule-soft);font-size:11px;color:var(--ow-ink-600);}
+  .pset-key span{display:inline-flex;align-items:center;gap:5px;}
+  /* How the page saves, as three marks rather than three paragraphs. */
+  .pset-sv-i{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-top:1px solid var(--ow-rule-soft);}
+  .ow-pan-h + .pset-sv-i{border-top:0;}
+  .pset-sv-i > span:last-child{display:flex;flex-direction:column;gap:1px;min-width:0;}
+  .pset-sv-i b{font-size:12px;font-weight:600;}
+  .pset-sv-i > span:last-child > span{font-size:11px;color:var(--ow-ink-600);}
+  .pset-sv-ic{width:26px;height:26px;border-radius:var(--ow-r-7);background:var(--ow-rule-soft);color:var(--ow-ink-600);
+    display:flex;align-items:center;justify-content:center;flex:none;}
+  .pset-sv-ic.is-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .pset-sv-ic svg{width:14px;height:14px;}
+  /* The signed-in list keeps its own grammar (.ls-*), seated in the
+     panel's gutter. */
+  .pset-dev .ls-answer{margin:0;padding:12px 14px;font-size:13px;line-height:1.5;border-bottom:1px solid var(--ow-rule-soft);
+    background:var(--ow-paper-2);}
+  .pset-dev .ow-empty{margin:12px 14px;}
+  #pset_devices .ls-tidy:not(:empty){padding:10px 14px;border-top:1px solid var(--ow-rule-soft);}
   .pset-grp{margin:0;padding:12px;border-top:1px solid var(--ow-rule-soft);}
   /* Inside a panel the row is 800px wide, so space-between put the
      Enabled switch a hand's width from the provider it belongs to. */
@@ -3750,24 +4099,6 @@
      an input cannot ellipsis: "From the MTN MoMo deve" reads as broken
      rather than as truncated. */
   .pset-grp .pset-fields{max-width:none;grid-template-columns:repeat(2,minmax(0,1fr));}
-  .pset-pan-2{margin-top:12px;}
-
-  /* The index. A map with state on every row, not a set of tabs --
-     nothing is hidden behind it, and clicking a row searches for it. */
-  .pset-ix{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:8px;
-    width:100%;padding:8px 12px;border-top:1px solid var(--ow-rule-soft);}
-  .pset-ix:hover{background:var(--ow-paper-2);}
-  .pset-ix:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
-  .pset-ix-n{flex:1;min-width:0;font-size:12px;color:var(--ink);
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .pset-ix-v{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;
-    font-variant-numeric:tabular-nums;color:var(--ink-soft);white-space:nowrap;}
-  .pset-ix-v.warn{color:var(--ow-amber-ink);}
-  .pset-ix-v.good{color:var(--ow-verdigris);}
-  .pset-ix-g{font-size:11px;font-weight:600;letter-spacing:0.09em;text-transform:uppercase;
-    color:var(--ow-ink-400);padding:12px 12px 4px;border-top:1px solid var(--ow-rule-soft);}
-  .ow-pan-h + .pset-ix-g{border-top:0;}
-
   .pset-head{margin-bottom:14px;}
   .pset-head h3{font-size:16px;margin:0 0 4px;}
   /* That 4px was the gap to the sentence underneath. Folded, there is no
@@ -3792,23 +4123,78 @@
     color:var(--ink-soft);margin:0 0 6px;}
   .pset-note{margin:0 0 10px;font-size:12px;color:var(--ink-soft);line-height:1.5;max-width:62ch;}
   .pset-note code{font-family:'IBM Plex Mono',monospace;font-size:11.5px;background:var(--ow-steel-050);border:1px solid var(--line);border-radius:5px;padding:1px 5px;}
-  .pset-toggle-row{display:flex;align-items:flex-start;gap:9px;margin:4px 0 14px;font-size:12.5px;line-height:1.5;cursor:pointer;max-width:62ch;}
-  .pset-toggle-row input{margin-top:2px;flex-shrink:0;width:15px;height:15px;accent-color:var(--navy);}
-  .pset-toggle-note{color:var(--ink-soft);font-size:12px;}
   .pset-fields{max-width:420px;}
-  /* The phone. 820 is a switch, and what this page needs on the small
-     side is one column of everything: two columns of word lists at
-     390 gives each list 170px, and a rule row whose control sits in a
-     212px gutter has no gutter left. */
+  /* The phone. 820 is a switch between two designs, not a squeeze of
+     one: the tiles go 2×2 in one card, the chains stand up, the tabs
+     become a segmented switch under the thumb, and every control is a
+     tap target. */
   @media (max-width:820px){
-    .pset-sf{width:100%;height:44px;}
-    .pset-rg{flex-direction:column;align-items:flex-start;gap:4px;}
+    .pset-sf{width:100%;height:var(--ow-tap);}
+    .pset-tiles{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .pset-tile{padding:12px 14px;gap:8px;}
+    .pset-tile:nth-child(3){border-left:0;}
+    .pset-tile:nth-child(n+3){border-top:1px solid var(--ow-rule-soft);}
+    .pset-tile-ic{display:none;}
+    .pset-tile-big{font-size:20px;}
+    .pset-rls{display:none;}
+    .pset-dv:nth-child(n+4){display:none;}
+    .pset-ch{grid-template-columns:minmax(0,1fr);gap:8px;padding:14px 16px;}
+    .pset-ch-ar{display:none;}
+    .pset-ch-s{flex-direction:row;align-items:center;justify-content:space-between;}
+    .pset-ch-s b{font-size:15px;}
+    .pset-ch-a{justify-self:stretch;height:48px;font-size:15px;}
+    .pset-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;border:0;
+      background:var(--ow-rule-soft);border-radius:var(--ow-r-10);}
+    .pset-tab{height:var(--ow-tap);justify-content:center;gap:6px;padding:0 6px;margin:0;border:0;border-radius:var(--ow-r-sm);}
+    .pset-tab.is-on{background:var(--ow-paper);box-shadow:var(--ow-lift);}
+    .pset-tab-ic,.pset-tab-s,.pset-tab-x{display:none;}
+    .pset-tab-n{display:none;}
+    .pset-tab-n.is-warn{display:block;font-size:0;width:7px;height:7px;padding:0;border-radius:var(--ow-r-2);background:var(--ow-amber);}
+    .pset-mk-r{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"l l" "c o" "x x";gap:8px;}
+    .pset-mk-r > .pset-op{display:none;}
+    .pset-mk-l{grid-area:l;flex-direction:row;align-items:baseline;justify-content:flex-start;gap:8px;}
+    .pset-mk-in{flex:1 1 auto;width:auto;min-width:0;}
+    .pset-mk-c{grid-area:c;}
+    .pset-mk-x{grid-area:x;}
+    .pset-mk-out{grid-area:o;}
+    .pset-mk + .pset-pan-f .pset-drv,.pset-pan-f .pset-drv{margin-left:0;}
+    .pset-pipe{flex-direction:column;align-items:stretch;}
+    .pset-pipe-ar{align-self:center;transform:rotate(90deg);}
+    .pset-pipe-n{flex-direction:row;align-items:center;justify-content:space-between;}
+    .pset-g2{grid-template-columns:minmax(0,1fr);}
+    .pset-paper{grid-template-columns:minmax(0,1fr);}
+    .pset-paper-f{grid-template-columns:minmax(0,1fr);}
+    .pset-rcpt-w{order:-1;border-left:0;border-bottom:1px solid var(--ow-rule-soft);}
+    .pset-act{grid-template-columns:minmax(0,1fr);}
+    .pset-act-sum{flex-direction:row;flex-wrap:wrap;gap:8px 16px;border-right:0;border-bottom:1px solid var(--ow-rule-soft);}
+    .pset-act-l{flex-basis:100%;}
+    .pset-act-t{flex-basis:100%;}
+    .pset-pr{flex-wrap:wrap;}
+    .pset-pr-b{flex:1 1 0;}
+    .pset-keys{order:3;flex-basis:100%;padding-left:44px;}
     .pset-wd{grid-template-columns:minmax(0,1fr);}
-    .pset-wd-b,.pset-wd-b:nth-child(5){border-left:0;grid-column:auto;}
-    .pset-rr{flex-direction:column;gap:8px;}
-    .pset-rr-v{width:100%;align-items:flex-start;}
-    .pset-st{grid-template-columns:minmax(0,1fr);}
-    .pset-fg{grid-template-columns:minmax(0,1fr);}
+    .pset-wd-b{border-left:0;border-top:1px solid var(--ow-rule-soft);}
+    .pset-wd-b:first-child{border-top:0;}
+    .pset-el{grid-template-columns:minmax(0,1fr) auto;padding:8px 14px;}
+    .pset-el-d{grid-column:1 / -1;width:auto;justify-self:start;}
+    .pset-mk-in,.pset-tr-in,.pset-pipe-v input,.pset-fl input,.pset-add input,.pset-sv-v input,.pset-sv-v select{
+      height:var(--ow-tap);font-size:15px;}
+    .pset-seg2,.pset-step{height:var(--ow-tap);}
+    .pset-step-b{width:var(--ow-tap);height:42px;}
+    .pset-step input{height:42px;font-size:15px;}
+    .pset-step-u{height:42px;}
+    .pset-tr{min-height:64px;}
+    .pset-ix{height:var(--ow-tap);}
+    .pset-door{height:28px;font-size:12px;}
+    .pset-swl{min-height:var(--ow-tap);}
+    /* 820 is a switch, not a squeeze. Kept as one row, "Fetch from
+       Kikuubo" had about seventy pixels and read "Fetch fro…". The name
+       takes its own line and the controls sit under it. */
+    .pset-sv-r{flex-wrap:wrap;gap:var(--ow-sp-8);padding:var(--ow-sp-10) 0;}
+    .pset-sv-n{flex:1 0 100%;font-size:15px;}
+    .pset-sv-v{flex:1 1 0;min-width:0;}
+    .pset-sv-v input{flex:1 1 80px;width:auto;min-width:0;}
+    .pset-sv-x{flex:0 0 auto;width:var(--ow-tap);height:var(--ow-tap);}
   }
   /* The agent roster's own sub-tabs. It used to share its look with the
      Presets rail and was kept as a separate class so that page's generic
@@ -35165,371 +35551,308 @@
          different kinds of thing: word lists that only decide what a
          field suggests, rules that change what other screens compute and
          warn about tomorrow, and the shop's own identity, its merchant
-         credentials and its live sessions. A preset is a value that
-         pre-fills a field, which described six of the twelve.
+         credentials and its live sessions.
 
-         Six of those doors carried a count. The other six carried
-         nothing at all -- .pset-count:empty collapses -- so the nav was
-         silent about exactly the settings that matter: whether the shop
-         has a name, whether a default price rule exists, whether any
-         order limit is set. presetDefaultMarkup defaults to {}, and a
-         product with no rule of its own and no shop default behind it
-         cannot be quoted, sold at the counter, or catalogued. The
-         Products register already marks that state. The page that causes
-         it never mentioned it.
+         Then it was one long scroll of folded panels, which fixed the
+         doors' real fault -- half of them said nothing about what was
+         behind them -- and cost the owner five thousand pixels of a page
+         opened twice a year.
 
-         So: three named regions on one scroll and no doors, a search over
-         every setting on the page, an index that carries state on every
-         row, and a band at the top that names each unset setting and what
-         depends on it -- absent entirely when there is nothing unset. -->
+         Now it is what the owner signed off on the canvas, read from the
+         top down:
+
+           what the setup is doing to the shop    four status tiles, each a
+                                                  picture of one system --
+                                                  pricing coverage, the
+                                                  receipt, mobile money,
+                                                  the devices signed in
+           what is stopping work                  the band, one chain per
+                                                  unset setting: the setting,
+                                                  what waits on it, and the
+                                                  screens it locks
+           the three kinds of thing               three tabs, and every tab
+                                                  carries its own state, so
+                                                  none is a silent door
+           the map                                a ring, what needs you on
+                                                  ANY tab, and the open tab
+                                                  as a jump list
+
+         The search still reaches every setting on every tab: a match on
+         a tab you are not looking at opens it. -->
     <section id="tab-presets" style="display:none;">
       <div class="ow-ph">
         <h1 class="ow-ph-t">The shop</h1>
-        <p class="ow-ph-sub">Everything the app assumes about this shop until you tell it otherwise.</p>
-        <p class="ow-ph-help">Three kinds of thing live here. The WORDS are lists this shop types into its own forms &mdash; they only decide what a field suggests, and keep one thing spelled one way. The RULES are the numbers the app works by: change one and other screens compute and warn differently tomorrow. THE SHOP ITSELF is who you are on paper, how you take mobile money, and what is signed in. Everything saves the moment you leave a field; the one exception is mobile money, which has its own Save because a wrong key fails a payment silently at the agent's end.</p>
+        <p class="ow-ph-sub">Everything the app assumes about this shop until you say otherwise.</p>
+        <p class="ow-ph-help">Three kinds of thing live here. The RULES are the numbers the app works by: change one and other screens compute and warn differently tomorrow. THE SHOP ITSELF is who you are on paper, how you take mobile money, and what is signed in. The WORDS are lists this shop types into its own forms &mdash; they only decide what a field suggests, and keep one thing spelled one way. Everything saves the moment you leave a field; the one exception is mobile money, which has its own Save because a wrong key fails a payment silently at the agent's end.</p>
         <span class="ow-ph-sp"></span>
         <div class="pset-sf">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
           <label class="sr-only" for="pset_search">Search these settings</label>
-          <input type="text" id="pset_search" autocomplete="off" placeholder="Search these settings">
+          <input type="text" id="pset_search" autocomplete="off" placeholder="Search every setting">
           <span class="pset-sf-x" id="pset_search_n"></span>
         </div>
       </div>
 
-      <!-- Not a badge: a decomposition. It names each unset setting, what
-           depends on it, and how many things that is, so the sentence can
-           be argued with. Empty markup -- not an empty band -- when there
-           is nothing unset. -->
+      <!-- What the setup is doing to the shop right now: four systems,
+           each drawn as its own state, each a door to where it is fixed.
+           Drawn by renderPresetTiles from the same derivations the
+           panels below use. -->
+      <div class="pset-tiles" id="psetTiles"></div>
+
+      <!-- One chain per unset setting: the setting, what waits on it,
+           the screens it locks, and the way to set it. Empty markup --
+           not an empty band -- when nothing is unset. -->
       <div id="psetBand"></div>
+
+      <!-- The three regions. A tab here is not one of the old doors:
+           each says on its face how many things on it need you, and the
+           search opens whichever tab holds what it finds. -->
+      <div class="pset-tabs" role="tablist" aria-label="Sections of this page">
+        <button type="button" class="pset-tab" role="tab" id="pset_tab_rules" data-pset-rgn="rules" aria-controls="pset_rgn_rules" aria-selected="true">
+          <span class="pset-tab-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></span>
+          <span class="pset-tab-b"><span class="pset-tab-t">The rules</span><span class="pset-tab-s">moves figures</span></span>
+          <span class="pset-tab-n" id="pset_tab_rules_n"></span>
+        </button>
+        <button type="button" class="pset-tab" role="tab" id="pset_tab_shop" data-pset-rgn="shop" aria-controls="pset_rgn_shop" aria-selected="false">
+          <span class="pset-tab-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 10v10h16V10"/><path d="M3 10l2-6h14l2 6"/><path d="M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/><path d="M10 20v-5h4v5"/></svg></span>
+          <span class="pset-tab-b"><span class="pset-tab-t">The shop<span class="pset-tab-x"> itself</span></span><span class="pset-tab-s">identity · payments · access</span></span>
+          <span class="pset-tab-n" id="pset_tab_shop_n"></span>
+        </button>
+        <button type="button" class="pset-tab" role="tab" id="pset_tab_words" data-pset-rgn="words" aria-controls="pset_rgn_words" aria-selected="false">
+          <span class="pset-tab-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 18 8.5 6 13 18M5.7 14h5.6"/><path d="M15 10h5M15 14h5M15 18h5"/></svg></span>
+          <span class="pset-tab-b"><span class="pset-tab-t">The words</span><span class="pset-tab-s">suggestions only</span></span>
+          <span class="pset-tab-n" id="pset_tab_words_n"></span>
+        </button>
+      </div>
 
       <div class="ow-grid">
         <div class="ow-stack">
 
-          <!-- ===================== THE WORDS ===================== -->
-          <div class="pset-rgn" data-rgn="words">
-            <div class="pset-rg">
-              <h2 class="pset-rg-t">The words the shop uses</h2>
-              <span class="pset-rg-s">Typed into this shop&rsquo;s own forms. Nothing here moves a figure &mdash; a list only decides what a field suggests, and keeps one thing spelled one way.</span>
-            </div>
-            <!-- The rules region says what is UNSET; this says what is
-                 TANGLED. Same grammar, same silence when there is
-                 nothing to report. -->
-            <div id="psetWordsBand"></div>
-            <div class="ow-pan pset-fold" data-fold="categories" data-find="categories category sub-category product catalogue">
-              <button type="button" class="ow-pan-h pset-fold-h" aria-expanded="false">
-                <svg class="pset-fold-cv" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-                <span class="ow-pan-t">Categories</span>
-                <span class="ow-pan-n" id="pset_cats_n"></span>
-              </button>
-              <div class="pset-fold-b" hidden>
-                <div class="pset-wd-w" data-find="categories category sub-category subcategory product catalogue">
-                  <div class="pset-wd-h"><span class="pset-wd-n">Categories</span><b class="pset-count" data-count="categories"></b></div>
-                  <p class="pset-wd-u">Suggested in the Category and Sub-category fields when adding a product.</p>
-                  <div class="preset-inline-add">
-                    <input type="text" id="preset_cat_new" placeholder="Add a category...">
-                    <button type="button" id="preset_cat_add">Add</button>
-                  </div>
-                  <div id="presetCategoriesWrap"></div>
-                </div>
-              </div>
-            </div>
-
-            <div class="ow-pan pset-fold pset-pan-2" data-fold="flat" data-find="units unit locations location money in money out income expense flat lists">
-              <button type="button" class="ow-pan-h pset-fold-h" aria-expanded="false">
-                <svg class="pset-fold-cv" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-                <span class="ow-pan-t">The flat lists</span>
-                <span class="ow-pan-n" id="pset_flat_n"></span>
-              </button>
-              <div class="pset-fold-b" hidden>
-                <div class="pset-wd">
-                  <div class="pset-wd-b" data-find="units unit pack piece bag kg metre price entry">
-                    <div class="pset-wd-h"><span class="pset-wd-n">Units</span><b class="pset-count" data-count="units"></b></div>
-                    <p class="pset-wd-u">Suggested in the Unit and Pack unit fields on a price entry.</p>
-                    <div class="preset-inline-add">
-                      <input type="text" id="preset_unit_new" placeholder="Add a unit...">
-                      <button type="button" id="preset_unit_add">Add</button>
-                    </div>
-                    <div id="presetUnitsWrap"></div>
-                  </div>
-
-                  <div class="pset-wd-b" data-find="locations location place delivery deliver customer agent route order tracking">
-                    <div class="pset-wd-h"><span class="pset-wd-n">Locations</span><b class="pset-count" data-count="locations"></b></div>
-                    <p class="pset-wd-u">Every place you deliver to. Chosen on a customer or an agent, and what groups orders going the same way on the board &mdash; which only works while one place is spelled one way.</p>
-                    <div class="preset-inline-add">
-                      <input type="text" id="preset_location_new" placeholder="Add a location...">
-                      <button type="button" id="preset_location_add">Add</button>
-                    </div>
-                    <div id="presetLocationsWrap"></div>
-                  </div>
-
-                  <div class="pset-wd-b" data-find="money in income cash in category cash book takings chart">
-                    <div class="pset-wd-h"><span class="pset-wd-n">Money in</span><b class="pset-count" data-count="income"></b></div>
-                    <p class="pset-wd-u">Suggested in the Category field when logging Cash In, and what groups the income chart on the Cash book.</p>
-                    <div class="preset-inline-add">
-                      <input type="text" id="preset_income_cat_new" placeholder="Add an income category...">
-                      <button type="button" id="preset_income_cat_add">Add</button>
-                    </div>
-                    <div id="presetIncomeCatsWrap"></div>
-                  </div>
-
-                  <div class="pset-wd-b" data-find="money out expense cash out category cash book spending chart">
-                    <div class="pset-wd-h"><span class="pset-wd-n">Money out</span><b class="pset-count" data-count="expense"></b></div>
-                    <p class="pset-wd-u">Suggested in the Category field when logging Cash Out, and what groups the expense chart on the Cash book.</p>
-                    <div class="preset-inline-add">
-                      <input type="text" id="preset_expense_cat_new" placeholder="Add an expense category...">
-                      <button type="button" id="preset_expense_cat_add">Add</button>
-                    </div>
-                    <div id="presetExpenseCatsWrap"></div>
-                  </div>
-                </div>
-
-                <!-- An attribute is a name AND its usual values, so it does
-                     not fit the two-column grid of single-word lists. It
-                     takes the width under them rather than a door of its
-                     own. -->
-                <p class="ow-mini">Renaming a word carries every product, price entry and cash line already using it. Deleting one leaves those records alone &mdash; it only stops the word being suggested again.</p>
-              </div>
-            </div>
-
-            <div class="ow-pan pset-fold pset-pan-2" data-fold="attributes" data-find="attributes attribute variants values colour gauge length size">
-              <button type="button" class="ow-pan-h pset-fold-h" aria-expanded="false">
-                <svg class="pset-fold-cv" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-                <span class="ow-pan-t">Attributes</span>
-                <span class="ow-pan-n" id="pset_attrs_n"></span>
-              </button>
-              <div class="pset-fold-b" hidden>
-                <div class="pset-wd-w" data-find="attributes attribute variants variant colour color gauge length size options">
-                  <div class="pset-wd-h"><span class="pset-wd-n">Attributes</span><b class="pset-count" data-count="attributes"></b></div>
-                  <p class="pset-wd-u">Reusable attribute names with their usual values &mdash; e.g. Colour: Red, Blue, Green. Suggested when a product is built in variants, and values auto-fill when the name matches one on file. Split by the one fact the app can derive about each: whether any product uses it.</p>
-                  <div class="preset-inline-add wide">
-                    <input type="text" id="preset_attr_name" placeholder="Attribute name...">
-                    <input type="text" id="preset_attr_values" placeholder="Values, comma-separated...">
-                    <button type="button" id="preset_attr_add">Add</button>
-                  </div>
-                  <div id="presetAttrsWrap"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           <!-- ===================== THE RULES ===================== -->
-          <div class="pset-rgn" data-rgn="rules">
-            <div class="pset-rg">
-              <h2 class="pset-rg-t">The rules it works by</h2>
-              <span class="pset-rg-s">Every number the app assumes, and the screen each one drives. Five of them are set on the screen that uses them; they are read here so this page is the whole answer.</span>
-            </div>
+          <div class="pset-rgn" data-rgn="rules" id="pset_rgn_rules" role="tabpanel" aria-labelledby="pset_tab_rules">
 
-            <div class="ow-pan pset-fold" data-fold="rules-here" data-find="rules set here markup agent margin cluster price check order limits">
-              <button type="button" class="ow-pan-h pset-fold-h" aria-expanded="false">
-                <svg class="pset-fold-cv" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-                <span class="ow-pan-t">Set here</span>
-                <span class="ow-pan-n">6 rules</span>
-              </button>
-              <div class="pset-fold-b" hidden>
-
-                <!-- Each rule is a row that states what it drives. That
-                     sentence is why the old panes carried 87 words of prose
-                     above the field; on the same line as the control it is
-                     one. -->
-                <div class="pset-rr" id="pset_rule_markup" data-find="default price rule markup percent fixed selling price cost wholesale retail">
-                  <div class="pset-rr-b"><div class="pset-rr-n">Default price rule</div>
-                  <p class="pset-rr-d">The selling rule for every product that has none of its own. Percent adds on top of the item&rsquo;s cheapest supplier cost and scales with the item; fixed adds a flat amount, per <b>pack</b> on the wholesale side and per <b>piece</b> on retail. A rule set on a product or a variant always wins, and clearing it drops the product back here. Leave a side at 0 for no default on that side.</p>
-                  <p class="pset-rr-c" id="preset_default_markup_caption"></p>
-                  </div>
-                  <div class="pset-rr-v">
-                    <div class="pset-rr-p">
-                      <span class="pset-rr-u">Wholesale</span>
-                      <div class="input-pair">
-                        <select id="preset_default_markup_wholesale_type"><option value="percent">+ %</option><option value="fixed">+ UGX</option></select>
-                        <input type="number" id="preset_default_markup_wholesale_value" min="0" step="any" placeholder="e.g. 12">
-                      </div>
+            <!-- The default price rule, written as the sum it is: the
+                 cheapest supplier cost, plus the markup, equals what the
+                 line sells at -- worked on one of this shop's own lines. -->
+            <div class="ow-pan pset-pan" id="pset_rule_markup" data-find="default price rule markup percent fixed selling price cost wholesale retail">
+              <div class="ow-pan-h">
+                <span class="ow-pan-t">Default price rule</span>
+                <span class="ow-cp" id="pset_mk_state"></span>
+                <span class="ow-pan-nt pset-pan-nt">for every product with no rule of its own</span>
+              </div>
+              <div class="pset-mk">
+                <div class="pset-mk-r">
+                  <div class="pset-mk-l"><span class="pset-mk-side">Wholesale</span><span class="pset-mk-per" id="pset_mk_w_per"></span></div>
+                  <div class="pset-mk-c"><span class="pset-mk-k">cheapest supplier cost</span><b class="pset-mk-f" id="pset_mk_w_cost"></b></div>
+                  <span class="pset-op" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></svg></span>
+                  <div class="pset-mk-x">
+                    <div class="pset-seg2" role="group" aria-label="How the wholesale default adds">
+                      <button type="button" class="pset-seg2-b" data-mk-kind="wholesale" data-mk-type="percent">%</button>
+                      <button type="button" class="pset-seg2-b" data-mk-kind="wholesale" data-mk-type="fixed">UGX</button>
                     </div>
-                    <div class="pset-rr-p">
-                      <span class="pset-rr-u">Retail</span>
-                      <div class="input-pair">
-                        <select id="preset_default_markup_retail_type"><option value="percent">+ %</option><option value="fixed">+ UGX</option></select>
-                        <input type="number" id="preset_default_markup_retail_value" min="0" step="any" placeholder="e.g. 18">
-                      </div>
+                    <select id="preset_default_markup_wholesale_type" hidden><option value="percent">+ %</option><option value="fixed">+ UGX</option></select>
+                    <label class="sr-only" for="preset_default_markup_wholesale_value">Wholesale default markup</label>
+                    <input type="number" class="pset-mk-in" id="preset_default_markup_wholesale_value" min="0" step="any" placeholder="e.g. 12">
+                    <b class="pset-mk-add" id="pset_mk_w_add"></b>
+                  </div>
+                  <span class="pset-op" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 9h12M6 15h12"/></svg></span>
+                  <div class="pset-mk-out" id="pset_mk_w_out"><span class="pset-mk-k" id="pset_mk_w_say"></span><b class="pset-mk-f" id="pset_mk_w_sells"></b></div>
+                </div>
+                <div class="pset-mk-r">
+                  <div class="pset-mk-l"><span class="pset-mk-side">Retail</span><span class="pset-mk-per" id="pset_mk_r_per"></span></div>
+                  <div class="pset-mk-c"><span class="pset-mk-k">cheapest supplier cost</span><b class="pset-mk-f" id="pset_mk_r_cost"></b></div>
+                  <span class="pset-op" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></svg></span>
+                  <div class="pset-mk-x">
+                    <div class="pset-seg2" role="group" aria-label="How the retail default adds">
+                      <button type="button" class="pset-seg2-b" data-mk-kind="retail" data-mk-type="percent">%</button>
+                      <button type="button" class="pset-seg2-b" data-mk-kind="retail" data-mk-type="fixed">UGX</button>
                     </div>
+                    <select id="preset_default_markup_retail_type" hidden><option value="percent">+ %</option><option value="fixed">+ UGX</option></select>
+                    <label class="sr-only" for="preset_default_markup_retail_value">Retail default markup</label>
+                    <input type="number" class="pset-mk-in" id="preset_default_markup_retail_value" min="0" step="any" placeholder="e.g. 18">
+                    <b class="pset-mk-add" id="pset_mk_r_add"></b>
                   </div>
+                  <span class="pset-op" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 9h12M6 15h12"/></svg></span>
+                  <div class="pset-mk-out" id="pset_mk_r_out"><span class="pset-mk-k" id="pset_mk_r_say"></span><b class="pset-mk-f" id="pset_mk_r_sells"></b></div>
                 </div>
-
-                <div class="pset-rr" data-find="agent share margin discount wholesale retail commission">
-                  <div class="pset-rr-b"><div class="pset-rr-n">Agent share of margin</div>
-                  <p class="pset-rr-d">A share of what you make on an item, not off its price &mdash; 50% gives an agent half your margin, 100% gives all of it and they pay exactly your cost. Below cost is not reachable, whatever is set here. Any product can override either side in its own edit form.</p>
-                  </div>
-                  <div class="pset-rr-v">
-                    <div class="pset-rr-p"><span class="pset-rr-u">Wholesale</span><input type="number" id="preset_agent_discount_wholesale" min="0" max="100" step="any" placeholder="e.g. 40"><span class="pset-rr-u">%</span></div>
-                    <div class="pset-rr-p"><span class="pset-rr-u">Retail</span><input type="number" id="preset_agent_discount_retail" min="0" max="100" step="any" placeholder="e.g. 30"><span class="pset-rr-u">%</span></div>
-                  </div>
-                </div>
-
-                <div class="pset-rr" data-find="cluster bonus wait agent starring commission">
-                  <div class="pset-rr-b"><div class="pset-rr-n">Cluster bonus wait</div>
-                  <p class="pset-rr-d">How long a product must already have been in an agent&rsquo;s commission cluster before a sale of it earns the bonus. Stops an agent starring a high-bonus item right before checkout just to collect on it.</p>
-                  </div>
-                  <div class="pset-rr-v">
-                    <div class="pset-rr-p"><input type="number" id="preset_agent_cluster_wait_days" min="0" step="1" placeholder="e.g. 7"><span class="pset-rr-u">days</span></div>
-                  </div>
-                </div>
-
-                <div class="pset-rr" data-find="trust a price stale days price checking registry analysis">
-                  <div class="pset-rr-b"><div class="pset-rr-n">Trust a price for</div>
-                  <p class="pset-rr-d">Drives <b>Prices to check</b> on Analysis. Where an item has enough dated purchase invoices to show how fast its own price moves, that is used instead and this is ignored; where it has not, this applies.</p>
-                  </div>
-                  <div class="pset-rr-v">
-                    <div class="pset-rr-p"><input type="number" id="preset_price_stale_days" min="1" step="1" placeholder="e.g. 90"><span class="pset-rr-u">days</span></div>
-                  </div>
-                </div>
-
-                <div class="pset-rr" data-find="prices to check each month review target list length">
-                  <div class="pset-rr-b"><div class="pset-rr-n">Prices to check each month</div>
-                  <p class="pset-rr-d">How many the check list is allowed to hold before it stops being read.</p>
-                  </div>
-                  <div class="pset-rr-v">
-                    <div class="pset-rr-p"><input type="number" id="preset_price_review_target" min="1" step="1" placeholder="e.g. 20"><span class="pset-rr-u">prices</span></div>
-                  </div>
-                </div>
-
-                <div class="pset-rr" id="pset_rule_limits" data-find="order step limits timing late flag board minutes stage alert notification">
-                  <div class="pset-rr-b"><div class="pset-rr-n">Order step limits</div>
-                  <p class="pset-rr-d">If an order sits in one of these steps on the Order tracking board longer than its limit, its card gets a warning flag. Leave a step blank or 0 to turn its warning off &mdash; a step that waits on a lorry or a customer is not this shop&rsquo;s to hurry.</p>
-                  </div>
-                  <div class="pset-rr-v">
-                    <span class="pset-rr-ro" id="pset_limits_n"></span>
-                  </div>
-                </div>
-                <div class="pset-st form-grid" id="presetOrderLimitsWrap"></div>
-
-                <label class="pset-toggle-row pset-sw" data-find="alert notification tell me late past limit">
-                  <input type="checkbox" id="preset_stage_alerts">
-                  <span><b>Tell me the moment an order goes past its limit</b><br>
-                    <span class="pset-toggle-note">A notification the moment a card goes over, instead of a flag that
-                      only warns whoever happens to be looking at the board. Each order is mentioned once per step,
-                      so a busy morning does not turn into a queue of the same reminder.</span></span>
-                </label>
-                <div class="pset-sw-n" id="preset_stage_alerts_state">
-                  <b>Only while the app is open.</b> This shop's notifications reach a picker's phone through their
-                  worker app; there is no such channel for you, so a closed browser cannot be reached. Keep the app
-                  open on the counter machine and it works all day. Set at least one limit above, or there is
-                  nothing to go past.
-                </div>
-                <p class="ow-mini">Minutes, on every step. A limit is the point at which an order is late enough to ask about, not the time the step should take.</p>
+              </div>
+              <div class="pset-pan-f">
+                <span class="pset-mk-ft"><span class="pset-mk-ex" id="pset_mk_example"></span><p class="pset-rr-c" id="preset_default_markup_caption"></p></span>
+                <span class="pset-drv"><span class="pset-drv-l">drives</span>
+                  <button type="button" class="pset-door pset-d-sell" data-pset-tab="quote">Quotes</button>
+                  <button type="button" class="pset-door pset-d-cat" data-pset-tab="products">Products</button>
+                  <button type="button" class="pset-door pset-d-cat" data-pset-tab="prices">Catalogue</button>
+                </span>
               </div>
             </div>
 
-            <!-- WHAT THE SHOP IS PAID FOR BESIDES THE GOODS.
-
-                 A rule, not a word. The words region says outright that
-                 nothing in it moves a figure, and every row here moves
-                 one: these amounts land on an order, an invoice and the
-                 profit and loss. Seeded with nothing on purpose -- the
-                 same argument solution_templates makes. A shop that
-                 charges for delivery and threading knows what it calls
-                 them; a list invented here would be two names nobody
-                 uses and a third they needed and did not get. -->
-            <div class="ow-pan pset-fold pset-pan-2" data-fold="services" data-find="services service charge charges delivery fee fetching cutting threading urgent what you charge for labour transport haulage extra">
-              <button type="button" class="ow-pan-h pset-fold-h" aria-expanded="false">
-                <svg class="pset-fold-cv" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-                <span class="ow-pan-t">What you charge for</span>
-                <span class="ow-pan-n" id="pset_services_n"></span>
-              </button>
-              <div class="pset-fold-b" hidden>
-                <div class="pset-wd-w" data-find="services service charge delivery fee fetching cutting urgent">
-                  <div class="pset-wd-h"><span class="pset-wd-n">Services</span><b class="pset-count" data-count="services"></b></div>
-                  <p class="pset-wd-u">Work this shop is paid for besides the goods &mdash; delivering, fetching from town, cutting to length. Each one is offered on a quote as a tap, and the amount stays editable on the order: this is what it usually costs, not what it must. A percent is worked out from the goods on that order, so two percents never stack on each other.</p>
-                  <div class="preset-inline-add">
-                    <input type="text" id="preset_service_new" placeholder="Add a service...">
-                    <button type="button" id="preset_service_add">Add</button>
-                  </div>
-                  <div id="presetServicesWrap"></div>
-                  <p class="pset-rr-c" id="preset_services_caption"></p>
-                </div>
+            <!-- The order board's own steps, drawn in the order an order
+                 walks them. A step with no limit is drawn open-ended. -->
+            <div class="ow-pan pset-pan" id="pset_rule_limits" data-find="order step limits timing late flag board minutes stage alert notification">
+              <div class="ow-pan-h">
+                <span class="ow-pan-t">Order step limits</span>
+                <span class="ow-cp" id="pset_limits_n"></span>
+                <span class="ow-pan-nt pset-pan-nt">minutes an order may sit before its card is flagged</span>
+              </div>
+              <div class="pset-pipe" id="presetOrderLimitsWrap"></div>
+              <label class="pset-swl" data-find="alert notification tell me late past limit">
+                <input type="checkbox" class="pset-switch" id="preset_stage_alerts">
+                <svg class="pset-swl-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
+                <span class="pset-swl-t">Tell me the moment an order goes past its limit</span>
+                <span class="ow-cp" title="This shop's notifications reach a picker's phone through their worker app; there is no such channel for you, so a closed browser cannot be reached.">Only while the app is open</span>
+              </label>
+              <div class="pset-sw-n" id="preset_stage_alerts_state"></div>
+              <div class="pset-pan-f">
+                <p class="ow-mini">A limit is the point at which an order is late enough to ask about, not the time the step should take.</p>
+                <span class="pset-drv"><span class="pset-drv-l">drives</span>
+                  <button type="button" class="pset-door pset-d-sell" data-pset-tab="quote-saved">Order board</button>
+                </span>
               </div>
             </div>
 
-            <!-- Six rules that write to this shop's own presets blob and
-                 have never been on this page: buy_cover on What to buy,
-                 pr_target and pr_days on Pricing, chase_after and
-                 chase_rest on Follow-ups, pw_days on the Price registry.
-                 They stay set there, beside the figures they change, so a
-                 number is never altered without its consequence on
-                 screen. Read here, because otherwise there is nowhere to
-                 see what the app assumes. -->
-            <div class="ow-pan pset-fold pset-pan-2" data-fold="rules-elsewhere" data-find="restock cover target margin dead stock chase debt price watch supplier other screens">
-              <button type="button" class="ow-pan-h pset-fold-h" aria-expanded="false">
-                <svg class="pset-fold-cv" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-                <span class="ow-pan-t">Set on the screen that uses them</span>
-                <span class="ow-pan-n">5 rules</span>
-              </button>
-              <div class="pset-fold-b" hidden>
+            <div class="pset-g2">
+              <!-- A share of the MARGIN, not of the price, so it is drawn
+                   as the margin splitting in two. -->
+              <div class="ow-pan pset-pan" id="pset_rule_agent" data-find="agent share margin discount wholesale retail commission">
+                <div class="ow-pan-h"><span class="ow-pan-t">Agent share of margin</span><span class="ow-pan-nt pset-pan-nt">never below cost</span></div>
+                <div class="pset-ag">
+                  <div class="pset-ag-r">
+                    <div class="pset-ag-h">
+                      <span class="pset-mk-side">Wholesale</span>
+                      <div class="pset-step" role="group" aria-label="Wholesale agent share">
+                        <button type="button" class="pset-step-b" data-step="-5" data-for="preset_agent_discount_wholesale" aria-label="Five points less to the agent"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12"/></svg></button>
+                        <label class="sr-only" for="preset_agent_discount_wholesale">Agent share of the wholesale margin, percent</label>
+                        <input type="number" id="preset_agent_discount_wholesale" min="0" max="100" step="any" placeholder="0">
+                        <span class="pset-step-u">%</span>
+                        <button type="button" class="pset-step-b" data-step="5" data-for="preset_agent_discount_wholesale" aria-label="Five points more to the agent"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v12M6 12h12"/></svg></button>
+                      </div>
+                    </div>
+                    <div class="pset-fork" id="pset_ag_w"></div>
+                  </div>
+                  <div class="pset-ag-r">
+                    <div class="pset-ag-h">
+                      <span class="pset-mk-side">Retail</span>
+                      <div class="pset-step" role="group" aria-label="Retail agent share">
+                        <button type="button" class="pset-step-b" data-step="-5" data-for="preset_agent_discount_retail" aria-label="Five points less to the agent"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12"/></svg></button>
+                        <label class="sr-only" for="preset_agent_discount_retail">Agent share of the retail margin, percent</label>
+                        <input type="number" id="preset_agent_discount_retail" min="0" max="100" step="any" placeholder="0">
+                        <span class="pset-step-u">%</span>
+                        <button type="button" class="pset-step-b" data-step="5" data-for="preset_agent_discount_retail" aria-label="Five points more to the agent"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v12M6 12h12"/></svg></button>
+                      </div>
+                    </div>
+                    <div class="pset-fork" id="pset_ag_r"></div>
+                  </div>
+                </div>
+                <div class="pset-pan-f">
+                  <p class="ow-mini">Any product can override either side in its own edit form.</p>
+                  <span class="pset-drv"><span class="pset-drv-l">drives</span>
+                    <button type="button" class="pset-door pset-d-sell" data-pset-tab="agents">Agents</button>
+                  </span>
+                </div>
+              </div>
+
+              <!-- Three rules that are each one number. -->
+              <div class="ow-pan pset-pan" id="pset_rule_timing" data-find="timing review cluster bonus wait trust a price stale prices to check each month">
+                <div class="ow-pan-h"><span class="ow-pan-t">Timing &amp; review</span><span class="ow-pan-n">3 rules</span></div>
+                <div class="pset-tr" data-find="cluster bonus wait agent starring commission">
+                  <svg class="pset-tr-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                  <span class="pset-tr-b"><label class="pset-tr-n" for="preset_agent_cluster_wait_days">Cluster bonus wait</label>
+                    <button type="button" class="pset-door pset-d-sell" data-pset-tab="agents">Agent commission</button></span>
+                  <input type="number" class="pset-tr-in" id="preset_agent_cluster_wait_days" min="0" step="1" placeholder="7">
+                  <span class="pset-tr-u">days</span>
+                </div>
+                <div class="pset-tr" data-find="trust a price stale days price checking registry analysis">
+                  <svg class="pset-tr-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 4v5c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V7z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>
+                  <span class="pset-tr-b"><label class="pset-tr-n" for="preset_price_stale_days">Trust a price for</label>
+                    <button type="button" class="pset-door pset-d-ins" data-pset-tab="analysis">Prices to check</button></span>
+                  <input type="number" class="pset-tr-in" id="preset_price_stale_days" min="1" step="1" placeholder="90">
+                  <span class="pset-tr-u">days</span>
+                </div>
+                <div class="pset-tr" data-find="prices to check each month review target list length">
+                  <svg class="pset-tr-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>
+                  <span class="pset-tr-b"><label class="pset-tr-n" for="preset_price_review_target">Prices to check each month</label>
+                    <button type="button" class="pset-door pset-d-ins" data-pset-tab="analysis">Analysis</button></span>
+                  <input type="number" class="pset-tr-in" id="preset_price_review_target" min="1" step="1" placeholder="20">
+                  <span class="pset-tr-u">prices</span>
+                </div>
+                <p class="ow-mini pset-pan-m">Where an item has enough dated invoices to show how fast its own price moves, that is used instead of the trust period.</p>
+              </div>
+            </div>
+
+            <div class="pset-g2">
+              <!-- Read here, set beside the list each one changes: two
+                   controls for one number is how they drift apart. -->
+              <div class="ow-pan pset-pan" id="pset_rules_elsewhere" data-find="restock cover target margin dead stock chase debt credit price watch supplier other screens">
+                <div class="ow-pan-h"><span class="ow-pan-t">Set on the screen that uses them</span><span class="ow-pan-n" id="pset_else_n"></span></div>
                 <div id="presetOutsideRules"></div>
-                <p class="ow-mini">Each of these changes what a list in front of you says, so it is set beside that list rather than here. Reading them here is what makes this page the whole answer to what the app assumes.</p>
+              </div>
+
+              <!-- What the shop is paid for besides the goods. A rule, not
+                   a word: every row lands on an order, an invoice and the
+                   profit and loss. -->
+              <div class="ow-pan pset-pan" id="pset_rule_services" data-find="services service charge charges delivery fee fetching cutting threading urgent what you charge for labour transport haulage extra">
+                <div class="ow-pan-h"><span class="ow-pan-t">What you charge for</span><span class="ow-pan-n" id="pset_services_n"></span></div>
+                <div class="pset-sv" id="presetServicesWrap"></div>
+                <div class="pset-add">
+                  <label class="sr-only" for="preset_service_new">A service this shop charges for</label>
+                  <input type="text" id="preset_service_new" placeholder="Add a service…">
+                  <button type="button" class="btn btn-ghost ow-sm" id="preset_service_add">Add</button>
+                </div>
+                <div class="pset-pan-f">
+                  <p class="pset-rr-c" id="preset_services_caption"></p>
+                  <span class="pset-drv"><span class="pset-drv-l">drives</span>
+                    <button type="button" class="pset-door pset-d-sell" data-pset-tab="quote">Quotes</button>
+                  </span>
+                </div>
               </div>
             </div>
           </div>
 
           <!-- ================= THE SHOP ITSELF ================= -->
-          <div class="pset-rgn" data-rgn="shop">
-            <div class="pset-rg">
-              <h2 class="pset-rg-t">The shop itself</h2>
-              <span class="pset-rg-s">Who this shop is on paper, how it takes money from agents, and what is signed in to it.</span>
-            </div>
+          <div class="pset-rgn" data-rgn="shop" id="pset_rgn_shop" role="tabpanel" aria-labelledby="pset_tab_shop">
 
-            <div class="ow-pan pset-fold" data-fold="on-paper" data-find="shop identity name address phone tin receipt footer print printing paper thermal kiosk on paper legal">
-              <button type="button" class="ow-pan-h pset-fold-h" aria-expanded="false">
-                <svg class="pset-fold-cv" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-                <span class="ow-pan-t">On paper</span>
-                <span class="ow-pan-n">prints on every receipt</span>
-              </button>
-              <div class="pset-fold-b" hidden>
-                <div class="form-grid pset-fg">
-                  <div class="field" style="grid-column:1/-1;"><label>Shop name</label>
+            <!-- The fields, and the receipt they print, side by side: a
+                 missing line is a gap in the paper. -->
+            <div class="ow-pan pset-pan" id="pset_on_paper" data-find="shop identity name address phone tin receipt footer print printing paper thermal kiosk on paper legal">
+              <div class="ow-pan-h"><span class="ow-pan-t">On paper</span><span class="ow-cp" id="pset_paper_state"></span><span class="ow-pan-nt pset-pan-nt">prints on every receipt</span></div>
+              <div class="pset-paper">
+                <div class="pset-paper-f">
+                  <div class="pset-fl pset-fl-w"><label for="preset_shop_name">Shop name</label>
                     <input type="text" id="preset_shop_name" placeholder="e.g. Telagon Hardware"></div>
-                  <div class="field" style="grid-column:1/-1;"><label>Address</label>
+                  <div class="pset-fl pset-fl-w"><label for="preset_shop_address">Address</label>
                     <input type="text" id="preset_shop_address" placeholder="e.g. Jesco House Room JHB08"></div>
-                  <div class="field"><label>Phone</label>
+                  <div class="pset-fl"><label for="preset_shop_phone">Phone</label>
                     <input type="text" id="preset_shop_phone" placeholder="e.g. 0754 333419"></div>
-                  <div class="field"><label>TIN <span style="font-weight:400;color:var(--ink-soft);">(optional)</span></label>
+                  <div class="pset-fl"><label for="preset_shop_tin">TIN <span class="pset-fl-o">optional</span></label>
                     <input type="text" id="preset_shop_tin" placeholder="leave blank to omit the line"></div>
-                  <div class="field" style="grid-column:1/-1;"><label>Receipt footer</label>
+                  <div class="pset-fl pset-fl-w"><label for="preset_receipt_footer">Receipt footer</label>
                     <textarea id="preset_receipt_footer" rows="2" placeholder="Thank you for your business"></textarea></div>
+                  <label class="pset-swl pset-fl-w">
+                    <input type="checkbox" class="pset-switch" id="preset_auto_print_receipt">
+                    <svg class="pset-swl-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V4h10v5"/><rect x="4" y="9" width="16" height="8" rx="1.5"/><path d="M7 14h10v6H7z"/></svg>
+                    <span class="pset-swl-t">Print a receipt automatically when money is received</span>
+                    <span class="ow-cp">80 mm roll</span>
+                  </label>
                 </div>
-                <label class="pset-toggle-row pset-sw">
-                  <input type="checkbox" id="preset_auto_print_receipt">
-                  <span><b>Print a receipt automatically when a payment is received</b><br>
-                    <span class="pset-toggle-note">Paper comes out the moment money is recorded, the way a till does. Turn it off on a day spent reconciling rather than trading.</span></span>
-                </label>
-                <p class="ow-mini">80&thinsp;mm roll, 72&thinsp;mm printed; the receipt is only as long as its contents, so short sales use short paper. <b>To print with no dialog</b>, make a desktop shortcut to Chrome with <code>--kiosk-printing</code> after the program path and open the app from it, with the thermal printer set as the Windows default.</p>
+                <div class="pset-rcpt-w">
+                  <div class="pset-rcpt" id="pset_receipt" role="img" aria-label="How a receipt prints with these details"></div>
+                </div>
               </div>
+              <p class="ow-mini pset-pan-m">80&thinsp;mm roll, 72&thinsp;mm printed; the receipt is only as long as its contents, so short sales use short paper. <b>To print with no dialog</b>, make a desktop shortcut to Chrome with <code>--kiosk-printing</code> after the program path and open the app from it, with the thermal printer set as the Windows default.</p>
             </div>
 
-            <!-- Merchant API keys, a sandbox switch and a callback URL:
-                 set up once, changed almost never, and the only thing on
-                 this page with an explicit Save, because a wrong key
-                 fails every payment silently at the agent's end. -->
-            <div class="ow-pan pset-fold pset-pan-2" data-fold="mobile-money" data-find="mobile money momo mtn airtel merchant api key subscription client secret sandbox production credentials payment prompt agent pays">
-              <button type="button" class="ow-pan-h pset-fold-h" aria-expanded="false">
-                <svg class="pset-fold-cv" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-                <span class="ow-pan-t">Taking mobile money</span>
-                <span class="ow-pan-n" id="pset_momo_state"></span>
-              </button>
-              <div class="pset-fold-b" hidden>
-
-                <!-- The answer first: can an agent pay me by phone right
-                     now, and is any money in limbo? The keys are set once
-                     and never touched, so they collapse; what changes by
-                     the hour is the ledger. -->
-                <p class="ow-mini momo-answer" id="momoAnswer"></p>
-                <div id="momoBand"></div>
-
-  <section class="pset-group pset-grp" id="momoActivity">
-                  <h4>Payment activity</h4>
-                  <p class="pset-note">Every prompt sent to an agent&rsquo;s phone, newest first. A prompt that is still pending long after it was sent is worth re-checking before the same money is counted twice.</p>
-                  <div class="ow-tbl ow-ag-mt" id="momoLedgerWrap"></div>
-                </section>
-
-
+            <!-- The answer first: can an agent pay me by phone right now,
+                 and is any money in limbo? The ledger changes by the hour;
+                 the keys are set once and collapse into their provider. -->
+            <div class="ow-pan pset-pan" id="pset_momo" data-find="mobile money momo mtn airtel merchant api key subscription client secret sandbox production credentials payment prompt agent pays">
+              <div class="ow-pan-h"><span class="ow-pan-t">Taking mobile money</span><span class="ow-pan-n" id="pset_momo_state"></span></div>
+              <p class="momo-answer" id="momoAnswer"></p>
+              <div id="momoBand"></div>
+              <section class="pset-act" id="momoActivity" aria-label="Payment activity">
+                <div class="pset-act-sum" id="momoSummary"></div>
+                <div class="ow-tbl ow-ag-mt" id="momoLedgerWrap"></div>
+              </section>
+              <div class="pset-prov">
                 <div class="momo-p-h" id="momo_mtn_head"></div>
                 <div class="momo-x" id="momo_mtn_body" style="display:none;">
   <section class="pset-group pset-grp">
@@ -35583,34 +35906,107 @@
 
                               </div>
 
-                <p class="ow-mini">Lets agents pay for their orders straight from the Agent app, through a real MTN or Airtel payment prompt to their phone, instead of you confirming cash by hand. Each provider needs its own merchant API credentials for this shop &mdash; sign up on MTN&rsquo;s or Airtel&rsquo;s developer portal to get sandbox keys before going live. Credentials are only ever readable by shop owners and admins, and are never sent to the Agent app.</p>
               </div>
+              <p class="ow-mini pset-pan-m">Lets agents pay for their orders straight from the Agent app, through a real MTN or Airtel payment prompt to their phone, instead of you confirming cash by hand. Each provider needs its own merchant API credentials for this shop &mdash; sign up on MTN&rsquo;s or Airtel&rsquo;s developer portal to get sandbox keys before going live. Credentials are only ever readable by shop owners and admins, and are never sent to the Agent app.</p>
             </div>
 
-            <!-- Who is signed in, on what, and since when. A question
-                 about accounts and hardware, not about people, which is
-                 why it is not on Staff. -->
-            <div class="ow-pan pset-fold pset-pan-2" data-fold="devices" data-find="signed in devices device session phone computer sign out revoke stolen login">
-              <button type="button" class="ow-pan-h pset-fold-h" aria-expanded="false">
-                <svg class="pset-fold-cv" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            <!-- Who is signed in, on what, and since when. A question about
+                 accounts and hardware, not about people, which is why it is
+                 not on Staff. -->
+            <div class="ow-pan pset-pan" id="pset_devices" data-find="signed in devices device session phone computer sign out revoke stolen login">
+              <div class="ow-pan-h">
                 <span class="ow-pan-t">Signed in to this shop</span>
                 <span class="ow-pan-n" id="pset_devices_n"></span>
-              </button>
-              <div class="pset-fold-b" hidden>
-                <div class="pset-fold-a">
-                  <button class="btn btn-ghost ow-sm" id="ls_refresh">
-                    <svg class="icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
-                    Refresh
-                  </button>
-                </div>
-                <div id="ls_list"></div>
-                <!-- Two bulk sign-outs and a purge used to lead this panel,
-                     so the first thing read on a security screen was the
-                     biggest commitment on it. They follow the answer now. -->
-                <div class="ls-tidy" id="ls_tidy"></div>
-                <div id="ls_more"></div>
-                <p class="ow-mini">Every phone and computer signed in to this shop, and when it was last heard from. Signing a device out takes effect the next time it checks in &mdash; a phone that is off stays signed in until it is switched on. A device nobody recognises is worth signing out today; it keeps working until then.</p>
+                <button class="btn btn-ghost ow-sm pset-pan-hb" id="ls_refresh">
+                  <svg class="icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+                  Refresh
+                </button>
               </div>
+              <div class="pset-dev" id="ls_list"></div>
+              <div class="ls-tidy" id="ls_tidy"></div>
+              <div id="ls_more"></div>
+              <p class="ow-mini pset-pan-m">Signing a device out takes effect the next time it checks in &mdash; a phone that is off stays signed in until it is switched on. A device nobody recognises is worth signing out today; it keeps working until then.</p>
+            </div>
+          </div>
+
+          <!-- ===================== THE WORDS ===================== -->
+          <div class="pset-rgn" data-rgn="words" id="pset_rgn_words" role="tabpanel" aria-labelledby="pset_tab_words">
+
+            <!-- The rules tab says what is UNSET; this says what is
+                 TANGLED. Same grammar, same silence when there is
+                 nothing to report. -->
+            <div id="psetWordsBand"></div>
+
+            <div class="ow-pan pset-pan" id="pset_w_cats" data-find="categories category sub-category subcategory product catalogue">
+              <div class="ow-pan-h"><span class="ow-pan-t">Categories</span><b class="pset-count" data-count="categories"></b><span class="ow-pan-n" id="pset_cats_n"></span></div>
+              <div class="preset-inline-add pset-add">
+                <label class="sr-only" for="preset_cat_new">A new category</label>
+                <input type="text" id="preset_cat_new" placeholder="Add a category...">
+                <button type="button" id="preset_cat_add">Add</button>
+              </div>
+              <div id="presetCategoriesWrap"></div>
+              <div class="pset-pan-f"><p class="ow-mini">Suggested in the Category and Sub-category fields when adding a product.</p>
+                <span class="pset-drv"><span class="pset-drv-l">suggested in</span><button type="button" class="pset-door pset-d-cat" data-pset-tab="products">Products</button></span></div>
+            </div>
+
+            <div class="ow-pan pset-pan" id="pset_w_flat" data-find="units unit locations location money in money out income expense flat lists">
+              <div class="ow-pan-h"><span class="ow-pan-t">The flat lists</span><span class="ow-pan-n" id="pset_flat_n"></span></div>
+              <div class="pset-wd">
+                <div class="pset-wd-b" data-find="units unit pack piece bag kg metre price entry">
+                  <div class="pset-wd-h"><span class="pset-wd-n">Units</span><b class="pset-count" data-count="units"></b></div>
+                  <div class="preset-inline-add">
+                    <label class="sr-only" for="preset_unit_new">A new unit</label>
+                    <input type="text" id="preset_unit_new" placeholder="Add a unit...">
+                    <button type="button" id="preset_unit_add">Add</button>
+                  </div>
+                  <div id="presetUnitsWrap"></div>
+                  <button type="button" class="pset-door pset-d-cat" data-pset-tab="prices">Price entry</button>
+                </div>
+                <div class="pset-wd-b" data-find="locations location place delivery deliver customer agent route order tracking">
+                  <div class="pset-wd-h"><span class="pset-wd-n">Locations</span><b class="pset-count" data-count="locations"></b></div>
+                  <div class="preset-inline-add">
+                    <label class="sr-only" for="preset_location_new">A new location</label>
+                    <input type="text" id="preset_location_new" placeholder="Add a location...">
+                    <button type="button" id="preset_location_add">Add</button>
+                  </div>
+                  <div id="presetLocationsWrap"></div>
+                  <button type="button" class="pset-door pset-d-sell" data-pset-tab="quote-saved">Order board</button>
+                </div>
+                <div class="pset-wd-b" data-find="money in income cash in category cash book takings chart">
+                  <div class="pset-wd-h"><span class="pset-wd-n">Money in</span><b class="pset-count" data-count="income"></b></div>
+                  <div class="preset-inline-add">
+                    <label class="sr-only" for="preset_income_cat_new">A new money-in category</label>
+                    <input type="text" id="preset_income_cat_new" placeholder="Add an income category...">
+                    <button type="button" id="preset_income_cat_add">Add</button>
+                  </div>
+                  <div id="presetIncomeCatsWrap"></div>
+                  <button type="button" class="pset-door pset-d-money" data-pset-tab="cashbook">Cash book</button>
+                </div>
+                <div class="pset-wd-b" data-find="money out expense cash out category cash book spending chart">
+                  <div class="pset-wd-h"><span class="pset-wd-n">Money out</span><b class="pset-count" data-count="expense"></b></div>
+                  <div class="preset-inline-add">
+                    <label class="sr-only" for="preset_expense_cat_new">A new money-out category</label>
+                    <input type="text" id="preset_expense_cat_new" placeholder="Add an expense category...">
+                    <button type="button" id="preset_expense_cat_add">Add</button>
+                  </div>
+                  <div id="presetExpenseCatsWrap"></div>
+                  <button type="button" class="pset-door pset-d-money" data-pset-tab="cashbook">Cash book</button>
+                </div>
+              </div>
+              <p class="ow-mini pset-pan-m">Renaming a word carries every product, price entry and cash line already using it. Deleting one leaves those records alone &mdash; it only stops the word being suggested again.</p>
+            </div>
+
+            <div class="ow-pan pset-pan" id="pset_w_attrs" data-find="attributes attribute variants variant values colour color gauge length size options">
+              <div class="ow-pan-h"><span class="ow-pan-t">Attributes</span><b class="pset-count" data-count="attributes"></b><span class="ow-pan-n" id="pset_attrs_n"></span></div>
+              <div class="preset-inline-add wide pset-add">
+                <label class="sr-only" for="preset_attr_name">Attribute name</label>
+                <input type="text" id="preset_attr_name" placeholder="Attribute name...">
+                <label class="sr-only" for="preset_attr_values">Its usual values</label>
+                <input type="text" id="preset_attr_values" placeholder="Values, comma-separated...">
+                <button type="button" id="preset_attr_add">Add</button>
+              </div>
+              <div id="presetAttrsWrap"></div>
+              <p class="ow-mini pset-pan-m">Suggested when a product is built in variants, and values fill in when the name matches one on file.</p>
             </div>
           </div>
 
@@ -35619,31 +36015,47 @@
           </div>
         </div>
 
-        <!-- The index. Twelve doors became none, so this is a map rather
-             than a set of tabs: every row carries its state, which is the
-             one thing the old rail could not do for half its entries.
-             Clicking a row searches for it. -->
+        <!-- The map. How complete the setup is, what needs you on ANY
+             tab, and the open tab as a jump list. Every row carries its
+             state, which is the one thing the old rail could not do for
+             half its entries. -->
         <div class="ow-side">
           <div class="ow-pan">
-            <div class="ow-pan-h"><span class="ow-pan-t">What is set</span><span class="ow-pan-n" id="pset_index_n"></span></div>
-            <div class="pset-ix-g">The words</div>
-            <button type="button" class="pset-ix" data-go="categories"><span class="pset-ix-n">Categories</span><b class="pset-count pset-ix-v" data-count="categories"></b></button>
-            <button type="button" class="pset-ix" data-go="units"><span class="pset-ix-n">Units</span><b class="pset-count pset-ix-v" data-count="units"></b></button>
-            <button type="button" class="pset-ix" data-go="locations"><span class="pset-ix-n">Locations</span><b class="pset-count pset-ix-v" data-count="locations"></b></button>
-            <button type="button" class="pset-ix" data-go="money in"><span class="pset-ix-n">Money in</span><b class="pset-count pset-ix-v" data-count="income"></b></button>
-            <button type="button" class="pset-ix" data-go="money out"><span class="pset-ix-n">Money out</span><b class="pset-count pset-ix-v" data-count="expense"></b></button>
-            <button type="button" class="pset-ix" data-go="attributes"><span class="pset-ix-n">Attributes</span><b class="pset-count pset-ix-v" data-count="attributes"></b></button>
-            <div class="pset-ix-g">The rules</div>
-            <div id="presetIndexRules"></div>
-            <div class="pset-ix-g">The shop itself</div>
-            <div id="presetIndexShop"></div>
+            <div class="ow-pan-h"><span class="ow-pan-t">What is set</span><span class="ow-pan-nt pset-pan-nt">across all three tabs</span></div>
+            <div class="pset-map-hd" id="psetMapHead"></div>
+            <div id="psetNeeds"></div>
+            <div class="pset-map-l">On this tab</div>
+            <div class="pset-ix-grp" data-rgn="rules"><div id="presetIndexRules"></div></div>
+            <div class="pset-ix-grp" data-rgn="shop"><div id="presetIndexShop"></div></div>
+            <div class="pset-ix-grp" data-rgn="words">
+              <button type="button" class="pset-ix" data-pset-jump="pset_w_cats"><span class="pset-ix-d" id="pset_ix_cats_d"></span><span class="pset-ix-n">Categories</span><b class="pset-count pset-ix-v" data-count="categories"></b></button>
+              <button type="button" class="pset-ix" data-pset-jump="pset_w_flat"><span class="pset-ix-d"></span><span class="pset-ix-n">Units</span><b class="pset-count pset-ix-v" data-count="units"></b></button>
+              <button type="button" class="pset-ix" data-pset-jump="pset_w_flat"><span class="pset-ix-d"></span><span class="pset-ix-n">Locations</span><b class="pset-count pset-ix-v" data-count="locations"></b></button>
+              <button type="button" class="pset-ix" data-pset-jump="pset_w_flat"><span class="pset-ix-d"></span><span class="pset-ix-n">Money in</span><b class="pset-count pset-ix-v" data-count="income"></b></button>
+              <button type="button" class="pset-ix" data-pset-jump="pset_w_flat"><span class="pset-ix-d"></span><span class="pset-ix-n">Money out</span><b class="pset-count pset-ix-v" data-count="expense"></b></button>
+              <button type="button" class="pset-ix" data-pset-jump="pset_w_attrs"><span class="pset-ix-d"></span><span class="pset-ix-n">Attributes</span><b class="pset-count pset-ix-v" data-count="attributes"></b></button>
+            </div>
+            <div class="pset-key" aria-hidden="true">
+              <span><i class="pset-ix-d is-good"></i>set</span>
+              <span><i class="pset-ix-d is-warn"></i>needs you</span>
+              <span><i class="pset-ix-d is-read"></i>set on its own screen</span>
+            </div>
           </div>
 
           <div class="ow-pan">
             <div class="ow-pan-h"><span class="ow-pan-t">How this page saves</span></div>
-            <p class="ow-rl">Everything here saves the moment you leave a field &mdash; one grammar for the whole page, no Save button, and no draft to lose.</p>
-            <p class="ow-rl">The exception is <b>mobile money</b>, which has its own Save: a merchant key is not useful half-typed, and a wrong one fails every payment silently at the agent&rsquo;s end rather than telling you here.</p>
-            <p class="ow-rl">Merchant credentials and the signed-in device list are readable by <b>owners and admins only</b>. That is enforced by the shop database, not by this screen, so it holds however the page is reached.</p>
+            <div class="pset-sv-i">
+              <span class="pset-sv-ic is-good" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+              <span><b>Saves as you leave a field</b><span>No Save button, and no draft to lose.</span></span>
+            </div>
+            <div class="pset-sv-i">
+              <span class="pset-sv-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3"/></svg></span>
+              <span><b>Mobile money keys save together</b><span>A half-typed key fails silently at the agent&rsquo;s end.</span></span>
+            </div>
+            <div class="pset-sv-i">
+              <span class="pset-sv-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+              <span><b>Keys &amp; devices: owners and admins</b><span>Enforced by the shop database, not by this screen.</span></span>
+            </div>
           </div>
         </div>
       </div>
@@ -79906,6 +80318,8 @@ function renderMomoBand(){
 /* One row per provider, carrying the two facts you decide from: whether
    it is live, and when it last did anything. The keys are inside. */
 function renderMomoProviderRows(){
+  const names = { subscriptionKey:'Subscription key', apiUser:'API user', apiKey:'API key',
+                  clientId:'Client ID', clientSecret:'Client secret' };
   ['mtn','airtel'].forEach(p=>{
     const head = document.getElementById(`momo_${p}_head`);
     const body = document.getElementById(`momo_${p}_body`);
@@ -79914,22 +80328,32 @@ function renderMomoProviderRows(){
     body.style.display = open ? '' : 'none';
     const st = momoProviderState(p);
     const row = momoProviders && momoProviders[p];
-    const hasCreds = !!(row && row.credentials && Object.keys(row.credentials).length);
+    const creds = (row && row.credentials) || {};
+    const hasCreds = !!Object.keys(creds).length;
     const last = Array.isArray(momoPayments)
       ? momoPayments.filter(x=> x.provider === p)[0] : null;
     const tag = st === 'live' ? '<span class="ls-tag live">Live</span>'
       : st === 'sandbox' ? '<span class="ls-tag">Sandbox</span>'
       : st === null ? '' : '';
-    head.innerHTML = `<button type="button" class="ls-p${open?' is-open':''}" data-momo-p="${p}">
-      <svg class="ls-p-cv" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-      <span class="ls-p-b">
-        <span class="ls-p-n">${p==='mtn'?'MTN Mobile Money':'Airtel Money'}${tag}</span>
-        <span class="ls-p-m">${
+    /* The keys as a path to live: each one on file is a step taken, and
+       the last step is the provider saying yes to production. What is
+       drawn is what is SAVED -- the form may say otherwise until Save. */
+    const steps = st === null ? [] : MOMO_CREDENTIAL_FIELDS[p].map(f=> ({ label: names[f] || f, ok: !!creds[f] }))
+      .concat([{ label: 'Production', ok: st === 'live' }]);
+    head.innerHTML = `<button type="button" class="pset-pr${open?' is-open':''}" data-momo-p="${p}" aria-expanded="${open?'true':'false'}">
+      <span class="pset-pr-m${st === 'live' ? ' is-live' : ''}" aria-hidden="true">${p==='mtn'?'M':'A'}</span>
+      <span class="pset-pr-b">
+        <span class="pset-pr-n">${p==='mtn'?'MTN Mobile Money':'Airtel Money'}${tag}</span>
+        <span class="pset-pr-s">${
           st === null ? 'Not read yet'
           : st === 'off' ? (hasCreds ? 'Off — credentials on file' : 'Off — no credentials yet')
           : (last ? `Last prompt ${esc(momoAgo(last.created_at))} · ${esc(momoPaymentStatusLabel(last.status))}`
                   : 'No prompt sent yet')}</span>
       </span>
+      <span class="pset-keys">${steps.map((k, i)=> `${i ? `<i class="pset-key-ln${k.ok && steps[i-1].ok ? ' is-ok' : ''}"></i>` : ''}<span class="pset-key-s${k.ok ? ' is-ok' : ''}" title="${esc(k.label)}${k.ok ? ' — on file' : ' — not yet'}">${k.ok
+        ? '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/></svg>'
+        : '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg>'}<span>${esc(k.label)}</span></span>`).join('')}</span>
+      <svg class="ls-p-cv" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
     </button>`;
     head.querySelector('[data-momo-p]').addEventListener('click', ()=>{
       momoOpenProvider = open ? null : p;
@@ -79940,6 +80364,25 @@ function renderMomoProviderRows(){
       renderMomoProviderRows();
     });
   });
+}
+/* The last seven days of prompts, as three counts and what reached the
+   shop -- the ledger beside it is every prompt, this is the week. */
+function renderMomoSummary(){
+  const el = document.getElementById('momoSummary');
+  if(!el) return;
+  if(!Array.isArray(momoPayments) || !momoPayments.length){ el.innerHTML = ''; return; }
+  const cut = Date.now() - 7 * 86400000;
+  const week = momoPayments.filter(p=> p.created_at && new Date(p.created_at).getTime() >= cut);
+  const n = (f)=> week.filter(f).length;
+  const ok = n(p=> p.status === 'successful');
+  const pend = n(p=> p.status === 'pending');
+  const bad = n(p=> ['failed','timeout','cancelled'].includes(p.status));
+  const got = week.filter(p=> p.status === 'successful').reduce((t, p)=> t + (Number(p.amount)||0), 0);
+  el.innerHTML = `<span class="pset-act-l">Last 7 days</span>
+    <span class="pset-act-r"><i class="pset-act-d is-ok"></i><span>Paid</span><b>${ok}</b></span>
+    <span class="pset-act-r"><i class="pset-act-d is-wait"></i><span>Pending</span><b>${pend}</b></span>
+    <span class="pset-act-r"><i class="pset-act-d is-bad"></i><span>Failed</span><b>${bad}</b></span>
+    <span class="pset-act-t"><span>received</span><b>${esc(fmtUGX(got))}</b></span>`;
 }
 function momoAgo(iso){
   if(!iso) return 'never';
@@ -79971,6 +80414,10 @@ async function renderMomoLedger(force){
   renderMomoAnswer();
   renderMomoBand();
   renderMomoProviderRows();
+  renderMomoSummary();
+  /* The tiles, the map and the tab chips read the ledger too: a prompt
+     stuck in limbo is something that needs you, on any tab. */
+  if(typeof renderPresetIndex === 'function') renderPresetIndex();
   const act = document.getElementById('momoActivity');
   const everOn = momoProviders && ['mtn','airtel'].some(p=> momoProviders[p] && momoProviders[p].enabled);
   if(act) act.style.display = (!momoPayments.length && !everOn) ? 'none' : '';
@@ -110400,13 +110847,17 @@ function presetUnsetCauses(){
     let n = 0;
     try { n = productLineStats(productRowsForList()).unruled; } catch(e){ n = -1; }
     out.push({
-      key: 'markup', go: 'default price rule',
-      said: n > 0
-        ? `<b>No default price rule.</b> ${n} sellable ${n===1?'line has':'lines have'} no rule of `
-          + `${n===1?'its':'their'} own and nothing behind ${n===1?'it':'them'}, so ${n===1?'it':'they'} `
-          + `cannot be quoted, sold at the counter, or put on a catalogue.`
-        : '<b>No default price rule.</b> Any product added without a rule of its own cannot be quoted, '
-          + 'sold at the counter, or put on a catalogue until one of the two is set.'
+      key: 'markup', rgn: 'rules', jump: 'pset_rule_markup', focus: 'preset_default_markup_wholesale_value',
+      name: 'Default price rule', state: 'not set',
+      /* A count that could not be worked out is left out rather than
+         guessed: the chain then names what waits on it in words. */
+      n: n > 0 ? n : null,
+      what: n > 0 ? `line${n===1?'':'s'} with no rule of ${n===1?'its':'their'} own`
+        : 'any product added without a rule of its own',
+      lead: 'can’t reach',
+      locks: [['sell','Quotes'], ['sell','Counter sales'], ['cat','Catalogue']],
+      act: 'Set the price rule', short: 'Set',
+      need: n > 0 ? `${n} line${n===1?' waits':'s wait'} on it` : 'new lines would wait on it',
     });
   }
 
@@ -110414,11 +110865,15 @@ function presetUnsetCauses(){
   const addr  = String(data.presetShopAddress||'').trim();
   if(!named || !addr){
     out.push({
-      key: 'identity', go: 'shop identity',
-      said: !named
-        ? '<b>The shop has no name on file.</b> Every receipt goes across the counter without one, '
-          + 'and so does every printed catalogue and statement.'
-        : '<b>No address on file.</b> Receipts print the name and no way to come back.'
+      key: 'identity', rgn: 'shop', jump: 'pset_on_paper',
+      focus: !named ? 'preset_shop_name' : 'preset_shop_address',
+      name: !named ? 'Shop name' : 'Shop address', state: 'not set',
+      n: null, icon: 'receipt',
+      what: 'every printed page',
+      lead: !named ? 'goes out unnamed on' : 'prints with no way back on',
+      locks: [['sell','Receipts'], ['money','Statements'], ['cat','Catalogue PDF']],
+      act: !named ? 'Name the shop' : 'Add the address', short: 'Add',
+      need: 'prints on every receipt',
     });
   }
 
@@ -110430,14 +110885,40 @@ function presetUnsetCauses(){
   const limitsSet = Object.keys(limits).filter(k=> Number(limits[k]) > 0).length;
   if(data.presetStageAlerts && !limitsSet){
     out.push({
-      key: 'limits', go: 'order step limits',
-      said: '<b>No limit is set on any order step, and the alert is on.</b> Nothing can go past a '
-        + 'limit that does not exist, so it has never fired.'
+      key: 'limits', rgn: 'rules', jump: 'pset_rule_limits', focus: 'pset_lim_draft',
+      name: 'Order step limits', state: 'none set',
+      n: null, icon: 'bell',
+      what: 'the late-order alert, which is on',
+      lead: 'can never fire on',
+      locks: [['sell','Order board']],
+      act: 'Set a limit', short: 'Set',
+      need: 'the alert is on and can never fire',
     });
   }
   return out;
 }
 
+const PSET_ICONS = {
+  arrow: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+  lock: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+  warn: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3.9 1.9 18a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>',
+  receipt: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>',
+  bell: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>',
+  tag: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/></svg>',
+  phone: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/></svg>',
+  laptop: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 19h20"/></svg>',
+  pay: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M10 9h4M12 7v4"/></svg>',
+  key: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+  check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  clock: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  chev: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>',
+  print: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V4h10v5"/><rect x="4" y="9" width="16" height="8" rx="1.5"/><path d="M7 14h10v6H7z"/></svg>',
+};
+
+/* THE BAND. Not a paragraph per cause: a chain per cause -- the setting,
+   what waits on it, and the screens it locks -- so the sentence is a
+   picture you can argue with rather than prose you have to read. The
+   accent is the FIRST chain's action and only that: one next move. */
 function renderPresetBand(){
   const wrap = document.getElementById('psetBand');
   if(!wrap) return;
@@ -110446,21 +110927,36 @@ function renderPresetBand(){
      you for filling it in teaches you to scroll past its own top. */
   if(!causes.length){ wrap.innerHTML = ''; return; }
   const n = causes.length;
-  wrap.innerHTML = `<div class="cb-openbar">
-    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3.9 1.9 18a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
-    <div class="cb-openbar-b">
-      <p class="cb-openbar-t">${n===1 ? 'One setting is unset, and something depends on it.'
-        : `${n} settings are unset, and something depends on each.`}</p>
-      ${causes.map(c=> `<p class="cb-openbar-w">${c.said}</p>`).join('')}
-    </div>
-    <div class="cb-openbar-a">
-      <button type="button" class="btn btn-accent ow-sm" data-pset-go="${esc(causes[0].go)}" data-pset-fold="${
-        causes[0].key === 'identity' ? 'on-paper' : 'rules-here'}">${
-        causes[0].key === 'markup' ? 'Set the price rule'
-        : causes[0].key === 'identity' ? 'Name the shop' : 'Set a limit'}</button>
-    </div>
-  </div>`;
+  const ar = `<span class="pset-ch-ar">${PSET_ICONS.arrow}</span>`;
+  wrap.innerHTML = `<section class="pset-band" aria-label="Unset settings">
+    <p class="pset-band-t">${PSET_ICONS.warn}${n===1 ? 'One setting is unset, and work waits on it'
+      : `${n} settings are unset, and work waits on each`}</p>
+    ${causes.map((c, i)=> `<div class="pset-ch">
+      <span class="pset-ch-s"><b>${esc(c.name)}</b><span class="ow-cp ow-warn">${esc(c.state)}</span></span>
+      ${ar}
+      <span class="pset-ch-i">${c.n != null ? `<b class="pset-ch-n">${c.n}</b>`
+        : `<span class="pset-ch-ic">${PSET_ICONS[c.icon] || PSET_ICONS.tag}</span>`}<span class="pset-ch-w">${esc(c.what)}</span></span>
+      ${ar}
+      <span class="pset-ch-l"><span class="pset-ch-lead">${esc(c.lead)}</span>${c.locks.map(([cat, l])=>
+        `<span class="pset-lk pset-d-${cat}">${PSET_ICONS.lock}${esc(l)}</span>`).join('')}</span>
+      <button type="button" class="btn ${i === 0 ? 'btn-accent' : 'btn-ghost'} ow-sm pset-ch-a" data-pset-jump="${c.jump}" data-pset-focus="${c.focus}">${esc(c.act)}</button>
+    </div>`).join('')}
+  </section>`;
 }
+
+/* Which part of the business a screen belongs to, read off the rail's own
+   grouping -- so a door wears the tint of the group it opens, and the
+   owner can tell "this rule changes Money" from "this one changes Sell"
+   without reading the label. Identity colour, never status. */
+const PSET_TAB_CAT = {
+  quote:'sell', 'quote-saved':'sell', invoices:'sell', customers:'sell', followups:'sell', agents:'sell',
+  sourcing:'buy', suppliers:'buy', buying:'buy',
+  products:'cat', pairings:'cat', prices:'cat', inventory:'cat', media:'cat', fasteners:'cat',
+  cashbook:'money', consignment:'money', pricing:'money', chase:'money', 'analytics-debtors':'money',
+  'analytics-creditors':'money', statements:'money', payroll:'money', assets:'money',
+  forecasts:'ins', manager:'ins', analysis:'ins', 'analytics-sales':'ins', 'analytics-purchase':'ins', map:'ins',
+};
+const PSET_RGN_NAME = { rules:'Rules', shop:'Shop', words:'Words' };
 
 /* THE SEVEN RULES THAT ARE NOT SET HERE. buy_cover on What to buy,
    pr_target and pr_days on Pricing, chase_after and chase_rest on
@@ -110506,76 +111002,61 @@ const PRESET_OUTSIDE_RULES = [
 function renderPresetOutsideRules(){
   const wrap = document.getElementById('presetOutsideRules');
   if(!wrap) return;
-  wrap.innerHTML = PRESET_OUTSIDE_RULES.map(r=> `<div class="pset-rr">
-    <div class="pset-rr-b">
-      <div class="pset-rr-n">${esc(r.name)}</div>
-      <p class="pset-rr-d">${esc(r.what)}</p>
-    </div>
-    <div class="pset-rr-v">
-      <div class="pset-rr-p">
-        <span class="pset-rr-ro">${r.get()}</span><span class="pset-rr-u">${esc(r.unit)}</span>
-        <button type="button" class="pset-door" data-pset-tab="${esc(r.tab)}">${esc(r.where)}
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </button>
-      </div>
-    </div>
+  /* Read, never edited here: a value, then a door to the screen that owns
+     it, tinted with the group that screen belongs to. */
+  wrap.innerHTML = PRESET_OUTSIDE_RULES.map(r=> `<div class="pset-el" title="${esc(r.what)}">
+    <span class="pset-el-n">${esc(r.name)}</span>
+    <span class="pset-el-v">${r.get()}<span class="pset-el-u">${r.unit === 'days' ? 'd' : esc(r.unit)}</span></span>
+    <button type="button" class="pset-door pset-d-${PSET_TAB_CAT[r.tab] || 'setup'} pset-el-d" data-pset-tab="${esc(r.tab)}"><span class="pset-door-t">${esc(r.where.split(',')[0])}</span>${PSET_ICONS.arrow}</button>
   </div>`).join('');
+  const n = document.getElementById('pset_else_n');
+  if(n) n.textContent = `${PRESET_OUTSIDE_RULES.length} rules · read only`;
 }
 
 /* THE INDEX. What the old rail could not do for six of its twelve
-   entries: say what is set without opening anything. The six word
-   counts are written by renderPresetCounts through the same
-   .pset-count[data-count] pass that fills the lists themselves, so the
-   index and the list cannot disagree. These are the ones it could not
-   count. */
-function presetIndexRow(name, value, mark, go){
-  return `<button type="button" class="pset-ix" data-go="${esc(go)}">
+   entries: say what is set without opening anything. Every row is a dot
+   (set / needs you / set on its own screen), a name and its value, and
+   pressing it jumps to the panel that holds it. */
+function presetIndexRow(name, value, mark, jump){
+  return `<button type="button" class="pset-ix" data-pset-jump="${esc(jump)}">
+    <span class="pset-ix-d${mark ? ' is-'+mark : ''}"></span>
     <span class="pset-ix-n">${esc(name)}</span>
-    <b class="pset-ix-v${mark ? ' '+mark : ''}">${esc(value)}</b>
+    <b class="pset-ix-v${mark === 'warn' ? ' warn' : ''}">${esc(value)}</b>
   </button>`;
 }
-function renderPresetIndex(){
-  const rules = document.getElementById('presetIndexRules');
-  const shop  = document.getElementById('presetIndexShop');
-  if(!rules || !shop) return;
 
+/* The rows, as data, so the index, the ring and the tab chips all count
+   from ONE list and can never disagree about what is set. */
+function presetIndexModel(){
   const mk = shopDefaultMarkupRule('wholesale') || shopDefaultMarkupRule('retail');
   const limits = data.presetOrderStageLimits || {};
   const limN = Object.keys(limits).filter(k=> Number(limits[k]) > 0).length;
   const steps = (typeof SQ_STATUS_ORDER !== 'undefined' && SQ_STATUS_ORDER) ? SQ_STATUS_ORDER.length : 0;
   const aw = Number(data.presetAgentDiscountWholesalePct)||0;
   const ar = Number(data.presetAgentDiscountRetailPct)||0;
+  const services = (data.presetServices||[]).length;
+  const stale = Number((data.presetPriceReview||{}).staleDays) > 0;
 
-  rules.innerHTML = [
-    presetIndexRow('Default price rule', mk ? 'set' : 'not set', mk ? 'good' : 'warn', 'default price rule'),
-    presetIndexRow('Agent share of margin', (aw||ar) ? `${aw} / ${ar}%` : 'not set', null, 'agent share'),
-    presetIndexRow('Cluster bonus wait',
-      `${data.presetAgentClusterWaitDays != null ? Math.max(0, Number(data.presetAgentClusterWaitDays)||0) : 7} d`,
-      null, 'cluster bonus'),
-    presetIndexRow('Trust a price for',
-      Number((data.presetPriceReview||{}).staleDays) > 0
-        ? `${Number(data.presetPriceReview.staleDays)} d` : 'not set', null, 'trust a price'),
-    presetIndexRow('Order step limits',
-      limN ? `${limN} of ${steps}` : (steps ? `none of ${steps}` : 'none'),
-      (!limN && data.presetStageAlerts) ? 'warn' : null, 'order step limits'),
-    presetIndexRow('What you charge for',
-      (data.presetServices||[]).length
-        ? `${(data.presetServices||[]).length} service${(data.presetServices||[]).length === 1 ? '' : 's'}`
-        : 'nothing yet', null, 'what you charge for'),
-    presetIndexRow('Set on other screens', String(PRESET_OUTSIDE_RULES.length), null, 'restock cover'),
-  ].join('');
+  const rules = [
+    { name:'Default price rule', value: mk ? 'set' : 'not set', mark: mk ? 'good' : 'warn', jump:'pset_rule_markup' },
+    { name:'Order step limits', value: limN ? `${limN} of ${steps}` : (steps ? `none of ${steps}` : 'none'),
+      mark: (!limN && data.presetStageAlerts) ? 'warn' : (limN ? 'good' : null), jump:'pset_rule_limits' },
+    { name:'Agent share of margin', value: (aw||ar) ? `${aw} / ${ar}%` : 'not set', mark: (aw||ar) ? 'good' : null, jump:'pset_rule_agent' },
+    { name:'Cluster bonus wait',
+      value: `${data.presetAgentClusterWaitDays != null ? Math.max(0, Number(data.presetAgentClusterWaitDays)||0) : 7} d`,
+      mark:'good', jump:'pset_rule_timing' },
+    { name:'Trust a price for', value: stale ? `${Number(data.presetPriceReview.staleDays)} d` : 'not set',
+      mark: stale ? 'good' : null, jump:'pset_rule_timing' },
+    { name:'What you charge for', value: services ? `${services} service${services === 1 ? '' : 's'}` : 'nothing yet',
+      mark: services ? 'good' : null, jump:'pset_rule_services' },
+    { name:'Set on other screens', value: String(PRESET_OUTSIDE_RULES.length), mark:'read', jump:'pset_rules_elsewhere' },
+  ];
 
-  /* The two panel headers whose subject is read from the server rather
-     than from the presets blob. Written here so the index and the panel
-     say the same thing from one derivation; both async loads call this
-     function again when they land. */
   /* What the SHOP has saved, not what is sitting in the form: reading
      the checkbox meant a half-edited form could announce that mobile
      money was off while it was still live. */
   const momoState = typeof momoStateWords === 'function' ? momoStateWords() : 'not read';
-  const momoEl = document.getElementById('pset_momo_state');
-  if(momoEl) momoEl.textContent = momoState;
-
+  const stuck = typeof momoStuckRows === 'function' ? momoStuckRows().length : 0;
   /* null is "could not read", which is not "nothing signed in" -- the
      same distinction renderLoginSessions draws, said the same way.
 
@@ -110584,174 +111065,390 @@ function renderPresetIndex(){
      tombstones kept, on the one figure anybody actually reads. */
   const devices = (typeof lsRows === 'undefined' || lsRows === null)
     ? null : lsRows.filter(r=> !r.revoked_at).length;
-  const devWord = devices === null ? 'not read'
-    : `${devices} signed in`;
-  const devEl = document.getElementById('pset_devices_n');
-  if(devEl) devEl.textContent = devWord;
-
+  const unread = devices === null ? 'not read' : null;
+  const quiet = devices === null ? 0 : lsStaleRows(lsRows, Date.now()).length;
   const named = String(data.presetShopLegalName||'').trim();
   const addr  = String(data.presetShopAddress||'').trim();
-  shop.innerHTML = [
-    presetIndexRow('On paper', (named && addr) ? 'named' : (named ? 'no address' : 'not named'),
-      (named && addr) ? 'good' : 'warn', 'shop identity'),
-    presetIndexRow('Mobile money', momoState,
-      momoState === 'not read' ? 'warn' : (/live/.test(momoState) ? 'good' : null), 'mobile money'),
-    presetIndexRow('Signed-in devices', devices === null ? 'not read' : String(devices),
-      devices === null ? 'warn' : null, 'devices'),
-  ].join('');
+  const shop = [
+    { name:'On paper', value: (named && addr) ? 'named' : (named ? 'no address' : 'not named'),
+      mark: (named && addr) ? 'good' : 'warn', jump:'pset_on_paper' },
+    { name:'Mobile money', value: stuck ? `${stuck} pending` : momoState,
+      mark: stuck ? 'warn' : (/live/.test(momoState) ? 'good' : null), jump:'pset_momo' },
+    { name:'Signed-in devices', value: unread || (quiet ? `${devices} · ${quiet} quiet` : String(devices)),
+      mark: quiet ? 'warn' : (devices ? 'good' : null), jump:'pset_devices' },
+  ];
 
-  /* What it counts is what it lists -- the six word lists plus these
-     rows. Calling a count of searchable blocks "41 settings" would be a
-     figure the page cannot add up, which is the one thing a console
-     never does. */
-  const n = document.getElementById('pset_index_n');
-  if(n){
-    const listed = document.querySelectorAll('#tab-presets .ow-side .pset-ix').length;
-    n.textContent = `${listed} listed`;
-  }
+  let tangled = false;
+  try { const f = presetWordsFindings(); tangled = !!(f.dupes.length || f.catchAll); } catch(e){ /* nothing claimed */ }
+  const words = [
+    { key:'categories', n:(data.presetCategories||[]).length, warn: tangled },
+    { key:'units', n:(data.presetUnits||[]).length },
+    { key:'locations', n:(data.presetLocations||[]).length },
+    { key:'income', n:(data.presetIncomeCategories||[]).length },
+    { key:'expense', n:(data.presetExpenseCategories||[]).length },
+    { key:'attributes', n:(data.presetAttributes||[]).length },
+  ].map(w=> ({ ...w, mark: w.warn ? 'warn' : (w.n ? 'good' : null) }));
+  return { rules, shop, words, momoState, devices };
+}
 
-  /* A folded header with nothing on it is a door, which is the whole
+function renderPresetIndex(){
+  const rules = document.getElementById('presetIndexRules');
+  const shop  = document.getElementById('presetIndexShop');
+  if(!rules || !shop) return;
+  const m = presetIndexModel();
+
+  rules.innerHTML = m.rules.map(r=> presetIndexRow(r.name, r.value, r.mark, r.jump)).join('');
+  shop.innerHTML = m.shop.map(r=> presetIndexRow(r.name, r.value, r.mark, r.jump)).join('');
+  /* The word rows are in the markup, because their counts are written by
+     the same .pset-count pass that counts the lists; only their dot is
+     drawn here. */
+  const wordRows = [...document.querySelectorAll('#tab-presets .pset-ix-grp[data-rgn="words"] .pset-ix-d')];
+  m.words.forEach((w, i)=>{ if(wordRows[i]) wordRows[i].className = 'pset-ix-d' + (w.mark ? ' is-'+w.mark : ''); });
+
+  /* The two panel headers whose subject is read from the server rather
+     than from the presets blob. Written here so the index and the panel
+     say the same thing from one derivation; both async loads call this
+     function again when they land. */
+  const setN = (id, txt)=>{ const el = document.getElementById(id); if(el) el.textContent = txt; };
+  setN('pset_momo_state', m.momoState);
+  const devWord = m.devices === null ? 'not read' : `${m.devices} signed in`;
+  setN('pset_devices_n', devWord);
+
+  /* A panel header with nothing on it is a door, which is the whole
      fault this page was rebuilt to remove. So each of the three word
      panels says on its own line what is inside it. */
-  const setN = (id, txt)=>{ const el = document.getElementById(id); if(el) el.textContent = txt; };
   const cats = data.presetCategories || [];
   const subs = cats.reduce((n,c)=> n + ((c.subcategories||[]).length), 0);
-  setN('pset_cats_n', `${cats.length} · ${subs} sub-categor${subs===1?'y':'ies'}`);
-
+  setN('pset_cats_n', `${subs} sub-categor${subs===1?'y':'ies'}`);
   const flat = ['presetUnits','presetLocations','presetIncomeCategories','presetExpenseCategories']
     .reduce((n,k)=> n + (data[k]||[]).length, 0);
   setN('pset_flat_n', `4 lists · ${flat} word${flat===1?'':'s'}`);
-
   const attrs = data.presetAttributes || [];
   const used = attrs.filter(a=> presetProductsWithAttr(a.name).length).length;
-  setN('pset_attrs_n', attrs.length
-    ? `${attrs.length} · ${used} in use` : 'none yet');
+  setN('pset_attrs_n', attrs.length ? `${used} in use` : 'none yet');
 
+  const limits = data.presetOrderStageLimits || {};
+  const limN = Object.keys(limits).filter(k=> Number(limits[k]) > 0).length;
+  const steps = (typeof SQ_STATUS_ORDER !== 'undefined' && SQ_STATUS_ORDER) ? SQ_STATUS_ORDER.length : 0;
   const limNode = document.getElementById('pset_limits_n');
-  if(limNode) limNode.textContent = steps ? `${limN} of ${steps} set` : '—';
-  const rowLim = document.getElementById('pset_rule_limits');
-  if(rowLim) rowLim.classList.toggle('is-unset', !limN && !!data.presetStageAlerts);
-  const rowMk = document.getElementById('pset_rule_markup');
-  if(rowMk) rowMk.classList.toggle('is-unset', !mk);
+  if(limNode){
+    limNode.textContent = steps ? `${limN} of ${steps} watched` : '—';
+    limNode.className = 'ow-cp' + ((!limN && data.presetStageAlerts) ? ' ow-warn' : '');
+  }
+
+  renderPresetMap(m);
+  renderPresetTiles();
+  renderPresetTabs();
 }
 
-/* ================= FOLDING THE SECTIONS ===========================
-
-   Most of this page is set once and never touched, and at this shop's
-   data it is nearly five thousand pixels tall. Folded it is a dozen
-   lines.
-
-   WHAT MAKES A FOLD DIFFERENT FROM THE TWELVE DOORS this page used to
-   have -- which is the whole question, since those doors are what the
-   redesign removed:
-
-     they are not exclusive   opening one closes nothing. Three can be
-                              open at once; the doors could show one.
-     every header has state   "17 · 64 sub-categories", "6 rules",
-                              "MTN live", "32 signed in". Six of the
-                              twelve doors carried nothing at all, and
-                              they were the six that mattered.
-     search opens them        a folded section that matches is opened by
-                              the search, which is the one thing folding
-                              genuinely costs and the one thing a tab
-                              could never give back.
-     and so do the bands      the thing that says a setting is unset
-                              opens the section that sets it.
-     it remembers             what you left open is what you find.
-
-   Folded BY DEFAULT, except whatever needs you: on a shop with nothing
-   unset and nothing tangled the page opens as its own table of
-   contents, which for a page opened twice a year is the right first
-   sight of it. */
-const PSET_FOLD_KEY = 'ow.shop.folds';
-let psetFolds = null;
-/* Sections the search has forced open. Kept apart from what you chose,
-   so clearing the box puts the page back the way you had it rather
-   than leaving four sections open that you never opened. */
-let psetFoldFound = new Set();
-
-function psetFoldState(){
-  if(psetFolds) return psetFolds;
-  psetFolds = {};
+/* What needs you, on ANY tab -- the unset causes, a tangle in the lists,
+   a prompt stuck in limbo, a device nobody has heard from. One list, so
+   the side panel, the tab chips and the ring cannot tell three different
+   stories about the same page. */
+function presetNeedsList(){
+  const out = [];
   try {
-    const raw = localStorage.getItem(PSET_FOLD_KEY);
-    if(raw) psetFolds = JSON.parse(raw) || {};
-  } catch(e){ /* storage refused: the page still works, it just forgets */ }
-  return psetFolds;
-}
-function psetFoldSave(){
-  try { localStorage.setItem(PSET_FOLD_KEY, JSON.stringify(psetFolds||{})); }
-  catch(e){ /* as above */ }
-}
-
-/* Which sections need you, derived from the two bands. Nothing here is
-   a preference: it is the same three causes the unset band names and
-   the same findings the tangle band names. */
-function psetFoldNeeded(){
-  const need = new Set();
+    presetUnsetCauses().forEach(c=> out.push({ rgn:c.rgn, jump:c.jump, focus:c.focus, name:c.name,
+      say:c.need, act:c.short, tag: c.key === 'limits' ? 'unset' : 'unset' }));
+  } catch(e){ /* a derivation that cannot run claims nothing */ }
   try {
-    (presetUnsetCauses()||[]).forEach(c=>{
-      if(c.key === 'markup' || c.key === 'limits') need.add('rules-here');
-      if(c.key === 'identity') need.add('on-paper');
-    });
     const f = presetWordsFindings();
-    if(f.dupes.length || f.catchAll || f.idle.length) need.add('categories');
-  } catch(e){ /* a derivation that cannot run opens nothing */ }
-  return need;
+    if(f.dupes.length){
+      const d = f.dupes[0];
+      out.push({ rgn:'words', jump:'pset_w_cats', act:'Show', tag:'tangle', show:'dupes',
+        name: f.dupes.length === 1 ? `“${d.label}” in two places` : `${f.dupes.length} words in two places`,
+        say: 'a product filed under one is lost to the other' });
+    } else if(f.catchAll){
+      out.push({ rgn:'words', jump:'pset_w_cats', act:'Open', tag:'tangle',
+        name: `${f.catchAll.name} holds ${f.catchAll.n} of ${f.catchAll.total}`,
+        say: 'more sub-categories than all the rest' });
+    }
+  } catch(e){ /* as above */ }
+  if(typeof momoStuckRows === 'function'){
+    const stuck = momoStuckRows();
+    if(stuck.length) out.push({ rgn:'shop', jump:'pset_momo', act:'Check', tag:'stuck',
+      name: `${stuck.length} payment prompt${stuck.length === 1 ? '' : 's'} pending`,
+      say: 'money that can end up counted twice' });
+  }
+  if(Array.isArray(lsRows)){
+    const quiet = lsStaleRows(lsRows, Date.now());
+    if(quiet.length) out.push({ rgn:'shop', jump:'pset_devices', act:'Review', tag:'quiet',
+      name: `${quiet.length} device${quiet.length === 1 ? '' : 's'} quiet ${LS_STALE_DAYS}+ days`,
+      say: 'still signed in to this shop' });
+  }
+  return out;
 }
 
-function psetFoldIsOpen(id){
-  if(psetFoldFound.has(id)) return true;
-  const st = psetFoldState();
-  if(Object.prototype.hasOwnProperty.call(st, id)) return !!st[id];
-  return psetFoldNeeded().has(id);
+/* The ring, one bar per tab, and what needs you. */
+function renderPresetMap(m){
+  const head = document.getElementById('psetMapHead');
+  const needsEl = document.getElementById('psetNeeds');
+  if(!head || !needsEl) return;
+  m = m || presetIndexModel();
+  const groups = [
+    { rgn:'rules', label:'Rules', rows: m.rules },
+    { rgn:'shop', label:'Shop', rows: m.shop },
+    { rgn:'words', label:'Words', rows: m.words },
+  ];
+  const all = groups.flatMap(g=> g.rows);
+  const total = all.length;
+  const warn = all.filter(r=> r.mark === 'warn').length;
+  const ok = total - warn;
+  /* The ring: settings in place, and the ones that need you, as arcs
+     of one circle. Two values, two inks; the gap between them is what
+     keeps them two marks rather than one. */
+  const C = 2 * Math.PI * 29;
+  const gap = warn && ok ? 2.4 : 0;
+  const okLen = total ? Math.max(0, C * ok / total - gap) : 0;
+  const warnLen = total ? Math.max(0, C * warn / total - gap) : 0;
+  const open = psetTabGet();
+  head.innerHTML = `<div class="pset-ring" role="img" aria-label="${ok} of ${total} settings in place">
+      <svg viewBox="0 0 72 72" aria-hidden="true">
+        <circle class="pset-ring-t" cx="36" cy="36" r="29"/>
+        ${okLen ? `<circle class="pset-ring-ok" cx="36" cy="36" r="29" stroke-dasharray="${okLen.toFixed(1)} ${C.toFixed(1)}"/>` : ''}
+        ${warnLen ? `<circle class="pset-ring-w" cx="36" cy="36" r="29" stroke-dasharray="${warnLen.toFixed(1)} ${C.toFixed(1)}" stroke-dashoffset="${(-(okLen + gap)).toFixed(1)}"/>` : ''}
+      </svg>
+      <span class="pset-ring-c"><b>${ok}</b><span>of ${total}</span></span>
+    </div>
+    <div class="pset-bars">${groups.map(g=>{
+      const gw = g.rows.filter(r=> r.mark === 'warn').length;
+      const gn = g.rows.length;
+      return `<button type="button" class="pset-bar${g.rgn === open ? ' is-on' : ''}" data-pset-rgn-go="${g.rgn}" aria-label="Open ${esc(g.label)}: ${gn - gw} of ${gn} in place">
+        <span class="pset-bar-l">${g.label}</span>
+        <span class="pset-bar-t" aria-hidden="true"><span class="pset-bar-ok" style="width:${gn ? ((gn - gw) / gn * 100).toFixed(1) : 0}%"></span>${gw ? `<span class="pset-bar-w" style="width:${(gw / gn * 100).toFixed(1)}%"></span>` : ''}</span>
+        <span class="pset-bar-n">${gn - gw}/${gn}</span>
+      </button>`;
+    }).join('')}</div>`;
+
+  const needs = presetNeedsList();
+  needsEl.innerHTML = !needs.length ? '' : `<div class="pset-needs">
+    <p class="pset-needs-t">${PSET_ICONS.warn}Needs you<span>${needs.length}</span></p>
+    ${needs.map((n, i)=> `<button type="button" class="pset-need" data-pset-jump="${n.jump}"${n.focus ? ` data-pset-focus="${n.focus}"` : ''}${n.show ? ` data-pset-show="${n.show}"` : ''}>
+      <span class="pset-need-b"><b>${esc(n.name)}</b><span>${esc(PSET_RGN_NAME[n.rgn])} · ${esc(n.say)}</span></span>
+      <span class="pset-need-a${i === 0 ? ' is-first' : ''}">${esc(n.act)}${PSET_ICONS.arrow}</span>
+    </button>`).join('')}
+  </div>`;
 }
 
-function renderPresetFolds(){
-  document.querySelectorAll('#tab-presets .pset-fold').forEach(pan=>{
-    const id = pan.dataset.fold;
-    const head = pan.querySelector(':scope > .pset-fold-h');
-    const body = pan.querySelector(':scope > .pset-fold-b');
-    if(!head || !body) return;
-    const open = psetFoldIsOpen(id);
-    pan.classList.toggle('is-open', open);
-    head.setAttribute('aria-expanded', open ? 'true' : 'false');
-    body.hidden = !open;
-  });
+/* THE TILES. What the setup is doing to the shop right now, one system
+   each. Every figure is one the panels below already derive -- the
+   Products funnel, the receipt fields, the providers the shop has saved,
+   the sessions it has read -- and a tile whose source could not be read
+   says so rather than drawing a zero. */
+function renderPresetTiles(){
+  const wrap = document.getElementById('psetTiles');
+  if(!wrap) return;
+  const fmt = (n)=> Math.round(n).toLocaleString('en-US');
+  const tile = (o)=> `<button type="button" class="pset-tile" data-pset-jump="${o.jump}">
+    <span class="pset-tile-h"><span class="pset-tile-ic">${o.icon}</span><span class="pset-tile-t">${o.title}</span><span class="pset-tile-go">${PSET_ICONS.chev}</span></span>
+    <span class="pset-tile-v">${o.body}</span>
+    <span class="pset-tile-s${o.tone ? ' is-'+o.tone : ''}">${o.tone === 'warn' ? '<i class="pset-ix-d is-warn"></i>' : o.tone === 'good' ? '<i class="pset-ix-d is-good"></i>' : ''}${o.say}</span>
+  </button>`;
+
+  /* ---- pricing: how much of the register can actually be sold ---- */
+  let s = null;
+  try { s = productLineStats(productRowsForList()); } catch(e){ s = null; }
+  let price;
+  if(!s){
+    price = { body:'<span class="pset-tile-q">The product lines could not be read.</span>', say:'nothing counted', tone:'warn' };
+  } else if(!s.lines){
+    price = { body:'<span class="pset-tile-big">0</span><span class="pset-tile-of">lines yet</span>', say:'add a product and it is counted here' };
+  } else {
+    const ready = s.lines - s.notReady;
+    const other = s.notReady - s.unruled;
+    const pc = (n)=> (n / s.lines * 100).toFixed(1);
+    price = {
+      body: `<span class="pset-tile-fig"><span class="pset-tile-big">${fmt(ready)}</span><span class="pset-tile-of">of ${fmt(s.lines)} lines can sell</span></span>
+        <span class="pset-cov" aria-hidden="true"><span class="pset-cov-ok" style="width:${pc(ready)}%"></span>${s.unruled ? `<span class="pset-cov-w" style="width:${pc(s.unruled)}%"></span>` : ''}${other ? `<span class="pset-cov-o" style="width:${pc(other)}%"></span>` : ''}</span>`,
+      say: s.unruled ? `${fmt(s.unruled)} wait on a price rule`
+        : other ? `${fmt(other)} not ready yet — see Products` : 'every line can be sold',
+      tone: s.unruled ? 'warn' : (other ? null : 'good'),
+    };
+  }
+
+  /* ---- the receipt, in miniature: a missing line is a hole in it ---- */
+  const named = String(data.presetShopLegalName||'').trim();
+  const addr  = String(data.presetShopAddress||'').trim();
+  const phone = String(data.presetShopPhone||'').trim();
+  const tin   = String(data.presetShopTin||'').trim();
+  const line = (ok, label)=> `<span class="pset-rl${ok ? '' : ' is-miss'}">${ok ? PSET_ICONS.check : '<i class="pset-ix-d is-warn"></i>'}<span>${label}</span></span>`;
+  const rcpt = {
+    body: `<span class="pset-mini" aria-hidden="true">
+        <span class="pset-mini-p">
+          <i class="pset-mini-name${named ? '' : ' is-miss'}"></i>
+          <i class="pset-mini-addr${addr ? '' : ' is-miss'}"></i>
+          <i class="pset-mini-tel${phone || tin ? '' : ' is-none'}"></i>
+          <i class="pset-mini-rule"></i>
+          <i class="pset-mini-ln"></i><i class="pset-mini-ln is-2"></i><i class="pset-mini-ln is-3"></i>
+          <i class="pset-mini-rule"></i>
+          <i class="pset-mini-tot"></i>
+        </span>
+        <svg class="pset-mini-tear" viewBox="0 0 70 5" preserveAspectRatio="none"><path d="M0 0H70V1L65 5 60 1 55 5 50 1 45 5 40 1 35 5 30 1 25 5 20 1 15 5 10 1 5 5 0 1Z"/></svg>
+      </span>
+      <span class="pset-rls">
+        ${line(!!named, named ? esc(named) : 'no shop name')}
+        ${line(!!addr, addr ? 'address' : 'no address')}
+        ${line(!!(phone || tin), [phone && 'phone', tin && 'TIN'].filter(Boolean).join(' · ') || 'no phone or TIN')}
+        <span class="pset-rl is-print">${PSET_ICONS.print}<span>auto-print <b class="${data.presetAutoPrintReceipt ? 'is-on' : ''}">${data.presetAutoPrintReceipt ? 'on' : 'off'}</b></span></span>
+      </span>`,
+    say: (named && addr) ? 'every line on the receipt is set' : (!named ? 'receipts go out unnamed' : 'prints with no way back'),
+    tone: (named && addr) ? 'good' : 'warn',
+  };
+
+  /* ---- mobile money: what the shop has SAVED, and what is in limbo ---- */
+  const st = (p)=> typeof momoProviderState === 'function' ? momoProviderState(p) : null;
+  const prov = (p, label)=>{
+    const s1 = st(p);
+    const word = s1 === null ? 'not read' : s1;
+    return `<span class="pset-pv"><span class="pset-pv-m${s1 === 'live' ? ' is-live' : ''}">${label[0]}</span><span class="pset-pv-n">${label}</span><span class="pset-pv-s is-${s1 || 'unread'}"><i></i>${word}</span></span>`;
+  };
+  const stuck = typeof momoStuckRows === 'function' ? momoStuckRows() : [];
+  const oldest = stuck.reduce((m, p)=> Math.max(m, Math.round((Date.now() - new Date(p.created_at).getTime())/60000)), 0);
+  const last = Array.isArray(momoPayments) && momoPayments.length ? momoPayments[0] : null;
+  const anyLive = ['mtn','airtel'].some(p=> st(p) === 'live');
+  const momo = {
+    body: `<span class="pset-pvs">${prov('mtn','MTN')}${prov('airtel','Airtel')}</span>`,
+    say: momoProviders === null ? 'not read yet'
+      : stuck.length ? `${stuck.length} prompt${stuck.length === 1 ? '' : 's'} waiting ${oldest} min`
+      : last ? `last prompt ${momoAgo(last.created_at)}`
+      : anyLive ? 'no prompt sent yet' : 'agents pay in cash',
+    tone: stuck.length ? 'warn' : null,
+  };
+
+  /* ---- access: every device signed in, its recency as a dot ---- */
+  let dev;
+  if(typeof lsRows === 'undefined' || lsRows === null){
+    dev = { body:'<span class="pset-tile-q">The signed-in devices could not be read.</span>', say:'owners and admins only' };
+  } else {
+    const now = Date.now();
+    const signed = lsRows.filter(r=> !r.revoked_at)
+      .sort((a,b)=> String(b.last_seen_at||'').localeCompare(String(a.last_seen_at||'')));
+    const quiet = new Set(lsStaleRows(lsRows, now).map(r=> r.id));
+    const shown = signed.slice(0, 7);
+    const more = signed.length - shown.length;
+    dev = {
+      body: `<span class="pset-devs">${shown.map(r=>{
+          const live = lsIsLive(r, now);
+          const q = quiet.has(r.id);
+          return `<span class="pset-dv${q ? ' is-quiet' : ''}" title="${esc((LS_APP_LABELS[r.app] || r.app) + ' · ' + (r.label || 'Unknown device') + ' · ' + (lsAgo(r.last_seen_at, now) || 'never'))}">${r.app === 'admin' ? PSET_ICONS.laptop : PSET_ICONS.phone}<i class="pset-dv-d${live ? ' is-live' : q ? ' is-quiet' : ''}"></i></span>`;
+        }).join('')}${more > 0 ? `<span class="pset-dv-more">+${more}</span>` : ''}<span class="pset-tile-big pset-devs-n">${signed.length}</span></span>`,
+      say: !signed.length ? 'nothing signed in yet'
+        : quiet.size ? `${quiet.size} quiet for ${LS_STALE_DAYS}+ days` : 'all heard from this week',
+      tone: quiet.size ? 'warn' : null,
+    };
+  }
+
+  wrap.innerHTML = [
+    tile({ jump:'pset_rule_markup', icon: PSET_ICONS.tag, title:'Pricing', ...price }),
+    tile({ jump:'pset_on_paper', icon: PSET_ICONS.receipt, title:'Receipts', ...rcpt }),
+    tile({ jump:'pset_momo', icon: PSET_ICONS.pay, title:'Mobile money', ...momo }),
+    tile({ jump:'pset_devices', icon: PSET_ICONS.key, title:'Signed in', ...dev }),
+  ].join('');
 }
 
-function psetFoldOpen(id){
-  psetFoldState()[id] = true;
-  psetFoldSave();
-  renderPresetFolds();
-  const pan = document.querySelector(`#tab-presets .pset-fold[data-fold="${id}"]`);
-  if(pan) pan.scrollIntoView({block:'nearest'});
+/* ================= THE THREE TABS =================================
+
+   Not the twelve doors again, and these are the differences:
+
+     every tab carries its state   "1 unset", "1 tangle" -- the doors
+                                   were silent about half of what was
+                                   behind them, and these never are
+     the map reaches every tab     the side panel's "Needs you" lists
+                                   what needs you wherever it lives,
+                                   and pressing a row opens its tab
+     the search ignores them       a search shows every match on every
+                                   tab at once; clearing it puts the
+                                   page back on the tab you were on
+     it remembers                  the tab you left is the tab you find
+
+   Three, not twelve, because there are three kinds of thing here --
+   rules, the shop itself, and words -- and a tab per kind is a page of
+   about one screen rather than five thousand pixels. */
+const PSET_TAB_KEY = 'ow.shop.tab';
+const PSET_RGNS = ['rules', 'shop', 'words'];
+let psetTab = null;
+
+function psetTabGet(){
+  if(psetTab) return psetTab;
+  try { psetTab = localStorage.getItem(PSET_TAB_KEY); }
+  catch(e){ /* storage refused: the page still works, it just forgets */ }
+  if(!PSET_RGNS.includes(psetTab)){
+    /* Nothing remembered: open where the first thing that needs you is,
+       so a shop with a shop-stopping blank never opens on a tab that
+       hides it. */
+    const first = presetNeedsList()[0];
+    psetTab = first ? first.rgn : 'rules';
+  }
+  return psetTab;
+}
+function psetTabSet(rgn){
+  if(!PSET_RGNS.includes(rgn)) return;
+  psetTab = rgn;
+  try { localStorage.setItem(PSET_TAB_KEY, rgn); }
+  catch(e){ /* storage refused: the page still works, it just forgets */ }
+  renderPresetTabs();
+  renderPresetMap();
 }
 
-{
+function renderPresetTabs(){
   const sec = document.getElementById('tab-presets');
-  if(sec) sec.addEventListener('click', (e)=>{
-    const head = e.target.closest('.pset-fold-h');
-    if(!head) return;
-    const pan = head.closest('.pset-fold');
-    if(!pan) return;
-    const id = pan.dataset.fold;
-    const open = psetFoldIsOpen(id);
-    /* A section the search opened is closed by choice, not put back to
-       "found" -- so clicking the chevron always does what it looks like
-       it does. */
-    psetFoldFound.delete(id);
-    psetFoldState()[id] = !open;
-    psetFoldSave();
-    renderPresetFolds();
+  if(!sec) return;
+  const box = document.getElementById('pset_search');
+  const searching = !!(box && box.value.trim());
+  const open = psetTabGet();
+  const needs = presetNeedsList();
+  sec.classList.toggle('is-searching', searching);
+  sec.querySelectorAll('.pset-tab').forEach(t=>{
+    const r = t.dataset.psetRgn;
+    const on = r === open;
+    t.setAttribute('aria-selected', on ? 'true' : 'false');
+    t.tabIndex = on ? 0 : -1;
+    t.classList.toggle('is-on', on && !searching);
+    const chip = document.getElementById(`pset_tab_${r}_n`);
+    if(!chip) return;
+    if(searching){
+      const hits = Number(t.dataset.hits || 0);
+      chip.textContent = hits ? `${hits} found` : '';
+      chip.className = 'pset-tab-n' + (hits ? ' is-hit' : '');
+      return;
+    }
+    const mine = needs.filter(n=> n.rgn === r);
+    /* One need is named by what it is; several are counted. */
+    chip.textContent = !mine.length ? ''
+      : mine.length === 1 ? `1 ${mine[0].tag}` : `${mine.length} need you`;
+    chip.className = 'pset-tab-n' + (mine.length ? ' is-warn' : '');
   });
+  if(!searching){
+    sec.querySelectorAll('.pset-rgn').forEach(r=>{ r.hidden = r.dataset.rgn !== open; });
+  }
+  sec.querySelectorAll('.pset-ix-grp').forEach(g=>{ g.hidden = g.dataset.rgn !== open; });
+}
+
+/* Go to a panel: its tab, then the panel itself, then -- when the thing
+   that sent you named one -- the field you came to fill. */
+function psetJump(id, focusId, show){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const box = document.getElementById('pset_search');
+  if(box && box.value){ box.value = ''; runPresetSearch(); }
+  const rgn = el.closest('.pset-rgn');
+  if(rgn) psetTabSet(rgn.dataset.rgn);
+  if(show === 'dupes') psetShowDupes();
+  el.scrollIntoView({ block:'start', behavior:'smooth' });
+  el.classList.remove('is-flash');
+  void el.offsetWidth;
+  el.classList.add('is-flash');
+  const f = focusId && document.getElementById(focusId);
+  if(f) setTimeout(()=> f.focus({ preventScroll:true }), 350);
 }
 
 /* THE SEARCH. Forty-odd settings, one field, and it matches what a
    setting DOES as well as what the app calls it -- "receipt" has to
    find the shop's address, and nothing on the page is called that.
 
-   A region with no match is not drawn, and the page does not report
+   It reaches every tab at once: a match on a tab you were not looking
+   at is shown beside the rest, and each tab says how many it holds. A
+   region with no match is not drawn, and the page does not report
    "0 results" about regions nobody asked for. */
 function presetSearchTargets(){
   return [...document.querySelectorAll('#tab-presets [data-find]')];
@@ -110762,37 +111459,41 @@ function runPresetSearch(){
   const q = box.value.trim().toLowerCase();
   const count = document.getElementById('pset_search_n');
   const targets = presetSearchTargets();
+  const sec = document.getElementById('tab-presets');
+  const tabs = sec ? [...sec.querySelectorAll('.pset-tab')] : [];
 
   if(!q){
     targets.forEach(el=> el.style.display = '');
     document.querySelectorAll('#tab-presets .pset-rgn').forEach(r=> r.style.display = '');
     document.getElementById('pset_no_match').style.display = 'none';
     if(count) count.textContent = '';
-    /* Clearing the box puts the page back the way you had it, rather
-       than leaving open four sections you never opened. */
-    psetFoldFound.clear();
-    renderPresetFolds();
+    tabs.forEach(t=> delete t.dataset.hits);
+    /* Clearing the box puts the page back on the tab you were on. */
+    renderPresetTabs();
     return;
   }
 
   let hits = 0;
-  psetFoldFound.clear();
+  const per = {};
   targets.forEach(el=>{
     const hay = (el.dataset.find + ' ' + el.textContent).toLowerCase();
     const on = hay.indexOf(q) !== -1;
     el.style.display = on ? '' : 'none';
-    if(on){
+    /* A panel and the row inside it both match the same word; only the
+       innermost is a result. */
+    if(on && !el.querySelector('[data-find]')){
       hits++;
-      /* A match inside a folded section is a match you cannot see. */
-      const pan = el.closest('.pset-fold');
-      if(pan) psetFoldFound.add(pan.dataset.fold);
+      const r = el.closest('.pset-rgn');
+      if(r) per[r.dataset.rgn] = (per[r.dataset.rgn] || 0) + 1;
     }
   });
-  renderPresetFolds();
   document.querySelectorAll('#tab-presets .pset-rgn').forEach(r=>{
     const shown = [...r.querySelectorAll('[data-find]')].some(el=> el.style.display !== 'none');
     r.style.display = shown ? '' : 'none';
+    r.hidden = !shown;
   });
+  tabs.forEach(t=> t.dataset.hits = String(per[t.dataset.psetRgn] || 0));
+  renderPresetTabs();
   if(count) count.textContent = hits ? String(hits) : '';
   const none = document.getElementById('pset_no_match');
   none.style.display = hits ? 'none' : '';
@@ -110810,12 +111511,31 @@ function runPresetSearch(){
   if(sec) sec.addEventListener('click', (e)=>{
     const door = e.target.closest('[data-pset-tab]');
     if(door){ goToTab(door.dataset.psetTab); return; }
-    const go = e.target.closest('[data-go],[data-pset-go]');
-    if(!go || !box) return;
-    if(go.dataset.psetFold && typeof psetFoldOpen === 'function'){ psetFoldOpen(go.dataset.psetFold); return; }
-    box.value = go.dataset.go || go.dataset.psetGo || '';
-    runPresetSearch();
-    box.focus();
+    const tab = e.target.closest('.pset-tab');
+    if(tab){
+      if(box && box.value){ box.value = ''; runPresetSearch(); }
+      psetTabSet(tab.dataset.psetRgn);
+      return;
+    }
+    const bar = e.target.closest('[data-pset-rgn-go]');
+    if(bar){
+      if(box && box.value){ box.value = ''; runPresetSearch(); }
+      psetTabSet(bar.dataset.psetRgnGo);
+      return;
+    }
+    const jump = e.target.closest('[data-pset-jump]');
+    if(jump){ psetJump(jump.dataset.psetJump, jump.dataset.psetFocus, jump.dataset.psetShow); return; }
+  });
+  /* Arrow keys move along the tabs, the way a tab list is expected to. */
+  const list = sec && sec.querySelector('.pset-tabs');
+  if(list) list.addEventListener('keydown', (e)=>{
+    if(e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    const i = PSET_RGNS.indexOf(psetTabGet());
+    const next = PSET_RGNS[(i + (e.key === 'ArrowRight' ? 1 : PSET_RGNS.length - 1)) % PSET_RGNS.length];
+    e.preventDefault();
+    psetTabSet(next);
+    const t = document.getElementById(`pset_tab_${next}`);
+    if(t) t.focus();
   });
 }
 // Shared inline-rename UX for a preset chip/row currently swapped for an
@@ -110965,15 +111685,20 @@ function renderPresetWordsBand(){
     </div>` : ''}
   </div>`;
   const btn = document.getElementById('pset_show_dupes');
-  if(btn) btn.addEventListener('click', ()=>{
-    presetCatFind = f.dupes[0].label;
-    if(typeof psetFoldOpen === 'function') psetFoldOpen('categories');
-    const box = document.getElementById('preset_cat_find');
-    if(box) box.value = presetCatFind;
-    renderPresetCategories();
-    const again = document.getElementById('preset_cat_find');
-    if(again){ again.value = presetCatFind; again.focus(); }
-  });
+  if(btn) btn.addEventListener('click', ()=> psetJump('pset_w_cats', null, 'dupes'));
+}
+/* Narrow the category list to the first word filed in two places, the
+   same way typing it into the list's own finder would. */
+function psetShowDupes(){
+  let f;
+  try { f = presetWordsFindings(); } catch(e){ return; }
+  if(!f.dupes.length) return;
+  presetCatFind = f.dupes[0].label;
+  const box = document.getElementById('preset_cat_find');
+  if(box) box.value = presetCatFind;
+  renderPresetCategories();
+  const again = document.getElementById('preset_cat_find');
+  if(again){ again.value = presetCatFind; again.focus({ preventScroll:true }); }
 }
 
 /* ================= MOVING A WORD INTO ANOTHER =====================
@@ -111761,10 +112486,49 @@ function renderPresetShopIdentity(){
   const auto = document.getElementById('preset_auto_print_receipt');
   if(auto) auto.checked = !!data.presetAutoPrintReceipt;
 }
+/* THE RECEIPT, as it prints, beside the fields that print on it. A line
+   that is not set is a gap in the paper rather than a word in a list --
+   and the goods are drawn as bars, because a preview that printed a sale
+   this shop never made would be a receipt that was invented. */
+function renderPresetReceipt(){
+  const el = document.getElementById('pset_receipt');
+  if(!el) return;
+  const v = (k)=> String(data[k]||'').trim();
+  const name = v('presetShopLegalName'), addr = v('presetShopAddress');
+  const phone = v('presetShopPhone'), tin = v('presetShopTin'), foot = v('presetReceiptFooter');
+  const tel = [phone && 'Tel ' + phone, tin && 'TIN ' + tin].filter(Boolean).join(' · ');
+  el.innerHTML = `
+    ${name ? `<p class="pset-rc-name">${esc(name.toUpperCase())}</p>` : '<p class="pset-rc-gap">shop name not set</p>'}
+    ${addr ? `<p class="pset-rc-c">${esc(addr)}</p>` : '<p class="pset-rc-gap">address not set</p>'}
+    ${tel ? `<p class="pset-rc-c">${esc(tel)}</p>` : ''}
+    <i class="pset-rc-rule"></i>
+    <span class="pset-rc-ln"><i></i><i></i></span>
+    <span class="pset-rc-ln is-2"><i></i><i></i></span>
+    <span class="pset-rc-ln is-3"><i></i><i></i></span>
+    <i class="pset-rc-rule"></i>
+    <span class="pset-rc-tot"><b>TOTAL UGX</b><i></i></span>
+    <i class="pset-rc-rule"></i>
+    ${foot ? `<p class="pset-rc-c">${esc(foot)}</p>` : ''}
+    <svg class="pset-rc-tear" viewBox="0 0 220 6" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0H220V1L215 6 210 1 205 6 200 1 195 6 190 1 185 6 180 1 175 6 170 1 165 6 160 1 155 6 150 1 145 6 140 1 135 6 130 1 125 6 120 1 115 6 110 1 105 6 100 1 95 6 90 1 85 6 80 1 75 6 70 1 65 6 60 1 55 6 50 1 45 6 40 1 35 6 30 1 25 6 20 1 15 6 10 1 5 6 0 1Z"/></svg>`;
+  const st = document.getElementById('pset_paper_state');
+  if(st){
+    st.textContent = (name && addr) ? 'complete' : (!name ? 'no name' : 'no address');
+    st.className = 'ow-cp ' + ((name && addr) ? 'ow-good' : 'ow-warn');
+  }
+}
 {
+  /* Saved as typed, as before -- and the receipt, the band, the tiles and
+     the map follow on the same keystroke, so filling the address in
+     takes the warning off the page as it is typed. */
+  let psetIdentityTimer = null;
   const bind = (id, key)=>{
     const el = document.getElementById(id);
-    if(el) el.addEventListener('input', ()=>{ data[key] = el.value; saveData(); });
+    if(el) el.addEventListener('input', ()=>{
+      data[key] = el.value; saveData();
+      renderPresetReceipt();
+      clearTimeout(psetIdentityTimer);
+      psetIdentityTimer = setTimeout(()=>{ renderPresetBand(); renderPresetIndex(); }, 250);
+    });
   };
   bind('preset_shop_name', 'presetShopLegalName');
   bind('preset_shop_address', 'presetShopAddress');
@@ -111775,6 +112539,7 @@ function renderPresetShopIdentity(){
   if(auto) auto.addEventListener('change', ()=>{
     data.presetAutoPrintReceipt = auto.checked;
     saveData();
+    renderPresetTiles();
     toast(auto.checked ? 'Receipts will print automatically on payment' : 'Automatic receipt printing is off');
   });
 }
@@ -111794,15 +112559,18 @@ function renderPresets(){
   renderPresetDefaultMarkup();
   renderPresetServices();
   renderPresetOutsideRules();
+  renderPresetReceipt();
   /* Last, and in this order. Every add and every delete routes through
      here, so a count cannot go stale behind an edit -- and the band and
      the index both read the same values the panels have just drawn,
-     which is what stops the three of them ever disagreeing. */
+     which is what stops the three of them ever disagreeing. The index
+     goes last of all because it draws the map, the tiles and the tabs
+     from what the bands have just found: a shop with an unset price
+     rule shows it on the Rules tab's own face. */
   renderPresetCounts();
   renderPresetBand();
   renderPresetWordsBand();
   renderPresetIndex();
-  renderPresetFolds();
 }
 function renderPresetAgentDiscounts(){
   document.getElementById('preset_agent_discount_wholesale').value = data.presetAgentDiscountWholesalePct || '';
@@ -111811,6 +112579,46 @@ function renderPresetAgentDiscounts(){
   // choice here (bonus earned instantly) -- so it must render as "0", not
   // fall back to blank/placeholder the way `|| ''` would.
   document.getElementById('preset_agent_cluster_wait_days').value = data.presetAgentClusterWaitDays!=null ? data.presetAgentClusterWaitDays : '';
+  renderPresetAgentFork();
+}
+/* A share of the MARGIN, not of the price -- so it is drawn as the
+   margin forking in two, on a round 10,000 of it. A scale rather than an
+   example: the split is the same on every line, and a scale needs no
+   line of this shop's to be invented for it. Reads the box rather than
+   the saved figure, so the fork moves while the number is typed. */
+function renderPresetAgentFork(){
+  [['wholesale','pset_ag_w'], ['retail','pset_ag_r']].forEach(([kind, id])=>{
+    const el = document.getElementById(id);
+    const inp = document.getElementById('preset_agent_discount_' + kind);
+    if(!el || !inp) return;
+    const share = Math.min(100, Math.max(0, Number(inp.value)||0));
+    const fmt = (n)=> Math.round(n).toLocaleString('en-US');
+    el.innerHTML = `<div class="pset-fork-src"><span class="pset-mk-k">of every</span><b class="pset-mk-f">10,000</b><span class="pset-mk-k">you make</span></div>
+      <svg class="pset-fork-ln" viewBox="0 0 28 74" preserveAspectRatio="none" aria-hidden="true"><path d="M0 37h10M10 18v38M10 18h18M10 56h18"/></svg>
+      <div class="pset-fork-out">
+        <div class="pset-fork-k"><span>you keep</span><b>${fmt(10000 * (100 - share) / 100)}</b></div>
+        <div class="pset-fork-a"><span>agent gets</span><b>${fmt(10000 * share / 100)}</b></div>
+      </div>`;
+  });
+}
+['wholesale','retail'].forEach(kind=>{
+  const inp = document.getElementById('preset_agent_discount_' + kind);
+  if(inp) inp.addEventListener('input', renderPresetAgentFork);
+});
+/* The stepper's two buttons write into the same box the owner can type
+   in, and save through its own change handler -- one control, two ways
+   to move it. */
+{
+  const sec = document.getElementById('tab-presets');
+  if(sec) sec.addEventListener('click', (e)=>{
+    const b = e.target.closest('.pset-step-b');
+    if(!b) return;
+    const inp = document.getElementById(b.dataset.for);
+    if(!inp) return;
+    inp.value = String(Math.min(100, Math.max(0, (Number(inp.value)||0) + Number(b.dataset.step||0))));
+    inp.dispatchEvent(new Event('change'));
+    renderPresetAgentFork();
+  });
 }
 document.getElementById('preset_agent_discount_wholesale').addEventListener('change', (e)=>{
   data.presetAgentDiscountWholesalePct = Math.min(100, Math.max(0, Number(e.target.value)||0));
@@ -111852,6 +112660,86 @@ function renderPresetDefaultMarkup(){
   el('preset_default_markup_caption').textContent = (!w && !r)
     ? 'No default set — products without their own rule stay unpriced.'
     : 'Right now: wholesale ' + (w || 'no default') + ' · retail ' + (r || 'no default') + '.';
+  const st = el('pset_mk_state');
+  if(st){
+    st.textContent = (w && r) ? 'set' : (w || r) ? 'one side set' : 'not set';
+    st.className = 'ow-cp ' + ((w || r) ? 'ow-good' : 'ow-warn');
+  }
+  renderPresetMarkupSum();
+}
+
+/* The line the sum is worked on: one of this shop's own, with a supplier
+   price on file -- preferring one that has no rule of its own, since
+   those are the lines this rule actually prices. Derived, never
+   invented: with no priced line there is no example, and the sum says
+   so rather than making one up. */
+function presetMarkupExample(){
+  let rows = [];
+  try { rows = productRowsForList(); } catch(e){ return null; }
+  let fallback = null;
+  for(const row of rows){
+    if(row.kind === 'variable-empty') continue;
+    const best = productBestBuy(row.p.id, row.idx);
+    if(best.price == null || !(Number(best.price) > 0)) continue;
+    const own = ['wholesale','retail'].some(k=>{
+      const rule = effectiveMarkupRule(row.p, row.idx, k);
+      return rule && rule.source !== 'default';
+    });
+    const ex = { name: row.p.name + (row.v && row.v.combo ? ' — ' + variantLabel(row.v.combo) : ''), cost: Number(best.price) };
+    if(!own) return ex;
+    if(!fallback) fallback = ex;
+  }
+  return fallback;
+}
+
+/* THE SUM: cost + markup = what it sells at, for each side. Read from
+   the controls rather than the saved rule, so the answer moves while the
+   owner types and only the save waits for them to leave the field. */
+function renderPresetMarkupSum(){
+  const el = id=> document.getElementById(id);
+  if(!el('pset_mk_w_cost')) return;
+  const ex = presetMarkupExample();
+  const fmt = (n)=> Math.round(n).toLocaleString('en-US');
+  [['wholesale','w'], ['retail','r']].forEach(([kind, k])=>{
+    const type = el('preset_default_markup_' + kind + '_type').value === 'fixed' ? 'fixed' : 'percent';
+    const v = Math.max(0, Number(el('preset_default_markup_' + kind + '_value').value)||0);
+    document.querySelectorAll(`#tab-presets .pset-seg2-b[data-mk-kind="${kind}"]`).forEach(b=>{
+      const on = b.dataset.mkType === type;
+      b.classList.toggle('is-on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    el(`pset_mk_${k}_per`).textContent = type === 'fixed' ? (kind === 'wholesale' ? 'per pack' : 'per piece') : 'on cost';
+    el(`pset_mk_${k}_cost`).textContent = ex ? fmt(ex.cost) : '—';
+    const add = ex && v ? (type === 'percent' ? ex.cost * v / 100 : v) : null;
+    el(`pset_mk_${k}_add`).textContent = !v ? 'no rule' : add != null ? '+' + fmt(add) : '+' + (type === 'percent' ? v + '%' : fmt(v));
+    el(`pset_mk_${k}_add`).classList.toggle('is-none', !v);
+    const out = el(`pset_mk_${k}_out`);
+    out.classList.toggle('is-set', !!v);
+    el(`pset_mk_${k}_say`).textContent = v ? 'sells at' : 'nothing to sell at';
+    el(`pset_mk_${k}_sells`).textContent = v && ex ? fmt(ex.cost + add) : '—';
+  });
+  const exEl = el('pset_mk_example');
+  if(exEl) exEl.textContent = ex ? `Worked on ${ex.name}` : '';
+  document.querySelectorAll('#pset_rule_markup .pset-mk-c').forEach(c=>{
+    c.title = ex ? `Worked on ${ex.name}: its cheapest supplier price on file` : 'No line has a supplier price on file yet';
+  });
+}
+/* The two-button switch writes the hidden select the save reads, so
+   the rule still has exactly one store. */
+{
+  const sec = document.getElementById('tab-presets');
+  if(sec) sec.addEventListener('click', (e)=>{
+    const b = e.target.closest('.pset-seg2-b[data-mk-kind]');
+    if(!b) return;
+    const sel = document.getElementById('preset_default_markup_' + b.dataset.mkKind + '_type');
+    if(!sel || sel.value === b.dataset.mkType) return;
+    sel.value = b.dataset.mkType;
+    sel.dispatchEvent(new Event('change'));
+  });
+  ['wholesale','retail'].forEach(kind=>{
+    const v = document.getElementById('preset_default_markup_' + kind + '_value');
+    if(v) v.addEventListener('input', renderPresetMarkupSum);
+  });
 }
 ['wholesale','retail'].forEach(kind=>{
   const typeEl = document.getElementById('preset_default_markup_' + kind + '_type');
@@ -111865,6 +112753,9 @@ function renderPresetDefaultMarkup(){
     // The product cards' rule chips read this default, so the list must
     // not keep saying "No rule" against products it now prices.
     triggerProductsRender();
+    // And this page must not go on saying it is unset.
+    renderPresetBand();
+    renderPresetIndex();
     toast('Default price rule updated');
   };
   typeEl.addEventListener('change', save);
@@ -111968,19 +112859,44 @@ document.getElementById('preset_service_add').addEventListener('click', ()=>{
 document.getElementById('preset_service_new').addEventListener('keydown', e=>{
   if(e.key==='Enter'){ e.preventDefault(); document.getElementById('preset_service_add').click(); }
 });
+/* The order board's own steps, in the order an order walks them, each
+   with its limit. A step with no limit is drawn open -- dashed, "not
+   watched" -- because that is a decision as often as an omission: a step
+   that waits on a lorry or a customer is not this shop's to hurry. */
 function renderPresetOrderLimits(){
   const wrap = document.getElementById('presetOrderLimitsWrap');
   const limits = data.presetOrderStageLimits || {};
-  wrap.innerHTML = SQ_STATUS_ORDER.map(status=>`
-    <div class="field"><label title="${esc(SQ_STATUSES[status].label)} (minutes)">${esc(SQ_STATUSES[status].label)} (minutes)</label>
-      <input type="number" class="preset-order-limit-input" data-status="${status}" min="0" step="1" value="${limits[status]||''}" placeholder="e.g. 60">
-    </div>`).join('');
+  const label = (st)=> (typeof ORDER_STATUS_SHORT_LABELS !== 'undefined' && ORDER_STATUS_SHORT_LABELS[st])
+    || SQ_STATUSES[st].label;
+  const arrow = '<span class="pset-pipe-ar" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>';
+  wrap.innerHTML = SQ_STATUS_ORDER.map((status, i)=>{
+    const m = Number(limits[status])||0;
+    return `${i ? arrow : ''}<div class="pset-pipe-n${m > 0 ? '' : ' is-off'}">
+      <span class="pset-pipe-h"><span class="pset-pipe-i">${i + 1}</span><span class="pset-pipe-t" title="${esc(SQ_STATUSES[status].label)}">${esc(label(status))}</span></span>
+      <span class="pset-pipe-v">
+        <label class="sr-only" for="pset_lim_${status}">${esc(label(status))}: limit in minutes</label>
+        <input type="number" id="pset_lim_${status}" class="preset-order-limit-input" data-status="${status}" min="0" step="1" value="${m||''}" placeholder="off">
+        <span class="pset-pipe-u">${m > 0 ? 'min' : ''}</span>
+      </span>
+    </div>`;
+  }).join('');
   wrap.querySelectorAll('.preset-order-limit-input').forEach(inp=>{
     inp.addEventListener('change', ()=>{
       if(!data.presetOrderStageLimits) data.presetOrderStageLimits = {};
       data.presetOrderStageLimits[inp.dataset.status] = Math.max(0, Number(inp.value)||0);
       saveData();
       renderSavedQuotes();
+      /* Redrawn in place, not rebuilt: rebuilding would take the caret
+         out of the next box as the owner tabs into it. */
+      const on = data.presetOrderStageLimits[inp.dataset.status] > 0;
+      const node = inp.closest('.pset-pipe-n');
+      if(node){
+        node.classList.toggle('is-off', !on);
+        const u = node.querySelector('.pset-pipe-u');
+        if(u) u.textContent = on ? 'min' : '';
+      }
+      renderPresetBand();
+      renderPresetIndex();
       toast('Order tracking limits updated');
     });
   });
@@ -112025,6 +112941,8 @@ document.getElementById('preset_stage_alerts').addEventListener('change', async 
   }
   saveData();
   renderStageAlertToggle();
+  renderPresetBand();
+  renderPresetIndex();
   toast(data.presetStageAlerts
     ? 'You will be told when an order goes past its limit'
     : 'Order timing alerts turned off — the blinking flag on the board stays');
