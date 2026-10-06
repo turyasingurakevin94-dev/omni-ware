@@ -124044,12 +124044,12 @@ function aheadRunwaySVG(a, small){
     g += `<circle class="ow-ah-dot ow-ah-low" cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="${small ? 4.5 : 6}"/>`;
     if(small){ /* the hero and the ledger name the day in words */ }
     else {
-    g += `<line class="ow-ah-lowrule" x1="${lx.toFixed(1)}" y1="${(padT + 34).toFixed(1)}" x2="${lx.toFixed(1)}" y2="${ly.toFixed(1)}"/>`;
+    g += `<line class="ow-ah-lowrule" x1="${lx.toFixed(1)}" y1="${(padT + 8).toFixed(1)}" x2="${lx.toFixed(1)}" y2="${ly.toFixed(1)}"/>`;
     const right = lx > padL + iw * 0.62;
     const ax = lx + (right ? -9 : 9), anc = right ? 'end' : 'start';
-    g += `<text class="ow-ah-lowlab${under ? ' ow-bad' : ''}" x="${ax.toFixed(1)}" y="${padT + 11}" text-anchor="${anc}">${
+    g += `<text class="ow-ah-lowlab${under ? ' ow-bad' : ''}" x="${ax.toFixed(1)}" y="${padT - 12}" text-anchor="${anc}">${
       under ? 'Short ' + esc(n(Math.abs(low.p[1]))) : esc(n(low.p[1])) + ' left'}</text>`
-      + `<text class="ow-ah-lowsub" x="${ax.toFixed(1)}" y="${padT + 25}" text-anchor="${anc}">${
+      + `<text class="ow-ah-lowsub" x="${ax.toFixed(1)}" y="${padT + 2}" text-anchor="${anc}">${
         esc(fmtShortDate(a.tightest.date))} — the tightest day</text>`;
     }
   }
@@ -124442,14 +124442,18 @@ function renderAhead(){
     const items = k === 'word'
       ? a.promised.map(p=> ({ date: p.date, amount: p.amount, name: String(p.name || '').split(' ')[0], full: p.name, sign: '+' }))
       : a.commitments.filter(c=> lever(c) === k).map(c=> ({ date: c.date, amount: c.amount, name: shortName(c), full: c.label, sign: '−' }));
-    /* Two on one day are one chip, or they would sit exactly on top of
-       each other and read as one. */
-    const byDay = new Map();
-    items.forEach(it=>{
-      const e = byDay.get(it.date) || { date: it.date, amount: 0, names: [], fulls: [], sign: it.sign };
-      e.amount += it.amount; e.names.push(it.name); e.fulls.push(it.full + ' ' + b(it.amount)); byDay.set(it.date, e);
+    /* Two close enough to touch are one chip, or they would sit on top
+       of each other and read as one -- the chip sits at the first of them. */
+    const groups = [];
+    items.slice().sort((x, y)=> String(x.date).localeCompare(String(y.date))).forEach(it=>{
+      let e = groups[groups.length - 1];
+      if(!e || xPct(it.date) - xPct(e.date) >= 9){
+        e = { date: it.date, amount: 0, names: [], fulls: [], sign: it.sign };
+        groups.push(e);
+      }
+      e.amount += it.amount; e.names.push(it.name); e.fulls.push(fmtShortDate(it.date) + ' ' + it.full + ' ' + b(it.amount));
     });
-    return [...byDay.values()].map(e=> `<button type="button" class="ow-fx-chip ${LV[k][1]}" data-x="${xPct(e.date).toFixed(2)}" style="left:${xPct(e.date).toFixed(2)}%" title="${esc(fmtShortDate(e.date) + ' — ' + e.fulls.join('; '))}"><span class="ow-fx-chip-n">${esc(e.names.length > 1 ? e.names.length + ' ' + (k === 'word' ? 'promises' : 'payments') : e.names[0])}</span><span class="ow-fx-chip-v">${e.sign}${esc(M(e.amount))}</span></button>`).join('');
+    return groups.map(e=> `<button type="button" class="ow-fx-chip ${LV[k][1]}" data-x="${xPct(e.date).toFixed(2)}" style="left:${xPct(e.date).toFixed(2)}%" title="${esc(e.fulls.join('; '))}"><span class="ow-fx-chip-n">${esc(e.names.length > 1 ? e.names.length + ' ' + (k === 'word' ? 'promises' : 'payments') : e.names[0])}</span><span class="ow-fx-chip-v">${e.sign}${esc(M(e.amount))}</span></button>`).join('');
   };
   const laneKeys = ['move', 'arrive', 'fixed', 'late', 'word']
     .filter(k=> k === 'word' ? a.promised.length : a.commitments.some(c=> lever(c) === k));
