@@ -80,9 +80,12 @@ const pay = (/function faUpdatePayment[\s\S]*?\n\}\n/.exec(code) || [''])[0];
 
 /* ---------- 3. it says what it will do before it does it ------------- */
 {
-  t.check(/will be recorded leaving \$\{esc\(label\)\}/.test(pay),
+  /* Version 2 says it in the popup's result box, in the canvas's words:
+     "1,300,000 paid now from Bank · 6,500,000 on Watu Credit". */
+  t.check(/\$\{fig\(paid\)\} out of \$\{esc\(label\)\} to the Cash Book/.test(pay)
+    && /\$\{fig\(paid\)\} paid now from \$\{esc\(label\)\}/.test(pay),
     'the form states what reaches the cash book before anything is saved');
-  t.check(/never passed through the shop/.test(pay),
+  t.check(/on \$\{esc\(loan\.lender\)\}/.test(pay) && /nothing to the Cash Book/.test(pay),
     'and says plainly that the financed part did not');
 
   /* The three figures shown adding up. A gap is NOT refused -- part of a
@@ -96,7 +99,7 @@ const pay = (/function faUpdatePayment[\s\S]*?\n\}\n/.exec(code) || [''])[0];
      warn line left both strings sitting there unreachable while the
      check went on passing — the third time today that presence has
      stood in for reachability. */
-  t.check(/if\(Math\.abs\(gap\) >= 1\)\{\s*\n\s*out\.className = 'fa-consequence warn';\s*\n\s*out\.innerHTML =/.test(pay),
+  t.check(/if\(Math\.abs\(gap\) >= 1\)\{\s*\n\s*out\.className = 'ow-pop-rl ow-pop-warn';\s*\n\s*out\.innerHTML =/.test(pay),
     'and named rather than refused');
   t.check(/unaccounted for/.test(pay), 'in words that say what is missing');
   t.check(/more than the thing cost/.test(pay),
@@ -158,14 +161,17 @@ const pay = (/function faUpdatePayment[\s\S]*?\n\}\n/.exec(code) || [''])[0];
      rendered at 14px, because `input[type=text]` does not match an
      <input> that declares no type. winningDeclaration resolves the
      cascade the way a browser does. */
-  eq(winningDeclaration(src, 'fa_cost', 'font-size').value, '24px',
-    'the cost actually renders as the subject of the form');
+  /* Version 2: the popup asks only what decides the thing, so every
+     field is drawn at one size -- 15px -- and the name and cost lead by
+     place, the first two rows. The kind is folded under More options. */
+  eq(winningDeclaration(src, 'fa_cost', 'font-size').value, '15px',
+    'the cost renders at the popup\'s field size');
   t.check(/IBM Plex Mono/.test(winningDeclaration(src, 'fa_cost', 'font-family').value),
     'in figures that line up');
-  eq(winningDeclaration(src, 'fa_name', 'font-size').value, '19px',
-    'and the name renders above the fields that describe the thing');
-  eq(winningDeclaration(src, 'fa_category', 'font-size').value, '14px',
-    'which only means something because those fields do not');
+  eq(winningDeclaration(src, 'fa_name', 'font-size').value, '15px',
+    'and the name, first, at the same size');
+  t.check(src.indexOf('id="fa_category"') > src.indexOf('id="fa_more"'),
+    'while the kind folds away under More options');
 
   // The preview was the best thing on the form and sat last, in grey.
   t.check(modal.indexOf('id="fa_preview"') < modal.indexOf('id="fa_notes"'),

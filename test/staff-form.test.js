@@ -100,17 +100,32 @@ const modal = (/<div class="modal-overlay" id="staffModal">[\s\S]*?\n<\/div>\n/.
 /* ---------- 3. what a rate commits the shop to ---------------------- */
 {
   const list = scope.bases();
-  eq(list[0].key, '', 'not being on the payroll is a first-class choice, not an empty dropdown slot');
-  eq(list.length, 4, 'with monthly, weekly and daily beside it');
-  eq(list.map((b) => b.key).join(','), ',monthly,weekly,daily',
-    'ordered longest period first, so the rate box means less money as the eye travels right');
+  /* REORDERED ON THE OWNER'S CANVAS. This pinned "Not on the payroll"
+     FIRST, against the dropdown it replaced, where an empty first slot
+     was how "nobody" got chosen by accident. The form the owner signed
+     off is one switch of four -- Monthly, Weekly, Daily, Not paid -- and
+     the point survives it: not being paid is still its own named
+     choice, the same size as the others, never an empty slot. What
+     changed is only where it sits, at the end of the run from longest
+     period to none. */
+  eq(list.length, 4, 'four ways of being paid, one switch');
+  t.check(list.some((b) => b.key === '' && /Not paid/.test(b.name)),
+    'not being on the payroll is a first-class choice with its own name, not an empty dropdown slot');
+  eq(list.map((b) => b.key).join(','), 'monthly,weekly,daily,',
+    'ordered longest period first, ending on none, so the rate box means less money as the eye travels right');
 
   const sync = (/function syncStaffPayFields[\s\S]*?\n\}\n/.exec(code) || [''])[0];
   /* The commitment, said here rather than discovered on the payroll
-     screen a month later. */
-  t.check(/is raised on the payroll at the end of\s*\n?\s*every month, starting \$\{esc\(month\)\}, until this is changed/.test(sync),
+     screen a month later. The canvas put it on ONE line -- what a month
+     comes to and what a missed day takes off it -- and the full
+     sentence moved to that line's title, so it is still said, word for
+     word, wherever the short form is shown. */
+  t.check(/a month · a missed day docks/.test(sync),
+    'a monthly or weekly rate says what the month comes to and what one missed day costs');
+  t.check(/is raised on the payroll at the end of every month, starting \$\{month\}, until this is changed/.test(sync),
     'a monthly salary says it recurs, from which month, and until when');
-  t.check(/nothing is raised for \$\{esc\(month\)\} until\s*\n?\s*somebody counts them/.test(sync),
+  t.check(/nothing is raised until the days are counted/.test(sync)
+    && /nothing is raised for \$\{month\} until somebody counts them/.test(sync),
     'and a daily rate says the month is not costed until the days are entered');
   t.check(/They will not appear on the payroll, and no wage is raised for them\./.test(sync),
     'while nobody on the payroll is told exactly that');
@@ -125,7 +140,7 @@ const modal = (/<div class="modal-overlay" id="staffModal">[\s\S]*?\n<\/div>\n/.
   /* The label is the only thing on the form that says what the number
      means, and the three readings are twenty-six, four and one times
      each other -- so a wrong one is not a cosmetic slip. */
-  t.check(/label\.textContent = basis === 'daily' \? 'Each day'/.test(sync)
+  t.check(/label\.textContent = basis === 'daily' \? 'Each day worked'/.test(sync)
     && /basis === 'weekly' \? 'Each week' : 'Each month'/.test(sync),
     'the label says which of the three, since one reading is twenty-six times another');
 
@@ -161,24 +176,30 @@ const modal = (/<div class="modal-overlay" id="staffModal">[\s\S]*?\n<\/div>\n/.
 
 /* ---------- 5. the cascade ------------------------------------------ */
 {
-  /* `.sf .sf-name` LOST to `.sf input:not([type])`: :not() lends its
-     argument's weight, so an attribute selector inside it outranks a
-     second class. The name silently rendered at 14px like everything
-     else, and looked deliberate. Caught by measuring the computed size,
-     not by reading the rule. */
-  /* MEASURED, not matched. Every one of these forms asserted its rule
-     was present and written after the general one; both were true and
-     the field still rendered at 14px, because `input[type=text]` does
-     not match an <input> that declares no type. winningDeclaration
-     resolves the cascade the way a browser does. */
-  eq(winningDeclaration(src, 'st_name', 'font-size').value, '19px',
-    'the name actually renders bigger than the fields that describe the person');
-  eq(winningDeclaration(src, 'st_phone', 'font-size').value, '14px',
-    'which only means something because those fields do not');
+  /* MEASURED, not matched. `.sf .sf-name` once LOST to
+     `.sf input:not([type])`: :not() lends its argument's weight, so an
+     attribute selector inside it outranks a second class, and a rule
+     that was present and written after the general one still did not
+     apply. winningDeclaration resolves the cascade the way a browser
+     does.
+
+     WHAT IT MEASURES CHANGED WITH THE CANVAS. This pinned the name at
+     19px over 14px fields -- a form with one big subject line. The
+     owner's form is compact: name and phone share one row at the same
+     size, and what tells them apart is that the phone is a FIGURE, set
+     in the mono face like every other number in the app. So the same
+     trap is measured on the rule that now carries the difference. */
+  const fam = (id) => String(winningDeclaration(src, id, 'font-family').value || '');
+  t.check(/IBM Plex Mono/.test(fam('st_phone')),
+    `the phone number actually renders in the figure face (got ${JSON.stringify(fam('st_phone'))})`);
+  t.check(!/IBM Plex Mono/.test(fam('st_name')),
+    'while the name, which is words, does not');
+  eq(winningDeclaration(src, 'st_name', 'font-size').value, winningDeclaration(src, 'st_phone', 'font-size').value,
+    'and the two sit at one size on one row, as drawn');
   t.check(/\.sf \.sf-rate input\[type=number\]\{/.test(src),
-    'and the rate does the same, for the same reason');
-  t.check(src.indexOf('.sf input[type=text],.sf input:not([type])') < src.indexOf('.sf input.sf-name'),
-    'with the general rule first and the exceptions after it, so order agrees with weight');
+    'the rate beats the general rule the same way, with the type selector');
+  t.check(src.indexOf('.sf input[type=text],.sf input:not([type])') < src.indexOf('.sf input.sf-phone'),
+    'with the general rule first and the exception after it, so order agrees with weight');
 }
 
 process.exit(t.done() ? 1 : 0);

@@ -23,4 +23,4 @@ t.check(/tab==='suppliers' && !supEntering && !tabRedrawing\)\{ supViewId = null
 t.check(!/goToTab\(currentActiveTab\)/.test(src.replace(/function redrawCurrentTab\(\)\{[\s\S]*?\n\}/, '')),
   'nothing redraws by calling goToTab(currentActiveTab) directly any more');
 
-t.done();
+process.exit(t.done() ? 1 : 0);

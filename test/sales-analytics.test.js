@@ -281,13 +281,18 @@ if (scope) {
   t.check(/if\(filtered\) bits\.push\(/.test(kpis) && /Showing only what matches/.test(kpis),
     'the screen saying instead what it is showing');
   /* THE COMPARISON MOVED INTO THE TILES. It was a sentence under the
-     strip ("Against 27 Jul – 25 Aug: ..."); it is now a grey "before"
-     bar under each figure, with the dates on it. What the old check
-     meant -- the window before is offered only when no search is
-     narrowing this one -- is kept: the bars are fed from cmp, which is
-     null while a search is on. */
-  t.check(/anVsHTML\(t\.sales, cmp && cmp\.sales, cmp\)/.test(kpis),
+     strip ("Against 27 Jul – 25 Aug: ..."); it became a grey "before"
+     bar under each figure; and with the screen drawn from the canvas it
+     is now a running total of this window's sales against the window
+     before's, dashed (anPaceHTML), with the profit before beside the
+     profit now. What the old check meant -- the window before is
+     offered only when no search is narrowing this one -- is unchanged:
+     the line is fed from cmp, which is null while a search is on, and
+     with cmp null it draws nothing. */
+  t.check(/anPaceHTML\(cmp\)/.test(kpis),
     'and the window before is drawn in the tiles, from the same guarded comparison');
+  t.check(/function anPaceHTML\(cmp\)\{\s*if\(!cmp\) return/.test(code),
+    'and the picture says nothing at all when there is no comparison to draw');
 }
 
 /* ---------- 8. a cost of nothing is not a cost of zero ------------------

@@ -192,7 +192,10 @@ const win = (from, to, b) => { const w = scope.stComparisonWindow(from, to, b); 
      the three periods are one control that says which of them the
      figures cover -- and one fewer opinion in the file about what
      "pick one of these" looks like. */
-  t.check(/<div class="ow-seg" id="st_presets">[\s\S]{0,400}?class="ow-seg-b st-preset" data-preset="year"/.test(src),
+  /* Attributes allowed after the id: the group now carries
+     role="group" and an aria-label, so a screen reader hears what the
+     four buttons choose between. Still one control. */
+  t.check(/<div class="ow-seg" id="st_presets"[^>]*>[\s\S]{0,400}?class="ow-seg-b st-preset" data-preset="year"/.test(src),
     'the three periods are one segmented control, not three separate buttons');
   t.check(!/class="rost-per st-preset"/.test(src),
     'and it is the layer\'s, so this screen no longer borrows the roster\'s');

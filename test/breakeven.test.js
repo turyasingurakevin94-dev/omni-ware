@@ -200,9 +200,16 @@ const IS = (revenue, costOfSales, opex, extra) => Object.assign({
   t.check(/daily-paid \$\{floor\.dailyCount===1\?'worker is':'workers are'\} not in this/.test(html),
     'and what the floor leaves out is said, not left to be discovered');
 
-  const ov = (/function stOverview[\s\S]*?\n\}\n/.exec(code) || [''])[0];
-  t.check(/stBreakevenHTML\(breakevenPosition\(is, periodOf\(to\)\)\)/.test(ov),
-    'it is on the overview, built from the period on screen');
+  /* The Performance hub gave break-even a view of its own; the panel
+     ("what the line is made of") lives there, and the overview carries
+     the one figure in its glance table. Both must be built from the
+     period on screen -- the committed floor is that month's. */
+  const bev = (/function shBreakEven[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+  t.check(/const be = breakevenPosition\(is, periodOf\(ctx\.to\)\);/.test(bev) && /stBreakevenHTML\(be\)/.test(bev),
+    'it is on the break-even view, built from the period on screen');
+  const model = (/function shModel[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+  t.check(/const be = breakevenPosition\(is, periodOf\(/.test(model) && /breakevenPosition\(mis, period\)/.test(model),
+    'and the overview\u2019s figure, and every month behind it, uses that month\u2019s committed costs');
 }
 
 process.exit(t.done() ? 1 : 0);

@@ -471,7 +471,10 @@ const reset = () => {
   const doc = (/function stBalanceSheet[\s\S]*?\n\}\n/.exec(src) || [''])[0];
   t.check(!/stLine\('Profit kept in the business'/.test(doc),
     'the line does not claim to be a total of profits earned');
-  t.check(/stLine\('Kept in the business'/.test(doc),
+  /* The Performance hub draws the sheet from row objects through
+     shStatement rather than one stLine call per line, so the name is
+     pinned on the row's label. Same claim: this is what the line says. */
+  t.check(/stLine\('Kept in the business'|label:'Kept in the business'/.test(doc),
     'and is named for what it is');
   /* As a hint, not merely as text present somewhere in the function.
      Renaming the key left the sentence sitting in the source, unrendered
@@ -777,8 +780,10 @@ const reset = () => {
      interpolated into a split layout rather than assigned directly. What
      the check protects is unchanged: ONE document keyed off the active
      tab, never the five-statement scroll this replaced. */
-  t.check(/\$\{statementDocHTML\(stActiveTab, ctx\)\}/.test(code)
-    && /: statementDocHTML\(stActiveTab, ctx\);/.test(code),
+  /* The side view now lives INSIDE each statement view (shStatement
+     draws the table and its records together), so the body is assigned
+     the one view directly. Still ONE document keyed off the active tab. */
+  t.check(/body\.innerHTML = statementDocHTML\(stActiveTab, ctx\);/.test(code),
     'and the body renders one of them rather than all of them at once');
   t.check(/key === 'pl'\s+\? stProfitAndLoss/.test(code),
     'chosen by key, one renderer per document');

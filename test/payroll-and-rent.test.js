@@ -518,7 +518,10 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
      asset, and says so. */
   t.check(/Wages and rent owed are the months already worked or occupied and not yet paid; paid in advance is the days already paid for and not yet reached/.test(code),
     'and the sheet says out loud that the liability and the asset follow the rule the profit and loss charges on');
-  t.check(/stLine\('Paid in advance', bs\.prepaid/.test(code),
+  /* The Performance hub draws the sheet from row objects (shStatement),
+     so the line is matched as a row labelled for it carrying bs.prepaid. */
+  t.check(/stLine\('Paid in advance', bs\.prepaid/.test(code)
+    || /label:'Paid in advance'[^}]*cur: bs\.prepaid/.test(code),
     'with the days paid for in advance on their own line');
 }
 

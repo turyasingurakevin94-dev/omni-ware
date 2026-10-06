@@ -421,7 +421,11 @@ const sold = (productId, qty, date) => data.stockLog.push({
      does not appear at all, and the SCREEN says the good news once,
      naming stale prices among the things it checked. The words moved;
      they were not dropped, and this checks they were not. */
-  const render = extractFunction(src, 'renderAnalysis', 'index.html');
+  /* The screen is drawn by more than one function now -- renderAnalysis
+     reads the books once, anDraw draws the lists, anRowHTML and
+     anDetailHTML a finding -- so the words are looked for in all four. */
+  const render = ['renderAnalysis', 'anDraw', 'anRowHTML', 'anDetailHTML']
+    .map((n) => extractFunction(src, n, 'index.html')).join('\n');
   t.check(/ow-empty/.test(render) && /no price you trade is stale/.test(render),
     'an empty list is still good news said in words — now said once, by the screen');
   t.check(/if\(prows\.length\)\{/.test(finds),
@@ -436,7 +440,7 @@ const sold = (productId, qty, date) => data.stockLog.push({
       finds.slice(finds.indexOf('priceReviewCandidates'), finds.indexOf('3. WHAT IS OWED'))),
     'the report ignores the dashboard date range — staleness is a fact about now');
   t.check(/Stale prices are not/.test(render),
-    'and the rail says so where the window is set, not buried in prose');
+    'and the finding says so on its own row, not buried in prose');
 
   // Reachable as a worklist, ordered the same way.
   t.check(/\{ key:'review',\s+label:'Needs checking' \}/.test(src),
