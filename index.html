@@ -5312,14 +5312,8 @@
   .sc-matches{background:#FCFBF9;border:1px solid var(--line);border-radius:8px;padding:9px 10px;display:flex;flex-direction:column;gap:9px;}
   .sc-matches-label{font-size:10px;text-transform:uppercase;letter-spacing:0.4px;color:var(--ink-soft);font-weight:700;}
 
-  /* Staff cards (reuse .supplier-grid/.supplier-card/.sc-* for layout) */
-  /* ---- The roster ----
-     One row per PERSON, not one card per role. A worker who also
-     delivers used to appear in both grids, which meant two statuses to
-     read for one human being. */
-  /* .sum-strip is the older metric row. The staff screen uses the
-     layer's .ow-strip now; this stays for the screens that still emit
-     it, and is not to be reached for again. */
+  /* .sum-strip is the older metric row. It stays for the screens that
+     still emit it, and is not to be reached for again. */
   .sum-strip{display:flex;flex-wrap:wrap;gap:1px;background:var(--line);border:1px solid var(--line);
     border-radius:12px;overflow:hidden;margin-bottom:16px;}
   .sum-cell{flex:1 1 130px;background:var(--panel);padding:12px 14px;}
@@ -5330,407 +5324,445 @@
   .sum-cell.good .sum-value{color:var(--good);}
   .sum-cell.warn .sum-value{color:var(--ow-amber-ink);}
 
-  /* ---- The roster ----
-     One row per PERSON, ordered by who can take the next order. The row
-     is a row inside a panel, not a floating card in a gapped column:
-     twelve cards with their own borders and shadows is twelve things to
-     look at, and the question here is answered by reading DOWN one
-     column, which needs the columns to line up. */
-  .rost-bar{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ow-sp-8);
-    justify-content:space-between;padding:var(--ow-sp-8) var(--ow-sp-12);
-    border-bottom:1px solid var(--ow-rule-soft);margin-bottom:0;}
-  .rost-right{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ow-sp-8);}
-  .rost-search{margin:0;min-width:190px;}
-  .rost-filters, .rost-period{display:flex;gap:2px;background:var(--ow-steel-050);
-    border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r);padding:2px;}
-  .rost-filter, .rost-per{
-    all:unset;box-sizing:border-box;cursor:pointer;padding:0 var(--ow-sp-10);height:24px;
-    line-height:24px;border-radius:var(--ow-r-sm);
-    font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);color:var(--ow-ink-600);white-space:nowrap;
-  }
-  .rost-filter:hover, .rost-per:hover{color:var(--ow-ink-900);}
-  .rost-filter.active, .rost-per.active{background:var(--ow-paper);color:var(--ow-ink-900);
-    font-weight:var(--ow-fw-600);border:1px solid var(--ow-rule-soft);
-    /* A hairline, not a shadow. The chosen chip is a surface that has
-       come forward, and this file already carries sixty-three distinct
-       shadows -- a sixty-fourth to mark a toggle is how that number got
-       there. */
-    padding:0 calc(var(--ow-sp-10) - 1px);line-height:22px;}
-  .rost-filter:focus-visible, .rost-per:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:2px;}
-
-  .rost-list{display:flex;flex-direction:column;}
-  .rost-item{border-bottom:1px solid var(--ow-rule-soft);}
-  .rost-item:last-child{border-bottom:0;}
-  .rost-item.is-open{background:var(--ow-paper-2);}
-  .rost-row{
-    /* The name and what they are doing get the room. The figure column
-       is sized to a figure -- it holds one, right-aligned -- and giving
-       it 2fr while the client's name it decides against was cut to
-       "Kato Construction L..." had it exactly backwards. */
-    display:grid;grid-template-columns:minmax(220px,1.5fr) minmax(190px,1.3fr) minmax(0,1fr) auto;
-    gap:var(--ow-sp-10);align-items:center;cursor:pointer;
-    min-height:var(--ow-tap);padding:var(--ow-sp-6) var(--ow-sp-12);
-    border-left:3px solid transparent;background:none;
-  }
-  .rost-row:hover{background:var(--ow-paper-2);}
-  .rost-item.is-open .rost-row{border-left-color:var(--ow-steel-950);}
-  /* Steel, not the accent. The accent is the one thing to do next, and
-     this screen has already spent it on Add staff -- an oxide box drawn
-     round a whole row the moment it opens reads as that one thing, and
-     buries the steel edge that actually marks which row is open. */
-  .rost-row:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
-  .rost-item.is-off .rost-name{color:var(--ow-ink-600);}
-  .rost-who{display:flex;align-items:center;gap:var(--ow-sp-8);min-width:0;}
-  .rost-cr{width:12px;height:12px;flex:none;color:var(--ow-ink-400);fill:none;stroke:currentColor;
-    stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:transform .13s;}
-  .rost-item.is-open .rost-cr{transform:rotate(90deg);}
-  .rost-av{width:28px;height:28px;border-radius:var(--ow-r);font-size:var(--ow-t-11);flex:none;}
-  .rost-ident{min-width:0;}
-  .rost-name{font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);line-height:1.3;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .rost-sub{font-size:var(--ow-t-11);color:var(--ow-ink-600);margin-top:1px;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .rost-state{min-width:0;}
-  /* Three declarations or none, and min-width:0 above -- a client's name
-     is longer than the box drawn for it more often than not. */
-  .rost-note{font-size:var(--ow-t-11);color:var(--ow-ink-600);margin-top:3px;line-height:1.35;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  /* The figure column. Right-aligned and tabular so a column of them can
-     be read down; sized to its content, because a clipped figure is not
-     a shortened figure, it is a wrong one. */
-  .rost-stats{min-width:0;text-align:right;}
-  .rost-fig{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
-    font-variant-numeric:tabular-nums;letter-spacing:-.02em;
-    font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);display:block;white-space:nowrap;}
-  .rost-fig.ow-bad{color:var(--ow-crimson);}
-  .rost-fig.ow-quiet{color:var(--ow-ink-400);}
-  .rost-basis{display:block;font-size:var(--ow-t-11);color:var(--ow-ink-600);margin-top:-1px;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .rost-actions{display:flex;align-items:center;gap:var(--ow-sp-4);flex-shrink:0;}
-  /* The record, opened in place. Indented to the name so it reads as
-     belonging to the row above rather than as the next thing in the list. */
-  .rost-x{padding:0 var(--ow-sp-12) var(--ow-sp-12) 55px;}
-  .rost-item:not(.is-open) .rost-x{display:none;}
-  .rost-foot{margin:0;border-top:1px solid var(--ow-rule-soft);}
-
-  /* The rail. */
-
-  @media (max-width:1100px){
-    .rost-row{grid-template-columns:minmax(180px,1fr) minmax(130px,1fr);grid-template-areas:
-      "who state" "stats stats" "actions actions";}
-    .rost-who{grid-area:who;} .rost-state{grid-area:state;}
-    .rost-stats{grid-area:stats;padding-top:4px;border-top:1px solid var(--ow-rule-soft);text-align:left;}
-    .rost-actions{grid-area:actions;justify-content:flex-end;}
-    .rost-x{padding-left:var(--ow-sp-12);}
-  }
-  /* Those two minimums add up to 310px plus a 16px gap, inside a phone
-     panel with 280px of room -- so every staff row hung 48px off the
-     right and took its last action button with it. The name column may
-     shrink instead; the status chip takes only what it needs. */
-  /* THE PHONE IS A DIFFERENT DESIGN, NOT THIS ONE REFLOWED.
-     820px is the switch. The row's four columns were squeezed into two
-     here -- name beside status -- and "Wasswa Ssekitoleko" came out as
-     "Wass...", beneath its own chip, with the status sentence taking
-     the width the name needed. A phone gets a card: one thing under
-     another, in the order it is read, with the actions visible and
-     thumb-sized rather than three 26px icons that only make sense to a
-     pointer. */
-  @media (max-width:820px){
-    .rost-bar{padding:var(--ow-sp-12);gap:var(--ow-sp-10);}
-    .rost-list{gap:var(--ow-sp-10);padding:var(--ow-sp-12);}
-    .rost-item{border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);
-      background:var(--ow-paper);}
-    .rost-item:last-child{border-bottom:1px solid var(--ow-rule-soft);}
-    .rost-row{grid-template-columns:minmax(0,1fr);
-      grid-template-areas:"who" "state" "stats" "actions";
-      min-height:0;padding:var(--ow-sp-12);border-left:0;gap:var(--ow-sp-10);}
-    .rost-name{font-size:var(--ow-t-16);}
-    .rost-sub, .rost-note, .rost-basis{font-size:var(--ow-t-13);}
-    .rost-state{display:flex;align-items:center;gap:var(--ow-sp-8);}
-    /* On one line with the chip, so the card does not spend a whole row
-       on four words -- and it may shrink, because the chip may not. */
-    .rost-state .ow-cp{flex:none;}
-    .rost-note{margin-top:0;min-width:0;}
-    .rost-stats{grid-area:stats;text-align:left;display:flex;align-items:baseline;
-      gap:var(--ow-sp-8);border-top:1px solid var(--ow-rule-soft);padding-top:var(--ow-sp-10);}
-    .rost-fig{font-size:15px;flex:none;}
-    .rost-basis{margin-top:0;}
-    .rost-cr{display:none;}
-    .rost-av{width:38px;height:38px;border-radius:var(--ow-r-lg);font-size:var(--ow-t-13);}
-    .rost-actions{flex-wrap:wrap;gap:var(--ow-sp-8);}
-    .rost-actions .pc-icon-btn{width:var(--ow-tap);height:var(--ow-tap);}
-    /* The one action with a name on it takes the row; the rest share
-       what is left, each still a 44px target. */
-    .rost-actions .btn.ow-sm{min-height:var(--ow-tap);flex:1 1 100%;box-sizing:border-box;}
-    .rost-x{padding:0 var(--ow-sp-12) var(--ow-sp-12);}
-    /* Four filter chips are wider than the screen and cannot wrap
-       mid-word, so the strip scrolls rather than being cut at
-       "Unavailable". */
-    .rost-filters, .rost-period{overflow-x:auto;max-width:100%;scrollbar-width:none;}
-    .rost-filters::-webkit-scrollbar, .rost-period::-webkit-scrollbar{display:none;}
-    .rost-search{min-width:0;flex:1 1 100%;}
-  }
-
-  /* The record opened inside a row was drawn for a modal body 640px
-     wide. Inside the roster it has the panel's width and the row's
-     indent, so the figures get room and the prose keeps its measure. */
-  .rost-x .cs-read{max-width:var(--ow-measure);}
-  .rost-x .cs-stat-value{font-size:var(--ow-t-16);}
-  .rost-x > *:first-child{margin-top:0;}
-
-  /* ---- Staff, drawn rather than said ----
-     The header's answer is a chip; the four tiles of sentences are one
-     bar and four lanes of people; a row's figure carries a bar measured
-     against the busiest person in view; a record opens as three small
-     pictures; wages are one bar; the days are one grid for everybody. */
-  .st-now{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:var(--ow-r-pill);
-    font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);white-space:nowrap;}
-  .st-now-free{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
-  .st-now-none{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
-  .st-now-d{width:7px;height:7px;border-radius:50%;background:currentColor;}
-
-  .st-lanes{padding:var(--ow-sp-12) var(--ow-sp-16);display:flex;flex-direction:column;gap:var(--ow-sp-12);
-    margin-bottom:var(--ow-sp-16);}
-  .st-lane-bar{display:flex;gap:2px;height:10px;border-radius:5px;overflow:hidden;}
-  .st-lb{min-width:6px;}
-  .st-lb-free{background:var(--ow-verdigris);}
-  .st-lb-busy{background:var(--ow-sky);}
-  .st-lb-absent{background:var(--ow-amber);}
-  .st-lb-block{background:var(--ow-steel-100);}
-  .st-lane-g{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--ow-sp-16);}
-  .st-lane{display:flex;flex-direction:column;gap:var(--ow-sp-8);min-width:0;}
-  .st-lane-h{display:flex;align-items:baseline;gap:var(--ow-sp-8);}
-  .st-lane-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
-    font-size:22px;font-weight:var(--ow-fw-600);line-height:1;}
-  .st-lane-l{font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);letter-spacing:.06em;text-transform:uppercase;
-    color:var(--ow-ink-600);}
-  .st-lane-free .st-lane-n{color:var(--ow-verdigris);}
-  .st-lane-busy .st-lane-n{color:var(--ow-sky);}
-  .st-lane-absent .st-lane-n{color:var(--ow-amber-ink);}
-  .st-lane-block .st-lane-n{color:var(--ow-ink-600);}
-  .st-lane-p{display:flex;flex-wrap:wrap;gap:6px;min-width:0;}
-  .st-lane-0{font-size:var(--ow-t-12);color:var(--ow-ink-400);}
-  .st-pc{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
-    max-width:100%;min-width:0;padding:3px 10px 3px 3px;border-radius:var(--ow-r-pill);
-    font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
-  .st-pc:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:2px;}
-  .st-pc-i{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;flex:none;
-    background:var(--ow-paper);font-size:10px;font-weight:var(--ow-fw-700);}
-  .st-pc-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .st-pc-t{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
-    font-size:var(--ow-t-11);white-space:nowrap;}
-  .st-lane-free .st-pc{background:var(--ow-verdigris-soft);} .st-lane-free .st-pc-i, .st-lane-free .st-pc-t{color:var(--ow-verdigris);}
-  .st-lane-busy .st-pc{background:var(--ow-sky-soft);} .st-lane-busy .st-pc-i, .st-lane-busy .st-pc-t{color:var(--ow-sky);}
-  .st-lane-absent .st-pc{background:var(--ow-amber-soft);} .st-lane-absent .st-pc-i, .st-lane-absent .st-pc-t{color:var(--ow-amber-ink);}
-  .st-lane-block .st-pc{background:var(--ow-steel-050);} .st-lane-block .st-pc-i, .st-lane-block .st-pc-t{color:var(--ow-ink-600);}
-
-  /* The avatar wears the person's state as a ring. */
-  .rost-av.st-av-free{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);outline:2px solid var(--ow-verdigris);outline-offset:2px;}
-  .rost-av.st-av-busy{background:var(--ow-sky-soft);color:var(--ow-sky);outline:2px solid var(--ow-sky);outline-offset:2px;}
-  .rost-av.st-av-absent{background:var(--ow-amber-soft);color:var(--ow-amber-ink);outline:2px solid var(--ow-amber);outline-offset:2px;}
-  .rost-av.st-av-nologin, .rost-av.st-av-off{background:var(--ow-steel-050);color:var(--ow-ink-600);outline:2px solid var(--ow-steel-100);outline-offset:2px;}
-  .rost-av{border-radius:50%;margin:0 4px;}
-  .rost-sub{display:flex;gap:4px;margin-top:3px;}
-  .rost-cap{display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:var(--ow-r-sm);
-    background:var(--ow-steel-050);font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
-  .rost-cap-i{width:12px;height:12px;flex:none;fill:none;stroke:currentColor;stroke-width:2;
+  /* ---- Staff, as drawn on the canvas ----
+     The owner signed this screen off on a design canvas. The desktop is a
+     console: a navy card naming who takes the next order beside where the
+     day's orders stand, the team as a table that opens in place, a rail
+     for what needs the owner, and the month of days at the foot. The
+     phone (under 820px, further down) is its own design: a 2x2 of where
+     everybody is, the next person, a roll of faces for today, the team as
+     cards. Depth is hairlines; the one floating thing is the ⋯ menu. */
+  #tab-staff .sx-i{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;
     stroke-linecap:round;stroke-linejoin:round;}
-  .rost-state{display:flex;flex-direction:column;align-items:flex-start;gap:5px;}
-  .rost-pips{display:flex;gap:3px;}
-  .rost-pips i{display:block;width:14px;height:6px;border-radius:3px;background:var(--ow-sky);}
-  .rost-stats{text-align:left;display:flex;flex-direction:column;gap:5px;}
-  .rost-figl{display:flex;align-items:baseline;gap:var(--ow-sp-8);min-width:0;}
-  .rost-figl .rost-fig{display:inline;flex:none;}
-  .rost-figl .rost-basis{display:inline;margin:0;min-width:0;}
-  .rost-fb{display:flex;height:8px;border-radius:4px;background:var(--ow-rule-soft);overflow:hidden;}
-  .rost-fb-f{display:block;border-radius:4px;background:var(--ow-steel-950);}
-  .rost-fb-f.is-bad{background:var(--ow-amber);}
-  .rost-row{grid-template-columns:minmax(220px,1.3fr) minmax(120px,.8fr) minmax(0,1.4fr) auto;}
+  #tab-staff .sx-cap{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ow-ink-600);}
+  .sx-ph-l{display:flex;flex-direction:column;min-width:0;}
+  .sx-ph-sub{display:flex;flex-wrap:wrap;align-items:center;gap:8px;}
+  .sx-ph-sub b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-weight:600;color:var(--ow-ink-900);}
+  .sx-sep{width:3px;height:3px;border-radius:50%;background:var(--ow-ink-400);flex:none;}
+  .sx-d-short{display:none;}
 
-  /* Edit, unavailable and delete behind one button: three icons on
-     every row were eighteen things to aim past on a six-person team. */
-  .rost-more{position:relative;}
-  .rost-more > summary{list-style:none;cursor:pointer;}
-  .rost-more > summary::-webkit-details-marker{display:none;}
-  .rost-more > summary .icon{fill:currentColor;stroke:none;}
-  .rost-menu{position:absolute;right:0;top:calc(100% + 4px);z-index:20;min-width:180px;
-    display:flex;flex-direction:column;padding:4px;background:var(--ow-paper);
-    border:1px solid var(--ow-rule);border-radius:var(--ow-r);box-shadow:0 8px 24px rgba(20,30,40,0.14);}
-  .rost-menu button{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:8px;
-    min-height:36px;padding:0 10px;border-radius:var(--ow-r-sm);font-size:var(--ow-t-13);
-    font-weight:var(--ow-fw-500);color:var(--ow-ink-900);}
-  .rost-menu button:hover, .rost-menu button:focus-visible{background:var(--ow-steel-050);}
-  .rost-menu button.is-danger{color:var(--ow-crimson);}
-  .rost-menu .icon{width:15px;height:15px;flex:none;}
+  /* panels */
+  .sx-pan{background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);}
+  .sx-pan-h{min-height:40px;display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid var(--ow-rule-soft);}
+  .sx-pan-t{font-size:13px;font-weight:700;color:var(--ow-ink-900);}
+  .sx-pan-nt{font-size:12px;color:var(--ow-ink-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+  .sx-pan-n{margin-left:auto;font-size:12px;color:var(--ow-ink-600);white-space:nowrap;}
+  .sx-pan-n b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-weight:600;color:var(--ow-ink-900);}
+  .sx-ibtn{width:28px;height:28px;border-radius:var(--ow-r-sm);border:1px solid transparent;background:none;
+    display:grid;place-items:center;color:var(--ow-ink-600);cursor:pointer;padding:0;list-style:none;}
+  .sx-ibtn:hover{background:var(--ow-steel-050);border-color:var(--ow-rule);}
+  .sx-ibtn:disabled{opacity:.4;cursor:default;background:none;border-color:transparent;}
+  .sx-ibtn .icon{width:16px;height:16px;}
 
-  /* The record: three pictures in a row. */
-  .st-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:var(--ow-sp-12);}
-  .st-tile{border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-lg);background:var(--ow-paper);
-    padding:var(--ow-sp-10) var(--ow-sp-12);display:flex;flex-direction:column;gap:6px;min-width:0;}
-  .st-tile-h{display:flex;justify-content:space-between;align-items:baseline;gap:var(--ow-sp-8);}
-  .st-tile-l{font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);letter-spacing:.06em;text-transform:uppercase;
-    color:var(--ow-ink-600);min-width:0;}
-  .st-tile-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
-    font-size:var(--ow-t-14);white-space:nowrap;}
-  .st-tile-f{display:flex;justify-content:space-between;gap:var(--ow-sp-8);font-size:var(--ow-t-11);color:var(--ow-ink-400);}
-  .st-tile-0{font-size:var(--ow-t-12);color:var(--ow-ink-400);}
-  .st-tile-big{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
-    font-size:var(--ow-t-16);font-weight:var(--ow-fw-600);}
-  .st-od{display:flex;align-items:flex-end;gap:2px;height:44px;}
-  .st-od-c{flex:1 1 0;min-width:0;border-radius:2px;background:var(--ow-steel-950);}
-  .st-od-c.is-0{background:var(--ow-steel-100);}
-  .st-sc{position:relative;height:18px;}
-  .st-sc::before{content:'';position:absolute;left:0;right:0;top:7px;height:4px;border-radius:2px;background:var(--ow-rule-soft);}
-  .st-sc-t{position:absolute;top:2px;width:2px;height:14px;margin-left:-1px;background:var(--ow-steel-400);}
-  .st-sc-d{position:absolute;top:2px;width:14px;height:14px;margin-left:-7px;border-radius:50%;box-sizing:border-box;
-    background:var(--ow-steel-950);border:2px solid var(--ow-paper);}
-  .st-ln{display:flex;flex-wrap:wrap;gap:2px;}
-  .st-ln i{display:block;width:10px;height:12px;border-radius:2px;background:var(--ow-verdigris-soft);}
-  .st-ln i.is-short{background:var(--ow-amber);}
-  .st-ln-job i{background:var(--ow-steel-100);width:12px;height:8px;}
-  .st-warn{color:var(--ow-amber-ink);font-weight:var(--ow-fw-600);}
-  .st-last{display:flex;justify-content:space-between;gap:var(--ow-sp-12);margin-top:var(--ow-sp-10);
-    font-size:var(--ow-t-12);color:var(--ow-ink-600);}
-  .st-last b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;color:var(--ow-ink-900);}
+  /* the board: next order + today's work */
+  .sx-board{margin-bottom:16px;}
+  .sx-board:empty,.sx-ptop:empty{display:none;}
+  .sx-board-in{display:grid;grid-template-columns:320px minmax(0,1fr);overflow:hidden;}
+  .sx-first{position:relative;padding:20px 22px 18px;display:flex;flex-direction:column;gap:16px;
+    background:var(--ow-steel-950);color:var(--ow-paper);overflow:hidden;}
+  .sx-first::before{content:'';position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(120% 70% at 0% 0%,rgba(15,107,67,.28),transparent 60%);}
+  .sx-first > *{position:relative;}
+  .sx-first-k{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--ow-navy-mute);}
+  .sx-live{margin-left:auto;display:inline-flex;align-items:center;gap:6px;letter-spacing:0;text-transform:none;
+    font-weight:500;color:var(--ow-navy-ink);}
+  .sx-live i{width:7px;height:7px;border-radius:50%;background:var(--ow-good-on-navy);outline:3px solid rgba(95,197,154,.18);}
+  .sx-first-p{display:flex;align-items:center;gap:14px;}
+  .sx-first-av{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;flex:none;font-size:16px;font-weight:700;
+    background:var(--ow-verdigris-soft);color:var(--ow-verdigris);outline:2px solid var(--ow-good-on-navy);outline-offset:3px;}
+  .sx-first-av.is-held{background:var(--ow-steel-800);color:var(--ow-navy-line);outline-color:var(--ow-navy-mute);}
+  .sx-first-w{min-width:0;}
+  .sx-first-n{font-size:18px;font-weight:700;line-height:1.2;letter-spacing:-.01em;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .sx-first-s{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12px;color:var(--ow-navy-ink);}
+  .sx-first-chip{display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 8px;border-radius:var(--ow-r-6);font-weight:600;
+    background:rgba(255,255,255,.08);color:var(--ow-navy-line);}
+  .sx-first-chip i{width:6px;height:6px;border-radius:50%;background:currentColor;}
+  .sx-first-chip.is-free{background:rgba(95,197,154,.16);color:var(--ow-good-on-navy);}
+  .sx-first-chip.is-warn{background:rgba(233,163,90,.16);color:var(--ow-warn-on-navy);}
+  .sx-first-m{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+    border-top:1px solid rgba(255,255,255,.1);border-bottom:1px solid rgba(255,255,255,.1);}
+  .sx-first-m div{padding:12px 0 12px 12px;display:flex;flex-direction:column;gap:3px;min-width:0;}
+  .sx-first-m div:first-child{padding-left:0;}
+  .sx-first-m div + div{border-left:1px solid rgba(255,255,255,.1);}
+  .sx-first-m b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-size:16px;font-weight:600;color:var(--ow-paper);white-space:nowrap;}
+  .sx-first-m span{font-size:11px;color:var(--ow-navy-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .sx-then{display:flex;flex-direction:column;gap:2px;}
+  .sx-then-r{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:10px;height:30px;
+    font-size:12px;color:var(--ow-navy-ink);border-radius:var(--ow-r-6);}
+  .sx-then-r:hover b{text-decoration:underline;}
+  .sx-then-r:focus-visible{outline:2px solid var(--ow-navy-line);outline-offset:2px;}
+  .sx-then-i{width:16px;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:11px;color:var(--ow-navy-mute);text-align:right;}
+  .sx-then-av{width:24px;height:24px;border-radius:50%;background:var(--ow-steel-800);color:var(--ow-navy-line);
+    display:grid;place-items:center;font-size:11px;font-weight:600;flex:none;}
+  .sx-then-r b{color:var(--ow-paper);font-weight:600;}
+  .sx-then-r em{margin-left:auto;font-style:normal;font-size:11px;color:var(--ow-navy-mute);}
+  .sx-go{display:flex;align-items:center;justify-content:center;gap:8px;height:38px;margin-top:auto;cursor:pointer;
+    border-radius:var(--ow-r);border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);
+    color:var(--ow-paper);font:inherit;font-size:13px;font-weight:600;}
+  .sx-go:hover{background:rgba(255,255,255,.12);}
+  .sx-go .sx-i{width:14px;height:14px;}
 
-  /* The rail. */
-  .rost-job{display:flex;flex-direction:column;gap:6px;padding:var(--ow-sp-10) var(--ow-sp-12);
-    border-top:1px solid var(--ow-rule-soft);}
-  .rost-job-r{display:flex;align-items:center;gap:var(--ow-sp-10);}
-  .rost-job-av{width:32px;height:32px;border-radius:50%;font-size:var(--ow-t-11);flex:none;
-    background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
-  .rost-job-t{flex:1;min-width:0;display:flex;flex-direction:column;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
-  .rost-job-t b{font-size:var(--ow-t-13);color:var(--ow-ink-900);}
-  .rost-job-r .rost-job-b{flex:none;width:auto;}
-  .st-due{margin-left:auto;padding:2px 9px;border-radius:var(--ow-r-pill);background:var(--ow-steel-050);
-    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);white-space:nowrap;}
-  .st-wage-b{display:flex;flex-direction:column;gap:6px;padding:var(--ow-sp-10) var(--ow-sp-12) var(--ow-sp-12);}
-  .st-wage-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
-    font-size:22px;font-weight:var(--ow-fw-600);}
-  .st-wbar{display:flex;height:12px;border-radius:6px;overflow:hidden;border:1px solid var(--ow-rule);
-    background:repeating-linear-gradient(135deg,var(--ow-rule-soft) 0 4px,var(--ow-paper) 4px 8px);margin-bottom:4px;}
-  .st-wbar-r{background:var(--ow-steel-950);}
-  .st-wbar-d{background:var(--ow-amber);}
-  .st-wk{display:flex;align-items:center;gap:6px;font-size:var(--ow-t-12);}
-  .st-wk-s{width:10px;height:10px;border-radius:2px;flex:none;box-sizing:border-box;}
-  .st-wk-r{background:var(--ow-steel-950);}
-  .st-wk-d{background:var(--ow-amber);}
-  .st-wk-n{border:1px solid var(--ow-steel-100);background:repeating-linear-gradient(135deg,var(--ow-rule-soft) 0 3px,var(--ow-paper) 3px 6px);}
-  .st-wk-k{flex:1;min-width:0;color:var(--ow-ink-600);}
-  .st-wk-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;white-space:nowrap;}
-  .st-wk-v.ow-warn{color:var(--ow-amber-ink);}
-  .st-wage-m{margin:0;}
-  .st-wage-b .rost-to-payroll{align-self:flex-start;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);margin-top:2px;}
+  .sx-flow{padding:16px 20px 18px;display:flex;flex-direction:column;gap:12px;min-width:0;}
+  .sx-flow-h{display:flex;align-items:center;gap:10px;}
+  .sx-flow-sum{margin-left:auto;display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:var(--ow-r-sm);
+    font-size:12px;font-weight:600;background:var(--ow-verdigris-soft);color:var(--ow-verdigris);white-space:nowrap;}
+  .sx-flow-sum i{width:6px;height:6px;border-radius:50%;background:currentColor;}
+  .sx-flow-sum.is-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .sx-stages{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--ow-rule-soft);border-radius:var(--ow-r-sm);flex:1;}
+  .sx-stage{position:relative;padding:14px 14px 12px;display:flex;flex-direction:column;gap:10px;min-width:0;}
+  .sx-stage + .sx-stage{border-left:1px solid var(--ow-rule-soft);}
+  .sx-stage:not(:last-child)::after{content:'';position:absolute;right:-7px;top:18px;width:12px;height:12px;z-index:1;
+    background:var(--ow-paper);border-top:1px solid var(--ow-steel-200);border-right:1px solid var(--ow-steel-200);transform:rotate(45deg);}
+  .sx-sg-h{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--ow-ink-600);}
+  .sx-sg-h .sx-i{width:14px;height:14px;}
+  .sx-sg-n{display:flex;align-items:baseline;gap:8px;min-width:0;}
+  .sx-sg-n b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-size:28px;font-weight:600;line-height:1;color:var(--ow-ink-900);}
+  .sx-sg-n span{font-size:11px;color:var(--ow-ink-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+  .sx-sg-n span.is-warn{color:var(--ow-amber-ink);font-weight:600;}
+  .sx-sg-list{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--ow-rule-soft);padding-top:10px;}
+  .sx-sg-i{display:flex;align-items:center;gap:7px;font-size:12px;min-width:0;}
+  .sx-sg-lead{flex:none;min-width:22px;height:22px;border-radius:var(--ow-r-pill);display:grid;place-items:center;padding:0 5px;
+    font-size:11px;font-weight:600;background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+  .sx-sg-lead.is-busy{background:var(--ow-steel-800);color:var(--ow-paper);}
+  .sx-sg-lead.is-ord{border-radius:var(--ow-r-6);background:var(--ow-steel-050);border:1px solid var(--ow-rule);
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+  .sx-sg-lead.is-done{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .sx-sg-c{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;color:var(--ow-ink-900);}
+  .sx-sg-t{flex:none;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:11px;color:var(--ow-ink-600);}
+  .sx-sg-t.is-warn{color:var(--ow-amber-ink);font-weight:600;}
+  .sx-sg-more{font-size:11px;color:var(--ow-ink-600);}
 
-  /* Days worked: everybody's month as one grid. */
-  .att-tg{--att-tg-name:140px;--att-tg-miss:48px;display:flex;flex-direction:column;gap:3px;margin-bottom:var(--ow-sp-12);}
-  .att-tg-r{display:grid;gap:3px;align-items:center;}
-  .att-tg-hd{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
-    font-size:10px;color:var(--ow-ink-400);text-align:center;}
-  .att-tg-dn.rest{color:var(--ow-steel-100);}
-  .att-tg-dn.is-today{color:var(--ow-oxide);font-weight:var(--ow-fw-600);}
-  .att-tg-n{all:unset;box-sizing:border-box;cursor:pointer;min-width:0;overflow:hidden;text-overflow:ellipsis;
-    white-space:nowrap;padding:0 6px;height:26px;line-height:26px;border-radius:var(--ow-r-sm);
-    font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);color:var(--ow-ink-600);}
-  .att-tg-r.on .att-tg-n{background:var(--ow-steel-050);color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
-  .att-tg-n:focus-visible, .att-tc:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
-  .att-tc{all:unset;box-sizing:border-box;cursor:pointer;height:26px;min-width:0;border-radius:4px;}
-  .att-tc.k-in{background:var(--ow-verdigris);}
-  .att-tc.k-absent{background:var(--ow-amber);}
-  .att-tc.k-paid{background:var(--ow-steel-400);}
-  .att-tc.k-rest{background:var(--ow-rule-soft);}
-  .att-tc.k-future{background:var(--ow-paper);border:1px dashed var(--ow-steel-100);cursor:default;}
-  .att-tc.is-sel{outline:2px solid var(--ow-ink-900);outline-offset:2px;}
-  .att-tg-m{text-align:right;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
-    font-size:var(--ow-t-13);color:var(--ow-steel-100);}
-  .att-tg-hd .att-tg-m{font-family:inherit;font-size:var(--ow-t-11);color:var(--ow-ink-400);}
-  .att-tg-m.is-miss{color:var(--ow-amber-ink);}
-  /* On a desktop the grid picks the person and the day, so the names
-     column and the one-person month step aside. */
-  @media (min-width:821px){
-    .ow-st-att .ow-st-att-b{grid-template-columns:minmax(0,1fr);}
-    .ow-st-att .ow-st-att-b > #att_people{display:none;}
-    .ow-st-att .ow-st-att-b .att-cal{display:none;}
-  }
+  /* the team */
+  .sx-main{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start;}
+  .sx-side{display:flex;flex-direction:column;gap:16px;}
+  .sx-side:empty{display:none;}
+  .sx-main:has(> .sx-side:empty){grid-template-columns:minmax(0,1fr);}
+  .sx-tb{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--ow-rule-soft);flex-wrap:wrap;}
+  .sx-seg{display:inline-flex;gap:2px;padding:2px;background:var(--ow-steel-050);border:1px solid var(--ow-rule);border-radius:var(--ow-r);}
+  .sx-seg-b{height:28px;padding:0 10px;border:1px solid transparent;background:none;border-radius:var(--ow-r-7);cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:12px;font-weight:600;color:var(--ow-ink-600);white-space:nowrap;}
+  .sx-seg-b:hover{color:var(--ow-ink-900);}
+  .sx-seg-b.on{background:var(--ow-paper);color:var(--ow-ink-900);border-color:var(--ow-rule);}
+  .sx-seg-b:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
+  .sx-seg-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:11px;font-weight:500;color:var(--ow-ink-600);}
+  .sx-seg-n:empty{display:none;}
+  .sx-srch{display:flex;align-items:center;gap:6px;height:32px;flex:1 1 120px;max-width:200px;min-width:0;margin-left:auto;padding:0 10px;
+    border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);color:var(--ow-ink-600);}
+  .sx-srch .icon{width:16px;height:16px;flex:none;}
+  .sx-srch input{border:0;outline:0;padding:0;margin:0;height:auto;background:none;font:inherit;font-size:13px;
+    color:var(--ow-ink-900);width:100%;min-width:0;box-shadow:none;}
+  .sx-srch:focus-within{border-color:var(--ow-steel-950);}
+  .sx-tbl{overflow-x:auto;}
+  .sx-cols{display:grid;grid-template-columns:minmax(220px,1.25fr) 150px minmax(180px,1fr) 126px 128px;align-items:center;min-width:820px;}
+  .sx-th{height:32px;background:var(--ow-paper-2);border-bottom:1px solid var(--ow-rule-soft);}
+  .sx-th span{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ow-ink-600);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+  .sx-th span:first-child{padding-left:44px;}
+  .sx-r{border-bottom:1px solid var(--ow-rule-soft);}
+  .sx-r:last-child{border-bottom:0;}
+  .sx-r:hover > .sx-cols{background:var(--ow-paper-2);}
+  .sx-r.is-open{background:var(--ow-paper-2);}
+  .sx-r.is-off .sx-who,.sx-r.is-off .sx-stc,.sx-r.is-off .sx-wk,.sx-r.is-off .sx-strip{opacity:.62;}
+  .sx-who{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:10px;min-height:56px;padding:0 10px 0 12px;
+    cursor:pointer;width:100%;min-width:0;}
+  .sx-who:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;border-radius:var(--ow-r-sm);}
+  .sx-chev{width:14px;height:14px;color:var(--ow-ink-400);transition:transform .15s;}
+  .sx-r.is-open .sx-chev{transform:rotate(90deg);color:var(--ow-ink-900);}
+  .sx-av{position:relative;width:32px;height:32px;border-radius:50%;background:var(--ow-rule-soft);color:var(--ow-ink-600);
+    display:grid;place-items:center;font-size:12px;font-weight:600;flex:none;}
+  .sx-dot{position:absolute;right:-1px;bottom:-1px;width:11px;height:11px;border-radius:50%;border:2px solid var(--ow-paper);box-sizing:border-box;}
+  .sx-dot-free{background:var(--ow-verdigris);}
+  .sx-dot-busy{background:var(--ow-steel-800);}
+  .sx-dot-absent{background:var(--ow-amber);}
+  .sx-dot-nologin{background:var(--ow-paper);border-color:var(--ow-amber);}
+  .sx-dot-off{background:var(--ow-crimson);}
+  .sx-who-t{display:flex;flex-direction:column;gap:3px;min-width:0;}
+  #tab-staff .sx-nm{font-size:13px;font-weight:600;color:var(--ow-ink-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  .sx-caps{display:flex;gap:8px;}
+  .sx-capb{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--ow-ink-600);}
+  .sx-capb .sx-i{width:13px;height:13px;}
+  .sx-stc{display:flex;align-items:center;gap:8px;min-width:0;}
+  .ow-cp.sx-cp{text-transform:none;letter-spacing:0;}
+  .ow-cp.sx-cp:not(.ow-good):not(.ow-warn):not(.ow-bad){background:var(--ow-rule-soft);color:var(--ow-ink-900);}
+  .sx-pips{display:inline-flex;gap:2px;}
+  .sx-pips i{width:5px;height:14px;border-radius:var(--ow-r-2);background:var(--ow-steel-800);}
+  .sx-wk{display:flex;flex-direction:column;gap:6px;padding-right:20px;min-width:0;}
+  .sx-wk-l{display:flex;align-items:baseline;gap:8px;min-width:0;}
+  .sx-fig{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-size:13px;font-weight:600;color:var(--ow-ink-900);white-space:nowrap;flex:none;}
+  .sx-fig.is-bad{color:var(--ow-crimson);}
+  .sx-fig.is-quiet{color:var(--ow-ink-600);font-weight:500;}
+  .sx-wk-b{font-size:11px;color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  .sx-fb{display:block;height:4px;border-radius:var(--ow-r-2);background:var(--ow-rule-soft);overflow:hidden;}
+  .sx-fb i{display:block;height:100%;border-radius:var(--ow-r-2);background:var(--ow-steel-800);}
+  .sx-fb i.is-bad{background:var(--ow-crimson);}
+  .sx-strip{display:grid;grid-template-columns:repeat(14,7px);gap:2px;align-items:end;}
+  .sx-sc{display:block;height:16px;border-radius:var(--ow-r-2);}
+  .sx-sc-in{background:#9CCBB2;}
+  .sx-sc-absent{background:var(--ow-amber);}
+  .sx-sc-paid{background:var(--ow-paper);border:1.5px solid var(--ow-verdigris);box-sizing:border-box;}
+  .sx-sc-rest{height:6px;background:var(--ow-rule);}
+  .sx-sc-none{height:6px;background:transparent;border:1px solid var(--ow-rule);box-sizing:border-box;}
+  .sx-sc.is-today{outline:1.5px solid var(--ow-steel-950);outline-offset:1px;}
+  .sx-act{display:flex;align-items:center;justify-content:flex-end;gap:4px;padding-right:12px;}
+  .sx-act .btn{white-space:nowrap;}
+
+  /* the ⋯ menu */
+  .sx-more{position:relative;}
+  .sx-more > summary{list-style:none;cursor:pointer;}
+  .sx-more > summary::-webkit-details-marker{display:none;}
+  .sx-menu{position:absolute;right:0;top:calc(100% + 4px);z-index:20;min-width:180px;display:flex;flex-direction:column;padding:4px;
+    background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r);box-shadow:0 8px 24px rgba(20,30,40,0.14);}
+  .sx-menu button{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:8px;min-height:36px;padding:0 10px;
+    border-radius:var(--ow-r-sm);font-size:13px;font-weight:500;color:var(--ow-ink-900);}
+  .sx-menu button:hover,.sx-menu button:focus-visible{background:var(--ow-steel-050);}
+  .sx-menu button.is-danger{color:var(--ow-crimson);}
+  .sx-menu .icon{width:15px;height:15px;flex:none;}
+
+  /* the record, opened in place */
+  .sx-rec{display:grid;grid-template-columns:180px minmax(0,1fr);gap:20px;padding:4px 16px 18px 46px;}
+  .sx-facts{display:flex;flex-direction:column;gap:10px;padding-top:4px;}
+  .sx-fact{display:flex;gap:10px;align-items:flex-start;}
+  .sx-fact .sx-i{color:var(--ow-ink-600);margin-top:1px;}
+  .sx-fact-l{font-size:11px;color:var(--ow-ink-600);}
+  .sx-fact-v{font-size:12px;font-weight:600;color:var(--ow-ink-900);margin-top:1px;}
+  .sx-mono{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+  .sx-facts-b{display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;}
+  .sx-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px;}
+  .sx-tile{border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);padding:12px 12px 10px;background:var(--ow-paper);
+    display:flex;flex-direction:column;gap:10px;min-width:0;}
+  .sx-tile-h{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 8px;}
+  .sx-tile-l{font-size:11px;font-weight:600;color:var(--ow-ink-600);}
+  .sx-tile-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-size:16px;font-weight:600;color:var(--ow-ink-900);white-space:nowrap;}
+  .sx-tile-v.is-bad{color:var(--ow-crimson);}
+  .sx-tile-f{display:flex;justify-content:space-between;gap:6px;font-size:11px;color:var(--ow-ink-600);}
+  .sx-tile-big{display:flex;align-items:center;height:44px;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:16px;font-weight:600;color:var(--ow-ink-900);}
+  .sx-odc{display:flex;align-items:flex-end;gap:2px;height:44px;}
+  .sx-odc i{flex:1;min-width:0;border-radius:var(--ow-r-2);background:var(--ow-steel-800);min-height:3px;}
+  .sx-odc i.is-0{background:var(--ow-rule);}
+  .sx-scale{position:relative;height:44px;}
+  .sx-scale::before{content:'';position:absolute;left:0;right:0;top:20px;height:4px;border-radius:var(--ow-r-2);
+    background:linear-gradient(90deg,var(--ow-verdigris-soft),var(--ow-rule-soft) 40%,var(--ow-amber-soft));}
+  .sx-scale-tm{position:absolute;top:14px;width:2px;height:16px;margin-left:-1px;background:var(--ow-ink-400);border-radius:var(--ow-r-2);}
+  .sx-scale-tl{position:absolute;top:0;font-size:11px;color:var(--ow-ink-600);transform:translateX(-50%);white-space:nowrap;}
+  .sx-scale-d{position:absolute;top:15px;width:14px;height:14px;margin-left:-7px;border-radius:50%;box-sizing:border-box;
+    background:var(--ow-steel-950);border:3px solid var(--ow-paper);outline:1px solid var(--ow-steel-950);}
+  .sx-sbar{position:relative;height:44px;}
+  .sx-sbar-tr{position:absolute;left:0;right:0;top:20px;height:6px;border-radius:var(--ow-r-3);background:var(--ow-rule-soft);overflow:hidden;}
+  .sx-sbar-tr i{display:block;height:100%;background:var(--ow-ink-600);}
+  .sx-sbar-tr i.is-bad{background:var(--ow-crimson);}
+  .sx-sbar-tm{position:absolute;top:14px;width:2px;height:18px;margin-left:-1px;background:var(--ow-ink-900);}
+  .sx-sbar-tl{position:absolute;top:0;font-size:11px;color:var(--ow-ink-600);transform:translateX(-50%);white-space:nowrap;}
+  .sx-warn{font-size:11px;color:var(--ow-amber-ink);background:var(--ow-amber-faint);border:1px solid var(--ow-amber-soft);
+    border-radius:var(--ow-r-6);padding:4px 8px;}
+  .sx-hold{display:flex;flex-direction:column;gap:6px;}
+  .sx-hold-r{display:flex;align-items:center;gap:8px;font-size:12px;min-width:0;}
+  .sx-hold-r .sx-i{color:var(--ow-ink-600);width:14px;height:14px;}
+  .sx-hold-c{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;color:var(--ow-ink-900);}
+  .sx-hold-s{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:11px;color:var(--ow-ink-600);white-space:nowrap;}
+  .sx-hold-0{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ow-verdigris);}
+  .sx-last{grid-column:2;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--ow-ink-600);
+    padding:10px 12px;border:1px dashed var(--ow-rule);border-radius:var(--ow-r-sm);}
+  .sx-last span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .sx-last b{margin-left:auto;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-weight:600;color:var(--ow-ink-900);white-space:nowrap;}
+  .sx-rec-empty{grid-column:2;display:flex;align-items:center;gap:12px;padding:14px 16px;font-size:13px;color:var(--ow-ink-600);
+    border:1px dashed var(--ow-rule);border-radius:var(--ow-r-sm);background:var(--ow-paper);}
+  .sx-rec-empty span{flex:1;}
+
+  /* the rail */
+  .sx-nd{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:10px;padding:12px 16px;width:100%;font-family:inherit;}
+  .sx-nd + .sx-nd{border-top:1px solid var(--ow-rule-soft);}
+  button.sx-nd{cursor:pointer;}
+  button.sx-nd:hover{background:var(--ow-paper-2);}
+  button.sx-nd:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
+  .sx-nd-i{width:30px;height:30px;border-radius:50%;background:var(--ow-amber-soft);color:var(--ow-amber-ink);
+    display:grid;place-items:center;font-size:11px;font-weight:700;flex:none;}
+  .sx-nd-t{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0;font-size:12px;color:var(--ow-ink-600);}
+  .sx-nd-t b{font-size:13px;font-weight:600;color:var(--ow-ink-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .sx-nd-f{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-size:12px;
+    color:var(--ow-ink-600);white-space:nowrap;}
+  .sx-nd-f b{font-size:16px;font-weight:600;color:var(--ow-amber-ink);}
+  .sx-nd .sx-chev{color:var(--ow-ink-400);}
+
+  /* days worked */
+  .sx-reg{margin-top:16px;}
+  .sx-reg-h{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--ow-rule-soft);flex-wrap:wrap;}
+  .sx-reg-key{display:flex;gap:14px;font-size:11px;color:var(--ow-ink-600);margin-left:8px;}
+  .sx-reg-key span{display:inline-flex;align-items:center;gap:6px;}
+  .sx-reg-key .sx-c{width:12px;height:12px;border-radius:var(--ow-r-3);box-sizing:border-box;}
+  .sx-mnav{margin-left:auto;display:flex;align-items:center;gap:6px;}
+  .sx-mlab{font-size:13px;font-weight:700;min-width:126px;text-align:center;}
+  .sx-regbox{overflow-x:auto;}
+  .sx-regin{min-width:1000px;padding:6px 0 4px;}
+  .sx-rg{display:grid;align-items:center;column-gap:3px;padding:0 16px;}
+  .sx-rg-h{height:40px;}
+  .sx-rg-row{height:34px;border-top:1px solid var(--ow-rule-soft);}
+  .sx-rg-row:hover{background:var(--ow-paper-2);}
+  .sx-rg-n{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;min-width:0;}
+  .sx-rg-n .sx-av{width:24px;height:24px;font-size:11px;}
+  .sx-rg-n span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  .sx-dh{display:flex;flex-direction:column;align-items:center;gap:1px;font-size:11px;color:var(--ow-ink-600);line-height:1.1;}
+  .sx-dh b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-weight:600;color:var(--ow-ink-900);font-size:11px;}
+  .sx-dh.is-rest,.sx-dh.is-rest b{color:var(--ow-ink-400);}
+  .sx-dh.is-today b{background:var(--ow-steel-950);color:var(--ow-paper);border-radius:var(--ow-r-6);padding:1px 5px;}
+  .sx-cell{display:block;width:100%;height:24px;border:0;padding:0;border-radius:var(--ow-r-4);box-sizing:border-box;}
+  button.sx-cell{cursor:pointer;}
+  button.sx-cell:hover{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
+  button.sx-cell:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
+  .sx-c-in{background:#CFE7DA;}
+  .sx-c-absent{background:var(--ow-amber);}
+  .sx-c-paid{background:var(--ow-paper);border:2px solid var(--ow-verdigris);}
+  .sx-c-rest{background:repeating-linear-gradient(135deg,var(--ow-rule-soft) 0 2px,transparent 2px 5px);}
+  .sx-reg-key .sx-c-rest{border:1px solid var(--ow-rule);}
+  .sx-c-future{background:transparent;border:1px solid var(--ow-rule-soft);}
+  .sx-cell.is-today{box-shadow:0 0 0 2px var(--ow-steel-950) inset;}
+  .sx-c-paid.is-today{border-color:var(--ow-steel-950);}
+  .sx-tot{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-size:12px;font-weight:600;text-align:right;color:var(--ow-ink-900);white-space:nowrap;}
+  .sx-tot.is-quiet{color:var(--ow-ink-600);font-weight:500;}
+  .sx-tot.is-warn{color:var(--ow-amber-ink);}
+  .sx-th-r{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ow-ink-600);text-align:right;}
+  .sx-reg-f{display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid var(--ow-rule-soft);
+    font-size:12px;color:var(--ow-ink-600);}
+  .sx-reg-f b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    color:var(--ow-amber-ink);font-weight:600;}
+
+  /* phone-only pieces stay out of the desktop */
+  .sx-ptop,.sx-cards{display:none;}
+
   @media (max-width:1100px){
-    .st-lane-g{grid-template-columns:repeat(2,minmax(0,1fr));}
-  }
-  @media (max-width:820px){
-    .st-lanes{padding:var(--ow-sp-12);}
-    .st-lane-g{gap:var(--ow-sp-10) var(--ow-sp-12);}
-    .st-lane-n{font-size:16px;}
-    .st-pc{padding:0 8px 0 0;background:none !important;min-height:var(--ow-tap);}
-    /* The one ⋯ button sits beside the name, not on a row of its own. */
-    .rost-row{grid-template-columns:minmax(0,1fr) auto;
-      grid-template-areas:"who actions" "state state" "stats stats";}
-    .rost-actions{flex-wrap:nowrap;align-self:start;}
-    .rost-actions .btn.ow-sm{flex:none;}
-    .rost-state{flex-direction:row;align-items:center;}
-    .rost-stats{flex-direction:column;align-items:stretch;}
-    .rost-av{margin:0 4px 0 2px;}
-    .rost-menu{min-width:200px;}
-    .rost-menu button{min-height:var(--ow-tap);}
-    .st-tiles{grid-template-columns:minmax(0,1fr);}
-    /* The grid stays as thin stripes to read; the names above it and
-       the month below it are what a thumb presses. */
-    .att-tg{--att-tg-name:52px;--att-tg-miss:18px;gap:2px;}
-    .att-tg-r{gap:1px;}
-    .att-tg-hd{display:none;}
-    .att-tg-n{font-size:var(--ow-t-11);padding:0;height:16px;line-height:16px;pointer-events:none;}
-    .att-tg-r.on .att-tg-n{background:none;}
-    .att-tc{height:14px;border-radius:2px;pointer-events:none;}
-    .att-tc.is-sel{outline:0;}
+    .sx-board-in{grid-template-columns:minmax(0,1fr);}
+    .sx-stages{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .sx-stage:nth-child(3){border-left:0;}
+    .sx-stage:nth-child(n+3){border-top:1px solid var(--ow-rule-soft);}
+    .sx-stage::after{display:none;}
+    .sx-main{grid-template-columns:minmax(0,1fr);}
+    .sx-tiles{grid-template-columns:repeat(2,minmax(0,1fr));}
   }
 
-  /* ---- the staff screen's own frame ---- */
-  /* Attendance is BELOW the work. The question you open Staff to ask is
-     who can take the next order; this is the one you answer on payday,
-     and it sat above the roster because it used to be the only thing on
-     the screen that changed daily. */
-  .ow-st-att{margin-top:var(--ow-sp-16);}
-  .ow-st-att .att-bar{margin-left:auto;gap:var(--ow-sp-4);flex-wrap:nowrap;}
-  .ow-st-att .att-monthlabel{font-size:var(--ow-t-12);font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
-    font-weight:var(--ow-fw-500);min-width:104px;letter-spacing:0;}
-  .ow-st-att-b{display:grid;grid-template-columns:196px minmax(0,1fr);align-items:start;}
-  /* The names as a column, not a wrapping row of pills. A column can be
-     read at a glance for who is on the list and who is short days; a row
-     that wraps to three lines cannot. */
-  .ow-st-att-b > #att_people{border-right:1px solid var(--ow-rule-soft);padding:var(--ow-sp-8) 0;
-    align-self:stretch;}
-  /* Nobody to switch between: the names column has nothing in it, and an
-     empty bordered box beside a sentence explaining why reads as a
-     column that failed to load. The sentence takes the width. */
-  .ow-st-att-b > #att_people:empty{display:none;}
-  .ow-st-att-b:has(> #att_people:empty){grid-template-columns:minmax(0,1fr);}
-  .ow-st-att-b .att-people{display:flex;flex-direction:column;gap:0;margin:0;}
-  .ow-st-att-b .att-person{border:0;border-radius:0;border-left:3px solid transparent;
-    justify-content:flex-start;padding:0 var(--ow-sp-12);min-height:34px;background:none;
-    font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);}
-  .ow-st-att-b .att-person:hover{background:var(--ow-paper-2);}
-  .ow-st-att-b .att-person.on{background:var(--ow-paper-2);color:var(--ow-ink-900);
-    border-left-color:var(--ow-steel-950);font-weight:var(--ow-fw-600);}
-  .ow-st-att-b .att-person-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .ow-st-att-b .att-person.on .att-person-tag{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
-  .ow-st-att-b > #attendanceWrap{padding:var(--ow-sp-12) var(--ow-sp-16);min-width:0;}
-  .ow-st-att-b .att-total{margin-top:0;}
+  /* ---- Staff on the phone: its own design, not the console squeezed.
+     A 2x2 of where everybody is, the next person, a roll of faces that
+     marks who is in today, the team as cards with their actions showing,
+     and Add staff in the thumb's reach. The board comes along in the
+     phone's shape: the same navy card, the day's four steps as a 2x2. ---- */
   @media (max-width:820px){
-    /* The calendar keeps its seven columns -- a month that reflows to
-       three is not a month -- but the names go back to a scrolling row,
-       because a 196px column is most of a phone. */
-    .ow-st-att-b{grid-template-columns:minmax(0,1fr);}
-    .ow-st-att-b > #att_people{border-right:0;border-bottom:1px solid var(--ow-rule-soft);
-      padding:var(--ow-sp-12);}
-    .ow-st-att-b .att-people{flex-direction:row;flex-wrap:nowrap;overflow-x:auto;
-      gap:var(--ow-sp-8);scrollbar-width:none;}
-    .ow-st-att-b .att-people::-webkit-scrollbar{display:none;}
-    .ow-st-att-b .att-person{border:1px solid var(--ow-rule);border-radius:var(--ow-r-pill);
-      padding:0 var(--ow-sp-12);min-height:var(--ow-tap);font-size:var(--ow-t-14);flex:none;}
-    .ow-st-att-b .att-person.on{background:var(--ow-steel-950);color:var(--ow-paper);
-      border-color:var(--ow-steel-950);}
-    .ow-st-att-b > #attendanceWrap{padding:var(--ow-sp-12);}
-    .ow-st-att .ow-pan-h{height:auto;flex-wrap:wrap;padding:var(--ow-sp-8) var(--ow-sp-12);gap:var(--ow-sp-6);}
-    .ow-st-att .att-bar{flex:1 1 100%;margin-left:0;}
-    .ow-st-att .att-bar .btn.ow-sm{min-height:36px;}
+    #tab-staff{padding-bottom:84px;}
+    .sx-board,.sx-side,.sx-reg,.sx-tbl,#tab-staff .sx-srch,#tab-staff .sx-period,.sx-pan-nt{display:none;}
+    .sx-ptop{display:flex;flex-direction:column;gap:14px;margin-bottom:14px;}
+    .sx-cards{display:flex;flex-direction:column;gap:12px;}
+    .sx-d-long{display:none;}
+    .sx-d-short{display:inline;}
+    #tab-staff .sx-ph-sub{font-size:13px;}
+    #tab-staff #st_add_btn{position:fixed;right:16px;bottom:calc(var(--mobile-bottomnav-h) + 16px + env(safe-area-inset-bottom,0px));
+      z-index:30;height:52px;padding:0 20px 0 16px;border-radius:var(--ow-r-pill);font-size:15px;box-shadow:var(--ow-lift);
+      width:auto;min-width:0;flex:none;}
+    .sx-pcard{background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);}
+    .sx-pwork-h{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--ow-rule-soft);}
+    .sx-pwork-h .sx-flow-sum{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .sx-q2{display:grid;grid-template-columns:1fr 1fr;}
+    .sx-qc{padding:12px 14px 14px;display:flex;flex-direction:column;gap:6px;min-width:0;}
+    .sx-qc:nth-child(odd){border-right:1px solid var(--ow-rule-soft);}
+    .sx-qc:nth-child(-n+2){border-bottom:1px solid var(--ow-rule-soft);}
+    .sx-qc-h{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ow-ink-600);}
+    .sx-qc-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+      font-size:28px;font-weight:600;line-height:1;color:var(--ow-ink-900);}
+    .sx-qc-s{font-size:12px;color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+    .sx-qc-s.is-warn{color:var(--ow-amber-ink);font-weight:600;}
+    .sx-next{position:relative;display:flex;align-items:center;gap:14px;padding:16px;overflow:hidden;
+      background:var(--ow-steel-950);border-color:var(--ow-steel-950);color:var(--ow-paper);}
+    .sx-next::before{content:'';position:absolute;inset:0;pointer-events:none;
+      background:radial-gradient(120% 70% at 0% 0%,rgba(15,107,67,.28),transparent 60%);}
+    .sx-next > *{position:relative;}
+    .sx-next-av{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;flex:none;font-size:14px;font-weight:700;
+      background:var(--ow-verdigris-soft);color:var(--ow-verdigris);outline:2px solid var(--ow-good-on-navy);outline-offset:3px;}
+    .sx-next-av.is-held{background:var(--ow-steel-800);color:var(--ow-navy-line);outline-color:var(--ow-navy-mute);}
+    .sx-next-w{min-width:0;flex:1;}
+    .sx-next-k{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ow-navy-mute);}
+    .sx-next-n{font-size:16px;font-weight:700;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .sx-next-s{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12px;color:var(--ow-navy-ink);min-width:0;}
+    .sx-next-then{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+    .sx-next-s .sx-first-chip{flex:none;}
+    .sx-next-go{width:44px;height:44px;border-radius:var(--ow-r-lg);border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);
+      display:grid;place-items:center;color:var(--ow-paper);cursor:pointer;flex:none;padding:0;}
+    .sx-next-go .sx-i{width:18px;height:18px;}
+    .sx-sect{display:flex;align-items:baseline;gap:8px;padding:4px 2px 0;}
+    .sx-sect-t{font-size:15px;font-weight:700;color:var(--ow-ink-900);}
+    .sx-sect-n{font-size:13px;color:var(--ow-ink-600);}
+    .sx-roll{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px 6px;padding:14px;}
+    .sx-rf{all:unset;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:4px;min-height:64px;cursor:pointer;min-width:0;}
+    .sx-rf:disabled{cursor:default;}
+    .sx-rf:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:2px;border-radius:var(--ow-r-sm);}
+    .sx-rf-a{position:relative;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;box-sizing:border-box;
+      font-size:13px;font-weight:700;background:var(--ow-verdigris-soft);color:var(--ow-verdigris);border:2px solid var(--ow-verdigris);}
+    .sx-rf-a.is-out{background:var(--ow-paper);color:var(--ow-amber-ink);border-color:var(--ow-amber);}
+    .sx-rf-a.is-out::after{content:'';position:absolute;left:8px;right:8px;top:50%;height:2px;background:var(--ow-amber);transform:rotate(-45deg);}
+    .sx-rf-a.is-dim{background:var(--ow-rule-soft);color:var(--ow-ink-600);border-color:transparent;}
+    .sx-rf-n{font-size:12px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .sx-rf-n.is-out{color:var(--ow-amber-ink);}
+    .sx-roll-f{display:flex;align-items:center;gap:8px;padding:10px 14px;border-top:1px solid var(--ow-rule-soft);font-size:12px;color:var(--ow-ink-600);}
+    .sx-roll-f b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;color:var(--ow-amber-ink);font-weight:600;}
+
+    /* the team, as a heading and chips rather than a panel */
+    .sx-team{background:none;border:0;border-radius:0;}
+    .sx-team > .sx-pan-h{min-height:0;padding:4px 2px 0;border:0;}
+    .sx-team > .sx-pan-h .sx-pan-t{font-size:15px;}
+    .sx-tb{padding:10px 0 12px;border:0;}
+    #tab-staff .sx-filters{background:none;border:0;padding:0;gap:8px;overflow-x:auto;max-width:100%;flex-wrap:nowrap;scrollbar-width:none;}
+    #tab-staff .sx-filters::-webkit-scrollbar{display:none;}
+    #tab-staff .sx-filters .sx-seg-b{height:36px;min-height:36px;padding:0 14px;border-radius:var(--ow-r-pill);border-color:var(--ow-rule);
+      background:var(--ow-paper);font-size:13px;}
+    #tab-staff .sx-filters .sx-seg-b.on{background:var(--ow-steel-950);border-color:var(--ow-steel-950);color:var(--ow-paper);}
+    #tab-staff .sx-filters .sx-seg-b.on .sx-seg-n{color:var(--ow-navy-line);}
+
+    .sx-pc{background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);padding:14px;
+      display:flex;flex-direction:column;gap:12px;}
+    .sx-pc.is-off{opacity:.75;}
+    .sx-pc-h{display:flex;align-items:center;gap:12px;}
+    .sx-pc .sx-av{width:40px;height:40px;font-size:13px;}
+    .sx-pc .sx-dot{width:12px;height:12px;}
+    .sx-pc-w{flex:1;min-width:0;}
+    #tab-staff .sx-pc .sx-nm{font-size:15px;}
+    .sx-pc .sx-caps{margin-top:3px;gap:10px;}
+    .sx-pc .sx-capb{font-size:12px;}
+    .sx-pc .ow-cp.sx-cp{flex:none;}
+    .sx-pc .sx-wk{padding-right:0;}
+    .sx-pc .sx-fig{font-size:15px;}
+    .sx-pc .sx-wk-b{font-size:12px;}
+    .sx-pc .sx-fb{height:5px;}
+    .sx-pc > .sx-hold{padding:10px 12px;border-radius:var(--ow-r-10);background:var(--ow-steel-050);}
+    .sx-pc .sx-hold-r{font-size:13px;}
+    .sx-prec{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .sx-prec .sx-tile{padding:10px;gap:8px;border-color:var(--ow-rule-soft);border-radius:var(--ow-r-10);}
+    .sx-prec .sx-tile.is-wide{grid-column:1 / -1;}
+    .sx-prec .sx-tile-l{font-size:12px;}
+    .sx-prec .sx-tile-v{font-size:15px;}
+    .sx-prec .sx-odc{height:40px;}
+    .sx-trk{position:relative;height:8px;border-radius:var(--ow-r-4);background:var(--ow-rule-soft);margin:4px 0;overflow:hidden;}
+    .sx-trk i{position:absolute;left:0;top:0;bottom:0;border-radius:var(--ow-r-4);background:var(--ow-ink-600);}
+    .sx-trk i.is-bad{background:var(--ow-crimson);}
+    .sx-pc-a{display:flex;gap:8px;}
+    .sx-pbtn{min-height:var(--ow-tap);height:44px;padding:0 16px;border-radius:var(--ow-r-10);border:1px solid var(--ow-rule);background:var(--ow-paper);
+      display:inline-flex;align-items:center;justify-content:center;gap:8px;flex:1;cursor:pointer;font:inherit;font-size:14px;font-weight:600;
+      color:var(--ow-ink-900);text-decoration:none;box-sizing:border-box;}
+    .sx-pbtn.is-ink{background:var(--ow-steel-950);border-color:var(--ow-steel-950);color:var(--ow-paper);}
+    .sx-pbtn-i{flex:0 0 44px;width:44px;padding:0;}
+    .sx-pbtn .sx-i{width:18px;height:18px;}
+    .sx-pc .sx-menu{min-width:200px;}
+    .sx-pc .sx-menu button{min-height:var(--ow-tap);}
+
   }
 
   /* The preset pane's own action, on the right of its heading. */
@@ -8684,69 +8716,78 @@
      be handed, and what they cost every month. Asked in that order, each
      showing what it does.
      ================================================================= */
-  .sf{display:flex;flex-direction:column;gap:18px;}
-  .sf-block{display:flex;flex-direction:column;gap:8px;}
-  .sf-label{font-size:10.5px;font-weight:700;letter-spacing:0.9px;text-transform:uppercase;color:var(--ink-soft);}
-
-  .sf-who{display:grid;grid-template-columns:1.4fr 1fr;gap:10px;}
-  @media (max-width:520px){ .sf-who{grid-template-columns:1fr;} }
+  #staffModal .modal.sf-modal{max-width:480px;border-radius:var(--ow-r-lg);overflow:hidden;}
+  #staffModal .sf-mh{padding:14px 16px 0 20px;border-bottom:0;}
+  #staffModal .sf-mh h2{font-size:16px;font-weight:700;text-transform:none;letter-spacing:0;color:var(--ow-ink-900);}
+  #staffModal .modal-body{padding:14px 20px 18px;}
+  .sf{display:flex;flex-direction:column;gap:14px;}
+  .sf-fld{display:flex;flex-direction:column;gap:5px;min-width:0;}
+  .sf-fld > label,.sf-label{font-size:11px;font-weight:600;color:var(--ow-ink-600);}
+  .sf-who{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:8px;}
   .sf input[type=text],.sf input:not([type]),.sf input[type=number]{
-    width:100%;box-sizing:border-box;font-family:inherit;font-size:14px;line-height:1.4;
-    color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:9px;
-    padding:11px 13px;transition:border-color .14s ease,box-shadow .14s ease;
+    width:100%;box-sizing:border-box;height:36px;font-family:inherit;font-size:13px;line-height:1.4;
+    color:var(--ow-ink-900);background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);
+    padding:0 10px;margin:0;transition:border-color .14s ease;
   }
-  /* The name is the subject of the form; everything else describes the
-     person it names.
-
-     `.sf input.sf-name`, not `.sf .sf-name`: the general rule above
+  /* `.sf input.sf-phone`, not `.sf .sf-phone`: the general rule above
      carries `:not([type])`, whose argument lends it an attribute
-     selector's weight, so a two-class selector LOSES to it and the name
-     silently rendered at 14px like everything else. Measured, not
-     assumed -- it looked deliberate either way. */
-  .sf input.sf-name{font-size:19px;font-weight:700;padding:13px 15px;}
+     selector's weight, so a two-class selector LOSES to it. A phone
+     number is a figure, and figures are set in the mono face. */
+  .sf input.sf-phone{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
   .sf input::placeholder{color:var(--ow-ink-400);}
   .sf input:hover{border-color:var(--ow-steel-400);}
-  .sf input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--ow-oxide-soft);}
+  .sf input:focus{outline:none;border-color:var(--ow-steel-950);box-shadow:0 0 0 3px var(--ow-oxide-soft);}
 
-  /* The two are not peers, so they are not a dropdown. Each says what it
-     unlocks and what it costs you. */
-  .sf-roles{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-  @media (max-width:520px){ .sf-roles{grid-template-columns:1fr;} }
-  .sf-role{display:flex;flex-direction:column;gap:3px;text-align:left;cursor:pointer;
-    background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:11px 13px;
-    transition:border-color .15s ease,background .15s ease;}
-  .sf-role:hover{background:var(--bg);}
-  .sf-role.on{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink);background:var(--bg);}
-  .sf-role-name{font-size:14px;font-weight:700;color:var(--ink);}
-  .sf-role-gives{font-size:12px;font-weight:600;color:var(--ow-verdigris);}
-  .sf-role.on .sf-role-gives{color:var(--ow-verdigris);}
-  .sf-role-note{font-size:11.5px;line-height:1.4;color:var(--ink-soft);}
-  .sf-warn{font-size:12.5px;line-height:1.5;border-radius:9px;padding:9px 12px;
+  /* The two roles and the four ways of being paid, each as one switch.
+     The roles are not peers, so they are not a dropdown: the narrowing
+     one carries only the truck. */
+  .sf-sw{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);border:1px solid var(--ow-rule);
+    border-radius:var(--ow-r-sm);overflow:hidden;background:var(--ow-paper);}
+  .sf-sw-b{height:34px;border:0;background:none;padding:0 6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    font:inherit;font-size:12px;font-weight:600;color:var(--ow-ink-600);white-space:nowrap;min-width:0;}
+  .sf-sw-b + .sf-sw-b{border-left:1px solid var(--ow-rule);}
+  .sf-sw-b:hover{background:var(--ow-paper-2);color:var(--ow-ink-900);}
+  .sf-sw-b.on{background:var(--ow-steel-950);color:var(--ow-paper);}
+  .sf-sw-b:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
+  .sf-sw-b .sx-i{width:15px;height:15px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .sf-warn{font-size:12px;line-height:1.5;border-radius:var(--ow-r-sm);padding:8px 10px;margin-top:4px;
     background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
 
-  .sf-bases{display:flex;flex-wrap:wrap;gap:7px;}
-  .sf-basis{font-size:12.5px;font-weight:600;padding:7px 13px;border-radius:999px;cursor:pointer;
-    background:var(--panel);border:1px solid var(--line);color:var(--ink);
-    transition:background .15s ease,border-color .15s ease;}
-  .sf-basis:hover{background:var(--bg);}
-  .sf-basis.on{background:var(--ink);border-color:var(--ink);color:var(--panel);}
-
-  .sf-rate{display:flex;align-items:center;gap:9px;}
-  .sf-rate label{font-size:12.5px;font-weight:600;color:var(--ink-soft);flex-shrink:0;min-width:78px;}
-  /* Same weighting problem as the name: needs the type selector to beat
+  .sf-rate{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px;align-items:center;margin-top:4px;}
+  .sf-rate-box{display:flex;align-items:center;height:36px;border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);overflow:hidden;background:var(--ow-paper);}
+  .sf-rate-box:focus-within{border-color:var(--ow-steel-950);box-shadow:0 0 0 3px var(--ow-oxide-soft);}
+  .sf-rate-cur{padding:0 9px;height:100%;display:grid;place-items:center;flex:none;font-size:11px;font-weight:600;
+    color:var(--ow-ink-600);background:var(--ow-paper-2);border-right:1px solid var(--ow-rule);}
+  /* Same weighting problem as the phone: needs the type selector to beat
      the general rule's :not([type]). */
-  .sf .sf-rate input[type=number]{font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:700;
-    font-variant-numeric:tabular-nums;text-align:right;max-width:190px;}
-  .sf-rate-cur{font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:700;color:var(--ink-soft);}
+  .sf .sf-rate input[type=number]{height:100%;border:0;border-radius:0;padding:0 10px;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.02em;box-shadow:none;-moz-appearance:textfield;}
+  .sf .sf-rate input[type=number]::-webkit-outer-spin-button,.sf .sf-rate input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+  .sf-rate-l{font-size:12px;color:var(--ow-ink-600);}
 
-  /* What this rate actually commits the shop to, said here rather than
-     discovered on the payroll screen a month later. */
-  .sf-consequence{font-size:12.5px;line-height:1.5;border-radius:9px;padding:9px 12px;
-    background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
-  .sf-consequence b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
-  .sf-consequence.quiet{background:var(--bg);color:var(--ink-soft);border:1px solid var(--line);}
-
-  .sf-foot-note{font-size:11.5px;color:var(--ink-soft);padding-top:2px;border-top:1px solid var(--ow-rule-soft);}
+  /* What this rate commits the shop to, in one line; the whole sentence
+     is on its title. */
+  .sf-consequence{font-size:12px;line-height:1.4;color:var(--ow-ink-600);}
+  .sf-consequence b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;font-weight:600;color:var(--ow-ink-900);}
+  .sf-consequence b.sf-dock{color:var(--ow-amber-ink);}
+  .sf-consequence.quiet{color:var(--ow-ink-600);}
+  .sf-inv{display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--ow-ink-900);}
+  .sf-inv input{width:16px;height:16px;margin:0;accent-color:var(--ow-steel-950);}
+  .sf-inv[hidden],.sf-note-add[hidden],.sf-fld[hidden]{display:none;}
+  .sf-note-add{all:unset;cursor:pointer;align-self:flex-start;display:inline-flex;align-items:center;gap:4px;
+    font-size:12px;font-weight:600;color:var(--ow-sky);}
+  .sf-note-add .icon{width:13px;height:13px;}
+  .sf-note-add:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:2px;}
+  #staffModal .sf-mf{align-items:center;gap:8px;padding:12px 20px;background:var(--ow-paper-2);border-top:1px solid var(--ow-rule-soft);}
+  .sf-foot-note{font-size:12px;color:var(--ow-ink-600);margin-right:auto;}
+  @media (max-width:820px){
+    .sf input[type=text],.sf input:not([type]),.sf input[type=number]{height:44px;font-size:16px;}
+    .sf .sf-rate input[type=number]{font-size:16px;}
+    .sf-rate-box{height:44px;}
+    .sf-sw-b{height:44px;font-size:13px;}
+    .sf-who{grid-template-columns:minmax(0,1fr);}
+  }
 
   /* ================= ADDING A CUSTOMER =============================
      A customer record exists so the shop can hand over goods before
@@ -9086,141 +9127,6 @@
   .pr-name{font-size:13.5px;font-weight:700;color:var(--ink);line-height:1.3;}
   .pr-quiet{color:var(--ink-soft);}
 
-  /* ---- Who's in (the month, as a calendar) ---- */
-  .att-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:0;}
-  .att-monthlabel{font-family:'Archivo Black',sans-serif;font-size:14px;letter-spacing:0.2px;
-    color:var(--ink);min-width:132px;text-align:center;}
-
-  /* The names. A row, not a dropdown -- a shop has a handful of people
-     and a dropdown hides how many there are behind a click. */
-  .att-people{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 4px;}
-  .att-person{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:999px;
-    border:1px solid var(--line);background:var(--panel);cursor:pointer;font:inherit;
-    font-size:12.5px;font-weight:700;color:var(--ink-soft);min-height:36px;}
-  .att-person:hover{border-color:var(--ow-steel-400);color:var(--ink);}
-  .att-person.on{background:var(--ow-steel-950);border-color:var(--ow-steel-950);color:var(--ow-paper);}
-  .att-person-tag{display:inline-flex;align-items:center;justify-content:center;min-width:19px;
-    height:19px;padding:0 5px;border-radius:999px;font-size:11px;font-variant-numeric:tabular-nums;
-    background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
-  .att-person.on .att-person-tag{background:var(--ow-amber);color:var(--ow-paper);}
-
-  /* What the month has come to, for the person on screen. */
-  .att-total{display:flex;flex-direction:column;gap:3px;padding:12px 14px;margin:14px 0 12px;
-    border:1px solid var(--line);border-left:3px solid var(--ow-steel-400);
-    border-radius:10px;background:var(--bg);}
-  .att-total.warn{border-left-color:var(--ow-amber);}
-  .att-total-label{font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--ink-soft);}
-  .att-total b{font-family:'IBM Plex Mono',monospace;font-size:15px;font-variant-numeric:tabular-nums;color:var(--ink);}
-  .att-total.warn b{color:var(--ow-amber-ink);}
-  .att-total-note{font-size:12px;color:var(--ink-soft);line-height:1.5;}
-
-  /* The grid. Seven equal columns whatever the width, so the weekday
-     header and the squares under it cannot drift apart. */
-  .att-cal{margin-top:4px;}
-  .att-dow,.att-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;}
-  .att-dow{margin-bottom:6px;}
-  .att-dow span{font-size:11px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;
-    color:var(--ink-soft);text-align:center;padding:2px 0;}
-  .att-dow span.rest{color:var(--ow-steel-400);}
-  .att-pad{display:block;}
-
-  .att-day{display:flex;flex-direction:column;align-items:flex-start;gap:5px;
-    min-height:74px;padding:8px 9px;border:1px solid var(--line);border-radius:9px;
-    background:var(--panel);cursor:pointer;font:inherit;text-align:left;overflow:hidden;
-    transition:border-color .12s ease, background .12s ease;}
-  .att-day:hover:not(:disabled){border-color:var(--ow-steel-400);}
-  .att-daynum{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;
-    font-variant-numeric:tabular-nums;color:var(--ink);line-height:1;}
-  /* The state, as a word and a mark. Colour alone would leave the grid
-     unreadable to anybody who cannot separate the greens from the
-     ambers, and this one is about somebody's pay. */
-  .att-mark{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:999px;
-    font-size:10.5px;font-weight:700;letter-spacing:0.2px;white-space:nowrap;
-    max-width:100%;overflow:hidden;}
-  .att-i{width:11px;height:11px;flex:none;fill:none;stroke:currentColor;stroke-width:3;
-    stroke-linecap:round;stroke-linejoin:round;}
-  .att-mark.in{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
-  .att-mark.absent{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
-  .att-mark.paid{background:var(--ow-steel-100);color:var(--ow-ink-600);}
-  /* ink-600, not steel-400. This is text meant to be read, and steel-400
-     on the muted cell behind it -- dimmed again on a future day -- came
-     out around 1.6:1, which is a label nobody can actually read. */
-  .att-mark.rest{background:transparent;color:var(--ow-ink-600);padding-left:0;}
-  .att-why{font-size:10.5px;color:var(--ink-soft);line-height:1.25;max-width:100%;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-
-  .att-day.rest{background:var(--bg);}
-  .att-day.rest .att-daynum{color:var(--ow-steel-400);}
-  .att-day.is-absent{border-color:var(--ow-amber);background:var(--ow-amber-faint);}
-  .att-day.is-paid{border-color:var(--ow-steel-400);}
-  /* A day that has not happened. Kept in the grid -- a month with its
-     tail cut off does not read as a month -- but plainly not actionable. */
-  /* Dimmed, not erased. The dashed border already says "not yet", so the
-     opacity only has to take the cell out of the foreground -- at .55 it
-     was also taking the Rest day label below legibility. */
-  .att-day.future{background:var(--bg);border-style:dashed;cursor:default;opacity:.72;}
-  .att-day.is-today .att-daynum{position:relative;color:var(--accent);}
-  .att-day.is-today .att-daynum::after{content:'';position:absolute;left:0;right:0;bottom:-3px;
-    height:2px;border-radius:2px;background:var(--accent);}
-  .att-day.is-sel{border-color:var(--ow-steel-950);box-shadow:0 0 0 2px var(--ow-steel-950) inset;}
-  /* Docked for a Sunday, which the 26-day month already treats as
-     unpaid. Not blocked -- a shop that opens on Sunday may mean it --
-     but never silent. */
-  .att-day.odd{border-style:dotted;border-color:var(--ow-amber);}
-
-  .att-key{display:flex;flex-wrap:wrap;gap:6px 16px;margin:12px 0 0;
-    font-size:11.5px;color:var(--ink-soft);}
-  .att-key-item{display:inline-flex;align-items:center;gap:6px;}
-  .att-key i{width:11px;height:11px;border-radius:3px;flex:none;}
-  .att-key .k-in{background:var(--ow-verdigris);}
-  .att-key .k-absent{background:var(--ow-amber);}
-  .att-key .k-paid{background:var(--ow-steel-400);}
-  .att-key .k-rest{background:var(--ow-steel-100);border:1px solid var(--ow-steel-400);}
-
-  /* The editor. Under the grid rather than inside a cell: it names the
-     day and the person in full, and there is no room for that in a
-     74px square. */
-  .att-edit{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;
-    margin-top:14px;padding:13px 15px;border:1px solid var(--line);border-radius:10px;
-    background:var(--bg);}
-  .att-edit.empty-ish{justify-content:flex-start;color:var(--ink-soft);font-size:12.5px;}
-  .att-edit-day{font-family:'Archivo Black',sans-serif;font-size:14px;color:var(--ink);letter-spacing:0.2px;}
-  .att-edit-sub{font-size:11.5px;color:var(--ink-soft);margin-top:3px;}
-  .att-edit-why{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--ink-soft);}
-  .att-edit-why input{width:150px;padding:6px 9px;}
-
-  .att-pick{display:inline-flex;border:1px solid var(--line);border-radius:999px;
-    overflow:hidden;background:var(--panel);}
-  .att-opt{padding:8px 16px;border:0;background:transparent;cursor:pointer;font:inherit;
-    font-size:12.5px;font-weight:700;color:var(--ink-soft);white-space:nowrap;min-height:38px;}
-  .att-opt + .att-opt{border-left:1px solid var(--line);}
-  .att-opt:hover{background:var(--ow-steel-050);color:var(--ink);}
-  .att-opt.on{background:var(--ow-steel-950);color:var(--ow-paper);}
-  .att-note{margin:12px 0 0;font-size:12px;line-height:1.6;color:var(--ink-soft);}
-
-  /* Narrow. The seven columns are kept -- a calendar that reflows to
-     three columns is no longer a calendar -- and the squares lose their
-     labels instead, down to the number and a coloured dot. */
-  @media (max-width: 860px){
-    .att-day{min-height:58px;padding:6px;gap:4px;align-items:center;}
-    .att-mark{padding:2px 5px;font-size:0;gap:0;width:16px;height:16px;
-      justify-content:center;border-radius:999px;}
-    /* Outlined, not filled. Paid leave is already a filled grey dot at
-       this size, and giving the rest day the same grey left two states
-       telling apart only by the dash glyph inside one of them. The
-       outline matches this state's own swatch in the key. */
-    .att-mark.rest{background:transparent;border:1px solid var(--ow-steel-400);}
-    /* The primary control on a phone -- it is how you change person --
-       and it was the one thing in this query left under the 44px the
-       buttons beside it are held to. */
-    .att-person{min-height:44px;}
-    .att-why{display:none;}
-    .att-edit{flex-direction:column;align-items:stretch;}
-    .att-pick{width:100%;}
-    .att-opt{flex:1 1 0;text-align:center;min-height:44px;}
-    .att-edit-why input{width:100%;}
-    .att-edit-why{display:grid;grid-template-columns:auto 1fr;}
-  }
   /* Muted and non-interactive: this sits where a delete button would be,
      so it must not read as something you can press. */
   .debt-log-locked{display:inline-flex;align-items:center;color:var(--ink-soft);opacity:.7;cursor:default;padding:0 2px;}
@@ -36310,9 +36216,11 @@
 
     <section id="tab-staff" style="display:none;">
       <div class="ow-ph">
-        <h1 class="ow-ph-t">Staff</h1>
-        <p class="ow-ph-sub" id="staffPhSub">Who you can hand the next order to.</p>
-        <p class="ow-ph-help">The people who pick and deliver for you, ordered by who is free: anybody idle first, then whoever is carrying least, then people who cannot be sent work at all. A row carries only what decides whether this person gets the next order &mdash; whether they are free, what they can do, and the one figure that speaks to their work &mdash; and opens in place for the rest of their record. Every figure is counted from the orders themselves over the period named on the control above the list; nothing is stored and nothing is ranked. Nothing here hands anybody an order: that happens on Order tracking, and it is always a tap of yours. The month of days at the foot is the same register the payroll screen docks from &mdash; there is no second attendance record and no second figure to reconcile. Which devices are signed in moved to Presets, under Signed-in devices; what matters about it here is on the person&rsquo;s own row, as &ldquo;No app login&rdquo;.</p>
+        <div class="sx-ph-l">
+          <h1 class="ow-ph-t">Staff</h1>
+          <p class="ow-ph-sub sx-ph-sub" id="staffPhSub">Who you can hand the next order to.</p>
+        </div>
+        <p class="ow-ph-help">Who can take the next order, and where today&rsquo;s orders are. The team is ordered free first, then whoever is carrying least, then whoever cannot be sent work; a row opens in place for that person&rsquo;s record. Every figure is counted from the orders themselves over the period chosen above the list &mdash; nothing is stored and nothing is ranked. Nothing here hands anybody an order: that happens on Order tracking, and it is always a tap of yours. Days worked at the foot is the same register the payroll screen docks from; a tap on a day moves it between in, absent and paid leave.</p>
         <span class="ow-ph-sp"></span>
         <button class="btn btn-accent ow-sm" id="st_add_btn">
           <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
@@ -36320,62 +36228,63 @@
         </button>
       </div>
 
-      <div id="staffTeamStrip"></div>
+      <!-- The desktop's answer: who gets the next order, and where the
+           day's orders are standing. The phone draws its own top below. -->
+      <div class="sx-board" id="staffBoard"></div>
+      <div class="sx-ptop" id="staffPhoneTop"></div>
 
-      <div class="ow-grid">
-        <div class="ow-pan">
-          <div class="ow-pan-h">
-            <span class="ow-pan-t">The team</span>
-            <span class="ow-pan-nt">free first, then whoever is carrying least</span>
-            <span class="ow-pan-n" id="staffRosterCount"></span>
+      <div class="sx-main">
+        <div class="sx-pan sx-team" role="region" aria-label="The team">
+          <div class="sx-pan-h">
+            <span class="sx-pan-t">The team</span>
+            <span class="sx-pan-nt">free first, then whoever carries least</span>
+            <span class="sx-pan-n" id="staffRosterCount"></span>
           </div>
-          <div class="rost-bar">
-            <div class="rost-filters" id="staffRoleFilter">
-              <button type="button" class="rost-filter active" data-role="all">Everyone</button>
-              <button type="button" class="rost-filter" data-role="worker">Workers</button>
-              <button type="button" class="rost-filter" data-role="delivery">Delivery</button>
-              <button type="button" class="rost-filter" data-role="off">Unavailable</button>
+          <div class="sx-tb">
+            <div class="sx-seg sx-filters" id="staffRoleFilter" role="group" aria-label="Who to show">
+              <button type="button" class="sx-seg-b on" data-role="all" aria-pressed="true">Everyone<span class="sx-seg-n"></span></button>
+              <button type="button" class="sx-seg-b" data-role="worker" aria-pressed="false">Pickers<span class="sx-seg-n"></span></button>
+              <button type="button" class="sx-seg-b" data-role="delivery" aria-pressed="false">Drivers<span class="sx-seg-n"></span></button>
+              <button type="button" class="sx-seg-b" data-role="off" aria-pressed="false">Can&rsquo;t be sent<span class="sx-seg-n"></span></button>
             </div>
-            <div class="rost-right">
-              <div class="search-bar rost-search"><input id="st_search" placeholder="Name or phone..."></div>
-              <div class="rost-period" id="staffPeriod">
-                <button type="button" class="rost-per active" data-period="month">This month</button>
-                <button type="button" class="rost-per" data-period="quarter">3 months</button>
-                <button type="button" class="rost-per" data-period="all">All time</button>
-              </div>
+            <label class="sx-srch"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="st_search" type="search" placeholder="Name or phone" aria-label="Find a person" autocomplete="off"></label>
+            <div class="sx-seg sx-period" id="staffPeriod" role="group" aria-label="Period">
+              <button type="button" class="sx-seg-b on" data-period="month" aria-pressed="true">This month</button>
+              <button type="button" class="sx-seg-b" data-period="quarter" aria-pressed="false">3 months</button>
+              <button type="button" class="sx-seg-b" data-period="all" aria-pressed="false">All time</button>
             </div>
           </div>
           <div id="staffRoster"></div>
         </div>
 
-        <!-- The answer to the screen's own question, said again where the
-             eye lands without reading a list, and the handful of things
-             about people that want doing today. -->
-        <div class="ow-side" id="staffRail"></div>
+        <!-- What is not on a row: the work that needs the owner and has
+             no button of its own. -->
+        <aside class="sx-side" id="staffRail"></aside>
       </div>
 
-      <!-- Who was in, by the month.
-
-           Below the work, not above it: the question you open Staff to
-           ask is who can take the next order, and this is the one you
-           answer on payday. It writes the same rows the payroll screen
-           reads -- there is no second attendance record and no second
-           figure to reconcile. -->
-      <div class="ow-pan ow-st-att" id="attendancePanel">
-        <div class="ow-pan-h">
-          <span class="ow-pan-t">Days worked</span>
-          <span class="ow-pan-nt">what payroll docks from, entered here</span>
-          <div class="att-bar">
-            <button type="button" class="btn btn-ghost ow-sm" id="att_prev">&lsaquo; Previous</button>
-            <span class="att-monthlabel" id="att_month" aria-live="polite"></span>
-            <button type="button" class="btn btn-ghost ow-sm" id="att_next">Next &rsaquo;</button>
+      <!-- Days worked. Below the work, not above it: the question you
+           open Staff to ask is who can take the next order, and this is
+           the one you answer on payday. It writes the same rows the
+           payroll screen reads -- there is no second attendance record
+           and no second figure to reconcile. -->
+      <div class="sx-pan sx-reg" id="attendancePanel" role="region" aria-label="Days worked">
+        <div class="sx-reg-h">
+          <span class="sx-pan-t">Days worked</span>
+          <span class="sx-pan-nt">what payroll docks from &mdash; tap a day to change it</span>
+          <div class="sx-reg-key" aria-hidden="true">
+            <span><i class="sx-c sx-c-in"></i>In</span>
+            <span><i class="sx-c sx-c-absent"></i>Absent, docked</span>
+            <span><i class="sx-c sx-c-paid"></i>Paid leave</span>
+            <span><i class="sx-c sx-c-rest"></i>Sunday</span>
+          </div>
+          <div class="sx-mnav">
+            <button type="button" class="sx-ibtn" id="att_prev" aria-label="Previous month"><svg class="icon" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+            <span class="sx-mlab" id="att_month" aria-live="polite"></span>
+            <button type="button" class="sx-ibtn" id="att_next" aria-label="Next month"><svg class="icon" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
             <button type="button" class="btn btn-ghost ow-sm" id="att_today">This month</button>
           </div>
         </div>
-        <div class="ow-st-att-b">
-          <div id="att_people"></div>
-          <div id="attendanceWrap"></div>
-        </div>
+        <div id="attendanceWrap"></div>
       </div>
     </section>
 
@@ -38127,8 +38036,8 @@
 
 <!-- STAFF MODAL -->
 <div class="modal-overlay" id="staffModal">
-  <div class="modal">
-    <div class="modal-head">
+  <div class="modal sf-modal" role="dialog" aria-modal="true" aria-labelledby="staffFormTitle">
+    <div class="modal-head sf-mh">
       <h2 id="staffFormTitle">Add staff</h2>
       <button class="modal-close" id="staffModalClose" aria-label="Close">
         <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -38136,48 +38045,42 @@
     </div>
     <div class="modal-body">
       <div class="sf">
-        <div class="sf-block">
-          <span class="sf-label">Who they are</span>
-          <div class="sf-who">
-            <input id="st_name" class="sf-name" placeholder="Their name" autocomplete="off">
-            <input id="st_phone" class="sf-phone" placeholder="Phone — e.g. 0700 000 000" autocomplete="off">
-          </div>
+        <div class="sf-who">
+          <div class="sf-fld"><label for="st_name">Name</label><input id="st_name" placeholder="Their full name" autocomplete="off"></div>
+          <div class="sf-fld"><label for="st_phone">Phone</label><input id="st_phone" class="sf-phone" placeholder="0700 000 000" autocomplete="off"></div>
         </div>
 
         <!-- Not a dropdown. The two are not peers: a worker can be given
-             picking AND delivery, a delivery person only delivery, and a
-             neutral select said nothing about that. -->
-        <div class="sf-block">
-          <span class="sf-label">What they can be given</span>
-          <div class="sf-roles" id="st_roles"></div>
+             picking AND delivery, a delivery person only delivery. -->
+        <div class="sf-fld">
+          <span class="sf-label" id="st_roles_l">Can be given</span>
+          <div class="sf-sw" id="st_roles" role="group" aria-labelledby="st_roles_l"></div>
           <input type="hidden" id="st_role" value="worker">
           <div class="sf-role-warn" id="st_role_warn"></div>
         </div>
 
-        <div class="sf-block">
-          <span class="sf-label">What they are paid</span>
-          <div class="sf-bases" id="st_bases"></div>
+        <div class="sf-fld">
+          <span class="sf-label" id="st_bases_l">Paid</span>
+          <div class="sf-sw" id="st_bases" role="group" aria-labelledby="st_bases_l"></div>
           <input type="hidden" id="st_pay_basis" value="">
           <div class="sf-rate" id="st_rate_row">
-            <label for="st_pay_rate" id="st_pay_rate_label">Rate</label>
-            <input id="st_pay_rate" type="number" min="0" step="any" placeholder="0">
-            <span class="sf-rate-cur">UGX</span>
+            <label class="sf-rate-box"><span class="sf-rate-cur">UGX</span><input id="st_pay_rate" type="number" min="0" step="any" placeholder="0" aria-labelledby="st_pay_rate_label"></label>
+            <span class="sf-rate-l" id="st_pay_rate_label">Each month</span>
           </div>
           <div class="sf-consequence" id="st_pay_consequence"></div>
         </div>
 
-        <div class="sf-block">
-          <span class="sf-label">Notes</span>
-          <input id="st_notes" placeholder="Anything worth remembering — optional" autocomplete="off">
+        <label class="sf-inv"><input type="checkbox" id="st_invite">Send a login invite once saved</label>
+        <button type="button" class="sf-note-add" id="st_note_add"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add a note</button>
+        <div class="sf-fld" id="st_notes_row" hidden>
+          <label for="st_notes">Note</label>
+          <input id="st_notes" placeholder="Anything worth remembering" autocomplete="off">
         </div>
-
-        <div class="sf-foot-note">
-          <span id="st_id_note"></span>
-          <input type="hidden" id="st_id">
-        </div>
+        <input type="hidden" id="st_id">
       </div>
     </div>
-    <div class="modal-foot">
+    <div class="modal-foot sf-mf">
+      <span class="sf-foot-note" id="st_id_note"></span>
       <button class="btn btn-ghost" id="st_cancel">Cancel</button>
       <button class="btn btn-accent" id="st_save">Save staff</button>
     </div>
@@ -79284,10 +79187,231 @@ function staffRowCount(s, p){
   return s.role === 'delivery' ? (p.delivered || p.picked) : (p.picked || p.delivered);
 }
 
-const ICON_ST_PICK = '<svg class="rost-cap-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/></svg>';
-const ICON_ST_DELIVER = '<svg class="rost-cap-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 6h13v10H1zM14 10h5l3 3v3h-8"/><circle cx="5" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>';
+/* ================= STAFF, AS DRAWN ON THE CANVAS =================
 
-function staffRosterRowHTML(s, range, maxCount){
+   The owner signed the screen off on a design canvas, and this is that
+   design. One question leads it -- who takes the next order -- answered
+   on a navy card where the eye lands, beside where the day's orders are
+   standing. The team is a table that opens in place; the rail holds only
+   what has no button of its own; the month of days sits at the foot.
+
+   The phone is its own design, not this one squeezed: a 2x2 of where
+   everybody is, the next person, a roll of faces to mark who is in, and
+   the team as cards. Both are drawn from the same figures in the same
+   pass, so they can never say different things. */
+
+const ICON_SX_PICK = '<svg class="sx-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/></svg>';
+const ICON_SX_DRIVE = '<svg class="sx-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 6h13v10H1zM14 10h5l3 3v3h-8"/><circle cx="5" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>';
+const ICON_SX_CHEV = '<svg class="sx-i sx-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+const ICON_SX_MORE = '<svg class="sx-i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>';
+const ICON_SX_PHONE = '<svg class="sx-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2"/></svg>';
+const ICON_SX_PAY = '<svg class="sx-i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M16 15h2"/></svg>';
+const ICON_SX_KEY = '<svg class="sx-i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3"/></svg>';
+const ICON_SX_CLOCK = '<svg class="sx-i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+const ICON_SX_ARROW = '<svg class="sx-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+const ICON_SX_TICK = '<svg class="sx-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>';
+
+/* How long ago, short enough for a column: "18 min", "2 hr". */
+function sxSince(ts){
+  const t = typeof ts === 'number' ? ts : Date.parse(ts || '');
+  if(!t || isNaN(t)) return '';
+  const mins = Math.max(0, Math.round((Date.now() - t) / 60000));
+  if(mins < 1) return 'now';
+  if(mins < 60) return `${mins} min`;
+  const hrs = Math.floor(mins / 60);
+  if(hrs < 24) return `${hrs} hr`;
+  return `${Math.floor(hrs / 24)} d`;
+}
+
+function sxMinsSince(ts){
+  const t = typeof ts === 'number' ? ts : Date.parse(ts || '');
+  return !t || isNaN(t) ? 0 : Math.max(0, Math.round((Date.now() - t) / 60000));
+}
+
+// The wall-clock time of a moment, for "done at 11:52".
+function sxClock(ts){
+  const d = new Date(typeof ts === 'number' ? ts : Date.parse(ts || ''));
+  if(isNaN(d.getTime())) return '';
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+function sxOrderNo(q){
+  return '#' + String(q.id).padStart(4, '0');
+}
+
+/* Money on a tile a third of a card wide: 14.8M, 640k. The full figure
+   is on the tile's title, so the short one is never the only one. */
+function sxShort(n){
+  const v = Math.round(Number(n) || 0);
+  if(Math.abs(v) >= 1e6) return `${(v / 1e6).toFixed(v >= 1e7 ? 0 : 1).replace(/\.0$/, '')}M`;
+  if(Math.abs(v) >= 1e3) return `${Math.round(v / 1e3)}k`;
+  return String(v);
+}
+
+/* EVERYBODY, IN THE ORDER THE NEXT ORDER WOULD GO TO THEM. Free first,
+   then whoever carries least, then whoever cannot be sent anything.
+   Name breaks the tie so the order is stable between renders, and the
+   card, the board and the list all read this one ordering. */
+function staffInLine(){
+  return (data.staff||[]).map(s=> ({ s, st: staffDispatchState(s) }))
+    .sort((a,b)=> a.st.rank - b.st.rank || String(a.s.name||'').localeCompare(String(b.s.name||'')));
+}
+
+/* WHERE TODAY'S ORDERS ARE STANDING, from the board's own fields.
+   Waiting is the picker queue itself -- the same list autoAssignNextOrder
+   hands out from -- so this column can never show an order the next
+   picker would not be given. Done is what reached Completed today. */
+function staffTodaysWork(){
+  const live = (data.savedQuotes||[]).filter(q=> !q.voided && !quoteAgedOffBoard(q));
+  const today = todayISO();
+  const doneToday = (q)=> {
+    if(q.voided || q.status !== 'completed' || !q.stageEnteredAt) return false;
+    const d = new Date(Number(q.stageEnteredAt));
+    return !isNaN(d.getTime()) && d.toISOString().slice(0,10) === today;
+  };
+  return {
+    waiting: workerPickQueue(),
+    picking: live.filter(q=> q.status === 'preparing' && q.assignedWorkerId && q.pickingStatus !== 'done'),
+    out: live.filter(q=> q.status === 'pending_delivery' && q.assignedDeliveryId),
+    done: (data.savedQuotes||[]).filter(doneToday)
+      .sort((a,b)=> Number(b.stageEnteredAt) - Number(a.stageEnteredAt)),
+  };
+}
+
+/* The three figures under the next person's name. A delivery person is
+   measured on what they carried; anybody else on what they picked. A
+   figure that cannot be derived is a dash, never a zero. */
+function staffFirstStats(s, p){
+  if(s.role === 'delivery' || (!p.picked && p.delivered)) return [
+    { v: String(p.delivered), l: 'delivered' },
+    { v: String(p.places), l: p.places === 1 ? 'place' : 'places' },
+    { v: p.deliveredValue ? sxShort(p.deliveredValue) : '—', l: 'UGX carried',
+      title: p.deliveredValue ? fmtUGX(Math.round(p.deliveredValue)) : '' },
+  ];
+  return [
+    { v: String(p.picked), l: 'picked' },
+    { v: p.shortRate == null ? '—' : `${p.shortRate.toFixed(1)}%`, l: 'lines short' },
+    { v: p.acceptMedianMins == null ? '—' : staffMinsLabel(p.acceptMedianMins), l: 'takes work up' },
+  ];
+}
+
+/* TODAY'S WORK as four steps an order walks through, with the chip that
+   weighs what is waiting against who is free. One reading, drawn twice:
+   as the desktop's flow, and as the phone's 2x2. */
+function staffWorkStages(line){
+  const w = staffTodaysWork();
+  const who = (id)=> { const x = (data.staff||[]).find(s=> String(s.id) === String(id)); return x ? nameInitials(x.name) : '?'; };
+  const oldest = w.waiting.reduce((m, q)=> Math.max(m, sxMinsSince(q.stageEnteredAt || q.savedAt)), 0);
+  const pickers = new Set(w.picking.map(q=> String(q.assignedWorkerId))).size;
+  const top3 = (rows, more)=> rows.slice(0, 3).join('') + (rows.length > 3 ? `<span class="sx-sg-more">+${rows.length - 3} ${more}</span>` : '');
+  const item = (lead, leadCls, client, t, tCls)=> `<div class="sx-sg-i"><span class="sx-sg-lead ${leadCls}">${esc(lead)}</span>
+      <span class="sx-sg-c" title="${esc(client)}">${esc(client)}</span><span class="sx-sg-t${tCls ? ' ' + tCls : ''}">${esc(t)}</span></div>`;
+  const none = '<span class="sx-sg-more">none right now</span>';
+  const doneValue = w.done.reduce((n, q)=> n + (savedQuoteTotal(q) || 0), 0);
+  const stages = [
+    { label:'Waiting for a picker', short:'Waiting', icon:ICON_SX_CLOCK, n:w.waiting.length,
+      sub: w.waiting.length ? `oldest ${oldest} min` : 'queue clear', subCls: oldest > 15 ? 'is-warn' : '',
+      list: w.waiting.length ? top3(w.waiting.map(q=> { const m = sxMinsSince(q.stageEnteredAt || q.savedAt);
+        return item(sxOrderNo(q), 'is-ord', quoteClientName(q), `${m} min`, m > 15 ? 'is-warn' : ''); }), 'more') : none },
+    { label:'Being picked', short:'Being picked', icon:ICON_SX_PICK, n:w.picking.length,
+      sub: w.picking.length ? `by ${pickers} ${pickers === 1 ? 'person' : 'people'}` : 'nobody picking',
+      list: w.picking.length ? top3(w.picking.map(q=> item(who(q.assignedWorkerId), 'is-busy', quoteClientName(q),
+        sxSince(q.pickingAssignedAt || q.stageEnteredAt), '')), 'more') : none },
+    { label:'Out for delivery', short:'Out', icon:ICON_SX_DRIVE, n:w.out.length,
+      sub: w.out.length ? 'on the road' : 'nobody out',
+      list: w.out.length ? top3(w.out.map(q=> item(who(q.assignedDeliveryId), 'is-busy', quoteClientName(q),
+        sxSince(q.stageEnteredAt), '')), 'more') : none },
+    { label:'Done today', short:'Done today', icon:ICON_SX_TICK, n:w.done.length,
+      sub: w.done.length ? `${fmtUGX(Math.round(doneValue))}` : 'nothing finished yet',
+      list: w.done.length ? w.done.slice(0, 3).map(q=> item(who(q.assignedDeliveryId || q.assignedWorkerId), 'is-done',
+        quoteClientName(q), sxClock(Number(q.stageEnteredAt)), '')).join('')
+        + (w.done.length > 3 ? `<span class="sx-sg-more">+${w.done.length - 3} earlier</span>` : '') : none },
+  ];
+  const freeN = line.filter(x=> x.st.key === 'free').length;
+  const sum = w.waiting.length
+    ? `${w.waiting.length} waiting · ${freeN ? `${freeN} free to take ${w.waiting.length === 1 ? 'it' : 'them'}` : 'nobody free'}`
+    : 'Nothing waiting';
+
+  return { stages, sum, warn: w.waiting.length > freeN };
+}
+
+function staffBoardHTML(){
+  const line = staffInLine();
+  const range = staffPeriodRange();
+  const f0 = line[0];
+  const p0 = staffPerformance(f0.s.id, range.from, range.to);
+  const caps = staffCapabilities(f0.s).map(c=> c === 'Picking' ? 'Pick' : 'Deliver').join(' + ') || 'no role set';
+  const chipCls = f0.st.key === 'free' ? 'is-free' : f0.st.key === 'busy' ? 'is-busy' : 'is-warn';
+
+  const first = `<div class="sx-first">
+      <div class="sx-first-k">Next order goes to<span class="sx-live"><i></i>Live</span></div>
+      <div class="sx-first-p">
+        <span class="sx-first-av${f0.st.key === 'free' ? '' : ' is-held'}">${esc(nameInitials(f0.s.name))}</span>
+        <div class="sx-first-w">
+          <div class="sx-first-n" title="${esc(f0.s.name)}">${esc(f0.s.name)}</div>
+          <div class="sx-first-s"><span class="sx-first-chip ${chipCls}"><i></i>${esc(f0.st.text)}</span>${esc(caps)}</div>
+        </div>
+      </div>
+      <div class="sx-first-m">${staffFirstStats(f0.s, p0).map(m=>
+        `<div${m.title ? ` title="${esc(m.title)}"` : ''}><b>${esc(m.v)}</b><span>${esc(m.l)}</span></div>`).join('')}</div>
+      <div class="sx-then">${line.slice(1, 3).map((x, i)=> `<button type="button" class="sx-then-r" data-staff="${esc(x.s.id)}">
+          <span class="sx-then-i">${i + 2}</span><span class="sx-then-av">${esc(nameInitials(x.s.name))}</span>
+          <b>${esc(firstName(x.s.name))}</b><em>${esc(x.st.text)}</em></button>`).join('')}</div>
+      <button type="button" class="sx-go" data-go="quote-saved">Hand over on Order tracking${ICON_SX_ARROW}</button>
+    </div>`;
+
+  /* TODAY'S WORK, four steps an order walks through. */
+  const { stages, sum, warn } = staffWorkStages(line);
+  const flow = `<div class="sx-flow">
+      <div class="sx-flow-h"><span class="sx-cap">Today’s work</span>
+        <span class="sx-flow-sum${warn ? ' is-warn' : ''}"><i></i>${esc(sum)}</span></div>
+      <div class="sx-stages">${stages.map(g=> `<div class="sx-stage">
+          <div class="sx-sg-h">${g.icon}<span>${esc(g.label)}</span></div>
+          <div class="sx-sg-n"><b>${g.n}</b><span class="${g.subCls || ''}">${esc(g.sub)}</span></div>
+          <div class="sx-sg-list">${g.list}</div>
+        </div>`).join('')}</div>
+    </div>`;
+  return `<div class="sx-pan sx-board-in" role="region" aria-label="Who takes the next order">${first}${flow}</div>`;
+}
+
+/* THE LAST FOURTEEN DAYS, one cell a day, read off the register. Somebody
+   not on the payroll has no register, and their cells say so rather than
+   claiming they were in. */
+function staffStripHTML(s){
+  const today = todayISO();
+  const onPay = PAY_BASES.includes(s.payBasis);
+  let absent = 0;
+  const cells = [];
+  for(let i = 13; i >= 0; i--){
+    const iso = anShiftDate(today, -i);
+    let k = 'none';
+    if(onPay){
+      const st = staffAttendanceOn(s.id, iso).state;
+      k = st === 'absent' ? 'absent' : st === 'paid' ? 'paid' : attIsRestDay(iso) ? 'rest' : 'in';
+      if(k === 'absent') absent++;
+    }
+    cells.push(`<i class="sx-sc sx-sc-${k}${iso === today ? ' is-today' : ''}" title="${esc(fmtShortDate(iso))}: ${
+      { in:'in', absent:'absent', paid:'paid leave', rest:'Sunday', none:'not on the payroll' }[k]}"></i>`);
+  }
+  return `<span class="sx-strip" role="img" aria-label="${onPay ? `Last 14 days: ${absent} absent` : 'Not on the payroll'}">${cells.join('')}</span>`;
+}
+
+/* The ⋯ menu: edit, unavailable and delete behind one button. */
+function staffMoreHTML(s, big){
+  return `<details class="sx-more">
+      <summary class="${big ? 'sx-pbtn sx-pbtn-i' : 'sx-ibtn'}" title="More for ${esc(s.name)}" aria-label="More for ${esc(s.name)}">${ICON_SX_MORE}</summary>
+      <div class="sx-menu">
+        <button type="button" onclick="event.stopPropagation();toggleStaffAvailability('${esc(s.id)}')">${s.unavailable?ICON_RESTOCK:ICON_NO_STOCK}${s.unavailable?'Mark available':'Mark unavailable'}</button>
+        <button type="button" onclick="event.stopPropagation();editStaff('${esc(s.id)}')">${ICON_EDIT}Edit</button>
+        <button type="button" class="is-danger" onclick="event.stopPropagation();deleteStaff('${esc(s.id)}')">${ICON_TRASH}Delete</button>
+      </div>
+    </details>`;
+}
+
+/* ONE PERSON, BOTH DESIGNS, ONE CALL. The desktop row and the phone card
+   are emitted together from the same figures, so the two can never say
+   different things about the same person. */
+function staffPersonHTML(s, range, maxCount){
   const p = staffPerformance(s.id, range.from, range.to);
   const st = staffDispatchState(s);
   const fig = staffRowFigure(s, p, range);
@@ -79295,183 +79419,203 @@ function staffRosterRowHTML(s, range, maxCount){
   const caps = staffCapabilities(s);
   const count = staffRowCount(s, p);
   const pct = maxCount ? Math.max(count ? 4 : 0, Math.round(count / maxCount * 100)) : 0;
-  /* What they hold, as one block per order -- the names of the clients
-     stay on the chip's title for whoever wants them. */
   const load = st.active ? st.active.length : 0;
+  const chip = `<span class="ow-cp ${st.cls} sx-cp" title="${esc(String(st.note).replace(/&mdash;/g,'—').replace(/&[a-z]+;/g,''))}">${st.dot?'<span class="ow-cp-d"></span>':''}${esc(st.text)}</span>`;
+  const pips = load ? `<span class="sx-pips" aria-hidden="true">${'<i></i>'.repeat(Math.min(load, 8))}</span>` : '';
+  const capsHTML = caps.length ? caps.map(c=> `<span class="sx-capb">${c === 'Picking' ? ICON_SX_PICK : ICON_SX_DRIVE}${c === 'Picking' ? 'Pick' : 'Deliver'}</span>`).join('')
+    : '<span class="sx-capb">no role set</span>';
+  const figHTML = `<span class="sx-fig${fig.bad?' is-bad':''}${fig.quiet?' is-quiet':''}">${fig.value}</span>`;
+  const bar = `<span class="sx-fb" aria-hidden="true"><i class="${fig.bad?'is-bad':''}" style="width:${pct}%"></i></span>`;
+  const av = `<span class="sx-av">${esc(nameInitials(s.name))}<i class="sx-dot sx-dot-${st.key}"></i></span>`;
 
-  return `<div class="rost-item${open?' is-open':''}${s.unavailable?' is-off':''}" data-staff="${esc(s.id)}">
-    <div class="rost-row" role="button" tabindex="0" aria-expanded="${open}"
-        title="${open ? 'Close' : 'Open'} ${esc(s.name)}&rsquo;s record">
-      <div class="rost-who">
-        <svg class="rost-cr" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-        <div class="ow-av st-av-${st.key} rost-av${st.key==='free'?' is-free':''}">${esc(nameInitials(s.name))}</div>
-        <div class="rost-ident">
-          <div class="rost-name">${esc(s.name)}</div>
-          <div class="rost-sub">${caps.length ? caps.map(c=> `<span class="rost-cap">${
-            c === 'Picking' ? ICON_ST_PICK : ICON_ST_DELIVER}${c === 'Picking' ? 'Pick' : 'Deliver'}</span>`).join('')
-            : '<span class="rost-cap">no role set</span>'}</div>
-        </div>
+  const row = `<div class="sx-r${open?' is-open':''}${s.unavailable?' is-off':''}" data-staff="${esc(s.id)}">
+      <div class="sx-cols">
+        <button type="button" class="sx-who" aria-expanded="${open}">${ICON_SX_CHEV}${av}
+          <span class="sx-who-t"><span class="sx-nm" title="${esc(s.name)}">${esc(s.name)}</span><span class="sx-caps">${capsHTML}</span></span>
+        </button>
+        <div class="sx-stc">${chip}${pips}</div>
+        <div class="sx-wk"><div class="sx-wk-l">${figHTML}<span class="sx-wk-b">${fig.basis}</span></div>${bar}</div>
+        ${staffStripHTML(s)}
+        <div class="sx-act">${s.userId ? '' : `<button type="button" class="btn btn-ghost ow-sm" onclick="event.stopPropagation();sendLoginInvite('${esc(s.id)}')">Send invite</button>`}${staffMoreHTML(s, false)}</div>
       </div>
-      <div class="rost-state">
-        <span class="ow-cp ${st.cls}" title="${esc(String(st.note).replace(/&mdash;/g,'—').replace(/&[a-z]+;/g,''))}">${st.dot?'<span class="ow-cp-d"></span>':''}${esc(st.text)}</span>
-        ${load ? `<span class="rost-pips" aria-hidden="true">${'<i></i>'.repeat(Math.min(load, 8))}</span>` : ''}
+      ${open ? staffRecordHTML(s, p, range, st) : ''}
+    </div>`;
+
+  const holds = st.active ? `<div class="sx-hold">${st.active.map(({order:o, capacity})=>
+      `<div class="sx-hold-r">${capacity === 'worker' ? ICON_SX_PICK : ICON_SX_DRIVE}<span class="sx-hold-c" title="${esc(quoteClientName(o))}">${esc(quoteClientName(o))}</span>
+      <span class="sx-hold-s">${esc(sxSince(capacity === 'worker' ? (o.pickingAssignedAt || o.stageEnteredAt) : o.stageEnteredAt))}</span></div>`).join('')}</div>` : '';
+  const card = `<article class="sx-pc${open?' is-open':''}${s.unavailable?' is-off':''}" data-staff="${esc(s.id)}">
+      <div class="sx-pc-h">${av}<div class="sx-pc-w"><div class="sx-nm" title="${esc(s.name)}">${esc(s.name)}</div><div class="sx-caps">${capsHTML}</div></div>${chip}</div>
+      <div class="sx-wk"><div class="sx-wk-l">${figHTML}<span class="sx-wk-b">${fig.basis}</span></div>${bar}</div>
+      ${holds}
+      ${open && (p.picked || p.delivered) ? staffPhoneRecordHTML(s, p) : ''}
+      <div class="sx-pc-a">
+        ${s.userId
+          ? `<button type="button" class="sx-pbtn sx-open" aria-expanded="${open}">${open ? 'Close record' : 'Open record'}</button>`
+          : `<button type="button" class="sx-pbtn is-ink" onclick="sendLoginInvite('${esc(s.id)}')">Send login invite</button>`}
+        ${s.phone ? `<a class="sx-pbtn sx-pbtn-i" href="tel:${esc(String(s.phone).replace(/[^\d+]/g,''))}" aria-label="Call ${esc(s.name)}">${ICON_SX_PHONE}</a>` : ''}
+        ${staffMoreHTML(s, true)}
       </div>
-      <div class="rost-stats">
-        <span class="rost-figl"><span class="rost-fig${fig.bad?' ow-bad':''}${fig.quiet?' ow-quiet':''}">${fig.value}</span>
-          <span class="rost-basis">${fig.basis}</span></span>
-        <span class="rost-fb" aria-hidden="true"><span class="rost-fb-f${fig.bad?' is-bad':''}" style="width:${pct}%"></span></span>
-      </div>
-      <div class="rost-actions">
-        ${s.userId ? '' : `<button class="btn btn-ghost ow-sm" title="Send login invite"
-          onclick="event.stopPropagation();sendLoginInvite('${esc(s.id)}')">Invite</button>`}
-        <details class="rost-more">
-          <summary class="pc-icon-btn" title="More for ${esc(s.name)}" aria-label="More for ${esc(s.name)}"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></summary>
-          <div class="rost-menu">
-            <button type="button" onclick="event.stopPropagation();toggleStaffAvailability('${esc(s.id)}')">${s.unavailable?ICON_RESTOCK:ICON_NO_STOCK}${s.unavailable?'Mark available':'Mark unavailable'}</button>
-            <button type="button" onclick="event.stopPropagation();editStaff('${esc(s.id)}')">${ICON_EDIT}Edit</button>
-            <button type="button" class="is-danger" onclick="event.stopPropagation();deleteStaff('${esc(s.id)}')">${ICON_TRASH}Delete</button>
-          </div>
-        </details>
-      </div>
-    </div>
-    <div class="rost-x">${open ? staffPerfHTML(p, range) : ''}</div>
-  </div>`;
+    </article>`;
+  return { row, card };
 }
 
-/* What the shop has to hand right now. Live state only -- no period
-   applies to "who is free this minute". */
-function renderStaffTeamStrip(){
-  const wrap = document.getElementById('staffTeamStrip');
-  const sub = document.getElementById('staffPhSub');
-  const all = (data.staff||[]);
-  if(!all.length){
-    wrap.innerHTML = '';
-    if(sub) sub.textContent = 'Who you can hand the next order to.';
-    return;
-  }
-  /* Sorted as the list under it is sorted, so the two names in the
-     sentence are the two names at the top of the roster. Reading a
-     header that says "Musa and Grace" over a list beginning "Aisha,
-     Denis" is reading two different answers to one question. */
-  const states = all.map(s=> ({ s, st: staffDispatchState(s) }))
-    .sort((a,b)=> String(a.s.name||'').localeCompare(String(b.s.name||'')));
-  const free = states.filter(x=> x.st.key === 'free');
-  const busy = states.filter(x=> x.st.key === 'busy');
-  const absent = states.filter(x=> x.st.key === 'absent');
-  const blocked = states.filter(x=> x.st.key === 'nologin' || x.st.key === 'off');
-  const inHand = busy.reduce((n,x)=> n + x.st.active.length, 0);
-  const inToday = all.length - absent.length - states.filter(x=> x.st.key==='off').length;
-
-  /* WHO CAN TAKE THE NEXT ORDER, as a picture. One bar split by where
-     everybody is, and under each part the people themselves -- the
-     four tiles of sentences said the same thing in forty words, and a
-     count of "1 free" still left you to find out who. A name opens
-     that person's row. */
-  const noLogin = blocked.filter(x=> x.st.key==='nologin').length;
-  const off = blocked.filter(x=> x.st.key==='off').length;
-  const chip = (x, tag)=> `<button type="button" class="st-pc" data-staff="${esc(x.s.id)}"
-      title="${esc(x.s.name)}">
-      <span class="st-pc-i">${esc(nameInitials(x.s.name))}</span>
-      <span class="st-pc-n">${esc(firstName(x.s.name))}</span>${
-      tag ? `<span class="st-pc-t">${esc(tag)}</span>` : ''}</button>`;
-  const lanes = [
-    { key:'free', label:'Free', rows: free, tag: ()=> '' },
-    { key:'busy', label:'Carrying', rows: busy, tag: (x)=> String(x.st.active.length) },
-    { key:'absent', label:'Absent', rows: absent, tag: ()=> '' },
-    { key:'block', label:'Can’t be sent', rows: blocked,
-      tag: (x)=> x.st.key==='nologin' ? 'no login' : 'off' },
-  ];
-  wrap.innerHTML = `<div class="ow-pan st-lanes" aria-label="Who can take the next order">
-    <div class="st-lane-bar" role="img" aria-label="${free.length} free, ${busy.length} carrying ${
-      inHand} order${inHand===1?'':'s'}, ${absent.length} absent, ${blocked.length} cannot be sent (${
-      noLogin} without a login, ${off} unavailable)">${lanes.filter(l=> l.rows.length).map(l=>
-      `<span class="st-lb st-lb-${l.key}" style="flex-grow:${l.rows.length}"></span>`).join('')}</div>
-    <div class="st-lane-g">${lanes.map(l=> `<div class="st-lane st-lane-${l.key}">
-      <div class="st-lane-h"><b class="st-lane-n">${l.rows.length}</b><span class="st-lane-l">${esc(l.label)}</span></div>
-      <div class="st-lane-p">${l.rows.length ? l.rows.map(x=> chip(x, l.tag(x))).join('')
-        : '<span class="st-lane-0">nobody</span>'}</div>
-    </div>`).join('')}</div>
-  </div>`;
-  wrap.querySelectorAll('.st-pc').forEach(b=> b.addEventListener('click', ()=>{
-    if(String(staffOpenRow) !== String(b.dataset.staff)) staffOpenRecord(b.dataset.staff);
-    const row = document.querySelector(`.rost-item[data-staff="${b.dataset.staff}"]`);
-    if(row) row.scrollIntoView({block:'nearest', behavior:'smooth'});
-  }));
-
-  if(sub){
-    /* The answer to the screen's question, as a chip beside the title.
-       Named people rather than a count -- "two free" still leaves you
-       to find out which two. */
-    sub.innerHTML = free.length
-      ? `<span class="st-now st-now-free"><span class="st-now-d"></span>${free.length} free now &middot; ${
-          free.slice(0,2).map(x=> esc(firstName(x.s.name))).join(', ')}${
-          free.length>2 ? ` +${free.length-2}` : ''}</span>`
-      : `<span class="st-now st-now-none">Nobody free${busy.length ? ` &middot; ${busy.length} carrying work` : ''}</span>`;
-  }
-}
-
-/* THE RAIL SAYS WHAT THE LIST CANNOT.
-
-   It held "Free right now" first, and that was a mistake worth naming:
-   the header sentence already says who is free, and the list is ORDERED
-   by it, so the same four names appeared three times on one screen. A
-   panel that repeats the thing beside it is not reassurance, it is noise
-   -- and on a screen whose whole argument is that the row carries one
-   figure instead of five, a rail of duplicates would be the same fault
-   moved sideways.
-
-   What is left is what genuinely is not on a row: work that needs the
-   owner and has no button of its own, and what the month of days at the
-   foot of the screen is adding up to in money. */
-function renderStaffRail(){
-  const rail = document.getElementById('staffRail');
-  if(!rail) return;
-  const all = (data.staff||[]);
-  if(!all.length){ rail.innerHTML = ''; return; }
-  const range = staffPeriodRange();
-
-  /* Only things with no action on the row itself. Somebody without a
-     login already carries "Send invite" beside their name; saying it
-     again here would be a second button for one job. */
-  const jobs = [];
-  all.slice().sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''))).forEach(s=>{
-    const p = staffPerformance(s.id, range.from, range.to);
-    if(p.neverAccepted) jobs.push({ s, never: p.neverAccepted, handed: p.picked, id: s.id });
+/* ORDERS A DAY over the last thirty-one days, as columns -- its own
+   window, whatever the period above the list, so a month that has only
+   run six days still reads as a month of work. */
+function staffDayCols(s){
+  const to = todayISO();
+  const from = anShiftDate(to, -30);
+  const p = staffPerformance(s.id, from, to);
+  const perDay = {};
+  [...p.orders.picked, ...p.orders.delivered].forEach(q=>{
+    const d = String(q.invoicedAt || q.date || '').slice(0,10);
+    if(d >= from && d <= to) perDay[d] = (perDay[d]||0) + 1;
   });
-  /* Each as the person and a row of blocks: the orders handed to them,
-     amber for the ones they never took up. */
-  const jobsPan = jobs.length ? `<div class="ow-pan">
-    <div class="ow-pan-h"><span class="ow-pan-t">Needs you</span>
-      <span class="ow-pan-n">${jobs.length}</span></div>
-    ${jobs.slice(0,6).map(j=> `<div class="rost-job">
-      <div class="rost-job-r">
-        <span class="ow-av st-av-absent rost-job-av">${esc(nameInitials(j.s.name))}</span>
-        <span class="rost-job-t"><b>${esc(firstName(j.s.name))} never took up ${esc(j.never)}</b>
-          <span>of ${esc(j.handed)} handed over</span></span>
-        <button type="button" class="btn btn-ghost ow-sm rost-job-b" data-staff="${esc(j.id)}">Open</button>
-      </div>
-      ${j.handed <= 40 ? `<span class="st-ln st-ln-job" role="img" aria-label="${j.never} of ${j.handed} never taken up">${
-        Array.from({length:j.handed}, (_,i)=> `<i class="${i < j.never ? 'is-short' : ''}"></i>`).join('')}</span>` : ''}
-    </div>`).join('')}
-    ${jobs.length > 6 ? `<p class="ow-mini">${jobs.length - 6} more, further down the list.</p>` : ''}
-  </div>` : '';
-
-  rail.innerHTML = jobsPan + staffWagePanelHTML();
-  rail.querySelectorAll('.rost-job-b').forEach(b=>
-    b.addEventListener('click', ()=> staffOpenRecord(b.dataset.staff)));
-  const door = rail.querySelector('.rost-to-payroll');
-  if(door) door.addEventListener('click', ()=> goToTab('payroll'));
+  const days = [];
+  for(let d = from; d <= to; d = anShiftDate(d, 1)) days.push(d);
+  const top = Math.max(1, ...days.map(d=> perDay[d]||0));
+  return { from, total: p.picked + p.delivered, html: days.map(d=> { const n = perDay[d]||0;
+    return `<i class="${n ? '' : 'is-0'}" style="height:${n ? Math.max(14, Math.round(n / top * 100)) : 6}%" title="${esc(fmtShortDate(d))}: ${n} order${n===1?'':'s'}"></i>`; }).join('') };
 }
 
-/* What the month of days at the foot of this screen is coming to in
-   money. DERIVED FROM THE MONTHS THAT EXIST, never from the months that
-   would exist if somebody opened them: looking at a screen must not
-   raise a wage, so a person nobody has costed yet is counted as not yet
-   raised and said so, rather than folded into the total at their rate. */
-function staffWagePanelHTML(){
+function staffTeamMedians(range){
+  const rows = (data.staff||[]).map(x=> staffPerformance(x.id, range.from, range.to));
+  return {
+    up: staffMedian(rows.map(r=> r.acceptMedianMins).filter(v=> v != null)),
+    short: staffMedian(rows.map(r=> r.shortRate).filter(v=> v != null)),
+  };
+}
+
+/* One person's record, opened in place: who they are, then four small
+   pictures of their work, then the last thing they did. */
+function staffRecordHTML(s, p, range, st){
+  const pay = PAY_BASES.includes(s.payBasis)
+    ? `${BASIS_LABELS[s.payBasis]}${s.payRate == null ? ' · no rate yet' : ` · ${fmtUGX(Math.round(s.payRate))}`}`
+    : 'Not on the payroll';
+  const facts = `<div class="sx-facts">
+      <div class="sx-fact">${ICON_SX_PHONE}<div><div class="sx-fact-l">Phone</div><div class="sx-fact-v sx-mono">${esc(s.phone || '—')}</div></div></div>
+      <div class="sx-fact">${ICON_SX_PAY}<div><div class="sx-fact-l">Paid</div><div class="sx-fact-v">${esc(pay)}</div></div></div>
+      <div class="sx-fact">${ICON_SX_KEY}<div><div class="sx-fact-l">App login</div><div class="sx-fact-v">${s.userId ? 'Has a login' : 'Not yet — no invite accepted'}</div></div></div>
+      <div class="sx-facts-b"><button type="button" class="btn btn-ghost ow-sm" onclick="editStaff('${esc(s.id)}')">Edit</button>
+        <button type="button" class="btn btn-ghost ow-sm" onclick="toggleStaffAvailability('${esc(s.id)}')">${s.unavailable ? 'Mark available' : 'Mark unavailable'}</button></div>
+    </div>`;
+
+  if(!p.picked && !p.delivered){
+    return `<div class="sx-rec">${facts}<div class="sx-rec-empty">${ICON_SX_KEY}<span>No orders went through ${esc(firstName(s.name))} ${esc(range.label)}.${
+      s.userId ? (p.activeNow ? ` They are on ${p.activeNow} right now — those count once the order is billed.` : '')
+        : ' Once a login invite is accepted, they can be handed work.'}</span>${
+      s.userId ? '' : `<button type="button" class="btn btn-ghost ow-sm" onclick="sendLoginInvite('${esc(s.id)}')">Send invite</button>`}</div></div>`;
+  }
+
+  const team = staffTeamMedians(range);
+  const cols = staffDayCols(s);
+  const pos = (m, max)=> Math.min(100, Math.max(0, m / max * 100));
+  // A label centred on a tick near either end would hang out of the tile.
+  const lpos = (m, max)=> Math.min(78, Math.max(22, pos(m, max)));
+  const tile = (label, value, vCls, pic, foot, title)=> `<div class="sx-tile"${title ? ` title="${esc(title)}"` : ''}>
+      <div class="sx-tile-h"><span class="sx-tile-l">${esc(label)}</span><b class="sx-tile-v${vCls ? ' ' + vCls : ''}">${value}</b></div>
+      ${pic}${foot ? `<div class="sx-tile-f">${foot}</div>` : ''}</div>`;
+  const scale = (val, teamVal)=> `<div class="sx-scale">
+      ${teamVal != null ? `<span class="sx-scale-tm" style="left:${pos(teamVal, 30)}%"></span><span class="sx-scale-tl" style="left:${lpos(teamVal, 30)}%">team ${esc(staffMinsLabel(teamVal))}</span>` : ''}
+      ${val != null ? `<span class="sx-scale-d" style="left:${pos(val, 30)}%"></span>` : ''}</div>`;
+  const isPick = !!p.picked;
+  const tiles = [];
+  tiles.push(tile(p.picked && p.delivered ? 'Orders a day' : p.picked ? 'Picked a day' : 'Delivered a day',
+    String(cols.total), '',
+    `<div class="sx-odc" role="img" aria-label="${cols.total} orders in the last 31 days">${cols.html}</div>`,
+    `<span>${esc(fmtShortDate(cols.from))}</span><span>today</span>`));
+  if(isPick){
+    tiles.push(tile('Takes work up in', esc(staffMinsLabel(p.acceptMedianMins)), '', scale(p.acceptMedianMins, team.up),
+      '<span>0</span><span>30 min</span>',
+      `Median across ${p.acceptSamples} handover${p.acceptSamples===1?'':'s'}, against the team. How long the picking itself took is not here: it is not kept once an order leaves the step.`));
+    const bad = p.shortRate != null && p.shortRate >= 10;
+    tiles.push(tile('Lines short', p.shortRate == null ? '—' : `${p.shortRate.toFixed(1)}%`, bad ? 'is-bad' : '',
+      `<div class="sx-sbar"><span class="sx-sbar-tr"><i class="${bad ? 'is-bad' : ''}" style="width:${p.shortRate == null ? 0 : pos(p.shortRate, 20)}%"></i></span>${
+        team.short != null ? `<span class="sx-sbar-tm" style="left:${pos(team.short, 20)}%"></span><span class="sx-sbar-tl" style="left:${lpos(team.short, 20)}%">team ${team.short.toFixed(1)}%</span>` : ''}</div>`,
+      `<span>${p.linesPicked ? `${p.linesShort} of ${p.linesPicked} lines` : 'no line answered yet'}</span><span>of 20%</span>`
+        + (p.neverAccepted ? `</div><div class="sx-warn">${p.neverAccepted} handed over, never taken up` : ''),
+      'A shortfall is what the picker found on the shelf, not what they did wrong. A rate well above the team usually means the stock figures are wrong.'));
+  } else {
+    tiles.push(tile('Places reached', String(p.places), '',
+      `<div class="sx-tile-big" title="${esc(fmtUGX(Math.round(p.deliveredValue)))}">${esc(fmtUGX(Math.round(p.deliveredValue)))}</div>`,
+      '<span>of goods carried</span>'));
+    tiles.push(tile('Leaves the yard in', '—', '', scale(null, null),
+      '<span>not recorded for deliveries</span>',
+      'When a delivery left the yard is not kept on the order, so this cannot be measured.'));
+  }
+  const active = st.active || [];
+  tiles.push(tile('Holding now', String(active.length), '',
+    `<div class="sx-hold">${active.length ? active.map(({order:o, capacity})=> `<div class="sx-hold-r">${capacity === 'worker' ? ICON_SX_PICK : ICON_SX_DRIVE}
+        <span class="sx-hold-c" title="${esc(quoteClientName(o))}">${esc(quoteClientName(o))}</span>
+        <span class="sx-hold-s">${esc(sxSince(capacity === 'worker' ? (o.pickingAssignedAt || o.stageEnteredAt) : o.stageEnteredAt))}</span></div>`).join('')
+      : '<span class="sx-hold-0"><span class="ow-cp-d"></span>Nothing in hand</span>'}</div>`, ''));
+
+  const recent = [...p.orders.picked.map(q=>({q, capacity:'worker'})), ...p.orders.delivered.map(q=>({q, capacity:'delivery'}))]
+    .sort((a,b)=> String(b.q.invoicedAt || b.q.date || '').localeCompare(String(a.q.invoicedAt || a.q.date || '')));
+  const last = recent[0];
+  return `<div class="sx-rec">${facts}
+      <div class="sx-tiles">${tiles.join('')}</div>
+      ${last ? `<div class="sx-last">${ICON_SX_CLOCK}<span>Last: ${esc(fmtShortDate(String(last.q.invoicedAt || last.q.date || '').slice(0,10)))} · ${
+        esc(quoteClientName(last.q))} · ${last.capacity === 'worker' ? 'picked' : 'delivered'}</span><b>${esc(fmtUGX(Math.round(savedQuoteTotal(last.q))))}</b></div>` : ''}
+    </div>`;
+}
+
+/* The phone's record: the same figures, three tiles to a card. */
+function staffPhoneRecordHTML(s, p){
+  const cols = staffDayCols(s);
+  const isPick = !!p.picked;
+  const pct = (v, max)=> Math.min(100, Math.max(0, v / max * 100));
+  const bad = isPick && p.shortRate != null && p.shortRate >= 10;
+  return `<div class="sx-prec">
+      <div class="sx-tile is-wide"><div class="sx-tile-h"><span class="sx-tile-l">Orders a day · last 31</span><b class="sx-tile-v">${cols.total}</b></div>
+        <div class="sx-odc">${cols.html}</div></div>
+      <div class="sx-tile"><div class="sx-tile-h"><span class="sx-tile-l">${isPick ? 'Takes up in' : 'Places'}</span><b class="sx-tile-v">${
+        isPick ? esc(staffMinsLabel(p.acceptMedianMins)) : p.places}</b></div>
+        <div class="sx-trk"><i style="width:${isPick ? (p.acceptMedianMins == null ? 0 : pct(p.acceptMedianMins, 30)) : pct(p.places, 20)}%"></i></div></div>
+      <div class="sx-tile"><div class="sx-tile-h"><span class="sx-tile-l">${isPick ? 'Lines short' : 'Carried'}</span><b class="sx-tile-v${bad ? ' is-bad' : ''}">${
+        isPick ? (p.shortRate == null ? '—' : `${p.shortRate.toFixed(1)}%`) : esc(sxShort(p.deliveredValue))}</b></div>
+        <div class="sx-trk"><i class="${bad ? 'is-bad' : ''}" style="width:${isPick ? (p.shortRate == null ? 0 : pct(p.shortRate, 20)) : 100}%"></i></div></div>
+    </div>`;
+}
+
+/* THE RAIL SAYS WHAT THE LIST CANNOT: work that needs the owner and has
+   no button of its own. A driver gap -- nobody filed under delivery is
+   free -- and anybody who was handed orders they never took up. */
+function staffRailHTML(){
+  const range = staffPeriodRange();
+  const line = staffInLine();
+  const drivers = line.filter(x=> x.s.role === 'delivery');
+  const freeDrivers = drivers.filter(x=> x.st.key === 'free').length;
+  const freePickers = line.filter(x=> x.s.role !== 'delivery' && x.st.key === 'free').map(x=> firstName(x.s.name));
+  const rows = [];
+  if(drivers.length && !freeDrivers){
+    rows.push(`<div class="sx-nd"><span class="sx-nd-i">${ICON_SX_DRIVE}</span>
+      <span class="sx-nd-t"><b>No driver free</b><span>${freePickers.length
+        ? `${esc(freePickers.slice(0, 2).join(' or '))} can take a delivery` : 'and nobody else free to cover'}</span></span></div>`);
+  }
+  (data.staff||[]).slice().sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''))).forEach(s=>{
+    const p = staffPerformance(s.id, range.from, range.to);
+    if(!p.neverAccepted) return;
+    rows.push(`<button type="button" class="sx-nd" data-staff="${esc(s.id)}" aria-label="Open ${esc(s.name)}: ${p.neverAccepted} of ${p.picked} orders not taken up">
+      <span class="sx-nd-i">${esc(nameInitials(s.name))}</span>
+      <span class="sx-nd-t"><b>${esc(s.name)}</b><span>orders not taken up</span></span>
+      <span class="sx-nd-f"><b>${p.neverAccepted}</b>/${p.picked}</span>${ICON_SX_CHEV}</button>`);
+  });
+  return `<div class="sx-pan" role="region" aria-label="Needs you">
+      <div class="sx-pan-h"><span class="sx-pan-t">Needs you</span><span class="sx-pan-n">${rows.length}</span></div>
+      ${rows.length ? rows.join('') : '<div class="sx-nd"><span class="sx-nd-t"><span>Nothing waiting on you.</span></span></div>'}
+    </div>`;
+}
+
+/* What the month of days is coming to in money. DERIVED FROM THE MONTHS
+   THAT EXIST, never from the months that would exist if somebody opened
+   them: looking at a screen must not raise a wage, so a person nobody has
+   costed yet is counted as not yet raised rather than folded in at their
+   rate. */
+function staffWageMonth(){
   const period = periodOf(todayISO());
   const on = staffOnPayroll();
-  if(!on.length) return '';
   let raised = 0, docked = 0, unraised = 0, uncosted = 0;
   on.forEach(s=>{
     const d = findDue('wage', s.id, period);
@@ -79481,127 +79625,68 @@ function staffWagePanelHTML(){
     raised += cost;
     docked += dueDeduction(d) || 0;
   });
-  /* THE MONTH AS ONE BAR. Raised in ink, what days missed took off it
-     in amber, and the people nobody has raised yet as a hatched share
-     of the team -- so an empty bar is visibly "not opened", never a
-     wage bill of nothing. */
   const dueISO = periodEndDate(period);
   const daysLeft = Math.round((Date.parse(dueISO) - Date.parse(todayISO())) / 86400000);
-  const dueChip = daysLeft > 0 ? `due in ${daysLeft} day${daysLeft===1?'':'s'}`
-    : daysLeft === 0 ? 'due today' : `due ${esc(fmtShortDate(dueISO))}`;
-  const counted = on.length - unraised - uncosted;
   const gross = raised + docked;
-  const shareCounted = on.length ? counted / on.length : 0;
-  const rPct = gross > 0 ? Math.round(shareCounted * raised / gross * 100) : 0;
-  const dPct = gross > 0 ? Math.max(docked >= 0.5 ? 1 : 0, Math.round(shareCounted * docked / gross * 100)) : 0;
-  const key = (cls, k, v, vcls)=> `<div class="st-wk"><i class="st-wk-s ${cls}"></i><span class="st-wk-k">${k}</span>
-    <b class="st-wk-v ${vcls||''}">${v}</b></div>`;
-  const missing = unraised + uncosted;
-  return `<div class="ow-pan">
-    <div class="ow-pan-h"><span class="ow-pan-t">${esc(periodLabel(period))} wages</span>
-      <span class="st-due">${dueChip}</span></div>
-    <div class="st-wage-b">
-      ${raised >= 0.5 || !unraised
-        ? `<b class="st-wage-v">${esc(fmtUGX(Math.round(raised)))}</b>`
-        : `<b class="st-wage-v ow-quiet-v">not raised yet</b>`}
-      <div class="st-wbar" role="img" aria-label="Raised ${esc(fmtUGX(Math.round(raised)))}${
-        docked >= 0.5 ? `, docked ${esc(fmtUGX(Math.round(docked)))}` : ''}${missing ? `, ${missing} not counted` : ''}">
-        <span class="st-wbar-r" style="width:${rPct}%"></span><span class="st-wbar-d" style="width:${dPct}%"></span></div>
-      ${key('st-wk-r', 'Raised', esc(fmtUGX(Math.round(raised))))}
-      ${docked >= 0.5 ? key('st-wk-d', 'Docked, days missed', `&minus;&nbsp;${esc(fmtUGX(Math.round(docked)))}`, 'ow-warn') : ''}
-      ${unraised ? key('st-wk-n', 'Not raised yet', `${unraised} ${unraised===1?'person':'people'}`) : ''}
-      ${uncosted ? key('st-wk-n', 'No days counted', `${uncosted} ${uncosted===1?'person':'people'}`) : ''}
-      ${missing ? `<p class="ow-mini st-wage-m" title="Looking at a month must not raise it, so a person nobody has costed yet is left out of the figure rather than counted at their rate.">The hatched part is not in the figure.</p>` : ''}
-      <button type="button" class="ow-link rost-to-payroll">Payroll &amp; rent &rarr;</button>
-    </div>
-  </div>`;
+  const share = on.length ? (on.length - unraised - uncosted) / on.length : 0;
+  return { period, on: on.length, raised, docked, unraised, uncosted,
+    due: daysLeft > 0 ? `due in ${daysLeft} day${daysLeft===1?'':'s'}` : daysLeft === 0 ? 'due today' : `due ${fmtShortDate(dueISO)}`,
+    rPct: gross > 0 ? Math.round(share * raised / gross * 100) : 0,
+    dPct: gross > 0 ? Math.max(docked >= 0.5 ? 1 : 0, Math.round(share * docked / gross * 100)) : 0 };
 }
 
-/* One person's record, in the order somebody asks about them: what they
-   have been doing, how quickly they pick work up, whether the shelf
-   holds when they go to it, and then the orders themselves. */
-function staffPerfHTML(p, range){
-  const s = p.staff;
-  const plural = (n,a,b)=> n===1 ? a : b;
-  const recent = [...p.orders.picked.map(q=>({q, capacity:'worker'})),
-                  ...p.orders.delivered.map(q=>({q, capacity:'delivery'}))]
-    .sort((a,b)=> String(b.q.invoicedAt || b.q.date || '').localeCompare(String(a.q.invoicedAt || a.q.date || '')));
-
-  if(!p.picked && !p.delivered){
-    return `<p class="cs-empty-note">No orders went through ${esc(s ? s.name : 'them')} ${esc(range.label)}.
-      ${p.activeNow ? `They are on ${p.activeNow} right now — those count once the order is billed.` : ''}</p>`;
-  }
-
-  /* ORDERS A DAY. The period's work as columns, at most the last
-     thirty-one days of it, so a month reads as a month and "all time"
-     does not become a comb too fine to see. */
-  const to = range.to;
-  const from = range.from > anShiftDate(to, -30) ? range.from : anShiftDate(to, -30);
-  const perDay = {};
-  recent.forEach(r=>{ const d = String(r.q.invoicedAt || r.q.date || '').slice(0,10);
-    if(d >= from && d <= to) perDay[d] = (perDay[d]||0) + 1; });
-  const days = [];
-  for(let d = from; d <= to; d = anShiftDate(d, 1)) days.push(d);
-  const top = Math.max(1, ...days.map(d=> perDay[d]||0));
-  const cols = days.map(d=> { const n = perDay[d]||0;
-    return `<span class="st-od-c${n?'':' is-0'}" style="height:${n ? Math.max(12, Math.round(n/top*100)) : 4}%"
-      title="${esc(fmtShortDate(d))}: ${n} order${n===1?'':'s'}"></span>`; }).join('');
-
-  /* How fast they take work up, on a 0–30 minute scale, beside the
-     team's own median so "4 min" means something. */
-  const rangeTeam = (data.staff||[]).map(x=> staffPerformance(x.id, range.from, range.to).acceptMedianMins)
-    .filter(v=> v != null);
-  const teamMed = staffMedian(rangeTeam);
-  const pos = (m)=> Math.min(100, Math.max(0, m / 30 * 100));
-
-  /* Lines that came up short, one block a line -- up to sixty; past
-     that the blocks would be slivers, and a bar says the same. */
-  const blocks = p.linesPicked && p.linesPicked <= 60
-    ? `<span class="st-ln" role="img" aria-label="${p.linesShort} of ${p.linesPicked} lines short">${
-        Array.from({length:p.linesPicked}, (_,i)=> `<i class="${i < p.linesShort ? 'is-short' : ''}"></i>`).join('')}</span>`
-    : p.linesPicked ? `<span class="rost-fb"><span class="rost-fb-f is-bad" style="width:${Math.max(2, p.shortRate)}%"></span></span>` : '';
-
-  const tile = (label, value, pic, foot, title)=> `<div class="st-tile"${title ? ` title="${esc(title)}"` : ''}>
-    <div class="st-tile-h"><span class="st-tile-l">${esc(label)}</span><b class="st-tile-v">${value}</b></div>
-    ${pic}${foot ? `<div class="st-tile-f">${foot}</div>` : ''}</div>`;
-
-  const last = recent[0];
-  return `<div class="st-tiles">
-      ${tile(p.picked && p.delivered ? 'Orders a day' : p.picked ? 'Picked a day' : 'Delivered a day',
-        String(p.picked + p.delivered),
-        `<div class="st-od" role="img" aria-label="${p.picked + p.delivered} orders ${esc(range.label)}">${cols}</div>`,
-        `<span>${esc(fmtShortDate(from))}</span><span>today</span>`)}
-      ${p.picked ? tile('Takes work up in', esc(staffMinsLabel(p.acceptMedianMins)),
-        `<div class="st-sc">${teamMed != null ? `<span class="st-sc-t" style="left:${pos(teamMed)}%"></span>` : ''}${
-          p.acceptMedianMins != null ? `<span class="st-sc-d" style="left:${pos(p.acceptMedianMins)}%"></span>` : ''}</div>`,
-        `<span>0</span><span>${teamMed != null ? `team ${esc(staffMinsLabel(teamMed))}` : ''}</span><span>30 min</span>`,
-        `Median across ${p.acceptSamples} ${plural(p.acceptSamples,'handover','handovers')}. How long the picking itself took is not here: it is not kept once an order leaves the step.`) : ''}
-      ${p.picked ? tile('Lines short', p.shortRate == null ? '&mdash;' : `${p.shortRate.toFixed(1)}%`,
-        blocks || '<span class="st-tile-0">no line answered yet</span>',
-        p.neverAccepted ? `<span class="st-warn">${p.neverAccepted} handed over, never taken up</span>` : '',
-        'A shortfall is what the picker found, not what they did wrong. A rate well above the rest of the team usually means the stock figures are wrong.') : ''}
-      ${p.delivered ? tile('Places reached', String(p.places),
-        `<div class="st-tile-big">${esc(fmtUGX(Math.round(p.deliveredValue)))}</div>`, '<span>of goods carried</span>') : ''}
+/* THE PHONE'S TOP, the desktop's board in the phone's own shape: the
+   next person on the same navy card, the day's orders as a 2x2 of the
+   same four steps, and a roll of faces that marks who is in today -- the
+   job a phone in the yard is actually picked up for. */
+function staffPhoneTopHTML(){
+  const line = staffInLine();
+  const f0 = line[0];
+  const { stages, sum, warn } = staffWorkStages(line);
+  const today = todayISO();
+  const roll = (data.staff||[]).slice().sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''))).map(s=>{
+    const onPay = PAY_BASES.includes(s.payBasis);
+    const out = onPay && staffAttendanceOn(s.id, today).state !== 'present';
+    const dim = s.unavailable || !onPay;
+    const label = s.unavailable ? 'off' : out ? 'out' : firstName(s.name);
+    return `<button type="button" class="sx-rf" data-staff="${esc(s.id)}" ${dim ? 'disabled' : ''}
+      aria-pressed="${out}" aria-label="${esc(s.name)}${dim ? (s.unavailable ? ', unavailable' : ', not on the payroll') : out ? ', absent — tap to mark in' : ', in — tap to mark absent'}">
+      <span class="sx-rf-a${dim ? ' is-dim' : out ? ' is-out' : ''}">${esc(nameInitials(s.name))}</span>
+      <span class="sx-rf-n${out && !dim ? ' is-out' : ''}">${esc(label)}</span></button>`;
+  }).join('');
+  const wm = staffWageMonth();
+  const chipCls = f0.st.key === 'free' ? 'is-free' : f0.st.key === 'busy' ? 'is-busy' : 'is-warn';
+  return `<div class="sx-pcard sx-next" role="region" aria-label="Next order goes to">
+      <span class="sx-next-av${f0.st.key === 'free' ? '' : ' is-held'}">${esc(nameInitials(f0.s.name))}</span>
+      <div class="sx-next-w"><div class="sx-next-k">Next order goes to</div><div class="sx-next-n">${esc(f0.s.name)}</div>
+        <div class="sx-next-s"><span class="sx-first-chip ${chipCls}"><i></i>${esc(f0.st.text)}</span>${
+          line.length > 1 ? `<span class="sx-next-then">then ${esc(line.slice(1, 3).map(x=> firstName(x.s.name)).join(', '))}</span>` : ''}</div></div>
+      <button type="button" class="sx-next-go" data-go="quote-saved" aria-label="Hand over on Order tracking">${ICON_SX_ARROW}</button>
     </div>
-    ${last ? `<div class="st-last"><span>Last: ${esc(last.q.invoicedAt || last.q.date || '')} &middot; ${
-      esc(quoteClientName(last.q))} &middot; ${last.capacity==='worker' ? 'picked' : 'delivered'}</span>
-      <b>${esc(fmtUGX(Math.round(savedQuoteTotal(last.q))))}</b></div>` : ''}`;
+    <div class="sx-pcard" role="region" aria-label="Today’s work">
+      <div class="sx-pwork-h"><span class="sx-sect-t">Today’s work</span><span class="sx-flow-sum${warn ? ' is-warn' : ''}"><i></i>${esc(sum)}</span></div>
+      <div class="sx-q2">${stages.map(g=> `<div class="sx-qc">
+          <div class="sx-qc-h">${g.icon}<span>${esc(g.short)}</span></div>
+          <b class="sx-qc-n">${g.n}</b>
+          <span class="sx-qc-s${g.subCls ? ' ' + g.subCls : ''}">${esc(g.sub)}</span></div>`).join('')}</div>
+    </div>
+    <div class="sx-sect"><span class="sx-sect-t">Who is in today</span><span class="sx-sect-n">tap a face to mark absent</span></div>
+    <div class="sx-pcard">
+      <div class="sx-roll">${roll}</div>
+      <div class="sx-roll-f">${ICON_SX_CLOCK}<span>Absent days dock this month’s wage: <b>${esc(fmtUGX(Math.round(wm.docked)))}</b></span></div>
+    </div>`;
 }
 
-/* Opening a person's record OPENS THE ROW, it does not cover the list.
-
-   It was a modal: a full-screen sheet over the one screen whose job is
-   comparing people, so answering "how is Joan doing" hid everybody you
-   were comparing her with. Every other queue in this console expands in
-   place, and so does this. One at a time -- two open records is a list
-   you scroll rather than a comparison you read. */
+/* Opening a person's record OPENS THE ROW, it does not cover the list --
+   the one screen whose job is comparing people should not hide everybody
+   you are comparing them with. One at a time. */
 let staffOpenRow = null;
 function staffOpenRecord(staffId){
   staffOpenRow = String(staffOpenRow) === String(staffId) ? null : staffId;
   renderStaff(document.getElementById('st_search').value);
   if(staffOpenRow){
-    const row = document.querySelector(`.rost-item[data-staff="${staffOpenRow}"]`);
-    if(row) row.querySelector('.rost-row').focus();
+    const row = document.querySelector(`.sx-r[data-staff="${staffOpenRow}"] .sx-who`);
+    if(row && row.offsetParent) row.focus();
   }
 }
 
@@ -80019,35 +80104,11 @@ function currentAttMonth(){
   return periodOf(currentAttDate());
 }
 
-const ATT_STATES = [
-  {key:'present', label:'In'},
-  {key:'absent',  label:'Absent'},
-  {key:'paid',    label:'Paid leave'},
-];
-
 /* Monday-first, because the shop week is Monday to Saturday and a grid
    that starts on Sunday puts the rest day in the middle of the working
    week. Sunday is the seventh column and the one day of the seven the
    26-day month does not pay for. */
 const ATT_DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-
-/* Small enough to sit inside a calendar square next to a word. The
-   shared ICON_ set is drawn for buttons and toolbars and is too heavy
-   at this size -- a 24px tick in a 15px slot reads as a smudge. */
-const ICON_ATT_IN    = '<svg class="att-i" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
-const ICON_ATT_OUT   = '<svg class="att-i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
-const ICON_ATT_LEAVE = '<svg class="att-i" viewBox="0 0 24 24"><path d="M5 12h14"/></svg>';
-
-// "Thursday 13 Aug 2026". The weekday is the point: the editor sits
-// under a grid of numbered squares and the name of the day is what
-// makes it obvious which square is being changed.
-function fmtLongDate(iso){
-  if(!iso) return '';
-  const d = new Date(iso+'T00:00:00Z');
-  if(isNaN(d.getTime())) return String(iso);
-  return d.toLocaleDateString('en-UG',
-    {weekday:'long', day:'numeric', month:'short', year:'numeric', timeZone:'UTC'});
-}
 
 // 0 = Monday ... 6 = Sunday, from an ISO date, without a timezone
 // anywhere near it -- new Date('2026-08-01') is UTC midnight and
@@ -80071,291 +80132,80 @@ function attMonthDays(period){
   return out;
 }
 
-// Who the calendar is drawn for. Falls back to the first person on the
-// payroll so the panel is never showing an empty month because nobody
-// has clicked a name yet.
-function currentAttPerson(){
-  const on = staffOnPayroll();
-  if(!on.length) return null;
-  const chosen = on.find(s=> String(s.id) === String(attPerson));
-  return chosen || on.slice().sort((a,b)=> String(a.name||'').localeCompare(String(b.name||'')))[0];
-}
+/* DAYS WORKED: the whole team's month as one grid, a row a person and a
+   cell a day. A tap moves a day round in -> absent -> paid leave -> in,
+   through setStaffAttendance, which writes the same rows the payroll
+   screen docks from. A day still to come cannot be changed. */
+const ATT_NEXT = { present:'absent', absent:'paid', paid:'present' };
 
 function renderAttendance(){
   const wrap = document.getElementById('attendanceWrap');
   if(!wrap) return;
-  const people = document.getElementById('att_people');
   const period = currentAttMonth();
   const thisMonth = periodOf(todayISO());
-
   document.getElementById('att_month').textContent = periodLabel(period);
   document.getElementById('att_next').disabled = period >= thisMonth;
   document.getElementById('att_today').disabled = period === thisMonth;
 
   const roster = staffOnPayroll().slice()
     .sort((a,b)=> String(a.name||'').localeCompare(String(b.name||'')));
-  const person = currentAttPerson();
   const notOnPayroll = (data.staff||[]).filter(s=> !PAY_BASES.includes(s.payBasis)).length;
-
-  if(!person){
-    people.innerHTML = '';
-    wrap.innerHTML = `<div class="empty">${notOnPayroll
+  if(!roster.length){
+    wrap.innerHTML = `<div class="ow-empty">${notOnPayroll
       ? `${notOnPayroll} ${notOnPayroll===1?'person is':'people are'} on the staff list, but nobody has a pay rate — so there is no wage to record a missed day against. Set how somebody is paid and their month appears here.`
       : 'Nobody on the team yet. Add someone with the button at the top of this screen.'}</div>`;
     return;
   }
 
-  // The names. A row of them rather than a dropdown: a shop has a handful
-  // of people, and a dropdown hides how many there are behind a click.
-  people.innerHTML = `<div class="att-people">${roster.map(s=>{
-    const due = findDue('wage', s.id, period);
-    const missed = due ? dueAbsences(due).length : 0;
-    return `<button type="button" class="att-person${String(s.id)===String(person.id)?' on':''}"
-      data-staff="${esc(s.id)}" aria-pressed="${String(s.id)===String(person.id)}">
-      <span class="att-person-name">${esc(s.name)}</span>
-      ${missed ? `<span class="att-person-tag">${missed}</span>` : ''}
-    </button>`;
-  }).join('')}</div>`;
-
-  const due = findDue('wage', person.id, period);
-  /* The DUE's basis where there is one, the person's where there is not.
-     Merely looking at a month must not raise it, so on an untouched
-     month there is no snapshot to read and the staff record answers. */
-  const basis = due ? dueBasis(due) : (PAY_BASES.includes(person.payBasis) ? person.payBasis : 'monthly');
-  const daily = basis === 'daily';
-  const dayRate = due ? dueDayRate(due) : basisDayRate(basis, person.payRate);
-
   const days = attMonthDays(period);
   const today = todayISO();
-  const selected = currentAttDate();
-  const lead = attWeekdayIndex(days[0]);
+  const cols = `grid-template-columns:190px repeat(${days.length},minmax(0,1fr)) 54px 96px`;
+  const head = `<div class="sx-rg sx-rg-h" style="${cols}"><span class="sx-cap">Person</span>${days.map(iso=>{
+      const rest = attIsRestDay(iso);
+      return `<span class="sx-dh${rest ? ' is-rest' : ''}${iso === today ? ' is-today' : ''}"><b>${Number(iso.slice(8))}</b>${ATT_DOW[attWeekdayIndex(iso)].charAt(0)}</span>`;
+    }).join('')}<span class="sx-th-r">In</span><span class="sx-th-r">Docked</span></div>`;
 
-  const cell = (iso)=>{
-    const at = staffAttendanceOn(person.id, iso);
-    const dayNum = Number(iso.slice(8));
-    const future = iso > today;
-    const rest = attIsRestDay(iso);
-    /* A rest day the shop nonetheless DOCKED somebody for. The 26-day
-       month already assumes Sundays off, so an unpaid absence on one
-       takes a day's pay for a day nobody was expected to work. Not
-       blocked -- a shop that opens on Sunday is entitled to record it --
-       but never silent.
-
-       Only where money actually moves. Paid leave deducts nothing, and
-       neither does any absence on a daily-paid month, so flagging those
-       put the deduction colour on a day that cost nothing -- on the same
-       screen whose own key says amber means a day's pay off. */
-    const oddRest = rest && at.state === 'absent' && !daily;
-    const cls = [
-      'att-day',
-      future ? 'future' : '',
-      rest ? 'rest' : '',
-      at.state === 'absent' ? 'is-absent' : '',
-      at.state === 'paid' ? 'is-paid' : '',
-      iso === today ? 'is-today' : '',
-      iso === selected ? 'is-sel' : '',
-      oddRest ? 'odd' : '',
-    ].filter(Boolean).join(' ');
-    /* A day still to come carries no attendance claim -- but Sunday is
-       Sunday whether or not it has happened, so the rest days stay
-       labelled right across the month rather than stopping at today. */
-    const mark = future ? (rest ? '<span class="att-mark rest">Rest day</span>' : '')
-      : at.state === 'absent' ? `<span class="att-mark absent">${ICON_ATT_OUT}Absent</span>`
-      : at.state === 'paid' ? `<span class="att-mark paid">${ICON_ATT_LEAVE}Leave</span>`
-      : rest ? '<span class="att-mark rest">Rest day</span>'
-      : `<span class="att-mark in">${ICON_ATT_IN}In</span>`;
-    return `<button type="button" class="${cls}" data-date="${iso}"
-      ${future ? 'disabled aria-disabled="true"' : ''}
-      aria-pressed="${iso === selected}"
-      title="${esc(fmtShortDate(iso))}${future ? ' — has not happened yet' : ''}">
-      <span class="att-daynum">${dayNum}</span>
-      ${mark}
-      ${at.state !== 'present' && at.reason && at.reason !== 'Absent' && at.reason !== 'Leave'
-        ? `<span class="att-why">${esc(at.reason)}</span>` : ''}
-    </button>`;
-  };
-
-  const missedDays = due ? dueAbsences(due).length : 0;
-  const unpaidDays = due ? dueUnpaidAbsenceDays(due) : 0;
-  const off = due ? dueDeduction(due) : 0;
-  /* THE MONTH, not the rate. Those are the same number only for a
-     monthly worker -- a weekly rate is one week, and reading it as the
-     month here would have shown a man on 60,000 a week losing a day out
-     of 60,000 instead of out of the 260,000 he is actually owed. */
-  const gross = due ? (dueGross(due) || 0) : (basisMonthCost(basis, person.payRate) || 0);
-
-  /* What the month has come to, for the person on screen. The whole
-     reason somebody opens this panel on payday, and it was previously
-     only on the Payroll screen -- two clicks from the register that
-     produced the figure. */
-  const totals = daily
-    ? `<div class="att-total">
-         <span class="att-total-label">${esc(person.name)} · ${esc(periodLabel(period))}</span>
-         <b>${missedDays} day${missedDays===1?'':'s'} missed</b>
-         <span class="att-total-note">Nothing is deducted — a daily month is costed from the days
-           entered on Payroll &amp; rent, so days missed were never counted in.</span>
-       </div>`
-    : `<div class="att-total${off >= 0.5 ? ' warn' : ''}">
-         <span class="att-total-label">${esc(person.name)} · ${esc(BASIS_LABELS[basis]||'Monthly')} · ${esc(periodLabel(period))}</span>
-         <b>${off >= 0.5 ? `${fmtUGX(Math.round(gross))} − ${fmtUGX(Math.round(off))} = ${fmtUGX(Math.round(Math.max(0, gross - off)))}`
-              : gross ? `${fmtUGX(Math.round(gross))} — nothing deducted` : 'No rate set'}</b>
-         <span class="att-total-note">${missedDays
-           ? `${missedDays} day${missedDays===1?'':'s'} recorded, ${unpaidDays} unpaid${
-               dayRate ? ` at ${fmtUGX(Math.round(dayRate))} a day` : ''}.`
-           : `Nothing missed${dayRate ? ` — a day is ${fmtUGX(Math.round(dayRate))}` : ''}.`}${
-           /* What the shop actually counts out, for the one basis whose
-              month is not what it hands over. */
-           basis === 'weekly' && dayRate
-             ? ` Paid every second week — ${fmtUGX(Math.round(dayRate * WAGE_DAYS_PER_FORTNIGHT))} a time, half the month.`
-             : ''}</span>
-       </div>`;
-
-  const at = staffAttendanceOn(person.id, selected);
-  const selFuture = selected > today;
-  const selInMonth = periodOf(selected) === period;
-  /* The editor names the day and the person in full. It is the control
-     that changes what somebody is paid, and "Absent" under a grid of
-     thirty-one numbered squares is not enough to be sure which square. */
-  const editor = !selInMonth ? `<div class="att-edit empty-ish">Pick a day above.</div>`
-    : selFuture ? `<div class="att-edit empty-ish">${esc(fmtLongDate(selected))} has not happened yet.</div>`
-    : `<div class="att-edit">
-        <div class="att-edit-head">
-          <div class="att-edit-day">${esc(fmtLongDate(selected))}</div>
-          <div class="att-edit-sub">${esc(person.name)}${attIsRestDay(selected)
-            ? ' · Sunday, which the 26-day month already treats as unpaid'
-            : dayRate ? ` · a day is ${fmtUGX(Math.round(dayRate))}` : ''}</div>
-        </div>
-        <div class="att-pick" role="group" aria-label="${esc(person.name)} on ${esc(fmtShortDate(selected))}">
-          ${ATT_STATES.map(st=> `<button type="button" class="att-opt${st.key===at.state?' on':''}"
-            data-state="${st.key}" aria-pressed="${st.key===at.state}">${esc(st.label)}</button>`).join('')}
-        </div>
-        <div class="att-edit-why">
-          <label for="att_reason">Reason</label>
-          <!-- Never disabled, even on a day that currently reads "In".
-               The natural order is to pick the day, say why, and THEN
-               press Absent; a box that only wakes up once the day is
-               already marked makes you press twice and silently drops
-               what you typed the first time. -->
-          <input id="att_reason" list="att_reasons" placeholder="Absent"
-            value="${esc(at.state === 'present' ? '' : (at.reason||''))}">
-          <datalist id="att_reasons">${ABSENCE_REASONS.map(r=> `<option value="${esc(r)}"></option>`).join('')}</datalist>
-        </div>
+  let monthDock = 0, monthMissed = 0;
+  const rows = roster.map(s=>{
+    const due = findDue('wage', s.id, period);
+    let inN = 0, work = 0;
+    const cells = days.map(iso=>{
+      if(iso > today) return `<span class="sx-cell sx-c-future" aria-hidden="true"></span>`;
+      const at = staffAttendanceOn(s.id, iso);
+      const rest = attIsRestDay(iso);
+      const k = at.state === 'absent' ? 'absent' : at.state === 'paid' ? 'paid' : rest ? 'rest' : 'in';
+      if(!rest || at.state !== 'present'){ work++; if(at.state === 'present') inN++; }
+      const word = { in:'in', absent:'absent, docked', paid:'paid leave', rest:'Sunday' }[k];
+      const why = at.state !== 'present' && at.reason && at.reason !== 'Absent' && at.reason !== 'Leave' ? ` — ${at.reason}` : '';
+      return `<button type="button" class="sx-cell sx-c-${k}${iso === today ? ' is-today' : ''}" data-staff="${esc(s.id)}" data-date="${iso}"
+        aria-label="${esc(s.name)}, ${esc(fmtShortDate(iso))}: ${word}${esc(why)}" title="${esc(fmtShortDate(iso))}: ${word}${esc(why)}"></button>`;
+    }).join('');
+    const dock = due ? dueDeduction(due) : 0;
+    monthDock += dock;
+    monthMissed += due ? dueUnpaidAbsenceDays(due) : 0;
+    return `<div class="sx-rg sx-rg-row" style="${cols}">
+        <span class="sx-rg-n"><span class="sx-av">${esc(nameInitials(s.name))}</span><span title="${esc(s.name)}">${esc(s.name)}</span></span>
+        ${cells}
+        <span class="sx-tot${work ? '' : ' is-quiet'}">${work ? `${inN}/${work}` : '—'}</span>
+        <span class="sx-tot${dock >= 0.5 ? ' is-warn' : ' is-quiet'}">${dock >= 0.5 ? `− ${esc(fmtUGX(Math.round(dock)))}` : '—'}</span>
       </div>`;
+  }).join('');
 
-  const lines = [];
-  if(notOnPayroll) lines.push(`<p class="att-note">${notOnPayroll}
-    ${notOnPayroll===1?'person on the staff list is':'people on the staff list are'} not here:
-    nobody has set how ${notOnPayroll===1?'they are':'they are'} paid, so there is no wage to record a
-    missed day against.</p>`);
+  wrap.innerHTML = `<div class="sx-regbox"><div class="sx-regin" role="grid" aria-label="Days worked, ${esc(periodLabel(period))}">${head}${rows}</div></div>
+    <div class="sx-reg-f">${ICON_SX_CLOCK}<span>${esc(periodLabel(period))}: <b>${esc(fmtUGX(Math.round(monthDock)))}</b> docked across
+      ${monthMissed} missed day${monthMissed===1?'':'s'}. The same rows the payroll screen reads.${notOnPayroll
+      ? ` ${notOnPayroll} ${notOnPayroll===1?'person is':'people are'} not here: nobody has set how they are paid.` : ''}</span></div>`;
 
-  /* THE WHOLE TEAM'S MONTH AT ONCE. A row a person, a square a day,
-     coloured by what was recorded -- so who was off this month is read
-     down one grid instead of by opening every name in turn. A square
-     picks that person and that day for the editor underneath. The
-     one-person calendar below stays for the phone, where thirty squares
-     across are too small to press. */
-  const cols = `grid-template-columns:var(--att-tg-name) repeat(${days.length},minmax(0,1fr)) var(--att-tg-miss)`;
-  const teamGrid = `<div class="att-tg" role="grid" aria-label="Days worked, ${esc(periodLabel(period))}">
-    <div class="att-tg-r att-tg-hd" role="row" style="${cols}"><span></span>${days.map(iso=>
-      `<span class="att-tg-dn${iso===today?' is-today':''}${attIsRestDay(iso)?' rest':''}">${Number(iso.slice(8))}</span>`).join('')}
-      <span class="att-tg-m">missed</span></div>
-    ${roster.map(s=>{
-      const on = String(s.id)===String(person.id);
-      const d2 = findDue('wage', s.id, period);
-      const missed = d2 ? dueAbsences(d2).length : 0;
-      return `<div class="att-tg-r${on?' on':''}" role="row" style="${cols}">
-        <button type="button" class="att-tg-n" data-staff="${esc(s.id)}" aria-pressed="${on}">${esc(s.name)}</button>
-        ${days.map(iso=>{
-          const at = staffAttendanceOn(s.id, iso);
-          const future = iso > today;
-          const k = future ? 'future' : at.state === 'absent' ? 'absent' : at.state === 'paid' ? 'paid'
-            : attIsRestDay(iso) ? 'rest' : 'in';
-          const sel = on && iso === selected;
-          return `<button type="button" class="att-tc k-${k}${sel?' is-sel':''}${iso===today?' is-today':''}"
-            data-staff="${esc(s.id)}" data-date="${iso}" ${future ? 'disabled' : ''}
-            aria-label="${esc(s.name)}, ${esc(fmtShortDate(iso))}: ${
-              k==='in'?'in':k==='absent'?'absent':k==='paid'?'paid leave':k==='rest'?'rest day':'not yet'}"></button>`;
-        }).join('')}
-        <b class="att-tg-m${missed?' is-miss':''}">${missed}</b>
-      </div>`;
-    }).join('')}
-  </div>`;
-
-  wrap.innerHTML = `
-    ${teamGrid}
-    ${totals}
-    <div class="att-cal" role="grid" aria-label="${esc(person.name)}, ${esc(periodLabel(period))}">
-      <div class="att-dow">${ATT_DOW.map((d,i)=>
-        `<span class="${i===6?'rest':''}">${d}</span>`).join('')}</div>
-      <div class="att-grid">
-        ${Array.from({length: lead}, ()=> '<span class="att-pad" aria-hidden="true"></span>').join('')}
-        ${days.map(cell).join('')}
-      </div>
-    </div>
-    <div class="att-key">
-      <span class="att-key-item"><i class="k-in"></i>In</span>
-      <span class="att-key-item"><i class="k-absent"></i>Absent — a day's pay off</span>
-      <span class="att-key-item"><i class="k-paid"></i>Paid leave — recorded, nothing off</span>
-      <span class="att-key-item"><i class="k-rest"></i>Sunday, not part of the 26-day month</span>
-    </div>
-    ${editor}
-    ${lines.join('')}`;
-
-  // ---- wiring ----
-  people.querySelectorAll('.att-person').forEach(b=> b.addEventListener('click', ()=>{
-    attPerson = b.dataset.staff;
-    renderAttendance();
-  }));
-  wrap.querySelectorAll('.att-day').forEach(b=> b.addEventListener('click', ()=>
-    selectAttDate(b.dataset.date)));
-  wrap.querySelectorAll('.att-tg-n').forEach(b=> b.addEventListener('click', ()=>{
-    attPerson = b.dataset.staff;
-    renderAttendance();
-  }));
-  wrap.querySelectorAll('.att-tc').forEach(b=> b.addEventListener('click', ()=>{
-    if(b.disabled) return;
-    attPerson = b.dataset.staff;
-    selectAttDate(b.dataset.date);
-  }));
-  wrap.querySelectorAll('.att-opt').forEach(b=> b.addEventListener('click', ()=>{
-    const reasonBox = document.getElementById('att_reason');
-    const typed = reasonBox ? reasonBox.value.trim() : '';
-    const res = setStaffAttendance(person.id, currentAttDate(), b.dataset.state);
+  wrap.querySelectorAll('button.sx-cell').forEach(b=> b.addEventListener('click', ()=>{
+    const cur = staffAttendanceOn(b.dataset.staff, b.dataset.date).state;
+    attDate = b.dataset.date;
+    const res = setStaffAttendance(b.dataset.staff, b.dataset.date, ATT_NEXT[cur] || 'present');
     if(res && res.error){ toast(res.error); return; }
-    // A reason already typed applies to the day being set. Blank leaves
-    // whatever the writer defaulted to, which is 'Absent' or 'Leave'.
-    if(typed && b.dataset.state !== 'present'){
-      const d2 = findDue('wage', person.id, periodOf(currentAttDate()));
-      const a = d2 && dueAbsences(d2).find(x=> String(x.date)===String(currentAttDate()));
-      if(a){ a.reason = typed; saveData(); }
-    }
-    renderAttendance();
-    renderStaffTeamStrip();
+    renderStaff(document.getElementById('st_search').value);
     // The payroll screen reads the same rows, so it cannot be left
     // showing last minute's figures behind this one.
     if(document.getElementById('tab-payroll').style.display !== 'none') renderPayroll();
   }));
-  /* SAVES, AND DOES NOT REDRAW. `change` on a text box fires on blur,
-     and pressing a button blurs it on MOUSEDOWN -- so redrawing from
-     here tore the pressed button out of the document between mousedown
-     and mouseup, no click was ever dispatched to it, and the state
-     change was dropped. The panel redrew, showing the new reason, which
-     made it look like something had happened: a day stayed Absent while
-     the operator watched the row change and believed they had made it
-     paid leave, and a day's pay stayed docked.
-
-     The reason is written here and shown at the next redraw, which any
-     button press causes anyway -- and the button's own handler already
-     applies whatever is typed in this box, so nothing is lost by not
-     redrawing now. */
-  const reasonBox = document.getElementById('att_reason');
-  if(reasonBox) reasonBox.addEventListener('change', ()=>{
-    const d2 = findDue('wage', person.id, periodOf(currentAttDate()));
-    const a = d2 && dueAbsences(d2).find(x=> String(x.date)===String(currentAttDate()));
-    if(!a) return;
-    a.reason = reasonBox.value.trim() || (a.paid ? 'Leave' : 'Absent');
-    saveData();
-  });
 }
 
 /* Picking a day. A future day is refused here as well as being rendered
@@ -80384,62 +80234,82 @@ document.getElementById('att_prev').addEventListener('click', ()=> goToAttMonth(
 document.getElementById('att_next').addEventListener('click', ()=> goToAttMonth(periodShift(currentAttMonth(), 1)));
 document.getElementById('att_today').addEventListener('click', ()=>{ attDate = todayISO(); renderAttendance(); });
 function renderStaff(filter=''){
-  renderStaffTeamStrip();
-  renderStaffRail();
-  renderAttendance();
+  const all = data.staff || [];
   const range = staffPeriodRange();
+  const line = staffInLine();
+  const sub = document.getElementById('staffPhSub');
+  const board = document.getElementById('staffBoard');
+  const ptop = document.getElementById('staffPhoneTop');
+  const rail = document.getElementById('staffRail');
+
+  /* THE HEADER'S LINE: the day, who is in, how much is in hand. A
+     shorter version for the phone, where the long one wraps. */
+  if(sub){
+    const absent = line.filter(x=> x.st.key === 'absent' || x.st.key === 'off').length;
+    const inHand = line.reduce((n, x)=> n + (x.st.active ? x.st.active.length : 0), 0);
+    const d = new Date(todayISO() + 'T00:00:00Z');
+    const long = d.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', timeZone:'UTC' });
+    const short = d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', timeZone:'UTC' });
+    sub.innerHTML = all.length
+      ? `<span class="sx-d-long">${esc(long)}</span><span class="sx-d-short">${esc(short)}</span><span class="sx-sep"></span><span><b>${all.length - absent}</b> of <b>${all.length}</b> in<span class="sx-d-long"> today</span></span><span class="sx-sep"></span><span><b>${inHand}</b> order${inHand===1?'':'s'} in hand</span>`
+      : 'Who you can hand the next order to.';
+  }
+  if(board) board.innerHTML = all.length ? staffBoardHTML() : '';
+  if(ptop) ptop.innerHTML = all.length ? staffPhoneTopHTML() : '';
+  if(rail) rail.innerHTML = all.length ? staffRailHTML() : '';
+  renderAttendance();
+
   const tokens = searchTokens(filter);
-  let rows = (data.staff||[]).slice();
+  let rows = all.slice();
   if(tokens.length){
     rows = rows.filter(s=>matchesAllTokens((s.name+' '+(s.phone||'')+' '+s.id).toLowerCase(), tokens));
   }
+  /* The filter counts, read before the filter is applied so each button
+     says how many it would show. */
+  const counts = {
+    all: rows.length,
+    worker: rows.filter(s=> s.role === 'worker').length,
+    delivery: rows.filter(s=> s.role === 'delivery').length,
+    off: rows.filter(s=> ['off','absent','nologin'].includes(staffDispatchState(s).key)).length,
+  };
+  document.querySelectorAll('#staffRoleFilter .sx-seg-b').forEach(b=>{
+    const n = b.querySelector('.sx-seg-n');
+    if(n) n.textContent = counts[b.dataset.role] == null ? '' : counts[b.dataset.role];
+  });
   /* Filtered on the job they hold, not on what they are ELIGIBLE for.
      staffEligibleForRole lets any worker be picked for a delivery, so
-     filtering by eligibility made "Delivery" return the whole team and
-     the button do nothing. What a worker can additionally be picked for
-     is on their row as a capability, which is where that fact belongs --
-     it describes the person, it does not sort them. */
-  if(staffRoleFilter === 'off') rows = rows.filter(s=> s.unavailable);
+     filtering by eligibility made "Drivers" return the whole team and
+     the button do nothing. "Can't be sent" is everybody the next order
+     cannot go to: unavailable, absent today, or without a login. */
+  if(staffRoleFilter === 'off') rows = rows.filter(s=> ['off','absent','nologin'].includes(staffDispatchState(s).key));
   else if(staffRoleFilter !== 'all') rows = rows.filter(s=> s.role === staffRoleFilter);
 
   /* FREE FIRST, then whoever is carrying least, then the people who
-     cannot be sent work at all. The list was alphabetical, which orders
-     it by a fact nobody opens this screen to ask about; the screen's
-     question is who can take the next order, so the answer sits at the
-     top of the list rather than somewhere in the middle of it.
-
-     Name breaks the tie, so the order is stable between renders. */
+     cannot be sent work at all -- the screen's question is who can take
+     the next order, so the answer sits at the top of the list. */
   rows.sort((a,b)=>{
     const d = staffDispatchState(a).rank - staffDispatchState(b).rank;
     return d || String(a.name||'').localeCompare(String(b.name||''));
   });
 
   const count = document.getElementById('staffRosterCount');
-  if(count) count.textContent = rows.length
-    ? `${rows.length} ${rows.length===1?'person':'people'}` : '';
+  if(count) count.innerHTML = all.length ? `<b>${rows.length}</b> of <b>${all.length}</b>` : '';
 
   /* Each figure's bar is measured against the busiest person in view,
      so the column reads down as a comparison without ranking anybody. */
   const maxCount = rows.reduce((m, s)=>
     Math.max(m, staffRowCount(s, staffPerformance(s.id, range.from, range.to))), 0);
+  const people = rows.map(s=> staffPersonHTML(s, range, maxCount));
   const wrap = document.getElementById('staffRoster');
   wrap.innerHTML = rows.length
-    ? `<div class="rost-list">${rows.map(s=> staffRosterRowHTML(s, range, maxCount)).join('')}</div>`
+    ? `<div class="sx-tbl"><div class="sx-cols sx-th"><span>Person</span><span>Right now</span><span>Work · ${esc(range.label)}</span><span>Last 14 days</span><span></span></div>${
+        people.map(x=> x.row).join('')}</div><div class="sx-cards">${people.map(x=> x.card).join('')}</div>`
     : `<div class="ow-empty">${staffEmptyHTML()}</div>`;
 
-  wrap.querySelectorAll('.rost-item').forEach(item=>{
-    const row = item.querySelector('.rost-row');
-    row.addEventListener('click', (e)=>{
-      if(e.target.closest('button, details')) return;
-      staffOpenRecord(item.dataset.staff);
-    });
-    row.addEventListener('keydown', (e)=>{
-      if(e.key !== 'Enter' && e.key !== ' ') return;
-      if(e.target.closest('button, details')) return;
-      e.preventDefault();
-      staffOpenRecord(item.dataset.staff);
-    });
-  });
+  wrap.querySelectorAll('.sx-who').forEach(b=> b.addEventListener('click', ()=>
+    staffOpenRecord(b.closest('.sx-r').dataset.staff)));
+  wrap.querySelectorAll('.sx-open').forEach(b=> b.addEventListener('click', ()=>
+    staffOpenRecord(b.closest('.sx-pc').dataset.staff)));
 }
 
 /* An empty screen names what is missing and what to do about it, and
@@ -80449,12 +80319,43 @@ function staffEmptyHTML(){
   if(!all) return `Nobody on the team yet. Add the people who pick and deliver for you &mdash;
     once somebody is here you can hand them orders on Order tracking, and their days feed the
     wage on Payroll &amp; rent.`;
-  if(staffRoleFilter === 'off') return 'Nobody is marked unavailable.';
+  if(staffRoleFilter === 'off') return 'Everybody can be sent work: nobody is unavailable, absent today or without a login.';
   if(staffRoleFilter !== 'all') return `Nobody is filed under ${
     staffRoleFilter === 'worker' ? 'picking' : 'delivery'}. A worker can still be sent on a
     delivery &mdash; the filter sorts on the job somebody holds, not on what they could be asked to do.`;
   return 'Nobody matches that search.';
 }
+
+/* The screen's own clicks, wired once on the section rather than on every
+   redraw: a name on the board or the rail opens that person's row, the
+   roll of faces marks today, and the two doors go where they say. */
+document.getElementById('tab-staff').addEventListener('click', (e)=>{
+  const go = e.target.closest('[data-go]');
+  if(go){ goToTab(go.dataset.go); return; }
+  const face = e.target.closest('.sx-rf');
+  if(face){
+    if(face.disabled) return;
+    const id = face.dataset.staff;
+    const now = staffAttendanceOn(id, todayISO()).state;
+    const res = setStaffAttendance(id, todayISO(), now === 'present' ? 'absent' : 'present');
+    if(res && res.error){ toast(res.error); return; }
+    renderStaff(document.getElementById('st_search').value);
+    return;
+  }
+  const pick = e.target.closest('.sx-then-r, button.sx-nd');
+  if(pick && pick.dataset.staff){
+    if(String(staffOpenRow) !== String(pick.dataset.staff)){
+      staffRoleFilter = 'all';
+      document.querySelectorAll('#staffRoleFilter .sx-seg-b').forEach(x=>{
+        x.classList.toggle('on', x.dataset.role === 'all');
+        x.setAttribute('aria-pressed', String(x.dataset.role === 'all'));
+      });
+      staffOpenRecord(pick.dataset.staff);
+    }
+    const row = document.querySelector(`.sx-r[data-staff="${pick.dataset.staff}"]`);
+    if(row && row.offsetParent) row.scrollIntoView({block:'nearest', behavior:'smooth'});
+  }
+});
 
 function toggleStaffAvailability(id){
   const s = data.staff.find(x=>x.id===id); if(!s) return;
@@ -80471,6 +80372,10 @@ function editStaff(id){
   document.getElementById('st_phone').value = s.phone;
   document.getElementById('st_role').value = s.role;
   document.getElementById('st_notes').value = s.notes;
+  // An invite is offered only to somebody who has no login yet.
+  document.getElementById('st_invite').checked = false;
+  document.getElementById('st_invite').closest('.sf-inv').hidden = !!s.userId;
+  sfShowNote(!!String(s.notes||'').trim());
   document.getElementById('st_pay_basis').value = s.payBasis || '';
   // Set BEFORE the sync, so the consequence line is drawn from the rate
   // this person is actually on rather than from an empty box.
@@ -80499,22 +80404,22 @@ function editStaff(id){
    waiting to happen. */
 
 const SF_ROLES = [
-  {key:'worker', name:'Worker', gives:'Picking and delivery',
+  {key:'worker', name:'Picks & delivers', gives:'Picking and delivery',
    note:'Can be handed anything on the board.'},
-  {key:'delivery', name:'Delivery only', gives:'Delivery',
-   note:'Cannot be given picking — choose Worker if they ever do both.'},
+  {key:'delivery', name:'Delivers only', gives:'Delivery',
+   note:'Cannot be given picking — choose Picks & delivers if they ever do both.'},
 ];
 
 function sfRenderRoles(){
   const wrap = document.getElementById('st_roles');
   if(!wrap) return;
   const chosen = document.getElementById('st_role').value || 'worker';
-  wrap.innerHTML = SF_ROLES.map(r=> `<button type="button" class="sf-role${r.key===chosen?' on':''}"
-      data-role="${esc(r.key)}" aria-pressed="${r.key===chosen}">
-      <span class="sf-role-name">${esc(r.name)}</span>
-      <span class="sf-role-gives">${esc(r.gives)}</span>
-      <span class="sf-role-note">${esc(r.note)}</span>
-    </button>`).join('');
+  /* Each says what it unlocks by its marks -- a box for picking, a truck
+     for delivery -- and the narrowing one carries only the truck. What
+     it gives and what it costs is on the button's title. */
+  wrap.innerHTML = SF_ROLES.map(r=> `<button type="button" class="sf-sw-b sf-role${r.key===chosen?' on':''}"
+      data-role="${esc(r.key)}" aria-pressed="${r.key===chosen}" title="${esc(r.gives)}. ${esc(r.note)}">${
+      r.key === 'worker' ? ICON_SX_PICK : ''}${ICON_SX_DRIVE}${esc(r.name)}</button>`).join('');
   wrap.querySelectorAll('.sf-role').forEach(b=> b.addEventListener('click', ()=>{
     document.getElementById('st_role').value = b.dataset.role;
     sfRenderRoles();
@@ -80539,18 +80444,18 @@ function sfUpdateRoleWarning(){
 }
 
 const SF_BASES = [
-  {key:'', name:'Not on the payroll', hint:'No wage is raised for them at all.'},
-  {key:'monthly', name:'Monthly salary', hint:''},
-  {key:'weekly', name:'Weekly rate', hint:''},
-  {key:'daily', name:'Daily rate', hint:''},
+  {key:'monthly', name:'Monthly', hint:''},
+  {key:'weekly', name:'Weekly', hint:''},
+  {key:'daily', name:'Daily', hint:''},
+  {key:'', name:'Not paid', hint:'No wage is raised for them at all.'},
 ];
 
 function sfRenderBases(){
   const wrap = document.getElementById('st_bases');
   if(!wrap) return;
   const chosen = document.getElementById('st_pay_basis').value || '';
-  wrap.innerHTML = SF_BASES.map(b=> `<button type="button" class="sf-basis${b.key===chosen?' on':''}"
-      data-basis="${esc(b.key)}" aria-pressed="${b.key===chosen}">${esc(b.name)}</button>`).join('');
+  wrap.innerHTML = SF_BASES.map(b=> `<button type="button" class="sf-sw-b sf-basis${b.key===chosen?' on':''}"
+      data-basis="${esc(b.key)}" aria-pressed="${b.key===chosen}"${b.hint ? ` title="${esc(b.hint)}"` : ''}>${esc(b.name)}</button>`).join('');
   wrap.querySelectorAll('.sf-basis').forEach(b=> b.addEventListener('click', ()=>{
     document.getElementById('st_pay_basis').value = b.dataset.basis;
     syncStaffPayFields();
@@ -80562,6 +80467,9 @@ function resetStaffForm(){
   ['st_id','st_name','st_phone','st_notes','st_pay_rate'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('st_role').value = 'worker';
   document.getElementById('st_pay_basis').value = '';
+  document.getElementById('st_invite').checked = false;
+  document.getElementById('st_invite').closest('.sf-inv').hidden = false;
+  sfShowNote(false);
   sfRenderRoles();
   sfUpdateRoleWarning();
   syncStaffPayFields();
@@ -80614,11 +80522,16 @@ function syncStaffPayFields(){
   // is taken away rather than shown greyed and unexplained.
   row.style.display = basis ? '' : 'none';
   if(!basis) input.value = '';
-  label.textContent = basis === 'daily' ? 'Each day'
+  label.textContent = basis === 'daily' ? 'Each day worked'
     : basis === 'weekly' ? 'Each week' : 'Each month';
 
+  /* ONE LINE, and the line is the commitment: what a month comes to and
+     what one missed day takes off it. The whole sentence -- that it is
+     raised every month from now until changed -- rides on the line's
+     title, so the short form never stands in for it alone. */
   const rate = Number(input.value) || 0;
   const month = periodLabel(currentPeriod());
+  out.removeAttribute('title');
   if(!basis){
     out.className = 'sf-consequence quiet';
     out.textContent = 'They will not appear on the payroll, and no wage is raised for them.';
@@ -80631,30 +80544,33 @@ function syncStaffPayFields(){
       : 'Put in the day rate and this will say how the month is worked out.';
   } else if(basis === 'monthly'){
     out.className = 'sf-consequence';
-    out.innerHTML = `<b>${esc(fmtUGX(Math.round(rate)))}</b> is raised on the payroll at the end of
-      every month, starting ${esc(month)}, until this is changed. Paying every second week is
-      ${esc(fmtUGX(Math.round(rate/2)))} a time, half the month.`;
+    out.innerHTML = `<b>${esc(fmtUGX(Math.round(rate)))}</b> a month · a missed day docks <b class="sf-dock">${
+      esc(fmtUGX(Math.round(basisDayRate('monthly', rate))))}</b>`;
+    out.title = `${fmtUGX(Math.round(rate))} is raised on the payroll at the end of every month, starting ${month}, until this is changed. Paying every second week is ${fmtUGX(Math.round(rate/2))} a time, half the month.`;
   } else if(basis === 'weekly'){
-    /* Spelled all the way out to the month, because that is what the
-       payroll will actually raise and it is not the number being typed.
-       Somebody entering 60,000 is agreeing to 260,000 a month, and a
-       form that shows only the 60,000 lets that be a surprise. */
+    /* Spelled out to the month, because that is what the payroll will
+       actually raise and it is not the number being typed: somebody
+       entering 60,000 is agreeing to 260,000 a month. */
     out.className = 'sf-consequence';
-    out.innerHTML = `<b>${esc(fmtUGX(Math.round(rate)))}</b> for each week — that is
-      ${esc(fmtUGX(Math.round(basisDayRate('weekly', rate))))} a day over a ${WAGE_DAYS_PER_WEEK}-day week,
-      and <b>${esc(fmtUGX(Math.round(basisMonthCost('weekly', rate))))}</b> for a month of
-      ${WAGE_DAYS_PER_MONTH} days, raised on the payroll at the end of every month starting
-      ${esc(month)}. Paying every second week is
-      ${esc(fmtUGX(Math.round(basisDayRate('weekly', rate) * WAGE_DAYS_PER_FORTNIGHT)))} a time, half the month.
-      <span class="sf-consequence-note">If the figure you have agreed is a MONTHLY one, put it in as a monthly
-      salary instead — the month is then exactly what you typed, and half of it exactly half.</span>`;
+    out.innerHTML = `<b>${esc(fmtUGX(Math.round(basisMonthCost('weekly', rate))))}</b> a month · a missed day docks <b class="sf-dock">${
+      esc(fmtUGX(Math.round(basisDayRate('weekly', rate))))}</b>`;
+    out.title = `${fmtUGX(Math.round(rate))} for each week is ${fmtUGX(Math.round(basisMonthCost('weekly', rate)))} for a month of ${WAGE_DAYS_PER_MONTH} days, raised on the payroll at the end of every month starting ${month}. If the figure agreed is a monthly one, put it in as monthly instead.`;
   } else {
     out.className = 'sf-consequence';
-    out.innerHTML = `<b>${esc(fmtUGX(Math.round(rate)))}</b> for each day worked. A month costs that
-      times the days you enter on the Payroll screen — nothing is raised for ${esc(month)} until
-      somebody counts them.`;
+    out.innerHTML = `<b>${esc(fmtUGX(Math.round(rate)))}</b> a day worked · nothing is raised until the days are counted`;
+    out.title = `A month costs ${fmtUGX(Math.round(rate))} times the days you enter on the Payroll screen — nothing is raised for ${month} until somebody counts them.`;
   }
 }
+
+/* The note is asked for only when somebody has one to write. */
+function sfShowNote(show){
+  document.getElementById('st_notes_row').hidden = !show;
+  document.getElementById('st_note_add').hidden = !!show;
+}
+document.getElementById('st_note_add').addEventListener('click', ()=>{
+  sfShowNote(true);
+  document.getElementById('st_notes').focus();
+});
 document.getElementById('st_pay_rate').addEventListener('input', syncStaffPayFields);
 // Grants a staff member an app login (via a Supabase invite email) and
 // links it to their staff row, so they can be recognized as themselves in
@@ -80780,12 +80696,17 @@ document.getElementById('st_save').addEventListener('click', ()=>{
   };
   if(editingStaffId){
     const idx = data.staff.findIndex(s=>s.id===editingStaffId);
-    data.staff[idx] = {...record, unavailable: !!data.staff[idx].unavailable};
+    data.staff[idx] = {...data.staff[idx], ...record, unavailable: !!data.staff[idx].unavailable};
   } else {
     data.staff.push({...record, unavailable: false});
   }
+  /* The invite is the owner's tick, read as they press Save -- never
+     sent on its own. It asks for the email as an invite always has. */
+  const invite = document.getElementById('st_invite').checked
+    && !(data.staff.find(s=> s.id === id) || {}).userId;
   saveData(); closeModal('staffModal'); resetStaffForm(); renderStaff();
   toast('Staff member saved');
+  if(invite) sendLoginInvite(id);
 });
 document.getElementById('st_cancel').addEventListener('click', ()=>closeModalAndReset('staffModal', resetStaffForm));
 document.getElementById('staffModalClose').addEventListener('click', ()=>closeModalAndReset('staffModal', resetStaffForm));
@@ -80794,19 +80715,23 @@ document.getElementById('st_search').addEventListener('input', e=>renderStaff(e.
 // clearing it: narrowing to Workers should not throw away the name
 // somebody has already typed.
 document.getElementById('staffRoleFilter').addEventListener('click', (e)=>{
-  const b = e.target.closest('.rost-filter');
+  const b = e.target.closest('.sx-seg-b');
   if(!b) return;
   staffRoleFilter = b.dataset.role;
-  document.querySelectorAll('#staffRoleFilter .rost-filter').forEach(x=>
-    x.classList.toggle('active', x === b));
+  document.querySelectorAll('#staffRoleFilter .sx-seg-b').forEach(x=>{
+    x.classList.toggle('on', x === b);
+    x.setAttribute('aria-pressed', String(x === b));
+  });
   renderStaff(document.getElementById('st_search').value);
 });
 document.getElementById('staffPeriod').addEventListener('click', (e)=>{
-  const b = e.target.closest('.rost-per');
+  const b = e.target.closest('.sx-seg-b');
   if(!b) return;
   staffPeriod = b.dataset.period;
-  document.querySelectorAll('#staffPeriod .rost-per').forEach(x=>
-    x.classList.toggle('active', x === b));
+  document.querySelectorAll('#staffPeriod .sx-seg-b').forEach(x=>{
+    x.classList.toggle('on', x === b);
+    x.setAttribute('aria-pressed', String(x === b));
+  });
   renderStaff(document.getElementById('st_search').value);
 });
 
