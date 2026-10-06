@@ -291,4 +291,4 @@ const noComments = code.replace(/\/\*[\s\S]*?\*\//g, '');
     'and that is verifiably what it uses');
 }
 
-t.done();
+process.exit(t.done() ? 1 : 0);

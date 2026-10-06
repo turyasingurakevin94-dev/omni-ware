@@ -67980,6 +67980,16 @@ function renderOrderFlow() {
 }
 window.renderOrderFlow = renderOrderFlow;
 window.ofBoardLogic = function () { return ofBoard && ofBoard.logic; };
+/* The board's post, for anything outside it that posts an order: the
+   same words the Post sheet opens with (sources grouped, no prices), so
+   the group reads one template whichever screen sent it. Dropped twice
+   by rewrites of this block; salesGroupOrderMessage falls back to the old
+   quote table without it, so nothing breaks loudly -- the day statement
+   and every announce just quietly post a different message. */
+window.ofPostMessage = function (qid) {
+  var q = (data.savedQuotes || []).find(function (x) { return String(x.id) === String(qid); });
+  return q ? postMsg(ofOrder(q), false, true) : null;
+};
 window.OrderFlowBoard = OrderFlowBoard;
 window.ofOpenOrder = function (qid) {
   if (!ofBoard) renderOrderFlow();
@@ -131292,16 +131302,21 @@ function managerGrowthPhone(phone){
   return /^[1-9][0-9]{9,14}$/.test(digits) ? digits : null;
 }
 
-function dashGoingQuietCustomers(){
+/* One clock for the whole reading, and it can be handed in. It read
+   Date.now() itself while its history took a `now`, so a check pinned
+   to a date passed until that date went by -- an invoice dated "ten
+   days ahead" became a real one, and the customer stopped being quiet. */
+function dashGoingQuietCustomers(nowMs){
+  const now = nowMs || Date.now();
   const rows = [];
-  const history = managerPurchaseHistory();
+  const history = managerPurchaseHistory(now);
   data.customers.forEach(c=>{
     const orderTimes = (history.byCustomer.get(String(c.id)) || []).map(e=> e.at);
     if(orderTimes.length<2) return;
     const first = orderTimes[0], last = orderTimes[orderTimes.length-1];
     const avgGapDays = (last-first) / (orderTimes.length-1) / 86400000;
     if(avgGapDays<=0) return;
-    const sinceLastDays = (Date.now()-last) / 86400000;
+    const sinceLastDays = (now-last) / 86400000;
     const extraDays = sinceLastDays - avgGapDays;
     // Overdue by at least 50% of their usual gap, with a 7-day floor so a
     // customer who orders every couple of days isn't flagged over natural
