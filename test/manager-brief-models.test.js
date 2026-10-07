@@ -506,6 +506,9 @@ const S = compileScope([
      (200k + 300k + 100k = 600k) are one row on their first day; the 27
      Oct bill stays its own; the third expected receipt still waits. */
   const all = S.mgrBriefForesightPick(items, 12, TODAY);
+  /* Cap 7: the seventh place goes to the payday's wages before the
+     folded bills -- what is known on its own day before routine bills. */
+  eq(S.mgrBriefForesightPick(items, 7, TODAY).map((x) => x.date).slice(-2), ['2026-10-28', '2026-11-05'], 'wages on the payday come before routine bills');
   t.check(all.length === 9 && all.some((x) => x.text === 'Bills · 3 on the days you named this week · 600k out' && x.date === '2026-10-12')
     && all.some((x) => x.date === '2026-10-27' && x.text === 'Bill · D · 400k out') && !all.some((x) => x.date === '2026-10-11'),
     'routine bills fold into a row a week, and only the first two expected receipts show before "Show all"');

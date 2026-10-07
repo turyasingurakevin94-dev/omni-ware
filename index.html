@@ -135377,8 +135377,8 @@ function mgrBriefForesight(src){
      - payments already past their day fold into one row on today;
      - routine bills on their named days fold into one row a week;
      - then, in this order until the cap: the lowest-cash day, every
-       risk, every deadline, the first two expected receipts, and the
-       rest of what is known;
+       risk, every deadline, the first two expected receipts, wages, rent
+       and loan repayments on their days, and the rest of what is known;
    and what is chosen is put back in date order. items: mgrBriefForesight. */
 function mgrBriefForesightPick(items, cap, today){
   const list = items || [], max = Math.max(1, Number(cap) || 12);
@@ -135404,11 +135404,12 @@ function mgrBriefForesightPick(items, cap, today){
     const pays = xs.reduce((n, x)=> n + (Number(x.n) || 1), 0);
     folded.push({ date: xs[0].date, kind: 'known', dept: 'procurement',
       text: 'Bills · ' + pays + ' on the days you named this week · ' + mgrShortUGX(sumOut(xs)) + ' out',
-      tag: xs.map(x=> Number(x.date.slice(8, 10))).join(', '), door: 'creditors', fold: xs.length });
+      tag: xs.map(x=> mgrBriefDay(x.date)).join(' · '), door: 'creditors', fold: xs.length });
   });
   const rest = list.filter(x=> !x.past && !(x.pay === 'bill' && x.kind === 'known'));
   const pool = folded.concat(rest);
-  const rank = (x)=> x.lowest ? 0 : x.kind === 'risk' ? 1 : x.kind === 'deadline' ? 2 : x.kind === 'expected' ? 3 : 4;
+  const rank = (x)=> x.lowest ? 0 : x.kind === 'risk' ? 1 : x.kind === 'deadline' ? 2 : x.kind === 'expected' ? 3
+    : ['wage', 'rent', 'loan'].includes(x.pay) ? 4 : 5;
   const byDate = (a, b)=> a.date.localeCompare(b.date) || (MGR_BRIEF_FS_ORDER[a.kind] - MGR_BRIEF_FS_ORDER[b.kind]);
   let expected = 0;
   const chosen = pool.slice().sort((a, b)=> rank(a) - rank(b) || byDate(a, b)).filter(x=>{
