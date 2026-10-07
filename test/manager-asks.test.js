@@ -50,6 +50,7 @@ const MGR_RENDER = ['renderManager', 'mgrPaintBrief', 'mgrPaintSim', 'mgrPaintTa
 const mgrRender = () => MGR_RENDER.map((n) => extractFunction(src, n, 'index.html')).join('\n');
 const api = read('api/assistant.js');
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
+const same = (got, want, msg) => eq(JSON.stringify(got), JSON.stringify(want), msg);
 
 const TODAY = '2026-08-29';
 const PRODUCTS = [
@@ -531,6 +532,98 @@ const PRODUCTS = [
   const hist = api.slice(api.indexOf("name: 'manager_history'"), api.indexOf('input_schema', api.indexOf("name: 'manager_history'")));
   t.check(/never ask for it to be recorded again/.test(hist),
     'and the mind is told what the mark means, or the flag is a key nobody reads');
+}
+
+/* ---------- 9. Q38: the planned price and the delegate's day, from the
+   meeting's block to the card -------------------------------------------
+   A move's price and a delegate's day go in through managerSaveMeeting's
+   whitelists, come back as the rows the screen reads, and draw: the price
+   as the "my plan" mark on the line's scale, the day on "Send to Moses"
+   and on the route. Today is Wednesday 7 October 2026. */
+{
+  const DAY = '2026-10-07';
+  const products = [{ id: 'P1', name: 'Masasi', variants: [{ name: '12 inch' }] }];
+  const agents = [{ id: 'a-1', name: 'Moses Kibirige', phone: '0772 123 456' }];
+  const staff = [{ id: 's-1', name: 'Joan', phone: '0700 111 222' }];
+  const inserted = [];
+  await compileScope([
+    extractFunction(src, 'managerSaveMeeting', 'index.html'),
+    ...['managerPips', 'managerPlanText', 'managerMeetingFields', 'managerMoveFields', 'managerPlanRefs', 'managerAskFields', 'managerPlayFields',
+      'managerResolvedSubject', 'buyKeyParts', 'stockKey'].map((n) => extractFunction(src, n, 'index.html')),
+    ...['MANAGER_DEPTS', 'MANAGER_ASK_PLACES', 'MANAGER_DOORS', 'MANAGER_MOVE_KINDS', 'MANAGER_WORTH_BASES', 'MANAGER_LEVERS', 'MANAGER_OBJECTIVES']
+      .map((n) => extractDeclaration(src, n, 'index.html')),
+  ], {
+    managerNotesTable: true, currentShopId: 'shop-1', todayISO: () => DAY,
+    data: { products, agents, staff, customers: [], suppliers: [], savedQuotes: [] },
+    apRound: (n) => Math.round(Number(n) || 0),
+    sb: { from: () => ({ insert: (row) => { inserted.push(row); return {
+      select: () => ({ single: () => Promise.resolve({ data: { id: 11 }, error: null }) }) }; } }) },
+    String, Number, Math, Array, Promise, JSON, Object, Date, isNaN, console,
+  }, ['managerSaveMeeting']).managerSaveMeeting({ keyline: 'k', moves: [
+    { title: 'Price Masasi 12 inch at 93,000', kind: 'price', subject: { key: 'P1::0' }, price: 93000 }],
+  asks: [
+    { q: 'What does Nyanzi charge for Masasi 12 inch?', product_id: 'P1', variant_index: 0, rival: 'Nyanzi',
+      place: { kind: 'rival', id: 'Nyanzi' }, delegate: { staff: 'Moses Kibirige', day: 'Thursday' } },
+    { q: 'What does Mengo charge for Masasi 12 inch?', product_id: 'P1', variant_index: 0, rival: 'Mengo',
+      place: { kind: 'rival', id: 'Mengo' }, delegate: { staff: 'Moses Kibirige', day: 'thu' } },
+    { q: 'Has Kato started the second floor?', place: { kind: 'you' }, delegate: { staff: 'Joan' } }] });
+  const flat = (k) => inserted.flat().filter((r) => r.kind === k);
+  const moves = flat('move').map((r, i) => ({ id: 100 + i, status: 'open', body: r.body }));
+  const qs = flat('question').map((r, i) => ({ id: 200 + i, date: DAY, body: r.body }));
+  eq(moves[0].body.price, 93000, 'the price move is saved with its planned price');
+  eq(qs[0].body.delegate.day, '2026-10-08', 'and the delegate with the Thursday it names');
+
+  const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const B = '/* ═══ MGR BED: Ask — begin ═══ */', E = '/* ═══ MGR BED: Ask — end ═══ */';
+  const block = src.slice(src.lastIndexOf(B), src.indexOf(E, src.lastIndexOf(B)) + E.length);
+  const A = compileScope([block,
+    ...['mgrDept', 'mgrPossessive', 'mgrShortUGX', 'mgrNum', 'managerPips', 'stockKey', 'daysSinceDate', 'fmtDayMonth', 'anShiftDate',
+      'waComposeUrl', 'pinDistanceKm'].map((n) => extractFunction(src, n, 'index.html')),
+    ...['MGR_DEPTS', 'MGR_WHOLE_SHOP', 'MANAGER_ASK_PLACES'].map((n) => extractDeclaration(src, n, 'index.html')),
+  ], {
+    esc, Math, Number, String, Array, Map, Set, JSON, Object, Date, Promise,
+    data: { products, suppliers: [], staff, agents, customers: [], prices: [], purchaseInvoices: [] },
+    todayISO: () => DAY, mgrMemo: (n, f) => f(), fmtUGX: String,
+    productVariantLabel: (p, v) => p.name + (v == null ? '' : ' ' + p.variants[v].name),
+    ourCostFor: () => null, ourPriceFor: () => 95000, rivalMarketRows: () => [],
+    rivalPriceLatest: () => [], marketVerdict: () => ({ under: [], lift: [] }), rivalNeverChecked: () => [], waSalesByKey: () => new Map(),
+    credOpenInvoices: () => [], purchasePlan: () => ({ lines: [] }), supplierLeadTimes: () => [], invCountRecords: () => [],
+    mgrConfidence: () => ({ pips: null }), placePin: () => null, mapHomePin: () => null, mapCentrePin: () => null, mapPlaceRows: () => [],
+    managerNotesTable: true, MANAGER_METRICS: {},
+  }, ['mgrAsksHTML', 'mgrAskModel', 'mgrAskPlanPrices', 'mgrAskDayWord', 'mgrAskRouteMessage']);
+
+  /* THE PRICE: one Map entry, line to price -- and only from a move that
+     carries it. */
+  same([...A.mgrAskPlanPrices(moves)], [['P1::0', 93000]], 'the plan’s price, read from the saved move, by its line');
+  same([...A.mgrAskPlanPrices([{ status: 'skipped', body: moves[0].body }])], [], 'a move the owner turned down proposes no price');
+  same([...A.mgrAskPlanPrices([{ status: 'open', body: { ...moves[0].body, price: undefined } }])], [], 'nor one that carries none (an old row)');
+  const model = A.mgrAskModel(qs, null, DAY, { moves });
+  const html = A.mgrAsksHTML(model);
+  t.check(/my plan <b>93,000<\/b>/.test(html) && /yours <b>95,000<\/b>/.test(html),
+    'the scale draws "my plan" at 93,000 beside our own 95,000 — the figure the meeting planned, never one read from a title');
+  t.check(!/my plan/.test(A.mgrAsksHTML(A.mgrAskModel(qs, null, DAY, { moves: [] }))), 'with no planned price there is no mark');
+
+  /* THE DAY: Thursday 8 October is the day after this Wednesday. */
+  same([A.mgrAskDayWord('2026-10-08', DAY), A.mgrAskDayWord(DAY, DAY), A.mgrAskDayWord('2026-10-20', DAY), A.mgrAskDayWord('2026-10-06', DAY)],
+    [{ short: 'Thu', long: 'Thursday', weekday: true }, { short: 'today', long: 'today', weekday: false },
+      { short: '20 Oct', long: '20 Oct', weekday: false }, null],
+    'a day said against today: a weekday in the week ahead, today, the date further out, and nothing once it has gone');
+  t.check(/>Send to Moses · Thu<\/a>/.test(html), 'the card reads "Send to Moses · Thu"');
+  t.check(/>Send to Joan<\/a>/.test(html), 'a delegate with no day reads as it always did');
+  t.check(/mgr-k-pt">Moses' Thursday route</.test(html), 'the route is "Moses\' Thursday route" (the app\'s own possessive) — every question on it is for Thursday');
+  eq(model.route.day, '2026-10-08', 'the route carries that one day');
+  t.check(/^Route for Thursday — 2 stops:/.test(A.mgrAskRouteMessage(model.route, DAY)), 'and the message Moses is sent says Thursday');
+  t.check(!/https?:\/\/(?!wa\.me)/.test(html.replace(/https:\/\/wa\.me\/[^"]*/g, '')), 'NOTHING SENDS ITSELF: the only way out is a wa.me link the owner taps');
+
+  /* Two days on one route is not one day. */
+  const mixed = qs.map((q, i) => (i === 1 ? { ...q, body: { ...q.body, delegate: { ...q.body.delegate, day: '2026-10-09' } } } : q));
+  const m2 = A.mgrAskModel(mixed, null, DAY, { moves });
+  eq(m2.route.day, null, 'questions on one route given for two days: the route names neither');
+  t.check(/mgr-k-pt">Moses' route</.test(A.mgrAsksHTML(m2)) && /^Route for today — /.test(A.mgrAskRouteMessage(m2.route, DAY)),
+    'and it reads as built');
+  /* A day already gone, on a card read later, is no day. */
+  t.check(/>Send to Moses<\/a>/.test(A.mgrAsksHTML(A.mgrAskModel(qs, null, '2026-10-09', { moves }))),
+    'read on Friday, Thursday has gone: "Send to Moses" as built');
 }
 
 })().then(() => { process.exit(t.done() ? 1 : 0); })

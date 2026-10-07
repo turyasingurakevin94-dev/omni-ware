@@ -52,6 +52,8 @@ const FIELDS = [
   extractDeclaration(src, 'MANAGER_DEPTS', 'index.html'),
   extractDeclaration(src, 'MANAGER_ASK_PLACES', 'index.html'),
   extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
+  /* What a play's aim and stop figures are read on (Q38). */
+  extractDeclaration(src, 'MANAGER_PROBLEM_METRICS', 'index.html'),
 ];
 
 const PRODUCTS = [
@@ -83,10 +85,14 @@ const DATA = () => ({
 
   t.check(/verdict: ONE first-person sentence from the figures, the first thing the owner reads/.test(meeting),
     'the verdict is one first-person sentence, from the figures');
-  t.check(/sure: 1\\u20135 for the whole plan/.test(meeting), 'with how sure the whole plan is');
+  /* WAS: these pins quoted the contract lines' dashes as \u2013 / \u2014
+     escapes. NOW: the four contract lines carry the characters themselves
+     -- five source characters each, freed to fit the Q38 fields under
+     the 20,000 ceiling -- and the pins quote the same words. */
+  t.check(/sure: 1–5 for the whole plan/.test(meeting), 'with how sure the whole plan is');
   t.check(/On a move: dept; touches\[\], the other departments it moves/.test(meeting),
     'each move names its department and the others it moves');
-  t.check(/confidence 1\\u20135, a judgement, never a rank \\u2014 your order IS the ranking and no figure is ever multiplied by a confidence/.test(meeting),
+  t.check(/confidence 1–5, a judgement, never a rank — your order IS the ranking and no figure is ever multiplied by a confidence/.test(meeting),
     'CONFIDENCE NEVER RE-RANKS: the plan order stays the ranking and no figure is multiplied by a confidence (Q5)');
   t.check(/evidence, at most 3 phrases each carrying a figure a tool returned/.test(meeting),
     'evidence carries figures a tool returned, not adjectives');
@@ -94,7 +100,7 @@ const DATA = () => ({
     'what would change its mind is an event the books can show');
   t.check(/target, the metric or the scoreboard id it serves, and effect, its size in that unit by arithmetic on the books/.test(meeting),
     'a move links to the target it serves — an id the scoreboard gave it — sized by arithmetic, never a forecast');
-  t.check(/from_question, the answered question that shaped it, its asked words copied exactly from answered_questions \\u2014 never an id, never one no tool returned/.test(meeting),
+  t.check(/from_question, the answered question that shaped it, its asked words copied exactly from answered_questions — never an id, never one no tool returned/.test(meeting),
     'and to the answer that shaped it, by the words manager_history showed it — the only handle it is ever given');
 
   t.check(/MY READING, NEVER A CAUSE\. Draw AT MOST THREE chains, none when the books link nothing/.test(meeting),
@@ -110,19 +116,25 @@ const DATA = () => ({
 
   t.check(/AN ASK SAYS WHAT HANGS ON IT\. place\.kind is one of: you, rival, supplier, bank, staff, customer\./.test(meeting),
     'a question names where its answer is found');
-  t.check(/An ask may also carry why \(what the answer decides\), stake \(shillings a tool sized, else omit\), dept, confidence \(1\\u20135, how sure the advice it bears on is now\)/.test(meeting),
+  t.check(/An ask may also carry why \(what the answer decides\), stake \(shillings a tool sized, else omit\), dept, confidence \(1–5, how sure the advice it bears on is now\)/.test(meeting),
     'why it is asked, what is at stake only when a tool sized it, and how sure the advice is now');
   t.check(/place \(kind, and the id or name of where to find out\), choices as objects \(label; effect, what that answer changes in your advice; confidence_after\)/.test(meeting),
     'each likely answer says what it would change in the advice and how sure it would leave the Manager');
-  t.check(/and delegate \(who on the staff could find out \\u2014 the owner sends it, never you\)/.test(meeting),
-    'NOTHING SENDS ITSELF: a delegated question is the owner’s to send');
+  /* WAS: delegate (who on the staff could find out — the owner sends it,
+     never you). NOW: and the day they go (Q38); the law is unchanged. */
+  t.check(/and delegate \(who on the staff could find out, and the day they go — the owner sends it, never you\)/.test(meeting),
+    'NOTHING SENDS ITSELF: a delegated question is the owner’s to send — on the day the meeting gives it (Q38)');
 
-  t.check(/A PLAY IS A TEST: dept; hypothesis \(if, then, and the target level it should reach, from the books \\u2014 a claim to test, never a promise\)/.test(meeting),
+  t.check(/A PLAY IS A TEST: dept; hypothesis \(if, then, and the target level it should reach, from the books — a claim to test, never a promise\)/.test(meeting),
     'a play is a hypothesis to test, never a promise — the never-forecast law at the play');
   t.check(/stop \(threshold and by_week, the reading that ends it\); cost in shillings; depends_on, the play or move it waits for/.test(meeting),
     'with the reading that would stop it, its cost and what it waits for');
-  t.check(/the play or move it waits for\. Never say a play caused what followed it\./.test(meeting),
-    'NO CREDIT: a play is never said to have caused what followed it');
+  /* WAS: "...the play or move it waits for. Never say a play caused...".
+     NOW: the aim and the stop as figures come between (Q38). */
+  t.check(/the play or move it waits for; aim\.value and stop\.value: figures on a week’s reading of what it treats; stop\.when: above or below\. Never say a play caused what followed it\./.test(meeting),
+    'a play’s aim and stop are also figures on a week’s reading, the stop above or below (Q38) — and NO CREDIT: a play is never said to have caused what followed it');
+  t.check(/from_question[^']*; price, a price or policy move’s planned unit price for its subject line, whole shillings\./.test(meeting),
+    'a price or policy move carries the price it plans, per unit of its line, in whole shillings (Q38)');
   t.check(/NEVER propose a play the shop has tried and dropped/.test(meeting),
     'and the rule against re-proposing a dropped play stands');
   /* A PLAY COMES BACK ONLY THROUGH A FIELD THAT COUNTS IT (Q14).
@@ -172,10 +184,10 @@ const DATA = () => ({
     'a move in the example carries every new field, its evidence carrying a figure');
   t.check(/"chains":\[\{"title":"","dept":"sales","links":\[\{"dept":"sales","text":"","figure":"","tool":"shop_pulse"\}\],"fix":\{"title":"","move":1\},"confidence":3\}\]/.test(meeting),
     'and a chain with its links, fix and confidence');
-  t.check(/"choices":\[\{"label":"","effect":"","confidence_after":4\}\]/.test(meeting) && /"delegate":\{"staff":""\}/.test(meeting),
-    'and an ask with choices as objects and a delegate');
-  t.check(/"hypothesis":\{"if":"","then":"","target":""\},"stop":\{"threshold":"","by_week":2\}/.test(meeting),
-    'and a play as a test');
+  t.check(/"choices":\[\{"label":"","effect":"","confidence_after":4\}\]/.test(meeting) && /"delegate":\{"staff":"","day":"Thu"\}/.test(meeting),
+    'and an ask with choices as objects and a delegate with the day they go');
+  t.check(/"hypothesis":\{"if":"","then":"","target":""\},"stop":\{"threshold":"","by_week":2,"value":8,"when":"below"\},"aim":\{"value":10,"unit":"%"\}/.test(meeting),
+    'and a play as a test, its stop and aim as figures');
 
   /* THE LAWS THAT WERE ALREADY THERE, still there. */
   t.check(/Never forecast: argue only from what is recorded/.test(common), 'never forecast');
@@ -653,6 +665,76 @@ const moves = rowsOf(inserted, 'move').map((r) => r.body);
   const oldPlay = book.proposed.find((x) => x.name === 'An old play');
   t.check(!['dept', 'hypothesis', 'stop', 'cost', 'dependsOn'].some((k) => k in oldPlay),
     'and an old play gains none of them');
+}
+
+/* ---------- 6b. Q38: the price a move plans, the aim and stop as figures,
+   and the day a delegate goes -- through the save path, each whitelisted - */
+{
+  /* Wednesday 7 October 2026. */
+  const ins = [];
+  await saver(ins, DATA())({ keyline: 'k', moves: [
+    { title: 'Price G28 at 46,500', kind: 'price', subject: { key: 'P1::0' }, price: 46500 },
+    { title: 'Hold G30 at 47,000', kind: 'policy', subject: { key: 'P1::1' }, price: 47000.6 },
+    { title: 'Price in words', kind: 'price', subject: { key: 'P1::0' }, price: '46,500' },
+    { title: 'A chase is no price', kind: 'chase', subject: { customerId: 7, key: 'P1::0' }, price: 46500 },
+    { title: 'A line nobody stocks', kind: 'price', subject: { key: 'P9' }, price: 100 },
+    { title: 'No line at all', kind: 'price', subject: { customerId: 7 }, price: 100 },
+    { title: 'A price of nothing', kind: 'price', subject: { key: 'P1::0' }, price: 0 },
+    { title: 'Priced below nothing', kind: 'policy', subject: { key: 'P1::0' }, price: -5 },
+  ], asks: [
+    { q: 'What does Kasubi charge for G28?', delegate: { staff: 'Moses', day: 'Thu' } },
+    { q: 'Is Kato still trading?', delegate: { staff: 'Joan', day: '2026-10-20' } },
+    { q: 'Will Roofings deliver Saturday?', delegate: { staff: 'Joan', day: '2026-10-06' } },
+  ], plays: [
+    { name: 'Charge for cutting', treats: 'margin', weeks: 4,
+      aim: { value: 10.04, unit: '%' }, stop: { threshold: 'the share kept below 8%', by_week: 2, value: 8, when: 'below' } },
+    { name: 'Friday chase', treats: 'debt', weeks: 6, aim: { value: 100000000.4 }, stop: { value: 120000000, when: 'above', by_week: 3 } },
+  ] });
+  const mv = rowsOf(ins, 'move').map((r) => r.body);
+  same(mv.map((b) => b.price), [46500, 47001, undefined, undefined, undefined, undefined, undefined, undefined],
+    'A PRICE IS KEPT ONLY AS A FIGURE, on a price or policy move whose subject is a line the catalogue holds: 46,500; 47,000.6 → 47,001 whole shillings; words, a chase, an unknown line, no line, nothing and below nothing are nothing');
+  same(mv[0].subject, { key: 'P1::0' }, 'and the line it prices is the move’s own subject');
+  const qs = rowsOf(ins, 'question').map((r) => r.body);
+  same(qs[0].delegate, { agentId: 'a-1', name: 'Moses', day: '2026-10-08' }, 'a delegate’s weekday is kept as the next such day from the meeting: Thu → Thursday 8 October');
+  same(qs[1].delegate, { staffId: 's-1', name: 'Joan', day: '2026-10-20' }, 'a date is kept as itself');
+  same(qs[2].delegate, { staffId: 's-1', name: 'Joan' }, 'a day already gone is nothing — the card reads as it did without one');
+  const pl = rowsOf(ins, 'play').map((r) => r.body);
+  eq(pl[0].aimValue, 10, 'a margin play’s aim is kept in % points, to one place: 10.04 → 10');
+  same(pl[0].stop, { threshold: 'the share kept below 8%', byWeek: 2, value: 8, when: 'below' }, 'and its stop keeps the words, the week and the figure with its direction');
+  eq(pl[1].aimValue, 100000000, 'a money play’s aim is whole shillings, no unit needed');
+  same(pl[1].stop, { byWeek: 3, value: 120000000, when: 'above' }, 'a stop given only as a figure is kept, with its week');
+
+  /* Old shapes save what they always did: no key appears unasked. */
+  const old = [];
+  await saver(old, DATA())({ keyline: 'k', moves: [{ title: 'Price it', kind: 'price', subject: { key: 'P1::0' } }],
+    asks: [{ q: 'Ask Moses', delegate: { staff: 'Moses' } }], plays: [{ name: 'Old play', treats: 'margin', stop: { threshold: 'below 8%' } }] });
+  eq('price' in rowsOf(old, 'move')[0].body, false, 'OLD ROWS: a price move with no price carries no price key');
+  same(rowsOf(old, 'question')[0].body.delegate, { agentId: 'a-1', name: 'Moses' }, 'a delegate with no day carries no day');
+  const op = rowsOf(old, 'play')[0].body;
+  same([op.aimValue, op.stop], [undefined, { threshold: 'below 8%' }], 'and a play with words only keeps words only');
+
+  /* The pure whitelists, edge by edge (no journal needed). */
+  const F = compileScope([...FIELDS, extractFunction(src, 'buyKeyParts', 'index.html')],
+    { data: DATA(), todayISO: () => TODAY, Math, Number, String, Array, Object, Date, isNaN },
+    ['managerMoveFields', 'managerAskFields', 'managerPlayFields']);
+  const day = (d) => (F.managerAskFields({ delegate: { staff: 'Moses', day: d } }).delegate || {}).day;
+  same(['Thursday', 'thurs', 'THU.', 'wed', 'Wednesday', 'mon', 'sun', 'th', 'someday', '2026-10-07', '2026-02-30', '7 Oct', '2027-01-04'].map(day),
+    ['2026-10-08', '2026-10-08', '2026-10-08', '2026-10-07', '2026-10-07', '2026-10-12', '2026-10-11', undefined, undefined, '2026-10-07', undefined, undefined, '2027-01-04'],
+    'a weekday, full or short, is the next one on or after the meeting’s Wednesday; today is today; two letters, a word, a date that is no date and a date in words are nothing');
+  eq(F.managerAskFields({ delegate: 'Moses' }).delegate.day, undefined, 'a delegate named as a bare word has no day to carry');
+  const play = (x) => F.managerPlayFields(x);
+  same(play({ treats: 'margin', aim: { value: 10, unit: 'UGX' } }), {}, 'an aim in a unit its measure does not read is nothing — never converted');
+  same(play({ treats: 'margin', aim: { value: 250, unit: '%' } }), {}, 'a share past 100% is off the scale');
+  same(play({ treats: 'cash', aim: { value: -5 } }), {}, 'money below nothing is no aim');
+  same(play({ treats: 'growth', aim: { value: 'lots' }, stop: { threshold: 'x', value: 5, when: 'atmost' } }), { stop: { threshold: 'x' } },
+    'an aim in words is nothing, and a stop direction the contract does not offer keeps the words only');
+  same(play({ treats: 'other', aim: { value: 5 }, stop: { value: 5, when: 'below' } }), {}, 'a problem nothing here measures takes no figure at all');
+  same(play({ treats: 'growth', aim: { value: '90000000', unit: 'ugx' }, stop: { value: '60000000.7', when: 'below' } }),
+    { aimValue: 90000000, stop: { value: 60000001, when: 'below' } }, 'figures written as plain numbers are read, money rounded to the shilling');
+  same(F.managerMoveFields({ kind: 'policy', subject: { key: 'P1' }, price: 12000 }), { price: 12000 },
+    'a line with no variant is a line');
+  same(F.managerMoveFields({ kind: 'price', subject: { key: 'P1::5' }, price: 12000 }), {},
+    'but a variant the line does not have is not');
 }
 
 /* ---------- 7. the meeting alone gets the bigger answer -------------- */

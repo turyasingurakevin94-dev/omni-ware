@@ -464,6 +464,84 @@ eq(S.mgrSimPresets(L, null, null).plan, null, 'no plan read: no plan');
 eq(S.mgrSimPresets(L, [], []).plan, null, 'no open move: no plan');
 t.check(S.mgrSimSame(L, {}, { 'chase:C1': 'today' }) && !S.mgrSimSame(L, {}, P.plan), 'a choice of the default is no change');
 
+/* ---------- 5b. Q38: the price today's plan names ---------- */
+/* The move's price goes in through the contract's whitelist
+   (managerMoveFields) and comes out on the price lever and in "My plan".
+   Y10 bar (P24): ours 33,170, Nakivubo 35,750, 93 sold a month, 2,000 a
+   unit profit. */
+{
+  const MF = compileScope([fn('managerMoveFields'), fn('managerPips'), fn('managerPlanText'),
+    decl('MANAGER_DEPTS'), decl('MANAGER_METRICS')], {
+    data: { products: [{ id: 'P24', name: 'Y10 bar' }, { id: 'P5', name: 'Paint 4L' }] },
+    buyKeyParts: (k) => (['P24', 'P5'].includes(String(k)) ? { productId: String(k), variantIdx: null } : null),
+  }, ['managerMoveFields']).managerMoveFields;
+  const bodyOf = (raw) => ({ mkind: raw.kind, subject: raw.subject, ...MF(raw) });
+  const priceMove = bodyOf({ kind: 'price', subject: { key: 'P24' }, price: 35000 });
+  eq(priceMove.price, 35000, 'the price move carries its planned price through the save whitelist');
+  const PM = [...MOVES.slice(0, 3), { i: 3, status: 'open', body: priceMove }];
+  const planOn = { key: 'P24', price: 35000, line: null };
+
+  /* 35,000 sits between the steps 34,900 and 35,750: a choice of its own,
+     in price order. At the same volume, 93 × (35,000 − 33,170) = 170,190
+     a month; at a tenth less, 93 × 0.9 × 1,830 − 9.3 × 2,000 = 153,171 −
+     18,600 = 134,571. */
+  const pl = S.mgrSimPriceLever(BOOKS(), planOn);
+  eq(pl.opts.map((o) => [o.id, o.price]), [['p0', 33170], ['p1', 34050], ['p2', 34900], ['plan', 35000], ['p3', 35750]],
+    'the price lever offers the plan’s 35,000 among the steps, in price order, today’s price still first');
+  eq(pl.def, 'p0', 'and today’s price is still where it starts');
+  eq([pl.effect('plan', 0).profit, pl.effect('plan', -10).profit], [170190, 134571], 'priced like every step: 170,190 at the same volume, 134,571 at a tenth less');
+  t.check(/^my plan · \+170k a month at the same volume — 750 under Nakivubo$/.test(pl.opts[3].hint), `and it says it is my plan (${pl.opts[3].hint})`);
+  eq(pl.opts[3].pips, undefined, 'with no rival-age pips: the price is the meeting’s, not a sighting');
+  const onStep = S.mgrSimPriceLever(BOOKS(), { ...planOn, price: 34900 });
+  eq([onStep.opts.map((o) => o.id), onStep.opts[2].plan, /^my plan · /.test(onStep.opts[2].hint)], [['p0', 'p1', 'p2', 'p3'], true, true],
+    'a planned price on a step marks that step rather than adding a twin');
+  eq(S.mgrSimPriceLever(BOOKS(), { ...planOn, price: 33170 }).opts.some((o) => o.plan), false, 'a plan to hold today’s price is today’s price');
+  eq(S.mgrSimPriceLever(BOOKS(), null).opts.map((o) => o.id), ['p0', 'p1', 'p2', 'p3'], 'with no planned price the lever is as built');
+
+  const PL = S.mgrSimLevers(BOOKS(), { moves: PM, open: S.mgrSimOpen(PM), orders: ORDERS, offers: [OFFER0, UNPRICED], planPrice: planOn });
+  const PP = S.mgrSimPresets(PL, S.mgrSimOpen(PM), PM);
+  eq(PP.plan, { 'bill:891': 'after:C1', 'order:P1': 'a', 'price:P24': 'plan' }, 'MY PLAN INCLUDES IT: the price lever set to the plan’s 35,000');
+  eq(PP.growth['price:P24'], 'p1', 'while Growth push still takes the first step up');
+  const done = [...MOVES.slice(0, 3), { i: 3, status: 'done', body: priceMove }];
+  eq(S.mgrSimPresets(PL, S.mgrSimOpen(done), done).plan['price:P24'], undefined, 'a price move already done sets nothing');
+
+  /* ANOTHER LINE: the plan prices Paint 4L (P5), which the market reading
+     does not. Ours 12,000; 40 sold wholesale of 50 in 30 days for 100,000
+     profit = 2,000 a unit. */
+  const fact = (over) => compileScope([fn('mgrSimPlanPriceFact')], {
+    buyKeyParts: (k) => (k === 'P5' ? { product: { name: 'Paint 4L' }, productId: 'P5', variantIdx: null } : null),
+    productVariantLabel: (p) => p.name, ourPriceFor: () => 12000,
+    waSalesByKey: () => new Map([['P5', { units30: 50, wholesaleUnits30: 40, profit30: 100000 }]]),
+    rivalMarketRows: () => [{ key: 'P5', comparable: true, side: 'wholesale', theirs: 11800, shop: 'Abba', daysOld: 4 },
+      { key: 'P5', comparable: true, side: 'wholesale', theirs: 13000, shop: 'Bina', daysOld: 2 }],
+    ...(over || {}),
+  }, ['mgrSimPlanPriceFact']).mgrSimPlanPriceFact;
+  const paint = [{ i: 0, status: 'open', body: bodyOf({ kind: 'policy', subject: { key: 'P5' }, price: 12500 }) }];
+  const pf = fact()(paint, BOOKS());
+  eq(pf, { key: 'P5', price: 12500, line: { key: 'P5', line: 'Paint 4L', rival: null, ours: 12000, theirs: null, side: 'wholesale',
+    units: 40, daysOld: null, unitProfit: 2000 } },
+  'the plan’s line read the market reading’s way: our price, wholesale units, profit a unit — and no rival, since the cheapest (11,800) is under ours');
+  const pfl = S.mgrSimPriceLever(BOOKS(), pf);
+  eq([pfl.id, pfl.opts.map((o) => [o.id, o.price]), pfl.effect('plan', 0).profit], ['price:P5', [['p0', 12000], ['plan', 12500]], 20000],
+    'the lever moves to the plan’s line: today’s 12,000 or the plan’s 12,500 — 40 × 500 = 20,000 a month at the same volume');
+  eq(pfl.opts[0].hint, 'today\'s price', 'with no rival above ours, today’s price says nothing about one');
+  const PL5 = S.mgrSimLevers(BOOKS(), { moves: paint, open: paint, orders: [], offers: [], planPrice: pf });
+  eq(PL5.filter((l) => l.kind === 'price').map((l) => l.id), ['price:P5'], 'one price lever, on the plan’s line');
+  const P5 = S.mgrSimPresets(PL5, paint, paint);
+  eq([P5.plan, P5.growth['price:P5']], [{ 'price:P5': 'plan' }, undefined], 'my plan takes it; Growth push has no step up to take');
+  /* A rival above ours: 13,000 cheapest -- steps a third and two thirds
+     of the 1,000 gap, to the nearest 50: 12,350 and 12,650. */
+  const pfR = fact({ rivalMarketRows: () => [{ key: 'P5', comparable: true, side: 'wholesale', theirs: 13000, shop: 'Bina', daysOld: 2 }] })(paint, BOOKS());
+  eq(S.mgrSimPriceLever(BOOKS(), pfR).opts.map((o) => o.price), [12000, 12350, 12500, 12650, 13000], 'with a rival above, the plan sits among its steps');
+  eq([fact({ ourPriceFor: () => null })(paint, BOOKS()).why, fact({ waSalesByKey: () => new Map() })(paint, BOOKS()).why,
+    fact({ buyKeyParts: () => null })(paint, BOOKS()).why],
+  ['Paint 4L has no wholesale price of ours to start from', 'no wholesale sale of Paint 4L in 30 days', 'its line is no longer in the catalogue'],
+  'a line the books cannot price says what is missing — never priced on a guess');
+  eq(S.mgrSimPriceLever(BOOKS(), fact({ ourPriceFor: () => null })(paint, BOOKS())).id, 'price:P24', 'and the lever stays on the market reading’s line');
+  eq(fact()(PM.filter((m) => m.status === 'open'), BOOKS()), { key: 'P24', price: 35000, line: null }, 'on the market reading’s own line, the price is all it needs');
+  eq(fact()([{ i: 0, status: 'open', body: bodyOf({ kind: 'price', subject: { key: 'P24' } }) }], BOOKS()), null, 'an old price move with no price names none');
+}
+
 /* ---------- 6. the verdict and the headline ---------- */
 const F = { amount: 3000000, source: 'set' };
 let V = S.mgrSimVerdict({ changed: 0, floor: F, low: { date: '2026-11-05', balance: 3148424 }, lowWeek: 'the loan repayment and rent' });

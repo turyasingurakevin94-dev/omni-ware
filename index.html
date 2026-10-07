@@ -133617,6 +133617,16 @@ function managerMoveFields(m, refs){
   const shaped = (asked.length > 3 && Array.isArray(r.answered))
     ? r.answered.find(q=> q && q.id != null && words(q.question || '') === asked) : null;
   if(shaped) out.fromQuestion = shaped.id;
+  /* THE PRICE IT PLANS (Q38): whole shillings per unit of the line its
+     subject names, on a price or policy move only. The scale's "my plan"
+     mark and the Simulator's price lever read it; a price on any other
+     move, on a line the catalogue does not hold, or written as words is
+     nothing -- never a figure read out of the title. */
+  if((x.kind === 'price' || x.kind === 'policy') && x.price != null && x.price !== ''){
+    const v = Math.round(num(x.price));
+    const key = x.subject && typeof x.subject === 'object' ? x.subject.key : null;
+    if(v > 0 && key != null && key !== '' && buyKeyParts(String(key))) out.price = v;
+  }
   return out;
 }
 
@@ -133738,6 +133748,24 @@ function managerAskFields(a){
   }
   const d = x.delegate;
   const w = person((d && typeof d === 'object') ? (d.staff != null ? d.staff : d.name) : d);
+  /* THE DAY THEY GO (Q38), kept as the date it names: a weekday is the
+     next one from the meeting's day (today, if it is today), a date is
+     itself. A day already gone, a date that is no date, or a word that
+     is no weekday is nothing -- the card then reads as it always did. */
+  if(w && d && typeof d === 'object' && typeof d.day === 'string' && d.day.trim()){
+    const said = d.day.trim().toLowerCase().replace(/\.$/, '');
+    const today = todayISO();
+    const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const wd = said.length >= 3 ? DAYS.findIndex(n=> n.startsWith(said)) : -1;
+    let on = null;
+    if(wd >= 0){
+      const t = new Date(today + 'T00:00:00Z');
+      t.setUTCDate(t.getUTCDate() + ((wd - t.getUTCDay() + 7) % 7));
+      on = t.toISOString().slice(0, 10);
+    } else if(/^\d{4}-\d{2}-\d{2}$/.test(said) && !isNaN(Date.parse(said + 'T00:00:00Z'))
+      && new Date(said + 'T00:00:00Z').toISOString().slice(0, 10) === said && said >= today) on = said;
+    if(on) w.day = on;
+  }
   if(w) out.delegate = w;
   return out;
 }
@@ -133764,7 +133792,30 @@ function managerPlayFields(x){
   const weeks = num(p.weeks);
   const span = (weeks >= 1 && weeks <= 13) ? Math.round(weeks) : 13;
   const by = num(s.by_week);
-  if(threshold) out.stop = { threshold, ...(Number.isInteger(by) && by >= 1 && by <= span ? { byWeek: by } : {}) };
+  /* THE AIM AND THE STOP AS FIGURES (Q38), beside the words: each on
+     one week's reading of what the play treats (MANAGER_PROBLEM_METRICS),
+     % points for the share kept, whole shillings for the rest -- so the
+     board counts the aim's odds and checks the stop exactly. A figure on
+     a problem nothing here measures, in another unit, or off the scale
+     is nothing, and the board falls back to what it did without one. */
+  const a = (p.aim && typeof p.aim === 'object') ? p.aim : null;
+  const sv = num(s.value);
+  const when = s.when === 'above' || s.when === 'below' ? s.when : null;
+  const m = (a || (when && Number.isFinite(sv))) ? MANAGER_PROBLEM_METRICS[String(p.treats || '')] : null;
+  const fig = (v, unit)=>{
+    if(!m || !Number.isFinite(v)) return null;
+    const u = String(unit == null ? '' : unit).trim().toLowerCase();
+    const pct = m.unit === 'pct';
+    if(u && !(pct ? ['%', 'pct', 'points', '% points'] : ['ugx', 'shillings', 'money']).includes(u)) return null;
+    if(pct) return v >= -100 && v <= 100 ? Math.round(v * 10) / 10 : null;
+    return v >= 0 ? Math.round(v) : null;
+  };
+  const aimValue = a ? fig(num(a.value), a.unit) : null;
+  if(aimValue != null) out.aimValue = aimValue;
+  const stopValue = when ? fig(sv, null) : null;
+  if(threshold || stopValue != null) out.stop = { ...(threshold ? { threshold } : {}),
+    ...(Number.isInteger(by) && by >= 1 && by <= span ? { byWeek: by } : {}),
+    ...(stopValue != null ? { value: stopValue, when } : {}) };
   const cost = num(p.cost);
   if(Number.isFinite(cost) && cost >= 0) out.cost = Math.round(cost);
   const dep = managerPlanText(p.depends_on, 120);
@@ -138866,8 +138917,8 @@ function mgrSimOfferFact(o, day){
 }
 
 /* ---- THE LEVERS ----------------------------------------------------
-   mgrSimLevers(books, { moves, orders, offers }) -> [lever], pure over
-   what it is handed. A lever:
+   mgrSimLevers(books, { moves, orders, offers, planPrice }) -> [lever],
+   pure over what it is handed (planPrice: mgrSimPlanPriceFact). A lever:
      { id, kind, dept, group: 'books' | 'assumption', label, short, def,
        opts: [{ id, label, hint, pips, basis, warn, say }],
        assume: { label, unit, value, lo, hi, min, max, basis } | null,
@@ -138907,7 +138958,7 @@ function mgrSimLevers(books, extra){
   add(mgrSimSeasonLever(b));
   add(mgrSimOfferLever(b, x.offers || []));
   add(mgrSimClearLever(b));
-  add(mgrSimPriceLever(b));
+  add(mgrSimPriceLever(b, x.planPrice));
   add(mgrSimDiscountLever(b));
   add(mgrSimTermsLever(b));
   add(mgrSimHireLever(b));
@@ -139142,11 +139193,43 @@ function mgrSimClearLever(b){
         stock: -Math.round(cost), dead: -Math.round(cost), clearIn: Math.round(raise), sales: Math.round(raise) };
     } };
 }
-function mgrSimPriceLever(b){
-  const p = b.price;
+/* THE PRICE TODAY'S PLAN NAMES (Q38): the first open price or policy
+   move that carries its planned price (body.price, whole shillings) on
+   a line. On the line the market reading already prices, that is all
+   the lever needs; on another line, that line is read the same way --
+   our wholesale price (ourPriceFor), its wholesale units and profit a
+   unit over 30 days (waSalesByKey), and the cheapest comparable
+   wholesale sighting above ours, if any (rivalMarketRows). A line the
+   books cannot price that way keeps the planned price off the lever,
+   and `why` says what was missing. */
+function mgrSimPlanPriceFact(open, books){
+  const m = (open || []).find(z=> z && z.body && (z.body.mkind === 'price' || z.body.mkind === 'policy')
+    && z.body.subject && z.body.subject.key != null && Math.round(Number(z.body.price)) > 0);
+  if(!m) return null;
+  const key = String(m.body.subject.key), price = Math.round(Number(m.body.price));
+  if(books && books.price && String(books.price.key) === key) return { key, price, line: null };
+  const parts = buyKeyParts(key);
+  if(!parts) return { key, price, line: null, why: 'its line is no longer in the catalogue' };
+  const name = productVariantLabel(parts.product, parts.variantIdx);
+  const ours = ourPriceFor(parts.productId, parts.variantIdx);
+  if(!(ours > 0)) return { key, price, line: null, why: name + ' has no wholesale price of ours to start from' };
+  const s = waSalesByKey(books.today).get(key);
+  const units = s ? Number(s.wholesaleUnits30) || 0 : 0;
+  if(!(units > 0) || !(s.units30 > 0)) return { key, price, line: null, why: 'no wholesale sale of ' + name + ' in 30 days' };
+  const riv = (rivalMarketRows(books.today) || []).filter(r=> r && r.key === key && r.comparable && r.side === 'wholesale' && r.theirs > 0)
+    .sort((a, c)=> a.theirs - c.theirs)[0];
+  const above = riv && riv.theirs > ours ? riv : null;
+  return { key, price, line: { key, line: name, rival: above ? above.shop : null, ours, theirs: above ? above.theirs : null,
+    side: 'wholesale', units, daysOld: above ? above.daysOld : null, unitProfit: s.profit30 / s.units30 } };
+}
+function mgrSimPriceLever(b, plan){
+  /* On the plan's own line when it names one the market reading does
+     not price; otherwise the line sold furthest under a rival. */
+  const p = plan && plan.line ? plan.line : b.price;
   if(!p) return null;
-  const steps = mgrSimPriceSteps(p.ours, p.theirs);
-  if(steps.length < 2) return null;
+  const mine = plan && (plan.line || (b.price && String(plan.key) === String(b.price.key))) ? plan.price : null;
+  const steps = p.theirs > p.ours ? mgrSimPriceSteps(p.ours, p.theirs) : [Math.round(Number(p.ours) || 0)];
+  if(steps.length < 2 && (mine == null || mine === steps[0])) return null;
   const u = p.units, m0 = p.unitProfit;
   const at = (price, v)=>{
     const f = 1 + v / 100;
@@ -139154,9 +139237,21 @@ function mgrSimPriceLever(b){
   };
   const seen = p.daysOld === 0 ? 'seen today' : 'seen ' + p.daysOld + ' day' + (p.daysOld === 1 ? '' : 's') + ' ago';
   const opts = steps.map((price, i)=> i === 0
-    ? { id: 'p0', label: mgrNum(price), price, hint: 'today\'s price · ' + mgrNum(p.theirs - p.ours) + ' under ' + p.rival + ' (' + seen + ')', say: p.line + ' at today\'s price' }
+    ? { id: 'p0', label: mgrNum(price), price, hint: 'today\'s price' + (p.rival ? ' · ' + mgrNum(p.theirs - p.ours) + ' under ' + p.rival + ' (' + seen + ')' : ''), say: p.line + ' at today\'s price' }
     : { id: 'p' + i, label: mgrNum(price), price, hint: mgrSimSigned(at(price, 0).profit) + ' a month at the same volume — ' + (i === steps.length - 1 ? 'level with ' + p.rival : mgrNum(p.theirs - price) + ' under ' + p.rival),
       pips: mgrPipsFromAge(p.daysOld), basis: 'from a rival price ' + (p.daysOld === 0 ? 'seen today' : p.daysOld + ' days old'), say: p.line + ' at ' + mgrNum(price) });
+  /* The plan's price is offered as itself -- marked on a step it
+     matches, else a choice of its own, every choice in price order. */
+  if(mine != null && mine !== steps[0]){
+    const hit = opts.find(o=> o.price === mine);
+    if(hit){ hit.plan = true; hit.hint = 'my plan · ' + hit.hint; hit.say = p.line + ' at ' + mgrNum(mine) + ', my plan'; }
+    else {
+      opts.push({ id: 'plan', label: mgrNum(mine), price: mine, plan: true,
+        hint: 'my plan · ' + mgrSimSigned(at(mine, 0).profit) + ' a month at the same volume' + (p.rival ? ' — ' + (mine >= p.theirs ? mgrNum(mine - p.theirs) + ' over ' : mgrNum(p.theirs - mine) + ' under ') + p.rival : ''),
+        basis: 'the price today’s plan names', say: p.line + ' at ' + mgrNum(mine) + ', my plan' });
+      opts.sort((x, y)=> x.price - y.price);
+    }
+  }
   return { id: 'price:' + p.key, kind: 'price', dept: 'sales', group: 'assumption', label: p.line + ' price', short: 'the ' + p.line + ' price',
     def: 'p0', subject: { key: p.key }, opts, line: p,
     assume: { ...MGR_SIM_ASSUME.price, basis: mgrNum(u) + ' sold in 30 days on the ' + p.side + ' side; how many would still sell at a new price is not on your books' },
@@ -139544,8 +139639,8 @@ function mgrSimHolds(shocks){
      reading (chased today); a payment the plan makes wait on a chase is
      paid after that customer pays, otherwise today; an order is placed
      with the buying plan's supplier; a clearance move clears its line's
-     stock at the price set, else at cost; a WhatsApp move posts. A price
-     move carries no price, so it moves nothing here.
+     stock at the price set, else at cost; a WhatsApp move posts; a price
+     or policy move that names its price sets the price lever to it.
    Cash first: keep cash -- bills after the payment they can wait on,
      nothing ordered, offers declined, dead stock cleared at cost, the
      shortest terms, no discounts, a post today.
@@ -139564,7 +139659,7 @@ function mgrSimPresets(levers, moves, all){
     if(l.kind === 'terms'){ cash[l.id] = l.opts[l.opts.length - 1].id; growth[l.id] = l.opts[1].id; }
     if(l.kind === 'discounts') cash[l.id] = 'none';
     if(l.kind === 'post'){ cash[l.id] = 'post'; growth[l.id] = 'post'; }
-    if(l.kind === 'price') growth[l.id] = 'p1';
+    if(l.kind === 'price' && has(l, 'p1')) growth[l.id] = 'p1';
     if(l.kind === 'hire') growth[l.id] = 'yes';
     if(l.kind === 'quote') growth[l.id] = 'train';
     if(l.kind === 'order'){
@@ -139592,6 +139687,13 @@ function mgrSimPresets(levers, moves, all){
         if(l && l.lineKeys && l.lineKeys.includes(String(s.key))) plan[l.id] = has(l, 'set') && l.setKeys.includes(String(s.key)) ? 'set' : has(l, 'cost') ? 'cost' : l.def;
       }
       if(body.door === 'whatsapp'){ const l = (levers || []).find(z=> z.kind === 'post'); if(l) plan[l.id] = 'post'; }
+      /* A price or policy move that names its price (Q38) sets the
+         price lever on its line to that price. */
+      if((body.mkind === 'price' || body.mkind === 'policy') && s.key != null && Math.round(Number(body.price)) > 0){
+        const l = (levers || []).find(z=> z.kind === 'price' && z.id === 'price:' + s.key);
+        const o = l ? l.opts.find(z=> z.price === Math.round(Number(body.price))) : null;
+        if(o && o.id !== l.def && !(l.id in plan)) plan[l.id] = o.id;
+      }
     });
   }
   return { today: {}, plan, cash, growth };
@@ -139801,8 +139903,11 @@ function mgrSimModel(moves, offers, today){
     try { return mgrSimOfferFact(o, books.today); }
     catch(e){ console.warn('Manager simulator: an offer could not be priced —', e && e.message); return null; }
   }).filter(Boolean);
-  const levers = mgrSimLevers(books, { moves: all, open, orders, offers: offerFacts });
-  return { books, levers, moves: all };
+  let planPrice = null;
+  try { planPrice = mgrSimPlanPriceFact(open, books); }
+  catch(e){ console.warn('Manager simulator: the plan\'s price could not be put on the price lever —', e && e.message); }
+  const levers = mgrSimLevers(books, { moves: all, open, orders, offers: offerFacts, planPrice });
+  return { books, levers, moves: all, planPrice };
 }
 /* mgrCashWalk, kept for one drawing: the same adjusted walk is asked for
    by a scenario and by each of its stress tests. */
@@ -142303,7 +142408,12 @@ function mgrPlayRunningHTML(x, model){
   } else if(r) reads = `<p class="mgr-pl-sub">${esc(r.why)}</p>`;
   const pips = r && r.measured ? `<span class="mgr-pl-pips" role="img" aria-label="${r.k} of ${r.n} weeks better">${[1, 2, 3, 4, 5].map(i=> `<i class="mgr-pl-pip${i <= r.pips ? ' mgr-pl-on' : ''}"></i>`).join('')}</span> <span class="mgr-pl-kn">${r.k} of ${r.n} wk</span>` : 'not measured';
   const st = x.stop;
-  const stop = p.stop && p.stop.threshold ? `${esc(mgrPlayText(p.stop.threshold))}${p.stop.byWeek ? ` by week ${p.stop.byWeek}` : ''}${
+  /* The rule in the meeting's words; a rule given only as a figure
+     (Q38) is said from the figure -- "below 8.0%" -- never left blank. */
+  const said = p.stop && p.stop.threshold ? mgrPlayText(p.stop.threshold)
+    : p.stop && p.stop.value != null && MGR_PLAY_STOP_SAY[p.stop.when]
+      ? MGR_PLAY_STOP_SAY[p.stop.when] + ' ' + mgrPlayFig(p.stop.value, (MANAGER_PROBLEM_METRICS[p.treats] || {}).unit) : '';
+  const stop = said ? `${esc(said)}${p.stop.byWeek ? ` by week ${p.stop.byWeek}` : ''}${
     st && st.value != null ? ` · read ${esc(mgrPlayFig(st.value, r && r.unit))}` : ''}` : 'no stop rule written';
   /* The Manager's note on the card: a stop rule met first, then a
      replacement it would make, then what is due, and what else is
@@ -144608,9 +144718,24 @@ function mgrAskDelegate(b, place){
   if(!name) return null;
   const first = name.split(/\s+/)[0];
   const phone = rec && String(rec.phone || '').replace(/[^0-9]/g, '').length >= 9 ? String(rec.phone) : null;
-  return { name, first, staffId: st ? st.id : null, agentId: ag ? ag.id : null, phone,
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(String(d.day || '')) ? String(d.day) : null;
+  return { name, first, staffId: st ? st.id : null, agentId: ag ? ag.id : null, phone, day,
     why: !rec ? first + ' is not on your staff list, so there is no number to send to'
       : !phone ? 'no phone number for ' + first + ' on file' : null };
+}
+/* THE DAY THEY GO (Q38), said against today: "today", a weekday within
+   the week ahead ("Thu" / "Thursday"), else the date ("9 Nov"). A day
+   already gone says nothing -- the card reads as it did without one. */
+function mgrAskDayWord(iso, today){
+  const on = String(iso || '').slice(0, 10), now = String(today || '').slice(0, 10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(on) || !/^\d{4}-\d{2}-\d{2}$/.test(now) || on < now) return null;
+  if(on === now) return { short: 'today', long: 'today', weekday: false };
+  const ahead = Math.round((Date.parse(on + 'T00:00:00Z') - Date.parse(now + 'T00:00:00Z')) / 864e5);
+  const d = new Date(on + 'T00:00:00Z');
+  if(ahead <= 6) return { short: d.toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' }),
+    long: d.toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' }), weekday: true };
+  const said = fmtDayMonth(on);
+  return { short: said, long: said, weekday: false };
 }
 /* What a person sent to find out should bring back, said in the
    message: the figure for a price, the days for a supplier's terms, one
@@ -144961,7 +145086,12 @@ function mgrAskRoute(items, homeOf){
   const list = [...stops.values()];
   const near = list.filter(s=> s.km != null).sort((a, c)=> a.km - c.km);
   const rest = list.filter(s=> s.km == null);
+  /* The day of the route: the one day every question on it was given
+     for (Q38), else none -- a route is never said to be one day when
+     its questions name two. */
+  const days = pick ? [...new Set(mine.map(it=> (it.delegate && it.delegate.day) || ''))] : [];
   return { person: pick ? pick.who : null, questions: mine.length, visits: visits.length,
+    day: days.length === 1 && days[0] ? days[0] : null,
     from: near.length ? (homeNow() || {}).from || null : null,
     stops: [...near, ...rest].map((s, i)=> ({ ...s, n: i + 1 })) };
 }
@@ -145178,7 +145308,8 @@ function mgrAskSendHTML(it){
   const d = it.delegate;
   if(!d || it.done) return '';
   if(!d.phone) return `<button type="button" class="btn btn-ghost ow-sm mgr-k-send" disabled title="${esc(d.why || '')}">${esc(d.staffId == null && d.agentId == null ? d.first + ' not on your staff list' : 'No number for ' + d.first)}</button>`;
-  return `<a class="btn btn-ghost ow-sm mgr-k-send" href="${esc(waComposeUrl(d.phone, mgrAskMessage(it)))}" target="_blank" rel="noopener" data-send="${esc(it.key)}" title="${esc('Opens WhatsApp to ' + d.name + ' with the question written — you send it')}">Send to ${esc(d.first)}</a>`;
+  const on = mgrAskDayWord(d.day, it.today);
+  return `<a class="btn btn-ghost ow-sm mgr-k-send" href="${esc(waComposeUrl(d.phone, mgrAskMessage(it)))}" target="_blank" rel="noopener" data-send="${esc(it.key)}" title="${esc('Opens WhatsApp to ' + d.name + ' with the question written — you send it' + (on ? '; the meeting gave it to ' + d.first + ' for ' + on.long : ''))}">Send to ${esc(d.first)}${on ? ` · ${esc(on.short)}` : ''}</a>`;
 }
 function mgrAskRemindHTML(it, today){
   if(!it.remind || it.done) return '';
@@ -145233,15 +145364,18 @@ function mgrAskCardHTML(it){
 }
 /* The route as the WhatsApp message the owner sends: each stop in
    order, and at each what to ask and what to bring back. */
-function mgrAskRouteMessage(r){
-  return 'Route for today — ' + r.stops.length + ' stop' + (r.stops.length === 1 ? '' : 's') + ':\n\n'
+function mgrAskRouteMessage(r, today){
+  const on = mgrAskDayWord(r.day, today);
+  return 'Route for ' + (on ? on.long : 'today') + ' — ' + r.stops.length + ' stop' + (r.stops.length === 1 ? '' : 's') + ':\n\n'
     + r.stops.map(s=> s.n + '. ' + s.name + (s.location ? ' (' + s.location + ')' : '') + '\n'
       + s.items.map(it=> '   • ' + it.question + ' Bring back ' + mgrAskBringBack(it) + '.').join('\n')).join('\n\n');
 }
 function mgrAskRouteHTML(model){
   const r = model.route;
   const p = r.person;
-  const title = p ? mgrPossessive(p.first) + ' route' : 'Visits';
+  const on = p ? mgrAskDayWord(r.day, model.today) : null;
+  const title = !p ? 'Visits' : on && on.weekday ? mgrPossessive(p.first) + ' ' + on.long + ' route'
+    : mgrPossessive(p.first) + ' route' + (on ? ' · ' + on.short : '');
   const stops = r.stops.length ? `<div class="mgr-k-stops">${r.stops.map(s=> `<div class="mgr-k-stop"><span class="mgr-k-sr"><b>${s.n}</b></span><span class="mgr-k-scn">
       <b>${esc(s.name)}${s.location && s.items[0].place.kind !== 'rival' ? `<small> · ${esc(s.location)}</small>` : ''}</b>
       ${s.items.map(it=> `<small>${esc(it.question)}</small>`).join('')}
@@ -145249,7 +145383,7 @@ function mgrAskRouteHTML(model){
     : '<div class="ow-empty mgr-k-none0">No question needs a visit right now.</div>';
   let act = '';
   if(p && r.stops.length){
-    const msg = mgrAskRouteMessage(r);
+    const msg = mgrAskRouteMessage(r, model.today);
     act = p.phone
       ? `<div class="mgr-k-ra"><a class="btn btn-accent ow-sm mgr-k-go" href="${esc(waComposeUrl(p.phone, msg))}" target="_blank" rel="noopener">Draft the route for ${esc(p.first)}</a><span>opens WhatsApp to ${esc(p.first)}; you record what ${esc(p.first)} finds on each card</span></div>`
       : `<div class="mgr-k-ra"><button type="button" class="btn ow-sm" disabled title="${esc(p.why || '')}">Draft the route for ${esc(p.first)}</button><span>${esc(p.why || '')}</span></div>`;
@@ -145285,7 +145419,7 @@ function mgrAsksHTML(model){
     : '<div class="ow-pan"><div class="ow-empty">Nothing to ask you right now. When the books cannot answer something a meeting needs, the question waits here for you.</div></div>';
   const r = model.route;
   /* On a phone the one primary action rides at the thumb, above the tab bar. */
-  const dock = r.person && r.person.phone && r.stops.length ? `<div class="mgr-k-dock"><a class="btn btn-accent mgr-k-go" href="${esc(waComposeUrl(r.person.phone, mgrAskRouteMessage(r)))}" target="_blank" rel="noopener">Draft the route for ${esc(r.person.first)}</a></div>` : '';
+  const dock = r.person && r.person.phone && r.stops.length ? `<div class="mgr-k-dock"><a class="btn btn-accent mgr-k-go" href="${esc(waComposeUrl(r.person.phone, mgrAskRouteMessage(r, model.today)))}" target="_blank" rel="noopener">Draft the route for ${esc(r.person.first)}</a></div>` : '';
   return `<div class="mgr-k" data-terms="${esc(model.termsKey)}">
     ${mgrAskBandHTML(model)}
     ${where}
