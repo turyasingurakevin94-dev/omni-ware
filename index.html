@@ -129686,12 +129686,24 @@ function managerMeetingFields(plan, moveCount){
    fromQuestion     the id of the answered question that shaped it, so
                     "this answer changed the advice" is a count.
 
+   THE TWO POINTERS ARE CHECKED, NEVER TRUSTED. A target id and the
+   question are model output like everything else in the block, and an
+   invented one would draw a target nobody took on, or count an answer
+   nobody gave as one that changed the advice. `refs` is what the
+   journal holds for them to land on (managerPlanRefs): a target id is
+   kept only when it is a target live or awaiting approval, and the
+   question -- written as its asked words, the only handle the meeting
+   is ever shown -- only when it is word for word an answered one, and
+   then stored as THAT row's id. With no refs, as for a plan held only
+   in this session, neither pointer is kept: nothing could vouch for it.
+
    Every key is ABSENT when the meeting gave nothing usable, so an old
    row and a new one read the same way and the screen falls back to
    what it derives. The order of the plan is untouched: confidence is
    shown beside a move, never used to re-rank it. */
-function managerMoveFields(m){
+function managerMoveFields(m, refs){
   const x = (m && typeof m === 'object') ? m : {};
+  const r = (refs && typeof refs === 'object') ? refs : {};
   const out = {};
   const num = (v)=> (typeof v === 'number' || (typeof v === 'string' && v.trim() !== '')) ? Number(v) : NaN;
   const dept = String(x.dept || '');
@@ -129708,16 +129720,61 @@ function managerMoveFields(m){
   if(mind) out.mind = mind;
   const t = x.target;
   const tid = num(t);
+  const live = (Number.isInteger(tid) && tid > 0 && Array.isArray(r.targets))
+    ? r.targets.find(id=> String(id) === String(tid)) : undefined;
   const target = (typeof t === 'string' && Object.prototype.hasOwnProperty.call(MANAGER_METRICS, t)) ? { metric: t }
-    : (Number.isInteger(tid) && tid > 0 ? { id: tid } : null);
+    : (live != null ? { id: live } : null);
   if(target){
     out.target = target;
     const e = num(x.effect);
     if(Number.isFinite(e) && e !== 0) out.effect = Math.round(e * 100) / 100;
   }
-  const q = num(x.from_question);
-  if(Number.isInteger(q) && q > 0) out.fromQuestion = q;
+  const words = (v)=> String(v).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const asked = typeof x.from_question === 'string' ? words(x.from_question) : '';
+  const shaped = (asked.length > 3 && Array.isArray(r.answered))
+    ? r.answered.find(q=> q && q.id != null && words(q.question || '') === asked) : null;
+  if(shaped) out.fromQuestion = shaped.id;
   return out;
+}
+
+/* WHAT A MOVE MAY POINT AT IN THE JOURNAL, read for managerMoveFields.
+
+   answered  the answered questions the meeting could have been shown
+             (manager_history reads the latest ones), as { id, question }.
+   targets   the ids, among those the plan names, of targets that are
+             live or awaiting approval -- what the scoreboard shows.
+
+   Read only when some move points at all, so a plan without pointers
+   costs nothing. A read that fails keeps NOTHING for that pointer, said
+   in the console: an unchecked id is exactly what this exists to stop,
+   and losing a pointer never loses the meeting it is part of. */
+async function managerPlanRefs(moves){
+  const list = Array.isArray(moves) ? moves : [];
+  const refs = { answered: [], targets: [] };
+  const wantsQ = list.some(m=> m && typeof m.from_question === 'string' && m.from_question.trim());
+  const tids = [...new Set(list.map(m=> m && m.target)
+    .filter(v=> typeof v === 'number' || (typeof v === 'string' && /^\s*\d+\s*$/.test(v)))
+    .map(Number).filter(n=> Number.isInteger(n) && n > 0))];
+  try {
+    if(wantsQ){
+      const r = await sb.from('manager_notes').select('id, body, status')
+        .eq('shop_id', currentShopId).eq('kind', 'question').eq('status', 'answered')
+        .order('id', { ascending: false }).limit(40);
+      if(r.error) console.warn('Manager: answered questions not read, so no move is tied to one:', r.error.message);
+      else refs.answered = (r.data || []).filter(q=> q && (q.body || {}).answer)
+        .map(q=> ({ id: q.id, question: String((q.body || {}).question || '') }));
+    }
+    if(tids.length){
+      const r = await sb.from('manager_notes').select('id, status')
+        .eq('shop_id', currentShopId).eq('kind', 'target').in('id', tids);
+      if(r.error) console.warn('Manager: targets not read, so no move is tied to one by id:', r.error.message);
+      else refs.targets = (r.data || []).filter(x=> x && (x.status === 'open' || x.status === 'proposed')).map(x=> x.id);
+    }
+  } catch(e){
+    console.warn('Manager: the journal could not be read to check what the moves point at:', e && e.message);
+    return { answered: [], targets: [] };
+  }
+  return refs;
 }
 
 /* WHAT HANGS ON A QUESTION, whitelisted.
@@ -129840,6 +129897,9 @@ async function managerSaveMeeting(plan){
      meeting row is written, because its chains point at moves by their
      position and a fix may only point at a move that is kept. */
   const kept = (plan.moves||[]).slice(0, 8);
+  /* What the journal holds for a move's target id and answered question
+     to land on, read before anything is written (managerPlanRefs). */
+  const refs = await managerPlanRefs(kept);
   const ins = await sb.from('manager_notes').insert({
     shop_id: currentShopId, kind: 'meeting', date: todayISO(),
     body: { keyline: String(plan.keyline||'').slice(0, 300),
@@ -129922,8 +129982,9 @@ async function managerSaveMeeting(plan){
       /* Its department and the others it moves, how sure the Manager
          is, the evidence with its figures, what would change its mind,
          the target it serves and the answer that shaped it -- each
-         whitelisted and absent when not given (managerMoveFields). */
-      ...managerMoveFields(m),
+         whitelisted and absent when not given, the two pointers only
+         when the journal holds what they point at (managerMoveFields). */
+      ...managerMoveFields(m, refs),
       /* Only ids, only known keys -- the block is model output and is
          stored as data, never trusted as structure. */
       subject: managerResolvedSubject(m.subject) },
@@ -129975,8 +130036,7 @@ async function managerSaveMeeting(plan){
         weeks: (Number(x.weeks) >= 1 && Number(x.weeks) <= 13) ? Math.round(Number(x.weeks)) : null,
         /* Said as a test: what it should move and by how much, the
            reading that would stop it, what it costs and what it waits
-           on (managerPlayFields). A proven recipe is saved like any
-           other proposal -- the owner still taps it. */
+           on (managerPlayFields). */
         ...managerPlayFields(x),
         source: 'manager' },
       status: 'proposed' }));

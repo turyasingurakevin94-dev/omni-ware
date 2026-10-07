@@ -47,7 +47,7 @@ const review = block('MANAGER_REVIEW');
 const common = block('MANAGER_COMMON');
 
 const FIELDS = [
-  ...['managerPips', 'managerPlanText', 'managerMeetingFields', 'managerMoveFields', 'managerAskFields', 'managerPlayFields']
+  ...['managerPips', 'managerPlanText', 'managerMeetingFields', 'managerMoveFields', 'managerPlanRefs', 'managerAskFields', 'managerPlayFields']
     .map((n) => extractFunction(src, n, 'index.html')),
   extractDeclaration(src, 'MANAGER_DEPTS', 'index.html'),
   extractDeclaration(src, 'MANAGER_ASK_PLACES', 'index.html'),
@@ -70,8 +70,10 @@ const DATA = () => ({
 {
   t.check(/Compose the day: pick AT MOST EIGHT moves/.test(meeting),
     'EIGHT moves (approval Q29) — one decision a department can have, never a quota');
-  t.check(/sales \(sales kept or won, never ranked against cash or profit\)/.test(meeting),
-    'the third kind of money is named in the same breath as the other two, and never ranked against them');
+  t.check(/sales \(what a named customer or line bought in the last 30 days, from a tool, that this move keeps or wins back/.test(meeting),
+    'the third kind of money is anchored in the books like the other two — what a named customer or line already bought');
+  t.check(/never a guess at new sales, and its figure is never compared with cash or profit\)/.test(meeting),
+    'NEVER FORECAST at the sales basis: never a guess at new sales — and its figure is never compared with cash or profit');
 
   t.check(/SIX DEPARTMENTS\. Advise across finance \(cash, debt, creditors, loans\), sales \(invoices, quotes, margin, customers\), procurement \(bills, buying, suppliers\), store \(stock, dead stock, counts\), people \(staff, payroll, picks\) and marketing \(WhatsApp posts, broadcasts, repeat customers\)/.test(meeting),
     'the six departments, each with what it holds — the mapping the owner approved (Q2)');
@@ -90,10 +92,10 @@ const DATA = () => ({
     'evidence carries figures a tool returned, not adjectives');
   t.check(/mind, what would change your mind, as an event the books would show/.test(meeting),
     'what would change its mind is an event the books can show');
-  t.check(/target, the metric or scoreboard id it serves, and effect, its size in that unit by arithmetic on the books/.test(meeting),
-    'a move links to the target it serves, sized by arithmetic — never a forecast');
-  t.check(/from_question, the id of the answered question that shaped it/.test(meeting),
-    'and to the answer that shaped it');
+  t.check(/target, the metric or the scoreboard id it serves, and effect, its size in that unit by arithmetic on the books/.test(meeting),
+    'a move links to the target it serves — an id the scoreboard gave it — sized by arithmetic, never a forecast');
+  t.check(/from_question, the answered question that shaped it, its asked words copied exactly from answered_questions \\u2014 never an id, never one no tool returned/.test(meeting),
+    'and to the answer that shaped it, by the words manager_history showed it — the only handle it is ever given');
 
   t.check(/MY READING, NEVER A CAUSE\. Draw AT MOST THREE chains, none when the books link nothing/.test(meeting),
     'chains are the meeting’s READING, at most three, and none when nothing links');
@@ -119,12 +121,29 @@ const DATA = () => ({
     'a play is a hypothesis to test, never a promise — the never-forecast law at the play');
   t.check(/stop \(threshold and by_week, the reading that ends it\); cost in shillings; depends_on, the play or move it waits for/.test(meeting),
     'with the reading that would stop it, its cost and what it waits for');
-  t.check(/A play the OWNER judged worked twice or more is a proven recipe and may be proposed again as their verdict/.test(meeting),
-    'a proven recipe is the OWNER’s verdict, twice — the only play that may come back (Q14)');
-  t.check(/never one they set aside, never with a claim that it caused anything/.test(meeting),
-    'never one they set aside, and still no credit claimed');
+  t.check(/the play or move it waits for\. Never say a play caused what followed it\./.test(meeting),
+    'NO CREDIT: a play is never said to have caused what followed it');
   t.check(/NEVER propose a play the shop has tried and dropped/.test(meeting),
-    'and the rule against re-proposing a dropped play still stands beside it');
+    'and the rule against re-proposing a dropped play stands');
+  /* A PLAY COMES BACK ONLY THROUGH A FIELD THAT COUNTS IT (Q14).
+     The owner approved letting a play THEY judged worked twice or more
+     be proposed again. But the playbook folds a play marked as worked
+     into the dropped list, manager_history hands that list over as
+     tried_and_dropped and do_not_repeat.plays_dropped -- "never
+     re-propose" -- and nothing counts how often the owner judged one
+     worked. A sentence granting the exception would contradict the
+     data it depends on, and the model could not tell a proven recipe
+     from a play the owner set aside. So the rulebook grants it only
+     once the app hands the meeting the count it needs: a field naming
+     the proven recipes, and worked plays no longer filed as dropped. */
+  {
+    const both = meeting + common;
+    const grants = /proven recipe|proposed again/i.test(both);
+    const book = extractFunction(src, 'managerPlaybook', 'index.html');
+    const foldsWorked = /x\.status === 'dropped' \|\| x\.status === 'done'/.test(book);
+    t.check(!grants || (/proven_recipes/.test(both) && src.includes('proven_recipes') && !foldsWorked),
+      'a proven recipe may come back only through a counted field the app produces, never against a list that says never re-propose');
+  }
 
   t.check(/CORRECT YOURSELF OUT LOUD\. Where the week shows one of YOUR OWN earlier claims was wrong/.test(review),
     'the review corrects the Manager’s own earlier claims');
@@ -176,18 +195,21 @@ const PLAN = {
       dept: 'finance', touches: ['procurement', 'store', 'finance', 'procurement', 'hr'], confidence: 5,
       evidence: ['Paid within 3 days of 4 of 4 chases', 'Owes 2,400,000, oldest 41 days', 'a hunch with nothing behind it',
         'Cement cover 11 days', 'a fourth with 4 in it'],
-      mind: 'If Kato has not paid by Thursday evening', target: 'collections', effect: 2400000, from_question: 12 },
+      mind: 'If Kato has not paid by Thursday evening', target: 'collections', effect: 2400000,
+      from_question: '  did Kato say when he’d pay ' },
     { title: 'Pay Roofings before Saturday', why: 'w', worth: 1600000, worth_basis: 'sales', lever: 'cost',
       door: 'creditors', kind: 'settle', subject: { supplierId: 'S1' }, after: 1,
-      dept: 'procurement', touches: ['store', 'sales'], confidence: 9, target: 31, effect: '1,600,000', from_question: 'twelve' },
+      dept: 'procurement', touches: ['store', 'sales'], confidence: 9, target: 31, effect: '1,600,000', from_question: 12 },
     { title: 'Price G28 at 46,500', worth: 525000, worth_basis: 'profit_30d', kind: 'price', dept: 'sales',
       confidence: 3.6, evidence: 'not a list', mind: { not: 'words' }, target: 'unicorns', effect: 5 },
     { title: 'Clear the dead stock', kind: 'other', dept: 'store', confidence: '4', target: 'constructor' },
-    { title: 'Hire a second Saturday loader', kind: 'other', dept: 'people', confidence: 0 },
-    { title: 'Post the rains price list', kind: 'other', dept: 'marketing', confidence: true, worth_basis: 'sales' },
-    { title: 'Teach Joan to quote', kind: 'other', dept: 'hr' },
-    { title: 'Count the paint shelf', kind: 'other', dept: 'store', touches: 'sales' },
-    { title: 'A ninth move', kind: 'other', dept: 'finance' },
+    { title: 'Hire a second Saturday loader', kind: 'other', dept: 'people', confidence: 0,
+      target: 44, effect: 5, from_question: 'Would Peter work Saturday overtime?' },
+    { title: 'Post the rains price list', kind: 'other', dept: 'marketing', confidence: true, worth_basis: 'sales',
+      target: '45', from_question: 'Was the answer left blank?' },
+    { title: 'Teach Joan to quote', kind: 'other', dept: 'hr', target: ' 46 ', effect: 1, from_question: 'An answer nobody gave' },
+    { title: 'Count the paint shelf', kind: 'other', dept: 'store', touches: 'sales', target: 31.5, from_question: 'Did' },
+    { title: 'A ninth move', kind: 'other', dept: 'finance', target: 47 },
   ],
   chains: [
     { title: 'Credit given without terms', dept: 'sales', links: [
@@ -231,8 +253,38 @@ const PLAN = {
   rejected: 'r', keyline: 'k',
 };
 
+/* What the journal holds for a move to point at. Every row is the
+   shop's own; the stub filters by the columns the saver asks about, so
+   a pointer survives only if the saver asked for the right thing. */
+const JOURNAL = [
+  { id: 12, kind: 'question', status: 'answered', body: { question: 'Did Kato say when he’d pay?', answer: 'Friday, he said' } },
+  { id: 13, kind: 'question', status: 'open', body: { question: 'Would Peter work Saturday overtime?' } },
+  { id: 14, kind: 'question', status: 'answered', body: { question: 'Was the answer left blank?' } },
+  { id: 31, kind: 'target', status: 'open', body: { metric: 'collections' } },
+  { id: 45, kind: 'target', status: 'declined', body: { metric: 'sales' } },
+  { id: 46, kind: 'target', status: 'proposed', body: { metric: 'gross_profit' } },
+  { id: 47, kind: 'target', status: 'open', body: { metric: 'sales' } },
+];
+const journalDb = (inserted, journal, reads, fail) => ({ from: () => {
+  const f = { eq: {}, in: null };
+  const rows = () => (journal || []).filter((r) => Object.keys(f.eq).every((k) => k === 'shop_id' || String(r[k]) === String(f.eq[k]))
+    && (!f.in || f.in.vals.map(String).includes(String(r[f.in.col]))));
+  const answer = () => { reads.push(JSON.parse(JSON.stringify(f)));
+    return Promise.resolve(fail ? { data: null, error: { message: 'offline' } } : { data: rows(), error: null }); };
+  const o = {
+    insert: (row) => { inserted.push(row); return {
+      select: () => ({ single: () => Promise.resolve({ data: { id: 21 }, error: null }) }) }; },
+    select: () => o, order: () => o,
+    eq: (c, v) => { f.eq[c] = v; return o; },
+    in: (c, vals) => { f.in = { col: c, vals }; return o; },
+    limit: () => answer(),
+    then: (res, rej) => answer().then(res, rej),
+  };
+  return o;
+} });
+
 const extract = compileScope([extractFunction(src, 'apExtractPlan', 'index.html')], {}, ['apExtractPlan']).apExtractPlan;
-const saver = (inserted, data) => compileScope([
+const saver = (inserted, data, reads = [], fail = false) => compileScope([
   extractFunction(src, 'managerSaveMeeting', 'index.html'),
   ...FIELDS,
   extractDeclaration(src, 'MANAGER_DOORS', 'index.html'),
@@ -248,9 +300,8 @@ const saver = (inserted, data) => compileScope([
 ], {
   managerNotesTable: true, currentShopId: 'shop-1', todayISO: () => TODAY, data,
   apRound: (n) => Math.round(Number(n) || 0), toast: () => {}, setBuyHold: () => true,
-  sb: { from: () => ({ insert: (row) => { inserted.push(row); return {
-    select: () => ({ single: () => Promise.resolve({ data: { id: 21 }, error: null }) }) }; } }) },
-  console, Promise, JSON, Math, Number, String, Array, Object, Set,
+  sb: journalDb(inserted, JOURNAL, reads, fail),
+  console: { warn: () => {}, log: console.log, error: console.error }, Promise, JSON, Math, Number, String, Array, Object, Set,
 }, ['managerSaveMeeting']).managerSaveMeeting;
 const rowsOf = (inserted, kind) => {
   const single = inserted.find((r) => !Array.isArray(r) && r.kind === kind);
@@ -264,8 +315,23 @@ t.check(parsed.plan && Array.isArray(parsed.plan.moves) && parsed.plan.moves.len
 t.check(!/\[plan:/.test(parsed.clean) && !/chains/.test(parsed.clean), 'and none of it reaches the screen as text');
 
 const inserted = [];
-const meetingId = await saver(inserted, DATA())(parsed.plan);
+const reads = [];
+const meetingId = await saver(inserted, DATA(), reads)(parsed.plan);
 eq(meetingId, 21, 'the meeting is saved');
+/* The journal is read for what the pointers may land on -- the
+   shop's own answered questions, and only the target ids the KEPT
+   moves name -- before anything is written. */
+{
+  const q = reads.find((r) => r.eq.kind === 'question');
+  const tg = reads.find((r) => r.eq.kind === 'target');
+  t.check(!!q && q.eq.status === 'answered' && q.eq.shop_id === 'shop-1',
+    'the answered questions are read, this shop’s only');
+  t.check(!!tg && tg.eq.shop_id === 'shop-1' && tg.in && tg.in.col === 'id',
+    'and the targets the moves name, by id, this shop’s only');
+  same(tg.in.vals.slice().sort((a, b) => a - b), [31, 44, 45, 46],
+    'only the ids the eight kept moves name — the ninth move’s target is never looked up');
+  eq(reads.length, 2, 'two reads, no more');
+}
 
 /* -- the meeting row -- */
 {
@@ -306,13 +372,13 @@ const moves = rowsOf(inserted, 'move').map((r) => r.body);
   eq(m0.mind, 'If Kato has not paid by Thursday evening', 'what would change its mind');
   same(m0.target, { metric: 'collections' }, 'the target metric it serves');
   eq(m0.effect, 2400000, 'and its size in that target’s unit');
-  eq(m0.fromQuestion, 12, 'and the answer that shaped it');
+  eq(m0.fromQuestion, 12, 'and the answer that shaped it — its asked words matched to the answered row, stored as that row’s id');
   eq(m0.worthBasis, 'cash_freed', 'the existing whitelist still runs');
   eq(m1.worthBasis, 'sales', 'SALES KEPT OR WON is a basis now — labelled as itself, never ranked against cash or profit');
   eq(m1.confidence, undefined, 'a confidence of 9 is refused');
-  same(m1.target, { id: 31 }, 'a target named by its scoreboard id');
+  same(m1.target, { id: 31 }, 'a target named by its scoreboard id, live in the journal');
   eq(m1.effect, undefined, 'an effect written as words-with-commas is not a number');
-  eq(m1.fromQuestion, undefined, 'a question id written in words is not an id');
+  eq(m1.fromQuestion, undefined, 'a bare question id is never trusted — the meeting is shown none, so one is invented');
   eq(m1.after, 0, 'and `after` still resolves inside the eight');
   eq(m2.confidence, 4, 'a half rounds');
   eq(m2.evidence, undefined, 'evidence that is not a list is nothing');
@@ -322,9 +388,19 @@ const moves = rowsOf(inserted, 'move').map((r) => r.body);
   eq(m3.confidence, 4, 'a confidence written as a string of a whole number is read');
   eq(m3.target, undefined, 'and an inherited property name is not a metric');
   eq(m4.confidence, undefined, 'zero is off the scale');
+  eq(m4.target, undefined, 'A TARGET THE BOOKS DO NOT HOLD IS NO TARGET: id 44 is in no journal');
+  eq(m4.effect, undefined, 'and its effect goes with it');
+  eq(m4.fromQuestion, undefined, 'a question still open was answered by nobody — it shaped nothing');
   eq(m5.confidence, undefined, 'and so is true');
+  eq(m5.target, undefined, 'a target the owner declined is served by nothing');
+  eq(m5.fromQuestion, undefined, 'a question marked answered with no answer in it shaped nothing');
   eq(m6.dept, undefined, 'a department outside the six is nothing');
+  same(m6.target, { id: 46 }, 'a target awaiting approval is a real one to serve, its id written as a string read as the id');
+  eq(m6.effect, 1, 'with its effect');
+  eq(m6.fromQuestion, undefined, 'and words no answered question carries point at nothing');
   eq(m7.touches, undefined, 'touches that are not a list are nothing');
+  eq(m7.target, undefined, 'an id with a fraction is no id');
+  eq(m7.fromQuestion, undefined, 'and three letters match nothing, however many questions begin with them');
   /* The plan's own order, untouched: rows go in as one insert in the
      order the meeting wrote them, whatever their confidence. */
   same(moves.map((m) => m.title).slice(0, 3), ['Chase Kato for 2,400,000', 'Pay Roofings before Saturday', 'Price G28 at 46,500'],
@@ -409,7 +485,8 @@ const moves = rowsOf(inserted, 'move').map((r) => r.body);
 /* ---------- 3. a plan with none of it saves what it always did ------- */
 {
   const old = [];
-  await saver(old, DATA())({ objective: { name: 'margin', why: 'w' }, keyline: 'k', rejected: 'r',
+  const oldReads = [];
+  await saver(old, DATA(), oldReads)({ objective: { name: 'margin', why: 'w' }, keyline: 'k', rejected: 'r',
     moves: [{ title: 'Chase', why: 'w', worth: 1, worth_basis: 'cash_freed', lever: 'collect', door: 'chase', kind: 'chase', subject: { customerId: 7 } }],
     asks: [{ q: 'Is Mulongo still trading?', choices: ['Yes', 'No'] }],
     plays: [{ name: 'Charge for cutting', treats: 'margin', how: 'h', sized: 's', watch: 'w', weeks: 4 }] });
@@ -420,6 +497,47 @@ const moves = rowsOf(inserted, 'move').map((r) => r.body);
     'and so does a move — absent, never null, so the screen falls back to what it derives');
   same(Object.keys(rowsOf(old, 'question')[0].body).sort(), ['choices', 'question'], 'and a question');
   same(Object.keys(rowsOf(old, 'play')[0].body).sort(), ['how', 'name', 'sized', 'source', 'treats', 'watch', 'weeks'], 'and a play');
+  eq(oldReads.length, 0, 'and a plan whose moves point at nothing reads nothing before it is written');
+}
+
+/* ---------- 3b. a journal that cannot be read vouches for nothing ---- */
+{
+  const ins = [];
+  const failed = [];
+  const id = await saver(ins, DATA(), failed, true)({ keyline: 'k', moves: [
+    { title: 'Chase Kato', target: 31, effect: 9, from_question: 'Did Kato say when he’d pay?', dept: 'finance' },
+    { title: 'Lift collections', target: 'collections', effect: 7 }] });
+  eq(id, 21, 'the meeting is still saved when the journal cannot be read');
+  const [a, b] = rowsOf(ins, 'move').map((r) => r.body);
+  eq(a.target, undefined, 'but an id nothing could check is not kept');
+  eq(a.effect, undefined, 'nor its effect');
+  eq(a.fromQuestion, undefined, 'nor the answer it named');
+  eq(a.dept, 'finance', 'and everything that needs no checking is kept as before');
+  same([b.target, b.effect], [{ metric: 'collections' }, 7], 'a metric target needs no journal, so it stands');
+  eq(failed.length, 2, 'both readings were tried');
+
+  /* A read that THROWS rather than answering an error is the same
+     answer, and must never take the meeting down with it. */
+  const thrown = [];
+  const save = compileScope([
+    extractFunction(src, 'managerSaveMeeting', 'index.html'), ...FIELDS,
+    extractDeclaration(src, 'MANAGER_DOORS', 'index.html'), extractDeclaration(src, 'MANAGER_MOVE_KINDS', 'index.html'),
+    extractFunction(src, 'managerResolvedSubject', 'index.html'), extractDeclaration(src, 'MANAGER_WORTH_BASES', 'index.html'),
+    extractDeclaration(src, 'MANAGER_LEVERS', 'index.html'), extractDeclaration(src, 'MANAGER_OBJECTIVES', 'index.html'),
+    extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'), extractFunction(src, 'buyKeyParts', 'index.html'),
+    extractFunction(src, 'stockKey', 'index.html'),
+  ], {
+    managerNotesTable: true, currentShopId: 'shop-1', todayISO: () => TODAY, data: DATA(),
+    apRound: (n) => Math.round(Number(n) || 0), toast: () => {}, setBuyHold: () => true,
+    sb: { from: () => ({ insert: (row) => { thrown.push(row); return {
+      select: () => ({ single: () => Promise.resolve({ data: { id: 22 }, error: null }) }) }; },
+      select: () => { throw new Error('socket closed'); } }) },
+    console: { warn: () => {} }, Promise, JSON, Math, Number, String, Array, Object, Set,
+  }, ['managerSaveMeeting']).managerSaveMeeting;
+  eq(await save({ keyline: 'k', moves: [{ title: 'Chase', target: 31, from_question: 'Did Kato say when he’d pay?' }] }), 22,
+    'a read that throws still saves the meeting');
+  const tm = rowsOf(thrown, 'move').map((r) => r.body)[0];
+  same([tm.target, tm.fromQuestion], [undefined, undefined], 'with neither pointer');
 }
 
 /* ---------- 4. one whitelist for the journal and the session --------- */
@@ -429,9 +547,19 @@ const moves = rowsOf(inserted, 'move').map((r) => r.body);
   const b = rowsOf(inserted, 'meeting')[0].body;
   same(F.managerMeetingFields(PLAN, 8), { verdict: b.verdict, sure: b.sure, chains: b.chains },
     'the meeting fields are pure: a plan held only in this session reads exactly as the journal does');
-  same(F.managerMoveFields(PLAN.moves[0]), (({ dept, touches, confidence, evidence, mind, target, effect, fromQuestion }) =>
-    ({ dept, touches, confidence, evidence, mind, target, effect, fromQuestion }))(moves[0]),
-  'and so are a move’s');
+  const REFS = { answered: [{ id: 12, question: 'Did Kato say when he’d pay?' }], targets: [31] };
+  const pick = ({ dept, touches, confidence, evidence, mind, target, effect, fromQuestion }) =>
+    ({ dept, touches, confidence, evidence, mind, target, effect, fromQuestion });
+  same(F.managerMoveFields(PLAN.moves[0], REFS), pick(moves[0]), 'and so are a move’s, given what the journal holds');
+  same(F.managerMoveFields(PLAN.moves[1], REFS), pick(moves[1]), 'its target id included');
+  same(F.managerMoveFields({ target: 31, effect: 4, from_question: 'Did Kato say when he’d pay?' }), {},
+    'WITH NOTHING TO VOUCH FOR THEM, neither pointer is kept — a plan held only in this session has no journal to land on');
+  same(F.managerMoveFields({ target: 'collections', effect: 4 }), { target: { metric: 'collections' }, effect: 4 },
+    'while a metric target needs no journal at all');
+  same(F.managerMoveFields({ from_question: 'did kato say when he d pay' }, REFS), { fromQuestion: 12 },
+    'the asked words match through case, spacing and punctuation');
+  same(F.managerMoveFields({ from_question: 'Did Kato say when he’d pay? Probably Friday' }, REFS), {},
+    'but not through added words — near enough is not the question');
   same(F.managerMeetingFields(null, 0), {}, 'nothing in, nothing out');
   same(F.managerMoveFields('a string'), {}, 'a move that is not an object adds nothing');
   same(F.managerAskFields(undefined), {}, 'nor a question');

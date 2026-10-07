@@ -109,7 +109,7 @@ const clock = (over) => clockScope.managerPlayClock(Object.assign({ weeks: 4, st
     const scope = compileScope(
       [extractFunction(src, 'managerSaveMeeting', 'index.html'),
         /* the optional fields of the meeting contract, through their whitelists */
-        ...['managerPips', 'managerPlanText', 'managerMeetingFields', 'managerMoveFields', 'managerAskFields', 'managerPlayFields']
+        ...['managerPips', 'managerPlanText', 'managerMeetingFields', 'managerMoveFields', 'managerPlanRefs', 'managerAskFields', 'managerPlayFields']
           .map((n) => extractFunction(src, n, 'index.html')),
         extractDeclaration(src, 'MANAGER_DEPTS', 'index.html'), extractDeclaration(src, 'MANAGER_ASK_PLACES', 'index.html'),
       extractDeclaration(src, 'MANAGER_MOVE_KINDS', 'index.html'),
