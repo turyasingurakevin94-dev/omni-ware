@@ -135979,7 +135979,15 @@ function mgrPaintAsk(gen, ctx){
      redraws the cards. */
   const draw = (why)=>{
     const read = (mgrAskRead && mgrAskRead.gen === gen) ? mgrAskRead : null;
-    const model = mgrAskModel(ctx.st.questions || [], read);
+    let model;
+    /* A FAILURE NAMES ITSELF: a reading of the books that throws says so
+       here rather than leaving yesterday's questions on the screen. */
+    try{ model = mgrAskModel(ctx.st.questions || [], read); }
+    catch(e){
+      console.error('The Manager could not read what it needs to know', e);
+      qWrap.innerHTML = `<div class="ow-pan"><div class="ow-empty">What it needs to know could not be worked out from the books — ${esc((e && e.message) || 'an unknown error')}</div></div>`;
+      return;
+    }
     ctx.askTerms = model.items.filter(it=> it.det && !it.done).length;
     const root = qWrap.querySelector('.mgr-k');
     if(why === 'read' && root && root.dataset.terms === model.termsKey){
@@ -135997,7 +136005,8 @@ function mgrPaintAsk(gen, ctx){
     mgrLastKnown(qWrap, true);
     /* The supplier terms come from the books alone, so the nav can count
        them before the journal answers. */
-    ctx.askTerms = mgrAskTermsAsks(todayISO(), {}).length;
+    try{ ctx.askTerms = mgrAskTermsAsks(todayISO(), {}).length; }
+    catch(e){ ctx.askTerms = null; console.error('The Manager could not count the supplier terms it needs', e); }
     mgrAskReadAnswered().then(r=>{
       if(gen !== mgrRenderGen) return;
       mgrAskRead = { ...r, gen };
@@ -136866,14 +136875,19 @@ function mgrWireAsks(root, model){
       if(input){ input.value = pick == null ? '' : it.choices[pick].label; if(own) input.focus(); }
       show(pick == null ? null : it.choices[pick]);
     }));
+    const save = card.querySelector('.mgr-k-save');
+    /* One answer, once: the button rests while it is being kept, so a
+       second tap cannot write it twice. */
     const send = ()=>{
+      if(save && save.disabled) return;
       const terms = {};
       card.querySelectorAll('.mgr-k-term').forEach(f=>{ terms[f.dataset.term] = f.value; });
       const text = input ? input.value : '';
-      mgrAskKeep(it, { text, pick: pick != null && String(text).trim() === it.choices[pick].label ? pick : null,
-        by: mgrAskByOf(card.querySelector('.mgr-k-sel')), terms });
+      if(save) save.disabled = true;
+      Promise.resolve(mgrAskKeep(it, { text, pick: pick != null && String(text).trim() === it.choices[pick].label ? pick : null,
+        by: mgrAskByOf(card.querySelector('.mgr-k-sel')), terms }))
+        .finally(()=>{ if(save && save.isConnected) save.disabled = false; });
     };
-    const save = card.querySelector('.mgr-k-save');
     if(save) save.addEventListener('click', send);
     card.querySelectorAll('.mgr-ask-input, .mgr-k-term').forEach(f=> f.addEventListener('keydown', e=>{ if(e.key === 'Enter') send(); }));
     /* A figure lands on the line's scale, and says where it sits against ours. */
@@ -136945,7 +136959,9 @@ async function mgrAskKeep(it, p){
   }
   if(!text){ toast(it.choices.length ? 'Tap an answer, or type one' : 'Type what you found out first'); return; }
   mgrAskKept.set(it.key, { item: it, pick: p.pick == null ? null : p.pick, text, by: p.by, on: todayISO() });
-  const r = await managerAnswerQuestion(it.id, text, { by: p.by, ...(terms ? { terms } : {}) });
+  let r = null;
+  try{ r = await managerAnswerQuestion(it.id, text, { by: p.by, ...(terms ? { terms } : {}) }); }
+  catch(e){ toast('Could not keep that answer — ' + ((e && e.message) || 'the journal did not answer'), 9000); }
   if(!r || !r.ok) mgrAskKept.delete(it.key);
 }
 /* A supplier's terms asked from the books: the question is written into
@@ -136972,7 +136988,9 @@ async function mgrAskAnswerTerms(it, p){
     if(w.ok) renderManager();
     return;
   }
-  const r = await managerAnswerQuestion(ins.data.id, words, { by: p.by, terms });
+  let r = null;
+  try{ r = await managerAnswerQuestion(ins.data.id, words, { by: p.by, terms }); }
+  catch(e){ toast('Could not keep that answer — ' + ((e && e.message) || 'the journal did not answer'), 9000); }
   if(!r || !r.ok) mgrAskKept.delete(it.key);
 }
 /* The days onto the supplier's own record, through the same save the
