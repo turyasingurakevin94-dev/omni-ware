@@ -287,7 +287,9 @@ const mgrRender = () => MGR_RENDER.map((n) => extractFunction(src, n, 'index.htm
      waiting. NOW: the canvas's situation strip (Q13) -- its hit rate is
      a count of done moves the books can weigh, "k of n followed by a
      payment or delivery", and what cannot be weighed is "not
-     measurable", never a miss. The money acted on stays on the Record. */
+     measurable", never a miss. The money acted on is no longer drawn
+     anywhere: the tally still carries it (counts.worthDone), and the
+     Record's account shows only the counts. */
   const cells = extractFunction(src, 'mgrStripCells', 'index.html');
   t.check(/value: hr\.n \? mgrOf\(hr\.k, hr\.n\)/.test(cells) && /'followed by a payment or delivery'/.test(cells)
     && /not measurable/.test(extractFunction(src, 'mgrBriefStripDetailHTML', 'index.html'))

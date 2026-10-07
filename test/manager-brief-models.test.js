@@ -15,7 +15,10 @@
  *   - chains are joins the books make, or the meeting's reading, said as
  *     which -- never a cause stated as fact (Q3);
  *   - a horizon only where a method supports it (Q4): the chase record's
- *     k of n, nothing else.
+ *     k of n, nothing else;
+ *   - a miss needs a whole window: advice done too recently, or advised
+ *     again before its time was up, is waiting or not measurable;
+ *   - a box whose readings failed says so, never its all-clear.
  *
  * Today is Wednesday 7 October 2026.
  *
@@ -32,12 +35,13 @@ const eq = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(wa
 const TODAY = '2026-10-07';
 
 const S = compileScope([
-  ...['mgrBriefKind', 'mgrBriefKey', 'mgrBriefSubjectOf', 'mgrBriefSignals', 'mgrBriefPlanAdds', 'mgrBriefUpside', 'mgrBriefCashToFree',
+  ...['mgrBriefKind', 'mgrBriefKey', 'mgrBriefSubjectOf', 'mgrBriefSignals', 'mgrBriefPlanAdds', 'mgrBriefUpside', 'mgrBriefOver60', 'mgrBriefCashToFree',
+    'mgrBriefForesightPick', 'mgrBriefUnread',
     'mgrBriefHitRate', 'mgrBriefLinkedChains', 'mgrBriefReadingChains', 'mgrBriefChainDepts', 'mgrBriefDecisionList', 'mgrBriefMindTrigger',
     'mgrBriefForesight', 'mgrBriefOrderBy', 'mgrBriefPatterns', 'mgrBriefBlindSpots', 'mgrBriefAskChips', 'mgrBriefDay', 'mgrBriefLastYear', 'mgrBriefOwn',
     'mgrShortUGX', 'mgrPipsFromRate', 'chaseRate', 'anShiftDate', 'waWeekday', 'managerPips', 'mgrPossessive', 'mgrDept'].map(fn),
   ...['MGR_BRIEF_KINDS', 'MGR_BRIEF_ALERT', 'MGR_BRIEF_UNUSUAL_DEPT', 'MGR_BRIEF_FS_ORDER', 'MGR_BRIEF_MONTHS', 'MGR_DEPTS', 'MGR_KIND_DEPT',
-    'TRACK_WINDOWED', 'MGR_WEEKDAYS'].map(decl),
+    'TRACK_WINDOWED', 'MGR_WEEKDAYS', 'MGR_BRIEF_BLIND_ORDER', 'MGR_BRIEF_NEEDS'].map(decl),
 ], {
   todayISO: () => TODAY, CHASE_WINDOW: 7,
   daysBetweenISO: (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000),
@@ -45,7 +49,8 @@ const S = compileScope([
     const m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return Number(d.slice(8, 10)) + ' ' + m[Number(d.slice(5, 7)) - 1] + ' ' + d.slice(0, 4); },
   Date, Math, Number, String, Map, Set, Array, Object, JSON,
-}, ['mgrBriefSignals', 'mgrBriefPlanAdds', 'mgrBriefUpside', 'mgrBriefCashToFree', 'mgrBriefHitRate', 'mgrBriefLinkedChains',
+}, ['mgrBriefKind', 'mgrBriefSignals', 'mgrBriefPlanAdds', 'mgrBriefUpside', 'mgrBriefOver60', 'mgrBriefCashToFree', 'mgrBriefForesightPick', 'mgrBriefUnread',
+  'mgrBriefHitRate', 'mgrBriefLinkedChains',
   'mgrBriefReadingChains', 'mgrBriefChainDepts', 'mgrBriefDecisionList', 'mgrBriefMindTrigger', 'mgrBriefForesight', 'mgrBriefOrderBy',
   'mgrBriefPatterns', 'mgrBriefBlindSpots', 'mgrBriefAskChips', 'mgrBriefDay', 'mgrBriefLastYear', 'mgrPipsFromRate', 'mgrShortUGX']);
 
@@ -82,14 +87,20 @@ const S = compileScope([
     { status: 'done', body: { worth: 193521, worthBasis: 'profit_30d' } },
     { status: 'skipped', body: { worth: 4307680, worthBasis: 'cash_freed' } },
     { status: 'open', body: { worth: 0, worthBasis: 'loss_avoided' } },
+    { status: 'open', body: { worth: 420000, worthBasis: 'loss_avoided' } },
+    { status: 'open', body: { worth: 130000, worthBasis: 'cost_saved' } },
     { status: 'open', body: { worth: 900000, worthBasis: 'sales' } },
     { status: 'open', body: { worth: 50000, worthBasis: null } },
   ];
   /* cash 15,233,850 (the skipped 4,307,680 is not in it); profit
-     1,085,664 + 193,521 = 1,279,185; sales 900,000; the basis-less 50,000
-     belongs to no kind. */
-  eq(S.mgrBriefPlanAdds(rows), { cash: 15233850, profit: 1279185, sales: 900000, moves: 4 },
+     1,085,664 + 193,521 = 1,279,185 -- profit over 30 days only; a loss
+     avoided (420,000) and a cost saved (130,000) are each their own kind,
+     as the worth bases and the share ring keep them; sales 900,000; the
+     basis-less 50,000 belongs to no kind. */
+  eq(S.mgrBriefPlanAdds(rows), { cash: 15233850, profit: 1279185, loss: 420000, saving: 130000, sales: 900000, moves: 6 },
     'each kind summed apart, moves set aside left out, money of no kind not counted');
+  eq(['cash_freed', 'profit_30d', 'loss_avoided', 'cost_saved', 'sales'].map(S.mgrBriefKind), ['cash', 'profit', 'loss', 'saving', 'sales'],
+    'one kind per worth basis: a loss avoided and a cost saved are never folded into profit over 30 days');
 }
 
 /* ---------- 3. profit upside found (A2.3) -------------------------------- */
@@ -119,8 +130,12 @@ const S = compileScope([
 /* ---------- 4. cash to free (A2.4, Q4) ------------------------------------ */
 {
   const f = S.mgrBriefCashToFree({
-    debts: [{ id: 'C3', name: 'Lubega', debt: 18887050, ageDays: 130 }, { id: 'C1', name: 'Kato', debt: 30467700, ageDays: 88 },
-      { id: 'C4', name: 'Nalubega', debt: 26619229, ageDays: 16 }],
+    /* Each debt carries the part of it that is over 60 days old
+       (mgrBriefOver60): Kato owes 30,467,700, of which only 16,468,050
+       is older than 60 days; Lubega's is all old; Nalubega's none. */
+    debts: [{ id: 'C3', name: 'Lubega', debt: 18887050, ageDays: 130, over60: 18887050 },
+      { id: 'C1', name: 'Kato', debt: 30467700, ageDays: 88, over60: 16468050 },
+      { id: 'C4', name: 'Nalubega', debt: 26619229, ageDays: 16, over60: 0 }],
     dead: [{ key: 'P009', line: 'Beige tiles', value: 5388606 }, { key: 'P022', line: 'Translucent sheets', value: 3313558 }],
     moves: [
       { id: 1, status: 'open', body: { title: 'Chase Kato', worthBasis: 'cash_freed', worth: 15233850, subject: { customerId: 'C1' } } },
@@ -131,14 +146,16 @@ const S = compileScope([
     lags: [{ customerId: 'C1', k: 3, n: 4, lagDays: 3, typicalAmount: 1800000 },
       { customerId: 'C4', k: 3, n: 3, lagDays: 6, typicalAmount: 11204587 }],
   });
-  /* Kato 30,467,700 (owed past 60 days, larger than the move's 15.2m);
-     Lubega 18,887,050; Nalubega 11,000,000 from the move (her debt is 16
-     days old, so only the move names it); the tiles 6,000,000 from the
-     move (above their 5,388,606 on the shelf); the sheets 3,313,558.
-     Total 69,668,308. */
-  t.check(f.total === 69668308, 'one figure per customer or line: 69,668,308 (got ' + f.total + ')');
-  eq(f.byKind, { debt: 49354750, dead: 3313558, move: 17000000 }, 'its parts by where they come from');
-  /* Within 60 days, by the chase record alone: Kato min(30,467,700,
+  /* Kato 16,468,050 (the part owed past 60 days, larger than the
+     move's 15.2m -- never his whole 30.47m balance); Lubega 18,887,050;
+     Nalubega 11,000,000 from the move (none of her debt is past 60 days,
+     so only the move names it); the tiles 6,000,000 from the move (above
+     their 5,388,606 on the shelf); the sheets 3,313,558.
+     16,468,050 + 18,887,050 + 11,000,000 + 6,000,000 + 3,313,558
+     = 55,668,658. */
+  t.check(f.total === 55668658, 'one figure per customer or line, debts by their part over 60 days: 55,668,658 (got ' + f.total + ')');
+  eq(f.byKind, { debt: 35355100, dead: 3313558, move: 17000000 }, 'its parts by where they come from');
+  /* Expected if chased, by the chase record alone: Kato min(16,468,050,
      1,800,000) = 1,800,000; Nalubega min(11,000,000, 11,204,587) =
      11,000,000. */
   t.check(f.expected.amount === 12800000 && f.expected.list.map((x) => x.k + '/' + x.n).join() === '3/4,3/3',
@@ -147,9 +164,14 @@ const S = compileScope([
 
 /* ---------- 5. the hit rate (A2.6, Q13) ----------------------------------- */
 {
+  /* As deriveMoveOutcome answers: true or false for every chase, restock
+     and payment it can read -- never null for a fresh one -- and null
+     only when the customer is no longer on file. */
   const derive = (row, until) => ({
-    'Chase Kato': { happened: true }, 'Restock nails': { happened: false }, 'Pay Steel': { happened: null },
-  }[row.body.title] || { happened: null, until });
+    'Chase Kato': { happened: true }, 'Restock nails': { happened: false }, 'Pay Steel': { happened: false },
+    'Chase Ssali': { happened: false }, 'Chase Achieng': { happened: false }, 'Chase Gone': { happened: null },
+    'Restock cement': { happened: false },
+  }[row.body.title] || { happened: false, until });
   const rows = [
     { date: '2026-09-01', status: 'done', body: { title: 'Chase Kato', mkind: 'chase', doneOn: '2026-09-02', subject: { customerId: 'C1' } } },
     { date: '2026-09-10', status: 'open', body: { title: 'Chase Kato', mkind: 'chase', subject: { customerId: 'C1' } } },
@@ -159,24 +181,47 @@ const S = compileScope([
     { date: '2026-10-06', status: 'done', body: { title: 'Pay Steel', mkind: 'settle', doneOn: '2026-10-06', subject: { supplierId: 'S3' } } },
     { date: '2026-09-07', status: 'done', body: { title: 'Tidy the store', mkind: 'other' } },
     { date: '2026-09-08', status: 'skipped', body: { title: 'Chase Kato', mkind: 'chase', subject: { customerId: 'C1' } } },
+    { date: '2026-09-11', status: 'done', body: { title: 'Chase Ssali', mkind: 'chase', doneOn: '2026-09-11', subject: { customerId: 'C5' } } },
+    { date: '2026-09-12', status: 'open', body: { title: 'Chase Ssali', mkind: 'chase', subject: { customerId: 'C5' } } },
+    { date: '2026-09-01', status: 'done', body: { title: 'Chase Achieng', mkind: 'chase', doneOn: '2026-09-01', subject: { customerId: 'C6' } } },
+    { date: '2026-09-20', status: 'open', body: { title: 'Chase Achieng', mkind: 'chase', subject: { customerId: 'C6' } } },
+    { date: '2026-09-01', status: 'done', body: { title: 'Chase Gone', mkind: 'chase', doneOn: '2026-09-01', subject: { customerId: 'C9' } } },
+    { date: '2026-10-01', status: 'done', body: { title: 'Restock cement', mkind: 'buy', doneOn: '2026-10-01', subject: { key: 'P001' } } },
   ];
-  /* Kato, done 2 Sept: weighed from 3 Sept until the next time it was
-     advised -- followed (1 of 1). Nails: nothing followed (1 of 2, a miss).
-     Y12 (a price), Okot (no day it was done) and the store (named nobody):
-     not measurable, 3. Steel: done yesterday, nothing to weigh yet. */
-  const h = S.mgrBriefHitRate(rows, derive);
-  eq([h.k, h.n, h.notMeasurable, h.waiting], [1, 2, 3, 1], 'k of n over what the books can weigh, the rest named apart');
-  t.check(h.misses.length === 1 && h.misses[0].title === 'Restock nails', 'the miss is named');
+  /* The time each is given: a chase or a payment 7 days; a restock its
+     supplier's lead and two days -- nails 1 + 2 = 3, cement 10 + 2 = 12.
+       Kato, done 2 Sept, weighed [3 Sept, 8 Sept): followed -- a hit.
+       Nails, done 5 Sept, never advised again: [6 Sept, 7 Oct) is 31
+         days, past its 3 -- nothing followed, a miss ("in the 31 days
+         after").
+       Achieng, done 1 Sept, advised again 20 Sept: [2 Sept, 20 Sept) is
+         18 days, past its 7 -- a miss ("before it was advised again").
+       Ssali, done 11 Sept, advised again 12 Sept: [12 Sept, 12 Sept) is
+         0 days -- cut short, not measurable, never a miss.
+       Steel, done yesterday: [7 Oct, 7 Oct) is 0 of its 7 -- waiting.
+       Cement, done 1 Oct: [2 Oct, 7 Oct) is 5 of its 12 -- waiting.
+       Y12 (a price), Okot (no day it was done), the store (named nobody)
+         and Gone (no longer on file): not measurable.
+     k 1 of n 3; not measurable 4 + 1 cut short = 5; waiting 2. */
+  const windowOf = (kind, body) => kind === 'buy' ? ({ P019: 1, P001: 10 }[body.subject.key] + 2) : 7;
+  const h = S.mgrBriefHitRate(rows, derive, { today: TODAY, windowOf });
+  eq([h.k, h.n, h.notMeasurable, h.cutShort, h.waiting], [1, 3, 5, 1, 2], 'k of n over what the books can weigh, the rest named apart');
+  eq(h.misses.map((m) => [m.title, m.days, m.again]), [['Restock nails', 31, false], ['Chase Achieng', 18, true]],
+    'only a whole window can miss, and each miss says how long it had and whether the advice came round again');
+  /* Without windowOf a restock is given a week, as a chase is. */
+  const h2 = S.mgrBriefHitRate(rows.slice(13), derive, { today: TODAY });
+  eq([h2.n, h2.waiting], [0, 1], 'a restock done 5 days ago is waiting, not a miss');
   /* The Kato occasion of 1 Sept closes at the next one, 8 Sept. */
   const seen = [];
-  S.mgrBriefHitRate(rows.slice(0, 2).concat(rows[7]), (row, until) => { seen.push([row.date, until]); return { happened: true }; });
+  S.mgrBriefHitRate(rows.slice(0, 2).concat(rows[7]), (row, until) => { seen.push([row.date, until]); return { happened: true }; }, { today: TODAY });
   eq(seen, [['2026-09-03', '2026-09-08']], 'a done move is weighed from the day after it was done until the advice came round again');
 }
 
 /* ---------- 6. chains linked in the books (A4, Q3) ----------------------- */
 {
   const chains = S.mgrBriefLinkedChains({
-    collect: { over: 7, overTotal: 7150000, leftOfBudget: 0, owedToYou: 136669398, debtors: 17, overKeys: ['P001', 'P030'],
+    collect: { over: 7, overTotal: 7150000, leftOfBudget: 0, budgetBefore: 3148424, onOrder: 3148424, spend: 0,
+      owedToYou: 136669398, debtors: 17, overKeys: ['P001', 'P030'],
       candidates: [{ customerId: 'C001', name: 'Kato', debt: 30467700, lines: 7, spend: 7150000 }] },
     runningOut: [{ key: 'P030', name: 'Binding wire', days: 0.4 }, { key: 'P001', name: 'Simba', days: 4 }, { key: 'P009', name: 'Tiles', days: 2 }],
     walk: { tightest: { date: '2026-10-14', balance: 1350000 }, days: [
@@ -195,6 +240,12 @@ const S = compileScope([
      not fit and run out inside 10 days; the tiles are not on the plan. */
   t.check(a.nodes.length === 3 && a.nodes[2].text === '2 of them run out inside 10 days' && a.nodes[2].figure === 'Binding wire · 0d',
     'owed and buying: the lines that do not fit, what can be spent, and those of them running out');
+  /* What is left to buy with is the buy plan's budget: 3,148,424 after
+     every dated payment, less 3,148,424 on orders already out = 0 --
+     said as that, never as "what you can spend after every dated
+     payment", which is the strip's 3.15m. */
+  t.check(a.nodes[1].text === 'Left to buy with, after every dated payment and the orders already out' && a.nodes[1].figure === '0 left of 3.15m',
+    'the buy plan\'s budget is named as what is left to buy with, beside what it was cut from (got ' + a.nodes[1].text + ' / ' + a.nodes[1].figure + ')');
   t.check(a.fix.subject === 'c:C001' && /would buy 7 of the 7 lines, if it were in the drawer today/.test(a.fix.text),
     'and the collection that would buy them, said as an if-then on the drawer, never a promise');
   /* Until Wed 14 Oct: the bill 5,670,120, wages 2,100,000 + 275,000 =
@@ -253,8 +304,15 @@ const S = compileScope([
     'a chase done 9 days ago with nothing paid: the trigger has fired, and says so');
   t.check(!S.mgrBriefMindTrigger({ mkind: 'chase' }, { ...f, chase: { doneOn: '2026-10-03', happened: false } }).fired,
     'four days after, it has not fired yet');
-  const buy = S.mgrBriefMindTrigger({ mkind: 'buy' }, { ...f, buy: { cost: 4212750, safe: 3148424 } });
-  t.check(buy.fired && /4\.21m/.test(buy.text) && /3\.15m/.test(buy.firedText), 'a buy: what can be spent has fallen below the line\'s cost');
+  /* The same quantity the chain draws: 3,148,424 after every dated
+     payment, less 3,148,424 on orders already out = 0 left to buy with,
+     under the line's 4,212,750. */
+  const buy = S.mgrBriefMindTrigger({ mkind: 'buy' }, { ...f, buy: { cost: 4212750, left: 0, before: 3148424, onOrder: 3148424 } });
+  t.check(buy.fired && /left to buy with falls below the line’s 4\.21m/.test(buy.text)
+    && buy.firedText === 'It has: 0 is left to buy with — 3.15m after every dated payment, less 3.15m on orders already out.',
+    'a buy: what is left to buy with has fallen below the line\'s cost, in the chain\'s own words (got ' + buy.firedText + ')');
+  t.check(!S.mgrBriefMindTrigger({ mkind: 'buy' }, { ...f, buy: { cost: 400000, left: 900000, before: 900000, onOrder: 0 } }).fired,
+    'and with 900k left for a 400k line, it has not');
   const price = S.mgrBriefMindTrigger({ mkind: 'price' }, { ...f, price: { ours: 46500, rival: { rival: 'Kasubi', price: 45000, daysOld: 3 } } });
   t.check(price.fired && price.firedText === 'It has: Kasubi at 45,000, seen 3 days ago.', 'a price: a rival seen below it');
   t.check(S.mgrBriefMindTrigger({ mkind: 'settle' }, { ...f, settle: { datedOn: '2026-10-10' } }).fired, 'a payment: a day named for the bill');
@@ -277,7 +335,7 @@ const S = compileScope([
     supplierRisks: [{ label: 'Steel & Tube stops delivering — a bill reaches 90 days', date: '2026-10-23', amount: 5670120 }],
     offers: [{ name: 'Centenary', from: 'bank', amount: 10000000, rate: 22, termMonths: 12, expiresOn: '2026-10-18' }],
     targets: [{ to: '2026-10-11', label: 'Collect', aimText: '6m', nowText: '5.7m', dept: 'finance' }],
-    receipts: [{ date: '2026-10-10', label: 'Kato Construction Ltd — after a chase', amount: 1800000, source: 'paid within 3 days of a chase in 3 of 4' },
+    receipts: [{ date: '2026-10-10', label: 'Kato Construction Ltd — after a chase', amount: 1800000, source: 'paid within 3 days of a chase in 3 of 4 · chased 2026-10-06' },
       { date: '2026-11-30', label: 'Wasswa Roofing Contractors — after a chase', amount: 1, source: 'outside the window' }],
     lastYear: [{ date: '2026-10-14', dept: 'sales', text: 'Last year these weeks: Roofing sold 31% above its usual', tag: 'last year’s fact' }],
   });
@@ -291,6 +349,8 @@ const S = compileScope([
     && items[2].tag === 'Kasubi takes 1 day', 'the last day to order, with the lead time it was counted from');
   t.check(items[5].text === 'Hoop iron runs out' && items[5].tag === 'lead not measured', 'and "lead not measured" where it is not');
   t.check(items[3].text === 'Kato Construction Ltd’s 1.8m expected' && /3 of 4/.test(items[3].tag), 'an expected receipt carries its k of n');
+  t.check(/chased 6 Oct 2026$/.test(items[3].tag) && !/\d{4}-\d{2}-\d{2}/.test(items.map((x) => x.tag).join(' ')),
+    'and its dates are said as every date on the Brief is, never a raw ISO date (got ' + items[3].tag + ')');
   t.check(items[7].text === 'Centenary’s 10m offer expires' && /22% over 12 months/.test(items[7].tag), 'an offer\'s expiry, from the owner\'s own record');
   t.check(items[9].text === 'Wages · 2 staff · 675k out' && items[9].dept === 'people', 'two wages on one payday are one line: 400k + 275k');
   t.check(items[10].kind === 'known' && /above your 3m floor/.test(items[10].tag), 'the lowest day, against the floor it was judged by');
@@ -331,7 +391,8 @@ const S = compileScope([
      Kato 3 of 4: 1.2302 / 1.9604 = 0.628, × 5 = 3.1 -> 3 pips. */
   eq([p[0].pips, p[1].pips], [4, 3], 'how sure, from the k of n behind each');
   /* Achieng: 2 of 7 is "rarely", so its pips count the 5 of 7 that agree. */
-  t.check(p[3].pips === S.mgrPipsFromRate(5, 7) && p[3].ev === '2 of 7 times it was done', 'a pattern is as sure as the count that agrees with it');
+  t.check(p[3].pips === S.mgrPipsFromRate(5, 7) && p[3].ev === 'my advice, done: 2 of 7 times', 'a pattern is as sure as the count that agrees with it');
+  t.check(p[0].ev === 'your chase record: 9 of 10 chases', 'and each names what it was counted from -- the chase record, or the Manager\'s own advice');
   t.check(p.length === 6 && p[4].text === 'Most new customers come back within 30 days'
     && p[5].text === 'A WhatsApp post is usually followed by more of that line sold than the week before',
     'six at most: the repeat cohort and the posts follow; the deliveries and the lesson wait');
@@ -352,7 +413,18 @@ const S = compileScope([
     dailyWages: { names: ['Okello Denis'] },
     fuel: { none: false },
   });
-  eq(b.map((x) => x.id), ['terms', 'counts', 'rival', 'beyond', 'customer', 'daily'], 'the gaps with the most money behind them first');
+  /* A fixed order that carries no money -- the canvas's (rival prices,
+     who the buyers are, the shelf), then the rest -- because each gap's
+     money is a different quantity: 11.69m of profit, 70m of stock at
+     cost, 70.19m of bills owed. Ranking them by it would rank one kind of
+     money against another. */
+  eq(b.map((x) => x.id), ['rival', 'customer', 'counts', 'beyond', 'terms', 'daily'], 'in the canvas\'s order, never by their money');
+  const swapped = S.mgrBriefBlindSpots({ rivalNever: { count: 1, top: 'x', earned: 1 }, terms: { unknownOwing: 1, owed: 9e9 },
+    counts: { lines: 10, counted: 1, value: 5e9 } });
+  eq(swapped.map((x) => x.id), ['rival', 'counts', 'terms'], 'and the order does not move when the money does');
+  t.check(b.find((x) => x.id === 'counts').money === 70000000 && b.find((x) => x.id === 'counts').moneyWord === 'of stock at cost not counted in 90 days'
+    && b.find((x) => x.id === 'terms').moneyWord === 'of bills owed to them' && b.find((x) => x.id === 'rival').moneyWord === 'of last month’s profit on them',
+    'each gap\'s money is drawn in its own words, as what the gap covers');
   t.check(b.find((x) => x.id === 'beyond').title === '1 line sold more than the book held', 'said as sold beyond the book, never as negative stock (Q11)');
   /* 1 - 1,816 / 4,122 = 0.5594 -> 56%. */
   t.check(/cover only 56% of invoices/.test(b.find((x) => x.id === 'customer').cost), 'each with what it costs the advice');
@@ -380,6 +452,70 @@ const S = compileScope([
   t.check(ly.length === 1 && ly[0].date === '2026-10-14' && ly[0].text === 'Last year these weeks: Roofing sold 31% above its usual'
     && /last year’s fact/.test(ly[0].tag), 'a category that sold a quarter above its usual this week last year, said as last year\'s fact');
   t.check(S.mgrBriefLastYear(TODAY, '2025-11-01', salesIn).length === 0, 'and nothing on books younger than a year');
+  /* Books from 25 Sep 2025: a year back (377 days), but the usual is the
+     four weeks from 10 Sep 2025, half of them before the books began --
+     a usual read from 13 of its 28 days would invent a lift. */
+  t.check(S.mgrBriefLastYear(TODAY, '2025-09-25', salesIn).length === 0, 'nor on books that start inside the four weeks the usual is read from');
+  t.check(S.mgrBriefLastYear(TODAY, '2025-09-10', salesIn).length === 1, 'and the first day of those four weeks is enough');
+}
+
+/* ---------- 16. the part of a balance over 60 days (A2.4) ------------------ */
+{
+  /* As the Debtors aging buckets it, charge by charge, today 7 Oct 2026:
+       1 Jul, 100 still due -- 98 days old: in.
+       7 Aug, 30 still due -- 61 days old: in.
+       8 Aug, 50 still due -- 60 days old: not over 60.
+       1 Jun, 0.2 still due -- under half a shilling: settled.
+       20 Sep, 999 -- 17 days old: not in.
+     100 + 30 = 130. */
+  eq(S.mgrBriefOver60([{ date: '2026-07-01', remaining: 100 }, { date: '2026-08-07', remaining: 30 }, { date: '2026-08-08', remaining: 50 },
+    { date: '2026-06-01', remaining: 0.2 }, { date: '2026-09-20', remaining: 999 }, { date: null, remaining: 5 }], TODAY), 130,
+    'only the charges themselves older than 60 days, never the whole balance');
+}
+
+/* ---------- 17. what the next 30 days shows first (A6.*) -------------------- */
+{
+  const items = S.mgrBriefForesight({ today: TODAY,
+    events: [
+      { date: '2026-10-07', kind: 'bill', label: 'Steel — bill', amount: -5670120, line: 'committed', overdue: true, dueOn: '2026-08-24' },
+      { date: '2026-10-07', kind: 'rent', label: 'Shop', amount: -1000000, line: 'committed', overdue: true, dueOn: '2026-10-01' },
+      { date: '2026-10-12', kind: 'bill', label: 'A — bill', amount: -200000, line: 'committed' },
+      { date: '2026-10-14', kind: 'bill', label: 'B — bill', amount: -300000, line: 'committed' },
+      { date: '2026-10-15', kind: 'bill', label: 'C — bill', amount: -100000, line: 'committed' },
+      { date: '2026-10-27', kind: 'bill', label: 'D — bill', amount: -400000, line: 'committed' },
+      { date: '2026-10-28', kind: 'wage', label: 'Joan', amount: -400000, line: 'committed' },
+      { date: '2026-10-28', kind: 'wage', label: 'Moses', amount: -275000, line: 'committed' }],
+    tightest: { date: '2026-11-05', balance: 3148424 }, floor: { amount: 3000000, source: 'set' },
+    supplierRisks: [{ label: 'Steel stops delivering', date: '2026-10-23', amount: 5670120 }],
+    offers: [{ name: 'Centenary', from: 'bank', amount: 10000000, expiresOn: '2026-10-18' }],
+    receipts: [{ date: '2026-10-09', label: 'A — after a chase', amount: 1, source: 's' }, { date: '2026-10-10', label: 'B — after a chase', amount: 1, source: 's' },
+      { date: '2026-10-11', label: 'C — after a chase', amount: 1, source: 's' }],
+  });
+  /* Cap 6, chosen by kind: the lowest day (5 Nov) first, then the risks --
+     the two payments past their day folded into one row on today, and
+     Steel's deadline -- then the offer, then the first two expected
+     receipts. The folded bills of 12-15 Oct, the 27 Oct bill and the
+     wages do not fit. Put back in date order. */
+  const six = S.mgrBriefForesightPick(items, 6, TODAY);
+  eq(six.map((x) => x.date + ' ' + x.kind), ['2026-10-07 risk', '2026-10-09 expected', '2026-10-10 expected', '2026-10-18 deadline',
+    '2026-10-23 risk', '2026-11-05 known'], 'the default view is chosen by kind and spans the month, the lowest day always in it');
+  /* 5,670,120 + 1,000,000 = 6,670,000 -> 6.67m. */
+  t.check(six[0].text === 'Past their day · 2 payments · 6.67m out' && six[0].fold === 2 && six[0].day === 7 && six[0].dow === 'Wed',
+    'payments past their day fold into one row on today (got ' + six[0].text + ')');
+  /* Cap 12: everything chosen fits; the three bills of the week of 12 Oct
+     (200k + 300k + 100k = 600k) are one row on their first day; the 27
+     Oct bill stays its own; the third expected receipt still waits. */
+  const all = S.mgrBriefForesightPick(items, 12, TODAY);
+  t.check(all.length === 9 && all.some((x) => x.text === 'Bills · 3 on the days you named this week · 600k out' && x.date === '2026-10-12')
+    && all.some((x) => x.date === '2026-10-27' && x.text === 'Bill · D · 400k out') && !all.some((x) => x.date === '2026-10-11'),
+    'routine bills fold into a row a week, and only the first two expected receipts show before "Show all"');
+}
+
+/* ---------- 18. a box whose readings failed says so ------------------------- */
+{
+  eq(S.mgrBriefUnread(['the cash ahead', 'supplier of P001', 'supplier of P002', 'posts'], ['the cash ahead', 'risks', 'supplier of ']),
+    ['the cash ahead', 'who supplies each line'], 'the readings a box is drawn from that failed, each named once');
+  eq(S.mgrBriefUnread([], ['the cash ahead']), [], 'and none when nothing failed');
 }
 
 process.exit(t.done() ? 1 : 0);
