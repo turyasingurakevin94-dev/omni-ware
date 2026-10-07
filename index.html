@@ -2816,16 +2816,23 @@
     .mgr-bed-x .mgr-x-out{padding:var(--ow-sp-12);}
     .mgr-bed-x .mgr-x-ocv{font-size:var(--ow-t-20);}
     .mgr-bed-x .mgr-x-ocd{font-size:var(--ow-t-12);}
+    .mgr-bed-x .mgr-x-oc .mgr-x-micro{white-space:normal;}
     .mgr-bed-x .mgr-x-sure{font-size:var(--ow-t-13);align-items:flex-start;}
     .mgr-bed-x .mgr-x-pips{margin-top:var(--ow-sp-6);}
     .mgr-bed-x .mgr-x-vd{font-size:var(--ow-t-14);}
-    .mgr-bed-x .mgr-x-out > .mgr-x-sign{display:none;}
-    .mgr-bed-x .ow-bk.mgr-x-dock{display:flex;}
-    .mgr-bed-x .mgr-x-dock .ow-bk-a{gap:var(--ow-sp-8);}
+    /* The body is this app's scroll box, so a sticky dock would never
+       stick: it is FIXED above the tab bar instead, and exists only while
+       this section is the one showing. The section keeps room under its
+       last line so the dock covers nothing. */
+    .mgr-bed-x .mgr-x{padding-bottom:88px;}
+    .mgr-bed-x .mgr-x-out > .mgr-x-sign .mgr-x-sb{display:none;}
+    .mgr-bed-x .mgr-x-out > .mgr-x-sign .btn.ow-sm{height:var(--ow-tap);font-size:var(--ow-t-14);}
+    .mgr-bed-x .ow-bk.mgr-x-dock{display:flex;position:fixed;left:var(--ow-sp-16);right:var(--ow-sp-16);margin:0;flex-wrap:nowrap;
+      bottom:calc(var(--mobile-bottomnav-h) + env(safe-area-inset-bottom, 0px) + var(--ow-sp-8));padding:var(--ow-sp-8) var(--ow-sp-8) var(--ow-sp-8) var(--ow-sp-12);}
+    .mgr-bed-x .mgr-x-dock .ow-bk-say{flex:1 1 auto;}
+    .mgr-bed-x .mgr-x-dock .ow-bk-a{flex:0 0 auto;}
     .mgr-bed-x .mgr-x-dock .btn.ow-sm{height:var(--ow-tap);font-size:var(--ow-t-14);padding:0 var(--ow-sp-12);}
-    .mgr-bed-x .mgr-x-dock .mgr-x-sb{flex:1 1 auto;}
     .mgr-bed-x .mgr-x-dock .btn-ghost{color:var(--ow-navy-line);border-color:var(--ow-steel-800);}
-    .mgr-bed-x .mgr-x-dock .btn.mgr-x-q{border-color:transparent;}
     .mgr-bed-x .mgr-x-cal{padding:var(--ow-sp-12);}
     .mgr-bed-x .mgr-x-calh span{font-size:var(--ow-t-12);}
     .mgr-bed-x .mgr-x-calg{grid-template-columns:104px repeat(31,32px);min-width:0;width:max-content;}
@@ -2845,8 +2852,8 @@
     .mgr-bed-x .mgr-x-cmp > span{padding:var(--ow-sp-8) var(--ow-sp-4);}
     .mgr-bed-x .mgr-x-cmp > span.mgr-x-h{font-size:10px;}
     .mgr-bed-x .mgr-x-of{grid-template-columns:22px minmax(0,1fr) auto;}
-    .mgr-bed-x .mgr-x-ofa{grid-column:2/-1;}
-    .mgr-bed-x .mgr-x-ofa .btn.ow-sm{height:var(--ow-tap);flex:1 1 0;}
+    .mgr-bed-x .mgr-x-ofa{grid-column:2/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--ow-sp-6);}
+    .mgr-bed-x .mgr-x-ofa .btn.ow-sm{height:var(--ow-tap);width:100%;box-sizing:border-box;}
     .mgr-bed-x .mgr-x-push{min-height:var(--ow-tap);}
     .mgr-bed-x .mgr-x-off .mgr-x-fld,.mgr-bed-x .mgr-x-off .mgr-x-wide{flex:1 1 100%;}
     .mgr-bed-x .mgr-x-tx,.mgr-bed-x .mgr-x-sel{height:var(--ow-tap);font-size:16px;width:100%;}
@@ -135460,7 +135467,7 @@ function mgrSimOfferFact(o, day){
   if(priced){
     const rows = loanSchedule({ principal: amount, ratePct: Number(o.rate), termMonths: Math.round(Number(o.termMonths)), startedOn: day });
     const yearEnd = anShiftDate(day, 365);
-    interestYear = Math.round(rows.filter(r=> r.date < yearEnd).reduce((n, r)=> n + (Number(r.interest) || 0), 0));
+    interestYear = Math.round(rows.filter(r=> r.date <= yearEnd).reduce((n, r)=> n + (Number(r.interest) || 0), 0));
     instalment = rows[0] ? Math.round(rows[0].payment) : null;
   }
   return { id: o.id, from: o.from, name: o.name || (o.from === 'bank' ? 'The bank' : 'A supplier'), amount,
@@ -135640,7 +135647,7 @@ function mgrSimOfferLever(b, offers){
   const first = list[0];
   const ends = first.expiresOn ? 'offer ends ' + mgrSimDay(first.expiresOn) + (first.daysLeft != null ? ' · ' + first.daysLeft + ' day' + (first.daysLeft === 1 ? '' : 's') + ' left' : '') : 'no end date written down';
   const opts = [{ id: 'decline', label: 'Decline', hint: ends, pips: 5, basis: 'the terms you wrote down', say: 'offers declined' }];
-  list.forEach(o=> opts.push({ id: 'take:' + o.id, label: list.length > 1 ? 'Take ' + o.name.split(/\s+/)[0] + '\'s' : 'Accept',
+  list.forEach(o=> opts.push({ id: 'take:' + o.id, label: list.length > 1 ? 'Take ' + mgrPossessive(o.name.split(/\s+/)[0]) : 'Accept',
     disabled: !o.priced,
     hint: o.priced ? mgrSimMoney(o.interestYear) + ' a year in interest · ' + mgrSimMoney(o.instalment) + ' a month' + (o.from === 'supplier' ? ' · on credit, not cash in hand' : '')
       : 'write down its rate and term to price it',
@@ -136092,7 +136099,7 @@ function mgrSimVerdict(v){
   if(v.priceBetter) return { cls: 'am', head: 'Close — but not that price.',
     body: mgrNum(v.priceBetter.at) + ' earns less than ' + mgrNum(v.priceBetter.better) + ' on your own assumption about volume.' };
   if(v.of && v.held < v.of) return { cls: 'am', head: 'Good on paper, fragile in practice.',
-    body: 'It breaks if ' + v.breaks.map(s=> s.charAt(0).toLowerCase() + s.slice(1)).join(' or if ') + '.'
+    body: 'It breaks if ' + v.breaks.map(s=> /^(The|A) /.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s).join(' or if ') + '.'
       + (v.termsFree ? ' ' + v.termsFree.days + '-day terms give you ' + mgrSimMoney(v.termsFree.freed) + ' of cushion.' : '') };
   const d = Math.round(v.profitD || 0);
   const range = v.ranged ? ' (' + mgrSimMoney(v.lo) + ' to ' + mgrSimMoney(v.hi) + ' on your assumptions)' : '';
@@ -136475,13 +136482,13 @@ function mgrSimOutHTML(c){
     ${mgrSimState.said ? `<p class="mgr-x-said${mgrSimState.said.ok ? '' : ' mgr-x-bad'}" role="status">${esc(mgrSimState.said.text)}</p>` : ''}
   </div>`;
 }
-function mgrSimSignHTML(c){
+function mgrSimSignHTML(c, dock){
   const n = c.run.changed.length;
   const fl = c.floor && c.floor.amount > 0 ? c.floor.amount : 0;
   const ok = n && c.run.low && c.run.low.balance >= fl;
   const label = mgrSimState.signing ? 'Signing…' : n ? 'Sign it — ' + n + ' decision' + (n === 1 ? '' : 's') : 'Nothing to sign yet';
-  return `<button type="button" class="btn ow-sm mgr-x-sb ${!n ? 'btn-ghost mgr-x-q' : ok ? 'btn-accent' : 'btn-ghost'}" data-sim-sign${!n || mgrSimState.signing ? ' disabled' : ''}>${esc(label)}</button>
-    <button type="button" class="btn btn-ghost ow-sm mgr-x-q" data-sim-reset${n ? '' : ' disabled'}>Back to today</button>`;
+  return `<button type="button" class="btn ow-sm mgr-x-sb ${!n ? 'btn-ghost mgr-x-q' : ok ? 'btn-accent' : 'btn-ghost'}" data-sim-sign${!n || mgrSimState.signing ? ' disabled' : ''}>${esc(label)}</button>`
+    + (dock ? '' : `<button type="button" class="btn btn-ghost ow-sm mgr-x-q" data-sim-reset${n ? '' : ' disabled'}>Back to today</button>`);
 }
 function mgrSimRippleHTML(c){
   const r = c.run, changed = r.changed.length > 0;
@@ -136607,7 +136614,7 @@ function mgrSimPresetsHTML(c){
 function mgrSimDockHTML(c){
   const r = c.run;
   return `<div class="ow-bk mgr-x-dock"><span class="ow-bk-say"><span class="ow-bk-b">${r.changed.length ? r.changed.length + ' changed' : 'Today, unchanged'}</span> · lowest <span class="ow-bk-m">${esc(r.low ? mgrSimMoney(r.low.balance) : '—')}</span>${c.holds.held != null ? ` · holds <span class="ow-bk-m">${c.holds.held}/${c.holds.of}</span>` : ''}</span>
-    <span class="ow-bk-a">${mgrSimSignHTML(c)}</span></div>`;
+    <span class="ow-bk-a">${mgrSimSignHTML(c, true)}</span></div>`;
 }
 function mgrSimHTML(c){
   const books = c.model.levers.filter(l=> l.group === 'books'), mine = c.model.levers.filter(l=> l.group !== 'books');
