@@ -36,6 +36,7 @@ const SOURCES = [
     'loanSchedule', 'loanPrincipal', 'loanInstallments', 'loanRoundTo', 'loanRound', 'loanLevelPI', 'loanDueDate',
     'loanPeriodRate', 'loanFeePerInstallment', 'loanPeriodsPerYear', 'loanFrequency',
     'mgrDept', 'mgrPayday', 'mgrPaydayLabel', 'mgrOrdinal', 'mgrMedian', 'mgrPaydayDates', 'mgrWageEvents',
+    'mgrPaydaySettles', 'mgrPaydaySettlesDefault', 'mgrPaydaySettlesLabel', 'mgrWageShares', 'mgrWageDueLate', 'dueIsOverdue',
     'mgrCollectionsByDay', 'mgrChaseLags', 'mgrTradingPattern', 'mgrCashWalk', 'mgrCashWalkBuild'].map(fn),
   ...['PAY_BASES', 'WAGE_DAYS_PER_MONTH', 'WAGE_DAYS_PER_WEEK', 'CASH_NOT_OPEX', 'CASH_NOT_REVENUE', 'cashHas',
     'LOAN_FREQUENCIES', 'MGR_DEPTS', 'MGR_WEEKDAYS', 'MGR_DATED_CATEGORIES',
@@ -107,7 +108,8 @@ function scope(data) {
     buyOrdersOpenRows: () => [],
     supplierName: (id) => ({ S1: 'Steel', S2: 'Roofings' })[id] || '',
     dueName: (d) => ({ ST1: 'Joan', ST2: 'Okello' })[d.refId] || 'Staff member',
-  }, ['mgrCashWalk', 'mgrWageEvents', 'mgrPaydayDates', 'mgrTradingPattern', 'mgrChaseLags', 'mgrPayday']);
+  }, ['mgrCashWalk', 'mgrWageEvents', 'mgrPaydayDates', 'mgrTradingPattern', 'mgrChaseLags', 'mgrPayday',
+    'mgrWageShares', 'mgrWageDueLate', 'dueIsOverdue']);
 }
 const day = (w, d) => w.days.find((x) => x.date === d);
 const committedOn = (w, ds) => ds.map((d) => day(w, d).committed);
@@ -143,43 +145,127 @@ const committedOn = (w, ds) => ds.map((d) => day(w, d).committed);
 /* ---------- 2. the payday moves the wages ----------------------------- */
 {
   const data = book();
+  /* The payroll raises a month's wages due on its last day. A payday
+     from the 1st to the 15th pays the month JUST ENDED; the 16th on, the
+     month in progress -- unless the owner says otherwise. */
   data.presetManager.payday = { kind: 'monthly', day: 13 };
   const s = scope(data);
+  eq(s.mgrPayday(), { kind: 'monthly', day: 13, settles: 'previous', settlesSet: false }, 'the 13th pays the month just ended, by default');
+  eq([s.mgrPaydayDates('2026-10', s.mgrPayday(), '2026-10-31'), s.mgrPaydayDates('2026-02', { kind: 'monthly', day: 31 }, null),
+    s.mgrPaydayDates('2026-01', { kind: 'monthly', day: 31, settles: 'previous' }, null)],
+  [['2026-11-13'], ['2026-02-28'], ['2026-02-28']], 'October\'s wages on 13 November; the 31st clamps to a short month\'s end');
+  /* September was never raised on this book: its payday, 13 October,
+     is still ahead, so a salary is a standing promise -- 600,000 costed
+     from Joan's rate, on the 13th, and it says it was not raised. */
+  const wu = s.mgrCashWalk({ today: TODAY });
+  eq(wu.days.flatMap((d) => d.events).filter((e) => e.kind === 'wage').map((e) => [e.date, e.amount, e.period, e.raised]),
+    [['2026-10-13', -600000, '2026-09', false]], 'a month not raised, its payday ahead, is costed from the rate on that payday');
+  /* Raised and paid in full, September leaves nothing to place. */
+  data.dues.push({ id: 2, kind: 'wage', refId: 'ST1', period: '2026-09', dueDate: '2026-09-30', amount: 600000, paid: 600000 });
   const w = s.mgrCashWalk({ today: TODAY });
-  /* October's 600,000 leaves on the 13th: 7,000,000 − 600,000 =
-     6,400,000 from the 13th; November's falls on 13 November, outside. */
-  eq(committedOn(w, ['2026-10-12', '2026-10-13', '2026-10-31', '2026-11-01']), [7000000, 6400000, 6400000, 5900000],
-    'a payday of the 13th takes October\'s wages on the 13th');
-  t.check(/the 13th of each month/.test(w.method.wages), 'and says so');
+  /* October's 600,000 leaves on 13 November, past the window. 10m −
+     1m bill = 9m; − 2m rent on the 10th = 7m; − 0.5m loan on 1 Nov =
+     6.5m. No wage inside the 30 days, none owed, none named. */
+  eq(committedOn(w, [TODAY, '2026-10-10', '2026-10-31', '2026-11-01', '2026-11-06']), [9000000, 7000000, 7000000, 6500000, 6500000],
+    'a payday of the 13th takes October\'s wages on 13 November, outside these 30 days');
+  t.check(!w.days.some((d) => d.events.some((e) => e.kind === 'wage')), 'so no wage is on this line, and nothing is overdue');
+  t.check(/the 13th of each month \(pays the month just ended\)/.test(w.method.wages), 'and the method says which month it pays');
 
+  /* The owner says their 13th pays the month in progress: October's
+     600,000 on 13 October -- 7m − 0.6m = 6.4m; − 0.5m on 1 Nov = 5.9m. */
+  data.presetManager.payday = { kind: 'monthly', day: 13, settles: 'same' };
+  const ws = scope(data).mgrCashWalk({ today: TODAY });
+  eq(committedOn(ws, ['2026-10-12', '2026-10-13', '2026-11-01']), [7000000, 6400000, 5900000], 'said otherwise, October\'s leave on 13 October');
+
+  /* THE 5TH, TODAY THE 7TH (the review's case). September was paid in
+     full; Peter's months are never raised. The 5th pays the month just
+     ended, so October's wages leave on 5 November -- Joan's raised
+     600,000 and Peter's 300,000 costed from his rate -- and NOTHING is
+     owed today: the 5 October payday was September's. November's leave
+     on 5 December, outside. One month in the window, never two.
+       10m − 1m bill = 9m · − 2m rent 10th = 7m · − 0.5m loan 1 Nov = 6.5m
+       · − 0.9m on 5 Nov = 5.6m */
   data.presetManager.payday = { kind: 'monthly', day: 5 };
   data.staff.push({ id: 'ST3', name: 'Peter', payBasis: 'monthly', payRate: 300000 });
-  const w5 = scope(data).mgrCashWalk({ today: TODAY });
-  /* The 5th has gone by: Joan's raised October is owed now (today).
-     Peter's October was never raised and its payday has passed -- it may
-     have been paid from the cash book, so it is named, not placed.
-     November: Joan 600,000 and Peter 300,000 on the 5th, both costed
-     from their rates. 10m − 1m − 0.6m = 8.4m today; − 2m = 6.4m on the
-     10th; − 0.5m = 5.9m on 1 Nov; − 0.9m = 5.0m on 5 Nov. */
-  eq(committedOn(w5, [TODAY, '2026-10-10', '2026-11-01', '2026-11-05']), [8400000, 6400000, 5900000, 5000000],
-    'a payday already gone by is owed today, and next month\'s lands on its own 5th');
-  const nov = w5.days.find((d) => d.date === '2026-11-05').events.filter((e) => e.kind === 'wage');
-  eq(nov.map((e) => [e.label, e.amount, e.raised]), [['Joan', -600000, false], ['Peter', -300000, false]],
-    'November is costed from the pay rate, and says it was not raised yet');
-  t.check(w5.notOnLine.some((x) => /Peter/.test(x.label) && /payday has gone by/.test(x.why)),
-    'Peter\'s October, unraised past its payday, is named and not taken a second time');
-  eq(w5.tightest, { date: '2026-11-05', balance: 5000000 }, 'the lowest day moves with the payday');
+  data.dues.push({ id: 3, kind: 'wage', refId: 'ST3', period: '2026-09', dueDate: '2026-09-30', amount: 300000, paid: 300000 });
+  const s5 = scope(data);
+  const w5 = s5.mgrCashWalk({ today: TODAY });
+  const wages5 = w5.days.flatMap((d) => d.events).filter((e) => e.kind === 'wage');
+  eq(wages5.map((e) => [e.date, e.label, e.amount, e.overdue, e.raised, e.period]),
+    [['2026-11-05', 'Joan', -600000, false, true, '2026-10'], ['2026-11-05', 'Peter', -300000, false, false, '2026-10']],
+    'payday the 5th: October\'s wages on 5 November, nothing overdue, one month only');
+  eq(committedOn(w5, [TODAY, '2026-10-10', '2026-11-01', '2026-11-05']), [9000000, 7000000, 6500000, 5600000], 'the line, day by day');
+  eq(w5.tightest, { date: '2026-11-05', balance: 5600000 }, 'and its lowest day is the payday');
+  t.check(!w5.notOnLine.some((x) => x.kind === 'wage' && x.amount != null), 'nothing named as maybe-paid: September is raised and paid');
+  /* The late-wages rule agrees: nothing is late today. */
+  eq(data.dues.filter((d) => d.kind === 'wage').map((d) => s5.mgrWageDueLate(d, TODAY, s5.mgrPayday())), [null, null, null],
+    'and the late-wages rule finds nothing late — the walk and the check tell one story');
 
-  data.presetManager.payday = { kind: 'weekly', day: 5 };
-  data.staff = data.staff.filter((x) => x.id !== 'ST3');
-  const ww = scope(data).mgrCashWalk({ today: TODAY });
-  /* Fridays. October's left after today: 9, 16, 23, 30 -- 600,000 in
-     four of 150,000. November's: 6, 13, 20, 27 -- the 6th is in the
-     window, 150,000. 9m → 8.85m (9th) → 6.85m (rent 10th) → 6.7m (16th)
-     → 6.55m (23rd) → 6.4m (30th) → 5.9m (1 Nov) → 5.75m (6 Nov). */
-  eq(committedOn(ww, ['2026-10-09', '2026-10-10', '2026-10-16', '2026-10-23', '2026-10-30', '2026-11-01', '2026-11-06']),
-    [8850000, 6850000, 6700000, 6550000, 6400000, 5900000, 5750000], 'a weekly payday splits the month across its Fridays');
-  eq(ww.tightest, { date: '2026-11-06', balance: 5750000 }, 'and the lowest day is the last Friday in the window');
+  /* Had September NOT been paid, it was due on its payday, 5 October:
+     owed today, and late by the same rule. */
+  data.dues.find((d) => d.id === 2).paid = 0;
+  const wl = scope(data).mgrCashWalk({ today: TODAY });
+  const late = wl.days[0].events.filter((e) => e.kind === 'wage');
+  eq(late.map((e) => [e.label, e.amount, e.overdue, e.dueOn, e.period]), [['Joan', -600000, true, '2026-10-05', '2026-09']],
+    'September unpaid past the 5th is owed today, once');
+  eq(s5.mgrWageDueLate(data.dues.find((d) => d.id === 2), TODAY, s5.mgrPayday()), { amount: 600000, since: '2026-10-05', first: '2026-10-05' },
+    'and late since 5 October by the rule the check reads');
+  data.dues.find((d) => d.id === 2).paid = 600000;
+
+  /* With no payday the rule IS dueIsOverdue: one share on the due's own
+     date. */
+  const due = { kind: 'wage', period: '2026-09', dueDate: '2026-09-30', amount: 500000, paid: 100000 };
+  eq([s5.mgrWageDueLate(due, TODAY, null), s5.dueIsOverdue(due, TODAY)], [{ amount: 400000, since: '2026-09-30', first: '2026-09-30' }, true],
+    'no payday: late exactly when dueIsOverdue says so');
+  eq([s5.mgrWageDueLate(due, '2026-09-30', null), s5.dueIsOverdue(due, '2026-09-30')], [null, false], 'and not on its own day');
+}
+
+/* ---------- 2b. a weekly payday splits the month over ALL its paydays -- */
+{
+  const data = book();
+  data.dues = [];
+  data.staff = [{ id: 'ST1', name: 'Joan', payBasis: 'monthly', payRate: 600000 }];
+  const s = scope(data);
+  const FRI = { kind: 'weekly', day: 5 };
+  /* The review's case. Today Wednesday 28 October; October not raised.
+     October's Fridays: 2, 9, 16, 23, 30 -- five shares of 120,000. Four
+     have gone by with nothing raised: 480,000 is NAMED (it may have been
+     paid from the cash book), never placed. The 30th's 120,000 is placed.
+     November's Fridays 6, 13, 20, 27: four of 150,000, all inside the
+     window to 27 November. 120,000 + 600,000 = 720,000 -- not 1,200,000. */
+  const ev = s.mgrWageEvents('2026-10-28', '2026-11-27', FRI);
+  eq(ev.events.map((e) => [e.date, e.amount]),
+    [['2026-10-30', 120000], ['2026-11-06', 150000], ['2026-11-13', 150000], ['2026-11-20', 150000], ['2026-11-27', 150000]],
+    'each payday carries its own share of its own month');
+  eq(ev.events.reduce((n, e) => n + e.amount, 0), 720000, '720,000 in the window — the month\'s last share and November');
+  eq(ev.notOnLine.map((x) => [x.label, x.amount]), [['Joan — October 2026', 480000]], 'the four shares gone by are named, not placed');
+  t.check(/4 of its 5 paydays have gone by/.test(ev.notOnLine[0].why), 'and it says how many');
+  eq(ev.events[0].split, { part: 5, of: 5 }, 'the share says which of the month\'s paydays it is');
+
+  /* RAISED, part paid. October raised at 600,000; today Saturday 10
+     October (the 2nd and 9th gone by). Paid 240,000: the first two
+     shares are covered, nothing is owed, and 16, 23, 30 carry 120,000
+     each. Paid 100,000: the 2nd's share is covered to 100,000, so 20,000
+     of it and all of the 9th's 120,000 -- 140,000 -- are owed today. */
+  data.dues = [{ id: 1, kind: 'wage', refId: 'ST1', period: '2026-10', dueDate: '2026-10-31', amount: 600000, paid: 240000 }];
+  let r = s.mgrWageEvents('2026-10-10', '2026-11-09', FRI);
+  eq(r.events.filter((e) => e.period === '2026-10').map((e) => [e.date, e.amount, e.overdue]),
+    [['2026-10-16', 120000, false], ['2026-10-23', 120000, false], ['2026-10-30', 120000, false]], 'paid ahead of the shares: nothing owed, three ahead');
+  data.dues[0].paid = 100000;
+  r = s.mgrWageEvents('2026-10-10', '2026-11-09', FRI);
+  eq(r.events.filter((e) => e.period === '2026-10').map((e) => [e.date, e.amount, e.overdue]),
+    [['2026-10-10', 140000, true], ['2026-10-16', 120000, false], ['2026-10-23', 120000, false], ['2026-10-30', 120000, false]],
+    'paid behind: only the uncovered shares already gone by are owed today');
+  eq(s.mgrWageDueLate(data.dues[0], '2026-10-10', FRI), { amount: 140000, since: '2026-10-09', first: '2026-10-02' },
+    'and the late-wages rule reads the same 140,000');
+  /* November's four Fridays in the window carry November's salary: 6 Nov
+     in [10 Oct, 9 Nov] -- 150,000, costed from the rate. */
+  eq(r.events.filter((e) => e.period === '2026-11').map((e) => [e.date, e.amount, e.raised]), [['2026-11-06', 150000, false]],
+    'and next month\'s first Friday is costed from the rate');
+  /* An odd amount: 100,001 over five Fridays is four of 20,000 and a
+     last of 20,001 -- no shilling lost, none negative. */
+  eq(s.mgrWageShares('2026-10', 100001, 0, FRI, null).map((x) => x.share), [20000, 20000, 20000, 20000, 20001], 'the last share takes the odd shillings');
+  eq(s.mgrWageShares('2026-10', 3, 0, FRI, null).map((x) => x.share), [0, 0, 0, 0, 3], 'never a negative share');
 }
 
 /* ---------- 3. the expected band, with its method --------------------- */
@@ -198,10 +284,11 @@ const committedOn = (w, ds) => ds.map((d) => day(w, d).committed);
     'Okot on the day he named; Kato three days after a chase today, 600,000 (less than the 2,000,000 owed)');
   const kato = w.expectedReceipts.find((x) => x.kind === 'chase');
   t.check(kato.source === 'paid within 3 days of a chase in 3 of 4 · if chased today', 'and it says its basis, k of n');
-  /* Weekday medians over the eight weeks: Wednesday +1,000,000,
-     Thursday −400,000 (paying suppliers at the shop's pace), every
-     other weekday 0; the Tuesday rent is dated, never the usual day. */
-  const by = w.trading.byWeekday.map((x) => x.median);
+  /* Weekday averages over the eight weeks: Wednesday 8 × 1,000,000 ÷ 8
+     = +1,000,000, Thursday 8 × −400,000 ÷ 8 = −400,000 (paying
+     suppliers at the shop's pace), every other weekday 0; the Tuesday
+     rent is dated, never the usual day. */
+  const by = w.trading.byWeekday.map((x) => x.mean);
   eq(by, [0, 0, 0, 1000000, -400000, 0, 0], 'the usual day by weekday');
   /* Expected = 10m, the bill NOT taken (it is inside the usual paying),
      rent, wages and the loan taken as on the committed line:
@@ -218,7 +305,7 @@ const committedOn = (w, ds) => ds.map((d) => day(w, d).committed);
   eq(w.tightest, { date: '2026-11-01', balance: 5900000 }, 'and the committed line is exactly as it was without it');
   t.check(w.days.flatMap((d) => d.events).filter((e) => e.line === 'expected').every((e) => /chase|promise|trading/.test(e.kind)),
     'everything on the expected band is a receipt or a usual day');
-  t.check(/median of the last 8/.test(w.method.expectedTrading) && /k of n/.test(w.method.expectedReceipts),
+  t.check(/average of the last 8/.test(w.method.expectedTrading) && /k of n/.test(w.method.expectedReceipts),
     'and the method is stated for both');
 }
 
@@ -231,15 +318,62 @@ const committedOn = (w, ds) => ds.map((d) => day(w, d).committed);
     data.customers[0].debtLog.push({ id: 50 + i, type: 'payment', date: d, amount: 200000, cashTxnId: 500 + i, note: '' });
   });
   const s = scope(data);
-  /* Mondays: [200k ×5, 0 ×3] → sorted 0,0,0,200,200,200,200,200 → the
-     middle two are 200k and 200k: 200,000. With Kato placed by name, his
-     payments come out of the history: every Monday 0. */
-  eq(s.mgrTradingPattern(TODAY, []).byWeekday[1].median, 200000, 'what other customers pay is part of the usual day');
-  eq(s.mgrTradingPattern(TODAY, ['C1']).byWeekday[1].median, 0, 'but a customer placed by name is taken out of it');
+  /* Mondays: 200k on five of the eight, nothing on three → 1,000,000 ÷
+     8 = 125,000. With Kato placed by name, his payments come out of the
+     history: every Monday 0. */
+  eq(s.mgrTradingPattern(TODAY, []).byWeekday[1].mean, 125000, 'what other customers pay is part of the usual day');
+  eq(s.mgrTradingPattern(TODAY, ['C1']).byWeekday[1].mean, 0, 'but a customer placed by name is taken out of it');
   data.cashTxns = data.cashTxns.filter((x) => x.date >= '2026-09-26');
   const thin = s.mgrTradingPattern(TODAY, []);
-  t.check(thin.byWeekday.every((x) => x.median === null && x.n < 3),
+  t.check(thin.byWeekday.every((x) => x.mean === null && x.n < 3),
     'books younger than three of a weekday give no usual day at all — not known, not 0');
+}
+
+/* ---------- 4b. a supplier paid every few weeks is in the usual day ---- */
+{
+  /* The review's book. Eight weeks of 1,000,000 of takings EVERY day,
+     and 6,000,000 paid to a supplier on three of the eight Thursdays
+     (20 Aug, 10 Sep, 1 Oct). A 6,000,000 bill is dated 15 October.
+     Opening 5,000,000. */
+  const data = { staff: [], dues: [], customers: [], presetChaseLog: [], savedQuotes: [], cashTxns: [], presetManager: {} };
+  let id = 1;
+  for (let i = 1; i <= 56; i++) {
+    const d = new Date(Date.UTC(2026, 9, 7 - i)).toISOString().slice(0, 10);
+    data.cashTxns.push({ id: id++, date: d, type: 'receipt', category: 'Sales Revenue', amount: 1000000, account: 'cash' });
+  }
+  ['2026-08-20', '2026-09-10', '2026-10-01'].forEach((d) =>
+    data.cashTxns.push({ id: id++, date: d, type: 'payment', category: 'Supplier Payment', amount: 6000000, account: 'bank' }));
+  const ahead = () => ({ onHand: 5000000,
+    commitments: [{ date: '2026-10-15', dueOn: '2026-10-15', overdue: false, kind: 'bill', label: 'Steel — bill', amount: 6000000, raised: true, billId: 21 }],
+    tightest: { date: '2026-10-15', balance: -1000000 }, safeToSpend: 0, promised: [],
+    owedToYou: { total: 0, count: 0 }, owedByYou: { total: 6000000, count: 1, dated: 1, datedTotal: 6000000 } });
+  const s = compileScope(SOURCES, {
+    data, todayISO: () => TODAY, CASH_AHEAD_DAYS: 30, cashAhead: ahead,
+    cashOnHandByAccount: () => ({ byAccount: [{ key: 'bank', label: 'Bank', amount: 5000000 }], total: 5000000 }),
+    mgrCashFloor: () => ({ amount: 0, source: 'set', note: 'the floor you set' }), mgrMemo: (name, f) => f(),
+    chaseResponse: () => ({ customers: [] }), credOpenInvoices: () => [], buyOrdersOpenRows: () => [],
+    supplierName: () => 'Steel', dueName: () => '',
+  }, ['mgrCashWalk', 'mgrTradingPattern']);
+  const tp = s.mgrTradingPattern(TODAY, []);
+  /* Thursdays: 8 × 1,000,000 − 3 × 6,000,000 = −10,000,000 ÷ 8 =
+     −1,250,000. (Their MEDIAN is +1,000,000: five of the eight paid
+     nobody, so a median would drop every supplier payment.) */
+  eq(tp.byWeekday.map((x) => x.mean), [1000000, 1000000, 1000000, 1000000, -1250000, 1000000, 1000000],
+    'the supplier\'s three payments are in the usual Thursday, averaged over all eight');
+  /* Over a week the usual days sum to 6 × 1,000,000 − 1,250,000 =
+     4,750,000; × 8 weeks = 38,000,000 = 56,000,000 − 18,000,000, the
+     books' own net over the same 56 days, to the shilling. */
+  eq(tp.byWeekday.reduce((n, x) => n + x.mean, 0) * 8, 56000000 - 18000000, 'eight usual weeks are exactly the eight weeks on the books');
+  const w = s.mgrCashWalk({ today: TODAY });
+  /* 7 Oct to 6 Nov is 31 days: 5 Thursdays (8, 15, 22, 29 Oct, 5 Nov)
+     and 26 other days. 5,000,000 + 26 × 1,000,000 − 5 × 1,250,000 =
+     24,750,000. The dated bill is paid out of that usual paying of
+     suppliers, so it is not taken off the band a second time; it IS on
+     the committed line: 5,000,000 − 6,000,000 = −1,000,000 from the 15th. */
+  eq([day(w, '2026-11-06').expected, day(w, '2026-11-06').committed], [24750000, -1000000], 'the band carries the shop\'s real supplier pace');
+  /* 5,000,000 + 1,000,000 on Wednesday the 7th = 6,000,000; − 1,250,000
+     on Thursday the 8th = 4,750,000. */
+  eq([day(w, '2026-10-07').expected, day(w, '2026-10-08').expected], [6000000, 4750000], 'a Thursday takes its average outflow');
 }
 
 /* ---------- 5. the Simulator's levers --------------------------------- */

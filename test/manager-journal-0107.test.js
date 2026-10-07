@@ -133,10 +133,11 @@ const code = mig.split(/\r?\n/).filter((l) => !/^\s*--/.test(l)).join('\n');
 /* ---------- 4. the owner's floor and payday ---------------------------- */
 {
   const data = { presetManager: {} };
-  const S = compileScope([fn('mgrCashFloor'), fn('mgrPayday'), fn('mgrPaydayLabel'), fn('mgrOrdinal'), decl('MGR_WEEKDAYS')], {
+  const S = compileScope([fn('mgrCashFloor'), fn('mgrPayday'), fn('mgrPaydayLabel'), fn('mgrOrdinal'), decl('MGR_WEEKDAYS'),
+    fn('mgrPaydaySettlesDefault'), fn('mgrPaydaySettles'), fn('mgrPaydaySettlesLabel')], {
     data, currentPeriod: () => '2026-10',
     committedMonthlyCost: () => ({ total: 4200000, rent: 2500000, wages: 1700000, dailyCount: 1, noRateCount: 0 }),
-  }, ['mgrCashFloor', 'mgrPayday', 'mgrPaydayLabel']);
+  }, ['mgrCashFloor', 'mgrPayday', 'mgrPaydayLabel', 'mgrPaydaySettlesLabel']);
   const stand = S.mgrCashFloor();
   eq([stand.amount, stand.source, stand.parts.rent, stand.parts.wages], [4200000, 'stand-in', 2500000, 1700000],
     'not set: a month of rent and salaries stands in — 2,500,000 + 1,700,000');
@@ -154,11 +155,22 @@ const code = mig.split(/\r?\n/).filter((l) => !/^\s*--/.test(l)).join('\n');
   data.presetManager.payday = 'month-end';
   eq(S.mgrPayday(), null, 'an old placeholder is not a payday');
   data.presetManager.payday = { kind: 'monthly', day: 13 };
-  eq([S.mgrPayday(), S.mgrPaydayLabel()], [{ kind: 'monthly', day: 13 }, 'the 13th of each month'], 'the 13th of each month');
+  eq([S.mgrPayday(), S.mgrPaydayLabel(), S.mgrPaydaySettlesLabel()],
+    [{ kind: 'monthly', day: 13, settles: 'previous', settlesSet: false }, 'the 13th of each month', 'pays the month just ended'],
+    'the 13th of each month — by default it pays the month just ended (the payroll raises a month due on its last day)');
+  data.presetManager.payday = { kind: 'monthly', day: 15 };
+  eq(S.mgrPayday().settles, 'previous', 'the 15th still pays the month before');
+  data.presetManager.payday = { kind: 'monthly', day: 16 };
+  eq([S.mgrPayday().settles, S.mgrPaydaySettlesLabel()], ['same', 'pays the month in progress'], 'the 16th on pays its own month');
+  data.presetManager.payday = { kind: 'monthly', day: 5, settles: 'same' };
+  eq([S.mgrPayday().settles, S.mgrPayday().settlesSet], ['same', true], 'and what the owner said wins over the day');
+  data.presetManager.payday = { kind: 'monthly', day: 5, settles: 'later' };
+  eq([S.mgrPayday().settles, S.mgrPayday().settlesSet], ['previous', false], 'a word that is not one of the two is not a choice');
   data.presetManager.payday = { kind: 'monthly', day: 31 };
   eq(S.mgrPaydayLabel(), 'the last day of each month', 'the 31st is the last day of a shorter month');
   data.presetManager.payday = { kind: 'weekly', day: 5 };
-  eq([S.mgrPayday(), S.mgrPaydayLabel()], [{ kind: 'weekly', day: 5 }, 'every Friday'], 'or a weekday');
+  eq([S.mgrPayday(), S.mgrPaydayLabel(), S.mgrPaydaySettlesLabel()], [{ kind: 'weekly', day: 5 }, 'every Friday', 'each pays an even share of its month'],
+    'or a weekday');
   data.presetManager.payday = { kind: 'monthly', day: 32 };
   eq(S.mgrPayday(), null, 'a day that is no day is not set');
 
@@ -172,6 +184,13 @@ const code = mig.split(/\r?\n/).filter((l) => !/^\s*--/.test(l)).join('\n');
     'the payday is saved in the shape mgrPayday reads');
   t.check(/data\.presetManager = \{ \.\.\.\(data\.presetManager \|\| \{\}\),\s*cashFloor/.test(g), 'without disturbing the growth settings beside it');
   t.check(/saveData\(\); renderManager\(\);/.test(g), 'saved, and the Manager redrawn on the new floor');
+  t.check(/id="mgrPaydaySettlesIn"/.test(g) && /The month just ended/.test(g) && /The month in progress/.test(g)
+    && /payday && payday\.kind === 'monthly' \? `<div class="field ow-growth-field"><label for="mgrPaydaySettlesIn">/.test(g),
+    'a monthly payday asks which month it pays — and only a monthly one');
+  t.check(/said !== mgrPaydaySettlesDefault\(pd\.day\)\) pd\.settles = said/.test(g)
+    && /which === 'settles' \? document\.getElementById\('mgrPaydaySettlesIn'\)\.value/.test(g),
+    'kept only when the owner said something the day does not already imply, and only from that control');
+  t.check(/esc\(mgrPaydaySettlesLabel\(payday\)\)/.test(g), 'and the payday figure says which month it pays');
 }
 
 /* ---------- 5. the journal's new kinds, through one door each ---------- */
@@ -199,7 +218,7 @@ function layer(answer, over) {
     data: { savedQuotes: [{ invoiced: true }, { invoiced: true, voided: true }, { invoiced: false }], purchaseInvoices: [{}, { voided: true }],
       stockLog: [{ date: '2026-09-02' }, { date: '2026-08-05' }] } }, over || {});
   const s = compileScope([...LAYER.map(fn), decl('MGR_MIGRATION_0107'), decl('mgrNoteText'), decl('mgrNoteDay'), decl('mgrNoteNum'),
-    decl('MGR_DEPTS'), 'let mgrSnapshotKept = null;'], env, LAYER);
+    decl('MGR_DEPTS'), decl('MGR_DECISION_OUTCOME_MAX'), 'let mgrSnapshotKept = null;', 'let mgrSnapshotTried = null;'], env, LAYER);
   return { s, sb, toasts, warns, timers };
 }
 (async () => {
@@ -237,9 +256,26 @@ function layer(answer, over) {
     eq([d.kind, d.status, d.body.source, d.body.signedOn, d.body.levers[0].from], ['decision', 'signed', 'owner', TODAY, 'books'],
       'a signed choice is its own kind — never a move, so it can never count as the Manager\'s advice');
     t.check(dec.ok && (await s.mgrSaveDecision({})).error === 'A decision needs a title', 'and needs a title');
+    eq([d.body.outcome, 'outcomeDropped' in d.body], [{ lowest: 3200000 }, false], 'a small outcome is kept whole');
+
+    /* A Simulator outcome carrying a 31-day walk, one event a day: 4,071
+       characters of JSON in the review's probe. Cut at 4,000 it was no
+       longer JSON, JSON.parse threw, and the write rejected with nothing
+       kept and nothing said. Now it is measured first: too long, it is
+       dropped WHOLE and flagged, and the decision is still written. */
+    const days = Array.from({ length: 31 }, (_, i) => ({ date: '2026-10-' + String(i + 1).padStart(2, '0'), committed: 3148424 + i * 1000,
+      events: [{ kind: 'bill', label: 'Steel & Tube — bill', amount: -1000000 - i, line: 'committed', dept: 'procurement' }] }));
+    t.check(JSON.stringify({ days }).length > 4000, 'the outcome is over 4,000 characters of JSON');
+    const big = await s.mgrSaveDecision({ title: 'Pay Steel later', outcome: { days } });
+    const bd = op(sb.calls[sb.calls.length - 1], 'insert')[1];
+    eq([big.ok, bd.kind, bd.body.title, bd.body.outcome, bd.body.outcomeDropped], [true, 'decision', 'Pay Steel later', null, true],
+      'an outcome too long is dropped whole and flagged — the decision is still kept');
+    const loop = {}; loop.self = loop;
+    const circ = await s.mgrSaveDecision({ title: 'Circular', outcome: loop });
+    eq([circ.ok, op(sb.calls[sb.calls.length - 1], 'insert')[1].body.outcomeDropped], [true, true], 'and one that is not JSON at all is dropped the same way');
 
     await s.mgrSaveNormal({ metric: 'sales', weekday: 6, condition: 'first Saturday of the month', effect: 'busy' });
-    const n = op(sb.calls[2], 'insert')[1];
+    const n = op(sb.calls[sb.calls.length - 1], 'insert')[1];
     eq([n.kind, n.status, n.body.metric, n.body.weekday, n.body.source], ['normal', 'active', 'sales', 6, 'owner'], 'a taught normal');
   }
   {
@@ -274,16 +310,42 @@ function layer(answer, over) {
     have = [];
   }
   {
-    const owner = layer(() => ({ data: [], error: null }));
-    owner.s.mgrSnapshotAfterLoad();
+    let day = TODAY;
+    const owner = layer(() => ({ data: [], error: null }), { todayISO: () => day });
+    eq(owner.s.mgrSnapshotAfterLoad(), true, 'the first load of the day schedules an attempt');
     eq(owner.timers.length, 1, 'the owner\'s session schedules the snapshot after the screen is up');
+    /* The poll reloads every thirty seconds; the app is never reloaded.
+       One attempt a day, however many loads. */
+    eq([owner.s.mgrSnapshotAfterLoad(), owner.s.mgrSnapshotAfterLoad(), owner.timers.length], [false, false, 1],
+      'later loads the same day do not try again — a shop without 0107 is not walked every thirty seconds');
+    day = '2026-10-08';
+    eq([owner.s.mgrSnapshotAfterLoad(), owner.timers.length], [true, 2], 'the next morning, on the same open app, it tries again');
+    await owner.timers[1]();
+    await new Promise((r) => setImmediate(r));
+    eq(op(owner.sb.calls[owner.sb.calls.length - 1], 'insert') && op(owner.sb.calls[owner.sb.calls.length - 1], 'insert')[1].kind, 'snapshot',
+      'and writes that day\'s snapshot');
+    /* Offline: the check never reached the journal and nothing was
+       worked out -- the day's key is given back for a later load. */
+    const off = layer((q) => ({ data: null, error: { message: 'Failed to fetch' } }));
+    off.s.mgrSnapshotAfterLoad();
+    await off.timers[0]();
+    await new Promise((r) => setImmediate(r));
+    eq([off.s.mgrSnapshotAfterLoad(), off.timers.length], [true, 2], 'a check that never reached the journal may be tried again');
+    const refused = layer((q) => op(q, 'insert') ? { data: null, error: { message: 'violates check constraint "manager_notes_kind_check"', code: '23514' } } : { data: [], error: null });
+    refused.s.mgrSnapshotAfterLoad();
+    await refused.timers[0]();
+    await new Promise((r) => setImmediate(r));
+    eq([refused.s.mgrSnapshotAfterLoad(), refused.timers.length], [false, 1], 'one the database refused is not retried that day');
+    const poll = extractFunction(src, 'pollForUpdatesNow', 'index.html');
+    t.check(/lastSynced = freshSynced;\s*\n\s*if\(typeof mgrSnapshotAfterLoad === 'function'\) mgrSnapshotAfterLoad\(\);/.test(poll),
+      'the background refresh offers the day\'s snapshot once fresh books are in — an app left open still keeps every day');
     const staff = layer(() => ({ data: [], error: null }), { currentMemberRole: 'staff' });
     staff.s.mgrSnapshotAfterLoad();
     const admin = layer(() => ({ data: [], error: null }), { currentMemberRole: 'admin' });
     admin.s.mgrSnapshotAfterLoad();
     eq([staff.timers.length, admin.timers.length], [0, 0], 'no other session writes one');
     const boot = extractFunction(src, 'boot', 'index.html');
-    t.check(/runStartupReminders\(\);\s*\n\s*mgrSnapshotAfterLoad\(\);/.test(boot), 'hooked once, where the owner\'s books have loaded');
+    t.check(/runStartupReminders\(\);\s*\n\s*mgrSnapshotAfterLoad\(\);/.test(boot), 'hooked where the owner\'s books first load');
     t.check(!/mgrSaveSnapshot|mgrSnapshotAfterLoad/.test(extractFunction(src, 'renderManager', 'index.html')),
       'and never from a repaint of the Manager');
   }

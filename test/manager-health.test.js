@@ -32,13 +32,13 @@ const FACTS = {
   loans: { open: 0, overdue: 0, amount: 0 },
   debtorDays: { days: 22.4, receivables: 5000000, creditSales: 20000000, creditPerDay: 222222, windowDays: 90 },
   margin: { pct: 14.2, aim: 12, sales: 30000000 },
-  belowCost: { count: 0, loss: 0, worst: null },
-  quiet: { count: 2, names: ['Achen', 'Bosco'] },
-  costRise: { count: 0, worst: null },
+  belowCost: { lines: 12, count: 0, loss: 0, worst: null },
+  quiet: { count: 2, regulars: 15, names: ['Achen', 'Bosco'] },
+  costRise: { trended: 8, count: 0, worst: null },
   concentration: { share: 0.6, top: 'Roofings', total: 10000000 },
   stopAt: { known: 0, owing: 3, unknownOwing: 3, past: [], near: [] },
   ordersLate: { open: 1, dated: 0, late: 0, worst: null },
-  stockOut: { count: 0, names: [], soonest: null },
+  stockOut: { selling: 40, count: 0, names: [], soonest: null },
   deadStock: { value: 0, total: 10000000, share: 0, lines: 0, quietDays: 60 },
   daysOfStock: { days: 120.4, value: 10000000, cogsPerDay: 83056 },
   countAccuracy: null,
@@ -200,10 +200,73 @@ const H = compileScope([
   t.check(/anOverallTotals\(anInvoicesInRange\(anShiftDate\(today, -29\), today\)\)/.test(facts),
     'margin over 30 days is the hero\'s own reading');
   t.check(/purchaseConcentration\(anShiftDate\(today, -89\), today\)/.test(facts), 'concentration is the Statements\' reading');
-  t.check(/supplierPriceWatch\(\)\.up\.filter\(s=> s\.risePct > DASH_COST_RISE_PCT\)/.test(facts), 'and price rises the dashboard\'s');
+  t.check(/const watch = supplierPriceWatch\(\);/.test(facts) && /watch\.up\.filter\(s=> s\.risePct > DASH_COST_RISE_PCT\)/.test(facts),
+    'and price rises the dashboard\'s');
+  t.check(/mgrWageDueLate\(d, today, payday\)/.test(facts),
+    'late wages are judged by the payday rule the cash walk dates them by — never dueIsOverdue on its own once a payday is set');
   t.check(/errors\.push\(name\)/.test(facts) && /console\.warn/.test(facts), 'a figure that cannot be read is named, and its checks read not known');
   const checks = extractDeclaration(src, 'MGR_HEALTH_CHECKS', 'index.html');
   t.check(!/because of|thanks to|it worked/i.test(checks), 'no check claims a cause');
+}
+
+/* ---------- 6. a book that cannot answer passes nothing --------------- */
+{
+  /* Everything a brand-new shop has: no floor set and nothing to stand in
+     for one, no cash moved, nobody owing or owed, nothing invoiced or
+     bought or sold, nobody on staff. Every check is "not known" -- not
+     one passes on an empty book, so there is no score at all. */
+  const EMPTY = {
+    today: TODAY, errors: [],
+    floor: { amount: 0, source: 'stand-in', note: 'not set — and no rent or salary is on the books to stand in' },
+    tightest: { date: TODAY, balance: 0 },
+    debt60: { amount: 0, count: 0, total: 0, oldest: null },
+    bills: { owed: 0, count: 0, dated: 0, late: 0, lateAmount: 0 },
+    loans: { open: 0, overdue: 0, amount: 0 },
+    debtorDays: { days: null, receivables: 0, creditSales: 0, creditPerDay: 0, windowDays: 90 },
+    margin: { pct: null, aim: 12, sales: 0 },
+    belowCost: { lines: 0, count: 0, loss: 0, worst: null },
+    quiet: { count: 0, regulars: 0, names: [] },
+    costRise: { trended: 0, count: 0, worst: null },
+    concentration: null,
+    stopAt: { known: 0, owing: 0, unknownOwing: 0, past: [], near: [] },
+    ordersLate: { open: 0, dated: 0, late: 0, worst: null },
+    stockOut: { selling: 0, count: 0, names: [], soonest: null },
+    deadStock: { value: 0, total: 0, share: null, lines: 0, quietDays: 60 },
+    daysOfStock: { days: null, value: 0, cogsPerDay: 0 },
+    countAccuracy: null,
+    wagesLate: { count: 0, amount: 0, dues: 0 },
+    ratesMissing: { count: 0, staff: 0, names: [] },
+    till: null, repeat: null, posts: null,
+  };
+  const E = compileScope([
+    fn('mgrHealthChecks'), fn('mgrShortUGX'), fn('fmtShortDate'), fn('mgrPossessive'),
+    decl('MGR_HEALTH_CHECKS'), decl('MGR_DEPTS'),
+  ], { mgrHealthFacts: () => EMPTY, todayISO: () => TODAY, DASH_COST_RISE_PCT: 5 }, ['mgrHealthChecks']);
+  const h = E.mgrHealthChecks();
+  eq([h.known, h.passed, h.score], [0, 0, null], 'an empty book: nothing known, nothing passed, no score');
+  const v = Object.fromEntries(h.checks.map((c) => [c.id, c.pass]));
+  eq(['cash_floor', 'debt_60', 'below_cost', 'going_quiet', 'cost_rise', 'stock_out'].map((k) => v[k]),
+    [null, null, null, null, null, null], 'the six that used to pass on nothing now say they cannot judge');
+  const line = (id) => h.checks.find((c) => c.id === id).line;
+  eq([line('cash_floor'), line('below_cost'), line('going_quiet'), line('cost_rise'), line('stock_out'), line('debt_60')],
+    ['No floor set, and no rent or salary on the books to stand in for one', 'Nothing invoiced in 30 days',
+      'No customer has bought twice yet — no rhythm to judge', 'No line bought often enough to see its price move',
+      'Nothing sold off the shelf in 30 days to judge', 'No credit sales on the books to judge'],
+    'and each says what is missing');
+  eq(h.thin, ['finance', 'sales', 'procurement', 'store', 'people', 'marketing'], 'every department is thin');
+
+  /* Even with no floor to judge against, running out of cash is known:
+     the committed line below nothing fails. */
+  const broke = E.mgrHealthChecks(null, { tightest: { date: '2026-10-20', balance: -400000 } });
+  const cf = broke.checks.find((c) => c.id === 'cash_floor');
+  eq([cf.pass, cf.figure, cf.threshold], [false, -400000, 0], 'no floor, but cash below nothing still fails');
+  /* A floor of 0 the owner SET is a real floor: cash at 0 passes it. */
+  const set0 = E.mgrHealthChecks(null, { floor: { amount: 0, source: 'set', note: 'the floor you set' } });
+  eq(set0.checks.find((c) => c.id === 'cash_floor').pass, true, 'a floor of 0 the owner typed is judged like any floor');
+  /* Debt with nobody owing but credit sold and paid in the window is a
+     real pass, not a gap. */
+  const paid = E.mgrHealthChecks(null, { debtorDays: { days: null, receivables: 0, creditSales: 900000, creditPerDay: 10000, windowDays: 90 } });
+  eq(paid.checks.find((c) => c.id === 'debt_60').pass, true, 'credit sold and all of it paid: nothing past 60 days is known, and passes');
 }
 
 process.exit(t.done() ? 1 : 0);

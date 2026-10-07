@@ -46,7 +46,9 @@ const TODAY = '2026-10-07';
     { date: '2026-10-20', committed: -100000, events: [{ line: 'committed', label: 'Shop — rent' }] },
   ] };
   const s = compileScope([fn('mgrRisks30'), fn('anShiftDate'), fn('dueIsOverdue'), fn('dueBalance'), fn('periodLabel'), fn('mgrDept'),
-    fn('mgrShortUGX'), fn('fmtShortDate'), fn('mgrPossessive'), fn('purchaseInvoiceNumberLabel'), decl('MGR_DEPTS')], {
+    fn('mgrShortUGX'), fn('fmtShortDate'), fn('mgrPossessive'), fn('purchaseInvoiceNumberLabel'), decl('MGR_DEPTS'),
+    ...['mgrPayday', 'mgrPaydaySettles', 'mgrPaydaySettlesDefault', 'mgrPaydayDates', 'mgrWageShares', 'mgrWageDueLate',
+      'periodEndDate', 'periodShift', 'periodOf', 'waWeekday'].map(fn)], {
     data, todayISO: () => TODAY,
     mgrCashFloor: () => ({ amount: 3000000, source: 'set' }),
     mgrCashWalk: () => walk,
@@ -95,6 +97,34 @@ const TODAY = '2026-10-07';
   eq([row('due:7').date, row('due:7').overdue, row('due:7').dept, row('due:7').amount], [TODAY, true, 'finance', 2500000],
     'rent past its day');
   t.check(!row('due:8'), 'a wage not yet due is not a risk');
+
+  /* Wages are late by the owner's payday -- the rule the cash walk dates
+     them by. September's 500,000 for Joan, 200,000 paid: with no payday
+     it fell due on 30 September, so 300,000 is late since then. */
+  data.dues.push({ id: 9, kind: 'wage', refId: 'ST1', period: '2026-09', dueDate: '2026-09-30', amount: 500000, paid: 200000 });
+  data.presetManager = {};
+  let w = s.mgrRisks30({}).find((x) => x.id === 'due:9');
+  eq(w && [w.date, w.overdue, w.dueOn, w.amount, w.dept], [TODAY, true, '2026-09-30', 300000, 'people'],
+    'no payday: September\'s wages are late since the payroll\'s month end');
+  /* Payday the 5th pays the month just ended: September's wages leave on
+     5 October -- gone by, so late since the 5th; October's leave on
+     5 November and are not late. */
+  data.presetManager = { payday: { kind: 'monthly', day: 5 } };
+  const r5 = s.mgrRisks30({});
+  w = r5.find((x) => x.id === 'due:9');
+  eq(w && [w.date, w.dueOn, w.amount], [TODAY, '2026-10-05', 300000], 'payday the 5th: late since 5 October, the day it was to be paid');
+  t.check(!r5.find((x) => x.id === 'due:8'), 'and October\'s, paid on 5 November, is not');
+  /* Payday the 20th pays the month in progress: October's 600,000
+     leaves on 20 October -- still ahead, not a risk; September's left on
+     20 September, so it is late since then. */
+  data.presetManager = { payday: { kind: 'monthly', day: 20 } };
+  const r20 = s.mgrRisks30({});
+  eq(r20.find((x) => x.id === 'due:9').dueOn, '2026-09-20', 'payday the 20th: September\'s was due on 20 September');
+  t.check(!r20.find((x) => x.id === 'due:8'), 'and October\'s on the 20th is still ahead');
+  data.dues = data.dues.filter((d) => d.id !== 9);
+  data.presetManager = {};
+  const risks = extractFunction(src, 'mgrRisks30', 'index.html');
+  t.check(/mgrWageDueLate\(d, today, payday\)/.test(risks), 'the dated risks read late wages through the same rule as the walk and the check');
 
   /* Stock: cement, 46 at 10 a day → out on 7 + 4 = 11 Oct; Steel & Tube
      take 3 days → order by 11 − 3 − 1 = 7 Oct, today. Hoop iron, 2.5

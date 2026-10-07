@@ -126463,18 +126463,45 @@ function mgrCashFloor(){
     parts: { rent: Math.round(Number(c.rent) || 0), wages: Math.round(Number(c.wages) || 0),
       dailyPaid: c.dailyCount || 0, noRate: c.noRateCount || 0 } };
 }
-/* payday: { kind: 'monthly', day: 1..31 } -- the day of each month
-   wages leave (31 is the month's last day in a shorter month) -- or
-   { kind: 'weekly', day: 0..6 } (0 = Sunday, as waWeekday counts).
+/* payday: { kind: 'monthly', day: 1..31, settles } -- the day of each
+   month wages leave (31 is the month's last day in a shorter month) --
+   or { kind: 'weekly', day: 0..6 } (0 = Sunday, as waWeekday counts).
    Anything else is "not set", and wages stay at month end, the date the
-   payroll gives every wage due. */
+   payroll gives every wage due.
+
+   WHICH MONTH A MONTHLY PAYDAY PAYS. The payroll raises a month's wages
+   due on its last day (newWageDue), so a payday early in the month pays
+   the month JUST ENDED ('previous': the 5th of November pays October)
+   and one late in the month pays the month IN PROGRESS ('same': the
+   25th of October pays October). The owner says which in the settings;
+   until they do, the day decides -- the 1st to the 15th pay the month
+   before, the 16th on pay their own -- and the settings show the answer
+   so it can be corrected. Every reading of wages (the cash walk, the
+   late-wages check, the dated risks) dates them by this one rule. */
+function mgrPaydaySettlesDefault(day){
+  return Number(day) <= 15 ? 'previous' : 'same';
+}
 function mgrPayday(){
   const p = ((data && data.presetManager) || {}).payday;
   if(!p || typeof p !== 'object') return null;
   const day = Number(p.day);
-  if(p.kind === 'monthly' && Number.isInteger(day) && day >= 1 && day <= 31) return { kind: 'monthly', day };
+  if(p.kind === 'monthly' && Number.isInteger(day) && day >= 1 && day <= 31)
+    return { kind: 'monthly', day, settles: p.settles === 'previous' || p.settles === 'same' ? p.settles : mgrPaydaySettlesDefault(day),
+      settlesSet: p.settles === 'previous' || p.settles === 'same' };
   if(p.kind === 'weekly' && Number.isInteger(day) && day >= 0 && day <= 6) return { kind: 'weekly', day };
   return null;
+}
+function mgrPaydaySettles(payday){
+  if(!payday || payday.kind !== 'monthly') return null;
+  return payday.settles === 'previous' || payday.settles === 'same' ? payday.settles : mgrPaydaySettlesDefault(payday.day);
+}
+/* 'pays the month just ended' | 'pays the month in progress' | 'each
+   pays an even share of its month' (weekly) | null (no payday). */
+function mgrPaydaySettlesLabel(p){
+  const pd = p === undefined ? mgrPayday() : p;
+  if(!pd) return null;
+  if(pd.kind === 'weekly') return 'each pays an even share of its month';
+  return mgrPaydaySettles(pd) === 'previous' ? 'pays the month just ended' : 'pays the month in progress';
 }
 const MGR_WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 function mgrOrdinal(n){
@@ -126523,56 +126550,91 @@ function mgrMedian(vals){
 }
 
 /* ---- WAGES ON THE OWNER'S PAYDAY ---------------------------------
-   The days in `period` a month's wages leave on. No payday: the due's
-   own date when it is raised (month end, as newWageDue writes it), the
-   month's last day when it is not. Monthly: that day of the month,
-   clamped to its length. Weekly: every such weekday in the month, and
-   the month's wages are split across them. */
+   The days a period's wages leave on. No payday: the due's own date
+   when it is raised (month end, as newWageDue writes it), the month's
+   last day when it is not. Monthly: the payday of the month it settles
+   in (mgrPaydaySettles) -- the month itself, or the one after -- clamped
+   to that month's length. Weekly: every such weekday in the month, and
+   the month's wages are split evenly across ALL of them. */
 function mgrPaydayDates(period, payday, dueDate){
   const end = periodEndDate(period);
   if(!payday) return [dueDate || end];
   if(payday.kind === 'monthly'){
-    const last = Number(end.slice(8, 10));
-    return [period + '-' + String(Math.min(payday.day, last)).padStart(2, '0')];
+    const on = mgrPaydaySettles(payday) === 'previous' ? periodShift(period, 1) : period;
+    const last = Number(periodEndDate(on).slice(8, 10));
+    return [on + '-' + String(Math.min(payday.day, last)).padStart(2, '0')];
   }
   const out = [];
   for(let d = period + '-01'; d <= end; d = anShiftDate(d, 1)) if(waWeekday(d) === payday.day) out.push(d);
   return out;
 }
+/* A period's wages as SHARES on its paydays: { date, share, owed }.
+   The month's amount is split evenly over every one of its paydays (the
+   last takes the odd shillings), and what has been paid covers them in
+   date order -- so a payday already gone by is owed only for what the
+   payments have not reached, and the shares still ahead are never
+   inflated by the ones behind. No payday, or a monthly one: one share. */
+function mgrWageShares(period, amount, paid, payday, dueDate){
+  const days = mgrPaydayDates(period, payday, dueDate);
+  const total = Math.round(Number(amount) || 0), n = days.length;
+  const each = Math.floor(total / n);
+  let cover = Math.max(0, Number(paid) || 0);
+  return days.map((date, i)=>{
+    const share = i === n - 1 ? total - each * (n - 1) : each;
+    const c = Math.min(share, cover); cover -= c;
+    return { date, share, owed: Math.round(share - c) };
+  });
+}
+/* Is a RAISED wage due late on `today`, by the owner's payday? Late is
+   any share whose payday has gone by and that the payments have not
+   covered. With no payday this is exactly dueIsOverdue: one share on
+   the due's own date. -> { amount, since, first } | null. One rule for
+   the walk, the late-wages check and the dated risks, so the three can
+   never disagree about whether a wage is late. */
+function mgrWageDueLate(d, today, payday){
+  if(!d || d.kind !== 'wage' || dueBalance(d) === null) return null;
+  const period = String(d.period || periodOf(d.dueDate));
+  if(!/^\d{4}-\d{2}$/.test(period)) return null;
+  const gone = mgrWageShares(period, d.amount, d.paid, payday, d.dueDate).filter(x=> x.date < today && x.owed > 0.5);
+  if(!gone.length) return null;
+  return { amount: gone.reduce((n, x)=> n + x.owed, 0), since: gone[gone.length - 1].date, first: gone[0].date };
+}
 /* Every wage that leaves between `from` and `to`, on the payday.
 
-   RAISED dues are taken at their balance, exactly as cashCommitments
-   takes them: an unpaid one whose day has gone by is due now and sits on
-   `from`. A daily worker's month nobody has counted is UNCOSTED, and is
+   RAISED dues are taken at their balance, share by share: the shares
+   whose payday has gone by unpaid are owed now and sit on `from` (as
+   cashCommitments puts an overdue due); the rest leave on their own
+   paydays. A daily worker's month nobody has counted is UNCOSTED, and is
    named off the line rather than put on it at 0.
 
    A month NOT RAISED YET is costed only where the books can cost it: a
    monthly or weekly salary is a standing promise (basisMonthCost, the
    figure committedMonthlyCost carries), a day rate is not -- what a
-   daily worker costs follows the days worked. A month whose payday has
-   already gone by with nothing raised is named, never placed: the wages
-   may well have been paid straight from the cash book, and placing them
-   again would take them twice. */
+   daily worker costs follows the days worked. A share whose payday has
+   already gone by THIS month with nothing raised is named, never
+   placed: the wages may well have been paid straight from the cash
+   book, and placing them again would take them twice. */
 function mgrWageEvents(from, to, payday){
   const events = [], notOnLine = [];
   const where = payday ? 'your payday, ' + mgrPaydayLabel(payday) : 'month end — no payday set, so the payroll\'s date';
-  const place = (period, amount, base, raised, dueDate)=>{
-    const days = mgrPaydayDates(period, payday, dueDate);
-    const ahead = days.filter(d=> d >= from);
-    if(!ahead.length){
-      if(!raised){ notOnLine.push({ kind: 'wage', dept: 'people', label: base.label + ' — ' + periodLabel(period),
-        amount: Math.round(amount), why: 'not raised, and its payday has gone by — it may have been paid from the cash book' }); return; }
-      if(amount > 0.5) events.push({ ...base, date: from, dueOn: days[days.length - 1], overdue: true,
-        amount: Math.round(amount), raised, source: 'owed since ' + days[days.length - 1] + ' (' + where + ')' });
-      return;
+  const monthStart = String(from).slice(0, 7) + '-01';
+  const place = (period, amount, paid, base, raised, dueDate)=>{
+    const shares = mgrWageShares(period, amount, paid, payday, dueDate);
+    const n = shares.length;
+    const gone = shares.filter(x=> x.date < from && x.owed > 0.5);
+    if(gone.length){
+      const owed = gone.reduce((m, x)=> m + x.owed, 0), since = gone[gone.length - 1].date;
+      if(raised) events.push({ ...base, date: from, dueOn: since, overdue: true, amount: owed, raised,
+        ...(n > 1 ? { split: { parts: gone.length, of: n } } : {}),
+        source: 'owed since ' + since + ' (' + where + ')' });
+      else if(since >= monthStart) notOnLine.push({ kind: 'wage', dept: 'people', label: base.label + ' — ' + periodLabel(period),
+        amount: owed, why: (n > 1 ? gone.length + ' of its ' + n + ' paydays have gone by' : 'its payday has gone by')
+          + ' with nothing raised — it may have been paid from the cash book' });
     }
-    let left = Math.round(amount);
-    const each = amount / ahead.length;
-    ahead.forEach((d, i)=>{
-      const part = i === ahead.length - 1 ? left : Math.round(each);
-      left -= part;
-      if(d <= to && part > 0.5) events.push({ ...base, date: d, dueOn: d, overdue: false, amount: part, raised,
-        ...(ahead.length > 1 ? { split: { part: i + 1, of: ahead.length } } : {}),
+    shares.forEach((x, i)=>{
+      if(x.date < from || x.date > to || !(x.owed > 0.5)) return;
+      events.push({ ...base, date: x.date, dueOn: x.date, overdue: false, amount: x.owed, raised,
+        ...(n > 1 ? { split: { part: i + 1, of: n } } : {}),
         source: (raised ? 'raised on the payroll' : 'costed from the pay rate, not raised yet') + ' · ' + where });
     });
   };
@@ -126589,21 +126651,25 @@ function mgrWageEvents(from, to, payday){
       return;
     }
     if(!(bal > 0.5)) return;
-    place(period, bal, base, true, d.dueDate);
+    place(period, Number(d.amount), Number(d.paid) || 0, base, true, d.dueDate);
   });
-  for(let i = 0; i <= 3; i++){
+  /* From the month before (a payday early in this month pays it) to the
+     last month whose payday can reach the window. */
+  for(let i = -1; i <= 4; i++){
     const period = periodShift(periodOf(from), i);
     if(period + '-01' > to) break;
     staffOnPayroll().forEach(s=>{
       if(findDue('wage', s.id, period)) return;
+      const days = mgrPaydayDates(period, payday, null);
+      if(!days.some(d=> d >= monthStart && d <= to)) return;
       const base = { kind: 'wage', dept: 'people', label: s.name || 'Staff member', staffId: String(s.id), period };
       const cost = basisMonthCost(s.payBasis, s.payRate);
       if(cost == null){
-        if(mgrPaydayDates(period, payday, null).some(d=> d >= from && d <= to)) notOnLine.push({ kind: 'wage', dept: 'people', label: base.label + ' — ' + periodLabel(period), amount: null,
+        if(days.some(d=> d >= from && d <= to)) notOnLine.push({ kind: 'wage', dept: 'people', label: base.label + ' — ' + periodLabel(period), amount: null,
           why: s.payRate == null ? 'no pay rate set' : 'paid by the day — not costed until the days are counted' });
         return;
       }
-      if(cost > 0.5) place(period, cost, base, false, null);
+      if(cost > 0.5) place(period, cost, 0, base, false, null);
     });
   }
   events.sort((a, b)=> String(a.date).localeCompare(String(b.date)) || (b.amount - a.amount));
@@ -126697,16 +126763,22 @@ function mgrChaseLags(today, reading){
 
 /* ---- THE USUAL DAY'S TRADING, BY WEEKDAY -------------------------
    What the Statements hub's weeks ahead (shWeeks) count as everyday
-   money, by weekday and by MEDIAN rather than by average, so one big
-   day cannot carry a week: in = takings (cashIsTradingIncome) and what
+   money, by weekday: in = takings (cashIsTradingIncome) and what
    customers paid on their debts; out = running costs, stock bought and
    suppliers paid -- minus rent, wages and loan repayments, which are on
    the committed line with their own dates. A customer the expected
    band places by name (a promise, a chase) has their payments taken out
-   of the history, or they would arrive twice. Each weekday is the
-   median of the last eight of it on the books (days with nothing
-   recorded count as nothing -- a shut Sunday is a Sunday); fewer than
-   three on the books and that weekday is not known. */
+   of the history, or they would arrive twice.
+
+   Each weekday is the AVERAGE of the last eight of it on the books --
+   their sum over their count, never the median. Cash is a sum: a
+   supplier paid six million on three Thursdays in eight is two and a
+   quarter million a Thursday, and a median would read that Thursday as
+   if nobody were ever paid. Days with nothing recorded count as nothing
+   (a shut Sunday is a Sunday); fewer than three on the books and that
+   weekday is not known. Over eight weeks this is the same pace shWeeks
+   reads over thirteen, so the band and the Statements' weeks ahead tell
+   one story. */
 const MGR_TRADING_WEEKS = 8, MGR_TRADING_MIN = 3;
 const MGR_DATED_CATEGORIES = ['Rent', 'Salaries & Wages', 'Loan Repayment'];
 function mgrTradingPattern(today, placedIds){
@@ -126736,8 +126808,12 @@ function mgrTradingPattern(today, placedIds){
     byWeekday[waWeekday(d)].push(net.get(d) || 0);
   }
   return { from: lo, to: anShiftDate(day, -1), weeks: MGR_TRADING_WEEKS,
-    byWeekday: byWeekday.map((vals, w)=> vals.length >= MGR_TRADING_MIN
-      ? { weekday: w, median: Math.round(mgrMedian(vals)), n: vals.length } : { weekday: w, median: null, n: vals.length }) };
+    byWeekday: byWeekday.map((vals, w)=>{
+      const total = vals.reduce((n, v)=> n + v, 0);
+      return vals.length >= MGR_TRADING_MIN
+        ? { weekday: w, mean: Math.round(total / vals.length), n: vals.length, total: Math.round(total) }
+        : { weekday: w, mean: null, n: vals.length, total: Math.round(total) };
+    }) };
 }
 
 /* ---- THE THIRTY DAYS OF CASH AHEAD -------------------------------
@@ -126760,10 +126836,11 @@ function mgrTradingPattern(today, placedIds){
    EXPECTED is a separate band, labelled with its method: the committed
    line plus what customers are expected to pay -- a day they named
    (cashAhead's promised band), and for those who pay when chased, the
-   chase lag in k of n -- plus the usual day's trading by weekday.
-   Because that usual trading already pays suppliers at the shop's own
-   pace, the dated bills are inside it and are not taken off a second
-   time on this band. Null where the books are too young to say.
+   chase lag in k of n -- plus the usual day's trading by weekday (the
+   average of the last eight of each, mgrTradingPattern). Because that
+   usual trading already pays suppliers at the shop's own pace, the
+   dated bills are inside it and are not taken off a second time on this
+   band. Null where the books are too young to say.
 
    Each day's events carry a signed amount (negative leaves the drawer),
    the line they ride ('committed' | 'expected'), a department and where
@@ -126891,7 +126968,7 @@ function mgrCashWalkBuild(today, span, adjust){
         + ' of a chase in ' + l.k + ' of ' + l.n + (recent ? ' · chased ' + recent : ' · if chased today') });
   });
   const pattern = mgrMemo('trading:' + today + ':' + placedIds.slice().sort().join(','), ()=> mgrTradingPattern(today, placedIds));
-  const knownDays = pattern.byWeekday.filter(w=> w.median != null).length;
+  const knownDays = pattern.byWeekday.filter(w=> w.mean != null).length;
   const tradingOn = knownDays > 0;
 
   const byDate = new Map();
@@ -126907,9 +126984,9 @@ function mgrCashWalkBuild(today, span, adjust){
   let tightest = { date: today, balance: opening }, expectedTightest = tradingOn || receipts.length || expectedOnly.length ? { date: today, balance: opening } : null;
   dayRows.forEach(r=>{
     const w = pattern.byWeekday[r.weekday];
-    if(tradingOn && w.median != null && w.median !== 0)
+    if(tradingOn && w.mean != null && w.mean !== 0)
       r.events.push({ date: r.date, kind: 'trading', label: 'A usual ' + MGR_WEEKDAYS[r.weekday] + '\'s trading',
-        amount: w.median, line: 'expected', dept: 'sales', source: 'the median of the last ' + w.n + ' ' + MGR_WEEKDAYS[r.weekday] + 's' });
+        amount: w.mean, line: 'expected', dept: 'sales', source: 'the average of the last ' + w.n + ' ' + MGR_WEEKDAYS[r.weekday] + 's' });
     r.events.sort((a, b)=> (a.line === b.line ? 0 : a.line === 'committed' ? -1 : 1) || (a.amount - b.amount));
     r.events.forEach(e=>{
       if(e.line === 'committed'){
@@ -126946,7 +127023,7 @@ function mgrCashWalkBuild(today, span, adjust){
         + (placedOwed > 0 ? '; ' + placedOwed.toLocaleString('en-UG') + ' of it rides the expected band after a chase' : '') });
   }
   const tradingWords = tradingOn
-    ? 'A usual day by weekday — the median of the last ' + MGR_TRADING_WEEKS + ' of each on the books: takings and what other customers paid, less running costs, stock bought and suppliers paid. Rent, wages and loan repayments are on the committed line instead; dated bills are inside the usual paying of suppliers, so this band does not take them off twice.'
+    ? 'A usual day by weekday — the average of the last ' + MGR_TRADING_WEEKS + ' of each on the books, so a supplier paid every few weeks is in it: takings and what other customers paid, less running costs, stock bought and suppliers paid — the Statements\' weeks-ahead pace, by weekday. Rent, wages and loan repayments are on the committed line instead; dated bills are paid out of this usual paying of suppliers, so this band does not take them off twice.'
       + (knownDays < 7 ? ' ' + (7 - knownDays) + ' weekday' + (7 - knownDays === 1 ? ' has' : 's have') + ' fewer than ' + MGR_TRADING_MIN + ' on the books and count as nothing.' : '')
     : 'Not known — fewer than ' + MGR_TRADING_MIN + ' of any weekday on the books.';
   return {
@@ -126959,7 +127036,7 @@ function mgrCashWalkBuild(today, span, adjust){
     trading: pattern,
     method: {
       committed: 'Cash on hand, less every dated commitment: raised rent and wages, salaries for a month not raised yet (from the pay rate), loan instalments still owed, rent not raised yet, and the bills you named a day for. Nothing coming in is on this line.',
-      wages: payday ? 'Wages on your payday, ' + mgrPaydayLabel(payday) + '.' : 'Wages at month end, the payroll\'s date — set your payday to move them.',
+      wages: payday ? 'Wages on your payday, ' + mgrPaydayLabel(payday) + ' (' + mgrPaydaySettlesLabel(payday) + ').' : 'Wages at month end, the payroll\'s date — set your payday to move them.',
       expectedReceipts: receipts.length
         ? 'A day a customer named, and for customers who pay when chased: how soon they paid after past chases, k of n.'
         : 'No customer has named a day, and none pays reliably when chased.',
@@ -127167,14 +127244,21 @@ function mgrHealthFactsBuild(c){
     return { pct: t.sales > 0 ? t.profit / t.sales * 100 : null, aim: targetMarginPct(), sales: Math.round(t.sales) };
   });
   f.belowCost = read('belowCost', ()=>{
-    const rows = anRowsByItem(anInvoicesInRange(anShiftDate(today, -29), today)).filter(r=> r.sales > 0 && r.profit < 0)
-      .sort((a, b)=> a.profit - b.profit);
-    return { count: rows.length, loss: Math.round(-rows.reduce((n, r)=> n + r.profit, 0)),
+    const sold = anRowsByItem(anInvoicesInRange(anShiftDate(today, -29), today)).filter(r=> r.sales > 0);
+    const rows = sold.filter(r=> r.profit < 0).sort((a, b)=> a.profit - b.profit);
+    return { lines: sold.length, count: rows.length, loss: Math.round(-rows.reduce((n, r)=> n + r.profit, 0)),
       worst: rows[0] ? { name: rows[0].name + (rows[0].variant ? ' — ' + rows[0].variant : ''), loss: Math.round(-rows[0].profit) } : null };
   });
   f.quiet = read('quiet', ()=>{
     const rows = dashGoingQuietCustomers();
-    return { count: rows.length, names: rows.slice(0, 3).map(r=> r.name) };
+    /* A regular is who dashGoingQuietCustomers can judge: two orders or
+       more, a gap between them. None, and there is no rhythm to judge. */
+    const hist = managerPurchaseHistory();
+    const regulars = (data.customers || []).filter(cu=>{
+      const at = (hist.byCustomer.get(String(cu.id)) || []).map(e=> e.at);
+      return at.length >= 2 && at[at.length - 1] > at[0];
+    }).length;
+    return { count: rows.length, regulars, names: rows.slice(0, 3).map(r=> r.name) };
   });
   f.ordersLate = read('orders', ()=>{
     const open = buyOrdersOpenRows(today);
@@ -127183,8 +127267,9 @@ function mgrHealthFactsBuild(c){
       worst: late[0] ? { supplier: late[0].supplier, days: Math.max(1, daysBetweenISO(late[0].expectedOn, today)) } : null };
   });
   f.costRise = read('costRise', ()=>{
-    const up = supplierPriceWatch().up.filter(s=> s.risePct > DASH_COST_RISE_PCT);
-    return { count: up.length, worst: up[0] ? { name: up[0].name, supplier: up[0].supplierName, pct: Math.round(up[0].risePct * 10) / 10 } : null };
+    const watch = supplierPriceWatch();
+    const up = watch.up.filter(s=> s.risePct > DASH_COST_RISE_PCT);
+    return { trended: (watch.series || []).filter(s=> s.trend).length, count: up.length, worst: up[0] ? { name: up[0].name, supplier: up[0].supplierName, pct: Math.round(up[0].risePct * 10) / 10 } : null };
   });
   f.concentration = read('concentration', ()=>{
     const pc = purchaseConcentration(anShiftDate(today, -89), today);
@@ -127214,17 +127299,21 @@ function mgrHealthFactsBuild(c){
   f.daysOfStock = read('daysOfStock', ()=> mgrDaysOfStock(today));
   f.stockOut = read('stockOut', ()=>{
     const onOrder = buyOrdersOnTheWay(today);
-    const rows = restockRiskRows(today).filter(r=> r.daysLeft < 10 && !onOrder.has(r.key));
-    return { count: rows.length, names: rows.slice(0, 3).map(r=> r.name), soonest: rows[0] ? { name: rows[0].name, days: rows[0].daysLeft } : null };
+    const selling = restockRiskRows(today);
+    const rows = selling.filter(r=> r.daysLeft < 10 && !onOrder.has(r.key));
+    return { selling: selling.length, count: rows.length, names: rows.slice(0, 3).map(r=> r.name), soonest: rows[0] ? { name: rows[0].name, days: rows[0].daysLeft } : null };
   });
   f.countAccuracy = read('counts', ()=>{
     const rs = invCountRecords().filter(r=> r.kept && waDaysBetween(r.date, today) >= 0 && waDaysBetween(r.date, today) < 90);
     return rs.length ? { pct: rs.filter(r=> r.found === r.record).length / rs.length * 100, n: rs.length } : null;
   });
+  /* Late by the owner's payday, through the one rule the cash walk
+     dates wages by (mgrWageDueLate) -- with no payday, dueIsOverdue. */
   f.wagesLate = read('wages', ()=>{
-    const late = (data.dues || []).filter(d=> d.kind === 'wage' && dueIsOverdue(d, today));
-    return { count: late.length, amount: Math.round(late.reduce((n, d)=> n + (dueBalance(d) || 0), 0)),
-      dues: (data.dues || []).filter(d=> d.kind === 'wage').length };
+    const payday = mgrPayday();
+    const wages = (data.dues || []).filter(d=> d.kind === 'wage');
+    const late = wages.map(d=> mgrWageDueLate(d, today, payday)).filter(Boolean);
+    return { count: late.length, amount: Math.round(late.reduce((n, x)=> n + x.amount, 0)), dues: wages.length, payday: !!payday };
   });
   f.ratesMissing = read('rates', ()=>{
     const miss = staffWithoutPayRate();
@@ -127273,6 +127362,13 @@ const MGR_HEALTH_CHECKS = [
     read: (f)=>{
       if(!f.tightest || !f.floor) return { pass: null, line: 'The cash ahead could not be read.' };
       const fl = f.floor, low = f.tightest.balance;
+      /* No floor set and nothing to stand in for one: only running out
+         altogether can be judged. */
+      if(fl.source !== 'set' && !(fl.amount > 0))
+        return low < 0 ? { pass: false, figure: low, unit: 'UGX', threshold: 0, on: f.tightest.date, rule: 'never below nothing (no floor set)',
+            source: 'the committed cash line', line: 'Cash runs out — ' + mgrShortUGX(low) + ' on ' + fmtShortDate(f.tightest.date) + ', and no floor is set' }
+          : { pass: null, figure: low, unit: 'UGX', threshold: null, rule: 'at least your floor', source: 'the committed cash line',
+            line: 'No floor set, and no rent or salary on the books to stand in for one' };
       const whose = fl.source === 'set' ? 'your' : 'the stand-in';
       return { pass: low >= fl.amount, figure: low, unit: 'UGX', threshold: fl.amount, on: f.tightest.date,
         rule: 'at least ' + whose + ' floor', source: 'the committed cash line',
@@ -127284,6 +127380,8 @@ const MGR_HEALTH_CHECKS = [
     read: (f)=>{
       const d = f.debt60;
       if(!d) return { pass: null, line: 'Money owed to you could not be read.' };
+      if(!(d.total > 0.5) && !(f.debtorDays && f.debtorDays.creditSales > 0))
+        return { pass: null, rule: 'nothing older than 60 days', source: 'Debtors', line: 'No credit sales on the books to judge' };
       return { pass: d.count === 0, figure: d.amount, unit: 'UGX', threshold: 0, rule: 'nothing older than 60 days',
         source: 'Debtors — the oldest open charge', count: d.count,
         line: d.count === 0 ? 'Nothing owed to you is older than 60 days'
@@ -127333,6 +127431,7 @@ const MGR_HEALTH_CHECKS = [
     read: (f)=>{
       const b = f.belowCost;
       if(!b) return { pass: null, line: 'The lines could not be read.' };
+      if(!b.lines) return { pass: null, rule: 'no line at a loss', source: 'invoices, last 30 days', line: 'Nothing invoiced in 30 days' };
       return { pass: b.count === 0, figure: b.loss, unit: 'UGX', threshold: 0, rule: 'no line at a loss', source: 'invoices, last 30 days', count: b.count,
         line: b.count === 0 ? 'No line sold below cost in 30 days'
           : b.count + ' line' + (b.count === 1 ? '' : 's') + ' sold below cost in 30 days, ' + mgrShortUGX(b.loss) + ' lost' + (b.worst ? ' — most on ' + b.worst.name : '') };
@@ -127341,6 +127440,8 @@ const MGR_HEALTH_CHECKS = [
     read: (f)=>{
       const q = f.quiet;
       if(!q) return { pass: null, line: 'Customer rhythms could not be read.' };
+      if(!q.regulars) return { pass: null, rule: 'none past half again their usual gap', source: 'each customer\'s own gap between orders',
+        line: 'No customer has bought twice yet — no rhythm to judge' };
       return { pass: q.count === 0, figure: q.count, unit: 'customers', threshold: 0, rule: 'none past half again their usual gap',
         source: 'each customer\'s own gap between orders', count: q.count,
         line: q.count === 0 ? 'Every regular customer is buying on their usual rhythm'
@@ -127372,6 +127473,8 @@ const MGR_HEALTH_CHECKS = [
     read: (f)=>{
       const c = f.costRise;
       if(!c) return { pass: null, line: 'Supplier prices could not be read.' };
+      if(!c.trended) return { pass: null, rule: 'no rise over ' + DASH_COST_RISE_PCT + '%', source: 'what each supplier charged, bill by bill',
+        line: 'No line bought often enough to see its price move' };
       return { pass: c.count === 0, figure: c.worst ? c.worst.pct : 0, unit: '%', threshold: DASH_COST_RISE_PCT, rule: 'no rise over ' + DASH_COST_RISE_PCT + '%',
         source: 'what each supplier charged, bill by bill', count: c.count,
         line: c.count === 0 ? 'No supplier has put a price up more than ' + DASH_COST_RISE_PCT + '%'
@@ -127390,6 +127493,8 @@ const MGR_HEALTH_CHECKS = [
     read: (f)=>{
       const s = f.stockOut;
       if(!s) return { pass: null, line: 'The shelf could not be read.' };
+      if(!s.selling) return { pass: null, rule: 'none inside 10 days unless ordered', source: 'shelf pace, last 30 days',
+        line: 'Nothing sold off the shelf in 30 days to judge' };
       return { pass: s.count === 0, figure: s.count, unit: 'lines', threshold: 0, rule: 'none inside 10 days unless ordered', source: 'shelf pace, last 30 days', count: s.count,
         line: s.count === 0 ? 'Nothing that sells runs out inside 10 days unordered'
           : s.count + ' line' + (s.count === 1 ? '' : 's') + ' run' + (s.count === 1 ? 's' : '') + ' out inside 10 days, not on order — first ' + s.soonest.name + ' in ' + Math.max(0, Math.floor(s.soonest.days)) + ' days' };
@@ -127427,7 +127532,7 @@ const MGR_HEALTH_CHECKS = [
       if(!w) return { pass: null, line: 'The payroll could not be read.' };
       if(!w.dues) return { pass: null, rule: 'none past its day', source: 'Payroll', line: 'No wages raised on the payroll' };
       return { pass: w.count === 0, figure: w.amount, unit: 'UGX', threshold: 0, rule: 'none past its day', source: 'Payroll', count: w.count,
-        line: w.count === 0 ? 'Every wage is paid by its day' : w.count + ' wage' + (w.count === 1 ? '' : 's') + ' past its day, ' + mgrShortUGX(w.amount) + ' owed' };
+        line: w.count === 0 ? 'Every wage is paid by its day' : w.count + (w.count === 1 ? ' wage past its day, ' : ' wages past their day, ') + mgrShortUGX(w.amount) + ' owed' };
     } },
   { id: 'pay_rates', dept: 'people', label: 'Everyone on staff has a pay rate',
     read: (f)=>{
@@ -127605,10 +127710,20 @@ function mgrRisks30(ctx){
       label: (x.loan.lender || 'Loan') + (x.due.status === 'overdue' ? ' — repayment behind' : ' — repayment due now'),
       amount: Math.round(x.due.status === 'overdue' ? x.due.overdue : x.due.dueNow), source: 'the loan\'s schedule' }));
   });
+  /* Rent past its day; wages past the owner's payday -- the one rule
+     the cash walk and the late-wages check date them by. */
   guard('dues', ()=>{
-    (data.dues || []).filter(d=> dueIsOverdue(d, today)).forEach(d=> add({ id: 'due:' + d.id, date: d.dueDate, kind: 'due',
-      dept: d.kind === 'wage' ? 'people' : 'finance', label: dueName(d) + (d.kind === 'wage' ? ' — wages past their day' : ' — rent past its day'),
-      amount: Math.round(dueBalance(d) || 0), detail: periodLabel(d.period), source: 'Payroll & rent' }));
+    const payday = mgrPayday();
+    (data.dues || []).forEach(d=>{
+      if(d.kind === 'wage'){
+        const late = mgrWageDueLate(d, today, payday);
+        if(late) add({ id: 'due:' + d.id, date: late.since, kind: 'due', dept: 'people', label: dueName(d) + ' — wages past their day',
+          amount: Math.round(late.amount), detail: periodLabel(d.period), source: payday ? 'Payroll, on your payday' : 'Payroll & rent' });
+        return;
+      }
+      if(dueIsOverdue(d, today)) add({ id: 'due:' + d.id, date: d.dueDate, kind: 'due', dept: 'finance', label: dueName(d) + ' — rent past its day',
+        amount: Math.round(dueBalance(d) || 0), detail: periodLabel(d.period), source: 'Payroll & rent' });
+    });
   });
   guard('stock', ()=>{
     const onOrder = buyOrdersOnTheWay(today);
@@ -127724,18 +127839,37 @@ const mgrNoteDay = (v)=> /^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v)
 const mgrNoteNum = (v)=> { const n = Number(v); return v == null || v === '' || !Number.isFinite(n) ? null : n; };
 /* A choice the owner SIGNED in the Simulator. A record, never an
    instruction: signing pays nothing, sends nothing, moves nothing. Kept
-   as its own kind so it can never be counted as the Manager's advice. */
+   as its own kind so it can never be counted as the Manager's advice.
+
+   The outcome is kept WHOLE or not at all: it is measured first, and
+   one over MGR_DECISION_OUTCOME_MAX characters of JSON is dropped and
+   flagged (outcomeDropped) -- cutting JSON text mid-way makes it
+   unreadable, and a half-kept outcome would be worse than none. The
+   Simulator signs a summary (the lowest day, what each lever changed),
+   never a whole walk. */
+const MGR_DECISION_OUTCOME_MAX = 4000, MGR_DECISION_MAX = 8000;
 async function mgrSaveDecision(body){
-  const b = body && typeof body === 'object' ? body : {};
-  const title = mgrNoteText(b.title, 200);
-  if(!title) return { ok: false, error: 'A decision needs a title' };
-  const levers = (Array.isArray(b.levers) ? b.levers : []).slice(0, 20).map(l=> ({
-    id: mgrNoteText(l && l.id, 40), label: mgrNoteText(l && l.label, 120), choice: mgrNoteText(l && l.choice, 120),
-    dept: mgrDept(l && l.dept) ? l.dept : null, from: (l && l.from) === 'books' ? 'books' : 'assumption' }));
-  const rec = { title, why: mgrNoteText(b.why, 500), dept: mgrDept(b.dept) ? b.dept : null, levers,
-    outcome: b.outcome && typeof b.outcome === 'object' ? JSON.parse(JSON.stringify(b.outcome).slice(0, 4000) || '{}') : null,
-    signedOn: todayISO(), signedAt: new Date().toISOString(), source: 'owner' };
-  if(JSON.stringify(rec).length > 8000) rec.outcome = null;
+  let rec;
+  try {
+    const b = body && typeof body === 'object' ? body : {};
+    const title = mgrNoteText(b.title, 200);
+    if(!title) return { ok: false, error: 'A decision needs a title' };
+    const levers = (Array.isArray(b.levers) ? b.levers : []).slice(0, 20).map(l=> ({
+      id: mgrNoteText(l && l.id, 40), label: mgrNoteText(l && l.label, 120), choice: mgrNoteText(l && l.choice, 120),
+      dept: mgrDept(l && l.dept) ? l.dept : null, from: (l && l.from) === 'books' ? 'books' : 'assumption' }));
+    let outcome = null, dropped = false;
+    if(b.outcome && typeof b.outcome === 'object'){
+      let oj = null;
+      try { oj = JSON.stringify(b.outcome); } catch(e){ oj = null; }
+      if(oj && oj.length <= MGR_DECISION_OUTCOME_MAX) outcome = JSON.parse(oj); else dropped = true;
+    }
+    rec = { title, why: mgrNoteText(b.why, 500), dept: mgrDept(b.dept) ? b.dept : null, levers, outcome,
+      signedOn: todayISO(), signedAt: new Date().toISOString(), source: 'owner' };
+    if(JSON.stringify(rec).length > MGR_DECISION_MAX){ rec.outcome = null; dropped = dropped || outcome != null; }
+    if(dropped) rec.outcomeDropped = true;
+  } catch(e){
+    return { ok: false, error: 'The decision could not be written down — ' + ((e && e.message) || String(e)) };
+  }
   return mgrNoteInsert('decision', rec, 'signed');
 }
 /* What the owner taught about an ordinary day, so a day like it stops
@@ -127826,7 +127960,8 @@ async function mgrSaveSnapshot(ctx){
   if(mgrSnapshotKept === key) return { ok: true, already: true };
   try {
     const have = await sb.from('manager_notes').select('id').eq('shop_id', currentShopId).eq('kind', 'snapshot').eq('date', today).limit(1);
-    if(have.error){ console.warn('Manager: the day\'s snapshot was not checked —', have.error.message); return { ok: false, error: have.error.message }; }
+    /* Nothing was worked out yet, so a later load may try again. */
+    if(have.error){ console.warn('Manager: the day\'s snapshot was not checked —', have.error.message); return { ok: false, error: have.error.message, retry: true }; }
     if((have.data || []).length){ mgrSnapshotKept = key; return { ok: true, already: true }; }
     const body = mgrSnapshotBody(ctx);
     const r = await mgrNoteInsert('snapshot', body, 'held', true);
@@ -127849,12 +127984,28 @@ async function mgrSnapshots(days){
   return { rows: r.rows.map(x=> ({ ...x.body, date: x.date, id: x.id })).sort((a, b)=> String(a.date).localeCompare(String(b.date))),
     error: r.error };
 }
-/* Called once the owner's books have loaded (boot). Only the owner's
-   session writes it, and only after the screen is up, so the first
-   paint never waits on a walk of the whole book. */
+/* Called each time the owner's books have loaded: at boot, and on every
+   background refresh (pollForUpdatesNow) -- an installed app is resumed
+   morning after morning and never reloads, and a day without its
+   snapshot is a level nobody can read again. ONE ATTEMPT PER SHOP PER
+   DAY: the key is taken before the attempt, so a shop that has not run
+   0107 is not walked every thirty seconds; only a check that never
+   reached the journal (offline) gives the key back for a later load.
+   Only the owner's session writes it, and only after the screen is up,
+   so a paint never waits on a walk of the whole book. Returns whether
+   an attempt was scheduled. */
+let mgrSnapshotTried = null;
 function mgrSnapshotAfterLoad(){
-  if(currentMemberRole !== 'owner' || !managerNotesTable) return;
-  setTimeout(()=>{ mgrSaveSnapshot().catch(e=> console.warn('Manager: the day\'s snapshot was not kept —', e && e.message)); }, 3000);
+  if(currentMemberRole !== 'owner' || !managerNotesTable || !currentShopId) return false;
+  const key = String(currentShopId) + '|' + todayISO();
+  if(mgrSnapshotTried === key || mgrSnapshotKept === key) return false;
+  mgrSnapshotTried = key;
+  setTimeout(()=>{
+    mgrSaveSnapshot()
+      .then(r=>{ if(r && r.retry && mgrSnapshotTried === key) mgrSnapshotTried = null; })
+      .catch(e=> console.warn('Manager: the day\'s snapshot was not kept —', e && e.message));
+  }, 3000);
+  return true;
 }
 /* ═══ MGR SHARED MODELS — end ═══ */
 
@@ -127877,31 +128028,44 @@ async function renderManagerGrowth(){
   const plans = `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">What the Manager plans around</span></div>
     <div class="ow-strip ow-growth-strip">
       <div class="ow-mt${floor.source === 'set' ? '' : ' ow-warn'}"><span class="ow-mt-l">Cash floor</span><span class="ow-mt-v">${n0(floor.amount)} <span class="ow-u">UGX</span></span><span class="ow-mt-s">${floor.source === 'set' ? 'set by you' : 'stand-in — ' + esc(floor.note.replace(/^not set — /, ''))}</span></div>
-      <div class="ow-mt${payday ? '' : ' ow-warn'}"><span class="ow-mt-l">Payday</span><span class="ow-mt-v">${payday ? (payday.kind === 'monthly' ? (payday.day === 31 ? 'Last day' : mgrOrdinal(payday.day)) : MGR_WEEKDAYS[payday.day].slice(0, 3) + 's') : 'Month end'}</span><span class="ow-mt-s">${payday ? esc(mgrPaydayLabel(payday)) : 'not set — the payroll\'s date'}</span></div>
+      <div class="ow-mt${payday ? '' : ' ow-warn'}"><span class="ow-mt-l">Payday</span><span class="ow-mt-v">${payday ? (payday.kind === 'monthly' ? (payday.day === 31 ? 'Last day' : mgrOrdinal(payday.day)) : MGR_WEEKDAYS[payday.day].slice(0, 3) + 's') : 'Month end'}</span><span class="ow-mt-s">${payday ? esc(mgrPaydaySettlesLabel(payday)) : 'not set — the payroll\'s date'}</span></div>
       <div class="ow-mt"><span class="ow-mt-l">Salaries a month</span><span class="ow-mt-v">${n0(cmc.wages)} <span class="ow-u">UGX</span></span><span class="ow-mt-s">${cmc.salariedCount} on a salary${cmc.dailyCount ? ` · ${cmc.dailyCount} paid by the day, not costed` : ''}${cmc.noRateCount ? ` · ${cmc.noRateCount} with no rate` : ''}</span></div>
       <div class="ow-mt"><span class="ow-mt-l">Rent a month</span><span class="ow-mt-v">${n0(cmc.rent)} <span class="ow-u">UGX</span></span><span class="ow-mt-s">from your rent agreements</span></div>
     </div>
     <details class="ow-growth-settings"><summary class="ow-growth-summary">Set the floor and the payday</summary>
     <div class="ow-growth-controls"><div class="field ow-growth-field"><label for="mgrCashFloorIn">Cash floor (UGX)</label><input id="mgrCashFloorIn" type="number" min="0" step="any" inputmode="numeric" value="${floor.source === 'set' ? floor.amount : ''}" placeholder="${floor.source === 'set' ? '' : 'Blank: ' + n0(floor.amount) + ' stands in'}"></div>
-    <div class="field ow-growth-field"><label for="mgrPaydayIn">Payday</label><select id="mgrPaydayIn">${paydayOpts}</select></div></div>
-    <p class="ow-mini">The floor is the least you want in hand. Until you set one, a month of rent and salaries stands in. A month's wages leave on its payday — on a weekly payday, split across that month's paydays. Both only shape the cash line ahead; neither pays anything.</p></details></div>`;
+    <div class="field ow-growth-field"><label for="mgrPaydayIn">Payday</label><select id="mgrPaydayIn">${paydayOpts}</select></div>
+    ${payday && payday.kind === 'monthly' ? `<div class="field ow-growth-field"><label for="mgrPaydaySettlesIn">It pays</label><select id="mgrPaydaySettlesIn">${[['previous', 'The month just ended'], ['same', 'The month in progress']].map(([k, l])=>
+      `<option value="${k}" ${mgrPaydaySettles(payday) === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>` : ''}</div>
+    <p class="ow-mini">The floor is the least you want in hand. Until you set one, a month of rent and salaries stands in. A payday from the 1st to the 15th pays the month just ended, a later one the month in progress — change it if yours is the other way. A weekly payday splits each month evenly across its paydays. Both only shape the cash line ahead; neither pays anything.</p></details></div>`;
   wrap.innerHTML = plans + `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">Customer growth</span></div>
     <details class="ow-growth-settings"><summary class="ow-growth-summary">${settings.enabled ? esc(MANAGER_OBJECTIVES[settings.objective] || 'Customer opportunities') + ' · up to ' + settings.limit + ' a day' : 'Growth queue is off'} · Settings</summary>
     <div class="ow-growth-controls"><div class="field ow-growth-field"><label for="mgrObjective">Standing objective</label><select id="mgrObjective"><option value="">Let the meeting choose</option>${Object.entries(MANAGER_OBJECTIVES).map(([k,v])=> `<option value="${k}" ${settings.objective === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></div>
     <div class="field ow-growth-field"><label for="mgrGrowthLimit">Daily capacity</label><input id="mgrGrowthLimit" type="number" min="1" max="10" value="${settings.limit}"></div></div>
     <label><input id="mgrGrowthEnabled" type="checkbox" ${settings.enabled ? 'checked' : ''}> Show growth opportunities</label></details>
     <div id="mgrGrowthReading" class="ow-growth-reading">Reading customer history…</div></div>`;
-  /* Blank is "not set", never 0: a floor of 0 is a real answer, typed. */
-  const planSave = ()=>{
+  /* Blank is "not set", never 0: a floor of 0 is a real answer, typed.
+     Which month a monthly payday pays is kept only when the owner said
+     something other than what the day already implies -- so moving the
+     day without touching it lets the day decide again. */
+  const planSave = (which)=>{
     const raw = document.getElementById('mgrCashFloorIn').value.trim(), num = Number(raw);
     const v = document.getElementById('mgrPaydayIn').value;
+    const was = (data.presetManager || {}).payday;
+    const pd = /^m:\d{1,2}$/.test(v) ? { kind: 'monthly', day: Number(v.slice(2)) } : /^w:[0-6]$/.test(v) ? { kind: 'weekly', day: Number(v.slice(2)) } : null;
+    if(pd && pd.kind === 'monthly'){
+      const said = which === 'settles' ? document.getElementById('mgrPaydaySettlesIn').value
+        : (was && was.kind === 'monthly' ? was.settles : null);
+      if((said === 'previous' || said === 'same') && said !== mgrPaydaySettlesDefault(pd.day)) pd.settles = said;
+    }
     data.presetManager = { ...(data.presetManager || {}),
-      cashFloor: raw === '' || !Number.isFinite(num) || num < 0 ? null : Math.round(num),
-      payday: /^m:\d{1,2}$/.test(v) ? { kind: 'monthly', day: Number(v.slice(2)) } : /^w:[0-6]$/.test(v) ? { kind: 'weekly', day: Number(v.slice(2)) } : null };
+      cashFloor: raw === '' || !Number.isFinite(num) || num < 0 ? null : Math.round(num), payday: pd };
     saveData(); renderManager();
   };
-  document.getElementById('mgrCashFloorIn').onchange = planSave;
-  document.getElementById('mgrPaydayIn').onchange = planSave;
+  document.getElementById('mgrCashFloorIn').onchange = ()=> planSave('floor');
+  document.getElementById('mgrPaydayIn').onchange = ()=> planSave('payday');
+  const settlesIn = document.getElementById('mgrPaydaySettlesIn');
+  if(settlesIn) settlesIn.onchange = ()=> planSave('settles');
   ['mgrObjective','mgrGrowthEnabled','mgrGrowthLimit'].forEach(id=> document.getElementById(id).onchange = ()=>{
     data.presetManager = { ...(data.presetManager || {}), objective: document.getElementById('mgrObjective').value,
       growthEnabled: document.getElementById('mgrGrowthEnabled').checked,
@@ -150461,6 +150625,7 @@ async function pollForUpdatesNow(){
     reportDebtReconciliation(reconcileCustomerDebts(fresh));
     data = fresh;
     lastSynced = freshSynced;
+    if(typeof mgrSnapshotAfterLoad === 'function') mgrSnapshotAfterLoad();   // a new day on an app left open keeps its snapshot too (0107)
     /* The guards above were read BEFORE the load, and a load on a shop's
        real connection is seconds long. The owner can start using a
        control inside that window -- and the redraw below lands on it
