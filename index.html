@@ -2403,9 +2403,204 @@
      Between two beds. These three lines are nobody's: leave them as they are.
      ────────────────────────────────────────────────────────────────── */
   /* ═══ MGR BED: Ask — begin ═══ */
-  /* It needs to know: the questions only the owner can answer. Until it
-     has a layout of its own, the panel keeps a readable width. */
-  .mgr-bed-k > .mgr-slot{max-width:760px;}
+  /* It needs to know, drawn as the canvas draws it: the Manager's band,
+     where you are standing, the questions two by two, and beside them
+     the field route and the answers that changed the advice. Figures in
+     IBM Plex Mono, tabular; hairlines, never shadows; the route's draft
+     is the section's one oxide action. */
+  .mgr-bed-k > .mgr-slot{max-width:none;}
+  .mgr-k{display:flex;flex-direction:column;gap:var(--ow-sp-16);min-width:0;}
+  .mgr-k-mic{font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);letter-spacing:.08em;text-transform:uppercase;
+    color:var(--ow-ink-600);white-space:nowrap;}
+  .mgr-k-fig,.mgr-k-stk,.mgr-k-rk,.mgr-k-n,.mgr-k-sr b,.mgr-k-qn i,.mgr-k-mk b,.mgr-k-cur{
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+  .mgr-k svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+  /* The band: the Manager, what it cannot read, and four figures. */
+  .mgr-k-hd{display:grid;grid-template-columns:84px minmax(0,1fr) auto;gap:var(--ow-sp-20);align-items:center;
+    background:var(--ow-steel-950);color:var(--ow-paper);border-radius:var(--ow-r-lg);padding:var(--ow-sp-16) var(--ow-sp-20);}
+  .mgr-k-av{position:relative;width:84px;height:84px;border-radius:var(--ow-r-pill);background:var(--ow-paper);
+    color:var(--ow-steel-950);display:grid;place-items:center;}
+  .mgr-k-av svg{width:48px;height:48px;stroke-width:1.6;}
+  .mgr-k-av i{position:absolute;right:3px;bottom:3px;width:18px;height:18px;border-radius:var(--ow-r-pill);
+    border:3px solid var(--ow-steel-950);background:var(--ow-verdigris);box-sizing:border-box;}
+  .mgr-k-hl{min-width:0;}
+  .mgr-k-hn{margin:0;display:flex;align-items:center;gap:var(--ow-sp-6);font-size:var(--ow-t-13);color:var(--ow-navy-line);}
+  .mgr-k-hn b{color:var(--ow-paper);font-size:var(--ow-t-14);font-weight:var(--ow-fw-700);}
+  .mgr-k-hw{margin:var(--ow-sp-6) 0 0;font-size:var(--ow-t-20);font-weight:var(--ow-fw-700);line-height:var(--ow-lh-snug);
+    max-width:60ch;color:var(--ow-paper);}
+  .mgr-k-hf{display:grid;grid-template-columns:repeat(4,auto);border-left:1px solid var(--ow-steel-800);}
+  .mgr-k-hf > div{padding:var(--ow-sp-4) var(--ow-sp-16);border-right:1px solid var(--ow-steel-800);
+    display:flex;flex-direction:column;gap:var(--ow-sp-4);min-width:0;}
+  .mgr-k-hf > div:last-child{border-right:0;}
+  .mgr-k-hf span{font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);letter-spacing:.08em;text-transform:uppercase;
+    color:var(--ow-navy-mute);white-space:nowrap;}
+  .mgr-k-hf b{font-size:var(--ow-t-20);font-weight:var(--ow-fw-600);white-space:nowrap;color:var(--ow-paper);}
+  .mgr-k-hf b.mgr-k-good{color:var(--ow-good-ink-on-navy);}
+
+  /* Where you are standing: the five places, and everywhere. */
+  .mgr-k-where{display:flex;align-items:center;gap:var(--ow-sp-8);flex-wrap:wrap;}
+  .mgr-k-where .mgr-k-mic{margin-right:var(--ow-sp-4);}
+  .mgr-k-wf{display:inline-flex;align-items:center;gap:var(--ow-sp-8);min-height:36px;padding:0 var(--ow-sp-12);
+    border:1px solid var(--ow-rule);border-radius:var(--ow-r-pill);background:var(--ow-paper);font-family:inherit;
+    font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);cursor:pointer;}
+  .mgr-k-wf svg{width:15px;height:15px;}
+  .mgr-k-wf .mgr-k-n{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .mgr-k-wf:hover{background:var(--ow-paper-2);border-color:var(--ow-steel-100);}
+  .mgr-k-wf[aria-pressed="true"]{background:var(--ow-steel-950);border-color:var(--ow-steel-950);color:var(--ow-paper);}
+  .mgr-k-wf[aria-pressed="true"] .mgr-k-n{color:var(--ow-navy-ink);}
+
+  /* The questions two by two; the route and the memory to their right. */
+  .mgr-k-grid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:var(--ow-sp-20);align-items:start;}
+  .mgr-k-qs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--ow-sp-12);min-width:0;}
+  .mgr-k-qs > .ow-pan,.mgr-k-none{grid-column:1/-1;}
+  .mgr-k-none{margin:0;padding:var(--ow-sp-16);font-size:var(--ow-t-13);color:var(--ow-ink-600);}
+  .mgr-k-none[hidden]{display:none;}
+  .mgr-k-side{display:flex;flex-direction:column;gap:var(--ow-sp-20);min-width:0;}
+
+  /* A question. */
+  .mgr-k-q{background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
+    padding:var(--ow-sp-12) var(--ow-sp-16);display:flex;flex-direction:column;gap:var(--ow-sp-10);min-width:0;}
+  .mgr-k-q[hidden]{display:none;}
+  .mgr-k-q.mgr-k-done{border-color:var(--ow-verdigris-tile-2);}
+  .mgr-k-qh{display:flex;align-items:center;gap:var(--ow-sp-8);min-width:0;}
+  .mgr-k-rk{width:24px;height:24px;border-radius:var(--ow-r-7);display:grid;place-items:center;flex:none;
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+  .mgr-k-rk.mgr-k-rk1{background:var(--ow-steel-950);color:var(--ow-paper);}
+  .mgr-k-dp{display:inline-flex;align-items:center;height:22px;padding:0 var(--ow-sp-8);border-radius:var(--ow-r-pill);
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);white-space:nowrap;}
+  .mgr-k-stk{margin-left:auto;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);white-space:nowrap;}
+  .mgr-k-stk small{font-size:var(--ow-t-11);font-weight:var(--ow-fw-500);color:var(--ow-ink-600);}
+  .mgr-k-stk.mgr-k-ns{font-weight:var(--ow-fw-500);color:var(--ow-ink-600);}
+  .mgr-k-qt{margin:0;font-size:var(--ow-t-14);font-weight:var(--ow-fw-700);line-height:var(--ow-lh-snug);color:var(--ow-ink-900);}
+  .mgr-k-why{margin:0;display:flex;gap:var(--ow-sp-8);align-items:flex-start;font-size:var(--ow-t-12);line-height:1.45;color:var(--ow-ink-900);}
+  .mgr-k-why b{font-weight:var(--ow-fw-700);}
+  .mgr-k-why.mgr-k-why0 > span:last-child{color:var(--ow-ink-600);}
+  .mgr-k-gm{width:24px;height:24px;border-radius:var(--ow-r-pill);background:var(--ow-steel-950);color:var(--ow-paper);
+    display:grid;place-items:center;flex:none;}
+  .mgr-k-gm svg,.mgr-k-ico svg{width:14px;height:14px;}
+  .mgr-k-wh{display:flex;align-items:center;gap:var(--ow-sp-8);font-size:var(--ow-t-12);color:var(--ow-ink-600);min-width:0;}
+  .mgr-k-ico{width:24px;height:24px;border-radius:var(--ow-r-7);background:var(--ow-rule-soft);color:var(--ow-ink-900);
+    display:grid;place-items:center;flex:none;}
+  .mgr-k-wh b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mgr-k-age{margin-left:auto;flex:0 1 auto;max-width:50%;font-size:var(--ow-t-11);text-align:right;line-height:1.35;}
+
+  /* The likely answers, and the answer in the owner's own words. */
+  .mgr-k-ans{display:flex;flex-wrap:wrap;gap:var(--ow-sp-6);}
+  .mgr-k-an{min-height:34px;padding:0 var(--ow-sp-12);border:1px solid var(--ow-rule);border-radius:var(--ow-r-pill);
+    background:var(--ow-paper);font-family:inherit;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);cursor:pointer;}
+  .mgr-k-an:hover{border-color:var(--ow-steel-100);background:var(--ow-paper-2);}
+  .mgr-k-an[aria-pressed="true"]{background:var(--ow-steel-950);border-color:var(--ow-steel-950);color:var(--ow-paper);}
+  .mgr-k-an:disabled{cursor:default;}
+  .mgr-k-an.mgr-k-an-own{border-style:dashed;color:var(--ow-ink-600);}
+  .mgr-k-form{display:flex;flex-direction:column;gap:var(--ow-sp-8);}
+  .mgr-k-form[hidden]{display:none;}
+  .mgr-k-box{display:flex;align-items:center;gap:var(--ow-sp-6);height:34px;padding:0 var(--ow-sp-10);min-width:0;
+    border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+  .mgr-k-box:focus-within{border-color:var(--ow-steel-800);}
+  .mgr-k-cur{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .mgr-k-box .mgr-k-in{flex:1 1 auto;min-width:0;width:100%;height:100%;border:0;outline:0;padding:0;margin:0;background:transparent;
+    font-family:inherit;font-size:var(--ow-t-13);color:var(--ow-ink-900);}
+  .mgr-k-terms{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:var(--ow-sp-8);}
+  .mgr-k-tf{display:flex;flex-direction:column;gap:var(--ow-sp-4);font-size:var(--ow-t-11);color:var(--ow-ink-600);min-width:0;}
+  .mgr-k-vd{margin:0;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .mgr-k-vd[hidden]{display:none;}
+  .mgr-k-keep{display:flex;align-items:center;gap:var(--ow-sp-8);flex-wrap:wrap;}
+  .mgr-k-by{display:inline-flex;align-items:center;gap:var(--ow-sp-6);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .mgr-k-sel{height:28px;max-width:180px;border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);
+    font-family:inherit;font-size:var(--ow-t-12);color:var(--ow-ink-900);padding:0 var(--ow-sp-6);}
+  .mgr-k-keep .mgr-k-save{margin-left:auto;}
+
+  /* What an answer changes, and how sure it leaves the Manager. */
+  .mgr-k-chg{display:flex;flex-direction:column;gap:var(--ow-sp-6);border-radius:var(--ow-r-10);background:var(--ow-rule-soft);
+    padding:var(--ow-sp-10) var(--ow-sp-12);font-size:var(--ow-t-12);line-height:1.45;color:var(--ow-ink-900);}
+  .mgr-k-chg[hidden]{display:none;}
+  .mgr-k-chg b{font-weight:var(--ow-fw-700);}
+  .mgr-k-chg.mgr-k-surer{background:var(--ow-verdigris-soft);}
+  .mgr-k-chg.mgr-k-less{background:var(--ow-amber-soft);}
+  .mgr-k-cf,.mgr-k-sure{display:flex;align-items:center;gap:var(--ow-sp-8);flex-wrap:wrap;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .mgr-k-fig{color:var(--ow-ink-900);}
+  .mgr-k-src{color:var(--ow-ink-600);}
+  .mgr-k-pips{display:inline-flex;gap:3px;}
+  .mgr-k-pips i{width:8px;height:8px;border-radius:var(--ow-r-2);background:var(--ow-steel-100);display:block;}
+  .mgr-k-pips i.mgr-k-on{background:var(--ow-steel-800);}
+  .mgr-k-pips.mgr-k-after i.mgr-k-on{background:var(--ow-verdigris);}
+  .mgr-k-sure .mgr-k-send{margin-left:auto;}
+  .mgr-k-kept{margin:0;display:flex;align-items:flex-start;gap:var(--ow-sp-6);font-size:var(--ow-t-11);color:var(--ow-verdigris);
+    font-weight:var(--ow-fw-600);}
+  .mgr-k-kept svg{width:14px;height:14px;}
+
+  /* A price question: every price on file for the line on one scale. */
+  .mgr-k-sc{position:relative;height:58px;margin:2px 48px 0;}
+  .mgr-k-ln{position:absolute;left:0;right:0;top:27px;height:4px;border-radius:var(--ow-r-pill);background:var(--ow-rule-soft);}
+  .mgr-k-band{position:absolute;top:24px;height:10px;border-radius:var(--ow-r-pill);background:var(--ow-steel-350);opacity:.45;}
+  .mgr-k-band[hidden],.mgr-k-mk[hidden]{display:none;}
+  .mgr-k-mk{position:absolute;top:22px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;}
+  .mgr-k-mk > i{width:14px;height:14px;border-radius:var(--ow-r-pill);border:2px solid var(--ow-paper);display:block;box-sizing:border-box;}
+  .mgr-k-mk > span{position:absolute;white-space:nowrap;font-size:var(--ow-t-11);color:var(--ow-ink-600);font-weight:var(--ow-fw-600);}
+  .mgr-k-mk.mgr-k-up > span{bottom:18px;}
+  .mgr-k-mk.mgr-k-dn > span{top:18px;}
+  .mgr-k-mk.mgr-k-up2 > span{bottom:34px;}
+  .mgr-k-mk.mgr-k-dn2 > span{top:34px;}
+  .mgr-k-sc.mgr-k-sc2{height:90px;}
+  .mgr-k-sc2 .mgr-k-ln{top:43px;}
+  .mgr-k-sc2 .mgr-k-band{top:40px;}
+  .mgr-k-sc2 .mgr-k-mk{top:38px;}
+  .mgr-k-mk b{color:var(--ow-ink-900);}
+  .mgr-k-mk-cost > i{background:var(--ow-indigo);}
+  .mgr-k-mk-ours > i{background:var(--ow-ink-900);}
+  .mgr-k-mk-rival > i,.mgr-k-mk-asked > i{background:var(--ow-ink-400);}
+  .mgr-k-mk-asked > i{border-color:var(--ow-ink-900);}
+  .mgr-k-mk-pin > i{background:var(--ow-steel-800);}
+
+  /* The route and the memory. */
+  .mgr-k-pan{min-width:0;}
+  .mgr-k-ph{min-height:48px;display:flex;align-items:center;gap:var(--ow-sp-10);padding:var(--ow-sp-8) var(--ow-sp-16);
+    border-bottom:1px solid var(--ow-rule-soft);flex-wrap:wrap;}
+  .mgr-k-pt{font-size:var(--ow-t-14);font-weight:var(--ow-fw-700);color:var(--ow-ink-900);}
+  .mgr-k-pn{margin-left:auto;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .mgr-k-stops{padding-top:var(--ow-sp-6);}
+  .mgr-k-stop{display:grid;grid-template-columns:28px minmax(0,1fr);gap:var(--ow-sp-10);padding:0 var(--ow-sp-16);}
+  .mgr-k-sr{position:relative;display:flex;justify-content:center;}
+  .mgr-k-sr::before{content:"";position:absolute;top:0;bottom:0;width:2px;background:var(--ow-rule-soft);}
+  .mgr-k-stop:first-child .mgr-k-sr::before{top:14px;}
+  .mgr-k-stop:last-child .mgr-k-sr::before{bottom:auto;height:14px;}
+  .mgr-k-stop:only-child .mgr-k-sr::before{display:none;}
+  .mgr-k-sr b{position:relative;margin-top:10px;width:22px;height:22px;border-radius:var(--ow-r-pill);background:var(--ow-steel-950);
+    color:var(--ow-paper);display:grid;place-items:center;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);}
+  .mgr-k-scn{padding:var(--ow-sp-10) 0;border-bottom:1px solid var(--ow-rule-soft);display:flex;flex-direction:column;gap:var(--ow-sp-2);min-width:0;}
+  .mgr-k-stop:last-child .mgr-k-scn{border-bottom:0;}
+  .mgr-k-scn > b{font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .mgr-k-scn small{font-size:var(--ow-t-11);color:var(--ow-ink-600);font-weight:var(--ow-fw-400);}
+  .mgr-k-qn{display:flex;align-items:center;gap:var(--ow-sp-4);flex-wrap:wrap;margin-top:var(--ow-sp-2);}
+  .mgr-k-qn i{font-style:normal;font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);background:var(--ow-rule-soft);
+    border-radius:var(--ow-r-4);padding:1px var(--ow-sp-6);color:var(--ow-ink-900);}
+  .mgr-k-qn em{font-style:normal;margin-left:auto;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .mgr-k-rf{margin:0;padding:0 var(--ow-sp-16) var(--ow-sp-8);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .mgr-k-ra{padding:var(--ow-sp-12) var(--ow-sp-16) var(--ow-sp-16);display:flex;gap:var(--ow-sp-8);align-items:center;
+    border-top:1px solid var(--ow-rule-soft);font-size:var(--ow-t-12);color:var(--ow-ink-600);line-height:1.4;}
+  .mgr-k-ra .btn{flex:none;}
+  .mgr-k-hi{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--ow-sp-4);padding:var(--ow-sp-10) var(--ow-sp-16);
+    border-bottom:1px solid var(--ow-rule-soft);font-size:var(--ow-t-12);line-height:1.45;}
+  .mgr-k-hi:last-child{border-bottom:0;}
+  .mgr-k-hy{color:var(--ow-ink-600);}
+  .mgr-k-hy b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  .mgr-k-hc{display:flex;gap:var(--ow-sp-6);color:var(--ow-verdigris);font-weight:var(--ow-fw-600);}
+  .mgr-k-hi small{font-size:var(--ow-t-11);color:var(--ow-ink-600);font-weight:var(--ow-fw-400);}
+  .mgr-k-pan .mgr-k-none0{padding:var(--ow-sp-16);text-align:left;font-size:var(--ow-t-12);}
+  .mgr-k-reading{margin:0;padding:var(--ow-sp-16);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .mgr-k-dock{display:none;}
+  .mgr-k > .mgr-ask-cut{border-top:0;padding:0;}
+  .mgr-k > .mgr-ask-cut[hidden]{display:none;}
+  /* A console narrower than the canvas: the route and memory go under
+     the questions, and the band's figures under its sentence. */
+  @media (max-width:1180px){
+    .mgr-k-grid{grid-template-columns:minmax(0,1fr);}
+    .mgr-k-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--ow-sp-16);align-items:start;}
+    .mgr-k-hd{grid-template-columns:84px minmax(0,1fr);}
+    .mgr-k-hf{grid-column:1/-1;border-left:0;grid-template-columns:repeat(4,minmax(0,1fr));}
+    .mgr-k-hf > div:first-child{padding-left:0;}
+  }
   /* ═══ MGR BED: Ask — end ═══ */
   /* ──────────────────────────────────────────────────────────────────
      Between two beds. These three lines are nobody's: leave them as they are.
@@ -2605,6 +2800,51 @@
        Between two beds. These three lines are nobody's: leave them as they are.
        ────────────────────────────────────────────────────────────────── */
     /* ═══ MGR BED: Ask — begin ═══ */
+    /* It needs to know on a phone: the band shrinks to a line and a 2×2,
+       the places wrap at thumb size, one question a card at 15px, the
+       route and the memory under the work, and the route's draft -- the
+       one primary action -- rides above the tab bar. */
+    .mgr-k{gap:var(--ow-sp-12);}
+    .mgr-k-hd{grid-template-columns:48px minmax(0,1fr);gap:var(--ow-sp-12);padding:var(--ow-sp-16);align-items:start;}
+    .mgr-k-av{width:48px;height:48px;}
+    .mgr-k-av svg{width:28px;height:28px;}
+    .mgr-k-av i{width:14px;height:14px;border-width:2px;right:0;bottom:0;}
+    .mgr-k-hn{font-size:var(--ow-t-13);}
+    .mgr-k-hw{font-size:var(--ow-t-16);margin-top:var(--ow-sp-4);}
+    .mgr-k-hf{grid-column:1/-1;border-left:0;grid-template-columns:repeat(2,minmax(0,1fr));border-top:1px solid var(--ow-steel-800);}
+    .mgr-k-hf > div,.mgr-k-hf > div:first-child{padding:var(--ow-sp-10) var(--ow-sp-12) var(--ow-sp-6) 0;border-right:0;}
+    .mgr-k-hf > div:nth-child(even){padding-left:var(--ow-sp-12);border-left:1px solid var(--ow-steel-800);}
+    .mgr-k-hf > div:nth-child(n+3){border-top:1px solid var(--ow-steel-800);}
+    .mgr-k-hf span{white-space:normal;}
+    .mgr-k-where{gap:var(--ow-sp-6);}
+    .mgr-k-where .mgr-k-mic{flex-basis:100%;}
+    .mgr-k-wf{min-height:var(--ow-tap);font-size:var(--ow-t-14);padding:0 var(--ow-sp-12);}
+    .mgr-k-grid,.mgr-k-qs{grid-template-columns:minmax(0,1fr);gap:var(--ow-sp-12);}
+    .mgr-k-side{display:flex;flex-direction:column;gap:var(--ow-sp-12);}
+    .mgr-k-q{padding:var(--ow-sp-16);gap:var(--ow-sp-12);}
+    .mgr-k-stk{font-size:var(--ow-t-13);}
+    .mgr-k-qt{font-size:var(--ow-t-16);}
+    .mgr-k-why{font-size:var(--ow-t-14);}
+    .mgr-k-wh{font-size:var(--ow-t-14);flex-wrap:wrap;}
+    .mgr-k-age{flex-basis:100%;margin-left:32px;text-align:left;font-size:var(--ow-t-12);}
+    .mgr-k-an{min-height:var(--ow-tap);font-size:var(--ow-t-14);padding:0 var(--ow-sp-16);}
+    .mgr-k-box{height:var(--ow-tap);}
+    .mgr-k-box .mgr-k-in{font-size:var(--ow-t-16);}
+    .mgr-k-tf,.mgr-k-by,.mgr-k-vd{font-size:var(--ow-t-12);}
+    .mgr-k-sel{height:var(--ow-tap);max-width:none;font-size:var(--ow-t-14);}
+    .mgr-k-keep .mgr-k-save{flex:1 1 100%;margin-left:0;height:var(--ow-tap);font-size:var(--ow-t-14);}
+    .mgr-k-chg{font-size:var(--ow-t-14);}
+    .mgr-k-cf,.mgr-k-sure,.mgr-k-kept{font-size:var(--ow-t-12);}
+    .mgr-k-sure .mgr-k-send{flex:1 1 100%;margin-left:0;height:var(--ow-tap);font-size:var(--ow-t-14);}
+    .mgr-k-sc{margin:2px 40px 0;}
+    .mgr-k-scn > b{font-size:var(--ow-t-14);}
+    .mgr-k-scn small,.mgr-k-hi small,.mgr-k-rf{font-size:var(--ow-t-12);}
+    .mgr-k-hi{font-size:var(--ow-t-14);}
+    .mgr-k-ra .btn.btn-accent{display:none;}
+    .mgr-k-dock{display:flex;position:fixed;left:0;right:0;bottom:calc(var(--mobile-bottomnav-h) + env(safe-area-inset-bottom, 0px));z-index:40;
+      padding:var(--ow-sp-10) var(--ow-sp-16);background:var(--ow-paper);border-top:1px solid var(--ow-rule);}
+    .mgr-k-dock .btn{flex:1 1 auto;display:inline-flex;align-items:center;justify-content:center;height:var(--ow-tap);font-size:var(--ow-t-14);}
+    .mgr-k:has(.mgr-k-dock){padding-bottom:64px;}
     /* ═══ MGR BED: Ask — end ═══ */
     /* ──────────────────────────────────────────────────────────────────
        Between two beds. These three lines are nobody's: leave them as they are.
@@ -133152,14 +133392,22 @@ async function managerAddOwnPlay(name, how){
    wrongly out of prose argues for the wrong shelf price, and "12 inch
    is 118,000" would file 12. "They don't stock it" is a real answer
    and is kept as the note it is. */
-async function managerAnswerQuestion(rowId, answer){
-  if(!managerNotesTable || rowId == null) return;
+async function managerAnswerQuestion(rowId, answer, opts){
+  if(!managerNotesTable || rowId == null) return { ok: false };
   const text = String(answer||'').trim();
-  if(!text) return;
+  if(!text) return { ok: false };
+  const o = (opts && typeof opts === 'object') ? opts : {};
   const cur = await sb.from('manager_notes').select('body').eq('shop_id', currentShopId).eq('id', rowId).single();
   const body = (cur.data && cur.data.body) || {};
   body.answer = text.slice(0, 500);
   body.answeredOn = todayISO();
+  /* WHO FOUND IT (Q23). Staff and field agents cannot write to the
+     journal, so the owner records what they found -- tagged with who
+     found it, by id, or as the owner's own. */
+  const by = o.by;
+  body.answeredBy = (by && typeof by === 'object' && (by.staffId != null || by.agentId != null))
+    ? { ...(by.staffId != null ? { staffId: by.staffId } : { agentId: by.agentId }), name: String(by.name || '').slice(0, 80) }
+    : 'you';
   const parts = body.productId ? buyKeyParts(stockKey(body.productId, body.variantIdx)) : null;
   const figure = /^[\d,.\s]+$/.test(text) ? Math.round(Number(text.replace(/[,\s]/g, ''))) : 0;
   let filed = null, refused = null;
@@ -133175,19 +133423,40 @@ async function managerAnswerQuestion(rowId, answer){
     if(r.ok){ filed = productVariantLabel(parts.product, parts.variantIdx); body.recorded = { rival: body.rival, price: figure }; }
     else refused = r.why;
   }
+  /* A SUPPLIER'S TERMS (Q9). An answer to a terms question carries the
+     days themselves, and they go onto the supplier's own record -- the
+     age of a bill they stop supplying at, their credit, their delivery
+     time. Kept in the journal either way; a shop whose supplier list
+     cannot hold them yet is told the one paste that fixes it. */
+  let terms = null;
+  if(o.terms && typeof o.terms === 'object'){
+    const sid = body.supplierId != null ? body.supplierId : (body.place && body.place.kind === 'supplier' ? body.place.id : null);
+    const days = {};
+    ['stopAtDays', 'creditDays', 'deliveryDays'].forEach(k=>{
+      const v = o.terms[k], n = Number(v);
+      if(v != null && String(v).trim() !== '' && Number.isFinite(n) && n >= 0) days[k] = Math.round(n);
+    });
+    if(sid != null && Object.keys(days).length){
+      body.terms = days;
+      terms = await mgrAskWriteTerms(sid, days);
+    }
+  }
   const up = await sb.from('manager_notes').update({ status: 'answered', body })
     .eq('shop_id', currentShopId).eq('id', rowId);
   if(up.error){
     toast(/check constraint/i.test(up.error.message||'')
       ? 'The answer could not be kept — paste supabase/migrations/0084_manager_questions.sql into the Supabase SQL editor and reload.'
       : 'Could not keep that answer — ' + up.error.message, 9000);
-    return;
+    return { ok: false, error: up.error.message };
   }
   toast(filed ? 'Recorded — ' + body.rival + ' ' + fmtUGX(figure) + ' for ' + filed
     : refused ? 'Kept, but the market record was not updated — ' + refused
+    : terms && !terms.ok ? 'Kept in the journal, but ' + terms.why
+    : terms ? 'Kept — ' + mgrPossessive(terms.name) + ' terms are on their record'
     : (parts && body.rival) ? 'Kept as a note — no figure in that, so the market record is unchanged'
-    : 'Kept — the manager reads it at the next meeting', refused ? 9000 : 5000);
+    : 'Kept — the manager reads it at the next meeting', refused || (terms && !terms.ok) ? 9000 : 5000);
   renderManager();
+  return { ok: true, filed: !!filed, terms };
 }
 
 async function managerLoadState(){
@@ -133222,7 +133491,7 @@ async function managerLoadState(){
     managerScoreboard(),
     sb.from('manager_notes').select('id, date, body, status')
       .eq('shop_id', currentShopId).eq('kind', 'question').eq('status', 'open')
-      .order('id', { ascending: false }).limit(6),
+      .order('id', { ascending: false }).limit(200),
     managerRecentReviews(4),
     /* How much evidence a review would stand on -- the same 7-day window
        week_review_data reads, counted so the offer can say it is thin
@@ -135656,8 +135925,8 @@ document.addEventListener('click', (e)=>{
    ────────────────────────────────────────────────────────────────── */
 /* ═══ MGR BED: Ask — begin ═══ */
 /* ---- IT NEEDS TO KNOW. The one place the shop's own eyes reach past
-   the database -- answered in a line, read back at the top of the next
-   meeting. ---- */
+   the database -- answered with a tap or a line, read back at the top of
+   the next meeting. ---- */
 /* How many questions are open, counted by the database rather than by
    the newest few the journal reading brings. A count that could not be
    read is null -- never a zero. */
@@ -135669,11 +135938,26 @@ async function managerOpenAskCount(){
     return (r && !r.error && Number.isFinite(r.count)) ? r.count : null;
   }catch(e){ return null; }
 }
+/* The nav's count: every open question in the journal, counted by the
+   database, plus the supplier terms the books cannot supply (Q9). The
+   painter counts those from the books onto ctx.askTerms each time it
+   paints -- the nav is painted straight after, from the same ctx. An
+   unread journal count is no chip at all, never a zero. */
 function mgrNavCountAsk(ctx){
   const n = ctx.openAsks;
   if(n == null) return null;
-  return { n, note: n ? `<b>${n} question${n === 1 ? '' : 's'}</b> only you can find out` : null };
+  const total = n + (Number(ctx.askTerms) > 0 ? Math.round(Number(ctx.askTerms)) : 0);
+  return { n: total, note: total ? `<b>${total} question${total === 1 ? '' : 's'}</b> only you can find out` : null };
 }
+/* What this section keeps between paints. The answered side of the
+   journal, read once per render beside the journal reading; the answers
+   the owner kept this session (their cards stay, done, as the canvas
+   draws them); who each question was sent to on WhatsApp (so "found by"
+   starts on that person); and the place the owner is filtering by. */
+let mgrAskRead = null;
+const mgrAskKept = new Map();
+const mgrAskSent = new Map();
+let mgrAskWhere = 'all';
 function mgrPaintAsk(gen, ctx){
   const qWrap = document.getElementById('managerQuestionsWrap');
   if(!qWrap) return;
@@ -135687,198 +135971,1047 @@ function mgrPaintAsk(gen, ctx){
     p.hidden = !more;
     p.textContent = more ? `Showing the newest ${shown} of ${ctx.openAsks} open questions.` : '';
   };
+  /* One drawing, from the questions and -- once it lands -- the answered
+     side. A reading that lands after the questions are drawn only puts
+     in the parts it feeds (the band, the memory), so it never wipes an
+     answer being typed; only a change in which suppliers are asked about
+     redraws the cards. */
+  const draw = (why)=>{
+    const read = (mgrAskRead && mgrAskRead.gen === gen) ? mgrAskRead : null;
+    const model = mgrAskModel(ctx.st.questions || [], read);
+    ctx.askTerms = model.items.filter(it=> it.det && !it.done).length;
+    const root = qWrap.querySelector('.mgr-k');
+    if(why === 'read' && root && root.dataset.terms === model.termsKey){
+      const band = root.querySelector('.mgr-k-hd'), mem = root.querySelector('.mgr-k-mem');
+      if(band) band.outerHTML = mgrAskBandHTML(model);
+      if(mem) mem.outerHTML = mgrAskMemHTML(model);
+      return;
+    }
+    qWrap.innerHTML = mgrAsksHTML(model);
+    mgrWireAsks(qWrap, model);
+    cut();
+  };
   if(ctx.landed === 'start'){
-    if(!ctx.notes) qWrap.innerHTML = mgrNeedsMemoryHTML('What it needs to know');
-    else mgrLastKnown(qWrap, true);
+    if(!ctx.notes){ qWrap.innerHTML = mgrNeedsMemoryHTML('What it needs to know'); return; }
+    mgrLastKnown(qWrap, true);
+    /* The supplier terms come from the books alone, so the nav can count
+       them before the journal answers. */
+    ctx.askTerms = mgrAskTermsAsks(todayISO(), {}).length;
+    mgrAskReadAnswered().then(r=>{
+      if(gen !== mgrRenderGen) return;
+      mgrAskRead = { ...r, gen };
+      if(ctx.st && !ctx.st.error) draw('read');
+      mgrPaintSwitch();
+    });
     return;
   }
   if(ctx.landed === 'asks'){ if(ctx.st && !ctx.st.error) cut(); return; }
   if(ctx.landed !== 'state') return;
-  const st = ctx.st;
-  if(st.error){ qWrap.innerHTML = mgrJournalUnreadHTML(st.error); return; }
-  const qs = st.questions || [];
-  qWrap.innerHTML = mgrAsksHTML(qs);
-  mgrWireAsks(qWrap);
-  if(!qs.length) qWrap.innerHTML = `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">What it needs to know</span></div>
-    <div class="ow-empty">Nothing to ask you right now. When the books cannot answer something a meeting needs,
-      the question waits here for you.</div></div>`;
-  (qWrap.querySelector('.ow-pan') || qWrap).insertAdjacentHTML('beforeend', '<p class="ow-mini mgr-ask-cut" hidden></p>');
-  cut();
+  if(ctx.st.error){ qWrap.innerHTML = mgrJournalUnreadHTML(ctx.st.error); return; }
+  draw('state');
 }
 
 /* ---- What It needs to know alone draws with. ---- */
-/* WHAT IT NEEDS TO KNOW, DRAWN.
+/* WHAT IT NEEDS TO KNOW, DRAWN AS THE CANVAS DRAWS IT.
 
-   Every open question names somewhere to go and find out -- a rival
-   shop, a supplier, or the owner themselves -- and most are about one
-   line the books already know a great deal about. So the panel is
-   built from those two facts rather than from the wording: questions
-   about the same line sit together under it (two shops asked about one
-   lock is one comparison, not two paragraphs), a price question draws
-   every price on file for that line on one scale and lands the typed
-   figure on it as it is typed, and a question the meeting sent with
-   its likely answers is answered with a tap. A row of places filters
-   the lot to what to ask where the owner is standing. */
-function mgrAskPlace(b){
-  if(b.productId && b.rival) return { id: 'r:' + String(b.rival).trim().toLowerCase(), label: String(b.rival).trim(), tone: 'sell' };
-  if(b.supplierId != null && (data.suppliers || []).some(x=> String(x.id) === String(b.supplierId)))
-    return { id: 's:' + b.supplierId, label: supplierName(b.supplierId), tone: 'buy' };
-  return { id: 'you', label: 'You', tone: 'insight' };
-}
-function mgrAskIni(label){
-  if(label === 'You') return 'You';
-  const words = String(label || '').replace(/[^\p{L}\p{N} ]+/gu, ' ').trim().split(/\s+/).filter(Boolean);
-  const keep = words.filter(w=> !/^(the|of|on|a|an|and|ltd)$/i.test(w));
-  const use = keep.length ? keep : words;
-  return (use.length > 1 ? use[0][0] + use[1][0] : (use[0] || '?').slice(0, 2)).toUpperCase();
-}
-function mgrAskAge(dateISO){
-  const d = Math.max(0, daysSinceDate(dateISO || todayISO()) || 0);
-  return { text: d === 0 ? 'today' : d === 1 ? '1 day' : d + ' days', stale: d >= 5 };
-}
+   The Manager's band says how many things it cannot read in the books
+   and how much advice rides on them. Under it, where the owner is
+   standing filters the questions to the ones answerable there -- only
+   you, at a rival, a supplier or the bank, your staff, customers and
+   their sites. Each question is a card: its rank in the Manager's own
+   order, its department, the money at stake, why it is asked, where to
+   find out and how old what is on file is, the likely answers -- each
+   with what it would change and how sure it would leave the Manager --
+   and who could go and find out. Beside them, the field route for the
+   questions that need a visit, nearest stop first, and the answers that
+   changed the advice.
 
-/* One line's prices on one scale: ours, every shop already on the
-   market record, and a pin per shop being asked that moves as its
-   figure is typed. Wholesale, because that is the side an answer is
-   filed as. Nothing to put on it -- no price of ours and nobody seen --
-   draws nothing: a scale with one unlabelled pin says nothing. */
-function mgrAskLadderHTML(productId, variantIdx, asks){
-  let ours = null, seen = [];
-  try{ ours = ourPriceFor(productId, variantIdx); }catch(e){}
-  try{ seen = rivalPriceLatest(productId, variantIdx).filter(x=> x.side === 'wholesale').slice(0, 3); }catch(e){}
-  const vals = [ours, ...seen.map(x=> x.price)].filter(v=> v > 0);
-  if(!vals.length) return '';
-  const lo = Math.min(...vals) * 0.8, hi = Math.max(...vals) * 1.2;
-  const pos = (v)=> Math.max(0, Math.min(100, Math.round((v - lo) / (hi - lo) * 1000) / 10));
-  return `<div class="mgr-lad" data-lo="${lo}" data-hi="${hi}" role="img" aria-label="${esc(
-      (ours != null ? 'You charge ' + mgrNum(ours) + '. ' : '') + seen.map(x=> x.rival + ' ' + mgrNum(x.price) + ', seen ' + x.daysOld + ' days ago').join('. '))}">
-    <span class="mgr-lad-t"></span>
-    ${ours != null ? `<span class="mgr-lad-you" style="left:${pos(ours)}%"><b>You ${esc(mgrNum(ours))}</b><i></i></span>` : ''}
-    ${seen.map((x, i)=>{
-      /* Two shops a few hundred apart would print one label over the
-         other: a label that lands close to the one before drops a row. */
-      const low = i > 0 && Math.abs(pos(x.price) - pos(seen[i - 1].price)) < 22 && !seen[i - 1]._low;
-      x._low = low;
-      return `<span class="mgr-lad-seen${low ? ' mgr-lad-low' : ''}" style="left:${pos(x.price)}%" title="${esc(x.rival)} · ${esc(fmtShortDate(x.seenOn))}"><i></i><small>${esc(mgrAskIni(x.rival))} ${esc(mgrNum(x.price))} · ${x.daysOld}d</small></span>`; }).join('')}
-    ${asks.map(q=> `<span class="mgr-lad-pin" data-for="${esc(String(q.id))}" hidden>${esc(mgrAskIni((q.body || {}).rival))}</span>`).join('')}
-  </div>`;
-}
-function mgrAskCardHTML(q, ours){
-  const b = q.body || {}, pl = mgrAskPlace(b), age = mgrAskAge(q.date);
-  const isPrice = !!(b.productId && b.rival);
-  const choices = Array.isArray(b.choices) ? b.choices.filter(c=> String(c || '').trim()).slice(0, 3) : [];
-  return `<div class="mgr-ask mgr-ak" data-qid="${esc(String(q.id))}" data-place="${esc(pl.id)}"${ours != null && isPrice ? ` data-ours="${ours}"` : ''}>
-    <div class="mgr-ak-h">
-      <span class="mgr-av mgr-ak-av mgr-kt-${pl.tone}" aria-hidden="true">${esc(mgrAskIni(pl.label))}</span>
-      <p class="mgr-ak-q">${esc(b.question || '')}</p>
-      <span class="mgr-ak-age${age.stale ? ' mgr-ak-old' : ''}" title="asked ${esc(fmtShortDate(q.date))}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>${esc(age.text)}</span>
-    </div>
-    ${choices.length ? `<div class="mgr-ak-chs">${choices.map(c=> `<button type="button" class="mgr-ak-ch" aria-pressed="false">${esc(c)}</button>`).join(' ')}</div>` : ''}
-    <div class="mgr-ask-row">
-      <label class="mgr-ak-box">${isPrice ? '<span class="mgr-ak-cur">UGX</span>' : ''}<input type="text" class="mgr-ask-input"${isPrice ? ' inputmode="decimal"' : ''} aria-label="${esc(b.question || 'Your answer')}" placeholder="${
-        isPrice ? esc('What ' + b.rival + ' charges — just the figure') : choices.length ? 'Or in your own words' : 'What you found out — one line'}"></label>
-      <button type="button" class="btn btn-ghost ow-sm mgr-ask-save">Answer</button>
-    </div>
-    ${isPrice && ours != null ? '<p class="mgr-ak-vd" hidden></p>' : ''}
-  </div>`;
-}
-const MGR_ASK_KINDS = [['sell', 'price check', 'price checks'], ['buy', 'supplier', 'suppliers'], ['insight', 'for you', 'for you']];
+   EVERY FIGURE IS THE BOOKS' OR THE MEETING'S, AND SAYS WHICH. A stake
+   the meeting sized says so; one the books size states its arithmetic
+   (thirty days' sales times the gap to the cheapest rival, what the line
+   earned, the open bills, the buy plan); a question nothing sizes reads
+   "not sized", never 0. Confidence is the meeting's judgement where it
+   gave one and is labelled so, otherwise it is counted from the books
+   (mgrConfidence) and says what it counted. An answer's effect is the
+   meeting's stated intent and is drawn only where the meeting wrote one
+   -- never invented. */
+const MGR_ASK_WHERE = [['all', 'Everywhere'], ['you', 'Only you'], ['rival', 'At a rival'],
+  ['supp', 'Suppliers & bank'], ['staff', 'Your staff'], ['cust', 'Customers & sites']];
+const MGR_ASK_WHERE_OF = { you: 'you', rival: 'rival', supplier: 'supp', bank: 'supp', staff: 'staff', customer: 'cust' };
 const MGR_ASK_ICON = {
-  sell: '<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
-  buy: '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>',
-  insight: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  all: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+  you: '<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 16 0v1"/>',
+  rival: '<path d="M3 21h18M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/>',
+  supp: '<path d="M1 4h14v12H1zM15 9h4l3 3v4h-7"/><circle cx="5.5" cy="18.5" r="2"/><circle cx="17.5" cy="18.5" r="2"/>',
+  staff: '<circle cx="9" cy="8" r="3.5"/><path d="M2 21v-1a7 7 0 0 1 14 0v1"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M22 21v-1a7 7 0 0 0-4-6.3"/>',
+  cust: '<path d="M3 21h18"/><path d="M5 21V10h6v11M13 21V4h6v17"/>',
+  face: '<circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20.5v-.5a5.5 5.5 0 0 1 5.5-5.5h4a5.5 5.5 0 0 1 5.5 5.5v.5"/>',
+  tie: '<path d="M12 14.5l-1 1.8.8 3.2h.4l.8-3.2z"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
 };
-function mgrAsksHTML(qs){
-  if(!qs.length) return '';
-  /* Group by the line asked about, in the order the questions came. */
-  const groups = [], byKey = new Map();
-  qs.forEach(q=>{
-    const b = q.body || {};
-    const parts = b.productId ? buyKeyParts(stockKey(b.productId, b.variantIdx)) : null;
-    const key = parts ? 'p:' + stockKey(parts.productId, parts.variantIdx) : 'q:' + q.id;
-    if(!byKey.has(key)){ const g = { key, parts, qs: [] }; byKey.set(key, g); groups.push(g); }
-    byKey.get(key).qs.push(q);
+/* The kinds of place that need somebody to go there. */
+const MGR_ASK_VISIT = ['rival', 'supplier', 'customer'];
+const MGR_ASK_WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve'];
+const MGR_ASK_TERM_LABEL = { stopAtDays: 'Stops supplying at', creditDays: 'Credit they give', deliveryDays: 'They deliver in' };
+
+/* WHERE THE ANSWER IS FOUND. The meeting's place when it named one of
+   the six kinds; otherwise what the question carries -- a line and a
+   shop is a rival's counter, a supplier the books hold is that
+   supplier, and anything else only the owner can find out. Each kind
+   lands in one of the five places the owner filters by. */
+function mgrAskPlace(b){
+  const x = b || {};
+  const pl = (x.place && typeof x.place === 'object') ? x.place : null;
+  const find = (list, id)=> id == null || id === '' ? null : (list || []).find(r=> r && String(r.id) === String(id)) || null;
+  let kind = pl && MANAGER_ASK_PLACES.includes(String(pl.kind || '')) ? String(pl.kind) : null;
+  if(!kind) kind = (x.productId && x.rival) ? 'rival' : find(data.suppliers, x.supplierId) ? 'supplier' : 'you';
+  const out = { kind, where: MGR_ASK_WHERE_OF[kind] };
+  if(kind === 'rival'){
+    out.name = String((pl && pl.name) || x.rival || '').trim();
+    out.label = out.name ? 'At ' + mgrPossessive(out.name) + ' counter' : 'At a rival';
+    out.key = 'r:' + out.name.toLowerCase();
+  } else if(kind === 'supplier'){
+    const s = find(data.suppliers, pl && pl.id != null ? pl.id : x.supplierId);
+    out.id = s ? s.id : null; out.name = s ? s.name : 'a supplier'; out.location = s ? String(s.location || '') : '';
+    out.label = 'Ask ' + out.name; out.key = 's:' + (s ? s.id : '');
+  } else if(kind === 'bank'){
+    out.name = String((pl && pl.name) || '').trim();
+    out.label = out.name ? 'Ask ' + out.name : 'Ask the bank'; out.key = 'b:' + out.name.toLowerCase();
+  } else if(kind === 'staff'){
+    const rec = (pl && pl.staffId != null) ? find(data.staff, pl.staffId) : (pl && pl.agentId != null) ? find(data.agents, pl.agentId) : null;
+    out.name = String((rec && rec.name) || (pl && pl.name) || '').trim();
+    if(pl && pl.staffId != null && rec) out.staffId = rec.id;
+    if(pl && pl.agentId != null && rec) out.agentId = rec.id;
+    out.label = out.name ? 'Ask ' + out.name : 'Ask your staff'; out.key = 'p:' + out.name.toLowerCase();
+  } else if(kind === 'customer'){
+    const c = find(data.customers, pl && pl.id);
+    out.id = c ? c.id : null; out.name = c ? c.name : 'a customer'; out.location = c ? String(c.location || '') : '';
+    out.label = out.name + (out.location ? ', ' + out.location : ''); out.key = 'c:' + (c ? c.id : '');
+  } else {
+    out.label = 'Only you know'; out.key = 'you';
+  }
+  return out;
+}
+/* A question's department: the meeting's when it named one of the six,
+   otherwise what the question is about -- a rival's price is Sales, a
+   supplier's terms or price Procurement, the bank Finance, staff People,
+   a customer Sales, a line on the shelf the Store. Null is the whole
+   shop, never a guess. */
+function mgrAskDeptOf(b, place){
+  const said = String((b && b.dept) || '');
+  if(mgrDept(said)) return said;
+  if(b && b.source === 'terms') return 'procurement';
+  if(place.kind === 'rival') return 'sales';
+  if(place.kind === 'supplier') return 'procurement';
+  if(place.kind === 'bank') return 'finance';
+  if(place.kind === 'staff') return b && b.productId ? 'store' : 'people';
+  if(place.kind === 'customer') return 'sales';
+  if(b && b.productId) return 'store';
+  return null;
+}
+/* MONEY AT STAKE, and the arithmetic behind it.
+     the meeting's   the shillings it sized when it asked (body.stake)
+     a price ask     thirty days' units times the gap to the cheapest
+                     rival on file (marketVerdict, "a month"); a line
+                     with no rival on file, what it earned in thirty
+                     days (rivalNeverChecked, the sales reading)
+     a supplier      what is owed to them on open bills; with nothing
+                     owed, what the buy plan would spend with them
+   Anything else is not sized -- null, which the card says in words. */
+function mgrAskStake(b, place, price, today){
+  const x = b || {};
+  const st = Math.round(Number(x.stake));
+  if((typeof x.stake === 'number' || typeof x.stake === 'string') && Number.isFinite(st) && st > 0)
+    return { amount: st, unit: '', basis: 'sized at the meeting', from: 'meeting' };
+  if(price){
+    const key = stockKey(price.productId, price.variantIdx);
+    const mv = mgrMemo('ask:verdict:' + today, ()=> marketVerdict(today)) || {};
+    const row = [...(mv.under || []), ...(mv.lift || [])].filter(r=> r && r.key === key)
+      .sort((a, c)=> c.atStake - a.atStake)[0];
+    if(row && row.atStake > 0) return { amount: Math.round(row.atStake), unit: 'a month', from: 'market',
+      basis: mgrNum(row.units30) + ' sold in 30 days × the ' + mgrNum(Math.abs(row.gap)) + ' gap to ' + row.shop };
+    const never = (mgrMemo('ask:never:' + today, ()=> rivalNeverChecked(today)) || []).find(r=> r && r.key === key);
+    if(never && never.earned30 > 0) return { amount: Math.round(never.earned30), unit: 'earned in 30 days', from: 'never',
+      basis: 'what the line earned in 30 days, with no rival price on file' };
+    const sale = (mgrMemo('ask:sales:' + today, ()=> waSalesByKey(today)) || new Map()).get(key);
+    if(sale && sale.profit30 > 0) return { amount: Math.round(sale.profit30), unit: 'earned in 30 days', from: 'sales',
+      basis: 'what the line earned in 30 days' };
+    return null;
+  }
+  const sid = place.kind === 'supplier' ? place.id : null;
+  if(sid == null) return null;
+  /* A supplier's price for one line: what the buy plan would spend on
+     that line. Their open bills are a different question. */
+  if(x.productId){
+    const key = stockKey(x.productId, x.variantIdx == null || x.variantIdx === '' ? null : x.variantIdx);
+    const plan = mgrMemo('ask:plan:' + today, ()=> purchasePlan(null, null, today)) || {};
+    const lines = (plan.lines || []).filter(l=> l && l.key === key);
+    const cost = lines.reduce((n, l)=> n + (Number(l.cost) || 0), 0);
+    return cost > 0 ? { amount: Math.round(cost), unit: 'to buy', from: 'plan',
+      basis: 'what the buy plan would spend on ' + mgrAskLine(x.productId, x.variantIdx) } : null;
+  }
+  return mgrAskSupplierStake(sid, place.name, today);
+}
+function mgrAskSupplierStake(sid, name, today){
+  const bills = (mgrMemo('ask:bills:' + today, ()=> credOpenInvoices()) || []).filter(x=> String(x.supplierId) === String(sid));
+  const owed = bills.reduce((n, x)=> n + (Number(x.due) || 0), 0);
+  if(owed > 0.5) return { amount: Math.round(owed), unit: 'owed', from: 'bills',
+    basis: 'owed to ' + name + ' on ' + bills.length + ' open bill' + (bills.length === 1 ? '' : 's') };
+  const plan = mgrMemo('ask:plan:' + today, ()=> purchasePlan(null, null, today)) || {};
+  const lines = (plan.lines || []).filter(l=> l && String(l.supplierId) === String(sid));
+  const cost = lines.reduce((n, l)=> n + (Number(l.cost) || 0), 0);
+  if(cost > 0) return { amount: Math.round(cost), unit: 'to buy', from: 'plan',
+    basis: lines.length + ' line' + (lines.length === 1 ? '' : 's') + ' on the buy plan from ' + name };
+  return null;
+}
+/* HOW OLD WHAT IS ON FILE IS -- the age of the current knowledge, not of
+   the question: the asked rival's own latest price, the supplier's price
+   on the registry (or when it was last asked for), the line's last count,
+   the customer's site stage; and only when nothing on file bears on it,
+   how long the question has waited. */
+function mgrAskKnown(b, place, price, asked, today){
+  const x = b || {};
+  const days = (d)=> d === 1 ? '1 day' : d + ' days';
+  const since = (iso)=> Math.max(0, daysSinceDate(String(iso || '').slice(0, 10)));
+  if(price){
+    const rival = String(price.rival || '').trim().toLowerCase();
+    const mine = (rivalPriceLatest(price.productId, price.variantIdx, today) || []).filter(r=> String(r.rival).trim().toLowerCase() === rival);
+    const fresh = mine.reduce((m, r)=> (!m || r.daysOld < m.daysOld) ? r : m, null);
+    return fresh ? { text: fresh.daysOld === 0 ? 'their price is from today' : 'their price is ' + days(fresh.daysOld) + ' old', days: fresh.daysOld }
+      : { text: 'no price of theirs on file', days: null };
+  }
+  if(x.productId){
+    const key = stockKey(x.productId, x.variantIdx == null || x.variantIdx === '' ? null : x.variantIdx);
+    if(place.kind === 'supplier' && place.id != null){
+      const rows = (data.prices || []).filter(p=> p && String(p.supplierId) === String(place.id) && stockKey(p.productId, p.variantIdx) === key);
+      const dated = rows.map(p=> String(p.date || '').slice(0, 10)).filter(d=> /^\d{4}-\d{2}-\d{2}$/.test(d)).sort().pop();
+      if(dated){ const d = since(dated); return { text: d === 0 ? 'their price is from today' : 'their price is ' + days(d) + ' old', days: d }; }
+      const askedAt = rows.map(p=> String(p.lastAskedAt || '').slice(0, 10)).filter(d=> /^\d{4}-\d{2}-\d{2}$/.test(d)).sort().pop();
+      if(askedAt){ const d = since(askedAt); return { text: d === 0 ? 'asked them today' : 'last asked ' + days(d) + ' ago', days: d }; }
+      return { text: 'no price of theirs on file', days: null };
+    }
+    const count = (mgrMemo('ask:counts:' + today, ()=> invCountRecords()) || []).find(r=> r && r.key === key);
+    if(count){ const d = since(count.date); return { text: d === 0 ? 'counted today' : 'last counted ' + days(d) + ' ago', days: d }; }
+    return { text: 'never counted', days: null };
+  }
+  if(place.kind === 'customer' && place.id != null){
+    const c = (data.customers || []).find(r=> r && String(r.id) === String(place.id));
+    if(c && c.siteStage && /^\d{4}-\d{2}-\d{2}/.test(String(c.siteStageAt || ''))){
+      const d = since(c.siteStageAt);
+      return { text: 'site at ' + c.siteStage + ', said ' + (d === 0 ? 'today' : days(d) + ' ago'), days: d };
+    }
+  }
+  const d = since(asked || today);
+  return { text: d === 0 ? 'asked today' : 'asked ' + days(d) + ' ago', days: d };
+}
+/* HOW SURE THE MANAGER IS WITHOUT THE ANSWER (Q6): the meeting's own
+   1-5 for the question, labelled judged; otherwise counted from the
+   books the way a move on the same thing would be (a price ask from its
+   freshest rival sighting and costing, a supplier ask from deliveries);
+   otherwise not known -- never a made-up middle. */
+function mgrAskSure(b, place, price){
+  const j = managerPips((b || {}).confidence);
+  if(j != null) return { pips: j, source: 'judged', basis: 'judged' };
+  let like = null;
+  if(price) like = { mkind: 'price', subject: { key: stockKey(price.productId, price.variantIdx) } };
+  else if(place.kind === 'supplier' && place.id != null && (b || {}).source !== 'terms') like = { mkind: 'buy', subject: { supplierId: place.id } };
+  const c = like ? mgrConfidence(like) : null;
+  if(c && c.pips != null) return { pips: c.pips, source: c.source, basis: c.basis };
+  return { pips: null, source: null, basis: 'not known' };
+}
+/* The likely answers, each beside what the meeting said it would change
+   and how sure it would then be -- matched index for index, and only
+   where the meeting's own words line up with the choice. No effect is
+   ever made up: a choice the meeting said nothing about changes nothing
+   on screen. */
+function mgrAskChoices(b, before){
+  const labels = (Array.isArray((b || {}).choices) ? b.choices : []).map(c=> String(c == null ? '' : c).trim()).filter(Boolean).slice(0, 3);
+  if(labels.length < 2) return [];
+  const fx = Array.isArray(b.choiceEffects) ? b.choiceEffects : [];
+  return labels.map((label, i)=>{
+    const e = (fx[i] && typeof fx[i] === 'object') ? fx[i] : {};
+    const lines = !e.label || String(e.label).trim() === label;
+    const effect = lines && e.effect ? String(e.effect).trim() : '';
+    const after = lines ? managerPips(e.confidenceAfter) : null;
+    const tone = (after != null && before != null) ? (after < before ? 'down' : after > before ? 'up' : 'same') : null;
+    return { label, effect, after, tone };
   });
-  const tones = qs.map(q=> mgrAskPlace(q.body || {}).tone);
-  const count = (t)=> tones.filter(x=> x === t).length;
-  const kinds = MGR_ASK_KINDS.filter(([t])=> count(t));
-  const places = [];
-  qs.forEach(q=>{ const pl = mgrAskPlace(q.body || {}); const hit = places.find(x=> x.id === pl.id); if(hit) hit.n++; else places.push({ ...pl, n: 1 }); });
-  const bar = kinds.length > 1 ? `<div class="mgr-ak-kb" aria-hidden="true">${kinds.map(([t])=> `<i class="mgr-ak-k-${t}" style="flex-grow:${count(t)}"></i>`).join('')}</div>
-    <div class="mgr-ak-lg">${kinds.map(([t, one, many])=> `<span><i class="mgr-ak-k-${t}"></i> ${count(t)} ${count(t) === 1 ? one : many}</span>`).join(' ')}</div>` : '';
-  const strip = places.length > 1 ? `<div class="mgr-ak-pl" role="group" aria-label="Where to find out">
-      <button type="button" class="mgr-ak-p" data-place="all" aria-pressed="true"><span class="mgr-av mgr-ak-av mgr-kt-setup" aria-hidden="true">All</span><span class="mgr-ak-pn">All</span><span class="mgr-ak-pc">${qs.length}</span></button>
-      ${places.map(p=> `<button type="button" class="mgr-ak-p" data-place="${esc(p.id)}" aria-pressed="false"><span class="mgr-av mgr-ak-av mgr-kt-${p.tone}" aria-hidden="true">${esc(mgrAskIni(p.label))}</span><span class="mgr-ak-pn">${esc(p.label)}</span><span class="mgr-ak-pc">${p.n}</span></button>`).join('')}
-    </div>` : '';
-  const body = groups.map(g=>{
-    if(!g.parts) return `<div class="mgr-ak-g">${mgrAskCardHTML(g.qs[0], null)}</div>`;
-    const tone = mgrAskPlace(g.qs[0].body || {}).tone;
-    let ours = null;
-    try{ ours = ourPriceFor(g.parts.productId, g.parts.variantIdx); }catch(e){}
-    const priceAsks = g.qs.filter(q=> (q.body || {}).rival);
-    let shelf = null;
-    try{ shelf = stockOnHand(g.parts.productId, g.parts.variantIdx); }catch(e){}
-    return `<div class="mgr-ak-g">
-      <div class="mgr-ak-gh">
-        <span class="mgr-av mgr-av-k mgr-ak-gi mgr-kt-${tone}" aria-hidden="true"><svg viewBox="0 0 24 24">${MGR_ASK_ICON[tone]}</svg></span>
-        <span class="mgr-ak-gt">${esc(productVariantLabel(g.parts.product, g.parts.variantIdx))}</span>
-        ${shelf && shelf.counted ? ` <span class="mgr-ak-sh${shelf.qty > 0 ? '' : ' mgr-ak-sh0'}">${shelf.qty > 0 ? esc(mgrNum(shelf.qty)) + ' on the shelf' : 'none on the shelf'}</span>` : ''}
-      </div>
-      ${priceAsks.length ? mgrAskLadderHTML(g.parts.productId, g.parts.variantIdx, priceAsks) : ''}
-      ${g.qs.map(q=> mgrAskCardHTML(q, ours)).join('')}
-    </div>`;
-  }).join('');
-  return `<div class="ow-pan mgr-aks">
-    <div class="ow-pan-h"><span class="ow-pan-t">What it needs to know</span>
-      <span class="ow-pan-n">${qs.length}</span></div>
-    ${bar ? `<div class="mgr-ak-top">${bar}</div>` : ''}
-    ${strip}
-    ${body}
-    <p class="mgr-ak-none" hidden>Nothing to ask here.</p>
+}
+/* WHO COULD GO AND FIND OUT (Q23): the meeting's delegate, or the member
+   of staff the question is for. Their number comes from the staff list
+   or the field agents -- and with no number, or nobody on file by that
+   name, the card says why it cannot send rather than offering a link
+   that goes nowhere. Nothing here sends anything: the link opens the
+   owner's own WhatsApp with the message written. */
+function mgrAskDelegate(b, place){
+  const x = b || {};
+  const d = (x.delegate && typeof x.delegate === 'object') ? x.delegate
+    : (place.kind === 'staff' && (place.staffId != null || place.agentId != null)) ? place : null;
+  if(!d) return null;
+  const find = (list, id)=> id == null || id === '' ? null : (list || []).find(r=> r && String(r.id) === String(id)) || null;
+  const st = find(data.staff, d.staffId), ag = st ? null : find(data.agents, d.agentId);
+  const rec = st || ag;
+  const name = String((rec && rec.name) || d.name || '').trim();
+  if(!name) return null;
+  const first = name.split(/\s+/)[0];
+  const phone = rec && String(rec.phone || '').replace(/[^0-9]/g, '').length >= 9 ? String(rec.phone) : null;
+  return { name, first, staffId: st ? st.id : null, agentId: ag ? ag.id : null, phone,
+    why: !rec ? first + ' is not on your staff list, so there is no number to send to'
+      : !phone ? 'no phone number for ' + first + ' on file' : null };
+}
+/* What a person sent to find out should bring back, said in the
+   message: the figure for a price, the days for a supplier's terms, one
+   of the likely answers, or the answer in a line. */
+function mgrAskLine(productId, variantIdx){
+  const p = (data.products || []).find(x=> x && x.id === productId);
+  return p ? productVariantLabel(p, variantIdx == null ? null : variantIdx) : 'that line';
+}
+function mgrAskBringBack(it){
+  if(it.terms) return it.terms.missing.map(k=> ({ stopAtDays: 'the age of an unpaid bill they stop supplying at',
+    creditDays: 'how many days’ credit they give', deliveryDays: 'how many days they take to deliver' })[k]).join(', ');
+  if(it.price) return 'what ' + it.price.rival + ' charges for ' + mgrAskLine(it.price.productId, it.price.variantIdx) + ' — the figure';
+  if(it.choices.length) return 'which it is: ' + it.choices.map(c=> c.label).join(' / ');
+  return 'the answer, in a line';
+}
+function mgrAskMessage(it){
+  return [it.question, it.why ? 'Why: ' + it.why : '', 'Please bring back ' + mgrAskBringBack(it) + '.'].filter(Boolean).join('\n\n');
+}
+
+/* ---- SUPPLIER TERMS THE BOOKS CANNOT SUPPLY (Q9) ------------------
+   For every supplier the shop owes on an open bill or has bought from
+   in 90 days: the age of an unpaid bill they stop supplying at, the
+   days' credit they give, and how long they take to deliver -- each
+   asked only while it is unknown. Not asked: the age they stop at when
+   they give no credit (0 days is cash on delivery), and a delivery time
+   the books already measure from two or more deliveries. A term the
+   owner told the journal, on a shop whose supplier list cannot hold it
+   yet, counts as known; so does a terms question already open in the
+   journal, which stands in for this one. */
+function mgrAskTermsGap(s, told, lead){
+  const t = told || {};
+  const val = (k)=> (s[k] != null && s[k] !== '' && Number.isFinite(Number(s[k]))) ? Number(s[k])
+    : (t[k] != null && Number.isFinite(Number(t[k])) ? Number(t[k]) : null);
+  const have = { stopAtDays: val('stopAtDays'), creditDays: val('creditDays'), deliveryDays: val('deliveryDays') };
+  const measured = lead && lead.typical && lead.days != null ? lead.days : null;
+  const missing = [];
+  if(have.stopAtDays == null && have.creditDays !== 0) missing.push('stopAtDays');
+  if(have.creditDays == null) missing.push('creditDays');
+  if(have.deliveryDays == null && measured == null) missing.push('deliveryDays');
+  return { missing, have, measured };
+}
+function mgrAskTermsQuestion(name, missing){
+  if(missing.length > 1) return 'What are ' + mgrPossessive(name) + ' terms with you?';
+  return missing[0] === 'stopAtDays' ? 'How old can a bill to ' + name + ' get before they stop supplying?'
+    : missing[0] === 'creditDays' ? 'How many days’ credit does ' + name + ' give you?'
+    : 'How many days does ' + name + ' take to deliver?';
+}
+function mgrAskTermsWhy(missing, owe){
+  const lead = owe ? 'You owe them ' + mgrShortUGX(owe.due) + ' on ' + owe.bills + ' bill' + (owe.bills === 1 ? '' : 's')
+    + ', the oldest ' + owe.oldest.ageDays + ' day' + (owe.oldest.ageDays === 1 ? '' : 's') + ' old. ' : '';
+  const cant = [];
+  if(missing.includes('stopAtDays')) cant.push('warn you before a bill reaches the age they stop supplying at');
+  if(missing.includes('creditDays')) cant.push('tell a bill that is late from one that is on time');
+  if(missing.includes('deliveryDays')) cant.push('date the last day to order before a line runs out');
+  const said = cant.length > 1 ? cant.slice(0, -1).join(', ') + ' or ' + cant[cant.length - 1] : cant[0];
+  return lead + 'Without ' + (missing.length > 1 ? 'them' : 'it') + ' I can’t ' + said + '.';
+}
+function mgrAskTermsKnownText(gap){
+  const on = [];
+  const days = (n)=> n + ' day' + (Number(n) === 1 ? '' : 's');
+  if(gap.have.stopAtDays != null) on.push('stops at ' + days(gap.have.stopAtDays));
+  if(gap.have.creditDays != null) on.push(gap.have.creditDays === 0 ? 'cash on delivery'
+    : gap.have.creditDays + (gap.have.creditDays === 1 ? ' day’s' : ' days’') + ' credit');
+  if(gap.have.deliveryDays != null) on.push('delivers in ' + days(gap.have.deliveryDays));
+  else if(gap.measured != null) on.push('delivers in ' + days(gap.measured) + ', measured');
+  return on.length ? 'on file: ' + on.join(', ') : 'never recorded';
+}
+function mgrAskTermsAsks(today, opts){
+  const o = opts || {};
+  const told = o.journalTerms || new Map(), skip = o.openTerms || new Set();
+  const owed = new Map();
+  (mgrMemo('ask:bills:' + today, ()=> credOpenInvoices()) || []).forEach(x=>{
+    const k = String(x.supplierId);
+    const r = owed.get(k) || { due: 0, bills: 0, oldest: null };
+    r.due += Number(x.due) || 0; r.bills += 1;
+    if(!r.oldest || x.ageDays > r.oldest.ageDays) r.oldest = x;
+    owed.set(k, r);
+  });
+  const since = anShiftDate(today, -89);
+  const bought = new Set((data.purchaseInvoices || []).filter(pi=> pi && !pi.voided && String(pi.date || '').slice(0, 10) >= since)
+    .map(pi=> String(pi.supplierId)));
+  const lead = new Map((mgrMemo('ask:lead:' + today, ()=> supplierLeadTimes(today)) || []).map(x=> [String(x.supplierId), x]));
+  const out = [];
+  (data.suppliers || []).forEach(s=>{
+    if(!s || s.id == null) return;
+    const k = String(s.id);
+    if(!(owed.has(k) || bought.has(k)) || skip.has(k)) return;
+    const gap = mgrAskTermsGap(s, told.get(k), lead.get(k));
+    if(!gap.missing.length) return;
+    const owe = owed.get(k) || null;
+    const place = { kind: 'supplier', where: 'supp', id: s.id, name: s.name, location: String(s.location || ''),
+      label: 'Ask ' + s.name, key: 's:' + k };
+    out.push({ key: 'terms:' + k, id: null, det: true, date: today, supplierId: s.id,
+      question: mgrAskTermsQuestion(s.name, gap.missing), why: mgrAskTermsWhy(gap.missing, owe), whyFrom: 'books',
+      dept: 'procurement', place, price: null, terms: gap, owe,
+      stake: owe ? { amount: Math.round(owe.due), unit: 'owed', from: 'bills',
+        basis: 'owed to ' + s.name + ' on ' + owe.bills + ' open bill' + (owe.bills === 1 ? '' : 's') } : mgrAskSupplierStake(s.id, s.name, today),
+      known: { text: mgrAskTermsKnownText(gap), days: null },
+      sure: { pips: null, source: null, basis: 'not known' }, choices: [], delegate: null });
+  });
+  return out;
+}
+/* What typing the days would change, from the books: the oldest open
+   bill against the age they stop at (Foresight dates it), and the open
+   bills already past the credit. Nothing is said for a delivery time --
+   nothing on the books reads it yet, so nothing would change. */
+function mgrAskTermsEffect(it, terms){
+  const t = terms || {}, out = [];
+  const owe = it.owe || null;
+  if(owe && owe.oldest && t.stopAtDays != null){
+    const v = Number(t.stopAtDays), age = owe.oldest.ageDays;
+    const bill = owe.oldest.invoice ? purchaseInvoiceNumberLabel(owe.oldest.invoice) : 'Their oldest bill';
+    out.push(age >= v ? bill + ' is already ' + (age - v) + ' day' + (age - v === 1 ? '' : 's') + ' past it.'
+      : bill + ' reaches ' + v + ' days on ' + fmtDayMonth(anShiftDate(String(owe.oldest.invoice.date).slice(0, 10), v)) + '.');
+  }
+  if(owe && t.creditDays != null){
+    const v = Number(t.creditDays);
+    const all = (mgrMemo('ask:bills:' + todayISO(), ()=> credOpenInvoices()) || []).filter(x=> String(x.supplierId) === String(it.supplierId));
+    const late = all.filter(x=> x.ageDays > v).length;
+    out.push(late + ' of ' + all.length + ' open bill' + (all.length === 1 ? ' is' : 's are') + ' past ' + v + ' days’ credit.');
+  }
+  return out;
+}
+function mgrAskTermsClean(t){
+  const out = {};
+  ['stopAtDays', 'creditDays', 'deliveryDays'].forEach(k=>{
+    const v = t && t[k];
+    const n = Number(v);
+    if(v != null && String(v).trim() !== '' && Number.isFinite(n) && n >= 0 && n <= 3650) out[k] = Math.round(n);
+  });
+  return out;
+}
+function mgrAskTermsWords(t){
+  const said = [];
+  if(t.stopAtDays != null) said.push('stops supplying at ' + t.stopAtDays + ' days');
+  if(t.creditDays != null) said.push(t.creditDays === 0 ? 'cash on delivery' : t.creditDays + ' days’ credit');
+  if(t.deliveryDays != null) said.push('delivers in ' + t.deliveryDays + ' days');
+  const s = said.join(', ');
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/* ONE QUESTION, AS THE CARD DRAWS IT. */
+function mgrAskItem(q, today){
+  const b = (q && q.body) || {};
+  const question = String(b.question || '').trim();
+  if(!question) return null;
+  const place = mgrAskPlace(b);
+  const price = (b.productId && b.rival) ? { productId: b.productId,
+    variantIdx: b.variantIdx == null || b.variantIdx === '' ? null : Number(b.variantIdx), rival: String(b.rival).trim() } : null;
+  let terms = null, owe = null;
+  if(b.source === 'terms' && place.kind === 'supplier' && place.id != null){
+    const s = (data.suppliers || []).find(x=> String(x.id) === String(place.id));
+    const lead = (mgrMemo('ask:lead:' + today, ()=> supplierLeadTimes(today)) || []).find(x=> String(x.supplierId) === String(place.id));
+    terms = s ? mgrAskTermsGap(s, null, lead) : null;
+    if(terms && !terms.missing.length) terms.missing = ['stopAtDays', 'creditDays', 'deliveryDays'];
+    const bills = (mgrMemo('ask:bills:' + today, ()=> credOpenInvoices()) || []).filter(x=> String(x.supplierId) === String(place.id));
+    if(bills.length) owe = { due: bills.reduce((n, x)=> n + (Number(x.due) || 0), 0), bills: bills.length,
+      oldest: bills.reduce((m, x)=> (!m || x.ageDays > m.ageDays) ? x : m, null) };
+  }
+  const sure = mgrAskSure(b, place, price);
+  return { key: 'q:' + q.id, id: q.id, det: false, date: String(q.date || today).slice(0, 10),
+    supplierId: place.kind === 'supplier' ? place.id : null,
+    question, why: b.why ? String(b.why).trim() : '', whyFrom: b.why ? 'meeting' : null,
+    dept: mgrAskDeptOf(b, place), place, price, terms, owe,
+    productId: b.productId || null, variantIdx: b.variantIdx == null ? null : b.variantIdx,
+    stake: mgrAskStake(b, place, price, today),
+    known: mgrAskKnown(b, place, price, q.date, today),
+    sure, choices: mgrAskChoices(b, sure.pips), delegate: mgrAskDelegate(b, place) };
+}
+/* THE WHOLE SECTION'S MODEL, from the open questions and the answered
+   side of the journal (null while it is being read).
+
+   ORDER. The meeting's questions first, newest meeting first and each
+   meeting's in the order it asked them; then the supplier terms the
+   books cannot supply, the most money owed first. An answer the owner
+   kept this session keeps its card, done, where it stood. */
+function mgrAskModel(questions, read, today){
+  const day = today || todayISO();
+  const rows = (read && read.rows) || [];
+  const journalTerms = new Map();
+  rows.forEach(r=>{
+    const b = (r && r.body) || {};
+    if(!b.terms || typeof b.terms !== 'object' || b.supplierId == null) return;
+    const k = String(b.supplierId);
+    journalTerms.set(k, { ...b.terms, ...(journalTerms.get(k) || {}) });
+  });
+  const openTerms = new Set((questions || []).map(q=> (q && q.body) || {})
+    .filter(b=> b.source === 'terms' && b.supplierId != null).map(b=> String(b.supplierId)));
+  const kept = new Map([...mgrAskKept.entries()].filter(([, k])=> k.on === day));
+  const keep = (it)=> kept.has(it.key) ? { ...kept.get(it.key).item, done: kept.get(it.key) } : it;
+  const journal = (questions || []).map(q=> mgrAskItem(q, day)).filter(Boolean).map(keep);
+  const det = mgrAskTermsAsks(day, { journalTerms, openTerms }).map(keep);
+  const seen = new Set([...journal, ...det].map(it=> it.key));
+  kept.forEach((k, key)=>{ if(!seen.has(key)) (k.item.det ? det : journal).push({ ...k.item, done: k }); });
+  journal.sort((a, c)=> String(c.date).localeCompare(String(a.date)) || (Number(a.id) || 0) - (Number(c.id) || 0));
+  det.sort((a, c)=> ((c.stake && c.stake.amount) || 0) - ((a.stake && a.stake.amount) || 0)
+    || String(a.place.name).localeCompare(String(c.place.name)));
+  const items = [...journal, ...det].map((it, i)=> ({ ...it, rank: i + 1, rk: String(i + 1).padStart(2, '0') }));
+  const open = items.filter(it=> !it.done);
+  const counts = {};
+  MGR_ASK_WHERE.forEach(([k])=>{ counts[k] = k === 'all' ? open.length : open.filter(it=> it.place.where === k).length; });
+  const sized = open.filter(it=> it.stake && it.stake.amount > 0);
+  return { today: day, items, open: open.length, counts,
+    riding: sized.reduce((n, it)=> n + it.stake.amount, 0), sized: sized.length,
+    headline: mgrAskHeadline(items),
+    route: mgrAskRoute(items, mgrAskHome),
+    hist: read && !read.error ? mgrAskHistory(read.rows, read.pointers, day) : null,
+    reading: !read, readError: read && read.error ? read.error : null,
+    termsKey: det.filter(it=> !it.done).map(it=> it.key).join(',') };
+}
+/* THE BAND'S SENTENCE, in the Manager's voice and from the list: how
+   many things it cannot read, what the top four carry, and -- only where
+   the meeting said what an answer would change -- the promise to show
+   it. */
+function mgrAskHeadline(items){
+  const open = (items || []).filter(it=> !it.done);
+  const n = open.length;
+  if(!n) return 'Nothing I can’t read in your books right now. When a meeting needs what the books can’t say, I’ll ask it here.';
+  const word = (k)=> k <= 12 ? MGR_ASK_WORDS[k] : String(k);
+  const head = word(n) + ' thing' + (n === 1 ? '' : 's') + ' I can’t read in your books.';
+  const top = open.slice(0, 4);
+  const sized = top.filter(it=> it.stake && it.stake.amount > 0);
+  const sum = sized.reduce((s, it)=> s + it.stake.amount, 0);
+  const who = n === 1 ? 'It decides' : top.length === 1 ? 'The top one decides' : 'The top ' + word(top.length).toLowerCase() + ' decide';
+  const unsized = top.length - sized.length;
+  const mid = sized.length ? ' ' + who + ' advice worth ' + mgrShortUGX(sum)
+    + (unsized ? ' — ' + word(unsized).toLowerCase() + (unsized === 1 ? ' is' : ' are') + ' not sized' : '') + '.' : '';
+  const tail = open.some(it=> it.choices.some(c=> c.effect)) ? ' A tap each — and I’ll show you what your answer changed.'
+    : open.some(it=> it.choices.length) ? ' A tap each, and I read it at the next meeting.'
+    : ' A line each, and I read it at the next meeting.';
+  return head + mid + tail;
+}
+/* Where distances are measured from: the shop's own pin, or the middle
+   of the pinned places when the shop has none -- said in those words. */
+function mgrAskHome(){
+  return mgrMemo('ask:home', ()=>{
+    const shop = mapHomePin();
+    if(shop) return { pin: shop, from: 'from the shop' };
+    const mid = mapCentrePin(mapPlaceRows());
+    return mid ? { pin: mid, from: 'from the middle of your pins' } : null;
+  });
+}
+/* THE FIELD ROUTE (Q23). The questions that need a visit -- a rival's
+   counter, a supplier, a customer's site -- for the person most of them
+   were given to, one stop per place, the nearest first by the places'
+   pins; a place with no pin is named as such and goes last, in the
+   Manager's order. With nobody named for any visit, the visits are
+   listed and no route is offered to send. */
+function mgrAskRoute(items, homeOf){
+  const visits = (items || []).filter(it=> !it.done && !it.terms && MGR_ASK_VISIT.includes(it.place.kind));
+  const by = new Map();
+  visits.forEach(it=>{
+    const d = it.delegate;
+    if(!d || (d.staffId == null && d.agentId == null)) return;
+    const k = d.staffId != null ? 'st:' + d.staffId : 'ag:' + d.agentId;
+    if(!by.has(k)) by.set(k, { who: d, items: [] });
+    by.get(k).items.push(it);
+  });
+  const pick = [...by.values()].reduce((m, r)=> (!m || r.items.length > m.items.length) ? r : m, null);
+  const mine = pick ? pick.items : visits;
+  let home;
+  const homeNow = ()=>{ if(home === undefined) home = (typeof homeOf === 'function' ? homeOf() : homeOf) || null; return home; };
+  const stops = new Map();
+  mine.forEach(it=>{
+    const k = it.place.key || it.key;
+    if(!stops.has(k)){
+      const pin = it.place.location ? placePin(it.place.location) : null;
+      const h = pin ? homeNow() : null;
+      const km = pin && h ? pinDistanceKm(h.pin, pin) : null;
+      stops.set(k, { name: it.place.name || it.place.label, location: it.place.location || '', pinned: !!pin,
+        km: km == null ? null : Math.round(km * 10) / 10, items: [] });
+    }
+    stops.get(k).items.push(it);
+  });
+  const list = [...stops.values()];
+  const near = list.filter(s=> s.km != null).sort((a, c)=> a.km - c.km);
+  const rest = list.filter(s=> s.km == null);
+  return { person: pick ? pick.who : null, questions: mine.length, visits: visits.length,
+    from: near.length ? (homeNow() || {}).from || null : null,
+    stops: [...near, ...rest].map((s, i)=> ({ ...s, n: i + 1 })) };
+}
+/* THE MONTH THE BAND COUNTS: the last whole month, as the canvas counts
+   "answered in September" on the 7th of October. */
+function mgrAskMonth(today){
+  const d = new Date(String(today).slice(0, 10) + 'T00:00:00Z');
+  const first = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 1, 1));
+  const last = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 0));
+  return { from: first.toISOString().slice(0, 10), to: last.toISOString().slice(0, 10),
+    name: first.toLocaleDateString('en-GB', { month: 'long', timeZone: 'UTC' }) };
+}
+function mgrAskWho(by){
+  if(by && typeof by === 'object' && String(by.name || '').trim()){
+    const first = String(by.name).trim().split(/\s+/)[0];
+    return { first, said: first + ' found' };
+  }
+  return { first: 'You', said: 'You told me' };
+}
+/* ANSWERS THAT CHANGED THE ADVICE (ASK.7). An answer changed the advice
+   when a move or a target the meeting made on or after the day it was
+   answered points back at it (fromQuestion -- checked against the
+   journal when the meeting was saved). Counted, k of n, over the last
+   whole month's answers; listed newest first. The answers the Out of
+   the ordinary section takes are its own, and are not counted here. */
+function mgrAskHistory(rows, pointers, today){
+  const m = mgrAskMonth(today);
+  const on = (r)=> String(((r && r.body) || {}).answeredOn || (r && r.date) || '').slice(0, 10);
+  const answered = (rows || []).filter(r=> r && (r.status == null || r.status === 'answered')
+    && String(((r.body || {}).answer) || '').trim() && (r.body || {}).unusualDay == null);
+  const ptr = (r)=> (pointers || []).filter(p=> p && p.fromQuestion != null && String(p.fromQuestion) === String(r.id)
+    && String(p.date || '').slice(0, 10) >= on(r));
+  const month = answered.filter(r=> on(r) >= m.from && on(r) <= m.to);
+  const changed = month.filter(r=> ptr(r).length).length;
+  const list = answered.map(r=> ({ r, p: ptr(r) })).filter(x=> x.p.length)
+    .sort((a, c)=> on(c.r).localeCompare(on(a.r)) || (Number(c.r.id) || 0) - (Number(a.r.id) || 0)).slice(0, 6)
+    .map(({ r, p })=>{
+      const b = r.body || {};
+      const first = p.slice().sort((a, c)=> String(a.date).localeCompare(String(c.date)) || (Number(a.id) || 0) - (Number(c.id) || 0))[0];
+      const metric = first.metric && typeof MANAGER_METRICS === 'object' && MANAGER_METRICS[first.metric] ? MANAGER_METRICS[first.metric].label : first.metric;
+      return { id: r.id, who: mgrAskWho(b.answeredBy).said, said: String(b.answer).trim(), asked: String(b.question || ''),
+        did: (first.kind === 'target' ? 'I set a target: ' : 'I proposed: ') + String(first.title || metric || 'a move'),
+        more: p.length - 1, when: on(r), on: String(first.date || '').slice(0, 10) };
+    });
+  return { month: m, answered: month.length, changed, rows: list };
+}
+/* A range a likely answer names, for the band on a price's scale:
+   "Under 45,000", "45,000–46,500", "47,000 or more". Only figures of a
+   hundred and up are read -- a "2" in "2nd" is not a price. */
+function mgrAskRangeOf(label){
+  const s = String(label || '');
+  const nums = (s.match(/\d[\d,]*(?:\.\d+)?/g) || []).map(v=> Number(v.replace(/,/g, ''))).filter(n=> n >= 100);
+  if(!nums.length) return null;
+  if(nums.length >= 2) return { lo: Math.min(nums[0], nums[1]), hi: Math.max(nums[0], nums[1]) };
+  if(/\b(under|below|less|up to)\b/i.test(s)) return { lo: null, hi: nums[0] };
+  if(/\b(over|above|more|at least)\b|\+/i.test(s)) return { lo: nums[0], hi: null };
+  return { lo: nums[0], hi: nums[0] };
+}
+/* One line's prices on one scale -- your cost, your price, and each
+   rival on the market record, their pack prices brought to yours the way
+   the market reading compares them (rivalMarketRows). Fewer than two
+   marks says nothing and draws nothing. */
+function mgrAskScale(price, today){
+  if(!price) return null;
+  const marks = [];
+  let cost = null, ours = null;
+  try{ const c = ourCostFor(price.productId, price.variantIdx); cost = c ? c.cost : null; }catch(e){}
+  try{ ours = ourPriceFor(price.productId, price.variantIdx); }catch(e){}
+  if(cost > 0) marks.push({ v: Math.round(cost), l: 'your cost', tone: 'cost' });
+  if(ours > 0) marks.push({ v: Math.round(ours), l: 'yours', tone: 'ours' });
+  const key = stockKey(price.productId, price.variantIdx);
+  const asked = String(price.rival || '').trim().toLowerCase();
+  (mgrMemo('ask:market:' + today, ()=> rivalMarketRows(today)) || [])
+    .filter(r=> r && r.key === key && r.comparable && r.side === 'wholesale').slice(0, 4)
+    .forEach(r=> marks.push({ v: Math.round(r.theirs), l: String(r.shop).split(/\s+/)[0], full: r.shop, days: r.daysOld,
+      tone: String(r.shop).trim().toLowerCase() === asked ? 'asked' : 'rival' }));
+  if(marks.length < 2) return null;
+  const vals = marks.map(m=> m.v);
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const pad = Math.max((max - min) * 0.12, max * 0.02);
+  const lo = min - pad, hi = max + pad;
+  const x = (v)=> Math.max(0, Math.min(100, Math.round((v - lo) / (hi - lo) * 1000) / 10));
+  /* Labels above and below the line, and a second row when two would
+     print over each other. A label's width is judged from its letters on
+     a scale about 240px wide -- the width a card gives it, desktop or
+     phone. */
+  const ends = { up: -1e9, dn: -1e9, up2: -1e9, dn2: -1e9 };
+  marks.sort((a, c)=> a.v - c.v);
+  marks.forEach(m=>{
+    m.x = x(m.v);
+    const half = ((m.l.length + 1 + mgrNum(m.v).length) * 6.4 + 8) / 240 * 50;
+    const room = (t)=> ends[t] <= m.x - half;
+    const one = ends.up <= ends.dn ? ['up', 'dn'] : ['dn', 'up'];
+    const two = ends.up2 <= ends.dn2 ? ['up2', 'dn2'] : ['dn2', 'up2'];
+    m.pos = [...one, ...two].find(room) || [...one, ...two].reduce((b, t)=> ends[t] < ends[b] ? t : b, 'up');
+    ends[m.pos] = m.x + half;
+  });
+  return { lo, hi, marks, tall: marks.some(m=> m.pos === 'up2' || m.pos === 'dn2') };
+}
+
+/* ---- DRAWN ---- */
+function mgrAskPipsHTML(n, after){
+  if(n == null) return '';
+  return `<span class="mgr-k-pips${after ? ' mgr-k-after' : ''}" aria-hidden="true">${[1, 2, 3, 4, 5]
+    .map(i=> `<i${i <= n ? ' class="mgr-k-on"' : ''}></i>`).join('')}</span>`;
+}
+function mgrAskIcon(k){
+  return `<svg viewBox="0 0 24 24" aria-hidden="true">${MGR_ASK_ICON[k] || MGR_ASK_ICON.you}</svg>`;
+}
+function mgrAskBandHTML(model){
+  const h = model.hist;
+  const month = mgrAskMonth(model.today);
+  const answered = h ? String(h.answered) : model.readError ? '—' : '…';
+  const changed = h ? (h.answered ? h.changed + ' of ' + h.answered : '—') : model.readError ? '—' : '…';
+  const readTitle = model.readError ? 'The answered questions could not be read — ' + model.readError : '';
+  return `<section class="mgr-k-hd" aria-label="The Manager — what it does not know">
+    <span class="mgr-k-av" role="img" aria-label="The Manager"><svg viewBox="0 0 24 24">${MGR_ASK_ICON.face}${MGR_ASK_ICON.tie}</svg><i></i></span>
+    <div class="mgr-k-hl"><p class="mgr-k-hn"><b>The Manager</b> · what I don’t know</p>
+      <h2 class="mgr-k-hw">“${esc(model.headline)}”</h2></div>
+    <div class="mgr-k-hf">
+      <div><span>Still open</span><b class="mgr-k-fig">${model.open}</b></div>
+      <div title="${esc(model.sized ? 'The money at stake on ' + model.sized + ' of the ' + model.open + ' open questions, added up — each sized on its own basis, shown on its card. ' + (model.open - model.sized) + ' not sized.' : 'None of the open questions is sized.')}"><span>Advice riding on them</span><b class="mgr-k-fig">${model.sized ? esc(mgrShortUGX(model.riding)) : '—'}</b></div>
+      <div title="${esc(readTitle || 'Questions answered between ' + fmtDayMonth(month.from) + ' and ' + fmtDayMonth(month.to))}"><span>Answered in ${esc(month.name)}</span><b class="mgr-k-fig">${esc(answered)}</b></div>
+      <div title="${esc(readTitle || 'Of those, the answers a later move or target of the meeting points back at')}"><span>Changed my advice</span><b class="mgr-k-fig mgr-k-good">${esc(changed)}</b></div>
+    </div>
+  </section>`;
+}
+function mgrAskStakeHTML(s){
+  if(!s) return '<span class="mgr-k-stk mgr-k-ns" title="Nothing on the books sizes it, and the meeting did not">not sized</span>';
+  return `<span class="mgr-k-stk" title="${esc(fmtUGX(s.amount) + ' — ' + s.basis)}">${esc(mgrShortUGX(s.amount))}${s.unit ? ` <small>${esc(s.unit)}</small>` : ''}</span>`;
+}
+function mgrAskScaleHTML(it){
+  const sc = mgrAskScale(it.price, it.today);
+  if(!sc) return '';
+  const said = sc.marks.map(m=> (m.tone === 'cost' ? 'Your cost ' : m.tone === 'ours' ? 'You charge ' : (m.full || m.l) + ' ') + mgrNum(m.v)
+    + (m.days != null ? ', seen ' + m.days + ' days ago' : '')).join('. ');
+  return `<div class="mgr-k-sc${sc.tall ? ' mgr-k-sc2' : ''}" data-lo="${sc.lo}" data-hi="${sc.hi}" role="img" aria-label="${esc('Prices on file for ' + mgrAskLine(it.price.productId, it.price.variantIdx) + ': ' + said)}">
+    <span class="mgr-k-ln"></span><span class="mgr-k-band" hidden></span>
+    ${sc.marks.map(m=> `<span class="mgr-k-mk mgr-k-${m.pos} mgr-k-mk-${m.tone}" style="left:${m.x}%"${m.full ? ` title="${esc(m.full + ' · ' + m.days + ' days old')}"` : ''}><i></i><span>${esc(m.l)} <b>${esc(mgrNum(m.v))}</b></span></span>`).join('')}
+    <span class="mgr-k-mk mgr-k-up mgr-k-mk-pin" hidden><i></i><span>${esc((it.price.rival || '').split(/\s+/)[0])} <b></b></span></span>
   </div>`;
 }
-function mgrWireAsks(root){
-  root.querySelectorAll('.mgr-ask[data-qid]').forEach(card=>{
-    const id = Number(card.dataset.qid);
+function mgrAskEffectHTML(it, c){
+  if(!c) return '';
+  const parts = [];
+  if(c.effect) parts.push(`<span><b>What that changes:</b> ${esc(c.effect)}</span>`);
+  if(c.after != null){
+    const before = it.sure.pips;
+    parts.push(before != null
+      ? `<span class="mgr-k-cf">How sure I am ${mgrAskPipsHTML(before)}<span aria-hidden="true">→</span>${mgrAskPipsHTML(c.after, true)}<span class="mgr-k-fig">${before} → ${c.after}</span><span class="mgr-k-src">${esc(it.sure.source === 'judged' ? 'judged' : it.sure.basis + ', then judged')}</span></span>`
+      : `<span class="mgr-k-cf">How sure I’d be ${mgrAskPipsHTML(c.after, true)}<span class="mgr-k-fig">${c.after}/5</span><span class="mgr-k-src">judged</span></span>`);
+  }
+  return parts.join('');
+}
+function mgrAskByOptions(it){
+  const opts = [['you', 'You']];
+  const add = (v, l)=>{ if(!opts.some(o=> o[0] === v)) opts.push([v, l]); };
+  const d = it.delegate;
+  if(d && d.staffId != null) add('st:' + d.staffId, d.name);
+  if(d && d.agentId != null) add('ag:' + d.agentId, d.name);
+  (data.staff || []).filter(s=> s && !s.unavailable).forEach(s=> add('st:' + s.id, s.name || 'Staff member'));
+  (data.agents || []).filter(a=> a && !a.retiredAt).forEach(a=> add('ag:' + a.id, a.name || 'Field agent'));
+  const sent = mgrAskSent.get(it.key);
+  const on = sent ? (sent.staffId != null ? 'st:' + sent.staffId : sent.agentId != null ? 'ag:' + sent.agentId : 'you') : 'you';
+  return opts.map(([v, l])=> `<option value="${esc(v)}"${v === on ? ' selected' : ''}>${esc(l)}</option>`).join('');
+}
+function mgrAskSendHTML(it){
+  const d = it.delegate;
+  if(!d || it.done) return '';
+  if(!d.phone) return `<button type="button" class="btn btn-ghost ow-sm mgr-k-send" disabled title="${esc(d.why || '')}">${esc(d.staffId == null && d.agentId == null ? d.first + ' not on your staff list' : 'No number for ' + d.first)}</button>`;
+  return `<a class="btn btn-ghost ow-sm mgr-k-send" href="${esc(waComposeUrl(d.phone, mgrAskMessage(it)))}" target="_blank" rel="noopener" data-send="${esc(it.key)}" title="${esc('Opens WhatsApp to ' + d.name + ' with the question written — you send it')}">Send to ${esc(d.first)}</a>`;
+}
+function mgrAskCardHTML(it){
+  const dept = mgrDept(it.dept) || MGR_WHOLE_SHOP;
+  const done = it.done || null;
+  const pick = done && done.pick != null ? done.pick : null;
+  const priceBox = !!it.price;
+  const formOpen = !done && (priceBox || !it.choices.length || !!it.terms);
+  const why = it.why
+    ? `<p class="mgr-k-why"><span class="mgr-k-gm" aria-hidden="true">${mgrAskIcon('face')}</span><span><b>Why I’m asking:</b> ${esc(it.why)}</span></p>`
+    : `<p class="mgr-k-why mgr-k-why0"><span class="mgr-k-gm" aria-hidden="true">${mgrAskIcon('face')}</span><span><b>Why I’m asking:</b> not recorded — asked before the Manager kept its reasons</span></p>`;
+  const chips = it.choices.length
+    ? `<div class="mgr-k-ans" role="group" aria-label="Your answer">${it.choices.map((c, i)=>
+        `<button type="button" class="mgr-k-an" data-pick="${i}" aria-pressed="${pick === i}"${done ? ' disabled' : ''}>${esc(c.label)}</button>`).join('')}${
+        !done && !priceBox ? '<button type="button" class="mgr-k-an mgr-k-an-own" data-pick="own" aria-pressed="false">Something else</button>' : ''}</div>` : '';
+  const field = it.terms
+    ? `<div class="mgr-k-terms">${it.terms.missing.map(k=> `<label class="mgr-k-tf"><span>${esc(MGR_ASK_TERM_LABEL[k])}</span><span class="mgr-k-box"><input type="number" min="0" max="3650" step="1" inputmode="numeric" class="mgr-k-in mgr-k-term" data-term="${k}" aria-label="${esc(MGR_ASK_TERM_LABEL[k] + ', in days')}"><span class="mgr-k-cur">days</span></span></label>`).join('')}</div>`
+    : `<label class="mgr-k-box">${priceBox ? '<span class="mgr-k-cur">UGX</span>' : ''}<input type="text" class="mgr-k-in mgr-ask-input"${priceBox ? ' inputmode="decimal"' : ''} aria-label="${esc(it.question)}" placeholder="${
+        esc(priceBox ? 'What ' + it.price.rival + ' charges — just the figure' : it.choices.length ? 'Or in your own words' : 'What you found out — one line')}"></label>`;
+  const form = done ? '' : `<div class="mgr-k-form"${formOpen ? '' : ' hidden'}>${field}<p class="mgr-k-vd" hidden></p>
+      <div class="mgr-k-keep"><span class="mgr-k-by"><span>Found by</span><select class="mgr-k-sel" aria-label="Who found it out">${mgrAskByOptions(it)}</select></span>
+        <button type="button" class="btn btn-ghost ow-sm mgr-k-save">Keep this answer</button></div></div>`;
+  const effect = done && pick != null ? mgrAskEffectHTML(it, it.choices[pick]) : '';
+  const tone = done && pick != null && it.choices[pick] && it.choices[pick].tone;
+  const sure = it.sure.pips != null
+    ? `${mgrAskPipsHTML(it.sure.pips)}<span class="mgr-k-fig">${it.sure.pips}/5</span><span class="mgr-k-src" title="${esc(it.sure.basis)}">${esc(it.sure.source === 'judged' ? 'judged' : it.sure.basis)}</span>`
+    : '<span class="mgr-k-src">not known</span>';
+  const by = done ? (done.by && typeof done.by === 'object' && done.by.name ? mgrPossessive(String(done.by.name).trim().split(/\s+/)[0]) + ' answer' : 'your answer') : '';
+  return `<article class="mgr-k-q${done ? ' mgr-k-done' : ''}" data-qkey="${esc(it.key)}"${it.id != null ? ` data-qid="${esc(String(it.id))}"` : ''} data-place="${esc(it.place.where)}" aria-label="${esc(it.question)}">
+    <div class="mgr-k-qh"><span class="mgr-k-rk${it.rank === 1 ? ' mgr-k-rk1' : ''}">${esc(it.rk)}</span><span class="mgr-k-dp" style="background:var(${dept.tint});color:var(${dept.ink})">${esc(dept.name)}</span>${mgrAskStakeHTML(it.stake)}</div>
+    <h3 class="mgr-k-qt">${esc(it.question)}</h3>
+    ${why}
+    ${it.price ? mgrAskScaleHTML(it) : ''}
+    <div class="mgr-k-wh"><span class="mgr-k-ico" aria-hidden="true">${mgrAskIcon(it.place.where)}</span><b title="${esc(it.place.label)}">${esc(it.place.label)}</b><span class="mgr-k-age">${esc(it.known.text)}</span></div>
+    ${chips}
+    <div class="mgr-k-chg${tone === 'down' ? ' mgr-k-less' : tone === 'up' ? ' mgr-k-surer' : ''}"${effect ? '' : ' hidden'}>${effect}</div>
+    ${form}
+    ${done ? `<p class="mgr-k-kept">${mgrAskIcon('check')}<span>Kept — ${esc(by)}: ${esc(done.text)}</span></p>`
+      : `<div class="mgr-k-sure"><span>Sure without it</span>${sure}${mgrAskSendHTML(it)}</div>`}
+  </article>`;
+}
+/* The route as the WhatsApp message the owner sends: each stop in
+   order, and at each what to ask and what to bring back. */
+function mgrAskRouteMessage(r){
+  return 'Route for today — ' + r.stops.length + ' stop' + (r.stops.length === 1 ? '' : 's') + ':\n\n'
+    + r.stops.map(s=> s.n + '. ' + s.name + (s.location ? ' (' + s.location + ')' : '') + '\n'
+      + s.items.map(it=> '   • ' + it.question + ' Bring back ' + mgrAskBringBack(it) + '.').join('\n')).join('\n\n');
+}
+function mgrAskRouteHTML(model){
+  const r = model.route;
+  const p = r.person;
+  const title = p ? mgrPossessive(p.first) + ' route' : 'Visits';
+  const stops = r.stops.length ? `<div class="mgr-k-stops">${r.stops.map(s=> `<div class="mgr-k-stop"><span class="mgr-k-sr"><b>${s.n}</b></span><span class="mgr-k-scn">
+      <b>${esc(s.name)}${s.location && s.items[0].place.kind !== 'rival' ? `<small> · ${esc(s.location)}</small>` : ''}</b>
+      ${s.items.map(it=> `<small>${esc(it.question)}</small>`).join('')}
+      <span class="mgr-k-qn">${s.items.map(it=> `<i>Q${esc(it.rk)}</i>`).join('')}<em>${s.km != null ? esc(s.km + ' km') : s.pinned ? 'pinned' : 'no pin'}</em></span></span></div>`).join('')}</div>`
+    : '<div class="ow-empty mgr-k-none0">No question needs a visit right now.</div>';
+  let act = '';
+  if(p && r.stops.length){
+    const msg = mgrAskRouteMessage(r);
+    act = p.phone
+      ? `<div class="mgr-k-ra"><a class="btn btn-accent ow-sm mgr-k-go" href="${esc(waComposeUrl(p.phone, msg))}" target="_blank" rel="noopener">Draft the route for ${esc(p.first)}</a><span>opens WhatsApp to ${esc(p.first)}; you record what ${esc(p.first)} finds on each card</span></div>`
+      : `<div class="mgr-k-ra"><button type="button" class="btn ow-sm" disabled title="${esc(p.why || '')}">Draft the route for ${esc(p.first)}</button><span>${esc(p.why || '')}</span></div>`;
+  } else if(r.visits){
+    act = '<div class="mgr-k-ra"><span>Nobody is named for these visits yet — the next meeting can give them to someone.</span></div>';
+  }
+  const others = p && r.visits > r.questions ? ` · ${r.visits - r.questions} more not given to ${esc(p.first)}` : '';
+  return `<section class="ow-pan mgr-k-pan mgr-k-route" aria-label="${esc(title)}">
+    <div class="mgr-k-ph"><span class="mgr-k-mic">Field</span><span class="mgr-k-pt">${esc(title)}</span><span class="mgr-k-pn">${r.questions} question${r.questions === 1 ? '' : 's'}, ${r.stops.length} stop${r.stops.length === 1 ? '' : 's'}${others}</span></div>
+    ${stops}
+    ${r.from ? `<p class="mgr-k-rf">Nearest first, ${esc(r.from)}.</p>` : ''}
+    ${act}
+  </section>`;
+}
+function mgrAskMemHTML(model){
+  const h = model.hist;
+  const body = model.readError ? `<div class="ow-empty mgr-k-none0">The answered questions could not be read — ${esc(model.readError)}</div>`
+    : !h ? '<p class="mgr-k-reading">Reading the answers…</p>'
+    : !h.rows.length ? '<div class="ow-empty mgr-k-none0">No answer has changed the advice yet. When a meeting acts on one of your answers, it is listed here.</div>'
+    : h.rows.map(r=> `<div class="mgr-k-hi"><span class="mgr-k-hy">${esc(r.who)} <b>${esc(r.said)}</b></span>
+        <span class="mgr-k-hc"><span aria-hidden="true">→</span><span>${esc(r.did)}${r.more ? ` <small>and ${r.more} more</small>` : ''}</span></span>
+        <small title="${esc('Asked: ' + r.asked)}">${esc(fmtDayMonth(r.when))}</small></div>`).join('');
+  return `<section class="ow-pan mgr-k-pan mgr-k-mem" aria-label="Answers that changed my advice">
+    <div class="mgr-k-ph"><span class="mgr-k-mic">Memory</span><span class="mgr-k-pt">Answers that changed my advice</span></div>
+    ${body}
+  </section>`;
+}
+function mgrAsksHTML(model){
+  const items = model.items;
+  const where = `<div class="mgr-k-where" role="group" aria-label="Where you are now"><span class="mgr-k-mic">Where you are now</span>
+    ${MGR_ASK_WHERE.map(([k, l])=> `<button type="button" class="mgr-k-wf" data-place="${k}" aria-pressed="${k === mgrAskWhere}">${mgrAskIcon(k)}${esc(l)}<span class="mgr-k-n">${model.counts[k]}</span></button>`).join('')}</div>`;
+  const cards = items.length ? items.map(it=> mgrAskCardHTML({ ...it, today: model.today })).join('')
+    : '<div class="ow-pan"><div class="ow-empty">Nothing to ask you right now. When the books cannot answer something a meeting needs, the question waits here for you.</div></div>';
+  const r = model.route;
+  /* On a phone the one primary action rides at the thumb, above the tab bar. */
+  const dock = r.person && r.person.phone && r.stops.length ? `<div class="mgr-k-dock"><a class="btn btn-accent mgr-k-go" href="${esc(waComposeUrl(r.person.phone, mgrAskRouteMessage(r)))}" target="_blank" rel="noopener">Draft the route for ${esc(r.person.first)}</a></div>` : '';
+  return `<div class="mgr-k" data-terms="${esc(model.termsKey)}">
+    ${mgrAskBandHTML(model)}
+    ${where}
+    <div class="mgr-k-grid">
+      <div class="mgr-k-qs">${cards}<p class="mgr-k-none" hidden>Nothing to find out there right now.</p></div>
+      <div class="mgr-k-side">${mgrAskRouteHTML(model)}${mgrAskMemHTML(model)}</div>
+    </div>
+    <p class="ow-mini mgr-ask-cut" hidden></p>
+    ${dock}
+  </div>`;
+}
+/* The place the owner is standing: only the cards answerable there. */
+function mgrAskFilter(root){
+  root.querySelectorAll('.mgr-k-wf').forEach(b=> b.setAttribute('aria-pressed', String(b.dataset.place === mgrAskWhere)));
+  let any = false;
+  root.querySelectorAll('.mgr-k-q').forEach(c=>{ const show = mgrAskWhere === 'all' || c.dataset.place === mgrAskWhere; c.hidden = !show; any = any || show; });
+  const none = root.querySelector('.mgr-k-none');
+  if(none) none.hidden = any || !root.querySelector('.mgr-k-q');
+}
+function mgrAskByOf(sel){
+  const v = sel ? String(sel.value || 'you') : 'you';
+  const find = (list, id)=> (list || []).find(r=> r && String(r.id) === id) || null;
+  if(v.startsWith('st:')){ const s = find(data.staff, v.slice(3)); return s ? { staffId: s.id, name: s.name || '' } : 'you'; }
+  if(v.startsWith('ag:')){ const a = find(data.agents, v.slice(3)); return a ? { agentId: a.id, name: a.name || '' } : 'you'; }
+  return 'you';
+}
+function mgrWireAsks(root, model){
+  const byKey = new Map(((model && model.items) || []).map(it=> [it.key, { ...it, today: model.today }]));
+  root.querySelectorAll('.mgr-k-q[data-qkey]').forEach(card=>{
+    const it = byKey.get(card.dataset.qkey);
+    if(!it || it.done) return;
+    const form = card.querySelector('.mgr-k-form');
     const input = card.querySelector('.mgr-ask-input');
-    const send = ()=> managerAnswerQuestion(id, input.value);
-    card.querySelector('.mgr-ask-save').addEventListener('click', send);
-    input.addEventListener('keydown', e=>{ if(e.key === 'Enter') send(); });
-    /* A tapped answer fills the box, so it can still be added to. */
-    card.querySelectorAll('.mgr-ak-ch').forEach(ch=> ch.addEventListener('click', ()=>{
-      card.querySelectorAll('.mgr-ak-ch').forEach(x=> x.setAttribute('aria-pressed', String(x === ch)));
-      input.value = ch.textContent;
-    }));
-    /* A figure lands on the line's scale, and says where it sits against ours. */
-    const pin = root.querySelector(`.mgr-lad-pin[data-for="${card.dataset.qid}"]`);
-    const vd = card.querySelector('.mgr-ak-vd');
-    if(pin || vd) input.addEventListener('input', ()=>{
-      const v = Number(String(input.value).replace(/[^\d.]/g, ''));
-      const ok = /\d/.test(input.value) && v > 0;
-      if(pin){
-        const lad = pin.parentElement, lo = Number(lad.dataset.lo), hi = Number(lad.dataset.hi);
-        pin.hidden = !ok;
-        if(ok) pin.style.left = Math.max(0, Math.min(100, (v - lo) / (hi - lo) * 100)) + '%';
+    const chg = card.querySelector('.mgr-k-chg');
+    const vd = card.querySelector('.mgr-k-vd');
+    const sc = card.querySelector('.mgr-k-sc');
+    let pick = null;
+    const show = (c)=>{
+      const html = mgrAskEffectHTML(it, c);
+      if(chg){ chg.innerHTML = html; chg.hidden = !html;
+        chg.className = 'mgr-k-chg' + (c && c.tone === 'down' ? ' mgr-k-less' : c && c.tone === 'up' ? ' mgr-k-surer' : ''); }
+      /* A range answer lands on the line's scale as a band. */
+      const band = sc && sc.querySelector('.mgr-k-band');
+      const rg = c ? mgrAskRangeOf(c.label) : null;
+      if(band){
+        const lo = Number(sc.dataset.lo), hi = Number(sc.dataset.hi);
+        const at = (v)=> Math.max(0, Math.min(100, (v - lo) / (hi - lo) * 100));
+        band.hidden = !rg;
+        if(rg){ const a = rg.lo == null ? 0 : at(rg.lo), z = rg.hi == null ? 100 : at(rg.hi);
+          band.style.left = Math.min(a, z) + '%'; band.style.width = Math.max(1.5, Math.abs(z - a)) + '%'; }
       }
+    };
+    card.querySelectorAll('.mgr-k-an').forEach(ch=> ch.addEventListener('click', ()=>{
+      const own = ch.dataset.pick === 'own';
+      const again = ch.getAttribute('aria-pressed') === 'true';
+      card.querySelectorAll('.mgr-k-an').forEach(x=> x.setAttribute('aria-pressed', String(!again && x === ch)));
+      pick = again || own ? null : Number(ch.dataset.pick);
+      if(form) form.hidden = false;
+      /* A tapped answer fills the box, so it can still be added to. */
+      if(input){ input.value = pick == null ? '' : it.choices[pick].label; if(own) input.focus(); }
+      show(pick == null ? null : it.choices[pick]);
+    }));
+    const send = ()=>{
+      const terms = {};
+      card.querySelectorAll('.mgr-k-term').forEach(f=>{ terms[f.dataset.term] = f.value; });
+      const text = input ? input.value : '';
+      mgrAskKeep(it, { text, pick: pick != null && String(text).trim() === it.choices[pick].label ? pick : null,
+        by: mgrAskByOf(card.querySelector('.mgr-k-sel')), terms });
+    };
+    const save = card.querySelector('.mgr-k-save');
+    if(save) save.addEventListener('click', send);
+    card.querySelectorAll('.mgr-ask-input, .mgr-k-term').forEach(f=> f.addEventListener('keydown', e=>{ if(e.key === 'Enter') send(); }));
+    /* A figure lands on the line's scale, and says where it sits against ours. */
+    const pin = sc && sc.querySelector('.mgr-k-mk-pin');
+    if(input) input.addEventListener('input', ()=>{
+      if(pick != null && input.value.trim() !== it.choices[pick].label){
+        pick = null; card.querySelectorAll('.mgr-k-an').forEach(x=> x.setAttribute('aria-pressed', 'false')); show(null);
+      }
+      if(!it.price) return;
+      const v = Number(String(input.value).replace(/[,\s]/g, ''));
+      const ok = /^[\d,.\s]+$/.test(input.value.trim()) && v > 0;
+      if(pin){
+        const lo = Number(sc.dataset.lo), hi = Number(sc.dataset.hi);
+        pin.hidden = !ok;
+        if(ok){ pin.style.left = Math.max(0, Math.min(100, (v - lo) / (hi - lo) * 100)) + '%'; pin.querySelector('b').textContent = mgrNum(v); }
+      }
+      let ours = null;
+      try{ ours = ourPriceFor(it.price.productId, it.price.variantIdx); }catch(e){}
       if(vd){
-        const ours = Number(card.dataset.ours), d = Math.round(v - ours);
-        vd.hidden = !ok;
-        vd.className = 'mgr-ak-vd ' + (d < 0 ? 'mgr-ak-vd-under' : 'mgr-ak-vd-over');
-        vd.textContent = d === 0 ? 'The same as you' : mgrNum(Math.abs(d)) + (d < 0 ? ' under you' : ' above you');
+        const d = ours > 0 ? Math.round(v - ours) : null;
+        vd.hidden = !ok || d == null;
+        if(ok && d != null) vd.textContent = d === 0 ? 'The same as your ' + mgrNum(ours) : mgrNum(Math.abs(d)) + (d < 0 ? ' under' : ' above') + ' your ' + mgrNum(ours) + ' — keeping it files a sighting of ' + it.price.rival;
       }
     });
+    /* The days a supplier's terms would put on the books, as they are typed. */
+    if(it.terms) card.querySelectorAll('.mgr-k-term').forEach(f=> f.addEventListener('input', ()=>{
+      const t = {};
+      card.querySelectorAll('.mgr-k-term').forEach(g=>{ if(String(g.value).trim() !== '') t[g.dataset.term] = Number(g.value); });
+      const lines = mgrAskTermsEffect(it, mgrAskTermsClean(t));
+      if(chg){ chg.innerHTML = lines.length ? `<span><b>What that changes:</b> ${esc(lines.join(' '))}</span>` : ''; chg.hidden = !lines.length; chg.className = 'mgr-k-chg'; }
+    }));
+    /* Sent on WhatsApp: whoever it went to is who "found by" starts on. */
+    const out = card.querySelector('a.mgr-k-send');
+    if(out) out.addEventListener('click', ()=>{
+      mgrAskSent.set(it.key, it.delegate);
+      const sel = card.querySelector('.mgr-k-sel');
+      const v = it.delegate.staffId != null ? 'st:' + it.delegate.staffId : 'ag:' + it.delegate.agentId;
+      if(sel && [...sel.options].some(o=> o.value === v)) sel.value = v;
+    });
   });
-  /* The places: what to ask where you are standing. */
-  const pan = root.querySelector('.mgr-aks');
-  root.querySelectorAll('.mgr-ak-p').forEach(btn=> btn.addEventListener('click', ()=>{
-    const place = btn.dataset.place;
-    root.querySelectorAll('.mgr-ak-p').forEach(x=> x.setAttribute('aria-pressed', String(x === btn)));
-    root.querySelectorAll('.mgr-ak').forEach(c=>{ c.hidden = !(place === 'all' || c.dataset.place === place); });
-    let any = false;
-    root.querySelectorAll('.mgr-ak-g').forEach(g=>{ const show = [...g.querySelectorAll('.mgr-ak')].some(c=> !c.hidden); g.hidden = !show; any = any || show; });
-    const none = pan && pan.querySelector('.mgr-ak-none');
-    if(none) none.hidden = any;
+  /* The route goes to one person: every question on it starts on them. */
+  const r = model && model.route;
+  root.querySelectorAll('a.mgr-k-go').forEach(a=> a.addEventListener('click', ()=>{
+    if(!r || !r.person) return;
+    const v = r.person.staffId != null ? 'st:' + r.person.staffId : 'ag:' + r.person.agentId;
+    r.stops.forEach(s=> s.items.forEach(it=>{
+      mgrAskSent.set(it.key, r.person);
+      const sel = root.querySelector(`.mgr-k-q[data-qkey="${it.key}"] .mgr-k-sel`);
+      if(sel && [...sel.options].some(o=> o.value === v)) sel.value = v;
+    }));
   }));
+  /* The places: what to ask where you are standing. */
+  root.querySelectorAll('.mgr-k-wf').forEach(btn=> btn.addEventListener('click', ()=>{ mgrAskWhere = btn.dataset.place; mgrAskFilter(root); }));
+  mgrAskFilter(root);
+}
+
+/* ---- KEPT ----
+   An answer goes through the one writer for answers,
+   managerAnswerQuestion, tagged with who found it. Its card stays on
+   the screen, done, for the rest of the session. */
+async function mgrAskKeep(it, p){
+  if(it.det) return mgrAskAnswerTerms(it, p);
+  let text = String((p && p.text) || '').trim();
+  let terms = null;
+  if(it.terms){
+    terms = mgrAskTermsClean(p && p.terms);
+    if(!Object.keys(terms).length){ toast('Type at least one of the days first'); return; }
+    text = mgrAskTermsWords(terms);
+  }
+  if(!text){ toast(it.choices.length ? 'Tap an answer, or type one' : 'Type what you found out first'); return; }
+  mgrAskKept.set(it.key, { item: it, pick: p.pick == null ? null : p.pick, text, by: p.by, on: todayISO() });
+  const r = await managerAnswerQuestion(it.id, text, { by: p.by, ...(terms ? { terms } : {}) });
+  if(!r || !r.ok) mgrAskKept.delete(it.key);
+}
+/* A supplier's terms asked from the books: the question is written into
+   the journal as it is answered, so the answer is kept and counted like
+   any other -- and the days go onto the supplier's own record. If the
+   journal refuses, the days still go onto the supplier: they are the
+   owner's word about that supplier either way. */
+async function mgrAskAnswerTerms(it, p){
+  const terms = mgrAskTermsClean(p && p.terms);
+  if(!Object.keys(terms).length){ toast('Type at least one of the days first'); return; }
+  const words = mgrAskTermsWords(terms);
+  mgrAskKept.set(it.key, { item: it, pick: null, text: words, by: p.by, on: todayISO() });
+  let ins = null;
+  try{
+    ins = await sb.from('manager_notes').insert({ shop_id: currentShopId, kind: 'question', date: todayISO(), status: 'open',
+      body: { question: it.question, why: it.why, supplierId: it.supplierId, dept: 'procurement',
+        place: { kind: 'supplier', id: it.supplierId }, source: 'terms' } }).select('id').single();
+  }catch(e){ ins = { error: { message: (e && e.message) || 'the journal did not answer' } }; }
+  if(!ins || ins.error || !ins.data){
+    const w = await mgrAskWriteTerms(it.supplierId, terms);
+    if(!w.ok) mgrAskKept.delete(it.key);
+    toast((w.ok ? 'Kept on ' + mgrPossessive(w.name) + ' record' : 'Not kept — ' + w.why)
+      + ', but the journal could not keep the answer — ' + ((ins && ins.error && ins.error.message) || 'no row came back'), 9000);
+    if(w.ok) renderManager();
+    return;
+  }
+  const r = await managerAnswerQuestion(ins.data.id, words, { by: p.by, terms });
+  if(!r || !r.ok) mgrAskKept.delete(it.key);
+}
+/* The days onto the supplier's own record, through the same save the
+   supplier form uses. A shop whose supplier list cannot hold terms yet
+   (0107 not applied) is told the one paste that fixes it, and nothing
+   pretends the days were written. */
+async function mgrAskWriteTerms(supplierId, terms){
+  const sup = (data.suppliers || []).find(s=> s && String(s.id) === String(supplierId));
+  if(!sup) return { ok: false, name: 'the supplier', why: 'that supplier is no longer on your list, so nothing was written to it' };
+  if(!supplierTermsColumns) return { ok: false, name: sup.name, migration: '0107',
+    why: mgrPossessive(sup.name) + ' record cannot hold terms yet — paste ' + MGR_MIGRATION_0107 + ' into the Supabase SQL editor and reload' };
+  Object.assign(sup, terms);
+  let saved = false;
+  try{ saved = (await saveData()) !== false; }catch(e){ saved = false; }
+  return saved ? { ok: true, name: sup.name }
+    : { ok: false, name: sup.name, why: mgrPossessive(sup.name) + ' terms did not reach the server yet — they are kept on this device and go with the next save' };
+}
+/* What a reading of the answered side brings: the answered questions
+   (the newest 200, the Out of the ordinary section's own left out) and
+   the moves and targets since the start of last month that point back
+   at one. A play never points at a question, and only the playbook
+   reads plays. A read that fails names itself. */
+async function mgrAskReadAnswered(){
+  if(!managerNotesTable) return { rows: [], pointers: [], error: null };
+  const since = mgrAskMonth(todayISO()).from;
+  try{
+    const [qR, pR] = await Promise.all([
+      sb.from('manager_notes').select('id, date, body, status')
+        .eq('shop_id', currentShopId).eq('kind', 'question').eq('status', 'answered')
+        .order('id', { ascending: false }).limit(200),
+      sb.from('manager_notes').select('id, date, kind, fromQuestion:body->fromQuestion, title:body->>title, metric:body->>metric')
+        .eq('shop_id', currentShopId).in('kind', ['move', 'target']).gte('date', since)
+        .order('id', { ascending: false }).limit(1000),
+    ]);
+    const err = (qR && qR.error) || (pR && pR.error);
+    if(err) return { rows: [], pointers: [], error: err.message || String(err) };
+    return { rows: ((qR && qR.data) || []).filter(r=> r && (r.body || {}).unusualDay == null),
+      pointers: ((pR && pR.data) || []).filter(p=> p && p.fromQuestion != null), error: null };
+  }catch(e){
+    return { rows: [], pointers: [], error: (e && e.message) || 'the journal did not answer' };
+  }
 }
 /* ═══ MGR BED: Ask — end ═══ */
 /* ──────────────────────────────────────────────────────────────────
