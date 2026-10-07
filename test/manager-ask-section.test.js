@@ -251,6 +251,12 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
     'and what the credit would say about the open bills');
   eq(S.mgrAskTermsEffect(a, { deliveryDays: 3 }), [], 'a delivery time changes nothing on the books yet, so nothing is said');
   eq(S.mgrAskTermsClean({ stopAtDays: '90', creditDays: '', deliveryDays: '-2' }), { stopAtDays: 90 }, 'only whole, non-negative days are kept');
+  /* Owed nothing but on the buy plan: 40,000 + 25,000 = 65,000 to buy. */
+  const P = scope({ ...book(), purchaseInvoices: [{ supplierId: 'S4', date: '2026-09-20' }] },
+    { purchasePlan: () => ({ lines: [{ supplierId: 'S4', key: 'P1', cost: 40000 }, { supplierId: 'S4', key: 'P2', cost: 25000 }] }) });
+  const q4 = P.mgrAskTermsAsks(TODAY, {})[0];
+  eq([q4.key, q4.stake.amount, q4.stake.unit, q4.why.slice(0, 44)], ['terms:S4', 65000, 'to buy', 'The buy plan would spend 65k with them. With'],
+    'a supplier bought from but owed nothing is sized by the buy plan, and says so');
   eq(S.mgrAskTermsWords({ stopAtDays: 90, creditDays: 0 }), 'Stops supplying at 90 days, cash on delivery', 'and the answer is said in words');
 }
 
@@ -459,6 +465,13 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
   const oxide = html.match(/class="btn btn-accent[^"]*"[^>]*>[^<]*</g) || [];
   t.check(oxide.length === 2 && oxide.every((b) => />Draft the route for Moses</.test(b)) && /<div class="mgr-k-dock">/.test(html),
     'one oxide action, drafting the route — drawn in the route panel for the console and in the thumb dock for the phone');
+  const E = scope(book());
+  const down = E.mgrAsksHTML(E.mgrAskModel([], { rows: [], pointers: [], error: 'the journal is down' }, TODAY));
+  t.check(/The answered questions could not be read — the journal is down/.test(down) && /Answered in September<\/span><b class="mgr-k-fig">—</.test(down),
+    'an answered side that could not be read names itself, and its figures read "—", never 0');
+  const reading = E.mgrAsksHTML(E.mgrAskModel([], null, TODAY));
+  t.check(/Reading the answers…/.test(reading) && /Answered in September<\/span><b class="mgr-k-fig">…</.test(reading) && /Nothing to ask you right now/.test(reading),
+    'while it is read it says so; and with nothing to ask, the section says that too');
   const wire = extractFunction(src, 'mgrWireAsks', 'index.html');
   t.check(/querySelectorAll\('\.mgr-k-q\[data-qkey\]'\)/.test(wire) && /mgrAskKeep\(it, \{ text,/.test(wire),
     'each card is wired by its key, and keeps what is in the box');

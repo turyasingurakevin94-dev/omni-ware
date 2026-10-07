@@ -2815,7 +2815,8 @@
     .mgr-k-hf > div,.mgr-k-hf > div:first-child{padding:var(--ow-sp-10) var(--ow-sp-12) var(--ow-sp-6) 0;border-right:0;}
     .mgr-k-hf > div:nth-child(even){padding-left:var(--ow-sp-12);border-left:1px solid var(--ow-steel-800);}
     .mgr-k-hf > div:nth-child(n+3){border-top:1px solid var(--ow-steel-800);}
-    .mgr-k-hf span{white-space:normal;}
+    .mgr-k-hf span{white-space:normal;letter-spacing:.06em;}
+    .mgr-k-hf b{font-size:var(--ow-t-16);}
     .mgr-k-where{gap:var(--ow-sp-6);}
     .mgr-k-where .mgr-k-mic{flex-basis:100%;}
     .mgr-k-wf{min-height:var(--ow-tap);font-size:var(--ow-t-14);padding:0 var(--ow-sp-12);}
@@ -2826,7 +2827,7 @@
     .mgr-k-qt{font-size:var(--ow-t-16);}
     .mgr-k-why{font-size:var(--ow-t-14);}
     .mgr-k-wh{font-size:var(--ow-t-14);flex-wrap:wrap;}
-    .mgr-k-age{flex-basis:100%;margin-left:32px;text-align:left;font-size:var(--ow-t-12);}
+    .mgr-k-age{flex-basis:100%;max-width:none;margin-left:32px;text-align:left;font-size:var(--ow-t-12);}
     .mgr-k-an{min-height:var(--ow-tap);font-size:var(--ow-t-14);padding:0 var(--ow-sp-16);}
     .mgr-k-box{height:var(--ow-tap);}
     .mgr-k-box .mgr-k-in{font-size:var(--ow-t-16);}
@@ -136305,9 +136306,10 @@ function mgrAskTermsQuestion(name, missing){
     : missing[0] === 'creditDays' ? 'How many days’ credit does ' + name + ' give you?'
     : 'How many days does ' + name + ' take to deliver?';
 }
-function mgrAskTermsWhy(missing, owe){
+function mgrAskTermsWhy(missing, owe, plan){
   const lead = owe ? 'You owe them ' + mgrShortUGX(owe.due) + ' on ' + owe.bills + ' bill' + (owe.bills === 1 ? '' : 's')
-    + ', the oldest ' + owe.oldest.ageDays + ' day' + (owe.oldest.ageDays === 1 ? '' : 's') + ' old. ' : '';
+    + ', the oldest ' + owe.oldest.ageDays + ' day' + (owe.oldest.ageDays === 1 ? '' : 's') + ' old. '
+    : plan && plan.amount > 0 ? 'The buy plan would spend ' + mgrShortUGX(plan.amount) + ' with them. ' : '';
   const cant = [];
   if(missing.includes('stopAtDays')) cant.push('warn you before a bill reaches the age they stop supplying at');
   if(missing.includes('creditDays')) cant.push('tell a bill that is late from one that is on time');
@@ -136348,13 +136350,13 @@ function mgrAskTermsAsks(today, opts){
     const gap = mgrAskTermsGap(s, told.get(k), lead.get(k));
     if(!gap.missing.length) return;
     const owe = owed.get(k) || null;
+    const stake = owe ? { amount: Math.round(owe.due), unit: 'owed', from: 'bills',
+      basis: 'owed to ' + s.name + ' on ' + owe.bills + ' open bill' + (owe.bills === 1 ? '' : 's') } : mgrAskSupplierStake(s.id, s.name, today);
     const place = { kind: 'supplier', where: 'supp', id: s.id, name: s.name, location: String(s.location || ''),
       label: 'Ask ' + s.name, key: 's:' + k };
     out.push({ key: 'terms:' + k, id: null, det: true, date: today, supplierId: s.id,
-      question: mgrAskTermsQuestion(s.name, gap.missing), why: mgrAskTermsWhy(gap.missing, owe), whyFrom: 'books',
-      dept: 'procurement', place, price: null, terms: gap, owe,
-      stake: owe ? { amount: Math.round(owe.due), unit: 'owed', from: 'bills',
-        basis: 'owed to ' + s.name + ' on ' + owe.bills + ' open bill' + (owe.bills === 1 ? '' : 's') } : mgrAskSupplierStake(s.id, s.name, today),
+      question: mgrAskTermsQuestion(s.name, gap.missing), why: mgrAskTermsWhy(gap.missing, owe, stake), whyFrom: 'books',
+      dept: 'procurement', place, price: null, terms: gap, owe, stake,
       known: { text: mgrAskTermsKnownText(gap), days: null },
       sure: { pips: null, source: null, basis: 'not known' }, choices: [], delegate: null });
   });
