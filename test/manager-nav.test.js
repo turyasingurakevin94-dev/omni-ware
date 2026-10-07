@@ -170,7 +170,7 @@ const blockOf = {};
     `outside the blocks there is only the shared frame${stray.length ? ' — also: ' + stray.join(', ') : ''}`);
   /* And each helper a block holds is called from that block alone, so
      moving it in did not leave a caller outside. */
-  ['mgrPaintMap', 'mgrPaintVerdict', 'mgrHeroHTML', 'mgrProposalHTML', 'mgrPaceHTML', 'mgrAsksHTML', 'mgrWireAsks',
+  ['mgrPaintMap', 'mgrPaintVerdict', 'mgrHeroHTML', 'mgrProposalHTML', 'mgrTgRowHTML', 'mgrAsksHTML', 'mgrWireAsks',
     'mgrPlayWorth', 'mgrUnusualHTML', 'mgrJournalChartHTML', 'mgrPaintLevers', 'mgrPaintAcctAdvice', 'mgrMoveView']
     .forEach((n) => {
       const def = js.indexOf(`\nfunction ${n}(`);
@@ -283,17 +283,30 @@ const blockOf = {};
   eq(C.mgrNavCountBrief({}), null, 'the brief counts nothing — it is the brief, not a queue');
   eq(C.mgrNavCountSim({}), null, 'nor does the simulator');
 
-  eq(C.mgrNavCountTargets({}), null, 'targets: nothing until the journal answers');
-  eq(C.mgrNavCountTargets({ score: { error: 'down' } }), null, 'and nothing — not a zero — when it could not be read');
+  /* WAS: off track = any running target behind its pace line. NOW: Off
+     track by the Targets section's one stated rule (mgrTgState): behind the
+     road by a third or more of what is still to go -- behind by less is At
+     risk, and is not named here. So the count is compiled with the rule. */
+  const T = compileScope([extractFunction(src, 'mgrNavCountTargets', 'index.html'), extractFunction(src, 'mgrTgState', 'index.html'),
+    extractFunction(src, 'mgrTgBreak', 'index.html'), extractDeclaration(src, 'MGR_TG_RISK', 'index.html'),
+    extractDeclaration(src, 'mgrTgBetter', 'index.html')], { esc, Number, Math, mgrCashWalk: undefined }, ['mgrNavCountTargets']);
+  eq(T.mgrNavCountTargets({}), null, 'targets: nothing until the journal answers');
+  eq(T.mgrNavCountTargets({ score: { error: 'down' } }), null, 'and nothing — not a zero — when it could not be read');
   const score = { targets: [
-    { finished: false, pace: { on_course: false } },   // running, behind
-    { finished: false, pace: { on_course: true } },    // running, on course
+    /* 4.4m aim, 1.03m in, 0.856m behind of 3.37m to go (25%): at risk */
+    { finished: false, direction: 'up', aim: 4400000, actual: 1030000, pace: { on_course: false, behind_by: 856000 } },
+    /* 6m aim, 5.7m in, ahead of the road: on track */
+    { finished: false, direction: 'up', aim: 6000000, actual: 5700000, pace: { on_course: true, behind_by: 0 } },
     { finished: true, met: true }, { finished: true, met: false } ], proposed: [{ id: 1 }, { id: 2 }] };
-  eq(C.mgrNavCountTargets({ score }), { n: 4, note: '<b>1 target</b> off track' },
-    'targets: 2 running + 2 proposed = 4, and the 1 running behind its pace is off track');
-  score.targets[1].pace.on_course = false;
-  eq(C.mgrNavCountTargets({ score }).note, '<b>2 targets</b> off track', 'two behind are two targets');
-  eq(C.mgrNavCountTargets({ score: { targets: [{ finished: false }], proposed: [] } }), { n: 1, note: null },
+  eq(T.mgrNavCountTargets({ score }), { n: 4, note: null },
+    'targets: 2 running + 2 proposed = 4; one at risk is not off track');
+  /* 4m behind of 4.97m to go (80%): off track */
+  score.targets[0].pace.behind_by = 4000000;
+  eq(T.mgrNavCountTargets({ score }).note, '<b>1 target</b> off track', 'behind by a third or more of what is left is off track');
+  /* the second now aims at 7m: 5.7m in, 1.3m to go, 1m behind the road (77%): off track */
+  Object.assign(score.targets[1], { aim: 7000000, pace: { on_course: false, behind_by: 1000000 } });
+  eq(T.mgrNavCountTargets({ score }).note, '<b>2 targets</b> off track', 'two off track are two targets');
+  eq(T.mgrNavCountTargets({ score: { targets: [{ finished: false, actual: 1, aim: 9, direction: 'up' }], proposed: [] } }), { n: 1, note: null },
     'a running target with no pace yet is not called off track');
 
   eq(C.mgrNavCountPlays({ book: { error: 'down', running: [], proposed: [] } }), null, 'plays: nothing when the playbook could not be read');

@@ -135841,7 +135841,9 @@ function managerProposalBefore(x){
       const on = /^\d{4}-\d{2}-\d{2}$/.test(String(x.date||'')) ? String(x.date) : todayISO();
       return { label: 'Last 7d', v: Math.round(Number(m.measure(anShiftDate(on, -7), anShiftDate(on, -1))) || 0) };
     }
-    return { label: 'Now', v: Math.round(Number(m.measure()) || 0) };
+    const now = m.measure();
+    if(now == null || !Number.isFinite(Number(now))) return null;
+    return { label: 'Now', v: m.round ? m.round(Number(now)) : Math.round(Number(now)) };
   } catch(e){ return null; }
 }
 const MGR_METRIC_MARKS = {
@@ -136142,8 +136144,8 @@ function mgrTgRowHTML(r){
   else { dn = r.key === 'off'; note = `${mgrTgGap(u, (Number(x.aim) || 0) - r.land)} short at this rate`; }
   const o = r.odds, op = r.oddsPlan;
   const oddsHTML = o.pct != null
-    ? `<span class="mgr-tg-fig" title="${esc(`Reached in ${o.k} of ${o.n} past ${r.past.len}-day periods before it began`)}">${o.pct}%</span><small>${
-      op && op.pct != null ? `${op.pct}% with my sizing` : `${o.k} of ${o.n} past periods`}</small>`
+    ? `<span class="mgr-tg-fig" title="${esc(`Reached in ${o.k} of ${o.n} past ${r.past.len}-day periods before it began`)}">${o.pct}%</span>${
+      op && op.pct != null ? `<small class="mgr-tg-plan">${op.pct}% with my sizing</small>` : `<small>${o.k} of ${o.n} past periods</small>`}`
     : `<span class="mgr-tg-fig">—</span><small>${o.n} past period${o.n === 1 ? '' : 's'} — too few</small>`;
   const st = r.state;
   const chip = r.brk && r.brk.breaksOn ? 'Breaks ' + mgrTgDay(r.brk.breaksOn) : MGR_TG_STATE_WORD[r.key];

@@ -102,24 +102,28 @@ const mgrRender = () => MGR_RENDER.map((n) => extractFunction(src, n, 'index.htm
 /* ---------- 3. the rail, the playbook and growth, drawn ----------------- */
 {
   const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  const { mgrScoreRingsHTML, mgrAvatarHTML } = compileScope([
-    extractFunction(src, 'mgrScoreRingsHTML', 'index.html'),
+  /* WAS: the scoreboard opened with one ring per running target. NOW (the
+     Targets canvas): the section opens with the Manager's band and its four
+     counts -- On track, At risk, Off track, and met this year. */
+  const { mgrTgBandHTML, mgrAvatarHTML } = compileScope([
+    extractFunction(src, 'mgrTgBandHTML', 'index.html'), extractFunction(src, 'mgrTgBandLine', 'index.html'),
+    extractFunction(src, 'mgrTgFig', 'index.html'), extractDeclaration(src, 'MGR_TG_GLYPH', 'index.html'),
+    extractDeclaration(src, 'mgrTgDay', 'index.html'),
     extractFunction(src, 'mgrAvatarHTML', 'index.html'),
-    extractFunction(src, 'mgrShortUGX', 'index.html'),
-  ], { esc, Math, Number, String }, ['mgrScoreRingsHTML', 'mgrAvatarHTML']);
-  const rings = mgrScoreRingsHTML([
-    { label: 'Sales', pct: 25, pace: { on_course: false, behind_by: 2898857 } },
-    { label: 'Gross profit', pct: 74, pace: { on_course: true } },
-  ]);
-  t.check((rings.match(/class="mgr-sr-bad"/g) || []).length === 1 && (rings.match(/class="mgr-sr-good"/g) || []).length === 1,
-    'one ring per running target, crimson behind pace and verdigris on course');
-  t.check(/25% · 2\.9m behind/.test(rings) && /74% · on course/.test(rings), 'with how far each is, and by how much it is behind');
-  t.check(mgrScoreRingsHTML([]) === '', 'and nothing at all when no target is running');
+  ], { esc, Math, Number, String, Date, todayISO: () => '2026-10-07' }, ['mgrTgBandHTML', 'mgrAvatarHTML']);
+  const band = mgrTgBandHTML([{ key: 'on', landsAlone: true }, { key: 'risk' }, { key: 'off' }, { key: 'off' }],
+    [{ x: { to: '2026-09-30' }, met: true }, { x: { to: '2026-08-31' }, met: false }, { x: { to: '2026-07-31' }, met: null },
+      { x: { to: '2025-12-31' }, met: true }]);
+  const cell = (label) => (new RegExp(`<span>${label}</span><b class="[^"]*">([^<]*)</b>`).exec(band) || [])[1];
+  t.check(cell('On track') === '1' && cell('At risk') === '1' && cell('Off track') === '2',
+    'the band counts the running targets in their three states');
+  t.check(cell('Met this year') === '1/2', 'and what finished this year with a known end, met of all — last year\u2019s and the unknown are not counted');
+  t.check(/Four running\. One lands at this rate on its own, three need a move to get there\./.test(band), 'its line is counted too');
   t.check(mgrAvatarHTML('Kato Construction Ltd') === mgrAvatarHTML('Kato Construction Ltd') && />KC</.test(mgrAvatarHTML('Kato Construction Ltd')),
     'a customer wears the same initials and the same tint every time');
 
   const render = mgrRender();
-  t.check(/mgrScoreRingsHTML\(sb2\.targets\.filter\(x=> !x\.finished\)\)/.test(render), 'the scoreboard opens with its rings');
+  t.check(/mgrTgBandHTML\(runs, finished\)/.test(extractFunction(src, 'mgrTgDraw', 'index.html')), 'the Targets section opens with its band');
   t.check(/<div class="mgr-rt">/.test(render) && /class="mgr-av mgr-av-k mgr-kt-money"/.test(render),
     'the standing rules are rows with the mark of the door each belongs to');
   t.check(/const span = \(p\)=>/.test(render) && /mgr-pk-over/.test(render) && /const gauge = \(p\)=>/.test(render),

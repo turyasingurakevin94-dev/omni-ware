@@ -79,41 +79,43 @@ const fmtUGX = (n) => Number(n).toLocaleString('en-US') + ' UGX';
       'eight empty weeks draw nothing at all');
   }
 
-  /* ---------- 3. the pace chart ---------------------------------------- */
-  const paceScope = (metrics) => compileScope([
-    extractFunction(src, 'managerTargetSeries', 'index.html'),
-    extractFunction(src, 'mgrPaceHTML', 'index.html'),
-    extractFunction(src, 'anShiftDate', 'index.html'),
-  ], { MANAGER_METRICS: metrics, esc, fmtUGX, Math, Number, String, Date }, ['managerTargetSeries', 'mgrPaceHTML']);
+  /* ---------- 3. the running target's track ---------------------------- */
+  /* WAS: a pace chart per running target (managerTargetSeries, mgrPaceHTML),
+     a line per recorded day with a hover. NOW (the Targets canvas): one
+     track per running target, on one scale from where it started to its
+     aim -- the fill where it is, the tick where the road has it today, the
+     ring where it lands at this rate, the dot where the plan lands it by
+     the Manager's sizing -- and the same said in words for a screen
+     reader. */
   {
-    const perDay = { [day(-2)]: 1000, [day(-1)]: 2000, [day(0)]: 500 };
-    const s = paceScope({ sales: { kind: 'flow', direction: 'up', measure: (a) => perDay[a] || 0 } });
-    const x = { metric: 'sales', label: 'Sales', from: day(-2), to: day(4), aim: 7000, baseline: 0, actual: 3500,
-      pace: { elapsed_days: 3, total_days: 7, expected: 3000, on_course: true, at_this_rate: 8167 } };
-    const ser = s.managerTargetSeries(x);
-    t.check(ser.pts.map((p) => p.v).join(',') === '1000,3000,3500', 'a flow is drawn from each day\'s own figure, summed');
-    t.check(ser.expectedOn(2) === 3000, 'and the road at the end of day three is where the text says on course would be');
-    const html = s.mgrPaceHTML(x);
-    t.check(/<polyline class="mgr-pc-act"/.test(html) && /mgr-pc-now mgr-pc-good/.test(html),
-      'the path is drawn, and today\'s point carries the state');
-    t.check(/aria-label="Sales: 3,500 UGX of 7,000 UGX, day 3 of 7\. On course would be 3,000 UGX; at this rate it ends at 8,167 UGX\."/.test(html),
-      'and the chart says in words what it shows');
-  }
-  {
-    const s = paceScope({ debtors_total: { kind: 'level', direction: 'down', measure: () => { throw new Error('a level has no daily reading'); } } });
-    const x = { metric: 'debtors_total', label: 'Money owed to you', from: day(-3), to: day(3), aim: 100000, baseline: 900000, actual: 250000,
-      pace: { elapsed_days: 4, total_days: 7, expected: 442857, on_course: true, at_this_rate: -237500 } };
-    const ser = s.managerTargetSeries(x);
-    t.check(ser.pts.length === 2 && ser.pts[0].v === 900000 && ser.pts[1].v === 250000,
-      'a level has two points, where it started and where it is — never measured for days the books did not keep');
-    const html = s.mgrPaceHTML(x);
-    t.check(!/mgr-pc-act/.test(html), 'and no line between them: a line there would invent the path');
-    t.check(ser.projected === 0, '"at this rate" stops at nothing: money owed cannot go below it');
-  }
-  {
-    const s = paceScope({ sales: { kind: 'flow', measure: () => 0 } });
-    t.check(s.mgrPaceHTML({ metric: 'sales', from: day(-1), to: day(5), aim: 10, pace: null }) === '',
-      'a target with no pace draws no chart');
+    const T = ['mgrTgRowHTML', 'mgrTgName', 'mgrTgFig', 'mgrTgGap', 'mgrTgAvHTML', 'mgrTgTrack'];
+    const s = compileScope([
+      ...T.map((n) => extractFunction(src, n, 'index.html')),
+      ...['mgrTgDay', 'mgrTgBetter', 'MGR_TG_GLYPH', 'MGR_TG_STATE_WORD', 'MGR_TG_STATE_TONE'].map((n) => extractDeclaration(src, n, 'index.html')),
+    ], { MANAGER_METRICS: { collections: { label: 'Collect', unit: 'ugx', kind: 'flow', direction: 'up' } },
+      esc, todayISO: () => TODAY, waDaysBetween: (a, b2) => Math.round((Date.parse(b2) - Date.parse(a)) / 86400000), Math, Number, String, Date },
+    ['mgrTgRowHTML', 'mgrTgTrack']);
+    /* Collect 8.0m by 2 Oct, 5.2m in, the road at 4.8m today: 65% there, the
+       road at 60%; 8.3m at this rate and 9.0m with the plan both run off the
+       end of the scale and sit on it. */
+    const x = { id: 41, metric: 'collections', measure_kind: 'flow', direction: 'up', aim: 8000000, baseline: 0, actual: 5200000,
+      from: day(-14), to: day(8), days_left: 8, finished: false, pace: { expected: 4800000, on_course: true, behind_by: 0, total_days: 23 } };
+    const track = s.mgrTgTrack(x, 8300000, 9000000);
+    const html = s.mgrTgRowHTML({ x, m: { unit: 'ugx', kind: 'flow', direction: 'up' }, state: { key: 'on', behind: 0, toGo: 2800000, share: 0 },
+      key: 'on', brk: null, links: [{ id: 107, num: '01', title: 'Keep chasing — Kato first' }], land: 8300000, planLand: 9000000,
+      past: { len: 23 }, odds: { k: 9, n: 11, pct: 82 }, oddsPlan: { k: 10, n: 11, pct: 91 }, landsAlone: true, wrongWay: false, two: false,
+      track, person: { key: 'you', name: 'You' } });
+    t.check(/<i class="mgr-tg-f mgr-tg-t-vg" style="width:65\.0%">/.test(html), 'where it is: 5.2m of 8.0m is 65% of the way, in the colour of its state');
+    t.check(/<em class="mgr-tg-pc" style="left:60\.0%"/.test(html), 'where the road has it today: 4.8m is 60%');
+    t.check(/class="mgr-tg-rg" style="left:100\.0%"/.test(html) && /class="mgr-tg-pl" style="left:100\.0%"/.test(html),
+      'where it lands at this rate and with the plan — past the aim, drawn at the end');
+    t.check(/role="img" aria-label="Collect 8\.00m: 5\.20m now; the road has it at 4\.80m today; 8\.30m at this rate; 9\.00m if the moves deliver my sizing\."/.test(html),
+      'and the track says in words what it shows');
+    t.check(/>82%<\/span><small class="mgr-tg-plan">91% with my sizing<\/small>/.test(html) && /Reached in 9 of 11 past 23-day periods before it began/.test(html),
+      'the odds are a count of past periods, beside the same count if the moves deliver the Manager\u2019s sizing');
+    t.check(/data-tg-move="107">Decision 01 →<\/button>/.test(html), 'the move that closes the gap links to its decision');
+    t.check(/aria-expanded="false" data-tg-rule="41">On track<\/button>/.test(html) && /less than a third of what is still to go/.test(html),
+      'and the state is a tap that says the rule it was called by');
   }
 
   /* ---------- 3b. one proposal per measure ----------------------------- */
@@ -142,7 +144,8 @@ const fmtUGX = (n) => Number(n).toLocaleString('en-US') + ' UGX';
       'two copies of one proposal show as one, the newest, carrying the older as a duplicate');
     t.check(!sb2.proposed.some((x) => x.metric === 'sales'), 'a measure already running is not proposed again');
     t.check(sb2.proposed.length === 2, 'and the rest are untouched');
-    const render = mgrRender();
+    /* The Targets section draws through mgrTgDraw, which wires the cards. */
+    const render = mgrRender() + extractFunction(src, 'mgrTgDraw', 'index.html');
     t.check(/managerAdoptTarget\(id, dups\)/.test(render) && /managerDeclineTarget\(id, dups\)/.test(render)
       && /await managerRetireDuplicates\(dupIds\);/.test(extractFunction(src, 'managerAdoptTarget', 'index.html'))
       && /await managerRetireDuplicates\(dupIds\);/.test(extractFunction(src, 'managerDeclineTarget', 'index.html')),
@@ -211,9 +214,11 @@ const fmtUGX = (n) => Number(n).toLocaleString('en-US') + ' UGX';
 
   /* ---------- 4. wiring ------------------------------------------------ */
   {
-    const render = mgrRender();
-    t.check(/\$\{\(!x\.finished && mgrPaceHTML\(x\)\) \|\| bar\(x\.pct\)\}/.test(render),
-      'a running target shows its pace chart; a finished one keeps its bar');
+    const render = mgrRender() + ['mgrTgDraw', 'mgrTgRunningHTML', 'mgrTgClick'].map((n) => extractFunction(src, n, 'index.html')).join('\n');
+    /* WAS: a running target's pace chart, a finished one's bar. NOW: every
+       running target is a row on the track; the finished ones are history. */
+    t.check(/runs\.map\(mgrTgRowHTML\)/.test(render) && /mgrTgFinishedHTML\(finished\)/.test(render),
+      'every running target is drawn on its track; the finished ones as history');
     t.check(/managerAdviceWeeks\(todayISO\(\)\)\.then/.test(render), 'the weeks are read beside the other verdict readings');
     const paint = extractFunction(src, 'mgrPaintVerdict', 'index.html');
     /* Advice done became a square per piece of advice (a share of a
@@ -222,8 +227,10 @@ const fmtUGX = (n) => Number(n).toLocaleString('en-US') + ' UGX';
       && /cells\[0\]\.viz = mgrWaffleHTML\(/.test(paint),
       'the trend rides beside a figure only once that figure is read, and advice done is drawn as its whole');
     t.check(!/cells\[1\]\.spark|cells\[3\]\.spark|cells\[0\]\.spark/.test(paint), 'and no other figure carries a weekly line — there it would be noise');
-    t.check(/closest\('\.mgr-pc'\)/.test(src) && /tip\.style\.left = Math\.max\(0, Math\.min\(rect\.width - tw/.test(src),
-      'one hover for every pace chart, and its label is kept inside the chart');
+    /* WAS: one hover for every pace chart. NOW: the state chip opens the
+       rule it was called by, in place. */
+    t.check(/if\(d\.tgRule\)\{/.test(render) && /why\.hidden = !why\.hidden;/.test(render),
+      'the state chip opens the rule it was called by');
   }
 
   process.exit(t.done() ? 1 : 0);

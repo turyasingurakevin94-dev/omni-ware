@@ -29,17 +29,18 @@ const s = compileScope([
   extractFunction(src, 'managerProposalBefore', 'index.html'),
   extractDeclaration(src, 'MGR_METRIC_MARKS', 'index.html'),
   extractFunction(src, 'mgrProposalHTML', 'index.html'),
-  extractFunction(src, 'mgrScoreSlotsHTML', 'index.html'),
   extractFunction(src, 'anShiftDate', 'index.html'),
+  extractFunction(src, 'mgrTgFig', 'index.html'), extractFunction(src, 'mgrTgGap', 'index.html'), extractFunction(src, 'mgrTgDelta', 'index.html'),
 ], {
   esc, fmtUGX, todayISO: () => TODAY,
   MANAGER_METRICS: {
     gross_profit: { label: 'Gross profit', kind: 'flow', measure: (from, to) => { measured.push([from, to]); return 1124990; } },
     collections: { label: 'Collect', kind: 'flow', measure: () => 0 },
     debtors_total: { label: 'Money owed to you', kind: 'level', measure: () => 8000000 },
+    margin_pct: { label: 'Gross margin', kind: 'level', unit: 'pct', direction: 'up', round: (v) => Math.round(v * 10) / 10, measure: () => 9.1 },
   },
   Date, String, Number, Math, Array,
-}, ['managerTargetParts', 'managerProposalBefore', 'mgrProposalHTML', 'mgrScoreSlotsHTML']);
+}, ['managerTargetParts', 'managerProposalBefore', 'mgrProposalHTML']);
 
 /* ---------- 1. the parts must close on the aim ------------------------ */
 {
@@ -92,11 +93,24 @@ const s = compileScope([
   t.check(!/<details/.test(bare), 'and no argument means no fold to open');
 }
 
-/* ---------- 4. the header's two slots --------------------------------- */
+/* ---------- 4. the cap on what runs at once ---------------------------- */
+/* WAS: the header drew two slots, and two targets a week was the most
+   that could run. NOW (Q16): up to four run at once -- the meeting's
+   weekly ones and the owner's own together -- and at four, Take it on is
+   held back with the reason on it. */
 {
-  t.check((s.mgrScoreSlotsHTML(0).match(/mgr-pp-slot"/g) || []).length === 2, 'no target running: two empty slots');
-  t.check((s.mgrScoreSlotsHTML(1).match(/mgr-pp-slot-on/g) || []).length === 1, 'one running fills one');
-  t.check((s.mgrScoreSlotsHTML(5).match(/mgr-pp-slot-on/g) || []).length === 2, 'never more than the two a week may carry');
+  t.check(/const MGR_TG_MAX_RUNNING = 4;/.test(src), 'up to four targets run at once');
+  const draw = extractFunction(src, 'mgrTgDraw', 'index.html');
+  t.check(/const full = live\.length >= MGR_TG_MAX_RUNNING;/.test(draw) && /if\(full\)\{ adopt\.disabled = true; adopt\.title = /.test(draw),
+    'and at four a proposal cannot be taken on until one finishes, and says so');
+}
+
+/* ---------- 4b. a proposal in its own unit ------------------------------ */
+{
+  const pct = s.mgrProposalHTML({ id: 12, metric: 'margin_pct', label: 'Gross margin', aim: 10.5, date: TODAY, why: '' });
+  t.check(/<span class="mgr-pp-big">10\.5%<\/span><span class="mgr-pp-u">this week<\/span>/.test(pct),
+    'a margin is proposed in per cent, not in shillings');
+  t.check(/<span class="mgr-pp-chip">\+1\.4 pts<\/span>/.test(pct), 'and its distance from now in points (9.1% to 10.5%)');
 }
 
 /* ---------- an aim below what the shop already did says why ---------- */
