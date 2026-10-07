@@ -141,8 +141,13 @@ const mgrRender = () => MGR_RENDER.map((n) => extractFunction(src, n, 'index.htm
     'the board is the canvas’s four lanes — proposed, running, judged, proven recipes — under its three slots');
   t.check(!/lane\('[^']*', '[a-z]+', 'Worked'/.test(plays) && /MGR_PLAY_VERDICT_WORDS = \{ worked: 'Worked', didnt: 'Didn’t work', cant_tell: 'Can’t tell' \}/.test(plays),
     'and no lane says a play worked — "Worked" is one of the three verdicts the owner chooses from, in the Judged lane');
-  t.check(/const props = proposed\.slice\(\)\.sort\(\(a, b\)=> worth\(b\) - worth\(a\)\)/.test(plays) && /Overlaps “/.test(plays),
-    'proposals are ordered by what they would add, and two treating the same thing are flagged as overlapping');
+  /* WAS: proposals sorted by their sizing (const props = proposed.slice()
+     .sort(worth)), which ranked cash against profit against sales. NOW:
+     the meeting's order (Q5, law 6); a pick is made only between two
+     sized plays on one lever, and a lead only within one kind of money. */
+  t.check(/const props = proposed\.map\(/.test(plays) && !/proposed\.slice\(\)\.sort\(/.test(plays) && /Overlaps “/.test(plays)
+    && /MGR_PLAY_MONEY_KIND/.test(plays) && /kinds\.size === 1/.test(plays),
+    'proposals stay in the meeting’s order, never ranked across kinds of money, and two treating the same thing are flagged as overlapping');
   const growth = extractFunction(src, 'renderManagerGrowth', 'index.html');
   t.check(/class="mgr-gg"/.test(growth) && /mgrAvatarHTML\(row\.name\)/.test(growth),
     'growth leads with its evidence as a gauge, and every customer has a face');
@@ -288,8 +293,10 @@ const mgrRender = () => MGR_RENDER.map((n) => extractFunction(src, n, 'index.htm
   /* WAS: read in mgrPaintPlays. NOW: the proposed card is the Plays
      block's mgrPlayProposedHTML; the pick is unchanged. */
   const proposedCard = extractFunction(src, 'mgrPlayProposedHTML', 'index.html');
-  t.check(/Try this one first\./.test(proposedCard) && /which is worth more — try that first/.test(proposedCard),
-    'of two overlapping plays it recommends the one worth more, and the other card points to it');
+  /* WAS: "which is worth more — try that first". NOW: "which is sized
+     higher" -- the Manager's sizing, compared only when both were sized. */
+  t.check(/Try this one first\./.test(proposedCard) && /which is sized higher — try that first/.test(proposedCard),
+    'of two overlapping plays it recommends the one sized higher, and the other card points to it');
   t.check(/class="mgr-rv-why"/.test(extractFunction(src, 'mgrRichRowHTML', 'index.html')), 'every move carries one line of its reasoning on the card');
   t.check(/<p class="mgr-rej">/.test(render) && !/<p class="ow-mini">Considered and rejected/.test(render), 'and what was considered and rejected leads the plan instead of trailing it');
 }

@@ -452,6 +452,25 @@ const base = {
     same(again.do_not_repeat.plays_dropped, ['SMS price list', 'Loyalty stamps', 'Bulk-lot the dead stock'],
       'and on the restraint list');
     t.check(!JSON.stringify(again).includes('it worked'), 'nothing handed to the meeting says a play worked — only that the owner judged it so');
+    /* NEVER ON BOTH LISTS: the owner's latest act wins. A re-run of the
+       recipe stopped on 3 Sep -- after its last "worked" verdict (24 Aug)
+       -- takes it off the recipes and leaves it never-again. */
+    journal.play.unshift({ id: 10, date: '2026-08-25', status: 'dropped', body: { name: 'Deposit cash twice a week', treats: 'cash',
+      source: 'manager', startedOn: '2026-08-25', endedOn: '2026-09-03' } });
+    const stopped = await tools.manager_history.run({ limit: 3 });
+    eq(stopped.playbook.proven_recipes, undefined, 'a recipe the owner stopped after judging it worked is no longer handed over as one');
+    t.check(stopped.playbook.tried_and_dropped.includes('Deposit cash twice a week') && stopped.do_not_repeat.plays_dropped.includes('Deposit cash twice a week'),
+      'and it is on the never-again lists instead — never on both');
+    /* Set aside on 15 Jul, BEFORE the owner judged it worked on 29 Jul and
+       24 Aug: their later verdicts stand, and the old set-aside is not
+       filed as never-again. */
+    journal.play[0] = { ...journal.play[0], date: '2026-07-10', body: { ...journal.play[0].body, startedOn: '2026-07-10', endedOn: '2026-07-15' } };
+    const earlier = await tools.manager_history.run({ limit: 3 });
+    same(earlier.playbook.proven_recipes, [{ name: 'Deposit cash twice a week', treats: 'cash', judged_worked: 2 }],
+      'a set-aside the owner later overturned with two "worked" verdicts leaves the recipe proven');
+    t.check(!earlier.playbook.tried_and_dropped.includes('Deposit cash twice a week') && !earlier.do_not_repeat.plays_dropped.includes('Deposit cash twice a week'),
+      'and that old set-aside is on neither never-again list — never on both');
+    journal.play.shift();
     journal.play.splice(0, 1);
     const once = await tools.manager_history.run({ limit: 3 });
     eq(once.playbook.proven_recipes, undefined, 'judged worked once is not proven: no proven_recipes at all');

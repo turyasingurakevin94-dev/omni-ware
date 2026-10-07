@@ -328,9 +328,14 @@ const invoiced = { savedQuotes: [{ voided: false, invoiced: true, date: '2026-06
     const book = extractFunction(src, 'managerPlaybook', 'index.html');
     t.check(/managerPlayProgress\(p, todayISO\(\), running\)/.test(book),
       'the movement is worked out ONCE, so the owner’s screen and the weekly review can never show different arithmetic');
-    const render = mgrRender();
+    /* WAS: the "alongside it" line was drawn in mgrPaintPlays. NOW: the
+       running card draws it (mgrPlayRunningHTML), from the reads -- which
+       take their before from p.progress, this same one reading. */
+    const render = mgrRender() + '\n' + extractFunction(src, 'mgrPlayRunningHTML', 'index.html');
     t.check(/alongside it/.test(render),
       'and the card says "alongside it" in the owner’s own view — the wording refuses the causal claim on the screen too');
+    t.check(/const pr = p\.progress \|\| null;/.test(extractFunction(src, 'mgrPlayReads', 'index.html')),
+      'and the board reads each play against the same before the meeting and the review are handed (p.progress)');
     t.check(!/because of it|thanks to|it worked/i.test(render.slice(render.indexOf('mgr-play-moved'), render.indexOf('mgr-play-moved') + 1200)),
       'and never claims the play did it');
     /* The Playbook section draws its cards with helpers in its own block,
