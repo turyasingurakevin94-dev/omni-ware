@@ -94,12 +94,14 @@ const build = (rows, over) => compileScope(
   NAMES.map((n) => extractFunction(src, n, 'index.html'))
     .concat([extractDeclaration(src, 'TRACK_MOVES_READ', 'index.html'),
       extractDeclaration(src, 'TRACK_MIN_TIMES', 'index.html'),
-      extractDeclaration(src, 'TRACK_WINDOWED', 'index.html')]),
+      extractDeclaration(src, 'TRACK_WINDOWED', 'index.html'),
+      extractDeclaration(src, 'CHASE_WINDOW', 'index.html')]),
   Object.assign({
     data, managerNotesTable: true, currentShopId: 'S', todayISO: () => TODAY,
     fmtUGX: (n) => Number(n || 0).toLocaleString('en-US'),
     fmtShortDate: (d) => String(d),
     supplierName: (id) => String(id), buyKeyLabel: (k) => 'Cement',
+    supplierLeadTimes: () => [], mgrLineSupplier: () => null,
     console,
     sb: { from: () => { const q = {}; q.select = () => q; q.eq = () => q; q.order = () => q;
       q.limit = () => Promise.resolve({ data: rows, error: null }); return q; } },
@@ -185,15 +187,18 @@ const build = (rows, over) => compileScope(
     /* THE INVARIANT A REMOVED GUARD RESTED ON.
 
        trackRecordDeadLevers once also asked scored >= minTimes, and no
-       mutation could tell it from the row filter: every windowed kind
-       answers `happened` as a plain yes or no, so scored always equals
-       times, and times is already filtered at minTimes. The guard went;
-       this pins the reason. A future windowed kind that can answer
-       "unknowable in a window" breaks this, and whoever adds it has to
-       decide again what counts as a dead lever. */
+       mutation could tell it from the row filter.
+       WAS: every windowed occasion was scored, so scored === times.
+       NOW: an occasion whose answer window has not run is not judged
+       (still waiting, or cut short by the same advice coming round), so
+       scored + waiting + cutShort === times. The dead-lever rule did
+       not need the old guard back: it asks completedScored >=
+       TRACK_MIN_TIMES, and completedScored counts only completions
+       judged after their WHOLE window -- three of those is its own
+       threshold, whatever `scored` says. */
     tr.rows.filter((x) => x.windowed).forEach((x) => {
-      eq(x.scored, x.times,
-        `a windowed kind weighs every occasion it has (${x.kind}) — a kind that cannot must reopen the dead-lever threshold`);
+      eq(x.scored + x.waiting + x.cutShort, x.times,
+        `a windowed kind weighs every occasion it has, or names it as waiting or cut short (${x.kind})`);
     });
     t.check(!/scored >= \(track\.minTimes/.test(src),
       'and the guard that rested on it is gone rather than sitting there unfalsifiable');
@@ -238,6 +243,64 @@ const build = (rows, over) => compileScope(
       'in one sentence, without a score it has not earned');
     eq(s.trackRecordDeadLevers(tr).length, 0,
       'and a state kind can never be called a dead lever — nothing weighed it');
+  }
+
+  /* ---------- 6b. a miss needs a whole answer window ---------------- */
+  {
+    /* The Brief's hit rate's rule (mgrBriefHitRate), so the Brief, the
+       Record and this record agree: a chase is given a week; a restock
+       its supplier's lead time and two days. Today is 31 August.
+
+       Okello (11) owes and never pays. Chased and marked done on 1, 4
+       and 28 August:
+         1 Aug  closed by the 4th: 3 days < 7, nothing followed -> cut short
+         4 Aug  closed by the 28th: 24 days -> a miss, scored
+         28 Aug runs to today: 3 days < 7 -> still waiting
+       Completions judged from the day after: 2 Aug (2 days to the 4th,
+       not judged), 5 Aug (23 days, judged, nothing), 29 Aug (2 days, not
+       judged) -> 1 completed and judged. Before the rule this row read
+       3 scored, 3 completed, nothing after any: a "dead lever" built on
+       two chases that never had their week. */
+    const book = Object.assign({}, data, { customers: data.customers.concat([
+      { id: 11, name: 'Okello', debt: 500000, debtLog: [] },
+      { id: 12, name: 'Nambi', debt: 500000, debtLog: [
+        { type: 'payment', amount: 150000, date: '2026-08-02', cashTxnId: 'T12' } ] },
+    ]) });
+    const chase = (id, d) => ({ date: d, status: 'done', body: { title: 'Chase ' + id, mkind: 'chase', subject: { customerId: id }, doneOn: d } });
+    const s = build([chase(11, '2026-08-01'), chase(11, '2026-08-04'), chase(11, '2026-08-28'),
+      chase(12, '2026-08-01'), chase(12, '2026-08-04'), chase(12, '2026-08-20')], { data: book });
+    const tr = await s.managerTrackRecord(TODAY);
+    const o = tr.rows.find((x) => String(x.id) === '11');
+    eq(JSON.stringify([o.times, o.scored, o.worked, o.cutShort, o.waiting, o.completedScored, o.completedObserved]),
+      JSON.stringify([3, 1, 0, 1, 1, 1, 0]), 'Okello: one miss judged, one cut short, one still waiting; one completion judged');
+    eq(s.trackRecordDeadLevers(tr).some((x) => String(x.id) === '11'), false,
+      'and not a dead lever: one judged completion is not three');
+    /* Nambi (12) paid 150,000 on 2 August, a day after the 1 August
+       chase that the 4th cut short: an event inside a short window still
+       counts. 4 Aug -> 20 Aug (16 days, nothing): a miss. 20 Aug -> today
+       (11 days, nothing): a miss. */
+    const n = tr.rows.find((x) => String(x.id) === '12');
+    eq(JSON.stringify([n.scored, n.worked, n.cutShort, n.waiting, n.money]), JSON.stringify([3, 1, 0, 0, 150000]),
+      'Nambi: a payment inside a short window counts as followed; the two full weeks are misses');
+
+    /* A restock of P2 from S1, whose measured lead is 10 days: each is
+       given 12. Advised 1, 12 and 20 August, nothing restocked:
+         1 Aug -> 12th: 11 < 12, cut short; 12th -> 20th: 8, cut short;
+         20th -> today: 11, waiting. Nothing judged.
+       With no measured lead the week stands, and all three are misses. */
+    const buy = (d) => ({ date: d, status: 'open', body: { title: 'Restock P2', mkind: 'buy', subject: { key: 'P2' } } });
+    const moves = [buy('2026-08-01'), buy('2026-08-12'), buy('2026-08-20')];
+    const lead = { supplierLeadTimes: () => [{ supplierId: 'S1', typical: true, days: 10 }],
+      mgrLineSupplier: (k) => (k === 'P2' ? { supplierId: 'S1' } : null) };
+    const led = (await build(moves, lead).managerTrackRecord(TODAY)).rows[0];
+    eq(JSON.stringify([led.scored, led.cutShort, led.waiting]), JSON.stringify([0, 2, 1]), 'a 10-day lead: each restock is given 12 days');
+    const unled = (await build(moves, { ...lead, supplierLeadTimes: () => [{ supplierId: 'S1', typical: false, days: 10 }] })
+      .managerTrackRecord(TODAY)).rows[0];
+    eq(JSON.stringify([unled.scored, unled.cutShort, unled.waiting]), JSON.stringify([3, 0, 0]), 'a lead from one delivery is not measured: the week stands');
+    const broke = await build(moves, { ...lead, supplierLeadTimes: () => { throw new Error('no deliveries read'); } }).managerTrackRecord(TODAY);
+    t.check(/supplier lead times could not be read — no deliveries read; a restock was given a week/.test(broke.windowError || ''),
+      'a lead time that cannot be read is named, and the week is used (got ' + broke.windowError + ')');
+    t.check(!('windowError' in tr), 'and a record that needed no lead time carries no such error');
   }
 
   /* ---------- 7. without the table, an empty record ------------------ */

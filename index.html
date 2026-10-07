@@ -128794,7 +128794,7 @@ function mgrCashWalkBuild(today, span, adjust){
     promisedIds.add(String(p.customerId));
     receipts.push({ date: clampDay(p.date), kind: 'promise', label: p.name + (p.whole ? ' — promised the balance' : ' — promised'),
       amount: Math.round(p.amount), line: 'expected', dept: 'finance', customerId: p.customerId,
-      source: 'they named ' + p.date + (p.brokenBefore ? ' · broke ' + p.brokenBefore + ' promise' + (p.brokenBefore === 1 ? '' : 's') + ' before' : '') });
+      source: 'they named ' + fmtShortDate(p.date) + (p.brokenBefore ? ' · broke ' + p.brokenBefore + ' promise' + (p.brokenBefore === 1 ? '' : 's') + ' before' : '') });
   });
   const lags = mgrMemo('chaseLags:' + today, ()=> mgrChaseLags(today));
   const debtOf = new Map((data.customers || []).map(c=> [String(c.id), Math.round(Number(c.debt) || 0)]));
@@ -128814,7 +128814,7 @@ function mgrCashWalkBuild(today, span, adjust){
       line: 'expected', dept: 'finance', customerId: l.customerId,
       basis: { k: l.k, n: l.n, lagDays: l.lagDays },
       source: 'paid within ' + (l.lagDays === 0 ? 'the same day' : l.lagDays + ' day' + (l.lagDays === 1 ? '' : 's'))
-        + ' of a chase in ' + l.k + ' of ' + l.n + (recent ? ' · chased ' + recent : ' · if chased today') });
+        + ' of a chase in ' + l.k + ' of ' + l.n + (recent ? ' · chased ' + fmtShortDate(recent) : ' · if chased today') });
   });
   const pattern = mgrMemo('trading:' + today + ':' + placedIds.slice().sort().join(','), ()=> mgrTradingPattern(today, placedIds));
   const knownDays = pattern.byWeekday.filter(w=> w.mean != null).length;
@@ -129007,6 +129007,27 @@ function mgrConfidence(move, ctx){
    sale paid at the till has no payments record and counts as paid that
    day. The Statements' "days to get paid" divides by all revenue and is
    left exactly as it is; this one is labelled as what it is. */
+/* WHAT OF A BALANCE IS OVER 60 DAYS OLD, charge by charge: the part of
+   each open charge still unpaid (customerOpenCharges, payments settling
+   the oldest first) where that charge is more than 60 days old. Never
+   the whole balance of a customer whose oldest charge happens to be --
+   a customer with one old invoice and one new one owes only the old one
+   "past 60 days". The same rule as the Brief's Cash to free
+   (mgrBriefOver60) and the customer statement's 61-90 / over-90 buckets;
+   the Debtors position strip also ages charge by charge. An undated
+   charge has no age and is never counted here. */
+function mgrChargesOver60(charges, today){
+  const day = String(today || todayISO()).slice(0, 10);
+  let amount = 0, oldest = null;
+  (charges || []).forEach(ch=>{
+    const rem = Number(ch && ch.remaining) || 0;
+    const d = String((ch && ch.date) || '').slice(0, 10);
+    if(!(rem > 0.5) || !/^\d{4}-\d{2}-\d{2}$/.test(d) || !(daysBetweenISO(d, day) > 60)) return;
+    amount += rem;
+    if(!oldest || d < oldest) oldest = d;
+  });
+  return { amount: Math.round(amount), oldest };
+}
 function mgrDebtorDays(today){
   const day = String(today || todayISO()).slice(0, 10);
   const WINDOW = 90;
@@ -129070,11 +129091,22 @@ function mgrHealthFactsBuild(c){
   const walk = c.walk || read('cash', ()=> mgrCashWalk({ today }));
   f.tightest = walk ? walk.tightest : undefined;
   f.cashOnHand = walk ? walk.opening : undefined;
+  /* Only the part of each balance that is itself over 60 days old
+     (mgrChargesOver60), so the Finance tile, the Brief's Cash to free
+     and the Debtors aging read one figure. count: customers with any. */
   f.debt60 = read('debt', ()=>{
     const all = collectableDebts();
-    const old = all.filter(d=> d.ageDays > 60);
-    return { amount: Math.round(old.reduce((n, d)=> n + d.debt, 0)), count: old.length,
-      total: Math.round(all.reduce((n, d)=> n + d.debt, 0)), oldest: old[0] ? { name: old[0].name, days: old[0].ageDays } : null };
+    const byId = new Map((data.customers || []).map(cu=> [String(cu.id), cu]));
+    const old = [];
+    all.forEach(d=>{
+      const cu = byId.get(String(d.id));
+      const o = cu ? mgrChargesOver60(customerOpenCharges(cu), today) : null;
+      if(o && o.amount > 0.5) old.push({ name: d.name, amount: o.amount, since: o.oldest });
+    });
+    old.sort((a, b)=> String(a.since).localeCompare(String(b.since)) || b.amount - a.amount);
+    return { amount: Math.round(old.reduce((n, d)=> n + d.amount, 0)), count: old.length,
+      total: Math.round(all.reduce((n, d)=> n + d.debt, 0)),
+      oldest: old[0] ? { name: old[0].name, days: daysBetweenISO(old[0].since, today) } : null };
   });
   f.bills = read('bills', ()=>{
     const open = credOpenInvoices();
@@ -129232,7 +129264,7 @@ const MGR_HEALTH_CHECKS = [
       if(!(d.total > 0.5) && !(f.debtorDays && f.debtorDays.creditSales > 0))
         return { pass: null, rule: 'nothing older than 60 days', source: 'Debtors', line: 'No credit sales on the books to judge' };
       return { pass: d.count === 0, figure: d.amount, unit: 'UGX', threshold: 0, rule: 'nothing older than 60 days',
-        source: 'Debtors — the oldest open charge', count: d.count,
+        source: 'Debtors — the part of each balance over 60 days old', count: d.count,
         line: d.count === 0 ? 'Nothing owed to you is older than 60 days'
           : mgrShortUGX(d.amount) + ' owed for more than 60 days, by ' + d.count + ' customer' + (d.count === 1 ? '' : 's') };
     } },
@@ -134390,11 +134422,46 @@ async function managerTrackRecord(todayISO_){
     by.set(key, cur);
   });
 
+  /* A MISS NEEDS A WHOLE WINDOW -- the Brief's hit rate's own rule
+     (mgrBriefHitRate), so the Brief, the Record and this record agree.
+     A chase or a payment is given a week (CHASE_WINDOW); a restock its
+     supplier's measured lead time and two days, or a week where the lead
+     is not measured. An occasion nothing has followed yet, whose time
+     has not run, is not judged: still WAITING when it is the latest, CUT
+     SHORT when the same advice came round before its time was up. An
+     event that did follow inside a short window still counts. */
+  let leads = null, windowError = null;
+  const leadBy = new Map();
+  const leadOf = (key)=>{
+    const k = String(key).replace(/::$/, '');
+    if(leadBy.has(k)) return leadBy.get(k);
+    let days = null;
+    try {
+      if(leads == null) leads = supplierLeadTimes(today);
+      const sup = mgrLineSupplier(k);
+      const lt = sup ? leads.find(l=> String(l.supplierId) === String(sup.supplierId)) : null;
+      days = lt && lt.typical && lt.days != null ? Number(lt.days) : null;
+    } catch(e){
+      if(!windowError){ windowError = 'supplier lead times could not be read — ' + ((e && e.message) || e) + '; a restock was given a week';
+        console.warn('Manager: track record —', windowError); }
+    }
+    leadBy.set(k, days);
+    return days;
+  };
+  const windowOf = (kind, body)=>{
+    if(kind !== 'buy') return CHASE_WINDOW;
+    const key = ((body || {}).subject || {}).key;
+    const lead = key == null ? null : leadOf(key);
+    return lead != null && lead >= 0 ? Math.round(lead) + 2 : CHASE_WINDOW;
+  };
+  /* [from, end): the whole days a move has had to be answered. */
+  const daysHad = (from, end)=> Math.max(0, Math.round((Date.parse(end) - Date.parse(from)) / 86400000)) || 0;
+
   const rows = [...by.values()].map(g=>{
     /* Oldest first, so each occasion can be closed at the next. */
     const occ = g.occasions.slice().sort((a, b)=> String(a.date).localeCompare(String(b.date)));
     const windowed = !!TRACK_WINDOWED[g.kind];
-    let worked = 0, money = 0, scored = 0, completedScored = 0, completedObserved = 0;
+    let worked = 0, money = 0, scored = 0, completedScored = 0, completedObserved = 0, waiting = 0, cutShort = 0;
     occ.forEach((o, i)=>{
       if(!windowed) return;
       /* The LAST occasion runs to today: it is still open, and closing
@@ -134402,15 +134469,21 @@ async function managerTrackRecord(todayISO_){
       const until = i + 1 < occ.length ? occ[i + 1].date : null;
       const out = deriveMoveOutcome({ date: o.date, status: o.status, body: o.body }, until);
       if(out.happened == null) return;
-      scored += 1;
+      const end = until || today;
+      const need = Math.max(1, windowOf(g.kind, o.body));
+      if(!out.happened && daysHad(o.date, end) < need){ if(until) cutShort += 1; else waiting += 1; }
+      else {
+        scored += 1;
+        if(out.happened) worked += 1;
+        money += Math.round(Number(out.money) || 0);
+      }
       const recorded = o.body && o.body.doneOn;
       if(o.status === 'done' && recorded && recorded >= o.date && (!until || recorded < until)){
         const afterDay = new Date(Date.parse(recorded) + 86400000).toISOString().slice(0,10);
         const afterCompletion = deriveMoveOutcome({ date: afterDay, status: o.status, body: o.body }, until);
-        if(afterCompletion.happened != null){ completedScored++; if(afterCompletion.happened) completedObserved++; }
+        if(afterCompletion.happened != null && (afterCompletion.happened || daysHad(afterDay, end) >= need)){
+          completedScored++; if(afterCompletion.happened) completedObserved++; }
       }
-      if(out.happened) worked += 1;
-      money += Math.round(Number(out.money) || 0);
     });
     /* A state kind is answered once, as it stands now -- never per
        occasion, because it would read as the same thing happening
@@ -134423,13 +134496,13 @@ async function managerTrackRecord(todayISO_){
       done: occ.filter(o=> o.status === 'done').length,
       skipped: occ.filter(o=> o.status === 'skipped').length,
       firstOn: occ[0].date, lastOn: occ[occ.length - 1].date,
-      windowed, scored, worked, completedScored, completedObserved, money: Math.round(money),
+      windowed, scored, worked, completedScored, completedObserved, waiting, cutShort, money: Math.round(money),
       ...(now ? { standsNow: now.derived } : {}) };
   }).filter(x=> x.times >= TRACK_MIN_TIMES)
     .sort((a, b)=> b.times - a.times || b.money - a.money);
 
   return { rows, movesRead: (r.data || []).length, since, unnamed,
-    minTimes: TRACK_MIN_TIMES, span: TRACK_MOVES_READ };
+    minTimes: TRACK_MIN_TIMES, span: TRACK_MOVES_READ, ...(windowError ? { windowError } : {}) };
 }
 
 /* WHAT THE RECORD ARGUES, in the owner's own words.
@@ -134477,6 +134550,9 @@ function trackRecordLine(row){
 function trackRecordDeadLevers(track){
   // Only dated completion records support a question about executed advice.
   // Even these are observations, not causal proof of an ineffective tactic.
+  // completedScored counts only completions judged after their WHOLE answer
+  // window (managerTrackRecord's rule, the Brief's hit rate's), so a chase
+  // still inside its week, or cut short by the next, is never a "no" here.
   return ((track && track.rows) || [])
     .filter(x=> x.windowed && x.completedScored >= TRACK_MIN_TIMES && x.completedObserved === 0)
     .sort((a, b)=> b.scored - a.scored);

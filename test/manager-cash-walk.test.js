@@ -37,7 +37,7 @@ const SOURCES = [
     'loanPeriodRate', 'loanFeePerInstallment', 'loanPeriodsPerYear', 'loanFrequency',
     'mgrDept', 'mgrPayday', 'mgrPaydayLabel', 'mgrOrdinal', 'mgrMedian', 'mgrPaydayDates', 'mgrWageEvents',
     'mgrPaydaySettles', 'mgrPaydaySettlesDefault', 'mgrPaydaySettlesLabel', 'mgrWageShares', 'mgrWageDueLate', 'dueIsOverdue',
-    'mgrCollectionsByDay', 'mgrChaseLags', 'mgrTradingPattern', 'mgrCashWalk', 'mgrCashWalkBuild'].map(fn),
+    'mgrCollectionsByDay', 'mgrChaseLags', 'mgrTradingPattern', 'mgrCashWalk', 'mgrCashWalkBuild', 'fmtShortDate'].map(fn),
   ...['PAY_BASES', 'WAGE_DAYS_PER_MONTH', 'WAGE_DAYS_PER_WEEK', 'CASH_NOT_OPEX', 'CASH_NOT_REVENUE', 'cashHas',
     'LOAN_FREQUENCIES', 'MGR_DEPTS', 'MGR_WEEKDAYS', 'MGR_DATED_CATEGORIES',
     'CHASE_WINDOW', 'CHASE_LOOKBACK', 'CHASE_MIN_CHASED', 'CHASE_MERGE'].map(decl),
@@ -284,6 +284,10 @@ const committedOn = (w, ds) => ds.map((d) => day(w, d).committed);
     'Okot on the day he named; Kato three days after a chase today, 600,000 (less than the 2,000,000 owed)');
   const kato = w.expectedReceipts.find((x) => x.kind === 'chase');
   t.check(kato.source === 'paid within 3 days of a chase in 3 of 4 · if chased today', 'and it says its basis, k of n');
+  /* The day a promise names is said as the app says a day, at the source
+     (fmtShortDate), never as a raw ISO date for each painter to reword. */
+  const okot = w.expectedReceipts.find((x) => x.kind === 'promise');
+  eq(okot.source, 'they named 12 Oct 2026 · broke 1 promise before', 'the promised day is a short date');
   /* Weekday averages over the eight weeks: Wednesday 8 × 1,000,000 ÷ 8
      = +1,000,000, Thursday 8 × −400,000 ÷ 8 = −400,000 (paying
      suppliers at the shop's pace), every other weekday 0; the Tuesday
@@ -307,6 +311,19 @@ const committedOn = (w, ds) => ds.map((d) => day(w, d).committed);
     'everything on the expected band is a receipt or a usual day');
   t.check(/average of the last 8/.test(w.method.expectedTrading) && /k of n/.test(w.method.expectedReceipts),
     'and the method is stated for both');
+}
+
+/* ---------- 3b. a chase already out is named by its day --------------- */
+{
+  /* Kato chased again on 5 October, two days ago, inside his 3-day lag,
+     and nothing paid since: he is expected on 8 October (5th + 3), and
+     the basis names the chase as a short date. */
+  const data = book();
+  data.presetChaseLog.push({ c: 'C1', d: '2026-10-05' });
+  const s = scope(data);
+  const kato = s.mgrCashWalk({ today: TODAY }).expectedReceipts.find((x) => x.kind === 'chase');
+  t.check(kato && kato.date === '2026-10-08' && / · chased 5 Oct 2026$/.test(kato.source),
+    'a chase two days ago: expected three days after it, and "chased 5 Oct 2026", not an ISO date (got ' + JSON.stringify(kato && [kato.date, kato.source]) + ')');
 }
 
 /* ---------- 4. a placed customer is not counted twice ----------------- */
