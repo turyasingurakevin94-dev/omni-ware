@@ -2486,10 +2486,16 @@
     font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
   .mgr-bed-x .mgr-x-cd.mgr-x-we b{color:var(--ow-ink-400);}
   .mgr-bed-x .mgr-x-ce{height:18px;display:grid;place-items:center;}
-  .mgr-bed-x .mgr-x-ce i,.mgr-bed-x .mgr-x-ev{min-width:17px;height:17px;padding:0 3px;box-sizing:border-box;border-radius:var(--ow-r-4);
+  .mgr-bed-x .mgr-x-ceb{all:unset;cursor:pointer;}
+  .mgr-bed-x .mgr-x-ceb,.mgr-bed-x .mgr-x-ev{min-width:17px;height:17px;padding:0 3px;box-sizing:border-box;border-radius:var(--ow-r-4);
     background:var(--ow-steel-950);color:var(--ow-paper);font-style:normal;font-size:10px;font-weight:var(--ow-fw-700);display:inline-grid;
     place-items:center;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;}
-  .mgr-bed-x .mgr-x-cl{font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);white-space:nowrap;line-height:1.25;min-width:0;}
+  .mgr-bed-x .mgr-x-ceb.mgr-x-on,.mgr-bed-x .mgr-x-ceb:focus-visible{outline:2px solid var(--ow-ink-900);outline-offset:2px;}
+  .mgr-bed-x .mgr-x-cdd{margin:var(--ow-sp-8) 0 0;font-size:var(--ow-t-12);color:var(--ow-ink-900);line-height:1.4;}
+  /* The row names stay pinned while the days slide, at every width. */
+  .mgr-bed-x .mgr-x-calw{position:relative;}
+  .mgr-bed-x .mgr-x-cl{font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);white-space:nowrap;line-height:1.25;min-width:0;
+    position:sticky;left:0;z-index:1;background:var(--ow-paper);align-self:stretch;display:flex;flex-direction:column;justify-content:center;}
   .mgr-bed-x .mgr-x-cl small{display:block;font-size:var(--ow-t-11);color:var(--ow-ink-600);font-weight:var(--ow-fw-500);}
   .mgr-bed-x .mgr-x-cl.mgr-x-ex{font-weight:var(--ow-fw-500);color:var(--ow-ink-600);padding-left:var(--ow-sp-10);}
   .mgr-bed-x .mgr-x-cc{height:30px;border-radius:var(--ow-r-4);display:grid;place-items:center;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
@@ -2561,11 +2567,17 @@
   .mgr-bed-x .mgr-x-ofs{display:flex;align-items:flex-end;}
   /* The phone's dock only -- on the desk the one action sits in the panel. */
   .mgr-bed-x .ow-bk.mgr-x-dock{display:none;}
+  /* What the choices add up to, and Sign it, stay in view beside the
+     levers while the owner moves one lower down. The panel lets it: a
+     clipping panel would hold a sticky column still. */
+  .mgr-bed-x .mgr-x-pan{overflow:visible;}
+  .mgr-bed-x .mgr-x-out{position:sticky;top:var(--ow-sp-16);align-self:start;}
   @media (max-width:1180px){
     .mgr-bed-x .mgr-x-hd{grid-template-columns:84px minmax(0,1fr);}
     .mgr-bed-x .mgr-x-hdr2{grid-column:1/-1;border-left:0;grid-template-columns:repeat(4,minmax(0,1fr));}
     .mgr-bed-x .mgr-x-top,.mgr-bed-x .mgr-x-b3{grid-template-columns:minmax(0,1fr);}
     .mgr-bed-x .mgr-x-levers{border-right:0;border-bottom:1px solid var(--ow-rule-soft);}
+    .mgr-bed-x .mgr-x-out{position:static;}
     .mgr-bed-x .mgr-x-b3 > div{border-left:0;border-top:1px solid var(--ow-rule-soft);}
     .mgr-bed-x .mgr-x-b3 > div:first-child{border-top:0;}
   }
@@ -2836,8 +2848,10 @@
     .mgr-bed-x .mgr-x-cal{padding:var(--ow-sp-12);}
     .mgr-bed-x .mgr-x-calh span{font-size:var(--ow-t-12);}
     .mgr-bed-x .mgr-x-calg{grid-template-columns:104px repeat(31,32px);min-width:0;width:max-content;}
-    .mgr-bed-x .mgr-x-cl{position:sticky;left:0;z-index:1;background:var(--ow-paper);align-self:stretch;display:flex;flex-direction:column;justify-content:center;
-      white-space:normal;padding-right:var(--ow-sp-4);}
+    .mgr-bed-x .mgr-x-cl{white-space:normal;padding-right:var(--ow-sp-4);}
+    .mgr-bed-x .mgr-x-ce{height:32px;}
+    .mgr-bed-x .mgr-x-ceb{min-width:28px;height:28px;font-size:var(--ow-t-11);}
+    .mgr-bed-x .mgr-x-cdd{font-size:var(--ow-t-13);}
     .mgr-bed-x .mgr-x-cl.mgr-x-ex{padding-left:var(--ow-sp-6);}
     .mgr-bed-x .mgr-x-cc{height:34px;font-size:var(--ow-t-11);}
     .mgr-bed-x .mgr-x-cc.mgr-x-ex{height:24px;}
@@ -135160,26 +135174,37 @@ function mgrPaintMap(){
                           all from the plan's supplier, or   rankedPurchaseRowsAtQty,
                           half from the next one             purchasePriceAtQty, the
                                                              supplier's credit days
-     loan      OFFER      an offer the owner wrote down      mgrOffers, loanSchedule
+     Rn        SEASON     last year's extra buying, placed   mgrSimSeason over the
+                          when last year's weeks come or a   cash log (a year and
+                          week ahead -- shown only with a    eight weeks of books)
+                          year of books
+     loan      OFFER      a BANK's offer the owner wrote     mgrOffers, loanSchedule
+                          down; a supplier's is shown,
+                          priced, and cannot be taken: its
+                          credit is goods, not cash in hand
+     clear     CLEAR      dead stock at the owner's own      deadStockRows, clearanceFor
+                          clearance prices, or at cost --    (consigned lines owe their
+                          the price arithmetic is the        consignor); how much
+                          books'; how much sells is the      sells is assumed
+                          owner's assumption
      --- your assumption ---
-     clear     CLEAR      dead stock at the owner's own      deadStockRows; how much
-                          clearance prices, or at cost       sells is assumed
      price     PRICE      the line sold furthest under its   marketVerdict, waSalesByKey;
                           cheapest rival, stepped to it      the volume is assumed
      cement    DISCOUNTS  counter discounts, or none         invoice discounts, 30 days;
                                                              the volume is assumed
      terms     TERMS      credit terms the shop already      mgrDebtorDays, customers'
-                          gives, shorter than today's        termsDays; sales lost are
-                          debtor days                        assumed
+                          gives that would free money: only  termsDays, the debt over
+                          debt under 60 days old can move    60 days (mgrHealthFacts);
+                          onto new terms                     sales lost are assumed
      loader    HIRE       one more on the payroll, paid as   staffOnPayroll, the payday;
                           the cheapest salary is             what it brings is assumed
      joan      QUOTE      the counter staff quoting too      managerGrowthBaseline's
                                                              quotes won; the lift is assumed
      bcast     POST       a WhatsApp post today              waPostOutcomes: the median
                                                              and quartiles of past posts
-   A lever whose subject is not on the books is not shown. There is no
-   seasonal lever: the season enters as a stress test, and only once the
-   books hold a year. */
+   A lever whose subject is not on the books is not shown. The season is
+   a lever and a stress test, and only once the books hold a year and the
+   eight weeks before it (the usual pace it is measured against). */
 
 /* ---- What the Simulator alone draws with ---- */
 
@@ -135278,7 +135303,7 @@ function mgrSimBooksBuild(day){
   const errors = [];
   const read = (name, fn)=>{
     try { return fn(); }
-    catch(e){ errors.push(name); console.warn('Manager simulator: ' + name + ' could not be read —', e && e.message); return null; }
+    catch(e){ if(!errors.includes(name)) errors.push(name); console.warn('Manager simulator: ' + name + ' could not be read —', e && e.message); return null; }
   };
   const to = anShiftDate(day, 30);
   const walk = read('cash', ()=> mgrCashWalk({ today: day }));
@@ -135305,6 +135330,8 @@ function mgrSimBooksBuild(day){
   books.debtorDays = facts.debtorDays || read('debtorDays', ()=> mgrDebtorDays(day));
   books.daysOfStock = facts.daysOfStock || read('daysOfStock', ()=> mgrDaysOfStock(day));
   books.deadStock = facts.deadStock || null;
+  /* What customers owe over 60 days old: shorter terms cannot reach it. */
+  books.debt60 = facts.debt60 || null;
   /* The aims the health checks hold these two to. */
   books.aims = read('aims', ()=>{
     const h = mgrHealthChecks();
@@ -135331,9 +135358,14 @@ function mgrSimBooksBuild(day){
   books.clearance = read('clearance', ()=>{
     const rows = deadStockRows(day);
     if(!rows.length) return null;
+    /* Each line priced by clearanceFor -- at the owner's clearance
+       price, and at cost -- so a consigned line carries what it owes its
+       consignor, as the Inventory screen's clearance says. */
     return { quietDays: deadStockQuietDays(), value: Math.round(rows.reduce((n, r)=> n + r.value, 0)),
       lines: rows.map(r=> ({ key: r.key, line: lineName(r.key), qty: r.qty, unitCost: r.unitCost, costKnown: r.costKnown,
-        value: r.value, clearance: r.clearance })) };
+        value: r.value, clearance: r.clearance,
+        atSet: r.clearance > 0 ? clearanceFor(r, r.clearance) : null,
+        atCost: r.costKnown && r.unitCost > 0 ? clearanceFor(r, r.unitCost) : null })) };
   });
   books.price = read('price', ()=>{
     const r = marketVerdict(day).lift[0];
@@ -135352,26 +135384,16 @@ function mgrSimBooksBuild(day){
   books.terms = read('terms', ()=>{
     const dd = books.debtorDays;
     if(!dd || dd.days == null || !(dd.creditPerDay > 0)) return null;
-    const used = [...new Set((data.customers || []).map(c=> Number(c.termsDays)).filter(n=> Number.isFinite(n) && n > 0))]
-      .sort((a, b)=> b - a);
-    const options = used.filter(n=> n < Math.round(dd.days)).slice(0, 2);
-    if(!options.length) return null;
-    return { days: dd.days, receivables: dd.receivables, creditPerDay: dd.creditPerDay, creditSales: dd.creditSales,
-      windowDays: dd.windowDays, options };
+    if(!books.debt60) throw new Error('the age of what customers owe could not be read');
+    return mgrSimTermsFact(dd, books.debt60, data.customers || []);
   });
   books.hire = read('hire', ()=>{
     const paid = staffOnPayroll().map(s=> ({ s, cost: basisMonthCost(s.payBasis, s.payRate) }))
       .filter(x=> x.cost > 0).sort((a, b)=> a.cost - b.cost);
     if(!paid.length) return null;
     const payday = mgrPayday();
-    const paydays = [];
-    for(let i = 0; i <= 2; i++){
-      const period = periodShift(periodOf(day), i);
-      mgrPaydayDates(period, payday, null).forEach(d=>{ if(d > day && d <= to && !paydays.includes(d)) paydays.push(d); });
-    }
     return { name: paid[0].s.name || 'Staff member', cost: Math.round(paid[0].cost), staff: (data.staff || []).length,
-      paydays: paydays.sort(), monthDays: paydays.map(d=> Number(periodEndDate(periodOf(d)).slice(8, 10))),
-      paydayLabel: mgrPaydayLabel(payday) };
+      payday, paydayLabel: mgrPaydayLabel(payday) };
   });
   books.quote = read('quote', ()=>{
     const q = (managerGrowthBaseline() || {}).quotes;
@@ -135405,7 +135427,8 @@ function mgrSimBooksBuild(day){
    Needs a year of books and the eight weeks before it. */
 function mgrSimSeason(day, booksStart, txns){
   const lyFrom = anShiftDate(day, -364);
-  if(!booksStart || booksStart > anShiftDate(lyFrom, -56)) return { available: false };
+  const needs = anShiftDate(lyFrom, -56);
+  if(!booksStart || booksStart > needs) return { available: false, booksStart: booksStart || null, needs };
   const buy = new Map();
   (txns || []).forEach(t=>{
     if(!t || !t.date || !cashIsMoneyOut(t)) return;
@@ -135425,6 +135448,26 @@ function mgrSimSeason(day, booksStart, txns){
   return { available: true, lyFrom, usualDay: Math.round(usual), weeks,
     extra: hot.reduce((n, w)=> n + w.extra, 0), from: hot.length ? hot[0].from : null,
     to: hot.length ? anShiftDate(hot[hot.length - 1].from, 6) : null };
+}
+/* SHORTER CREDIT TERMS, ON WHAT THEY CAN REACH. mgrDebtorDays' own
+   figures: what customers owe over credit sales a day. Debt over 60 days
+   old (mgrHealthFacts' debt60) is stalled -- new terms do not collect
+   it -- so only the YOUNG debt can move: at N-day terms the young debt
+   would be credit sales a day × N, and what it holds above that is what
+   the terms free, if customers keep to them. The options are the terms
+   the shop already gives, longest first, that would free anything at
+   all; two at most. Null when none would. */
+function mgrSimTermsFact(dd, debt60, customers){
+  const old = Math.max(0, Math.round(Number(debt60 && debt60.amount) || 0));
+  const young = Math.max(0, Math.round(dd.receivables - old));
+  const freedAt = (n)=> Math.max(0, Math.round(young - dd.creditPerDay * n));
+  const used = [...new Set((customers || []).map(c=> Number(c.termsDays)).filter(n=> Number.isFinite(n) && n > 0))]
+    .sort((a, b)=> b - a);
+  const options = used.filter(n=> n < Math.round(dd.days) && freedAt(n) > 0).slice(0, 2);
+  if(!options.length) return null;
+  return { days: dd.days, receivables: dd.receivables, old, oldCount: (debt60 && debt60.count) || 0, young,
+    creditPerDay: dd.creditPerDay, creditSales: dd.creditSales, windowDays: dd.windowDays, options,
+    freed: options.map(n=> freedAt(n)) };
 }
 /* A buy on today's plan, costed the way the buying plan costs it: the
    plan's own supplier at the plan's quantity, and -- for the split -- half
@@ -135464,16 +135507,20 @@ function mgrSimOrderFact(key, day){
 function mgrSimOfferFact(o, day){
   const amount = Math.round(Number(o && o.amount) || 0);
   const priced = amount > 0 && o.rate != null && Number(o.termMonths) > 0;
-  let interestYear = null, instalment = null;
+  let interestYear = null, instalment = null, interestMonth = null;
   if(priced){
     const rows = loanSchedule({ principal: amount, ratePct: Number(o.rate), termMonths: Math.round(Number(o.termMonths)), startedOn: day });
     const yearEnd = anShiftDate(day, 365);
     interestYear = Math.round(rows.filter(r=> r.date <= yearEnd).reduce((n, r)=> n + (Number(r.interest) || 0), 0));
     instalment = rows[0] ? Math.round(rows[0].payment) : null;
+    /* A month's cost is the first month's interest, the schedule's own --
+       not a year's interest over twelve, which understates a loan
+       shorter than a year. */
+    interestMonth = rows[0] ? Math.round(Number(rows[0].interest) || 0) : 0;
   }
   return { id: o.id, from: o.from, name: o.name || (o.from === 'bank' ? 'The bank' : 'A supplier'), amount,
     rate: o.rate, termMonths: o.termMonths, expiresOn: o.expiresOn || null, daysLeft: o.daysLeft, note: o.note || '',
-    priced, interestYear, instalment };
+    priced, interestYear, instalment, interestMonth };
 }
 
 /* ---- THE LEVERS ----------------------------------------------------
@@ -135515,6 +135562,7 @@ function mgrSimLevers(books, extra){
   bills.filter(x=> x.dueOn && x.dueOn >= b.today && x.dueOn <= b.to).sort((p, q)=> q.due - p.due).forEach(x=> pick(x, {}));
   picked.forEach(p=> add(mgrSimBillLever(b, p.bill, p.reason, moves, receipts)));
   (x.orders || []).forEach(o=> add(mgrSimOrderLever(b, o)));
+  add(mgrSimSeasonLever(b));
   add(mgrSimOfferLever(b, x.offers || []));
   add(mgrSimClearLever(b));
   add(mgrSimPriceLever(b));
@@ -135580,7 +135628,7 @@ function mgrSimBillLever(b, bill, reason, moves, receipts){
   if(!r) r = receipts.slice().sort((p, q)=> q.amount - p.amount)[0] || null;
   if(r && (!lineDate || r.date > lineDate)){
     const pips = r.kind === 'chase' ? mgrPipsFromRate(r.k, r.n) : null;
-    opts.push({ id: 'after:' + r.customerId, label: 'After ' + r.name.split(/\s+/)[0] + ' pays', after: r.customerId, date: r.date,
+    opts.push({ id: 'after:' + r.customerId, label: 'After ' + r.name.split(/\s+/)[0] + ' pays', after: r.customerId, date: r.date, who: r.name,
       hint: r.name + '\'s ' + mgrSimMoney(r.amount) + ' lands ' + mgrSimDay(r.date) + ' first'
         + (r.kind === 'chase' ? ' (' + r.k + ' of ' + r.n + ' chases)' : ' (the day they named' + (r.brokenBefore ? '; broke ' + r.brokenBefore + ' before' : '') + ')')
         + (past(r.date) ? ' — past ' + bill.supplier + '\'s ' + bill.stopAt + '-day limit' : ''),
@@ -135595,7 +135643,7 @@ function mgrSimBillLever(b, bill, reason, moves, receipts){
   }
   return { id: 'bill:' + bill.billId, kind: 'bill', dept: 'procurement', group: 'books',
     label: bill.supplier + ' bill · ' + mgrSimMoney(bill.due), short: bill.supplier + '\'s bill', def: 'as',
-    subject: { supplierId: bill.supplierId, billId: bill.billId }, stop, opts, assume: null,
+    subject: { supplierId: bill.supplierId, billId: bill.billId }, stop, stopWho: bill.supplier, stopAt: bill.stopAt, opts, assume: null,
     effect: (o)=>{
       if(o === 'today') return { bills: [{ billId: bill.billId, to: b.today }] };
       if(o === 'week') return { bills: [{ billId: bill.billId, to: anShiftDate(lineDate, 7) }] };
@@ -135605,18 +135653,23 @@ function mgrSimBillLever(b, bill, reason, moves, receipts){
     } };
 }
 /* When an order's bill would be paid: delivery, then the supplier's
-   credit. Null when the credit days are not written on the supplier. */
+   credit. With no credit days written on the supplier it is counted on
+   delivery -- the earliest it could be asked for, never left off the
+   line -- and with no delivery time either, today. */
 function mgrSimPayDay(today, t){
-  if(!t || t.credit == null) return null;
-  return anShiftDate(today, (t.lead || 0) + t.credit);
+  return anShiftDate(today, ((t && t.lead) || 0) + (t && t.credit != null ? t.credit : 0));
 }
 function mgrSimOrderLever(b, o){
   if(!o || o.none || !(o.cost > 0)) return null;
   const unit = String(o.unit || '').toLowerCase();
   const qty = o.qty + (unit ? ' ' + unit + (o.qty === 1 || /s$/.test(unit) ? '' : 's') : '');
-  const when = (t, sup)=> t.credit == null ? 'its bill carries no day — ' + sup + '\'s credit days are not written down'
-    : 'paid ' + mgrSimDay(mgrSimPayDay(b.today, t)) + ' (' + (t.lead == null ? 'delivery not measured' : t.lead + '-day delivery') + ', ' + t.credit + ' days\' credit)';
-  const pay = (t, amount, sup)=>{ const d = mgrSimPayDay(b.today, t); return d ? [{ date: d, amount: -amount, label: sup + ' — order', dept: 'procurement' }] : []; };
+  const lead = (t)=> t.lead == null ? 'delivery not measured' : t.lead + '-day delivery';
+  const when = (t, sup)=> t.credit == null
+    ? 'counted on delivery, ' + mgrSimDay(mgrSimPayDay(b.today, t)) + ' — ' + mgrPossessive(sup) + ' credit days are not written down'
+      + (t.lead == null ? ', nor its delivery time' : '')
+    : 'paid ' + mgrSimDay(mgrSimPayDay(b.today, t)) + ' (' + lead(t) + ', ' + t.credit + ' days\' credit)';
+  const pay = (t, amount, sup)=> [{ date: mgrSimPayDay(b.today, t), amount: -amount,
+    label: sup + ' — order' + (t.credit == null ? ' (credit days not written — counted on delivery)' : ''), dept: 'procurement' }];
   const opts = [
     { id: 'none', label: 'Not now', hint: 'on today\'s plan · not on the cash line until it is ordered', pips: 5, basis: 'the buying plan', say: o.name + ' not ordered yet' },
     { id: 'a', label: 'All from ' + o.supplier.split(/\s+/)[0], hint: mgrSimMoney(o.cost) + ' for ' + qty + ' · ' + when(o.a, o.supplier),
@@ -135642,55 +135695,109 @@ function mgrSimOrderLever(b, o){
       return {};
     } };
 }
+/* THE SEASON'S BUYING, from last year's books (mgrSimSeason): each week
+   last year that took more buying than usual, its extra placed on the
+   committed line on the first day of the same week this year (52 weeks
+   on) -- or a week ahead of it -- as money the owner would commit to
+   stock. Not counted is the books as they stand: nothing is ordered for
+   it yet. Shown only with a year of books and a busy week in it. */
+function mgrSimSeasonOut(b, se, ahead){
+  const out = [];
+  se.weeks.filter(w=> w.extra > 0).forEach(w=>{
+    let d = anShiftDate(w.from, 364 - ahead);
+    if(d < b.today) d = b.today;
+    if(d <= b.to) out.push({ date: d, amount: -w.extra, label: 'Season’s buying, as last year', dept: 'procurement' });
+  });
+  return out;
+}
+function mgrSimSeasonLever(b){
+  const se = b.season;
+  if(!se || !se.available || !(se.extra > 0)) return null;
+  const from = (ahead)=>{ const d = anShiftDate(se.from, 364 - ahead); return d < b.today ? b.today : d; };
+  const inside = (ahead)=> mgrSimSeasonOut(b, se, ahead).reduce((n, x)=> n - x.amount, 0);
+  const last = 'last year ' + mgrSimDate(se.from) + '–' + mgrSimDate(se.to) + ' took ' + mgrSimMoney(se.extra) + ' more buying than usual';
+  const opts = [{ id: 'off', label: 'Not counted', hint: last + ' · nothing is ordered for it yet', say: 'the season’s buying not counted' },
+    { id: 'ly', label: 'When last year’s weeks come', hint: mgrSimMoney(inside(0)) + ' from ' + mgrSimDay(from(0)) + ' · ' + last,
+      basis: 'last year’s buying', say: 'the season’s buying as last year' },
+    { id: 'early', label: 'A week ahead', hint: mgrSimMoney(inside(7)) + ' from ' + mgrSimDay(from(7)) + ' · ' + last,
+      basis: 'last year’s buying', say: 'the season’s buying a week ahead' }];
+  return { id: 'season', kind: 'season', dept: 'procurement', group: 'books', label: 'Season’s buying · ' + mgrSimMoney(se.extra) + ' as last year',
+    short: 'the season’s buying', def: 'off', subject: {}, opts, assume: null,
+    effect: (op)=>{
+      if(op !== 'ly' && op !== 'early') return {};
+      const out = mgrSimSeasonOut(b, se, op === 'early' ? 7 : 0);
+      return { out, stock: out.reduce((n, x)=> n - x.amount, 0) };
+    } };
+}
 function mgrSimOfferLever(b, offers){
   const list = (offers || []).filter(o=> o && o.amount > 0).slice(0, 3);
   if(!list.length) return null;
   const first = list[0];
   const ends = first.expiresOn ? 'offer ends ' + mgrSimDay(first.expiresOn) + (first.daysLeft != null ? ' · ' + first.daysLeft + ' day' + (first.daysLeft === 1 ? '' : 's') + ' left' : '') : 'no end date written down';
   const opts = [{ id: 'decline', label: 'Decline', hint: ends, pips: 5, basis: 'the terms you wrote down', say: 'offers declined' }];
-  list.forEach(o=> opts.push({ id: 'take:' + o.id, label: list.length > 1 ? 'Take ' + mgrPossessive(o.name.split(/\s+/)[0]) : 'Accept',
-    disabled: !o.priced,
-    hint: o.priced ? mgrSimMoney(o.interestYear) + ' a year in interest · ' + mgrSimMoney(o.instalment) + ' a month' + (o.from === 'supplier' ? ' · on credit, not cash in hand' : '')
-      : 'write down its rate and term to price it',
-    pips: 5, basis: 'the terms you wrote down', say: o.name + '\'s ' + mgrSimMoney(o.amount) + ' taken' }));
+  /* A BANK's offer is money in hand: taken, it lands on the committed
+     line today and its instalments follow on their days. A SUPPLIER's
+     offer is credit on goods -- it brings no cash, and the goods it pays
+     for are not on this line -- so it is priced here but cannot be taken
+     as cash. */
+  list.forEach(o=>{
+    const sup = o.from === 'supplier';
+    const cost = o.priced ? mgrSimMoney(o.interestYear) + ' a year in interest · ' + mgrSimMoney(o.instalment) + ' a month' : null;
+    opts.push({ id: 'take:' + o.id, label: list.length > 1 ? 'Take ' + mgrPossessive(o.name.split(/\s+/)[0]) : 'Accept',
+      disabled: !o.priced || sup,
+      hint: !o.priced ? 'write down its rate and term to price it'
+        : sup ? cost + ' · a supplier’s credit is goods, not cash in hand, so it is not run on the cash line' : cost,
+      pips: 5, basis: 'the terms you wrote down', say: o.name + '\'s ' + mgrSimMoney(o.amount) + ' taken' });
+  });
   return { id: 'offer', kind: 'offer', dept: 'finance', group: 'books',
     label: list.length > 1 ? 'Offers on the table' : first.name + '\'s ' + mgrSimMoney(first.amount), short: 'the offer', def: 'decline',
     subject: {}, opts, assume: null, offers: list,
     effect: (op)=>{
       const o = list.find(z=> 'take:' + z.id === op);
-      if(!o || !o.priced) return {};
+      if(!o || !o.priced || o.from === 'supplier') return {};
       return { loan: { amount: o.amount, on: b.today, ratePct: Number(o.rate), termMonths: Math.round(Number(o.termMonths)), lender: o.name },
-        profit: -Math.round(o.interestYear / 12), interest: o.interestYear };
+        profit: -(o.interestMonth || 0), interest: o.interestYear };
     } };
 }
 function mgrSimClearLever(b){
   const c = b.clearance;
   if(!c || !c.lines.length) return null;
-  const set = c.lines.filter(l=> l.clearance > 0 && l.costKnown);
-  const known = c.lines.filter(l=> l.costKnown && l.unitCost > 0);
+  /* Each line as clearanceFor prices it (b.clearance): what it raises
+     and what it cost. On a consigned line sold under what its consignor
+     is owed, the part of that loss that comes out of the owner's own
+     pocket is named (it is inside the under-cost figure, not added to
+     it). The price arithmetic is the books'; how much of it sells is
+     the owner's assumption. */
+  const set = c.lines.filter(l=> l.atSet && l.atSet.cost != null);
+  const known = c.lines.filter(l=> l.atCost && l.atCost.cost != null);
   if(!set.length && !known.length) return null;
   const sum = (rows, f)=> rows.reduce((n, l)=> n + f(l), 0);
-  const priced = { set: { rows: set, price: (l)=> l.clearance }, cost: { rows: known, price: (l)=> l.unitCost } };
+  const priced = { set: { rows: set, at: (l)=> l.atSet }, cost: { rows: known, at: (l)=> l.atCost } };
+  const owes = (p)=> sum(p.rows, (l)=> p.at(l).owesConsignor || 0);
+  const owesSay = (p)=> owes(p) > 0 ? ' · ' + mgrSimMoney(owes(p)) + ' of what it owes its consignor comes out of your pocket' : '';
   const sd = b.daysOfStock && b.daysOfStock.days != null ? Math.round(b.daysOfStock.days) + ' stock days' : 'stock days not known';
   const opts = [{ id: 'leave', label: 'Leave it', hint: c.lines.length + ' line' + (c.lines.length === 1 ? '' : 's') + ' unsold in ' + c.quietDays + ' days · ' + sd, say: 'dead stock left' }];
   if(set.length){
-    const kept = sum(set, (l)=> (l.clearance - l.unitCost) * l.qty);
+    const kept = sum(set, (l)=> l.atSet.kept * l.qty);
     opts.push({ id: 'set', label: 'At your clearance price' + (set.length === 1 ? '' : 's'),
-      hint: set.length + ' line' + (set.length === 1 ? '' : 's') + ' priced · ' + mgrSimMoney(sum(set, (l)=> l.clearance * l.qty)) + ' if it all sells, '
-        + (kept < 0 ? mgrSimMoney(-kept) + ' under what it cost' : mgrSimMoney(kept) + ' over cost'), say: 'dead stock cleared at your prices' });
+      hint: set.length + ' line' + (set.length === 1 ? '' : 's') + ' priced · ' + mgrSimMoney(sum(set, (l)=> l.atSet.raises)) + ' if it all sells, '
+        + (kept < 0 ? mgrSimMoney(-kept) + ' under what it cost' : mgrSimMoney(kept) + ' over cost') + owesSay(priced.set),
+      pips: 5, basis: 'your clearance prices', say: 'dead stock cleared at your prices' });
   }
-  if(known.length) opts.push({ id: 'cost', label: 'At cost', hint: mgrSimMoney(sum(known, (l)=> l.unitCost * l.qty)) + ' back off the shelf if it all sells · no loss', say: 'dead stock cleared at cost' });
-  return { id: 'clear', kind: 'clear', dept: 'store', group: 'assumption', label: 'Dead stock · ' + mgrSimMoney(c.value), short: 'the clearance',
+  if(known.length) opts.push({ id: 'cost', label: 'At cost', hint: mgrSimMoney(sum(known, (l)=> l.atCost.raises)) + ' back off the shelf if it all sells · '
+    + (owes(priced.cost) > 0 ? 'no loss on your own stock' + owesSay(priced.cost) : 'no loss'),
+    pips: 5, basis: 'what it cost', say: 'dead stock cleared at cost' });
+  return { id: 'clear', kind: 'clear', dept: 'store', group: 'books', label: 'Dead stock · ' + mgrSimMoney(c.value), short: 'the clearance',
     def: 'leave', subject: {}, opts, lineKeys: c.lines.map(l=> String(l.key)), setKeys: set.map(l=> String(l.key)),
     assume: { ...MGR_SIM_ASSUME.clear, basis: 'nothing on your books says how much of it would sell' },
     effect: (op, x)=>{
       const p = priced[op];
       if(!p) return {};
       const st = Math.max(0, Math.min(100, Number(x) || 0)) / 100;
-      const raise = sum(p.rows, (l)=> p.price(l) * l.qty) * st;
-      const cost = sum(p.rows, (l)=> l.unitCost * l.qty) * st;
+      const raise = sum(p.rows, (l)=> p.at(l).raises) * st;
+      const cost = sum(p.rows, (l)=> p.at(l).cost * l.qty) * st;
       return { exp: mgrSimSpread(b.today, raise, 1, 30, 'Clearance sales', 'store'), profit: Math.round(raise - cost),
-        stock: -Math.round(cost), dead: -Math.round(cost), freed: Math.round(raise), sales: Math.round(raise) };
+        stock: -Math.round(cost), dead: -Math.round(cost), clearIn: Math.round(raise), sales: Math.round(raise) };
     } };
 }
 function mgrSimPriceLever(b){
@@ -135740,11 +135847,12 @@ function mgrSimDiscountLever(b){
 function mgrSimTermsLever(b){
   const t = b.terms;
   if(!t) return null;
-  const freedAt = (n)=> Math.max(0, Math.round(t.receivables - t.creditPerDay * n));
+  const freedAt = (n)=> t.freed[t.options.indexOf(n)];
   const month = t.creditPerDay * 30;
-  const opts = [{ id: 'now', label: 'As now', hint: 'today ' + Math.round(t.days) + ' days on credit sales', say: 'credit as now' }];
+  const old = t.old > 0 ? ' · ' + mgrSimMoney(t.old) + ' over 60 days old stays where it is' : '';
+  const opts = [{ id: 'now', label: 'As now', hint: 'today ' + Math.round(t.days) + ' days on credit sales' + old, say: 'credit as now' }];
   t.options.forEach(n=> opts.push({ id: 't' + n, label: n + ' days', days: n,
-    hint: 'frees ' + mgrSimMoney(freedAt(n)) + ' over 60 days if customers keep to it', say: n + '-day terms' }));
+    hint: 'frees ' + mgrSimMoney(freedAt(n)) + ' over 60 days if customers keep to it' + old, say: n + '-day terms' }));
   return { id: 'terms', kind: 'terms', dept: 'finance', group: 'assumption', label: 'Credit terms', short: 'the credit terms', def: 'now',
     subject: {}, opts,
     assume: { ...MGR_SIM_ASSUME.terms, basis: mgrSimMoney(month) + ' of credit sales a month; what shorter terms would lose is not on your books' },
@@ -135753,23 +135861,41 @@ function mgrSimTermsLever(b){
       if(!o || !o.days) return {};
       /* Freed over 60 days as customers move onto the shorter terms,
          evenly -- so half of it inside these 30 -- on the expected band:
-         it is money owed, not money in hand. */
+         it is money owed, not money in hand. DEBTOR DAYS, recomputed the
+         way mgrDebtorDays reads them: what is still owed at the end of
+         these 30 days (less the half freed inside them) over credit sales
+         a day, which the assumed lost share shrinks. */
       const freed = freedAt(o.days);
-      const lost = Math.round(month * Math.min(0, Number(x) || 0) / 100);
+      const share = Math.min(0, Number(x) || 0) / 100;
+      const lost = Math.round(month * share);
       const margin = b.marginPct == null ? 0 : b.marginPct;
-      return { dd: o.days, freed, sales: lost, profit: Math.round(lost * margin),
-        exp: mgrSimSpread(b.today, freed / 2, 1, 30, o.days + '-day terms', 'finance') };
+      return { dd: { owed: Math.round(t.receivables - freed / 2), perDay: t.creditPerDay * (1 + share) }, freed, sales: lost,
+        profit: Math.round(lost * margin), exp: mgrSimSpread(b.today, freed / 2, 1, 30, o.days + '-day terms', 'finance') };
     } };
 }
-/* The hire's pay on each payday inside the window, for the days worked
-   since the one before (or since today). */
-function mgrSimHirePay(today, h){
-  let prev = today;
-  return (h.paydays || []).map((d, i)=>{
-    const amt = Math.round(h.cost * Math.max(0, daysBetweenISO(prev, d)) / (h.monthDays[i] || 30));
-    prev = d;
-    return { date: d, amount: -amt, label: 'New hire — pay', dept: 'people' };
-  }).filter(p=> p.amount < 0);
+/* A NEW HIRE'S PAY on each payday inside the window, the walk's own rule
+   for dating wages: each payday pays the month it settles
+   (mgrPaydayDates over mgrPaydaySettles). A month the hire works only
+   part of is paid for the days worked in it, from today to the month's
+   end, inclusive; a weekly payroll splits that evenly over the month's
+   paydays from the first day worked. No payday: month end. */
+function mgrSimHirePay(today, to, cost, payday){
+  const out = [];
+  for(let i = -1; i <= 2; i++){
+    const period = periodShift(periodOf(today), i);
+    const end = periodEndDate(period);
+    if(end < today) continue;
+    const first = period + '-01' < today ? today : period + '-01';
+    const worked = daysBetweenISO(first, end) + 1, inMonth = Number(end.slice(8, 10));
+    const amount = Math.round(cost * worked / inMonth);
+    const days = mgrPaydayDates(period, payday, null).filter(d=> !(payday && payday.kind === 'weekly') || d >= first);
+    const each = days.length ? Math.floor(amount / days.length) : 0;
+    days.forEach((d, k)=>{
+      const amt = k === days.length - 1 ? amount - each * (days.length - 1) : each;
+      if(d > today && d <= to && amt > 0) out.push({ date: d, amount: -amt, label: 'New hire — pay', dept: 'people' });
+    });
+  }
+  return out.sort((a, b)=> a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
 }
 function mgrSimHireLever(b){
   const h = b.hire;
@@ -135780,7 +135906,7 @@ function mgrSimHireLever(b){
       { id: 'yes', label: 'Hire', hint: 'paid as ' + h.name + ' is, on ' + h.paydayLabel, say: 'one more on the payroll' }],
     assume: { label: 'What it brings a month', unit: 'UGX', value: h.cost, lo: 0, hi: h.cost * 2, min: 0, max: h.cost * 100,
       basis: 'it pays for itself, between nothing and twice its cost — your books cannot say what one more pair of hands earns' },
-    effect: (op, x)=> op === 'yes' ? { out: mgrSimHirePay(b.today, h), profit: Math.round((Number(x) || 0) - h.cost) } : {} };
+    effect: (op, x)=> op === 'yes' ? { out: mgrSimHirePay(b.today, b.to, h.cost, h.payday), profit: Math.round((Number(x) || 0) - h.cost) } : {} };
 }
 function mgrSimQuoteLever(b){
   const q = b.quote;
@@ -135834,7 +135960,7 @@ function mgrSimAssumeOf(l, assume){
 }
 function mgrSimCompose(levers, choice, assume){
   const c = { adjust: { bills: [], oneOff: [] }, exp: [], moves: [], profit: 0, lo: 0, hi: 0, dd: null, stock: 0, dead: 0,
-    freed: 0, interest: 0, sales: 0, changed: [], assumed: 0, price: null };
+    freed: 0, clearIn: 0, interest: 0, sales: 0, changed: [], assumed: 0, price: null };
   (levers || []).forEach(l=>{
     const o = mgrSimChoiceOf(l, choice);
     if(o === l.def) return;
@@ -135852,7 +135978,7 @@ function mgrSimCompose(levers, choice, assume){
       c.lo += Math.min(...ps); c.hi += Math.max(...ps); c.assumed++;
     } else { c.lo += p; c.hi += p; }
     if(e.dd != null) c.dd = e.dd;
-    c.stock += Number(e.stock) || 0; c.dead += Number(e.dead) || 0; c.freed += Number(e.freed) || 0;
+    c.stock += Number(e.stock) || 0; c.dead += Number(e.dead) || 0; c.freed += Number(e.freed) || 0; c.clearIn += Number(e.clearIn) || 0;
     c.interest += Number(e.interest) || 0; c.sales += Number(e.sales) || 0;
     if(e.price != null) c.price = { key: l.subject.key, price: e.price, volume: e.volume };
     const op = l.opts.find(z=> z.id === o);
@@ -135909,108 +136035,165 @@ function mgrSimExpected(walk, exp, moves){
   return { ...walk, days: out, expectedTightest: tight, expectedReceipts: receipts.filter(r=> r.date) };
 }
 
+/* WHEN A CUSTOMER'S MONEY LANDS IN A SCENARIO: their first expected
+   payment, moved by the first move of theirs -- the same receipt and the
+   same move mgrSimExpected moves. -> { date | null, moved }. Null when
+   no payment of theirs is expected, or the scenario takes it off. */
+function mgrSimLands(receipts, moves, customerId){
+  const r = (receipts || []).find(x=> String(x.customerId) === String(customerId) && x.date);
+  if(!r) return { date: null, moved: false };
+  const m = (moves || []).find(x=> String(x.customerId) === String(customerId));
+  if(!m) return { date: r.date, moved: false };
+  return { date: m.days == null ? null : anShiftDate(r.date, m.days), moved: true };
+}
 /* One scenario, run: the choices composed, the walk adjusted for what
    they commit (walkFn is mgrCashWalk), the expected band moved for what
-   they bring. `more` adds a stress test's own moves and money, and can
-   hold a bill that waits on a customer back with them (billWait). */
+   they bring. `more` adds a stress test's own moves and money.
+
+   A BILL PAID AFTER A CUSTOMER PAYS follows that customer's money in
+   THIS scenario -- the chase choices and a stress test's lateness both
+   move it. When the customer is no longer expected inside these days,
+   the bill is counted on the last day: still owed, never left off.
+
+   With no cash walk to stand on, the run says so -- no line, no lows --
+   and every other figure still reads. */
 function mgrSimRun(model, choice, assume, walkFn, more){
   const b = model.books;
   const comp = mgrSimCompose(model.levers, choice, assume);
   const m = more || {};
-  let bills = comp.adjust.bills;
-  if(m.billWait) bills = bills.map(x=> x.after != null && String(x.after) === String(m.billWait.customerId)
-    ? { ...x, to: anShiftDate(x.to, m.billWait.days) } : x);
+  const moves = comp.moves.concat(m.moves || []);
+  const waits = [];
+  const bills = comp.adjust.bills.map(x=>{
+    if(x.after == null) return x;
+    const at = mgrSimLands(b.walk ? b.walk.expectedReceipts : [], moves, x.after);
+    const gone = !at.date || at.date > b.to;
+    const to = gone ? b.to : at.date;
+    waits.push({ billId: x.billId, after: x.after, to, moved: at.moved, gone });
+    return { ...x, to };
+  });
   const adjust = { bills, oneOff: comp.adjust.oneOff, ...(comp.adjust.loan ? { loan: comp.adjust.loan } : {}) };
   const committed = bills.length || adjust.oneOff.length || adjust.loan;
-  const base = committed ? walkFn({ today: b.today, adjust }) : b.walk;
-  const walk = mgrSimExpected(base, comp.exp.concat(m.exp || []), comp.moves.concat(m.moves || []));
+  const base = !b.walk ? null : committed ? walkFn({ today: b.today, adjust }) : b.walk;
+  const walk = base ? mgrSimExpected(base, comp.exp.concat(m.exp || []), moves) : null;
   const ds = b.daysOfStock;
   const stockValue = ds ? ds.value + comp.stock : null;
   const profitBase = b.profit ? b.profit.net : null;
-  return { comp, walk, low: walk.tightest, expLow: walk.expectedTightest,
+  return { comp, walk, waits, low: walk ? walk.tightest : null, expLow: walk ? walk.expectedTightest : null,
     profit: { base: profitBase, d: comp.profit, lo: comp.lo, hi: comp.hi, ranged: comp.assumed > 0 && comp.lo !== comp.hi,
       mid: profitBase == null ? null : profitBase + comp.profit },
-    debtorDays: comp.dd != null ? comp.dd : (b.debtorDays && b.debtorDays.days != null ? b.debtorDays.days : null),
+    debtorDays: comp.dd != null ? (comp.dd.perDay > 0 ? comp.dd.owed / comp.dd.perDay : null)
+      : (b.debtorDays && b.debtorDays.days != null ? b.debtorDays.days : null),
     stockValue, stockDays: !ds || ds.days == null ? null : comp.stock ? (ds.cogsPerDay > 0 ? stockValue / ds.cogsPerDay : null) : ds.days,
     deadValue: b.deadStock ? Math.max(0, b.deadStock.value + comp.dead) : null,
-    freed: comp.freed, interest: comp.interest, changed: comp.changed };
+    freed: comp.freed, clearIn: comp.clearIn, interest: comp.interest, changed: comp.changed };
 }
 
 /* ---- WHAT COULD GO WRONG (SIM.6) ------------------------------------
-   Three tests on a run, each judged where it acts -- on the expected
-   band, against the floor. Sizes are MGR_SIM_SHOCK's, said as
-   assumptions. -> [{ id, label, available, held, low, note, profit }] */
+   Three tests on a run. Each is judged the way the Lowest cash tile is:
+   on the COMMITTED line first -- cash after every dated promise -- and
+   then on the expected band; a test holds only when both stay at or above
+   the floor (no expected band: the committed line alone). A choice whose
+   committed line already breaks the floor therefore holds under none.
+   Sizes are MGR_SIM_SHOCK's, said as assumptions.
+   -> [{ id, label, available, held, low, expLow, note, profit }] */
+function mgrSimJudge(r, floor){
+  if(!r || !r.low) return null;
+  return r.low.balance >= floor && (r.expLow == null || r.expLow.balance >= floor);
+}
 function mgrSimShocks(model, choice, assume, run, walkFn){
   const b = model.books;
   const floor = b.floor ? b.floor.amount : 0;
   const S = MGR_SIM_SHOCK;
-  const judge = (r)=> r.expLow ? r.expLow.balance >= floor : null;
+  const judge = (r)=> mgrSimJudge(r, floor);
+  const res = (r)=> ({ held: judge(r), low: r.low, expLow: r.expLow });
   const out = [];
+  if(!run.walk){
+    const why = 'Not testable — the cash ahead could not be read.';
+    return [{ id: 'late', label: 'A big customer pays late', available: false, held: null, low: null, expLow: null, note: why },
+      { id: 'season', label: 'The season comes early', available: false, held: null, low: null, expLow: null, note: why },
+      { id: 'rival', label: 'A rival cuts price', available: false, held: null, low: null, expLow: null, note: why }];
+  }
   /* 1. The largest payment expected inside the window comes two weeks
-        late -- and a bill the choices pay after it waits with it. */
+        late -- and a bill the choices pay after it waits with it
+        (mgrSimRun moves it with the customer's money). */
   const rs = (run.walk.expectedReceipts || []).filter(r=> r.date && r.date <= b.to).sort((p, q)=> q.amount - p.amount);
   const big = rs[0];
-  if(!big) out.push({ id: 'late', label: 'A big customer pays late', available: true, held: judge(run), low: run.expLow,
+  if(!big) out.push({ id: 'late', label: 'A big customer pays late', available: true, ...res(run),
     note: 'No customer is expected to pay in these 30 days — nothing to be late.' });
   else {
     const who = (b.receipts || []).find(r=> String(r.customerId) === String(big.customerId));
     const name = who ? who.name : 'The largest payment';
     const waits = run.comp.adjust.bills.some(x=> x.after != null && String(x.after) === String(big.customerId));
-    const r = mgrSimRun(model, choice, assume, walkFn, { moves: [{ customerId: big.customerId, days: S.lateDays }],
-      billWait: waits ? { customerId: big.customerId, days: S.lateDays } : null });
+    const r = mgrSimRun(model, choice, assume, walkFn, { moves: [{ customerId: big.customerId, days: S.lateDays }] });
     const lands = anShiftDate(big.date, S.lateDays);
-    out.push({ id: 'late', label: name + ' pays ' + (S.lateDays === 14 ? 'two weeks' : S.lateDays + ' days') + ' late', available: true, held: judge(r), low: r.expLow,
+    out.push({ id: 'late', label: name + ' pays ' + (S.lateDays === 14 ? 'two weeks' : S.lateDays + ' days') + ' late', available: true, ...res(r),
       note: mgrSimMoney(big.amount) + ' lands ' + (lands <= b.to ? mgrSimDay(lands) : 'after these 30 days') + ' instead of ' + mgrSimDay(big.date)
         + (waits ? ' — and the bill you pay after it waits too' : run.comp.changed.length ? ' — none of these choices waits on it' : '') + '.' });
   }
   /* 2. The season's buying a week early: last year's weeks that took
-        more buying than usual, landing a week sooner this year. */
+        more buying than usual, landing a week sooner this year. When the
+        choices already count it (the season lever), it is that buying
+        moved a week ahead; otherwise it rides the expected band. */
   const se = b.season;
-  if(!se || !se.available) out.push({ id: 'season', label: 'The season comes early', available: false, held: null, low: null,
-    note: 'Not available — under a year of books.' });
-  else if(!(se.extra > 0)) out.push({ id: 'season', label: 'The season comes early', available: true, held: judge(run), low: run.expLow,
+  const sl = (model.levers || []).find(l=> l.kind === 'season');
+  const sc = sl ? mgrSimChoiceOf(sl, choice) : null;
+  const early = (d)=> anShiftDate(d, 364 - S.earlyDays) < b.today ? b.today : anShiftDate(d, 364 - S.earlyDays);
+  if(!se || !se.available) out.push({ id: 'season', label: 'The season comes early', available: false, held: null, low: null, expLow: null,
+    note: 'Not available — it needs a year of books and the eight weeks before it' + (se && se.booksStart ? '; yours start ' + mgrSimDate(se.booksStart) + ' ' + se.booksStart.slice(0, 4) : '') + '.' });
+  else if(!(se.extra > 0)) out.push({ id: 'season', label: 'The season comes early', available: true, ...res(run),
     note: 'Last year these weeks took no more buying than usual — no effect.' });
   else {
-    const exp = [];
-    se.weeks.filter(w=> w.extra > 0).forEach(w=>{
-      const start = anShiftDate(w.from, 364 - S.earlyDays);
-      const each = Math.round(w.extra / 7);
-      for(let i = 0; i < 7; i++){
-        let d = anShiftDate(start, i);
-        if(d < b.today) d = b.today;
-        if(d > b.to) continue;
-        exp.push({ date: d, amount: -(i === 6 ? w.extra - each * 6 : each), label: 'The season\'s buying, a week early', dept: 'procurement', spread: true });
-      }
-    });
-    const r = mgrSimRun(model, choice, assume, walkFn, { exp });
-    out.push({ id: 'season', label: 'The season comes a week early', available: true, held: judge(r), low: r.expLow,
-      note: 'Last year ' + mgrSimDate(se.from) + '–' + mgrSimDate(se.to) + ' took ' + mgrSimMoney(se.extra) + ' more buying than usual; a week early, it lands from '
-        + mgrSimDay(anShiftDate(se.from, 364 - S.earlyDays) < b.today ? b.today : anShiftDate(se.from, 364 - S.earlyDays)) + '.' });
+    const last = 'Last year ' + mgrSimDate(se.from) + '–' + mgrSimDate(se.to) + ' took ' + mgrSimMoney(se.extra) + ' more buying than usual';
+    if(sc === 'early') out.push({ id: 'season', label: 'The season comes a week early', available: true, ...res(run),
+      note: last + '; you already count it a week ahead — no further effect.' });
+    else if(sc === 'ly'){
+      const r = mgrSimRun(model, { ...choice, [sl.id]: 'early' }, assume, walkFn);
+      out.push({ id: 'season', label: 'The season comes a week early', available: true, ...res(r),
+        note: last + '; the buying you count lands a week sooner, from ' + mgrSimDay(early(se.from)) + '.' });
+    } else {
+      const exp = [];
+      se.weeks.filter(w=> w.extra > 0).forEach(w=>{
+        const start = anShiftDate(w.from, 364 - S.earlyDays);
+        const each = Math.round(w.extra / 7);
+        for(let i = 0; i < 7; i++){
+          let d = anShiftDate(start, i);
+          if(d < b.today) d = b.today;
+          if(d > b.to) continue;
+          exp.push({ date: d, amount: -(i === 6 ? w.extra - each * 6 : each), label: 'The season\'s buying, a week early', dept: 'procurement', spread: true });
+        }
+      });
+      const r = mgrSimRun(model, choice, assume, walkFn, { exp });
+      out.push({ id: 'season', label: 'The season comes a week early', available: true, ...res(r),
+        note: last + '; a week early, it lands from ' + mgrSimDay(early(se.from)) + '.' });
+    }
   }
   /* 3. A rival cuts to today's price on the line the shop sells under
         them -- it costs only where the choices priced above it. */
   const p = b.price;
-  if(!p) out.push({ id: 'rival', label: 'A rival cuts price', available: false, held: null, low: null,
+  if(!p) out.push({ id: 'rival', label: 'A rival cuts price', available: false, held: null, low: null, expLow: null,
     note: 'Not available — no rival price above yours on a line you sell.' });
   else {
     const at = run.comp.price && run.comp.price.key === p.key ? run.comp.price : null;
     const label = p.rival + ' cuts ' + p.line + ' to ' + mgrNum(p.ours);
-    if(!at || !(at.price > p.ours)) out.push({ id: 'rival', label, available: true, held: judge(run), low: run.expLow,
+    if(!at || !(at.price > p.ours)) out.push({ id: 'rival', label, available: true, ...res(run),
       note: 'No effect — you are already at ' + mgrNum(p.ours) + '.' });
     else {
       const units = p.units * (1 + (at.volume || 0) / 100) * S.rivalShare / 100;
       const sales = Math.round(units * at.price);
       const profit = -Math.round(units * (p.unitProfit + at.price - p.ours));
       const r = mgrSimRun(model, choice, assume, walkFn, { exp: mgrSimSpread(b.today, -sales, 1, 30, 'Sales lost to ' + p.rival, 'sales') });
-      out.push({ id: 'rival', label, available: true, held: judge(r), low: r.expLow, profit,
+      out.push({ id: 'rival', label, available: true, ...res(r), profit,
         note: 'About ' + S.rivalShare + '% of the line\'s volume follows the cheaper price — your assumption.' });
     }
   }
   return out;
 }
+/* k of THREE: always out of the three tests; the ones that could not be
+   run are counted apart (untestable), never dropped from the three.
+   held is null when none could be run. */
 function mgrSimHolds(shocks){
   const av = (shocks || []).filter(s=> s.available && s.held != null);
-  return { held: av.length ? av.filter(s=> s.held).length : null, of: av.length };
+  return { held: av.length ? av.filter(s=> s.held).length : null, of: 3, untestable: 3 - av.length };
 }
 
 /* ---- THE PRESETS (SIM.3) ---------------------------------------------
@@ -136087,7 +136270,9 @@ function mgrSimVerdict(v){
   const floorSay = fl ? whose + ' ' + mgrSimMoney(fl.amount) + ' floor' : null;
   const lowSay = v.low ? mgrSimMoney(v.low.balance) + ' on ' + mgrSimDay(v.low.date) : 'not known';
   const under = !!(v.low && (fl ? v.low.balance < fl.amount : v.low.balance < 0));
-  const shocksSay = v.of ? (v.of === 3 ? 'all three shocks' : 'all ' + v.of + ' shocks') : 'every test that could be run';
+  const tested = 3 - (v.untestable || 0);
+  const shocksSay = tested === 3 ? 'all three shocks' : tested > 0 ? 'the ' + (tested === 1 ? 'one shock' : tested + ' shocks') + ' that could be tested' : 'every test that could be run';
+  const freeSay = (tf, what)=> tf.days + '-day terms would ' + what + ' ' + mgrSimMoney(tf.freed) + ' over 60 days, if customers keep to them';
   const exp = v.expLow ? '; with what customers usually pay, the low is ' + mgrSimMoney(v.expLow.balance) + ' on ' + mgrSimDay(v.expLow.date) : '';
   if(!v.changed){
     if(!v.low) return { cls: 'am', head: 'This is today, unchanged.', body: 'The cash ahead could not be read.' };
@@ -136100,15 +136285,15 @@ function mgrSimVerdict(v){
   if(under) return { cls: 'cr', head: 'I wouldn’t sign this.',
     body: 'Cash falls to ' + lowSay + ' — under ' + (floorSay || 'nothing') + ', counting only money already in hand' + exp + '.'
       + (v.fix ? ' ' + v.fix : '') };
-  if(v.offer) return { cls: 'am', head: 'Safe, but expensive.',
+  if(v.offer && v.offer.interest > 0) return { cls: 'am', head: 'Safe, but expensive.',
     body: 'You’d pay ' + mgrSimMoney(v.offer.interest) + ' a year to borrow ' + mgrSimMoney(v.offer.amount) + '.'
       + (v.owed > v.offer.amount ? ' Customers already owe you ' + mgrSimMoney(v.owed) + '.' : '')
-      + (v.termsFree ? ' ' + v.termsFree.days + '-day terms would free ' + mgrSimMoney(v.termsFree.freed) + ' without interest.' : '') };
+      + (v.termsFree ? ' ' + freeSay(v.termsFree, 'free') + ', without interest.' : '') };
   if(v.priceBetter) return { cls: 'am', head: 'Close — but not that price.',
     body: mgrNum(v.priceBetter.at) + ' earns less than ' + mgrNum(v.priceBetter.better) + ' on your own assumption about volume.' };
-  if(v.of && v.held < v.of) return { cls: 'am', head: 'Good on paper, fragile in practice.',
+  if(v.held != null && v.held < tested) return { cls: 'am', head: 'Good on paper, fragile in practice.',
     body: 'It breaks if ' + v.breaks.map(s=> /^(The|A) /.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s).join(' or if ') + '.'
-      + (v.termsFree ? ' ' + v.termsFree.days + '-day terms give you ' + mgrSimMoney(v.termsFree.freed) + ' of cushion.' : '') };
+      + (v.termsFree ? ' ' + freeSay(v.termsFree, 'give you') + ' of cushion.' : '') };
   const d = Math.round(v.profitD || 0);
   const range = v.ranged ? ' (' + mgrSimMoney(v.lo) + ' to ' + mgrSimMoney(v.hi) + ' on your assumptions)' : '';
   const left = v.missing && v.missing.length ? ' Still on the table: ' + mgrSimAnd(v.missing.slice(0, 3)) + '.' : '';
@@ -136119,7 +136304,7 @@ function mgrSimVerdict(v){
     body: mgrSimSigned(d) + ' a month' + range + ', cash above the floor through ' + shocksSay + '.' + left };
   if(d < 0) return { cls: 'am', head: 'Safer, at a price.',
     body: mgrSimSigned(d) + ' a month' + range + ' for cash above the floor through ' + shocksSay + '.' + left };
-  return { cls: 'vg', head: 'It holds.', body: 'Profit as today; cash stays above the floor through ' + shocksSay + '.' + left };
+  return { cls: 'vg', head: 'It holds.', body: 'Profit as today' + range + '; cash stays above the floor through ' + shocksSay + '.' + left };
 }
 /* The kinds of money that leave in the week up to a day, as words:
    'wages and rent'. */
@@ -136148,6 +136333,7 @@ function mgrSimHeadline(o){
   const on = (d)=> 'on ' + mgrSimDay(d);
   let s = 'Move any decision and I’ll play out the next 30 days before you commit.';
   if(!o.base) return s;
+  if(!o.base.walk) return s + ' The cash ahead could not be read, so I cannot say where it stands against the floor.';
   const bb = mgrSimBreakDay(o.base.walk, o.floor), pb = o.plan ? mgrSimBreakDay(o.plan.walk, o.floor) : null;
   s += ' Today’s path ' + (bb ? 'breaks ' + whose + ' ' + on(bb) : 'stays above ' + whose);
   if(!o.plan) return s + (o.planWhy ? '; ' + o.planWhy + '.' : '.');
@@ -136164,8 +136350,9 @@ function mgrSimHeadline(o){
    for the "My plan" preset -- today's open moves, as the journal last
    read them (mgrNavCtx) -- or for nothing changing when there is no plan.
    Synchronous, kept per data version and plan, and it never throws: a
-   failure answers with every figure null. shocksOf is how many of the
-   three tests could be run (3 with a year of books and a rival price). */
+   failure answers with every figure null. shocksOf is always 3: a test
+   that could not be run (no year of books, no rival price above yours)
+   is not held, and is never dropped from the three. */
 function mgrSimTeaserFigures(ctx){
   const empty = { profitMonth: null, lowest: null, shocksHeld: null, shocksOf: 3, plan: 'nothing changes' };
   try {
@@ -136190,6 +136377,27 @@ function mgrSimTeaserFigures(ctx){
   }
 }
 
+/* ---- THE TARGETS A SCENARIO MOVES (the canvas's "M targets") --------
+   The owner's RUNNING targets (the scoreboard's rows, not finished)
+   whose measure these choices change against nothing changing. Each
+   measure is matched to the figure the simulator moves for it; a
+   measure it does not compute is not claimed. -> [{ id, metric }] */
+function mgrSimTargetsTouched(targets, base, run){
+  if(!run || !run.changed.length) return [];
+  const r = (v)=> v == null ? null : Math.round(v);
+  const kinds = new Set(run.changed.map(x=> x.kind));
+  const moved = {
+    collections: kinds.has('chase') || kinds.has('terms'),
+    debtors_total: run.comp.dd != null, debtor_days: r(run.debtorDays) !== r(base.debtorDays),
+    stock_days: r(run.stockDays) !== r(base.stockDays), dead_stock_value: r(run.deadValue) !== r(base.deadValue),
+    cash_on_hand: !!(run.comp.adjust.bills.length || run.comp.adjust.oneOff.length || run.comp.adjust.loan || run.comp.exp.length || run.comp.moves.length),
+    lowest_cash: !!(run.low && base.low && run.low.balance !== base.low.balance),
+    gross_profit: Math.round(run.profit.d) !== 0, net_profit: Math.round(run.profit.d) !== 0, margin_pct: Math.round(run.profit.d) !== 0,
+    sales: Math.round(run.comp.sales) !== 0, quotes_won_pct: kinds.has('quote'), wa_orders: kinds.has('post'),
+  };
+  return (targets || []).filter(t=> t && !t.finished && t.metric && moved[t.metric]).map(t=> ({ id: t.id, metric: t.metric }));
+}
+
 /* ---- SIGN IT (Q20) ---------------------------------------------------
    What is kept: one 'decision' row -- the title, why (the verdict), the
    levers (each 'books' or 'assumption'), and a SUMMARY outcome: the low
@@ -136207,7 +136415,8 @@ function mgrSimDecisionBody(o){
       expectedLow: o.run.expLow ? { balance: o.run.expLow.balance, date: o.run.expLow.date } : null,
       floor: o.floor ? { amount: o.floor.amount, source: o.floor.source } : null,
       profit: { base: o.run.profit.base, change: Math.round(o.run.profit.d), lo: Math.round(o.run.profit.lo), hi: Math.round(o.run.profit.hi) },
-      holds: { held: o.holds.held, of: o.holds.of },
+      holds: { held: o.holds.held, of: o.holds.of, untestable: o.holds.untestable || 0 },
+      targets: (o.targets || []).map(x=> x.id),
       debtorDays: o.run.debtorDays == null ? null : Math.round(o.run.debtorDays),
       stockDays: o.run.stockDays == null ? null : Math.round(o.run.stockDays),
       levers: (o.alone || []).map(a=> ({ id: a.id, profit: Math.round(a.profit), low: a.low == null ? null : Math.round(a.low) })),
@@ -136217,7 +136426,7 @@ function mgrSimDecisionBody(o){
 
 /* ---- THE SECTION ON SCREEN ------------------------------------------- */
 /* What the owner is moving: kept while the screen is open, never stored. */
-let mgrSimState = { choice: {}, assume: {}, edit: null, offerForm: false, signing: false, said: null, signedKey: null };
+let mgrSimState = { choice: {}, assume: {}, edit: null, offerForm: false, signing: false, said: null, signedKey: null, day: null };
 /* Today's moves as the journal last read them -- null until it has. */
 let mgrSimPlanMoves = null;
 let mgrSimPlanErr = null;
@@ -136225,6 +136434,9 @@ let mgrSimNotes = false;
 let mgrSimOffers = { rows: [], error: null, read: false };
 let mgrSimDecisions = { rows: [], error: null, read: false };
 let mgrSimLast = null;
+/* The owner's running targets, as the journal last read them -- null
+   until it has (or when it could not), [] on a shop with no journal. */
+let mgrSimTargets = null;
 function mgrSimMoves(rows){
   return (rows || []).map((r, i)=> ({ i, id: r.id, status: r.status, body: (r && r.body && typeof r.body === 'object') ? r.body : {} }));
 }
@@ -136261,11 +136473,51 @@ function mgrSimWalkFn(){
   };
 }
 function mgrSimScenarioFacts(b, run){
-  const s = { walk: run.walk };
+  const s = {};
+  if(run.walk) s.walk = run.walk;
   if(b.debtorDays) s.debtorDays = { ...b.debtorDays, days: run.debtorDays };
   if(b.daysOfStock) s.daysOfStock = { ...b.daysOfStock, value: run.stockValue, days: run.stockDays };
   if(b.deadStock) s.deadStock = { ...b.deadStock, value: run.deadValue, share: b.deadStock.total > 0 ? run.deadValue / b.deadStock.total : null };
   return s;
+}
+/* THE VERDICT'S INPUTS, each derived, pure over the model:
+   fix -- the first committed choice (an order, the season's buying, a
+     hire, a bill, an offer) whose undoing ALONE lifts the committed line
+     back over the floor;
+   priceBetter -- a lower price step that earns more on the owner's
+     same volume assumption;
+   termsFree -- the shortest terms' cushion, when they are not chosen;
+   offer -- the bank offer taken, with its year's interest;
+   missing -- what my plan does that these choices do not. */
+function mgrSimVerdictInputs(model, choice, assume, run, presets, walkFn){
+  const b = model.books;
+  const fl = b.floor && b.floor.amount > 0 ? b.floor.amount : 0;
+  let fix = null;
+  if(run.low && run.low.balance < fl){
+    for(const c of run.changed){
+      const l = model.levers.find(z=> z.id === c.id);
+      if(!l || !['order', 'season', 'hire', 'bill', 'offer'].includes(l.kind)) continue;
+      const r = mgrSimRun(model, { ...choice, [c.id]: l.def }, assume, walkFn);
+      if(r.low && r.low.balance >= fl){ fix = 'Leaving ' + c.short + ' as it is keeps cash above the floor.'; break; }
+    }
+  }
+  let priceBetter = null;
+  const pl = model.levers.find(l=> l.kind === 'price');
+  if(pl && mgrSimChoiceOf(pl, choice) !== pl.def){
+    const a = mgrSimAssumeOf(pl, assume);
+    const at = pl.opts.find(o=> o.id === mgrSimChoiceOf(pl, choice));
+    const best = pl.opts.filter(o=> o.id !== pl.def).map(o=> ({ o, p: (pl.effect(o.id, a.value) || {}).profit || 0 }))
+      .sort((p, q)=> q.p - p.p)[0];
+    if(best && best.o.id !== at.id && best.p > ((pl.effect(at.id, a.value) || {}).profit || 0)) priceBetter = { at: at.price, better: best.o.price };
+  }
+  const tl = model.levers.find(l=> l.kind === 'terms');
+  const tight = tl ? tl.opts[tl.opts.length - 1] : null;
+  const termsFree = tl && mgrSimChoiceOf(tl, choice) !== tight.id ? { days: tight.days, freed: (tl.effect(tight.id, 0) || {}).freed || 0 } : null;
+  const off = run.comp.adjust.loan && model.levers.find(l=> l.kind === 'offer');
+  const taken = off ? off.offers.find(o=> 'take:' + o.id === mgrSimChoiceOf(off, choice)) : null;
+  const missing = presets && presets.plan ? Object.keys(presets.plan).filter(k=> presets.plan[k] !== mgrSimChoiceOf(model.levers.find(l=> l.id === k) || { opts: [], def: null }, choice))
+    .map(k=> (model.levers.find(l=> l.id === k) || {}).short).filter(Boolean) : [];
+  return { fix, priceBetter, termsFree, offer: taken ? { interest: taken.interestYear, amount: taken.amount } : null, missing };
 }
 /* Everything one drawing needs, worked out once. */
 function mgrSimCompute(){
@@ -136285,53 +136537,29 @@ function mgrSimCompute(){
   const shocksBase = mgrSimShocks(model, {}, assume, base, walkFn);
   const shocksPlan = plan ? mgrSimShocks(model, planChoice, assume, plan, walkFn) : null;
   const holds = mgrSimHolds(shocks), holdsBase = mgrSimHolds(shocksBase), holdsPlan = shocksPlan ? mgrSimHolds(shocksPlan) : null;
-  let healthBase = null, health = null;
+  /* The ripple: the shared health checks, today and with these choices.
+     A failure is NAMED under "Across the shop", never read as "no
+     change". */
+  let healthBase = null, health = null, rippleErr = null;
   try { healthBase = mgrHealthChecks(); health = run.changed.length ? mgrHealthChecks(undefined, mgrSimScenarioFacts(b, run)) : healthBase; }
-  catch(e){ console.warn('Manager simulator: the ripple could not be read —', e && e.message); }
-  /* The verdict's inputs, each derived: a committed choice whose undoing
-     alone lifts the line back over the floor; a lower price step that
-     earns more on the same assumption; the shortest terms' cushion. */
+  catch(e){ rippleErr = (e && e.message) || String(e); console.warn('Manager simulator: the ripple could not be read —', rippleErr); }
   const floor = b.floor;
-  const fl = floor && floor.amount > 0 ? floor.amount : 0;
-  let fix = null;
-  if(run.low && run.low.balance < fl){
-    for(const c of run.changed){
-      const l = model.levers.find(z=> z.id === c.id);
-      if(!l || !['order', 'hire', 'bill', 'offer'].includes(l.kind)) continue;
-      const r = mgrSimRun(model, { ...choice, [c.id]: l.def }, assume, walkFn);
-      if(r.low && r.low.balance >= fl){ fix = 'Leaving ' + c.short + ' as it is keeps cash above the floor.'; break; }
-    }
-  }
-  let priceBetter = null;
-  const pl = model.levers.find(l=> l.kind === 'price');
-  if(pl && mgrSimChoiceOf(pl, choice) !== pl.def){
-    const a = mgrSimAssumeOf(pl, assume);
-    const at = pl.opts.find(o=> o.id === mgrSimChoiceOf(pl, choice));
-    const best = pl.opts.filter(o=> o.id !== pl.def).map(o=> ({ o, p: (pl.effect(o.id, a.value) || {}).profit || 0 }))
-      .sort((p, q)=> q.p - p.p)[0];
-    if(best && best.o.id !== at.id && best.p > ((pl.effect(at.id, a.value) || {}).profit || 0)) priceBetter = { at: at.price, better: best.o.price };
-  }
-  const tl = model.levers.find(l=> l.kind === 'terms');
-  const tight = tl ? tl.opts[tl.opts.length - 1] : null;
-  const termsFree = tl && mgrSimChoiceOf(tl, choice) !== tight.id ? { days: tight.days, freed: (tl.effect(tight.id, 0) || {}).freed || 0 } : null;
-  const off = run.comp.adjust.loan && model.levers.find(l=> l.kind === 'offer');
-  const offTaken = off ? off.offers.find(o=> 'take:' + o.id === mgrSimChoiceOf(off, choice)) : null;
-  const missing = presets.plan ? Object.keys(presets.plan).filter(k=> presets.plan[k] !== mgrSimChoiceOf(model.levers.find(l=> l.id === k) || { opts: [], def: null }, choice))
-    .map(k=> (model.levers.find(l=> l.id === k) || {}).short).filter(Boolean) : [];
+  const vi = mgrSimVerdictInputs(model, choice, assume, run, presets, walkFn);
   const verdict = mgrSimVerdict({ changed: run.changed.length, floor, low: run.low, expLow: run.expLow,
-    lowWeek: mgrSimWeekWords(run.walk, run.low && run.low.date), fix,
-    offer: offTaken ? { interest: offTaken.interestYear, amount: offTaken.amount } : null,
-    owed: b.debtorDays ? b.debtorDays.receivables : 0, termsFree, priceBetter,
-    held: holds.held, of: holds.of, breaks: shocks.filter(s=> s.available && s.held === false).map(s=> s.label),
-    profitD: run.profit.d, ranged: run.profit.ranged, lo: run.profit.lo, hi: run.profit.hi, missing,
+    lowWeek: mgrSimWeekWords(run.walk, run.low && run.low.date), fix: vi.fix, offer: vi.offer,
+    owed: b.debtorDays ? b.debtorDays.receivables : 0, termsFree: vi.termsFree, priceBetter: vi.priceBetter,
+    held: holds.held, of: holds.of, untestable: holds.untestable, breaks: shocks.filter(s=> s.available && s.held === false).map(s=> s.label),
+    profitD: run.profit.d, ranged: run.profit.ranged, lo: run.profit.lo, hi: run.profit.hi, missing: vi.missing,
     hire: run.changed.some(c=> c.kind === 'hire') });
   const lateOf = (sh)=>{ const s = (sh || []).find(x=> x.id === 'late'); return s ? { held: s.held, name: (s.label.match(/^(.*) pays /) || [])[1] || null } : null; };
   const planWhy = !mgrSimNotes ? 'my plan lives in the Manager’s memory, which this shop does not have yet'
     : mgrSimPlanErr ? 'my plan could not be read — ' + mgrSimPlanErr : mgrSimPlanMoves == null ? null
     : !mgrSimOpen(mgrSimPlanMoves).length ? 'no plan is open today' : !plan ? 'nothing on today’s plan moves a lever here' : null;
   const head = mgrSimHeadline({ floor, base, plan, planLate: lateOf(shocksPlan), planWhy });
+  /* The owner's running targets these choices move (null: not read). */
+  const targets = mgrSimTargets == null ? null : mgrSimTargetsTouched(mgrSimTargets, base, run);
   return { model, b, presets, choice, assume, run, base, plan, shocks, shocksBase, shocksPlan, holds, holdsBase, holdsPlan,
-    healthBase, health, verdict, head, floor, planWhy };
+    healthBase, health, rippleErr, verdict, head, floor, planWhy, targets };
 }
 
 /* ---- Drawing helpers ---- */
@@ -136348,10 +136576,21 @@ function mgrSimAssumeSay(a){
   const f = (v)=> a.unit === 'UGX' ? mgrSimMoney(v) : sign(v) + Math.abs(v) + (a.unit === 'pts' ? ' pts' : '%');
   return { v: f(a.value), lo: f(a.lo), hi: f(a.hi) };
 }
-function mgrSimLeverHTML(l, choice, assume, edit){
+/* A bill paid after a customer pays follows that customer's money in
+   the scenario (mgrSimRun's waits): its hint says where it went. */
+function mgrSimWaitHint(l, op, run){
+  if(l.kind !== 'bill' || op.after == null || !run) return null;
+  const w = (run.waits || []).find(x=> String(x.billId) === String(l.subject.billId));
+  if(!w || (!w.moved && !w.gone)) return null;
+  const past = l.stop && w.to >= l.stop ? ' — past ' + l.stopWho + '’s ' + l.stopAt + '-day limit' : '';
+  return w.gone ? op.who + ' is not expected to pay in these 30 days with your choices — the bill is counted on ' + mgrSimDay(w.to) + ', the last day' + past
+    : op.who + '’s money lands ' + mgrSimDay(w.to) + ' with your chase choice — the bill is paid then' + past;
+}
+function mgrSimLeverHTML(l, choice, assume, edit, run){
   const on = mgrSimChoiceOf(l, choice);
   const changed = on !== l.def;
   const op = l.opts.find(o=> o.id === on) || l.opts[0];
+  const waitHint = mgrSimWaitHint(l, op, run);
   const a = mgrSimAssumeOf(l, assume);
   const say = a ? mgrSimAssumeSay(a) : null;
   const unit = a ? (a.unit === 'UGX' ? 'UGX' : a.unit === 'pts' ? 'pts' : '%') : '';
@@ -136359,7 +136598,7 @@ function mgrSimLeverHTML(l, choice, assume, edit){
     <span class="mgr-x-lvl">${mgrSimMonoHTML(l.dept)}<span class="mgr-x-lvn" title="${esc(l.label)}">${esc(l.label)}${changed ? '<i class="mgr-x-dot" role="img" aria-label="changed"></i>' : ''}</span></span>
     <span class="mgr-x-lvr">
       <span class="mgr-x-opts" role="group" aria-label="${esc(l.label)}">${l.opts.map(o=> `<button type="button" class="mgr-x-opt${o.id === on ? ' mgr-x-on' : ''}" aria-pressed="${o.id === on}" data-sim-lever="${esc(l.id)}" data-sim-opt="${esc(o.id)}"${o.disabled ? ' disabled title="' + esc(o.hint) + '"' : ''}>${esc(o.label)}</button>`).join('')}</span>
-      <span class="mgr-x-hint${op.warn ? ' mgr-x-warn' : ''}">${esc(op.hint || '')}</span>
+      <span class="mgr-x-hint${(waitHint ? / — past /.test(waitHint) : op.warn) ? ' mgr-x-warn' : ''}">${esc(waitHint || op.hint || '')}</span>
       ${a ? `<span class="mgr-x-as${changed ? '' : ' mgr-x-idle'}"><span class="mgr-x-tag">your assumption</span>${esc(a.label)}: <b class="ow-fig">${esc(say.v)}</b> <span class="mgr-x-rng">(${esc(say.lo)} to ${esc(say.hi)})</span>
         <button type="button" class="mgr-x-link" data-sim-edit="${esc(l.id)}" aria-expanded="${edit === l.id}">${edit === l.id ? 'Done' : 'Change'}</button></span>
       ${edit === l.id ? `<span class="mgr-x-ased">${[['value', 'yours'], ['lo', 'low'], ['hi', 'high']].map(([k, cap])=> `<label class="mgr-x-fld"><span>${cap}</span><span class="ow-f-in"><input class="ow-f-v" type="number" inputmode="decimal" step="any" data-sim-assume="${esc(l.id)}" data-sim-k="${k}" value="${esc(String(a[k]))}" aria-label="${esc(a.label + ', ' + cap)}"><span class="ow-f-u">${unit}</span></span></label>`).join('')}
@@ -136368,30 +136607,46 @@ function mgrSimLeverHTML(l, choice, assume, edit){
   </div>`;
 }
 /* The day markers: the money that moves on a day, by kind, the plan's
-   deadline days among them. One letter a day, the weightiest; every
-   event of the day in its title. */
+   deadline days among them. One letter a day, the weightiest. The
+   routine kinds (a supplier bill, wages, rent, a loan repayment) are
+   named in the legend by kind; the few NAMED events -- a deadline, a
+   customer's payment, an offer ending, the season, what a choice moves
+   -- are named in the legend with who and what. Every marker is a button:
+   tapped, its day's events are listed under the calendar (a phone has
+   no hover). */
 const MGR_SIM_EV = [
   ['deadline', 'D', 'a supplier stops delivering'], ['bill', 'B', 'a supplier bill'], ['wage', 'W', 'wages'], ['rent', 'R', 'rent'],
   ['loan', 'L', 'a loan repayment'], ['loan-in', 'M', 'money borrowed'], ['order', 'O', 'an order paid'], ['hire', 'H', 'a new hire paid'],
-  ['promise', 'P', 'a promised payment'], ['chase', 'C', 'a payment after a chase'], ['offer', 'E', 'an offer ends'],
+  ['season', 'S', 'the season’s buying'], ['promise', 'P', 'a promised payment'], ['chase', 'C', 'a payment after a chase'],
+  ['offer', 'E', 'an offer ends'],
 ];
+const MGR_SIM_NAMED = ['deadline', 'loan-in', 'order', 'hire', 'season', 'promise', 'chase', 'offer'];
 function mgrSimMarks(c){
   const run = c.run, b = c.b;
   const byDay = new Map();
-  const put = (date, kind, text)=>{ if(!byDay.has(date)) byDay.set(date, []); byDay.get(date).push({ kind, text }); };
+  const put = (date, kind, text, named)=>{ if(!byDay.has(date)) byDay.set(date, []); byDay.get(date).push({ kind, text, named: !!named }); };
+  if(!run.walk) return byDay;
   run.walk.days.forEach(d=> d.events.forEach(e=>{
     if(e.spread || e.kind === 'trading' || e.kind === 'clearance') return;
-    const kind = e.kind === 'one-off' ? (e.dept === 'people' ? 'hire' : 'order') : e.kind;
+    const kind = e.kind === 'one-off' ? (e.dept === 'people' ? 'hire' : /^Season/.test(String(e.label || '')) ? 'season' : 'order') : e.kind;
     if(!MGR_SIM_EV.some(x=> x[0] === kind)) return;
-    put(d.date, kind, (e.label || kind) + ' ' + (e.amount < 0 ? '−' : '+') + mgrShortUGX(Math.abs(e.amount)));
+    const who = String(e.label || kind).replace(/ — (bill|after a chase|order|money in)\b.*$/, '').replace(/ \(credit days.*\)$/, '');
+    put(d.date, kind, (kind === 'bill' || kind === 'order' ? who + ' ' + (kind === 'bill' ? 'bill' : 'order') : String(e.label || kind))
+      + ' ' + (e.amount < 0 ? '−' : '+') + mgrShortUGX(Math.abs(e.amount)), MGR_SIM_NAMED.includes(kind) || (kind === 'bill' && e.adjusted));
   }));
-  c.model.levers.filter(l=> l.kind === 'bill' && l.stop && l.stop <= b.to).forEach(l=> put(l.stop < b.today ? b.today : l.stop, 'deadline', l.short + ' reaches the age its supplier stops delivering'));
-  (mgrSimOffers.rows || []).forEach(o=>{ if(o.expiresOn && o.expiresOn >= b.today && o.expiresOn <= b.to) put(o.expiresOn, 'offer', (o.name || 'An offer') + ' — the offer ends'); });
+  c.model.levers.filter(l=> l.kind === 'bill' && l.stop && l.stop <= b.to).forEach(l=> put(l.stop < b.today ? b.today : l.stop, 'deadline', l.stopWho + ' stops delivering — ' + l.short + ' reaches ' + l.stopAt + ' days', true));
+  const se = b.season;
+  if(se && se.available && se.extra > 0){
+    const d = anShiftDate(se.from, 364);
+    if(d >= b.today && d <= b.to) put(d, 'season', 'Last year’s busy buying began (' + mgrSimMoney(se.extra) + ' over usual)', true);
+  }
+  (mgrSimOffers.rows || []).forEach(o=>{ if(o.expiresOn && o.expiresOn >= b.today && o.expiresOn <= b.to) put(o.expiresOn, 'offer', (o.name || 'An offer') + '’s offer ends', true); });
   return byDay;
 }
 function mgrSimCalHTML(c){
   const b = c.b, floor = c.floor;
   const f = floor && floor.amount > 0 ? floor.amount : 0;
+  if(!c.base.walk) return `<div class="mgr-x-cal"><div class="mgr-x-calh"><b>Free cash, day by day</b><span class="mgr-x-bad">The cash ahead could not be read — there is no day-by-day line to draw. The levers, the offers and what was signed still stand.</span></div></div>`;
   const days = c.base.walk.days;
   const marks = mgrSimMarks(c);
   const used = new Set();
@@ -136410,21 +136665,25 @@ function mgrSimCalHTML(c){
     const wd = waWeekday(d.date);
     return `<span class="mgr-x-cd${wd === 0 ? ' mgr-x-we' : ''}"><b>${Number(d.date.slice(8, 10))}</b>${esc(MGR_WEEKDAYS[wd].slice(0, 3))}</span>`;
   }).join('');
+  const sel = mgrSimState.day;
+  const named = [];
   const ev = days.map(d=>{
     const list = marks.get(d.date) || [];
     if(!list.length) return '<span class="mgr-x-ce"></span>';
     const top = MGR_SIM_EV.find(x=> list.some(e=> e.kind === x[0]));
-    used.add(top[0]);
-    list.forEach(e=> used.add(e.kind));
-    return `<span class="mgr-x-ce" title="${esc(mgrSimDay(d.date) + ' · ' + list.map(e=> e.text).join(' · '))}"><i>${top[1]}</i></span>`;
+    list.forEach(e=>{ if(e.named) named.push({ date: d.date, letter: (MGR_SIM_EV.find(x=> x[0] === e.kind) || top)[1], text: e.text }); else used.add(e.kind); });
+    const say = mgrSimDay(d.date) + ' · ' + list.map(e=> e.text).join(' · ');
+    return `<span class="mgr-x-ce"><button type="button" class="mgr-x-ceb${sel === d.date ? ' mgr-x-on' : ''}" data-sim-day="${d.date}" aria-pressed="${sel === d.date}" aria-label="${esc(say)}" title="${esc(say)}">${top[1]}</button></span>`;
   }).join('');
+  const picked = sel && marks.get(sel) ? marks.get(sel) : null;
   const same = !c.run.changed.length;
   const fs = floor ? (floor.source === 'set' ? 'your floor is ' : 'the stand-in floor (a month of rent and salaries) is ') + mgrSimMoney(f) : '';
   const band = f > 0 ? [['lo', 'under the ' + mgrSimMoney(f) + ' floor'], ['md', mgrSimMoney(f) + '–' + mgrSimMoney(f * 1.5) + ' · thin'],
     ['ok', mgrSimMoney(f * 1.5) + '–' + mgrSimMoney(f * 3) + ' · safe'], ['hi', 'over ' + mgrSimMoney(f * 3)]]
     : [['lo', 'below nothing'], ['ok', 'above nothing']];
+  const counted = c.run.comp.adjust.loan ? 'nothing coming in counted but the money you borrow' : 'nothing coming in counted';
   return `<div class="mgr-x-cal">
-    <div class="mgr-x-calh"><b>Free cash, day by day</b><span>${esc(mgrSimDay(b.today))} → ${esc(mgrSimDay(b.to))} · after every dated promise, nothing coming in counted · the ringed day is the lowest${fs ? ' · ' + esc(fs) : ''}</span></div>
+    <div class="mgr-x-calh"><b>Free cash, day by day</b><span>${esc(mgrSimDay(b.today))} → ${esc(mgrSimDay(b.to))} · after every dated promise, ${counted} · the ringed day is the lowest${fs ? ' · ' + esc(fs) : ''}</span></div>
     <div class="mgr-x-calw" tabindex="0" role="region" aria-label="Free cash by day — scrolls sideways">
       <div class="mgr-x-calg">
         <span class="mgr-x-cl"></span>${head}
@@ -136435,9 +136694,11 @@ function mgrSimCalHTML(c){
         ${row('expected', expSub(c.run), c.run.walk, 'expected', null, ' mgr-x-ex')}
       </div>
     </div>
+    ${picked ? `<p class="mgr-x-cdd" role="status"><b>${esc(mgrSimDay(sel))}</b> · ${esc(picked.map(e=> e.text).join(' · '))}</p>` : ''}
     <div class="mgr-x-calk">${band.map(([k, t])=> `<span><i class="mgr-x-sw mgr-x-${k}"></i>${esc(t)}</span>`).join('')}
       <span><i class="mgr-x-sw mgr-x-sx"></i>expected: with what customers usually pay and a usual day’s trading</span>
-      ${MGR_SIM_EV.filter(x=> used.has(x[0])).map(x=> `<span><i class="mgr-x-ev">${x[1]}</i>${esc(x[2])}</span>`).join('')}</div>
+      ${MGR_SIM_EV.filter(x=> used.has(x[0])).map(x=> `<span><i class="mgr-x-ev">${x[1]}</i>${esc(x[2])}</span>`).join('')}
+      ${named.slice(0, 8).map(x=> `<span><i class="mgr-x-ev">${x.letter}</i>${esc(x.text)} · ${Number(x.date.slice(8, 10))}</span>`).join('')}</div>
   </div>`;
 }
 function mgrSimOutHTML(c){
@@ -136448,9 +136709,10 @@ function mgrSimOutHTML(c){
   const p = r.profit;
   const pd = Math.round(p.d);
   const tiles = [];
-  tiles.push({ l: 'Net profit · a month', v: mgrSimMoney(changed ? p.mid : p.base),
+  tiles.push({ l: 'Net profit · a month', v: changed && p.base == null ? mgrSimSigned(pd) : mgrSimMoney(changed ? p.mid : p.base),
     d: !changed ? (p.base == null ? 'not known — nothing invoiced in 30 days' : 'today’s pace · the last 30 days')
-      : (p.ranged ? mgrSimMoney((p.base || 0) + p.lo) + '–' + mgrSimMoney((p.base || 0) + p.hi) + ' on your assumptions · ' : '') + mgrSimSigned(pd) + ' vs today',
+      : p.base == null ? (p.ranged ? mgrSimSigned(p.lo) + ' to ' + mgrSimSigned(p.hi) + ' vs today, on your assumptions' : mgrSimSigned(pd) + ' vs today') + ' · today’s profit not known'
+      : (p.ranged ? mgrSimMoney(p.base + p.lo) + '–' + mgrSimMoney(p.base + p.hi) + ' on your assumptions · ' : '') + mgrSimSigned(pd) + ' vs today',
     dc: pd > 0 ? 'mgr-x-up' : pd < 0 ? 'mgr-x-dn' : '', title: p.base == null ? '' : mgrNum(changed ? p.mid : p.base) });
   const lowUnder = r.low && r.low.balance < fl;
   tiles.push({ l: 'Lowest cash · 30 days', v: r.low ? mgrSimMoney(r.low.balance) : 'not known',
@@ -136466,16 +136728,18 @@ function mgrSimOutHTML(c){
     d: 'aims: ' + (b.aims.debtorDays != null ? b.aims.debtorDays : '—') + ' · ' + (b.aims.stockDays != null ? b.aims.stockDays : '—') + ' · debtor days on credit sales',
     dc: better && !worse ? 'mgr-x-up' : worse && !better ? 'mgr-x-dn' : '' });
   const h = c.holds;
+  const tested = h.of - (h.untestable || 0);
+  const notT = h.untestable ? ' · ' + h.untestable + ' not testable' : '';
   tiles.push({ l: 'Holds under shocks', v: h.held == null ? '—' : h.held + '/' + h.of,
-    d: h.held == null ? 'not known — no expected band to test' : h.held === h.of ? 'survives ' + (h.of === 3 ? 'all three' : 'every one') + ' below'
-      : h.held === 0 ? 'breaks under every shock' : 'breaks under ' + (h.of - h.held) + ' of them',
-    dc: h.held == null ? '' : h.held === h.of ? 'mgr-x-up' : h.held < h.of - 1 || h.held === 0 ? 'mgr-x-dn' : '' });
+    d: h.held == null ? 'not known — no test could be run' : (h.held === tested ? 'survives ' + (tested === 3 ? 'all three' : 'every one tested') + ' below'
+      : h.held === 0 ? 'breaks under every shock tested' : 'breaks under ' + (tested - h.held) + ' of them') + notT,
+    dc: h.held == null ? '' : h.held === tested ? 'mgr-x-up' : h.held < tested - 1 || h.held === 0 ? 'mgr-x-dn' : '' });
   /* How sure: the lowest counted pips among the choices the books can
      price; the ones resting on the owner's assumptions are named, not
      counted. */
   const books = r.changed.filter(x=> x.from === 'books' && x.pips != null);
   const lowP = books.reduce((m, x)=> (!m || x.pips < m.pips) ? x : m, null);
-  const assumed = r.changed.filter(x=> x.from === 'assumption').map(x=> x.short);
+  const assumed = r.changed.filter(x=> x.from === 'assumption' || x.assumption).map(x=> x.short);
   const pips = !changed ? 5 : lowP ? lowP.pips : null;
   const sure = !changed ? 'How sure: certain — this is the books as they stand.'
     : (lowP ? 'How sure: ' + lowP.pips + '/5 — ' + (lowP.basis || 'counted') + (assumed.length ? '; ' : '; everything here is on your books.') : 'How sure: not counted — ')
@@ -136499,7 +136763,9 @@ function mgrSimSignHTML(c, dock){
   const fl = c.floor && c.floor.amount > 0 ? c.floor.amount : 0;
   const ok = n && c.run.low && c.run.low.balance >= fl;
   const done = n && mgrSimState.signedKey === mgrSimSignKey(c);
-  const label = mgrSimState.signing ? 'Signing…' : done ? 'Signed' : n ? 'Sign it — ' + n + ' decision' + (n === 1 ? '' : 's') : 'Nothing to sign yet';
+  const t = c.targets;
+  const tSay = t == null ? ', targets not read' : ', ' + t.length + ' target' + (t.length === 1 ? '' : 's');
+  const label = mgrSimState.signing ? 'Signing…' : done ? 'Signed' : n ? 'Sign it — ' + n + ' decision' + (n === 1 ? '' : 's') + tSay : 'Nothing to sign yet';
   return `<button type="button" class="btn ow-sm mgr-x-sb ${!n || done ? 'btn-ghost mgr-x-q' : ok ? 'btn-accent' : 'btn-ghost'}" data-sim-sign${!n || done || mgrSimState.signing ? ' disabled' : ''}>${esc(label)}</button>`
     + (dock ? '' : `<button type="button" class="btn btn-ghost ow-sm mgr-x-q" data-sim-reset${n ? '' : ' disabled'}>Back to today</button>`);
 }
@@ -136522,20 +136788,23 @@ function mgrSimRippleHTML(c){
     const moved = r.changed.some(x=> x.dept === d.id) || (d.id === 'finance' && changed) || (d.id === 'store' && Math.round(c.base.stockDays || 0) !== Math.round(r.stockDays || 0));
     return `<div class="mgr-x-rp${moved ? ' mgr-x-chg' : ''}">${mgrSimMonoHTML(d.id)}<span><b>${esc(d.name)}</b><small>${esc(bits.join(' · ') || 'no change')}</small></span></div>`;
   }).join('');
-  return `<div><div class="mgr-x-hdr"><b>Across the shop</b><span class="mgr-x-nt">what these choices change, department by department</span></div>${rows}</div>`;
+  const err = c.rippleErr ? `<p class="mgr-x-fine mgr-x-bad">The health checks could not be read — ${esc(c.rippleErr)}. Which checks these choices pass or fail is not shown.</p>` : '';
+  return `<div><div class="mgr-x-hdr"><b>Across the shop</b><span class="mgr-x-nt">what these choices change, department by department</span></div>${err}${rows}</div>`;
 }
 function mgrSimShocksHTML(c){
   const h = c.holds;
-  const chip = h.held == null ? '' : `<span class="ow-cp ${h.held === h.of ? 'ow-good' : h.held === 0 ? 'ow-bad' : 'ow-warn'}">holds in <b class="ow-fig">${h.held}</b> of ${h.of}</span>`;
+  const tested = h.of - (h.untestable || 0);
+  const chip = h.held == null ? '' : `<span class="ow-cp ${h.held === tested ? 'ow-good' : h.held === 0 ? 'ow-bad' : 'ow-warn'}">holds in <b class="ow-fig">${h.held}</b> of ${h.of}${h.untestable ? ' · ' + h.untestable + ' not testable' : ''}</span>`;
   const rows = c.shocks.map(s=>{
     const sig = !s.available || s.held == null ? 'mgr-x-sgn' : s.held ? 'mgr-x-sgg' : 'mgr-x-sgb';
-    const res = !s.available ? '' : s.held == null ? 'Not known — no expected band to test'
-      : (s.held ? 'Holds' : 'Breaks the floor') + ' — expected low ' + mgrSimMoney(s.low.balance) + ', ' + mgrSimDay(s.low.date)
+    const res = !s.available ? '' : s.held == null ? 'Not known — the cash ahead could not be read'
+      : (s.held ? 'Holds' : 'Breaks the floor') + ' — lowest ' + mgrSimMoney(s.low.balance) + ' committed, ' + mgrSimDay(s.low.date)
+        + (s.expLow ? ' · expected ' + mgrSimMoney(s.expLow.balance) : '')
         + (s.profit ? ' · profit ' + mgrSimSigned(s.profit) + ' a month' : '');
     return `<div class="mgr-x-sh"><span class="mgr-x-sig ${sig}" aria-hidden="true"></span><span><b>${esc(s.label)}</b>${res ? `<small class="mgr-x-res ${s.held ? 'mgr-x-up' : s.held === false ? 'mgr-x-dn' : ''}">${esc(res)}</small>` : ''}<small>${esc(s.note)}</small></span></div>`;
   }).join('');
   return `<div><div class="mgr-x-hdr"><b>What could go wrong</b>${chip}</div>${rows}
-    <p class="mgr-x-fine">Judged on the expected band, against the floor. Sizes are assumptions: ${MGR_SIM_SHOCK.lateDays} days late, ${MGR_SIM_SHOCK.earlyDays} days early, ${MGR_SIM_SHOCK.rivalShare}% of the volume.</p></div>`;
+    <p class="mgr-x-fine">Judged on cash after what is promised, then on the expected band, against the floor. Sizes are assumptions: ${MGR_SIM_SHOCK.lateDays} days late, ${MGR_SIM_SHOCK.earlyDays} days early, ${MGR_SIM_SHOCK.rivalShare}% of the volume.</p></div>`;
 }
 function mgrSimCmpHTML(c){
   const cols = [c.base, c.run, c.plan];
@@ -136543,12 +136812,13 @@ function mgrSimCmpHTML(c){
   const pips = (r)=>{ if(!r || !r.changed.length) return 5; const b = r.changed.filter(x=> x.from === 'books' && x.pips != null); return b.length ? Math.min(...b.map(x=> x.pips)) : null; };
   const n = (v)=> v == null ? '—' : String(Math.round(v));
   const rows = [
-    ['Net profit · a month', (r)=> r.profit.mid == null ? (r.changed.length ? mgrSimSigned(r.profit.d) : 'not known') : mgrSimMoney(r.profit.mid), (a, b)=> b.profit.d - a.profit.d],
+    ['Net profit · a month', (r)=> r.profit.mid == null ? (r.changed.length ? mgrSimSigned(r.profit.d) + ' vs today' : 'not known') : mgrSimMoney(r.profit.mid), (a, b)=> b.profit.d - a.profit.d],
     ['Lowest cash', (r)=> r.low ? mgrSimMoney(r.low.balance) : '—', (a, b)=> a.low && b.low ? b.low.balance - a.low.balance : 0],
     ['Lowest, expected', (r)=> r.expLow ? mgrSimMoney(r.expLow.balance) : '—', (a, b)=> a.expLow && b.expLow ? b.expLow.balance - a.expLow.balance : 0],
     ['Debtor days', (r)=> n(r.debtorDays), (a, b)=> (a.debtorDays || 0) - (b.debtorDays || 0)],
     ['Stock days', (r)=> n(r.stockDays), (a, b)=> Math.round(a.stockDays || 0) - Math.round(b.stockDays || 0)],
-    ['Cash freed · 60 days', (r)=> r.freed ? mgrSimMoney(r.freed) : '—', (a, b)=> b.freed - a.freed],
+    ['Cash freed · 60 days, if customers keep to the terms', (r)=> r.freed ? mgrSimMoney(r.freed) : '—', (a, b)=> b.freed - a.freed],
+    ['Clearance in · 30 days, on your assumption', (r)=> r.clearIn ? mgrSimMoney(r.clearIn) : '—', (a, b)=> b.clearIn - a.clearIn],
     ['Interest · a year', (r)=> r.interest ? mgrSimMoney(r.interest) : '—', (a, b)=> a.interest - b.interest],
     ['Holds under shocks', (r, h)=> h && h.held != null ? h.held + ' of ' + h.of : '—', (a, b, ha, hb)=> (hb && ha && hb.held != null && ha.held != null) ? hb.held - ha.held : 0],
     ['How sure', (r)=> { const p = pips(r); return p == null ? 'yours' : p + '/5'; }, ()=> 0],
@@ -136605,7 +136875,7 @@ function mgrSimDecisionsHTML(){
 }
 function mgrSimHeadHTML(c){
   const r = c.run, h = c.holds;
-  const cells = [['Profit a month', mgrSimMoney(r.changed.length ? r.profit.mid : r.profit.base)], ['Lowest cash', r.low ? mgrSimMoney(r.low.balance) : '—'],
+  const cells = [['Profit a month', r.changed.length && r.profit.base == null ? mgrSimSigned(r.profit.d) : mgrSimMoney(r.changed.length ? r.profit.mid : r.profit.base)], ['Lowest cash', r.low ? mgrSimMoney(r.low.balance) : '—'],
     ['Holds under shocks', h.held == null ? '—' : h.held + '/' + h.of], ['Decisions changed', String(r.changed.length)]];
   return `<section class="mgr-x-hd" aria-label="The Manager — simulator">
     <span class="mgr-x-gm" role="img" aria-label="${c.b.errors.length ? 'The Manager — part of the books could not be read' : 'The Manager'}">${MGR_SIM_FACE}<i${c.b.errors.length ? ' class="mgr-x-gw"' : ''}></i></span>
@@ -136629,10 +136899,17 @@ function mgrSimDockHTML(c){
   return `<div class="ow-bk mgr-x-dock"><span class="ow-bk-say"><span class="ow-bk-b">${r.changed.length ? r.changed.length + ' changed' : 'Today, unchanged'}</span> · lowest <span class="ow-bk-m">${esc(r.low ? mgrSimMoney(r.low.balance) : '—')}</span>${c.holds.held != null ? ` · holds <span class="ow-bk-m">${c.holds.held}/${c.holds.of}</span>` : ''}</span>
     <span class="ow-bk-a">${mgrSimSignHTML(c, true)}</span></div>`;
 }
+/* Each reading the simulator makes, in the owner's words, for the line
+   that names what could not be read. */
+const MGR_SIM_READS = { cash: 'the cash ahead', health: 'the health checks', sales: 'sales by line', margin: 'the month’s margin',
+  chases: 'how customers pay after a chase', floor: 'the cash floor', profit: 'the month’s profit', debtorDays: 'debtor days',
+  daysOfStock: 'days of stock', aims: 'the health checks’ aims', promises: 'broken promises', bills: 'supplier bills',
+  clearance: 'dead stock', price: 'rival prices', discounts: 'counter discounts', terms: 'credit terms', hire: 'the payroll',
+  quote: 'quotes won', post: 'past WhatsApp posts', season: 'last year’s buying' };
 function mgrSimHTML(c){
   const books = c.model.levers.filter(l=> l.group === 'books'), mine = c.model.levers.filter(l=> l.group !== 'books');
-  const lv = (list)=> list.map(l=> mgrSimLeverHTML(l, c.choice, c.assume, mgrSimState.edit)).join('');
-  const missing = c.b.errors.length ? `<p class="mgr-x-fine mgr-x-bad">Not read, so not shown: ${esc(c.b.errors.join(', '))}.</p>` : '';
+  const lv = (list)=> list.map(l=> mgrSimLeverHTML(l, c.choice, c.assume, mgrSimState.edit, c.run)).join('');
+  const missing = c.b.errors.length ? `<p class="mgr-x-fine mgr-x-bad">Could not be read: ${esc(mgrSimAnd([...new Set(c.b.errors.map(k=> MGR_SIM_READS[k] || k))]))}.</p>` : '';
   return `<div class="mgr-x">
     ${mgrSimHeadHTML(c)}
     <section class="ow-pan mgr-x-pan" aria-label="Simulator">
@@ -136664,10 +136941,12 @@ function mgrPaintSim(gen, ctx){
   if(ctx.landed === 'start'){
     mgrSimNotes = !!ctx.notes;
     if(ctx.notes) mgrSimReadJournal(gen);
-    else { mgrSimPlanMoves = null; mgrSimOffers = { rows: [], error: null, read: true }; mgrSimDecisions = { rows: [], error: null, read: true }; }
+    else { mgrSimPlanMoves = null; mgrSimTargets = []; mgrSimOffers = { rows: [], error: null, read: true }; mgrSimDecisions = { rows: [], error: null, read: true }; }
   } else if(ctx.landed === 'state'){
     mgrSimPlanErr = ctx.st && ctx.st.error ? ctx.st.error : null;
     mgrSimPlanMoves = ctx.st && !ctx.st.error ? mgrSimMoves(ctx.st.today ? ctx.st.today.moves : []) : null;
+    const sc = ctx.st && !ctx.st.error ? ctx.st.score : null;
+    mgrSimTargets = sc && !sc.error && Array.isArray(sc.targets) ? sc.targets : null;
   } else if(ctx.landed !== 'view') return;
   /* Worked out only while the section is open: a hidden simulator would
      walk the books on every render of the Brief for nobody. Opening it
@@ -136696,16 +136975,31 @@ function mgrSimDraw(el){
   let c;
   try { c = mgrSimCompute(); }
   catch(e){
+    /* Named, over the last drawing if there is one -- never a wiped bed. */
     console.error('The Manager could not work out the simulator', e);
-    el.innerHTML = `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">Simulator</span></div>
-      <div class="ow-empty">The simulator could not be worked out — ${esc((e && e.message) || String(e))}</div></div>`;
+    const say = `<p class="mgr-x-fail mgr-x-fine mgr-x-bad" role="status">The simulator could not be worked out just now — ${esc((e && e.message) || String(e))}. What is shown is the last drawing.</p>`;
+    const prev = el.querySelector('.mgr-x');
+    if(prev){ const old = prev.querySelector('.mgr-x-fail'); if(old) old.remove(); prev.insertAdjacentHTML('afterbegin', say); return; }
+    mgrLastKnown(el, false);
+    el.insertAdjacentHTML('afterbegin', `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">Simulator</span></div>
+      <div class="ow-empty">The simulator could not be worked out — ${esc((e && e.message) || String(e))}</div></div>`);
     return;
   }
   mgrSimLast = c;
   const f = document.activeElement;
-  const keep = f && el.contains(f) ? ['data-sim-lever', 'data-sim-opt', 'data-sim-preset', 'data-sim-edit', 'data-sim-assume', 'data-sim-k', 'data-sim-sign', 'data-sim-reset', 'data-sim-offer-new']
+  const keep = f && el.contains(f) ? ['data-sim-lever', 'data-sim-opt', 'data-sim-preset', 'data-sim-edit', 'data-sim-assume', 'data-sim-k', 'data-sim-sign', 'data-sim-reset', 'data-sim-offer-new', 'data-sim-day']
     .filter(a=> f.hasAttribute(a)).map(a=> '[' + a + (f.getAttribute(a) ? '="' + String(f.getAttribute(a)).replace(/"/g, '\\"') + '"' : '') + ']').join('') : '';
+  const calw = el.querySelector('.mgr-x-calw');
+  const scrolled = calw ? calw.scrollLeft : 0;
   el.innerHTML = mgrSimHTML(c);
+  /* A calendar narrower than its 31 days keeps where the owner scrolled
+     it, and on a first drawing brings the ringed low into view. */
+  const w2 = el.querySelector('.mgr-x-calw');
+  if(w2 && w2.scrollWidth > w2.clientWidth){
+    if(scrolled) w2.scrollLeft = scrolled;
+    else { const rings = w2.querySelectorAll('.mgr-x-min'); const ring = rings[rings.length - 1];
+      if(ring && ring.offsetLeft + ring.offsetWidth > w2.clientWidth) w2.scrollLeft = ring.offsetLeft - w2.clientWidth / 2; }
+  }
   if(keep){ const back = el.querySelector(keep); if(back) back.focus({ preventScroll: true }); }
   if(!el._mgrSimWired){ el._mgrSimWired = true; mgrSimWire(el); }
 }
@@ -136721,6 +137015,7 @@ function mgrSimWire(el){
       return;
     }
     if(t.hasAttribute('data-sim-reset')){ mgrSimState.choice = {}; mgrSimState.said = null; mgrSimRepaint(); return; }
+    if(t.hasAttribute('data-sim-day')){ mgrSimState.day = mgrSimState.day === t.dataset.simDay ? null : t.dataset.simDay; mgrSimRepaint(); return; }
     if(t.hasAttribute('data-sim-edit')){ mgrSimState.edit = mgrSimState.edit === t.dataset.simEdit ? null : t.dataset.simEdit; mgrSimRepaint(); return; }
     if(t.hasAttribute('data-sim-sign')){ mgrSimSign(); return; }
     if(t.hasAttribute('data-sim-offer-new')){ mgrSimState.offerForm = !mgrSimState.offerForm; mgrSimRepaint(); return; }
@@ -136756,7 +137051,7 @@ async function mgrSimSign(){
       const one = mgrSimRun(c.model, { [x.id]: x.choice }, c.assume, walkFn);
       return { id: x.id, profit: one.profit.d, low: one.low ? one.low.balance : null };
     });
-    r = await mgrSaveDecision(mgrSimDecisionBody({ run: c.run, verdict: c.verdict, holds: c.holds, floor: c.floor, today: c.b.today, alone }));
+    r = await mgrSaveDecision(mgrSimDecisionBody({ run: c.run, verdict: c.verdict, holds: c.holds, floor: c.floor, today: c.b.today, alone, targets: c.targets }));
   } catch(e){ r = { ok: false, error: (e && e.message) || String(e) }; }
   mgrSimState.signing = false;
   mgrSimState.said = r.ok ? { ok: true, text: 'Signed and kept in the Manager’s memory — nothing was paid, ordered or sent.' }
