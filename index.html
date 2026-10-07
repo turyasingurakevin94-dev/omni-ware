@@ -2592,14 +2592,19 @@
   .mgr-k-dock{display:none;}
   .mgr-k > .mgr-ask-cut{border-top:0;padding:0;}
   .mgr-k > .mgr-ask-cut[hidden]{display:none;}
-  /* A console narrower than the canvas: the route and memory go under
-     the questions, and the band's figures under its sentence. */
-  @media (max-width:1180px){
-    .mgr-k-grid{grid-template-columns:minmax(0,1fr);}
-    .mgr-k-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--ow-sp-16);align-items:start;}
+  /* A console narrower than the canvas. Beside the 220px rail the band's
+     sentence would be squeezed to a column of single words, so its
+     figures go under it first; then the route and the memory go under
+     the questions, at the canvas's own 1180. */
+  @media (max-width:1360px){
     .mgr-k-hd{grid-template-columns:84px minmax(0,1fr);}
     .mgr-k-hf{grid-column:1/-1;border-left:0;grid-template-columns:repeat(4,minmax(0,1fr));}
     .mgr-k-hf > div:first-child{padding-left:0;}
+    .mgr-k-hf span{white-space:normal;}
+  }
+  @media (max-width:1180px){
+    .mgr-k-grid{grid-template-columns:minmax(0,1fr);}
+    .mgr-k-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--ow-sp-16);align-items:start;}
   }
   /* ═══ MGR BED: Ask — end ═══ */
   /* ──────────────────────────────────────────────────────────────────
@@ -136004,9 +136009,15 @@ function mgrPaintAsk(gen, ctx){
     if(!ctx.notes){ qWrap.innerHTML = mgrNeedsMemoryHTML('What it needs to know'); return; }
     mgrLastKnown(qWrap, true);
     /* The supplier terms come from the books alone, so the nav can count
-       them before the journal answers. */
-    try{ ctx.askTerms = mgrAskTermsAsks(todayISO(), {}).length; }
-    catch(e){ ctx.askTerms = null; console.error('The Manager could not count the supplier terms it needs', e); }
+       them before the journal answers -- just after this paint rather
+       than inside it (walking the bills and deliveries costs a moment),
+       and never over the count a drawing has already made. */
+    setTimeout(()=>{
+      if(gen !== mgrRenderGen || ctx.askTerms != null) return;
+      try{ ctx.askTerms = mgrAskTermsAsks(todayISO(), {}).length; }
+      catch(e){ console.error('The Manager could not count the supplier terms it needs', e); return; }
+      mgrPaintSwitch();
+    }, 0);
     mgrAskReadAnswered().then(r=>{
       if(gen !== mgrRenderGen) return;
       mgrAskRead = { ...r, gen };
@@ -136784,7 +136795,7 @@ function mgrAskRouteHTML(model){
     act = '<div class="mgr-k-ra"><span>Nobody is named for these visits yet — the next meeting can give them to someone.</span></div>';
   }
   const others = p && r.visits > r.questions ? ` · ${r.visits - r.questions} more not given to ${esc(p.first)}` : '';
-  return `<section class="ow-pan mgr-k-pan mgr-k-route" aria-label="${esc(title)}">
+  return `<section class="ow-pan mgr-k-pan" aria-label="${esc(title)}">
     <div class="mgr-k-ph"><span class="mgr-k-mic">Field</span><span class="mgr-k-pt">${esc(title)}</span><span class="mgr-k-pn">${r.questions} question${r.questions === 1 ? '' : 's'}, ${r.stops.length} stop${r.stops.length === 1 ? '' : 's'}${others}</span></div>
     ${stops}
     ${r.from ? `<p class="mgr-k-rf">Nearest first, ${esc(r.from)}.</p>` : ''}

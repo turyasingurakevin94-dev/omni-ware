@@ -498,8 +498,9 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
   const paint = extractFunction(src, 'mgrPaintAsk', 'index.html');
   t.check(/mgrAskReadAnswered\(\)\.then\(r=>\{\s*if\(gen !== mgrRenderGen\) return;/.test(paint),
     'the answered side is read beside the journal and lands only while its render is current');
-  t.check(/ctx\.askTerms = mgrAskTermsAsks\(todayISO\(\), \{\}\)\.length;/.test(paint) && /ctx\.askTerms = model\.items\.filter/.test(paint),
-    'the supplier terms are counted for the nav from the books, then from the drawing');
+  t.check(/setTimeout\(\(\)=>\{\s*if\(gen !== mgrRenderGen \|\| ctx\.askTerms != null\) return;\s*try\{ ctx\.askTerms = mgrAskTermsAsks\(todayISO\(\), \{\}\)\.length; \}/.test(paint)
+    && /ctx\.askTerms = model\.items\.filter/.test(paint),
+    'the supplier terms are counted for the nav from the books just after the first paint, never over the drawing\'s own count');
   t.check(/if\(why === 'read' && root && root\.dataset\.terms === model\.termsKey\)/.test(paint),
     'a reading that lands after the cards only redraws the band and the memory — never what the owner is typing');
   const read = extractFunction(src, 'mgrAskReadAnswered', 'index.html');
