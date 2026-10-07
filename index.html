@@ -131684,18 +131684,25 @@ function managerScoreProgress(row){
   /* A flow starts at nothing and climbs to the aim. A level starts where
      it was and has to travel to the aim, so the distance is what counts
      -- and an aim already met before the week began is 100%, not more. */
+  const met = m.direction === 'down' ? actual <= aim : actual >= aim;
+  /* A HOLD: a level whose aim was already met where it started -- cash
+     never under a floor it stood above, debt kept under a line it was
+     already under. There is no distance to travel, only a line to keep:
+     it is 100% while held and 0% once broken, and the line it must hold
+     today is the aim itself. Read as a journey it scored 100% while
+     broken, the distance running the wrong way. */
+  const hold = m.kind === 'level' && (m.direction === 'down' ? baseline <= aim : baseline >= aim);
   let pct;
   if(m.kind === 'flow') pct = aim > 0 ? Math.round(actual / aim * 100) : null;
   else {
     const span = baseline - aim;
-    pct = Math.abs(span) < 0.5 ? (m.direction === 'down' ? (actual <= aim ? 100 : 0) : (actual >= aim ? 100 : 0))
+    pct = hold || Math.abs(span) < 0.5 ? (met ? 100 : 0)
       : Math.round((baseline - actual) / span * 100);
   }
   /* Capped at 100: beating a target is reported by met and by the two
      figures standing side by side, never as "150% of target" -- a score
      above the commitment is how a manager flatters itself. */
   if(pct != null) pct = Math.max(0, Math.min(100, pct));
-  const met = m.direction === 'down' ? actual <= aim : actual >= aim;
   /* PACE -- where a target on course would stand TODAY. Progress alone
      says 900,000 of 3,000,000; pace says 900,000 where 1,300,000 would
      be level, with 3 days left, which is the difference between a
@@ -131710,8 +131717,11 @@ function managerScoreProgress(row){
   let pace = null;
   if(totalDays && elapsedDays){
     const share = elapsedDays / totalDays;
-    const expected = m.kind === 'flow' ? aim * share : baseline + (aim - baseline) * share;
-    const onCourse = m.direction === 'down' ? actual <= expected + 0.5 : actual >= expected - 0.5;
+    const expected = m.kind === 'flow' ? aim * share : hold ? aim : baseline + (aim - baseline) * share;
+    /* Level within rounding: half a shilling, a day or an order; a
+       twentieth of a point for a margin, where half a point is a lot. */
+    const slack = m.unit === 'pct' ? 0.05 : 0.5;
+    const onCourse = m.direction === 'down' ? actual <= expected + slack : actual >= expected - slack;
     const projected = m.kind === 'flow'
       ? actual / share
       : baseline + (actual - baseline) / share;
@@ -131728,7 +131738,7 @@ function managerScoreProgress(row){
      same way. The Brief's foresight reads these. */
   let checkpoints;
   if(!ended && totalDays >= 1 && /^\d{4}-\d{2}-\d{2}$/.test(from) && /^\d{4}-\d{2}-\d{2}$/.test(to)){
-    const start = m.kind === 'flow' ? 0 : baseline;
+    const start = m.kind === 'flow' ? 0 : hold ? aim : baseline;
     const roadAt = (iso)=> rnd(start + (aim - start) * ((Math.round((dayNum(iso) - dayNum(from)) / 86400000) + 1) / totalDays));
     checkpoints = Array.isArray(b.checkpoints) && b.checkpoints.length
       ? b.checkpoints.filter(c=> c && /^\d{4}-\d{2}-\d{2}$/.test(String(c.on)) && Number.isFinite(Number(c.value)))
@@ -131743,7 +131753,7 @@ function managerScoreProgress(row){
   }
   return { metric: b.metric, label: m.label, unit: m.unit, aim, baseline, actual: rnd(actual),
     direction: m.direction, measure_kind: m.kind, from, to, days_left: daysLeft,
-    finished: ended, met, pct, pace, why: b.why || '', ...owner,
+    finished: ended, met, pct, pace, why: b.why || '', ...owner, ...(hold ? { hold: true } : {}),
     ...(checkpoints ? { checkpoints } : {}) };
 }
 
@@ -132663,7 +132673,10 @@ async function managerSetOwnerTarget(draft){
   if(base == null || !Number.isFinite(Number(base))) return no(m.label + ' cannot be read from your books today, so it cannot be a target yet');
   const owner = String(d.owner || 'you');
   if(owner !== 'you' && !(data.staff || []).some(s=> String(s.id) === owner)) return no('That owner is not on your staff list');
-  const start = m.kind === 'flow' ? 0 : Number(base);
+  /* A level whose aim is already met today is a line to hold: its
+     checkpoints are the aim itself. */
+  const holds = m.kind === 'level' && (m.direction === 'down' ? Number(base) <= aim : Number(base) >= aim);
+  const start = m.kind === 'flow' ? 0 : holds ? aim : Number(base);
   const checkpoints = [];
   for(let i = 0; i < days; i++){
     const on = anShiftDate(from, i);
@@ -135628,31 +135641,40 @@ function mgrTgState(x){
 }
 const MGR_TG_STATE_WORD = { on: 'On track', risk: 'At risk', off: 'Off track', met: 'Met', missed: 'Missed', unknown: 'Not known' };
 const MGR_TG_STATE_TONE = { on: 'good', risk: 'warn', off: 'bad', met: 'good', missed: 'bad', unknown: '' };
-/* A CASH TARGET AGAINST THE COMMITTED LINE. The lowest cash in the
-   month that ends on the deadline is the lower of what the books already
-   show in that month and the committed line's low point before the
-   deadline (mgrCashWalk: dated outflows only, never expected money in).
-   breaksOn is the first day that line goes under the aim. The line runs
-   30 days, and says so when the deadline is beyond it. */
+/* A CASH TARGET AGAINST ITS MONTH. The lowest cash in the month that
+   ends on the deadline is the lower of what the books already show for
+   the days of that month gone by and the committed line's low point for
+   the days still to come (mgrCashWalk: dated outflows only, never money
+   expected in). breaksOn is the first day under the aim -- a past day
+   from the books, or a day ahead on the committed line. The line runs 30
+   days, and says so when the deadline is beyond it. */
 function mgrTgBreak(x){
-  if(!x || x.finished || x.metric !== 'lowest_cash' || typeof mgrCashWalk !== 'function') return null;
-  let walk;
-  try { walk = mgrCashWalk(); } catch(e){ return null; }
-  const today = todayISO(), opens = anShiftDate(x.to, -29);
-  const days = ((walk && walk.days) || []).filter(d=> d && d.date <= x.to && d.date >= opens && Number.isFinite(Number(d.committed)));
-  if(!days.length) return null;
-  let low = null, lowOn = null;
-  days.forEach(d=>{ const v = Number(d.committed); if(low == null || v < low){ low = v; lowOn = d.date; } });
+  if(!x || x.finished || x.metric !== 'lowest_cash') return null;
+  const today = todayISO(), opens = anShiftDate(x.to, -29), aim = Number(x.aim) || 0;
+  const days = [];
   if(opens <= today){
     const first = mgrTgBooksFrom();
-    for(let d = first && first > opens ? first : opens; d <= today; d = anShiftDate(d, 1)){
+    for(let d = first && first > opens ? first : opens; d < today; d = anShiftDate(d, 1)){
       const v = Number(mgrTgCashOn(d));
-      if(Number.isFinite(v) && v < low){ low = v; lowOn = d; }
+      if(Number.isFinite(v)) days.push({ date: d, v, books: true });
     }
   }
-  const under = days.find(d=> Number(d.committed) < Number(x.aim));
-  return { low, lowOn, breaksOn: under ? under.date : null, through: days[days.length - 1].date,
-    partial: days[days.length - 1].date < x.to };
+  let through = null;
+  if(typeof mgrCashWalk === 'function'){
+    let walk = null;
+    try { walk = mgrCashWalk(); } catch(e){ walk = null; }
+    ((walk && walk.days) || []).forEach(d=>{
+      if(!d || d.date > x.to || d.date < opens || !Number.isFinite(Number(d.committed))) return;
+      days.push({ date: d.date, v: Number(d.committed), books: false });
+      through = d.date;
+    });
+  }
+  if(!through) return null;
+  let low = null;
+  days.forEach(d=>{ if(!low || d.v < low.v) low = d; });
+  const under = days.find(d=> d.v < aim) || null;
+  return { low: low.v, lowOn: low.date, lowBooks: low.books, breaksOn: under ? under.date : null,
+    broke: !!(under && under.books), through, partial: through < x.to };
 }
 /* WHERE EACH MARK SITS ON THE TRACK, as a share of the journey from
    where it started to the aim: the fill is where it is, the tick where
@@ -135660,13 +135682,18 @@ function mgrTgBreak(x){
    where it lands with the plan. Off either end is drawn at the end. */
 function mgrTgTrack(x, land, plan){
   const start = x.measure_kind === 'flow' ? 0 : Number(x.baseline) || 0;
-  const span = (Number(x.aim) || 0) - start;
+  const aim = Number(x.aim) || 0;
+  /* A HOLD (the aim already met where it started) has no journey: its
+     track is the margin it had over the line, from the line (0) to where
+     it started (100), and it has no road to tick. */
+  const hold = x.measure_kind !== 'flow' && mgrTgBetter(x.direction, start, aim) && Math.abs(start - aim) > 1e-9;
+  const from = hold ? aim : start, span = (hold ? start : aim) - from;
   const pos = (v)=>{
     if(v == null || !Number.isFinite(Number(v))) return null;
-    if(Math.abs(span) < 1e-9) return mgrTgBetter(x.direction, Number(v), Number(x.aim) || 0) ? 100 : 0;
-    return Math.max(0, Math.min(100, (Number(v) - start) / span * 100));
+    if(Math.abs(span) < 1e-9) return mgrTgBetter(x.direction, Number(v), aim) ? 100 : 0;
+    return Math.max(0, Math.min(100, (Number(v) - from) / span * 100));
   };
-  return { start, now: pos(x.actual), pace: pos(x.pace && x.pace.expected), land: pos(land), plan: pos(plan) };
+  return { start, hold, now: pos(x.actual), pace: hold ? null : pos(x.pace && x.pace.expected), land: pos(land), plan: pos(plan) };
 }
 /* THE LIVE PLAN'S MOVES AIMED AT A TARGET: open moves of today's meeting,
    or of the last one held, whose target names this row (by id) or this
@@ -135799,7 +135826,8 @@ function mgrTgBandLine(runs){
   const brk = runs.find(r=> r.brk && r.brk.breaksOn);
   return `${word(n)} running. ${alone ? word(alone) + (alone === 1 ? ' lands at this rate on its own' : ' land at this rate on their own') : 'None lands at this rate on its own'}${
     need ? `, ${word(need).toLowerCase()} need${need === 1 ? 's' : ''} a move to get there` : ''}${
-    brk ? ` — and the committed line takes cash under ${mgrTgFig('ugx', brk.x.aim)} on ${mgrTgDay(brk.brk.breaksOn, true)}` : ''}.`;
+    brk ? (brk.brk.broke ? ` — and cash already went under ${mgrTgFig('ugx', brk.x.aim)} on ${mgrTgDay(brk.brk.breaksOn, true)}`
+      : ` — and the committed line takes cash under ${mgrTgFig('ugx', brk.x.aim)} on ${mgrTgDay(brk.brk.breaksOn, true)}`) : ''}.`;
 }
 
 /* ==== A PROPOSED TARGET, DRAWN AS ITS OWN ARITHMETIC ==================
@@ -135983,8 +136011,10 @@ function mgrTgComposeModel(draft, env){
   const odds = aim != null ? mgrTgOdds(out.past.values, aim, m.direction) : null;
   const moves = mgrTgLinked((env.plan || {}).moves, { metric });
   const bridge = mgrTgBridge(out.projected, aim, m.direction, moves);
+  /* An aim the measure already meets is a line to hold: its road is flat. */
+  const holds = m.kind === 'level' && aim != null && out.now != null && mgrTgBetter(m.direction, out.now, aim);
   const road = aim != null && (m.kind === 'flow' || out.now != null)
-    ? mgrTgRoad(today, by.to, m.kind === 'flow' ? 0 : out.now, aim, m.round) : null;
+    ? mgrTgRoad(today, by.to, m.kind === 'flow' ? 0 : holds ? aim : out.now, aim, m.round) : null;
   const suggest = mgrTgSuggest(metric, env.finished);
   const people = [{ key: 'you' }].concat((data.staff || []).filter(s=> s && !s.unavailable).map(s=> ({ key: String(s.id) })))
     .map(p=> ({ ...mgrTgPerson(p.key), sug: p.key === suggest.owner }));
@@ -136129,7 +136159,9 @@ function mgrTgAskText(c, person){
 function mgrTgRowHTML(r){
   const x = r.x, u = r.m.unit, today = todayISO();
   const name = mgrTgName(x.metric, x.aim);
-  const left = r.brk && r.brk.breaksOn ? `breaks in ${waDaysBetween(today, r.brk.breaksOn)} day${waDaysBetween(today, r.brk.breaksOn) === 1 ? '' : 's'}`
+  const inDays = r.brk && r.brk.breaksOn ? waDaysBetween(today, r.brk.breaksOn) : null;
+  const left = r.brk && r.brk.broke ? `broke on ${mgrTgDay(r.brk.breaksOn)}`
+    : inDays != null ? (inDays === 0 ? 'breaks today' : `breaks in ${inDays} day${inDays === 1 ? '' : 's'}`)
     : x.days_left === 0 ? 'ends today' : `${x.days_left} day${x.days_left === 1 ? '' : 's'} left`;
   const tone = { on: 'mgr-tg-t-vg', risk: 'mgr-tg-t-am', off: 'mgr-tg-t-cr' }[r.key] || 'mgr-tg-t-nt';
   const t = r.track;
@@ -136137,9 +136169,11 @@ function mgrTgRowHTML(r){
   const aria = `${name}: ${mgrTgFig(u, x.actual)} now; the road has it at ${mgrTgFig(u, x.pace && x.pace.expected)} today; ${mgrTgFig(u, r.land)} at this rate${
     r.planLand != null ? `; ${mgrTgFig(u, r.planLand)} if the moves deliver my sizing` : ''}.`;
   let note, dn = false;
-  if(r.brk){ dn = r.brk.low < (Number(x.aim) || 0); note = `${mgrTgDay(r.brk.lowOn, true)} — ${dn ? 'under the aim' : 'above the aim'}, on the committed line${r.brk.partial ? ` (it runs to ${mgrTgDay(r.brk.through)})` : ''}`; }
+  if(r.brk){ dn = r.brk.low < (Number(x.aim) || 0); note = `${mgrTgDay(r.brk.lowOn, true)} — ${dn ? 'under the aim' : 'above the aim'}, ${
+    r.brk.lowBooks ? 'in your books' : 'on the committed line'}${r.brk.partial ? ` (the line runs to ${mgrTgDay(r.brk.through)})` : ''}`; }
   else if(r.land == null) note = 'not known';
   else if(r.wrongWay){ dn = true; note = 'moving the wrong way'; }
+  else if(r.track.hold) { dn = !r.landsAlone; note = r.landsAlone ? 'holding the line at this rate' : 'crosses the line at this rate'; }
   else if(r.landsAlone) note = r.state.key === 'on' && mgrTgBetter(r.m.direction, Number(x.actual), Number(x.aim) || 0) ? 'already there' : 'at this rate';
   else { dn = r.key === 'off'; note = `${mgrTgGap(u, (Number(x.aim) || 0) - r.land)} short at this rate`; }
   const o = r.odds, op = r.oddsPlan;
@@ -136148,9 +136182,11 @@ function mgrTgRowHTML(r){
       op && op.pct != null ? `<small class="mgr-tg-plan">${op.pct}% with my sizing</small>` : `<small>${o.k} of ${o.n} past periods</small>`}`
     : `<span class="mgr-tg-fig">—</span><small>${o.n} past period${o.n === 1 ? '' : 's'} — too few</small>`;
   const st = r.state;
-  const chip = r.brk && r.brk.breaksOn ? 'Breaks ' + mgrTgDay(r.brk.breaksOn) : MGR_TG_STATE_WORD[r.key];
+  const chip = r.brk && r.brk.breaksOn ? (r.brk.broke ? 'Broke ' : 'Breaks ') + mgrTgDay(r.brk.breaksOn) : MGR_TG_STATE_WORD[r.key];
   const ruleLine = r.brk
-    ? `The lowest cash in the month to ${mgrTgDay(x.to)} is the lower of what the books already show in it and the committed line — dated bills, rent, wages and loans only, never money expected in. ${r.brk.breaksOn ? `That line goes under ${mgrTgFig(u, x.aim)} on ${mgrTgDay(r.brk.breaksOn, true)}.` : `It stays at or above ${mgrTgFig(u, x.aim)}.`}`
+    ? `The lowest cash in the month to ${mgrTgDay(x.to)} is the lower of what the books already show for its days gone by and the committed line for the days to come — dated bills, rent, wages and loans only, never money expected in. ${
+      r.brk.breaksOn ? (r.brk.broke ? `The books show it under ${mgrTgFig(u, x.aim)} on ${mgrTgDay(r.brk.breaksOn, true)}, so this month cannot hold it now.`
+        : `The committed line goes under ${mgrTgFig(u, x.aim)} on ${mgrTgDay(r.brk.breaksOn, true)}.`) : `It stays at or above ${mgrTgFig(u, x.aim)}.`}`
     : st.key === 'unknown' ? 'The books cannot read where it stands today, so it is not called anything.'
     : `${st.behind ? `Behind the road by ${mgrTgGap(u, st.behind)} today — ${Math.round(st.share * 100)}% of the ${mgrTgGap(u, st.toGo)} still to go.` : 'At or ahead of the road today.'} The rule: on track at or ahead of the straight road from where it started to the aim; at risk behind it by less than a third of what is still to go; off track a third or more.`;
   const fix = r.links[0];
@@ -136164,7 +136200,9 @@ function mgrTgRowHTML(r){
       <span class="mgr-tg-trk" role="img" aria-label="${esc(aria)}"><i class="mgr-tg-f ${tone}" style="width:${(t.now || 0).toFixed(1)}%"></i>${
         t.pace != null ? `<em class="mgr-tg-pc" style="left:${t.pace.toFixed(1)}%" title="Where the road has it today"></em>` : ''}${
         mark('mgr-tg-rg', t.land, 'Where it lands at this rate')}${mark('mgr-tg-pl', t.plan, 'Where it lands with the plan, by my sizing')}</span>
-      <span class="mgr-tg-trx"><span>started <b class="mgr-tg-fig">${esc(mgrTgFig(u, t.start, true))}</b></span><span>now <b class="mgr-tg-fig">${esc(mgrTgFig(u, x.actual, true))}</b></span><span>target <b class="mgr-tg-fig">${esc(mgrTgFig(u, x.aim, true))}</b></span></span>
+      <span class="mgr-tg-trx">${t.hold
+        ? `<span>line <b class="mgr-tg-fig">${esc(mgrTgFig(u, x.aim, true))}</b></span><span>now <b class="mgr-tg-fig">${esc(mgrTgFig(u, x.actual, true))}</b></span><span>started <b class="mgr-tg-fig">${esc(mgrTgFig(u, t.start, true))}</b></span>`
+        : `<span>started <b class="mgr-tg-fig">${esc(mgrTgFig(u, t.start, true))}</b></span><span>now <b class="mgr-tg-fig">${esc(mgrTgFig(u, x.actual, true))}</b></span><span>target <b class="mgr-tg-fig">${esc(mgrTgFig(u, x.aim, true))}</b></span>`}</span>
     </span>
     <span class="mgr-tg-rl"><span class="mgr-tg-fig">${esc(mgrTgFig(u, r.land))}</span><small${dn ? ' class="mgr-tg-dn"' : ''}>${esc(note)}</small>${
       r.planLand != null ? `<small class="mgr-tg-plan">with the plan ${esc(mgrTgFig(u, r.planLand))} · my sizing</small>` : ''}</span>

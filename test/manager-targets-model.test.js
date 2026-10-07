@@ -352,6 +352,46 @@ function scope(env) {
   eq([none.actual, none.met, none.pct, none.pace], [null, null, null, null], 'a reading the books cannot give is not known — no score, no verdict');
 }
 
+/* ---------- 16b. a hold: the aim already met where it started ----------- */
+{
+  const M = { cash: { label: 'Lowest cash in a month', unit: 'ugx', kind: 'level', direction: 'up', measure: () => 3540000, at: () => 3540000 } };
+  const { managerScoreProgress } = compileScope([extractFunction(src, 'managerScoreProgress', 'index.html')],
+    { MANAGER_METRICS: M, todayISO: () => TODAY, Date, Math, Number, String, Array }, ['managerScoreProgress']);
+  /* Set on 1 Oct at 29.07m with a floor of 10.00m: a line to hold. It now
+     stands at 3.54m -- broken: 0%, not the 134% the journey arithmetic
+     gave ((29.07-3.54)/(29.07-10), capped to 100 while not met). */
+  const h = managerScoreProgress({ body: { metric: 'cash', aim: 10000000, baseline: 29070000, from: '2026-10-01', to: '2026-10-31' } });
+  eq([h.hold, h.pct, h.met, h.pace.expected, h.pace.on_course, h.pace.behind_by], [true, 0, false, 10000000, false, 6460000],
+    'a hold is 0% once broken, the line it must keep today is the aim, and it is behind by the distance under it');
+  eq(h.checkpoints.every((c) => c.value === 10000000), true, 'and every checkpoint is the line itself');
+  const sTr = scope({});
+  /* The track of a hold: from the line (0) to where it started (100):
+     20m is (20-10)/(29.07-10) = 52.4% of the margin left; 3.54m is under it: 0. */
+  const tr = sTr.mgrTgTrack({ measure_kind: 'level', direction: 'up', baseline: 29070000, aim: 10000000, actual: 3540000, pace: { expected: 10000000 } }, 20000000, null);
+  eq([tr.hold, tr.now, tr.pace, Math.round(tr.land * 10) / 10], [true, 0, null, 52.4], 'a hold is drawn as the margin over its line, with no road to tick');
+}
+
+/* ---------- 16c. a cash floor against its month -------------------------- */
+{
+  /* Floor 10.00m to 31 Oct (its month opens 2 Oct). The books: 2 Oct 3.54m,
+     3-6 Oct 30m. The committed line: 7 Oct 38.3m, 22 Oct 9.59m, 31 Oct 7.48m. */
+  const cash = { '2026-10-02': 3540000 };
+  const mk = (walk) => scope({ shCashAt: (d) => cash[d] || 30000000, mgrCashWalk: () => ({ days: walk }),
+    data: { savedQuotes: [{ date: '2025-01-01' }], cashTxns: [], stockLog: [], customers: [], staff: [] } });
+  const walk = [{ date: '2026-10-07', committed: 38300000 }, { date: '2026-10-22', committed: 9590000 }, { date: '2026-10-31', committed: 7480000 },
+    { date: '2026-11-05', committed: 3150000 }];
+  const x = { finished: false, metric: 'lowest_cash', aim: 10000000, to: '2026-10-31' };
+  const b = mk(walk).mgrTgBreak(x);
+  eq([b.low, b.lowOn, b.lowBooks, b.breaksOn, b.broke, b.through, b.partial], [3540000, '2026-10-02', true, '2026-10-02', true, '2026-10-31', false],
+    'the books already show 3.54m on 2 Oct, inside its month: broken, from the books — not a figure of the committed line');
+  delete cash['2026-10-02'];
+  const c = mk(walk).mgrTgBreak(x);
+  eq([c.low, c.lowOn, c.lowBooks, c.breaksOn, c.broke], [7480000, '2026-10-31', false, '2026-10-22', false],
+    'with the books above it, the committed line goes under 10.00m on 22 Oct and lows at 7.48m on 31 Oct; 5 Nov is past the deadline');
+  eq(mk([]).mgrTgBreak(x), null, 'no committed line, no reading of the days ahead');
+  eq(mk(walk).mgrTgBreak({ ...x, metric: 'collections' }), null, 'only the lowest cash is read against the line');
+}
+
 /* ---------- 17. the owner’s own target is written as it was set --------- */
 (async () => {
   const written = [];
