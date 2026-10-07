@@ -2568,6 +2568,7 @@
   .mgr-tg-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--ow-sp-20);align-items:start;}
   .mgr-tg-fin{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:var(--ow-sp-12);align-items:center;
     padding:var(--ow-sp-10) var(--ow-sp-16);border-bottom:1px solid var(--ow-rule-soft);}
+  .mgr-tg-fin + .ow-mini{border-top:0;}
   .mgr-tg-fm{width:22px;height:22px;border-radius:var(--ow-r-sm);display:grid;place-items:center;background:var(--ow-rule-soft);
     color:var(--ow-ink-600);font-size:var(--ow-t-12);font-weight:var(--ow-fw-700);}
   .mgr-tg-fm-m{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
@@ -131590,7 +131591,11 @@ const MANAGER_METRICS = {
     measure: (from, to)=>{
       if(!/^\d{4}-\d{2}-\d{2}$/.test(String(from||'')) || !/^\d{4}-\d{2}-\d{2}$/.test(String(to||''))) return 0;
       let n = 0; const stop = to < todayISO() ? to : todayISO();
-      for(let d = from; d <= stop; d = anShiftDate(d, 1)) n += debtCollectionsOn(d).total;
+      /* A day's collections are read once per reading of the books when
+         the Targets section's keeper is there: its past periods walk the
+         same days many times over. */
+      const day = (d)=> typeof mgrTgMemo === 'function' ? mgrTgMemo('dc|' + d, ()=> debtCollectionsOn(d).total) : debtCollectionsOn(d).total;
+      for(let d = from; d <= stop; d = anShiftDate(d, 1)) n += day(d);
       return n; } },
   gross_profit: { label: 'Gross profit', unit: 'ugx', kind: 'flow', direction: 'up',
     basis: 'goods sold less what they cost, on the invoices of the period',
@@ -135371,15 +135376,18 @@ function mgrNavCountTargets(ctx){
 
 /* READINGS ARE KEPT FOR THE LENGTH OF ONE READ OF THE BOOKS. The past
    periods of a measure cost a pass over the books each, and a tap in the
-   composer must not pay for them again; a new render, a new day or a new
-   row in the books starts afresh. */
+   composer must not pay for them again. A new render, a new day, a row
+   added anywhere the shared models watch (mgrModelStamp), or a minute
+   gone -- the shared models' own rule -- starts afresh. */
 let mgrTgMemoSig = '';
+let mgrTgMemoAt = 0;
 let mgrTgMemoMap = new Map();
 function mgrTgMemo(key, fn){
-  const sig = [typeof mgrRenderGen === 'number' ? mgrRenderGen : 0, todayISO(),
-    (data.savedQuotes || []).length, (data.cashTxns || []).length, (data.stockLog || []).length,
-    (data.customers || []).length].join('|');
-  if(sig !== mgrTgMemoSig){ mgrTgMemoSig = sig; mgrTgMemoMap = new Map(); }
+  const sig = [typeof mgrRenderGen === 'number' ? mgrRenderGen : 0,
+    typeof mgrModelStamp === 'function' ? mgrModelStamp()
+      : [todayISO(), (data.savedQuotes || []).length, (data.cashTxns || []).length, (data.stockLog || []).length].join('|')].join('|');
+  const now = Date.now();
+  if(sig !== mgrTgMemoSig || now - mgrTgMemoAt > 60000){ mgrTgMemoSig = sig; mgrTgMemoAt = now; mgrTgMemoMap = new Map(); }
   if(mgrTgMemoMap.has(key)) return mgrTgMemoMap.get(key);
   const v = fn();
   mgrTgMemoMap.set(key, v);
@@ -135967,8 +135975,10 @@ function mgrTgFinishedModel(x, moveRead){
     linked = moveRead.rows.some(r=> r.date >= x.from && r.date <= x.to && r.body && r.body.target && (
       (r.body.target.id != null && String(r.body.target.id) === String(x.id)) || r.body.target.metric === x.metric));
   }
+  /* Read from the books before it began -- the same reading for a weekly
+     target and the owner's own. */
   let above90 = null;
-  try { above90 = mgrTgAbove90(x, x.set ? x.set.p90 : null); } catch(e){ above90 = null; }
+  try { above90 = mgrTgAbove90(x, null); } catch(e){ above90 = null; }
   let behindTwo = null;
   try { behindTwo = mgrTgBehindTwo(mgrTgMondays(x)); } catch(e){ behindTwo = null; }
   return { x, m, met: x.met, owner: x.owner || null, linked, above90, behindTwo, metOn: mgrTgMetOn(x) };
