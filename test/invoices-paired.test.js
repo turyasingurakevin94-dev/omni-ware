@@ -22,7 +22,7 @@ assert.match(src,/id="inv_buys_pane"/);
 assert.doesNotMatch(renderer,/\bKept\b|Left after bills/);
 
 const wrap = {innerHTML:'',querySelectorAll:()=>[]};
-const strip = {innerHTML:''};
+const strip = {innerHTML:'',querySelectorAll:()=>[]};
 const attention = {innerHTML:'',querySelectorAll:()=>[]};
 const panels = {innerHTML:'',querySelectorAll:()=>[]};
 const count = {textContent:''};
@@ -32,11 +32,11 @@ const elements = {
 };
 const data = {
   savedQuotes:[
-    {id:1,status:'completed',invoiced:true,invoicedAt:'2026-09-18',client:{name:'Ada'},items:[{productName:'Lamp'}],total:690000,amountPaid:100000},
+    {id:1,status:'completed',invoiced:true,invoicedAt:'2026-09-18',client:{name:'Ada'},items:[{productName:'Lamp'},{productId:7,productName:'Bolt',supplierId:'S9',qty:2,sellPrice:5000},{productId:8,productName:'Pipe',supplierId:'N1',qty:3,sellPrice:10000}],total:690000,amountPaid:100000},
     {id:2,status:'completed',invoiced:true,invoicedAt:'2026-08-01',client:{name:'Ben'},items:[],total:500000,amountPaid:0},
   ],
   purchaseInvoices:[
-    {id:1,quoteId:1,date:'2026-09-20',dueDate:'2026-09-23',supplierName:'North',items:[],total:660000,amountPaid:160000},
+    {id:1,quoteId:1,date:'2026-09-20',dueDate:'2026-09-23',supplierId:'N1',supplierName:'North',items:[{productId:8,productName:'Pipe',qty:5,price:7000}],total:660000,amountPaid:160000},
     {id:2,quoteId:null,date:'2026-09-20',supplierName:'Stock House',items:[],total:420000,amountPaid:100000},
     {id:3,quoteId:2,date:'2026-09-21',supplierName:'West',items:[],total:300000,amountPaid:0},
   ],
@@ -48,6 +48,7 @@ const names = [
   'invSyncStickyOffset','invSearchValue','revealPurchaseInvoice','openPiPaymentModal',
   'purchaseInvoiceFindings','todayISO','quoteItemSellPrice','orderLineIsBoughtIn','nameInitials',
   'fmtShortDate','invoiceOpenDays','openPiDocPopup','goToTab','toast',
+  'supplierName','quoteLineUnitsBought','piPriceHistory','piLineKey','openNewBill',
 ];
 const values = [
   {getElementById:id=>elements[id]||null},data,
@@ -62,6 +63,7 @@ const values = [
   n=>String(n||'?').slice(0,1).toUpperCase(),
   d=>String(d),
   ()=>null, ()=>{}, ()=>{}, ()=>{},
+  id=>`Supplier ${id}`, it=>Number(it.qty)||0, ()=>[], ()=>'', ()=>{},
 ];
 const lens = new Function(...names,`let invUnifiedOpenKey='s1'; let invUnifiedShow='all'; let invUnifiedMore=0; let invLastRows=[]; ${helpers}; ${renderer};
   return {render:renderInvoicesUnified, show:k=>{ invUnifiedShow = k; }};`)(...values);
@@ -79,7 +81,13 @@ assert.doesNotMatch(wrap.innerHTML,/PINV-2/,'unrelated stock purchases stay out 
    bill, so the shop has fronted 60,000 on one sale. */
 assert.match(strip.innerHTML,/Fronted to suppliers<\/span><span>1 sale<\/span><\/p><p class="inv-hf-v">60,000/,'the cash position survives as the fronted card');
 assert.match(strip.innerHTML,/Held for suppliers<\/span><span>0 sales/,'and nothing is held when no customer has paid ahead');
-assert.match(strip.innerHTML,/Who pays first/,'the insights time both sides of the counter');
+/* WHO PAYS FIRST and BOUGHT IN AGAIN gave way, on the owner's canvas, to
+   two questions only the pair can answer: which sales are still waiting
+   on a supplier's bill, and where a supplier's cost rose under a price
+   that did not. Sale 1's Bolt came from S9 and no S9 bill exists. */
+assert.match(strip.innerHTML,/Sold, no bill yet[\s\S]*1 sale<\/b>[\s\S]*INV-1/,'a sale whose bought-in line has no bill is listed, oldest first');
+assert.match(strip.innerHTML,/data-u-newbill="1" data-u-newbill-sup="S9"/,'Record a bill opens a bill for that sale and the supplier still missing');
+assert.match(strip.innerHTML,/Cost up, price not[\s\S]*No supplier raised a cost/,'with no earlier bill to compare, no squeeze is claimed');
 /* SHOW, AS THE OWNER DREW IT: Everything, Still to collect, Past terms,
    Cash went out first and Bills to review, each with how many and what
    they come to. "Bills due or late" left the row: when a bill falls due
@@ -92,6 +100,10 @@ assert.match(attention.innerHTML,/Bills to review <b>1<\/b>/,'the existing bill 
 /* The owed bill is matched to its sale, under the customer it waits on,
    and the act offered is to chase the customer. */
 assert.match(panels.innerHTML,/Waiting on the customer[\s\S]*PINV-1[\s\S]*INV-1[\s\S]*Chase/,'an owed bill is matched to the sale it waits on');
+/* WHAT EACH SUPPLIER LEAVES YOU gave way to the bills that disagree with
+   their sale: North billed 5 Pipe against the 3 the sale ordered, so 2
+   more at 7,000 each -- 14,000 billed for goods the sale never needed. */
+assert.match(panels.innerHTML,/Bills that don’t match their sale[\s\S]*14,000[\s\S]*PINV-1[\s\S]*INV-1[\s\S]*Pipe[\s\S]*\+2<small>14,000/,'a bill for more than its sale ordered is named, with what the extra cost');
 assert.doesNotMatch(wrap.innerHTML,/Sale less linked bills/,'an incomplete cost difference is not presented as profit');
 /* THE BILL TAGS. Sale 690,000 with 100,000 in; one bill of 660,000 with
    160,000 paid. The bill is a tag in its supplier's colour, pale because
