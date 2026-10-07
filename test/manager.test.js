@@ -328,7 +328,12 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   t.check(/const MANAGER_COMMON = \[/.test(api) && /const MANAGER_MEETING = \[/.test(api)
     && /const MANAGER_REVIEW = \[/.test(api),
     'the manager prompt lives on the server like the first one — as three blocks now, one per occasion plus what binds on both');
-  t.check(/AT MOST FIVE moves/.test(api), 'at most five moves — a plan of twenty is a dashboard, not judgement');
+  /* EIGHT, not five (owner approval Q29): one decision for each
+     department the books show something in, still a plan and not a
+     dashboard. The save path enforces the same number (prompt-integrity
+     checks the two agree). */
+  t.check(/AT MOST EIGHT moves/.test(api), 'at most eight moves — a plan of twenty is a dashboard, not judgement');
+  t.check(!/AT MOST FIVE moves/.test(api), 'and the old ceiling of five is gone, not left beside the new one');
   t.check(/Never forecast/.test(api), 'forecasting is forbidden in as many words');
   t.check(/manager_history FIRST/.test(api), 'the meeting opens with its own account');
   t.check(/never invent one, and omit subject ONLY when the reading gave you none/.test(api),
