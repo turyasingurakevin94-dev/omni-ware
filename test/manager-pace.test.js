@@ -258,8 +258,15 @@ const row = (body) => ({ date: '2026-08-24', body: { from: '2026-08-24', to: '20
     'behind first, and at most two — a dashboard that always speaks teaches the eye to skip it');
   t.check(/if\(!live\.length\)\{ el\.innerHTML = ''; return; \}/.test(pace),
     'and silent when nothing is live');
-  t.check(/x\.pace\.at_this_rate/.test(pace) && /At this rate/.test(pace),
+  /* WAS: the strip wrote its own line in shillings ("the week ends at").
+     NOW: it draws the Targets section's own line for the target
+     (mgrTgTodayLine), in the target's unit and to its deadline -- and that
+     line carries the projection, in those words. */
+  const todayLine = extractFunction(src, 'mgrTgTodayLine', 'index.html');
+  t.check(/mgrTgTodayLine\(x\)\.text/.test(pace) && /x\.pace\.at_this_rate/.test(todayLine) && /At this rate/.test(todayLine),
     'the projection is shown as the rate carried forward, in those words');
+  t.check(!/fmtUGX/.test(pace) && !/the week ends/.test(pace),
+    'never every target in shillings against "the week"');
   t.check(/managerScoreboard\(\)/.test(pace),
     'read from the one scoreboard derivation, so the dashboard and the Manager screen cannot disagree');
 }

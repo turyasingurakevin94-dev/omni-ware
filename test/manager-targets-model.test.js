@@ -39,7 +39,7 @@ const FNS = ['mgrTgMemo', 'mgrTgBooksFrom', 'mgrTgFig', 'mgrTgGap', 'mgrTgDelta'
   'mgrTgRoad', 'mgrTgState', 'mgrTgTrack', 'mgrTgLinked', 'mgrTgBehindTwo', 'mgrTgLearned', 'mgrTgSuggest',
   'mgrTgPerson', 'mgrTgBandLine', 'mgrTgFinishedLine', 'mgrTgDeadStockAt', 'mgrNavCountTargets', 'mgrTgBreak', 'mgrTgCashOn',
   'mgrTgCashLowOver', 'mgrTgFloorRead', 'mgrTgWaFrom', 'mgrTgVerdict', 'mgrTgComposeModel', 'mgrTgComposeSay',
-  'mgrTgRunModel', 'mgrTgFinishedModel', 'mgrTgAbove90', 'mgrTgMetOn', 'mgrTgMondays', 'mgrTgPlanMoves', 'mgrTgTodayLine'];
+  'mgrTgRunModel', 'mgrTgFinishedModel', 'mgrTgAbove90', 'mgrTgMetOn', 'mgrTgMondays', 'mgrTgPlanMoves', 'mgrTgTodayLine', 'mgrTgLower'];
 const DECLS = ['MGR_TG_MIN_ODDS', 'MGR_TG_MIN_CHOICES', 'MGR_TG_PERIODS', 'MGR_TG_RISK', 'MGR_TG_MAX_RUNNING',
   'mgrTgMemoSig', 'mgrTgMemoAt', 'mgrTgMemoMap', 'mgrTgBetter', 'mgrTgDay', 'MGR_TG_ORDER', 'MGR_TG_STATE_WORD'];
 
@@ -738,6 +738,152 @@ function scope(env) {
     to: '2026-11-30', days_left: 54, pace: { expected: 24, on_course: false, behind_by: 11, at_this_rate: 53 } });
   eq(l, { key: 'off', ok: false, text: 'Off track — Debtor days under 22: 35 days now. The road has it at 24 days — 11 days behind. At this rate it ends at 53 days by 30 Nov. 54 days are left.' },
     'days as days, the deadline as a date — never "35 UGX of 22 UGX" and "the week ends"');
+}
+
+/* ---------- 27. Saturday load time (Q36), from the stage history -------- */
+{
+  /* Times in UTC; Kampala is UTC+3. Today is Wed 7 Oct; the Saturdays
+     before it are 3 Oct, 26 Sep, 19 Sep, 12 Sep, 5 Sep. */
+  const U = (d, hh, mm) => Date.UTC(Number(d.slice(0, 4)), Number(d.slice(5, 7)) - 1, Number(d.slice(8, 10)), hh, mm || 0);
+  const leg = (prep, out) => [{ status: 'preparing', at: prep }, { status: 'pending_delivery', at: out }];
+  const base = [
+    /* Sat 3 Oct: 70 min; 60 min (re-entered Being prepared at 08:30 --
+       one stay, read from 08:00); 40 min. */
+    { date: '2026-09-01', stageLog: leg(U('2026-10-03', 6), U('2026-10-03', 7, 10)) },
+    { stageLog: [{ status: 'preparing', at: U('2026-10-03', 8) }, { status: 'preparing', at: U('2026-10-03', 8, 30) }, { status: 'pending_delivery', at: U('2026-10-03', 9) }] },
+    { stageLog: leg(U('2026-10-03', 10), U('2026-10-03', 10, 40)) },
+    /* Fri 2 Oct 21:30 UTC is Sat 3 Oct 00:30 in Kampala: a Saturday load of 90 min. */
+    { stageLog: leg(U('2026-10-02', 20), U('2026-10-02', 21, 30)) },
+    /* Sat 3 Oct 22:30 UTC is Sunday 01:30 in Kampala: not a Saturday load. */
+    { stageLog: leg(U('2026-10-03', 22), U('2026-10-03', 22, 30)) },
+    /* Sat 26 Sep: out straight from Awaiting goods (no prepared stay) and a
+       voided order -- neither counts; one load of 50 min, its times as
+       ISO strings. */
+    { stageLog: [{ status: 'awaiting_goods', at: U('2026-09-26', 6) }, { status: 'pending_delivery', at: U('2026-09-26', 7) }] },
+    { voided: true, stageLog: leg(U('2026-09-26', 6), U('2026-09-26', 6, 30)) },
+    { stageLog: leg(new Date(U('2026-09-26', 7)).toISOString(), new Date(U('2026-09-26', 7, 50)).toISOString()) },
+    /* Sat 19 Sep: 45 min. Sent back to Being prepared and out again on Sat
+       12 Sep: 80 min for the second stay, and the first move out was a
+       Saturday too (12 Sep, 30 min) -- 12 Sep reads the median of 30 and
+       80, 55. A Thursday load counts for nothing. */
+    { stageLog: leg(U('2026-09-19', 9), U('2026-09-19', 9, 45)) },
+    { stageLog: [{ status: 'preparing', at: U('2026-09-12', 6) }, { status: 'pending_delivery', at: U('2026-09-12', 6, 30) },
+      { status: 'preparing', at: U('2026-09-12', 7) }, { status: 'pending_delivery', at: U('2026-09-12', 8, 20) }] },
+    { stageLog: leg(U('2026-10-01', 6), U('2026-10-01', 9)) },
+    /* No stage history: a counter sale, an old order. */
+    { counterSale: true, stageLog: null }, { status: 'completed' },
+  ];
+  const LOADFNS = ['mgrTgMemo', 'mgrTgBooksFrom', 'mgrTgLoadsOf', 'mgrTgMedian', 'mgrTgLoads', 'mgrTgLoadReady', 'mgrTgLoadAt',
+    'mgrTgPeriods', 'mgrTgPercentile', 'mgrTgChoices', 'mgrTgOdds', 'mgrTgFig', 'mgrTgName', 'managerScoreProgress'];
+  const mk = (quotes) => compileScope([
+    ...['MGR_TG_LOAD_MIN', 'MGR_TG_KAMPALA_MS', 'MGR_TG_PERIODS', 'MGR_TG_MIN_CHOICES', 'MGR_TG_MIN_ODDS', 'mgrTgMemoSig', 'mgrTgMemoAt', 'mgrTgMemoMap',
+      'mgrTgBetter', 'MANAGER_METRICS'].map((n) => extractDeclaration(src, n, 'index.html')),
+    ...LOADFNS.map((n) => extractFunction(src, n, 'index.html')),
+    'function loadMetric(){ return MANAGER_METRICS; }',
+  ], { todayISO: () => TODAY, anShiftDate: shift, mgrRenderGen: 1, data: { savedQuotes: quotes, cashTxns: [], stockLog: [] },
+    Date, Math, Number, String, Array, Object, Map, Set, JSON }, LOADFNS.concat(['loadMetric']));
+  const s = mk(base);
+  s.MANAGER_METRICS = s.loadMetric();
+  const days = s.mgrTgLoadsOf(base);
+  eq([...days.keys()].sort(), ['2026-09-12', '2026-09-19', '2026-09-26', '2026-10-03'],
+    'four Saturdays with a load; Sunday by the Kampala clock, a Thursday, a move out from Awaiting goods and a voided order count for none');
+  eq(days.get('2026-10-03').slice().sort((a, b) => a - b), [40, 60, 70, 90],
+    'Sat 3 Oct: 70, 60 (from the first entry of the stay), 40, and the 90 that was Friday night in UTC but Saturday in Kampala');
+  eq(days.get('2026-09-12').slice().sort((a, b) => a - b), [30, 80], 'an order sent back counts each stay that went out on a Saturday');
+  eq(s.mgrTgMedian([70, 60, 40, 90]), 65, 'the median of four is the mean of the middle two: (60 + 70) / 2');
+  eq(s.mgrTgMedian([50]), 50, 'of one, itself');
+  eq(s.mgrTgMedian([]), null, 'of none, not known — never 0');
+  eq(s.mgrTgLoadReady(), { n: 4, min: 4, ok: true, why: null }, 'four Saturdays recorded: enough');
+  const M = s.MANAGER_METRICS.sat_load;
+  eq([M.at('2026-10-06'), M.at('2026-10-03'), M.at('2026-10-02'), M.at('2026-09-12'), M.at('2026-09-11')], [65, 65, 50, 55, null],
+    'a day reads the Saturday in the 7 days to it: Tue 6 Oct and Sat 3 Oct read 3 Oct (65), Fri 2 Oct reads 26 Sep (50), 12 Sep (30, 80) reads 55, and 11 Sep reads 5 Sep — no load recorded, not known');
+  eq(M.measure(), 65, 'now is read to yesterday (Tue 6 Oct): last Saturday, 65 minutes');
+  /* Past 7-day periods ending 6 Oct, 29 Sep, 22 Sep, 15 Sep, 8 Sep (the
+     books start 1 Sep; the period to 1 Sep starts before them): 65, 50,
+     45, 55 and one not known (5 Sep). Lower is better: sorted 45, 50, 55,
+     65 -- safe the median 52.5 -> 53, stretch the 25th 48.75 -> 49, bold
+     the 10th 46.5 -> 47. Odds of 49: one period (45) of four -- no per
+     cent under six. */
+  const per = s.mgrTgPeriods('sat_load', 7, '2026-10-06');
+  eq([per.values.map((x) => x.v), per.unknown], [[65, 50, 45, 55], 1], 'its past periods come from the same stage history; a Saturday with none is left out, not read as 0');
+  eq(s.mgrTgChoices(per.values, 'down'), { safe: 53, stretch: 49, bold: 47, n: 4 }, 'safe / stretch / bold, read the way lower is better');
+  eq(s.mgrTgOdds(per.values, 49, 'down'), { k: 1, n: 4, pct: null }, 'odds stay hidden under six periods');
+  eq([s.mgrTgFig('min', 64.6), s.mgrTgFig('min', 45, true), s.mgrTgName('sat_load', 45)], ['65 min', '45', 'Saturday loads in 45 minutes'],
+    'minutes, whole, and the target named as the canvas says it');
+  /* A running target from 1 Oct to 31 Oct, 70 -> 45: 6 whole days of 31;
+     the road has it at 70 - 25*6/31 = 65.16 -> 65; at 65 it is on the road
+     (within half a minute); at this rate 70 - 5*31/6 = 44.17 -> 44. */
+  const run = s.managerScoreProgress({ body: { metric: 'sat_load', aim: 45, baseline: 70, from: '2026-10-01', to: '2026-10-31' } });
+  eq([run.actual, run.unit, run.pace.expected, run.pace.on_course, run.pace.at_this_rate], [65, 'min', 65, true, 44],
+    'a load-time target is read like any level, in minutes');
+  /* Three Saturdays only: not enough history, said with the count -- and
+     nothing is read, never a 0. */
+  const thin = base.filter((q) => !(q.stageLog && q.stageLog.some((e) => String(e.at).length > 0 && new Date(e.at).toISOString().slice(0, 10) === '2026-09-12')));
+  const s3 = mk(thin);
+  s3.MANAGER_METRICS = s3.loadMetric();
+  eq(s3.mgrTgLoadReady(), { n: 3, min: 4, ok: false, why: 'not enough history — 3 Saturdays recorded' }, 'three Saturdays: not enough, and it says how many');
+  eq([s3.MANAGER_METRICS.sat_load.measure(), s3.MANAGER_METRICS.sat_load.at('2026-10-06')], [null, null], 'nothing is read until four are recorded');
+  eq([scope({}).mgrTgLower('Saturday load time'), scope({}).mgrTgLower('WhatsApp orders a month'), scope({}).mgrTgLower('Debtor days')],
+    ['Saturday load time', 'WhatsApp orders a month', 'debtor days'], 'inside a sentence a day and WhatsApp keep their capitals');
+  eq(mk([]).mgrTgLoadReady().why, 'not enough history — 0 Saturdays recorded', 'none at all says 0 Saturdays recorded');
+  eq(mk([base[2]]).mgrTgLoadReady().why, 'not enough history — 1 Saturday recorded', 'one says Saturday');
+
+  /* The composer draws it disabled with that line, and never picks it. */
+  const c = scope({ MANAGER_METRICS: {
+    sat_load: { label: 'Saturday load time', unit: 'min', kind: 'level', direction: 'down', window: 7, measure: () => null, at: () => null,
+      ready: () => ({ n: 3, min: 4, ok: false, why: 'not enough history — 3 Saturdays recorded' }) },
+    wa_orders: { label: 'Orders', unit: 'count', kind: 'flow', direction: 'up', measure: () => 1 } } });
+  const cm = c.mgrTgComposeModel({ metric: 'sat_load', choice: 'stretch', by: 0 }, { runningMetrics: [], runningCount: 0, plan: { moves: [] }, finished: [], rules: [] });
+  eq([cm.metric, cm.measures.find((x) => x.k === 'sat_load').unready], ['wa_orders', 'not enough history — 3 Saturdays recorded'],
+    'a measure that cannot be read yet is drawn with why and never chosen');
+}
+
+/* ---------- 28. a cash floor the committed line breaks is At risk (Q37) --- */
+{
+  const s = scope({ MANAGER_METRICS: { lowest_cash: { label: 'Lowest cash in a month', unit: 'ugx', kind: 'level', direction: 'up', span: true } } });
+  const row = (pace) => ({ id: 1, metric: 'lowest_cash', label: 'Lowest cash in a month', unit: 'ugx', finished: false, direction: 'up', measure_kind: 'level',
+    hold: true, aim: 10000000, baseline: 29070000, actual: 25000000, from: '2026-10-01', to: '2026-10-31', days_left: 24, pace });
+  /* Above the floor in the books (25.00m); the committed line -- no money
+     coming in -- goes under 10.00m on Thu 22 Oct. */
+  const line = row({ on_course: true, behind_by: 0, expected: 10000000, at_this_rate: 7480000, low_on: '2026-10-31', low_books: false,
+    breaks_on: '2026-10-22', broke: false, line_to: '2026-10-31' });
+  const st = s.mgrTgState(line);
+  eq([st.key, st.breaksOn], ['risk', '2026-10-22'], 'the committed line under the floor before the deadline is At risk, with the day it would break');
+  /* The books already went under on 2 Oct: Off track. */
+  const broke = row({ on_course: false, behind_by: 6460000, expected: 10000000, at_this_rate: 3540000, low_on: '2026-10-02', low_books: true,
+    breaks_on: '2026-10-02', broke: true, line_to: '2026-10-31' });
+  eq([s.mgrTgState({ ...broke, actual: 3540000 }).key, s.mgrTgState({ ...broke, actual: 3540000 }).breaksOn], ['off', '2026-10-02'],
+    'Off track only once the books show cash under it');
+  eq(s.mgrNavCountTargets({ score: { targets: [line], proposed: [] } }), { n: 1, note: null }, 'the nav names no Off track for a line that only would break');
+  const tl = s.mgrTgTodayLine(line);
+  t.check(tl.key === 'risk' && tl.ok === false && /^At risk — Cash never under 10\.00m: 25\.00m now\. The committed line takes cash under it on Thu,? 22 Oct\. 24 days are left\.$/.test(tl.text),
+    `Today says At risk and the day it would break (${tl.text})`);
+  const r = s.mgrTgRunModel(line, { moves: [] });
+  eq(r.key, 'risk', 'the row is coloured At risk by the same state');
+}
+
+/* ---------- 29. the screens that read the scoreboard count it one way ---- */
+{
+  /* The meeting's proposed aim is rounded by its measure's own rule: a
+     10.46% margin is 10.5, never 10; minutes and shillings whole. */
+  const save = extractFunction(src, 'managerSaveMeeting', 'index.html');
+  t.check(/aim: \(MANAGER_METRICS\[String\(x\.metric\)\]\.round \|\| apRound\)\(Number\(x\.aim\)\)/.test(save),
+    'a proposed aim is rounded by its measure’s rule (a margin to a tenth), not to a whole number');
+  const { metrics } = compileScope([extractDeclaration(src, 'MANAGER_METRICS', 'index.html'), 'function metrics(){ return MANAGER_METRICS; }'],
+    { Math, Number }, ['metrics']);
+  eq([metrics().margin_pct.round(10.46), metrics().quotes_won_pct.round(48.25)], [10.5, 48.3], 'a share keeps a tenth of a point');
+  /* The weekly review is handed the week, and the long record as a count. */
+  const review = src.slice(src.indexOf('  week_review_data: { confirm: false'), src.indexOf('  week_review_data: { confirm: false') + 6000);
+  t.check(/if\(\(score\.week\|\|\[\]\)\.length\) out\.scoreboard = score\.week;/.test(review) && !/out\.scoreboard = score\.targets/.test(review),
+    'the review reads the running targets and those finished in the last seven days, not every target ever taken on');
+  t.check(/out\.targets_finished = \{ met: score\.tally\.met, of: score\.tally\.met \+ score\.tally\.missed \}/.test(review),
+    'and the finished record as met of met-or-missed, an unknown end in neither');
+  /* The Record's account counts the tally: a running target is never Met,
+     an unreadable end is never Missed, and is named. */
+  const rec = extractFunction(src, 'mgrPaintRecord', 'index.html');
+  t.check(/st\.score\.tally\.met/.test(rec) && /st\.score\.tally\.missed/.test(rec) && /Ended, not known/.test(rec)
+    && !/filter\(x=> x\.met\)/.test(rec) && !/x\.finished && !x\.met/.test(rec),
+    'Met and Missed are the scoreboard’s tally, and an end the books cannot read is named, never counted as missed');
 }
 
 /* ---------- 17. the owner’s own target is written as it was set --------- */

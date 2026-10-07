@@ -3104,6 +3104,8 @@
   .mgr-tg-ro small{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
   .mgr-tg-ro small.mgr-tg-plan{color:var(--ow-verdigris);font-weight:var(--ow-fw-600);}
   .mgr-tg-st{border:0;cursor:pointer;font-family:inherit;}
+  .mgr-tg-rs{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0;}
+  .mgr-tg-rs small{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
   .mgr-tg-st:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:2px;}
   .mgr-tg-ra{display:flex;flex-direction:column;align-items:flex-start;gap:2px;font-size:var(--ow-t-12);
     line-height:var(--ow-lh-snug);min-width:0;color:var(--ow-ink-900);}
@@ -4119,7 +4121,8 @@
     .mgr-tg-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--ow-sp-12);padding:var(--ow-sp-16);}
     .mgr-tg-rn,.mgr-tg-trw,.mgr-tg-ra{grid-column:1/-1;}
     .mgr-tg-rn b{font-size:var(--ow-t-14);}
-    .mgr-tg-rs{grid-column:1/-1;}
+    .mgr-tg-rs{grid-column:1/-1;flex-direction:row;align-items:center;gap:var(--ow-sp-8);}
+    .mgr-tg-rs small{font-size:var(--ow-t-12);}
     .mgr-tg-st{height:auto;min-height:32px;padding:0 var(--ow-sp-10);font-size:var(--ow-t-12);}
     .mgr-bed-t .mgr-tg-dec{min-height:var(--ow-tap);display:inline-flex;align-items:center;}
     .mgr-tg-fin,.mgr-tg-rule{padding:var(--ow-sp-12) var(--ow-sp-16);}
@@ -132995,7 +132998,8 @@ const MANAGER_OBJECTIVES = {
    distance, not 130% of the target.
 
    unit is what the figure is counted in -- ugx, pct (percentage points),
-   days or count -- so nothing that draws a target has to assume money.
+   days, count or min (minutes) -- so nothing that draws a target has to
+   assume money.
    A level also carries at(day): where it stood at the END of that day,
    from the books' own dated records (the balance sheet's readers, the
    debtor and stock-days definitions of Q17/Q18), so a target that has
@@ -133101,6 +133105,22 @@ const MANAGER_METRICS = {
       if(!first || from < first) return null;
       return (data.savedQuotes||[]).filter(q=> q && q.originWa && !q.voided
         && String(q.date||'').slice(0, 10) >= from && String(q.date||'').slice(0, 10) <= d).length; } },
+  sat_load: {
+    /* SATURDAY LOAD TIME (Q36), from the orders' own stage history: the
+       minutes from an order's move to Being prepared to its move to Out
+       for delivery, for the orders moved out on a Saturday (the Kampala
+       day of the move). The statistic is the MEDIAN of that Saturday's
+       orders, so one order that sat overnight does not speak for the
+       day. A day reads the Saturday in the 7 days to it (window); a
+       Saturday with no such move is not recorded, never 0. Nothing is
+       read until MGR_TG_LOAD_MIN (4) Saturdays are recorded:
+       "not enough history -- N Saturdays recorded" (the Targets
+       section's mgrTgLoadAt / mgrTgLoadReady). */
+    label: 'Saturday load time', unit: 'min', kind: 'level', direction: 'down', window: 7,
+    basis: 'the median minutes from Being prepared to Out for delivery of the orders moved out on the last Saturday (Kampala time), from the stage history, read to yesterday; read once 4 Saturdays are recorded',
+    measure: ()=> MANAGER_METRICS.sat_load.at(anShiftDate(todayISO(), -1)),
+    at: (d)=> mgrTgLoadAt(d),
+    ready: ()=> mgrTgLoadReady() },
 };
 
 /* THE SCOREBOARD IS DERIVED, NEVER STORED -- the same law as a move's
@@ -133885,7 +133905,7 @@ async function managerSaveMeeting(plan){
     .filter(x=> x && MANAGER_METRICS[String(x.metric||'')] && Number(x.aim) > 0)
     .slice(0, 2)
     .map(x=> ({ shop_id: currentShopId, kind: 'target', meeting_id: ins.data.id, date: todayISO(),
-      body: { metric: String(x.metric), aim: apRound(x.aim), why: String(x.why||'').slice(0, 200),
+      body: { metric: String(x.metric), aim: (MANAGER_METRICS[String(x.metric)].round || apRound)(Number(x.aim)), why: String(x.why||'').slice(0, 200),
         /* The same arithmetic as parts the card can draw. Only known
            keys and bounded values are kept; whether they close on the
            aim is judged where they are drawn (managerTargetParts). */
@@ -135702,12 +135722,12 @@ async function renderManagerPace(){
   if(!live.length){ el.innerHTML = ''; return; }
   const behind = live.filter(x=> !x.pace.on_course);
   const show = behind.concat(live.filter(x=> x.pace.on_course)).slice(0, 2);
-  el.innerHTML = show.map(x=> `<div class="mgr-pace ${x.pace.on_course ? 'ok' : 'behind'}">
-      <div class="mgr-pace-line"><b>${x.pace.on_course ? 'On course' : 'Behind'} — ${esc(x.label)}
-        ${fmtUGX(x.actual)} of ${fmtUGX(x.aim)}.</b>
-        ${x.pace.on_course ? '' : `Level today would be ${fmtUGX(x.pace.expected)} — ${fmtUGX(x.pace.behind_by)} short.`}
-        At this rate the week ends at ${fmtUGX(x.pace.at_this_rate)},
-        and ${x.days_left === 0 ? 'it ends today' : x.days_left + (x.days_left === 1 ? ' day is left' : ' days are left')}.</div>
+  /* Each target in its own unit, by the Targets section's own state and
+     deadline (mgrTgTodayLine): days as days, a margin in points, a cash
+     floor by the day the committed line would break it -- never every
+     figure in shillings against "the week". */
+  el.innerHTML = show.map(x=> `<div class="mgr-pace ${mgrTgTodayLine(x).ok ? 'ok' : 'behind'}">
+      <div class="mgr-pace-line">${esc(mgrTgTodayLine(x).text)}</div>
       <button type="button" class="btn btn-ghost mgr-pace-open">Open the Manager</button>
     </div>`).join('');
   el.querySelectorAll('.mgr-pace-open').forEach(b=> b.addEventListener('click', ()=> goToTab('manager')));
@@ -140458,12 +140478,17 @@ const MGR_TG_PERIODS = 24;      // how many past periods the composer reads at m
    On track; behind by less than a third of what is still to go is At
    risk; a third or more is Off track. A line to hold (the aim already
    met where it started) is On track while held, At risk when at this
-   rate it crosses the line before the deadline, Off track once crossed. */
+   rate it crosses the line before the deadline, Off track once crossed.
+   A CASH FLOOR (Q37) is At risk when the committed line -- dated
+   outflows only, no money coming in counted -- takes cash under it
+   before the deadline, with the day it would break; it is Off track only
+   once the books show cash actually went under it. */
 const MGR_TG_RISK = 1 / 3;
 /* The composer's measures, in the canvas's order, then the ones the
-   meeting already proposed. Load time has no agreed definition and no
-   reader, so it is drawn disabled and never offered. */
-const MGR_TG_ORDER = ['net_profit', 'margin_pct', 'debtor_days', 'stock_days', 'lowest_cash', 'quotes_won_pct', 'wa_orders',
+   meeting already proposed. Saturday load time (Q36) is offered once the
+   stage history holds enough Saturdays to read it (mgrTgLoadReady);
+   until then it is drawn disabled and says how many it has. */
+const MGR_TG_ORDER = ['net_profit', 'margin_pct', 'debtor_days', 'stock_days', 'lowest_cash', 'quotes_won_pct', 'sat_load', 'wa_orders',
   'collections', 'gross_profit', 'sales', 'debtors_total', 'dead_stock_value', 'cash_on_hand'];
 
 /* The count is what is running plus what waits for an answer; the line
@@ -140578,6 +140603,62 @@ function mgrTgWaFrom(){
     return first;
   });
 }
+/* SATURDAY LOAD TIME (Q36), from the orders' stage history -- the log
+   setQuoteStatus appends to on every move ({ status, at } in ms).
+   A LOAD is an order's move to Out for delivery (pending_delivery) made
+   straight from Being prepared (preparing): its minutes are from the
+   start of that preparing stay (a stage entered again without leaving
+   it is one stay, as the order's trail reads it) to the move out. It
+   counts for the Saturday it happened on, by the Kampala clock (UTC+3,
+   no summer time); a voided order and a move out from any other stage
+   count for nothing. One Saturday's reading is the MEDIAN of its loads.
+   Until MGR_TG_LOAD_MIN Saturdays with a load are recorded nothing is
+   read: "not enough history -- N Saturdays recorded". */
+const MGR_TG_LOAD_MIN = 4;
+const MGR_TG_KAMPALA_MS = 3 * 3600000;
+function mgrTgLoadsOf(quotes){
+  const byDay = new Map();
+  (quotes || []).forEach(q=>{
+    if(!q || q.voided || !Array.isArray(q.stageLog)) return;
+    const log = q.stageLog.filter(e=> e && e.status)
+      .map(e=> ({ status: String(e.status), t: typeof e.at === 'number' ? e.at : Date.parse(e.at) }))
+      .filter(e=> Number.isFinite(e.t)).sort((a, b)=> a.t - b.t);
+    const stays = [];
+    log.forEach(e=>{ const last = stays[stays.length - 1]; if(!last || last.status !== e.status) stays.push(e); });
+    stays.forEach((e, i)=>{
+      if(e.status !== 'pending_delivery' || !i || stays[i - 1].status !== 'preparing') return;
+      const mins = (e.t - stays[i - 1].t) / 60000;
+      const k = new Date(e.t + MGR_TG_KAMPALA_MS);
+      if(!(mins >= 0) || k.getUTCDay() !== 6) return;
+      const day = k.toISOString().slice(0, 10);
+      if(!byDay.has(day)) byDay.set(day, []);
+      byDay.get(day).push(mins);
+    });
+  });
+  return byDay;
+}
+/* The middle of a list (the mean of the two middles of an even one). */
+function mgrTgMedian(list){
+  const v = (list || []).map(Number).filter(Number.isFinite).sort((a, b)=> a - b);
+  if(!v.length) return null;
+  const h = Math.floor(v.length / 2);
+  return v.length % 2 ? v[h] : (v[h - 1] + v[h]) / 2;
+}
+function mgrTgLoads(){ return mgrTgMemo('loads', ()=> mgrTgLoadsOf(data.savedQuotes)); }
+function mgrTgLoadReady(){
+  const n = mgrTgLoads().size;
+  return { n, min: MGR_TG_LOAD_MIN, ok: n >= MGR_TG_LOAD_MIN,
+    why: n >= MGR_TG_LOAD_MIN ? null : `not enough history — ${n} Saturday${n === 1 ? '' : 's'} recorded` };
+}
+/* A day reads the Saturday in the 7 days to it (the day itself when it
+   is one): the median minutes of that Saturday's loads. A Saturday with
+   no load recorded is not known. */
+function mgrTgLoadAt(d){
+  const day = String(d || '').slice(0, 10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(day) || !mgrTgLoadReady().ok) return null;
+  const sat = anShiftDate(day, -((new Date(day + 'T00:00:00Z').getUTCDay() + 1) % 7));
+  return mgrTgMedian(mgrTgLoads().get(sat));
+}
 /* DEAD STOCK AS IT STOOD ON A PAST DAY. The same rule as the shelf's own
    reading (stockAgeRows): a line holding stock with no sale in the quiet
    window before the day. How many it held then is exact -- the movement
@@ -140619,6 +140700,7 @@ function mgrTgFig(unit, v, bare){
   if(unit === 'pct') return neg + a.toFixed(1) + '%';
   if(unit === 'days'){ const d = Math.round(a); return neg + d + (bare ? '' : (d === 1 ? ' day' : ' days')); }
   if(unit === 'count') return neg + Math.round(a).toLocaleString('en-US');
+  if(unit === 'min') return neg + Math.round(a) + (bare ? '' : ' min');
   /* Rounded first, then scaled: 999,600 is 1.00m, never "1000k". */
   if(a >= 1e6 || Math.round(a / 1e3) >= 1000) return neg + (a / 1e6).toFixed(2) + 'm';
   if(Math.round(a) >= 1e3) return neg + Math.round(a / 1e3) + 'k';
@@ -140642,7 +140724,8 @@ function mgrTgName(metric, aim){
   const a = mgrTgFig(m.unit, aim, true);
   const named = { collections: 'Collect ' + a, lowest_cash: 'Cash never under ' + a, net_profit: 'Net profit ' + a + ' a month',
     wa_orders: 'WhatsApp orders ' + a + ' a month', quotes_won_pct: 'Quotes won ' + a, margin_pct: 'Gross margin ' + a,
-    cash_on_hand: 'Cash in hand ' + a, gross_profit: 'Gross profit ' + a, sales: 'Sales ' + a };
+    cash_on_hand: 'Cash in hand ' + a, gross_profit: 'Gross profit ' + a, sales: 'Sales ' + a,
+    sat_load: 'Saturday loads in ' + a + ' minutes' };
   return named[metric] || (m.direction === 'down' ? m.label + ' under ' + a : m.label + ' ' + a);
 }
 const mgrTgDay = (iso, withDay)=> new Date(iso + 'T12:00:00Z').toLocaleDateString('en-GB',
@@ -140816,10 +140899,14 @@ function mgrTgState(x){
   if(!x || x.actual == null || !Number.isFinite(Number(x.actual))) return none;
   if(x.finished) return { ...none, key: x.met === true ? 'met' : x.met === false ? 'missed' : 'unknown' };
   const aim = Number(x.aim) || 0, actual = Number(x.actual);
-  /* A cash floor the books or the committed line take under its aim
-     before the deadline is Off track -- the books' break cannot be
-     undone, and the line's is a dated bill ahead, not a rate. */
-  if(x.pace && x.pace.breaks_on) return { key: 'off', behind: x.pace.broke ? Math.abs(aim - actual) : 0, toGo: 0, share: 1, breaks: true };
+  /* A CASH FLOOR (Q37): the books already under it is Off track -- that
+     break cannot be undone. The committed line under it before the
+     deadline is At risk, with the day it would break: the line counts
+     no money coming in, so it says what happens if none does, not what
+     will. */
+  if(x.pace && x.pace.breaks_on) return x.pace.broke
+    ? { key: 'off', behind: Math.abs(aim - actual), toGo: 0, share: 1, breaks: true, breaksOn: x.pace.breaks_on }
+    : { key: 'risk', behind: 0, toGo: 0, share: 0, breaks: true, breaksOn: x.pace.breaks_on };
   if(mgrTgBetter(x.direction, actual, aim)){
     /* A line to hold that, at this rate, crosses it before the deadline. */
     if(x.hold && x.pace && Number.isFinite(Number(x.pace.at_this_rate)) && !mgrTgBetter(x.direction, Number(x.pace.at_this_rate), aim))
@@ -141120,7 +141207,7 @@ function mgrProposalHTML(x){
     <div class="mgr-pp-h"><svg class="mgr-pp-ic" viewBox="0 0 24 24" aria-hidden="true">${mark}</svg><span class="mgr-pp-n">${esc(x.label)}</span>${
       chip ? `<span class="mgr-pp-chip">${chip}</span>` : ''}</div>
     <div class="mgr-pp-aim"><span class="mgr-pp-big">${esc(mgrTgFig(unit, aim, true))}</span><span class="mgr-pp-u">${
-      unit === 'days' ? 'days, this week' : 'this week'}</span></div>
+      unit === 'days' ? 'days, this week' : unit === 'min' ? 'minutes, this week' : 'this week'}</span></div>
     <div class="mgr-pp-bars">
       ${before ? `<span class="mgr-pp-k">${before.label}</span><span class="mgr-pp-tr"><i class="mgr-pp-was" style="width:${w(before.v)}"></i></span>
       <span></span><span class="mgr-pp-c">${fig(before.v)}</span>` : ''}
@@ -141164,7 +141251,11 @@ function mgrTgRunModel(x, plan){
   const wrongWay = m.kind === 'level' && x.actual != null && Number(x.actual) !== Number(x.baseline)
     && !mgrTgBetter(m.direction, Number(x.actual), Number(x.baseline));
   const mondays = mgrTgMondays(x);
-  return { x, m, state, key, brk, links, planAdd, land, planLand, past, odds, oddsPlan, landsAlone, wrongWay,
+  /* A measure not readable yet says why (Saturday load time: how many
+     Saturdays are recorded, and how many it takes). */
+  let thin = null;
+  if(typeof m.ready === 'function'){ try { const rd = m.ready(); thin = rd && !rd.ok ? rd : null; } catch(e){ thin = null; } }
+  return { x, m, state, key, brk, links, planAdd, land, planLand, past, odds, oddsPlan, landsAlone, wrongWay, thin,
     two: mgrTgBehindTwo(mondays) === true, track: mgrTgTrack(x, land, planLand), person: mgrTgPerson(x.owner) };
 }
 function mgrTgFinishedModel(x, moveRead){
@@ -141202,9 +141293,15 @@ function mgrTgFinishedLine(r){
 function mgrTgComposeModel(draft, env){
   const today = todayISO();
   const running = new Set(env.runningMetrics || []);
-  const measures = MGR_TG_ORDER.filter(k=> MANAGER_METRICS[k]).map(k=> ({ k, label: MANAGER_METRICS[k].label, running: running.has(k) }));
-  const metric = measures.some(x=> x.k === draft.metric && !x.running) ? draft.metric
-    : ((measures.find(x=> !x.running) || {}).k || null);
+  /* A measure that cannot be read yet (Saturday load time before enough
+     Saturdays are recorded) is drawn, says why, and is never picked. */
+  const unready = (m)=>{ if(typeof m.ready !== 'function') return null;
+    try { const r = m.ready(); return r && !r.ok ? (r.why || 'not readable yet') : null; } catch(e){ return 'could not be read'; } };
+  const measures = MGR_TG_ORDER.filter(k=> MANAGER_METRICS[k]).map(k=> ({ k, label: MANAGER_METRICS[k].label, running: running.has(k),
+    unready: unready(MANAGER_METRICS[k]) }));
+  const open = (x)=> !x.running && !x.unready;
+  const metric = measures.some(x=> x.k === draft.metric && open(x)) ? draft.metric
+    : ((measures.find(open) || {}).k || null);
   const deadlines = mgrTgDeadlines(today);
   const byIdx = Math.max(0, Math.min(deadlines.length - 1, Number(draft.by) || 0));
   const by = deadlines[byIdx] || null;
@@ -141267,15 +141364,20 @@ function mgrTgVerdict(m, aim, now, projected, bridge){
   const share = dist > 0 ? Math.min(1, short / dist) : 1;
   return share < MGR_TG_RISK ? { word: 'A stretch', tone: 'warn', share } : { word: 'Not by then', tone: 'bad', share };
 }
+/* A measure's name inside a sentence: lower case, the names of a day
+   and of WhatsApp kept as they are written. */
+function mgrTgLower(label){
+  return String(label || '').toLowerCase().replace(/\bwhatsapp\b/g, 'WhatsApp').replace(/\bsaturday\b/g, 'Saturday');
+}
 /* WHAT THE COMPOSER SAYS, in figures it derived. */
 function mgrTgComposeSay(c){
   const m = c.m, u = m.unit, day = mgrTgDay(c.by.to);
   const word = (n)=> ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight'][n] || String(n);
-  if(c.out.past.error) return `Your books could not be read for ${m.label.toLowerCase()} — ${c.out.past.error}.`;
-  if(!c.choices) return `Your books hold ${c.out.past.values.length} past ${c.out.P}-day period${c.out.past.values.length === 1 ? '' : 's'} of ${m.label.toLowerCase()} — too few to size a target from (it takes ${MGR_TG_MIN_CHOICES}).`;
+  if(c.out.past.error) return `Your books could not be read for ${mgrTgLower(m.label)} — ${c.out.past.error}.`;
+  if(!c.choices) return `Your books hold ${c.out.past.values.length} past ${c.out.P}-day period${c.out.past.values.length === 1 ? '' : 's'} of ${mgrTgLower(m.label)} — too few to size a target from (it takes ${MGR_TG_MIN_CHOICES}).`;
   if(c.aim == null && m.span && c.out.now != null) return `Cash stands at ${mgrTgFig(u, c.out.now)} today — already under every floor your past ${c.out.P}-day periods held, so none of them can be set from today.`;
   if(c.out.projected == null) return m.span ? `There is no committed line to read the days ahead on, so I cannot say how low cash goes by ${day}.`
-    : `Your books give no rate for ${m.label.toLowerCase()} yet, so I cannot say where it lands by ${day}.`;
+    : `Your books give no rate for ${mgrTgLower(m.label)} yet, so I cannot say where it lands by ${day}.`;
   const lead = c.out.method.charAt(0).toUpperCase() + c.out.method.slice(1);
   const who = c.owner === 'you' ? 'you' : (mgrTgPerson(c.owner).first || 'them');
   const closes = (n)=> `${n === 1 ? 'One move closes it' : word(n) + ' moves close it'}, by my sizing; I’ll hold ${who} to the road at each Monday checkpoint.`;
@@ -141333,10 +141435,10 @@ function mgrTgComposerHTML(c){
   const m = c.m, u = m.unit;
   const opt = (on, attrs, inner, cls, dis, title)=> `<button type="button" class="mgr-tg-opt${cls ? ' ' + cls : ''}${on ? ' mgr-tg-on' : ''}" aria-pressed="${on}"${
     dis ? ' disabled' : ''}${title ? ` title="${esc(title)}"` : ''} ${attrs}>${inner}</button>`;
-  const what = c.measures.map(x=> opt(x.k === c.metric, `data-tg-metric="${x.k}"`, esc(x.label) + (x.running ? '<small>running</small>' : ''),
-    'mgr-tg-opt-r', x.running, x.running ? 'A target on this is already running' : MANAGER_METRICS[x.k].basis)).join('')
-    + opt(false, 'data-tg-none="load"', 'Saturday load time<small>not measurable yet</small>', 'mgr-tg-opt-r', true,
-      'Load time has no agreed definition yet, so the books cannot measure it');
+  const what = c.measures.map(x=> opt(x.k === c.metric, `data-tg-metric="${x.k}"`,
+    esc(x.label) + (x.running ? '<small>running</small>' : x.unready ? `<small>${esc(x.unready)}</small>` : ''),
+    'mgr-tg-opt-r', x.running || !!x.unready, x.running ? 'A target on this is already running'
+      : x.unready ? `${MANAGER_METRICS[x.k].basis} — ${x.unready}` : MANAGER_METRICS[x.k].basis)).join('');
   const nowCell = `<span class="mgr-tg-opt mgr-tg-opt-now"><small>${esc(c.out.nowLabel || 'now')}</small><span class="mgr-tg-fig">${esc(mgrTgFig(u, c.out.now))}</span></span>`;
   const to = c.choices ? ['safe', 'stretch', 'bold'].map(k=> opt(c.choice === k && !c.blocked[k], `data-tg-choice="${k}"`,
       `<small>${c.blocked[k] ? 'under today' : k}</small><span class="mgr-tg-fig">${esc(mgrTgFig(u, c.choices[k]))}</span>`, '', !!c.blocked[k],
@@ -141423,7 +141525,7 @@ function mgrTgRowHTML(r){
   if(r.brk){ dn = r.brk.low < (Number(x.aim) || 0); note = `${mgrTgDay(r.brk.lowOn, true)} — ${dn ? 'under the aim' : 'above the aim'}, ${
     r.brk.lowBooks ? 'in your books' : 'on the committed line'}${r.brk.partial ? ` (the line runs to ${mgrTgDay(r.brk.through)})` : ''}`; }
   else if(x.pace && x.pace.first) note = r.land != null ? 'as set — first whole day read tomorrow' : 'first whole day read tomorrow';
-  else if(r.land == null) note = 'not known';
+  else if(r.land == null) note = r.thin ? r.thin.why : 'not known';
   else if(r.wrongWay){ dn = true; note = 'moving the wrong way'; }
   else if(r.track.hold) { dn = !r.landsAlone; note = r.landsAlone ? 'holding the line at this rate' : 'crosses the line at this rate'; }
   else if(r.landsAlone) note = r.state.key === 'on' && mgrTgBetter(r.m.direction, Number(x.actual), Number(x.aim) || 0) ? 'already there' : 'at this rate';
@@ -141437,13 +141539,18 @@ function mgrTgRowHTML(r){
       op && op.pct != null ? `<small class="mgr-tg-plan">${op.pct}% with my sizing</small>` : `<small>${o.k} of ${o.n} past periods</small>`}`
     : `<span class="mgr-tg-fig">—</span><small>${o.n} past period${o.n === 1 ? '' : 's'} — too few</small>`;
   const st = r.state;
-  const chip = r.brk && r.brk.breaksOn ? (r.brk.broke ? 'Broke ' : 'Breaks ') + mgrTgDay(r.brk.breaksOn) : MGR_TG_STATE_WORD[r.key];
+  /* A cash floor's state carries the day: the day the committed line
+     would break it (At risk), or the day the books show it broke (Off
+     track) -- Q37. */
+  const chip = MGR_TG_STATE_WORD[r.key];
+  const chipDay = r.brk && r.brk.breaksOn ? `${r.brk.broke ? 'broke' : 'breaks'} ${mgrTgDay(r.brk.breaksOn, true)}` : '';
   const ruleLine = r.brk
     ? `The lowest cash from ${mgrTgDay(x.from)} to ${mgrTgDay(x.to)} is the lower of what the books already show for the days gone by and the committed line for the days to come — dated bills, rent, wages and loans only, never money expected in${
       r.brk.partial ? `; the line runs to ${mgrTgDay(r.brk.through)}, so the days after it are not read yet` : ''}. ${
       r.brk.breaksOn ? (r.brk.broke ? `The books show it under ${mgrTgFig(u, x.aim)} on ${mgrTgDay(r.brk.breaksOn, true)}, so it cannot be held this time.`
-        : `The committed line goes under ${mgrTgFig(u, x.aim)} on ${mgrTgDay(r.brk.breaksOn, true)}.`) : `It stays at or above ${mgrTgFig(u, x.aim)}.`} The rule: on track while the books and the line stay at or above the floor; off track once either goes under it.`
-    : st.key === 'unknown' ? 'The books cannot read where it stands today, so it is not called anything.'
+        : `The committed line goes under ${mgrTgFig(u, x.aim)} on ${mgrTgDay(r.brk.breaksOn, true)} if no money comes in before then.`) : `It stays at or above ${mgrTgFig(u, x.aim)}.`} The rule: on track while the books and the committed line stay at or above the floor; at risk when the committed line goes under it before the deadline, named by the day it would break; off track only once the books show cash went under it.`
+    : st.key === 'unknown' ? (r.thin ? `The books cannot read it yet — ${r.thin.why}; it takes ${r.thin.min}. Until then it is not called anything.`
+      : 'The books cannot read where it stands today, so it is not called anything.')
     : st.first ? `Set today. The first whole day is read tomorrow; until then it is On track${r.land != null ? `, and lands where it was set to: ${mgrTgFig(u, r.land)}` : ''}.`
     : x.hold ? `A line to hold: ${mgrTgFig(u, x.aim)} was already met when it was set. ${st.key === 'off' ? `It is ${mgrTgGap(u, st.behind)} past the line now.`
       : st.crossing ? `At this rate it reaches ${mgrTgFig(u, x.pace.at_this_rate)} by ${mgrTgDay(x.to)}, across the line.` : 'It is held, and at this rate stays held.'} The rule: on track while held; at risk when at this rate it crosses the line before the deadline; off track once crossed.`
@@ -141466,7 +141573,8 @@ function mgrTgRowHTML(r){
     <span class="mgr-tg-rl"><span class="mgr-tg-fig">${esc(mgrTgFig(u, r.land))}</span><small${dn ? ' class="mgr-tg-dn"' : ''}>${esc(note)}</small>${
       r.planLand != null ? `<small class="mgr-tg-plan">with the plan ${esc(mgrTgFig(u, r.planLand))} · my sizing</small>` : ''}</span>
     <span class="mgr-tg-ro">${oddsHTML}</span>
-    <span class="mgr-tg-rs"><button type="button" class="ow-cp mgr-tg-st${MGR_TG_STATE_TONE[r.key] ? ' ow-' + MGR_TG_STATE_TONE[r.key] : ''}" aria-expanded="false" data-tg-rule="${esc(String(x.id))}">${esc(chip)}</button></span>
+    <span class="mgr-tg-rs"><button type="button" class="ow-cp mgr-tg-st${MGR_TG_STATE_TONE[r.key] ? ' ow-' + MGR_TG_STATE_TONE[r.key] : ''}" aria-expanded="false" data-tg-rule="${esc(String(x.id))}">${esc(chip)}</button>${
+      chipDay ? `<small class="mgr-tg-fig">${esc(chipDay)}</small>` : ''}</span>
     <span class="mgr-tg-ra">${fixHTML}</span>
     <p class="mgr-tg-why" hidden>${esc(ruleLine)}</p>
   </div>`;
@@ -145730,9 +145838,11 @@ function mgrPaintRecord(gen, ctx){
     <div class="mgr-rf"><span class="mgr-rf-l">Targets taken on</span><span class="mgr-rf-v">${
       (st.score && st.score.targets || []).length}</span></div>
     <div class="mgr-rf"><span class="mgr-rf-l">Met</span><span class="mgr-rf-v ow-good">${
-      (st.score && st.score.targets || []).filter(x=> x.met).length}</span></div>
+      st.score && !st.score.error && st.score.tally ? st.score.tally.met : 'not known'}</span></div>
     <div class="mgr-rf"><span class="mgr-rf-l">Missed</span><span class="mgr-rf-v ow-bad">${
-      (st.score && st.score.targets || []).filter(x=> x.finished && !x.met).length}</span></div>
+      st.score && !st.score.error && st.score.tally ? st.score.tally.missed : 'not known'}</span></div>${
+    st.score && !st.score.error && st.score.tally && st.score.tally.unknown ? `<div class="mgr-rf"><span class="mgr-rf-l">Ended, not known</span><span class="mgr-rf-v">${
+      st.score.tally.unknown}</span></div>` : ''}
     <div id="mgrAcctAdvice"></div>
     <p class="mgr-rl">Every figure here is counted from your own books and from what you did with the
       advice. Nothing on this page is the manager&rsquo;s opinion of itself.</p>
@@ -162704,7 +162814,11 @@ const ASSISTANT_TOOLS = {
     });
     const chasesUnnamed = chases.length - chases.filter(r=> ((r.body||{}).subject||{}).customerId != null).length;
     const score = await managerScoreboard();
-    if(score.targets.length) out.scoreboard = score.targets;
+    /* The week, not the whole record: what runs and what finished in the
+       last seven days, without the screen's checkpoint lists; the long
+       record goes as the count of finished targets met. */
+    if((score.week||[]).length) out.scoreboard = score.week;
+    if(score.tally && score.tally.met + score.tally.missed) out.targets_finished = { met: score.tally.met, of: score.tally.met + score.tally.missed };
     /* The review before this one: the only way to say whether the
        lessons it gave were learned, rather than drawing fresh ones over
        the top of them every week. */

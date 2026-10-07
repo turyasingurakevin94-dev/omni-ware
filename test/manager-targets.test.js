@@ -59,12 +59,16 @@ const { MANAGER_METRICS: M, managerScoreProgress } = scope.names();
   /* WAS: six money metrics. NOW (Q16, TGT.1): thirteen -- the six, plus
      net profit a month, gross margin, debtor days (Q18), stock days
      (Q17), the lowest cash in a month, quotes won and WhatsApp orders --
-     each with its unit, so nothing that draws a target assumes money. */
-  eq(keys.length, 13, 'thirteen metrics, every one of them measurable here');
+     each with its unit, so nothing that draws a target assumes money.
+     WAS: thirteen. NOW (Q36): fourteen -- Saturday load time, in minutes,
+     read from the orders' stage history (lower is better). */
+  eq(keys.length, 14, 'fourteen metrics, every one of them measurable here');
   ['collections', 'gross_profit', 'sales', 'debtors_total', 'dead_stock_value', 'cash_on_hand',
-    'net_profit', 'margin_pct', 'debtor_days', 'stock_days', 'lowest_cash', 'quotes_won_pct', 'wa_orders']
+    'net_profit', 'margin_pct', 'debtor_days', 'stock_days', 'lowest_cash', 'quotes_won_pct', 'wa_orders', 'sat_load']
     .forEach((k) => t.check(keys.includes(k), `${k} can be aimed at`));
-  keys.forEach((k) => t.check(['ugx', 'pct', 'days', 'count'].includes(M[k].unit),
+  t.check(M.sat_load.unit === 'min' && M.sat_load.direction === 'down' && M.sat_load.kind === 'level' && typeof M.sat_load.ready === 'function',
+    'Saturday load time is in minutes, lower is better, and says when it cannot be read yet');
+  keys.forEach((k) => t.check(['ugx', 'pct', 'days', 'count', 'min'].includes(M[k].unit),
     `${k} says what it is counted in (${M[k].unit})`));
   keys.filter((k) => M[k].kind === 'level').forEach((k) => t.check(typeof M[k].at === 'function',
     `${k} can be read as it stood on a past day — a finished target is judged on its own last day`));
