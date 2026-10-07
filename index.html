@@ -136066,12 +136066,48 @@ const MGR_CACHED_WRAPS = [
   'managerSimWrap', 'managerTargetsWrap', 'managerPlaysWrap', 'managerQuestionsWrap',
   'managerHistoryWrap', 'managerTrackWrap', 'managerAccountWrap'];
 function mgrCacheKey(id){ return 'ow-mgr-last:' + (currentShopId || '-') + ':' + id; }
-function mgrCacheSave(){
+/* A TOTAL BUDGET, NOT ONLY A PER-BOX ONE. Sixteen boxes kept for every
+   shop opened on this device share localStorage with the offline queue,
+   and a full quota there is a sale that cannot be kept offline. So all
+   last-known copies together (every shop's) stay under `budget`
+   characters, 400,000 unless told otherwise: when they would not, the
+   oldest copies go first and, among copies of the same age, the
+   largest -- a box that is not kept simply opens empty and fills from
+   its reading, as on a first visit. */
+function mgrCacheSave(budget){
+  const cap = Number(budget) > 0 ? Number(budget) : 400000;
+  const prefix = 'ow-mgr-last:';
+  const at = new Date().toISOString();
+  const entries = [];
   MGR_CACHED_WRAPS.forEach(id=>{
     const el = document.getElementById(id);
     if(!el || el.classList.contains('mgr-stale') || !el.innerHTML.trim() || el.querySelector('.mgr-reading')) return;
     if(el.innerHTML.length > 200000) return;
-    try{ localStorage.setItem(mgrCacheKey(id), JSON.stringify({ at: new Date().toISOString(), html: el.innerHTML })); }catch(e){}
+    const key = mgrCacheKey(id), val = JSON.stringify({ at, html: el.innerHTML });
+    entries.push({ key, at, size: key.length + val.length, val });
+  });
+  const fresh = new Set(entries.map(x=> x.key));
+  try{
+    for(let i = 0; i < localStorage.length; i++){
+      const key = localStorage.key(i);
+      if(!key || !key.startsWith(prefix) || fresh.has(key)) continue;
+      const v = localStorage.getItem(key) || '';
+      let when = '';
+      try{ when = String((JSON.parse(v) || {}).at || ''); }catch(e){}
+      entries.push({ key, at: when, size: key.length + v.length, val: null });
+    }
+  }catch(e){}
+  let total = entries.reduce((n, x)=> n + x.size, 0);
+  const drop = new Set();
+  entries.slice().sort((a, b)=> String(a.at).localeCompare(String(b.at)) || b.size - a.size).forEach(x=>{
+    if(total <= cap) return;
+    drop.add(x.key); total -= x.size;
+  });
+  entries.forEach(x=>{
+    try{
+      if(drop.has(x.key)) localStorage.removeItem(x.key);
+      else if(x.val != null) localStorage.setItem(x.key, x.val);
+    }catch(e){ try{ localStorage.removeItem(x.key); }catch(e2){} }
   });
 }
 function mgrCachePaint(el){
