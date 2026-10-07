@@ -202,11 +202,15 @@ const advice = async (rows) => {
        "never mention this", which would bury advice the owner may still
        need. This needs the opposite: said out loud once, then a
        different plan. */
+    /* WAS: the first 12,000 characters of the tool. NOW: 16,000 -- the
+       targets and playbook readings it now hands the meeting (owner
+       targets, proven recipes) moved this entry further down; where it
+       goes, not how far in, is what is checked. */
     const hist = src.slice(src.indexOf("manager_history: { confirm: false"));
-    t.check(/kind: 'advice_not_landing'/.test(hist.slice(0, 12000)),
+    t.check(/kind: 'advice_not_landing'/.test(hist.slice(0, 16000)),
       'advice that is not landing reaches the morning through worth_saying');
-    t.check(!/advice_not_landing[\s\S]{0,400}const doNot/.test(hist.slice(0, 12000))
-      || !/doNot[\s\S]{0,200}notLanding/.test(hist.slice(0, 12000)),
+    t.check(!/advice_not_landing[\s\S]{0,400}const doNot/.test(hist.slice(0, 16000))
+      || !/doNot[\s\S]{0,200}notLanding/.test(hist.slice(0, 16000)),
       'and never through do_not_repeat, which would bury advice the owner may still need');
     /* A COUNT WITH NO INSTRUCTION leaves a mind free to say the same
        thing a fourth time in different words — the exact failure. */
