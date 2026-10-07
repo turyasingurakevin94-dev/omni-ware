@@ -64,13 +64,16 @@ function scope(data, extra) {
     real('anShiftDate'), real('liveCreditNotes'), real('cashIsMoneyIn'), real('cashIsMoneyOut'), real('cashIsCashOverage'),
     real('cashIsCashShortage'), real('cbIsTransfer'), real('cashIsDebtCollection'), real('cashIsTradingIncome'),
     real('stockLogIsCount'), real('stockCountIndex'), real('invCountRecords'), real('invCountMoment'),
-    real('unusualSpread'), real('mgrShortUGX'), real('mgrDept'), real('stockKey'),
+    real('unusualSpread'), real('mgrShortUGX'), real('mgrDept'), real('stockKey'), real('isStockPurchaseRow'), decl('STOCK_PURCHASE_NOTE_RE'),
     decl('CASH_SHORTAGE_CATEGORY'), decl('CASH_OVERAGE_CATEGORY'), decl('CASH_TRANSFER_CATEGORY'), decl('CASH_NOT_REVENUE'), decl('cashHas'),
     decl('INV_NOT_A_COUNT'), decl('ACCOUNTS'), decl('UNUSUAL_WEEKS'), decl('UNUSUAL_MIN'), decl('UNUSUAL_Z'), decl('MGR_DEPTS'),
     block,
     'function setNormals(rows){ mgrPulseNormals = { rows, error: null, day: todayISO(), loaded: true, writeError: null }; }',
     'function setOpen(k){ mgrUnusualOpen = k; }',
-  ], env, ['mgrPulseBooks', 'mgrPulseJudge', 'mgrPulseBand', 'mgrPulseQuartiles', 'mgrPulseNormalRule', 'mgrPulseNormalApplies',
+    'function _answers(){ return MGR_PULSE_ANSWERS; }',
+    'function _state(){ return { answers: mgrUnusualAnswers, rows: mgrPulseAnswerRows, normals: mgrPulseNormals, answersErr: mgrPulseAnswersErr }; }',
+  ], env, ['mgrPulseWhat', 'mgrAnswerUnusual', 'mgrPulseRetire', 'mgrPulseNormalsLoad', 'mgrUnusualAnswersLoad', 'mgrPulseAction',
+    'mgrPulseTillPast', 'mgrPulseTaughtHTML', '_answers', '_state', 'mgrPulseBooks', 'mgrPulseJudge', 'mgrPulseBand', 'mgrPulseQuartiles', 'mgrPulseNormalRule', 'mgrPulseNormalApplies',
     'mgrPulseNormalOf', 'mgrPulseAnswerSet', 'mgrPulseTitle', 'mgrPulseImpact', 'mgrPulseRarity', 'mgrPulseWhen', 'mgrPulseReasons',
     'mgrPulseLearnt', 'mgrPulseVerdict', 'mgrPulseReading', 'mgrUnusualHTML', 'mgrNavCountUnusual', 'mgrPulseMinGap', 'setNormals',
     'mgrUnusualKey', 'mgrPulseFig', 'setOpen']);
@@ -124,7 +127,7 @@ function book(opts) {
   cashTxns.push({ id: sid++, date: T(-6), type: 'receipt', account: 'cash', category: 'Cash Overage', amount: 10000 });
   /* Four credit notes of 300,000 in the month: Sat 12, Thu 17, Sat 26
      Sept and Fri 2 Oct. None before. */
-  [T(-25), T(-20), T(-11), T(-5)].forEach((d, n) => {
+  if (!o.dailyReturns) [T(-25), T(-20), T(-11), T(-5)].forEach((d, n) => {
     const q = savedQuotes.find((x) => x.invoicedAt === d && x.invoiced);
     q.creditNotes = [{ id: n + 1, no: n + 1, date: d, reason: n < 3 ? 'Lid does not seal' : 'Wrong colour', amount: 300000,
       lines: [{ idx: 0, qty: 1, price: 300000, name: 'Gloss 4L' }] }];
@@ -142,7 +145,27 @@ function book(opts) {
   const data = { savedQuotes, cashTxns, stockLog, cashDays, customers: [{ id: 'C1', name: 'Kato' }], products: [],
     presetStockCounts: {}, presetExpenseCategories: o.fuelCat ? ['Rent', 'Fuel'] : ['Rent', 'Transport'], waPosts: [], paymentPromises: [],
     __variance: { [T(-1)]: 600000 } };                                // Tue 6 Oct: the drawer counted 600,000 over the book
-  if (o.fuel) for (let i = 30; i >= 1; i--) data.cashTxns.push({ id: 90000 + i, date: T(-i), type: 'payment', account: 'cash', category: 'Fuel', amount: 40000 });
+  if (o.fuel) for (let i = o.fuelDays || 30; i >= 1; i--) data.cashTxns.push({ id: 90000 + i, date: T(-i), type: 'payment', account: 'cash', category: 'Fuel',
+    amount: (o.fuelSpikes || {})[T(-i)] || 40000 });
+  /* A shop with credit notes on most days: one on every invoice, 40k,
+     50k or 60k by i mod 3, and Mon 5 Oct's 2,000,000. */
+  if (o.dailyReturns) savedQuotes.filter((q) => q.invoiced && q.invoicedAt > T(-200) && q.invoicedAt < TODAY).forEach((q) => {
+    const i = Math.round((Date.parse(TODAY) - Date.parse(q.invoicedAt)) / 864e5);
+    const amount = q.invoicedAt === T(-2) ? 2000000 : 40000 + 10000 * (i % 3);
+    q.creditNotes = [{ id: 7000 + i, no: 7000 + i, date: q.invoicedAt, reason: 'Wrong size', amount, lines: [{ idx: 0, qty: 1, price: amount, name: 'Nails 3in' }] }];
+  });
+  /* A shop that applied 0106 three weeks ago: rows older than 21 days came
+     back from the database without cost, supplier, bill, source and the
+     correction pointers. */
+  if (o.pre0106) stockLog.forEach((l) => { if (l.date < T(-21)) ['cost', 'supplierId', 'piId', 'source', 'corrects', 'purchaseQty', 'reverses'].forEach((k) => { delete l[k]; }); });
+  /* Thu 1 Oct: a delivery from S1 of a line with no cost anywhere. */
+  if (o.uncosted) stockLog.push({ id: 6000, key: 'PX', type: 'restock', delta: 12, supplierId: 'S1', date: T(-6), note: 'Received from S1' });
+  /* Mon 5 Oct: one more lorry, bill 77 from S2 -- two lines, 10 x 100,000
+     and 5 x 20,000 = 1,100,000. */
+  if (o.bills) {
+    stockLog.push({ id: 6001, key: 'P4', type: 'restock', delta: 10, cost: 100000, supplierId: 'S2', piId: 77, date: T(-2), note: 'Bill B-77 from S2' });
+    stockLog.push({ id: 6002, key: 'P5', type: 'restock', delta: 5, cost: 20000, supplierId: 'S2', piId: 77, date: T(-2), note: 'Bill B-77 from S2' });
+  }
   return data;
 }
 
@@ -265,7 +288,8 @@ const cell = (sig, d) => R.rows.find((r) => r.sig.id === sig).cells.find((c) => 
   const cash = R.findings.find((x) => x.metric === 'cash_in');
   const rc = S.mgrPulseReasons(cash, B);
   eq(rc[0].state + ':' + rc[0].label, 'found:Debts were paid', 'cash in up: a debt paid, found');
-  eq(rc[0].detail, '1 debt payment, 3m — a usual Monday collects 0; the largest Payment — Okello & Sons, 3m.', 'with what was paid against a usual Monday');
+  eq(rc[0].detail, '1 debt payment, 3m — a usual Monday collects 0; the largest Okello & Sons, 3m.',
+    'with what was paid against a usual Monday, and who paid -- the payment screen\'s "Payment — " is not a name');
   const all = R.findings.flatMap((x) => S.mgrPulseReasons(x, B));
   t.check(all.length > 0 && all.every((x) => ['found', 'open', 'none'].includes(x.state)), 'every reason is found, not checked or not found');
   t.check(!all.some((x) => /\d%$|probab|likel(y|ihood) \d|chance/i.test(x.label)), 'no reason carries a percentage or a likelihood');
@@ -350,11 +374,307 @@ const cell = (sig, d) => R.rows.find((r) => r.sig.id === sig).cells.find((c) => 
   t.check(/class="mgr-u-rar"[^>]*>(?:<span[^>]*><i><\/i>[a-z ]+<\/span>){5}<\/div>/.test(html), 'the rarity scale has its five steps');
   t.check(/found in the books/.test(html) && !/\d+%<\/span>/.test(html.slice(html.indexOf('Likely reasons'))), 'reasons with what the books found, and no percentage');
   t.check(/data-unusual-answer="Not entered yet" data-unusual-key="2026-10-06\|sales"/.test(html), 'the open finding is answered with a tap');
-  t.check(/data-unusual-day="2026-10-06">Open Tue 6 Oct</.test(html), 'and its one action opens the day');
+  t.check(/data-unusual-day="2026-10-06">Open Tue 6 Oct</.test(html), 'and its one action opens the day the sales were low');
   t.check(/Out of the ordinary<\/span><b class="mgr-u-hd-v">8<\/b>/.test(html) && /Good news<\/span><b class="mgr-u-hd-v mgr-u-hd-good">1<\/b>/.test(html)
     && /Need your answer<\/span><b class="mgr-u-hd-v mgr-u-hd-warn">7<\/b>/.test(html), 'the band counts: 8 found, 1 good news, 7 problems still waiting');
   t.check(/Nothing taught yet/.test(html), 'and an empty Taught list says how to fill it');
-  eq(S.mgrNavCountUnusual({}), { n: 8, note: '<b>8 unusual things</b> need your answer' }, 'the nav: eight in the fortnight, eight without an answer');
+  /* WAS: '<b>8 unusual things</b> need your answer' beside the band's
+     "Need your answer 7" -- two figures under one label. NOW: the band
+     counts problems waiting (7: eight findings less the one good news);
+     the nav counts every finding not yet explained (8), in its own words. */
+  eq(S.mgrNavCountUnusual({}), { n: 8, note: '<b>8 unusual things</b> not yet explained' }, 'the nav: eight in the fortnight, eight not yet explained');
+  t.check(!/need/.test(S.mgrNavCountUnusual({}).note), 'and never under the band\'s label "need your answer", which counts only problems');
 }
 
-process.exit(t.done() ? 1 : 0);
+/* ---------- 9. the gap of a month's returns is counted once ----------- */
+{
+  /* The month's finding carries two flagged days, Sat 26 Sept and Fri 2
+     Oct; their 30-day windows overlap (Sat 26 Sept's holds the notes of
+     12, 17 and 26 Sept, 900,000; Fri 2 Oct's holds all four, 1,200,000).
+     Adding the two days' gaps would say 2.1m. The month's gap is the
+     latest 30 days against a usual month: 1,200,000 - 0 = 1,200,000. */
+  const ret = R.findings.find((x) => x.metric === 'returns');
+  eq(ret.per.map((p) => p.gap), [900000, 1200000], 'each flagged day\'s own 30 days, above a usual month of none');
+  eq(ret.gap, 1200000, 'the finding\'s gap is the latest 30 days less a usual month, once: 1.2m, never 2.1m');
+  eq(S.mgrPulseImpact(ret), '−1.2m', 'so its impact is −1.2m');
+}
+
+/* ---------- 10. returns on most days are judged day by day ----------- */
+{
+  /* Every invoice carries a credit note of 40k/50k/60k (by days back mod
+     3), so a weekday's spread is real and returns are judged as a day.
+     The 8 Mondays before Mon 5 Oct are 9,16,..,58 days back: mod 3 gives
+     0,1,2,0,1,2,0,1 -> 40,50,60,40,50,60,40,50k. Sorted 40,40,40,50,50,
+     50,60,60: the median is 50k; the 25th percentile (1.75 along) 40k
+     and the 75th (5.25 along) 50 + 0.25 x 10 = 52.5k. Mon 5 Oct's note
+     is 2,000,000: 1,950,000 over. */
+  const SR = scope(book({ dailyReturns: true }));
+  const BR = SR.mgrPulseBooks(TODAY);
+  const RR = SR.mgrPulseJudge(BR, [], () => false);
+  const fr = RR.findings.filter((x) => x.metric === 'returns');
+  eq(fr.length, 1, 'one returns finding');
+  eq([fr[0].monthly, fr[0].days, fr[0].value, fr[0].usual], [null, [T(-2)], 2000000, 50000], 'judged as Mon 5 Oct against a usual Monday of 50k, not as a month');
+  eq(fr[0].gap, 1950000, 'its gap: 2,000,000 - 50,000');
+  const title = SR.mgrPulseTitle(fr[0]);
+  eq(title, 'Monday’s returns were 2m — a Monday is usually 40k–53k', 'a day\'s title, never a month\'s with nothing in it');
+  const what = SR.mgrPulseWhat(fr[0], BR);
+  t.check(!/undefined|NaN/.test(title + what) && /^1 credit note on Mon 5 Oct, 2m credited/.test(what), 'and the day\'s own sentence: ' + what);
+  const rs = SR.mgrPulseReasons(fr[0], BR, RR);
+  eq(rs.find((x) => x.label === 'One line keeps coming back').detail, 'Nails 3in: on 1 of 1 credit notes.', 'its reasons read the day\'s notes, not a month\'s');
+}
+
+/* ---------- 11. purchases before the 0106 columns: not recorded -------- */
+{
+  /* Rows older than 21 days lost their supplier and cost. The first
+     restock that kept one is Mon 21 Sept (16 days back -- Mondays are 2,
+     9, 16, 23 days back). So purchases are read from Mon 21 Sept: every
+     day of the fortnight has at most two same weekdays on record (8 and
+     15 days back for a Tuesday), too few to judge -- never a usual of
+     nothing against which every delivery is "never before". */
+  const SP = scope(book({ pre0106: true }));
+  const BP = SP.mgrPulseBooks(TODAY);
+  eq(BP.purchasesFrom, T(-16), 'purchases are read from the first delivery that kept its supplier and cost');
+  eq(BP.read(T(-23)).v.purchases, null, 'a Monday before it is not recorded, never 0');
+  eq(BP.read(T(-16)).v.purchases, 500000, 'and the first one after it reads its 10 x 50,000');
+  const RP = SP.mgrPulseJudge(BP, [], () => false);
+  const row = RP.rows.find((r) => r.sig.id === 'purchases');
+  t.check(row.cells.every((c) => ['q', 't', 'c'].includes(c.s)), 'no purchases cell is judged: ' + row.cells.map((c) => c.s).join(''));
+  eq(RP.findings.filter((f) => f.metric === 'purchases').length, 0, 'so there is no purchases finding at all');
+  /* With the stage-log-like start in place, a shop that never kept one
+     reads the whole row as not recorded. */
+  const SN = scope(Object.assign(book(), { stockLog: book().stockLog.map((l) => { const x = { ...l }; ['cost', 'supplierId', 'piId', 'source', 'corrects', 'purchaseQty', 'reverses'].forEach((k) => delete x[k]); return x; }) }));
+  const RN = SN.mgrPulseJudge(SN.mgrPulseBooks(TODAY), [], () => false);
+  eq(RN.rows.find((r) => r.sig.id === 'purchases').state, 'none', 'no delivery ever kept its supplier and cost: the row is not recorded');
+  SN.setNormals([]);
+  t.check(/not recorded — deliveries are not kept with their supplier and cost yet/.test(SN.mgrUnusualHTML(SN.mgrPulseReading())), 'and says so across the fortnight');
+}
+
+/* ---------- 12. a delivery with no cost is a floor, never a low day ---- */
+{
+  /* Thu 1 Oct: 12 of a line with no cost anywhere. The figure is 0 plus
+     something not known -- not a Thursday with nothing bought. */
+  const SU = scope(book({ uncosted: true }));
+  const BU = SU.mgrPulseBooks(TODAY);
+  eq([BU.read(T(-6)).v.purchases, BU.read(T(-6)).uncosted.purchases], [0, 1], 'the day reads 0 known, 1 line uncosted');
+  const RU = SU.mgrPulseJudge(BU, [], () => false);
+  const c = RU.rows.find((r) => r.sig.id === 'purchases').cells.find((x) => x.date === T(-6));
+  eq(c.s, 'u', 'so the cell is not judged');
+  eq(c.why, '1 delivery line has no cost on file — at least 0, not known how much more', 'and says why');
+}
+
+/* ---------- 13. deliveries are lorries, not lines ---------------------- */
+{
+  /* Mon 5 Oct: S1's 20 bags (1,000,000) and bill 77 from S2 -- 10 x
+     100,000 + 5 x 20,000 = 1,100,000. Two deliveries, three lines,
+     2,100,000. A usual Monday is 500,000, so the gap is 1,600,000 and
+     half of it 800,000: bill 77 alone is past that. */
+  const SB = scope(book({ bills: true }));
+  const BB = SB.mgrPulseBooks(TODAY);
+  const dl = BB.deliveriesOn(T(-2));
+  eq(dl.map((g) => [g.key, g.total, g.lines.length]), [['pi:77', 1100000, 2], ['sup:S1', 1000000, 1]], 'two deliveries: the bill\'s two lines together, then S1');
+  const RB = SB.mgrPulseJudge(BB, [], () => false);
+  const fp = RB.findings.find((x) => x.metric === 'purchases');
+  eq([fp.value, fp.gap], [2100000, 1600000], '2,100,000 arrived, 1,600,000 over a usual Monday');
+  t.check(/^2 deliveries \(3 lines\) arrived, 2\.1m at cost/.test(SB.mgrPulseWhat(fp, BB)), 'the sentence counts deliveries and lines');
+  const big = SB.mgrPulseReasons(fp, BB, RB).find((x) => x.label === 'One big delivery');
+  eq([big.state, big.detail], ['found', 'Supplier S2, 1.1m — 2 lines, the largest P4 × 10; 1 other delivery that day.'],
+    'one big delivery is the bill as a whole, its largest line named only as a detail');
+}
+
+/* ---------- 14. the till's past, counted ------------------------------ */
+{
+  /* Tue 6 Oct over: the 8 Tuesdays before (8..57 days back) were all
+     counted; 29 Sept was 85,000 short, the other seven 0. */
+  const over = R.findings.find((x) => x.metric === 'till' && x.dir === 'high');
+  eq(S.mgrPulseTillPast(over), '7 of the last 8 counted Tuesdays balanced', 'seven of eight, not "balanced to the shilling"');
+  t.check(/Counted days only — 7 of the last 8 counted Tuesdays balanced\./.test(S.mgrPulseWhat(over, B)), 'and the sentence says so');
+  const short = R.findings.find((x) => x.metric === 'till' && x.dir === 'low');
+  eq(S.mgrPulseTillPast(short), 'the last 8 counted Tuesdays balanced to the shilling', 'the 8 Tuesdays before 29 Sept all balanced: then, and only then, to the shilling');
+}
+
+/* ---------- 15. fuel: the reasons read the grid and the days after ----- */
+{
+  /* Fuel at 40,000 every day for 60 days; 300,000 on Thu 1 Oct and on
+     Tue 6 Oct. A same-weekday usual of 40,000, spread nothing: each is
+     260,000 over, one finding over the two days. */
+  const SF = scope(book({ fuelCat: true, fuel: true, fuelDays: 60, fuelSpikes: { [T(-6)]: 300000, [T(-1)]: 300000 } }));
+  const BF = SF.mgrPulseBooks(TODAY);
+  const RF = SF.mgrPulseJudge(BF, [], () => false);
+  const ff = RF.findings.find((x) => x.metric === 'fuel');
+  eq([ff.days, ff.gap], [[T(-6), T(-1)], 520000], 'one fuel finding, two days, 260,000 + 260,000 over');
+  const rs = SF.mgrPulseReasons(ff, BF, RF);
+  const several = rs.find((x) => x.label === 'Fuel bought for several days');
+  /* Thu 1 Oct: Fri 2 and Sat 3 Oct had fuel. Tue 6 Oct: the day after is
+     today, not over. Nothing found, one not over: not checked. */
+  eq([several.state, several.detail], ['open', 'The days after Tue 6 Oct are not over yet.'], 'a day after that is not over cannot say no');
+  const thu = SF.mgrPulseReasons({ ...ff, days: [T(-6)], date: T(-6), per: [ff.per[0]] }, BF, RF).find((x) => x.label === 'Fuel bought for several days');
+  eq([thu.state, thu.detail], ['none', 'Fuel was entered again on Fri 2 Oct.'], 'one with fuel says no, and names the day');
+  /* Deliveries on those days: the stage log starts 20 days back, so a
+     Thursday or Tuesday has two weeks behind it -- the grid does not
+     judge them, and nor does the reason. */
+  const more = rs.find((x) => x.label === 'More deliveries than usual');
+  eq([more.state, more.detail], ['open', 'Too few weeks of deliveries to say what is usual.'], 'more deliveries than usual is the grid\'s judgement, never half of all days');
+}
+
+/* ---------- 16. every reason set, every title: no cause, no percentage -- */
+{
+  const ANS = S._answers();
+  const bad = /\bbecause\b|thanks to|\bcaused\b|root cause|it worked|\d+%\s*(likely|chance)|probab/i;
+  const base = R.findings.find((x) => x.metric === 'sales');
+  let ran = 0, fails = [];
+  Object.keys(ANS).forEach((k) => {
+    const [metric, dir] = k.split('.');
+    const sig = R.rows.find((r) => r.sig.id === metric).sig;
+    const f = { ...base, metric, dir, sig, tone: 'bad', monthly: metric === 'returns' ? { sum: 300000, count: 1, usual: 0, usualCount: 0, months: 5, k: 0 } : null };
+    try {
+      const rs = S.mgrPulseReasons(f, B, R);
+      const words = [S.mgrPulseTitle(f), S.mgrPulseWhat(f, B)].concat(rs.flatMap((x) => [x.label, x.detail]))
+        .concat(S.mgrPulseAnswerSet(f).flatMap((a) => [a.label, S.mgrPulseLearnt(f, a)]));
+      if (!rs.length || rs.some((x) => !['found', 'open', 'none'].includes(x.state))) fails.push(k + ': states');
+      words.forEach((w) => { if (bad.test(w) || /undefined|NaN/.test(w)) fails.push(k + ': ' + w); });
+      ran++;
+    } catch (e) { fails.push(k + ': threw ' + e.message); }
+  });
+  eq([ran, fails], [Object.keys(ANS).length, []], 'every finding kind has reasons, titles and answers with no cause, no percentage, nothing undefined');
+  const code = block.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/.*$/gm, '$1');
+  t.check(!bad.test(code), 'and no string anywhere in the section names a cause or a likelihood');
+  t.check(!bad.test(S.mgrPulseVerdict(R)), 'nor the Manager\'s sentence');
+}
+
+/* ---------- 17. the owner's word: kept per day, changed in place ------- */
+function fakeSb(answer) {
+  const log = []; let next = 100;
+  const from = (table) => {
+    const q = { table, op: 'select', filters: [] };
+    const b = {
+      select(c) { q.cols = c; return b; }, eq(k, v) { q.filters.push([k, v]); return b; }, gte(k, v) { q.filters.push([k, '>=', v]); return b; },
+      order() { return b; }, limit() { return b; }, single() { q.single = true; return b; },
+      insert(rows) { q.op = 'insert'; q.payload = rows; return b; }, update(p) { q.op = 'update'; q.payload = p; return b; },
+      then(res, rej) { log.push(q); return Promise.resolve(answer(q, () => next++)).then(res, rej); },
+    };
+    return b;
+  };
+  return { from, log };
+}
+const okAnswer = (q, id) => q.op === 'insert' ? { data: q.payload.map((r) => ({ id: id(), body: r.body })), error: null }
+  : q.op === 'update' ? { data: null, error: null } : { data: [], error: null };
+(async () => {
+  {
+    const toasts = [], saved = [];
+    const sb = fakeSb(okAnswer);
+    const SA = scope(book(), { sb, toast: (m) => toasts.push(m),
+      mgrSaveNormal: async (b) => { saved.push(b); return { ok: true, row: { id: 900 + saved.length, status: 'active', date: TODAY, body: { ...b, taughtOn: TODAY } } }; } });
+    SA.setNormals([]);
+    const RA = SA.mgrPulseReading();
+    const ret = RA.findings.find((x) => x.metric === 'returns');
+    const key = SA.mgrUnusualKey(ret);
+    await SA.mgrAnswerUnusual(key, 'A bad batch');
+    const ins = sb.log.filter((q) => q.op === 'insert');
+    eq(ins.length, 1, 'one write for the answer');
+    eq(ins[0].payload.map((r) => [r.kind, r.status, r.body.unusualDay, r.body.metric, r.body.answer]),
+      [['question', 'answered', T(-11), 'returns', 'A bad batch'], ['question', 'answered', T(-5), 'returns', 'A bad batch']],
+      'one answered question per day the finding covers, each under its own day and metric -- the fields the meeting matches on');
+    eq([SA._state().answers.get(T(-11) + '|returns'), SA._state().rows.get(T(-11) + '|returns'), SA._state().rows.get(key)], ['A bad batch', 100, 101],
+      'each day is answered, by its own row');
+    let html = SA.mgrUnusualHTML(SA.mgrPulseReading());
+    SA.setOpen(key); html = SA.mgrUnusualHTML(SA.mgrPulseReading());
+    t.check(/aria-pressed="true">A bad batch</.test(html) && /data-unusual-answer="Our storage"/.test(html) && /mgr-u-st-done">Explained</.test(html),
+      'answered: the chosen answer pressed, "Explained", and the other answers still a tap away');
+    t.check(!/data-unusual-answer="A bad batch"/.test(html), 'the chosen one is not tapped again');
+
+    /* A changed answer rewrites the two rows -- no second answer beside
+       the first, which the meeting could read instead. */
+    await SA.mgrAnswerUnusual(key, 'Our storage');
+    const ups = sb.log.filter((q) => q.op === 'update' && q.table === 'manager_notes');
+    eq(sb.log.filter((q) => q.op === 'insert').length, 1, 'changing the answer writes no new row');
+    eq(ups.map((q) => [q.filters.find((f) => f[0] === 'id')[1], q.payload.body.answer, q.payload.body.previousAnswer, q.payload.body.unusualDay]),
+      [[100, 'Our storage', 'A bad batch', T(-11)], [101, 'Our storage', 'A bad batch', T(-5)]], 'it updates each day\'s row in place, keeping what it said before');
+
+    /* A rule, then a change of mind: the normal it taught is retired. */
+    const low = RA.findings.find((x) => x.metric === 'sales');
+    await SA.mgrAnswerUnusual(SA.mgrUnusualKey(low), 'Tuesdays run lower now');
+    eq(saved.map((b) => [b.metric, b.weekday, b.condition, b.effect, b.sourceAnswerId]), [['sales', 2, 'every', 'low up to 60%', '102']],
+      'a weekday answer teaches a normal that points back to its answer');
+    await SA.mgrAnswerUnusual(SA.mgrUnusualKey(low), 'Something else');
+    const retire = sb.log.filter((q) => q.op === 'update' && q.payload.status === 'retired');
+    eq(retire.map((q) => q.filters.find((f) => f[0] === 'id')[1]), [901], 'changed to a one-off: the normal the old answer taught is retired');
+    eq(saved.length, 1, 'and no new normal is kept for a one-off');
+    eq(toasts, [], 'nothing went wrong, so nothing was said');
+  }
+  {
+    /* A write refused: the day is taken back to unanswered, and said. */
+    const toasts = [];
+    const sb = fakeSb((q) => q.op === 'insert' ? { data: null, error: { message: 'offline' } } : { data: [], error: null });
+    const SE = scope(book(), { sb, toast: (m) => toasts.push(m) });
+    SE.setNormals([]);
+    const low = SE.mgrPulseReading().findings.find((x) => x.metric === 'sales');
+    await SE.mgrAnswerUnusual(SE.mgrUnusualKey(low), 'Not entered yet');
+    eq([SE._state().answers.has(SE.mgrUnusualKey(low)), toasts], [false, ['Could not keep that answer — offline']], 'an answer the journal refused is taken back and said so');
+  }
+  {
+    /* The 0107 update missing: the answer is kept, the normal is not, and
+       the open finding names the update. */
+    const sb = fakeSb(okAnswer);
+    const SM = scope(book(), { sb, mgrSaveNormal: async () => ({ ok: false, error: 'check', migration: '0107' }),
+      mgrMigrationNote: () => 'The Manager\'s memory needs one update — paste 0107_manager_intelligence.sql into the Supabase SQL editor and reload.' });
+    SM.setNormals([]);
+    const low = SM.mgrPulseReading().findings.find((x) => x.metric === 'sales');
+    await SM.mgrAnswerUnusual(SM.mgrUnusualKey(low), 'Tuesdays run lower now');
+    SM.setOpen(SM.mgrUnusualKey(low));
+    const html = SM.mgrUnusualHTML(SM.mgrPulseReading());
+    t.check(/mgr-u-unkept">Your answer is kept, but not as a normal — The Manager&#39;s memory needs one update — paste 0107|mgr-u-unkept">Your answer is kept, but not as a normal — The Manager's memory needs one update — paste 0107/.test(html),
+      'a normal the journal refused for want of 0107 names the update on the finding');
+    t.check(!/I’ll remember:/.test(html), 'and never claims to remember it');
+  }
+  {
+    /* Retiring refused: the normal stands again, and it is said. */
+    const toasts = [];
+    const sb = fakeSb((q) => q.op === 'update' ? { data: null, error: { message: 'denied' } } : { data: [], error: null });
+    const SR2 = scope(book(), { sb, toast: (m) => toasts.push(m) });
+    SR2.setNormals([{ id: 5, status: 'active', date: T(-3), body: { metric: 'quotes', weekday: 3, condition: 'every', effect: 'low up to 100%', note: 'x — y' } }]);
+    await SR2.mgrPulseRetire(5);
+    eq([SR2._state().normals.rows[0].status, toasts], ['active', ['Could not retire that normal — denied']], 'a retire the journal refused is rolled back and said so');
+  }
+  {
+    /* The normals unreadable: named, and nothing taught is applied. */
+    const SR3 = scope(book(), { mgrNotesOfKind: async () => ({ rows: [], error: 'timeout' }) });
+    await SR3.mgrPulseNormalsLoad(1);
+    const st = SR3._state().normals;
+    eq([st.loaded, st.error, st.day], [true, 'timeout', null], 'a failed read is kept as failed, and tried again on the next visit');
+    t.check(/could not be read — timeout\. Nothing taught is being applied until it can\./.test(SR3.mgrPulseTaughtHTML(SR3.mgrPulseReading())), 'the Taught panel names it');
+  }
+  {
+    /* Two loads overlapping, the first started by a render that is no
+       longer current: the rows that arrive are the shop's and are kept. */
+    let release;
+    const gate = new Promise((r) => { release = r; });
+    let calls = 0;
+    const SR4 = scope(book(), { mgrRenderGen: 2, mgrNotesOfKind: () => { calls++; return gate; } });
+    const p1 = SR4.mgrPulseNormalsLoad(1), p2 = SR4.mgrPulseNormalsLoad(2);
+    release({ rows: [{ id: 8, status: 'active', date: T(-3), body: { metric: 'quotes', weekday: 3, condition: 'every', effect: 'low up to 100%' } }], error: null });
+    await Promise.all([p1, p2]);
+    const st = SR4._state().normals;
+    eq([calls, st.loaded, st.rows.length, st.day], [1, true, 1, TODAY], 'one read, and its rows kept -- never a panel stuck on "Reading…"');
+    eq(SR4.mgrPulseReading().rows.find((r) => r.sig.id === 'quotes').cells.find((c) => c.date === T(-7)).s, 'tn', 'and the normal applied');
+  }
+  {
+    /* The answers unreadable: the band says so and counts nothing. */
+    const sb = fakeSb(() => ({ data: null, error: { message: 'timeout' } }));
+    const SR5 = scope(book(), { sb });
+    SR5.setNormals([]);
+    await SR5.mgrUnusualAnswersLoad();
+    const html = SR5.mgrUnusualHTML(SR5.mgrPulseReading());
+    t.check(/Your answers could not be read — timeout\./.test(html) && /Need your answer<\/span><b class="mgr-u-hd-v" aria-label="Need your answer not known">—</.test(html),
+      'answers not read: the band names it, and "Need your answer" is not known, never a count of everything');
+    eq(SR5.mgrNavCountUnusual({}), { n: 8, note: null }, 'and the nav says nothing is waiting rather than guess');
+    t.check(/mgr-u-st-done">Answer not read</.test(html), 'each finding says its answer was not read');
+  }
+  {
+    /* The action on each finding opens where its follow-up is done. */
+    const f = (m, d) => ({ metric: m, dir: d, date: T(-1) });
+    eq([S.mgrPulseAction(f('sales', 'low')), S.mgrPulseAction(f('cash_in', 'low')), S.mgrPulseAction(f('purchases', 'high'))].map((a) => a.tab + ':' + a.label),
+      ['day:Open Tue 6 Oct', 'analytics-debtors:Open the debtors', 'invoices:Open the bills'], 'per signal: the day, the debtors, the bills');
+  }
+  process.exit(t.done() ? 1 : 0);
+})().catch((e) => { console.error(e); process.exit(1); });
+

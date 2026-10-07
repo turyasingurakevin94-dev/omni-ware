@@ -207,9 +207,16 @@ function build(days, books) {
     'with an honest word for too-new and for a calm fortnight, never a blank');
   t.check(/dayShown = b\.dataset\.unusualDay;\s*goToTab\('day'\);/.test(src), 'and a row opens The day on that date');
   const save = extractFunction(src, 'mgrAnswerUnusual', 'index.html');
-  t.check(/kind: 'question'/.test(save) && /status: 'answered'/.test(save) && /unusualDay: x\.date, metric: x\.metric/.test(save),
-    'a tapped answer is kept as an answered question, so it reaches the next meeting the way every answer does');
-  t.check(/mgrUnusualAnswers\.delete\(key\)/.test(save), 'and one that could not be kept is taken back and said so');
+  /* WAS: one row per finding, unusualDay: x.date (its latest day only),
+     taken back with mgrUnusualAnswers.delete(key). NOW: one answered row
+     per day the finding covers, each under its own unusualDay and the
+     finding's metric -- the fields the meeting matches on -- and every
+     day not written is taken back. The behaviour (rows written, rollback
+     and toast) is run in manager-unusual-pulse.test.js section 17. */
+  t.check(/kind: 'question'/.test(save) && /status: 'answered'/.test(save) && /unusualDay: d, metric: x\.metric/.test(save)
+    && /x\.days\.map\(d=> d \+ '\|' \+ x\.metric\)/.test(save),
+    'a tapped answer is kept as an answered question on each day it covers, so it reaches the next meeting the way every answer does');
+  t.check(/mgrUnusualAnswers\.delete\(k\)/.test(save) && /toast\('Could not keep that answer/.test(save), 'and one that could not be kept is taken back and said so');
   t.check(/owner_said: said\.body\.answer/.test(hist) && /never flag the day again/.test(hist) && /!answeredDay\(x\)/.test(hist),
     'the meeting reads the owner\'s word on the day, never raises an answered day as news, and turns unentered sales into a job');
   t.check(/mgrUnusualAnswersLoad\(\);/.test(mgrRender()), 'and a day answered before stays answered');
