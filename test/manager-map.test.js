@@ -86,6 +86,7 @@ const eq = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(wa
     managerToday: null, managerMeetingRunning: false, apMode: null, apWasCutOff: false, managerCommittedPlan: null,
     assistantBusy: false, runManagerMeeting() {}, runManagerReview() {}, apOpenPanel() {}, apSend() {}, mgrTrailHTML: () => '',
     lsSet() {}, todayISO: () => '2026-10-07', esc, fmtShortDate: (d) => d,
+    mgrBriefPaintThumb() {},
   };
   S = compileScope([fn('mgrPaintBrief'), fn('mgrBriefSoon'), fn('mgrBriefOnScreen'),
     'let mgrMapJournal = null, mgrBriefDirty = true, mgrBriefJournalErr = null, mgrBriefRows = [], mgrBriefPlanArgs = null,'

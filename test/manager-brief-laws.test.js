@@ -108,19 +108,19 @@ const all = (re) => { const out = []; let m; const g = new RegExp(re.source, 'g'
 /* ---------- 4. a box whose readings failed says so -------------------- */
 {
   const els = {};
-  const document = { getElementById: (id) => (els[id] = els[id] || { id, innerHTML: '', querySelectorAll: () => [] }) };
+  const document = { getElementById: (id) => (els[id] = els[id] || { id, innerHTML: '', querySelectorAll: () => [], classList: { toggle() {} } }) };
   const M = { today: '2026-10-07', chains: [], foresight: [], patterns: [], blind: [], signals: { count: 0 }, meeting: null,
     hit: null, deadLevers: [], corrected: null, unknownTerms: null, orderByMore: 0,
     errors: ['the cash ahead', 'risks', 'the buy plan', 'the shelf', 'lead times', 'orders on the way', 'chase record', 'chase verdicts',
       'posts', 'counts', 'statements', 'rival checks', 'supplier of P001'] };
   const S = compileScope([
     ...['mgrBriefPaintChains', 'mgrBriefPaintForesight', 'mgrBriefPaintMemory', 'mgrBriefPaintBlind', 'mgrBriefUnread', 'mgrBriefUnreadHTML',
-      'mgrBriefForesightPick', 'mgrBriefLampHTML', 'mgrBriefDeptChip', 'mgrBriefPipsHTML', 'mgrBriefDoor', 'mgrBriefWireGo', 'mgrBriefChainDepts',
+      'mgrBriefForesightPick', 'mgrBriefNext7', 'mgrBriefLampHTML', 'mgrBriefDeptChip', 'mgrBriefPipsHTML', 'mgrBriefDoor', 'mgrBriefWireGo', 'mgrBriefChainDepts',
       'mgrBriefDay', 'mgrShortUGX', 'mgrDept', 'anShiftDate', 'waWeekday'].map(fn),
     ...['MGR_BRIEF_NEEDS', 'MGR_BRIEF_ICON', 'mgrBriefIcon', 'MGR_BRIEF_DOORS', 'MGR_BRIEF_FS_ORDER', 'MGR_WEEKDAYS', 'MGR_DEPTS',
       'MGR_WHOLE_SHOP', 'MGR_BRIEF_MONTHS'].map(decl),
   ], {
-    document, mgrBriefModel: M, mgrBriefDept: 'all', mgrBriefChain: null, mgrBriefRows: [], mgrBriefMoreFore: false, mgrBriefMoreBlind: false,
+    document, mgrBriefModel: M, mgrBriefDept: 'all', mgrBriefChain: null, mgrBriefRows: [], mgrBriefMoreFore: false, mgrBriefFore30: false, mgrBriefMoreBlind: false,
     mgrBriefCtx: {}, MANAGER_DOORS: {}, esc: (s) => String(s), fmtUGX: (n) => String(n), fmtShortDate: (d) => String(d),
     mgrMoveOrder: (r) => r.slice(), todayISO: () => '2026-10-07', Math, Number, String, Map, Set, Array, Object, JSON,
   }, ['mgrBriefPaintChains', 'mgrBriefPaintForesight', 'mgrBriefPaintMemory', 'mgrBriefPaintBlind']);

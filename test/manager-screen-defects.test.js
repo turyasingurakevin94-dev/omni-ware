@@ -304,6 +304,7 @@ const brief = extractFunction(src, 'mgrPaintBrief', 'index.html');
      one of the sentences a count of nothing would make. */
   const VERDICT = [{ n: 'mgrPaintVerdict' }, { n: 'mgrVerdictHTML' }, { n: 'mgrStripCells' },
     { n: 'mgrBriefLamp' }, { n: 'mgrBriefLampHTML' }, { n: 'mgrBriefDay' }, { n: 'mgrShortUGX' },
+    { n: 'mgrBriefPhoneCells' }, { n: 'MGR_BRIEF_PHONE_CELLS', d: true },
     { n: 'MGR_WAIT_CELLS', d: true }, { n: 'mgrOf', d: true }, { n: 'MGR_BRIEF_MONTHS', d: true }];
   const STRIP_ENV = { mgrBriefStripOpen: null, mgrBriefWireGo: ()=>{}, mgrBriefStripDetailHTML: ()=> '',
     MGR_WEEKDAYS: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
@@ -316,12 +317,21 @@ const brief = extractFunction(src, 'mgrPaintBrief', 'index.html');
     'trend after 7 days', 'followed by a payment'];
   lies.forEach(lie=> t.check(!broke.includes(lie),
     `a failed reading never says "${lie}"`));
-  t.check((broke.match(/could not be read/g) || []).length === 6,
+  /* WAS: one strip of six cells. NOW: two designs from the same cells --
+     the desk's six and the phone's four (health, lowest cash, upside, hit
+     rate; mgrBriefPhoneCells) -- so each is counted on its own. */
+  const desk = (h)=> h.split('mgr-b-sit mgr-b-sit4')[0];
+  const phone = (h)=> h.split('mgr-b-sit mgr-b-sit4')[1] || '';
+  t.check((desk(broke).match(/could not be read/g) || []).length === 6,
     'all six cells say what happened instead of counting it');
+  t.check((phone(broke).match(/could not be read/g) || []).length === 4,
+    'and so do the phone\'s four');
   t.check(!/>0</.test(broke) && !/mgr-b-fig">0</.test(broke), 'and not one of them shows a zero');
   const waiting = paint('managerStripWrap', VERDICT, {}, STRIP_ENV);
-  t.check((waiting.match(/&mdash;/g) || []).length === 6 && (waiting.match(/reading the/g) || []).length === 6 && !/>0</.test(waiting),
+  t.check((desk(waiting).match(/&mdash;/g) || []).length === 6 && (desk(waiting).match(/reading the/g) || []).length === 6 && !/>0</.test(waiting),
     'before anything is read the six cells wait with em-dashes, saying they are reading');
+  t.check((phone(waiting).match(/&mdash;/g) || []).length === 4 && (phone(waiting).match(/reading the/g) || []).length === 4,
+    'and the phone\'s four wait the same way');
 
   /* AND THE FIGURES STILL ARRIVE when the reading worked -- an error
      branch that swallows the happy path passes every check above. */
@@ -335,6 +345,13 @@ const brief = extractFunction(src, 'mgrPaintBrief', 'index.html');
   t.check(/mgr-b-lamp-bad/.test(good) && /under your floor of 2m/.test(good),
     'and the lowest day under the floor lights its lamp, saying against which floor');
   t.check(!/could not be read/.test(good), 'and says nothing about a failure that did not happen');
+  /* The phone's four are the canvas's: health, lowest cash, upside found,
+     hit rate -- the same figures as the desk's cells, in that order. */
+  const four = phone(good);
+  t.check(/>70</.test(four) && />1\.35m</.test(four) && />\+2\.4m</.test(four) && /11<span class="of">of<\/span>15/.test(four)
+    && !/>6\.4m</.test(four) && four.indexOf('>70<') < four.indexOf('>1.35m<') && four.indexOf('>1.35m<') < four.indexOf('>+2.4m<'),
+    'the phone shows the canvas\'s four, in its order, with the desk\'s figures');
+  t.check(/each in its window/.test(good), 'and the hit rate says which window it was weighed in');
 
   /* The account's advice half, and the levers table that used to go
      silent. */
