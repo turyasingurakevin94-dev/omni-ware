@@ -178,36 +178,12 @@ function build(days, books) {
     && u.days.filter((d) => !d.today && d.judged && !d.flags).length === 5 && u.days.filter((d) => !d.judged).length === 1,
     'and every day looked at is kept with how many findings it had — five calm, one to look at, and the closed Sunday not judged');
 
-  const esc = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  const ui = compileScope([
-    'mgrUnusualHTML', 'mgrUnusualWeekHTML', 'mgrUnusualCardHTML', 'mgrUnusualRowHTML', 'mgrUnusualBarsHTML',
-    'mgrUnusualKey', 'mgrUnusualGood', 'mgrUnusualFig', 'mgrUnusualWhen', 'mgrShortUGX', 'mgrNum',
-  ].map((n) => extractFunction(src, n, 'index.html')).concat([
-    'UNUSUAL_TITLES', 'UNUSUAL_ANSWERS', 'UNUSUAL_ICON',
-  ].map((n) => extractDeclaration(src, n, 'index.html'))).concat(['const mgrUnusualAnswers = new Map(); let mgrUnusualOpen = null; function answersMap(){ return mgrUnusualAnswers; }']), {
-    esc, Math, Date, Number, String, Map, Array,
-    fmtUGX: (n) => Number(n).toLocaleString('en-US') + ' UGX', fmtShortDate: (d) => d.slice(5),
-    unusualLine: () => 'a line',
-  }, ['mgrUnusualHTML', 'answersMap']);
-  const html = ui.mgrUnusualHTML(u);
-  t.check((html.match(/class="mgr-od-d mgr-od-d-ok"/g) || []).length === 5 && /mgr-od-d-bad/.test(html) && /mgr-od-d-now/.test(html) && /mgr-od-d-thin/.test(html),
-    'the week is a row of days: ticks for the calm ones, the day to look at marked, a day it cannot judge greyed, today left open');
-  t.check(/5 of 6<\/b> days inside their usual · 1 to look at/.test(html), 'and says how many sat inside their usual');
-  t.check((html.match(/class="mgr-od-b"/g) || []).length === 8 && /mgr-od-b mgr-od-b-bad/.test(html) && /class="mgr-od-band"/.test(html) && /usual /.test(html),
-    'the day is drawn beside the eight it was measured against, with the usual range behind them');
-  t.check(/under a usual Tuesday/.test(html) && /lower than every Tuesday in 8 weeks/.test(html), 'the gap, and whether it is past anything in eight weeks');
-  t.check(/data-unusual-answer="The shop was closed"/.test(html) && /What happened on Tuesday\?/.test(html),
-    'and the question it raises is answered with a tap');
-  t.check(/data-unusual-day="[\d-]+"/.test(html), 'the day still opens in full');
-  ui.answersMap().set(tue + '|sales', 'The shop was closed');
-  const said = ui.mgrUnusualHTML(u);
-  t.check(/explained: “The shop was closed”/.test(said) && !/data-unusual-answer=/.test(said) && /Nothing unexplained/.test(said),
-    'an answered day is explained, asks no more, and is no longer counted as out of the ordinary');
-  t.check(/mgr-od-d-ex/.test(said) && !/mgr-od-d-bad/.test(said), 'and its day in the week reads as settled, not flagged');
-  ui.answersMap().set(tue + '|sales', 'Sales not entered yet');
-  const todo = ui.mgrUnusualHTML(u);
-  t.check(/class="mgr-od-task" data-unusual-day="[\d-]+"/.test(todo) && /Enter Tuesday/.test(todo) && /sales<\/b>/.test(todo),
-    'sales not entered yet turns the day into a job — enter them — that opens the day');
+  /* WAS: the week as a row of days, the open finding beside its eight
+     weekdays, one-line rows for the rest -- drawn from this reading.
+     NOW: the Out of the ordinary section draws the fortnight's pulse
+     instead (mgrPulseBooks / mgrPulseJudge, pinned in
+     test/manager-unusual-pulse.test.js); this reading stays the meeting's,
+     and the two shapes above are what the meeting's tool still reads. */
 }
 
 /* ---------- 5. wiring --------------------------------------------------- */
@@ -220,17 +196,27 @@ function build(days, books) {
   /* WAS: on the side rail, in the standing bed. Out of the ordinary is a
      section of the Manager's own now, with a painter of its own -- the
      same one an answer repaints with. */
+  /* WAS: el.innerHTML = mgrUnusualHTML(mgrUnusualReading()) -- the week.
+     NOW: the section draws the fortnight's pulse, mgrPulseReading(). */
   t.check(/<div class="mgr-bed mgr-bed-u"[^>]*>\s*<div id="managerUnusualWrap" class="mgr-slot"><\/div>/.test(src)
-    && /el\.innerHTML = mgrUnusualHTML\(mgrUnusualReading\(\)\)/.test(extractFunction(src, 'mgrPaintUnusual', 'index.html')),
+    && /el\.innerHTML = mgrUnusualHTML\(mgrPulseReading\(\)\)/.test(extractFunction(src, 'mgrPaintUnusual', 'index.html')),
     'the Manager screen draws it in a section of its own, Out of the ordinary');
-  const html = extractFunction(src, 'mgrUnusualHTML', 'index.html');
-  t.check(/Not enough weeks on the books yet/.test(html) && /Nothing out of the ordinary in the last week/.test(html),
-    'with an honest word for too-new and for a calm week, never a blank');
+  const html = extractFunction(src, 'mgrPulseListHTML', 'index.html') + extractFunction(src, 'mgrPulseVerdict', 'index.html');
+  t.check(/Not enough weeks on the books yet/.test(html) && /Nothing broke from normal in the fortnight/.test(html)
+    && /The books are too new for me to know a usual day here/.test(html),
+    'with an honest word for too-new and for a calm fortnight, never a blank');
   t.check(/dayShown = b\.dataset\.unusualDay;\s*goToTab\('day'\);/.test(src), 'and a row opens The day on that date');
   const save = extractFunction(src, 'mgrAnswerUnusual', 'index.html');
-  t.check(/kind: 'question'/.test(save) && /status: 'answered'/.test(save) && /unusualDay: x\.date, metric: x\.metric/.test(save),
-    'a tapped answer is kept as an answered question, so it reaches the next meeting the way every answer does');
-  t.check(/mgrUnusualAnswers\.delete\(key\)/.test(save), 'and one that could not be kept is taken back and said so');
+  /* WAS: one row per finding, unusualDay: x.date (its latest day only),
+     taken back with mgrUnusualAnswers.delete(key). NOW: one answered row
+     per day the finding covers, each under its own unusualDay and the
+     finding's metric -- the fields the meeting matches on -- and every
+     day not written is taken back. The behaviour (rows written, rollback
+     and toast) is run in manager-unusual-pulse.test.js section 17. */
+  t.check(/kind: 'question'/.test(save) && /status: 'answered'/.test(save) && /unusualDay: d, metric: x\.metric/.test(save)
+    && /x\.days\.map\(d=> d \+ '\|' \+ x\.metric\)/.test(save),
+    'a tapped answer is kept as an answered question on each day it covers, so it reaches the next meeting the way every answer does');
+  t.check(/mgrUnusualAnswers\.delete\(k\)/.test(save) && /toast\('Could not keep that answer/.test(save), 'and one that could not be kept is taken back and said so');
   t.check(/owner_said: said\.body\.answer/.test(hist) && /never flag the day again/.test(hist) && /!answeredDay\(x\)/.test(hist),
     'the meeting reads the owner\'s word on the day, never raises an answered day as news, and turns unentered sales into a job');
   t.check(/mgrUnusualAnswersLoad\(\);/.test(mgrRender()), 'and a day answered before stays answered');
