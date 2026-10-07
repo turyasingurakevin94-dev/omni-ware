@@ -144446,7 +144446,7 @@ function mgrPulseDetailHTML(r, f){
   const kept = deed.kind === 'rule' ? mgrPulseKeptRule(mgrUnusualKey(f)) : null;
   const dnote = mgrPulseDeedNote(deed);
   const skip = `<button type="button" class="btn btn-ghost" data-pulse-skip="${esc(mgrUnusualKey(f))}">Not now</button>`;
-  const act = kept ? `<p class="mgr-u-learnt mgr-u-kept"><span class="mgr-u-gmini" aria-hidden="true">${MGR_PULSE_AVATAR}</span><span><b>Your rule:</b> ${esc(kept.body.note || '')} It is on the Taught list below.</span></p><div class="mgr-u-act">${skip}</div>`
+  const act = kept ? `<p class="mgr-u-learnt"><span class="mgr-u-gmini" aria-hidden="true">${MGR_PULSE_AVATAR}</span><span><b>Your rule:</b> ${esc(kept.body.note || '')} It is on the Taught list below.</span></p><div class="mgr-u-act">${skip}</div>`
     : deed.kind === 'rule' && mgrPulseRuleOpen === mgrUnusualKey(f) ? mgrPulseRuleHTML(deed)
     : `<div class="mgr-u-act">${mgrPulseActionHTML(f, deed)}${skip}${dnote ? `<span class="mgr-u-act-n">${esc(dnote)}</span>` : ''}</div>`;
   return `<section class="ow-pan mgr-u-pan mgr-u-dt" aria-label="${esc(mgrPulseTitle(f))}">
@@ -144516,7 +144516,8 @@ document.addEventListener('click', (e)=>{
   if(a){ mgrAnswerUnusual(a.dataset.unusualKey, a.dataset.unusualAnswer); return; }
   const p = t.closest('[data-pulse-pick]');
   if(p){
-    mgrUnusualOpen = p.dataset.pulsePick; mgrPaintUnusual();
+    /* A rule form left open on another finding closes. */
+    mgrUnusualOpen = p.dataset.pulsePick; mgrPulseRuleOpen = null; mgrPaintUnusual();
     /* The open finding is brought into view whenever its head is not:
        stacked above the list (phone, and up to 1180px) it is off screen
        after a tap far down; beside it, a row low in a long list leaves
