@@ -136149,6 +136149,9 @@ function mgrPulseGapFig(sig, g){
 }
 function mgrPulseRange(sig, lo, hi){
   if(lo == null || hi == null) return 'not known';
+  /* Orders come whole: a usual range of counts is said in whole ones. */
+  const s = typeof sig === 'string' ? mgrPulseSig(sig) : sig;
+  if(s && s.unit === 'count'){ lo = Math.floor(lo); hi = Math.ceil(hi); }
   const a = mgrPulseFig(sig, lo), b = mgrPulseFig(sig, hi);
   if(a === b) return lo === 0 ? 'nothing' : 'about ' + a;
   return a + '–' + b;
@@ -136256,6 +136259,25 @@ function mgrPulseReasons(f, books){
       const c = (data.customers || []).find(x=> String(x.id) === missing[0][0]);
       add('A regular buyer did not come', 'found', `${(c && c.name) || 'A regular'} buys on ${missing[0][1]} of the last ${pastDays.length} ${wd}s — nothing this one${missing.length > 1 ? `, nor ${missing.length - 1} other regular${missing.length > 2 ? 's' : ''}` : ''}.`);
     } else add('A regular buyer did not come', 'none', `Everyone who buys most ${wd}s bought something.`);
+    /* A line that sells most of this weekday, empty on the shelf when the
+       day began: the last movement before the day left it at nothing. */
+    const sells = new Map();
+    pastDays.forEach(p=>{ const keys = new Set();
+      (B.inv.get(p.date) || []).forEach(q=> (q.items || []).forEach(it=>{
+        if(it && it.productId && (!it.supplierId || it.supplierId === '__stock__')) keys.add(stockKey(it.productId, it.variantIdx == null ? null : it.variantIdx)); }));
+      keys.forEach(k=> sells.set(k, (sells.get(k) || 0) + 1)); });
+    const regulars = [...sells.entries()].filter(([, n])=> pastDays.length >= 4 && n >= pastDays.length / 2);
+    if(!regulars.length) add('Lines that sell ran out', 'open', `No line sells on most ${wd}s, so a stock-out cannot be told from the books.`);
+    else {
+      const shelf = (key)=>{ let last = null;
+        (data.stockLog || []).forEach(l=>{ if(l && l.key === key && String(l.date || '') < d && (!last || String(l.at || l.date) >= String(last.at || last.date))) last = l; });
+        return last ? Number(last.qtyAfter) || 0 : null; };
+      const empty = regulars.map(([k, n])=> ({ k, n, at: shelf(k) })).filter(x=> x.at != null && x.at <= 0).sort((a, b)=> b.n - a.n);
+      const label = (k)=>{ const p = buyKeyParts(k); return (p && p.product && p.product.name) || k; };
+      add('Lines that sell ran out', empty.length ? 'found' : 'none', empty.length
+        ? `${label(empty[0].k)} was at nothing on the shelf — it sells on ${empty[0].n} of the last ${pastDays.length} ${wd}s${empty.length > 1 ? `, and ${empty.length - 1} more line${empty.length > 2 ? 's' : ''} like it` : ''}.`
+        : `Every line that sells most ${wd}s was on the shelf.`);
+    }
     add('It was genuinely quiet', 'open', 'The books cannot see the weather or who walked past.');
   } else if(k === 'sales.high'){
     const big = invs.slice().sort((a, b)=> anInvoiceTotals(b).sales - anInvoiceTotals(a).sales)[0];
@@ -136674,7 +136696,7 @@ function mgrPulseGridHTML(r, sel){
     ? `<span class="mgr-u-dl">today</span><span class="mgr-u-ds">${esc(mgrPulseWd(d))}</span>` : esc(mgrPulseWd(d))}</span>`).join('');
   const rows = r.rows.map(row=>{
     const s = row.sig, on = mgrPulseSignal === s.id;
-    const label = `<button type="button" class="mgr-u-l${on ? ' mgr-u-l-on' : ''}" data-pulse-sig="${s.id}" aria-pressed="${on}" title="${esc(on ? 'Show every finding' : 'Show only ' + s.label.toLowerCase())}">${mgrPulseMono(s.dept)}<span>${esc(s.label)}</span></button>`;
+    const label = `<button type="button" class="mgr-u-l${on ? ' mgr-u-l-on' : ''}" data-pulse-sig="${s.id}" aria-pressed="${on}" title="${esc(on ? 'Show every finding' : 'Show only ' + s.label.toLowerCase())}">${mgrPulseMono(s.dept)} <span>${esc(s.label)}</span></button>`;
     if(s.id === 'fuel' && row.state !== 'ok') return label + `<span class="mgr-u-nr">${row.state === 'nocat'
       ? 'not recorded — the cash book has no Fuel category <button type="button" class="btn btn-ghost ow-sm mgr-u-nr-b" data-pulse-fuelcat="1">Add a Fuel category</button>'
       : 'not recorded yet — fuel entered in the cash book under Fuel shows here'}</span>`;
@@ -136712,14 +136734,14 @@ function mgrPulseListHTML(r, list, sel){
     const [st, stc] = mgrPulseStatus(f), on = sel && f === sel;
     return `<button type="button" class="mgr-u-ar${on ? ' mgr-u-ar-on' : ''}" data-pulse-pick="${esc(mgrUnusualKey(f))}" aria-pressed="${!!on}">
       <span class="mgr-u-nb mgr-u-nb-${f.tone === 'good' ? 'g' : 'x'}">${f.id}</span>
-      <span class="mgr-u-at-w"><span class="mgr-u-at">${esc(mgrPulseTitle(f))}</span><span class="mgr-u-am">${mgrPulseDeptChip(f.sig.dept)}${esc(mgrPulseWhen(f))}</span></span>
+      <span class="mgr-u-at-w"><span class="mgr-u-at">${esc(mgrPulseTitle(f))}</span><span class="mgr-u-am">${mgrPulseDeptChip(f.sig.dept)} ${esc(mgrPulseWhen(f))}</span></span>
       <span class="mgr-u-ir"><b>${esc(mgrPulseImpact(f))}</b>${esc(mgrPulseRarity(f))}</span>
       <span class="mgr-u-sw"><span class="mgr-u-st ${stc}">${esc(st)}</span></span>
     </button>`;
   }).join('');
   const empty = !r.findings.length ? `<p class="mgr-u-empty">${r.judged ? 'Nothing broke from normal in the fortnight — every signal sat inside its usual for the weekday.' : 'Not enough weeks on the books yet to know what a usual day looks like here — it needs five of each weekday.'}</p>`
     : !list.length ? '<p class="mgr-u-empty">Nothing here under this filter.</p>' : '';
-  return `<section class="ow-pan mgr-u-pan mgr-u-list" aria-label="What broke from normal">
+  return `<section class="ow-pan mgr-u-pan" aria-label="What broke from normal">
     <div class="mgr-u-ph"><span class="mgr-u-mi">This fortnight</span><span class="mgr-u-pt">What broke from normal</span>${r.findings.length ? filt : ''}</div>
     ${only}${rows}${empty}
   </section>`;
@@ -136839,7 +136861,7 @@ function mgrPulseTaughtHTML(r){
     }).join('') : '<p class="mgr-u-empty">Nothing taught yet. Answer a finding with a pattern — “Tuesdays run lower now” — and it becomes part of normal here.</p>';
   }
   const err = mgrPulseNormals.writeError ? `<p class="mgr-u-empty mgr-u-err">${esc(mgrPulseNormals.writeError)}</p>` : '';
-  return `<section class="ow-pan mgr-u-pan mgr-u-taught" aria-label="What you have taught me">${head}${err}${body}</section>`;
+  return `<section class="ow-pan mgr-u-pan" aria-label="What you have taught me">${head}${err}${body}</section>`;
 }
 /* THE SECTION. The band, the pulse, what broke from normal beside the
    open finding, and what the owner has taught. */

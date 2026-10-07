@@ -47,7 +47,7 @@ function scope(data, extra) {
     savedQuoteTotal: (q) => q.total,
     invoiceLineCost: (it) => ({ cost: (Number(it.cost) || 0) * (Number(it.qty) || 0), estimatedQty: it.est ? Number(it.qty) : 0 }),
     quoteItemSellPrice: (it) => Number(it.price) || 0,
-    buyKeyParts: () => null, getFIFOUnitCost: () => null,
+    buyKeyParts: (k) => (k === 'P1' ? { product: { name: 'Iron sheets' }, productId: 'P1', variantIdx: null } : null), getFIFOUnitCost: () => null,
     /* The day's count against the book, as the Day screen reads it: here
        only the variance matters, and the book below says which days have
        one. */
@@ -64,7 +64,7 @@ function scope(data, extra) {
     real('anShiftDate'), real('liveCreditNotes'), real('cashIsMoneyIn'), real('cashIsMoneyOut'), real('cashIsCashOverage'),
     real('cashIsCashShortage'), real('cbIsTransfer'), real('cashIsDebtCollection'), real('cashIsTradingIncome'),
     real('stockLogIsCount'), real('stockCountIndex'), real('invCountRecords'), real('invCountMoment'),
-    real('unusualSpread'), real('mgrShortUGX'), real('mgrDept'),
+    real('unusualSpread'), real('mgrShortUGX'), real('mgrDept'), real('stockKey'),
     decl('CASH_SHORTAGE_CATEGORY'), decl('CASH_OVERAGE_CATEGORY'), decl('CASH_TRANSFER_CATEGORY'), decl('CASH_NOT_REVENUE'), decl('cashHas'),
     decl('INV_NOT_A_COUNT'), decl('ACCOUNTS'), decl('UNUSUAL_WEEKS'), decl('UNUSUAL_MIN'), decl('UNUSUAL_Z'), decl('MGR_DEPTS'),
     block,
@@ -92,7 +92,10 @@ function book(opts) {
     let sales = 1000000 + OFF[k % 8];
     if (d === T(-1)) sales = 400000;                                  // Tue 6 Oct: sales low
     const inv = { id: qid++, status: 'completed', invoiced: true, invoicedAt: d, date: d, total: sales, profit: Math.round(sales * 0.2),
-      counterSale: true, client: { name: 'Walk-in' }, items: [], payments: [] };
+      counterSale: true, client: { name: 'Walk-in' }, payments: [],
+      /* Iron sheets off the shelf every day -- none on the planted Tuesday,
+         the shelf having been counted down to nothing on the Saturday. */
+      items: d === T(-1) ? [] : [{ productId: 'P1', supplierId: '__stock__', qty: 1, price: 1, cost: 0 }] };
     /* Kato buys every Tuesday -- but not on the planted Tuesday. */
     if (wdOf(d) === 2 && d !== T(-1)) { inv.customerId = 'C1'; inv.client = { name: 'Kato' }; }
     savedQuotes.push(inv);
@@ -110,7 +113,7 @@ function book(opts) {
   /* Opening stock on the first day: no supplier, not a purchase. */
   stockLog.push({ id: 5003, key: 'P3', type: 'restock', delta: 500, cost: 1000, date: T(-199), note: 'Opening stock — counted in' });
   /* Sat 3 Oct: a count found 4 of P1 short, at 45,000 each. */
-  stockLog.push({ id: 5004, key: 'P1', type: 'count', delta: -4, cost: 45000, date: T(-4), label: 'Iron sheets' });
+  stockLog.push({ id: 5004, key: 'P1', type: 'count', delta: -4, qtyAfter: 0, cost: 45000, date: T(-4), label: 'Iron sheets' });
   /* Mon 5 Oct: a debt of 3,000,000 paid. Tue 6 Oct: 5,000,000 moved from
      the drawer to the bank (a transfer -- not cash in). */
   cashTxns.push({ id: sid++, date: T(-2), type: 'receipt', account: 'cash', category: 'Debt Payment', amount: 3000000, description: 'Payment — Okello & Sons' });
@@ -254,7 +257,9 @@ const cell = (sig, d) => R.rows.find((r) => r.sig.id === sig).cells.find((c) => 
   const low = R.findings.find((x) => x.metric === 'sales');
   const rs = S.mgrPulseReasons(low, B);
   eq(rs.map((x) => x.state + ':' + x.label), ['found:Sales taken but not entered yet', 'found:A regular buyer did not come',
-    'open:Mobile-money payments were down', 'open:It was genuinely quiet'], 'ranked by what the books found: found, then not checked');
+    'found:Lines that sell ran out', 'open:Mobile-money payments were down', 'open:It was genuinely quiet'], 'ranked by what the books found: found, then not checked');
+  eq(rs[2].detail, 'Iron sheets was at nothing on the shelf — it sells on 8 of the last 8 Tuesdays.',
+    'a line sold every Tuesday, counted down to nothing on the Saturday before');
   eq(rs[0].detail, 'The till counted 600k more than the book that evening.', 'the till over the book is what points to sales not entered');
   eq(rs[1].detail, 'Kato buys on 8 of the last 8 Tuesdays — nothing this one.', 'a regular who buys every Tuesday did not');
   const cash = R.findings.find((x) => x.metric === 'cash_in');
