@@ -15,6 +15,12 @@ const { read, extractFunction, extractDeclaration, compileScope, createReporter 
 
 const t = createReporter('manager map');
 const src = read('index.html');
+/* The Manager screen is renderManager and the seven bed painters it hands
+   every reading to (mgrPaint<Bed>), so a pin on "the render" reads all
+   eight: what used to sit in one function is drawn by the bed it belongs to. */
+const MGR_RENDER = ['renderManager', 'mgrPaintBrief', 'mgrPaintSim', 'mgrPaintTargets', 'mgrPaintPlays',
+  'mgrPaintUnusual', 'mgrPaintAsk', 'mgrPaintRecord'];
+const mgrRender = () => MGR_RENDER.map((n) => extractFunction(src, n, 'index.html')).join('\n');
 const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 const scope = compileScope([
@@ -117,15 +123,23 @@ t.check(/data-dom="growth" style="[^"]*" aria-pressed="true"/.test(quiet) && /no
   'an area chosen stays chosen, and a day with no meeting says so and draws nothing it does not have');
 
 /* ---------- 4. wired into the screen ------------------------------------ */
-const sw = extractFunction(src, 'mgrPaintSwitch', 'index.html');
-t.check(/data-mgrview="map"/.test(sw) && /if\(mgrView === 'map'\) mgrPaintMap\(\);/.test(sw) && /'mgr-on-map'/.test(sw),
-  'a third tab, drawn when it is looked at');
-t.check(/id="managerMapWrap" class="mgr-bed mgr-bed-m"/.test(src) && /#tab-manager\.mgr-on-map \.mgr-bed-m\{display:block;\}|#tab-manager\.mgr-on-map \.mgr-bed-m\{/.test(src),
-  'with a bed of its own');
+/* WAS: a third tab of the switch with a bed of its own. The map folded
+   into the Brief's department board (Q26): it is drawn into the Brief's
+   managerDeptWrap, still only when it is looked at -- a render while
+   another section is open marks it stale, and opening the Brief draws it. */
+const brief = extractFunction(src, 'mgrPaintBrief', 'index.html');
+t.check(/const drawMap = \(\)=>\{ mgrPaintMap\(\); mgrMapDirty = false; \};/.test(brief)
+  && /mgrMapDirty = true;\s*if\(mgrView === 'brief'\) drawMapSoon\(\);/.test(brief)
+  && /if\(gen === mgrRenderGen && mgrMapDirty && mgrView === 'brief'\) drawMap\(\);/.test(brief)
+  && /if\(ctx\.landed === 'view' && mgrMapDirty\) drawMap\(\);/.test(brief),
+  'the Brief draws it, when it is looked at — after the rest of the Brief, and only for the current render');
+t.check(/<div class="mgr-bed mgr-bed-b"[\s\S]*?<div id="managerDeptWrap" class="mgr-slot"><\/div>[\s\S]*?<div class="mgr-bed mgr-bed-x"/.test(src)
+  && /function mgrPaintMap\(\)\{\s*const wrap = document\.getElementById\('managerDeptWrap'\);/.test(src),
+  'in the Brief\'s department slot');
 const paint = extractFunction(src, 'mgrPaintMap', 'index.html');
 t.check(/ASSISTANT_TOOLS\.shop_pulse\.run\(\)/.test(paint), 'it reads the same position the meeting reads');
 t.check(/could not read the shop/.test(paint), 'and says so when it cannot, rather than drawing a blank');
-const render = extractFunction(src, 'renderManager', 'index.html');
+const render = mgrRender();
 t.check(/mgrMapJournal = \{ today: st\.today/.test(render) && /mgrMapModelCache = null;/.test(render),
   'every fresh read of the journal redraws it');
 t.check(/\.mgr-mp-cv\{display:none;\}/.test(src) && /\.mgr-mp-tiles\{display:grid;/.test(src),

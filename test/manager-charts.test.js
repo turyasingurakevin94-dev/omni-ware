@@ -15,6 +15,12 @@ const { read, extractFunction, extractDeclaration, compileScope, createReporter 
 
 const t = createReporter('manager charts');
 const src = read('index.html');
+/* The Manager screen is renderManager and the seven bed painters it hands
+   every reading to (mgrPaint<Bed>), so a pin on "the render" reads all
+   eight: what used to sit in one function is drawn by the bed it belongs to. */
+const MGR_RENDER = ['renderManager', 'mgrPaintBrief', 'mgrPaintSim', 'mgrPaintTargets', 'mgrPaintPlays',
+  'mgrPaintUnusual', 'mgrPaintAsk', 'mgrPaintRecord'];
+const mgrRender = () => MGR_RENDER.map((n) => extractFunction(src, n, 'index.html')).join('\n');
 const TODAY = '2026-09-24';
 const day = (n) => new Date(Date.parse(TODAY) + n * 86400000).toISOString().slice(0, 10);
 const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -136,7 +142,7 @@ const fmtUGX = (n) => Number(n).toLocaleString('en-US') + ' UGX';
       'two copies of one proposal show as one, the newest, carrying the older as a duplicate');
     t.check(!sb2.proposed.some((x) => x.metric === 'sales'), 'a measure already running is not proposed again');
     t.check(sb2.proposed.length === 2, 'and the rest are untouched');
-    const render = extractFunction(src, 'renderManager', 'index.html');
+    const render = mgrRender();
     t.check(/managerAdoptTarget\(id, dups\)/.test(render) && /managerDeclineTarget\(id, dups\)/.test(render)
       && /await managerRetireDuplicates\(dupIds\);/.test(extractFunction(src, 'managerAdoptTarget', 'index.html'))
       && /await managerRetireDuplicates\(dupIds\);/.test(extractFunction(src, 'managerDeclineTarget', 'index.html')),
@@ -186,13 +192,13 @@ const fmtUGX = (n) => Number(n).toLocaleString('en-US') + ' UGX';
     t.check(/async function managerPlayStatus\(rowId, status, dupIds\)/.test(status)
       && /if\(status === 'running' \|\| status === 'dropped'\) await managerRetireDuplicates\(dupIds\);/.test(status),
       'trying it or setting it aside retires the older copies too');
-    t.check(/managerPlayStatus\(id, status, dups\)/.test(extractFunction(src, 'renderManager', 'index.html')),
+    t.check(/managerPlayStatus\(id, status, dups\)/.test(mgrRender()),
       'and the row hands its copies to that answer');
   }
 
   /* ---------- 3e. a meeting that stopped short says so ------------------ */
   {
-    const render = extractFunction(src, 'renderManager', 'index.html');
+    const render = mgrRender();
     t.check(/const cutShort = \(\)=> apMode === 'manager' && apWasCutOff && !managerCommittedPlan && !assistantBusy;/.test(render),
       'a manager sitting cut off before any plan was kept is told apart from no meeting at all');
     t.check(/const notHeldHTML = \(weekMeetings, last\)=> cutShort\(\) \? unfinishedHTML\(\) :/.test(render)
@@ -205,7 +211,7 @@ const fmtUGX = (n) => Number(n).toLocaleString('en-US') + ' UGX';
 
   /* ---------- 4. wiring ------------------------------------------------ */
   {
-    const render = extractFunction(src, 'renderManager', 'index.html');
+    const render = mgrRender();
     t.check(/\$\{\(!x\.finished && mgrPaceHTML\(x\)\) \|\| bar\(x\.pct\)\}/.test(render),
       'a running target shows its pace chart; a finished one keeps its bar');
     t.check(/managerAdviceWeeks\(todayISO\(\)\)\.then/.test(render), 'the weeks are read beside the other verdict readings');

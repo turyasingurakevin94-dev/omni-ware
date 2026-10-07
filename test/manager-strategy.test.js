@@ -33,6 +33,12 @@ const { read, extractFunction, extractDeclaration, compileScope, createReporter 
 
 const t = createReporter('the manager’s strategy');
 const src = read('index.html');
+/* The Manager screen is renderManager and the seven bed painters it hands
+   every reading to (mgrPaint<Bed>), so a pin on "the render" reads all
+   eight: what used to sit in one function is drawn by the bed it belongs to. */
+const MGR_RENDER = ['renderManager', 'mgrPaintBrief', 'mgrPaintSim', 'mgrPaintTargets', 'mgrPaintPlays',
+  'mgrPaintUnusual', 'mgrPaintAsk', 'mgrPaintRecord'];
+const mgrRender = () => MGR_RENDER.map((n) => extractFunction(src, n, 'index.html')).join('\n');
 const api = read('api/assistant.js');
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 
@@ -244,11 +250,13 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     'and so is an unknown lever');
   t.check(/MANAGER_OBJECTIVES\[String\(obj\.name\|\|''\)\] \? String\(obj\.name\) : null/.test(save),
     'and an unknown objective');
-  const render = extractFunction(src, 'renderManager', 'index.html');
+  const render = mgrRender();
   /* The objective moved from the plan's header into the band above it,
-     which the render paints first -- still above the moves. */
+     which the render paints first -- still above the moves. The band is
+     the Brief's now (managerBandWrap), at the head of the section. */
   t.check(/MANAGER_OBJECTIVES\[plan\.objective\]/.test(extractFunction(src, 'mgrHeroHTML', 'index.html'))
-    && /heroWrap\.innerHTML = mgrHeroHTML\(/.test(render),
+    && /band\.innerHTML = mgrHeroHTML\(/.test(render)
+    && /const band = document\.getElementById\('managerBandWrap'\);/.test(render),
     'the screen leads with the week’s objective, above the moves');
 }
 

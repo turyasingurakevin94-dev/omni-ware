@@ -42,6 +42,12 @@ const { read, extractFunction, extractDeclaration, compileScope, createReporter 
 
 const t = createReporter('making the questions land');
 const src = read('index.html');
+/* The Manager screen is renderManager and the seven bed painters it hands
+   every reading to (mgrPaint<Bed>), so a pin on "the render" reads all
+   eight: what used to sit in one function is drawn by the bed it belongs to. */
+const MGR_RENDER = ['renderManager', 'mgrPaintBrief', 'mgrPaintSim', 'mgrPaintTargets', 'mgrPaintPlays',
+  'mgrPaintUnusual', 'mgrPaintAsk', 'mgrPaintRecord'];
+const mgrRender = () => MGR_RENDER.map((n) => extractFunction(src, n, 'index.html')).join('\n');
 const api = read('api/assistant.js');
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 
@@ -322,7 +328,7 @@ const PRODUCTS = [
   t.check(scope.mgrAskIni('Jin Zhuang Le Ju') === 'JZ' && scope.mgrAskIni('Nyanzi') === 'NY' && scope.mgrAskIni('You') === 'You',
     'places wear their initials');
 
-  const render = extractFunction(src, 'renderManager', 'index.html');
+  const render = mgrRender();
   t.check(/qWrap\.innerHTML = mgrAsksHTML\(qs\);\s*mgrWireAsks\(qWrap\);/.test(render), 'the screen draws the panel and wires it');
   const wire = extractFunction(src, 'mgrWireAsks', 'index.html');
   t.check(/querySelectorAll\('\.mgr-ask\[data-qid\]'\)/.test(wire) && /managerAnswerQuestion\(id, input\.value\)/.test(wire),
