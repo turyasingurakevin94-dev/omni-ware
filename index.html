@@ -16022,7 +16022,39 @@
     .fup-strip.fup-lanes .ow-mt-s .ow-fig{font-weight:var(--ow-fw-400);color:var(--ow-ink-600);}
     .fup-strip.fup-lanes .ow-mt.ow-warn .ow-mt-v,.fup-strip.fup-lanes .fup-ls-warn{color:var(--ow-amber);}
     .fup-strip.fup-lanes .fup-ls-bad{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
+    /* TODAY'S SUB TABS, as the Messages canvas draws them: one bordered
+       strip split by hairlines rather than six loose cards, so it reads as
+       a row of tabs one level under the views. The open lane takes the
+       navy underline and the hover ground; a card's navy frame was the
+       wrong word for "you are here" once the views above say it with an
+       underline. */
+    #fupSummaryRow .fup-strip.fup-lanes{gap:0;background:var(--ow-paper);border:1px solid var(--ow-rule);
+      border-radius:var(--ow-r-lg);overflow:hidden;}
+    #fupSummaryRow .fup-strip.fup-lanes .ow-mt{border:0;border-left:1px solid var(--ow-rule-soft);border-bottom:2px solid transparent;border-radius:0;
+      padding:var(--ow-sp-10) var(--ow-sp-16) var(--ow-sp-8);}
+    #fupSummaryRow .fup-strip.fup-lanes .ow-mt:first-child{border-left:0;}
+    #fupSummaryRow .fup-strip.fup-lanes .ow-mt:hover{background:var(--ow-paper-2);}
+    #fupSummaryRow .fup-strip.fup-lanes .ow-mt.ow-on{background:var(--ow-paper-2);outline:0;
+      border-bottom-color:var(--ow-steel-950);}
+    #fupSummaryRow .fup-strip.fup-lanes .ow-mt.ow-on .ow-mt-l{font-weight:var(--ow-fw-700);}
+    /* THE VIEWS, as the Invoices tabs: underlined, a mark and a count,
+       a row of their own under the header. The segmented fill is the
+       phone's; on the desk the chosen view is the navy underline. */
+    #tab-followups .fup-tabs{display:flex;align-items:flex-end;gap:var(--ow-sp-4);width:auto;padding:0;background:none;
+      border:0;border-bottom:1px solid var(--ow-rule);border-radius:0;margin:0 0 var(--ow-sp-12);}
+    #tab-followups .fup-tabs .ow-seg-b{display:inline-flex;align-items:center;gap:var(--ow-sp-8);height:42px;padding:0 var(--ow-sp-12);
+      margin-bottom:-1px;border:0;border-bottom:2px solid transparent;border-radius:0;background:none;box-shadow:none;
+      font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
+    #tab-followups .fup-tabs .ow-seg-b:hover{color:var(--ow-ink-900);background:none;}
+    #tab-followups .fup-tabs .ow-seg-b.ow-on{color:var(--ow-steel-950);border-bottom-color:var(--ow-steel-950);background:none;}
+    #tab-followups .fup-tabs .fup-ti{display:block;}
+    #tab-followups .fup-tabs .ow-seg-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-size:var(--ow-t-11);
+      font-weight:var(--ow-fw-500);padding:2px 7px;border-radius:var(--ow-r-pill);background:var(--ow-rule-soft);color:var(--ow-ink-600);margin:0;}
+    #tab-followups .fup-tabs .ow-seg-n:empty{display:none;}
+    #tab-followups .fup-tabs .ow-seg-b.ow-on .ow-seg-n{background:var(--ow-steel-950);color:var(--ow-paper);}
   }
+  .fup-ti{display:none;width:16px;height:16px;flex:none;fill:none;stroke:currentColor;
+    stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
   /* The acts under an item -- name a day, fix the qty, open the lead,
      take a payment -- are links in a line, in ink rather than the accent:
      the accent is the send, and a card wearing five oxide words beside
@@ -36185,13 +36217,6 @@
              material sat where the eye looks for the queue. The register
              IS the history and the score MEASURES it, so they share one
              view: the table, and the 304px rail beside it. -->
-        <div class="ow-seg fup-tabs" id="fup_tabs">
-          <button type="button" class="ow-seg-b ow-on" data-fuptab="contact">Today<span class="ow-seg-n" id="fupSegContact"></span></button>
-          <button type="button" class="ow-seg-b" data-fuptab="chats">Chats<span class="ow-seg-n" id="fupSegChats"></span></button>
-          <button type="button" class="ow-seg-b" data-fuptab="intel">Intelligence</button>
-          <button type="button" class="ow-seg-b" data-fuptab="tpls">Templates</button>
-          <button type="button" class="ow-seg-b" data-fuptab="all">Register<span class="ow-seg-n" id="fupSegAll"></span></button>
-        </div>
         <!-- The rules this screen turns on, in the header beside the
              name rather than in a form above the work.
 
@@ -36222,20 +36247,33 @@
              it; filled only while that view is open. -->
         <div class="msg-in-per" id="fup_intel_per"></div>
       </div>
+      <!-- THE VIEWS AS TABS UNDER THE HEADER, as Invoices and Customers
+           have theirs: a row of its own, so the header keeps the name and
+           the screen's one act, and every view opens from the same place.
+           On the desk they are underlined tabs with a mark and a count; on
+           the phone the same buttons stay the layer's segmented row. -->
+      <div class="ow-seg fup-tabs" id="fup_tabs" role="tablist" aria-label="Messages views">
+        <button type="button" class="ow-seg-b ow-on" role="tab" data-fuptab="contact"><svg class="fup-ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18h18M6 18a6 6 0 0 1 12 0M12 5v3M5 9l2 2M19 9l-2 2"/></svg>Today<span class="ow-seg-n" id="fupSegContact"></span></button>
+        <button type="button" class="ow-seg-b" role="tab" data-fuptab="chats"><svg class="fup-ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>Chats<span class="ow-seg-n" id="fupSegChats"></span></button>
+        <button type="button" class="ow-seg-b" role="tab" data-fuptab="intel"><svg class="fup-ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Intelligence</button>
+        <button type="button" class="ow-seg-b" role="tab" data-fuptab="tpls"><svg class="fup-ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4M9 12h7M9 16h5"/></svg>Templates</button>
+        <button type="button" class="ow-seg-b" role="tab" data-fuptab="all"><svg class="fup-ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>Register<span class="ow-seg-n" id="fupSegAll"></span></button>
+      </div>
       <!-- THE LANES AND THE ONE READING, ON ONE LINE. Five tiles took a
            full band of the screen to say mostly zero; as chips they say
            the same five counts, stay the filter, and give the height back
            to the queue. The sent-and-waiting reading sits at the end of
            the same line, because it is read with them. -->
-      <!-- THE DAY'S BAND: the loop, the money riding on it and who can
-           be reached for nothing. It sits ABOVE the lanes, as the Today
-           canvas has it: the day read whole first, then the lanes that
-           cut it, then the work. Today's alone -- the other views hide it. -->
-      <div id="fupBand"></div>
+      <!-- THE LANES ARE TODAY'S SUB TABS, straight under the views, so
+           the row never moves as you click from lane to lane. THE DAY'S
+           BAND -- the loop, the money riding on it and who can be reached
+           for nothing -- comes after them and belongs to To message alone;
+           the other five lanes step it aside. -->
       <div class="fup-lanebar">
       <div id="fupSummaryRow"></div>
       <div id="fupQuietLine"></div>
       </div>
+      <div id="fupBand"></div>
       <!-- ONE QUEUE AND A 304px RAIL, on both views, so the furniture
            never moves between filters. The queue expands IN PLACE: there
            is no second pane holding a copy of the draft, because two
