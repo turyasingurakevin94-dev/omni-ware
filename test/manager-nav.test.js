@@ -35,14 +35,22 @@ const eq = (a, b, m) => t.check(JSON.stringify(a) === JSON.stringify(b),
   `${m}${JSON.stringify(a) === JSON.stringify(b) ? '' : ` — got ${JSON.stringify(a)}, want ${JSON.stringify(b)}`}`);
 
 const BEDS = ['Brief', 'Sim', 'Targets', 'Plays', 'Unusual', 'Ask', 'Record'];
+/* One entry per bed and a line between each, so a bed that gains a wrap
+   edits its own entry and never a line another bed's change touches. */
 const WRAPS = {
   Brief: ['managerBandWrap', 'managerStripWrap', 'managerDeptWrap', 'managerChainWrap', 'managerPlanWrap',
     'managerForesightWrap', 'managerSimTeaserWrap', 'managerMemoryWrap', 'managerBlindWrap'],
+
   Sim: ['managerSimWrap'],
+
   Targets: ['managerTargetsWrap'],
+
   Plays: ['managerPlaysWrap'],
+
   Unusual: ['managerUnusualWrap'],
+
   Ask: ['managerQuestionsWrap'],
+
   Record: ['managerHistoryWrap', 'managerTrackWrap', 'managerGrowthWrap', 'managerAccountWrap', 'managerPoliciesWrap'],
 };
 const begin = (b) => `/* ═══ MGR BED: ${b} — begin ═══ */`;
@@ -135,6 +143,42 @@ const blockOf = {};
         `${id} is written by the ${b} painter alone${stray.length ? ' — also from ' + stray.join(', ') : ''}`);
     });
   });
+}
+
+/* ---------- 3b. what one bed draws with lives in that bed's block ----------
+
+   A bed's helpers outside its block are lines another bed's change can
+   land beside, and two edits on touching lines are a merge conflict
+   even when they mean nothing to each other. So from the screen's first
+   shared helper to the end of the beds, the only code outside a block
+   is the frame every bed shares, named here. A new helper for one bed
+   goes in that bed's block; a new shared one is added to this list on
+   purpose, not by accident. */
+{
+  const from = js.indexOf('\nfunction mgrMoveOrder(rows){');
+  const to = js.indexOf(end('Record')) + end('Record').length;
+  const SHARED = ['mgrMoveOrder', 'mgrView', 'mgrRenderGen', 'mgrPaceGen', 'MANAGER_KIND_CHIPS', 'MGR_TREND_WEEKS',
+    'managerAdviceWeeks', 'mgrShortUGX', 'MGR_VIEWS', 'mgrNavCtx', 'mgrPaintSwitch', 'mgrNum', 'MGR_JR_STOP', 'mgrJrWords',
+    'MGR_CACHED_WRAPS', 'mgrCacheKey', 'mgrCacheSave', 'mgrCachePaint', 'window.addEventListener', 'mgrLastKnown',
+    'mgrNeedsMemoryHTML', 'mgrJournalUnreadHTML', 'renderManager'];
+  const inBlock = (p) => BEDS.some((b) => p > blockOf[b][0] && p < blockOf[b][1]);
+  const outside = [...js.slice(from, to).matchAll(
+    /\n(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(|\n(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=|\n(document|window)\.addEventListener\(/g)]
+    .filter((m) => !inBlock(from + m.index)).map((m) => m[1] || m[2] || m[3] + '.addEventListener');
+  const stray = outside.filter((n) => !SHARED.includes(n));
+  t.check(from > -1 && outside.length > 0 && stray.length === 0,
+    `outside the blocks there is only the shared frame${stray.length ? ' — also: ' + stray.join(', ') : ''}`);
+  /* And each helper a block holds is called from that block alone, so
+     moving it in did not leave a caller outside. */
+  ['mgrPaintMap', 'mgrPaintVerdict', 'mgrHeroHTML', 'mgrProposalHTML', 'mgrPaceHTML', 'mgrAsksHTML', 'mgrWireAsks',
+    'mgrPlayWorth', 'mgrUnusualHTML', 'mgrJournalChartHTML', 'mgrPaintLevers', 'mgrPaintAcctAdvice', 'mgrMoveView']
+    .forEach((n) => {
+      const def = js.indexOf(`\nfunction ${n}(`);
+      const owner = BEDS.find((b) => def > blockOf[b][0] && def < blockOf[b][1]);
+      const calls = [...js.matchAll(new RegExp(`[^\\w$.]${n}\\(`, 'g'))].map((m) => m.index).filter((p) => p !== def);
+      t.check(owner && calls.length && calls.every((p) => p > blockOf[owner][0] && p < blockOf[owner][1]),
+        `${n} lives in the ${owner || '(no)'} block and is called from there alone`);
+    });
 }
 
 /* ---------- 4. the render: one ctx, every reading guarded and painted ---------- */

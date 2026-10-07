@@ -110,8 +110,33 @@ const src = read('index.html');
                         src.indexOf('<section id="tab-map"'));
   const kids = [...sec.matchAll(/<div id="(manager[A-Za-z]+)"([^>]*)>/g)];
   const ids = kids.map(k => k[1]);
-  /* Two above the nav, nineteen in the seven beds. */
-  t.check(ids.length === 21, `every container is a flat div with an id (${ids.length})`);
+  /* SEVEN BEDS, AND NOTHING IN TWO. The wraps each bed holds, in the
+     order the canvas lays them out.
+     ONE ENTRY PER BED, A LINE BETWEEN EACH. Each section is rebuilt by
+     its own hand later, and two edits on touching lines are a merge
+     conflict even when they mean nothing to each other: a bed that
+     gains or loses a wrap edits its own entry here and nothing else --
+     the count below is worked out from these entries, not typed. */
+  const BEDS = {
+    b: ['managerBandWrap', 'managerStripWrap', 'managerDeptWrap', 'managerChainWrap', 'managerPlanWrap',
+        'managerForesightWrap', 'managerSimTeaserWrap', 'managerMemoryWrap', 'managerBlindWrap'],
+
+    x: ['managerSimWrap'],
+
+    t: ['managerTargetsWrap'],
+
+    p: ['managerPlaysWrap'],
+
+    u: ['managerUnusualWrap'],
+
+    k: ['managerQuestionsWrap'],
+
+    r: ['managerHistoryWrap', 'managerTrackWrap', 'managerGrowthWrap', 'managerAccountWrap', 'managerPoliciesWrap'],
+  };
+  /* Two above the nav (the memory note and the nav), the rest in the beds.
+     WAS: a literal 21, on one line every bed's change would have had to edit. */
+  const bedWraps = Object.values(BEDS).flat().length;
+  t.check(ids.length === 2 + bedWraps, `every container is a flat div with an id (${ids.length} of ${2 + bedWraps})`);
 
   /* The retired, named rather than merely absent: a wrap that comes back
      by accident is a section that renders into nothing. */
@@ -134,18 +159,6 @@ const src = read('index.html');
   t.check(orphanFill.length === 0,
     `and nothing is rendered into a container that is not there${orphanFill.length ? ' — missing: ' + orphanFill.join(', ') : ''}`);
 
-  /* SEVEN BEDS, AND NOTHING IN TWO. The wraps each bed holds, in the
-     order the canvas lays them out. */
-  const BEDS = {
-    b: ['managerBandWrap', 'managerStripWrap', 'managerDeptWrap', 'managerChainWrap', 'managerPlanWrap',
-        'managerForesightWrap', 'managerSimTeaserWrap', 'managerMemoryWrap', 'managerBlindWrap'],
-    x: ['managerSimWrap'],
-    t: ['managerTargetsWrap'],
-    p: ['managerPlaysWrap'],
-    u: ['managerUnusualWrap'],
-    k: ['managerQuestionsWrap'],
-    r: ['managerHistoryWrap', 'managerTrackWrap', 'managerGrowthWrap', 'managerAccountWrap', 'managerPoliciesWrap'],
-  };
   const opens = [...sec.matchAll(/<div class="mgr-bed mgr-bed-([a-z])"/g)];
   t.check(opens.map(m => m[1]).join('') === 'bxtpukr',
     `seven beds, in the nav's order (${opens.map(m => m[1]).join('')})`);
