@@ -16465,7 +16465,15 @@
   .inv-u-more summary{list-style:none;cursor:pointer;}
   .inv-u-more summary::-webkit-details-marker{display:none;}
   .inv-u-more-menu{position:absolute;right:0;top:calc(100% + var(--ow-sp-6));z-index:12;min-width:160px;padding:var(--ow-sp-6);border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);box-shadow:var(--ow-lift);}
-  .inv-u-more-menu .btn{width:100%;justify-content:flex-start;}
+  .inv-u-more-menu{min-width:260px;display:flex;flex-direction:column;}
+  .inv-u-mi{all:unset;box-sizing:border-box;display:flex;align-items:flex-start;gap:var(--ow-sp-10);padding:var(--ow-sp-8) var(--ow-sp-10);border-radius:var(--ow-r-sm);cursor:pointer;color:var(--ow-ink-900);}
+  .inv-u-mi:hover,.inv-u-mi:focus-visible{background:var(--ow-steel-050);}
+  .inv-u-mi .icon{width:16px;height:16px;margin-top:2px;color:var(--ow-ink-600);flex:none;}
+  .inv-u-mi span{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .inv-u-mi b{font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);}
+  .inv-u-mi small{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .inv-u-sep{height:1px;background:var(--ow-rule-soft);margin:var(--ow-sp-4) var(--ow-sp-6);}
+  #inv_u_print_list_btn[hidden] + .inv-u-sep{display:none;}
   /* ---- TOGETHER, AS A SPREADSHEET. Each case is one row on the same
      eleven tracks as the names above it, and a hairline between every
      cell, so a figure can be read down its column the way it is read on
@@ -16566,6 +16574,7 @@
   .inv-nb-a i.is-bad{background:var(--ow-crimson);}
   .inv-nb-d{text-align:right;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
   .inv-nb-f{display:flex;align-items:center;gap:var(--ow-sp-8);}
+  .inv-nb-f .btn{flex:none;white-space:nowrap;}
   /* COST UP, PRICE NOT: each item drawn against its own selling price --
      the old cost, the rise on top of it, and the price as the end tick. */
   .inv-sq{display:flex;flex-direction:column;gap:var(--ow-sp-8);}
@@ -35585,10 +35594,14 @@
              which is the reasoning that screen already carried when the
              two were separate. The oxide is spent once either way; the
              lens decides where. -->
-        <details class="inv-u-more" id="inv_u_more"><summary class="btn btn-ghost ow-sm">More <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary><div class="inv-u-more-menu">
-          <button type="button" class="btn btn-ghost ow-sm" id="inv_u_print_list_btn">Print sales list</button>
-          <button type="button" class="btn btn-ghost ow-sm" data-inv-goto="analytics-debtors">Open Debtors</button>
-          <button type="button" class="btn btn-ghost ow-sm" data-inv-goto="analytics-creditors">Open Creditors</button>
+        <details class="inv-u-more" id="inv_u_more"><summary class="btn btn-ghost ow-sm">More <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary><div class="inv-u-more-menu" role="menu">
+          <!-- One menu, read as one: each thing it does with its mark and
+               the line that says what it is for, the print first and the
+               two screens it leads to under a hairline. -->
+          <button type="button" class="inv-u-mi" id="inv_u_print_list_btn" role="menuitem"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg><span><b>Print sales list</b><small>the sales in this range, on paper</small></span></button>
+          <span class="inv-u-sep" aria-hidden="true"></span>
+          <button type="button" class="inv-u-mi" role="menuitem" data-inv-goto="analytics-debtors"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg><span><b>Debtors</b><small>who owes you, and how old it is</small></span></button>
+          <button type="button" class="inv-u-mi" role="menuitem" data-inv-goto="analytics-creditors"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V8M7 13l5-5 5 5M5 4h14"/></svg><span><b>Creditors</b><small>who you owe, and what to pay first</small></span></button>
         </div></details>
         <button type="button" class="btn btn-accent ow-sm" id="inv_doc_print_list_btn" hidden>
           <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>
@@ -69548,26 +69561,36 @@ function invUInsightsHTML(facts, u){
     const xs = (sells.get(k) || []).filter(x=> x.d < d || (x.d === d && x.id < q.id)).sort((a,b)=> a.d.localeCompare(b.d) || a.id - b.id);
     return xs.length ? xs[xs.length - 1].p : null;
   };
+  /* Read in money, line by line, never as two unit prices: a bill can
+     price a box of 100 and the sale a single screw, and dividing one by
+     the other made a 1,800% loss out of a unit mismatch. The sale line's
+     own value is the price; the bill's value for the same goods is the
+     cost now, and the same quantity at the supplier's earlier price is
+     the cost before. */
   const squeeze = new Map();
   facts.forEach(f=> f.lines.forEach(l=>{
-    if(l.shelf || !l.bill) return;
+    if(l.shelf || !l.bill || !(l.bought > 0) || !(l.sold > 0)) return;
     const k = lineKey(l.it);
-    (l.bill.items||[]).filter(x=>lineKey(x) === k).forEach(x=>{
+    const items = (l.bill.items||[]).filter(x=>lineKey(x) === k);
+    let now = 0, was = 0, known = true;
+    items.forEach(x=>{
       const hist = piPriceHistory(l.bill.supplierId, piLineKey(x), l.bill.date || '', l.bill.id);
-      const was = hist.length ? hist[hist.length - 1].price : null, now = Number(x.price)||0;
-      const sell = unitSell(l.it), before = sellBefore(k, f.q);
-      if(was == null || before == null || now - was <= 0.5 || sell > before + 0.5 || sell <= 0) return;
-      const e = squeeze.get(k) || {name: l.it.productName || x.productName || 'Item', lost:0, at:''};
-      e.lost += (now - was) * (Number(x.qty)||0);
-      if((l.bill.date || '') >= e.at){ e.at = l.bill.date || ''; e.sell = sell; e.was = was; e.now = now; }
-      squeeze.set(k, e);
+      if(!hist.length){ known = false; return; }
+      now += (Number(x.qty)||0) * (Number(x.price)||0);
+      was += (Number(x.qty)||0) * hist[hist.length - 1].price;
     });
+    const before = sellBefore(k, f.q);
+    if(!known || !items.length || before == null || now - was <= 0.5 || unitSell(l.it) > before + 0.5) return;
+    const e = squeeze.get(k) || {name: l.it.productName || 'Item', lost:0, at:''};
+    e.lost += now - was;
+    if((l.bill.date || '') >= e.at){ e.at = l.bill.date || ''; e.sell = l.sold; e.was = was; e.now = now; e.qty = Number(l.it.qty) || 1; }
+    squeeze.set(k, e);
   }));
   const squeezed = [...squeeze.values()].sort((a,b)=>b.lost-a.lost);
   const lostAll = squeezed.reduce((n,e)=>n+e.lost,0);
   const pc = (sell, cost)=> Math.round((sell - cost) / sell * 100);
   const worst = squeezed[0];
-  const squeezeHTML = squeezed.length ? `<p class="inv-pf-big"><b class="is-bad">−${esc(u.short(lostAll))}</b><span>less left on ${squeezed.length} item${squeezed.length===1?'':'s'} ${esc(u.range || 'in this range')} — the supplier raised the cost, your price stayed</span></p>
+  const squeezeHTML = squeezed.length ? `<p class="inv-pf-big"><b class="is-bad">−${esc(u.short(lostAll))}</b><span>less left on ${squeezed.length} item${squeezed.length===1?'':'s'} · ${esc(u.range || 'this range')} — the supplier raised the cost, your price stayed</span></p>
     <div class="inv-sq">${squeezed.slice(0, 3).map(e=>{
       const wOld = Math.min(100, e.was / e.sell * 100), wUp = Math.max(0, Math.min(100 - wOld, (e.now - e.was) / e.sell * 100));
       return `<div class="inv-sq-r" title="${esc(`${e.name} · sold at ${u.number(e.sell)} · cost ${u.number(e.was)} → ${u.number(e.now)}`)}">
@@ -69576,7 +69599,7 @@ function invUInsightsHTML(facts, u){
         <span class="inv-sq-m"><s>${pc(e.sell, e.was)}%</s> ${pc(e.sell, e.now)}%</span></div>`;
     }).join('')}
       <p class="inv-sq-k"><span><i class="is-cost"></i>cost</span><span><i class="is-rise"></i>rise</span><span><i class="is-price"></i>price</span><span class="inv-sq-kr">margin</span></p></div>
-    <p class="inv-ins-note">${esc(worst.name)} now ${worst.sell - worst.now < 0 ? `sells below cost — <b class="is-bad">${u.number(worst.now - worst.sell)}</b> lost a unit` : `leaves <b class="is-bad">${u.number(worst.sell - worst.now)}</b> a unit`} — reprice before the next order.</p>`
+    <p class="inv-ins-note">${esc(worst.name)} now ${worst.sell - worst.now < 0 ? `sells below cost — <b class="is-bad">${u.number((worst.now - worst.sell) / worst.qty)}</b> lost a unit sold` : `leaves <b class="is-bad">${u.number((worst.sell - worst.now) / worst.qty)}</b> a unit sold`} — reprice before the next order.</p>`
     : '<p class="inv-ins-none">No supplier raised a cost in this range on goods you resold at an unchanged price.</p>';
 
   /* 3. WHAT EACH SALE LEFT AFTER ITS BILLS -- only sales whose every line
@@ -70705,6 +70728,10 @@ document.getElementById('inv_sel_clear').addEventListener('click', ()=>{
   renderInvoices(invSearchValue());
 });
 
+document.addEventListener('click', (ev)=>{
+  const more = document.getElementById('inv_u_more');
+  if(more && more.open && !more.contains(ev.target)) more.open = false;
+}, true);
 document.getElementById('inv_u_print_list_btn').addEventListener('click', ()=>{
   document.getElementById('inv_u_more').open = false;
   document.getElementById('inv_doc_print_list_btn').click();
