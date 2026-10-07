@@ -15,6 +15,12 @@ const { read, extractFunction, extractDeclaration, compileScope, createReporter 
 
 const t = createReporter('manager map');
 const src = read('index.html');
+/* The Manager screen is renderManager and the seven bed painters it hands
+   every reading to (mgrPaint<Bed>), so a pin on "the render" reads all
+   eight: what used to sit in one function is drawn by the bed it belongs to. */
+const MGR_RENDER = ['renderManager', 'mgrPaintBrief', 'mgrPaintSim', 'mgrPaintTargets', 'mgrPaintPlays',
+  'mgrPaintUnusual', 'mgrPaintAsk', 'mgrPaintRecord'];
+const mgrRender = () => MGR_RENDER.map((n) => extractFunction(src, n, 'index.html')).join('\n');
 const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 const scope = compileScope([
@@ -117,15 +123,102 @@ t.check(/data-dom="growth" style="[^"]*" aria-pressed="true"/.test(quiet) && /no
   'an area chosen stays chosen, and a day with no meeting says so and draws nothing it does not have');
 
 /* ---------- 4. wired into the screen ------------------------------------ */
-const sw = extractFunction(src, 'mgrPaintSwitch', 'index.html');
-t.check(/data-mgrview="map"/.test(sw) && /if\(mgrView === 'map'\) mgrPaintMap\(\);/.test(sw) && /'mgr-on-map'/.test(sw),
-  'a third tab, drawn when it is looked at');
-t.check(/id="managerMapWrap" class="mgr-bed mgr-bed-m"/.test(src) && /#tab-manager\.mgr-on-map \.mgr-bed-m\{display:block;\}|#tab-manager\.mgr-on-map \.mgr-bed-m\{/.test(src),
-  'with a bed of its own');
+/* WAS: a third tab of the switch with a bed of its own. The map folded
+   into the Brief's department board (Q26): it is drawn into the Brief's
+   managerDeptWrap, still only when it is looked at -- a render while
+   another section is open marks it stale, and opening the Brief draws it. */
+const brief = extractFunction(src, 'mgrPaintBrief', 'index.html');
+t.check(/const drawMap = \(\)=>\{ mgrPaintMap\(\); mgrMapDirty = false; \};/.test(brief)
+  && /if\(ctx\.landed === 'view' && mgrMapDirty\) drawMap\(\);/.test(brief),
+  'the Brief draws it, and opening the Brief draws a board a render marked stale');
+
+/* WHEN IT IS DRAWN, run rather than read: the real Brief painter, its
+   timer held so each check can say what was queued.
+   WAS: the board was drawn whenever the Brief was the section chosen --
+   including from a render made while Today was showing (Done on Today's
+   plan renders this screen), a quarter of a second of whole-shop reading
+   into a hidden section; and a journal read that FAILED returned before
+   the board was ever drawn, leaving it empty, or last known and
+   "updating…" for as long as the screen was open.
+   NOW: drawn only while the Manager is on screen, and drawn from the
+   books when the journal fails, its centre saying the journal was not
+   read rather than that no meeting was held. */
+{
+  const el = (id) => ({ id, innerHTML: '', style: {}, classList: { contains: () => false, add() {}, remove() {} },
+    querySelector: () => null, querySelectorAll: () => [], addEventListener() {} });
+  const els = {};
+  ['managerBandWrap', 'managerStripWrap', 'managerDeptWrap', 'managerPlanWrap', 'managerChainWrap', 'managerForesightWrap',
+    'managerSimTeaserWrap', 'managerMemoryWrap', 'managerBlindWrap', 'tab-manager'].forEach((id) => { els[id] = el(id); });
+  let timers = [], draws = 0, heroArgs = null;
+  const env = {
+    document: { getElementById: (id) => els[id] || null },
+    setTimeout: (fn) => { timers.push(fn); return timers.length; },
+    mgrRenderGen: 1, mgrView: 'brief', mgrMapDirty: true, mgrMapJournal: null, mgrMapModelCache: {}, mgrMapJournalErr: null,
+    mgrPaintMap: () => { draws++; },
+    mgrPaintVerdict: () => {}, mgrCachePaint: () => false, mgrLastKnown: () => {},
+    mgrHeroHTML: (...a) => { heroArgs = a; return '<div class="mgr-hero"></div>'; },
+    mgrJournalUnreadHTML: (e) => `<div class="ow-empty">The journal could not be read — ${e}</div>`,
+    mgrWirePlan: () => {}, mgrMoveOrder: (r) => r, deriveMoveOutcome: () => ({ status: 'open' }), mgrQueueRowHTML: () => '',
+    managerToday: null, managerMeetingRunning: false, apMode: null, apWasCutOff: false, managerCommittedPlan: null,
+    assistantBusy: false, runManagerMeeting() {}, runManagerReview() {}, apOpenPanel() {}, apSend() {},
+    lsSet() {}, todayISO: () => '2026-10-07', esc, fmtShortDate: (d) => d,
+  };
+  const B = compileScope([brief,
+    'function __state(){ return { mgrMapDirty, mgrMapJournalErr, mgrMapModelCache, mgrMapJournal }; }',
+    'function __set(k, v){ if(k === "view") mgrView = v; if(k === "gen") mgrRenderGen = v; }'],
+    env, ['mgrPaintBrief', '__state', '__set']);
+  const run = () => { const q = timers; timers = []; q.forEach((f) => f()); };
+  const ok = { today: null, prior: [], reviews: [], weekMeetings: 0 };
+
+  els['tab-manager'].style.display = 'block';
+  B.mgrPaintBrief(1, { landed: 'state', st: { error: 'network down' }, notes: true, heldGuess: true });
+  run();
+  t.check(draws === 1 && B.__state().mgrMapJournalErr === 'network down' && B.__state().mgrMapModelCache === null,
+    'a journal read that fails still draws the board — from fresh books, with the failure kept for its centre');
+  t.check(/could not be read — network down/.test(els.managerPlanWrap.innerHTML) && heroArgs && heroArgs[3] === 'network down',
+    'and the plan and the band both name the failure, rather than the band saying it is still reading');
+  B.mgrPaintBrief(1, { landed: 'state', st: ok, notes: true, heldGuess: false });
+  run();
+  t.check(draws === 2 && B.__state().mgrMapJournalErr === null && B.__state().mgrMapJournal && B.__state().mgrMapJournal.today === null,
+    'the next clean read clears it, and draws again with what today\'s plan acts on');
+
+  els['tab-manager'].style.display = 'none';
+  B.mgrPaintBrief(1, { landed: 'state', st: ok, notes: true, heldGuess: false });
+  run();
+  t.check(draws === 2 && B.__state().mgrMapDirty === true,
+    'a render while another screen is showing reads nothing for the board — it is only marked stale');
+  B.mgrPaintBrief(1, { landed: 'state', st: { error: 'network down' }, notes: true, heldGuess: true });
+  B.mgrPaintBrief(1, { landed: 'start', notes: false, heldGuess: false });
+  run();
+  t.check(draws === 2 && B.__state().mgrMapDirty === true, 'not after a failed read either, nor on a shop with no journal');
+  els['tab-manager'].style.display = 'block';
+  B.mgrPaintBrief(1, { landed: 'state', st: ok, notes: true, heldGuess: false });
+  run();
+  t.check(draws === 3, 'and the render that showing the screen runs draws it');
+
+  B.__set('view', 'targets');
+  B.mgrPaintBrief(1, { landed: 'state', st: ok, notes: true, heldGuess: false });
+  run();
+  t.check(draws === 3 && B.__state().mgrMapDirty === true, 'another section open: marked stale, not drawn');
+  B.__set('view', 'brief');
+  B.mgrPaintBrief(1, { landed: 'view', notes: true, heldGuess: false });
+  t.check(draws === 4 && B.__state().mgrMapDirty === false, 'opening the Brief from the nav draws it at once');
+
+  B.mgrPaintBrief(1, { landed: 'state', st: ok, notes: true, heldGuess: false });
+  B.__set('gen', 2);
+  run();
+  t.check(draws === 4, 'and a board queued by a render that has since been replaced is not drawn');
+}
+const unread = scope.mgrMapHTML(model, null, { error: 'network down' });
+t.check(/journal not read/.test(unread) && !/no meeting yet/.test(unread) && !/How it decided/.test(unread),
+  'a board drawn without its journal says the journal was not read — never that there was no meeting');
+t.check(/<div class="mgr-bed mgr-bed-b"[\s\S]*?<div id="managerDeptWrap" class="mgr-slot"><\/div>[\s\S]*?<div class="mgr-bed mgr-bed-x"/.test(src)
+  && /function mgrPaintMap\(\)\{\s*const wrap = document\.getElementById\('managerDeptWrap'\);/.test(src),
+  'in the Brief\'s department slot');
 const paint = extractFunction(src, 'mgrPaintMap', 'index.html');
 t.check(/ASSISTANT_TOOLS\.shop_pulse\.run\(\)/.test(paint), 'it reads the same position the meeting reads');
 t.check(/could not read the shop/.test(paint), 'and says so when it cannot, rather than drawing a blank');
-const render = extractFunction(src, 'renderManager', 'index.html');
+const render = mgrRender();
 t.check(/mgrMapJournal = \{ today: st\.today/.test(render) && /mgrMapModelCache = null;/.test(render),
   'every fresh read of the journal redraws it');
 t.check(/\.mgr-mp-cv\{display:none;\}/.test(src) && /\.mgr-mp-tiles\{display:grid;/.test(src),

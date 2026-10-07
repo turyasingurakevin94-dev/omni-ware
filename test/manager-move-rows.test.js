@@ -15,6 +15,12 @@ const { read, extractFunction, extractDeclaration, compileScope, createReporter 
 
 const t = createReporter('manager move rows');
 const src = read('index.html');
+/* The Manager screen is renderManager and the seven bed painters it hands
+   every reading to (mgrPaint<Bed>), so a pin on "the render" reads all
+   eight: what used to sit in one function is drawn by the bed it belongs to. */
+const MGR_RENDER = ['renderManager', 'mgrPaintBrief', 'mgrPaintSim', 'mgrPaintTargets', 'mgrPaintPlays',
+  'mgrPaintUnusual', 'mgrPaintAsk', 'mgrPaintRecord'];
+const mgrRender = () => MGR_RENDER.map((n) => extractFunction(src, n, 'index.html')).join('\n');
 
 /* ---------- 1. the buttons reach every move --------------------------- */
 {
@@ -112,7 +118,7 @@ const src = read('index.html');
   t.check(mgrAvatarHTML('Kato Construction Ltd') === mgrAvatarHTML('Kato Construction Ltd') && />KC</.test(mgrAvatarHTML('Kato Construction Ltd')),
     'a customer wears the same initials and the same tint every time');
 
-  const render = extractFunction(src, 'renderManager', 'index.html');
+  const render = mgrRender();
   t.check(/mgrScoreRingsHTML\(sb2\.targets\.filter\(x=> !x\.finished\)\)/.test(render), 'the scoreboard opens with its rings');
   t.check(/<div class="mgr-rt">/.test(render) && /class="mgr-av mgr-av-k mgr-kt-money"/.test(render),
     'the standing rules are rows with the mark of the door each belongs to');
@@ -232,7 +238,7 @@ const src = read('index.html');
     'entries are kept by the week they fall in, Monday to Sunday');
   t.check(sc.mgrJournalWeekLabel('2026-09-21', '2026-09-24') === 'This week · 21–27 Sept' && sc.mgrJournalWeekLabel('2026-08-31', '2026-09-24') === '31 Aug – 6 Sept',
     'and each week is labelled by its dates, this one named as such');
-  const render = extractFunction(src, 'renderManager', 'index.html');
+  const render = mgrRender();
   t.check(/said again — \$\{ORD\[n\] \|\| n \+ 'th'\} time/.test(render) && /Said \$\{top\.dates\.length\} times/.test(render) && /mgr-jr-wk/.test(render),
     'the journal draws the chart, the repeated advice and its weeks');
   t.check(/label: 'sales', cls: 'mgr-jr-b-s'/.test(render) && /' · was ' \+ mgrShortUGX\(wk\.prior_sales\)/.test(render),
@@ -258,7 +264,7 @@ const src = read('index.html');
 
 /* ---------- 8. the scorecard, the pick, the reasoning ------------------- */
 {
-  const render = extractFunction(src, 'renderManager', 'index.html');
+  const render = mgrRender();
   const tally = extractFunction(src, 'managerAdviceTally', 'index.html');
   t.check(/counts\.worthDone \+= x\.worth/.test(tally) && /counts\.waiting\.repeated\+\+/.test(tally) && /counts\.waiting\.stale\+\+/.test(tally) && /counts\.waiting\.fresh\+\+/.test(tally),
     'the tally carries the money acted on and why each waiting move is waiting: repeated, stale, or new this week');
@@ -327,7 +333,7 @@ const src = read('index.html');
   t.check((chart.match(/class="mgr-jc-r"/g) || []).length === 3 && /Weekly review, 2026-08-29: sales 31,436,660 UGX/.test(chart),
     'and the older keeps its mark, with its figure on hover');
 
-  const render = extractFunction(src, 'renderManager', 'index.html');
+  const render = mgrRender();
   t.check(/held: again \? `held \$\{again \+ 1\} times`/.test(render) && /Answered on the earlier plan that day/.test(render),
     'a day held more than once is one entry, says how many times, and keeps what was answered on the earlier plan');
   const load = extractFunction(src, 'managerLoadState', 'index.html');

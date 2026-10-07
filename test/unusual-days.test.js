@@ -16,6 +16,12 @@ const { read, extractFunction, extractDeclaration, compileScope, createReporter 
 
 const t = createReporter('unusual days');
 const src = read('index.html');
+/* The Manager screen is renderManager and the seven bed painters it hands
+   every reading to (mgrPaint<Bed>), so a pin on "the render" reads all
+   eight: what used to sit in one function is drawn by the bed it belongs to. */
+const MGR_RENDER = ['renderManager', 'mgrPaintBrief', 'mgrPaintSim', 'mgrPaintTargets', 'mgrPaintPlays',
+  'mgrPaintUnusual', 'mgrPaintAsk', 'mgrPaintRecord'];
+const mgrRender = () => MGR_RENDER.map((n) => extractFunction(src, n, 'index.html')).join('\n');
 const api = read('api/assistant.js');
 const TODAY = '2026-09-24'; // a Thursday
 const day = (n) => new Date(Date.parse(TODAY) + n * 86400000).toISOString().slice(0, 10);
@@ -211,9 +217,12 @@ function build(days, books) {
     'the Manager reads it every meeting, and raises the days since the last one');
   t.check(/stock counted short is a question, not a theft/.test(hist) && /never name a cause/.test(api),
     'and is told a finding is a question, never a verdict');
-  t.check(/<div id="managerUnusualWrap" class="mgr-bed mgr-bed-s"><\/div>/.test(src)
-    && /unWrap\.innerHTML = mgrUnusualHTML\(mgrUnusualReading\(\)\)/.test(extractFunction(src, 'renderManager', 'index.html')),
-    'the Manager screen draws it on the side rail, in the standing bed');
+  /* WAS: on the side rail, in the standing bed. Out of the ordinary is a
+     section of the Manager's own now, with a painter of its own -- the
+     same one an answer repaints with. */
+  t.check(/<div class="mgr-bed mgr-bed-u"[^>]*>\s*<div id="managerUnusualWrap" class="mgr-slot"><\/div>/.test(src)
+    && /el\.innerHTML = mgrUnusualHTML\(mgrUnusualReading\(\)\)/.test(extractFunction(src, 'mgrPaintUnusual', 'index.html')),
+    'the Manager screen draws it in a section of its own, Out of the ordinary');
   const html = extractFunction(src, 'mgrUnusualHTML', 'index.html');
   t.check(/Not enough weeks on the books yet/.test(html) && /Nothing out of the ordinary in the last week/.test(html),
     'with an honest word for too-new and for a calm week, never a blank');
@@ -224,7 +233,7 @@ function build(days, books) {
   t.check(/mgrUnusualAnswers\.delete\(key\)/.test(save), 'and one that could not be kept is taken back and said so');
   t.check(/owner_said: said\.body\.answer/.test(hist) && /never flag the day again/.test(hist) && /!answeredDay\(x\)/.test(hist),
     'the meeting reads the owner\'s word on the day, never raises an answered day as news, and turns unentered sales into a job');
-  t.check(/mgrUnusualAnswersLoad\(\);/.test(extractFunction(src, 'renderManager', 'index.html')), 'and a day answered before stays answered');
+  t.check(/mgrUnusualAnswersLoad\(\);/.test(mgrRender()), 'and a day answered before stays answered');
 }
 
 process.exit(t.done() ? 1 : 0);

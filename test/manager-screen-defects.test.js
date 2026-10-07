@@ -62,7 +62,14 @@ const { read, extractFunction, extractDeclaration, compileScope, createReporter 
 const t = createReporter('manager screen defects');
 const src = read('index.html');
 const view = extractFunction(src, 'mgrMoveView', 'index.html');
-const render = extractFunction(src, 'renderManager', 'index.html');
+/* The screen is renderManager and the seven bed painters it hands every
+   reading to: a pin on "the render" reads all eight. renderManager alone
+   is what sends the readings; the Brief is where the plan is drawn. */
+const MGR_RENDER = ['renderManager', 'mgrPaintBrief', 'mgrPaintSim', 'mgrPaintTargets', 'mgrPaintPlays',
+  'mgrPaintUnusual', 'mgrPaintAsk', 'mgrPaintRecord'];
+const render = MGR_RENDER.map(n => extractFunction(src, n, 'index.html')).join('\n');
+const rm = extractFunction(src, 'renderManager', 'index.html');
+const brief = extractFunction(src, 'mgrPaintBrief', 'index.html');
 
 /* ---------- 1. the sentence has its own line ---------- */
 {
@@ -114,10 +121,15 @@ const render = extractFunction(src, 'renderManager', 'index.html');
   /* Born in the right SHAPE, which is the stronger form of born in the
      right colour: the two states are drawn by two different helpers and
      neither can become the other. */
-  const shell = /planWrap\.innerHTML = heldGuess\s*\?\s*planShell\([\s\S]{0,240}?heldFoot\(null, false\)\)\s*:\s*notHeldHTML\(null, null\);/.exec(render);
+  const shell = /planWrap\.innerHTML = heldGuess\s*\?\s*planShell\([\s\S]{0,240}?heldFoot\(null, false\)\)\s*:\s*notHeldHTML\(null, null\);/.exec(brief);
   t.check(!!shell, 'and the panel is born in the shape the stamp says, before the query goes out');
-  const at = render.indexOf('managerLoadState().then');
-  t.check(shell && render.indexOf(shell[0]) < at, 'BEFORE it, not after it comes back');
+  /* BEFORE it, in two steps now: the shell is the Brief's 'start' paint,
+     and renderManager paints 'start' before it sends the journal read. */
+  const at = rm.indexOf('managerLoadState().then');
+  const startAt = brief.indexOf("if(ctx.landed === 'start'){"), stateAt = brief.indexOf("if(ctx.landed === 'state'){");
+  t.check(shell && startAt > -1 && brief.indexOf(shell[0]) > startAt && brief.indexOf(shell[0]) < stateAt
+    && rm.indexOf("paint('start');") > -1 && rm.indexOf("paint('start');") < at,
+    'BEFORE it, not after it comes back');
 
   /* The accent lives in exactly one of the two, and it is the one where
      holding a meeting IS the next thing to do. */
@@ -172,18 +184,26 @@ const render = extractFunction(src, 'renderManager', 'index.html');
 
   /* LAST KNOWN, NEVER SILENTLY. A box with a last good render shows it
      at once, dimmed, inert and tagged as last known; one without is
-     emptied as before. Either way nothing stale passes for today's. */
-  const loop = /\[scoreWrap,[\s\S]{0,400}?forEach\(el=>\{ if\(el && !mgrCachePaint\(el\)\) el\.innerHTML = ''; \}\);/.exec(render);
-  t.check(!!loop, 'the clearing loop exists and names its containers in one place');
-  const at = render.indexOf('managerLoadState().then');
-  t.check(loop && render.indexOf(loop[0]) < at,
-    'and it runs BEFORE the query goes out, not after it comes back');
-  const block = loop ? loop[0] : '';
-  ['scoreWrap', 'qWrap', 'hist', 'acct'].forEach(n => {
-    t.check(new RegExp(`\\b${n}\\b`).test(block), `${n} is among them`);
-  });
-  t.check(/managerTrackWrap/.test(block),
+     emptied, or -- the one box of its section that should -- says it is
+     reading. Either way nothing stale passes for today's.
+
+     WAS: one clearing loop in renderManager naming the five boxes. The
+     boxes live in three sections now (Targets, It needs to know, the
+     Record), and a section showing alone with nothing in it would be a
+     blank page -- so each painter clears its own boxes, through one
+     helper, in its 'start' paint, which renderManager sends before the
+     journal read goes out. */
+  const lk = extractFunction(src, 'mgrLastKnown', 'index.html');
+  t.check(/if\(!el \|\| mgrCachePaint\(el\)\) return;/.test(lk) && /el\.innerHTML = say \? '<p class="mgr-reading">Reading the journal…<\/p>' : '';/.test(lk),
+    'one helper: last known if there is one, otherwise empty or waiting — never yesterday passed off as today');
+  const startOf = (fn) => { const f = extractFunction(src, fn, 'index.html');
+    const a = f.indexOf("if(ctx.landed === 'start'){"); return a < 0 ? '' : f.slice(a, f.indexOf('return;', f.indexOf('mgrLastKnown', a)) + 7); };
+  [['mgrPaintTargets', 'scoreWrap'], ['mgrPaintAsk', 'qWrap'], ['mgrPaintRecord', 'hist'], ['mgrPaintRecord', 'acct'], ['mgrPaintRecord', 'trackWrap']]
+    .forEach(([fn, n]) => t.check(new RegExp(`mgrLastKnown\\(${n}\\b`).test(startOf(fn)), `${n} is cleared in ${fn}'s start paint`));
+  t.check(/const trackWrap = document\.getElementById\('managerTrackWrap'\);/.test(extractFunction(src, 'mgrPaintRecord', 'index.html')),
     'including the track record, which is filled by its own chain and would linger longest');
+  t.check(rm.indexOf("paint('start');") > -1 && rm.indexOf("paint('start');") < rm.indexOf('managerLoadState().then'),
+    'and the start paint runs BEFORE the query goes out, not after it comes back');
   t.check(!/revWrap|managerReviewWrap|\bpassed\b/.test(render),
     'and the two containers that folded into others are gone from the render entirely');
   t.check(/\.mgr-reading\{/.test(src), 'the line has a style, so it reads as a wait rather than as content');
@@ -221,12 +241,18 @@ const render = extractFunction(src, 'renderManager', 'index.html');
   });
 
   /* THE ANNOUNCEMENT IS NOT THE READING. */
-  t.check(/if\(managerNotesTable\) managerPlaybook\(\)\.then/.test(render),
+  /* The read is renderManager's own now, at the top level of the render
+     after the one memoryless return -- every render with a journal makes it. */
+  t.check(/\n  managerPlaybook\(\)\.then\(book=>\{/.test(rm)
+    && rm.indexOf('managerPlaybook().then') > rm.indexOf('if(!managerNotesTable) return;'),
     'the playbook is read on every render, not only the one that found the panel empty');
   t.check(!/else managerPlaybook\(\)/.test(render),
     'so the read no longer sits in a branch the second render cannot reach');
-  t.check(/else if\(!mgrCachePaint\(playWrap\) && playWrap\.innerHTML\) playWrap\.innerHTML = '<p class="mgr-reading">/.test(render),
-    'and the waiting line is still said when there is something on screen to replace');
+  /* WAS: said only when there was something on screen to replace. The
+     playbook is a section of its own now, and an empty one is a blank
+     page, so it says it is reading whenever it has no last-known copy. */
+  t.check(/else if\(!mgrCachePaint\(playWrap\)\) playWrap\.innerHTML = '<p class="mgr-reading">/.test(render),
+    'and the waiting line is said whenever there is no last-known copy to show');
 
   /* The pace strip on Today is the same shape with a counter of its
      own: sharing one would let a Manager render cancel a pace paint
@@ -274,7 +300,7 @@ const render = extractFunction(src, 'renderManager', 'index.html');
     { n: 'mgrWaffleHTML' }, { n: 'mgrTargetRingHTML' }, { n: 'mgrDotsHTML' },
     { n: 'MGR_WAIT_CELLS', d: true }, { n: 'mgrOf', d: true }];
   const failed = { message: 'network' };
-  const broke = paint('managerVerdictWrap', VERDICT,
+  const broke = paint('managerStripWrap', VERDICT,
     { tally: { error: failed.message, counts: { proposed: 0, done: 0, skipped: 0, untouched: 0, days: 35 }, notLanding: [], repeats: 3 },
       track: { error: failed.message, rows: [], minTimes: 3 },
       score: { error: failed.message, targets: [] } });
@@ -288,7 +314,7 @@ const render = extractFunction(src, 'renderManager', 'index.html');
 
   /* AND THE FIGURES STILL ARRIVE when the reading worked -- an error
      branch that swallows the happy path passes every check above. */
-  const good = paint('managerVerdictWrap', VERDICT,
+  const good = paint('managerStripWrap', VERDICT,
     { tally: { counts: { proposed: 9, done: 4, skipped: 2, untouched: 3, days: 35 }, notLanding: [], repeats: 3 },
       track: { rows: [], minTimes: 3 },
       score: { targets: [] } });
@@ -332,7 +358,12 @@ const render = extractFunction(src, 'renderManager', 'index.html');
   const save = extractFunction(src, 'mgrCacheSave', 'index.html');
   t.check(/classList\.contains\('mgr-stale'\)/.test(save) && /querySelector\('\.mgr-reading'\)/.test(save),
     'only a fresh, finished render is kept — never a stale copy or a waiting line');
-  t.check(/mgrCacheSave\(\);\s*mgrPaintVerdict\(\{\}\);/.test(render), 'what was on screen is kept before the next render clears it');
+  /* WAS: mgrCacheSave() directly before the strip's waiting paint. Every
+     bed repaints from the one 'start' paint now, so the save comes before
+     that, and before anything at all is cleared. */
+  t.check(/if\(managerNotesTable\) mgrCacheSave\(\);/.test(rm)
+    && rm.indexOf('mgrCacheSave();') < rm.indexOf("paint('start');"),
+    'what was on screen is kept before the next render clears it');
 }
 
 process.exit(t.done() ? 1 : 0);

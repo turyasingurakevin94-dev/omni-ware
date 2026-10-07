@@ -33,6 +33,12 @@ const { read, extractFunction, extractDeclaration, compileScope, createReporter 
 
 const t = createReporter('the manager');
 const src = read('index.html');
+/* The Manager screen is renderManager and the seven bed painters it hands
+   every reading to (mgrPaint<Bed>), so a pin on "the render" reads all
+   eight: what used to sit in one function is drawn by the bed it belongs to. */
+const MGR_RENDER = ['renderManager', 'mgrPaintBrief', 'mgrPaintSim', 'mgrPaintTargets', 'mgrPaintPlays',
+  'mgrPaintUnusual', 'mgrPaintAsk', 'mgrPaintRecord'];
+const mgrRender = () => MGR_RENDER.map((n) => extractFunction(src, n, 'index.html')).join('\n');
 const api = read('api/assistant.js');
 const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
@@ -293,7 +299,7 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
 {
   t.check(!/runManagerMeeting/.test(extractFunction(src, 'boot', 'index.html')),
     'boot never holds a meeting — it is the owner\'s AI money');
-  t.check(!/runManagerMeeting\(\)/.test(extractFunction(src, 'renderManager', 'index.html')
+  t.check(!/runManagerMeeting\(\)/.test(mgrRender()
     .replace(/addEventListener\('click', runManagerMeeting\)/g, '')),
     'rendering the screen never holds one either — only its button does');
   const card = extractFunction(src, 'renderManagerCard', 'index.html');
@@ -416,7 +422,7 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   t.check(/check \(kind in \('meeting', 'move', 'review'\)\)/.test(mig),
     'and re-adds it with the review kind — without this every review save is refused');
 
-  const render = extractFunction(src, 'renderManager', 'index.html');
+  const render = mgrRender();
   t.check(/Weekly review — /.test(render) && /st\.reviews/.test(render),
     'the screen reads journalled reviews and names them in the history');
   /* The review's body moved into mgrReviewBody when the weekly review
