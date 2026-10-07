@@ -136070,7 +136070,7 @@ function mgrTgComposeSay(c){
 /* ==== THE DRAWING ======================================================= */
 const MGR_TG_GLYPH = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20.5v-.5a5.5 5.5 0 0 1 5.5-5.5h4a5.5 5.5 0 0 1 5.5 5.5v.5"/></svg>';
 function mgrTgAvHTML(p){
-  return p.key === 'you' ? `<span class="mgr-tg-av mgr-tg-av-you" aria-hidden="true">${MGR_TG_GLYPH}</span>`
+  return p.key === 'you' ? `<span class="mgr-tg-av" aria-hidden="true">${MGR_TG_GLYPH}</span>`
     : `<span class="mgr-tg-av${p.key === 'none' ? ' mgr-tg-av-none' : ''}" aria-hidden="true">${esc(p.ini)}</span>`;
 }
 const MGR_TG_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -136233,7 +136233,7 @@ function mgrTgRowHTML(r){
 }
 function mgrTgRunningHTML(runs, proposed, full){
   const head = `<div class="ow-pan-h"><span class="ow-pan-t">Running</span><span class="mgr-tg-pt">Where each target stands — and where it lands</span>${
-    runs.length ? '<span class="ow-pan-nt mgr-tg-sort">sorted by days left</span>' : ''}</div>`;
+    runs.length ? '<span class="ow-pan-nt">sorted by days left</span>' : ''}</div>`;
   const pp = (proposed || []).length ? `<div class="mgr-tg-pp"><p class="mgr-tg-pph"><b>Proposed by the meeting</b> — a commitment only when you take it on${
       full ? ` · ${MGR_TG_MAX_RUNNING} are running, the most at once` : ''}</p><div class="mgr-pp-list">${proposed.map(mgrProposalHTML).join('')}</div></div>` : '';
   if(!runs.length) return `${head}${pp}<div class="ow-empty">No target is running. Set one above, or take on one the meeting proposes.</div>`;
@@ -136336,10 +136336,10 @@ function mgrTgDraw(scoreWrap, gen, st){
   scoreWrap.innerHTML = `<div class="mgr-tg-w">
     ${mgrTgBandHTML(runs, finished)}
     <section class="ow-pan mgr-tg-new" aria-label="Set a target">${mgrTgComposerHTML(compose)}</section>
-    <section class="ow-pan mgr-tg-run" aria-label="Running targets">${mgrTgRunningHTML(runs, sb2.proposed || [], full)}</section>
+    <section class="ow-pan" aria-label="Running targets">${mgrTgRunningHTML(runs, sb2.proposed || [], full)}</section>
     <div class="mgr-tg-cols">
-      <section class="ow-pan mgr-tg-finp" aria-label="Finished targets">${mgrTgFinishedHTML(finished)}</section>
-      <section class="ow-pan mgr-tg-lrn" aria-label="How I set targets now">${mgrTgLearnedHTML(rules, finished, moveRead)}</section>
+      <section class="ow-pan" aria-label="Finished targets">${mgrTgFinishedHTML(finished)}</section>
+      <section class="ow-pan" aria-label="How I set targets now">${mgrTgLearnedHTML(rules, finished, moveRead)}</section>
     </div>
   </div>`;
   scoreWrap.querySelectorAll('.mgr-pp[data-tid]').forEach(card=>{
