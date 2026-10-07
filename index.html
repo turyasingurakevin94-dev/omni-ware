@@ -2413,7 +2413,8 @@
   .mgr-bed-x .mgr-x-pzb:disabled,.mgr-bed-x .mgr-x-opt:disabled{opacity:.45;cursor:not-allowed;}
   .mgr-bed-x .mgr-x-pzb:focus-visible,.mgr-bed-x .mgr-x-opt:focus-visible,.mgr-bed-x .mgr-x-link:focus-visible,
   .mgr-bed-x .mgr-x-calw:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:2px;}
-  .mgr-bed-x .mgr-x-top{display:grid;grid-template-columns:minmax(0,1fr) 440px;}
+  .mgr-bed-x .mgr-x-top{display:grid;grid-template-columns:minmax(0,1fr) 440px;
+    background:linear-gradient(to left,var(--ow-paper-2) 440px,transparent 440px);}
   .mgr-bed-x .mgr-x-levers{padding:var(--ow-sp-2) var(--ow-sp-16) var(--ow-sp-8);border-right:1px solid var(--ow-rule-soft);min-width:0;}
   .mgr-bed-x .mgr-x-grp{margin:var(--ow-sp-12) 0 0;padding-bottom:var(--ow-sp-6);border-bottom:1px solid var(--ow-rule-soft);
     font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);letter-spacing:.08em;text-transform:uppercase;color:var(--ow-ink-600);}
@@ -2578,6 +2579,7 @@
     .mgr-bed-x .mgr-x-top,.mgr-bed-x .mgr-x-b3{grid-template-columns:minmax(0,1fr);}
     .mgr-bed-x .mgr-x-levers{border-right:0;border-bottom:1px solid var(--ow-rule-soft);}
     .mgr-bed-x .mgr-x-out{position:static;}
+    .mgr-bed-x .mgr-x-top{background:none;}
     .mgr-bed-x .mgr-x-b3 > div{border-left:0;border-top:1px solid var(--ow-rule-soft);}
     .mgr-bed-x .mgr-x-b3 > div:first-child{border-top:0;}
   }
@@ -135642,7 +135644,7 @@ function mgrSimBillLever(b, bill, reason, moves, receipts){
       pips: 5, basis: 'the bill on your books', warn: past(later), say: bill.supplier + ' paid a week later' });
   }
   return { id: 'bill:' + bill.billId, kind: 'bill', dept: 'procurement', group: 'books',
-    label: bill.supplier + ' bill · ' + mgrSimMoney(bill.due), short: bill.supplier + '\'s bill', def: 'as',
+    label: bill.supplier + ' bill · ' + mgrSimMoney(bill.due), short: mgrPossessive(bill.supplier) + ' bill', def: 'as',
     subject: { supplierId: bill.supplierId, billId: bill.billId }, stop, stopWho: bill.supplier, stopAt: bill.stopAt, opts, assume: null,
     effect: (o)=>{
       if(o === 'today') return { bills: [{ billId: bill.billId, to: b.today }] };
@@ -136599,6 +136601,7 @@ function mgrSimLeverHTML(l, choice, assume, edit, run){
     <span class="mgr-x-lvr">
       <span class="mgr-x-opts" role="group" aria-label="${esc(l.label)}">${l.opts.map(o=> `<button type="button" class="mgr-x-opt${o.id === on ? ' mgr-x-on' : ''}" aria-pressed="${o.id === on}" data-sim-lever="${esc(l.id)}" data-sim-opt="${esc(o.id)}"${o.disabled ? ' disabled title="' + esc(o.hint) + '"' : ''}>${esc(o.label)}</button>`).join('')}</span>
       <span class="mgr-x-hint${(waitHint ? / — past /.test(waitHint) : op.warn) ? ' mgr-x-warn' : ''}">${esc(waitHint || op.hint || '')}</span>
+      ${l.opts.filter(o=> o.disabled).map(o=> `<span class="mgr-x-hint">${esc(o.label + ': ' + o.hint)}</span>`).join('')}
       ${a ? `<span class="mgr-x-as${changed ? '' : ' mgr-x-idle'}"><span class="mgr-x-tag">your assumption</span>${esc(a.label)}: <b class="ow-fig">${esc(say.v)}</b> <span class="mgr-x-rng">(${esc(say.lo)} to ${esc(say.hi)})</span>
         <button type="button" class="mgr-x-link" data-sim-edit="${esc(l.id)}" aria-expanded="${edit === l.id}">${edit === l.id ? 'Done' : 'Change'}</button></span>
       ${edit === l.id ? `<span class="mgr-x-ased">${[['value', 'yours'], ['lo', 'low'], ['hi', 'high']].map(([k, cap])=> `<label class="mgr-x-fld"><span>${cap}</span><span class="ow-f-in"><input class="ow-f-v" type="number" inputmode="decimal" step="any" data-sim-assume="${esc(l.id)}" data-sim-k="${k}" value="${esc(String(a[k]))}" aria-label="${esc(a.label + ', ' + cap)}"><span class="ow-f-u">${unit}</span></span></label>`).join('')}
@@ -136630,11 +136633,12 @@ function mgrSimMarks(c){
     if(e.spread || e.kind === 'trading' || e.kind === 'clearance') return;
     const kind = e.kind === 'one-off' ? (e.dept === 'people' ? 'hire' : /^Season/.test(String(e.label || '')) ? 'season' : 'order') : e.kind;
     if(!MGR_SIM_EV.some(x=> x[0] === kind)) return;
-    const who = String(e.label || kind).replace(/ — (bill|after a chase|order|money in)\b.*$/, '').replace(/ \(credit days.*\)$/, '');
-    put(d.date, kind, (kind === 'bill' || kind === 'order' ? who + ' ' + (kind === 'bill' ? 'bill' : 'order') : String(e.label || kind))
+    const who = String(e.label || kind).replace(/ — .*$/, '').replace(/ \(credit days.*\)$/, '');
+    const what = { bill: ' bill', order: ' order', chase: ' pays', promise: ' promised', 'loan-in': ' lends', hire: '', season: '' }[kind];
+    put(d.date, kind, (what != null ? (kind === 'hire' ? 'The new hire’s pay' : kind === 'season' ? 'The season’s buying' : who + what) : String(e.label || kind))
       + ' ' + (e.amount < 0 ? '−' : '+') + mgrShortUGX(Math.abs(e.amount)), MGR_SIM_NAMED.includes(kind) || (kind === 'bill' && e.adjusted));
   }));
-  c.model.levers.filter(l=> l.kind === 'bill' && l.stop && l.stop <= b.to).forEach(l=> put(l.stop < b.today ? b.today : l.stop, 'deadline', l.stopWho + ' stops delivering — ' + l.short + ' reaches ' + l.stopAt + ' days', true));
+  c.model.levers.filter(l=> l.kind === 'bill' && l.stop && l.stop <= b.to).forEach(l=> put(l.stop < b.today ? b.today : l.stop, 'deadline', l.stopWho + ' stops delivering — its bill reaches ' + l.stopAt + ' days', true));
   const se = b.season;
   if(se && se.available && se.extra > 0){
     const d = anShiftDate(se.from, 364);
@@ -136817,8 +136821,8 @@ function mgrSimCmpHTML(c){
     ['Lowest, expected', (r)=> r.expLow ? mgrSimMoney(r.expLow.balance) : '—', (a, b)=> a.expLow && b.expLow ? b.expLow.balance - a.expLow.balance : 0],
     ['Debtor days', (r)=> n(r.debtorDays), (a, b)=> (a.debtorDays || 0) - (b.debtorDays || 0)],
     ['Stock days', (r)=> n(r.stockDays), (a, b)=> Math.round(a.stockDays || 0) - Math.round(b.stockDays || 0)],
-    ['Cash freed · 60 days, if customers keep to the terms', (r)=> r.freed ? mgrSimMoney(r.freed) : '—', (a, b)=> b.freed - a.freed],
-    ['Clearance in · 30 days, on your assumption', (r)=> r.clearIn ? mgrSimMoney(r.clearIn) : '—', (a, b)=> b.clearIn - a.clearIn],
+    ['Freed by terms · 60 days, if kept to', (r)=> r.freed ? mgrSimMoney(r.freed) : '—', (a, b)=> b.freed - a.freed],
+    ['Clearance in · 30 days, assumed', (r)=> r.clearIn ? mgrSimMoney(r.clearIn) : '—', (a, b)=> b.clearIn - a.clearIn],
     ['Interest · a year', (r)=> r.interest ? mgrSimMoney(r.interest) : '—', (a, b)=> a.interest - b.interest],
     ['Holds under shocks', (r, h)=> h && h.held != null ? h.held + ' of ' + h.of : '—', (a, b, ha, hb)=> (hb && ha && hb.held != null && ha.held != null) ? hb.held - ha.held : 0],
     ['How sure', (r)=> { const p = pips(r); return p == null ? 'yours' : p + '/5'; }, ()=> 0],
