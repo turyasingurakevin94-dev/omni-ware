@@ -300,7 +300,7 @@ const cell = (sig, d) => R.rows.find((r) => r.sig.id === sig).cells.find((c) => 
   eq(S.mgrPulseNormalOf(low, set[1]).condition, 'rain', 'a note keeps what it was about');
   eq(S.mgrPulseNormalOf(low, set[0]), null, 'a job teaches no normal');
   t.check(/books can’t see rain, so I’ve kept this as a note, not a rule/.test(S.mgrPulseLearnt(low, set[1])), 'and the screen says a note is not a rule');
-  t.check(/On Tuesdays, sales up to 60% under usual is normal now/.test(S.mgrPulseLearnt(low, set[2])), 'a rule says exactly what is normal now');
+  t.check(/On Tuesdays, sales running up to 60% under usual is normal now/.test(S.mgrPulseLearnt(low, set[2])), 'a rule says exactly what is normal now');
   const till = R.findings.find((x) => x.metric === 'till' && x.dir === 'low');
   t.check(!S.mgrPulseAnswerSet(till).some((a) => a.learn === 'rule'), 'nothing about a till short becomes a rule');
 }

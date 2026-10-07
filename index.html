@@ -2499,6 +2499,7 @@
   .mgr-bed-u .mgr-u-st-done{background:var(--ow-rule-soft);color:var(--ow-ink-600);}
   .mgr-bed-u .mgr-u-empty{margin:0;padding:var(--ow-sp-16);font-size:var(--ow-t-13);color:var(--ow-ink-600);line-height:1.5;max-width:var(--ow-measure);}
   .mgr-bed-u .mgr-u-err{color:var(--ow-crimson);}
+  .mgr-bed-u .mgr-u-unkept{padding:0;}
   /* The open finding. */
   .mgr-bed-u .mgr-u-dh{min-height:48px;display:flex;align-items:center;gap:var(--ow-sp-10);padding:var(--ow-sp-8) var(--ow-sp-16);border-bottom:1px solid var(--ow-rule-soft);flex-wrap:wrap;box-sizing:border-box;}
   .mgr-bed-u .mgr-u-dh-w{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
@@ -136509,7 +136510,7 @@ function mgrPulseLearnt(f, a, normal){
     const r = mgrPulseNormalRule(normal || mgrPulseNormalOf(f, a) || {});
     if(!r) return '';
     const when = r.condition === 'month_end' ? 'At a month’s turn' : `On ${wd}s`;
-    return `${when}, ${sig.label.toLowerCase()} ${r.upTo != null ? 'up to ' + r.upTo + '% ' : ''}${r.dir === 'low' ? 'under' : 'over'} usual is normal now. I’ll stop flagging days like that — you can retire it below.`;
+    return `${when}, ${sig.label.toLowerCase()} running ${r.upTo != null ? 'up to ' + r.upTo + '% ' : ''}${r.dir === 'low' ? 'under' : 'over'} usual is normal now. I’ll stop flagging days like that — you can retire it below.`;
   }
   if(a.learn === 'note') return `the books can’t see ${a.cond}, so I’ve kept this as a note, not a rule — a day like it will still be flagged.`;
   return `this one was “${a.label}”. I won’t ask about it again, and the next meeting reads your answer.`;
@@ -136785,7 +136786,14 @@ function mgrPulseDetailHTML(r, f){
   else if(f.days.length > 1){ il2 = 'Days this far out'; iv2 = `${f.days.length} of ${r.days.length}`; }
   else { il2 = `${sig.label} on the day`; iv2 = `${mgrPulseFig(sig, f.value)} (usual ${mgrPulseFig(sig, f.usual)})`; }
   const gapFig = f.metric === 'stock_short' ? mgrShortUGX(f.per.reduce((s, p)=> s + p.value, 0)) : mgrPulseGapFig(sig, f.gap);
-  const learnt = chosen ? mgrPulseLearnt(f, chosen, normal) : '';
+  /* A rule or a note is only said to be kept once it is: refused (the
+     0107 update missing) or retired since, the box says that instead. */
+  const teaches = chosen && (chosen.learn === 'rule' || chosen.learn === 'note');
+  const retired = teaches && !normal ? (mgrPulseNormals.rows || []).find(n=> n.status !== 'active' && n.body
+    && String(n.body.sourceAnswerId) === String(mgrPulseAnswerRows.get(mgrUnusualKey(f)))) : null;
+  const unkept = teaches && !normal ? (retired ? 'You retired the normal this answer taught, so days like it are flagged again.'
+    : mgrPulseNormals.writeError ? 'Your answer is kept, but not as a normal — ' + mgrPulseNormals.writeError : '') : '';
+  const learnt = chosen && !unkept ? mgrPulseLearnt(f, chosen, normal) : '';
   const day = f.date;
   return `<section class="ow-pan mgr-u-pan mgr-u-dt" aria-label="${esc(mgrPulseTitle(f))}">
     <div class="mgr-u-dh"><span class="mgr-u-nb mgr-u-nb-${good ? 'g' : 'x'}">${f.id}</span>${mgrPulseDeptChip(sig.dept)}<span class="mgr-u-dh-w">${esc(mgrPulseWhen(f))}</span>
@@ -136800,6 +136808,7 @@ function mgrPulseDetailHTML(r, f){
       <div><span class="mgr-u-mi mgr-u-mi-b">Teach me — what was it?</span>
         <div class="mgr-u-teach" role="group" aria-label="What was it">${answers.map(a=> `<button type="button" class="mgr-u-tb${said === a.label ? ' mgr-u-tb-on' : ''}" aria-pressed="${said === a.label}"${said ? ' disabled' : ` data-unusual-answer="${esc(a.label)}" data-unusual-key="${esc(mgrUnusualKey(f))}"`}>${esc(a.label)}</button>`).join('')}</div></div>
       ${learnt ? `<p class="mgr-u-learnt"><span class="mgr-u-gmini" aria-hidden="true">${MGR_PULSE_AVATAR}</span><span><b>I’ll remember:</b> ${esc(learnt)}</span></p>` : ''}
+      ${unkept ? `<p class="mgr-u-empty mgr-u-err mgr-u-unkept">${esc(unkept)}</p>` : ''}
       <div class="mgr-u-act"><button type="button" class="btn btn-accent" data-unusual-day="${esc(day)}">Open ${esc(mgrPulseDate(day))}</button><button type="button" class="btn btn-ghost" data-pulse-skip="${esc(mgrUnusualKey(f))}">Not now</button></div>
     </div>
   </section>`;
@@ -136819,7 +136828,7 @@ function mgrPulseTaughtHTML(r){
       const b = n.body || {}, rule = mgrPulseNormalRule(b), sig = mgrPulseSig(b.metric) || { label: b.metric, dept: null };
       const when = rule ? (rule.condition === 'month_end' ? 'At a month’s turn' : rule.weekday != null ? `On ${['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays'][rule.weekday]}` : 'Every day') : '';
       const way = /^high/.test(String(b.effect || '')) ? 'over' : 'under';
-      const t = rule ? `${when}, ${String(sig.label).toLowerCase()} ${rule.upTo != null ? 'up to ' + rule.upTo + '% ' : ''}${rule.dir === 'low' ? 'under' : 'over'} usual is normal`
+      const t = rule ? `${when}, ${String(sig.label).toLowerCase()} running ${rule.upTo != null ? 'up to ' + rule.upTo + '% ' : ''}${rule.dir === 'low' ? 'under' : 'over'} usual is normal`
         : `“${String(b.note || '').split(' — ')[0] || 'A note'}” — ${String(sig.label).toLowerCase()} ${way} usual`;
       const used = r.used.get(n.id) || 0;
       const s = rule ? `${used ? `Explained ${used} day${used === 1 ? '' : 's'} of this fortnight` : 'Nothing in this fortnight needed it'} · from your answer “${String(b.note || '').split(' — ')[0]}”`
