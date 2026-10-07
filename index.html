@@ -2915,11 +2915,244 @@
      Between two beds. These three lines are nobody's: leave them as they are.
      ────────────────────────────────────────────────────────────────── */
   /* ═══ MGR BED: Targets — begin ═══ */
-  /* The targets: running, proposed and finished, each with its pace.
-     Until the section has a layout of its own, the scoreboard keeps the
-     width it was drawn for -- stretched across the page its pace charts
-     grew a hand's height each. */
-  .mgr-bed-t > .mgr-slot{max-width:760px;}
+  /* The targets, laid out as the canvas draws them: the Manager's band
+     with the four counts, the composer beside its read, the running
+     targets as one table on one scale each, then what finished beside
+     what it taught. Hairlines, not shadows; oxide only on "Set this
+     target". */
+  .mgr-bed-t > .mgr-slot{max-width:none;}
+  .mgr-tg-w{display:flex;flex-direction:column;gap:var(--ow-sp-20);min-width:0;}
+  .mgr-bed-t .ow-pan-h{height:auto;min-height:44px;flex-wrap:wrap;row-gap:var(--ow-sp-4);
+    padding:var(--ow-sp-8) var(--ow-sp-16);background:var(--ow-paper);}
+  .mgr-tg-pt{font-size:var(--ow-t-14);font-weight:var(--ow-fw-700);color:var(--ow-ink-900);min-width:0;}
+  .mgr-bed-t .ow-pan-nt{margin-left:auto;}
+  .mgr-tg-fig{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;white-space:nowrap;}
+  .mgr-tg-micro{font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);letter-spacing:.08em;text-transform:uppercase;
+    color:var(--ow-ink-600);white-space:nowrap;}
+
+  /* The band: the Manager, its counted line, and the four counts. */
+  .mgr-tg-hd{background:var(--ow-steel-950);border-radius:var(--ow-r-lg);color:var(--ow-paper);
+    padding:var(--ow-sp-16) var(--ow-sp-20);display:grid;grid-template-columns:72px minmax(0,1fr) auto;
+    gap:var(--ow-sp-20);align-items:center;}
+  .mgr-tg-gm{position:relative;width:72px;height:72px;border-radius:var(--ow-r-pill);background:var(--ow-paper);
+    color:var(--ow-steel-950);display:grid;place-items:center;}
+  .mgr-tg-gm-g{width:40px;height:40px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;}
+  .mgr-tg-gm i{position:absolute;right:2px;bottom:2px;width:16px;height:16px;box-sizing:border-box;
+    border-radius:var(--ow-r-pill);border:3px solid var(--ow-steel-950);background:var(--ow-verdigris);}
+  .mgr-tg-hm{min-width:0;}
+  .mgr-tg-hn{margin:0;font-size:var(--ow-t-13);color:var(--ow-navy-line);}
+  .mgr-tg-hn b{color:var(--ow-paper);font-size:var(--ow-t-14);font-weight:var(--ow-fw-700);}
+  .mgr-tg-hw{margin:var(--ow-sp-6) 0 0;font-size:var(--ow-t-20);font-weight:var(--ow-fw-700);
+    line-height:var(--ow-lh-snug);max-width:60ch;color:var(--ow-paper);}
+  .mgr-tg-hr{display:grid;grid-template-columns:repeat(4,auto);border-left:1px solid var(--ow-steel-800);}
+  .mgr-tg-hc{padding:var(--ow-sp-4) var(--ow-sp-16);border-right:1px solid var(--ow-steel-800);
+    display:flex;flex-direction:column;gap:2px;}
+  .mgr-tg-hc:last-child{border-right:0;}
+  .mgr-tg-hc span{font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);letter-spacing:.08em;text-transform:uppercase;
+    color:var(--ow-navy-mute);white-space:nowrap;}
+  .mgr-tg-hv{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-20);font-weight:var(--ow-fw-600);white-space:nowrap;color:var(--ow-paper);}
+  .mgr-tg-hv-on{color:var(--ow-good-ink-on-navy);}
+  .mgr-tg-hv-risk{color:var(--ow-warn-ink-on-navy);}
+  .mgr-tg-hv-off{color:var(--ow-bad-on-navy);}
+
+  /* The composer: four steps on the left, the read on the right. */
+  .mgr-tg-tc{display:grid;grid-template-columns:minmax(0,1fr) 440px;}
+  .mgr-tg-tl{padding:var(--ow-sp-4) var(--ow-sp-16) var(--ow-sp-12);border-right:1px solid var(--ow-rule-soft);min-width:0;}
+  .mgr-tg-step{display:grid;grid-template-columns:24px 72px minmax(0,1fr);gap:var(--ow-sp-12);align-items:start;
+    padding:var(--ow-sp-12) 0;border-bottom:1px solid var(--ow-rule-soft);}
+  .mgr-tg-step:last-child{border-bottom:0;}
+  .mgr-tg-sn{width:24px;height:24px;border-radius:var(--ow-r-pill);background:var(--ow-steel-950);color:var(--ow-paper);
+    display:grid;place-items:center;font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);margin-top:6px;}
+  .mgr-tg-sl{font-size:var(--ow-t-13);font-weight:var(--ow-fw-700);padding-top:var(--ow-sp-8);color:var(--ow-ink-900);}
+  .mgr-tg-opts{display:flex;flex-wrap:wrap;gap:var(--ow-sp-6);min-width:0;}
+  .mgr-tg-opt{all:unset;box-sizing:border-box;display:inline-flex;flex-direction:column;align-items:flex-start;
+    justify-content:center;min-height:36px;padding:var(--ow-sp-4) var(--ow-sp-12);border:1px solid var(--ow-rule);
+    border-radius:var(--ow-r);background:var(--ow-paper);font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);
+    color:var(--ow-ink-900);cursor:pointer;line-height:var(--ow-lh-tight);}
+  .mgr-tg-opt:hover{border-color:var(--ow-steel-100);background:var(--ow-paper-2);}
+  .mgr-tg-opt:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:2px;}
+  .mgr-tg-opt small{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);
+    letter-spacing:.04em;text-transform:uppercase;}
+  .mgr-tg-opt.mgr-tg-on,.mgr-tg-opt.mgr-tg-on:hover{background:var(--ow-steel-950);border-color:var(--ow-steel-950);color:var(--ow-paper);}
+  .mgr-tg-opt.mgr-tg-on small{color:var(--ow-navy-ink);}
+  .mgr-tg-opt:disabled,.mgr-tg-opt:disabled:hover{cursor:default;color:var(--ow-ink-400);background:var(--ow-paper-2);
+    border-style:dashed;border-color:var(--ow-rule);}
+  .mgr-tg-opt-r,.mgr-tg-opt-p{flex-direction:row;align-items:center;gap:var(--ow-sp-6);}
+  .mgr-tg-opt-p{gap:var(--ow-sp-8);padding-left:var(--ow-sp-6);}
+  .mgr-tg-opt-now{cursor:default;color:var(--ow-ink-600);border-style:dashed;}
+  .mgr-tg-opt-now:hover{background:var(--ow-paper);border-color:var(--ow-rule);}
+  .mgr-tg-opt .mgr-tg-fig{font-size:var(--ow-t-13);}
+  .mgr-tg-thin{font-size:var(--ow-t-12);color:var(--ow-ink-600);align-self:center;max-width:var(--ow-measure);}
+  .mgr-tg-av{width:22px;height:22px;border-radius:var(--ow-r-pill);background:var(--ow-steel-800);color:var(--ow-paper);
+    display:inline-grid;place-items:center;font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);flex:none;letter-spacing:0;}
+  .mgr-tg-av svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .mgr-tg-on .mgr-tg-av{background:var(--ow-paper);color:var(--ow-steel-950);}
+  .mgr-tg-av-none{background:var(--ow-rule-soft);color:var(--ow-ink-600);}
+
+  /* The read: the odds as a count, what it says, the path, the
+     checkpoints, the one action. */
+  .mgr-tg-tr{padding:var(--ow-sp-16);background:var(--ow-paper-2);display:flex;flex-direction:column;gap:var(--ow-sp-12);min-width:0;}
+  .mgr-tg-odds{display:flex;align-items:center;gap:var(--ow-sp-16);}
+  .mgr-tg-odds-v{font-size:var(--ow-t-40);font-weight:var(--ow-fw-600);line-height:1;color:var(--ow-ink-900);}
+  .mgr-tg-odds-l{display:flex;flex-direction:column;gap:var(--ow-sp-4);min-width:0;}
+  .mgr-tg-odds-w{display:flex;align-items:center;gap:var(--ow-sp-8);}
+  .mgr-tg-odds-w b{font-size:var(--ow-t-14);font-weight:var(--ow-fw-700);color:var(--ow-ink-900);}
+  .mgr-tg-odds-l small{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .mgr-tg-sig{width:9px;height:9px;border-radius:var(--ow-r-pill);background:var(--ow-ink-400);flex:none;display:inline-block;
+    outline:3px solid var(--ow-rule-soft);}
+  .mgr-tg-sig-good{background:var(--ow-verdigris);outline-color:var(--ow-verdigris-soft);}
+  .mgr-tg-sig-warn{background:var(--ow-amber);outline-color:var(--ow-amber-soft);}
+  .mgr-tg-sig-bad{background:var(--ow-crimson);outline-color:var(--ow-crimson-soft);}
+  .mgr-tg-say{display:flex;gap:var(--ow-sp-10);align-items:flex-start;margin:0;font-size:var(--ow-t-13);
+    line-height:var(--ow-lh-normal);color:var(--ow-ink-900);max-width:var(--ow-measure);}
+  .mgr-tg-gmini{width:24px;height:24px;border-radius:var(--ow-r-pill);background:var(--ow-steel-950);color:var(--ow-paper);
+    display:grid;place-items:center;flex:none;}
+  .mgr-tg-gmini svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .mgr-tg-bridge{display:flex;flex-direction:column;border:1px solid var(--ow-rule);border-radius:var(--ow-r);
+    background:var(--ow-paper);overflow:hidden;}
+  .mgr-tg-br{display:grid;grid-template-columns:16px minmax(0,1fr) auto auto;gap:var(--ow-sp-10);align-items:center;
+    padding:var(--ow-sp-8) var(--ow-sp-12);border-bottom:1px solid var(--ow-rule-soft);font-size:var(--ow-t-12);color:var(--ow-ink-900);}
+  .mgr-tg-br:last-child{border-bottom:0;}
+  .mgr-tg-br i{width:10px;height:10px;border-radius:var(--ow-r-pill);background:var(--ow-steel-100);display:block;margin:0 auto;}
+  .mgr-tg-br-st i{background:var(--ow-ink-400);}
+  .mgr-tg-br-mv i{background:var(--ow-steel-800);}
+  .mgr-tg-br-l{min-width:0;}
+  .mgr-tg-br-l small{display:block;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .mgr-tg-br-d{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);color:var(--ow-verdigris);white-space:nowrap;}
+  .mgr-tg-br-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);min-width:64px;text-align:right;white-space:nowrap;}
+  .mgr-tg-br-none{color:var(--ow-ink-600);}
+  .mgr-tg-br-end{background:var(--ow-paper-2);font-weight:var(--ow-fw-700);}
+  .mgr-tg-br-end.mgr-tg-ok i{background:var(--ow-verdigris);}
+  .mgr-tg-br-end.mgr-tg-no i{background:var(--ow-crimson);}
+  .mgr-tg-cpw .mgr-tg-micro{display:block;margin-bottom:var(--ow-sp-6);}
+  .mgr-tg-cps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--ow-rule);
+    border:1px solid var(--ow-rule);border-radius:var(--ow-r);overflow:hidden;}
+  .mgr-tg-cps div{background:var(--ow-paper);padding:var(--ow-sp-8) var(--ow-sp-10);display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .mgr-tg-cps b{font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .mgr-tg-cps small{font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;}
+  .mgr-tg-cpn{margin:var(--ow-sp-6) 0 0;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .mgr-tg-warn{display:flex;gap:var(--ow-sp-8);align-items:flex-start;margin:0;padding:var(--ow-sp-8) var(--ow-sp-10);
+    border-radius:var(--ow-r-sm);background:var(--ow-amber-soft);color:var(--ow-amber-ink);font-size:var(--ow-t-12);}
+  .mgr-tg-warn svg{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .mgr-tg-acts{display:flex;gap:var(--ow-sp-8);align-items:center;flex-wrap:wrap;}
+  .mgr-tg-actp{display:none;}
+  .mgr-tg-ask{text-decoration:none;}
+
+  /* Running: one row per target, every mark on one scale from where it
+     started to the aim. */
+  .mgr-tg-pp{padding:var(--ow-sp-12) var(--ow-sp-16);border-bottom:1px solid var(--ow-rule-soft);}
+  .mgr-tg-pph{margin:0 0 var(--ow-sp-8);font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .mgr-tg-pph b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  /* A proposal is one of the panel's rows: what it is and its aim, the
+     arithmetic across the middle, and who would own it with the two taps
+     at the end. */
+  .mgr-bed-t .mgr-tg-pp .mgr-pp-list{display:flex;flex-direction:column;padding:0;}
+  .mgr-bed-t .mgr-tg-pp .mgr-pp{display:grid;grid-template-columns:200px minmax(0,1fr) minmax(0,auto);
+    column-gap:var(--ow-sp-16);row-gap:var(--ow-sp-8);align-items:center;}
+  .mgr-bed-t .mgr-tg-pp .mgr-pp-h{grid-column:1;grid-row:1;}
+  .mgr-bed-t .mgr-tg-pp .mgr-pp-aim{grid-column:1;grid-row:2;}
+  .mgr-bed-t .mgr-tg-pp .mgr-pp-bars{grid-column:2;grid-row:1/3;}
+  .mgr-bed-t .mgr-tg-pp .mgr-pp-own{grid-column:3;grid-row:1;display:flex;flex-wrap:wrap;gap:var(--ow-sp-6);justify-content:flex-end;}
+  .mgr-bed-t .mgr-tg-pp .mgr-pp-row{grid-column:3;grid-row:2;justify-content:flex-end;}
+  .mgr-bed-t .mgr-tg-pp .mgr-pp-back,.mgr-bed-t .mgr-tg-pp .mgr-pp-why{grid-column:1/-1;}
+  .mgr-bed-t .mgr-pp-own .mgr-tg-opt{padding-top:2px;padding-bottom:2px;}
+  .mgr-bed-t .mgr-pp-own .mgr-tg-av{width:20px;height:20px;}
+  .mgr-bed-t .mgr-pp-own .mgr-tg-av svg{width:12px;height:12px;}
+  .mgr-tg-lgd{display:flex;gap:var(--ow-sp-16);flex-wrap:wrap;padding:var(--ow-sp-10) var(--ow-sp-16);
+    border-bottom:1px solid var(--ow-rule-soft);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .mgr-tg-lgd span{display:inline-flex;align-items:center;gap:var(--ow-sp-6);}
+  .mgr-tg-lg-sw{width:16px;height:8px;border-radius:var(--ow-r-pill);background:var(--ow-steel-800);display:inline-block;}
+  .mgr-tg-lg-pc{width:2px;height:12px;background:var(--ow-ink-900);display:inline-block;}
+  .mgr-tg-lg-rg,.mgr-tg-lg-pl{width:11px;height:11px;box-sizing:border-box;border-radius:var(--ow-r-pill);display:inline-block;}
+  .mgr-tg-lg-rg{border:2px solid var(--ow-ink-600);background:var(--ow-paper);}
+  .mgr-tg-lg-pl{background:var(--ow-verdigris);border:2px solid var(--ow-paper);outline:1px solid var(--ow-verdigris);}
+  .mgr-tg-th,.mgr-tg-row{display:grid;grid-template-columns:220px minmax(0,1fr) 124px 104px 104px 196px;gap:var(--ow-sp-16);}
+  .mgr-tg-th{padding:var(--ow-sp-8) var(--ow-sp-16);background:var(--ow-paper-2);border-bottom:1px solid var(--ow-rule-soft);}
+  .mgr-tg-th span{font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);letter-spacing:.08em;text-transform:uppercase;
+    color:var(--ow-ink-600);white-space:nowrap;}
+  .mgr-tg-row{align-items:center;padding:var(--ow-sp-12) var(--ow-sp-16);border-bottom:1px solid var(--ow-rule-soft);}
+  .mgr-tg-row:last-child{border-bottom:0;}
+  .mgr-tg-rn{min-width:0;}
+  .mgr-tg-rn b{display:block;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);line-height:var(--ow-lh-snug);color:var(--ow-ink-900);}
+  .mgr-tg-rn small{display:block;margin-top:var(--ow-sp-4);font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:var(--ow-lh-normal);}
+  .mgr-tg-rn .mgr-tg-av{width:20px;height:20px;vertical-align:middle;margin-right:var(--ow-sp-4);}
+  .mgr-tg-rn .mgr-tg-av svg{width:12px;height:12px;}
+  .mgr-tg-two{color:var(--ow-amber-ink);font-weight:var(--ow-fw-600);}
+  .mgr-tg-trw{display:flex;flex-direction:column;gap:var(--ow-sp-6);min-width:0;}
+  .mgr-tg-trk{position:relative;height:10px;border-radius:var(--ow-r-pill);background:var(--ow-rule-soft);margin:0 7px;}
+  .mgr-tg-f{position:absolute;left:0;top:0;bottom:0;border-radius:var(--ow-r-pill);}
+  .mgr-tg-t-vg{background:var(--ow-verdigris);}
+  .mgr-tg-t-am{background:var(--ow-amber);}
+  .mgr-tg-t-cr{background:var(--ow-crimson);}
+  .mgr-tg-t-nt{background:var(--ow-steel-800);}
+  .mgr-tg-pc{position:absolute;top:-5px;bottom:-5px;width:2px;margin-left:-1px;background:var(--ow-ink-900);border-radius:var(--ow-r-pill);}
+  .mgr-tg-rg,.mgr-tg-pl{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;box-sizing:border-box;border-radius:var(--ow-r-pill);}
+  .mgr-tg-rg{border:2px solid var(--ow-ink-600);background:var(--ow-paper);}
+  .mgr-tg-pl{background:var(--ow-verdigris);border:2px solid var(--ow-paper);outline:1px solid var(--ow-verdigris);}
+  .mgr-tg-trx{display:flex;justify-content:space-between;gap:var(--ow-sp-8);font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .mgr-tg-trx b{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
+  .mgr-tg-rl,.mgr-tg-ro{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .mgr-tg-rl .mgr-tg-fig{font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .mgr-tg-rl small{font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:var(--ow-lh-snug);}
+  .mgr-tg-rl small.mgr-tg-dn{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
+  .mgr-tg-rl small.mgr-tg-plan{color:var(--ow-verdigris);font-weight:var(--ow-fw-600);}
+  .mgr-tg-ro .mgr-tg-fig{font-size:var(--ow-t-20);font-weight:var(--ow-fw-600);line-height:var(--ow-lh-tight);color:var(--ow-ink-900);}
+  .mgr-tg-ro small{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .mgr-tg-ro small.mgr-tg-plan{color:var(--ow-verdigris);font-weight:var(--ow-fw-600);}
+  .mgr-tg-st{border:0;cursor:pointer;font-family:inherit;}
+  .mgr-tg-st:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:2px;}
+  .mgr-tg-ra{display:flex;flex-direction:column;align-items:flex-start;gap:2px;font-size:var(--ow-t-12);
+    line-height:var(--ow-lh-snug);min-width:0;color:var(--ow-ink-900);}
+  .mgr-tg-ra b{font-weight:var(--ow-fw-600);}
+  .mgr-tg-ra small{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .mgr-bed-t .mgr-tg-dec{color:var(--ow-sky);}
+  .mgr-bed-t .mgr-tg-dec:hover{color:var(--ow-steel-950);}
+  .mgr-tg-none{color:var(--ow-ink-600);}
+  .mgr-tg-why{grid-column:1/-1;margin:0;padding:var(--ow-sp-8) var(--ow-sp-12);background:var(--ow-paper-2);
+    border-radius:var(--ow-r-sm);font-size:var(--ow-t-12);color:var(--ow-ink-600);max-width:var(--ow-measure);}
+
+  /* What finished, beside what it taught. */
+  .mgr-tg-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--ow-sp-20);align-items:start;}
+  .mgr-tg-fin{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:var(--ow-sp-12);align-items:center;
+    padding:var(--ow-sp-10) var(--ow-sp-16);border-bottom:1px solid var(--ow-rule-soft);}
+  .mgr-tg-fin + .ow-mini{border-top:0;}
+  .mgr-tg-fm{width:22px;height:22px;border-radius:var(--ow-r-sm);display:grid;place-items:center;background:var(--ow-rule-soft);
+    color:var(--ow-ink-600);font-size:var(--ow-t-12);font-weight:var(--ow-fw-700);}
+  .mgr-tg-fm-m{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .mgr-tg-fm-x{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .mgr-tg-fm svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .mgr-tg-fb{min-width:0;}
+  .mgr-tg-fb b{display:block;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
+  .mgr-tg-fb small{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .mgr-tg-fd{font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+  .mgr-tg-rule{display:grid;grid-template-columns:24px minmax(0,1fr);gap:var(--ow-sp-12);padding:var(--ow-sp-12) var(--ow-sp-16);
+    border-bottom:1px solid var(--ow-rule-soft);font-size:var(--ow-t-12);line-height:var(--ow-lh-normal);color:var(--ow-ink-900);}
+  .mgr-tg-rule:last-child{border-bottom:0;}
+  .mgr-tg-rule b{font-weight:var(--ow-fw-700);}
+
+  /* A narrow console: the read under the steps, the table's figures
+     under each target's name, the two lists one above the other. */
+  @media (max-width:1280px){
+    .mgr-tg-hd{grid-template-columns:72px minmax(0,1fr);}
+    .mgr-tg-hr{grid-column:1/-1;border-left:0;grid-template-columns:repeat(4,minmax(0,1fr));}
+    .mgr-tg-hc:first-child{padding-left:0;}
+    .mgr-tg-tc,.mgr-tg-cols{grid-template-columns:minmax(0,1fr);}
+    .mgr-tg-tl{border-right:0;border-bottom:1px solid var(--ow-rule-soft);}
+    .mgr-tg-th{display:none;}
+    .mgr-tg-row{grid-template-columns:minmax(0,1fr) 124px 104px 104px;}
+    .mgr-tg-rn,.mgr-tg-ra{grid-column:1/-1;}
+    .mgr-bed-t .mgr-tg-pp .mgr-pp-bars{grid-column:2/-1;}
+    .mgr-bed-t .mgr-tg-pp .mgr-pp-own{grid-column:1/3;grid-row:3;justify-content:flex-start;}
+    .mgr-bed-t .mgr-tg-pp .mgr-pp-row{grid-row:3;}
+  }
+  @media (max-width:1023px){
+    .mgr-bed-t .mgr-tg-pp .mgr-pp{display:flex;flex-direction:column;align-items:stretch;}
+    .mgr-bed-t .mgr-tg-pp .mgr-pp-own{justify-content:flex-start;}
+  }
   /* ═══ MGR BED: Targets — end ═══ */
   /* ──────────────────────────────────────────────────────────────────
      Between two beds. These three lines are nobody's: leave them as they are.
@@ -3658,6 +3891,55 @@
        Between two beds. These three lines are nobody's: leave them as they are.
        ────────────────────────────────────────────────────────────────── */
     /* ═══ MGR BED: Targets — begin ═══ */
+    /* The phone's own targets: the band's counts two by two, every step
+       of the composer full width with thumb-sized choices, its one action
+       held at the foot of the composer above the tab bar while it is on
+       screen, each running target a card with its track across it. */
+    .mgr-tg-w{gap:var(--ow-sp-16);}
+    .mgr-tg-hd{grid-template-columns:56px minmax(0,1fr);gap:var(--ow-sp-12);padding:var(--ow-sp-16);}
+    .mgr-tg-gm{width:56px;height:56px;}
+    .mgr-tg-gm-g{width:32px;height:32px;}
+    .mgr-tg-hw{font-size:var(--ow-t-16);}
+    .mgr-tg-hr{grid-column:1/-1;border-left:0;grid-template-columns:repeat(2,minmax(0,1fr));row-gap:var(--ow-sp-12);
+      padding-top:var(--ow-sp-12);border-top:1px solid var(--ow-steel-800);}
+    .mgr-tg-hc{padding:0 var(--ow-sp-12);}
+    .mgr-tg-hc:nth-child(odd){padding-left:0;}
+    .mgr-tg-hc:nth-child(2){border-right:0;}
+    .mgr-tg-tc{grid-template-columns:minmax(0,1fr);}
+    .mgr-tg-tl{border-right:0;border-bottom:1px solid var(--ow-rule-soft);padding:0 var(--ow-sp-16);}
+    .mgr-tg-step{grid-template-columns:24px minmax(0,1fr);gap:var(--ow-sp-8) var(--ow-sp-12);}
+    .mgr-tg-step .mgr-tg-opts{grid-column:1/-1;}
+    .mgr-tg-sn{margin-top:0;}
+    .mgr-tg-sl{padding-top:2px;font-size:var(--ow-t-14);}
+    .mgr-tg-opt{min-height:var(--ow-tap);font-size:var(--ow-t-14);}
+    .mgr-tg-say,.mgr-tg-rule{font-size:var(--ow-t-14);}
+    .mgr-tg-cps{grid-template-columns:repeat(2,minmax(0,1fr));}
+    /* The one action rides above the tab bar, as the phone's Brief carries
+       its next move: what would be set, and the tap that sets it. (The
+       page itself is the scroller here, so a sticky bar would never
+       stick.) The section keeps room for it at its foot. */
+    .mgr-tg-tr .mgr-tg-acts .mgr-tg-set{display:none;}
+    .mgr-tg-tr .mgr-tg-acts .btn{flex:1 1 auto;min-height:var(--ow-tap);box-sizing:border-box;}
+    .mgr-bed-t{padding-bottom:76px;}
+    .mgr-tg-actp{display:flex;align-items:center;gap:var(--ow-sp-12);position:fixed;left:0;right:0;z-index:80;
+      bottom:calc(var(--mobile-bottomnav-h) + env(safe-area-inset-bottom));padding:var(--ow-sp-10) var(--ow-sp-16);
+      background:var(--ow-paper);border-top:1px solid var(--ow-rule);}
+    .mgr-tg-actp-t{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;}
+    .mgr-tg-actp-t b{font-size:var(--ow-t-14);font-weight:var(--ow-fw-700);color:var(--ow-ink-900);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .mgr-tg-actp-t small{font-size:var(--ow-t-12);color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .mgr-tg-actp .btn{flex:none;min-height:var(--ow-tap);box-sizing:border-box;}
+    .mgr-tg-lgd{gap:var(--ow-sp-8) var(--ow-sp-12);}
+    .mgr-bed-t .mgr-tg-pp .mgr-pp-list{grid-template-columns:minmax(0,1fr);}
+    .mgr-tg-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--ow-sp-12);padding:var(--ow-sp-16);}
+    .mgr-tg-rn,.mgr-tg-trw,.mgr-tg-ra{grid-column:1/-1;}
+    .mgr-tg-rn b{font-size:var(--ow-t-14);}
+    .mgr-tg-rs{grid-column:1/-1;}
+    .mgr-tg-st{height:auto;min-height:32px;padding:0 var(--ow-sp-10);font-size:var(--ow-t-12);}
+    .mgr-bed-t .mgr-tg-dec{min-height:var(--ow-tap);display:inline-flex;align-items:center;}
+    .mgr-tg-fin,.mgr-tg-rule{padding:var(--ow-sp-12) var(--ow-sp-16);}
+    .mgr-tg-fb b{font-size:var(--ow-t-14);}
+    .mgr-tg-fb small,.mgr-tg-rn small,.mgr-tg-rl small,.mgr-tg-ro small{font-size:var(--ow-t-12);}
     /* ═══ MGR BED: Targets — end ═══ */
     /* ──────────────────────────────────────────────────────────────────
        Between two beds. These three lines are nobody's: leave them as they are.
@@ -132480,9 +132762,29 @@ const MANAGER_OBJECTIVES = {
    (collections, profit, sales); a level is read as it stands today
    (debtors, dead stock, cash), so its baseline matters -- 8,000,000 of
    debt coming down to 6,500,000 against an aim of 5,000,000 is half the
-   distance, not 130% of the target. */
+   distance, not 130% of the target.
+
+   unit is what the figure is counted in -- ugx, pct (percentage points),
+   days or count -- so nothing that draws a target has to assume money.
+   A level also carries at(day): where it stood at the END of that day,
+   from the books' own dated records (the balance sheet's readers, the
+   debtor and stock-days definitions of Q17/Q18), so a target that has
+   finished is judged where it stood on its last day and never on
+   today's figure, and its past periods can be read for the composer's
+   safe / stretch / bold. at() answers null where the books cannot say
+   (no sales in the window to take a margin of), never a zero. A level
+   with window: 30 is a month's figure read over the 30 days to the day
+   (net profit a month, margin, quotes won, WhatsApp orders a month), and
+   its "now" is read to yesterday: today is not over, and half a day of
+   rent against two sales is not a day the past periods were read on. A
+   level with span is read over a target's own days, from its first to
+   its last (the lowest the cash stood); reads is how many days of books one reading
+   looks back over when that is longer (debtor days read 90 days of
+   credit sales), so a past period older than the books is never read.
+   basis says, in the owner's words, how it is read. */
 const MANAGER_METRICS = {
-  collections: { label: 'Collect', unit: 'money', kind: 'flow', direction: 'up',
+  collections: { label: 'Collect', unit: 'ugx', kind: 'flow', direction: 'up',
+    basis: 'debt payments received, day by day, as the review counts them',
     /* Walks real days, so it must be handed real days: a row with no
        period would otherwise step from nothing and never arrive. Every
        adopted target carries both dates; this answers 0 for anything
@@ -132490,18 +132792,85 @@ const MANAGER_METRICS = {
     measure: (from, to)=>{
       if(!/^\d{4}-\d{2}-\d{2}$/.test(String(from||'')) || !/^\d{4}-\d{2}-\d{2}$/.test(String(to||''))) return 0;
       let n = 0; const stop = to < todayISO() ? to : todayISO();
-      for(let d = from; d <= stop; d = anShiftDate(d, 1)) n += debtCollectionsOn(d).total;
+      /* A day's collections are read once per reading of the books when
+         the Targets section's keeper is there: its past periods walk the
+         same days many times over. */
+      const day = (d)=> typeof mgrTgMemo === 'function' ? mgrTgMemo('dc|' + d, ()=> debtCollectionsOn(d).total) : debtCollectionsOn(d).total;
+      for(let d = from; d <= stop; d = anShiftDate(d, 1)) n += day(d);
       return n; } },
-  gross_profit: { label: 'Gross profit', unit: 'money', kind: 'flow', direction: 'up',
+  gross_profit: { label: 'Gross profit', unit: 'ugx', kind: 'flow', direction: 'up',
+    basis: 'goods sold less what they cost, on the invoices of the period',
     measure: (from, to)=> anOverallTotals(anInvoicesInRange(from, to)).profit },
-  sales: { label: 'Sales', unit: 'money', kind: 'flow', direction: 'up',
+  sales: { label: 'Sales', unit: 'ugx', kind: 'flow', direction: 'up',
+    basis: 'goods invoiced in the period',
     measure: (from, to)=> anOverallTotals(anInvoicesInRange(from, to)).sales },
-  debtors_total: { label: 'Money owed to you', unit: 'money', kind: 'level', direction: 'down',
-    measure: ()=> (data.customers||[]).reduce((n, c)=> n + (Number(c.debt) > 0.5 ? Number(c.debt) : 0), 0) },
-  dead_stock_value: { label: 'Dead stock', unit: 'money', kind: 'level', direction: 'down',
-    measure: ()=> dashInventoryHealth().deadValue },
-  cash_on_hand: { label: 'Cash in hand', unit: 'money', kind: 'level', direction: 'up',
-    measure: ()=> cashOnHandByAccount().total },
+  debtors_total: { label: 'Money owed to you', unit: 'ugx', kind: 'level', direction: 'down',
+    basis: 'what customers owe; a past day from their own dated ledgers',
+    measure: ()=> (data.customers||[]).reduce((n, c)=> n + (Number(c.debt) > 0.5 ? Number(c.debt) : 0), 0),
+    at: (d)=> d >= todayISO() ? MANAGER_METRICS.debtors_total.measure() : receivablesAsAt(d) },
+  dead_stock_value: { label: 'Dead stock', unit: 'ugx', kind: 'level', direction: 'down',
+    basis: 'stock with no sale in the quiet window; a past day valued at today\'s cost',
+    measure: ()=> dashInventoryHealth().deadValue,
+    at: (d)=> d >= todayISO() ? MANAGER_METRICS.dead_stock_value.measure() : mgrTgDeadStockAt(d) },
+  cash_on_hand: { label: 'Cash in hand', unit: 'ugx', kind: 'level', direction: 'up',
+    basis: 'cash, mobile money and bank together, as the cash book holds them',
+    measure: ()=> cashOnHandByAccount().total,
+    at: (d)=> d >= todayISO() ? MANAGER_METRICS.cash_on_hand.measure() : shCashAt(d) },
+  net_profit: { label: 'Net profit a month', unit: 'ugx', kind: 'level', direction: 'up', window: 30, signed: true,
+    basis: 'the Statements\' net profit for the 30 days to yesterday, whole days only',
+    measure: ()=> MANAGER_METRICS.net_profit.at(anShiftDate(todayISO(), -1)),
+    at: (d)=> incomeStatement(anShiftDate(d, -29), d).netProfit },
+  margin_pct: { label: 'Gross margin', unit: 'pct', kind: 'level', direction: 'up', window: 30,
+    basis: 'profit as a share of goods sold over the 30 days to yesterday, the health check\'s reading on whole days',
+    round: (v)=> Math.round(v * 10) / 10,
+    measure: ()=> MANAGER_METRICS.margin_pct.at(anShiftDate(todayISO(), -1)),
+    at: (d)=>{ const t = anOverallTotals(anInvoicesInRange(anShiftDate(d, -29), d));
+      return t.sales > 0 ? t.profit / t.sales * 100 : null; } },
+  debtor_days: { label: 'Debtor days', unit: 'days', kind: 'level', direction: 'down', reads: 90,
+    basis: 'what customers owe over credit sales a day across 90 days (Q18)',
+    measure: ()=> mgrDebtorDays(todayISO()).days,
+    at: (d)=>{
+      if(d >= todayISO()) return MANAGER_METRICS.debtor_days.measure();
+      const r = mgrDebtorDays(d);
+      return r.creditSales > 0 ? receivablesAsAt(d) / (r.creditSales / r.windowDays) : null; } },
+  stock_days: { label: 'Stock days', unit: 'days', kind: 'level', direction: 'down', reads: 30,
+    basis: 'shelf value over what the shelf sold a day at cost, the Inventory screen\'s (Q17)',
+    measure: ()=> mgrDaysOfStock(todayISO()).days,
+    at: (d)=>{
+      if(d >= todayISO()) return MANAGER_METRICS.stock_days.measure();
+      const r = mgrDaysOfStock(d);
+      return r.cogsPerDay > 0 ? stockValueAsAt(d).value / r.cogsPerDay : null; } },
+  lowest_cash: {
+    /* A FLOOR, read over the target's own days (span): the lowest cash,
+       mobile money and bank stood at the end of a day from its first day
+       to its last -- "cash never under" is broken by any day of it, not
+       only by the last 30. A past period is read the same way, over its
+       own days; the days still ahead of a running one are read on the
+       committed line (floor(), the Targets section's mgrTgFloorRead),
+       never extrapolated. */
+    label: 'Lowest cash in a month', unit: 'ugx', kind: 'level', direction: 'up', span: true,
+    basis: 'the lowest cash, mobile money and bank stood at the end of a day over the target\'s own days; the days ahead on the committed line',
+    measure: (from, to)=> mgrTgCashLowOver(from || todayISO(), to || todayISO()),
+    at: (d)=> mgrTgCashLowOver(anShiftDate(d, -29), d),
+    floor: (from, to, aim)=> mgrTgFloorRead(from, to, aim) },
+  quotes_won_pct: { label: 'Quotes won', unit: 'pct', kind: 'level', direction: 'up', window: 30,
+    basis: 'quotes made 30 to 60 days before, invoiced within 30 days, the growth reading\'s rule, read to yesterday',
+    round: (v)=> Math.round(v * 10) / 10,
+    measure: ()=> MANAGER_METRICS.quotes_won_pct.at(anShiftDate(todayISO(), -1)),
+    at: (d)=>{ const r = managerGrowthBaseline(Date.parse(d + 'T23:59:59Z')).quotes.rate;
+      return r == null ? null : r * 100; } },
+  wa_orders: {
+    /* Counted only from the first order the books hold as born in a
+       chat: a month before the shop took WhatsApp orders here is not
+       recorded, never a month of none. */
+    label: 'WhatsApp orders a month', unit: 'count', kind: 'level', direction: 'up', window: 30,
+    basis: 'orders born in a WhatsApp chat, not voided, dated in the 30 days to yesterday, counted from the first one recorded',
+    measure: ()=> MANAGER_METRICS.wa_orders.at(anShiftDate(todayISO(), -1)),
+    at: (d)=>{ const from = anShiftDate(d, -29);
+      const first = mgrTgWaFrom();
+      if(!first || from < first) return null;
+      return (data.savedQuotes||[]).filter(q=> q && q.originWa && !q.voided
+        && String(q.date||'').slice(0, 10) >= from && String(q.date||'').slice(0, 10) <= d).length; } },
 };
 
 /* THE SCOREBOARD IS DERIVED, NEVER STORED -- the same law as a move's
@@ -132517,51 +132886,141 @@ function managerScoreProgress(row){
   const to = String(b.to || '');
   const aim = Number(b.aim) || 0;
   const baseline = Number(b.baseline) || 0;
-  const actual = m.measure(from, to);
   const today = todayISO();
+  /* A LEVEL THAT HAS FINISHED is judged where it stood on its last day,
+     read from the books' dated records -- never on today's figure, which
+     is a different day's story (a debt book that grew after a target met
+     would otherwise turn it into a miss months later). A level read over
+     the target's own days (span: the lowest the cash stood) is read over
+     them, finished or not. */
+  const ended = !!to && to < today;
   const daysLeft = to ? Math.max(0, Math.round((new Date(to + 'T00:00:00Z') - new Date(today + 'T00:00:00Z')) / 86400000)) : 0;
+  const owner = b.owner ? { owner: String(b.owner) } : {};
+  /* A reading the books cannot give (a margin with nothing sold) is not
+     known, never zero: no progress, no pace, no verdict. A reading that
+     THROWS is not known on its own row and says why there -- one bad day
+     on one old target must never take the whole scoreboard down with it. */
+  const unknown = (error)=> ({ metric: b.metric, label: m.label, unit: m.unit, aim, baseline, actual: null,
+    direction: m.direction, measure_kind: m.kind, from, to, days_left: daysLeft,
+    finished: ended, met: null, pct: null, pace: null, why: b.why || '', ...owner, ...(error ? { error } : {}) });
+  let read;
+  try {
+    read = (ended && m.kind === 'level' && !m.span && typeof m.at === 'function') ? m.at(to) : m.measure(from, to);
+  } catch(e){ return unknown((e && e.message) || String(e)); }
+  const actual = read == null || !Number.isFinite(Number(read)) ? null : Number(read);
+  const rnd = (v)=> m.round ? m.round(v) : Math.round(v);
+  if(actual == null) return unknown(null);
+  /* Where a projection can go: money owed, a shelf, a day count, a count
+     or cash never below nothing (net profit can be a loss), a share never
+     above the whole. */
+  const fit = (v)=>{
+    let n = Number(v);
+    if(m.direction === 'down' || m.unit === 'count' || (m.unit === 'ugx' && !m.signed)) n = Math.max(0, n);
+    if(m.unit === 'pct') n = Math.min(100, n);
+    return n;
+  };
   /* A flow starts at nothing and climbs to the aim. A level starts where
      it was and has to travel to the aim, so the distance is what counts
      -- and an aim already met before the week began is 100%, not more. */
+  const met = m.direction === 'down' ? actual <= aim : actual >= aim;
+  /* A HOLD: a level whose aim was already met where it started -- cash
+     never under a floor it stood above, debt kept under a line it was
+     already under. There is no distance to travel, only a line to keep:
+     it is 100% while held and 0% once broken, and the line it must hold
+     today is the aim itself. Read as a journey it scored 100% while
+     broken, the distance running the wrong way. A floor read over the
+     target's own days is always a line to hold: its lowest can only fall. */
+  const hold = m.kind === 'level' && (!!m.span || (m.direction === 'down' ? baseline <= aim : baseline >= aim));
   let pct;
   if(m.kind === 'flow') pct = aim > 0 ? Math.round(actual / aim * 100) : null;
   else {
     const span = baseline - aim;
-    pct = Math.abs(span) < 0.5 ? (m.direction === 'down' ? (actual <= aim ? 100 : 0) : (actual >= aim ? 100 : 0))
+    pct = hold || Math.abs(span) < 0.5 ? (met ? 100 : 0)
       : Math.round((baseline - actual) / span * 100);
   }
   /* Capped at 100: beating a target is reported by met and by the two
      figures standing side by side, never as "150% of target" -- a score
      above the commitment is how a manager flatters itself. */
   if(pct != null) pct = Math.max(0, Math.min(100, pct));
-  const met = m.direction === 'down' ? actual <= aim : actual >= aim;
-  /* PACE -- where a target on course would stand TODAY. Progress alone
+  /* PACE -- where a target on course would stand by now. Progress alone
      says 900,000 of 3,000,000; pace says 900,000 where 1,300,000 would
      be level, with 3 days left, which is the difference between a
-     warning and a verdict. A flow accrues across the week; a level
+     warning and a verdict. A flow accrues across the period; a level
      travels from where it started. The projection is the observed rate
      carried to the end of the period -- arithmetic on the past, said as
-     "at this rate", never a forecast. */
+     "at this rate", never a forecast.
+     WHOLE DAYS ONLY. Today is not over: a morning's takings read as a
+     whole day's would call a target set an hour ago At risk. The road
+     and the rate are read to the end of yesterday; a target in its first
+     day has no rate yet -- it is On track until its first whole day is
+     read, and an owner's target lands where the composer said it would
+     (the books' part of the path it was set with). */
   const dayNum = (iso)=> new Date(iso + 'T00:00:00Z').getTime();
   const totalDays = (from && to) ? Math.max(1, Math.round((dayNum(to) - dayNum(from)) / 86400000) + 1) : 0;
-  const elapsedDays = totalDays
-    ? Math.max(0, Math.min(totalDays, Math.round((dayNum(today) - dayNum(from)) / 86400000) + 1)) : 0;
+  const fullDays = !totalDays ? 0 : ended ? totalDays
+    : Math.max(0, Math.min(totalDays, Math.round((dayNum(today) - dayNum(from)) / 86400000)));
+  const slack = m.unit === 'pct' ? 0.05 : 0.5;
+  const better = (a, c)=> m.direction === 'down' ? a <= c + slack : a >= c - slack;
   let pace = null;
-  if(totalDays && elapsedDays){
-    const share = elapsedDays / totalDays;
-    const expected = m.kind === 'flow' ? aim * share : baseline + (aim - baseline) * share;
-    const onCourse = m.direction === 'down' ? actual <= expected + 0.5 : actual >= expected - 0.5;
-    const projected = m.kind === 'flow'
-      ? actual / share
-      : baseline + (actual - baseline) / share;
-    pace = { elapsed_days: elapsedDays, total_days: totalDays,
-      expected: Math.round(expected), on_course: onCourse,
-      behind_by: onCourse ? 0 : Math.round(Math.abs(expected - actual)),
-      at_this_rate: Math.round(projected) };
+  if(totalDays && m.span && !ended && typeof m.floor === 'function'){
+    /* A FLOOR is not carried forward at a rate: the days gone are the
+       books', the days ahead are the committed line's (dated outflows
+       only, never money expected in), and the lowest of them is where it
+       lands. The line runs 30 days; line_to says where it stops. */
+    let f = null;
+    try { f = m.floor(from, to, aim); } catch(e){ f = null; }
+    const onCourse = better(actual, aim);
+    pace = { elapsed_days: fullDays, total_days: totalDays, expected: rnd(aim), on_course: onCourse,
+      behind_by: onCourse ? 0 : rnd(Math.abs(aim - actual)), at_this_rate: f ? rnd(fit(f.low)) : null,
+      ...(f ? { low_on: f.lowOn, low_books: !!f.lowBooks, breaks_on: f.breaksOn || null, broke: !!f.broke, line_to: f.through } : {}) };
+  } else if(totalDays && !fullDays){
+    const p0 = Array.isArray(b.parts) ? b.parts[0] : null;
+    const saved = b.source === 'owner' && p0 && p0.adds !== true && p0.amount != null && Number.isFinite(Number(p0.amount)) ? Number(p0.amount) : null;
+    pace = { elapsed_days: 0, total_days: totalDays, expected: rnd(m.kind === 'flow' ? 0 : hold ? aim : baseline),
+      on_course: true, behind_by: 0, at_this_rate: saved == null ? null : rnd(fit(saved)), first: true };
+  } else if(totalDays){
+    const share = fullDays / totalDays;
+    /* A flow's whole days: from its first day to yesterday. */
+    let done = actual;
+    if(m.kind === 'flow' && !ended){
+      const yesterday = new Date(dayNum(today) - 86400000).toISOString().slice(0, 10);
+      try { const v = Number(m.measure(from, yesterday)); done = Number.isFinite(v) ? v : actual; } catch(e){ done = actual; }
+    }
+    const expected = m.kind === 'flow' ? aim * share : hold ? aim : baseline + (aim - baseline) * share;
+    /* Level within rounding: half a shilling, a day or an order; a
+       twentieth of a point for a margin, where half a point is a lot. */
+    const onCourse = better(done, expected);
+    const projected = m.kind === 'flow' ? done / share : baseline + (actual - baseline) / share;
+    pace = { elapsed_days: fullDays, total_days: totalDays,
+      expected: rnd(expected), on_course: onCourse,
+      behind_by: onCourse ? 0 : rnd(Math.abs(expected - done)),
+      at_this_rate: rnd(fit(projected)) };
   }
-  return { metric: b.metric, label: m.label, aim, baseline, actual: Math.round(actual),
+  /* THE CHECKPOINTS ON ITS ROAD, for a target still running: every
+     Monday from its start to its last day, and the last day itself, each
+     with where the straight road from where it started to the aim has it
+     by the END of that day. The owner's own target carries the list it
+     was set with (body.checkpoints); a weekly one has it derived the
+     same way. The Brief's foresight reads these. */
+  let checkpoints;
+  if(!ended && totalDays >= 1 && /^\d{4}-\d{2}-\d{2}$/.test(from) && /^\d{4}-\d{2}-\d{2}$/.test(to)){
+    const start = m.kind === 'flow' ? 0 : hold ? aim : baseline;
+    const roadAt = (iso)=> rnd(start + (aim - start) * ((Math.round((dayNum(iso) - dayNum(from)) / 86400000) + 1) / totalDays));
+    checkpoints = Array.isArray(b.checkpoints) && b.checkpoints.length
+      ? b.checkpoints.filter(c=> c && /^\d{4}-\d{2}-\d{2}$/.test(String(c.on)) && Number.isFinite(Number(c.value)))
+          .map(c=> ({ on: String(c.on), value: Number(c.value) }))
+      : [];
+    if(!checkpoints.length){
+      for(let i = 0; i < totalDays; i++){
+        const d = new Date(dayNum(from) + i * 86400000).toISOString().slice(0, 10);
+        if(d === to || new Date(d + 'T00:00:00Z').getUTCDay() === 1) checkpoints.push({ on: d, value: roadAt(d) });
+      }
+    }
+  }
+  return { metric: b.metric, label: m.label, unit: m.unit, aim, baseline, actual: rnd(actual),
     direction: m.direction, measure_kind: m.kind, from, to, days_left: daysLeft,
-    finished: !!to && to < today, met, pct, pace, why: b.why || '' };
+    finished: ended, met, pct, pace, why: b.why || '', ...owner, ...(hold ? { hold: true } : {}),
+    ...(checkpoints ? { checkpoints } : {}) };
 }
 
 /* WHAT A PLAY TREATS. A strategy loose in the world is a listicle; one
@@ -133419,7 +133878,7 @@ async function managerRetireDuplicates(dupIds){
     .eq('shop_id', currentShopId).in('id', ids);
   if(r.error) console.warn('Manager: older copies of a proposal not retired:', r.error.message);
 }
-async function managerAdoptTarget(rowId, dupIds){
+async function managerAdoptTarget(rowId, dupIds, owner){
   if(!managerNotesTable || rowId == null) return;
   const cur = await sb.from('manager_notes').select('body, date').eq('shop_id', currentShopId).eq('id', rowId).single();
   const body = (cur.data && cur.data.body) || {};
@@ -133429,13 +133888,88 @@ async function managerAdoptTarget(rowId, dupIds){
   const to = anShiftDate(from, 6);
   body.from = from;
   body.to = to;
-  body.baseline = apRound(m.kind === 'level' ? m.measure(from, to) : m.measure(anShiftDate(from, -7), anShiftDate(from, -1)));
+  const base = m.kind === 'level' ? m.measure(from, to) : m.measure(anShiftDate(from, -7), anShiftDate(from, -1));
+  /* A level the books cannot read today has no starting point, and a
+     target without one would read the whole journey as this week's. */
+  if(base == null || !Number.isFinite(Number(base))){ toast(m.label + ' cannot be read from your books today, so it cannot be taken on yet', 8000); return; }
+  body.baseline = m.round ? m.round(Number(base)) : apRound(base);
+  /* Taken on by the owner's own tap, so it has an owner: the one they
+     picked on the card, or themself -- never nobody. */
+  const who = String(owner || 'you');
+  body.owner = who !== 'you' && (data.staff || []).some(s=> String(s.id) === who) ? who : 'you';
   const up = await sb.from('manager_notes').update({ status: 'open', body })
     .eq('shop_id', currentShopId).eq('id', rowId);
   if(up.error){ toast('Could not adopt that target — ' + up.error.message, 8000); return; }
   await managerRetireDuplicates(dupIds);
   toast(m.label + ' target adopted — the scoreboard reads it from your books from now on');
   renderManager();
+}
+/* THE OWNER'S OWN TARGET (Q16). A meeting's proposal is fixed at one
+   week by managerAdoptTarget; a target the owner composes carries the
+   deadline they chose and the person who owns it, by name. Written in
+   the same shape the scoreboard reads (metric, aim, from, to, baseline),
+   plus what only the owner's target has:
+     owner        'you', or the id of a member of staff on file
+     unit         the metric's unit, so a reader never assumes money
+     source       'owner'
+     parts        the path it was set with, in the target's unit: what
+                  the books already do at their recent rate (adds false)
+                  and what each linked move adds by the Manager's own
+                  sizing (adds true)
+     checkpoints  [{ on, value }] every Monday on the road and the last
+                  day, where the straight road from today's reading to
+                  the aim has it by the end of that day
+     set          what the composer showed when it was set: the choice
+                  (safe / stretch / bold), the percentiles it came from,
+                  and the odds as k of n past periods (null under 6)
+   The baseline is today's reading for a level, and the figure of the
+   last period of the same length for a flow. A level the books cannot
+   read today, a deadline that is not after today, or an owner who is
+   not on file is refused, and the refusal says why. One tap, one row:
+   nothing here runs by itself. */
+async function managerSetOwnerTarget(draft){
+  const d = draft || {};
+  const m = MANAGER_METRICS[d.metric];
+  const no = (why)=>{ toast(why, 8000); return { ok: false, error: why }; };
+  if(!m) return no('That is not something this app can measure, so it cannot be a target');
+  const from = todayISO();
+  const to = String(d.to || '');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(to) || to <= from) return no('A target needs a deadline after today');
+  const aim = Number(d.aim);
+  if(d.aim == null || !Number.isFinite(aim)) return no('A target needs an aim');
+  const rnd = (v)=> m.round ? m.round(Number(v)) : Math.round(Number(v));
+  const days = Math.round((Date.parse(to + 'T00:00:00Z') - Date.parse(from + 'T00:00:00Z')) / 86400000) + 1;
+  const base = m.kind === 'level' ? m.measure(from, to) : m.measure(anShiftDate(from, -days), anShiftDate(from, -1));
+  if(base == null || !Number.isFinite(Number(base))) return no(m.label + ' cannot be read from your books today, so it cannot be a target yet');
+  const owner = String(d.owner || 'you');
+  if(owner !== 'you' && !(data.staff || []).some(s=> String(s.id) === owner)) return no('That owner is not on your staff list');
+  /* A level whose aim is already met today is a line to hold: its
+     checkpoints are the aim itself. */
+  const holds = m.kind === 'level' && (m.direction === 'down' ? Number(base) <= aim : Number(base) >= aim);
+  const start = m.kind === 'flow' ? 0 : holds ? aim : Number(base);
+  const checkpoints = [];
+  for(let i = 0; i < days; i++){
+    const on = anShiftDate(from, i);
+    if(on === to || new Date(on + 'T00:00:00Z').getUTCDay() === 1)
+      checkpoints.push({ on, value: rnd(start + (aim - start) * ((i + 1) / days)) });
+  }
+  const parts = (Array.isArray(d.parts) ? d.parts : []).slice(0, 4).map(p=> ({
+    label: String((p && p.label) || '').slice(0, 80), amount: rnd(Number(p && p.amount) || 0), adds: !!(p && p.adds === true) }))
+    .filter(p=> p.label);
+  const num = (v)=> v != null && Number.isFinite(Number(v)) ? rnd(v) : null;
+  const set = d.set && typeof d.set === 'object' ? {
+    choice: ['safe', 'stretch', 'bold'].includes(d.set.choice) ? d.set.choice : null,
+    p50: num(d.set.p50), p75: num(d.set.p75), p90: num(d.set.p90),
+    periods: Math.max(0, Math.round(Number(d.set.periods) || 0)),
+    odds: d.set.odds && Number(d.set.odds.n) >= 6 ? { k: Math.round(Number(d.set.odds.k) || 0), n: Math.round(Number(d.set.odds.n)) } : null,
+  } : null;
+  const body = { metric: String(d.metric), aim: rnd(aim), from, to, baseline: rnd(base), unit: m.unit,
+    owner, source: 'owner', why: String(d.why || '').slice(0, 200), parts, checkpoints, ...(set ? { set } : {}) };
+  const r = await mgrNoteInsert('target', body, 'open');
+  if(!r.ok) return r;
+  toast(m.label + ' target set — the Targets section reads it from your books from now on');
+  renderManager();
+  return r;
 }
 async function managerDeclineTarget(rowId, dupIds){
   if(!managerNotesTable || rowId == null) return;
@@ -133452,20 +133986,38 @@ async function managerDeclineTarget(rowId, dupIds){
    another. */
 async function managerScoreboard(){
   if(!managerNotesTable) return { targets: [] };
+  /* EVERY TARGET EVER TAKEN ON, not the last twelve rows and not only
+     the last week: the finished ones are the shop's own history -- met
+     or missed, by how much -- and the Targets section, the account and
+     the verdict strip all count from this one read, so they can never
+     disagree. targets holds the running ones and the finished ones
+     alike (x.finished says which); the bound is a guard, not a window. */
   const r = await sb.from('manager_notes').select('id, date, body, status')
     .eq('shop_id', currentShopId).eq('kind', 'target')
-    .order('id', { ascending: false }).limit(12);
+    .order('id', { ascending: false }).limit(500);
   if(r.error) return { targets: [], error: r.error.message };
-  const cutoff = anShiftDate(todayISO(), -7);
-  const open = (r.data||[]).filter(x=> x.status === 'open' && String((x.body||{}).to||'') >= cutoff)
+  const open = (r.data||[]).filter(x=> x.status === 'open')
     .map(x=> ({ id: x.id, ...managerScoreProgress(x) })).filter(x=> x.metric);
+  /* THE ONE COUNT of what finished, for every surface that counts it:
+     met is met === true, missed is met === false, and a finished target
+     whose end the books cannot read is not known -- never a miss, never
+     in a denominator. running is what has not finished. */
+  const fin = open.filter(x=> x.finished);
+  const tally = { running: open.length - fin.length, met: fin.filter(x=> x.met === true).length,
+    missed: fin.filter(x=> x.met === false).length, unknown: fin.filter(x=> x.met !== true && x.met !== false).length };
+  /* THE WEEK'S VIEW, for the meeting and the weekly review: what runs and
+     what finished in the last seven days, without the checkpoint lists
+     (the screen's) -- the long record is the tally. */
+  const weekAgo = anShiftDate(todayISO(), -7);
+  const week = open.filter(x=> !x.finished || String(x.to || '') >= weekAgo)
+    .map(x=>{ const { checkpoints, ...rest } = x; return rest; });
   /* ONE PROPOSAL PER MEASURE. Proposals written before the duplicate
      guard (0097) could stand side by side -- "Gross profit 1,400,000
      this week" twice, each with its own Take it on. The newest speaks
      for its measure; the older copies ride along as dupIds, so taking
      one on or setting it aside retires them with it. A measure that is
      already running is not proposed again. */
-  const running = new Set(open.map(x=> x.metric));
+  const running = new Set(open.filter(x=> !x.finished).map(x=> x.metric));
   const byMetric = new Map();
   (r.data||[]).filter(x=> x.status === 'proposed').forEach(x=>{
     const metric = (x.body||{}).metric;
@@ -133477,7 +134029,7 @@ async function managerScoreboard(){
       parts: Array.isArray((x.body||{}).parts) ? (x.body||{}).parts : [] });
   });
   const proposed = [...byMetric.values()];
-  return { targets: open, proposed };
+  return { targets: open, proposed, tally, week };
 }
 
 /* THE JUDGEMENT THE MANAGER FORMED ABOUT ITS OWN WEEK, read back.
@@ -139506,73 +140058,599 @@ function mgrSimRereadOffers(){
    Between two beds. These three lines are nobody's: leave them as they are.
    ────────────────────────────────────────────────────────────────── */
 /* ═══ MGR BED: Targets — begin ═══ */
-/* THE TARGETS. The scoreboard: what is running and its pace, what is
-   proposed and waiting for the owner's answer, and what finished. */
-/* The count is what is running plus what waits for an answer; the
-   line under the nav names the running ones behind their own pace. */
+/* THE TARGETS. The owner composes a target from the shop's own past --
+   safe, stretch and bold are the median, 75th and 90th percentile of the
+   measure's own past periods of the same length (Q16) -- and sees where
+   it lands before committing. Every running target is then read against
+   the straight road from where it started to its aim: where it is, where
+   the road has it today, where it lands at this rate, and where it lands
+   if the moves aimed at it deliver what the Manager sized them at. What
+   has finished is history, met or missed and by how much; what that
+   history teaches is said as rules, and the composer warns against them.
+
+   Every figure is read from the books through MANAGER_METRICS, or was
+   entered by the owner. A move's effect is the Manager's own sizing and
+   is always labelled so. Odds are a count -- how many past periods of
+   the same length reached the level, k of n (Q4) -- and are not shown
+   under six. */
+const MGR_TG_MAX_RUNNING = 4;   // Q16: up to four running at once
+const MGR_TG_MIN_ODDS = 6;      // TGT.2: odds hidden under six past periods
+const MGR_TG_MIN_CHOICES = 3;   // fewer past periods than this size nothing
+const MGR_TG_PERIODS = 24;      // how many past periods the composer reads at most
+/* THE THREE STATES, by one stated rule. Behind is how far the measure
+   stands behind the straight road today; what is still to go is the
+   distance from where it stands to the aim. At or ahead of the road is
+   On track; behind by less than a third of what is still to go is At
+   risk; a third or more is Off track. A line to hold (the aim already
+   met where it started) is On track while held, At risk when at this
+   rate it crosses the line before the deadline, Off track once crossed. */
+const MGR_TG_RISK = 1 / 3;
+/* The composer's measures, in the canvas's order, then the ones the
+   meeting already proposed. Load time has no agreed definition and no
+   reader, so it is drawn disabled and never offered. */
+const MGR_TG_ORDER = ['net_profit', 'margin_pct', 'debtor_days', 'stock_days', 'lowest_cash', 'quotes_won_pct', 'wa_orders',
+  'collections', 'gross_profit', 'sales', 'debtors_total', 'dead_stock_value', 'cash_on_hand'];
+
+/* The count is what is running plus what waits for an answer; the line
+   under the nav names the running ones Off track by the stated rule --
+   the same mgrTgState the rows and the band are coloured by, a cash
+   floor the books or the committed line take under its aim included. */
 function mgrNavCountTargets(ctx){
   const sc = ctx.score;
   if(!sc || sc.error) return null;
   const running = (sc.targets || []).filter(x=> !x.finished);
-  const off = running.filter(x=> x.pace && !x.pace.on_course).length;
+  const off = running.filter(x=> mgrTgState(x).key === 'off').length;
   return { n: running.length + (sc.proposed || []).length,
     note: off ? `<b>${off} target${off === 1 ? '' : 's'}</b> off track` : null };
 }
-function mgrPaintTargets(gen, ctx){
-  const scoreWrap = document.getElementById('managerTargetsWrap');
-  if(!scoreWrap) return;
-  if(ctx.landed === 'start'){
-    if(!ctx.notes) scoreWrap.innerHTML = mgrNeedsMemoryHTML('The scoreboard');
-    else mgrLastKnown(scoreWrap, true);
-    return;
-  }
-  if(ctx.landed !== 'state') return;
-  const st = ctx.st;
-  if(st.error){ scoreWrap.innerHTML = mgrJournalUnreadHTML(st.error); return; }
-  const sb2 = st.score || { targets: [], proposed: [] };
-  const bar = (p)=> `<div class="mgr-tg-b"><i style="width:${Math.max(0, Math.min(100, Number(p)||0))}%"></i></div>`;
-  if(sb2.error){
-    scoreWrap.innerHTML = `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">The scoreboard</span></div>
-      <div class="ow-empty">The scoreboard could not be read just now &mdash; ${esc(sb2.error)}. No target has been
-        taken on or set aside by this.</div></div>`;
-    return;
-  }
-  scoreWrap.innerHTML = (sb2.targets.length || (sb2.proposed||[]).length)
-    ? `<div class="ow-pan">
-        <div class="ow-pan-h"><span class="ow-pan-t">The scoreboard</span>
-          ${mgrScoreSlotsHTML(sb2.targets.filter(x=> !x.finished).length)}<span class="ow-pan-n">${[
-            sb2.targets.length ? sb2.targets.filter(x=> x.met).length + ' of ' + sb2.targets.length + ' met' : '',
-            (sb2.proposed||[]).length ? (sb2.proposed||[]).length + ' to decide' : ''].filter(Boolean).join(' · ')}</span></div>
-        ${mgrScoreRingsHTML(sb2.targets.filter(x=> !x.finished))}
-        ${sb2.targets.map(x=>{
-          const behind = !x.finished && x.pace && !x.pace.on_course;
-          return `<div class="mgr-tg${x.met ? ' mgr-met' : behind ? ' mgr-behind' : ''}">
-            <div class="mgr-tg-t"><span class="mgr-tg-n" title="${esc(x.label)}">${esc(x.label)}</span
-              ><span class="mgr-tg-v">${fmtUGX(x.actual)}</span></div>
-            ${(!x.finished && mgrPaceHTML(x)) || bar(x.pct)}
-            <p class="mgr-tg-f${x.finished ? (x.met ? ' mgr-met' : '') : (behind ? ' mgr-behind' : '')}">of ${
-              fmtUGX(x.aim)} · ${
-              x.finished
-                ? (x.met ? 'Met' : 'Missed') + ' — week ended ' + esc(fmtShortDate(x.to))
-                : (x.pct == null ? '' : x.pct + '% there') + ' · ' + x.days_left + (x.days_left === 1 ? ' day left' : ' days left')}${
-              x.measure_kind === 'level' ? ' · from ' + fmtUGX(x.baseline) : ''}${
-              x.why ? ' · ' + esc(x.why) : ''}${
-              behind ? ` · level today would be ${fmtUGX(x.pace.expected)}, ${fmtUGX(x.pace.behind_by)} short; at this rate it ends at ${fmtUGX(x.pace.at_this_rate)}` : ''}</p>
-          </div>`; }).join('')}
-        ${(sb2.proposed||[]).length ? `<div class="mgr-pp-list">${sb2.proposed.map(mgrProposalHTML).join('')}</div>` : ''}
-      </div>`
-      : `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">The scoreboard</span></div>
-          <div class="ow-empty">No target is running and none is waiting for your answer. A meeting proposes one
-            when the books show a gap worth closing, and it becomes the shop&rsquo;s only when you take it on.</div></div>`;
-  scoreWrap.querySelectorAll('.mgr-pp[data-tid]').forEach(card=>{
-    const id = Number(card.dataset.tid);
-    const dups = String(card.dataset.dups || '').split(',').filter(Boolean).map(Number);
-    card.querySelector('.mgr-target-adopt').addEventListener('click', ()=> managerAdoptTarget(id, dups));
-    card.querySelector('.mgr-target-decline').addEventListener('click', ()=> managerDeclineTarget(id, dups));
+
+/* ---- What the Targets section alone draws with ---- */
+
+/* READINGS ARE KEPT FOR THE LENGTH OF ONE READ OF THE BOOKS. The past
+   periods of a measure cost a pass over the books each, and a tap in the
+   composer must not pay for them again. A new render, a new day, a row
+   added anywhere the shared models watch (mgrModelStamp), or a minute
+   gone -- the shared models' own rule -- starts afresh. */
+let mgrTgMemoSig = '';
+let mgrTgMemoAt = 0;
+let mgrTgMemoMap = new Map();
+function mgrTgMemo(key, fn){
+  const sig = [typeof mgrRenderGen === 'number' ? mgrRenderGen : 0,
+    typeof mgrModelStamp === 'function' ? mgrModelStamp()
+      : [todayISO(), (data.savedQuotes || []).length, (data.cashTxns || []).length, (data.stockLog || []).length].join('|')].join('|');
+  const now = Date.now();
+  if(sig !== mgrTgMemoSig || now - mgrTgMemoAt > 60000){ mgrTgMemoSig = sig; mgrTgMemoAt = now; mgrTgMemoMap = new Map(); }
+  if(mgrTgMemoMap.has(key)) return mgrTgMemoMap.get(key);
+  const v = fn();
+  mgrTgMemoMap.set(key, v);
+  return v;
+}
+/* The first day the books say anything: the oldest invoice, cash entry
+   or stock movement. A past period that starts before it is not a period
+   the shop traded through, and is never read as one. */
+function mgrTgBooksFrom(){
+  return mgrTgMemo('booksFrom', ()=>{
+    let first = null;
+    const see = (v)=>{ const d = String(v || '').slice(0, 10); if(/^\d{4}-\d{2}-\d{2}$/.test(d) && (!first || d < first)) first = d; };
+    (data.savedQuotes || []).forEach(q=>{ if(q) see(q.invoicedAt || q.date); });
+    (data.cashTxns || []).forEach(t=>{ if(t) see(t.date); });
+    (data.stockLog || []).forEach(e=>{ if(e) see(e.date); });
+    return first;
   });
 }
+/* Cash, mobile money and bank at the end of a day -- the Statements'
+   own shCashAt -- and the lowest of those over a run of days, never
+   before the books and never past today. No day read is not known. */
+function mgrTgCashOn(d){ return mgrTgMemo('cash|' + d, ()=> shCashAt(d)); }
+function mgrTgCashLowOver(from, to){
+  const today = todayISO(), first = mgrTgBooksFrom();
+  const a = first && first > String(from) ? first : String(from || '').slice(0, 10);
+  const z = String(to || '').slice(0, 10) < today ? String(to).slice(0, 10) : today;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(a) || !/^\d{4}-\d{2}-\d{2}$/.test(z)) return null;
+  let low = null;
+  for(let d = a; d <= z; d = anShiftDate(d, 1)){
+    const v = Number(mgrTgCashOn(d));
+    if(Number.isFinite(v) && (low == null || v < low)) low = v;
+  }
+  return low;
+}
+/* A CASH FLOOR OVER A TARGET'S OWN DAYS, from its first to its last: the
+   books for the days already gone, then the committed line (mgrCashWalk:
+   dated bills, rent, wages and loans only, never money expected in) from
+   today to the deadline. low is the lowest of them; breaksOn the first
+   day under the aim -- a past day from the books (broke), or a day ahead
+   on the line. The line runs 30 days: through says where it stops and
+   partial that it stops short of the deadline. No line, no reading of
+   the days ahead: null. */
+function mgrTgFloorRead(from, to, aim){
+  const today = todayISO(), f = String(from || '').slice(0, 10), z = String(to || '').slice(0, 10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(f) || !/^\d{4}-\d{2}-\d{2}$/.test(z) || z < today) return null;
+  const days = [];
+  const first = mgrTgBooksFrom();
+  for(let d = first && first > f ? first : f; d < today && d <= z; d = anShiftDate(d, 1)){
+    const v = Number(mgrTgCashOn(d));
+    if(Number.isFinite(v)) days.push({ date: d, v, books: true });
+  }
+  let through = null;
+  if(typeof mgrCashWalk === 'function'){
+    let walk = null;
+    try { walk = mgrCashWalk(); } catch(e){ walk = null; }
+    ((walk && walk.days) || []).forEach(d=>{
+      if(!d || d.date < today || d.date < f || d.date > z || !Number.isFinite(Number(d.committed))) return;
+      days.push({ date: d.date, v: Number(d.committed), books: false });
+      through = d.date;
+    });
+  }
+  if(!through) return null;
+  let low = null;
+  days.forEach(d=>{ if(!low || d.v < low.v) low = d; });
+  const a = aim == null || !Number.isFinite(Number(aim)) ? null : Number(aim);
+  const under = a == null ? null : days.find(d=> d.v < a) || null;
+  return { low: low.v, lowOn: low.date, lowBooks: low.books, breaksOn: under ? under.date : null,
+    broke: !!(under && under.books), through, partial: through < z };
+}
+/* THE FIRST ORDER THE BOOKS HOLD AS BORN IN A WHATSAPP CHAT. A month
+   before it is a month the shop did not record chat orders here -- not
+   recorded, never a month of none. */
+function mgrTgWaFrom(){
+  return mgrTgMemo('waFrom', ()=>{
+    let first = null;
+    (data.savedQuotes || []).forEach(q=>{
+      if(!q || !q.originWa) return;
+      const d = String(q.date || '').slice(0, 10);
+      if(/^\d{4}-\d{2}-\d{2}$/.test(d) && (!first || d < first)) first = d;
+    });
+    return first;
+  });
+}
+/* DEAD STOCK AS IT STOOD ON A PAST DAY. The same rule as the shelf's own
+   reading (stockAgeRows): a line holding stock with no sale in the quiet
+   window before the day. How many it held then is exact -- the movement
+   log keeps qtyAfter on every row -- and what each was worth is today's
+   unit cost, because the lots as they stood then were never kept; the
+   balance sheet values a past shelf the same way and says so. */
+function mgrTgDeadStockAt(d){
+  const day = String(d || '').slice(0, 10);
+  const log = mgrTgMemo('stockLogSorted', ()=> (data.stockLog || []).filter(e=> e && e.key && e.date).slice()
+    .sort((a, b)=> String(a.date).localeCompare(String(b.date)) || ((Number(a.id) || 0) - (Number(b.id) || 0))));
+  const cutoff = anShiftDate(day, -deadStockQuietDays());
+  const qtyThen = new Map(), lastSale = new Map();
+  log.forEach(e=>{
+    const on = String(e.date).slice(0, 10);
+    if(on <= day){ qtyThen.set(e.key, Number(e.qtyAfter) || 0); if(e.type === 'sale') lastSale.set(e.key, on); }
+    else if(!qtyThen.has(e.key)) qtyThen.set(e.key, (Number(e.qtyAfter) || 0) - (Number(e.delta) || 0));
+  });
+  let value = 0;
+  allProductVariantEntries([]).forEach(({ p, variantIdx })=>{
+    const key = stockKey(p.id, variantIdx);
+    const qty = qtyThen.has(key) ? qtyThen.get(key) : getStockQty(p.id, variantIdx);
+    if(!(qty > 0)) return;
+    const sold = lastSale.get(key);
+    if(sold && sold >= cutoff) return;
+    const known = getFIFOUnitCost(p.id, variantIdx);
+    const row = known == null ? rankedPriceRows(p.id, variantIdx)[0] : null;
+    const fallback = row ? purchasePriceAtQty(row, qty) : null;
+    value += qty * (known != null ? known : (fallback != null ? fallback : 0));
+  });
+  return Math.round(value);
+}
 
-/* ---- What the Targets section alone draws with: proposals, rings and pace. ---- */
+/* A FIGURE IN ITS OWN UNIT. Money short (5.04m, 850k), a margin in
+   per cent with one decimal, days and counts whole. A reading the books
+   cannot give says so in words, never as a zero. */
+function mgrTgFig(unit, v, bare){
+  if(v == null || !Number.isFinite(Number(v))) return 'not known';
+  const n = Number(v), neg = n < 0 ? '−' : '', a = Math.abs(n);
+  if(unit === 'pct') return neg + a.toFixed(1) + '%';
+  if(unit === 'days'){ const d = Math.round(a); return neg + d + (bare ? '' : (d === 1 ? ' day' : ' days')); }
+  if(unit === 'count') return neg + Math.round(a).toLocaleString('en-US');
+  /* Rounded first, then scaled: 999,600 is 1.00m, never "1000k". */
+  if(a >= 1e6 || Math.round(a / 1e3) >= 1000) return neg + (a / 1e6).toFixed(2) + 'm';
+  if(Math.round(a) >= 1e3) return neg + Math.round(a / 1e3) + 'k';
+  return neg + String(Math.round(a));
+}
+/* A distance without a sign (0.96m short, 6 days short, 0.7 pts short)
+   and a change with one (+0.53m, −7 days, +0.8 pts). A margin moves in
+   points, never in per cent of itself. */
+function mgrTgGap(unit, d){
+  if(d == null || !Number.isFinite(Number(d))) return 'not known';
+  return unit === 'pct' ? Math.abs(Number(d)).toFixed(1) + ' pts' : mgrTgFig(unit, Math.abs(Number(d)));
+}
+function mgrTgDelta(unit, d){
+  if(d == null || !Number.isFinite(Number(d))) return '';
+  return (Number(d) < 0 ? '−' : '+') + mgrTgGap(unit, d);
+}
+/* A target named as the owner would say it. */
+function mgrTgName(metric, aim){
+  const m = MANAGER_METRICS[metric];
+  if(!m) return '';
+  const a = mgrTgFig(m.unit, aim, true);
+  const named = { collections: 'Collect ' + a, lowest_cash: 'Cash never under ' + a, net_profit: 'Net profit ' + a + ' a month',
+    wa_orders: 'WhatsApp orders ' + a + ' a month', quotes_won_pct: 'Quotes won ' + a, margin_pct: 'Gross margin ' + a,
+    cash_on_hand: 'Cash in hand ' + a, gross_profit: 'Gross profit ' + a, sales: 'Sales ' + a };
+  return named[metric] || (m.direction === 'down' ? m.label + ' under ' + a : m.label + ' ' + a);
+}
+const mgrTgDay = (iso, withDay)=> new Date(iso + 'T12:00:00Z').toLocaleDateString('en-GB',
+  withDay ? { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' } : { timeZone: 'UTC', day: 'numeric', month: 'short' });
+/* Where a projection can and cannot go: money owed, a shelf, a day
+   count, a count or cash never below nothing (net profit, signed, can be
+   a loss), a share never above the whole. */
+function mgrTgClamp(m, v){
+  if(v == null || !Number.isFinite(Number(v))) return null;
+  let n = Number(v);
+  if(m.direction === 'down' || m.unit === 'count' || (m.unit === 'ugx' && !m.signed)) n = Math.max(0, n);
+  if(m.unit === 'pct') n = Math.min(100, n);
+  return n;
+}
+const mgrTgBetter = (dir, a, b)=> dir === 'down' ? a <= b : a >= b;
+
+/* THE DEADLINES ON OFFER: the next three month-ends at least a week
+   away. days is the length of the period, today included; left is the
+   days after today, as the running rows count them. */
+function mgrTgDeadlines(today){
+  const out = [];
+  let p = periodOf(today);
+  for(let i = 0; out.length < 3 && i < 6; i++){
+    const to = periodEndDate(p);
+    p = periodShift(p, 1);
+    const left = waDaysBetween(today, to);
+    if(left < 7) continue;
+    out.push({ to, left, days: left + 1 });
+  }
+  return out;
+}
+
+/* THE MEASURE'S OWN PAST PERIODS OF ONE LENGTH, newest first, ending on
+   endISO: back to back, never overlapping, never older than the books.
+   A flow is what the period earned; a level is where it stood on the
+   period's last day; a floor (span) the lowest it stood over the
+   period's own days. A period the books cannot read (no sales to take a
+   margin of) is counted as unknown and left out, never read as zero; a
+   reading that fails names itself in error. */
+function mgrTgPeriods(metric, len, endISO, max){
+  const m = MANAGER_METRICS[metric];
+  const L = Math.round(Number(len) || 0);
+  if(!m || !(L >= 1) || !/^\d{4}-\d{2}-\d{2}$/.test(String(endISO || ''))) return { len: L, values: [], unknown: 0, error: null };
+  const K = Math.max(1, Math.round(Number(max) || MGR_TG_PERIODS));
+  return mgrTgMemo(`per|${metric}|${L}|${endISO}|${K}`, ()=>{
+    const first = mgrTgBooksFrom();
+    const back = Math.max(L, m.window || 0, m.reads || 0);
+    const values = [];
+    let unknown = 0, error = null;
+    for(let k = 0; k < K; k++){
+      const to = anShiftDate(endISO, -k * L), from = anShiftDate(to, -(L - 1));
+      if(!first || anShiftDate(to, -(back - 1)) < first) break;
+      let v = null;
+      try { v = m.kind === 'flow' || m.span ? m.measure(from, to) : m.at(to); }
+      catch(e){ error = (e && e.message) || String(e); break; }
+      if(v == null || !Number.isFinite(Number(v))){ unknown++; continue; }
+      values.push({ from, to, v: Number(v) });
+    }
+    return { len: L, values, unknown, error };
+  });
+}
+/* A percentile of sorted values, read between neighbours (the usual
+   linear rule): the 50th of 3, 5, 9 is 5; the 75th is 7. */
+function mgrTgPercentile(sorted, p){
+  if(!sorted.length) return null;
+  const h = (sorted.length - 1) * p / 100, lo = Math.floor(h), hi = Math.ceil(h);
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (h - lo);
+}
+/* SAFE / STRETCH / BOLD (Q16): the median, 75th and 90th percentile of
+   the past periods, read in the measure's good direction -- for debtor
+   days, lower is better, so stretch is the period only a quarter of the
+   past did better than. Fewer than three past periods size nothing. */
+function mgrTgChoices(values, direction, round){
+  const v = (values || []).map(x=> x.v).filter(Number.isFinite).sort((a, b)=> a - b);
+  if(v.length < MGR_TG_MIN_CHOICES) return null;
+  const r = typeof round === 'function' ? round : Math.round;
+  const at = (p)=> r(mgrTgPercentile(v, direction === 'down' ? 100 - p : p));
+  return { safe: at(50), stretch: at(75), bold: at(90), n: v.length };
+}
+/* THE ODDS (Q4): how many of the past periods reached the level, k of
+   n. A count, not a probability -- and no per cent under six periods. */
+function mgrTgOdds(values, aim, direction){
+  const list = values || [];
+  const n = list.length;
+  const k = list.filter(x=> mgrTgBetter(direction, x.v, aim)).length;
+  return { k, n, pct: n >= MGR_TG_MIN_ODDS ? Math.round(k / n * 100) : null };
+}
+/* WHERE A NEW TARGET STANDS AND WHERE THE BOOKS ALONE TAKE IT, for a
+   period from today to the deadline. A flow's "now" is what the last
+   period of the same length earned, and that rate carried forward is
+   its landing; a level stands where it is and moves on at the rate it
+   moved over the last period of the same length -- arithmetic on the
+   past, said as "at the rate of the last N days", never a forecast. A
+   month's figure (window) stands where it was at the end of yesterday,
+   today being unfinished, and moves on from there.
+   A FLOOR (span, the lowest cash) is never carried at a rate: it stands
+   at today's cash and lands at the lowest of the committed line from
+   today to the deadline (mgrTgFloorRead), said as "on the committed
+   line" -- and where the line stops short of the deadline, it says so. */
+function mgrTgOutlook(metric, today, to){
+  const m = MANAGER_METRICS[metric];
+  const left = waDaysBetween(today, to), P = left + 1;
+  const past = mgrTgPeriods(metric, P, anShiftDate(today, -1));
+  const method = `at the rate of the last ${P} days`;
+  if(!m) return { P, left, past, now: null, projected: null, method };
+  /* Where it lands is rounded as the aims are (a margin to a tenth, the
+     rest whole), so "you land at 32 days" is never "short of 32 days". */
+  const rnd = (v)=> v == null ? null : (typeof m.round === 'function' ? m.round(v) : Math.round(v));
+  if(m.kind === 'flow'){
+    const last = past.values[0] && past.values[0].to === anShiftDate(today, -1) ? past.values[0].v : null;
+    return { P, left, past, now: last, nowLabel: `last ${P} days`, projected: rnd(last), method };
+  }
+  const num = (v)=> v == null || !Number.isFinite(Number(v)) ? null : Number(v);
+  if(m.span){
+    let now = null, f = null;
+    try { now = num(m.measure(today, today)); } catch(e){ now = null; }
+    try { f = typeof m.floor === 'function' ? m.floor(today, to, null) : null; } catch(e){ f = null; }
+    return { P, left, past, now, nowLabel: 'now', floor: f,
+      projected: f ? rnd(mgrTgClamp(m, f.low)) : null, lowOn: f ? f.lowOn : null,
+      method: f ? (f.partial ? `on the committed line, which runs to ${mgrTgDay(f.through)}` : 'on the committed line') : 'on the committed line' };
+  }
+  const base = m.window ? anShiftDate(today, -1) : today, steps = m.window ? left + 1 : left;
+  let now = null, then = null;
+  try { now = num(m.measure(today, to)); } catch(e){ now = null; }
+  try { then = num(m.at(anShiftDate(base, -P))); } catch(e){ then = null; }
+  const projected = now != null && then != null ? rnd(mgrTgClamp(m, now + (now - then) / P * steps)) : null;
+  return { P, left, past, now, nowLabel: m.window ? 'to yesterday' : 'now', projected, method };
+}
+/* THE PATH FROM WHERE THE BOOKS LAND IT TO THE AIM. The moves aimed at
+   the measure, in the meeting's own order, each adding what the Manager
+   sized it at, until the aim is reached; a move with no size is listed
+   and adds nothing. */
+function mgrTgBridge(start, aim, direction, moves){
+  const rows = [];
+  if(start == null || aim == null) return { rows, reached: false, used: 0, end: start, short: null };
+  let acc = start, reached = mgrTgBetter(direction, start, aim), used = 0;
+  (moves || []).forEach(mv=>{
+    if(reached) return;
+    const e = Math.abs(Number(mv.effect));
+    if(!(e > 0)){ rows.push({ move: mv, delta: null, value: acc }); return; }
+    acc = direction === 'down' ? acc - e : acc + e;
+    used++;
+    rows.push({ move: mv, delta: direction === 'down' ? -e : e, value: acc });
+    if(mgrTgBetter(direction, acc, aim)) reached = true;
+  });
+  return { rows, reached, used, end: acc, short: reached ? 0 : Math.abs(aim - acc) };
+}
+/* THE ROAD: the straight line from where it starts to the aim on its
+   last day, read at the end of each day. Mondays and the last day are
+   the checkpoints; the composer draws the quarter points of the same
+   road. A flow's road starts from nothing, a level's from today's
+   reading. */
+function mgrTgRoad(from, to, start, aim, round){
+  const total = waDaysBetween(from, to) + 1;
+  const r = typeof round === 'function' ? round : Math.round;
+  const at = (i)=> r(start + (aim - start) * ((i + 1) / total));
+  const mondays = [];
+  for(let i = 0; i < total; i++){
+    const on = anShiftDate(from, i);
+    if(on === to || new Date(on + 'T00:00:00Z').getUTCDay() === 1) mondays.push({ on, value: at(i) });
+  }
+  const quarters = [1, 2, 3, 4].map(q=>{ const i = Math.max(0, Math.ceil(total * q / 4) - 1);
+    return { q, on: anShiftDate(from, i), value: at(i) }; });
+  return { total, mondays, quarters };
+}
+/* THE STATE OF A TARGET, by the rule above. A running target with no
+   reading or no road is not called anything; one already at its aim is
+   On track. */
+function mgrTgState(x){
+  const none = { key: 'unknown', behind: null, toGo: null, share: null };
+  if(!x || x.actual == null || !Number.isFinite(Number(x.actual))) return none;
+  if(x.finished) return { ...none, key: x.met === true ? 'met' : x.met === false ? 'missed' : 'unknown' };
+  const aim = Number(x.aim) || 0, actual = Number(x.actual);
+  /* A cash floor the books or the committed line take under its aim
+     before the deadline is Off track -- the books' break cannot be
+     undone, and the line's is a dated bill ahead, not a rate. */
+  if(x.pace && x.pace.breaks_on) return { key: 'off', behind: x.pace.broke ? Math.abs(aim - actual) : 0, toGo: 0, share: 1, breaks: true };
+  if(mgrTgBetter(x.direction, actual, aim)){
+    /* A line to hold that, at this rate, crosses it before the deadline. */
+    if(x.hold && x.pace && Number.isFinite(Number(x.pace.at_this_rate)) && !mgrTgBetter(x.direction, Number(x.pace.at_this_rate), aim))
+      return { key: 'risk', behind: 0, toGo: 0, share: 0, crossing: true };
+    return { key: 'on', behind: 0, toGo: 0, share: 0 };
+  }
+  /* Set today: nothing whole has been read yet. */
+  if(x.pace && x.pace.first) return { key: 'on', behind: 0, toGo: Math.abs(aim - actual), share: 0, first: true };
+  if(!x.pace) return none;
+  const toGo = Math.abs(aim - actual);
+  const behind = x.pace.on_course ? 0 : Math.abs(Number(x.pace.behind_by) || 0);
+  if(!(behind > 0)) return { key: 'on', behind: 0, toGo, share: 0 };
+  const share = toGo > 0 ? Math.min(1, behind / toGo) : 1;
+  return { key: share < MGR_TG_RISK ? 'risk' : 'off', behind, toGo, share };
+}
+const MGR_TG_STATE_WORD = { on: 'On track', risk: 'At risk', off: 'Off track', met: 'Met', missed: 'Missed', unknown: 'Not known' };
+const MGR_TG_STATE_TONE = { on: 'good', risk: 'warn', off: 'bad', met: 'good', missed: 'bad', unknown: '' };
+/* A CASH TARGET AGAINST ITS OWN DAYS, as the scoreboard read it
+   (managerScoreProgress, through mgrTgFloorRead): the lowest of the
+   books for the days gone and the committed line for the days ahead,
+   where, and the first day under the aim. Null for anything else, or
+   when there is no committed line to read the days ahead on. */
+function mgrTgBreak(x){
+  if(!x || x.finished || x.metric !== 'lowest_cash' || !x.pace || !x.pace.line_to) return null;
+  const p = x.pace;
+  return { low: p.at_this_rate, lowOn: p.low_on, lowBooks: !!p.low_books, breaksOn: p.breaks_on || null,
+    broke: !!p.broke, through: p.line_to, partial: String(p.line_to) < String(x.to) };
+}
+/* WHERE EACH MARK SITS ON THE TRACK, as a share of the journey from
+   where it started to the aim: the fill is where it is, the tick where
+   the road has it today, the ring where it lands at this rate, the dot
+   where it lands with the plan. Off either end is drawn at the end. */
+function mgrTgTrack(x, land, plan){
+  const start = x.measure_kind === 'flow' ? 0 : Number(x.baseline) || 0;
+  const aim = Number(x.aim) || 0;
+  /* A HOLD (the aim already met where it started) has no journey: its
+     track is the margin it had over the line, from the line (0) to where
+     it started (100), and it has no road to tick. */
+  const hold = x.measure_kind !== 'flow' && mgrTgBetter(x.direction, start, aim) && Math.abs(start - aim) > 1e-9;
+  const from = hold ? aim : start, span = (hold ? start : aim) - from;
+  const pos = (v)=>{
+    if(v == null || !Number.isFinite(Number(v))) return null;
+    if(Math.abs(span) < 1e-9) return mgrTgBetter(x.direction, Number(v), aim) ? 100 : 0;
+    return Math.max(0, Math.min(100, (Number(v) - from) / span * 100));
+  };
+  return { start, hold, now: pos(x.actual), pace: hold ? null : pos(x.pace && x.pace.expected), land: pos(land), plan: pos(plan) };
+}
+/* THE LIVE PLAN'S MOVES AIMED AT A TARGET: open moves of today's meeting,
+   or of the last one held, whose target names this row (by id) or this
+   measure, in the meeting's own order, with their Decision number. */
+function mgrTgPlanMoves(st){
+  const day = (st && st.today) || (st && st.prior && st.prior[0]) || null;
+  if(!day || !Array.isArray(day.moves)) return { on: null, moves: [] };
+  const ordered = mgrMoveOrder(day.moves);
+  return { on: day.meeting ? day.meeting.date : null, moves: ordered.map((r, i)=> ({ id: r.id, status: r.status,
+    num: String(i + 1).padStart(2, '0'), title: String((r.body || {}).title || ''), target: (r.body || {}).target || null,
+    effect: Number.isFinite(Number((r.body || {}).effect)) ? Number(r.body.effect) : null })) };
+}
+function mgrTgLinked(moves, x){
+  return (moves || []).filter(mv=> mv.status === 'open' && mv.target && (
+    (mv.target.id != null && x.id != null && String(mv.target.id) === String(x.id)) ||
+    (mv.target.metric && mv.target.metric === x.metric)));
+}
+/* READINGS AT A TARGET'S MONDAYS, for "behind the road two Mondays
+   running": a flow summed from its first day to the Monday, a level as
+   it stood that Monday. Only Mondays already behind us count. */
+function mgrTgMondays(x){
+  const m = MANAGER_METRICS[x.metric];
+  if(!m || !/^\d{4}-\d{2}-\d{2}$/.test(String(x.from)) || !/^\d{4}-\d{2}-\d{2}$/.test(String(x.to))) return [];
+  const today = todayISO();
+  /* A line to hold has a flat road: the aim itself. */
+  const start = m.kind === 'flow' ? 0 : x.hold ? Number(x.aim) || 0 : Number(x.baseline) || 0;
+  const road = mgrTgRoad(x.from, x.to, start, Number(x.aim) || 0, m.round);
+  return mgrTgMemo(`mon|${x.id}|${x.from}|${x.to}|${x.aim}`, ()=> road.mondays.filter(c=> c.on < today && c.on !== x.to).map(c=>{
+    let v = null;
+    try { v = m.kind === 'flow' || m.span ? m.measure(x.from, c.on) : m.at(c.on); } catch(e){ v = null; }
+    v = v == null || !Number.isFinite(Number(v)) ? null : Number(v);
+    return { on: c.on, road: c.value, v, behind: v == null ? null : !mgrTgBetter(m.direction, v, c.value) };
+  }));
+}
+function mgrTgBehindTwo(list){
+  let run = 0, known = 0;
+  for(const c of list || []){
+    if(c.behind == null){ run = 0; continue; }
+    known++;
+    run = c.behind ? run + 1 : 0;
+    if(run >= 2) return true;
+  }
+  return known >= 2 ? false : null;
+}
+/* THE DAY A FLOW CROSSED ITS AIM, for "met, 4 days early": the first
+   day its running total reached the aim. A level keeps no daily reading
+   cheap enough to walk, so it says only where it ended. */
+function mgrTgMetOn(x){
+  const m = MANAGER_METRICS[x.metric];
+  if(!m || m.kind !== 'flow' || x.met !== true) return null;
+  return mgrTgMemo(`meton|${x.id}`, ()=>{
+    let run = 0;
+    for(let d = x.from; d && d <= x.to; d = anShiftDate(d, 1)){
+      run += Number(m.measure(d, d)) || 0;
+      if(run >= (Number(x.aim) || 0)) return d;
+    }
+    return null;
+  });
+}
+/* WHERE A FINISHED TARGET'S AIM STOOD AGAINST ITS OWN PAST: at or past
+   the 90th percentile of the periods of its length before it began. An
+   owner's target carries what the composer showed (set.p90); a weekly
+   one is read from the books before its first day. */
+function mgrTgAbove90(x, setP90){
+  const m = MANAGER_METRICS[x.metric];
+  if(!m) return null;
+  let p90 = Number.isFinite(Number(setP90)) && setP90 != null ? Number(setP90) : null;
+  if(p90 == null){
+    const len = waDaysBetween(x.from, x.to) + 1;
+    const ch = mgrTgChoices(mgrTgPeriods(x.metric, len, anShiftDate(x.from, -1), 12).values, m.direction, m.round);
+    p90 = ch ? ch.bold : null;
+  }
+  if(p90 == null) return null;
+  return m.direction === 'down' ? Number(x.aim) <= p90 : Number(x.aim) >= p90;
+}
+/* WHAT THE FINISHED HISTORY TEACHES (TGT.8). Each rule is a count over
+   the targets that finished with a known end, said only when there is
+   enough of it -- at least two targets behind it, at least half of them
+   missed, and, where it compares, the other side doing better. Until
+   then there is no rule, and the panel says how many have finished.
+   There is no rule about owners: every target is now taken on with one
+   (the composer asks, and "Take it on" names the owner or whoever they
+   pick), and the weekly targets from before the app asked never had the
+   chance to name anyone -- counting them would blame the app's own gap
+   on the shop. */
+function mgrTgLearned(rows){
+  const rules = [];
+  const known = (rows || []).filter(r=> r.met === true || r.met === false);
+  const tally = (list)=> ({ n: list.length, missed: list.filter(r=> r.met === false).length });
+  const worse = (a, b)=> a.n >= 2 && b.n >= 1 && a.missed * 2 >= a.n && a.missed / a.n > b.missed / b.n;
+  const above = tally(known.filter(r=> r.above90 === true));
+  if(above.n >= 2 && above.missed * 2 >= above.n) rules.push({ id: 'above90', k: above.missed, n: above.n,
+    title: 'Aims at your 90th percentile or past it mostly miss.',
+    line: `${above.missed} of ${above.n} targets set at or above the 90th percentile of their own past periods were missed. I say so before you set one there.` });
+  const unlinked = tally(known.filter(r=> r.linked === false)), linked = tally(known.filter(r=> r.linked === true));
+  if(worse(unlinked, linked)) rules.push({ id: 'moves', k: unlinked.missed, n: unlinked.n,
+    title: 'No target without the moves that reach it.',
+    line: `${unlinked.missed} of ${unlinked.n} targets with no move aimed at them were missed, against ${linked.missed} of ${linked.n} with one. Every target now shows its path before you set it.` });
+  const two = tally(known.filter(r=> r.behindTwo === true));
+  if(two.n >= 2 && two.missed * 2 >= two.n) rules.push({ id: 'checkpoint', k: two.missed, n: two.n,
+    title: 'I warn at the checkpoint, not the deadline.',
+    line: `${two.missed} of ${two.n} targets behind the road two Mondays running went on to miss. A running target behind two Mondays running is flagged below.` });
+  return rules;
+}
+/* WHO TO SUGGEST AS OWNER: whoever owned the last target on this
+   measure that was met; with none, the owner themself. */
+function mgrTgSuggest(metric, finished){
+  const hit = (finished || []).filter(r=> r.x.metric === metric && r.met === true && r.x.owner)
+    .sort((a, b)=> String(b.x.to).localeCompare(String(a.x.to)))[0];
+  return hit ? { owner: String(hit.x.owner), why: 'owned the last one on this measure and met it' }
+    : { owner: 'you', why: 'nobody has met one of these yet' };
+}
+function mgrTgPerson(owner){
+  /* A weekly target the meeting proposed names nobody: it is said so,
+     never quietly handed to the owner. */
+  if(!owner) return { key: 'none', name: 'No owner named', ini: '–', phone: '' };
+  if(owner === 'you') return { key: 'you', name: 'You', ini: '', phone: '' };
+  const s = (data.staff || []).find(x=> String(x.id) === String(owner));
+  if(!s) return { key: String(owner), name: 'someone no longer on your staff', ini: '?', phone: '' };
+  const words = String(s.name || '').trim().split(/\s+/);
+  return { key: String(s.id), name: s.name || 'Staff', first: words[0] || s.name || 'Staff',
+    ini: (((words[0] || '')[0] || '') + ((words[1] || '')[0] || '')).toUpperCase() || '?', phone: s.phone || '' };
+}
+/* THE BAND'S LINE, counted: how many run, how many land at this rate on
+   their own, how many need a move -- and a cash target the books or the
+   committed line take under its aim, by date. */
+function mgrTgBandLine(runs){
+  const word = (n)=> ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten'][n] || String(n);
+  const n = runs.length;
+  if(!n) return 'No target is running. Set one below — I’ll show you what your own books say before you commit.';
+  /* A floor the books already show broken needs no move: this period
+     cannot hold it now, and the clause after the dash says so. */
+  const broke = runs.filter(r=> r.brk && r.brk.broke).length;
+  const alone = runs.filter(r=> r.landsAlone).length, need = n - alone - broke;
+  const brk = runs.find(r=> r.brk && r.brk.breaksOn);
+  return `${word(n)} running. ${alone ? word(alone) + (alone === 1 ? ' lands at this rate on its own' : ' land at this rate on their own') : 'None lands at this rate on its own'}${
+    need ? `, ${word(need).toLowerCase()} need${need === 1 ? 's' : ''} a move to get there` : ''}${
+    brk ? (brk.brk.broke ? ` — and cash already went under ${mgrTgFig('ugx', brk.x.aim)} on ${mgrTgDay(brk.brk.breaksOn, true)}`
+      : ` — and the committed line takes cash under ${mgrTgFig('ugx', brk.x.aim)} on ${mgrTgDay(brk.brk.breaksOn, true)}`) : ''}.`;
+}
+
+/* THE TODAY SCREEN'S LINE FOR A RUNNING TARGET, in the target's own unit
+   and by the same state the Targets section colours it by -- for the
+   pace strip on Today (renderManagerPace) to draw instead of shillings
+   and "the week". Pure: { key, ok, text }. */
+function mgrTgTodayLine(x){
+  const u = x.unit || 'ugx', st = mgrTgState(x), brk = mgrTgBreak(x);
+  const word = MGR_TG_STATE_WORD[st.key] || 'Not known';
+  const name = mgrTgName(x.metric, x.aim) || x.label;
+  const by = /^\d{4}-\d{2}-\d{2}$/.test(String(x.to || '')) ? mgrTgDay(x.to) : '';
+  const left = x.days_left === 0 ? 'it ends today' : `${x.days_left} day${x.days_left === 1 ? ' is' : 's are'} left`;
+  let tail;
+  if(brk) tail = brk.breaksOn ? `${brk.broke ? 'The books show cash under it on' : 'The committed line takes cash under it on'} ${mgrTgDay(brk.breaksOn, true)}.`
+    : `The lowest on the committed line is ${mgrTgFig(u, brk.low)}${brk.partial ? `, read to ${mgrTgDay(brk.through)}` : ''}.`;
+  else if(x.pace && x.pace.first) tail = 'Set today — its first whole day is read tomorrow.';
+  else if(x.pace && x.pace.at_this_rate != null) tail = `${st.behind ? `The road has it at ${mgrTgFig(u, x.pace.expected)} — ${mgrTgGap(u, st.behind)} behind. ` : ''}At this rate it ends at ${mgrTgFig(u, x.pace.at_this_rate)}${by ? ` by ${by}` : ''}.`;
+  else tail = 'Where it lands is not known yet.';
+  return { key: st.key, ok: st.key === 'on', text: `${word} — ${name}: ${mgrTgFig(u, x.actual)} now. ${tail} ${left.charAt(0).toUpperCase() + left.slice(1)}.` };
+}
+
 /* ==== A PROPOSED TARGET, DRAWN AS ITS OWN ARITHMETIC ==================
 
    A proposal used to be a paragraph: "last week returned 1,124,990; the
@@ -139604,11 +140682,6 @@ function managerTargetParts(raw, aim){
   return (sum >= a * 0.98 && sum <= a * 1.5) ? parts : [];
 }
 
-/* THE WEEK AT A GLANCE: one ring per running target, how far each has
-   come, in the colour of its pace -- verdigris met or on course, crimson
-   behind. Three at most, the order the scoreboard lists them; the rows
-   under it carry every figure. */
-
 function managerProposalBefore(x){
   const m = MANAGER_METRICS[x && x.metric];
   if(!m) return null;
@@ -139617,7 +140690,9 @@ function managerProposalBefore(x){
       const on = /^\d{4}-\d{2}-\d{2}$/.test(String(x.date||'')) ? String(x.date) : todayISO();
       return { label: 'Last 7d', v: Math.round(Number(m.measure(anShiftDate(on, -7), anShiftDate(on, -1))) || 0) };
     }
-    return { label: 'Now', v: Math.round(Number(m.measure()) || 0) };
+    const now = m.measure();
+    if(now == null || !Number.isFinite(Number(now))) return null;
+    return { label: 'Now', v: m.round ? m.round(Number(now)) : Math.round(Number(now)) };
   } catch(e){ return null; }
 }
 const MGR_METRIC_MARKS = {
@@ -139629,17 +140704,21 @@ const MGR_METRIC_MARKS = {
 function mgrProposalHTML(x){
   const m = MANAGER_METRICS[x.metric] || {};
   const aim = Number(x.aim) || 0;
+  /* Counted in the measure's own unit and in the section's own figures
+     (5.04m, 22.0%, 30 days), as the running rows beside it are. */
+  const unit = m.unit || 'ugx';
   const parts = managerTargetParts(x.parts, aim);
   const before = managerProposalBefore(x);
   const sum = parts.reduce((n, p)=> n + p.amount, 0);
   const scale = Math.max(aim, sum, before ? before.v : 0, 1);
   const w = (v)=> (Math.max(0, Math.min(1, v / scale)) * 100).toFixed(1) + '%';
-  const fig = (v)=> `<b class="mgr-pp-fig">${esc(Number(v).toLocaleString('en-US'))}</b>`;
+  const fig = (v)=> `<b class="mgr-pp-fig">${esc(mgrTgFig(unit, v))}</b>`;
   /* How far the aim is from where it stood -- a size, never a verdict,
      so the chip is neutral whichever way it points. */
   let chip = '';
   if(before){
-    if(before.v > 0){
+    if(unit === 'pct') chip = Math.abs(aim - before.v) < 0.05 ? 'level' : mgrTgDelta('pct', aim - before.v);
+    else if(before.v > 0){
       const d = Math.round((aim / before.v - 1) * 100);
       chip = d === 0 ? 'level' : (d > 0 ? '+' : '−') + Math.abs(d) + '%';
     } else if(m.kind === 'flow') chip = 'from 0';
@@ -139648,179 +140727,551 @@ function mgrProposalHTML(x){
   /* AN AIM BELOW WHAT THE SHOP ALREADY DID looks like a mistake unless
      it says why -- so the argument comes out of its fold and leads,
      and a missing argument is said to be missing. */
-  const lowerIsBetter = x.metric === 'debtors_total' || x.metric === 'dead_stock_value';
+  const lowerIsBetter = m.direction === 'down' || x.metric === 'debtors_total' || x.metric === 'dead_stock_value';
   const backwards = !!(before && before.v > 0 && m.kind === 'flow' && !lowerIsBetter && aim < before.v);
   const aimBar = parts.length
     ? parts.map(p=> `<i class="mgr-pp-seg${p.adds ? ' mgr-pp-adds' : ''}" style="width:${w(p.amount)}"></i>`).join('')
     : `<i class="mgr-pp-seg" style="width:${w(aim)}"></i>`;
   const tick = aim < scale - 0.5 ? `<i class="mgr-pp-tick" style="left:${w(aim)}"></i>` : '';
-  const legend = parts.map(p=> `<span class="mgr-pp-part"><i class="mgr-pp-sw${p.adds ? ' mgr-pp-adds' : ''}"></i><span class="mgr-pp-pl" title="${esc(p.label)}">${esc(p.label)}</span><b class="mgr-pp-fig">${p.adds ? '+' : ''}${esc(p.amount.toLocaleString('en-US'))}</b></span>`).join('');
-  return `<article class="mgr-pp" data-tid="${esc(String(x.id))}" data-dups="${esc((x.dupIds||[]).join(','))}"
-      aria-label="Proposed: ${esc(x.label)} ${esc(fmtUGX(aim))} this week" title="Proposed — a commitment only when you take it on">
+  const legend = parts.map(p=> `<span class="mgr-pp-part"><i class="mgr-pp-sw${p.adds ? ' mgr-pp-adds' : ''}"></i><span class="mgr-pp-pl" title="${esc(p.label)}">${esc(p.label)}</span><b class="mgr-pp-fig">${p.adds ? '+' : ''}${esc(mgrTgFig(unit, p.amount))}</b></span>`).join('');
+  /* WHO OWNS IT once taken on: the owner by default -- they are the one
+     tapping -- or a member of staff on file. Never nobody. */
+  const people = [{ key: 'you' }].concat((data.staff || []).filter(s=> s && !s.unavailable).map(s=> ({ key: String(s.id) })))
+    .map(p=> mgrTgPerson(p.key));
+  const owners = people.map(p=> `<button type="button" class="mgr-tg-opt mgr-tg-opt-p${p.key === 'you' ? ' mgr-tg-on' : ''}" aria-pressed="${p.key === 'you'}" data-pp-owner="${esc(p.key)}">${
+    mgrTgAvHTML(p)}<span>${esc(p.key === 'you' ? 'You' : p.first || p.name)}</span></button>`).join('');
+  return `<article class="mgr-pp" data-tid="${esc(String(x.id))}" data-dups="${esc((x.dupIds||[]).join(','))}" data-owner="you"
+      aria-label="Proposed: ${esc(x.label)} ${esc(mgrTgFig(unit, aim))} this week" title="Proposed — a commitment only when you take it on">
     <div class="mgr-pp-h"><svg class="mgr-pp-ic" viewBox="0 0 24 24" aria-hidden="true">${mark}</svg><span class="mgr-pp-n">${esc(x.label)}</span>${
       chip ? `<span class="mgr-pp-chip">${chip}</span>` : ''}</div>
-    <div class="mgr-pp-aim"><span class="mgr-pp-big">${esc(aim.toLocaleString('en-US'))}</span><span class="mgr-pp-u">UGX this week</span></div>
+    <div class="mgr-pp-aim"><span class="mgr-pp-big">${esc(mgrTgFig(unit, aim, true))}</span><span class="mgr-pp-u">${
+      unit === 'days' ? 'days, this week' : 'this week'}</span></div>
     <div class="mgr-pp-bars">
       ${before ? `<span class="mgr-pp-k">${before.label}</span><span class="mgr-pp-tr"><i class="mgr-pp-was" style="width:${w(before.v)}"></i></span>
       <span></span><span class="mgr-pp-c">${fig(before.v)}</span>` : ''}
       <span class="mgr-pp-k">Aim</span><span class="mgr-pp-tr mgr-pp-tr-aim">${aimBar}${tick}</span>
-      ${legend ? `<span></span><span class="mgr-pp-c mgr-pp-parts">${legend}</span>` : ''}
+      <span></span><span class="mgr-pp-c">${legend ? `<span class="mgr-pp-parts">${legend}</span>` : fig(aim)}</span>
     </div>
-    ${backwards ? `<p class="mgr-pp-back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg><span><b>Aims ${esc(Number(before.v - aim).toLocaleString('en-US'))} below last week.</b> ${
+    ${backwards ? `<p class="mgr-pp-back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg><span><b>Aims ${esc(mgrTgGap(unit, before.v - aim))} below last week.</b> ${
       x.why ? esc(x.why) : 'The Manager gave no reason for aiming lower than what you already did — ask it why before taking this on.'}</span></p>`
       : x.why ? `<details class="mgr-pp-why"><summary>The argument</summary><p>${esc(x.why)}</p></details>` : ''}
+    <span class="mgr-pp-own" role="group" aria-label="Owner, once taken on">${owners}</span>
     <div class="mgr-pp-row">
       <button type="button" class="btn btn-ghost ow-sm mgr-target-adopt"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>Take it on</button>
       <button type="button" class="btn btn-ghost ow-sm mgr-target-decline">Set aside</button>
     </div>
   </article>`;
 }
-/* The header's two slots: a target running is a filled ring, an empty
-   slot is dashed -- AT MOST TWO, drawn, so a proposal is visibly
-   something that would fill one. */
-function mgrScoreSlotsHTML(running){
-  const n = Math.max(0, Math.min(2, Number(running) || 0));
-  return `<svg class="mgr-pp-slots" viewBox="0 0 26 12" aria-hidden="true">${[0, 1].map(i=>
-    `<circle cx="${6 + i * 14}" cy="6" r="4.5" class="${i < n ? 'mgr-pp-slot-on' : 'mgr-pp-slot'}"/>`).join('')}</svg>`;
+
+/* ==== THE SECTION'S MODEL, built once per draw ========================
+
+   The running targets, the finished ones and the rules, from the one
+   scoreboard read (st.score) and the live plan (st.today, or the last
+   meeting held). Pure: it draws nothing. */
+function mgrTgRunModel(x, plan){
+  const m = MANAGER_METRICS[x.metric] || {};
+  const state = mgrTgState(x);
+  const brk = mgrTgBreak(x);
+  const links = mgrTgLinked(plan.moves, x);
+  const planAdd = links.reduce((n, mv)=> n + (Math.abs(Number(mv.effect)) > 0 ? Math.abs(Number(mv.effect)) : 0), 0);
+  /* Where it lands at this rate: the scoreboard's own at_this_rate (for
+     a floor, the lowest of the books and the committed line; on its first
+     day, where the composer said it would land). */
+  const land = x.pace ? mgrTgClamp(m, x.pace.at_this_rate) : null;
+  const planLand = land != null && planAdd > 0 ? mgrTgClamp(m, m.direction === 'down' ? land - planAdd : land + planAdd) : null;
+  const len = x.pace ? x.pace.total_days : (waDaysBetween(x.from, x.to) + 1);
+  const past = mgrTgPeriods(x.metric, len, anShiftDate(x.from, -1));
+  const odds = mgrTgOdds(past.values, Number(x.aim) || 0, m.direction);
+  const oddsPlan = planAdd > 0 ? mgrTgOdds(past.values, m.direction === 'down' ? (Number(x.aim) || 0) + planAdd : (Number(x.aim) || 0) - planAdd, m.direction) : null;
+  /* One derivation of the state, the one the nav counts by. */
+  const key = state.key;
+  const landsAlone = !(brk && brk.broke) && land != null && mgrTgBetter(m.direction, land, Number(x.aim) || 0);
+  const wrongWay = m.kind === 'level' && x.actual != null && Number(x.actual) !== Number(x.baseline)
+    && !mgrTgBetter(m.direction, Number(x.actual), Number(x.baseline));
+  const mondays = mgrTgMondays(x);
+  return { x, m, state, key, brk, links, planAdd, land, planLand, past, odds, oddsPlan, landsAlone, wrongWay,
+    two: mgrTgBehindTwo(mondays) === true, track: mgrTgTrack(x, land, planLand), person: mgrTgPerson(x.owner) };
 }
-
-function mgrScoreRingsHTML(running){
-  const list = (running || []).filter(x=> x.pct != null).slice(0, 3);
-  if(!list.length) return '';
-  const radii = [54, 38, 22];
-  const tone = (x)=> x.met ? 'good' : (x.pace && !x.pace.on_course) ? 'bad' : 'good';
-  const rings = list.map((x, i)=>{
-    const r = radii[i], C = 2 * Math.PI * r;
-    return `<circle cx="65" cy="65" r="${r}" class="mgr-sr-bg"/><circle cx="65" cy="65" r="${r}" class="mgr-sr-${tone(x)}" stroke-dasharray="${(Math.max(0.01, x.pct / 100) * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 65 65)"/>`;
-  }).join('');
-  const legend = list.map(x=> `<div class="mgr-sr-l"><span class="mgr-sr-d mgr-sr-d-${tone(x)}"></span><span class="mgr-sr-n">${esc(x.label)}</span><span class="mgr-sr-v">${x.pct}%${
-    x.pace && !x.pace.on_course && !x.met ? ` · ${esc(mgrShortUGX(x.pace.behind_by))} behind` : x.met ? ' · met' : ' · on course'}</span></div>`).join('');
-  return `<div class="mgr-sr"><svg viewBox="0 0 130 130" class="mgr-sr-svg" role="img" aria-label="${esc(list.map(x=> x.label + ' ' + x.pct + '%').join(', '))}">${rings}</svg><div class="mgr-sr-ls">${legend}</div></div>`;
-}
-
-/* ==== WHERE A TARGET STANDS AGAINST ITS PACE ==========================
-
-   The bar said 69% there. It could not say whether 69% on Wednesday is
-   ahead or behind, or where the period is heading. This draws the lines
-   a manager reads a target by:
-     pace          the straight road from where it started to the aim on
-                   the last day -- where a target on course would be
-     actual        where the books say it has been, day by day
-     at this rate  the observed rate carried to the last day, dashed:
-                   arithmetic on the past, never a forecast
-
-   A FLOW (sales, profit, collections) is earned day by day, so its path
-   is drawn from each day's own figure. A LEVEL (debt, dead stock, cash)
-   is read as it stands now and the books keep no daily reading of it --
-   so the chart has two points, where it started and where it is, and
-   no line between them: a line there would invent the path. */
-function managerTargetSeries(x){
-  const m = MANAGER_METRICS[x && x.metric];
-  if(!m || !x.pace || !/^\d{4}-\d{2}-\d{2}$/.test(String(x.from)) || !/^\d{4}-\d{2}-\d{2}$/.test(String(x.to))) return null;
-  const total = x.pace.total_days, elapsed = Math.min(x.pace.elapsed_days, total);
-  if(!(total >= 1) || !(elapsed >= 1)) return null;
-  const pts = [];
-  if(m.kind === 'flow'){
-    let run = 0;
-    for(let i = 0; i < elapsed; i++){
-      const d = anShiftDate(x.from, i);
-      run += Number(m.measure(d, d)) || 0;
-      pts.push({ i, d, v: Math.round(run) });
-    }
-  } else {
-    pts.push({ i: 0, d: x.from, v: Math.round(Number(x.baseline) || 0) });
-    if(elapsed > 1) pts.push({ i: elapsed - 1, d: anShiftDate(x.from, elapsed - 1), v: Math.round(x.actual) });
+function mgrTgFinishedModel(x, moveRead){
+  const m = MANAGER_METRICS[x.metric] || {};
+  let linked = null;
+  if(moveRead && !moveRead.error && moveRead.firstLink && String(x.from) >= moveRead.firstLink){
+    linked = moveRead.rows.some(r=> r.date >= x.from && r.date <= x.to && r.body && r.body.target && (
+      (r.body.target.id != null && String(r.body.target.id) === String(x.id)) || r.body.target.metric === x.metric));
   }
-  const start = m.kind === 'flow' ? 0 : Number(x.baseline) || 0;
-  /* Where the road has it at the END of day i (0-based): a flow that
-     must reach the aim over `total` days is at aim*(i+1)/total. */
-  const expectedOn = (i)=> Math.round(start + (x.aim - start) * ((i + 1) / total));
-  return { kind: m.kind, total, elapsed, start, aim: Number(x.aim) || 0, pts, expectedOn,
-    /* Money on a shelf or owed cannot go below nothing; a rate carried
-       past zero is arithmetic, not a place the figure can reach. */
-    projected: Math.max(0, Number(x.pace.at_this_rate) || 0), onCourse: !!x.pace.on_course };
+  /* Read from the books before it began -- the same reading for a weekly
+     target and the owner's own. */
+  let above90 = null;
+  try { above90 = mgrTgAbove90(x, null); } catch(e){ above90 = null; }
+  let behindTwo = null;
+  try { behindTwo = mgrTgBehindTwo(mgrTgMondays(x)); } catch(e){ behindTwo = null; }
+  return { x, m, met: x.met, owner: x.owner || null, linked, above90, behindTwo, metOn: mgrTgMetOn(x) };
 }
-function mgrPaceHTML(x){
-  const s = managerTargetSeries(x);
-  if(!s || !s.pts.length) return '';
-  const W = 280, H = 72, top = 6, bottom = 18, padR = 6;
-  const vals = [s.start, s.aim, s.projected].concat(s.pts.map(p=> p.v));
-  let lo = Math.min(...vals), hi = Math.max(...vals);
-  if(s.kind === 'flow') lo = 0;
-  if(hi - lo < 1) hi = lo + 1;
-  /* Positions are ENDS of days: day i (0-based) closes at X(i + 1), and
-     X(0) is the moment the period opened, where a flow stands at
-     nothing and a level at its baseline. */
-  const X = (k)=> (k / s.total) * (W - padR);
-  const Y = (v)=> top + (1 - (v - lo) / (hi - lo)) * (H - top - bottom);
-  const f = (n)=> n.toFixed(1);
-  const tone = s.onCourse ? 'mgr-pc-good' : 'mgr-pc-bad';
-  const last = s.pts[s.pts.length - 1];
-  const at = (p, n)=> s.kind === 'level' && n === 0 ? 0 : p.i + 1;
-  const line = s.kind === 'flow'
-    ? `<polyline class="mgr-pc-act" points="${[f(X(0)) + ',' + f(Y(0))].concat(s.pts.map(p=> f(X(p.i + 1)) + ',' + f(Y(p.v)))).join(' ')}"/>` : '';
-  const startDot = s.kind === 'level' && s.pts.length > 1
-    ? `<circle class="mgr-pc-start" cx="${f(X(0))}" cy="${f(Y(s.pts[0].v))}" r="3.5"/>` : '';
-  const lastX = X(at(last, s.pts.length - 1));
-  const proj = at(last, s.pts.length - 1) < s.total
-    ? `<line class="mgr-pc-proj ${tone}" x1="${f(lastX)}" y1="${f(Y(last.v))}" x2="${f(X(s.total))}" y2="${f(Y(s.projected))}"/>` : '';
-  /* The road starts from nothing before the first day for a flow, and
-     from the baseline for a level. */
-  const roadFrom = s.kind === 'flow' ? 0 : s.start;
-  const dayLabel = (iso)=> new Date(iso + 'T12:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short' });
-  const endISO = anShiftDate(s.pts[0].d, s.total - 1);
-  const said = `${x.label}: ${fmtUGX(x.actual)} of ${fmtUGX(s.aim)}, day ${s.elapsed} of ${s.total}. `
-    + `On course would be ${fmtUGX(x.pace.expected)}; at this rate it ends at ${fmtUGX(s.projected)}.`;
-  /* The hover reads these back: each recorded day, the figure the books
-     give it, and where the road had it. */
-  const days = s.pts.map((p, n)=> [p.d, p.v, s.kind === 'level' && n === 0 ? s.start : s.expectedOn(p.i), at(p, n)])
-    .map(a=> a.join(':')).join('|');
-  return `<div class="mgr-pc" data-pace-days="${esc(days)}" data-pace-total="${s.total}" data-pace-w="${W - padR}" data-pace-vw="${W}">
-    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${esc(said)}">
-      <line class="mgr-pc-base" x1="0" y1="${f(H - bottom)}" x2="${W}" y2="${f(H - bottom)}"/>
-      <line class="mgr-pc-road" x1="${f(X(0))}" y1="${f(Y(roadFrom))}" x2="${f(X(s.total))}" y2="${f(Y(s.aim))}"/>
-      <circle class="mgr-pc-aim" cx="${f(X(s.total))}" cy="${f(Y(s.aim))}" r="3"/>
-      ${proj}${line}${startDot}
-      <line class="mgr-pc-x" x1="0" y1="${top}" x2="0" y2="${f(H - bottom)}"/>
-      <circle class="mgr-pc-now ${tone}" cx="${f(lastX)}" cy="${f(Y(last.v))}" r="4"/>
-    </svg>
-    <span class="mgr-pc-d">${esc(dayLabel(s.pts[0].d))}</span><span class="mgr-pc-d mgr-pc-d-end">aim · ${esc(dayLabel(endISO))}</span>
-    <span class="mgr-pc-tip" hidden></span>
+/* THE LINE UNDER A FINISHED TARGET: met and by how much, or missed and
+   by how much, then the fact the books hold about it -- no move aimed
+   at it. Never a reason the books cannot show. */
+function mgrTgFinishedLine(r){
+  const x = r.x, u = r.m.unit;
+  if(r.met == null) return 'where it ended is not known — the books cannot read it for that day';
+  if(r.met){
+    const early = r.metOn && r.metOn < x.to ? waDaysBetween(r.metOn, x.to) : 0;
+    return `reached ${mgrTgFig(u, x.actual)}${early ? `, ${early} day${early === 1 ? '' : 's'} early` : ''}`;
+  }
+  const facts = [];
+  if(r.linked === false) facts.push('no move aimed at it');
+  return `missed by ${mgrTgGap(u, (Number(x.aim) || 0) - Number(x.actual))} — ended at ${mgrTgFig(u, x.actual)}${facts.length ? ' · ' + facts.join(', ') : ''}`;
+}
+/* THE COMPOSER, as a model: the measure, the three values from the past,
+   the deadline, the owner, and the read -- odds, where the books land it,
+   the path, the checkpoints and the warnings the history earns. */
+function mgrTgComposeModel(draft, env){
+  const today = todayISO();
+  const running = new Set(env.runningMetrics || []);
+  const measures = MGR_TG_ORDER.filter(k=> MANAGER_METRICS[k]).map(k=> ({ k, label: MANAGER_METRICS[k].label, running: running.has(k) }));
+  const metric = measures.some(x=> x.k === draft.metric && !x.running) ? draft.metric
+    : ((measures.find(x=> !x.running) || {}).k || null);
+  const deadlines = mgrTgDeadlines(today);
+  const byIdx = Math.max(0, Math.min(deadlines.length - 1, Number(draft.by) || 0));
+  const by = deadlines[byIdx] || null;
+  const full = (env.runningCount || 0) >= MGR_TG_MAX_RUNNING;
+  const base = { today, measures, metric, deadlines, byIdx, by, full };
+  if(!metric || !by) return { ...base, m: null };
+  const m = MANAGER_METRICS[metric];
+  const out = mgrTgOutlook(metric, today, by.to);
+  const choices = mgrTgChoices(out.past.values, m.direction, m.round);
+  /* A FLOOR ALREADY UNDER: cash a floor is set above today is broken on
+     its first day, so that value is not offered -- the next one that
+     today's cash still stands on is. */
+  const blocked = {};
+  if(choices && m.span && out.now != null)
+    ['safe', 'stretch', 'bold'].forEach(k=>{ if(!mgrTgBetter(m.direction, out.now, choices[k])) blocked[k] = true; });
+  let choice = ['safe', 'stretch', 'bold'].includes(draft.choice) ? draft.choice : 'stretch';
+  if(blocked[choice]) choice = ['stretch', 'safe', 'bold'].find(k=> !blocked[k]) || choice;
+  const aim = choices && !blocked[choice] ? choices[choice] : null;
+  const odds = aim != null ? mgrTgOdds(out.past.values, aim, m.direction) : null;
+  const moves = mgrTgLinked((env.plan || {}).moves, { metric });
+  const bridge = mgrTgBridge(out.projected, aim, m.direction, moves);
+  const verdict = choices && aim == null && m.span && out.now != null
+    ? { word: 'Under every floor today', tone: 'bad', share: null }
+    : mgrTgVerdict(m, aim, out.now, out.projected, bridge);
+  /* An aim the measure already meets is a line to hold: its road is flat. */
+  const holds = m.kind === 'level' && aim != null && out.now != null && mgrTgBetter(m.direction, out.now, aim);
+  const road = aim != null && (m.kind === 'flow' || out.now != null)
+    ? mgrTgRoad(today, by.to, m.kind === 'flow' ? 0 : holds ? aim : out.now, aim, m.round) : null;
+  const suggest = mgrTgSuggest(metric, env.finished);
+  const people = [{ key: 'you' }].concat((data.staff || []).filter(s=> s && !s.unavailable).map(s=> ({ key: String(s.id) })))
+    .map(p=> ({ ...mgrTgPerson(p.key), sug: p.key === suggest.owner }));
+  const owner = people.some(p=> p.key === draft.owner) ? draft.owner : (people.some(p=> p.key === suggest.owner) ? suggest.owner : 'you');
+  const rules = env.rules || [];
+  const warn = [];
+  const r90 = rules.find(r=> r.id === 'above90');
+  if(r90 && aim != null && choices && mgrTgBetter(m.direction, aim, choices.bold)) warn.push(`At or past your 90th percentile — ${r90.k} of ${r90.n} aims like that were missed.`);
+  const rMv = rules.find(r=> r.id === 'moves');
+  if(rMv && aim != null && !bridge.reached && !moves.some(mv=> Math.abs(Number(mv.effect)) > 0))
+    warn.push(`No move is aimed at it yet — ${rMv.k} of ${rMv.n} targets without one were missed.`);
+  return { ...base, m, out, choices, blocked, choice, aim, odds, moves, bridge, verdict, road, suggest, people, owner, warn,
+    planOn: (env.plan || {}).on || null,
+    canSet: !full && aim != null && (m.kind === 'flow' || out.now != null) };
+}
+/* MY READ'S WORD, from the path -- as the canvas reads it: where the
+   books land it, and what the moves aimed at it add. The books alone
+   reach the aim: Likely. The moves close the rest, by my sizing:
+   Reachable. Otherwise what is still short after every move, as a share
+   of the distance from where it stands to the aim -- under a third (the
+   running rows' At risk line) is A stretch, a third or more Not by then.
+   The odds beside it are the history, k of n past periods (Q4), never
+   the verdict: safe, stretch and bold are percentiles of those same
+   periods, so their odds are fixed by which one is picked. */
+function mgrTgVerdict(m, aim, now, projected, bridge){
+  if(!m || aim == null || projected == null) return { word: 'Cannot be read yet', tone: '', share: null };
+  if(mgrTgBetter(m.direction, projected, aim)) return { word: 'Likely', tone: 'good', share: 0 };
+  if(bridge && bridge.reached) return { word: 'Reachable — with the moves below', tone: 'good', share: 0 };
+  const from = m.kind === 'flow' ? 0 : (now != null ? now : projected);
+  const end = bridge && bridge.end != null ? bridge.end : projected;
+  const dist = Math.abs(aim - from), short = Math.abs(aim - end);
+  const share = dist > 0 ? Math.min(1, short / dist) : 1;
+  return share < MGR_TG_RISK ? { word: 'A stretch', tone: 'warn', share } : { word: 'Not by then', tone: 'bad', share };
+}
+/* WHAT THE COMPOSER SAYS, in figures it derived. */
+function mgrTgComposeSay(c){
+  const m = c.m, u = m.unit, day = mgrTgDay(c.by.to);
+  const word = (n)=> ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight'][n] || String(n);
+  if(c.out.past.error) return `Your books could not be read for ${m.label.toLowerCase()} — ${c.out.past.error}.`;
+  if(!c.choices) return `Your books hold ${c.out.past.values.length} past ${c.out.P}-day period${c.out.past.values.length === 1 ? '' : 's'} of ${m.label.toLowerCase()} — too few to size a target from (it takes ${MGR_TG_MIN_CHOICES}).`;
+  if(c.aim == null && m.span && c.out.now != null) return `Cash stands at ${mgrTgFig(u, c.out.now)} today — already under every floor your past ${c.out.P}-day periods held, so none of them can be set from today.`;
+  if(c.out.projected == null) return m.span ? `There is no committed line to read the days ahead on, so I cannot say how low cash goes by ${day}.`
+    : `Your books give no rate for ${m.label.toLowerCase()} yet, so I cannot say where it lands by ${day}.`;
+  const lead = c.out.method.charAt(0).toUpperCase() + c.out.method.slice(1);
+  const who = c.owner === 'you' ? 'you' : (mgrTgPerson(c.owner).first || 'them');
+  const closes = (n)=> `${n === 1 ? 'One move closes it' : word(n) + ' moves close it'}, by my sizing; I’ll hold ${who} to the road at each Monday checkpoint.`;
+  const order = ['safe', 'stretch', 'bold'];
+  /* A later deadline gives a flow or a level more time; a floor more days
+     to break, so it is never offered one. */
+  const later = !m.span && c.deadlines[c.byIdx + 1] ? mgrTgDay(c.deadlines[c.byIdx + 1].to) : null;
+  /* A lower value is worth suggesting only while it is still a target:
+     above nothing, not already under today (a floor), and not where the
+     books land anyway. */
+  const li = order.indexOf(c.choice) - 1;
+  const lowerKey = li >= 0 ? order[li] : null;
+  const lower = lowerKey ? c.choices[lowerKey] : null;
+  const lowerOk = lower != null && !c.blocked[lowerKey] && (m.direction === 'down' || lower > 0) && !mgrTgBetter(m.direction, c.out.projected, lower);
+  const tail = lowerOk ? ` I’d set ${mgrTgFig(u, lower)}${later ? `, or give it until ${later}` : ''}.`
+    : later ? ` I’d give it until ${later}.` : '';
+  if(m.span){
+    const at = c.out.lowOn ? ` on ${mgrTgDay(c.out.lowOn, true)}` : '';
+    if(mgrTgBetter(m.direction, c.out.projected, c.aim))
+      return `${lead}, cash stays at or above ${mgrTgFig(u, c.out.projected)} — its lowest${at} — to ${day} without doing anything new. Set it higher — a target you’d hit anyway teaches nobody anything.`;
+    if(c.bridge.reached)
+      return `${lead}, cash dips to ${mgrTgFig(u, c.out.projected)}${at} — ${mgrTgGap(u, c.aim - c.out.projected)} under the floor. ${closes(c.bridge.used)}`;
+    return `${c.moves.length ? 'Even with every move aimed at it' : 'With no move aimed at it yet'}, cash dips to ${mgrTgFig(u, c.bridge.end)} — under ${mgrTgFig(u, c.aim)} before ${day}, ${c.out.method}.${tail}`;
+  }
+  if(mgrTgBetter(m.direction, c.out.projected, c.aim))
+    return `${lead} you reach ${mgrTgFig(u, c.out.projected)} by ${day} without doing anything new. Set it higher — a target you’d hit anyway teaches nobody anything.`;
+  if(c.bridge.reached)
+    return `${lead} you get to ${mgrTgFig(u, c.out.projected)} — ${mgrTgGap(u, c.aim - c.out.projected)} short. ${closes(c.bridge.used)}`;
+  return `${c.moves.length ? 'Even with every move aimed at it' : 'With no move aimed at it yet'}, you land at ${mgrTgFig(u, c.bridge.end)} — short of ${mgrTgFig(u, c.aim)} by ${day}.${tail}`;
+}
+
+/* ==== THE DRAWING ======================================================= */
+const MGR_TG_GLYPH = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20.5v-.5a5.5 5.5 0 0 1 5.5-5.5h4a5.5 5.5 0 0 1 5.5 5.5v.5"/></svg>';
+function mgrTgAvHTML(p){
+  return p.key === 'you' ? `<span class="mgr-tg-av" aria-hidden="true">${MGR_TG_GLYPH}</span>`
+    : `<span class="mgr-tg-av${p.key === 'none' ? ' mgr-tg-av-none' : ''}" aria-hidden="true">${esc(p.ini)}</span>`;
+}
+const MGR_TG_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function mgrTgBandHTML(runs, finished){
+  const year = todayISO().slice(0, 4);
+  const n = (k)=> runs.filter(r=> r.key === k).length;
+  const fy = finished.filter(r=> String(r.x.to).slice(0, 4) === year && (r.met === true || r.met === false));
+  const cell = (label, v, cls)=> `<div class="mgr-tg-hc"><span>${label}</span><b class="mgr-tg-hv${cls ? ' ' + cls : ''}">${v}</b></div>`;
+  return `<section class="mgr-tg-hd" aria-label="The Manager on targets">
+    <span class="mgr-tg-gm">${MGR_TG_GLYPH.replace('<svg ', '<svg class="mgr-tg-gm-g" ')}<i title="Read from your books this morning"></i></span>
+    <div class="mgr-tg-hm"><p class="mgr-tg-hn"><b>The Manager</b> · on targets</p>
+      <p class="mgr-tg-hw">“${esc(mgrTgBandLine(runs))}”</p></div>
+    <div class="mgr-tg-hr">${cell('On track', n('on'), 'mgr-tg-hv-on')}${cell('At risk', n('risk'), 'mgr-tg-hv-risk')}${
+      cell('Off track', n('off'), 'mgr-tg-hv-off')}${cell('Met this year', fy.length ? `${fy.filter(r=> r.met).length}/${fy.length}` : '—', '')}</div>
+  </section>`;
+}
+function mgrTgComposerHTML(c){
+  const head = `<div class="ow-pan-h"><span class="ow-pan-t">New target</span><span class="mgr-tg-pt">Set a target — I’ll tell you if it’s real before you commit</span></div>`;
+  if(!c.m) return `${head}<div class="ow-empty">${c.metric ? 'No deadline a week or more away is on offer.' : 'Every measure already has a target running.'}</div>`;
+  const m = c.m, u = m.unit;
+  const opt = (on, attrs, inner, cls, dis, title)=> `<button type="button" class="mgr-tg-opt${cls ? ' ' + cls : ''}${on ? ' mgr-tg-on' : ''}" aria-pressed="${on}"${
+    dis ? ' disabled' : ''}${title ? ` title="${esc(title)}"` : ''} ${attrs}>${inner}</button>`;
+  const what = c.measures.map(x=> opt(x.k === c.metric, `data-tg-metric="${x.k}"`, esc(x.label) + (x.running ? '<small>running</small>' : ''),
+    'mgr-tg-opt-r', x.running, x.running ? 'A target on this is already running' : MANAGER_METRICS[x.k].basis)).join('')
+    + opt(false, 'data-tg-none="load"', 'Saturday load time<small>not measurable yet</small>', 'mgr-tg-opt-r', true,
+      'Load time has no agreed definition yet, so the books cannot measure it');
+  const nowCell = `<span class="mgr-tg-opt mgr-tg-opt-now"><small>${esc(c.out.nowLabel || 'now')}</small><span class="mgr-tg-fig">${esc(mgrTgFig(u, c.out.now))}</span></span>`;
+  const to = c.choices ? ['safe', 'stretch', 'bold'].map(k=> opt(c.choice === k && !c.blocked[k], `data-tg-choice="${k}"`,
+      `<small>${c.blocked[k] ? 'under today' : k}</small><span class="mgr-tg-fig">${esc(mgrTgFig(u, c.choices[k]))}</span>`, '', !!c.blocked[k],
+      c.blocked[k] ? `Cash stands at ${mgrTgFig(u, c.out.now)} today, already under this floor`
+        : `${k === 'safe' ? 'The median' : k === 'stretch' ? 'The 75th percentile' : 'The 90th percentile'} of ${c.choices.n} past ${c.out.P}-day periods`)).join('') + nowCell
+    : `<span class="mgr-tg-thin">${c.out.past.error ? 'The books could not be read for this measure.' : `${c.out.past.values.length} past ${c.out.P}-day period${c.out.past.values.length === 1 ? '' : 's'} on your books — it takes ${MGR_TG_MIN_CHOICES} to size one.`}</span>${nowCell}`;
+  const byOpts = c.deadlines.map((d, i)=> opt(i === c.byIdx, `data-tg-by="${i}"`, `<small>${d.days} days</small><span>${esc(mgrTgDay(d.to))}</span>`)).join('');
+  const owners = c.people.map(p=> opt(p.key === c.owner, `data-tg-owner="${esc(p.key)}"`,
+    `${mgrTgAvHTML(p)}<span>${esc(p.key === 'you' ? 'You' : p.first || p.name)}</span>${p.sug ? '<small>suggested</small>' : ''}`, 'mgr-tg-opt-p', false,
+    p.sug ? 'Suggested: ' + c.suggest.why : '')).join('');
+  const step = (n, label, inner, aria)=> `<div class="mgr-tg-step"><span class="mgr-tg-sn">${n}</span><span class="mgr-tg-sl">${label}</span>
+    <span class="mgr-tg-opts" role="group" aria-label="${aria}">${inner}</span></div>`;
+  /* My read: the odds as a count, where the books land it, the path,
+     the checkpoints and the one action. */
+  const o = c.odds;
+  const word = c.verdict.word, tone = c.verdict.tone;
+  const oddsSub = o && o.pct != null ? `reached in ${o.k} of ${o.n} past ${c.out.P}-day periods on your books`
+    : o ? `${o.n} past ${c.out.P}-day period${o.n === 1 ? '' : 's'} on your books — odds after ${MGR_TG_MIN_ODDS}` : 'no aim to count against yet';
+  const day = mgrTgDay(c.by.to);
+  const br = (cls, label, d, v)=> `<div class="mgr-tg-br ${cls}"><i></i><span class="mgr-tg-br-l">${label}</span><span class="mgr-tg-br-d">${d}</span><span class="mgr-tg-br-v">${v}</span></div>`;
+  const bridge = c.aim == null || c.out.projected == null ? '' : `<div class="mgr-tg-bridge" aria-label="The path to the target">
+      ${br('mgr-tg-br-st', m.span ? `The lowest ${esc(c.out.method)}, to ${esc(day)}` : `${esc(c.out.method.charAt(0).toUpperCase() + c.out.method.slice(1))}, by ${esc(day)}`, '', esc(mgrTgFig(u, c.out.projected)))}
+      ${c.bridge.rows.map(r=> br('mgr-tg-br-mv', `${esc(r.move.title || 'A move')}<small>Decision ${esc(r.move.num)} · my sizing</small>`,
+        r.delta == null ? 'not sized' : esc(mgrTgDelta(u, r.delta)), esc(mgrTgFig(u, r.value)))).join('')}
+      ${!c.moves.length && !mgrTgBetter(m.direction, c.out.projected, c.aim) ? br('mgr-tg-br-none', `No move in ${c.planOn ? (c.planOn === c.today ? 'today’s plan' : 'the plan of ' + esc(mgrTgDay(c.planOn))) : 'a plan'} is aimed at this yet`, '', '') : ''}
+      ${br('mgr-tg-br-end ' + (c.bridge.reached ? 'mgr-tg-ok' : 'mgr-tg-no'), c.bridge.reached ? 'Target reached' : 'Still short of the target', '', esc(mgrTgFig(u, c.aim)))}
+    </div>`;
+  const qLabel = ['¼ of the way', 'Halfway', '¾', 'Deadline'];
+  const cps = c.road ? `<div class="mgr-tg-cpw"><span class="mgr-tg-micro">Checkpoints I’ll hold you to</span>
+      <div class="mgr-tg-cps">${c.road.quarters.map((q, i)=> `<div><span class="mgr-tg-micro">${qLabel[i]}</span><b class="mgr-tg-fig">${esc(mgrTgFig(u, q.value))}</b><small>${esc(mgrTgDay(q.on, true))}</small></div>`).join('')}</div>
+      <p class="mgr-tg-cpn">and every Monday on the road — ${c.road.mondays.length} checkpoint${c.road.mondays.length === 1 ? '' : 's'} in all</p></div>` : '';
+  const person = mgrTgPerson(c.owner);
+  const ask = person.key !== 'you'
+    ? (person.phone ? `<a class="btn btn-ghost mgr-tg-ask" target="_blank" rel="noopener" href="${esc(waComposeUrl(person.phone, mgrTgAskText(c, person)))}">Ask ${esc(person.first || person.name)} first</a>`
+      : `<button type="button" class="btn btn-ghost mgr-tg-ask" disabled title="No phone number on file for ${esc(person.name)}">Ask ${esc(person.first || person.name)} first</button>`) : '';
+  const why = c.full ? `${MGR_TG_MAX_RUNNING} targets are running — the most at once. One has to finish first.`
+    : c.aim == null && c.choices && m.span ? 'Cash today is already under every floor on offer.'
+    : c.aim == null ? 'There is no aim to set until the books can size one.'
+    : (m.kind === 'level' && c.out.now == null) ? m.label + ' cannot be read from your books today.' : '';
+  return `${head}
+    <div class="mgr-tg-tc">
+      <div class="mgr-tg-tl">
+        ${step(1, 'What', what, 'Measure')}
+        ${step(2, 'To', to, 'Target')}
+        ${step(3, 'By', byOpts, 'Deadline')}
+        ${step(4, 'Owner', owners, 'Owner')}
+      </div>
+      <div class="mgr-tg-tr">
+        <span class="mgr-tg-micro">My read</span>
+        <div class="mgr-tg-odds"><span class="mgr-tg-odds-v mgr-tg-fig">${o && o.pct != null ? o.pct + '%' : '—'}</span>
+          <span class="mgr-tg-odds-l"><span class="mgr-tg-odds-w" title="From the path: the books alone reach it — Likely; the moves close the rest — Reachable; short after every move by under a third of the distance — A stretch; a third or more — Not by then"><i class="mgr-tg-sig${tone ? ' mgr-tg-sig-' + tone : ''}"></i><b>${esc(word)}</b></span><small>${esc(oddsSub)}</small></span></div>
+        <p class="mgr-tg-say"><span class="mgr-tg-gmini">${MGR_TG_GLYPH}</span><span>${esc(mgrTgComposeSay(c))}</span></p>
+        ${bridge}
+        ${cps}
+        ${c.warn.map(w=> `<p class="mgr-tg-warn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg><span>${esc(w)}</span></p>`).join('')}
+        <div class="mgr-tg-acts"><button type="button" class="btn btn-accent mgr-tg-set"${c.canSet ? '' : ' disabled'}>Set this target</button>${ask}</div>
+        ${why ? `<p class="mgr-tg-cpn">${esc(why)}</p>` : ''}
+      </div>
+      <div class="mgr-tg-actp"><span class="mgr-tg-actp-t"><b title="${esc(c.aim != null ? mgrTgName(c.metric, c.aim) : m.label)}">${
+        esc(c.aim != null ? mgrTgName(c.metric, c.aim) : m.label)}</b><small>by ${esc(day)} · ${esc(person.key === 'you' ? 'you' : person.first || person.name)}</small></span><button type="button" class="btn btn-accent mgr-tg-set"${c.canSet ? '' : ' disabled'}>Set this target</button></div>
+    </div>`;
+}
+/* The message "Ask Joan first" opens in WhatsApp: the target, where it
+   stands and the checkpoints, for the owner to send by their own tap. */
+function mgrTgAskText(c, person){
+  const u = c.m.unit;
+  return `Hi ${person.first || person.name} — I’d like you to own a target: ${mgrTgName(c.metric, c.aim)} by ${mgrTgDay(c.by.to)}`
+    + ` (it stands at ${mgrTgFig(u, c.out.now)} now). The checkpoints: ${(c.road ? c.road.quarters : []).map(q=> `${mgrTgFig(u, q.value)} by ${mgrTgDay(q.on)}`).join(', ')}.`
+    + ' Can you commit to it?';
+}
+function mgrTgRowHTML(r){
+  const x = r.x, u = r.m.unit, today = todayISO();
+  const name = mgrTgName(x.metric, x.aim);
+  const inDays = r.brk && r.brk.breaksOn ? waDaysBetween(today, r.brk.breaksOn) : null;
+  const left = r.brk && r.brk.broke ? `broke on ${mgrTgDay(r.brk.breaksOn)}`
+    : inDays != null ? (inDays === 0 ? 'breaks today' : `breaks in ${inDays} day${inDays === 1 ? '' : 's'}`)
+    : x.days_left === 0 ? 'ends today' : `${x.days_left} day${x.days_left === 1 ? '' : 's'} left`;
+  const tone = { on: 'mgr-tg-t-vg', risk: 'mgr-tg-t-am', off: 'mgr-tg-t-cr' }[r.key] || 'mgr-tg-t-nt';
+  const t = r.track;
+  const mark = (cls, pos, label)=> pos == null ? '' : `<b class="${cls}" style="left:${pos.toFixed(1)}%" title="${esc(label)}"></b>`;
+  const aria = `${name}: ${mgrTgFig(u, x.actual)} now; the road has it at ${mgrTgFig(u, x.pace && x.pace.expected)} today; ${mgrTgFig(u, r.land)} at this rate${
+    r.planLand != null ? `; ${mgrTgFig(u, r.planLand)} if the moves deliver my sizing` : ''}.`;
+  let note, dn = false;
+  if(r.brk){ dn = r.brk.low < (Number(x.aim) || 0); note = `${mgrTgDay(r.brk.lowOn, true)} — ${dn ? 'under the aim' : 'above the aim'}, ${
+    r.brk.lowBooks ? 'in your books' : 'on the committed line'}${r.brk.partial ? ` (the line runs to ${mgrTgDay(r.brk.through)})` : ''}`; }
+  else if(x.pace && x.pace.first) note = r.land != null ? 'as set — first whole day read tomorrow' : 'first whole day read tomorrow';
+  else if(r.land == null) note = 'not known';
+  else if(r.wrongWay){ dn = true; note = 'moving the wrong way'; }
+  else if(r.track.hold) { dn = !r.landsAlone; note = r.landsAlone ? 'holding the line at this rate' : 'crosses the line at this rate'; }
+  else if(r.landsAlone) note = r.state.key === 'on' && mgrTgBetter(r.m.direction, Number(x.actual), Number(x.aim) || 0) ? 'already there' : 'at this rate';
+  else { dn = r.key === 'off'; note = `${mgrTgGap(u, (Number(x.aim) || 0) - r.land)} short at this rate`; }
+  const o = r.odds, op = r.oddsPlan;
+  /* A floor the books already show broken cannot be held this time,
+     whatever the past periods did: no per cent beside a break. */
+  const oddsHTML = r.brk && r.brk.broke ? `<span class="mgr-tg-fig">—</span><small class="mgr-tg-dn">cannot be held now — it went under</small>`
+    : o.pct != null
+    ? `<span class="mgr-tg-fig" title="${esc(`Reached in ${o.k} of ${o.n} past ${r.past.len}-day periods before it began`)}">${o.pct}%</span>${
+      op && op.pct != null ? `<small class="mgr-tg-plan">${op.pct}% with my sizing</small>` : `<small>${o.k} of ${o.n} past periods</small>`}`
+    : `<span class="mgr-tg-fig">—</span><small>${o.n} past period${o.n === 1 ? '' : 's'} — too few</small>`;
+  const st = r.state;
+  const chip = r.brk && r.brk.breaksOn ? (r.brk.broke ? 'Broke ' : 'Breaks ') + mgrTgDay(r.brk.breaksOn) : MGR_TG_STATE_WORD[r.key];
+  const ruleLine = r.brk
+    ? `The lowest cash from ${mgrTgDay(x.from)} to ${mgrTgDay(x.to)} is the lower of what the books already show for the days gone by and the committed line for the days to come — dated bills, rent, wages and loans only, never money expected in${
+      r.brk.partial ? `; the line runs to ${mgrTgDay(r.brk.through)}, so the days after it are not read yet` : ''}. ${
+      r.brk.breaksOn ? (r.brk.broke ? `The books show it under ${mgrTgFig(u, x.aim)} on ${mgrTgDay(r.brk.breaksOn, true)}, so it cannot be held this time.`
+        : `The committed line goes under ${mgrTgFig(u, x.aim)} on ${mgrTgDay(r.brk.breaksOn, true)}.`) : `It stays at or above ${mgrTgFig(u, x.aim)}.`} The rule: on track while the books and the line stay at or above the floor; off track once either goes under it.`
+    : st.key === 'unknown' ? 'The books cannot read where it stands today, so it is not called anything.'
+    : st.first ? `Set today. The first whole day is read tomorrow; until then it is On track${r.land != null ? `, and lands where it was set to: ${mgrTgFig(u, r.land)}` : ''}.`
+    : x.hold ? `A line to hold: ${mgrTgFig(u, x.aim)} was already met when it was set. ${st.key === 'off' ? `It is ${mgrTgGap(u, st.behind)} past the line now.`
+      : st.crossing ? `At this rate it reaches ${mgrTgFig(u, x.pace.at_this_rate)} by ${mgrTgDay(x.to)}, across the line.` : 'It is held, and at this rate stays held.'} The rule: on track while held; at risk when at this rate it crosses the line before the deadline; off track once crossed.`
+    : `${st.behind ? `Behind the road by ${mgrTgGap(u, st.behind)} today — ${Math.round(st.share * 100)}% of the ${mgrTgGap(u, st.toGo)} still to go.` : 'At or ahead of the road today.'} The rule: on track at or ahead of the straight road from where it started to the aim; at risk behind it by less than a third of what is still to go; off track a third or more.`;
+  const fix = r.links[0];
+  const fixHTML = fix ? `<b>${esc(fix.title || 'A move')}</b><button type="button" class="ow-link mgr-tg-dec" data-tg-move="${esc(String(fix.id))}">Decision ${esc(fix.num)} →</button>${
+      r.links.length > 1 ? `<small>and ${r.links.length - 1} more aimed at it</small>` : ''}`
+    : `<span class="mgr-tg-none">No move aimed at it yet</span>`;
+  return `<div class="mgr-tg-row" data-tg-id="${esc(String(x.id))}">
+    <span class="mgr-tg-rn"><b title="${esc(name)}">${esc(name)}</b><small>${mgrTgAvHTML(r.person)}${esc(r.person.name)} · by ${esc(mgrTgDay(x.to))} · <span class="mgr-tg-fig">${esc(left)}</span>${
+      r.two ? ' · <span class="mgr-tg-two">behind the road two Mondays running</span>' : ''}</small></span>
+    <span class="mgr-tg-trw">
+      <span class="mgr-tg-trk" role="img" aria-label="${esc(aria)}"><i class="mgr-tg-f ${tone}" style="width:${(t.now || 0).toFixed(1)}%"></i>${
+        t.pace != null ? `<em class="mgr-tg-pc" style="left:${t.pace.toFixed(1)}%" title="Where the road has it today"></em>` : ''}${
+        mark('mgr-tg-rg', t.land, 'Where it lands at this rate')}${mark('mgr-tg-pl', t.plan, 'Where it lands with the plan, by my sizing')}</span>
+      <span class="mgr-tg-trx">${t.hold
+        ? `<span>line <b class="mgr-tg-fig">${esc(mgrTgFig(u, x.aim, true))}</b></span><span>now <b class="mgr-tg-fig">${esc(mgrTgFig(u, x.actual, true))}</b></span><span>started <b class="mgr-tg-fig">${esc(mgrTgFig(u, t.start, true))}</b></span>`
+        : `<span>started <b class="mgr-tg-fig">${esc(mgrTgFig(u, t.start, true))}</b></span><span>now <b class="mgr-tg-fig">${esc(mgrTgFig(u, x.actual, true))}</b></span><span>target <b class="mgr-tg-fig">${esc(mgrTgFig(u, x.aim, true))}</b></span>`}</span>
+    </span>
+    <span class="mgr-tg-rl"><span class="mgr-tg-fig">${esc(mgrTgFig(u, r.land))}</span><small${dn ? ' class="mgr-tg-dn"' : ''}>${esc(note)}</small>${
+      r.planLand != null ? `<small class="mgr-tg-plan">with the plan ${esc(mgrTgFig(u, r.planLand))} · my sizing</small>` : ''}</span>
+    <span class="mgr-tg-ro">${oddsHTML}</span>
+    <span class="mgr-tg-rs"><button type="button" class="ow-cp mgr-tg-st${MGR_TG_STATE_TONE[r.key] ? ' ow-' + MGR_TG_STATE_TONE[r.key] : ''}" aria-expanded="false" data-tg-rule="${esc(String(x.id))}">${esc(chip)}</button></span>
+    <span class="mgr-tg-ra">${fixHTML}</span>
+    <p class="mgr-tg-why" hidden>${esc(ruleLine)}</p>
   </div>`;
 }
-/* One hover for every pace chart on the page: the nearest recorded day
-   under the pointer, its figure, and where the road had it. */
-document.addEventListener('pointermove', (e)=>{
-  const box = e.target && e.target.closest ? e.target.closest('.mgr-pc') : null;
-  document.querySelectorAll('.mgr-pc.mgr-pc-on').forEach(b=>{ if(b !== box) mgrPaceOff(b); });
-  if(!box) return;
-  const days = String(box.dataset.paceDays || '').split('|').filter(Boolean).map(r=> r.split(':'));
-  if(!days.length) return;
-  const total = Number(box.dataset.paceTotal) || 1, rect = box.getBoundingClientRect();
-  const frac = Math.max(0, Math.min(1, (e.clientX - rect.left) / (rect.width || 1)));
-  let best = null;
-  days.forEach(r=>{
-    const k = Number(r[3]);
-    if(!best || Math.abs(k / total - frac) < Math.abs(best.k / total - frac)) best = { k, d: r[0], v: Number(r[1]), e: Number(r[2]) };
-  });
-  const tip = box.querySelector('.mgr-pc-tip'), cross = box.querySelector('.mgr-pc-x');
-  const x = (best.k / total) * (Number(box.dataset.paceW) || 274);
-  if(cross){ cross.setAttribute('x1', x); cross.setAttribute('x2', x); }
-  box.classList.add('mgr-pc-on');
-  if(tip){
-    tip.hidden = false;
-    tip.textContent = `${new Date(best.d + 'T12:00:00Z').toLocaleDateString('en-GB',
-      { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' })}: ${fmtUGX(best.v)} · pace ${Math.round(best.e).toLocaleString('en-US')}`;
-    /* Kept inside the chart: centred over the day, but never past
-       either edge -- a figure cut by the panel's edge is a wrong figure. */
-    const px = (best.k / total) * rect.width, tw = tip.offsetWidth;
-    tip.style.left = Math.max(0, Math.min(rect.width - tw, px - tw / 2)) + 'px';
+function mgrTgRunningHTML(runs, proposed, full){
+  const head = `<div class="ow-pan-h"><span class="ow-pan-t">Running</span><span class="mgr-tg-pt">Where each target stands — and where it lands</span>${
+    runs.length ? '<span class="ow-pan-nt">sorted by days left</span>' : ''}</div>`;
+  const pp = (proposed || []).length ? `<div class="mgr-tg-pp"><p class="mgr-tg-pph"><b>Proposed by the meeting</b> — a commitment only when you take it on${
+      full ? ` · ${MGR_TG_MAX_RUNNING} are running, the most at once` : ''}</p><div class="mgr-pp-list">${proposed.map(mgrProposalHTML).join('')}</div></div>` : '';
+  if(!runs.length) return `${head}${pp}<div class="ow-empty">No target is running. Set one above, or take on one the meeting proposes.</div>`;
+  return `${head}${pp}
+    <div class="mgr-tg-lgd" aria-hidden="true"><span><i class="mgr-tg-lg-sw"></i>where you are</span><span><i class="mgr-tg-lg-pc"></i>where the road has you today</span><span><i class="mgr-tg-lg-rg"></i>where it lands at this rate</span><span><i class="mgr-tg-lg-pl"></i>where my plan lands it</span></div>
+    <div class="mgr-tg-th" aria-hidden="true"><span>Target</span><span>Progress, start → target</span><span>Lands at</span><span>Odds</span><span>State</span><span>What closes the gap</span></div>
+    ${runs.map(mgrTgRowHTML).join('')}`;
+}
+const MGR_TG_TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>';
+const MGR_TG_CROSS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"/></svg>';
+function mgrTgFinishedHTML(finished){
+  const shown = finished.slice(0, 6);
+  const met = shown.filter(r=> r.met === true).length, missed = shown.filter(r=> r.met === false).length;
+  const head = `<div class="ow-pan-h"><span class="ow-pan-t">Finished</span><span class="mgr-tg-pt">${shown.length ? `The last ${['', 'one', 'two', 'three', 'four', 'five', 'six'][shown.length]}` : 'Nothing yet'}</span>${
+    shown.length ? `<span class="ow-pan-n">${met} met · ${missed} missed</span>` : ''}</div>`;
+  if(!shown.length) return `${head}<div class="ow-empty">A target joins this list the day after its deadline, met or missed and by how much.</div>`;
+  return `${head}${shown.map(r=> `<div class="mgr-tg-fin"><span class="mgr-tg-fm ${r.met === true ? 'mgr-tg-fm-m' : r.met === false ? 'mgr-tg-fm-x' : ''}"${
+      r.met == null ? ' title="Not known"' : ''}>${r.met === true ? MGR_TG_TICK : r.met === false ? MGR_TG_CROSS : '?'}</span>
+      <span class="mgr-tg-fb"><b>${esc(mgrTgName(r.x.metric, r.x.aim))}</b><small>${esc(mgrTgFinishedLine(r))}</small></span>
+      <span class="mgr-tg-fd mgr-tg-fig">${esc(MGR_TG_MONTHS[Number(String(r.x.to).slice(5, 7)) - 1] || '')}</span></div>`).join('')}${
+    finished.length > shown.length ? `<p class="ow-mini">Showing the last 6 of ${finished.length} finished.</p>` : ''}`;
+}
+function mgrTgLearnedHTML(rules, finished, moveRead){
+  const known = finished.filter(r=> r.met === true || r.met === false);
+  const missed = known.filter(r=> r.met === false).length;
+  const head = `<div class="ow-pan-h"><span class="ow-pan-t">Learned</span><span class="mgr-tg-pt">How I set targets now</span>${
+    rules.length ? `<span class="ow-pan-nt">from the ${missed} I missed</span>` : ''}</div>`;
+  const unread = moveRead && moveRead.error ? `<p class="ow-mini">The journal’s moves could not be read — ${esc(moveRead.error)} — so no rule about moves is counted.</p>` : '';
+  if(!rules.length) return `${head}<div class="ow-empty">Nothing learned yet. A rule needs at least two finished targets behind it — ${known.length} finished so far, ${missed} missed.</div>${unread}`;
+  return `${head}${rules.map(r=> `<div class="mgr-tg-rule"><span class="mgr-tg-gmini">${MGR_TG_GLYPH}</span><span><b>${esc(r.title)}</b> ${esc(r.line)}</span></div>`).join('')}${unread}`;
+}
+
+/* ==== THE PAINTER ======================================================
+
+   'start' puts the last good copy back (or says it is reading). The
+   section is drawn when it is looked at: on 'state' while it is open,
+   or on 'view' when the owner opens it -- the history readings cost a
+   pass over the books each, and a render while another section is open
+   only marks it stale. The journal's moves (for the finished history's
+   "no move aimed at it" and the rule about moves) are read once per
+   render, guarded by the render's ticket, and the section is drawn
+   again when they land. */
+let mgrTgDraft = { metric: null, choice: 'stretch', by: 0, owner: null };
+let mgrTgDirty = true;
+let mgrTgLastModel = null;
+let mgrTgMoveRead = null;
+function mgrPaintTargets(gen, ctx){
+  const scoreWrap = document.getElementById('managerTargetsWrap');
+  if(!scoreWrap) return;
+  if(ctx.landed === 'start'){
+    mgrTgDirty = true;
+    if(!ctx.notes) scoreWrap.innerHTML = mgrNeedsMemoryHTML('Targets');
+    else mgrLastKnown(scoreWrap, true);
+    return;
   }
-});
-function mgrPaceOff(b){
-  b.classList.remove('mgr-pc-on');
-  const t = b.querySelector('.mgr-pc-tip');
-  if(t) t.hidden = true;
+  if(ctx.landed === 'state') mgrTgDirty = true;
+  if(ctx.landed !== 'state' && ctx.landed !== 'view') return;
+  if(!ctx.st || mgrView !== 'targets' || !mgrTgDirty) return;
+  const st = ctx.st;
+  if(st.error){ scoreWrap.innerHTML = mgrJournalUnreadHTML(st.error); mgrTgDirty = false; return; }
+  const sb2 = st.score || { targets: [], proposed: [] };
+  if(sb2.error){
+    scoreWrap.innerHTML = `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">Targets</span></div>
+      <div class="ow-empty">The scoreboard could not be read just now &mdash; ${esc(sb2.error)}. No target has been
+        taken on or set aside by this.</div></div>`;
+    mgrTgDirty = false;
+    return;
+  }
+  mgrTgDirty = false;
+  mgrTgDraw(scoreWrap, gen, st);
+  /* The moves, once per render; drawn again when they land. */
+  if(!mgrTgMoveRead || mgrTgMoveRead.gen !== gen){
+    const since = (sb2.targets || []).filter(x=> x.finished).map(x=> String(x.from || '')).filter(Boolean).sort()[0] || todayISO();
+    mgrTgMoveRead = { gen, pending: true, rows: [], error: null, firstLink: null };
+    mgrNotesOfKind('move', { since, limit: 500 }).then(r=>{
+      if(gen !== mgrRenderGen) return;
+      const rows = (r.rows || []).filter(x=> x && x.body);
+      const links = rows.filter(x=> x.body.target).map(x=> String(x.date)).sort();
+      mgrTgMoveRead = { gen, pending: false, rows, error: r.error || null, firstLink: links[0] || null };
+      if(mgrView === 'targets') mgrTgDraw(scoreWrap, gen, st);
+    });
+  }
+}
+function mgrTgDraw(scoreWrap, gen, st){
+  const sb2 = st.score || { targets: [], proposed: [] };
+  const plan = mgrTgPlanMoves(st);
+  const live = (sb2.targets || []).filter(x=> !x.finished);
+  const runs = live.map(x=> mgrTgRunModel(x, plan))
+    .sort((a, b)=> (a.x.days_left - b.x.days_left) || String(a.x.to).localeCompare(String(b.x.to)));
+  const moveRead = mgrTgMoveRead && mgrTgMoveRead.gen === gen && !mgrTgMoveRead.pending ? mgrTgMoveRead : null;
+  const finished = (sb2.targets || []).filter(x=> x.finished)
+    .sort((a, b)=> String(b.to).localeCompare(String(a.to)) || (Number(b.id) || 0) - (Number(a.id) || 0))
+    .map(x=> mgrTgFinishedModel(x, moveRead));
+  const rules = mgrTgLearned(finished.slice(0, 24));
+  const full = live.length >= MGR_TG_MAX_RUNNING;
+  mgrTgLastModel = { gen, st, plan, runs, finished, rules, full,
+    env: { runningMetrics: live.map(x=> x.metric), runningCount: live.length, plan, finished, rules } };
+  const compose = mgrTgComposeModel(mgrTgDraft, mgrTgLastModel.env);
+  mgrTgLastModel.compose = compose;
+  scoreWrap.innerHTML = `<div class="mgr-tg-w">
+    ${mgrTgBandHTML(runs, finished)}
+    <section class="ow-pan mgr-tg-new" aria-label="Set a target">${mgrTgComposerHTML(compose)}</section>
+    <section class="ow-pan" aria-label="Running targets">${mgrTgRunningHTML(runs, sb2.proposed || [], full)}</section>
+    <div class="mgr-tg-cols">
+      <section class="ow-pan" aria-label="Finished targets">${mgrTgFinishedHTML(finished)}</section>
+      <section class="ow-pan" aria-label="How I set targets now">${mgrTgLearnedHTML(rules, finished, moveRead)}</section>
+    </div>
+  </div>`;
+  scoreWrap.querySelectorAll('.mgr-pp[data-tid]').forEach(card=>{
+    const id = Number(card.dataset.tid);
+    const dups = String(card.dataset.dups || '').split(',').filter(Boolean).map(Number);
+    const adopt = card.querySelector('.mgr-target-adopt');
+    if(full){ adopt.disabled = true; adopt.title = MGR_TG_MAX_RUNNING + ' targets are running — the most at once'; }
+    card.querySelectorAll('[data-pp-owner]').forEach(o=> o.addEventListener('click', ()=>{
+      card.dataset.owner = o.dataset.ppOwner;
+      card.querySelectorAll('[data-pp-owner]').forEach(q=>{ const on = q === o; q.classList.toggle('mgr-tg-on', on); q.setAttribute('aria-pressed', String(on)); });
+    }));
+    card.querySelector('.mgr-target-adopt').addEventListener('click', ()=> managerAdoptTarget(id, dups, card.dataset.owner || 'you'));
+    card.querySelector('.mgr-target-decline').addEventListener('click', ()=> managerDeclineTarget(id, dups));
+  });
+  if(!scoreWrap.dataset.tgWired){
+    scoreWrap.dataset.tgWired = '1';
+    scoreWrap.addEventListener('click', mgrTgClick);
+  }
+}
+/* The composer redraws itself alone on a tap: the rest of the section
+   does not change when a choice does. */
+function mgrTgDrawComposer(){
+  const box = document.querySelector('#managerTargetsWrap .mgr-tg-new');
+  if(!box || !mgrTgLastModel) return;
+  const c = mgrTgComposeModel(mgrTgDraft, mgrTgLastModel.env);
+  mgrTgLastModel.compose = c;
+  box.innerHTML = mgrTgComposerHTML(c);
+}
+function mgrTgClick(e){
+  const t = e.target && e.target.closest ? e.target : null;
+  if(!t) return;
+  const b = t.closest('button[data-tg-metric],button[data-tg-choice],button[data-tg-by],button[data-tg-owner],button[data-tg-rule],button[data-tg-move],button.mgr-tg-set');
+  if(!b || b.disabled) return;
+  const d = b.dataset;
+  if(d.tgMetric){ mgrTgDraft = { ...mgrTgDraft, metric: d.tgMetric, choice: 'stretch', owner: null }; mgrTgDrawComposer(); return; }
+  if(d.tgChoice){ mgrTgDraft = { ...mgrTgDraft, choice: d.tgChoice }; mgrTgDrawComposer(); return; }
+  if(d.tgBy != null && d.tgBy !== ''){ mgrTgDraft = { ...mgrTgDraft, by: Number(d.tgBy) || 0 }; mgrTgDrawComposer(); return; }
+  if(d.tgOwner){ mgrTgDraft = { ...mgrTgDraft, owner: d.tgOwner }; mgrTgDrawComposer(); return; }
+  if(d.tgRule){
+    const row = b.closest('.mgr-tg-row');
+    const why = row ? row.querySelector('.mgr-tg-why') : null;
+    if(why){ why.hidden = !why.hidden; b.setAttribute('aria-expanded', String(!why.hidden)); }
+    return;
+  }
+  if(d.tgMove){
+    /* To the decision on the Brief: the section opens and the row is
+       brought into view. */
+    const nav = document.getElementById('mgrNav-brief');
+    if(nav) nav.click();
+    const id = d.tgMove;
+    setTimeout(()=>{
+      const row = document.querySelector(`#mgrBedBrief [data-mid="${CSS.escape(id)}"]`);
+      if(row){ row.scrollIntoView({ block: 'center', behavior: 'smooth' }); if(row.focus) row.focus({ preventScroll: true }); }
+    }, 60);
+    return;
+  }
+  if(b.classList.contains('mgr-tg-set')){
+    const c = mgrTgLastModel && mgrTgLastModel.compose;
+    if(!c || !c.canSet) return;
+    b.disabled = true;
+    const parts = [{ label: c.out.method.charAt(0).toUpperCase() + c.out.method.slice(1), amount: c.out.projected, adds: false }]
+      .concat(c.bridge.rows.filter(r=> r.delta != null).map(r=> ({ label: r.move.title, amount: Math.abs(r.delta), adds: true })))
+      .filter(p=> p.amount != null && Number.isFinite(Number(p.amount)) && (Number(p.amount) >= 0 || !!c.m.signed));
+    managerSetOwnerTarget({ metric: c.metric, aim: c.aim, to: c.by.to, owner: c.owner, parts,
+      set: { choice: c.choice, p50: c.choices.safe, p75: c.choices.stretch, p90: c.choices.bold, periods: c.choices.n, odds: c.odds } })
+      .then(r=>{ if(r && r.ok) mgrTgDraft = { metric: null, choice: 'stretch', by: 0, owner: null }; else b.disabled = false; });
+  }
 }
 /* ═══ MGR BED: Targets — end ═══ */
 /* ──────────────────────────────────────────────────────────────────
@@ -160142,8 +161593,14 @@ const ASSISTANT_TOOLS = {
           at_stake_30d: apRound(r.atStake), seen_days_ago: r.daysOld }))
       : [];
     /* Where the shop stands against what this manager itself said it
-       would do -- derived now, from the books, every time. */
-    const score = await managerScoreboard();
+       would do -- derived now, from the books, every time. The
+       scoreboard now reads every target ever taken on; the meeting is
+       handed what it always was -- the running ones and those that
+       finished in the last week -- without the checkpoint lists, which
+       are the screen's; and the record of the rest as a count. */
+    const scoreAll = await managerScoreboard();
+    const tallyAll = scoreAll.tally || { met: 0, missed: 0 };
+    const score = { ...scoreAll, targets: scoreAll.week || [] };
     /* What the shop learned last week, so today's plan can be held
        against it instead of starting over. */
     const lastReview = managerReviewBrief((await managerRecentReviews(1))[0]);
@@ -160222,8 +161679,8 @@ const ASSISTANT_TOOLS = {
     const worth = [];
     /* A target behind its own pace, with how far. One on course needs
        no sentence -- that is the whole point of a pace line. */
-    score.targets.filter(x=> x.pace && x.pace.on_course === false).slice(0, 3).forEach(x=>{
-      worth.push({ kind: 'target_behind', metric: x.metric, label: x.label, aim: x.aim,
+    score.targets.filter(x=> !x.finished && x.pace && x.pace.on_course === false).slice(0, 3).forEach(x=>{
+      worth.push({ kind: 'target_behind', metric: x.metric, label: x.label, unit: x.unit, aim: x.aim,
         stands_at: x.actual, behind_by: x.pace.behind_by, days_left: x.days_left,
         at_this_rate: x.pace.at_this_rate });
     });
@@ -160434,6 +161891,7 @@ const ASSISTANT_TOOLS = {
       ...(held.length ? { holds_you_placed: held } : {}),
       ...(lastReview ? { last_review: lastReview } : {}),
       ...(score.targets.length ? { scoreboard: score.targets.slice(0, 6) } : {}),
+      ...(tallyAll.met + tallyAll.missed ? { targets_finished: { met: tallyAll.met, of: tallyAll.met + tallyAll.missed } } : {}),
       ...((score.proposed||[]).length ? { targets_awaiting_your_approval: score.proposed.slice(0, 4) } : {}),
       ...(answered.length ? { answered_questions: answered } : {}),
       ...(open.length ? { open_questions: open } : {}),

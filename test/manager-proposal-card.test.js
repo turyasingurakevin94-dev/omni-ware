@@ -29,17 +29,20 @@ const s = compileScope([
   extractFunction(src, 'managerProposalBefore', 'index.html'),
   extractDeclaration(src, 'MGR_METRIC_MARKS', 'index.html'),
   extractFunction(src, 'mgrProposalHTML', 'index.html'),
-  extractFunction(src, 'mgrScoreSlotsHTML', 'index.html'),
   extractFunction(src, 'anShiftDate', 'index.html'),
+  extractFunction(src, 'mgrTgFig', 'index.html'), extractFunction(src, 'mgrTgGap', 'index.html'), extractFunction(src, 'mgrTgDelta', 'index.html'),
+  extractDeclaration(src, 'MGR_TG_GLYPH', 'index.html'), extractFunction(src, 'mgrTgPerson', 'index.html'), extractFunction(src, 'mgrTgAvHTML', 'index.html'),
 ], {
   esc, fmtUGX, todayISO: () => TODAY,
+  data: { staff: [{ id: 'ST001', name: 'Joan Nakato' }, { id: 'ST009', name: 'Gone Away', unavailable: true }] },
   MANAGER_METRICS: {
     gross_profit: { label: 'Gross profit', kind: 'flow', measure: (from, to) => { measured.push([from, to]); return 1124990; } },
     collections: { label: 'Collect', kind: 'flow', measure: () => 0 },
     debtors_total: { label: 'Money owed to you', kind: 'level', measure: () => 8000000 },
+    margin_pct: { label: 'Gross margin', kind: 'level', unit: 'pct', direction: 'up', round: (v) => Math.round(v * 10) / 10, measure: () => 9.1 },
   },
   Date, String, Number, Math, Array,
-}, ['managerTargetParts', 'managerProposalBefore', 'mgrProposalHTML', 'mgrScoreSlotsHTML']);
+}, ['managerTargetParts', 'managerProposalBefore', 'mgrProposalHTML']);
 
 /* ---------- 1. the parts must close on the aim ------------------------ */
 {
@@ -79,8 +82,15 @@ const s = compileScope([
   t.check(/mgr-target-adopt/.test(html) && /mgr-target-decline/.test(html), 'and both taps: a number becomes a commitment only by one');
   t.check((html.match(/mgr-pp-seg/g) || []).length === 2 && /mgr-pp-seg mgr-pp-adds/.test(html),
     'the aim is drawn as its parts, with what a move adds drawn apart from what the books already do');
-  t.check(/\+235,000/.test(html), 'an added part says it is added');
-  t.check(/1,124,990/.test(html) && /\+24%/.test(html), 'where it stood, and how far the aim is from it');
+  /* WAS full shillings (+235,000; 1,124,990); NOW the section's own
+     figures, as the running rows beside it read: +235k, 1.12m. */
+  t.check(/\+235k/.test(html), 'an added part says it is added');
+  t.check(/1\.12m/.test(html) && /\+24%/.test(html), 'where it stood, and how far the aim is from it');
+  /* NEW: who owns it once taken on -- the owner by default, or staff on
+     file who are not away; never nobody. */
+  t.check(/data-owner="you"/.test(html) && /data-pp-owner="you"[^>]*>/.test(html) && /class="mgr-tg-opt mgr-tg-opt-p mgr-tg-on" aria-pressed="true" data-pp-owner="you"/.test(html),
+    'the card names its owner before it is taken on: you, unless another is picked');
+  t.check(/data-pp-owner="ST001"/.test(html) && !/data-pp-owner="ST009"/.test(html), 'staff on file can be picked; staff away cannot');
   t.check(/<details class="mgr-pp-why">/.test(html) && /&lt;b&gt;/.test(html),
     'the argument is one tap away, escaped, not the first thing read');
 
@@ -88,21 +98,35 @@ const s = compileScope([
     why: '', parts: [{ label: 'Somebody', amount: 100 }] });
   t.check((bare.match(/mgr-pp-seg/g) || []).length === 1 && !/mgr-pp-part/.test(bare),
     'parts that do not close fall back to one plain bar for the aim, with no legend');
+  t.check(/<span class="mgr-pp-c"><b class="mgr-pp-fig">2\.50m<\/b><\/span>/.test(bare), 'and the aim bar is labelled with its figure');
   t.check(/from 0/.test(bare), 'nothing earned the week before reads as "from 0", not as an infinite percentage');
   t.check(!/<details/.test(bare), 'and no argument means no fold to open');
 }
 
-/* ---------- 4. the header's two slots --------------------------------- */
+/* ---------- 4. the cap on what runs at once ---------------------------- */
+/* WAS: the header drew two slots, and two targets a week was the most
+   that could run. NOW (Q16): up to four run at once -- the meeting's
+   weekly ones and the owner's own together -- and at four, Take it on is
+   held back with the reason on it. */
 {
-  t.check((s.mgrScoreSlotsHTML(0).match(/mgr-pp-slot"/g) || []).length === 2, 'no target running: two empty slots');
-  t.check((s.mgrScoreSlotsHTML(1).match(/mgr-pp-slot-on/g) || []).length === 1, 'one running fills one');
-  t.check((s.mgrScoreSlotsHTML(5).match(/mgr-pp-slot-on/g) || []).length === 2, 'never more than the two a week may carry');
+  t.check(/const MGR_TG_MAX_RUNNING = 4;/.test(src), 'up to four targets run at once');
+  const draw = extractFunction(src, 'mgrTgDraw', 'index.html');
+  t.check(/const full = live\.length >= MGR_TG_MAX_RUNNING;/.test(draw) && /if\(full\)\{ adopt\.disabled = true; adopt\.title = /.test(draw),
+    'and at four a proposal cannot be taken on until one finishes, and says so');
+}
+
+/* ---------- 4b. a proposal in its own unit ------------------------------ */
+{
+  const pct = s.mgrProposalHTML({ id: 12, metric: 'margin_pct', label: 'Gross margin', aim: 10.5, date: TODAY, why: '' });
+  t.check(/<span class="mgr-pp-big">10\.5%<\/span><span class="mgr-pp-u">this week<\/span>/.test(pct),
+    'a margin is proposed in per cent, not in shillings');
+  t.check(/<span class="mgr-pp-chip">\+1\.4 pts<\/span>/.test(pct), 'and its distance from now in points (9.1% to 10.5%)');
 }
 
 /* ---------- an aim below what the shop already did says why ---------- */
 {
   const low = s.mgrProposalHTML({ id: 9, metric: 'gross_profit', label: 'Gross profit', aim: 1000000, date: TODAY, why: 'Last week had one unusual sale to Kato that will not repeat' });
-  t.check(/class="mgr-pp-back"/.test(low) && /Aims 124,990 below last week\./.test(low) && /will not repeat/.test(low) && !/<details class="mgr-pp-why"/.test(low),
+  t.check(/class="mgr-pp-back"/.test(low) && /Aims 125k below last week\./.test(low) && /will not repeat/.test(low) && !/<details class="mgr-pp-why"/.test(low),
     'an aim below what the shop already did leads with how far below, and the Manager\'s reason, out of its fold');
   const bare = s.mgrProposalHTML({ id: 10, metric: 'gross_profit', label: 'Gross profit', aim: 1000000, date: TODAY });
   t.check(/gave no reason for aiming lower/.test(bare), 'and a missing reason is said to be missing');
