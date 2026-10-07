@@ -234,6 +234,13 @@ eq([hr.assume.value, hr.assume.lo, hr.assume.hi], [500000, 0, 1000000], 'between
 
 /* Another quoter winning 10 points more of 158 quotes: 15.8 more won, at
    50,000 of profit each = 790,000. */
+/* Counter discounts: 4 invoices, 200,000 off, their sales 3,000,000 and
+   profit 300,000 (both net of the discount). None at the same volume:
+   +200,000 of each. At 10% less volume: profit 0.9 × 500,000 − 300,000 =
+   150,000; sales 0.9 × 3,200,000 − 3,000,000 = −120,000. */
+const dl = S.mgrSimDiscountLever({ ...BOOKS(), discounts: { count: 4, total: 200000, profit: 300000, sales: 3000000 } });
+eq([dl.effect('none', 0).profit, dl.effect('none', 0).sales, dl.effect('none', -10).profit, dl.effect('none', -10).sales],
+  [200000, 200000, 150000, -120000], 'no counter discounts: the discount back at the same volume; less volume costs its sales');
 eq(lv('quote').effect('train', 10).profit, 790000, 'ten points more quotes won: 15.8 × 50,000 = 790,000');
 eq(lv('quote').effect('train', 0), { profit: 0, sales: 0, exp: lv('quote').effect('train', 0).exp }, 'and nothing at the starting assumption of no lift');
 eq([lv('post').assume.value, lv('post').assume.lo, lv('post').assume.hi], [0, -56000, 29000], 'a post: the middle and quartiles of what past posts were followed by');

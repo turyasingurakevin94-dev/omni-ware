@@ -135346,7 +135346,8 @@ function mgrSimBooksBuild(day){
     const inv = anInvoicesInRange(anShiftDate(day, -29), day).filter(q=> Number(q.discount) > 0);
     if(!inv.length) return null;
     const t = anOverallTotals(inv);
-    return { count: inv.length, total: Math.round(inv.reduce((n, q)=> n + (Number(q.discount) || 0), 0)), profit: Math.round(t.profit) };
+    return { count: inv.length, total: Math.round(inv.reduce((n, q)=> n + (Number(q.discount) || 0), 0)), profit: Math.round(t.profit),
+      sales: Math.round(t.sales) };
   });
   books.terms = read('terms', ()=>{
     const dd = books.debtorDays;
@@ -135725,11 +135726,15 @@ function mgrSimDiscountLever(b){
     opts: [{ id: 'allow', label: 'Allowed', hint: d.count + ' invoice' + (d.count === 1 ? '' : 's') + ' got ' + mgrSimMoney(d.total) + ' off in 30 days', say: 'discounts allowed' },
       { id: 'none', label: 'None', hint: mgrSimSigned(d.total) + ' a month at the same volume', say: 'no counter discounts' }],
     assume: { ...MGR_SIM_ASSUME.discounts, basis: 'whether those customers would still buy without the discount is not on your books' },
+    /* Those invoices' sales and profit are net of the discount, so with
+       none at the same volume each gains the discount; at a volume f of
+       theirs, f × (with the discount added back) less what they were. */
     effect: (op, x)=>{
       if(op !== 'none') return {};
       const f = 1 + (Number(x) || 0) / 100;
       const gain = Math.round(f * (d.profit + d.total) - d.profit);
-      return { profit: gain, sales: gain, exp: mgrSimSpread(b.today, gain, 1, 30, 'No counter discounts', 'sales') };
+      const sales = Math.round(f * ((d.sales || 0) + d.total) - (d.sales || 0));
+      return { profit: gain, sales, exp: mgrSimSpread(b.today, sales, 1, 30, 'No counter discounts', 'sales') };
     } };
 }
 function mgrSimTermsLever(b){
@@ -135746,6 +135751,9 @@ function mgrSimTermsLever(b){
     effect: (op, x)=>{
       const o = opts.find(z=> z.id === op);
       if(!o || !o.days) return {};
+      /* Freed over 60 days as customers move onto the shorter terms,
+         evenly -- so half of it inside these 30 -- on the expected band:
+         it is money owed, not money in hand. */
       const freed = freedAt(o.days);
       const lost = Math.round(month * Math.min(0, Number(x) || 0) / 100);
       const margin = b.marginPct == null ? 0 : b.marginPct;
@@ -136209,7 +136217,7 @@ function mgrSimDecisionBody(o){
 
 /* ---- THE SECTION ON SCREEN ------------------------------------------- */
 /* What the owner is moving: kept while the screen is open, never stored. */
-let mgrSimState = { choice: {}, assume: {}, edit: null, offerForm: false, signing: false, said: null };
+let mgrSimState = { choice: {}, assume: {}, edit: null, offerForm: false, signing: false, said: null, signedKey: null };
 /* Today's moves as the journal last read them -- null until it has. */
 let mgrSimPlanMoves = null;
 let mgrSimPlanErr = null;
@@ -136482,12 +136490,17 @@ function mgrSimOutHTML(c){
     ${mgrSimState.said ? `<p class="mgr-x-said${mgrSimState.said.ok ? '' : ' mgr-x-bad'}" role="status">${esc(mgrSimState.said.text)}</p>` : ''}
   </div>`;
 }
+/* What was signed last, so the same choices are not signed twice. */
+function mgrSimSignKey(c){
+  return JSON.stringify([c.run.changed.map(x=> [x.id, x.choice, x.assumption ? [x.assumption.value, x.assumption.lo, x.assumption.hi] : null])]);
+}
 function mgrSimSignHTML(c, dock){
   const n = c.run.changed.length;
   const fl = c.floor && c.floor.amount > 0 ? c.floor.amount : 0;
   const ok = n && c.run.low && c.run.low.balance >= fl;
-  const label = mgrSimState.signing ? 'Signing…' : n ? 'Sign it — ' + n + ' decision' + (n === 1 ? '' : 's') : 'Nothing to sign yet';
-  return `<button type="button" class="btn ow-sm mgr-x-sb ${!n ? 'btn-ghost mgr-x-q' : ok ? 'btn-accent' : 'btn-ghost'}" data-sim-sign${!n || mgrSimState.signing ? ' disabled' : ''}>${esc(label)}</button>`
+  const done = n && mgrSimState.signedKey === mgrSimSignKey(c);
+  const label = mgrSimState.signing ? 'Signing…' : done ? 'Signed' : n ? 'Sign it — ' + n + ' decision' + (n === 1 ? '' : 's') : 'Nothing to sign yet';
+  return `<button type="button" class="btn ow-sm mgr-x-sb ${!n || done ? 'btn-ghost mgr-x-q' : ok ? 'btn-accent' : 'btn-ghost'}" data-sim-sign${!n || done || mgrSimState.signing ? ' disabled' : ''}>${esc(label)}</button>`
     + (dock ? '' : `<button type="button" class="btn btn-ghost ow-sm mgr-x-q" data-sim-reset${n ? '' : ' disabled'}>Back to today</button>`);
 }
 function mgrSimRippleHTML(c){
@@ -136495,7 +136508,7 @@ function mgrSimRippleHTML(c){
   const hb = c.healthBase, hs = c.health;
   const rows = MGR_DEPTS.map(d=>{
     const bits = r.changed.filter(x=> x.dept === d.id).map(x=> x.say);
-    if(d.id === 'finance' && changed) bits.unshift('profit ' + mgrSimSigned(r.profit.d) + ' a month', 'lowest cash ' + mgrSimMoney(r.low ? r.low.balance : null));
+    if(d.id === 'finance' && changed) bits.unshift(Math.round(r.profit.d) ? 'profit ' + mgrSimSigned(r.profit.d) + ' a month' : 'profit as today', 'lowest cash ' + mgrSimMoney(r.low ? r.low.balance : null));
     if(d.id === 'store'){
       const was = c.base.stockDays, now = r.stockDays;
       bits.push(now == null ? 'stock days not known' : Math.round(now) !== Math.round(was) ? 'stock days ' + Math.round(was) + ' → ' + Math.round(now) : 'stock days ' + Math.round(now));
@@ -136749,6 +136762,7 @@ async function mgrSimSign(){
   mgrSimState.said = r.ok ? { ok: true, text: 'Signed and kept in the Manager’s memory — nothing was paid, ordered or sent.' }
     : { ok: false, text: r.migration ? mgrMigrationNote({ code: '23514' }) : r.error === 'no-journal' ? 'Not kept — the Manager’s memory is not set up on this shop.' : 'Not kept — ' + (r.error || 'the journal refused it') };
   if(r.ok){
+    mgrSimState.signedKey = mgrSimSignKey(c);
     if(r.row) mgrSimDecisions = { rows: [{ id: r.row.id, date: r.row.date, status: r.row.status, body: r.row.body || {} }].concat(mgrSimDecisions.rows || []), error: null, read: true };
     toast('Signed — kept as a record. Nothing was paid, ordered or sent.', 5000);
   }
