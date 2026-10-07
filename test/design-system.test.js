@@ -179,7 +179,17 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        outline now rather than a one-pixel inset shadow in ink, and the
        ledger's old account filter, with its raised "on" button, became
        the layer's .ow-seg, which marks the chosen one by fill. */
-    'shadows': [60, /box-shadow:\s*([^;}]+)/g],
+    /* 62, not 60, and up -- the third time, so argued, and like the two
+       before it a ruling rather than a drift. The owner asked for the
+       fastener guide to be put on the live site exactly as it was drawn
+       on its design canvas, and the canvas's length slider wears two
+       marks on its thumb: a one-pixel navy ring with a 3px drop under it
+       at rest (the thumb's white border is the gap between thumb and
+       ring, so a border cannot also be the ring), and a 5px sky halo
+       when the slider has keyboard focus. The second is a focus ring,
+       not depth. Both are on one pseudo-element of one input, and
+       nothing else may spend them. */
+    'shadows': [62, /box-shadow:\s*([^;}]+)/g],
     /* 103, not 104: the product form's type cards carried #FFF9EF -- a
        cream that existed only to tint the selected option, and that made
        the selection one of four things on that form wearing a warm colour
