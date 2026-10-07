@@ -165,4 +165,16 @@ const sc = compileScope([
     'the controls are wired, and a finger on a phone still scrolls the page');
 }
 
+/* ---------- 7. the book and the map are two tabs --------------------- */
+{
+  t.check(/id="custTabs" role="tablist"/.test(src) && /data-ctab="book"[\s\S]*?data-ctab="map"/.test(src),
+    'the table comes first, the map second, as the design board orders them');
+  t.check(/let custBookTab = 'book';/.test(src), 'and the screen opens on the book');
+  const render = extractFunction(src, 'renderCustomers', 'index.html');
+  t.check(/stripEl\.style\.display = onMap \? '' : 'none'/.test(render) && /panEl\.style\.display = onMap \? 'none' : ''/.test(render),
+    'one view shows at a time, the other drawn and hidden');
+  t.check(/'custTabs', 'custStripWrap', 'custBookPan'/.test(render), 'and the tabs step aside with the rest when an account opens');
+  t.check(/need \? `\$\{need\} need you` : ''/.test(render), 'the map\'s tab says how many need you');
+}
+
 process.exit(t.done() ? 1 : 0);
