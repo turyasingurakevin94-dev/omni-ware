@@ -333,6 +333,17 @@ const invoiced = { savedQuotes: [{ voided: false, invoiced: true, date: '2026-06
       'and the card says "alongside it" in the owner’s own view — the wording refuses the causal claim on the screen too');
     t.check(!/because of it|thanks to|it worked/i.test(render.slice(render.indexOf('mgr-play-moved'), render.indexOf('mgr-play-moved') + 1200)),
       'and never claims the play did it');
+    /* The Playbook section draws its cards with helpers in its own block,
+       so the law is held over the whole block, not one window of the
+       painter: no card, lane, band or designer line claims a play caused
+       anything or worked -- a judged play says "You judged", and what it
+       read says "alongside it". (Comments are not on screen.) */
+    const playsBlock = src.slice(src.indexOf('/* ═══ MGR BED: Plays — begin ═══ */\n/* ---- THE PLAYBOOK'),
+      src.indexOf('/* ═══ MGR BED: Plays — end ═══ */\n/* ────')).replace(/\/\*[\s\S]*?\*\//g, '');
+    t.check(playsBlock.length > 15000 && /alongside it/.test(playsBlock) && /You judged: /.test(playsBlock),
+      'the Playbook says what moved alongside a play, and that a verdict is the owner’s');
+    t.check(!/because of it|thanks to|it worked|root cause/i.test(playsBlock),
+      'and nowhere in the section does the app claim a play worked or caused anything');
     const status = extractFunction(src, 'managerPlayStatus', 'index.html');
     t.check(/m && m\.kind === 'level'/.test(status) && /body\.baseline = Math\.round\(m\.measure\(\)\)/.test(status),
       'switching a play on stamps where the shop stood, but only where the measure is a level a flow cannot recover');

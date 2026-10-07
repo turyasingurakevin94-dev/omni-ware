@@ -135579,11 +135579,11 @@ function mgrPaintPlays(gen, ctx){
   if(ctx.landed !== 'book' && ctx.landed !== 'view') return;
   if(!ctx.book || mgrView !== 'plays') return;
   const book = ctx.book;
-  if(book.error){
-    playWrap.innerHTML = `<div class="mgr-pl">${mgrPlayBandHTML(null)}<section class="ow-pan mgr-pl-pan" aria-label="The playbook">
-      <div class="ow-empty">The playbook could not be read just now &mdash; ${esc(book.error)}. No play has been stopped or started by this.</div></section></div>`;
-    return;
-  }
+  /* A READING THAT FAILED IS NOT AN EMPTY BOARD: it says so, and that
+     nothing was started or stopped by it. */
+  const failed = book.error ? `<div class="mgr-pl">${mgrPlayBandHTML(null)}<section class="ow-pan mgr-pl-pan" aria-label="The playbook">
+      <div class="ow-empty">The playbook could not be read just now &mdash; ${esc(book.error)}. No play has been stopped or started by this.</div></section></div>` : null;
+  if(failed){ playWrap.innerHTML = failed; return; }
   /* A play treating dead stock is read from the daily snapshot: there
      is no other record of where dead stock stood on a past day. Read
      once a day, and the board drawn again when it lands. */
@@ -135831,8 +135831,13 @@ function mgrPlayBoard(book, reads, today){
   const worth = (p)=> { const w = mgrPlayWorth(p.sized); return w ? w.amount : -1; };
   const props = proposed.slice().sort((a, b)=> worth(b) - worth(a)).map(p=>{
     const conflicts = mgrPlayConflicts(p, book);
+    /* AND OF TWO PROPOSALS ON ONE LEVER IT PICKS: the one sized higher
+       goes first, so an overlap is an answer and not a chore. */
+    const twin = conflicts.find(c=> c.kind === 'twin');
+    const pick = !!twin && worth(p) > 0 && worth(p) > worth(twin.with);
+    if(pick) twin.level = 'vg';
     const level = conflicts.some(c=> c.level === 'cr') ? 'cr' : conflicts.some(c=> c.level === 'am') ? 'am' : 'vg';
-    return { p, conflicts, level, worth: mgrPlayWorth(p.sized), odds: mgrPlayOdds(p.treats, judged) };
+    return { p, conflicts, level, pick, worth: mgrPlayWorth(p.sized), odds: mgrPlayOdds(p.treats, judged) };
   });
   const lead = props.find(x=> x.level === 'vg') || null;
   const runs = running.map(p=> ({ p, r: reads.get(p.id) || null, conflicts: mgrPlayConflicts(p, book) }));
@@ -135935,7 +135940,9 @@ function mgrPlayProposedHTML(x, model){
   if(slots) notes.push(['cr', `All ${MGR_PLAY_SLOTS} slots are in use — judge or stop one first.`]);
   if(clash) notes.push(['cr', `Clashes with “${esc(clash.with.name)}”, running now — both move ${esc(measure || p.problem.toLowerCase())}, so you couldn’t tell which did what.`]);
   if(dep) notes.push(['am', `Waits on ${esc(mgrPlayText(dep.text))}.`]);
-  if(twin) notes.push(['am', `Overlaps “${esc(twin.with.name)}” — both treat ${esc(p.problem.toLowerCase())}; start one at a time.`]);
+  const wOf = (q)=> (mgrPlayWorth(q.sized) || {}).amount || 0;
+  if(twin && x.pick) notes.push(['vg', `<b class="mgr-pl-lb">Try this one first.</b> It and “${esc(twin.with.name)}” both treat ${esc(p.problem.toLowerCase())}, so only one can be judged at a time — and this one is sized at +${esc(mgrShortUGX(wOf(p)))} against +${esc(mgrShortUGX(wOf(twin.with)))}.`]);
+  else if(twin) notes.push(['am', `Overlaps “${esc(twin.with.name)}”${wOf(twin.with) > wOf(p) ? ', which is worth more — try that first' : ` — both treat ${esc(p.problem.toLowerCase())}; start one at a time`}.`]);
   if(!notes.length) notes.push(['vg', `Fits a free slot; nothing running pulls the same lever.`]);
   const odds = x.odds.n ? `${x.odds.k} of ${x.odds.n}` : 'no verdicts yet';
   const act = slots ? `<button type="button" class="btn btn-ghost ow-sm" disabled title="${esc(mgrPlaySlotRefusal({ running: model.running.map(r=> r.p) }, null) || '')}">Start it</button>`
@@ -136131,7 +136138,7 @@ function mgrPlayPresets(today){
   /* moses */
   const agent = (data.agents || []).find(a=> a && a.name && !a.retiredAt)
     || (data.staff || []).find(s=> s && s.name && !s.unavailable && /deliver|driver|field|agent|sales/i.test(String(s.role || '') + ' ' + String(s.notes || '')));
-  if(agent && salesAim != null){
+  if(agent && salesAim > 0){
     const first = String(agent.name).split(/\s+/)[0];
     out.push({ id: 'moses', label: `${first} to new sites`, name: `${first} to new building sites`, treats: 'growth',
       if: `send ${first} to new building sites every week`, weeks: 8, target: salesAim,
@@ -136167,7 +136174,7 @@ function mgrPlayDesignCheck(draft, base, book, judged){
   else if(base.base == null) checks.push({ c: 'cr', t: `No baseline: ${base.why}.` });
   else if(base.snapsKept === false) checks.push({ c: 'am', t: `Baseline found: ${base.m.label} ${fig(base.base)} today — but weekly reads need the daily snapshot, and none is kept yet.` });
   else if(base.snapsKept === null) checks.push({ c: 'am', t: `Baseline found: ${base.m.label} ${fig(base.base)} today — checking the daily snapshots its weekly reads need…` });
-  else checks.push({ c: 'vg', t: `Baseline found: ${base.m.label} ${fig(base.base)} over ${base.basis}.` });
+  else checks.push({ c: 'vg', t: `Baseline found: ${base.m.label} ${fig(base.base)} ${base.m.kind === 'flow' ? 'over ' + base.basis : 'today, from the books'}.` });
   /* 2. clash, slots and what it waits for */
   const probe = { id: null, treats: draft.treats, dependsOn: draft.dependsOn };
   const cf = mgrPlayConflicts(probe, book);
