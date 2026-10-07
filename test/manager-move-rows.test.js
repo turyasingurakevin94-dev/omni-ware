@@ -141,12 +141,32 @@ const mgrRender = () => MGR_RENDER.map((n) => extractFunction(src, n, 'index.htm
   t.check(/mgrTgBandHTML\(runs, finished\)/.test(extractFunction(src, 'mgrTgDraw', 'index.html')), 'the Targets section opens with its band');
   t.check(/<div class="mgr-rt">/.test(render) && /class="mgr-av mgr-av-k mgr-kt-money"/.test(render),
     'the standing rules are rows with the mark of the door each belongs to');
-  t.check(/const span = \(p\)=>/.test(render) && /mgr-pk-over/.test(render) && /const gauge = \(p\)=>/.test(render),
-    'a running play wears its span as its weeks, crimson once past them, and what it watches as start-and-now bars');
-  t.check(/mgr-pk-pipe/.test(render) && /'Proposed'/.test(render) && /'Running'/.test(render) && /'Worked'/.test(render) && /'Set aside'/.test(render),
-    'the playbook opens with the road a play travels: proposed, running, worked or set aside');
-  t.check(/b\.treats \|\| 0\) - \(\(worthOf|worthOf\.get\(b\.id\) \|\| \{\}\)\.amount/.test(render) && /Overlaps “/.test(render),
-    'proposals are ordered by what they would add, and two treating the same thing are flagged as overlapping');
+  /* WAS: the playbook was one panel drawn inside mgrPaintPlays -- a span
+     bar (const span), start-and-now gauges (const gauge), and a pipe of
+     stages (Proposed -> Running -> Worked, Set aside). NOW: the Playbook
+     section is the canvas's board, drawn by helpers in its own block --
+     four lanes (Proposed, Running, Judged, Proven recipes) under three
+     experiment slots; a running play wears its weeks as cells read
+     against the week before it started, its overrun weeks marked, and how
+     sure so far as pips. "Worked" is no longer a stage the app names: the
+     Judged lane holds the owner's verdict (Q14). What these pins keep:
+     the span drawn as weeks, the overrun marked, proposals ordered by what
+     each would add, and overlaps flagged. */
+  const plays = src.slice(src.indexOf('/* ═══ MGR BED: Plays — begin ═══ */\n/* ---- THE PLAYBOOK'),
+    src.indexOf('/* ═══ MGR BED: Plays — end ═══ */\n/* ────'));
+  t.check(plays.length > 20000 && /class="mgr-pl-wk"/.test(plays) && /mgr-pl-over/.test(plays) && /class="mgr-pl-pips"/.test(plays),
+    'a running play wears its span as its weeks, each read against the week before it started, its overrun weeks marked, how sure so far as pips');
+  t.check(/'Proposed'/.test(plays) && /'Running'/.test(plays) && /'Judged'/.test(plays) && /'Proven recipes'/.test(plays) && /class="mgr-pl-slots"/.test(plays),
+    'the board is the canvas’s four lanes — proposed, running, judged, proven recipes — under its three slots');
+  t.check(!/lane\('[^']*', '[a-z]+', 'Worked'/.test(plays) && /MGR_PLAY_VERDICT_WORDS = \{ worked: 'Worked', didnt: 'Didn’t work', cant_tell: 'Can’t tell' \}/.test(plays),
+    'and no lane says a play worked — "Worked" is one of the three verdicts the owner chooses from, in the Judged lane');
+  /* WAS: proposals sorted by their sizing (const props = proposed.slice()
+     .sort(worth)), which ranked cash against profit against sales. NOW:
+     the meeting's order (Q5, law 6); a pick is made only between two
+     sized plays on one lever, and a lead only within one kind of money. */
+  t.check(/const props = proposed\.map\(/.test(plays) && !/proposed\.slice\(\)\.sort\(/.test(plays) && /Overlaps “/.test(plays)
+    && /MGR_PLAY_MONEY_KIND/.test(plays) && /kinds\.size === 1/.test(plays),
+    'proposals stay in the meeting’s order, never ranked across kinds of money, and two treating the same thing are flagged as overlapping');
   const growth = extractFunction(src, 'renderManagerGrowth', 'index.html');
   t.check(/class="mgr-gg"/.test(growth) && /mgrAvatarHTML\(row\.name\)/.test(growth),
     'growth leads with its evidence as a gauge, and every customer has a face');
@@ -299,8 +319,13 @@ const mgrRender = () => MGR_RENDER.map((n) => extractFunction(src, n, 'index.htm
     && /not measurable/.test(extractFunction(src, 'mgrBriefStripDetailHTML', 'index.html'))
     && !/worked|did what I said/.test(cells),
     'and the strip counts what was done and followed by an event, k of n, with the unmeasurable named, never "worked"');
-  t.check(/Try this one first\./.test(render) && /which is worth more — try that first/.test(render),
-    'of two overlapping plays it recommends the one worth more, and the other card points to it');
+  /* WAS: read in mgrPaintPlays. NOW: the proposed card is the Plays
+     block's mgrPlayProposedHTML; the pick is unchanged. */
+  const proposedCard = extractFunction(src, 'mgrPlayProposedHTML', 'index.html');
+  /* WAS: "which is worth more — try that first". NOW: "which is sized
+     higher" -- the Manager's sizing, compared only when both were sized. */
+  t.check(/Try this one first\./.test(proposedCard) && /which is sized higher — try that first/.test(proposedCard),
+    'of two overlapping plays it recommends the one sized higher, and the other card points to it');
   t.check(/class="mgr-rv-why"/.test(extractFunction(src, 'mgrRichRowHTML', 'index.html')), 'every move carries one line of its reasoning on the card');
   t.check(/<p class="mgr-rej">/.test(render) && !/<p class="ow-mini">Considered and rejected/.test(render), 'and what was considered and rejected leads the plan instead of trailing it');
 }

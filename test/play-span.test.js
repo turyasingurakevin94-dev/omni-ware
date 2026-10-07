@@ -219,7 +219,13 @@ const clock = (over) => clockScope.managerPlayClock(Object.assign({ weeks: 4, st
 
   /* ---------- 8. and the owner sees it without a meeting -------------- */
   {
-    const render = (/const clock = \(p\)=>\{[\s\S]*?\n      \};/.exec(src) || [''])[0];
+    /* WAS: the clock was a closure (const clock = (p)=>{...}) inside the
+       painter and the card a closure (const row = ...). NOW: the Playbook's
+       running card is mgrPlayRunningHTML, and the clock is worked out and
+       drawn there. What is pinned is unchanged: the words, and that the
+       card draws it. */
+    const card = extractFunction(src, 'mgrPlayRunningHTML', 'index.html');
+    const render = card.slice(card.indexOf('const clock = '), card.indexOf("let reads = ''"));
     t.check(/week \$\{c\.weekOf\} of \$\{c\.weeks\}/.test(render),
       'the clock is written in the words the owner reads');
     t.check(/past its \$\{c\.weeks\} weeks/.test(render), 'and says plainly when it has run over');
@@ -227,18 +233,11 @@ const clock = (over) => clockScope.managerPlayClock(Object.assign({ weeks: 4, st
     /* AND THE CARD CALLS IT. Every check above passes with the clock
        written, correct, and never put on a card — which is exactly how
        a whole build reaches the tests and never the owner. */
-    /* The play is a ROW now rather than a card -- four plays as 90px
-       cards was 360px of chrome for four sentences -- so this locates
-       the emitter by its current name. What is pinned is unchanged and
-       is the point: every check above passes with the clock written,
-       correct, and never put in front of the owner, which is exactly
-       how a whole build reaches the tests and never the shop. */
-    const card = (/const row = \(p, buttons\)=> `[\s\S]*?<\/div>`;/.exec(src) || [''])[0];
-    t.check(card.length > 200, `the play row was found, not silently skipped (${card.length} chars)`);
-    t.check(/\$\{clock\(p\)\}/.test(card),
+    t.check(card.length > 200 && render.length > 100, `the running card was found, not silently skipped (${card.length} chars)`);
+    t.check(/<article class="mgr-pl-c"[\s\S]*\n    \$\{clock\}\n[\s\S]*<\/article>/.test(card),
       'THE CARD DRAWS IT — a strategy the owner cannot see the clock on is one they can only be told about, and the meeting is not held every day');
-    t.check(/\.mgr-play-clock\.over\{/.test(src) && /ow-oxide-soft/.test(src),
-      'with the overrun marked, so the owner does not have to count the weeks to notice');
+    t.check(/\.mgr-play-clock\.over\{/.test(src) && /\.mgr-bed-p \.mgr-play-clock\.over\{background:var\(--ow-crimson-soft\);color:var\(--ow-crimson\);\}/.test(src),
+      'with the overrun marked — in the state colour for bad, so the owner does not have to count the weeks to notice');
   }
 
   process.exit(t.done() ? 1 : 0);

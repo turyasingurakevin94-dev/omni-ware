@@ -143,6 +143,14 @@ const DATA = () => ({
     const foldsWorked = /x\.status === 'dropped' \|\| x\.status === 'done'/.test(book);
     t.check(!grants || (/proven_recipes/.test(both) && src.includes('proven_recipes') && !foldsWorked),
       'a proven recipe may come back only through a counted field the app produces, never against a list that says never re-propose');
+    /* The permission is now given (Q14), tied to that field, and carries
+       the no-credit law with it. manager-playbook.test.js runs
+       manager_history and holds the field to it: a play the owner judged
+       worked twice is in proven_recipes and in neither never-again list. */
+    t.check(grants && /only a play it lists in proven_recipes \(the owner\\u2019s own verdict, counted\) may be proposed again, and never claim it caused anything/.test(meeting),
+      'the meeting may propose again only a play manager_history lists in proven_recipes — the owner’s verdict, counted — and never as its cause');
+    t.check(/proven_recipes: book\.proven\.map\(r=> \(\{ name: r\.name, treats: r\.treats,\s*judged_worked: r\.judgedWorked \}\)\)/.test(src),
+      'and manager_history hands it as { name, treats, judged_worked }');
   }
 
   t.check(/CORRECT YOURSELF OUT LOUD\. Where the week shows one of YOUR OWN earlier claims was wrong/.test(review),
