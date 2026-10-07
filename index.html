@@ -7318,6 +7318,27 @@
   .sp-more summary b{font-size:13px;font-weight:600;}
   .sp-more summary span{font-size:12px;color:var(--ow-ink-600);}
   .sp-more-b{display:flex;flex-direction:column;gap:14px;padding:14px 0 0 24px;}
+  /* Their terms (0107): three day boxes, then a line that draws the
+     oldest unpaid bill against the credit they give and the age at
+     which they stop delivering. */
+  .sp-terms{display:flex;flex-wrap:wrap;gap:10px;}
+  .sp-term{display:flex;flex-direction:column;justify-content:flex-end;gap:5px;flex:1 1 140px;min-width:0;font-size:12px;color:var(--ow-ink-600);}
+  .sp-term-in em{font-style:normal;font-size:12px;color:var(--ow-ink-400);flex:0 0 auto;}
+  .sp-modal .sp-term-in input{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+  .sp-tt{display:flex;flex-direction:column;gap:8px;padding-top:2px;}
+  .sp-tt:empty{display:none;}
+  .sp-tt-bar{position:relative;height:6px;margin:4px 5px;border-radius:var(--ow-r-pill);background:var(--ow-rule-soft);}
+  .sp-tt-ok{position:absolute;left:0;top:0;bottom:0;border-radius:var(--ow-r-pill);background:var(--ow-verdigris);}
+  .sp-tt-stop{position:absolute;top:-4px;width:2px;height:14px;margin-left:-1px;background:var(--ow-crimson);}
+  .sp-tt-age{position:absolute;top:-3px;width:12px;height:12px;margin-left:-6px;border-radius:var(--ow-r-pill);background:var(--ow-ink-900);box-sizing:border-box;border:2px solid var(--ow-paper);}
+  .sp-tt-age.sp-tt-past{background:var(--ow-crimson);}
+  .sp-tt-k{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--ow-ink-600);}
+  .sp-tt-k span{display:inline-flex;align-items:center;gap:6px;}
+  .sp-tt-k b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-weight:600;color:var(--ow-ink-900);}
+  .sp-tt-k i{display:inline-block;width:12px;height:6px;border-radius:var(--ow-r-pill);background:var(--ow-verdigris);}
+  .sp-tt-k i.sp-tt-ks{width:2px;height:12px;border-radius:0;background:var(--ow-crimson);}
+  .sp-tt-k i.sp-tt-ka{width:8px;height:8px;background:var(--ow-ink-900);}
+  .sup-hint.sp-tt-late{color:var(--ow-crimson);font-weight:600;}
   .sp-dup-card{display:flex;flex-direction:column;border:1px solid var(--ow-amber-soft);border-radius:var(--ow-r-lg);background:var(--ow-amber-faint);overflow:hidden;}
   .sp-dup-h{display:flex;align-items:center;gap:12px;padding:12px 14px;}
   .sp-dup-n{display:flex;flex-direction:column;gap:3px;flex:1 1 auto;min-width:0;}
@@ -31404,6 +31425,9 @@
   .ow-growth-actions{display:flex;flex-direction:column;gap:var(--ow-sp-6);justify-content:center;}
   .ow-growth-price{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
   .ow-growth-evidence{padding:var(--ow-sp-12);border-top:1px solid var(--ow-rule);}
+  /* What the Manager plans around: the strip sits inside its panel, so it
+     keeps the hairline under it and not a second frame. */
+  .ow-strip.ow-growth-strip{border:0;border-radius:0;border-bottom:1px solid var(--ow-rule-soft);}
   @media(max-width:820px){
     .ow-growth-reading{font-size:var(--ow-t-14);}
     .ow-growth-controls{grid-template-columns:1fr;}
@@ -35804,7 +35828,7 @@
           <input id="s_shopno" class="sp-shop" placeholder="Shop no. — e.g. B12 (optional)" autocomplete="off" aria-label="Shop number">
         </div>
         <details class="sp-more" id="s_more">
-          <summary><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg><b>More details</b><span>opening balance · also a customer · notes</span></summary>
+          <summary><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg><b>More details</b><span>opening balance · their terms · also a customer · notes</span></summary>
           <div class="sp-more-b">
             <!-- The mirror of the customer form's "what they already owe you",
                  for the other direction: money the shop owed a supplier before
@@ -35825,6 +35849,27 @@
               </div>
               <label class="cf-undated" id="s_open_undated_row"><input type="checkbox" id="s_open_undated"> Nobody knows when it started</label>
               <div class="sup-hint" id="s_open_hint"></div>
+            </div>
+            <!-- THEIR TERMS (0107). What only the owner knows about a
+                 supplier, each in days. Blank means NOBODY HAS SAID --
+                 not 0, which is cash on delivery. The Manager reads a
+                 supplier's deadline off a bill only from what is written
+                 here, so the line under the boxes draws how close their
+                 oldest unpaid bill already is. Hidden where 0107 has not
+                 landed: a box that cannot be saved would only lose what
+                 was typed into it. -->
+            <div class="sup-block" id="s_terms_block" style="display:none;">
+              <span class="sup-label">Their terms</span>
+              <div class="sp-terms">
+                <label class="sp-term"><span>Stop delivering at</span>
+                  <span class="sp-in sp-term-in"><input id="s_stop_at" type="number" min="0" step="1" inputmode="numeric" placeholder="Not known" autocomplete="off"><em>days owed</em></span></label>
+                <label class="sp-term"><span>Credit they give</span>
+                  <span class="sp-in sp-term-in"><input id="s_credit_days" type="number" min="0" step="1" inputmode="numeric" placeholder="Not known" autocomplete="off"><em>days</em></span></label>
+                <label class="sp-term"><span>A delivery takes</span>
+                  <span class="sp-in sp-term-in"><input id="s_delivery_days" type="number" min="0" step="1" inputmode="numeric" placeholder="Not known" autocomplete="off"><em>days</em></span></label>
+              </div>
+              <div class="sp-tt" id="s_terms_track"></div>
+              <div class="sup-hint" id="s_terms_hint"></div>
             </div>
             <!-- The mirror of the customer form's question. Either side can
                  tie the knot; both write the same symmetric link. -->
@@ -39347,7 +39392,7 @@ async function loadData(shopId){
     savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR,
     mediaR, mediaFoldersR, waPostsR,
     rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, followUpsR, rivalPricesR, paymentPromisesR, productLinksR, briefsSentR, statementsSentR, variantColR, imageColR, askedColR, transferColR, lotConsignColR, rivalSideColR, stageColR, managerNotesR, linkSizeColR, coversColR, clientAccountsR, termsColR, waPostKindsColR, cashMetaColR, cashCloseColR,
-    stockLogMetaColR, debtLogLinkColR
+    stockLogMetaColR, debtLogLinkColR, supplierTermsColR
   ] = await Promise.all([
     sel('suppliers'), sel('staff'), sel('customers'), sel('customer_debt_log'), sel('products'), sel('prices'),
     sel('stock'), sel('stock_lots'), sel('stock_log'), sel('cash_days'), sel('cash_txns'),
@@ -39388,7 +39433,11 @@ async function loadData(shopId){
        both guard writes: a log row goes up with every movement, a ledger
        row with every payment. */
     sb.from('stock_log').select('cost, supplier_id, pi_id, source, corrects, purchase_qty, reverses').limit(1),
-    sb.from('customer_debt_log').select('cash_txn_id, quote_id').limit(1)
+    sb.from('customer_debt_log').select('cash_txn_id, quote_id').limit(1),
+    /* 0107, what only the owner knows about a supplier -- the age a bill
+       reaches before they stop delivering, their credit and delivery
+       days. Probed alone: a supplier row goes up on every save. */
+    sb.from('suppliers').select('stop_at_days, credit_days, delivery_days').limit(1)
   ]);
   [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR, mediaR, mediaFoldersR, waPostsR, rentAgreementsR, duesR, placesR]
     .forEach(r=>{ if(r.error) throw r.error; });
@@ -39466,6 +39515,9 @@ async function loadData(shopId){
      the next reload. */
   stockLogMetaColumns = !(stockLogMetaColR && stockLogMetaColR.error);
   debtLogLinkColumns = !(debtLogLinkColR && debtLogLinkColR.error);
+  /* 0107. Without them a supplier still saves exactly as it did; the
+     terms simply cannot be written, and the form does not offer them. */
+  supplierTermsColumns = !(supplierTermsColR && supplierTermsColR.error);
   // sourcing_leads is out of the list for the same reason.
   const sourcingLeadRows = (sourcingLeadsR && !sourcingLeadsR.error && sourcingLeadsR.data) || [];
   // And follow_ups (0077), newest of the lot. A shop whose migration has
@@ -39555,7 +39607,12 @@ async function loadData(shopId){
   const quote = settings.quote_draft || {client:{name:'', phone:''}, date: todayISO(), items:[], savedId:null};
 
   return {
-    suppliers: (suppliersR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, phone2:s.phone2||'', location:s.location, shopNo:s.shop_no||'', notes:s.notes, commissionPct: s.commission_pct==null ? null : Number(s.commission_pct)})),
+    suppliers: (suppliersR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, phone2:s.phone2||'', location:s.location, shopNo:s.shop_no||'', notes:s.notes, commissionPct: s.commission_pct==null ? null : Number(s.commission_pct),
+      /* 0107's terms. Null is "nobody has said", never 0 -- 0 credit
+         days is cash on delivery. */
+      stopAtDays: s.stop_at_days==null ? null : Number(s.stop_at_days),
+      creditDays: s.credit_days==null ? null : Number(s.credit_days),
+      deliveryDays: s.delivery_days==null ? null : Number(s.delivery_days)})),
     // payBasis and payRate stay null rather than becoming '' and 0: a
     // staff member nobody has set a rate for has not been given a rate
     // of nothing, and the payroll screen has to be able to tell those
@@ -40038,6 +40095,8 @@ let cashCloseColumns = false;
 // Set by loadData, both from 0106. See the probes there.
 let stockLogMetaColumns = false;
 let debtLogLinkColumns = false;
+// Set by loadData from 0107: the supplier's terms (stop-at, credit, delivery days).
+let supplierTermsColumns = false;
 
 // cloneJSON() / keyRowsById() now live in shared-worker.js.
 
@@ -40084,7 +40143,14 @@ function buildSyncRows(d, shopId){
     ...(debtLogLinkColumns ? {cash_txn_id: idOrNull(l.cashTxnId), quote_id: idOrNull(l.quoteId)} : {})
   })));
   return {
-    suppliers: d.suppliers.map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, phone2:s.phone2||null, location:s.location, shop_no:s.shopNo||null, notes:s.notes, commission_pct: s.commissionPct==null ? null : s.commissionPct})),
+    suppliers: d.suppliers.map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, phone2:s.phone2||null, location:s.location, shop_no:s.shopNo||null, notes:s.notes, commission_pct: s.commissionPct==null ? null : s.commissionPct,
+      /* 0107's three, on their own probe: sent to a shop without them,
+         every supplier write would fail on an unknown column. */
+      ...(supplierTermsColumns ? {
+        stop_at_days: s.stopAtDays==null ? null : s.stopAtDays,
+        credit_days: s.creditDays==null ? null : s.creditDays,
+        delivery_days: s.deliveryDays==null ? null : s.deliveryDays,
+      } : {})})),
     staff: (d.staff||[]).map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, role:s.role, notes:s.notes, unavailable:!!s.unavailable,
       // Written through as null, never coerced to 0 -- see the load side.
       pay_basis: s.payBasis || null,
@@ -75244,10 +75310,12 @@ function editSupplier(id){
   document.getElementById('s_form').hidden = false;
   document.getElementById('s_foot').hidden = false;
   document.getElementById('s_done').hidden = true;
-  document.getElementById('s_more').open = !!(s.notes || linkedCustomerOf(s) || supplierOpeningInvoice(s.id));
+  document.getElementById('s_more').open = !!(s.notes || linkedCustomerOf(s) || supplierOpeningInvoice(s.id)
+    || s.stopAtDays != null || s.creditDays != null || s.deliveryDays != null);
   sfFillLinkPicker(s);
   supShowIssuedId();
   sfShowOpeningBalance(s.id);
+  sfShowTerms(s);
   supRefresh();
   openModal('supplierModal');
   document.getElementById('s_name').focus();
@@ -75289,6 +75357,77 @@ function sfShowOpeningBalance(supplierId){
       + 'It becomes a purchase invoice you can pay off like any other, so it shows in Creditors and on the balance sheet.';
   }
 }
+/* ---- THEIR TERMS (0107) ------------------------------------------
+   Read back as null when the box is empty, never as 0: an empty box
+   means nobody has said, and 0 credit days is cash on delivery -- a real
+   and much stricter agreement. A whole number of days or nothing. */
+const SF_TERM_FIELDS = [['s_stop_at', 'stopAtDays'], ['s_credit_days', 'creditDays'], ['s_delivery_days', 'deliveryDays']];
+function sfTermValue(raw){
+  const t = String(raw == null ? '' : raw).trim();
+  if(t === '') return null;
+  const n = Number(t);
+  return Number.isFinite(n) && n >= 0 ? Math.round(n) : null;
+}
+function sfReadTerms(){
+  const out = {};
+  SF_TERM_FIELDS.forEach(([id, key])=>{ const el = document.getElementById(id); out[key] = el ? sfTermValue(el.value) : null; });
+  return out;
+}
+function sfShowTerms(s){
+  const block = document.getElementById('s_terms_block');
+  if(!block) return;
+  block.style.display = supplierTermsColumns ? '' : 'none';
+  SF_TERM_FIELDS.forEach(([id, key])=>{
+    const el = document.getElementById(id);
+    if(el) el.value = s && s[key] != null ? s[key] : '';
+  });
+  sfTermsDraw();
+}
+/* The oldest bill still unpaid to this supplier, drawn against what
+   they said: inside their credit, past it, or at the age they stop. */
+function sfTermsDraw(){
+  const track = document.getElementById('s_terms_track');
+  const hint = document.getElementById('s_terms_hint');
+  if(!track || !hint) return;
+  const t = sfReadTerms();
+  const open = editingSupplierId
+    ? credOpenInvoices().filter(b=> String(b.supplierId) === String(editingSupplierId) && b.ageDays >= 0) : [];
+  const oldest = open.reduce((m, b)=> (!m || b.ageDays > m.ageDays) ? b : m, null);
+  const age = oldest ? oldest.ageDays : null;
+  const bits = [];
+  let late = false;
+  if(age != null && t.stopAtDays != null){
+    late = age >= t.stopAtDays;
+    bits.push(late
+      ? `Their oldest unpaid bill is ${age} days old — at or past the ${t.stopAtDays} days at which they stop delivering.`
+      : `Their oldest unpaid bill is ${age} days old — ${t.stopAtDays - age} day${t.stopAtDays - age === 1 ? '' : 's'} before they stop delivering.`);
+  } else if(age != null && t.creditDays != null){
+    bits.push(age > t.creditDays
+      ? `Their oldest unpaid bill is ${age} days old — ${age - t.creditDays} day${age - t.creditDays === 1 ? '' : 's'} past the credit they give.`
+      : `Their oldest unpaid bill is ${age} days old — inside the credit they give.`);
+  } else if(editingSupplierId && !open.length){
+    bits.push('Nothing unpaid with them.');
+  }
+  bits.push('Blank means nobody has said. The Manager reads a supplier\'s deadline only from what is written here.');
+  hint.textContent = bits.join(' ');
+  hint.classList.toggle('sp-tt-late', late);
+  const span = Math.max(30, t.stopAtDays || 0, t.creditDays || 0, age || 0) * 1.12;
+  const at = (d)=> Math.max(0, Math.min(100, d / span * 100)).toFixed(1);
+  if(t.stopAtDays == null && t.creditDays == null){ track.innerHTML = ''; return; }
+  track.innerHTML = `<div class="sp-tt-bar" role="img" aria-label="${esc(hint.textContent)}">`
+    + (t.creditDays != null ? `<i class="sp-tt-ok" style="width:${at(t.creditDays)}%"></i>` : '')
+    + (t.stopAtDays != null ? `<i class="sp-tt-stop" style="left:${at(t.stopAtDays)}%"></i>` : '')
+    + (age != null ? `<i class="sp-tt-age${late ? ' sp-tt-past' : ''}" style="left:${at(age)}%"></i>` : '')
+    + `</div><div class="sp-tt-k" aria-hidden="true">`
+    + (t.creditDays != null ? `<span><i></i>credit <b>${t.creditDays} d</b></span>` : '')
+    + (age != null ? `<span><i class="sp-tt-ka"></i>oldest unpaid bill <b>${age} d</b></span>` : '')
+    + (t.stopAtDays != null ? `<span><i class="sp-tt-ks"></i>they stop at <b>${t.stopAtDays} d</b></span>` : '')
+    + `</div>`;
+}
+SF_TERM_FIELDS.forEach(([id])=>{
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('input', sfTermsDraw);
+});
 function resetSupplierForm(){
   editingSupplierId = null;
   ['s_id','s_name','s_phone','s_phone2','s_location','s_shopno','s_notes','s_open_bal','s_open_since'].forEach(id=>document.getElementById(id).value='');
@@ -75297,6 +75436,7 @@ function resetSupplierForm(){
   sfFillLinkPicker(null);
   supShowIssuedId();
   sfShowOpeningBalance(null);
+  sfShowTerms(null);
   supRefresh();
   document.getElementById('supplierFormTitle').textContent = 'Add supplier';
   supDupDismissed = '';
@@ -75585,6 +75725,12 @@ Add them anyway?`)) return;
   // Commission rate is managed from the commission modal, not this form --
   // carry whatever's already on file forward so saving here doesn't wipe it.
   const priorPct = editingSupplierId ? (data.suppliers.find(s=>s.id===editingSupplierId)||{}).commissionPct : null;
+  /* Their terms come from the form only where 0107 has landed and the
+     boxes were shown; otherwise whatever is on file is carried forward,
+     so a save from a shop without the columns cannot wipe them. */
+  const prior = editingSupplierId ? (data.suppliers.find(s=>s.id===editingSupplierId)||{}) : {};
+  const terms = supplierTermsColumns ? sfReadTerms()
+    : { stopAtDays: prior.stopAtDays ?? null, creditDays: prior.creditDays ?? null, deliveryDays: prior.deliveryDays ?? null };
   const record = {
     id, name,
     phone: document.getElementById('s_phone').value.trim(),
@@ -75596,6 +75742,7 @@ Add them anyway?`)) return;
     shopNo: document.getElementById('s_shopno').value.trim(),
     notes: document.getElementById('s_notes').value.trim(),
     commissionPct: priorPct!=null ? priorPct : null,
+    stopAtDays: terms.stopAtDays, creditDays: terms.creditDays, deliveryDays: terms.deliveryDays,
   };
   if(editingSupplierId){
     const idx = data.suppliers.findIndex(s=>s.id===editingSupplierId);
@@ -126198,17 +126345,1563 @@ async function managerGrowthRead(){
     ranking: 'Requested stock first, then repeat-buying/price evidence, then relevant next purchases. No estimated uplift.' };
 }
 
+/* ═══ MGR SHARED MODELS — begin ═══
+
+   THE MANAGER'S SHARED READINGS. Departments, how sure a decision is,
+   the thirty days of cash ahead, the shop's health as named checks, the
+   dated risks, what is on the books, and the four row kinds 0107 adds to
+   the journal. Every bed of the Manager draws from these, so two beds
+   can never tell the owner two different stories about one figure.
+
+   The laws they keep, each one pinned by a test:
+   - DERIVED, NEVER INVENTED. A figure the books cannot give is null --
+     "not known" on the screen -- never 0.
+   - THE COMMITTED LINE IS OUTFLOWS AND COMMITMENTS ONLY. What customers
+     are expected to pay and what trading usually brings ride a separate
+     EXPECTED band, each with its method and its k of n, and never feed
+     safeToSpend: cashAhead is read here and never changed.
+   - HEALTH IS A SHARE OF NAMED CHECKS, each visible with its figure and
+     its rule. A check the books cannot answer is null and is left out
+     of the score rather than passed or failed on a guess.
+   - THE APP'S DAYS. todayISO() is the UTC date, so for the first three
+     hours of a Kampala morning "today" is still yesterday -- everywhere
+     in the app at once. Every date here is that same YYYY-MM-DD string,
+     shifted and compared in UTC (anShiftDate, daysBetweenISO,
+     waWeekday), exactly as the cash line, the debtors and the stock log
+     date theirs. A walk dated on local midnight would put a bill on a
+     different day from the screen the owner checks it against. */
+
+/* ---- THE SIX DEPARTMENTS (owner's mapping, Q2) -------------------
+   Finance = cash, debt both ways, loans; Sales = invoices, quotes,
+   margin, customers; Procurement = bills, the buy plan, suppliers;
+   Store = stock, dead stock, counts; People = staff, payroll, the till;
+   Marketing = WhatsApp posts, repeat customers. Each wears a category
+   tint (identity, never state) -- token names, so a painter writes
+   background:var(<tint>);color:var(<ink>). People's teal is the
+   supplier family's, already held to 4.5:1 ink-on-tint. */
+const MGR_DEPTS = [
+  { id: 'finance', name: 'Finance', mono: 'F', tint: '--ow-sky-soft', ink: '--ow-sky', holds: 'cash, money owed both ways, loans' },
+  { id: 'sales', name: 'Sales', mono: 'S', tint: '--ow-oxide-soft', ink: '--ow-oxide-deep', holds: 'invoices, quotes, margin, customers' },
+  { id: 'procurement', name: 'Procurement', mono: 'P', tint: '--ow-indigo-soft', ink: '--ow-indigo', holds: 'bills, the buy plan, suppliers' },
+  { id: 'store', name: 'Store', mono: 'O', tint: '--ow-verdigris-soft', ink: '--ow-verdigris', holds: 'stock, dead stock, counts' },
+  { id: 'people', name: 'People', mono: 'H', tint: '--ow-teal-soft', ink: '--ow-teal', holds: 'staff, payroll, the till' },
+  { id: 'marketing', name: 'Marketing', mono: 'M', tint: '--ow-plum-soft', ink: '--ow-plum', holds: 'WhatsApp posts, repeat customers' },
+];
+const MGR_WHOLE_SHOP = { id: 'all', name: 'Whole shop', mono: '∑', tint: '--ow-rule-soft', ink: '--ow-ink-600', holds: 'every department' };
+function mgrDept(id){
+  return MGR_DEPTS.find(d=> d.id === id) || null;
+}
+
+/* Where an older move belongs when the meeting did not say. Kind first
+   (what the move does), then its door (the screen it opens), then its
+   lever, then what it is about. A standing rule ('policy') and 'other'
+   have no kind of their own, so their door decides. */
+const MGR_KIND_DEPT = { chase: 'finance', settle: 'finance', buy: 'procurement', invoice: 'sales', price: 'sales' };
+const MGR_DOOR_DEPT = { chase: 'finance', debtors: 'finance', creditors: 'finance', cashbook: 'finance', statements: 'finance',
+  buy: 'procurement', prices: 'procurement', 'prices-watch': 'procurement', sourcing: 'procurement', consignment: 'procurement',
+  orders: 'sales', invoices: 'sales', inventory: 'store', payroll: 'people', followups: 'marketing', whatsapp: 'marketing' };
+const MGR_LEVER_DEPT = { collect: 'finance', cost: 'finance', sell: 'sales', price: 'sales', buy: 'procurement' };
+function mgrMoveBody(move){
+  if(!move || typeof move !== 'object') return {};
+  return move.body && typeof move.body === 'object' ? move.body : move;
+}
+/* body.dept when the meeting supplied a valid one; derived otherwise.
+   Null when nothing about the move names a department -- the board
+   files it under the whole shop rather than guessing. */
+function mgrDeptOf(move){
+  const b = mgrMoveBody(move);
+  const said = String(b.dept || '').trim().toLowerCase();
+  if(mgrDept(said)) return said;
+  const s = (b.subject && typeof b.subject === 'object') ? b.subject : {};
+  return MGR_KIND_DEPT[b.mkind] || MGR_DOOR_DEPT[b.door] || MGR_LEVER_DEPT[b.lever]
+    || (s.customerId != null ? 'sales' : s.supplierId != null ? 'procurement'
+      : s.key != null ? 'store' : s.orderId != null ? 'sales' : null);
+}
+/* The OTHER departments a move moves. The meeting's own list when it
+   gave one (a non-empty array); derived from what the move is about
+   otherwise: a customer is sales and finance, a supplier procurement
+   and finance, a line store and sales, an order sales and store --
+   and buying spends cash, paying keeps a supplier supplying, chasing is
+   a customer conversation. Never the move's own department, in the
+   board's order. */
+function mgrTouchesOf(move){
+  const b = mgrMoveBody(move);
+  const own = mgrDeptOf(move);
+  let out = [];
+  const said = Array.isArray(b.touches) ? b.touches.map(x=> String(x || '').trim().toLowerCase()).filter(x=> mgrDept(x)) : [];
+  if(said.length) out = said;
+  else {
+    const s = (b.subject && typeof b.subject === 'object') ? b.subject : {};
+    if(s.customerId != null) out.push('sales', 'finance');
+    if(s.supplierId != null) out.push('procurement', 'finance');
+    if(s.key != null) out.push('store', 'sales');
+    if(s.orderId != null) out.push('sales', 'store');
+    if(b.mkind === 'buy') out.push('finance');
+    if(b.mkind === 'settle') out.push('procurement');
+    if(b.mkind === 'chase') out.push('sales');
+  }
+  return MGR_DEPTS.map(d=> d.id).filter(id=> id !== own && out.includes(id));
+}
+
+/* ---- WHAT THE OWNER SET (data.presetManager) ---------------------
+   cashFloor: UGX, a number the owner typed (0 is a real answer: no
+   floor). Until then the stand-in is the committed month -- rent and
+   monthly/weekly salaries, committedMonthlyCost, the same cushion the
+   Statements hub already measures cash against -- and it says so. */
+function mgrCashFloor(){
+  const p = (data && data.presetManager) || {};
+  const raw = p.cashFloor;
+  const set = Number(raw);
+  if(raw != null && raw !== '' && Number.isFinite(set) && set >= 0)
+    return { amount: Math.round(set), source: 'set', note: 'the floor you set' };
+  const c = committedMonthlyCost(currentPeriod());
+  const amount = Math.round(Number(c.total) || 0);
+  return { amount, source: 'stand-in',
+    note: amount > 0
+      ? 'not set — a month of rent and salaries stands in'
+      : 'not set — and no rent or salary is on the books to stand in',
+    parts: { rent: Math.round(Number(c.rent) || 0), wages: Math.round(Number(c.wages) || 0),
+      dailyPaid: c.dailyCount || 0, noRate: c.noRateCount || 0 } };
+}
+/* payday: { kind: 'monthly', day: 1..31 } -- the day of each month
+   wages leave (31 is the month's last day in a shorter month) -- or
+   { kind: 'weekly', day: 0..6 } (0 = Sunday, as waWeekday counts).
+   Anything else is "not set", and wages stay at month end, the date the
+   payroll gives every wage due. */
+function mgrPayday(){
+  const p = ((data && data.presetManager) || {}).payday;
+  if(!p || typeof p !== 'object') return null;
+  const day = Number(p.day);
+  if(p.kind === 'monthly' && Number.isInteger(day) && day >= 1 && day <= 31) return { kind: 'monthly', day };
+  if(p.kind === 'weekly' && Number.isInteger(day) && day >= 0 && day <= 6) return { kind: 'weekly', day };
+  return null;
+}
+const MGR_WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+function mgrOrdinal(n){
+  const v = Number(n), t = v % 100;
+  return v + (t >= 11 && t <= 13 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' })[v % 10] || 'th');
+}
+function mgrPaydayLabel(p){
+  const pd = p === undefined ? mgrPayday() : p;
+  if(!pd) return 'month end (no payday set)';
+  return pd.kind === 'monthly' ? (pd.day === 31 ? 'the last day of each month' : 'the ' + mgrOrdinal(pd.day) + ' of each month')
+    : 'every ' + MGR_WEEKDAYS[pd.day];
+}
+
+/* ---- ONE READING PER DATA VERSION --------------------------------
+   The health checks walk the whole book (stock, invoices, the cash
+   log), and the screen repaints on every Done and every answer. Kept
+   for the day, for this `data` object (the poll replaces it), for the
+   counts that change when anything is recorded, and for a minute at
+   most -- an edit that changes no count is picked up within it, the
+   same terms mgrUnusualMemo reads the unusual days on. */
+let mgrModelMemo = null;
+function mgrModelStamp(){
+  const d = data || {};
+  const n = (x)=> Array.isArray(x) ? x.length : (x && typeof x === 'object' ? Object.keys(x).length : 0);
+  const pm = d.presetManager || {};
+  return [todayISO(), n(d.savedQuotes), n(d.cashTxns), n(d.stockLog), n(d.purchaseInvoices), n(d.customers),
+    n(d.dues), n(d.loans), n(d.paymentPromises), n(d.presetChaseLog), n(d.presetBuyOrders), n(d.staff),
+    (d.suppliers || []).map(s=> [s.stopAtDays, s.creditDays].join('/')).join(','),
+    JSON.stringify([pm.cashFloor == null ? null : pm.cashFloor, pm.payday || null])].join('|');
+}
+function mgrMemo(name, fn){
+  const now = Date.now(), stamp = mgrModelStamp();
+  if(!mgrModelMemo || mgrModelMemo.data !== data || mgrModelMemo.stamp !== stamp || now - mgrModelMemo.at > 60000)
+    mgrModelMemo = { data, stamp, at: now, values: new Map() };
+  if(!mgrModelMemo.values.has(name)) mgrModelMemo.values.set(name, fn());
+  return mgrModelMemo.values.get(name);
+}
+function mgrPossessive(name){
+  const n = String(name || ''); return /s$/i.test(n) ? n + '\'' : n + '\'s';
+}
+function mgrMedian(vals){
+  const v = vals.filter(x=> x != null && Number.isFinite(x)).slice().sort((a, b)=> a - b);
+  if(!v.length) return null;
+  const m = Math.floor(v.length / 2);
+  return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
+}
+
+/* ---- WAGES ON THE OWNER'S PAYDAY ---------------------------------
+   The days in `period` a month's wages leave on. No payday: the due's
+   own date when it is raised (month end, as newWageDue writes it), the
+   month's last day when it is not. Monthly: that day of the month,
+   clamped to its length. Weekly: every such weekday in the month, and
+   the month's wages are split across them. */
+function mgrPaydayDates(period, payday, dueDate){
+  const end = periodEndDate(period);
+  if(!payday) return [dueDate || end];
+  if(payday.kind === 'monthly'){
+    const last = Number(end.slice(8, 10));
+    return [period + '-' + String(Math.min(payday.day, last)).padStart(2, '0')];
+  }
+  const out = [];
+  for(let d = period + '-01'; d <= end; d = anShiftDate(d, 1)) if(waWeekday(d) === payday.day) out.push(d);
+  return out;
+}
+/* Every wage that leaves between `from` and `to`, on the payday.
+
+   RAISED dues are taken at their balance, exactly as cashCommitments
+   takes them: an unpaid one whose day has gone by is due now and sits on
+   `from`. A daily worker's month nobody has counted is UNCOSTED, and is
+   named off the line rather than put on it at 0.
+
+   A month NOT RAISED YET is costed only where the books can cost it: a
+   monthly or weekly salary is a standing promise (basisMonthCost, the
+   figure committedMonthlyCost carries), a day rate is not -- what a
+   daily worker costs follows the days worked. A month whose payday has
+   already gone by with nothing raised is named, never placed: the wages
+   may well have been paid straight from the cash book, and placing them
+   again would take them twice. */
+function mgrWageEvents(from, to, payday){
+  const events = [], notOnLine = [];
+  const where = payday ? 'your payday, ' + mgrPaydayLabel(payday) : 'month end — no payday set, so the payroll\'s date';
+  const place = (period, amount, base, raised, dueDate)=>{
+    const days = mgrPaydayDates(period, payday, dueDate);
+    const ahead = days.filter(d=> d >= from);
+    if(!ahead.length){
+      if(!raised){ notOnLine.push({ kind: 'wage', dept: 'people', label: base.label + ' — ' + periodLabel(period),
+        amount: Math.round(amount), why: 'not raised, and its payday has gone by — it may have been paid from the cash book' }); return; }
+      if(amount > 0.5) events.push({ ...base, date: from, dueOn: days[days.length - 1], overdue: true,
+        amount: Math.round(amount), raised, source: 'owed since ' + days[days.length - 1] + ' (' + where + ')' });
+      return;
+    }
+    let left = Math.round(amount);
+    const each = amount / ahead.length;
+    ahead.forEach((d, i)=>{
+      const part = i === ahead.length - 1 ? left : Math.round(each);
+      left -= part;
+      if(d <= to && part > 0.5) events.push({ ...base, date: d, dueOn: d, overdue: false, amount: part, raised,
+        ...(ahead.length > 1 ? { split: { part: i + 1, of: ahead.length } } : {}),
+        source: (raised ? 'raised on the payroll' : 'costed from the pay rate, not raised yet') + ' · ' + where });
+    });
+  };
+  (data.dues || []).forEach(d=>{
+    if(d.kind !== 'wage') return;
+    const period = String(d.period || periodOf(d.dueDate));
+    if(!/^\d{4}-\d{2}$/.test(period)) return;
+    const bal = dueBalance(d);
+    const base = { kind: 'wage', dept: 'people', label: dueName(d), staffId: String(d.refId), period };
+    if(bal === null){
+      if(mgrPaydayDates(period, payday, d.dueDate).some(x=> x <= to))
+        notOnLine.push({ kind: 'wage', dept: 'people', label: base.label + ' — ' + periodLabel(period), amount: null,
+          why: 'paid by the day — not costed until the days are counted' });
+      return;
+    }
+    if(!(bal > 0.5)) return;
+    place(period, bal, base, true, d.dueDate);
+  });
+  for(let i = 0; i <= 3; i++){
+    const period = periodShift(periodOf(from), i);
+    if(period + '-01' > to) break;
+    staffOnPayroll().forEach(s=>{
+      if(findDue('wage', s.id, period)) return;
+      const base = { kind: 'wage', dept: 'people', label: s.name || 'Staff member', staffId: String(s.id), period };
+      const cost = basisMonthCost(s.payBasis, s.payRate);
+      if(cost == null){
+        if(mgrPaydayDates(period, payday, null).some(d=> d >= from && d <= to)) notOnLine.push({ kind: 'wage', dept: 'people', label: base.label + ' — ' + periodLabel(period), amount: null,
+          why: s.payRate == null ? 'no pay rate set' : 'paid by the day — not costed until the days are counted' });
+        return;
+      }
+      if(cost > 0.5) place(period, cost, base, false, null);
+    });
+  }
+  events.sort((a, b)=> String(a.date).localeCompare(String(b.date)) || (b.amount - a.amount));
+  return { events, notOnLine };
+}
+
+/* ---- WHAT CUSTOMERS PAID, BY DAY ---------------------------------
+   customerCollectionDays' gates (collectionInvoiceTxn,
+   collectionLedgerRow), with the amounts kept: Map customerId(string)
+   -> Map date -> UGX. One door to who paid what, so a chase lag and the
+   chase verdict can never disagree about whether money came. */
+function mgrCollectionsByDay(fromISO){
+  const from = String(fromISO || '').slice(0, 10);
+  const out = new Map();
+  const add = (id, d, amount)=>{
+    if(id == null || !(amount > 0) || !d || d < from) return;
+    const k = String(id);
+    if(!out.has(k)) out.set(k, new Map());
+    const m = out.get(k);
+    m.set(d, (m.get(d) || 0) + amount);
+  };
+  const txnById = new Map((data.cashTxns || []).map(t=> [t.id, t]));
+  (data.savedQuotes || []).forEach(q=>{
+    if(q.customerId == null) return;
+    (q.payments || []).forEach(p=>{
+      if(collectionInvoiceTxn(p, txnById)) add(q.customerId, String(p.date || '').slice(0, 10), Number(p.amount) || 0);
+    });
+  });
+  (data.customers || []).forEach(c=>{
+    (c.debtLog || []).forEach(l=>{
+      if(collectionLedgerRow(l)) add(c.id, String(l.date || '').slice(0, 10), Number(l.amount) || 0);
+    });
+  });
+  return out;
+}
+
+/* ---- HOW SOON A CUSTOMER PAYS AFTER A CHASE ----------------------
+   Only for a customer chaseResponse reads as PAYS WHEN CHASED -- enough
+   chases (CHASE_MIN_CHASED) and enough unchased weeks to compare, with
+   chasing clearly ahead. Their chases are merged into occasions exactly
+   as chaseResponse merges them; for each closed occasion, the first day
+   money came inside the seven-day window is the lag, and what came in
+   that window is what it brought. N is the LONGEST lag among the paid
+   occasions, so "paid within N days of a chase in k of n" is true of
+   every one of the k -- the amount is the median of what they brought. */
+function mgrChaseLags(today, reading){
+  const day = String(today || todayISO()).slice(0, 10);
+  const chase = reading || ((typeof mgrChaseMemo !== 'undefined' && mgrChaseMemo && mgrChaseMemo.day === day)
+    ? mgrChaseMemo.reading : chaseResponse(day, (typeof mgrChaseExtras !== 'undefined' && mgrChaseExtras) || []));
+  const start = chaseDayAdd(day, -CHASE_LOOKBACK), lastOpen = chaseDayAdd(day, -CHASE_WINDOW);
+  const paid = mgrCollectionsByDay(start);
+  const chasesBy = new Map();
+  const addChase = (id, d)=>{
+    if(id == null || !/^\d{4}-\d{2}-\d{2}$/.test(String(d || ''))) return;
+    const k = String(id);
+    if(!chasesBy.has(k)) chasesBy.set(k, []);
+    chasesBy.get(k).push(String(d));
+  };
+  (data.presetChaseLog || []).forEach(r=> r && addChase(r.c, r.d));
+  ((typeof mgrChaseExtras !== 'undefined' && mgrChaseExtras) || []).forEach(r=> r && addChase(r.customerId, r.date));
+  const out = [];
+  ((chase && chase.customers) || []).forEach(row=>{
+    if(row.verdict !== 'pays_when_chased' || !(row.chased && row.chased.n >= CHASE_MIN_CHASED)) return;
+    const id = String(row.customerId);
+    const occasions = [];
+    (chasesBy.get(id) || []).slice().sort().forEach(d=>{
+      const prev = occasions[occasions.length - 1];
+      if(prev && d < chaseDayAdd(prev, CHASE_MERGE)) return;
+      occasions.push(d);
+    });
+    const days = paid.get(id) || new Map();
+    const lags = [], amounts = [];
+    let n = 0;
+    occasions.forEach(d=>{
+      if(d < start || d > lastOpen) return;
+      n++;
+      let first = null, brought = 0;
+      for(let i = 0; i < CHASE_WINDOW; i++){
+        const v = days.get(chaseDayAdd(d, i)) || 0;
+        if(v > 0){ if(first == null) first = i; brought += v; }
+      }
+      if(first != null){ lags.push(first); amounts.push(brought); }
+    });
+    if(!lags.length) return;
+    out.push({ customerId: row.customerId, name: row.name, k: lags.length, n,
+      lagDays: Math.max(...lags), typicalAmount: Math.round(mgrMedian(amounts)),
+      lastChased: occasions[occasions.length - 1] || null, verdict: row.verdict });
+  });
+  return out;
+}
+
+/* ---- THE USUAL DAY'S TRADING, BY WEEKDAY -------------------------
+   What the Statements hub's weeks ahead (shWeeks) count as everyday
+   money, by weekday and by MEDIAN rather than by average, so one big
+   day cannot carry a week: in = takings (cashIsTradingIncome) and what
+   customers paid on their debts; out = running costs, stock bought and
+   suppliers paid -- minus rent, wages and loan repayments, which are on
+   the committed line with their own dates. A customer the expected
+   band places by name (a promise, a chase) has their payments taken out
+   of the history, or they would arrive twice. Each weekday is the
+   median of the last eight of it on the books (days with nothing
+   recorded count as nothing -- a shut Sunday is a Sunday); fewer than
+   three on the books and that weekday is not known. */
+const MGR_TRADING_WEEKS = 8, MGR_TRADING_MIN = 3;
+const MGR_DATED_CATEGORIES = ['Rent', 'Salaries & Wages', 'Loan Repayment'];
+function mgrTradingPattern(today, placedIds){
+  const day = String(today || todayISO()).slice(0, 10);
+  const placed = new Set((placedIds || []).map(String));
+  const txns = data.cashTxns || [];
+  const first = txns.reduce((m, t)=> (t && t.date && (!m || t.date < m)) ? t.date : m, null);
+  const owner = new Map();
+  (data.savedQuotes || []).forEach(q=>{ if(q.customerId != null) (q.payments || []).forEach(p=>{ if(p && p.cashTxnId != null) owner.set(p.cashTxnId, String(q.customerId)); }); });
+  (data.customers || []).forEach(c=> (c.debtLog || []).forEach(l=>{ if(l && l.type === 'payment' && l.cashTxnId != null) owner.set(l.cashTxnId, String(c.id)); }));
+  const lo = anShiftDate(day, -7 * MGR_TRADING_WEEKS);
+  const net = new Map();
+  txns.forEach(t=>{
+    if(!t || !t.date || t.date < lo || t.date >= day) return;
+    const amt = Number(t.amount) || 0;
+    let v = 0;
+    if(cashIsTradingIncome(t)) v = amt;
+    else if(cashIsDebtCollection(t)) v = placed.has(owner.get(t.id)) ? 0 : amt;
+    else if(cashIsMoneyOut(t) && (cashIsOperatingExpense(t) || t.category === 'Stock Purchase' || t.category === 'Supplier Payment')
+      && MGR_DATED_CATEGORIES.indexOf(String(t.category)) === -1) v = -amt;
+    if(v) net.set(t.date, (net.get(t.date) || 0) + v);
+  });
+  const byWeekday = [0, 1, 2, 3, 4, 5, 6].map(()=> []);
+  for(let i = 1; i <= 7 * MGR_TRADING_WEEKS; i++){
+    const d = anShiftDate(day, -i);
+    if(!first || d < first) continue;
+    byWeekday[waWeekday(d)].push(net.get(d) || 0);
+  }
+  return { from: lo, to: anShiftDate(day, -1), weeks: MGR_TRADING_WEEKS,
+    byWeekday: byWeekday.map((vals, w)=> vals.length >= MGR_TRADING_MIN
+      ? { weekday: w, median: Math.round(mgrMedian(vals)), n: vals.length } : { weekday: w, median: null, n: vals.length }) };
+}
+
+/* ---- THE THIRTY DAYS OF CASH AHEAD -------------------------------
+   mgrCashWalk({ today, days = 30, adjust }) ->
+     { from, to, days, opening, accounts, floor, payday,
+       days: [{ date, weekday, committed, expected, events }],
+       tightest: { date, balance }, expectedTightest, notOnLine,
+       method: { committed, wages, expectedReceipts, expectedTrading },
+       vsCashAhead: { tightest, safeToSpend } }
+
+   COMMITTED is the law's line: cash on hand (cashOnHandByAccount) less
+   every dated commitment cashAhead already carries -- raised dues, loan
+   instalments still owed, rent not yet raised, bills the owner dated --
+   with WAGES moved to the owner's payday (month end until one is set)
+   and salaried months not yet raised costed from the pay rate. Nothing
+   coming in is ever on it. Its lowest point is cashAhead's when no
+   payday is set and every month in the window is raised; safeToSpend
+   is never touched.
+
+   EXPECTED is a separate band, labelled with its method: the committed
+   line plus what customers are expected to pay -- a day they named
+   (cashAhead's promised band), and for those who pay when chased, the
+   chase lag in k of n -- plus the usual day's trading by weekday.
+   Because that usual trading already pays suppliers at the shop's own
+   pace, the dated bills are inside it and are not taken off a second
+   time on this band. Null where the books are too young to say.
+
+   Each day's events carry a signed amount (negative leaves the drawer),
+   the line they ride ('committed' | 'expected'), a department and where
+   the figure came from.
+
+   adjust (the Simulator's levers, never the baseline):
+     bills:     [{ billId, to, amount? }]  pay a bill on another day (an
+                undated bill is placed there; a day past the window takes
+                it off the line and names it)
+     loan:      { amount, on, ratePct, termMonths, method, frequency,
+                fees, lender }  the money lands on the committed line --
+                an owner's own financing choice, not a forecast -- and its
+                instalments (loanSchedule) leave on their days
+     clearance: [{ date, amount, label }]  expected receipts only: what
+                a clearance brings in is a sell-through nobody knows
+     oneOff:    [{ date, amount, label }]  negative = out (committed);
+                positive = in, which rides the expected band only */
+function mgrCashWalk(opts){
+  const o = opts || {};
+  const today = String(o.today || todayISO()).slice(0, 10);
+  const span = Math.max(1, Math.min(90, Math.round(Number(o.days) || CASH_AHEAD_DAYS)));
+  const adjust = o.adjust && typeof o.adjust === 'object' ? o.adjust : null;
+  if(!adjust) return mgrMemo('cashWalk:' + today + ':' + span, ()=> mgrCashWalkBuild(today, span, null));
+  return mgrCashWalkBuild(today, span, adjust);
+}
+function mgrCashWalkBuild(today, span, adjust){
+  const to = anShiftDate(today, span);
+  const ahead = cashAhead(today, span);
+  const held = cashOnHandByAccount();
+  const opening = Math.round(ahead.onHand);
+  const payday = mgrPayday();
+  const floor = mgrCashFloor();
+  const wages = mgrWageEvents(today, to, payday);
+  const notOnLine = wages.notOnLine.slice();
+  const DEPT_OF = { rent: 'finance', loan: 'finance', bill: 'procurement' };
+  const committed = ahead.commitments.filter(c=> c.kind !== 'wage').map(c=> ({
+    date: c.date, dueOn: c.dueOn, overdue: !!c.overdue, kind: c.kind, label: c.label,
+    amount: -Math.round(c.amount), line: 'committed', dept: DEPT_OF[c.kind] || 'finance',
+    source: c.kind === 'bill' ? 'the day you named for this bill'
+      : c.kind === 'loan' ? 'the loan\'s schedule, less what is paid'
+      : c.raised ? 'raised on the payroll' : 'the rent agreement, not raised yet',
+    ...(c.billId != null ? { billId: c.billId } : {}), ...(c.unknown ? { unknown: true } : {}) }));
+  wages.events.forEach(w=> committed.push({ date: w.date, dueOn: w.dueOn, overdue: w.overdue, kind: 'wage', label: w.label,
+    amount: -w.amount, line: 'committed', dept: 'people', source: w.source, staffId: w.staffId, period: w.period,
+    raised: w.raised, ...(w.split ? { split: w.split } : {}) }));
+  const expectedOnly = [];
+  const clampDay = (d)=> /^\d{4}-\d{2}-\d{2}$/.test(String(d || '')) ? (String(d) < today ? today : String(d)) : today;
+  if(adjust){
+    [].concat(adjust.bills || []).forEach(m=>{
+      if(!m || m.billId == null) return;
+      const at = committed.findIndex(e=> e.kind === 'bill' && String(e.billId) === String(m.billId));
+      const open = credOpenInvoices().find(b=> String(b.invoice.id) === String(m.billId));
+      const amt = Number(m.amount) > 0 ? Math.round(Number(m.amount)) : (at >= 0 ? -committed[at].amount : open ? Math.round(open.due) : 0);
+      if(!(amt > 0)) return;
+      const label = at >= 0 ? committed[at].label : ((open && supplierName(open.supplierId)) || 'Supplier') + ' — bill';
+      if(at >= 0) committed.splice(at, 1);
+      const when = clampDay(m.to);
+      if(when > to){ notOnLine.push({ kind: 'bill', dept: 'procurement', label, amount: amt, why: 'moved past these ' + span + ' days in this scenario' }); return; }
+      committed.push({ date: when, dueOn: when, overdue: false, kind: 'bill', label, amount: -amt, line: 'committed',
+        dept: 'procurement', source: 'your choice in the Simulator', billId: m.billId, adjusted: true });
+    });
+    const L = adjust.loan;
+    if(L && Number(L.amount) > 0){
+      const on = clampDay(L.on);
+      const loan = { principal: Number(L.amount), ratePct: Number(L.ratePct) || 0, termMonths: Math.max(1, Math.round(Number(L.termMonths) || 12)),
+        startedOn: on, method: L.method || undefined, frequency: L.frequency || undefined,
+        fees: Number(L.fees) || 0, feePerInstallment: Number(L.feePerInstallment) || 0 };
+      const lender = String(L.lender || 'Loan');
+      if(on <= to) committed.push({ date: on, dueOn: on, overdue: false, kind: 'loan-in', label: lender + ' — money in',
+        amount: Math.round(loan.principal - loan.fees), line: 'committed', dept: 'finance', source: 'your choice in the Simulator', adjusted: true });
+      loanSchedule(loan).forEach(r=>{
+        if(r.date < today || r.date > to) return;
+        committed.push({ date: r.date, dueOn: r.date, overdue: false, kind: 'loan', label: lender + ' repayment',
+          amount: -Math.round(r.payment), line: 'committed', dept: 'finance', source: 'its schedule, on the terms in the Simulator', adjusted: true });
+      });
+    }
+    [].concat(adjust.clearance || []).forEach(c=>{
+      if(!c || !(Number(c.amount) > 0)) return;
+      const when = clampDay(c.date);
+      if(when <= to) expectedOnly.push({ date: when, kind: 'clearance', label: String(c.label || 'Clearance sales'),
+        amount: Math.round(Number(c.amount)), line: 'expected', dept: 'store', source: 'your assumption in the Simulator', adjusted: true });
+    });
+    [].concat(adjust.oneOff || []).forEach(x=>{
+      const amt = Math.round(Number(x && x.amount) || 0);
+      if(!amt) return;
+      const when = clampDay(x.date);
+      if(when > to) return;
+      const ev = { date: when, kind: 'one-off', label: String(x.label || (amt < 0 ? 'Money out' : 'Money in')), amount: amt,
+        dept: mgrDept(x.dept) ? x.dept : 'finance', source: 'your choice in the Simulator', adjusted: true };
+      if(amt < 0) committed.push({ ...ev, dueOn: when, overdue: false, line: 'committed' });
+      else expectedOnly.push({ ...ev, line: 'expected' });
+    });
+  }
+  /* WHAT CUSTOMERS ARE EXPECTED TO PAY. A named day first (cashAhead's
+     own band, with how many they have broken); then, for those who pay
+     when chased and have named nothing, the chase lag -- placed N days
+     after a chase already out, or "if chased today". A customer already
+     paid since that chase is not expected again. */
+  const promisedIds = new Set();
+  const receipts = [];
+  (ahead.promised || []).forEach(p=>{
+    promisedIds.add(String(p.customerId));
+    receipts.push({ date: clampDay(p.date), kind: 'promise', label: p.name + (p.whole ? ' — promised the balance' : ' — promised'),
+      amount: Math.round(p.amount), line: 'expected', dept: 'finance', customerId: p.customerId,
+      source: 'they named ' + p.date + (p.brokenBefore ? ' · broke ' + p.brokenBefore + ' promise' + (p.brokenBefore === 1 ? '' : 's') + ' before' : '') });
+  });
+  const lags = mgrMemo('chaseLags:' + today, ()=> mgrChaseLags(today));
+  const debtOf = new Map((data.customers || []).map(c=> [String(c.id), Math.round(Number(c.debt) || 0)]));
+  const paidSince = mgrMemo('collections:' + today, ()=> mgrCollectionsByDay(anShiftDate(today, -CHASE_WINDOW)));
+  const placedIds = [...promisedIds];
+  lags.forEach(l=>{
+    const id = String(l.customerId);
+    const owes = debtOf.get(id) || 0;
+    if(promisedIds.has(id) || !(owes > 0.5) || !(l.typicalAmount > 0)) return;
+    const recent = l.lastChased && daysBetweenISO(l.lastChased, today) <= l.lagDays ? l.lastChased : null;
+    if(recent && [...((paidSince.get(id) || new Map()).keys())].some(d=> d >= recent)) return;
+    const anchor = recent || today;
+    const when = clampDay(anShiftDate(anchor, l.lagDays));
+    if(when > to) return;
+    placedIds.push(id);
+    receipts.push({ date: when, kind: 'chase', label: l.name + ' — after a chase', amount: Math.min(owes, l.typicalAmount),
+      line: 'expected', dept: 'finance', customerId: l.customerId,
+      basis: { k: l.k, n: l.n, lagDays: l.lagDays },
+      source: 'paid within ' + (l.lagDays === 0 ? 'the same day' : l.lagDays + ' day' + (l.lagDays === 1 ? '' : 's'))
+        + ' of a chase in ' + l.k + ' of ' + l.n + (recent ? ' · chased ' + recent : ' · if chased today') });
+  });
+  const pattern = mgrMemo('trading:' + today + ':' + placedIds.slice().sort().join(','), ()=> mgrTradingPattern(today, placedIds));
+  const knownDays = pattern.byWeekday.filter(w=> w.median != null).length;
+  const tradingOn = knownDays > 0;
+
+  const byDate = new Map();
+  const dayRows = [];
+  for(let i = 0; i <= span; i++){
+    const date = anShiftDate(today, i);
+    const row = { date, weekday: waWeekday(date), committed: 0, expected: null, events: [] };
+    byDate.set(date, row); dayRows.push(row);
+  }
+  committed.forEach(e=>{ const r = byDate.get(e.date); if(r) r.events.push(e); });
+  receipts.concat(expectedOnly).forEach(e=>{ const r = byDate.get(e.date); if(r) r.events.push(e); });
+  let bal = opening, exp = opening;
+  let tightest = { date: today, balance: opening }, expectedTightest = tradingOn || receipts.length || expectedOnly.length ? { date: today, balance: opening } : null;
+  dayRows.forEach(r=>{
+    const w = pattern.byWeekday[r.weekday];
+    if(tradingOn && w.median != null && w.median !== 0)
+      r.events.push({ date: r.date, kind: 'trading', label: 'A usual ' + MGR_WEEKDAYS[r.weekday] + '\'s trading',
+        amount: w.median, line: 'expected', dept: 'sales', source: 'the median of the last ' + w.n + ' ' + MGR_WEEKDAYS[r.weekday] + 's' });
+    r.events.sort((a, b)=> (a.line === b.line ? 0 : a.line === 'committed' ? -1 : 1) || (a.amount - b.amount));
+    r.events.forEach(e=>{
+      if(e.line === 'committed'){
+        bal += e.amount;
+        /* The bills on the expected band are inside the usual paying of
+           suppliers; every other commitment (rent, wages, loans, a
+           scenario's choices) leaves that band exactly as it leaves
+           this one. */
+        if(!(tradingOn && e.kind === 'bill')) exp += e.amount;
+      } else exp += e.amount;
+    });
+    r.committed = Math.round(bal);
+    if(r.committed < tightest.balance) tightest = { date: r.date, balance: r.committed };
+    if(expectedTightest){
+      r.expected = Math.round(exp);
+      if(r.expected < expectedTightest.balance) expectedTightest = { date: r.date, balance: r.expected };
+    }
+  });
+
+  const undated = ahead.owedByYou.count - ahead.owedByYou.dated;
+  if(undated > 0) notOnLine.push({ kind: 'bill', dept: 'procurement', label: undated + ' bill' + (undated === 1 ? '' : 's') + ' with no day named',
+    amount: Math.round(ahead.owedByYou.total - ahead.owedByYou.datedTotal), count: undated,
+    why: 'owed, but nobody has said when — name a day on Creditors to put it on the line' });
+  try{
+    const orders = buyOrdersOpenRows(today);
+    if(orders.length) notOnLine.push({ kind: 'order', dept: 'procurement', label: orders.length + ' buy order' + (orders.length === 1 ? '' : 's') + ' on the way',
+      amount: Math.round(orders.reduce((n, x)=> n + (Number(x.total) || 0), 0)), count: orders.length,
+      why: 'owed when the goods and their bill arrive — not dated until then' });
+  }catch(e){}
+  if(ahead.owedToYou && ahead.owedToYou.total > 0.5){
+    const placedOwed = receipts.filter(r=> r.kind === 'chase').reduce((n, r)=> n + r.amount, 0);
+    notOnLine.push({ kind: 'owed', dept: 'finance', label: 'Money owed to you with no day named', amount: Math.round(ahead.owedToYou.total),
+      count: ahead.owedToYou.count, why: 'not on the committed line — what you are owed is not cash until it is paid'
+        + (placedOwed > 0 ? '; ' + placedOwed.toLocaleString('en-UG') + ' of it rides the expected band after a chase' : '') });
+  }
+  const tradingWords = tradingOn
+    ? 'A usual day by weekday — the median of the last ' + MGR_TRADING_WEEKS + ' of each on the books: takings and what other customers paid, less running costs, stock bought and suppliers paid. Rent, wages and loan repayments are on the committed line instead; dated bills are inside the usual paying of suppliers, so this band does not take them off twice.'
+      + (knownDays < 7 ? ' ' + (7 - knownDays) + ' weekday' + (7 - knownDays === 1 ? ' has' : 's have') + ' fewer than ' + MGR_TRADING_MIN + ' on the books and count as nothing.' : '')
+    : 'Not known — fewer than ' + MGR_TRADING_MIN + ' of any weekday on the books.';
+  return {
+    from: today, to, span, opening,
+    accounts: held.byAccount.map(a=> ({ key: a.key, label: a.label, amount: a.amount })),
+    floor, payday,
+    days: dayRows, tightest, expectedTightest,
+    notOnLine,
+    expectedReceipts: receipts,
+    trading: pattern,
+    method: {
+      committed: 'Cash on hand, less every dated commitment: raised rent and wages, salaries for a month not raised yet (from the pay rate), loan instalments still owed, rent not raised yet, and the bills you named a day for. Nothing coming in is on this line.',
+      wages: payday ? 'Wages on your payday, ' + mgrPaydayLabel(payday) + '.' : 'Wages at month end, the payroll\'s date — set your payday to move them.',
+      expectedReceipts: receipts.length
+        ? 'A day a customer named, and for customers who pay when chased: how soon they paid after past chases, k of n.'
+        : 'No customer has named a day, and none pays reliably when chased.',
+      expectedTrading: tradingWords,
+    },
+    vsCashAhead: { tightest: ahead.tightest, safeToSpend: ahead.safeToSpend },
+  };
+}
+
+/* ---- HOW SURE: COUNTED, OR JUDGED (Q6) ---------------------------
+   mgrConfidence(move, ctx) -> { pips 1-5, source 'counted' | 'judged' |
+   null, basis 'from 4 chases', evidence: [...] }.
+
+   COUNTED wherever the books hold evidence about this move, and the
+   LOWEST reading wins -- confidence is as strong as its weakest
+   evidence, not its best:
+     chase    the customer's chases, k of n paid within a week
+     buy      the supplier's measured deliveries (n)
+     price    the age of the freshest rival sighting, and the share of
+              the line's last 30 days costed by estimate
+     any      the track record of this very lever: an event followed k
+              of n times it was advised and done
+   A rate is read by the middle of its 95% range (chaseRate), which
+   pulls a small count toward even: four out of four reads as about
+   three in four, and only a long unbroken run earns five pips.
+   JUDGED only when nothing is counted: the meeting's own 1-5, said to
+   be its judgement. Neither: null. */
+function mgrPipsFromRate(k, n){
+  if(!(n > 0)) return null;
+  const r = chaseRate(k, n);
+  return Math.max(1, Math.min(5, Math.round(5 * (r.low + r.high) / 2)));
+}
+/* Who a line comes from: the supplier of its last delivery (the
+   Inventory screen's own answer), else the cheapest price on file. */
+function mgrLineSupplier(key){
+  let last = null;
+  (data.stockLog || []).forEach(e=>{
+    if(e && e.key === key && e.type === 'restock' && e.supplierId && (!last || String(e.date) >= String(last.date))) last = e;
+  });
+  if(last) return { supplierId: last.supplierId, from: 'its last delivery' };
+  const parts = buyKeyParts(String(key));
+  const best = parts ? (rankedPriceRows(parts.productId, parts.variantIdx) || [])[0] : null;
+  return best ? { supplierId: best.supplierId, from: 'the cheapest price on file' } : null;
+}
+function mgrPipsFromDeliveries(n){
+  return n >= 10 ? 5 : n >= 6 ? 4 : n >= 3 ? 3 : n >= 2 ? 2 : n >= 1 ? 1 : null;
+}
+function mgrPipsFromAge(days){
+  return days == null ? null : days <= 7 ? 5 : days <= 30 ? 4 : days <= 60 ? 3 : days <= 90 ? 2 : 1;
+}
+function mgrPipsFromEstimateShare(share){
+  return share == null ? null : share <= 0 ? 5 : share < 0.1 ? 4 : share < 0.25 ? 3 : share < 0.5 ? 2 : 1;
+}
+function mgrConfidence(move, ctx){
+  const b = mgrMoveBody(move);
+  const c = ctx || {};
+  const today = c.today || todayISO();
+  const s = (b.subject && typeof b.subject === 'object') ? b.subject : {};
+  const ev = [];
+  const add = (what, pips, basis, detail)=>{ if(pips != null) ev.push({ what, pips, basis, detail }); };
+  try{
+    if(b.mkind === 'chase' && s.customerId != null){
+      const reading = c.chase || ((typeof mgrChaseMemo !== 'undefined' && mgrChaseMemo && mgrChaseMemo.day === today) ? mgrChaseMemo.reading : null)
+        || mgrMemo('chase:' + today, ()=> chaseResponse(today, (typeof mgrChaseExtras !== 'undefined' && mgrChaseExtras) || []));
+      const row = ((reading && reading.customers) || []).find(r=> String(r.customerId) === String(s.customerId));
+      if(row && row.chased && row.chased.n > 0)
+        add('chases', mgrPipsFromRate(row.chased.k, row.chased.n), 'from ' + row.chased.n + ' chase' + (row.chased.n === 1 ? '' : 's'),
+          'paid within a week after ' + row.chased.k + ' of ' + row.chased.n);
+    }
+    if(b.mkind === 'buy'){
+      let sid = s.supplierId;
+      if(sid == null && s.key != null){ const ls = mgrLineSupplier(String(s.key)); sid = ls ? ls.supplierId : null; }
+      if(sid != null){
+        const lt = (c.leadTimes || mgrMemo('lead:' + today, ()=> supplierLeadTimes(today))).find(x=> String(x.supplierId) === String(sid));
+        if(lt && lt.deliveries > 0)
+          add('deliveries', mgrPipsFromDeliveries(lt.deliveries), 'from ' + lt.deliveries + ' deliver' + (lt.deliveries === 1 ? 'y' : 'ies'),
+            (lt.typical ? 'usually ' + lt.days + ' days' : 'one delivery is not yet a pattern') + ' · ' + supplierName(sid));
+      }
+    }
+    if(b.mkind === 'price' && s.key != null){
+      const parts = buyKeyParts(String(s.key));
+      if(parts){
+        const seen = rivalPriceLatest(parts.productId, parts.variantIdx, today);
+        if(seen.length){
+          const fresh = seen.reduce((m, r)=> (!m || r.daysOld < m.daysOld) ? r : m, null);
+          add('rival', mgrPipsFromAge(fresh.daysOld), 'from a rival price ' + (fresh.daysOld === 0 ? 'seen today' : fresh.daysOld + ' day' + (fresh.daysOld === 1 ? '' : 's') + ' old'),
+            fresh.rival + ' at ' + fresh.price.toLocaleString('en-UG'));
+        }
+        const rowKey = parts.productId + '::' + (parts.variantIdx == null ? '' : parts.variantIdx);
+        const row = anRowsByItem(anInvoicesInRange(anShiftDate(today, -29), today)).find(r=> r.key === rowKey);
+        const cc = row ? anCostConfidence(row) : null;
+        if(row && row.qty > 0)
+          add('cost', mgrPipsFromEstimateShare(cc ? cc.share : 0), cc ? 'cost estimated for ' + Math.round(cc.share * 100) + '% of 30 days\' units' : 'cost known for every unit sold in 30 days',
+            cc ? cc.est + ' of ' + cc.qty + ' units costed by estimate' : '');
+      }
+    }
+    const track = c.track && c.track.rows;
+    if(track && b.mkind){
+      const id = s.customerId != null ? s.customerId : s.key != null ? s.key : s.orderId != null ? s.orderId : s.supplierId;
+      const tr = id == null ? null : track.find(r=> r.kind === b.mkind && String(r.id) === String(id));
+      if(tr && tr.completedScored > 0)
+        add('record', mgrPipsFromRate(tr.completedObserved, tr.completedScored), 'from ' + tr.completedScored + ' time' + (tr.completedScored === 1 ? '' : 's') + ' done before',
+          'an event followed ' + tr.completedObserved + ' of ' + tr.completedScored);
+    }
+  }catch(e){ console.warn('Manager: confidence could not be counted —', e && e.message); }
+  if(ev.length){
+    const low = ev.reduce((m, x)=> x.pips < m.pips ? x : m, ev[0]);
+    return { pips: low.pips, source: 'counted', basis: low.basis, evidence: ev };
+  }
+  const j = Math.round(Number(b.confidence));
+  if(Number.isFinite(j) && j >= 1 && j <= 5) return { pips: j, source: 'judged', basis: 'the Manager\'s judgement', evidence: [] };
+  return { pips: null, source: null, basis: null, evidence: [] };
+}
+
+/* ---- THE FIGURES HEALTH IS JUDGED ON -----------------------------
+   Q18: DEBTOR DAYS ON CREDIT SALES. What customers owe, over what was
+   sold on credit a day across the last 90 days. A credit sale is the
+   part of an invoice not paid on the day it was invoiced -- a counter
+   sale paid at the till has no payments record and counts as paid that
+   day. The Statements' "days to get paid" divides by all revenue and is
+   left exactly as it is; this one is labelled as what it is. */
+function mgrDebtorDays(today){
+  const day = String(today || todayISO()).slice(0, 10);
+  const WINDOW = 90;
+  const from = anShiftDate(day, -(WINDOW - 1));
+  let credit = 0;
+  anInvoicesInRange(from, day).forEach(q=>{
+    const on = String(q.invoicedAt || q.date || '').slice(0, 10);
+    const total = savedQuoteTotal(q);
+    const pays = Array.isArray(q.payments) ? q.payments : [];
+    const paidThen = pays.length ? pays.filter(p=> p && String(p.date || '').slice(0, 10) <= on).reduce((n, p)=> n + (Number(p.amount) || 0), 0)
+      : (Number(q.amountPaid) || 0);
+    credit += Math.max(0, total - paidThen);
+  });
+  const receivables = (data.customers || []).reduce((n, c)=> n + Math.max(0, Number(c.debt) || 0), 0);
+  const perDay = credit / WINDOW;
+  return { days: perDay > 0 ? receivables / perDay : null, receivables: Math.round(receivables),
+    creditSales: Math.round(credit), creditPerDay: Math.round(perDay), windowDays: WINDOW };
+}
+/* Q17: DAYS OF STOCK, the Inventory screen's own. What the shelf is
+   worth at cost, over what the shelf sold a day at cost across the last
+   30 days -- read off the movement log at today's cost of each line,
+   exactly as the Inventory vital sign reads it, so the two can never
+   show different numbers. */
+function mgrDaysOfStock(today){
+  const day = String(today || todayISO()).slice(0, 10);
+  const lines = allProductVariantEntries([]).map(({ p, variantIdx })=> inventoryLineFor(p, variantIdx));
+  const each = new Map();
+  let value = 0;
+  lines.forEach(l=>{
+    const k = stockKey(l.p.id, l.variantIdx == null ? null : l.variantIdx);
+    each.set(k, l.value != null && l.qty > 0 ? l.value / l.qty : (l.unitCost || 0));
+    value += l.value || 0;
+  });
+  let cogs = 0;
+  (data.stockLog || []).forEach(e=>{
+    if(!e || !e.key || !e.date || (e.type !== 'sale' && e.type !== 'reversal')) return;
+    const age = waDaysBetween(e.date, day);
+    if(age < 0 || age >= 30) return;
+    cogs -= (Number(e.delta) || 0) * (each.get(e.key) || 0);
+  });
+  return { days: cogs > 0 ? value / (cogs / 30) : null, value: Math.round(value), cogsPerDay: Math.round(cogs / 30) };
+}
+
+/* Every figure a check reads, once. Each is read on its own, so one
+   that throws is NAMED (errors) and its checks read "not known" -- the
+   rest of the board still stands. */
+function mgrHealthFacts(ctx){
+  const c = ctx || {};
+  if(!c.today && !c.walk) return mgrMemo('healthFacts', ()=> mgrHealthFactsBuild(c));
+  return mgrHealthFactsBuild(c);
+}
+function mgrHealthFactsBuild(c){
+  const today = String(c.today || todayISO()).slice(0, 10);
+  const errors = [];
+  const read = (name, fn)=>{
+    try { return fn(); }
+    catch(e){ errors.push(name); console.warn('Manager health: ' + name + ' could not be read —', e && e.message); return undefined; }
+  };
+  const f = { today, errors };
+  f.floor = read('floor', ()=> mgrCashFloor());
+  const walk = c.walk || read('cash', ()=> mgrCashWalk({ today }));
+  f.tightest = walk ? walk.tightest : undefined;
+  f.cashOnHand = walk ? walk.opening : undefined;
+  f.debt60 = read('debt', ()=>{
+    const all = collectableDebts();
+    const old = all.filter(d=> d.ageDays > 60);
+    return { amount: Math.round(old.reduce((n, d)=> n + d.debt, 0)), count: old.length,
+      total: Math.round(all.reduce((n, d)=> n + d.debt, 0)), oldest: old[0] ? { name: old[0].name, days: old[0].ageDays } : null };
+  });
+  f.bills = read('bills', ()=>{
+    const open = credOpenInvoices();
+    const late = open.filter(b=> b.missedOwnWord);
+    return { owed: Math.round(open.reduce((n, b)=> n + b.due, 0)), count: open.length,
+      dated: open.filter(b=> b.dueOn).length, late: late.length, lateAmount: Math.round(late.reduce((n, b)=> n + b.due, 0)) };
+  });
+  f.loans = read('loans', ()=>{
+    const open = (data.loans || []).filter(l=> !l.closedOn);
+    const behind = loansNeedingPayment(today).filter(x=> x.due.status === 'overdue');
+    return { open: open.length, overdue: behind.length, amount: Math.round(behind.reduce((n, x)=> n + (Number(x.due.overdue) || 0), 0)) };
+  });
+  f.debtorDays = read('debtorDays', ()=> mgrDebtorDays(today));
+  f.margin = read('margin', ()=>{
+    const t = anOverallTotals(anInvoicesInRange(anShiftDate(today, -29), today));
+    return { pct: t.sales > 0 ? t.profit / t.sales * 100 : null, aim: targetMarginPct(), sales: Math.round(t.sales) };
+  });
+  f.belowCost = read('belowCost', ()=>{
+    const rows = anRowsByItem(anInvoicesInRange(anShiftDate(today, -29), today)).filter(r=> r.sales > 0 && r.profit < 0)
+      .sort((a, b)=> a.profit - b.profit);
+    return { count: rows.length, loss: Math.round(-rows.reduce((n, r)=> n + r.profit, 0)),
+      worst: rows[0] ? { name: rows[0].name + (rows[0].variant ? ' — ' + rows[0].variant : ''), loss: Math.round(-rows[0].profit) } : null };
+  });
+  f.quiet = read('quiet', ()=>{
+    const rows = dashGoingQuietCustomers();
+    return { count: rows.length, names: rows.slice(0, 3).map(r=> r.name) };
+  });
+  f.ordersLate = read('orders', ()=>{
+    const open = buyOrdersOpenRows(today);
+    const late = open.filter(o=> o.late);
+    return { open: open.length, dated: open.filter(o=> o.expectedOn).length, late: late.length,
+      worst: late[0] ? { supplier: late[0].supplier, days: Math.max(1, daysBetweenISO(late[0].expectedOn, today)) } : null };
+  });
+  f.costRise = read('costRise', ()=>{
+    const up = supplierPriceWatch().up.filter(s=> s.risePct > DASH_COST_RISE_PCT);
+    return { count: up.length, worst: up[0] ? { name: up[0].name, supplier: up[0].supplierName, pct: Math.round(up[0].risePct * 10) / 10 } : null };
+  });
+  f.concentration = read('concentration', ()=>{
+    const pc = purchaseConcentration(anShiftDate(today, -89), today);
+    return pc.total > 0 ? { share: pc.topShare, top: pc.top ? pc.top.name : null, total: Math.round(pc.total) } : null;
+  });
+  f.stopAt = read('stopAt', ()=>{
+    const known = (data.suppliers || []).filter(s=> s.stopAtDays != null && Number(s.stopAtDays) >= 0);
+    const open = credOpenInvoices();
+    const past = [], near = [];
+    known.forEach(s=>{
+      const bills = open.filter(b=> String(b.supplierId) === String(s.id) && b.ageDays >= 0);
+      const oldest = bills.reduce((m, b)=> (!m || b.ageDays > m.ageDays) ? b : m, null);
+      if(!oldest) return;
+      const left = Number(s.stopAtDays) - oldest.ageDays;
+      const row = { supplier: s.name, supplierId: s.id, age: oldest.ageDays, stopAt: Number(s.stopAtDays), left };
+      if(left <= 0) past.push(row); else if(left <= 30) near.push(row);
+    });
+    const owing = new Set(open.map(b=> String(b.supplierId)));
+    return { known: known.length, owing: owing.size, unknownOwing: [...owing].filter(id=> !known.some(s=> String(s.id) === id)).length,
+      past: past.sort((a, b)=> a.left - b.left), near: near.sort((a, b)=> a.left - b.left) };
+  });
+  f.deadStock = read('deadStock', ()=>{
+    const h = dashInventoryHealth();
+    return { value: Math.round(h.deadValue), total: Math.round(h.totalValue), share: h.totalValue > 0 ? h.deadValue / h.totalValue : null,
+      lines: stockAgeRows(today).filter(r=> r.dead).length, quietDays: deadStockQuietDays() };
+  });
+  f.daysOfStock = read('daysOfStock', ()=> mgrDaysOfStock(today));
+  f.stockOut = read('stockOut', ()=>{
+    const onOrder = buyOrdersOnTheWay(today);
+    const rows = restockRiskRows(today).filter(r=> r.daysLeft < 10 && !onOrder.has(r.key));
+    return { count: rows.length, names: rows.slice(0, 3).map(r=> r.name), soonest: rows[0] ? { name: rows[0].name, days: rows[0].daysLeft } : null };
+  });
+  f.countAccuracy = read('counts', ()=>{
+    const rs = invCountRecords().filter(r=> r.kept && waDaysBetween(r.date, today) >= 0 && waDaysBetween(r.date, today) < 90);
+    return rs.length ? { pct: rs.filter(r=> r.found === r.record).length / rs.length * 100, n: rs.length } : null;
+  });
+  f.wagesLate = read('wages', ()=>{
+    const late = (data.dues || []).filter(d=> d.kind === 'wage' && dueIsOverdue(d, today));
+    return { count: late.length, amount: Math.round(late.reduce((n, d)=> n + (dueBalance(d) || 0), 0)),
+      dues: (data.dues || []).filter(d=> d.kind === 'wage').length };
+  });
+  f.ratesMissing = read('rates', ()=>{
+    const miss = staffWithoutPayRate();
+    return { count: miss.length, staff: (data.staff || []).length, names: miss.slice(0, 3).map(s=> s.name || 'Staff member') };
+  });
+  f.till = read('till', ()=>{
+    const lo = anShiftDate(today, -30);
+    const counted = Object.keys(data.cashDays || {}).filter(d=> d >= lo && d < today && (()=>{
+      const a = ((data.cashDays || {})[d] || {}).actual; return a && Object.keys(a).some(k=> a[k] != null && a[k] !== ''); })());
+    if(!counted.length) return null;
+    const short = new Map(), over = new Map();
+    (data.cashTxns || []).forEach(t=>{
+      if(!t || !t.date || t.date < lo || t.date >= today) return;
+      if(cashIsCashShortage(t)) short.set(t.date, (short.get(t.date) || 0) + (Number(t.amount) || 0));
+      if(cashIsCashOverage(t)) over.set(t.date, (over.get(t.date) || 0) + (Number(t.amount) || 0));
+    });
+    const sum = (m)=> Math.round([...m.values()].reduce((n, v)=> n + v, 0));
+    return { counted: counted.length, shortDays: short.size, overDays: over.size, short: sum(short), over: sum(over) };
+  });
+  f.repeat = read('repeat', ()=>{
+    const g = managerGrowthBaseline();
+    const r = g.recentMatureCohort, p = g.priorMatureCohort;
+    return r.eligible >= 3 && p.eligible >= 3 ? { recent: r, prior: p } : null;
+  });
+  f.posts = read('posts', ()=>{
+    const dates = (data.waPosts || []).map(w=> String(w.date || '').slice(0, 10)).filter(d=> /^\d{4}-\d{2}-\d{2}$/.test(d) && d <= today);
+    const inWin = (k)=> dates.filter(d=>{ const a = waDaysBetween(d, today); return a >= 30 * k && a < 30 * (k + 1); }).length;
+    const prior = [inWin(1), inWin(2), inWin(3)];
+    if(!prior.some(n=> n > 0)) return null;
+    return { recent: inWin(0), usual: mgrMedian(prior), prior };
+  });
+  return f;
+}
+
+/* ---- THE CHECKS (Q1) ----------------------------------------------
+   Each answers one question from one figure, against a rule the app
+   already keeps somewhere -- the owner's own floor, aim and quiet
+   window; the dashboard's alerts; the ratio table's healthy ranges;
+   the Statements' lean; the Inventory's count rule -- or against the
+   shop's own recent normal. In each department's list the most
+   consequential comes first, and a department's one line is its first
+   failing check. pass: true | false | null (not known: no figure, or a
+   figure the rule cannot be read against). */
+const MGR_HEALTH_CHECKS = [
+  { id: 'cash_floor', dept: 'finance', label: 'Cash stays above your floor for 30 days',
+    read: (f)=>{
+      if(!f.tightest || !f.floor) return { pass: null, line: 'The cash ahead could not be read.' };
+      const fl = f.floor, low = f.tightest.balance;
+      const whose = fl.source === 'set' ? 'your' : 'the stand-in';
+      return { pass: low >= fl.amount, figure: low, unit: 'UGX', threshold: fl.amount, on: f.tightest.date,
+        rule: 'at least ' + whose + ' floor', source: 'the committed cash line',
+        line: low >= fl.amount
+          ? 'Cash stays above ' + whose + ' ' + mgrShortUGX(fl.amount) + ' floor — lowest ' + mgrShortUGX(low) + ' on ' + fmtShortDate(f.tightest.date)
+          : 'Cash falls to ' + mgrShortUGX(low) + ' on ' + fmtShortDate(f.tightest.date) + ', under ' + whose + ' ' + mgrShortUGX(fl.amount) + ' floor' };
+    } },
+  { id: 'debt_60', dept: 'finance', label: 'No customer debt past 60 days',
+    read: (f)=>{
+      const d = f.debt60;
+      if(!d) return { pass: null, line: 'Money owed to you could not be read.' };
+      return { pass: d.count === 0, figure: d.amount, unit: 'UGX', threshold: 0, rule: 'nothing older than 60 days',
+        source: 'Debtors — the oldest open charge', count: d.count,
+        line: d.count === 0 ? 'Nothing owed to you is older than 60 days'
+          : mgrShortUGX(d.amount) + ' owed for more than 60 days, by ' + d.count + ' customer' + (d.count === 1 ? '' : 's') };
+    } },
+  { id: 'bills_late', dept: 'finance', label: 'No supplier bill past the day you named',
+    read: (f)=>{
+      const b = f.bills;
+      if(!b) return { pass: null, line: 'The bills could not be read.' };
+      if(!b.dated) return { pass: null, figure: null, rule: 'none past its day', source: 'Creditors',
+        line: 'No bill has a day named, so none can be late — name days on Creditors' };
+      return { pass: b.late === 0, figure: b.lateAmount, unit: 'UGX', threshold: 0, rule: 'none past its day', source: 'Creditors', count: b.late,
+        line: b.late === 0 ? 'Every dated bill is inside its day'
+          : b.late + ' bill' + (b.late === 1 ? '' : 's') + ' past the day you named, ' + mgrShortUGX(b.lateAmount) };
+    } },
+  { id: 'loans', dept: 'finance', label: 'Loan repayments up to date',
+    read: (f)=>{
+      const l = f.loans;
+      if(!l) return { pass: null, line: 'The loans could not be read.' };
+      if(!l.open) return { pass: null, rule: 'none behind', source: 'Assets & loans', line: 'No loan on the books' };
+      return { pass: l.overdue === 0, figure: l.amount, unit: 'UGX', threshold: 0, rule: 'none behind', source: 'Assets & loans', count: l.overdue,
+        line: l.overdue === 0 ? 'Every loan repayment is up to date'
+          : l.overdue + ' loan' + (l.overdue === 1 ? '' : 's') + ' behind, ' + mgrShortUGX(l.amount) };
+    } },
+  { id: 'debtor_days', dept: 'finance', label: 'Customers pay credit sales within 30 days',
+    read: (f)=>{
+      const d = f.debtorDays;
+      if(!d) return { pass: null, line: 'Debtor days could not be read.' };
+      if(d.days == null) return { pass: null, rule: '30 days or fewer', source: 'credit sales, last 90 days',
+        line: 'No credit sales in 90 days to measure against' };
+      const v = Math.round(d.days);
+      return { pass: v <= 30, figure: v, unit: 'days', threshold: 30, rule: '30 days or fewer (the ratio table\'s healthy range)',
+        source: 'what customers owe ÷ credit sales a day, last 90 days',
+        line: v <= 30 ? 'Customers take ' + v + ' days on credit sales' : 'Customers take ' + v + ' days to pay on credit sales — the healthy range is 30' };
+    } },
+  { id: 'margin', dept: 'sales', label: 'Margin at or above your aim',
+    read: (f)=>{
+      const m = f.margin;
+      if(!m) return { pass: null, line: 'The margin could not be read.' };
+      if(m.pct == null) return { pass: null, rule: 'at least ' + m.aim + '%', source: 'invoices, last 30 days', line: 'Nothing invoiced in 30 days' };
+      const v = Math.round(m.pct * 10) / 10;
+      return { pass: m.pct >= m.aim, figure: v, unit: '%', threshold: m.aim, rule: 'at least your ' + m.aim + '% aim', source: 'invoices, last 30 days',
+        line: m.pct >= m.aim ? 'Margin ' + v + '% over 30 days, at or above your ' + m.aim + '% aim'
+          : 'Margin ' + v + '% over 30 days, under your ' + m.aim + '% aim' };
+    } },
+  { id: 'below_cost', dept: 'sales', label: 'Nothing sold below what it cost',
+    read: (f)=>{
+      const b = f.belowCost;
+      if(!b) return { pass: null, line: 'The lines could not be read.' };
+      return { pass: b.count === 0, figure: b.loss, unit: 'UGX', threshold: 0, rule: 'no line at a loss', source: 'invoices, last 30 days', count: b.count,
+        line: b.count === 0 ? 'No line sold below cost in 30 days'
+          : b.count + ' line' + (b.count === 1 ? '' : 's') + ' sold below cost in 30 days, ' + mgrShortUGX(b.loss) + ' lost' + (b.worst ? ' — most on ' + b.worst.name : '') };
+    } },
+  { id: 'going_quiet', dept: 'sales', label: 'No regular customer gone quiet',
+    read: (f)=>{
+      const q = f.quiet;
+      if(!q) return { pass: null, line: 'Customer rhythms could not be read.' };
+      return { pass: q.count === 0, figure: q.count, unit: 'customers', threshold: 0, rule: 'none past half again their usual gap',
+        source: 'each customer\'s own gap between orders', count: q.count,
+        line: q.count === 0 ? 'Every regular customer is buying on their usual rhythm'
+          : q.count + ' regular customer' + (q.count === 1 ? ' has' : 's have') + ' gone quiet' + (q.names.length ? ' — ' + q.names.join(', ') : '') };
+    } },
+  { id: 'stop_at', dept: 'procurement', label: 'No supplier at the age they stop delivering',
+    read: (f)=>{
+      const s = f.stopAt;
+      if(!s) return { pass: null, line: 'Supplier terms could not be read.' };
+      if(!s.known) return { pass: null, rule: 'oldest bill under their stop-at age', source: 'the terms you wrote on each supplier',
+        line: s.owing ? 'Terms not known for the ' + s.owing + ' supplier' + (s.owing === 1 ? '' : 's') + ' you owe' : 'You owe no supplier' };
+      const w = s.past[0];
+      return { pass: s.past.length === 0, figure: w ? w.age : (s.near[0] ? s.near[0].age : null), unit: 'days', threshold: w ? w.stopAt : (s.near[0] ? s.near[0].stopAt : null),
+        rule: 'oldest bill under their stop-at age', source: 'the terms you wrote on each supplier', count: s.past.length,
+        ...(s.unknownOwing ? { note: 'terms not known for ' + s.unknownOwing + ' supplier' + (s.unknownOwing === 1 ? '' : 's') + ' you owe' } : {}),
+        line: w ? mgrPossessive(w.supplier) + ' oldest bill is ' + w.age + ' days old — they stop delivering at ' + w.stopAt
+          : s.near[0] ? s.near[0].supplier + ' reaches ' + s.near[0].stopAt + ' days in ' + s.near[0].left + ' day' + (s.near[0].left === 1 ? '' : 's')
+          : 'Every supplier with terms is inside them' };
+    } },
+  { id: 'orders_late', dept: 'procurement', label: 'No buy order past the day it was due',
+    read: (f)=>{
+      const o = f.ordersLate;
+      if(!o) return { pass: null, line: 'The buy orders could not be read.' };
+      if(!o.dated) return { pass: null, rule: 'none past its day', source: 'What to buy — orders', line: o.open ? 'No order on the way has a day named' : 'No order on the way' };
+      return { pass: o.late === 0, figure: o.late, unit: 'orders', threshold: 0, rule: 'none past its day', source: 'What to buy — orders', count: o.late,
+        line: o.late === 0 ? 'Every dated order is inside its day' : o.worst.supplier + ' is ' + o.worst.days + ' day' + (o.worst.days === 1 ? '' : 's') + ' late with an order' + (o.late > 1 ? ' (' + o.late + ' late in all)' : '') };
+    } },
+  { id: 'cost_rise', dept: 'procurement', label: 'No supplier price up more than 5%',
+    read: (f)=>{
+      const c = f.costRise;
+      if(!c) return { pass: null, line: 'Supplier prices could not be read.' };
+      return { pass: c.count === 0, figure: c.worst ? c.worst.pct : 0, unit: '%', threshold: DASH_COST_RISE_PCT, rule: 'no rise over ' + DASH_COST_RISE_PCT + '%',
+        source: 'what each supplier charged, bill by bill', count: c.count,
+        line: c.count === 0 ? 'No supplier has put a price up more than ' + DASH_COST_RISE_PCT + '%'
+          : c.worst.supplier + ' put ' + c.worst.name + ' up ' + c.worst.pct + '%' + (c.count > 1 ? ' (' + c.count + ' rises in all)' : '') };
+    } },
+  { id: 'one_supplier', dept: 'procurement', label: 'No supplier holds half your buying',
+    read: (f)=>{
+      const c = f.concentration;
+      if(c === undefined) return { pass: null, line: 'Buying could not be read.' };
+      if(!c) return { pass: null, rule: 'under 50%', source: 'purchase bills, last 90 days', line: 'Nothing bought on a bill in 90 days' };
+      const v = Math.round(c.share * 100);
+      return { pass: c.share < 0.5, figure: v, unit: '%', threshold: 50, rule: 'under 50% (the Statements\' lean)', source: 'purchase bills, last 90 days',
+        line: (c.top || 'The top supplier') + ' holds ' + v + '% of your buying' };
+    } },
+  { id: 'stock_out', dept: 'store', label: 'Nothing runs out in 10 days that is not on order',
+    read: (f)=>{
+      const s = f.stockOut;
+      if(!s) return { pass: null, line: 'The shelf could not be read.' };
+      return { pass: s.count === 0, figure: s.count, unit: 'lines', threshold: 0, rule: 'none inside 10 days unless ordered', source: 'shelf pace, last 30 days', count: s.count,
+        line: s.count === 0 ? 'Nothing that sells runs out inside 10 days unordered'
+          : s.count + ' line' + (s.count === 1 ? '' : 's') + ' run' + (s.count === 1 ? 's' : '') + ' out inside 10 days, not on order — first ' + s.soonest.name + ' in ' + Math.max(0, Math.floor(s.soonest.days)) + ' days' };
+    } },
+  { id: 'dead_stock', dept: 'store', label: 'No stock unsold for the quiet window',
+    read: (f)=>{
+      const d = f.deadStock;
+      if(!d) return { pass: null, line: 'Dead stock could not be read.' };
+      if(!(d.total > 0)) return { pass: null, rule: 'none unsold for ' + d.quietDays + ' days', source: 'Inventory', line: 'Nothing on the shelf with a cost' };
+      return { pass: !(d.value > 0), figure: d.value, unit: 'UGX', threshold: 0, rule: 'none unsold for ' + d.quietDays + ' days', source: 'Inventory — last sale per line',
+        line: d.value > 0 ? mgrShortUGX(d.value) + ' of stock unsold in ' + d.quietDays + ' days — ' + Math.round(d.share * 100) + '% of the shelf, ' + d.lines + ' line' + (d.lines === 1 ? '' : 's')
+          : 'Everything on the shelf has sold in the last ' + d.quietDays + ' days' };
+    } },
+  { id: 'stock_days', dept: 'store', label: 'Days of stock 90 or fewer',
+    read: (f)=>{
+      const d = f.daysOfStock;
+      if(!d) return { pass: null, line: 'Days of stock could not be read.' };
+      if(d.days == null) return { pass: null, rule: '90 days or fewer', source: 'Inventory', line: 'Nothing sold off the shelf in 30 days to measure against' };
+      const v = Math.round(d.days);
+      return { pass: v <= 90, figure: v, unit: 'days', threshold: 90, rule: '90 days or fewer (the ratio table\'s healthy range)', source: 'Inventory — shelf value ÷ shelf cost of goods a day',
+        line: v + ' days of stock on the shelf' + (v > 90 ? ' — the healthy range is 90' : '') };
+    } },
+  { id: 'count_accuracy', dept: 'store', label: 'Counts match the book 9 times in 10',
+    read: (f)=>{
+      const c = f.countAccuracy;
+      if(c === undefined) return { pass: null, line: 'The counts could not be read.' };
+      if(!c) return { pass: null, rule: '90% or better', source: 'stock counts, last 90 days', line: 'No count kept in 90 days' };
+      const v = Math.round(c.pct);
+      return { pass: c.pct >= 90, figure: v, unit: '%', threshold: 90, rule: '90% or better (the Inventory\'s rule)', source: c.n + ' count' + (c.n === 1 ? '' : 's') + ', last 90 days',
+        line: v + '% of ' + c.n + ' count' + (c.n === 1 ? '' : 's') + ' matched the book' };
+    } },
+  { id: 'wages_late', dept: 'people', label: 'Wages paid by their day',
+    read: (f)=>{
+      const w = f.wagesLate;
+      if(!w) return { pass: null, line: 'The payroll could not be read.' };
+      if(!w.dues) return { pass: null, rule: 'none past its day', source: 'Payroll', line: 'No wages raised on the payroll' };
+      return { pass: w.count === 0, figure: w.amount, unit: 'UGX', threshold: 0, rule: 'none past its day', source: 'Payroll', count: w.count,
+        line: w.count === 0 ? 'Every wage is paid by its day' : w.count + ' wage' + (w.count === 1 ? '' : 's') + ' past its day, ' + mgrShortUGX(w.amount) + ' owed' };
+    } },
+  { id: 'pay_rates', dept: 'people', label: 'Everyone on staff has a pay rate',
+    read: (f)=>{
+      const r = f.ratesMissing;
+      if(!r) return { pass: null, line: 'The staff list could not be read.' };
+      if(!r.staff) return { pass: null, rule: 'none missing', source: 'Staff', line: 'No staff on the books' };
+      return { pass: r.count === 0, figure: r.count, unit: 'people', threshold: 0, rule: 'none missing', source: 'Staff', count: r.count,
+        line: r.count === 0 ? 'Everyone on staff has a pay rate' : r.count + ' on staff with no pay rate — ' + r.names.join(', ') };
+    } },
+  { id: 'till', dept: 'people', label: 'The till matched every count for 30 days',
+    read: (f)=>{
+      const t = f.till;
+      if(t === undefined) return { pass: null, line: 'The till could not be read.' };
+      if(!t) return { pass: null, rule: 'no shortage or overage', source: 'Cash book counts, last 30 days', line: 'No till counted in 30 days' };
+      const days = t.shortDays + t.overDays;
+      return { pass: days === 0, figure: t.short, unit: 'UGX', threshold: 0, rule: 'no shortage or overage booked', source: t.counted + ' counted day' + (t.counted === 1 ? '' : 's') + ', last 30 days', count: days,
+        line: days === 0 ? 'The till matched on all ' + t.counted + ' counted days'
+          : (t.shortDays ? mgrShortUGX(t.short) + ' short on ' + t.shortDays + ' day' + (t.shortDays === 1 ? '' : 's') : '')
+            + (t.shortDays && t.overDays ? ', ' : '') + (t.overDays ? mgrShortUGX(t.over) + ' over on ' + t.overDays + ' day' + (t.overDays === 1 ? '' : 's') : '') + ' in 30 days' };
+    } },
+  { id: 'repeat', dept: 'marketing', label: 'New customers come back as often as before',
+    read: (f)=>{
+      const r = f.repeat;
+      if(r === undefined) return { pass: null, line: 'Repeat buying could not be read.' };
+      if(!r) return { pass: null, rule: 'at least the month before', source: 'first purchases 30–90 days ago', line: 'Too few new customers to compare' };
+      return { pass: r.recent.rate >= r.prior.rate, figure: Math.round(r.recent.rate * 100), unit: '%', threshold: Math.round(r.prior.rate * 100),
+        rule: 'at least the month before (' + r.prior.returned + ' of ' + r.prior.eligible + ')', source: 'customers who first bought 30–60 days ago',
+        line: r.recent.returned + ' of ' + r.recent.eligible + ' new customers came back within 30 days — ' + r.prior.returned + ' of ' + r.prior.eligible + ' the month before' };
+    } },
+  { id: 'posting', dept: 'marketing', label: 'Posting on WhatsApp as often as usual',
+    read: (f)=>{
+      const p = f.posts;
+      if(p === undefined) return { pass: null, line: 'The posts could not be read.' };
+      if(!p) return { pass: null, rule: 'at least your usual', source: 'WhatsApp posts', line: 'No posts on the books to compare' };
+      return { pass: p.recent >= p.usual, figure: p.recent, unit: 'posts', threshold: p.usual, rule: 'at least your usual (the median of the three months before)',
+        source: 'WhatsApp posts, last 30 days',
+        line: p.recent + ' post' + (p.recent === 1 ? '' : 's') + ' in 30 days — usually ' + p.usual };
+    } },
+];
+/* mgrHealthChecks(ctx, scenario) -> { checks, score, known, passed,
+   byDept: { finance: { score, known, passed, worst, line, thin } ... },
+   thin: [ids], asOf, errors }. score = passed ÷ known × 100, rounded;
+   a department with fewer than two known checks is THIN -- its score is
+   null and its line says there is not enough on the books; its worst
+   failing check, if any, is still in worstLine.
+   scenario: figures to judge instead of today's, by the facts' names
+   ({ tightest, debtorDays: { days }, daysOfStock: { days }, ... }) or a
+   whole walk ({ walk }) -- the Simulator's ripple, read by the same
+   rules as today. */
+function mgrHealthChecks(ctx, scenario){
+  const base = mgrHealthFacts(ctx);
+  let f = base;
+  if(scenario && typeof scenario === 'object'){
+    f = { ...base, ...scenario };
+    if(scenario.walk) f.tightest = scenario.walk.tightest;
+  }
+  const checks = MGR_HEALTH_CHECKS.map(c=>{
+    let r;
+    try { r = c.read(f) || { pass: null }; }
+    catch(e){ console.warn('Manager health: ' + c.id + ' could not be judged —', e && e.message); r = { pass: null, line: 'Could not be read.' }; }
+    return { id: c.id, dept: c.dept, label: c.label, pass: r.pass === true ? true : r.pass === false ? false : null,
+      figure: r.figure == null ? null : r.figure, unit: r.unit || null, threshold: r.threshold == null ? null : r.threshold,
+      rule: r.rule || '', source: r.source || '', line: r.line || '', ...(r.count != null ? { count: r.count } : {}), ...(r.on ? { on: r.on } : {}),
+      ...(r.note ? { note: r.note } : {}) };
+  });
+  const tally = (list)=>{
+    const known = list.filter(c=> c.pass !== null);
+    const passed = known.filter(c=> c.pass).length;
+    return { known: known.length, passed, score: known.length ? Math.round(passed / known.length * 100) : null };
+  };
+  const all = tally(checks);
+  const byDept = {};
+  const thin = [];
+  MGR_DEPTS.forEach(d=>{
+    const mine = checks.filter(c=> c.dept === d.id);
+    const t = tally(mine);
+    const worst = mine.find(c=> c.pass === false) || null;
+    const isThin = t.known < 2;
+    if(isThin) thin.push(d.id);
+    /* A thin department says so (Q2), whatever its one check found --
+       the failing line still travels, for the tap that opens it. */
+    byDept[d.id] = { score: isThin ? null : t.score, known: t.known, passed: t.passed, checks: mine.length, thin: isThin,
+      worst: worst ? worst.id : null, worstLine: worst ? worst.line : null,
+      line: isThin ? 'Not enough on the books to judge' : worst ? worst.line : t.passed + ' of ' + t.known + ' checks pass' };
+  });
+  return { checks, score: all.score, known: all.known, passed: all.passed, byDept, thin,
+    asOf: f.today || todayISO(), errors: (f.errors || []).slice(), scenario: !!scenario };
+}
+
+/* The change over the last week, from the daily snapshots -- and none
+   until seven days of them exist (Q1): before that the screen says the
+   trend comes after seven days rather than inventing one. The change is
+   the latest snapshot's score less the latest one at least six days
+   before it, so the seven days counted are the week the change spans. */
+function mgrHealthTrend(snapshots){
+  const byDay = new Map();
+  (snapshots || []).forEach(s=>{
+    const date = String((s && (s.date || (s.body && s.body.date))) || '').slice(0, 10);
+    const body = s && s.body && typeof s.body === 'object' ? s.body : s;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date) || !body || typeof body.score !== 'number') return;
+    byDay.set(date, body);
+  });
+  const days = [...byDay.keys()].sort();
+  if(days.length < 7) return null;
+  const last = days[days.length - 1];
+  const edge = anShiftDate(last, -6);
+  const fromDay = days.filter(d=> d <= edge).pop();
+  if(!fromDay) return null;
+  const a = byDay.get(fromDay), b = byDay.get(last);
+  const byDept = {};
+  MGR_DEPTS.forEach(d=>{
+    const x = a.depts && a.depts[d.id], y = b.depts && b.depts[d.id];
+    byDept[d.id] = x && y && typeof x.score === 'number' && typeof y.score === 'number' ? y.score - x.score : null;
+  });
+  return { change: b.score - a.score, from: { date: fromDay, score: a.score }, to: { date: last, score: b.score },
+    snapshots: days.length, byDept };
+}
+
+/* ---- WHAT COULD HURT IN THE NEXT 30 DAYS (A2.5) ------------------
+   Dated, every one -- a risk without a day is a worry, not a risk:
+     floor     the day the committed line first goes under the floor,
+               and the day it would go below nothing
+     bill      a bill past the day the owner named for it
+     supplier  a supplier's oldest bill at or reaching the age they
+               stop delivering (0107 terms; none without them)
+     loan      a repayment behind, or due now
+     due       rent or wages past their day
+     stock     a line that sells running out inside 10 days, not on
+               order -- with the last day to order where the supplier's
+               lead time is measured
+     promise   a customer's latest promise, broken
+     play      a running play past its span (ctx.playsPastSpan, when
+               the playbook has been read)
+   Each: { id, date, overdue, kind, dept, label, detail, amount, source }. */
+function mgrRisks30(ctx){
+  const c = ctx || {};
+  const today = String(c.today || todayISO()).slice(0, 10);
+  const end = anShiftDate(today, 30);
+  const out = [];
+  const add = (r)=> out.push({ amount: null, overdue: false, detail: '', ...r, date: r.date < today ? today : r.date, ...(r.date < today ? { dueOn: r.date, overdue: true } : {}) });
+  const guard = (name, fn)=>{ try { fn(); } catch(e){ console.warn('Manager risks: ' + name + ' could not be read —', e && e.message); } };
+  const floor = mgrCashFloor();
+  guard('cash', ()=>{
+    const walk = c.walk || mgrCashWalk({ today: c.today });
+    const under = walk.days.find(d=> d.committed < floor.amount);
+    if(under && floor.amount > 0) add({ id: 'floor:' + under.date, date: under.date, kind: 'floor', dept: 'finance',
+      label: 'Cash falls under ' + (floor.source === 'set' ? 'your' : 'the stand-in') + ' floor', amount: under.committed,
+      detail: mgrShortUGX(under.committed) + ' against ' + mgrShortUGX(floor.amount) + ' after ' + under.events.filter(e=> e.line === 'committed').map(e=> e.label).slice(0, 3).join(', '),
+      source: 'the committed cash line' });
+    const broke = walk.days.find(d=> d.committed < 0);
+    if(broke) add({ id: 'cash:' + broke.date, date: broke.date, kind: 'floor', dept: 'finance', label: 'Cash runs out before the dated payments are made',
+      amount: broke.committed, detail: mgrShortUGX(-broke.committed) + ' short', source: 'the committed cash line' });
+  });
+  guard('bills', ()=>{
+    credOpenInvoices().filter(b=> b.missedOwnWord).forEach(b=> add({ id: 'bill:' + b.invoice.id, date: b.dueOn, kind: 'bill', dept: 'procurement',
+      label: (supplierName(b.supplierId) || 'Supplier') + ' — bill past the day you named', amount: Math.round(b.due),
+      detail: purchaseInvoiceNumberLabel(b.invoice) + ', due ' + fmtShortDate(b.dueOn), source: 'Creditors' }));
+  });
+  guard('suppliers', ()=>{
+    const open = credOpenInvoices();
+    (data.suppliers || []).forEach(s=>{
+      if(s.stopAtDays == null || !(Number(s.stopAtDays) >= 0)) return;
+      const bills = open.filter(b=> String(b.supplierId) === String(s.id) && b.invoice.date);
+      const oldest = bills.reduce((m, b)=> (!m || String(b.invoice.date) < String(m.invoice.date)) ? b : m, null);
+      if(!oldest) return;
+      const when = anShiftDate(String(oldest.invoice.date).slice(0, 10), Number(s.stopAtDays));
+      if(when > end) return;
+      add({ id: 'supplier:' + s.id, date: when, kind: 'supplier', dept: 'procurement',
+        label: (s.name || 'Supplier') + ' stops delivering — a bill reaches ' + s.stopAtDays + ' days', amount: Math.round(oldest.due),
+        detail: purchaseInvoiceNumberLabel(oldest.invoice) + ', ' + oldest.ageDays + ' days old today', source: 'the terms you wrote on the supplier' });
+    });
+  });
+  guard('loans', ()=>{
+    loansNeedingPayment(today).forEach(x=> add({ id: 'loan:' + x.loan.id, date: x.due.status === 'overdue' ? anShiftDate(today, -1) : today, kind: 'loan', dept: 'finance',
+      label: (x.loan.lender || 'Loan') + (x.due.status === 'overdue' ? ' — repayment behind' : ' — repayment due now'),
+      amount: Math.round(x.due.status === 'overdue' ? x.due.overdue : x.due.dueNow), source: 'the loan\'s schedule' }));
+  });
+  guard('dues', ()=>{
+    (data.dues || []).filter(d=> dueIsOverdue(d, today)).forEach(d=> add({ id: 'due:' + d.id, date: d.dueDate, kind: 'due',
+      dept: d.kind === 'wage' ? 'people' : 'finance', label: dueName(d) + (d.kind === 'wage' ? ' — wages past their day' : ' — rent past its day'),
+      amount: Math.round(dueBalance(d) || 0), detail: periodLabel(d.period), source: 'Payroll & rent' }));
+  });
+  guard('stock', ()=>{
+    const onOrder = buyOrdersOnTheWay(today);
+    const leads = new Map(supplierLeadTimes(today).filter(r=> r.typical).map(r=> [String(r.supplierId), r.days]));
+    restockRiskRows(today).filter(r=> r.daysLeft < 10 && !onOrder.has(r.key)).forEach(r=>{
+      const best = mgrLineSupplier(r.key);
+      const lead = best ? leads.get(String(best.supplierId)) : undefined;
+      const outOn = anShiftDate(today, Math.max(0, Math.floor(r.daysLeft)));
+      const lastOrder = lead != null ? anShiftDate(outOn, -(lead + 1)) : null;
+      add({ id: 'stock:' + r.key, date: outOn, kind: 'stock', dept: 'store', label: r.name + ' runs out',
+        detail: Math.round(r.qty) + ' left at ' + (Math.round(r.dailyRate * 10) / 10) + ' a day'
+          + (lead != null ? (lastOrder < today ? ' — already inside ' + mgrPossessive(supplierName(best.supplierId)) + ' ' + lead + '-day lead time'
+            : ' — order from ' + supplierName(best.supplierId) + ' by ' + fmtShortDate(lastOrder) + ' (' + lead + '-day lead time)')
+            : ' — lead time not measured'),
+        ...(lastOrder ? { lastOrderOn: lastOrder } : {}), source: 'shelf pace, last 30 days' });
+    });
+  });
+  guard('promises', ()=>{
+    (data.customers || []).forEach(cu=>{
+      if(!((Number(cu.debt) || 0) > 0.5)) return;
+      const p = promiseLatest(cu.id, today);
+      if(p && p.state === 'broken') add({ id: 'promise:' + cu.id, date: p.promisedOn, kind: 'promise', dept: 'finance',
+        label: (cu.name || 'A customer') + ' broke a promise to pay', amount: Math.round(p.amount || Number(cu.debt) || 0),
+        detail: 'said ' + fmtShortDate(p.promisedOn), source: 'Debtors — promises' });
+    });
+  });
+  (c.playsPastSpan || []).forEach(p=>{ if(p && p.name) add({ id: 'play:' + (p.id || p.name), date: p.endsOn || today, kind: 'play', dept: mgrDept(p.dept) ? p.dept : 'finance',
+    label: p.name + ' — past its span', detail: 'read it and decide', source: 'the playbook' }); });
+  return out.filter(r=> r.date <= end)
+    .sort((a, b)=> String(a.date).localeCompare(String(b.date)) || (Math.abs(b.amount || 0) - Math.abs(a.amount || 0)));
+}
+
+/* ---- ON THE BOOKS (Q12) ------------------------------------------
+   What the books hold, said as that -- never as what the Manager
+   "read". Invoices and bills are counted from the loaded book; the
+   messages and the meetings by a COUNT query, because the screens load
+   only a capped list of each. A count that fails is null, and its error
+   is named. */
+async function mgrBooksCounts(){
+  const today = todayISO();
+  const invoices = (data.savedQuotes || []).filter(q=> q.invoiced && !q.voided).length;
+  const purchases = (data.purchaseInvoices || []).filter(pi=> !pi.voided).length;
+  const firstMove = (data.stockLog || []).reduce((m, e)=> (e && e.date && (!m || e.date < m)) ? e.date : m, null);
+  const stockWeeks = firstMove ? Math.floor(Math.max(0, daysBetweenISO(firstMove, today)) / 7) : null;
+  const errors = {};
+  const count = async (name, q)=>{
+    try {
+      const r = await q;
+      if(r.error){ errors[name] = r.error.message || String(r.error); return null; }
+      return typeof r.count === 'number' ? r.count : null;
+    } catch(e){ errors[name] = (e && e.message) || String(e); return null; }
+  };
+  const [messages, meetings] = await Promise.all([
+    count('messages', sb.from('wa_messages').select('id', { count: 'exact', head: true }).eq('shop_id', currentShopId)),
+    managerNotesTable
+      ? count('meetings', sb.from('manager_notes').select('id', { count: 'exact', head: true }).eq('shop_id', currentShopId).eq('kind', 'meeting'))
+      : Promise.resolve(null),
+  ]);
+  if(!managerNotesTable) errors.meetings = 'the Manager\'s memory is not set up on this shop';
+  return { invoices, purchases, messages, stockWeeks, stockSince: firstMove, meetings, errors };
+}
+
+/* ---- THE JOURNAL'S FOUR NEW KINDS (0107) -------------------------
+   snapshot, decision, normal and offer rows in manager_notes. Reads are
+   plain promises that answer { rows, error } -- the caller holds its own
+   mgrRenderGen ticket and decides what a late answer is worth. Writes
+   answer { ok, row?, error?, migration? } and, where the database
+   refuses the kind, say which update fixes it.
+
+   A play and a review are NOT read through here: each has exactly one
+   reading (managerPlaybook, managerRecentReviews), and a second door
+   would be a second chance for the screen and the meeting to disagree. */
+const MGR_MIGRATION_0107 = 'supabase/migrations/0107_manager_intelligence.sql';
+function mgrMigrationNote(error){
+  const msg = String((error && (error.message || error.details)) || error || '');
+  return /check constraint|manager_notes_kind_check|23514/i.test(msg) || (error && error.code === '23514')
+    ? 'The Manager\'s memory needs one update — paste ' + MGR_MIGRATION_0107 + ' into the Supabase SQL editor and reload.'
+    : null;
+}
+async function mgrNotesOfKind(kind, opts){
+  const k = String(kind || '');
+  if(k === 'play' || k === 'review')
+    return { rows: [], error: k === 'play' ? 'plays are read through managerPlaybook' : 'reviews are read through managerRecentReviews' };
+  if(!managerNotesTable) return { rows: [], error: 'the Manager\'s memory is not set up on this shop' };
+  const o = opts || {};
+  try {
+    let q = sb.from('manager_notes').select('id, date, body, status, created_at').eq('shop_id', currentShopId).eq('kind', k);
+    if(o.since) q = q.gte('date', String(o.since).slice(0, 10));
+    if(o.status) q = q.eq('status', String(o.status));
+    const r = await q.order('date', { ascending: false }).order('id', { ascending: false })
+      .limit(Math.max(1, Math.min(500, Math.round(Number(o.limit) || 60))));
+    if(r.error) return { rows: [], error: r.error.message || String(r.error) };
+    return { rows: (r.data || []).map(x=> ({ id: x.id, date: x.date, status: x.status, createdAt: x.created_at || null,
+      body: x.body && typeof x.body === 'object' ? x.body : {} })), error: null };
+  } catch(e){ return { rows: [], error: (e && e.message) || String(e) }; }
+}
+async function mgrNoteInsert(kind, body, status, quiet){
+  if(!managerNotesTable){
+    if(!quiet) toast('The Manager\'s memory is not set up on this shop yet — nothing was kept.', 6000);
+    return { ok: false, error: 'no-journal' };
+  }
+  const ins = await sb.from('manager_notes').insert({ shop_id: currentShopId, kind, date: todayISO(), body, status })
+    .select('id, date, body, status').single();
+  if(ins.error){
+    const migration = mgrMigrationNote(ins.error);
+    if(!quiet) toast(migration || ('Could not keep that — ' + (ins.error.message || 'the journal refused it')), 9000);
+    return { ok: false, error: ins.error.message || String(ins.error), migration: migration ? '0107' : null, code: ins.error.code || null };
+  }
+  return { ok: true, row: ins.data || null };
+}
+const mgrNoteText = (v, n)=> String(v == null ? '' : v).trim().slice(0, n);
+const mgrNoteDay = (v)=> /^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : null;
+const mgrNoteNum = (v)=> { const n = Number(v); return v == null || v === '' || !Number.isFinite(n) ? null : n; };
+/* A choice the owner SIGNED in the Simulator. A record, never an
+   instruction: signing pays nothing, sends nothing, moves nothing. Kept
+   as its own kind so it can never be counted as the Manager's advice. */
+async function mgrSaveDecision(body){
+  const b = body && typeof body === 'object' ? body : {};
+  const title = mgrNoteText(b.title, 200);
+  if(!title) return { ok: false, error: 'A decision needs a title' };
+  const levers = (Array.isArray(b.levers) ? b.levers : []).slice(0, 20).map(l=> ({
+    id: mgrNoteText(l && l.id, 40), label: mgrNoteText(l && l.label, 120), choice: mgrNoteText(l && l.choice, 120),
+    dept: mgrDept(l && l.dept) ? l.dept : null, from: (l && l.from) === 'books' ? 'books' : 'assumption' }));
+  const rec = { title, why: mgrNoteText(b.why, 500), dept: mgrDept(b.dept) ? b.dept : null, levers,
+    outcome: b.outcome && typeof b.outcome === 'object' ? JSON.parse(JSON.stringify(b.outcome).slice(0, 4000) || '{}') : null,
+    signedOn: todayISO(), signedAt: new Date().toISOString(), source: 'owner' };
+  if(JSON.stringify(rec).length > 8000) rec.outcome = null;
+  return mgrNoteInsert('decision', rec, 'signed');
+}
+/* What the owner taught about an ordinary day, so a day like it stops
+   being flagged. Only a condition the books can test is a rule. */
+async function mgrSaveNormal(body){
+  const b = body && typeof body === 'object' ? body : {};
+  const metric = mgrNoteText(b.metric, 40);
+  if(!metric) return { ok: false, error: 'A normal needs the measure it is about' };
+  const weekday = mgrNoteNum(b.weekday);
+  const rec = { metric, weekday: weekday != null && weekday >= 0 && weekday <= 6 ? Math.round(weekday) : null,
+    condition: mgrNoteText(b.condition, 200), effect: mgrNoteText(b.effect, 200),
+    sourceAnswerId: b.sourceAnswerId == null ? null : mgrNoteText(b.sourceAnswerId, 40), note: mgrNoteText(b.note, 300),
+    taughtOn: todayISO(), source: 'owner' };
+  return mgrNoteInsert('normal', rec, 'active');
+}
+/* An offer the owner wrote down: a bank's loan or a supplier's terms.
+   amount UGX (> 0); rate % a year; termMonths; expiresOn. Nothing in
+   the books holds one -- what it would cost is worked out from these by
+   loanSchedule, and only on the owner's own figures. */
+async function mgrSaveOffer(body){
+  const b = body && typeof body === 'object' ? body : {};
+  const from = b.from === 'supplier' ? 'supplier' : b.from === 'bank' ? 'bank' : null;
+  const name = mgrNoteText(b.name, 120);
+  const amount = mgrNoteNum(b.amount);
+  if(!from) return { ok: false, error: 'Say whether the offer is from a bank or a supplier' };
+  if(!name) return { ok: false, error: 'Name who made the offer' };
+  if(!(amount > 0)) return { ok: false, error: 'An offer needs its amount' };
+  const rate = mgrNoteNum(b.rate), term = mgrNoteNum(b.termMonths);
+  const rec = { from, name, amount: Math.round(amount), rate: rate != null && rate >= 0 ? rate : null,
+    termMonths: term != null && term > 0 ? Math.round(term) : null, expiresOn: mgrNoteDay(b.expiresOn),
+    supplierId: from === 'supplier' && b.supplierId != null ? String(b.supplierId) : null,
+    note: mgrNoteText(b.note, 300), writtenOn: todayISO(), source: 'owner' };
+  return mgrNoteInsert('offer', rec, 'open');
+}
+/* The offers still open, with days left -- an expired one drops off
+   unless asked for. */
+async function mgrOffers(opts){
+  const o = opts || {};
+  const r = await mgrNotesOfKind('offer', { limit: 60 });
+  const today = todayISO();
+  const rows = r.rows.filter(x=> x.status === 'open' || o.all).map(x=> ({ id: x.id, status: x.status, ...x.body,
+    daysLeft: x.body.expiresOn ? daysBetweenISO(today, x.body.expiresOn) : null }))
+    .filter(x=> o.all || x.daysLeft == null || x.daysLeft >= 0)
+    .sort((a, b)=> (a.daysLeft == null ? 1e9 : a.daysLeft) - (b.daysLeft == null ? 1e9 : b.daysLeft));
+  return { rows, error: r.error };
+}
+async function mgrSetOfferStatus(id, status){
+  if(!managerNotesTable || id == null) return { ok: false, error: 'no-journal' };
+  const s = ['open', 'taken', 'declined', 'expired'].includes(status) ? status : null;
+  if(!s) return { ok: false, error: 'unknown status' };
+  const up = await sb.from('manager_notes').update({ status: s }).eq('shop_id', currentShopId).eq('id', id).eq('kind', 'offer');
+  if(up.error){ toast(mgrMigrationNote(up.error) || ('Could not change that offer — ' + up.error.message), 9000); return { ok: false, error: up.error.message }; }
+  return { ok: true };
+}
+
+/* THE DAY'S SNAPSHOT. The score, each department's, every check's
+   answer, and the LEVELS a trend needs later -- a level (cash on hand,
+   dead stock) cannot be worked out again once the day has gone. */
+function mgrSnapshotBody(ctx){
+  const today = todayISO();
+  const facts = mgrHealthFacts(ctx);
+  const h = mgrHealthChecks(ctx);
+  const depts = {};
+  Object.keys(h.byDept).forEach(id=>{ const d = h.byDept[id]; depts[id] = { score: d.score, known: d.known, passed: d.passed }; });
+  const checks = {};
+  h.checks.forEach(c=>{ checks[c.id] = c.pass; });
+  const lv = (x)=> x == null || !Number.isFinite(Number(x)) ? null : Math.round(Number(x) * 10) / 10;
+  return { v: 1, date: today, takenAt: new Date().toISOString(), score: h.score, known: h.known, passed: h.passed, depts, checks,
+    levels: {
+      cashOnHand: lv(facts.cashOnHand), tightest: facts.tightest ? lv(facts.tightest.balance) : null, tightestOn: facts.tightest ? facts.tightest.date : null,
+      floor: facts.floor ? lv(facts.floor.amount) : null, floorSource: facts.floor ? facts.floor.source : null,
+      debtors: facts.debt60 ? lv(facts.debt60.total) : null, debt60: facts.debt60 ? lv(facts.debt60.amount) : null,
+      payables: facts.bills ? lv(facts.bills.owed) : null,
+      stockValue: facts.daysOfStock ? lv(facts.daysOfStock.value) : null, deadStock: facts.deadStock ? lv(facts.deadStock.value) : null,
+      daysOfStock: facts.daysOfStock ? lv(facts.daysOfStock.days) : null, debtorDays: facts.debtorDays ? lv(facts.debtorDays.days) : null,
+      margin30: facts.margin ? lv(facts.margin.pct) : null, sales30: facts.margin ? lv(facts.margin.sales) : null } };
+}
+/* At most once per shop per day: an in-session guard, a read for a row
+   already there, and 0107's unique index behind both (a second device
+   the same morning is refused, and that refusal reads as "already
+   kept"). Silent on failure -- nothing the owner asked for failed --
+   but every failure is logged with what fixes it. */
+let mgrSnapshotKept = null;
+async function mgrSaveSnapshot(ctx){
+  const today = todayISO();
+  const key = String(currentShopId) + '|' + today;
+  if(!managerNotesTable || !currentShopId) return { ok: false, error: 'no-journal' };
+  if(mgrSnapshotKept === key) return { ok: true, already: true };
+  try {
+    const have = await sb.from('manager_notes').select('id').eq('shop_id', currentShopId).eq('kind', 'snapshot').eq('date', today).limit(1);
+    if(have.error){ console.warn('Manager: the day\'s snapshot was not checked —', have.error.message); return { ok: false, error: have.error.message }; }
+    if((have.data || []).length){ mgrSnapshotKept = key; return { ok: true, already: true }; }
+    const body = mgrSnapshotBody(ctx);
+    const r = await mgrNoteInsert('snapshot', body, 'held', true);
+    if(!r.ok){
+      if(r.code === '23505' || /duplicate key|unique/i.test(String(r.error || ''))){ mgrSnapshotKept = key; return { ok: true, already: true }; }
+      console.warn('Manager: the day\'s snapshot was not kept —', mgrMigrationNote(r.error) || r.error);
+      return r;
+    }
+    mgrSnapshotKept = key;
+    return { ok: true, row: r.row };
+  } catch(e){
+    console.warn('Manager: the day\'s snapshot was not kept —', e && e.message);
+    return { ok: false, error: (e && e.message) || String(e) };
+  }
+}
+/* The last `days` days of snapshots, oldest first, as { date, ...body }. */
+async function mgrSnapshots(days){
+  const n = Math.max(1, Math.min(400, Math.round(Number(days) || 14)));
+  const r = await mgrNotesOfKind('snapshot', { since: anShiftDate(todayISO(), -n), limit: n + 5 });
+  return { rows: r.rows.map(x=> ({ ...x.body, date: x.date, id: x.id })).sort((a, b)=> String(a.date).localeCompare(String(b.date))),
+    error: r.error };
+}
+/* Called once the owner's books have loaded (boot). Only the owner's
+   session writes it, and only after the screen is up, so the first
+   paint never waits on a walk of the whole book. */
+function mgrSnapshotAfterLoad(){
+  if(currentMemberRole !== 'owner' || !managerNotesTable) return;
+  setTimeout(()=>{ mgrSaveSnapshot().catch(e=> console.warn('Manager: the day\'s snapshot was not kept —', e && e.message)); }, 3000);
+}
+/* ═══ MGR SHARED MODELS — end ═══ */
+
 async function renderManagerGrowth(){
   const wrap = document.getElementById('managerGrowthWrap');
   if(!wrap) return;
   const stamp = String(Date.now()) + Math.random(); wrap.dataset.read = stamp;
   const settings = managerGrowthSettings();
-  wrap.innerHTML = `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">Customer growth</span></div>
+  /* WHAT THE MANAGER PLANS AROUND (0107's settings, Q8 and Q28). The
+     floor every risk and every cash check is measured against, and the
+     day wages leave -- shown as figures first, with what stands in for
+     each until the owner sets it, and changed under them. Neither moves
+     a shilling: both only shape the cash line ahead. */
+  const floor = mgrCashFloor(), payday = mgrPayday(), cmc = committedMonthlyCost(currentPeriod());
+  const n0 = (v)=> Math.round(Number(v) || 0).toLocaleString('en-UG');
+  const paydayOpts = `<option value="">Month end</option><optgroup label="Each month">${Array.from({ length: 31 }, (_, i)=>
+      `<option value="m:${i + 1}" ${payday && payday.kind === 'monthly' && payday.day === i + 1 ? 'selected' : ''}>${mgrOrdinal(i + 1)}${i === 30 ? ' (last day)' : ''}</option>`).join('')}</optgroup>`
+    + `<optgroup label="Each week">${[1, 2, 3, 4, 5, 6, 0].map(w=>
+      `<option value="w:${w}" ${payday && payday.kind === 'weekly' && payday.day === w ? 'selected' : ''}>${MGR_WEEKDAYS[w]}s</option>`).join('')}</optgroup>`;
+  const plans = `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">What the Manager plans around</span></div>
+    <div class="ow-strip ow-growth-strip">
+      <div class="ow-mt${floor.source === 'set' ? '' : ' ow-warn'}"><span class="ow-mt-l">Cash floor</span><span class="ow-mt-v">${n0(floor.amount)} <span class="ow-u">UGX</span></span><span class="ow-mt-s">${floor.source === 'set' ? 'set by you' : 'stand-in — ' + esc(floor.note.replace(/^not set — /, ''))}</span></div>
+      <div class="ow-mt${payday ? '' : ' ow-warn'}"><span class="ow-mt-l">Payday</span><span class="ow-mt-v">${payday ? (payday.kind === 'monthly' ? (payday.day === 31 ? 'Last day' : mgrOrdinal(payday.day)) : MGR_WEEKDAYS[payday.day].slice(0, 3) + 's') : 'Month end'}</span><span class="ow-mt-s">${payday ? esc(mgrPaydayLabel(payday)) : 'not set — the payroll\'s date'}</span></div>
+      <div class="ow-mt"><span class="ow-mt-l">Salaries a month</span><span class="ow-mt-v">${n0(cmc.wages)} <span class="ow-u">UGX</span></span><span class="ow-mt-s">${cmc.salariedCount} on a salary${cmc.dailyCount ? ` · ${cmc.dailyCount} paid by the day, not costed` : ''}${cmc.noRateCount ? ` · ${cmc.noRateCount} with no rate` : ''}</span></div>
+      <div class="ow-mt"><span class="ow-mt-l">Rent a month</span><span class="ow-mt-v">${n0(cmc.rent)} <span class="ow-u">UGX</span></span><span class="ow-mt-s">from your rent agreements</span></div>
+    </div>
+    <details class="ow-growth-settings"><summary class="ow-growth-summary">Set the floor and the payday</summary>
+    <div class="ow-growth-controls"><div class="field ow-growth-field"><label for="mgrCashFloorIn">Cash floor (UGX)</label><input id="mgrCashFloorIn" type="number" min="0" step="any" inputmode="numeric" value="${floor.source === 'set' ? floor.amount : ''}" placeholder="${floor.source === 'set' ? '' : 'Blank: ' + n0(floor.amount) + ' stands in'}"></div>
+    <div class="field ow-growth-field"><label for="mgrPaydayIn">Payday</label><select id="mgrPaydayIn">${paydayOpts}</select></div></div>
+    <p class="ow-mini">The floor is the least you want in hand. Until you set one, a month of rent and salaries stands in. A month's wages leave on its payday — on a weekly payday, split across that month's paydays. Both only shape the cash line ahead; neither pays anything.</p></details></div>`;
+  wrap.innerHTML = plans + `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">Customer growth</span></div>
     <details class="ow-growth-settings"><summary class="ow-growth-summary">${settings.enabled ? esc(MANAGER_OBJECTIVES[settings.objective] || 'Customer opportunities') + ' · up to ' + settings.limit + ' a day' : 'Growth queue is off'} · Settings</summary>
     <div class="ow-growth-controls"><div class="field ow-growth-field"><label for="mgrObjective">Standing objective</label><select id="mgrObjective"><option value="">Let the meeting choose</option>${Object.entries(MANAGER_OBJECTIVES).map(([k,v])=> `<option value="${k}" ${settings.objective === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></div>
     <div class="field ow-growth-field"><label for="mgrGrowthLimit">Daily capacity</label><input id="mgrGrowthLimit" type="number" min="1" max="10" value="${settings.limit}"></div></div>
     <label><input id="mgrGrowthEnabled" type="checkbox" ${settings.enabled ? 'checked' : ''}> Show growth opportunities</label></details>
     <div id="mgrGrowthReading" class="ow-growth-reading">Reading customer history…</div></div>`;
+  /* Blank is "not set", never 0: a floor of 0 is a real answer, typed. */
+  const planSave = ()=>{
+    const raw = document.getElementById('mgrCashFloorIn').value.trim(), num = Number(raw);
+    const v = document.getElementById('mgrPaydayIn').value;
+    data.presetManager = { ...(data.presetManager || {}),
+      cashFloor: raw === '' || !Number.isFinite(num) || num < 0 ? null : Math.round(num),
+      payday: /^m:\d{1,2}$/.test(v) ? { kind: 'monthly', day: Number(v.slice(2)) } : /^w:[0-6]$/.test(v) ? { kind: 'weekly', day: Number(v.slice(2)) } : null };
+    saveData(); renderManager();
+  };
+  document.getElementById('mgrCashFloorIn').onchange = planSave;
+  document.getElementById('mgrPaydayIn').onchange = planSave;
   ['mgrObjective','mgrGrowthEnabled','mgrGrowthLimit'].forEach(id=> document.getElementById(id).onchange = ()=>{
     data.presetManager = { ...(data.presetManager || {}), objective: document.getElementById('mgrObjective').value,
       growthEnabled: document.getElementById('mgrGrowthEnabled').checked,
@@ -148527,6 +150220,7 @@ async function boot(){
   // over a blank page. A repayment that is due does not stop being due
   // because somebody was heading for another tab.
   runStartupReminders();
+  mgrSnapshotAfterLoad();   // the Manager's daily snapshot, owner's session only (0107)
   // handlePendingNotificationRoute() (the cold-start ?orderId=&action= URL
   // handler) no longer exists -- Web Push was retired in favor of native
   // FCM push, which delivers a notification tap straight into
