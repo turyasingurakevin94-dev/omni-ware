@@ -189,8 +189,18 @@ function build(days, books) {
 /* ---------- 5. wiring --------------------------------------------------- */
 {
   const hist = src.slice(src.indexOf('  manager_history: { confirm: false'));
-  t.check(/const unusual = unusualDays\(todayISO\(\)\);/.test(hist) && /kind: 'unusual_day'/.test(hist) && /unusual_days: unusual\.items/.test(hist),
-    'the Manager reads it every meeting, and raises the days since the last one');
+  /* WAS: const unusual = unusualDays(todayISO()) -- the meeting read this
+     week-long detector (sales, margin, money out, stock short) while the
+     Out of the ordinary section showed the fortnight's pulse, so a day
+     could be raised in the meeting that the screen could not answer.
+     NOW: the meeting reads the section's own findings through
+     mgrUnusualForMeeting (normals applied, answers read first), in the
+     fields unusual_days always carried; the item shape is run in
+     manager-unusual-pulse.test.js section 19. This detector stays for the
+     Brief's own reading (mgrUnusualReading). */
+  t.check(/const unusual = await mgrUnusualForMeeting\(\);/.test(hist) && !/unusualDays\(/.test(hist.slice(0, hist.indexOf('\n  standing_policies: {')))
+    && /kind: 'unusual_day'/.test(hist) && /unusual_days: unusual\.items\.slice\(0, 8\)/.test(hist) && /unusual_days_not_listed/.test(hist),
+    'the Manager reads the screen\'s own findings every meeting, raises the ones since the last, and names how many it did not list');
   t.check(/stock counted short is a question, not a theft/.test(hist) && /never name a cause/.test(api),
     'and is told a finding is a question, never a verdict');
   /* WAS: on the side rail, in the standing bed. Out of the ordinary is a
@@ -217,8 +227,14 @@ function build(days, books) {
     && /x\.days\.map\(d=> d \+ '\|' \+ x\.metric\)/.test(save),
     'a tapped answer is kept as an answered question on each day it covers, so it reaches the next meeting the way every answer does');
   t.check(/mgrUnusualAnswers\.delete\(k\)/.test(save) && /toast\('Could not keep that answer/.test(save), 'and one that could not be kept is taken back and said so');
-  t.check(/owner_said: said\.body\.answer/.test(hist) && /never flag the day again/.test(hist) && /!answeredDay\(x\)/.test(hist),
+  /* WAS: owner_said: said.body.answer, from the journal's latest twenty
+     question rows only. NOW: the row, or the screen's own answers when the
+     row is past those twenty; a 'job' answer is a job by its kind too. */
+  t.check(/owner_said: said\.answer/.test(hist) && /said\.learn === 'job'/.test(hist) && /never flag the day again/.test(hist)
+    && /!answeredDay\(x\)/.test(hist) && /!!unusual\.answered\(x\.key\)/.test(hist),
     'the meeting reads the owner\'s word on the day, never raises an answered day as news, and turns unentered sales into a job');
+  t.check(/unusual_answers_not_read/.test(hist) && /owner_taught: unusual\.taught/.test(hist),
+    'a failed read of the answers is named to the meeting, and what the owner taught reaches it');
   t.check(/mgrUnusualAnswersLoad\(\);/.test(mgrRender()), 'and a day answered before stays answered');
 }
 
