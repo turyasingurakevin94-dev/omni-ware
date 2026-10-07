@@ -137,6 +137,38 @@ const eq = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(wa
   S.__set('gen', 2);
   run();
   t.check(draws === 4, 'and a draw queued by a render that has since been replaced is not made');
+
+  /* A SHOP WITH NO JOURNAL keeps today's plan for the session: at most
+     eight decisions, as the journal keeps them, each carrying the fields a
+     saved move does -- read through the same whitelists (managerMoveFields,
+     and managerMeetingFields for the verdict, the sure and the chains). */
+  const moves = Array.from({ length: 9 }, (_, i) => ({ title: 'Move ' + (i + 1), why: 'w', worth: 1000 * (i + 1), kind: 'chase',
+    worth_basis: i % 2 ? 'profit_30d' : 'cash_freed', lever: 'collect', play: 'p', unlocks: i === 0 ? 'u' : '',
+    dept: 'finance', touches: ['sales', 'finance', 'nonsense'], confidence: 4, evidence: ['3 of 4 chases', 'no figure'], mind: 'If not paid by Friday',
+    target: 'collections', effect: 5, subject: { customerId: 'C' + i }, ...(i === 2 ? { after: 1 } : {}) }));
+  const W = compileScope([fn('mgrPaintBrief'), fn('managerMoveFields'), fn('managerMeetingFields'), fn('managerPips'), fn('managerPlanText'),
+    decl('MANAGER_DEPTS'), decl('MANAGER_WORTH_BASES'), decl('MANAGER_LEVERS'),
+    'let mgrMapJournal = null, mgrBriefDirty = true, mgrBriefJournalErr = null, mgrBriefRows = [], mgrBriefPlanArgs = null,'
+      + ' mgrBriefBandArgs = {}, mgrBriefCtx = null, mgrBriefTimer = null;',
+    'function __rows(){ return { rows: mgrBriefRows, plan: mgrBriefPlanArgs, band: mgrBriefBandArgs }; }'],
+  { ...Object.fromEntries(Object.entries(env).filter(([k]) => !/^MANAGER_(WORTH_BASES|LEVERS)$|^manager(Move|Meeting)Fields$/.test(k))),
+    mgrBriefSoon() {}, MANAGER_METRICS: { collections: {} }, mgrBriefPaintPlan() {},
+    managerToday: { date: '2026-10-07', plan: { keyline: 'k', verdict: 'Cash first, then the rest.', sure: 4, moves,
+      chains: [{ title: 'A reading', links: [{ text: 'one', figure: '1m', tool: 'shop_pulse' }, { text: 'two', figure: '2 days', tool: 'list_bills' }], fix: { move: 2 } }] } } },
+  ['mgrPaintBrief', '__rows']);
+  W.mgrPaintBrief(1, { gen: 1, landed: 'start', notes: false, heldGuess: true });
+  const got = W.__rows();
+  t.check(got.rows.length === 8 && got.rows[0].id === 'mem:0', 'at most eight decisions from the session, as the journal keeps');
+  const b0 = got.rows[0].body, b2 = got.rows[2].body;
+  t.check(b0.worthBasis === 'cash_freed' && got.rows[1].body.worthBasis === 'profit_30d' && b0.lever === 'collect' && b0.play === 'p' && b0.unlocks === 'u',
+    'each carries its kind of money, lever, play and what it unlocks');
+  t.check(b0.dept === 'finance' && JSON.stringify(b0.touches) === '["sales"]' && b0.confidence === 4
+    && JSON.stringify(b0.evidence) === '["3 of 4 chases"]' && b0.mind === 'If not paid by Friday' && b2.after === 0,
+    'and the meeting\'s department, the others it moves, how sure, its evidence with figures and what would change its mind');
+  t.check(!('target' in b0 && b0.target.id) && !b0.fromQuestion, 'with no journal to vouch for an id, no pointer is kept');
+  t.check(got.plan.plan.verdict === 'Cash first, then the rest.' && got.plan.plan.sure === 4 && got.plan.plan.chains.length === 1
+    && got.plan.plan.chains[0].fix.move === 1 && got.band.plan.verdict === 'Cash first, then the rest.',
+    'the session\'s verdict, sure and chains read through the meeting\'s whitelist, its fix a position in the plan');
 }
 
 /* ---------- 3. in the Brief's department slot, and no longer a map ------ */

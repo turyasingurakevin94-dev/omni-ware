@@ -2365,7 +2365,6 @@
   .mgr-b-pair > .mgr-b-fore{flex:0 0 360px;}
   .mgr-b-pair:not(:has(> .mgr-slot:not(:empty))){display:none;}
   .mgr-bed-b{gap:var(--ow-sp-20);}
-  .mgr-bed-b .mgr-hero,.mgr-bed-b .mgr-verdict{margin-bottom:0;}
   .mgr-bed-b .mgr-b-fig{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
   .mgr-bed-b .mgr-b-micro{font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);letter-spacing:.08em;text-transform:uppercase;
     color:var(--ow-ink-600);white-space:nowrap;}
@@ -2454,6 +2453,7 @@
   .mgr-bed-b .mgr-b-sits{font-size:var(--ow-t-11);color:var(--ow-navy-ink);font-weight:var(--ow-fw-500);letter-spacing:0;}
   .mgr-bed-b .mgr-b-sitv .of{font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-12);color:var(--ow-navy-ink);margin:0 4px;}
   .mgr-bed-b .mgr-b-wait .mgr-b-sitv{color:var(--ow-navy-mute);}
+  .mgr-bed-b .mgr-b-sita{font-size:var(--ow-t-11);color:var(--ow-good-ink-on-navy);}
   .mgr-bed-b .mgr-b-sit .mgr-b-lamp{outline-color:rgba(255,255,255,.12);}
   .mgr-bed-b .mgr-b-sit .mgr-b-lamp-good{background:var(--ow-good-on-navy);}
   .mgr-bed-b .mgr-b-sit .mgr-b-lamp-warn{background:var(--ow-warn-on-navy);}
@@ -2588,7 +2588,7 @@
   .mgr-bed-b .mgr-b-cw{font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.3;}
   .mgr-bed-b .mgr-b-car{color:var(--ow-ink-600);}
   .mgr-bed-b .mgr-b-x .mgr-b-car{transform:rotate(180deg);}
-  .mgr-bed-b .mgr-b-dc-x{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) minmax(0,1fr) 180px;gap:var(--ow-sp-20);
+  .mgr-bed-b .mgr-b-dc-x{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr) minmax(0,1fr) 180px;gap:var(--ow-sp-20);
     padding:var(--ow-sp-4) var(--ow-sp-16) var(--ow-sp-16) 58px;}
   .mgr-bed-b .mgr-b-dc-x .mgr-b-micro{display:block;margin-bottom:var(--ow-sp-6);white-space:normal;}
   .mgr-bed-b .mgr-b-xt{font-size:var(--ow-t-13);line-height:1.5;color:var(--ow-ink-900);margin:0;}
@@ -2946,7 +2946,7 @@
     .mgr-bed-b .mgr-b-node{flex:none;}
     .mgr-bed-b .mgr-b-arr{flex-basis:24px;}
     .mgr-bed-b .mgr-b-arr .mgr-b-i{transform:rotate(90deg);}
-    .mgr-bed-b .mgr-b-fix .btn.ow-sm{width:100%;}
+    .mgr-bed-b .mgr-b-fix .btn.ow-sm{width:100%;box-sizing:border-box;justify-content:center;}
     /* A decision is a card: number, title and money on top, how sure
        under them; opened, its door first and full width, for a thumb. */
     .mgr-bed-b .mgr-b-sort{margin-left:0;width:100%;overflow-x:auto;}
@@ -134620,13 +134620,18 @@ function mgrPaintBrief(gen, ctx){
   if(ctx.landed === 'start'){
     /* What waits on the books comes back as last known, or stays empty,
        until the Brief is drawn on screen -- nothing stale passes for
-       today's, and nothing is invented to fill a box. */
+       today's, and nothing is invented to fill a box. A box already drawn
+       this session keeps what it shows until it is drawn again, so a Done
+       does not flash every box to "last known" and back. */
     ['managerChainWrap', 'managerForesightWrap', 'managerSimTeaserWrap', 'managerMemoryWrap', 'managerBlindWrap']
-      .forEach(id=>{ const el = document.getElementById(id); if(el) mgrLastKnown(el); });
+      .forEach(id=>{ const el = document.getElementById(id); if(el && !el.innerHTML) mgrLastKnown(el); });
     /* The band paints at once; the sentence from today's meeting joins it
        when the journal answers. heldGuess, not null, so the headline does
-       not change shape on an ordinary morning. */
-    paintBand({ plan: sessionPlan(), moves: null, held: heldGuess ? null : false, unread: null });
+       not change shape on an ordinary morning -- and a meeting the journal
+       already said was held today stays said while it is read again. */
+    const kept = mgrBriefBandArgs;
+    if(ctx.notes && kept && kept.held === true && kept.day === todayISO()) paintBand(kept);
+    else paintBand({ plan: sessionPlan(), moves: null, held: heldGuess ? null : false, unread: null });
     if(managerMeetingRunning){
       planWrap.innerHTML = planShell(`<div class="mgr-emp">
           <p class="mgr-emp-t">The manager is reading the shop&hellip;</p>
@@ -134668,9 +134673,12 @@ function mgrPaintBrief(gen, ctx){
       return;
     }
     /* THE STRIP WAITS OUT LOUD. Six figures painted as 0 while the books
-       are still being read would be six claims nobody counted. */
-    mgrPaintVerdict({});
-    mgrCachePaint(strip);
+       are still being read would be six claims nobody counted. A strip
+       already drawn this session keeps its figures until drawn again. */
+    if(!strip.innerHTML){
+      mgrPaintVerdict({});
+      mgrCachePaint(strip);
+    }
     if(!managerMeetingRunning && heldGuess && mgrCachePaint(planWrap)){ wireOffers(); }
     else if(!managerMeetingRunning){
       planWrap.innerHTML = heldGuess
@@ -134701,7 +134709,7 @@ function mgrPaintBrief(gen, ctx){
     }
     const body = st.today ? (st.today.meeting.body || {}) : null;
     mgrBriefRows = st.today ? st.today.moves : [];
-    paintBand({ plan: body, moves: st.today ? st.today.moves : null, held: !!st.today, unread: null });
+    paintBand({ plan: body, moves: st.today ? st.today.moves : null, held: !!st.today, unread: null, day: todayISO() });
     /* Every fresh read of the journal is what the assistant panel reads
        today's plan from. */
     mgrMapJournal = { today: st.today || null, review: (st.reviews || [])[0] || null, last: st.prior && st.prior[0] ? st.prior[0].meeting : null };
@@ -134796,7 +134804,7 @@ function mgrBriefReadSide(gen, notes){
   kept('snaps', ()=> mgrSnapshots(14)).then(land('snaps'), fail('snaps'));
   mgrNotesOfKind('question', { status: 'answered', since: anShiftDate(today, -(UNUSUAL_LOOKBACK + 2)), limit: 200 })
     .then(land('answered'), fail('answered'));
-  kept('meetings', ()=> mgrNotesOfKind('meeting', { since: today, limit: 10 })).then(land('meetings'), fail('meetings'));
+  mgrNotesOfKind('meeting', { since: today, limit: 10 }).then(land('meetings'), fail('meetings'));
   Promise.resolve().then(()=> sb.from('manager_notes').select('date, body, status, meeting_id')
     .eq('shop_id', currentShopId).eq('kind', 'move').order('id', { ascending: false }).limit(TRACK_MOVES_READ))
     .then(r=> land('moves')(r && r.error ? { error: r.error.message || String(r.error), rows: [] } : { rows: (r && r.data) || [] }), fail('moves'));
@@ -134838,10 +134846,14 @@ function mgrBriefDraw(gen, ctx){
    customer keeps buying is sales. */
 const MGR_BRIEF_KINDS = { cash_freed: 'cash', profit_30d: 'profit', loss_avoided: 'profit', cost_saved: 'profit', sales: 'sales' };
 const MGR_BRIEF_KIND_WORD = { cash: 'Cash', profit: 'Profit', sales: 'Sales' };
-function mgrBriefKind(basis){ return MGR_BRIEF_KINDS[basis] || null; }
+function mgrBriefKind(basis){
+  return MGR_BRIEF_KINDS[basis] || null;
+}
 /* One spelling for a stock line wherever it comes from: the sales
    rows key a line with no variant "P001::", the shelf "P001". */
-function mgrBriefKey(k){ return String(k == null ? '' : k).replace(/::$/, ''); }
+function mgrBriefKey(k){
+  return String(k == null ? '' : k).replace(/::$/, '');
+}
 /* What a move is about, spelled as a subject: c: customer, s: supplier,
    k: stock line, o: order -- or the move itself when it names nothing. */
 function mgrBriefSubjectOf(body, fallbackId){
@@ -135291,12 +135303,12 @@ function mgrBriefForesight(src){
   (s.supplierRisks || []).forEach(r=> add({ date: r.date, kind: 'risk', dept: 'procurement', text: r.label,
     move: r.amount != null ? 'Pay the ' + mgrShortUGX(r.amount) + ' before then' : null, tag: 'the terms you wrote down', door: 'creditors' }));
   (s.offers || []).forEach(o=> add({ date: o.expiresOn, kind: 'deadline', dept: 'finance',
-    text: (o.name || (o.from === 'bank' ? 'The bank' : 'A supplier')) + '’s ' + mgrShortUGX(o.amount) + ' offer expires',
+    text: mgrBriefOwn(o.name || (o.from === 'bank' ? 'The bank' : 'A supplier')) + ' ' + mgrShortUGX(o.amount) + ' offer expires',
     tag: 'your offer record' + (o.rate != null ? ' · ' + o.rate + '%' : '') + (o.termMonths ? ' over ' + o.termMonths + ' months' : '') }));
   (s.targets || []).forEach(t=> add({ date: t.to, kind: 'deadline', dept: t.dept || 'finance',
     text: t.label + ' goal checkpoint · ' + t.aimText, tag: 'goal · now ' + t.nowText }));
   (s.receipts || []).forEach(r=> add({ date: r.date, kind: 'expected', dept: 'finance',
-    text: r.label.replace(/ — after a chase$| — promised( the balance)?$/, '') + '’s ' + mgrShortUGX(r.amount) + ' expected', tag: r.source }));
+    text: mgrBriefOwn(r.label.replace(/ — after a chase$| — promised( the balance)?$/, '')) + ' ' + mgrShortUGX(r.amount) + ' expected', tag: r.source }));
   (s.lastYear || []).forEach(x=> add({ ...x, kind: 'known' }));
   items.sort((a, b)=> a.date.localeCompare(b.date) || (MGR_BRIEF_FS_ORDER[a.kind] - MGR_BRIEF_FS_ORDER[b.kind]));
   return items.map(x=> ({ ...x, day: Number(x.date.slice(8, 10)), dow: MGR_WEEKDAYS[waWeekday(x.date)].slice(0, 3) }));
@@ -135370,7 +135382,7 @@ function mgrBriefPatterns(src){
    opened, never acted on. src carries the counts, already read. */
 function mgrBriefBlindSpots(src){
   const s = src || {}, out = [];
-  const plural = (n, w, ws)=> n + ' ' + (n === 1 ? w : (ws || w + 's'));
+  const plural = (n, w, ws)=> Number(n).toLocaleString('en-UG') + ' ' + (n === 1 ? w : (ws || w + 's'));
   if(s.rivalNever && s.rivalNever.count > 0) out.push({ id: 'rival', dept: 'sales',
     title: plural(s.rivalNever.count, 'line that sells has', 'lines that sell have') + ' never been checked against a rival',
     why: s.rivalNever.top ? 'The one earning most: ' + s.rivalNever.top + '.' : '',
@@ -135394,11 +135406,11 @@ function mgrBriefBlindSpots(src){
     title: plural(s.uncosted.lines, 'line', 'lines') + ' on the shelf have no cost', why: s.uncosted.top ? 'The most units: ' + s.uncosted.top + '.' : '',
     cost: 'the shelf value and the margin on them are left out', money: s.uncosted.value || null, door: 'inventory' });
   if(s.estimated && s.estimated.share > 0) out.push({ id: 'estimated', dept: 'sales',
-    title: Math.round(s.estimated.share * 100) + '% of last 30 days’ units were costed by estimate',
+    title: (s.estimated.share < 0.005 ? 'Under 1%' : Math.round(s.estimated.share * 100) + '%') + ' of last 30 days’ units were costed by estimate',
     why: s.estimated.est.toLocaleString('en-UG') + ' of ' + s.estimated.qty.toLocaleString('en-UG') + ' units had no cost of their own.',
     cost: 'margin and profit rest partly on estimates', money: null, door: 'inventory' });
   if(s.counts && s.counts.lines > 0 && s.counts.counted < s.counts.lines * 0.9) out.push({ id: 'counts', dept: 'store',
-    title: s.counts.counted + ' of ' + plural(s.counts.lines, 'stocked line', 'stocked lines') + ' counted in 90 days',
+    title: Number(s.counts.counted).toLocaleString('en-UG') + ' of ' + plural(s.counts.lines, 'stocked line', 'stocked lines') + ' counted in 90 days',
     why: s.counts.last ? 'The last count was ' + fmtShortDate(s.counts.last) + '.' : 'No count is on the books.',
     cost: 'stock figures for the rest are the book’s, not the shelf’s', money: s.counts.value || null, door: 'inventory' });
   if(s.unmeasured && s.unmeasured.count > 0) out.push({ id: 'unmeasured', dept: null,
@@ -135424,12 +135436,17 @@ function mgrBriefBlindSpots(src){
 function mgrBriefAskChips(src){
   const s = src || {}, out = [];
   if(s.cashTight) out.push(s.profitUp ? 'Why is cash tight if profit is up?' : 'Why is cash tight this month?');
-  if(s.offer && s.offer.amount > 0) out.push('What happens if I take ' + (s.offer.name ? mgrPossessive(s.offer.name) : 'the') + ' ' + mgrShortUGX(s.offer.amount) + '?');
+  if(s.offer && s.offer.amount > 0) out.push('What happens if I take ' + (s.offer.name ? mgrBriefOwn(s.offer.name) : 'the') + ' ' + mgrShortUGX(s.offer.amount) + '?');
   if(s.first) out.push('Why is ' + s.first + ' first?');
   if(s.margin != null && s.aim > 0 && s.margin < s.aim) out.push('What’s stopping margin reaching ' + s.aim + '%?');
   return out.slice(0, 3);
 }
 
+/* A name made possessive the way the screen spells it: Kato’s, Contractors’. */
+function mgrBriefOwn(name){
+  const n = String(name || '');
+  return /s$/i.test(n) ? n + '’' : n + '’s';
+}
 /* Dates said the way the canvas says them: Wed 14 Oct. */
 const MGR_BRIEF_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 function mgrBriefDay(iso){
@@ -135631,17 +135648,20 @@ function mgrBriefRead(ctx){
       earned: never.reduce((n, r)=> n + Math.max(0, r.earned30 || 0), 0) };
     const stale = memo('rivalStale', ()=>{
       const sold = new Set(anRowsByItem(anInvoicesInRange(anShiftDate(today, -29), today)).filter(r=> r.qty > 0).map(r=> mgrBriefKey(r.key)));
-      const keys = new Map();
-      (data.rivalPrices || []).forEach(r=>{ if(r && Number(r.price) > 0) keys.set(stockKey(r.productId, r.variantIdx), r); });
-      let count = 0, top = null, oldest = -1;
-      keys.forEach((r, k)=>{
+      /* The market's one reading: the freshest sighting of each line
+         sold this month, stale when even that is past the stale mark. */
+      const freshest = new Map();
+      rivalMarketRows(today).forEach(r=>{
+        const k = mgrBriefKey(r.key);
         if(!sold.has(k)) return;
-        const seen = rivalPriceLatest(r.productId, r.variantIdx, today);
-        if(!seen.length) return;
-        const fresh = Math.min(...seen.map(x=> x.daysOld));
-        if(fresh <= 90) return;
+        const was = freshest.get(k);
+        if(!was || r.daysOld < was.daysOld) freshest.set(k, r);
+      });
+      let count = 0, top = null, oldest = -1;
+      freshest.forEach((r)=>{
+        if(!(r.daysOld > RIVAL_STALE_DAYS)) return;
         count++;
-        if(fresh > oldest){ oldest = fresh; const p = (data.products || []).find(x=> x.id === r.productId); top = p ? productVariantLabel(p, r.variantIdx) : k; }
+        if(r.daysOld > oldest){ oldest = r.daysOld; top = r.line; }
       });
       return count ? { count, top: top + ' (' + oldest + ' days)' } : null;
     });
@@ -135773,7 +135793,9 @@ function mgrBriefLampHTML(lamp, title){
 }
 /* Where a door goes: the app's own doors, plus the two the Brief needs. */
 const MGR_BRIEF_DOORS = { suppliers: { tab: 'suppliers', label: 'Open Suppliers' }, record: { view: 'record', label: 'Open the Record' } };
-function mgrBriefDoor(key){ return MANAGER_DOORS[key] || MGR_BRIEF_DOORS[key] || null; }
+function mgrBriefDoor(key){
+  return MANAGER_DOORS[key] || MGR_BRIEF_DOORS[key] || null;
+}
 function mgrBriefGo(btn){
   const view = btn.dataset.mgrgo;
   if(view){ const b = document.getElementById('mgrNav-' + view); if(b) b.click(); return; }
@@ -135887,10 +135909,10 @@ function mgrBriefReadsHTML(){
   const b = mgrBriefSide && mgrBriefSide.books;
   if(!b) return '';
   if(b.error) return `<div class="mgr-b-reads"><span class="mgr-b-micro">On the books</span><span>could not be counted — ${esc(b.error)}</span></div>`;
-  const fig = (n, word, err)=> n == null ? `<span title="${esc(err || '')}">${esc(word)} not counted</span>` : `<span><b class="mgr-b-rdn mgr-b-fig">${esc(Number(n).toLocaleString('en-UG'))}</b> ${esc(word)}</span>`;
+  const fig = (n, word, err, none)=> n == null ? `<span title="${esc(err || '')}">${esc(none || word)} not counted</span>` : `<span><b class="mgr-b-rdn mgr-b-fig">${esc(Number(n).toLocaleString('en-UG'))}</b> ${esc(word)}</span>`;
   return `<div class="mgr-b-reads"><span class="mgr-b-micro">On the books</span>
     ${fig(b.invoices, 'invoices')}${fig(b.purchases, 'purchases')}${fig(b.messages, 'messages', b.errors && b.errors.messages)}
-    ${fig(b.stockWeeks, 'weeks of stock moves')}${fig(b.meetings, b.meetings === 1 ? 'of my own meetings' : 'of my own meetings', b.errors && b.errors.meetings)}</div>`;
+    ${fig(b.stockWeeks, 'weeks of stock moves', null, 'stock moves')}${fig(b.meetings, 'of my own meetings', b.errors && b.errors.meetings, 'my own meetings')}</div>`;
 }
 /* THE ASK CARD (A1.4). A question typed here, or a suggestion tapped,
    opens the shared assistant panel with it and sends it there -- the one
@@ -135979,21 +136001,23 @@ function mgrStripCells(M){
     const trendText = t ? (t.change > 0 ? '+' + t.change : t.change < 0 ? '−' + Math.abs(t.change) : '±0') + ' this week'
       : M.snapErr ? 'trend not read' : 'trend after 7 days';
     cells[0] = { id: 'health', label: 'Business health', value: h.score == null ? '&mdash;' : String(h.score),
-      unit: h.score == null ? '' : '/100', sub: esc(trendText), lamp: mgrBriefLamp(h.score) };
+      unit: h.score == null ? '' : '/100', sub: esc(trendText) };
   }
   const w = M.walk;
   if(!w) cells[1] = unread(1, 'the cash ahead');
   else {
     const fl = M.floor || {};
     const under = fl.amount > 0 && w.tightest.balance < fl.amount;
-    cells[1] = { id: 'lowest', label: 'Lowest cash ahead', value: fig(w.tightest.balance), sub: esc(mgrBriefDay(w.tightest.date)),
+    cells[1] = { id: 'lowest', label: 'Lowest cash ahead', value: fig(w.tightest.balance),
+      sub: esc(mgrBriefDay(w.tightest.date)) + (fl.amount > 0 && fl.source !== 'set' ? ' · stand-in floor' : ''),
+      also: w.expectedTightest ? 'expected low ' + esc(mgrShortUGX(w.expectedTightest.balance)) + ' · ' + esc(mgrBriefDay(w.expectedTightest.date)) : '',
       lamp: w.tightest.balance < 0 || under ? 'bad' : fl.amount > 0 ? 'good' : 'none',
       lampTitle: fl.amount > 0 ? (under ? 'under ' : 'above ') + (fl.source === 'set' ? 'your floor' : 'the stand-in floor') + ' of ' + mgrShortUGX(fl.amount) : 'no floor to judge it against' };
   }
   const u = M.upside;
   if(!u || u.error) cells[2] = unread(2, 'the margin lines');
   else cells[2] = { id: 'upside', label: 'Profit upside found', value: u.total > 0 ? '+' + fig(u.total) : '&mdash;',
-    sub: u.total > 0 ? 'a month' : 'nothing found to lift' };
+    sub: u.total > 0 ? 'a month at last 30 days’ volume' : 'nothing found to lift' };
   const f = M.free;
   if(!f || f.error) cells[3] = unread(3, 'what is owed and the shelf');
   else cells[3] = { id: 'free', label: 'Cash to free', value: f.total > 0 ? fig(f.total) : '&mdash;',
@@ -136003,7 +136027,7 @@ function mgrStripCells(M){
   else {
     const ahead = r.filter(x=> !x.overdue).length;
     cells[4] = { id: 'risks', label: 'Risks in 30 days', value: String(r.length),
-      sub: r.length ? ahead + ' with deadlines' : 'nothing dated', lamp: r.some(x=> x.overdue) ? 'bad' : r.length ? 'warn' : 'good' };
+      sub: r.length ? ahead + ' with deadlines' : 'nothing dated' };
   }
   const hr = M.hit;
   if(!hr) cells[5] = { ...cells[5] };
@@ -136016,10 +136040,11 @@ function mgrStripCells(M){
 }
 function mgrVerdictHTML(cells){
   const cell = (c)=> `<button type="button" class="mgr-b-sitc${c.wait ? ' mgr-b-wait' : ''}${mgrBriefStripOpen === c.id ? ' mgr-b-on' : ''}" data-cell="${c.id}"
-      aria-expanded="${mgrBriefStripOpen === c.id}"${c.wait ? ' disabled' : ''}>
+      aria-expanded="${mgrBriefStripOpen === c.id}"${c.wait ? ' disabled' : ' title="What this is made of"'}>
       <span class="mgr-b-sitl">${esc(c.label)}</span>
       <span class="mgr-b-sitv">${c.lamp && c.lamp !== 'none' ? mgrBriefLampHTML(c.lamp, c.lampTitle) : ''}<span class="mgr-b-fig">${c.value}</span>${
-        c.unit ? `<span class="mgr-b-situ mgr-b-fig">${c.unit}</span>` : ''}<span class="mgr-b-sits">${c.sub}</span></span>
+        c.unit ? `<span class="mgr-b-situ mgr-b-fig">${c.unit}</span>` : ''} <span class="mgr-b-sits">${c.sub}</span></span>${
+      c.also ? `<span class="mgr-b-sita">${c.also}</span>` : ''}
     </button>`;
   return `<div class="mgr-b-sit" role="group" aria-label="The situation">${cells.map(cell).join('')}</div>`;
 }
@@ -136109,7 +136134,7 @@ function mgrPaintMap(){
     const trc = d.trend == null ? 'fl' : d.trend.startsWith('+') ? 'up' : d.trend.startsWith('−') ? 'dn' : 'fl';
     return `<button type="button" role="tab" class="mgr-b-dp${on ? ' mgr-b-on' : ''}" aria-selected="${on}" data-dept="${esc(d.id)}"
       title="${esc(d.thin ? 'Not enough on the books to judge' : d.passed + ' of ' + d.known + ' checks pass')}">
-      <span class="mgr-b-dph">${mgrBriefDeptChip(d.id === 'all' ? null : d.id, true, on)}<span class="mgr-b-dpn">${esc(d.name)}</span></span>
+      <span class="mgr-b-dph">${mgrBriefDeptChip(d.id === 'all' ? null : d.id, true, on)} <span class="mgr-b-dpn">${esc(d.name)}</span></span>
       ${mgrBriefLampHTML(d.lamp)}
       <span class="mgr-b-dps"><b class="mgr-b-dpv mgr-b-fig">${d.score == null ? '—' : d.score}</b><span class="mgr-b-dpu">health</span><span class="mgr-b-tr mgr-b-tr-${trc}" title="${esc(d.trend == null ? 'change shown after 7 daily snapshots' : 'change over the last week')}">${esc(tr)}</span></span>
       <span class="mgr-b-dpl">${esc(d.line)}</span>
@@ -136137,7 +136162,7 @@ function mgrBriefPaintChains(){
   const head = `<div class="ow-pan-h mgr-b-h"><span class="mgr-b-micro">Chains</span><span class="mgr-b-t">What’s really going on</span>
     <span class="mgr-b-nt">${sigs} signal${sigs === 1 ? '' : 's'} · ${chains.length} chain${chains.length === 1 ? '' : 's'}, linked in your books or my reading</span>`;
   if(!chains.length){
-    wrap.innerHTML = `<div class="ow-pan mgr-b-pan">${head}</div><div class="ow-empty">Nothing in the books joins across departments today${
+    wrap.innerHTML = `<div class="ow-pan">${head}</div><div class="ow-empty">Nothing in the books joins across departments today${
       M.meeting ? ', and today’s meeting read no chain' : ', and no meeting has read one yet'}.</div></div>`;
     return;
   }
@@ -136154,12 +136179,12 @@ function mgrBriefPaintChains(){
   const door = doorKey ? mgrBriefDoor(doorKey) : null;
   const fixNum = fixMove ? String(rows.indexOf(fixMove) + 1).padStart(2, '0') : null;
   const pills = chains.map(c=> `<button type="button" role="tab" class="mgr-b-pill${c === sel ? ' mgr-b-on' : ''}" aria-selected="${c === sel}" data-chain="${esc(c.id)}">
-      <span class="mgr-b-src mgr-b-src-${c.source}" aria-hidden="true"></span>${esc(c.short)}<span class="mgr-b-fig">${mgrBriefChainDepts(c)} depts</span></button>`).join('');
+      <span class="mgr-b-src mgr-b-src-${c.source}" aria-hidden="true"></span>${esc(c.short)} <span class="mgr-b-fig">${mgrBriefChainDepts(c)} depts</span></button>`).join('');
   const node = (n)=> `<span class="mgr-b-arr" aria-hidden="true">${mgrBriefIcon('arrow')}</span>
     <div class="mgr-b-node${hl(n.dept)}"><span>${mgrBriefDeptChip(n.dept, false)}</span><p class="mgr-b-node-t">${esc(n.text)}</p>
       <span class="mgr-b-node-f mgr-b-fig">${esc(n.figure)}</span>${n.tool ? `<small class="mgr-b-tool">from ${esc(n.tool)}</small>` : ''}</div>`;
   const srcLabel = sel.source === 'books' ? 'Linked in your books' : 'My reading';
-  wrap.innerHTML = `<div class="ow-pan mgr-b-pan">${head}<span class="mgr-b-ctabs" role="tablist" aria-label="Chains">${pills}</span></div>
+  wrap.innerHTML = `<div class="ow-pan">${head} <span class="mgr-b-ctabs" role="tablist" aria-label="Chains">${pills}</span></div>
     <div class="mgr-b-chain" role="tabpanel" aria-label="${esc(sel.title)}">
       <div class="mgr-b-node mgr-b-root${hl(sel.root.dept)}">
         <span class="mgr-b-micro">${srcLabel}${sel.source === 'reading' ? (sel.confidence ? ' · judged' : '') : ''}</span>
@@ -136230,7 +136255,9 @@ function mgrBriefPaintPlan(wire){
 /* Which row is open: the owner's choice, else the first move still open
    -- the plan exists to name the next thing to do. */
 let mgrBriefFirstOpen = null;
-function mgrBriefOpenId(){ return mgrBriefOpen === undefined ? mgrBriefFirstOpen : mgrBriefOpen; }
+function mgrBriefOpenId(){
+  return mgrBriefOpen === undefined ? mgrBriefFirstOpen : mgrBriefOpen;
+}
 function mgrBriefPlanHTML(plan, rows, foot, lead){
   const p = plan || {};
   const ctx = mgrBriefCtx || {};
@@ -136253,7 +136280,7 @@ function mgrBriefPlanHTML(plan, rows, foot, lead){
     v !== 'order' && !kinds.has(v) ? ' disabled' : ''}>${label}</button>`;
   const rowHTML = (m)=> mgrBriefDecisionRowHTML(m, ordered, String(m.id) === openId);
   const rest = list.rest.length ? `<p class="mgr-b-dc-more">${list.rest.length} move${list.rest.length === 1 ? '' : 's'} of other kinds of money, in the meeting’s order</p>${list.rest.map(rowHTML).join('')}` : '';
-  return `<div class="ow-pan mgr-b-pan mgr-b-dec">
+  return `<div class="ow-pan mgr-b-dec">
     <div class="ow-pan-h mgr-b-h"><span class="mgr-b-micro">Decisions</span><span class="mgr-b-t">What I’d do, in order</span>
       <span class="mgr-b-nt">${esc(note)}</span>
       <span class="mgr-b-sort" role="group" aria-label="Sort one kind of money">${sortBtn('order', 'in order')}${sortBtn('cash', 'by cash')}${sortBtn('profit', 'by profit')}${sortBtn('sales', 'by sales')}</span>
@@ -136287,7 +136314,7 @@ function mgrBriefDecisionRowHTML(m, ordered, isOpen){
   const c = m.conf || {};
   const confWord = c.pips == null ? 'not stated' : c.source === 'counted' ? c.basis : 'judged';
   const conf = c.pips == null ? `<span class="mgr-b-conf"><span class="mgr-b-cw">not stated</span></span>`
-    : `<span class="mgr-b-conf">${mgrBriefPipsHTML(c.pips, 'How sure: ' + c.pips + ' of 5, ' + confWord)}<span class="mgr-b-cw"><span class="mgr-b-fig">${c.pips}/5</span> · ${esc(confWord)}</span></span>`;
+    : `<span class="mgr-b-conf">${mgrBriefPipsHTML(c.pips, 'How sure: ' + c.pips + ' of 5, ' + confWord)} <span class="mgr-b-cw"><span class="mgr-b-fig">${c.pips}/5</span> · ${esc(confWord)}</span></span>`;
   let x = '';
   if(isOpen){
     /* THE EVIDENCE, the books' first: what has happened since, a chase's
@@ -136309,7 +136336,10 @@ function mgrBriefDecisionRowHTML(m, ordered, isOpen){
     if(waiting) ev.push('Waits on ' + blockerNum + ': ' + esc((blocker.body || {}).title || 'an earlier move'));
     if(b.unlocks) ev.push('Unlocks: ' + esc(b.unlocks));
     const theirs = (Array.isArray(b.evidence) ? b.evidence : []).map(e=> `<li class="mgr-b-ev mgr-b-ev-m"><span>${esc(e)} <span class="mgr-b-sm">— the meeting’s</span></span></li>`);
-    const mind = b.mind ? { text: b.mind, fired: false } : mgrBriefMindFor(r);
+    /* The meeting's own words when it gave them; either way, the books'
+       own trigger for this kind of move says when it has already fired. */
+    const trig = mgrBriefMindFor(r);
+    const mind = b.mind ? { text: b.mind, fired: !!(trig && trig.fired), firedText: trig ? trig.firedText : '' } : trig;
     x = `<div class="mgr-b-dc-x">
       <div><span class="mgr-b-micro">Why</span><p class="mgr-b-xt">${esc(b.why || 'The meeting gave no reason.')}</p></div>
       <div><span class="mgr-b-micro">Evidence</span>${ev.length || theirs.length ? `<ul class="mgr-b-evl">${ev.map(e=> `<li class="mgr-b-ev"><span>${e}</span></li>`).join('')}${theirs.join('')}</ul>`
@@ -136327,7 +136357,7 @@ function mgrBriefDecisionRowHTML(m, ordered, isOpen){
     <button type="button" class="mgr-b-dc-r" aria-expanded="${isOpen}" data-open="${esc(String(r.id))}">
       <span class="mgr-b-rk mgr-rv-n${m.n === 1 ? ' mgr-b-rk1' : ''}">${num}</span>
       <span class="mgr-b-dc-m"><span class="mgr-b-dc-t">${esc(b.title || '')}</span>
-        <span class="mgr-b-dc-s">${mgrBriefDeptChip(m.dept, false)}${also.length ? `<span>also moves ${esc(also.join(' · '))}</span>` : ''}${state}</span></span>
+        <span class="mgr-b-dc-s">${mgrBriefDeptChip(m.dept, false)} ${also.length ? `<span>also moves ${esc(also.join(' · '))}</span>` : ''}${state}</span></span>
       <span class="mgr-b-imp"><span class="mgr-b-imp-v mgr-b-fig ow-q-f" title="${esc(exact)}">${esc(value)}</span><span class="mgr-b-imp-k">${kindWord ? `<b class="mgr-b-kind">${esc(kindWord)}</b> · ` : ''}${esc(per)}</span></span>
       ${conf}
       ${mgrBriefIcon('caret', 'mgr-b-car')}
@@ -136387,7 +136417,7 @@ function mgrBriefPaintForesight(){
   };
   const notes = [M.unknownTerms > 0 ? `Supplier deadlines: terms not known for ${M.unknownTerms} supplier${M.unknownTerms === 1 ? '' : 's'} you owe.` : '',
     M.orderByMore > 0 ? `${M.orderByMore} more line${M.orderByMore === 1 ? '' : 's'} need ordering soon — What to buy has them all.` : ''].filter(Boolean);
-  wrap.innerHTML = `<div class="ow-pan mgr-b-pan mgr-b-fs">
+  wrap.innerHTML = `<div class="ow-pan">
     <div class="ow-pan-h mgr-b-h"><span class="mgr-b-micro">Foresight</span><span class="mgr-b-t">The next 30 days</span><span class="mgr-b-n">if nothing changes</span></div>
     <div class="mgr-b-lg"><span class="mgr-b-lgi"><i class="mgr-b-dot mgr-b-dot-risk"></i>risk</span><span class="mgr-b-lgi"><i class="mgr-b-dot mgr-b-dot-deadline"></i>deadline</span><span class="mgr-b-lgi"><i class="mgr-b-dot mgr-b-dot-expected"></i>expected</span><span class="mgr-b-lgi"><i class="mgr-b-dot mgr-b-dot-known"></i>known</span></div>
     ${items.length ? shown.map(row).join('') : '<p class="ow-empty">Nothing is dated in the next 30 days.</p>'}
@@ -136451,7 +136481,7 @@ function mgrBriefPaintMemory(){
       hr.notMeasurable ? `; ${hr.notMeasurable} could not be measured` : ''}.${misses.length ? ` Nothing followed, whenever done: ${misses.map(x=> esc(x.name) + ' (' + x.times + ' times advised)').join(', ')}.` : ''} Following is not proof the advice caused it.</span></p>`;
   } else if(hr && hr.error) hit = `<p class="mgr-b-hit"><span>The hit rate could not be read — ${esc(hr.error)}</span></p>`;
   else if(ctx.track && ctx.track.error) hit = `<p class="mgr-b-hit"><span>The track record could not be read — ${esc(ctx.track.error)}</span></p>`;
-  wrap.innerHTML = `<div class="ow-pan mgr-b-pan">
+  wrap.innerHTML = `<div class="ow-pan">
     <div class="ow-pan-h mgr-b-h"><span class="mgr-b-micro">Memory</span><span class="mgr-b-t">What I’ve learned about this shop</span><span class="mgr-b-n">evidence · how sure</span></div>
     ${rows || '<p class="ow-empty">Nothing repeats often enough in the books to call a pattern yet.</p>'}
     ${corr}${hit}
@@ -136477,7 +136507,7 @@ function mgrBriefPaintBlind(){
       ${door ? `<button type="button" class="btn btn-ghost ow-sm mgr-b-go"${door.view ? ` data-mgrgo="${esc(door.view)}"` : ` data-tab="${esc(door.tab)}"`} title="${esc(door.label)}">${esc(ACT[x.id] || door.label)}</button>` : '<span></span>'}
     </div>`;
   };
-  wrap.innerHTML = `<div class="ow-pan mgr-b-pan">
+  wrap.innerHTML = `<div class="ow-pan">
     <div class="ow-pan-h mgr-b-h"><span class="mgr-b-micro">Blind spots</span><span class="mgr-b-t">What I can’t see yet</span><span class="mgr-b-n">and what it costs my advice</span></div>
     ${all.length ? shown.map(row).join('') : '<p class="ow-empty">Nothing the advice leans on is missing from the books.</p>'}
     ${all.length > CAP ? `<button type="button" class="mgr-b-more" data-more="blind">${mgrBriefMoreBlind ? 'Show fewer' : 'Show ' + (all.length - CAP) + ' more'}</button>` : ''}

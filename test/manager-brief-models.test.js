@@ -34,7 +34,7 @@ const TODAY = '2026-10-07';
 const S = compileScope([
   ...['mgrBriefKind', 'mgrBriefKey', 'mgrBriefSubjectOf', 'mgrBriefSignals', 'mgrBriefPlanAdds', 'mgrBriefUpside', 'mgrBriefCashToFree',
     'mgrBriefHitRate', 'mgrBriefLinkedChains', 'mgrBriefReadingChains', 'mgrBriefChainDepts', 'mgrBriefDecisionList', 'mgrBriefMindTrigger',
-    'mgrBriefForesight', 'mgrBriefOrderBy', 'mgrBriefPatterns', 'mgrBriefBlindSpots', 'mgrBriefAskChips', 'mgrBriefDay', 'mgrBriefLastYear',
+    'mgrBriefForesight', 'mgrBriefOrderBy', 'mgrBriefPatterns', 'mgrBriefBlindSpots', 'mgrBriefAskChips', 'mgrBriefDay', 'mgrBriefLastYear', 'mgrBriefOwn',
     'mgrShortUGX', 'mgrPipsFromRate', 'chaseRate', 'anShiftDate', 'waWeekday', 'managerPips', 'mgrPossessive', 'mgrDept'].map(fn),
   ...['MGR_BRIEF_KINDS', 'MGR_BRIEF_ALERT', 'MGR_BRIEF_UNUSUAL_DEPT', 'MGR_BRIEF_FS_ORDER', 'MGR_BRIEF_MONTHS', 'MGR_DEPTS', 'MGR_KIND_DEPT',
     'TRACK_WINDOWED', 'MGR_WEEKDAYS'].map(decl),
@@ -277,7 +277,8 @@ const S = compileScope([
     supplierRisks: [{ label: 'Steel & Tube stops delivering — a bill reaches 90 days', date: '2026-10-23', amount: 5670120 }],
     offers: [{ name: 'Centenary', from: 'bank', amount: 10000000, rate: 22, termMonths: 12, expiresOn: '2026-10-18' }],
     targets: [{ to: '2026-10-11', label: 'Collect', aimText: '6m', nowText: '5.7m', dept: 'finance' }],
-    receipts: [{ date: '2026-10-10', label: 'Kato Construction Ltd — after a chase', amount: 1800000, source: 'paid within 3 days of a chase in 3 of 4' }],
+    receipts: [{ date: '2026-10-10', label: 'Kato Construction Ltd — after a chase', amount: 1800000, source: 'paid within 3 days of a chase in 3 of 4' },
+      { date: '2026-11-30', label: 'Wasswa Roofing Contractors — after a chase', amount: 1, source: 'outside the window' }],
     lastYear: [{ date: '2026-10-14', dept: 'sales', text: 'Last year these weeks: Roofing sold 31% above its usual', tag: 'last year’s fact' }],
   });
   eq(items.map((x) => x.date + ' ' + x.kind), [
@@ -290,6 +291,7 @@ const S = compileScope([
     && items[2].tag === 'Kasubi takes 1 day', 'the last day to order, with the lead time it was counted from');
   t.check(items[5].text === 'Hoop iron runs out' && items[5].tag === 'lead not measured', 'and "lead not measured" where it is not');
   t.check(items[3].text === 'Kato Construction Ltd’s 1.8m expected' && /3 of 4/.test(items[3].tag), 'an expected receipt carries its k of n');
+  t.check(items[7].text === 'Centenary’s 10m offer expires' && /22% over 12 months/.test(items[7].tag), 'an offer\'s expiry, from the owner\'s own record');
   t.check(items[9].text === 'Wages · 2 staff · 675k out' && items[9].dept === 'people', 'two wages on one payday are one line: 400k + 275k');
   t.check(items[10].kind === 'known' && /above your 3m floor/.test(items[10].tag), 'the lowest day, against the floor it was judged by');
   t.check(items[0].day === 7 && items[0].dow === 'Wed' && items[8].dow === 'Fri', 'each with its day number and weekday');
@@ -361,7 +363,7 @@ const S = compileScope([
 /* ---------- 14. the ask card's questions (A1.4) ----------------------------- */
 {
   eq(S.mgrBriefAskChips({ cashTight: true, profitUp: true, offer: { name: 'Centenary', amount: 10000000 }, first: 'Kato Construction', margin: 9.1, aim: 12 }),
-    ['Why is cash tight if profit is up?', 'What happens if I take Centenary\'s 10m?', 'Why is Kato Construction first?'],
+    ['Why is cash tight if profit is up?', 'What happens if I take Centenary’s 10m?', 'Why is Kato Construction first?'],
     'only questions the books can answer today, three at most');
   eq(S.mgrBriefAskChips({ cashTight: false, first: null, margin: 13, aim: 12 }), [], 'and none when the books give no reason to ask');
 }
