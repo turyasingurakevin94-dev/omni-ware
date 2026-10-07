@@ -131303,9 +131303,24 @@ const MANAGER_OBJECTIVES = {
    (collections, profit, sales); a level is read as it stands today
    (debtors, dead stock, cash), so its baseline matters -- 8,000,000 of
    debt coming down to 6,500,000 against an aim of 5,000,000 is half the
-   distance, not 130% of the target. */
+   distance, not 130% of the target.
+
+   unit is what the figure is counted in -- ugx, pct (percentage points),
+   days or count -- so nothing that draws a target has to assume money.
+   A level also carries at(day): where it stood at the END of that day,
+   from the books' own dated records (the balance sheet's readers, the
+   debtor and stock-days definitions of Q17/Q18), so a target that has
+   finished is judged where it stood on its last day and never on
+   today's figure, and its past periods can be read for the composer's
+   safe / stretch / bold. at() answers null where the books cannot say
+   (no sales in the window to take a margin of), never a zero. A level
+   with window: 30 is a month's figure read over the 30 days to the day
+   (net profit a month, margin, WhatsApp orders a month, the lowest the
+   cash stood in a month). basis says, in the owner's words, how it is
+   read. */
 const MANAGER_METRICS = {
-  collections: { label: 'Collect', unit: 'money', kind: 'flow', direction: 'up',
+  collections: { label: 'Collect', unit: 'ugx', kind: 'flow', direction: 'up',
+    basis: 'debt payments received, day by day, as the review counts them',
     /* Walks real days, so it must be handed real days: a row with no
        period would otherwise step from nothing and never arrive. Every
        adopted target carries both dates; this answers 0 for anything
@@ -131315,16 +131330,64 @@ const MANAGER_METRICS = {
       let n = 0; const stop = to < todayISO() ? to : todayISO();
       for(let d = from; d <= stop; d = anShiftDate(d, 1)) n += debtCollectionsOn(d).total;
       return n; } },
-  gross_profit: { label: 'Gross profit', unit: 'money', kind: 'flow', direction: 'up',
+  gross_profit: { label: 'Gross profit', unit: 'ugx', kind: 'flow', direction: 'up',
+    basis: 'goods sold less what they cost, on the invoices of the period',
     measure: (from, to)=> anOverallTotals(anInvoicesInRange(from, to)).profit },
-  sales: { label: 'Sales', unit: 'money', kind: 'flow', direction: 'up',
+  sales: { label: 'Sales', unit: 'ugx', kind: 'flow', direction: 'up',
+    basis: 'goods invoiced in the period',
     measure: (from, to)=> anOverallTotals(anInvoicesInRange(from, to)).sales },
-  debtors_total: { label: 'Money owed to you', unit: 'money', kind: 'level', direction: 'down',
-    measure: ()=> (data.customers||[]).reduce((n, c)=> n + (Number(c.debt) > 0.5 ? Number(c.debt) : 0), 0) },
-  dead_stock_value: { label: 'Dead stock', unit: 'money', kind: 'level', direction: 'down',
-    measure: ()=> dashInventoryHealth().deadValue },
-  cash_on_hand: { label: 'Cash in hand', unit: 'money', kind: 'level', direction: 'up',
-    measure: ()=> cashOnHandByAccount().total },
+  debtors_total: { label: 'Money owed to you', unit: 'ugx', kind: 'level', direction: 'down',
+    basis: 'what customers owe; a past day from their own dated ledgers',
+    measure: ()=> (data.customers||[]).reduce((n, c)=> n + (Number(c.debt) > 0.5 ? Number(c.debt) : 0), 0),
+    at: (d)=> d >= todayISO() ? MANAGER_METRICS.debtors_total.measure() : receivablesAsAt(d) },
+  dead_stock_value: { label: 'Dead stock', unit: 'ugx', kind: 'level', direction: 'down',
+    basis: 'stock with no sale in the quiet window; a past day valued at today\'s cost',
+    measure: ()=> dashInventoryHealth().deadValue,
+    at: (d)=> d >= todayISO() ? MANAGER_METRICS.dead_stock_value.measure() : mgrTgDeadStockAt(d) },
+  cash_on_hand: { label: 'Cash in hand', unit: 'ugx', kind: 'level', direction: 'up',
+    basis: 'cash, mobile money and bank together, as the cash book holds them',
+    measure: ()=> cashOnHandByAccount().total,
+    at: (d)=> d >= todayISO() ? MANAGER_METRICS.cash_on_hand.measure() : shCashAt(d) },
+  net_profit: { label: 'Net profit a month', unit: 'ugx', kind: 'level', direction: 'up', window: 30,
+    basis: 'the Statements\' net profit for the 30 days to the day',
+    measure: ()=> MANAGER_METRICS.net_profit.at(todayISO()),
+    at: (d)=> incomeStatement(anShiftDate(d, -29), d).netProfit },
+  margin_pct: { label: 'Gross margin', unit: 'pct', kind: 'level', direction: 'up', window: 30,
+    basis: 'profit as a share of goods sold over the 30 days to the day, the health check\'s reading',
+    round: (v)=> Math.round(v * 10) / 10,
+    measure: ()=> MANAGER_METRICS.margin_pct.at(todayISO()),
+    at: (d)=>{ const t = anOverallTotals(anInvoicesInRange(anShiftDate(d, -29), d));
+      return t.sales > 0 ? t.profit / t.sales * 100 : null; } },
+  debtor_days: { label: 'Debtor days', unit: 'days', kind: 'level', direction: 'down',
+    basis: 'what customers owe over credit sales a day across 90 days (Q18)',
+    measure: ()=> mgrDebtorDays(todayISO()).days,
+    at: (d)=>{
+      if(d >= todayISO()) return MANAGER_METRICS.debtor_days.measure();
+      const r = mgrDebtorDays(d);
+      return r.creditSales > 0 ? receivablesAsAt(d) / (r.creditSales / r.windowDays) : null; } },
+  stock_days: { label: 'Stock days', unit: 'days', kind: 'level', direction: 'down',
+    basis: 'shelf value over what the shelf sold a day at cost, the Inventory screen\'s (Q17)',
+    measure: ()=> mgrDaysOfStock(todayISO()).days,
+    at: (d)=>{
+      if(d >= todayISO()) return MANAGER_METRICS.stock_days.measure();
+      const r = mgrDaysOfStock(d);
+      return r.cogsPerDay > 0 ? stockValueAsAt(d).value / r.cogsPerDay : null; } },
+  lowest_cash: { label: 'Lowest cash in a month', unit: 'ugx', kind: 'level', direction: 'up', window: 30,
+    basis: 'the lowest cash, mobile money and bank stood at the end of a day, over the 30 days to the day',
+    measure: ()=> MANAGER_METRICS.lowest_cash.at(todayISO()),
+    at: (d)=> mgrTgCashLow(d) },
+  quotes_won_pct: { label: 'Quotes won', unit: 'pct', kind: 'level', direction: 'up', window: 30,
+    basis: 'quotes made 30 to 60 days before, invoiced within 30 days, the growth reading\'s rule',
+    round: (v)=> Math.round(v * 10) / 10,
+    measure: ()=> MANAGER_METRICS.quotes_won_pct.at(todayISO()),
+    at: (d)=>{ const r = managerGrowthBaseline(d >= todayISO() ? Date.now() : Date.parse(d + 'T23:59:59Z')).quotes.rate;
+      return r == null ? null : r * 100; } },
+  wa_orders: { label: 'WhatsApp orders a month', unit: 'count', kind: 'level', direction: 'up', window: 30,
+    basis: 'orders born in a WhatsApp chat, not voided, dated in the 30 days to the day',
+    measure: ()=> MANAGER_METRICS.wa_orders.at(todayISO()),
+    at: (d)=>{ const from = anShiftDate(d, -29);
+      return (data.savedQuotes||[]).filter(q=> q && q.originWa && !q.voided
+        && String(q.date||'').slice(0, 10) >= from && String(q.date||'').slice(0, 10) <= d).length; } },
 };
 
 /* THE SCOREBOARD IS DERIVED, NEVER STORED -- the same law as a move's
@@ -131340,9 +131403,22 @@ function managerScoreProgress(row){
   const to = String(b.to || '');
   const aim = Number(b.aim) || 0;
   const baseline = Number(b.baseline) || 0;
-  const actual = m.measure(from, to);
   const today = todayISO();
+  /* A LEVEL THAT HAS FINISHED is judged where it stood on its last day,
+     read from the books' dated records -- never on today's figure, which
+     is a different day's story (a debt book that grew after a target met
+     would otherwise turn it into a miss months later). */
+  const ended = !!to && to < today;
+  const read = (ended && m.kind === 'level' && typeof m.at === 'function') ? m.at(to) : m.measure(from, to);
+  /* A reading the books cannot give (a margin with nothing sold) is not
+     known, never zero: no progress, no pace, no verdict. */
+  const actual = read == null || !Number.isFinite(Number(read)) ? null : Number(read);
+  const rnd = (v)=> m.round ? m.round(v) : Math.round(v);
   const daysLeft = to ? Math.max(0, Math.round((new Date(to + 'T00:00:00Z') - new Date(today + 'T00:00:00Z')) / 86400000)) : 0;
+  const owner = b.owner ? { owner: String(b.owner) } : {};
+  if(actual == null) return { metric: b.metric, label: m.label, unit: m.unit, aim, baseline, actual: null,
+    direction: m.direction, measure_kind: m.kind, from, to, days_left: daysLeft,
+    finished: ended, met: null, pct: null, pace: null, why: b.why || '', ...owner };
   /* A flow starts at nothing and climbs to the aim. A level starts where
      it was and has to travel to the aim, so the distance is what counts
      -- and an aim already met before the week began is 100%, not more. */
@@ -131378,13 +131454,35 @@ function managerScoreProgress(row){
       ? actual / share
       : baseline + (actual - baseline) / share;
     pace = { elapsed_days: elapsedDays, total_days: totalDays,
-      expected: Math.round(expected), on_course: onCourse,
-      behind_by: onCourse ? 0 : Math.round(Math.abs(expected - actual)),
-      at_this_rate: Math.round(projected) };
+      expected: rnd(expected), on_course: onCourse,
+      behind_by: onCourse ? 0 : rnd(Math.abs(expected - actual)),
+      at_this_rate: rnd(projected) };
   }
-  return { metric: b.metric, label: m.label, aim, baseline, actual: Math.round(actual),
+  /* THE CHECKPOINTS ON ITS ROAD, for a target still running: every
+     Monday from its start to its last day, and the last day itself, each
+     with where the straight road from where it started to the aim has it
+     by the END of that day. The owner's own target carries the list it
+     was set with (body.checkpoints); a weekly one has it derived the
+     same way. The Brief's foresight reads these. */
+  let checkpoints;
+  if(!ended && totalDays >= 1 && /^\d{4}-\d{2}-\d{2}$/.test(from) && /^\d{4}-\d{2}-\d{2}$/.test(to)){
+    const start = m.kind === 'flow' ? 0 : baseline;
+    const roadAt = (iso)=> rnd(start + (aim - start) * ((Math.round((dayNum(iso) - dayNum(from)) / 86400000) + 1) / totalDays));
+    checkpoints = Array.isArray(b.checkpoints) && b.checkpoints.length
+      ? b.checkpoints.filter(c=> c && /^\d{4}-\d{2}-\d{2}$/.test(String(c.on)) && Number.isFinite(Number(c.value)))
+          .map(c=> ({ on: String(c.on), value: Number(c.value) }))
+      : [];
+    if(!checkpoints.length){
+      for(let i = 0; i < totalDays; i++){
+        const d = new Date(dayNum(from) + i * 86400000).toISOString().slice(0, 10);
+        if(d === to || new Date(d + 'T00:00:00Z').getUTCDay() === 1) checkpoints.push({ on: d, value: roadAt(d) });
+      }
+    }
+  }
+  return { metric: b.metric, label: m.label, unit: m.unit, aim, baseline, actual: rnd(actual),
     direction: m.direction, measure_kind: m.kind, from, to, days_left: daysLeft,
-    finished: !!to && to < today, met, pct, pace, why: b.why || '' };
+    finished: ended, met, pct, pace, why: b.why || '', ...owner,
+    ...(checkpoints ? { checkpoints } : {}) };
 }
 
 /* WHAT A PLAY TREATS. A strategy loose in the world is a listicle; one
@@ -132252,13 +132350,81 @@ async function managerAdoptTarget(rowId, dupIds){
   const to = anShiftDate(from, 6);
   body.from = from;
   body.to = to;
-  body.baseline = apRound(m.kind === 'level' ? m.measure(from, to) : m.measure(anShiftDate(from, -7), anShiftDate(from, -1)));
+  const base = m.kind === 'level' ? m.measure(from, to) : m.measure(anShiftDate(from, -7), anShiftDate(from, -1));
+  /* A level the books cannot read today has no starting point, and a
+     target without one would read the whole journey as this week's. */
+  if(base == null || !Number.isFinite(Number(base))){ toast(m.label + ' cannot be read from your books today, so it cannot be taken on yet', 8000); return; }
+  body.baseline = m.round ? m.round(Number(base)) : apRound(base);
   const up = await sb.from('manager_notes').update({ status: 'open', body })
     .eq('shop_id', currentShopId).eq('id', rowId);
   if(up.error){ toast('Could not adopt that target — ' + up.error.message, 8000); return; }
   await managerRetireDuplicates(dupIds);
   toast(m.label + ' target adopted — the scoreboard reads it from your books from now on');
   renderManager();
+}
+/* THE OWNER'S OWN TARGET (Q16). A meeting's proposal is fixed at one
+   week by managerAdoptTarget; a target the owner composes carries the
+   deadline they chose and the person who owns it, by name. Written in
+   the same shape the scoreboard reads (metric, aim, from, to, baseline),
+   plus what only the owner's target has:
+     owner        'you', or the id of a member of staff on file
+     unit         the metric's unit, so a reader never assumes money
+     source       'owner'
+     parts        the path it was set with, in the target's unit: what
+                  the books already do at their recent rate (adds false)
+                  and what each linked move adds by the Manager's own
+                  sizing (adds true)
+     checkpoints  [{ on, value }] every Monday on the road and the last
+                  day, where the straight road from today's reading to
+                  the aim has it by the end of that day
+     set          what the composer showed when it was set: the choice
+                  (safe / stretch / bold), the percentiles it came from,
+                  and the odds as k of n past periods (null under 6)
+   The baseline is today's reading for a level, and the figure of the
+   last period of the same length for a flow. A level the books cannot
+   read today, a deadline that is not after today, or an owner who is
+   not on file is refused, and the refusal says why. One tap, one row:
+   nothing here runs by itself. */
+async function managerSetOwnerTarget(draft){
+  const d = draft || {};
+  const m = MANAGER_METRICS[d.metric];
+  const no = (why)=>{ toast(why, 8000); return { ok: false, error: why }; };
+  if(!m) return no('That is not something this app can measure, so it cannot be a target');
+  const from = todayISO();
+  const to = String(d.to || '');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(to) || to <= from) return no('A target needs a deadline after today');
+  const aim = Number(d.aim);
+  if(d.aim == null || !Number.isFinite(aim)) return no('A target needs an aim');
+  const rnd = (v)=> m.round ? m.round(Number(v)) : Math.round(Number(v));
+  const days = Math.round((Date.parse(to + 'T00:00:00Z') - Date.parse(from + 'T00:00:00Z')) / 86400000) + 1;
+  const base = m.kind === 'level' ? m.measure(from, to) : m.measure(anShiftDate(from, -days), anShiftDate(from, -1));
+  if(base == null || !Number.isFinite(Number(base))) return no(m.label + ' cannot be read from your books today, so it cannot be a target yet');
+  const owner = String(d.owner || 'you');
+  if(owner !== 'you' && !(data.staff || []).some(s=> String(s.id) === owner)) return no('That owner is not on your staff list');
+  const start = m.kind === 'flow' ? 0 : Number(base);
+  const checkpoints = [];
+  for(let i = 0; i < days; i++){
+    const on = anShiftDate(from, i);
+    if(on === to || new Date(on + 'T00:00:00Z').getUTCDay() === 1)
+      checkpoints.push({ on, value: rnd(start + (aim - start) * ((i + 1) / days)) });
+  }
+  const parts = (Array.isArray(d.parts) ? d.parts : []).slice(0, 4).map(p=> ({
+    label: String((p && p.label) || '').slice(0, 80), amount: rnd(Number(p && p.amount) || 0), adds: !!(p && p.adds === true) }))
+    .filter(p=> p.label);
+  const num = (v)=> v != null && Number.isFinite(Number(v)) ? rnd(v) : null;
+  const set = d.set && typeof d.set === 'object' ? {
+    choice: ['safe', 'stretch', 'bold'].includes(d.set.choice) ? d.set.choice : null,
+    p50: num(d.set.p50), p75: num(d.set.p75), p90: num(d.set.p90),
+    periods: Math.max(0, Math.round(Number(d.set.periods) || 0)),
+    odds: d.set.odds && Number(d.set.odds.n) >= 6 ? { k: Math.round(Number(d.set.odds.k) || 0), n: Math.round(Number(d.set.odds.n)) } : null,
+  } : null;
+  const body = { metric: String(d.metric), aim: rnd(aim), from, to, baseline: rnd(base), unit: m.unit,
+    owner, source: 'owner', why: String(d.why || '').slice(0, 200), parts, checkpoints, ...(set ? { set } : {}) };
+  const r = await mgrNoteInsert('target', body, 'open');
+  if(!r.ok) return r;
+  toast(m.label + ' target set — the Targets section reads it from your books from now on');
+  renderManager();
+  return r;
 }
 async function managerDeclineTarget(rowId, dupIds){
   if(!managerNotesTable || rowId == null) return;
@@ -132275,12 +132441,17 @@ async function managerDeclineTarget(rowId, dupIds){
    another. */
 async function managerScoreboard(){
   if(!managerNotesTable) return { targets: [] };
+  /* EVERY TARGET EVER TAKEN ON, not the last twelve rows and not only
+     the last week: the finished ones are the shop's own history -- met
+     or missed, by how much -- and the Targets section, the account and
+     the verdict strip all count from this one read, so they can never
+     disagree. targets holds the running ones and the finished ones
+     alike (x.finished says which); the bound is a guard, not a window. */
   const r = await sb.from('manager_notes').select('id, date, body, status')
     .eq('shop_id', currentShopId).eq('kind', 'target')
-    .order('id', { ascending: false }).limit(12);
+    .order('id', { ascending: false }).limit(500);
   if(r.error) return { targets: [], error: r.error.message };
-  const cutoff = anShiftDate(todayISO(), -7);
-  const open = (r.data||[]).filter(x=> x.status === 'open' && String((x.body||{}).to||'') >= cutoff)
+  const open = (r.data||[]).filter(x=> x.status === 'open')
     .map(x=> ({ id: x.id, ...managerScoreProgress(x) })).filter(x=> x.metric);
   /* ONE PROPOSAL PER MEASURE. Proposals written before the duplicate
      guard (0097) could stand side by side -- "Gross profit 1,400,000
@@ -132288,7 +132459,7 @@ async function managerScoreboard(){
      for its measure; the older copies ride along as dupIds, so taking
      one on or setting it aside retires them with it. A measure that is
      already running is not proposed again. */
-  const running = new Set(open.map(x=> x.metric));
+  const running = new Set(open.filter(x=> !x.finished).map(x=> x.metric));
   const byMetric = new Map();
   (r.data||[]).filter(x=> x.status === 'proposed').forEach(x=>{
     const metric = (x.body||{}).metric;
@@ -153149,8 +153320,17 @@ const ASSISTANT_TOOLS = {
           at_stake_30d: apRound(r.atStake), seen_days_ago: r.daysOld }))
       : [];
     /* Where the shop stands against what this manager itself said it
-       would do -- derived now, from the books, every time. */
-    const score = await managerScoreboard();
+       would do -- derived now, from the books, every time. The
+       scoreboard now reads every target ever taken on; the meeting is
+       handed what it always was -- the running ones and those that
+       finished in the last week -- without the checkpoint lists, which
+       are the screen's; and the record of the rest as a count. */
+    const scoreAll = await managerScoreboard();
+    const weekAgo = anShiftDate(todayISO(), -7);
+    const finishedAll = (scoreAll.targets || []).filter(x=> x.finished && x.met != null);
+    const score = { ...scoreAll, targets: (scoreAll.targets || [])
+      .filter(x=> !x.finished || String(x.to || '') >= weekAgo)
+      .map(x=>{ const { checkpoints, ...rest } = x; return rest; }) };
     /* What the shop learned last week, so today's plan can be held
        against it instead of starting over. */
     const lastReview = managerReviewBrief((await managerRecentReviews(1))[0]);
@@ -153229,7 +153409,7 @@ const ASSISTANT_TOOLS = {
     const worth = [];
     /* A target behind its own pace, with how far. One on course needs
        no sentence -- that is the whole point of a pace line. */
-    score.targets.filter(x=> x.pace && x.pace.on_course === false).slice(0, 3).forEach(x=>{
+    score.targets.filter(x=> !x.finished && x.pace && x.pace.on_course === false).slice(0, 3).forEach(x=>{
       worth.push({ kind: 'target_behind', metric: x.metric, label: x.label, aim: x.aim,
         stands_at: x.actual, behind_by: x.pace.behind_by, days_left: x.days_left,
         at_this_rate: x.pace.at_this_rate });
@@ -153441,6 +153621,7 @@ const ASSISTANT_TOOLS = {
       ...(held.length ? { holds_you_placed: held } : {}),
       ...(lastReview ? { last_review: lastReview } : {}),
       ...(score.targets.length ? { scoreboard: score.targets.slice(0, 6) } : {}),
+      ...(finishedAll.length ? { targets_finished: { met: finishedAll.filter(x=> x.met).length, of: finishedAll.length } } : {}),
       ...((score.proposed||[]).length ? { targets_awaiting_your_approval: score.proposed.slice(0, 4) } : {}),
       ...(answered.length ? { answered_questions: answered } : {}),
       ...(open.length ? { open_questions: open } : {}),
