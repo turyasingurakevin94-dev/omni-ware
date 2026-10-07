@@ -71,7 +71,7 @@ function scope(data, over) {
   };
   return compileScope([
     block,
-    ['mgrDept', 'mgrPossessive', 'mgrShortUGX', 'mgrNum', 'managerPips', 'stockKey', 'daysSinceDate', 'fmtDayMonth',
+    ['mgrDept', 'mgrPossessive', 'mgrShortUGX', 'mgrNum', 'managerPips', 'mgrPipsFromAge', 'stockKey', 'daysSinceDate', 'fmtDayMonth',
       'anShiftDate', 'waComposeUrl', 'pinDistanceKm', 'purchaseInvoiceNumberLabel', 'productVariantLabel', 'variantLabel']
       .map((n) => extractFunction(src, n, 'index.html')).join('\n'),
     ['MGR_DEPTS', 'MGR_WHOLE_SHOP', 'MANAGER_ASK_PLACES'].map((n) => extractDeclaration(src, n, 'index.html')).join('\n'),
@@ -79,7 +79,8 @@ function scope(data, over) {
   ], env, ['mgrNavCountAsk', 'mgrAskPlace', 'mgrAskDeptOf', 'mgrAskStake', 'mgrAskKnown', 'mgrAskSure', 'mgrAskChoices',
     'mgrAskDelegate', 'mgrAskTermsAsks', 'mgrAskTermsEffect', 'mgrAskTermsClean', 'mgrAskTermsWords', 'mgrAskItem',
     'mgrAskModel', 'mgrAskHeadline', 'mgrAskRoute', 'mgrAskMonth', 'mgrAskHistory', 'mgrAskRangeOf', 'mgrAskScale',
-    'mgrAskMessage', 'mgrAsksHTML', 'mgrAskCardHTML', 'mgrAskWriteTerms', 'mgrAskAnswerTerms', 'mgrAskKeep', '__kept', '__sent']);
+    'mgrAskMessage', 'mgrAsksHTML', 'mgrAskCardHTML', 'mgrAskWriteTerms', 'mgrAskAnswerTerms', 'mgrAskKeep', '__kept', '__sent',
+    'mgrAskRiding', 'mgrAskStakeKind', 'mgrAskPlanPrices', 'mgrAskRemindDays', 'mgrAskRemindLabel', 'mgrAskRemind', 'mgrAskSaid']);
 }
 const STAFF = [
   { id: 'ST001', name: 'Joan Nakato', phone: '0700 555 111' },
@@ -108,6 +109,8 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
     '11 open in the journal + 3 supplier terms the books cannot supply = 14');
   eq(S.mgrNavCountAsk({ openAsks: 0, askTerms: 0 }), { n: 0, note: null }, 'none is a counted zero, with no line');
   eq(S.mgrNavCountAsk({ openAsks: 1 }), { n: 1, note: '<b>1 question</b> only you can find out' }, 'one is one question');
+  eq(S.mgrNavCountAsk({ openAsks: 4, askTerms: 0, askDue: 2 }), { n: 4, note: '<b>4 questions</b> only you can find out · <b>2 reminders</b> due' },
+    'a reminder the owner set that has come round is said in the line');
 }
 
 /* ---------- 2. where the answer is found ---------- */
@@ -148,7 +151,11 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
     'a price ask: 40 × 3,000 = 120,000 a month, with its working');
   eq(st({ productId: 'P2', rival: 'Mengo' }), [84000, 'earned in 30 days', 'what the line earned in 30 days, with no rival price on file'],
     'a line nobody has checked: what it earned');
-  eq(st({ productId: 'P3', rival: 'Mengo' }), [5000, 'earned in 30 days', 'what the line earned in 30 days'], 'else the sales reading, rounded');
+  /* WAS: else the sales reading -- the line's whole 30-day profit, 5,000.
+     NOW: not sized. The market reading found nothing at stake on the
+     side P3 sells, and P3 has a rival price on file, so its whole
+     month's profit is not what the answer decides (review: Simba). */
+  eq(st({ productId: 'P3', rival: 'Mengo' }), null, 'a checked line with nothing at stake on its side is not sized — never its whole month\'s profit');
   eq(st({ productId: 'P4', rival: 'Mengo' }), null, 'nothing sells it: not sized — null, never 0');
   eq(st({ supplierId: 'S1' }), [500000, 'owed', 'owed to Roto Hardware on 2 open bills'], 'a supplier: 300,000 + 200,000 owed');
   eq(st({ supplierId: 'S2' }), [100000, 'to buy', '2 lines on the buy plan from Cash Co'], 'nothing owed: the buy plan, 70,000 + 30,000');
@@ -162,12 +169,18 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
 {
   const S = scope({ ...book(), prices: [{ supplierId: 'S1', productId: 'P2', variantIdx: null, date: '2026-09-30' },
     { supplierId: 'S1', productId: 'P3', variantIdx: null, date: '', lastAskedAt: '2026-10-05T09:00:00Z' }] }, {
-    rivalPriceLatest: () => [{ rival: 'Mengo', daysOld: 12 }, { rival: 'mengo', daysOld: 3 }, { rival: 'Other', daysOld: 1 }],
+    rivalPriceLatest: () => [{ rival: 'Mengo', side: 'wholesale', daysOld: 20 }, { rival: 'mengo', side: 'wholesale', daysOld: 12 },
+      { rival: 'mengo', side: 'retail', daysOld: 3 }, { rival: 'Other', side: 'retail', daysOld: 1 }],
     invCountRecords: () => [{ key: 'P1', date: '2026-10-03' }],
   });
   const k = (b, asked) => { const pl = S.mgrAskPlace(b); const pr = b.productId && b.rival ? { productId: b.productId, variantIdx: null, rival: b.rival } : null;
     return S.mgrAskKnown(b, pl, pr, asked, TODAY).text; };
-  eq(k({ productId: 'P1', rival: 'Mengo ' }), 'their price is 3 days old', 'the asked rival\'s freshest price, whatever the case of its name');
+  /* WAS: the asked rival's freshest sighting on either side (3 days, a
+     retail one). NOW: their freshest PACK price -- 12 days -- the side the
+     scale draws and an answer is filed on; the fresher retail one is a
+     different price and does not lend it its age. */
+  eq(k({ productId: 'P1', rival: 'Mengo ' }), 'their price is 12 days old', 'the asked rival\'s freshest pack price, whatever the case of its name — not their fresher retail one');
+  eq(k({ productId: 'P1', rival: 'Other' }), 'only a retail price of theirs, 1 day old', 'a rival with only a retail price on file says so');
   eq(k({ productId: 'P1', rival: 'Nyanzi' }), 'no price of theirs on file', 'a rival never seen says so');
   eq(k({ place: { kind: 'supplier', id: 'S1' }, productId: 'P2' }), 'their price is 7 days old', 'the supplier\'s registry price: 30 Sep to 7 Oct = 7 days');
   eq(k({ place: { kind: 'supplier', id: 'S1' }, productId: 'P3' }), 'last asked 2 days ago', 'no dated price: when it was last asked for (5 Oct)');
@@ -180,12 +193,28 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
 
 /* ---------- 5. how sure, and what each answer would change ---------- */
 {
-  const S = scope(book(), { mgrConfidence: (m) => m.mkind === 'price' ? { pips: 3, source: 'counted', basis: 'from a rival price 3 days old' }
-    : { pips: null, source: null, basis: null } });
+  let costPips = 4;
+  const S = scope(book(), {
+    /* Mengo's pack price is 40 days old (31–60 days: 3 pips); Kikuubo has
+       only a retail one; another shop's fresh price must not count. */
+    rivalPriceLatest: () => [{ rival: 'Mengo', side: 'wholesale', daysOld: 40 }, { rival: 'Kikuubo', side: 'retail', daysOld: 2 },
+      { rival: 'Fresh Shop', side: 'wholesale', daysOld: 1 }],
+    mgrConfidence: (m) => m.mkind === 'price'
+      ? { pips: 5, source: 'counted', basis: 'from a rival price seen 1 day old', evidence: [{ what: 'rival', pips: 5, basis: 'from a rival price 1 day old' },
+        { what: 'cost', pips: costPips, basis: 'cost estimated for 30% of 30 days\' units' }] }
+      : { pips: 5, source: 'counted', basis: 'from 11 deliveries', evidence: [{ what: 'deliveries', pips: 5 }] } });
   const sure = (b) => { const pl = S.mgrAskPlace(b); const pr = b.productId && b.rival ? { productId: b.productId, variantIdx: null, rival: b.rival } : null;
     const x = S.mgrAskSure(b, pl, pr); return [x.pips, x.source, x.basis]; };
   eq(sure({ confidence: 4, productId: 'P1', rival: 'Mengo' }), [4, 'judged', 'judged'], 'the meeting\'s 1-5, labelled judged');
-  eq(sure({ productId: 'P1', rival: 'Mengo' }), [3, 'counted', 'from a rival price 3 days old'], 'else counted, saying what it counted');
+  /* WAS: counted from the freshest sighting of ANY shop (mgrConfidence's
+     1-day-old price, 5 pips), and a supplier ask from its deliveries.
+     NOW: the asked rival's own pack price (40 days: 3 pips) against the
+     costing (4 pips) -- the weaker, 3; with the costing at 2, it is 2. */
+  eq(sure({ productId: 'P1', rival: 'Mengo' }), [3, 'counted', 'from their pack price 40 days old'], 'else counted from the asked rival\'s own pack price, saying so');
+  costPips = 2;
+  eq(sure({ productId: 'P1', rival: 'Mengo' }), [2, 'counted', 'cost estimated for 30% of 30 days\' units'], 'held against the costing, the weaker of the two');
+  eq(sure({ productId: 'P1', rival: 'Kikuubo' }), [null, null, 'not known'], 'a rival with no pack price on file: not known');
+  eq(sure({ supplierId: 'S1' }), [null, null, 'not known'], 'a supplier question: past deliveries say nothing about the answer, so not known');
   eq(sure({}), [null, null, 'not known'], 'else not known — never a made-up middle');
   const ch = S.mgrAskChoices({ choices: ['A', 'B', 'C', 'D'], choiceEffects: [{ label: 'A', effect: 'Hold the price.', confidenceAfter: 2 },
     { label: 'Z', effect: 'misaligned' }, { label: 'C', confidenceAfter: 5 }] }, 4);
@@ -202,7 +231,31 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
   eq(d({ delegate: { staffId: 'ST003', name: 'Peter' } }), ['Peter', null, 'no phone number for Peter on file'], 'no number: it says why it cannot send');
   eq(d({ delegate: { name: 'Kizza' } }), ['Kizza', null, 'Kizza is not on your staff list, so there is no number to send to'],
     'a name the books do not hold is a name and nothing more');
-  eq(d({ place: { kind: 'staff', staffId: 'ST001' } }), ['Joan', '0700 555 111', null], 'a question for a member of staff can be sent to them');
+  /* WAS: a question about a member of staff was sent to them ("Send to
+     Peter"). NOW: as the canvas draws it ("Ask Peter" · "Remind me
+     Friday") the owner asks them in person -- no send; a reminder. */
+  eq(d({ place: { kind: 'staff', staffId: 'ST001' } }), null, 'a question about a member of staff with nobody sent is the owner\'s to ask in person');
+  const staffQ = S.mgrAskItem({ id: 7, date: TODAY, body: { question: 'Would Peter work Saturdays?', place: { kind: 'staff', staffId: 'ST003' } } }, TODAY);
+  const youQ = S.mgrAskItem({ id: 8, date: TODAY, body: { question: 'Is the roof sound?', remindOn: '2026-10-09' } }, TODAY);
+  const sentQ = S.mgrAskItem({ id: 9, date: TODAY, body: { question: 'Count it?', place: { kind: 'staff', staffId: 'ST003' }, delegate: { staffId: 'ST001' } } }, TODAY);
+  eq([staffQ.remind, youQ.remind, sentQ.remind], [{ on: null }, { on: '2026-10-09' }, null], 'only-you and in-person questions carry a reminder; one sent to somebody does not');
+  /* 7 Oct 2026 is a Wednesday: Thursday is tomorrow, then Fri 9 … Wed 14. */
+  eq(S.mgrAskRemindDays(TODAY).map((x) => x.label), ['Tomorrow', 'Fri 9', 'Sat 10', 'Sun 11', 'Mon 12', 'Tue 13', 'Wed 14'], 'the next seven days to pick from');
+  eq(['2026-10-09', TODAY, '2026-10-02', '2026-10-20', null].map((x) => S.mgrAskRemindLabel(x, TODAY)),
+    [{ text: 'Remind me Friday', due: false }, { text: 'Reminder: today', due: true }, { text: 'Reminder: since 2 Oct', due: true },
+      { text: 'Remind me 20 Oct', due: false }, null], 'the day said as the canvas says it — a weekday this week, a date beyond');
+  const youHTML = S.mgrAskCardHTML({ ...youQ, rank: 3, rk: '03', today: TODAY });
+  t.check(/class="btn btn-ghost ow-sm mgr-k-send mgr-k-rem" aria-expanded="false" aria-pressed="true"[^>]*>Remind me Friday<\/button>/.test(youHTML)
+    && /data-day="2026-10-09" aria-pressed="true">Fri 9</.test(youHTML) && !/Send to/.test(youHTML), 'the card: "Remind me Friday", and the days to change it');
+  t.check(/>Remind me…<\/button>/.test(S.mgrAskCardHTML({ ...staffQ, rank: 4, rk: '04', today: TODAY })), 'with no day picked: "Remind me…"');
+  const writes = [];
+  const R = scope(book(), { sb: { from: () => ({
+    select: () => ({ eq: () => ({ eq: () => ({ single: () => Promise.resolve({ data: { body: { question: 'Is the roof sound?', why: 'w' } }, error: null }) }) }) }),
+    update: (patch) => { writes.push(patch); return { eq: () => ({ eq: () => Promise.resolve({ error: null }) }) }; } }) } });
+  eq([await R.mgrAskRemind(youQ, '2026-10-10'), writes[0].body], [true, { question: 'Is the roof sound?', why: 'w', remindOn: '2026-10-10' }],
+    'the day is written onto the question, everything else on it kept');
+  await R.mgrAskRemind(youQ, null);
+  eq(writes[1].body, { question: 'Is the roof sound?', why: 'w' }, 'and "No reminder" takes it off');
   eq(d({}), null, 'and a question for the owner has nobody to send it to');
   const it = S.mgrAskItem({ id: 5, date: TODAY, body: { question: 'Is the estate paying in stages?', why: 'it decides their credit.',
     choices: ['Yes', 'No'], place: { kind: 'customer', id: 'C4' }, delegate: { staffId: 'ST002', name: 'Moses Kibirige' } } }, TODAY);
@@ -249,6 +302,7 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
   eq(S.mgrAskTermsEffect(a, { stopAtDays: 60 }), ['PINV-0007 reaches 60 days on 27 Oct.'], 'what the age they stop at would date');
   eq(S.mgrAskTermsEffect(a, { stopAtDays: 30, creditDays: 21 }), ['PINV-0007 is already 10 days past it.', '1 of 2 open bills are past 21 days’ credit.'],
     'and what the credit would say about the open bills');
+  eq(S.mgrAskTermsEffect(a, { stopAtDays: 40 }), ['PINV-0007 reaches it today.'], 'a bill exactly at the age they stop at reaches it today — never "0 days past it"');
   eq(S.mgrAskTermsEffect(a, { deliveryDays: 3 }), [], 'a delivery time changes nothing on the books yet, so nothing is said');
   eq(S.mgrAskTermsClean({ stopAtDays: '90', creditDays: '', deliveryDays: '-2' }), { stopAtDays: 90 }, 'only whole, non-negative days are kept');
   /* Owed nothing but on the buy plan: 40,000 + 25,000 = 65,000 to buy. */
@@ -282,6 +336,26 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
   eq(answered[0], [42, 'Stops supplying at 90 days, 30 days’ credit', { by: { staffId: 'ST001', name: 'Joan Nakato' }, terms: { stopAtDays: 90, creditDays: 30 } }],
     'and answered through the one writer, with the days and who found them');
   t.check(A.__kept().has('terms:S1'), 'its card stays, done, for the session');
+  /* JOURNAL FIRST. WAS: a refused question still wrote the days onto the
+     supplier. NOW: nothing is written to the supplier unless the journal
+     keeps the answer; a question row opened for an answer that was then
+     refused is taken back out. */
+  const toasts = [], deleted = [];
+  let wrote = 0;
+  const failIns = { from: () => ({ insert: () => ({ select: () => ({ single: () => Promise.resolve({ data: null, error: { message: 'offline' } }) }) }) }) };
+  const F = scope(book(), { sb: failIns, toast: (m) => toasts.push(m), saveData: () => { wrote++; return Promise.resolve(true); },
+    credOpenInvoices: () => [{ supplierId: 'S1', due: 5, ageDays: 1, invoice: { id: 1, date: TODAY } }] });
+  await F.mgrAskAnswerTerms(F.mgrAskTermsAsks(TODAY, {})[0], { terms: { stopAtDays: '90' }, by: 'you' });
+  t.check(wrote === 0 && !F.__kept().has('terms:S1') && /^Not kept — the journal could not keep the answer \(offline\)\. Nothing was written to Roto Hardware's record\.$/.test(toasts[0]),
+    'the journal refuses the question: nothing reaches the supplier, the card stays open, and the toast says both');
+  const okIns = { from: () => ({
+    insert: () => ({ select: () => ({ single: () => Promise.resolve({ data: { id: 43 }, error: null }) }) }),
+    delete: () => { const q = { eq: (k, v) => { deleted.push([k, v]); return q; }, then: (f) => Promise.resolve({ error: null }).then(f) }; return q; } }) };
+  const G = scope(book(), { sb: okIns, managerAnswerQuestion: () => Promise.resolve({ ok: false, error: 'boom' }),
+    credOpenInvoices: () => [{ supplierId: 'S1', due: 5, ageDays: 1, invoice: { id: 1, date: TODAY } }] });
+  await G.mgrAskAnswerTerms(G.mgrAskTermsAsks(TODAY, {})[0], { terms: { stopAtDays: '90' }, by: 'you' });
+  eq(deleted, [['shop_id', 'shop-1'], ['id', 43], ['status', 'open']], 'an answer refused after its question was opened takes the open row back out');
+  t.check(!G.__kept().has('terms:S1'), 'and the card stays open to answer again');
 }
 
 /* ---------- 9. who found it, and the terms, on the answer itself ---------- */
@@ -320,16 +394,35 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
   r = await fn(9, 'x', { terms: { stopAtDays: 90 } });
   t.check(seen.updates.length === 1 && r.ok && /^Kept in the journal, but paste .*0107/.test(seen.toasts[0]),
     'without 0107 the answer is still kept in the journal, and the missing update is named');
+  ({ fn, seen } = mk({ question: 'Terms?', supplierId: 'S1' }, { sb: { from: () => ({
+    select: () => ({ eq: () => ({ eq: () => ({ single: () => Promise.resolve({ data: { body: { question: 'Terms?', supplierId: 'S1' } } }) }) }) }),
+    update: () => ({ eq: () => ({ eq: () => Promise.resolve({ error: { message: 'offline' } }) }) }) }) } }));
+  r = await fn(9, 'x', { terms: { stopAtDays: 90 } });
+  t.check(!r.ok && seen.wrote.length === 0 && /^Could not keep that answer — offline\. Nothing was written to the supplier’s record\.$/.test(seen.toasts[0]),
+    'journal first: an answer the journal refuses writes nothing onto the supplier, and the toast says so');
 }
 
 /* ---------- 10. the band's sentence and figures ---------- */
 {
   const S = scope(book());
-  const items = [null, null, 1230000, 2600000, 5000].map((amount, i) => ({ key: 'q' + i, done: null,
-    stake: amount ? { amount } : null, choices: i === 2 ? [{ label: 'a', effect: 'x' }, { label: 'b', effect: '' }] : [] }));
-  /* The top four: two not sized, 1,230,000 + 2,600,000 = 3,830,000 = 3.83m. */
-  eq(S.mgrAskHeadline(items), 'Five things I can’t read in your books. The top four decide advice worth 3.83m — two are not sized. A tap each — and I’ll show you what your answer changed.',
-    'five open; the top four carry 3.83m; and the promise to show what an answer changed only where the meeting said so');
+  const MARKET = (amount) => ({ amount, unit: 'a month', from: 'market' });
+  const MEETING = (amount) => ({ amount, unit: '', from: 'meeting' });
+  const OWED = (amount) => ({ amount, unit: 'owed', from: 'bills' });
+  const PROFIT = (amount) => ({ amount, unit: 'earned in 30 days', from: 'never' });
+  const items = [null, null, MARKET(1230000), MEETING(2600000), MEETING(5000)].map((stake, i) => ({ key: 'q' + i, rk: String(i + 1).padStart(2, '0'), done: null,
+    stake, choices: i === 2 ? [{ label: 'a', effect: 'x' }, { label: 'b', effect: '' }] : [] }));
+  /* LAW 6. WAS: "The top four decide advice worth 3.83m" -- 1,230,000 a
+     month at a rival's gap added to 2,600,000 the meeting sized, two
+     kinds of money in one figure. NOW: two kinds, so nothing is added;
+     the first one sized in the Manager's order (03) is named with its
+     kind: "Of the top four, 03 carries 1.23m a month". */
+  eq(S.mgrAskHeadline(items), 'Five things I can’t read in your books. Of the top four, 03 carries 1.23m a month — two are not sized. A tap each — and I’ll show you what your answer changed.',
+    'five open; the top four carry two kinds of money, so none is added — the first sized is named with its kind');
+  /* One kind: 1,230,000 + 400,000 a month = 1,630,000 = 1.63m a month. */
+  eq(S.mgrAskHeadline([items[0], items[2], { ...items[3], stake: MARKET(400000) }]), 'Three things I can’t read in your books. The top three decide advice worth 1.63m a month — one is not sized. A tap each — and I’ll show you what your answer changed.',
+    'all one kind: added up, and said with its kind');
+  eq(S.mgrAskHeadline([{ ...items[3], rk: '01' }, { ...items[4], rk: '02' }]).split('.')[1],
+    ' Of the top two, 01 carries 2', 'two stakes the meeting sized are never added — their kinds are unsaid');
   eq(S.mgrAskHeadline(items.map((x) => ({ ...x, choices: [] })).slice(0, 1)), 'One thing I can’t read in your books. A line each, and I read it at the next meeting.',
     'one unsized question: nothing claimed about money');
   eq(S.mgrAskHeadline([]), 'Nothing I can’t read in your books right now. When a meeting needs what the books can’t say, I’ll ask it here.', 'and none');
@@ -340,8 +433,28 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
   ], null, TODAY);
   eq(model.items.map((x) => [x.rk, x.question]), [['01', 'First asked today'], ['02', 'Second asked today'], ['03', 'Asked last week']],
     'the Manager\'s own order: the newest meeting first, each meeting in the order it asked');
-  eq([model.open, model.riding, model.sized, model.counts], [3, 100000, 1, { all: 3, you: 1, rival: 0, supp: 1, staff: 1, cust: 0 }],
-    'still open 3, riding 100,000 on the 1 sized, and the five places counted');
+  /* WAS: riding was one sum. NOW: one row per kind of money. */
+  eq([model.open, model.riding, model.sized, model.counts], [3, [{ kind: 'meeting', label: 'sized at the meeting', n: 1, total: null, each: [100000] }], 1,
+    { all: 3, you: 1, rival: 0, supp: 1, staff: 1, cust: 0 }], 'still open 3, 100,000 riding on the 1 sized, and the five places counted');
+  /* LAW 6 PIN: a stake owed and one earned in 30 days never land in one
+     number. Owed 500,000 + 300,000 = 800,000; profit 84,000 on its own;
+     the meeting's 250,000 and 90,000 listed side by side, never added. */
+  const mix = [OWED(500000), PROFIT(84000), OWED(300000), MEETING(250000), MEETING(90000), MARKET(60000)].map((stake) => ({ stake }));
+  eq(S.mgrAskRiding(mix), [
+    { kind: 'meeting', label: '2 sized at the meeting', n: 2, total: null, each: [250000, 90000] },
+    { kind: 'market', label: 'a month at a rival’s gap', n: 1, total: 60000, each: null },
+    { kind: 'profit', label: 'profit in 30 days', n: 1, total: 84000, each: null },
+    { kind: 'bills', label: 'owed to suppliers', n: 2, total: 800000, each: null }], 'what rides on them, one line per kind — no total crosses kinds');
+  const band = S.mgrAsksHTML(S.mgrAskModel([{ id: 1, date: TODAY, body: { question: 'q', stake: 250000 } }], { rows: [], pointers: [], error: null }, TODAY));
+  t.check(/<span>Advice riding on them<\/span><ul class="mgr-k-kinds"><li[^>]*><b class="mgr-k-fig">250k<\/b><small>sized at the meeting<\/small><\/li><\/ul>/.test(band),
+    'the band draws each kind with its own words');
+  /* The supplier terms, ranked within one kind only: owed first by
+     amount (S1 40k), then to buy by amount (S4 900k, larger but a
+     different kind), then unsized (S2). */
+  const T = scope({ ...book(), purchaseInvoices: [{ supplierId: 'S4', date: '2026-09-20' }, { supplierId: 'S2', date: '2026-09-20' }] }, {
+    credOpenInvoices: () => [{ supplierId: 'S1', due: 40000, ageDays: 3, invoice: { id: 1, date: '2026-10-04' } }],
+    purchasePlan: () => ({ lines: [{ supplierId: 'S4', key: 'P1', cost: 900000 }] }) });
+  eq(T.mgrAskModel([], null, TODAY).items.map((x) => x.key), ['terms:S1', 'terms:S4', 'terms:S2'], 'owed before to-buy, never weighed against each other');
   t.check(model.reading && model.hist === null, 'the answered side reads as being read until it lands — never as zero');
 }
 
@@ -395,10 +508,19 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
   const h = S.mgrAskHistory(rows, pointers, TODAY);
   eq([h.answered, h.changed], [4, 2], '2 of 4 of September\'s answers changed the advice');
   eq(h.rows.map((r) => [r.id, r.who, r.said, r.did, r.more, r.when]), [
-    [5, 'You told me', '47800', 'I proposed: Bring Y12 to within 2%', 0, '2026-10-04'],
-    [1, 'You told me', 'Until March', 'I proposed: Order 200 bags of Simba', 1, '2026-09-21'],
-    [2, 'Moses found', 'At our cost', 'I proposed: Reprice Tororo', 0, '2026-09-18'],
-  ], 'listed newest first, with who found it and the first thing the advice did with it');
+    [5, 'You told me', '47,800', 'I proposed: Bring Y12 to within 2%', 0, '2026-10-04'],
+    [1, 'You told me', 'until March', 'I proposed: Order 200 bags of Simba', 1, '2026-09-21'],
+    [2, 'Moses found', 'at our cost', 'I proposed: Reprice Tororo', 0, '2026-09-18'],
+  ], 'listed newest first, with who found it and the first thing the advice did with it — WAS the raw answer ("47800", "Until March"), NOW said so it reads on its own');
+  eq(S.mgrAskSaid({ answer: '47500', productId: 'P1', recorded: { rival: 'Nakasero', price: 47500 } }), 'Nakasero at 47,500 for Iron sheet G28',
+    'a figure filed as a sighting is that rival\'s price for that line, as the canvas says it');
+  eq([S.mgrAskSaid({ answer: 'Ssali sent them' }), S.mgrAskSaid({ answer: 'I asked' }), S.mgrAskSaid({ answer: 'ABC Ltd quoted' })],
+    ['Ssali sent them', 'I asked', 'ABC Ltd quoted'], 'a name the books hold, "I" and capitals stay as typed');
+  eq([S.mgrAskSaid({ answer: 'Mengo dropped it', rival: 'Mengo' }), S.mgrAskSaid({ answer: 'Mengo dropped it' })], ['Mengo dropped it', 'mengo dropped it'],
+    'the shop the question named is a name too (rivals are read through the market reading, never the raw rows)');
+  const html = S.mgrAsksHTML({ ...S.mgrAskModel([], { rows, pointers, error: null }, TODAY) });
+  t.check(/<small class="mgr-k-hq">Until when\?<\/small><span class="mgr-k-hy">You told me <b>until March<\/b>\.<\/span>/.test(html),
+    'each memory row says the question it answers, then the answer');
 }
 
 /* ---------- 13. a price on one scale ---------- */
@@ -423,6 +545,19 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
     'two marks still make a scale');
   const lone = scope(book(), { ourPriceFor: () => 44000 });
   eq(lone.mgrAskScale({ productId: 'P1', variantIdx: null, rival: 'X' }, TODAY), null, 'one mark says nothing and draws nothing');
+  /* "my plan": today's meeting proposes 46,500 for P1. The scale then
+     runs 37,084 to 48,616 as before; 46,500 sits at 9,416/11,532 = 81.7%. */
+  const planned = S.mgrAskScale({ productId: 'P1', variantIdx: null, rival: 'Nakasero Stores' }, TODAY, 46500);
+  eq(planned.marks.map((m) => [m.l, m.v, m.x, m.tone]), [['your cost', 38200, 9.7, 'cost'], ['yours', 44000, 60, 'ours'], ['my plan', 46500, 81.7, 'plan'],
+    ['Nakasero', 47500, 90.3, 'asked']], 'the price the meeting proposes is a "my plan" mark on the same scale');
+  const plans = S.mgrAskPlanPrices([{ status: 'open', body: { mkind: 'price', subject: { key: 'P1' }, price: 46500 } },
+    { status: 'skipped', body: { mkind: 'price', subject: { key: 'P2' }, price: 9000 } },
+    { status: 'open', body: { mkind: 'buy', subject: { key: 'P3' }, price: 100 } },
+    { status: 'open', body: { mkind: 'price', subject: { key: 'P4' }, title: 'Lift hinges to 5,500' } }]);
+  eq([...plans.entries()], [['P1', 46500]], 'only a price or policy move that carries its price — not one turned down, not a buy, never a figure read from a title');
+  const pm = S.mgrAskModel([{ id: 1, date: TODAY, body: { question: 'Nakasero?', productId: 'P1', rival: 'Nakasero Stores' } }], null, TODAY,
+    { moves: [{ status: 'open', body: { mkind: 'price', subject: { key: 'P1' }, price: 46500 } }] });
+  t.check(pm.items[0].plan === 46500 && /mgr-k-mk-plan" style="left:81\.7%"/.test(S.mgrAsksHTML(pm)), 'and the card draws it');
   eq(S.mgrAskRangeOf('Under 45,000'), { lo: null, hi: 45000 }, 'a likely answer\'s range: under');
   eq(S.mgrAskRangeOf('45,000–46,500'), { lo: 45000, hi: 46500 }, 'between');
   eq(S.mgrAskRangeOf('Still 47,000 or more'), { lo: 47000, hi: null }, 'or more');
@@ -431,7 +566,8 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
 
 /* ---------- 14. the section, drawn ---------- */
 {
-  const S = scope(book(), { mgrConfidence: () => ({ pips: 3, source: 'counted', basis: 'from a rival price 3 days old' }),
+  const S = scope(book(), { mgrConfidence: () => ({ pips: 3, source: 'counted', basis: 'from a rival price 3 days old', evidence: [] }),
+    rivalPriceLatest: () => [{ rival: 'Mengo', side: 'wholesale', daysOld: 40 }],
     marketVerdict: () => ({ under: [{ key: 'P1', atStake: 120000, units30: 40, gap: -3000, shop: 'Mengo' }], lift: [] }),
     credOpenInvoices: () => [{ supplierId: 'S1', due: 500000, ageDays: 40, invoice: { id: 7, date: '2026-08-28' } }] });
   const model = S.mgrAskModel([
@@ -442,7 +578,7 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
   ], { rows: [], pointers: [], error: null }, TODAY);
   const html = S.mgrAsksHTML(model);
   t.check(/<section class="mgr-k-hd"/.test(html) && /<span>Still open<\/span><b class="mgr-k-fig">3<\/b>/.test(html)
-    && /<span>Answered in September<\/span><b class="mgr-k-fig">0<\/b>/.test(html) && /<span>Changed my advice<\/span><b class="mgr-k-fig mgr-k-good">—<\/b>/.test(html),
+    && /<span>Answered in September<\/span><b class="mgr-k-fig">0<\/b>/.test(html) && /<span>Changed my advice<\/span><b class="mgr-k-fig">—<\/b>/.test(html),
     'the band: still open (two asked + one supplier\'s terms), answered last month, and "—" where nothing was answered to change anything');
   t.check(['all', 'you', 'rival', 'supp', 'staff', 'cust'].every((k) => new RegExp(`class="mgr-k-wf" data-place="${k}"`).test(html))
     && /Suppliers &amp; bank<span class="mgr-k-n">1<\/span>/.test(html), 'where you are now: everywhere and the five places, each counted');
@@ -455,7 +591,7 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
   t.check(/class="mgr-k-an" data-pick="0" aria-pressed="false">Under 40,000<\/button>/.test(html) && /data-pick="own"/.test(html),
     'the likely answers to tap, and one in the owner\'s own words');
   t.check(/inputmode="decimal"/.test(html) && /What Mengo charges — just the figure/.test(html), 'a price is asked for as a figure, on a phone keypad');
-  t.check(/<span>Sure without it<\/span><span class="mgr-k-pips"[^>]*>(<i class="mgr-k-on"><\/i>){3}(<i><\/i>){2}<\/span><span class="mgr-k-fig">3\/5<\/span><span class="mgr-k-src" title="from a rival price 3 days old">from a rival price 3 days old<\/span>/.test(html),
+  t.check(/<span>Sure without it<\/span><span class="mgr-k-pips"[^>]*>(<i class="mgr-k-on"><\/i>){3}(<i><\/i>){2}<\/span><span class="mgr-k-fig">3\/5<\/span><span class="mgr-k-src" title="from their pack price 40 days old">from their pack price 40 days old<\/span>/.test(html),
     'how sure without it: counted pips, the figure, and what was counted');
   t.check(/<select class="mgr-k-sel" aria-label="Who found it out"><option value="you" selected>You<\/option><option value="st:ST002">Moses Kibirige<\/option>/.test(html),
     'found by: the owner, then the person it was given to first');
@@ -476,6 +612,8 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
   t.check(/querySelectorAll\('\.mgr-k-q\[data-qkey\]'\)/.test(wire) && /mgrAskKeep\(it, \{ text,/.test(wire),
     'each card is wired by its key, and keeps what is in the box');
   t.check(/input\.value = pick == null \? '' : it\.choices\[pick\]\.label/.test(wire), 'a tapped answer fills the box, so it can still be added to');
+  t.check((wire.match(/querySelectorAll\('\.mgr-k-ans:not\(\.mgr-k-days\) \.mgr-k-an'\)/g) || []).length === 3 && !/querySelectorAll\('\.mgr-k-an'\)/.test(wire),
+    'the answer chips are wired apart from the reminder\'s day chips');
 }
 
 /* ---------- 15. kept this session: the card stays, done ---------- */
@@ -498,9 +636,11 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
   const paint = extractFunction(src, 'mgrPaintAsk', 'index.html');
   t.check(/mgrAskReadAnswered\(\)\.then\(r=>\{\s*if\(gen !== mgrRenderGen\) return;/.test(paint),
     'the answered side is read beside the journal and lands only while its render is current');
-  t.check(/setTimeout\(\(\)=>\{\s*if\(gen !== mgrRenderGen \|\| ctx\.askTerms != null\) return;\s*try\{ ctx\.askTerms = mgrAskTermsAsks\(todayISO\(\), \{\}\)\.length; \}/.test(paint)
+  t.check(/setTimeout\(\(\)=>\{\s*if\(gen !== mgrRenderGen \|\| ctx\.askTerms != null \|\| ctx\.askTermsOff\) return;\s*try\{ ctx\.askTerms = mgrAskTermsAsks\(todayISO\(\), \{\}\)\.length; \}/.test(paint)
     && /ctx\.askTerms = model\.items\.filter/.test(paint),
     'the supplier terms are counted for the nav from the books just after the first paint, never over the drawing\'s own count');
+  t.check(/ctx\.askTermsOff = true; ctx\.askTerms = null;/.test(paint),
+    'an unread journal leaves the books\' early count out of the nav — it cannot be checked against the terms the journal holds');
   t.check(/if\(why === 'read' && root && root\.dataset\.terms === model\.termsKey\)/.test(paint),
     'a reading that lands after the cards only redraws the band and the memory — never what the owner is typing');
   const read = extractFunction(src, 'mgrAskReadAnswered', 'index.html');
