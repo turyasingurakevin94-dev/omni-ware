@@ -129,4 +129,81 @@ const src = read('index.html');
   }
 }
 
-process.exit(t.done() ? 1 : 0);
+/* ---------- 4. the tier is drawn from the plan that stands ---------- */
+/*
+ * Driven, not read. renderTodayPlan read `today.rows`, which nothing has
+ * ever set, so the tier was empty every morning a meeting had been held
+ * -- and every check above still passed, because they read the source.
+ * Here the real managerLoadState shape goes in and the rows must come out,
+ * in mgrMoveOrder's order, with a failed read named rather than blank.
+ */
+(async () => {
+  const plan = extractFunction(src, 'renderTodayPlan', 'index.html');
+  t.check(!/today\.rows/.test(plan.replace(/\/\*[\s\S]*?\*\//g, '')) && /st\.today\.moves/.test(plan),
+    'the tier reads today.moves, no longer a field nothing sets');
+
+  const box = { innerHTML: 'before' };
+  let state = null, wired = 0;
+  const scope = compileScope([
+    extractFunction(src, 'mgrMoveOrder', 'index.html'),
+    'let todayPlanTicket = 0;',
+    plan,
+  ], {
+    document: { getElementById: (id) => (id === 'dash_mgrQueue' ? box : null) },
+    managerLoadState: () => (state instanceof Error ? Promise.reject(state) : Promise.resolve(state)),
+    mgrQueueRowHTML: (r) => `[${r.body.title}]`,
+    mgrWirePlan: () => { wired++; },
+    esc: (v) => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;'),
+  }, ['renderTodayPlan']);
+  const settle = () => new Promise((r) => setTimeout(r, 0));
+
+  /* The meeting's order: the second move waits on the third, so the
+     third is drawn before it -- and nothing is sorted by money. */
+  state = { today: { meeting: { id: 1 }, moves: [
+    { id: 10, body: { title: 'Chase Mulongo', worth: 100 } },
+    { id: 11, body: { title: 'Pay Roto', worth: 900, after: 2 } },
+    { id: 12, body: { title: 'Count the cement', worth: 5 } },
+  ], earlier: [], earlierAnswered: [] } };
+  scope.renderTodayPlan(); await settle();
+  t.check(box.innerHTML === '[Chase Mulongo][Count the cement][Pay Roto]',
+    `today's moves are drawn, in the meeting's order with what waits drawn after what it waits on (${box.innerHTML})`);
+  t.check(wired === 1, 'and their buttons are wired');
+
+  state = { today: null, prior: [], reviews: [], weekMeetings: 0 };
+  scope.renderTodayPlan(); await settle();
+  t.check(box.innerHTML === '', 'a morning with no meeting leaves the tier empty');
+
+  state = { error: 'permission denied for table manager_notes', today: null };
+  scope.renderTodayPlan(); await settle();
+  t.check(/could not be read/.test(box.innerHTML) && /permission denied for table manager_notes\./.test(box.innerHTML),
+    `a read that failed is named in the tier, with its reason (${box.innerHTML.slice(0, 80)}…)`);
+
+  state = new Error('Failed to fetch');
+  box.innerHTML = '[earlier]';
+  scope.renderTodayPlan(); await settle();
+  t.check(/could not be read/.test(box.innerHTML) && /Failed to fetch/.test(box.innerHTML),
+    'and so is one that threw — never a blank that reads as "nothing for you"');
+
+  /* The later read is the one that stands: a move answered here redraws
+     the tier while the dashboard may be drawing it too. */
+  let release;
+  const slow = new Promise((r) => { release = r; });
+  state = null;
+  const scope2 = compileScope([
+    extractFunction(src, 'mgrMoveOrder', 'index.html'), 'let todayPlanTicket = 0;', plan,
+  ], {
+    document: { getElementById: () => box },
+    managerLoadState: (() => { let n = 0; return () => (n++ === 0 ? slow
+      : Promise.resolve({ today: { moves: [{ id: 2, body: { title: 'newer' } }] } })); })(),
+    mgrQueueRowHTML: (r) => `[${r.body.title}]`, mgrWirePlan: () => {}, esc: String,
+  }, ['renderTodayPlan']);
+  scope2.renderTodayPlan(); scope2.renderTodayPlan(); await settle();
+  release({ today: { moves: [{ id: 1, body: { title: 'older' } }] } }); await settle();
+  t.check(box.innerHTML === '[newer]', `an older read landing last does not put back what was just answered (${box.innerHTML})`);
+
+  const setter = extractFunction(src, 'managerSetMoveStatus', 'index.html');
+  t.check(/if\(document\.getElementById\('dash_mgrQueue'\)\) renderTodayPlan\(\);/.test(setter),
+    'and a move answered from Today redraws Today\'s tier, not only the Manager screen');
+
+  process.exit(t.done() ? 1 : 0);
+})();

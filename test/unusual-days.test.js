@@ -38,25 +38,34 @@ function shop(weeks, override) {
   return days;
 }
 
-function build(days) {
+/* `books` lays the stock log and the count records on as the app really
+   keeps them (section 2b); without it each day's counts are typed
+   'count', the older shape a reader must still honour. */
+function build(days, books) {
+  const b = books || {};
   const cashTxns = [], stockLog = [];
   Object.entries(days).forEach(([d, x]) => {
     if (x.out) cashTxns.push({ date: d, type: 'payment', amount: x.out, category: x.outWhat || 'Transport' });
     (x.counts || []).forEach((c) => stockLog.push({ date: d, type: 'count', key: 'P1', label: c.label, delta: -c.qty, cost: c.cost }));
   });
-  const data = { cashTxns, stockLog, products: [] };
+  const data = { cashTxns, stockLog: stockLog.concat(b.stockLog || []), products: [],
+    presetStockCounts: b.presetStockCounts || {} };
   return compileScope([
     'unusualDays', 'unusualDayReading', 'unusualSpread', 'unusualDrivers', 'unusualLine',
     'anShiftDate', 'dayWeekday',
+    /* Which log rows are counts -- the Inventory screen's own answer,
+       compiled for real: a stocktake is written as a 'correction'. */
+    'invCountMoment', 'invCountRecords', 'stockCountIndex', 'stockLogIsCount',
   ].map((n) => extractFunction(src, n, 'index.html')).concat([
-    'UNUSUAL_WEEKS', 'UNUSUAL_MIN', 'UNUSUAL_Z', 'UNUSUAL_LOOKBACK', 'UNUSUAL_WORDS',
+    'UNUSUAL_WEEKS', 'UNUSUAL_MIN', 'UNUSUAL_Z', 'UNUSUAL_LOOKBACK', 'UNUSUAL_WORDS', 'INV_NOT_A_COUNT',
   ].map((n) => extractDeclaration(src, n, 'index.html'))), {
     data, todayISO: () => TODAY,
     dayPulse: (d) => { const x = days[d]; return x ? { date: d, sales: x.sales, profit: x.profit, collected: 0, till: 0, any: true }
       : { date: d, sales: 0, profit: 0, collected: 0, till: 0, any: false }; },
     anInvoicesInRange: (d) => (days[d] ? days[d].invoices : []),
     savedQuoteTotal: (q) => q.total, anInvoiceTotals: (q) => ({ profit: q.profit }),
-    cashIsMoneyIn: (x) => x.type === 'receipt', buyKeyParts: () => null, getFIFOUnitCost: () => null,
+    cashIsMoneyIn: (x) => x.type === 'receipt',
+    buyKeyParts: b.buyKeyParts || (() => null), getFIFOUnitCost: b.getFIFOUnitCost || (() => null),
     fmtUGX: (n) => Number(n).toLocaleString('en-US') + ' UGX', fmtShortDate: (d) => d.slice(5),
     Math, Date, Number, String, Map, Array, isFinite,
   }, ['unusualDays', 'unusualLine']);
@@ -97,6 +106,45 @@ function build(days) {
   t.check(!find(TODAY, 'sales'), 'but today\'s sales are never judged — a day still trading is not a slow day at noon');
   t.check(/^Sales well below a usual Wednesday, 09-23: 200,000 UGX — usually .* over the last 8 Wednesdays$/.test(s.unusualLine(low)),
     'said in the owner\'s words, against the usual and how many weeks it rests on: ' + s.unusualLine(low));
+}
+
+/* ---------- 2b. a count as the count screen really writes it ----------- */
+{
+  /* The count screen has no 'count' type to write. The difference it
+     finds goes to the log as a 'correction', and the count itself is
+     kept by line in the presets, stamped with that row's own moment --
+     spelled "…Z" there and "…+00:00" by the database once the log has
+     been read back. Neither row carries a cost: a count that takes goods
+     off is valued at what the line cost (FIFO). And a correction that is
+     NOT a count -- a delivery taken back because the goods never came --
+     must not be read as a stocktake that found the shelf short. */
+  const tue = day(-2), mon = day(-3);
+  const s = build(shop(10), {
+    stockLog: [
+      { id: 71, key: 'P1::0', label: 'Iron sheets — G28', type: 'correction', delta: -4, qtyAfter: 6,
+        date: tue, at: tue + 'T10:15:00.250+00:00', note: '' },
+      { id: 72, key: 'P2', label: 'Tiles', type: 'correction', delta: -20, qtyAfter: 0, date: tue,
+        at: tue + 'T16:00:00+00:00', note: 'Delivery on PINV-0012 undone — those goods never came', source: 'buy-order' },
+      { id: 73, key: 'P2', label: 'Tiles', type: 'correction', delta: -20, qtyAfter: 0, date: mon,
+        at: mon + 'T16:00:00+00:00', note: 'Delivery on PINV-0011 undone — those goods never came', source: 'buy-order' },
+    ],
+    presetStockCounts: {
+      'P1::0': [{ date: tue, at: tue + 'T10:15:00.250Z', found: 6, record: 10 }],
+      // A count that matched the book: no row on the log, nothing short.
+      P3: [{ date: tue, at: tue + 'T11:00:00.000Z', found: 12, record: 12 }],
+    },
+    buyKeyParts: (k) => (k === 'P1::0' ? { productId: 'P1', variantIdx: 0 } : k === 'P2' ? { productId: 'P2', variantIdx: null } : null),
+    getFIFOUnitCost: (pid) => (pid === 'P1' ? 45000 : pid === 'P2' ? 30000 : null),
+  });
+  const u = s.unusualDays(TODAY);
+  const short = u.items.find((x) => x.date === tue && x.metric === 'stock_short');
+  t.check(!!short, 'a stocktake written as a correction is found by its record, across the two spellings of one moment');
+  t.check(short && short.value === 180000,
+    'valued at what the line cost — four sheets at 45,000, and not the 600,000 of tiles that never came (got ' + (short && short.value) + ')');
+  t.check(short && /^Iron sheets — G28: 4 short, 180,000 UGX/.test(short.drivers[0]) && !short.drivers.some((x) => /Tiles/.test(x)),
+    'and named by the line it found short: ' + (short && short.drivers.join(' | ')));
+  t.check(!u.items.some((x) => x.date === mon && x.metric === 'stock_short'),
+    'a day whose only correction is a delivery taken back has no stocktake on it at all');
 }
 
 /* ---------- 3. a swinging Saturday is not unusual for swinging --------- */

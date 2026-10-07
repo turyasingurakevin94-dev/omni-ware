@@ -30,7 +30,8 @@ const data = {
   stock: {}, stockLots: {}, stockLog: [], nextStockLogId: 1, purchaseInvoices: [],
 };
 const N = ['stockKey', 'addStockLot', 'consumeStockLots', 'restoreStockLots', 'applyStockDelta',
-  'stockMovementReversalPlan', 'reverseStockMovement', 'shelfValueForKey', 'stockUnitFor', 'stockMoveOnRowUnit'];
+  'stockMovementReversalPlan', 'reverseStockMovement', 'shelfValueForKey', 'stockUnitFor', 'stockMoveOnRowUnit',
+  'stockLogTakenBack', 'stockLogRelink', 'effectiveStockPurchase'];
 const fns = compileScope([
   extractDeclaration(src, 'STOCK_TYPE_LABELS', 'index.html'),
   ...N.map((n) => extractFunction(src, n, 'index.html')),
@@ -114,6 +115,102 @@ const reset = (onHand) => {
   const sale = fns.reverseStockMovement(5, '');
   eq(sale.ok, false, 'a sale is not something that put goods on the shelf');
   t.check(/PUT goods on the shelf/.test(sale.error), 'and says what the verb is for');
+}
+
+/* ---------- 4b. taken back once, after a reload too ------------------- */
+{
+  /* Only the reversal's own pointer reaches the database (0106); the
+     forward one on the row it undid is an in-place edit that does not.
+     So a reloaded log must still know the delivery was taken back --
+     asked of the plan directly, and relinked the way loadData does. */
+  reset(16);
+  fns.reverseStockMovement(1, '');
+  const reloaded = JSON.parse(JSON.stringify(data.stockLog));
+  reloaded.forEach((r) => { delete r.reversedBy; delete r.correctedBy; });
+  data.stockLog = reloaded;
+  data.stock['P-EL::1'] = 16;   // even with goods back on the shelf
+  eq(fns.stockMovementReversalPlan(1).already, true,
+    'the plan finds the reversal by the pointer the reload kept');
+  const again = fns.reverseStockMovement(1, '');
+  eq(again.ok, false, 'so the same delivery cannot be taken back twice');
+  t.check(/already been taken back/.test(again.error || ''), 'and the refusal says so');
+  eq(data.stockLog.length, 2, 'writing nothing');
+
+  const relinked = fns.stockLogRelink(JSON.parse(JSON.stringify(reloaded)));
+  eq(relinked[0].reversedBy, relinked[1].id, 'and the load puts the forward pointer back, for the tag and the verbs');
+  t.check(!('correctedBy' in relinked[0]) && !('reversedBy' in relinked[1]),
+    'touching nothing else');
+}
+
+/* ---------- 4c. read where its corrections left it -------------------- */
+{
+  /* The sixteen came in on a buy order, and the whole delivery was then
+     undone (undoDelivery): a correction row carrying all sixteen back
+     off and saying the purchase now stands at nothing. Thirty more of
+     the same item, from other deliveries, are on the shelf. Taking the
+     first figure again would take sixteen of THOSE. */
+  const undone = () => {
+    data.stock = { 'P-EL::1': 30 };
+    data.stockLots = { 'P-EL::1': [{ qty: 30, cost: 300000 }] };
+    data.stockLog = [
+      { id: 1, key: 'P-EL::1', productId: 'P-EL', variantIdx: 1, type: 'restock', delta: 16, qtyAfter: 46,
+        date: '2026-08-28', cost: 310000, supplierId: 'S-SHAFIK', source: 'buy-order', piId: 102, correctedBy: 2 },
+      { id: 2, key: 'P-EL::1', productId: 'P-EL', variantIdx: 1, type: 'correction', delta: -16, qtyAfter: 30,
+        note: 'Delivery on PINV-0102 undone — those goods never came', date: '2026-08-29', cost: 310000,
+        supplierId: 'S-SHAFIK', source: 'buy-order', corrects: 1, purchaseQty: 0, piId: 102 },
+    ];
+    data.nextStockLogId = 3;
+    data.purchaseInvoices = [];
+  };
+  undone();
+  const plan = fns.stockMovementReversalPlan(1);
+  eq(plan.already, true, 'a delivery already undone is already taken back, whatever its first row says');
+  eq(plan.delta, 0, 'and stands at nothing to take back');
+  const res = fns.reverseStockMovement(1, '');
+  eq(res.ok, false, 'so it cannot be said never to have happened a second time');
+  t.check(/corrected to nothing/.test(res.error || ''), `and the refusal says why (${res.error})`);
+  eq(data.stock['P-EL::1'], 30, 'the other deliveries\' thirty stay on the shelf');
+  eq(data.stockLog.length, 2, 'writing nothing');
+
+  // After a reload: only the correction's own pointer came back.
+  undone();
+  data.stockLog = fns.stockLogRelink(data.stockLog.map((r) => { const c = Object.assign({}, r); delete c.correctedBy; return c; }));
+  eq(data.stockLog[0].correctedBy, 2, 'the load puts the forward pointer back');
+  eq(fns.reverseStockMovement(1, '').ok, false, 'and the undone delivery is still refused after a reload');
+  undone();
+  delete data.stockLog[0].correctedBy;
+  eq(fns.reverseStockMovement(1, '').ok, false, 'as it is when only the backward pointer is there at all');
+  eq(data.stock['P-EL::1'], 30, 'the shelf untouched throughout');
+
+  /* Corrected down rather than undone: sixteen recorded, ten really
+     came. "It never happened" takes back the ten. */
+  data.stock = { 'P-EL::1': 30 };
+  data.stockLots = { 'P-EL::1': [{ qty: 30, cost: 310000 }] };
+  data.stockLog = [
+    { id: 1, key: 'P-EL::1', productId: 'P-EL', variantIdx: 1, type: 'restock', delta: 16, qtyAfter: 36,
+      date: '2026-08-28', cost: 310000, supplierId: 'S-SHAFIK', source: 'inv-purchase' },
+    { id: 2, key: 'P-EL::1', productId: 'P-EL', variantIdx: 1, type: 'correction', delta: -6, qtyAfter: 30,
+      note: 'Corrected — purchase of 16 was 10', date: '2026-08-29', cost: 310000, supplierId: 'S-SHAFIK',
+      source: 'inv-purchase', corrects: 1, purchaseQty: 10 },
+  ];
+  data.nextStockLogId = 3;
+  eq(fns.stockMovementReversalPlan(1).delta, 10, 'a purchase corrected to ten has ten to take back, not its first sixteen');
+  const ten = fns.reverseStockMovement(1, '');
+  eq(ten.took, 10, 'and ten come off');
+  eq(data.stock['P-EL::1'], 20, 'leaving the other twenty on the shelf');
+  t.check(/of 10 as corrected/.test(data.stockLog[2].note), `the reversal says which figure it took back (${data.stockLog[2].note})`);
+  /* A correction's own difference is not the purchase's quantity: a
+     correction that put two more on is taken back as two. */
+  data.stock = { 'P-EL::1': 12 };
+  data.stockLots = { 'P-EL::1': [{ qty: 12, cost: 310000 }] };
+  data.stockLog = [
+    { id: 1, key: 'P-EL::1', productId: 'P-EL', variantIdx: 1, type: 'restock', delta: 10, qtyAfter: 10,
+      date: '2026-08-28', cost: 310000, source: 'inv-purchase', correctedBy: 2 },
+    { id: 2, key: 'P-EL::1', productId: 'P-EL', variantIdx: 1, type: 'correction', delta: 2, qtyAfter: 12,
+      date: '2026-08-29', cost: 310000, source: 'inv-purchase', corrects: 1, purchaseQty: 12 },
+  ];
+  eq(fns.stockMovementReversalPlan(2).delta, 2, 'a correction is taken back by its own difference');
+  eq(fns.stockMovementReversalPlan(1).delta, 12, 'while its purchase is read at the twelve it now stands at');
 }
 
 /* ---------- 5. the bill is named, never quietly moved ----------------- */

@@ -39346,7 +39346,8 @@ async function loadData(shopId){
     stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR,
     savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR,
     mediaR, mediaFoldersR, waPostsR,
-    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, followUpsR, rivalPricesR, paymentPromisesR, productLinksR, briefsSentR, statementsSentR, variantColR, imageColR, askedColR, transferColR, lotConsignColR, rivalSideColR, stageColR, managerNotesR, linkSizeColR, coversColR, clientAccountsR, termsColR, waPostKindsColR, cashMetaColR, cashCloseColR
+    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, followUpsR, rivalPricesR, paymentPromisesR, productLinksR, briefsSentR, statementsSentR, variantColR, imageColR, askedColR, transferColR, lotConsignColR, rivalSideColR, stageColR, managerNotesR, linkSizeColR, coversColR, clientAccountsR, termsColR, waPostKindsColR, cashMetaColR, cashCloseColR,
+    stockLogMetaColR, debtLogLinkColR
   ] = await Promise.all([
     sel('suppliers'), sel('staff'), sel('customers'), sel('customer_debt_log'), sel('products'), sel('prices'),
     sel('stock'), sel('stock_lots'), sel('stock_log'), sel('cash_days'), sel('cash_txns'),
@@ -39381,7 +39382,13 @@ async function loadData(shopId){
        the mark that closes a day. Probed apart, and both guard busy
        writes: every cash entry and every day go up on every save. */
     sb.from('cash_txns').select('entered_by, photo').limit(1),
-    sb.from('cash_days').select('closed_at, closed_by').limit(1)
+    sb.from('cash_days').select('closed_at, closed_by').limit(1),
+    /* 0106, what the stock log and the customer ledger already knew in
+       memory and lost on every reload. Probed apart, one per table, and
+       both guard writes: a log row goes up with every movement, a ledger
+       row with every payment. */
+    sb.from('stock_log').select('cost, supplier_id, pi_id, source, corrects, purchase_qty, reverses').limit(1),
+    sb.from('customer_debt_log').select('cash_txn_id, quote_id').limit(1)
   ]);
   [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR, mediaR, mediaFoldersR, waPostsR, rentAgreementsR, duesR, placesR]
     .forEach(r=>{ if(r.error) throw r.error; });
@@ -39452,6 +39459,13 @@ async function loadData(shopId){
      who made it -- and a day can be closed on this device only. */
   cashEntryMetaColumns = !(cashMetaColR && cashMetaColR.error);
   cashCloseColumns = !(cashCloseColR && cashCloseColR.error);
+  /* 0106. Without them a movement and a payment still save, exactly as
+     they did -- the cost, the supplier, the bill and the screen that
+     wrote a movement, what a correction or a reversal put right, and the
+     cash entry and invoice behind a ledger row, simply last only until
+     the next reload. */
+  stockLogMetaColumns = !(stockLogMetaColR && stockLogMetaColR.error);
+  debtLogLinkColumns = !(debtLogLinkColR && debtLogLinkColR.error);
   // sourcing_leads is out of the list for the same reason.
   const sourcingLeadRows = (sourcingLeadsR && !sourcingLeadsR.error && sourcingLeadsR.data) || [];
   // And follow_ups (0077), newest of the lot. A shop whose migration has
@@ -39508,7 +39522,15 @@ async function loadData(shopId){
 
   const debtByCustomer = {};
   (debtLogR.data||[]).forEach(l=>{
-    (debtByCustomer[l.customer_id] ||= []).push({id:l.id, date:l.date, type:l.type, amount:Number(l.amount)||0, note:l.note||''});
+    (debtByCustomer[l.customer_id] ||= []).push({id:l.id, date:l.date, type:l.type, amount:Number(l.amount)||0, note:l.note||'',
+      /* The cash entry a payment arrived as and the invoice a row
+         belongs to (0106). Without them a payment taken on the ledger
+         alone stopped being money collected after a reload
+         (collectionLedgerRow), and an invoice's own rows fell back to
+         being recognised by their wording. Keys only where there is a
+         link, so an older row reads exactly as it always has. */
+      ...(l.cash_txn_id != null ? {cashTxnId: Number(l.cash_txn_id)} : {}),
+      ...(l.quote_id != null ? {quoteId: Number(l.quote_id)} : {})});
   });
 
   const stock = {};
@@ -39603,7 +39625,24 @@ async function loadData(shopId){
     })),
     nextPriceId: (pricesR.data||[]).length ? Math.max(0,...pricesR.data.map(p=>p.id||0))+1 : 1,
     stock, stockLots,
-    stockLog: (stockLogR.data||[]).map(l=>({id:l.id, key:l.key, productId:l.product_id, variantIdx:l.variant_idx, label:l.label, type:l.type, delta:Number(l.delta)||0, qtyAfter:Number(l.qty_after)||0, note:l.note||'', date:l.date, at:l.at})),
+    stockLog: stockLogRelink((stockLogR.data||[]).map(l=>({id:l.id, key:l.key, productId:l.product_id, variantIdx:l.variant_idx, label:l.label, type:l.type, delta:Number(l.delta)||0, qtyAfter:Number(l.qty_after)||0, note:l.note||'', date:l.date, at:l.at,
+      /* What the movement cost, from whom, against which bill, and which
+         screen wrote it (0106) -- read by the receipt checks, the lead
+         supplier and undoing a delivery, all of which went quiet after a
+         reload because none of it came back. Keys only where the row has
+         one, so an older row reads exactly as it always has. */
+      ...(l.cost != null ? {cost: Number(l.cost)} : {}),
+      ...(l.supplier_id != null ? {supplierId: l.supplier_id} : {}),
+      ...(l.pi_id != null ? {piId: Number(l.pi_id)} : {}),
+      ...(l.source ? {source: l.source} : {}),
+      /* And the chain a correction or a reversal hangs on (0106): the
+         row it put right, the quantity the purchase now stands at, the
+         row it took back. Without them a reloaded log read every
+         corrected purchase at its first figure and every undone
+         delivery as still standing -- and offered to undo it again. */
+      ...(l.corrects != null ? {corrects: Number(l.corrects)} : {}),
+      ...(l.purchase_qty != null ? {purchaseQty: Number(l.purchase_qty)} : {}),
+      ...(l.reverses != null ? {reverses: Number(l.reverses)} : {})}))),
     nextStockLogId: (stockLogR.data||[]).length ? Math.max(0,...stockLogR.data.map(l=>l.id||0))+1 : 1,
     cashDays,
     // quoteId stays null rather than 0: null means this receipt was not
@@ -39996,6 +40035,9 @@ let cashTransferColumn = false;
 let cashCoversColumns = false;
 let cashEntryMetaColumns = false;
 let cashCloseColumns = false;
+// Set by loadData, both from 0106. See the probes there.
+let stockLogMetaColumns = false;
+let debtLogLinkColumns = false;
 
 // cloneJSON() / keyRowsById() now live in shared-worker.js.
 
@@ -40030,9 +40072,16 @@ function dateOrNull(v){
   return s === '' ? null : s;
 }
 function buildSyncRows(d, shopId){
+  /* A link to another row's bigint id, or null. A value that is not a
+     number cannot be one of those ids, and sent as it is would fail the
+     whole upsert it rides in -- every row of that table, not just this
+     one link. */
+  const idOrNull = (v)=> (v == null || v === '' || !Number.isFinite(Number(v))) ? null : Number(v);
   const debtLogRows = [];
   d.customers.forEach(c=> (c.debtLog||[]).forEach(l=> debtLogRows.push({
-    id:l.id, shop_id:shopId, customer_id:c.id, date:dateOrNull(l.date), type:l.type, amount:l.amount, note:l.note
+    id:l.id, shop_id:shopId, customer_id:c.id, date:dateOrNull(l.date), type:l.type, amount:l.amount, note:l.note,
+    // Guarded like every column after the first set -- see 0106.
+    ...(debtLogLinkColumns ? {cash_txn_id: idOrNull(l.cashTxnId), quote_id: idOrNull(l.quoteId)} : {})
   })));
   return {
     suppliers: d.suppliers.map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, phone2:s.phone2||null, location:s.location, shop_no:s.shopNo||null, notes:s.notes, commission_pct: s.commissionPct==null ? null : s.commissionPct})),
@@ -40092,7 +40141,15 @@ function buildSyncRows(d, shopId){
     stockLots: d.stockLots,
     stockLog: d.stockLog.map(l=>({
       id:l.id, shop_id:shopId, key:l.key, product_id:l.productId, variant_idx:l.variantIdx,
-      label:l.label, type:l.type, delta:l.delta, qty_after:l.qtyAfter, note:l.note, date:dateOrNull(l.date), at:l.at
+      label:l.label, type:l.type, delta:l.delta, qty_after:l.qtyAfter, note:l.note, date:dateOrNull(l.date), at:l.at,
+      // And 0106, the same way: a log row goes up with every movement.
+      // Blank stays null, never 0 -- an uncosted movement is not a free one.
+      ...(stockLogMetaColumns ? {
+        cost: (l.cost == null || l.cost === '' || !Number.isFinite(Number(l.cost))) ? null : Number(l.cost),
+        supplier_id: (l.supplierId == null || l.supplierId === '') ? null : String(l.supplierId),
+        pi_id: idOrNull(l.piId), source: l.source || null,
+        corrects: idOrNull(l.corrects), reverses: idOrNull(l.reverses),
+        purchase_qty: (l.purchaseQty == null || l.purchaseQty === '' || !Number.isFinite(Number(l.purchaseQty))) ? null : Number(l.purchaseQty) } : {})
     })),
     cashDays: Object.keys(d.cashDays).map(date=>({
       shop_id:shopId, date, opening:d.cashDays[date].opening, actual:d.cashDays[date].actual,
@@ -40164,6 +40221,15 @@ function buildSyncRows(d, shopId){
         ...(q.invoiceNote ? {invoiceNote:q.invoiceNote} : {}),
         ...(q.creditNotes && q.creditNotes.length ? {creditNotes:q.creditNotes} : {}),
         ...(q.docLog && q.docLog.length ? {docLog:q.docLog} : {}),
+        /* Where the rest of an order's origin lives, on the same terms as
+           the WhatsApp fields below: a walk-in sale (csSell and the Cash
+           Book till set it) and the chat an order was taken from. Neither
+           was named here, so both went on the first save -- and a counter
+           sale read back as an ordinary one, inflating quote conversion
+           and hiding the counter's share of the takings. Written only
+           when there is one, so an ordinary order carries no key at all. */
+        ...(q.counterSale ? {counterSale:true} : {}),
+        ...(q.waConversationId != null ? {waConversationId:q.waConversationId} : {}),
         // WhatsApp-originated orders only -- same preservation contract
         // as the agent fields above: absent for a normal order, and an
         // admin re-save must never strip what wa-webhook set. Learned
@@ -40197,7 +40263,13 @@ function buildSyncRows(d, shopId){
         ...(pi.priceCheckedAt ? {priceCheckedAt:pi.priceCheckedAt} : {}),
         ...(pi.needsReview ? {needsReview:pi.needsReview} : {}),
         ...(pi.photo ? {photo:pi.photo} : {}),
-        ...(pi.docLog && pi.docLog.length ? {docLog:pi.docLog} : {})}
+        ...(pi.docLog && pi.docLog.length ? {docLog:pi.docLog} : {}),
+        /* The buy order a bill was received against, and the day that
+           delivery was undone. Neither went up before, so after a reload
+           "Undo the delivery" refused every bill and an undone one
+           offered "Unvoid bill" as if nothing had happened. */
+        ...(pi.buyOrderId != null ? {buyOrderId:pi.buyOrderId} : {}),
+        ...(pi.deliveryUndone ? {deliveryUndone:pi.deliveryUndone} : {})}
     })),
     supplierCommissions: d.supplierCommissions.map(c=>({
       id:c.id, shop_id:shopId, supplier_id:c.supplierId, period:c.period, amount:c.amount, notes:c.notes||null
@@ -40451,6 +40523,46 @@ function addSettingsDiffOp(ops, shopId, settingsCore){
   });
 }
 
+/* AN ORDER'S STAGE LOG HAS TWO WRITERS. This app appends on every move
+   (setSavedQuoteStatus) and the worker app appends when an order is
+   loaded and sent out (loadOrder) -- so the copy in memory here can be
+   missing the worker's entry, and sending it as it stands would erase
+   that entry from the server. Re-read just the log of the rows about to
+   go up, merge it in (mergeStageLog: each entry once, oldest first), and
+   keep the merged log on the order in memory too -- otherwise the row
+   sent would never again equal the one built from it, and the order
+   would be re-sent on every save.
+
+   Called from inside the upsert (addDiffOps' beforeUpsert) rather than
+   awaited before the diff: an await there would let another save run
+   between the absent-collection guard and the diff. A failed read sends
+   the rows as they are -- the database's own trigger (0106) unions the
+   two logs as well, so this is the first line, not the only one. */
+async function mergeServerStageLogs(shopId, rows){
+  if(!rows.length) return;
+  const { data: current, error } = await sb.from('saved_quotes')
+    .select('id, stageLog:payload->stageLog').eq('shop_id', shopId).in('id', rows.map(r=> r.id));
+  if(error) throw error;
+  const theirs = new Map((current || []).map(r=> [String(r.id), r.stageLog]));
+  rows.forEach(row=>{
+    const server = theirs.get(String(row.id));
+    if(!server || !row.payload) return;
+    const log = mergeStageLog(server, row.payload.stageLog);
+    if(!log) return;
+    row.payload.stageLog = log;
+    /* Merged with what is in memory NOW, not overwritten: a move made
+       while the read was out is newer than both. The merged log goes
+       FIRST, so its copy of an entry is the one kept: the database
+       spells an entry with its keys in its own order ({at, auto,
+       status}), this app as it wrote it ({status, at, auto}), and the
+       row is compared as text -- memory keeping its own spelling of an
+       entry the server already holds would never again equal the row
+       just sent, and the order would go up on every save. */
+    const q = (data.savedQuotes || []).find(x=> String(x.id) === String(row.id));
+    if(q) q.stageLog = mergeStageLog(log, q.stageLog);
+  });
+}
+
 /* How many saves are in flight, so the background refresh can see one.
 
    A refresh REPLACES `data` and `lastSynced` wholesale, and both of those
@@ -40520,7 +40632,7 @@ async function syncDataToServer(){
   addDiffOps(ops, 'stockLog', 'stock_log', 'id', shopId, rows.stockLog);
   addDiffOps(ops, 'cashDays', 'cash_days', 'date', shopId, rows.cashDays);
   addDiffOps(ops, 'cashTxns', 'cash_txns', 'id', shopId, rows.cashTxns);
-  addDiffOps(ops, 'savedQuotes', 'saved_quotes', 'id', shopId, rows.savedQuotes);
+  addDiffOps(ops, 'savedQuotes', 'saved_quotes', 'id', shopId, rows.savedQuotes, {beforeUpsert: (r)=> mergeServerStageLogs(shopId, r)});
   addDiffOps(ops, 'purchaseInvoices', 'purchase_invoices', 'id', shopId, rows.purchaseInvoices);
   addDiffOps(ops, 'supplierCommissions', 'supplier_commissions', 'id', shopId, rows.supplierCommissions);
   addDiffOps(ops, 'fixedAssets', 'fixed_assets', 'id', shopId, rows.fixedAssets);
@@ -57309,7 +57421,7 @@ function ordersReadyToLeaveAwaitingGoods(){
    word about it is how somebody loses track of their own board. */
 function autoAdvanceReceivedOrders(){
   const moved = ordersReadyToLeaveAwaitingGoods();
-  moved.forEach(q=> setSavedQuoteStatus(q.id, 'preparing'));
+  moved.forEach(q=> setSavedQuoteStatus(q.id, 'preparing', { auto: true }));
   return moved;
 }
 function autoAdvanceNote(moved){
@@ -57323,8 +57435,12 @@ function autoAdvanceNote(moved){
    Draft used to hand the order to the sales group from in here, which
    opens a WhatsApp window on its own. The app has a permanent law that
    NOTHING SENDS ITSELF -- every send is an owner's tap -- so the hand-off
-   stays the tap it became and no status change carries one. */
-function setSavedQuoteStatus(id, status){
+   stays the tap it became and no status change carries one.
+
+   opts.auto marks a move the app made by itself (a supplier's last
+   answer, goods checked in, the board's autopilot) rather than a tap,
+   so the order's trail can say which. */
+function setSavedQuoteStatus(id, status, opts){
   if(!SQ_STATUSES[status]) return;
   const q = data.savedQuotes.find(x=>x.id===id);
   if(!q) return;
@@ -57352,7 +57468,19 @@ function setSavedQuoteStatus(id, status){
     q.pickingStatus = 'done';
   }
   const moved = q.status!==status;
-  if(moved) q.stageEnteredAt = Date.now();
+  if(moved){
+    q.stageEnteredAt = Date.now();
+    /* THE STAGE LOG, written here because this is the one place a status
+       changes. The order's trail, its stage times and the board's
+       days-per-stage all read it, and nothing wrote it -- so every one
+       of them said "not recorded" of every order. The moment is the
+       same number as stageEnteredAt, kept in milliseconds: the board
+       subtracts one entry's from the next. Appended, never rewritten,
+       and merged with the server's copy on save (mergeServerStageLogs)
+       so the worker app's own entry is not lost to this one. */
+    q.stageLog = (Array.isArray(q.stageLog) ? q.stageLog : [])
+      .concat([{ status, at: q.stageEnteredAt, ...(opts && opts.auto ? { auto: true } : {}) }]);
+  }
   q.status = status;
   saveData();
   renderSavedQuotes();
@@ -59895,7 +60023,11 @@ function orderTrail(q){
      for delivery happen in the same instant and the sort is stable: the
      act reads above the move it caused rather than under it. */
   if(q.carrier && q.carrier.at) push(q.carrier.at, `Loaded — ${[q.carrier.name, q.carrier.what].filter(Boolean).join(' · ') || DELIVERY_SELF_CARRIERS[String(q.assignedDeliveryId)] || 'gone out'}${q.carrier.by ? ' · by ' + q.carrier.by : ''}`);
-  (q.stageLog || []).forEach(e=> push(e.at, `Moved to ${otStageShort(e.status)}`, e.auto));
+  // A stage entered again without leaving it is one move, not two (ofHist).
+  (q.stageLog || []).forEach((e, i, log)=>{
+    if(i && log[i - 1] && e.status === log[i - 1].status) return;
+    push(e.at, `Moved to ${otStageShort(e.status)}`, e.auto);
+  });
   (q.items || []).forEach(it=>{
     if(quoteLineReceived(it)) push(it.receivedAt, `${Number(it.receivedQty).toLocaleString('en-UG')}${it.unit ? ' ' + it.unit : ''} of ${it.productName || 'an item'} received from ${supplierName(it.supplierId)}`);
   });
@@ -64138,7 +64270,12 @@ function ofDriver(q) {
   return String(d);
 }
 function ofHist(q) {
-  var h = {}, log = Array.isArray(q.stageLog) ? q.stageLog : [];
+  var h = {}, all = Array.isArray(q.stageLog) ? q.stageLog : [];
+  /* A stage entered again without leaving it is not a move. A tab that
+     had not refreshed can send out an order already out, the log keeps
+     both entries for good (0106), and read as two moves the second would
+     cut the first one's stay short. The first is when it got there. */
+  var log = all.filter(function (e, i) { return !(i && e && all[i - 1] && e.status === all[i - 1].status); });
   for (var i = 1; i < log.length; i++) {
     var a = log[i - 1], b = log[i];
     if (a && b && a.status && a.at && b.at) h[a.status] = Math.max(0, Math.round((b.at - a.at) / 864e5));
@@ -64272,10 +64409,10 @@ class OrderFlowBoard extends Component {
       if (o.stage === 'draft' && typeof orderLeaveDraft === 'function' && orderDraftReady(q) && orderLeaveDraft(q, { auto: true })) {
         moved++; self.feedMove(o, q.status, self.whyFor(o));
       } else if (o.stage === 'awaiting_goods' && !orderAwaitsGoods(q) && !agentPaymentBlocksPreparing(q)) {
-        setSavedQuoteStatus(q.id, 'preparing'); moved++; self.feedMove(o, 'preparing', self.whyFor(o));
+        setSavedQuoteStatus(q.id, 'preparing', { auto: true }); moved++; self.feedMove(o, 'preparing', self.whyFor(o));
       } else if (o.stage === 'preparing' && o.pickSt === 'packed' && !pickUndecided(o)) {
         var d = chooseDriver(o, orders);
-        self.sendOut(q, d); moved++;
+        self.sendOut(q, d, true); moved++;
         self.feedMove(o, 'pending_delivery', self.whyFor(o) + (d ? ' · ' + carrierName(d) + ' takes it' : ''));
       } else if (o.stage === 'pending_delivery' && !o.driver) {
         var d2 = chooseDriver(o, orders);
@@ -64308,11 +64445,12 @@ class OrderFlowBoard extends Component {
     else if (d === 'hired') { q.assignedDeliveryId = '__carrier__'; q.carrier = { kind: 'hired', name: 'Hired transport', what: '', phone: '', at: Date.now(), by: 'board' }; }
     else { q.assignedDeliveryId = null; q.carrier = null; }
   }
-  sendOut(q, d) {
+  // `auto` is the autopilot's own move, written as such on the stage log.
+  sendOut(q, d, auto) {
     if (d) this.assignCarrier(q, d);
     q.pickingStatus = 'done';
     if (!q.pickingDoneAt) q.pickingDoneAt = Date.now();
-    setSavedQuoteStatus(q.id, 'pending_delivery');
+    setSavedQuoteStatus(q.id, 'pending_delivery', auto ? { auto: true } : undefined);
   }
 
   // ---- Quoted: confirming suppliers -------------------------------------
@@ -64765,7 +64903,11 @@ OrderFlowBoard.prototype.csSell = function (c, cart, total) {
       syncInvoiceDebtCharge(q);
     } else {
       data.cashTxns.push({ id: allocRowId('cashTxn'), date: today, account: c.acct || 'cash', type: 'receipt', category: 'Sales Revenue', amount: total,
-        description: 'Counter sale — ' + q.items.length + ' item' + (q.items.length === 1 ? '' : 's') + (who ? ' · ' + who : ''), time: time, quoteId: q.id });
+        description: 'Counter sale — ' + q.items.length + ' item' + (q.items.length === 1 ? '' : 's') + (who ? ' · ' + who : ''), time: time, quoteId: q.id,
+        // Who took the money, stamped as the Cash Book till stamps its own
+        // counter sale (tillCommitSale) -- without it the book could only
+        // say "not recorded" of every sale made from this sheet.
+        enteredBy: typeof cbWhoAmI === 'function' ? cbWhoAmI() : null });
       q.amountPaid = total;
     }
     saveData();
@@ -102303,6 +102445,33 @@ function stockCostsEqual(a, b){
    correction row's own `corrects` field is the same fact written on
    the row that always survives, so a missing forward pointer is healed
    from the backward one. */
+/* THE FORWARD POINTERS, REBUILT FROM THE BACKWARD ONES. correctedBy and
+   reversedBy are written onto the old row in memory and have no column
+   of their own; the database keeps only the pointer on the row that did
+   the putting right (corrects, reverses -- 0106). So a reloaded log is
+   relinked here, once, and every reader that asks "was this corrected",
+   "was this taken back" -- the tags on the log, the verbs Put it right
+   offers -- reads the same answer it did before the reload. Rows that
+   carry no backward pointer are left exactly as they are. */
+function stockLogRelink(rows){
+  const byId = new Map((rows || []).map(r=> [String(r.id), r]));
+  (rows || []).forEach(r=>{
+    const fixed = r.corrects != null ? byId.get(String(r.corrects)) : null;
+    if(fixed && fixed !== r) fixed.correctedBy = r.id;
+    const undone = r.reverses != null ? byId.get(String(r.reverses)) : null;
+    if(undone && undone !== r) undone.reversedBy = r.id;
+  });
+  return rows;
+}
+/* Has this movement been taken back? Asked by either pointer -- the same
+   healing effectiveStockPurchase gives a correction: the forward one is
+   an in-place edit a sync can lose, the backward one rides on the row
+   that always survives. */
+function stockLogTakenBack(e){
+  if(!e) return false;
+  if(e.reversedBy) return true;
+  return (data.stockLog || []).some(x=> x !== e && x.reverses != null && String(x.reverses) === String(e.id));
+}
 function effectiveStockPurchase(e){
   let row = e, guard = 0;
   while(row && guard++ < 200){
@@ -102364,24 +102533,37 @@ function stockPurchaseMinQty(e){
 function stockMovementReversalPlan(logId){
   const e = (data.stockLog || []).find(x => String(x.id) === String(logId));
   if(!e) return null;
-  const delta = Number(e.delta) || 0;
-  if(!(delta > 0)) return null;
+  if(!((Number(e.delta) || 0) > 0)) return null;
+  /* A PURCHASE STANDS WHERE ITS CORRECTIONS LEFT IT, not at the figure
+     first written: sixteen corrected to ten has ten to take back, and a
+     delivery already undone (undoDelivery corrects it to nothing) has
+     none, nor has any correction along the way. Read off the first
+     figure, other deliveries' goods on the same shelf would be taken
+     back with it. The quantity is the chain's only for the row the
+     chain starts from -- a correction's own difference is not what the
+     purchase stands at. */
+  const eff = effectiveStockPurchase(e);
+  const undone = eff.tail !== e && !(eff.qty > 0);
+  const corrected = !undone && eff.tail !== e && e.corrects == null;
+  const delta = undone ? 0 : corrected ? eff.qty : Number(e.delta);
   const onHand = Number((data.stock || {})[e.key]) || 0;
   const takeBack = Math.min(delta, onHand);
   const pi = (data.purchaseInvoices || []).find(x => x.id === e.piId && !x.voided) || null;
   return { row: e, delta, onHand, takeBack, soldOn: delta - takeBack,
-    bill: pi, already: !!e.reversedBy };
+    bill: pi, corrected, undone, already: undone || stockLogTakenBack(e) };
 }
 function reverseStockMovement(logId, note){
   const plan = stockMovementReversalPlan(logId);
   if(!plan) return {ok: false, error: 'That movement cannot be taken back — only something that PUT goods on the shelf can be.'};
-  if(plan.already) return {ok: false, error: 'That movement has already been taken back.'};
+  if(plan.already) return {ok: false, error: plan.undone
+    ? 'That delivery has already been corrected to nothing, so there is nothing of it left to take back.'
+    : 'That movement has already been taken back.'};
   if(plan.takeBack <= 0) return {ok: false,
     error: `Every one of these ${plan.delta} has already been sold or written off, so there is nothing left to take back. Correct the movements that took them instead.`};
   /* Through the one writer, so the lots, the log and the count move
      together exactly as they do for every other movement. */
   const after = applyStockDelta(plan.row.productId, plan.row.variantIdx, -plan.takeBack, 'reversal',
-    `Never happened — ${STOCK_TYPE_LABELS[plan.row.type] || plan.row.type} of ${plan.delta} on ${plan.row.date} taken back`
+    `Never happened — ${STOCK_TYPE_LABELS[plan.row.type] || plan.row.type} of ${plan.delta}${plan.corrected ? ' as corrected' : ''} on ${plan.row.date} taken back`
       + (plan.soldOn > 0 ? `, less ${plan.soldOn} already gone` : '')
       + (note ? ` — ${note}` : ''),
     null, null);
@@ -102551,7 +102733,12 @@ function stockCountBillWarning(productId, variantIdx, delta){
    is testable without a screen. */
 function applyStockPurchaseEdit(logId, next){
   const e = (data.stockLog || []).find(x => x.id === logId);
-  if(!e || !isStockPurchaseRow(e)) return {ok: false, error: 'That movement is not a purchase this screen can correct.'};
+  /* A delivery against a buy order is known as one by the screen stamped
+     on it, which before 0106 does not survive a reload -- named, rather
+     than calling a real purchase not one. */
+  if(!e || !isStockPurchaseRow(e)) return {ok: false, error: 'That movement is not a purchase this screen can correct.'
+    + (e && e.type === 'restock' && !e.source && !stockLogMetaColumns
+      ? ' A delivery against one of your buy orders is known as one across a reload once the 0106 update is applied.' : '')};
   const eff = effectiveStockPurchase(e);
   const onHand = Number(data.stock[e.key]) || 0;
   const newQty = Number(next.qty) || 0;
@@ -103770,10 +103957,14 @@ function priceReviewStaleDays(){
    are the same events counted again:
 
      stock log     applyStockDelta stamps cost and supplierId onto the
-                   entry, and NEITHER IS PERSISTED -- the columns do not
-                   exist on stock_log and the sync maps neither, so every
-                   restock reads back with a null cost. Checked on the
-                   live shop: 21 restock rows, none carrying a price.
+                   entry. Until 0106 neither reached the database, so
+                   every restock read back with a null cost (checked on
+                   the live shop: 21 restock rows, none carrying a
+                   price). Since 0106 both are kept, behind its probe --
+                   but only on rows written after it, nothing is filled
+                   in backward, so the log's prices start partway through
+                   the shop's history and the invoices stay the one
+                   complete record of it.
      receipts      real and persisted, but a received line becomes a
                    purchase invoice line too, so counting both would
                    double every order-derived observation and inflate
@@ -112989,19 +113180,31 @@ function invShelfFacts(allLines){
    Counts from before that are read off the log: a correction the shop
    typed, not one of the rows the app writes itself when a purchase,
    a cost or a consignment is put right. */
-const INV_NOT_A_COUNT = /^(Corrected —|Sent back —|Purchase of|Cost corrected|Cost put on)|held on consignment/;
+/* "Delivery on … undone" is the buy-order screen taking back goods that
+   never came (a purchase put right, like the rest of this list), and
+   read as a count it was a stocktake that found the shelf short. */
+const INV_NOT_A_COUNT = /^(Corrected —|Sent back —|Purchase of|Cost corrected|Cost put on|Delivery on .* undone)|held on consignment/;
+/* THE MOMENT, NOT ITS SPELLING. A count's record keeps the `at` of the
+   log row it wrote as this browser spelled it ("…Z"); the same row read
+   back from the database is spelled "…+00:00". Compared as text the two
+   never met after a reload, so one count was kept twice -- once from
+   the presets and once off the log. */
+function invCountMoment(at){
+  const t = Date.parse(at);
+  return Number.isFinite(t) ? String(t) : String(at || '');
+}
 function invCountRecords(){
   const out = [], seen = new Set();
   Object.keys(data.presetStockCounts || {}).forEach(key=>{
     ((data.presetStockCounts || {})[key] || []).forEach(r=>{
       if(!r || !r.date) return;
       out.push({ key, date: r.date, at: r.at || r.date, found: Number(r.found) || 0, record: Number(r.record) || 0, kept: true });
-      seen.add(`${key}|${r.at || r.date}`);
+      seen.add(`${key}|${invCountMoment(r.at || r.date)}`);
     });
   });
   (data.stockLog || []).forEach(e=>{
     if(!e || e.type !== 'correction' || !e.key || !e.date || !Number(e.delta)) return;
-    if(INV_NOT_A_COUNT.test(String(e.note || '')) || seen.has(`${e.key}|${e.at || e.date}`)) return;
+    if(INV_NOT_A_COUNT.test(String(e.note || '')) || seen.has(`${e.key}|${invCountMoment(e.at || e.date)}`)) return;
     const after = Number(e.qtyAfter) || 0;
     const before = after - (Number(e.delta) || 0);
     /* Against an empty record it is the first stock put on file, not a
@@ -113010,6 +113213,26 @@ function invCountRecords(){
     out.push({ key: e.key, date: e.date, at: e.at || e.date, found: after, record: before });
   });
   return out.sort((a, b)=> String(b.at).localeCompare(String(a.at)));
+}
+/* WHICH LOG ROWS ARE COUNTS, for a reader walking the log by day. The
+   count screen has no 'count' type to write: the difference it finds
+   goes to the log as a 'correction', and the count itself is kept by
+   line in the presets, stamped with that row's own moment
+   (invRecordCount). So "was this row a count" is invCountRecords'
+   question -- the one the register's Counted column already answers --
+   asked of the row's line and moment. A row typed 'count' still is one:
+   older books and imports carry it. Built once and handed to each day,
+   because a reader of eight weeks of days must not re-walk the log for
+   every one of them. */
+function stockCountIndex(){
+  const out = new Map();
+  invCountRecords().forEach(r=> out.set(`${r.key}|${invCountMoment(r.at)}`, r));
+  return out;
+}
+function stockLogIsCount(l, index){
+  if(!l) return false;
+  if(l.type === 'count') return true;
+  return l.type === 'correction' && !!index && index.has(`${l.key}|${invCountMoment(l.at || l.date)}`);
 }
 // Kept to the last eight per line: enough for a trend, never a ledger.
 function invRecordCount(key, found, record, at){
@@ -114277,11 +114500,17 @@ function prOwnedElsewhere(e){
    button that argues with itself when pressed. The shelf and the cost
    are about the ITEM rather than this row, so they are always offered:
    whatever put the goods there, what stands on the shelf today and what
-   it is said to have cost are this screen's to state. */
+   it is said to have cost are this screen's to state.
+
+   A purchase is read where its corrections left it: one already
+   corrected to nothing (a delivery undone) has nothing left either to
+   take back or to correct. */
 function prVerbsFor(e){
+  const eff = effectiveStockPurchase(e);
+  const undone = eff.tail !== e && !(eff.qty > 0);
   return PR_VERBS.filter(v=>{
-    if(v.id === 'never') return (Number(e.delta) || 0) > 0 && !e.reversedBy && !prOwnedElsewhere(e);
-    if(v.id === 'figures') return isStockPurchaseRow(e) && !e.reversedBy;
+    if(v.id === 'never') return (Number(e.delta) || 0) > 0 && !e.reversedBy && !undone && !prOwnedElsewhere(e);
+    if(v.id === 'figures') return isStockPurchaseRow(e) && !e.reversedBy && !undone;
     return true;
   });
 }
@@ -126038,16 +126267,21 @@ function managerGrowthPhone(phone){
   return /^[1-9][0-9]{9,14}$/.test(digits) ? digits : null;
 }
 
-function dashGoingQuietCustomers(){
+/* `nowMs` is the moment the reading is taken at, and defaults to now.
+   Passed through to the purchase history so both halves read one clock:
+   an invoice dated after it is not a purchase yet, and "since their
+   last order" is measured to the same moment. */
+function dashGoingQuietCustomers(nowMs){
+  const now = nowMs || Date.now();
   const rows = [];
-  const history = managerPurchaseHistory();
+  const history = managerPurchaseHistory(now);
   data.customers.forEach(c=>{
     const orderTimes = (history.byCustomer.get(String(c.id)) || []).map(e=> e.at);
     if(orderTimes.length<2) return;
     const first = orderTimes[0], last = orderTimes[orderTimes.length-1];
     const avgGapDays = (last-first) / (orderTimes.length-1) / 86400000;
     if(avgGapDays<=0) return;
-    const sinceLastDays = (Date.now()-last) / 86400000;
+    const sinceLastDays = (now-last) / 86400000;
     const extraDays = sinceLastDays - avgGapDays;
     // Overdue by at least 50% of their usual gap, with a 7-day floor so a
     // customer who orders every couple of days isn't flagged over natural
@@ -126702,15 +126936,22 @@ function undoDeliveryPlan(billId){
      on one morning is an ordinary Tuesday. */
   const rows = (data.stockLog || []).filter(r=> r && r.source === 'buy-order'
     && String(r.piId) === String(pi.id) && r.type === 'restock');
+  /* Before 0106 the bill and the screen stamped on a movement last only
+     until the next reload, so a delivery from an earlier session cannot
+     be traced at all -- named, so the shop is not told its goods never
+     reached the shelf. */
   if(!rows.length) return { ok: false,
-    why: `Nothing on the shelf can be traced to ${purchaseInvoiceNumberLabel(pi)}, so there is nothing to take back. Void the bill if it is wrong.` };
+    why: `Nothing on the shelf can be traced to ${purchaseInvoiceNumberLabel(pi)}, so there is nothing to take back. `
+      + (stockLogMetaColumns ? 'Void the bill if it is wrong.'
+        : 'Which bill a delivery came in on is kept across a reload once the 0106 update is applied — until then, correct the lines one at a time or void the bill.') };
   const lines = []; const sold = [];
   rows.forEach(r=>{
     const eff = effectiveStockPurchase(r);
-    /* Already corrected to nothing by hand: there is nothing left of
-       this line to take back, and taking it again would take somebody
-       else's goods. */
-    if(!(eff.qty > 0)) return;
+    /* Already corrected to nothing by hand, or already said never to
+       have happened (Put it right): there is nothing left of this line
+       to take back, and taking it again would take somebody else's
+       goods. */
+    if(!(eff.qty > 0) || stockLogTakenBack(r)) return;
     const onHand = Number(data.stock[r.key]) || 0;
     const line = { logId: r.id, key: r.key, productId: r.productId,
       variantIdx: (r.variantIdx == null || r.variantIdx === '') ? null : r.variantIdx,
@@ -126723,7 +126964,7 @@ function undoDeliveryPlan(billId){
       + sold.map(l=> `${l.name} — ${l.gone} of ${l.qty} gone`).join('; ')
       + '. Units that left the shelf existed, whatever the paperwork says. Correct the lines that are still here one at a time instead.' };
   if(!lines.length) return { ok: false,
-    why: `Every line on ${purchaseInvoiceNumberLabel(pi)} has already been corrected to nothing, so there is nothing left to take back. Void the bill if it is still standing.` };
+    why: `Every line on ${purchaseInvoiceNumberLabel(pi)} has already been corrected to nothing or taken back, so there is nothing left to take back. Void the bill if it is still standing.` };
   return { ok: true, bill: pi, lines,
     total: Math.round(purchaseInvoiceTotal(pi)),
     order: buyOrderFor(pi.buyOrderId) };
@@ -129618,6 +129859,10 @@ async function managerSetMoveStatus(rowId, status, skipReason){
   const up = await sb.from('manager_notes').update({ status, body }).eq('shop_id', currentShopId).eq('id', rowId);
   if(up.error) toast('Could not record that — ' + up.error.message);
   renderManager();
+  /* Answered from Today's own tier, the row there says so too -- it
+     went on offering Done on a move already done until the next full
+     redraw of the dashboard. */
+  if(document.getElementById('dash_mgrQueue')) renderTodayPlan();
 }
 
 /* Adopting a target fixes the two things that cannot be derived later:
@@ -133274,7 +133519,15 @@ function dayRecord(dateISO){
 
   /* The shelf. A count is neither a delivery nor a sale and is kept
      apart: it is the shop correcting its own record, which is a
-     different fact about the day. */
+     different fact about the day.
+
+     Which rows ARE counts is the Inventory screen's answer, not the
+     row's type (stockLogIsCount): the count screen writes its
+     difference as a 'correction', so asked for type 'count' -- which
+     nothing writes -- every stocktake landed here as a delivery or a
+     sale. */
+  const counts = stockCountIndex();
+  const countsOnLog = new Set();
   const inRows = [], outRows = [], countRows = [], ranOut = [];
   (data.stockLog || []).forEach(l=>{
     if(!l || String(l.date || '').slice(0, 10) !== day) return;
@@ -133282,12 +133535,29 @@ function dayRecord(dateISO){
     const after = Number(l.qtyAfter) || 0;
     const row = { key: l.key, line: l.label || l.key, delta: Math.round(delta),
       left: Math.round(after), note: l.note || '', at: l.at || null };
-    if(l.type === 'count') countRows.push(row);
+    if(stockLogIsCount(l, counts)){
+      countRows.push(row);
+      countsOnLog.add(`${l.key}|${invCountMoment(l.at || l.date)}`);
+    }
     else if(delta > 0) inRows.push(row);
     else if(delta < 0) outRows.push(row);
     /* Crossed to nothing on this day -- the same test the morning brief
        makes, so the two can never disagree about what ran out. */
     if(delta < 0 && after <= 0 && (after - delta) > 0) ranOut.push(row);
+  });
+  /* A COUNT THAT MATCHED IS STILL A COUNT. It moved nothing, so it has
+     no row on the log -- but the line was checked that day, and a day
+     somebody spent counting the shelf is not a quiet one. Named by the
+     line's own label off the log where it has one; failing that, the
+     way the log would have labelled it (productVariantLabel), and only
+     a line the catalogue no longer knows by its raw key. */
+  counts.forEach((r, k)=>{
+    if(String(r.date || '').slice(0, 10) !== day || countsOnLog.has(k)) return;
+    const named = (data.stockLog || []).find(l=> l && l.key === r.key && l.label);
+    const parts = named ? null : buyKeyParts(r.key);
+    countRows.push({ key: r.key,
+      line: named ? named.label : parts ? productVariantLabel(parts.product, parts.variantIdx) : r.key, delta: 0,
+      left: Math.round(Number(r.found) || 0), note: '', at: r.at || null });
   });
   /* What a line that ran out had sold by then -- every movement out on
      this day for that key, not only the one that crossed to nothing. */
@@ -133496,7 +133766,7 @@ const UNUSUAL_MIN = 5;          // fewer, and the day is not judged
 const UNUSUAL_Z = 3;            // distances from the middle to be unusual
 const UNUSUAL_LOOKBACK = 7;     // finished days checked
 
-function unusualDayReading(dateISO){
+function unusualDayReading(dateISO, countIndex){
   const day = String(dateISO || '').slice(0, 10);
   const p = dayPulse(day);
   const invoices = anInvoicesInRange(day, day);
@@ -133509,11 +133779,15 @@ function unusualDayReading(dateISO){
     outRows.push({ what: String(t.category || t.note || 'Money out'), amount: Math.round(amt) });
   });
   /* A count that found LESS than the book, valued at what the line
-     cost. A count that found more is the book catching up, not a loss. */
+     cost. A count that found more is the book catching up, not a loss.
+     A count is whatever the Inventory screen counts as one
+     (stockLogIsCount): its difference is written as a 'correction', and
+     asked for type 'count' this never saw a single real stocktake. */
+  const counts = countIndex || stockCountIndex();
   let short = 0;
   const shortRows = [];
   (data.stockLog || []).forEach(l=>{
-    if(!l || l.type !== 'count' || String(l.date || '').slice(0, 10) !== day) return;
+    if(!l || !stockLogIsCount(l, counts) || String(l.date || '').slice(0, 10) !== day) return;
     const delta = Number(l.delta) || 0;
     if(delta >= 0) return;
     const parts = buyKeyParts(l.key);
@@ -133543,7 +133817,9 @@ function unusualSpread(xs){
 function unusualDays(todayISO_){
   const today = String(todayISO_ || todayISO()).slice(0, 10);
   const cache = new Map();
-  const read = (d)=>{ if(!cache.has(d)) cache.set(d, unusualDayReading(d)); return cache.get(d); };
+  // Which log rows are counts, read once for every day below.
+  const counts = stockCountIndex();
+  const read = (d)=>{ if(!cache.has(d)) cache.set(d, unusualDayReading(d, counts)); return cache.get(d); };
   /* A sum worth a sentence: 5% of what this shop typically sells in a
      day, and never under 20,000. Below it a "spike" is small change. */
   const recent = [];
@@ -135163,16 +135439,36 @@ function mgrRichRowHTML(row, all, opts){
    container above the watch's -- so the two never reorder each other and
    a row the owner is already reading does not jump when the second
    list lands underneath it. */
+/* The read in flight. A move answered here redraws the tier while the
+   dashboard may be drawing it too, and the later answer is the one that
+   stands -- an older read landing last would put back what was just
+   answered. */
+let todayPlanTicket = 0;
 function renderTodayPlan(){
   if(!document.getElementById('dash_mgrQueue')) return;
+  const ticket = ++todayPlanTicket;
+  /* A READ THAT FAILED SAYS SO, in the tier, rather than leaving it
+     empty -- an empty tier reads as "the Manager has nothing for you",
+     which is a different and false sentence. */
+  const unread = (why)=>{
+    const box = document.getElementById('dash_mgrQueue');
+    if(!box || ticket !== todayPlanTicket) return;
+    box.innerHTML = `<div class="ow-empty"><b>The Manager's plan for today could not be read.</b> ${
+      esc(String(why || 'The journal did not answer').replace(/\.?$/, '.'))} The watch below is the app's own, and is unaffected.</div>`;
+  };
   managerLoadState().then((st)=>{
     const box = document.getElementById('dash_mgrQueue');
-    if(!box) return;
-    const rows = (st && st.today && st.today.rows) || [];
+    if(!box || ticket !== todayPlanTicket) return;
+    if(st && st.error){ unread(st.error); return; }
+    /* The plan that stands today, in the shape managerLoadState hands
+       back: {meeting, moves, earlier, earlierAnswered}. This read
+       `today.rows`, which nothing has ever set -- so the Manager's tier
+       on Today stayed empty every morning a meeting had been held. */
+    const rows = (st && st.today && st.today.moves) || [];
     if(!rows.length){ box.innerHTML = ''; return; }
     box.innerHTML = mgrMoveOrder(rows).map(r=> mgrQueueRowHTML(r, rows)).join('');
     mgrWirePlan(box);
-  }).catch(()=>{});
+  }).catch((e)=> unread(e && e.message));
 }
 
 function renderDashboard(){
@@ -147289,12 +147585,13 @@ function dsRecords(from, to){
   }));
   /* A PAYMENT ON THE LEDGER is one the owner wrote: type payment, not an
      invoice's echo, not the drift repair's correction. Its cashTxnId is
-     NOT persisted -- debt_log has no column for it -- so after a reload
-     the link is gone and the brief's gate (collectionLedgerRow) would drop
-     every one of them. Here the receipt is found again instead: the
-     unclaimed receipt of that day for that customer, the same amount
-     first. Found, it gives the clock and the method; not found, the
-     payment still counts, its time and method unknown. */
+     kept since 0106 (cash_txn_id) and followed where it is there. A row
+     written before that, or on a shop that has not applied it, comes back
+     from a reload without the link, and the brief's gate
+     (collectionLedgerRow) would drop it. For those the receipt is found
+     again instead: the unclaimed receipt of that day for that customer,
+     the same amount first. Found, it gives the clock and the method; not
+     found, the payment still counts, its time and method unknown. */
   const claimed = new Set(pieces.map(p=> p.txn));
   (data.customers || []).forEach(c=> (c.debtLog || []).forEach(l=>{ if(l && l.cashTxnId != null) claimed.add(l.cashTxnId); }));
   const findReceipt = (c, l, d)=>{

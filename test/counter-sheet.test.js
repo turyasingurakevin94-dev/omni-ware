@@ -85,6 +85,8 @@ const ctx = {
   syncInvoiceDebtCharge: (q) => { calls.push(['debt', q.id]); const c = data.customers.find((x) => x.id === q.customerId); if (c) c.debt += ctx.invoiceBalanceDue(q); },
   buildQuoteRecord: (o) => ({ id: o.quoteId, client: o.client, date: o.date, items: o.items, status: 'draft', stageEnteredAt: Date.now(), invoiced: false, amountPaid: 0 }),
   printReceipt: log('printReceipt'), copyTextInTap: () => true, SALES_GROUP_WA_LINK: 'https://chat.whatsapp.com/x', open: () => ({}),
+  // Who is signed in, as the Cash Book till asks it.
+  cbWhoAmI: () => 'user-7',
 };
 ctx.window = ctx; ctx.globalThis = ctx; ctx.data = data;
 vm.createContext(ctx);
@@ -145,6 +147,8 @@ function walk(i, scope, live, label) {
   t.check(q && q.items[0].supplierId === '__stock__' && q.items[0].productId === 'P1' && q.items[0].sellPrice === 34500 && q.items[0].productName === 'Cement', 'its lines come off our shelf at the price shown');
   t.check(calls.some((c) => c[0] === 'stock' && c[1] === 900) && STOCK.P1 === 38, 'the stock comes down');
   t.check(tx && tx.account === 'momo' && tx.amount === 69000 && tx.category === 'Sales Revenue' && tx.type === 'receipt', 'one Sales Revenue receipt in the account it was paid into, linked to the sale');
+  t.check(tx && tx.enteredBy === 'user-7',
+    `stamped with who took the money, as the till stamps its own counter sale — not "not recorded" (${tx && tx.enteredBy})`);
   t.check(board.state.counter.done && board.state.counter.done.no === 'INV-0900', 'the sold screen shows the invoice number');
   t.check(!board.state.orders.some((o) => o.qid === 900), 'and it stays off the lanes');
 

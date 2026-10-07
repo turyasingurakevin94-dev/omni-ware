@@ -50,6 +50,10 @@ let __owAllowMassDelete = false;
 // A delete there is not an instruction, it is the symptom of `data` and
 // `lastSynced` having drifted apart -- and the diff turns that into "delete
 // everything the snapshot still remembers".
+// opts.beforeUpsert(rows) runs inside the upsert, just before it, and may
+// change those rows in place (the admin app merges the server's stage
+// logs in). What it leaves is what is sent AND what is committed. If it
+// throws, the rows go as they are: a failed re-read must not cost a save.
 function addDiffOps(ops, collectionKey, tableName, idField, shopId, rows, opts){
   if(syncAbsentCollections && syncAbsentCollections.has(collectionKey)){
     console.error(`REFUSING to sync ${collectionKey}: the collection is absent from data — a partial data object is not an instruction to empty the shop`);
@@ -64,8 +68,15 @@ function addDiffOps(ops, collectionKey, tableName, idField, shopId, rows, opts){
   const toDeleteValues = removedKeys.map(k=> prev[k][idField]);
 
   if(toUpsert.length){
+    const beforeUpsert = opts && opts.beforeUpsert;
     ops.push({
-      run: ()=> sb.from(tableName).upsert(toUpsert),
+      run: beforeUpsert
+        ? async ()=>{
+            try{ await beforeUpsert(toUpsert); }
+            catch(err){ console.error(`Could not prepare ${tableName} before saving — sending the rows as they are:`, err); }
+            return sb.from(tableName).upsert(toUpsert);
+          }
+        : ()=> sb.from(tableName).upsert(toUpsert),
       commit: ()=> toUpsert.forEach(r=> prev[String(r[idField])] = cloneJSON(r))
     });
   }
@@ -1330,6 +1341,30 @@ function carrierDraftsFrom(root){
   return m;
 }
 
+/* ONE ORDER'S STAGE LOG, FROM TWO COPIES. Both apps append to it -- the
+   console on every move, this app when it sends an order out -- and each
+   saves from its own copy, so either alone would erase the other's
+   entry. Each entry {status, at, auto?} is kept once (the same status at
+   the same moment is the same move), and the result runs oldest first:
+   the board reads the time spent in a stage as the next entry's `at`
+   less this one's, which only means something in order. `at` is a
+   millisecond number, the same clock as stageEnteredAt. Null when
+   neither copy has anything, so an order with no history stays without
+   one rather than gaining an empty list. */
+function mergeStageLog(a, b){
+  const seen = new Set(), out = [];
+  [].concat(Array.isArray(a) ? a : [], Array.isArray(b) ? b : []).forEach(e=>{
+    if(!e || !e.status) return;
+    const at = typeof e.at === 'number' ? e.at : Date.parse(e.at);
+    if(!Number.isFinite(at)) return;
+    const k = `${e.status}|${at}`;
+    if(seen.has(k)) return;
+    seen.add(k);
+    out.push(e.at === at ? e : Object.assign({}, e, { at }));
+  });
+  return out.length ? out.sort((x, y)=> x.at - y.at) : null;
+}
+
 /* LOADED, IT HAS GONE. Out for delivery begins when something is out --
    not when the pick ends, which is what the app used to say while the
    goods sat on the floor. So this is its own moment, with its own tap,
@@ -1389,6 +1424,9 @@ function loadOrder(orderId, carrier){
     } else {
       q.status = 'pending_delivery';
       q.stageEnteredAt = now;
+      // The stage log, as setSavedQuoteStatus writes it on the console.
+      // Merged onto the server's copy on save (mergeOntoServerRows).
+      q.stageLog = (Array.isArray(q.stageLog) ? q.stageLog : []).concat([{ status: 'pending_delivery', at: now }]);
       saveData();
     }
   }

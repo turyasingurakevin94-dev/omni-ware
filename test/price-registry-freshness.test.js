@@ -852,20 +852,30 @@ const sold = (productId, qty, date) => data.stockLog.push({
   const fn = (/function priceObservations[\s\S]*?\n\}/.exec(code) || [''])[0];
   t.check(/data\.purchaseInvoices/.test(fn), 'the history is read from the purchase invoices');
   t.check(!/stockLog/.test(fn),
-    'and NOT the stock log, whose cost and supplierId are stamped in memory and never persisted');
+    'and NOT the stock log, whose cost survives a reload only on rows written after 0106');
   t.check(!/receipts/.test(fn),
     'nor the receipts, which become purchase invoice lines too and would double every order-derived price');
 
-  /* The stock log's two dead fields, pinned so nobody builds on them
-     again believing they survive. They are written by applyStockDelta,
-     mapped by neither side of the sync, and the columns do not exist. */
+  /* WHY NOT THE STOCK LOG, now that its cost is kept. applyStockDelta
+     stamps a cost and a supplier on the entry, and since 0106 both sides
+     of the sync carry them -- but only once the owner has applied that
+     migration (the probe), and never for a row written before it: there
+     is no back-fill. A price history read off the log would begin on the
+     day 0106 landed, and read every purchase before it as having no
+     price at all. The purchase invoices hold the whole history, so they
+     stay the one source. Pinned so nobody builds on the log believing
+     its costs reach back. */
   const push = (/data\.stockLog\.push\(\{[\s\S]*?\}\);/.exec(code) || [''])[0];
   t.check(/cost:/.test(push) && /supplierId:/.test(push),
     'applyStockDelta does stamp a cost and a supplier onto the entry');
-  const load = (/stockLog: \(stockLogR\.data\|\|\[\]\)\.map[\s\S]*?\)\),/.exec(code) || [''])[0];
+  const load = (/stockLog: stockLogRelink\(\(stockLogR\.data\|\|\[\]\)\.map[\s\S]*?\)\)\),/.exec(code) || [''])[0];
   const save = (/stockLog: d\.stockLog\.map[\s\S]*?\}\)\),/.exec(code) || [''])[0];
-  t.check(!/cost/.test(load) && !/cost/.test(save),
-    'but neither side of the sync carries it, so it does not survive a reload — which is why it is not the source here');
+  t.check(/l\.cost != null \? \{cost: Number\(l\.cost\)\} : \{\}/.test(load)
+    && /\.\.\.\(stockLogMetaColumns \? \{[\s\S]*?cost:/.test(save),
+    'since 0106 both sides of the sync carry it -- behind the probe, so a shop without the migration still loses it on reload');
+  const mig = read('supabase/migrations/0106_data_integrity.sql');
+  t.check(/add column if not exists cost numeric/.test(mig) && !/update\s+public\.stock_log/i.test(mig),
+    'and the column is added with no back-fill, so every row from before it carries no cost — which is why it is still not the source here');
 }
 
 /* ---------- 20. both settings are reachable ---------------------------

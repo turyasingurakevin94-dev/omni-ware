@@ -48,7 +48,12 @@ const FNS = ['stockKey', 'addStockLot', 'consumeStockLots', 'isStockPurchaseRow'
   /* The whole-delivery undo, which is the other half of this: a line
      cannot be corrected to nothing, so "none of it came" is its own
      act. */
-  'undoDeliveryPlan', 'undoDelivery', 'buyOrderTotal', 'buyOrderIsOpen', 'buyOrderFor'];
+  'undoDeliveryPlan', 'undoDelivery', 'buyOrderTotal', 'buyOrderIsOpen', 'buyOrderFor',
+  /* Whether a line was already said never to have happened, by either
+     pointer -- the backward one is the one a reload keeps (0106) -- and
+     the plan "It never happened" reads, which must not see an undone
+     delivery as still standing. */
+  'stockLogTakenBack', 'stockMovementReversalPlan'];
 
 const data = {};
 const syncCalls = [];
@@ -390,6 +395,19 @@ const line = (pid) => bill().items.find((it) => it.productId === pid);
   t.check(/already voided/.test(again.why || ''), 'and says why');
   eq(bill().deliveryUndone, '2026-08-31',
     'the bill is marked as undone, so it can never be un-voided back into a delivery the shelf and the order have both moved on from');
+
+  /* NOR TAKEN BACK A SECOND WAY. Put it right reads the delivery where
+     the undo left it -- at nothing -- so "It never happened" is not
+     offered, and would take other deliveries' cement off the shelf if
+     it were. The same after a reload, when only the correction's own
+     pointer comes back. */
+  data.stock.P1 = 40;   // forty more bags since, from other lorries
+  t.check(verbIds(data.stockLog[0]).indexOf('never') === -1 && verbIds(data.stockLog[0]).indexOf('figures') === -1,
+    `an undone line offers neither "It never happened" nor "The figures are wrong" (offered: ${verbIds(data.stockLog[0])})`);
+  eq(scope.stockMovementReversalPlan(1).already, true, 'and the reversal plan finds nothing of it left to take back');
+  delete data.stockLog[0].correctedBy;
+  eq(verbIds(data.stockLog[0]).indexOf('never'), -1, 'nor after a reload');
+  eq(scope.stockMovementReversalPlan(1).already, true, 'where the plan still finds it by the backward pointer');
 }
 
 /* ---------- 16. a bill that never came off an order ------------------ */
@@ -427,6 +445,30 @@ const line = (pid) => bill().items.find((it) => it.productId === pid);
     'TAKING BACK WHAT THE PURCHASE NOW SAYS, not what it said first — reading the original 30 would take eighteen units off a shelf that never had them');
   scope.undoDelivery(9);
   eq(data.stock.P1, 0, 'and the shelf lands on nothing rather than below it');
+}
+
+/* ---------- 18b. a line already taken back is left alone ----------- */
+{
+  /* The wall angle was said never to have happened (Put it right), and
+     the log was then read back from the database: only the reversal's
+     own pointer survives, the forward one on the original row is gone.
+     Undoing the delivery must take back the cement, and leave the wall
+     angle -- whose 200 are already off the shelf -- alone. */
+  freshDelivery();
+  data.stock.P2 = 0;
+  data.stockLots.P2 = [];
+  data.stockLog.push({ id: 3, key: 'P2', productId: 'P2', variantIdx: null, label: 'Wall Angle',
+    type: 'reversal', delta: -200, qtyAfter: 0, note: 'Never happened — Restock of 200 on 2026-08-30 taken back',
+    date: '2026-08-31', at: '2026-08-31T08:00:00+00:00', source: 'never-happened', reverses: 2 });
+  t.check(!data.stockLog[1].reversedBy, 'the forward pointer is gone, as it is after a reload');
+  const plan = scope.undoDeliveryPlan(9);
+  t.check(plan.ok, `the delivery can still be undone${plan.ok ? '' : ' — ' + plan.why}`);
+  eq(plan.ok && plan.lines.length, 1, 'with one line to take back, not two');
+  eq(plan.ok && plan.lines[0].name, 'Cement',
+    'the cement -- the wall angle was already taken back, and reading it as still standing would refuse the whole undo as "already sold"');
+  scope.undoDelivery(9);
+  eq(data.stock.P1, 0, 'the cement comes off');
+  eq(data.stock.P2, 0, 'and the wall angle is not taken twice');
 }
 
 /* ---------- 19. and the DOOR, which is the void button --------------- *

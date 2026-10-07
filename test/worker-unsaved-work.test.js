@@ -33,6 +33,7 @@ const { read, extractFunction, extractDeclaration, createReporter } = require('.
 
 const t = createReporter('worker unsaved work');
 const workerHtml = read('worker.html');
+const sharedJs = read('shared-worker.js');
 
 const LINE = () => ({ productId: 'P1', productName: 'Cement', qty: 5, pickStatus: 'pending', pickedQty: null });
 const SERVER_ROW = () => ({
@@ -76,6 +77,7 @@ function build({ saveFails, serverPayment }) {
     ${extractFunction(workerHtml, 'buildWorkerSyncRows', 'worker.html')}
     ${extractFunction(workerHtml, 'mergePickState', 'worker.html')}
     ${extractFunction(workerHtml, 'mergeOntoServerRows', 'worker.html')}
+    ${extractFunction(sharedJs, 'mergeStageLog', 'shared-worker.js')}
     ${extractFunction(workerHtml, 'saveData', 'worker.html')}
     ${extractFunction(workerHtml, 'hasUnsavedWork', 'worker.html')}
     ${extractFunction(workerHtml, 'refreshWorkerData', 'worker.html')}
