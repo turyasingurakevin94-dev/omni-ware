@@ -138958,7 +138958,12 @@ function mgrSimLevers(books, extra){
   add(mgrSimSeasonLever(b));
   add(mgrSimOfferLever(b, x.offers || []));
   add(mgrSimClearLever(b));
-  add(mgrSimPriceLever(b, x.planPrice));
+  /* The market reading's line, offering the plan's price when the plan
+     prices that line; and the plan's own line beside it when it names
+     another (Q38). */
+  const pp = x.planPrice || null;
+  add(mgrSimPriceLever(b, pp && !pp.line ? pp : null));
+  if(pp && pp.line) add(mgrSimPriceLever(b, pp));
   add(mgrSimDiscountLever(b));
   add(mgrSimTermsLever(b));
   add(mgrSimHireLever(b));
@@ -139223,8 +139228,8 @@ function mgrSimPlanPriceFact(open, books){
     side: 'wholesale', units, daysOld: above ? above.daysOld : null, unitProfit: s.profit30 / s.units30 } };
 }
 function mgrSimPriceLever(b, plan){
-  /* On the plan's own line when it names one the market reading does
-     not price; otherwise the line sold furthest under a rival. */
+  /* The plan's own line when it names one the market reading does not
+     price; otherwise the line sold furthest under a rival. */
   const p = plan && plan.line ? plan.line : b.price;
   if(!p) return null;
   const mine = plan && (plan.line || (b.price && String(plan.key) === String(b.price.key))) ? plan.price : null;
@@ -139417,7 +139422,9 @@ function mgrSimCompose(levers, choice, assume){
     if(e.dd != null) c.dd = e.dd;
     c.stock += Number(e.stock) || 0; c.dead += Number(e.dead) || 0; c.freed += Number(e.freed) || 0; c.clearIn += Number(e.clearIn) || 0;
     c.interest += Number(e.interest) || 0; c.sales += Number(e.sales) || 0;
-    if(e.price != null) c.price = { key: l.subject.key, price: e.price, volume: e.volume };
+    /* The first price chosen: the market reading's line comes first, so
+       the rival test reads that line's price whatever else is priced. */
+    if(e.price != null && !c.price) c.price = { key: l.subject.key, price: e.price, volume: e.volume };
     const op = l.opts.find(z=> z.id === o);
     c.changed.push({ id: l.id, kind: l.kind, label: l.label, short: l.short, choice: o, choiceLabel: op.label, say: op.say || op.label,
       dept: l.dept, from: l.group === 'books' ? 'books' : 'assumption', pips: op.pips == null ? null : op.pips, basis: op.basis || null,
@@ -139949,8 +139956,8 @@ function mgrSimVerdictInputs(model, choice, assume, run, presets, walkFn){
     }
   }
   let priceBetter = null;
-  const pl = model.levers.find(l=> l.kind === 'price');
-  if(pl && mgrSimChoiceOf(pl, choice) !== pl.def){
+  const pl = model.levers.find(l=> l.kind === 'price' && mgrSimChoiceOf(l, choice) !== l.def);
+  if(pl){
     const a = mgrSimAssumeOf(pl, assume);
     const at = pl.opts.find(o=> o.id === mgrSimChoiceOf(pl, choice));
     const best = pl.opts.filter(o=> o.id !== pl.def).map(o=> ({ o, p: (pl.effect(o.id, a.value) || {}).profit || 0 }))

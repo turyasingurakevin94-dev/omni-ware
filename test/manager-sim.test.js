@@ -526,9 +526,18 @@ t.check(S.mgrSimSame(L, {}, { 'chase:C1': 'today' }) && !S.mgrSimSame(L, {}, P.p
     'the lever moves to the plan’s line: today’s 12,000 or the plan’s 12,500 — 40 × 500 = 20,000 a month at the same volume');
   eq(pfl.opts[0].hint, 'today\'s price', 'with no rival above ours, today’s price says nothing about one');
   const PL5 = S.mgrSimLevers(BOOKS(), { moves: paint, open: paint, orders: [], offers: [], planPrice: pf });
-  eq(PL5.filter((l) => l.kind === 'price').map((l) => l.id), ['price:P5'], 'one price lever, on the plan’s line');
+  eq(PL5.filter((l) => l.kind === 'price').map((l) => l.id), ['price:P24', 'price:P5'],
+    'the plan’s line gets a price lever of its own, beside the market reading’s — which is untouched');
+  eq(PL5.find((l) => l.id === 'price:P24').opts.some((o) => o.plan), false, 'and the market line is offered no planned price it was never given');
   const P5 = S.mgrSimPresets(PL5, paint, paint);
-  eq([P5.plan, P5.growth['price:P5']], [{ 'price:P5': 'plan' }, undefined], 'my plan takes it; Growth push has no step up to take');
+  eq([P5.plan, P5.growth['price:P5'], P5.growth['price:P24']], [{ 'price:P5': 'plan' }, undefined, 'p1'],
+    'my plan takes the plan’s price; Growth push has no step up to take on Paint, and still takes Y10’s');
+  /* Both priced: the rival test reads the market line's price, and the
+     verdict looks for a better step on whichever price was moved. */
+  const both = S.mgrSimCompose(PL5, { 'price:P5': 'plan', 'price:P24': 'p1' }, {});
+  eq([both.price.key, both.price.price, both.profit], ['P24', 34050, 81840 + 20000],
+    'the rival test reads Y10 at 34,050; the month adds 81,840 + 20,000');
+  eq(S.mgrSimCompose(PL5, { 'price:P5': 'plan' }, {}).price.key, 'P5', 'with only the plan’s line moved, that is the price chosen');
   /* A rival above ours: 13,000 cheapest -- steps a third and two thirds
      of the 1,000 gap, to the nearest 50: 12,350 and 12,650. */
   const pfR = fact({ rivalMarketRows: () => [{ key: 'P5', comparable: true, side: 'wholesale', theirs: 13000, shop: 'Bina', daysOld: 2 }] })(paint, BOOKS());
