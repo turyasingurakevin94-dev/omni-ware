@@ -206,6 +206,15 @@ function scope(env) {
   eq(s.mgrTgState({ finished: false, direction: 'up', aim: 1, actual: null, pace: null }).key, 'unknown', 'a figure the books cannot read is called nothing');
   eq(s.mgrTgState({ finished: false, direction: 'up', aim: 9, actual: 1 }).key, 'unknown', 'nor is one with no road yet');
   eq(s.mgrTgState({ finished: true, met: false, actual: 5, aim: 9 }).key, 'missed', 'a finished one is met or missed');
+  /* A line to hold: cash never under 10m, at 20m today; at this rate it
+     ends at 8m -- across the line before the deadline: At risk. Ending at
+     12m it is held: On track. Under the line it is Off track. */
+  eq(s.mgrTgState({ finished: false, hold: true, direction: 'up', aim: 10, actual: 20, pace: { on_course: true, behind_by: 0, at_this_rate: 8 } }).key, 'risk',
+    'a line held today that crosses at this rate is At risk');
+  eq(s.mgrTgState({ finished: false, hold: true, direction: 'up', aim: 10, actual: 20, pace: { on_course: true, behind_by: 0, at_this_rate: 12 } }).key, 'on',
+    'held, and staying held, is On track');
+  eq(s.mgrTgState({ finished: false, hold: true, direction: 'up', aim: 10, actual: 4, pace: { on_course: false, behind_by: 6, at_this_rate: 2 } }).key, 'off',
+    'crossed is Off track');
 }
 
 /* ---------- 8. the track: every mark on one scale ----------------------- */

@@ -135352,7 +135352,9 @@ const MGR_TG_PERIODS = 24;      // how many past periods the composer reads at m
    stands behind the straight road today; what is still to go is the
    distance from where it stands to the aim. At or ahead of the road is
    On track; behind by less than a third of what is still to go is At
-   risk; a third or more is Off track. */
+   risk; a third or more is Off track. A line to hold (the aim already
+   met where it started) is On track while held, At risk when at this
+   rate it crosses the line before the deadline, Off track once crossed. */
 const MGR_TG_RISK = 1 / 3;
 /* The composer's measures, in the canvas's order, then the ones the
    meeting already proposed. Load time has no agreed definition and no
@@ -135639,7 +135641,12 @@ function mgrTgState(x){
   if(!x || x.actual == null || !Number.isFinite(Number(x.actual))) return none;
   if(x.finished) return { ...none, key: x.met === true ? 'met' : x.met === false ? 'missed' : 'unknown' };
   const aim = Number(x.aim) || 0, actual = Number(x.actual);
-  if(mgrTgBetter(x.direction, actual, aim)) return { key: 'on', behind: 0, toGo: 0, share: 0 };
+  if(mgrTgBetter(x.direction, actual, aim)){
+    /* A line to hold that, at this rate, crosses it before the deadline. */
+    if(x.hold && x.pace && Number.isFinite(Number(x.pace.at_this_rate)) && !mgrTgBetter(x.direction, Number(x.pace.at_this_rate), aim))
+      return { key: 'risk', behind: 0, toGo: 0, share: 0, crossing: true };
+    return { key: 'on', behind: 0, toGo: 0, share: 0 };
+  }
   if(!x.pace) return none;
   const toGo = Math.abs(aim - actual);
   const behind = x.pace.on_course ? 0 : Math.abs(Number(x.pace.behind_by) || 0);
@@ -136198,6 +136205,8 @@ function mgrTgRowHTML(r){
       r.brk.breaksOn ? (r.brk.broke ? `The books show it under ${mgrTgFig(u, x.aim)} on ${mgrTgDay(r.brk.breaksOn, true)}, so this month cannot hold it now.`
         : `The committed line goes under ${mgrTgFig(u, x.aim)} on ${mgrTgDay(r.brk.breaksOn, true)}.`) : `It stays at or above ${mgrTgFig(u, x.aim)}.`}`
     : st.key === 'unknown' ? 'The books cannot read where it stands today, so it is not called anything.'
+    : x.hold ? `A line to hold: ${mgrTgFig(u, x.aim)} was already met when it was set. ${st.key === 'off' ? `It is ${mgrTgGap(u, st.behind)} past the line now.`
+      : st.crossing ? `At this rate it reaches ${mgrTgFig(u, x.pace.at_this_rate)} by ${mgrTgDay(x.to)}, across the line.` : 'It is held, and at this rate stays held.'} The rule: on track while held; at risk when at this rate it crosses the line before the deadline; off track once crossed.`
     : `${st.behind ? `Behind the road by ${mgrTgGap(u, st.behind)} today — ${Math.round(st.share * 100)}% of the ${mgrTgGap(u, st.toGo)} still to go.` : 'At or ahead of the road today.'} The rule: on track at or ahead of the straight road from where it started to the aim; at risk behind it by less than a third of what is still to go; off track a third or more.`;
   const fix = r.links[0];
   const fixHTML = fix ? `<b>${esc(fix.title || 'A move')}</b><button type="button" class="ow-link mgr-tg-dec" data-tg-move="${esc(String(fix.id))}">Decision ${esc(fix.num)} →</button>${
