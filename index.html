@@ -2504,6 +2504,8 @@
   .mgr-pl-in{box-sizing:border-box;width:100%;height:36px;padding:0 var(--ow-sp-10);border:1px solid var(--ow-rule);
     border-radius:var(--ow-r);background:var(--ow-paper);font:inherit;font-size:var(--ow-t-13);color:var(--ow-ink-900);}
   .mgr-pl-in:focus{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
+  .mgr-pl-ta{height:auto;min-height:56px;padding:var(--ow-sp-8) var(--ow-sp-10);line-height:1.4;resize:vertical;}
+  .mgr-pl-f-w{grid-column:1/-1;}
   /* judged and proven */
   .mgr-pl-vd{display:flex;align-items:center;gap:var(--ow-sp-6);font-size:var(--ow-t-12);font-weight:var(--ow-fw-700);color:var(--ow-ink-600);}
   .mgr-pl-vd.mgr-pl-vg{color:var(--ow-verdigris);}
@@ -2805,6 +2807,7 @@
     .mgr-pl-ca .btn.ow-sm{flex:1 1 calc(50% - 3px);min-height:var(--ow-tap);box-sizing:border-box;}
     .mgr-pl-vs .btn.ow-sm{flex:1 1 0;min-width:0;min-height:var(--ow-tap);box-sizing:border-box;}
     .mgr-pl-in{height:44px;font-size:16px;}
+    .mgr-pl-ta{height:auto;min-height:64px;}
     .mgr-pl-aside{padding:var(--ow-sp-12) var(--ow-sp-16);font-size:var(--ow-t-13);}
     .mgr-pl-dzg{grid-template-columns:minmax(0,1fr);}
     .mgr-pl-dzl{border-right:0;border-bottom:1px solid var(--ow-rule-soft);padding:var(--ow-sp-16);}
@@ -136038,8 +136041,9 @@ function mgrPlayRecipeHTML(x, model){
     <div class="mgr-pl-runs-w"><span class="mgr-pl-runs" role="img" aria-label="${esc(`${x.judgedWorked} of ${x.judged} judged worked`)}">${x.runs.map(r=>
       `<i class="mgr-pl-rn${r.verdict === 'worked' ? '' : ' mgr-pl-rx'}" title="${esc(`${MGR_PLAY_VERDICT_WORDS[r.verdict]}${r.ended_on ? ' · ' + r.ended_on : ''}`)}"></i>`).join('')}</span>
       <span class="mgr-pl-fig">${x.judgedWorked} of ${x.judged} judged worked</span></div>
-    <dl class="mgr-pl-kv"><dt>Moved alongside, avg</dt><dd title="${esc(avgTitle)}">${esc(avgText)}${avg == null ? '' : ` <span class="mgr-pl-kn">${esc(same[0].label)}</span>`}</dd>
+    <dl class="mgr-pl-kv"><dt>Moved alongside, avg</dt><dd title="${esc(avgTitle)}">${esc(avgText)}</dd>
       <dt>Last run</dt><dd>${x.running ? 'running now' : x.lastOn ? esc(mgrPlayDate(x.lastOn)) : 'not recorded'}</dd></dl>
+    ${avg == null ? '' : `<p class="mgr-pl-sub">${esc(same[0].label)}, across the ${same.length} run${same.length === 1 ? '' : 's'} you judged worked</p>`}
     ${mgrPlayNoteHTML('vg', x.running ? 'Running again now — judge it when its span ends.' : 'Your verdict, counted: the meeting may propose it again.', true)}
     <div class="mgr-pl-ca">${x.running ? '<button type="button" class="btn btn-ghost ow-sm" disabled>Running now</button>'
       : `<button type="button" class="btn btn-ghost ow-sm" data-pl-act="rerun" data-key="${esc(x.key)}"${full ? ` disabled title="${esc(`All ${MGR_PLAY_SLOTS} slots are in use — judge or stop one first.`)}"` : ''}>Run it again</button>`}</div>
@@ -136237,7 +136241,11 @@ function mgrPlayDesignPaint(book, today){
   const thenText = m ? m.label : d.treats === 'other' ? 'what you are after' : String(MANAGER_PROBLEMS[d.treats] || 'it').toLowerCase();
   const icon = { vg: MGR_PLAY_MARK.ok, am: MGR_PLAY_MARK.warn, cr: MGR_PLAY_MARK.no };
   const slot = (t)=> `<span class="mgr-pl-slot">${esc(t)}</span>`;
-  const field = (k, label, val, type, extra)=> `<label class="mgr-pl-f"><span class="mgr-pl-fl">${esc(label)}</span><input class="mgr-pl-in" data-pl-f="${k}" type="${type || 'text'}" value="${esc(val == null ? '' : String(val))}"${extra || ''}></label>`;
+  /* A sentence the owner writes sits in a box that grows with it: an
+     input would clip "give cash buyers a lower price than credit b..." */
+  const field = (k, label, val, type, extra)=> type === 'area'
+    ? `<label class="mgr-pl-f mgr-pl-f-w"><span class="mgr-pl-fl">${esc(label)}</span><textarea class="mgr-pl-in mgr-pl-ta" data-pl-f="${k}" rows="2"${extra || ''}>${esc(val == null ? '' : String(val))}</textarea></label>`
+    : `<label class="mgr-pl-f"><span class="mgr-pl-fl">${esc(label)}</span><input class="mgr-pl-in" data-pl-f="${k}" type="${type || 'text'}" value="${esc(val == null ? '' : String(val))}"${extra || ''}></label>`;
   el.innerHTML = `<div class="mgr-pl-ph"><span class="mgr-pl-micro">New play</span><span class="mgr-pl-pt">Write a play with me — I check it before it starts</span></div>
     <div class="mgr-pl-dzg">
       <div class="mgr-pl-dzl">
@@ -136245,15 +136253,15 @@ function mgrPlayDesignPaint(book, today){
           `<button type="button" class="btn btn-ghost ow-sm mgr-pl-pre" data-pl-pre="${esc(p.id)}" aria-pressed="${d.id === p.id}" title="${esc(p.aimBasis)}">${esc(p.label)}</button>`).join('')}
           <button type="button" class="btn btn-ghost ow-sm mgr-pl-pre" data-pl-pre="own" aria-pressed="${d.id === 'own'}">Your own</button></div>
         ${mgrPlayDraftEdit ? `<div class="mgr-pl-form">
-          ${field('name', 'Name', d.name, 'text', ' maxlength="120"')}
+          ${field('name', 'Name', d.name, 'area', ' maxlength="120"')}
           <div class="mgr-pl-f"><span class="mgr-pl-fl">It treats</span><select class="mgr-pl-in" data-pl-f="treats" aria-label="It treats">${Object.keys(MANAGER_PROBLEMS).map(k=>
             `<option value="${k}"${k === d.treats ? ' selected' : ''}>${esc(MANAGER_PROBLEMS[k])}</option>`).join('')}</select></div>
-          ${field('if', 'If we', d.if, 'text', ' maxlength="200"')}
+          ${field('if', 'If we', d.if, 'area', ' maxlength="200"')}
           ${m ? field('target', `Aim for ${m.label}${m.unit === 'pct' ? ' (%)' : ' (UGX)'}`, d.target == null ? '' : (m.unit === 'pct' ? d.target : Math.round(d.target)), 'number', ' inputmode="decimal"') : ''}
           ${field('weeks', 'Weeks', d.weeks, 'number', ' min="2" max="13" inputmode="numeric"')}
           ${field('stopBy', 'Stop rule read at week', d.stopBy, 'number', ' min="1" max="13" inputmode="numeric"')}
           ${field('cost', 'What it costs (UGX)', d.cost, 'number', ' min="0" inputmode="numeric"')}
-          ${field('dependsOn', 'Waits on (optional)', d.dependsOn, 'text', ' maxlength="120"')}
+          ${field('dependsOn', 'Waits on (optional)', d.dependsOn, 'area', ' maxlength="120"')}
         </div>` : ''}
         <p class="mgr-pl-sent"><span class="mgr-pl-w">If we</span>${slot(d.if || 'say what you will do')}, <span class="mgr-pl-w">then</span>${slot(thenText)} <span class="mgr-pl-w">will</span>${slot(by)} <span class="mgr-pl-w">within</span>${slot(`${d.weeks} week${Number(d.weeks) === 1 ? '' : 's'}`)}.</p>
         <div class="mgr-pl-facts">
