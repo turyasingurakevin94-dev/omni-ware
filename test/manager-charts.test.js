@@ -146,7 +146,9 @@ const fmtUGX = (n) => Number(n).toLocaleString('en-US') + ' UGX';
     t.check(sb2.proposed.length === 2, 'and the rest are untouched');
     /* The Targets section draws through mgrTgDraw, which wires the cards. */
     const render = mgrRender() + extractFunction(src, 'mgrTgDraw', 'index.html');
-    t.check(/managerAdoptTarget\(id, dups\)/.test(render) && /managerDeclineTarget\(id, dups\)/.test(render)
+    /* WAS managerAdoptTarget(id, dups); NOW it also passes the owner
+       picked on the card (managerAdoptTarget(id, dups, owner)). */
+    t.check(/managerAdoptTarget\(id, dups, /.test(render) && /managerDeclineTarget\(id, dups\)/.test(render)
       && /await managerRetireDuplicates\(dupIds\);/.test(extractFunction(src, 'managerAdoptTarget', 'index.html'))
       && /await managerRetireDuplicates\(dupIds\);/.test(extractFunction(src, 'managerDeclineTarget', 'index.html')),
       'answering the newest retires its older copies, whichever way it was answered');
