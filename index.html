@@ -129332,6 +129332,110 @@ function mgrSnapshotAfterLoad(){
   }, 3000);
   return true;
 }
+
+/* ---- WHAT THE MEETING IS HANDED FROM THESE MODELS --------------------
+   The screen draws health, the floor, the payday, the owner's offers,
+   the taught normals and the signed decisions; the meeting, which fills
+   the plan's dept, confidence and evidence fields, could see none of
+   them. These turn each reading into a compact, capped answer for the
+   meeting's tools (shop_pulse, manager_history) -- the same figures the
+   screen draws, never a second calculation. A reading that failed is
+   named; an unknown says "not known", never 0. */
+const MGR_MEETING_FAILING_MAX = 3;
+function mgrMeetingHealth(h){
+  if(!h || typeof h !== 'object') return { error: 'the health checks could not be read' };
+  if(h.error) return { error: 'the health checks could not be read — ' + h.error };
+  const checks = Array.isArray(h.checks) ? h.checks : [];
+  return {
+    score: h.score == null ? 'not known' : h.score, passed: h.passed || 0, of: h.known || 0,
+    how: 'the share of named pass/fail checks the books pass; a check the books cannot judge is not counted',
+    ...((h.errors || []).length ? { could_not_read: h.errors.slice(0, 8) } : {}),
+    departments: MGR_DEPTS.map(d=>{
+      const x = (h.byDept || {})[d.id] || {};
+      const mine = checks.filter(c=> c.dept === d.id);
+      const failing = mine.filter(c=> c.pass === false);
+      const unknown = mine.filter(c=> c.pass == null).length;
+      return { dept: d.id,
+        score: x.thin || x.score == null ? 'not enough on the books' : x.score,
+        passed: x.passed || 0, of: x.known || 0,
+        ...(failing.length ? { failing: failing.slice(0, MGR_MEETING_FAILING_MAX).map(c=> ({ check: c.id, reads: c.line })) } : {}),
+        ...(failing.length > MGR_MEETING_FAILING_MAX ? { more_failing: failing.length - MGR_MEETING_FAILING_MAX } : {}),
+        ...(unknown ? { not_known: unknown } : {}) };
+    }) };
+}
+/* The cash floor with where it comes from, and the payday the wages
+   are dated by. A stand-in floor is said to be one. */
+function mgrMeetingSettings(floor, payday){
+  const f = floor && typeof floor === 'object' ? floor : null;
+  const cashFloor = !f ? { error: 'the cash floor could not be read' }
+    : { amount: Math.round(Number(f.amount) || 0), source: f.source === 'set' ? 'set by the owner' : 'stand-in', note: f.note || '',
+      ...(f.source !== 'set' && f.parts ? { stands_in_with: { rent: f.parts.rent, salaries: f.parts.wages,
+        ...(f.parts.dailyPaid ? { daily_paid_staff_not_costed: f.parts.dailyPaid } : {}) } } : {}) };
+  const pd = payday && typeof payday === 'object' ? payday : null;
+  return { cash_floor: cashFloor,
+    payday: pd ? { kind: pd.kind, reads: mgrPaydayLabel(pd), ...(mgrPaydaySettlesLabel(pd) ? { settles: mgrPaydaySettlesLabel(pd) } : {}) }
+      : { reads: 'not set', wages_dated: 'at month end, the date the payroll gives every wage due' } };
+}
+/* mgrOffers()' answer: the owner's offers still open, soonest expiry
+   first. Written down by the owner; none is money in hand. */
+function mgrMeetingOffers(r, max){
+  if(!r || typeof r !== 'object') return { error: 'the offers could not be read' };
+  if(r.error) return { error: 'the offers could not be read — ' + r.error };
+  const rows = Array.isArray(r.rows) ? r.rows : [];
+  if(!rows.length) return null;
+  const n = Math.max(1, Number(max) || 5);
+  return { count: rows.length,
+    offers: rows.slice(0, n).map(o=> ({ from: o.from, name: o.name, amount: Math.round(Number(o.amount) || 0),
+      rate_pct_a_year: o.rate == null ? 'not known' : o.rate, term_months: o.termMonths == null ? 'not known' : o.termMonths,
+      expires_on: o.expiresOn || 'not known', ...(o.daysLeft != null ? { days_left: o.daysLeft } : {}),
+      ...(o.supplierId != null ? { supplierId: o.supplierId } : {}), ...(o.note ? { note: o.note } : {}) })),
+    ...(rows.length > n ? { more: rows.length - n } : {}),
+    note: 'Written down by the owner. An offer is not money in hand: nothing counts it until the owner takes it.' };
+}
+/* mgrNotesOfKind('normal')' answer: what the owner taught is an
+   ordinary day, so the meeting stops raising a day like it. */
+function mgrMeetingNormals(r, max){
+  if(!r || typeof r !== 'object') return { error: 'the taught normals could not be read' };
+  if(r.error) return { error: 'the taught normals could not be read — ' + r.error };
+  const rows = (Array.isArray(r.rows) ? r.rows : []).filter(x=> !x.status || x.status === 'active');
+  if(!rows.length) return null;
+  const n = Math.max(1, Number(max) || 8);
+  return { count: rows.length,
+    normals: rows.slice(0, n).map(x=>{
+      const b = x.body || {};
+      return { metric: b.metric || '', ...(b.weekday != null && MGR_WEEKDAYS[b.weekday] ? { weekday: MGR_WEEKDAYS[b.weekday] } : {}),
+        ...(b.condition ? { when: b.condition } : {}), ...(b.effect ? { effect: b.effect } : {}),
+        ...(b.note ? { note: b.note } : {}), taught_on: b.taughtOn || x.date || null };
+    }),
+    ...(rows.length > n ? { more: rows.length - n } : {}),
+    note: 'Taught by the owner: a day that matches one of these is ordinary for this shop. Do not raise it as unusual.' };
+}
+/* mgrNotesOfKind('decision')' answer: choices the owner SIGNED in the
+   Simulator -- each lever with whether its effect is from the books or
+   the owner's assumption, and the summary kept with it. A record of a
+   choice, never executed, and never the Manager's advice. */
+function mgrMeetingDecisions(r, max){
+  if(!r || typeof r !== 'object') return { error: 'the signed decisions could not be read' };
+  if(r.error) return { error: 'the signed decisions could not be read — ' + r.error };
+  const rows = (Array.isArray(r.rows) ? r.rows : []).filter(x=> !x.status || x.status === 'signed');
+  if(!rows.length) return null;
+  const n = Math.max(1, Number(max) || 5);
+  return { count: rows.length,
+    decisions: rows.slice(0, n).map(x=>{
+      const b = x.body || {}, o = b.outcome && typeof b.outcome === 'object' ? b.outcome : null;
+      return { signed_on: b.signedOn || x.date || null, title: String(b.title || '').slice(0, 200),
+        ...(b.why ? { why: String(b.why).slice(0, 240) } : {}), ...(b.dept ? { dept: b.dept } : {}),
+        levers: (Array.isArray(b.levers) ? b.levers : []).slice(0, 6).map(l=> ({ lever: l.label || l.id || '', choice: l.choice || '',
+          effect_from: l.from === 'books' ? 'the books' : 'the owner’s assumption' })),
+        ...(o ? { as_signed: {
+          ...(o.low ? { lowest_committed_cash: o.low.balance, on: o.low.date } : {}),
+          ...(o.profit ? { net_profit_change_a_month: o.profit.change, change_range: [o.profit.lo, o.profit.hi] } : {}),
+          ...(o.holds ? { shocks_held: o.holds.held + ' of ' + o.holds.of } : {}) } }
+          : b.outcomeDropped ? { as_signed: 'not kept' } : {}) };
+    }),
+    ...(rows.length > n ? { more: rows.length - n } : {}),
+    note: 'Signed by the owner in the Simulator: a record of what they chose, never executed by the app and never the Manager’s advice. Do not count it as advice taken.' };
+}
 /* ═══ MGR SHARED MODELS — end ═══ */
 
 async function renderManagerGrowth(){
@@ -161864,6 +161968,16 @@ const ASSISTANT_TOOLS = {
     return {
       as_of: today, period: 'last 30 days',
       cash,
+      /* WHERE EACH DEPARTMENT STANDS, and the two settings the cash line
+         is judged by: the health checks (each department's score and its
+         failing checks), the cash floor with its source, and the payday
+         wages are dated by -- the figures the screen draws, handed over
+         so a move's dept and evidence argue from them. Each is read on
+         its own: one that fails is named and the rest still stand. */
+      health: (()=>{ try { return mgrMeetingHealth(mgrHealthChecks()); }
+        catch(e){ return { error: 'the health checks could not be read — ' + ((e && e.message) || e) }; } })(),
+      ...(()=>{ try { return mgrMeetingSettings(mgrCashFloor(), mgrPayday()); }
+        catch(e){ return { cash_floor: { error: 'the cash floor and payday could not be read — ' + ((e && e.message) || e) } }; } })(),
       alerts: dashAlerts(dctx).slice(0, 8).map(a=> ({
         band: a.band, title: a.title, money: apRound(a.money||0), action: a.action })),
       /* EVERY ROW THAT NAMES ONE THING CARRIES THAT THING'S ID, spelled
@@ -162477,6 +162591,19 @@ const ASSISTANT_TOOLS = {
     /* WHETHER CHASING WORKS HERE, AND ON WHOM -- measured against the
        weeks nobody chased, which the track record cannot do. */
     const chasing = await managerChaseEvidence(todayISO());
+    /* THE OWNER'S OWN RECORDS, kept beside the advice: offers written
+       down (open, soonest expiry first), what the owner taught is an
+       ordinary day, and the choices signed in the Simulator. Each read
+       on its own, and named when it fails. */
+    const ownRecord = async (what, read, shape)=>{
+      try { return shape(await read()); }
+      catch(e){ return { error: 'the ' + what + ' could not be read — ' + ((e && e.message) || e) }; }
+    };
+    const [offersOut, normalsOut, decisionsOut] = await Promise.all([
+      ownRecord('offers', ()=> mgrOffers(), (r)=> mgrMeetingOffers(r)),
+      ownRecord('taught normals', ()=> mgrNotesOfKind('normal', { status: 'active', limit: 20 }), (r)=> mgrMeetingNormals(r)),
+      ownRecord('signed decisions', ()=> mgrNotesOfKind('decision', { status: 'signed', limit: 10 }), (r)=> mgrMeetingDecisions(r)),
+    ]);
     /* DAYS OUT OF THE ORDINARY in the last week, against this shop's own
        usual for each weekday. Refreshes the screen's reading too, so the
        rail and the meeting argue from the same days. */
@@ -162667,6 +162794,9 @@ const ASSISTANT_TOOLS = {
          move should reach for and quote. It belongs here, beside the
          scoreboard and the market. */
       ...(trackOut ? { track_record: trackOut } : {}),
+      ...(offersOut ? { open_offers: offersOut } : {}),
+      ...(normalsOut ? { taught_normals: normalsOut } : {}),
+      ...(decisionsOut ? { signed_decisions: decisionsOut } : {}),
       ...(unusual.items.length ? { unusual_days: unusual.items.map(x=>{
         /* The owner's own word on the day, tapped on the Manager screen:
            that is the answer, and the day is no longer a question. */
