@@ -129255,12 +129255,15 @@ function standingPoliciesData(){
    3,330,000 balance above a 340,000 month, every meeting, because debts
    are always the biggest number in a shop. Every worth now carries its
    basis, and the card prints the basis beside the figure so the two can
-   never be silently compared again. */
+   never be silently compared again. SALES KEPT OR WON is a third kind
+   of money -- neither cash released nor profit earned -- so it is
+   labelled as itself and never ranked against either. */
 const MANAGER_WORTH_BASES = {
   cash_freed: 'cash tied up',
   profit_30d: 'profit in 30 days',
   loss_avoided: 'loss avoided',
   cost_saved: 'cost saved',
+  sales: 'sales kept or won',
   none: '',
 };
 /* WHICH LEVER A MOVE PULLS. Left to itself the mind picks the biggest
@@ -129550,6 +129553,15 @@ async function managerInsertProposals(rows){
 /* The kinds a move may be -- the same list the meeting contract names
    on the server. Anything else is stored as 'other'. */
 const MANAGER_MOVE_KINDS = ['chase', 'buy', 'invoice', 'settle', 'price', 'policy', 'other'];
+/* THE SIX DEPARTMENTS a move, a chain link, a question or a play may
+   belong to -- the same six words the meeting contract names on the
+   server (approval Q2). A word outside them is stored as nothing, never
+   as a seventh department the screen would have to draw. */
+const MANAGER_DEPTS = ['finance', 'sales', 'procurement', 'store', 'people', 'marketing'];
+/* WHERE AN ANSWER IS FOUND OUT -- the kinds a question's place may be:
+   only you, at a rival, a supplier or the bank, your staff, customers
+   and their sites. The same list the contract names on the server. */
+const MANAGER_ASK_PLACES = ['you', 'rival', 'supplier', 'bank', 'staff', 'customer'];
 
 /* A SUBJECT ONLY NAMES WHAT IS ON FILE.
 
@@ -129578,9 +129590,256 @@ function managerResolvedSubject(subj){
   return out;
 }
 
+/* THE MEETING'S OWN JUDGEMENT, ON A SCALE OF FIVE.
+
+   A move's confidence, the plan's "sure", a question's confidence and
+   an answer's confidence after are the Manager's judgement and nothing
+   else -- the screen prefers a count from the books wherever one exists
+   and labels this one "judged". A whole number from 1 to 5 survives and
+   a half rounds. One off the scale is REFUSED rather than pinned to an
+   end: 9 is not "certain", it is a mind reading the wrong scale, and
+   storing 5 for it would be inventing a certainty nobody judged. */
+function managerPips(v){
+  if(v == null || v === '' || typeof v === 'boolean' || typeof v === 'object') return null;
+  const n = Math.round(Number(v));
+  return Number.isFinite(n) && n >= 1 && n <= 5 ? n : null;
+}
+/* One line of the model's words, bounded. Only words: an object or a
+   list where a sentence belongs becomes nothing, never the text of an
+   object printed on a card. */
+function managerPlanText(v, max){
+  if(typeof v !== 'string' && typeof v !== 'number') return '';
+  return String(v).replace(/\s+/g, ' ').trim().slice(0, max);
+}
+
+/* WHAT THE MEETING SAID ABOUT THE WHOLE DAY, kept with the meeting.
+
+   verdict  the one first-person sentence the Brief leads with. It is
+            the last meeting's own words: nothing regenerates it on
+            open, because no AI call runs untapped.
+   sure     how sure the Manager was of the plan as a whole, judged.
+   chains   at most three READINGS of how one thing in the books sits
+            beside others across departments, which the screen titles
+            "My reading". A link is kept only with a figure in it and
+            the tool that returned it: a link with no figure is an
+            opinion, and a chain exists to be checked. A chain that
+            claims causation in so many words is not kept at all -- the
+            rulebook forbids it, and "caused" on the screen would be the
+            app asserting what the books cannot show. fix.move is the
+            position of the move that addresses it, 1-based from the
+            model and stored 0-based like a move's `after`; a position
+            outside the plan is dropped, never repaired.
+
+   Pure, so a plan held only in this session can be read through the
+   same whitelist the journal was written with. */
+function managerMeetingFields(plan, moveCount){
+  const p = (plan && typeof plan === 'object') ? plan : {};
+  const out = {};
+  const verdict = managerPlanText(p.verdict, 240);
+  if(verdict) out.verdict = verdict;
+  const sure = managerPips(p.sure);
+  if(sure != null) out.sure = sure;
+  const n = Math.max(0, Math.floor(Number(moveCount) || 0));
+  const dept = (d)=> MANAGER_DEPTS.includes(String(d || '')) ? String(d) : null;
+  const causal = /\b(?:root causes?|caused|because of|thanks to)\b/i;
+  const chainOf = (c)=>{
+    if(!c || typeof c !== 'object') return null;
+    const title = managerPlanText(c.title, 120);
+    const links = (Array.isArray(c.links) ? c.links : [])
+      .filter(l=> l && typeof l === 'object')
+      .map(l=> ({ dept: dept(l.dept), text: managerPlanText(l.text, 160),
+        figure: managerPlanText(l.figure, 40), tool: managerPlanText(l.tool, 40) }))
+      .filter(l=> l.text && /\d/.test(l.figure) && /^[a-z][a-z0-9_]*$/.test(l.tool))
+      .slice(0, 5)
+      .map(l=> ({ ...(l.dept ? { dept: l.dept } : {}), text: l.text, figure: l.figure, tool: l.tool }));
+    if(!title || links.length < 2) return null;
+    const f = (c.fix && typeof c.fix === 'object') ? c.fix : {};
+    const fixTitle = managerPlanText(f.title, 120);
+    const at = (typeof f.move === 'number' || typeof f.move === 'string') ? Number(f.move) : NaN;
+    const fix = { ...(fixTitle ? { title: fixTitle } : {}),
+      ...(Number.isInteger(at) && at >= 1 && at <= n ? { move: at - 1 } : {}) };
+    if(causal.test([title, fixTitle, ...links.map(l=> l.text)].join(' '))) return null;
+    const conf = managerPips(c.confidence);
+    const root = dept(c.dept) || links[0].dept || null;
+    return { title, ...(root ? { dept: root } : {}), links,
+      ...(Object.keys(fix).length ? { fix } : {}), ...(conf != null ? { confidence: conf } : {}) };
+  };
+  const chains = (Array.isArray(p.chains) ? p.chains : []).map(chainOf).filter(Boolean).slice(0, 3);
+  if(chains.length) out.chains = chains;
+  return out;
+}
+
+/* WHAT A MOVE CARRIES BEYOND ITS ARGUMENT, whitelisted.
+
+   dept, touches    which of the six departments it belongs to, and the
+                    others it moves -- never its own twice.
+   confidence       the meeting's judgement, 1-5 (managerPips).
+   evidence         at most three short phrases, each carrying a figure.
+                    A phrase with no digit in it is an adjective, not
+                    evidence, and is dropped.
+   mind             what would change the Manager's mind: an event the
+                    books would show.
+   target, effect   the target it serves -- a metric this app measures,
+                    or the id of a target on the scoreboard -- and its
+                    size in that target's unit. No target, no effect: a
+                    size with nothing to size it against floats free.
+   fromQuestion     the id of the answered question that shaped it, so
+                    "this answer changed the advice" is a count.
+
+   Every key is ABSENT when the meeting gave nothing usable, so an old
+   row and a new one read the same way and the screen falls back to
+   what it derives. The order of the plan is untouched: confidence is
+   shown beside a move, never used to re-rank it. */
+function managerMoveFields(m){
+  const x = (m && typeof m === 'object') ? m : {};
+  const out = {};
+  const num = (v)=> (typeof v === 'number' || (typeof v === 'string' && v.trim() !== '')) ? Number(v) : NaN;
+  const dept = String(x.dept || '');
+  if(MANAGER_DEPTS.includes(dept)) out.dept = dept;
+  const touches = (Array.isArray(x.touches) ? x.touches : []).map(d=> String(d || ''))
+    .filter((d, i, all)=> MANAGER_DEPTS.includes(d) && d !== out.dept && all.indexOf(d) === i);
+  if(touches.length) out.touches = touches;
+  const conf = managerPips(x.confidence);
+  if(conf != null) out.confidence = conf;
+  const evidence = (Array.isArray(x.evidence) ? x.evidence : [])
+    .map(e=> managerPlanText(e, 140)).filter(e=> /\d/.test(e)).slice(0, 3);
+  if(evidence.length) out.evidence = evidence;
+  const mind = managerPlanText(x.mind, 200);
+  if(mind) out.mind = mind;
+  const t = x.target;
+  const tid = num(t);
+  const target = (typeof t === 'string' && Object.prototype.hasOwnProperty.call(MANAGER_METRICS, t)) ? { metric: t }
+    : (Number.isInteger(tid) && tid > 0 ? { id: tid } : null);
+  if(target){
+    out.target = target;
+    const e = num(x.effect);
+    if(Number.isFinite(e) && e !== 0) out.effect = Math.round(e * 100) / 100;
+  }
+  const q = num(x.from_question);
+  if(Number.isInteger(q) && q > 0) out.fromQuestion = q;
+  return out;
+}
+
+/* WHAT HANGS ON A QUESTION, whitelisted.
+
+   why          what the answer decides.
+   stake        the shillings a tool sized -- absent otherwise, never 0,
+                which would read as "nothing at stake".
+   dept         the department it serves; confidence, how sure the
+                advice it bears on is now (judged, 1-5).
+   place        where the answer is found: a kind from
+                MANAGER_ASK_PLACES, and who -- a customer or supplier
+                only when the books hold them, a member of staff or a
+                field agent resolved by id or name, a rival or bank by
+                name.
+   choices      the likely answers' words, two or three, exactly as
+                before -- and beside them, in the same order,
+                choiceEffects: what each answer would change in the
+                advice and how sure it would leave the Manager. A bare
+                string is still a choice.
+   delegate     who could find out, resolved to a staff member or field
+                agent where the books hold one (the screen needs their
+                number to open the OWNER'S WhatsApp -- nothing here
+                sends anything). A name the books do not hold is kept as
+                a name and nothing more. */
+function managerAskFields(a){
+  const x = (a && typeof a === 'object') ? a : {};
+  const out = {};
+  const why = managerPlanText(x.why, 300);
+  if(why) out.why = why;
+  const stake = (typeof x.stake === 'number' || typeof x.stake === 'string') ? Math.round(Number(x.stake)) : NaN;
+  if(Number.isFinite(stake) && stake > 0) out.stake = stake;
+  const dept = String(x.dept || '');
+  if(MANAGER_DEPTS.includes(dept)) out.dept = dept;
+  const conf = managerPips(x.confidence);
+  if(conf != null) out.confidence = conf;
+  const ref = (v)=> managerPlanText(v, 80);
+  const find = (list, id)=> id === '' ? null : (list || []).find(r=> r && String(r.id) === id);
+  const person = (v)=>{
+    const key = ref(v);
+    if(!key) return null;
+    const low = key.toLowerCase();
+    const hit = (list)=> (list || []).find(r=> r && !r.retiredAt
+      && (String(r.id) === key || String(r.name || '').trim().toLowerCase() === low));
+    const st = hit(data.staff);
+    const ag = st ? null : hit(data.agents);
+    if(st) return { staffId: st.id, name: String(st.name || key).slice(0, 80) };
+    if(ag) return { agentId: ag.id, name: String(ag.name || key).slice(0, 80) };
+    return { name: key };
+  };
+  const pl = (x.place && typeof x.place === 'object') ? x.place : null;
+  const kind = pl ? String(pl.kind || '') : '';
+  if(MANAGER_ASK_PLACES.includes(kind)){
+    const place = { kind };
+    const said = ref(pl.id) || ref(pl.name);
+    if(kind === 'customer'){
+      const c = find(data.customers, said); if(c) place.id = c.id;
+    } else if(kind === 'supplier'){
+      const s = find(data.suppliers, said) || find(data.suppliers, ref(x.supplier_id)); if(s) place.id = s.id;
+    } else if(kind === 'staff'){
+      const w = person(said); if(w) Object.assign(place, w);
+    } else if(kind === 'rival' || kind === 'bank'){
+      const name = said || (kind === 'rival' ? ref(x.rival) : '');
+      if(name) place.name = name;
+    }
+    out.place = place;
+  }
+  const picks = (Array.isArray(x.choices) ? x.choices : [])
+    .map(c=> (c && typeof c === 'object') ? c : { label: c })
+    .map(c=> ({ label: managerPlanText(c.label, 40), effect: managerPlanText(c.effect, 200),
+      after: managerPips(c.confidence_after) }))
+    .filter(c=> c.label).slice(0, 3);
+  if(picks.length >= 2){
+    out.choices = picks.map(c=> c.label);
+    if(picks.some(c=> c.effect || c.after != null)){
+      out.choiceEffects = picks.map(c=> ({ label: c.label, ...(c.effect ? { effect: c.effect } : {}),
+        ...(c.after != null ? { confidenceAfter: c.after } : {}) }));
+    }
+  }
+  const d = x.delegate;
+  const w = person((d && typeof d === 'object') ? (d.staff != null ? d.staff : d.name) : d);
+  if(w) out.delegate = w;
+  return out;
+}
+
+/* A PLAY SAID AS A TEST, whitelisted: hypothesis (if, then, and the
+   target level -- a claim to test, never a promise), stop (the reading
+   that would end it, and the week it is read by), cost in shillings,
+   and dependsOn, the play or move it waits for. A hypothesis needs both
+   halves: an "if" with no "then" claims nothing that could ever be
+   checked. A stop week past the play's own span -- or past a quarter,
+   when no span was named -- is not kept: a check after the end is no
+   check. Each part absent when the meeting gave nothing usable. */
+function managerPlayFields(x){
+  const p = (x && typeof x === 'object') ? x : {};
+  const out = {};
+  const num = (v)=> (typeof v === 'number' || (typeof v === 'string' && v.trim() !== '')) ? Number(v) : NaN;
+  const dept = String(p.dept || '');
+  if(MANAGER_DEPTS.includes(dept)) out.dept = dept;
+  const h = (p.hypothesis && typeof p.hypothesis === 'object') ? p.hypothesis : {};
+  const hIf = managerPlanText(h.if, 200), hThen = managerPlanText(h.then, 200), hAt = managerPlanText(h.target, 120);
+  if(hIf && hThen) out.hypothesis = { if: hIf, then: hThen, ...(hAt ? { target: hAt } : {}) };
+  const s = (p.stop && typeof p.stop === 'object') ? p.stop : {};
+  const threshold = managerPlanText(s.threshold, 120);
+  const weeks = num(p.weeks);
+  const span = (weeks >= 1 && weeks <= 13) ? Math.round(weeks) : 13;
+  const by = num(s.by_week);
+  if(threshold) out.stop = { threshold, ...(Number.isInteger(by) && by >= 1 && by <= span ? { byWeek: by } : {}) };
+  const cost = num(p.cost);
+  if(Number.isFinite(cost) && cost >= 0) out.cost = Math.round(cost);
+  const dep = managerPlanText(p.depends_on, 120);
+  if(dep) out.dependsOn = dep;
+  return out;
+}
+
 async function managerSaveMeeting(plan){
   if(!managerNotesTable) return null;
   const obj = plan.objective || {};
+  /* EIGHT, NOT FIVE (approval Q29): one decision a department can have
+     its say in, still in the meeting's own order. Taken before the
+     meeting row is written, because its chains point at moves by their
+     position and a fix may only point at a move that is kept. */
+  const kept = (plan.moves||[]).slice(0, 8);
   const ins = await sb.from('manager_notes').insert({
     shop_id: currentShopId, kind: 'meeting', date: todayISO(),
     body: { keyline: String(plan.keyline||'').slice(0, 300),
@@ -129595,11 +129854,14 @@ async function managerSaveMeeting(plan){
          manager's instructions had grown too heavy for one answer --
          which is the only evidence that would say so. Written down with
          the meeting it belongs to, and only when true. */
-      ...(plan.cutOff ? { cutOff: true } : {}) },
+      ...(plan.cutOff ? { cutOff: true } : {}),
+      /* The verdict the Brief leads with, how sure the Manager was of
+         the whole plan, and its chains -- each whitelisted, each absent
+         when the meeting gave nothing usable (managerMeetingFields). */
+      ...managerMeetingFields(plan, kept.length) },
     status: 'held',
   }).select('id').single();
   if(ins.error || !ins.data){ console.warn('Manager: meeting not saved:', ins.error && ins.error.message); return null; }
-  const kept = (plan.moves||[]).slice(0, 5);
   /* WHICH MOVE WAITS ON WHICH. `unlocks` has always said WHY one move
      helps another, in the model's own words, and nothing ever said
      WHICH -- so a plan was a list where the manager meant a sequence.
@@ -129619,7 +129881,7 @@ async function managerSaveMeeting(plan){
   after.forEach((from, i)=>{
     if(from == null) return;
     /* Walk the chain: a cycle would loop the renderer for ever, and
-       every valid chain is at most five long. A move waiting on ITSELF
+       every valid chain is at most eight long. A move waiting on ITSELF
        is the shortest cycle there is and needs no separate guard --
        one was written here and no test could tell it from this walk,
        which is a good enough reason for it not to exist. */
@@ -129657,6 +129919,11 @@ async function managerSaveMeeting(plan){
          rows go in as one insert in plan order, so id order IS plan
          order, and every reader sorts by id before using this. */
       ...(after[mi] != null ? { after: after[mi] } : {}),
+      /* Its department and the others it moves, how sure the Manager
+         is, the evidence with its figures, what would change its mind,
+         the target it serves and the answer that shaped it -- each
+         whitelisted and absent when not given (managerMoveFields). */
+      ...managerMoveFields(m),
       /* Only ids, only known keys -- the block is model output and is
          stored as data, never trusted as structure. */
       subject: managerResolvedSubject(m.subject) },
@@ -129706,6 +129973,11 @@ async function managerSaveMeeting(plan){
            screen says "no span named" instead of inventing one and
            then judging the shop against it. */
         weeks: (Number(x.weeks) >= 1 && Number(x.weeks) <= 13) ? Math.round(Number(x.weeks)) : null,
+        /* Said as a test: what it should move and by how much, the
+           reading that would stop it, what it costs and what it waits
+           on (managerPlayFields). A proven recipe is saved like any
+           other proposal -- the owner still taps it. */
+        ...managerPlayFields(x),
         source: 'manager' },
       status: 'proposed' }));
   if(plays.length){
@@ -129753,14 +130025,16 @@ async function managerSaveMeeting(plan){
          least two to choose between. */
       const sup = String(a.supplier_id == null ? '' : a.supplier_id).trim();
       const supplierId = sup && (data.suppliers || []).some(x=> String(x.id) === sup) ? sup : null;
-      const choices = (Array.isArray(a.choices) ? a.choices : [])
-        .map(c=> String(c == null ? '' : c).trim().slice(0, 40)).filter(Boolean).slice(0, 3);
+      /* Why it is asked, what is at stake, where the answer is found,
+         who could find it, and the likely answers -- as words, two or
+         three, exactly as before -- with what each would change in the
+         advice beside them (managerAskFields). */
       return { shop_id: currentShopId, kind: 'question', meeting_id: ins.data.id, date: todayISO(),
         body: { question: String(a.q).trim().slice(0, 300),
           ...(parts ? { productId: parts.productId, variantIdx: parts.variantIdx } : {}),
           ...(parts && rival ? { rival } : {}),
           ...(supplierId ? { supplierId } : {}),
-          ...(choices.length >= 2 ? { choices } : {}) },
+          ...managerAskFields(a) },
         status: 'open' };
     });
   if(asks.length){
@@ -129804,11 +130078,24 @@ function reviewChaseLine(wk){
 async function managerSaveReview(review, weekData){
   if(!managerNotesTable) return null;
   const wk = weekData || {}, tw = wk.this_week || {}, pw = wk.prior_week || {}, adv = wk.advice || {};
+  /* WHERE THE MANAGER WAS WRONG ABOUT ITSELF -- the Memory's "I
+     corrected myself". Three at most, each what it said, what the books
+     show now, and the figure that shows it. A correction needs both
+     halves to be one: a "was" with no "now" is a confession with
+     nothing learned. Only words survive, bounded, and the key is absent
+     when the review found nothing. */
+  const said = (v, n)=> (typeof v === 'string' || typeof v === 'number') ? String(v).replace(/\s+/g, ' ').trim().slice(0, n) : '';
+  const corrections = (Array.isArray(review.corrections) ? review.corrections : [])
+    .filter(c=> c && typeof c === 'object')
+    .map(c=> ({ was: said(c.was, 200), now: said(c.now, 200), why: said(c.why, 200) }))
+    .filter(c=> c.was && c.now).slice(0, 3)
+    .map(c=> c.why ? c : { was: c.was, now: c.now });
   const ins = await sb.from('manager_notes').insert({
     shop_id: currentShopId, kind: 'review', date: todayISO(),
     body: {
       verdict: String(review.verdict||'').slice(0, 300),
       lessons: (Array.isArray(review.lessons) ? review.lessons : []).slice(0, 3).map(x=> String(x).slice(0, 300)),
+      ...(corrections.length ? { corrections } : {}),
       week: {
         sales: apRound(tw.sales||0), prior_sales: apRound(pw.sales||0),
         gross_profit: apRound(tw.gross_profit||0), prior_gross_profit: apRound(pw.gross_profit||0),
@@ -130524,7 +130811,13 @@ async function managerPlaybook(){
     source: (x.body||{}).source === 'owner' ? 'owner' : 'manager',
     weeks: Number((x.body||{}).weeks) >= 1 ? Math.round(Number((x.body||{}).weeks)) : null,
     baseline: (x.body||{}).baseline == null ? null : Number((x.body||{}).baseline),
-    proposed_on: x.date, started_on: (x.body||{}).startedOn || null, ended_on: (x.body||{}).endedOn || null });
+    proposed_on: x.date, started_on: (x.body||{}).startedOn || null, ended_on: (x.body||{}).endedOn || null,
+    /* What the meeting said the play is a test OF -- passed through as
+       it was saved (managerPlayFields), so the screen reads the same
+       hypothesis, stop, cost and dependency the journal holds. Absent
+       on plays written before they were asked for. */
+    ...['dept', 'hypothesis', 'stop', 'cost', 'dependsOn'].reduce((o, k)=>
+      ((x.body||{})[k] != null ? { ...o, [k]: (x.body||{})[k] } : o), {}) });
   const running = rows.filter(x=> x.status === 'running').map(view);
   /* What moved alongside each running play, worked out here so the
      screen and the weekly review are looking at the same arithmetic.

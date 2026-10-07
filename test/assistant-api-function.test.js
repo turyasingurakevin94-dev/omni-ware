@@ -66,7 +66,13 @@ const pkg = read('package.json');
     'no thinking parameter — adaptive is this model’s default and a budget would 400');
   t.check(!/temperature|top_p|top_k/.test(src),
     'no sampling parameters — removed on this model');
-  t.check(/max_tokens: 3000/.test(src), 'output is capped, sized to the 60s window (a bulk import call at 2000 was cut off mid-JSON)');
+  t.check(/max_tokens: mgrMode === 'manager' \? 4000 : 3000,/.test(src), 'output is capped, sized to the 60s window (a bulk import call at 2000 was cut off mid-JSON)');
+  /* The morning meeting alone was raised (owner approval Q7): its plan
+     block carries up to eight moves with their departments, confidence,
+     evidence and chains, and a block cut off mid-way is a meeting
+     nothing can keep. The review and the plain assistant keep 3000. */
+  t.check((src.match(/max_tokens:/g) || []).length === 1,
+    'one cap, written once — the meeting\'s 4000 is a branch of it, not a second request shape');
   t.check(/output_config: \{ effort: 'medium' \}/.test(src),
     'effort is medium — deep thinking spent the output budget before a word was said, and it is the owner\'s money');
   /* Two minds now share one cached prefix: the assistant sends the one
