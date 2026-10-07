@@ -241,8 +241,7 @@ function scope(over) {
   const weeks = Array.from({ length: 12 }, (_, i) => ({ from: shift(TODAY, -7 * (i + 1)), v: (i + 1) * 10e6 }));
   const sales = { label: 'sales', unit: 'money', kind: 'flow', direction: 'up',
     measure: (f) => (weeks.find((w) => w.from === f) || { v: 0 }).v };
-  const S = scope({
-    MANAGER_PROBLEM_METRICS: { growth: sales },
+  const presetEnv = {
     MANAGER_METRICS: { debtors_total: { measure: () => 50000000 }, dead_stock_value: { measure: () => 13000000 } },
     mgrDebtorDays: () => ({ creditPerDay: 1000000, windowDays: 90 }),
     /* Two invoices on Saturday 3 Oct (16m in all), one on Monday 5 Oct
@@ -253,7 +252,8 @@ function scope(over) {
     anRowsByItem: () => [{ name: 'Iron sheet', variant: 'Iron sheet — G28', sales: 5 }, { name: 'Roofing nails', variant: '', sales: 9 }],
     data: { products: [{ id: 'P9', name: 'Floor tiles' }], agents: [],
       staff: [{ name: 'Joan Nakato', role: 'counter' }, { name: 'Moses Kibirige', role: 'delivery' }] },
-  });
+  };
+  const S = scope({ ...presetEnv, MANAGER_PROBLEM_METRICS: { growth: sales } });
   eq(S.mgrPlayP75([5, 1, 3, 2, 4, 6, 7, 8, 9, 10, 11, 12]), 9, 'p75 of 1..12 is the 9th: ceil(0.75 x 12) = 9');
   eq(S.mgrPlayP75([10, null]), 10, 'one value is its own p75; a missing one is left out');
   eq(S.mgrPlayP75([]), null, 'and none is not known');
@@ -270,6 +270,15 @@ function scope(over) {
     'the biggest dead line offered with the best seller, aimed at dead stock less that line');
   eq([P[3].label, P[3].if, P[3].target, P[3].weeks, P[3].stopBy], ['Moses to new sites', 'send Moses to new building sites every week', 90000000, 8, 4],
     'the field hand on the books, by first name');
+  t.check(/^the 75th percentile of the last 12 weeks’ sales \(a week beaten 1 time in 4\)/.test(P[1].aimBasis), 'the aim says what it is');
+  /* The last 7 days (weekly[0]) already above the 75th percentile: the
+     aim is the best week, when one beat it; none, when none did. */
+  const withLast = (last) => scope({ ...presetEnv, MANAGER_PROBLEM_METRICS: { growth: { ...sales,
+    measure: (f) => (f === shift(TODAY, -7) ? last : (weeks.find((w) => w.from === f) || { v: 0 }).v) } } }).mgrPlayPresets(TODAY);
+  /* weeks 2..12 are 20m..120m: p75 of {95m, 20m..120m} is the 9th of 12 sorted = 95m? sorted: 20..90 (8 values), 95, 100, 110, 120 -> 9th = 95m = last: not above it, so the best week, 120m. */
+  eq([withLast(95e6)[1].target, /best week/.test(withLast(95e6)[1].aimBasis)], [120e6, true], 'last 7 days at the 75th percentile: aim at the best week');
+  eq(withLast(130e6)[1].target, null, 'last 7 days the best of all: no aim is derived — the owner sets one');
+  eq(withLast(130e6)[3].aimBasis, 'no week of the last 12 beat the last 7 days — set your own aim', 'and says so');
   const bare = scope({ MANAGER_PROBLEM_METRICS: { growth: { ...sales, measure: () => 0 } },
     MANAGER_METRICS: { debtors_total: { measure: () => 0 }, dead_stock_value: { measure: () => 0 } } }).mgrPlayPresets(TODAY);
   eq(bare, [], 'a shop whose books hold none of the four situations is offered none — only "your own"');

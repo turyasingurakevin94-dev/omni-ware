@@ -135894,8 +135894,8 @@ function mgrPlayBandHTML(model){
     <div class="mgr-pl-hd-t"><p class="mgr-pl-hd-n"><b class="mgr-pl-hd-b">The Manager</b> · on plays</p>
       <p class="mgr-pl-hd-w">${b ? '“' + esc(b.headline) + '”' : 'The playbook could not be read, so I have nothing to say about it yet.'}</p></div>
     <div class="mgr-pl-hd-r">
-      ${cell(month ? 'Tried since ' + month : 'Tried', b ? String(b.tried) : '—', 'plays switched on', 'Every play switched on: running, judged, or stopped after it started')}
-      ${cell('Win rate', b ? (b.verdicts ? `${b.worked}/${b.verdicts}` : '—') : '—', b && b.verdicts ? 'your verdicts' : 'no verdicts yet', 'Plays you judged worked, of all the plays you judged')}
+      ${cell(month ? 'Tried since ' + month : 'Tried', b ? String(b.tried) : '—', b ? 'plays switched on' : null, 'Every play switched on: running, judged, or stopped after it started')}
+      ${cell('Win rate', b ? (b.verdicts ? `${b.worked}/${b.verdicts}` : '—') : '—', b ? (b.verdicts ? 'your verdicts' : 'no verdicts yet') : null, 'Plays you judged worked, of all the plays you judged')}
       ${cell('Slots in use', model ? `${model.slots.used}/${model.slots.cap}` : '—', null, 'Running plays, of the three experiment slots')}
       ${cell('Proven recipes', b ? String(b.proven) : '—', null, 'Plays you judged worked twice or more')}
     </div>
@@ -135919,7 +135919,7 @@ function mgrPlayBoardHTML(model, moved){
       ${lane('mgr-pl-run', 'am', 'Running', model.running.length, 'Read week by week against the week before it started.',
         model.running.length ? model.running.map(x=> mgrPlayRunningHTML(x, model, moved)).join('')
           : empty(`No play is running — all ${s.cap} slots are free.`))}
-      ${lane('', 'vg', 'Judged', model.judged.length, 'Your verdict, what moved alongside, and the lesson.',
+      ${lane('', 'vg', 'Judged', model.judged.length, 'Every verdict leaves a lesson, worked or not.',
         model.judged.length ? model.judged.slice(0, 6).map(mgrPlayJudgedHTML).join('') + more(model.judged.length - 6, 'judged')
           : empty('No verdicts yet. Judge a running play when its span ends — worked, didn’t, or can’t tell.'))}
       ${lane('', 'vg', 'Proven recipes', model.proven.length, 'Plays you judged worked twice or more. Run again in one tap.',
@@ -136102,8 +136102,15 @@ function mgrPlayP75(values){
 }
 function mgrPlayPresets(today){
   const out = [];
+  /* A sales aim from the shop's own last 12 weeks: the 75th percentile
+     (a week it beat 1 time in 4) when that is above the last 7 days;
+     otherwise its best week, when that is; otherwise no aim is derived
+     and the owner sets one. weekly[0] IS the last 7 days. */
   const weekly = mgrPlayPastWeeks(today, 12).map(w=> MANAGER_PROBLEM_METRICS.growth.measure(w.from, w.to));
-  const salesAim = mgrPlayP75(weekly);
+  const p75 = mgrPlayP75(weekly), bestWeek = Math.max(...weekly.map(v=> Number(v) || 0)), last = Number(weekly[0]) || 0;
+  const salesAim = p75 != null && p75 > last ? p75 : bestWeek > last ? bestWeek : null;
+  const salesBasis = salesAim == null ? '' : salesAim === p75 ? 'the 75th percentile of the last 12 weeks’ sales (a week beaten 1 time in 4)'
+    : 'your best week of the last 12 — the last 7 days already beat the 75th percentile';
   /* cash */
   const dd = mgrDebtorDays(today);
   const owed = Math.round(MANAGER_METRICS.debtors_total.measure());
@@ -136122,7 +136129,7 @@ function mgrPlayPresets(today){
   const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   if(avg[top] > 0) out.push({ id: 'sat', label: DAYS[top] + ' delivery', name: DAYS[top] + ' delivery to builders’ sites', treats: 'growth',
     if: `deliver to builders’ sites on ${DAYS[top]}s`, weeks: 4, target: salesAim,
-    aimBasis: `the 75th percentile of the last 12 weeks’ sales; ${DAYS[top]} is your strongest day, ${mgrShortUGX(avg[top])} on average over the last 8` });
+    aimBasis: `${salesBasis ? salesBasis + '; ' : ''}${DAYS[top]} is your strongest day, ${mgrShortUGX(avg[top])} on average over the last 8` });
   /* paint */
   const dead = deadStockRows(today).filter(r=> r.value > 0)[0];
   const best = anRowsByItem(anInvoicesInRange(anShiftDate(today, -30), to)).sort((a, b)=> b.sales - a.sales)[0];
@@ -136138,11 +136145,11 @@ function mgrPlayPresets(today){
   /* moses */
   const agent = (data.agents || []).find(a=> a && a.name && !a.retiredAt)
     || (data.staff || []).find(s=> s && s.name && !s.unavailable && /deliver|driver|field|agent|sales/i.test(String(s.role || '') + ' ' + String(s.notes || '')));
-  if(agent && salesAim > 0){
+  if(agent && bestWeek > 0){
     const first = String(agent.name).split(/\s+/)[0];
     out.push({ id: 'moses', label: `${first} to new sites`, name: `${first} to new building sites`, treats: 'growth',
       if: `send ${first} to new building sites every week`, weeks: 8, target: salesAim,
-      aimBasis: 'the 75th percentile of the last 12 weeks’ sales' });
+      aimBasis: salesBasis || 'no week of the last 12 beat the last 7 days — set your own aim' });
   }
   return out.map(p=> ({ ...p, cost: null, dependsOn: '', stopBy: Math.ceil(p.weeks / 2) }));
 }
@@ -136227,7 +136234,7 @@ function mgrPlayDesignPaint(book, today){
     : `${verb} from ${fig(base.base)}${d.target != null ? ' to ' + fig(d.target) : ''}`;
   const add = m && base.base != null && d.target != null ? d.target - base.base : null;
   const stopText = m && base.base != null ? `${m.label} no better than ${fig(base.base)} by week ${d.stopBy}` : `no reading to stop on — judge it by week ${d.stopBy}`;
-  const thenText = m ? m.label : String(MANAGER_PROBLEMS[d.treats] || 'it').toLowerCase();
+  const thenText = m ? m.label : d.treats === 'other' ? 'what you are after' : String(MANAGER_PROBLEMS[d.treats] || 'it').toLowerCase();
   const icon = { vg: MGR_PLAY_MARK.ok, am: MGR_PLAY_MARK.warn, cr: MGR_PLAY_MARK.no };
   const slot = (t)=> `<span class="mgr-pl-slot">${esc(t)}</span>`;
   const field = (k, label, val, type, extra)=> `<label class="mgr-pl-f"><span class="mgr-pl-fl">${esc(label)}</span><input class="mgr-pl-in" data-pl-f="${k}" type="${type || 'text'}" value="${esc(val == null ? '' : String(val))}"${extra || ''}></label>`;
@@ -136291,7 +136298,10 @@ function mgrPlayDesignPaint(book, today){
     managerAddOwnPlay(name, d.if, { status: act === 'queue' ? 'proposed' : 'running', treats: d.treats, weeks: Number(d.weeks),
       hypothesis: { if: d.if, then: `${thenText} will ${by}`, target: d.target != null && m ? fig(d.target) : '' },
       stop: { threshold: stopText.replace(/ by week \d+$/, ''), by_week: d.stopBy },
-      cost: d.cost == null || d.cost === '' ? undefined : Number(d.cost), depends_on: d.dependsOn || undefined });
+      cost: d.cost == null || d.cost === '' ? undefined : Number(d.cost), depends_on: d.dependsOn || undefined })
+      /* Kept: the designer starts again from the first of the shop's own
+         situations rather than offering the play it just saved. */
+      .then((r)=>{ if(r && r.ok){ mgrPlayDraft = null; mgrPlayDraftEdit = false; } });
   });
 }
 /* THE MANAGER'S OWN SIZING OF A PLAY, as a figure: the first sum it
