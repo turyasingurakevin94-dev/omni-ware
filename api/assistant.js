@@ -793,8 +793,10 @@ module.exports = async (req, res) => {
          each with its department, confidence, evidence and what would
          change its mind, plus the chains -- and a plan cut off mid-block
          is a meeting nothing can keep. The owner approved the raise (a
-         few cents a meeting); the review and the plain assistant stay at
-         3000, where the 60s window was measured. */
+         few cents a meeting), and the function's window with it
+         (vercel.json, 300s), so the clock does not cut the block off
+         before the budget does. The review and the plain assistant stay
+         at 3000, where the 60s window was measured. */
       max_tokens: mgrMode === 'manager' ? 4000 : 3000,
       /* Medium effort: this assistant dispatches tools and reads
          documents — the deep default burned the output budget on

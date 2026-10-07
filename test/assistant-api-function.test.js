@@ -206,8 +206,11 @@ const pkg = read('package.json');
 
 /* ---------- 7. deploy wiring ------------------------------------------ */
 {
-  t.check(/"api\/assistant\.js": \{ "maxDuration": 60 \}/.test(vercel),
-    'vercel.json lifts the 10s default that would cut off a tool-heavy turn');
+  /* WAS 60. The meeting now writes up to 4000 tokens (eight moves with
+     their evidence and chains), and the owner approved lifting the
+     window so a full plan is not cut off by the clock before max_tokens. */
+  t.check(/"api\/assistant\.js": \{ "maxDuration": 300 \}/.test(vercel),
+    'vercel.json lifts the 10s default that would cut off a tool-heavy turn, far enough for a full meeting');
   t.check(/"@anthropic-ai\/sdk"/.test(pkg), 'the SDK is a declared dependency');
   t.check(!/"type": "module"/.test(pkg), 'and the function’s CommonJS shape matches the package');
 }
