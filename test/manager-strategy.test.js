@@ -251,13 +251,17 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   t.check(/MANAGER_OBJECTIVES\[String\(obj\.name\|\|''\)\] \? String\(obj\.name\) : null/.test(save),
     'and an unknown objective');
   const render = mgrRender();
-  /* The objective moved from the plan's header into the band above it,
-     which the render paints first -- still above the moves. The band is
-     the Brief's now (managerBandWrap), at the head of the section. */
-  t.check(/MANAGER_OBJECTIVES\[plan\.objective\]/.test(extractFunction(src, 'mgrHeroHTML', 'index.html'))
-    && /band\.innerHTML = mgrHeroHTML\(/.test(render)
+  /* WAS: the objective as a chip in the band, MANAGER_OBJECTIVES[plan.objective]
+     in mgrHeroHTML. NOW: the band leads with the meeting's own verdict, as
+     the canvas draws it (its keyline when an older meeting has none), and
+     the week's objective heads the decisions it orders -- still named,
+     still above the moves, whitelisted the same way. */
+  const hero = extractFunction(src, 'mgrHeroHTML', 'index.html');
+  t.check(/MANAGER_OBJECTIVES\[p\.objective\]/.test(extractFunction(src, 'mgrBriefPlanHTML', 'index.html'))
+    && /String\(plan\.verdict \|\| plan\.keyline \|\| ''\)/.test(hero)
+    && /const band = document\.getElementById\('managerBandWrap'\);/.test(extractFunction(src, 'mgrBriefPaintBand', 'index.html'))
     && /const band = document\.getElementById\('managerBandWrap'\);/.test(render),
-    'the screen leads with the week’s objective, above the moves');
+    'the screen leads with the meeting’s verdict, and the week’s objective heads the moves');
 }
 
 /* ---------- 4. the shop answers its manager -------------------------- */

@@ -216,7 +216,8 @@ const brief = extractFunction(src, 'mgrPaintBrief', 'index.html');
     'the verdict strip is painted in its waiting state before the readings go out');
   t.check(/const MGR_WAIT_CELLS = \[[\s\S]*?wait: true/.test(src),
     'with em-dashes rather than zeroes');
-  t.check(/\.mgr-verdict \.mgr-wait \.ow-mt-v\{color:var\(--ow-ink-400\)/.test(src.replace(/\s*\n\s*/g, '')),
+  /* WAS: .mgr-verdict .mgr-wait .ow-mt-v; NOW the situation strip's own. */
+  t.check(/\.mgr-bed-b \.mgr-b-wait \.mgr-b-sitv\{color:var\(--ow-navy-mute\);\}/.test(src),
     'and in a colour that reads as a wait');
 }
 
@@ -283,42 +284,56 @@ const brief = extractFunction(src, 'mgrPaintBrief', 'index.html');
      runs, so the strip is rendered and its words are read back. */
   const esc = (v)=> String(v == null ? '' : v)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const paint = (id, names, state)=>{
+  const paint = (id, names, state, extra)=>{
     const el = { innerHTML: '', querySelector: ()=> null, querySelectorAll: ()=> [] };
     const scope = compileScope(names.map(n=> n.d
       ? extractDeclaration(src, n.n, 'index.html')
       : extractFunction(src, n.n, 'index.html')), {
       document: { getElementById: (x)=> (x === id ? el : null) },
       esc, String, Number, Object, Array, Boolean, Math, JSON,
-      fmtUGX: (n)=> String(n),
+      fmtUGX: (n)=> String(n), ...(extra || {}),
     }, names.filter(n=> !n.d).map(n=> n.n));
     scope[names[0].n](state, state && state.tally);
     return el.innerHTML;
   };
 
-  const VERDICT = [{ n: 'mgrPaintVerdict' }, { n: 'mgrVerdictHTML' },
-    { n: 'mgrWaffleHTML' }, { n: 'mgrTargetRingHTML' }, { n: 'mgrDotsHTML' },
-    { n: 'MGR_WAIT_CELLS', d: true }, { n: 'mgrOf', d: true }];
+  /* WAS: the verdict strip's four journal cells. NOW: the canvas's six-cell
+     situation strip (A2.*): five figures from the books and the hit rate
+     from the journal. The law is the same and is painted the same way: a
+     reading that failed says so in its own cell, never a zero and never
+     one of the sentences a count of nothing would make. */
+  const VERDICT = [{ n: 'mgrPaintVerdict' }, { n: 'mgrVerdictHTML' }, { n: 'mgrStripCells' },
+    { n: 'mgrBriefLamp' }, { n: 'mgrBriefLampHTML' }, { n: 'mgrBriefDay' }, { n: 'mgrShortUGX' },
+    { n: 'MGR_WAIT_CELLS', d: true }, { n: 'mgrOf', d: true }, { n: 'MGR_BRIEF_MONTHS', d: true }];
+  const STRIP_ENV = { mgrBriefStripOpen: null, mgrBriefWireGo: ()=>{}, mgrBriefStripDetailHTML: ()=> '',
+    MGR_WEEKDAYS: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+    waWeekday: (d)=> new Date(d + 'T00:00:00Z').getUTCDay() };
   const failed = { message: 'network' };
   const broke = paint('managerStripWrap', VERDICT,
-    { tally: { error: failed.message, counts: { proposed: 0, done: 0, skipped: 0, untouched: 0, days: 35 }, notLanding: [], repeats: 3 },
-      track: { error: failed.message, rows: [], minTimes: 3 },
-      score: { error: failed.message, targets: [] } });
-  const lies = ['nothing advised in', 'it has taken none on',
-    'nothing advised often enough to judge', 'everything it has put to you has had an answer'];
+    { strip: { health: { error: failed.message }, walk: null, risks: null, hit: { error: failed.message },
+      upside: { error: failed.message }, free: { error: failed.message } } }, STRIP_ENV);
+  const lies = ['nothing found to lift', 'nothing tied up', 'nothing dated', 'nothing done can be weighed',
+    'trend after 7 days', 'followed by a payment'];
   lies.forEach(lie=> t.check(!broke.includes(lie),
     `a failed reading never says "${lie}"`));
-  t.check((broke.match(/the journal could not be read/g) || []).length === 4,
-    'all four cells say what happened instead of counting it');
-  t.check(!/>0</.test(broke), 'and not one of them shows a zero');
+  t.check((broke.match(/could not be read/g) || []).length === 6,
+    'all six cells say what happened instead of counting it');
+  t.check(!/>0</.test(broke) && !/mgr-b-fig">0</.test(broke), 'and not one of them shows a zero');
+  const waiting = paint('managerStripWrap', VERDICT, {}, STRIP_ENV);
+  t.check((waiting.match(/&mdash;/g) || []).length === 6 && (waiting.match(/reading the/g) || []).length === 6 && !/>0</.test(waiting),
+    'before anything is read the six cells wait with em-dashes, saying they are reading');
 
   /* AND THE FIGURES STILL ARRIVE when the reading worked -- an error
      branch that swallows the happy path passes every check above. */
   const good = paint('managerStripWrap', VERDICT,
-    { tally: { counts: { proposed: 9, done: 4, skipped: 2, untouched: 3, days: 35 }, notLanding: [], repeats: 3 },
-      track: { rows: [], minTimes: 3 },
-      score: { targets: [] } });
-  t.check(/4<span class="of">of<\/span>9/.test(good), 'a reading that worked still counts');
+    { strip: { health: { score: 70, known: 10, passed: 7, checks: [] }, trend: null,
+      walk: { opening: 5000000, tightest: { date: '2026-10-14', balance: 1350000 } }, floor: { amount: 2000000, source: 'set' },
+      upside: { total: 2400000, parts: [] }, free: { total: 6400000, parts: [], expected: { amount: 0, list: [] } },
+      risks: [{ overdue: false }, { overdue: true }], hit: { k: 11, n: 15, notMeasurable: 2, waiting: 0, misses: [] } } }, STRIP_ENV);
+  t.check(/11<span class="of">of<\/span>15/.test(good) && />1\.35m</.test(good) && /Wed 14 Oct/.test(good)
+    && />\+2\.4m</.test(good) && />6\.4m</.test(good) && />70</.test(good), 'a reading that worked still counts');
+  t.check(/mgr-b-lamp-bad/.test(good) && /under your floor of 2m/.test(good),
+    'and the lowest day under the floor lights its lamp, saying against which floor');
   t.check(!/could not be read/.test(good), 'and says nothing about a failure that did not happen');
 
   /* The account's advice half, and the levers table that used to go

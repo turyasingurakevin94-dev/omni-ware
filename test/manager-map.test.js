@@ -1,265 +1,172 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * The Manager's map: the shop as one picture.
+ * The Manager's department board -- what the map became (Q26).
  *
- * Six areas around the Manager, each with its one figure and the people,
- * lines and accounts that matter most hanging off it. It reads the same
- * position the meeting reads (shop_pulse), and every leaf is keyed the
- * way a move's subject is keyed -- which is what lets today's plan light
- * up exactly the customer, supplier or line it acts on.
+ * WAS: a drawing of six areas around the Manager, read from shop_pulse,
+ * each area's people and lines hanging off it. NOW: the canvas's board,
+ * the whole shop and the six departments (Q2), each a tile with its
+ * health as a share of named checks passed (Q1), its lamp, its change
+ * over the week once seven daily snapshots exist, and one line -- its
+ * first failing check, said with the figure. A tap narrows the
+ * decisions, lights the chains and dims the next 30 days.
+ *
+ * What did NOT change is pinned as it was: the Brief's whole-shop half is
+ * drawn only while the Brief is on screen, by the render that is current,
+ * and a journal read that fails is named rather than waited on.
  *
  * Run: node test/manager-map.test.js   (or: npm test)
  */
 const { read, extractFunction, extractDeclaration, compileScope, createReporter } = require('./_extract');
 
-const t = createReporter('manager map');
+const t = createReporter('manager department board');
 const src = read('index.html');
-/* The Manager screen is renderManager and the seven bed painters it hands
-   every reading to (mgrPaint<Bed>), so a pin on "the render" reads all
-   eight: what used to sit in one function is drawn by the bed it belongs to. */
-const MGR_RENDER = ['renderManager', 'mgrPaintBrief', 'mgrPaintSim', 'mgrPaintTargets', 'mgrPaintPlays',
-  'mgrPaintUnusual', 'mgrPaintAsk', 'mgrPaintRecord'];
-const mgrRender = () => MGR_RENDER.map((n) => extractFunction(src, n, 'index.html')).join('\n');
+const fn = (n) => extractFunction(src, n, 'index.html');
+const decl = (n) => extractDeclaration(src, n, 'index.html');
 const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const eq = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(want),
+  `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 
-const scope = compileScope([
-  extractFunction(src, 'mgrMapModel', 'index.html'),
-  extractFunction(src, 'mgrMapSubjectIds', 'index.html'),
-  extractFunction(src, 'mgrMapLayout', 'index.html'),
-  extractFunction(src, 'mgrMapUnclash', 'index.html'),
-  extractFunction(src, 'mgrMapLeafW', 'index.html'),
-  extractDeclaration(src, 'MGR_MAP_LEAF_MAXW', 'index.html'),
-  extractFunction(src, 'mgrMapAvHTML', 'index.html'),
-  extractFunction(src, 'mgrMapNodeStyle', 'index.html'),
-  extractFunction(src, 'mgrMapIni', 'index.html'),
-  extractFunction(src, 'mgrMapHTML', 'index.html'),
-  extractFunction(src, 'mgrMapDetailHTML', 'index.html'),
-  extractFunction(src, 'mgrShortUGX', 'index.html'),
-  extractDeclaration(src, 'MGR_MAP_DOMAINS', 'index.html'),
-  extractDeclaration(src, 'MGR_MAP_ICON', 'index.html'),
-], {
-  esc, Math, Number, String, Array, Object, Map, Set,
-  fmtUGX: (n) => Math.round(n).toLocaleString('en-US') + ' UGX', fmtShortDate: (d) => d,
-  MANAGER_DOORS: { chase: { tab: 'chase', label: 'Open the money queue' }, cashbook: { tab: 'cashbook', label: 'Open the Cash book' } },
-  MANAGER_OBJECTIVES: { cash: 'Cash first' },
-  chaseResponseLine: () => 'pays when chased', mgrChaseRowFor: () => ({}),
-}, ['mgrMapModel', 'mgrMapLayout', 'mgrMapHTML', 'mgrMapAvHTML']);
+/* ---------- 1. the tiles, from the health checks ------------------------ */
+{
+  const s = compileScope([fn('mgrBriefBoard'), fn('mgrBriefLamp'), fn('mgrBriefTrendText'), decl('MGR_DEPTS'), decl('MGR_WHOLE_SHOP')],
+    { Number, Math, Object }, ['mgrBriefBoard', 'mgrBriefLamp']);
+  /* Finance 3 of 5 checks pass = 60; sales 0 of 3 = 0; people thin (one
+     known check). The whole shop: 8 of 20 = 40. */
+  const health = { score: 40, known: 20, passed: 8, byDept: {
+    finance: { score: 60, known: 5, passed: 3, thin: false, line: '63.41m owed for more than 60 days, by 4 customers' },
+    sales: { score: 0, known: 3, passed: 0, thin: false, line: 'Margin 9.1% over 30 days, under your 12% aim' },
+    procurement: { score: 75, known: 4, passed: 3, thin: false, line: 'Roofings Ltd holds 32% of your buying' },
+    store: { score: 25, known: 4, passed: 1, thin: false, line: '4 lines run out inside 10 days' },
+    people: { score: null, known: 1, passed: 1, thin: true, line: 'Not enough on the books to judge' },
+    marketing: { score: 100, known: 2, passed: 2, thin: false, line: '2 of 2 checks pass' } } };
+  const tiles = s.mgrBriefBoard(health, null, 18, 3);
+  eq(tiles.map((x) => x.id), ['all', 'finance', 'sales', 'procurement', 'store', 'people', 'marketing'],
+    'seven tiles: the whole shop first, then the six departments in the board\'s order');
+  eq(tiles.map((x) => x.score), [40, 60, 0, 75, 25, null, 100], 'each the share of its own checks passed, as counted');
+  /* 70 and over well, 40 and over watch, under 40 trouble, thin none. */
+  eq(tiles.map((x) => x.lamp), ['warn', 'warn', 'bad', 'good', 'bad', 'none', 'good'], 'the lamp follows the score bands');
+  t.check(tiles[0].line === '3 chains behind 18 signals', 'the whole shop counts chains beside signals, and claims nothing more');
+  t.check(tiles[5].thin && tiles[5].line === 'Not enough on the books to judge', 'a thin department says so, with no score (Q2)');
+  t.check(tiles[1].line === '63.41m owed for more than 60 days, by 4 customers', 'a department\'s line is its first failing check, with its figure');
+  t.check(tiles.every((x) => x.trend === null), 'and no change is shown before seven daily snapshots exist');
+  const week = s.mgrBriefBoard(health, { change: 3, byDept: { finance: -4, sales: 0, procurement: null } }, 18, 3);
+  eq(week.slice(0, 4).map((x) => x.trend), ['+3', '−4', '±0', null], 'once they do, each tile carries its own week\'s change');
+  const broke = s.mgrBriefBoard({ error: 'could not be read', byDept: {} }, null, 0, 0);
+  t.check(/could not be read/.test(broke[0].line) && broke.slice(1).every((x) => x.score === null && x.line === 'Not read'),
+    'a health reading that failed says so on the board rather than scoring anything');
+}
 
-const pulse = {
-  cash: { total: 10630000, safe_to_spend: 6600000 },
-  who_you_owe: { total: 19700000, bills: 35, no_day_named: 30, past_a_day_you_named: 0,
-    due_in_the_window: [{ supplierId: 'S1', supplier: 'Roto', bill: 'B1', owed: 4000000 }],
-    biggest_with_no_day: [{ supplierId: 'S1', supplier: 'Roto', bill: 'B1', owed: 4000000 }, { supplierId: 'S2', supplier: 'Kato Steel', bill: 'B2', owed: 2500000 }],
-    missed_own_word: [] },
-  profit: { margin_pct: 5.3, runway_months: 0.2, gross_profit_30d: 900000 },
-  margin: { target_pct: 10, lifting_them_would_add_over_30_days: 943000,
-    worst_lines: [{ key: 'P1|0', line: 'Masasi 12"', lifting_adds: 600000, kept_pct: 3 }] },
-  running_out_soon: [{ key: 'P2|', item: 'Cement 50kg', days_left: 4 }],
-  dead_stock: { value: 1200000 },
-  buying: { top_lines: [{ cost: 500000 }] },
-  going_quiet: [{ customerId: 9, name: 'Ssekitoleko', silent_days: 40 }],
-  best_customers: [{ name: 'Amos Dulisa', profit: 800000 }],
-};
-const debtors = [
-  { id: 1, name: 'Amos Dulisa', debt: 2515000, ageDays: 13 },
-  { id: 2, name: 'Dad', debt: 1436000, ageDays: 30 },
-  { id: 3, name: 'Mulongo Hardware', debt: 900000, ageDays: 8 },
-  { id: 4, name: 'Small One', debt: 10000, ageDays: 2 },
-  { id: 5, name: 'Tiny', debt: 5000, ageDays: 1 },
-];
-const moves = [
-  { status: 'open', body: { title: 'Collect from Amos', mkind: 'chase', subject: { customerId: 1 } } },
-  { status: 'done', body: { title: 'Ring Tiny', mkind: 'chase', subject: { customerId: 5 } } },
-  { status: 'open', body: { title: 'Lift Masasi', mkind: 'price', subject: { key: 'P1|0' } } },
-];
-const model = scope.mgrMapModel(pulse, {
-  accounts: [{ key: 'cash', label: 'Cash drawer', amount: 8000000 }, { key: 'momo', label: 'Mobile money', amount: 2630000 }, { key: 'bank', label: 'Bank', amount: 0 }],
-  debtors, moves, nameOf: (id) => id === 'c:5' ? 'Tiny' : '',
-});
-const dom = (id) => model.domains.find((d) => d.id === id);
-
-/* ---------- 1. six areas, each with its one figure ---------------------- */
-t.check(model.domains.map((d) => d.id).join() === 'cash,customers,growth,margin,stock,suppliers', 'six areas around the Manager');
-t.check(dom('cash').figText === '6.6m' && /safe to spend of 10.63m/.test(dom('cash').sub) && dom('cash').note === '0.2 months of cover',
-  'cash leads with what is safe to spend, not the balance');
-t.check(dom('cash').leaves.length === 2 && dom('cash').leaves[0].label === 'Cash drawer', 'its accounts hang off it, empty ones left out');
-t.check(dom('customers').figText === '4.87m' && dom('customers').sub === '5 owe you', 'customers: what is owed, by how many');
-t.check(dom('suppliers').leaves.length === 2 && dom('suppliers').leaves[0].fig === 4000000,
-  'suppliers: a bill listed under two headings is counted once');
-t.check(dom('margin').figText === '5.3%' && dom('margin').bad === true && dom('margin').sub === 'aim 10%', 'margin below its aim is marked');
-t.check(dom('stock').figText === '1' && dom('stock').leaves[0].id === 'k:P2|', 'stock: the lines running out, keyed as a move would key them');
-t.check(dom('growth').leaves[0].id === 'c:9' && /40 days silent/.test(dom('growth').leaves[0].sub), 'growth: who is going quiet');
-
-/* ---------- 2. today's plan lights up what it acts on ------------------- */
-t.check(dom('customers').on && dom('margin').on && !dom('cash').on && !dom('growth').on,
-  'an area glows when a move of its kind is in today\'s plan, and only then');
-const amos = dom('customers').leaves.find((l) => l.id === 'c:1');
-t.check(amos.on && !amos.done, 'the customer a chase names glows');
-const tiny = dom('customers').leaves.find((l) => l.id === 'c:5');
-t.check(tiny && tiny.on && tiny.done, 'someone below the top four is added when the plan names them, and shows as done');
-t.check(dom('margin').leaves[0].on, 'a line the plan prices glows');
-t.check(dom('customers').moves.length === 2, 'and the area carries its moves for the detail panel');
-t.check(dom('customers').stroke > dom('growth').stroke && dom('cash').stroke <= 9 && dom('growth').stroke >= 2,
-  'line weight follows the money on each area, between 2 and 9');
-
-/* ---------- 3. drawn ---------------------------------------------------- */
-const laid = scope.mgrMapLayout(model.domains);
-t.check(laid.every((d) => d.leaves.every((l) => l.x >= 90 && l.x <= 910 && l.y >= 22 && l.y <= 638)),
-  'every leaf stays inside the frame');
-const html = scope.mgrMapHTML(model, null, { today: { meeting: { date: '2026-09-24', body: { objective: 'cash', objectiveWhy: 'w', keyline: 'Get Amos in', rejected: 'the reorder waits' } }, moves },
-  review: { date: '2026-09-08', body: { lessons: ['Volume is not the lever'] } }, last: null });
-t.check((html.match(/class="mgr-mp-d /g) || []).length === 6 && (html.match(/class="mgr-mp-t[ "]/g) || []).length === 6,
-  'six nodes for the drawing, and six tiles for a phone');
-t.check(/mgr-mp-ln-on/.test(html) && /stroke-width="[\d.]+"/.test(html), 'glowing lines run to the areas the plan acts on');
-t.check(/data-dom="customers" style="[^"]*" aria-pressed="true"/.test(html), 'with no choice made, the first area the plan touches is opened');
-t.check(/Open the money queue/.test(html) && /in today’s plan/.test(html) && /done today/.test(html) && /pays when chased/.test(html),
-  'the detail names each customer, whether the plan names them, how they answer a chase, and the door');
-t.check(/met today · 3 moves/.test(html), 'the Manager at the centre says when it last met');
-t.check(/How it decided today/.test(html) && /Cash first/.test(html) && /Set aside/.test(html) && /Volume is not the lever/.test(html),
-  'underneath: how it decided, and what it has learned');
-const quiet = scope.mgrMapHTML(model, 'growth', null);
-t.check(/data-dom="growth" style="[^"]*" aria-pressed="true"/.test(quiet) && /no meeting yet/.test(quiet) && !/How it decided/.test(quiet),
-  'an area chosen stays chosen, and a day with no meeting says so and draws nothing it does not have');
-
-/* ---------- 4. wired into the screen ------------------------------------ */
-/* WAS: a third tab of the switch with a bed of its own. The map folded
-   into the Brief's department board (Q26): it is drawn into the Brief's
-   managerDeptWrap, still only when it is looked at -- a render while
-   another section is open marks it stale, and opening the Brief draws it. */
-const brief = extractFunction(src, 'mgrPaintBrief', 'index.html');
-t.check(/const drawMap = \(\)=>\{ mgrPaintMap\(\); mgrMapDirty = false; \};/.test(brief)
-  && /if\(ctx\.landed === 'view' && mgrMapDirty\) drawMap\(\);/.test(brief),
-  'the Brief draws it, and opening the Brief draws a board a render marked stale');
-
-/* WHEN IT IS DRAWN, run rather than read: the real Brief painter, its
-   timer held so each check can say what was queued.
-   WAS: the board was drawn whenever the Brief was the section chosen --
-   including from a render made while Today was showing (Done on Today's
-   plan renders this screen), a quarter of a second of whole-shop reading
-   into a hidden section; and a journal read that FAILED returned before
-   the board was ever drawn, leaving it empty, or last known and
-   "updating…" for as long as the screen was open.
-   NOW: drawn only while the Manager is on screen, and drawn from the
-   books when the journal fails, its centre saying the journal was not
-   read rather than that no meeting was held. */
+/* ---------- 2. when the Brief is drawn ---------------------------------
+   The real painter, its timer held so each check can say what was
+   queued. Drawn only while the Manager is on screen and the Brief is the
+   section open, and only by the render that is still current; opening
+   the Brief from the nav draws what a render marked stale. A journal
+   read that fails is named in the band and the plan, and the books are
+   drawn all the same. */
 {
   const el = (id) => ({ id, innerHTML: '', style: {}, classList: { contains: () => false, add() {}, remove() {} },
     querySelector: () => null, querySelectorAll: () => [], addEventListener() {} });
   const els = {};
   ['managerBandWrap', 'managerStripWrap', 'managerDeptWrap', 'managerPlanWrap', 'managerChainWrap', 'managerForesightWrap',
     'managerSimTeaserWrap', 'managerMemoryWrap', 'managerBlindWrap', 'tab-manager'].forEach((id) => { els[id] = el(id); });
-  let timers = [], draws = 0, heroArgs = null;
+  let timers = [], draws = 0;
+  const bands = [];
+  let S = null;
   const env = {
     document: { getElementById: (id) => els[id] || null },
-    setTimeout: (fn) => { timers.push(fn); return timers.length; },
-    mgrRenderGen: 1, mgrView: 'brief', mgrMapDirty: true, mgrMapJournal: null, mgrMapModelCache: {}, mgrMapJournalErr: null,
-    mgrPaintMap: () => { draws++; },
+    setTimeout: (f) => { timers.push(f); return timers.length; },
+    mgrRenderGen: 1, mgrView: 'brief',
+    mgrBriefDraw: () => { draws++; S.__clean(); },
+    mgrBriefPaintBand: () => { bands.push(S.__state().band); }, mgrBriefPaintPlan: () => {},
     mgrPaintVerdict: () => {}, mgrCachePaint: () => false, mgrLastKnown: () => {},
-    mgrHeroHTML: (...a) => { heroArgs = a; return '<div class="mgr-hero"></div>'; },
     mgrJournalUnreadHTML: (e) => `<div class="ow-empty">The journal could not be read — ${e}</div>`,
-    mgrWirePlan: () => {}, mgrMoveOrder: (r) => r, deriveMoveOutcome: () => ({ status: 'open' }), mgrQueueRowHTML: () => '',
+    mgrWirePlan: () => {}, managerMeetingFields: () => ({}), managerMoveFields: () => ({}),
+    MANAGER_WORTH_BASES: {}, MANAGER_LEVERS: [],
     managerToday: null, managerMeetingRunning: false, apMode: null, apWasCutOff: false, managerCommittedPlan: null,
-    assistantBusy: false, runManagerMeeting() {}, runManagerReview() {}, apOpenPanel() {}, apSend() {},
+    assistantBusy: false, runManagerMeeting() {}, runManagerReview() {}, apOpenPanel() {}, apSend() {}, mgrTrailHTML: () => '',
     lsSet() {}, todayISO: () => '2026-10-07', esc, fmtShortDate: (d) => d,
   };
-  const B = compileScope([brief,
-    'function __state(){ return { mgrMapDirty, mgrMapJournalErr, mgrMapModelCache, mgrMapJournal }; }',
+  S = compileScope([fn('mgrPaintBrief'), fn('mgrBriefSoon'), fn('mgrBriefOnScreen'),
+    'let mgrMapJournal = null, mgrBriefDirty = true, mgrBriefJournalErr = null, mgrBriefRows = [], mgrBriefPlanArgs = null,'
+      + ' mgrBriefBandArgs = {}, mgrBriefCtx = null, mgrBriefTimer = null;',
+    'function __state(){ return { mgrBriefDirty, mgrBriefJournalErr, mgrMapJournal, band: mgrBriefBandArgs }; }',
+    'function __clean(){ mgrBriefDirty = false; }',
     'function __set(k, v){ if(k === "view") mgrView = v; if(k === "gen") mgrRenderGen = v; }'],
-    env, ['mgrPaintBrief', '__state', '__set']);
+    env, ['mgrPaintBrief', '__state', '__set', '__clean']);
   const run = () => { const q = timers; timers = []; q.forEach((f) => f()); };
   const ok = { today: null, prior: [], reviews: [], weekMeetings: 0 };
 
   els['tab-manager'].style.display = 'block';
-  B.mgrPaintBrief(1, { landed: 'state', st: { error: 'network down' }, notes: true, heldGuess: true });
+  S.mgrPaintBrief(1, { gen: 1, landed: 'state', st: { error: 'network down' }, notes: true, heldGuess: true });
   run();
-  t.check(draws === 1 && B.__state().mgrMapJournalErr === 'network down' && B.__state().mgrMapModelCache === null,
-    'a journal read that fails still draws the board — from fresh books, with the failure kept for its centre');
-  t.check(/could not be read — network down/.test(els.managerPlanWrap.innerHTML) && heroArgs && heroArgs[3] === 'network down',
+  t.check(draws === 1 && S.__state().mgrBriefJournalErr === 'network down',
+    'a journal read that fails still draws the Brief from the books, with the failure kept');
+  t.check(/could not be read — network down/.test(els.managerPlanWrap.innerHTML) && bands.length && bands[bands.length - 1].unread === 'network down',
     'and the plan and the band both name the failure, rather than the band saying it is still reading');
-  B.mgrPaintBrief(1, { landed: 'state', st: ok, notes: true, heldGuess: false });
+  S.mgrPaintBrief(1, { gen: 1, landed: 'state', st: ok, notes: true, heldGuess: false });
   run();
-  t.check(draws === 2 && B.__state().mgrMapJournalErr === null && B.__state().mgrMapJournal && B.__state().mgrMapJournal.today === null,
-    'the next clean read clears it, and draws again with what today\'s plan acts on');
+  t.check(draws === 2 && S.__state().mgrBriefJournalErr === null && S.__state().mgrMapJournal && S.__state().mgrMapJournal.today === null
+    && Object.keys(S.__state().mgrMapJournal).join() === 'today,review,last',
+    'the next clean read clears it, draws again, and keeps the journal in the shape the assistant panel reads');
 
   els['tab-manager'].style.display = 'none';
-  B.mgrPaintBrief(1, { landed: 'state', st: ok, notes: true, heldGuess: false });
+  S.mgrPaintBrief(1, { gen: 1, landed: 'state', st: ok, notes: true, heldGuess: false });
   run();
-  t.check(draws === 2 && B.__state().mgrMapDirty === true,
-    'a render while another screen is showing reads nothing for the board — it is only marked stale');
-  B.mgrPaintBrief(1, { landed: 'state', st: { error: 'network down' }, notes: true, heldGuess: true });
-  B.mgrPaintBrief(1, { landed: 'start', notes: false, heldGuess: false });
+  t.check(draws === 2 && S.__state().mgrBriefDirty === true,
+    'a render while another screen is showing reads nothing for the Brief — it is only marked stale');
+  S.mgrPaintBrief(1, { gen: 1, landed: 'start', notes: false, heldGuess: false });
   run();
-  t.check(draws === 2 && B.__state().mgrMapDirty === true, 'not after a failed read either, nor on a shop with no journal');
+  t.check(draws === 2 && S.__state().mgrBriefDirty === true, 'nor on a shop with no journal');
   els['tab-manager'].style.display = 'block';
-  B.mgrPaintBrief(1, { landed: 'state', st: ok, notes: true, heldGuess: false });
+  S.mgrPaintBrief(1, { gen: 1, landed: 'state', st: ok, notes: true, heldGuess: false });
   run();
   t.check(draws === 3, 'and the render that showing the screen runs draws it');
 
-  B.__set('view', 'targets');
-  B.mgrPaintBrief(1, { landed: 'state', st: ok, notes: true, heldGuess: false });
+  S.__set('view', 'targets');
+  S.mgrPaintBrief(1, { gen: 1, landed: 'tally', notes: true, heldGuess: false });
   run();
-  t.check(draws === 3 && B.__state().mgrMapDirty === true, 'another section open: marked stale, not drawn');
-  B.__set('view', 'brief');
-  B.mgrPaintBrief(1, { landed: 'view', notes: true, heldGuess: false });
-  t.check(draws === 4 && B.__state().mgrMapDirty === false, 'opening the Brief from the nav draws it at once');
+  t.check(draws === 3 && S.__state().mgrBriefDirty === true, 'another section open: marked stale, not drawn');
+  S.__set('view', 'brief');
+  S.mgrPaintBrief(1, { gen: 1, landed: 'view', notes: true, heldGuess: false });
+  t.check(draws === 4 && S.__state().mgrBriefDirty === false, 'opening the Brief from the nav draws it at once');
 
-  B.mgrPaintBrief(1, { landed: 'state', st: ok, notes: true, heldGuess: false });
-  B.__set('gen', 2);
+  S.mgrPaintBrief(1, { gen: 1, landed: 'tally', notes: true, heldGuess: false });
+  S.mgrPaintBrief(1, { gen: 1, landed: 'weeks', notes: true, heldGuess: false });
+  t.check(timers.length === 1, 'readings that land together are drawn once, not once each');
+  S.__set('gen', 2);
   run();
-  t.check(draws === 4, 'and a board queued by a render that has since been replaced is not drawn');
+  t.check(draws === 4, 'and a draw queued by a render that has since been replaced is not made');
 }
-const unread = scope.mgrMapHTML(model, null, { error: 'network down' });
-t.check(/journal not read/.test(unread) && !/no meeting yet/.test(unread) && !/How it decided/.test(unread),
-  'a board drawn without its journal says the journal was not read — never that there was no meeting');
-t.check(/<div class="mgr-bed mgr-bed-b"[\s\S]*?<div id="managerDeptWrap" class="mgr-slot"><\/div>[\s\S]*?<div class="mgr-bed mgr-bed-x"/.test(src)
-  && /function mgrPaintMap\(\)\{\s*const wrap = document\.getElementById\('managerDeptWrap'\);/.test(src),
-  'in the Brief\'s department slot');
-const paint = extractFunction(src, 'mgrPaintMap', 'index.html');
-t.check(/ASSISTANT_TOOLS\.shop_pulse\.run\(\)/.test(paint), 'it reads the same position the meeting reads');
-t.check(/could not read the shop/.test(paint), 'and says so when it cannot, rather than drawing a blank');
-const render = mgrRender();
-t.check(/mgrMapJournal = \{ today: st\.today/.test(render) && /mgrMapModelCache = null;/.test(render),
-  'every fresh read of the journal redraws it');
-t.check(/\.mgr-mp-cv\{display:none;\}/.test(src) && /\.mgr-mp-tiles\{display:grid;/.test(src),
-  'on a phone the drawing becomes tiles');
-t.check(/prefers-reduced-motion: reduce\)\{ \.mgr-mp-lines line\.mgr-mp-ln-on/.test(src), 'and the glow holds still for those who ask it to');
 
-/* ---------- labels that land on each other --------------------------
-   The shop's own map on 24 Sept: five customers on the right edge and
-   five items at the bottom. Before, Mulongo sat under Amos Dulisa and
-   "Soft Close Mulper — Flat" under "Half Bend". Every leaf is measured
-   as the stylesheet draws it and no two boxes may touch. */
+/* ---------- 3. in the Brief's department slot, and no longer a map ------ */
 {
-  const real = [{"id": "cash", "angle": -90, "leaves": [{"id": "a:cash", "label": "Cash"}, {"id": "a:momo", "label": "Mobile Money"}, {"id": "a:bank", "label": "Bank"}]}, {"id": "customers", "angle": -30, "leaves": [{"id": "c:X727", "label": "Aid"}, {"id": "c:X208", "label": "Kato Brian"}, {"id": "c:X600", "label": "Ruthx"}, {"id": "c:X350", "label": "Mukasax"}, {"id": "c:X864", "label": "Ojok Peters"}]}, {"id": "growth", "angle": 30, "leaves": [{"id": "c:X108", "label": "Nakato An"}, {"id": "c:X793", "label": "Okello Jox"}, {"id": "c:X409", "label": "Babiry"}]}, {"id": "margin", "angle": 90, "leaves": [{"id": "k:P051::18", "label": "Runners \u2014 Masasi / 14\""}, {"id": "k:P051::17", "label": "Runners \u2014 Masasi / 12\""}, {"id": "k:P073::0", "label": "ELEPHANT King \u2014 Short / Single Lock"}]}, {"id": "stock", "angle": 150, "leaves": [{"id": "k:P044::0", "label": "Soft Close Mulper \u2014 Flat"}, {"id": "k:P044::1", "label": "Soft Close Mulper \u2014 Half Bend"}, {"id": "k:P211::3", "label": "Window Rollers \u2014 Big / Grooved"}, {"id": "s:X43", "label": "Akello Maryxx"}, {"id": "k:P073::0", "label": "ELEPHANT King \u2014 Short / Single Lock"}]}, {"id": "suppliers", "angle": 210, "leaves": [{"id": "s:X43", "label": "Akello Maryxx"}, {"id": "s:X574", "label": "Wasswaxxxxx"}]}];
-  const out = scope.mgrMapLayout(real);
-  const PX = 0.84, PY = 560 / 660, boxes = [];
-  out.forEach((d) => d.leaves.forEach((l) => boxes.push({ n: l.label, x: l.x * PX, y: l.y * PY, w: Math.min(180, 36 + l.label.length * 6.2), h: 24 })));
-  out.forEach((d) => boxes.push({ n: d.id, x: d.x * PX, y: d.y * PY, w: 108, h: 90 }));
-  boxes.push({ n: 'core', x: 420, y: 280, w: 124, h: 124 });
-  const clash = [];
-  for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
-    const a = boxes[i], b = boxes[j];
-    if (Math.abs(a.x - b.x) < (a.w + b.w) / 2 && Math.abs(a.y - b.y) < (a.h + b.h) / 2) clash.push(a.n + ' / ' + b.n);
-  }
-  t.check(!clash.length, 'no label on the map lands on another, or on an area (' + (clash.join('; ') || 'none') + ')');
-  t.check(out.every((d) => d.leaves.every((l) => l.x * PX - Math.min(180, 36 + l.label.length * 6.2) / 2 >= 0 && l.x * PX + Math.min(180, 36 + l.label.length * 6.2) / 2 <= 840)),
-    'and every label stays inside the frame');
-  const crossing = [];
-  out.forEach((d) => d.leaves.forEach((l) => {
-    const through = out.filter((o) => o.id !== d.id).find((o) => {
-      for (let k = 0.1; k < 0.95; k += 0.05) { const x = d.x + (l.x - d.x) * k, y = d.y + (l.y - d.y) * k; if (Math.abs(x - o.x) < 75 && Math.abs(y - o.y) < 61) return true; }
-      return false; });
-    if (through) crossing.push(l.label + ' through ' + through.id);
-  }));
-  t.check(!crossing.length, 'and no leaf is moved so far that its line runs through another area (' + (crossing.join('; ') || 'none') + ')');
-  const again = scope.mgrMapLayout(real);
-  t.check(JSON.stringify(again) === JSON.stringify(out), 'the same books always draw the same map');
-  const a = scope.mgrMapAvHTML({ id: 'k:P051::18', label: 'Runners — Masasi / 14"' }, { tone: 'buy' });
-  const b = scope.mgrMapAvHTML({ id: 'k:P051::17', label: 'Runners — Masasi / 12"' }, { tone: 'buy' });
-  const c = scope.mgrMapAvHTML({ id: 'c:C106', label: 'Mulongo' }, { tone: 'money' });
-  t.check(/<svg/.test(a) && a === b && />MU</.test(c),
-    'an item wears the tag rather than initials two sizes of it would share; a person keeps their initials');
+  t.check(/<div class="mgr-bed mgr-bed-b"[\s\S]*?<div id="managerDeptWrap" class="mgr-slot"><\/div>[\s\S]*?<div class="mgr-bed mgr-bed-x"/.test(src)
+    && /function mgrPaintMap\(\)\{\s*const wrap = document\.getElementById\('managerDeptWrap'\);/.test(src),
+    'the board is drawn into the Brief\'s department slot');
+  const b0 = src.indexOf('/* ═══ MGR BED: Brief — begin ═══ */', src.indexOf('function renderManager('));
+  const block = src.slice(b0, src.indexOf('/* ═══ MGR BED: Brief — end ═══ */', b0));
+  t.check(b0 > -1 && !/ASSISTANT_TOOLS\.shop_pulse/.test(block) && !/function mgrMapModel\(|function mgrMapHTML\(/.test(src),
+    'the map\'s drawing is retired: nothing on the Brief recomputes shop_pulse');
+  const reader = fn('mgrBriefRead');
+  t.check(/mgrMemo\('brief:' \+ name \+ ':' \+ today, fn\)/.test(reader) && /memo\('alerts', \(\)=>\{\s*const dctx = dashboardContext\(/.test(reader),
+    'and the whole-shop reading it does make is kept for a minute or until the books change');
+  /* Tap a tile: the decisions narrow, the chains light, the next 30 days
+     dim; the same tile, or the whole shop, clears it. */
+  const p = compileScope(['let mgrBriefDept = "all";', fn('mgrBriefPickDept'), 'function __d(){ return mgrBriefDept; }'],
+    { mgrPaintMap() {}, mgrBriefPaintChains() {}, mgrBriefPaintForesight() {}, mgrBriefPaintPlan() {}, mgrWirePlan() {}, console },
+    ['mgrBriefPickDept', '__d']);
+  p.mgrBriefPickDept('finance');
+  const a = p.__d();
+  p.mgrBriefPickDept('finance');
+  const b = p.__d();
+  p.mgrBriefPickDept('sales'); p.mgrBriefPickDept('all');
+  eq([a, b, p.__d()], ['finance', 'all', 'all'], 'a tap narrows to the department; the same tap, or the whole shop, clears it');
+  t.check(/mgrBriefDept !== 'all' && x\.dept !== mgrBriefDept/.test(fn('mgrBriefPaintForesight')) && /mgr-b-dim/.test(fn('mgrBriefPaintForesight')),
+    'the next 30 days of other departments dim');
+  t.check(/mgrBriefDept !== 'all' && d === mgrBriefDept \? ' mgr-b-hl' : ''/.test(fn('mgrBriefPaintChains')), 'the chain cards of the department light');
+  t.check(/r\.dept === dept \|\| \(r\.touches \|\| \[\]\)\.includes\(dept\)/.test(fn('mgrBriefDecisionList')),
+    'and the decisions narrow to it and to those that move it');
 }
 
 process.exit(t.done() ? 1 : 0);
