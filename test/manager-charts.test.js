@@ -58,26 +58,14 @@ const fmtUGX = (n) => Number(n).toLocaleString('en-US') + ' UGX';
     t.check(w.reduce((n, x) => n + x.proposed, 0) === 3, 'and nothing older than eight weeks is counted');
   }
 
-  /* ---------- 2. the sparkline ----------------------------------------- */
-  {
-    const { mgrSparkHTML } = compileScope([extractFunction(src, 'mgrSparkHTML', 'index.html')],
-      { esc, fmtShortDate: (d) => d.slice(5), Math }, ['mgrSparkHTML']);
-    const weeks = Array.from({ length: 8 }, (_, i) => ({ from: day(-7 * (7 - i) - 6), current: i === 7,
-      proposed: i === 2 ? 0 : 4, done: i === 2 ? 0 : i % 4 }));
-    const svg = mgrSparkHTML(weeks, 'done', 'proposed', 'done');
-    t.check((svg.match(/mgr-spark-track/g) || []).length === 7 && (svg.match(/mgr-spark-gap/g) || []).length === 1,
-      'one column per week: a full-height track for each week with advice, a baseline tick for the one without');
-    const zero = svg.split('<g>').find((g) => /Week of [\d-]+: 0 of 4 done/.test(g)) || '';
-    t.check(/mgr-spark-track/.test(zero) && !/mgr-spark-bar|mgr-spark-now/.test(zero),
-      'a week where nothing advised was done is an EMPTY track — not the same mark as a week with nothing advised');
-    t.check(/class="mgr-spark-gap"><title>Week of [\d-]+: nothing advised<\/title>/.test(svg),
-      'a week with nothing advised is a gap that says so, not a zero');
-    t.check((svg.match(/mgr-spark-now/g) || []).length === 1 && /This week so far: 3 of 4 done/.test(svg),
-      'the running week is drawn apart and called "so far"');
-    t.check(/aria-label="Last 8 weeks, done: /.test(svg), 'and the whole trend is read out for a screen reader');
-    t.check(mgrSparkHTML(weeks.map((x) => ({ ...x, proposed: 0 })), 'done', 'proposed', 'done') === '',
-      'eight empty weeks draw nothing at all');
-  }
+  /* ---------- 2. the sparkline -----------------------------------------
+     WAS: an eight-week sparkline (mgrSparkHTML) beside "Advice followed by
+     events" in the verdict strip. NOW: that strip is the canvas's
+     situation strip, which carries no weekly line -- its one change over
+     time is the health score's, said as a figure once seven daily
+     snapshots exist (mgrHealthTrend, pinned in manager-health). The
+     sparkline went with the strip it was drawn for. */
+  t.check(!/function mgrSparkHTML\(/.test(src), 'the verdict strip\'s sparkline went with the strip');
 
   /* ---------- 3. the pace chart ---------------------------------------- */
   const paceScope = (metrics) => compileScope([
@@ -215,13 +203,13 @@ const fmtUGX = (n) => Number(n).toLocaleString('en-US') + ' UGX';
     t.check(/\$\{\(!x\.finished && mgrPaceHTML\(x\)\) \|\| bar\(x\.pct\)\}/.test(render),
       'a running target shows its pace chart; a finished one keeps its bar');
     t.check(/managerAdviceWeeks\(todayISO\(\)\)\.then/.test(render), 'the weeks are read beside the other verdict readings');
-    const paint = extractFunction(src, 'mgrPaintVerdict', 'index.html');
-    /* Advice done became a square per piece of advice (a share of a
-       whole); the trend stays with the figure that is about change. */
-    t.check(/if\(wk && !cells\[2\]\.wait\) cells\[2\]\.spark/.test(paint)
-      && /cells\[0\]\.viz = mgrWaffleHTML\(/.test(paint),
-      'the trend rides beside a figure only once that figure is read, and advice done is drawn as its whole');
-    t.check(!/cells\[1\]\.spark|cells\[3\]\.spark|cells\[0\]\.spark/.test(paint), 'and no other figure carries a weekly line — there it would be noise');
+    /* WAS: the verdict strip's trend and waffle. NOW: the situation
+       strip's one figure about change, the health score's week, is said
+       only once seven daily snapshots exist -- "trend after 7 days"
+       until then, never a change invented from fewer. */
+    const cells = extractFunction(src, 'mgrStripCells', 'index.html');
+    t.check(/const t = M\.trend;/.test(cells) && /'trend after 7 days'/.test(cells),
+      'the health figure carries its week\'s change only once the snapshots can say it');
     t.check(/closest\('\.mgr-pc'\)/.test(src) && /tip\.style\.left = Math\.max\(0, Math\.min\(rect\.width - tw/.test(src),
       'one hover for every pace chart, and its label is kept inside the chart');
   }

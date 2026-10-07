@@ -73,8 +73,8 @@ const mgrRender = () => MGR_RENDER.map((n) => extractFunction(src, n, 'index.htm
   }, ['mgrRichRowHTML']);
   const rows = [
     { id: 1, status: 'open', body: { title: 'Collect the 13-day invoice', mkind: 'chase', door: 'chase', worth: 2515000, worthBasis: 'cash_freed', subject: { customerId: 7 }, unlocks: 'the restock' } },
-    { id: 2, status: 'open', body: { title: 'Restock Masasi', mkind: 'buy', worth: 250000, after: 0 } },
-    { id: 3, status: 'done', body: { title: 'Ring Sarah', mkind: 'chase', worth: 400000, doneOn: '2026-09-24' } },
+    { id: 2, status: 'open', body: { title: 'Restock Masasi', mkind: 'buy', worth: 250000, worthBasis: 'profit_30d', after: 0 } },
+    { id: 3, status: 'done', body: { title: 'Ring Sarah', mkind: 'chase', worth: 400000, worthBasis: 'cash_freed', doneOn: '2026-09-24' } },
     { id: 4, status: 'skipped', body: { title: 'Get a date from Peter', mkind: 'chase', skipReason: 'travelling' } },
   ];
   const open = scope.mgrRichRowHTML(rows[0], rows, { rich: true, num: 0, open: true });
@@ -84,8 +84,17 @@ const mgrRender = () => MGR_RENDER.map((n) => extractFunction(src, n, 'index.htm
     'its kind as a chip in its door\'s colour, spaced from what follows, and the customer by name');
   t.check(/class="btn btn-accent ow-sm mgr-door"/.test(open) && /class="mgr-skip-why"/.test(open) && /class="btn btn-ghost ow-sm mgr-done"/.test(open),
     'the open move carries its door, Done, and Not now with a box for the reason');
-  t.check(/aria-label="79% of the money in today's plan"/.test(open),
-    'and a ring for its share of the day\'s money (2,515,000 of 3,165,000)');
+  /* WAS: one total of every move's money (2,515,000 of 3,165,000 = 79%),
+     cash, profit and sales added together -- the law the plan keeps
+     everywhere else (Q5). NOW: the share of its own kind only. Cash:
+     2,515,000 of 2,515,000 + 400,000 = 2,915,000 -> 86%; the 250,000 of
+     profit is not in it. */
+  t.check(/aria-label="86% of today's cash"/.test(open) && /of the cash<\/text>/.test(open),
+    'and a ring for its share of the day\'s CASH only (2,515,000 of 2,915,000), named as cash');
+  t.check(/aria-label="100% of today's profit"/.test(scope.mgrRichRowHTML(rows[1], rows, { rich: true, num: 1 })),
+    'a profit move\'s ring counts the plan\'s profit alone (250,000 of 250,000), never the cash beside it');
+  t.check(!/mgr-rv-ring/.test(scope.mgrRichRowHTML({ id: 9, status: 'open', body: { title: 'x', mkind: 'other', worth: 5000 } }, rows, { rich: true, num: 4 })),
+    'and money of no named kind draws no ring at all');
   t.check(/Unlocks: the restock/.test(open), 'with what it makes possible as a chip');
   const waiting = scope.mgrRichRowHTML(rows[1], rows, { rich: true, num: 1 });
   t.check(/waiting on 01/.test(waiting) && /mgr-av-k mgr-kt-buy/.test(waiting),
@@ -95,8 +104,14 @@ const mgrRender = () => MGR_RENDER.map((n) => extractFunction(src, n, 'index.htm
     'a done move says so, with what the books saw since, and offers no Done again');
   const skipped = scope.mgrRichRowHTML(rows[3], rows, { rich: true, num: 3 });
   t.check(/mgr-rv-skipped/.test(skipped) && /“travelling”/.test(skipped), 'a move set aside shows the owner\'s own reason');
-  t.check(/mgrQueueRowHTML\(r, rows, \{ kindChip: true, open, rich: true, num: ordered\.indexOf\(r\) \}\)/.test(src),
-    'the Manager\'s plan draws rich rows; Today\'s queue keeps its compact one');
+  /* WAS: the Manager's plan drew these rich rows through mgrQueueRowHTML.
+     NOW: the Brief draws the canvas's decision rows (mgrBriefDecisionRowHTML),
+     numbered in the meeting's own order; Today's queue keeps its compact
+     row, and the rich row stays the shared emitter it was. */
+  const plan = extractFunction(src, 'mgrBriefPlanHTML', 'index.html');
+  t.check(/const ordered = mgrMoveOrder\(rows\);/.test(plan) && /ordered\.map\(\(r, i\)=> \(\{ \.\.\.mgrBriefDecisionMeta\(r, track\), n: i \+ 1, row: r \}\)\)/.test(plan)
+    && /mgrQueueRowHTML\(r, rows\)/.test(extractFunction(src, 'renderTodayPlan', 'index.html')),
+    'the Manager\'s plan draws its decisions in the meeting\'s order; Today\'s queue keeps its compact row');
 }
 
 /* ---------- 3. the rail, the playbook and growth, drawn ----------------- */
@@ -268,8 +283,18 @@ const mgrRender = () => MGR_RENDER.map((n) => extractFunction(src, n, 'index.htm
   const tally = extractFunction(src, 'managerAdviceTally', 'index.html');
   t.check(/counts\.worthDone \+= x\.worth/.test(tally) && /counts\.waiting\.repeated\+\+/.test(tally) && /counts\.waiting\.stale\+\+/.test(tally) && /counts\.waiting\.fresh\+\+/.test(tally),
     'the tally carries the money acted on and why each waiting move is waiting: repeated, stale, or new this week');
-  const verdict = extractFunction(src, 'mgrPaintVerdict', 'index.html');
-  t.check(/'Money acted on'/.test(verdict) && /waiting: \$\{why\}/.test(verdict), 'and the scorecard shows money acted on against money waiting, with the reasons, not a bare count of untouched');
+  /* WAS: the verdict strip's first cell, money acted on against money
+     waiting. NOW: the canvas's situation strip (Q13) -- its hit rate is
+     a count of done moves the books can weigh, "k of n followed by a
+     payment or delivery", and what cannot be weighed is "not
+     measurable", never a miss. The money acted on is no longer drawn
+     anywhere: the tally still carries it (counts.worthDone), and the
+     Record's account shows only the counts. */
+  const cells = extractFunction(src, 'mgrStripCells', 'index.html');
+  t.check(/value: hr\.n \? mgrOf\(hr\.k, hr\.n\)/.test(cells) && /'followed by a payment or delivery'/.test(cells)
+    && /not measurable/.test(extractFunction(src, 'mgrBriefStripDetailHTML', 'index.html'))
+    && !/worked|did what I said/.test(cells),
+    'and the strip counts what was done and followed by an event, k of n, with the unmeasurable named, never "worked"');
   t.check(/Try this one first\./.test(render) && /which is worth more — try that first/.test(render),
     'of two overlapping plays it recommends the one worth more, and the other card points to it');
   t.check(/class="mgr-rv-why"/.test(extractFunction(src, 'mgrRichRowHTML', 'index.html')), 'every move carries one line of its reasoning on the card');
