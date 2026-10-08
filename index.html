@@ -137984,7 +137984,9 @@ function mgrBriefSubHTML(M, plan){
       a.loss > 0 ? `<b class="mgr-b-em mgr-b-fig">${esc(mgrShortUGX(a.loss))}</b> of losses avoided` : '',
       a.saving > 0 ? `<b class="mgr-b-em mgr-b-fig">${esc(mgrShortUGX(a.saving))}</b> of costs saved` : '',
       a.sales > 0 ? `<b class="mgr-b-em mgr-b-fig">${esc(mgrShortUGX(a.sales))}</b> of sales kept or won` : ''].filter(Boolean);
-    if(bits.length) out += ' Today’s plan adds ' + (bits.length > 1 ? bits.slice(0, -1).join(', ') + ' and ' + bits[bits.length - 1] : bits[0]) + '.';
+    /* The meeting's own sizing of its moves, said as its -- so it is not
+       read as the Simulator's test of the plan, which may find less. */
+    if(bits.length) out += ' The meeting sized today’s plan at ' + (bits.length > 1 ? bits.slice(0, -1).join(', ') + ' and ' + bits[bits.length - 1] : bits[0]) + '.';
   }
   /* Said only when the Simulator played THIS plan, not "nothing changes"
      -- and never without what the test found. A plan that takes cash
@@ -138265,7 +138267,7 @@ function mgrBriefStripDetailHTML(id, M){
       + (u.parts.length > 10 ? row(`and ${u.parts.length - 10} more`, null, 'mgr-b-muted') : '')
       /* The meeting's own sizing of its proposed plays, each as the
          Playbook reads it: shown apart, as its claim, never in the total. */
-      + (u.plays.list || []).map(p=> row(esc(p.name) + ` <span class="mgr-b-sm">— a proposed play, the Manager’s own sizing ${esc(p.per === 'over 30 days' ? 'over 30 days' : 'a month')}, not added in</span>`,
+      + (u.plays.list || []).map(p=> row(esc(p.name) + ` <span class="mgr-b-sm">— a proposed play; the Manager’s own sizing, ${esc(p.per === 'over 30 days' ? 'over 30 days' : 'a month')}; not added in</span>`,
         '+' + fig(p.amount), 'mgr-b-muted')).join('');
     foot = 'Counted once per line or customer. Not a forecast: what the same volume would add at the aim.'
       + (u.plays.total > 0 ? ` The Manager’s own sizing of its proposed plays — ${esc(mgrShortUGX(u.plays.total))} — is its claim, and is not added in.` : '');

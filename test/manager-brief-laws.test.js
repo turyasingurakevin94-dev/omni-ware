@@ -90,7 +90,8 @@ const all = (re) => { const out = []; let m; const g = new RegExp(re.source, 'g'
   t.check(/I connected 18 signals across all six departments; 4 chains join departments — 3 linked in your books, 1 my reading\./.test(plain),
     'the signals, the departments and the chains, by source, side by side (got ' + plain + ')');
   t.check(!/run through|behind|explain/.test(plain), 'and no word says the chains explain the signals');
-  t.check(/Today’s plan adds \+1\.28m of profit over 30 days and 15\.23m of cash\./.test(plain), 'what the plan adds, each kind apart');
+  t.check(/The meeting sized today’s plan at \+1\.28m of profit over 30 days and 15\.23m of cash\./.test(plain) && !/plan adds/.test(plain),
+    'what the plan adds, each kind apart, said as the meeting\'s own sizing -- never read as the Simulator\'s test (got ' + plain + ')');
   t.check(!/tested/.test(plain) && !/corrected/.test(plain), 'no Simulator figure and no correction: neither clause is said');
   t.check(!/tested/.test(say({ tz: { plan: 'nothing changes', lowest: { balance: 1, date: '2026-10-10' }, profitMonth: null } })),
     'a Simulator that played "nothing changes" has not tested the plan, so the band does not say it has');
