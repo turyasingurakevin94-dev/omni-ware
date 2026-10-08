@@ -4096,6 +4096,14 @@ document.getElementById('toast').addEventListener('click', (e)=>{
   if(e.target.closest('[data-toast-x]')) t.classList.remove('show');
 });
 
+// A step reads as done only once it is. The money step is "Pay shop" --
+// what you still have to do, and to whom -- until it is paid; read as
+// "Paid" ahead of time it told agents (and their clients) that money had
+// moved when it had not.
+function stepLabel(s, done){
+  return s.icon === 'cash' && !done ? 'Pay shop' : s.label;
+}
+
 // A sheet about one thing -- an order, a client, your money, your goal --
 // is a page of its own and rises to fill the screen (opts.full), so the
 // screen behind is only a sliver of edge, never half a hero competing
@@ -6021,7 +6029,7 @@ function openTrackSheet(orderId){
         const cls = i < at || at >= steps.length ? 'done' : i === at ? `now${st.tone === 'warn' ? ' warn' : ''}` : '';
         return `<span class="ax-st ${cls}"><i>${i < at || at >= steps.length ? AX_ICON.check : AX_ICON[s.icon]}</i><em>${i === at ? 'now' : ''}</em></span>`;
       }).join('')}</div>
-      <div class="ax-track-l">${steps.map((s,i)=> `<span class="${i===at?'on':''}">${esc(s.label)}</span>`).join('')}</div>
+      <div class="ax-track-l">${steps.map((s,i)=> `<span class="${i===at?'on':''}">${esc(stepLabel(s, i < at || at >= steps.length))}</span>`).join('')}</div>
     </div>`;
     const lineRow = (it, mark)=>{
       const qty = it.displayQty != null ? `${it.displayQty} ${it.displayUnit||''}` : `${fmtNum(it.qty)} ${it.unit||''}`;

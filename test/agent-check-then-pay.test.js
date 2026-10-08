@@ -155,4 +155,13 @@ const order = (over) => Object.assign({
   t.check(ok.orderShopChecked({ status: 'preparing', items: [] }) === true, 'agent app: anything past Draft has been checked');
 }
 
+/* ---------- 6. the money step is not "Paid" until it is ------------- */
+{
+  const { stepLabel } = compileScope([extractFunction(agent, 'stepLabel', 'agent.html')], {}, ['stepLabel']);
+  t.check(stepLabel({ label: 'Paid', icon: 'cash' }, false) === 'Pay shop', 'before payment the step says what to do: "Pay shop"');
+  t.check(stepLabel({ label: 'Paid', icon: 'cash' }, true) === 'Paid', 'and only says "Paid" once it is');
+  t.check(stepLabel({ label: 'Packing', icon: 'box' }, false) === 'Packing', 'other steps keep their names');
+  t.check(/stepLabel\(s, i < at \|\| at >= steps\.length\)/.test(agent), 'the track uses it for every step');
+}
+
 process.exit(t.done() ? 1 : 0);
