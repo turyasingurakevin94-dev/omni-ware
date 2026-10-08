@@ -140870,9 +140870,10 @@ function mgrSimVerdict(v){
   const fl = v.floor && v.floor.amount > 0 ? v.floor : null;
   const whose = fl && fl.source === 'set' ? 'your' : 'the stand-in';
   const floorSay = fl ? whose + ' ' + mgrSimMoney(fl.amount) + ' floor' : null;
-  /* With no floor known the judgement is against running out, said. */
-  const nf = mgrSimNoFloor(v.floor);
-  const underSay = floorSay ? 'under ' + floorSay : nf ? 'it runs out (' + MGR_SIM_NO_FLOOR + ')' : 'under nothing';
+  /* With no floor known, or a floor the owner set at 0, the judgement
+     is against running out, said (mgrSimRunOutSay). */
+  const nfSay = fl ? null : mgrSimRunOutSay(v.floor);
+  const underSay = floorSay ? 'under ' + floorSay : 'it runs out (' + nfSay + ')';
   const lowSay = v.low ? mgrSimMoney(v.low.balance) + ' on ' + mgrSimDay(v.low.date) : 'not known';
   const under = !!(v.low && (fl ? v.low.balance < fl.amount : v.low.balance < 0));
   const tested = 3 - (v.untestable || 0);
@@ -140883,7 +140884,7 @@ function mgrSimVerdict(v){
     if(!v.low) return { cls: 'am', head: 'This is today, unchanged.', body: 'The cash ahead could not be read.' };
     return { cls: 'am', head: 'This is today, unchanged.',
       body: 'Cash after what is already promised ' + (under ? 'dips to ' + lowSay + ' — ' + underSay
-          : (floorSay ? 'stays above ' + floorSay : nf ? 'never runs out (' + MGR_SIM_NO_FLOOR + ')' : 'stays above nothing') + ' — lowest ' + lowSay)
+          : (floorSay ? 'stays above ' + floorSay : 'never runs out (' + nfSay + ')') + ' — lowest ' + lowSay)
         + (v.lowWeek ? ', the week ' + v.lowWeek + (/ and |s$/.test(v.lowWeek) ? ' go out' : ' goes out') : '') + '. Start from my plan, or move one choice at a time.' };
   }
   if(!v.low) return { cls: 'am', head: 'I cannot judge this yet.', body: 'The cash ahead could not be read.' };
@@ -140936,6 +140937,20 @@ function mgrSimWeekWords(walk, date){
    running out -- and says so, never "the floor is 0" or "above nothing". */
 const MGR_SIM_NO_FLOOR = 'no floor known — judged against running out';
 function mgrSimNoFloor(floor){ return !floor || floor.amount == null; }
+/* A FLOOR AT 0 is the owner's answer (mgrCashFloor keeps a set 0 as 0),
+   and a line held to 0 is judged against running out too -- said as
+   their 0, never as "above nothing". No floor known keeps its own words.
+   mgrSimRunOutSay: the clause ('your floor is 0 — judged against running
+   out'); mgrSimRunOutWith: the same after "With" in the band's headline
+   ('your floor at 0 — judged against running out'). */
+function mgrSimRunOutSay(floor){
+  if(mgrSimNoFloor(floor)) return MGR_SIM_NO_FLOOR;
+  return (floor.source === 'set' ? 'your' : 'the stand-in') + ' floor is 0 — judged against running out';
+}
+function mgrSimRunOutWith(floor){
+  if(mgrSimNoFloor(floor)) return MGR_SIM_NO_FLOOR;
+  return (floor.source === 'set' ? 'your' : 'the stand-in') + ' floor at 0 — judged against running out';
+}
 /* The first day the committed line goes under the floor, or null. */
 function mgrSimBreakDay(walk, floor){
   const f = floor && floor.amount > 0 ? floor.amount : 0;
@@ -140947,14 +140962,15 @@ function mgrSimBreakDay(walk, floor){
    plan holds that test. */
 function mgrSimHeadline(o){
   const fl = o.floor && o.floor.amount > 0 ? o.floor : null;
-  const whose = fl && fl.source === 'set' ? 'your floor' : fl ? 'the stand-in floor' : 'nothing';
+  const whose = fl && fl.source === 'set' ? 'your floor' : 'the stand-in floor';
   const on = (d)=> 'on ' + mgrSimDay(d);
   let s = 'Move any decision and I’ll play out the next 30 days before you commit.';
   if(!o.base) return s;
   if(!o.base.walk) return s + ' The cash ahead could not be read, so I cannot say where it stands against the floor.';
   const bb = mgrSimBreakDay(o.base.walk, o.floor), pb = o.plan ? mgrSimBreakDay(o.plan.walk, o.floor) : null;
-  const nf = mgrSimNoFloor(o.floor);
-  s += nf ? ' With ' + MGR_SIM_NO_FLOOR + ', today’s path ' + (bb ? 'runs out ' + on(bb) : 'never runs out')
+  /* No floor known or a floor at 0: judged against running out. */
+  const nf = !fl;
+  s += nf ? ' With ' + mgrSimRunOutWith(o.floor) + ', today’s path ' + (bb ? 'runs out ' + on(bb) : 'never runs out')
     : ' Today’s path ' + (bb ? 'breaks ' + whose + ' ' + on(bb) : 'stays above ' + whose);
   if(!o.plan) return s + (o.planWhy ? '; ' + o.planWhy + '.' : '.');
   if(pb) s += bb ? '; my plan ' + (nf ? 'runs out' : 'breaks it') + ' too' + (pb !== bb ? ', ' + on(pb) : '') : '; my plan ' + (nf ? 'runs out ' : 'breaks it ') + on(pb);
@@ -141565,7 +141581,7 @@ function mgrSimShocksHTML(c){
     /* The verdict's own line first (the expected band, Q40), the
        committed low beside it -- named when it is under the floor. */
     const fl = c.floor && c.floor.amount > 0 ? c.floor.amount : 0;
-    const nf = mgrSimNoFloor(c.floor);
+    const nf = !(fl > 0);
     const res = !s.available ? '' : s.held == null ? 'Not known — the cash ahead could not be read'
       : (s.held ? 'Holds' : nf ? 'Runs out' : 'Breaks the floor') + ' — '
         + (s.expLow ? 'expected low ' + mgrSimMoney(s.expLow.balance) + ', ' + mgrSimDay(s.expLow.date)
@@ -141577,7 +141593,7 @@ function mgrSimShocksHTML(c){
     return `<div class="mgr-x-sh"><span class="mgr-x-sig ${sig}" aria-hidden="true"></span><span><b>${esc(s.label)}</b>${res ? `<small class="mgr-x-res ${s.held ? 'mgr-x-up' : s.held === false ? 'mgr-x-dn' : ''}">${esc(res)}</small>` : ''}${com ? `<small class="mgr-x-res${under ? ' mgr-x-dn' : ''}">${esc(com)}</small>` : ''}<small>${esc(s.note)}</small></span></div>`;
   }).join('');
   return `<div><div class="mgr-x-hdr"><b>What could go wrong</b>${chip}</div>${rows}
-    <p class="mgr-x-fine">Judged on the expected line against ${mgrSimNoFloor(c.floor) ? 'running out — no floor known' : 'the floor'} — on cash after what is promised where there is no expected line — with the committed low beside it. Sizes are assumptions: ${MGR_SIM_SHOCK.lateDays} days late, ${MGR_SIM_SHOCK.earlyDays} days early, ${MGR_SIM_SHOCK.rivalShare}% of the volume.</p></div>`;
+    <p class="mgr-x-fine">Judged on the expected line against ${mgrSimNoFloor(c.floor) ? 'running out — no floor known' : !(c.floor.amount > 0) ? 'running out — ' + (c.floor.source === 'set' ? 'your' : 'the stand-in') + ' floor is 0' : 'the floor'} — on cash after what is promised where there is no expected line — with the committed low beside it. Sizes are assumptions: ${MGR_SIM_SHOCK.lateDays} days late, ${MGR_SIM_SHOCK.earlyDays} days early, ${MGR_SIM_SHOCK.rivalShare}% of the volume.</p></div>`;
 }
 function mgrSimCmpHTML(c){
   const cols = [c.base, c.run, c.plan];

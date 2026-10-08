@@ -41,7 +41,7 @@ const SIM = ['mgrSimDate', 'mgrSimDay', 'mgrSimMoney', 'mgrSimSigned', 'mgrSimCe
   'mgrSimPayDay', 'mgrSimOrderLever', 'mgrSimSeasonOut', 'mgrSimSeasonLever', 'mgrSimOfferLever', 'mgrSimClearLever', 'mgrDeadWindow', 'mgrSimPriceLever',
   'mgrSimDiscountLever', 'mgrSimTermsLever', 'mgrSimHirePay', 'mgrSimHireLever', 'mgrSimQuoteLever', 'mgrSimPostLever', 'mgrSimChoiceOf',
   'mgrSimAssumeOf', 'mgrSimCompose', 'mgrSimExpected', 'mgrSimLands', 'mgrSimRun', 'mgrSimJudge', 'mgrSimShocks', 'mgrSimHolds', 'mgrSimPresets',
-  'mgrSimSame', 'mgrSimVerdict', 'mgrSimWeekWords', 'mgrSimNoFloor', 'mgrSimBreakDay', 'mgrSimHeadline', 'mgrSimTeaserFigures', 'mgrSimTargetsTouched',
+  'mgrSimSame', 'mgrSimVerdict', 'mgrSimWeekWords', 'mgrSimNoFloor', 'mgrSimRunOutSay', 'mgrSimRunOutWith', 'mgrSimBreakDay', 'mgrSimHeadline', 'mgrSimTeaserFigures', 'mgrSimTargetsTouched',
   'mgrSimDecisionBody', 'mgrSimMoves', 'mgrSimOpen', 'mgrSimScenarioFacts', 'mgrSimVerdictInputs', 'mgrSimWaitHint', 'mgrNavCountSim',
   'mgrSimPlanPriceNote', 'mgrSimPoss', 'mgrSimShift', 'mgrSimStops', 'mgrSimQuoteBounds', 'mgrSimOffLine', 'mgrSimLegendNamed', 'mgrSimUncostedSay'];
 const LOANS = ['loanSchedule', 'loanPrincipal', 'loanInstallments', 'loanRoundTo', 'loanRound', 'loanLevelPI', 'loanDueDate',
@@ -1155,6 +1155,31 @@ eq(S.mgrSimTeaserFigures(ctxPlan).plan, 'my plan', 'with an open move that moves
   const vNF2 = S.mgrSimVerdict({ floor: NF, changed: true, low: { date: '2026-10-08', balance: -500 } });
   t.check(/^Cash falls to −500 on Thu 8 Oct — it runs out \(no floor known — judged against running out\), counting only money already in hand/.test(vNF2.body),
     `and a choice that runs out says so (${vNF2.body})`);
+  /* A FLOOR THE OWNER SET AT 0 is their answer, and a line held to 0 is
+     judged against running out: "your floor is 0", never "stays above
+     nothing" or "breaks it". Same walks as above: today's path 1,000
+     then -500 runs out on Thu 8 Oct; the plan's 1,000 and 200 never does. */
+  const Z = { amount: 0, source: 'set', note: 'the floor you set' };
+  eq(S.mgrSimHeadline({ floor: Z, base: { walk: nfWk([1000, -500]) }, plan: { walk: nfWk([1000, 200]) } }),
+    'Move any decision and I’ll play out the next 30 days before you commit. With your floor at 0 — judged against running out, today’s path runs out on Thu 8 Oct; my plan doesn’t.',
+    'the headline with a floor set at 0: judged against running out, said as theirs');
+  eq(S.mgrSimHeadline({ floor: Z, base: { walk: nfWk([1000, 200]) }, plan: { walk: nfWk([1000, -500]) } }),
+    'Move any decision and I’ll play out the next 30 days before you commit. With your floor at 0 — judged against running out, today’s path never runs out; my plan runs out on Thu 8 Oct.',
+    'and the plan that runs out says "runs out", never "breaks it"');
+  const vZ = S.mgrSimVerdict({ floor: Z, changed: false, low: { date: '2026-10-08', balance: 200 } });
+  eq(vZ.body, 'Cash after what is already promised never runs out (your floor is 0 — judged against running out) — lowest 200 on Thu 8 Oct. Start from my plan, or move one choice at a time.',
+    'the verdict on an unchanged day with a floor set at 0');
+  const vZ2 = S.mgrSimVerdict({ floor: Z, changed: true, low: { date: '2026-10-08', balance: -500 } });
+  t.check(vZ2.head === 'I wouldn’t sign this.' && /^Cash falls to −500 on Thu 8 Oct — it runs out \(your floor is 0 — judged against running out\), counting only money already in hand/.test(vZ2.body),
+    `and a choice that runs out with a 0 floor says so (${vZ2.body})`);
+  t.check(![vZ.body, vZ2.body, S.mgrSimHeadline({ floor: Z, base: { walk: nfWk([1000, -500]) }, plan: { walk: nfWk([1000, -500]) } })].some((x) => /nothing|breaks/.test(x)),
+    'no "above nothing", "under nothing" or "breaks it" with a floor at 0');
+  const zH = SHH({ holds: { held: 0, of: 3, untestable: 2 }, floor: Z, shocks: [
+    { id: 'late', label: 'Nalubega pays two weeks late', available: true, held: false, low: { date: '2026-11-05', balance: -1064326 },
+      expLow: { date: '2026-11-06', balance: -200000 }, note: 'n' }] });
+  t.check(/mgr-x-dn">Runs out — expected low −200k, Fri 6 Nov</.test(zH) && /Committed low −1\.06m, Thu 5 Nov — runs out, counting only money in hand/.test(zH)
+    && /Judged on the expected line against running out — your floor is 0/.test(zH),
+    `a 0 floor: the shocks say "Runs out", against "your floor is 0" (${zH.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 300)})`);
   const cal = fn('mgrSimCalHTML');
   t.check(/mgrSimNoFloor\(floor\) \? MGR_SIM_NO_FLOOR/.test(cal) && /\['lo', 'under 0 · runs out'\], \['ok', '0 or more'\]/.test(cal) && !/below nothing|above nothing/.test(cal),
     'the calendar says no floor is known, and its key reads "under 0 · runs out" / "0 or more"');
