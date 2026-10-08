@@ -430,6 +430,10 @@ Deno.serve(async (req) => {
         client: { name: agent.name, phone: agent.phone },
         items: lineItems,
         savedAt: now,
+        // The moment it was sent, which savedAt stops being the first time
+        // the shop saves the order. The shop's app carries createdAt
+        // through every save, so the agent's track can show it under Sent.
+        createdAt: now,
         payments: [],
         customerId: null,
         debtCharged: 0,

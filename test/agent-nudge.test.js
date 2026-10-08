@@ -86,7 +86,7 @@ t.check(/unique index if not exists agent_push_log_once/.test(read('supabase/mig
 
 /* ---------- 5. the agent side ------------------------------------------ */
 const agent = read('agent.html');
-t.check(/data-fd-act="push-on"/.test(agent) && /if\(act === 'push-on'\)\{ if\(await enableAgentPush\(\)\)/.test(agent),
+t.check(/data-p="push" role="switch"/.test(agent) && /if\(k === 'push'\)\{ if\(await enableAgentPush\(\)\)/.test(agent),
   'notifications are asked for from a button he pressed');
 t.check(!/requestPermission\(\)[\s\S]{0,40}boot\(\)/.test(agent) && !/^\s*enableAgentPush\(\);/m.test(agent),
   'and never on load');

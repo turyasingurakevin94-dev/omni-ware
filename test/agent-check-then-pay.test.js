@@ -161,7 +161,8 @@ const order = (over) => Object.assign({
   t.check(stepLabel({ label: 'Paid', icon: 'cash' }, false) === 'Pay shop', 'before payment the step says what to do: "Pay shop"');
   t.check(stepLabel({ label: 'Paid', icon: 'cash' }, true) === 'Paid', 'and only says "Paid" once it is');
   t.check(stepLabel({ label: 'Packing', icon: 'box' }, false) === 'Packing', 'other steps keep their names');
-  t.check(/stepLabel\(s, i < at \|\| at >= steps\.length\)/.test(agent), 'the track uses it for every step');
+  t.check(/stepLabel\(s, i < at \|\| all\)/.test(extractFunction(agent, 'stepTilesHTML', 'agent.html')), 'the track uses it for every step');
+  t.check(/stepLabel\(s, done\)/.test(extractFunction(agent, 'stepDotsHTML', 'agent.html')), 'and so does every small row of steps on a card');
 }
 
 process.exit(t.done() ? 1 : 0);

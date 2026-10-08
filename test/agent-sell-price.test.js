@@ -161,9 +161,9 @@ const line = (over) => Object.assign({
 {
   // What the client is sent is built from rows that carry only the
   // quantity, the name, the rate the agent charges and the amount.
-  for (const name of ['sentSnapshot', 'orderReceiptRows', 'drawReceiptCanvas']) {
+  for (const name of ['sentSnapshot', 'orderReceiptRows', 'drawReceiptCanvas', 'openReceiptSheet']) {
     const body = extractFunction(src, name, 'agent.html');
-    const rows = name === 'sentSnapshot' ? (/rows: .*$/m.exec(body) || [''])[0] : body;
+    const rows = body;
     t.check(rows.length > 0 && !/floorPrice|sellPrice\b|profit|margin|cartMarginFlagHTML/i.test(rows.replace(/agentSellPrice/g, '')),
       `${name}: the client-facing receipt carries no floor price, shop price, margin or profit`);
   }

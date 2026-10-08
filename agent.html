@@ -1076,6 +1076,376 @@
   .toast.bad .act{all:unset;box-sizing:border-box;cursor:pointer;height:40px;padding:0 14px;border-radius:12px;background:var(--bad);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;}
   .toast.bad .x{all:unset;box-sizing:border-box;cursor:pointer;width:44px;height:44px;flex:none;border-radius:999px;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);}
   .toast.bad .x .icon{width:16px;height:16px;stroke-width:2.2;}
+
+  /* ================= THE TRACK, AS DRAWN =================
+     The six steps as named tiles with the time each was reached; the
+     order's state as one big lit tile; each line ticked as its supplier
+     answers. */
+  .ax-state{gap:14px;}
+  .ax-state-ic{width:56px;height:56px;border-radius:18px;}
+  .ax-state-ic .icon{width:28px;height:28px;stroke-width:1.9;}
+  .ax-state-ic.now{background:var(--mint);color:var(--navy);animation:axGlow 2s infinite;}
+  .ax-state-ic.warn{background:#F5B26B;color:var(--navy);animation:axGlowW 2s infinite;}
+  .ax-state-ic.done{background:#fff;color:var(--navy);}
+  .ax-state-ic.off{background:rgba(255,255,255,.1);color:var(--on-navy);}
+  .ax-state .t{font-size:28px;line-height:1;letter-spacing:-.02em;}
+  .ax-state .s{font-weight:600;}
+  @keyframes axGlow{0%{box-shadow:0 0 0 0 rgba(111,220,176,.55)}70%{box-shadow:0 0 0 9px rgba(111,220,176,0)}100%{box-shadow:0 0 0 0 rgba(111,220,176,0)}}
+  @keyframes axGlowW{0%{box-shadow:0 0 0 0 rgba(245,178,107,.55)}70%{box-shadow:0 0 0 9px rgba(245,178,107,0)}100%{box-shadow:0 0 0 0 rgba(245,178,107,0)}}
+  .ax-steps{display:flex;flex-direction:column;gap:7px;}
+  .ax-steps .r,.ax-steps .l{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;}
+  .ax-stp{height:52px;border-radius:12px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.16);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#8D99B5;}
+  .ax-stp .icon{width:16px;height:16px;stroke-width:2;}
+  .ax-stp em{font-style:normal;font-size:11px;font-weight:700;line-height:1;display:flex;}
+  .ax-stp em .icon{width:11px;height:11px;stroke-width:3;}
+  .ax-stp.done{border:none;background:rgba(255,255,255,.14);color:#fff;}
+  .ax-stp.done em.m{font-family:var(--font-money);font-weight:500;font-variant-numeric:tabular-nums;}
+  .ax-stp.now{border:none;background:var(--mint);color:var(--navy);}
+  .ax-stp.now.warn{background:#F5B26B;}
+  .ax-steps .l{font-size:11px;font-weight:600;text-align:center;color:#8D99B5;}
+  .ax-steps .l span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ax-steps .l .done{color:var(--on-navy);}
+  .ax-steps .l .on{color:var(--mint);font-weight:700;}
+  .ax-steps .l .on.warn{color:#F5B26B;}
+  .ax-sheet-h .s.m{font-family:var(--font-money);font-size:12px;}
+  .ax-shopbtn{all:unset;box-sizing:border-box;cursor:pointer;flex:none;height:40px;padding:0 12px 0 10px;border-radius:999px;background:rgba(111,220,176,.14);color:var(--mint);display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;}
+  .ax-shopbtn .icon{width:16px;height:16px;}
+  .ax-money{display:grid;grid-template-columns:1fr 1fr;gap:10px;background:none;border:none;border-radius:0;overflow:visible;}
+  .ax-money > div{border:1px solid var(--line);border-radius:16px;}
+  .ax-money > div.maybe{border:1.5px dashed var(--good);}
+  .ax-money > div.maybe .k{color:var(--good);}
+  .ax-money > div.yours{background:var(--good-bg);border-color:transparent;}
+  .ax-money > div.yours .k{color:var(--good);}
+  .ax-money .k{font-size:12px;color:var(--ink-soft);}
+  .ax-pill.sm{height:24px;padding:0 8px;font-size:12px;gap:4px;}
+  .ax-pill.sm .icon{width:11px;height:11px;stroke-width:3.2;}
+  details.ax-gets{padding:2px 14px;}
+  details.ax-gets > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;min-height:52px;}
+  details.ax-gets > summary::-webkit-details-marker{display:none;}
+  details.ax-gets > summary .h{flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--ink-soft);}
+  details.ax-gets > summary .cnt{display:flex;gap:5px;}
+  details.ax-gets[open] > summary{border-bottom:1px solid var(--line);}
+  details.ax-gets[open] > summary .ax-stack,details.ax-gets[open] > summary .shut,details.ax-gets:not([open]) > summary .opn{display:none;}
+  details.ax-gets .ax-gl:first-of-type{border-top:none;}
+  .ax-stack.sq span{width:30px;height:30px;border-radius:9px;}
+  .ax-stack span.gone{opacity:.5;}
+  .ax-chev{width:28px;height:28px;flex:none;border-radius:999px;background:var(--tile);display:flex;align-items:center;justify-content:center;color:var(--ink);}
+  .ax-chev .icon{width:14px;height:14px;stroke-width:2.4;transition:transform .2s;}
+  details[open] > summary .ax-chev .icon{transform:rotate(180deg);}
+  .ax-gl .t{font-size:11px;font-weight:700;color:var(--ink-faint);flex:none;}
+  .ax-gl .t.m{font-family:var(--font-money);font-weight:500;}
+  .ax-gl .t.warn{color:var(--warn-ink);}
+  .ax-mk.spin{border:2.5px solid #F5B26B;border-top-color:transparent;animation:axSpin 1s linear infinite;box-sizing:border-box;}
+  .ax-mk.prob{background:var(--warn-bg);color:var(--warn-ink);}
+  .ax-mk.no{background:var(--bad);color:#fff;}
+  @keyframes axSpin{to{transform:rotate(360deg)}}
+  .ax-lock{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;border:1.5px dashed var(--dash);}
+  .ax-lock .ic{width:36px;height:36px;flex:none;border-radius:10px;background:var(--tile);color:var(--ink-faint);display:flex;align-items:center;justify-content:center;}
+  .ax-lock .ic .icon{width:18px;height:18px;}
+  .ax-lock .b{flex:1;display:flex;flex-direction:column;gap:1px;}
+  .ax-lock .t{font-size:14px;font-weight:700;color:var(--ink-soft);}
+  .ax-lock .s{font-size:12px;font-weight:600;color:var(--ink-faint);}
+  .ax-counter{background:var(--panel);border:2px solid var(--good);color:var(--ink);gap:12px;padding:12px 14px;}
+  .ax-counter .ic{width:44px;height:44px;flex:none;border-radius:12px;background:var(--good-bg);color:var(--good);display:flex;align-items:center;justify-content:center;}
+  .ax-counter .ic .icon{width:22px;height:22px;}
+  .ax-counter .k{color:var(--good);}
+  .ax-counter .v{font-size:26px;letter-spacing:.04em;line-height:1;}
+  .ax-counter .w{font-size:12px;font-weight:600;color:var(--ink-soft);text-align:right;}
+  .ax-foot{display:flex;flex-direction:column;gap:8px;}
+  .ax-sheet.full .ax-foot{margin-top:auto;}
+  .ax-sheet.full .ax-foot .ax-acts{margin-top:0;}
+  .ax-finish{background:var(--navy);color:#fff;height:56px;font-size:16px;}
+  .ax-finish .icon{color:var(--mint);width:20px;height:20px;stroke-width:2.6;}
+
+  /* The six steps, small, on a light card. */
+  .ax-dots6{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:2px;padding:4px 0 2px;}
+  .ax-dots6 span{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0;}
+  .ax-dots6 i{width:28px;height:28px;border-radius:999px;box-sizing:border-box;border:1.5px dashed #CFCAC1;color:#B5B0A6;display:flex;align-items:center;justify-content:center;}
+  .ax-dots6 i .icon{width:13px;height:13px;stroke-width:2;}
+  .ax-dots6 em{font-style:normal;font-size:11px;font-weight:600;color:#9AA1AE;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+  .ax-dots6 .done i{border:none;background:var(--navy);color:#fff;}
+  .ax-dots6 .done i .icon{stroke-width:3;width:12px;height:12px;}
+  .ax-dots6 .done em{color:var(--ink-soft);}
+  .ax-dots6 .now i{border:2px solid var(--navy);background:#E8EBF0;color:var(--navy);}
+  .ax-dots6 .now em{color:var(--ink);font-weight:700;}
+  .ax-dots6 .now.warn i{border-color:var(--warn-ink);background:var(--warn-bg);color:var(--warn-ink);}
+  .ax-dots6 .now.warn em{color:var(--warn-ink);}
+  .ax-dots6 .now.good i{border-color:var(--good);background:var(--good-bg);color:var(--good);}
+  .ax-dots6 .now.good em{color:var(--good);}
+
+  /* ================= TODAY'S HEADER, PREMIUM =================
+     A greeting, the ring (your goal) beside the figure (your money), and a
+     glass bar of two doors: what is within reach, where you stand. */
+  .ax-hero{border-radius:0 0 32px 32px;padding:16px 20px 20px;gap:20px;}
+  .ax-hello{display:flex;flex-direction:column;gap:3px;min-width:0;}
+  .ax-hello .g{font-size:20px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ax-hero-day{gap:8px;font-size:12px;color:var(--on-navy);}
+  .ax-hero-day .sep{color:#5F6A85;}
+  .ax-live{padding:0;background:none;color:var(--mint);gap:5px;}
+  .ax-live.off{color:#F5B26B;}
+  .ax-me{width:46px;height:46px;background:#243052;font-size:15px;box-shadow:0 0 0 2px var(--navy),0 0 0 4px rgba(111,220,176,.55);}
+  .ax-ring-row{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:18px;width:100%;}
+  .ax-ringbtn{all:unset;box-sizing:border-box;cursor:pointer;flex:none;border-radius:999px;display:block;}
+  .ax-ring{display:block;}
+  .ax-ring{width:136px;height:136px;}
+  .ax-ring-c .p{font-size:28px;letter-spacing:-.04em;line-height:1;}
+  .ax-ring-c .set{display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .ax-ring-c .set .icon{width:20px;height:20px;}
+  .ax-yours{all:unset;box-sizing:border-box;cursor:pointer;flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;}
+  .ax-yours .l{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;letter-spacing:.1em;}
+  .ax-yours .l .icon{width:14px;height:14px;opacity:.7;stroke-width:2.4;}
+  .ax-yours .v{display:flex;align-items:baseline;gap:6px;font-size:31px;letter-spacing:-.04em;}
+  .ax-yours .v small{font-family:var(--font-sans);font-size:13px;font-weight:700;color:#8D99B5;letter-spacing:0;}
+  .ax-yours .of{display:flex;justify-content:space-between;gap:8px;font-family:var(--font-sans);font-size:11px;font-weight:600;}
+  .ax-yours .of .m{font-family:var(--font-money);}
+  .ax-glass{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-radius:18px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);overflow:hidden;}
+  .ax-glass button{all:unset;box-sizing:border-box;cursor:pointer;min-height:64px;padding:10px 12px 10px 14px;display:flex;align-items:center;gap:10px;min-width:0;}
+  .ax-glass button + button{border-left:1px solid rgba(255,255,255,.08);}
+  .ax-glass .ic{width:36px;height:36px;flex:none;border-radius:12px;display:flex;align-items:center;justify-content:center;}
+  .ax-glass .ic .icon{width:18px;height:18px;stroke-width:2.2;}
+  .ax-glass .ic.near{background:rgba(111,220,176,.14);color:var(--mint);}
+  .ax-glass .ic.fire{background:rgba(245,178,107,.14);color:#F5B26B;}
+  .ax-glass .ic.fire .icon{fill:currentColor;stroke-width:1.6;}
+  .ax-glass .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .ax-glass .v{font-size:16px;font-weight:700;white-space:nowrap;}
+  .ax-glass .v.m{font-family:var(--font-money);font-weight:600;}
+  .ax-glass .v.mint{color:var(--mint);}
+  .ax-glass .v small{font-size:12px;font-weight:600;color:var(--on-navy);}
+  .ax-glass .s{font-size:11px;font-weight:600;color:var(--on-navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ax-glass > button > .icon{width:14px;height:14px;color:#5F6A85;stroke-width:2.4;flex:none;}
+  .ax-tile{height:auto;min-height:64px;padding:8px 2px;gap:3px;}
+  .ax-faces{display:flex;margin-top:2px;}
+  .ax-av.xs{width:24px;height:24px;font-size:11px;letter-spacing:-.04em;border:2px solid var(--bg);box-sizing:border-box;}
+  .ax-faces .ax-av.xs + .ax-av.xs{margin-left:-6px;}
+  .ax-av.xs.more{background:var(--tile);color:var(--ink-soft);}
+  .ax-tile.basket .ax-av.xs{border-color:var(--panel);}
+
+  /* ================= SENT, AS A MOMENT ================= */
+  .ax-sent2{position:fixed;inset:0;z-index:70;background:var(--navy);color:#fff;overflow:hidden;cursor:pointer;animation:axFade .15s ease-out;}
+  .ax-sent2.out{opacity:0;transition:opacity .2s;}
+  .ax-sent2 .trail{position:absolute;inset:0;width:100%;height:100%;}
+  .ax-sent2 .trail path{fill:none;stroke:var(--mint);stroke-width:2;stroke-dasharray:100;stroke-linecap:round;vector-effect:non-scaling-stroke;animation:axTrail 3.4s ease-out both;}
+  .ax-sent2 .plane{position:absolute;left:calc(50% - 28px);top:36%;width:56px;height:56px;border-radius:18px;background:#fff;color:var(--navy);display:flex;align-items:center;justify-content:center;box-shadow:0 14px 30px rgba(0,0,0,.35);animation:axPlane 3.4s cubic-bezier(.45,.05,.4,1) both;}
+  .ax-sent2 .plane .icon{width:28px;height:28px;}
+  .ax-sent2 .mid{position:absolute;left:0;right:0;top:30%;display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center;padding:0 20px;}
+  .ax-sent2 .tick{position:relative;width:96px;height:96px;}
+  .ax-sent2 .tick i{position:absolute;inset:0;border-radius:999px;border:3px solid var(--mint);animation:axRingOut 3.4s ease-out both;}
+  .ax-sent2 .tick b{position:absolute;inset:0;border-radius:999px;background:var(--mint);color:var(--navy);display:flex;align-items:center;justify-content:center;animation:axPop 3.4s ease-out both;}
+  .ax-sent2 .tick b .icon{width:46px;height:46px;stroke-width:2.8;}
+  .ax-sent2 .up{display:flex;flex-direction:column;align-items:center;gap:12px;animation:axRise 3.4s ease-out both;}
+  .ax-sent2 .t{font-size:30px;font-weight:700;letter-spacing:-.02em;}
+  .ax-sent2 .who{display:flex;align-items:center;gap:8px;height:40px;padding:0 14px 0 5px;border-radius:999px;background:rgba(255,255,255,.08);max-width:100%;}
+  .ax-sent2 .who .ax-av{width:30px;height:30px;font-size:11px;}
+  .ax-sent2 .who .nm{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ax-sent2 .who .v{font-family:var(--font-money);font-size:13px;color:var(--on-navy);}
+  .ax-sent2 .go{position:absolute;left:32px;right:32px;bottom:calc(56px + var(--safe-b));gap:10px;font-size:13px;font-weight:600;color:var(--on-navy);}
+  .ax-sent2 .bar{display:block;width:100%;height:4px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden;}
+  .ax-sent2 .bar i{display:block;height:100%;border-radius:999px;background:var(--mint);animation:axFill 4.4s linear both;}
+  @keyframes axPlane{0%{transform:translate(-38vw,39vh) scale(.7);opacity:0}12%{opacity:1}55%{transform:translate(0,0) rotate(-8deg) scale(1)}75%{transform:translate(44vw,-31vh) rotate(-14deg) scale(.6);opacity:1}80%,100%{transform:translate(44vw,-31vh) scale(.6);opacity:0}}
+  @keyframes axTrail{0%,10%{stroke-dashoffset:100;opacity:.5}60%{stroke-dashoffset:0;opacity:.5}85%,100%{opacity:0}}
+  @keyframes axPop{0%,62%{transform:scale(0);opacity:0}74%{transform:scale(1.18);opacity:1}84%,100%{transform:scale(1);opacity:1}}
+  @keyframes axRingOut{0%,66%{transform:scale(.8);opacity:0}72%{opacity:.7}100%{transform:scale(2.2);opacity:0}}
+  @keyframes axRise{0%,70%{transform:translateY(14px);opacity:0}85%,100%{transform:none;opacity:1}}
+  @keyframes axFill{0%,70%{width:0}100%{width:100%}}
+
+  /* ================= THANK YOU ================= */
+  .ax-thanks{position:fixed;inset:0;z-index:72;background:var(--navy);color:#fff;overflow-y:auto;animation:axFade .2s ease-out;}
+  .ax-thanks .cf{position:absolute;inset:0;overflow:hidden;pointer-events:none;}
+  .ax-thanks .cf i{position:absolute;top:-12px;width:7px;height:12px;border-radius:2px;opacity:0;animation:axConf 2.6s ease-in both;}
+  @keyframes axConf{0%{transform:translateY(0) rotate(0);opacity:1}100%{transform:translateY(105vh) rotate(540deg);opacity:.9}}
+  .ax-thanks .in{position:relative;max-width:520px;min-height:100%;margin:0 auto;box-sizing:border-box;padding:14px 20px calc(24px + var(--safe-b));display:flex;flex-direction:column;gap:14px;}
+  .ax-thanks .top{display:flex;justify-content:flex-end;}
+  .ax-thanks .hero{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;}
+  .ax-thanks .tick{width:116px;height:116px;border-radius:999px;background:rgba(111,220,176,.16);display:flex;align-items:center;justify-content:center;}
+  .ax-thanks .tick b{width:92px;height:92px;border-radius:999px;background:var(--mint);color:var(--navy);display:flex;align-items:center;justify-content:center;animation:axPop 1.6s ease-out both;}
+  .ax-thanks .tick b .icon{width:44px;height:44px;stroke-width:2.8;}
+  .ax-thanks .t{font-size:30px;font-weight:700;letter-spacing:-.02em;}
+  .ax-thanks .who{display:flex;align-items:center;gap:8px;height:38px;padding:0 14px 0 4px;border-radius:999px;background:rgba(255,255,255,.08);font-size:14px;font-weight:600;}
+  .ax-thanks .who .ax-av{width:30px;height:30px;font-size:11px;}
+  .ax-thanks .card{border-radius:18px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);padding:14px 16px;display:flex;align-items:center;gap:14px;}
+  .ax-thanks .earn .ring{position:relative;width:84px;height:84px;flex:none;}
+  .ax-thanks .earn .ring svg{position:absolute;inset:0;}
+  .ax-thanks .earn .ring b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-money);font-size:16px;font-weight:600;}
+  .ax-thanks .grow{--a:0px;--b:0px;animation:axGrow 1.4s .5s cubic-bezier(.3,.7,.3,1) both;}
+  @keyframes axGrow{from{stroke-dasharray:var(--a) 999px}to{stroke-dasharray:var(--b) 999px}}
+  .ax-thanks .earn .b{display:flex;flex-direction:column;gap:4px;min-width:0;}
+  .ax-thanks .earn .v{font-family:var(--font-money);font-size:30px;font-weight:600;letter-spacing:-.03em;color:var(--mint);}
+  .ax-thanks .earn .s{font-size:13px;font-weight:600;color:var(--on-navy);}
+  .ax-thanks .badges{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:8px;}
+  .ax-thanks .badges:empty{display:none;}
+  .ax-thanks .badges .card{justify-content:center;gap:6px;font-size:13px;font-weight:700;padding:16px 10px;}
+  .ax-thanks .badges .card b{font-family:var(--font-money);font-size:20px;font-weight:600;}
+  .ax-thanks .badges .fire{background:rgba(245,178,107,.14);color:#F5B26B;}
+  .ax-thanks .badges .fire .icon{width:16px;height:16px;fill:currentColor;}
+  .ax-thanks .back .ic{width:40px;height:40px;flex:none;border-radius:12px;background:rgba(111,220,176,.14);color:var(--mint);display:flex;align-items:center;justify-content:center;}
+  .ax-thanks .back .ic .icon{width:20px;height:20px;}
+  .ax-thanks .back .b{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--on-navy);font-weight:600;}
+  .ax-thanks .back .b b{font-size:14px;color:#fff;font-weight:700;}
+  .ax-again{height:58px;font-size:16px;box-shadow:0 10px 26px rgba(201,58,48,.35);}
+  .ax-link-l{all:unset;cursor:pointer;align-self:center;padding:10px 16px;font-size:14px;font-weight:600;color:var(--on-navy);}
+
+  /* ================= SHOP, RECEIPT, UPDATE ================= */
+  .ax-wa{background:#0F6B43;color:#fff;height:56px;}
+  .ax-wa .icon{width:20px;height:20px;}
+  .btn.sm{min-height:40px;padding:0 12px;font-size:13px;border-radius:12px;}
+  .btn.sm .icon{width:15px;height:15px;}
+  .ax-shop{padding:0 16px;display:flex;flex-direction:column;gap:14px;}
+  .ax-shop-h{display:flex;align-items:center;gap:12px;}
+  .ax-shop-h .ic{width:52px;height:52px;flex:none;border-radius:16px;background:var(--navy);color:var(--mint);display:flex;align-items:center;justify-content:center;}
+  .ax-shop-h .ic .icon{width:24px;height:24px;}
+  .ax-shop-h .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .ax-shop-h .n{font-size:18px;font-weight:700;}
+  .ax-shop-h .s{font-size:13px;color:var(--ink-soft);}
+  .ax-about{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:var(--tile);}
+  .ax-about .b{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .ax-about .n{font-size:14px;font-weight:700;}
+  .ax-about .s{font-size:12px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ax-seg2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .ax-seg2 button{all:unset;box-sizing:border-box;cursor:pointer;height:48px;border-radius:14px;border:1px solid var(--line);background:var(--panel);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:var(--ink-soft);}
+  .ax-seg2 button[aria-pressed="true"]{border:2px solid var(--ink);color:var(--ink);font-weight:700;}
+  .ax-chatbg{border-radius:18px;background:#EAE4DB;padding:12px;display:flex;flex-direction:column;align-items:flex-end;gap:10px;}
+  .ax-chatbg.tall{min-height:260px;justify-content:flex-end;}
+  .ax-bub{display:flex;flex-direction:column;gap:2px;width:88%;border-radius:16px 16px 4px 16px;background:#DCF8C6;padding:10px 12px 6px;box-sizing:border-box;}
+  .ax-bub textarea{all:unset;box-sizing:border-box;width:100%;font-size:15px;line-height:1.4;color:var(--ink);resize:none;white-space:pre-wrap;field-sizing:content;min-height:3.5em;}
+  .ax-bub .hint{align-self:flex-end;display:flex;align-items:center;gap:4px;font-size:11px;color:#6B7480;}
+  .ax-bub .hint .icon{width:11px;height:11px;}
+  .ax-shop-go{margin-top:6px;}
+  .ax-shop-go .btn{height:56px;}
+  .ax-attach{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:10px;height:44px;padding:0 14px 0 10px;border-radius:12px;background:var(--panel);font-size:13px;font-weight:700;}
+  .ax-attach i,.ax-sw i{position:relative;width:40px;height:24px;border-radius:999px;background:var(--dash);transition:background .15s;}
+  .ax-attach i::after,.ax-sw i::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:999px;background:#fff;transition:transform .15s;}
+  .ax-attach[aria-checked="true"] i,.ax-sw.on i{background:var(--good);}
+  .ax-attach[aria-checked="true"] i::after,.ax-sw.on i::after{transform:translateX(16px);}
+  .ax-sw{all:unset;cursor:pointer;display:flex;flex:none;}
+  .ax-upd-st{display:flex;align-items:flex-start;gap:12px;padding:12px;border-radius:16px;background:var(--tile);}
+  .ax-upd-st .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;}
+  .ax-upd-st .n{font-size:15px;font-weight:700;}
+  .ax-upd-st .ax-dots6 i{width:24px;height:24px;}
+  .ax-rcpt-bg{border-radius:18px;background:var(--tile);padding:16px;}
+  .ax-rcpt{background:#fff;border-radius:6px;box-shadow:0 6px 18px rgba(27,36,56,.12);padding:16px;display:flex;flex-direction:column;gap:2px;}
+  .ax-rcpt .h{display:flex;justify-content:space-between;gap:10px;padding-bottom:12px;}
+  .ax-rcpt .h .b,.ax-rcpt .h .r{display:flex;flex-direction:column;gap:2px;font-size:11px;color:var(--ink-soft);}
+  .ax-rcpt .h .b b{font-size:15px;color:var(--ink);}
+  .ax-rcpt .h .r{text-align:right;}
+  .ax-rcpt .h .r b{color:var(--ink);}
+  .ax-rcpt .row{display:grid;grid-template-columns:52px 1fr 58px 76px;gap:6px;padding:9px 0;border-top:1px solid #EFECE6;font-size:12px;align-items:start;}
+  .ax-rcpt .row > span:nth-child(3),.ax-rcpt .row > span:nth-child(4){text-align:right;}
+  .ax-rcpt .row.hd{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6B7480;padding:6px 0;}
+  .ax-rcpt .row .nm{font-weight:700;}
+  .ax-rcpt .row .nm small{display:block;font-weight:500;color:var(--ink-soft);}
+  .ax-rcpt .m{font-family:var(--font-money);}
+  .ax-rcpt .soft{color:#6B7480;}
+  .ax-rcpt .tot{display:flex;justify-content:space-between;align-items:baseline;border-top:2px solid var(--ink);margin-top:6px;padding:12px 0 6px;font-size:13px;font-weight:700;}
+  .ax-rcpt .tot b{font-size:18px;font-weight:600;}
+  .ax-rcpt .ax-pill{align-self:flex-start;}
+
+  /* ================= A STAGE, OPENED ================= */
+  .ax-stp.now.white{background:#fff;color:var(--navy);}
+  .ax-steps .l .on.white{color:#fff;}
+  .ax-count{font-size:13px;color:var(--ink-soft);padding:0 4px;}
+  .ax-oc{all:unset;box-sizing:border-box;cursor:pointer;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px;}
+  .ax-oc .h{display:flex;align-items:center;gap:12px;}
+  .ax-oc .h .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .ax-oc .h .n{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ax-oc .h .s{font-size:12px;color:var(--ink-faint);}
+  .ax-oc .h .v{font-size:16px;font-weight:600;}
+  .ax-oc .f{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .ax-oc .f .s{font-size:13px;color:var(--ink-soft);min-width:0;}
+  .ax-oc .go{flex:none;height:40px;padding:0 12px 0 14px;border-radius:12px;background:var(--tile);color:var(--ink);font-size:14px;font-weight:700;display:flex;align-items:center;gap:4px;}
+  .ax-oc .go .icon{width:15px;height:15px;stroke-width:2.4;}
+  .ax-oc .go.warn{background:var(--warn-bg);color:var(--warn-ink);}
+  .ax-oc .go.good{background:var(--good-bg);color:var(--good);}
+  .ax-empty .icon{display:block;margin:0 auto 8px;width:26px;height:26px;color:var(--ink-faint);}
+  .ax-empty .btn{margin:12px auto 0;}
+
+  /* ================= WITHIN REACH, STANDING, YOU ================= */
+  .ax-near{display:flex;align-items:center;gap:16px;}
+  .ax-ring.sm{width:112px;height:112px;}
+  .ax-ring.sm .ax-ring-c .p{font-size:22px;}
+  .ax-near .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;}
+  .ax-near .v{font-size:32px;font-weight:600;letter-spacing:-.04em;color:var(--mint);line-height:1;}
+  .ax-near .s{font-size:13px;font-weight:600;color:var(--on-navy);}
+  .ax-key{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:6px;font-size:11px;font-weight:600;color:var(--on-navy);}
+  .ax-key span{display:flex;align-items:center;gap:5px;}
+  .ax-key i{width:8px;height:8px;border-radius:999px;}
+  .ax-key b{font-weight:600;color:#fff;}
+  .ax-grp{display:flex;align-items:center;gap:8px;padding:4px 4px 0;font-size:13px;font-weight:700;color:var(--ink-soft);}
+  .ax-grp i{width:8px;height:8px;border-radius:999px;}
+  .ax-grp span{flex:1;}
+  .ax-grp b{font-weight:600;}
+  .ax-list{padding:2px 14px;}
+  .ax-nrow{all:unset;box-sizing:border-box;cursor:pointer;width:100%;display:flex;align-items:center;gap:12px;min-height:62px;}
+  .ax-nrow + .ax-nrow{border-top:1px solid var(--tile);}
+  .ax-nrow .b{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:3px;}
+  .ax-nrow .n{font-size:14px;font-weight:700;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ax-nrow .v{font-size:15px;font-weight:600;color:var(--good);}
+  .ax-nrow > .icon{width:16px;height:16px;color:#9AA1AE;stroke-width:2.2;flex:none;}
+  .ax-rankbig{display:flex;align-items:baseline;gap:10px;}
+  .ax-rankbig b{font-size:48px;font-weight:700;letter-spacing:-.03em;line-height:1;}
+  .ax-rankbig span{font-size:15px;font-weight:600;color:var(--on-navy);}
+  .ax-podium2{display:flex;gap:8px;align-items:flex-end;height:128px;}
+  .ax-podium2 .col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;min-width:0;}
+  .ax-podium2 .nm{font-size:12px;font-weight:700;color:var(--on-navy);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ax-podium2 .bar{width:100%;border-radius:10px 10px 4px 4px;background:rgba(255,255,255,.12);display:flex;justify-content:center;padding-top:8px;box-sizing:border-box;font-family:var(--font-money);font-size:15px;font-weight:600;}
+  .ax-podium2 .you .nm{color:#fff;}
+  .ax-podium2 .you .bar{background:var(--mint);color:var(--navy);}
+  .ax-gap{display:flex;align-items:center;gap:12px;padding:14px;}
+  .ax-gap .ic{width:44px;height:44px;flex:none;border-radius:999px;background:var(--good-bg);color:var(--good);display:flex;align-items:center;justify-content:center;}
+  .ax-gap .ic.gold{background:var(--warn-bg);color:var(--warn-ink);}
+  .ax-gap .ic .icon{width:20px;height:20px;}
+  .ax-gap .b{flex:1;display:flex;flex-direction:column;gap:2px;}
+  .ax-gap .v{font-size:20px;font-weight:600;}
+  .ax-gap .s{font-size:12px;font-weight:600;color:var(--ink-faint);}
+  .ax-gap .btn{min-height:44px;padding:0 14px;}
+  .ax-weeks{padding:14px;display:flex;flex-direction:column;gap:12px;}
+  .ax-weeks .h{display:flex;align-items:center;gap:8px;}
+  .ax-weeks .h .ic{display:flex;color:var(--warn-ink);}
+  .ax-weeks .h .ic .icon{width:18px;height:18px;fill:currentColor;}
+  .ax-weeks .h b{font-size:20px;}
+  .ax-weeks .h span:last-child{font-size:13px;font-weight:600;color:var(--ink-faint);}
+  .ax-weeks .r{display:flex;gap:4px;}
+  .ax-weeks .w{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;}
+  .ax-weeks .w i{width:100%;height:40px;border-radius:10px;background:var(--tile);color:#C9C4BA;display:flex;align-items:center;justify-content:center;box-sizing:border-box;}
+  .ax-weeks .w i .icon{width:16px;height:16px;}
+  .ax-weeks .w.on i{background:var(--warn-bg);color:var(--warn-ink);}
+  .ax-weeks .w.on i .icon{fill:currentColor;}
+  .ax-weeks .w.now i{background:none;border:2px dashed var(--warn-ink);color:var(--warn-ink);}
+  .ax-weeks .w em{font-style:normal;font-size:11px;font-weight:600;color:var(--ink-faint);white-space:nowrap;}
+  .ax-weeks .note{font-size:13px;font-weight:600;color:var(--warn-ink);}
+  .ax-av.xl{width:64px;height:64px;font-size:22px;}
+  .ax-av.me{background:#243052;color:#fff;box-shadow:inset 0 0 0 2px var(--mint);}
+  .ax-me3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+  .ax-me3 button{all:unset;box-sizing:border-box;cursor:pointer;height:64px;border-radius:14px;background:rgba(255,255,255,.08);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;}
+  .ax-me3 b{font-size:16px;font-weight:600;}
+  .ax-me3 b.mint{color:var(--mint);}
+  .ax-me3 span{font-size:11px;font-weight:600;color:var(--on-navy);}
+  .ax-shopcard{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:12px;padding:12px 12px 12px 14px;border-radius:16px;background:var(--navy);color:#fff;}
+  .ax-shopcard .ic{width:40px;height:40px;flex:none;border-radius:12px;background:rgba(111,220,176,.14);color:var(--mint);display:flex;align-items:center;justify-content:center;}
+  .ax-shopcard .ic .icon{width:20px;height:20px;}
+  .ax-shopcard .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+  .ax-shopcard .n{font-size:15px;font-weight:700;}
+  .ax-shopcard .s{font-size:12px;color:var(--on-navy);}
+  .ax-shopcard .go{height:40px;padding:0 14px;border-radius:12px;background:var(--mint);color:var(--navy);font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px;}
+  .ax-shopcard .go .icon{width:16px;height:16px;}
+  .ax-termc{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;background:var(--tile);}
+  .ax-termc.warn{background:var(--warn-bg);color:var(--warn-ink);}
+  .ax-termc .ic{width:36px;height:36px;flex:none;border-radius:10px;background:var(--ink-soft);color:#fff;display:flex;align-items:center;justify-content:center;}
+  .ax-termc.warn .ic{background:var(--warn-ink);}
+  .ax-termc .ic .icon{width:18px;height:18px;}
+  .ax-termc .b{display:flex;flex-direction:column;gap:1px;}
+  .ax-termc .n{font-size:14px;font-weight:700;}
+  .ax-termc .s{font-size:12px;font-weight:600;}
+  .ax-lis{padding:2px 14px;}
+  .ax-li{display:flex;align-items:center;gap:12px;min-height:58px;}
+  .ax-li + .ax-li{border-top:1px solid var(--tile);}
+  .ax-li .ic{width:36px;height:36px;flex:none;border-radius:10px;background:var(--tile);color:var(--ink-soft);display:flex;align-items:center;justify-content:center;}
+  .ax-li .ic .icon{width:18px;height:18px;}
+  .ax-li .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+  .ax-li .k{font-size:12px;font-weight:600;color:var(--ink-faint);}
+  .ax-li .v{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ax-li .dot{width:10px;height:10px;flex:none;border-radius:999px;background:var(--good);}
+  .ax-li.warn .dot{background:var(--warn);}
+  .ax-out{color:var(--bad);height:52px;}
 </style>
 </head>
 <body class="app-loading">
@@ -1101,13 +1471,17 @@
   <div id="ag_todayView" class="ax-view" hidden>
     <div class="ax-hero">
       <div class="ax-hero-top">
-        <div class="ax-hero-day">
-          <span id="ag_todayDate"></span>
-          <span class="ax-live" id="ag_live"><i></i><span id="ag_liveText">Live</span></span>
+        <div class="ax-hello">
+          <span class="g" id="ag_hello"></span>
+          <span class="ax-hero-day"><span id="ag_todayDate"></span><span class="sep">&middot;</span><span class="ax-live" id="ag_live"><i></i><span id="ag_liveText">Live</span></span></span>
         </div>
-        <button type="button" class="ax-me" id="ag_meBtn" aria-label="Your money and account"></button>
+        <button type="button" class="ax-me" id="ag_meBtn" aria-label="You, your shop and this phone"></button>
       </div>
-      <button type="button" class="ax-ring-row" id="ag_ringBtn" aria-label="Your goal"></button>
+      <div class="ax-ring-row">
+        <button type="button" class="ax-ringbtn" id="ag_ringBtn" aria-label="Your goal"></button>
+        <button type="button" class="ax-yours" id="ag_moneyBtn" aria-label="Your money"></button>
+      </div>
+      <div class="ax-glass" id="ag_glass"></div>
     </div>
 
     <div class="ax-today">
@@ -2259,6 +2633,14 @@ function mapOrderRow(q){
     shopConfirmedAt: payload.shopConfirmedAt || null,
     shopConfirmedTerms: payload.shopConfirmedTerms || null,
     droppedLines: Array.isArray(payload.droppedLines) ? payload.droppedLines : [],
+    /* Before the shop signs the whole order off, each supplier says yes
+       line by line (supplierConfirms, keyed by supplier), so the track
+       can tick items off one at a time instead of all at once. The stage
+       log is when each step was reached, for the times under the steps. */
+    supplierConfirms: payload.supplierConfirms || null,
+    stageLog: Array.isArray(payload.stageLog) ? payload.stageLog : [],
+    payments: Array.isArray(payload.payments) ? payload.payments : [],
+    createdAt: payload.createdAt || null,
   };
 }
 
@@ -3926,6 +4308,9 @@ const AX_ICON = {
   trend: '<svg class="icon" viewBox="0 0 24 24"><path d="m3 17 6-6 4 4 8-8M15 7h6v6"/></svg>',
   bang: '<svg class="icon" viewBox="0 0 24 24"><path d="M12 7v6M12 17h.01"/></svg>',
   warn: '<svg class="icon" viewBox="0 0 24 24"><path d="M12 4 2.8 19.5h18.4zM12 10v4M12 17h.01"/></svg>',
+  clip: '<svg class="icon" viewBox="0 0 24 24"><path d="M9 4h6v3H9zM7 5.5H5V21h14V5.5h-2M9 14l2 2 4-4"/></svg>',
+  whatsapp: '<svg class="icon" viewBox="0 0 24 24"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 18.8z"/><path d="M9 9.5c0 2.8 2.7 5.5 5.5 5.5l1.3-1.3-1.8-1-1 .8a4.3 4.3 0 0 1-2.3-2.3l.8-1-1-1.8z"/></svg>',
+  download: '<svg class="icon" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>',
   link: '<svg class="icon" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>',
 };
 
@@ -4167,7 +4552,11 @@ function orderStage(o){
   const pickup = o.deliveryMode === 'agent_pickup';
   if(o.voided) return { key:'cancelled', title:'Cancelled', sub:'The shop cancelled this order', group:null, tone:'warn' };
   if(o.status === 'draft'){
-    if(!orderShopChecked(o)) return { key:'checking', title:'Checking', sub:'The shop confirms each item', group:'sent' };
+    if(!orderShopChecked(o)){
+      const k = orderCheckCount(o);
+      return { key:'checking', title:'Checking', group:'sent',
+        sub: k.items && k.ok >= k.items ? `All ${k.ok} confirmed · the shop signs it off next` : `${k.ok} of ${k.all} confirmed with the supplier` };
+    }
     if(prepay && o.agentPaymentStatus !== 'paid' && owed > 0){
       const kept = (o.items||[]).length, all = kept + (o.droppedLines||[]).length;
       return { key:'pay', title:'Pay now', sub:`${kept} of ${all} confirmed · packing starts after`, group:'sent', tone:'warn', needs:'pay' };
@@ -4214,6 +4603,105 @@ function orderOwedAmount(o){
   const total = (o.items||[]).reduce((s,it)=> s + (Number(it.sellPrice)||0) * (Number(it.qty)||0), 0);
   return Math.max(0, Math.round(total - (Number(o.amountPaid)||0)));
 }
+/* ---- each line, before the whole order is signed off ----
+   The shop rings each supplier once, about every line that supplier is on
+   (supplierConfirms in the shop's app), so a line is ticked the moment its
+   supplier says yes rather than when the last one does. Off the shop's own
+   shelf there is nobody to ring, so those are ticked from the start. A yes
+   counts only for the terms it was given -- the shop's own rule
+   (orderSupplierConfirmState) -- so an edit since puts the tick back. */
+function supplierLineTerms(o, sid){
+  return (o.items||[]).filter(it=> String(it && it.supplierId) === String(sid)).map(it=> [
+    it.productId, it.variantIdx == null ? '' : it.variantIdx, Number(it.qty) || 0, Math.round(Number(it.price) || 0)
+  ].join(':')).join('|');
+}
+function lineCheck(o, it){
+  if(orderShopChecked(o)) return { state:'ok' };
+  const sid = it && it.supplierId;
+  if(sid === '__stock__') return { state:'ok' };
+  if(!sid) return { state:'wait' };
+  const rec = ((o && o.supplierConfirms) || {})[String(sid)] || {};
+  if(rec.state === 'confirmed' && rec.terms === supplierLineTerms(o, sid)) return { state:'ok', at: rec.at || null };
+  if(rec.state === 'problem') return { state:'problem' };
+  if(rec.askedAt) return { state:'asking' };
+  return { state:'wait' };
+}
+function orderCheckCount(o){
+  const items = (o && o.items) || [];
+  return { ok: items.filter(it=> lineCheck(o, it).state === 'ok').length, items: items.length, all: items.length + ((o && o.droppedLines) || []).length };
+}
+
+/* ---- when each step happened ----
+   Today reads as a time, this week as a day, older as a date: the
+   question is "how long has it sat there", and that is the grain it is
+   answered in. */
+function toMs(v){
+  if(v == null || v === '') return null;
+  const n = typeof v === 'number' ? v : Date.parse(v);
+  return isNaN(n) ? null : n;
+}
+function dayShort(v){
+  const ms = toMs(typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v + 'T00:00:00' : v);
+  if(ms == null) return '';
+  const d = new Date(ms), now = new Date();
+  const days = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
+  if(days === 0) return 'today';
+  if(days > 0 && days < 7) return d.toLocaleDateString('en-GB', { weekday:'short' });
+  return d.toLocaleDateString('en-GB', { day:'numeric', month:'short' });
+}
+function whenShort(v){
+  const ms = toMs(v);
+  if(ms == null) return '';
+  const d = new Date(ms);
+  return dayShort(ms) === 'today' ? `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}` : dayShort(ms);
+}
+// Keyed by each step's icon, which is the one thing a step keeps whether
+// the agent pays first or last and whether it is picked up or delivered.
+function orderStepTimes(o){
+  const at = {};
+  (o.stageLog || []).forEach(e=>{ if(e && e.status && at[e.status] == null) at[e.status] = toMs(e.at); });
+  // When it was sent, to the minute, where the server recorded it
+  // (createdAt); older orders carry only their day.
+  const sent = o.createdAt ? whenShort(o.createdAt) : dayShort(orderDate(o));
+  const pays = o.payments || [];
+  return {
+    send: sent,
+    check: o.shopConfirmedAt ? whenShort(o.shopConfirmedAt) : '',
+    cash: o.agentPaymentStatus === 'paid' && pays.length ? dayShort(pays[pays.length - 1].date) : '',
+    box: whenShort(at.preparing || at.awaiting_goods),
+    store: whenShort(at.pending_delivery), truck: whenShort(at.pending_delivery),
+    flag: whenShort(at.completed),
+  };
+}
+/* The six steps as tiles: done ones carry when they happened, the one
+   it is on now is lit, the rest wait faintly. Named underneath in the
+   words of the order screen -- the money step says "Pay shop" until it
+   is paid. */
+function stepTilesHTML(o, st){
+  const steps = orderSteps(o), at = orderStepIndex(o, st), times = orderStepTimes(o);
+  const all = at >= steps.length;
+  const tiles = steps.map((s,i)=>{
+    const done = i < at || all;
+    if(done) return `<span class="ax-stp done">${AX_ICON[s.icon === 'check' ? 'clip' : s.icon]}${times[s.icon] ? `<em class="m">${esc(times[s.icon])}</em>` : `<em>${AX_ICON.check}</em>`}</span>`;
+    if(i === at) return `<span class="ax-stp now${st.tone === 'warn' ? ' warn' : ''}">${AX_ICON[s.icon === 'check' ? 'clip' : s.icon]}<em>now</em></span>`;
+    return `<span class="ax-stp">${AX_ICON[s.icon === 'check' ? 'clip' : s.icon]}</span>`;
+  }).join('');
+  const labels = steps.map((s,i)=> `<span class="${i === at ? `on${st.tone === 'warn' ? ' warn' : ''}` : i < at || all ? 'done' : ''}">${esc(stepLabel(s, i < at || all))}</span>`).join('');
+  return `<div class="ax-steps" role="img" aria-label="${esc(st.title)}: step ${Math.min(at + 1, steps.length)} of ${steps.length}"><div class="r">${tiles}</div><div class="l">${labels}</div></div>`;
+}
+/* The same six on a light card, small: ticked circles behind, the one it
+   is on in its colour and named in bold, the rest faint. Read the way the
+   order's own screen reads, so no key is needed. */
+function stepDotsHTML(o, st){
+  const steps = orderSteps(o), at = orderStepIndex(o, st);
+  const all = at >= steps.length;
+  return `<div class="ax-dots6" aria-hidden="true">${steps.map((s,i)=>{
+    const done = i < at || all;
+    const cls = done ? 'done' : i === at ? `now ${st.tone === 'warn' ? 'warn' : st.tone === 'good' ? 'good' : ''}` : '';
+    return `<span class="${cls}"><i>${done ? AX_ICON.check : AX_ICON[s.icon === 'check' ? 'clip' : s.icon]}</i><em>${esc(stepLabel(s, done))}</em></span>`;
+  }).join('')}</div>`;
+}
+
 function liveOrders(){
   return myOrders.filter(o=> !o.voided && o.status !== 'completed');
 }
@@ -4237,6 +4725,8 @@ function renderToday(){
       .then(()=>{ if(currentView === 'today') renderNext(); });
     ensureLeaderboardLoaded();
     ensureOrderStaffNamesLoaded().then(()=>{ if(currentView === 'today') renderMove(); });
+    // The shop's phone, for every Shop button -- asked once, quietly.
+    ensureShopInfo().then(()=> refreshOpenSheets());
   }
 }
 function renderLivePill(){
@@ -4277,42 +4767,58 @@ function ringSVG(size, stroke, parts, track){
   return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true">
     <circle cx="${mid}" cy="${mid}" r="${r}" fill="none" stroke="${track}" stroke-width="${stroke}"/>${arcs.slice().reverse().join('')}</svg>`;
 }
+function greeting(now){
+  const h = now.getHours();
+  return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+}
+/* The header answers three questions at a glance, each one a tap into
+   its own page: how is my month going (the ring -- the goal), what is
+   mine so far (the figure -- the money), and what is still to come and
+   where do I stand (the glass bar). Initials open you: account, shop,
+   this phone. */
 function renderTodayHero(){
   const now = new Date();
   const p = monthPicture(now);
+  document.getElementById('ag_hello').textContent = `${greeting(now)}${myAgent && myAgent.name ? ', ' + firstWord(myAgent.name) : ''}`;
   const btn = document.getElementById('ag_ringBtn');
   const frac = p.aim > 0 ? p.earned / p.aim : 0;
   const nearFrac = p.aim > 0 ? p.near / p.aim : 0;
-  const ring = ringSVG(128, 12, [
+  const ring = ringSVG(136, 10, [
     { frac: Math.min(1, frac), color:'#FFFFFF', round:true },
-    { frac: nearFrac, color:'#6FDCB0', opacity:'.45' },
-  ], 'rgba(255,255,255,.10)');
-  const centre = p.aim > 0
-    ? `<span class="p">${Math.round(frac * 100)}%</span><span class="d">${p.days} day${p.days===1?'':'s'} left</span>`
-    : `<span class="set">Set a goal</span>`;
+    { frac: nearFrac, color:'#6FDCB0', opacity:'.4' },
+  ], 'rgba(255,255,255,.08)');
+  btn.setAttribute('aria-label', p.aim > 0
+    ? `Your goal: ${Math.round(frac*100)} percent of ${fmtNum(p.aim)}, ${p.days} days left`
+    : 'Set a goal');
+  btn.innerHTML = `<span class="ax-ring">${ring}<span class="ax-ring-c">${p.aim > 0
+    ? `<span class="p">${Math.round(frac * 100)}%</span><span class="d">${p.target ? 'of goal' : 'of your best'}</span>`
+    : `<span class="set">${AX_ICON.flag}Set a goal</span>`}</span></span>`;
+  const money = document.getElementById('ag_moneyBtn');
+  money.setAttribute('aria-label', `${fmtNum(p.earned)} yours in ${monthName(p.key)}. Open your money.`);
+  money.innerHTML = `<span class="l">Yours &middot; ${esc(monthName(p.key))}${AX_ICON.chevR}</span>
+    <span class="v"><small>UGX</small>${fmtNum(p.earned)}</span>
+    <span class="of">${p.aim > 0 ? `<span class="m">of ${fmtNum(p.aim)}</span>` : '<span></span>'} <span>${p.days} day${p.days===1?'':'s'} left</span></span>`;
   const streak = computeSellingStreak();
   const lb = leaderboard && leaderboard.you && leaderboard.totalAgents >= 2 ? leaderboard : null;
-  const rankChip = lb || streak >= 2
-    ? `<span class="ax-chip-rank">${lb ? `#${esc(lb.you.rank)}` : ''}${streak >= 2 ? ` ${AX_ICON.flame}${streak} wk` : ''}</span>` : '';
-  btn.setAttribute('aria-label', p.aim > 0
-    ? `${fmtNum(p.earned)} earned, ${Math.round(frac*100)} percent of ${fmtNum(p.aim)}. Open your goal.`
-    : `${fmtNum(p.earned)} earned this month. Set a goal.`);
-  btn.innerHTML = `
-    <span class="ax-ring">${ring}<span class="ax-ring-c">${centre}</span></span>
-    <span class="ax-yours">
-      <span class="l">Yours &middot; ${esc(monthName(p.key))}</span>
-      <span class="v">${fmtNum(p.earned)}</span>
-      ${p.aim > 0 ? `<span class="of">${p.target ? 'of' : 'best'} ${fmtNum(p.aim)}</span>` : ''}
-      <span class="ax-chips">
-        ${p.near > 0 ? `<span class="ax-chip-near"><i></i>+${esc(fmtCompactUGX(p.near))} near</span>` : ''}
-        ${rankChip}
-      </span>
-    </span>`;
+  const nearN = p.near > 0 ? `+${fmtCompactUGX(p.near)}` : '0';
+  document.getElementById('ag_glass').innerHTML = `
+    <button type="button" data-hero="near" aria-label="${esc(nearN)} within reach"><span class="ic near">${AX_ICON.trend}</span>
+      <span class="b"><span class="v m${p.near > 0 ? ' mint' : ''}">${esc(nearN)}</span><span class="s">within reach</span></span>${AX_ICON.chevR}</button>
+    <button type="button" data-hero="standing" aria-label="Your standing"><span class="ic fire">${AX_ICON.flame}</span>
+      <span class="b">${lb ? `<span class="v">#${esc(lb.you.rank)} <small>of ${esc(lb.totalAgents)}</small></span>` : `<span class="v">${streak >= 1 ? `${streak} wk` : 'Standing'}</span>`}
+        <span class="s">${streak >= 2 ? `${streak}-week streak` : lb ? 'this month' : streak === 1 ? 'selling this week' : 'first sale starts it'}</span></span>${AX_ICON.chevR}</button>`;
 }
-// The ring is the goal, so it opens the goal. Money opens from your
-// initials beside it.
+// The ring is the goal, so it opens the goal; the figure beside it opens
+// the money; your initials open you.
 document.getElementById('ag_ringBtn').addEventListener('click', ()=> openGoalSheet());
-document.getElementById('ag_meBtn').addEventListener('click', ()=> openMoneySheet());
+document.getElementById('ag_moneyBtn').addEventListener('click', ()=> openMoneySheet());
+document.getElementById('ag_meBtn').addEventListener('click', ()=> openProfileSheet());
+document.getElementById('ag_glass').addEventListener('click', (e)=>{
+  const b = e.target.closest('[data-hero]');
+  if(!b) return;
+  if(b.dataset.hero === 'near') openNearSheet();
+  else openStandingSheet();
+});
 
 /* Every order still moving, counted by where it is, and the ones that
    are waiting on YOU named underneath. */
@@ -4328,17 +4834,22 @@ function renderMove(){
   const doneN = myOrders.filter(o=> !o.voided && o.status === 'completed' && String(orderDate(o)||'').startsWith(month)).length;
   document.getElementById('ag_moveCount').textContent = `${live.length} live · ${doneN} done`;
   const baskets = quoteBasketSummaries(agentClients, carts, chosenClient ? chosenClient.id : null, unnamedCart).filter(b=> b.count > 0);
-  const tile = (key, label, icon, n, dot, cls)=>
+  // Who is in each, as faces: the count says how many, the faces say who.
+  const faces = (clients)=> clients.length
+    ? `<span class="ax-faces">${clients.slice(0, 2).map(c=> avHTML(c, 'xs')).join('')}${clients.length > 2 ? `<span class="ax-av xs more">+${clients.length - 2}</span>` : ''}</span>` : '';
+  const tile = (key, label, icon, n, dot, cls, who)=>
     `<button type="button" class="ax-tile${cls ? ' ' + cls : ''}${n ? '' : ' zero'}" data-move="${key}" aria-label="${n} ${esc(label)}">
       ${dot ? `<span class="dot ${dot}"></span>` : ''}
-      <span class="t">${AX_ICON[icon]}<b>${n}</b></span><span class="l">${esc(label)}</span>
+      <span class="t">${AX_ICON[icon]}<b>${n}</b></span><span class="l">${esc(label)}</span>${faces(who || [])}
     </button>`;
   const inGroup = (g)=> staged.filter(x=> x.st.group === g);
-  const tiles = tile('basket', 'Basket', 'basket', baskets.length, '', 'basket')
+  const clientOf = (o)=> agentClients.find(x=> String(x.id) === String(o.agentClientId)) || { id: o.agentClientId, name: 'Client' };
+  const basketWho = baskets.filter(b=> !b.unnamed).map(b=> agentClients.find(c=> String(c.id) === String(b.key))).filter(Boolean);
+  const tiles = tile('basket', 'Basket', 'basket', baskets.length, '', 'basket', basketWho)
     + MOVE_GROUPS.map(g=>{
       const rows = inGroup(g.key);
       const dot = rows.some(x=> x.st.needs === 'pay') ? 'warn' : rows.some(x=> x.st.needs === 'collect') ? 'good' : '';
-      return tile(g.key, g.label, g.icon, rows.length, dot);
+      return tile(g.key, g.label, g.icon, rows.length, dot, '', rows.map(x=> clientOf(x.o)));
     }).join('');
   const needs = staged.concat(myOrders.filter(o=> !o.voided && o.status === 'completed').map(o=> ({ o, st: orderStage(o) })))
     .filter(x=> x.st.needs)
@@ -4363,11 +4874,11 @@ document.getElementById('ag_move').addEventListener('click', (e)=>{
   if(!m) return;
   const key = m.dataset.move;
   if(key === 'basket'){ switchTab('order'); return; }
-  const staged = liveOrders().map(o=> ({ o, st: orderStage(o) }))
-    .concat(key === 'needs' ? myOrders.filter(o=> !o.voided && o.status === 'completed').map(o=> ({ o, st: orderStage(o) })) : []);
-  const list = key === 'needs' ? staged.filter(x=> x.st.needs) : staged.filter(x=> x.st.group === key);
-  if(list.length === 1){ openTrackSheet(list[0].o.id); return; }
-  openOrderListSheet(list.map(x=> x.o), key === 'needs' ? 'Waiting on you' : (MOVE_GROUPS.find(g=> g.key === key) || {}).label);
+  // Each stage opens its own page -- the orders in it, each showing where
+  // on the six steps it is -- even when there is only one.
+  if(key !== 'needs'){ openStageSheet(key); return; }
+  const staged = liveOrders().concat(myOrders.filter(o=> !o.voided && o.status === 'completed')).map(o=> ({ o, st: orderStage(o) }));
+  openOrderListSheet(staged.filter(x=> x.st.needs).map(x=> x.o), 'Waiting on you');
 });
 
 /* A short list of orders, each a row that opens its track. */
@@ -5940,148 +6451,663 @@ function openSaveSolutionModal(){
   });
 }
 
-/* ================= SENT =================
-   Not "paid" and not "done": the order is with the shop, and this says
-   exactly what happens next, so nobody mistakes sending for finishing. */
-function sentSnapshot(){
-  const t = cartTotals();
-  return {
-    client: chosenClient, total: t.total, profit: t.profit, count: cart.length,
-    rows: cart.map(it=>{ const f = cartLineFigures(it); return { qty: `${f.displayQty} ${f.displayUnit}`.trim(), name: it.name, variant: it.variantLabel || '', rate: f.rate, amount: f.amount }; }),
-  };
+/* ================= THE SHOP, TO REACH =================
+   Its name, phone and address, as the shop typed them for its own
+   receipts. Agents cannot read the shop's settings, so agent-catalog
+   hands over just these three. Kept on the phone so an agent with no
+   signal can still ring it. An empty object means none on file -- and
+   every Shop button stays hidden rather than dialling nothing. */
+let shopInfo = null;
+try{ const v = JSON.parse(localStorage.getItem('agentShopInfo') || 'null'); if(v && typeof v === 'object') shopInfo = v; }catch(_e){}
+let shopInfoAsked = null;
+function ensureShopInfo(){
+  if(shopInfoAsked) return shopInfoAsked;
+  shopInfoAsked = callAgentFn('agent-catalog', { action: 'shop' }).then(r=>{
+    const sh = (r && r.shop) || {};
+    shopInfo = { name: sh.name || '', phone: sh.phone || '', address: sh.address || '' };
+    try{ localStorage.setItem('agentShopInfo', JSON.stringify(shopInfo)); }catch(_e){}
+    return shopInfo;
+  }).catch(()=>{ if(shopInfo == null) shopInfo = {}; shopInfoAsked = null; return shopInfo; });
+  return shopInfoAsked;
 }
-function showSent(s, orderId){
-  const prepay = !!(myAgent && myAgent.paymentTerm === 'prepay');
-  const push = agentPushState();
-  const steps = prepay
-    ? [{ icon:'check', t:'The shop checks each item', s:'now', now:true },
-       { icon:'cash', t:"You pay for what's confirmed", s: push === 'on' ? "we'll alert you" : 'you will see it on Today' },
-       { icon:'box', t:'Packing starts' }]
-    : [{ icon:'check', t:'The shop checks each item', s:'now', now:true },
-       { icon:'box', t:'Packing starts', s:'straight after' },
-       { icon:'cash', t:'You pay on delivery' }];
-  const el = document.createElement('div');
-  el.className = 'ax-sent';
-  el.setAttribute('role', 'dialog');
-  el.setAttribute('aria-label', 'Order sent');
-  el.innerHTML = `<div class="ax-sent-in">
-    <div class="ax-sent-top">
-      <button type="button" class="ax-iconbtn on-navy" data-sent-share aria-label="Share the receipt with the client">${AX_ICON.receipt}</button>
-      <button type="button" class="ax-iconbtn on-navy" data-sent-close aria-label="Close">${AX_ICON.x}</button>
-    </div>
-    <div class="ax-sent-hero">
-      <span class="ax-sent-ok">${AX_ICON.send}</span>
-      <span class="t">Sent</span>
-      <span class="ax-sent-who">${avHTML(s.client, 'sm')}<span class="nm">${esc(s.client ? s.client.name : '')}</span><span class="v">${fmtNum(s.total)}</span></span>
-    </div>
-    <div class="ax-next">
-      <span class="h">What happens next</span>
-      ${steps.map((x,i)=> `${i ? '<span class="ax-ns-gap"></span>' : ''}<div class="ax-ns${x.now ? ' now' : ''}"><i>${AX_ICON[x.icon]}</i><span class="b"><span class="t">${esc(x.t)}</span>${x.s ? `<span class="s">${esc(x.s)}</span>` : ''}</span></div>`).join('')}
-      ${push === 'off' ? `<span class="ax-gap"></span><button type="button" class="ax-alert" data-fd-act="push-on">${AX_ICON.bell}Alert me when it moves</button>` : ''}
-    </div>
-    ${s.profit > 0 ? `<div class="ax-sent-earn"><span class="k">Yours, if all<br>confirmed</span><span class="v">+${fmtNum(s.profit)}</span></div>` : ''}
-    <span style="flex:1;"></span>
-    <button type="button" class="btn btn-block btn-light" data-sent-track>Track this order${AX_ICON.chevR}</button>
-  </div>`;
-  document.body.appendChild(el);
-  const close = ()=>{ if(el.parentNode) el.remove(); };
-  el.addEventListener('click', async (e)=>{
-    if(e.target.closest('[data-sent-close]')){ close(); return; }
-    if(e.target.closest('[data-sent-share]')){ shareReceipt(s.rows, s.client ? s.client.name : 'Client'); return; }
-    const pushBtn = e.target.closest('[data-fd-act]');
-    if(pushBtn){
-      const act = pushBtn.dataset.fdAct;
-      if(act === 'push-on'){ if(await enableAgentPush()) pushBtn.remove(); }
+const waNumber = (p)=> String(p || '').replace(/[^\d]/g, '').replace(/^0(?=7)/, '256');
+
+function orderClient(o){
+  return agentClients.find(x=> String(x.id) === String(o.agentClientId)) || { id: o.agentClientId, name: 'Client' };
+}
+
+/* ---- Shop: call or WhatsApp it ----
+   Most often about one order -- "did you get it?" -- so the order is
+   named and the message is already written. */
+function openShopSheet(orderId){
+  const o = orderId != null ? myOrders.find(x=> String(x.id) === String(orderId)) : null;
+  const sh = shopInfo || {};
+  const c = o ? orderClient(o) : null;
+  const n = o ? (o.items || []).length : 0;
+  const texts = o ? {
+    got: `Hi, I've just sent order #${o.id} for ${c.name} (${n} item${n === 1 ? '' : 's'}). Please confirm you've got it.`,
+    other: `Hi, about order #${o.id} for ${c.name}: `,
+  } : { other: 'Hi, ' };
+  let why = o ? 'got' : 'other';
+  const sheet = openSheet(`<button type="button" class="ax-grab" data-close aria-label="Close"></button>
+    <div class="ax-shop">
+      <div class="ax-shop-h"><span class="ic">${AX_ICON.store}</span>
+        <span class="b"><span class="n">${esc(sh.name || 'The shop')}</span><span class="s m">${esc(sh.phone || '')}</span></span>
+        <button type="button" class="ax-iconbtn" data-close aria-label="Close">${AX_ICON.x}</button></div>
+      ${o ? `<div class="ax-about">${avHTML(c, 'sm')}<span class="b"><span class="n">About order #${esc(o.id)}</span><span class="s m">${esc(c.name)} · ${n} item${n === 1 ? '' : 's'} · ${fmtNum(orderTotal(o))}</span></span></div>
+        <div class="ax-seg2" role="group" aria-label="What about">
+          <button type="button" data-why="got" aria-pressed="true">Did you get it?</button>
+          <button type="button" data-why="other" aria-pressed="false">Something else</button>
+        </div>` : ''}
+      <div class="ax-chatbg"><label class="ax-bub"><textarea rows="3" data-msg aria-label="Message to the shop">${esc(texts[why])}</textarea></label></div>
+      <div class="ax-row2 ax-shop-go">
+        <a class="btn btn-dark" href="tel:${esc(sh.phone || '')}">${AX_ICON.phone}Call</a>
+        <button type="button" class="btn ax-wa" data-wa>${AX_ICON.whatsapp}WhatsApp</button>
+      </div>
+    </div>`, { label: 'The shop', white: true, kind: 'shop' });
+  const msg = sheet.el.querySelector('[data-msg]');
+  sheet.el.addEventListener('click', (e)=>{
+    const w = e.target.closest('[data-why]');
+    if(w){
+      why = w.dataset.why;
+      sheet.el.querySelectorAll('[data-why]').forEach(b=> b.setAttribute('aria-pressed', String(b === w)));
+      msg.value = texts[why];
+      if(why === 'other'){ msg.focus(); msg.setSelectionRange(msg.value.length, msg.value.length); }
       return;
     }
-    if(e.target.closest('[data-sent-track]')){
-      close();
-      if(orderId && myOrders.some(o=> String(o.id) === String(orderId))) openTrackSheet(orderId);
-    }
+    if(e.target.closest('[data-wa]')) window.open(`https://wa.me/${waNumber(sh.phone)}?text=${encodeURIComponent(msg.value.trim())}`, '_blank');
   });
+  return sheet;
+}
+
+/* ---- Receipt ----
+   What the client will get, shown before it goes: the same rows the image
+   is drawn from, so what the shop charges never appears. While the shop is
+   still checking, it says the total may change. */
+function receiptFile(rows, clientName, ref){
+  const canvas = drawReceiptCanvas(rows, clientName, ref);
+  const filename = `quote-${String(clientName || 'client').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'client'}.png`;
+  return new Promise(res=> canvas.toBlob(blob=> res({ blob, filename, file: new File([blob], filename, { type: 'image/png' }) }), 'image/png'));
+}
+async function sendReceipt(o, how){
+  const c = orderClient(o);
+  const rows = orderReceiptRows(o);
+  if(!rows.length) return;
+  const r = await receiptFile(rows, c.name, o.id);
+  const text = `Here is your receipt, ${firstWord(c.name)}`;
+  if(how !== 'save' && navigator.canShare && navigator.canShare({ files: [r.file] })){
+    try{ await navigator.share({ files: [r.file], title: 'Receipt', text }); return; }
+    catch(err){ if(err && err.name === 'AbortError') return; }
+  }
+  downloadBlob(r.blob, r.filename);
+  // Where the phone cannot hand an image to WhatsApp, the image is saved
+  // and the chat opened beside it, so attaching it is one tap.
+  if(how === 'wa') window.open(`https://wa.me/${waNumber(c.phone)}?text=${encodeURIComponent(text)}`, '_blank');
+  else toast('Receipt saved');
+}
+function openReceiptSheet(orderId){
+  const o = myOrders.find(x=> String(x.id) === String(orderId));
+  if(!o) return null;
+  const c = orderClient(o);
+  const rows = orderReceiptRows(o);
+  const total = rows.reduce((s,r)=> s + r.amount, 0);
+  const sheet = openSheet(`<button type="button" class="ax-grab" data-close aria-label="Close"></button>
+    <div class="ax-sheet-title"><h3>Receipt</h3><button type="button" class="ax-iconbtn" data-close aria-label="Close">${AX_ICON.x}</button></div>
+    <div class="ax-sheet-pad">
+      <div class="ax-rcpt-bg"><div class="ax-rcpt">
+        <div class="h"><span class="b"><b>${esc(myAgent.name || '')}</b><span>Quotation · #${esc(o.id)}</span></span>
+          <span class="r"><span>${esc(new Date().toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }))}</span><b>For: ${esc(c.name)}</b></span></div>
+        <div class="row hd"><span>Qty</span><span>Item</span><span>Rate</span><span>Amount</span></div>
+        ${rows.map(r=> `<div class="row"><span class="m">${esc(r.qty)}</span><span class="nm">${esc(r.name)}${r.variant ? `<small>${esc(r.variant)}</small>` : ''}</span><span class="m soft">${fmtAmount(r.rate)}</span><span class="m">${fmtAmount(r.amount)}</span></div>`).join('')}
+        <div class="tot"><span>Total</span><b class="m">UGX ${fmtAmount(total)}</b></div>
+        ${orderShopChecked(o) ? '' : `<span class="ax-pill warn sm">${AX_ICON.clip}Being checked · may change</span>`}
+      </div></div>
+      <div class="ax-foot">
+        <button type="button" class="btn btn-block ax-wa" data-r="wa">${AX_ICON.whatsapp}Send to ${esc(firstWord(c.name))} on WhatsApp</button>
+        <div class="ax-row2">
+          <button type="button" class="btn btn-ghost" data-r="share">${AX_ICON.share}Share</button>
+          <button type="button" class="btn btn-ghost" data-r="save">${AX_ICON.download}Save image</button>
+        </div>
+      </div>
+    </div>`, { label: 'Receipt', full: true, white: true, kind: 'receipt' });
+  sheet.el.addEventListener('click', (e)=>{
+    const b = e.target.closest('[data-r]');
+    if(b) sendReceipt(o, b.dataset.r);
+  });
+  return sheet;
+}
+
+/* ---- Update the client ----
+   Where their order is, in their words, ready to send and editable
+   first. The receipt can ride along. */
+function updateMessage(o, c){
+  const st = orderStage(o);
+  const said = { checking:'is being checked at the shop', pay:'is confirmed', queued:'is confirmed', packing:'is being packed',
+    ready:'is packed and ready', out:'is on its way to you', done:'has been delivered', settle:'has been delivered', cancelled:'was cancelled' }[st.key] || 'is with the shop';
+  const n = (o.items||[]).length;
+  let text = `Hello ${firstWord(c.name)}, your order of ${n} item${n===1?'':'s'} (UGX ${fmtNum(orderTotal(o))}) ${said}.`;
+  if(st.key === 'checking'){
+    const k = orderCheckCount(o);
+    if(k.ok) text += ` ${k.ok} of ${k.all} ${k.ok === 1 ? 'is' : 'are'} confirmed so far.`;
+  }
+  return text;
+}
+function openUpdateSheet(orderId){
+  const o = myOrders.find(x=> String(x.id) === String(orderId));
+  if(!o) return null;
+  const c = orderClient(o);
+  const st = orderStage(o);
+  let attach = true;
+  const sheet = openSheet(`<button type="button" class="ax-grab" data-close aria-label="Close"></button>
+    <div class="ax-sheet-title"><h3>Update ${esc(firstWord(c.name))}</h3><button type="button" class="ax-iconbtn" data-close aria-label="Close">${AX_ICON.x}</button></div>
+    <div class="ax-sheet-pad">
+      <div class="ax-upd-st">${avHTML(c, 'sm')}<span class="b"><span class="n">${esc(st.title)}</span>${stepDotsHTML(o, st)}</span></div>
+      <div class="ax-chatbg tall">
+        <label class="ax-bub"><textarea rows="4" data-msg aria-label="Message to ${esc(c.name)}">${esc(updateMessage(o, c))}</textarea>
+          <span class="hint">${AX_ICON.pencil}edit before sending</span></label>
+        <button type="button" class="ax-attach" data-attach role="switch" aria-checked="true"><i></i>Attach receipt</button>
+      </div>
+      <div class="ax-foot">
+        <button type="button" class="btn btn-block ax-wa" data-u="wa">${AX_ICON.whatsapp}Send on WhatsApp</button>
+        <button type="button" class="btn btn-block btn-ghost" data-u="sms"${c.phone ? '' : ' disabled'}>${AX_ICON.chat}Send as SMS</button>
+      </div>
+    </div>`, { label: 'Update the client', full: true, white: true, kind: 'update' });
+  const msg = sheet.el.querySelector('[data-msg]');
+  sheet.el.addEventListener('click', async (e)=>{
+    const sw = e.target.closest('[data-attach]');
+    if(sw){ attach = !attach; sw.setAttribute('aria-checked', String(attach)); return; }
+    const b = e.target.closest('[data-u]');
+    if(!b) return;
+    const text = msg.value.trim();
+    if(b.dataset.u === 'sms'){ window.location.href = `sms:${String(c.phone || '').replace(/[^\d+]/g, '')}?body=${encodeURIComponent(text)}`; return; }
+    if(attach){
+      const rows = orderReceiptRows(o);
+      if(rows.length){
+        const r = await receiptFile(rows, c.name, o.id);
+        if(navigator.canShare && navigator.canShare({ files: [r.file] })){
+          try{ await navigator.share({ files: [r.file], text }); return; }
+          catch(err){ if(err && err.name === 'AbortError') return; }
+        }
+        downloadBlob(r.blob, r.filename);
+      }
+    }
+    window.open(`https://wa.me/${waNumber(c.phone)}?text=${encodeURIComponent(text)}`, '_blank');
+  });
+  return sheet;
+}
+
+/* ================= SENT =================
+   Sending is a moment, so it is shown as one: the order flies off, a tick
+   lands, and the order's own screen opens by itself -- that screen says
+   what happens next far better than a list could. A tap anywhere skips
+   ahead. */
+const SENT_MS = 4400;
+function sentSnapshot(){
+  const t = cartTotals();
+  return { client: chosenClient, total: t.total, count: cart.length };
+}
+function showSent(s, orderId){
+  const el = document.createElement('div');
+  el.className = 'ax-sent2';
+  el.setAttribute('role', 'dialog');
+  el.setAttribute('aria-label', 'Order sent. Tap to open it');
+  el.innerHTML = `<svg class="trail" viewBox="0 0 390 844" preserveAspectRatio="none" aria-hidden="true"><path pathLength="100" d="M45 760 C 120 640, 150 520, 195 430 S 300 230, 365 170"/></svg>
+    <span class="plane" aria-hidden="true">${AX_ICON.send}</span>
+    <div class="mid">
+      <span class="tick"><i></i><b>${AX_ICON.check}</b></span>
+      <span class="up"><span class="t">Sent to the shop</span>
+        <span class="who">${avHTML(s.client, 'sm')}<span class="nm">${esc(s.client ? s.client.name : '')}</span><span class="v">${fmtNum(s.total)}</span></span></span>
+    </div>
+    <div class="up go"><span class="bar"><i></i></span><span>Opening your order…</span></div>`;
+  document.body.appendChild(el);
+  let done = false;
+  const finish = ()=>{
+    if(done) return;
+    done = true;
+    clearTimeout(timer);
+    el.classList.add('out');
+    setTimeout(()=> el.remove(), 220);
+    openSentOrder(orderId);
+  };
+  const timer = setTimeout(finish, SENT_MS);
+  el.addEventListener('click', finish);
+  return el;
+}
+// The order may still be on its way back from the server: wait a little
+// for it rather than open nothing.
+function openSentOrder(orderId, tries){
+  if(orderId == null) return;
+  if(myOrders.some(o=> String(o.id) === String(orderId))){ openTrackSheet(orderId); return; }
+  if((tries || 0) < 12) setTimeout(()=> openSentOrder(orderId, (tries || 0) + 1), 400);
+}
+
+/* ================= THANK YOU =================
+   An order done is worth a moment: what it earned, where it puts the
+   month, and the obvious next thing -- the same client again. */
+// The month's ring filling from where it stood to where this order puts
+// it -- the one picture of what finishing an order did.
+function growRingSVG(from, to){
+  const R = 37.5, C = 2 * Math.PI * R;
+  const a = Math.min(1, Math.max(0, from)) * C, b = Math.min(1, Math.max(0, to)) * C;
+  return `<svg width="84" height="84" viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="${R}" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="9"/>
+    ${b > 0 ? `<circle class="grow" cx="42" cy="42" r="${R}" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" transform="rotate(-90 42 42)" style="--a:${a.toFixed(1)}px;--b:${b.toFixed(1)}px;" stroke-dasharray="${b.toFixed(1)} ${C.toFixed(1)}"/>` : ''}</svg>`;
+}
+function openThankYou(orderId){
+  const o = myOrders.find(x=> String(x.id) === String(orderId));
+  if(!o) return null;
+  const c = orderClient(o);
+  const now = new Date();
+  const e = orderEarnings(o);
+  const earned = e.margin + e.bonus;
+  const key = String(orderDate(o) || '').slice(0, 7) || currentMonthKey();
+  const p = monthPicture(now);
+  const inThisMonth = key === p.key;
+  const after = inThisMonth && p.aim > 0 ? Math.max(0, p.earned / p.aim) : null;
+  const before = after != null ? Math.max(0, (p.earned - earned) / p.aim) : null;
+  const streak = computeSellingStreak();
+  const doneN = myOrders.filter(x=> !x.voided && x.status === 'completed' && String(orderDate(x) || '').startsWith(p.key)).length;
+  const cad = clientCadence(c, clientOrderCounts(), now);
+  const back = cad ? new Date(cad.lastDate.getTime() + Math.round(cad.avgGapDays) * 86400000) : null;
+  const pct = (f)=> Math.round(Math.min(1, f) * 100);
+  const confetti = Array.from({ length: 26 }, (_, i)=> `<i style="left:${(i * 37) % 100}%;animation-delay:${(i % 9) * 0.11}s;animation-duration:${2.2 + (i % 5) * 0.35}s;background:${['#6FDCB0','#F5B26B','#FFFFFF','#E8EBF0','#C93A30'][i % 5]};"></i>`).join('');
+  const el = document.createElement('div');
+  el.className = 'ax-thanks';
+  el.setAttribute('role', 'dialog');
+  el.setAttribute('aria-label', 'Order complete');
+  el.innerHTML = `<div class="cf" aria-hidden="true">${confetti}</div>
+    <div class="in">
+      <div class="top"><button type="button" class="ax-iconbtn on-navy" data-ty-close aria-label="Close">${AX_ICON.x}</button></div>
+      <div class="hero">
+        <span class="tick"><b>${AX_ICON.check}</b></span>
+        <span class="t">Thank you, ${esc(firstWord(myAgent.name || ''))}</span>
+        <span class="who">${avHTML(c, 'sm')}<span>${esc(possessive(firstWord(c.name)))} order is complete</span></span>
+      </div>
+      <div class="card earn">
+        ${after != null ? `<span class="ring">${growRingSVG(before, after)}<b>${pct(after)}%</b></span>` : ''}
+        <span class="b"><span class="v">${fmtSigned(earned)}</span>
+          <span class="s">added to ${esc(monthName(key))}${after != null ? ` · ${pct(before)}% → ${pct(after)}% of goal` : ''}</span></span>
+      </div>
+      <div class="badges">
+        ${streak >= 2 ? `<span class="card fire">${AX_ICON.flame}${streak}-week streak</span>` : ''}
+        ${inThisMonth ? `<span class="card"><b>${doneN}</b>order${doneN === 1 ? '' : 's'} this month</span>` : ''}
+      </div>
+      ${back ? `<div class="card back"><span class="ic">${AX_ICON.bell}</span><span class="b"><b>${esc(firstWord(c.name))} reorders about every ${Math.round(cad.avgGapDays)} days</b>
+        <span>${back > now ? `Back on Today around ${esc(back.toLocaleDateString('en-GB', { day:'numeric', month:'short' }))}` : 'Due for their next one now'}</span></span></div>` : ''}
+      <span style="flex:1;"></span>
+      <button type="button" class="btn btn-block btn-accent ax-again" data-ty-again>${AX_ICON.again}Order again for ${esc(firstWord(c.name))}</button>
+      <button type="button" class="ax-link-l" data-ty-close>Back to Today</button>
+    </div>`;
+  document.body.appendChild(el);
+  const close = ()=>{ if(el.parentNode) el.remove(); };
+  el.addEventListener('click', (ev)=>{
+    if(ev.target.closest('[data-ty-close]')){ close(); if(currentView !== 'today') switchTab('today'); return; }
+    if(ev.target.closest('[data-ty-again]')){ close(); orderUsual(c); }
+  });
+  return el;
+}
+
+/* ================= A STAGE, OPENED =================
+   Tapping Sent, Packing or Out on Today opens that stage: every order in
+   it, each showing where on the six steps it is -- the same named steps
+   as the order's own screen -- and the one thing to do with it. */
+const STAGE_PAGES = {
+  sent:    { title:'Sent',    sub:'With the shop, before packing',   icon:'send',  lit:['send','check','cash'] },
+  packing: { title:'Packing', sub:'The shop is getting it ready',    icon:'box',   lit:['box'] },
+  out:     { title:'Out',     sub:'Ready to collect, or on the way', icon:'store', lit:['store','truck'] },
+};
+function orderCardHTML(o){
+  const c = orderClient(o);
+  const st = orderStage(o);
+  const go = st.needs === 'pay' ? `<span class="go warn">${st.key === 'settle' ? 'Settle' : 'Pay'} ${esc(fmtCompactUGX(orderOwedAmount(o)))}${AX_ICON.chevR}</span>`
+    : st.needs === 'collect' ? `<span class="go good">Collect${AX_ICON.chevR}</span>` : `<span class="go">Open${AX_ICON.chevR}</span>`;
+  return `<button type="button" class="ax-card ax-oc" data-track="${esc(o.id)}">
+    <span class="h">${avHTML(c)}<span class="b"><span class="n">${esc(c.name)}</span><span class="s m">#${esc(o.id)} · ${esc(orderStepTimes(o).send)}</span></span><span class="v m">${fmtNum(orderTotal(o))}</span></span>
+    ${stepDotsHTML(o, st)}
+    <span class="f"><span class="s">${esc(st.sub)}</span>${go}</span>
+  </button>`;
+}
+function openStageSheet(key){
+  const page = STAGE_PAGES[key];
+  if(!page) return null;
+  closeSheetsOfKind('stage');
+  const sheet = openSheet('', { label: page.title, kind:'stage', full:true, refresh: ()=> paint() });
+  function paint(){
+    const rows = liveOrders().map(o=> ({ o, st: orderStage(o) })).filter(x=> x.st.group === key)
+      .sort((a,b)=> (b.st.needs ? 1 : 0) - (a.st.needs ? 1 : 0) || String(orderDate(b.o) || '').localeCompare(String(orderDate(a.o) || '')));
+    const warn = rows.some(x=> x.st.needs === 'pay');
+    const tone = key === 'packing' ? 'done' : key === 'sent' && warn ? 'warn' : 'now';
+    const steps = orderSteps({ deliveryMode: 'agent_pickup' });
+    const tiles = steps.map(s=> `<span class="ax-stp${page.lit.includes(s.icon) ? ` now ${tone === 'warn' ? 'warn' : tone === 'done' ? 'white' : ''}` : ''}">${AX_ICON[s.icon === 'check' ? 'clip' : s.icon]}</span>`).join('');
+    const labels = steps.map(s=> `<span class="${page.lit.includes(s.icon) ? `on${tone === 'warn' ? ' warn' : tone === 'done' ? ' white' : ''}` : ''}">${esc(stepLabel(s, false))}</span>`).join('');
+    sheet.el.innerHTML = `
+      <div class="ax-sheet-top">
+        <button type="button" class="ax-grab" data-close aria-label="Close"></button>
+        <div class="ax-state"><span class="ax-state-ic ${tone}">${AX_ICON[page.icon]}</span>
+          <span class="b"><span class="t">${esc(page.title)}</span><span class="s">${esc(page.sub)}</span></span>
+          <button type="button" class="ax-iconbtn on-navy" data-close aria-label="Close" style="margin-left:auto;">${AX_ICON.x}</button></div>
+        <div class="ax-steps" aria-hidden="true"><div class="r">${tiles}</div><div class="l">${labels}</div></div>
+      </div>
+      <div class="ax-sheet-pad">
+        <span class="ax-count m">${rows.length} order${rows.length === 1 ? '' : 's'}</span>
+        ${rows.length ? rows.map(x=> orderCardHTML(x.o)).join('') : `<div class="ax-empty">${AX_ICON[page.icon]}Nothing here right now</div>`}
+      </div>`;
+  }
+  sheet.el.addEventListener('click', (e)=>{
+    const t = e.target.closest('[data-track]');
+    if(t) openTrackSheet(t.dataset.track);
+  });
+  paint();
+  return sheet;
+}
+
+/* ================= WITHIN REACH =================
+   What is not yours yet but could be this month: what the baskets would
+   earn once sent, and the bonuses that land when live orders finish --
+   drawn on the same ring as Today, so it reads as "the rest of the ring". */
+function nearPicture(){
+  const sendRows = [];
+  const seen = new Set();
+  const addBasket = (key, rows)=>{
+    if(!rows || !rows.length || seen.has(rows)) return;
+    seen.add(rows);
+    const profit = rows.reduce((s,it)=>{ const f = cartLineFigures(it); return s + (f.profit > 0 ? f.profit : 0); }, 0);
+    const client = key == null ? null : agentClients.find(c=> String(c.id) === String(key)) || null;
+    if(profit > 0) sendRows.push({ key, client, count: rows.length, profit });
+  };
+  Object.keys(carts).forEach(k=> addBasket(k, carts[k]));
+  addBasket(null, unnamedCart);
+  const key = currentMonthKey();
+  const bonusRows = monthEarnings(key).orders.filter(o=> o.status !== 'completed' && !o.voided)
+    .map(o=> ({ o, bonus: orderEarnings(o).bonus })).filter(x=> x.bonus > 0);
+  return { sendRows, bonusRows,
+    toSend: sendRows.reduce((s,r)=> s + r.profit, 0), bonus: bonusRows.reduce((s,r)=> s + r.bonus, 0) };
+}
+function openNearSheet(){
+  closeSheetsOfKind('near');
+  const sheet = openSheet('', { label:'Within reach', kind:'near', full:true, refresh: ()=> paint() });
+  function paint(){
+    const p = monthPicture(new Date());
+    const n = nearPicture();
+    const near = n.toSend + n.bonus;
+    const aim = p.aim > 0 ? p.aim : Math.max(1, p.earned + near);
+    const ring = ringSVG(112, 12, [
+      { frac: p.earned / aim, color:'#FFFFFF', round:true },
+      { frac: n.toSend / aim, color:'#F5B26B' },
+      { frac: n.bonus / aim, color:'#6FDCB0' },
+    ], 'rgba(255,255,255,.10)');
+    const row = (av, name, pill, v, attrs)=> `<button type="button" class="ax-nrow" ${attrs}>${av} <span class="b"><span class="n">${esc(name)}</span>${pill}</span><span class="v m">+${fmtNum(v)}</span>${AX_ICON.chevR}</button>`;
+    const sendList = n.sendRows.map(r=> row(r.client ? avHTML(r.client) : `<span class="ax-av">?</span>`, r.client ? r.client.name : 'Not yet named',
+      `<span class="ax-pill warn sm">Basket · ${r.count} item${r.count === 1 ? '' : 's'}</span>`, r.profit, `data-basket="${esc(r.key == null ? '' : r.key)}"`)).join('');
+    const bonusList = n.bonusRows.map(({ o, bonus })=>{
+      const st = orderStage(o);
+      return row(avHTML(orderClient(o)), orderClient(o).name, `<span class="ax-pill ${st.tone === 'warn' ? 'warn' : st.tone === 'good' ? 'good' : 'soft'} sm">${esc(st.title)}</span>`, bonus, `data-track="${esc(o.id)}"`);
+    }).join('');
+    const nOrders = n.sendRows.length + n.bonusRows.length;
+    sheet.el.innerHTML = `
+      <div class="ax-sheet-top">
+        <button type="button" class="ax-grab" data-close aria-label="Close"></button>
+        <div class="ax-sheet-h" style="justify-content:space-between;"><span class="n">Within reach</span>
+          <button type="button" class="ax-iconbtn on-navy" data-close aria-label="Close">${AX_ICON.x}</button></div>
+        <div class="ax-near">
+          <span class="ax-ring sm">${ring}<span class="ax-ring-c">${p.aim > 0 ? `<span class="p">${Math.round(Math.min(9.99, (p.earned + near) / p.aim) * 100)}%</span><span class="d">if all land</span>` : `<span class="p">${esc(fmtCompactUGX(p.earned + near))}</span>`}</span></span>
+          <span class="b"><span class="v m">+${fmtNum(near)}</span><span class="s">not yours yet · ${nOrders} order${nOrders === 1 ? '' : 's'}</span>
+            <span class="ax-key"><span><i style="background:#fff;"></i>Yours <b class="m">${esc(fmtCompactUGX(p.earned))}</b></span><span><i style="background:#F5B26B;"></i>To send</span><span><i style="background:#6FDCB0;"></i>Bonus</span></span></span>
+        </div>
+      </div>
+      <div class="ax-sheet-pad">
+        ${n.sendRows.length ? `<div class="ax-grp"><i style="background:#F5B26B;"></i><span>Send it</span><b class="m">+${fmtNum(n.toSend)}</b></div><div class="ax-card ax-list">${sendList}</div>` : ''}
+        ${n.bonusRows.length ? `<div class="ax-grp"><i style="background:#6FDCB0;"></i><span>Bonus when it finishes</span><b class="m">+${fmtNum(n.bonus)}</b></div><div class="ax-card ax-list">${bonusList}</div>` : ''}
+        ${nOrders ? '' : `<div class="ax-empty">${AX_ICON.trend}Nothing waiting yet<button type="button" class="btn btn-dark" data-new>Start an order</button></div>`}
+      </div>`;
+  }
+  sheet.el.addEventListener('click', (e)=>{
+    const t = e.target.closest('[data-track]');
+    if(t){ openTrackSheet(t.dataset.track); return; }
+    const b = e.target.closest('[data-basket]');
+    if(b){
+      sheet.close();
+      const c = b.dataset.basket ? agentClients.find(x=> String(x.id) === b.dataset.basket) : null;
+      if(c) goToClientBasket(c);
+      switchTab('order');
+      return;
+    }
+    if(e.target.closest('[data-new]')){ sheet.close(); switchTab('order'); }
+  });
+  paint();
+  return sheet;
+}
+
+/* ================= STANDING =================
+   Where you are among the shop's agents this month (places, never their
+   money), how far to the next place, and the run of weeks with a sale. */
+function openStandingSheet(){
+  closeSheetsOfKind('standing');
+  const sheet = openSheet('', { label:'Standing', kind:'standing', full:true, refresh: ()=> paint() });
+  function paint(){
+    const lb = leaderboard && leaderboard.you && leaderboard.totalAgents >= 2 ? leaderboard : null;
+    const streak = computeSellingStreak();
+    const key = currentMonthKey();
+    const podium = lb ? (lb.top || []).slice(0, 5).map((a, i)=> `<span class="col${a.isYou ? ' you' : ''}"><span class="nm">${esc(a.isYou ? 'You' : a.displayName)}</span><span class="bar" style="height:${100 - i * 12}px;">${esc(a.rank)}</span></span>`).join('') : '';
+    const youInTop = lb && (lb.top || []).some(a=> a.isYou);
+    const gap = lb && lb.you.gapToNext != null ? Number(lb.you.gapToNext) : null;
+    // Eight weeks, oldest first; this week dashed until it has a sale.
+    const weeks = [];
+    const done = new Set(myOrders.filter(o=> !o.voided && o.status === 'completed' && orderDate(o)).map(o=> weekKey(new Date(orderDate(o) + 'T00:00:00'))));
+    const start = weekStart(new Date());
+    for(let i = 7; i >= 0; i--){ const d = new Date(start); d.setDate(d.getDate() - i * 7); weeks.push(d); }
+    let prevMonth = -1;
+    const wk = weeks.map((d, i)=>{
+      const on = done.has(weekKey(d));
+      const now = i === weeks.length - 1;
+      const lab = now ? 'now' : d.getMonth() !== prevMonth ? d.toLocaleDateString('en-GB', { month:'short', day:'numeric' }) : String(d.getDate());
+      prevMonth = d.getMonth();
+      return `<span class="w${on ? ' on' : ''}${now && !on ? ' now' : ''}"><i>${AX_ICON.flame}</i><em>${esc(lab)}</em></span>`;
+    }).join('');
+    const thisWeekDone = done.has(weekKey(start));
+    sheet.el.innerHTML = `
+      <div class="ax-sheet-top">
+        <button type="button" class="ax-grab" data-close aria-label="Close"></button>
+        <div class="ax-sheet-h" style="justify-content:space-between;"><span class="n">${esc(monthName(key))} standing</span>
+          <button type="button" class="ax-iconbtn on-navy" data-close aria-label="Close">${AX_ICON.x}</button></div>
+        ${lb ? `<div class="ax-rankbig"><b>#${esc(lb.you.rank)}</b><span>of ${esc(lb.totalAgents)}</span></div>
+          <div class="ax-podium2">${podium} ${youInTop ? '' : `<span class="col you"><span class="nm">You</span><span class="bar" style="height:36px;">${esc(lb.you.rank)}</span></span>`}</div>`
+        : `<div class="ax-rankbig"><b>${esc(computeAgentStats().completedOrders)}</b><span>orders done</span></div>`}
+      </div>
+      <div class="ax-sheet-pad">
+        ${lb ? (gap != null && gap > 0
+          ? `<div class="ax-card ax-gap"><span class="ic">${AX_ICON.trend}</span><span class="b"><span class="v m">${fmtNum(gap)}</span><span class="s">more earned puts you at #${esc(lb.you.rank - 1)}</span></span>
+              <button type="button" class="btn btn-dark" data-sell>Sell${AX_ICON.chevR}</button></div>`
+          : lb.you.rank === 1 ? `<div class="ax-card ax-gap"><span class="ic gold">${AX_ICON.trophy}</span><span class="b"><span class="v">Top this month</span><span class="s">keep it there</span></span></div>` : '') : ''}
+        <div class="ax-card ax-weeks">
+          <div class="h"><span class="ic">${AX_ICON.flame}</span><b>${streak} week${streak === 1 ? '' : 's'}</b><span>a sale every week</span></div>
+          <div class="r">${wk}</div>
+          ${thisWeekDone ? '' : `<span class="note">Finish an order by Sunday → ${streak + 1} week${streak + 1 === 1 ? '' : 's'}</span>`}
+        </div>
+      </div>`;
+  }
+  sheet.el.addEventListener('click', (e)=>{ if(e.target.closest('[data-sell]')){ sheet.close(); switchTab('order'); } });
+  paint();
+  ensureLeaderboardLoaded();
+  return sheet;
+}
+
+/* ================= YOU =================
+   Your initials open you: what you have made, who you sell to and where
+   you stand -- each a door to its own page -- then the shop and how to
+   reach it, the terms only the shop sets, your link and details, and
+   this phone. */
+function openProfileSheet(){
+  closeSheetsOfKind('profile');
+  const sheet = openSheet('', { label:'You', kind:'profile', full:true, refresh: ()=> paint() });
+  function paint(){
+    const p = monthPicture(new Date());
+    const lb = leaderboard && leaderboard.you && leaderboard.totalAgents >= 2 ? leaderboard : null;
+    const sh = shopInfo && shopInfo.phone ? shopInfo : null;
+    const push = agentPushState();
+    const link = myCatalogue ? catalogueUrl(myCatalogue.slug) : null;
+    const item = (icon, k, v, right)=> `<div class="ax-li"><span class="ic">${AX_ICON[icon]}</span><span class="b"><span class="k">${esc(k)}</span><span class="v">${v}</span></span>${right || ''}</div>`;
+    sheet.el.innerHTML = `
+      <div class="ax-sheet-top">
+        <button type="button" class="ax-grab" data-close aria-label="Close"></button>
+        <div class="ax-sheet-h"><span class="ax-av xl me">${esc(agentInitials())}</span>
+          <span class="b"><span class="n">${esc(myAgent.name || '')}</span><span class="s">Agent${sh && sh.name ? ` · ${esc(sh.name)}` : ''}</span></span>
+          <button type="button" class="ax-iconbtn on-navy" data-close aria-label="Close">${AX_ICON.x}</button></div>
+        <div class="ax-me3">
+          <button type="button" data-p="money"><b class="m mint">${esc(fmtCompactUGX(p.earned))}</b><span>${esc(monthName(p.key))}</span></button>
+          <button type="button" data-p="clients"><b class="m">${agentClients.length}</b><span>client${agentClients.length === 1 ? '' : 's'}</span></button>
+          <button type="button" data-p="standing">${lb ? `<b class="m">#${esc(lb.you.rank)}</b><span>of ${esc(lb.totalAgents)}</span>` : `<b class="m">${computeSellingStreak()}</b><span>week streak</span>`}</button>
+        </div>
+      </div>
+      <div class="ax-sheet-pad">
+        ${sh ? `<button type="button" class="ax-shopcard" data-p="shop"><span class="ic">${AX_ICON.store}</span>
+          <span class="b"><span class="n">${esc(sh.name || 'The shop')}</span><span class="s m">${esc(sh.phone)}</span></span>
+          <span class="go">${AX_ICON.phone}Contact</span></button>` : ''}
+        ${termCardHTML()}
+        <div class="ax-card ax-lis">
+          ${item('link', 'My shop link', link ? esc(link.replace(/^https?:\/\//, '')) : 'Not made yet', `<button type="button" class="btn btn-ghost sm" data-p="link">${link ? `${AX_ICON.share}Share` : 'Make it'}</button>`)}
+          ${item('phone', 'Phone', esc(myAgent.phone || '—'))}
+          ${item('chat', 'Email', esc(myAgent.email || '—'))}
+        </div>
+        <div class="ax-card ax-lis">
+          ${item('bell', 'Notifications', push === 'on' ? 'On · ready orders and asks' : push === 'denied' ? 'Blocked in the browser settings' : push === 'unsupported' ? 'Not on this phone' : 'Off',
+            push === 'on' ? `<span class="ax-sw on" aria-label="On"><i></i></span>` : push === 'off' ? `<button type="button" class="ax-sw" data-p="push" role="switch" aria-checked="false" aria-label="Turn notifications on"><i></i></button>` : '')}
+          <div class="ax-li ag-sync-card" id="ag_syncCard"><span class="ic">${AX_ICON.save}</span><span class="b"><span class="k">This phone</span><span class="v" data-sync></span></span><span class="dot"></span></div>
+        </div>
+        <button type="button" class="btn btn-block btn-ghost ax-out" id="ag_signout_btn">${AX_ICON.out}Sign out</button>
+      </div>`;
+    renderSyncCard();
+  }
+  sheet.el.addEventListener('click', async (e)=>{
+    const b = e.target.closest('[data-p]');
+    if(e.target.closest('#ag_signout_btn')){ confirmSignOut(); return; }
+    if(!b) return;
+    const k = b.dataset.p;
+    if(k === 'money') openMoneySheet();
+    else if(k === 'standing') openStandingSheet();
+    else if(k === 'clients'){ sheet.close(); switchTab('clients'); }
+    else if(k === 'shop') openShopSheet(null);
+    else if(k === 'link'){
+      if(myCatalogue) shareCatalogueLink(catalogueUrl(myCatalogue.slug));
+      else openShopLinkSheet();
+    }
+    else if(k === 'push'){ if(await enableAgentPush()) paint(); }
+  });
+  paint();
+  if(!myCatalogueLoaded) ensureMyCatalogueLoaded().then(()=>{ if(sheet.el.isConnected) paint(); });
+  if(shopInfo == null || !shopInfoAsked) ensureShopInfo().then(()=>{ if(sheet.el.isConnected) paint(); });
+  ensureLeaderboardLoaded();
+  return sheet;
 }
 
 /* ================= TRACK =================
    One order: where it is on six steps, what the client gets (each line
-   ticked once the shop confirms it, crossed out if the shop could not
-   supply it), the money as it now stands, and the one thing to do. */
+   ticked as its supplier says yes, crossed out if the shop could not
+   supply it), the money as it now stands, and the one thing to do.
+   Once the lines are settled -- packing onwards -- they fold into one row
+   that opens on a tap: what matters then is where it is, not what is in
+   it. */
+const FOLD_ITEMS_AT = ['queued','packing','ready','out','done','settle'];
+function trackStateIcon(st){
+  return st.key === 'pay' || st.key === 'settle' ? 'cash' : st.key === 'ready' ? 'store' : st.key === 'out' ? 'truck'
+    : st.key === 'done' ? 'check' : st.key === 'checking' ? 'clip' : st.key === 'cancelled' ? 'x' : 'box';
+}
 function openTrackSheet(orderId){
   const id = String(orderId);
   let payState = { provider: 'mtn', phone: (myAgent && myAgent.phone) || '', busy:false, note:null, tone:'' };
+  // Whether the agent has opened or shut the item list themselves: their
+  // choice outlives the repaint a refresh brings.
+  let itemsOpen = null;
   const sheet = openSheet('', { label:'Order', kind:'track', full:true, refresh: ()=> paint(), onClose: ()=>{ payState.polling = false; } });
   function paint(){
     const o = myOrders.find(x=> String(x.id) === id);
     if(!o){ sheet.close(); return; }
     const c = agentClients.find(x=> String(x.id) === String(o.agentClientId)) || { id: o.agentClientId, name: 'Client' };
     const st = orderStage(o);
-    const steps = orderSteps(o);
-    const at = orderStepIndex(o, st);
     const checked = orderShopChecked(o);
+    const prepay = !!(myAgent && myAgent.paymentTerm === 'prepay');
     const dropped = Array.isArray(o.droppedLines) ? o.droppedLines : [];
     const total = orderTotal(o);
     const droppedTotal = dropped.reduce((s,d)=> s + (Number(d.agentSellPrice)||0) * (Number(d.qty)||0), 0);
     const e = orderEarnings(o);
     const yours = e.margin + (o.status === 'completed' ? e.bonus : 0);
     const droppedYours = dropped.reduce((s,d)=> agentLinePriced(d) ? s + (Number(d.agentSellPrice) - (Number(d.sellPrice)||0)) * (Number(d.qty)||0) : s, 0);
-    const prog = at < 0 ? 0 : Math.min(1, at / (steps.length - 1));
-    const track = `<div class="ax-track" aria-label="${esc(st.title)}">
-      <div class="ax-track-r"><span class="bar" style="width:${(prog * 84).toFixed(1)}%;"></span>${steps.map((s,i)=>{
-        const cls = i < at || at >= steps.length ? 'done' : i === at ? `now${st.tone === 'warn' ? ' warn' : ''}` : '';
-        return `<span class="ax-st ${cls}"><i>${i < at || at >= steps.length ? AX_ICON.check : AX_ICON[s.icon]}</i><em>${i === at ? 'now' : ''}</em></span>`;
-      }).join('')}</div>
-      <div class="ax-track-l">${steps.map((s,i)=> `<span class="${i===at?'on':''}">${esc(stepLabel(s, i < at || at >= steps.length))}</span>`).join('')}</div>
-    </div>`;
-    const lineRow = (it, mark)=>{
+    const k = orderCheckCount(o);
+    const lineRow = (it, chk)=>{
       const qty = it.displayQty != null ? `${it.displayQty} ${it.displayUnit||''}` : `${fmtNum(it.qty)} ${it.unit||''}`;
       const amt = (Number(it.agentSellPrice)||0) * (Number(it.qty)||0);
       const ce = catalogEntry(it.productId, it.variantIdx);
-      const markHTML = mark === 'ok' ? `<span class="ax-mk ok" aria-label="Confirmed">${AX_ICON.check}</span>`
-        : mark === 'no' ? `<span class="ax-mk no" aria-label="Dropped by the shop">${AX_ICON.x}</span>`
+      const st2 = chk.state;
+      const when = st2 === 'ok' && !checked && chk.at ? `<span class="t m">${esc(whenShort(chk.at))}</span>` : '';
+      const markHTML = st2 === 'ok' ? `${when}<span class="ax-mk ok" aria-label="Confirmed">${AX_ICON.check}</span>`
+        : st2 === 'no' ? `<span class="ax-mk no" aria-label="Dropped by the shop">${AX_ICON.x}</span>`
+        : st2 === 'asking' ? `<span class="t warn">checking</span><span class="ax-mk spin" aria-label="Being checked now"></span>`
+        : st2 === 'problem' ? `<span class="ax-mk prob" aria-label="The supplier has a problem with this">${AX_ICON.bang}</span>`
         : `<span class="ax-mk wait" aria-label="Not checked yet"></span>`;
-      return `<div class="ax-gl${mark === 'no' ? ' gone' : ''}"><span class="ax-th">${itemThumbHTML(ce || it)}</span>
+      return `<div class="ax-gl${st2 === 'no' ? ' gone' : ''}"><span class="ax-th">${itemThumbHTML(ce || it)}</span>
         <span class="b"><span class="nm">${esc(it.productName || it.name || '')}${ce && ce.variantLabel ? ` · ${esc(ce.variantLabel)}` : ''}</span><span class="q">${esc(String(qty).trim())} · ${fmtNum(amt)}</span></span>${markHTML}</div>`;
     };
-    const keptN = (o.items||[]).length, dropN = dropped.length;
-    const counts = checked
-      ? `<span class="cnt"><span class="ax-pill good">${AX_ICON.check}${keptN}</span>${dropN ? `<span class="ax-pill bad">${AX_ICON.x}${dropN}</span>` : ''}</span>`
-      : `<span class="ax-pill soft">${AX_ICON.clock}being checked</span>`;
-    const ready = st.key === 'ready' ? `<div class="ax-counter">${AX_ICON.store}<span class="b"><span class="k">Show at the counter</span><span class="v">#${esc(o.id)}</span></span></div>` : '';
+    const lines = (o.items||[]).map(it=> ({ it, chk: lineCheck(o, it) })).concat(dropped.map(d=> ({ it: d, chk: { state:'no' } })));
+    const counts = checked || dropped.length
+      ? `<span class="ax-pill good sm">${AX_ICON.check}${k.ok}</span>${dropped.length ? `<span class="ax-pill bad sm">${AX_ICON.x}${dropped.length}</span>` : ''}`
+      : `<span class="ax-pill ${k.ok ? 'good' : 'soft'} sm">${AX_ICON.check}${k.ok} of ${k.all}</span>`;
+    const fold = FOLD_ITEMS_AT.includes(st.key);
+    const open = itemsOpen == null ? !fold : itemsOpen;
+    const stack = lines.slice(0, 4).map(({ it, chk })=>{
+      const ce = catalogEntry(it.productId, it.variantIdx);
+      return `<span class="${chk.state === 'no' ? 'gone' : ''}">${itemThumbHTML(ce || it)}</span>`;
+    }).join('');
+    const items = `<details class="ax-card ax-gets"${open ? ' open' : ''} data-items>
+      <summary><span class="ax-stack sq">${stack}</span><span class="h"><span class="shut">Items</span><span class="opn">What the client gets</span></span>
+        <span class="cnt">${counts}</span><span class="ax-chev">${AX_ICON.chevD}</span></summary>
+      ${lines.map(({ it, chk })=> lineRow(it, chk)).join('')}
+    </details>`;
+    const lock = st.key === 'checking' && prepay
+      ? `<div class="ax-lock"><span class="ic">${AX_ICON.lock}</span><span class="b"><span class="t">${k.items === 1 ? 'Pay opens once it is checked' : `Pay opens when all ${k.items} are checked`}</span>
+          <span class="s">for what was confirmed · ${agentPushState() === 'on' ? "we'll alert you" : 'it opens right here'}</span></span></div>` : '';
+    const sh = shopInfo && shopInfo.phone ? shopInfo : null;
+    const ready = st.key === 'ready' ? `<div class="ax-counter"><span class="ic">${AX_ICON.store}</span><span class="b"><span class="k">Show at the counter</span><span class="v">${esc(o.id)}</span></span>
+      ${sh && (sh.name || sh.address) ? `<span class="w">${esc(sh.name || '')}${sh.address ? `<br>${esc(sh.address)}` : ''}</span>` : ''}</div>` : '';
     const owed = orderOwedAmount(o);
     const pay = st.needs === 'pay' ? payPanelHTML(owed, payState) : '';
+    const finish = st.key === 'done' ? `<button type="button" class="btn btn-block ax-finish" data-finish>${AX_ICON.check}Finish</button>` : '';
     sheet.el.innerHTML = `
       <div class="ax-sheet-top">
         <button type="button" class="ax-grab" data-close aria-label="Close"></button>
-        <div class="ax-sheet-h">${avHTML(c)}<span class="b"><span class="n">${esc(c.name)}</span><span class="s">#${esc(o.id)} · ${esc(dateShort(orderDate(o)))}${o.deliveryMode === 'shop_delivery' ? ' · delivery' : ' · pickup'}</span></span>
+        <div class="ax-sheet-h">${avHTML(c)}<span class="b"><span class="n">${esc(c.name)}</span><span class="s m">#${esc(o.id)} · ${esc(orderStepTimes(o).send)}${o.deliveryMode === 'shop_delivery' ? ' · delivery' : ''}</span></span>
+          ${sh ? `<button type="button" class="ax-shopbtn" data-shop aria-label="Contact the shop">${AX_ICON.phone}Shop</button>` : ''}
           <button type="button" class="ax-iconbtn on-navy" data-close aria-label="Close">${AX_ICON.x}</button></div>
-        <div class="ax-state"><span class="ax-state-ic${st.tone === 'warn' ? ' warn' : ''}">${AX_ICON[st.key === 'pay' || st.key === 'settle' ? 'cash' : st.key === 'ready' ? 'store' : st.key === 'out' ? 'truck' : st.key === 'done' ? 'flag' : st.key === 'checking' ? 'clock' : 'box']}</span>
+        <div class="ax-state"><span class="ax-state-ic ${st.key === 'done' ? 'done' : st.key === 'cancelled' ? 'off' : st.tone === 'warn' ? 'warn' : 'now'}">${AX_ICON[trackStateIcon(st)]}</span>
           <span class="b"><span class="t">${esc(st.title)}</span><span class="s">${esc(st.sub)}</span></span></div>
-        ${st.key !== 'cancelled' ? track : ''}
+        ${st.key !== 'cancelled' ? stepTilesHTML(o, st) : ''}
       </div>
       <div class="ax-sheet-pad">
         ${ready}
-        ${pay}
         <div class="ax-money">
           <div><span class="k">Client pays</span><span class="v">${fmtNum(total)}</span>${droppedTotal > 0 ? `<s>${fmtNum(total + droppedTotal)}</s>` : ''}</div>
-          <div><span class="k">${checked ? 'Yours' : 'Yours, if all confirmed'}</span><span class="v ${yours < 0 ? 'bad' : 'good'}">${fmtSigned(yours)}</span>${droppedYours > 0 ? `<s>${fmtSigned(yours + droppedYours)}</s>` : ''}</div>
+          <div class="${checked ? 'yours' : 'maybe'}"><span class="k">${checked ? 'Yours' : 'Yours, if all confirmed'}</span><span class="v ${yours < 0 ? 'bad' : 'good'}">${fmtSigned(yours)}</span>${droppedYours > 0 ? `<s>${fmtSigned(yours + droppedYours)}</s>` : ''}</div>
         </div>
-        <div class="ax-card ax-gets">
-          <div class="ax-gets-h"><span>What the client gets</span>${counts}</div>
-          ${(o.items||[]).map(it=> lineRow(it, checked ? 'ok' : 'wait')).join('')}
-          ${dropped.map(d=> lineRow(d, 'no')).join('')}
-        </div>
-        <div class="ax-acts">
-          <a class="ax-act" ${c.phone ? `href="tel:${esc(c.phone)}"` : 'aria-disabled="true"'} aria-label="Call ${esc(c.name)}">${AX_ICON.phone}Call</a>
-          <button type="button" class="ax-act" data-update>${AX_ICON.chat}Update</button>
-          <button type="button" class="ax-act" data-receipt>${AX_ICON.receipt}Receipt</button>
+        ${items}
+        ${lock}
+        <div class="ax-foot">
+          ${pay}
+          ${finish}
+          <div class="ax-acts">
+            <a class="ax-act" ${c.phone ? `href="tel:${esc(c.phone)}"` : 'aria-disabled="true"'} aria-label="Call ${esc(c.name)}">${AX_ICON.phone}Call</a>
+            <button type="button" class="ax-act" data-update>${AX_ICON.chat}Update</button>
+            <button type="button" class="ax-act" data-receipt>${AX_ICON.share}Receipt</button>
+          </div>
         </div>
       </div>`;
   }
+  sheet.el.addEventListener('toggle', (e)=>{ if(e.target.matches && e.target.matches('[data-items]')) itemsOpen = e.target.open; }, true);
   sheet.el.addEventListener('click', async (e)=>{
     const o = myOrders.find(x=> String(x.id) === id);
     if(!o) return;
     const c = agentClients.find(x=> String(x.id) === String(o.agentClientId)) || { name:'Client' };
-    if(e.target.closest('[data-update]')){ sendClientUpdate(o, c); return; }
-    if(e.target.closest('[data-receipt]')){ shareReceipt(orderReceiptRows(o), c.name); return; }
+    if(e.target.closest('[data-update]')){ openUpdateSheet(o.id); return; }
+    if(e.target.closest('[data-receipt]')){ openReceiptSheet(o.id); return; }
+    if(e.target.closest('[data-shop]')){ openShopSheet(o.id); return; }
+    if(e.target.closest('[data-finish]')){ sheet.close(); openThankYou(o.id); return; }
     const prov = e.target.closest('[data-prov]');
     if(prov){ payState.provider = prov.dataset.prov; payState.note = null; paint(); return; }
     if(e.target.closest('[data-pay]')) payOrder(o, payState, paint);
@@ -6089,6 +7115,7 @@ function openTrackSheet(orderId){
   sheet.el.addEventListener('input', (e)=>{ if(e.target.matches('[data-pay-phone]')) payState.phone = e.target.value; });
   paint();
   ensureOrderStaffNamesLoaded().then(()=>{ if(sheet.el.isConnected) paint(); });
+  if(shopInfo == null) ensureShopInfo().then(()=>{ if(sheet.el.isConnected) paint(); });
   return sheet;
 }
 function payPanelHTML(owed, ps){
@@ -6151,17 +7178,6 @@ async function pollMomo(paymentId, attemptsLeft, ps, paint){
   }
   setTimeout(()=> pollMomo(paymentId, attemptsLeft - 1, ps, paint), 3000);
 }
-// A WhatsApp message to the client saying where their order is, in the
-// words they would use.
-function sendClientUpdate(o, c){
-  const st = orderStage(o);
-  const said = { checking:'is being checked at the shop', pay:'is confirmed', queued:'is confirmed', packing:'is being packed',
-    ready:'is packed and ready', out:'is on its way to you', done:'has been delivered', settle:'has been delivered', cancelled:'was cancelled' }[st.key] || 'is with the shop';
-  const n = (o.items||[]).length;
-  const text = `Hello ${firstWord(c.name)}, your order of ${n} item${n===1?'':'s'} (UGX ${fmtNum(orderTotal(o))}) ${said}.`;
-  const phone = String(c.phone||'').replace(/[^\d]/g, '');
-  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
-}
 function orderReceiptRows(o){
   return (o.items||[]).map(it=>{
     const amount = (Number(it.agentSellPrice)||0) * (Number(it.qty)||0);
@@ -6175,7 +7191,7 @@ function orderReceiptRows(o){
    Drawn on a canvas from the rows alone -- never from the screen -- so
    what the shop charges you has no path onto it. A PNG, because that is
    what goes into WhatsApp. */
-function drawReceiptCanvas(rows, clientName){
+function drawReceiptCanvas(rows, clientName, ref){
   const rowH = 40, headerH = 122, footerH = 90;
   const w = 640, h = headerH + rows.length*rowH + 70 + footerH;
   const canvas = document.createElement('canvas');
@@ -6188,7 +7204,7 @@ function drawReceiptCanvas(rows, clientName){
   ctx.fillStyle = '#1C2233'; ctx.font = sans(700, 22);
   ctx.fillText(myAgent.name || 'Omni-Ware', 32, 52);
   ctx.fillStyle = '#5F6980'; ctx.font = sans(600, 13);
-  ctx.fillText('Quotation', 32, 72);
+  ctx.fillText(ref != null ? `Quotation · #${ref}` : 'Quotation', 32, 72);
   ctx.textAlign = 'right';
   ctx.fillText(new Date().toLocaleDateString('en-UG', { day:'numeric', month:'short', year:'numeric' }), w-32, 52);
   ctx.fillText(`For: ${clientName || 'Client'}`, w-32, 72);
@@ -6233,21 +7249,6 @@ function downloadBlob(blob, filename){
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(()=> URL.revokeObjectURL(url), 4000);
 }
-function shareReceipt(rows, clientName){
-  if(!rows || !rows.length) return;
-  const canvas = drawReceiptCanvas(rows, clientName);
-  const filename = `quote-${String(clientName||'client').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') || 'client'}.png`;
-  canvas.toBlob(async blob=>{
-    const file = new File([blob], filename, { type: 'image/png' });
-    if(navigator.canShare && navigator.canShare({ files: [file] })){
-      try{ await navigator.share({ files: [file], title: 'Quotation', text: `Here is your quote, ${clientName}` }); return; }
-      catch(err){ if(err && err.name === 'AbortError') return; }
-    }
-    downloadBlob(blob, filename);
-    toast('Receipt downloaded');
-  }, 'image/png');
-}
-
 /* ================= CLIENTS ================= */
 let clientFilter = 'all';
 /* Where a client stands, as one coloured line and a ring: late, due,
@@ -6563,16 +7564,7 @@ function openMoneySheet(month){
           return `<button type="button" class="ax-mo ax-po" data-track="${esc(o.id)}"><span class="b"><span class="nm">${esc(c ? c.name : 'Client')}</span><span class="s">${esc(dateShort(orderDate(o)))} · ${esc(orderStage(o).title)}</span></span>
             <span class="v">${fmtSigned(e.margin + (counted ? e.bonus : 0))}${!counted && e.bonus ? `<small>+${fmtNum(e.bonus)} bonus when done</small>` : ''}</span></button>`;
         }).join('')}</div>` : `<div class="ax-empty">No orders in ${esc(monthName(key))}.</div>`}
-        ${termCardHTML()}
-        <div class="ax-card ax-acct ag-sync-card" id="ag_syncCard">
-          <span class="ax-av lg" style="background:var(--navy);color:#fff;">${esc(agentInitials())}</span>
-          <span class="b"><span class="nm">${esc(myAgent.name || '')}</span>
-            <span class="s">${esc([myAgent.phone, myAgent.email].filter(Boolean).join(' · ') || 'No phone or email on file')}</span>
-            <span class="s"><i></i><span data-sync></span></span></span>
-          <button type="button" class="btn btn-ghost" id="ag_signout_btn">${AX_ICON.out}Sign out</button>
-        </div>
       </div>`;
-    renderSyncCard();
   }
   sheet.el.addEventListener('click', (e)=>{
     const nav = e.target.closest('[data-mnav]');
@@ -6588,7 +7580,6 @@ function openMoneySheet(month){
     if(claim){ submitClaim(claim.dataset.claim, claim); return; }
     const t = e.target.closest('[data-track]');
     if(t){ openTrackSheet(t.dataset.track); return; }
-    if(e.target.closest('#ag_signout_btn')) confirmSignOut();
   });
   paint();
   if(!feedClaimsLoaded) loadMyClaims().then(()=>{ feedClaimsLoaded = true; if(sheet.el.isConnected) paint(); });
@@ -6601,10 +7592,12 @@ function openMoneySheet(month){
 function termCardHTML(){
   const term = PAYMENT_TERM_COPY[myAgent.paymentTerm];
   if(!term){
-    return `<div class="ax-card ax-term" id="ag_termCard"><span class="b"><span class="t">Ask the shop how your orders are settled.</span></span></div>`;
+    const ask = 'Ask the shop how your orders are settled';
+    return `<div class="ax-termc" id="ag_termCard"><span class="ic">${AX_ICON.cash}</span><span class="b"><span class="n">${ask}</span></span></div>`;
   }
-  return `<div class="ax-card ax-term" id="ag_termCard"><span class="ic">${term.icon}</span>
-    <span class="b"><span class="t">${esc(term.title)}</span><span class="s">Only the shop can change this.</span></span></div>`;
+  const prepay = myAgent.paymentTerm === 'prepay';
+  return `<div class="ax-termc${prepay ? ' warn' : ''}" id="ag_termCard"><span class="ic">${term.icon}</span>
+    <span class="b"><span class="n">${prepay ? 'Prepay' : 'Pay on delivery'}</span><span class="s">${esc(term.title)} · set by the shop</span></span></div>`;
 }
 // What this phone holds, and how old it is. It is the only copy when there
 // is no signal, and signing out deletes it, so it sits beside the button.

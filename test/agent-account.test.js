@@ -115,16 +115,16 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   t.check(/if\(!term\)\{[\s\S]{0,120}Ask the shop how your orders are settled/.test(card),
     'an unrecognised term is admitted, not guessed at -- inventing the wrong one is worse than saying nothing');
   // No edit affordance: it is a trust setting only an admin can change.
-  t.check(/Only the shop can change this\./.test(card),
+  t.check(/set by the shop/.test(card),
     'and the card says who can change it, so it does not read as a broken control');
   t.check(!/<(button|input|select)/.test(card), 'with nothing on it to tap');
 }
 
 /* ---------- 4. what the sheet shows about you ------------------------ */
 {
-  t.check(/\[myAgent\.phone, myAgent\.email\]\.filter\(Boolean\)\.join\(/.test(code),
-    'phone and email are both shown -- it was `phone || email`, which hid whichever came second');
-  t.check(/No phone or email on file/.test(code), 'and an agent with neither is told so');
+  const you = extractFunction(src, 'openProfileSheet', 'agent.html');
+  t.check(/item\('phone', 'Phone', esc\(myAgent\.phone \|\| '—'\)\)/.test(you) && /item\('chat', 'Email', esc\(myAgent\.email \|\| '—'\)\)/.test(you),
+    'phone and email each get a row of their own -- it was `phone || email`, which hid whichever came second');
 }
 
 /* ---------- 5. the sync line, and why it sits beside sign-out -------- */
@@ -147,7 +147,7 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
  * not reversible until you have a connection again.
  */
 {
-  t.check(/if\(e\.target\.closest\('#ag_signout_btn'\)\) confirmSignOut\(\);/.test(code),
+  t.check(/if\(e\.target\.closest\('#ag_signout_btn'\)\)\{ confirmSignOut\(\); return; \}/.test(code),
     'the sign-out button opens a confirmation instead of signing out');
   t.check(/function confirmSignOut\(\)/.test(code), 'which exists');
   t.check(/signOutAndReload\(\)/.test(code) && /id="ag_signout_confirm"/.test(code),
@@ -161,9 +161,9 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
     'sign-out still clears the snapshot -- the confirmation is the guard, not a change of behaviour');
 }
 
-/* ---------- 7. the foot of the Money sheet is ordered by what it is for */
+/* ---------- 7. the You page is ordered by what it is for -------------- */
 {
-  const money = extractFunction(src, 'openMoneySheet', 'agent.html');
+  const money = extractFunction(src, 'openProfileSheet', 'agent.html');
   const iTerm = money.indexOf('termCardHTML()'), iSync = money.indexOf('id="ag_syncCard"'), iOut = money.indexOf('id="ag_signout_btn"');
   t.check(iTerm > 0 && iTerm < iSync && iSync < iOut,
     'the terms you work on, then who you are and what this phone holds, then the way out');

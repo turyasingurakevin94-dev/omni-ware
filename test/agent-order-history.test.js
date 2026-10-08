@@ -123,8 +123,8 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
     'and sorts them into Sent, Packing and Out by the same orderStage the track reads');
   const live = extractFunction(src, 'liveOrders', 'agent.html');
   t.check(/!o\.voided && o\.status !== 'completed'/.test(live), 'a live order is any not voided and not finished');
-  t.check(/if\(list\.length === 1\)\{ openTrackSheet\(list\[0\]\.o\.id\); return; \}/.test(code),
-    'a tile holding one order opens it straight away; more than one opens the short list');
+  t.check(/if\(key !== 'needs'\)\{ openStageSheet\(key\); return; \}/.test(code),
+    'every stage tile opens its own page -- the orders in it and where each one is -- even with only one in it');
 }
 
 /* ---------- 4. finding an older order ------------------------------- */

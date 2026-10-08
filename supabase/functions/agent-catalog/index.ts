@@ -424,6 +424,31 @@ Deno.serve(async (req) => {
       return json({ ok: true, items });
     }
 
+    if (action === "shop") {
+      // How an agent reaches the shop: its name, phone and address, as the
+      // shop typed them for its own receipts (Settings -> receipt details).
+      // Agents have no read on app_settings (see promotions below), and
+      // the rest of presets -- discounts, price rules -- is not theirs to
+      // see, so only these three are handed over. Empty strings when the
+      // shop has not filled them in; the app then hides its Shop buttons
+      // rather than dial nothing.
+      const [{ data: settingsRow, error: settingsErr }, { data: shopRow }] = await Promise.all([
+        admin.from("app_settings").select("presets").eq("shop_id", shopId).maybeSingle(),
+        admin.from("shops").select("name").eq("id", shopId).maybeSingle(),
+      ]);
+      if (settingsErr) return json({ error: settingsErr.message, stage: "settings_lookup" }, 500);
+      const presets = settingsRow?.presets || {};
+      const str = (v: unknown) => (v == null ? "" : String(v).trim());
+      return json({
+        ok: true,
+        shop: {
+          name: str(presets.shopLegalName) || str(shopRow?.name),
+          phone: str(presets.shopPhone) || str(presets.waPhone),
+          address: str(presets.shopAddress),
+        },
+      });
+    }
+
     if (action === "promotions") {
       // clusterWaitDays travels with every response (even an empty one) so
       // the frontend can explain, for any cluster item, exactly how many

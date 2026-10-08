@@ -143,8 +143,10 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
  */
 {
   t.check(!/ag-quick-actions|ag-qa-label/.test(src), 'no quick-action menu anywhere');
-  t.check(/getElementById\('ag_meBtn'\)\.addEventListener\('click', \(\)=> openMoneySheet\(\)\)/.test(code),
-    'the initials open the Money sheet');
+  t.check(/getElementById\('ag_meBtn'\)\.addEventListener\('click', \(\)=> openProfileSheet\(\)\)/.test(code),
+    'the initials open you: account, shop and this phone');
+  t.check(/getElementById\('ag_moneyBtn'\)\.addEventListener\('click', \(\)=> openMoneySheet\(\)\)/.test(code),
+    'and the figure beside the ring opens the money');
   t.check(/getElementById\('ag_ringBtn'\)\.addEventListener\('click', \(\)=> openGoalSheet\(\)\)/.test(code),
     'the ring is the goal, so it opens the goal');
 }
@@ -155,7 +157,7 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
  * initials, and it opens the Money sheet -- whose foot is the account.
  */
 {
-  t.check(/id="ag_meBtn" aria-label="Your money and account"/.test(src),
+  t.check(/id="ag_meBtn" aria-label="You, your shop and this phone"/.test(src),
     'it says what it opens -- its only content is an initial, which a screen reader reads as a letter');
   const av = (/\.ax-me\{([^}]*)\}/.exec(src) || ['',''])[1];
   const w = /width:(\d+)px/.exec(av), h = /height:(\d+)px/.exec(av);
@@ -166,7 +168,7 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   t.check(/function agentInitials\(\)/.test(code), 'the initials are computed once');
   t.check(/document\.getElementById\('ag_meBtn'\)\.textContent = agentInitials\(\);/.test(code),
     'and written every time Today draws');
-  t.check(/esc\(agentInitials\(\)\)/.test(extractFunction(src, 'openMoneySheet', 'agent.html')),
+  t.check(/esc\(agentInitials\(\)\)/.test(extractFunction(src, 'openProfileSheet', 'agent.html')),
     'the account card uses the same helper, so the two cannot disagree');
 
   const initialsFor = (name) => {

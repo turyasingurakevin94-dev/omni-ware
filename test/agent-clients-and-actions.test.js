@@ -57,7 +57,7 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   const myAgent = { paymentTerm: 'prepay' };
   try {
     st = compileScope(['const orderStaffNames = new Map();',
-      ...['agentOrderTerms', 'orderShopChecked', 'staffName', 'orderOwedAmount', 'orderStage'].map((n) => extractFunction(src, n, 'agent.html'))],
+      ...['agentOrderTerms', 'orderShopChecked', 'supplierLineTerms', 'lineCheck', 'orderCheckCount', 'staffName', 'orderOwedAmount', 'orderStage'].map((n) => extractFunction(src, n, 'agent.html'))],
       { myAgent, fmtNum: (n) => String(n) }, ['orderStage', 'agentOrderTerms']);
   } catch (e) { err = e; }
   t.check(!!st, `orderStage compiles${err ? ` (${err.message})` : ''}`);

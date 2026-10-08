@@ -39,9 +39,10 @@ const money = extractFunction(src, 'openMoneySheet', 'agent.html');
  */
 {
   const at = (re) => { const m = re.exec(money); return m ? m.index : -1; };
-  const seq = [at(/class="ax-big"/), at(/class="ax-bars"/), at(/claimMonths\.map/), at(/\$\{standing\}/), at(/sortedOrders\.slice\(0, 12\)/), at(/termCardHTML\(\)/)];
+  const seq = [at(/class="ax-big"/), at(/class="ax-bars"/), at(/claimMonths\.map/), at(/\$\{standing\}/), at(/sortedOrders\.slice\(0, 12\)/)];
   t.check(seq.every((x, i) => x > 0 && (i === 0 || x > seq[i - 1])),
-    `the figure, the chart, claims, standing, the month's orders, then the account (${seq.join(' -> ')})`);
+    `the figure, the chart, claims, standing, then the month's orders (${seq.join(' -> ')})`);
+  t.check(!/termCardHTML\(\)|ag_signout_btn/.test(money), 'the account lives on the You page now, not under the money');
 }
 
 /* ---------- 2. the chart carries figures ---------------------------- */
