@@ -731,7 +731,10 @@ const S = compileScope([
     'phone: no row open until tapped; desk: the first open move; the owner\'s own pick on both');
 
   /* (m) THE DEAD STOCK IS VALUED AS THE INVENTORY REGISTER VALUES IT. */
-  t.check(/inventoryLineFor\(pts\.product, pts\.variantIdx\)/.test(read), 'a dead line\'s value is the Inventory register\'s (inventoryLineFor)');
+  /* Through the Manager's one dead-stock reader (mgrDeadStockLines), so
+     the Brief, the health check, the Simulator and Targets share it. */
+  t.check(/mgrDeadStockLines\(today\)/.test(read) && /inventoryLineFor\(pts\.product, pts\.variantIdx\)/.test(extractFunction(src, 'mgrDeadStockLines', 'index.html')),
+    'a dead line\'s value is the Inventory register\'s (inventoryLineFor, through mgrDeadStockLines)');
 }
 
 /* ---------- 20. dead stock says what it counted (Q43) ------------------- */
