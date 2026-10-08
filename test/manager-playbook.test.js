@@ -227,8 +227,14 @@ const base = {
       const updates = [], inserts = [], toasts = [];
       const s = compileScope([
         extractFunction(src, 'managerPlayStatus', 'index.html'),
+        extractFunction(src, 'managerPlayStatusWrite', 'index.html'),
         extractFunction(src, 'managerRetireDuplicates', 'index.html'),
         extractFunction(src, 'managerAddOwnPlay', 'index.html'),
+        extractFunction(src, 'managerAddOwnPlayWrite', 'index.html'),
+        /* one playbook write at a time, and the stamp both writers take */
+        extractDeclaration(src, 'MGR_PLAY_WRITE', 'index.html'),
+        extractFunction(src, 'managerPlayStamp', 'index.html'),
+        extractFunction(src, 'managerPlayApplyStamp', 'index.html'),
         extractDeclaration(src, 'MANAGER_PROBLEM_METRICS', 'index.html'),
         extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
         extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
@@ -241,12 +247,17 @@ const base = {
         extractFunction(src, 'managerPlanText', 'index.html'),
         'function names(){ return { managerPlayStatus, managerAddOwnPlay }; }',
       ], { ...base, toast: (m) => toasts.push(m), renderManager: () => {},
-        managerPlaybook: async () => over.book || { running: [{ id: 1, name: 'Deposit before delivery' }], proposed: [] },
+        booksStartDate: () => over.booksStart || '2026-01-01',
+        ...(over.env || {}),
+        /* The playbook as the slots see it: a book handed in, or -- for a
+           double tap -- the rows written so far, read back as running. */
+        managerPlaybook: async () => (over.live ? { running: [...over.live.running, ...inserts.filter((r) => r.status === 'running').map((r) => r.body)], proposed: [] }
+          : over.book || { running: [{ id: 1, name: 'Deposit before delivery' }], proposed: [] }),
         sb: { from: () => ({
           select: () => ({ eq: () => ({ eq: () => ({ single: () => Promise.resolve({
-            data: { body: { name: 'Charge for cutting', treats: 'margin' } } }) }) }) }),
+            data: { body: over.body ? JSON.parse(JSON.stringify(over.body)) : { name: 'Charge for cutting', treats: 'margin' } } }) }) }) }),
           update: (patch) => { updates.push(patch); return { eq: () => ({ eq: () => Promise.resolve(over.updateError || { error: null }) }) }; },
-          insert: (row) => { inserts.push(row); return Promise.resolve(over.insertError || { error: null }); },
+          insert: (row) => { inserts.push(row); return new Promise((res) => setTimeout(() => res(over.insertError || { error: null }), 5)); },
         }) },
       }, ['names']).names();
       return { s, updates, inserts, toasts };
@@ -342,6 +353,58 @@ const base = {
     const odd = mk({ book: { running: [], proposed: [] } });
     await odd.s.managerAddOwnPlay('Moon dance', 'x', { treats: 'vibes', weeks: 40 });
     same([odd.inserts[0].body.treats, 'weeks' in odd.inserts[0].body], ['other', false], 'a problem or a span outside the rules is not kept');
+
+    /* TWO QUICK TAPS, ONE PLAY (review P4). Two running, the owner taps
+       "Start the play" twice before the first save answers: both used to
+       read two running, both passed the slot check, and four ran. The
+       second write is refused while the first is in flight -- exactly one
+       running row is written -- and a third tap after it lands is refused
+       as already running. */
+    const dbl = mk({ live: { running: [{ id: 126, name: 'Weekly chase' }, { id: 127, name: 'Price steel' }] } });
+    const plan = { status: 'running', treats: 'growth', weeks: 4 };
+    const [t1, t2] = await Promise.all([dbl.s.managerAddOwnPlay('Saturday delivery to builders’ sites', 'deliver', plan),
+      dbl.s.managerAddOwnPlay('Saturday delivery to builders’ sites', 'deliver', plan)]);
+    same([t1.ok, t2.ok, t2.reason, dbl.inserts.filter((r) => r.status === 'running').length], [true, false, 'busy', 1],
+      'two taps together write exactly one running play');
+    t.check(dbl.toasts.some((m) => /Still saving the last change to the playbook/.test(m)), 'and the second tap is told why');
+    const t3 = await dbl.s.managerAddOwnPlay('Saturday delivery to builders’ sites!', 'deliver', plan);
+    same([t3.ok, t3.reason, dbl.inserts.length], [false, 'already running', 1], 'a play already running under that name is not started again');
+    const ps = mk({});
+    const [p1, p2] = await Promise.all([ps.s.managerPlayStatus(5, 'running'), ps.s.managerPlayStatus(5, 'running')]);
+    same([p1.ok, p2.ok, ps.updates.length], [true, false, 1], 'and a proposal tapped Start twice is switched on once');
+
+    /* A RE-RUN OF THE MEETING'S RECIPE stays the meeting's, and the toast
+       does not call it the shop's own. */
+    const rr = mk({ book: { running: [], proposed: [] } });
+    await rr.s.managerAddOwnPlay('Deposit cash twice a week', 'x', { status: 'running', treats: 'cash', weeks: 4, source: 'manager' });
+    eq(rr.inserts[0].body.source, 'manager', 'a re-run of a meeting recipe keeps its source');
+    t.check(rr.toasts.some((m) => /^Running again — the meeting reads it as running/.test(m)) && !rr.toasts.some((m) => /shop's own/.test(m)),
+      'and the toast says it is running again, not that it is the shop’s own');
+
+    /* A FLOW IS STAMPED THE DAY IT STARTS (review P4: the designer's
+       figure and the board's before are one number). Sales, 4 weeks,
+       started 29 Aug: the 28 days before, 1-28 Aug, sold 28,000,000, a
+       week's worth = 28,000,000 x 7 / 28 = 7,000,000. Its stop rule,
+       written as "no better than where it starts", is held to that same
+       7,000,000. */
+    const salesM = { anInvoicesInRange: (f, to) => (f === '2026-08-01' && to === '2026-08-28' ? [{ total: 28000000 }] : []),
+      anOverallTotals: (l) => ({ sales: l.reduce((n, q) => n + q.total, 0), profit: 0, count: l.length }) };
+    const fl = mk({ book: { running: [], proposed: [] }, env: salesM });
+    await fl.s.managerAddOwnPlay('Saturday delivery', 'deliver', { status: 'running', treats: 'growth', weeks: 4,
+      stop: { threshold: 'sales no better than where it starts', by_week: 2, value: 6900000, when: 'atmost', vs: 'before' }, sized: '+1.2m a week if it reaches your aim' });
+    const fb = fl.inserts[0].body;
+    same([fb.baseline, fb.baselineFrom, fb.baselineTo], [7000000, '2026-08-01', '2026-08-28'], 'a sales play stamps a week’s worth of the 28 days before it started');
+    same([fb.stop.value, fb.stop.when, fb.stop.vs], [7000000, 'atmost', 'before'], 'and its stop rule is held to that same figure');
+    eq(fb.sized, '+1.2m a week if it reaches your aim', 'what the designer said it would add is kept with it');
+    const fs = mk({ env: salesM,
+      body: { name: 'Saturday delivery', treats: 'growth', weeks: 4, stop: { threshold: 'x', byWeek: 2, vs: 'before', when: 'atmost' } } });
+    await fs.s.managerPlayStatus(5, 'running');
+    same([fs.updates[0].body.baseline, fs.updates[0].body.stop.value], [7000000, 7000000], 'a queued play started from the board is stamped and held to its stamp the same way');
+    const short = mk({ booksStart: '2026-08-10', env: salesM,
+      body: { name: 'Saturday delivery', treats: 'growth', weeks: 4, stop: { threshold: 'x', byWeek: 2, vs: 'before', when: 'atmost', value: 5 } } });
+    await short.s.managerPlayStatus(5, 'running');
+    same(['baseline' in short.updates[0].body, 'value' in short.updates[0].body.stop], [false, false],
+      'books that do not reach back the span stamp nothing, and the rule is left unchecked rather than held to a stale figure');
   }
 
   /* ---------- 5. the mind is handed the book ------------------------- */
