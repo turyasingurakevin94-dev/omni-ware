@@ -573,5 +573,78 @@ function scope(over) {
   const snapFor = extractFunction(src, 'mgrPlaysSnapFor', 'index.html');
   t.check(/cur\.waiters\[who\] = then/.test(snapFor) && /Date\.now\(\) - cur\.at < 60000/.test(snapFor) && /\.catch\(e=> land\(null/.test(snapFor),
     'the snapshot read repaints whoever painted last, and a failure is not kept for the day');
+  /* ---------- 11. Q38: a meeting play's aim and stop as figures ----------
+     From the [plan:] block through the contract's whitelist
+     (managerPlayFields) and the playbook's view to the board: odds counted
+     from the aim (Q4), the stop rule checked from its figure. A play with
+     no figure keeps the k-of-n verdict fallback, said as such. */
+  {
+    const OWED = { '2026-09-06': 110950363, '2026-09-13': 107000000, '2026-09-20': 116000000, '2026-09-27': 141000000, '2026-10-04': 99000000 };
+    const W12 = {};
+    for (let i = 0; i < 12; i += 1) W12[shift(TODAY, -7 * (i + 1)) + '|' + shift(TODAY, -7 * i - 1)] = (i + 1) * 10e6;
+    const METRICS = {
+      growth: { label: 'sales', unit: 'money', kind: 'flow', direction: 'up', measure: (f, to) => W12[f + '|' + to] },
+      debt: { label: 'money owed to you', unit: 'money', kind: 'level', direction: 'down', measure: () => 0 },
+      margin: { label: 'the share kept', unit: 'pct', kind: 'flow', direction: 'up', measure: () => null },
+    };
+    const fields = compileScope([extractFunction(src, 'managerPlayFields', 'index.html'), extractFunction(src, 'managerPlanText', 'index.html'),
+      extractDeclaration(src, 'MANAGER_DEPTS', 'index.html')], { MANAGER_PROBLEM_METRICS: METRICS }, ['managerPlayFields']).managerPlayFields;
+    /* What managerPlaybook hands the screen: the saved body's keys. */
+    const viewOf = (id, raw, extra) => { const b = { name: raw.name, treats: raw.treats, weeks: raw.weeks, ...fields(raw) };
+      return { id, name: b.name, treats: b.treats, weeks: b.weeks, ...['stop', 'aimValue'].reduce((o, k) => (b[k] != null ? { ...o, [k]: b[k] } : o), {}), ...extra }; };
+    const Q = scope({ MANAGER_PROBLEM_METRICS: METRICS, receivablesAsAt: (dd) => OWED[dd] });
+    const promo = viewOf(21, { name: 'Weekend promo', treats: 'growth', weeks: 4, aim: { value: 90e6, unit: 'UGX' } });
+    const old = viewOf(22, { name: 'Bundle the fastener', treats: 'growth', weeks: 4, hypothesis: { if: 'a', then: 'b', target: 'sales to 90m a week' } });
+    eq([promo.aimValue, old.aimValue], [90000000, undefined], 'the meeting’s aim is saved as a figure; an old play has none');
+    const judged = [{ id: 30, treats: 'growth', verdict: 'worked' }, { id: 31, treats: 'growth', verdict: 'didnt' }];
+    const board = Q.mgrPlayBoard({ running: [], proposed: [promo, old], judged }, new Map(), TODAY, []);
+    /* 12 finished weeks read 10m … 120m; 90m or more in 4 of them. */
+    eq(board.proposed[0].odds, { k: 4, n: 12, of: 12, basis: 'aim', aim: 90000000, treats: 'growth' }, 'EXACT ODDS (Q4): weeks of the last 12 at its aim of 90m or better — 4 of 12, the figure and the measure carried for the card to name');
+    eq(board.proposed[1].odds, { k: 1, n: 2, basis: 'verdicts' }, 'the play with words only keeps the fallback: your verdicts on sales plays, 1 of 2');
+    const H = compileScope(['mgrPlayOddsHTML', 'mgrPlayFig', 'mgrPlayCellFig'].map((f) => extractFunction(src, f, 'index.html')),
+      { esc, MANAGER_PROBLEM_METRICS: METRICS, fmtUGX: (n) => Number(n).toLocaleString('en-US') + ' UGX' }, ['mgrPlayOddsHTML']).mgrPlayOddsHTML;
+    /* WAS: "weeks of the last 12 at its aim or better" -- the figure
+       counted against never appeared, and the words beside it may read a
+       rise ("+150,000 a week"). NOW: the measure and the figure, named. */
+    eq(H(board.proposed[0].odds, 'growth'), '4 of 12<small class="mgr-pl-ob" title="90,000,000 UGX">weeks of the last 12 with sales at 90m or more</small>',
+      'and each says what it counted: weeks with sales at the aim’s own figure, 90m, or more — the full figure in its title');
+    eq(H({ k: 2, n: 12, of: 12, basis: 'aim', aim: 50e6, treats: 'debt' }, 'debt'),
+      '2 of 12<small class="mgr-pl-ob" title="50,000,000 UGX">weeks of the last 12 with money owed to you at 50m or less</small>',
+      'a measure that should fall counts the weeks at the figure or less');
+    eq(H({ k: 5, n: 12, of: 12, basis: 'aim', aim: 10, treats: 'margin' }, 'margin'),
+      '5 of 12<small class="mgr-pl-ob">weeks of the last 12 with the share kept at 10.0% or more</small>', 'a share is named in points, no money title');
+    t.check(/^1 of 2<small class="mgr-pl-ob">your verdicts on growth plays<\/small>$/.test(H(board.proposed[1].odds, 'growth')),
+      'or the owner’s own verdicts, labelled as such');
+
+    /* THE STOP AS A FIGURE: money owed above 100m, read by week 3. Week 3
+       (21-27 Sep) ends on 141m > 100m -- met; the rule came from the
+       figure ('kept'), not from reading words. */
+    const chase = viewOf(23, { name: 'Friday chase', treats: 'debt', weeks: 6, stop: { value: 100e6, when: 'above', by_week: 3 } },
+      { started_on: '2026-09-07' });
+    eq(chase.stop, { byWeek: 3, value: 100000000, when: 'above' }, 'the stop is saved as figure, direction and week');
+    eq(Q.mgrPlayStopCheck(chase, TODAY, []), { rule: { value: 100000000, when: 'above', byWeek: 3, from: 'kept' }, met: true, week: 3, value: 141000000 },
+      'EXACT STOP RULE: week 3 read 141m, above 100m — met, from the figure itself');
+    const later = viewOf(24, { name: 'Friday chase', treats: 'debt', weeks: 6, stop: { value: 100e6, when: 'above', by_week: 4 } }, { started_on: '2026-09-07' });
+    eq(Q.mgrPlayStopCheck(later, TODAY, []).met, false, 'by week 4 it read 99m: not met');
+    /* Words a reader cannot parse stay unchecked; with the figure beside
+       them, the figure is what is checked. */
+    const worded = viewOf(25, { name: 'Price ladder', treats: 'margin', weeks: 4, stop: { threshold: 'if the share kept slips', value: 8, when: 'below', by_week: 2 } },
+      { started_on: '2026-09-21' });
+    eq(Q.mgrPlayStopRule(worded), { value: 8, when: 'below', byWeek: 2, from: 'kept' }, 'words that name no figure, with the figure beside them: the figure is checked');
+    eq(Q.mgrPlayStopRule(viewOf(26, { name: 'x', treats: 'margin', stop: { threshold: 'if the share kept slips', by_week: 2 } })), null,
+      'and without it, nothing is checked — shown, never guessed');
+
+    /* The running card says a figure-only rule in words built from it. */
+    const R = compileScope([block, ...['mgrShortUGX', 'mgrDept', 'anShiftDate'].map((n) => extractFunction(src, n, 'index.html')),
+      ...['MANAGER_PROBLEMS', 'MGR_DEPTS', 'MGR_WHOLE_SHOP'].map((n) => extractDeclaration(src, n, 'index.html'))], {
+      esc, MANAGER_PROBLEM_METRICS: METRICS, fmtUGX: (n) => String(n), localStorage: null, todayISO: () => TODAY,
+      data: { products: [], agents: [], staff: [] }, Map, Set, Math, Number, String, Array, Object, JSON, Date,
+    }, ['mgrPlayRunningHTML']);
+    const card = R.mgrPlayRunningHTML({ p: { ...chase, clock: null }, r: null, conflicts: [], stop: Q.mgrPlayStopCheck(chase, TODAY, []), replaceWith: null },
+      { running: [], today: TODAY });
+    t.check(/<dt>Stop if<\/dt><dd class="mgr-pl-words">above 100m by week 3 · read 141m<\/dd>/.test(card),
+      `a stop given only as a figure reads "above 100m by week 3", with what the week read (${(card.match(/Stop if<\/dt><dd[^>]*>[^<]*/) || [''])[0]})`);
+    t.check(/stop rule is met: week 3 read 141m, above 100m/.test(card), 'and the card says the rule is met, in the same figures');
+  }
   process.exit(t.done() ? 1 : 0);
 }).catch((e) => { console.error(e); process.exit(1); });
