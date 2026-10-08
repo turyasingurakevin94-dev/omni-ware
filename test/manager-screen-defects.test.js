@@ -89,8 +89,11 @@ const brief = extractFunction(src, 'mgrPaintBrief', 'index.html');
      and quietly restyled another. */
   t.check(/\.mgr-move-state\{[^}]*display:block/.test(src),
     'the new class is a block');
-  t.check(/\.mgr-state\{[^}]*margin-left:auto/.test(src),
-    'and .mgr-state keeps its auto margin, because the playbook chip still wants it');
+  /* WAS: .mgr-state kept its auto margin for the playbook's "since"
+     chip. NOW: the Playbook draws its own cards and no screen emits
+     .mgr-state, so Phase 3 deleted the dead rule. */
+  t.check(!/class="[^"]*\bmgr-state\b/.test(src) && !/\.mgr-state\{/.test(src),
+    'and .mgr-state, which nothing wears any more, is gone from the stylesheet');
   t.check(/\.mgr-move-state\{[^}]*max-width:\d+ch/.test(src),
     'with a measure on it — it is a sentence, and a sentence needs one');
 }

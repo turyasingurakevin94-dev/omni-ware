@@ -194,7 +194,13 @@ const H = compileScope([
 /* ---------- 5. the facts are read, not invented ----------------------- */
 {
   const facts = extractFunction(src, 'mgrHealthFactsBuild', 'index.html');
-  t.check(/collectableDebts\(\)/.test(facts) && /ageDays > 60/.test(facts), 'debt over 60 days is the Debtors\' own reading');
+  /* WAS: collectableDebts() with ageDays > 60 -- the WHOLE balance of any
+     customer whose oldest charge was over 60 days (63.41m on the harness
+     book, while the Brief's Cash to free read 38.05m).
+     NOW: only the part of each balance over 60 days old, charge by charge
+     (mgrChargesOver60 over customerOpenCharges), the Brief's own rule. */
+  t.check(/collectableDebts\(\)/.test(facts) && /mgrChargesOver60\(customerOpenCharges\(cu\), today\)/.test(facts)
+    && !/ageDays > 60/.test(facts), 'debt over 60 days is the part of each balance over 60 days old, charge by charge');
   t.check(/dashInventoryHealth\(\)/.test(facts), 'dead stock is dashInventoryHealth\'s — the quiet window, as the target uses');
   t.check(/mgrDaysOfStock\(today\)/.test(facts) && /mgrDebtorDays\(today\)/.test(facts), 'days of stock and debtor days by the approved definitions');
   t.check(/anOverallTotals\(anInvoicesInRange\(anShiftDate\(today, -29\), today\)\)/.test(facts),
@@ -267,6 +273,49 @@ const H = compileScope([
      real pass, not a gap. */
   const paid = E.mgrHealthChecks(null, { debtorDays: { days: null, receivables: 0, creditSales: 900000, creditPerDay: 10000, windowDays: 90 } });
   eq(paid.checks.find((c) => c.id === 'debt_60').pass, true, 'credit sold and all of it paid: nothing past 60 days is known, and passes');
+}
+
+/* ---------- 7. debt past 60 days is counted charge by charge ---------- */
+{
+  /* Kato: charged 1,000,000 on 1 July (98 days before 7 October) and
+     800,000 on 20 September (17 days), paid 600,000 on 10 August. The
+     payment settles the oldest first, so 400,000 of July's charge is
+     still open and over 60 days; September's 800,000 is young. Kato's
+     balance is 1,200,000 and his oldest open charge is 98 days old -- the
+     old reading counted all 1,200,000 as past 60 days; the part that is
+     is 400,000.
+     Exactly 60 days (8 August) is not MORE than 60: not counted. An
+     undated charge has no age: not counted. */
+  const S = compileScope([fn('mgrChargesOver60'), fn('customerOpenCharges'), fn('mgrBriefOver60'), fn('daysBetweenISO')],
+    { todayISO: () => TODAY, promisesFor: () => [] }, ['mgrChargesOver60', 'customerOpenCharges', 'mgrBriefOver60']);
+  const kato = { id: 1, debt: 1200000, debtLog: [
+    { id: 1, type: 'charge', date: '2026-07-01', amount: 1000000 },
+    { id: 2, type: 'payment', date: '2026-08-10', amount: 600000 },
+    { id: 3, type: 'charge', date: '2026-09-20', amount: 800000 },
+  ] };
+  const ch = S.customerOpenCharges(kato);
+  eq(S.mgrChargesOver60(ch, TODAY), { amount: 400000, oldest: '2026-07-01' }, 'Kato: 400,000 of 1,200,000 is over 60 days old, since 1 July');
+  eq(S.mgrChargesOver60(ch, TODAY).amount, S.mgrBriefOver60(ch, TODAY), 'the same figure the Brief\'s Cash to free counts');
+  const edge = [{ date: '2026-08-08', remaining: 500000 }, { date: '', remaining: 300000 }, { date: '2026-08-07', remaining: 200000 }];
+  eq(S.mgrChargesOver60(edge, TODAY), { amount: 200000, oldest: '2026-08-07' }, 'exactly 60 days and undated charges are not counted; 61 days is');
+  eq(S.mgrChargesOver60([], TODAY), { amount: 0, oldest: null }, 'nothing open: nothing past 60 days');
+}
+
+/* ---------- the snapshot says which debt60 it kept ------------------ */
+{
+  /* levels.debt60 changed meaning in Phase 3 (whole balance of an old
+     customer -> the over-60 part charge by charge). A trend read across
+     the two would invent a drop, so each snapshot marks its basis. */
+  const S = compileScope([fn('mgrSnapshotBody')], {
+    todayISO: () => TODAY,
+    mgrHealthFacts: () => ({ debt60: { amount: 400000, count: 1, total: 1200000, oldest: null } }),
+    mgrHealthChecks: () => ({ byDept: {}, checks: [], score: null, known: 0, passed: 0 }),
+  }, ['mgrSnapshotBody']);
+  const b = S.mgrSnapshotBody({});
+  eq([b.levels.debt60, b.levels.debt60Basis], [400000, 'charge'], 'the over-60 part is kept, marked as counted charge by charge');
+  const none = compileScope([fn('mgrSnapshotBody')], { todayISO: () => TODAY, mgrHealthFacts: () => ({}),
+    mgrHealthChecks: () => ({ byDept: {}, checks: [], score: null, known: 0, passed: 0 }) }, ['mgrSnapshotBody']).mgrSnapshotBody({});
+  eq([none.levels.debt60, none.levels.debt60Basis], [null, null], 'and no figure carries no basis');
 }
 
 process.exit(t.done() ? 1 : 0);

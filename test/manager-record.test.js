@@ -200,21 +200,18 @@ const src = read('index.html');
     'the record lays out on .ow-grid + .ow-side, the pair every other console screen uses');
 }
 
-/* ---------- 3. a heading is not a field label ---------- */
+/* ---------- 3. a heading is not a field label ----------
+   WAS: the .mgr-sec-title rule was pinned (15px, not uppercase, not a
+   form label's treatment).
+   NOW: no screen emits .mgr-sec-title any more -- every Manager section
+   is headed by the console panel's own title, .ow-pan-t -- and Phase 3
+   deleted the dead rule. What the pin protected still holds: the
+   heading is the console's, never a form label's. */
 {
-  const rule = (/\.mgr-sec-title\{[^}]*\}/.exec(src) || [''])[0];
-  t.check(!/text-transform:uppercase/.test(rule),
-    'section headings are no longer shouted');
-  t.check(!/letter-spacing:\.0[45]em/.test(rule),
-    'nor tracked out like a caption');
-  const size = (/font-size:(\d+(?:\.\d+)?)px/.exec(rule) || [0, 0])[1];
-  t.check(Number(size) >= 15, `and they are bigger than the body text they head (${size}px)`);
-
-  /* The comparison that made this worth doing. If these two ever read
-     the same again, the heading has become a form label again. */
-  const label = (/\.field label\{[^}]*\}/.exec(src) || [''])[0];
-  t.check(!!label && rule.replace(/\s/g, '') !== label.replace(/\s/g, '').replace('.field label', '.mgr-sec-title'),
-    'and they no longer wear the treatment a form label wears');
+  t.check(!/\.mgr-sec-title\{/.test(src) && !/class="[^"]*\bmgr-sec-title\b/.test(src),
+    'the retired .mgr-sec-title is neither emitted nor styled');
+  t.check(/<span class="ow-pan-t">/.test(src), 'the Manager\'s sections are headed by the console panel title');
+  t.check(!/<label[^>]*class="[^"]*ow-pan-t/.test(src), 'and never by a form label');
 }
 
 /* ---------- 4. no screen has a blank title bar on the phone ---------- */
