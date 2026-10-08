@@ -257,9 +257,15 @@ const row = (body) => ({ date: '2026-08-24', body: { from: '2026-08-24', to: '20
      Targets section's own state (mgrTgTodayLine(x).ok) -- a first day set
      to land short is "on course" against a road it has not started on,
      and is not On track. Still at most two. */
+  /* And (second review): a target called nothing yet (its first day, or
+     not known) wears no danger edge and comes after Off track and At
+     risk -- tone '' -- and before On track. */
   t.check(/const lines = live\.map\(x=> \(\{ x, l: mgrTgTodayLine\(x\) \}\)\);/.test(pace)
-    && /lines\.filter\(r=> !r\.l\.ok\)\.concat\(lines\.filter\(r=> r\.l\.ok\)\)\.slice\(0, 2\)/.test(pace),
-    'not On track first, and at most two — a dashboard that always speaks teaches the eye to skip it');
+    && /const rank = \(l\)=> l\.ok \? 2 : l\.tone \? 0 : 1;/.test(pace)
+    && /\.sort\(\(a, b\)=> \(rank\(a\.l\) - rank\(b\.l\)\) \|\| \(a\.i - b\.i\)\)\.slice\(0, 2\)/.test(pace),
+    'trouble first, then what is called nothing yet, then On track, and at most two — a dashboard that always speaks teaches the eye to skip it');
+  t.check(/class="mgr-pace\$\{l\.ok \? ' ok' : l\.tone \? ' behind' : ''\}"/.test(pace),
+    'the danger edge only on a state with a tone of trouble — never on Set today');
   t.check(/if\(!live\.length\)\{ el\.innerHTML = ''; return; \}/.test(pace),
     'and silent when nothing is live');
   /* WAS: the strip wrote its own line in shillings ("the week ends at").

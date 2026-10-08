@@ -135578,11 +135578,13 @@ async function renderManagerPace(){
      deadline (mgrTgTodayLine): days as days, a margin in points, a cash
      floor by the day the committed line would break it -- never every
      figure in shillings against "the week". What is not On track by that
-     state comes first -- a first day set to land short included, which
-     is "on course" against a road it has not started on. */
+     state comes first: Off track and At risk, then one called nothing yet
+     (its first day, or not known), then On track. Only a state with a
+     tone of trouble wears the danger edge; one called nothing is plain. */
   const lines = live.map(x=> ({ x, l: mgrTgTodayLine(x) }));
-  const show = lines.filter(r=> !r.l.ok).concat(lines.filter(r=> r.l.ok)).slice(0, 2);
-  el.innerHTML = show.map(({ l })=> `<div class="mgr-pace ${l.ok ? 'ok' : 'behind'}">
+  const rank = (l)=> l.ok ? 2 : l.tone ? 0 : 1;
+  const show = lines.map((r, i)=> ({ ...r, i })).sort((a, b)=> (rank(a.l) - rank(b.l)) || (a.i - b.i)).slice(0, 2);
+  el.innerHTML = show.map(({ l })=> `<div class="mgr-pace${l.ok ? ' ok' : l.tone ? ' behind' : ''}">
       <div class="mgr-pace-line">${esc(l.text)}</div>
       <button type="button" class="btn btn-ghost mgr-pace-open">Open the Manager</button>
     </div>`).join('');
@@ -141106,17 +141108,25 @@ function mgrTgDeadlines(today){
 
 /* THE DEADLINE THE COMPOSER OPENS ON (Q41): the third on offer when its
    past periods of the same length are enough to show odds (six), else
-   the first one that has enough, else the third, as the canvas opens.
-   Fewer than three on offer: the last of them stands for the third. */
+   the first one that has enough. With odds nowhere, it opens where a
+   target can at least be sized (three periods): the third when it can,
+   else the first that can -- never on a deadline that opens disabled
+   while an earlier one could be set -- and with none sized anywhere,
+   the third, as the canvas opens. Fewer than three on offer: the last
+   of them stands for the third. */
 function mgrTgDefaultBy(metric, deadlines, today){
   const list = deadlines || [];
   if(!list.length) return 0;
   const third = Math.min(2, list.length - 1);
   if(!metric || !MANAGER_METRICS[metric]) return third;
-  const enough = (d)=>{ try { return mgrTgPeriods(metric, d.days, anShiftDate(today, -1)).values.length >= MGR_TG_MIN_ODDS; } catch(e){ return false; } };
-  if(enough(list[third])) return third;
-  const i = list.findIndex(enough);
-  return i >= 0 ? i : third;
+  const count = (d)=>{ try { return mgrTgPeriods(metric, d.days, anShiftDate(today, -1)).values.length; } catch(e){ return 0; } };
+  const n = list.map(count);
+  for(const min of [MGR_TG_MIN_ODDS, MGR_TG_MIN_CHOICES]){
+    if(n[third] >= min) return third;
+    const i = n.findIndex(k=> k >= min);
+    if(i >= 0) return i;
+  }
+  return third;
 }
 /* THE MEASURE'S OWN PAST PERIODS OF ONE LENGTH, newest first, ending on
    endISO: back to back, never overlapping, never older than the books.
@@ -141287,19 +141297,22 @@ function mgrTgState(x){
       return { key: 'risk', behind: 0, toGo: 0, share: 0, crossing: true };
     return { key: 'on', behind: 0, toGo: 0, share: 0 };
   }
-  /* Set today: nothing whole has been read yet, so it is judged by where
-     it was set to land (the composer's landing, at_this_rate) by the
-     same share rule -- short of the aim by under a third of what is still
-     to go is At risk, a third or more Off track. A target the composer
-     said would not get there is never called On track on its first day.
-     With no landing saved, or one that reaches the aim, it is On track. */
+  /* NOTHING WHOLE READ YET (its first day; a Saturday measure until its
+     first Saturday is in): it is called nothing -- 'Set today', or 'Not
+     read yet' after its first day -- never On track (the composer may
+     have said it will not get there) and never Off track (the next
+     morning judges it against the road, and a state must not flip from
+     red to green overnight with nothing changed). Where it was set to
+     land rides beside it: short and share say by how much it falls short
+     of the aim, as a share of what is still to go, for the note. */
   if(x.pace && x.pace.first){
     const toGo = Math.abs(aim - actual), land = x.pace.at_this_rate == null ? NaN : Number(x.pace.at_this_rate);
+    const key = (Number(x.pace.elapsed_days) || 0) > 0 ? 'unread' : 'set';
     if(Number.isFinite(land) && !mgrTgBetter(x.direction, land, aim)){
       const short = Math.abs(aim - land), share = toGo > 0 ? Math.min(1, short / toGo) : 1;
-      return { key: share < MGR_TG_RISK ? 'risk' : 'off', behind: 0, toGo, share, first: true, short };
+      return { key, behind: 0, toGo, share, first: true, short };
     }
-    return { key: 'on', behind: 0, toGo, share: 0, first: true };
+    return { key, behind: 0, toGo, share: 0, first: true };
   }
   if(!x.pace) return none;
   const toGo = Math.abs(aim - actual);
@@ -141308,8 +141321,8 @@ function mgrTgState(x){
   const share = toGo > 0 ? Math.min(1, behind / toGo) : 1;
   return { key: share < MGR_TG_RISK ? 'risk' : 'off', behind, toGo, share };
 }
-const MGR_TG_STATE_WORD = { on: 'On track', risk: 'At risk', off: 'Off track', met: 'Met', missed: 'Missed', unknown: 'Not known' };
-const MGR_TG_STATE_TONE = { on: 'good', risk: 'warn', off: 'bad', met: 'good', missed: 'bad', unknown: '' };
+const MGR_TG_STATE_WORD = { on: 'On track', risk: 'At risk', off: 'Off track', met: 'Met', missed: 'Missed', unknown: 'Not known', set: 'Set today', unread: 'Not read yet' };
+const MGR_TG_STATE_TONE = { on: 'good', risk: 'warn', off: 'bad', met: 'good', missed: 'bad', unknown: '', set: '', unread: '' };
 /* A CASH TARGET AGAINST ITS OWN DAYS, as the scoreboard read it
    (managerScoreProgress, through mgrTgFloorRead): the lowest of the
    books for the days gone and the committed line for the days ahead,
@@ -141483,7 +141496,7 @@ function mgrTgBandLine(runs){
 /* THE TODAY SCREEN'S LINE FOR A RUNNING TARGET, in the target's own unit
    and by the same state the Targets section colours it by -- for the
    pace strip on Today (renderManagerPace) to draw instead of shillings
-   and "the week". Pure: { key, ok, text }. */
+   and "the week". Pure: { key, ok, tone, text } -- tone empty for a target called nothing yet (first day, not known). */
 function mgrTgTodayLine(x){
   const u = x.unit || 'ugx', st = mgrTgState(x), brk = mgrTgBreak(x);
   const word = MGR_TG_STATE_WORD[st.key] || 'Not known';
@@ -141493,16 +141506,18 @@ function mgrTgTodayLine(x){
   let tail;
   if(brk) tail = brk.breaksOn ? `${brk.broke ? 'The books show cash under it on' : 'The committed line takes cash under it on'} ${mgrTgDay(brk.breaksOn, true)}.`
     : `The lowest on the committed line is ${mgrTgFig(u, brk.low)}${brk.partial ? `, read to ${mgrTgDay(brk.through)}` : ''}.`;
-  else if(x.pace && x.pace.first) tail = (st.short != null ? `As set it lands at ${mgrTgFig(u, x.pace.at_this_rate)}${by ? ` by ${by}` : ''} — ${mgrTgGap(u, st.short)} short. ` : '') + (x.pace.first_on
+  else if(x.pace && x.pace.first) tail = (x.pace.at_this_rate != null ? `As set it lands at ${mgrTgFig(u, x.pace.at_this_rate)}${by ? ` by ${by}` : ''}${
+      st.short != null ? ` — ${mgrTgGap(u, st.short)} short` : ''}. ` : '') + (x.pace.first_on
     ? `It moves on ${x.pace.step_day}s only — the first inside it is ${mgrTgDay(x.pace.first_on, true)}.`
-    : 'Set today — its first whole day is read tomorrow.');
+    : 'Its first whole day is read tomorrow.');
   else if(x.pace && x.pace.at_this_rate == null && x.pace.rate_from) tail = `${st.behind ? `The road has it at ${mgrTgFig(u, x.pace.expected)} — ${mgrTgGap(u, st.behind)} behind. ` : ''}Where it lands is read once ${mgrTgDay(x.pace.rate_from, true)} is in.`;
   else if(x.pace && x.pace.at_this_rate != null) tail = `${st.behind ? `The road has it at ${mgrTgFig(u, x.pace.expected)} — ${mgrTgGap(u, st.behind)} behind. ` : ''}At this rate it ends at ${mgrTgFig(u, x.pace.at_this_rate)}${by ? ` by ${by}` : ''}.`;
   else tail = 'Where it lands is not known yet.';
   /* A floor's reading is the lowest since it began, never today's cash. */
   const nowSaid = (MANAGER_METRICS[x.metric] || {}).span && /^\d{4}-\d{2}-\d{2}$/.test(String(x.from || ''))
     ? `lowest ${mgrTgFig(u, x.actual)} since ${mgrTgDay(x.from)}` : `${mgrTgFig(u, x.actual)} now`;
-  return { key: st.key, ok: st.key === 'on', text: `${word} — ${name}: ${nowSaid}. ${tail} ${left.charAt(0).toUpperCase() + left.slice(1)}.` };
+  return { key: st.key, ok: st.key === 'on', tone: MGR_TG_STATE_TONE[st.key] || '',
+    text: `${word} — ${name}: ${nowSaid}. ${tail} ${left.charAt(0).toUpperCase() + left.slice(1)}.` };
 }
 
 /* ==== A PROPOSED TARGET, DRAWN AS ITS OWN ARITHMETIC ==================
@@ -141622,7 +141637,27 @@ function mgrProposalHTML(x){
    The running targets, the finished ones and the rules, from the one
    scoreboard read (st.score) and the live plan (st.today, or the last
    meeting held). Pure: it draws nothing. */
-function mgrTgRunModel(x, plan){
+/* WHAT OUT OF THE ORDINARY SAW ON THE SAME MEASURE, for the gap column
+   of a target no move is aimed at (the canvas's "Out of the ordinary →").
+   Matched by measure only, never by a guess at why: sales to sales,
+   WhatsApp orders to WhatsApp orders, the margin to the margin. The
+   newest finding on or after the target's first day that the owner has
+   not answered yet (answered(f) says so -- the same answers the section
+   and the Brief count), or null. */
+const MGR_TG_PULSE = { sales: 'sales', wa_orders: 'wa_orders', margin_pct: 'margin' };
+function mgrTgUnusualFor(x, findings, answered){
+  const sig = x && MGR_TG_PULSE[x.metric];
+  if(!sig || !Array.isArray(findings)) return null;
+  const said = typeof answered === 'function' ? answered : ()=> false;
+  const from = String(x.from || '');
+  const hit = findings.filter(f=> f && f.metric === sig && String(f.date || '') >= from && !said(f))
+    .sort((a, b)=> String(b.date).localeCompare(String(a.date)))[0];
+  if(!hit) return null;
+  const label = (hit.sig && hit.sig.label) || (MANAGER_METRICS[x.metric] || {}).label || 'It';
+  return { key: hit.date + '|' + hit.metric, date: hit.date, dir: hit.dir, tone: hit.tone || '',
+    title: `${label} ${hit.dir === 'high' ? 'above' : 'below'} usual, ${mgrTgDay(hit.date, true)}` };
+}
+function mgrTgRunModel(x, plan, pulse){
   const m = MANAGER_METRICS[x.metric] || {};
   const state = mgrTgState(x);
   const brk = mgrTgBreak(x);
@@ -141647,7 +141682,9 @@ function mgrTgRunModel(x, plan){
      Saturdays are recorded, and how many it takes). */
   let thin = null;
   if(typeof m.ready === 'function'){ try { const rd = m.ready(); thin = rd && !rd.ok ? rd : null; } catch(e){ thin = null; } }
-  return { x, m, state, key, brk, links, planAdd, land, planLand, past, odds, oddsPlan, landsAlone, wrongWay, thin,
+  /* With no move aimed at it, what Out of the ordinary saw on its measure. */
+  const unusual = links.length || !pulse ? null : mgrTgUnusualFor(x, pulse.findings, pulse.answered);
+  return { x, m, state, key, brk, links, planAdd, land, planLand, past, odds, oddsPlan, landsAlone, wrongWay, thin, unusual,
     two: mgrTgBehindTwo(mondays) === true, track: mgrTgTrack(x, land, planLand), person: mgrTgPerson(x.owner) };
 }
 function mgrTgFinishedModel(x, moveRead){
@@ -141808,16 +141845,30 @@ function mgrTgComposeSay(c){
   const lowerOk = lower != null && !c.blocked[lowerKey] && (m.direction === 'down' || lower > 0) && !mgrTgBetter(m.direction, c.out.projected, lower);
   const tail = lowerOk ? ` I’d set ${mgrTgFig(u, lower)}${later ? `, or give it until ${later}` : ''}.`
     : later ? ` I’d give it until ${later}.` : '';
+  /* "Set it higher" only when a choice past this one can be picked: one
+     that is drawn, not blocked (a floor above today's cash), and further
+     in the measure's good direction than the aim. With none, it says why
+     there is nothing further to pick, never advice the owner cannot take. */
+  const further = ['safe', 'stretch', 'bold', 'floor'].some(k=>{
+    const v = k === 'floor' ? (c.floorOpt ? c.floorOpt.value : null) : c.choices ? c.choices[k] : null;
+    return v != null && !c.blocked[k] && v !== c.aim && mgrTgBetter(m.direction, v, c.aim);
+  });
+  const word2 = m.direction === 'down' ? 'lower' : 'higher';
+  const easy = further ? ` Set it ${word2} — a target you’d hit anyway teaches nobody anything.`
+    : m.span ? (['safe', 'stretch', 'bold', 'floor'].some(k=> c.blocked[k])
+      ? ` Every ${word2} floor on offer is above today’s cash of ${mgrTgFig(u, c.stand)}, so none can be set from today — this is the ${m.direction === 'down' ? 'lowest' : 'highest'} that can.`
+      : ` It is the ${m.direction === 'down' ? 'lowest' : 'highest'} floor on offer.`)
+    : ` It is the boldest your past periods size — they offer nothing ${word2}.`;
   if(m.span){
     const at = c.out.lowOn ? ` on ${mgrTgDay(c.out.lowOn, true)}` : '';
     if(mgrTgBetter(m.direction, c.out.projected, c.aim))
-      return `${lead}, cash stays at or above ${mgrTgFig(u, c.out.projected)} — its lowest${at} — to ${day} without doing anything new. Set it higher — a target you’d hit anyway teaches nobody anything.`;
+      return `${lead}, cash stays at or above ${mgrTgFig(u, c.out.projected)} — its lowest${at} — to ${day} without doing anything new.${easy}`;
     if(c.bridge.reached)
       return `${lead}, cash dips to ${mgrTgFig(u, c.out.projected)}${at} — ${mgrTgGap(u, c.aim - c.out.projected)} under the floor. ${closes(c.bridge.used)}`;
     return `${c.moves.length ? 'Even with every move aimed at it' : 'With no move aimed at it yet'}, cash dips to ${mgrTgFig(u, c.bridge.end)} — under ${mgrTgFig(u, c.aim)} before ${day}, ${c.out.method}.${tail}`;
   }
   if(mgrTgBetter(m.direction, c.out.projected, c.aim))
-    return `${lead} you reach ${mgrTgFig(u, c.out.projected)} by ${day} without doing anything new. Set it higher — a target you’d hit anyway teaches nobody anything.`;
+    return `${lead} you reach ${mgrTgFig(u, c.out.projected)} by ${day} without doing anything new.${easy}`;
   if(c.bridge.reached)
     return `${lead} you get to ${mgrTgFig(u, c.out.projected)} — ${mgrTgGap(u, c.aim - c.out.projected)} short. ${closes(c.bridge.used)}`;
   return `${c.moves.length ? 'Even with every move aimed at it' : 'With no move aimed at it yet'}, you land at ${mgrTgFig(u, c.bridge.end)} — short of ${mgrTgFig(u, c.aim)} by ${day}.${tail}`;
@@ -141953,7 +142004,7 @@ function mgrTgRowHTML(r){
   if(r.brk){ dn = r.brk.low < (Number(x.aim) || 0); note = `${mgrTgDay(r.brk.lowOn, true)} — ${dn ? 'under the aim' : 'above the aim'}, ${
     r.brk.lowBooks ? 'in your books' : 'on the committed line'}${r.brk.partial ? ` (the line runs to ${mgrTgDay(r.brk.through)})` : ''}`; }
   else if(x.pace && x.pace.first){
-    if(r.state.short != null) dn = r.key === 'off';
+    /* Called nothing yet, so its note is not coloured either. */
     note = x.pace.first_on ? `first ${x.pace.step_day} inside it ${mgrTgDay(x.pace.first_on)}`
       : r.state.short != null ? `${mgrTgGap(u, r.state.short)} short as set — first whole day read tomorrow`
       : r.land != null ? 'as set — first whole day read tomorrow' : 'first whole day read tomorrow';
@@ -141984,9 +142035,9 @@ function mgrTgRowHTML(r){
         : `The committed line goes under ${mgrTgFig(u, x.aim)} on ${mgrTgDay(r.brk.breaksOn, true)} if no money comes in before then.`) : `It stays at or above ${mgrTgFig(u, x.aim)}.`} The rule: on track while the books and the committed line stay at or above the floor; at risk when the committed line goes under it before the deadline, named by the day it would break; off track only once the books show cash went under it.`
     : st.key === 'unknown' ? (r.thin ? `The books cannot read it yet — ${r.thin.why}; it takes ${r.thin.min}. Until then it is not called anything.`
       : 'The books cannot read where it stands today, so it is not called anything.')
-    : st.first && st.short != null ? `${x.pace && x.pace.first_on ? `It moves on ${x.pace.step_day}s only: the first inside it is ${mgrTgDay(x.pace.first_on, true)}, read the day after. Until then` : 'Set today. The first whole day is read tomorrow; until then'} it is judged by where it was set to land: ${mgrTgFig(u, r.land)} by ${mgrTgDay(x.to)}, ${mgrTgGap(u, st.short)} short of ${mgrTgFig(u, x.aim)} — ${Math.round(st.share * 100)}% of the ${mgrTgGap(u, st.toGo)} still to go. The rule: on track when it lands at the aim; at risk short by less than a third of what is still to go; off track a third or more.`
-    : st.first && x.pace && x.pace.first_on ? `It moves on ${x.pace.step_day}s only: the first inside it is ${mgrTgDay(x.pace.first_on, true)}, read the day after. Until then it is On track${r.land != null ? `, and lands where it was set to: ${mgrTgFig(u, r.land)}` : ''}.`
-    : st.first ? `Set today. The first whole day is read tomorrow; until then it is On track${r.land != null ? `, and lands where it was set to: ${mgrTgFig(u, r.land)}` : ''}.`
+    : st.first ? `${x.pace && x.pace.first_on ? `It moves on ${x.pace.step_day}s only: the first inside it is ${mgrTgDay(x.pace.first_on, true)}, read the day after.` : 'Set today. The first whole day is read tomorrow.'} Until then nothing whole has been read, so it is not called on track or off.${
+      r.land != null ? ` As set it lands at ${mgrTgFig(u, r.land)} by ${mgrTgDay(x.to)}${st.short != null ? `, ${mgrTgGap(u, st.short)} short of ${mgrTgFig(u, x.aim)} — ${Math.round(st.share * 100)}% of the ${mgrTgGap(u, st.toGo)} still to go` : ''}.` : ''} From then on: on track at or ahead of the ${
+      x.pace && x.pace.first_on ? 'road' : 'straight road'} from where it started to the aim; at risk behind it by less than a third of what is still to go; off track a third or more.`
     : x.hold ? `A line to hold: ${mgrTgFig(u, x.aim)} was already met when it was set. ${st.key === 'off' ? `It is ${mgrTgGap(u, st.behind)} past the line now.`
       : st.crossing ? `At this rate it reaches ${mgrTgFig(u, x.pace.at_this_rate)} by ${mgrTgDay(x.to)}, across the line.` : 'It is held, and at this rate stays held.'} The rule: on track while held; at risk when at this rate it crosses the line before the deadline; off track once crossed.`
     : `${st.behind ? `Behind the road by ${mgrTgGap(u, st.behind)} today — ${Math.round(st.share * 100)}% of the ${mgrTgGap(u, st.toGo)} still to go.` : 'At or ahead of the road today.'}${
@@ -141996,6 +142047,7 @@ function mgrTgRowHTML(r){
   const fix = r.links[0];
   const fixHTML = fix ? `<b>${esc(fix.title || 'A move')}</b><button type="button" class="ow-link mgr-tg-dec" data-tg-move="${esc(String(fix.id))}">Decision ${esc(fix.num)} →</button>${
       r.links.length > 1 ? `<small>and ${r.links.length - 1} more aimed at it</small>` : ''}`
+    : r.unusual ? `<b>${esc(r.unusual.title)}</b><button type="button" class="ow-link mgr-tg-dec" data-tg-unusual="${esc(r.unusual.key)}">Out of the ordinary →</button><small>no move aimed at it yet</small>`
     : `<span class="mgr-tg-none">No move aimed at it yet</span>`;
   return `<div class="mgr-tg-row" data-tg-id="${esc(String(x.id))}">
     <span class="mgr-tg-rn"><b title="${esc(name)}">${esc(name)}</b><small>${mgrTgAvHTML(r.person)}${esc(r.person.name)} · by ${esc(mgrTgDay(x.to))} · <span class="mgr-tg-fig">${esc(left)}</span>${
@@ -142107,7 +142159,14 @@ function mgrTgDraw(scoreWrap, gen, st){
   const sb2 = st.score || { targets: [], proposed: [] };
   const plan = mgrTgPlanMoves(st);
   const live = (sb2.targets || []).filter(x=> !x.finished);
-  const runs = live.map(x=> mgrTgRunModel(x, plan))
+  /* Out of the ordinary's own reading and the owner's answers; a reading
+     that fails leaves the gap column to the moves alone. */
+  let pulse = null;
+  try {
+    const pr = typeof mgrPulseReading === 'function' ? mgrPulseReading() : null;
+    if(pr && pr.judged && !mgrPulseAnswersErr) pulse = { findings: pr.findings, answered: (f)=> !!mgrUnusualAnswers.get(mgrUnusualKey(f)) };
+  } catch(e){ pulse = null; }
+  const runs = live.map(x=> mgrTgRunModel(x, plan, pulse))
     .sort((a, b)=> (a.x.days_left - b.x.days_left) || String(a.x.to).localeCompare(String(b.x.to)));
   const moveRead = mgrTgMoveRead && mgrTgMoveRead.gen === gen && !mgrTgMoveRead.pending ? mgrTgMoveRead : null;
   const finished = (sb2.targets || []).filter(x=> x.finished)
@@ -142157,7 +142216,7 @@ function mgrTgDrawComposer(){
 function mgrTgClick(e){
   const t = e.target && e.target.closest ? e.target : null;
   if(!t) return;
-  const b = t.closest('button[data-tg-metric],button[data-tg-choice],button[data-tg-by],button[data-tg-owner],button[data-tg-rule],button[data-tg-move],button.mgr-tg-set');
+  const b = t.closest('button[data-tg-metric],button[data-tg-choice],button[data-tg-by],button[data-tg-owner],button[data-tg-rule],button[data-tg-move],button[data-tg-unusual],button.mgr-tg-set');
   if(!b || b.disabled) return;
   const d = b.dataset;
   if(d.tgMetric){ mgrTgDraft = { ...mgrTgDraft, metric: d.tgMetric, choice: 'stretch', owner: null }; mgrTgDrawComposer(); return; }
@@ -142179,6 +142238,18 @@ function mgrTgClick(e){
     setTimeout(()=>{
       const row = document.querySelector(`#mgrBedBrief [data-mid="${CSS.escape(id)}"]`);
       if(row){ row.scrollIntoView({ block: 'center', behavior: 'smooth' }); if(row.focus) row.focus({ preventScroll: true }); }
+    }, 60);
+    return;
+  }
+  if(d.tgUnusual){
+    /* To the finding in Out of the ordinary: the section opens and the
+       finding is opened there, as a tap on its row would. */
+    const nav = document.getElementById('mgrNav-unusual');
+    if(nav) nav.click();
+    const key = d.tgUnusual;
+    setTimeout(()=>{
+      const row = document.querySelector(`#managerUnusualWrap [data-pulse-pick="${CSS.escape(key)}"]`);
+      if(row) row.click();
     }, 60);
     return;
   }
