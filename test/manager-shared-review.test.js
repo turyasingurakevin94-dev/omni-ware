@@ -243,6 +243,11 @@ const eq = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(wa
     && /ALONGSIDE it, never its cause/.test(desc) && !/money out/.test(desc),
     'and the tool tells the meeting what it really reads: a fortnight, eleven signals, no "money out"');
   t.check(/never name a cause/.test(desc), 'still a question, never a verdict');
+  /* The pick sorts back into screen order (#4, good news, arrives before
+     problem #11), so the description must not call the order a ranking. */
+  const mh = (/name: 'manager_history',\s*description: '([^']*)'/.exec(api) || ['', ''])[1];
+  t.check(mh.length > 0 && !/listed first/.test(mh) && /Unanswered problems are chosen first; the list keeps the screen\u2019s order and numbers/.test(mh.replace(/\\u2019/g, "\u2019")),
+    'manager_history says problems are CHOSEN first and the list keeps the screen\'s order -- never that the order is a priority');
 }
 
 /* ---------- 9. one oxide action on the phone -------------------------- */
