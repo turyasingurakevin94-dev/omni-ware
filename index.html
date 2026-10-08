@@ -17669,6 +17669,23 @@
 
   /* ---- the register --------------------------------------------- */
   #supBookPan{border-radius:var(--ow-r-lg);}
+  .su-ptabs{display:flex;align-items:flex-end;gap:var(--ow-sp-24);border-bottom:1px solid var(--ow-steel-100);}
+  .su-ptab{display:inline-flex;align-items:center;gap:var(--ow-sp-8);height:40px;padding:0 2px;margin-bottom:-1px;border:0;border-bottom:2px solid transparent;
+    background:none;font:inherit;font-size:var(--ow-t-14);font-weight:var(--ow-fw-500);color:var(--ow-ink-600);cursor:pointer;}
+  .su-ptab:hover{color:var(--ow-ink-900);}
+  .su-ptab .icon{width:16px;height:16px;}
+  .su-ptab.ow-on{color:var(--ow-ink-900);font-weight:var(--ow-fw-600);border-bottom-color:var(--ow-steel-950);}
+  .su-ptab .ow-seg-n{padding:1px 6px;border-radius:var(--ow-r-sm);background:var(--ow-steel-050);font-size:var(--ow-t-11);}
+  .su-ptab.ow-on .ow-seg-n{background:var(--ow-steel-950);color:var(--ow-paper);}
+  .su-ptab-b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
+    padding:1px 6px;border-radius:var(--ow-r-sm);background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .su-ptab-b[hidden]{display:none;}
+  .su-ptab{white-space:nowrap;}
+  @media (max-width:820px){
+    .su-ptabs{gap:var(--ow-sp-16);}
+    .su-ptab{height:var(--ow-tap);}
+    .su-ptab .icon,.su-ptab-x{display:none;}
+  }
   .su-tb{display:flex;align-items:center;gap:var(--ow-sp-12);padding:var(--ow-sp-10) var(--ow-sp-16);flex-wrap:wrap;}
   .su-tb .ow-seg{background:var(--ow-steel-050);}
   .su-find{flex:0 1 340px;min-width:220px;}
@@ -27937,6 +27954,13 @@
           <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
           Add supplier
         </button>
+      </div>
+      <!-- Two tabs, as the canvas draws them: the register on one, and
+           everything that reads the whole book on the other. The badge
+           keeps the stale prices in view from the register. -->
+      <div class="su-ptabs" id="supPageTabs" role="tablist" aria-label="Suppliers view">
+        <button type="button" class="su-ptab ow-on" role="tab" aria-selected="true" data-spage="book"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Supplier book <span class="ow-seg-n" id="supTabBookN"></span></button>
+        <button type="button" class="su-ptab" role="tab" aria-selected="false" data-spage="health"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg>Buying health <span class="su-ptab-b" id="supTabHealthN" hidden></span></button>
       </div>
       <div id="supStripWrap"></div>
       <div class="su-duo" id="supDuo">
@@ -67323,6 +67347,8 @@ function askSupplierForPrices(supplierId, rowId){
 let supViewId = null;
 /* Which slice of the book the register is showing. */
 let supLens = 'all';
+/* Which tab of the book is showing: the register, or Buying health. */
+let supPage = 'book';
 /* Set only while openSupplierAccount is walking through goToTab, so that
    one arrival is not treated as a request for the book. */
 let supEntering = false;
@@ -67656,7 +67682,7 @@ function supplierAttentionHTML(rows){
   }).join('');
   const more = flagged.length - shown.length;
   return `<div class="su-cards">${cards}</div>${more > 0
-    ? `<p class="ow-mini su-more">${more} more under <button type="button" class="su-lnk" data-slens-go="stale">Stale prices</button> in the register below.</p>` : ''}`;
+    ? `<p class="ow-mini su-more">${more} more under <button type="button" class="su-lnk" data-slens-go="stale">Stale prices</button> in the supplier book.</p>` : ''}`;
 }
 
 /* One action, and never the accent: the accent on this screen is Add
@@ -67820,7 +67846,7 @@ function renderSuppliers(filter=''){
   /* ONE SCREEN, TWO VIEWS. The register steps aside for an account
      rather than a dialog opening over it. Everything the register drew
      is left in the DOM and hidden, so coming back does not rebuild it. */
-  const book = ['supBookHead', 'supStripWrap', 'supDuo', 'supBookPan'];
+  const book = ['supBookHead', 'supPageTabs', 'supStripWrap', 'supDuo', 'supBookPan'];
   const acct = document.getElementById('supAccountWrap');
   if(supViewId){
     book.forEach(id=>{ const el = document.getElementById(id); if(el) el.style.display = 'none'; });
@@ -67839,6 +67865,24 @@ function renderSuppliers(filter=''){
   if(wins) wins.innerHTML = all.length ? supplierWinsHTML(all) : '';
   const duo = document.getElementById('supDuo');
   if(duo) duo.style.display = all.length ? '' : 'none';
+  /* ---- the tabs: one shows the register, the other the book's health ---- */
+  const health = supPage === 'health' && all.length > 0;
+  if(strip && !health) strip.style.display = 'none';
+  if(duo && !health) duo.style.display = 'none';
+  const bookPan = document.getElementById('supBookPan');
+  if(bookPan) bookPan.style.display = health ? 'none' : '';
+  document.querySelectorAll('#supPageTabs .su-ptab').forEach(b=>{
+    const on = b.dataset.spage === (health ? 'health' : 'book');
+    b.classList.toggle('ow-on', on);
+    b.setAttribute('aria-selected', String(on));
+  });
+  const tabs = document.getElementById('supPageTabs');
+  if(tabs) tabs.style.display = all.length ? '' : 'none';
+  const tabBookN = document.getElementById('supTabBookN');
+  if(tabBookN) tabBookN.textContent = String(all.length);
+  const toConfirm = all.reduce((n, r)=> n + r.ask.length, 0);
+  const tabHealthN = document.getElementById('supTabHealthN');
+  if(tabHealthN){ tabHealthN.hidden = !toConfirm; tabHealthN.innerHTML = `${toConfirm}<span class="su-ptab-x"> to confirm</span>`; }
 
   /* ---- the lenses. Counted over the book, not over the search ---- */
   const staleRows = all.filter(r=> r.ask.length);
@@ -75791,7 +75835,7 @@ async function sendSupplierStatementPdf(supplierId){
       return rerender();
     }
     const go = e.target.closest('[data-slens-go]');
-    if(go){ supLens = go.dataset.slensGo; rerender(); return; }
+    if(go){ supLens = go.dataset.slensGo; supPage = 'book'; rerender(); return; }
     const win = e.target.closest('[data-sopen-go]');
     if(win){ act('open', win.dataset.sopenGo); return; }
     const b = e.target.closest('[data-sact]');
@@ -75806,6 +75850,13 @@ async function sendSupplierStatementPdf(supplierId){
   if(band) band.addEventListener('click', onClick);
   const wins = document.getElementById('supWinsWrap');
   if(wins) wins.addEventListener('click', onClick);
+  const pageTabs = document.getElementById('supPageTabs');
+  if(pageTabs) pageTabs.addEventListener('click', (e)=>{
+    const t = e.target.closest('[data-spage]');
+    if(!t || t.dataset.spage === supPage) return;
+    supPage = t.dataset.spage;
+    rerender();
+  });
   wrap.addEventListener('change', (e)=>{
     if(e.target.id !== 'supPageSize') return;
     LIST_PAGE_SIZES.suppliers = Number(e.target.value) || 10;
