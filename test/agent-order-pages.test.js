@@ -163,4 +163,18 @@ const fn = (n) => extractFunction(src, n, 'agent.html');
     'and the shop app stamps its confirmation when the last yes lands, for a payment function not yet redeployed');
 }
 
+/* ---------- 12. Next move: the best play large, the rest as a list ---- */
+{
+  const r = fn('renderNext');
+  t.check(/nextCardHTML\(nextCards\[0\], 0, nextCards\.length\)/.test(r) && /rest\.map\(\(c,i\)=> playRowHTML\(c, i \+ 1\)\)/.test(r),
+    'the top play is drawn large and every other one as a row underneath -- nothing hidden behind a swipe');
+  t.check(/picks\.slice\(0, 1\)\.concat\(asks, claims, picks\.slice\(1\), wins\)/.test(r), 'a money play leads, with anyone waiting on a reply straight after it');
+  t.check(/nextCards\.length\} play/.test(r) && /fmtCompactUGX\(total\)/.test(r), 'and the header says how many plays and what they are worth together');
+  t.check(/rhythmDialHTML\(c, 84\)/.test(fn('nextCardHTML')) && !/dayBlocksHTML/.test(fn('nextCardHTML') + fn('playRowHTML')),
+    'a due client shows their rhythm as a dial, not a row of day blocks');
+  const dial = fn('rhythmDialHTML');
+  t.check(/Math\.max\(0, since - gap\) \/ gap/.test(dial) && /#F5B26B/.test(dial), 'the days past their rhythm wrap round it in amber');
+  t.check(/data-nx-act="\$\{act\}"/.test(fn('playRowHTML')), 'every row has its one button, wired the same way as the large card');
+}
+
 process.exit(t.done() ? 1 : 0);
