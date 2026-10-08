@@ -353,7 +353,11 @@ const build = (rows, over) => compileScope(
     /* A window over the tool's source, not a claim about its size: it
        grew past 20,000 when the brief learned to name advice already
        done, and the return it looks for did not move. */
-    t.check(tool.slice(0, 24000).includes('{ track_record: trackOut }'),
+    /* WAS 24,000: the Manager's readings handed to the meeting (offers,
+       normals, decisions, the pulse, the playbook's weekly reads) moved
+       the return further in. Where it sits is not the point; that the
+       record reaches the meeting is. */
+    t.check(tool.slice(0, 40000).includes('{ track_record: trackOut }'),
       'the record is returned');
     const doNot = tool.slice(tool.indexOf('const doNot = {'), tool.indexOf('const passedOn') + 200);
     t.check(doNot.length > 100 && !doNot.includes('track_record'),
