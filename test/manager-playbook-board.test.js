@@ -768,6 +768,14 @@ function scope(over) {
       { running: [], today: TODAY });
     eq(acts(weakCard), ['replace', 'finish'], 'not met, weak weeks: Replace it or Let it finish');
 
+    /* A RULE HELD TO WHERE IT STARTED says the stamp it is held to. */
+    const heldTo = { ...viewOf(27, { name: 'Friday chase', treats: 'debt', weeks: 6 }, { started_on: '2026-09-07', baseline: 102672963 }),
+      stop: { threshold: 'money owed to you no better than where it starts (103m today)', byWeek: 3, vs: 'before', when: 'atleast', value: 102672963 } };
+    const heldCard = R.mgrPlayRunningHTML({ p: { ...heldTo, clock: null }, r: null, conflicts: [], stop: Q.mgrPlayStopCheck(heldTo, TODAY, []), replaceWith: null },
+      { running: [], today: TODAY });
+    t.check(/<dd class="mgr-pl-words">at or above 103m, where it started, by week 3 · read 141m<\/dd>/.test(heldCard),
+      `a rule held to its start says the stamp: "at or above 103m, where it started, by week 3" (${(heldCard.match(/Stop if<\/dt><dd[^>]*>[^<]*/) || [''])[0]})`);
+
     /* A RULE THE BOARD CANNOT CHECK says so: its silence is not "not met". */
     const vague = viewOf(26, { name: 'Price ladder', treats: 'margin', weeks: 4, stop: { threshold: 'if the share kept slips', by_week: 2 } }, { started_on: '2026-09-21' });
     const vagueCard = R.mgrPlayRunningHTML({ p: { ...vague, clock: null }, r: null, conflicts: [], stop: Q.mgrPlayStopCheck(vague, TODAY, []), replaceWith: null },
@@ -807,7 +815,14 @@ function scope(over) {
     /* A CLEARED SPAN is asked for, never printed as "null". */
     eq([RR.mgrPlayWeeksText(null), RR.mgrPlayWeeksText(''), RR.mgrPlayWeeksText(NaN), RR.mgrPlayWeeksText(1), RR.mgrPlayWeeksText(6)],
       ['how many weeks?', 'how many weeks?', 'how many weeks?', '1 week', '6 weeks'], 'the designer’s span in its sentence');
-    t.check(/slot\(weeksText\)/.test(extractFunction(src, 'mgrPlayDesignPaint', 'index.html')), 'and the sentence uses it');
+    t.check(extractFunction(src, 'mgrPlayDesignPaint', 'index.html').includes("${slot(weeksText)}${/\\?$/.test(weeksText) ? '' : '.'}"),
+      'and the sentence uses it, with no full stop after the question');
+    /* ONE TAP, ONE WRITE: the buttons switched off are the CARD's -- a
+       recipe's "Run it again" carries data-key itself, so the card is
+       found as its article, and the tapped button is always among them. */
+    const painter = extractFunction(src, 'mgrPaintPlays', 'index.html');
+    t.check(/const card = b\.closest\('article'\) \|\| b\.parentElement \|\| b;/.test(painter) && /new Set\(\[b, \.\.\.card\.querySelectorAll\('\[data-pl-act\]'\)\]\)/.test(painter)
+      && /if\(WRITES\.includes\(act\) && b\.disabled\) return;/.test(painter), 'a write button is off from the first tap until its write answers');
 
     /* "OTHER" IS NOT A THING THE BOOKS MEASURE (review P4: "Nothing in
        the books measures other"). */

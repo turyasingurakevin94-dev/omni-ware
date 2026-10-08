@@ -142273,8 +142273,10 @@ function mgrPaintPlays(gen, ctx){
      play twice or take a fourth slot. */
   const WRITES = ['start', 'aside', 'stop', 'keep', 'replace', 'rerun'];
   const hold = (b)=>{
-    const card = b.closest('[data-pid],[data-key]') || b;
-    const btns = [...card.querySelectorAll('[data-pl-act]')].filter(x=> WRITES.includes(x.dataset.plAct) && !x.disabled);
+    /* The card, not the button: a recipe's "Run it again" carries
+       data-key itself, and closest() would stop at it. */
+    const card = b.closest('article') || b.parentElement || b;
+    const btns = [...new Set([b, ...card.querySelectorAll('[data-pl-act]')])].filter(x=> WRITES.includes(x.dataset.plAct) && !x.disabled);
     btns.forEach(x=> { x.disabled = true; });
     return (r)=>{ if(!(r && r.ok)) btns.forEach(x=> { x.disabled = false; }); return r; };
   };
@@ -142988,7 +142990,8 @@ function mgrPlayRunningHTML(x, model){
       ? MGR_PLAY_STOP_SAY[p.stop.when] + ' ' + mgrPlayFig(p.stop.value, unit) : '';
   /* A rule the board cannot hold a figure to says so: its silence is
      not "not met". */
-  const stop = said ? `${esc(said)}${p.stop.byWeek ? ` by week ${p.stop.byWeek}` : ''}${
+  const held = /, where it started$/.test(said);
+  const stop = said ? `${esc(said)}${p.stop.byWeek ? `${held ? ',' : ''} by week ${p.stop.byWeek}` : ''}${
     st && st.value != null ? ` · read ${esc(mgrPlayFig(st.value, r && r.unit))}` : ''}${
     !st ? ' <span class="mgr-pl-sub">· not checked by the board — your call</span>' : ''}` : 'no stop rule written';
   /* The Manager's note on the card: a stop rule met first, then a
@@ -143391,7 +143394,7 @@ function mgrPlayDesignPaint(book, today){
           ${field('cost', 'What it costs (UGX)', d.cost, 'number', ' min="0" inputmode="numeric"')}
           ${field('dependsOn', 'Waits on (optional)', d.dependsOn, 'area', ' maxlength="120"')}
         </div>` : ''}
-        <p class="mgr-pl-sent"><span class="mgr-pl-w">If we</span>${slot(d.if || 'say what you will do')}, <span class="mgr-pl-w">then</span>${slot(thenText)} <span class="mgr-pl-w">will</span>${slot(by)} <span class="mgr-pl-w">within</span>${slot(weeksText)}.</p>
+        <p class="mgr-pl-sent"><span class="mgr-pl-w">If we</span>${slot(d.if || 'say what you will do')}, <span class="mgr-pl-w">then</span>${slot(thenText)} <span class="mgr-pl-w">will</span>${slot(by)} <span class="mgr-pl-w">within</span>${slot(weeksText)}${/\?$/.test(weeksText) ? '' : '.'}</p>
         <div class="mgr-pl-facts">
           <div class="mgr-pl-fc"><span class="mgr-pl-micro">Before it starts</span><b class="mgr-pl-fig">${esc(base.base != null ? fig(base.base) : base.measured ? 'not found' : 'not measured')}</b><small class="mgr-pl-fs">${esc(base.basis || '')}</small></div>
           <div class="mgr-pl-fc"><span class="mgr-pl-micro">Would add</span><b class="mgr-pl-fig">${esc(addText)}</b><small class="mgr-pl-fs">${add == null ? '' : 'if it reaches your aim'}</small></div>

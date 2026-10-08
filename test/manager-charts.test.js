@@ -181,8 +181,10 @@ const fmtUGX = (n) => Number(n).toLocaleString('en-US') + ' UGX';
       'a play proposed twice shows once, the newest, with the older copy carried to be retired (a trailing full stop is the same play)');
     t.check(!book.proposed.some((p) => p.name === 'Charge for cutting'), 'a play already running is not proposed again beside itself');
     t.check(book.proposed.length === 2 && book.running.length === 1, 'and the rest are untouched');
-    const status = extractFunction(src, 'managerPlayStatus', 'index.html');
-    t.check(/async function managerPlayStatus\(rowId, status, dupIds\)/.test(status)
+    /* managerPlayStatus lets one playbook write through at a time and
+       hands it to managerPlayStatusWrite (review P4: two quick taps). */
+    const status = extractFunction(src, 'managerPlayStatus', 'index.html') + extractFunction(src, 'managerPlayStatusWrite', 'index.html');
+    t.check(/async function managerPlayStatus\(rowId, status, dupIds\)/.test(status) && /return await managerPlayStatusWrite\(rowId, status, dupIds\)/.test(status)
       && /if\(status === 'running' \|\| status === 'dropped'\) await managerRetireDuplicates\(dupIds\);/.test(status),
       'trying it or setting it aside retires the older copies too');
     t.check(/managerPlayStatus\(id, status, dups\)/.test(mgrRender()),

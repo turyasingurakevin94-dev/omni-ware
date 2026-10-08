@@ -154,7 +154,7 @@ const mgrRender = () => MGR_RENDER.map((n) => extractFunction(src, n, 'index.htm
      each would add, and overlaps flagged. */
   const plays = src.slice(src.indexOf('/* ═══ MGR BED: Plays — begin ═══ */\n/* ---- THE PLAYBOOK'),
     src.indexOf('/* ═══ MGR BED: Plays — end ═══ */\n/* ────'));
-  t.check(plays.length > 20000 && /class="mgr-pl-wk"/.test(plays) && /mgr-pl-over/.test(plays) && /class="mgr-pl-pips"/.test(plays),
+  t.check(plays.length > 20000 && /class="mgr-pl-wk\$\{/.test(plays) && /mgr-pl-over/.test(plays) && /class="mgr-pl-pips"/.test(plays),
     'a running play wears its span as its weeks, each read against the week before it started, its overrun weeks marked, how sure so far as pips');
   t.check(/'Proposed'/.test(plays) && /'Running'/.test(plays) && /'Judged'/.test(plays) && /'Proven recipes'/.test(plays) && /class="mgr-pl-slots"/.test(plays),
     'the board is the canvas’s four lanes — proposed, running, judged, proven recipes — under its three slots');

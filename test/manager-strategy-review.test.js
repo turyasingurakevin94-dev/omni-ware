@@ -349,9 +349,16 @@ const invoiced = { savedQuotes: [{ voided: false, invoiced: true, date: '2026-06
       'the Playbook says what moved alongside a play, and that a verdict is the owner’s');
     t.check(!/because of it|thanks to|it worked|root cause/i.test(playsBlock),
       'and nowhere in the section does the app claim a play worked or caused anything');
-    const status = extractFunction(src, 'managerPlayStatus', 'index.html');
-    t.check(/m && m\.kind === 'level'/.test(status) && /body\.baseline = Math\.round\(m\.measure\(\)\)/.test(status),
-      'switching a play on stamps where the shop stood, but only where the measure is a level a flow cannot recover');
+    /* Where the shop stood the day it was switched on (managerPlayStamp):
+       a level always, since it cannot be recovered afterwards; a flow with
+       a span as the before "Write a play" showed -- the span's days before
+       the start, a week's worth -- so its weeks, its stop rule and the
+       meeting read one fixed figure (review P4). */
+    const status = extractFunction(src, 'managerPlayStatusWrite', 'index.html');
+    const stamp = extractFunction(src, 'managerPlayStamp', 'index.html');
+    t.check(/managerPlayApplyStamp\(body, todayISO\(\)\)/.test(status) && /if\(m\.kind === 'level'\) return \{ baseline: Math\.round\(m\.measure\(\)\) \};/.test(stamp)
+      && /baselineFrom: from, baselineTo: to/.test(stamp),
+      'switching a play on stamps where the shop stood: a level as it is, a flow as the span before it started');
 
     /* One reading of how far the books reach. */
     const rest = src.replace(extractFunction(src, 'booksStartDate', 'index.html'), '');
