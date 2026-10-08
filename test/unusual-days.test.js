@@ -235,6 +235,17 @@ function build(days, books) {
     'the meeting reads the owner\'s word on the day, never raises an answered day as news, and turns unentered sales into a job');
   t.check(/unusual_answers_not_read/.test(hist) && /owner_taught: unusual\.taught/.test(hist),
     'a failed read of the answers is named to the meeting, and what the owner taught reaches it');
+  /* WAS: normalsError was carried by mgrUnusualForMeeting but never read,
+     so a failed read of what the owner taught looked like "taught
+     nothing". NOW: it is named to the meeting as unusual_normals_not_read. */
+  t.check(/unusual\.normalsError \? \{ unusual_normals_not_read:/.test(hist) && /do not treat the owner as having taught nothing/.test(hist),
+    'a failed read of what the owner taught is named to the meeting too');
+  /* WAS: drove_it carried the day's rows AND what the books found behind
+     it, and the meeting is told to name what drove it from drove_it -- so
+     a ranked candidate read as the cause. NOW: drove_it is the day's own
+     rows; what the books found is found_in_books, put as a question. */
+  t.check(/found_in_books: x\.found_in_books/.test(hist) && /put it to the owner as a question, never as the cause/.test(hist),
+    'what the books found alongside a day reaches the meeting apart from what drove it, as a question');
   t.check(/mgrUnusualAnswersLoad\(\);/.test(mgrRender()), 'and a day answered before stays answered');
 }
 

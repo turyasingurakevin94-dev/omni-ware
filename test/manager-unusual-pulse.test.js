@@ -754,6 +754,33 @@ const okAnswer = (q, id) => q.op === 'insert' ? { data: q.payload.map((r) => ({ 
     eq([dp.kind, dp.label], ['wa', 'Ask Steel & Tube about the 200k rise'], 'ask the supplier about the 200k: 10 at 20,000 over their last price');
     eq(dp.msg, `Hello Steel & Tube, on Monday 5 Oct we were charged ${(100000).toLocaleString('en-UG')} UGX each for P4, against ${(80000).toLocaleString('en-UG')} UGX on ${long(T(-30))} — 10 at ${(20000).toLocaleString('en-UG')} UGX more, ${(200000).toLocaleString('en-UG')} UGX in all. Can you confirm the price, or credit the difference? — Nakawa Hardware`,
       'the message carries both prices, both days and the sum -- a question, never a claim it was owed');
+    /* Another supplier's P4 came in between, on Sun 27 Sept at 90,000:
+       the shop's last price was theirs, but Steel & Tube is asked about
+       its OWN last price, 80,000 -- never someone else's. */
+    DP.stockLog.push({ id: 6013, key: 'P4', type: 'restock', delta: 2, cost: 90000, supplierId: 'S3', date: T(-10), note: 'Bill B-61 from S3' });
+    const dp3 = deedOf(SP2, 'purchases', 'high');
+    eq([dp3.label, dp3.msg], [dp.label, dp.msg], 'with S3 at 90,000 in between, S2 is still asked against its own 80,000 on ' + T(-30));
+    /* Only another supplier ever sold P4 before: the rise is found (11%
+       over S3's 90,000), but no supplier is asked about a price it never
+       charged -- the bills instead. */
+    const DP2 = book({ bills: true });
+    DP2.stockLog.push({ id: 6014, key: 'P4', type: 'restock', delta: 2, cost: 90000, supplierId: 'S3', date: T(-10), note: 'Bill B-61 from S3' });
+    DP2.suppliers = [{ id: 'S2', name: 'Steel & Tube', phone: '0752 200002' }, { id: 'S3', name: 'Mukwano Steel', phone: '0752 300003' }];
+    const SP3 = scope(DP2); SP3.setNormals([]);
+    const fp3 = SP3.mgrPulseReading().findings.find((x) => x.metric === 'purchases' && x.dir === 'high');
+    const rp3 = SP3.mgrPulseReasons(fp3, SP3.mgrPulseBooks(TODAY), SP3.mgrPulseReading()).find((x) => x.label === 'Prices paid went up');
+    eq([rp3.state, rp3.ref], ['found', null], 'the rise over S3\'s price is still a reason on screen, with nobody to ask');
+    eq(pick(deedOf(SP3, 'purchases', 'high')), ['go', 'Open the bills', 'invoices'], 'and the action is the bills');
+    /* A delivery whose own cost is not recorded is never read as a rise
+       off today's FIFO cost. */
+    const DP4 = book({ bills: true });
+    DP4.stockLog.push({ id: 6003, key: 'P4', type: 'restock', delta: 5, cost: 80000, supplierId: 'S2', date: T(-30), note: 'Bill B-60 from S2' });
+    DP4.suppliers = [{ id: 'S2', name: 'Steel & Tube', phone: '0752 200002' }];
+    DP4.stockLog.filter((l) => l.piId === 77).forEach((l) => { delete l.cost; });
+    const SP4 = scope(DP4); SP4.setNormals([]);
+    const fp4 = SP4.mgrPulseReading().findings.find((x) => x.metric === 'purchases' && x.dir === 'high');
+    t.check(!fp4 || SP4.mgrPulseReasons(fp4, SP4.mgrPulseBooks(TODAY), SP4.mgrPulseReading()).find((x) => x.label === 'Prices paid went up').state === 'none',
+      'bill 77 with no cost recorded: no rise is read off a cost the books do not hold');
 
     /* Returns of one line, last bought from one supplier on file: P1 came
        from S4 on 28 Aug. Four notes of 300,000, three with a lid that does
@@ -763,9 +790,38 @@ const okAnswer = (q, id) => q.op === 'insert' ? { data: q.payload.map((r) => ({ 
     DR.suppliers = [{ id: 'S4', name: 'Bwaise Paints', phone: '0782 400004' }];
     const SR2 = scope(DR); SR2.setNormals([]);
     const dr = deedOf(SR2, 'returns');
-    eq([dr.kind, dr.label], ['wa', 'Ask Bwaise Paints to credit 1.2m'], 'ask the supplier the line came from to credit the 1.2m given back');
-    eq(dr.msg, `Hello Bwaise Paints, 4 Gloss 4L we bought from you came back from customers in the last 30 days, 3 of 4 returns with a fault — ${(1200000).toLocaleString('en-UG')} UGX credited back to them. Can we return them to you for a credit note? — Nakawa Hardware`,
-      'counted from the notes: 4 units, 3 of the 4 notes giving a fault, 1,200,000 credited');
+    /* WAS: 'Ask Bwaise Paints to credit 1.2m' -- the 4 x 300,000 the shop
+       refunded its customers at its own selling price, and the message
+       said "1,200,000 UGX credited back to them". NOW: the supplier is
+       asked for what the shop paid THEM: 4 units from the 28 Aug delivery
+       at 45,000 = 180,000. The refund is not sent to the supplier. */
+    const fr = SR2.mgrPulseReading().findings.find((x) => x.metric === 'returns');
+    eq([dr.kind, dr.label], ['wa', 'Ask Bwaise Paints to credit 180k'], 'ask the supplier the line came from to credit what was paid them: 4 x 45,000');
+    eq(dr.msg, `Hello Bwaise Paints, 4 Gloss 4L we bought from you came back from customers in the 30 days to ${long(fr.date)}, 3 of 4 returns with a fault. We paid you ${(180000).toLocaleString('en-UG')} UGX for them. Can we return them to you for a credit note? — Nakawa Hardware`,
+      'counted from the notes and the delivery: 4 units, 3 of the 4 notes giving a fault, 180,000 paid -- over the 30 days the screen counts');
+    const lr = SR2.mgrPulseReasons(fr, SR2.mgrPulseBooks(TODAY), SR2.mgrPulseReading()).find((x) => x.label === 'One line keeps coming back').ref;
+    eq([lr.refunded, lr.paid, lr.units, lr.supplierId], [1200000, 180000, 4, 'S4'], 'two sums kept apart: 1.2m refunded at the shop\'s price, 180k paid at the delivery\'s cost');
+    /* A unit is traced to the delivery before its SALE: each note now
+       written two days after its sale, and S5 delivering P1 four days ago
+       -- after the last sale (five days ago) and before its note (three
+       days ago). Read by the return's day, that note would trace to S5,
+       two suppliers would share the line and nobody would be asked. */
+    const DR2 = book();
+    DR2.stockLog.push({ id: 6004, key: 'P1', type: 'restock', delta: 4, cost: 45000, supplierId: 'S4', date: T(-40), note: 'Bill B-40 from S4' });
+    DR2.stockLog.push({ id: 6005, key: 'P1', type: 'restock', delta: 6, cost: 52000, supplierId: 'S5', date: T(-4), note: 'Bill B-41 from S5' });
+    DR2.savedQuotes.forEach((q) => (q.creditNotes || []).forEach((n) => { n.date = new Date(Date.parse(n.date + 'T00:00:00Z') + 2 * 86400000).toISOString().slice(0, 10); }));
+    DR2.suppliers = [{ id: 'S4', name: 'Bwaise Paints', phone: '0782 400004' }, { id: 'S5', name: 'Kampala Paints Centre', phone: '0782 500005' }];
+    const SR3 = scope(DR2); SR3.setNormals([]);
+    eq(deedOf(SR3, 'returns').label, 'Ask Bwaise Paints to credit 180k', 'S5\'s delivery after the sales is not where the returned units came from');
+    /* The delivery's cost not recorded: the supplier is still asked, but
+       no sum is named -- never the refund in its place. */
+    const DR3 = book();
+    DR3.stockLog.push({ id: 6004, key: 'P1', type: 'restock', delta: 4, supplierId: 'S4', date: T(-40), note: 'Bill B-40 from S4' });
+    DR3.suppliers = [{ id: 'S4', name: 'Bwaise Paints', phone: '0782 400004' }];
+    const SR4 = scope(DR3); SR4.setNormals([]);
+    const dr4 = deedOf(SR4, 'returns');
+    eq(dr4.label, 'Ask Bwaise Paints for a credit on Gloss 4L', 'no cost on the delivery: no sum named');
+    t.check(!/UGX/.test(dr4.msg) && /Can we return them to you for a credit note\?/.test(dr4.msg), 'and the message names none either: ' + dr4.msg);
 
     /* A chase: a promise broken, the customer still owing. */
     const base = R.findings.find((x) => x.metric === 'sales');
@@ -828,6 +884,14 @@ const okAnswer = (q, id) => q.op === 'insert' ? { data: q.payload.map((r) => ({ 
     SK2.setNormals([]);
     await SK2.mgrPulseKeepRule(tk, 'Two people count.');
     t.check(/Apply 0107_manager_intelligence\.sql/.test(SK2.mgrUnusualHTML(SK2.mgrPulseReading())), 'a rule the journal refuses names the missing update');
+    SK2.setOpen(tk); SK2.setRuleOpen(tk);
+    t.check(/<textarea class="mgr-u-rule-in"[^>]*>Two people count\.<\/textarea>/.test(SK2.mgrUnusualHTML(SK2.mgrPulseReading())),
+      'and the form keeps the owner\'s own words after the refusal, not the drafted rule');
+    const gone = [];
+    const SK4 = scope(book(), { toast: (m) => gone.push(m), mgrSaveNormal: async (b) => { gone.push(b); return { ok: true }; } });
+    SK4.setNormals([]);
+    await SK4.mgrPulseKeepRule('2020-01-01|till', 'Two people count.');
+    eq(gone, ['That finding is no longer on the list — nothing was kept.'], 'a finding gone from the list keeps nothing, and says so');
     const toasts = [], none = [];
     const SK3 = scope(book(), { toast: (m) => toasts.push(m), mgrSaveNormal: async (b) => { none.push(b); return { ok: true }; } });
     SK3.setNormals([]);
@@ -836,7 +900,7 @@ const okAnswer = (q, id) => q.op === 'insert' ? { data: q.payload.map((r) => ({ 
 
     /* No cause, no likelihood, nothing undefined in any action. */
     const bad = /\bbecause\b|thanks to|\bcaused\b|root cause|it worked|probab/i;
-    const all = [S, SJ, ST, SP2, SR2, SC, SN2].flatMap((SX) => { const r = SX.mgrPulseReading(); const bk = SX.mgrPulseBooks(TODAY);
+    const all = [S, SJ, ST, SP2, SP3, SR2, SR3, SR4, SC, SN2].flatMap((SX) => { const r = SX.mgrPulseReading(); const bk = SX.mgrPulseBooks(TODAY);
       return r.findings.map((f) => SX.mgrPulseDeed(f, bk, r)); });
     const words = all.flatMap((d) => [d.label, d.msg || '', d.text || '', d.basis || '', S.mgrPulseDeedNote(d)]);
     eq(words.filter((w) => bad.test(w) || /undefined|NaN|null/.test(w)), [], 'every action, message and rule: no cause, no likelihood, nothing undefined');
@@ -853,8 +917,14 @@ const okAnswer = (q, id) => q.op === 'insert' ? { data: q.payload.map((r) => ({ 
       [4, T(-1) + '|sales', T(-1), [T(-1)], 'sales', 'low', 'bad', -5.4, 400000, 1000000, 8, null, 'never before'],
       'the low Tuesday as the meeting reads it: finding 4 on screen, 400,000 against a usual 1,000,000 over 8 Tuesdays, never before');
     eq(it.reads_as, 'Tuesday’s sales were 400k — a Tuesday is usually 938k–1.06m', 'in the screen\'s own words');
-    eq(it.drove_it, [S.mgrPulseWhat(low, B), 'The till counted 600k more than the book that evening.', 'Kato buys on 8 of the last 8 Tuesdays — nothing this one.'],
-      'drove_it: the day\'s own rows, then what the books found -- details only, never the reason they point to');
+    /* WAS: drove_it = the day's own rows, then what the books found (the
+       screen's candidate reasons) -- and the meeting names "what drove it"
+       from drove_it, so a candidate read as the cause. NOW: drove_it is
+       the day's rows only; what the books found is found_in_books. */
+    eq(it.drove_it, [S.mgrPulseWhat(low, B)], 'drove_it: the day\'s own rows only');
+    eq(it.found_in_books, ['The till counted 600k more than the book that evening.', 'Kato buys on 8 of the last 8 Tuesdays — nothing this one.',
+      'Iron sheets was at nothing on the shelf — it sells on 8 of the last 8 Tuesdays.'],
+      'found_in_books: what the books found alongside the day -- details only, never the reason they point to');
     const ret = S.mgrPulseMeetingItem(r.findings.find((x) => x.metric === 'returns'), B, r);
     eq([ret.figure, ret.usual, ret.weeks, ret.months, ret.days], [1200000, 0, null, 5, [T(-11), T(-5)]], 'a month of returns: 1.2m against a usual month of none, over five months, on its two days');
     const q = S.mgrPulseMeetingItem(r.findings.find((x) => x.metric === 'quotes'), B, r);
@@ -871,6 +941,9 @@ const okAnswer = (q, id) => q.op === 'insert' ? { data: q.payload.map((r) => ({ 
     eq(m.taught, [{ what: 'till', kind: 'your_rule', words: 'Two people count the till.', taught_on: T(-2) }], 'and what the owner taught, the rule marked as theirs');
     const SF = scope(book(), { sb: fakeSb(() => ({ data: null, error: { message: 'timeout' } })) });
     eq((await SF.mgrUnusualForMeeting()).answersError, 'timeout', 'a failed read of the answers is carried, to be named');
+    const SG = scope(book(), { mgrNotesOfKind: async () => ({ rows: [], error: 'journal offline' }) });
+    const mg = await SG.mgrUnusualForMeeting();
+    eq([mg.normalsError, mg.taught], ['journal offline', []], 'and so is a failed read of what the owner taught -- never "taught nothing"');
   }
   process.exit(t.done() ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

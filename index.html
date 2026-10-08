@@ -143603,15 +143603,23 @@ function mgrPulseReasons(f, books, reading){
         : 'Nothing arrived.');
       const empty = arr.filter(a=> (Number(a.l.qtyAfter) || 0) - (Number(a.l.delta) || 0) <= 0);
       add('Lines that had run out were restocked', empty.length ? 'found' : 'none', empty.length ? `${empty.length} line${empty.length === 1 ? '' : 's'} came in onto an empty shelf.` : 'Every line restocked still had some on the shelf.');
-      const rises = arr.map(a=>{
-        if(a.c == null) return null;
-        const prev = (data.stockLog || []).filter(x=> x !== a.l && x.key === a.l.key && x.type === 'restock' && x.cost != null && String(x.date || '') < d)
-          .sort((x, y)=> String(y.date).localeCompare(String(x.date)))[0];
-        return prev && Number(prev.cost) > 0 && a.c >= Number(prev.cost) * 1.05 ? { ...a, prev } : null;
-      }).filter(Boolean).sort((x, y)=> (y.c - Number(y.prev.cost)) * y.q - (x.c - Number(x.prev.cost)) * x.q);
-      const rTop = rises[0];
+      /* A rise is read only off a delivery that carries its own recorded
+         cost -- never today's FIFO cost standing in for a missing one. */
+      const own = (l)=>{ const tl = B.tail(l); return tl && tl.cost != null && tl.cost !== '' ? Number(tl.cost) : null; };
+      const before = (a, same)=> (data.stockLog || []).filter(x=> x !== a.l && x.key === a.l.key && x.type === 'restock' && x.cost != null && String(x.date || '') < d
+          && (!same || (B.isBuy(x) && String(x.supplierId || '') === String(a.l.supplierId))))
+        .sort((x, y)=> String(y.date).localeCompare(String(x.date)))[0];
+      const up = (a, prev)=> prev && Number(prev.cost) > 0 && a.c >= Number(prev.cost) * 1.05;
+      const byRise = (x, y)=> (y.c - Number(y.prev.cost)) * y.q - (x.c - Number(x.prev.cost)) * x.q;
+      const costed = arr.filter(a=> a.c != null && own(a.l) != null);
+      const rises = costed.map(a=>{ const prev = before(a, false); return up(a, prev) ? { ...a, prev } : null; }).filter(Boolean).sort(byRise);
+      /* What a supplier is asked about is their own rise: this delivery
+         against the last price THE SAME SUPPLIER charged for the line. A
+         rise read only against another supplier's price drafts nothing. */
+      const theirs = a=> a.l.supplierId ? before(a, true) : null;
+      const rTop = costed.map(a=>{ const prev = theirs(a); return up(a, prev) ? { ...a, prev } : null; }).filter(Boolean).sort(byRise)[0];
       add('Prices paid went up', rises.length ? 'found' : 'none', rises.length ? `${rises.length} line${rises.length === 1 ? '' : 's'} cost 5% or more above the last delivery: ${rises[0].l.label || rises[0].l.key}.` : 'No line cost more than its last delivery.',
-        rTop ? { supplierId: rTop.l.supplierId || null, line: rTop.l.label || rTop.l.key, qty: rTop.q, cost: rTop.c, prev: Number(rTop.prev.cost), prevOn: String(rTop.prev.date).slice(0, 10) } : null);
+        rises.length && rTop ? { supplierId: rTop.l.supplierId || null, line: rTop.l.label || rTop.l.key, qty: rTop.q, cost: rTop.c, prev: Number(rTop.prev.cost), prevOn: String(rTop.prev.date).slice(0, 10) } : null);
     } else {
       const late = Object.keys(data.presetBuyOrders || {}).map(id=> buyOrderFor(id, d)).filter(o=> o && o.expectedOn && o.expectedOn <= d && o.state !== 'cancelled' && (!o.closedOn || o.closedOn > d));
       add('A delivery due did not come', late.length ? 'found' : 'none', late.length ? `${late[0].supplier} was due by ${mgrPulseDate(late[0].expectedOn)}${late.length > 1 ? `, and ${late.length - 1} more` : ''}.` : 'No buy order was due and missing.',
@@ -143635,21 +143643,34 @@ function mgrPulseReasons(f, books, reading){
        came back -- the supplier a credit would be asked of. */
     let lineRef = null;
     if(line){
-      let amount = 0, faulty = 0, units = 0;
+      /* Two different sums, never added: what the shop refunded its
+         customers (the notes, at its own selling price) and what it paid
+         the supplier for those units (each unit's delivery, at that
+         delivery's recorded cost). A credit is asked for the second. Each
+         unit is traced to the latest delivery on or before its SALE --
+         one that came after it sold is not where it came from. */
+      let refunded = 0, faulty = 0, units = 0, paid = 0, unpaid = 0;
       const sups = new Set();
       notes.forEach(x=>{
         const ls = (x.n.lines || []).filter(l=> (l.name || 'a line') === line[0]);
         if(!ls.length) return;
-        ls.forEach(l=>{ amount += (Number(l.qty) || 0) * (Number(l.price) || 0); units += Number(l.qty) || 0;
+        const sold = String(x.q.invoicedAt || x.q.date || '').slice(0, 10);
+        ls.forEach(l=>{ const qty = Number(l.qty) || 0;
+          refunded += qty * (Number(l.price) || 0); units += qty;
           const it = (x.q.items || [])[l.idx];
           const k = it && it.productId ? stockKey(it.productId, it.variantIdx == null ? null : it.variantIdx) : null;
-          const r = k ? (data.stockLog || []).filter(y=> y && y.key === k && y.supplierId && B.isBuy(y) && String(y.date || '') <= x.day)
+          const r = k && sold ? (data.stockLog || []).filter(y=> y && y.key === k && y.supplierId && B.isBuy(y) && String(y.date || '').slice(0, 10) <= sold)
             .sort((a, b)=> String(b.date).localeCompare(String(a.date)))[0] : null;
-          sups.add(r ? String(r.supplierId) : ''); });
+          const tl = r ? B.tail(r) : null;
+          const c = tl && tl.cost != null && tl.cost !== '' ? Number(tl.cost) : null;
+          if(c != null && isFinite(c)) paid += qty * c; else unpaid += qty;
+          sups.add(r ? String(tl.supplierId || r.supplierId) : ''); });
         if(/damag|broke|leak|crack|fault|seal|defect/i.test(String(x.n.reason || ''))) faulty++;
       });
       const one = sups.size === 1 ? [...sups][0] : '';
-      lineRef = { line: line[0], notes: line[1], units: Math.round(units * 100) / 100, amount: Math.round(amount), faulty, supplierId: one || null };
+      lineRef = { line: line[0], notes: line[1], units: Math.round(units * 100) / 100, refunded: Math.round(refunded), faulty, supplierId: one || null,
+        /* Paid is known only when every unit's delivery carries its cost. */
+        paid: one && !unpaid ? Math.round(paid) : null };
     }
     add('One line keeps coming back', line && line[1] >= 2 ? 'found' : 'none', line ? `${line[0]}: on ${line[1]} of ${notes.length} credit notes.` : 'The notes name no lines.', lineRef);
     const cust = [...byCust.entries()].sort((a, b)=> b[1] - a[1])[0];
@@ -144269,8 +144290,12 @@ function mgrPulseDeed(f, B, reading, reasons){
     const x = found('One line keeps coming back');
     const p = x && x.ref ? mgrPulsePerson('supplier', x.ref.supplierId) : null;
     if(p){
-      const R = x.ref, span = f.monthly ? 'in the last 30 days' : 'on ' + long(f.date);
-      deed = wa(p, `Ask ${p.name} to credit ${U(R.amount)}`, `Hello ${p.name}, ${R.units} ${R.line} we bought from you came back from customers ${span}${R.faulty ? `, ${R.faulty} of ${R.notes} returns with a fault` : ''} — ${fmtUGX(R.amount)} credited back to them. Can we return them to you for a credit note?${sign}`, x.label);
+      /* The supplier is asked for what the shop paid THEM for the units --
+         never the refund at the shop's own price. Where a delivery's cost
+         is not recorded, no sum is named. */
+      const R = x.ref, span = f.monthly ? 'in the 30 days to ' + long(f.date) : 'on ' + long(f.date);
+      deed = wa(p, R.paid != null ? `Ask ${p.name} to credit ${U(R.paid)}` : `Ask ${p.name} for a credit on ${R.line}`,
+        `Hello ${p.name}, ${R.units} ${R.line} we bought from you came back from customers ${span}${R.faulty ? `, ${R.faulty} of ${R.notes} returns with a fault` : ''}.${R.paid != null ? ` We paid you ${fmtUGX(R.paid)} for them.` : ''} Can we return them to you for a credit note?${sign}`, x.label);
     }
   } else if(k === 'stock_short.high'){
     const x = found('A delivery booked in but not all received');
@@ -144329,6 +144354,9 @@ function mgrPulseActionHTML(f, deed){
    rule the books can test -- so it is listed, never applied. */
 const MGR_PULSE_HOUSE = 'house_rule';
 let mgrPulseRuleOpen = null;
+/* The owner's wording while the form is open: kept across a repaint (a
+   data poll, a refused write), never lost to the drafted text. */
+let mgrPulseRuleDraft = null;
 function mgrPulseKeptRule(key){
   return (mgrPulseNormals.rows || []).find(n=> n.status === 'active' && n.body && n.body.condition === MGR_PULSE_HOUSE
     && String(n.body.sourceAnswerId) === 'rule:' + key) || null;
@@ -144338,7 +144366,7 @@ function mgrPulseRuleHTML(d){
     ? `<a class="btn btn-ghost" href="${esc(waComposeUrl(d.to.phone, d.msg))}" target="_blank" rel="noopener">Tell ${esc(d.to.first)}</a>` : '';
   return `<div class="mgr-u-rule" role="group" aria-label="Your rule">
     <span class="mgr-u-mi mgr-u-mi-b">Your rule</span>
-    <textarea class="mgr-u-rule-in" id="mgrPulseRuleText" rows="2" maxlength="280" aria-label="Your rule">${esc(d.text)}</textarea>
+    <textarea class="mgr-u-rule-in" id="mgrPulseRuleText" rows="2" maxlength="280" aria-label="Your rule">${esc(mgrPulseRuleDraft && mgrPulseRuleDraft.key === d.key ? mgrPulseRuleDraft.text : d.text)}</textarea>
     <p class="mgr-u-act-n">Kept on the Taught list for you and the next meeting. The books can’t check it, so days like this are still flagged.</p>
     <div class="mgr-u-act"><button type="button" class="btn btn-accent" data-pulse-rule-keep="${esc(d.key)}">Keep this rule</button>${send}<button type="button" class="btn btn-ghost" data-pulse-rule-x="1">Cancel</button></div>
   </div>`;
@@ -144346,18 +144374,19 @@ function mgrPulseRuleHTML(d){
 async function mgrPulseKeepRule(key, text){
   const x = mgrPulseReading().findings.find(i=> mgrUnusualKey(i) === key);
   const words = String(text || '').trim().slice(0, 280);
-  if(!x) return;
+  if(!x){ toast('That finding is no longer on the list — nothing was kept.', 6000); mgrPulseRuleOpen = null; mgrPulseRuleDraft = null; mgrPaintUnusual(); return; }
   if(!words){ toast('Write the rule first — it is kept in your words.', 5000); return; }
   if(!managerNotesTable){ toast('Rules need the Manager’s memory — it is not set up on this shop yet.', 6000); return; }
   const w = await mgrSaveNormal({ metric: x.metric, weekday: null, condition: MGR_PULSE_HOUSE, effect: x.dir, note: words, sourceAnswerId: 'rule:' + key });
   if(!w.ok){
+    mgrPulseRuleDraft = { key, text: String(text || '') };
     mgrPulseNormals.writeError = w.migration ? mgrMigrationNote({ code: '23514' }) : ('That rule could not be kept — ' + (w.error || 'the journal refused it'));
     mgrPaintUnusual();
     return;
   }
   mgrPulseNormals.writeError = null;
   if(w.row) mgrPulseNormals.rows = [w.row].concat(mgrPulseNormals.rows || []);
-  mgrPulseRuleOpen = null;
+  mgrPulseRuleOpen = null; mgrPulseRuleDraft = null;
   mgrPaintUnusual();
 }
 /* ---- What the meeting reads ----
@@ -144368,8 +144397,9 @@ async function mgrPulseKeepRule(key, text){
    (date, what, direction, reads_as, drove_it, figure, usual and how
    many same weekdays the usual rests on), plus what the pulse adds: the
    days a repeat covers, problem or good news, and how unusual. drove_it
-   is the day's own rows and what the books FOUND behind it -- never a
-   reason they did not find. */
+   is the day's own rows only, as it always was. What the books FOUND
+   alongside the day (the screen's ranked candidates) is its own field,
+   found_in_books: questions to put to the owner, never the cause. */
 function mgrPulseMeetingItem(f, B, reading){
   const S = f.sig, round = typeof apRound === 'function' ? apRound : Math.round;
   const fig = (v)=> v == null ? null : S.unit === 'pct' ? Math.round(v * 1000) / 10 + '%' : S.unit === 'count' ? Math.round(v * 10) / 10 : round(v);
@@ -144383,7 +144413,7 @@ function mgrPulseMeetingItem(f, B, reading){
     figure: f.monthly ? round(f.monthly.sum) : fig(f.value), usual: f.monthly ? round(f.monthly.usual) : fig(f.usual),
     weeks: f.monthly ? null : (last.past || []).length, months: f.monthly ? f.monthly.months : null,
     how_unusual: MGR_PULSE_SCALE[f.band] + (f.band === 4 ? '' : ' — ' + mgrPulseRarity(f)),
-    reads_as: mgrPulseTitle(f), drove_it: (what ? [what] : []).concat(found).slice(0, 3) };
+    reads_as: mgrPulseTitle(f), drove_it: what ? [what] : [], found_in_books: found.slice(0, 3) };
 }
 /* Read for a meeting: the taught normals and the owner's answers first
    (each read once a day, as the screen reads them), then the reading.
@@ -144550,11 +144580,15 @@ document.addEventListener('click', (e)=>{
   const ch = t.closest('[data-pulse-chase]');
   if(ch){ mgrPulseChaseOpen(ch.dataset.pulseChase); return; }
   const ru = t.closest('[data-pulse-rule]');
-  if(ru){ mgrPulseRuleOpen = ru.dataset.pulseRule; mgrPaintUnusual();
+  if(ru){ mgrPulseRuleOpen = ru.dataset.pulseRule; mgrPulseRuleDraft = null; mgrPaintUnusual();
     const ta = document.getElementById('mgrPulseRuleText'); if(ta && ta.focus) ta.focus(); return; }
   const rk = t.closest('[data-pulse-rule-keep]');
   if(rk){ const ta = document.getElementById('mgrPulseRuleText'); mgrPulseKeepRule(rk.dataset.pulseRuleKeep, ta ? ta.value : ''); return; }
-  if(t.closest('[data-pulse-rule-x]')){ mgrPulseRuleOpen = null; mgrPaintUnusual(); return; }
+  if(t.closest('[data-pulse-rule-x]')){ mgrPulseRuleOpen = null; mgrPulseRuleDraft = null; mgrPaintUnusual(); return; }
+});
+document.addEventListener('input', (e)=>{
+  const t = e.target;
+  if(t && t.id === 'mgrPulseRuleText' && mgrPulseRuleOpen) mgrPulseRuleDraft = { key: mgrPulseRuleOpen, text: t.value };
 });
 /* One listener for the open-the-day action, not one per row: the rows are
    repainted every render and a listener per row would be re-added every time. */
@@ -163382,9 +163416,10 @@ const ASSISTANT_TOOLS = {
         ...(x.days.length > 1 ? { days: x.days } : {}), news: x.tone === 'good' ? 'good news' : 'a problem',
         figure: x.figure, usual: x.usual,
         ...(x.months != null ? { months_compared: x.months } : { weekdays_compared: x.weeks }), how_unusual: x.how_unusual,
-        drove_it: x.drove_it, reads_as: x.reads_as,
+        drove_it: x.drove_it, reads_as: x.reads_as, ...((x.found_in_books || []).length ? { found_in_books: x.found_in_books } : {}),
         what_to_do: 'Say which day and what was unusual in one sentence, name what drove it from drove_it,'
-          + ' and ASK what happened if the books cannot say. Never name a cause the figures do not show:'
+          + ' and ASK what happened if the books cannot say. found_in_books is what the books show alongside the day:'
+          + ' put it to the owner as a question, never as the cause. Never name a cause the figures do not show:'
           + ' stock counted short is a question, not a theft.' });
     });
 
@@ -163465,6 +163500,8 @@ const ASSISTANT_TOOLS = {
         const row = qRows.find(q=> (q.body || {}).unusualDay === x.date && (q.body || {}).metric === x.metric && (q.body || {}).answer);
         const said = row ? row.body : unusual.answered(x.key) ? { answer: unusual.answered(x.key) } : null;
         return { date: x.date, what: x.metric, direction: x.dir, reads_as: x.reads_as, drove_it: x.drove_it,
+          /* Alongside the day, never its cause: a question for the owner. */
+          ...((x.found_in_books || []).length ? { found_in_books: x.found_in_books } : {}),
           ...(x.days.length > 1 ? { days: x.days } : {}), news: x.tone === 'good' ? 'good news' : 'a problem', how_unusual: x.how_unusual,
           ...(said ? { owner_said: said.answer,
             /* Answered: not a question any more. Sales not entered is a
@@ -163479,6 +163516,7 @@ const ASSISTANT_TOOLS = {
       ...(unusual.taught.length ? { owner_taught: unusual.taught.slice(0, 10) } : {}),
       /* A failed read is named, never taken for "nothing answered". */
       ...(unusual.answersError ? { unusual_answers_not_read: 'The owner\u2019s answers to these days could not be read (' + unusual.answersError + '): do not treat a day as unanswered on that account.' } : {}),
+      ...(unusual.normalsError ? { unusual_normals_not_read: 'What the owner taught Out of the ordinary could not be read (' + unusual.normalsError + '): days it taught as normal may be listed; do not treat the owner as having taught nothing.' } : {}),
       /* WHO A CHASE MOVES. The debtors that owe most now, each with how
          often they paid within a week after a chase against how often
          they paid in a week nobody chased them -- and the shop's own
