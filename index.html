@@ -128814,6 +128814,33 @@ function mgrDaysOfStock(today){
   return { days: cogs > 0 ? value / (cogs / 30) : null, value: Math.round(value), cogsPerDay: Math.round(cogs / 30) };
 }
 
+/* DEAD STOCK ON ONE VALUATION. The quiet-window list is the
+   Inventory's (deadStockRows); each line is worth what the Inventory
+   register says it is (inventoryLineFor -- the shop's own units at cost,
+   a consignor's goods left out), the valuation mgrDaysOfStock's shelf
+   total carries. So a dead line, the sum and "N% of the shelf" read the
+   same everywhere the Manager shows dead stock: the health check, the
+   Brief's Cash to free, the Simulator's clearance and the Targets
+   measure. A line the register cannot price (value null) keeps the age
+   table's own figure (its cost or the supplier registry's), never 0.
+   -> [{ ...deadStockRows row, value, ageValue }], worst money first as
+   the Inventory lists them. */
+function mgrDeadStockLines(today){
+  const day = String(today || todayISO()).slice(0, 10);
+  return mgrMemo('deadLines:' + day, ()=> deadStockRows(day).map(r=>{
+    let value = Number(r.value) || 0;
+    try {
+      const pts = buyKeyParts(String(r.key));
+      const l = pts && pts.product ? inventoryLineFor(pts.product, pts.variantIdx) : null;
+      if(l && l.value != null && Number.isFinite(Number(l.value))) value = Number(l.value);
+    } catch(e){}
+    return { ...r, value: Math.round(value), ageValue: r.value };
+  }));
+}
+function mgrDeadStockValue(today){
+  return Math.round(mgrDeadStockLines(today).reduce((n, r)=> n + (Number(r.value) || 0), 0));
+}
+
 /* Every figure a check reads, once. Each is read on its own, so one
    that throws is NAMED (errors) and its checks read "not known" -- the
    rest of the board still stands. */
@@ -128922,13 +128949,15 @@ function mgrHealthFactsBuild(c){
   /* The shelf's total is the Inventory register's value at cost
      (inventoryLineFor, through mgrDaysOfStock) -- the figure the
      Inventory screen and days of stock show -- so "N% of the shelf" is a
-     share of the shelf the owner sees. Unreadable: no share, never a
-     guess. */
+     share of the shelf the owner sees. The dead lines are valued the same
+     way (mgrDeadStockLines), so the share's two sides sit on one
+     valuation. Unreadable: no share, never a guess. */
   f.deadStock = read('deadStock', ()=>{
-    const h = dashInventoryHealth();
+    const rows = mgrDeadStockLines(today);
+    const value = Math.round(rows.reduce((n, r)=> n + (Number(r.value) || 0), 0));
     const total = f.daysOfStock && f.daysOfStock.value != null ? Math.round(Number(f.daysOfStock.value)) : null;
-    return { value: Math.round(h.deadValue), total, share: total > 0 ? h.deadValue / total : null,
-      lines: stockAgeRows(today).filter(r=> r.dead).length, quietDays: deadStockQuietDays() };
+    return { value, total, share: total > 0 ? value / total : null,
+      lines: rows.length, quietDays: deadStockQuietDays() };
   });
   f.stockOut = read('stockOut', ()=>{
     const onOrder = buyOrdersOnTheWay(today);
@@ -132984,7 +133013,9 @@ const MANAGER_METRICS = {
   dead_stock_value: { label: 'Dead stock', unit: 'ugx', kind: 'level', direction: 'down',
     /* Q43: said with the shop's own quiet window, read when it is shown. */
     get basis(){ return 'stock with ' + (typeof mgrDeadWindow === 'function' ? mgrDeadWindow() : 'no sale in the quiet window') + '; a past day valued at today\'s cost'; },
-    measure: ()=> dashInventoryHealth().deadValue,
+    /* Today: the Manager's one dead-stock valuation (mgrDeadStockValue,
+       the register's), so a target reads what the health check reads. */
+    measure: ()=> typeof mgrDeadStockValue === 'function' ? mgrDeadStockValue() : dashInventoryHealth().deadValue,
     at: (d)=> d >= todayISO() ? MANAGER_METRICS.dead_stock_value.measure() : mgrTgDeadStockAt(d) },
   cash_on_hand: { label: 'Cash in hand', unit: 'ugx', kind: 'level', direction: 'up',
     basis: 'cash, mobile money and bank together, as the cash book holds them',
@@ -138033,18 +138064,11 @@ function mgrBriefRead(ctx){
     const cu = (data.customers || []).find(x=> String(x.id) === String(d.id));
     return { id: d.id, name: d.name, debt: d.debt, ageDays: d.ageDays, over60: cu ? mgrBriefOver60(customerOpenCharges(cu), today) : 0 };
   })), []);
-  /* Each line valued as the Inventory register values it (inventoryLineFor),
-     so a line reads the same figure here as there; the quiet-window list
-     itself is the Inventory's (deadStockRows). */
-  const dead = read('dead stock', ()=> memo('dead', ()=> deadStockRows(today).map(r=>{
-    let value = r.value;
-    try {
-      const pts = buyKeyParts(String(r.key));
-      const l = pts && pts.product ? inventoryLineFor(pts.product, pts.variantIdx) : null;
-      if(l && Number.isFinite(Number(l.value))) value = Number(l.value);
-    } catch(e){}
-    return { key: r.key, line: r.line, value };
-  })), []);
+  /* Each line valued as the Inventory register values it -- the one
+     valuation the health check, the Simulator and Targets read too
+     (mgrDeadStockLines); the quiet-window list itself is the
+     Inventory's (deadStockRows). */
+  const dead = read('dead stock', ()=> memo('dead', ()=> mgrDeadStockLines(today).map(r=> ({ key: r.key, line: r.line, value: r.value }))), []);
   const lags = read('chase record', ()=> mgrMemo('chaseLags:' + today, ()=> mgrChaseLags(today)), []);
   const free = mgrBriefCashToFree({ debts, dead, moves: rows, lags });
   if(errors.includes('debts') || errors.includes('dead stock')) free.error = 'what is owed and the shelf could not be read';
@@ -139820,7 +139844,9 @@ function mgrSimBooksBuild(day){
       reachesOn: stopAt != null && billDate ? anShiftDate(billDate, stopAt) : null };
   })) || [];
   books.clearance = read('clearance', ()=>{
-    const rows = deadStockRows(day);
+    /* Valued as the register values each line (mgrDeadStockLines): the
+       lever's figure is the health check's and the Brief's. */
+    const rows = mgrDeadStockLines(day);
     if(!rows.length) return null;
     /* Each line priced by clearanceFor -- at the owner's clearance
        price, and at cost -- so a consigned line carries what it owes its
@@ -144391,7 +144417,9 @@ function mgrPlayPresets(today){
         areas.length ? `${areas.join(' and ')} took the most of its deliveries` : `no ${DAY} delivery carries a place on the books, so every area counts`}` });
   }
   /* paint */
-  const dead = deadStockRows(today).filter(r=> r.value > 0)[0];
+  /* The line valued as the Manager values dead stock (mgrDeadStockLines),
+     so "dead stock less" it is taken off the same figure deadNow is. */
+  const dead = (typeof mgrDeadStockLines === 'function' ? mgrDeadStockLines(today) : deadStockRows(today)).filter(r=> r.value > 0)[0];
   const best = anRowsByItem(anInvoicesInRange(anShiftDate(today, -30), to)).sort((a, b)=> b.sales - a.sales)[0];
   const deadNow = Math.round(MANAGER_METRICS.dead_stock_value.measure());
   if(dead && best && deadNow > 0){

@@ -201,7 +201,8 @@ const H = compileScope([
      (mgrChargesOver60 over customerOpenCharges), the Brief's own rule. */
   t.check(/collectableDebts\(\)/.test(facts) && /mgrChargesOver60\(customerOpenCharges\(cu\), today\)/.test(facts)
     && !/ageDays > 60/.test(facts), 'debt over 60 days is the part of each balance over 60 days old, charge by charge');
-  t.check(/dashInventoryHealth\(\)/.test(facts), 'dead stock is dashInventoryHealth\'s — the quiet window, as the target uses');
+  t.check(/mgrDeadStockLines\(today\)/.test(facts) && !/dashInventoryHealth\(\)/.test(facts),
+    'dead stock is the quiet window\'s lines valued as the register values them (mgrDeadStockLines), as the target, the Brief and the Simulator read it');
   t.check(/mgrDaysOfStock\(today\)/.test(facts) && /mgrDebtorDays\(today\)/.test(facts), 'days of stock and debtor days by the approved definitions');
   /* WAS: anShiftDate(today, -29) .. today -- today's unfinished day in
      it. NOW the 30 whole days to yesterday, as margin_pct and the

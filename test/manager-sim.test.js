@@ -933,7 +933,7 @@ eq(S.mgrSimTeaserFigures(ctxPlan).plan, 'my plan', 'with an open move that moves
     promisesBroken: () => 0,
     credOpenInvoices: () => [{ invoice: { id: 891, date: '2026-07-25' }, supplierId: 'S3', due: 5670120, dueOn: '2026-08-24', ageDays: 74 }],
     supplierName: (id) => (id === 'S3' ? 'Steel & Tube' : ''),
-    deadStockRows: () => [], deadStockQuietDays: () => 60, consignmentUnitCostForKey: () => null,
+    deadStockRows: () => [], mgrDeadStockLines: () => [], deadStockQuietDays: () => 60, consignmentUnitCostForKey: () => null,
     marketVerdict: () => ({ lift: [] }),
     staffOnPayroll: () => [{ name: 'Joan Nakato', payBasis: 'monthly', payRate: 900000 }, { name: 'Peter', payBasis: 'monthly', payRate: 500000 }],
     basisMonthCost: (basis, rate) => rate,

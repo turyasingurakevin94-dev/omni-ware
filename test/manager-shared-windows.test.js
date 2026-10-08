@@ -38,9 +38,12 @@ const shift = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate
      The 30 days to yesterday (7 Sep .. 6 Oct): 400,000 / 2,000,000 = 20%,
      and nothing sold below cost (1 line sold). The old window (8 Sep ..
      today) read -50% and Tiles below cost.
-     The shelf: dashInventoryHealth says 1,500,000 is dead of its own
-     3,000,000; the Inventory register (mgrDaysOfStock) values the shelf
-     at 10,000,000. Share 1,500,000 / 10,000,000 = 15%, not 50%. */
+     The shelf: the Inventory register (mgrDaysOfStock) values the shelf
+     at 10,000,000, and values the two dead lines at 1,000,000 and
+     500,000 (mgrDeadStockLines -- the same valuation). Share 1,500,000
+     / 10,000,000 = 15%: not 50% (the ageing rows' own 3,000,000 shelf),
+     and not 14% (dashInventoryHealth's 1,400,000, a second valuation
+     of the same lines). */
   const invoices = [
     { date: '2026-09-06', sales: 9000000, profit: 9000000, name: 'Sand' },
     { date: '2026-09-07', sales: 2000000, profit: 400000, name: 'Cement' },
@@ -54,8 +57,9 @@ const shift = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate
     anOverallTotals: (qs) => ({ sales: qs.reduce((n, q) => n + q.sales, 0), profit: qs.reduce((n, q) => n + q.profit, 0) }),
     anRowsByItem: (qs) => qs.map((q) => ({ name: q.name, variant: '', sales: q.sales, profit: q.profit })),
     targetMarginPct: () => 12,
-    dashInventoryHealth: () => ({ deadValue: 1500000, totalValue: 3000000 }),
-    stockAgeRows: () => [{ dead: true }, { dead: false }],
+    dashInventoryHealth: () => ({ deadValue: 1400000, totalValue: 3000000 }),
+    stockAgeRows: () => [{ dead: true }, { dead: true }, { dead: false }],
+    mgrDeadStockLines: () => [{ key: 'P1', value: 1000000 }, { key: 'P2', value: 500000 }],
     deadStockQuietDays: () => 60,
     mgrDaysOfStock: () => ({ days: 120, value: 10000000, cogsPerDay: 83333 }),
     console: { warn() {} },
@@ -65,12 +69,14 @@ const shift = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate
     'margin and below-cost read 7 Sep .. 6 Oct: the 30 whole days to yesterday');
   eq([f.margin.pct, f.margin.sales], [20, 2000000], 'margin 400,000 / 2,000,000 = 20%, today\'s unfinished day left out');
   eq([f.belowCost.lines, f.belowCost.count], [1, 0], 'one line sold in the window, none below cost');
-  eq([f.deadStock.total, f.deadStock.share], [10000000, 0.15], 'dead stock is 15% of the shelf the Inventory register values at 10,000,000');
+  eq([f.deadStock.value, f.deadStock.total, f.deadStock.share, f.deadStock.lines], [1500000, 10000000, 0.15, 2],
+    'dead stock 1,500,000 on the register\'s valuation, 15% of the shelf the register values at 10,000,000, 2 lines');
 
   /* The register unreadable: no share, never the ageing rows' own sum. */
   const S2 = compileScope([fn('mgrHealthFactsBuild'), fn('anShiftDate')], {
     data: { customers: [] }, todayISO: () => TODAY,
-    dashInventoryHealth: () => ({ deadValue: 1500000, totalValue: 3000000 }), stockAgeRows: () => [{ dead: true }],
+    dashInventoryHealth: () => ({ deadValue: 1400000, totalValue: 3000000 }), stockAgeRows: () => [{ dead: true }],
+    mgrDeadStockLines: () => [{ key: 'P1', value: 1500000 }],
     deadStockQuietDays: () => 60, mgrDaysOfStock: () => { throw new Error('the shelf is away'); }, console: { warn() {} },
   }, ['mgrHealthFactsBuild']);
   const f2 = S2.mgrHealthFactsBuild({ today: TODAY, walk: { tightest: null, opening: 0 } });
@@ -82,6 +88,33 @@ const shift = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate
     console: { warn() {} } }, ['mgrHealthChecks']);
   const dc = H.mgrHealthChecks().checks.find((c) => c.id === 'dead_stock');
   eq([dc.pass, dc.line], [false, '1.5m of dead stock — no sale in 60 days — 1 line'], 'and the check still fails on the dead stock, without a share it cannot know');
+}
+
+/* ---------- 3b. dead stock on one valuation -------------------------- */
+{
+  /* The quiet window's two dead lines, as deadStockRows lists them, worst
+     money first: floor tiles 5,390,000 and wood primer 910,000 by the
+     age table. The Inventory register (inventoryLineFor) values the
+     tiles at 5,410,000 -- the shop's own units at cost -- and cannot
+     price the primer (value null). So the lines read 5,410,000 and
+     910,000 (the primer keeps the age table's figure, never 0): 6,320,000
+     in all, and that one figure is the health check's, the Brief's, the
+     Simulator's and the Targets measure's. */
+  const rows = [{ key: 'P1', line: 'Floor tiles', value: 5390000, qty: 100 }, { key: 'P2', line: 'Wood primer', value: 910000, qty: 10 }];
+  const reg = { P1: { value: 5410000 }, P2: { value: null } };
+  const D = compileScope([fn('mgrDeadStockLines'), fn('mgrDeadStockValue')], {
+    todayISO: () => TODAY, mgrMemo: (name, f) => f(), deadStockRows: () => rows,
+    buyKeyParts: (k) => ({ product: { id: k }, variantIdx: null }), inventoryLineFor: (p) => reg[p.id],
+  }, ['mgrDeadStockLines', 'mgrDeadStockValue']);
+  eq(D.mgrDeadStockLines(TODAY).map((r) => [r.key, r.value, r.ageValue, r.qty]), [['P1', 5410000, 5390000, 100], ['P2', 910000, 910000, 10]],
+    'each dead line at the register\'s value; a line it cannot price keeps the age table\'s figure, never 0');
+  eq(D.mgrDeadStockValue(TODAY), 6320000, 'dead stock 5,410,000 + 910,000 = 6,320,000');
+  const brief = fn('mgrBriefRead'), sim = fn('mgrSimBooksBuild'), metrics = decl('MANAGER_METRICS'), plays = fn('mgrPlayPresets');
+  t.check(/mgrDeadStockLines\(today\)\.map\(r=> \(\{ key: r\.key, line: r\.line, value: r\.value \}\)\)/.test(brief) && !/deadStockRows\(/.test(brief),
+    'the Brief\'s Cash to free reads the same lines');
+  t.check(/const rows = mgrDeadStockLines\(day\);/.test(sim) && !/deadStockRows\(/.test(sim), 'the Simulator\'s clearance reads the same lines');
+  t.check(/dead_stock_value:[^]*?measure: \(\)=> typeof mgrDeadStockValue === 'function' \? mgrDeadStockValue\(\)/.test(metrics), 'the Targets measure reads the same figure');
+  t.check(/mgrDeadStockLines\(today\)/.test(plays), 'and a play\'s "dead stock less" line comes off the same figure');
 }
 
 /* ---------- 2. 60 days or more, as the aging bands it ---------------- */
