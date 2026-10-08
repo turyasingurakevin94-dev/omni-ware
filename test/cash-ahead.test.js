@@ -699,6 +699,30 @@ const drawBuy = (over) => {
   t.check(!/There is nothing safe to spend/.test(clean),
     'while a shop with a budget is not told it has none');
 
+  /* SAFE TO SPEND ABOVE NOUGHT, THE ORDERS TAKING ALL OF IT. 4,848,424 is
+     safe to spend; 6,314,070 is already out on orders not yet arrived, so
+     the plan works to max(0, 4,848,424 - 6,314,070) = 0. The plan is
+     empty because of the orders, not because nothing is safe to spend --
+     and the screen says so, with both figures. */
+  const ordered = drawBuy({
+    cashAhead: () => ({ days: 30, committed: 41944213, safeToSpend: 4848424, unknown: 0,
+      commitments: [{ dueOn: '2026-10-11', date: '2026-10-11', overdue: false, label: 'Rent', amount: 2500000 }],
+      tightest: { date: '2026-11-05', balance: 4848424 } }),
+    purchasePlan: (budget) => ({ budget: Math.max(0, budget - 6314070), budgetBefore: budget, onOrder: 6314070, coverDays: 14,
+      lines: [], spend: 0, sourceFirst: [], coming: [],
+      didNotFit: [{ kind: 'shelf', daysLeft: 2, name: 'Simba Cement', cost: 3000000, qty: 100, reason: 'Runs out in 2 days',
+        supplier: 'Simba', unitCost: 30000, unit: 'Bag', units30: 300, earned30: 900000, kept: 10 }] }),
+  });
+  t.check(/The 6,314,070 already out on orders uses up the 4,848,424 that is safe to spend, so the plan is empty\./.test(ordered)
+    && !/There is nothing safe to spend/.test(ordered),
+    'safe to spend 4,848,424 and 6,314,070 on order: the orders are named as what empties the plan, never "nothing safe to spend"');
+  t.check(/Follow-ups/.test(ordered) && /What collecting would pay for/.test(ordered), 'and it still points at what changes it');
+  /* The phone header: the budget takes two parts of the plan's row (a
+     nine-digit figure reads whole), Redo the row under. */
+  t.check(/<label class="ow-f ow-fc-budget"><span class="ow-f-l">Budget<\/span>/.test(src)
+    && /\.ow-fc-acts > \.ow-f\.ow-fc-budget\{flex:2 1 0;\}/.test(src) && /\.ow-fc-acts > \.btn\.ow-sm\.ow-fc-redo\{flex:1 1 100%;\}/.test(src),
+    'on a phone the budget field is wide enough for its figure');
+
   /* A BLANK BOX MEANS "NO LIMIT". Zero is falsy, so `budget || ''`
      emptied the field on the one render where the answer is "nothing" —
      showing the state the change handler reads back as null. */

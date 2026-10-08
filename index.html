@@ -30177,12 +30177,17 @@
        44px tap -- the layer already does that -- and the acts take the
        row under it rather than trailing off the end of a 26px page
        name. Two small controls are not two decisions: Today and Print
-       share a row, as do the plan's two fields. */
+       share a row, as do the plan's two fields (Redo under them). */
     .ow-fc-lens{flex:1 1 100%;}
     .ow-fc-acts{flex:1 1 100%;flex-wrap:wrap;gap:var(--ow-sp-8);}
     .ow-fc-acts > .btn.ow-sm{flex:1 1 0;min-width:0;min-height:var(--ow-tap);
       box-sizing:border-box;justify-content:center;}
     .ow-fc-acts > .ow-f{flex:1 1 0;min-width:0;}
+    /* The plan's two fields share the row, the budget taking two parts
+       of three so a nine-digit figure reads whole beside "worked out";
+       Redo takes the row under them. */
+    .ow-fc-acts > .ow-f.ow-fc-budget{flex:2 1 0;}
+    .ow-fc-acts > .btn.ow-sm.ow-fc-redo{flex:1 1 100%;}
     .ow-fc-acts .ow-f-in{min-width:0;height:var(--ow-tap);}
     .ow-fc-acts .ow-dy-nav{flex:1 1 100%;height:auto;}
     .ow-fc-acts .ow-dy-b{width:var(--ow-tap);min-height:var(--ow-tap);}
@@ -35538,8 +35543,8 @@
                guard. The budget's suffix says whether it was worked out
                from the cash line or typed. -->
           <label class="ow-f"><span class="ow-f-l">Cover</span><span class="ow-f-in"><input type="number" class="ow-f-v" id="buy_cover" min="1" step="1"><span class="ow-f-u">days</span></span></label>
-          <label class="ow-f"><span class="ow-f-l">Budget</span><span class="ow-f-in"><input type="number" class="ow-f-v" id="buy_budget" min="0" step="any" placeholder="safe to spend"><span class="ow-f-u" id="buy_budget_src">worked out</span></span></label>
-          <button type="button" class="btn ow-sm" id="buy_redo_btn" title="Read the shelf and the price book again">Redo the plan</button>
+          <label class="ow-f ow-fc-budget"><span class="ow-f-l">Budget</span><span class="ow-f-in"><input type="number" class="ow-f-v" id="buy_budget" min="0" step="any" placeholder="safe to spend"><span class="ow-f-u" id="buy_budget_src">worked out</span></span></label>
+          <button type="button" class="btn ow-sm ow-fc-redo" id="buy_redo_btn" title="Read the shelf and the price book again">Redo the plan</button>
         </span>
       </div>
 
@@ -131781,8 +131786,16 @@ function renderPurchasePlanPanel(){
       ? 'Everything that was running short is on an order already out.'
       : `Nothing on the shelf runs out within ${days(plan.coverDays)}, and nothing is being bought in order after order.`}</div></div>`;
   } else {
-    if(plan.budget === 0 && buyBudget == null) work += `<p class="ow-mini"><b>There is nothing safe to spend, so the plan is empty.</b>
-      Every shilling in the drawer is already promised to a day inside the next ${ahead.days}. What is below is what the shop would buy
+    /* WHY IT IS EMPTY, said as it is. Safe to spend can be well above
+       nought while the orders already out take all of it -- then the
+       money on order is the reason, not "nothing safe to spend", and
+       the screen names both figures. */
+    const ordersTookIt = plan.onOrder > 0 && plan.budgetBefore > 0;
+    if(plan.budget === 0 && buyBudget == null) work += `<p class="ow-mini">${ordersTookIt
+      ? `<b>The ${f(plan.onOrder)} already out on orders uses up the ${f(plan.budgetBefore)} that is safe to spend, so the plan is empty.</b>
+      That ${f(plan.budgetBefore)} is what is left after every dated payment inside the next ${ahead.days} days, and the orders not yet arrived take all of it.`
+      : `<b>There is nothing safe to spend, so the plan is empty.</b>
+      Every shilling in the drawer is already promised to a day inside the next ${ahead.days}.`} What is below is what the shop would buy
       the moment there is something to buy it with. Collecting is what makes it affordable, and Follow-ups has who to ring —
       <b>What collecting would pay for</b>, beside, works out which of them, and exactly what their money would buy.
       Or type a budget above to overrule this.</p>`;
