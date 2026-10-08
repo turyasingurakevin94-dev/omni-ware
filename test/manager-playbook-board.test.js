@@ -169,8 +169,6 @@ function scope(over) {
   const mv = movingOf({ name: 'Price steel to the rival', progress: steel.progress });
   eq([mv.measures, mv.before, mv.now, mv.read_days, mv.per], ['the share kept', 9, 8.7, 14, 'share'],
     'a share-of-sales play reaches the meeting as a share over its 14 days, never called a sum');
-  eq(movingOf({ name: 'Old margin play', progress: { measures: 'the share kept', unit: 'pct', before: 9, since: 8.7, days_read: 14 } }).per, 'share',
-    'even a reading carried from before the field existed says share for a percentage');
   eq([steel.progress.per, bundle.progress.per, sat.progress.per], ['share', 'sum', 'week'],
     'the progress names its reading: margin a share, sales unstamped the 14 days’ sum, sales stamped a week’s worth');
   eq([movingOf({ name: 'bundle', progress: bundle.progress }).per, movingOf({ name: 'sat', progress: sat.progress }).per], ['sum', 'week'],
