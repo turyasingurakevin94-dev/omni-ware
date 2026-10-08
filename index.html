@@ -245,6 +245,16 @@
   /* The field face of the Manager's door, shown only at the phone
      breakpoint. Hidden here so the console keeps its button. */
   .mgr-talk-f{display:none;}
+  /* THE BOOKS' FRESHNESS, in the Manager's header: a state lamp, the
+     time as a figure, the day. Crimson, and worded, when a read failed. */
+  .mgr-fresh{display:inline-flex;align-items:center;gap:var(--ow-sp-6);margin-right:var(--ow-sp-12);
+    font-size:var(--ow-t-12);color:var(--ow-ink-600);white-space:nowrap;}
+  .mgr-fresh:empty{display:none;}
+  .mgr-fresh-lamp{width:8px;height:8px;flex:none;border-radius:var(--ow-r-pill);background:var(--ow-verdigris);}
+  .mgr-fresh-t{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;color:var(--ow-ink-900);}
+  .mgr-fresh.mgr-fresh-bad{color:var(--ow-crimson);white-space:normal;max-width:52ch;}
+  .mgr-fresh-bad .mgr-fresh-lamp{background:var(--ow-crimson);}
   /* Two children of .topbar that only the phone ever shows -- the sheet's
      Cancel and the line pinned at its foot. They live here rather than in
      the phone's own bar because they belong to the SEARCH, and there is
@@ -1407,6 +1417,9 @@
      colour on this line has never carried a single bit of information.
      --danger exists. Now it does. */
   .mgr-pace.behind{border-left:3px solid var(--danger);}
+  /* At risk is amber, as the Targets section draws it; only Off track
+     wears the crimson rail. */
+  .mgr-pace.risk{border-left:3px solid var(--ow-amber);}
   .mgr-pace-line{font-size:12.5px;color:var(--ink-soft);line-height:1.45;max-width:76ch;}
   .mgr-pace-line b{color:var(--ink);}
   .mgr-basis{display:block;font-weight:400;font-size:11px;color:var(--ink-soft);text-align:right;margin-top:1px;}
@@ -18469,12 +18482,18 @@
       stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;color:var(--ow-oxide);}
     #mgrTalkBtn .mgr-talk-p{flex:1 1 auto;min-width:0;text-align:left;
       color:var(--ow-ink-600);font-size:15px;}
+    /* Navy, not oxide, on every section: each section's own primary
+       action is the screen's one oxide. */
     #mgrTalkBtn .mgr-talk-go{flex:none;width:40px;height:40px;border-radius:var(--ow-r);
-      background:var(--ow-oxide);color:var(--ow-paper);
+      background:var(--ow-steel-950);color:var(--ow-paper);
       display:flex;align-items:center;justify-content:center;}
     #mgrTalkBtn .mgr-talk-go svg{width:19px;height:19px;fill:none;stroke:currentColor;
       stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
     #mgrTalkBtn:active .mgr-talk-f{background:var(--ow-paper-2);}
+    /* On the phone the books' time stays off the header -- the bar is
+       the ask field -- unless the last read FAILED, which is said. */
+    .mgr-fresh:not(.mgr-fresh-bad){display:none;}
+    .mgr-fresh.mgr-fresh-bad{display:flex;width:100%;margin:var(--ow-sp-8) 0 0;}
 
     /* The sheet is the search. Everything under it is out of reach. */
     body.phone-searching .mobile-topbar,
@@ -35481,6 +35500,9 @@
         <h1 class="ow-ph-t">The Manager</h1>
         <p class="ow-ph-sub">Reads your books, keeps score on its own advice, and moves nothing without you.</p>
         <span class="ow-ph-sp"></span>
+        <!-- How fresh every figure below is: when the books were last read
+             (verdigris), or that the last read failed and why (crimson). -->
+        <span class="mgr-fresh" id="mgrFresh" role="status"></span>
         <!-- One control, one handler, two skins. On the console it is a
              button in the page header, beside the meeting and the review.
              On the phone it becomes the first thing on the screen and
@@ -40823,6 +40845,16 @@ async function loadData(shopId){
        days. Probed alone: a supplier row goes up on every save. */
     sb.from('suppliers').select('stop_at_days, credit_days, delivery_days').limit(1)
   ]);
+  /* WHEN THE BOOKS WERE LAST READ, for the Manager's header: the time of
+     this read when every table the shop needs answered, or -- when one
+     did not -- the failure, named, with the last good time kept beside
+     it. Painted at once on a failure, since no redraw follows one. */
+  const booksFail = [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR, mediaR, mediaFoldersR, waPostsR, rentAgreementsR, duesR, placesR]
+    .find(r=> r && r.error);
+  booksRead = booksFail
+    ? { at: booksRead.at, failedAt: Date.now(), error: String(booksFail.error.message || booksFail.error.code || 'the database did not answer') }
+    : { at: Date.now(), failedAt: null, error: null };
+  if(booksFail && typeof mgrPaintFresh === 'function') mgrPaintFresh();
   [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR, mediaR, mediaFoldersR, waPostsR, rentAgreementsR, duesR, placesR]
     .forEach(r=>{ if(r.error) throw r.error; });
   /* collection_trips is deliberately NOT in that list. The app deploys on
@@ -40877,8 +40909,15 @@ async function loadData(shopId){
   /* 0081. Not a column on a busy write but a whole table of its own, so
      the stakes are smaller: with it missing the Manager still holds a
      meeting, and simply cannot REMEMBER one -- the screen says so
-     rather than letting advice quietly evaporate. */
-  managerNotesTable = !(managerNotesR && managerNotesR.error);
+     rather than letting advice quietly evaporate.
+     Only a MISSING table means "not set up": a 500, a timeout or a
+     policy hiccup on the probe is a journal that could not be read
+     this once, and calling it a missing migration would send the owner
+     to paste 0081 again. Such a shop keeps its journal; each section's
+     own read then fails and names itself, and the reason is kept. */
+  managerNotesTable = !(managerNotesR && managerNotesR.error && managerNotesMissing(managerNotesR.error));
+  managerNotesProbeErr = managerNotesR && managerNotesR.error && managerNotesTable
+    ? String(managerNotesR.error.message || managerNotesR.error.code || 'the journal did not answer') : null;
   /* 0076, its own probe like the two above. Guards a busy write: every
      cash entry goes up on every save, so sending transfer_id before the
      migration lands would fail the whole cash_txns upsert and the shop
@@ -41442,12 +41481,28 @@ async function loadData(shopId){
 }
 
 let lastSynced = {};
+/* When loadData last read the shop's books (ms), and the last failure:
+   { at, failedAt, error }. The Manager's header says which. */
+let booksRead = { at: null, failedAt: null, error: null };
 // Set by loadData: see the probe there for why a write cannot assume it.
 let sourcingVariantColumn = false;
 let sourcingImageColumn = false;
 let priceAskedColumn = false;
 let stockLotConsignColumn = false;
 let managerNotesTable = false;
+/* Why the boot probe of manager_notes failed when the table is THERE
+   (null when it answered): the journal is kept, but this load could not
+   read it. */
+let managerNotesProbeErr = null;
+/* The probe's error says the table does not exist: Postgres's 42P01,
+   PostgREST's PGRST205 (not in the schema cache), or those words. Any
+   other error is a failed read, not a missing migration. */
+function managerNotesMissing(err){
+  if(!err) return false;
+  const code = String(err.code || '');
+  if(code === '42P01' || code === 'PGRST205') return true;
+  return /relation .* does not exist|could not find the table/i.test(String(err.message || ''));
+}
 /* Whether 0087 has landed. A shop without it knows nothing about the
    market -- which is what every shop here knew until now -- so the
    screens say so plainly rather than offering a box that swallows
@@ -127831,7 +127886,10 @@ function mgrTouchesOf(move){
    cashFloor: UGX, a number the owner typed (0 is a real answer: no
    floor). Until then the stand-in is the committed month -- rent and
    monthly/weekly salaries, committedMonthlyCost, the same cushion the
-   Statements hub already measures cash against -- and it says so. */
+   Statements hub already measures cash against -- and it says so.
+   With no floor set and no rent or salary on the books to stand in,
+   the floor is NOT KNOWN: amount null, never 0, so no screen prints a
+   floor of 0 and every check judges against running out instead. */
 function mgrCashFloor(){
   const p = (data && data.presetManager) || {};
   const raw = p.cashFloor;
@@ -127839,7 +127897,8 @@ function mgrCashFloor(){
   if(raw != null && raw !== '' && Number.isFinite(set) && set >= 0)
     return { amount: Math.round(set), source: 'set', note: 'the floor you set' };
   const c = committedMonthlyCost(currentPeriod());
-  const amount = Math.round(Number(c.total) || 0);
+  const total = Math.round(Number(c.total) || 0);
+  const amount = total > 0 ? total : null;
   return { amount, source: 'stand-in',
     note: amount > 0
       ? 'not set — a month of rent and salaries stands in'
@@ -129460,17 +129519,58 @@ function mgrMeetingHealth(h){
         ...(unknown ? { not_known: unknown } : {}) };
     }) };
 }
+/* THE BOOKS' FRESHNESS LINE (the canvas header's "Books read 08:12 ·
+   Wed 7 Oct"). br = booksRead: { at, failedAt, error }. A failed read
+   is said in crimson with its reason, and the last good time beside it;
+   nothing read yet and nothing failed says nothing. -> { bad, html }. */
+function mgrFresh(br){
+  const b = br && typeof br === 'object' ? br : {};
+  const t = (ms)=>{ const d = new Date(ms); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+  const day = (ms)=> new Date(ms).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/,/g, '');
+  const lamp = '<i class="mgr-fresh-lamp" aria-hidden="true"></i>';
+  if(b.error && b.failedAt) return { bad: true, html: lamp + '<span>The books could not be read at <span class="mgr-fresh-t">' + t(b.failedAt) + '</span> — '
+    + esc(b.error) + (b.at ? ' · last read <span class="mgr-fresh-t">' + t(b.at) + '</span> · ' + esc(day(b.at)) : '') + '</span>' };
+  if(!b.at) return { bad: false, html: '' };
+  return { bad: false, html: lamp + '<span>Books read <span class="mgr-fresh-t">' + t(b.at) + '</span> · ' + esc(day(b.at)) + '</span>' };
+}
+function mgrPaintFresh(){
+  const el = typeof document !== 'undefined' && document.getElementById('mgrFresh');
+  if(!el) return;
+  const f = mgrFresh(typeof booksRead === 'undefined' ? null : booksRead);
+  el.className = 'mgr-fresh' + (f.bad ? ' mgr-fresh-bad' : '');
+  el.innerHTML = f.html;
+}
+/* WHICH OF OUT OF THE ORDINARY'S FINDINGS THE MEETING IS HANDED, when
+   there are more than its slots: the ones that still need the owner
+   first -- unanswered problems, then unanswered good news -- then the
+   answered ones; within each, the screen's own order. Listed back in the
+   screen's order with the screen's number (id), so the meeting can say
+   "#11" and mean the row the owner sees. saidOf(x) -> the owner's answer
+   or null. -> [{ x, said }]. */
+function mgrMeetingUnusualPick(items, saidOf, max){
+  const n = Math.max(1, Number(max) || 8);
+  const rows = (items || []).map((x, i)=> ({ x, i, said: saidOf ? saidOf(x) : null }));
+  const rank = (r)=> r.said ? 2 : r.x.tone === 'good' ? 1 : 0;
+  return rows.slice().sort((a, b)=> rank(a) - rank(b) || a.i - b.i).slice(0, n)
+    .sort((a, b)=> a.i - b.i).map(({ x, said })=> ({ x, said }));
+}
 /* The cash floor with where it comes from, and the payday the wages
    are dated by. A stand-in floor is said to be one. */
 function mgrMeetingSettings(floor, payday){
   const f = floor && typeof floor === 'object' ? floor : null;
   const cashFloor = !f ? { error: 'the cash floor could not be read' }
-    : { amount: Math.round(Number(f.amount) || 0), source: f.source === 'set' ? 'set by the owner' : 'stand-in', note: f.note || '',
+    : { amount: f.amount == null || !Number.isFinite(Number(f.amount)) ? 'not known' : Math.round(Number(f.amount)),
+      source: f.source === 'set' ? 'set by the owner' : 'stand-in', note: f.note || '',
       ...(f.source !== 'set' && f.parts ? { stands_in_with: { rent: f.parts.rent, salaries: f.parts.wages,
         ...(f.parts.dailyPaid ? { daily_paid_staff_not_costed: f.parts.dailyPaid } : {}) } } : {}) };
   const pd = payday && typeof payday === 'object' ? payday : null;
   return { cash_floor: cashFloor,
-    payday: pd ? { kind: pd.kind, reads: mgrPaydayLabel(pd), ...(mgrPaydaySettlesLabel(pd) ? { settles: mgrPaydaySettlesLabel(pd) } : {}) }
+    /* The payday dates wages on the Manager's own cash line only. The
+       buying budget (cashAhead, so safe_to_spend) still dates them at
+       month end until the owner says otherwise -- said, so the meeting
+       never reads the two lows as one figure. */
+    payday: pd ? { kind: pd.kind, reads: mgrPaydayLabel(pd), ...(mgrPaydaySettlesLabel(pd) ? { settles: mgrPaydaySettlesLabel(pd) } : {}),
+        wages_dated: 'on this payday on the Manager\u2019s cash line; safe_to_spend (the buying budget) still dates them at month end' }
       : { reads: 'not set', wages_dated: 'at month end, the date the payroll gives every wage due' } };
 }
 /* mgrOffers()' answer: the owner's offers still open, soonest expiry
@@ -129553,13 +129653,13 @@ async function renderManagerGrowth(){
       `<option value="w:${w}" ${payday && payday.kind === 'weekly' && payday.day === w ? 'selected' : ''}>${MGR_WEEKDAYS[w]}s</option>`).join('')}</optgroup>`;
   const plans = `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">What the Manager plans around</span></div>
     <div class="ow-strip ow-growth-strip">
-      <div class="ow-mt${floor.source === 'set' ? '' : ' ow-warn'}"><span class="ow-mt-l">Cash floor</span><span class="ow-mt-v">${n0(floor.amount)} <span class="ow-u">UGX</span></span><span class="ow-mt-s">${floor.source === 'set' ? 'set by you' : 'stand-in — ' + esc(floor.note.replace(/^not set — /, ''))}</span></div>
+      <div class="ow-mt${floor.source === 'set' ? '' : ' ow-warn'}"><span class="ow-mt-l">Cash floor</span><span class="ow-mt-v">${floor.amount == null ? 'not known' : n0(floor.amount) + ' <span class="ow-u">UGX</span>'}</span><span class="ow-mt-s">${floor.source === 'set' ? 'set by you' : floor.amount == null ? 'not set — ' + esc(floor.note.replace(/^not set — /, '')) : 'stand-in — ' + esc(floor.note.replace(/^not set — /, ''))}</span></div>
       <div class="ow-mt${payday ? '' : ' ow-warn'}"><span class="ow-mt-l">Payday</span><span class="ow-mt-v">${payday ? (payday.kind === 'monthly' ? (payday.day === 31 ? 'Last day' : mgrOrdinal(payday.day)) : MGR_WEEKDAYS[payday.day].slice(0, 3) + 's') : 'Month end'}</span><span class="ow-mt-s">${payday ? esc(mgrPaydaySettlesLabel(payday)) : 'not set — the payroll\'s date'}</span></div>
       <div class="ow-mt"><span class="ow-mt-l">Salaries a month</span><span class="ow-mt-v">${n0(cmc.wages)} <span class="ow-u">UGX</span></span><span class="ow-mt-s">${cmc.salariedCount} on a salary${cmc.dailyCount ? ` · ${cmc.dailyCount} paid by the day, not costed` : ''}${cmc.noRateCount ? ` · ${cmc.noRateCount} with no rate` : ''}</span></div>
       <div class="ow-mt"><span class="ow-mt-l">Rent a month</span><span class="ow-mt-v">${n0(cmc.rent)} <span class="ow-u">UGX</span></span><span class="ow-mt-s">from your rent agreements</span></div>
     </div>
     <details class="ow-growth-settings"><summary class="ow-growth-summary">Set the floor and the payday</summary>
-    <div class="ow-growth-controls"><div class="field ow-growth-field"><label for="mgrCashFloorIn">Cash floor (UGX)</label><input id="mgrCashFloorIn" type="number" min="0" step="any" inputmode="numeric" value="${floor.source === 'set' ? floor.amount : ''}" placeholder="${floor.source === 'set' ? '' : 'Blank: ' + n0(floor.amount) + ' stands in'}"></div>
+    <div class="ow-growth-controls"><div class="field ow-growth-field"><label for="mgrCashFloorIn">Cash floor (UGX)</label><input id="mgrCashFloorIn" type="number" min="0" step="any" inputmode="numeric" value="${floor.source === 'set' ? floor.amount : ''}" placeholder="${floor.source === 'set' ? '' : floor.amount == null ? 'Blank: nothing stands in' : 'Blank: ' + n0(floor.amount) + ' stands in'}"></div>
     <div class="field ow-growth-field"><label for="mgrPaydayIn">Payday</label><select id="mgrPaydayIn">${paydayOpts}</select></div>
     ${payday && payday.kind === 'monthly' ? `<div class="field ow-growth-field"><label for="mgrPaydaySettlesIn">It pays</label><select id="mgrPaydaySettlesIn">${[['previous', 'The month just ended'], ['same', 'The month in progress']].map(([k, l])=>
       `<option value="${k}" ${mgrPaydaySettles(payday) === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>` : ''}</div>
@@ -135505,7 +135605,7 @@ function renderManagerCard(){
   const paint = (held)=>{
     el.innerHTML = (held ? '' : `<div class="mgr-invite">
       <p><b>Your manager is ready.</b> One tap holds the morning meeting<span class="ow-hide-sm">: yesterday's advice accounted
-        for, and today's few moves ranked by the money on them</span>. A meeting spends a little AI credit.</p>
+        for, and today's few moves in the meeting's own order</span>. A meeting spends a little AI credit.</p>
       <button type="button" class="btn btn-accent" id="mgrInviteBtn">Hold the morning meeting</button>
     </div>`);
     const btn = el.querySelector('#mgrInviteBtn');
@@ -135545,6 +135645,21 @@ function renderManagerCard(){
   renderManagerPace();
 }
 
+/* WHICH TWO TARGETS TODAY SHOWS: by the Targets section's own state
+   (mgrTgState, through mgrTgTodayLine), never by pace.on_course -- a
+   cash floor the committed line breaks, or a line to hold that crosses
+   at this rate, is At risk while its pace is still "on course". Off
+   track first, then At risk, then not known, then On track; the nearer
+   deadline first within a state, the board's order after that. */
+const MGR_PACE_RANK = { off: 0, risk: 1, unknown: 2, on: 3 };
+const MGR_PACE_CLASS = { off: 'behind', risk: 'risk', on: 'ok' };
+function mgrPaceShow(live){
+  const rank = (k)=> MGR_PACE_RANK[k] == null ? MGR_PACE_RANK.unknown : MGR_PACE_RANK[k];
+  const left = (x)=> Number.isFinite(Number(x.days_left)) ? Number(x.days_left) : Infinity;
+  return (live || []).map((x, i)=> ({ x, i, line: mgrTgTodayLine(x) }))
+    .sort((a, b)=> rank(a.line.key) - rank(b.line.key) || left(a.x) - left(b.x) || a.i - b.i)
+    .slice(0, 2);
+}
 /* Where the shop stands against what it took on, said WITHOUT being
    asked and without spending a shilling of AI credit: every figure here
    is the same derivation the Manager screen draws, compared to the
@@ -135562,14 +135677,14 @@ async function renderManagerPace(){
   if(gen !== mgrPaceGen) return;
   const live = (board.targets||[]).filter(x=> x.pace && !x.finished);
   if(!live.length){ el.innerHTML = ''; return; }
-  const behind = live.filter(x=> !x.pace.on_course);
-  const show = behind.concat(live.filter(x=> x.pace.on_course)).slice(0, 2);
+  const show = mgrPaceShow(live);
   /* Each target in its own unit, by the Targets section's own state and
      deadline (mgrTgTodayLine): days as days, a margin in points, a cash
      floor by the day the committed line would break it -- never every
-     figure in shillings against "the week". */
-  el.innerHTML = show.map(x=> `<div class="mgr-pace ${mgrTgTodayLine(x).ok ? 'ok' : 'behind'}">
-      <div class="mgr-pace-line">${esc(mgrTgTodayLine(x).text)}</div>
+     figure in shillings against "the week". The rail is the state's:
+     crimson Off track, amber At risk, none On track or not known. */
+  el.innerHTML = show.map(({ line })=> `<div class="mgr-pace ${MGR_PACE_CLASS[line.key] || ''}">
+      <div class="mgr-pace-line">${esc(line.text)}</div>
       <button type="button" class="btn btn-ghost mgr-pace-open">Open the Manager</button>
     </div>`).join('');
   el.querySelectorAll('.mgr-pace-open').forEach(b=> b.addEventListener('click', ()=> goToTab('manager')));
@@ -135710,11 +135825,19 @@ async function managerAdviceWeeks(todayISO_){
   return { weeks };
 }
 
-/* Money at a glance: 6.64m, 940k. The exact figure rides on the title. */
+/* Money at a glance: 6.64m, 940k. The exact figure rides on the title.
+   Whole millions from 100m (100m, 130m, 200m: zeros are stripped only
+   after the decimal point, never from the whole part), and a figure
+   that rounds to a thousand k reads 1m. Halves round away from zero on
+   both sides, so -1,500 and 1,500 read alike. */
 function mgrShortUGX(n){
-  const v = Math.round(Number(n) || 0), a = Math.abs(v);
-  if(a >= 1e6) return (v / 1e6).toFixed(a >= 1e8 ? 0 : 2).replace(/\.?0+$/, '') + 'm';
-  if(a >= 1e3) return Math.round(v / 1e3) + 'k';
+  const v = Math.round(Number(n) || 0), a = Math.abs(v), sign = v < 0 ? '-' : '';
+  if(a >= 1e8) return sign + Math.round(a / 1e6) + 'm';
+  if(a >= 1e6) return sign + (a / 1e6).toFixed(2).replace(/\.?0+$/, '') + 'm';
+  if(a >= 1e3){
+    const k = Math.round(a / 1e3);
+    return sign + (k >= 1000 ? '1m' : k + 'k');
+  }
   return String(v);
 }
 
@@ -135992,6 +136115,7 @@ function renderManager(){
     <div class="deb-drift-why">Paste <b>supabase/migrations/0081_manager_notes.sql</b> into the
       Supabase SQL editor and reload once. Until then, today's plan lives only until this page closes.</div>
   </div>`;
+  if(typeof mgrPaintFresh === 'function') mgrPaintFresh();
 
   /* THE DOOR to the conversation. It opens the panel and nothing else.
      It does NOT set apMode: 'manager' is an OCCASION -- a meeting, a
@@ -163993,12 +164117,17 @@ const ASSISTANT_TOOLS = {
       ...(offersOut ? { open_offers: offersOut } : {}),
       ...(normalsOut ? { taught_normals: normalsOut } : {}),
       ...(decisionsOut ? { signed_decisions: decisionsOut } : {}),
-      ...(unusual.items.length ? { unusual_days: unusual.items.slice(0, 8).map(x=>{
+      ...(unusual.items.length ? { unusual_days: mgrMeetingUnusualPick(unusual.items, (x)=>{
         /* The owner's own word on the day, tapped on the Manager screen:
            that is the answer, and the day is no longer a question. */
         const row = qRows.find(q=> (q.body || {}).unusualDay === x.date && (q.body || {}).metric === x.metric && (q.body || {}).answer);
-        const said = row ? row.body : unusual.answered(x.key) ? { answer: unusual.answered(x.key) } : null;
-        return { date: x.date, what: x.metric, direction: x.dir, reads_as: x.reads_as, drove_it: x.drove_it,
+        return row ? row.body : unusual.answered(x.key) ? { answer: unusual.answered(x.key) } : null;
+      }, 8).map(({ x, said })=>{
+        return { id: x.id, date: x.date, what: x.metric, direction: x.dir, reads_as: x.reads_as, drove_it: x.drove_it,
+          /* The figures the screen draws: the day (or a month's sum) against
+             its usual, and how many same weekdays (or months) that rests on. */
+          ...(x.figure != null ? { figure: x.figure } : {}), ...(x.usual != null ? { usual: x.usual } : {}),
+          ...(x.months != null ? { months_compared: x.months } : x.weeks != null ? { weekdays_compared: x.weeks } : {}),
           /* Alongside the day, never its cause: a question for the owner. */
           ...((x.found_in_books || []).length ? { found_in_books: x.found_in_books } : {}),
           ...(x.days.length > 1 ? { days: x.days } : {}), news: x.tone === 'good' ? 'good news' : 'a problem', how_unusual: x.how_unusual,

@@ -134,4 +134,5 @@ const s = compileScope([
   t.check(!/mgr-pp-back/.test(up) && /<details class="mgr-pp-why"/.test(up), 'an aim above it keeps its argument folded as before');
 }
 
-t.done();
+/* A failed check fails the file: run-all.js reads only the exit code. */
+process.exit(t.done() ? 1 : 0);
