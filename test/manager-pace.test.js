@@ -253,9 +253,13 @@ const row = (body) => ({ date: '2026-08-24', body: { from: '2026-08-24', to: '20
   const pace = extractFunction(src, 'renderManagerPace', 'index.html');
   t.check(/if\(!el \|\| !managerNotesTable\) return;/.test(pace),
     'probe-guarded like every other journal read');
-  t.check(/const behind = live\.filter\(x=> !x\.pace\.on_course\);/.test(pace)
-    && /behind\.concat\(live\.filter\(x=> x\.pace\.on_course\)\)\.slice\(0, 2\)/.test(pace),
-    'behind first, and at most two — a dashboard that always speaks teaches the eye to skip it');
+  /* WAS: behind first by pace.on_course. NOW (final review): by the
+     Targets section's own state (mgrTgTodayLine(x).ok) -- a first day set
+     to land short is "on course" against a road it has not started on,
+     and is not On track. Still at most two. */
+  t.check(/const lines = live\.map\(x=> \(\{ x, l: mgrTgTodayLine\(x\) \}\)\);/.test(pace)
+    && /lines\.filter\(r=> !r\.l\.ok\)\.concat\(lines\.filter\(r=> r\.l\.ok\)\)\.slice\(0, 2\)/.test(pace),
+    'not On track first, and at most two — a dashboard that always speaks teaches the eye to skip it');
   t.check(/if\(!live\.length\)\{ el\.innerHTML = ''; return; \}/.test(pace),
     'and silent when nothing is live');
   /* WAS: the strip wrote its own line in shillings ("the week ends at").
@@ -263,7 +267,7 @@ const row = (body) => ({ date: '2026-08-24', body: { from: '2026-08-24', to: '20
      (mgrTgTodayLine), in the target's unit and to its deadline -- and that
      line carries the projection, in those words. */
   const todayLine = extractFunction(src, 'mgrTgTodayLine', 'index.html');
-  t.check(/mgrTgTodayLine\(x\)\.text/.test(pace) && /x\.pace\.at_this_rate/.test(todayLine) && /At this rate/.test(todayLine),
+  t.check(/esc\(l\.text\)/.test(pace) && /x\.pace\.at_this_rate/.test(todayLine) && /At this rate/.test(todayLine),
     'the projection is shown as the rate carried forward, in those words');
   t.check(!/fmtUGX/.test(pace) && !/the week ends/.test(pace),
     'never every target in shillings against "the week"');

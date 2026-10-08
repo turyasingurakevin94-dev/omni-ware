@@ -39,8 +39,12 @@ const FNS = ['mgrTgMemo', 'mgrTgBooksFrom', 'mgrTgFig', 'mgrTgGap', 'mgrTgDelta'
   'mgrTgRoad', 'mgrTgState', 'mgrTgTrack', 'mgrTgLinked', 'mgrTgBehindTwo', 'mgrTgLearned', 'mgrTgSuggest',
   'mgrTgPerson', 'mgrTgBandLine', 'mgrTgFinishedLine', 'mgrTgDeadStockAt', 'mgrNavCountTargets', 'mgrTgBreak', 'mgrTgCashOn',
   'mgrTgCashLowOver', 'mgrTgFloorRead', 'mgrTgWaFrom', 'mgrTgVerdict', 'mgrTgComposeModel', 'mgrTgComposeSay',
-  'mgrTgRunModel', 'mgrTgFinishedModel', 'mgrTgAbove90', 'mgrTgMetOn', 'mgrTgMondays', 'mgrTgPlanMoves', 'mgrTgTodayLine', 'mgrTgLower'];
-const DECLS = ['MGR_TG_MIN_ODDS', 'MGR_TG_MIN_CHOICES', 'MGR_TG_PERIODS', 'MGR_TG_RISK', 'MGR_TG_MAX_RUNNING',
+  'mgrTgRunModel', 'mgrTgFinishedModel', 'mgrTgAbove90', 'mgrTgMetOn', 'mgrTgMondays', 'mgrTgPlanMoves', 'mgrTgTodayLine', 'mgrTgLower',
+  'mgrTgDefaultBy', 'mgrTgComposerHTML', 'mgrTgAvHTML', 'mgrTgAskText'];
+/* The writers' slot rule, compiled with what it reads. */
+const SLOT = [extractDeclaration(src, 'MGR_TG_MAX_RUNNING', 'index.html'), extractFunction(src, 'mgrTgSlotRefusal', 'index.html'),
+  extractFunction(src, 'mgrTgLower', 'index.html')];
+const DECLS = ['MGR_TG_MIN_ODDS', 'MGR_TG_MIN_CHOICES', 'MGR_TG_PERIODS', 'MGR_TG_RISK', 'MGR_TG_MAX_RUNNING', 'MGR_TG_GLYPH',
   'mgrTgMemoSig', 'mgrTgMemoAt', 'mgrTgMemoMap', 'mgrTgBetter', 'mgrTgDay', 'MGR_TG_ORDER', 'MGR_TG_STATE_WORD'];
 
 /* A scope over a hand-made book. METRICS stands in for MANAGER_METRICS so
@@ -326,15 +330,16 @@ function scope(env) {
   eq(s.mgrTgDeadStockAt('2026-12-31'), 1120, 'a line quiet past the window is dead, at today’s unit cost');
 }
 
-/* ---------- 14. the nav: running + proposed, and the Off track ------------ */
+/* ---------- 14. the nav: what is running, and the Off track --------------- */
 {
   const s = scope({});
   const score = { targets: [
     { finished: false, direction: 'down', aim: 22, actual: 35, pace: { on_course: false, behind_by: 11.094 } },   // off
     { finished: false, direction: 'up', aim: 4400000, actual: 1030000, pace: { on_course: false, behind_by: 856000 } }, // at risk
     { finished: true, met: true, actual: 1, aim: 1 } ], proposed: [{ id: 1 }] };
-  eq(s.mgrNavCountTargets({ score }), { n: 3, note: '<b>1 target</b> off track' },
-    '2 running + 1 proposed = 3; only the one Off track by the rule is named, not the one at risk');
+  /* WAS: running + proposed = 3. NOW the canvas's count: 2 running. */
+  eq(s.mgrNavCountTargets({ score }), { n: 2, note: '<b>1 target</b> off track' },
+    '2 running = 2 (the proposal is not a running target); only the one Off track by the rule is named, not the one at risk');
   eq(s.mgrNavCountTargets({ score: { error: 'down' } }), null, 'an unread scoreboard counts nothing');
 }
 
@@ -460,7 +465,8 @@ function scope(env) {
   const growthAsked = [];
   const env = {
     data: { savedQuotes: quotes, cashTxns: [{ date: '2026-01-01' }], stockLog: [], customers: [], staff: [] },
-    incomeStatement: (a, b) => { let n = 0; for (let d = a; d <= b; d = shift(d, 1)) n += np(d); return { netProfit: n }; },
+    incomeStatement: (a, b) => { let n = 0; for (let d = a; d <= b; d = shift(d, 1)) n += np(d);
+      return { netProfit: n, revenue: inv.filter((x) => inRange(x.date, a, b)).reduce((k, x) => k + x.sales, 0) }; },
     anInvoicesInRange: (a, b) => inv.filter((x) => inRange(x.date, a, b)),
     anOverallTotals: (list) => list.reduce((t, x) => ({ sales: t.sales + x.sales, profit: t.profit + x.profit }), { sales: 0, profit: 0 }),
     mgrDebtorDays: (d) => (d === TODAY ? { days: 35.2 } : d === '2026-09-30' ? { creditSales: 900000, windowDays: 90 } : { creditSales: 0, windowDays: 90 }),
@@ -486,6 +492,10 @@ function scope(env) {
      days at 100 = 3,000; the 30 days to today would be 29*100 − 500 = 2,400. */
   eq(M.net_profit.measure(), 3000, 'net profit now is the 30 whole days to yesterday (3,000), never a half-day’s rent (2,400)');
   eq(M.net_profit.at(TODAY), 2400, 'while a reading at a day is that day’s own 30 days');
+  /* 3 Jul–1 Aug holds no invoice (revenue 0): the Simulator reads that as
+     "not known — nothing invoiced in 30 days", and so does the target --
+     never the rent alone as a month's profit, never 0. */
+  eq(M.net_profit.at('2026-08-01'), null, 'thirty days with nothing invoiced: net profit not known, as the Simulator says');
   /* margin: 7 Sep–6 Oct sold 2,000 for 300: 15%; today's −50 on 500 is not in it. */
   near(M.margin_pct.measure(), 15, 'margin now: 300 of 2,000 sold over the 30 days to yesterday = 15%');
   eq(M.margin_pct.at('2026-08-01'), null, 'nothing sold in the window: not known, never 0%');
@@ -691,6 +701,120 @@ function scope(env) {
   const full = s.mgrTgComposeModel({ metric: 'wa_orders', choice: 'stretch', by: 0 }, { ...env, runningCount: 4 });
   eq([full.full, full.canSet], [true, false], 'four running: nothing more can be set');
   eq(s.mgrTgComposeModel({ metric: 'wa_orders', by: 0 }, { ...env, runningMetrics: ['wa_orders'] }).metric, 'lowest_cash', 'a measure already running is not offered');
+}
+
+/* ---------- 23b. the final review: first days, today's cash, the composer - */
+{
+  /* A FIRST DAY IS JUDGED BY WHERE IT WAS SET TO LAND. Debtor days under
+     22, standing at 47, set to land at 47 (the composer said "Not by
+     then"): 25 still to go, 25 short = 100% -> Off track, never On track. */
+  const s = scope({ MANAGER_METRICS: { debtor_days: { label: 'Debtor days', unit: 'days', kind: 'level', direction: 'down' } } });
+  const first = (land, actual) => ({ id: 7, metric: 'debtor_days', label: 'Debtor days', unit: 'days', finished: false, direction: 'down', measure_kind: 'level',
+    aim: 22, baseline: actual, actual, from: TODAY, to: '2026-11-30', days_left: 54,
+    pace: { elapsed_days: 0, total_days: 55, expected: actual, on_course: true, behind_by: 0, at_this_rate: land, first: true } });
+  const off = s.mgrTgState(first(47, 47));
+  eq([off.key, off.toGo, off.short, off.share], ['off', 25, 25, 1], 'set today to land at 47 against 22: Off track on its first day');
+  /* Standing at 30, landing 24: 8 to go, 2 short = 25% -> At risk. */
+  const risk = s.mgrTgState(first(24, 30));
+  eq([risk.key, risk.share], ['risk', 0.25], 'landing 2 days short of 8 to go: At risk');
+  eq(s.mgrTgState(first(20, 30)).key, 'on', 'landing at or past the aim: On track');
+  eq(s.mgrTgState(first(null, 30)).key, 'on', 'no landing saved (a weekly target): On track until the first whole day is read');
+  const tl = s.mgrTgTodayLine(first(47, 47));
+  t.check(tl.key === 'off' && tl.ok === false && /^Off track — Debtor days under 22: 47 days now\. As set it lands at 47 days by 30 Nov — 25 days short\. Set today — its first whole day is read tomorrow\. 54 days are left\.$/.test(tl.text),
+    `Today says the same as the row, with where it was set to land (${tl.text})`);
+  const rm = s.mgrTgRunModel(first(47, 47), { moves: [] });
+  eq(rm.key, 'off', 'the row is coloured by the same state');
+  eq(s.mgrNavCountTargets({ score: { targets: [first(47, 47)], proposed: [] } }).note, '<b>1 target</b> off track', 'and the nav counts it');
+}
+{
+  /* TODAY'S CASH BOOK IS A BOOKS DAY. "Cash never under 45.00m" from 6
+     Oct; the cash book closed 6 Oct at 50.00m and stands at 41,792,637
+     today (a 5.00m payment this morning); the committed line has 43.00m
+     today and 46.00m on 20 Oct. The target's own lowest so far is
+     41.79m (today) -- so the floor read must say the books broke it today,
+     not that the committed line would. */
+  const mkCash = (today) => scope({ shCashAt: (d) => (d === TODAY ? today : 50000000),
+    mgrCashWalk: () => ({ days: [{ date: TODAY, committed: 43000000 }, { date: '2026-10-20', committed: 46000000 }] }),
+    data: { savedQuotes: [{ date: '2025-01-01' }], cashTxns: [], stockLog: [], customers: [], staff: [] } });
+  const s = mkCash(41792637);
+  const f = s.mgrTgFloorRead('2026-10-06', '2026-10-31', 45000000);
+  eq([f.low, f.lowOn, f.lowBooks, f.breaksOn, f.broke], [41792637, TODAY, true, TODAY, true],
+    'today’s cash book under the floor: broken, from the books, today');
+  eq(s.mgrTgCashLowOver('2026-10-06', '2026-10-31'), 41792637, 'the same lowest the target reads as its "lowest so far"');
+  const st = s.mgrTgState({ finished: false, direction: 'up', aim: 45000000, actual: 41792637, hold: true,
+    pace: { at_this_rate: f.low, breaks_on: f.breaksOn, broke: f.broke, line_to: f.through } });
+  eq(st.key, 'off', 'so it is Off track (Q37), not At risk with odds beside it');
+  /* Above the floor today (46.00m): the books hold, the line (43.00m
+     today) would break it -- At risk, as before. */
+  const g = mkCash(46000000).mgrTgFloorRead('2026-10-06', '2026-10-31', 45000000);
+  eq([g.low, g.lowBooks, g.breaksOn, g.broke], [43000000, false, TODAY, false], 'cash book above it: only the committed line goes under');
+}
+{
+  /* THE COMPOSER, as the review asked. Books from 1 Apr; deadlines from 7
+     Oct are 31 Oct (24 days after today), 30 Nov (54) and 31 Dec (85). */
+  const ends = ['2026-10-06', '2026-09-11', '2026-08-17', '2026-07-23', '2026-06-28', '2026-06-03', '2026-05-09'];
+  const lows = [8, 12, 4, 10, 6, 14, 9].map((v) => v * 1e6);
+  let cashToday = 3e6;
+  let floor = { amount: 3e6, source: 'set', note: 'the floor you set' };
+  const M = {
+    lowest_cash: { label: 'Lowest cash in a month', unit: 'ugx', kind: 'level', direction: 'up', span: true, basis: 'b',
+      measure: (a, b) => (a === TODAY && b === TODAY ? cashToday : lows[ends.indexOf(b)]),
+      floor: () => ({ low: 7480000, lowOn: '2026-10-28', lowBooks: false, breaksOn: null, broke: false, through: '2026-10-31', partial: false }) },
+  };
+  const s = scope({ MANAGER_METRICS: M, mgrCashFloor: () => floor, waComposeUrl: (p, m) => 'wa:' + m,
+    data: { savedQuotes: [], cashTxns: [{ date: '2026-04-01' }], stockLog: [], customers: [], staff: [{ id: 'ST001', name: 'Joan Nakato' }] } });
+  const env = { runningMetrics: [], runningCount: 0, plan: { moves: [] }, finished: [], rules: [] };
+  /* NOW is the lowest ahead (7.48m on 28 Oct, the committed line), the
+     figure the Brief and the Simulator read -- not today's cash (3.00m). */
+  const c = s.mgrTgComposeModel({ metric: 'lowest_cash', choice: 'stretch', by: 0 }, env);
+  eq([c.out.now, c.out.nowLabel, c.out.cashToday, c.stand], [7480000, 'lowest ahead', 3e6, 3e6], 'a floor’s NOW is the lowest ahead; today’s cash rides beside it');
+  /* Past lows 4..14m are all above today's 3.00m: all three blocked. The
+     owner's own floor (Q8) is 3.00m, which today's cash stands on: it is
+     offered and picked -- the composer is not disabled. Odds: all 7 past
+     lows held 3.00m -> 7 of 7 = 100%. */
+  eq([c.blocked, (c.floorOpt || {}).value, c.choice, c.aim, c.canSet], [{ safe: true, stretch: true, bold: true }, 3e6, 'floor', 3e6, true],
+    'every past floor above today’s cash: the owner’s own floor is offered instead, and can be set');
+  eq([(c.odds || {}).k, (c.odds || {}).n, (c.odds || {}).pct], [7, 7, 100], 'its odds are counted like any aim');
+  const html = s.mgrTgComposerHTML(c);
+  t.check(/<small>your floor<\/small><span class="mgr-tg-fig">3\.00m<\/span>/.test(html) && /<small>lowest ahead<\/small><span class="mgr-tg-fig">7\.48m<\/span>/.test(html),
+    'the chips read “your floor 3.00m” and “lowest ahead 7.48m”');
+  /* The deadline chips count the days after today, as the rows do. */
+  t.check(/<small>24 days<\/small><span>31 Oct<\/span>/.test(html) && /<small>54 days<\/small><span>30 Nov<\/span>/.test(html) && /<small>85 days<\/small><span>31 Dec<\/span>/.test(html),
+    'the deadline chips read 24 / 54 / 85 days, as the canvas and the running rows count them');
+  t.check(/disabled title="You own it[^"]*">Ask the owner first<\/button>/.test(html), '“Ask the owner first” is drawn while You own it, and says why it waits');
+  /* A floor of its own above today's cash is blocked too; with nothing
+     left the composer says so. */
+  floor = { amount: 5e6, source: 'set' };
+  const none = s.mgrTgComposeModel({ metric: 'lowest_cash', choice: 'floor', by: 0 }, env);
+  eq([none.blocked.floor, none.aim, none.canSet, none.verdict.word], [true, null, false, 'Under every floor today'], 'a floor of its own above today’s cash is not offered either');
+  t.check(/^Cash stands at 3\.00m today — already under every floor on offer, your own included/.test(s.mgrTgComposeSay(none)), 'and it says so in figures');
+  /* No floor set: the stand-in (a month of rent and salaries) is offered, said as that. */
+  floor = { amount: 2.5e6, source: 'stand-in', note: 'not set — a month of rent and salaries stands in' };
+  const si = s.mgrTgComposeModel({ metric: 'lowest_cash', by: 0 }, env);
+  t.check(si.aim === 2.5e6 && /<small>a month’s costs<\/small>/.test(s.mgrTgComposerHTML(si)), 'the stand-in floor is offered as a month’s costs');
+
+  /* WHICH DEADLINE IT OPENS ON (Q41). Sales, a flow, read on any day. */
+  const mk = (from) => scope({ MANAGER_METRICS: { sales: { label: 'Sales', unit: 'ugx', kind: 'flow', direction: 'up', measure: () => 1 } },
+    data: { savedQuotes: [], cashTxns: [{ date: from }], stockLog: [], customers: [], staff: [] } });
+  const dl = mk('2023-01-01').mgrTgDeadlines(TODAY);
+  /* Books from 2023: 86-day periods back to 2023 are 24 (the cap) -> the third. */
+  eq(mk('2023-01-01').mgrTgDefaultBy('sales', dl, TODAY), 2, 'enough past 86-day periods for odds: it opens on the third month-end (31 Dec)');
+  /* Books from 1 Apr 2026: to 6 Oct is 189 days -- 7 periods of 25 days,
+     3 of 55, 2 of 86. The third has too few; the first has enough. */
+  eq(mk('2026-04-01').mgrTgDefaultBy('sales', dl, TODAY), 0, 'too few for odds at the third: the first deadline that has them (31 Oct)');
+  /* Books from 1 Sep: no deadline has six -> the third, as the canvas opens. */
+  eq(mk('2026-09-01').mgrTgDefaultBy('sales', dl, TODAY), 2, 'none with odds: the third, as the canvas');
+  const opened = mk('2023-01-01').mgrTgComposeModel({ metric: 'sales', choice: 'stretch', by: null }, env);
+  eq([opened.byIdx, opened.by.to], [2, '2026-12-31'], 'a fresh composer opens there');
+  eq(mk('2023-01-01').mgrTgComposeModel({ metric: 'sales', by: 1 }, env).byIdx, 1, 'and a deadline the owner picked is kept');
+}
+{
+  /* THE PHONE'S STATE CHIP opens the row's rule, so it is a tap target:
+     the design system's --ow-tap (44px), never the 32px it was drawn at. */
+  const phone = (src.match(/\/\* ═══ MGR BED: Targets — begin ═══ \*\/[\s\S]*?\/\* ═══ MGR BED: Targets — end ═══ \*\//g) || [])[1] || '';
+  const rule = (phone.match(/\.mgr-tg-st\{[^}]*\}/) || [''])[0];
+  t.check(/min-height:var\(--ow-tap\)/.test(rule) && /box-sizing:border-box/.test(rule) && !/min-height:32px/.test(rule),
+    `on the phone the state chip is at least --ow-tap tall (${rule})`);
 }
 
 /* ---------- 24. finished: how early, against its own past, and its moves -- */
@@ -987,7 +1111,8 @@ function scope(env) {
   t.check(/if\(rd && !rd\.ok\)\{ toast\(m\.label \+ ' cannot be taken on yet — ' \+ rd\.why/.test(adopt),
     'taking on a load-time proposal before four Saturdays says how many are recorded');
   const toasts = [];
-  const { managerSetOwnerTarget } = compileScope([own], {
+  const { managerSetOwnerTarget } = compileScope([own, ...SLOT], {
+    managerScoreboard: async () => ({ targets: [] }),
     MANAGER_METRICS: { sat_load: { label: 'Saturday load time', unit: 'min', kind: 'level', direction: 'down', step: 6, measure: () => null,
       ready: () => ({ n: 1, min: 4, ok: false, why: 'not enough history — 1 Saturday recorded' }) } },
     todayISO: () => TODAY, anShiftDate: shift, toast: (m) => toasts.push(m), renderManager: () => {}, data: { staff: [] },
@@ -1004,7 +1129,9 @@ function scope(env) {
   const toasts = [];
   const M = { debtor_days: { label: 'Debtor days', unit: 'days', kind: 'level', direction: 'down', measure: () => 35.2, at: () => 35.2 },
     sales: { label: 'Sales', unit: 'ugx', kind: 'flow', direction: 'up', measure: (f, to) => (f === '2026-09-12' && to === '2026-10-06' ? 2500 : -1) } };
-  const { managerSetOwnerTarget } = compileScope([extractFunction(src, 'managerSetOwnerTarget', 'index.html')], {
+  let board = { targets: [] };
+  const { managerSetOwnerTarget } = compileScope([extractFunction(src, 'managerSetOwnerTarget', 'index.html'), ...SLOT], {
+    managerScoreboard: async () => board,
     MANAGER_METRICS: M, todayISO: () => TODAY, anShiftDate: shift, toast: (m) => toasts.push(m), renderManager: () => {},
     data: { staff: [{ id: 'ST001', name: 'Joan Nakato' }] },
     mgrNoteInsert: async (kind, body, status) => { written.push({ kind, body, status }); return { ok: true, row: { id: 9 } }; },
@@ -1042,5 +1169,30 @@ function scope(env) {
     'an unmeasurable metric, a deadline not after today, no aim, or an owner not on the staff list writes nothing and says why');
   t.check(!/update\(|insert\(/.test(extractFunction(src, 'managerSetOwnerTarget', 'index.html')),
     'it writes through the journal’s one insert, which names a refused write');
+
+  /* THE CAP IN THE WRITER (Q16, Q41). Four running (one finished does not
+     count): a fifth is refused with the composer's sentence and nothing is
+     written -- a stale card or a second tab cannot get past a disabled
+     button. A second on a measure already running is refused; an unread
+     scoreboard counts nothing and sets nothing. */
+  written.length = 0; toasts.length = 0;
+  const run = (metric) => ({ metric, finished: false });
+  board = { targets: [run('collections'), run('margin_pct'), run('wa_orders'), run('stock_days'), { metric: 'sales', finished: true }] };
+  const fifth = await managerSetOwnerTarget({ metric: 'sales', aim: 3000, to: '2026-10-31', owner: 'you' });
+  eq([fifth.ok, fifth.error, written.length], [false, '4 targets are running — the most at once. One has to finish first.', 0],
+    'a fifth running target is refused by the writer itself');
+  board = { targets: [run('debtor_days'), { metric: 'sales', finished: true }] };
+  const twice = await managerSetOwnerTarget({ metric: 'debtor_days', aim: 30, to: '2026-10-31', owner: 'you' });
+  eq([twice.ok, twice.error, written.length], [false, 'A target on debtor days is already running — one at a time on each measure.', 0],
+    'and a second on a measure already running');
+  board = { targets: [], error: 'timeout' };
+  const blind = await managerSetOwnerTarget({ metric: 'sales', aim: 3000, to: '2026-10-31', owner: 'you' });
+  eq([blind.ok, blind.error, written.length], [false, 'The scoreboard could not be read — timeout, so the running targets could not be counted. Nothing was set.', 0],
+    'an unread scoreboard counts nothing, so nothing is set');
+  board = { targets: [run('debtor_days'), run('margin_pct'), run('wa_orders'), { metric: 'x', finished: true }] };
+  const third = await managerSetOwnerTarget({ metric: 'sales', aim: 3000, to: '2026-10-31', owner: 'you' });
+  eq([third.ok, written.length], [true, 1], 'three running and a free measure: it is set');
+  t.check(/const refusal = mgrTgSlotRefusal\(await managerScoreboard\(\), body\.metric\);\s*if\(refusal\)\{ toast\(refusal, 8000\); return; \}\s*const up = await sb/.test(extractFunction(src, 'managerAdoptTarget', 'index.html')),
+    'taking on a proposal asks the same question of a fresh scoreboard before it writes');
 })().then(() => { process.exit(t.done() ? 1 : 0); })
   .catch((e) => { console.error(e); process.exit(1); });

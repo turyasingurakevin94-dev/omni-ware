@@ -173,7 +173,11 @@ const { MANAGER_METRICS: M, managerScoreProgress } = scope.names();
       extractFunction(src, 'managerAdoptTarget', 'index.html'),
       extractFunction(src, 'managerRetireDuplicates', 'index.html'),
       extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
+      extractDeclaration(src, 'MGR_TG_MAX_RUNNING', 'index.html'),
+      extractFunction(src, 'mgrTgSlotRefusal', 'index.html'),
+      extractFunction(src, 'mgrTgLower', 'index.html'),
     ], { ...env, managerNotesTable: true, rivalPricesTable: false, currentShopId: 'shop-1',
+      managerScoreboard: async () => ({ targets: [] }),
       toast: (m) => toasts.push(m), renderManager: () => {},
       sb: { from: () => ({
         select: () => ({ eq: () => ({ eq: () => ({ single: () => Promise.resolve({

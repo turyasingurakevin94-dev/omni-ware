@@ -284,4 +284,33 @@ const src = read('index.html');
     'and it is passive, because a scroll handler that can block scrolling is worse than no title');
 }
 
+/* ---------- the final review: the levers table and the account ---------- */
+{
+  /* LAW 5 / Q13. The table's outcome column held "4 of 5 event followed"
+     under a heading that read "Worked" -- the app claiming the advice
+     worked. The heading says what the cells count. No column heading or
+     label anywhere in the Manager's beds reads "Worked" (the owner's own
+     verdict word on a play, Q14, is a chip, not a heading). */
+  const beds = [];
+  const re = /\/\* ═══ MGR BED: (\w+) — begin ═══ \*\/([\s\S]*?)\/\* ═══ MGR BED: \1 — end ═══ \*\//g;
+  let m;
+  while ((m = re.exec(src))) beds.push(m[2]);
+  t.check(beds.length >= 7, `the beds are found (${beds.length})`);
+  t.check(beds.every((b) => !/<th[^>]*>\s*Worked\s*<\/th>/.test(b) && !/mgr-rf-l">\s*Worked\s*</.test(b)),
+    'no column heading or account label in the Manager reads “Worked”');
+  const lv = extractFunction(src, 'mgrPaintLevers', 'index.html');
+  t.check(/<th class="r">Event followed<\/th>/.test(lv), 'the levers table heads its outcome column “Event followed”');
+  /* MEETINGS KEPT is every meeting on the books -- the Brief's own count
+     (mgrBooksCounts().meetings) -- never the journal's last few, which
+     read 6 beside 69 moves over 35 days. A failed count is "not known"
+     and names why; nothing reads 0 for it. */
+  const rec = extractFunction(src, 'mgrPaintRecord', 'index.html');
+  t.check(/mgrBooksCounts\(\)/.test(rec) && /bc\.meetings/.test(rec) && /Meetings kept<\/span>\$\{meetingsCell\}/.test(rec),
+    'Meetings kept is the count of every meeting on the books, the one the Brief says');
+  t.check(!/const meetings = journal\.filter/.test(rec), 'not a count of the journal window');
+  t.check(/el\.textContent = 'not known'; el\.title = 'The meetings could not be counted/.test(rec) && /gen !== mgrRenderGen/.test(rec),
+    'a count that fails is not known and says why, and a late one from an old render is dropped');
+  t.check(/Weekly reviews in the journal/.test(rec), 'the reviews row says it counts what the journal holds');
+}
+
 process.exit(t.done() ? 1 : 0);
