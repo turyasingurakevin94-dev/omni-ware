@@ -62,7 +62,14 @@ const { read, extractFunction, extractDeclaration, compileScope, createReporter 
 const t = createReporter('manager screen defects');
 const src = read('index.html');
 const view = extractFunction(src, 'mgrMoveView', 'index.html');
-const render = extractFunction(src, 'renderManager', 'index.html');
+/* The screen is renderManager and the seven bed painters it hands every
+   reading to: a pin on "the render" reads all eight. renderManager alone
+   is what sends the readings; the Brief is where the plan is drawn. */
+const MGR_RENDER = ['renderManager', 'mgrPaintBrief', 'mgrPaintSim', 'mgrPaintTargets', 'mgrPaintPlays',
+  'mgrPaintUnusual', 'mgrPaintAsk', 'mgrPaintRecord'];
+const render = MGR_RENDER.map(n => extractFunction(src, n, 'index.html')).join('\n');
+const rm = extractFunction(src, 'renderManager', 'index.html');
+const brief = extractFunction(src, 'mgrPaintBrief', 'index.html');
 
 /* ---------- 1. the sentence has its own line ---------- */
 {
@@ -82,8 +89,11 @@ const render = extractFunction(src, 'renderManager', 'index.html');
      and quietly restyled another. */
   t.check(/\.mgr-move-state\{[^}]*display:block/.test(src),
     'the new class is a block');
-  t.check(/\.mgr-state\{[^}]*margin-left:auto/.test(src),
-    'and .mgr-state keeps its auto margin, because the playbook chip still wants it');
+  /* WAS: .mgr-state kept its auto margin for the playbook's "since"
+     chip. NOW: the Playbook draws its own cards and no screen emits
+     .mgr-state, so Phase 3 deleted the dead rule. */
+  t.check(!/class="[^"]*\bmgr-state\b/.test(src) && !/\.mgr-state\{/.test(src),
+    'and .mgr-state, which nothing wears any more, is gone from the stylesheet');
   t.check(/\.mgr-move-state\{[^}]*max-width:\d+ch/.test(src),
     'with a measure on it — it is a sentence, and a sentence needs one');
 }
@@ -114,10 +124,15 @@ const render = extractFunction(src, 'renderManager', 'index.html');
   /* Born in the right SHAPE, which is the stronger form of born in the
      right colour: the two states are drawn by two different helpers and
      neither can become the other. */
-  const shell = /planWrap\.innerHTML = heldGuess\s*\?\s*planShell\([\s\S]{0,240}?heldFoot\(null, false\)\)\s*:\s*notHeldHTML\(null, null\);/.exec(render);
+  const shell = /planWrap\.innerHTML = heldGuess\s*\?\s*planShell\([\s\S]{0,240}?heldFoot\(null, false\)\)\s*:\s*notHeldHTML\(null, null\);/.exec(brief);
   t.check(!!shell, 'and the panel is born in the shape the stamp says, before the query goes out');
-  const at = render.indexOf('managerLoadState().then');
-  t.check(shell && render.indexOf(shell[0]) < at, 'BEFORE it, not after it comes back');
+  /* BEFORE it, in two steps now: the shell is the Brief's 'start' paint,
+     and renderManager paints 'start' before it sends the journal read. */
+  const at = rm.indexOf('managerLoadState().then');
+  const startAt = brief.indexOf("if(ctx.landed === 'start'){"), stateAt = brief.indexOf("if(ctx.landed === 'state'){");
+  t.check(shell && startAt > -1 && brief.indexOf(shell[0]) > startAt && brief.indexOf(shell[0]) < stateAt
+    && rm.indexOf("paint('start');") > -1 && rm.indexOf("paint('start');") < at,
+    'BEFORE it, not after it comes back');
 
   /* The accent lives in exactly one of the two, and it is the one where
      holding a meeting IS the next thing to do. */
@@ -125,9 +140,14 @@ const render = extractFunction(src, 'renderManager', 'index.html');
   const heldFoot = (/const heldFoot = [\s\S]*?<\/div>`;/.exec(render) || [''])[0];
   t.check(notHeld.length > 400 && heldFoot.length > 200,
     'both shells were found, not silently skipped');
-  t.check(/btn-accent[^`]*mgrRunBtn|mgrRunBtn[^`]*Hold the morning meeting/.test(notHeld)
-    && /btn btn-accent/.test(notHeld),
-    'an un-held morning wears the accent on "Hold the morning meeting"');
+  /* Q30, Q41: on a no-meeting day the accent "Hold the morning meeting"
+     is the BAND's (mgrHeroHTML), where the screen opens; the panel under
+     the decisions keeps a quiet ghost door to the same click. */
+  const hero = extractFunction(src, 'mgrHeroHTML', 'index.html');
+  t.check(/btn btn-accent mgr-b-hold" id="mgrRunBtn">Hold the morning meeting/.test(hero) && /const hold = held === false/.test(hero),
+    'an un-held morning wears the accent on "Hold the morning meeting", in the band');
+  t.check(/btn btn-ghost ow-sm" data-mgr-hold="1">Hold the morning meeting/.test(notHeld) && !/btn-accent/.test(notHeld),
+    'and the plan panel\'s copy is a ghost button, so the screen has one accent');
   t.check(/Hold another anyway/.test(heldFoot) && !/btn-accent/.test(heldFoot),
     'and a held one offers another as a ghost in the panel\'s footer, never as the accent');
 
@@ -172,18 +192,26 @@ const render = extractFunction(src, 'renderManager', 'index.html');
 
   /* LAST KNOWN, NEVER SILENTLY. A box with a last good render shows it
      at once, dimmed, inert and tagged as last known; one without is
-     emptied as before. Either way nothing stale passes for today's. */
-  const loop = /\[scoreWrap,[\s\S]{0,400}?forEach\(el=>\{ if\(el && !mgrCachePaint\(el\)\) el\.innerHTML = ''; \}\);/.exec(render);
-  t.check(!!loop, 'the clearing loop exists and names its containers in one place');
-  const at = render.indexOf('managerLoadState().then');
-  t.check(loop && render.indexOf(loop[0]) < at,
-    'and it runs BEFORE the query goes out, not after it comes back');
-  const block = loop ? loop[0] : '';
-  ['scoreWrap', 'qWrap', 'hist', 'acct'].forEach(n => {
-    t.check(new RegExp(`\\b${n}\\b`).test(block), `${n} is among them`);
-  });
-  t.check(/managerTrackWrap/.test(block),
+     emptied, or -- the one box of its section that should -- says it is
+     reading. Either way nothing stale passes for today's.
+
+     WAS: one clearing loop in renderManager naming the five boxes. The
+     boxes live in three sections now (Targets, It needs to know, the
+     Record), and a section showing alone with nothing in it would be a
+     blank page -- so each painter clears its own boxes, through one
+     helper, in its 'start' paint, which renderManager sends before the
+     journal read goes out. */
+  const lk = extractFunction(src, 'mgrLastKnown', 'index.html');
+  t.check(/if\(!el \|\| mgrCachePaint\(el\)\) return;/.test(lk) && /el\.innerHTML = say \? '<p class="mgr-reading">Reading the journal…<\/p>' : '';/.test(lk),
+    'one helper: last known if there is one, otherwise empty or waiting — never yesterday passed off as today');
+  const startOf = (fn) => { const f = extractFunction(src, fn, 'index.html');
+    const a = f.indexOf("if(ctx.landed === 'start'){"); return a < 0 ? '' : f.slice(a, f.indexOf('return;', f.indexOf('mgrLastKnown', a)) + 7); };
+  [['mgrPaintTargets', 'scoreWrap'], ['mgrPaintAsk', 'qWrap'], ['mgrPaintRecord', 'hist'], ['mgrPaintRecord', 'acct'], ['mgrPaintRecord', 'trackWrap']]
+    .forEach(([fn, n]) => t.check(new RegExp(`mgrLastKnown\\(${n}\\b`).test(startOf(fn)), `${n} is cleared in ${fn}'s start paint`));
+  t.check(/const trackWrap = document\.getElementById\('managerTrackWrap'\);/.test(extractFunction(src, 'mgrPaintRecord', 'index.html')),
     'including the track record, which is filled by its own chain and would linger longest');
+  t.check(rm.indexOf("paint('start');") > -1 && rm.indexOf("paint('start');") < rm.indexOf('managerLoadState().then'),
+    'and the start paint runs BEFORE the query goes out, not after it comes back');
   t.check(!/revWrap|managerReviewWrap|\bpassed\b/.test(render),
     'and the two containers that folded into others are gone from the render entirely');
   t.check(/\.mgr-reading\{/.test(src), 'the line has a style, so it reads as a wait rather than as content');
@@ -196,7 +224,8 @@ const render = extractFunction(src, 'renderManager', 'index.html');
     'the verdict strip is painted in its waiting state before the readings go out');
   t.check(/const MGR_WAIT_CELLS = \[[\s\S]*?wait: true/.test(src),
     'with em-dashes rather than zeroes');
-  t.check(/\.mgr-verdict \.mgr-wait \.ow-mt-v\{color:var\(--ow-ink-400\)/.test(src.replace(/\s*\n\s*/g, '')),
+  /* WAS: .mgr-verdict .mgr-wait .ow-mt-v; NOW the situation strip's own. */
+  t.check(/\.mgr-bed-b \.mgr-b-wait \.mgr-b-sitv\{color:var\(--ow-navy-mute\);\}/.test(src),
     'and in a colour that reads as a wait');
 }
 
@@ -221,12 +250,18 @@ const render = extractFunction(src, 'renderManager', 'index.html');
   });
 
   /* THE ANNOUNCEMENT IS NOT THE READING. */
-  t.check(/if\(managerNotesTable\) managerPlaybook\(\)\.then/.test(render),
+  /* The read is renderManager's own now, at the top level of the render
+     after the one memoryless return -- every render with a journal makes it. */
+  t.check(/\n  managerPlaybook\(\)\.then\(book=>\{/.test(rm)
+    && rm.indexOf('managerPlaybook().then') > rm.indexOf('if(!managerNotesTable) return;'),
     'the playbook is read on every render, not only the one that found the panel empty');
   t.check(!/else managerPlaybook\(\)/.test(render),
     'so the read no longer sits in a branch the second render cannot reach');
-  t.check(/else if\(!mgrCachePaint\(playWrap\) && playWrap\.innerHTML\) playWrap\.innerHTML = '<p class="mgr-reading">/.test(render),
-    'and the waiting line is still said when there is something on screen to replace');
+  /* WAS: said only when there was something on screen to replace. The
+     playbook is a section of its own now, and an empty one is a blank
+     page, so it says it is reading whenever it has no last-known copy. */
+  t.check(/else if\(!mgrCachePaint\(playWrap\)\) playWrap\.innerHTML = '<p class="mgr-reading">/.test(render),
+    'and the waiting line is said whenever there is no last-known copy to show');
 
   /* The pace strip on Today is the same shape with a counter of its
      own: sharing one would let a Manager render cancel a pace paint
@@ -257,43 +292,74 @@ const render = extractFunction(src, 'renderManager', 'index.html');
      runs, so the strip is rendered and its words are read back. */
   const esc = (v)=> String(v == null ? '' : v)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const paint = (id, names, state)=>{
+  const paint = (id, names, state, extra)=>{
     const el = { innerHTML: '', querySelector: ()=> null, querySelectorAll: ()=> [] };
     const scope = compileScope(names.map(n=> n.d
       ? extractDeclaration(src, n.n, 'index.html')
       : extractFunction(src, n.n, 'index.html')), {
       document: { getElementById: (x)=> (x === id ? el : null) },
       esc, String, Number, Object, Array, Boolean, Math, JSON,
-      fmtUGX: (n)=> String(n),
+      fmtUGX: (n)=> String(n), ...(extra || {}),
     }, names.filter(n=> !n.d).map(n=> n.n));
     scope[names[0].n](state, state && state.tally);
     return el.innerHTML;
   };
 
-  const VERDICT = [{ n: 'mgrPaintVerdict' }, { n: 'mgrVerdictHTML' },
-    { n: 'mgrWaffleHTML' }, { n: 'mgrTargetRingHTML' }, { n: 'mgrDotsHTML' },
-    { n: 'MGR_WAIT_CELLS', d: true }, { n: 'mgrOf', d: true }];
+  /* WAS: the verdict strip's four journal cells. NOW: the canvas's six-cell
+     situation strip (A2.*): five figures from the books and the hit rate
+     from the journal. The law is the same and is painted the same way: a
+     reading that failed says so in its own cell, never a zero and never
+     one of the sentences a count of nothing would make. */
+  const VERDICT = [{ n: 'mgrPaintVerdict' }, { n: 'mgrVerdictHTML' }, { n: 'mgrStripCells' },
+    { n: 'mgrBriefLamp' }, { n: 'mgrBriefLampHTML' }, { n: 'mgrBriefDay' }, { n: 'mgrShortUGX' },
+    { n: 'mgrBriefPhoneCells' }, { n: 'MGR_BRIEF_PHONE_CELLS', d: true },
+    { n: 'MGR_WAIT_CELLS', d: true }, { n: 'mgrOf', d: true }, { n: 'MGR_BRIEF_MONTHS', d: true }];
+  const STRIP_ENV = { mgrBriefStripOpen: null, mgrBriefWireGo: ()=>{}, mgrBriefStripDetailHTML: ()=> '',
+    MGR_WEEKDAYS: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+    waWeekday: (d)=> new Date(d + 'T00:00:00Z').getUTCDay() };
   const failed = { message: 'network' };
-  const broke = paint('managerVerdictWrap', VERDICT,
-    { tally: { error: failed.message, counts: { proposed: 0, done: 0, skipped: 0, untouched: 0, days: 35 }, notLanding: [], repeats: 3 },
-      track: { error: failed.message, rows: [], minTimes: 3 },
-      score: { error: failed.message, targets: [] } });
-  const lies = ['nothing advised in', 'it has taken none on',
-    'nothing advised often enough to judge', 'everything it has put to you has had an answer'];
+  const broke = paint('managerStripWrap', VERDICT,
+    { strip: { health: { error: failed.message }, walk: null, risks: null, hit: { error: failed.message },
+      upside: { error: failed.message }, free: { error: failed.message } } }, STRIP_ENV);
+  const lies = ['nothing found to lift', 'nothing tied up', 'nothing dated', 'nothing done can be weighed',
+    'trend after 7 days', 'followed by a payment'];
   lies.forEach(lie=> t.check(!broke.includes(lie),
     `a failed reading never says "${lie}"`));
-  t.check((broke.match(/the journal could not be read/g) || []).length === 4,
-    'all four cells say what happened instead of counting it');
-  t.check(!/>0</.test(broke), 'and not one of them shows a zero');
+  /* WAS: one strip of six cells. NOW: two designs from the same cells --
+     the desk's six and the phone's four (health, lowest cash, upside, hit
+     rate; mgrBriefPhoneCells) -- so each is counted on its own. */
+  const desk = (h)=> h.split('mgr-b-sit mgr-b-sit4')[0];
+  const phone = (h)=> h.split('mgr-b-sit mgr-b-sit4')[1] || '';
+  t.check((desk(broke).match(/could not be read/g) || []).length === 6,
+    'all six cells say what happened instead of counting it');
+  t.check((phone(broke).match(/could not be read/g) || []).length === 4,
+    'and so do the phone\'s four');
+  t.check(!/>0</.test(broke) && !/mgr-b-fig">0</.test(broke), 'and not one of them shows a zero');
+  const waiting = paint('managerStripWrap', VERDICT, {}, STRIP_ENV);
+  t.check((desk(waiting).match(/&mdash;/g) || []).length === 6 && (desk(waiting).match(/reading the/g) || []).length === 6 && !/>0</.test(waiting),
+    'before anything is read the six cells wait with em-dashes, saying they are reading');
+  t.check((phone(waiting).match(/&mdash;/g) || []).length === 4 && (phone(waiting).match(/reading the/g) || []).length === 4,
+    'and the phone\'s four wait the same way');
 
   /* AND THE FIGURES STILL ARRIVE when the reading worked -- an error
      branch that swallows the happy path passes every check above. */
-  const good = paint('managerVerdictWrap', VERDICT,
-    { tally: { counts: { proposed: 9, done: 4, skipped: 2, untouched: 3, days: 35 }, notLanding: [], repeats: 3 },
-      track: { rows: [], minTimes: 3 },
-      score: { targets: [] } });
-  t.check(/4<span class="of">of<\/span>9/.test(good), 'a reading that worked still counts');
+  const good = paint('managerStripWrap', VERDICT,
+    { strip: { health: { score: 70, known: 10, passed: 7, checks: [] }, trend: null,
+      walk: { opening: 5000000, tightest: { date: '2026-10-14', balance: 1350000 } }, floor: { amount: 2000000, source: 'set' },
+      upside: { total: 2400000, parts: [] }, free: { total: 6400000, parts: [], expected: { amount: 0, list: [] } },
+      risks: [{ overdue: false }, { overdue: true }], hit: { k: 11, n: 15, notMeasurable: 2, waiting: 0, misses: [] } } }, STRIP_ENV);
+  t.check(/11<span class="of">of<\/span>15/.test(good) && />1\.35m</.test(good) && /Wed 14 Oct/.test(good)
+    && />\+2\.4m</.test(good) && />6\.4m</.test(good) && />70</.test(good), 'a reading that worked still counts');
+  t.check(/mgr-b-lamp-bad/.test(good) && /under your floor of 2m/.test(good),
+    'and the lowest day under the floor lights its lamp, saying against which floor');
   t.check(!/could not be read/.test(good), 'and says nothing about a failure that did not happen');
+  /* The phone's four are the canvas's: health, lowest cash, upside found,
+     hit rate -- the same figures as the desk's cells, in that order. */
+  const four = phone(good);
+  t.check(/>70</.test(four) && />1\.35m</.test(four) && />\+2\.4m</.test(four) && /11<span class="of">of<\/span>15/.test(four)
+    && !/>6\.4m</.test(four) && four.indexOf('>70<') < four.indexOf('>1.35m<') && four.indexOf('>1.35m<') < four.indexOf('>+2.4m<'),
+    'the phone shows the canvas\'s four, in its order, with the desk\'s figures');
+  t.check(/each from the day done/.test(good), 'and the hit rate says which window it was weighed in, from the day done (one rule with the chase record)');
 
   /* The account's advice half, and the levers table that used to go
      silent. */
@@ -332,7 +398,12 @@ const render = extractFunction(src, 'renderManager', 'index.html');
   const save = extractFunction(src, 'mgrCacheSave', 'index.html');
   t.check(/classList\.contains\('mgr-stale'\)/.test(save) && /querySelector\('\.mgr-reading'\)/.test(save),
     'only a fresh, finished render is kept — never a stale copy or a waiting line');
-  t.check(/mgrCacheSave\(\);\s*mgrPaintVerdict\(\{\}\);/.test(render), 'what was on screen is kept before the next render clears it');
+  /* WAS: mgrCacheSave() directly before the strip's waiting paint. Every
+     bed repaints from the one 'start' paint now, so the save comes before
+     that, and before anything at all is cleared. */
+  t.check(/if\(managerNotesTable\) mgrCacheSave\(\);/.test(rm)
+    && rm.indexOf('mgrCacheSave();') < rm.indexOf("paint('start');"),
+    'what was on screen is kept before the next render clears it');
 }
 
 process.exit(t.done() ? 1 : 0);

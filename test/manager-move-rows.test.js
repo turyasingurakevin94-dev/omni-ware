@@ -15,6 +15,12 @@ const { read, extractFunction, extractDeclaration, compileScope, createReporter 
 
 const t = createReporter('manager move rows');
 const src = read('index.html');
+/* The Manager screen is renderManager and the seven bed painters it hands
+   every reading to (mgrPaint<Bed>), so a pin on "the render" reads all
+   eight: what used to sit in one function is drawn by the bed it belongs to. */
+const MGR_RENDER = ['renderManager', 'mgrPaintBrief', 'mgrPaintSim', 'mgrPaintTargets', 'mgrPaintPlays',
+  'mgrPaintUnusual', 'mgrPaintAsk', 'mgrPaintRecord'];
+const mgrRender = () => MGR_RENDER.map((n) => extractFunction(src, n, 'index.html')).join('\n');
 
 /* ---------- 1. the buttons reach every move --------------------------- */
 {
@@ -67,8 +73,8 @@ const src = read('index.html');
   }, ['mgrRichRowHTML']);
   const rows = [
     { id: 1, status: 'open', body: { title: 'Collect the 13-day invoice', mkind: 'chase', door: 'chase', worth: 2515000, worthBasis: 'cash_freed', subject: { customerId: 7 }, unlocks: 'the restock' } },
-    { id: 2, status: 'open', body: { title: 'Restock Masasi', mkind: 'buy', worth: 250000, after: 0 } },
-    { id: 3, status: 'done', body: { title: 'Ring Sarah', mkind: 'chase', worth: 400000, doneOn: '2026-09-24' } },
+    { id: 2, status: 'open', body: { title: 'Restock Masasi', mkind: 'buy', worth: 250000, worthBasis: 'profit_30d', after: 0 } },
+    { id: 3, status: 'done', body: { title: 'Ring Sarah', mkind: 'chase', worth: 400000, worthBasis: 'cash_freed', doneOn: '2026-09-24' } },
     { id: 4, status: 'skipped', body: { title: 'Get a date from Peter', mkind: 'chase', skipReason: 'travelling' } },
   ];
   const open = scope.mgrRichRowHTML(rows[0], rows, { rich: true, num: 0, open: true });
@@ -78,8 +84,17 @@ const src = read('index.html');
     'its kind as a chip in its door\'s colour, spaced from what follows, and the customer by name');
   t.check(/class="btn btn-accent ow-sm mgr-door"/.test(open) && /class="mgr-skip-why"/.test(open) && /class="btn btn-ghost ow-sm mgr-done"/.test(open),
     'the open move carries its door, Done, and Not now with a box for the reason');
-  t.check(/aria-label="79% of the money in today's plan"/.test(open),
-    'and a ring for its share of the day\'s money (2,515,000 of 3,165,000)');
+  /* WAS: one total of every move's money (2,515,000 of 3,165,000 = 79%),
+     cash, profit and sales added together -- the law the plan keeps
+     everywhere else (Q5). NOW: the share of its own kind only. Cash:
+     2,515,000 of 2,515,000 + 400,000 = 2,915,000 -> 86%; the 250,000 of
+     profit is not in it. */
+  t.check(/aria-label="86% of today's cash"/.test(open) && /of the cash<\/text>/.test(open),
+    'and a ring for its share of the day\'s CASH only (2,515,000 of 2,915,000), named as cash');
+  t.check(/aria-label="100% of today's profit"/.test(scope.mgrRichRowHTML(rows[1], rows, { rich: true, num: 1 })),
+    'a profit move\'s ring counts the plan\'s profit alone (250,000 of 250,000), never the cash beside it');
+  t.check(!/mgr-rv-ring/.test(scope.mgrRichRowHTML({ id: 9, status: 'open', body: { title: 'x', mkind: 'other', worth: 5000 } }, rows, { rich: true, num: 4 })),
+    'and money of no named kind draws no ring at all');
   t.check(/Unlocks: the restock/.test(open), 'with what it makes possible as a chip');
   const waiting = scope.mgrRichRowHTML(rows[1], rows, { rich: true, num: 1 });
   t.check(/waiting on 01/.test(waiting) && /mgr-av-k mgr-kt-buy/.test(waiting),
@@ -89,39 +104,69 @@ const src = read('index.html');
     'a done move says so, with what the books saw since, and offers no Done again');
   const skipped = scope.mgrRichRowHTML(rows[3], rows, { rich: true, num: 3 });
   t.check(/mgr-rv-skipped/.test(skipped) && /“travelling”/.test(skipped), 'a move set aside shows the owner\'s own reason');
-  t.check(/mgrQueueRowHTML\(r, rows, \{ kindChip: true, open, rich: true, num: ordered\.indexOf\(r\) \}\)/.test(src),
-    'the Manager\'s plan draws rich rows; Today\'s queue keeps its compact one');
+  /* WAS: the Manager's plan drew these rich rows through mgrQueueRowHTML.
+     NOW: the Brief draws the canvas's decision rows (mgrBriefDecisionRowHTML),
+     numbered in the meeting's own order; Today's queue keeps its compact
+     row, and the rich row stays the shared emitter it was. */
+  const plan = extractFunction(src, 'mgrBriefPlanHTML', 'index.html');
+  t.check(/const ordered = mgrMoveOrder\(rows\);/.test(plan) && /ordered\.map\(\(r, i\)=> \(\{ \.\.\.mgrBriefDecisionMeta\(r, track\), n: i \+ 1, row: r \}\)\)/.test(plan)
+    && /mgrQueueRowHTML\(r, rows\)/.test(extractFunction(src, 'renderTodayPlan', 'index.html')),
+    'the Manager\'s plan draws its decisions in the meeting\'s order; Today\'s queue keeps its compact row');
 }
 
 /* ---------- 3. the rail, the playbook and growth, drawn ----------------- */
 {
   const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  const { mgrScoreRingsHTML, mgrAvatarHTML } = compileScope([
-    extractFunction(src, 'mgrScoreRingsHTML', 'index.html'),
+  /* WAS: the scoreboard opened with one ring per running target. NOW (the
+     Targets canvas): the section opens with the Manager's band and its four
+     counts -- On track, At risk, Off track, and met this year. */
+  const { mgrTgBandHTML, mgrAvatarHTML } = compileScope([
+    extractFunction(src, 'mgrTgBandHTML', 'index.html'), extractFunction(src, 'mgrTgBandLine', 'index.html'),
+    extractFunction(src, 'mgrTgFig', 'index.html'), extractDeclaration(src, 'MGR_TG_GLYPH', 'index.html'),
+    extractDeclaration(src, 'mgrTgDay', 'index.html'),
     extractFunction(src, 'mgrAvatarHTML', 'index.html'),
-    extractFunction(src, 'mgrShortUGX', 'index.html'),
-  ], { esc, Math, Number, String }, ['mgrScoreRingsHTML', 'mgrAvatarHTML']);
-  const rings = mgrScoreRingsHTML([
-    { label: 'Sales', pct: 25, pace: { on_course: false, behind_by: 2898857 } },
-    { label: 'Gross profit', pct: 74, pace: { on_course: true } },
-  ]);
-  t.check((rings.match(/class="mgr-sr-bad"/g) || []).length === 1 && (rings.match(/class="mgr-sr-good"/g) || []).length === 1,
-    'one ring per running target, crimson behind pace and verdigris on course');
-  t.check(/25% · 2\.9m behind/.test(rings) && /74% · on course/.test(rings), 'with how far each is, and by how much it is behind');
-  t.check(mgrScoreRingsHTML([]) === '', 'and nothing at all when no target is running');
+  ], { esc, Math, Number, String, Date, todayISO: () => '2026-10-07' }, ['mgrTgBandHTML', 'mgrAvatarHTML']);
+  const band = mgrTgBandHTML([{ key: 'on', landsAlone: true }, { key: 'risk' }, { key: 'off' }, { key: 'off' }],
+    [{ x: { to: '2026-09-30' }, met: true }, { x: { to: '2026-08-31' }, met: false }, { x: { to: '2026-07-31' }, met: null },
+      { x: { to: '2025-12-31' }, met: true }]);
+  const cell = (label) => (new RegExp(`<span>${label}</span><b class="[^"]*">([^<]*)</b>`).exec(band) || [])[1];
+  t.check(cell('On track') === '1' && cell('At risk') === '1' && cell('Off track') === '2',
+    'the band counts the running targets in their three states');
+  t.check(cell('Met this year') === '1/2', 'and what finished this year with a known end, met of all — last year\u2019s and the unknown are not counted');
+  t.check(/Four running\. One lands at this rate on its own, three need a move to get there\./.test(band), 'its line is counted too');
   t.check(mgrAvatarHTML('Kato Construction Ltd') === mgrAvatarHTML('Kato Construction Ltd') && />KC</.test(mgrAvatarHTML('Kato Construction Ltd')),
     'a customer wears the same initials and the same tint every time');
 
-  const render = extractFunction(src, 'renderManager', 'index.html');
-  t.check(/mgrScoreRingsHTML\(sb2\.targets\.filter\(x=> !x\.finished\)\)/.test(render), 'the scoreboard opens with its rings');
+  const render = mgrRender();
+  t.check(/mgrTgBandHTML\(runs, finished\)/.test(extractFunction(src, 'mgrTgDraw', 'index.html')), 'the Targets section opens with its band');
   t.check(/<div class="mgr-rt">/.test(render) && /class="mgr-av mgr-av-k mgr-kt-money"/.test(render),
     'the standing rules are rows with the mark of the door each belongs to');
-  t.check(/const span = \(p\)=>/.test(render) && /mgr-pk-over/.test(render) && /const gauge = \(p\)=>/.test(render),
-    'a running play wears its span as its weeks, crimson once past them, and what it watches as start-and-now bars');
-  t.check(/mgr-pk-pipe/.test(render) && /'Proposed'/.test(render) && /'Running'/.test(render) && /'Worked'/.test(render) && /'Set aside'/.test(render),
-    'the playbook opens with the road a play travels: proposed, running, worked or set aside');
-  t.check(/b\.treats \|\| 0\) - \(\(worthOf|worthOf\.get\(b\.id\) \|\| \{\}\)\.amount/.test(render) && /Overlaps “/.test(render),
-    'proposals are ordered by what they would add, and two treating the same thing are flagged as overlapping');
+  /* WAS: the playbook was one panel drawn inside mgrPaintPlays -- a span
+     bar (const span), start-and-now gauges (const gauge), and a pipe of
+     stages (Proposed -> Running -> Worked, Set aside). NOW: the Playbook
+     section is the canvas's board, drawn by helpers in its own block --
+     four lanes (Proposed, Running, Judged, Proven recipes) under three
+     experiment slots; a running play wears its weeks as cells read
+     against the week before it started, its overrun weeks marked, and how
+     sure so far as pips. "Worked" is no longer a stage the app names: the
+     Judged lane holds the owner's verdict (Q14). What these pins keep:
+     the span drawn as weeks, the overrun marked, proposals ordered by what
+     each would add, and overlaps flagged. */
+  const plays = src.slice(src.indexOf('/* ═══ MGR BED: Plays — begin ═══ */\n/* ---- THE PLAYBOOK'),
+    src.indexOf('/* ═══ MGR BED: Plays — end ═══ */\n/* ────'));
+  t.check(plays.length > 20000 && /class="mgr-pl-wk\$\{/.test(plays) && /mgr-pl-over/.test(plays) && /class="mgr-pl-pips"/.test(plays),
+    'a running play wears its span as its weeks, each read against the week before it started, its overrun weeks marked, how sure so far as pips');
+  t.check(/'Proposed'/.test(plays) && /'Running'/.test(plays) && /'Judged'/.test(plays) && /'Proven recipes'/.test(plays) && /class="mgr-pl-slots"/.test(plays),
+    'the board is the canvas’s four lanes — proposed, running, judged, proven recipes — under its three slots');
+  t.check(!/lane\('[^']*', '[a-z]+', 'Worked'/.test(plays) && /MGR_PLAY_VERDICT_WORDS = \{ worked: 'Worked', didnt: 'Didn’t work', cant_tell: 'Can’t tell' \}/.test(plays),
+    'and no lane says a play worked — "Worked" is one of the three verdicts the owner chooses from, in the Judged lane');
+  /* WAS: proposals sorted by their sizing (const props = proposed.slice()
+     .sort(worth)), which ranked cash against profit against sales. NOW:
+     the meeting's order (Q5, law 6); a pick is made only between two
+     sized plays on one lever, and a lead only within one kind of money. */
+  t.check(/const props = proposed\.map\(/.test(plays) && !/proposed\.slice\(\)\.sort\(/.test(plays) && /Overlaps “/.test(plays)
+    && /MGR_PLAY_MONEY_KIND/.test(plays) && /kinds\.size === 1/.test(plays),
+    'proposals stay in the meeting’s order, never ranked across kinds of money, and two treating the same thing are flagged as overlapping');
   const growth = extractFunction(src, 'renderManagerGrowth', 'index.html');
   t.check(/class="mgr-gg"/.test(growth) && /mgrAvatarHTML\(row\.name\)/.test(growth),
     'growth leads with its evidence as a gauge, and every customer has a face');
@@ -232,7 +277,7 @@ const src = read('index.html');
     'entries are kept by the week they fall in, Monday to Sunday');
   t.check(sc.mgrJournalWeekLabel('2026-09-21', '2026-09-24') === 'This week · 21–27 Sept' && sc.mgrJournalWeekLabel('2026-08-31', '2026-09-24') === '31 Aug – 6 Sept',
     'and each week is labelled by its dates, this one named as such');
-  const render = extractFunction(src, 'renderManager', 'index.html');
+  const render = mgrRender();
   t.check(/said again — \$\{ORD\[n\] \|\| n \+ 'th'\} time/.test(render) && /Said \$\{top\.dates\.length\} times/.test(render) && /mgr-jr-wk/.test(render),
     'the journal draws the chart, the repeated advice and its weeks');
   t.check(/label: 'sales', cls: 'mgr-jr-b-s'/.test(render) && /' · was ' \+ mgrShortUGX\(wk\.prior_sales\)/.test(render),
@@ -258,14 +303,29 @@ const src = read('index.html');
 
 /* ---------- 8. the scorecard, the pick, the reasoning ------------------- */
 {
-  const render = extractFunction(src, 'renderManager', 'index.html');
+  const render = mgrRender();
   const tally = extractFunction(src, 'managerAdviceTally', 'index.html');
   t.check(/counts\.worthDone \+= x\.worth/.test(tally) && /counts\.waiting\.repeated\+\+/.test(tally) && /counts\.waiting\.stale\+\+/.test(tally) && /counts\.waiting\.fresh\+\+/.test(tally),
     'the tally carries the money acted on and why each waiting move is waiting: repeated, stale, or new this week');
-  const verdict = extractFunction(src, 'mgrPaintVerdict', 'index.html');
-  t.check(/'Money acted on'/.test(verdict) && /waiting: \$\{why\}/.test(verdict), 'and the scorecard shows money acted on against money waiting, with the reasons, not a bare count of untouched');
-  t.check(/Try this one first\./.test(render) && /which is worth more — try that first/.test(render),
-    'of two overlapping plays it recommends the one worth more, and the other card points to it');
+  /* WAS: the verdict strip's first cell, money acted on against money
+     waiting. NOW: the canvas's situation strip (Q13) -- its hit rate is
+     a count of done moves the books can weigh, "k of n followed by a
+     payment or delivery", and what cannot be weighed is "not
+     measurable", never a miss. The money acted on is no longer drawn
+     anywhere: the tally still carries it (counts.worthDone), and the
+     Record's account shows only the counts. */
+  const cells = extractFunction(src, 'mgrStripCells', 'index.html');
+  t.check(/value: hr\.n \? mgrOf\(hr\.k, hr\.n\)/.test(cells) && /'followed by a payment or delivery'/.test(cells)
+    && /not measurable/.test(extractFunction(src, 'mgrBriefStripDetailHTML', 'index.html'))
+    && !/worked|did what I said/.test(cells),
+    'and the strip counts what was done and followed by an event, k of n, with the unmeasurable named, never "worked"');
+  /* WAS: read in mgrPaintPlays. NOW: the proposed card is the Plays
+     block's mgrPlayProposedHTML; the pick is unchanged. */
+  const proposedCard = extractFunction(src, 'mgrPlayProposedHTML', 'index.html');
+  /* WAS: "which is worth more — try that first". NOW: "which is sized
+     higher" -- the Manager's sizing, compared only when both were sized. */
+  t.check(/Try this one first\./.test(proposedCard) && /which is sized higher — try that first/.test(proposedCard),
+    'of two overlapping plays it recommends the one sized higher, and the other card points to it');
   t.check(/class="mgr-rv-why"/.test(extractFunction(src, 'mgrRichRowHTML', 'index.html')), 'every move carries one line of its reasoning on the card');
   t.check(/<p class="mgr-rej">/.test(render) && !/<p class="ow-mini">Considered and rejected/.test(render), 'and what was considered and rejected leads the plan instead of trailing it');
 }
@@ -327,7 +387,7 @@ const src = read('index.html');
   t.check((chart.match(/class="mgr-jc-r"/g) || []).length === 3 && /Weekly review, 2026-08-29: sales 31,436,660 UGX/.test(chart),
     'and the older keeps its mark, with its figure on hover');
 
-  const render = extractFunction(src, 'renderManager', 'index.html');
+  const render = mgrRender();
   t.check(/held: again \? `held \$\{again \+ 1\} times`/.test(render) && /Answered on the earlier plan that day/.test(render),
     'a day held more than once is one entry, says how many times, and keeps what was answered on the earlier plan');
   const load = extractFunction(src, 'managerLoadState', 'index.html');

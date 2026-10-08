@@ -411,7 +411,8 @@ const build = (data, extraSrc, extraNames, extraEnv) => compileScope(
       extractFunction(src, 'mgrLiveMoveRows', 'index.html'),
       extractFunction(src, 'managerChaseEvidence', 'index.html'),
       /* The unusual-days reading has its own test; here it is quiet. */
-      "function unusualDays(){ return { today: '', judged: 0, thin: 0, floor: 0, items: [] }; } function unusualLine(){ return ''; } var mgrUnusualMemo = null;",
+      "function unusualDays(){ return { today: '', judged: 0, thin: 0, floor: 0, items: [] }; } function unusualLine(){ return ''; } var mgrUnusualMemo = null;"
+      + " async function mgrUnusualForMeeting(){ return { judged: false, items: [], answered: () => null, answersError: null, normalsError: null, taught: [] }; }",
       extractFunction(src, 'chaseResponse', 'index.html'),
       extractFunction(src, 'chaseDayAdd', 'index.html'),
       extractFunction(src, 'chaseRate', 'index.html'),
@@ -487,6 +488,10 @@ const build = (data, extraSrc, extraNames, extraEnv) => compileScope(
         .concat(CONSTS.map((n) => extractDeclaration(src, n, 'index.html')))
         .concat([
           extractFunction(src, 'managerSaveMeeting', 'index.html'),
+          /* the optional fields of the meeting contract, through their whitelists */
+          ...['managerPips', 'managerPlanText', 'managerMeetingFields', 'managerMoveFields', 'managerPlanRefs', 'managerAskFields', 'managerPlayFields']
+            .map((n) => extractFunction(src, n, 'index.html')),
+          extractDeclaration(src, 'MANAGER_DEPTS', 'index.html'), extractDeclaration(src, 'MANAGER_ASK_PLACES', 'index.html'),
       extractDeclaration(src, 'MANAGER_DOORS', 'index.html'),
       extractDeclaration(src, 'MANAGER_MOVE_KINDS', 'index.html'),
       extractFunction(src, 'managerResolvedSubject', 'index.html'),

@@ -36,6 +36,12 @@ const { read, extractFunction, extractDeclaration, compileScope, createReporter 
 
 const t = createReporter('the morning brief');
 const src = read('index.html');
+/* The Manager screen is renderManager and the seven bed painters it hands
+   every reading to (mgrPaint<Bed>), so a pin on "the render" reads all
+   eight: what used to sit in one function is drawn by the bed it belongs to. */
+const MGR_RENDER = ['renderManager', 'mgrPaintBrief', 'mgrPaintSim', 'mgrPaintTargets', 'mgrPaintPlays',
+  'mgrPaintUnusual', 'mgrPaintAsk', 'mgrPaintRecord'];
+const mgrRender = () => MGR_RENDER.map((n) => extractFunction(src, n, 'index.html')).join('\n');
 const api = read('api/assistant.js');
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 
@@ -70,8 +76,10 @@ const shift = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate
      would say so. */
   const RULES = [
     'THE MORNING MEETING\\.', 'HOW THE MORNING READS', 'Order of work: call manager_history FIRST',
-    'NAME THE WEEK', 'Compose the day: pick AT MOST FIVE moves',
+    'NAME THE WEEK', 'Compose the day: pick AT MOST EIGHT moves', 'SIX DEPARTMENTS\\.',
     'After the prose, end with EXACTLY ONE machine block',
+    'WHAT ELSE THE BLOCK CARRIES', 'MY READING, NEVER A CAUSE', 'AN ASK SAYS WHAT HANGS ON IT',
+    'A PLAY IS A TEST', 'CORRECT YOURSELF OUT LOUD',
     'WHEN YOU TURN DOWN A BUY', 'A hold is an argument, never a lock',
     'ASK FOR WHAT THE BOOKS CANNOT HOLD', 'BE MEASURED\\.',
     'THE PLAYBOOK', 'Propose AT MOST TWO plays in a meeting',
@@ -91,9 +99,21 @@ const shift = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate
      catches the drift that produced the problem: eight builds each
      adding a paragraph nobody weighed. It has moved once, deliberately,
      when the market rule was added, and moving it should always cost a
-     deliberate act and a line of explanation. */
-  t.check(meeting.length + common.length < 16000,
-    `the morning's rulebook is materially smaller than the 17,806 it was (now ${meeting.length + common.length})`);
+     deliberate act and a line of explanation.
+
+     IT HAS MOVED A SECOND TIME, 16,000 → 20,000, and this is the line.
+     The meeting stood at 15,995 of 16,000 when the Manager was asked to
+     run six departments: a verdict, a department and a confidence on
+     every decision, the evidence behind it and what would change its
+     mind, its own reading of how one problem runs through several
+     departments, and questions that say what hangs on them. None of
+     that has a deterministic source -- the owner was told so and
+     approved the raise (Q7) rather than have older rules weakened to
+     make room. The 4,000 is for THOSE fields; the next paragraph that
+     wants in must still be weighed against this ceiling, not used as a
+     reason to move it again. */
+  t.check(meeting.length + common.length < 20000,
+    `the morning's rulebook stays under its approved ceiling of 20,000 (now ${meeting.length + common.length})`);
   t.check(review.length + common.length < 8000,
     `and the review's is a third of what it was (now ${review.length + common.length})`);
 
@@ -171,7 +191,8 @@ const shift = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate
       extractFunction(src, 'mgrLiveMoveRows', 'index.html'),
       extractFunction(src, 'managerChaseEvidence', 'index.html'),
       /* The unusual-days reading has its own test; here it is quiet. */
-      "function unusualDays(){ return { today: '', judged: 0, thin: 0, floor: 0, items: [] }; } function unusualLine(){ return ''; } var mgrUnusualMemo = null;",
+      "function unusualDays(){ return { today: '', judged: 0, thin: 0, floor: 0, items: [] }; } function unusualLine(){ return ''; } var mgrUnusualMemo = null;"
+      + " async function mgrUnusualForMeeting(){ return { judged: false, items: [], answered: () => null, answersError: null, normalsError: null, taught: [] }; }",
       extractFunction(src, 'chaseResponse', 'index.html'),
       extractFunction(src, 'chaseDayAdd', 'index.html'),
       extractFunction(src, 'chaseRate', 'index.html'),
@@ -389,7 +410,7 @@ const shift = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate
       'on a flag that outlives the single send apWasCutOff lived for');
     const loop = extractFunction(src, 'apRunLoop', 'index.html');
     t.check(/apCutOffThisSitting = true;/.test(loop), 'set where the ceiling is actually hit');
-    const render = extractFunction(src, 'renderManager', 'index.html');
+    const render = mgrRender();
     t.check(/ran out of room mid-answer/.test(render),
       'and the owner is told, rather than left to wonder why the plan looks thin');
 

@@ -42,8 +42,15 @@ const { read, extractFunction, extractDeclaration, compileScope, createReporter 
 
 const t = createReporter('the manager’s playbook');
 const src = read('index.html');
+/* The Manager screen is renderManager and the seven bed painters it hands
+   every reading to (mgrPaint<Bed>), so a pin on "the render" reads all
+   eight: what used to sit in one function is drawn by the bed it belongs to. */
+const MGR_RENDER = ['renderManager', 'mgrPaintBrief', 'mgrPaintSim', 'mgrPaintTargets', 'mgrPaintPlays',
+  'mgrPaintUnusual', 'mgrPaintAsk', 'mgrPaintRecord'];
+const mgrRender = () => MGR_RENDER.map((n) => extractFunction(src, n, 'index.html')).join('\n');
 const api = read('api/assistant.js');
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
+const same = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(want), `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 
 const TODAY = '2026-08-29';
 const base = {
@@ -80,6 +87,10 @@ const base = {
     const inserted = [];
     const save = compileScope([
       extractFunction(src, 'managerSaveMeeting', 'index.html'),
+      /* the optional fields of the meeting contract, through their whitelists */
+      ...['managerPips', 'managerPlanText', 'managerMeetingFields', 'managerMoveFields', 'managerPlanRefs', 'managerAskFields', 'managerPlayFields']
+        .map((n) => extractFunction(src, n, 'index.html')),
+      extractDeclaration(src, 'MANAGER_DEPTS', 'index.html'), extractDeclaration(src, 'MANAGER_ASK_PLACES', 'index.html'),
       extractDeclaration(src, 'MANAGER_DOORS', 'index.html'),
       extractDeclaration(src, 'MANAGER_MOVE_KINDS', 'index.html'),
       extractFunction(src, 'managerResolvedSubject', 'index.html'),
@@ -161,7 +172,14 @@ const base = {
 
     eq(book.proposed.length, 1, 'a nameless row is not a play in anybody’s book');
     eq(book.running.length, 2, 'what the shop is actually working');
-    eq(book.dropped.length, 2, 'and what it has tried and stopped — dropped AND done both stop being proposals');
+    /* WAS: dropped.length 2 — a play marked worked was filed with the plays
+       set aside. NOW (Q14): set aside holds only what the owner set aside;
+       a closed play carries the owner's verdict in its own list. A 'done'
+       row from before verdicts were asked for reads as their "worked". */
+    eq(book.dropped.length, 1, 'what it has tried and set aside');
+    eq(book.judged.length, 1, 'and what the owner closed with a verdict, in a list of its own');
+    eq(book.judged[0].verdict, 'worked', 'an old "It worked" close reads as the owner’s verdict worked');
+    eq(book.judged[0].verdictLegacy, true, 'and says it was marked before verdicts were asked for');
     eq(book.proposed[0].problem, 'Margin', 'each play named by the problem it treats, in the owner’s words');
     eq(book.running[1].source, 'owner', 'a play the owner typed is marked as theirs');
     eq(book.running[0].source, 'manager', 'and one the manager thought of is not');
@@ -180,7 +198,8 @@ const base = {
     ], { ...base, managerNotesTable: false,
       sb: { from(){ throw new Error('reached for a table that is not there'); } } },
       ['managerPlaybook', 'managerPlayClock', 'managerPlaysPastSpan']).managerPlaybook();
-    t.check(none.running.length === 0 && none.proposed.length === 0 && none.dropped.length === 0,
+    t.check(none.running.length === 0 && none.proposed.length === 0 && none.dropped.length === 0
+      && none.judged.length === 0 && none.proven.length === 0,
       'without the memory table it answers an empty book rather than throwing');
 
     const errBook = await compileScope([
@@ -208,16 +227,37 @@ const base = {
       const updates = [], inserts = [], toasts = [];
       const s = compileScope([
         extractFunction(src, 'managerPlayStatus', 'index.html'),
+        extractFunction(src, 'managerPlayStatusWrite', 'index.html'),
         extractFunction(src, 'managerRetireDuplicates', 'index.html'),
         extractFunction(src, 'managerAddOwnPlay', 'index.html'),
+        extractFunction(src, 'managerAddOwnPlayWrite', 'index.html'),
+        /* one playbook write at a time, and the stamp both writers take */
+        extractDeclaration(src, 'MGR_PLAY_WRITE', 'index.html'),
+        extractFunction(src, 'managerPlayStamp', 'index.html'),
+        extractFunction(src, 'managerPlayApplyStamp', 'index.html'),
         extractDeclaration(src, 'MANAGER_PROBLEM_METRICS', 'index.html'),
+        extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
+        extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
+        extractDeclaration(src, 'MANAGER_DEPTS', 'index.html'),
+        /* the slots (Q15) are counted by the Playbook's own refusal */
+        extractFunction(src, 'mgrPlaySlotRefusal', 'index.html'),
+        extractDeclaration(src, 'MGR_PLAY_SLOTS', 'index.html'),
+        /* an owner's play passes the meeting's own whitelist */
+        extractFunction(src, 'managerPlayFields', 'index.html'),
+        extractFunction(src, 'managerPlanText', 'index.html'),
         'function names(){ return { managerPlayStatus, managerAddOwnPlay }; }',
       ], { ...base, toast: (m) => toasts.push(m), renderManager: () => {},
+        booksStartDate: () => over.booksStart || '2026-01-01',
+        ...(over.env || {}),
+        /* The playbook as the slots see it: a book handed in, or -- for a
+           double tap -- the rows written so far, read back as running. */
+        managerPlaybook: async () => (over.live ? { running: [...over.live.running, ...inserts.filter((r) => r.status === 'running').map((r) => r.body)], proposed: [] }
+          : over.book || { running: [{ id: 1, name: 'Deposit before delivery' }], proposed: [] }),
         sb: { from: () => ({
           select: () => ({ eq: () => ({ eq: () => ({ single: () => Promise.resolve({
-            data: { body: { name: 'Charge for cutting', treats: 'margin' } } }) }) }) }),
+            data: { body: over.body ? JSON.parse(JSON.stringify(over.body)) : { name: 'Charge for cutting', treats: 'margin' } } }) }) }) }),
           update: (patch) => { updates.push(patch); return { eq: () => ({ eq: () => Promise.resolve(over.updateError || { error: null }) }) }; },
-          insert: (row) => { inserts.push(row); return Promise.resolve(over.insertError || { error: null }); },
+          insert: (row) => { inserts.push(row); return new Promise((res) => setTimeout(() => res(over.insertError || { error: null }), 5)); },
         }) },
       }, ['names']).names();
       return { s, updates, inserts, toasts };
@@ -254,6 +294,117 @@ const base = {
     await e.s.managerAddOwnPlay('  ', 'no name at all');
     eq(e.inserts.length, 0, 'a play with no name is not kept');
     t.check(e.toasts.some((m) => /name/i.test(m)), 'and the owner is told why');
+
+    /* THREE SLOTS (Q15). With three running, a fourth is refused by both
+       writers, nothing is written, and the reason names every running play. */
+    const three = { running: [{ id: 1, name: 'Friday chase' }, { id: 2, name: 'Steel' }, { id: 3, name: 'Hima' }], proposed: [] };
+    const f = mk({ book: three });
+    const fr = await f.s.managerPlayStatus(5, 'running');
+    same([fr.ok, f.updates.length], [false, 0], 'a fourth play is not switched on — nothing written');
+    t.check(/All 3 experiment slots are in use — “Friday chase”, “Steel” and “Hima”\. Judge or stop one first/.test(f.toasts[0] || ''),
+      'and the owner is told why, every running play named');
+    const g = mk({ book: three });
+    const gr = await g.s.managerAddOwnPlay('Cash discount on Saturdays', 'Two per cent off');
+    same([gr.ok, g.inserts.length], [false, 0], 'the owner’s own play cannot take a fourth slot either');
+    const h = mk({ book: three });
+    await h.s.managerPlayStatus(2, 'running');
+    eq(h.updates.length, 1, 'a play already in a slot is not refused its own');
+    const down = mk({ book: { running: [], proposed: [], error: 'offline' } });
+    const dr = await down.s.managerPlayStatus(5, 'running');
+    same([dr.ok, down.updates.length], [false, 0], 'slots that could not be counted start nothing');
+
+    /* THE OWNER'S VERDICT (Q14): closed as done, with the verdict, what
+       moved alongside it, and the lesson in their words. */
+    const v = mk({});
+    await v.s.managerPlayStatus(5, { verdict: 'didnt', result: 'the share kept 9.0% → 8.2%, better in 1 of 2 weeks',
+      resultRead: { unit: 'pct', before: 9, after: 8.2, moved: -0.8, k: 1, n: 2 }, lesson: '  Price alone did not bring volume back.  ' }, []);
+    eq(v.updates[0].status, 'done', 'a verdict closes the play');
+    same([v.updates[0].body.verdict, v.updates[0].body.judgedOn, v.updates[0].body.endedOn], ['didnt', TODAY, TODAY],
+      'with the owner’s verdict and the day they gave it');
+    eq(v.updates[0].body.result, 'the share kept 9.0% → 8.2%, better in 1 of 2 weeks', 'what moved alongside it, kept in words');
+    eq(v.updates[0].body.resultRead.moved, -0.8, 'and in figures');
+    eq(v.updates[0].body.lesson, 'Price alone did not bring volume back.', 'and the lesson, in their words');
+    t.check(v.toasts.some((m) => /your verdict — didn’t work/.test(m)), 'the toast says it was the owner’s verdict');
+    const bad = mk({});
+    const br = await bad.s.managerPlayStatus(5, { verdict: 'great' }, []);
+    same([br.ok, bad.updates.length], [false, 0], 'a verdict that is not worked, didn’t or can’t tell is not kept');
+
+    /* WRITE A PLAY: what the designer composed goes through the meeting's
+       whitelist, a level stamps where it stood, a queued play waits on the
+       board, and a name already waiting is said, not silently dropped. */
+    const w = mk({ book: { running: [], proposed: [] } });
+    await w.s.managerAddOwnPlay('Cash price under credit', 'give cash buyers a lower price', { status: 'running', treats: 'debt', weeks: 6,
+      hypothesis: { if: 'give cash buyers a lower price', then: 'money owed to you will fall from 137m to 109m', target: '109m' },
+      stop: { threshold: 'money owed to you no better than 137m', by_week: 3 }, cost: 60000, depends_on: '', dept: 'nonsense' });
+    const wb = w.inserts[0].body;
+    same([w.inserts[0].status, wb.treats, wb.weeks, wb.source, wb.startedOn], ['running', 'debt', 6, 'owner', TODAY], 'started today, the owner’s, six weeks');
+    same(wb.hypothesis, { if: 'give cash buyers a lower price', then: 'money owed to you will fall from 137m to 109m', target: '109m' }, 'with its hypothesis');
+    same(wb.stop, { threshold: 'money owed to you no better than 137m', byWeek: 3 }, 'and its stop rule, stored as the meeting’s are');
+    same([wb.cost, 'dept' in wb, 'dependsOn' in wb], [60000, false, false], 'a department the app does not name and an empty dependency are not kept');
+    eq(wb.baseline, 0, 'a level stamps where it stood the day it started (the books here owe nothing)');
+    const q = mk({ book: { running: [], proposed: [{ id: 9, name: 'Cash price under credit' }] } });
+    const qr = await q.s.managerAddOwnPlay('Cash price under credit!', 'x', { status: 'proposed', treats: 'debt', weeks: 6 });
+    same([qr.ok, q.inserts.length], [false, 0], 'queuing a play already waiting on the board writes nothing');
+    t.check(q.toasts.some((m) => /already on the board/.test(m)), 'and says it is there');
+    const q2 = mk({ book: { running: [{ id: 1 }, { id: 2 }, { id: 3 }], proposed: [] } });
+    await q2.s.managerAddOwnPlay('Saturday delivery', 'deliver', { status: 'proposed', treats: 'growth', weeks: 4 });
+    same([q2.inserts[0].status, 'startedOn' in q2.inserts[0].body, 'baseline' in q2.inserts[0].body], ['proposed', false, false],
+      'a queued play waits proposed — no start day and no stamp — even with the slots full');
+    const odd = mk({ book: { running: [], proposed: [] } });
+    await odd.s.managerAddOwnPlay('Moon dance', 'x', { treats: 'vibes', weeks: 40 });
+    same([odd.inserts[0].body.treats, 'weeks' in odd.inserts[0].body], ['other', false], 'a problem or a span outside the rules is not kept');
+
+    /* TWO QUICK TAPS, ONE PLAY (review P4). Two running, the owner taps
+       "Start the play" twice before the first save answers: both used to
+       read two running, both passed the slot check, and four ran. The
+       second write is refused while the first is in flight -- exactly one
+       running row is written -- and a third tap after it lands is refused
+       as already running. */
+    const dbl = mk({ live: { running: [{ id: 126, name: 'Weekly chase' }, { id: 127, name: 'Price steel' }] } });
+    const plan = { status: 'running', treats: 'growth', weeks: 4 };
+    const [t1, t2] = await Promise.all([dbl.s.managerAddOwnPlay('Saturday delivery to builders’ sites', 'deliver', plan),
+      dbl.s.managerAddOwnPlay('Saturday delivery to builders’ sites', 'deliver', plan)]);
+    same([t1.ok, t2.ok, t2.reason, dbl.inserts.filter((r) => r.status === 'running').length], [true, false, 'busy', 1],
+      'two taps together write exactly one running play');
+    t.check(dbl.toasts.some((m) => /Still saving the last change to the playbook/.test(m)), 'and the second tap is told why');
+    const t3 = await dbl.s.managerAddOwnPlay('Saturday delivery to builders’ sites!', 'deliver', plan);
+    same([t3.ok, t3.reason, dbl.inserts.length], [false, 'already running', 1], 'a play already running under that name is not started again');
+    const ps = mk({});
+    const [p1, p2] = await Promise.all([ps.s.managerPlayStatus(5, 'running'), ps.s.managerPlayStatus(5, 'running')]);
+    same([p1.ok, p2.ok, ps.updates.length], [true, false, 1], 'and a proposal tapped Start twice is switched on once');
+
+    /* A RE-RUN OF THE MEETING'S RECIPE stays the meeting's, and the toast
+       does not call it the shop's own. */
+    const rr = mk({ book: { running: [], proposed: [] } });
+    await rr.s.managerAddOwnPlay('Deposit cash twice a week', 'x', { status: 'running', treats: 'cash', weeks: 4, source: 'manager' });
+    eq(rr.inserts[0].body.source, 'manager', 'a re-run of a meeting recipe keeps its source');
+    t.check(rr.toasts.some((m) => /^Running again — the meeting reads it as running/.test(m)) && !rr.toasts.some((m) => /shop's own/.test(m)),
+      'and the toast says it is running again, not that it is the shop’s own');
+
+    /* A FLOW IS STAMPED THE DAY IT STARTS (review P4: the designer's
+       figure and the board's before are one number). Sales, 4 weeks,
+       started 29 Aug: the 28 days before, 1-28 Aug, sold 28,000,000, a
+       week's worth = 28,000,000 x 7 / 28 = 7,000,000. Its stop rule,
+       written as "no better than where it starts", is held to that same
+       7,000,000. */
+    const salesM = { anInvoicesInRange: (f, to) => (f === '2026-08-01' && to === '2026-08-28' ? [{ total: 28000000 }] : []),
+      anOverallTotals: (l) => ({ sales: l.reduce((n, q) => n + q.total, 0), profit: 0, count: l.length }) };
+    const fl = mk({ book: { running: [], proposed: [] }, env: salesM });
+    await fl.s.managerAddOwnPlay('Saturday delivery', 'deliver', { status: 'running', treats: 'growth', weeks: 4,
+      stop: { threshold: 'sales no better than where it starts', by_week: 2, value: 6900000, when: 'atmost', vs: 'before' }, sized: '+1.2m a week if it reaches your aim' });
+    const fb = fl.inserts[0].body;
+    same([fb.baseline, fb.baselineFrom, fb.baselineTo], [7000000, '2026-08-01', '2026-08-28'], 'a sales play stamps a week’s worth of the 28 days before it started');
+    same([fb.stop.value, fb.stop.when, fb.stop.vs], [7000000, 'atmost', 'before'], 'and its stop rule is held to that same figure');
+    eq(fb.sized, '+1.2m a week if it reaches your aim', 'what the designer said it would add is kept with it');
+    const fs = mk({ env: salesM,
+      body: { name: 'Saturday delivery', treats: 'growth', weeks: 4, stop: { threshold: 'x', byWeek: 2, vs: 'before', when: 'atmost' } } });
+    await fs.s.managerPlayStatus(5, 'running');
+    same([fs.updates[0].body.baseline, fs.updates[0].body.stop.value], [7000000, 7000000], 'a queued play started from the board is stamped and held to its stamp the same way');
+    const short = mk({ booksStart: '2026-08-10', env: salesM,
+      body: { name: 'Saturday delivery', treats: 'growth', weeks: 4, stop: { threshold: 'x', byWeek: 2, vs: 'before', when: 'atmost', value: 5 } } });
+    await short.s.managerPlayStatus(5, 'running');
+    same(['baseline' in short.updates[0].body, 'value' in short.updates[0].body.stop], [false, false],
+      'books that do not reach back the span stamp nothing, and the rule is left unchecked rather than held to a stale figure');
   }
 
   /* ---------- 5. the mind is handed the book ------------------------- */
@@ -274,7 +425,8 @@ const base = {
       extractFunction(src, 'mgrLiveMoveRows', 'index.html'),
       extractFunction(src, 'managerChaseEvidence', 'index.html'),
       /* The unusual-days reading has its own test; here it is quiet. */
-      "function unusualDays(){ return { today: '', judged: 0, thin: 0, floor: 0, items: [] }; } function unusualLine(){ return ''; } var mgrUnusualMemo = null;",
+      "function unusualDays(){ return { today: '', judged: 0, thin: 0, floor: 0, items: [] }; } function unusualLine(){ return ''; } var mgrUnusualMemo = null;"
+      + " async function mgrUnusualForMeeting(){ return { judged: false, items: [], answered: () => null, answersError: null, normalsError: null, taught: [] }; }",
       extractFunction(src, 'chaseResponse', 'index.html'),
       extractFunction(src, 'chaseDayAdd', 'index.html'),
       extractFunction(src, 'chaseRate', 'index.html'),
@@ -340,6 +492,54 @@ const base = {
     t.check((hist.playbook.tried_and_dropped || []).includes('Bulk-lot the dead stock'),
       'and what was tried and dropped — without this it proposes the same bright idea every Monday');
 
+    /* PROVEN RECIPES (Q14). A play the OWNER judged worked twice is handed
+       over by name with that count, and is the one closed play left off
+       the never-again lists. Set aside, judged once, and judged not to
+       work all stay on them. The same journal, read again. */
+    journal.play = [
+      { id: 9, date: '2026-08-10', status: 'done', body: { name: 'Deposit cash twice a week', treats: 'cash', source: 'manager',
+        verdict: 'worked', judgedOn: '2026-08-24', endedOn: '2026-08-24', lesson: 'Fixed days work.' } },
+      { id: 8, date: '2026-07-01', status: 'done', body: { name: 'Deposit cash twice a week', treats: 'cash', source: 'manager',
+        verdict: 'worked', judgedOn: '2026-07-29', endedOn: '2026-07-29' } },
+      { id: 7, date: '2026-07-01', status: 'done', body: { name: 'SMS price list', treats: 'growth', source: 'owner', verdict: 'worked', judgedOn: '2026-07-20' } },
+      { id: 6, date: '2026-06-20', status: 'done', body: { name: 'Loyalty stamps', treats: 'growth', source: 'manager', verdict: 'didnt', judgedOn: '2026-07-10' } },
+      { id: 2, date: '2026-08-07', status: 'dropped', body: { name: 'Bulk-lot the dead stock', treats: 'dead_stock', source: 'manager' } },
+    ];
+    const again = await tools.manager_history.run({ limit: 3 });
+    same(again.playbook.proven_recipes, [{ name: 'Deposit cash twice a week', treats: 'cash', judged_worked: 2 }],
+      'a play the owner judged worked twice is a proven recipe — its name, what it treats, and the count of those verdicts');
+    t.check(!again.playbook.tried_and_dropped.includes('Deposit cash twice a week')
+      && !again.do_not_repeat.plays_dropped.includes('Deposit cash twice a week'),
+    'and it is on neither never-again list, so the meeting may propose it again');
+    same(again.playbook.tried_and_dropped, ['SMS price list', 'Loyalty stamps', 'Bulk-lot the dead stock'],
+      'judged once, judged not to work, and set aside all stay on tried_and_dropped');
+    same(again.do_not_repeat.plays_dropped, ['SMS price list', 'Loyalty stamps', 'Bulk-lot the dead stock'],
+      'and on the restraint list');
+    t.check(!JSON.stringify(again).includes('it worked'), 'nothing handed to the meeting says a play worked — only that the owner judged it so');
+    /* NEVER ON BOTH LISTS: the owner's latest act wins. A re-run of the
+       recipe stopped on 3 Sep -- after its last "worked" verdict (24 Aug)
+       -- takes it off the recipes and leaves it never-again. */
+    journal.play.unshift({ id: 10, date: '2026-08-25', status: 'dropped', body: { name: 'Deposit cash twice a week', treats: 'cash',
+      source: 'manager', startedOn: '2026-08-25', endedOn: '2026-09-03' } });
+    const stopped = await tools.manager_history.run({ limit: 3 });
+    eq(stopped.playbook.proven_recipes, undefined, 'a recipe the owner stopped after judging it worked is no longer handed over as one');
+    t.check(stopped.playbook.tried_and_dropped.includes('Deposit cash twice a week') && stopped.do_not_repeat.plays_dropped.includes('Deposit cash twice a week'),
+      'and it is on the never-again lists instead — never on both');
+    /* Set aside on 15 Jul, BEFORE the owner judged it worked on 29 Jul and
+       24 Aug: their later verdicts stand, and the old set-aside is not
+       filed as never-again. */
+    journal.play[0] = { ...journal.play[0], date: '2026-07-10', body: { ...journal.play[0].body, startedOn: '2026-07-10', endedOn: '2026-07-15' } };
+    const earlier = await tools.manager_history.run({ limit: 3 });
+    same(earlier.playbook.proven_recipes, [{ name: 'Deposit cash twice a week', treats: 'cash', judged_worked: 2 }],
+      'a set-aside the owner later overturned with two "worked" verdicts leaves the recipe proven');
+    t.check(!earlier.playbook.tried_and_dropped.includes('Deposit cash twice a week') && !earlier.do_not_repeat.plays_dropped.includes('Deposit cash twice a week'),
+      'and that old set-aside is on neither never-again list — never on both');
+    journal.play.shift();
+    journal.play.splice(0, 1);
+    const once = await tools.manager_history.run({ limit: 3 });
+    eq(once.playbook.proven_recipes, undefined, 'judged worked once is not proven: no proven_recipes at all');
+    t.check(once.playbook.tried_and_dropped.includes('Deposit cash twice a week'), 'and it stays never-again until a second verdict');
+
     /* Nothing to say beats an empty heading. */
     const empty = compileScope([
       extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
@@ -348,7 +548,8 @@ const base = {
       extractFunction(src, 'mgrLiveMoveRows', 'index.html'),
       extractFunction(src, 'managerChaseEvidence', 'index.html'),
       /* The unusual-days reading has its own test; here it is quiet. */
-      "function unusualDays(){ return { today: '', judged: 0, thin: 0, floor: 0, items: [] }; } function unusualLine(){ return ''; } var mgrUnusualMemo = null;",
+      "function unusualDays(){ return { today: '', judged: 0, thin: 0, floor: 0, items: [] }; } function unusualLine(){ return ''; } var mgrUnusualMemo = null;"
+      + " async function mgrUnusualForMeeting(){ return { judged: false, items: [], answered: () => null, answersError: null, normalsError: null, taught: [] }; }",
       extractFunction(src, 'chaseResponse', 'index.html'),
       extractFunction(src, 'chaseDayAdd', 'index.html'),
       extractFunction(src, 'chaseRate', 'index.html'),
@@ -409,7 +610,7 @@ const base = {
 
   /* ---------- 6. one reading, screen and mind alike ------------------ */
   {
-    const render = extractFunction(src, 'renderManager', 'index.html');
+    const render = mgrRender();
     t.check(/managerPlaybook\(\)/.test(render),
       'the screen draws the playbook from the same function the tool calls');
     /* The tap also hands over the older copies of a proposal written

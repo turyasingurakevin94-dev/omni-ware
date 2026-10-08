@@ -21,13 +21,13 @@
  *                  skips seeding the day. A question asked down that
  *                  path would write a plan out of a question.
  *
- *   THE GRID       Twelve flat sibling divs become two columns with no
- *                  restructuring, so the six test files that extract
- *                  renderManager keep matching -- every one of them
- *                  pins a function call or a string, none pins a
- *                  wrapper. Every child is CLASSED rather than reached
- *                  with `> *`, because a universal selector inside the
- *                  ow layer is a selector that has left it.
+ *   THE BEDS       Every container is a flat, id-addressed div in
+ *                  exactly one of seven beds -- Brief, Simulator,
+ *                  Targets, Playbook, Out of the ordinary, It needs to
+ *                  know, Record -- and the nav shows one by a class on
+ *                  the section. Every wrap is CLASSED (.mgr-slot) rather
+ *                  than reached with `> *`, because a universal selector
+ *                  is a selector that has left its namespace.
  *
  *   THE HEADINGS   .mgr-sec-title was 12.5px uppercase tracked grey --
  *                  the identical treatment .field label gets. "THE
@@ -73,66 +73,80 @@ const src = read('index.html');
     'with the button on the right of the header rather than buried in the sections');
 }
 
-/* ---------- 2. two beds, and every container still found by id ----------
+/* ---------- 2. seven beds, and every container still found by id ----------
 
    WHAT THIS BLOCK USED TO SAY, and why it stopped being true.
 
-   It pinned twelve wraps in one .ow-rec grid, six of them .ow-half.
-   That assertion was the record of a cheap session: the twelve flat
-   sections were dropped into two columns WITHOUT opening
-   renderManager, and the test existed to prove nothing had been
-   restructured. It was the right test for that change.
+   It pinned fifteen wraps: three above a three-way switch (the verdict,
+   the switch, the memory note) and twelve in three beds -- standing,
+   the record, the map -- each wrap wearing its bed's class, the whole
+   laid into one .ow-grid. That was the right test for a screen that
+   asked two questions and drew one picture.
 
-   The redesign is the opposite change. Twelve sections of equal weight
-   were the defect, not the arrangement of them: the screen was about
-   advice and never said whether the advice had been worth anything,
-   and three of the twelve — advice you passed on, advice that is not
-   landing, and what has worked — are the same question asked three
-   ways, which the source comment already admitted. So:
+   The Manager the owner approved asks seven: the canvas's six sections
+   and the record kept after them (Q26) -- Brief, Simulator, Targets,
+   Playbook, Out of the ordinary, It needs to know, Record. So:
 
-     - two of the twelve are GONE. managerReviewWrap folded into the
-       journal, because a weekly review and a meeting are the same kind
-       of event on the same clock; managerPassedWrap folded into the
-       levers table, because "you passed on this" is a verdict column,
-       not a section.
-     - two are NEW. managerVerdictWrap carries the four figures that
-       say whether this manager has earned its credit — the thing the
-       old screen could not say at all — and managerViewWrap carries
-       the switch.
-     - the .ow-rec half-grid is gone with them. It laid flat siblings
-       into halves, so a short section left a 200px hole beside a tall
-       one and the reading order zig-zagged. The console's own
-       .ow-grid + .ow-side is what the rest of this app uses.
+     - four wraps are GONE and nothing in them is lost: the band
+       (managerHeroWrap) is the Brief's band, the verdict strip
+       (managerVerdictWrap) is the Brief's situation strip, the map
+       (managerMapWrap) is the Brief's department board, and the
+       scoreboard (managerScoreWrap) is the Targets section.
+     - ten are NEW: the Brief's band, strip, department board, chains,
+       next 30 days, simulator teaser, memory and blind spots, and the
+       Simulator's and the Targets' own wraps.
+     - a bed is ONE container holding its wraps, rather than a class
+       repeated on each, so a bed's markup is one block a later change
+       can own whole; and the switch is a seven-section nav.
 
-   WHAT IS PINNED NOW is the part that mattered then and still does:
-   every container is a flat, classed, id-addressed div that
-   renderManager finds by getElementById, so no wrapper ever comes
-   between the render and its container; and every wrap belongs to
-   exactly one bed, so the switch can never leave a container showing
-   in both or in neither. */
+   WHAT IS STILL PINNED is what mattered then and still does: every
+   container is a flat, id-addressed div that its painter finds by
+   getElementById, so no wrapper comes between a paint and its container;
+   every wrap belongs to exactly one bed, so the nav can never leave a
+   container showing in two sections or in none; and every wrap that
+   exists is filled, and every wrap filled exists. */
 {
   const sec = src.slice(src.indexOf('<section id="tab-manager"'),
                         src.indexOf('<section id="tab-map"'));
   const kids = [...sec.matchAll(/<div id="(manager[A-Za-z]+)"([^>]*)>/g)];
   const ids = kids.map(k => k[1]);
-  /* Thirteen since the side rail gained "Out of the ordinary"
-     (managerUnusualWrap): the days of the last week outside this shop's
-     own usual. A new section is a new container, not a wrapper.
-     Fourteen since the band under the verdict (managerHeroWrap): what
-     today is about and the three figures it is about. Fifteen since the
-     map (managerMapWrap): the shop as one picture, in a bed of its own. */
-  t.check(ids.length === 15, `every container is a flat sibling div with an id (${ids.length})`);
+  /* SEVEN BEDS, AND NOTHING IN TWO. The wraps each bed holds, in the
+     order the canvas lays them out.
+     ONE ENTRY PER BED, A LINE BETWEEN EACH. Each section is rebuilt by
+     its own hand later, and two edits on touching lines are a merge
+     conflict even when they mean nothing to each other: a bed that
+     gains or loses a wrap edits its own entry here and nothing else --
+     the count below is worked out from these entries, not typed. */
+  const BEDS = {
+    b: ['managerBandWrap', 'managerStripWrap', 'managerDeptWrap', 'managerChainWrap', 'managerPlanWrap',
+        'managerForesightWrap', 'managerSimTeaserWrap', 'managerMemoryWrap', 'managerBlindWrap'],
 
-  /* The two that were retired, and the two that replaced them. Named
-     rather than merely absent: a wrap that comes back by accident is a
-     section that renders into nothing. */
-  ['managerReviewWrap', 'managerPassedWrap'].forEach(id => {
-    t.check(!ids.includes(id) && !new RegExp(`getElementById\\('${id}'\\)`).test(src),
-      `${id} is gone from the markup AND from the render — it folded into another section`);
-  });
-  ['managerVerdictWrap', 'managerViewWrap'].forEach(id => {
-    t.check(ids.includes(id), `${id} has a place on the screen`);
-  });
+    x: ['managerSimWrap'],
+
+    t: ['managerTargetsWrap'],
+
+    p: ['managerPlaysWrap'],
+
+    u: ['managerUnusualWrap'],
+
+    k: ['managerQuestionsWrap'],
+
+    r: ['managerHistoryWrap', 'managerTrackWrap', 'managerGrowthWrap', 'managerAccountWrap', 'managerPoliciesWrap'],
+  };
+  /* Two above the nav (the memory note and the nav), the rest in the beds.
+     WAS: a literal 21, on one line every bed's change would have had to edit. */
+  const bedWraps = Object.values(BEDS).flat().length;
+  t.check(ids.length === 2 + bedWraps, `every container is a flat div with an id (${ids.length} of ${2 + bedWraps})`);
+
+  /* The retired, named rather than merely absent: a wrap that comes back
+     by accident is a section that renders into nothing. */
+  ['managerReviewWrap', 'managerPassedWrap', 'managerHeroWrap', 'managerVerdictWrap', 'managerMapWrap', 'managerScoreWrap']
+    .forEach(id => {
+      t.check(!ids.includes(id) && !new RegExp(`getElementById\\('${id}'\\)`).test(src),
+        `${id} is gone from the markup AND from the render — what it held lives in a bed now`);
+    });
+  t.check(ids[0] === 'managerMemoryNote' && ids[1] === 'managerViewWrap',
+    'the memory note and the nav stand above every bed');
 
   /* Every container the render fills must exist, and every container
      that exists must be filled. Either half alone is a section that
@@ -145,54 +159,59 @@ const src = read('index.html');
   t.check(orphanFill.length === 0,
     `and nothing is rendered into a container that is not there${orphanFill.length ? ' — missing: ' + orphanFill.join(', ') : ''}`);
 
-  /* TWO BEDS, AND NOTHING IN BOTH. .mgr-bed-s is what still wants an
-     answer; .mgr-bed-r is the record. A wrap in neither would show on
-     both views; a wrap in both would show twice. */
-  const bedded = kids.filter(k => /class="mgr-bed mgr-bed-[srm]"/.test(k[2]));
-  t.check(bedded.length === ids.length - 3,
-    `every wrap but the three above the switch belongs to a bed (${bedded.length} of ${ids.length - 3})`);
-  t.check(kids.filter(k => /mgr-bed-s/.test(k[2]) && /mgr-bed-r/.test(k[2])).length === 0,
-    'and none of them is in both');
-  ['managerPlanWrap', 'managerPlaysWrap', 'managerScoreWrap', 'managerQuestionsWrap', 'managerPoliciesWrap']
-    .forEach(id => t.check(new RegExp(`id="${id}" class="mgr-bed mgr-bed-s"`).test(sec),
-      `${id} is standing — it wants an answer from the owner`));
-  ['managerHistoryWrap', 'managerTrackWrap', 'managerAccountWrap']
-    .forEach(id => t.check(new RegExp(`id="${id}" class="mgr-bed mgr-bed-r"`).test(sec),
-      `${id} is the record — it is what already happened`));
+  const opens = [...sec.matchAll(/<div class="mgr-bed mgr-bed-([a-z])"/g)];
+  t.check(opens.map(m => m[1]).join('') === 'bxtpukr',
+    `seven beds, in the nav's order (${opens.map(m => m[1]).join('')})`);
+  const found = {};
+  opens.forEach((m, i) => {
+    const body = sec.slice(m.index, i + 1 < opens.length ? opens[i + 1].index : sec.length);
+    found[m[1]] = [...body.matchAll(/<div id="(manager[A-Za-z]+)"/g)].map(x => x[1]);
+  });
+  Object.entries(BEDS).forEach(([bed, want]) => t.check(JSON.stringify(found[bed]) === JSON.stringify(want),
+    `mgr-bed-${bed} holds ${want.join(', ')}${JSON.stringify(found[bed]) === JSON.stringify(want) ? '' : ' — found ' + (found[bed] || []).join(', ')}`));
+  const bedded = Object.values(found).flat();
+  t.check(bedded.length === ids.length - 2 && new Set(bedded).size === bedded.length,
+    `every wrap but the two above the nav is in exactly one bed (${bedded.length} of ${ids.length - 2})`);
+  t.check(opens.length && sec.indexOf('id="managerViewWrap"') < opens[0].index,
+    'and the nav comes before every bed');
+  t.check(kids.slice(2).every(k => /class="mgr-slot\b/.test(k[2])),
+    'every bedded wrap is a slot, so one with nothing to say takes no room');
+  /* The verdict strip moved into the Brief, where the canvas has its
+     situation strip: it is painted into managerStripWrap now. */
+  t.check(/function mgrPaintVerdict\(state\)\{\s*const el = document\.getElementById\('managerStripWrap'\);/.test(src),
+    'the verdict strip is drawn into the Brief\'s situation strip');
 
-  /* The switch is the ONLY thing that decides which bed shows, and it
+  /* The nav is the ONLY thing that decides which bed shows, and it
      decides it by a class on the section rather than by re-rendering:
      a bed that had to be re-read on every tap would spend a query on a
-     view the owner may only be glancing at. */
+     section the owner may only be glancing at. */
   const flat = src.replace(/\s*\n\s*/g, '');
-  t.check(/#tab-manager\.mgr-on-standing \.mgr-bed-s,#tab-manager\.mgr-on-record \.mgr-bed-r,#tab-manager\.mgr-on-map \.mgr-bed-m\{display:block;\}/.test(flat),
-    'the switch shows a bed with one class on the section, not with a second read of the journal');
-  t.check(/\.mgr-bed\{display:none;\}/.test(flat), 'and everything is hidden until it does');
-  t.check(/\.mgr-bed:empty\{display:none;\}/.test(flat),
+  t.check(/#tab-manager\.mgr-on-brief \.mgr-bed-b,#tab-manager\.mgr-on-sim \.mgr-bed-x,#tab-manager\.mgr-on-targets \.mgr-bed-t,#tab-manager\.mgr-on-plays \.mgr-bed-p,#tab-manager\.mgr-on-unusual \.mgr-bed-u,#tab-manager\.mgr-on-ask \.mgr-bed-k,#tab-manager\.mgr-on-record \.mgr-bed-r\{display:flex;\}/.test(flat),
+    'the nav shows a bed with one class on the section, not with a second read of the journal');
+  t.check(/\.mgr-bed\{display:none;/.test(flat), 'and every bed is hidden until it does');
+  t.check(/\.mgr-slot:empty\{display:none;\}/.test(flat),
     'an empty container is removed rather than left holding a gap in the stack — several are empty on an ordinary week');
 
-  /* The console's own two-column layout, not a half-grid of flat
-     siblings: the main column is the work and the 304px rail is what
-     stands beside it. */
-  t.check(/<div class="ow-grid">[\s\S]*?<div class="ow-stack">[\s\S]*?<div class="ow-side">/.test(sec),
-    'the two columns are .ow-grid + .ow-side, the pair every other console screen uses');
+  /* The record keeps the console's own two-column layout: the journal
+     and the levers are the work, the account and the rules stand beside
+     them. */
+  const rec = sec.slice(sec.indexOf('<div class="mgr-bed mgr-bed-r"'));
+  t.check(/<div class="ow-grid">[\s\S]*?<div class="ow-stack">[\s\S]*?<div class="ow-side">/.test(rec),
+    'the record lays out on .ow-grid + .ow-side, the pair every other console screen uses');
 }
 
-/* ---------- 3. a heading is not a field label ---------- */
+/* ---------- 3. a heading is not a field label ----------
+   WAS: the .mgr-sec-title rule was pinned (15px, not uppercase, not a
+   form label's treatment).
+   NOW: no screen emits .mgr-sec-title any more -- every Manager section
+   is headed by the console panel's own title, .ow-pan-t -- and Phase 3
+   deleted the dead rule. What the pin protected still holds: the
+   heading is the console's, never a form label's. */
 {
-  const rule = (/\.mgr-sec-title\{[^}]*\}/.exec(src) || [''])[0];
-  t.check(!/text-transform:uppercase/.test(rule),
-    'section headings are no longer shouted');
-  t.check(!/letter-spacing:\.0[45]em/.test(rule),
-    'nor tracked out like a caption');
-  const size = (/font-size:(\d+(?:\.\d+)?)px/.exec(rule) || [0, 0])[1];
-  t.check(Number(size) >= 15, `and they are bigger than the body text they head (${size}px)`);
-
-  /* The comparison that made this worth doing. If these two ever read
-     the same again, the heading has become a form label again. */
-  const label = (/\.field label\{[^}]*\}/.exec(src) || [''])[0];
-  t.check(!!label && rule.replace(/\s/g, '') !== label.replace(/\s/g, '').replace('.field label', '.mgr-sec-title'),
-    'and they no longer wear the treatment a form label wears');
+  t.check(!/\.mgr-sec-title\{/.test(src) && !/class="[^"]*\bmgr-sec-title\b/.test(src),
+    'the retired .mgr-sec-title is neither emitted nor styled');
+  t.check(/<span class="ow-pan-t">/.test(src), 'the Manager\'s sections are headed by the console panel title');
+  t.check(!/<label[^>]*class="[^"]*ow-pan-t/.test(src), 'and never by a form label');
 }
 
 /* ---------- 4. no screen has a blank title bar on the phone ---------- */
@@ -263,6 +282,35 @@ const src = read('index.html');
     'written only on the crossing — this runs on every scroll event');
   t.check(/addEventListener\('scroll', syncMobileTopbarTitle, \{ passive: true \}\)/.test(src),
     'and it is passive, because a scroll handler that can block scrolling is worse than no title');
+}
+
+/* ---------- the final review: the levers table and the account ---------- */
+{
+  /* LAW 5 / Q13. The table's outcome column held "4 of 5 event followed"
+     under a heading that read "Worked" -- the app claiming the advice
+     worked. The heading says what the cells count. No column heading or
+     label anywhere in the Manager's beds reads "Worked" (the owner's own
+     verdict word on a play, Q14, is a chip, not a heading). */
+  const beds = [];
+  const re = /\/\* ═══ MGR BED: (\w+) — begin ═══ \*\/([\s\S]*?)\/\* ═══ MGR BED: \1 — end ═══ \*\//g;
+  let m;
+  while ((m = re.exec(src))) beds.push(m[2]);
+  t.check(beds.length >= 7, `the beds are found (${beds.length})`);
+  t.check(beds.every((b) => !/<th[^>]*>\s*Worked\s*<\/th>/.test(b) && !/mgr-rf-l">\s*Worked\s*</.test(b)),
+    'no column heading or account label in the Manager reads “Worked”');
+  const lv = extractFunction(src, 'mgrPaintLevers', 'index.html');
+  t.check(/<th class="r">Event followed<\/th>/.test(lv), 'the levers table heads its outcome column “Event followed”');
+  /* MEETINGS KEPT is every meeting on the books -- the Brief's own count
+     (mgrBooksCounts().meetings) -- never the journal's last few, which
+     read 6 beside 69 moves over 35 days. A failed count is "not known"
+     and names why; nothing reads 0 for it. */
+  const rec = extractFunction(src, 'mgrPaintRecord', 'index.html');
+  t.check(/mgrBooksCounts\(\)/.test(rec) && /bc\.meetings/.test(rec) && /Meetings kept<\/span>\$\{meetingsCell\}/.test(rec),
+    'Meetings kept is the count of every meeting on the books, the one the Brief says');
+  t.check(!/const meetings = journal\.filter/.test(rec), 'not a count of the journal window');
+  t.check(/el\.textContent = 'not known'; el\.title = 'The meetings could not be counted/.test(rec) && /gen !== mgrRenderGen/.test(rec),
+    'a count that fails is not known and says why, and a late one from an old render is dropped');
+  t.check(/Weekly reviews in the journal/.test(rec), 'the reviews row says it counts what the journal holds');
 }
 
 process.exit(t.done() ? 1 : 0);

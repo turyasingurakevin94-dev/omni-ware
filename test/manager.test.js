@@ -33,6 +33,12 @@ const { read, extractFunction, extractDeclaration, compileScope, createReporter 
 
 const t = createReporter('the manager');
 const src = read('index.html');
+/* The Manager screen is renderManager and the seven bed painters it hands
+   every reading to (mgrPaint<Bed>), so a pin on "the render" reads all
+   eight: what used to sit in one function is drawn by the bed it belongs to. */
+const MGR_RENDER = ['renderManager', 'mgrPaintBrief', 'mgrPaintSim', 'mgrPaintTargets', 'mgrPaintPlays',
+  'mgrPaintUnusual', 'mgrPaintAsk', 'mgrPaintRecord'];
+const mgrRender = () => MGR_RENDER.map((n) => extractFunction(src, n, 'index.html')).join('\n');
 const api = read('api/assistant.js');
 const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
@@ -198,6 +204,7 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     extractFunction(src, 'deadStockRows', 'index.html'),
     extractFunction(src, 'deadStockBuyers', 'index.html'),
     extractFunction(src, 'deadStockQuietDays', 'index.html'),
+    extractFunction(src, 'mgrDeadWindow', 'index.html'),
     extractDeclaration(src, 'BUY_HOLD_MAX_DAYS', 'index.html'),
     'function names(){ return { ASSISTANT_TOOLS }; }',
   ], env, ['names']);
@@ -293,7 +300,7 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
 {
   t.check(!/runManagerMeeting/.test(extractFunction(src, 'boot', 'index.html')),
     'boot never holds a meeting — it is the owner\'s AI money');
-  t.check(!/runManagerMeeting\(\)/.test(extractFunction(src, 'renderManager', 'index.html')
+  t.check(!/runManagerMeeting\(\)/.test(mgrRender()
     .replace(/addEventListener\('click', runManagerMeeting\)/g, '')),
     'rendering the screen never holds one either — only its button does');
   const card = extractFunction(src, 'renderManagerCard', 'index.html');
@@ -322,7 +329,12 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   t.check(/const MANAGER_COMMON = \[/.test(api) && /const MANAGER_MEETING = \[/.test(api)
     && /const MANAGER_REVIEW = \[/.test(api),
     'the manager prompt lives on the server like the first one — as three blocks now, one per occasion plus what binds on both');
-  t.check(/AT MOST FIVE moves/.test(api), 'at most five moves — a plan of twenty is a dashboard, not judgement');
+  /* EIGHT, not five (owner approval Q29): one decision for each
+     department the books show something in, still a plan and not a
+     dashboard. The save path enforces the same number (prompt-integrity
+     checks the two agree). */
+  t.check(/AT MOST EIGHT moves/.test(api), 'at most eight moves — a plan of twenty is a dashboard, not judgement');
+  t.check(!/AT MOST FIVE moves/.test(api), 'and the old ceiling of five is gone, not left beside the new one');
   t.check(/Never forecast/.test(api), 'forecasting is forbidden in as many words');
   t.check(/manager_history FIRST/.test(api), 'the meeting opens with its own account');
   t.check(/never invent one, and omit subject ONLY when the reading gave you none/.test(api),
@@ -416,7 +428,7 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   t.check(/check \(kind in \('meeting', 'move', 'review'\)\)/.test(mig),
     'and re-adds it with the review kind — without this every review save is refused');
 
-  const render = extractFunction(src, 'renderManager', 'index.html');
+  const render = mgrRender();
   t.check(/Weekly review — /.test(render) && /st\.reviews/.test(render),
     'the screen reads journalled reviews and names them in the history');
   /* The review's body moved into mgrReviewBody when the weekly review

@@ -202,11 +202,15 @@ const advice = async (rows) => {
        "never mention this", which would bury advice the owner may still
        need. This needs the opposite: said out loud once, then a
        different plan. */
+    /* WAS: the first 12,000 characters of the tool. NOW: 16,000 -- the
+       targets and playbook readings it now hands the meeting (owner
+       targets, proven recipes) moved this entry further down; where it
+       goes, not how far in, is what is checked. */
     const hist = src.slice(src.indexOf("manager_history: { confirm: false"));
-    t.check(/kind: 'advice_not_landing'/.test(hist.slice(0, 12000)),
+    t.check(/kind: 'advice_not_landing'/.test(hist.slice(0, 16000)),
       'advice that is not landing reaches the morning through worth_saying');
-    t.check(!/advice_not_landing[\s\S]{0,400}const doNot/.test(hist.slice(0, 12000))
-      || !/doNot[\s\S]{0,200}notLanding/.test(hist.slice(0, 12000)),
+    t.check(!/advice_not_landing[\s\S]{0,400}const doNot/.test(hist.slice(0, 16000))
+      || !/doNot[\s\S]{0,200}notLanding/.test(hist.slice(0, 16000)),
       'and never through do_not_repeat, which would bury advice the owner may still need');
     /* A COUNT WITH NO INSTRUCTION leaves a mind free to say the same
        thing a fourth time in different words — the exact failure. */
@@ -261,6 +265,10 @@ const advice = async (rows) => {
   {
     const inserted = [];
     const save = compileScope([extractFunction(src, 'managerSaveMeeting', 'index.html'),
+      /* the optional fields of the meeting contract, through their whitelists */
+      ...['managerPips', 'managerPlanText', 'managerMeetingFields', 'managerMoveFields', 'managerPlanRefs', 'managerAskFields', 'managerPlayFields']
+        .map((n) => extractFunction(src, n, 'index.html')),
+      extractDeclaration(src, 'MANAGER_DEPTS', 'index.html'), extractDeclaration(src, 'MANAGER_ASK_PLACES', 'index.html'),
       extractDeclaration(src, 'MANAGER_DOORS', 'index.html'),
       extractDeclaration(src, 'MANAGER_MOVE_KINDS', 'index.html'),
       extractFunction(src, 'managerResolvedSubject', 'index.html'),
@@ -363,9 +371,18 @@ const advice = async (rows) => {
       `every plan on the screen is drawn through the sequence pass (${passes.length} found)`);
     t.check(/const ordered = mgrMoveOrder\(rows\);/.test(src),
       'today\u2019s plan orders the moves once, before it draws any of them');
-    /* The row also gets its number in the plan's own order (num), drawn
-       beside its face -- still the plan's order, never the drawing's. */
-    t.check(/mgrQueueRowHTML\(r, rows, \{ kindChip: true, open, rich: true, num: ordered\.indexOf\(r\) \}\)/.test(src),
+    /* The row also gets its number in the plan's own order, and resolves
+       `after` against the WHOLE plan -- still the plan's order, never the
+       drawing's, even when the owner narrows the list to one department
+       or sorts one kind of money.
+       WAS: mgrQueueRowHTML(r, rows, { …, num: ordered.indexOf(r) }).
+       NOW: the Brief's decision rows (mgrBriefPlanHTML /
+       mgrBriefDecisionRowHTML) carry the same two guarantees. */
+    const decPlan = extractFunction(src, 'mgrBriefPlanHTML', 'index.html');
+    const decRow = extractFunction(src, 'mgrBriefDecisionRowHTML', 'index.html');
+    t.check(/ordered\.map\(\(r, i\)=> \(\{ \.\.\.mgrBriefDecisionMeta\(r, track\), n: i \+ 1, row: r \}\)\)/.test(decPlan)
+      && /mgrBriefDecisionRowHTML\(m, ordered, /.test(decPlan)
+      && /const blocker = \(Number\.isInteger\(b\.after\) && \(mgrBriefRows \|\| \[\]\)\[b\.after\]\)/.test(decRow),
       'and hands each row the whole plan, in its own order, not the drawing order');
     t.check(/mgrMoveOrder\(w\.moves\)\.map\(\(r, i\)=> mgrMoveView\(r, i, w\.moves\)\)/.test(src),
       'and a meeting opened in the journal is drawn the same way, through the same pass');

@@ -56,9 +56,26 @@ const { MANAGER_METRICS: M, managerScoreProgress } = scope.names();
 /* ---------- 1. only what the books can answer unasked ---------------- */
 {
   const keys = Object.keys(M);
-  eq(keys.length, 6, 'six metrics, every one of them measurable here');
-  ['collections', 'gross_profit', 'sales', 'debtors_total', 'dead_stock_value', 'cash_on_hand']
+  /* WAS: six money metrics. NOW (Q16, TGT.1): thirteen -- the six, plus
+     net profit a month, gross margin, debtor days (Q18), stock days
+     (Q17), the lowest cash in a month, quotes won and WhatsApp orders --
+     each with its unit, so nothing that draws a target assumes money.
+     WAS: thirteen. NOW (Q36): fourteen -- Saturday load time, in minutes,
+     read from the orders' stage history (lower is better). */
+  eq(keys.length, 14, 'fourteen metrics, every one of them measurable here');
+  ['collections', 'gross_profit', 'sales', 'debtors_total', 'dead_stock_value', 'cash_on_hand',
+    'net_profit', 'margin_pct', 'debtor_days', 'stock_days', 'lowest_cash', 'quotes_won_pct', 'wa_orders', 'sat_load']
     .forEach((k) => t.check(keys.includes(k), `${k} can be aimed at`));
+  t.check(M.sat_load.unit === 'min' && M.sat_load.direction === 'down' && M.sat_load.kind === 'level' && typeof M.sat_load.ready === 'function',
+    'Saturday load time is in minutes, lower is better, and says when it cannot be read yet');
+  keys.forEach((k) => t.check(['ugx', 'pct', 'days', 'count', 'min'].includes(M[k].unit),
+    `${k} says what it is counted in (${M[k].unit})`));
+  keys.filter((k) => M[k].kind === 'level').forEach((k) => t.check(typeof M[k].at === 'function',
+    `${k} can be read as it stood on a past day — a finished target is judged on its own last day`));
+  t.check(M.margin_pct.unit === 'pct' && M.debtor_days.unit === 'days' && M.wa_orders.unit === 'count' && M.net_profit.unit === 'ugx',
+    'a margin is in points, debtor days in days, orders a count, profit in shillings');
+  t.check(M.debtor_days.direction === 'down' && M.stock_days.direction === 'down' && M.lowest_cash.direction === 'up',
+    'fewer debtor and stock days is better; a higher lowest cash is better');
   keys.forEach((k) => t.check(typeof M[k].measure === 'function',
     `${k} carries the function that measures it — a metric with no measure is a wish`));
   t.check(M.debtors_total.direction === 'down' && M.dead_stock_value.direction === 'down',
@@ -111,6 +128,10 @@ const { MANAGER_METRICS: M, managerScoreProgress } = scope.names();
     const inserted = [];
     const save = compileScope([
       extractFunction(src, 'managerSaveMeeting', 'index.html'),
+      /* the optional fields of the meeting contract, through their whitelists */
+      ...['managerPips', 'managerPlanText', 'managerMeetingFields', 'managerMoveFields', 'managerPlanRefs', 'managerAskFields', 'managerPlayFields']
+        .map((n) => extractFunction(src, n, 'index.html')),
+      extractDeclaration(src, 'MANAGER_DEPTS', 'index.html'), extractDeclaration(src, 'MANAGER_ASK_PLACES', 'index.html'),
       extractDeclaration(src, 'MANAGER_DOORS', 'index.html'),
       extractDeclaration(src, 'MANAGER_MOVE_KINDS', 'index.html'),
       extractFunction(src, 'managerResolvedSubject', 'index.html'),
@@ -152,7 +173,12 @@ const { MANAGER_METRICS: M, managerScoreProgress } = scope.names();
       extractFunction(src, 'managerAdoptTarget', 'index.html'),
       extractFunction(src, 'managerRetireDuplicates', 'index.html'),
       extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
+      extractDeclaration(src, 'MGR_TG_MAX_RUNNING', 'index.html'),
+      extractFunction(src, 'mgrTgSlotRefusal', 'index.html'),
+      extractFunction(src, 'mgrTgFullLine', 'index.html'),
+      extractFunction(src, 'mgrTgLower', 'index.html'),
     ], { ...env, managerNotesTable: true, rivalPricesTable: false, currentShopId: 'shop-1',
+      managerScoreboard: async () => ({ targets: [] }),
       toast: (m) => toasts.push(m), renderManager: () => {},
       sb: { from: () => ({
         select: () => ({ eq: () => ({ eq: () => ({ single: () => Promise.resolve({
@@ -191,8 +217,15 @@ const { MANAGER_METRICS: M, managerScoreProgress } = scope.names();
     }, ['managerScoreboard']).managerScoreboard;
 
     const out = await board();
-    eq(out.targets.length, 1, 'a target whose week ended long ago drops off the live board');
-    eq(out.targets[0].metric, 'collections', 'the live one stands');
+    /* WAS: a target whose week ended more than seven days ago dropped
+       off the board, and only the newest twelve rows were read -- so the
+       account and the verdict strip counted a different history from
+       one week to the next. NOW (TGT.7): every target ever taken on is
+       read, the finished ones marked finished, and the screen, the
+       account and the strip count from this one read. */
+    eq(out.targets.length, 2, 'a finished target stays on the board as history');
+    eq(out.targets.filter((x) => !x.finished).map((x) => x.metric).join(), 'collections', 'the live one stands, and is the only one running');
+    t.check(out.targets.some((x) => x.metric === 'sales' && x.finished === true), 'the old one is marked finished, to be counted met or missed');
     eq(out.proposed.length, 1, 'a proposal waits for the tap');
     eq(out.proposed[0].label, 'Dead stock', 'named in the owner’s words');
     t.check(!out.proposed.some((x) => x.metric === 'sales' && x.aim === 9),
@@ -214,7 +247,8 @@ const { MANAGER_METRICS: M, managerScoreProgress } = scope.names();
       extractFunction(src, 'mgrLiveMoveRows', 'index.html'),
       extractFunction(src, 'managerChaseEvidence', 'index.html'),
       /* The unusual-days reading has its own test; here it is quiet. */
-      "function unusualDays(){ return { today: '', judged: 0, thin: 0, floor: 0, items: [] }; } function unusualLine(){ return ''; } var mgrUnusualMemo = null;",
+      "function unusualDays(){ return { today: '', judged: 0, thin: 0, floor: 0, items: [] }; } function unusualLine(){ return ''; } var mgrUnusualMemo = null;"
+      + " async function mgrUnusualForMeeting(){ return { judged: false, items: [], answered: () => null, answersError: null, normalsError: null, taught: [] }; }",
       extractFunction(src, 'chaseResponse', 'index.html'),
       extractFunction(src, 'chaseDayAdd', 'index.html'),
       extractFunction(src, 'chaseRate', 'index.html'),

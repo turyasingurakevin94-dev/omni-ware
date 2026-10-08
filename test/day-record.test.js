@@ -43,6 +43,22 @@ const t = createReporter('the day');
 const src = read('index.html');
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 
+/* WHICH ROWS ARE COUNTS is the Inventory screen's answer -- a count is
+   written as a 'correction' and kept by line in the presets -- so the
+   readers that decide it are compiled for real wherever dayRecord is. */
+const COUNT_READERS = () => [
+  extractDeclaration(src, 'INV_NOT_A_COUNT', 'index.html'),
+  extractFunction(src, 'invCountMoment', 'index.html'),
+  extractFunction(src, 'invCountRecords', 'index.html'),
+  extractFunction(src, 'stockCountIndex', 'index.html'),
+  extractFunction(src, 'stockLogIsCount', 'index.html'),
+  /* And how a count with no row on the log is named: as the log would
+     have named it, off the catalogue. */
+  extractFunction(src, 'buyKeyParts', 'index.html'),
+  extractFunction(src, 'productVariantLabel', 'index.html'),
+  extractFunction(src, 'variantLabel', 'index.html'),
+];
+
 const TODAY = '2026-08-28';
 const TUE = '2026-08-25';
 const shift = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
@@ -99,6 +115,7 @@ const books = () => ({
 
 const scope = (data) => compileScope([
   extractFunction(src, 'dayRecord', 'index.html'),
+  ...COUNT_READERS(),
   /* THE STAMP IS A NUMBER. The board keeps stageEnteredAt as
      milliseconds, and the day used to read it as a string -- so no
      order ever moved on any day. The reader that gets both right is
@@ -196,6 +213,65 @@ const scope = (data) => compileScope([
   eq(d.stock.ranOut[0].line, 'Runners', 'and it is named');
   t.check(!d.stock.ranOut.some((s) => s.line === 'Nails'),
     'a line that merely went down did not run out');
+}
+
+/* ---------- 3b. a count as the count screen really writes it --------- */
+{
+  /* The fixture above types its count 'count', and nothing in the app
+     writes that type. A real stocktake is a 'correction' row carrying the
+     difference, plus a record by line in the presets stamped with the
+     row's own moment -- spelled "…Z" there and "…+00:00" by the database
+     once the log has been read back. A count that matched writes no row
+     at all. And a correction that is not a count -- a delivery taken
+     back because the goods never came -- must stay what it is. */
+  const real = Object.assign(books(), {
+    stockLog: [
+      { key: 'P1', label: 'Cement', type: 'restock', delta: 40, qtyAfter: 44, date: TUE, note: 'Roto' },
+      { key: 'P6', label: 'Wire mesh', type: 'correction', delta: -3, qtyAfter: 9, date: TUE,
+        at: TUE + 'T15:20:00.250+00:00', note: '' },
+      { key: 'P7', label: 'Tiles', type: 'correction', delta: -5, qtyAfter: 0, date: TUE,
+        at: TUE + 'T16:00:00+00:00', note: 'Delivery on PI-0012 undone — those goods never came' },
+      { key: 'P8', label: 'Hinges', type: 'sale', delta: -1, qtyAfter: 30, date: '2026-08-20' },
+    ],
+    presetStockCounts: {
+      P6: [{ date: TUE, at: TUE + 'T15:20:00.250Z', found: 9, record: 12 }],
+      P8: [{ date: TUE, at: TUE + 'T17:05:00.000Z', found: 30, record: 30 }],
+    },
+  });
+  const d = scope(real)(TUE);
+  eq(d.stock.countedCount, 2, 'the stocktake the count screen wrote, and the one that matched, are both counts');
+  t.check(d.stock.counted.some((r) => r.line === 'Wire mesh' && r.delta === -3),
+    'the count with a difference is found by its record, across the two spellings of one moment');
+  t.check(d.stock.counted.some((r) => r.line === 'Hinges' && r.delta === 0 && r.left === 30),
+    'and the one that found the shelf as recorded is named by its line, with nothing moved');
+  t.check(!d.stock.out.some((r) => r.line === 'Wire mesh'), 'a stocktake is no longer read as a sale');
+  t.check(d.stock.out.some((r) => r.line === 'Tiles') && !d.stock.counted.some((r) => r.line === 'Tiles'),
+    'while a delivery taken back is a movement out, not a count that found the shelf short');
+  eq(d.stock.inCount, 1, 'and the delivery that day is still the only delivery');
+
+  /* A matched count on a line the log has never moved -- it has no row
+     to borrow a label from, and its raw key ("P9::1") is not a name. */
+  const quiet = Object.assign(books(), {
+    products: [{ id: 'P9', name: 'Door handle', variants: [{ combo: { Finish: 'Brass' } }, { combo: { Finish: 'Chrome' } }] }],
+    stockLog: [],
+    presetStockCounts: { 'P9::1': [{ date: TUE, at: TUE + 'T11:00:00.000Z', found: 6, record: 6 }],
+      'GONE::0': [{ date: TUE, at: TUE + 'T11:05:00.000Z', found: 2, record: 2 }] },
+  });
+  const q = scope(quiet)(TUE);
+  t.check(q.stock.counted.some((r) => r.line === 'Door handle — Chrome' && r.delta === 0 && r.left === 6),
+    'a count on a line with no movement at all is named off the catalogue, as the log would have named it');
+  t.check(q.stock.counted.some((r) => r.line === 'GONE::0'),
+    'and only a line the catalogue no longer knows falls back to its key');
+
+  /* One count, once: the record and its log row are the same stocktake. */
+  const once = compileScope([
+    extractDeclaration(src, 'INV_NOT_A_COUNT', 'index.html'),
+    extractFunction(src, 'invCountMoment', 'index.html'),
+    extractFunction(src, 'invCountRecords', 'index.html'),
+  ], { data: real }, ['invCountRecords']).invCountRecords();
+  eq(once.filter((r) => r.key === 'P6').length, 1,
+    'the Inventory screen keeps one count, not one from the presets and a second off the reloaded log');
+  t.check(!once.some((r) => r.key === 'P7'), 'and does not count a delivery taken back as a stocktake');
 }
 
 /* ---------- 4. orders, and the days customers named ------------------ */
@@ -384,6 +460,7 @@ const scope = (data) => compileScope([
     extractFunction(src, 'dayClosing', 'index.html'),
     extractFunction(src, 'dayCashPosition', 'index.html'),
     extractFunction(src, 'dayRecord', 'index.html'),
+    ...COUNT_READERS(),
   /* THE STAMP IS A NUMBER. The board keeps stageEnteredAt as
      milliseconds, and the day used to read it as a string -- so no
      order ever moved on any day. The reader that gets both right is
@@ -510,6 +587,7 @@ const scope = (data) => compileScope([
   const line = async (data, sb, hasTable) => compileScope([
     extractFunction(src, 'dayThreadLine', 'index.html'),
     extractFunction(src, 'dayRecord', 'index.html'),
+    ...COUNT_READERS(),
   /* THE STAMP IS A NUMBER. The board keeps stageEnteredAt as
      milliseconds, and the day used to read it as a string -- so no
      order ever moved on any day. The reader that gets both right is

@@ -42,8 +42,15 @@ const { read, extractFunction, extractDeclaration, compileScope, createReporter 
 
 const t = createReporter('making the questions land');
 const src = read('index.html');
+/* The Manager screen is renderManager and the seven bed painters it hands
+   every reading to (mgrPaint<Bed>), so a pin on "the render" reads all
+   eight: what used to sit in one function is drawn by the bed it belongs to. */
+const MGR_RENDER = ['renderManager', 'mgrPaintBrief', 'mgrPaintSim', 'mgrPaintTargets', 'mgrPaintPlays',
+  'mgrPaintUnusual', 'mgrPaintAsk', 'mgrPaintRecord'];
+const mgrRender = () => MGR_RENDER.map((n) => extractFunction(src, n, 'index.html')).join('\n');
 const api = read('api/assistant.js');
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
+const same = (got, want, msg) => eq(JSON.stringify(got), JSON.stringify(want), msg);
 
 const TODAY = '2026-08-29';
 const PRODUCTS = [
@@ -87,6 +94,10 @@ const PRODUCTS = [
 {
   const saveMeeting = (inserted, products) => compileScope([
     extractFunction(src, 'managerSaveMeeting', 'index.html'),
+    /* the optional fields of the meeting contract, through their whitelists */
+    ...['managerPips', 'managerPlanText', 'managerMeetingFields', 'managerMoveFields', 'managerPlanRefs', 'managerAskFields', 'managerPlayFields']
+      .map((n) => extractFunction(src, n, 'index.html')),
+    extractDeclaration(src, 'MANAGER_DEPTS', 'index.html'), extractDeclaration(src, 'MANAGER_ASK_PLACES', 'index.html'),
       extractDeclaration(src, 'MANAGER_DOORS', 'index.html'),
       extractDeclaration(src, 'MANAGER_MOVE_KINDS', 'index.html'),
       extractFunction(src, 'managerResolvedSubject', 'index.html'),
@@ -264,71 +275,84 @@ const PRODUCTS = [
     eq(seen.updates.length, 1, 'but the answer is still kept');
 }
 
-/* ---------- 6. the panel: grouped by line, drawn, answered with a tap - */
+/* ---------- 6. the panel: one card a question, drawn, answered with a tap - */
+/* WAS: the questions were grouped under the line they asked about, each
+   group headed by the line and what was on its shelf, a price question's
+   line drew our price and the wholesale sightings on a ladder, a header
+   bar split them by kind (MGR_ASK_KINDS: "1 price check · 1 supplier ·
+   1 for you"), places wore initials, and data-place named the exact shop
+   ("r:nyanzi", "s:S1", "you").
+   NOW: the approved canvas (the Ask board) is the plan. One card a
+   question in the Manager's own order, each saying its rank, department,
+   money at stake, why it asks, where to find out and how old what is on
+   file is; a row of the five places the canvas filters by -- only you,
+   at a rival, suppliers & bank, your staff, customers & sites -- counts
+   them, replacing the kind bar (the same split, in the canvas's words),
+   and data-place names the place a card is answered in. What each pin
+   meant is kept: a price question draws our price and every comparable
+   wholesale sighting on one scale with the other side off it, labels do
+   not print over each other, a pin per asked shop waits for its figure,
+   the price box asks for a figure on a phone keypad, likely answers are
+   tapped, an ordinary question keeps its one-line box, and every card
+   says where it is answered. The new section's own arithmetic is pinned
+   in manager-ask-section.test.js. */
 {
   const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const products = [{ id: 'P1', name: 'Masasi', variants: [{ name: '12 inch' }] }];
-  const scope = compileScope([
-    extractFunction(src, 'mgrAsksHTML', 'index.html'),
-    extractFunction(src, 'mgrAskCardHTML', 'index.html'),
-    extractFunction(src, 'mgrAskLadderHTML', 'index.html'),
-    extractFunction(src, 'mgrAskPlace', 'index.html'),
-    extractFunction(src, 'mgrAskIni', 'index.html'),
-    extractFunction(src, 'mgrAskAge', 'index.html'),
-    extractFunction(src, 'mgrNum', 'index.html'),
-    extractDeclaration(src, 'MGR_ASK_KINDS', 'index.html'),
-    extractDeclaration(src, 'MGR_ASK_ICON', 'index.html'),
+  const B = '/* ═══ MGR BED: Ask — begin ═══ */', E = '/* ═══ MGR BED: Ask — end ═══ */';
+  const block = src.slice(src.lastIndexOf(B), src.indexOf(E, src.lastIndexOf(B)) + E.length);
+  const scope = compileScope([block,
+    ...['mgrDept', 'mgrPossessive', 'mgrShortUGX', 'mgrNum', 'managerPips', 'stockKey', 'daysSinceDate', 'fmtDayMonth', 'anShiftDate',
+      'waComposeUrl', 'pinDistanceKm'].map((n) => extractFunction(src, n, 'index.html')),
+    ...['MGR_DEPTS', 'MGR_WHOLE_SHOP', 'MANAGER_ASK_PLACES'].map((n) => extractDeclaration(src, n, 'index.html')),
   ], {
-    esc, Math, Number, String, Array, Map, JSON,
-    data: { products, suppliers: [{ id: 'S1', name: 'Roto Hardware' }] },
-    supplierName: (id) => id === 'S1' ? 'Roto Hardware' : '(unknown supplier)',
-    stockKey: (p, v) => p + '|' + (v == null ? '' : v),
-    buyKeyParts: (k) => { const [pid, v] = k.split('|'); const p = products.find(x => x.id === pid); return p ? { product: p, productId: pid, variantIdx: v === '' ? null : Number(v) } : null; },
+    esc, Math, Number, String, Array, Map, Set, JSON, Object, Date, Promise,
+    data: { products, suppliers: [{ id: 'S1', name: 'Roto Hardware' }], staff: [], agents: [], customers: [], prices: [], purchaseInvoices: [] },
+    todayISO: () => '2026-09-24', mgrMemo: (n, f) => f(), fmtUGX: String,
     productVariantLabel: (p, v) => p.name + (v == null ? '' : ' ' + p.variants[v].name),
-    ourPriceFor: () => 95000,
-    rivalPriceLatest: () => [{ rival: 'Kasule Hardware', price: 90000, side: 'wholesale', seenOn: '2026-09-12', daysOld: 12 },
-      { rival: 'Mengo', price: 91000, side: 'wholesale', seenOn: '2026-09-21', daysOld: 3 },
-      { rival: 'Retail Only', price: 5000, side: 'retail', seenOn: '2026-09-21', daysOld: 3 }],
-    stockOnHand: () => ({ qty: 0, counted: true }),
-    daysSinceDate: (d) => d === '2026-09-24' ? 0 : 5, todayISO: () => '2026-09-24', fmtShortDate: (d) => d,
-  }, ['mgrAsksHTML', 'mgrAskIni']);
+    ourCostFor: () => null, ourPriceFor: () => 95000,
+    rivalMarketRows: () => [{ key: 'P1::0', comparable: true, side: 'wholesale', theirs: 90000, shop: 'Kasule Hardware', daysOld: 12 },
+      { key: 'P1::0', comparable: true, side: 'wholesale', theirs: 91000, shop: 'Mengo', daysOld: 3 },
+      { key: 'P1::0', comparable: true, side: 'retail', theirs: 5000, shop: 'Retail Only', daysOld: 3 }],
+    rivalPriceLatest: () => [], marketVerdict: () => ({ under: [], lift: [] }), rivalNeverChecked: () => [], waSalesByKey: () => new Map(),
+    credOpenInvoices: () => [], purchasePlan: () => ({ lines: [] }), supplierLeadTimes: () => [], invCountRecords: () => [],
+    mgrConfidence: () => ({ pips: null }), placePin: () => null, mapHomePin: () => null, mapCentrePin: () => null, mapPlaceRows: () => [],
+    managerNotesTable: true, MANAGER_METRICS: {},
+  }, ['mgrAsksHTML', 'mgrAskModel']);
   const qs = [
     { id: 1, date: '2026-09-24', body: { question: 'What does Nyanzi charge for Masasi 12 inch?', productId: 'P1', variantIdx: 0, rival: 'Nyanzi' } },
     { id: 2, date: '2026-09-19', body: { question: 'Does Roto still hold 95,000?', productId: 'P1', variantIdx: 0, supplierId: 'S1', choices: ['Yes, still 95,000', 'No, it moved'] } },
     { id: 3, date: '2026-09-19', body: { question: 'What is stopping the carton lift?' } },
   ];
-  const html = scope.mgrAsksHTML(qs);
-  t.check((html.match(/class="mgr-ak-g"/g) || []).length === 2,
-    'questions about the same line sit together under it; one about no line stands alone');
-  t.check(/class="mgr-ak-gt">Masasi 12 inch</.test(html) && /none on the shelf/.test(html),
-    'the group is headed by the line, with what is on the shelf');
-  t.check(/class="mgr-lad"/.test(html) && /You 95,000/.test(html) && /KH 90,000 · 12d/.test(html) && !/5,000 · 3d/.test(html),
-    'a price question draws our price and every wholesale sighting on one scale — the other side stays off it');
-  t.check(/mgr-lad-low/.test(html), 'two sightings close together do not print one label over the other');
-  t.check(/class="mgr-lad-pin" data-for="1" hidden>NY</.test(html), 'and a pin per shop asked, waiting for its figure');
-  t.check(/data-ours="95000"/.test(html) && /inputmode="decimal"/.test(html) && /charges — just the figure/.test(html),
-    'the price box asks for a figure, on a phone keypad, and knows our price to judge it against');
-  t.check(/<button type="button" class="mgr-ak-ch" aria-pressed="false">Yes, still 95,000<\/button> <button/.test(html)
+  const html = scope.mgrAsksHTML(scope.mgrAskModel(qs, null, '2026-09-24'));
+  eq((html.match(/<article class="mgr-k-q"/g) || []).length, 3, 'each question is a card of its own, as the canvas draws them');
+  t.check(/class="mgr-k-sc[^"]*"/.test(html) && /yours <b>95,000<\/b>/.test(html) && /Kasule <b>90,000<\/b>/.test(html) && !/Retail/.test(html),
+    'a price question draws our price and every comparable wholesale sighting on one scale — the other side stays off it');
+  t.check(/mgr-k-mk mgr-k-(up|dn)2?[^"]*/.test(html), 'and its labels are placed above and below, so two close together do not print over each other');
+  t.check(/class="mgr-k-mk mgr-k-up mgr-k-mk-pin" hidden><i><\/i><span>Nyanzi <b><\/b>/.test(html), 'a pin for the shop asked, waiting for its figure');
+  t.check(/inputmode="decimal"/.test(html) && /charges — just the figure/.test(html),
+    'the price box asks for a figure, on a phone keypad');
+  t.check(/<button type="button" class="mgr-k-an" data-pick="0" aria-pressed="false">Yes, still 95,000<\/button><button/.test(html)
     && /Or in your own words/.test(html), 'a question sent with its likely answers is answered with a tap, or in words');
   t.check(/What you found out — one line/.test(html), 'while an ordinary question keeps the box it always had');
-  t.check(/data-place="r:nyanzi"/.test(html) && /data-place="s:S1"/.test(html) && /data-place="you"/.test(html),
-    'every question knows where it is answered: a shop, a supplier the books hold, or the owner');
-  t.check(/class="mgr-ak-pl"/.test(html) && /<span class="mgr-ak-pn">Roto Hardware<\/span>/.test(html),
-    'and the places are a row to filter by');
-  t.check(/mgr-ak-age mgr-ak-old" title="asked 2026-09-19"><svg[^>]*>.*<\/svg>5 days/.test(html) && />today</.test(html),
-    'each says how long it has waited, amber once it has waited five days');
-  t.check(/1 price check/.test(html) && /1 supplier/.test(html) && /1 for you/.test(html), 'and the header splits them by kind');
-  t.check(scope.mgrAsksHTML([]) === '', 'no questions, no panel');
-  t.check(scope.mgrAskIni('Jin Zhuang Le Ju') === 'JZ' && scope.mgrAskIni('Nyanzi') === 'NY' && scope.mgrAskIni('You') === 'You',
-    'places wear their initials');
+  t.check(/data-place="rival" aria-label="What does Nyanzi/.test(html) && /data-place="supp" aria-label="Does Roto/.test(html)
+    && /data-place="you" aria-label="What is stopping/.test(html),
+    'every question knows where it is answered: a rival, a supplier the books hold, or the owner');
+  t.check(/At Nyanzi’s counter/.test(html) && /Ask Roto Hardware/.test(html) && /Only you know/.test(html), 'and says it in words');
+  t.check(/data-place="rival" aria-pressed="false">.*At a rival<span class="mgr-k-n">1<\/span>/.test(html)
+    && /Suppliers &amp; bank<span class="mgr-k-n">1<\/span>/.test(html) && /Only you<span class="mgr-k-n">1<\/span>/.test(html),
+    'and the places are a row to filter by, each counted — the same split the kind bar made');
+  t.check(/>asked 5 days ago</.test(html) && /no price of theirs on file/.test(html), 'each says how old what is on file is');
+  t.check(/Nothing to ask you right now/.test(scope.mgrAsksHTML(scope.mgrAskModel([], null, '2026-09-24'))), 'no questions: it says so');
 
-  const render = extractFunction(src, 'renderManager', 'index.html');
-  t.check(/qWrap\.innerHTML = mgrAsksHTML\(qs\);\s*mgrWireAsks\(qWrap\);/.test(render), 'the screen draws the panel and wires it');
+  const render = mgrRender();
+  t.check(/qWrap\.innerHTML = mgrAsksHTML\(model\);\s*mgrWireAsks\(qWrap, model\);/.test(render), 'the screen draws the panel and wires it');
   const wire = extractFunction(src, 'mgrWireAsks', 'index.html');
-  t.check(/querySelectorAll\('\.mgr-ask\[data-qid\]'\)/.test(wire) && /managerAnswerQuestion\(id, input\.value\)/.test(wire),
-    'the binding is scoped by attribute — the target cards share the class — and answers what is in the box');
-  t.check(/input\.value = ch\.textContent/.test(wire), 'a tapped answer fills the box, so it can still be added to');
-  t.check(/pin\.style\.left/.test(wire) && /under you/.test(wire) && /above you/.test(wire),
+  t.check(/querySelectorAll\('\.mgr-k-q\[data-qkey\]'\)/.test(wire) && /const text = input \? input\.value : '';/.test(wire)
+    && /managerAnswerQuestion\(it\.id, text, \{ by: p\.by/.test(extractFunction(src, 'mgrAskKeep', 'index.html')),
+    'the binding is scoped by attribute, and answers what is in the box through the one writer');
+  t.check(/input\.value = pick == null \? '' : it\.choices\[pick\]\.label/.test(wire), 'a tapped answer fills the box, so it can still be added to');
+  t.check(/pin\.style\.left/.test(wire) && /' under'/.test(wire) && /' above'/.test(wire),
     'a typed figure lands on the scale and says where it sits against ours');
 }
 
@@ -345,7 +369,8 @@ const PRODUCTS = [
       extractFunction(src, 'mgrLiveMoveRows', 'index.html'),
       extractFunction(src, 'managerChaseEvidence', 'index.html'),
       /* The unusual-days reading has its own test; here it is quiet. */
-      "function unusualDays(){ return { today: '', judged: 0, thin: 0, floor: 0, items: [] }; } function unusualLine(){ return ''; } var mgrUnusualMemo = null;",
+      "function unusualDays(){ return { today: '', judged: 0, thin: 0, floor: 0, items: [] }; } function unusualLine(){ return ''; } var mgrUnusualMemo = null;"
+      + " async function mgrUnusualForMeeting(){ return { judged: false, items: [], answered: () => null, answersError: null, normalsError: null, taught: [] }; }",
       extractFunction(src, 'chaseResponse', 'index.html'),
       extractFunction(src, 'chaseDayAdd', 'index.html'),
       extractFunction(src, 'chaseRate', 'index.html'),
@@ -439,7 +464,8 @@ const PRODUCTS = [
       extractFunction(src, 'mgrLiveMoveRows', 'index.html'),
       extractFunction(src, 'managerChaseEvidence', 'index.html'),
       /* The unusual-days reading has its own test; here it is quiet. */
-      "function unusualDays(){ return { today: '', judged: 0, thin: 0, floor: 0, items: [] }; } function unusualLine(){ return ''; } var mgrUnusualMemo = null;",
+      "function unusualDays(){ return { today: '', judged: 0, thin: 0, floor: 0, items: [] }; } function unusualLine(){ return ''; } var mgrUnusualMemo = null;"
+      + " async function mgrUnusualForMeeting(){ return { judged: false, items: [], answered: () => null, answersError: null, normalsError: null, taught: [] }; }",
       extractFunction(src, 'chaseResponse', 'index.html'),
       extractFunction(src, 'chaseDayAdd', 'index.html'),
       extractFunction(src, 'chaseRate', 'index.html'),
@@ -508,6 +534,101 @@ const PRODUCTS = [
   const hist = api.slice(api.indexOf("name: 'manager_history'"), api.indexOf('input_schema', api.indexOf("name: 'manager_history'")));
   t.check(/never ask for it to be recorded again/.test(hist),
     'and the mind is told what the mark means, or the flag is a key nobody reads');
+}
+
+/* ---------- 9. Q38: the planned price and the delegate's day, from the
+   meeting's block to the card -------------------------------------------
+   A move's price and a delegate's day go in through managerSaveMeeting's
+   whitelists, come back as the rows the screen reads, and draw: the price
+   as the "my plan" mark on the line's scale, the day on "Send to Moses"
+   and on the route. Today is Wednesday 7 October 2026. */
+{
+  const DAY = '2026-10-07';
+  const products = [{ id: 'P1', name: 'Masasi', variants: [{ name: '12 inch' }] }];
+  const agents = [{ id: 'a-1', name: 'Moses Kibirige', phone: '0772 123 456' }];
+  const staff = [{ id: 's-1', name: 'Joan', phone: '0700 111 222' }];
+  const inserted = [];
+  await compileScope([
+    extractFunction(src, 'managerSaveMeeting', 'index.html'),
+    ...['managerPips', 'managerPlanText', 'managerMeetingFields', 'managerMoveFields', 'managerPlanRefs', 'managerAskFields', 'managerPlayFields',
+      'managerResolvedSubject', 'buyKeyParts', 'stockKey'].map((n) => extractFunction(src, n, 'index.html')),
+    ...['MANAGER_DEPTS', 'MANAGER_ASK_PLACES', 'MANAGER_DOORS', 'MANAGER_MOVE_KINDS', 'MANAGER_WORTH_BASES', 'MANAGER_LEVERS', 'MANAGER_OBJECTIVES']
+      .map((n) => extractDeclaration(src, n, 'index.html')),
+  ], {
+    managerNotesTable: true, currentShopId: 'shop-1', todayISO: () => DAY,
+    data: { products, agents, staff, customers: [], suppliers: [], savedQuotes: [] },
+    apRound: (n) => Math.round(Number(n) || 0),
+    sb: { from: () => ({ insert: (row) => { inserted.push(row); return {
+      select: () => ({ single: () => Promise.resolve({ data: { id: 11 }, error: null }) }) }; } }) },
+    String, Number, Math, Array, Promise, JSON, Object, Date, isNaN, console,
+  }, ['managerSaveMeeting']).managerSaveMeeting({ keyline: 'k', moves: [
+    { title: 'Price Masasi 12 inch at 93,000', kind: 'price', subject: { key: 'P1::0' }, price: 93000 }],
+  asks: [
+    { q: 'What does Nyanzi charge for Masasi 12 inch?', product_id: 'P1', variant_index: 0, rival: 'Nyanzi',
+      place: { kind: 'rival', id: 'Nyanzi' }, delegate: { staff: 'Moses Kibirige', day: 'Thursday' } },
+    { q: 'What does Mengo charge for Masasi 12 inch?', product_id: 'P1', variant_index: 0, rival: 'Mengo',
+      place: { kind: 'rival', id: 'Mengo' }, delegate: { staff: 'Moses Kibirige', day: 'thu' } },
+    { q: 'Has Kato started the second floor?', place: { kind: 'you' }, delegate: { staff: 'Joan' } }] });
+  const flat = (k) => inserted.flat().filter((r) => r.kind === k);
+  const moves = flat('move').map((r, i) => ({ id: 100 + i, status: 'open', body: r.body }));
+  const qs = flat('question').map((r, i) => ({ id: 200 + i, date: DAY, body: r.body }));
+  eq(moves[0].body.price, 93000, 'the price move is saved with its planned price');
+  eq(qs[0].body.delegate.day, '2026-10-08', 'and the delegate with the Thursday it names');
+
+  const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const B = '/* ═══ MGR BED: Ask — begin ═══ */', E = '/* ═══ MGR BED: Ask — end ═══ */';
+  const block = src.slice(src.lastIndexOf(B), src.indexOf(E, src.lastIndexOf(B)) + E.length);
+  const A = compileScope([block,
+    ...['mgrDept', 'mgrPossessive', 'mgrShortUGX', 'mgrNum', 'managerPips', 'stockKey', 'daysSinceDate', 'fmtDayMonth', 'anShiftDate',
+      'waComposeUrl', 'pinDistanceKm'].map((n) => extractFunction(src, n, 'index.html')),
+    ...['MGR_DEPTS', 'MGR_WHOLE_SHOP', 'MANAGER_ASK_PLACES'].map((n) => extractDeclaration(src, n, 'index.html')),
+  ], {
+    esc, Math, Number, String, Array, Map, Set, JSON, Object, Date, Promise,
+    data: { products, suppliers: [], staff, agents, customers: [], prices: [], purchaseInvoices: [] },
+    todayISO: () => DAY, mgrMemo: (n, f) => f(), fmtUGX: String,
+    productVariantLabel: (p, v) => p.name + (v == null ? '' : ' ' + p.variants[v].name),
+    /* Wholesale 95,000, retail 97,000: the planned price is wholesale
+       (the contract's word), so "my plan" sits beside the wholesale one. */
+    ourCostFor: () => null, ourPriceFor: (id, v, kind) => (kind === 'retail' ? 97000 : 95000), rivalMarketRows: () => [],
+    rivalPriceLatest: () => [], marketVerdict: () => ({ under: [], lift: [] }), rivalNeverChecked: () => [], waSalesByKey: () => new Map(),
+    credOpenInvoices: () => [], purchasePlan: () => ({ lines: [] }), supplierLeadTimes: () => [], invCountRecords: () => [],
+    mgrConfidence: () => ({ pips: null }), placePin: () => null, mapHomePin: () => null, mapCentrePin: () => null, mapPlaceRows: () => [],
+    managerNotesTable: true, MANAGER_METRICS: {},
+  }, ['mgrAsksHTML', 'mgrAskModel', 'mgrAskPlanPrices', 'mgrAskDayWord', 'mgrAskRouteMessage']);
+
+  /* THE PRICE: one Map entry, line to price -- and only from a move that
+     carries it. */
+  same([...A.mgrAskPlanPrices(moves)], [['P1::0', 93000]], 'the plan’s price, read from the saved move, by its line');
+  same([...A.mgrAskPlanPrices([{ status: 'skipped', body: moves[0].body }])], [], 'a move the owner turned down proposes no price');
+  same([...A.mgrAskPlanPrices([{ status: 'open', body: { ...moves[0].body, price: undefined } }])], [], 'nor one that carries none (an old row)');
+  const model = A.mgrAskModel(qs, null, DAY, { moves });
+  const html = A.mgrAsksHTML(model);
+  t.check(/my plan <b>93,000<\/b>/.test(html) && /yours <b>95,000<\/b>/.test(html),
+    'the scale draws "my plan" at 93,000 beside our own WHOLESALE 95,000 (never the retail 97,000) — the figure the meeting planned, never one read from a title');
+  t.check(!/97,000/.test(html), 'the retail price is not on the plan’s scale: one side, the wholesale one');
+  t.check(!/my plan/.test(A.mgrAsksHTML(A.mgrAskModel(qs, null, DAY, { moves: [] }))), 'with no planned price there is no mark');
+
+  /* THE DAY: Thursday 8 October is the day after this Wednesday. */
+  same([A.mgrAskDayWord('2026-10-08', DAY), A.mgrAskDayWord(DAY, DAY), A.mgrAskDayWord('2026-10-20', DAY), A.mgrAskDayWord('2026-10-06', DAY)],
+    [{ short: 'Thu', long: 'Thursday', weekday: true }, { short: 'today', long: 'today', weekday: false },
+      { short: '20 Oct', long: '20 Oct', weekday: false }, null],
+    'a day said against today: a weekday in the week ahead, today, the date further out, and nothing once it has gone');
+  t.check(/>Send to Moses · Thu<\/a>/.test(html), 'the card reads "Send to Moses · Thu"');
+  t.check(/>Send to Joan<\/a>/.test(html), 'a delegate with no day reads as it always did');
+  t.check(/mgr-k-pt">Moses’s Thursday route</.test(html), 'the route is "Moses’s Thursday route", as the canvas writes it — every question on it is for Thursday');
+  eq(model.route.day, '2026-10-08', 'the route carries that one day');
+  t.check(/^Route for Thursday — 2 stops:/.test(A.mgrAskRouteMessage(model.route, DAY)), 'and the message Moses is sent says Thursday');
+  t.check(!/https?:\/\/(?!wa\.me)/.test(html.replace(/https:\/\/wa\.me\/[^"]*/g, '')), 'NOTHING SENDS ITSELF: the only way out is a wa.me link the owner taps');
+
+  /* Two days on one route is not one day. */
+  const mixed = qs.map((q, i) => (i === 1 ? { ...q, body: { ...q.body, delegate: { ...q.body.delegate, day: '2026-10-09' } } } : q));
+  const m2 = A.mgrAskModel(mixed, null, DAY, { moves });
+  eq(m2.route.day, null, 'questions on one route given for two days: the route names neither');
+  t.check(/mgr-k-pt">Moses’s route</.test(A.mgrAsksHTML(m2)) && /^Route for today — /.test(A.mgrAskRouteMessage(m2.route, DAY)),
+    'and it reads as built');
+  /* A day already gone, on a card read later, is no day. */
+  t.check(/>Send to Moses<\/a>/.test(A.mgrAsksHTML(A.mgrAskModel(qs, null, '2026-10-09', { moves }))),
+    'read on Friday, Thursday has gone: "Send to Moses" as built');
 }
 
 })().then(() => { process.exit(t.done() ? 1 : 0); })

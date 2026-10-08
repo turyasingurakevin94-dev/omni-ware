@@ -33,6 +33,12 @@ const { read, extractFunction, extractDeclaration, compileScope, createReporter 
 
 const t = createReporter('the manager’s strategy');
 const src = read('index.html');
+/* The Manager screen is renderManager and the seven bed painters it hands
+   every reading to (mgrPaint<Bed>), so a pin on "the render" reads all
+   eight: what used to sit in one function is drawn by the bed it belongs to. */
+const MGR_RENDER = ['renderManager', 'mgrPaintBrief', 'mgrPaintSim', 'mgrPaintTargets', 'mgrPaintPlays',
+  'mgrPaintUnusual', 'mgrPaintAsk', 'mgrPaintRecord'];
+const mgrRender = () => MGR_RENDER.map((n) => extractFunction(src, n, 'index.html')).join('\n');
 const api = read('api/assistant.js');
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 
@@ -140,7 +146,8 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
       extractFunction(src, 'mgrLiveMoveRows', 'index.html'),
       extractFunction(src, 'managerChaseEvidence', 'index.html'),
       /* The unusual-days reading has its own test; here it is quiet. */
-      "function unusualDays(){ return { today: '', judged: 0, thin: 0, floor: 0, items: [] }; } function unusualLine(){ return ''; } var mgrUnusualMemo = null;",
+      "function unusualDays(){ return { today: '', judged: 0, thin: 0, floor: 0, items: [] }; } function unusualLine(){ return ''; } var mgrUnusualMemo = null;"
+      + " async function mgrUnusualForMeeting(){ return { judged: false, items: [], answered: () => null, answersError: null, normalsError: null, taught: [] }; }",
       extractFunction(src, 'chaseResponse', 'index.html'),
       extractFunction(src, 'chaseDayAdd', 'index.html'),
       extractFunction(src, 'chaseRate', 'index.html'),
@@ -188,6 +195,7 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     extractFunction(src, 'deadStockRows', 'index.html'),
     extractFunction(src, 'deadStockBuyers', 'index.html'),
     extractFunction(src, 'deadStockQuietDays', 'index.html'),
+    extractFunction(src, 'mgrDeadWindow', 'index.html'),
     'function names(){ return { ASSISTANT_TOOLS }; }',
   ], env, ['names']);
   const pulse = scope.names().ASSISTANT_TOOLS.shop_pulse.run();
@@ -244,12 +252,18 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     'and so is an unknown lever');
   t.check(/MANAGER_OBJECTIVES\[String\(obj\.name\|\|''\)\] \? String\(obj\.name\) : null/.test(save),
     'and an unknown objective');
-  const render = extractFunction(src, 'renderManager', 'index.html');
-  /* The objective moved from the plan's header into the band above it,
-     which the render paints first -- still above the moves. */
-  t.check(/MANAGER_OBJECTIVES\[plan\.objective\]/.test(extractFunction(src, 'mgrHeroHTML', 'index.html'))
-    && /heroWrap\.innerHTML = mgrHeroHTML\(/.test(render),
-    'the screen leads with the week’s objective, above the moves');
+  const render = mgrRender();
+  /* WAS: the objective as a chip in the band, MANAGER_OBJECTIVES[plan.objective]
+     in mgrHeroHTML. NOW: the band leads with the meeting's own verdict, as
+     the canvas draws it (its keyline when an older meeting has none), and
+     the week's objective heads the decisions it orders -- still named,
+     still above the moves, whitelisted the same way. */
+  const hero = extractFunction(src, 'mgrHeroHTML', 'index.html');
+  t.check(/MANAGER_OBJECTIVES\[p\.objective\]/.test(extractFunction(src, 'mgrBriefPlanHTML', 'index.html'))
+    && /String\(plan\.verdict \|\| plan\.keyline \|\| ''\)/.test(hero)
+    && /const band = document\.getElementById\('managerBandWrap'\);/.test(extractFunction(src, 'mgrBriefPaintBand', 'index.html'))
+    && /const band = document\.getElementById\('managerBandWrap'\);/.test(render),
+    'the screen leads with the meeting’s verdict, and the week’s objective heads the moves');
 }
 
 /* ---------- 4. the shop answers its manager -------------------------- */
@@ -299,6 +313,10 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     const inserted = [];
     const saveMeeting = compileScope([
       extractFunction(src, 'managerSaveMeeting', 'index.html'),
+      /* the optional fields of the meeting contract, through their whitelists */
+      ...['managerPips', 'managerPlanText', 'managerMeetingFields', 'managerMoveFields', 'managerPlanRefs', 'managerAskFields', 'managerPlayFields']
+        .map((n) => extractFunction(src, n, 'index.html')),
+      extractDeclaration(src, 'MANAGER_DEPTS', 'index.html'), extractDeclaration(src, 'MANAGER_ASK_PLACES', 'index.html'),
       extractDeclaration(src, 'MANAGER_DOORS', 'index.html'),
       extractDeclaration(src, 'MANAGER_MOVE_KINDS', 'index.html'),
       extractFunction(src, 'managerResolvedSubject', 'index.html'),
@@ -367,7 +385,8 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
       extractFunction(src, 'mgrLiveMoveRows', 'index.html'),
       extractFunction(src, 'managerChaseEvidence', 'index.html'),
       /* The unusual-days reading has its own test; here it is quiet. */
-      "function unusualDays(){ return { today: '', judged: 0, thin: 0, floor: 0, items: [] }; } function unusualLine(){ return ''; } var mgrUnusualMemo = null;",
+      "function unusualDays(){ return { today: '', judged: 0, thin: 0, floor: 0, items: [] }; } function unusualLine(){ return ''; } var mgrUnusualMemo = null;"
+      + " async function mgrUnusualForMeeting(){ return { judged: false, items: [], answered: () => null, answersError: null, normalsError: null, taught: [] }; }",
       extractFunction(src, 'chaseResponse', 'index.html'),
       extractFunction(src, 'chaseDayAdd', 'index.html'),
       extractFunction(src, 'chaseRate', 'index.html'),

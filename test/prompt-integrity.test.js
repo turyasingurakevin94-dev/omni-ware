@@ -38,7 +38,7 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { read, createReporter } = require('./_extract');
+const { read, extractFunction, createReporter } = require('./_extract');
 
 const t = createReporter('the manager’s rulebook');
 const api = read('api/assistant.js');
@@ -145,6 +145,11 @@ BLOCKS.forEach((n) => blockText(n).split('\n').forEach((line) => {
     ['targets[].metric', 'targets[].metric is one of: ', () => topKeys('MANAGER_METRICS')],
     ['plays[].treats', 'plays[].treats is one of: ', () => topKeys('MANAGER_PROBLEMS')],
     ['door', 'door is one of: ', () => topKeys('MANAGER_DOORS')],
+    /* The six departments every dept in the block is drawn from, and
+       the places a question's answer can be found -- the same words the
+       save path whitelists (MANAGER_DEPTS, MANAGER_ASK_PLACES). */
+    ['dept', 'every dept is one of: ', () => arrValues('MANAGER_DEPTS')],
+    ['place.kind', 'place.kind is one of: ', () => arrValues('MANAGER_ASK_PLACES')],
   ];
   ENUMS.forEach(([name, label, codeSide]) => {
     const said = promptList(label);
@@ -162,7 +167,7 @@ BLOCKS.forEach((n) => blockText(n).split('\n').forEach((line) => {
 
 /* ---------- 3. the caps agree ---------------------------------------- */
 {
-  const WORD = { ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5 };
+  const WORD = { ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5, SIX: 6, SEVEN: 7, EIGHT: 8 };
   const save = src.slice(src.indexOf('async function managerSaveMeeting'));
   const codeCap = (re) => { const m = save.match(re); return m ? Number(m[1]) : null; };
   const promptCap = (phrase) => {
@@ -184,6 +189,34 @@ BLOCKS.forEach((n) => blockText(n).split('\n').forEach((line) => {
     t.check(enforced != null, `and the saver enforces one for ${name}`);
     eq(enforced, said,
       `${name}: the ceiling the model is told and the ceiling the journal enforces are the same number — two writings of one rule drift`);
+  });
+}
+
+/* ---------- 3b. the contract's newer ceilings agree too -------------- */
+/* The fields the six-department meeting added are sanitised in helpers
+   of their own (managerMeetingFields, managerMoveFields) and the review
+   in its saver, so their ceilings are read where they are enforced --
+   the same rule written twice, checked the same way as the five above. */
+{
+  const WORDS = { 2: 'two', 3: 'three', 5: 'five' };
+  const num = (txt, re) => { const m = txt.match(re); return m ? (/^\d+$/.test(m[1]) ? Number(m[1])
+    : ({ two: 2, three: 3, four: 4, five: 5 })[m[1].toLowerCase()]) : null; };
+  const meeting = blockText('MANAGER_MEETING');
+  const review = blockText('MANAGER_REVIEW');
+  const fields = extractFunction(src, 'managerMeetingFields', 'index.html');
+  const moveFields = extractFunction(src, 'managerMoveFields', 'index.html');
+  const saveReview = extractFunction(src, 'managerSaveReview', 'index.html');
+  const NEWER = [
+    ['chains', num(meeting, /Draw AT MOST ([A-Z]+) chains/), num(fields, /\.map\(chainOf\)\.filter\(Boolean\)\.slice\(0, (\d+)\)/)],
+    ['links in a chain, at most', num(meeting, /links in order \(\d\\u2013(\d)/), num(fields, /\/\^\[a-z\]\[a-z0-9_\]\*\$\/\.test\(l\.tool\)\)\s*\.slice\(0, (\d+)\)/)],
+    ['links in a chain, at least', num(meeting, /links in order \((\d)\\u2013/), num(fields, /links\.length < (\d+)\) return null/)],
+    ['evidence', num(meeting, /evidence, at most (\d) phrases/), num(moveFields, /\.filter\(e=> \/\\d\/\.test\(e\)\)\.slice\(0, (\d+)\)/)],
+    ['corrections', num(review, /in corrections, at most ([a-z]+):/), num(saveReview, /\.filter\(c=> c\.was && c\.now\)\.slice\(0, (\d+)\)/)],
+  ];
+  NEWER.forEach(([name, said, enforced]) => {
+    t.check(said != null, `the prompt states a ceiling for ${name}`);
+    t.check(enforced != null, `and the save path enforces one for ${name}`);
+    eq(enforced, said, `${name}: told and enforced are one number (${WORDS[said] || said})`);
   });
 }
 

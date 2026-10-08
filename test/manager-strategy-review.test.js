@@ -40,6 +40,12 @@ const { read, extractFunction, extractDeclaration, compileScope, createReporter 
 
 const t = createReporter('the strategy review');
 const src = read('index.html');
+/* The Manager screen is renderManager and the seven bed painters it hands
+   every reading to (mgrPaint<Bed>), so a pin on "the render" reads all
+   eight: what used to sit in one function is drawn by the bed it belongs to. */
+const MGR_RENDER = ['renderManager', 'mgrPaintBrief', 'mgrPaintSim', 'mgrPaintTargets', 'mgrPaintPlays',
+  'mgrPaintUnusual', 'mgrPaintAsk', 'mgrPaintRecord'];
+const mgrRender = () => MGR_RENDER.map((n) => extractFunction(src, n, 'index.html')).join('\n');
 const api = read('api/assistant.js');
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 
@@ -322,14 +328,37 @@ const invoiced = { savedQuotes: [{ voided: false, invoiced: true, date: '2026-06
     const book = extractFunction(src, 'managerPlaybook', 'index.html');
     t.check(/managerPlayProgress\(p, todayISO\(\), running\)/.test(book),
       'the movement is worked out ONCE, so the owner’s screen and the weekly review can never show different arithmetic');
-    const render = extractFunction(src, 'renderManager', 'index.html');
+    /* WAS: the "alongside it" line was drawn in mgrPaintPlays. NOW: the
+       running card draws it (mgrPlayRunningHTML), from the reads -- which
+       take their before from p.progress, this same one reading. */
+    const render = mgrRender() + '\n' + extractFunction(src, 'mgrPlayRunningHTML', 'index.html');
     t.check(/alongside it/.test(render),
       'and the card says "alongside it" in the owner’s own view — the wording refuses the causal claim on the screen too');
+    t.check(/const pr = p\.progress \|\| null;/.test(extractFunction(src, 'mgrPlayReads', 'index.html')),
+      'and the board reads each play against the same before the meeting and the review are handed (p.progress)');
     t.check(!/because of it|thanks to|it worked/i.test(render.slice(render.indexOf('mgr-play-moved'), render.indexOf('mgr-play-moved') + 1200)),
       'and never claims the play did it');
-    const status = extractFunction(src, 'managerPlayStatus', 'index.html');
-    t.check(/m && m\.kind === 'level'/.test(status) && /body\.baseline = Math\.round\(m\.measure\(\)\)/.test(status),
-      'switching a play on stamps where the shop stood, but only where the measure is a level a flow cannot recover');
+    /* The Playbook section draws its cards with helpers in its own block,
+       so the law is held over the whole block, not one window of the
+       painter: no card, lane, band or designer line claims a play caused
+       anything or worked -- a judged play says "You judged", and what it
+       read says "alongside it". (Comments are not on screen.) */
+    const playsBlock = src.slice(src.indexOf('/* ═══ MGR BED: Plays — begin ═══ */\n/* ---- THE PLAYBOOK'),
+      src.indexOf('/* ═══ MGR BED: Plays — end ═══ */\n/* ────')).replace(/\/\*[\s\S]*?\*\//g, '');
+    t.check(playsBlock.length > 15000 && /alongside it/.test(playsBlock) && /You judged: /.test(playsBlock),
+      'the Playbook says what moved alongside a play, and that a verdict is the owner’s');
+    t.check(!/because of it|thanks to|it worked|root cause/i.test(playsBlock),
+      'and nowhere in the section does the app claim a play worked or caused anything');
+    /* Where the shop stood the day it was switched on (managerPlayStamp):
+       a level always, since it cannot be recovered afterwards; a flow with
+       a span as the before "Write a play" showed -- the span's days before
+       the start, a week's worth -- so its weeks, its stop rule and the
+       meeting read one fixed figure (review P4). */
+    const status = extractFunction(src, 'managerPlayStatusWrite', 'index.html');
+    const stamp = extractFunction(src, 'managerPlayStamp', 'index.html');
+    t.check(/managerPlayApplyStamp\(body, todayISO\(\)\)/.test(status) && /if\(m\.kind === 'level'\) return \{ baseline: Math\.round\(m\.measure\(\)\) \};/.test(stamp)
+      && /baselineFrom: from, baselineTo: to/.test(stamp),
+      'switching a play on stamps where the shop stood: a level as it is, a flow as the span before it started');
 
     /* One reading of how far the books reach. */
     const rest = src.replace(extractFunction(src, 'booksStartDate', 'index.html'), '');

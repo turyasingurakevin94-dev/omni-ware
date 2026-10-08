@@ -36,8 +36,13 @@ const api = read('api/assistant.js');
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 
 const shift = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
-/* Monday 24th to Sunday 30th; today is Wednesday the 26th, so three of
-   the seven days are gone. */
+/* Monday 24th to Sunday 30th; today is Wednesday the 26th, so two
+   WHOLE days of the seven are gone (24th, 25th) and the third is still
+   running.
+   WAS: today counted as an elapsed day (3 of 7) -- a morning's takings
+   read as a whole day's, so a target set an hour ago read At risk.
+   NOW: pace reads whole days only, to the end of yesterday (2 of 7); the
+   law is unchanged -- against the days elapsed, never the whole period. */
 const TODAY = '2026-08-26';
 const data = { customers: [{ id: 1, debt: 7100000 }] };
 const env = {
@@ -61,14 +66,15 @@ const row = (body) => ({ date: '2026-08-24', body: { from: '2026-08-24', to: '20
 
 /* ---------- 1. a flow, measured against the days elapsed ------------- */
 {
-  /* 24th, 25th, 26th collected 300,000 each = 900,000 of a 3,000,000 aim
-     with three of seven days gone. Level would be 1,285,714. */
+  /* 24th and 25th collected 300,000 each = 600,000 of a 3,000,000 aim
+     with two whole days of seven gone. Level would be 3,000,000*2/7 =
+     857,143. (WAS 3 days, 900,000 against 1,285,714.) */
   const p = managerScoreProgress(row({ metric: 'collections', aim: 3000000, baseline: 0 })).pace;
-  eq(p.elapsed_days, 3, 'three days of the week are gone');
+  eq(p.elapsed_days, 2, 'two whole days of the week are gone — today is not over');
   eq(p.total_days, 7, 'out of seven');
-  eq(p.expected, 1285714, 'level today is the aim shared over the days elapsed, not the whole week');
-  eq(p.on_course, false, 'so 900,000 is behind');
-  eq(p.behind_by, 385714, 'by the distance to level, in shillings the owner can act on');
+  eq(p.expected, 857143, 'level is the aim shared over the days elapsed, not the whole week');
+  eq(p.on_course, false, 'so 600,000 is behind');
+  eq(p.behind_by, 257143, 'by the distance to level, in shillings the owner can act on');
   eq(p.at_this_rate, 2100000,
     'and the observed rate carried to Sunday lands at 2,100,000 — arithmetic on the past, said as "at this rate"');
 }
@@ -83,14 +89,17 @@ const row = (body) => ({ date: '2026-08-24', body: { from: '2026-08-24', to: '20
 
 /* ---------- 3. a level target travels from where it started ---------- */
 {
-  /* Owed 8,000,000 when taken on, aiming for 5,000,000; three days in,
-     level is 8,000,000 - 3,000,000 * 3/7 = 6,714,286. It stands at
-     7,100,000, so it is behind. */
+  /* Owed 8,000,000 when taken on, aiming for 5,000,000; two whole days
+     in, level is 8,000,000 - 3,000,000 * 2/7 = 7,142,857. It stands at
+     7,300,000, so it is behind by 157,143; 700,000 off in 2 of 7 days
+     carried forward is 8,000,000 - 700,000 * 7/2 = 5,550,000.
+     (WAS three days in: 6,714,286 against 7,100,000.) */
+  data.customers[0].debt = 7300000;
   const p = managerScoreProgress(row({ metric: 'debtors_total', aim: 5000000, baseline: 8000000 })).pace;
-  eq(p.expected, 6714286, 'level on a LEVEL target is the journey from the baseline, not a share of the aim');
+  eq(p.expected, 7142857, 'level on a LEVEL target is the journey from the baseline, not a share of the aim');
   eq(p.on_course, false, 'above the line on a target aimed DOWN is behind');
-  eq(p.behind_by, 385714, 'by the distance back to the line');
-  eq(p.at_this_rate, 5900000, 'and the rate of reduction carried forward lands at 5,900,000');
+  eq(p.behind_by, 157143, 'by the distance back to the line');
+  eq(p.at_this_rate, 5550000, 'and the rate of reduction carried forward lands at 5,550,000');
 
   data.customers[0].debt = 6500000;
   const better = managerScoreProgress(row({ metric: 'debtors_total', aim: 5000000, baseline: 8000000 })).pace;
@@ -109,7 +118,12 @@ const row = (body) => ({ date: '2026-08-24', body: { from: '2026-08-24', to: '20
   const same = managerScoreProgress({ date: TODAY,
     body: { metric: 'collections', aim: 700000, baseline: 0, from: TODAY, to: TODAY } });
   eq(same.pace.total_days, 1, 'a one-day period is one day, never zero — nothing here divides by nothing');
-  eq(same.pace.expected, 700000, 'and its whole aim is due today');
+  /* WAS: its whole aim due today (700,000). NOW: a target in its first
+     day has no whole day read yet -- on course, first reading tomorrow,
+     nothing projected from a morning. */
+  eq(same.pace.first, true, 'a target in its first day is read from tomorrow');
+  eq(same.pace.on_course, true, 'and is on course until then, never behind on a morning');
+  eq(same.pace.at_this_rate, null, 'with nothing projected from a part of a day');
   eq(managerScoreProgress({ body: { metric: 'collections', aim: 1 } }).pace, null,
     'a target with no period has no pace, rather than a fabricated one');
   eq(managerScoreProgress({ body: { metric: 'nonsense', aim: 1 } }), null, 'and an unmeasurable metric still scores nothing');
@@ -239,13 +253,25 @@ const row = (body) => ({ date: '2026-08-24', body: { from: '2026-08-24', to: '20
   const pace = extractFunction(src, 'renderManagerPace', 'index.html');
   t.check(/if\(!el \|\| !managerNotesTable\) return;/.test(pace),
     'probe-guarded like every other journal read');
-  t.check(/const behind = live\.filter\(x=> !x\.pace\.on_course\);/.test(pace)
-    && /behind\.concat\(live\.filter\(x=> x\.pace\.on_course\)\)\.slice\(0, 2\)/.test(pace),
-    'behind first, and at most two — a dashboard that always speaks teaches the eye to skip it');
+  /* WAS: behind first by pace.on_course. NOW: by the Targets section's
+     own state (mgrPaceShow ranks Off track, At risk, not known, On track),
+     because a cash floor the committed line breaks is At risk while its
+     pace is still "on course" (test/manager-shared-review.test.js). */
+  const paceShow = extractFunction(src, 'mgrPaceShow', 'index.html');
+  t.check(/const show = mgrPaceShow\(live\);/.test(pace) && /\.slice\(0, 2\)/.test(paceShow)
+    && /mgrTgTodayLine\(x\)/.test(paceShow) && !/on_course/.test(paceShow),
+    'worst state first, and at most two — a dashboard that always speaks teaches the eye to skip it');
   t.check(/if\(!live\.length\)\{ el\.innerHTML = ''; return; \}/.test(pace),
     'and silent when nothing is live');
-  t.check(/x\.pace\.at_this_rate/.test(pace) && /At this rate/.test(pace),
+  /* WAS: the strip wrote its own line in shillings ("the week ends at").
+     NOW: it draws the Targets section's own line for the target
+     (mgrTgTodayLine), in the target's unit and to its deadline -- and that
+     line carries the projection, in those words. */
+  const todayLine = extractFunction(src, 'mgrTgTodayLine', 'index.html');
+  t.check(/esc\(line\.text\)/.test(pace) && /x\.pace\.at_this_rate/.test(todayLine) && /At this rate/.test(todayLine),
     'the projection is shown as the rate carried forward, in those words');
+  t.check(!/fmtUGX/.test(pace) && !/the week ends/.test(pace),
+    'never every target in shillings against "the week"');
   t.check(/managerScoreboard\(\)/.test(pace),
     'read from the one scoreboard derivation, so the dashboard and the Manager screen cannot disagree');
 }
@@ -279,7 +305,8 @@ const row = (body) => ({ date: '2026-08-24', body: { from: '2026-08-24', to: '20
       extractFunction(src, 'mgrLiveMoveRows', 'index.html'),
       extractFunction(src, 'managerChaseEvidence', 'index.html'),
       /* The unusual-days reading has its own test; here it is quiet. */
-      "function unusualDays(){ return { today: '', judged: 0, thin: 0, floor: 0, items: [] }; } function unusualLine(){ return ''; } var mgrUnusualMemo = null;",
+      "function unusualDays(){ return { today: '', judged: 0, thin: 0, floor: 0, items: [] }; } function unusualLine(){ return ''; } var mgrUnusualMemo = null;"
+      + " async function mgrUnusualForMeeting(){ return { judged: false, items: [], answered: () => null, answersError: null, normalsError: null, taught: [] }; }",
       extractFunction(src, 'chaseResponse', 'index.html'),
       extractFunction(src, 'chaseDayAdd', 'index.html'),
       extractFunction(src, 'chaseRate', 'index.html'),
@@ -329,7 +356,7 @@ const row = (body) => ({ date: '2026-08-24', body: { from: '2026-08-24', to: '20
   const hist = await tools.manager_history.run({ limit: 3 });
   const target = (hist.scoreboard || [])[0];
   t.check(!!(target && target.pace), 'the meeting is HANDED the pace, not merely near the code that computes it');
-  eq(target.pace.expected, 1285714, 'the same level the screen shows');
+  eq(target.pace.expected, 857143, 'the same level the screen shows (whole days: 3,000,000*2/7; WAS 1,285,714 counting today)');
   eq(target.pace.on_course, false, 'and the same verdict');
 })().then(() => { process.exit(t.done() ? 1 : 0); })
   .catch((e) => { console.error(e); process.exit(1); });

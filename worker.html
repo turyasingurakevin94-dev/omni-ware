@@ -753,7 +753,7 @@ function buildWorkerSyncRows(d, shopId){
       date:q.date, status:q.status, invoiced:q.invoiced, invoiced_at:q.invoicedAt,
       invoiced_ts: q.invoicedTs ? new Date(q.invoicedTs).toISOString() : null,
       amount_paid:q.amountPaid, voided:q.voided,
-      payload:{client:q.client, items:q.items, savedAt:q.savedAt, payments:q.payments, customerId:q.customerId, debtCharged:q.debtCharged, stageEnteredAt:q.stageEnteredAt, assignedWorkerId:q.assignedWorkerId, assignedDeliveryId:q.assignedDeliveryId, pickingStatus:q.pickingStatus||null, pickCursor:q.pickCursor||0, pickingAssignedAt:q.pickingAssignedAt||null, workerAcceptedAt:q.workerAcceptedAt||null, pickingDoneAt:q.pickingDoneAt||null, carrier:q.carrier||null}
+      payload:{client:q.client, items:q.items, savedAt:q.savedAt, payments:q.payments, customerId:q.customerId, debtCharged:q.debtCharged, stageEnteredAt:q.stageEnteredAt, assignedWorkerId:q.assignedWorkerId, assignedDeliveryId:q.assignedDeliveryId, pickingStatus:q.pickingStatus||null, pickCursor:q.pickCursor||0, pickingAssignedAt:q.pickingAssignedAt||null, workerAcceptedAt:q.workerAcceptedAt||null, pickingDoneAt:q.pickingDoneAt||null, carrier:q.carrier||null, stageLog:q.stageLog||null}
     })),
     collectionTrips: (d.collectionTrips||[]).map(t=>({
       id:t.id, shop_id:shopId, supplier_id:t.supplierId, status:t.status||'open',
@@ -780,6 +780,12 @@ const WORKER_OWNED_KEYS = [
   'pickingDoneAt', 'carrier',
   'stageEnteredAt'
 ];
+/* stageLog is NOT one of them, on purpose. Both apps append to it, so it
+   is neither side's to overwrite: mergeOntoServerRows merges the two
+   copies (mergeStageLog) instead. Listed here, the worker's copy would
+   replace the console's entries; and hasUnsavedWork, which compares
+   these keys, would find the merged log never equal to the one in
+   memory and hold every refresh off for good. */
 
 // The only status move this app makes, keyed by where the order has to be
 // for the move to mean anything: loadOrder sends a packed order out
@@ -848,7 +854,16 @@ async function mergeOntoServerRows(shopId, rows){
     // Judged against the SERVER's status, so a real move is still written
     // through and a stale one no longer drags the order backward.
     const moves = WORKER_STATUS_MOVES[server.status] || [];
-    const status = moves.includes(local.status) ? local.status : server.status;
+    const moved = moves.includes(local.status);
+    const status = moved ? local.status : server.status;
+    // Both apps' entries, each once and in order -- see WORKER_OWNED_KEYS.
+    // This app's own entries only ride with the move they record: a
+    // "Loaded" tapped on an order the console had already sent out or
+    // completed is refused above, and its entry would otherwise stand in
+    // the log for good (0107 keeps every entry it has seen) as a move
+    // that never happened.
+    const log = mergeStageLog(serverPayload.stageLog, moved ? localPayload.stageLog : null);
+    if(log) payload.stageLog = log;
     return {...server, status, payload};
   });
 }
@@ -1007,7 +1022,9 @@ let workerSaveInFlight = false;
 //
 // So: the status, the picking fields, and the pick state on the lines. That
 // is precisely what buildWorkerSyncRows sends and what mergePickState lays
-// down, and nothing else this app is allowed to write.
+// down, and nothing else this app is allowed to write. The stage log is
+// left out (see WORKER_OWNED_KEYS): this app only ever appends to it with
+// a status move, and the status is compared.
 function hasUnsavedWork(){
   if(!currentShopId || !data || !data.savedQuotes) return false;
   /* Trip answers count too. A refresh replaces `data` wholesale, and a

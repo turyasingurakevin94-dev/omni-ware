@@ -44,7 +44,14 @@ function build(over={}){
   assert.equal(b.recentMatureCohort.returned,1);
   assert.equal(b.priorMatureCohort.rate,null,'empty cohorts have no rate');
   assert.equal(s.customerOrdersFor(2).length,1,'name collision cannot leak purchases');
+  // Read at the fixtures' own clock: invoice 9 is dated ten days after
+  // `now`, so it is not a purchase yet. Left to the wall clock, this
+  // check started failing the day that date stopped being in the future.
   assert.equal(s.dashGoingQuietCustomers(now).length,1,'invoiced dates establish the quiet customer');
+  // And the clock is the one handed in, not the machine's: twenty days
+  // on, invoice 9 has happened, customer 1's gap is 30 days and they last
+  // bought 10 days ago -- not quiet at all.
+  assert.equal(s.dashGoingQuietCustomers(now + 20 * day).length,0,'the reading is taken at the moment it is given');
   s=build({data:{savedQuotes:[invoice(1,1,45,{createdAt:iso(50)}),{id:2,createdAt:iso(45)},
     {id:3,createdAt:iso(40),voided:true},invoice(4,2,40,{createdAt:iso(40),counterSale:true})]}});
   b=s.managerGrowthBaseline(now);

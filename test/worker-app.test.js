@@ -33,6 +33,8 @@ const sharedJs = read('shared-worker.js');
     extractDeclaration(workerHtml, 'WORKER_STATUS_MOVES', 'worker.html'),
     extractFunction(workerHtml, 'mergePickState', 'worker.html'),
     extractFunction(workerHtml, 'mergeOntoServerRows', 'worker.html'),
+    // The stage log is merged rather than owned -- shared with the console.
+    extractFunction(sharedJs, 'mergeStageLog', 'shared-worker.js'),
     'function __ownedKeys(){ return WORKER_OWNED_KEYS.slice(); }',
   ], {
     sb: {

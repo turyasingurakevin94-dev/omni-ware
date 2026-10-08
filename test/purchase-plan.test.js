@@ -450,7 +450,7 @@ if (scope) {
   /* The two figures live in the page header as labelled fields, beside
      the name of the screen rather than as a form above the list. The
      ids are the same ones the listeners bind to at parse time. */
-  t.check(/<label class="ow-f"><span class="ow-f-l">Budget<\/span>[\s\S]{0,160}?id="buy_budget"/.test(src)
+  t.check(/<label class="ow-f(?: ow-fc-budget)?"><span class="ow-f-l">Budget<\/span>[\s\S]{0,160}?id="buy_budget"/.test(src)
     && /<label class="ow-f"><span class="ow-f-l">Cover<\/span>[\s\S]{0,160}?id="buy_cover"/.test(src),
     'the controls are two labelled fields in the header, not a form above the list');
   t.check(/id="buy_budget"/.test(src) && /id="buy_cover"/.test(src),
