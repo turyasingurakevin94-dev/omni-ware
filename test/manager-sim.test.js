@@ -313,6 +313,11 @@ eq(pr.effect('p0', 0), {}, 'today\'s price moves nothing');
 eq([BOOKS().terms.young, BOOKS().terms.options, BOOKS().terms.freed], [73263279, [14], [18910757]],
   'terms free only young debt; a term that frees nothing is not offered');
 const tm = lv('terms');
+/* The 63,406,119 that terms cannot reach is debt60 -- charges 60 days
+   old or more, the Debtors aging's boundary -- and the hint says so in
+   the Finance tile's words. */
+t.check(tm.opts.every((o) => o.hint.endsWith(' · 63.41m 60 days old or more stays where it is')) && !tm.opts.some((o) => /over 60 days old/.test(o.hint)),
+  `the terms lever says "60 days old or more", as the Finance tile and the aging do (${tm.opts[0].hint})`);
 const e3 = tm.effect('t14', 0);
 eq([e3.freed, e3.profit, Math.round(e3.exp.reduce((n, x) => n + x.amount, 0))], [18910757, 0, 9455379],
   'shorter terms: 18.9m freed over 60 days, half of it expected inside these 30');

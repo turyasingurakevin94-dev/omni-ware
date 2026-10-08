@@ -139940,8 +139940,8 @@ function mgrSimSeason(day, booksStart, txns){
     to: hot.length ? anShiftDate(hot[hot.length - 1].from, 6) : null };
 }
 /* SHORTER CREDIT TERMS, ON WHAT THEY CAN REACH. mgrDebtorDays' own
-   figures: what customers owe over credit sales a day. Debt over 60 days
-   old (mgrHealthFacts' debt60) is stalled -- new terms do not collect
+   figures: what customers owe over credit sales a day. Debt 60 days old
+   or more (mgrHealthFacts' debt60) is stalled -- new terms do not collect
    it -- so only the YOUNG debt can move: at N-day terms the young debt
    would be credit sales a day × N, and what it holds above that is what
    the terms free, if customers keep to them. The options are the terms
@@ -140420,7 +140420,9 @@ function mgrSimTermsLever(b){
   if(!t) return null;
   const freedAt = (n)=> t.freed[t.options.indexOf(n)];
   const month = t.creditPerDay * 30;
-  const old = t.old > 0 ? ' · ' + mgrSimMoney(t.old) + ' over 60 days old stays where it is' : '';
+  /* t.old is debt60: charges 60 days old or more (mgrChargesOver60), the
+     Debtors aging's own boundary -- said in its words. */
+  const old = t.old > 0 ? ' · ' + mgrSimMoney(t.old) + ' 60 days old or more stays where it is' : '';
   const opts = [{ id: 'now', label: 'As now', hint: 'today ' + Math.round(t.days) + ' days on credit sales' + old, say: 'credit as now' }];
   t.options.forEach(n=> opts.push({ id: 't' + n, label: n + ' days', days: n,
     hint: 'frees ' + mgrSimMoney(freedAt(n)) + ' over 60 days if customers keep to it' + old, say: n + '-day terms' }));
