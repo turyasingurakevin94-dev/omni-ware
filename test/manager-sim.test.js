@@ -41,7 +41,7 @@ const SIM = ['mgrSimDate', 'mgrSimDay', 'mgrSimMoney', 'mgrSimSigned', 'mgrSimCe
   'mgrSimPayDay', 'mgrSimOrderLever', 'mgrSimSeasonOut', 'mgrSimSeasonLever', 'mgrSimOfferLever', 'mgrSimClearLever', 'mgrDeadWindow', 'mgrSimPriceLever',
   'mgrSimDiscountLever', 'mgrSimTermsLever', 'mgrSimHirePay', 'mgrSimHireLever', 'mgrSimQuoteLever', 'mgrSimPostLever', 'mgrSimChoiceOf',
   'mgrSimAssumeOf', 'mgrSimCompose', 'mgrSimExpected', 'mgrSimLands', 'mgrSimRun', 'mgrSimJudge', 'mgrSimShocks', 'mgrSimHolds', 'mgrSimPresets',
-  'mgrSimSame', 'mgrSimVerdict', 'mgrSimWeekWords', 'mgrSimBreakDay', 'mgrSimHeadline', 'mgrSimTeaserFigures', 'mgrSimTargetsTouched',
+  'mgrSimSame', 'mgrSimVerdict', 'mgrSimWeekWords', 'mgrSimNoFloor', 'mgrSimBreakDay', 'mgrSimHeadline', 'mgrSimTeaserFigures', 'mgrSimTargetsTouched',
   'mgrSimDecisionBody', 'mgrSimMoves', 'mgrSimOpen', 'mgrSimScenarioFacts', 'mgrSimVerdictInputs', 'mgrSimWaitHint', 'mgrNavCountSim',
   'mgrSimPlanPriceNote', 'mgrSimPoss', 'mgrSimShift', 'mgrSimStops', 'mgrSimQuoteBounds', 'mgrSimOffLine', 'mgrSimLegendNamed', 'mgrSimUncostedSay'];
 const LOANS = ['loanSchedule', 'loanPrincipal', 'loanInstallments', 'loanRoundTo', 'loanRound', 'loanLevelPI', 'loanDueDate',
@@ -53,7 +53,7 @@ const SOURCES = [
     'mgrPipsFromRate', 'mgrPipsFromDeliveries', 'mgrPipsFromAge', 'clearanceFor', 'periodOf', 'periodShift', 'periodEndDate',
     'mgrPaydayDates', 'mgrPaydaySettles', 'mgrPaydaySettlesDefault'].map(fn),
   ...['MGR_SIM_ASSUME', 'MGR_SIM_SHOCK', 'MGR_SIM_MONTHS', 'MGR_WEEKDAYS', 'MGR_DEPTS', 'MGR_WHOLE_SHOP', 'LOAN_FREQUENCIES', 'MGR_SIM_EV',
-    'MGR_SIM_LEGEND_NAMED'].map(decl),
+    'MGR_SIM_LEGEND_NAMED', 'MGR_SIM_NO_FLOOR'].map(decl),
 ];
 let memoThrows = false;
 let teaserModel = null;
@@ -1120,12 +1120,56 @@ eq(S.mgrSimTeaserFigures(ctxPlan).plan, 'my plan', 'with an open move that moves
      committed low on its own line beside it -- crimson and named when it
      is under the floor, never hidden. */
   const SHH = compileScope([fn('mgrSimShocksHTML'), fn('mgrSimMoney'), fn('mgrSimSigned'), fn('mgrShortUGX'), fn('mgrSimDay'), fn('waWeekday'),
+    fn('mgrSimNoFloor'), decl('MGR_SIM_NO_FLOOR'),
     decl('MGR_SIM_SHOCK'), decl('MGR_SIM_MONTHS'), decl('MGR_WEEKDAYS')], { esc: (v) => String(v) }, ['mgrSimShocksHTML']).mgrSimShocksHTML;
   const shH = SHH({ holds: { held: 1, of: 3, untestable: 2 }, floor: { amount: 3000000, source: 'set' }, shocks: [
     { id: 'late', label: 'Nalubega pays two weeks late', available: true, held: true, low: { date: '2026-11-05', balance: -1064326 },
       expLow: { date: '2026-11-06', balance: 32595854 }, note: 'n' }] });
   t.check(/mgr-x-up">Holds — expected low 32\.6m, Fri 6 Nov</.test(shH) && /mgr-x-res mgr-x-dn">Committed low −1\.06m, Thu 5 Nov — under the floor, counting only money in hand</.test(shH)
     && /Judged on the expected line against the floor/.test(shH), 'a shock held on the expected line shows its committed break beside it, in crimson');
+
+  /* NO FLOOR KNOWN (mgrCashFloor().amount == null): judged against
+     running out, and said -- never "the stand-in floor is 0", "stays
+     above nothing" or "below nothing". The same shock, committed low
+     -1.06m: "Runs out" beside it. */
+  const nfH = SHH({ holds: { held: 1, of: 3, untestable: 2 }, floor: { amount: null, source: 'stand-in', note: 'no rent or salary' }, shocks: [
+    { id: 'late', label: 'Nalubega pays two weeks late', available: true, held: false, low: { date: '2026-11-05', balance: -1064326 },
+      expLow: { date: '2026-11-06', balance: -200000 }, note: 'n' }] });
+  t.check(/mgr-x-dn">Runs out — expected low −200k, Fri 6 Nov</.test(nfH) && /Committed low −1\.06m, Thu 5 Nov — runs out, counting only money in hand/.test(nfH)
+    && /Judged on the expected line against running out — no floor known/.test(nfH) && !/the floor/.test(nfH), `no floor known: the shocks are judged against running out (${nfH.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 300)})`);
+  /* The band's headline and the verdict. Today's committed path: 1,000
+     on 7 Oct, -500 on 8 Oct -- it runs out on Thu 8 Oct; the plan's stays
+     at 1,000 and 200: it never does. */
+  const nfWk = (vals) => ({ days: vals.map((v, i) => ({ date: '2026-10-0' + (7 + i), committed: v })) });
+  const NF = { amount: null, source: 'stand-in', note: 'no rent or salary' };
+  eq(S.mgrSimHeadline({ floor: NF, base: { walk: nfWk([1000, -500]) }, plan: { walk: nfWk([1000, 200]) } }),
+    'Move any decision and I’ll play out the next 30 days before you commit. With no floor known — judged against running out, today’s path runs out on Thu 8 Oct; my plan doesn’t.',
+    'the headline: no floor known, judged against running out');
+  eq(S.mgrSimHeadline({ floor: NF, base: { walk: nfWk([1000, 200]) }, plan: { walk: nfWk([1000, 300]) } }),
+    'Move any decision and I’ll play out the next 30 days before you commit. With no floor known — judged against running out, today’s path never runs out; nor does my plan.',
+    'and when neither runs out');
+  const vNF = S.mgrSimVerdict({ floor: NF, changed: false, low: { date: '2026-10-08', balance: 200 } });
+  eq(vNF.body, 'Cash after what is already promised never runs out (no floor known — judged against running out) — lowest 200 on Thu 8 Oct. Start from my plan, or move one choice at a time.',
+    'the verdict on an unchanged day with no floor known');
+  t.check(!/nothing/.test(vNF.body), 'never "above nothing"');
+  const vNF2 = S.mgrSimVerdict({ floor: NF, changed: true, low: { date: '2026-10-08', balance: -500 } });
+  t.check(/^Cash falls to −500 on Thu 8 Oct — it runs out \(no floor known — judged against running out\), counting only money already in hand/.test(vNF2.body),
+    `and a choice that runs out says so (${vNF2.body})`);
+  const cal = fn('mgrSimCalHTML');
+  t.check(/mgrSimNoFloor\(floor\) \? MGR_SIM_NO_FLOOR/.test(cal) && /\['lo', 'under 0 · runs out'\], \['ok', '0 or more'\]/.test(cal) && !/below nothing|above nothing/.test(cal),
+    'the calendar says no floor is known, and its key reads "under 0 · runs out" / "0 or more"');
+
+  /* SIGNED HERE COUNTS HONESTLY: a lever carrying an assumption is kept
+     as one, though its prices are the books' -- the clearance at the
+     owner's prices rests on how much of it sells (50%). A bill moved is
+     the books'. So 2 choices, 1 on your assumptions. */
+  const body = S.mgrSimDecisionBody({ today: TODAY, verdict: { head: 'h', body: 'b' }, holds: { held: 3, of: 3 }, alone: [], floor: null,
+    run: { low: null, expLow: null, profit: { base: 0, d: 0, lo: 0, hi: 0 }, changed: [
+      { id: 'clear', label: 'Dead stock', choiceLabel: 'At your clearance price', dept: 'store', from: 'books', say: 'cleared',
+        assumption: { value: 50, lo: 25, hi: 75, unit: '%', label: 'Of it sold in 30 days' } },
+      { id: 'bill:891', label: 'Steel bill', choiceLabel: 'After the chase', dept: 'procurement', from: 'books', say: 'paid later', assumption: null }] } });
+  eq(body.levers.map((l) => [l.id, l.from]), [['clear', 'assumption'], ['bill:891', 'books']],
+    'the clearance is kept as resting on an assumption; the bill as the books\'');
 
   /* THE ORDER SAYS WHOSE QUANTITY IT IS. */
   t.check(/4\.21m for the buying plan’s 123 bags/.test(od.opts[1].hint), `the buying plan's quantity, said (${od.opts[1].hint})`);
