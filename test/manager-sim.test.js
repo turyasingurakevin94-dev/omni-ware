@@ -16,8 +16,9 @@
  *     between them -- one figure when nothing assumed is moved;
  *   - a lever whose subject is not on the books is not shown;
  *   - signing keeps a summary and never acts;
- *   - a stress test holds only when the COMMITTED line and the expected
- *     band both stay at or above the floor, and it is always k of three;
+ *   - a stress test is judged on the EXPECTED band against the floor
+ *     (Q40; the committed line alone where there is no band), the
+ *     committed low shown beside it, and it is always k of three;
  *   - an unknown is never 0: an order whose supplier's credit days are
  *     not written is counted on delivery, never left off the line.
  *
@@ -42,7 +43,7 @@ const SIM = ['mgrSimDate', 'mgrSimDay', 'mgrSimMoney', 'mgrSimSigned', 'mgrSimCe
   'mgrSimAssumeOf', 'mgrSimCompose', 'mgrSimExpected', 'mgrSimLands', 'mgrSimRun', 'mgrSimJudge', 'mgrSimShocks', 'mgrSimHolds', 'mgrSimPresets',
   'mgrSimSame', 'mgrSimVerdict', 'mgrSimWeekWords', 'mgrSimBreakDay', 'mgrSimHeadline', 'mgrSimTeaserFigures', 'mgrSimTargetsTouched',
   'mgrSimDecisionBody', 'mgrSimMoves', 'mgrSimOpen', 'mgrSimScenarioFacts', 'mgrSimVerdictInputs', 'mgrSimWaitHint', 'mgrNavCountSim',
-  'mgrSimPlanPriceNote'];
+  'mgrSimPlanPriceNote', 'mgrSimPoss', 'mgrSimShift', 'mgrSimStops', 'mgrSimQuoteBounds', 'mgrSimOffLine', 'mgrSimLegendNamed', 'mgrSimUncostedSay'];
 const LOANS = ['loanSchedule', 'loanPrincipal', 'loanInstallments', 'loanRoundTo', 'loanRound', 'loanLevelPI', 'loanDueDate',
   'loanPeriodRate', 'loanFeePerInstallment', 'loanPeriodsPerYear', 'loanFrequency', 'loanTotalInterest'];
 const SOURCES = [
@@ -51,7 +52,8 @@ const SOURCES = [
   ...['anShiftDate', 'daysBetweenISO', 'waWeekday', 'mgrShortUGX', 'mgrNum', 'mgrPossessive', 'mgrDept', 'chaseRate',
     'mgrPipsFromRate', 'mgrPipsFromDeliveries', 'mgrPipsFromAge', 'clearanceFor', 'periodOf', 'periodShift', 'periodEndDate',
     'mgrPaydayDates', 'mgrPaydaySettles', 'mgrPaydaySettlesDefault'].map(fn),
-  ...['MGR_SIM_ASSUME', 'MGR_SIM_SHOCK', 'MGR_SIM_MONTHS', 'MGR_WEEKDAYS', 'MGR_DEPTS', 'MGR_WHOLE_SHOP', 'LOAN_FREQUENCIES'].map(decl),
+  ...['MGR_SIM_ASSUME', 'MGR_SIM_SHOCK', 'MGR_SIM_MONTHS', 'MGR_WEEKDAYS', 'MGR_DEPTS', 'MGR_WHOLE_SHOP', 'LOAN_FREQUENCIES', 'MGR_SIM_EV',
+    'MGR_SIM_LEGEND_NAMED'].map(decl),
 ];
 let memoThrows = false;
 let teaserModel = null;
@@ -234,10 +236,10 @@ eq([ch.effect('week'), ch.effect('none')], [{ moves: [{ customerId: 'C1', days: 
    its half is counted on delivery: 7 Oct + 2 = 9 Oct (never left off). */
 const od = lv('order:P1');
 eq(od.label, 'Simba Cement 50kg · 123 bags', 'the order is named with its quantity');
-eq(od.effect('a'), { out: [{ date: '2026-10-15', amount: -4212750, label: 'Kasubi Hardware — order', dept: 'procurement' }], stock: 4212750 },
+eq(od.effect('a'), { out: [{ date: '2026-10-15', amount: -4212750, label: 'Kasubi Hardware — order', dept: 'procurement', routine: true }], stock: 4212750 },
   'all from the plan\'s supplier: paid on delivery + credit, onto the shelf at cost');
-eq(od.effect('split'), { out: [{ date: '2026-10-15', amount: -2123500, label: 'Kasubi Hardware — order', dept: 'procurement' },
-  { date: '2026-10-09', amount: -2196000, label: 'Simba Depot — order (credit days not written — counted on delivery)', dept: 'procurement' }], stock: 4319500, profit: -106750 },
+eq(od.effect('split'), { out: [{ date: '2026-10-15', amount: -2123500, label: 'Kasubi Hardware — order', dept: 'procurement', routine: true },
+  { date: '2026-10-09', amount: -2196000, label: 'Simba Depot — order (credit days not written — counted on delivery)', dept: 'procurement', routine: true }], stock: 4319500, profit: -106750 },
   'half from the next supplier: dearer by 106,750, and the half with no credit days is counted on delivery, never left off the line');
 t.check(/counted on delivery, Fri 9 Oct/.test(od.opts[2].hint), `and says so (${od.opts[2].hint})`);
 /* No credit days and no delivery time: counted today. */
@@ -248,7 +250,7 @@ eq(od.effect('none'), {}, 'not ordered: nothing on the line');
 /* The offer: the unpriced one is offered but cannot be taken. */
 const of = lv('offer');
 eq(of.opts.map((o) => [o.id, !!o.disabled]), [['decline', false], ['take:5', false], ['take:7', true]], 'an offer that cannot be priced cannot be taken');
-eq(of.effect('take:5'), { loan: { amount: 12000000, on: TODAY, ratePct: 0, termMonths: 12, lender: 'Centenary Bank' }, profit: 0, interest: 0 },
+eq(of.effect('take:5'), { loan: { amount: 12000000, on: TODAY, ratePct: 0, termMonths: 12, lender: 'Centenary Bank' }, profit: 0, gross: 0, interest: 0 },
   'taking it puts the loan through the walk on its own terms');
 /* A supplier's 6,000,000 at 12% over 2 months: priced (its first month's
    interest is 6,000,000 × 1% = 60,000) but not taken as cash. */
@@ -328,7 +330,7 @@ eq(S.mgrSimTermsFact({ days: 35.2, receivables: 136669398, creditPerDay: 3882323
    worked in October: 7 to 31 Oct inclusive = 25 of 31 days = 500,000 ×
    25 / 31 = 403,226 on 28 Oct. November's falls after these days. */
 const hr = lv('hire');
-eq(hr.effect('yes', 500000), { out: [{ date: '2026-10-28', amount: -403226, label: 'New hire — pay', dept: 'people' }], profit: 0 },
+eq(hr.effect('yes', 500000), { out: [{ date: '2026-10-28', amount: -403226, label: 'New hire — pay', dept: 'people' }], profit: 0, gross: 500000 },
   'a hire: its pay committed on the payday for the days worked in the month it settles');
 /* The 5th pays the month just ended ('previous'): October's 25 days are
    paid 5 Nov, inside these days. */
@@ -404,17 +406,21 @@ eq(S.mgrSimShocks({ ...model, books: { ...model.books, season: { available: fals
   'Not available — it needs a year of books and the eight weeks before it; yours start 15 Sep 2025.',
   'thirteen months of books is over a year: it says what is missing, not "under a year"');
 eq(S.mgrSimHolds(SH), { held: 0, of: 3, untestable: 2 }, 'held in 0 of 3 — the two that could not be run are counted apart, never dropped');
-/* THE LAW: judged on the COMMITTED line first. Floor 750: the expected
-   band never goes under it (lowest 750 with Kato late), but the committed
-   line sits at 700 -- so the choice breaks under every test. Floor 600:
-   700 committed and 750 expected both clear it -- it holds. */
+/* Q40: JUDGED ON THE EXPECTED LINE against the floor. Floor 750: the
+   expected band with Kato late bottoms at 750 -- at the floor, so it
+   holds -- while the committed line sits at 700, under it; that low is
+   kept beside the verdict (low), never hidden. Floor 800: 750 expected is
+   under it -- it breaks. */
 const m750 = { ...model, books: { ...model.books, floor: { amount: 750, source: 'set' } } };
-eq(S.mgrSimShocks(m750, {}, {}, R, fakeWalk)[0].held, false, 'a committed line under the floor breaks the test, however high the expected band');
-eq(S.mgrSimHolds(S.mgrSimShocks(m750, {}, {}, R, fakeWalk)).held, 0, 'and holds 0 of 3');
-eq(S.mgrSimShocks({ ...model, books: { ...model.books, floor: { amount: 600, source: 'set' } } }, {}, {}, R, fakeWalk)[0].held, true,
-  'both lines over the floor: it holds');
-eq([S.mgrSimJudge({ low: { balance: 700 }, expLow: null }, 600), S.mgrSimJudge({ low: null, expLow: { balance: 900 } }, 600)], [true, null],
-  'no expected band: the committed line alone; no committed line: not known');
+const S750 = S.mgrSimShocks(m750, {}, {}, R, fakeWalk);
+eq([S750[0].held, S750[0].expLow.balance, S750[0].low.balance], [true, 750, 700],
+  'Q40: the expected low (750) at a 750 floor holds; the committed 700 is kept beside it');
+eq(S.mgrSimHolds(S750), { held: 1, of: 3, untestable: 2 }, 'and holds 1 of 3 — the two that could not be run still counted apart');
+eq(S.mgrSimShocks({ ...model, books: { ...model.books, floor: { amount: 800, source: 'set' } } }, {}, {}, R, fakeWalk)[0].held, false,
+  'the expected low under the floor: it breaks');
+eq([S.mgrSimJudge({ low: { balance: 700 }, expLow: null }, 600), S.mgrSimJudge({ low: { balance: -5 }, expLow: { balance: 900 } }, 600),
+  S.mgrSimJudge({ low: null, expLow: null }, 600)], [true, true, null],
+  'no expected band: the committed line alone; with one, the expected line decides; neither: not known');
 /* Last year's buying: 100 a day as usual, and one day of 1,100 in the week
    from 15 Oct 2025 -- that week took 1,000 more than its usual 700. */
 const txns = [];
@@ -541,7 +547,7 @@ t.check(S.mgrSimSame(L, {}, { 'chase:C1': 'today' }) && !S.mgrSimSame(L, {}, P.p
   eq([pfl.id, pfl.opts.map((o) => [o.id, o.price]), pfl.effect('plan', 0).profit],
     ['price:P5', [['p0', 12000], ['p1', 12350], ['plan', 12500], ['p2', 12650], ['p3', 13000]], 20000],
     'the lever moves to the plan’s line, the plan among its steps — 40 × 500 = 20,000 a month at the same volume');
-  eq(pfl.opts[0].hint, 'today\'s price · 1,000 under Bina (seen 2 days ago)', 'today’s price says where it sits against the rival');
+  eq(pfl.opts[0].hint, 'today’s price · 1,000 under Bina (seen 2 days ago)', 'today’s price says where it sits against the rival');
   const PL5 = S.mgrSimLevers(BOOKS(), { moves: paint, open: paint, orders: [], offers: [], planPrice: pf });
   eq(PL5.filter((l) => l.kind === 'price').map((l) => l.id), ['price:P24', 'price:P5'],
     'the plan’s line gets a price lever of its own, beside the market reading’s — which is untouched');
@@ -565,7 +571,7 @@ t.check(S.mgrSimSame(L, {}, { 'chase:C1': 'today' }) && !S.mgrSimSame(L, {}, P.p
   eq([pb.line.rival, pb.line.theirs, pb.line.daysOld], ['Abba', 11800, 4], 'with no rival above, the nearest one under ours (wholesale only)');
   const pbl = S.mgrSimPriceLever(BOOKS(), pb);
   eq([pbl.opts.map((o) => [o.id, o.price]), pbl.opts[0].hint, pbl.opts[1].hint],
-    [[['p0', 12000], ['plan', 12500]], 'today\'s price · 200 over Abba (seen 4 days ago)', 'my plan · +20k a month at the same volume — 700 over Abba'],
+    [[['p0', 12000], ['plan', 12500]], 'today’s price · 200 over Abba (seen 4 days ago)', 'my plan · +20k a month at the same volume — 700 over Abba'],
     'no steps to climb; today’s price and the plan’s each say how far over Abba they sit');
 
   /* A PLANNED CUT: 11,900, 100 under ours. Same volume: 40 × −100 =
@@ -704,12 +710,19 @@ t.check(JSON.stringify(bigBody.outcome).length < 4000 && bigBody.title.length <=
 
 /* ---------- 8. the Brief's teaser ---------- */
 memoThrows = true;
-eq(S.mgrSimTeaserFigures(), { profitMonth: null, lowest: null, shocksHeld: null, shocksOf: 3, plan: 'nothing changes' },
+eq(S.mgrSimTeaserFigures(), { profitMonth: null, profitLevel: null, lowest: null, expectedLowest: null, shocksHeld: null, shocksOf: 3,
+  shocksUntestable: null, plan: 'nothing changes' },
   'a teaser that cannot be worked out answers with nothing — it never throws');
 memoThrows = false;
 teaserModel = { books: { ...BOOKS(), to: '2026-10-10', floor: { amount: 800, source: 'set' }, price: null }, levers: L.filter((l) => l.group === 'assumption') };
-eq(S.mgrSimTeaserFigures(), { profitMonth: { lo: 10172190, hi: 10172190 }, lowest: { balance: 700, date: '2026-10-09' }, shocksHeld: 0, shocksOf: 3, plan: 'nothing changes' },
-  'no plan read: the teaser is today, unchanged — today\'s profit, the committed low, 0 of the three tests held (700 committed is under the 800 floor)');
+/* Nothing changes: the profit CHANGE is +0 (the Brief prints "as
+   today"), its level today's 10,172,190; the committed low 700 on 9 Oct
+   and the expected low 950 today beside it; the late payer takes the
+   expected band to 750, under the 800 floor -- 0 held, the other two not
+   testable (Q40). */
+eq(S.mgrSimTeaserFigures(), { profitMonth: { lo: 0, hi: 0 }, profitLevel: { lo: 10172190, hi: 10172190 }, lowest: { balance: 700, date: '2026-10-09' },
+  expectedLowest: { balance: 950, date: TODAY }, shocksHeld: 0, shocksOf: 3, shocksUntestable: 2, plan: 'nothing changes' },
+  'no plan read: the teaser is today, unchanged — the change +0, today\'s level, the committed low and the expected one, 0 of three held on the expected line');
 const ctxPlan = { st: { today: { meeting: { id: 9 }, moves: [{ id: 1, status: 'open', body: { mkind: 'whatsapp', door: 'whatsapp' } }] } } };
 eq(S.mgrSimTeaserFigures(ctxPlan).plan, 'my plan', 'with an open move that moves a lever, it reads the plan');
 
@@ -728,7 +741,7 @@ eq(S.mgrSimTeaserFigures(ctxPlan).plan, 'my plan', 'with an open move that moves
     ...LOANS, 'mgrDept', 'mgrPayday', 'mgrPaydayLabel', 'mgrOrdinal', 'mgrMedian', 'mgrPaydayDates', 'mgrWageEvents',
     'mgrPaydaySettles', 'mgrPaydaySettlesDefault', 'mgrPaydaySettlesLabel', 'mgrWageShares', 'mgrWageDueLate', 'dueIsOverdue',
     'mgrCollectionsByDay', 'mgrChaseLags', 'mgrTradingPattern', 'mgrCashWalk', 'mgrCashWalkBuild',
-    'mgrSimExpected', 'mgrSimRun', 'mgrSimCompose', 'mgrSimChoiceOf', 'mgrSimAssumeOf', 'mgrSimBillLever', 'mgrSimOrderLever',
+    'mgrSimExpected', 'mgrSimShift', 'mgrSimPoss', 'mgrSimRun', 'mgrSimCompose', 'mgrSimChoiceOf', 'mgrSimAssumeOf', 'mgrSimBillLever', 'mgrSimOrderLever',
     'mgrSimOfferLever', 'mgrSimPayDay', 'mgrSimDay', 'mgrSimMoney', 'mgrSimSigned', 'mgrShortUGX', 'mgrNum', 'mgrPossessive',
     'mgrPipsFromRate', 'mgrPipsFromDeliveries'];
   const data = {
@@ -864,7 +877,7 @@ eq(S.mgrSimTeaserFigures(ctxPlan).plan, 'my plan', 'with an open move that moves
   const vi = S.mgrSimVerdictInputs(m6, { 'order:P1': 'a' }, {}, run6, P6, walkO);
   eq(vi.fix, 'Leaving the Simba Cement 50kg order as it is keeps cash above the floor.', 'the committed choice whose undoing alone lifts the line over the floor');
   eq(vi.termsFree, { days: 14, freed: 18910757 }, 'the shortest terms\' cushion, when they are not chosen');
-  eq(vi.missing, ['Steel & Tube\'s bill'], 'what my plan does that these choices do not');
+  eq(vi.missing, ['Steel & Tube’s bill'], 'what my plan does that these choices do not');
   eq(vi.offer, null, 'no offer taken');
   /* A price step at 34,050 on a tenth less volume earns 55,056; 35,750
      earns 93 × 0.9 × 2,580 − 9.3 × 2,000 = 215,946 − 18,600 = 197,346 --
@@ -889,6 +902,7 @@ eq(S.mgrSimTeaserFigures(ctxPlan).plan, 'my plan', 'with an open move that moves
   };
   const WALKB = { tightest: { date: DAY, balance: 1 }, floor: { amount: 3000000, source: 'set' },
     expectedReceipts: [{ customerId: 'C1', kind: 'chase', date: '2026-10-08', amount: 300 }, { customerId: 'C2', kind: 'chase', date: '2026-10-10', amount: 500 }] };
+  const ranges = [];
   const INV = [{ counterSale: false, profit: 100, sales: 1000 }, { counterSale: false, profit: 200, sales: 2000 }, { counterSale: false, profit: 300, sales: 3000 },
     { counterSale: true, profit: 9999, sales: 99999 }];
   const B = compileScope([fn('mgrSimBooksBuild'), fn('mgrSimSeason'), fn('mgrSimTermsFact'), fn('mgrSimQuantile'), fn('anShiftDate'), fn('daysBetweenISO'),
@@ -901,10 +915,12 @@ eq(S.mgrSimTeaserFigures(ctxPlan).plan, 'my plan', 'with an open move that moves
     waSalesByKey: () => new Map([['K', { units30: 10, profit30: 1000, sales30: 5000 }]]),
     buyKeyParts: (k) => ({ product: k, variantIdx: null }), productVariantLabel: (p) => 'Line ' + p,
     anOverallTotals: (rows) => ({ profit: rows.reduce((n, r) => n + r.profit, 0), sales: rows.reduce((n, r) => n + r.sales, 0) }),
-    anInvoicesInRange: () => INV,
+    anInvoicesInRange: (f, to) => { ranges.push([f, to]); return INV; },
     mgrChaseLags: () => [{ customerId: 'C1', name: 'Kato', k: 3, n: 4, lagDays: 3, lastChased: '2026-10-05' }, { customerId: 'C2', name: 'Nalubega', k: 2, n: 2, lagDays: 3, lastChased: null }],
     mgrCashFloor: () => ({ amount: 3000000, source: 'set' }),
-    incomeStatement: () => ({ revenue: 6000, netProfit: 450.4, uncostedDues: [] }),
+    incomeStatement: (f, to) => { ranges.push(['is', f, to]); return { revenue: 6000, netProfit: 450.4,
+      uncostedDues: [{ kind: 'wage', refId: 'ST9', period: '2026-10', amount: null }] }; },
+    dueName: (d) => (d.refId === 'ST9' ? 'Okello Denis' : 'Staff member'),
     mgrDebtorDays: () => { throw new Error('read from the health facts'); }, mgrDaysOfStock: () => { throw new Error('read from the health facts'); },
     mgrHealthChecks: () => ({ checks: [{ id: 'debtor_days', threshold: 30 }, { id: 'stock_days', threshold: 90 }] }),
     promisesBroken: () => 0,
@@ -947,6 +963,17 @@ eq(S.mgrSimTeaserFigures(ctxPlan).plan, 'my plan', 'with an open move that moves
      105,999. */
   eq([bk.profit.net, bk.marginPct, bk.aims], [450, 10599 / 105999, { debtorDays: 30, stockDays: 90 }], 'today\'s pace, the month\'s margin and the health checks\' aims');
   eq(bk.season, { available: false, booksStart: '2026-01-01', needs: '2025-08-13' }, 'under a year and eight weeks of books: no season, and why');
+  /* ONE MONTH, ON WHOLE DAYS (the final review): the month's profit and
+     margin are read over the 30 days to yesterday -- 7 Oct − 30 = 7 Sep
+     to 6 Oct -- the window the Targets' net profit and margin read
+     (MANAGER_METRICS), not the 30 days to today. */
+  eq([ranges[0], ranges.find((r) => r[0] === 'is')], [['2026-09-07', '2026-10-06'], ['is', '2026-09-07', '2026-10-06']],
+    'the month\'s margin and net profit: the 30 days to yesterday, as the Targets read them');
+  eq([bk.profit.from, bk.profit.to, bk.month], ['2026-09-07', '2026-10-06', { sales: 105999, profit: 10599 }], 'and the month kept for the margin target');
+  /* A daily wage nobody has costed is out of that net profit, and named. */
+  eq(bk.profit.uncosted, [{ name: 'Okello Denis', period: '2026-10', kind: 'wage' }], 'an uncosted wage is named, not counted as nothing');
+  eq(S.mgrSimUncostedSay(bk.profit), 'leaves out Okello Denis’ wage — paid by the day, not costed', 'and said on the net profit tile, the possessive the app\'s own (mgrPossessive)');
+  eq(S.mgrSimUncostedSay({ uncosted: [] }), null, 'nothing left out: nothing said');
 }
 
 /* ---------- 14. no cash walk to stand on ----------
@@ -960,6 +987,158 @@ eq(S.mgrSimTeaserFigures(ctxPlan).plan, 'my plan', 'with an open move that moves
   eq([sh.map((x) => x.held), S.mgrSimHolds(sh)], [[null, null, null], { held: null, of: 3, untestable: 3 }], 'no test can be run, and none is claimed');
   t.check(/could not be read/.test(S.mgrSimHeadline({ floor: F, base: r, plan: null })), 'the headline names it rather than saying the path stays above the floor');
   eq(S.mgrSimVerdict({ changed: 2, floor: F, low: null }).body, 'The cash ahead could not be read.', 'and so does the verdict');
+}
+
+/* ---------- 15. the final review ---------- */
+{
+  /* NOT ON THE LINE (SIM.1, Q28). The walk's own list: Okello's daily
+     wage (not costed), 11 undated bills (46,294,136), 5 buy orders on the
+     way (6,314,070), what customers owe with no day named (136,669,398)
+     and, in this scenario, Steel's bill moved past the window. A choice
+     puts undated bill #77 (1,000,000) on the line today: the undated row
+     is then 10 bills, 46,294,136 − 1,000,000 = 45,294,136 -- never
+     counted on the line and off it at once. */
+  const list = [
+    { kind: 'wage', dept: 'people', label: 'Okello Denis — October 2026', amount: null, why: 'paid by the day — not costed until the days are counted' },
+    { kind: 'bill', dept: 'procurement', label: '11 bills with no day named', amount: 46294136, count: 11, why: 'owed, but nobody has said when' },
+    { kind: 'order', dept: 'procurement', label: '5 buy orders on the way', amount: 6314070, count: 5, why: 'owed when the goods and their bill arrive' },
+    { kind: 'owed', dept: 'finance', label: 'Money owed to you with no day named', amount: 136669398, count: 40, why: 'not cash until it is paid' },
+    { kind: 'bill', dept: 'procurement', label: 'Steel — bill', amount: 5670120, why: 'moved past these 30 days in this scenario' }];
+  const off = S.mgrSimOffLine(list, [{ billId: 77, to: TODAY }, { billId: 891, to: '2026-12-01' }],
+    [{ billId: 77, due: 1000000, dueOn: null }, { billId: 891, due: 5670120, dueOn: '2026-08-24' }]);
+  eq(off.map((x) => [x.kind, x.label, x.amount, x.dir, x.scenario]), [
+    ['wage', 'Okello Denis — October 2026', null, 'out', false],
+    ['bill', '10 bills with no day named', 45294136, 'out', false],
+    ['order', '5 buy orders on the way', 6314070, 'out', false],
+    ['owed', 'Money owed to you with no day named', 136669398, 'in', false],
+    ['bill', 'Steel — bill', 5670120, 'out', true]], 'what is not on the line: each row with its amount, its way, and whether only this scenario puts it there');
+  eq(S.mgrSimOffLine(list.slice(1, 2), [{ billId: 77, to: TODAY }], [{ billId: 77, due: 46294136, dueOn: null }]).length, 11 - 11 + 1,
+    'one undated bill of eleven placed: the row stays, ten left');
+  const OH = compileScope([fn('mgrSimOffLineHTML'), fn('mgrShortUGX')], { esc: (v) => String(v) }, ['mgrSimOffLineHTML']).mgrSimOffLineHTML;
+  const html = OH(off);
+  t.check(/Not on the line · 5/.test(html) && />not costed</.test(html) && /−45\.29m/.test(html) && /\+137m/.test(html) && /this scenario/.test(html)
+    && /paid by the day — not costed until the days are counted/.test(html), 'the strip names each: not costed, −45.29m of bills, +137m owed, the scenario\'s own row, and why');
+  t.check(/mgrSimOffLineHTML\(c\.offLine/.test(fn('mgrSimCalHTML')) && /mgrSimOffLine\(run\.walk\.notOnLine, run\.comp\.adjust\.bills, b\.bills\)/.test(fn('mgrSimCompute')),
+    'the calendar draws it, from the scenario\'s own walk');
+  t.check(/mgrSimUncostedSay\(b\.profit\)/.test(fn('mgrSimOutHTML')), 'and the net profit tile names an uncosted wage');
+
+  /* SEVERAL MOVES OF ONE CUSTOMER ADD UP. Kato's 300 on 8 Oct moved a
+     day, then a day more: 10 Oct -- 950, 950, 750, 1050 (the second move
+     used to be dropped: 950, 950, 1050, 1050). Moved, then taken off:
+     off for good -- 950, 950, 750, 750. */
+  eq(S.mgrSimExpected(WALK(), [], [{ customerId: 'C1', days: 1 }, { customerId: 'C1', days: 1 }]).days.map((d) => d.expected), [950, 950, 750, 1050],
+    'two moves of one payment are one move by their sum');
+  eq(S.mgrSimExpected(WALK(), [], [{ customerId: 'C1', days: 1 }, { customerId: 'C1', days: null }]).days.map((d) => d.expected), [950, 950, 750, 750],
+    'a move that takes it off takes it off');
+  eq([S.mgrSimLands([{ customerId: 'C1', date: '2026-10-08' }], [{ customerId: 'C1', days: 7 }, { customerId: 'C1', days: 14 }], 'C1'),
+    S.mgrSimLands([{ customerId: 'C1', date: '2026-10-08' }], [{ customerId: 'C1', days: 7 }, { customerId: 'C1', days: null }], 'C1')],
+  [{ date: '2026-10-29', moved: true }, { date: null, moved: true }], 'where the money lands: 8 Oct + 7 + 14 = 29 Oct; taken off, nowhere');
+  /* Chased a week later AND two weeks late in the stress test: the bill
+     paid after Kato waits 21 days, 8 Oct -> 29 Oct (it used to stop at
+     the chase's 15 Oct). */
+  const seen = [];
+  S.mgrSimRun({ books: BOOKS(), levers: L }, { 'bill:891': 'after:C1', 'chase:C1': 'week' }, {},
+    (o) => { seen.push(o.adjust.bills.map((x) => [x.billId, x.to])); return WALK(); }, { moves: [{ customerId: 'C1', days: 14 }] });
+  eq(seen.pop(), [[891, '2026-10-29']], 'a chase put back a week and a late payer\'s two weeks: the bill waits 21 days');
+
+  /* GROSS PROFIT IS NOT NET PROFIT. A bank's 12m at 12% taken: about
+     −120,000 of interest a month, below gross profit -- net profit moves,
+     gross profit and the margin do not. A hire bringing its 500,000 cost:
+     gross profit +500,000, net 0 -- and the margin on a 100m month at 9m
+     moves from 9.0% to 9.5%. */
+  const ofL = S.mgrSimOfferLever(BOOKS(), [OFFER12]);
+  const mO = { books: BOOKS(), levers: [ofL, lv('hire'), lv('clear')] };
+  const wk = () => WALK();
+  const baseO = S.mgrSimRun(mO, {}, {}, wk);
+  const tg = [{ id: 1, metric: 'gross_profit' }, { id: 2, metric: 'net_profit' }, { id: 3, metric: 'margin_pct' }];
+  const month = { sales: 100000000, profit: 9000000 };
+  eq(S.mgrSimTargetsTouched(tg, baseO, S.mgrSimRun(mO, { offer: 'take:6' }, {}, wk), month).map((x) => x.metric), ['net_profit'],
+    'an offer taken moves net profit only — interest is below gross profit');
+  eq(S.mgrSimTargetsTouched(tg, baseO, S.mgrSimRun(mO, { hire: 'yes' }, {}, wk), month).map((x) => x.metric), ['gross_profit', 'margin_pct'],
+    'a hire that brings its cost: gross profit and the margin move, net profit does not');
+  /* Clearance at cost, half sold: 500,000 of sales at no profit -- 9m of
+     100.5m is 8.955%, still 9.0% to a tenth of a point: no target moved. */
+  eq(S.mgrSimTargetsTouched(tg, baseO, S.mgrSimRun(mO, { clear: 'cost' }, {}, wk), month), [], 'sales at cost that leave the margin at 9.0%: none');
+
+  /* THE LEGEND names the weightiest first: nine customers' payments
+     (8-16 Oct) and a supplier's stop day (23 Oct). Eight are named --
+     the stop day among them -- and the two left out are counted, their
+     kind keeping its line. */
+  const named = [];
+  for (let i = 0; i < 9; i++) named.push({ date: '2026-10-' + String(8 + i).padStart(2, '0'), kind: 'chase', letter: 'C', text: 'Customer ' + i + ' pays' });
+  named.push({ date: '2026-10-23', kind: 'deadline', letter: 'D', text: 'Steel stops delivering' });
+  const lg = S.mgrSimLegendNamed(named, 8);
+  eq([lg.shown.length, lg.shown.some((x) => x.kind === 'deadline'), lg.more, lg.kinds, lg.shown[lg.shown.length - 1].date],
+    [8, true, 2, ['chase'], '2026-10-23'], 'eight named, the stop day first in weight and last in date; two more counted');
+  t.check(/mgrSimLegendNamed\(named, MGR_SIM_LEGEND_NAMED\)/.test(fn('mgrSimCalHTML')) && !/named\.slice\(0, 8\)/.test(fn('mgrSimCalHTML')),
+    'the calendar\'s legend is built by it, never cut by date');
+
+  /* THE STOP DAY FOLLOWS THE SCENARIO. Steel & Tube's bill reaches 90
+     days on 23 Oct. Paid on 10 Oct in this scenario: no stop. Paid on 23
+     Oct, or nowhere on the line: it still stops. */
+  const stopRun = (date) => ({ changed: [{ id: 'bill:891' }], walk: { days: [{ date: date || '2026-10-08', events: date ? [{ kind: 'bill', line: 'committed', billId: 891, amount: -5670120 }] : [] }] } });
+  eq([S.mgrSimStops([b891], stopRun('2026-10-10'), BOOKS()), S.mgrSimStops([b891], stopRun('2026-10-23'), BOOKS()).map((x) => [x.on, x.paidOn, x.changed]),
+    S.mgrSimStops([b891], stopRun(null), BOOKS()).map((x) => [x.on, x.paidOn])],
+  [[], [['2026-10-23', '2026-10-23', true]], [['2026-10-23', null]]], 'paid before the stop day: no marker; on it, or not at all: the marker stays');
+  t.check(/mgrSimStops\(c\.model\.levers, run, b\)/.test(fn('mgrSimMarks')), 'and the calendar draws the stop day from it');
+
+  /* THE VERDICT SAYS IT: cash holds, the deliveries do not. */
+  const st = S.mgrSimVerdict({ ...ok, stops: [{ who: 'Steel & Tube Industries', at: 90, on: '2026-10-23', paidOn: '2026-11-06', changed: true }] });
+  eq([st.cls, st.head, st.body], ['am', 'Cash holds, but Steel & Tube Industries stops delivering on Fri 23 Oct.',
+    'Its bill reaches their 90-day limit that day and these choices pay it Fri 6 Nov. Paid before Fri 23 Oct, deliveries keep coming.'],
+  'a bill left past its supplier\'s stop day: amber, named, with the day');
+  t.check(/stops: mgrSimStops\(model\.levers, run, b\)\.filter\(x=> x\.changed\)/.test(fn('mgrSimCompute')), 'from the choices the owner moved');
+
+  /* ONE POSSESSIVE: "Steel & Tube Industries’", never "Industries’s". */
+  eq([S.mgrSimPoss('Steel & Tube Industries'), S.mgrSimPoss('Kato Construction Ltd')], ['Steel & Tube Industries’', 'Kato Construction Ltd’s'], 'possessives, one apostrophe');
+  const lateI = S.mgrSimBillLever(BOOKS(), { ...BOOKS().bills[0], supplier: 'Steel & Tube Industries', dueOn: '2026-10-20' }, {}, MOVES, BOOKS().receipts);
+  t.check(/past Steel & Tube Industries’ 90-day limit/.test(lateI.opts.find((o) => o.id === 'week').hint), `the limit said rightly (${lateI.opts.find((o) => o.id === 'week').hint})`);
+  t.check(!/'\\'s |'’s /.test(src.slice(src.indexOf('\n/* ═══ MGR BED: Sim — begin ═══ */'), src.indexOf('/* ═══ MGR BED: Sim — end ═══ */', src.indexOf('\n/* ═══ MGR BED: Sim — begin ═══ */')))),
+    'no possessive built by hand in the section');
+
+  /* ROUTINE BUYING ON THE EXPECTED BAND. The walk took a 100 order off
+     the expected band on 9 Oct, as it takes any one-off. With a usual
+     day's trading on the band (it already pays suppliers, as for a dated
+     bill) the order goes back on it: 950, 1250, 1050, 1050. Without
+     trading on the band, it stays off. */
+  const W2 = () => ({ ...WALK(), days: WALK().days.map((d, i) => ({ ...d, expected: d.expected - (i >= 2 ? 100 : 0) })) });
+  const back = [{ date: '2026-10-09', amount: -100, routine: true }];
+  eq(S.mgrSimExpected({ ...W2(), trading: { byWeekday: [{ weekday: 0, mean: 500 }] } }, [], [], back).days.map((d) => d.expected), [950, 1250, 1050, 1050],
+    'an order from the buying plan is inside the usual trading on the expected band — not taken off twice');
+  eq(S.mgrSimExpected({ ...W2(), trading: { byWeekday: [{ weekday: 0, mean: null }] } }, [], [], back).days.map((d) => d.expected), [950, 1250, 950, 950],
+    'with no usual trading on the band, it stays off');
+  eq(sLv.effect('ly').out.some((x) => x.routine), false, 'the season\'s above-usual buying is not routine: it stays off the expected band');
+
+  /* Q40 ON SCREEN: the shock's verdict on the expected line, the
+     committed low on its own line beside it -- crimson and named when it
+     is under the floor, never hidden. */
+  const SHH = compileScope([fn('mgrSimShocksHTML'), fn('mgrSimMoney'), fn('mgrSimSigned'), fn('mgrShortUGX'), fn('mgrSimDay'), fn('waWeekday'),
+    decl('MGR_SIM_SHOCK'), decl('MGR_SIM_MONTHS'), decl('MGR_WEEKDAYS')], { esc: (v) => String(v) }, ['mgrSimShocksHTML']).mgrSimShocksHTML;
+  const shH = SHH({ holds: { held: 1, of: 3, untestable: 2 }, floor: { amount: 3000000, source: 'set' }, shocks: [
+    { id: 'late', label: 'Nalubega pays two weeks late', available: true, held: true, low: { date: '2026-11-05', balance: -1064326 },
+      expLow: { date: '2026-11-06', balance: 32595854 }, note: 'n' }] });
+  t.check(/mgr-x-up">Holds — expected low 32\.6m, Fri 6 Nov</.test(shH) && /mgr-x-res mgr-x-dn">Committed low −1\.06m, Thu 5 Nov — under the floor, counting only money in hand</.test(shH)
+    && /Judged on the expected line against the floor/.test(shH), 'a shock held on the expected line shows its committed break beside it, in crimson');
+
+  /* THE ORDER SAYS WHOSE QUANTITY IT IS. */
+  t.check(/4\.21m for the buying plan’s 123 bags/.test(od.opts[1].hint), `the buying plan's quantity, said (${od.opts[1].hint})`);
+
+  /* "NOT KNOWN", NEVER A DASH, for a figure that cannot be read. */
+  const CM = compileScope([fn('mgrSimCmpHTML'), fn('mgrSimMoney'), fn('mgrSimSigned'), fn('mgrShortUGX')], { esc: (v) => String(v) }, ['mgrSimCmpHTML']).mgrSimCmpHTML;
+  const col = { profit: { mid: 1, d: 0 }, low: null, expLow: null, debtorDays: null, stockDays: null, freed: 0, clearIn: 0, interest: 0, changed: [] };
+  const cmp = CM({ base: col, run: col, plan: null, holdsBase: { held: null, of: 3 }, holds: { held: null, of: 3 }, holdsPlan: null });
+  t.check(/Debtor days<\/span><span[^>]*>not known<\/span>/.test(cmp) && /Lowest cash<\/span><span[^>]*>not known/.test(cmp)
+    && /Holds under shocks<\/span><span[^>]*>not known/.test(cmp), 'the side-by-side reads unknown days, lows and tests as "not known"');
+  t.check(/Freed by terms · 60 days, if kept to<\/span><span[^>]*>—</.test(cmp), 'and keeps the dash for none');
+  t.check(!/debtorDays == null \? '—'|stockDays == null \? '—'/.test(fn('mgrSimOutHTML')), 'the tiles read unknown debtor and stock days as "not known"');
+
+  /* THE QUOTE LIFT STOPS AT WHAT IS LEFT TO WIN. 137 of 158 won: at most
+     21 more, 100 × 21 / 158 = 13.29 points. An owner's +20 reads as that:
+     21 more won × 50,000 = 1,050,000 (not 31.6 × 50,000 = 1,580,000). */
+  const qL = lv('quote');
+  t.check(Math.abs(qL.assume.max - 100 * 21 / 158) < 1e-9 && Math.abs(qL.assume.min + 100 * 137 / 158) < 1e-9 && qL.assume.hi === 10,
+    `the quote lift is bounded by what is left to win (${qL.assume.min.toFixed(2)} to ${qL.assume.max.toFixed(2)})`);
+  eq(Math.round(S.mgrSimCompose(L, { quote: 'train' }, { quote: { value: 20 } }).profit), 1050000, 'an owner\'s +20 points wins the 21 left, no more');
 }
 
 /* ---------- 9. the laws the section keeps ---------- */
