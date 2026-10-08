@@ -303,8 +303,11 @@ const blockOf = {};
     /* 6m aim, 5.7m in, ahead of the road: on track */
     { finished: false, direction: 'up', aim: 6000000, actual: 5700000, pace: { on_course: true, behind_by: 0 } },
     { finished: true, met: true }, { finished: true, met: false } ], proposed: [{ id: 1 }, { id: 2 }] };
-  eq(T.mgrNavCountTargets({ score }), { n: 4, note: null },
-    'targets: 2 running + 2 proposed = 4; one at risk is not off track');
+  /* WAS: running + proposed (4). NOW (final review, canvas): the count is
+     the running targets, one per row under Running (2); with none off
+     track the line names the 2 proposals waiting for an answer. */
+  eq(T.mgrNavCountTargets({ score }), { n: 2, note: '<b>2 proposed</b> by the meeting, waiting for you' },
+    'targets: 2 running = 2; one at risk is not off track, and the proposals waiting are named');
   /* 4m behind of 4.97m to go (80%): off track */
   score.targets[0].pace.behind_by = 4000000;
   eq(T.mgrNavCountTargets({ score }).note, '<b>1 target</b> off track', 'behind by a third or more of what is left is off track');
