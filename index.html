@@ -143218,7 +143218,10 @@ function mgrPlayPresets(today){
     const prod = (data.products || []).find(x=> x.id === dead.productId);
     const deadName = prod ? productVariantLabel(prod, dead.variantIdx) : dead.line;
     const bestName = best.variant || best.name;
-    out.push({ id: 'paint', label: `${prod ? prod.name : deadName} bundle`, name: `${deadName} with every ${bestName} order`, treats: 'dead_stock',
+    /* The pill says only what kind of play it is: a product's name is as
+       long as the shop made it, and the five pills share one row on a
+       desktop. The name it bundles is in the play's name and its aim. */
+    out.push({ id: 'paint', label: 'Dead-stock bundle', name: `${deadName} with every ${bestName} order`, treats: 'dead_stock',
       if: `offer ${deadName} with every ${bestName} order`, weeks: 3, target: Math.max(0, deadNow - dead.value),
       aimBasis: `dead stock less ${deadName} (${mgrShortUGX(dead.value)} at cost, unsold ${dead.daysQuiet == null ? 'since it came in' : dead.daysQuiet + ' days'}); ${bestName} sold most in the last 30 days` });
   }

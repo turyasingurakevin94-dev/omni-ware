@@ -487,8 +487,9 @@ function scope(over) {
   eq(S.mgrPlayMetric({ treats: 'growth', measure: { kind: 'weekday', dow: 6, areas: [] } }).measure('2026-09-27', '2026-10-03'), 2000000,
     'with no area named, every Saturday sale counts: 1m + 1m Ntinda');
   /* paint: 13m dead less the 5m tiles = 8m; the best seller has no variant, so its name. */
-  eq([P[2].label, P[2].name, P[2].treats, P[2].target], ['Floor tiles bundle', 'Floor tiles with every Roofing nails order', 'dead_stock', 8000000],
+  eq([P[2].label, P[2].name, P[2].treats, P[2].target], ['Dead-stock bundle', 'Floor tiles with every Roofing nails order', 'dead_stock', 8000000],
     'the biggest dead line offered with the best seller, aimed at dead stock less that line — its pill short enough for one row');
+  t.check(/^dead stock less Floor tiles \(/.test(P[2].aimBasis), 'the pill’s hover names the line it bundles, as the play’s name does');
   /* MOSES TO NEW SITES, MEASURED ON NEW BUILDER ACCOUNTS' SALES (Q41). A
      builder = a site on the books; new = within 8 weeks (56 days) of the
      first invoice. Weeks newest first: 30 Sep-6 Oct 0; 23-29 Sep Kato's
