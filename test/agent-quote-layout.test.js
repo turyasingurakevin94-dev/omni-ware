@@ -107,9 +107,9 @@ const fn = (n) => extractFunction(src, n, 'agent.html');
 /* ---------- 4. editing a line in place ------------------------------- */
 {
   const typing = (/getElementById\('ag_cartWrap'\)\.addEventListener\('input'[\s\S]*?\n\}\);/.exec(src) || [''])[0];
-  t.check(/const preview = Object\.assign\(\{\}, it, \{ agentSellPrice: entered \/ lineMult\(it\) \}\);/.test(typing),
-    'a typed price is previewed per base unit, the way it will be stored');
-  t.check(!/renderCart\(\)/.test(typing) && /renderDock\(preview\)/.test(typing),
+  t.check(/it\.agentSellPrice = entered \/ lineMult\(it\);/.test(typing),
+    'a typed price is stored per base unit as it is typed -- a slide to send does not leave the field first');
+  t.check(!/renderCart\(\)/.test(typing) && /renderDock\(\)/.test(typing),
     'and patches the chips and the dock without redrawing the field under the thumb');
   const commit = (/getElementById\('ag_cartWrap'\)\.addEventListener\('change'[\s\S]*?\n\}\);/.exec(src) || [''])[0];
   t.check(/it\.agentSellPrice = entered \/ lineMult\(it\);/.test(commit) && /saveQuoteDraft\(\);/.test(commit),

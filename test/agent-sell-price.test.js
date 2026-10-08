@@ -145,8 +145,15 @@ const line = (over) => Object.assign({
   t.check(/function earnChipHTML\(margin, profit\)/.test(code) && /earnChipHTML\(f\.margin, f\.profit\)/.test(render),
     'and every line\'s own chip reads the same level -- green, amber at nothing, red at a loss');
   const typing = (/getElementById\('ag_cartWrap'\)\.addEventListener\('input'[\s\S]*?\n\}\);/.exec(code) || [''])[0];
-  t.check(/const f = cartLineFigures\(preview\);/.test(typing),
+  t.check(/const f = cartLineFigures\(it\);/.test(typing),
     'the live-typing patch resolves through the same helper, so typing cannot say something the commit will not');
+  // Sliding to send leaves the focus in the price box, and so does closing
+  // the keyboard on Android: a price kept only on 'change' went out as the
+  // price the line was added at, while the dock showed the one typed.
+  t.check(/it\.agentSellPrice = entered \/ lineMult\(it\);/.test(typing) && /saveQuoteDraft\(\)/.test(typing),
+    'a typed price is kept on every keystroke, so the order sends what the dock shows');
+  t.check(/\[data-qty-in\][\s\S]*?setLineQty\(it, v\)/.test(typing),
+    'and so is a typed quantity');
   t.check(/classList\.toggle\('loss', f\.margin\.level === 'loss'\)/.test(typing),
     'and marks the price box while a loss is being typed');
   const add = extractFunction(src, 'addCatalogLine', 'agent.html');
