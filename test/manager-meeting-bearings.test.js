@@ -206,6 +206,8 @@ const H = {
       fn('booksStartDate'), fn('managerPlayProgress'), fn('managerAdviceTally'), fn('mgrLiveMoveRows'), fn('mgrJrWords'), decl('MGR_JR_STOP'),
       fn('managerTrackRecord'), fn('managerChaseEvidence'),
       "function unusualDays(){ return { today: '', judged: 0, thin: 0, floor: 0, items: [] }; } function unusualLine(){ return ''; } var mgrUnusualMemo = null;",
+      /* The meeting now reads Out of the ordinary's own pulse (Phase 3); empty here. */
+      "async function mgrUnusualForMeeting(){ return { judged: false, items: [], answered: ()=> null, answersError: null, normalsError: null, taught: [] }; }",
       fn('chaseResponse'), fn('chaseDayAdd'), fn('chaseRate'), fn('chaseResponseLine'), fn('customerCollectionDays'),
       fn('collectionInvoiceTxn'), fn('collectionLedgerRow'), fn('debtLogIsInvoiceOwned'), fn('cashIsMoneyIn'),
       ...['CHASE_WINDOW', 'CHASE_LOOKBACK', 'CHASE_QUIET', 'CHASE_MIN_CHASED', 'CHASE_MIN_QUIET', 'CHASE_MERGE', 'CHASE_VERDICT_WORDS',
