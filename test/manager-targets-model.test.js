@@ -810,12 +810,16 @@ function scope(env) {
   eq(s.mgrTgOdds(per.values, 49, 'down'), { k: 1, n: 4, pct: null }, 'odds stay hidden under six periods');
   eq([s.mgrTgFig('min', 64.6), s.mgrTgFig('min', 45, true), s.mgrTgName('sat_load', 45)], ['65 min', '45', 'Saturday loads in 45 minutes'],
     'minutes, whole, and the target named as the canvas says it');
-  /* A running target from 1 Oct to 31 Oct, 70 -> 45: 6 whole days of 31;
-     the road has it at 70 - 25*6/31 = 65.16 -> 65; at 65 it is on the road
-     (within half a minute); at this rate 70 - 5*31/6 = 44.17 -> 44. */
+  /* A running target from 1 Oct to 31 Oct, 70 -> 45. It moves on
+     Saturdays only: 3, 10, 17, 24 and 31 Oct are inside it, and read to
+     yesterday (Tue 6 Oct) one of them is in (3 Oct). The road steps a
+     fifth of the way: 70 - 25/5 = 65; at 65 it is on the road. Where it
+     lands waits for a second Saturday (10 Oct): one Saturday's step
+     stretched over five would let one noisy week decide it. */
   const run = s.managerScoreProgress({ body: { metric: 'sat_load', aim: 45, baseline: 70, from: '2026-10-01', to: '2026-10-31' } });
-  eq([run.actual, run.unit, run.pace.expected, run.pace.on_course, run.pace.at_this_rate], [65, 'min', 65, true, 44],
-    'a load-time target is read like any level, in minutes');
+  eq([run.actual, run.unit, run.pace.elapsed_steps, run.pace.total_steps, run.pace.expected, run.pace.on_course, run.pace.at_this_rate, run.pace.rate_from],
+    [65, 'min', 1, 5, 65, true, null, '2026-10-10'],
+    'a load-time target is read in minutes, against a road that steps on each Saturday inside it');
   /* Three Saturdays only: not enough history, said with the count -- and
      nothing is read, never a 0. */
   const thin = base.filter((q) => !(q.stageLog && q.stageLog.some((e) => String(e.at).length > 0 && new Date(e.at).toISOString().slice(0, 10) === '2026-09-12')));
@@ -838,6 +842,63 @@ function scope(env) {
     'a measure that cannot be read yet is drawn with why and never chosen');
 }
 
+/* ---------- 27b. a measure that moves once a week is paced by its weeks --- */
+{
+  /* One Saturday median a week, stood in for by a fixed table: the
+     Saturday in the 7 days to a day is the one read (as mgrTgLoadAt). */
+  const SAT = { '2026-09-26': 57, '2026-10-03': 57, '2026-10-10': 52, '2026-10-17': 49 };
+  const satOf = (d) => { for (let i = 0; i < 7; i++) { const x = shift(d, -i); if (new Date(x + 'T00:00:00Z').getUTCDay() === 6) return x; } return null; };
+  const mkAt = (today) => {
+    const sc = compileScope([extractFunction(src, 'managerScoreProgress', 'index.html')], {
+      todayISO: () => today, Date, Math, Number, String, Array, Object,
+      MANAGER_METRICS: { sat_load: { label: 'Saturday load time', unit: 'min', kind: 'level', direction: 'down', window: 7, step: 6,
+        at: (d) => SAT[satOf(d)] == null ? null : SAT[satOf(d)], measure: () => SAT[satOf(shift(today, -1))] == null ? null : SAT[satOf(shift(today, -1))] } },
+    }, ['managerScoreProgress']);
+    return sc.managerScoreProgress;
+  };
+  /* Set Mon 5 Oct for the week to Sun 11 Oct, from 57 to 50, read on Wed
+     7 Oct: Sat 10 Oct is its only Saturday and has not come. Read a day
+     at a time it was 2 behind a road at 55 -- At risk for a Saturday that
+     has not happened. It is On track, and names the Saturday it waits on. */
+  const wk = { body: { metric: 'sat_load', aim: 50, baseline: 57, from: '2026-10-05', to: '2026-10-11' } };
+  const p1 = mkAt('2026-10-07')(wk);
+  eq([p1.actual, p1.pace.first, p1.pace.first_on, p1.pace.on_course, p1.pace.behind_by, p1.pace.expected, p1.pace.total_steps],
+    [57, true, '2026-10-10', true, 0, 57, 1], 'a weekly target set on a Monday reads On track on Wednesday — no Saturday inside it has been read');
+  const ts = scope({ MANAGER_METRICS: { sat_load: { label: 'Saturday load time', unit: 'min', kind: 'level', direction: 'down', step: 6 } } });
+  const x1 = { ...p1, id: 1, finished: false, days_left: 4 };
+  eq(ts.mgrTgState(x1).key, 'on', 'the state says On track');
+  const tl1 = ts.mgrTgTodayLine(x1).text;
+  t.check(/^On track — Saturday loads in 50 minutes: 57 min now\. It moves on Saturdays only — the first inside it is Sat,? 10 Oct\. 4 days are left\.$/.test(tl1),
+    `Today names the Saturday it waits on, not a whole day tomorrow (${tl1})`);
+  /* Read on Sun 11 Oct (yesterday Sat 10 Oct is in): 52 against a road
+     that has stepped all the way to 50: 2 behind of 2 to go -- Off track. */
+  const p2 = mkAt('2026-10-11')(wk);
+  eq([p2.actual, p2.pace.elapsed_steps, p2.pace.expected, p2.pace.on_course, p2.pace.behind_by, p2.pace.at_this_rate], [52, 1, 50, false, 2, 52],
+    'once its Saturday is read the road has stepped to the aim, and with its only Saturday in, where it lands is where it stands');
+  /* A month from Thu 1 Oct to Sat 31 Oct, from 65 to 45, read on Wed 14
+     Oct: Saturdays inside it 3, 10, 17, 24, 31 (5); in by yesterday 3 and
+     10 Oct (2). The road: 65 - 20*2/5 = 57; it reads 52, ahead. At this
+     rate, carried over Saturdays, not days: 65 + (52 - 65) * 5/2 = 32.5
+     -> 33 (a day at a time it was 65 - 13*31/13 = 34). */
+  const mo = mkAt('2026-10-14')({ body: { metric: 'sat_load', aim: 45, baseline: 65, from: '2026-10-01', to: '2026-10-31' } });
+  eq([mo.pace.elapsed_steps, mo.pace.total_steps, mo.pace.expected, mo.pace.on_course, mo.pace.at_this_rate, mo.pace.rate_from],
+    [2, 5, 57, true, 33, undefined], 'the rate is read over Saturdays, and only once two are in');
+  /* Its checkpoints step too: Mondays 5, 12, 19, 26 Oct and 31 Oct have
+     1, 2, 3, 4 and 5 of its 5 Saturdays behind them (65 - 20*k/5): 61,
+     57, 53, 49, 45. */
+  const mo7 = mkAt('2026-10-07')({ body: { metric: 'sat_load', aim: 45, baseline: 65, from: '2026-10-01', to: '2026-10-31' } });
+  eq(mo7.checkpoints, [{ on: '2026-10-05', value: 61 }, { on: '2026-10-12', value: 57 }, { on: '2026-10-19', value: 53 },
+    { on: '2026-10-26', value: 49 }, { on: '2026-10-31', value: 45 }], 'the checkpoints step on Saturdays: 3 Oct is behind 5 Oct (61), 3 and 10 Oct behind 12 Oct (57)');
+  eq(mo7.pace.rate_from, '2026-10-10', 'with one Saturday in, where it lands waits for the second');
+  /* The composer's road steps the same way. 7 Oct to 31 Oct, 57 -> 45:
+     Saturdays 10, 17, 24, 31 -- Monday 12 Oct has one behind it (54). */
+  const road = ts.mgrTgRoad('2026-10-07', '2026-10-31', 57, 45, Math.round, 6);
+  eq(road.mondays.map((c) => c.on + ':' + c.value), ['2026-10-12:54', '2026-10-19:51', '2026-10-26:48', '2026-10-31:45'], 'and the composer’s road and its checkpoints with it');
+  /* The row says it in its own unit and names what it waits on. */
+  const r = ts.mgrTgRunModel({ ...mo7, id: 2, finished: false, days_left: 24 }, { moves: [] });
+  eq([r.key, r.land], ['on', null], 'no landing until the second Saturday');
+}
+
 /* ---------- 28. a cash floor the committed line breaks is At risk (Q37) --- */
 {
   const s = scope({ MANAGER_METRICS: { lowest_cash: { label: 'Lowest cash in a month', unit: 'ugx', kind: 'level', direction: 'up', span: true } } });
@@ -856,10 +917,21 @@ function scope(env) {
     'Off track only once the books show cash under it');
   eq(s.mgrNavCountTargets({ score: { targets: [line], proposed: [] } }), { n: 1, note: null }, 'the nav names no Off track for a line that only would break');
   const tl = s.mgrTgTodayLine(line);
-  t.check(tl.key === 'risk' && tl.ok === false && /^At risk — Cash never under 10\.00m: 25\.00m now\. The committed line takes cash under it on Thu,? 22 Oct\. 24 days are left\.$/.test(tl.text),
-    `Today says At risk and the day it would break (${tl.text})`);
+  /* The floor's reading is the lowest close since it began, not today's
+     cash: it says so. */
+  t.check(tl.key === 'risk' && tl.ok === false && /^At risk — Cash never under 10\.00m: lowest 25\.00m since 1 Oct\. The committed line takes cash under it on Thu,? 22 Oct\. 24 days are left\.$/.test(tl.text),
+    `Today says At risk, the lowest since it began, and the day it would break (${tl.text})`);
   const r = s.mgrTgRunModel(line, { moves: [] });
   eq(r.key, 'risk', 'the row is coloured At risk by the same state');
+  /* The row's track labels the floor's reading the same way, and its
+     break day sits under the chip without a weekday (it fits its column). */
+  const rowSrc = extractFunction(src, 'mgrTgRowHTML', 'index.html');
+  t.check(/const nowWord = r\.m\.span \? 'lowest so far' : 'now';/.test(rowSrc) && /\$\{nowWord\} <b class="mgr-tg-fig">/.test(rowSrc),
+    'a floor’s track says lowest so far, never now');
+  t.check(/const chipDay = r\.brk && r\.brk\.breaksOn \? `\$\{r\.brk\.broke \? 'broke' : 'breaks'\} \$\{mgrTgDay\(r\.brk\.breaksOn\)\}` : '';/.test(rowSrc),
+    'the break day reads "breaks 22 Oct", as the canvas does');
+  t.check(/const tf = \(v\)=> mgrTgFig\(u, v, u !== 'min'\);/.test(rowSrc) && !/mgrTgFig\(u, [^)]*, true\)/.test(rowSrc),
+    'the track’s figures keep "min" (started 72 min · now 70 min · target 45 min)');
 }
 
 /* ---------- 29. the screens that read the scoreboard count it one way ---- */
@@ -881,10 +953,50 @@ function scope(env) {
   /* The Record's account counts the tally: a running target is never Met,
      an unreadable end is never Missed, and is named. */
   const rec = extractFunction(src, 'mgrPaintRecord', 'index.html');
-  t.check(/st\.score\.tally\.met/.test(rec) && /st\.score\.tally\.missed/.test(rec) && /Ended, not known/.test(rec)
+  t.check(/const tally = st\.score && !st\.score\.error && st\.score\.tally \? st\.score\.tally : null;/.test(rec)
+    && /tally \? tally\.met : unread/.test(rec) && /tally \? tally\.missed : unread/.test(rec) && /Ended, not known/.test(rec)
     && !/filter\(x=> x\.met\)/.test(rec) && !/x\.finished && !x\.met/.test(rec),
     'Met and Missed are the scoreboard’s tally, and an end the books cannot read is named, never counted as missed');
+  /* A scoreboard that could not be read: every count in the account says
+     so -- never a 0 beside "not known" -- and no unknown wears a state colour. */
+  t.check(/st\.score && !st\.score\.error \? \(st\.score\.targets \|\| \[\]\)\.length : unread/.test(rec)
+    && /'the scoreboard could not be read'/.test(rec)
+    && /class="mgr-rf-v\$\{tally \? ' ow-good' : ''\}"/.test(rec) && /class="mgr-rf-v\$\{tally \? ' ow-bad' : ''\}"/.test(rec)
+    && !/mgr-rf-v ow-good/.test(rec) && !/mgr-rf-v ow-bad/.test(rec),
+    'Targets taken on is not 0 when the read failed, and green and red belong to known counts only');
 }
+
+/* ---------- 29b. a meeting's proposal, by its measure's own rules -------- */
+(async () => {
+  const save = extractFunction(src, 'managerSaveMeeting', 'index.html');
+  /* The save is read for its proposed-target lines, as written. */
+  t.check(/amount: \(MANAGER_METRICS\[String\(x\.metric\)\]\.round \|\| apRound\)\(Number\(p && p\.amount\) \|\| 0\)/.test(save),
+    'a proposal’s parts are rounded by the measure’s own rule, as its aim is');
+  t.check(/typeof MANAGER_METRICS\[String\(x\.metric\)\]\.ready === 'function' && !MANAGER_METRICS\[String\(x\.metric\)\]\.ready\(\)\.ok/.test(save),
+    'a proposal on a measure that cannot be read yet is not kept');
+  /* By hand: a margin aim 10.5 built from 10.2 on the books and 0.3 a move
+     adds keeps its tenths, so the parts still close on the aim. */
+  const { metrics } = compileScope([extractDeclaration(src, 'MANAGER_METRICS', 'index.html'), 'function metrics(){ return MANAGER_METRICS; }'],
+    { Math, Number }, ['metrics']);
+  const rd = metrics().margin_pct.round;
+  eq([rd(10.5), rd(10.2), rd(0.3), rd(10.2) + rd(0.3)], [10.5, 10.2, 0.3, 10.5], 'a 0.3-point part is kept, and 10.2 + 0.3 closes on 10.5');
+  /* Taking one on, or setting one, on a measure not readable yet says why
+     in its own words. */
+  const adopt = extractFunction(src, 'managerAdoptTarget', 'index.html');
+  const own = extractFunction(src, 'managerSetOwnerTarget', 'index.html');
+  t.check(/if\(rd && !rd\.ok\)\{ toast\(m\.label \+ ' cannot be taken on yet — ' \+ rd\.why/.test(adopt),
+    'taking on a load-time proposal before four Saturdays says how many are recorded');
+  const toasts = [];
+  const { managerSetOwnerTarget } = compileScope([own], {
+    MANAGER_METRICS: { sat_load: { label: 'Saturday load time', unit: 'min', kind: 'level', direction: 'down', step: 6, measure: () => null,
+      ready: () => ({ n: 1, min: 4, ok: false, why: 'not enough history — 1 Saturday recorded' }) } },
+    todayISO: () => TODAY, anShiftDate: shift, toast: (m) => toasts.push(m), renderManager: () => {}, data: { staff: [] },
+    mgrNoteInsert: async () => { throw new Error('nothing is written'); }, Date, Math, Number, String, Array, Promise,
+  }, ['managerSetOwnerTarget']);
+  const r = await managerSetOwnerTarget({ metric: 'sat_load', aim: 45, to: '2026-10-31', owner: 'you' });
+  eq([r.ok, toasts[0]], [false, 'Saturday load time cannot be a target yet — not enough history — 1 Saturday recorded'],
+    'setting one says why, and writes nothing');
+})().catch((e) => { t.check(false, 'the proposal test threw: ' + e.message); });
 
 /* ---------- 17. the owner’s own target is written as it was set --------- */
 (async () => {
