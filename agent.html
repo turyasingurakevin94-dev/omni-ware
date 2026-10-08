@@ -520,12 +520,16 @@
   /* ================= SHEETS =================
      Everything that is about ONE thing -- an order, a client, your money --
      comes up over the screen you were on rather than replacing it. */
-  .ax-scrim{position:fixed;inset:0;z-index:60;background:rgba(22,32,60,.55);display:flex;align-items:flex-end;justify-content:center;animation:axFade .18s ease-out;}
+  .ax-scrim{position:fixed;inset:0;z-index:60;background:rgba(12,19,38,.72);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;align-items:flex-end;justify-content:center;animation:axFade .18s ease-out;}
   .ax-sheet{
     width:100%;max-width:520px;max-height:calc(100vh - 44px);overflow-y:auto;overscroll-behavior:contain;background:var(--bg);border-radius:26px 26px 0 0;
     padding-bottom:calc(20px + var(--safe-b));animation:axUp .24s cubic-bezier(.2,.8,.2,1);
   }
   .ax-sheet.white{background:var(--panel);}
+  .ax-sheet.full{height:calc(100vh - 24px);height:calc(100dvh - 24px);max-height:none;display:flex;flex-direction:column;box-shadow:0 -8px 30px rgba(0,0,0,.35);}
+  .ax-sheet.full > *{flex-shrink:0;}
+  .ax-sheet.full > .ax-sheet-pad{flex:1 0 auto;}
+  .ax-sheet.full .ax-acts{margin-top:auto;}
   @keyframes axUp{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
   @keyframes axFade{from{opacity:0}to{opacity:1}}
   .ax-grab{all:unset;box-sizing:border-box;cursor:pointer;display:block;width:100%;height:24px;position:relative;}
@@ -3895,11 +3899,15 @@ document.getElementById('ag_tabbar').addEventListener('click', (e)=>{
    One way to bring something up over the screen and one way to put it
    away: tap outside it, the X, or Escape. */
 const openSheets = [];
+// A sheet about one thing -- an order, a client, your money, your goal --
+// is a page of its own and rises to fill the screen (opts.full), so the
+// screen behind is only a sliver of edge, never half a hero competing
+// with it. Quick asks stay as short as their question.
 function openSheet(html, opts){
   opts = opts || {};
   const scrim = document.createElement('div');
   scrim.className = 'ax-scrim';
-  scrim.innerHTML = `<div class="ax-sheet${opts.white ? ' white' : ''}" role="dialog" aria-modal="true" aria-label="${esc(opts.label||'')}">${html}</div>`;
+  scrim.innerHTML = `<div class="ax-sheet${opts.white ? ' white' : ''}${opts.full ? ' full' : ''}" role="dialog" aria-modal="true" aria-label="${esc(opts.label||'')}">${html}</div>`;
   document.body.appendChild(scrim);
   document.body.classList.add('ax-locked');
   const sheet = { el: scrim.querySelector('.ax-sheet'), scrim, kind: opts.kind || '', refresh: opts.refresh || null,
@@ -5388,7 +5396,7 @@ function showSent(s, orderId){
 function openTrackSheet(orderId){
   const id = String(orderId);
   let payState = { provider: 'mtn', phone: (myAgent && myAgent.phone) || '', busy:false, note:null, tone:'' };
-  const sheet = openSheet('', { label:'Order', kind:'track', refresh: ()=> paint(), onClose: ()=>{ payState.polling = false; } });
+  const sheet = openSheet('', { label:'Order', kind:'track', full:true, refresh: ()=> paint(), onClose: ()=>{ payState.polling = false; } });
   function paint(){
     const o = myOrders.find(x=> String(x.id) === id);
     if(!o){ sheet.close(); return; }
@@ -5749,7 +5757,7 @@ function renderInquiries(){
 /* ================= ONE CLIENT ================= */
 function openClientSheet(clientId){
   const id = String(clientId);
-  const sheet = openSheet('', { label:'Client', kind:'client', refresh: ()=> paint() });
+  const sheet = openSheet('', { label:'Client', kind:'client', full:true, refresh: ()=> paint() });
   function paint(){
     const c = agentClients.find(x=> String(x.id) === id);
     if(!c){ sheet.close(); return; }
@@ -5855,7 +5863,7 @@ let moneyMonth = null;
 function openMoneySheet(month){
   moneyMonth = month || currentMonthKey();
   closeSheetsOfKind('money');
-  const sheet = openSheet('', { label:'Your money', kind:'money', refresh: ()=> paint() });
+  const sheet = openSheet('', { label:'Your money', kind:'money', full:true, refresh: ()=> paint() });
   function paint(){
     const key = moneyMonth;
     const thisMonth = key === currentMonthKey();
@@ -6157,7 +6165,7 @@ function openGoalSheet(opts){
       ${presets.length ? `<div class="ax-gchips" style="grid-template-columns:repeat(${presets.length},1fr);">${presets.map((p,i)=>
         `<button type="button" data-preset="${i}" aria-pressed="false"><span class="l">${p.icon || ''}${esc(p.l)}</span><span class="v">${esc(fmtCompactUGX(p.v))}</span></button>`).join('')}</div>` : ''}
     </div>
-    <div class="ax-sheet-pad" data-below></div>`, { label:'Your goal', kind:'goal', refresh: ()=> paint() });
+    <div class="ax-sheet-pad" data-below></div>`, { label:'Your goal', kind:'goal', full:true, refresh: ()=> paint() });
   const input = document.getElementById('ag_goalInput');
   const fit = ()=>{ input.style.width = `${Math.max(5, input.value.length) + 0.5}ch`; };
   function paint(){
