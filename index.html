@@ -33970,6 +33970,21 @@
   .ow-cx-wl.ow-bad .ow-cr-wl-r{border-top-color:var(--ow-crimson);}
   .ow-cx-wl.ow-bad .ow-cr-wl-t{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
   .ow-cx-card-m{display:none;}
+  /* Who the plan pays: the walk as a list, on the plan's own tab. */
+  .ow-cx-pl{overflow:hidden;margin-top:var(--ow-sp-16);}
+  .ow-cx-pl-r{all:unset;box-sizing:border-box;cursor:pointer;width:100%;display:grid;
+    grid-template-columns:28px minmax(0,1fr) 190px 150px 128px;gap:var(--ow-sp-12);align-items:center;
+    min-height:52px;padding:0 var(--ow-sp-16);border-bottom:1px solid var(--ow-rule-soft);}
+  .ow-cx-pl-r:hover{background:var(--ow-paper-2);}
+  .ow-cx-pl-r:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
+  .ow-cx-pl-w{display:flex;align-items:center;gap:var(--ow-sp-10);min-width:0;}
+  .ow-cx-pl-t{display:flex;flex-direction:column;min-width:0;}
+  .ow-cx-pl-n{font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  .ow-cx-pl-s{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);color:var(--ow-verdigris);white-space:nowrap;}
+  .ow-cx-pl-v{font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);text-align:right;}
+  .ow-cx-pl-tt{display:grid;grid-template-columns:28px minmax(0,1fr) 128px;gap:var(--ow-sp-12);align-items:center;
+    min-height:48px;padding:0 var(--ow-sp-16);background:var(--ow-steel-050);font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);}
+  .ow-cx-pl-tn{font-weight:var(--ow-fw-400);color:var(--ow-ink-600);}
   .ow-cx-ph-o,.ow-cx-psub,.ow-cx-pwarn,.ow-cx-back,.ow-cx-plan-ph,.ow-cx-ord{display:none;}
   /* The day named on a bill: a chip that opens its own editor. */
   .ow-cx-dchip{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:var(--ow-sp-6);
@@ -34214,6 +34229,10 @@
     .ow-cx-pwarn .ow-cr-ic{width:18px;height:18px;}
     .ow-cx-pwarn-t{flex:1 1 auto;min-width:0;font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);line-height:1.35;}
     .ow-cx-tabs{display:none;}
+    .ow-cr[data-cx-tab="plan"] .ow-cx-pane.ow-cx-payp,.ow-cr[data-cx-tab="pay"] .ow-cx-pane.ow-cx-planp{display:flex;}
+    .ow-cx-pl{display:none;}
+    .ow-cx-planp .ow-pan{border:0;background:transparent;}
+    .ow-cx-pane.ow-cx-planp{padding-bottom:0;gap:0;}
     .ow-cx-back{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;min-height:var(--ow-tap);
       font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);color:var(--ow-sky);}
     /* The plan is its action bar on the phone, docked over the tab bar. */
@@ -36346,15 +36365,27 @@
         <div id="credPositionWrap"></div>
         <div id="credTabsWrap"></div>
 
-        <!-- Who to pay: the plan over the table it drives. -->
-        <div class="ow-cx-pane" id="credPayPane">
+        <!-- A payment just recorded, with the way back, over whichever tab. -->
+        <div id="credReceiptWrap"></div>
+
+        <!-- Today's plan: the amount, and who it pays. -->
+        <div class="ow-cx-pane ow-cx-planp" id="credPlanPane">
+          <div id="credPlanWrap"></div>
+        </div>
+
+        <!-- Who to pay: the table the plan walks. -->
+        <div class="ow-cx-pane ow-cx-payp" id="credPayPane" hidden>
           <div id="cred_tableWrap"></div>
           <div id="credFilterNote"></div>
         </div>
 
-        <!-- Intelligence: the next 30 days, then three readings of the book. -->
-        <div class="ow-cx-pane" id="credIntelPane" hidden>
+        <!-- Next 30 days: the cash line and the day picked on it. -->
+        <div class="ow-cx-pane" id="credLinePane" hidden>
           <div id="credWhenWrap"></div>
+        </div>
+
+        <!-- Insights: three readings of the book. -->
+        <div class="ow-cx-pane" id="credReadPane" hidden>
           <div class="ow-cx-trio">
             <div id="credBandsWrap"></div>
             <div class="ow-cx-trio-r" id="credRailWrap"></div>
@@ -101417,7 +101448,7 @@ function credRowsForList(filter=''){
 
    Nothing here pays anybody. Recording the plan is the owner's tap, and
    it goes through allocateCreditorPayment like every other lump sum. */
-let credTab = 'pay';
+let credTab = 'plan';
 let credPlanAmt = null;
 let credPlanConfirm = false;
 let credPlanAccount = 'cash';
@@ -101817,7 +101848,7 @@ function renderCreditorsPosition(){
      card under the position, since the phone has no room for the tab. */
   const line0 = credCashLine();
   const short0 = line0 ? line0.days.find(d=> d.after < -0.5) : null;
-  const pwarn = line0 ? `<button type="button" class="ow-cx-pwarn ${short0 ? 'ow-bad' : 'ow-good'}" data-cx-tab="intel">
+  const pwarn = line0 ? `<button type="button" class="ow-cx-pwarn ${short0 ? 'ow-bad' : 'ow-good'}" data-cx-tab="line">
       <svg class="ow-cr-ic" viewBox="0 0 24 24">${short0 ? '<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17.5v.01"/>' : '<path d="M4 12.5l5 5L20 6.5"/>'}</svg>
       <span class="ow-cx-pwarn-t">${short0 ? `Short <span class="ow-cx-mono">${f(-short0.after)}</span> on ${esc(credDayLabel(short0.iso))} if you keep every day named` : 'Every day you have named is covered'}</span>
       <svg class="ow-cr-ic" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>` : '';
@@ -101833,13 +101864,15 @@ function renderCreditorsPosition(){
     const short = line ? line.days.find(d=> d.after < -0.5) : null;
     const badge = !line ? {t: 'Cash book not opened', c: 'ow-warn'}
       : short ? {t: 'Short on ' + credDayLabel(short.iso, true), c: 'ow-bad'} : {t: 'All covered', c: 'ow-good'};
+    const oldest = credAllRows().filter(r=> r.owed > 0.5 && r.ageDays >= 0).sort((x, y)=> y.ageDays - x.ageDays)[0];
+    const tab = (key, icon, label, badge, cls)=> `<button type="button" role="tab" class="ow-cx-tab${credTab === key ? ' ow-on' : ''}" data-cx-tab="${key}" aria-selected="${credTab === key}">
+        <svg class="ow-cr-ic" viewBox="0 0 24 24">${icon}</svg>${label}
+        <span class="ow-cx-badge${cls ? ' ' + cls : ''}">${esc(badge)}</span></button>`;
     tabsEl.innerHTML = `<div class="ow-cx-tabs" role="tablist" aria-label="Creditors views">
-      <button type="button" role="tab" class="ow-cx-tab${credTab === 'pay' ? ' ow-on' : ''}" data-cx-tab="pay" aria-selected="${credTab === 'pay'}">
-        <svg class="ow-cr-ic" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>Who to pay
-        <span class="ow-cx-badge">${plan.order.length} supplier${plan.order.length===1?'':'s'}</span></button>
-      <button type="button" role="tab" class="ow-cx-tab${credTab === 'intel' ? ' ow-on' : ''}" data-cx-tab="intel" aria-selected="${credTab === 'intel'}">
-        <svg class="ow-cr-ic" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Intelligence
-        <span class="ow-cx-badge ${badge.c}">${esc(badge.t)}</span></button>
+      ${tab('plan', '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>', 'Today&rsquo;s plan', credM(plan.amount), '')}
+      ${tab('pay', '<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>', 'Who to pay', `${plan.order.length} supplier${plan.order.length===1?'':'s'}`, '')}
+      ${tab('line', '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>', 'Next 30 days', badge.t, badge.c)}
+      ${tab('read', '<circle cx="12" cy="12" r="8"/><path d="M12 4v8h8"/>', 'Insights', oldest ? `Oldest ${oldest.ageDays} days` : 'Nothing dated', '')}
     </div>`;
     tabsEl.querySelectorAll('[data-cx-tab]').forEach(b=> b.addEventListener('click', ()=>{
       credTab = b.dataset.cxTab;
@@ -101891,10 +101924,14 @@ function renderCreditorsPosition(){
 /* Which pane is on screen. Both are drawn every time, so switching is a
    class and never a stale pane. */
 function credShowTab(){
-  const pay = document.getElementById('credPayPane');
-  const intel = document.getElementById('credIntelPane');
-  if(pay) pay.hidden = credTab !== 'pay';
-  if(intel) intel.hidden = credTab !== 'intel';
+  [['plan', 'credPlanPane'], ['pay', 'credPayPane'], ['line', 'credLinePane'], ['read', 'credReadPane']].forEach(([k, id])=>{
+    const el = document.getElementById(id);
+    if(el) el.hidden = credTab !== k;
+  });
+  /* The phone has no tab bar: the plan's action bar and the list stand
+     together there, so the root says which tab is on for its CSS. */
+  const root = document.querySelector('#tab-analytics-creditors .ow-cr');
+  if(root) root.dataset.cxTab = credTab;
 }
 
 /* A supplier picked on the bar, the timeline or the tray: open their row,
@@ -102519,7 +102556,36 @@ function renderCreditorsList(filter=credSearch){
       </div></div>${foot}`
     : empty;
 
-  wrap.innerHTML = `${planHTML}${receipt}<div class="ow-pan ow-cx-list">
+  /* WHO THE PLAN PAYS, on the plan's own tab: each supplier it reaches,
+     in the order it walks, what it pays them and whether that clears
+     them -- the same walk as the table's last column, read as a list. */
+  const reached = plan.order.filter(o=> o.covered > 0.5);
+  const planList = reached.length ? `<section class="ow-pan ow-cx-pl" aria-label="Who the plan pays">
+      <div class="ow-cx-lh"><h2 class="ow-cx-h">Who the plan pays</h2>
+        <span class="ow-cx-lh-s">oldest bill first on each supplier &middot; in the order on the Who to pay tab</span></div>
+      ${reached.map((o, i)=>{
+        const r = o.row, z = credCxReason(r), all = o.covered >= o.owed - 0.5;
+        return `<button type="button" class="ow-cx-pl-r" data-cx-goto="${esc(r.id)}" title="Open ${esc(r.name)} on the Who to pay tab">
+          <span class="ow-cx-mono ow-cx-num">${i + 1}</span>
+          <span class="ow-cx-pl-w"><span class="ow-cx-mono-s su-h-${supHue(r.id)}">${esc(supInitials(r.name))}</span>
+            <span class="ow-cx-pl-t"><span class="ow-cx-pl-n">${esc(r.name)}</span><span class="ow-cx-sub">${r.openCount} bill${r.openCount===1?'':'s'}</span></span></span>
+          <span class="ow-cr-rz ${z.tone}"><span class="ow-cr-rz-h">${z.head}</span>${z.sub}</span>
+          <span class="ow-cx-pc ow-good"><span class="ow-cx-pc-m"><span class="ow-cx-pc-f" style="width:${(o.covered / o.owed * 100).toFixed(1)}%"></span></span>
+            <span class="ow-cx-pl-s">${all ? 'In full' : credM(o.covered) + ' of ' + credM(o.owed)}</span></span>
+          <span class="ow-cx-mono ow-cx-pl-v">${f(o.covered)}</span></button>`;
+      }).join('')}
+      <div class="ow-cx-pl-tt"><span></span><span>Total paid out &middot; ${reached.length} supplier${reached.length===1?'':'s'}
+        <span class="ow-cx-pl-tn">&middot; ${plan.none} untouched, still owed ${credM(plan.left)}</span></span>
+        <span class="ow-cx-mono ow-cx-pl-v ow-good">${f(plan.amount)}</span></div>
+    </section>` : (plan.order.length ? `<div class="ow-pan"><div class="ow-empty"><b>Nothing set aside yet.</b> Move the amount above, or tap a preset, to see who it pays.</div></div>` : '');
+  const planEl = document.getElementById('credPlanWrap');
+  if(planEl) planEl.innerHTML = planHTML + planList;
+  const rcEl = document.getElementById('credReceiptWrap');
+  if(rcEl) rcEl.innerHTML = receipt;
+  /* The plan and the receipt are drawn into their own places now, so
+     their controls are found from the screen rather than the list. */
+  const scr = document.getElementById('tab-analytics-creditors') || wrap;
+  wrap.innerHTML = `<div class="ow-pan ow-cx-list">
     ${toolbar}
     ${listHTML}
   </div>`;
@@ -102530,18 +102596,18 @@ function renderCreditorsList(filter=credSearch){
   renderCreditorsRail();
 
   /* ---- the plan's controls ---- */
-  const range = wrap.querySelector('#cred_plan_amt');
+  const range = scr.querySelector('#cred_plan_amt');
   if(range){
     range.addEventListener('input', ()=>{ credPlanAmt = Number(range.value) || 0; credPlanConfirm = false; renderCreditorsList(credSearch);
       const again = document.getElementById('cred_plan_amt'); if(again) again.focus(); });
   }
-  wrap.querySelectorAll('[data-cx-amt]').forEach(b=> b.addEventListener('click', ()=>{ credPlanAmt = Number(b.dataset.cxAmt) || 0; credPlanConfirm = false; renderCreditorsList(credSearch); }));
-  const planBtn = wrap.querySelector('#cred_plan_btn');
+  scr.querySelectorAll('[data-cx-amt]').forEach(b=> b.addEventListener('click', ()=>{ credPlanAmt = Number(b.dataset.cxAmt) || 0; credPlanConfirm = false; renderCreditorsList(credSearch); }));
+  const planBtn = scr.querySelector('#cred_plan_btn');
   if(planBtn) planBtn.addEventListener('click', ()=>{ credPlanConfirm = true; renderCreditorsList(credSearch); });
-  const planCancel = wrap.querySelector('#cred_plan_cancel');
+  const planCancel = scr.querySelector('#cred_plan_cancel');
   if(planCancel) planCancel.addEventListener('click', ()=>{ credPlanConfirm = false; renderCreditorsList(credSearch); });
-  wrap.querySelectorAll('[data-cx-pacct]').forEach(b=> b.addEventListener('click', ()=>{ credPlanAccount = b.dataset.cxPacct; renderCreditorsList(credSearch); }));
-  const planGo = wrap.querySelector('#cred_plan_go');
+  scr.querySelectorAll('[data-cx-pacct]').forEach(b=> b.addEventListener('click', ()=>{ credPlanAccount = b.dataset.cxPacct; renderCreditorsList(credSearch); }));
+  const planGo = scr.querySelector('#cred_plan_go');
   if(planGo) planGo.addEventListener('click', ()=>{
     const walk = credPlanWalk();
     const done = payCreditorPlan(walk.order, credPlanAccount, todayISO());
@@ -102552,7 +102618,8 @@ function renderCreditorsList(filter=credSearch){
     credPlanConfirm = false; credPlanAmt = null;
     credAfterPayment();
   });
-  const undo = wrap.querySelector('#cred_undo');
+  scr.querySelectorAll('[data-cx-goto]').forEach(b=> b.addEventListener('click', ()=> credOpenSupplier(b.dataset.cxGoto)));
+  const undo = scr.querySelector('#cred_undo');
   if(undo) undo.addEventListener('click', ()=>{
     if(!credLastPay) return;
     undoCreditorPayments(credLastPay.done);
