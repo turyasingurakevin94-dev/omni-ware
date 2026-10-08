@@ -396,12 +396,12 @@ const cell = (sig, d) => R.rows.find((r) => r.sig.id === sig).cells.find((c) => 
   t.check(/Out of the ordinary<\/span><b class="mgr-u-hd-v">8<\/b>/.test(html) && /Good news<\/span><b class="mgr-u-hd-v mgr-u-hd-good">1<\/b>/.test(html)
     && /Need your answer<\/span><b class="mgr-u-hd-v mgr-u-hd-warn">7<\/b>/.test(html), 'the band counts: 8 found, 1 good news, 7 problems still waiting');
   t.check(/Nothing taught yet/.test(html), 'and an empty Taught list says how to fill it');
-  /* WAS: '<b>8 unusual things</b> need your answer' beside the band's
-     "Need your answer 7" -- two figures under one label. NOW: the band
-     counts problems waiting (7: eight findings less the one good news);
-     the nav counts every finding not yet explained (8), in its own words. */
-  eq(S.mgrNavCountUnusual({}), { n: 8, note: '<b>8 unusual things</b> not yet explained' }, 'the nav: eight in the fortnight, eight not yet explained');
-  t.check(!/need/.test(S.mgrNavCountUnusual({}).note), 'and never under the band\'s label "need your answer", which counts only problems');
+  /* WAS: '<b>8 unusual things</b> not yet explained' -- every finding,
+     the good news too -- beside the band's "Need your answer 7". NOW the
+     nav counts the band's own set (mgrPulseNeedAnswer): eight findings
+     less the one good news, 7, in the band's own words. */
+  eq(S.mgrNavCountUnusual({}), { n: 8, note: '<b>7 unusual things</b> need your answer' }, 'the nav: eight in the fortnight, seven need your answer -- the band\'s figure');
+  t.check(/function mgrPulseBandHTML[\s\S]*?const open = mgrPulseNeedAnswer\(r\);/.test(src), 'and the band and the nav read one set'); 
 }
 
 /* ---------- 9. the gap of a month's returns is counted once ----------- */

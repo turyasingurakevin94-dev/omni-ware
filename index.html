@@ -144626,18 +144626,26 @@ function mgrPlayText(text){
    no ctx at all, and then it redraws from the same reading and
    refreshes the nav's count, because an answered finding no longer
    needs one. */
+/* WHAT NEEDS THE OWNER'S ANSWER: every finding that is not good news
+   (the problems, and the neutral ones such as a big delivery) the owner
+   has not explained. One set, read by the band's "Need your answer" and
+   by the nav's line, so the two never disagree. Answers not read: which
+   wait is not known -- null, never counted. */
+function mgrPulseNeedAnswer(r){
+  if(!r || mgrPulseAnswersErr) return null;
+  return (r.findings || []).filter(f=> f.tone !== 'good' && !mgrUnusualAnswers.get(mgrUnusualKey(f))).length;
+}
 /* The count is every finding in the fortnight; the line under the nav
-   names the ones the owner has not explained yet, good news included.
-   It is worded apart from the band's "Need your answer", which counts
-   only the problems, so the two figures never wear one label. When the
-   answers could not be read, nobody knows which are explained: no line. */
+   is the band's own "Need your answer" set, in the band's own words.
+   When the answers could not be read, nobody knows which are explained:
+   no line. */
 function mgrNavCountUnusual(ctx){
   const r = mgrPulseReading();
   if(!r || !r.judged) return null;
-  if(mgrPulseAnswersErr) return { n: r.findings.length, note: null };
-  const live = r.findings.filter(f=> !mgrUnusualAnswers.get(mgrUnusualKey(f))).length;
+  const open = mgrPulseNeedAnswer(r);
+  if(open == null) return { n: r.findings.length, note: null };
   return { n: r.findings.length,
-    note: live ? `<b>${live} unusual thing${live === 1 ? '' : 's'}</b> not yet explained` : null };
+    note: open ? `<b>${open} unusual thing${open === 1 ? '' : 's'}</b> need${open === 1 ? 's' : ''} your answer` : null };
 }
 function mgrPaintUnusual(gen, ctx){
   if(ctx && ctx.landed !== 'start' && ctx.landed !== 'view') return;
@@ -145971,9 +145979,8 @@ function mgrPulseVerdict(r){
 function mgrPulseBandHTML(r){
   const n = r.findings.length, good = r.findings.filter(f=> f.tone === 'good').length;
   /* Answers not read: which problems wait is not known, never counted.
-     Waiting: every finding not good news (problems, and the neutral ones
-     such as a big delivery) that the owner has not explained. */
-  const open = mgrPulseAnswersErr ? null : r.findings.filter(f=> f.tone !== 'good' && !mgrUnusualAnswers.get(mgrUnusualKey(f))).length;
+     Waiting: mgrPulseNeedAnswer, the set the nav's line counts too. */
+  const open = mgrPulseNeedAnswer(r);
   const month = r.today.slice(0, 7);
   const monthName = new Date(r.today + 'T12:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', month: 'short' });
   const known = managerNotesTable && mgrPulseNormals.loaded && !mgrPulseNormals.error;

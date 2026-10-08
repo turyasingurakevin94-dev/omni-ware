@@ -341,25 +341,29 @@ const blockOf = {};
      a finding keyed by its latest day -- compiled on its own here, so this
      section's change touches no other section's lines. */
   let pulse = null;
-  const U = compileScope([extractFunction(src, 'mgrNavCountUnusual', 'index.html'), extractFunction(src, 'mgrUnusualKey', 'index.html')], {
+  const U = compileScope([extractFunction(src, 'mgrNavCountUnusual', 'index.html'), extractFunction(src, 'mgrUnusualKey', 'index.html'),
+    extractFunction(src, 'mgrPulseNeedAnswer', 'index.html')], {
     esc, Number, mgrPulseReading: () => pulse, mgrUnusualAnswers: answers, mgrPulseAnswersErr: null,
   }, ['mgrNavCountUnusual']);
   pulse = { judged: false, findings: [] };
   eq(U.mgrNavCountUnusual({}), null, 'unusual: nothing while the books are too new to know a usual day');
-  pulse = { judged: true, findings: [{ date: '2026-10-03', metric: 'sales' }, { date: '2026-10-06', metric: 'purchases' },
-    { date: '2026-10-03', metric: 'stock_short', days: ['2026-09-26', '2026-10-03'] }] };
+  /* Four found: a sales day (a problem), a delivery (neutral), a count
+     short twice (a problem), and a good day (good news, never waiting). */
+  pulse = { judged: true, findings: [{ date: '2026-10-03', metric: 'sales', tone: 'bad' }, { date: '2026-10-06', metric: 'purchases', tone: null },
+    { date: '2026-10-03', metric: 'stock_short', tone: 'bad', days: ['2026-09-26', '2026-10-03'] }, { date: '2026-10-05', metric: 'wa_orders', tone: 'good' }] };
   answers.set('2026-10-03|sales', 'A big order came in');
-  /* WAS: '… need your answer' -- the band's own label, over a different
-     figure (the band counts only problems). NOW: worded apart. */
-  eq(U.mgrNavCountUnusual({}), { n: 3, note: '<b>2 unusual things</b> not yet explained' },
-    'unusual: 3 found in the fortnight, 2 still without the owner\'s word');
+  /* WAS: '<b>3 unusual things</b> not yet explained' -- every finding,
+     good news included, beside the band's "Need your answer 2": two
+     figures for one question. NOW: the band's own set, in its words. */
+  eq(U.mgrNavCountUnusual({}), { n: 4, note: '<b>2 unusual things</b> need your answer' },
+    'unusual: 4 found in the fortnight; the delivery and the count still need the owner\'s word -- the good day never does');
   answers.set('2026-10-06|purchases', 'Restocking after a stock-out');
-  eq(U.mgrNavCountUnusual({}).note, '<b>1 unusual thing</b> not yet explained', 'one is one thing');
+  eq(U.mgrNavCountUnusual({}).note, '<b>1 unusual thing</b> needs your answer', 'one is one thing');
   answers.set('2026-09-26|stock_short', 'Counted wrong');
-  eq(U.mgrNavCountUnusual({}).note, '<b>1 unusual thing</b> not yet explained',
+  eq(U.mgrNavCountUnusual({}).note, '<b>1 unusual thing</b> needs your answer',
     'a repeat is answered by its latest day: an earlier day answered leaves the finding open');
   answers.set('2026-10-03|stock_short', 'Counted wrong');
-  eq(U.mgrNavCountUnusual({}), { n: 3, note: null }, 'all answered: still three found, nothing asked');
+  eq(U.mgrNavCountUnusual({}), { n: 4, note: null }, 'all answered but the good news: still four found, nothing asked');
 
   eq(C.mgrNavCountAsk({}), null, 'asks: nothing until counted');
   eq(C.mgrNavCountAsk({ openAsks: null }), null, 'and nothing — not a zero — when the count could not be read');
