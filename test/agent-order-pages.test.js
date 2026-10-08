@@ -131,4 +131,13 @@ const fn = (n) => extractFunction(src, n, 'agent.html');
     'and a refresh never snatches the field the agent is typing in');
 }
 
+/* ---------- 10. the standing page's cards are its own ------------------ */
+{
+  // "ax-gap" was already the 12px spacer, so the card under the podium
+  // was squeezed to 12px tall and its trophy spilled out of it.
+  const st = fn('openStandingSheet');
+  t.check(!/class="[^"]*\bax-gap\b/.test(st) && /class="ax-card ax-togo"/.test(st), 'the "how far to the next place" card has a class of its own, not the spacer\'s');
+  t.check(/\.ax-podium2 \.col\{[^}]*max-width:72px/.test(src), 'and with only two agents the podium stays a podium, not two slabs');
+}
+
 process.exit(t.done() ? 1 : 0);
