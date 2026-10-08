@@ -658,8 +658,10 @@ const S = compileScope([
   t.check(/not known/.test(paintMap) && !/'—'/.test(paintMap), 'the board draws an unknown in words (law 1), never a dash');
 
   /* (j) THE PLAYS' OWN SIZING, SHOWN APART. */
-  t.check(!/const playSizes = \[\];/.test(read) && /mgrPlayWorth\(p\.sized\)/.test(read) && /MGR_PLAY_MONEY_KIND\[p\.treats\] !== 'profit'/.test(read),
-    'the proposed plays\' own sizing is read (profit plays only), never hard-coded empty');
+  /* Read through the Playbook's own offered reader (the Plays block keeps
+     mgrPlayWorth to itself), profit plays only. */
+  t.check(!/const playSizes = \[\];/.test(read) && /mgrPlayProposedSizes\(book\)/.test(read) && /x\.kind === 'profit'/.test(read) && !/mgrPlayWorth\(/.test(read),
+    'the proposed plays\' own sizing is read through the Playbook\'s reader (profit plays only), never hard-coded empty');
   const up = S.mgrBriefUpside({ marginLines: [{ key: 'P1', line: 'x', atStake: 100 }], moves: [], plays: [{ name: 'Bundle', amount: 620000, per: 'a month' }] });
   t.check(up.total === 100 && up.plays.total === 620000, 'and kept out of the total: 100, the play\'s 620k apart');
 

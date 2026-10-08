@@ -176,7 +176,8 @@ const S = compileScope([
     mgrBriefCtx: ctx, mgrBriefIcon: () => '', esc: (x) => String(x), mgrBriefDeptChip: (d) => '[' + d + ']', mgrShortUGX: (v) => String(v),
     mgrAskModel: () => ({ items, today: TODAY }), mgrAskRead: null, mgrBriefWireGo() {},
     mgrAskCardHTML: (it) => '<div class="mgr-k-q" data-qkey="' + it.question + '">[' + it.dept + '] ' + it.question + ' <button class="mgr-k-an">chip</button></div>',
-    mgrWireAsks() {}, managerNotesProbeError: (extra || {}).probeErr || null, Number, Math, String, Array, Object, console,
+    ...((extra || {}).noWire ? {} : { mgrAskWireCards() {} }), mgrAskStakeWords: (st) => st.amount + ' a month at stake',
+    managerNotesProbeError: (extra || {}).probeErr || null, Number, Math, String, Array, Object, console,
   }, ['mgrBriefNeedsCard']).mgrBriefNeedsCard();
   const txt = (c) => c.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
   t.check(/It needs to know/.test(txt(card({ notes: false }))) && /does not have yet/.test(txt(card({ notes: false }))),
@@ -206,8 +207,14 @@ const S = compileScope([
   /* Nothing is kept untapped: the card's only writer is the Ask section's
      wiring (its "Keep this answer"), and the Brief calls no write. */
   const cardSrc = fn('mgrBriefNeedsCard');
-  t.check(/mgrWireAsks\(/.test(cardSrc) && !/managerAnswerQuestion|sb\.from|apSend|runManagerMeeting/.test(cardSrc),
-    'the Brief writes nothing itself: answers are kept only by the Ask section\'s own "Keep this answer"');
+  t.check(/mgrAskWireCards\(/.test(cardSrc) && !/mgrWireAsks\(|managerAnswerQuestion|sb\.from|apSend|runManagerMeeting/.test(cardSrc),
+    'the Brief writes nothing itself: answers are kept only by the Ask section\'s own wiring and its "Keep this answer"');
+  /* Where the Ask section offers no wiring, no chip is drawn that a tap
+     could not answer: the first question and the door, as before. */
+  const bare = card({ notes: true, st: { questions: [] }, openAsks: 7 }, { noWire: true });
+  t.check(!/mgr-k-an|mgr-k-q/.test(bare.html) && /What is Kasubi charging for G28 this week\?/.test(txt(bare)) && /All 8 questions →/.test(txt(bare))
+    && /525000/.test(txt(bare)),
+    'with no wiring offered: the first question, its stake and the door to all 8 -- no dead answer chips (got ' + txt(bare) + ')');
   const none = S.mgrBriefNeeds(0, []);
   t.check(none.n === 0 && none.top === null, 'nothing open: none, and no question invented');
 }

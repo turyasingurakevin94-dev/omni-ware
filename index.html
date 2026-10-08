@@ -3509,6 +3509,10 @@
        a tap changes, then who found it and "Keep this answer". Why it
        asks, and sending it on, wait in the section. */
     .mgr-bed-b .mgr-b-need{display:block;margin-bottom:var(--ow-sp-16);}
+    .mgr-bed-b .mgr-b-nq{display:flex;flex-direction:column;align-items:flex-start;gap:var(--ow-sp-6);padding:var(--ow-sp-12);
+      border-bottom:1px solid var(--ow-rule-soft);}
+    .mgr-bed-b .mgr-b-nqh{display:flex;align-items:center;gap:var(--ow-sp-8);flex-wrap:wrap;}
+    .mgr-bed-b .mgr-b-nqt{font-size:var(--ow-t-14);font-weight:var(--ow-fw-700);line-height:1.35;}
     .mgr-bed-b .mgr-b-needk{padding:var(--ow-sp-12);gap:var(--ow-sp-12);}
     .mgr-bed-b .mgr-b-needk .mgr-k-why,.mgr-bed-b .mgr-b-needk .mgr-k-sure,.mgr-bed-b .mgr-b-needk .mgr-k-days{display:none;}
     /* The thumb bar: what the panel offers as its accent, above the tab
@@ -136258,7 +136262,7 @@ function mgrPaintBrief(gen, ctx){
   const wireOffers = ()=>{
     const runBtn = document.getElementById('mgrRunBtn');
     if(runBtn && !runBtn.dataset.wired){ runBtn.dataset.wired = '1'; runBtn.addEventListener('click', runManagerMeeting); }
-    document.querySelectorAll('#managerPlanWrap [data-mgr-hold]').forEach(b=>{
+    planWrap.querySelectorAll('[data-mgr-hold]').forEach(b=>{
       if(b.dataset.wired) return;
       b.dataset.wired = '1'; b.addEventListener('click', runManagerMeeting);
     });
@@ -137554,17 +137558,17 @@ function mgrBriefRead(ctx){
   const marginLines = read('margin', ()=> memo('margin', ()=> marginRows(today).filter(r=> r.atStake > 0)
     .map(r=> ({ key: r.key, line: r.line, atStake: r.atStake }))), []);
   /* A proposed play's own sizing is the meeting's words read as a figure
-     -- the Playbook's own reading of them (mgrPlayWorth), of the plays
-     that treat a profit problem (MGR_PLAY_MONEY_KIND) -- shown apart as
-     the Manager's claim, and never added in. */
+     -- the Playbook's own reading of them, which that section offers
+     other screens as mgrPlayProposedSizes(book): [{ name, amount, per,
+     kind }], kind the money a play treats (MGR_PLAY_MONEY_KIND). Only the
+     plays that treat a profit problem belong beside the profit upside,
+     shown apart as the Manager's claim and never added in. Where the
+     Playbook does not offer it, none is shown. */
   const playSizes = read('play sizing', ()=>{
     const book = c.book && !c.book.error ? c.book : null;
-    if(!book || typeof mgrPlayWorth !== 'function' || typeof MGR_PLAY_MONEY_KIND === 'undefined') return [];
-    return (book.proposed || []).map(p=>{
-      if(MGR_PLAY_MONEY_KIND[p.treats] !== 'profit') return null;
-      const w = mgrPlayWorth(p.sized);
-      return w && w.amount > 0 ? { name: String(p.name || 'A proposed play'), amount: Math.round(w.amount), per: w.per } : null;
-    }).filter(Boolean);
+    if(!book || typeof mgrPlayProposedSizes !== 'function') return [];
+    return (mgrPlayProposedSizes(book) || []).filter(x=> x && x.kind === 'profit' && Number(x.amount) > 0)
+      .map(x=> ({ name: String(x.name || 'A proposed play'), amount: Math.round(Number(x.amount)), per: x.per === 'over 30 days' ? 'over 30 days' : 'a month' }));
   }, []);
   const upside = mgrBriefUpside({ marginLines, moves: rows, plays: playSizes });
   if(errors.includes('margin')) upside.error = 'the margin lines could not be read';
@@ -138360,7 +138364,7 @@ function mgrPaintMap(){
       title="${esc(d.thin ? 'Not enough on the books to judge' : d.passed + ' of ' + d.known + ' checks pass' + (d.thinNote ? ' — ' + d.thinNote.charAt(0).toLowerCase() + d.thinNote.slice(1) : ''))}">
       <span class="mgr-b-dph">${mgrBriefDeptChip(d.id === 'all' ? null : d.id, true, on)} <span class="mgr-b-dpn">${esc(d.name)}</span></span>
       ${mgrBriefLampHTML(d.lamp)}
-      <span class="mgr-b-dps">${d.score == null ? '<b class="mgr-b-dpnk">not known</b>' : `<b class="mgr-b-dpv mgr-b-fig">${d.score}</b>`}<span class="mgr-b-dpu">health</span>${d.trend == null ? ''
+      <span class="mgr-b-dps">${d.score == null ? '<b class="mgr-b-dpnk">not known</b>' : `<b class="mgr-b-dpv mgr-b-fig">${d.score}</b>`} <span class="mgr-b-dpu">health</span>${d.trend == null ? ''
         : `<span class="mgr-b-tr mgr-b-tr-${trc}" title="change over the last week, to today’s score">${esc(d.trend)}</span>`}</span>
       <span class="mgr-b-dpl">${esc(d.line)}</span>
     </button>`; }).join('')}</div>`;
@@ -139010,20 +139014,37 @@ function mgrBriefNeedsCard(){
   const count = m.n != null ? `<span class="mgr-b-fig">${m.n}</span> · only you can find out`
     : m.failed ? (m.atLeast ? `at least <span class="mgr-b-fig">${m.atLeast}</span> · ` : '') + 'the count could not be read'
     : (m.atLeast ? `at least <span class="mgr-b-fig">${m.atLeast}</span> · ` : '') + 'still counting';
-  /* The Ask section's own card for each (mgrAskCardHTML), so a question
-     reads and answers the same in both places. */
+  /* ANSWERED HERE, with the Ask section's own card (mgrAskCardHTML) and
+     its own wiring, which that section offers other screens as
+     mgrAskWireCards -- so a question reads, answers and is kept the same
+     in both places. Where that wiring is not offered, no chip is drawn
+     that a tap could not answer: the first question is shown with the
+     door to the section, as before. */
+  const answerable = typeof mgrAskWireCards === 'function';
+  const sig = (answerable ? 'a:' : 't:') + m.shown.map(it=> it.key).join(',') + '|' + (m.n == null ? '' : m.n);
+  const door = (label)=> label ? `<button type="button" class="mgr-b-more" data-mgrgo="ask">${label} →</button>` : '';
+  if(!answerable){
+    const t = m.top;
+    const stake = t && t.stake ? (typeof mgrAskStakeWords === 'function' ? mgrAskStakeWords(t.stake) : mgrShortUGX(t.stake.amount)) : '';
+    const out = card(count, `
+    ${t ? `<div class="mgr-b-nq"><span class="mgr-b-nqh">${mgrBriefDeptChip(t.dept, false)}${stake ? ` <span class="mgr-b-sm"><span class="mgr-b-fig">${esc(mgrShortUGX(t.stake.amount))}</span> ${esc(stake.slice(mgrShortUGX(t.stake.amount).length).replace(/^,?\s*/, ''))}</span>` : ''}</span>
+      <b class="mgr-b-nqt">${esc(t.question)}</b>${t.where ? `<span class="mgr-b-sm">${esc(t.where)}</span>` : ''}</div>`
+      : m.n === 0 ? '<p class="ow-empty">Nothing it can’t read in your books right now.</p>' : ''}
+    ${door(m.n > 1 ? 'All ' + m.n + ' questions' : m.n === 1 ? 'Answer it' : 'Open It needs to know')}`, sig);
+    out.wire = (el)=> mgrBriefWireGo(el);
+    return out;
+  }
   let cards = '';
   try { cards = m.shown.map(it=> mgrAskCardHTML({ ...it, today: model.today })).join(''); }
   catch(e){ console.error('The Brief could not draw a question', e); cards = ''; }
-  const more = m.n != null && m.n > m.shown.length ? `All ${m.n} questions` : m.shown.length ? 'Open It needs to know' : m.n === 0 ? '' : 'Open It needs to know';
-  const sig = m.shown.map(it=> it.key).join(',') + '|' + (m.n == null ? '' : m.n);
+  const more = m.n != null && m.n > m.shown.length ? `All ${m.n} questions` : m.n === 0 && !m.shown.length ? '' : 'Open It needs to know';
   const body = (cards ? `<div class="mgr-k mgr-b-needk">${cards}</div>` : m.n === 0 ? '<p class="ow-empty">Nothing it can’t read in your books right now.</p>' : '')
-    + (more ? `<button type="button" class="mgr-b-more" data-mgrgo="ask">${more} →</button>` : '');
+    + door(more);
   const out = card(count, body, sig);
   out.wire = (el)=>{
     const root = el.querySelector('.mgr-b-needk');
     if(root){
-      try { mgrWireAsks(root, { ...model, items: m.shown, route: null }); } catch(e){ console.error('The Brief could not wire a question', e); }
+      try { mgrAskWireCards(root, { ...model, items: m.shown, route: null }); } catch(e){ console.error('The Brief could not wire a question', e); }
       /* The Ask section's place filter is that section's: every card here
          stays shown. */
       root.querySelectorAll('.mgr-k-q').forEach(q=>{ q.hidden = false; });
