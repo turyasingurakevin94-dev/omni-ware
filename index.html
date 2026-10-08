@@ -2893,6 +2893,8 @@
      is its fill, its number is the finding it belongs to. */
   .mgr-bed-u .mgr-u-pulse{padding:var(--ow-sp-12) var(--ow-sp-16) var(--ow-sp-16);overflow-x:auto;}
   .mgr-bed-u .mgr-u-pg{display:grid;grid-template-columns:168px repeat(14,minmax(34px,1fr));gap:var(--ow-sp-4);align-items:center;min-width:760px;}
+  /* The dates again, every fourth row -- for the phone only. */
+  .mgr-bed-u .mgr-u-pgr{display:none;}
   .mgr-bed-u .mgr-u-d{text-align:center;font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.15;padding-bottom:var(--ow-sp-4);}
   .mgr-bed-u .mgr-u-d b{display:block;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
   .mgr-bed-u .mgr-u-d-t,.mgr-bed-u .mgr-u-d-t b{color:var(--ow-oxide);}
@@ -2944,6 +2946,8 @@
     font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);font-weight:var(--ow-fw-700);}
   .mgr-bed-u .mgr-u-nb-x{background:var(--ow-crimson);}
   .mgr-bed-u .mgr-u-nb-g{background:var(--ow-verdigris);}
+  /* Neither a problem nor good news (goods arriving): a neutral number. */
+  .mgr-bed-u .mgr-u-nb-n{background:var(--ow-steel-800);}
   .mgr-bed-u .mgr-u-at-w{min-width:0;}
   .mgr-bed-u .mgr-u-at{display:block;font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);line-height:1.3;color:var(--ow-ink-900);}
   .mgr-bed-u .mgr-u-am{display:flex;align-items:center;gap:var(--ow-sp-6);margin-top:var(--ow-sp-4);font-size:var(--ow-t-12);color:var(--ow-ink-600);flex-wrap:wrap;}
@@ -2964,6 +2968,7 @@
   .mgr-bed-u .mgr-u-kc{margin-left:auto;display:inline-flex;align-items:center;height:22px;padding:0 var(--ow-sp-8);border-radius:var(--ow-r-pill);font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);}
   .mgr-bed-u .mgr-u-kc-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
   .mgr-bed-u .mgr-u-kc-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .mgr-bed-u .mgr-u-kc-note{background:var(--ow-rule-soft);color:var(--ow-ink-600);}
   .mgr-bed-u .mgr-u-dt{scroll-margin-top:var(--ow-sp-16);}
   .mgr-bed-u .mgr-u-db{padding:var(--ow-sp-16);display:flex;flex-direction:column;gap:var(--ow-sp-16);}
   .mgr-bed-u .mgr-u-dt-t{margin:0;font-size:var(--ow-t-16);font-weight:var(--ow-fw-700);line-height:1.3;color:var(--ow-ink-900);}
@@ -2975,6 +2980,8 @@
   .mgr-bed-u .mgr-u-rar > span.mgr-u-rar-at{color:var(--ow-ink-900);}
   .mgr-bed-u .mgr-u-rar > span.mgr-u-rar-at > i{background:var(--ow-crimson);}
   .mgr-bed-u .mgr-u-rar-good > span.mgr-u-rar-at > i{background:var(--ow-verdigris);}
+  .mgr-bed-u .mgr-u-rar-note > span.mgr-u-rar-on > i{background:var(--ow-steel-400);}
+  .mgr-bed-u .mgr-u-rar-note > span.mgr-u-rar-at > i{background:var(--ow-steel-950);}
   .mgr-bed-u .mgr-u-imp{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--ow-rule);border:1px solid var(--ow-rule);border-radius:var(--ow-r-10);overflow:hidden;}
   .mgr-bed-u .mgr-u-imp > div{background:var(--ow-paper);padding:var(--ow-sp-10) var(--ow-sp-12);display:flex;flex-direction:column;gap:3px;min-width:0;}
   .mgr-bed-u .mgr-u-imp b{font-size:var(--ow-t-16);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);
@@ -3744,8 +3751,24 @@
     .mgr-bed-u .mgr-u-imp .mgr-u-mi{white-space:normal;}
     /* The open finding first, the rest of the list under it. */
     .mgr-bed-u .mgr-u-dt{order:-1;scroll-margin-top:60px;}
-    .mgr-bed-u .mgr-u-l{grid-column:1 / -1;margin:var(--ow-sp-8) 0 0;padding:0;min-height:var(--ow-tap);font-size:var(--ow-t-14);}
+    .mgr-bed-u .mgr-u-l{grid-column:1 / -1;margin:var(--ow-sp-12) 0 0;padding:0;min-height:var(--ow-tap);font-size:var(--ow-t-14);}
     .mgr-bed-u .mgr-u-c{height:24px;border-radius:var(--ow-r-4);}
+    /* The days stay in view: the eleven rows run two screens tall, so
+       the dates come again above every fourth row -- a cell far down
+       always has its date within the screen. (Not sticky: the phone's
+       html, body{overflow-x:hidden} makes the body a scroller that never
+       scrolls, and a sticky strip would never move.) */
+    .mgr-bed-u .mgr-u-pgr{display:grid;grid-column:1 / -1;grid-template-columns:repeat(14,minmax(0,1fr));gap:2px;
+      margin-top:var(--ow-sp-12);padding-top:var(--ow-sp-6);border-top:1px solid var(--ow-rule-soft);}
+    .mgr-bed-u .mgr-u-pgr .mgr-u-d{padding-bottom:0;}
+    /* A numbered cell is 24px to the eye and a thumb's 44 to the touch:
+       the target reaches 6px up into the gap under the row's name, 14px
+       down into the margin above the next, and 11px each side over the
+       neighbouring (inert) cells -- halved to the gap where the
+       neighbour is another numbered cell, so neither steals the other. */
+    .mgr-bed-u button.mgr-u-c::before{content:'';position:absolute;top:-6px;bottom:-14px;left:-11px;right:-11px;}
+    .mgr-bed-u button.mgr-u-c + button.mgr-u-c::before{left:-1px;}
+    .mgr-bed-u button.mgr-u-c:has(+ button.mgr-u-c)::before{right:-1px;}
     .mgr-bed-u .mgr-u-c-tn::after{top:2px;right:2px;width:5px;height:5px;}
     .mgr-bed-u .mgr-u-c-on{outline-offset:1px;}
     .mgr-bed-u .mgr-u-nr{grid-column:1 / -1;padding:var(--ow-sp-6) var(--ow-sp-10);}
@@ -143222,8 +143245,9 @@ function mgrPaintUnusual(gen, ctx){
 
      sales            invoices by the day they were invoiced (dayPulse's
                       own reading: anInvoiceTotals, voided ones out)
-     cash in          money in, less the shop's own transfers and money
-                      found on a count -- neither is anybody paying it
+     cash in          money in, less the shop's own transfers, money found
+                      on a count, and the owner's own money and loans --
+                      none of them is anybody paying it
      quotes created   quotes by the day they were made, counter sales out
                       (a counter sale is never quoted)
      WhatsApp orders  orders taken from a chat (originWa), by the day made
@@ -143274,6 +143298,17 @@ const MGR_PULSE_MILD = 1.5;
 const MGR_PULSE_TILL_MIN = 5000;
 const MGR_PULSE_FUEL_MIN = 5000;
 const MGR_PULSE_COUNT_MIN = 2;
+/* THE YEAR, AS A SECOND ROUTE. Eight same weekdays are few: one or two
+   big days among them widen the spread until even a day with nothing
+   sold sits inside it. So the year is asked too -- how many of the same
+   weekdays on the books (up to 52, at least half a year of them) were
+   at least this far out the same way. None, or no more than 1 in 25, and
+   the day is out of the ordinary however wide the eight ran (a gap worth
+   a sentence still needed); no more than 1 in 10, and it is at least
+   higher or lower than usual, never "normal for the weekday". */
+const MGR_PULSE_YEAR_MIN = 26;
+const MGR_PULSE_YEAR_RARE = 0.04;
+const MGR_PULSE_YEAR_LEAN = 0.1;
 const MGR_PULSE_SIGNALS = [
   { id: 'sales', label: 'Sales', dept: 'sales', unit: 'money', dirs: ['low', 'high'] },
   { id: 'cash_in', label: 'Cash in', dept: 'finance', unit: 'money', dirs: ['low', 'high'] },
@@ -143291,14 +143326,18 @@ const MGR_PULSE_SIGNALS = [
    is good news, for every row and both directions, written down once so
    the grid, the list and the detail can never disagree. More trade,
    cash, orders, deliveries and margin is good news; fewer is a problem.
-   Money going out -- purchases either way (more spent, or the shelf not
-   refilled), fuel up, returns up, stock found short -- is a problem, and
-   a till out either way is one too: money found in a drawer is a sale
-   nobody wrote down. Fuel down and returns down are good news. */
+   Money lost -- fuel up, returns up, stock found short -- is a problem,
+   and a till out either way is one too: money found in a drawer is a
+   sale nobody wrote down. Fuel down and returns down are good news.
+   PURCHASES are neither ('note'): goods arriving turn cash into stock
+   and lose nothing by themselves, and a shelf not refilled has cost
+   nothing yet. A delivery day is a problem only where the books find
+   money paid above the line's last price (mgrPulseToneAt), and its
+   impact is then that sum, never the whole extra spend. */
 const MGR_PULSE_TONE = {
   sales: { high: 'good', low: 'bad' }, cash_in: { high: 'good', low: 'bad' },
   quotes: { high: 'good', low: 'bad' }, wa_orders: { high: 'good', low: 'bad' },
-  purchases: { high: 'bad', low: 'bad' }, returns: { high: 'bad', low: 'good' },
+  purchases: { high: 'note', low: 'note' }, returns: { high: 'bad', low: 'good' },
   till: { high: 'bad', low: 'bad' }, fuel: { high: 'bad', low: 'good' },
   deliveries: { high: 'good', low: 'bad' }, margin: { high: 'good', low: 'bad' },
   stock_short: { high: 'bad', low: 'good' },
@@ -143318,6 +143357,21 @@ function mgrPulseBand(z, k, n){
   const fb = f > 0.25 ? 0 : f > 0.1 ? 1 : f > 0.04 ? 2 : 3;
   return Math.min(zb, fb);
 }
+/* The year's own step, for a day out of the ordinary by the year alone:
+   its spreads were widened by the eight, so they are not asked. */
+function mgrPulseYearBand(k, n){
+  if(!(n > 0)) return null;
+  if(k === 0) return 4;
+  const f = k / n;
+  return f > 0.25 ? 0 : f > 0.1 ? 1 : f > 0.04 ? 2 : 3;
+}
+/* A finding's tone on its day: the table's, except a purchases day with
+   money paid above the last price on file, which is a problem. */
+function mgrPulseToneAt(books, id, dir, d){
+  const t = (MGR_PULSE_TONE[id] || {})[dir] || 'bad';
+  if(id === 'purchases' && dir === 'high' && books && books.risesOn && books.risesOn(d).sum > 0) return 'bad';
+  return t;
+}
 function mgrPulseSig(id){ return MGR_PULSE_SIGNALS.find(s=> s.id === id) || null; }
 function mgrPulseMinGap(id, floor){
   if(id === 'till') return MGR_PULSE_TILL_MIN;
@@ -143335,6 +143389,10 @@ function mgrPulseQuartiles(xs){
   return [at(0.25), at(0.75)];
 }
 const mgrPulseIsFuel = (c)=> /^fuel$/i.test(String(c == null ? '' : c).trim());
+/* The owner's own money and loans coming in: equity and borrowing, not
+   anybody paying the shop -- 'Owner Investment', 'Loan Received', or a
+   category of the shop's own that names the owner, capital or a loan. */
+const mgrPulseIsOwnMoney = (t)=> !!t && cashIsMoneyIn(t) && !cbIsTransfer(t) && /owner|capital|loan/i.test(String(t.category == null ? '' : t.category));
 function mgrPulseWeekdayIdx(d){ return new Date(String(d).slice(0, 10) + 'T12:00:00Z').getUTCDay(); }
 
 /* THE BOOKS, INDEXED BY DAY. Walked once per version of the books; each
@@ -143437,10 +143495,10 @@ function mgrPulseBooks(todayISO_){
     const invs = inv.get(d) || [], txs = tx.get(d) || [], logs = slog.get(d) || [], qs = made.get(d) || [], ds = done.get(d) || [];
     let sales = 0, profit = 0;
     invs.forEach(q=>{ const t = anInvoiceTotals(q); sales += t.sales; profit += t.profit; });
-    let cashIn = 0, short = 0, over = 0, fuel = 0;
+    let cashIn = 0, short = 0, over = 0, fuel = 0, ownIn = 0;
     txs.forEach(t=>{
       const a = Number(t.amount) || 0;
-      if(cashIsMoneyIn(t)){ if(cashIsCashOverage(t)) over += a; else if(!cbIsTransfer(t)) cashIn += a; }
+      if(cashIsMoneyIn(t)){ if(cashIsCashOverage(t)) over += a; else if(mgrPulseIsOwnMoney(t)) ownIn += a; else if(!cbIsTransfer(t)) cashIn += a; }
       else if(cashIsMoneyOut(t)){ if(cashIsCashShortage(t)) short += a; if(mgrPulseIsFuel(t.category)) fuel += a; }
     });
     /* A row with no cost anywhere adds nothing it can claim: it is
@@ -143478,7 +143536,7 @@ function mgrPulseBooks(todayISO_){
         till, fuel: fuelFrom && d >= fuelFrom ? Math.round(fuel) : null,
         deliveries: stageFrom && d >= stageFrom ? ds.length : null,
         margin: sales > 0 ? profit / sales : null, stock_short: shortStock },
-      invoices: invs.length, credits: cnDay.length,
+      invoices: invs.length, credits: cnDay.length, own: { cash_in: Math.round(ownIn) },
       uncosted: { purchases: purchasesFrom && d >= purchasesFrom ? buysUncosted : 0, stock_short: shortUncosted } };
     cache.set(d, r);
     return r;
@@ -143502,6 +143560,28 @@ function mgrPulseBooks(todayISO_){
     return [...by.values()].map(g=> ({ ...g, total: Math.round(g.total), lines: g.lines.sort((a, b)=> (b.v || 0) - (a.v || 0)) }))
       .sort((a, b)=> b.total - a.total);
   };
+  /* PRICES PAID ABOVE THE LAST, a day's deliveries at a time: each line
+     that carries its own recorded cost (never today's FIFO cost standing
+     in for a missing one) against the line's last delivery before the
+     day; 5% or more above it is a rise, and the rise is qty x (cost -
+     last cost). theirs is the largest rise against the SAME supplier's
+     own last price -- the one a supplier can be asked about. */
+  const riseCache = new Map();
+  const risesOn = (d)=>{
+    if(riseCache.has(d)) return riseCache.get(d);
+    const own = (l)=>{ const tl = tail(l); return tl && tl.cost != null && tl.cost !== '' ? Number(tl.cost) : null; };
+    const before = (a, same)=> rows.filter(x=> x && x !== a.l && x.key === a.l.key && x.type === 'restock' && x.cost != null && String(x.date || '') < d
+        && (!same || (isBuy(x) && String(x.supplierId || '') === String(a.l.supplierId))))
+      .sort((x, y)=> String(y.date).localeCompare(String(x.date)))[0];
+    const up = (a, prev)=> prev && Number(prev.cost) > 0 && a.c >= Number(prev.cost) * 1.05;
+    const byRise = (x, y)=> (y.c - Number(y.prev.cost)) * y.q - (x.c - Number(x.prev.cost)) * x.q;
+    const costed = deliveriesOn(d).flatMap(g=> g.lines).filter(a=> a.c != null && own(a.l) != null);
+    const all = costed.map(a=>{ const prev = before(a, false); return up(a, prev) ? { ...a, prev } : null; }).filter(Boolean).sort(byRise);
+    const theirs = costed.map(a=>{ const prev = a.l.supplierId ? before(a, true) : null; return up(a, prev) ? { ...a, prev } : null; }).filter(Boolean).sort(byRise)[0] || null;
+    const out = { all, theirs, sum: Math.round(all.reduce((n, a)=> n + (a.c - Number(a.prev.cost)) * a.q, 0)) };
+    riseCache.set(d, out);
+    return out;
+  };
   /* A sum worth a sentence: the unusual detector's own floor, 5% of what
      this shop typically sells in a day and never under 20,000. */
   const recent = [];
@@ -143509,7 +143589,7 @@ function mgrPulseBooks(todayISO_){
   const floor = Math.max(20000, Math.round(0.05 * (recent.length ? unusualSpread(recent).mid : 0)));
   const sum30 = (end)=>{ const start = anShiftDate(end, -29); let amount = 0, count = 0;
     cnList.forEach(x=>{ if(x.d >= start && x.d <= end){ amount += x.amount; count += x.count; } }); return { amount: Math.round(amount), count }; };
-  return { today: T, read, floor, firstDay, stageFrom, fuelFrom, fuelCat, purchasesFrom, sum30, deliveriesOn,
+  return { today: T, read, floor, firstDay, stageFrom, fuelFrom, fuelCat, purchasesFrom, sum30, deliveriesOn, risesOn,
     inv, made, tx, slog, cns, done, firstBuy, tail, isBuy, unitCost, counts };
 }
 
@@ -143586,6 +143666,8 @@ function mgrPulseJudge(books, normals, answered){
         : 'not recorded' };
       const uncosted = (r.uncosted && r.uncosted[sig.id]) || 0;
       if(uncosted) base.atLeast = uncosted;
+      /* What the row left out, said on the cell: the owner's own money. */
+      if(r.own && r.own[sig.id] > 0) base.own = r.own[sig.id];
       const past = pastOf(d, sig.id, UNUSUAL_WEEKS);
       if(past.length < UNUSUAL_MIN) return { ...base, s: isToday ? 't' : 'q', past };
       /* Margin is a question only on a day that sold something like a
@@ -143637,6 +143719,14 @@ function mgrPulseJudge(books, normals, answered){
          it is still above, at or under usual nobody can say. */
       if(uncosted && dir !== 'high')
         return { ...base, s: isToday ? 't' : 'u', past, usual: sp.mid, why: `${uncosted} ${sig.id === 'purchases' ? (uncosted === 1 ? 'delivery line has' : 'delivery lines have') : (uncosted === 1 ? 'counted line has' : 'counted lines have')} no cost on file — at least ${mgrShortUGX(v)}, not known how much more` };
+      /* How many of the year's same weekdays were at least this far out
+         the same way (k of n), read once a cell needs it. */
+      const year = ()=>{
+        if(out.n != null) return;
+        const hist = pastOf(d, sig.id, 52);
+        out.k = hist.filter(p=> dir === 'high' ? p.value - sp.mid >= gap : sp.mid - p.value >= gap).length;
+        out.n = hist.length;
+      };
       let extreme = !!dir && Math.abs(z) >= UNUSUAL_Z && gap >= min && sig.dirs.includes(dir);
       if(extreme){
         /* COMMON IS NOT OUT OF THE ORDINARY. Three spreads from the last
@@ -143644,27 +143734,45 @@ function mgrPulseJudge(books, normals, answered){
            year's same weekdays were at least this far out the same way,
            the year says it happens, and it is drawn as higher or lower
            than usual instead. */
-        const hist = pastOf(d, sig.id, 52);
-        out.k = hist.filter(p=> dir === 'high' ? p.value - sp.mid >= gap : sp.mid - p.value >= gap).length;
-        out.n = hist.length;
+        year();
         out.band = mgrPulseBand(z, out.k, out.n);
         if(!(out.band > 0)) extreme = false;
       }
+      /* THE YEAR'S OWN ROUTE (MGR_PULSE_YEAR_MIN): a day the year all but
+         never saw is out of the ordinary, or at least off usual, however
+         wide the last eight ran. Only where they did run: where every one
+         was the same (the spread collapses) any day off it is "never
+         before", and the gap floor carries the judgement as it does. */
+      let lean = false;
+      if(!extreme && dir && !collapsed && gap >= min / 2){
+        year();
+        if(out.n >= MGR_PULSE_YEAR_MIN){
+          const fr = out.k / out.n;
+          if(fr <= MGR_PULSE_YEAR_RARE && gap >= min && sig.dirs.includes(dir)){
+            extreme = true; out.band = mgrPulseYearBand(out.k, out.n); out.byYear = true;
+          } else if(fr <= MGR_PULSE_YEAR_LEAN) lean = true;
+        }
+      }
+      const toneOf = dir ? mgrPulseToneAt(books, sig.id, dir, d) : null;
+      /* A finding that is neither a problem nor good news (purchases) is
+         drawn as what it is -- higher or lower than usual -- and carries
+         its number. */
+      const sOf = ()=> toneOf === 'good' ? 'g' : toneOf === 'note' ? (dir === 'high' ? 'h' : 'l') : 'x';
       /* TODAY IS NOT OVER. A day still trading is never a slow day at
          noon; only a row that can only grow, gone past usual already,
          is out of the ordinary before the close. */
       if(isToday){
-        if(extreme && sig.grows && dir === 'high') return { ...out, s: tone.high === 'good' ? 'g' : 'x', extreme: true };
+        if(extreme && sig.grows && dir === 'high') return { ...out, s: sOf(), extreme: true, tone: toneOf };
         return { ...out, s: 't' };
       }
-      const mild = !!dir && Math.abs(z) >= MGR_PULSE_MILD && gap >= min / 2;
+      const mild = (!!dir && Math.abs(z) >= MGR_PULSE_MILD && gap >= min / 2) || lean;
       if(!extreme && !mild) return { ...out, s: 'n' };
       if(!said(d, sig.id)){
         const n = rules.find(x=> mgrPulseNormalApplies(x, sig.id, d, v, sp.mid));
         if(n){ used.set(n.id, (used.get(n.id) || 0) + 1); return { ...out, s: 'tn', normal: n }; }
       }
       if(!extreme) return { ...out, s: dir === 'high' ? 'h' : 'l' };
-      return { ...out, s: tone[dir] === 'good' ? 'g' : 'x', extreme: true };
+      return { ...out, s: sOf(), extreme: true, tone: toneOf };
     });
     return { sig, state, cells };
   });
@@ -143690,7 +143798,11 @@ function mgrPulseJudge(books, normals, answered){
     const per = cells.map(c=> ({ date: c.date, value: c.v, usual: c.usual, low: c.low, high: c.high, z: c.z, gap: c.gap,
       k: c.k, n: c.n, band: c.band, monthly: c.monthly || null, past: c.past }));
     const top = per.reduce((a, b)=> (b.band > a.band || (b.band === a.band && Math.abs(b.z) >= Math.abs(a.z))) ? b : a, per[0]);
-    const tone = MGR_PULSE_TONE[sig.id][g.dir];
+    /* The tone of the day (mgrPulseToneAt); a repeat is a problem if any
+       of its days is. Money actually lost on a delivery day is kept. */
+    const tones = cells.map(c=> c.tone || MGR_PULSE_TONE[sig.id][g.dir]);
+    const tone = tones.includes('bad') ? 'bad' : tones[tones.length - 1];
+    const lost = sig.id === 'purchases' && tone === 'bad' && books.risesOn ? cells.reduce((n, c)=> n + books.risesOn(c.date).sum, 0) : null;
     /* THE GAP. Days of a repeat (the till, fuel, counts) are separate
        days, so their gaps add. A month of returns is not: each flagged
        day's thirty days overlap the next one's, and adding them would
@@ -143699,7 +143811,7 @@ function mgrPulseJudge(books, normals, answered){
     const gap = last.monthly ? last.monthly.sum - last.monthly.usual : per.reduce((n, p)=> n + p.gap, 0);
     return { metric: sig.id, sig, dir: g.dir, tone, date: last.date, days: cells.map(c=> c.date),
       value: last.v, usual: last.usual, low: last.low, high: last.high,
-      gap, z: top.z, band: top.band, k: top.k, n: top.n, atLeast: cells.some(c=> c.atLeast) || false,
+      gap, lost, z: top.z, band: top.band, k: top.k, n: top.n, atLeast: cells.some(c=> c.atLeast) || false,
       monthly: last.monthly || null, per, weekday: mgrPulseWeekdayIdx(top.date), rarityDate: top.date };
   });
   findings.sort((a, b)=> (b.band - a.band) || ((a.tone === 'bad' ? 0 : 1) - (b.tone === 'bad' ? 0 : 1))
@@ -143773,8 +143885,14 @@ function mgrPulseRange(sig, lo, hi){
   return a + '–' + b;
 }
 /* The impact on the row: the gap from usual, signed by what it means --
-   a problem costs, good news brings. */
-function mgrPulseImpact(f){ return (f.tone === 'bad' ? '−' : '+') + mgrPulseGapFig(f.sig, f.gap); }
+   a problem costs, good news brings. A finding that is neither (goods
+   arriving) is a size, unsigned; a delivery day made a problem by a
+   price rise costs what was paid above the last price, not its gap. */
+function mgrPulseImpact(f){
+  if(f.tone === 'note') return mgrPulseGapFig(f.sig, f.gap) + (f.dir === 'low' ? ' below usual' : ' above usual');
+  if(f.tone === 'bad' && f.lost > 0) return '−' + mgrShortUGX(f.lost);
+  return (f.tone === 'bad' ? '−' : '+') + mgrPulseGapFig(f.sig, f.gap);
+}
 function mgrPulseRarity(f){
   if(f.band === 4) return 'never before';
   if(f.monthly) return `${f.k} month${f.k === 1 ? '' : 's'} in ${f.n}`;
@@ -143958,14 +144076,13 @@ function mgrPulseReasons(f, books, reading){
       broken.length ? { customerId: String(broken[0].customerId), amount: Number(broken[0].amount) || null } : null);
     else add('A promised payment did not come', 'none', 'Nobody had promised to pay that day.');
   } else if(k === 'cash_in.high'){
-    const own = txs.filter(t=> cashIsMoneyIn(t) && /owner|capital|loan/i.test(String(t.category || '')) && !cbIsTransfer(t));
-    add('The owner’s own money or a loan came in', own.length ? 'found' : 'none', own.length
-      ? own.slice(0, 2).map(t=> `${t.category} ${mgrShortUGX(t.amount)}`).join(', ') + '.' : 'No owner’s money or loan that day.');
+    /* The owner's own money and loans are not in the row (mgrPulseIsOwnMoney),
+       so they are never offered as why it was high. */
     /* Collections and cash sales, each against what a usual one of the
        weekday takes: found when the day's extra covers half the gap. */
     const usualOf = (fn)=> pastDays.length ? unusualSpread(pastDays.map(p=> fn(p.date))).mid : null;
     const debtOn = (day)=> (B.tx.get(day) || []).filter(t=> cashIsDebtCollection(t));
-    const saleOn = (day)=> (B.tx.get(day) || []).filter(t=> cashIsTradingIncome(t) && !cashIsDebtCollection(t) && !cbIsTransfer(t));
+    const saleOn = (day)=> (B.tx.get(day) || []).filter(t=> cashIsTradingIncome(t) && !cashIsDebtCollection(t) && !cbIsTransfer(t) && !mgrPulseIsOwnMoney(t));
     /* Who paid: the invoice the money belongs to when the entry names
        one, else the words after the payment screens' own "Payment — ". */
     const who = (t)=>{ const m = /INV-0*(\d+)/.exec(String(t.description || ''));
@@ -144038,21 +144155,14 @@ function mgrPulseReasons(f, books, reading){
       const empty = arr.filter(a=> (Number(a.l.qtyAfter) || 0) - (Number(a.l.delta) || 0) <= 0);
       add('Lines that had run out were restocked', empty.length ? 'found' : 'none', empty.length ? `${empty.length} line${empty.length === 1 ? '' : 's'} came in onto an empty shelf.` : 'Every line restocked still had some on the shelf.');
       /* A rise is read only off a delivery that carries its own recorded
-         cost -- never today's FIFO cost standing in for a missing one. */
-      const own = (l)=>{ const tl = B.tail(l); return tl && tl.cost != null && tl.cost !== '' ? Number(tl.cost) : null; };
-      const before = (a, same)=> (data.stockLog || []).filter(x=> x !== a.l && x.key === a.l.key && x.type === 'restock' && x.cost != null && String(x.date || '') < d
-          && (!same || (B.isBuy(x) && String(x.supplierId || '') === String(a.l.supplierId))))
-        .sort((x, y)=> String(y.date).localeCompare(String(x.date)))[0];
-      const up = (a, prev)=> prev && Number(prev.cost) > 0 && a.c >= Number(prev.cost) * 1.05;
-      const byRise = (x, y)=> (y.c - Number(y.prev.cost)) * y.q - (x.c - Number(x.prev.cost)) * x.q;
-      const costed = arr.filter(a=> a.c != null && own(a.l) != null);
-      const rises = costed.map(a=>{ const prev = before(a, false); return up(a, prev) ? { ...a, prev } : null; }).filter(Boolean).sort(byRise);
-      /* What a supplier is asked about is their own rise: this delivery
-         against the last price THE SAME SUPPLIER charged for the line. A
-         rise read only against another supplier's price drafts nothing. */
-      const theirs = a=> a.l.supplierId ? before(a, true) : null;
-      const rTop = costed.map(a=>{ const prev = theirs(a); return up(a, prev) ? { ...a, prev } : null; }).filter(Boolean).sort(byRise)[0];
-      add('Prices paid went up', rises.length ? 'found' : 'none', rises.length ? `${rises.length} line${rises.length === 1 ? '' : 's'} cost 5% or more above the last delivery: ${rises[0].l.label || rises[0].l.key}.` : 'No line cost more than its last delivery.',
+         cost -- never today's FIFO cost standing in for a missing one --
+         by the books' own reading (risesOn), the one the finding's tone
+         and impact come from. What a supplier is asked about is their
+         own rise: this delivery against the last price THE SAME SUPPLIER
+         charged for the line. A rise read only against another
+         supplier's price drafts nothing. */
+      const R0 = B.risesOn(d), rises = R0.all, rTop = R0.theirs;
+      add('Prices paid went up', rises.length ? 'found' : 'none', rises.length ? `${rises.length} line${rises.length === 1 ? '' : 's'} cost 5% or more above the last delivery: ${rises[0].l.label || rises[0].l.key} — ${mgrShortUGX(R0.sum)} paid above the last price${rises.length === 1 ? '' : 's'}.` : 'No line cost more than its last delivery.',
         rises.length && rTop ? { supplierId: rTop.l.supplierId || null, line: rTop.l.label || rTop.l.key, qty: rTop.q, cost: rTop.c, prev: Number(rTop.prev.cost), prevOn: String(rTop.prev.date).slice(0, 10) } : null);
     } else {
       const late = Object.keys(data.presetBuyOrders || {}).map(id=> buyOrderFor(id, d)).filter(o=> o && o.expectedOn && o.expectedOn <= d && o.state !== 'cancelled' && (!o.closedOn || o.closedOn > d));
@@ -144147,8 +144257,13 @@ function mgrPulseReasons(f, books, reading){
          one: found only where the Deliveries row says higher than usual. */
       const dcell = (day)=>{ const row = reading && reading.rows.find(x=> x.sig.id === 'deliveries'); return row ? row.cells.find(c=> c.date === day) || null : null; };
       const judgedDays = f.days.map(day=> ({ day, c: dcell(day) })).filter(x=> x.c && x.c.v != null && x.c.usual != null && ['n', 'h', 'l', 'g', 'x', 'tn'].includes(x.c.s));
-      const more = judgedDays.filter(x=> ['h', 'g', 'x'].includes(x.c.s) && x.c.dir === 'high');
-      const fig = (x)=> `${mgrPulseDate(x.day)}: ${x.c.v} deliver${x.c.v === 1 ? 'y' : 'ies'}, a usual ${mgrPulseWd(x.day, true)} has ${Math.round(x.c.usual)}`;
+      /* More, by the row's own judgement or by at least the count gap
+         (two) over usual: twice a usual Tuesday's three is more, even
+         where the row's spread holds it. */
+      const more = judgedDays.filter(x=> (['h', 'g', 'x'].includes(x.c.s) && x.c.dir === 'high') || x.c.v - x.c.usual >= MGR_PULSE_COUNT_MIN);
+      const fig = (x)=>{ const u = Math.round(x.c.usual), wd = mgrPulseWd(x.day, true), v = x.c.v, nn = `${mgrPulseDate(x.day)}: ${v} deliver${v === 1 ? 'y' : 'ies'}`;
+        if(more.includes(x) || v < u) return v < u ? `${nn} — fewer than a usual ${wd}’s ${u}` : `${nn}, a usual ${wd} has ${u}`;
+        return v === u ? `${nn}, as on a usual ${wd}` : `${nn} — a usual ${wd} has ${u}, within one of it`; };
       if(!judgedDays.length) add('More deliveries than usual', 'open', f.days.every(day=> dv(day) == null) ? 'Deliveries were not recorded on those days.' : 'Too few weeks of deliveries to say what is usual.');
       else add('More deliveries than usual', more.length ? 'found' : 'none', (more.length ? more : judgedDays).slice(0, 2).map(fig).join('; ') + '.');
       /* Bought for several days: no fuel on the two finished days after.
@@ -144197,7 +144312,7 @@ const MGR_PULSE_ANSWERS = {
   'sales.low': [['Not entered yet', 'job'], ['It rained', 'note', 'rain'], ['{wd}s run lower now', 'rule', 'every'], ['Something else', 'once']],
   'sales.high': [['A big order came in', 'once'], ['Late sales entered that day', 'once'], ['Month-end pay days', 'rule', 'month_end'], ['{wd}s run higher now', 'rule', 'every']],
   'cash_in.low': [['Customers paid late', 'once'], ['Receipts not entered yet', 'once'], ['{wd}s run lower now', 'rule', 'every'], ['Something else', 'once']],
-  'cash_in.high': [['Debts were paid', 'once'], ['My own money or a loan', 'once'], ['Month-end pay days', 'rule', 'month_end'], ['Not sure', 'once']],
+  'cash_in.high': [['Debts were paid', 'once'], ['More cash sales', 'once'], ['Month-end pay days', 'rule', 'month_end'], ['Not sure', 'once']],
   'quotes.low': [['Fewer people asked', 'once'], ['Sold at the counter instead', 'once'], ['{wd}s run lower now', 'rule', 'every'], ['Not sure', 'once']],
   'quotes.high': [['One customer, many quotes', 'once'], ['New customers asking', 'once'], ['{wd}s run higher now', 'rule', 'every'], ['Not sure', 'once']],
   'wa_orders.high': [['Someone sent them to us', 'note', 'a referral'], ['A post went out', 'once'], ['{wd}s run higher now', 'rule', 'every'], ['Not sure', 'once']],
@@ -144414,6 +144529,9 @@ function mgrPulseAddFuel(){
 }
 
 /* ---- Drawn ---- */
+/* A recorded cell with too few weeks behind it ('q') wears the hollow
+   swatch of one not recorded: neither can be judged, and the legend
+   names both. */
 const MGR_PULSE_CELL_WORD = { n: 'normal for the weekday', h: 'higher than usual', l: 'lower than usual', x: 'out of the ordinary — a problem',
   g: 'out of the ordinary — good news', c: 'closed — nothing on the books', t: 'today so far', tn: 'taught normal', u: 'not recorded', q: 'too few weeks to judge' };
 const MGR_PULSE_AVATAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20.5v-.5a5.5 5.5 0 0 1 5.5-5.5h4a5.5 5.5 0 0 1 5.5 5.5v.5"/><path d="M12 14.5l-1 1.8.8 3.2h.4l.8-3.2z"/></svg>';
@@ -144440,8 +144558,10 @@ function mgrPulseVerdict(r){
 }
 function mgrPulseBandHTML(r){
   const n = r.findings.length, good = r.findings.filter(f=> f.tone === 'good').length;
-  /* Answers not read: which problems wait is not known, never counted. */
-  const open = mgrPulseAnswersErr ? null : r.findings.filter(f=> f.tone === 'bad' && !mgrUnusualAnswers.get(mgrUnusualKey(f))).length;
+  /* Answers not read: which problems wait is not known, never counted.
+     Waiting: every finding not good news (problems, and the neutral ones
+     such as a big delivery) that the owner has not explained. */
+  const open = mgrPulseAnswersErr ? null : r.findings.filter(f=> f.tone !== 'good' && !mgrUnusualAnswers.get(mgrUnusualKey(f))).length;
   const month = r.today.slice(0, 7);
   const monthName = new Date(r.today + 'T12:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', month: 'short' });
   const known = managerNotesTable && mgrPulseNormals.loaded && !mgrPulseNormals.error;
@@ -144463,15 +144583,20 @@ function mgrPulseBandHTML(r){
 }
 function mgrPulseCellTitle(row, c){
   const s = row.sig, when = mgrPulseDate(c.date);
-  const word = c.why || MGR_PULSE_CELL_WORD[c.s] || '';
+  const word = c.why || (c.extreme && c.tone === 'note' ? `out of the ordinary — ${c.dir === 'low' ? 'less' : 'more'} bought than usual, not a loss on its own` : MGR_PULSE_CELL_WORD[c.s]) || '';
   const val = c.v == null || c.s === 'u' ? '' : ` · ${c.atLeast ? 'at least ' : ''}${mgrPulseFig(s, c.v)}${c.usual != null ? ', usually ' + mgrPulseFig(s, c.usual) : ''}`;
+  const own = c.own > 0 ? ` · the owner’s own money and loans left out: ${mgrShortUGX(c.own)}` : '';
   const taught = c.normal ? ` — you taught me: ${c.normal.note || ''}` : '';
-  return `${s.label} · ${when} · ${word}${val}${taught}`;
+  return `${s.label} · ${when} · ${word}${val}${own}${taught}`;
 }
+const MGR_PULSE_HEAD_EVERY = 4;
 function mgrPulseGridHTML(r, sel){
   const head = r.days.map(d=> `<span class="mgr-u-d${d === r.today ? ' mgr-u-d-t' : ''}"><b>${Number(d.slice(8, 10))}</b>${d === r.today
     ? `<span class="mgr-u-dl">today</span><span class="mgr-u-ds">${esc(mgrPulseWd(d))}</span>` : esc(mgrPulseWd(d))}</span>`).join('');
-  const rows = r.rows.map(row=>{
+  /* On the phone the dates come again above every fourth row (a visual
+     repeat: the table's own head is the row of days above). */
+  const again = `<div class="mgr-u-pgr" aria-hidden="true">${head}</div>`;
+  const rows = r.rows.map((row, i)=> (i && i % MGR_PULSE_HEAD_EVERY === 0 ? again : '') + (()=>{
     const s = row.sig, on = mgrPulseSignal === s.id;
     const label = `<button type="button" class="mgr-u-l${on ? ' mgr-u-l-on' : ''}" data-pulse-sig="${s.id}" aria-pressed="${on}" title="${esc(on ? 'Show every finding' : 'Show only ' + s.label.toLowerCase())}">${mgrPulseMono(s.dept)} <span>${esc(s.label)}</span></button>`;
     if(s.id === 'fuel' && row.state !== 'ok') return label + `<span class="mgr-u-nr">${row.state === 'nocat'
@@ -144485,12 +144610,12 @@ function mgrPulseGridHTML(r, sel){
       return c.num ? `<button type="button" class="${cls}" data-pulse-pick="${esc(r.findings[c.num - 1] ? mgrUnusualKey(r.findings[c.num - 1]) : '')}" title="${t}" aria-label="${t}">${c.num}</button>`
         : `<span class="${cls}" title="${t}"></span>`;
     }).join('');
-  }).join('');
+  })()).join('');
   const L = (cls, w)=> `<span><i class="mgr-u-c mgr-u-c-${cls}"></i>${w}</span>`;
   return `<section class="ow-pan mgr-u-pan" aria-label="Pulse">
     <div class="mgr-u-ph"><span class="mgr-u-mi">Pulse</span><span class="mgr-u-pt">${esc(mgrPulseCap(mgrPulseWord(r.rows.length)))} signals, ${esc(mgrPulseWord(r.days.length))} days — measured against this shop’s own normal for that weekday</span></div>
     <div class="mgr-u-pulse"><div class="mgr-u-pg" role="table" aria-label="Signals by day"><span class="mgr-u-corner"></span>${head}${rows}</div></div>
-    <div class="mgr-u-lg">${L('n', 'normal for the weekday')}${L('h', 'higher than usual')}${L('l', 'lower than usual')}${L('x', 'out of the ordinary — a problem')}${L('g', 'out of the ordinary — good news')}${L('tn', 'taught normal')}${L('c', 'closed')}${L('u', 'not recorded')}</div>
+    <div class="mgr-u-lg">${L('n', 'normal for the weekday')}${L('h', 'higher than usual')}${L('l', 'lower than usual')}${L('x', 'out of the ordinary — a problem')}${L('g', 'out of the ordinary — good news')}${L('tn', 'taught normal')}${L('c', 'closed')}${L('u', 'not recorded or too new to judge')}</div>
   </section>`;
 }
 function mgrPulseStatus(f){
@@ -144512,7 +144637,7 @@ function mgrPulseListHTML(r, list, sel){
   const rows = list.map(f=>{
     const [st, stc] = mgrPulseStatus(f), on = sel && f === sel;
     return `<button type="button" class="mgr-u-ar${on ? ' mgr-u-ar-on' : ''}" data-pulse-pick="${esc(mgrUnusualKey(f))}" aria-pressed="${!!on}">
-      <span class="mgr-u-nb mgr-u-nb-${f.tone === 'good' ? 'g' : 'x'}">${f.id}</span>
+      <span class="mgr-u-nb mgr-u-nb-${f.tone === 'good' ? 'g' : f.tone === 'note' ? 'n' : 'x'}">${f.id}</span>
       <span class="mgr-u-at-w"><span class="mgr-u-at">${esc(mgrPulseTitle(f))}</span><span class="mgr-u-am">${mgrPulseDeptChip(f.sig.dept)} ${esc(mgrPulseWhen(f))}</span></span>
       <span class="mgr-u-ir"><b>${esc(mgrPulseImpact(f))}</b>${esc(mgrPulseRarity(f))}</span>
       <span class="mgr-u-sw"><span class="mgr-u-st ${stc}">${esc(st)}</span></span>
@@ -144553,8 +144678,9 @@ function mgrPulseWhat(f, B){
       return `${invs.length} invoice${invs.length === 1 ? '' : 's'} on the day${u != null ? ` — a usual ${wd} has ${u}` : ''}, ${mgrShortUGX(r.v.sales)} sold${r.v.margin != null ? ` at ${Math.round(r.v.margin * 100)}% margin` : ''}.${big ? ` The largest: ${name(big)}, ${mgrShortUGX(anInvoiceTotals(big).sales)}.` : ''}`;
     }
     case 'cash_in': {
-      const ins = (B.tx.get(d) || []).filter(t=> cashIsMoneyIn(t) && !cbIsTransfer(t) && !cashIsCashOverage(t)).sort((a, b)=> b.amount - a.amount);
-      return `${ins.length} receipt${ins.length === 1 ? '' : 's'}, ${mgrShortUGX(r.v.cash_in)} in all, transfers between the shop’s own tills left out.${ins[0] ? ` The largest: ${ins[0].category || 'money in'}${ins[0].description ? ' — ' + String(ins[0].description).slice(0, 60) : ''}, ${mgrShortUGX(ins[0].amount)}.` : ''}`;
+      const ins = (B.tx.get(d) || []).filter(t=> cashIsMoneyIn(t) && !cbIsTransfer(t) && !cashIsCashOverage(t) && !mgrPulseIsOwnMoney(t)).sort((a, b)=> b.amount - a.amount);
+      const own = (r.own && r.own.cash_in) || 0;
+      return `${ins.length} receipt${ins.length === 1 ? '' : 's'}, ${mgrShortUGX(r.v.cash_in)} in all. Left out: transfers between the shop’s own tills, and the owner’s own money and loans${own ? ` (${mgrShortUGX(own)} that day)` : ''}.${ins[0] ? ` The largest: ${ins[0].category || 'money in'}${ins[0].description ? ' — ' + String(ins[0].description).slice(0, 60) : ''}, ${mgrShortUGX(ins[0].amount)}.` : ''}`;
     }
     case 'quotes': return `${r.v.quotes} quote${r.v.quotes === 1 ? '' : 's'} made at the desk that day, counter sales not counted.`;
     case 'wa_orders': return `${r.v.wa_orders} order${r.v.wa_orders === 1 ? '' : 's'} taken from WhatsApp chats that day.`;
@@ -144588,7 +144714,7 @@ const MGR_PULSE_ACT = {
   sales: ['day', 'Open {day}'], margin: ['day', 'Open {day}'], till: ['day', 'Open {day}'],
   returns: ['day', 'Open {day}'], cash_in: { low: ['analytics-debtors', 'Open the debtors'], high: ['cashbook', 'Open the cash book'] },
   fuel: ['cashbook', 'Open the cash book'], quotes: ['quote-saved', 'Open order tracking'], deliveries: ['quote-saved', 'Open order tracking'],
-  wa_orders: ['followups', 'Open the WhatsApp chats'], purchases: ['invoices', 'Open the bills'], stock_short: ['inventory', 'Open the stock log'],
+  wa_orders: ['followups', 'Open the WhatsApp chats'], purchases: ['purchase-invoices', 'Open the bills'], stock_short: ['stock-movements', 'Open the stock log'],
 };
 function mgrPulseAction(f){
   const e = MGR_PULSE_ACT[f.metric];
@@ -144680,7 +144806,7 @@ function mgrPulseDeed(f, B, reading, reasons){
     const p = mgrPulsePerson('customer', customerId), owes = mgrPulseOwes(customerId);
     return p && owes > 0 ? { kind: 'chase', key, label: `Chase ${p.name}’s ${U(owes)}`, customerId: p.id, owes, to: p, from } : null;
   };
-  const go = (tab, label, from)=> ({ kind: 'go', key, label, tab, from });
+  const go = (tab, label, from, search)=> search ? { kind: 'go', key, label, tab, from, search } : { kind: 'go', key, label, tab, from };
   const rule = (label, text, extra)=> ({ kind: 'rule', key, label, text, ...(extra || {}) });
   const k = f.metric + '.' + f.dir;
   let deed = null;
@@ -144737,7 +144863,7 @@ function mgrPulseDeed(f, B, reading, reasons){
     if(p){ const R = x.ref;
       deed = wa(p, `Ask ${p.name} to check the ${R.line} delivery`, `Hello ${p.name}, ${R.bookedQty} ${R.line} were booked in from you on ${long(R.bookedOn)}. Our count on ${long(R.countedOn)} found ${R.shortQty} fewer on the shelf than the book. Can you check that delivery?${sign}`, x.label); }
     const rc = !deed && rs.find(y=> y.label === 'A recount found them' && y.state === 'none' && y.ref);
-    if(rc) deed = go('inventory', `Recount ${rc.ref.line}`, 'No later count found the units');
+    if(rc) deed = go('stock-movements', `Recount ${rc.ref.line}`, 'No later count found the units', rc.ref.line);
   } else if(k === 'margin.low'){
     const x = found('Lines sold below what they cost');
     if(x && x.ref) deed = go('prices', `Check ${x.ref.line}’s price`, x.label);
@@ -144781,7 +144907,7 @@ function mgrPulseActionHTML(f, deed){
   if(d.kind === 'chase') return `<button type="button" class="btn btn-accent" data-pulse-chase="${esc(d.customerId)}">${esc(d.label)}</button>`;
   if(d.kind === 'rule') return `<button type="button" class="btn btn-accent" data-pulse-rule="${k}">${esc(d.label)}</button>`;
   if(d.kind === 'day') return `<button type="button" class="btn btn-accent" data-unusual-day="${esc(d.day)}">${esc(d.label)}</button>`;
-  return `<button type="button" class="btn btn-accent" data-pulse-go="${esc(d.tab)}">${esc(d.label)}</button>`;
+  return `<button type="button" class="btn btn-accent" data-pulse-go="${esc(d.tab)}"${d.search ? ` data-pulse-search="${esc(d.search)}"` : ''}>${esc(d.label)}</button>`;
 }
 /* A rule the owner kept for a finding: a normal of its own kind
    (condition 'house_rule'), which mgrPulseNormalRule never reads as a
@@ -144874,7 +145000,7 @@ function mgrPulseChaseOpen(id){
 function mgrPulseDetailHTML(r, f){
   if(!f) return '';
   const B = mgrPulseMemo && mgrPulseMemo.books;
-  const sig = f.sig, good = f.tone === 'good';
+  const sig = f.sig, good = f.tone === 'good', note = f.tone === 'note';
   const said = mgrUnusualAnswers.get(mgrUnusualKey(f));
   const answers = mgrPulseAnswerSet(f);
   const chosen = said ? answers.find(a=> a.label === said) || { label: said, learn: 'once' } : null;
@@ -144882,7 +145008,7 @@ function mgrPulseDetailHTML(r, f){
     ? mgrPulseActiveNormals().find(n=> n.sourceAnswerId != null && String(n.sourceAnswerId) === String(mgrPulseAnswerRows.get(mgrUnusualKey(f)))) : null;
   const scale = MGR_PULSE_SCALE.map((l, i)=> `<span class="${i === f.band ? 'mgr-u-rar-at' : i < f.band ? 'mgr-u-rar-on' : ''}"><i></i>${esc(l)}</span>`).join('');
   const reasons = B ? mgrPulseReasons(f, B, r) : [];
-  const gapLabel = { 'sales.low': 'Sales missing vs normal', 'sales.high': 'Sales above normal', 'cash_in.low': 'Cash in short of normal',
+  let gapLabel = { 'sales.low': 'Sales missing vs normal', 'sales.high': 'Sales above normal', 'cash_in.low': 'Cash in short of normal',
     'cash_in.high': 'Cash in above normal', 'quotes.low': 'Quotes short of normal', 'quotes.high': 'Quotes above normal',
     'wa_orders.low': 'Orders short of normal', 'wa_orders.high': 'Orders above normal', 'purchases.low': 'Bought below normal',
     'purchases.high': 'Bought above normal', 'returns.high': f.monthly ? 'Credited above a usual month' : 'Credited above normal', 'till.low': 'Short in total', 'till.high': 'Over in total',
@@ -144895,7 +145021,10 @@ function mgrPulseDetailHTML(r, f){
   } else if(f.monthly){ il2 = 'Credit notes, 30 days'; iv2 = `${f.monthly.count} (usual ${Math.round(f.monthly.usualCount || 0)})`; }
   else if(f.days.length > 1){ il2 = 'Days this far out'; iv2 = `${f.days.length} of ${r.days.length}`; }
   else { il2 = `${sig.label} on the day`; iv2 = `${mgrPulseFig(sig, f.value)} (usual ${mgrPulseFig(sig, f.usual)})`; }
-  const gapFig = (f.atLeast ? 'at least ' : '') + (f.metric === 'stock_short' ? mgrShortUGX(f.per.reduce((s, p)=> s + p.value, 0)) : mgrPulseGapFig(sig, f.gap));
+  let gapFig = (f.atLeast ? 'at least ' : '') + (f.metric === 'stock_short' ? mgrShortUGX(f.per.reduce((s, p)=> s + p.value, 0)) : mgrPulseGapFig(sig, f.gap));
+  /* A delivery day that is a problem: what was paid above the last price
+     is the loss; the extra bought moves beside it. */
+  if(f.metric === 'purchases' && f.tone === 'bad' && f.lost > 0){ il2 = gapLabel; iv2 = gapFig; gapLabel = 'Paid above the last price'; gapFig = mgrShortUGX(f.lost); }
   /* A rule or a note is only said to be kept once it is: refused (the
      0107 update missing) or retired since, the box says that instead. */
   const teaches = chosen && (chosen.learn === 'rule' || chosen.learn === 'note');
@@ -144914,12 +145043,12 @@ function mgrPulseDetailHTML(r, f){
     : deed.kind === 'rule' && mgrPulseRuleOpen === mgrUnusualKey(f) ? mgrPulseRuleHTML(deed)
     : `<div class="mgr-u-act">${mgrPulseActionHTML(f, deed)}${skip}${dnote ? `<span class="mgr-u-act-n">${esc(dnote)}</span>` : ''}</div>`;
   return `<section class="ow-pan mgr-u-pan mgr-u-dt" aria-label="${esc(mgrPulseTitle(f))}">
-    <div class="mgr-u-dh"><span class="mgr-u-nb mgr-u-nb-${good ? 'g' : 'x'}">${f.id}</span>${mgrPulseDeptChip(sig.dept)}<span class="mgr-u-dh-w">${esc(mgrPulseWhen(f))}</span>
-      <span class="mgr-u-kc ${good ? 'mgr-u-kc-good' : 'mgr-u-kc-bad'}">${good ? 'Good news' : 'A problem'}</span></div>
+    <div class="mgr-u-dh"><span class="mgr-u-nb mgr-u-nb-${good ? 'g' : note ? 'n' : 'x'}">${f.id}</span>${mgrPulseDeptChip(sig.dept)}<span class="mgr-u-dh-w">${esc(mgrPulseWhen(f))}</span>
+      <span class="mgr-u-kc ${good ? 'mgr-u-kc-good' : note ? 'mgr-u-kc-note' : 'mgr-u-kc-bad'}">${good ? 'Good news' : note ? 'Out of the ordinary' : 'A problem'}</span></div>
     <div class="mgr-u-db">
       <div><h3 class="mgr-u-dt-t">${esc(mgrPulseTitle(f))}</h3><p class="mgr-u-dt-w">${esc(B ? mgrPulseWhat(f, B) : '')}</p></div>
       <div><span class="mgr-u-mi mgr-u-mi-b">How unusual · ${esc(mgrPulseRarity(f))}</span>
-        <div class="mgr-u-rar${good ? ' mgr-u-rar-good' : ''}" role="img" aria-label="${esc('How unusual: ' + MGR_PULSE_SCALE[f.band] + ', ' + mgrPulseRarity(f))}">${scale}</div></div>
+        <div class="mgr-u-rar${good ? ' mgr-u-rar-good' : note ? ' mgr-u-rar-note' : ''}" role="img" aria-label="${esc('How unusual: ' + MGR_PULSE_SCALE[f.band] + ', ' + mgrPulseRarity(f))}">${scale}</div></div>
       <div class="mgr-u-imp"><div><span class="mgr-u-mi">${esc(gapLabel)}</span><b>${esc(gapFig)}</b></div><div><span class="mgr-u-mi">${esc(il2)}</span><b>${esc(iv2)}</b></div></div>
       <div><span class="mgr-u-mi mgr-u-mi-b">Likely reasons — and what points to each</span>
         ${reasons.map((x, i)=> `<div class="mgr-u-ex mgr-u-ex-${x.state}${i === 0 && x.state === 'found' ? ' mgr-u-ex-top' : ''}"><b>${esc(x.label)}</b><span class="mgr-u-ex-p">${esc(MGR_PULSE_EVIDENCE[x.state])}</span><span class="mgr-u-bar"><i></i></span><small>${esc(x.detail)}</small></div>`).join('')}</div>
@@ -145010,7 +145139,11 @@ document.addEventListener('click', (e)=>{
   if(rt){ mgrPulseRetire(rt.dataset.pulseRetire); return; }
   if(t.closest('[data-pulse-fuelcat]')){ mgrPulseAddFuel(); return; }
   const go = t.closest('[data-pulse-go]');
-  if(go){ goToTab(go.dataset.pulseGo); return; }
+  if(go){
+    /* The stock log opens on the line to recount: its own search, filled. */
+    const q = go.dataset.pulseSearch, box = q ? document.getElementById('inv_log_search') : null;
+    if(box) box.value = q;
+    goToTab(go.dataset.pulseGo); return; }
   const ch = t.closest('[data-pulse-chase]');
   if(ch){ mgrPulseChaseOpen(ch.dataset.pulseChase); return; }
   const ru = t.closest('[data-pulse-rule]');
@@ -163901,7 +164034,7 @@ const ASSISTANT_TOOLS = {
       || (qRows || []).some(q=> (q.body || {}).unusualDay === x.date && (q.body || {}).metric === x.metric && (q.body || {}).answer);
     unusual.items.filter(x=> isNew(x.date) && !answeredDay(x)).slice(0, 2).forEach(x=>{
       worth.push({ kind: 'unusual_day', date: x.date, what: x.metric, direction: x.dir,
-        ...(x.days.length > 1 ? { days: x.days } : {}), news: x.tone === 'good' ? 'good news' : 'a problem',
+        ...(x.days.length > 1 ? { days: x.days } : {}), news: x.tone === 'good' ? 'good news' : x.tone === 'note' ? 'out of the ordinary, not a loss on its own' : 'a problem',
         figure: x.figure, usual: x.usual,
         ...(x.months != null ? { months_compared: x.months } : { weekdays_compared: x.weeks }), how_unusual: x.how_unusual,
         drove_it: x.drove_it, reads_as: x.reads_as, ...((x.found_in_books || []).length ? { found_in_books: x.found_in_books } : {}),
@@ -164001,7 +164134,7 @@ const ASSISTANT_TOOLS = {
         return { date: x.date, what: x.metric, direction: x.dir, reads_as: x.reads_as, drove_it: x.drove_it,
           /* Alongside the day, never its cause: a question for the owner. */
           ...((x.found_in_books || []).length ? { found_in_books: x.found_in_books } : {}),
-          ...(x.days.length > 1 ? { days: x.days } : {}), news: x.tone === 'good' ? 'good news' : 'a problem', how_unusual: x.how_unusual,
+          ...(x.days.length > 1 ? { days: x.days } : {}), news: x.tone === 'good' ? 'good news' : x.tone === 'note' ? 'out of the ordinary, not a loss on its own' : 'a problem', how_unusual: x.how_unusual,
           ...(said ? { owner_said: said.answer,
             /* Answered: not a question any more. Sales not entered is a
                job to name, never a day to flag again. */

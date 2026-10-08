@@ -143,9 +143,9 @@ function book(opts) {
   /* Deliveries: the stage log starts on Thu 17 Sept; two orders a day
      reach Completed from then on. One more is collected by the customer
      (not a delivery) and one logs Completed twice (one delivery). */
-  for (let i = 20; i >= 0; i--) {
+  for (let i = o.stageDays || 20; i >= 0; i--) {
     const at = Date.parse(T(-i) + 'T12:00:00Z');
-    for (let j = 0; j < 2; j++) savedQuotes.push({ id: qid++, status: 'completed', invoiced: false, date: T(-i), counterSale: true, items: [],
+    for (let j = 0; j < 2 + ((o.extraDeliveries || {})[T(-i)] || 0); j++) savedQuotes.push({ id: qid++, status: 'completed', invoiced: false, date: T(-i), counterSale: true, items: [],
       stageLog: [{ status: 'preparing', at: at - 7200000 }, { status: 'pending_delivery', at: at - 3600000 }, { status: 'completed', at }].concat(j === 1 && i === 3 ? [{ status: 'completed', at: at + 60000 }] : []) });
   }
   savedQuotes.push({ id: qid++, status: 'completed', invoiced: false, date: T(-3), counterSale: true, items: [], assignedDeliveryId: '__client__',
@@ -248,18 +248,23 @@ const cell = (sig, d) => R.rows.find((r) => r.sig.id === sig).cells.find((c) => 
        purchases Mon 5 Oct    z = (1,000,000 - 500,000) / max(25% of 500,000, 51,250) = 4  (Mon 5 Oct, later)
        quotes Wed 30 Sept     z = (0 - 8) / max(25% of 8, 2) = -4                          (Wed 30 Sept, earlier)
        stock short Sat 3 Oct  z = 180,000 / 51,250 = 3.51
-       cash in Mon 5 Oct      z = 3,000,000 / max(25% of 800,000, 51,250) = 15, good news */
-  eq(R.findings.map((f) => f.metric + '.' + f.dir), ['till.high', 'returns.high', 'till.low', 'sales.low', 'purchases.high', 'quotes.low', 'stock_short.high', 'cash_in.high'],
+       cash in Mon 5 Oct      z = 3,000,000 / max(25% of 800,000, 51,250) = 15, good news
+     WAS: purchases Mon 5 Oct was a problem, fifth. NOW: more goods
+     arriving turns cash into stock and loses nothing by itself -- with no
+     price rise found it is out of the ordinary but neither a problem nor
+     good news ('note'), and so after the problems, behind the good news
+     that is further out. */
+  eq(R.findings.map((f) => f.metric + '.' + f.dir), ['till.high', 'returns.high', 'till.low', 'sales.low', 'quotes.low', 'stock_short.high', 'cash_in.high', 'purchases.high'],
     'eight findings, the rarest and the problems first');
   eq(R.findings.map((f) => f.id), [1, 2, 3, 4, 5, 6, 7, 8], 'numbered in that order');
-  eq(R.findings.map((f) => f.tone), ['bad', 'bad', 'bad', 'bad', 'bad', 'bad', 'bad', 'good'], 'toned by the table: only more cash in is good news here');
+  eq(R.findings.map((f) => f.tone), ['bad', 'bad', 'bad', 'bad', 'bad', 'bad', 'good', 'note'], 'toned by the table: more cash in is good news, more bought is neither');
   near(R.findings[1].z, 1200000 / 51250, 'returns read as a month: 1,200,000 in the 30 days to Fri 2 Oct against five months of nothing', 1e-9);
   eq(R.findings[1].days, [T(-11), T(-5)], 'one finding for the month, on the two days of the fortnight that carried returns');
   eq([R.findings[1].monthly.sum, R.findings[1].monthly.count, R.findings[1].monthly.usual, R.findings[1].monthly.months], [1200000, 4, 0, 5],
     'four notes, 1.2m, a usual month of none, measured against five months');
   eq(cell('sales', T(-1)).num, 4, 'each out-of-the-ordinary cell carries its finding\'s number');
   eq(cell('returns', T(-11)).num, 2, 'both of the month\'s return days carry the one finding');
-  eq(cell('purchases', T(-2)).s, 'x', 'buying more than a usual Monday is a problem (money out)');
+  eq([cell('purchases', T(-2)).s, cell('purchases', T(-2)).num], ['h', 8], 'buying more than a usual Monday is drawn higher than usual, numbered as a finding -- never crimson, nothing was lost');
   eq(cell('cash_in', T(-2)).s, 'g', 'and more cash in is good news');
 }
 
@@ -554,6 +559,140 @@ const cell = (sig, d) => R.rows.find((r) => r.sig.id === sig).cells.find((c) => 
   t.check(!bad.test(S.mgrPulseVerdict(R)), 'nor the Manager\'s sentence');
 }
 
+/* ---------- 16a. the owner's own money and loans are nobody paying ---- */
+{
+  /* WAS: cash in counted every receipt but transfers and overages, so an
+     owner's 12,000,000 top-up on Thu 1 Oct read as Thursday's cash in of
+     12.8m -- good news, "never before". NOW: the owner's own money and
+     loans are left out of the row (they are equity and borrowing, not
+     anybody paying the shop), and the cell says what was left out. */
+  const DO = book();
+  DO.cashTxns.push({ id: 80001, date: T(-6), type: 'receipt', account: 'bank', category: 'Owner Investment', amount: 12000000, description: 'Owner — top-up' });
+  DO.cashTxns.push({ id: 80002, date: T(-7), type: 'receipt', account: 'bank', category: 'Loan Received', amount: 2000000 });
+  const SO = scope(DO);
+  const BO = SO.mgrPulseBooks(TODAY);
+  eq([BO.read(T(-6)).v.cash_in, BO.read(T(-7)).v.cash_in], [800000, 800000], 'Thu 1 Oct and Wed 30 Sept take their 800,000 of sales receipts; the 12m top-up and the 2m loan are left out');
+  eq([BO.read(T(-6)).own.cash_in, BO.read(T(-7)).own.cash_in], [12000000, 2000000], 'and what was left out is kept, to be said');
+  const RO = SO.mgrPulseJudge(BO, [], () => false);
+  const c6 = RO.rows.find((r) => r.sig.id === 'cash_in').cells.find((c) => c.date === T(-6));
+  eq(c6.s, 'n', '800,000 against a usual Thursday of 800,000: normal');
+  eq(RO.findings.filter((f) => f.metric === 'cash_in').map((f) => f.date), [T(-2)], 'the only cash-in finding is Monday\'s 3m debt paid -- the top-up makes none');
+  SO.setNormals([]);
+  t.check(/title="Cash in · Thu 1 Oct · normal for the weekday · 800k, usually 800k · the owner’s own money and loans left out: 12m"/.test(SO.mgrUnusualHTML(SO.mgrPulseReading())),
+    'the cell names the money it left out');
+  const fc = RO.findings.find((f) => f.metric === 'cash_in');
+  t.check(!SO.mgrPulseReasons(fc, BO, RO).some((x) => /owner/i.test(x.label)), 'no reason offers the owner\'s money for a cash-in day: it is not in the row');
+  t.check(!SO.mgrPulseAnswerSet(fc).some((a) => /own money|loan/i.test(a.label)), 'nor does any answer');
+  t.check(/Left out: transfers between the shop’s own tills, and the owner’s own money and loans\./.test(SO.mgrPulseWhat(fc, BO)), 'and the day\'s sentence says they are left out');
+}
+
+/* ---------- 16b. more goods arriving is not money lost ----------------- */
+{
+  /* WAS: purchases above usual were a problem, and the impact the whole
+     extra spend with a minus: "−500k" for Mon 5 Oct's 1,000,000 against
+     a usual 500,000. NOW: unsigned, "500k above usual", toned 'note'. A
+     price rise found on the day makes it a problem, and the impact is
+     then what was paid above the last price. */
+  const fp = R.findings.find((x) => x.metric === 'purchases');
+  eq([fp.tone, S.mgrPulseImpact(fp)], ['note', '500k above usual'], 'no price rise: 500k above usual, neither a loss nor a gain');
+  /* Bill 77 brought P4 at 100,000 each, 10 of them; P4 last came at
+     80,000: 10 x 20,000 = 200,000 paid above the last price. */
+  const DP = book({ bills: true });
+  DP.stockLog.push({ id: 6003, key: 'P4', type: 'restock', delta: 5, cost: 80000, supplierId: 'S2', date: T(-30), note: 'Bill B-60 from S2' });
+  const SP = scope(DP);
+  const RP = SP.mgrPulseJudge(SP.mgrPulseBooks(TODAY), [], () => false);
+  const fq = RP.findings.find((x) => x.metric === 'purchases');
+  eq([fq.tone, fq.lost, SP.mgrPulseImpact(fq)], ['bad', 200000, '−200k'], 'a price rise found: a problem, and the impact is the 200k paid above the last price -- not the 1.6m extra bought');
+  eq(RP.rows.find((r) => r.sig.id === 'purchases').cells.find((c) => c.date === T(-2)).s, 'x', 'and its cell is a problem');
+  SP.setNormals([]); S.setNormals([]);
+  S.setOpen(S.mgrUnusualKey(fp));
+  const html = S.mgrUnusualHTML(S.mgrPulseReading());
+  t.check(/class="mgr-u-kc mgr-u-kc-note">Out of the ordinary</.test(html) && !/mgr-u-kc-bad">A problem<\/span><\/div>\s*<div class="mgr-u-db">\s*<div><h3 class="mgr-u-dt-t">Monday/.test(html),
+    'the open finding is "Out of the ordinary", not "A problem"');
+  t.check(/<b>500k above usual<\/b>/.test(html) && /mgr-u-nb mgr-u-nb-n">8</.test(html), 'its row shows the unsigned figure, under a neutral number');
+  t.check(/Need your answer<\/span><b class="mgr-u-hd-v mgr-u-hd-warn">7<\/b>/.test(html), 'and it still waits for the owner\'s word: 7 need an answer (8 less the good news)');
+}
+
+/* ---------- 16c. a day the year never saw is not "normal" -------------- */
+{
+  /* The eight Thursdays before Thu 1 Oct ran wide: 1.0, 0.2, 3.0, 0.6,
+     2.6, 1.4, 2.2, 1.8m (13 .. 62 days back). Median (1.4 + 1.8)/2 =
+     1.6m; distances 0.6,1.4,1.4,1.0,1.0,0.2,0.6,0.2 -> median 0.8m, so
+     the spread is 1.4826 x 800,000 = 1,186,080. Thu 1 Oct sold 100,000:
+     z = -1.5m / 1,186,080 = -1.265 -- under 1.5 spreads, so it was drawn
+     normal. But no Thursday of the 27 on the books (back to 195 days)
+     sold 100,000 or less: k = 0 of 27, never before. */
+  const wide = { [T(-13)]: 1000000, [T(-20)]: 200000, [T(-27)]: 3000000, [T(-34)]: 600000, [T(-41)]: 2600000, [T(-48)]: 1400000, [T(-55)]: 2200000, [T(-62)]: 1800000 };
+  const yearBook = (thu) => { const d = book(); d.savedQuotes.forEach((q) => { if (!q.invoiced) return;
+    const v = q.invoicedAt === T(-6) ? thu : wide[q.invoicedAt]; if (v != null) { q.total = v; q.profit = Math.round(v * 0.2); } }); return d; };
+  const SY = scope(yearBook(100000));
+  const RY = SY.mgrPulseJudge(SY.mgrPulseBooks(TODAY), [], () => false);
+  const cy = RY.rows.find((r) => r.sig.id === 'sales').cells.find((c) => c.date === T(-6));
+  near(cy.z, -1500000 / (1.4826 * 800000), 'z = -1.5m / 1,186,080 = -1.265', 1e-9);
+  eq([cy.s, cy.k, cy.n, cy.band], ['x', 0, 27, 4], 'below every Thursday on the books: out of the ordinary, never before -- under three spreads');
+  t.check(RY.findings.some((f) => f.metric === 'sales' && f.date === T(-6) && f.tone === 'bad'), 'and a finding');
+  /* Thu 1 Oct at 600,000: z = -1.0m / 1,186,080 = -0.843; 2 Thursdays of
+     27 (the 200k and the 600k) sold that little or less, 7.4% -- rare
+     enough to be lower than usual, not enough to be a finding. */
+  const SY2 = scope(yearBook(600000));
+  const RY2 = SY2.mgrPulseJudge(SY2.mgrPulseBooks(TODAY), [], () => false);
+  const cy2 = RY2.rows.find((r) => r.sig.id === 'sales').cells.find((c) => c.date === T(-6));
+  eq([cy2.s, cy2.k, cy2.n, !!cy2.extreme], ['l', 2, 27, false], '2 Thursdays in 27 (7.4%): lower than usual, never "normal for the weekday"');
+}
+
+/* ---------- 16d. the legend names what a hollow cell means ------------- */
+{
+  /* WAS: 'not recorded' alone -- a Thursday with 8 deliveries on the
+     books but too few weeks behind it read as if nothing were kept. */
+  S.setNormals([]);
+  const html = S.mgrUnusualHTML(S.mgrPulseReading());
+  t.check(/<i class="mgr-u-c mgr-u-c-u"><\/i>not recorded or too new to judge<\/span>/.test(html), 'the hollow swatch reads "not recorded or too new to judge"');
+  eq(cell('deliveries', T(-6)).s, 'q', 'and Thu 1 Oct\'s deliveries, recorded but too new, is one of them');
+}
+
+/* ---------- 16e. "more deliveries" never says no to twice the usual ---- */
+{
+  /* The stage log kept 70 days, two deliveries a day; Tue 6 Oct had two
+     more (4) and 300,000 of fuel against a usual 40,000. The Deliveries
+     row reads 4 against a usual Tuesday of 2: the spread is nothing, so
+     the gap carries it -- max(25% of 2, 2) = 2, z = 1 -- normal. WAS: the
+     fuel finding's reason said "not found -- 4 deliveries, a usual
+     Tuesday has 2". NOW: two or more over usual is more deliveries. */
+  const SD = scope(book({ fuelCat: true, fuel: true, fuelDays: 60, fuelSpikes: { [T(-1)]: 300000 }, stageDays: 70, extraDeliveries: { [T(-1)]: 2 } }));
+  const BD = SD.mgrPulseBooks(TODAY), RD = SD.mgrPulseJudge(BD, [], () => false);
+  eq(RD.rows.find((r) => r.sig.id === 'deliveries').cells.find((c) => c.date === T(-1)).s, 'n', 'the row: 4 against 2 is inside a usual Tuesday');
+  const more = SD.mgrPulseReasons(RD.findings.find((f) => f.metric === 'fuel'), BD, RD).find((x) => x.label === 'More deliveries than usual');
+  eq([more.state, more.detail], ['found', 'Tue 6 Oct: 4 deliveries, a usual Tuesday has 2.'], 'twice the usual is more deliveries than usual: found');
+  const SD1 = scope(book({ fuelCat: true, fuel: true, fuelDays: 60, fuelSpikes: { [T(-1)]: 300000 }, stageDays: 70, extraDeliveries: { [T(-1)]: 1 } }));
+  const BD1 = SD1.mgrPulseBooks(TODAY), RD1 = SD1.mgrPulseJudge(BD1, [], () => false);
+  const one = SD1.mgrPulseReasons(RD1.findings.find((f) => f.metric === 'fuel'), BD1, RD1).find((x) => x.label === 'More deliveries than usual');
+  eq([one.state, one.detail], ['none', 'Tue 6 Oct: 3 deliveries — a usual Tuesday has 2, within one of it.'], 'one over usual: not found, and the words say why');
+}
+
+/* ---------- 16f. the phone: the days stay in view, a number is a thumb -- */
+{
+  /* WAS: the dates once, above Sales -- Fuel, Deliveries, Margin and
+     Stock short two screens below any date. NOW: the dates come again
+     above every fourth row: before Purchases (row 5) and Deliveries
+     (row 9) -- 11 rows, so two repeats, each of the fourteen days, the
+     phone's alone. */
+  S.setNormals([]);
+  const html = S.mgrUnusualHTML(S.mgrPulseReading());
+  const again = html.match(/<div class="mgr-u-pgr" aria-hidden="true">((?:<span class="mgr-u-d[^"]*"><b>\d+<\/b>.*?<\/span>)+)<\/div>/g) || [];
+  eq(again.length, 2, 'the dates come twice more down the eleven rows');
+  t.check(/<div class="mgr-u-pgr"[^>]*>.*?<\/div><button type="button" class="mgr-u-l[^"]*" data-pulse-sig="purchases"/.test(html)
+    && /<div class="mgr-u-pgr"[^>]*>.*?<\/div><button type="button" class="mgr-u-l[^"]*" data-pulse-sig="deliveries"/.test(html), 'above Purchases and above Deliveries');
+  eq((again[0].match(/<b>/g) || []).length, 14, 'each with the fourteen days');
+  const P0 = src.indexOf('/* ═══ MGR BED: Unusual — begin ═══ */', src.indexOf('@media (max-width:820px)', src.indexOf('/* ═══ MGR BED: Unusual — end ═══ */')));
+  const phone = src.slice(P0, src.indexOf('/* ═══ MGR BED: Unusual — end ═══ */', P0));
+  const desk = src.slice(src.indexOf('/* ═══ MGR BED: Unusual — begin ═══ */'), src.indexOf('/* ═══ MGR BED: Unusual — end ═══ */'));
+  t.check(/\.mgr-bed-u \.mgr-u-pgr\{display:none;\}/.test(desk) && /\.mgr-bed-u \.mgr-u-pgr\{display:grid;grid-column:1 \/ -1;grid-template-columns:repeat\(14,/.test(phone),
+    'hidden on the desk, where the dates sit over every row; a full-width strip of fourteen on the phone');
+  const hit = /\.mgr-bed-u button\.mgr-u-c::before\{[^}]*top:-(\d+)px;[^}]*bottom:-(\d+)px;[^}]*left:-(\d+)px;[^}]*right:-(\d+)px;/.exec(phone);
+  t.check(!!hit && 24 + Number(hit[1]) + Number(hit[2]) >= 44 && 22 + Number(hit[3]) + Number(hit[4]) >= 44,
+    'a numbered cell, 24px tall to the eye, is a 44px target: ' + (hit ? hit.slice(1).join('/') : 'no hit area'));
+}
+
 /* ---------- 17. the owner's word: kept per day, changed in place ------- */
 function fakeSb(answer) {
   const log = []; let next = 100;
@@ -686,7 +825,8 @@ const okAnswer = (q, id) => q.op === 'insert' ? { data: q.payload.map((r) => ({ 
     /* The action on each finding opens where its follow-up is done. */
     const f = (m, d) => ({ metric: m, dir: d, date: T(-1) });
     eq([S.mgrPulseAction(f('sales', 'low')), S.mgrPulseAction(f('cash_in', 'low')), S.mgrPulseAction(f('purchases', 'high'))].map((a) => a.tab + ':' + a.label),
-      ['day:Open Tue 6 Oct', 'analytics-debtors:Open the debtors', 'invoices:Open the bills'], 'per signal: the day, the debtors, the bills');
+      ['day:Open Tue 6 Oct', 'analytics-debtors:Open the debtors', 'purchase-invoices:Open the bills'], 'per signal: the day, the debtors, the bills -- the supplier bills, not the sales register');
+    eq(S.mgrPulseAction(f('stock_short', 'high')).tab, 'stock-movements', 'and the stock log is the Movements lens, not the on-hand register');
   }
   /* ---------- 18. each finding's own action (Q39) --------------------- */
   {
@@ -706,8 +846,13 @@ const okAnswer = (q, id) => q.op === 'insert' ? { data: q.payload.map((r) => ({ 
       'the till: a rule about the till, never about a person -- and Sat 3 Oct was not counted, so the rule is to count every close');
     eq(deedOf(S, 'till', 'high').basis, '1 of the last 13 trading days was not counted.', 'with what it rests on: Sat 3 Oct, one of thirteen trading days');
     eq(deedOf(S, 'till', 'high').text, 'The till is counted at every close until Tue 6 Oct is explained.', 'the rule, written out for the owner to change');
-    eq(pick(deedOf(S, 'stock_short')), ['go', 'Recount Iron sheets', 'inventory'], 'a count short with no delivery behind it: recount the line, by name');
-    eq(pick(deedOf(S, 'purchases')), ['go', 'Open the bills', 'invoices'], 'purchases up with no price rise found: the bills, where the screen-level follow-up is');
+    /* WAS: 'inventory' -- the Stock register on its on-hand lens, no line
+       picked. NOW: the stock log (Movements), searched for the line. */
+    eq(pick(deedOf(S, 'stock_short')), ['go', 'Recount Iron sheets', 'stock-movements'], 'a count short with no delivery behind it: recount the line, by name, on the stock log');
+    eq(deedOf(S, 'stock_short').search, 'Iron sheets', 'with the line put into the stock log\'s search');
+    t.check(/data-pulse-go="stock-movements" data-pulse-search="Iron sheets">Recount Iron sheets</.test(S.mgrPulseActionHTML(null, deedOf(S, 'stock_short'))), 'the button carries the line to search for');
+    /* WAS: 'invoices' -- the paired "Sales, with their bills" register. */
+    eq(pick(deedOf(S, 'purchases')), ['go', 'Open the bills', 'purchase-invoices'], 'purchases up with no price rise found: the supplier bills, where the screen-level follow-up is');
     eq(pick(deedOf(S, 'quotes')), ['go', 'Open order tracking', 'quote-saved'], 'quotes down: order tracking');
     eq(pick(deedOf(S, 'returns')), ['day', 'Open Fri 2 Oct', T(-5)], 'returns whose line was never bought from a named supplier: nobody to ask, the day');
     eq(pick(deedOf(S, 'cash_in')), ['go', 'Open the cash book', 'cashbook'], 'a debt paid by "Okello & Sons", who is no customer on file: no thank-you to a name the books cannot place');
@@ -770,7 +915,7 @@ const okAnswer = (q, id) => q.op === 'insert' ? { data: q.payload.map((r) => ({ 
     const fp3 = SP3.mgrPulseReading().findings.find((x) => x.metric === 'purchases' && x.dir === 'high');
     const rp3 = SP3.mgrPulseReasons(fp3, SP3.mgrPulseBooks(TODAY), SP3.mgrPulseReading()).find((x) => x.label === 'Prices paid went up');
     eq([rp3.state, rp3.ref], ['found', null], 'the rise over S3\'s price is still a reason on screen, with nobody to ask');
-    eq(pick(deedOf(SP3, 'purchases', 'high')), ['go', 'Open the bills', 'invoices'], 'and the action is the bills');
+    eq(pick(deedOf(SP3, 'purchases', 'high')), ['go', 'Open the bills', 'purchase-invoices'], 'and the action is the bills');
     /* A delivery whose own cost is not recorded is never read as a rise
        off today's FIFO cost. */
     const DP4 = book({ bills: true });
@@ -935,7 +1080,7 @@ const okAnswer = (q, id) => q.op === 'insert' ? { data: q.payload.map((r) => ({ 
     const SM = scope(book(), { sb, mgrNotesOfKind: async () => ({ rows: [{ id: 7, status: 'active', date: T(-2), body: { metric: 'till', condition: 'house_rule', effect: 'high', note: 'Two people count the till.', sourceAnswerId: 'rule:x', taughtOn: T(-2) } }], error: null }) });
     const m = await SM.mgrUnusualForMeeting();
     eq([m.judged, m.items.map((x) => x.id), m.items.map((x) => x.metric + '.' + x.dir)],
-      [true, [1, 2, 3, 4, 5, 6, 7, 8], ['till.high', 'returns.high', 'till.low', 'sales.low', 'purchases.high', 'quotes.low', 'stock_short.high', 'cash_in.high']],
+      [true, [1, 2, 3, 4, 5, 6, 7, 8], ['till.high', 'returns.high', 'till.low', 'sales.low', 'quotes.low', 'stock_short.high', 'cash_in.high', 'purchases.high']],
       'the meeting reads the eight findings the screen shows, in its order');
     eq([m.answered(T(-1) + '|sales'), m.answered(T(-2) + '|purchases'), m.answersError], ['Not entered yet', null, null], 'with the owner\'s answers known');
     eq(m.taught, [{ what: 'till', kind: 'your_rule', words: 'Two people count the till.', taught_on: T(-2) }], 'and what the owner taught, the rule marked as theirs');
