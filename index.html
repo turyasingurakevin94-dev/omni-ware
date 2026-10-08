@@ -3940,7 +3940,24 @@
     #printArea .sb-t-b{background:#EFECE6;color:#5F6980;}
     #printArea .sb-none{color:#5F6980;font-style:italic;}
     #printArea .sb-read{margin:0;font-size:11.5px;}
-    #printArea .sb-tail{display:grid;grid-template-columns:240px minmax(0,1fr);gap:14px;align-items:start;}
+    #printArea .sb-tail{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:14px;align-items:start;}
+    #printArea .sb-age-bar{display:flex;gap:2px;height:12px;border-radius:4px;overflow:hidden;margin:4px 0 2px;background:#EFECE6;}
+    #printArea .sb-age-bar i{display:block;height:100%;}
+    #printArea .sb-age-g{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;}
+    #printArea .sb-age-g div{display:flex;flex-direction:column;gap:2px;}
+    #printArea .sb-age-g span{font-size:10px;color:#5F6980;display:inline-flex;align-items:center;gap:5px;}
+    #printArea .sb-age-g span i{width:8px;height:8px;border-radius:2px;display:block;}
+    #printArea .sb-age-g b{font-size:11.5px;}
+    #printArea .sb-age-g b.sb-nil{color:#767F91;font-weight:400;}
+    #printArea .sb-a0{background:#0F6B43;}
+    #printArea .sb-a1{background:#95530C;}
+    #printArea .sb-a2{background:#C26A12;}
+    #printArea .sb-a3{background:#8E2A22;}
+    #printArea .sb-ob{border:1px solid #E6E3DD;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;}
+    #printArea .sb-ob-r{display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:8px;align-items:center;font-size:11px;padding:3px 0;border-top:1px solid #EFECE6;}
+    #printArea .sb-ob .sb-lbl + .sb-ob-r{border-top:0;}
+    #printArea .sb-ob-w{color:#5F6980;}
+    #printArea .sb-t-l{background:#FDEEE1;color:#7A4A02;justify-self:start;}
     #printArea .sb-age{border:1px solid #E6E3DD;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:5px;}
     #printArea .sb-age-r{display:flex;justify-content:space-between;font-size:11px;}
     #printArea .sb-bills th{font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5F6980;text-align:left;padding:0 8px 5px;border-bottom:1px solid #16203C;}
@@ -8601,6 +8618,9 @@
   .sp-more[open] summary .icon{transform:rotate(90deg);}
   .sp-more summary b{font-size:13px;font-weight:600;}
   .sp-more summary span{font-size:12px;color:var(--ow-ink-600);}
+  .sp-modal #s_terms_block[hidden]{display:none;}
+  .sp-in.sp-terms{max-width:180px;}
+  .sp-unit{font-size:13px;color:var(--ow-ink-600);flex:0 0 auto;}
   .sp-more-b{display:flex;flex-direction:column;gap:14px;padding:14px 0 0 24px;}
   .sp-dup-card{display:flex;flex-direction:column;border:1px solid var(--ow-amber-soft);border-radius:var(--ow-r-lg);background:var(--ow-amber-faint);overflow:hidden;}
   .sp-dup-h{display:flex;align-items:center;gap:12px;padding:12px 14px;}
@@ -23094,6 +23114,10 @@
   .su-tl-dot.su-dot-good{background:var(--ow-verdigris);}
   .su-tl-dot.su-dot-warn{background:var(--ow-amber);}
   .su-tl-dot.su-dot-bad{background:var(--ow-crimson);}
+  .su-tl-dot.su-dot-open{background:var(--ow-paper);border-color:var(--ow-ink-900);}
+  .su-tl-od{left:0;width:var(--x);top:14px;height:2px;background:var(--ow-amber);}
+  .su-tl-now.su-tl-now-x{left:var(--x);right:auto;}
+  .su-tl em.su-tl-tday{font-weight:var(--ow-fw-700);color:var(--ow-ink-900);}
   .su-tl-dot.su-dot-none{background:var(--ow-ink-400);}
   .su-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--ow-sp-8);}
   .su-two-i{display:flex;flex-direction:column;gap:1px;padding:var(--ow-sp-6) var(--ow-sp-8);border-radius:var(--ow-r-sm);background:var(--ow-steel-050);min-width:0;}
@@ -38395,7 +38419,7 @@
           <input id="s_shopno" class="sp-shop" placeholder="Shop no. — e.g. B12 (optional)" autocomplete="off" aria-label="Shop number">
         </div>
         <details class="sp-more" id="s_more">
-          <summary><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg><b>More details</b><span>opening balance · also a customer · notes</span></summary>
+          <summary><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg><b>More details</b><span>opening balance · also a customer · terms · notes</span></summary>
           <div class="sp-more-b">
             <!-- The mirror of the customer form's "what they already owe you",
                  for the other direction: money the shop owed a supplier before
@@ -38425,6 +38449,14 @@
                 <option value="">No — they are only a supplier</option>
               </select>
               <div class="sup-hint" id="s_link_hint"></div>
+            </div>
+            <!-- How long they give you to pay. With it every bill has a due
+                 date, and the account says what is overdue and what comes
+                 due next rather than only how long a bill has waited. -->
+            <div class="sup-block" id="s_terms_block">
+              <label class="sup-label" for="s_terms">Days they give you to pay</label>
+              <div class="sp-in sp-terms"><input id="s_terms" type="number" min="0" max="365" step="1" inputmode="numeric" placeholder="e.g. 30" autocomplete="off"><span class="sp-unit">days</span></div>
+              <div class="sup-hint">Leave blank if they have not said &mdash; bills then show how long they have waited.</div>
             </div>
             <div class="sup-block">
               <label class="sup-label" for="s_notes">Notes</label>
@@ -41949,7 +41981,7 @@ async function loadData(shopId){
     stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR,
     savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR,
     mediaR, mediaFoldersR, waPostsR,
-    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, followUpsR, rivalPricesR, paymentPromisesR, productLinksR, briefsSentR, statementsSentR, variantColR, imageColR, askedColR, transferColR, lotConsignColR, rivalSideColR, stageColR, managerNotesR, linkSizeColR, coversColR, clientAccountsR, termsColR, waPostKindsColR, cashMetaColR, cashCloseColR
+    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, followUpsR, rivalPricesR, paymentPromisesR, productLinksR, briefsSentR, statementsSentR, variantColR, imageColR, askedColR, transferColR, lotConsignColR, rivalSideColR, stageColR, managerNotesR, linkSizeColR, coversColR, clientAccountsR, termsColR, waPostKindsColR, cashMetaColR, cashCloseColR, supTermsColR
   ] = await Promise.all([
     sel('suppliers'), sel('staff'), sel('customers'), sel('customer_debt_log'), sel('products'), sel('prices'),
     sel('stock'), sel('stock_lots'), sel('stock_log'), sel('cash_days'), sel('cash_txns'),
@@ -41984,7 +42016,10 @@ async function loadData(shopId){
        the mark that closes a day. Probed apart, and both guard busy
        writes: every cash entry and every day go up on every save. */
     sb.from('cash_txns').select('entered_by, photo').limit(1),
-    sb.from('cash_days').select('closed_at, closed_by').limit(1)
+    sb.from('cash_days').select('closed_at, closed_by').limit(1),
+    /* 0106, a supplier's payment terms. Probed alone: the suppliers
+       upsert carrying a column the table lacks would fail every save. */
+    sb.from('suppliers').select('terms_days').limit(1)
   ]);
   [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR, mediaR, mediaFoldersR, waPostsR, rentAgreementsR, duesR, placesR]
     .forEach(r=>{ if(r.error) throw r.error; });
@@ -42055,6 +42090,7 @@ async function loadData(shopId){
      who made it -- and a day can be closed on this device only. */
   cashEntryMetaColumns = !(cashMetaColR && cashMetaColR.error);
   cashCloseColumns = !(cashCloseColR && cashCloseColR.error);
+  supplierTermsColumn = !(supTermsColR && supTermsColR.error);
   // sourcing_leads is out of the list for the same reason.
   const sourcingLeadRows = (sourcingLeadsR && !sourcingLeadsR.error && sourcingLeadsR.data) || [];
   // And follow_ups (0077), newest of the lot. A shop whose migration has
@@ -42136,7 +42172,7 @@ async function loadData(shopId){
   const quote = settings.quote_draft || {client:{name:'', phone:''}, date: todayISO(), items:[], savedId:null};
 
   return {
-    suppliers: (suppliersR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, phone2:s.phone2||'', location:s.location, shopNo:s.shop_no||'', notes:s.notes, commissionPct: s.commission_pct==null ? null : Number(s.commission_pct)})),
+    suppliers: (suppliersR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, phone2:s.phone2||'', location:s.location, shopNo:s.shop_no||'', notes:s.notes, commissionPct: s.commission_pct==null ? null : Number(s.commission_pct), termsDays: s.terms_days == null ? null : Number(s.terms_days)})),
     // payBasis and payRate stay null rather than becoming '' and 0: a
     // staff member nobody has set a rate for has not been given a rate
     // of nothing, and the payroll screen has to be able to tell those
@@ -42600,6 +42636,8 @@ let cashTransferColumn = false;
 let cashCoversColumns = false;
 let cashEntryMetaColumns = false;
 let cashCloseColumns = false;
+/* 0106 applied: suppliers carry terms_days. */
+let supplierTermsColumn = false;
 
 // cloneJSON() / keyRowsById() now live in shared-worker.js.
 
@@ -42639,7 +42677,8 @@ function buildSyncRows(d, shopId){
     id:l.id, shop_id:shopId, customer_id:c.id, date:dateOrNull(l.date), type:l.type, amount:l.amount, note:l.note
   })));
   return {
-    suppliers: d.suppliers.map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, phone2:s.phone2||null, location:s.location, shop_no:s.shopNo||null, notes:s.notes, commission_pct: s.commissionPct==null ? null : s.commissionPct})),
+    suppliers: d.suppliers.map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, phone2:s.phone2||null, location:s.location, shop_no:s.shopNo||null, notes:s.notes, commission_pct: s.commissionPct==null ? null : s.commissionPct,
+      ...(supplierTermsColumn ? {terms_days: s.termsDays == null ? null : Number(s.termsDays)} : {})})),
     staff: (d.staff||[]).map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, role:s.role, notes:s.notes, unavailable:!!s.unavailable,
       // Written through as null, never coerced to 0 -- see the load side.
       pay_basis: s.payBasis || null,
@@ -77896,6 +77935,39 @@ function supShort(n){
    prices up faster than everyone else, what you have bought from them,
    how old what you owe them is, and what you still sell on their prices
    that nobody has confirmed. */
+/* When a bill falls due: the day written on the bill, else its date
+   plus the supplier's terms, else nobody has said and there is none. */
+function supBillDue(pi, s){
+  const own = billDueDate(pi);
+  if(own) return own;
+  const t = s && s.termsDays;
+  if(t == null || t === '' || !pi || !pi.date) return null;
+  return custAddDaysISO(pi.date, Math.max(0, Number(t) || 0));
+}
+/* Days past due (positive) or until due (negative), for one line. */
+function supDueWords(rel){
+  if(rel < 0) return `${-rel} ${rel === -1 ? 'day' : 'days'} overdue`;
+  if(rel === 0) return 'due today';
+  return `due in ${rel} ${rel === 1 ? 'day' : 'days'}`;
+}
+function supOwedByDueHTML(open, f){
+  const lo = Math.min(-1, ...open.map(o=> o.rel)), hi = Math.max(1, ...open.map(o=> o.rel));
+  const x = (rel)=> ((rel - lo) / (hi - lo) * 100).toFixed(1);
+  const dueMax = Math.max(1, ...open.map(o=> o.due));
+  const late = open.filter(o=> o.rel < 0).sort((a, b)=> a.rel - b.rel);
+  const next = open.filter(o=> o.rel >= 0).sort((a, b)=> a.rel - b.rel)[0] || null;
+  const lateSum = late.reduce((n, o)=> n + o.due, 0);
+  const words = open.map(o=> `${f(o.due)} ${o.rel < 0 ? 'overdue since ' : 'due '}${fmtShortDate(o.dueOn)}`).join('; ');
+  return `<span class="su-tl" aria-label="Bills by due date: ${esc(words)}">
+      <i class="su-tl-axis"></i>${late.length ? `<i class="su-tl-od" style="--x:${x(0)}%"></i>` : ''}
+      <i class="su-tl-now su-tl-now-x" style="--x:${x(0)}%"></i><em class="su-tl-tday" style="--x:${x(0)}%">today</em>
+      ${open.map(o=> `<b class="su-tl-dot ${o.rel < 0 ? 'su-dot-warn' : 'su-dot-open'}" style="--x:${x(o.rel)}%;--s:${Math.round(10 + o.due / dueMax * 10)}px" title="${esc(purchaseInvoiceNumberLabel(o.pi))} &middot; ${f(o.due)} &middot; due ${esc(fmtShortDate(o.dueOn))}"></b>`).join('')}
+    </span>
+    <span class="su-two">${late.length
+      ? `<span class="su-two-i su-two-warn"><em>Overdue ${-late[0].rel} ${late[0].rel === -1 ? 'day' : 'days'}</em><b class="ow-fig">${f(lateSum)}</b></span>`
+      : `<span class="su-two-i"><em>Overdue</em><b class="ow-fig">nothing</b></span>`}${
+      next ? `<span class="su-two-i"><em>${next.rel === 0 ? 'Next due today' : `Next due in ${next.rel} ${next.rel === 1 ? 'day' : 'days'}`}</em><b class="ow-fig">${f(next.due)}</b></span>` : ''}</span>`;
+}
 function supplierFiguresHTML(r){
   const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
   const today = todayISO();
@@ -77949,11 +78021,18 @@ function supplierFiguresHTML(r){
     <p class="ow-mt-s">weekly &middot; last 4 weeks darker &middot; ${f(r.boughtEver)} all told</p>
   </div>`;
 
-  /* 3. WHAT YOU OWE THEM, placed by how long each bill has waited. Bills
-     here carry no due date, so the age is the honest measure -- the same
-     one Creditors ages the whole book by. */
-  const open = creditorOutstandingInvoices(r.id).map(pi=> ({ pi, due: purchaseInvoiceBalanceDue(pi),
-    age: pi.date ? Math.max(0, daysBetweenISO(pi.date, today)) : null }));
+  /* 3. WHAT YOU OWE THEM. When every open bill has a due date -- its
+     own, or its date plus the supplier's terms -- the bills are placed
+     against today, overdue to the left and coming due to the right, as
+     the canvas draws it. Otherwise by how long each has waited, the
+     measure Creditors ages the whole book by. */
+  const sup = (data.suppliers || []).find(x=> String(x.id) === String(r.id));
+  const open = creditorOutstandingInvoices(r.id).map(pi=> {
+    const dueOn = supBillDue(pi, sup);
+    return { pi, due: purchaseInvoiceBalanceDue(pi), dueOn, rel: dueOn ? daysBetweenISO(today, dueOn) : null,
+      age: pi.date ? Math.max(0, daysBetweenISO(pi.date, today)) : null };
+  });
+  const byDue = open.length > 0 && open.every(o=> o.rel !== null);
   const span = Math.max(90, ...open.map(o=> o.age || 0));
   const dueMax = Math.max(1, ...open.map(o=> o.due));
   const tone = (a)=> a === null ? 'su-dot-none' : a > 60 ? 'su-dot-bad' : a > 30 ? 'su-dot-warn' : 'su-dot-good';
@@ -77962,7 +78041,7 @@ function supplierFiguresHTML(r){
   const owedTile = `<div class="ow-mt su-mt">
     <p class="ow-mt-l">Owed now</p>
     <span class="ow-mt-v">${f(r.owed)} <span class="ow-u">UGX &middot; ${open.length} open ${open.length === 1 ? 'bill' : 'bills'}</span></span>
-    ${open.length ? `<span class="su-tl" aria-label="Open bills by how long they have waited">
+    ${byDue ? supOwedByDueHTML(open, f) : open.length ? `<span class="su-tl" aria-label="Open bills by how long they have waited">
       <i class="su-tl-axis"></i><i class="su-tl-30" style="--x:${(1 - 30 / span) * 100}%"></i><em style="--x:${(1 - 30 / span) * 100}%">30 d</em>
       <i class="su-tl-now"></i><em class="su-tl-nowl">today</em>
       ${open.map(o=> `<b class="su-tl-dot ${tone(o.age)}" style="--x:${o.age === null ? 0 : (1 - o.age / span) * 100}%;--s:${Math.round(10 + o.due / dueMax * 10)}px" title="${esc(purchaseInvoiceNumberLabel(o.pi))} &middot; ${f(o.due)} &middot; ${o.age === null ? 'no date' : o.age + ' days'}"></b>`).join('')}
@@ -78109,16 +78188,23 @@ function supplierBillsHTML(r){
   const f = (n)=> Number(Math.round(n)).toLocaleString('en-UG');
   const today = todayISO();
   const open = creditorOutstandingInvoices(r.id);
-  if(s.pay.sel === null) s.pay.sel = new Set(open.filter(pi=> pi.date && daysBetweenISO(pi.date, today) > 30).map(pi=> pi.id));
+  const supRec = (data.suppliers || []).find(x=> String(x.id) === String(r.id));
+  /* Ticked to begin with: what is past its due date, or -- with no due
+     date to go by -- what has waited more than 30 days. */
+  const late = (pi)=> { const d = supBillDue(pi, supRec); return d ? d < today : !!(pi.date && daysBetweenISO(pi.date, today) > 30); };
+  if(s.pay.sel === null) s.pay.sel = new Set(open.filter(late).map(pi=> pi.id));
   if(!open.length && !s.pay.last) return '';
   const chosen = open.filter(pi=> s.pay.sel.has(pi.id));
   const total = chosen.reduce((n, pi)=> n + purchaseInvoiceBalanceDue(pi), 0);
   const rows = open.map(pi=>{
     const age = pi.date ? Math.max(0, daysBetweenISO(pi.date, today)) : null;
+    const dueOn = supBillDue(pi, supRec), rel = dueOn ? daysBetweenISO(today, dueOn) : null;
+    const when = rel !== null ? (rel < 0 ? `Overdue ${-rel} ${rel === -1 ? 'day' : 'days'}` : rel === 0 ? 'Due today' : `Due in ${rel} ${rel === 1 ? 'day' : 'days'} &middot; ${esc(fmtShortDate(dueOn))}`)
+      : age === null ? 'no date' : `billed ${age} ${age === 1 ? 'day' : 'days'} ago`;
     return `<label class="su-pb-r">
       <input type="checkbox" data-spbill="${pi.id}"${s.pay.sel.has(pi.id) ? ' checked' : ''}>
       <span class="su-pb-t"><button type="button" class="su-ref" data-sdoc="${pi.id}">${esc(purchaseInvoiceNumberLabel(pi))}</button>
-        <em class="${age !== null && age > 30 ? 'su-pb-old' : ''}">${age === null ? 'no date' : `billed ${age} ${age === 1 ? 'day' : 'days'} ago`}</em></span>
+        <em class="${late(pi) ? 'su-pb-old' : ''}">${when}</em></span>
       <b class="ow-fig">${f(purchaseInvoiceBalanceDue(pi))}</b></label>`;
   }).join('');
   const acc = (k, label)=> `<button type="button" role="radio" aria-checked="${s.pay.account === k}" class="su-pb-acc${s.pay.account === k ? ' ow-on' : ''}" data-spacc="${k}">${label}</button>`;
@@ -78173,6 +78259,7 @@ function supplierAccountRailHTML(r){
     r.place ? sr('Collected from', `<span class="su-txt">${esc(r.place)}</span>`) : ''}${
     r.shopNo ? sr('Shop', esc(r.shopNo)) : ''}${
     sr('Commission', r.commissionPct != null ? `${r.commissionPct}<span class="ow-u">%</span>` : '<span class="su-txt su-plain">none on file</span>')}${
+    sr('Terms', s && s.termsDays != null && s.termsDays !== '' ? `${Number(s.termsDays)} <span class="ow-u">days</span>` : '<span class="su-txt su-plain">not set</span>')}${
     sr('First bill', r.invoiceCount ? esc(fmtShortDate(supFirstBillDate(r.id) || todayISO())) : '<span class="su-txt su-plain">none yet</span>')}${
     r.notes ? `<p class="ow-mini su-note">${esc(r.notes)}</p>` : ''}${
     (!r.phones.length && !r.place && !r.notes)
@@ -78350,11 +78437,14 @@ function supDrawerHTML(r){
     if(!pi) return '';
     const tot = purchaseInvoiceTotal(pi), due = purchaseInvoiceBalanceDue(pi), paid = Math.max(0, tot - due);
     const age = pi.date ? Math.max(0, daysBetweenISO(pi.date, today)) : null;
-    const status = pi.voided ? ['Voided', ''] : due <= 0.5 ? ['Paid', 'ow-good'] : age !== null && age > 30 ? [`Waiting ${age} days`, 'ow-warn'] : ['Open', ''];
+    const dueOn = supBillDue(pi, (data.suppliers || []).find(x=> String(x.id) === String(r.id))), rel = dueOn ? daysBetweenISO(today, dueOn) : null;
+    const status = pi.voided ? ['Voided', ''] : due <= 0.5 ? ['Paid', 'ow-good']
+      : rel !== null ? (rel < 0 ? [`${-rel} ${rel === -1 ? 'day' : 'days'} overdue`, 'ow-warn'] : [`Due ${fmtShortDate(dueOn)}`, ''])
+      : age !== null && age > 30 ? [`Waiting ${age} days`, 'ow-warn'] : ['Open', ''];
     return `<div class="su-scrim" data-sdclose="1"></div>
     <aside class="su-drawer" role="dialog" aria-modal="true" aria-label="${esc(purchaseInvoiceNumberLabel(pi))}">
       <header class="su-dr-h"><div class="su-dr-hh"><span class="su-dr-tags"><span class="ow-cp">Order</span><span class="ow-cp ${status[1]}"><span class="ow-cp-d"></span>${status[0]}</span></span>
-        <b class="ow-fig">${esc(purchaseInvoiceNumberLabel(pi))}</b><em>${esc(r.name)} &middot; billed ${esc(pi.date ? fmtShortDate(pi.date) : 'with no date')}</em></div>${close}</header>
+        <b class="ow-fig">${esc(purchaseInvoiceNumberLabel(pi))}</b><em>${esc(r.name)} &middot; billed ${esc(pi.date ? fmtShortDate(pi.date) : 'with no date')}${dueOn ? ` &middot; due ${esc(fmtShortDate(dueOn))}` : ''}</em></div>${close}</header>
       <div class="su-dr-b">
         <div class="su-dr-figs"><span><em>Billed</em><b class="ow-fig">${f(tot)}</b></span><span><em>Paid</em><b class="ow-fig su-paid">${f(paid)}</b></span><span><em>Still owed</em><b class="ow-fig">${f(due)}</b></span></div>
         <div class="su-dr-l"><span class="ow-pan-t">What was supplied</span>
@@ -79417,11 +79507,13 @@ function editSupplier(id){
   document.getElementById('s_location').value = s.location;
   document.getElementById('s_shopno').value = s.shopNo || '';
   document.getElementById('s_notes').value = s.notes;
+  document.getElementById('s_terms').value = s.termsDays == null ? '' : String(s.termsDays);
+  document.getElementById('s_terms_block').hidden = !supplierTermsColumn;
   document.getElementById('supplierFormTitle').textContent = 'Edit supplier';
   document.getElementById('s_form').hidden = false;
   document.getElementById('s_foot').hidden = false;
   document.getElementById('s_done').hidden = true;
-  document.getElementById('s_more').open = !!(s.notes || linkedCustomerOf(s) || supplierOpeningInvoice(s.id));
+  document.getElementById('s_more').open = !!(s.notes || s.termsDays != null || linkedCustomerOf(s) || supplierOpeningInvoice(s.id));
   sfFillLinkPicker(s);
   supShowIssuedId();
   sfShowOpeningBalance(s.id);
@@ -79468,7 +79560,9 @@ function sfShowOpeningBalance(supplierId){
 }
 function resetSupplierForm(){
   editingSupplierId = null;
-  ['s_id','s_name','s_phone','s_phone2','s_location','s_shopno','s_notes','s_open_bal','s_open_since'].forEach(id=>document.getElementById(id).value='');
+  ['s_id','s_name','s_phone','s_phone2','s_location','s_shopno','s_notes','s_terms','s_open_bal','s_open_since'].forEach(id=>document.getElementById(id).value='');
+  /* Terms are only offered once the server can keep them (0106). */
+  document.getElementById('s_terms_block').hidden = !supplierTermsColumn;
   document.getElementById('s_open_undated').checked = false;
   fillIssuedId('s_id', 'supplier', 'S', 3, data.suppliers);
   sfFillLinkPicker(null);
@@ -79790,6 +79884,7 @@ Add them anyway?`)) return;
     location: rememberLocation(document.getElementById('s_location').value),
     shopNo: document.getElementById('s_shopno').value.trim(),
     notes: document.getElementById('s_notes').value.trim(),
+    termsDays: (()=>{ const v = document.getElementById('s_terms').value.trim(); return v === '' ? null : Math.min(365, Math.max(0, Math.round(Number(v) || 0))); })(),
     commissionPct: priorPct!=null ? priorPct : null,
   };
   if(editingSupplierId){
@@ -86829,7 +86924,8 @@ function statementBrandHTML(st, side, shop){
           <div><dt class="sb-lbl">Statement no.</dt><dd class="num">${esc(b.number)}</dd></div>
           <div><dt class="sb-lbl">Supplier ID</dt><dd class="num">${esc(b.id)}</dd></div>
           <div><dt class="sb-lbl">Period</dt><dd class="num">${esc(fmtShortDate(st.from))} – ${esc(fmtShortDate(st.to))}</dd></div>
-          <div><dt class="sb-lbl">Open bills</dt><dd>${side.openBills ? side.openBills.length : 0}</dd></div>
+          ${b.terms != null ? `<div><dt class="sb-lbl">Terms</dt><dd>${b.terms} days</dd></div>`
+            : `<div><dt class="sb-lbl">Open bills</dt><dd>${side.openBills ? side.openBills.length : 0}</dd></div>`}
         </dl>
       </div>
       <div class="sb-move">
@@ -86854,11 +86950,17 @@ function statementBrandHTML(st, side, shop){
       ${st.agrees ? '' : `<p class="cst-flag">The entries above come to ${fmtUGX(Math.round(st.closing))},
         while ${esc(side.recordedAs)} ${fmtUGX(Math.round(st.recorded))}.</p>`}
       ${side.aging || (side.openBills && side.openBills.length) ? `<div class="sb-tail">
-        ${side.aging ? `<div class="sb-age"><div class="sb-lbl">How old the balance is</div>
-          ${side.aging.map(a=> `<div class="sb-age-r"><span>${esc(a.label)}</span><b class="num">${fig(a.value)}</b></div>`).join('')}</div>` : '<div></div>'}
-        ${side.openBills && side.openBills.length ? `<table class="sb-bills"><thead><tr><th>Open bill</th><th>Billed</th><th class="r">Waiting</th><th class="r">Still owed</th></tr></thead>
-          <tbody>${side.openBills.map(o=> `<tr><td class="num">${esc(o.ref)}</td><td class="num">${esc(o.date ? fmtShortDate(o.date) : 'no date')}</td>
-          <td class="r">${o.age === null ? '' : o.age + ' days'}</td><td class="r num">${fig(o.due)}</td></tr>`).join('')}</tbody></table>` : ''}
+        ${side.aging ? (()=>{
+          const tot = side.aging.reduce((n, a)=> n + a.value, 0) || 1;
+          const tones = ['sb-a0', 'sb-a1', 'sb-a2', 'sb-a3'];
+          return `<div class="sb-age"><div class="sb-lbl">${esc(side.agingTitle || 'How old the balance is')}</div>
+          <div class="sb-age-bar">${side.aging.map((a, i)=> a.value > 0 ? `<i class="${tones[i]}" style="width:${(a.value / tot * 100).toFixed(1)}%"></i>` : '').join('')}</div>
+          <div class="sb-age-g">${side.aging.map((a, i)=> `<div><span><i class="${tones[i]}"></i>${esc(a.label)}</span><b class="num${a.value ? '' : ' sb-nil'}">${fig(a.value)}</b></div>`).join('')}</div></div>`;
+        })() : '<div></div>'}
+        ${side.openBills && side.openBills.length ? `<div class="sb-ob"><div class="sb-lbl">Open bills</div>
+          ${side.openBills.map(o=> `<div class="sb-ob-r"><span class="num">${esc(o.ref)}</span>${o.late !== null && o.late > 0
+            ? `<span class="sb-tag sb-t-l">${o.late} d overdue</span>`
+            : `<span class="sb-ob-w">${o.dueOn ? 'due ' + esc(fmtShortDate(o.dueOn)) : o.age === null ? 'no date' : 'waiting ' + o.age + ' d'}</span>`}<b class="num">${fig(o.due)}</b></div>`).join('')}</div>` : ''}
       </div>` : ''}
       ${side.signoff ? `<div class="cst-sign">${side.signoff.map(l=> `<div><span></span>${esc(l)}</div>`).join('')}</div>` : ''}
       <footer class="st-print-foot cst-foot">
@@ -87339,7 +87441,7 @@ function supStatementBrand(s, st){
   st.rows.forEach(r=>{ if(r.type === 'charge'){ const pi = byId.get(String(r.piId)); if(pi) r.what = supBillWhat(pi); } });
   return { initials: supInitials(s.name), soft, ink, id: String(s.id),
     number: `ST-${s.id}-${ym}`, place: [s.location, s.shopNo ? 'Shop ' + s.shopNo : ''].filter(Boolean).join(', '),
-    phones: contactPhones(s) };
+    phones: contactPhones(s), terms: s.termsDays == null || s.termsDays === '' ? null : Number(s.termsDays) };
 }
 function supplierStatementSheet(supplierId){
   const { from, to } = supStmtRange(supplierId);
@@ -87350,13 +87452,24 @@ function supplierStatementSheet(supplierId){
      ages the whole book by -- and the bills themselves, so the supplier
      can tick them off against their own book. */
   const today = todayISO();
-  const open = creditorOutstandingInvoices(s.id).map(pi=> ({ ref: purchaseInvoiceNumberLabel(pi), date: pi.date || '',
-    age: pi.date ? Math.max(0, daysBetweenISO(pi.date, today)) : null, due: purchaseInvoiceBalanceDue(pi) }));
-  const aging = [['Under 30 days', 0, 30], ['31–60', 31, 60], ['61–90', 61, 90], ['Over 90', 91, Infinity]]
-    .map(([label, lo, hi])=> ({ label, value: open.filter(o=> o.age !== null && o.age >= lo && o.age <= hi).reduce((n, o)=> n + o.due, 0) }));
+  const open = creditorOutstandingInvoices(s.id).map(pi=> {
+    const dueOn = supBillDue(pi, s);
+    return { ref: purchaseInvoiceNumberLabel(pi), date: pi.date || '', dueOn, late: dueOn ? daysBetweenISO(dueOn, today) : null,
+      age: pi.date ? Math.max(0, daysBetweenISO(pi.date, today)) : null, due: purchaseInvoiceBalanceDue(pi) };
+  });
+  /* By how far past due when every bill has a due date, as the canvas
+     ages it; otherwise by how long each has waited. */
+  const byDue = open.length > 0 && open.every(o=> o.late !== null);
+  const sum = (keep)=> open.filter(keep).reduce((n, o)=> n + o.due, 0);
+  const aging = byDue
+    ? [['Not yet due', o=> o.late <= 0], ['1–30 days', o=> o.late >= 1 && o.late <= 30], ['31–60 days', o=> o.late >= 31 && o.late <= 60], ['Over 60 days', o=> o.late > 60]]
+        .map(([label, keep])=> ({ label, value: sum(keep) }))
+    : [['Under 30 days', 0, 30], ['31–60', 31, 60], ['61–90', 61, 90], ['Over 90', 91, Infinity]]
+        .map(([label, lo, hi])=> ({ label, value: sum(o=> o.age !== null && o.age >= lo && o.age <= hi) }));
   return { st, side: {
     who: { name: s.name, location: [s.location, 'Supplier ' + s.id].filter(Boolean).join(' · '), phone: (contactPhones(s)[0] || '') },
     aging: open.length ? aging : null,
+    agingTitle: byDue ? 'Ageing of balance due' : 'How old the balance is',
     openLine: open.length ? `${open.length} open ${open.length === 1 ? 'bill' : 'bills'}` : '',
     openBills: open,
     signoff: ['Prepared by ' + printedShopName(), 'Confirmed by supplier · date'],
