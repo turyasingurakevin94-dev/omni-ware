@@ -128720,7 +128720,9 @@ function mgrConfidence(move, ctx){
    left exactly as it is; this one is labelled as what it is. */
 /* WHAT OF A BALANCE IS OVER 60 DAYS OLD, charge by charge: the part of
    each open charge still unpaid (customerOpenCharges, payments settling
-   the oldest first) where that charge is more than 60 days old. Never
+   the oldest first) where that charge is 60 days old or more -- the
+   Debtors aging's own boundary (AGING_BANDS: "60 to 90 days" starts AT
+   60, by daysSinceDate's whole days). Never
    the whole balance of a customer whose oldest charge happens to be --
    a customer with one old invoice and one new one owes only the old one
    "past 60 days". The same rule as the Brief's Cash to free
@@ -128733,7 +128735,7 @@ function mgrChargesOver60(charges, today){
   (charges || []).forEach(ch=>{
     const rem = Number(ch && ch.remaining) || 0;
     const d = String((ch && ch.date) || '').slice(0, 10);
-    if(!(rem > 0.5) || !/^\d{4}-\d{2}-\d{2}$/.test(d) || !(daysBetweenISO(d, day) > 60)) return;
+    if(!(rem > 0.5) || !/^\d{4}-\d{2}-\d{2}$/.test(d) || !(daysBetweenISO(d, day) >= 60)) return;
     amount += rem;
     if(!oldest || d < oldest) oldest = d;
   });
@@ -128831,12 +128833,15 @@ function mgrHealthFactsBuild(c){
     return { open: open.length, overdue: behind.length, amount: Math.round(behind.reduce((n, x)=> n + (Number(x.due.overdue) || 0), 0)) };
   });
   f.debtorDays = read('debtorDays', ()=> mgrDebtorDays(today));
+  /* Margin and lines sold below cost: the 30 WHOLE days to yesterday,
+     as MANAGER_METRICS.margin_pct and the Simulator read them -- today
+     is not over, and half a day would read a different margin. */
   f.margin = read('margin', ()=>{
-    const t = anOverallTotals(anInvoicesInRange(anShiftDate(today, -29), today));
+    const t = anOverallTotals(anInvoicesInRange(anShiftDate(today, -30), anShiftDate(today, -1)));
     return { pct: t.sales > 0 ? t.profit / t.sales * 100 : null, aim: targetMarginPct(), sales: Math.round(t.sales) };
   });
   f.belowCost = read('belowCost', ()=>{
-    const sold = anRowsByItem(anInvoicesInRange(anShiftDate(today, -29), today)).filter(r=> r.sales > 0);
+    const sold = anRowsByItem(anInvoicesInRange(anShiftDate(today, -30), anShiftDate(today, -1))).filter(r=> r.sales > 0);
     const rows = sold.filter(r=> r.profit < 0).sort((a, b)=> a.profit - b.profit);
     return { lines: sold.length, count: rows.length, loss: Math.round(-rows.reduce((n, r)=> n + r.profit, 0)),
       worst: rows[0] ? { name: rows[0].name + (rows[0].variant ? ' — ' + rows[0].variant : ''), loss: Math.round(-rows[0].profit) } : null };
@@ -128883,12 +128888,18 @@ function mgrHealthFactsBuild(c){
     return { known: known.length, owing: owing.size, unknownOwing: [...owing].filter(id=> !known.some(s=> String(s.id) === id)).length,
       past: past.sort((a, b)=> a.left - b.left), near: near.sort((a, b)=> a.left - b.left) };
   });
+  f.daysOfStock = read('daysOfStock', ()=> mgrDaysOfStock(today));
+  /* The shelf's total is the Inventory register's value at cost
+     (inventoryLineFor, through mgrDaysOfStock) -- the figure the
+     Inventory screen and days of stock show -- so "N% of the shelf" is a
+     share of the shelf the owner sees. Unreadable: no share, never a
+     guess. */
   f.deadStock = read('deadStock', ()=>{
     const h = dashInventoryHealth();
-    return { value: Math.round(h.deadValue), total: Math.round(h.totalValue), share: h.totalValue > 0 ? h.deadValue / h.totalValue : null,
+    const total = f.daysOfStock && f.daysOfStock.value != null ? Math.round(Number(f.daysOfStock.value)) : null;
+    return { value: Math.round(h.deadValue), total, share: total > 0 ? h.deadValue / total : null,
       lines: stockAgeRows(today).filter(r=> r.dead).length, quietDays: deadStockQuietDays() };
   });
-  f.daysOfStock = read('daysOfStock', ()=> mgrDaysOfStock(today));
   f.stockOut = read('stockOut', ()=>{
     const onOrder = buyOrdersOnTheWay(today);
     const selling = restockRiskRows(today);
@@ -128968,16 +128979,16 @@ const MGR_HEALTH_CHECKS = [
           ? 'Cash stays above ' + whose + ' ' + mgrShortUGX(fl.amount) + ' floor — lowest ' + mgrShortUGX(low) + ' on ' + fmtShortDate(f.tightest.date)
           : 'Cash falls to ' + mgrShortUGX(low) + ' on ' + fmtShortDate(f.tightest.date) + ', under ' + whose + ' ' + mgrShortUGX(fl.amount) + ' floor' };
     } },
-  { id: 'debt_60', dept: 'finance', label: 'No customer debt past 60 days',
+  { id: 'debt_60', dept: 'finance', label: 'No customer debt 60 days or more',
     read: (f)=>{
       const d = f.debt60;
       if(!d) return { pass: null, line: 'Money owed to you could not be read.' };
       if(!(d.total > 0.5) && !(f.debtorDays && f.debtorDays.creditSales > 0))
-        return { pass: null, rule: 'nothing older than 60 days', source: 'Debtors', line: 'No credit sales on the books to judge' };
-      return { pass: d.count === 0, figure: d.amount, unit: 'UGX', threshold: 0, rule: 'nothing older than 60 days',
-        source: 'Debtors — the part of each balance over 60 days old', count: d.count,
-        line: d.count === 0 ? 'Nothing owed to you is older than 60 days'
-          : mgrShortUGX(d.amount) + ' owed for more than 60 days, by ' + d.count + ' customer' + (d.count === 1 ? '' : 's') };
+        return { pass: null, rule: 'nothing owed 60 days or more', source: 'Debtors', line: 'No credit sales on the books to judge' };
+      return { pass: d.count === 0, figure: d.amount, unit: 'UGX', threshold: 0, rule: 'nothing owed 60 days or more',
+        source: 'Debtors — the part of each balance 60 days old or more, as the aging bands it', count: d.count,
+        line: d.count === 0 ? 'Nothing owed to you is 60 days old or more'
+          : mgrShortUGX(d.amount) + ' owed for 60 days or more, by ' + d.count + ' customer' + (d.count === 1 ? '' : 's') };
     } },
   { id: 'bills_late', dept: 'finance', label: 'No supplier bill past the day you named',
     read: (f)=>{
@@ -129097,9 +129108,9 @@ const MGR_HEALTH_CHECKS = [
       if(!d) return { pass: null, line: 'Dead stock (' + mgrDeadWindow() + ') could not be read.' };
       const w = mgrDeadWindow(d.quietDays);
       const label = 'No dead stock — ' + w;
-      if(!(d.total > 0)) return { pass: null, label, rule: 'nothing with ' + w, source: 'Inventory', line: 'Nothing on the shelf with a cost' };
+      if(d.total != null && !(d.total > 0) && !(d.value > 0)) return { pass: null, label, rule: 'nothing with ' + w, source: 'Inventory', line: 'Nothing on the shelf with a cost' };
       return { pass: !(d.value > 0), label, figure: d.value, unit: 'UGX', threshold: 0, rule: 'nothing with ' + w, source: 'Inventory — last sale per line',
-        line: d.value > 0 ? mgrShortUGX(d.value) + ' of dead stock — ' + w + ' — ' + Math.round(d.share * 100) + '% of the shelf, ' + d.lines + ' line' + (d.lines === 1 ? '' : 's')
+        line: d.value > 0 ? mgrShortUGX(d.value) + ' of dead stock — ' + w + ' — ' + (d.share != null ? Math.round(d.share * 100) + '% of the shelf, ' : '') + d.lines + ' line' + (d.lines === 1 ? '' : 's')
           : 'No dead stock — every line on the shelf has sold in the last ' + d.quietDays + ' days' };
     } },
   { id: 'stock_days', dept: 'store', label: 'Days of stock 90 or fewer',
@@ -134477,9 +134488,11 @@ async function managerTrackRecord(todayISO_){
       }
       const recorded = o.body && o.body.doneOn;
       if(o.status === 'done' && recorded && recorded >= o.date && (!until || recorded < until)){
-        const afterDay = new Date(Date.parse(recorded) + 86400000).toISOString().slice(0,10);
-        const afterCompletion = deriveMoveOutcome({ date: afterDay, status: o.status, body: o.body }, until);
-        if(afterCompletion.happened != null && (afterCompletion.happened || daysHad(afterDay, end) >= need)){
+        /* From the done day, that day counted -- as the Brief's hit rate
+           (mgrBriefHitRate) and the chase record (mgrChaseLags: paid the
+           day of the chase is paid within 0 days) count it. */
+        const afterCompletion = deriveMoveOutcome({ date: recorded, status: o.status, body: o.body }, until);
+        if(afterCompletion.happened != null && (afterCompletion.happened || daysHad(recorded, end) >= need)){
           completedScored++; if(afterCompletion.happened) completedObserved++; }
       }
     });
@@ -137189,10 +137202,9 @@ function mgrBriefHitRate(rows, derive, opts){
       const done = String(x.body.doneOn || '');
       if(!/^\d{4}-\d{2}-\d{2}$/.test(done) || done < x.date || (until && done >= until)){ notMeasurable++; return; }
       /* THE DONE DAY COUNTS, as the chase record counts it (mgrChaseLags:
-         a payment the day of the chase is paid within 0 days). The shared
-         track record (managerTrackRecord's completedScored, behind the
-         lever lines) is asked to start on the same day; until it does,
-         its lines count from the day after. */
+         a payment the day of the chase is paid within 0 days), and as the
+         shared track record (managerTrackRecord's completedScored, behind
+         the lever lines) counts it. */
       const from = done;
       const out = derive({ date: from, status: x.status, body: x.body }, until);
       /* The books cannot answer it (a customer no longer on file). */

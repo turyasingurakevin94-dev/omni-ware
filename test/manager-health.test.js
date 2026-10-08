@@ -203,8 +203,11 @@ const H = compileScope([
     && !/ageDays > 60/.test(facts), 'debt over 60 days is the part of each balance over 60 days old, charge by charge');
   t.check(/dashInventoryHealth\(\)/.test(facts), 'dead stock is dashInventoryHealth\'s — the quiet window, as the target uses');
   t.check(/mgrDaysOfStock\(today\)/.test(facts) && /mgrDebtorDays\(today\)/.test(facts), 'days of stock and debtor days by the approved definitions');
-  t.check(/anOverallTotals\(anInvoicesInRange\(anShiftDate\(today, -29\), today\)\)/.test(facts),
-    'margin over 30 days is the hero\'s own reading');
+  /* WAS: anShiftDate(today, -29) .. today -- today's unfinished day in
+     it. NOW the 30 whole days to yesterday, as margin_pct and the
+     Simulator read them (manager-shared-windows.test.js works it). */
+  t.check(/anOverallTotals\(anInvoicesInRange\(anShiftDate\(today, -30\), anShiftDate\(today, -1\)\)\)/.test(facts),
+    'margin over the 30 whole days to yesterday, as the Targets measure and the Simulator read it');
   t.check(/purchaseConcentration\(anShiftDate\(today, -89\), today\)/.test(facts), 'concentration is the Statements\' reading');
   t.check(/const watch = supplierPriceWatch\(\);/.test(facts) && /watch\.up\.filter\(s=> s\.risePct > DASH_COST_RISE_PCT\)/.test(facts),
     'and price rises the dashboard\'s');
@@ -284,7 +287,8 @@ const H = compileScope([
      balance is 1,200,000 and his oldest open charge is 98 days old -- the
      old reading counted all 1,200,000 as past 60 days; the part that is
      is 400,000.
-     Exactly 60 days (8 August) is not MORE than 60: not counted. An
+     Exactly 60 days (8 August) is in "60 days or more", as the Debtors
+     aging bands it (AGING_BANDS: 60 to 90 starts AT 60): counted. An
      undated charge has no age: not counted. */
   const S = compileScope([fn('mgrChargesOver60'), fn('customerOpenCharges'), fn('mgrBriefOver60'), fn('daysBetweenISO')],
     { todayISO: () => TODAY, promisesFor: () => [] }, ['mgrChargesOver60', 'customerOpenCharges', 'mgrBriefOver60']);
@@ -297,7 +301,7 @@ const H = compileScope([
   eq(S.mgrChargesOver60(ch, TODAY), { amount: 400000, oldest: '2026-07-01' }, 'Kato: 400,000 of 1,200,000 is over 60 days old, since 1 July');
   eq(S.mgrChargesOver60(ch, TODAY).amount, S.mgrBriefOver60(ch, TODAY), 'the same figure the Brief\'s Cash to free counts');
   const edge = [{ date: '2026-08-08', remaining: 500000 }, { date: '', remaining: 300000 }, { date: '2026-08-07', remaining: 200000 }];
-  eq(S.mgrChargesOver60(edge, TODAY), { amount: 200000, oldest: '2026-08-07' }, 'exactly 60 days and undated charges are not counted; 61 days is');
+  eq(S.mgrChargesOver60(edge, TODAY), { amount: 700000, oldest: '2026-08-07' }, 'exactly 60 days (500,000) and 61 days (200,000) are counted; undated is not');
   eq(S.mgrChargesOver60([], TODAY), { amount: 0, oldest: null }, 'nothing open: nothing past 60 days');
 }
 
