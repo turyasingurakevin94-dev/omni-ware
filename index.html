@@ -2025,6 +2025,14 @@
   .mgr-bed-b .mgr-b-src-books{background:currentColor;border-radius:var(--ow-r-2);}
   .mgr-bed-b .mgr-b-src-reading{border:1.5px solid currentColor;border-radius:var(--ow-r-pill);box-sizing:border-box;}
   .mgr-bed-b .mgr-b-chain{display:flex;align-items:stretch;padding:var(--ow-sp-16) var(--ow-sp-16) var(--ow-sp-12);}
+  /* ONE ROW UP TO FIVE CARDS; FROM SIX, TWO ROWS AS EVEN AS THE COUNT
+     ALLOWS (--per, set from the count), at every desk width -- and no
+     card under 140px, so a narrower desk wraps further rather than
+     squeezing seven cards to 103px. A card carries the arrow after it
+     (mgr-b-lk), so a row never starts on an arrow. */
+  .mgr-bed-b .mgr-b-chain{flex-wrap:wrap;row-gap:var(--ow-sp-12);}
+  .mgr-bed-b .mgr-b-lk{display:flex;align-items:stretch;flex:1 1 calc(100% / var(--per, 4) - 1px);min-width:164px;}
+  .mgr-bed-b .mgr-b-lk:last-child{min-width:140px;}
   .mgr-bed-b .mgr-b-node{flex:1 1 0;min-width:0;border:1px solid var(--ow-rule);border-radius:var(--ow-r-10);padding:var(--ow-sp-12);
     display:flex;flex-direction:column;gap:var(--ow-sp-8);background:var(--ow-paper);}
   .mgr-bed-b .mgr-b-node-t{font-size:var(--ow-t-13);line-height:1.45;color:var(--ow-ink-900);margin:0;}
@@ -2203,11 +2211,10 @@
     .mgr-bed-b .mgr-b-tz-r:nth-child(2){border-left:0;}
     .mgr-bed-b .btn.mgr-b-tz-go{grid-column:1 / -1;justify-self:start;margin:0 var(--ow-sp-16) var(--ow-sp-16);}
     .mgr-bed-b .mgr-b-dc-x{grid-template-columns:minmax(0,1fr) minmax(0,1fr);}
-    /* A chain too long for the row wraps onto the next, each card wide
-       enough for its words and figure, rather than squeezing five cards
-       to 120px. */
-    .mgr-bed-b .mgr-b-chain{flex-wrap:wrap;row-gap:var(--ow-sp-12);}
-    .mgr-bed-b .mgr-b-node{flex:1 1 150px;}
+  }
+  /* Five chain cards on a narrow desk: 3 + 2, never four and a lone one. */
+  @media (max-width:1200px){
+    .mgr-bed-b .mgr-b-chain[data-cards="5"]{--per:3 !important;}
   }
   /* ═══ MGR BED: Brief — end ═══ */
   /* ──────────────────────────────────────────────────────────────────
@@ -3455,7 +3462,8 @@
        themselves. */
     .mgr-bed-b .mgr-b-ctabs{margin-left:0;width:100%;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;}
     .mgr-bed-b .mgr-b-pill{min-height:var(--ow-tap);flex:none;font-size:var(--ow-t-13);}
-    .mgr-bed-b .mgr-b-chain{flex-direction:column;padding:var(--ow-sp-12);}
+    .mgr-bed-b .mgr-b-chain{flex-direction:column;flex-wrap:nowrap;padding:var(--ow-sp-12);row-gap:0;}
+    .mgr-bed-b .mgr-b-lk,.mgr-bed-b .mgr-b-lk:last-child{flex:none;flex-direction:column;min-width:0;}
     .mgr-bed-b .mgr-b-node{flex:none;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--ow-sp-4) var(--ow-sp-10);
       align-items:center;padding:var(--ow-sp-10) var(--ow-sp-12);}
     .mgr-bed-b .mgr-b-node > *{grid-column:1 / -1;justify-self:start;}
@@ -136708,6 +136716,40 @@ function mgrBriefUpside(src){
     plays: { total: plays.reduce((n, p)=> n + Math.round(Number(p.amount)), 0), list: plays } };
 }
 
+/* A DAILY READING THAT CANNOT BE KEPT says so (law 3): before database
+   update 0107 the journal refuses a snapshot, so "trend after 7 days"
+   would be a wait that never ends. WHAT THE WRITE ITSELF SAID COMES
+   FIRST: the snapshot writer's own refusal (writeErr, mgrSnapshotWriteErr
+   { migration, msg }) names 0107 only when it was the missing column,
+   and any other refusal by its own words. Only when no write has been
+   refused is the 0107 probe (termsCols false) read as the shop's state.
+   WAS: the probe came first, so a failed boot probe on a migrated shop
+   claimed it needed 0107 even when the write had said why it failed.
+   -> null | { migration: '0107' | null, msg? } */
+function mgrBriefSnapWrite(notes, termsCols, writeErr){
+  if(!notes) return null;
+  if(writeErr){
+    const msg = typeof writeErr === 'object' ? String(writeErr.msg || writeErr.error || writeErr.message || 'the journal refused it') : String(writeErr);
+    return { migration: typeof writeErr === 'object' && writeErr.migration ? '0107' : null, msg };
+  }
+  return termsCols === false ? { migration: '0107' } : null;
+}
+/* THE MANAGER'S OWN SIZING OF ITS PROPOSED PLAYS, as the Playbook reads
+   it: each proposal's words through the Playbook's own reader (worth:
+   mgrPlayWorth, "adds 1,466,051 over 30 days" -> 1,466,051 over 30
+   days) and the money it is in by what it treats (kinds:
+   MGR_PLAY_MONEY_KIND). A play sized in words alone has no figure and
+   is left out; nothing is made up. -> [{ name, amount, per, kind }] */
+function mgrBriefPlaySizes(book, worth, kinds){
+  const proposed = book && Array.isArray(book.proposed) ? book.proposed : [];
+  if(typeof worth !== 'function') return [];
+  return proposed.map(p=>{
+    const w = p ? worth(p.sized) : null;
+    return w && Number(w.amount) > 0 ? { name: String(p.name || 'A proposed play'), amount: Math.round(Number(w.amount)),
+      per: w.per === 'over 30 days' ? 'over 30 days' : 'a month', kind: (kinds && kinds[p.treats]) || null } : null;
+  }).filter(Boolean);
+}
+
 /* WHAT OF A CUSTOMER'S BALANCE IS OVER 60 DAYS OLD, charge by charge, as
    the Debtors statement's aging buckets it: the part of each open charge
    still unpaid, where the charge is 60 days old or more -- the aging's
@@ -136721,7 +136763,7 @@ function mgrBriefOver60(charges, today){
     return rem > 0.5 && /^\d{4}-\d{2}-\d{2}$/.test(d) && daysBetweenISO(d, today) >= 60 ? n + rem : n;
   }, 0));
 }
-/* CASH THAT COULD BE FREED (A2.4, Q4): money owed for more than 60 days,
+/* CASH THAT COULD BE FREED (A2.4, Q4): money owed 60 days or more,
    stock unsold for the quiet window, and the cash the plan's cash moves
    would free -- one figure per customer or line, the larger where two
    readings name the same one. No time on the whole of it: what
@@ -136814,9 +136856,10 @@ function mgrBriefHitRate(rows, derive, opts){
       const done = String(x.body.doneOn || '');
       if(!/^\d{4}-\d{2}-\d{2}$/.test(done) || done < x.date || (until && done >= until)){ notMeasurable++; return; }
       /* THE DONE DAY COUNTS, as the chase record counts it (mgrChaseLags:
-         a payment the day of the chase is paid within 0 days) and the
-         Record reads the advice's own window -- one rule for "followed"
-         on every screen. */
+         a payment the day of the chase is paid within 0 days). The shared
+         track record (managerTrackRecord's completedScored, behind the
+         lever lines) is asked to start on the same day; until it does,
+         its lines count from the day after. */
       const from = done;
       const out = derive({ date: from, status: x.status, body: x.body }, until);
       /* The books cannot answer it (a customer no longer on file). */
@@ -137408,14 +137451,36 @@ const MGR_BRIEF_BLIND_ORDER = ['rival', 'rival-old', 'fuel', 'customer', 'counts
   'terms', 'daily', 'statements', 'unmeasured'];
 
 /* THE QUESTIONS THE ASK CARD OFFERS (A1.4): only ones the books can
-   answer today, at most three. */
+   answer today, at most three. The canvas's third is a People question
+   (Q41: "where the books support it"): asked only when a People check
+   fails -- wages past their day (the payroll), a till that did not
+   match its count (the cash book), staff with no pay rate (the staff
+   list), in that order -- each answerable from the book that failed it.
+   Then the shelf: lines unsold for the quiet window, by their count.
+   people: { kind: 'wages' | 'till' | 'rates', count }; dead: { lines, days }. */
 function mgrBriefAskChips(src){
   const s = src || {}, out = [];
   if(s.cashTight) out.push(s.profitUp ? 'Why is cash tight if profit is up?' : 'Why is cash tight this month?');
   if(s.offer && s.offer.amount > 0) out.push('What happens if I take ' + (s.offer.name ? mgrBriefOwn(s.offer.name) : 'the') + ' ' + mgrShortUGX(s.offer.amount) + '?');
   if(s.first) out.push('Why is ' + s.first + ' first?');
+  const pp = s.people || null, pn = pp ? Math.round(Number(pp.count) || 0) : 0;
+  if(pp && pp.kind === 'wages' && pn > 0) out.push(pn === 1 ? 'What does the wage past its day do to my cash?' : 'What do the ' + pn + ' wages past their day do to my cash?');
+  else if(pp && pp.kind === 'till' && pn > 0) out.push('Which days did the till not match its count, and by how much?');
+  else if(pp && pp.kind === 'rates' && pn > 0) out.push('Who on staff has no pay rate, and what does that leave out?');
   if(s.margin != null && s.aim > 0 && s.margin < s.aim) out.push('What’s stopping margin reaching ' + s.aim + '%?');
+  const dl = s.dead ? Math.round(Number(s.dead.lines) || 0) : 0, dd = s.dead ? Math.round(Number(s.dead.days) || 0) : 0;
+  if(dl > 0 && dd > 0) out.push('What would clear the ' + (dl === 1 ? 'line' : dl + ' lines') + ' unsold in ' + dd + ' days?');
   return out.slice(0, 3);
+}
+/* The People question's basis: the first failing People check, in the
+   order the chips ask them. checks: mgrHealth().checks. */
+function mgrBriefPeopleAsk(checks){
+  const by = new Map((checks || []).filter(c=> c && c.dept === 'people').map(c=> [c.id, c]));
+  for(const [id, kind] of [['wages_late', 'wages'], ['till', 'till'], ['pay_rates', 'rates']]){
+    const c = by.get(id);
+    if(c && c.pass === false && Number(c.count) > 0) return { kind, count: Number(c.count) };
+  }
+  return null;
 }
 
 /* A name made possessive the way the screen spells it: Kato’s, Contractors’. */
@@ -137558,16 +137623,18 @@ function mgrBriefRead(ctx){
   const marginLines = read('margin', ()=> memo('margin', ()=> marginRows(today).filter(r=> r.atStake > 0)
     .map(r=> ({ key: r.key, line: r.line, atStake: r.atStake }))), []);
   /* A proposed play's own sizing is the meeting's words read as a figure
-     -- the Playbook's own reading of them, which that section offers
-     other screens as mgrPlayProposedSizes(book): [{ name, amount, per,
-     kind }], kind the money a play treats (MGR_PLAY_MONEY_KIND). Only the
+     -- the Playbook's own reading of them (mgrPlayWorth) and the money a
+     play treats (MGR_PLAY_MONEY_KIND), through mgrBriefPlaySizes; or the
+     Playbook's mgrPlayProposedSizes(book) where it offers one. Only the
      plays that treat a profit problem belong beside the profit upside,
-     shown apart as the Manager's claim and never added in. Where the
-     Playbook does not offer it, none is shown. */
+     shown apart as the Manager's claim and never added in. WAS: it read
+     only an export no section defined, so the clause never appeared. */
   const playSizes = read('play sizing', ()=>{
     const book = c.book && !c.book.error ? c.book : null;
-    if(!book || typeof mgrPlayProposedSizes !== 'function') return [];
-    return (mgrPlayProposedSizes(book) || []).filter(x=> x && x.kind === 'profit' && Number(x.amount) > 0)
+    if(!book) return [];
+    const sizes = typeof mgrPlayProposedSizes === 'function' ? mgrPlayProposedSizes(book)
+      : typeof mgrPlayWorth === 'function' && typeof MGR_PLAY_MONEY_KIND !== 'undefined' ? mgrBriefPlaySizes(book, mgrPlayWorth, MGR_PLAY_MONEY_KIND) : [];
+    return (sizes || []).filter(x=> x && x.kind === 'profit' && Number(x.amount) > 0)
       .map(x=> ({ name: String(x.name || 'A proposed play'), amount: Math.round(Number(x.amount)), per: x.per === 'over 30 days' ? 'over 30 days' : 'a month' }));
   }, []);
   const upside = mgrBriefUpside({ marginLines, moves: rows, plays: playSizes });
@@ -137613,15 +137680,9 @@ function mgrBriefRead(ctx){
   const trend = side.snaps && !side.snaps.error && !health.error
     ? read('trend', ()=> mgrBriefWeekTrend(health, side.snaps.rows, mgrHealthTrend(side.snaps.rows), today), null) : null;
   const snapCount = side.snaps && !side.snaps.error ? new Set(side.snaps.rows.map(r=> r.date)).size : null;
-  /* A DAILY READING THAT CANNOT BE KEPT says so (law 3): before database
-     update 0107 the journal refuses a snapshot, so "trend after 7 days"
-     would be a wait that never ends. The 0107 probe says which shop that
-     is; a write the journal refused for another reason is named when the
-     snapshot writer keeps it (mgrSnapshotWriteErr). */
-  const snapWrite = !c.notes ? null
-    : typeof supplierTermsColumns !== 'undefined' && !supplierTermsColumns ? { migration: '0107' }
-    : typeof mgrSnapshotWriteErr !== 'undefined' && mgrSnapshotWriteErr
-      ? { migration: mgrSnapshotWriteErr.migration ? '0107' : null, msg: String(mgrSnapshotWriteErr.msg || mgrSnapshotWriteErr.error || mgrSnapshotWriteErr) } : null;
+  const snapWrite = mgrBriefSnapWrite(c.notes,
+    typeof supplierTermsColumns !== 'undefined' ? supplierTermsColumns : true,
+    typeof mgrSnapshotWriteErr !== 'undefined' ? mgrSnapshotWriteErr : null);
 
   /* The next 30 days. */
   const onOrder = read('orders on the way', ()=> buyOrdersOnTheWay(today), new Map());
@@ -137812,7 +137873,10 @@ function mgrBriefRead(ctx){
   const chips = mgrBriefAskChips({ cashTight: !!cashCheck && cashCheck.pass === false, profitUp,
     offer: side.offers && !side.offers.error ? side.offers.rows[0] : null,
     first: firstOpen ? (face && face.name ? face.name.split(/\s+/).slice(0, 2).join(' ') : 'move 1') : null,
-    margin: facts && facts.margin ? facts.margin.pct : null, aim: facts && facts.margin ? facts.margin.aim : null });
+    margin: facts && facts.margin ? facts.margin.pct : null, aim: facts && facts.margin ? facts.margin.aim : null,
+    people: mgrBriefPeopleAsk(health.checks),
+    dead: (health.checks || []).some(x=> x.id === 'dead_stock' && x.pass === false) && facts && facts.deadStock
+      ? { lines: facts.deadStock.lines, days: facts.deadStock.quietDays } : null });
 
   /* The simulator's own figures, when that section offers them. */
   const tz = typeof mgrSimTeaserFigures === 'function' ? read('simulator', ()=> mgrSimTeaserFigures(c), null) : null;
@@ -138278,7 +138342,7 @@ function mgrBriefStripDetailHTML(id, M){
   } else if(id === 'free' && M.free && !M.free.error){
     const f = M.free;
     title = `${mgrShortUGX(f.total)} tied up that could be freed`;
-    const KIND = { debt: 'the part owed for more than 60 days', dead: 'stock unsold for the quiet window', move: 'a cash move in today’s plan' };
+    const KIND = { debt: 'the part owed 60 days or more', dead: 'stock unsold for the quiet window', move: 'a cash move in today’s plan' };
     body = f.parts.slice(0, 10).map(p=> row(esc(p.label) + ` <span class="mgr-b-sm">— ${KIND[p.kind]}</span>`, fig(p.amount))).join('')
       + (f.parts.length > 10 ? row(`and ${f.parts.length - 10} more`, null, 'mgr-b-muted') : '')
       + f.expected.list.map(x=> row(esc(x.label) + ` <span class="mgr-b-sm">— expected if chased: paid within ${x.lagDays === 0 ? 'the day' : x.lagDays + ' day' + (x.lagDays === 1 ? '' : 's')} of a chase in ${x.k} of ${x.n}</span>`, fig(x.amount), 'mgr-b-exp')).join('');
@@ -138381,6 +138445,13 @@ function mgrBriefPickDept(id){
    Never a root cause stated as fact. "Linked in your books" are joins
    the books make; "My reading" is the meeting's own, with how sure it
    said it was. The one fix opens the door of the move it names. */
+/* How many chain cards share a desk row: all of them up to five; from
+   six, two rows as even as the count allows (6 -> 3 + 3, 7 -> 4 + 3).
+   A narrow desk splits five 3 + 2 (the CSS's own rule). */
+function mgrBriefChainPer(cards){
+  const n = Math.max(1, Math.round(Number(cards) || 1));
+  return n <= 5 ? n : Math.ceil(n / 2);
+}
 function mgrBriefPaintChains(){
   const wrap = document.getElementById('managerChainWrap');
   if(!wrap) return;
@@ -138411,29 +138482,36 @@ function mgrBriefPaintChains(){
   const fixNum = fixMove ? String(rows.indexOf(fixMove) + 1).padStart(2, '0') : null;
   const pills = chains.map(c=> `<button type="button" role="tab" class="mgr-b-pill${c === sel ? ' mgr-b-on' : ''}" aria-selected="${c === sel}" data-chain="${esc(c.id)}">
       <span class="mgr-b-src mgr-b-src-${c.source}" aria-hidden="true"></span>${esc(c.short)} <span class="mgr-b-fig">${mgrBriefChainDepts(c)} depts</span></button>`).join('');
-  const node = (n)=> `<span class="mgr-b-arr" aria-hidden="true">${mgrBriefIcon('arrow')}</span>
+  /* EACH CARD CARRIES THE ARROW AFTER IT (mgr-b-lk), so a chain too long
+     for one row wraps between links: a row ends on its arrow, pointing
+     on, and the next row starts on a card -- never on an arrow. The last
+     card carries none; the arrow into the one fix is green. */
+  const arrow = (fx)=> `<span class="mgr-b-arr${fx ? ' mgr-b-arr-fx' : ''}" aria-hidden="true">${mgrBriefIcon('arrow')}</span>`;
+  const after = (i)=> i < sel.nodes.length - 1 ? arrow(false) : sel.fix ? arrow(true) : '';
+  const node = (n, i)=> `<div class="mgr-b-lk">
     <div class="mgr-b-node${hl(n.dept)}"><span>${mgrBriefDeptChip(n.dept, false)}</span><p class="mgr-b-node-t">${esc(n.text)}</p>
-      <span class="mgr-b-node-f mgr-b-fig">${esc(n.figure)}</span>${n.tool ? `<small class="mgr-b-tool">from ${esc(n.tool)}</small>` : ''}</div>`;
+      <span class="mgr-b-node-f mgr-b-fig">${esc(n.figure)}</span>${n.tool ? `<small class="mgr-b-tool">from ${esc(n.tool)}</small>` : ''}</div>${after(i)}</div>`;
   const srcLabel = sel.source === 'books' ? 'Linked in your books' : 'My reading';
+  const cards = 1 + sel.nodes.length + (sel.fix ? 1 : 0);
   wrap.innerHTML = `<div class="ow-pan">${head} <span class="mgr-b-ctabs" role="tablist" aria-label="Chains">${pills}</span></div>
-    <div class="mgr-b-chain" role="tabpanel" aria-label="${esc(sel.title)}">
-      <div class="mgr-b-node mgr-b-root${hl(sel.root.dept)}">
+    <div class="mgr-b-chain" role="tabpanel" aria-label="${esc(sel.title)}" data-cards="${cards}" style="--per:${mgrBriefChainPer(cards)}">
+      <div class="mgr-b-lk"><div class="mgr-b-node mgr-b-root${hl(sel.root.dept)}">
         <span class="mgr-b-micro">${srcLabel}${sel.source === 'reading' ? (sel.confidence ? ' · judged' : '') : ''}</span>
         ${sel.source === 'reading' && sel.confidence ? mgrBriefPipsHTML(sel.confidence, 'How sure the meeting said it was: ' + sel.confidence + ' of 5, judged') : ''}
         <b class="mgr-b-node-h">${esc(sel.title)}</b>
         <span>${mgrBriefDeptChip(sel.root.dept, false)}</span>
         <p class="mgr-b-node-t">${esc(sel.root.text)}</p>
         <span class="mgr-b-node-f mgr-b-fig">${esc(sel.root.figure)}</span>${sel.root.tool ? `<small class="mgr-b-tool">from ${esc(sel.root.tool)}</small>` : ''}
-      </div>
+      </div>${sel.nodes.length ? arrow(false) : sel.fix ? arrow(true) : ''}</div>
       ${sel.nodes.map(node).join('')}
-      ${sel.fix ? `<span class="mgr-b-arr mgr-b-arr-fx" aria-hidden="true">${mgrBriefIcon('arrow')}</span>
+      ${sel.fix ? `<div class="mgr-b-lk mgr-b-lk-fix">
       <div class="mgr-b-node mgr-b-fix">
         <span class="mgr-b-micro">One fix</span>
         <b class="mgr-b-node-h">${esc(fixBody ? fixBody.title || sel.fix.title : sel.fix.title)}</b>
         ${sel.fix.text ? `<p class="mgr-b-node-t">${esc(sel.fix.text)}</p>` : ''}
         ${fixNum ? `<span class="mgr-b-fixn">${mgrBriefIcon('check')}Decision ${fixNum} in today’s plan</span>` : sel.source === 'reading' ? '<span class="mgr-b-fixn">Not one of today’s decisions</span>' : ''}
         ${door ? `<button type="button" class="btn btn-ghost ow-sm mgr-b-go"${door.view ? ` data-mgrgo="${esc(door.view)}"` : ` data-tab="${esc(door.tab)}"`}>${esc(door.label)}</button>` : ''}
-      </div>` : ''}
+      </div></div>` : ''}
     </div>
     ${sel.source === 'reading' ? '<p class="mgr-b-cnote">My reading of how these sit together, from the figures shown — not something the books prove.</p>'
       : '<p class="mgr-b-cnote">Each figure is the books’ own; the books show these sit together, not which one caused which.</p>'}
@@ -139015,12 +139093,13 @@ function mgrBriefNeedsCard(){
     : m.failed ? (m.atLeast ? `at least <span class="mgr-b-fig">${m.atLeast}</span> · ` : '') + 'the count could not be read'
     : (m.atLeast ? `at least <span class="mgr-b-fig">${m.atLeast}</span> · ` : '') + 'still counting';
   /* ANSWERED HERE, with the Ask section's own card (mgrAskCardHTML) and
-     its own wiring, which that section offers other screens as
-     mgrAskWireCards -- so a question reads, answers and is kept the same
-     in both places. Where that wiring is not offered, no chip is drawn
-     that a tap could not answer: the first question is shown with the
-     door to the section, as before. */
-  const answerable = typeof mgrAskWireCards === 'function';
+     its own wiring (mgrWireAsks: the chips, the effect line, Found by
+     and Keep this answer) -- so a question reads, answers and is kept
+     the same in both places. WAS: this waited on an export hook no
+     section defines, so the phone always fell back to one bare
+     question. Where the wiring is missing, no chip is drawn that a tap
+     could not answer: the first question with the door to the section. */
+  const answerable = typeof mgrWireAsks === 'function';
   const sig = (answerable ? 'a:' : 't:') + m.shown.map(it=> it.key).join(',') + '|' + (m.n == null ? '' : m.n);
   const door = (label)=> label ? `<button type="button" class="mgr-b-more" data-mgrgo="ask">${label} →</button>` : '';
   if(!answerable){
@@ -139044,7 +139123,7 @@ function mgrBriefNeedsCard(){
   out.wire = (el)=>{
     const root = el.querySelector('.mgr-b-needk');
     if(root){
-      try { mgrAskWireCards(root, { ...model, items: m.shown, route: null }); } catch(e){ console.error('The Brief could not wire a question', e); }
+      try { mgrWireAsks(root, { ...model, items: m.shown, route: null }); } catch(e){ console.error('The Brief could not wire a question', e); }
       /* The Ask section's place filter is that section's: every card here
          stays shown. */
       root.querySelectorAll('.mgr-k-q').forEach(q=>{ q.hidden = false; });

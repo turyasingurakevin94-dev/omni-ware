@@ -176,7 +176,7 @@ const S = compileScope([
     mgrBriefCtx: ctx, mgrBriefIcon: () => '', esc: (x) => String(x), mgrBriefDeptChip: (d) => '[' + d + ']', mgrShortUGX: (v) => String(v),
     mgrAskModel: () => ({ items, today: TODAY }), mgrAskRead: null, mgrBriefWireGo() {},
     mgrAskCardHTML: (it) => '<div class="mgr-k-q" data-qkey="' + it.question + '">[' + it.dept + '] ' + it.question + ' <button class="mgr-k-an">chip</button></div>',
-    ...((extra || {}).noWire ? {} : { mgrAskWireCards() {} }), mgrAskStakeWords: (st) => st.amount + ' a month at stake',
+    ...((extra || {}).noWire ? {} : { mgrWireAsks() {} }), mgrAskStakeWords: (st) => st.amount + ' a month at stake',
     managerNotesProbeError: (extra || {}).probeErr || null, Number, Math, String, Array, Object, console,
   }, ['mgrBriefNeedsCard']).mgrBriefNeedsCard();
   const txt = (c) => c.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
@@ -207,7 +207,10 @@ const S = compileScope([
   /* Nothing is kept untapped: the card's only writer is the Ask section's
      wiring (its "Keep this answer"), and the Brief calls no write. */
   const cardSrc = fn('mgrBriefNeedsCard');
-  t.check(/mgrAskWireCards\(/.test(cardSrc) && !/mgrWireAsks\(|managerAnswerQuestion|sb\.from|apSend|runManagerMeeting/.test(cardSrc),
+  /* WAS: it waited on mgrAskWireCards, which no section defines, so the
+     phone always showed one bare question (final review, 3/12). NOW: the
+     Ask section's own wiring, mgrWireAsks, the one its own screen uses. */
+  t.check(/mgrWireAsks\(root, \{ \.\.\.model, items: m\.shown, route: null \}\)/.test(cardSrc) && !/mgrAskWireCards|managerAnswerQuestion|sb\.from|apSend|runManagerMeeting/.test(cardSrc),
     'the Brief writes nothing itself: answers are kept only by the Ask section\'s own wiring and its "Keep this answer"');
   /* Where the Ask section offers no wiring, no chip is drawn that a tap
      could not answer: the first question and the door, as before. */

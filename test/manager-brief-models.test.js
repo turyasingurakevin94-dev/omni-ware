@@ -452,6 +452,25 @@ const S = compileScope([
     ['Why is cash tight if profit is up?', 'What happens if I take Centenary’s 10m?', 'Why is Kato Construction first?'],
     'only questions the books can answer today, three at most');
   eq(S.mgrBriefAskChips({ cashTight: false, first: null, margin: 13, aim: 12 }), [], 'and none when the books give no reason to ask');
+  /* Q41: THE THIRD QUESTION WHERE THE BOOKS SUPPORT IT. WAS: the harness
+     book (first + margin) showed 2, a no-meeting day 1. NOW a People
+     question when a People check fails, and the shelf's unsold lines. */
+  eq(S.mgrBriefAskChips({ first: 'Kato Construction', margin: 9.1, aim: 12, people: { kind: 'wages', count: 2 }, dead: { lines: 6, days: 60 } }),
+    ['Why is Kato Construction first?', 'What do the 2 wages past their day do to my cash?', 'What’s stopping margin reaching 12%?'],
+    'a meeting day: the first move, the People question (2 wages past their day), the margin aim -- three');
+  eq(S.mgrBriefAskChips({ first: null, margin: 9.1, aim: 12, people: null, dead: { lines: 6, days: 60 } }),
+    ['What’s stopping margin reaching 12%?', 'What would clear the 6 lines unsold in 60 days?'],
+    'no meeting, People all passing: the margin aim and the 6 lines unsold in 60 days');
+  eq(S.mgrBriefAskChips({ people: { kind: 'till', count: 3 } }), ['Which days did the till not match its count, and by how much?'], 'a till off on 3 days');
+  eq(S.mgrBriefAskChips({ people: { kind: 'rates', count: 1 }, dead: { lines: 1, days: 45 } }),
+    ['Who on staff has no pay rate, and what does that leave out?', 'What would clear the line unsold in 45 days?'], 'a missing pay rate; one line, singular');
+  eq(S.mgrBriefAskChips({ people: { kind: 'wages', count: 0 }, dead: { lines: 0, days: 60 } }), [], 'a count of 0 asks nothing');
+  const PA = compileScope([fn('mgrBriefPeopleAsk')], { Map, Number }, ['mgrBriefPeopleAsk']).mgrBriefPeopleAsk;
+  const ck = (id, pass, count) => ({ id, dept: 'people', pass, count });
+  eq([PA([ck('till', false, 3), ck('wages_late', false, 2)]), PA([ck('wages_late', true, 0), ck('pay_rates', false, 1), ck('till', false, 4)]),
+    PA([ck('wages_late', null), ck('till', true, 0)]), PA(undefined)],
+    [{ kind: 'wages', count: 2 }, { kind: 'till', count: 4 }, null, null],
+    'the first failing People check in the chips\' order: wages, then the till, then pay rates; none failing, none');
 }
 
 /* ---------- 15. last year in these weeks (A6.6) ----------------------------- */
@@ -488,6 +507,12 @@ const S = compileScope([
     { date: '2026-08-09', remaining: 7 },
     { date: '2026-06-01', remaining: 0.2 }, { date: '2026-09-20', remaining: 999 }, { date: null, remaining: 5 }], TODAY), 180,
     'only the charges themselves 60 days old or more -- the Debtors aging\'s own boundary -- never the whole balance');
+  /* WAS (final review, 24): Cash to free counted a charge 60 days old
+     (>= 60) and labelled it "the part owed for more than 60 days". NOW
+     the label says the rule it counts by. */
+  const det = extractFunction(src, 'mgrBriefStripDetailHTML', 'index.html');
+  t.check(/debt: 'the part owed 60 days or more'/.test(det) && !/more than 60 days/.test(det) && /daysBetweenISO\(d, today\) >= 60/.test(fn('mgrBriefOver60')),
+    'Cash to free says "60 days or more", as mgrBriefOver60 counts (>= 60)');
 }
 
 /* ---------- 17. what the next 30 days shows first (A6.*) -------------------- */
@@ -591,6 +616,16 @@ const S = compileScope([
     'before 0107: the trend names the update it waits on, never "trend after 7 days"');
   t.check(cell({ snapWrite: { msg: 'permission denied' } }) === 'daily reading not kept — permission denied', 'another refusal is named');
   t.check(cell({}) === 'trend after 7 days' && cell({ trend: { change: 1 } }) === '+1 this week', 'and the ordinary waits and changes are said as before');
+  /* WHICH SAYS SO (final review, 29). WAS: the 0107 probe came first, so
+     a migrated shop whose boot probe merely failed was told it needs
+     0107, even when the snapshot write said why it failed. NOW the
+     write's own refusal comes first; the probe only when none was kept. */
+  const SW = compileScope([fn('mgrBriefSnapWrite')], { String }, ['mgrBriefSnapWrite']).mgrBriefSnapWrite;
+  eq([SW(true, false, { migration: false, msg: 'permission denied' }), SW(true, false, { migration: true, msg: 'column "body" ...' }),
+    SW(true, false, null), SW(true, true, null), SW(false, false, { msg: 'x' }), SW(true, true, 'timeout')],
+    [{ migration: null, msg: 'permission denied' }, { migration: '0107', msg: 'column "body" ...' }, { migration: '0107' }, null, null,
+      { migration: null, msg: 'timeout' }],
+    'the write\'s own refusal first (named, or 0107 only when it was the column); the probe only when no write was refused; no journal, nothing');
 
   /* (d) THE HIT RATE'S PROBE: a journal the probe could not read names it. */
   const hitCell = (hit) => S.mgrStripCells({ hit })[5];
@@ -660,8 +695,26 @@ const S = compileScope([
   /* (j) THE PLAYS' OWN SIZING, SHOWN APART. */
   /* Read through the Playbook's own offered reader (the Plays block keeps
      mgrPlayWorth to itself), profit plays only. */
-  t.check(!/const playSizes = \[\];/.test(read) && /mgrPlayProposedSizes\(book\)/.test(read) && /x\.kind === 'profit'/.test(read) && !/mgrPlayWorth\(/.test(read),
-    'the proposed plays\' own sizing is read through the Playbook\'s reader (profit plays only), never hard-coded empty');
+  t.check(!/const playSizes = \[\];/.test(read) && /mgrBriefPlaySizes\(book, mgrPlayWorth, MGR_PLAY_MONEY_KIND\)/.test(read)
+    && /x\.kind === 'profit'/.test(read) && !/mgrPlayWorth\(/.test(read),
+    'the proposed plays\' own sizing is read with the Playbook\'s own reader (profit plays only), never hard-coded empty');
+  /* WAS (final review, 4): it read only an export no section defined, so
+     playSizes was always []. NOW: the Playbook's own reader of the words
+     (mgrPlayWorth) and kinds (MGR_PLAY_MONEY_KIND), run on three
+     proposals: "adds 1,466,051 over 30 days" on margin -> 1,466,051 over
+     30 days, profit; "about 250,000 a month" on growth -> 250,000 a
+     month, sales; "a good lift" -> no figure, left out. */
+  const PS = compileScope([fn('mgrBriefPlaySizes'), fn('mgrPlayWorth'), decl('MGR_PLAY_MONEY_KIND'), 'function __kinds(){ return MGR_PLAY_MONEY_KIND; }'],
+    { Number, Math, String, Array }, ['mgrBriefPlaySizes', 'mgrPlayWorth', '__kinds']);
+  PS.MGR_PLAY_MONEY_KIND = PS.__kinds();
+  eq(PS.mgrBriefPlaySizes({ proposed: [
+    { name: 'Raise G28 to list', sized: 'adds 1,466,051 over 30 days', treats: 'margin' },
+    { name: 'Saturday delivery', sized: 'about 250,000 a month', treats: 'growth' },
+    { name: 'Words only', sized: 'a good lift', treats: 'margin' }] }, PS.mgrPlayWorth, PS.MGR_PLAY_MONEY_KIND),
+    [{ name: 'Raise G28 to list', amount: 1466051, per: 'over 30 days', kind: 'profit' },
+     { name: 'Saturday delivery', amount: 250000, per: 'a month', kind: 'sales' }],
+    'each sized proposal, its own figure and kind; one sized in words alone left out');
+  eq(PS.mgrBriefPlaySizes({}, PS.mgrPlayWorth, PS.MGR_PLAY_MONEY_KIND), [], 'no proposals: none');
   const up = S.mgrBriefUpside({ marginLines: [{ key: 'P1', line: 'x', atStake: 100 }], moves: [], plays: [{ name: 'Bundle', amount: 620000, per: 'a month' }] });
   t.check(up.total === 100 && up.plays.total === 620000, 'and kept out of the total: 100, the play\'s 620k apart');
 

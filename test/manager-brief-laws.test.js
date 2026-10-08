@@ -132,7 +132,7 @@ const all = (re) => { const out = []; let m; const g = new RegExp(re.source, 'g'
     errors: ['the cash ahead', 'risks', 'the buy plan', 'the shelf', 'lead times', 'orders on the way', 'chase record', 'chase verdicts',
       'posts', 'counts', 'statements', 'rival checks', 'supplier of P001'] };
   const S = compileScope([
-    ...['mgrBriefPaintChains', 'mgrBriefPaintForesight', 'mgrBriefPaintMemory', 'mgrBriefPaintBlind', 'mgrBriefUnread', 'mgrBriefUnreadHTML',
+    ...['mgrBriefPaintChains', 'mgrBriefChainPer', 'mgrBriefPaintForesight', 'mgrBriefPaintMemory', 'mgrBriefPaintBlind', 'mgrBriefUnread', 'mgrBriefUnreadHTML',
       'mgrBriefForesightPick', 'mgrBriefNext7', 'mgrBriefLampHTML', 'mgrBriefDeptChip', 'mgrBriefPipsHTML', 'mgrBriefDoor', 'mgrBriefWireGo', 'mgrBriefChainDepts',
       'mgrBriefDay', 'mgrShortUGX', 'mgrDept', 'anShiftDate', 'waWeekday'].map(fn),
     ...['MGR_BRIEF_NEEDS', 'MGR_BRIEF_ICON', 'mgrBriefIcon', 'MGR_BRIEF_DOORS', 'MGR_BRIEF_FS_ORDER', 'MGR_BRIEF_WEEK_KEEP', 'MGR_WEEKDAYS', 'MGR_DEPTS',
@@ -141,7 +141,7 @@ const all = (re) => { const out = []; let m; const g = new RegExp(re.source, 'g'
     document, mgrBriefModel: M, mgrBriefDept: 'all', mgrBriefChain: null, mgrBriefRows: [], mgrBriefMoreFore: false, mgrBriefFore30: false, mgrBriefMoreBlind: false,
     mgrBriefCtx: {}, MANAGER_DOORS: {}, esc: (s) => String(s), fmtUGX: (n) => String(n), fmtShortDate: (d) => String(d),
     mgrMoveOrder: (r) => r.slice(), todayISO: () => '2026-10-07', Math, Number, String, Map, Set, Array, Object, JSON,
-  }, ['mgrBriefPaintChains', 'mgrBriefPaintForesight', 'mgrBriefPaintMemory', 'mgrBriefPaintBlind']);
+  }, ['mgrBriefPaintChains', 'mgrBriefChainPer', 'mgrBriefPaintForesight', 'mgrBriefPaintMemory', 'mgrBriefPaintBlind']);
   [['managerChainWrap', 'mgrBriefPaintChains', /Nothing in the books joins/, /The cash ahead, the buy plan, risks, the shelf and who supplies each line could not be read/],
     ['managerForesightWrap', 'mgrBriefPaintForesight', /Nothing is dated/, /The cash ahead, risks, the shelf, lead times, orders on the way and who supplies each line could not be read/],
     ['managerMemoryWrap', 'mgrBriefPaintMemory', /Nothing repeats/, /Chase record, chase verdicts and posts could not be read/],
@@ -151,8 +151,34 @@ const all = (re) => { const out = []; let m; const g = new RegExp(re.source, 'g'
       const html = els[id].innerHTML.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
       t.check(!allClear.test(html) && named.test(html), id + ': its failed readings are named, and its all-clear is not said (got ' + html.trim().slice(0, 220) + ')');
     });
-  /* And the all-clear is still said when nothing failed. */
+  /* THE LOWEST DAY'S CHAIN, SEVEN CARDS (final review, 13). WAS: one row
+     at every width over 1180px, each card 103px at 1200 with its figure
+     broken mid-phrase, and at 1024 a wrapped row that started on an
+     arrow. NOW: from five cards two even rows (7 -> 4 per row), and each
+     card carries the arrow after it, so no row starts on one; the last
+     card (the fix) carries none, and the arrow into it is green. */
+  t.check([1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => S.mgrBriefChainPer(n)).join(',') === '1,2,3,4,5,3,4,4,5',
+    'cards a row: all up to five, then two even rows (6 -> 3, 7 -> 4, 9 -> 5)');
+  t.check(/@media \(max-width:1200px\)\{\s*\.mgr-bed-b \.mgr-b-chain\[data-cards="5"\]\{--per:3 !important;\}/.test(src),
+    'and five on a narrow desk split 3 + 2, never four and a lone card');
   M.errors = [];
+  const nd = (dept, text, figure) => ({ dept, text, figure });
+  M.chains = [{ id: 'b:lowest', short: 'The lowest-cash day', title: 'Dated payments and the lowest-cash day', source: 'books',
+    root: nd('finance', '19 dated payments leave before Thu 5 Nov', '43.64m out'),
+    nodes: [nd('procurement', 'Bills', '34.84m'), nd('finance', 'Rent', '5m'), nd('people', 'Wages', '1.98m'), nd('finance', 'Loan', '1.83m'),
+      nd('finance', 'The lowest', '3.15m · Thu 5 Nov')],
+    fix: { title: 'Collect before Thu 5 Nov', text: 'x', door: null } }];
+  S.mgrBriefPaintChains();
+  const ch = els.managerChainWrap.innerHTML;
+  const links = ch.split('<div class="mgr-b-lk').slice(1);
+  t.check(/data-cards="7" style="--per:4"/.test(ch) && links.length === 7, 'seven cards, each its own link, four to a row');
+  t.check(links.every((l) => !/^[^>]*>\s*<span class="mgr-b-arr/.test(l)) && links.slice(0, 6).every((l) => /<\/div><span class="mgr-b-arr/.test(l))
+    && !/mgr-b-arr/.test(links[6]) && /mgr-b-arr mgr-b-arr-fx/.test(links[5]),
+    'every arrow follows its card, none leads one; the fix carries none, and the arrow into it is green');
+  t.check(src.includes('.mgr-bed-b .mgr-b-chain{flex-wrap:wrap;row-gap:var(--ow-sp-12);}\n  .mgr-bed-b .mgr-b-lk{display:flex;align-items:stretch;flex:1 1 calc(100% / var(--per, 4) - 1px);min-width:164px;}'),
+    'the wrap is the desk\'s own rule at every width, no card under 140px (164px with its arrow)');
+  M.chains = [];
+  /* And the all-clear is still said when nothing failed. */
   S.mgrBriefPaintForesight();
   t.check(/Nothing is dated in the next 30 days\./.test(els.managerForesightWrap.innerHTML) && !/could not be read/.test(els.managerForesightWrap.innerHTML),
     'with every reading in, an empty box says so plainly');
