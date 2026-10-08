@@ -3490,15 +3490,16 @@
   /* ---- the table panel's head: the lens, the declared order, the search ---- */
   .pan-tbh{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ow-sp-8) var(--ow-sp-12);min-height:52px;
     padding:var(--ow-sp-8) var(--ow-sp-16);border-bottom:1px solid var(--ow-rule-soft);box-sizing:border-box;}
-  .pan-seg{display:inline-flex;gap:var(--ow-sp-2);padding:3px;background:var(--ow-rule-soft);border-radius:var(--ow-r);}
-  .pan-seg-b{all:unset;box-sizing:border-box;height:30px;padding:0 var(--ow-sp-12);border:1px solid transparent;border-radius:7px;
-    display:inline-flex;align-items:center;justify-content:center;gap:var(--ow-sp-6);cursor:pointer;white-space:nowrap;
-    font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-12);font-weight:var(--ow-fw-500);color:var(--ow-ink-600);}
-  .pan-seg-b:hover{color:var(--ow-ink-900);}
-  .pan-seg-b:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:1px;}
-  .pan-seg-b.ow-on{background:var(--ow-paper);border-color:var(--ow-rule);color:var(--ow-ink-900);font-weight:var(--ow-fw-600);}
-  .pan-seg-n{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
-    font-size:var(--ow-t-11);font-weight:var(--ow-fw-500);color:var(--ow-ink-600);}
+  /* The tab row is Sales analytics' (.an-pgtabs); this screen's figures
+     also come in the state colours a price move and a partial
+     commission wear elsewhere on the page. */
+  #pan_pages[hidden]{display:none;}
+  .an-pg .an-pg-n.pan-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .an-pg .an-pg-n.pan-good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .an-pg .an-pg-n.pan-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .pan-tp-none{padding:var(--ow-sp-24) var(--ow-sp-16);font-size:var(--ow-t-13);color:var(--ow-ink-600);}
+  .pan-tp-none[hidden]{display:none;}
+  .pan-tp-none b{display:block;margin-bottom:var(--ow-sp-4);font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);}
   .pan-order{display:flex;align-items:center;gap:var(--ow-sp-6);min-width:0;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
   .pan-order .icon{width:14px;height:14px;stroke-width:1.8;}
   .pan-tbh-sp{flex:1;}
@@ -3635,6 +3636,10 @@
   .pan-lg-s{font-size:var(--ow-t-11);color:var(--ow-ink-600);}
   .pan-lg-v{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:var(--ow-t-12);white-space:nowrap;}
   .pan-lg-more{color:var(--ow-ink-600);}
+  /* Each supplier's share, in its own column now the panel has the width. */
+  .pan-lg-p{flex:none;width:52px;text-align:right;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
+  .pan-cc .pan-lg-v{flex:none;min-width:96px;text-align:right;}
   .pan-tail{display:flex;flex-direction:column;gap:var(--ow-sp-6);padding-top:var(--ow-sp-10);border-top:1px solid var(--ow-rule-soft);}
   .pan-tail-h{display:flex;justify-content:space-between;font-size:var(--ow-t-11);color:var(--ow-ink-600);}
   .pan-tail-b{display:flex;align-items:flex-end;gap:var(--ow-sp-2);height:44px;}
@@ -3744,8 +3749,6 @@
     .pan-drv-k{width:12px;height:12px;}
     .pan-drv-s{display:none;}
     .pan-tbh{padding:var(--ow-sp-12);}
-    .pan-seg{display:flex;flex:1 1 100%;}
-    .pan-seg-b{flex:1 1 0;height:38px;font-size:var(--ow-t-14);}
     .pan-order{display:none;}
     .pan-tbh-sp{display:none;}
     .pan-find{flex:1 1 100%;height:44px;}
@@ -36340,26 +36343,25 @@
       <!-- The four figures, each with the small picture behind it. -->
       <div class="ow-strip pan-strip" id="pan_kpiGrid"></div>
 
+      <!-- THE FIVE VIEWS, the price table first. Each tab carries the
+           figure its view opens on, so the row of tabs reads as a summary
+           before one is opened. The same tabs Sales analytics wears. -->
+      <div class="an-pgtabs" id="pan_pages" role="tablist" aria-label="Purchase analytics views">
+        <button type="button" role="tab" class="an-pg ow-on" data-pan-tab="watch" aria-selected="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V4h8l9 9-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/></svg><span>Price watch</span><span class="an-pg-n" id="pan_pgn_watch"></span></button>
+        <button type="button" role="tab" class="an-pg" data-pan-tab="supp" aria-selected="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V9l9-6 9 6v12"/><path d="M9 21v-6h6v6"/></svg><span>Suppliers</span><span class="an-pg-n" id="pan_pgn_supp"></span></button>
+        <button type="button" role="tab" class="an-pg" data-pan-tab="why" aria-selected="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V8M10 20V4M16 20v-6M22 20H2"/></svg><span>Why spend moved</span><span class="an-pg-n" id="pan_pgn_why"></span></button>
+        <button type="button" role="tab" class="an-pg" data-pan-tab="money" aria-selected="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v9l6.4 6.4"/></svg><span>Where the money went</span><span class="an-pg-n" id="pan_pgn_money"></span></button>
+        <button type="button" role="tab" class="an-pg" data-pan-tab="com" aria-selected="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 5L5 19"/><circle cx="7" cy="7" r="2.5"/><circle cx="17" cy="17" r="2.5"/></svg><span>Commission</span><span class="an-pg-n" id="pan_pgn_com"></span></button>
+      </div>
+
       <!-- An empty window: what it knows, and the way out. Takes the
            place of everything below it. -->
       <div class="pan-pan pan-nothing-w" id="pan_empty" hidden></div>
 
       <div class="ow-grid" id="pan_grid">
         <div class="pan-main">
-          <section class="pan-pan" id="pan_whyPan" aria-labelledby="pan_why_t" hidden>
-            <div class="pan-pan-h">
-              <h2 class="pan-pan-t" id="pan_why_t">Why spend moved</h2>
-              <span class="pan-pan-n" id="pan_whyRange"></span>
-            </div>
-            <div id="pan_whyBody"></div>
-          </section>
-
-          <section class="pan-pan pan-tbl-pan" aria-label="The rows">
+          <section class="pan-pan" id="pan_tblPan" aria-label="The rows">
             <div class="pan-tbh">
-              <div class="pan-seg" id="pan_subtabs" role="tablist" aria-label="What the rows are">
-                <button type="button" class="pan-seg-b ow-on" role="tab" aria-selected="true" data-view="item">Price watch <span class="pan-seg-n" id="pan_n_item"></span></button>
-                <button type="button" class="pan-seg-b" role="tab" aria-selected="false" data-view="supplier">Suppliers <span class="pan-seg-n" id="pan_n_supplier"></span></button>
-              </div>
               <span class="pan-order">
                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M7 20l-3-3M7 20l3-3"/><path d="M14 6h7M14 11h5M14 16h3"/></svg>
                 <span id="pan_order"></span>
@@ -36375,9 +36377,15 @@
             <div id="pan_pager"></div>
             <p class="pan-note" id="pan_tableNote"></p>
           </section>
-        </div>
 
-        <aside class="ow-side pan-side">
+          <section class="pan-pan" id="pan_whyPan" aria-labelledby="pan_why_t" hidden>
+            <div class="pan-pan-h">
+              <h2 class="pan-pan-t" id="pan_why_t">Why spend moved</h2>
+              <span class="pan-pan-n" id="pan_whyRange"></span>
+            </div>
+            <div id="pan_whyBody"></div>
+          </section>
+
           <section class="pan-pan" id="pan_concPan" aria-labelledby="pan_conc_t" hidden>
             <div class="pan-pan-h">
               <h2 class="pan-pan-t" id="pan_conc_t">Where the money went</h2>
@@ -36385,6 +36393,7 @@
             </div>
             <div id="pan_concBody"></div>
           </section>
+
           <section class="pan-pan" id="pan_comPan" aria-labelledby="pan_com_t" hidden>
             <div class="pan-pan-h">
               <h2 class="pan-pan-t" id="pan_com_t">Commission due to you</h2>
@@ -36392,6 +36401,13 @@
             </div>
             <div id="pan_comBody"></div>
           </section>
+
+          <!-- A view with nothing to show says why, rather than opening
+               on an empty box. -->
+          <div class="pan-pan pan-tp-none" id="pan_tpNone" hidden></div>
+        </div>
+
+        <aside class="ow-side pan-side">
           <section class="pan-pan" id="pan_basisPan" aria-labelledby="pan_basis_t">
             <div class="pan-pan-h">
               <h2 class="pan-pan-t" id="pan_basis_t">What these figures rest on</h2>
@@ -77524,8 +77540,8 @@ function renderPanConc(){
       <p class="pan-brk-l${c.threePct >= 60 ? ' pan-brk-c' : ''}" style="width:${c.threePct.toFixed(2)}%">top 3 · <b class="an-d">${c.threePct.toFixed(1)}%</b>${
         many ? '' : ` · <span class="an-d">${c.threeDocs}</span> of <span class="an-d">${panLastEntries.length}</span> purchases`}</p>` : '';
   const row = (g)=> g.rest
-    ? `<div class="pan-lg-r pan-lg-rest"><span class="pan-lg-k pan-hx"></span><span class="pan-lg-2"><span><span class="an-d">${g.count}</span> other supplier${g.count===1?'':'s'}</span><span class="pan-lg-s">none above <span class="an-d">${g.maxPct.toFixed(1)}%</span> on its own</span></span><span class="pan-lg-v">${panMoney(g.amt)}</span></div>`
-    : `<div class="pan-lg-r"><span class="pan-lg-k ${panHue(g.id)}"></span><span class="pan-lg-n" title="${esc(g.name)}">${esc(g.name)}</span><span class="pan-lg-v">${panMoney(g.amt)}</span></div>`;
+    ? `<div class="pan-lg-r pan-lg-rest"><span class="pan-lg-k pan-hx"></span><span class="pan-lg-2"><span><span class="an-d">${g.count}</span> other supplier${g.count===1?'':'s'}</span><span class="pan-lg-s">none above <span class="an-d">${g.maxPct.toFixed(1)}%</span> on its own</span></span><span class="pan-lg-p">${g.pct.toFixed(1)}%</span><span class="pan-lg-v">${panMoney(g.amt)}</span></div>`
+    : `<div class="pan-lg-r"><span class="pan-lg-k ${panHue(g.id)}"></span><span class="pan-lg-n" title="${esc(g.name)}">${esc(g.name)}</span><span class="pan-lg-p">${g.pct.toFixed(1)}%</span><span class="pan-lg-v">${panMoney(g.amt)}</span></div>`;
   const top = Math.max(1, Number(c.all[0].amt) || 0);
   const tail = many ? `<div class="pan-tail">
       <div class="pan-tail-h"><span>All <span class="an-d">${c.count}</span>, largest to smallest</span><span>long tail</span></div>
@@ -78081,9 +78097,17 @@ function renderPanTable(){
   renderPanWhy();
   renderPanConc();
   renderPanCom();
+  panAvail = {
+    why: !document.getElementById('pan_whyPan').hidden,
+    money: !document.getElementById('pan_concPan').hidden,
+    com: !document.getElementById('pan_comPan').hidden,
+  };
+  panPageFigures();
+  panApplyTab();
   const empty = panLastEntries.length === 0;
   const emptyEl = document.getElementById('pan_empty');
   document.getElementById('pan_grid').hidden = empty;
+  document.getElementById('pan_pages').hidden = empty;
   document.getElementById('pan_export_ph').hidden = empty;
   const wrap = document.getElementById('pan_tableWrap');
   const cards = document.getElementById('pan_cards');
@@ -78097,8 +78121,6 @@ function renderPanTable(){
     return;
   }
   emptyEl.hidden = true; emptyEl.innerHTML = '';
-  document.getElementById('pan_n_item').textContent = panRowsByItem(panLastEntries).length;
-  document.getElementById('pan_n_supplier').textContent = panRowsBySupplier(panLastEntries).length;
   /* THE ORDER IS DECLARED, so it can be argued with. And when there is
      no earlier period there is no change to rank on -- the screen falls
      back to spend and says so. */
@@ -78218,14 +78240,70 @@ function panSyncRange(){
     b.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
 }
-function panSetView(view){
-  document.querySelectorAll('#pan_subtabs .pan-seg-b').forEach(b=>{
-    const on = b.dataset.view === view;
-    b.classList.toggle('ow-on', on); b.setAttribute('aria-selected', on ? 'true' : 'false');
+/* WHICH VIEW IS OPEN. Price watch and Suppliers are the one table read
+   two ways; the other three are a panel each. */
+let panTab = 'watch';
+/* Whether each panel has anything to show for this window, as its
+   renderer found it -- read before the tabs hide what is not open. */
+let panAvail = { why: false, money: false, com: false };
+function panSetTab(k){
+  if(k === 'watch' || k === 'supp'){
+    const view = k === 'supp' ? 'supplier' : 'item';
+    panTab = k;
+    if(view !== panView){ panView = view; panPage = 1; renderPanTable(); return; }
+  }
+  panTab = k;
+  panApplyTab();
+}
+function panApplyTab(){
+  const k = panTab;
+  document.querySelectorAll('#pan_pages .an-pg').forEach(b=>{
+    const on = b.dataset.panTab === k;
+    b.classList.toggle('ow-on', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
   });
-  panView = view;
-  panPage = 1;
-  renderPanTable();
+  document.getElementById('pan_tblPan').hidden = !(k === 'watch' || k === 'supp');
+  document.getElementById('pan_whyPan').hidden = !(k === 'why' && panAvail.why);
+  document.getElementById('pan_concPan').hidden = !(k === 'money' && panAvail.money);
+  document.getElementById('pan_comPan').hidden = !(k === 'com' && panAvail.com);
+  const none = document.getElementById('pan_tpNone');
+  const q = document.getElementById('pan_table_search').value.trim();
+  const {from, to} = panGetDateRange();
+  const why = {
+    why: q ? ['Not while a search narrows the rows', 'Why spend moved reads the whole window. Clear the search on Price watch to see it.']
+      : !(from && to) ? ['All time has no window before it', 'Pick a range to see what moved the spend against the one before.']
+      : ['Nothing to compare against', 'No purchase invoices in the window before this one, so there is no change to explain.'],
+    money: ['One supplier', 'All of this window’s buying went to one supplier, so there is nothing to split.'],
+    com: ['No suppliers in this window', 'There is nothing bought here to earn commission on.'],
+  }[k];
+  const missing = why && !panAvail[k];
+  none.hidden = !missing;
+  none.innerHTML = missing ? `<b>${esc(why[0])}</b>${esc(why[1])}` : '';
+}
+/* The figure each tab carries, for the whole window: what the price
+   changes added, how many suppliers and the largest one's share, what
+   the spend moved by, how concentrated the buying is, and the commission
+   due. A tab with nothing to say is blank rather than zero. */
+function panPageFigures(){
+  const set = (k, text, cls)=>{
+    const el = document.getElementById('pan_pgn_' + k);
+    if(!el) return;
+    el.textContent = text || '';
+    el.className = 'an-pg-n' + (cls ? ' ' + cls : '');
+  };
+  const has = panLastEntries.length > 0;
+  const mv = has ? panMoveTotals(panRowsForViewItems()) : null;
+  set('watch', mv && mv.any ? `${mv.cost > 0 ? '+' : mv.cost < 0 ? '−' : ''}${anShort(Math.abs(mv.cost))} added` : '',
+    mv && mv.any ? (mv.cost > 0 ? 'pan-bad' : mv.cost < 0 ? 'pan-good' : '') : '');
+  const sup = has ? panRowsBySupplier(panLastEntries) : [];
+  const c = has ? panConcentration(sup) : null;
+  set('supp', has ? `${sup.length}${c && sup.length > 1 ? ` · top ${c.topPct.toFixed(0)}%` : ''}` : '');
+  const b = has ? panSpendBridge() : null;
+  set('why', b && Math.abs(b.net) >= 1 ? `${b.net > 0 ? '+' : '−'}${anShort(Math.abs(b.net))}` : '');
+  set('money', c && c.count >= 3 ? `top 3 · ${c.threePct.toFixed(0)}%` : c && c.count === 2 ? `top · ${c.topPct.toFixed(0)}%` : '');
+  const cov = has ? panCommissionCoverage(sup) : null;
+  const anyRate = sup.some(r=> r.commission != null);
+  set('com', !has ? '' : anyRate ? `${anShort(cov.total)}${cov.complete ? '' : '*'}` : 'none on file', anyRate && !cov.complete ? 'pan-warn' : '');
 }
 function renderPurchaseAnalytics(){
   panPage = 1;
@@ -78263,8 +78341,8 @@ document.querySelectorAll('#pan_range .pan-rng-b').forEach(b=> b.addEventListene
 }));
 document.getElementById('pan_apply_btn').addEventListener('click', renderPurchaseAnalytics);
 document.getElementById('pan_table_search').addEventListener('input', ()=>{ panPage = 1; renderPanTable(); });
-document.querySelectorAll('#pan_subtabs .pan-seg-b').forEach(btn=>{
-  btn.addEventListener('click', ()=> panSetView(btn.dataset.view));
+document.querySelectorAll('#pan_pages .an-pg').forEach(btn=>{
+  btn.addEventListener('click', ()=> panSetTab(btn.dataset.panTab));
 });
 /* The panels' own controls: "see all in the table" opens the supplier
    view, "set rate" opens that supplier's commission, and the phone's
@@ -78282,8 +78360,8 @@ document.getElementById('tab-analytics-purchase').addEventListener('click', (e)=
     return;
   }
   if(e.target.closest('[data-pan-sup]')){
-    panSetView('supplier');
-    const pan = document.querySelector('#tab-analytics-purchase .pan-tbl-pan');
+    panSetTab('supp');
+    const pan = document.getElementById('pan_pages');
     if(pan && pan.scrollIntoView) pan.scrollIntoView({block:'start', behavior:'smooth'});
     return;
   }
