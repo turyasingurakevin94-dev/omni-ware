@@ -118,7 +118,7 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
   const S = scope(book());
   const p = (b) => { const x = S.mgrAskPlace(b); return [x.kind, x.where, x.label]; };
   eq(p({ place: { kind: 'bank', name: 'Centenary Bank' } }), ['bank', 'supp', 'Ask Centenary Bank'], 'the bank is found among suppliers & bank');
-  eq(p({ productId: 'P1', rival: 'Mengo Stores' }), ['rival', 'rival', 'At Mengo Stores\' counter'],
+  eq(p({ productId: 'P1', rival: 'Mengo Stores' }), ['rival', 'rival', 'At Mengo Stores’s counter'],
     'an old price ask (a line and a shop) is at that rival\'s counter');
   eq(p({ supplierId: 'S1' }), ['supplier', 'supp', 'Ask Roto Hardware'], 'a supplier the books hold is that supplier');
   eq(p({ supplierId: 'S404' }), ['you', 'you', 'Only you know'], 'one the books do not hold is not a place');
@@ -287,7 +287,7 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
   eq(asks.map((a) => [a.key, a.terms.missing]), [['terms:S1', ['stopAtDays', 'creditDays', 'deliveryDays']]],
     'only the supplier owed or bought from, and only what is unknown');
   const a = asks[0];
-  eq(a.question, 'What are Roto Hardware\'s terms with you?', 'asked in the Manager\'s words');
+  eq(a.question, 'What are Roto Hardware’s terms with you?', 'asked in the Manager\'s words');
   eq(a.why, 'You owe them 500k on 2 bills, the oldest 40 days old. Without them I can’t warn you before a bill reaches the age they stop supplying at, tell a bill that is late from one that is on time or date the last day to order before a line runs out.',
     'with its own reason, from the books');
   eq([a.stake.amount, a.stake.unit], [500000, 'owed'], 'at stake: what is owed to them');
@@ -346,7 +346,7 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
   const F = scope(book(), { sb: failIns, toast: (m) => toasts.push(m), saveData: () => { wrote++; return Promise.resolve(true); },
     credOpenInvoices: () => [{ supplierId: 'S1', due: 5, ageDays: 1, invoice: { id: 1, date: TODAY } }] });
   await F.mgrAskAnswerTerms(F.mgrAskTermsAsks(TODAY, {})[0], { terms: { stopAtDays: '90' }, by: 'you' });
-  t.check(wrote === 0 && !F.__kept().has('terms:S1') && /^Not kept — the journal could not keep the answer \(offline\)\. Nothing was written to Roto Hardware's record\.$/.test(toasts[0]),
+  t.check(wrote === 0 && !F.__kept().has('terms:S1') && /^Not kept — the journal could not keep the answer \(offline\)\. Nothing was written to Roto Hardware’s record\.$/.test(toasts[0]),
     'the journal refuses the question: nothing reaches the supplier, the card stays open, and the toast says both');
   const okIns = { from: () => ({
     insert: () => ({ select: () => ({ single: () => Promise.resolve({ data: { id: 43 }, error: null }) }) }),
@@ -363,7 +363,7 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
   const mk = (row, over) => {
     const seen = { updates: [], toasts: [], wrote: [] };
     const fn = compileScope([extractFunction(src, 'managerAnswerQuestion', 'index.html'),
-      extractFunction(src, 'mgrPossessive', 'index.html')], {
+      extractFunction(src, 'mgrAskPossessive', 'index.html')], {
       managerNotesTable: true, currentShopId: 'shop-1', todayISO: () => TODAY,
       toast: (m) => seen.toasts.push(m), renderManager: () => {}, fmtUGX: String,
       buyKeyParts: () => null, stockKey: (p) => p,
@@ -388,7 +388,7 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
   await fn(9, 'Stops supplying at 90 days', { terms: { stopAtDays: '90', creditDays: '', deliveryDays: 3 } });
   eq(seen.wrote, [['S1', { stopAtDays: 90, deliveryDays: 3 }]], 'a terms answer writes the supplier\'s days — an empty box is not a 0');
   eq(seen.updates[0].body.terms, { stopAtDays: 90, deliveryDays: 3 }, 'and the journal keeps them beside the words');
-  t.check(/Roto Hardware's terms are on their record/.test(seen.toasts[0]), 'the toast says where they went');
+  t.check(/Roto Hardware’s terms are on their record/.test(seen.toasts[0]), 'the toast says where they went');
   ({ fn, seen } = mk({ question: 'Terms?', supplierId: 'S1' }, {
     mgrAskWriteTerms: () => Promise.resolve({ ok: false, why: 'paste supabase/migrations/0107_manager_intelligence.sql' }) }));
   r = await fn(9, 'x', { terms: { stopAtDays: 90 } });
@@ -587,7 +587,7 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
   t.check(/120k <small>a month<\/small>/.test(html) && /not sized<\/span>/.test(html), 'the money at stake, or "not sized"');
   t.check(/<b>Why I’m asking:<\/b> it decides the price\./.test(html) && /not recorded — asked before the Manager kept its reasons/.test(html),
     'why it asks — and an old question says its reason was not recorded');
-  t.check(/data-place="rival" aria-label="What is Mengo/.test(html) && /At Mengo's counter/.test(html), 'where to find out, filterable');
+  t.check(/data-place="rival" aria-label="What is Mengo/.test(html) && /At Mengo’s counter/.test(html), 'where to find out, filterable');
   t.check(/class="mgr-k-an" data-pick="0" aria-pressed="false">Under 40,000<\/button>/.test(html) && /data-pick="own"/.test(html),
     'the likely answers to tap, and one in the owner\'s own words');
   t.check(/inputmode="decimal"/.test(html) && /What Mengo charges — just the figure/.test(html), 'a price is asked for as a figure, on a phone keypad');
@@ -595,7 +595,7 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
     'how sure without it: counted pips, the figure, and what was counted');
   t.check(/<select class="mgr-k-sel" aria-label="Who found it out"><option value="you" selected>You<\/option><option value="st:ST002">Moses Kibirige<\/option>/.test(html),
     'found by: the owner, then the person it was given to first');
-  t.check(/What are Roto Hardware's terms with you\?/.test(html) && /data-term="stopAtDays"/.test(html) && /data-term="creditDays"/.test(html),
+  t.check(/What are Roto Hardware’s terms with you\?/.test(html) && /data-term="stopAtDays"/.test(html) && /data-term="creditDays"/.test(html),
     'a supplier\'s terms are asked as days, one box each');
   t.check(/class="ow-mini mgr-ask-cut" hidden/.test(html), 'the line that names what was not shown is there for the count to fill');
   const oxide = html.match(/class="btn btn-accent[^"]*"[^>]*>[^<]*</g) || [];
@@ -628,7 +628,7 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
   t.check(/mgr-k-q mgr-k-done/.test(html) && /aria-pressed="true" disabled>Yes</.test(html), 'its answer pressed');
   t.check(/<b>What that changes:<\/b> Keep the cap\./.test(html) && /<span class="mgr-k-fig">2 → 4<\/span>/.test(html),
     'with what it changes and how sure it leaves the Manager, before → after');
-  t.check(/Kept — Moses' answer: Yes/.test(html), 'and who found it');
+  t.check(/Kept — Moses’s answer: Yes/.test(html), 'and who found it');
 }
 
 /* ---------- 16. the painter and the journal reading ---------- */

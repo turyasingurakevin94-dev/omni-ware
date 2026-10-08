@@ -338,7 +338,7 @@ const PRODUCTS = [
   t.check(/data-place="rival" aria-label="What does Nyanzi/.test(html) && /data-place="supp" aria-label="Does Roto/.test(html)
     && /data-place="you" aria-label="What is stopping/.test(html),
     'every question knows where it is answered: a rival, a supplier the books hold, or the owner');
-  t.check(/At Nyanzi's counter/.test(html) && /Ask Roto Hardware/.test(html) && /Only you know/.test(html), 'and says it in words');
+  t.check(/At Nyanzi’s counter/.test(html) && /Ask Roto Hardware/.test(html) && /Only you know/.test(html), 'and says it in words');
   t.check(/data-place="rival" aria-pressed="false">.*At a rival<span class="mgr-k-n">1<\/span>/.test(html)
     && /Suppliers &amp; bank<span class="mgr-k-n">1<\/span>/.test(html) && /Only you<span class="mgr-k-n">1<\/span>/.test(html),
     'and the places are a row to filter by, each counted — the same split the kind bar made');
@@ -615,7 +615,7 @@ const PRODUCTS = [
     'a day said against today: a weekday in the week ahead, today, the date further out, and nothing once it has gone');
   t.check(/>Send to Moses · Thu<\/a>/.test(html), 'the card reads "Send to Moses · Thu"');
   t.check(/>Send to Joan<\/a>/.test(html), 'a delegate with no day reads as it always did');
-  t.check(/mgr-k-pt">Moses' Thursday route</.test(html), 'the route is "Moses\' Thursday route" (the app\'s own possessive) — every question on it is for Thursday');
+  t.check(/mgr-k-pt">Moses’s Thursday route</.test(html), 'the route is "Moses’s Thursday route", as the canvas writes it — every question on it is for Thursday');
   eq(model.route.day, '2026-10-08', 'the route carries that one day');
   t.check(/^Route for Thursday — 2 stops:/.test(A.mgrAskRouteMessage(model.route, DAY)), 'and the message Moses is sent says Thursday');
   t.check(!/https?:\/\/(?!wa\.me)/.test(html.replace(/https:\/\/wa\.me\/[^"]*/g, '')), 'NOTHING SENDS ITSELF: the only way out is a wa.me link the owner taps');
@@ -624,7 +624,7 @@ const PRODUCTS = [
   const mixed = qs.map((q, i) => (i === 1 ? { ...q, body: { ...q.body, delegate: { ...q.body.delegate, day: '2026-10-09' } } } : q));
   const m2 = A.mgrAskModel(mixed, null, DAY, { moves });
   eq(m2.route.day, null, 'questions on one route given for two days: the route names neither');
-  t.check(/mgr-k-pt">Moses' route</.test(A.mgrAsksHTML(m2)) && /^Route for today — /.test(A.mgrAskRouteMessage(m2.route, DAY)),
+  t.check(/mgr-k-pt">Moses’s route</.test(A.mgrAsksHTML(m2)) && /^Route for today — /.test(A.mgrAskRouteMessage(m2.route, DAY)),
     'and it reads as built');
   /* A day already gone, on a card read later, is no day. */
   t.check(/>Send to Moses<\/a>/.test(A.mgrAsksHTML(A.mgrAskModel(qs, null, '2026-10-09', { moves }))),
