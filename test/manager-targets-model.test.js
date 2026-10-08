@@ -40,9 +40,10 @@ const FNS = ['mgrTgMemo', 'mgrTgBooksFrom', 'mgrTgFig', 'mgrTgGap', 'mgrTgDelta'
   'mgrTgPerson', 'mgrTgBandLine', 'mgrTgFinishedLine', 'mgrTgDeadStockAt', 'mgrNavCountTargets', 'mgrTgBreak', 'mgrTgCashOn',
   'mgrTgCashLowOver', 'mgrTgFloorRead', 'mgrTgWaFrom', 'mgrTgVerdict', 'mgrTgComposeModel', 'mgrTgComposeSay',
   'mgrTgRunModel', 'mgrTgFinishedModel', 'mgrTgAbove90', 'mgrTgMetOn', 'mgrTgMondays', 'mgrTgPlanMoves', 'mgrTgTodayLine', 'mgrTgLower',
-  'mgrTgDefaultBy', 'mgrTgComposerHTML', 'mgrTgAvHTML', 'mgrTgAskText'];
+  'mgrTgDefaultBy', 'mgrTgComposerHTML', 'mgrTgAvHTML', 'mgrTgAskText', 'mgrTgFullLine'];
 /* The writers' slot rule, compiled with what it reads. */
 const SLOT = [extractDeclaration(src, 'MGR_TG_MAX_RUNNING', 'index.html'), extractFunction(src, 'mgrTgSlotRefusal', 'index.html'),
+  extractFunction(src, 'mgrTgFullLine', 'index.html'),
   extractFunction(src, 'mgrTgLower', 'index.html')];
 const DECLS = ['MGR_TG_MIN_ODDS', 'MGR_TG_MIN_CHOICES', 'MGR_TG_PERIODS', 'MGR_TG_RISK', 'MGR_TG_MAX_RUNNING', 'MGR_TG_GLYPH',
   'mgrTgMemoSig', 'mgrTgMemoAt', 'mgrTgMemoMap', 'mgrTgBetter', 'mgrTgDay', 'MGR_TG_ORDER', 'MGR_TG_STATE_WORD'];
@@ -767,7 +768,7 @@ function scope(env) {
   /* NOW is the lowest ahead (7.48m on 28 Oct, the committed line), the
      figure the Brief and the Simulator read -- not today's cash (3.00m). */
   const c = s.mgrTgComposeModel({ metric: 'lowest_cash', choice: 'stretch', by: 0 }, env);
-  eq([c.out.now, c.out.nowLabel, c.out.cashToday, c.stand], [7480000, 'lowest ahead', 3e6, 3e6], 'a floor’s NOW is the lowest ahead; today’s cash rides beside it');
+  eq([c.out.now, c.out.nowLabel, c.out.cashToday, c.stand], [7480000, 'lowest to 31 Oct', 3e6, 3e6], 'a floor’s NOW is the lowest to the deadline, named by it; today’s cash rides beside it');
   /* Past lows 4..14m are all above today's 3.00m: all three blocked. The
      owner's own floor (Q8) is 3.00m, which today's cash stands on: it is
      offered and picked -- the composer is not disabled. Odds: all 7 past
@@ -776,12 +777,15 @@ function scope(env) {
     'every past floor above today’s cash: the owner’s own floor is offered instead, and can be set');
   eq([(c.odds || {}).k, (c.odds || {}).n, (c.odds || {}).pct], [7, 7, 100], 'its odds are counted like any aim');
   const html = s.mgrTgComposerHTML(c);
-  t.check(/<small>your floor<\/small><span class="mgr-tg-fig">3\.00m<\/span>/.test(html) && /<small>lowest ahead<\/small><span class="mgr-tg-fig">7\.48m<\/span>/.test(html),
-    'the chips read “your floor 3.00m” and “lowest ahead 7.48m”');
+  t.check(/<small>your floor<\/small><span class="mgr-tg-fig">3\.00m<\/span>/.test(html) && /<small>lowest to 31 Oct<\/small><span class="mgr-tg-fig">7\.48m<\/span>/.test(html),
+    'the chips read “your floor 3.00m” and “lowest to 31 Oct 7.48m”');
   /* The deadline chips count the days after today, as the rows do. */
   t.check(/<small>24 days<\/small><span>31 Oct<\/span>/.test(html) && /<small>54 days<\/small><span>30 Nov<\/span>/.test(html) && /<small>85 days<\/small><span>31 Dec<\/span>/.test(html),
     'the deadline chips read 24 / 54 / 85 days, as the canvas and the running rows count them');
   t.check(/disabled title="You own it[^"]*">Ask the owner first<\/button>/.test(html), '“Ask the owner first” is drawn while You own it, and says why it waits');
+  const five = s.mgrTgComposerHTML(s.mgrTgComposeModel({ metric: 'lowest_cash', by: 0 }, { ...env, runningCount: 5 }));
+  t.check(/5 targets are running — 4 is the most at once\. One has to finish first\./.test(five) && !/4 targets are running/.test(five),
+    'five running: the composer says five against the four, not “4 are running”');
   /* A floor of its own above today's cash is blocked too; with nothing
      left the composer says so. */
   floor = { amount: 5e6, source: 'set' };
@@ -1181,6 +1185,12 @@ function scope(env) {
   const fifth = await managerSetOwnerTarget({ metric: 'sales', aim: 3000, to: '2026-10-31', owner: 'you' });
   eq([fifth.ok, fifth.error, written.length], [false, '4 targets are running — the most at once. One has to finish first.', 0],
     'a fifth running target is refused by the writer itself');
+  /* Five already running (taken on before the writers asked): the
+     sentence says five against the four, never "4 are running". */
+  board = { targets: ['collections', 'margin_pct', 'wa_orders', 'stock_days', 'debtor_days'].map(run) };
+  const sixth = await managerSetOwnerTarget({ metric: 'sales', aim: 3000, to: '2026-10-31', owner: 'you' });
+  eq([sixth.ok, sixth.error, written.length], [false, '5 targets are running — 4 is the most at once. One has to finish first.', 0],
+    'five running: refused, and said with the count it is');
   board = { targets: [run('debtor_days'), { metric: 'sales', finished: true }] };
   const twice = await managerSetOwnerTarget({ metric: 'debtor_days', aim: 30, to: '2026-10-31', owner: 'you' });
   eq([twice.ok, twice.error, written.length], [false, 'A target on debtor days is already running — one at a time on each measure.', 0],

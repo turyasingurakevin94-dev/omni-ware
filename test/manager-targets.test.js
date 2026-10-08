@@ -175,6 +175,7 @@ const { MANAGER_METRICS: M, managerScoreProgress } = scope.names();
       extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
       extractDeclaration(src, 'MGR_TG_MAX_RUNNING', 'index.html'),
       extractFunction(src, 'mgrTgSlotRefusal', 'index.html'),
+      extractFunction(src, 'mgrTgFullLine', 'index.html'),
       extractFunction(src, 'mgrTgLower', 'index.html'),
     ], { ...env, managerNotesTable: true, rivalPricesTable: false, currentShopId: 'shop-1',
       managerScoreboard: async () => ({ targets: [] }),

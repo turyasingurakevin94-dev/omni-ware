@@ -140831,11 +140831,18 @@ function mgrNavCountTargets(ctx){
    cannot start a fifth (Q16) or a second on one measure (Q41) -- and
    the owner reads the same sentence the composer shows. A scoreboard
    that could not be read counts nothing, and says so. */
+/* THE CAP, said with the count it is: four running is "the most at
+   once"; more than four (taken on before the writers asked) says how
+   many run against the four, never "4 are running" above five rows. */
+function mgrTgFullLine(n){
+  const k = Math.max(MGR_TG_MAX_RUNNING, Number(n) || 0);
+  return k > MGR_TG_MAX_RUNNING ? `${k} targets are running — ${MGR_TG_MAX_RUNNING} is the most at once` : `${k} targets are running — the most at once`;
+}
 function mgrTgSlotRefusal(score, metric){
   if(!score || score.error) return 'The scoreboard could not be read' + (score && score.error ? ' — ' + score.error : '')
     + ', so the running targets could not be counted. Nothing was set.';
   const live = (score.targets || []).filter(x=> x && !x.finished);
-  if(live.length >= MGR_TG_MAX_RUNNING) return `${MGR_TG_MAX_RUNNING} targets are running — the most at once. One has to finish first.`;
+  if(live.length >= MGR_TG_MAX_RUNNING) return `${mgrTgFullLine(live.length)}. One has to finish first.`;
   const same = metric ? live.find(x=> x.metric === metric) : null;
   if(same) return `A target on ${mgrTgLower((MANAGER_METRICS[metric] || {}).label || metric)} is already running — one at a time on each measure.`;
   return null;
@@ -141177,7 +141184,9 @@ function mgrTgOdds(values, aim, direction){
    A FLOOR (span, the lowest cash) is never carried at a rate. Its "now"
    is the figure every other section reads for the same quantity: the
    lowest cash stands at from today to the deadline -- today's cash book,
-   then the committed line (mgrTgFloorRead) -- labelled "lowest ahead",
+   then the committed line (mgrTgFloorRead) -- labelled "lowest to" the
+   deadline (the Brief's "lowest cash ahead" reads 30 days, so the
+   label names its own window),
    and that is also where it lands, said as "on the committed line" (and
    where the line stops short of the deadline, it says so). Today's cash
    rides beside it as cashToday: a floor above it would break on its
@@ -141201,7 +141210,7 @@ function mgrTgOutlook(metric, today, to){
     try { cashToday = num(m.measure(today, today)); } catch(e){ cashToday = null; }
     try { f = typeof m.floor === 'function' ? m.floor(today, to, null) : null; } catch(e){ f = null; }
     const low = f ? rnd(mgrTgClamp(m, f.low)) : null;
-    return { P, left, past, now: low, nowLabel: 'lowest ahead', cashToday, floor: f,
+    return { P, left, past, now: low, nowLabel: 'lowest to ' + mgrTgDay(to), cashToday, floor: f,
       projected: low, lowOn: f ? f.lowOn : null,
       method: f ? (f.partial ? `on the committed line, which runs to ${mgrTgDay(f.through)}` : 'on the committed line') : 'on the committed line' };
   }
@@ -141695,7 +141704,7 @@ function mgrTgComposeModel(draft, env){
     : mgrTgDefaultBy(metric, deadlines, today);
   const by = deadlines[byIdx] || null;
   const full = (env.runningCount || 0) >= MGR_TG_MAX_RUNNING;
-  const base = { today, measures, metric, deadlines, byIdx, by, full };
+  const base = { today, measures, metric, deadlines, byIdx, by, full, runningCount: env.runningCount || 0 };
   if(!metric || !by) return { ...base, m: null };
   const m = MANAGER_METRICS[metric];
   const out = mgrTgOutlook(metric, today, by.to);
@@ -141889,7 +141898,7 @@ function mgrTgComposerHTML(c){
     /* Drawn while You own it too, as the canvas draws it -- there is no one
        else to ask until an owner from the staff is picked, and it says so. */
     : `<button type="button" class="btn btn-ghost mgr-tg-ask" disabled title="You own it — pick someone from your staff as owner to ask them first">Ask the owner first</button>`;
-  const why = c.full ? `${MGR_TG_MAX_RUNNING} targets are running — the most at once. One has to finish first.`
+  const why = c.full ? `${mgrTgFullLine(c.runningCount)}. One has to finish first.`
     : c.aim == null && (c.choices || c.floorOpt) && m.span ? 'Cash today is already under every floor on offer.'
     : c.aim == null ? 'There is no aim to set until the books can size one.'
     : (m.kind === 'level' && c.stand == null) ? m.label + ' cannot be read from your books today.' : '';
@@ -142012,7 +142021,7 @@ function mgrTgRunningHTML(runs, proposed, full){
   const head = `<div class="ow-pan-h"><span class="ow-pan-t">Running</span><span class="mgr-tg-pt">Where each target stands — and where it lands</span>${
     runs.length ? '<span class="ow-pan-nt">sorted by days left</span>' : ''}</div>`;
   const pp = (proposed || []).length ? `<div class="mgr-tg-pp"><p class="mgr-tg-pph"><b>Proposed by the meeting</b> — a commitment only when you take it on${
-      full ? ` · ${MGR_TG_MAX_RUNNING} are running, the most at once` : ''}</p><div class="mgr-pp-list">${proposed.map(mgrProposalHTML).join('')}</div></div>` : '';
+      full ? ` · ${esc(mgrTgFullLine(runs.length))}` : ''}</p><div class="mgr-pp-list">${proposed.map(mgrProposalHTML).join('')}</div></div>` : '';
   if(!runs.length) return `${head}${pp}<div class="ow-empty">No target is running. Set one above, or take on one the meeting proposes.</div>`;
   return `${head}${pp}
     <div class="mgr-tg-lgd" aria-hidden="true"><span><i class="mgr-tg-lg-sw"></i>where you are</span><span><i class="mgr-tg-lg-pc"></i>where the road has you today</span><span><i class="mgr-tg-lg-rg"></i>where it lands at this rate</span><span><i class="mgr-tg-lg-pl"></i>where my plan lands it</span></div>
@@ -142123,7 +142132,7 @@ function mgrTgDraw(scoreWrap, gen, st){
     const id = Number(card.dataset.tid);
     const dups = String(card.dataset.dups || '').split(',').filter(Boolean).map(Number);
     const adopt = card.querySelector('.mgr-target-adopt');
-    if(full){ adopt.disabled = true; adopt.title = MGR_TG_MAX_RUNNING + ' targets are running — the most at once'; }
+    if(full){ adopt.disabled = true; adopt.title = mgrTgFullLine(live.length); }
     card.querySelectorAll('[data-pp-owner]').forEach(o=> o.addEventListener('click', ()=>{
       card.dataset.owner = o.dataset.ppOwner;
       card.querySelectorAll('[data-pp-owner]').forEach(q=>{ const on = q === o; q.classList.toggle('mgr-tg-on', on); q.setAttribute('aria-pressed', String(on)); });
