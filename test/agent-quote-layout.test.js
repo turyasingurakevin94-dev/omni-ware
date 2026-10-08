@@ -61,7 +61,8 @@ const fn = (n) => extractFunction(src, n, 'agent.html');
   try {
     api = compileScope(['let agentPaused = false, chosenClient = null; const cart = [];',
       'function set(p, c, n){ agentPaused = p; chosenClient = c; cart.length = 0; for(let i=0;i<n;i++) cart.push({}); }',
-      fn('deliveryMode'), fn('sendBlocker')],
+      'const blockedLines = new Map(); const feedItemKey = (p, v) => `${p}::${v==null?\'\':v}`;',
+      fn('lineBlock'), fn('deliveryMode'), fn('sendBlocker')],
     { document: { getElementById: (id) => els[id] } }, ['sendBlocker', 'set']);
   } catch (e) { /* below */ }
   t.check(!!api, 'sendBlocker compiles');

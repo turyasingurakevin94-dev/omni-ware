@@ -323,29 +323,105 @@
   .ax-ob .icon{width:18px;height:18px;stroke-width:2;}
   .ax-ob .c{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:var(--ink);color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;}
   .ax-search{
-    all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:10px;height:48px;padding:0 14px;border-radius:14px;
-    background:var(--panel);border:1px solid var(--line);color:var(--ink-soft);font-size:15px;width:100%;
+    box-sizing:border-box;cursor:text;display:flex;align-items:center;gap:10px;height:52px;padding:0 6px 0 14px;border-radius:14px;
+    background:var(--panel);border:1px solid var(--line);color:var(--ink-soft);width:100%;
   }
-  .ax-search .icon{color:var(--ink);}
-  .ax-usual-h{display:flex;align-items:center;justify-content:space-between;padding:0 2px;}
-  .ax-usual-h span{font-size:13px;font-weight:700;color:var(--ink-soft);}
-  .ax-usual-h b{font-family:var(--font-money);font-size:12px;font-weight:600;color:var(--good);}
-  .ax-usual{display:flex;gap:8px;}
-  .ax-ut{
-    all:unset;box-sizing:border-box;cursor:pointer;flex:1;min-width:0;height:84px;border-radius:12px;background:var(--panel);border:1px solid var(--line);
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;position:relative;padding:0 4px;
-  }
-  .ax-ut.in{border:1.5px solid var(--good);}
-  .ax-ut .icon{width:26px;height:26px;color:var(--ink-soft);stroke-width:1.6;}
-  .ax-ut img{width:30px;height:30px;border-radius:6px;object-fit:cover;}
-  .ax-ut .nm{font-size:12px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .ax-ut .mk{position:absolute;top:6px;right:6px;width:20px;height:20px;border-radius:999px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;}
-  .ax-ut.in .mk{background:var(--good);}
-  .ax-ut .mk .icon{width:11px;height:11px;color:#fff;stroke-width:3.4;}
+  .ax-search:focus-within{border:1.5px solid var(--navy);box-shadow:0 0 0 4px rgba(22,32,60,.08);}
+  .ax-search .icon{color:var(--ink);flex:none;}
+  .ax-search input{flex:1;min-width:0;height:100%;border:none;outline:none;background:transparent;font-family:inherit;font-size:16px;color:var(--ink);}
+  .ax-search input::-webkit-search-cancel-button{-webkit-appearance:none;}
+  .ax-search .ax-find-x{width:40px;height:40px;border-radius:999px;background:var(--tile);}
+  .ax-search .ax-find-x .icon{width:15px;height:15px;color:var(--ink-soft);stroke-width:2.4;}
+
+  /* the matches, right under the box */
+  .ax-res{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:2px 12px;}
+  .ax-res-r{display:flex;align-items:center;gap:12px;min-height:68px;}
+  .ax-res-r + .ax-res-r{border-top:1px solid var(--tile);}
+  .ax-res-r .ax-th{width:48px;height:48px;}
+  .ax-res-r .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
+  .ax-res-r .nm{font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ax-res-r .nm b{font-weight:800;}
+  .ax-res-r .s{display:flex;align-items:center;gap:6px;}
+  .ax-res-r .p{font-family:var(--font-money);font-size:12px;color:var(--ink-soft);}
+  .ax-res-r .p small{font-size:11px;}
+  .ax-res-r .v{font-size:11px;font-weight:700;color:#3A3F9B;background:#E4E6FA;padding:2px 7px;border-radius:999px;}
+  .ax-res-add{all:unset;box-sizing:border-box;cursor:pointer;width:44px;height:44px;flex:none;border-radius:999px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;}
+  .ax-res-add .icon{width:18px;height:18px;stroke-width:2.6;}
+  .ax-res-step{display:flex;align-items:center;height:44px;border-radius:999px;background:var(--navy);color:#fff;flex:none;padding:0 2px;}
+  .ax-res-step button{all:unset;box-sizing:border-box;cursor:pointer;width:40px;height:44px;display:flex;align-items:center;justify-content:center;}
+  .ax-res-step .icon{width:15px;height:15px;stroke-width:2.6;}
+  .ax-res-step b{font-family:var(--font-money);font-size:14px;font-weight:600;min-width:18px;text-align:center;}
+  .ax-res-none{display:flex;align-items:center;justify-content:center;gap:8px;min-height:64px;font-size:14px;font-weight:600;color:var(--ink-faint);}
+  .ax-res-none .icon{width:18px;height:18px;}
+  .ax-res-all{align-self:center;margin-top:8px;}
+
+  /* a regular: their usual, as tiles */
+  .ax-uc{background:var(--navy);color:#fff;border-radius:22px;padding:14px;display:flex;flex-direction:column;gap:12px;}
+  .ax-uc-h{display:flex;align-items:center;gap:10px;}
+  .ax-uc-h .ic{width:40px;height:40px;flex:none;border-radius:999px;background:rgba(111,220,176,.16);color:var(--mint);display:flex;align-items:center;justify-content:center;}
+  .ax-uc-h .ic .icon{width:20px;height:20px;stroke-width:2;}
+  .ax-uc-h .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+  .ax-uc-h .n{font-size:16px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ax-uc-h .s{font-size:12px;color:var(--on-navy);}
+  .ax-uc-h .e{display:flex;flex-direction:column;align-items:flex-end;gap:1px;}
+  .ax-uc-h .e b{font-family:var(--font-money);font-size:15px;font-weight:600;color:var(--mint);}
+  .ax-uc-h .e small{font-size:11px;color:var(--on-navy);}
+  .ax-uc-g{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+  .ax-uct{border-radius:14px;background:var(--panel);color:var(--ink);overflow:hidden;display:flex;flex-direction:column;}
+  .ax-uct .im{height:58px;background:var(--tile);color:var(--ink-soft);display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .ax-uct .im img{width:100%;height:100%;object-fit:cover;}
+  .ax-uct .im .icon{width:24px;height:24px;stroke-width:1.6;}
+  .ax-uct .t{flex:1;padding:8px 8px 0;display:flex;flex-direction:column;gap:2px;}
+  .ax-uct .nm{font-size:12px;font-weight:700;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .ax-uct .f{font-size:11px;font-weight:600;color:var(--ink-faint);}
+  .ax-uct .f.good{color:var(--good);}
+  .ax-uct button{all:unset;box-sizing:border-box;cursor:pointer;margin:8px;height:40px;border-radius:10px;background:var(--navy);color:#fff;
+    font-family:var(--font-money);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:4px;}
+  .ax-uct button .icon{width:12px;height:12px;stroke-width:2.8;}
+  .ax-uct.in button{background:var(--good-bg);color:var(--good);font-family:var(--font-sans);font-weight:700;}
+  .ax-uc-all{all:unset;box-sizing:border-box;cursor:pointer;height:52px;border-radius:14px;background:#fff;color:var(--navy);font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;}
+  .ax-uc-all span{font-family:var(--font-money);font-weight:600;color:var(--ink-soft);}
+  .ax-uc-in{display:flex;align-items:center;gap:8px;height:44px;padding:0 14px;border-radius:14px;background:var(--good-bg);color:var(--good);font-size:14px;font-weight:700;}
+  .ax-uc-in .icon{width:16px;height:16px;stroke-width:2.6;}
+
+  /* someone new: the aisles and what you sell most */
+  .ax-lp-cats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+  .ax-lpc{all:unset;box-sizing:border-box;cursor:pointer;height:80px;border-radius:14px;background:var(--panel);border:1px solid var(--line);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:700;color:var(--ink);text-align:center;padding:0 4px;}
+  .ax-lpc span:last-child{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ax-lpc .ic{color:var(--ink-soft);display:flex;}
+  .ax-lpc .ic .icon,.ax-lpc .ic svg{width:24px;height:24px;}
+  .ax-lpc.all{background:var(--tile);color:var(--ink-soft);}
+  .ax-lp-h{display:flex;align-items:center;gap:6px;font-size:15px;font-weight:700;padding:6px 2px 0;}
+  .ax-lp-h .icon{width:16px;height:16px;color:var(--warn);stroke-width:2;}
+  .ax-lp-row{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px 4px;}
+  .ax-lp-row::-webkit-scrollbar{display:none;}
+  .ax-lpi{flex:none;width:132px;border-radius:14px;background:var(--panel);border:1px solid var(--line);overflow:hidden;display:flex;flex-direction:column;}
+  .ax-lpi .im{height:72px;background:var(--tile);color:var(--ink-soft);display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .ax-lpi .im img{width:100%;height:100%;object-fit:cover;}
+  .ax-lpi .im .icon{width:26px;height:26px;stroke-width:1.6;}
+  .ax-lpi .nm{padding:8px 10px 0;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ax-lpi .r{display:flex;align-items:center;justify-content:space-between;padding:6px 6px 8px 10px;}
+  .ax-lpi .p{font-family:var(--font-money);font-size:13px;font-weight:600;}
+  .ax-lpi button{all:unset;box-sizing:border-box;cursor:pointer;width:44px;height:44px;border-radius:999px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;}
+  .ax-lpi button .icon{width:16px;height:16px;stroke-width:2.6;}
+  .ax-lpi .in{width:44px;height:44px;border-radius:999px;background:var(--good-bg);color:var(--good);display:flex;align-items:center;justify-content:center;}
+  .ax-lpi .in .icon{width:16px;height:16px;stroke-width:2.6;}
+  .ax-lp-chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:4px 16px;}
+  .ax-lp-chips::-webkit-scrollbar{display:none;}
+  .ax-lp-chips button{all:unset;box-sizing:border-box;cursor:pointer;flex:none;height:44px;padding:0 14px;border-radius:999px;background:var(--panel);border:1px solid var(--line);
+    font-size:13px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px;}
+  .ax-lp-chips .icon{width:15px;height:15px;color:var(--ink-soft);}
 
   .ax-lines{display:flex;flex-direction:column;gap:8px;}
   .ax-line{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:14px;}
   .ax-line.open{border:1.5px solid var(--ink);padding:12px;}
+  .ax-line.blocked{border:2px solid var(--bad);box-shadow:0 0 0 4px var(--bad-bg);gap:10px;}
+  .ax-line-why{display:flex;align-items:center;gap:8px;padding-top:10px;border-top:1px solid var(--bad-bg);}
+  .ax-line-why > span{flex:1;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--bad);}
+  .ax-line-why > span .icon{width:16px;height:16px;flex:none;stroke-width:2.6;}
+  .ax-line-why .ax-sug{color:var(--ink);font-weight:700;}
+  .ax-line-why .ax-sug .icon{width:15px;height:15px;}
   .ax-line-h{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:10px;width:100%;}
   .ax-th{width:40px;height:40px;flex:none;border-radius:10px;background:var(--tile);display:flex;align-items:center;justify-content:center;color:var(--ink-soft);overflow:hidden;}
   .ax-th img{width:100%;height:100%;object-fit:cover;}
@@ -470,6 +546,8 @@
   .ax-pt-im .icon{width:34px;height:34px;stroke-width:1.5;}
   .ax-pt-tag{position:absolute;top:8px;left:8px;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:4px;}
   .ax-pt-tag.in{background:var(--ink);color:#fff;}
+  .ax-pt-tag.zero{background:var(--warn-bg);color:var(--warn-ink);font-family:var(--font-money);}
+  .ax-pt-tag.loss{background:var(--bad-bg);color:var(--bad);font-family:var(--font-money);}
   .ax-pt-tag.bonus{background:var(--warn-bg);color:var(--warn-ink);}
   .ax-pt-tag.buys{background:var(--panel);color:var(--ink);}
   .ax-pt-tag .icon{width:12px;height:12px;stroke-width:2.4;}
@@ -484,9 +562,27 @@
   .ax-pt-p .u{font-size:11px;font-weight:600;color:var(--ink-faint);}
   .ax-pt-p .e{margin-left:auto;font-family:var(--font-money);font-size:11px;font-weight:600;color:var(--good);}
   .ax-var{
-    width:100%;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--panel);font-family:inherit;font-size:12px;font-weight:600;
-    color:var(--ink);padding:0 8px;
+    all:unset;box-sizing:border-box;cursor:pointer;width:100%;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--panel);
+    font-size:12px;font-weight:600;color:var(--ink);padding:0 8px 0 10px;display:flex;align-items:center;justify-content:space-between;gap:4px;
   }
+  .ax-var span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ax-var .icon{width:15px;height:15px;flex:none;color:var(--ink-soft);}
+  .ax-vs{padding:0 18px 4px;display:flex;flex-direction:column;gap:16px;}
+  .ax-vs-h{display:flex;align-items:center;gap:14px;}
+  .ax-vs-h .ax-th{width:64px;height:64px;border-radius:14px;}
+  .ax-vs-h .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;}
+  .ax-vs-h .n{font-size:18px;font-weight:700;}
+  .ax-vs-h .p{font-family:var(--font-money);font-size:15px;font-weight:600;}
+  .ax-vs-h .p small{font-size:12px;color:var(--ink-faint);font-weight:500;}
+  .ax-vs-row{display:flex;flex-wrap:wrap;gap:8px;}
+  .ax-vs-c{all:unset;box-sizing:border-box;cursor:pointer;height:44px;min-width:56px;padding:0 16px;border-radius:12px;border:1.5px solid var(--line);background:var(--panel);
+    font-size:15px;font-weight:700;color:var(--ink);display:flex;align-items:center;justify-content:center;}
+  .ax-vs-c.on{background:var(--navy);border-color:var(--navy);color:#fff;}
+  .ax-vs-c.far{border-style:dashed;border-color:#D8D3CA;color:#A3A9B5;}
+  .ax-vs-foot{display:flex;align-items:center;gap:10px;padding-top:4px;}
+  .ax-vs-foot .ax-useg{flex:none;width:132px;}
+  .ax-vs-foot .btn{flex:1;height:52px;font-size:16px;}
+  .ax-vs-foot .btn b{font-family:var(--font-money);font-weight:600;margin-left:6px;}
   .ax-pt-a{display:flex;align-items:center;gap:6px;margin-top:auto;}
   .ax-useg{flex:1;display:flex;padding:3px;border-radius:12px;background:var(--tile);min-width:0;}
   .ax-useg button{
@@ -936,6 +1032,18 @@
 
   .ag-spinner{width:28px;height:28px;border-radius:999px;border:3px solid var(--line);border-top-color:var(--accent);animation:ag-spin .8s linear infinite;margin:0 auto;}
   @keyframes ag-spin{to{transform:rotate(360deg)}}
+  /* ---- it drops in ---- */
+  .ax-fly{position:fixed;z-index:95;width:44px;height:44px;box-sizing:border-box;border-radius:12px;background:#fff;border:2px solid var(--navy);
+    box-shadow:0 10px 24px rgba(22,32,60,.3);overflow:hidden;display:flex;align-items:center;justify-content:center;pointer-events:none;color:var(--ink-soft);will-change:transform;}
+  .ax-fly img{width:100%;height:100%;object-fit:cover;}
+  .ax-fly .icon,.ax-fly svg{width:22px;height:22px;}
+  @keyframes axBump{0%{transform:scale(1)}35%{transform:scale(1.045,1.12)}60%{transform:scale(.985,.96)}80%{transform:scale(1.01)}100%{transform:scale(1)}}
+  @keyframes axPlus1{0%{opacity:0;transform:translateY(6px)}15%{opacity:1;transform:translateY(0)}70%{opacity:1;transform:translateY(-4px)}100%{opacity:0;transform:translateY(-12px)}}
+  .ax-bump{animation:axBump .5s ease-out;transform-origin:50% 100%;}
+  .ax-sum{position:relative;}
+  .ax-plus1{position:absolute;top:-14px;left:36px;height:24px;padding:0 9px;border-radius:999px;background:var(--mint);color:var(--navy);
+    font-family:var(--font-money);font-size:12px;font-weight:600;display:flex;align-items:center;pointer-events:none;animation:axPlus1 1.2s ease-out forwards;}
+  .ax-sum .ax-plus1{left:auto;right:0;top:-22px;}
   @media (prefers-reduced-motion: reduce){ .ag-spinner{animation:none;} }
   @media (prefers-reduced-motion: reduce){ *{animation:none !important;transition:none !important;} }
 
@@ -943,11 +1051,31 @@
   .ag-lightbox img{max-width:100%;max-height:100%;border-radius:12px;}
 
   .toast{
-    position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top, 0px));transform:translateX(-50%) translateY(-20px);z-index:100;max-width:calc(100% - 32px);
-    background:var(--ink);color:#fff;padding:12px 16px;border-radius:14px;font-size:14px;font-weight:600;line-height:1.35;opacity:0;pointer-events:none;
-    transition:opacity .2s,transform .2s;box-shadow:var(--shadow);
+    position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top, 0px));transform:translateX(-50%) translateY(-16px) scale(.96);z-index:100;
+    max-width:calc(100% - 32px);width:max-content;box-sizing:border-box;display:flex;align-items:center;gap:10px;
+    min-height:44px;padding:8px 18px 8px 8px;border-radius:24px;font-size:14px;font-weight:600;line-height:1.3;
+    background:var(--navy);color:#fff;box-shadow:0 10px 28px rgba(22,32,60,.25);
+    opacity:0;pointer-events:none;transition:opacity .2s,transform .25s cubic-bezier(.2,.8,.2,1);
   }
-  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0) scale(1);}
+  .toast .ic{width:28px;height:28px;flex:none;border-radius:999px;display:flex;align-items:center;justify-content:center;background:var(--mint);color:var(--navy);}
+  .toast .ic .icon{width:15px;height:15px;stroke-width:3;}
+  .toast.warn{background:var(--warn-bg);color:var(--warn-ink);border:1px solid #F3D3B0;font-weight:700;box-shadow:0 10px 28px rgba(149,83,12,.18);}
+  .toast.warn .ic{background:var(--warn);color:#fff;}
+  .toast.warn .ic .icon{stroke-width:2.4;}
+  .toast.bad{
+    top:auto;bottom:calc(110px + var(--safe-b));transform:translateX(-50%) translateY(16px) scale(.96);width:calc(100% - 24px);max-width:496px;
+    padding:12px 8px 12px 14px;border-radius:20px;background:var(--panel);color:var(--ink);border:1.5px solid #E8B4AE;box-shadow:0 10px 28px rgba(142,42,34,.16);
+  }
+  .toast.bad.show{transform:translateX(-50%) translateY(0) scale(1);pointer-events:auto;}
+  .toast.bad .ic{width:36px;height:36px;background:var(--bad);color:#fff;}
+  .toast.bad .ic .icon{width:18px;height:18px;stroke-width:2.8;}
+  .toast.bad .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .toast.bad .b b{font-size:14px;font-weight:700;color:var(--bad);}
+  .toast.bad .b span{font-size:13px;font-weight:500;color:var(--ink-soft);}
+  .toast.bad .act{all:unset;box-sizing:border-box;cursor:pointer;height:40px;padding:0 14px;border-radius:12px;background:var(--bad);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;}
+  .toast.bad .x{all:unset;box-sizing:border-box;cursor:pointer;width:44px;height:44px;flex:none;border-radius:999px;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);}
+  .toast.bad .x .icon{width:16px;height:16px;stroke-width:2.2;}
 </style>
 </head>
 <body class="app-loading">
@@ -1021,12 +1149,17 @@
         </button>
         <div class="ax-strip-scroll" id="ag_clientStrip"></div>
       </div>
-      <button type="button" class="ax-search" id="ag_openFind">
+      <label class="ax-search">
         <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
-        Add an item
-      </button>
+        <input type="search" id="ag_orderQ" placeholder="Type an item" aria-label="Type an item to add" autocomplete="off" enterkeyhint="search">
+        <button type="button" class="ax-find-x" id="ag_orderQClear" aria-label="Clear" hidden>
+          <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </label>
+      <div id="ag_orderResults" hidden></div>
       <div id="ag_usualWrap"></div>
       <div class="ax-lines" id="ag_cartWrap"></div>
+      <div id="ag_moreWrap"></div>
     </div>
 
     <div class="ax-dock" id="ag_dock">
@@ -1128,13 +1261,6 @@ function possessive(name){
   return /s$/i.test(n) ? `${n}'` : `${n}'s`;
 }
 
-function toast(msg, duration){
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(toast._h);
-  toast._h = setTimeout(()=>t.classList.remove('show'), duration || 2200);
-}
 
 function fmtUGX(n){ return 'UGX ' + Math.round(Number(n)||0).toLocaleString('en-UG'); }
 // The same figure without the unit, for the places that already say UGX
@@ -3798,6 +3924,8 @@ const AX_ICON = {
   save: '<svg class="icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>',
   trophy: '<svg class="icon" viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M9 20h6"/></svg>',
   trend: '<svg class="icon" viewBox="0 0 24 24"><path d="m3 17 6-6 4 4 8-8M15 7h6v6"/></svg>',
+  bang: '<svg class="icon" viewBox="0 0 24 24"><path d="M12 7v6M12 17h.01"/></svg>',
+  warn: '<svg class="icon" viewBox="0 0 24 24"><path d="M12 4 2.8 19.5h18.4zM12 10v4M12 17h.01"/></svg>',
   link: '<svg class="icon" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>',
 };
 
@@ -3899,6 +4027,75 @@ document.getElementById('ag_tabbar').addEventListener('click', (e)=>{
    One way to bring something up over the screen and one way to put it
    away: tap outside it, the X, or Escape. */
 const openSheets = [];
+/* ---- messages ----
+   Three kinds, and each looks like what it means. Done: a navy pill with
+   a mint tick that goes by itself. Heads up: an amber pill. Stopped: a
+   red card just above the bottom bar, where the thumb is, that stays until
+   it is closed or its button is used. Most callers pass only the words,
+   so the kind is read from them; a caller that knows better says so. */
+function toastTone(msg){
+  const s = String(msg || '');
+  if(/could ?not|couldn['’]t|can['’]t|cannot|failed/i.test(s)) return 'bad';
+  if(/offline|paused|^enter |^choose |^add (at least|items)|^put in|^slide |already taken|no longer|has no items|stay off/i.test(s)) return 'warn';
+  return 'good';
+}
+// How far up the screen the bottom bars reach, so a red card sits on top
+// of them instead of under a thumb's worth of navy.
+function toastBottomClear(){
+  let clear = 16;
+  ['ag_dock', 'ag_findDone', 'ag_tabbar'].forEach(id=>{
+    const el = document.getElementById(id);
+    // Fixed bars have no offsetParent, so visibility is read from the box.
+    if(!el || !el.getClientRects().length) return;
+    const r = el.getBoundingClientRect();
+    if(r.height > 0 && r.top < window.innerHeight) clear = Math.max(clear, window.innerHeight - r.top + 12);
+  });
+  return clear;
+}
+function toast(msg, duration, opts){
+  opts = opts || {};
+  const t = document.getElementById('toast');
+  const tone = opts.tone || toastTone(msg);
+  clearTimeout(toast._h);
+  const text = String(msg || '');
+  // A message can be raised while the app is still starting, before the
+  // icon set below it exists.
+  let I;
+  try{ I = AX_ICON; }catch(_e){ I = { bang:'!', warn:'!', check:'', x:'×' }; }
+  t.className = `toast ${tone}`;
+  t.setAttribute('role', tone === 'bad' ? 'alert' : 'status');
+  if(tone === 'bad'){
+    // "Could not save: no signal" reads as a headline and its reason.
+    const cut = text.indexOf(': ');
+    const title = opts.title || (cut > 0 ? text.slice(0, cut) : text);
+    const detail = opts.title ? text : (cut > 0 ? text.slice(cut + 2) : '');
+    t.style.bottom = `calc(${toastBottomClear()}px + var(--safe-b))`;
+    t.innerHTML = `<span class="ic">${I.bang}</span>
+      <span class="b"><b>${esc(title)}</b>${detail ? `<span>${esc(detail)}</span>` : ''}</span>
+      ${opts.action ? `<button type="button" class="act" data-toast-act>${esc(opts.action.label)}</button>` : ''}
+      <button type="button" class="x" data-toast-x aria-label="Close">${I.x}</button>`;
+    toast._act = opts.action ? opts.action.run : null;
+  } else {
+    t.style.bottom = '';
+    t.innerHTML = `<span class="ic">${tone === 'warn' ? I.warn : I.check}</span><span class="tx">${esc(text)}</span>`;
+    toast._act = null;
+  }
+  void t.offsetWidth;
+  t.classList.add('show');
+  const ms = tone === 'bad' ? (opts.sticky ? 0 : Math.max(duration || 0, 8000)) : (duration || 2400);
+  if(ms) toast._h = setTimeout(()=> t.classList.remove('show'), ms);
+}
+document.getElementById('toast').addEventListener('click', (e)=>{
+  const t = document.getElementById('toast');
+  if(e.target.closest('[data-toast-act]')){
+    const run = toast._act;
+    t.classList.remove('show');
+    if(run) run();
+    return;
+  }
+  if(e.target.closest('[data-toast-x]')) t.classList.remove('show');
+});
+
 // A sheet about one thing -- an order, a client, your money, your goal --
 // is a page of its own and rises to fill the screen (opts.full), so the
 // screen behind is only a sliver of edge, never half a hero competing
@@ -4399,7 +4596,6 @@ function renderOrder(){
   renderDock();
 }
 document.getElementById('ag_orderClose').addEventListener('click', ()=> switchTab(lastMainTab));
-document.getElementById('ag_openFind').addEventListener('click', ()=> switchTab('find'));
 
 /* Most recently served clients first, for the strip and the picker. */
 function recentClients(limit){
@@ -4518,45 +4714,257 @@ function openClientPicker(){
   setTimeout(()=> input.focus(), 60);
 }
 
-/* ---- their usual ----
-   What this client always buys, as tiles you tick off: a tick when it is
-   already in the order, a plus to drop it in at their usual quantity and
-   the price you last charged them. */
+/* ---- starting an order ----
+   The box at the top is a real box: type and the matches appear right
+   here, each with its own +. Under it, what this client needs first: a
+   regular gets their usual as tiles, one tap each or all at once; someone
+   new gets the aisles and what you sell most. Once lines are in, the
+   aisles shrink to a row of chips under them. */
 function lineFor(rows, productId, variantIdx){
   return (rows||[]).findIndex(it=> String(it.productId) === String(productId)
     && String(it.variantIdx==null?'':it.variantIdx) === String(variantIdx==null?'':variantIdx));
 }
+function orderQuery(){
+  const el = document.getElementById('ag_orderQ');
+  return el ? el.value.trim() : '';
+}
+// The usual quantity, said the way it was bought: "2 ctn" when it is a
+// whole number of cartons, else in pieces.
+function usualLabel(r, it){
+  const qty = usualQty(r.qtys) || 1;
+  const pq = Number(it && it.packQty) || 0;
+  if(pq > 0 && it.packUnit && qty % pq === 0) return `${fmtNum(qty / pq)} ${String(it.packUnit).toLowerCase()}`;
+  return `${fmtNum(qty)} ${String((it && it.unit) || r.unit || 'pc').toLowerCase()}`;
+}
+function clientUsuals(client){
+  if(!client) return { orders: [], regs: [] };
+  const orders = (clientOrderCounts().get(client.id) || []).filter(o=> !o.voided);
+  return { orders, regs: clientRegulars(orders).slice(0, 6) };
+}
+// The aisles worth a tile: the ones you sell from most, then the shop's
+// own order.
+function topCategories(n){
+  const by = new Map();
+  myOrders.forEach(o=>{
+    if(o.voided) return;
+    (o.items||[]).forEach(li=>{
+      const ce = catalogEntry(li.productId, li.variantIdx);
+      if(ce) by.set(itemCategory(ce), (by.get(itemCategory(ce))||0) + 1);
+    });
+  });
+  return findCategories().slice().sort((a,b)=> (by.get(b)||0) - (by.get(a)||0)).slice(0, n);
+}
+// What this agent sells most across every client, else what earns a bonus.
+function sellMostItems(n){
+  const by = new Map();
+  myOrders.forEach(o=>{
+    if(o.voided) return;
+    (o.items||[]).forEach(li=>{
+      const k = feedItemKey(li.productId, li.variantIdx);
+      by.set(k, (by.get(k)||0) + 1);
+    });
+  });
+  let items = [...by.entries()].sort((a,b)=> b[1]-a[1])
+    .map(([k])=>{ const [p, v] = k.split('::'); return catalogEntry(p, v === '' ? null : Number(v)); })
+    .filter(Boolean);
+  if(!items.length){
+    const promoted = promotedMap();
+    items = catalog.filter(it=> promoted.has(feedItemKey(it.productId, it.variantIdx)));
+  }
+  return items.slice(0, n);
+}
+function shelfPrice(it, mode){
+  const pq = Number(it.packQty) || 0;
+  const mult = mode === 'pack' && pq > 0 ? pq : 1;
+  const floor = Number(it.floorPrice) || 0, our = Number(it.ourPrice) || 0;
+  return (our > floor ? our : floor) * mult;
+}
+function defaultUnit(it){
+  const key = feedItemKey(it.productId, it.variantIdx);
+  return Number(it.packQty) > 0 && it.packUnit ? (unitChoice.get(key) || 'pack') : 'unit';
+}
 function renderUsual(){
   const wrap = document.getElementById('ag_usualWrap');
-  if(!chosenClient){ wrap.innerHTML = ''; return; }
-  const orders = (clientOrderCounts().get(chosenClient.id) || []).filter(o=> !o.voided);
-  const regs = clientRegulars(orders).slice(0, 4);
-  if(!regs.length){ wrap.innerHTML = ''; return; }
-  const inN = regs.filter(r=> lineFor(cart, r.productId, r.variantIdx) >= 0).length;
-  wrap.innerHTML = `<div class="ax-usual-h"><span>Their usual</span><b>${inN} / ${regs.length} in</b></div>
-    <div class="ax-usual" style="margin-top:8px;">${regs.map(r=>{
+  const more = document.getElementById('ag_moreWrap');
+  const q = orderQuery();
+  renderOrderResults();
+  if(q){ wrap.innerHTML = ''; more.innerHTML = ''; return; }
+  const { orders, regs } = clientUsuals(chosenClient);
+  let top = '';
+  const missingUsual = regs.filter(r=> lineFor(cart, r.productId, r.variantIdx) < 0);
+  if(regs.length && !missingUsual.length){
+    // All of it is in: the card folds to one line, out of the order's way.
+    top = `<div class="ax-uc-in">${AX_ICON.check}${esc(possessive(firstWord(chosenClient.name)))} usual is in</div>`;
+  } else if(regs.length){
+    const shown = regs.slice(0, 3);
+    const missing = missingUsual;
+    const allTotal = missing.reduce((s, r)=>{
       const it = catalogEntry(r.productId, r.variantIdx);
-      const isIn = lineFor(cart, r.productId, r.variantIdx) >= 0;
-      const qty = usualQty(r.qtys);
-      const label = isIn ? shortName(r.name, 2) : `${shortName(r.name, 2)} ×${qty}`;
-      return `<button type="button" class="ax-ut${isIn ? ' in' : ''}" data-usual="${esc(r.key)}" aria-label="${isIn ? `${esc(r.name)} is in the order` : `Add ${esc(r.name)}, usual ${qty}`}">
-        ${it && it.image ? `<img src="${esc(it.image)}" alt="">` : categoryIconSVG(it ? itemCategory(it) : '')}
-        <span class="nm">${esc(label)}</span>
-        <span class="mk">${isIn ? AX_ICON.check : AX_ICON.plus}</span>
-      </button>`;
-    }).join('')}</div>`;
+      return s + (usualQty(r.qtys) || 1) * (r.lastRate > 0 ? r.lastRate : (it ? shelfPrice(it, 'unit') : 0));
+    }, 0);
+    const last = clientStats(orders).lastAt;
+    const cad = clientCadence(chosenClient, clientOrderCounts(), new Date());
+    const earn = cad && cad.avgMargin > 0 ? Math.round(cad.avgMargin) : 0;
+    top = `<div class="ax-uc">
+      <div class="ax-uc-h"><span class="ic">${AX_ICON.again}</span>
+        <span class="b"><span class="n">${esc(possessive(firstWord(chosenClient.name)))} usual</span>${last ? `<span class="s">last order ${esc(dateShort(last))}</span>` : ''}</span>
+        ${earn ? `<span class="e"><b>+${fmtNum(earn)}</b><small>yours</small></span>` : ''}</div>
+      <div class="ax-uc-g">${shown.map(r=>{
+        const it = catalogEntry(r.productId, r.variantIdx);
+        const isIn = lineFor(cart, r.productId, r.variantIdx) >= 0;
+        const every = r.orders >= orders.length;
+        return `<div class="ax-uct${isIn ? ' in' : ''}">
+          <span class="im">${itemThumbHTML(it || r)}</span>
+          <span class="t"><span class="nm">${esc(r.name)}</span><span class="f${every ? ' good' : ''}">${every ? 'every order' : `${r.orders} of ${orders.length} orders`}</span></span>
+          <button type="button" data-usual="${esc(r.key)}" aria-label="${isIn ? `${esc(r.name)} is in the order` : `Add ${esc(r.name)}, ${esc(usualLabel(r, it))}`}">${isIn ? `${AX_ICON.check}In` : `${AX_ICON.plus}${esc(usualLabel(r, it))}`}</button>
+        </div>`;
+      }).join('')}</div>
+      <button type="button" class="ax-uc-all" data-usual-all>Add ${missing.length === regs.length ? 'all ' : 'the other '}${missing.length}${allTotal > 0 ? `<span>${fmtNum(allTotal)}</span>` : ''}</button>
+    </div>`;
+  } else if(!cart.length && catalog.length){
+    const cats = topCategories(5);
+    const sells = sellMostItems(6);
+    top = `<div class="ax-lp-cats">${cats.map(c=> `<button type="button" class="ax-lpc" data-go-cat="${esc(c)}"><span class="ic">${categoryIconSVG(c)}</span><span>${esc(c)}</span></button>`).join('')}
+        <button type="button" class="ax-lpc all" data-go-all><span class="ic">${AX_ICON.grid}</span><span>All</span></button></div>
+      ${sells.length ? `<div class="ax-lp-h">${AX_ICON.flame}You sell most</div>
+      <div class="ax-lp-row">${sells.map(it=> `<div class="ax-lpi">
+          <span class="im">${itemThumbHTML(it)}</span>
+          <span class="nm">${esc(it.name)}</span>
+          <span class="r"><span class="p">${fmtNum(shelfPrice(it, defaultUnit(it)))}</span>
+            ${lineFor(cart, it.productId, it.variantIdx) >= 0 ? `<span class="in">${AX_ICON.check}</span>`
+              : `<button type="button" data-lp-add="${esc(feedItemKey(it.productId, it.variantIdx))}" aria-label="Add ${esc(it.name)}">${AX_ICON.plus}</button>`}</span>
+        </div>`).join('')}</div>` : ''}`;
+  }
+  wrap.innerHTML = top;
+  // Once there is an order, the aisles are a row of chips under it.
+  more.innerHTML = cart.length && catalog.length
+    ? `<div class="ax-lp-chips">${topCategories(6).map(c=> `<button type="button" data-go-cat="${esc(c)}">${esc(c)}</button>`).join('')}<button type="button" data-go-all>${AX_ICON.grid}All</button></div>` : '';
 }
-document.getElementById('ag_usualWrap').addEventListener('click', async (e)=>{
+/* The matches for what is typed, in the order screen itself. One size:
+   a + that adds it, then a stepper. Many sizes: a + that opens the size
+   picker. */
+function renderOrderResults(){
+  const box = document.getElementById('ag_orderResults');
+  const q = orderQuery();
+  if(!q){ box.hidden = true; box.innerHTML = ''; return; }
+  box.hidden = false;
+  if(!catalog.length){ box.innerHTML = `<div class="ax-more"><div class="ag-spinner"></div></div>`; return; }
+  const lq = q.toLowerCase();
+  const groups = groupCatalogItems(catalog.filter(it=> `${it.name||''} ${it.variantLabel||''} ${it.category||''} ${it.subcategory||''}`.toLowerCase().includes(lq)));
+  if(!groups.length){ box.innerHTML = `<div class="ax-res-none">${AX_ICON.search}Nothing called “${esc(q)}”</div>`; return; }
+  const mark = (name)=>{
+    const s = String(name || ''), i = s.toLowerCase().indexOf(lq);
+    return i < 0 ? esc(s) : `${esc(s.slice(0, i))}<b>${esc(s.slice(i, i + q.length))}</b>${esc(s.slice(i + q.length))}`;
+  };
+  box.innerHTML = `<div class="ax-res">${groups.slice(0, 25).map(g=>{
+    const sel = selectedVariantFor(g);
+    const many = g.variants.length > 1;
+    const mode = defaultUnit(sel);
+    const unitLabel = mode === 'pack' ? sel.packUnit : (sel.unit || 'each');
+    const idx = many ? -1 : lineFor(cart, sel.productId, sel.variantIdx);
+    const line = idx >= 0 ? cart[idx] : null;
+    const right = line
+      ? `<span class="ax-res-step"><button type="button" data-res-step="-1" aria-label="Fewer">${AX_ICON.minus}</button><b>${esc(line.displayQty != null ? line.displayQty : line.qty)}</b><button type="button" data-res-step="1" aria-label="More">${AX_ICON.plus}</button></span>`
+      : `<button type="button" class="ax-res-add" ${many ? `data-res-pick="${esc(g.productId)}"` : 'data-res-add'} aria-label="Add ${esc(g.name)}">${AX_ICON.plus}</button>`;
+    return `<div class="ax-res-r" data-pid="${esc(sel.productId)}" data-vidx="${sel.variantIdx==null?'':esc(sel.variantIdx)}">
+      <span class="ax-th">${itemThumbHTML(sel)}</span>
+      <span class="b"><span class="nm">${mark(g.name)}</span>
+        <span class="s"><span class="p">${fmtNum(shelfPrice(sel, mode))} <small>/${esc(String(unitLabel).toLowerCase())}</small></span>${many ? `<span class="v">${g.variants.length} sizes</span>` : ''}</span></span>
+      ${right}</div>`;
+  }).join('')}</div>
+  ${groups.length > 25 ? `<button type="button" class="ax-sug ax-res-all" data-res-all>See all ${groups.length} in the shop${AX_ICON.chevR}</button>` : ''}`;
+}
+document.getElementById('ag_orderQ').addEventListener('input', ()=>{
+  document.getElementById('ag_orderQClear').hidden = !document.getElementById('ag_orderQ').value;
+  renderUsual();
+  if(!catalog.length || !browseDataLoaded) ensureBrowseDataLoaded().then(()=>{ if(currentView === 'order') renderUsual(); });
+});
+document.getElementById('ag_orderQClear').addEventListener('click', (e)=>{
+  e.preventDefault();
+  const q = document.getElementById('ag_orderQ');
+  q.value = '';
+  document.getElementById('ag_orderQClear').hidden = true;
+  q.focus();
+  renderUsual();
+});
+function goToAisle(cat){
+  findCategory = cat; findSub = null;
+  findFilter = { again:false, bonus:false, fresh:false };
+  const s = document.getElementById('ag_browse_search');
+  if(s) s.value = '';
+  switchTab('find');
+}
+async function onOrderStartClick(e){
+  const cat = e.target.closest('[data-go-cat]');
+  if(cat){ goToAisle(cat.dataset.goCat); return; }
+  if(e.target.closest('[data-go-all]')){ switchTab('find'); openCategorySheet(); return; }
+  if(e.target.closest('[data-res-all]')){
+    const s = document.getElementById('ag_browse_search');
+    const q = orderQuery();
+    switchTab('find');
+    if(s){ s.value = q; document.getElementById('ag_browse_search_clear').hidden = !q; renderFind(); }
+    return;
+  }
+  const pick = e.target.closest('[data-res-pick]');
+  if(pick){ openVariantSheet(pick.dataset.resPick); return; }
+  const row = e.target.closest('.ax-res-r');
+  if(row){
+    const item = catalogEntry(row.dataset.pid, row.dataset.vidx === '' ? null : Number(row.dataset.vidx));
+    if(!item) return;
+    const add = e.target.closest('[data-res-add]');
+    if(add){
+      const from = add.getBoundingClientRect();
+      const line = await addCatalogLine(item, { unit: defaultUnit(item), displayQty: 1 });
+      renderOrder();
+      if(line) dropIntoOrder(item, from);
+      return;
+    }
+    const step = e.target.closest('[data-res-step]');
+    if(step){
+      const idx = lineFor(cart, item.productId, item.variantIdx);
+      if(idx < 0) return;
+      const it = cart[idx];
+      const next = Math.round(Number(it.displayQty != null ? it.displayQty : it.qty) || 0) + Number(step.dataset.resStep);
+      if(next <= 0){ cart.splice(idx, 1); if(openLineIdx === idx) openLineIdx = -1; updateCartBadge(); saveQuoteDraft(); }
+      else setLineQty(it, next);
+      renderOrder();
+      if(Number(step.dataset.resStep) > 0) bumpOrderBar();
+    }
+    return;
+  }
+  const lp = e.target.closest('[data-lp-add]');
+  if(lp){
+    const [p, v] = lp.dataset.lpAdd.split('::');
+    const item = catalogEntry(p, v === '' ? null : Number(v));
+    if(!item) return;
+    const from = lp.getBoundingClientRect();
+    const line = await addCatalogLine(item, { unit: defaultUnit(item), displayQty: 1 });
+    renderOrder();
+    if(line) dropIntoOrder(item, from);
+    return;
+  }
+  if(!chosenClient) return;
+  const { regs } = clientUsuals(chosenClient);
+  if(e.target.closest('[data-usual-all]')){
+    const missing = regs.filter(r=> lineFor(cart, r.productId, r.variantIdx) < 0);
+    if(!catalog.length) await ensureBrowseDataLoaded();
+    for(const r of missing) await addRegular(r);
+    renderOrder();
+    bumpOrderBar();
+    return;
+  }
   const b = e.target.closest('[data-usual]');
-  if(!b || !chosenClient) return;
-  const orders = (clientOrderCounts().get(chosenClient.id) || []).filter(o=> !o.voided);
-  const r = clientRegulars(orders).find(x=> x.key === b.dataset.usual);
+  if(!b) return;
+  const r = regs.find(x=> x.key === b.dataset.usual);
   if(!r) return;
   const idx = lineFor(cart, r.productId, r.variantIdx);
   if(idx >= 0){ openLineIdx = idx; renderCart(); return; }
-  await addRegular(r);
+  const from = b.getBoundingClientRect();
+  const line = await addRegular(r);
   renderOrder();
-});
+  if(line) dropIntoOrder(catalogEntry(r.productId, r.variantIdx) || r, from);
+}
+['ag_usualWrap', 'ag_moreWrap', 'ag_orderResults'].forEach(id=> document.getElementById(id).addEventListener('click', onOrderStartClick));
 // A regular is remembered in base units. Shown in packs when it is a
 // whole number of them, because "2 ctn" is how it was bought.
 async function addRegular(r){
@@ -4570,15 +4978,12 @@ async function addRegular(r){
 }
 async function orderUsual(client){
   goToClientBasket(client);
-  const orders = (clientOrderCounts().get(client.id) || []).filter(o=> !o.voided);
-  const regs = clientRegulars(orders).slice(0, 6).filter(r=> lineFor(cart, r.productId, r.variantIdx) < 0);
+  const regs = clientUsuals(client).regs.filter(r=> lineFor(cart, r.productId, r.variantIdx) < 0);
   switchTab('order');
   if(!regs.length) return;
   if(!catalog.length) await ensureBrowseDataLoaded();
-  toast(`Adding ${regs.length} usual item${regs.length===1?'':'s'}…`);
   for(const r of regs) await addRegular(r);
-  if(currentView === 'order') renderOrder();
-  toast(`${possessive(client.name)} usual is in — check the prices and slide to send`, 3500);
+  if(currentView === 'order'){ renderOrder(); bumpOrderBar(); }
 }
 
 /* The last price this client was charged for an item, per base unit --
@@ -4642,13 +5047,72 @@ async function addCatalogLine(item, opts){
   cart.push(line);
   updateCartBadge();
   saveQuoteDraft();
-  if(!opts.quiet){
-    const m = cartLineMargin(line.agentSellPrice, line.floorPrice, line.qty);
-    if(m.level !== 'ok') toast(`Added — ${m.detail}`, 6000);
-  }
+  // Nothing is said about what the line earns. The line says it: an amber
+  // +0 when it is sold at the shop's own price, red below it -- on the
+  // card in Find and on the line in the order.
   if(currentView === 'find') renderFind();
   return line;
 }
+/* ---- it drops in ----
+   No "Added" message. The item's picture lifts off the button that was
+   tapped and drops into the order bar at the bottom, which swells as it
+   lands and shows +1 -- so the eye follows the item to where it went. */
+function dropTarget(){
+  if(currentView === 'find'){
+    const el = document.getElementById('ag_findDone');
+    return el && el.getClientRects().length ? { bar: el, at: el.querySelector('.ax-av') || el } : null;
+  }
+  if(currentView === 'order'){
+    const el = document.querySelector('#ag_dock .ax-sum');
+    return el && el.getClientRects().length ? { bar: el, at: el } : null;
+  }
+  return null;
+}
+function bumpOrderBar(target){
+  target = target || dropTarget();
+  if(!target) return;
+  const bar = target.bar;
+  bar.classList.remove('ax-bump');
+  void bar.offsetWidth;
+  bar.classList.add('ax-bump');
+  const old = bar.querySelector('.ax-plus1');
+  if(old) old.remove();
+  const p = document.createElement('span');
+  p.className = 'ax-plus1';
+  p.setAttribute('aria-hidden', 'true');
+  p.textContent = '+1';
+  bar.appendChild(p);
+  setTimeout(()=>{ p.remove(); bar.classList.remove('ax-bump'); }, 1300);
+}
+function dropIntoOrder(item, from){
+  const target = dropTarget();
+  if(!target) return;
+  const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(still || !from || !(from.width > 0) || typeof document.body.animate !== 'function'){ bumpOrderBar(target); return; }
+  const to = target.at.getBoundingClientRect();
+  const S = 44;
+  const x0 = from.left + from.width / 2 - S / 2, y0 = from.top + from.height / 2 - S / 2;
+  const dx = to.left + to.width / 2 - S / 2 - x0, dy = to.top + to.height / 2 - S / 2 - y0;
+  const fly = document.createElement('div');
+  fly.className = 'ax-fly';
+  fly.setAttribute('aria-hidden', 'true');
+  fly.innerHTML = itemThumbHTML(item);
+  fly.style.left = `${x0}px`;
+  fly.style.top = `${y0}px`;
+  document.body.appendChild(fly);
+  const lift = Math.max(24, Math.min(70, Math.abs(dy) * 0.18));
+  const anim = fly.animate([
+    { transform: 'translate(0,0) scale(.9)', opacity: 0 },
+    { transform: `translate(${dx * .12}px,${-lift}px) scale(1.08)`, opacity: 1, offset: .22 },
+    { transform: `translate(${dx * .55}px,${dy * .45}px) scale(.8)`, opacity: 1, offset: .6 },
+    { transform: `translate(${dx}px,${dy}px) scale(.4)`, opacity: 1, offset: .92 },
+    { transform: `translate(${dx}px,${dy}px) scale(.3)`, opacity: 0 },
+  ], { duration: 640, easing: 'cubic-bezier(.4,0,.6,1)' });
+  const land = ()=>{ fly.remove(); bumpOrderBar(dropTarget() || target); };
+  anim.onfinish = land;
+  anim.oncancel = land;
+}
+
 function lineUsesPack(it){
   return Number(it.packQty) > 0 && !!it.displayUnit && it.displayUnit === it.packUnit && it.packUnit !== it.unit;
 }
@@ -4692,9 +5156,15 @@ async function ensureLineTiers(it){
 
 function earnChipHTML(margin, profit){
   if(margin.level === 'loss') return `<span class="ax-earn loss" title="${esc(margin.detail)}">${fmtSigned(profit)}</span>`;
-  if(margin.level === 'none') return `<span class="ax-earn none" title="${esc(margin.detail)}">0</span>`;
+  if(margin.level === 'none') return `<span class="ax-earn none" title="${esc(margin.detail)}">+0</span>`;
   return `<span class="ax-earn">${fmtSigned(profit)}</span>`;
 }
+/* Lines the shop refused to price when the order went in. The refusal
+   names the item, so the item is what gets marked -- red, with its reason
+   and a Remove -- and the slider waits until it is gone. Not saved: once
+   the shop has priced it, the next send simply goes through. */
+const blockedLines = new Map();
+function lineBlock(it){ return blockedLines.get(feedItemKey(it.productId, it.variantIdx)) || null; }
 function renderCart(){
   const wrap = document.getElementById('ag_cartWrap');
   if(!wrap) return;
@@ -4710,6 +5180,9 @@ function renderCart(){
         </span>
         <span data-chip="${i}">${earnChipHTML(f.margin, f.profit)}</span>
       </button>`;
+    const block = lineBlock(it);
+    if(block) return `<div class="ax-line blocked" data-blocked="${i}">${head}
+      <div class="ax-line-why"><span>${AX_ICON.bang}${esc(block)}</span><button type="button" class="ax-sug" data-unblock-del="${i}">${AX_ICON.trash}Remove</button></div></div>`;
     if(i !== openLineIdx) return `<div class="ax-line">${head}</div>`;
     const hint = nextTierHint(it);
     const mult = lineMult(it);
@@ -4741,7 +5214,9 @@ function renderCart(){
     </div>`;
   }).join('')
   + (cart.length >= 2 ? `<button type="button" class="ax-sug" data-bundle-save style="align-self:flex-start;">${AX_ICON.bundle}Save as a bundle</button>` : '')
-  + (!cart.length ? `<div class="ax-empty">${AX_ICON.basket}<div>Nothing in this order yet.</div></div>` : '');
+  // Said only when nothing else on the screen offers a way to start.
+  + (!cart.length && !orderQuery() && !document.getElementById('ag_usualWrap').innerHTML.trim()
+    ? `<div class="ax-empty">${AX_ICON.basket}<div>Nothing in this order yet.</div></div>` : '');
   renderDock();
 }
 document.getElementById('ag_cartWrap').addEventListener('click', (e)=>{
@@ -4754,6 +5229,18 @@ document.getElementById('ag_cartWrap').addEventListener('click', (e)=>{
     return;
   }
   if(e.target.closest('[data-bundle-save]')){ openSaveSolutionModal(); return; }
+  const gone = e.target.closest('[data-unblock-del]');
+  if(gone){
+    const i = Number(gone.dataset.unblockDel);
+    const it = cart[i];
+    if(it) blockedLines.delete(feedItemKey(it.productId, it.variantIdx));
+    cart.splice(i, 1);
+    if(openLineIdx === i) openLineIdx = -1; else if(openLineIdx > i) openLineIdx--;
+    updateCartBadge();
+    saveQuoteDraft();
+    renderOrder();
+    return;
+  }
   const it = cart[openLineIdx];
   if(!it) return;
   const step = e.target.closest('[data-qty]');
@@ -4846,6 +5333,7 @@ function deliveryMode(){
 function sendBlocker(){
   if(agentPaused) return 'Orders are paused';
   if(!cart.length) return 'Add an item to send';
+  if(cart.some(lineBlock)){ const n = cart.filter(lineBlock).length; return `Remove ${n} red item${n===1?'':'s'} to send`; }
   if(!chosenClient) return 'Pick a client to send';
   if(deliveryMode() === 'shop_delivery' && !document.getElementById('ag_delivery_address').value.trim()) return 'Add the address to send';
   return null;
@@ -4960,10 +5448,20 @@ async function submitOrder(){
   }catch(err){
     /* Not "try again" when it is the pause that refused it -- a paused
        account will refuse every retry. */
-    toast(err.paused
-      ? 'Your account is paused — the shop has to lift it before orders can go through'
-      : isNetworkError(err) ? "You're offline -- this order needs a live price check, so it can't submit until you're back online"
-      : `Could not submit order: ${err.message||err}`, err.paused ? 6000 : undefined);
+    const unpriced = /^(?:Could not price|No supplier price on file for) (.+)$/.exec(String(err && err.message || ''));
+    const hit = unpriced ? cart.filter(it=> String(it.name||'').trim() === unpriced[1].trim()) : [];
+    if(hit.length){
+      hit.forEach(it=> blockedLines.set(feedItemKey(it.productId, it.variantIdx), 'The shop hasn’t priced this yet'));
+      renderCart();
+      toast(`${hit.length} item${hit.length===1?' has':'s have'} no price yet`, 0, { tone:'bad', title:'Not sent', sticky:true,
+        action: { label:'Show', run: ()=>{ const el = document.querySelector('#ag_cartWrap [data-blocked]'); if(el) el.scrollIntoView({ behavior:'smooth', block:'center' }); } } });
+    } else {
+      const offline = "You're offline -- this order needs a live price check, so it can't submit until you're back online";
+      toast(err.paused
+        ? 'Your account is paused — the shop has to lift it before orders can go through'
+        : isNetworkError(err) ? offline : `Could not submit order: ${err.message||err}`, err.paused ? 6000 : undefined,
+        err.paused || isNetworkError(err) ? { tone:'warn' } : undefined);
+    }
     return;}finally{
     sendingOrder = false;
     btn.disabled = false;
@@ -4994,6 +5492,7 @@ function resetCartAfterSubmit(){
   document.getElementById('ag_delivery_pickup').checked = true;
   document.getElementById('ag_delivery_address').value = '';
   openLineIdx = -1;
+  blockedLines.clear();
   updateCartBadge();
   saveQuoteDraft();
 }
@@ -5120,12 +5619,13 @@ function findTileHTML(group, promoted, before){
   const idx = lineFor(cart, sel.productId, sel.variantIdx);
   const line = idx >= 0 ? cart[idx] : null;
   const inCluster = promo && isInCluster(sel.productId, sel.variantIdx);
-  const tag = line ? `<span class="ax-pt-tag in">${AX_ICON.check}In order</span>`
+  const lineF = line ? cartLineFigures(line) : null;
+  const tag = line ? (lineF.margin.level === 'ok' ? `<span class="ax-pt-tag in">${AX_ICON.check}In order</span>`
+      : `<span class="ax-pt-tag ${lineF.margin.level === 'loss' ? 'loss' : 'zero'}" title="${esc(lineF.margin.detail)}">${AX_ICON.check}${fmtSigned(lineF.profit)}</span>`)
     : promo ? `<span class="ax-pt-tag bonus">${esc(bonusFlagLabel(promo))} each</span>`
     : before.has(key) && chosenClient ? `<span class="ax-pt-tag buys">${esc(clientInitials(chosenClient.name))} buys</span>` : '';
   const variants = group.variants.length > 1
-    ? `<select class="ax-var" data-var="${esc(group.productId)}" aria-label="Which ${esc(group.name)}">${group.variants.map(v=>
-        `<option value="${v.variantIdx==null?'':esc(v.variantIdx)}"${v===sel?' selected':''}>${esc(v.variantLabel || '—')}</option>`).join('')}</select>` : '';
+    ? `<button type="button" class="ax-var" data-varpick="${esc(group.productId)}" aria-label="${esc(group.name)}: ${esc(sel.variantLabel || 'choose')}. Change"><span>${esc(sel.variantLabel || '—')}</span>${AX_ICON.chevD}</button>` : '';
   const busy = addingKeys.has(key);
   const bottom = line
     ? `<div class="ax-instep">
@@ -5164,6 +5664,8 @@ document.getElementById('ag_findView').addEventListener('click', async (e)=>{
   const flt = e.target.closest('[data-flt]');
   if(flt){ findFilter[flt.dataset.flt] = !findFilter[flt.dataset.flt]; findLimit = 40; renderFind(); return; }
   if(e.target.closest('[data-more]')){ findLimit += 40; renderFind(); return; }
+  const vp = e.target.closest('[data-varpick]');
+  if(vp){ openVariantSheet(vp.dataset.varpick); return; }
   const tile = e.target.closest('.ax-pt');
   if(!tile) return;
   const item = catalogEntry(tile.dataset.pid, tile.dataset.vidx === '' ? null : Number(tile.dataset.vidx));
@@ -5173,9 +5675,11 @@ document.getElementById('ag_findView').addEventListener('click', async (e)=>{
   const unit = e.target.closest('[data-unit]');
   if(unit){ unitChoice.set(key, unit.dataset.unit); renderFind(); return; }
   if(e.target.closest('[data-add]')){
+    const from = e.target.closest('[data-add]').getBoundingClientRect();
     const pq = Number(item.packQty) || 0;
     const mode = pq > 0 && item.packUnit ? (unitChoice.get(key) || 'pack') : 'unit';
-    await addCatalogLine(item, { unit: mode, displayQty: 1 });
+    const line = await addCatalogLine(item, { unit: mode, displayQty: 1 });
+    if(line) dropIntoOrder(item, from);
     return;
   }
   const step = e.target.closest('[data-find-step]');
@@ -5187,16 +5691,11 @@ document.getElementById('ag_findView').addEventListener('click', async (e)=>{
     if(next <= 0){ cart.splice(idx, 1); if(openLineIdx === idx) openLineIdx = -1; updateCartBadge(); saveQuoteDraft(); }
     else setLineQty(it, next);
     renderFind();
+    if(Number(step.dataset.findStep) > 0) bumpOrderBar();
     return;
   }
   const img = e.target.closest('[data-img]');
   if(img && img.dataset.img){ openImageLightbox(img.dataset.img); }
-});
-document.getElementById('ag_findView').addEventListener('change', (e)=>{
-  const v = e.target.closest('[data-var]');
-  if(!v) return;
-  browseSelectedVariant.set(v.dataset.var, v.value);
-  renderFind();
 });
 document.getElementById('ag_browse_search').addEventListener('input', ()=>{
   const has = document.getElementById('ag_browse_search').value.length > 0;
@@ -5212,6 +5711,108 @@ document.getElementById('ag_browse_search_clear').addEventListener('click', (e)=
   document.getElementById('ag_browse_search_clear').hidden = true;
   renderFind();
 });
+/* ---- picking a size ----
+   One item, many sizes: "6* / Coarse / 3/4"". The labels are split on
+   their slashes into rows -- size, thread, length -- so a choice is three
+   taps on short buttons instead of a scroll down a long list. A
+   combination the shop does not stock is drawn dashed; tapping it jumps to
+   the nearest one it does. Labels that do not split evenly stay one row. */
+function variantDims(variants){
+  // " / " between parts; a bare slash only where it is not a fraction --
+  // the 3/4 in 3/4" is a length, not two choices.
+  const spaced = variants.some(v=> / \/ /.test(v.variantLabel || ''));
+  const cut = spaced ? /\s+\/\s+/ : /(?<!\d)\/|\/(?!\d)/;
+  const parts = variants.map(v=> String(v.variantLabel || '—').split(cut).map(x=> x.trim()));
+  const n = parts[0].length;
+  if(n >= 2 && n <= 4 && parts.every(p=> p.length === n && p.every(Boolean))){
+    const values = Array.from({ length: n }, (_, d)=> [...new Set(parts.map(p=> p[d]))]);
+    if(values.every(v=> v.length < variants.length)) return { parts, values };
+  }
+  const whole = variants.map(v=> [String(v.variantLabel || '—')]);
+  return { parts: whole, values: [whole.map(p=> p[0])] };
+}
+function openVariantSheet(productId, opts){
+  opts = opts || {};
+  const group = groupCatalogItems(catalog.filter(it=> String(it.productId) === String(productId)))[0];
+  if(!group) return;
+  const { parts, values } = variantDims(group.variants);
+  let sel = selectedVariantFor(group);
+  // The card behind follows whatever was picked.
+  const sheet = openSheet('', { label: `Choose ${group.name}`, white:true,
+    onClose: ()=>{ if(currentView === 'find') renderFind(); if(currentView === 'order') renderOrder(); } });
+  function paint(){
+    const at = group.variants.indexOf(sel);
+    const cur = parts[at];
+    const key = feedItemKey(sel.productId, sel.variantIdx);
+    const pq = Number(sel.packQty) || 0;
+    const mode = pq > 0 && sel.packUnit ? (unitChoice.get(key) || 'pack') : 'unit';
+    const mult = mode === 'pack' ? pq : 1;
+    const floor = Number(sel.floorPrice) || 0, our = Number(sel.ourPrice) || 0;
+    const price = (our > floor ? our : floor) * mult;
+    const unitLabel = mode === 'pack' ? sel.packUnit : (sel.unit || 'each');
+    const inOrder = lineFor(cart, sel.productId, sel.variantIdx) >= 0;
+    sheet.el.innerHTML = `<button type="button" class="ax-grab" data-close aria-label="Close"></button>
+      <div class="ax-vs">
+        <div class="ax-vs-h"><span class="ax-th">${itemThumbHTML(sel)}</span>
+          <span class="b"><span class="n">${esc(group.name)}</span><span class="p">${fmtNum(price)} <small>/${esc(String(unitLabel).toLowerCase())}</small></span></span>
+          <button type="button" class="ax-iconbtn" data-close aria-label="Close">${AX_ICON.x}</button></div>
+        ${values.map((vals, d)=> `<div class="ax-vs-row" role="group">${vals.map(v=>{
+          const on = cur[d] === v;
+          const fits = parts.some(p=> p[d] === v && p.every((x, i)=> i === d || x === cur[i]));
+          return `<button type="button" class="ax-vs-c${on ? ' on' : fits ? '' : ' far'}" data-d="${d}" data-v="${esc(v)}" aria-pressed="${on}">${esc(v)}</button>`;
+        }).join('')}</div>`).join('')}
+        <div class="ax-vs-foot">
+          ${pq > 0 && sel.packUnit ? `<div class="ax-useg" role="group" aria-label="Unit">
+              <button type="button" data-vs-unit="unit" aria-pressed="${mode==='unit'}">${esc(sel.unit || 'pc')}</button>
+              <button type="button" data-vs-unit="pack" aria-pressed="${mode==='pack'}">${esc(sel.packUnit)}</button></div>` : ''}
+          ${inOrder ? `<button type="button" class="btn btn-dark" data-close>${AX_ICON.check}In order</button>`
+            : `<button type="button" class="btn btn-accent" data-vs-add>Add <b>${fmtNum(price)}</b></button>`}
+        </div>
+      </div>`;
+  }
+  sheet.el.addEventListener('click', async (e)=>{
+    const c = e.target.closest('[data-d]');
+    if(c){
+      const d = Number(c.dataset.d), v = c.dataset.v;
+      const cur = parts[group.variants.indexOf(sel)];
+      const want = cur.slice(); want[d] = v;
+      let i = parts.findIndex(p=> p.every((x, k)=> x === want[k]));
+      if(i < 0){
+        // The nearest stocked combination that keeps what was just tapped.
+        let best = -1, score = -1;
+        parts.forEach((p, k)=>{
+          if(p[d] !== v) return;
+          const sc = p.filter((x, m)=> x === want[m]).length;
+          if(sc > score){ score = sc; best = k; }
+        });
+        i = best;
+      }
+      if(i >= 0){
+        sel = group.variants[i];
+        browseSelectedVariant.set(group.productId, sel.variantIdx == null ? '' : String(sel.variantIdx));
+      }
+      paint();
+      return;
+    }
+    const u = e.target.closest('[data-vs-unit]');
+    if(u){ unitChoice.set(feedItemKey(sel.productId, sel.variantIdx), u.dataset.vsUnit); paint(); return; }
+    const add = e.target.closest('[data-vs-add]');
+    if(add){
+      const from = add.getBoundingClientRect();
+      const key = feedItemKey(sel.productId, sel.variantIdx);
+      const pq = Number(sel.packQty) || 0;
+      const mode = pq > 0 && sel.packUnit ? (unitChoice.get(key) || 'pack') : 'unit';
+      add.disabled = true;
+      sheet.close();
+      const line = await addCatalogLine(sel, { unit: mode, displayQty: 1 });
+      if(line) dropIntoOrder(sel, from);
+      if(currentView === 'find') renderFind();
+      if(currentView === 'order') renderOrder();
+    }
+  });
+  paint();
+}
+
 function renderFindDone(){
   const btn = document.getElementById('ag_findDone');
   const t = cartTotals();

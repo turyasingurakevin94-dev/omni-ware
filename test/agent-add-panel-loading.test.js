@@ -86,7 +86,8 @@ if (api) {
   const under = await api.addCatalogLine(Object.assign({}, item, { productId: 'n3' }), { unit: 'unit', displayQty: 1 });
   t.check(under.agentSellPrice === 3700,
     'and a suggested price under what the shop charges is never used -- the line starts at cost, not at a loss');
-  t.check(seen.toasts.some((m) => /keep nothing/.test(m)), 'and says so, at the moment it can still be a surprise');
+  t.check(!seen.toasts.some((m) => /keep nothing/.test(m)),
+    'and no message pops up about it -- the line and its card show +0 in amber instead');
 
   /* ---------- 4. no signal ------------------------------------------- */
   reply = Promise.reject(new Error('Failed to fetch'));

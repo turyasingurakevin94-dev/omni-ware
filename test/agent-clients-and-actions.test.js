@@ -46,8 +46,8 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
 
   // Ordering matters: esc() rewrites ' to &#39;, so escaping first would
   // leave every name ending in a semicolon and the rule would never fire.
-  t.check(/possessive\(client\.name\)/.test(code),
-    'possessive is applied to the raw name -- the toast it builds is text, so nothing is escaped first');
+  t.check(/esc\(possessive\(firstWord\(chosenClient\.name\)\)\)/.test(code),
+    'possessive is applied to the raw name and escaped after -- never the other way round');
   t.check(!/possessive\(esc\(/.test(code), 'and never the other way round anywhere');
 }
 

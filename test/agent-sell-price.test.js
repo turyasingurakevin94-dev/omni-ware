@@ -150,10 +150,11 @@ const line = (over) => Object.assign({
   t.check(/classList\.toggle\('loss', f\.margin\.level === 'loss'\)/.test(typing),
     'and marks the price box while a loss is being typed');
   const add = extractFunction(src, 'addCatalogLine', 'agent.html');
-  t.check(/const m = cartLineMargin\(line\.agentSellPrice, line\.floorPrice, line\.qty\);/.test(add),
-    'adding a line checks it once, at the moment it can still be a surprise');
-  t.check(/if\(m\.level !== 'ok'\) toast\(`Added — \$\{m\.detail\}`, 6000\);/.test(add),
-    'and says so only when there is something to say');
+  t.check(!/toast\(`Added/.test(add) && !/cartLineMargin/.test(add),
+    'adding a line raises no message about its earning -- what it earns is shown on the line itself');
+  const tile = extractFunction(src, 'findTileHTML', 'agent.html');
+  t.check(/const lineF = line \? cartLineFigures\(line\) : null;/.test(tile) && /lineF\.margin\.level === 'loss' \? 'loss' : 'zero'/.test(tile),
+    'and the card in Find shows +0 in amber, or a loss in red, where it would say "In order"');
 }
 
 /* ---------- 7. the client never sees any of it ------------------------ */

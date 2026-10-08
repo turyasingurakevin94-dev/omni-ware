@@ -74,6 +74,8 @@ try {
     // The real one, not a stub: whether the finally hands a disabled
     // button back is exactly the kind of thing this file exists to catch.
     'let agentPaused = false, sendingOrder = false, openLineIdx = -1;',
+    // Lines the shop refused to price are marked, not just reported.
+    'const blockedLines = new Map(); const feedItemKey = (p, v) => `${p}::${v==null?\'\':v}`; function renderCart(){}',
     'function setAgentPaused(on){ agentPaused = !!on; applyPausedToCart(); }',
     extractFunction(src, 'applyPausedToCart', 'agent.html'),
     'const cartKey = (client) => client ? String(client.id) : null;',
