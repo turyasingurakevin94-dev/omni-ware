@@ -183,7 +183,7 @@ const H = {
     mgrHealthChecks: () => H,
     Date, JSON, Math, Number, String, Array, Object,
   };
-  const build = (over) => compileScope([decl('ASSISTANT_TOOLS'), ...FORMAT, fn('mgrCashFloor'), fn('mgrPayday'),
+  const build = (over) => compileScope([decl('ASSISTANT_TOOLS'), ...FORMAT, fn('mgrCashFloor'), fn('mgrPayday'), fn('mgrDeadWindow'),
     'function names(){ return { ASSISTANT_TOOLS }; }'],
   { ...env, ...(over || {}) }, ['names']).names();
   const pulse = build().ASSISTANT_TOOLS.shop_pulse.run();

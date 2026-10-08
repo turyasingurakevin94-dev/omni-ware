@@ -272,6 +272,7 @@ const books = () => ({
     extractFunction(src, 'deadStockRows', 'index.html'),
     extractFunction(src, 'deadStockBuyers', 'index.html'),
     extractFunction(src, 'deadStockQuietDays', 'index.html'),
+    extractFunction(src, 'mgrDeadWindow', 'index.html'),
     'function names(){ return { ASSISTANT_TOOLS, deriveMoveOutcome }; }',
   ], env, ['names']);
   const N = scope.names();

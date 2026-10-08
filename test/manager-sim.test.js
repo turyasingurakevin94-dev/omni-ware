@@ -38,7 +38,7 @@ const eq = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(wa
 const TODAY = '2026-10-07';
 const SIM = ['mgrSimDate', 'mgrSimDay', 'mgrSimMoney', 'mgrSimSigned', 'mgrSimCell', 'mgrSimAnd', 'mgrSimQuantile', 'mgrSimRoundPrice',
   'mgrSimPriceSteps', 'mgrSimBand', 'mgrSimSeason', 'mgrSimTermsFact', 'mgrSimOfferFact', 'mgrSimLevers', 'mgrSimSpread', 'mgrSimChaseLever', 'mgrSimBillLever',
-  'mgrSimPayDay', 'mgrSimOrderLever', 'mgrSimSeasonOut', 'mgrSimSeasonLever', 'mgrSimOfferLever', 'mgrSimClearLever', 'mgrSimPriceLever',
+  'mgrSimPayDay', 'mgrSimOrderLever', 'mgrSimSeasonOut', 'mgrSimSeasonLever', 'mgrSimOfferLever', 'mgrSimClearLever', 'mgrDeadWindow', 'mgrSimPriceLever',
   'mgrSimDiscountLever', 'mgrSimTermsLever', 'mgrSimHirePay', 'mgrSimHireLever', 'mgrSimQuoteLever', 'mgrSimPostLever', 'mgrSimChoiceOf',
   'mgrSimAssumeOf', 'mgrSimCompose', 'mgrSimExpected', 'mgrSimLands', 'mgrSimRun', 'mgrSimJudge', 'mgrSimShocks', 'mgrSimHolds', 'mgrSimPresets',
   'mgrSimSame', 'mgrSimVerdict', 'mgrSimWeekWords', 'mgrSimBreakDay', 'mgrSimHeadline', 'mgrSimTeaserFigures', 'mgrSimTargetsTouched',
@@ -287,6 +287,13 @@ const eC = clC.effect('set', 100);
 eq([eC.profit, eC.clearIn, eC.stock], [-30000, 90000, -120000], 'a consigned line cleared under its consignor\'s price: the loss once');
 t.check(/30k of what it owes its consignor comes out of your pocket/.test(clC.opts[1].hint), `and the consignor's share is named (${clC.opts[1].hint})`);
 t.check(!e1.out && !e1.bills && !e1.loan, 'a clearance commits nothing: its money is expected, never committed');
+/* Q43: the lever says what dead stock counted -- the shop's own window
+   (60 here, from the books' quietDays; 45 when the shop sets 45). */
+eq([clC.label, clC.opts[0].hint.split(' · ').slice(0, 2)], ['Dead stock (no sale in 60 days) · 120k', ['1 line', 'no sale in 60 days']],
+  'the dead-stock lever is labelled "no sale in 60 days"');
+eq(S.mgrSimClearLever({ ...BOOKS(), clearance: { quietDays: 45, value: 120000,
+  lines: [deadLine({ key: 'P7', line: 'Doors', qty: 2, unitCost: 60000, costKnown: true, value: 120000, clearance: 45000 })] } }).label,
+'Dead stock (no sale in 45 days) · 120k', 'and with the shop\'s window at 45, 45 -- never a literal 60');
 
 /* Price: 93 units a month. At 34,050 and the same volume: 93 × 880 =
    81,840 more a month. Losing 10% of the volume: 93 × 0.9 × 880 =

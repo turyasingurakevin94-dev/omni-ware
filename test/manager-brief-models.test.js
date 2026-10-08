@@ -41,11 +41,11 @@ const S = compileScope([
     'mgrBriefForesight', 'mgrBriefOrderBy', 'mgrBriefPatterns', 'mgrBriefBlindSpots', 'mgrBriefAskChips', 'mgrBriefDay', 'mgrBriefLastYear', 'mgrBriefOwn',
     'mgrShortUGX', 'mgrPipsFromRate', 'chaseRate', 'anShiftDate', 'waWeekday', 'managerPips', 'mgrPossessive', 'mgrDept',
     'mgrBriefUnusualItems', 'mgrBriefAnsweredKeys', 'mgrBriefWeekTrend', 'mgrBriefExpectedParts', 'mgrBriefDerivedText', 'mgrBriefBoard',
-    'mgrBriefTrendText', 'mgrBriefLamp', 'mgrStripCells'].map(fn),
+    'mgrBriefTrendText', 'mgrBriefLamp', 'mgrStripCells', 'mgrDeadWindow', 'deadStockQuietDays'].map(fn),
   ...['MGR_BRIEF_KINDS', 'MGR_BRIEF_ALERT', 'MGR_BRIEF_UNUSUAL_DEPT', 'MGR_BRIEF_FS_ORDER', 'MGR_BRIEF_MONTHS', 'MGR_DEPTS', 'MGR_KIND_DEPT',
     'TRACK_WINDOWED', 'MGR_WEEKDAYS', 'MGR_BRIEF_BLIND_ORDER', 'MGR_BRIEF_NEEDS', 'MGR_WHOLE_SHOP', 'MGR_WAIT_CELLS', 'mgrOf'].map(decl),
 ], {
-  todayISO: () => TODAY, CHASE_WINDOW: 7, esc: (x) => String(x),
+  todayISO: () => TODAY, CHASE_WINDOW: 7, esc: (x) => String(x), data: { presetDeadStockDays: 60 },
   daysBetweenISO: (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000),
   fmtShortDate: (d) => {
     const m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -459,11 +459,11 @@ const S = compileScope([
     ['Why is Kato Construction first?', 'What do the 2 wages past their day do to my cash?', 'What’s stopping margin reaching 12%?'],
     'a meeting day: the first move, the People question (2 wages past their day), the margin aim -- three');
   eq(S.mgrBriefAskChips({ first: null, margin: 9.1, aim: 12, people: null, dead: { lines: 6, days: 60 } }),
-    ['What’s stopping margin reaching 12%?', 'What would clear the 6 lines unsold in 60 days?'],
-    'no meeting, People all passing: the margin aim and the 6 lines unsold in 60 days');
+    ['What’s stopping margin reaching 12%?', 'What would clear the 6 lines with no sale in 60 days?'],
+    'no meeting, People all passing: the margin aim and the 6 lines with no sale in 60 days (Q43)');
   eq(S.mgrBriefAskChips({ people: { kind: 'till', count: 3 } }), ['Which days did the till not match its count, and by how much?'], 'a till off on 3 days');
   eq(S.mgrBriefAskChips({ people: { kind: 'rates', count: 1 }, dead: { lines: 1, days: 45 } }),
-    ['Who on staff has no pay rate, and what does that leave out?', 'What would clear the line unsold in 45 days?'], 'a missing pay rate; one line, singular');
+    ['Who on staff has no pay rate, and what does that leave out?', 'What would clear the line with no sale in 45 days?'], 'a missing pay rate; one line, singular, in the shop\'s own 45-day window');
   eq(S.mgrBriefAskChips({ people: { kind: 'wages', count: 0 }, dead: { lines: 0, days: 60 } }), [], 'a count of 0 asks nothing');
   const PA = compileScope([fn('mgrBriefPeopleAsk')], { Map, Number }, ['mgrBriefPeopleAsk']).mgrBriefPeopleAsk;
   const ck = (id, pass, count) => ({ id, dept: 'people', pass, count });
@@ -732,6 +732,22 @@ const S = compileScope([
 
   /* (m) THE DEAD STOCK IS VALUED AS THE INVENTORY REGISTER VALUES IT. */
   t.check(/inventoryLineFor\(pts\.product, pts\.variantIdx\)/.test(read), 'a dead line\'s value is the Inventory register\'s (inventoryLineFor)');
+}
+
+/* ---------- 20. dead stock says what it counted (Q43) ------------------- */
+{
+  /* The Cash-to-free cell carries 3,313,558 of dead stock: its note says
+     "no sale in 60 days" from the shop's quiet window. With the window
+     set to 45 the same cell says 45 -- never a literal 60. With no dead
+     stock in it, no note. */
+  const free = (dead) => ({ total: 20000000 + dead, parts: [], byKind: { debt: 20000000, dead, move: 0 }, expected: { amount: 0, list: [] } });
+  eq(S.mgrStripCells({ free: free(3313558) })[3].note, 'dead stock: no sale in 60 days', 'the strip names the window it counted');
+  const W = compileScope([fn('mgrDeadWindow'), fn('deadStockQuietDays')], { data: { presetDeadStockDays: 45 } }, ['mgrDeadWindow']);
+  eq([W.mgrDeadWindow(), W.mgrDeadWindow(90), W.mgrDeadWindow(null)], ['no sale in 45 days', 'no sale in 90 days', 'no sale in 45 days'],
+    'the shop\'s own 45-day setting, or the days a reading carries');
+  eq(S.mgrStripCells({ free: free(0) })[3].note, '', 'no dead stock in it: no note');
+  const paint = fn('mgrBriefStripDetailHTML');
+  t.check(/dead: 'dead stock — ' \+ mgrDeadWindow\(\)/.test(paint), 'the strip\'s opened cash-to-free rows say "dead stock — no sale in N days"');
 }
 
 process.exit(t.done() ? 1 : 0);

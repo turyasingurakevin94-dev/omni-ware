@@ -195,6 +195,7 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     extractFunction(src, 'deadStockRows', 'index.html'),
     extractFunction(src, 'deadStockBuyers', 'index.html'),
     extractFunction(src, 'deadStockQuietDays', 'index.html'),
+    extractFunction(src, 'mgrDeadWindow', 'index.html'),
     'function names(){ return { ASSISTANT_TOOLS }; }',
   ], env, ['names']);
   const pulse = scope.names().ASSISTANT_TOOLS.shop_pulse.run();

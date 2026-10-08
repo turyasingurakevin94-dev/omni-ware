@@ -48,8 +48,8 @@ const FACTS = {
 };
 const H = compileScope([
   fn('mgrHealthChecks'), fn('mgrShortUGX'), fn('fmtShortDate'), fn('mgrPossessive'), fn('mgrHealthTrend'), fn('anShiftDate'),
-  decl('MGR_HEALTH_CHECKS'), decl('MGR_DEPTS'),
-], { mgrHealthFacts: () => FACTS, todayISO: () => TODAY, DASH_COST_RISE_PCT: 5 }, ['mgrHealthChecks', 'mgrHealthTrend']);
+  decl('MGR_HEALTH_CHECKS'), decl('MGR_DEPTS'), fn('mgrDeadWindow'), fn('deadStockQuietDays'),
+], { mgrHealthFacts: () => FACTS, todayISO: () => TODAY, DASH_COST_RISE_PCT: 5, data: { presetDeadStockDays: 60 } }, ['mgrHealthChecks', 'mgrHealthTrend']);
 
 {
   const h = H.mgrHealthChecks();
@@ -246,8 +246,8 @@ const H = compileScope([
   };
   const E = compileScope([
     fn('mgrHealthChecks'), fn('mgrShortUGX'), fn('fmtShortDate'), fn('mgrPossessive'),
-    decl('MGR_HEALTH_CHECKS'), decl('MGR_DEPTS'),
-  ], { mgrHealthFacts: () => EMPTY, todayISO: () => TODAY, DASH_COST_RISE_PCT: 5 }, ['mgrHealthChecks']);
+    decl('MGR_HEALTH_CHECKS'), decl('MGR_DEPTS'), fn('mgrDeadWindow'), fn('deadStockQuietDays'),
+  ], { mgrHealthFacts: () => EMPTY, todayISO: () => TODAY, DASH_COST_RISE_PCT: 5, data: { presetDeadStockDays: 60 } }, ['mgrHealthChecks']);
   const h = E.mgrHealthChecks();
   eq([h.known, h.passed, h.score], [0, 0, null], 'an empty book: nothing known, nothing passed, no score');
   const v = Object.fromEntries(h.checks.map((c) => [c.id, c.pass]));
@@ -316,6 +316,35 @@ const H = compileScope([
   const none = compileScope([fn('mgrSnapshotBody')], { todayISO: () => TODAY, mgrHealthFacts: () => ({}),
     mgrHealthChecks: () => ({ byDept: {}, checks: [], score: null, known: 0, passed: 0 }) }, ['mgrSnapshotBody']).mgrSnapshotBody({});
   eq([none.levels.debt60, none.levels.debt60Basis], [null, null], 'and no figure carries no basis');
+}
+
+/* ---------- 8. dead stock says what it counted (Q43) ------------------ */
+{
+  /* 13,685,508 of a 187,630,801 shelf, 6 lines, nothing sold in 60 days:
+     13.69m, 13,685,508 / 187,630,801 = 7.29% -> 7%. The check's label and
+     line say "no sale in 60 days"; with the shop's window at 45, 45. */
+  const dead = { value: 13685508, total: 187630801, share: 13685508 / 187630801, lines: 6, quietDays: 60 };
+  const c = H.mgrHealthChecks(null, { deadStock: dead }).checks.find((x) => x.id === 'dead_stock');
+  eq([c.pass, c.label, c.rule, c.line], [false, 'No dead stock — no sale in 60 days', 'nothing with no sale in 60 days',
+    '13.69m of dead stock — no sale in 60 days — 7% of the shelf, 6 lines'], 'a failing dead-stock check names its window');
+  const c45 = H.mgrHealthChecks(null, { deadStock: { ...dead, quietDays: 45 } }).checks.find((x) => x.id === 'dead_stock');
+  eq([c45.label, c45.line], ['No dead stock — no sale in 45 days', '13.69m of dead stock — no sale in 45 days — 7% of the shelf, 6 lines'],
+    'the shop\'s own quiet window, never a literal 60');
+  const ok = H.mgrHealthChecks().checks.find((x) => x.id === 'dead_stock');
+  eq([ok.pass, ok.line], [true, 'No dead stock — every line on the shelf has sold in the last 60 days'], 'a passing check says the same window');
+  /* Targets: the measure is named and explained with the window. */
+  const T = compileScope([fn('mgrTgName'), fn('mgrTgFig'), fn('mgrDeadWindow'), fn('deadStockQuietDays')], {
+    data: { presetDeadStockDays: 60 }, MANAGER_METRICS: { dead_stock_value: { label: 'Dead stock', unit: 'ugx', direction: 'down' } } }, ['mgrTgName']);
+  eq(T.mgrTgName('dead_stock_value', 6000000), 'Dead stock (no sale in 60 days) under 6.00m', 'a dead-stock target names its window');
+  const M = compileScope([decl('MANAGER_METRICS'), fn('mgrDeadWindow'), fn('deadStockQuietDays'), 'function metrics(){ return MANAGER_METRICS; }'],
+    { data: { presetDeadStockDays: 45 } }, ['metrics']).metrics();
+  t.check(/^stock with no sale in 45 days; /.test(M.dead_stock_value.basis), 'the measure\'s basis reads the window when shown (45 here)');
+  t.check(/x\.metric === 'dead_stock_value' \? x\.label \+ ' \(' \+ mgrDeadWindow\(\) \+ '\)'/.test(fn('mgrProposalHTML'))
+    && /x\.k === 'dead_stock_value' \? `<small>\$\{esc\(mgrDeadWindow\(\)\)\}<\/small>`/.test(src),
+  'the Targets proposal card and the composer\'s measure chip carry the window');
+  /* The meeting and Today's alert. */
+  t.check(/counted_as: mgrDeadWindow\(deadStockQuietDays\(\)\)/.test(src), 'the meeting is told what dead stock counted');
+  t.check(/of dead stock — \$\{mgrDeadWindow\(\)\}/.test(src) && !/of stock has not sold in 60 days/.test(src), 'Today\'s alert no longer hard-codes 60 days');
 }
 
 process.exit(t.done() ? 1 : 0);

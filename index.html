@@ -128090,6 +128090,14 @@ function mgrMemo(name, fn){
   if(!mgrModelMemo.values.has(name)) mgrModelMemo.values.set(name, fn());
   return mgrModelMemo.values.get(name);
 }
+/* DEAD STOCK'S ONE NAME (Q43). Wherever the Manager shows dead stock it
+   says what it counted -- "no sale in 60 days" -- with N the shop's own
+   quiet window (data.presetDeadStockDays, deadStockQuietDays), never a
+   literal 60. The Inventory screen keeps its own words. */
+function mgrDeadWindow(days){
+  const n = Math.round(Number(days));
+  return 'no sale in ' + (n > 0 ? n : deadStockQuietDays()) + ' days';
+}
 function mgrPossessive(name){
   const n = String(name || ''); return /s$/i.test(n) ? n + '\'' : n + '\'s';
 }
@@ -129083,14 +129091,16 @@ const MGR_HEALTH_CHECKS = [
         line: s.count === 0 ? 'Nothing that sells runs out inside 10 days unordered'
           : s.count + ' line' + (s.count === 1 ? '' : 's') + ' run' + (s.count === 1 ? 's' : '') + ' out inside 10 days, not on order — first ' + s.soonest.name + ' in ' + Math.max(0, Math.floor(s.soonest.days)) + ' days' };
     } },
-  { id: 'dead_stock', dept: 'store', label: 'No stock unsold for the quiet window',
+  { id: 'dead_stock', dept: 'store', label: 'No dead stock',
     read: (f)=>{
       const d = f.deadStock;
-      if(!d) return { pass: null, line: 'Dead stock could not be read.' };
-      if(!(d.total > 0)) return { pass: null, rule: 'none unsold for ' + d.quietDays + ' days', source: 'Inventory', line: 'Nothing on the shelf with a cost' };
-      return { pass: !(d.value > 0), figure: d.value, unit: 'UGX', threshold: 0, rule: 'none unsold for ' + d.quietDays + ' days', source: 'Inventory — last sale per line',
-        line: d.value > 0 ? mgrShortUGX(d.value) + ' of stock unsold in ' + d.quietDays + ' days — ' + Math.round(d.share * 100) + '% of the shelf, ' + d.lines + ' line' + (d.lines === 1 ? '' : 's')
-          : 'Everything on the shelf has sold in the last ' + d.quietDays + ' days' };
+      if(!d) return { pass: null, line: 'Dead stock (' + mgrDeadWindow() + ') could not be read.' };
+      const w = mgrDeadWindow(d.quietDays);
+      const label = 'No dead stock — ' + w;
+      if(!(d.total > 0)) return { pass: null, label, rule: 'nothing with ' + w, source: 'Inventory', line: 'Nothing on the shelf with a cost' };
+      return { pass: !(d.value > 0), label, figure: d.value, unit: 'UGX', threshold: 0, rule: 'nothing with ' + w, source: 'Inventory — last sale per line',
+        line: d.value > 0 ? mgrShortUGX(d.value) + ' of dead stock — ' + w + ' — ' + Math.round(d.share * 100) + '% of the shelf, ' + d.lines + ' line' + (d.lines === 1 ? '' : 's')
+          : 'No dead stock — every line on the shelf has sold in the last ' + d.quietDays + ' days' };
     } },
   { id: 'stock_days', dept: 'store', label: 'Days of stock 90 or fewer',
     read: (f)=>{
@@ -129177,7 +129187,7 @@ function mgrHealthChecks(ctx, scenario){
     let r;
     try { r = c.read(f) || { pass: null }; }
     catch(e){ console.warn('Manager health: ' + c.id + ' could not be judged —', e && e.message); r = { pass: null, line: 'Could not be read.' }; }
-    return { id: c.id, dept: c.dept, label: c.label, pass: r.pass === true ? true : r.pass === false ? false : null,
+    return { id: c.id, dept: c.dept, label: r.label || c.label, pass: r.pass === true ? true : r.pass === false ? false : null,
       figure: r.figure == null ? null : r.figure, unit: r.unit || null, threshold: r.threshold == null ? null : r.threshold,
       rule: r.rule || '', source: r.source || '', line: r.line || '', ...(r.count != null ? { count: r.count } : {}), ...(r.on ? { on: r.on } : {}),
       ...(r.note ? { note: r.note } : {}) };
@@ -132599,7 +132609,7 @@ function dashAlerts(ctx){
   // Stock that has not moved in two months, priced at what it cost.
   if(ctx.inv && ctx.inv.deadValue > 0){
     add({ id:'stock:dead', kind:'deadstock', dueDays: null, money: ctx.inv.deadValue,
-      title: `${fmtUGX(Math.round(ctx.inv.deadValue))} of stock has not sold in 60 days`,
+      title: `${fmtUGX(Math.round(ctx.inv.deadValue))} of dead stock — ${mgrDeadWindow()}`,
       detail: `${Math.round(ctx.inv.deadQty)} units, ${(100-ctx.inv.ratio).toFixed(0)}% of what the shop is holding by value.`,
       action: 'Clear it or stop reordering it' });
   }
@@ -132921,7 +132931,8 @@ const MANAGER_METRICS = {
     measure: ()=> (data.customers||[]).reduce((n, c)=> n + (Number(c.debt) > 0.5 ? Number(c.debt) : 0), 0),
     at: (d)=> d >= todayISO() ? MANAGER_METRICS.debtors_total.measure() : receivablesAsAt(d) },
   dead_stock_value: { label: 'Dead stock', unit: 'ugx', kind: 'level', direction: 'down',
-    basis: 'stock with no sale in the quiet window; a past day valued at today\'s cost',
+    /* Q43: said with the shop's own quiet window, read when it is shown. */
+    get basis(){ return 'stock with ' + (typeof mgrDeadWindow === 'function' ? mgrDeadWindow() : 'no sale in the quiet window') + '; a past day valued at today\'s cost'; },
     measure: ()=> dashInventoryHealth().deadValue,
     at: (d)=> d >= todayISO() ? MANAGER_METRICS.dead_stock_value.measure() : mgrTgDeadStockAt(d) },
   cash_on_hand: { label: 'Cash in hand', unit: 'ugx', kind: 'level', direction: 'up',
@@ -137791,7 +137802,7 @@ function mgrBriefAskChips(src){
   else if(pp && pp.kind === 'rates' && pn > 0) out.push('Who on staff has no pay rate, and what does that leave out?');
   if(s.margin != null && s.aim > 0 && s.margin < s.aim) out.push('What’s stopping margin reaching ' + s.aim + '%?');
   const dl = s.dead ? Math.round(Number(s.dead.lines) || 0) : 0, dd = s.dead ? Math.round(Number(s.dead.days) || 0) : 0;
-  if(dl > 0 && dd > 0) out.push('What would clear the ' + (dl === 1 ? 'line' : dl + ' lines') + ' unsold in ' + dd + ' days?');
+  if(dl > 0 && dd > 0) out.push('What would clear the ' + (dl === 1 ? 'line' : dl + ' lines') + ' with ' + mgrDeadWindow(dd) + '?');
   return out.slice(0, 3);
 }
 /* The People question's basis: the first failing People check, in the
@@ -138562,6 +138573,8 @@ function mgrStripCells(M){
     const k = ex.reduce((n, x)=> n + (Number(x.k) || 0), 0), n = ex.reduce((m, x)=> m + (Number(x.n) || 0), 0);
     cells[3] = { id: 'free', label: 'Cash to free', value: f.total > 0 ? fig(f.total) : '&mdash;',
       sub: f.total > 0 ? 'could be freed' : 'nothing tied up',
+      /* Q43: the dead stock inside it says what it counted. */
+      note: f.byKind && f.byKind.dead > 0 ? 'dead stock: ' + (typeof mgrDeadWindow === 'function' ? mgrDeadWindow() : 'no sale in the quiet window') : '',
       also: f.total > 0 && f.expected.amount > 0 ? 'expected ' + esc(mgrShortUGX(f.expected.amount)) + ' if chased · paid within '
         + (lag === 0 ? 'the day' : lag + ' day' + (lag === 1 ? '' : 's')) + ' in ' + k + ' of ' + n : '' };
   }
@@ -138664,7 +138677,7 @@ function mgrBriefStripDetailHTML(id, M){
   } else if(id === 'free' && M.free && !M.free.error){
     const f = M.free;
     title = `${mgrShortUGX(f.total)} tied up that could be freed`;
-    const KIND = { debt: 'the part owed 60 days or more', dead: 'stock unsold for the quiet window', move: 'a cash move in today’s plan' };
+    const KIND = { debt: 'the part owed 60 days or more', dead: 'dead stock — ' + mgrDeadWindow(), move: 'a cash move in today’s plan' };
     body = f.parts.slice(0, 10).map(p=> row(esc(p.label) + ` <span class="mgr-b-sm">— ${KIND[p.kind]}</span>`, fig(p.amount))).join('')
       + (f.parts.length > 10 ? row(`and ${f.parts.length - 10} more`, null, 'mgr-b-muted') : '')
       + f.expected.list.map(x=> row(esc(x.label) + ` <span class="mgr-b-sm">— expected if chased: paid within ${x.lagDays === 0 ? 'the day' : x.lagDays + ' day' + (x.lagDays === 1 ? '' : 's')} of a chase in ${x.k} of ${x.n}</span>`, fig(x.amount), 'mgr-b-exp')).join('');
@@ -140182,7 +140195,7 @@ function mgrSimClearLever(b){
   const owes = (p)=> sum(p.rows, (l)=> p.at(l).owesConsignor || 0);
   const owesSay = (p)=> owes(p) > 0 ? ' · ' + mgrSimMoney(owes(p)) + ' of what it owes its consignor comes out of your pocket' : '';
   const sd = b.daysOfStock && b.daysOfStock.days != null ? Math.round(b.daysOfStock.days) + ' stock days' : 'stock days not known';
-  const opts = [{ id: 'leave', label: 'Leave it', hint: c.lines.length + ' line' + (c.lines.length === 1 ? '' : 's') + ' unsold in ' + c.quietDays + ' days · ' + sd, say: 'dead stock left' }];
+  const opts = [{ id: 'leave', label: 'Leave it', hint: c.lines.length + ' line' + (c.lines.length === 1 ? '' : 's') + ' · ' + mgrDeadWindow(c.quietDays) + ' · ' + sd, say: 'dead stock left' }];
   if(set.length){
     const kept = sum(set, (l)=> l.atSet.kept * l.qty);
     opts.push({ id: 'set', label: 'At your clearance price' + (set.length === 1 ? '' : 's'),
@@ -140193,7 +140206,7 @@ function mgrSimClearLever(b){
   if(known.length) opts.push({ id: 'cost', label: 'At cost', hint: mgrSimMoney(sum(known, (l)=> l.atCost.raises)) + ' back off the shelf if it all sells · '
     + (owes(priced.cost) > 0 ? 'no loss on your own stock' + owesSay(priced.cost) : 'no loss'),
     pips: 5, basis: 'what it cost', say: 'dead stock cleared at cost' });
-  return { id: 'clear', kind: 'clear', dept: 'store', group: 'books', label: 'Dead stock · ' + mgrSimMoney(c.value), short: 'the clearance',
+  return { id: 'clear', kind: 'clear', dept: 'store', group: 'books', label: 'Dead stock (' + mgrDeadWindow(c.quietDays) + ') · ' + mgrSimMoney(c.value), short: 'the clearance',
     def: 'leave', subject: {}, opts, lineKeys: c.lines.map(l=> String(l.key)), setKeys: set.map(l=> String(l.key)),
     assume: { ...MGR_SIM_ASSUME.clear, basis: 'nothing on your books says how much of it would sell' },
     effect: (op, x)=>{
@@ -142081,6 +142094,8 @@ function mgrTgName(metric, aim){
     wa_orders: 'WhatsApp orders ' + a + ' a month', quotes_won_pct: 'Quotes won ' + a, margin_pct: 'Gross margin ' + a,
     cash_on_hand: 'Cash in hand ' + a, gross_profit: 'Gross profit ' + a, sales: 'Sales ' + a,
     sat_load: 'Saturday loads in ' + a + ' minutes' };
+  /* Q43: dead stock says what it counted, in the shop's own window. */
+  if(metric === 'dead_stock_value') return 'Dead stock (' + mgrDeadWindow() + ') under ' + a;
   return named[metric] || (m.direction === 'down' ? m.label + ' under ' + a : m.label + ' ' + a);
 }
 const mgrTgDay = (iso, withDay)=> new Date(iso + 'T12:00:00Z').toLocaleDateString('en-GB',
@@ -142618,7 +142633,7 @@ function mgrProposalHTML(x){
     mgrTgAvHTML(p)}<span>${esc(p.key === 'you' ? 'You' : p.first || p.name)}</span></button>`).join('');
   return `<article class="mgr-pp" data-tid="${esc(String(x.id))}" data-dups="${esc((x.dupIds||[]).join(','))}" data-owner="you"
       aria-label="Proposed: ${esc(x.label)} ${esc(mgrTgFig(unit, aim))} this week" title="Proposed — a commitment only when you take it on">
-    <div class="mgr-pp-h"><svg class="mgr-pp-ic" viewBox="0 0 24 24" aria-hidden="true">${mark}</svg><span class="mgr-pp-n">${esc(x.label)}</span>${
+    <div class="mgr-pp-h"><svg class="mgr-pp-ic" viewBox="0 0 24 24" aria-hidden="true">${mark}</svg><span class="mgr-pp-n">${esc(x.metric === 'dead_stock_value' ? x.label + ' (' + mgrDeadWindow() + ')' : x.label)}</span>${
       chip ? `<span class="mgr-pp-chip">${chip}</span>` : ''}</div>
     <div class="mgr-pp-aim"><span class="mgr-pp-big">${esc(mgrTgFig(unit, aim, true))}</span><span class="mgr-pp-u">${
       unit === 'days' ? 'days, this week' : unit === 'min' ? 'minutes, this week' : 'this week'}</span></div>
@@ -142908,7 +142923,9 @@ function mgrTgComposerHTML(c){
   const opt = (on, attrs, inner, cls, dis, title)=> `<button type="button" class="mgr-tg-opt${cls ? ' ' + cls : ''}${on ? ' mgr-tg-on' : ''}" aria-pressed="${on}"${
     dis ? ' disabled' : ''}${title ? ` title="${esc(title)}"` : ''} ${attrs}>${inner}</button>`;
   const what = c.measures.map(x=> opt(x.k === c.metric, `data-tg-metric="${x.k}"`,
-    esc(x.label) + (x.running ? '<small>running</small>' : x.unready ? `<small>${esc(x.unready)}</small>` : ''),
+    esc(x.label) + (x.running ? '<small>running</small>' : x.unready ? `<small>${esc(x.unready)}</small>`
+      /* Q43: dead stock says what it counts. */
+      : x.k === 'dead_stock_value' ? `<small>${esc(mgrDeadWindow())}</small>` : ''),
     'mgr-tg-opt-r', x.running || !!x.unready, x.running ? 'A target on this is already running'
       : x.unready ? `${MANAGER_METRICS[x.k].basis} — ${x.unready}` : MANAGER_METRICS[x.k].basis)).join('');
   const nowCell = `<span class="mgr-tg-opt mgr-tg-opt-now"${m.span && c.out.lowOn ? ` title="${esc(`${mgrTgDay(c.out.lowOn, true)}, ${c.out.method}`)}"` : ''}><small>${esc(c.out.nowLabel || 'now')}</small><span class="mgr-tg-fig">${esc(mgrTgFig(u, c.out.now))}</span></span>`;
@@ -164951,6 +164968,8 @@ const ASSISTANT_TOOLS = {
         const marked = dead.filter(r=> r.clearance != null);
         return { value: apRound(dctx.inv.deadValue), units: Math.round(dctx.inv.deadQty),
           quiet_after_days: deadStockQuietDays(),
+          /* Q43: what the figure counted, in the words the Manager shows. */
+          counted_as: mgrDeadWindow(deadStockQuietDays()),
           /* NAMED, not just totalled. The advice "sell the dead stock"
              was given and skipped for weeks because nothing could say
              WHICH. Six lines by money, with how long each has sat and
