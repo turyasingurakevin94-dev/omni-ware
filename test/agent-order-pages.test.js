@@ -118,4 +118,17 @@ const fn = (n) => extractFunction(src, n, 'agent.html');
   t.check(/if\(key !== 'needs'\)\{ openStageSheet\(key\); return; \}/.test(src), 'each stage tile opens its own page');
 }
 
+/* ---------- 9. live without a reload ---------------------------------- */
+{
+  t.check(/if\(liveIsBusy\(\) && Date\.now\(\) - lastLiveAt > LIVE_FAST_MS\) refreshLiveOrders\(\);/.test(src),
+    'while an order is being checked, or its page is open, the moving orders are re-read every few seconds -- no reload');
+  const fast = /const LIVE_FAST_MS = (\d+);/.exec(src);
+  t.check(fast && Number(fast[1]) <= 15000, `and "every few seconds" means it (${fast ? fast[1] : '?'}ms)`);
+  t.check(/\.in\('id', ids\)/.test(fn('refreshLiveOrders')), 'reading only those orders, not the whole account');
+  t.check(/freshTicks\.set\(lineKey\(n, it\), Date\.now\(\)\)/.test(fn('noteOrderNews')) && /tickIsFresh\(o, it\) \? ' pop'/.test(fn('openTrackSheet')),
+    'a line that has just been confirmed pops its tick in, so the change is seen, not just there');
+  t.check(/a\.matches\('input, textarea'\)\) return; paint\(\);/.test(fn('openTrackSheet')),
+    'and a refresh never snatches the field the agent is typing in');
+}
+
 process.exit(t.done() ? 1 : 0);

@@ -1446,6 +1446,14 @@
   .ax-li .dot{width:10px;height:10px;flex:none;border-radius:999px;background:var(--good);}
   .ax-li.warn .dot{background:var(--warn);}
   .ax-out{color:var(--bad);height:52px;}
+
+  /* A tick that has just landed pops in; the order says it is live. */
+  .ax-mk.ok.pop{animation:axTickPop .7s cubic-bezier(.2,1.6,.4,1) both;box-shadow:0 0 0 0 rgba(15,107,67,.4);}
+  @keyframes axTickPop{0%{transform:scale(0)}60%{transform:scale(1.25);box-shadow:0 0 0 8px rgba(15,107,67,0)}100%{transform:scale(1)}}
+  .ax-livedot{display:inline-flex;align-items:center;gap:4px;margin-left:8px;font-family:var(--font-sans);font-size:11px;font-weight:700;color:var(--mint);}
+  .ax-livedot i{width:6px;height:6px;border-radius:999px;background:var(--mint);animation:axPulse 2s infinite;}
+  .ax-livedot.off{color:#F5B26B;}
+  .ax-livedot.off i{background:#F5B26B;animation:none;}
 </style>
 </head>
 <body class="app-loading">
@@ -7017,7 +7025,11 @@ function openTrackSheet(orderId){
   // Whether the agent has opened or shut the item list themselves: their
   // choice outlives the repaint a refresh brings.
   let itemsOpen = null;
-  const sheet = openSheet('', { label:'Order', kind:'track', full:true, refresh: ()=> paint(), onClose: ()=>{ payState.polling = false; } });
+  // A refresh repaints the page, so it waits while the agent is typing in
+  // it -- the phone number to pay from -- rather than snatch the field.
+  const sheet = openSheet('', { label:'Order', kind:'track', full:true,
+    refresh: ()=>{ const a = document.activeElement; if(a && sheet.el.contains(a) && a.matches('input, textarea')) return; paint(); },
+    onClose: ()=>{ payState.polling = false; } });
   function paint(){
     const o = myOrders.find(x=> String(x.id) === id);
     if(!o){ sheet.close(); return; }
@@ -7038,7 +7050,7 @@ function openTrackSheet(orderId){
       const ce = catalogEntry(it.productId, it.variantIdx);
       const st2 = chk.state;
       const when = st2 === 'ok' && !checked && chk.at ? `<span class="t m">${esc(whenShort(chk.at))}</span>` : '';
-      const markHTML = st2 === 'ok' ? `${when}<span class="ax-mk ok" aria-label="Confirmed">${AX_ICON.check}</span>`
+      const markHTML = st2 === 'ok' ? `${when}<span class="ax-mk ok${tickIsFresh(o, it) ? ' pop' : ''}" aria-label="Confirmed">${AX_ICON.check}</span>`
         : st2 === 'no' ? `<span class="ax-mk no" aria-label="Dropped by the shop">${AX_ICON.x}</span>`
         : st2 === 'asking' ? `<span class="t warn">checking</span><span class="ax-mk spin" aria-label="Being checked now"></span>`
         : st2 === 'problem' ? `<span class="ax-mk prob" aria-label="The supplier has a problem with this">${AX_ICON.bang}</span>`
@@ -7073,7 +7085,7 @@ function openTrackSheet(orderId){
     sheet.el.innerHTML = `
       <div class="ax-sheet-top">
         <button type="button" class="ax-grab" data-close aria-label="Close"></button>
-        <div class="ax-sheet-h">${avHTML(c)}<span class="b"><span class="n">${esc(c.name)}</span><span class="s m">#${esc(o.id)} · ${esc(orderStepTimes(o).send)}${o.deliveryMode === 'shop_delivery' ? ' · delivery' : ''}</span></span>
+        <div class="ax-sheet-h">${avHTML(c)}<span class="b"><span class="n">${esc(c.name)}</span><span class="s m">#${esc(o.id)} · ${esc(orderStepTimes(o).send)}${o.deliveryMode === 'shop_delivery' ? ' · delivery' : ''}${FOLD_ITEMS_AT.includes(st.key) && st.key !== 'queued' ? '' : `<span class="ax-livedot${isOffline ? ' off' : ''}"><i></i>${isOffline ? 'offline' : 'live'}</span>`}</span></span>
           ${sh ? `<button type="button" class="ax-shopbtn" data-shop aria-label="Contact the shop">${AX_ICON.phone}Shop</button>` : ''}
           <button type="button" class="ax-iconbtn on-navy" data-close aria-label="Close">${AX_ICON.x}</button></div>
         <div class="ax-state"><span class="ax-state-ic ${st.key === 'done' ? 'done' : st.key === 'cancelled' ? 'off' : st.tone === 'warn' ? 'warn' : 'now'}">${AX_ICON[trackStateIcon(st)]}</span>
@@ -7958,24 +7970,96 @@ function openNewClientPanel(prefillName, onDone, { makeActive = true } = {}){
 }
 
 /* ================= STAYING LIVE =================
-   "Live" on Today means it: the orders are re-read whenever the app comes
-   back to the front, and every couple of minutes while it is open, so a
-   line the shop has just confirmed shows up without anybody pulling. */
+   "Live" on Today means it. Everything is re-read when the app comes back
+   to the front and every couple of minutes while it is open. On top of
+   that, while something is actually changing -- an order the shop is
+   checking or waiting on payment, or an order's own page open -- just the
+   orders still moving are re-read every few seconds, so a supplier's yes
+   lands as a tick while the agent is looking, with nothing to pull or
+   reload. What changed is said once, in a word, and the tick pops in. */
 let lastRefreshAt = Date.now();
+let lastLiveAt = Date.now();
+const LIVE_FAST_MS = 12000;
 async function refreshLive(){
   if(isOffline || !currentShopId) return;
-  lastRefreshAt = Date.now();
+  lastRefreshAt = lastLiveAt = Date.now();
   try{
+    const before = myOrders.slice();
     await loadAgentHomeData();
     saveOfflineCache();
+    noteOrderNews(before, myOrders);
     if(currentView === 'today' || currentView === 'clients') renderCurrentView();
     else refreshOpenSheets();
   }catch(_e){ /* the next tick tries again */ }
 }
+// Lines that have just been ticked, so their tick can pop in rather than
+// simply be there: keyed order|product|variant, kept for a few seconds.
+const freshTicks = new Map();
+function lineKey(o, it){ return `${o.id}|${it.productId}|${it.variantIdx == null ? '' : it.variantIdx}`; }
+function tickIsFresh(o, it){ const at = freshTicks.get(lineKey(o, it)); return !!at && Date.now() - at < 5000; }
+function noteOrderNews(before, after){
+  const was = new Map(before.map(o=> [String(o.id), o]));
+  const ticked = [], moved = [];
+  after.forEach(n=>{
+    const o = was.get(String(n.id));
+    if(!o || o.voided) return;
+    (n.items || []).forEach(it=>{
+      const prev = (o.items || []).find(x=> String(x.productId) === String(it.productId) && String(x.variantIdx == null ? '' : x.variantIdx) === String(it.variantIdx == null ? '' : it.variantIdx));
+      if(lineCheck(n, it).state === 'ok' && (!prev || lineCheck(o, prev).state !== 'ok')){
+        freshTicks.set(lineKey(n, it), Date.now());
+        ticked.push({ n, it });
+      }
+    });
+    const a = orderStage(o), b = orderStage(n);
+    if(a.key !== b.key) moved.push({ n, st: b });
+  });
+  if(moved.length){
+    const { n, st } = moved[0];
+    const c = agentClients.find(x=> String(x.id) === String(n.agentClientId));
+    toast(`${c ? firstWord(c.name) : 'Order #' + n.id}: ${st.key === 'pay' ? 'checked — ready to pay' : st.title.toLowerCase()}`, 3200, { tone: st.tone === 'warn' ? 'warn' : 'good' });
+  } else if(ticked.length){
+    toast(ticked.length === 1 ? `${shortName(ticked[0].it.productName || ticked[0].it.name || 'Item', 3)} confirmed` : `${ticked.length} items confirmed`, 2600, { tone: 'good' });
+  }
+}
+// Only the orders still moving, and only their rows -- a handful of rows
+// rather than the whole account.
+async function refreshLiveOrders(){
+  const ids = liveOrders().map(o=> o.id);
+  if(!ids.length || isOffline || !currentShopId) return;
+  lastLiveAt = Date.now();
+  try{
+    const { data, error } = await sb.from('saved_quotes').select('*').eq('shop_id', currentShopId).in('id', ids);
+    if(error || !Array.isArray(data)) return;
+    const fresh = new Map(data.map(r=> [String(r.id), mapOrderRow(r)]));
+    const before = myOrders.slice();
+    let changed = false;
+    myOrders = myOrders.map(o=>{
+      const n = fresh.get(String(o.id));
+      if(!n || JSON.stringify(n) === JSON.stringify(o)) return o;
+      changed = true;
+      return n;
+    });
+    if(!changed) return;
+    saveOfflineCache();
+    noteOrderNews(before, myOrders);
+    if(currentView === 'today') renderToday();
+    refreshOpenSheets();
+  }catch(_e){ /* the next tick tries again */ }
+}
+// Something worth watching closely: an order the shop is still checking
+// or waiting on, or an order (or a stage of them) open on screen.
+function liveIsBusy(){
+  if(openSheets.some(s=> s.kind === 'track' || s.kind === 'stage')) return true;
+  return liveOrders().some(o=>{ const k = orderStage(o).key; return k === 'checking' || k === 'pay' || k === 'queued'; });
+}
 document.addEventListener('visibilitychange', ()=>{
   if(!document.hidden && Date.now() - lastRefreshAt > 30000) refreshLive();
 });
-setInterval(()=>{ if(!document.hidden && Date.now() - lastRefreshAt > 110000) refreshLive(); }, 30000);
+setInterval(()=>{
+  if(document.hidden) return;
+  if(Date.now() - lastRefreshAt > 110000){ refreshLive(); return; }
+  if(liveIsBusy() && Date.now() - lastLiveAt > LIVE_FAST_MS) refreshLiveOrders();
+}, 4000);
 
 async function boot(){
   updateOfflineBanner();
