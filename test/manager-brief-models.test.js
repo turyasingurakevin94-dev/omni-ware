@@ -612,20 +612,20 @@ const S = compileScope([
 
   /* (c) THE STRIP SAYS WHEN NO DAILY READING CAN BE KEPT (law 3). */
   const cell = (M) => S.mgrStripCells({ health: { score: 37 }, ...M })[0].sub;
-  t.check(cell({ snapWrite: { migration: '0107' } }) === 'trend needs database update 0107 — daily readings are not being kept',
-    'before 0107: the trend names the update it waits on, never "trend after 7 days"');
+  t.check(cell({ snapWrite: { migration: '0108' } }) === 'trend needs database update 0108 — daily readings are not being kept',
+    'before 0108: the trend names the update it waits on, never "trend after 7 days"');
   t.check(cell({ snapWrite: { msg: 'permission denied' } }) === 'daily reading not kept — permission denied', 'another refusal is named');
   t.check(cell({}) === 'trend after 7 days' && cell({ trend: { change: 1 } }) === '+1 this week', 'and the ordinary waits and changes are said as before');
-  /* WHICH SAYS SO (final review, 29). WAS: the 0107 probe came first, so
+  /* WHICH SAYS SO (final review, 29). WAS: the 0108 probe came first, so
      a migrated shop whose boot probe merely failed was told it needs
-     0107, even when the snapshot write said why it failed. NOW the
+     0108, even when the snapshot write said why it failed. NOW the
      write's own refusal comes first; the probe only when none was kept. */
   const SW = compileScope([fn('mgrBriefSnapWrite')], { String }, ['mgrBriefSnapWrite']).mgrBriefSnapWrite;
   eq([SW(true, false, { migration: false, msg: 'permission denied' }), SW(true, false, { migration: true, msg: 'column "body" ...' }),
     SW(true, false, null), SW(true, true, null), SW(false, false, { msg: 'x' }), SW(true, true, 'timeout')],
-    [{ migration: null, msg: 'permission denied' }, { migration: '0107', msg: 'column "body" ...' }, { migration: '0107' }, null, null,
+    [{ migration: null, msg: 'permission denied' }, { migration: '0108', msg: 'column "body" ...' }, { migration: '0108' }, null, null,
       { migration: null, msg: 'timeout' }],
-    'the write\'s own refusal first (named, or 0107 only when it was the column); the probe only when no write was refused; no journal, nothing');
+    'the write\'s own refusal first (named, or 0108 only when it was the column); the probe only when no write was refused; no journal, nothing');
 
   /* (d) THE HIT RATE'S PROBE: a journal the probe could not read names it. */
   const hitCell = (hit) => S.mgrStripCells({ hit })[5];
@@ -718,10 +718,10 @@ const S = compileScope([
   const up = S.mgrBriefUpside({ marginLines: [{ key: 'P1', line: 'x', atStake: 100 }], moves: [], plays: [{ name: 'Bundle', amount: 620000, per: 'a month' }] });
   t.check(up.total === 100 && up.plays.total === 620000, 'and kept out of the total: 100, the play\'s 620k apart');
 
-  /* (k) THE BLIND SPOT AND FORESIGHT NOTE NAME 0107. */
+  /* (k) THE BLIND SPOT AND FORESIGHT NOTE NAME 0108. */
   const bt = S.mgrBriefBlindSpots({ terms: { unknownOwing: 6, owed: 1000, needsUpdate: true } }).find((y) => y.id === 'terms');
-  t.check(/until one update \(0107\) is applied/.test(bt.why), 'before 0107, terms "not known" says the shop cannot keep them yet');
-  t.check(/Supplier deadlines need one database update \(0107\)/.test(extractFunction(src, 'mgrBriefPaintForesight', 'index.html')),
+  t.check(/until one update \(0108\) is applied/.test(bt.why), 'before 0108, terms "not known" says the shop cannot keep them yet');
+  t.check(/Supplier deadlines need one database update \(0108\)/.test(extractFunction(src, 'mgrBriefPaintForesight', 'index.html')),
     'and the next 30 days\' footnote says the same');
 
   /* (l) ON A PHONE THE ROWS START COMPACT. */

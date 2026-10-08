@@ -7,7 +7,7 @@
  * A risk is DATED, every one -- a worry without a day is not on this
  * list. Something already past its day is due today and says it is
  * overdue; a supplier's stop-at deadline exists only where the owner
- * wrote the supplier's terms down (0107); the floor is the owner's, or
+ * wrote the supplier's terms down (0108); the floor is the owner's, or
  * the stand-in, and the cash line is the committed one.
  *
  * Today is 7 October 2026; the window ends 6 November.

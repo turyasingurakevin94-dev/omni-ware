@@ -119,7 +119,7 @@ const reset = (onHand) => {
 
 /* ---------- 4b. taken back once, after a reload too ------------------- */
 {
-  /* Only the reversal's own pointer reaches the database (0106); the
+  /* Only the reversal's own pointer reaches the database (0107); the
      forward one on the row it undid is an in-place edit that does not.
      So a reloaded log must still know the delivery was taken back --
      asked of the plan directly, and relinked the way loadData does. */

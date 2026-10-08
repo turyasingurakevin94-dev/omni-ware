@@ -95,4 +95,4 @@ const sql = fs.existsSync(mig) ? fs.readFileSync(mig, 'utf8') : '';
 t.check(/add column if not exists entered_by text/.test(sql) && /add column if not exists photo text/.test(sql)
   && /add column if not exists closed_at timestamptz/.test(sql), 'and the migration that makes them real is in the repo');
 
-t.done();
+process.exit(t.done() ? 1 : 0);

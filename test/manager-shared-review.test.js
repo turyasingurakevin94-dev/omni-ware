@@ -105,32 +105,32 @@ const eq = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(wa
     dbColumnMissing({ code: 'PGRST204', message: 'Could not find the \'stop_at_days\' column of \'suppliers\' in the schema cache' }),
     dbColumnMissing({ code: 'STUBFAIL', message: 'the suppliers are down' }), dbColumnMissing({ code: '57014', message: 'timeout' }), dbColumnMissing(null)],
   [true, true, false, false, false], 'only 42703 and PGRST204 are a missing column');
-  t.check(/supplierTermsColumns = !\(supplierTermsColR && supplierTermsColR\.error && dbColumnMissing\(supplierTermsColR\.error\)\);/.test(src),
-    'supplierTermsColumns is false only for a missing column');
+  t.check(/supplierStopColumns = !\(supplierStopColR && supplierStopColR\.error && dbColumnMissing\(supplierStopColR\.error\)\);/.test(src),
+    'supplierStopColumns is false only for a missing column');
   /* The supplier form says why the terms are not offered. */
-  t.check(/<div class="sup-hint" id="s_terms_off" style="display:none;">[^<]*database update: 0107\.<\/div>/.test(src)
-    && /off\.style\.display = supplierTermsColumns \? 'none' : '';/.test(fn('sfShowTerms')),
-  'where the terms block is hidden, one line names database update 0107');
+  t.check(/<div class="sup-hint" id="s_terms_off" style="display:none;">[^<]*database update: 0108\.<\/div>/.test(src)
+    && /off\.style\.display = supplierStopColumns \? 'none' : '';/.test(fn('sfShowTerms')),
+  'where the terms block is hidden, one line names database update 0108');
 }
 
 /* ---------- 2b. the day's snapshot says why it was not kept ----------- */
 const snapDone = (async () => {
-  /* Three mornings: 0107 not applied (the kind check refuses: 23514 ->
+  /* Three mornings: 0108 not applied (the kind check refuses: 23514 ->
      migration true); a 500 (migration false, its own words); then a
      morning it is kept (cleared). */
   let answer = null, haveErr = null;
   const sb = { from: () => { const q = {}; q.select = () => q; q.eq = () => q; q.limit = () => Promise.resolve({ data: [], error: haveErr }); return q; } };
-  const S = compileScope([fn('mgrSaveSnapshot'), fn('mgrMigrationNote'), decl('MGR_MIGRATION_0107'),
+  const S = compileScope([fn('mgrSaveSnapshot'), fn('mgrMigrationNote'), decl('MGR_MIGRATION_0108'),
     'let mgrSnapshotKept = null; let mgrSnapshotWriteErr = null; function state(){ return mgrSnapshotWriteErr; } function reset(){ mgrSnapshotKept = null; }'], {
     managerNotesTable: true, currentShopId: 1, sb, todayISO: () => '2026-10-07', mgrSnapshotBody: () => ({}),
     mgrNoteInsert: async () => answer, console: { warn() {} },
   }, ['mgrSaveSnapshot', 'state', 'reset']);
   answer = { ok: false, error: 'new row violates check constraint "manager_notes_kind_check"', code: '23514' };
   await S.mgrSaveSnapshot();
-  eq(S.state(), { migration: true, msg: 'new row violates check constraint "manager_notes_kind_check"' }, 'a refusal by the old kind check names 0107');
+  eq(S.state(), { migration: true, msg: 'new row violates check constraint "manager_notes_kind_check"' }, 'a refusal by the old kind check names 0108');
   answer = { ok: false, error: 'the journal is down', code: 'STUBFAIL' };
   await S.mgrSaveSnapshot();
-  eq(S.state(), { migration: false, msg: 'the journal is down' }, 'any other refusal by its own words, never as 0107');
+  eq(S.state(), { migration: false, msg: 'the journal is down' }, 'any other refusal by its own words, never as 0108');
   haveErr = { message: 'timeout' };
   await S.mgrSaveSnapshot();
   eq(S.state(), { migration: false, msg: 'the journal could not be checked for today\'s reading — timeout' }, 'a check that could not be read is named too');

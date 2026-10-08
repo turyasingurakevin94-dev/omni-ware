@@ -166,14 +166,22 @@ const win = (from, to, b) => { const w = scope.stComparisonWindow(from, to, b); 
      click to the select it wraps, which opens the native list and shuts
      it again in the same gesture. Mouse only; the keyboard always
      worked, which is why it took three rounds to find the first time. */
-  t.check(/<select class="ow-f-sel" id="st_basis"/.test(src),
-    'the choice is on the period control, wearing the layer\'s field');
-  t.check(/<div class="ow-f st-f st-f-cmp">[\s\S]{0,200}?<select class="ow-f-sel" id="st_basis"/.test(src),
-    'and it is a div, never a label, so a click opens the list rather than toggling it shut');
-  t.check(/stComparisonBasis = e\.target\.value;/.test(code), 'and drives the render');
-  /* Left on "automatically", the control says which one that turned out
-     to be, rather than leaving the reader to infer it from the note. */
-  t.check(/Automatic — \$\{ST_BASES\[ctx\.basis\]\.toLowerCase\(\)\}/.test(code),
+  /* The dropdown became two segmented buttons on the period card, as the
+     canvas draws it: both choices in view, the one in force lit. The
+     rules the select carried still hold -- it lives on the period
+     control, wears the layer's segmented control, sets the basis and
+     redraws -- and nothing wraps it in a <label>, so the old
+     open-and-shut-in-one-click fault cannot come back. */
+  t.check(/<div class="ow-seg" id="st_basis" role="group"[^>]*>[\s\S]{0,300}?data-basis="previous"[\s\S]{0,200}?data-basis="lastyear"/.test(src),
+    'the choice is on the period control, wearing the layer\'s segmented control');
+  t.check(!/<label[^>]*>[^<]*<div class="ow-seg" id="st_basis"/.test(src),
+    'and it is never inside a label');
+  t.check(/stComparisonBasis = d\.basis; renderStatements\(\);/.test(code), 'and drives the render');
+  /* Left on "automatically", the lit button is the comparison automatic
+     settled on, and its title says so, rather than leaving the reader to
+     infer it from the note. */
+  t.check(/b\.dataset\.basis === ctx\.basis/.test(code)
+    && /Automatic — \$\{ST_BASES\[ctx\.basis\]\.toLowerCase\(\)\}/.test(code),
     'and reports which comparison automatic settled on');
   t.check(/stComparisonNote\(ctx\)/.test(code), 'with the note built from the same context');
   t.check(!/days immediately before this period \(\$\{esc\(prevFrom\)\}/.test(code),

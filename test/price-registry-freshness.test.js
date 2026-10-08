@@ -421,7 +421,11 @@ const sold = (productId, qty, date) => data.stockLog.push({
      does not appear at all, and the SCREEN says the good news once,
      naming stale prices among the things it checked. The words moved;
      they were not dropped, and this checks they were not. */
-  const render = extractFunction(src, 'renderAnalysis', 'index.html');
+  /* The screen is drawn by more than one function now -- renderAnalysis
+     reads the books once, anDraw draws the lists, anRowHTML and
+     anDetailHTML a finding -- so the words are looked for in all four. */
+  const render = ['renderAnalysis', 'anDraw', 'anRowHTML', 'anDetailHTML']
+    .map((n) => extractFunction(src, n, 'index.html')).join('\n');
   t.check(/ow-empty/.test(render) && /no price you trade is stale/.test(render),
     'an empty list is still good news said in words — now said once, by the screen');
   t.check(/if\(prows\.length\)\{/.test(finds),
@@ -436,7 +440,7 @@ const sold = (productId, qty, date) => data.stockLog.push({
       finds.slice(finds.indexOf('priceReviewCandidates'), finds.indexOf('3. WHAT IS OWED'))),
     'the report ignores the dashboard date range — staleness is a fact about now');
   t.check(/Stale prices are not/.test(render),
-    'and the rail says so where the window is set, not buried in prose');
+    'and the finding says so on its own row, not buried in prose');
 
   // Reachable as a worklist, ordered the same way.
   t.check(/\{ key:'review',\s+label:'Needs checking' \}/.test(src),
@@ -852,16 +856,16 @@ const sold = (productId, qty, date) => data.stockLog.push({
   const fn = (/function priceObservations[\s\S]*?\n\}/.exec(code) || [''])[0];
   t.check(/data\.purchaseInvoices/.test(fn), 'the history is read from the purchase invoices');
   t.check(!/stockLog/.test(fn),
-    'and NOT the stock log, whose cost survives a reload only on rows written after 0106');
+    'and NOT the stock log, whose cost survives a reload only on rows written after 0107');
   t.check(!/receipts/.test(fn),
     'nor the receipts, which become purchase invoice lines too and would double every order-derived price');
 
   /* WHY NOT THE STOCK LOG, now that its cost is kept. applyStockDelta
-     stamps a cost and a supplier on the entry, and since 0106 both sides
+     stamps a cost and a supplier on the entry, and since 0107 both sides
      of the sync carry them -- but only once the owner has applied that
      migration (the probe), and never for a row written before it: there
      is no back-fill. A price history read off the log would begin on the
-     day 0106 landed, and read every purchase before it as having no
+     day 0107 landed, and read every purchase before it as having no
      price at all. The purchase invoices hold the whole history, so they
      stay the one source. Pinned so nobody builds on the log believing
      its costs reach back. */
@@ -872,8 +876,8 @@ const sold = (productId, qty, date) => data.stockLog.push({
   const save = (/stockLog: d\.stockLog\.map[\s\S]*?\}\)\),/.exec(code) || [''])[0];
   t.check(/l\.cost != null \? \{cost: Number\(l\.cost\)\} : \{\}/.test(load)
     && /\.\.\.\(stockLogMetaColumns \? \{[\s\S]*?cost:/.test(save),
-    'since 0106 both sides of the sync carry it -- behind the probe, so a shop without the migration still loses it on reload');
-  const mig = read('supabase/migrations/0106_data_integrity.sql');
+    'since 0107 both sides of the sync carry it -- behind the probe, so a shop without the migration still loses it on reload');
+  const mig = read('supabase/migrations/0107_data_integrity.sql');
   t.check(/add column if not exists cost numeric/.test(mig) && !/update\s+public\.stock_log/i.test(mig),
     'and the column is added with no back-fill, so every row from before it carries no cost — which is why it is still not the source here');
 }

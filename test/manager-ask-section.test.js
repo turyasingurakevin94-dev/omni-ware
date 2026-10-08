@@ -23,7 +23,7 @@
  *                for it -- none invented.
  *   SUPPLIER TERMS (Q9)  asked from the books for suppliers owed or
  *                bought from, only while unknown; an answer writes the
- *                supplier's own record, and a shop without 0107 is told
+ *                supplier's own record, and a shop without 0108 is told
  *                so while the answer is still kept.
  *   WHO FOUND IT (Q23)   recorded on the answer; "Send to" opens the
  *                owner's own WhatsApp, and says why when it cannot.
@@ -60,8 +60,8 @@ function scope(data, over) {
     ourCostFor: () => null, ourPriceFor: () => null,
     placePin: () => null, mapHomePin: () => null, mapCentrePin: () => null, mapPlaceRows: () => [],
     fmtUGX: (n) => Number(n).toLocaleString('en-UG') + ' UGX',
-    managerNotesTable: true, currentShopId: 'shop-1', supplierTermsColumns: true,
-    MGR_MIGRATION_0107: 'supabase/migrations/0107_manager_intelligence.sql',
+    managerNotesTable: true, currentShopId: 'shop-1', supplierStopColumns: true, supplierTermsColumn: true,
+    MGR_MIGRATION_0108: 'supabase/migrations/0108_manager_intelligence.sql',
     toast: () => {}, renderManager: () => {}, saveData: () => Promise.resolve(true),
     managerAnswerQuestion: () => Promise.resolve({ ok: true }),
     sb: null, document: null, mgrRenderGen: 0,
@@ -88,10 +88,10 @@ const STAFF = [
   { id: 'ST003', name: 'Peter Wandera', phone: '' },
 ];
 const SUPPLIERS = [
-  { id: 'S1', name: 'Roto Hardware', location: 'Nakawa', stopAtDays: null, creditDays: null, deliveryDays: null },
-  { id: 'S2', name: 'Cash Co', location: 'Kasubi', stopAtDays: null, creditDays: 0, deliveryDays: null },
-  { id: 'S3', name: 'Full Terms Ltd', location: '', stopAtDays: 90, creditDays: 30, deliveryDays: 3 },
-  { id: 'S4', name: 'Quiet Ltd', location: '', stopAtDays: null, creditDays: null, deliveryDays: null },
+  { id: 'S1', name: 'Roto Hardware', location: 'Nakawa', stopAtDays: null, termsDays: null, deliveryDays: null },
+  { id: 'S2', name: 'Cash Co', location: 'Kasubi', stopAtDays: null, termsDays: 0, deliveryDays: null },
+  { id: 'S3', name: 'Full Terms Ltd', location: '', stopAtDays: 90, termsDays: 30, deliveryDays: 3 },
+  { id: 'S4', name: 'Quiet Ltd', location: '', stopAtDays: null, termsDays: null, deliveryDays: null },
 ];
 const CUSTOMERS = [{ id: 'C4', name: 'Nalubega Estates', location: 'Namugongo', siteStage: 'walling', siteStageAt: '2026-09-27' },
   { id: 'C5', name: 'Ssali Builders', location: 'Seeta' }];
@@ -284,7 +284,7 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
      so has no age it stops at, and its delivery is measured: nothing.
      S3 knows all three. S4's only purchase in 90 days was voided, and its
      other is from June (90 days back from 7 Oct is 10 Jul): not asked. */
-  eq(asks.map((a) => [a.key, a.terms.missing]), [['terms:S1', ['stopAtDays', 'creditDays', 'deliveryDays']]],
+  eq(asks.map((a) => [a.key, a.terms.missing]), [['terms:S1', ['stopAtDays', 'termsDays', 'deliveryDays']]],
     'only the supplier owed or bought from, and only what is unknown');
   const a = asks[0];
   eq(a.question, 'What are Roto Hardware’s terms with you?', 'asked in the Manager\'s words');
@@ -292,7 +292,7 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
     'with its own reason, from the books');
   eq([a.stake.amount, a.stake.unit], [500000, 'owed'], 'at stake: what is owed to them');
   eq([a.place.where, a.dept, a.known.text], ['supp', 'procurement', 'never recorded'], 'found from the supplier, Procurement, never recorded');
-  const told = S.mgrAskTermsAsks(TODAY, { journalTerms: new Map([['S1', { stopAtDays: 90, creditDays: 30 }]]) });
+  const told = S.mgrAskTermsAsks(TODAY, { journalTerms: new Map([['S1', { stopAtDays: 90, termsDays: 30 }]]) });
   eq([told[0].terms.missing, told[0].question], [['deliveryDays'], 'How many days does Roto Hardware take to deliver?'],
     'what the owner already told the journal is known, even where the supplier list cannot hold it yet');
   eq(S.mgrAskTermsAsks(TODAY, { openTerms: new Set(['S1']) }).length, 0, 'a terms question open in the journal stands in for this one');
@@ -300,40 +300,51 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
      is already 40 − 30 = 10 days past; 21 days' credit: the 40-day bill
      is past it, the 10-day one is not — 1 of 2. */
   eq(S.mgrAskTermsEffect(a, { stopAtDays: 60 }), ['PINV-0007 reaches 60 days on 27 Oct.'], 'what the age they stop at would date');
-  eq(S.mgrAskTermsEffect(a, { stopAtDays: 30, creditDays: 21 }), ['PINV-0007 is already 10 days past it.', '1 of 2 open bills are past 21 days’ credit.'],
+  eq(S.mgrAskTermsEffect(a, { stopAtDays: 30, termsDays: 21 }), ['PINV-0007 is already 10 days past it.', '1 of 2 open bills are past 21 days’ credit.'],
     'and what the credit would say about the open bills');
   eq(S.mgrAskTermsEffect(a, { stopAtDays: 40 }), ['PINV-0007 reaches it today.'], 'a bill exactly at the age they stop at reaches it today — never "0 days past it"');
   eq(S.mgrAskTermsEffect(a, { deliveryDays: 3 }), [], 'a delivery time changes nothing on the books yet, so nothing is said');
-  eq(S.mgrAskTermsClean({ stopAtDays: '90', creditDays: '', deliveryDays: '-2' }), { stopAtDays: 90 }, 'only whole, non-negative days are kept');
+  eq(S.mgrAskTermsClean({ stopAtDays: '90', termsDays: '', deliveryDays: '-2' }), { stopAtDays: 90 }, 'only whole, non-negative days are kept');
   /* Owed nothing but on the buy plan: 40,000 + 25,000 = 65,000 to buy. */
   const P = scope({ ...book(), purchaseInvoices: [{ supplierId: 'S4', date: '2026-09-20' }] },
     { purchasePlan: () => ({ lines: [{ supplierId: 'S4', key: 'P1', cost: 40000 }, { supplierId: 'S4', key: 'P2', cost: 25000 }] }) });
   const q4 = P.mgrAskTermsAsks(TODAY, {})[0];
   eq([q4.key, q4.stake.amount, q4.stake.unit, q4.why.slice(0, 44)], ['terms:S4', 65000, 'to buy', 'The buy plan would spend 65k with them. With'],
     'a supplier bought from but owed nothing is sized by the buy plan, and says so');
-  eq(S.mgrAskTermsWords({ stopAtDays: 90, creditDays: 0 }), 'Stops supplying at 90 days, cash on delivery', 'and the answer is said in words');
+  eq(S.mgrAskTermsWords({ stopAtDays: 90, termsDays: 0 }), 'Stops supplying at 90 days, cash on delivery', 'and the answer is said in words');
 }
 
-/* ---------- 8. answering terms writes the supplier, and names 0107 ---------- */
+/* ---------- 8. answering terms writes the supplier, and names 0108 ---------- */
 {
   const data = book();
   let saved = 0;
   const S = scope(data, { saveData: () => { saved++; return Promise.resolve(true); } });
   let w = await S.mgrAskWriteTerms('S1', { stopAtDays: 90, deliveryDays: 3 });
-  eq([w.ok, data.suppliers[0].stopAtDays, data.suppliers[0].deliveryDays, data.suppliers[0].creditDays, saved], [true, 90, 3, null, 1],
+  eq([w.ok, data.suppliers[0].stopAtDays, data.suppliers[0].deliveryDays, data.suppliers[0].termsDays, saved], [true, 90, 3, null, 1],
     'the days go onto the supplier\'s own record through the one save, and an unanswered field stays unknown');
-  const old = scope(book(), { supplierTermsColumns: false });
+  const old = scope(book(), { supplierStopColumns: false });
   w = await old.mgrAskWriteTerms('S1', { stopAtDays: 90 });
-  t.check(!w.ok && /0107_manager_intelligence\.sql/.test(w.why), 'a shop without 0107 is told the one paste that fixes it');
+  t.check(!w.ok && /0108_manager_intelligence\.sql/.test(w.why), 'a shop without 0108 is told the one paste that fixes it');
+  /* The credit they give is the supplier's terms_days (0106), the same
+     figure the Suppliers form keeps -- not a column of the Manager's own. */
+  const cr = book();
+  w = await scope(cr).mgrAskWriteTerms('S1', { termsDays: 30, deliveryDays: 3 });
+  eq([w.ok, cr.suppliers[0].termsDays, cr.suppliers[0].deliveryDays, 'creditDays' in cr.suppliers[0]], [true, 30, 3, false],
+    'the credit is written as termsDays, beside the delivery days');
+  const half = book();
+  w = await scope(half, { supplierTermsColumn: false }).mgrAskWriteTerms('S1', { termsDays: 30, deliveryDays: 3 });
+  t.check(!w.ok && half.suppliers[0].deliveryDays === 3 && half.suppliers[0].termsDays == null && /0106_supplier_terms\.sql/.test(w.why),
+    'without 0106 the delivery days are still kept, the credit is not, and its paste is named');
+  eq(S.mgrAskTermsClean({ termsDays: '400', stopAtDays: '400' }), { stopAtDays: 400 }, 'credit past 365 days is not filed: 0106 holds 0..365');
   const inserts = [], answered = [];
   const sb = { from: () => ({ insert: (row) => { inserts.push(row); return { select: () => ({ single: () => Promise.resolve({ data: { id: 42 }, error: null }) }) }; } }) };
   const A = scope(book(), { sb, credOpenInvoices: () => [{ supplierId: 'S1', due: 5, ageDays: 1, invoice: { id: 1, date: TODAY } }],
     managerAnswerQuestion: (id, text, opts) => { answered.push([id, text, opts]); return Promise.resolve({ ok: true }); } });
   const it = A.mgrAskTermsAsks(TODAY, {})[0];
-  await A.mgrAskAnswerTerms(it, { terms: { stopAtDays: '90', creditDays: '30' }, by: { staffId: 'ST001', name: 'Joan Nakato' } });
+  await A.mgrAskAnswerTerms(it, { terms: { stopAtDays: '90', termsDays: '30' }, by: { staffId: 'ST001', name: 'Joan Nakato' } });
   eq([inserts[0].kind, inserts[0].status, inserts[0].body.source, inserts[0].body.supplierId, inserts[0].body.place],
     ['question', 'open', 'terms', 'S1', { kind: 'supplier', id: 'S1' }], 'the question is written into the journal as it is answered');
-  eq(answered[0], [42, 'Stops supplying at 90 days, 30 days’ credit', { by: { staffId: 'ST001', name: 'Joan Nakato' }, terms: { stopAtDays: 90, creditDays: 30 } }],
+  eq(answered[0], [42, 'Stops supplying at 90 days, 30 days’ credit', { by: { staffId: 'ST001', name: 'Joan Nakato' }, terms: { stopAtDays: 90, termsDays: 30 } }],
     'and answered through the one writer, with the days and who found them');
   t.check(A.__kept().has('terms:S1'), 'its card stays, done, for the session');
   /* JOURNAL FIRST. WAS: a refused question still wrote the days onto the
@@ -385,15 +396,15 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
   await fn(5, 'yes');
   eq(seen.updates[0].body.answeredBy, 'you', 'with nobody named, it is the owner\'s own');
   ({ fn, seen } = mk({ question: 'Terms?', supplierId: 'S1', source: 'terms' }));
-  await fn(9, 'Stops supplying at 90 days', { terms: { stopAtDays: '90', creditDays: '', deliveryDays: 3 } });
+  await fn(9, 'Stops supplying at 90 days', { terms: { stopAtDays: '90', termsDays: '', deliveryDays: 3 } });
   eq(seen.wrote, [['S1', { stopAtDays: 90, deliveryDays: 3 }]], 'a terms answer writes the supplier\'s days — an empty box is not a 0');
   eq(seen.updates[0].body.terms, { stopAtDays: 90, deliveryDays: 3 }, 'and the journal keeps them beside the words');
   t.check(/Roto Hardware’s terms are on their record/.test(seen.toasts[0]), 'the toast says where they went');
   ({ fn, seen } = mk({ question: 'Terms?', supplierId: 'S1' }, {
-    mgrAskWriteTerms: () => Promise.resolve({ ok: false, why: 'paste supabase/migrations/0107_manager_intelligence.sql' }) }));
+    mgrAskWriteTerms: () => Promise.resolve({ ok: false, why: 'paste supabase/migrations/0108_manager_intelligence.sql' }) }));
   r = await fn(9, 'x', { terms: { stopAtDays: 90 } });
-  t.check(seen.updates.length === 1 && r.ok && /^Kept in the journal, but paste .*0107/.test(seen.toasts[0]),
-    'without 0107 the answer is still kept in the journal, and the missing update is named');
+  t.check(seen.updates.length === 1 && r.ok && /^Kept in the journal, but paste .*0108/.test(seen.toasts[0]),
+    'without 0108 the answer is still kept in the journal, and the missing update is named');
   ({ fn, seen } = mk({ question: 'Terms?', supplierId: 'S1' }, { sb: { from: () => ({
     select: () => ({ eq: () => ({ eq: () => ({ single: () => Promise.resolve({ data: { body: { question: 'Terms?', supplierId: 'S1' } } }) }) }) }),
     update: () => ({ eq: () => ({ eq: () => Promise.resolve({ error: { message: 'offline' } }) }) }) }) } }));
@@ -595,7 +606,7 @@ const book = () => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers
     'how sure without it: counted pips, the figure, and what was counted');
   t.check(/<select class="mgr-k-sel" aria-label="Who found it out"><option value="you" selected>You<\/option><option value="st:ST002">Moses Kibirige<\/option>/.test(html),
     'found by: the owner, then the person it was given to first');
-  t.check(/What are Roto Hardware’s terms with you\?/.test(html) && /data-term="stopAtDays"/.test(html) && /data-term="creditDays"/.test(html),
+  t.check(/What are Roto Hardware’s terms with you\?/.test(html) && /data-term="stopAtDays"/.test(html) && /data-term="termsDays"/.test(html),
     'a supplier\'s terms are asked as days, one box each');
   t.check(/class="ow-mini mgr-ask-cut" hidden/.test(html), 'the line that names what was not shown is there for the count to fill');
   const oxide = html.match(/class="btn btn-accent[^"]*"[^>]*>[^<]*</g) || [];

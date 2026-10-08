@@ -89,7 +89,7 @@ const { nameInitials } = compileScope(
      unchanged and is not about any one grid: ONE initials function,
      never a private copy per screen. The count above still has to clear
      four, and every avatar left in the app is lettered by it. */
-  ['rost-av${st.key===\'free\'?\' is-free\':\'\'}">${esc(nameInitials(s.name))}']
+  ['<span class="sx-av">${esc(nameInitials(s.name))}']
     .forEach((frag) => t.check(src.includes(frag), `the avatar is rendered from it: ${frag.slice(0, 12)}…`));
   t.check(!/cc-avatar/.test(src),
     'and the customer card\'s avatar is gone with the card, not left styling nothing');

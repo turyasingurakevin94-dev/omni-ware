@@ -159,8 +159,24 @@ if (scope) {
 
   t.check(/t\.qty != null[\s\S]{0,200}?Bought \(\$\{esc\(t\.sameUnit\)\}\)/.test(kpis),
     'the headline quantity names its unit, and only appears when there is one');
-  t.check(/Items bought/.test(kpis) && /Suppliers/.test(kpis),
-    'otherwise it counts something that can be counted');
+  /* THE THIRD TILE IS GONE, and with it the count it fell back to. It
+     used to read "Bought (Bag)" where every row shared a unit and
+     "Items bought" / "Suppliers" where they did not -- a quantity when one
+     existed, a count when it did not. The screen was redrawn on the
+     owner's canvas, whose strip is Spent, Purchases, Price changes added
+     and Expected commission: two sums of money and a count of invoices,
+     none of which can add bags to kilograms. The single-unit quantity
+     moved to "What these figures rest on", pinned just above.
+
+     What this still protects is the thing the old assertion was for: the
+     headline never prints a quantity across units. So it now pins that
+     the strip's figures are a count of purchases and sums of money, and
+     that no quantity total is written into the strip at all. */
+  const strip = (/grid\.innerHTML = `[\s\S]*?`;/.exec(kpis) || [''])[0];
+  t.check(/anMtHTML\('Purchases', fmtNumAn\(panLastEntries\.length\)/.test(strip),
+    'otherwise the strip counts something that can be counted — purchases');
+  t.check(strip && !/t\.qty|t\.purchased/.test(strip),
+    'and never writes a quantity total into the headline');
   /* Pinned on the guard: `if(false) bits.push(...)` leaves the sentence
      present and unreachable, and matching the words alone passed. */
   t.check(/if\(t\.units\.size > 1\) bits\.push\(/.test(kpis)

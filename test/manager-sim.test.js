@@ -148,7 +148,7 @@ const ORDERS = [{ key: 'P1', name: 'Simba Cement 50kg', qty: 123, unit: 'Bag', s
    days) and its credit days are not. */
 {
   const O = compileScope([fn('mgrSimOrderFact')], {
-    data: { suppliers: [{ id: 'S4', name: 'Kasubi Hardware', creditDays: 7, deliveryDays: 3 }, { id: 'S1', name: 'Simba Depot', creditDays: null, deliveryDays: 2 }] },
+    data: { suppliers: [{ id: 'S4', name: 'Kasubi Hardware', termsDays: 7, deliveryDays: 3 }, { id: 'S1', name: 'Simba Depot', termsDays: null, deliveryDays: 2 }] },
     buyKeyParts: (k) => ({ product: { name: 'Simba Cement' }, productId: 'P1', variantIdx: null }),
     productVariantLabel: () => 'Simba Cement 50kg',
     mgrMemo: (k, f) => f(),
@@ -1234,7 +1234,7 @@ t.check(/mgrSaveDecision\(mgrSimDecisionBody\(/.test(block) && /nothing was paid
 t.check(/if\(gen !== mgrRenderGen\) return;/.test(fn('mgrSimReadJournal')), 'the offers and the decisions land only under the render\'s ticket');
 t.check(/could not be read — \$\{esc\(o\.error\)\}/.test(block) && /could not be read — \$\{esc\(d\.error\)\}/.test(block),
   'a failed read of the offers or the decisions names itself');
-t.check(/mgrMigrationNote\(\{ code: '23514' \}\)/.test(block), 'a missing 0107 is named when signing');
+t.check(/mgrMigrationNote\(\{ code: '23514' \}\)/.test(block), 'a missing 0108 is named when signing');
 t.check(!/likely/i.test(block.replace(/\/\*[\s\S]*?\*\//g, '')), 'no "likely" range: profit is read between the owner\'s own assumptions');
 
 process.exit(t.done() ? 1 : 0);

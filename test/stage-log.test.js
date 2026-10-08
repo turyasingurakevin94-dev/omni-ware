@@ -18,7 +18,7 @@
  *                it inside the upsert (addDiffOps' beforeUpsert) and keeps
  *                the merged log on the order in memory too, or the row
  *                would be re-sent on every save. A failed re-read still
- *                saves -- the database's trigger (0106) unions as well.
+ *                saves -- the database's trigger (0107) unions as well.
  *   NOT OWNED    stageLog stays out of WORKER_OWNED_KEYS and out of
  *                hasUnsavedWork: owned, the worker's copy would overwrite
  *                the console's; compared, a merged log would never equal
@@ -34,7 +34,7 @@ const eq = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(wa
 const src = read('index.html');
 const sharedJs = read('shared-worker.js');
 const workerHtml = read('worker.html');
-const mig = read('supabase/migrations/0106_data_integrity.sql');
+const mig = read('supabase/migrations/0107_data_integrity.sql');
 
 const { mergeStageLog } = compileScope([extractFunction(sharedJs, 'mergeStageLog', 'shared-worker.js')], {}, ['mergeStageLog']);
 
@@ -136,7 +136,7 @@ const SYNC = [
     { awaiting_goods: 2 }, 'two days buying, read off a merged log');
 
   /* A tab that had not refreshed can send out an order already out, and
-     the log keeps both entries for good (0106). The second is not a
+     the log keeps both entries for good (0107). The second is not a
      move: read as one it would cut the first stay short (2 days, not 4)
      and start a second that never happened. */
   const t0 = Date.UTC(2026, 9, 1);
@@ -300,7 +300,7 @@ const SYNC = [
     /* A MOVE REFUSED LEAVES NO ENTRY. The worker taps Loaded on a copy
        the console has already moved on -- sent out by the autopilot, or
        completed -- so the status stays the server's, and the worker's
-       entry must not ride in with it: 0106 keeps every entry it sees,
+       entry must not ride in with it: 0107 keeps every entry it sees,
        and one written here would stand for good as a move that never
        happened. */
     const stale = (at) => ({ id: 12, shop_id: 'shop-1', status: 'pending_delivery',
@@ -328,7 +328,7 @@ const SYNC = [
   /* ---------- 6. and the database keeps the union too ------------------ */
   {
     t.check(/create trigger saved_quotes_keep_stage_log\s+before update on public\.saved_quotes/.test(mig),
-      '0106 adds a trigger that runs before every update of an order — the upsert\'s conflict path included');
+      '0107 adds a trigger that runs before every update of an order — the upsert\'s conflict path included');
     t.check(/old\.payload -> 'stageLog'/.test(mig) && /new\.payload -> 'stageLog'/.test(mig),
       'reading the log already there and the log arriving');
     t.check(/distinct on \(x\.e ->> 'status', x\.e ->> 'at'\)/.test(mig),

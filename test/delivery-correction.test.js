@@ -50,7 +50,7 @@ const FNS = ['stockKey', 'addStockLot', 'consumeStockLots', 'isStockPurchaseRow'
      act. */
   'undoDeliveryPlan', 'undoDelivery', 'buyOrderTotal', 'buyOrderIsOpen', 'buyOrderFor',
   /* Whether a line was already said never to have happened, by either
-     pointer -- the backward one is the one a reload keeps (0106) -- and
+     pointer -- the backward one is the one a reload keeps (0107) -- and
      the plan "It never happened" reads, which must not see an undone
      delivery as still standing. */
   'stockLogTakenBack', 'stockMovementReversalPlan'];

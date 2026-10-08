@@ -1,28 +1,29 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * What 0107 adds, and what the app does before and after it lands.
+ * What 0108 adds, and what the app does before and after it lands.
  *
  *  - manager_notes takes four new kinds: snapshot, decision, normal,
  *    offer -- with every kind it already took kept, and one snapshot per
  *    shop per day held by the database itself.
- *  - suppliers take three terms (stop_at_days, credit_days,
- *    delivery_days), whole days or nothing. Probed like every column
- *    after the first set: a supplier row goes up on every save, and an
- *    unknown column would fail the whole upsert.
+ *  - suppliers take two more terms (stop_at_days, delivery_days), whole
+ *    days or nothing. Probed like every column after the first set: a
+ *    supplier row goes up on every save, and an unknown column would
+ *    fail the whole upsert. The third, the credit they give, is 0106's
+ *    terms_days (termsDays), kept by the Suppliers screen's own field.
  *  - The owner sets a cash floor and a payday; until then a month of
  *    rent and salaries stands in for the floor, and wages stay at month
  *    end.
  *  - The new kinds are read and written through one door each; a write
- *    the database refuses names 0107; the daily snapshot is written at
+ *    the database refuses names 0108; the daily snapshot is written at
  *    most once, from the owner's session only, and fails silently but
  *    logged.
  *
- * Run: node test/manager-journal-0107.test.js   (or: npm test)
+ * Run: node test/manager-journal-0108.test.js   (or: npm test)
  */
 const { read, extractFunction, extractDeclaration, compileScope, createReporter } = require('./_extract');
 
-const t = createReporter('manager journal (0107)');
+const t = createReporter('manager journal (0108)');
 const src = read('index.html');
 const fn = (n) => extractFunction(src, n, 'index.html');
 const decl = (n) => extractDeclaration(src, n, 'index.html');
@@ -31,7 +32,7 @@ const eq = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(wa
 const TODAY = '2026-10-07';
 
 /* ---------- 1. the migration ------------------------------------------ */
-const mig = read('supabase/migrations/0107_manager_intelligence.sql');
+const mig = read('supabase/migrations/0108_manager_intelligence.sql');
 const code = mig.split(/\r?\n/).filter((l) => !/^\s*--/.test(l)).join('\n');
 {
   t.check(/alter table manager_notes drop constraint if exists manager_notes_kind_check;/.test(code),
@@ -41,10 +42,17 @@ const code = mig.split(/\r?\n/).filter((l) => !/^\s*--/.test(l)).join('\n');
     'every kind the journal already holds is kept, and the four new ones are added');
   t.check(/create unique index if not exists manager_notes_snapshot_day_idx\s+on manager_notes\(shop_id, date\) where kind = 'snapshot';/.test(code),
     'one snapshot per shop per day, held by the database');
-  ['stop_at_days', 'credit_days', 'delivery_days'].forEach((c) =>
+  ['stop_at_days', 'delivery_days'].forEach((c) =>
     t.check(new RegExp(`add column if not exists ${c} integer`).test(code), `suppliers.${c} is a whole number of days`));
-  t.check(/stop_at_days is null or stop_at_days >= 0/.test(code) && /credit_days is null or credit_days >= 0/.test(code)
+  t.check(/stop_at_days is null or stop_at_days >= 0/.test(code)
     && /delivery_days is null or delivery_days >= 0/.test(code), 'nullable, and never negative');
+  /* WAS: a credit_days column of its own. NOW: the credit they give is
+     0106's terms_days -- one column for one fact -- and 0108's check is
+     named for its own columns, so it cannot drop 0106's terms_days check
+     (which Postgres names suppliers_terms_days_check). */
+  t.check(!/credit_days/.test(code), 'no second credit-days column: 0106\'s terms_days is the one');
+  t.check(!/suppliers_terms_days_check/.test(code) && /add constraint suppliers_stop_delivery_days_check/.test(code),
+    'its check does not touch 0106\'s terms_days check');
   t.check(!/\bnot null\b|\bdefault\b/i.test(code.slice(code.indexOf('alter table public.suppliers'))),
     'no default: a supplier nobody asked about reads "not known", never 0');
   t.check(!/\bdelete\b|\bdrop table\b|\bdrop column\b/i.test(code), 'the executable half deletes nothing');
@@ -56,12 +64,13 @@ const code = mig.split(/\r?\n/).filter((l) => !/^\s*--/.test(l)).join('\n');
 /* ---------- 2. probed, loaded, and saved only where it exists ---------- */
 {
   const load = extractFunction(src, 'loadData', 'index.html');
-  t.check(/sb\.from\('suppliers'\)\.select\('stop_at_days, credit_days, delivery_days'\)\.limit\(1\)/.test(load),
-    'loadData probes for the three terms');
-  /* Only a missing column (42703 / PGRST204, dbColumnMissing) is "0107
+  t.check(/sb\.from\('suppliers'\)\.select\('stop_at_days, delivery_days'\)\.limit\(1\)/.test(load)
+    && /sb\.from\('suppliers'\)\.select\('terms_days'\)\.limit\(1\)/.test(load),
+    'loadData probes for its two terms, and for 0106\'s terms_days apart');
+  /* Only a missing column (42703 / PGRST204, dbColumnMissing) is "0108
      not applied"; a probe that failed otherwise leaves the terms on offer. */
-  t.check(/supplierTermsColumns = !\(supplierTermsColR && supplierTermsColR\.error && dbColumnMissing\(supplierTermsColR\.error\)\);/.test(load), 'and remembers the answer');
-  t.check(/^let supplierTermsColumns = false;$/m.test(src), 'false until the probe says otherwise');
+  t.check(/supplierStopColumns = !\(supplierStopColR && supplierStopColR\.error && dbColumnMissing\(supplierStopColR\.error\)\);/.test(load), 'and remembers the answer');
+  t.check(/^let supplierStopColumns = false;$/m.test(src), 'false until the probe says otherwise');
 
   // The supplier mapper, run on rows as the database returns them.
   const at = load.indexOf('suppliers: (suppliersR.data||[]).map(');
@@ -70,31 +79,36 @@ const code = mig.split(/\r?\n/).filter((l) => !/^\s*--/.test(l)).join('\n');
     if (load[i] === '(') depth++; else if (load[i] === ')' && --depth === 0) { end = i; break; }
   }
   const mapper = new Function('suppliersR', 'return ' + load.slice(at + 'suppliers: '.length, end + 1) + ';');
-  const rows = mapper({ data: [{ id: 'S1', name: 'A', stop_at_days: 90, credit_days: 0, delivery_days: null },
+  const rows = mapper({ data: [{ id: 'S1', name: 'A', stop_at_days: 90, terms_days: 0, delivery_days: null },
     { id: 'S2', name: 'B' }] });
-  eq(rows.map((r) => [r.stopAtDays, r.creditDays, r.deliveryDays]), [[90, 0, null], [null, null, null]],
+  eq(rows.map((r) => [r.stopAtDays, r.termsDays, r.deliveryDays]), [[90, 0, null], [null, null, null]],
     'loaded as days; 0 stays 0 (cash on delivery) and blank stays null (nobody has said)');
 
   const FLAGS = ['priceAskedColumn', 'sourcingVariantColumn', 'sourcingImageColumn', 'linkSizeColumn', 'siteStageColumn',
     'cashTransferColumn', 'cashCoversColumns', 'customerTermsColumns', 'waPostKindsColumn', 'cashEntryMetaColumns',
     'cashCloseColumns', 'lotConsignColumn', 'transferColumn', 'stockLogMetaColumns', 'debtLogLinkColumns'];
-  const books = () => ({ suppliers: [{ id: 'S1', name: 'A', stopAtDays: 90, creditDays: 0, deliveryDays: null }],
+  const books = () => ({ suppliers: [{ id: 'S1', name: 'A', stopAtDays: 90, termsDays: 0, deliveryDays: null }],
     staff: [], agents: [], customers: [], products: [], prices: [], stock: {}, stockLots: {}, stockLog: [], cashDays: {}, cashTxns: [],
     savedQuotes: [], purchaseInvoices: [], supplierCommissions: [], fixedAssets: [], loans: [], quote: null });
-  const sync = (on) => compileScope([fn('dateOrNull'), fn('buildSyncRows')], Object.assign({ sourcingResearchRows: () => [], supplierTermsColumns: on },
+  const sync = (on) => compileScope([fn('dateOrNull'), fn('buildSyncRows')], Object.assign({ sourcingResearchRows: () => [], supplierStopColumns: on, supplierTermsColumn: on },
     Object.fromEntries(FLAGS.map((f) => [f, true]))), ['buildSyncRows']).buildSyncRows;
   const before = sync(false)(books(), 'shop').suppliers[0];
-  t.check(!('stop_at_days' in before) && !('credit_days' in before) && !('delivery_days' in before),
-    'before 0107 a supplier row carries exactly the columns it always had — the upsert cannot fail on one');
+  t.check(!('stop_at_days' in before) && !('terms_days' in before) && !('delivery_days' in before) && !('credit_days' in before),
+    'before 0106 and 0108 a supplier row carries exactly the columns it always had — the upsert cannot fail on one');
   const after = sync(true)(books(), 'shop').suppliers[0];
-  eq([after.stop_at_days, after.credit_days, after.delivery_days], [90, 0, null], 'after it, all three go up, 0 and null as they are');
+  eq([after.stop_at_days, after.terms_days, after.delivery_days, 'credit_days' in after], [90, 0, null, false],
+    'after them, all three go up, 0 and null as they are -- the credit as terms_days');
 }
 
 /* ---------- 3. the supplier form --------------------------------------- */
 {
   const modal = (/<div class="modal-overlay" id="supplierModal">[\s\S]*?\n<\/div>\n/.exec(src) || [''])[0];
-  t.check(/id="s_terms_block" style="display:none;"/.test(modal), 'the terms are hidden until 0107 is known to be there');
-  ['s_stop_at', 's_credit_days', 's_delivery_days'].forEach((id) =>
+  t.check(/id="s_stop_block" style="display:none;"/.test(modal), 'the terms are hidden until 0108 is known to be there');
+  /* WAS: a "Credit they give" box of its own (s_credit_days). NOW the
+     credit is 0106's "days they give you to pay" (s_terms), shown once. */
+  t.check(!/s_credit_days/.test(modal) && (modal.match(/id="s_terms"/g) || []).length === 1,
+    'the credit they give is asked once, as 0106\'s days to pay');
+  ['s_stop_at', 's_delivery_days'].forEach((id) =>
     t.check(new RegExp(`<input id="${id}" type="number" min="0" step="1"[^>]*placeholder="Not known"`).test(modal), `${id}: whole days, blank reads "Not known"`));
   t.check(/id="s_terms_track"/.test(modal) && /id="s_terms_hint"/.test(modal), 'with a line drawing the oldest bill against them');
 
@@ -104,29 +118,32 @@ const code = mig.split(/\r?\n/).filter((l) => !/^\s*--/.test(l)).join('\n');
 
   const els = {};
   const el = () => ({ value: '', style: {}, textContent: '', innerHTML: '', classList: { toggle() {} } });
-  ['s_terms_block', 's_stop_at', 's_credit_days', 's_delivery_days', 's_terms_track', 's_terms_hint'].forEach((id) => { els[id] = el(); });
-  const env = { document: { getElementById: (id) => els[id] || null }, supplierTermsColumns: false, editingSupplierId: 'S1',
+  ['s_stop_block', 's_stop_at', 's_terms', 's_delivery_days', 's_terms_track', 's_terms_hint'].forEach((id) => { els[id] = el(); });
+  const env = { document: { getElementById: (id) => els[id] || null }, supplierStopColumns: false, editingSupplierId: 'S1',
     credOpenInvoices: () => [{ supplierId: 'S1', ageDays: 74 }, { supplierId: 'S1', ageDays: 30 }, { supplierId: 'S2', ageDays: 200 }],
     esc: (x) => String(x) };
   const F = compileScope([fn('sfTermValue'), fn('sfReadTerms'), fn('sfShowTerms'), fn('sfTermsDraw'), decl('SF_TERM_FIELDS')], env, ['sfShowTerms', 'sfReadTerms']);
-  F.sfShowTerms({ stopAtDays: 90, creditDays: 30, deliveryDays: null });
-  eq(els.s_terms_block.style.display, 'none', 'before 0107 the block stays hidden');
+  F.sfShowTerms({ stopAtDays: 90, termsDays: 30, deliveryDays: null });
+  eq(els.s_stop_block.style.display, 'none', 'before 0108 the block stays hidden');
   const G = compileScope([fn('sfTermValue'), fn('sfReadTerms'), fn('sfShowTerms'), fn('sfTermsDraw'), decl('SF_TERM_FIELDS')],
-    { ...env, supplierTermsColumns: true }, ['sfShowTerms', 'sfReadTerms']);
-  G.sfShowTerms({ stopAtDays: 90, creditDays: 30, deliveryDays: null });
-  eq([els.s_terms_block.style.display, els.s_stop_at.value, els.s_credit_days.value, els.s_delivery_days.value], ['', 90, 30, ''],
+    { ...env, supplierStopColumns: true }, ['sfShowTerms', 'sfReadTerms']);
+  els.s_terms.value = '30';   // editSupplier fills 0106's days to pay itself
+  G.sfShowTerms({ stopAtDays: 90, termsDays: 30, deliveryDays: null });
+  eq([els.s_stop_block.style.display, els.s_stop_at.value, els.s_delivery_days.value], ['', 90, ''],
     'after it, the supplier\'s terms fill the boxes, blank where nobody has said');
   t.check(/oldest unpaid bill is 74 days old — 16 days before they stop delivering/.test(els.s_terms_hint.textContent),
     'and the line says how close their oldest bill is: 90 − 74 = 16 days');
   t.check(/class="sp-tt-age" style="left:/.test(els.s_terms_track.innerHTML) && /they stop at <b>90 d<\/b>/.test(els.s_terms_track.innerHTML),
     'drawn as a track: credit, the oldest bill, and the stop');
-  eq(G.sfReadTerms(), { stopAtDays: 90, creditDays: 30, deliveryDays: null }, 'read back as whole days or null');
+  t.check(/credit <b>30 d<\/b>/.test(els.s_terms_track.innerHTML), 'the credit on the track is the days to pay typed above');
+  eq(G.sfReadTerms(), { stopAtDays: 90, deliveryDays: null }, 'read back as whole days or null');
 
   const save = (/__btn_s_save\.addEventListener[\s\S]*?\n\}\)\);/.exec(src) || [''])[0];
-  t.check(/const terms = supplierTermsColumns \? sfReadTerms\(\)/.test(save)
-    && /stopAtDays: prior\.stopAtDays \?\? null/.test(save), 'a save reads the boxes where 0107 is there, and carries the old terms forward where not');
-  t.check(/stopAtDays: terms\.stopAtDays, creditDays: terms\.creditDays, deliveryDays: terms\.deliveryDays/.test(save),
-    'and the record keeps all three — a save no longer strips them');
+  t.check(/const terms = supplierStopColumns \? sfReadTerms\(\)/.test(save)
+    && /stopAtDays: prior\.stopAtDays \?\? null/.test(save), 'a save reads the boxes where 0108 is there, and carries the old terms forward where not');
+  t.check(/stopAtDays: terms\.stopAtDays, deliveryDays: terms\.deliveryDays/.test(save)
+    && /termsDays: \(\(\)=>\{ const v = document\.getElementById\('s_terms'\)/.test(save),
+    'and the record keeps all three — a save no longer strips them; the credit from 0106\'s field');
   const edit = extractFunction(src, 'editSupplier', 'index.html');
   t.check(/sfShowTerms\(s\)/.test(edit) && /s\.stopAtDays != null/.test(edit), 'editing shows them, and opens More details when there are any');
   t.check(/sfShowTerms\(null\)/.test(extractFunction(src, 'resetSupplierForm', 'index.html')), 'a new supplier starts blank');
@@ -219,7 +236,7 @@ function layer(answer, over) {
     mgrSnapshotBody: () => ({ v: 1, score: 64, depts: {}, checks: {}, levels: {} }),
     data: { savedQuotes: [{ invoiced: true }, { invoiced: true, voided: true }, { invoiced: false }], purchaseInvoices: [{}, { voided: true }],
       stockLog: [{ date: '2026-09-02' }, { date: '2026-08-05' }] } }, over || {});
-  const s = compileScope([...LAYER.map(fn), decl('MGR_MIGRATION_0107'), decl('mgrNoteText'), decl('mgrNoteDay'), decl('mgrNoteNum'),
+  const s = compileScope([...LAYER.map(fn), decl('MGR_MIGRATION_0108'), decl('mgrNoteText'), decl('mgrNoteDay'), decl('mgrNoteNum'),
     decl('MGR_DEPTS'), decl('MGR_DECISION_OUTCOME_MAX'), 'let mgrSnapshotKept = null;', 'let mgrSnapshotTried = null;'], env, LAYER);
   return { s, sb, toasts, warns, timers };
 }
@@ -284,12 +301,12 @@ function layer(answer, over) {
     const refuse = { message: 'new row for relation "manager_notes" violates check constraint "manager_notes_kind_check"', code: '23514' };
     const { s, toasts } = layer(() => ({ data: null, error: refuse }));
     const r = await s.mgrSaveOffer({ from: 'bank', name: 'Centenary', amount: 10000000 });
-    eq([r.ok, r.migration], [false, '0107'], 'a database without 0107 refuses the kind');
-    t.check(toasts.length === 1 && /paste supabase\/migrations\/0107_manager_intelligence\.sql into the Supabase SQL editor/.test(toasts[0]),
+    eq([r.ok, r.migration], [false, '0108'], 'a database without 0108 refuses the kind');
+    t.check(toasts.length === 1 && /paste supabase\/migrations\/0108_manager_intelligence\.sql into the Supabase SQL editor/.test(toasts[0]),
       'and the toast names the one update that fixes it');
     const other = layer(() => ({ data: null, error: { message: 'network down' } }));
     await other.s.mgrSaveNormal({ metric: 'sales' });
-    t.check(/network down/.test(other.toasts[0]) && !/0107/.test(other.toasts[0]), 'any other failure says what it was, not a migration');
+    t.check(/network down/.test(other.toasts[0]) && !/0108/.test(other.toasts[0]), 'any other failure says what it was, not a migration');
   }
   {
     let have = [];
@@ -306,8 +323,8 @@ function layer(answer, over) {
     eq((await race.s.mgrSaveSnapshot()).already, true, 'and the unique index settles a race as "already kept"');
     const pre = layer((q) => op(q, 'insert') ? { data: null, error: { message: 'violates check constraint "manager_notes_kind_check"', code: '23514' } } : { data: [], error: null });
     const r3 = await pre.s.mgrSaveSnapshot();
-    t.check(!r3.ok && pre.toasts.length === 0 && pre.warns.some((w) => /0107/.test(w)),
-      'before 0107 it fails silently — nothing the owner asked for failed — but the log names the fix');
+    t.check(!r3.ok && pre.toasts.length === 0 && pre.warns.some((w) => /0108/.test(w)),
+      'before 0108 it fails silently — nothing the owner asked for failed — but the log names the fix');
     t.check(toasts.length === 0 && warns.length === 0, 'a snapshot that went in says nothing at all');
     have = [];
   }
@@ -319,7 +336,7 @@ function layer(answer, over) {
     /* The poll reloads every thirty seconds; the app is never reloaded.
        One attempt a day, however many loads. */
     eq([owner.s.mgrSnapshotAfterLoad(), owner.s.mgrSnapshotAfterLoad(), owner.timers.length], [false, false, 1],
-      'later loads the same day do not try again — a shop without 0107 is not walked every thirty seconds');
+      'later loads the same day do not try again — a shop without 0108 is not walked every thirty seconds');
     day = '2026-10-08';
     eq([owner.s.mgrSnapshotAfterLoad(), owner.timers.length], [true, 2], 'the next morning, on the same open app, it tries again');
     await owner.timers[1]();

@@ -19,7 +19,7 @@
  *   LEDGER        the cash entry a payment arrived as, and the invoice a
  *                 row belongs to.
  *
- * Every new column waits for 0106: with the probe false a row carries
+ * Every new column waits for 0107: with the probe false a row carries
  * none of them (PostgREST rejects the whole upsert for one unknown
  * column), and an older row read back gains no keys at all.
  *
@@ -31,7 +31,7 @@ const t = createReporter('data integrity');
 const eq = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(want),
   `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 const src = read('index.html');
-const mig = read('supabase/migrations/0106_data_integrity.sql');
+const mig = read('supabase/migrations/0107_data_integrity.sql');
 const load = extractFunction(src, 'loadData', 'index.html');
 
 /* The text from `from` to the bracket that closes the one opened at
@@ -126,10 +126,10 @@ const NEW_LOG_COLS = ['cost', 'supplier_id', 'pi_id', 'source', 'corrects', 'rev
 
   const off = sync(false)(books({ stockLog: log }), 'shop-1').stockLog;
   t.check(off.every((r) => JSON.stringify(Object.keys(r)) === JSON.stringify(BASE_LOG_COLS)),
-    'before 0106 a stock log row carries exactly the columns it always had — no new key, so the upsert cannot fail on one');
+    'before 0107 a stock log row carries exactly the columns it always had — no new key, so the upsert cannot fail on one');
 
   const on = wire(sync(true)(books({ stockLog: log }), 'shop-1').stockLog);
-  t.check(on.every((r) => NEW_LOG_COLS.every((k) => k in r)), 'with 0106 every row names all seven new columns');
+  t.check(on.every((r) => NEW_LOG_COLS.every((k) => k in r)), 'with 0107 every row names all seven new columns');
   eq([on[0].cost, on[0].supplier_id, on[0].pi_id, on[0].source], [27000, 'S1', 9, 'buy-order'], 'a delivery carries its cost, supplier, bill and source');
   eq([on[1].corrects, on[1].purchase_qty], [1, 12], 'a correction carries the row it put right and what the purchase now stands at');
   eq([on[5].corrects, on[5].purchase_qty], [2, 0], 'an undone delivery stands at nothing — 0 kept as 0, not lost as blank');
@@ -157,7 +157,7 @@ const NEW_LOG_COLS = ['cost', 'supplier_id', 'pi_id', 'source', 'corrects', 'rev
     label: 'Old', type: 'restock', delta: 2, qty_after: 2, note: 'Purchased', date: '2026-01-01', at: null,
     cost: null, supplier_id: null, pi_id: null, source: null, corrects: null, purchase_qty: null, reverses: null }] })[0];
   eq(Object.keys(old), ['id', 'key', 'productId', 'variantIdx', 'label', 'type', 'delta', 'qtyAfter', 'note', 'date', 'at'],
-    'a row written before 0106 reads back exactly as it always did');
+    'a row written before 0107 reads back exactly as it always did');
 }
 
 /* ---------- 3. the customer ledger, both ways ------------------------- */
@@ -169,7 +169,7 @@ const NEW_LOG_COLS = ['cost', 'supplier_id', 'pi_id', 'source', 'corrects', 'rev
   ] }];
   const off = sync(false)(books({ customers }), 'shop-1').debtLog;
   t.check(off.every((r) => !('cash_txn_id' in r) && !('quote_id' in r)),
-    'before 0106 a ledger row carries no link column');
+    'before 0107 a ledger row carries no link column');
   const on = wire(sync(true)(books({ customers }), 'shop-1').debtLog);
   eq(on.map((r) => [r.cash_txn_id, r.quote_id]), [[301, null], [null, 42], [null, null]],
     'with it, the payment names its cash entry and the invoice row its invoice — and the rest say null');
@@ -204,7 +204,7 @@ const NEW_LOG_COLS = ['cost', 'supplier_id', 'pi_id', 'source', 'corrects', 'rev
 /* ---------- 4. the probes, the flags and the migration ---------------- */
 {
   t.check(/sb\.from\('stock_log'\)\.select\('cost, supplier_id, pi_id, source, corrects, purchase_qty, reverses'\)\.limit\(1\)/.test(load),
-    'loadData probes the stock log for every 0106 column');
+    'loadData probes the stock log for every 0107 column');
   t.check(/sb\.from\('customer_debt_log'\)\.select\('cash_txn_id, quote_id'\)\.limit\(1\)/.test(load),
     'and the ledger for both of its own');
   t.check(/stockLogMetaColumns = !\(stockLogMetaColR && stockLogMetaColR\.error\);/.test(load)
@@ -217,14 +217,14 @@ const NEW_LOG_COLS = ['cost', 'supplier_id', 'pi_id', 'source', 'corrects', 'rev
     ['stock_log', 'reverses', 'bigint'], ['customer_debt_log', 'cash_txn_id', 'bigint'], ['customer_debt_log', 'quote_id', 'bigint'],
   ].forEach(([tbl, col, type]) => t.check(new RegExp(`add column if not exists ${col} ${type}`).test(mig)
     && mig.indexOf(`alter table public.${tbl}`) > -1 && mig.indexOf(`alter table public.${tbl}`) < mig.indexOf(`add column if not exists ${col} ${type}`),
-  `0106 adds ${tbl}.${col} as ${type}`));
+  `0107 adds ${tbl}.${col} as ${type}`));
   t.check(!/not null/i.test(mig.slice(0, mig.indexOf('create or replace function'))) && !/references/i.test(mig),
     'nullable, with no foreign keys — audit rows outlive what they point at');
 
-  /* A refusal that depends on 0106 names it, the way 0105's do. */
-  t.check(/0106 update is applied/.test(extractFunction(src, 'undoDeliveryPlan', 'index.html')),
+  /* A refusal that depends on 0107 names it, the way 0105's do. */
+  t.check(/0107 update is applied/.test(extractFunction(src, 'undoDeliveryPlan', 'index.html')),
     'undoing a delivery that cannot be traced names the missing update');
-  t.check(/0106 update is applied/.test(extractFunction(src, 'applyStockPurchaseEdit', 'index.html')),
+  t.check(/0107 update is applied/.test(extractFunction(src, 'applyStockPurchaseEdit', 'index.html')),
     'and so does correcting a purchase the log no longer knows as one');
 }
 

@@ -162,10 +162,10 @@ function book(opts) {
     const amount = q.invoicedAt === T(-2) ? 2000000 : 40000 + 10000 * (i % 3);
     q.creditNotes = [{ id: 7000 + i, no: 7000 + i, date: q.invoicedAt, reason: 'Wrong size', amount, lines: [{ idx: 0, qty: 1, price: amount, name: 'Nails 3in' }] }];
   });
-  /* A shop that applied 0106 three weeks ago: rows older than 21 days came
+  /* A shop that applied 0107 three weeks ago: rows older than 21 days came
      back from the database without cost, supplier, bill, source and the
      correction pointers. */
-  if (o.pre0106) stockLog.forEach((l) => { if (l.date < T(-21)) ['cost', 'supplierId', 'piId', 'source', 'corrects', 'purchaseQty', 'reverses'].forEach((k) => { delete l[k]; }); });
+  if (o.pre0107) stockLog.forEach((l) => { if (l.date < T(-21)) ['cost', 'supplierId', 'piId', 'source', 'corrects', 'purchaseQty', 'reverses'].forEach((k) => { delete l[k]; }); });
   /* Thu 1 Oct: a delivery from S1 of a line with no cost anywhere. */
   if (o.uncosted) stockLog.push({ id: 6000, key: 'PX', type: 'restock', delta: 12, supplierId: 'S1', date: T(-6), note: 'Received from S1' });
   /* Mon 5 Oct: one more lorry, bill 77 from S2 -- two lines, 10 x 100,000
@@ -441,7 +441,7 @@ const cell = (sig, d) => R.rows.find((r) => r.sig.id === sig).cells.find((c) => 
   eq(rs.find((x) => x.label === 'One line keeps coming back').detail, 'Nails 3in: on 1 of 1 credit notes.', 'its reasons read the day\'s notes, not a month\'s');
 }
 
-/* ---------- 11. purchases before the 0106 columns: not recorded -------- */
+/* ---------- 11. purchases before the 0107 columns: not recorded -------- */
 {
   /* Rows older than 21 days lost their supplier and cost. The first
      restock that kept one is Mon 21 Sept (16 days back -- Mondays are 2,
@@ -449,7 +449,7 @@ const cell = (sig, d) => R.rows.find((r) => r.sig.id === sig).cells.find((c) => 
      day of the fortnight has at most two same weekdays on record (8 and
      15 days back for a Tuesday), too few to judge -- never a usual of
      nothing against which every delivery is "never before". */
-  const SP = scope(book({ pre0106: true }));
+  const SP = scope(book({ pre0107: true }));
   const BP = SP.mgrPulseBooks(TODAY);
   eq(BP.purchasesFrom, T(-16), 'purchases are read from the first delivery that kept its supplier and cost');
   eq(BP.read(T(-23)).v.purchases, null, 'a Monday before it is not recorded, never 0');
@@ -764,18 +764,18 @@ const okAnswer = (q, id) => q.op === 'insert' ? { data: q.payload.map((r) => ({ 
     eq([SE._state().answers.has(SE.mgrUnusualKey(low)), toasts], [false, ['Could not keep that answer — offline']], 'an answer the journal refused is taken back and said so');
   }
   {
-    /* The 0107 update missing: the answer is kept, the normal is not, and
+    /* The 0108 update missing: the answer is kept, the normal is not, and
        the open finding names the update. */
     const sb = fakeSb(okAnswer);
-    const SM = scope(book(), { sb, mgrSaveNormal: async () => ({ ok: false, error: 'check', migration: '0107' }),
-      mgrMigrationNote: () => 'The Manager\'s memory needs one update — paste 0107_manager_intelligence.sql into the Supabase SQL editor and reload.' });
+    const SM = scope(book(), { sb, mgrSaveNormal: async () => ({ ok: false, error: 'check', migration: '0108' }),
+      mgrMigrationNote: () => 'The Manager\'s memory needs one update — paste 0108_manager_intelligence.sql into the Supabase SQL editor and reload.' });
     SM.setNormals([]);
     const low = SM.mgrPulseReading().findings.find((x) => x.metric === 'sales');
     await SM.mgrAnswerUnusual(SM.mgrUnusualKey(low), 'Tuesdays run lower now');
     SM.setOpen(SM.mgrUnusualKey(low));
     const html = SM.mgrUnusualHTML(SM.mgrPulseReading());
-    t.check(/mgr-u-unkept">Your answer is kept, but not as a normal — The Manager&#39;s memory needs one update — paste 0107|mgr-u-unkept">Your answer is kept, but not as a normal — The Manager's memory needs one update — paste 0107/.test(html),
-      'a normal the journal refused for want of 0107 names the update on the finding');
+    t.check(/mgr-u-unkept">Your answer is kept, but not as a normal — The Manager&#39;s memory needs one update — paste 0108|mgr-u-unkept">Your answer is kept, but not as a normal — The Manager's memory needs one update — paste 0108/.test(html),
+      'a normal the journal refused for want of 0108 names the update on the finding');
     t.check(!/I’ll remember:/.test(html), 'and never claims to remember it');
   }
   {
@@ -1025,10 +1025,10 @@ const okAnswer = (q, id) => q.op === 'insert' ? { data: q.payload.map((r) => ({ 
     t.check(/Your rule: The till is counted at every close\./.test(hk) && /the books can’t check it, so days like it are still flagged\. The next meeting reads it\./.test(hk),
       'the Taught list carries it as the owner\'s rule, not a normal');
     eq(SK.mgrPulseReading().findings.length, 8, 'and it is never applied: the till is still out of the ordinary');
-    const SK2 = scope(book(), { mgrSaveNormal: async () => ({ ok: false, migration: true }), mgrMigrationNote: () => 'Apply 0107_manager_intelligence.sql' });
+    const SK2 = scope(book(), { mgrSaveNormal: async () => ({ ok: false, migration: true }), mgrMigrationNote: () => 'Apply 0108_manager_intelligence.sql' });
     SK2.setNormals([]);
     await SK2.mgrPulseKeepRule(tk, 'Two people count.');
-    t.check(/Apply 0107_manager_intelligence\.sql/.test(SK2.mgrUnusualHTML(SK2.mgrPulseReading())), 'a rule the journal refuses names the missing update');
+    t.check(/Apply 0108_manager_intelligence\.sql/.test(SK2.mgrUnusualHTML(SK2.mgrPulseReading())), 'a rule the journal refuses names the missing update');
     SK2.setOpen(tk); SK2.setRuleOpen(tk);
     t.check(/<textarea class="mgr-u-rule-in"[^>]*>Two people count\.<\/textarea>/.test(SK2.mgrUnusualHTML(SK2.mgrPulseReading())),
       'and the form keeps the owner\'s own words after the refusal, not the drafted rule');

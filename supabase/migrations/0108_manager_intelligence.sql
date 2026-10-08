@@ -1,6 +1,7 @@
 -- What the Manager needs written down to see the month ahead and to
--- remember its own days -- four new row kinds in its journal, and three
--- things about a supplier that only the owner knows.
+-- remember its own days -- four new row kinds in its journal, and two
+-- things about a supplier that only the owner knows (the third, the
+-- credit they give, is 0106's terms_days).
 --
 -- manager_notes, four new kinds. Fifth widening of the same check
 -- (0082 review, 0084 question, 0085 target, 0086 play), under the name
@@ -42,40 +43,44 @@ alter table manager_notes add constraint manager_notes_kind_check
 create unique index if not exists manager_notes_snapshot_day_idx
   on manager_notes(shop_id, date) where kind = 'snapshot';
 
--- suppliers, three terms. What only the owner knows about a supplier,
--- each in days, each nullable:
+-- suppliers, two more terms. What only the owner knows about a
+-- supplier, each in days, each nullable:
 --
 --   stop_at_days   the age a bill reaches before the supplier stops
 --                  delivering ("Steel & Tube stop at 90 days")
---   credit_days    the days of credit they give
 --   delivery_days  the days they say a delivery takes
 --
--- NULL means NOBODY HAS SAID, which is not 0: 0 credit days is cash on
--- delivery, a real and much stricter agreement. Older rows are not
--- back-filled -- a supplier nobody has asked about reads "not known",
--- which is the truth. The Manager reads a deadline off a bill only where
--- the owner wrote one down; an invented supplier term would be a date
--- on the cash line nobody ever agreed to.
+-- The days of credit they give are NOT added here: 0106 already keeps
+-- them as suppliers.terms_days ("days they give you to pay"), and the
+-- Manager reads and writes that one column. Two columns for one fact
+-- would drift apart the first time only one of them was edited.
 --
--- The app probes for these before writing them (as it does for 0096 and
--- 0106): a supplier row goes up on every save, and a column the
+-- NULL means NOBODY HAS SAID, which is not 0: a supplier who stops at 0
+-- days stops at once. Older rows are not back-filled -- a supplier
+-- nobody has asked about reads "not known", which is the truth. The
+-- Manager reads a deadline off a bill only where the owner wrote one
+-- down; an invented supplier term would be a date on the cash line
+-- nobody ever agreed to.
+--
+-- The app probes for these before writing them (as it does for 0096,
+-- 0106 and 0107): a supplier row goes up on every save, and a column the
 -- database does not have yet would fail the whole upsert -- the shop
 -- would stop saving its suppliers rather than merely lose the terms.
+--
+-- The check is named for its own two columns. NOT suppliers_terms_days_check:
+-- that is the name Postgres gave 0106's inline check on terms_days, and
+-- dropping it "if exists" here would silently remove 0106's 0..365 bound.
 alter table public.suppliers
   add column if not exists stop_at_days integer,
-  add column if not exists credit_days integer,
   add column if not exists delivery_days integer;
 
-alter table public.suppliers drop constraint if exists suppliers_terms_days_check;
-alter table public.suppliers add constraint suppliers_terms_days_check
+alter table public.suppliers drop constraint if exists suppliers_stop_delivery_days_check;
+alter table public.suppliers add constraint suppliers_stop_delivery_days_check
   check ((stop_at_days is null or stop_at_days >= 0)
-     and (credit_days is null or credit_days >= 0)
      and (delivery_days is null or delivery_days >= 0));
 
 comment on column public.suppliers.stop_at_days is
   'The age in days a bill reaches before this supplier stops delivering, as the owner was told. Null when nobody has said -- never 0, which would mean they stop at once.';
-comment on column public.suppliers.credit_days is
-  'Days of credit this supplier gives. 0 is cash on delivery; null is not known.';
 comment on column public.suppliers.delivery_days is
   'Days this supplier says a delivery takes. The measured lead time comes from deliveries; this is their word. Null when nobody has said.';
 
@@ -89,6 +94,6 @@ comment on column public.suppliers.delivery_days is
 -- alter table manager_notes drop constraint if exists manager_notes_kind_check;
 -- alter table manager_notes add constraint manager_notes_kind_check
 --   check (kind in ('meeting', 'move', 'review', 'question', 'target', 'play'));
--- alter table public.suppliers drop constraint if exists suppliers_terms_days_check;
+-- alter table public.suppliers drop constraint if exists suppliers_stop_delivery_days_check;
 -- alter table public.suppliers drop column if exists stop_at_days,
---   drop column if exists credit_days, drop column if exists delivery_days;
+--   drop column if exists delivery_days;

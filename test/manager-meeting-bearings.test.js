@@ -143,7 +143,7 @@ const H = {
     { metric: 'cash_in', when: 'month\'s turn', effect: 'high', note: 'builders pay', taught_on: '2026-08-30' }],
     'each with its weekday by name and its condition');
   t.check(/Do not raise it as unusual/.test(n.note), 'and the meeting is told what a taught normal means');
-  eq(F.mgrMeetingNormals({ rows: [], error: 'no 0107' }), { error: 'the taught normals could not be read — no 0107' }, 'a failed read names itself');
+  eq(F.mgrMeetingNormals({ rows: [], error: 'no 0108' }), { error: 'the taught normals could not be read — no 0108' }, 'a failed read names itself');
 
   const decisions = { rows: [
     { id: 9, date: '2026-10-05', status: 'signed', body: { title: 'Simulator: pay Roofings on the 20th; chase Kato today', why: 'This is the plan I\'d sign.',

@@ -50,8 +50,8 @@ function scope(data, over) {
     placePin: (name) => { const p = (data.places || []).find((x) => x.name === name); return p && p.lat != null ? { lat: p.lat, lng: p.lng } : null; },
     mapHomePin: () => null, mapCentrePin: () => null, mapPlaceRows: () => [],
     fmtUGX: (n) => Number(n).toLocaleString('en-UG') + ' UGX',
-    managerNotesTable: true, currentShopId: 'shop-1', supplierTermsColumns: true,
-    MGR_MIGRATION_0107: 'supabase/migrations/0107_manager_intelligence.sql',
+    managerNotesTable: true, currentShopId: 'shop-1', supplierStopColumns: true,
+    MGR_MIGRATION_0108: 'supabase/migrations/0108_manager_intelligence.sql',
     toast: () => {}, renderManager: () => {}, saveData: () => Promise.resolve(true),
     managerAnswerQuestion: () => Promise.resolve({ ok: true }),
     sb: null, document: null, mgrRenderGen: 0, MANAGER_METRICS: {},
@@ -71,8 +71,8 @@ function scope(data, over) {
 }
 const STAFF = [{ id: 'ST002', name: 'Moses Kibirige', phone: '0700 555 222' }];
 const SUPPLIERS = [
-  { id: 'S1', name: 'Roto Hardware', location: 'Nakawa', stopAtDays: null, creditDays: null, deliveryDays: null },
-  { id: 'S4', name: 'Quiet Ltd', location: '', stopAtDays: null, creditDays: null, deliveryDays: null },
+  { id: 'S1', name: 'Roto Hardware', location: 'Nakawa', stopAtDays: null, termsDays: null, deliveryDays: null },
+  { id: 'S4', name: 'Quiet Ltd', location: '', stopAtDays: null, termsDays: null, deliveryDays: null },
 ];
 const PRODUCTS = [{ id: 'P1', name: 'Iron sheet G28' }, { id: 'P2', name: 'Wire nails' }];
 const book = (extra) => ({ staff: STAFF.map((x) => ({ ...x })), agents: [], suppliers: SUPPLIERS.map((x) => ({ ...x })),
@@ -132,14 +132,14 @@ await sec(async () => {
     S.mgrAskTermsAskedBy({ question: 'What will Roto quote for G28 delivered?', productId: 'P1' }, { kind: 'supplier', id: 'S1' }),
     S.mgrAskTermsAskedBy({ question: 'When do they stop?', source: 'terms' }, { kind: 'supplier', id: 'S1' }),
     S.mgrAskTermsAskedBy({ question: 'When does the bank stop the overdraft?' }, { kind: 'bank' })],
-  [['stopAtDays'], ['stopAtDays', 'creditDays', 'deliveryDays'], ['creditDays', 'deliveryDays'], ['stopAtDays'], [], [], []],
+  [['stopAtDays'], ['stopAtDays', 'termsDays', 'deliveryDays'], ['termsDays', 'deliveryDays'], ['stopAtDays'], [], [], []],
   'the terms a meeting question asks: stop age, all three for "terms", credit and delivery; never a line’s price, the app’s own, or the bank');
   const m = S.mgrAskModel([ROTO_STOP], null, TODAY);
   const roto = m.items.filter((it) => String(it.supplierId) === 'S1');
   /* WAS: the meeting's card AND "What are Roto Hardware’s terms with
      you?" asking all three -- the stop age twice. */
   eq(roto.map((it) => [it.key, it.det ? it.terms.missing : it.termsAsked]),
-    [['q:7', ['stopAtDays']], ['terms:S1', ['creditDays', 'deliveryDays']]],
+    [['q:7', ['stopAtDays']], ['terms:S1', ['termsDays', 'deliveryDays']]],
     'the meeting asks Roto’s stop age; the terms card asks only the credit and delivery days');
   eq(m.open, 3, 'three open: the meeting’s, Roto’s two remaining terms, Quiet’s terms');
   const all = S.mgrAskModel([{ id: 8, date: TODAY, body: { question: 'What are Roto Hardware’s terms?', place: { kind: 'supplier', id: 'S1' } } }], null, TODAY);
@@ -151,11 +151,11 @@ await sec(async () => {
     S.mgrAskTermsFromAnswer({ question: ROTO_STOP.body.question, termsAsked: ['stopAtDays'] }, 'about 60, he thinks'),
     S.mgrAskTermsFromAnswer({ question: ROTO_STOP.body.question, termsAsked: ['stopAtDays'] }, 'Not asked'),
     S.mgrAskTermsFromAnswer({ question: 'Will Roto keep supplying past 90 days?', termsAsked: ['stopAtDays'] }, '120'),
-    S.mgrAskTermsFromAnswer({ question: 'What are their terms?', termsAsked: ['stopAtDays', 'creditDays', 'deliveryDays'] }, '30')],
+    S.mgrAskTermsFromAnswer({ question: 'What are their terms?', termsAsked: ['stopAtDays', 'termsDays', 'deliveryDays'] }, '30')],
   [{ stopAtDays: 60 }, { stopAtDays: 75 }, null, null, null, null],
   'only the whole answer, a number of days, to a question asking one term');
   /* A meeting question about money, a date or a discount is not a term.
-     WAS: "How much credit…" asked creditDays and "500" filed 500 days'
+     WAS: "How much credit…" asked termsDays and "500" filed 500 days'
      credit on the supplier; "When will they deliver…" asked
      deliveryDays and "3" filed 3 days; "stop the 5% discount" hid the
      stop-age box on the terms card. */
@@ -167,11 +167,11 @@ await sec(async () => {
     S.mgrAskTermsAskedBy({ question: 'Will Roto stop the 5% discount?' }, SUP),
     S.mgrAskTermsAskedBy({ question: 'How many days’ credit do they give, and when will they deliver the sheets?' }, SUP),
     S.mgrAskTermsAskedBy({ question: 'After how many days do they stop supplying us?' }, SUP)],
-  [[], [], [], ['creditDays'], ['stopAtDays']],
+  [[], [], [], ['termsDays'], ['stopAtDays']],
   'only a clause naming the term and speaking of days asks it: money, a date, a discount ask none');
   eq([S.mgrAskTermsFromAnswer({ question: HOW_MUCH, termsAsked: S.mgrAskTermsAskedBy({ question: HOW_MUCH }, SUP) }, '500'),
     S.mgrAskTermsFromAnswer({ question: WHEN, termsAsked: S.mgrAskTermsAskedBy({ question: WHEN }, SUP) }, '3'),
-    S.mgrAskTermsFromAnswer({ question: HOW_MUCH, termsAsked: ['creditDays'] }, '500'),
+    S.mgrAskTermsFromAnswer({ question: HOW_MUCH, termsAsked: ['termsDays'] }, '500'),
     S.mgrAskTermsFromAnswer({ question: WHEN, termsAsked: ['deliveryDays'] }, '3'),
     S.mgrAskTermsFromAnswer({ question: 'How long does Roto take to deliver?', termsAsked: ['deliveryDays'] }, '3 days')],
   [null, null, null, null, { deliveryDays: 3 }],

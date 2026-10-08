@@ -1,47 +1,41 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * The Shop, laid out as one page rather than twelve doors.
+ * The Shop, as the owner drew it on the canvas.
  *
- * WHAT THE OLD TEST PINNED, AND WHY IT STOPPED BEING TRUE.
+ * WHAT THE OLD TESTS PINNED, AND WHY EACH STOPPED BEING TRUE.
  *
- * It pinned a left rail of twelve sub-tabs grouped by what each setting
- * affects, with a count on each of the six that were lists. That was a
- * real improvement on the eight equal pills before it, and the count was
- * the point: it answered "is anything in there" without clicking.
+ * First it pinned a left rail of twelve sub-tabs. That rail could only
+ * report state for the six settings that were lists; the other six --
+ * the default price rule among them, whose blank stops a line being
+ * quoted at all -- carried nothing. So the rail went, and this file
+ * pinned "no doors at all": one scroll, every panel folded, the search
+ * opening what it found.
  *
- * But it could only ever answer that for the six settings that WERE
- * lists. The other six -- the default price rule, agent terms, order
- * timing, mobile money, signed-in devices, shop identity -- carried
- * nothing at all, because .pset-count:empty collapses. So the rail was
- * silent about exactly the settings that matter, and one of those
- * silences is a shop-stopping condition: presetDefaultMarkup defaults to
- * {}, and a product with no rule of its own and no shop default behind
- * it cannot be quoted, sold at the counter, or catalogued. The Products
- * register marks that state on every affected line. The page that causes
- * it never mentioned it.
+ * That fixed the doors' real fault and cost the owner a page of nearly
+ * five thousand pixels, opened twice a year. The owner asked for the
+ * sections back under tabs, on the canvas they signed off. So "no tab,
+ * no pane, no accordion" is no longer the rule. What replaces it is the
+ * thing that made the twelve doors wrong, stated directly:
  *
- * So the grouping-by-rail checks are gone, and what replaces them is
- * stricter: there are no doors at all, the page says out loud what is
- * unset and what depends on it, and every row of the index carries its
- * state -- which is the thing the rail could not do for half its
- * entries.
- *
- * Four decisions worth pinning:
- *
- *   nothing hidden     no sub-tab, no pane, no accordion. Everything is
- *                      on one scroll, so Ctrl-F works, which it cannot
- *                      when content lives behind a tab.
- *   derived, decomposed the band counts lines through productLineStats,
- *                      the same derivation the Products register marks
- *                      each line with -- and it is ABSENT, not empty and
- *                      not a green tick, when nothing is unset.
- *   counted once       .pset-count[data-count] is written by one pass and
- *                      appears twice per list -- on the list and on the
- *                      index -- so the two can never disagree.
- *   read, not moved    the five rules set on other screens are shown here
- *                      with a door. Two controls for one number is how
- *                      they drift apart.
+ *   no silent door        every tab carries its own state -- "1 unset",
+ *                         "1 tangle" -- derived from the same list the
+ *                         side panel's "Needs you" draws
+ *   needs reach every tab the side panel lists what needs you on ANY tab,
+ *                         and pressing a row opens its tab at the panel
+ *   search ignores tabs   a search shows every match on every tab at
+ *                         once and counts them on each tab's face --
+ *                         which is what Ctrl-F over one scroll gave
+ *   derived, decomposed   the band counts lines through productLineStats,
+ *                         the same derivation the Products register marks
+ *                         each line with -- and it is ABSENT when nothing
+ *                         is unset
+ *   counted once          .pset-count[data-count] is written by one pass
+ *                         and appears twice per list -- on the list and on
+ *                         the map -- so the two can never disagree
+ *   read, not moved       the rules set on other screens are shown here
+ *                         with a door. Two controls for one number is how
+ *                         they drift apart.
  *
  * Run: node test/presets-layout.test.js   (or: npm test)
  */
@@ -84,7 +78,7 @@ const section = (/<section id="tab-presets"[\s\S]*?\n    <\/section>/.exec(src) 
     `every control survived the redesign${missing.length ? ` (missing ${missing.join(', ')})` : ` (${IDS.length})`}`);
 }
 
-/* ---------- 2. there are no doors ------------------------------------ */
+/* ---------- 2. the old doors are gone -------------------------------- */
 {
   /* The whole change. A door is a promise that what is behind it can be
      summarised on its face, and half of these could not be: the rail had
@@ -121,30 +115,38 @@ const section = (/<section id="tab-presets"[\s\S]*?\n    <\/section>/.exec(src) 
     'and that row says whether it is live and when it last did anything');
 }
 
-/* ---------- 3. three regions, and one accent ------------------------- */
+/* ---------- 3. three tabs, and one accent ---------------------------- */
 {
+  /* The order is the order of consequence: the rules change tomorrow's
+     figures, the shop itself is who you are on paper and who is signed
+     in, and the words only decide what a field suggests. The old order
+     put the words first because they were the longest; on tabs, length
+     no longer decides what you see first. */
   const regions = [...section.matchAll(/class="pset-rgn" data-rgn="([a-z]+)"/g)].map((m) => m[1]);
-  t.check(regions.join(',') === 'words,rules,shop',
-    `three regions, in the order they are read (${regions.join(', ')})`);
-  const heads = (section.match(/class="pset-rg-t"/g) || []).length;
-  t.check(heads === regions.length, `each one names itself (${heads})`);
-  // Every region carries a sentence saying what KIND of thing is in it.
-  // That sentence is the whole argument for the grouping: a word list
-  // costs nothing if it is wrong and a rule changes tomorrow's figures.
-  t.check((section.match(/class="pset-rg-s"/g) || []).length === regions.length,
-    'and says what kind of setting is in it');
+  t.check(regions.join(',') === 'rules,shop,words',
+    `three regions, in the order of consequence (${regions.join(', ')})`);
+  const tabs = [...section.matchAll(/class="pset-tab" role="tab" id="pset_tab_([a-z]+)" data-pset-rgn="\1" aria-controls="pset_rgn_\1"/g)].map((m) => m[1]);
+  t.check(tabs.join(',') === regions.join(','), `one tab per region, each controlling it (${tabs.join(', ')})`);
+  t.check(regions.every((r) => new RegExp(`id="pset_rgn_${r}" role="tabpanel" aria-labelledby="pset_tab_${r}"`).test(section)),
+    'and each region is the panel its tab names, so a screen reader hears what it opened');
+  /* A tab is only a door again if its face is silent. Each one carries a
+     state element, and renderPresetTabs writes it. */
+  t.check(regions.every((r) => new RegExp(`id="pset_tab_${r}_n"`).test(section)),
+    'every tab carries a place for its own state');
+  const tabsFn = (/function renderPresetTabs\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/getElementById\(`pset_tab_\$\{r\}_n`\)/.test(tabsFn) && /presetNeedsList\(\)/.test(tabsFn),
+    'and writes it from the same list of needs the side panel draws');
 
   /* The accent appears ONCE per screen: it is the one thing to do next.
-     The old page had the active tab, six oxide .pset-group h4s and two
-     accent Save buttons. The only accent here is the band's action, and
-     the band is not drawn at all when there is nothing to do. */
+     The only accent here is the first chain's action, and the band is
+     not drawn at all when there is nothing to do. */
   const accents = (section.match(/btn-accent/g) || []).length;
   t.check(accents === 0, `no accent is baked into the markup (${accents})`);
   const band = (/function renderPresetBand\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
-  t.check((band.match(/btn-accent/g) || []).length === 1,
-    'the one accent on the screen is the band’s action');
+  t.check((band.match(/btn-accent/g) || []).length === 1 && /i === 0 \? 'btn-accent' : 'btn-ghost'/.test(band),
+    'the one accent on the screen is the first unset setting’s action; the rest are ghosts');
   t.check(/color:var\(--ink-soft\);margin:0 0 6px;\}/.test(src.slice(src.indexOf('.pset-group h4{'))),
-    'and the group headings are ink, not six more of it');
+    'and the group headings are ink, not more of it');
 }
 
 /* ---------- 4. the band is derived, decomposed, and goes away -------- */
@@ -176,12 +178,17 @@ const section = (/<section id="tab-presets"[\s\S]*?\n    <\/section>/.exec(src) 
   const band = (/function renderPresetBand\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
   t.check(/if\(!causes\.length\)\{ wrap\.innerHTML = ''; return; \}/.test(band),
     'nothing unset draws no band at all — not an empty one and not a green tick');
-  t.check(/cb-openbar/.test(band),
-    'and it is the band this app already ships rather than a fourteenth one');
-  // One line per cause, so the sentence can be argued with rather than
-  // believed.
-  t.check(/causes\.map\(c=> `<p class="cb-openbar-w">/.test(band),
-    'each cause gets its own line, naming what depends on it');
+  /* WHAT THE OLD CHECK MEANT: one paragraph per cause, in the amber
+     band other screens use. What it meant underneath was "each cause is
+     stated so it can be argued with". The owner's canvas states it as a
+     chain instead -- the setting, what waits on it, the screens it locks
+     -- which can be argued with at a glance rather than by reading. */
+  t.check(/causes\.map\(\(c, i\)=> `<div class="pset-ch">/.test(band),
+    'each cause gets its own chain');
+  t.check(/c\.locks\.map/.test(band) && /class="pset-ch-n"/.test(band),
+    'naming how many things wait on it and which screens it locks');
+  t.check(/data-pset-jump="\$\{c\.jump\}" data-pset-focus="\$\{c\.focus\}"/.test(band),
+    'and its action goes to the field that sets it, not merely to the page');
 }
 
 /* ---------- 5. the index says what is set, from one count ------------ */
@@ -210,28 +217,32 @@ const section = (/<section id="tab-presets"[\s\S]*?\n    <\/section>/.exec(src) 
   });
 
   const render = (/function renderPresets\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
-  /* Two bands now: what is UNSET among the rules, and what is TANGLED
-     in the lists. Both are drawn after the panels they describe, for
-     the same reason the counts are -- a band that ran first would be
-     reporting the state before the edit that prompted the redraw. */
-  /* And the folds last of all, because which sections are open depends
-     on what the bands have just found: a shop with an unset price rule
-     opens the rules, and one with nothing to report opens as its own
-     table of contents. */
-  t.check(/renderPresetCounts\(\);\s*\n  renderPresetBand\(\);\s*\n  renderPresetWordsBand\(\);\s*\n  renderPresetIndex\(\);\s*\n  renderPresetFolds\(\);\s*\n\}/.test(render),
-    'the counts, both bands, the index and the folds are written after the panels they describe');
+  /* Two bands: what is UNSET among the rules, and what is TANGLED in
+     the lists. Both are drawn after the panels they describe, for the
+     same reason the counts are -- a band that ran first would be
+     reporting the state before the edit that prompted the redraw. The
+     index goes last because it draws the map, the tiles and the tab
+     chips from what the bands have just found. (It replaced the folds
+     in that slot: the folds are gone.) */
+  t.check(/renderPresetCounts\(\);\s*\n  renderPresetBand\(\);\s*\n  renderPresetWordsBand\(\);\s*\n  renderPresetIndex\(\);\s*\n\}/.test(render),
+    'the counts, both bands and the index are written after the panels they describe');
+  const ixFn = (/function renderPresetIndex\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/renderPresetMap\(m\);\s*\n  renderPresetTiles\(\);\s*\n  renderPresetTabs\(\);/.test(ixFn),
+    'and the index draws the map, the tiles and the tabs from one model');
   t.check(/if\(tab==='presets'\)\{/.test(code) && /renderPresets\(\);/.test(code),
     'and the tab redraws on entry, so every claim is about current data');
 
   /* The six the old rail could not count. Each index row carries its
      state as words -- "not set", "none of 6", "MTN live" -- which is the
      whole reason the rail is gone. */
-  const ix = (/function renderPresetIndex\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  /* The rows are a model now, so the ring, the per-tab bars and the
+     list all count the same rows. */
+  const ix = (/function presetIndexModel\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
   ['Default price rule', 'Agent share of margin', 'Order step limits',
     'On paper', 'Mobile money', 'Signed-in devices'].forEach((name) => {
     t.check(ix.indexOf(name) !== -1, `the index reports ${name}, which the rail could not`);
   });
-  t.check(/mk \? 'set' : 'not set'/.test(ix) && /'warn'/.test(ix),
+  t.check(/mk \? 'set' : 'not set'/.test(ix) && /mk \? 'good' : 'warn'/.test(ix),
     'and marks the unset ones, rather than showing a blank that reads as fine');
 
   /* null is "could not read", which is not "nothing signed in" -- the
@@ -293,9 +304,11 @@ const section = (/<section id="tab-presets"[\s\S]*?\n    <\/section>/.exec(src) 
   t.check(/if\(!q\)\{[\s\S]*?targets\.forEach\(el=> el\.style\.display = ''\);/.test(run),
     'clearing the box restores the whole page');
 
-  // The index doubles as the way in: clicking a row searches for it.
-  t.check(/box\.value = go\.dataset\.go \|\| go\.dataset\.psetGo \|\| '';/.test(code),
-    'and clicking an index row searches for that setting');
+  /* The index doubles as the way in. It used to search for the row's
+     name, which on one long scroll was the only way to bring a panel up;
+     on tabs, pressing a row opens its tab at its panel. */
+  t.check(/data-pset-jump="\$\{esc\(jump\)\}"/.test((/function presetIndexRow\([^)]*\)\{[\s\S]*?\n\}/.exec(code) || [''])[0]),
+    'and pressing an index row goes to that setting');
 }
 
 /* ---------- 8. no prose above a control ------------------------------ */
@@ -309,7 +322,7 @@ const section = (/<section id="tab-presets"[\s\S]*?\n    <\/section>/.exec(src) 
   t.check(/class="ow-ph-help"/.test(section), 'the long explanation is folded behind the "i"');
   t.check(!/class="pset-head"/.test(section) && !/pset-note-t/.test(section),
     'and no pane heading survives to put a paragraph above a field');
-  const minis = (section.match(/class="ow-mini"/g) || []).length;
+  const minis = (section.match(/class="ow-mini[ "]/g) || []).length;
   t.check(minis >= 4, `the rest sits under what it explains (${minis} footnotes)`);
   // .pset-head is still the product form's pane heading and is untouched.
   t.check(/\.pset-head\{/.test(src) && /class="pset-head"/.test(src),
@@ -444,7 +457,7 @@ const section = (/<section id="tab-presets"[\s\S]*?\n    <\/section>/.exec(src) 
      money in limbo?" The keys are set once and never touched; the
      ledger changes by the hour. The panel was built the other way up --
      two credential forms, then the ledger at the bottom. */
-  const sec = (/<div class="ow-pan pset-fold pset-pan-2" data-fold="mobile-money"[\s\S]*?\n            <\/div>/.exec(section) || [''])[0];
+  const sec = section.slice(section.indexOf('id="pset_momo"'), section.indexOf('id="pset_devices"'));
   t.check(sec.indexOf('id="momoActivity"') < sec.indexOf('id="momo_mtn_head"'),
     'the ledger comes before the credentials, not after them');
   t.check(sec.indexOf('id="momoAnswer"') < sec.indexOf('id="momoActivity"'),
@@ -504,81 +517,75 @@ const section = (/<section id="tab-presets"[\s\S]*?\n    <\/section>/.exec(src) 
     'asked before the save begins, not after it has started');
 }
 
-/* ---------- 13. folded, but not doors again -------------------------- */
+/* ---------- 13. tabbed, but not doors again ---------------------------- */
 {
-  /* Most of this page is set once and never touched, and at a real
-     shop's data it ran near five thousand pixels. Folded it is a dozen
-     lines. The risk is obvious -- this page exists BECAUSE twelve doors
-     were wrong -- so what is pinned here is every way a fold differs
-     from a door. */
-  const folds = [...section.matchAll(/data-fold="([a-z-]+)"/g)].map((m) => m[1]);
-  /* Nine since the shop gained a list of what it charges for besides the
-     goods. The number is not the point and never was -- what is pinned is
-     that a panel ADDED to this page folds like the rest, so the page
-     cannot creep back towards the five thousand pixels it started at.
-     Raise it with a panel; never lower it to make a run go green. */
-  t.check(folds.length === 9, `every panel folds (${folds.length})`);
-  t.check(new Set(folds).size === folds.length, 'each under its own name, so what you left open can be found again');
+  /* WHAT THIS SECTION USED TO PIN: nine folded panels, none exclusive,
+     each header carrying its state, the search opening what it found,
+     and the page remembering what you left open. The owner asked for the
+     sections under tabs instead, and signed the canvas off. Every one of
+     those protections is about one thing -- nothing hidden behind
+     something silent -- and each has a tab-shaped equivalent pinned here.
+     The fold machinery itself is gone, not left unused. */
+  t.check(!/data-fold=/.test(section) && !/function renderPresetFolds/.test(code) && !/psetFold/.test(code),
+    'the folds are gone, not merely unused');
 
-  /* NOT EXCLUSIVE. The doors showed one pane and closed the rest; a
-     fold closes nothing. There is no code anywhere that shuts the
-     others when one opens. */
-  const fold = (/function renderPresetFolds\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
-  t.check(!/forEach[\s\S]{0,200}?hidden = true/.test(fold),
-    'opening one closes nothing — three can be open at once');
-
-  /* EVERY HEADER CARRIES ITS STATE. This is the whole fault of the old
-     rail: six of twelve carried a count and six carried nothing, and
-     the silent six were the ones that mattered. A fold header with
-     nothing on it is a door. */
-  const heads = [...section.matchAll(/<button type="button" class="ow-pan-h pset-fold-h"[\s\S]*?<\/button>/g)]
-    .map((m) => m[0]);
-  t.check(heads.length === folds.length, `each fold has a header (${heads.length})`);
-  const silent = heads.filter((h) => !/class="ow-pan-n"/.test(h));
-  t.check(silent.length === 0,
-    `and every one of them reports its own state (${silent.length} silent)`);
-  /* An .ow-pan-n nobody writes into is a silent header wearing a state
-     element, which is worse than none: it looks answered. Each of the
-     eight is either literal text in the markup or an id something
-     fills. */
-  const ids = heads.map((h) => (/class="ow-pan-n"(?: id="([^"]+)")?>([^<]*)</.exec(h) || []));
-  const unwritten = ids.filter((m) => m[1] && !new RegExp(`setN\\('${m[1]}'|getElementById\\('${m[1]}'`).test(code));
-  t.check(unwritten.length === 0,
-    `and nothing fills that state is left blank (${unwritten.map((m) => m[1]).join(', ')})`);
-
-  /* SEARCH OPENS WHAT IT FINDS. Folding costs Ctrl-F, and this is the
-     one thing that gives it back -- a match inside a folded section is
-     a match you cannot see. */
+  /* SEARCH IGNORES THE TABS. A match on a tab you are not looking at is
+     a match you cannot see -- so a search shows every region that holds
+     one, at once, and each tab's face says how many it holds. */
   const run = (/function runPresetSearch\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
-  t.check(/psetFoldFound\.add\(pan\.dataset\.fold\)/.test(run),
-    'a folded section holding a match is opened by the search');
-  t.check(/psetFoldFound\.clear\(\);\s*\n    renderPresetFolds\(\);\s*\n    return;/.test(run),
-    'and clearing the box puts the page back the way you had it');
-  t.check(/psetFoldFound\.delete\(id\);/.test(code),
-    'while closing one by hand is a choice the search does not undo');
+  t.check(/r\.hidden = !shown;/.test(run) && /per\[r\.dataset\.rgn\]/.test(run),
+    'a search shows every tab’s matches at once, counted per tab');
+  t.check(/t\.dataset\.hits = String/.test(run),
+    'and the tabs carry the count of what they hold');
+  t.check(/if\(!q\)\{[\s\S]*?renderPresetTabs\(\);\s*\n    return;/.test(run),
+    'and clearing the box puts the page back on the tab you were on');
+  t.check(/!el\.querySelector\('\[data-find\]'\)/.test(run),
+    'a panel and the row inside it are one result, not two');
 
-  /* AND SO DO THE BANDS. A band that names an unset setting and cannot
-     take you to it is a band that has told you off. */
-  t.check(/data-pset-fold=/.test(code) && /psetFoldOpen\(go\.dataset\.psetFold\)/.test(code),
-    'the unset band opens the section that sets it');
-  t.check(/psetFoldOpen\('categories'\)/.test(code),
-    'and the tangle band opens the list it is about');
+  /* NEEDS REACH EVERY TAB. The thing that says a setting is unset takes
+     you to it, whichever tab it lives on. */
+  const jump = (/function psetJump\([^)]*\)\{[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/el\.closest\('\.pset-rgn'\)/.test(jump) && /psetTabSet\(rgn\.dataset\.rgn\)/.test(jump),
+    'a jump opens the tab that holds its panel');
+  t.check(/getElementById\(focusId\)/.test(jump),
+    'and lands in the field it came to fill');
+  t.check(/psetJump\('pset_w_cats', null, 'dupes'\)/.test(code),
+    'and the tangle band opens the list it is about, narrowed to the tangle');
+  const needs = (/function presetNeedsList\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/presetUnsetCauses\(\)/.test(needs) && /presetWordsFindings\(\)/.test(needs)
+    && /momoStuckRows\(\)/.test(needs) && /lsStaleRows\(/.test(needs),
+    'what needs you is derived -- unset, tangled, stuck and quiet -- not a preference');
 
-  /* FOLDED BY DEFAULT, EXCEPT WHAT NEEDS YOU -- derived from the same
-     two bands, so a shop with a shop-stopping blank never opens to a
-     table of contents that hides it. */
-  const need = (/function psetFoldNeeded\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
-  t.check(/presetUnsetCauses\(\)/.test(need) && /presetWordsFindings\(\)/.test(need),
-    'what opens itself is derived from the bands, not from a preference');
-  const isOpen = (/function psetFoldIsOpen\(id\)[\s\S]*?\n\}/.exec(code) || [''])[0];
-  t.check(/hasOwnProperty\.call\(st, id\)/.test(isOpen),
-    'and a section you have opened or closed yourself outranks that');
-
-  /* IT REMEMBERS. A page opened twice a year should open the way you
-     left it -- and must still work when storage refuses. */
-  t.check(/localStorage\.setItem\(PSET_FOLD_KEY/.test(code)
+  /* OPENS WHERE YOU ARE NEEDED, AND REMEMBERS. With nothing remembered
+     the page opens on the tab of the first thing that needs you, so a
+     shop with a shop-stopping blank never opens on a tab that hides it.
+     A tab you chose outranks that, and must survive storage refusing. */
+  const get = (/function psetTabGet\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/presetNeedsList\(\)\[0\]/.test(get), 'with nothing remembered it opens where you are needed');
+  t.check(/localStorage\.setItem\(PSET_TAB_KEY/.test(code)
     && /catch\(e\)\{ \/\* storage refused/.test(code),
     'what you left open is what you find, and a refused store loses the memory, not the page');
+
+  /* THE TILES ARE DERIVED. Each is a figure a panel below already works
+     out, and a source that could not be read says so. */
+  const tiles = (/function renderPresetTiles\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/productLineStats\(productRowsForList\(\)\)/.test(tiles) && /momoProviderState/.test(tiles)
+    && /lsStaleRows\(lsRows/.test(tiles),
+    'the tiles read the Products funnel, the saved providers and the read sessions');
+  t.check((tiles.match(/could not be read/g) || []).length >= 2,
+    'and a tile whose source could not be read says so rather than drawing a zero');
+
+  /* THE RECEIPT PREVIEW INVENTS NO SALE. The shop's own lines print in
+     words; the goods are bars, because a preview that printed figures
+     this shop never charged would be a receipt that was made up. */
+  const rc = (/function renderPresetReceipt\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(rc.length > 0 && !/fmtUGX|\d{2},\d{3}/.test(rc), 'the receipt preview prints no invented figure');
+  t.check(/pset-rc-gap/.test(rc), 'and a line that is not set is a gap in the paper');
+
+  /* THE SUM IS WORKED ON A REAL LINE, or on none. */
+  const ex = (/function presetMarkupExample\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/productBestBuy\(row\.p\.id, row\.idx\)/.test(ex) && /return fallback;/.test(ex),
+    'the price-rule sum is worked on one of the shop’s own priced lines, or says there is none');
 }
 
 process.exit(t.done() ? 1 : 0);
