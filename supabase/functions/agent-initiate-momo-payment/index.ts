@@ -179,6 +179,27 @@ function agentOrderTerms(payload: any): string {
   ].join(":")).join("|");
 }
 
+// Every line said yes to by whoever supplies it -- the same rule as
+// agentOrderSuppliersConfirmed in shared-worker.js. Each supplier's yes is
+// signed with the terms it was given (orderSupplierTerms in the shop's
+// app); a line off the shop's own shelf has nobody to ask; a line with no
+// supplier has had no yes at all.
+function agentOrderSuppliersConfirmed(payload: any): boolean {
+  const items: any[] = payload.items || [];
+  if (!items.length) return false;
+  const confirms = payload.supplierConfirms || {};
+  const termsFor = (sid: unknown) => items.filter((it) => it && String(it.supplierId) === String(sid)).map((it) => [
+    it.productId, it.variantIdx == null ? "" : it.variantIdx, Number(it.qty) || 0, Math.round(Number(it.price) || 0),
+  ].join(":")).join("|");
+  return items.every((it) => {
+    const sid = it && it.supplierId;
+    if (sid === "__stock__") return true;
+    if (!sid) return false;
+    const rec = confirms[String(sid)];
+    return !!rec && rec.state === "confirmed" && rec.terms === termsFor(sid);
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
@@ -224,7 +245,8 @@ Deno.serve(async (req) => {
     // drop would mean a refund. The shop's confirmation signs the lines as
     // they stood (agentOrderTerms in shared-worker.js) -- if a line changed
     // after that, the signature no longer matches and the shop confirms again.
-    if (order.status === "draft" && !(payload.shopConfirmedAt && payload.shopConfirmedTerms === agentOrderTerms(payload))) {
+    const signedOff = !!(payload.shopConfirmedAt && payload.shopConfirmedTerms === agentOrderTerms(payload));
+    if (order.status === "draft" && !signedOff && !agentOrderSuppliersConfirmed(payload)) {
       return json({ error: "The shop is still checking this order — you can pay once it is confirmed" }, 409);
     }
 

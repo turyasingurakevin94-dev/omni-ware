@@ -27,7 +27,7 @@ const agent = read('agent.html');
 
 /* ---------- 1. the signature and the gate (shared-worker.js) --------- */
 const data = { agents: [{ id: 'A1', name: 'Brian', paymentTerm: 'prepay' }, { id: 'A2', name: 'Sara', paymentTerm: 'pay_on_delivery' }] };
-const NAMES = ['agentOrderTerms', 'agentOrderConfirmed', 'agentOrderNeedsShopCheck'];
+const NAMES = ['agentOrderTerms', 'agentOrderSuppliersConfirmed', 'agentOrderConfirmed', 'agentOrderNeedsShopCheck'];
 const { agentOrderTerms, agentOrderConfirmed, agentOrderNeedsShopCheck } =
   compileScope(NAMES.map((n) => extractFunction(shared, n, 'shared-worker.js')), { data }, NAMES);
 
@@ -129,8 +129,9 @@ const order = (over) => Object.assign({
 
 /* ---------- 4. the payment function refuses an unchecked order -------- */
 {
-  t.check(/order\.status === "draft" && !\(payload\.shopConfirmedAt && payload\.shopConfirmedTerms === agentOrderTerms\(payload\)\)/.test(momo),
-    'mobile money is refused while the shop is still checking');
+  t.check(/const signedOff = !!\(payload\.shopConfirmedAt && payload\.shopConfirmedTerms === agentOrderTerms\(payload\)\);/.test(momo)
+    && /order\.status === "draft" && !signedOff && !agentOrderSuppliersConfirmed\(payload\)/.test(momo),
+    'mobile money is refused while the lines are still being checked -- neither signed off nor every one said yes to');
   const tsTerms = compileScope([stripTypes(extractFunction(momo, 'agentOrderTerms', 'agent-initiate-momo-payment'))], {}, ['agentOrderTerms']).agentOrderTerms;
   for (const q of [order({}), order({ items: [{ productId: 'X', variantIdx: 0, qty: '3', sellPrice: 1200.4 }] }), order({ items: [] })]) {
     t.check(tsTerms(q) === agentOrderTerms(q), `the server signs lines exactly as the shop does (${agentOrderTerms(q) || 'empty'})`);
@@ -147,6 +148,8 @@ const order = (over) => Object.assign({
   const ok = compileScope([
     extractFunction(agent, 'agentOrderTerms', 'agent.html'),
     extractFunction(agent, 'orderShopChecked', 'agent.html'),
+    extractFunction(agent, 'supplierLineTerms', 'agent.html'),
+    extractFunction(agent, 'lineSupplierCheck', 'agent.html'),
   ], {}, ['orderShopChecked', 'agentOrderTerms']);
   const o = { status: 'draft', items: order({}).items };
   t.check(ok.orderShopChecked(o) === false, 'agent app: an unconfirmed draft is still being checked');

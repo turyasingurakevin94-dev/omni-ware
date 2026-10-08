@@ -26,7 +26,7 @@ const fn = (n) => extractFunction(src, n, 'agent.html');
 /* ---------- 1. one line at a time ------------------------------------ */
 {
   const api = compileScope(['const orderStaffNames = new Map();',
-    ...['agentOrderTerms', 'orderShopChecked', 'supplierLineTerms', 'lineCheck', 'orderCheckCount', 'staffName', 'orderOwedAmount', 'orderStage'].map(fn)],
+    ...['agentOrderTerms', 'orderShopChecked', 'supplierLineTerms', 'lineSupplierCheck', 'lineCheck', 'orderCheckCount', 'staffName', 'orderOwedAmount', 'orderStage'].map(fn)],
     { myAgent: { paymentTerm: 'prepay' }, fmtNum: (n) => String(n) }, ['lineCheck', 'orderCheckCount', 'orderStage', 'agentOrderTerms']);
   const cem = { productId: 'cem', variantIdx: null, qty: 40, price: 31000, sellPrice: 32000, supplierId: 'S1' };
   const iron = { productId: 'ir', variantIdx: null, qty: 60, price: 35000, sellPrice: 36500, supplierId: 'S2' };
@@ -44,6 +44,12 @@ const fn = (n) => extractFunction(src, n, 'agent.html');
   t.check(api.lineCheck(stale, cem).state === 'wait', 'a yes to different terms is not a yes -- edit the line and the tick goes');
   t.check(api.lineCheck(order({ S3: { state: 'problem' } }), nails).state === 'problem', 'a supplier with a problem is flagged, not ticked');
   t.check(api.lineCheck(order({}, { items: [shelf] }), shelf).state === 'ok', 'off the shop\'s own shelf there is nobody to ring, so it is ticked');
+
+  // The last yes is the check: no separate sign-off, Pay opens.
+  const allIn = order({ S1: { state: 'confirmed', terms: 'cem::40:31000' }, S2: { state: 'confirmed', terms: 'ir::60:35000' }, S3: { state: 'confirmed', terms: 'n::4:3400' } });
+  t.check(api.orderStage(allIn).key === 'pay', `when the last supplier says yes, the agent is asked to pay at once (${api.orderStage(allIn).key})`);
+  const lastOne = order({ S1: { state: 'confirmed', terms: 'cem::40:31000' }, S2: { state: 'confirmed', terms: 'ir::60:35000' } });
+  t.check(api.orderStage(lastOne).key === 'checking', 'and not a moment before');
 
   const signed = order({}, { shopConfirmedAt: 5 });
   signed.shopConfirmedTerms = api.agentOrderTerms(signed);
@@ -138,6 +144,23 @@ const fn = (n) => extractFunction(src, n, 'agent.html');
   const st = fn('openStandingSheet');
   t.check(!/class="[^"]*\bax-gap\b/.test(st) && /class="ax-card ax-togo"/.test(st), 'the "how far to the next place" card has a class of its own, not the spacer\'s');
   t.check(/\.ax-podium2 \.col\{[^}]*max-width:72px/.test(src), 'and with only two agents the podium stays a podium, not two slabs');
+}
+
+/* ---------- 11. the shop and the payment agree on "checked" ------------ */
+{
+  for (const f of ['shared-worker.js', 'worker-www/shared-worker.js']) {
+    const sw = read(f);
+    const { agentOrderConfirmed } = compileScope(['agentOrderTerms', 'agentOrderSuppliersConfirmed', 'agentOrderConfirmed'].map((n) => extractFunction(sw, n, f)), {}, ['agentOrderConfirmed']);
+    const q = { items: [{ productId: 'a', variantIdx: null, qty: 2, price: 10, sellPrice: 12, supplierId: 'S1' }, { productId: 'b', variantIdx: null, qty: 1, price: 5, sellPrice: 6, supplierId: '__stock__' }],
+      supplierConfirms: { S1: { state: 'confirmed', terms: 'a::2:10' } } };
+    t.check(agentOrderConfirmed(q), `${f}: every line said yes to counts as confirmed, so the shop's board asks for payment, not a sign-off`);
+    q.items[0].qty = 3;
+    t.check(!agentOrderConfirmed(q), `${f}: and a yes to different terms does not`);
+  }
+  const momo = read('supabase/functions/agent-initiate-momo-payment/index.ts');
+  t.check(/!signedOff && !agentOrderSuppliersConfirmed\(payload\)/.test(momo), 'the payment function takes the same rule, so the Pay the agent sees actually goes through');
+  t.check(/agentOrderSuppliersConfirmed\(q\)[^\n]*\)\)\{\s*q\.shopConfirmedAt = Date\.now\(\);/.test(read('index.html')),
+    'and the shop app stamps its confirmation when the last yes lands, for a payment function not yet redeployed');
 }
 
 process.exit(t.done() ? 1 : 0);

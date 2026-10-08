@@ -1454,11 +1454,6 @@
   .ax-livedot i{width:6px;height:6px;border-radius:999px;background:var(--mint);animation:axPulse 2s infinite;}
   .ax-livedot.off{color:#F5B26B;}
   .ax-livedot.off i{background:#F5B26B;animation:none;}
-
-  .ax-lock.ready{border-style:solid;border-color:var(--good);background:var(--good-bg);}
-  .ax-lock.ready .ic{background:var(--panel);color:var(--good);}
-  .ax-lock.ready .t{color:var(--good);}
-  .ax-lock.ready .s{color:var(--ink-soft);}
 </style>
 </head>
 <body class="app-loading">
@@ -4547,14 +4542,20 @@ function agentOrderTerms(q){
     Number(it.qty)||0, Math.round(Number(it.sellPrice)||0)
   ].join(':')).join('|');
 }
-/* Whether the shop has been through the lines. A draft carries the
-   shop's signature of the lines it confirmed; if a line changed since,
-   the signature no longer matches and it is being checked again. Past
-   Draft it has been checked by definition. */
+/* Whether the lines have been checked. Either the shop signed them off
+   (its signature of the lines it confirmed -- edit a line and it no
+   longer matches), or every line has had its own yes from whoever
+   supplies it (lineSupplierCheck), which is the check itself: the agent
+   watched each line tick, and the moment the last one does, it is
+   checked and Pay opens. The shop's app and the payment function apply
+   the same rule (agentOrderSuppliersConfirmed). Past Draft it has been
+   checked by definition. */
 function orderShopChecked(o){
   if(!o) return false;
   if(o.status !== 'draft') return true;
-  return !!(o.shopConfirmedAt && o.shopConfirmedTerms === agentOrderTerms(o));
+  if(o.shopConfirmedAt && o.shopConfirmedTerms === agentOrderTerms(o)) return true;
+  const items = o.items || [];
+  return items.length > 0 && items.every(it=> lineSupplierCheck(o, it).state === 'ok');
 }
 function staffName(id){
   return id && id !== '__agent__' ? (orderStaffNames.get(id) || null) : null;
@@ -4568,7 +4569,7 @@ function orderStage(o){
     if(!orderShopChecked(o)){
       const k = orderCheckCount(o);
       return { key:'checking', title:'Checking', group:'sent',
-        sub: k.items && k.ok >= k.items ? `All ${k.ok} confirmed · the shop signs it off next` : `${k.ok} of ${k.all} confirmed with the supplier` };
+        sub: `${k.ok} of ${k.all} confirmed with the supplier` };
     }
     if(prepay && o.agentPaymentStatus !== 'paid' && owed > 0){
       const kept = (o.items||[]).length, all = kept + (o.droppedLines||[]).length;
@@ -4629,7 +4630,10 @@ function supplierLineTerms(o, sid){
   ].join(':')).join('|');
 }
 function lineCheck(o, it){
-  if(orderShopChecked(o)) return { state:'ok' };
+  const c = lineSupplierCheck(o, it);
+  return c.state !== 'ok' && orderShopChecked(o) ? { state:'ok' } : c;
+}
+function lineSupplierCheck(o, it){
   const sid = it && it.supplierId;
   if(sid === '__stock__') return { state:'ok' };
   if(!sid) return { state:'wait' };
@@ -7078,15 +7082,9 @@ function openTrackSheet(orderId){
         <span class="cnt">${counts}</span><span class="ax-chev">${AX_ICON.chevD}</span></summary>
       ${lines.map(({ it, chk })=> lineRow(it, chk)).join('')}
     </details>`;
-    // Every line ticked but the shop has not signed it off yet: the lock
-    // says that is all it is waiting on, and how to hurry it.
-    const allIn = k.items > 0 && k.ok >= k.items;
     const lock = st.key === 'checking' && prepay
-      ? `<div class="ax-lock${allIn ? ' ready' : ''}"><span class="ic">${AX_ICON[allIn ? 'clock' : 'lock']}</span><span class="b">${allIn
-          ? `<span class="t">All ${k.items} confirmed</span><span class="s">Pay opens when the shop signs it off</span>`
-          : `<span class="t">${k.items === 1 ? 'Pay opens once it is checked' : `Pay opens when all ${k.items} are checked`}</span>
-          <span class="s">for what was confirmed · ${agentPushState() === 'on' ? "we'll alert you" : 'it opens right here'}</span>`}</span>
-          ${allIn && shopInfo && shopInfo.phone ? `<button type="button" class="btn btn-dark sm" data-shop>${AX_ICON.phone}Ask</button>` : ''}</div>` : '';
+      ? `<div class="ax-lock"><span class="ic">${AX_ICON.lock}</span><span class="b"><span class="t">${k.items === 1 ? 'Pay opens once it is checked' : `Pay opens when all ${k.items} are checked`}</span>
+          <span class="s">for what was confirmed · ${agentPushState() === 'on' ? "we'll alert you" : 'it opens right here'}</span></span></div>` : '';
     const sh = shopInfo && shopInfo.phone ? shopInfo : null;
     const ready = st.key === 'ready' ? `<div class="ax-counter"><span class="ic">${AX_ICON.store}</span><span class="b"><span class="k">Show at the counter</span><span class="v">${esc(o.id)}</span></span>
       ${sh && (sh.name || sh.address) ? `<span class="w">${esc(sh.name || '')}${sh.address ? `<br>${esc(sh.address)}` : ''}</span>` : ''}</div>` : '';

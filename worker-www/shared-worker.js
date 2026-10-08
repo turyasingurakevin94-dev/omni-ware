@@ -2248,8 +2248,30 @@ function agentOrderTerms(q){
     Number(it.qty)||0, Math.round(Number(it.sellPrice)||0)
   ].join(':')).join('|');
 }
+/* Every line has been said yes to by whoever supplies it: each supplier
+   confirmed their own lines on the terms they were asked (the same
+   signature orderSupplierTerms keeps), and anything off the shop's own
+   shelf has nobody to ask. That IS the check -- the agent watched each
+   line tick -- so it counts as confirmed without a separate sign-off,
+   and Pay opens the moment the last yes lands. A line with no supplier
+   chosen has had no yes, so it still needs the shop's own confirmation. */
+function agentOrderSuppliersConfirmed(q){
+  const items = (q && q.items) || [];
+  if(!items.length) return false;
+  const confirms = q.supplierConfirms || {};
+  const termsFor = (sid)=> items.filter(it=> it && String(it.supplierId) === String(sid)).map(it=> [
+    it.productId, it.variantIdx == null ? '' : it.variantIdx, Number(it.qty) || 0, Math.round(Number(it.price) || 0)
+  ].join(':')).join('|');
+  return items.every(it=>{
+    const sid = it && it.supplierId;
+    if(sid === '__stock__') return true;
+    if(!sid) return false;
+    const rec = confirms[String(sid)];
+    return !!rec && rec.state === 'confirmed' && rec.terms === termsFor(sid);
+  });
+}
 function agentOrderConfirmed(q){
-  return !!(q.shopConfirmedAt && q.shopConfirmedTerms === agentOrderTerms(q));
+  return !!(q.shopConfirmedAt && q.shopConfirmedTerms === agentOrderTerms(q)) || agentOrderSuppliersConfirmed(q);
 }
 // Only a prepay agent's unpaid draft waits for this. A pay-on-delivery
 // agent pays nothing up front, so there is nothing a dropped line could
