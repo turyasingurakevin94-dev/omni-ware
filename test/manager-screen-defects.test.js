@@ -140,9 +140,14 @@ const brief = extractFunction(src, 'mgrPaintBrief', 'index.html');
   const heldFoot = (/const heldFoot = [\s\S]*?<\/div>`;/.exec(render) || [''])[0];
   t.check(notHeld.length > 400 && heldFoot.length > 200,
     'both shells were found, not silently skipped');
-  t.check(/btn-accent[^`]*mgrRunBtn|mgrRunBtn[^`]*Hold the morning meeting/.test(notHeld)
-    && /btn btn-accent/.test(notHeld),
-    'an un-held morning wears the accent on "Hold the morning meeting"');
+  /* Q30, Q41: on a no-meeting day the accent "Hold the morning meeting"
+     is the BAND's (mgrHeroHTML), where the screen opens; the panel under
+     the decisions keeps a quiet ghost door to the same click. */
+  const hero = extractFunction(src, 'mgrHeroHTML', 'index.html');
+  t.check(/btn btn-accent mgr-b-hold" id="mgrRunBtn">Hold the morning meeting/.test(hero) && /const hold = held === false/.test(hero),
+    'an un-held morning wears the accent on "Hold the morning meeting", in the band');
+  t.check(/btn btn-ghost ow-sm" data-mgr-hold="1">Hold the morning meeting/.test(notHeld) && !/btn-accent/.test(notHeld),
+    'and the plan panel\'s copy is a ghost button, so the screen has one accent');
   t.check(/Hold another anyway/.test(heldFoot) && !/btn-accent/.test(heldFoot),
     'and a held one offers another as a ghost in the panel\'s footer, never as the accent');
 
@@ -354,7 +359,7 @@ const brief = extractFunction(src, 'mgrPaintBrief', 'index.html');
   t.check(/>70</.test(four) && />1\.35m</.test(four) && />\+2\.4m</.test(four) && /11<span class="of">of<\/span>15/.test(four)
     && !/>6\.4m</.test(four) && four.indexOf('>70<') < four.indexOf('>1.35m<') && four.indexOf('>1.35m<') < four.indexOf('>+2.4m<'),
     'the phone shows the canvas\'s four, in its order, with the desk\'s figures');
-  t.check(/each in its window/.test(good), 'and the hit rate says which window it was weighed in');
+  t.check(/each from the day done/.test(good), 'and the hit rate says which window it was weighed in, from the day done (one rule with the chase record)');
 
   /* The account's advice half, and the levers table that used to go
      silent. */

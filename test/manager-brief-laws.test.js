@@ -76,24 +76,42 @@ const all = (re) => { const out = []; let m; const g = new RegExp(re.source, 'g'
 
 /* ---------- 3. the band says only what is true ------------------------ */
 {
-  const S = compileScope([fn('mgrBriefSubHTML'), fn('mgrShortUGX')], {
+  const S = compileScope([fn('mgrBriefSubHTML'), fn('mgrBriefTestedText'), fn('mgrBriefDay'), fn('waWeekday'), fn('mgrShortUGX'),
+    decl('MGR_BRIEF_MONTHS'), decl('MGR_WEEKDAYS')], {
     esc: (s) => String(s),
-  }, ['mgrBriefSubHTML']);
+  }, ['mgrBriefSubHTML', 'mgrBriefTestedText']);
   const base = { signals: { count: 18, depts: 6 }, linked: [1, 2, 3], reading: [1], errors: [],
-    adds: { cash: 15233850, profit: 1279185, loss: 0, saving: 0, sales: 0 } };
+    adds: { cash: 15233850, profit: 1279185, loss: 0, saving: 0, sales: 0 }, floor: { amount: 3000000, source: 'set' } };
   const plan = { verdict: 'x' };
   const say = (extra) => S.mgrBriefSubHTML({ ...base, ...extra }, plan).replace(/<[^>]+>/g, '');
   const plain = say({});
-  t.check(/I connected 18 signals across all six departments; 4 chains run through them — 3 linked in your books, 1 my reading\./.test(plain),
-    'the signals, the departments and the chains, by source (got ' + plain + ')');
-  t.check(/Today’s plan adds \+1\.28m of profit over 30 days and 15\.23m of cash\./.test(plain), 'what the plan adds, each kind apart');
+  /* Side by side, never "run through them" (law 5): nothing joins a
+     chain to a signal. */
+  t.check(/I connected 18 signals across all six departments; 4 chains join departments — 3 linked in your books, 1 my reading\./.test(plain),
+    'the signals, the departments and the chains, by source, side by side (got ' + plain + ')');
+  t.check(!/run through|behind|explain/.test(plain), 'and no word says the chains explain the signals');
+  t.check(/The meeting sized today’s plan at \+1\.28m of profit over 30 days and 15\.23m of cash\./.test(plain) && !/plan adds/.test(plain),
+    'what the plan adds, each kind apart, said as the meeting\'s own sizing -- never read as the Simulator\'s test (got ' + plain + ')');
   t.check(!/tested/.test(plain) && !/corrected/.test(plain), 'no Simulator figure and no correction: neither clause is said');
   t.check(!/tested/.test(say({ tz: { plan: 'nothing changes', lowest: { balance: 1, date: '2026-10-10' }, profitMonth: null } })),
     'a Simulator that played "nothing changes" has not tested the plan, so the band does not say it has');
-  t.check(/I’ve tested the plan against the next 30 days\./.test(say({ tz: { plan: 'my plan', lowest: { balance: 1, date: '2026-10-10' } } })),
-    'a Simulator that played my plan: "tested against the next 30 days"');
-  t.check(/I’ve tested the plan against the next 30 days — and I corrected one of my own earlier calls\./
-    .test(say({ tz: { plan: 'my plan', profitMonth: { lo: 1, hi: 2 } }, corrected: { body: { corrections: [{}] } } })),
+  /* "tested" is never said without what the test found (review). Thu 5 Nov
+     2026: the committed line on my plan at -1,060,000, under the 3m floor
+     and under zero. 8 Oct 2026 is a Thursday; 5 Nov is 28 days on: Thu. */
+  const failed = say({ tz: { plan: 'my plan', lowest: { balance: -1060000, date: '2026-11-05' }, shocksHeld: 0, shocksOf: 3 } });
+  t.check(/I’ve tested the plan against the next 30 days: on it, cash goes as low as −1\.06m on Thu 5 Nov, under your 3m floor and below zero — see the Simulator\./.test(failed),
+    'a plan the test finds under the floor: "tested" says where and when (got ' + failed + ')');
+  const held = say({ tz: { plan: 'my plan', lowest: { balance: 3450000, date: '2026-10-20' }, shocksHeld: 3, shocksOf: 3 } });
+  t.check(/I’ve tested the plan against the next 30 days: at its lowest, 3\.45m on Tue 20 Oct, cash stays above your 3m floor, and it holds 3 of 3 shocks on the expected line\./.test(held),
+    'a plan that holds: said with its lowest and the shocks it holds on the expected line, Q40 (got ' + held + ')');
+  t.check(S.mgrBriefTestedText({ plan: 'my plan', lowest: null, profitMonth: { lo: 1, hi: 2 } }, base.floor) === null
+    && !/tested/.test(say({ tz: { plan: 'my plan', profitMonth: { lo: 1, hi: 2 } } })),
+    'a test with no lowest worked out is not said to have been made');
+  /* Every place the band can say "tested", the result rides with it. */
+  const sub = extractFunction(src, 'mgrBriefSubHTML', 'index.html');
+  t.check(!/tested the plan/.test(sub) && /mgrBriefTestedText\(/.test(sub), 'the band\'s "tested" comes only from mgrBriefTestedText, which always carries the outcome');
+  t.check(/I’ve tested the plan against the next 30 days: at its lowest, 3\.45m on Tue 20 Oct, cash stays above your 3m floor, and it holds 3 of 3 shocks on the expected line\. I corrected one of my own earlier calls\./
+    .test(say({ tz: { plan: 'my plan', lowest: { balance: 3450000, date: '2026-10-20' }, shocksHeld: 3, shocksOf: 3 }, corrected: { body: { corrections: [{}] } } })),
     'both, when both are true');
   t.check(/ I corrected one of my own earlier calls\.$/.test(say({ corrected: { body: { corrections: [{}] } } })) ,
     'a correction alone, when only a review corrected itself');
@@ -114,7 +132,7 @@ const all = (re) => { const out = []; let m; const g = new RegExp(re.source, 'g'
     errors: ['the cash ahead', 'risks', 'the buy plan', 'the shelf', 'lead times', 'orders on the way', 'chase record', 'chase verdicts',
       'posts', 'counts', 'statements', 'rival checks', 'supplier of P001'] };
   const S = compileScope([
-    ...['mgrBriefPaintChains', 'mgrBriefPaintForesight', 'mgrBriefPaintMemory', 'mgrBriefPaintBlind', 'mgrBriefUnread', 'mgrBriefUnreadHTML',
+    ...['mgrBriefPaintChains', 'mgrBriefChainPer', 'mgrBriefPaintForesight', 'mgrBriefPaintMemory', 'mgrBriefPaintBlind', 'mgrBriefUnread', 'mgrBriefUnreadHTML',
       'mgrBriefForesightPick', 'mgrBriefNext7', 'mgrBriefLampHTML', 'mgrBriefDeptChip', 'mgrBriefPipsHTML', 'mgrBriefDoor', 'mgrBriefWireGo', 'mgrBriefChainDepts',
       'mgrBriefDay', 'mgrShortUGX', 'mgrDept', 'anShiftDate', 'waWeekday'].map(fn),
     ...['MGR_BRIEF_NEEDS', 'MGR_BRIEF_ICON', 'mgrBriefIcon', 'MGR_BRIEF_DOORS', 'MGR_BRIEF_FS_ORDER', 'MGR_BRIEF_WEEK_KEEP', 'MGR_WEEKDAYS', 'MGR_DEPTS',
@@ -123,7 +141,7 @@ const all = (re) => { const out = []; let m; const g = new RegExp(re.source, 'g'
     document, mgrBriefModel: M, mgrBriefDept: 'all', mgrBriefChain: null, mgrBriefRows: [], mgrBriefMoreFore: false, mgrBriefFore30: false, mgrBriefMoreBlind: false,
     mgrBriefCtx: {}, MANAGER_DOORS: {}, esc: (s) => String(s), fmtUGX: (n) => String(n), fmtShortDate: (d) => String(d),
     mgrMoveOrder: (r) => r.slice(), todayISO: () => '2026-10-07', Math, Number, String, Map, Set, Array, Object, JSON,
-  }, ['mgrBriefPaintChains', 'mgrBriefPaintForesight', 'mgrBriefPaintMemory', 'mgrBriefPaintBlind']);
+  }, ['mgrBriefPaintChains', 'mgrBriefChainPer', 'mgrBriefPaintForesight', 'mgrBriefPaintMemory', 'mgrBriefPaintBlind']);
   [['managerChainWrap', 'mgrBriefPaintChains', /Nothing in the books joins/, /The cash ahead, the buy plan, risks, the shelf and who supplies each line could not be read/],
     ['managerForesightWrap', 'mgrBriefPaintForesight', /Nothing is dated/, /The cash ahead, risks, the shelf, lead times, orders on the way and who supplies each line could not be read/],
     ['managerMemoryWrap', 'mgrBriefPaintMemory', /Nothing repeats/, /Chase record, chase verdicts and posts could not be read/],
@@ -133,11 +151,69 @@ const all = (re) => { const out = []; let m; const g = new RegExp(re.source, 'g'
       const html = els[id].innerHTML.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
       t.check(!allClear.test(html) && named.test(html), id + ': its failed readings are named, and its all-clear is not said (got ' + html.trim().slice(0, 220) + ')');
     });
-  /* And the all-clear is still said when nothing failed. */
+  /* THE LOWEST DAY'S CHAIN, SEVEN CARDS (final review, 13). WAS: one row
+     at every width over 1180px, each card 103px at 1200 with its figure
+     broken mid-phrase, and at 1024 a wrapped row that started on an
+     arrow. NOW: from five cards two even rows (7 -> 4 per row), and each
+     card carries the arrow after it, so no row starts on one; the last
+     card (the fix) carries none, and the arrow into it is green. */
+  t.check([1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => S.mgrBriefChainPer(n)).join(',') === '1,2,3,4,5,3,4,4,5',
+    'cards a row: all up to five, then two even rows (6 -> 3, 7 -> 4, 9 -> 5)');
+  t.check(/@media \(max-width:1200px\)\{\s*\.mgr-bed-b \.mgr-b-chain\[data-cards="5"\]\{--per:3 !important;\}/.test(src),
+    'and five on a narrow desk split 3 + 2, never four and a lone card');
   M.errors = [];
+  const nd = (dept, text, figure) => ({ dept, text, figure });
+  M.chains = [{ id: 'b:lowest', short: 'The lowest-cash day', title: 'Dated payments and the lowest-cash day', source: 'books',
+    root: nd('finance', '19 dated payments leave before Thu 5 Nov', '43.64m out'),
+    nodes: [nd('procurement', 'Bills', '34.84m'), nd('finance', 'Rent', '5m'), nd('people', 'Wages', '1.98m'), nd('finance', 'Loan', '1.83m'),
+      nd('finance', 'The lowest', '3.15m · Thu 5 Nov')],
+    fix: { title: 'Collect before Thu 5 Nov', text: 'x', door: null } }];
+  S.mgrBriefPaintChains();
+  const ch = els.managerChainWrap.innerHTML;
+  const links = ch.split('<div class="mgr-b-lk').slice(1);
+  t.check(/data-cards="7" style="--per:4"/.test(ch) && links.length === 7, 'seven cards, each its own link, four to a row');
+  t.check(links.every((l) => !/^[^>]*>\s*<span class="mgr-b-arr/.test(l)) && links.slice(0, 6).every((l) => /<\/div><span class="mgr-b-arr/.test(l))
+    && !/mgr-b-arr/.test(links[6]) && /mgr-b-arr mgr-b-arr-fx/.test(links[5]),
+    'every arrow follows its card, none leads one; the fix carries none, and the arrow into it is green');
+  t.check(src.includes('.mgr-bed-b .mgr-b-chain{flex-wrap:wrap;row-gap:var(--ow-sp-12);}\n  .mgr-bed-b .mgr-b-lk{display:flex;align-items:stretch;flex:1 1 calc(100% / var(--per, 4) - 1px);min-width:164px;}'),
+    'the wrap is the desk\'s own rule at every width, no card under 140px (164px with its arrow)');
+  M.chains = [];
+  /* And the all-clear is still said when nothing failed. */
   S.mgrBriefPaintForesight();
   t.check(/Nothing is dated in the next 30 days\./.test(els.managerForesightWrap.innerHTML) && !/could not be read/.test(els.managerForesightWrap.innerHTML),
     'with every reading in, an empty box says so plainly');
+}
+
+
+/* ---------- 5. the band on a morning with no meeting, and with no journal -- */
+{
+  const H = compileScope([fn('mgrHeroHTML')], {
+    mgrBriefModel: null, managerMeetingRunning: false, apMode: null, apWasCutOff: false, managerCommittedPlan: null, assistantBusy: false,
+    mgrBriefSpokeAt: () => null, managerPips: () => null, esc: (s) => String(s), mgrBriefSubHTML: () => '', mgrBriefReadsHTML: () => '',
+    String, Number,
+  }, ['mgrHeroHTML']);
+  const txt = (h) => h.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+  /* Q30, Q41: no meeting yet -- the band says so WITH the control. */
+  const none = H.mgrHeroHTML(null, null, false, null, false);
+  t.check(/No meeting has been held yet today\./.test(txt(none)) && /<button type="button" class="btn btn-accent mgr-b-hold" id="mgrRunBtn">Hold the morning meeting<\/button>/.test(none)
+    && /It spends a little AI credit and never runs itself\./.test(txt(none)) && !/button below/.test(txt(none)),
+    'no meeting yet: the band carries the one accent "Hold the morning meeting", never "from the button below"');
+  t.check(!/mgrRunBtn/.test(H.mgrHeroHTML({ verdict: 'x' }, [], true, null, false)) && !/mgrRunBtn/.test(H.mgrHeroHTML(null, null, null, null, false))
+    && !/mgrRunBtn/.test(H.mgrHeroHTML(null, null, null, 'Failed to fetch', false)),
+    'and never while a plan is in, the journal is still being read, or it could not be read');
+  /* A meeting stamped on this device, with no journal to read it back:
+     held, said as held here -- never "Reading today's meeting…" forever. */
+  const dev = txt(H.mgrHeroHTML(null, null, true, null, true));
+  t.check(/Today’s meeting was held on this device\./.test(dev) && /Its plan is not kept/.test(dev) && !/Reading today/.test(dev),
+    'held on this device with no journal: said as that, never a read that never resolves');
+  const fail = txt(H.mgrHeroHTML(null, null, null, 'Failed to fetch', false));
+  t.check(/The journal could not be read\./.test(fail) && /Failed to fetch/.test(fail) && !/No meeting has been held/.test(fail),
+    'a journal the probe could not read: the band names the failure, never "no meeting"');
+  /* The painter routes a failed probe to that band, and a stamp with no
+     journal to "held". */
+  const paint = extractFunction(src, 'mgrPaintBrief', 'index.html');
+  t.check(/else if\(probeErr\) paintBand\(\{ plan: sessionPlan\(\), moves: null, held: null, unread: probeErr \}\);/.test(paint)
+    && /held: heldGuess \? \(ctx\.notes \? null : true\) : false/.test(paint), 'the painter hands the band the failure, or the device\'s own stamp');
 }
 
 process.exit(t.done() ? 1 : 0);

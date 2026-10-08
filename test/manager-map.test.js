@@ -46,7 +46,8 @@ const eq = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(wa
   eq(tiles.map((x) => x.score), [40, 60, 0, 75, 25, null, 100], 'each the share of its own checks passed, as counted');
   /* 70 and over well, 40 and over watch, under 40 trouble, thin none. */
   eq(tiles.map((x) => x.lamp), ['warn', 'warn', 'bad', 'good', 'bad', 'none', 'good'], 'the lamp follows the score bands');
-  t.check(tiles[0].line === '3 chains behind 18 signals', 'the whole shop counts chains beside signals, and claims nothing more');
+  /* Side by side, never "behind": nothing joins a chain to a signal (law 5). */
+  t.check(tiles[0].line === '18 signals · 3 chains', 'the whole shop counts chains beside signals, and claims nothing more');
   t.check(tiles[5].thin && tiles[5].line === 'Not enough on the books to judge', 'a thin department says so, with no score (Q2)');
   t.check(tiles[1].line === '63.41m owed for more than 60 days, by 4 customers', 'a department\'s line is its first failing check, with its figure');
   t.check(tiles.every((x) => x.trend === null), 'and no change is shown before seven daily snapshots exist');

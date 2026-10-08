@@ -176,8 +176,13 @@ const blockOf = {};
       const def = js.indexOf(`\nfunction ${n}(`);
       const owner = BEDS.find((b) => def > blockOf[b][0] && def < blockOf[b][1]);
       const calls = [...js.matchAll(new RegExp(`[^\\w$.]${n}\\(`, 'g'))].map((m) => m.index).filter((p) => p !== def);
-      t.check(owner && calls.length && calls.every((p) => p > blockOf[owner][0] && p < blockOf[owner][1]),
-        `${n} lives in the ${owner || '(no)'} block and is called from there alone`);
+      /* The Ask section's wiring also answers the two questions on the
+         Brief's phone card ("It needs to know"), so one tap keeps an
+         answer the same way in both places. */
+      const also = n === 'mgrWireAsks' ? ['Brief'] : [];
+      const ok = (p) => [owner, ...also].some((b) => b && p > blockOf[b][0] && p < blockOf[b][1]);
+      t.check(owner && calls.length && calls.every(ok),
+        `${n} lives in the ${owner || '(no)'} block and is called from there${also.length ? ' and the ' + also.join(', ') + ' block' : ''} alone`);
     });
 }
 
