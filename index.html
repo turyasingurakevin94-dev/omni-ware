@@ -129267,6 +129267,12 @@ function mgrSnapshotBody(ctx){
       cashOnHand: lv(facts.cashOnHand), tightest: facts.tightest ? lv(facts.tightest.balance) : null, tightestOn: facts.tightest ? facts.tightest.date : null,
       floor: facts.floor ? lv(facts.floor.amount) : null, floorSource: facts.floor ? facts.floor.source : null,
       debtors: facts.debt60 ? lv(facts.debt60.total) : null, debt60: facts.debt60 ? lv(facts.debt60.amount) : null,
+      /* WHICH debt60 THIS IS. Before Phase 3 it was the whole balance of a
+         customer whose oldest charge passed 60 days; now it is the part of
+         each balance that is itself over 60 days (mgrChargesOver60). A
+         trend read across the two would show a drop nobody earned, so a
+         reader of levels.debt60 takes only rows carrying this marker. */
+      debt60Basis: facts.debt60 ? 'charge' : null,
       payables: facts.bills ? lv(facts.bills.owed) : null,
       stockValue: facts.daysOfStock ? lv(facts.daysOfStock.value) : null, deadStock: facts.deadStock ? lv(facts.deadStock.value) : null,
       daysOfStock: facts.daysOfStock ? lv(facts.daysOfStock.days) : null, debtorDays: facts.debtorDays ? lv(facts.debtorDays.days) : null,
@@ -134084,10 +134090,25 @@ function trackRecordLine(row){
      could not answer is a gap in the record, and reading it as a
      failure is exactly the lie the accounting repair was built to
      stop. */
+  /* NOT JUDGED YET IS NOT UNWEIGHABLE. An occasion whose answer window
+     has not run (still waiting, or cut short by the same advice coming
+     round) is one the books CAN weigh -- just not yet -- so it is named
+     for what it is, and the gap between "advised" and "weighed" is
+     never left for the reader to guess at. */
+  const waiting = Number(row.waiting) || 0, cutShort = Number(row.cutShort) || 0;
+  const unk = Math.max(0, (Number(row.times) || 0) - (Number(row.scored) || 0) - waiting - cutShort);
+  const pend = [waiting ? `${waiting} still in ${waiting === 1 ? 'its' : 'their'} answer window` : '',
+    cutShort ? `${cutShort} cut short by the next advice` : '']
+    .filter(Boolean).join(', ');
+  if(!row.scored && pend) return head + (unk
+    ? ` — none judged yet: ${pend}; the books cannot weigh the other ${unk}`
+    : ` — none has had its whole answer window yet: ${pend}`);
   if(!row.scored) return head + ' — nothing in the books can weigh any of them';
-  if(!row.worked) return head + ` — and the books show nothing after any of ${row.scored === 1 ? 'it' : 'them'}`;
+  const notYet = pend ? `; not judged yet: ${pend}` : '';
+  if(!row.worked) return head + ` — and the books show nothing after ${row.scored === 1 ? (pend ? 'the one judged' : 'it')
+    : `any of ${pend ? `the ${row.scored} judged` : 'them'}`}${notYet}`;
   const money = row.money > 0 ? `, ${fmtUGX(row.money)} in all` : '';
-  return head + ` — an event followed ${row.worked} of ${row.scored} recommendations${money}; this does not prove the advice caused it`;
+  return head + ` — an event followed ${row.worked} of ${row.scored} recommendations${money}${notYet}; this does not prove the advice caused it`;
 }
 
 /* THE FINDING WORTH INTERRUPTING FOR: a lever that has never once
@@ -162770,9 +162791,17 @@ const ASSISTANT_TOOLS = {
         first_on: x.firstOn, last_on: x.lastOn,
         ...(x.windowed
           ? { weighed: x.scored, it_worked: x.worked,
+              /* The gap between advised and weighed, named: an occasion
+                 whose answer window has not run is not a miss and not
+                 unweighable -- it is not judged yet. */
+              ...(x.waiting ? { still_inside_answer_window: x.waiting } : {}),
+              ...(x.cutShort ? { cut_short_by_the_next: x.cutShort } : {}),
               ...(x.money ? { money_after_it: apRound(x.money) } : {}) }
           : { stands_now: x.standsNow || null }),
         reads_as: trackRecordLine(x) })),
+      /* A restock judged on a week because its lead could not be read
+         says so, rather than passing for a measured window. */
+      ...(track.windowError ? { could_not_read: track.windowError } : {}),
     } : null;
     const passedOn = { rows: tally.passedOn };
     const doNot = {

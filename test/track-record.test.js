@@ -297,6 +297,23 @@ const build = (rows, over) => compileScope(
     const unled = (await build(moves, { ...lead, supplierLeadTimes: () => [{ supplierId: 'S1', typical: false, days: 10 }] })
       .managerTrackRecord(TODAY)).rows[0];
     eq(JSON.stringify([unled.scored, unled.cutShort, unled.waiting]), JSON.stringify([3, 0, 0]), 'a lead from one delivery is not measured: the week stands');
+    /* NOT JUDGED YET IS NOT UNWEIGHABLE. Every occasion of the P2 row is
+       cut short or waiting: the books CAN weigh them, their windows have
+       not run. The sentence says that, never "nothing in the books can
+       weigh any of them". */
+    eq(s.trackRecordLine(led), 'Told to restock 3 times since 2026-08-01 · 0 marked done — none has had its whole answer window yet: '
+      + '1 still in its answer window, 2 cut short by the next advice',
+      'a row with nothing judged yet says why, and never that the books cannot weigh it');
+    /* Okello: 1 judged miss, 1 cut short, 1 waiting -- the gap between
+       advised (3) and weighed (1) is named in the sentence. */
+    eq(s.trackRecordLine(o), 'Advised chasing 3 times since 2026-08-01 · 3 marked done — and the books show nothing after the one judged; '
+      + 'not judged yet: 1 still in its answer window, 1 cut short by the next advice',
+      'a partly judged row names what was not judged yet');
+    eq(s.trackRecordLine(n).includes('not judged yet'), false, 'and a row judged in full adds nothing');
+    /* A row with some occasions the books cannot answer at all keeps them apart. */
+    t.check(/none judged yet: 1 still in its answer window; the books cannot weigh the other 2$/.test(
+      s.trackRecordLine({ kind: 'chase', times: 3, firstOn: '2026-08-01', done: 0, windowed: true, scored: 0, worked: 0, waiting: 1, cutShort: 0 })),
+      'waiting and unweighable are two different things, and both are named');
     const broke = await build(moves, { ...lead, supplierLeadTimes: () => { throw new Error('no deliveries read'); } }).managerTrackRecord(TODAY);
     t.check(/supplier lead times could not be read — no deliveries read; a restock was given a week/.test(broke.windowError || ''),
       'a lead time that cannot be read is named, and the week is used (got ' + broke.windowError + ')');

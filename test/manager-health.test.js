@@ -301,4 +301,21 @@ const H = compileScope([
   eq(S.mgrChargesOver60([], TODAY), { amount: 0, oldest: null }, 'nothing open: nothing past 60 days');
 }
 
+/* ---------- the snapshot says which debt60 it kept ------------------ */
+{
+  /* levels.debt60 changed meaning in Phase 3 (whole balance of an old
+     customer -> the over-60 part charge by charge). A trend read across
+     the two would invent a drop, so each snapshot marks its basis. */
+  const S = compileScope([fn('mgrSnapshotBody')], {
+    todayISO: () => TODAY,
+    mgrHealthFacts: () => ({ debt60: { amount: 400000, count: 1, total: 1200000, oldest: null } }),
+    mgrHealthChecks: () => ({ byDept: {}, checks: [], score: null, known: 0, passed: 0 }),
+  }, ['mgrSnapshotBody']);
+  const b = S.mgrSnapshotBody({});
+  eq([b.levels.debt60, b.levels.debt60Basis], [400000, 'charge'], 'the over-60 part is kept, marked as counted charge by charge');
+  const none = compileScope([fn('mgrSnapshotBody')], { todayISO: () => TODAY, mgrHealthFacts: () => ({}),
+    mgrHealthChecks: () => ({ byDept: {}, checks: [], score: null, known: 0, passed: 0 }) }, ['mgrSnapshotBody']).mgrSnapshotBody({});
+  eq([none.levels.debt60, none.levels.debt60Basis], [null, null], 'and no figure carries no basis');
+}
+
 process.exit(t.done() ? 1 : 0);

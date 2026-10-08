@@ -266,6 +266,28 @@ const H = {
     eq(out.signed_decisions, { error: 'the signed decisions could not be read — permission denied' }, 'a refused read is named');
     t.check(Array.isArray(out.meetings) && Array.isArray(out.worth_saying), 'and the rest of the history still answers');
   }
+  /* THE TRACK RECORD'S GAP, NAMED. Restocks of P2 advised 20 and 25
+     September and 3 October, nothing restocked, and the supplier lead
+     times cannot be read, so each is given a week (CHASE_WINDOW):
+       20 Sep -> 25th: 5 days < 7, nothing followed -> cut short
+       25 Sep -> 3 Oct: 8 days -> a miss, weighed
+       3 Oct -> today (7 Oct): 4 days < 7 -> still waiting
+     The meeting is handed both counts beside `weighed`, the sentence says
+     what they are, and the lead time that could not be read is named. */
+  {
+    const buy = (id, d) => ({ id, date: d, status: 'open', meeting_id: 1, body: { title: 'Restock P2', mkind: 'buy', subject: { key: 'P2' } } });
+    const out = await run(journal({ move: [buy(53, '2026-10-03'), buy(52, '2026-09-25'), buy(51, '2026-09-20')] }),
+      { supplierLeadTimes: () => { throw new Error('no deliveries read'); } });
+    const row = out.track_record && out.track_record.rows.find((x) => x.kind === 'buy');
+    eq(row && [row.advised, row.weighed, row.still_inside_answer_window, row.cut_short_by_the_next],
+      [3, 1, 1, 1], 'advised 3: 1 weighed, 1 still inside its answer window, 1 cut short by the next');
+    t.check(row && /not judged yet: 1 still in its answer window, 1 cut short by the next advice/.test(row.reads_as),
+      'and the sentence names the two not judged (got ' + (row && row.reads_as) + ')');
+    t.check(/^supplier lead times could not be read — no deliveries read; a restock was given a week$/.test(out.track_record.could_not_read || ''),
+      'and a lead time that could not be read is named to the meeting (got ' + out.track_record.could_not_read + ')');
+    const fine = await run(journal({ move: [buy(53, '2026-10-03'), buy(52, '2026-09-25'), buy(51, '2026-09-20')] }));
+    t.check(!('could_not_read' in fine.track_record), 'and a record whose lead times were read carries no such notice');
+  }
   /* The tools say where these come from, at the source. */
   {
     const tools = decl('ASSISTANT_TOOLS');
