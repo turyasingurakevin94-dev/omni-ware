@@ -3920,10 +3920,12 @@
     .mgr-bed-b > #managerBandWrap{order:1;}
     .mgr-bed-b > #managerStripWrap{order:2;}
     .mgr-bed-b > #managerChainWrap{order:3;}
-    .mgr-bed-b > .mgr-b-pair:has(#managerPlanWrap){order:4;}
+    /* The pairs are placed by the wrap before each (no :has(), so a
+       browser without it keeps the same order). */
+    .mgr-bed-b > #managerChainWrap + .mgr-b-pair{order:4;}
     .mgr-bed-b > #managerSimTeaserWrap{order:5;}
     .mgr-bed-b > #managerDeptWrap{order:6;}
-    .mgr-bed-b > .mgr-b-pair:has(#managerMemoryWrap){order:7;}
+    .mgr-bed-b > #managerSimTeaserWrap + .mgr-b-pair{order:7;}
     .mgr-b-pair{flex-direction:column;align-items:stretch;gap:var(--ow-sp-16);}
     .mgr-b-pair > .mgr-slot,.mgr-b-pair > .mgr-b-fore{flex:none;}
     .mgr-b-pair > #managerForesightWrap{order:-1;}
@@ -3935,7 +3937,7 @@
        verdict in its own words, and what it connected. */
     .mgr-bed-b .mgr-b-ent{grid-template-columns:minmax(0,1fr);gap:0;}
     .mgr-bed-b .mgr-b-who{display:flex;flex-direction:column;align-items:center;text-align:center;gap:var(--ow-sp-10);
-      padding:var(--ow-sp-20) var(--ow-sp-16) var(--ow-sp-24);}
+      padding:var(--ow-sp-12) var(--ow-sp-16) var(--ow-sp-20);}
     .mgr-bed-b .mgr-b-gm,.mgr-bed-b .mgr-b-gm-r{padding:var(--ow-sp-4);}
     .mgr-bed-b .mgr-b-gm-c{width:88px;height:88px;}
     .mgr-bed-b .mgr-b-gm-c svg{width:52px;height:52px;}
@@ -3945,12 +3947,16 @@
     .mgr-bed-b .mgr-b-role{display:none;}
     .mgr-bed-b .mgr-b-nmn{font-size:var(--ow-t-16);}
     .mgr-bed-b .mgr-b-w{font-size:var(--ow-t-20);max-width:none;margin:0;}
-    .mgr-bed-b .mgr-b-s{font-size:var(--ow-t-14);max-width:34ch;margin:0;}
+    .mgr-bed-b .mgr-b-s{font-size:var(--ow-t-13);line-height:1.45;max-width:36ch;margin:0;}
+    .mgr-bed-b .mgr-b-s-x{display:none;}
     .mgr-bed-b .mgr-b-reads{display:none;}
     /* One place to type a question on a phone: the header's own field
        (#mgrTalkBtn), which opens the same panel. The ask card is the
        desk's. */
     .mgr-bed-b .mgr-b-ask{display:none;}
+    /* Its go square is navy, as the canvas draws it: the screen's one
+       oxide is the thumb bar's. */
+    #tab-manager.mgr-on-brief #mgrTalkBtn .mgr-talk-go{background:var(--ow-steel-950);}
     /* The four readouts, two by two; what a figure is made of, one
        column beneath them. The desk's six stay on the desk. */
     .mgr-bed-b .mgr-b-sit:not(.mgr-b-sit4):not(.mgr-b-sit-x){display:none;}
@@ -4000,7 +4006,7 @@
     .mgr-bed-b .mgr-b-dc-m{grid-row:1 / span 2;}
     .mgr-bed-b .mgr-b-imp{grid-column:3;grid-row:1;align-self:end;}
     .mgr-bed-b .mgr-b-imp-v.ow-q-f{font-size:var(--ow-t-14);}
-    .mgr-bed-b .mgr-b-per{display:none;}
+    .mgr-bed-b .mgr-b-dc:not(.mgr-b-x) .mgr-b-per{display:none;}
     .mgr-bed-b .mgr-b-conf{grid-column:3;grid-row:2;align-self:start;align-items:flex-end;gap:2px;max-width:112px;}
     .mgr-bed-b .mgr-b-conf .mgr-b-cw{text-align:right;}
     .mgr-bed-b .mgr-b-conf .mgr-b-pip{width:6px;height:6px;}
@@ -4009,6 +4015,9 @@
     .mgr-bed-b .mgr-b-dc:not(.mgr-b-x) .mgr-b-dc-s > .mgr-b-muted{display:none;}
     .mgr-bed-b .mgr-b-dc-x{grid-template-columns:minmax(0,1fr);gap:var(--ow-sp-12);padding:0 var(--ow-sp-12) var(--ow-sp-16);}
     .mgr-bed-b .mgr-b-dc-a .btn.ow-sm{height:var(--ow-tap);font-size:var(--ow-t-14);}
+    /* The panel's own Hold / Finish button, when the bar does not carry
+       it (no journal to confirm the day), is a tap tall too. */
+    .mgr-bed-b #managerPlanWrap #mgrRunBtn,.mgr-bed-b #managerPlanWrap #mgrFinishBtn{min-height:var(--ow-tap);box-sizing:border-box;}
     .mgr-bed-b .mgr-b-skip{flex-wrap:wrap;}
     .mgr-bed-b .mgr-b-skip .btn.ow-sm{flex:1 1 100%;min-width:0;}
     .mgr-bed-b .mgr-b-skip .mgr-skip-why{flex:1 1 100%;height:var(--ow-tap);font-size:var(--ow-t-16);}
@@ -4027,11 +4036,12 @@
       background:var(--ow-paper);border-top:1px solid var(--ow-rule);}
     .mgr-bed-b .mgr-b-thumb-t{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px;}
     .mgr-bed-b .mgr-b-thumb-s{font-size:var(--ow-t-11);font-weight:var(--ow-fw-700);letter-spacing:.06em;text-transform:uppercase;
-      color:var(--ow-ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+      color:var(--ow-ink-600);line-height:1.35;}
+    .mgr-bed-b .mgr-b-thumb-g{white-space:nowrap;}
     .mgr-bed-b .mgr-b-thumb-b{font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);color:var(--ow-ink-900);
       overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
     .mgr-bed-b .mgr-b-thumb .btn{flex:none;min-height:var(--ow-tap);box-sizing:border-box;padding:0 var(--ow-sp-16);}
-    .mgr-bed-b.mgr-b-has-thumb{padding-bottom:72px;}
+    .mgr-bed-b.mgr-b-has-thumb{padding-bottom:96px;}
     .mgr-bed-b.mgr-b-has-thumb .mgr-b-dc.mgr-b-x .mgr-door,
     .mgr-bed-b.mgr-b-has-thumb #managerPlanWrap #mgrRunBtn.btn-accent,
     .mgr-bed-b.mgr-b-has-thumb #managerPlanWrap #mgrFinishBtn{display:none;}
@@ -137156,7 +137166,7 @@ function mgrBriefForesight(src){
   (s.offers || []).forEach(o=> add({ date: o.expiresOn, kind: 'deadline', dept: 'finance',
     text: mgrBriefOwn(o.name || (o.from === 'bank' ? 'The bank' : 'A supplier')) + ' ' + mgrShortUGX(o.amount) + ' offer expires',
     tag: 'your offer record' + (o.rate != null ? ' · ' + o.rate + '%' : '') + (o.termMonths ? ' over ' + o.termMonths + ' months' : '') }));
-  (s.targets || []).forEach(t=> add({ date: t.to, kind: 'deadline', dept: t.dept || 'finance',
+  (s.targets || []).forEach(t=> add({ date: t.to, kind: 'deadline', dept: t.dept || null,
     text: t.label + (t.last ? ' goal ends · ' : ' goal checkpoint · ') + t.aimText, tag: 'goal · now ' + t.nowText }));
   /* The expected band's method says its dates the way every other date
      on the Brief is said, never as a raw ISO date. */
@@ -137174,10 +137184,14 @@ function mgrBriefForesight(src){
    10.5%, 38 days, 12) beside where it stands now. A figure the books
    cannot give reads "not known", never 0. A target with no checkpoint
    list stands on its last day with its aim.
-   targets: score.targets; fig(unit, v) -> text. */
+   targets: score.targets; fig(unit, v) -> text. A measure this table
+   does not name belongs to the whole shop (dept null), never to a
+   department it was not given. */
 const MGR_BRIEF_METRIC_DEPT = { collections: 'finance', gross_profit: 'sales', sales: 'sales', debtors_total: 'finance',
   dead_stock_value: 'store', cash_on_hand: 'finance', net_profit: 'finance', margin_pct: 'sales', debtor_days: 'finance',
-  stock_days: 'store', lowest_cash: 'finance', quotes_won_pct: 'sales', wa_orders: 'marketing' };
+  stock_days: 'store', lowest_cash: 'finance', quotes_won_pct: 'sales', wa_orders: 'marketing',
+  /* Saturday load time (Q36): getting orders ready and loaded out. */
+  sat_load: 'store' };
 function mgrBriefGoalCheckpoints(targets, today, fig){
   const day = String(today || todayISO());
   const end = anShiftDate(day, 30);
@@ -137186,7 +137200,7 @@ function mgrBriefGoalCheckpoints(targets, today, fig){
   (targets || []).forEach(t=>{
     if(!t || t.finished || !/^\d{4}-\d{2}-\d{2}$/.test(String(t.to || ''))) return;
     const label = t.label || String(t.metric || 'Target');
-    const base = { label, nowText: say(t.unit, t.actual == null ? null : t.actual), dept: MGR_BRIEF_METRIC_DEPT[t.metric] || 'finance' };
+    const base = { label, nowText: say(t.unit, t.actual == null ? null : t.actual), dept: MGR_BRIEF_METRIC_DEPT[t.metric] || null };
     const cps = (Array.isArray(t.checkpoints) ? t.checkpoints : [])
       .filter(c=> c && /^\d{4}-\d{2}-\d{2}$/.test(String(c.on)) && c.value != null && Number.isFinite(Number(c.value)))
       .slice().sort((a, b)=> String(a.on).localeCompare(String(b.on)));
@@ -137203,10 +137217,18 @@ function mgrBriefGoalCheckpoints(targets, today, fig){
    next 30 days, today and the six days after it, chosen the same way
    (mgrBriefForesightPick), so the phone and the desk never pick
    differently from one list. */
+/* A week is short enough for its risks and deadlines to fill every
+   slot, so two are kept when the week has them: the first money expected
+   in, and the first known wage, rent, loan or bill going out -- the
+   canvas's week mixes what comes in with what goes out. */
+const MGR_BRIEF_WEEK_KEEP = [
+  (x)=> x.kind === 'expected' && !x.lowest,
+  (x)=> x.kind === 'known' && !x.lowest && ['wage', 'rent', 'loan', 'bill'].includes(x.pay),
+];
 function mgrBriefNext7(items, cap, today){
   const day = String(today || todayISO());
   const end = anShiftDate(day, 6);
-  return mgrBriefForesightPick((items || []).filter(x=> x && x.date >= day && x.date <= end), cap || 6, day);
+  return mgrBriefForesightPick((items || []).filter(x=> x && x.date >= day && x.date <= end), cap || 6, day, MGR_BRIEF_WEEK_KEEP);
 }
 /* WHAT THE NEXT 30 DAYS SHOWS BEFORE "SHOW ALL" -- chosen by kind, so the
    default view spans the month as the canvas draws it, rather than the
@@ -137217,8 +137239,10 @@ function mgrBriefNext7(items, cap, today){
      - then, in this order until the cap: the lowest-cash day, every
        risk, every deadline, the first two expected receipts, wages, rent
        and loan repayments on their days, and the rest of what is known;
-   and what is chosen is put back in date order. items: mgrBriefForesight. */
-function mgrBriefForesightPick(items, cap, today){
+   and what is chosen is put back in date order. items: mgrBriefForesight.
+   keep (optional): tests, each keeping a slot for the first item (by
+   date) it passes when the ranking would leave every such item out. */
+function mgrBriefForesightPick(items, cap, today, keep){
   const list = items || [], max = Math.max(1, Number(cap) || 12);
   const day = String(today || todayISO());
   const sumOut = (xs)=> xs.reduce((n, x)=> n + (Number(x.amount) || 0), 0);
@@ -137240,7 +137264,7 @@ function mgrBriefForesightPick(items, cap, today){
   bills.forEach((xs)=>{
     if(xs.length < 2){ folded.push(xs[0]); return; }
     const pays = xs.reduce((n, x)=> n + (Number(x.n) || 1), 0);
-    folded.push({ date: xs[0].date, kind: 'known', dept: 'procurement',
+    folded.push({ date: xs[0].date, kind: 'known', dept: 'procurement', pay: 'bill',
       text: 'Bills · ' + pays + ' on the days you named this week · ' + mgrShortUGX(sumOut(xs)) + ' out',
       tag: xs.map(x=> mgrBriefDay(x.date)).join(' · '), door: 'creditors', fold: xs.length });
   });
@@ -137250,10 +137274,21 @@ function mgrBriefForesightPick(items, cap, today){
     : ['wage', 'rent', 'loan'].includes(x.pay) ? 4 : 5;
   const byDate = (a, b)=> a.date.localeCompare(b.date) || (MGR_BRIEF_FS_ORDER[a.kind] - MGR_BRIEF_FS_ORDER[b.kind]);
   let expected = 0;
-  const chosen = pool.slice().sort((a, b)=> rank(a) - rank(b) || byDate(a, b)).filter(x=>{
+  const ranked = pool.slice().sort((a, b)=> rank(a) - rank(b) || byDate(a, b)).filter(x=>{
     if(x.kind === 'expected' && !x.lowest){ expected++; if(expected > 2) return false; }
     return true;
-  }).slice(0, max);
+  });
+  let chosen = ranked.slice(0, max);
+  const kept = [];
+  (Array.isArray(keep) ? keep : []).forEach(test=>{
+    if(chosen.some(test) || kept.some(test)) return;
+    const first = pool.filter(test).sort(byDate)[0];
+    if(first) kept.push(first);
+  });
+  if(kept.length){
+    const room = Math.max(0, max - kept.length);
+    chosen = ranked.filter(x=> !kept.includes(x)).slice(0, room).concat(kept.slice(0, max));
+  }
   return chosen.sort(byDate).map(x=> x.day != null ? x : { ...x, day: Number(x.date.slice(8, 10)), dow: MGR_WEEKDAYS[waWeekday(x.date)].slice(0, 3) });
 }
 
@@ -137874,7 +137909,7 @@ function mgrHeroHTML(plan, moves, held, unread){
   const sure = plan ? managerPips(plan.sure) : null;
   const chips = `<span class="mgr-b-chip mgr-b-role">General Manager</span>`
     + (spoke ? `<span class="mgr-b-chip">Spoke <span class="mgr-b-fig">${esc(spoke)}</span></span>` : '')
-    + (sure != null ? `<span class="mgr-b-chip" title="How sure the meeting said it was of this plan — its own judgement, not a count">Sure of this · <span class="mgr-b-fig">${sure}/5</span> judged</span>` : '');
+    + (sure != null ? `<span class="mgr-b-chip" title="How sure the meeting said it was of this plan — its own judgement, not a count">Sure<span class="mgr-b-s-x"> of this</span> · <span class="mgr-b-fig">${sure}/5</span> judged</span>` : '');
   let sub;
   if(running) sub = 'It is reading the same books you see below. The plan lands here when it is done.';
   else if(stopped) sub = 'It ran out of room before naming the plan. Finish it below &mdash; it picks up where it stopped.';
@@ -137911,7 +137946,10 @@ function mgrBriefSubHTML(M, plan){
     ? `I connected <b class="mgr-b-em">${s.count} signal${s.count === 1 ? '' : 's'}</b> across ${s.depts === 6 ? 'all six' : s.depts} department${s.depts === 1 ? '' : 's'}`
     : 'Nothing in the books is flagging right now');
   const L = (M.linked || []).length, R = (M.reading || []).length;
-  if(L + R) parts[0] += `; <b class="mgr-b-em">${L + R} chain${L + R === 1 ? '' : 's'}</b> run through them — ${[L ? L + ' linked in your books' : '', R ? R + ' my reading' : ''].filter(Boolean).join(', ')}`;
+  /* What the phone folds away (mgr-b-s-x) is said again by the card it
+     names -- the chains' own labels, the simulator's teaser, the memory
+     -- so the band stays two or three lines above the four readouts. */
+  if(L + R) parts[0] += `; <b class="mgr-b-em">${L + R} chain${L + R === 1 ? '' : 's'}</b> run through them<span class="mgr-b-s-x"> — ${[L ? L + ' linked in your books' : '', R ? R + ' my reading' : ''].filter(Boolean).join(', ')}</span>`;
   let out = parts[0] + '.' + (unreadFlags.length ? ' (' + esc(unreadFlags.join(', ')) + ' could not be read, so not counted.)' : '');
   if(plan){
     const a = M.adds || {};
@@ -137925,8 +137963,8 @@ function mgrBriefSubHTML(M, plan){
   /* Said only when the Simulator played THIS plan, not "nothing changes". */
   const tested = !!(M.tz && M.tz.plan === 'my plan' && (M.tz.lowest || M.tz.profitMonth));
   const corrected = M.corrected;
-  if(tested) out += ' I’ve tested the plan against the next 30 days' + (corrected ? ' — and I corrected one of my own earlier calls.' : '.');
-  else if(corrected) out += ' I corrected one of my own earlier calls.';
+  if(tested) out += '<span class="mgr-b-s-x"> I’ve tested the plan against the next 30 days' + (corrected ? ' — and I corrected one of my own earlier calls.' : '.') + '</span>';
+  else if(corrected) out += '<span class="mgr-b-s-x"> I corrected one of my own earlier calls.</span>';
   return out;
 }
 /* ON THE BOOKS (Q12): what the books hold, said as that -- never as
@@ -138369,6 +138407,9 @@ function mgrBriefDecisionRowHTML(m, ordered, isOpen){
   const reach = m.worth > 0 ? null : mgrMoveReach(b);
   const value = m.worth > 0 ? (m.kind === 'sales' ? '' : '+') + mgrShortUGX(m.worth) : '—';
   const kindWord = m.worth > 0 && m.kind ? MGR_BRIEF_KIND_WORD[m.kind] : null;
+  /* What the money is over (mgr-b-per) folds away on a closed phone
+     row; "no worth stated" never does -- an unknown is said in words,
+     never left as a dash that could pass for nothing (mgr-b-nw). */
   const per = m.worth > 0 ? (MANAGER_WORTH_BASES[b.worthBasis] || 'on this move') : 'no worth stated';
   const exact = m.worth > 0 ? fmtUGX(m.worth) : '';
   const reachHTML = reach ? `<span class="mgr-b-muted" title="${esc(fmtUGX(reach.amount) + ' · from your books')}"><span class="mgr-b-fig">${esc(mgrShortUGX(reach.amount))}</span> ${esc(reach.basis)}</span>` : '';
@@ -138439,7 +138480,8 @@ function mgrBriefDecisionRowHTML(m, ordered, isOpen){
       <span class="mgr-b-rk mgr-rv-n${m.n === 1 ? ' mgr-b-rk1' : ''}">${num}</span>
       <span class="mgr-b-dc-m"><span class="mgr-b-dc-t">${esc(b.title || '')}</span>
         <span class="mgr-b-dc-s">${mgrBriefDeptChip(m.dept, false)} ${also.length ? `<span>also moves ${esc(also.join(' · '))}</span>` : ''}${reachHTML}${state}</span></span>
-      <span class="mgr-b-imp"><span class="mgr-b-imp-v mgr-b-fig ow-q-f" title="${esc(exact)}">${esc(value)}</span><span class="mgr-b-imp-k">${kindWord ? `<b class="mgr-b-kind">${esc(kindWord)}</b><span class="mgr-b-per"> · ` : '<span class="mgr-b-per">'}${esc(per)}</span></span></span>
+      <span class="mgr-b-imp"><span class="mgr-b-imp-v mgr-b-fig ow-q-f" title="${esc(exact)}">${esc(value)}</span><span class="mgr-b-imp-k">${kindWord ? `<b class="mgr-b-kind">${esc(kindWord)}</b><span class="mgr-b-per"> · ${esc(per)}</span>`
+        : m.worth > 0 ? `<span class="mgr-b-per">${esc(per)}</span>` : `<span class="mgr-b-nw">${esc(per)}</span>`}</span></span>
       ${conf}
       ${mgrBriefIcon('caret', 'mgr-b-car')}
     </button>${x}
@@ -138449,8 +138491,10 @@ function mgrBriefDecisionRowHTML(m, ordered, isOpen){
 
    The phone canvas's bar above the tab bar: the screen's ONE accent,
    within a thumb's reach. It carries what the plan panel offers as its
-   accent -- the open decision's door, or, with no meeting held, holding
-   it (or finishing one that stopped short) -- and is a second face of
+   accent -- the open decision's door (or, with no row open on a door,
+   the first move still open that has one, in the meeting's order), or,
+   with no meeting held, holding it (or finishing one that stopped
+   short) -- and is a second face of
    that same control: a tap on it is a tap on the panel's own button, so
    the two can never do different things. On the phone the panel's copy
    steps aside while the bar carries it. Nothing runs from the bar
@@ -138460,10 +138504,33 @@ function mgrBriefThumbPick(s){
   const x = s || {};
   if(x.running || x.stale) return null;
   if(x.finish) return { kind: 'finish', small: 'Today’s plan', title: 'The meeting stopped short of its plan', label: 'Finish the meeting' };
-  if(x.hold) return { kind: 'hold', small: 'Today’s plan', title: 'No meeting held yet today', label: 'Hold the meeting' };
+  /* "No meeting held yet" is offered only when the journal could say
+     so: with no journal, or a journal that could not be read, the bar
+     never promotes a meeting the screen cannot confirm is unheld (the
+     panel's own button still stands, as the one accent). */
+  if(x.hold) return x.known === false ? null : { kind: 'hold', small: 'Today’s plan', title: 'No meeting held yet today', label: 'Hold the meeting' };
   const d = x.door;
-  if(d && d.label) return { kind: 'door', small: [d.num, d.dept, d.sure].filter(Boolean).join(' · '), title: String(d.title || ''), label: String(d.label) };
-  return null;
+  if(!d || !d.label) return null;
+  const sure = d.pips == null ? '' : 'sure ' + d.pips + '/5' + (d.basis ? ' ' + d.basis : '');
+  return { kind: 'door', small: [d.num, d.dept, sure].filter(Boolean).join(' · '), title: String(d.title || ''), label: String(d.label),
+    mid: d.mid != null ? String(d.mid) : '' };
+}
+/* The decision the bar carries: the open row's, when it has a door; else
+   the first move still open in the meeting's order (mgrMoveOrder) that
+   has a door and is drawn in the panel -- so whenever a plan has a door
+   left, the screen has its one action, as the canvas draws it.
+   rows: mgrMoveOrder(rows); openId: the open row's id (or null);
+   openHasDoor: whether that row shows a door; drawn(id): whether the
+   panel draws that row. -> { row, n } | null */
+function mgrBriefThumbMove(ordered, openId, openHasDoor, drawn){
+  const list = ordered || [];
+  if(openId != null && openHasDoor){
+    const i = list.findIndex(r=> String(r.id) === String(openId));
+    if(i > -1) return { row: list[i], n: i + 1 };
+  }
+  const i = list.findIndex(r=> deriveMoveOutcome(r).status === 'open' && MANAGER_DOORS[(r.body || {}).door]
+    && (typeof drawn !== 'function' || drawn(String(r.id))));
+  return i > -1 ? { row: list[i], n: i + 1 } : null;
 }
 function mgrBriefPaintThumb(){
   const bed = document.getElementById('mgrBedBrief');
@@ -138486,33 +138553,56 @@ function mgrBriefPaintThumb(){
       if(!b) return;
       const p = document.getElementById('managerPlanWrap');
       const kind = b.dataset.thumb;
-      const target = !p ? null : kind === 'door' ? p.querySelector('.mgr-b-dc.mgr-b-x .mgr-door')
+      const rowOf = (el)=> el && el.closest('.mgr-b-dc') ? el.closest('.mgr-b-dc').dataset.mid : null;
+      let target = !p ? null : kind === 'door' ? p.querySelector('.mgr-b-dc.mgr-b-x .mgr-door')
         : kind === 'hold' ? p.querySelector('#mgrRunBtn.btn-accent') : kind === 'finish' ? p.querySelector('#mgrFinishBtn') : null;
+      /* The bar carries a move whose row is closed: open that row (its
+         own header button), then its own door -- the same two taps the
+         owner would make in the panel. */
+      const mid = b.dataset.mid;
+      if(p && kind === 'door' && mid && rowOf(target) !== mid){
+        const opener = [...p.querySelectorAll('.mgr-b-dc [data-open]')].find(o=> o.dataset.open === mid);
+        if(opener) opener.click();
+        target = p.querySelector('.mgr-b-dc.mgr-b-x .mgr-door');
+        if(rowOf(target) !== mid) target = null;
+      }
       if(target) target.click();
     });
     bed.appendChild(bar);
   }
   const openRow = plan.querySelector('.mgr-b-dc.mgr-b-x');
   const doorBtn = openRow ? openRow.querySelector('.mgr-door') : null;
+  const drawnIds = new Set([...plan.querySelectorAll('.mgr-b-dc[data-mid]')].map(el=> el.dataset.mid));
+  const ordered = mgrMoveOrder(mgrBriefRows || []);
+  const pickMove = drawnIds.size ? mgrBriefThumbMove(ordered, openRow ? openRow.dataset.mid : null, !!doorBtn, (id)=> drawnIds.has(id)) : null;
   let door = null;
-  if(doorBtn){
-    const id = openRow.dataset.mid;
-    const ordered = mgrMoveOrder(mgrBriefRows || []);
-    const row = ordered.find(r=> String(r.id) === String(id));
+  if(pickMove){
+    const row = pickMove.row;
     let meta = null;
-    try { meta = row ? mgrBriefDecisionMeta(row, (mgrBriefCtx || {}).track || null) : null; } catch(e){ meta = null; }
+    try { meta = mgrBriefDecisionMeta(row, (mgrBriefCtx || {}).track || null); } catch(e){ meta = null; }
     const c = meta ? meta.conf || {} : {};
-    door = { num: row ? String(ordered.indexOf(row) + 1).padStart(2, '0') : '',
+    const own = doorBtn && String(row.id) === String(openRow.dataset.mid);
+    const d = MANAGER_DOORS[(row.body || {}).door];
+    door = { num: String(pickMove.n).padStart(2, '0'), mid: String(row.id),
       dept: meta && mgrDept(meta.dept) ? mgrDept(meta.dept).name : '',
-      sure: c.pips == null ? '' : 'sure ' + c.pips + '/5 ' + (c.source === 'counted' ? c.basis : 'judged'),
-      title: row ? (row.body || {}).title : '', label: doorBtn.textContent.trim() };
+      pips: c.pips == null ? null : c.pips, basis: c.pips == null ? '' : c.source === 'counted' ? c.basis : 'judged',
+      title: (row.body || {}).title || '', label: own ? doorBtn.textContent.trim() : d ? d.label : '' };
   }
+  const c = mgrBriefCtx || {};
   const pick = mgrBriefThumbPick({ running: !!managerMeetingRunning, stale: plan.classList.contains('mgr-stale'),
-    finish: !!plan.querySelector('#mgrFinishBtn'), hold: !!plan.querySelector('#mgrRunBtn.btn-accent'), door });
+    finish: !!plan.querySelector('#mgrFinishBtn'), hold: !!plan.querySelector('#mgrRunBtn.btn-accent'),
+    known: !!c.notes && !(c.st && c.st.error), door });
   bed.classList.toggle('mgr-b-has-thumb', !!pick);
   bar.hidden = !pick;
-  const html = pick ? `<span class="mgr-b-thumb-t"><small class="mgr-b-thumb-s">${esc(pick.small)}</small><b class="mgr-b-thumb-b" title="${esc(pick.title)}">${esc(pick.title)}</b></span>
-    <button type="button" class="btn btn-accent" data-thumb="${pick.kind}">${esc(pick.label)}</button>` : '';
+  /* The small line: its number and how sure in figures, each group kept
+     whole and the line free to wrap, so what the confidence was counted
+     from is read, never cut off. */
+  const small = !pick ? '' : pick.kind !== 'door' ? esc(pick.small)
+    : [`<span class="mgr-b-thumb-g"><b class="mgr-b-fig">${esc(door.num)}</b>${door.dept ? ' · ' + esc(door.dept) : ''}</span>`,
+      door.pips != null ? `<span class="mgr-b-thumb-g">· sure <b class="mgr-b-fig">${door.pips}/5</b></span>` : '',
+      door.pips != null && door.basis ? `<span class="mgr-b-thumb-g">${esc(door.basis)}</span>` : ''].filter(Boolean).join(' ');
+  const html = pick ? `<span class="mgr-b-thumb-t"><small class="mgr-b-thumb-s">${small}</small><b class="mgr-b-thumb-b" title="${esc(pick.title)}">${esc(pick.title)}</b></span>
+    <button type="button" class="btn btn-accent" data-thumb="${pick.kind}"${pick.mid ? ` data-mid="${esc(pick.mid)}"` : ''}>${esc(pick.label)}</button>` : '';
   if(bar.innerHTML !== html) bar.innerHTML = html;
 }
 /* The deterministic "change my mind" for a move the meeting gave none,
@@ -138618,16 +138708,28 @@ function mgrBriefPaintTeaser(){
   const profitText = profit ? (profit.lo === profit.hi ? pf(profit.lo) : pf(profit.lo) + ' – ' + pf(profit.hi)) : 'not known';
   const of = tz && Number(tz.shocksOf) > 0 ? Number(tz.shocksOf) : 3;
   /* The Simulator's own count and its own words: a shock is held when the
-     committed line AND the expected band both stay at or above the floor
-     (mgrSimHolds), the committed line judged first. */
+     committed line stays at or above the floor, and the expected band
+     too where there is one (mgrSimJudge). A shock that could not be
+     tested (no year of books, no rival price above yours) is counted in
+     the three and not held (mgrSimHolds), so the count says how many
+     those were -- or, while the Simulator does not hand that number
+     over (shocksUntestable), that such a shock counts as not held. */
   const held = tz && tz.shocksHeld != null ? mgrOf(tz.shocksHeld, of) : 'not known';
+  const untestable = tz && tz.shocksUntestable != null && Number.isFinite(Number(tz.shocksUntestable)) ? Math.round(Number(tz.shocksUntestable)) : null;
+  const heldNote = tz && tz.shocksHeld != null && untestable > 0 ? `<span class="mgr-b-sm"><span class="mgr-b-fig">${untestable}</span> not testable</span>` : '';
+  /* What "holds" means, said once across the card rather than squeezed
+     under the figure. */
+  const holdsDef = tz && tz.shocksHeld != null
+    ? '<span class="mgr-b-sm">A shock holds when cash stays at or above the floor: the committed line, then the expected band where there is one.'
+      + (untestable == null && tz.shocksHeld < of ? ' A shock that could not be tested counts as not held.' : '') + '</span>'
+    : '';
   const n = (mgrBriefRows || []).length;
   wrap.innerHTML = mgrBriefNeedsHTML() + `<div class="ow-pan mgr-b-tz">
     <div class="mgr-b-tz-l"><span class="mgr-b-micro">Simulator</span><b class="mgr-b-tz-h">Test any decision before you sign it</b>
-      <span class="mgr-b-nt">${n ? n + ' decision' + (n === 1 ? '' : 's') + ' · ' : ''}6 departments · 30 days of cash · ${of} shock${of === 1 ? '' : 's'}. ${tz && tz.plan === 'my plan' ? 'My plan, played out:' : 'If nothing changes:'}</span></div>
+      <span class="mgr-b-nt">${n ? n + ' decision' + (n === 1 ? '' : 's') + ' · ' : ''}6 departments · 30 days of cash · ${of} shock${of === 1 ? '' : 's'}. ${tz && tz.plan === 'my plan' ? 'My plan, played out:' : 'If nothing changes:'}</span>${holdsDef}</div>
     <div class="mgr-b-tz-r"><span class="mgr-b-micro">Profit a month</span><b class="mgr-b-tz-v mgr-b-fig${profit && profit.lo > 0 ? ' mgr-b-good' : ''}">${esc(profitText)}</b></div>
     <div class="mgr-b-tz-r"><span class="mgr-b-micro">Lowest cash</span><b class="mgr-b-tz-v mgr-b-fig">${lowest ? esc(mgrShortUGX(lowest.balance)) : 'not known'}</b>${lowest && lowest.date ? `<span class="mgr-b-sm">${esc(mgrBriefDay(lowest.date))}${tz && tz.lowest ? '' : ' · committed'}</span>` : ''}</div>
-    <div class="mgr-b-tz-r"><span class="mgr-b-micro">Holds under shocks</span><b class="mgr-b-tz-v mgr-b-fig">${held}</b>${tz && tz.shocksHeld != null ? '<span class="mgr-b-sm">at or above the floor, on both lines</span>' : ''}</div>
+    <div class="mgr-b-tz-r"><span class="mgr-b-micro">Holds under shocks</span><b class="mgr-b-tz-v mgr-b-fig">${held}</b>${heldNote}</div>
     <button type="button" class="btn btn-ghost mgr-b-tz-go" data-mgrgo="sim">Open the simulator →</button>
   </div>`;
   mgrBriefWireGo(wrap);
@@ -138643,19 +138745,28 @@ function mgrBriefPaintTeaser(){
 function mgrBriefNeeds(openAsks, items){
   const open = (items || []).filter(it=> it && !it.done);
   const det = open.filter(it=> it.det).length;
-  const journal = openAsks != null && Number.isFinite(Number(openAsks)) ? Math.max(0, Math.round(Number(openAsks)))
-    : open.filter(it=> !it.det).length;
+  /* The journal's count is the nav's (managerOpenAskCount): exact once
+     it has landed. Before then (undefined), or when it could not be read
+     (null), no count is stated as the count -- only what the list
+     itself holds, which is at least that many. */
+  const exact = openAsks != null && Number.isFinite(Number(openAsks));
+  const listed = open.filter(it=> !it.det).length + det;
   const top = open[0] || null;
-  return { n: journal + det, top: top ? { question: String(top.question || ''), dept: top.dept || null,
+  return { n: exact ? Math.max(0, Math.round(Number(openAsks))) + det : null,
+    atLeast: exact ? null : listed, failed: openAsks === null,
+    top: top ? { question: String(top.question || ''), dept: top.dept || null,
     stake: top.stake && Number(top.stake.amount) > 0 ? top.stake : null, where: (top.place && top.place.label) || '' } : null };
 }
 function mgrBriefNeedsHTML(){
   const c = mgrBriefCtx || {};
-  if(!c.notes) return '';
-  const head = (n)=> `<div class="ow-pan-h mgr-b-h"><span class="mgr-b-t">It needs to know</span>${n != null ? `<span class="mgr-b-n"><span class="mgr-b-fig">${n}</span> · only you can find out</span>` : ''}</div>`;
+  const head = (count)=> `<div class="ow-pan-h mgr-b-h"><span class="mgr-b-t">It needs to know</span>${count ? `<span class="mgr-b-n">${count}</span>` : ''}</div>`;
+  const card = (count, body)=> `<div class="ow-pan mgr-b-need">${head(count)}${body}</div>`;
+  /* No journal: its questions are kept in the memory this shop does not
+     have yet -- said, never an empty space where the card was. */
+  if(!c.notes) return card('', `<p class="mgr-b-unr">${mgrBriefIcon('warn')}<span>Its questions are kept in the Manager’s memory, which this shop does not have yet — the note above names the one database update that gives it one.</span></p>`);
   const st = c.st;
-  if(!st) return '';
-  if(st.error) return `<div class="ow-pan mgr-b-need">${head(null)}<p class="mgr-b-unr">${mgrBriefIcon('warn')}<span>The questions could not be read — ${esc(st.error)}</span></p></div>`;
+  if(!st) return card('', '<p class="ow-empty">Reading the questions…</p>');
+  if(st.error) return card('', `<p class="mgr-b-unr">${mgrBriefIcon('warn')}<span>The questions could not be read — ${esc(st.error)}</span></p>`);
   let m;
   try {
     const read = (typeof mgrAskRead !== 'undefined' && mgrAskRead && mgrAskRead.gen === c.gen) ? mgrAskRead : null;
@@ -138663,16 +138774,18 @@ function mgrBriefNeedsHTML(){
     m = mgrBriefNeeds(c.openAsks, model.items);
   } catch(e){
     console.error('The Brief could not read what the Manager needs to know', e);
-    return `<div class="ow-pan mgr-b-need">${head(null)}<p class="mgr-b-unr">${mgrBriefIcon('warn')}<span>What it needs to know could not be worked out — ${esc((e && e.message) || 'an unknown error')}</span></p></div>`;
+    return card('', `<p class="mgr-b-unr">${mgrBriefIcon('warn')}<span>What it needs to know could not be worked out — ${esc((e && e.message) || 'an unknown error')}</span></p>`);
   }
+  const count = m.n != null ? `<span class="mgr-b-fig">${m.n}</span> · only you can find out`
+    : m.failed ? (m.atLeast ? `at least <span class="mgr-b-fig">${m.atLeast}</span> · ` : '') + 'the count could not be read'
+    : (m.atLeast ? `at least <span class="mgr-b-fig">${m.atLeast}</span> · ` : '') + 'still counting';
   const t = m.top;
   const stake = t && t.stake ? (typeof mgrAskStakeWords === 'function' ? mgrAskStakeWords(t.stake) : mgrShortUGX(t.stake.amount)) : '';
-  return `<div class="ow-pan mgr-b-need">${head(m.n)}
+  return card(count, `
     ${t ? `<div class="mgr-b-nq"><span class="mgr-b-nqh">${mgrBriefDeptChip(t.dept, false)}${stake ? ` <span class="mgr-b-sm"><span class="mgr-b-fig">${esc(mgrShortUGX(t.stake.amount))}</span> ${esc(stake.slice(mgrShortUGX(t.stake.amount).length).replace(/^,?\s*/, ''))}</span>` : ''}</span>
       <b class="mgr-b-nqt">${esc(t.question)}</b>${t.where ? `<span class="mgr-b-sm">${esc(t.where)}</span>` : ''}</div>`
-      : '<p class="ow-empty">Nothing it can’t read in your books right now.</p>'}
-    <button type="button" class="mgr-b-more" data-mgrgo="ask">${m.n > 1 ? 'All ' + m.n + ' questions' : m.n === 1 ? 'Answer it' : 'Open It needs to know'} →</button>
-  </div>`;
+      : m.n === 0 ? '<p class="ow-empty">Nothing it can’t read in your books right now.</p>' : ''}
+    <button type="button" class="mgr-b-more" data-mgrgo="ask">${m.n > 1 ? 'All ' + m.n + ' questions' : m.n === 1 ? 'Answer it' : 'Open It needs to know'} →</button>`);
 }
 
 /* ==== WHAT IT HAS LEARNED (A8.*) ===================================

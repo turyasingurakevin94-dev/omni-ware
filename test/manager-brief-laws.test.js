@@ -117,7 +117,7 @@ const all = (re) => { const out = []; let m; const g = new RegExp(re.source, 'g'
     ...['mgrBriefPaintChains', 'mgrBriefPaintForesight', 'mgrBriefPaintMemory', 'mgrBriefPaintBlind', 'mgrBriefUnread', 'mgrBriefUnreadHTML',
       'mgrBriefForesightPick', 'mgrBriefNext7', 'mgrBriefLampHTML', 'mgrBriefDeptChip', 'mgrBriefPipsHTML', 'mgrBriefDoor', 'mgrBriefWireGo', 'mgrBriefChainDepts',
       'mgrBriefDay', 'mgrShortUGX', 'mgrDept', 'anShiftDate', 'waWeekday'].map(fn),
-    ...['MGR_BRIEF_NEEDS', 'MGR_BRIEF_ICON', 'mgrBriefIcon', 'MGR_BRIEF_DOORS', 'MGR_BRIEF_FS_ORDER', 'MGR_WEEKDAYS', 'MGR_DEPTS',
+    ...['MGR_BRIEF_NEEDS', 'MGR_BRIEF_ICON', 'mgrBriefIcon', 'MGR_BRIEF_DOORS', 'MGR_BRIEF_FS_ORDER', 'MGR_BRIEF_WEEK_KEEP', 'MGR_WEEKDAYS', 'MGR_DEPTS',
       'MGR_WHOLE_SHOP', 'MGR_BRIEF_MONTHS'].map(decl),
   ], {
     document, mgrBriefModel: M, mgrBriefDept: 'all', mgrBriefChain: null, mgrBriefRows: [], mgrBriefMoreFore: false, mgrBriefFore30: false, mgrBriefMoreBlind: false,

@@ -37,15 +37,19 @@ const TODAY = '2026-10-07';
 
 const S = compileScope([
   ...['mgrBriefGoalCheckpoints', 'mgrBriefNext7', 'mgrBriefForesightPick', 'mgrBriefForesight', 'mgrBriefPhoneCells', 'mgrBriefNeeds',
-    'mgrBriefThumbPick', 'mgrBriefOwn', 'mgrBriefDay', 'mgrTgFig', 'mgrShortUGX', 'anShiftDate', 'waWeekday'].map(fn),
-  ...['MGR_BRIEF_METRIC_DEPT', 'MGR_BRIEF_PHONE_CELLS', 'MGR_BRIEF_FS_ORDER', 'MGR_BRIEF_MONTHS', 'MGR_WEEKDAYS'].map(decl),
+    'mgrBriefThumbPick', 'mgrBriefThumbMove', 'mgrBriefOwn', 'mgrBriefDay', 'mgrTgFig', 'mgrShortUGX', 'anShiftDate', 'waWeekday'].map(fn),
+  ...['MGR_BRIEF_METRIC_DEPT', 'MGR_BRIEF_WEEK_KEEP', 'MGR_BRIEF_PHONE_CELLS', 'MGR_BRIEF_FS_ORDER', 'MGR_BRIEF_MONTHS', 'MGR_WEEKDAYS'].map(decl),
 ], {
   todayISO: () => TODAY,
   fmtShortDate: (d) => {
     const m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return Number(d.slice(8, 10)) + ' ' + m[Number(d.slice(5, 7)) - 1] + ' ' + d.slice(0, 4); },
+  /* A move is open unless marked done or not now; two kinds have doors. */
+  deriveMoveOutcome: (r) => ({ status: r.status === 'done' ? 'done' : r.status === 'skipped' ? 'skipped' : 'open' }),
+  MANAGER_DOORS: { queue: { tab: 'queue', label: 'Open the money queue' }, buy: { tab: 'buy', label: 'Open What to buy' } },
   Date, Math, Number, String, Map, Set, Array, Object, JSON,
-}, ['mgrBriefGoalCheckpoints', 'mgrBriefNext7', 'mgrBriefForesight', 'mgrBriefPhoneCells', 'mgrBriefNeeds', 'mgrBriefThumbPick', 'mgrTgFig']);
+}, ['mgrBriefGoalCheckpoints', 'mgrBriefNext7', 'mgrBriefForesight', 'mgrBriefForesightPick', 'mgrBriefPhoneCells', 'mgrBriefNeeds',
+  'mgrBriefThumbPick', 'mgrBriefThumbMove', 'mgrTgFig']);
 
 /* ---------- 1. a goal's dates, in its own unit (A6.8) ------------------ */
 {
@@ -77,6 +81,13 @@ const S = compileScope([
     ['2026-10-12', 'Gross margin', '10.6%', '10.5%', false, 'sales'],
     ['2026-10-09', 'Debtor days', '38 days', 'not known', true, 'finance'],
   ], 'the next checkpoint and the end inside 30 days, each in its own unit, and "not known" for a figure the books cannot give');
+  /* Saturday load time (Q36) is the Store's; a measure the table does
+     not name is the whole shop's (null), never Finance's by default. */
+  const more = S.mgrBriefGoalCheckpoints([
+    { metric: 'sat_load', label: 'Saturday load time', unit: 'min', to: '2026-10-10', aim: 45, actual: 62, finished: false },
+    { metric: 'a_new_measure', label: 'Something new', unit: 'count', to: '2026-10-10', aim: 3, actual: 1, finished: false },
+  ], TODAY, S.mgrTgFig);
+  eq(more.map((x) => x.dept), ['store', null], 'a load-time goal carries the Store; an unnamed measure carries no department');
   /* Through the foresight: the canvas's words, and no raw number. */
   const fs = S.mgrBriefForesight({ today: TODAY, targets: got });
   const lines = fs.filter((x) => /goal/.test(x.text)).map((x) => x.text + ' | ' + x.tag);
@@ -107,6 +118,26 @@ const S = compileScope([
   t.check(wk.length === 6 && wk.some((x) => x.lowest) && wk.some((x) => x.kind === 'risk') && wk.filter((x) => x.kind === 'deadline').length === 2,
     'capped at six, chosen as the 30 days chooses: the lowest day, the risk and both deadlines kept (got ' + wk.map((x) => x.date + ':' + x.kind).join(', ') + ')');
   t.check(wk.every((x, i) => i === 0 || wk[i - 1].date <= x.date), 'and put back in date order');
+  /* A week full of risks and deadlines still shows money coming in and
+     a known payment going out. Nine in the week, a cap of six:
+       risks 7, 10, 12; deadlines 8, 9, 11; expected 10 (Kato 1.8m);
+       a known bill on 8 and a known wage on 13.
+     Ranked alone, the three risks and three deadlines fill all six.
+     Kept: the first expected (10) and the first known wage/rent/loan/bill
+     by date (the bill, 8). Four left for the ranking: the risks 7, 10,
+     12 and the earliest deadline, 8. Dropped: the deadlines 9 and 11,
+     and the wage on 13. */
+  const full = [it('2026-10-07', 'risk'), it('2026-10-10', 'risk'), it('2026-10-12', 'risk'),
+    it('2026-10-08', 'deadline'), it('2026-10-09', 'deadline'), it('2026-10-11', 'deadline'),
+    it('2026-10-10', 'expected', { amount: 1800000 }), it('2026-10-08', 'known', { pay: 'bill', amount: 1 }),
+    it('2026-10-13', 'known', { pay: 'wage', amount: 1 })];
+  eq(S.mgrBriefNext7(full, 6, TODAY).map((x) => x.date.slice(8) + ':' + x.kind),
+    ['07:risk', '08:deadline', '08:known', '10:risk', '10:expected', '12:risk'],
+    'the first money expected in and the first known payment keep a slot, the rest by rank, in date order');
+  /* The desk's 30 days is picked as before: no slot is kept there. */
+  eq(S.mgrBriefForesightPick(full, 6, TODAY).map((x) => x.date.slice(8) + ':' + x.kind),
+    ['07:risk', '08:deadline', '09:deadline', '10:risk', '11:deadline', '12:risk'],
+    'the 30 days\' own pick keeps no slot (its cap of 12 has room)');
 }
 
 /* ---------- 3. the phone's four readouts -------------------------------- */
@@ -130,25 +161,62 @@ const S = compileScope([
   t.check(m.n === 8, 'the journal\'s open count plus the open supplier terms: 7 + 1 = 8 (got ' + m.n + ')');
   eq(m.top && [m.top.question, m.top.dept, m.top.stake.amount, m.top.where],
     ['What is Kasubi charging for G28 this week?', 'sales', 525000, 'At Kasubi’s counter'], 'the first open one, as the section orders them');
-  /* Before the journal's count lands: the open journal questions on the
-     list (1) plus the terms (1) = 2. */
-  t.check(S.mgrBriefNeeds(null, items).n === 2, 'before the count lands, what the list holds: 1 + 1 = 2');
+  /* WAS: before the count landed, or when it failed, the card stated
+     what the list held (1 + 1 = 2) as THE count, where the nav states
+     none. NOW: no count is stated as the count -- "at least 2" (the
+     list's own 1 + 1), and a count that could not be read says so. */
+  const pending = S.mgrBriefNeeds(undefined, items);
+  t.check(pending.n === null && pending.atLeast === 2 && pending.failed === false && pending.top.dept === 'sales',
+    'before the count lands: no count, at least what the list holds (1 + 1 = 2), and the first question still shown');
+  const failed = S.mgrBriefNeeds(null, items);
+  t.check(failed.n === null && failed.atLeast === 2 && failed.failed === true,
+    'a count that could not be read (null, as managerOpenAskCount answers a failure): no count, and it says it failed');
+  /* The card itself: never gone without a word. */
+  const card = (ctx) => compileScope([fn('mgrBriefNeedsHTML'), fn('mgrBriefNeeds')], {
+    mgrBriefCtx: ctx, mgrBriefIcon: () => '', esc: (x) => String(x), mgrBriefDeptChip: (d) => '[' + d + ']', mgrShortUGX: (v) => String(v),
+    mgrAskModel: () => ({ items }), mgrAskRead: null, Number, Math, String, Array, Object, console,
+  }, ['mgrBriefNeedsHTML']).mgrBriefNeedsHTML().replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+  t.check(/It needs to know/.test(card({ notes: false })) && /does not have yet/.test(card({ notes: false })),
+    'no journal: the card stays and says its questions are kept in a memory this shop does not have yet');
+  t.check(/could not be read — the journal is down/.test(card({ notes: true, st: { error: 'the journal is down' } })),
+    'a journal that could not be read: the card names the failure');
+  t.check(/at least 2 · the count could not be read/.test(card({ notes: true, st: { questions: [] }, openAsks: null })),
+    'a failed count: "at least 2", and the count named as unread');
+  t.check(/at least 2 · still counting/.test(card({ notes: true, st: { questions: [] } })), 'a count not yet landed: "still counting"');
+  t.check(/8 · only you can find out/.test(card({ notes: true, st: { questions: [] }, openAsks: 7 })), 'the landed count: 7 + 1 = 8');
   const none = S.mgrBriefNeeds(0, []);
   t.check(none.n === 0 && none.top === null, 'nothing open: none, and no question invented');
 }
 
 /* ---------- 5. the thumb bar carries the panel's one accent -------------- */
 {
-  const door = { num: '01', dept: 'Finance', sure: 'sure 4/5 from 4 chases', title: 'Collect Kato’s 2.4m first', label: 'Draft the chase' };
+  const door = { num: '01', dept: 'Finance', pips: 4, basis: 'from 4 chases', title: 'Collect Kato’s 2.4m first', label: 'Draft the chase', mid: 'm1' };
   const d = S.mgrBriefThumbPick({ door });
   eq(d && [d.kind, d.small, d.title, d.label], ['door', '01 · Finance · sure 4/5 from 4 chases', 'Collect Kato’s 2.4m first', 'Draft the chase'],
     'the open decision: its number, department and how sure, its title, and its door');
   const h = S.mgrBriefThumbPick({ hold: true });
   t.check(h && h.kind === 'hold' && h.label === 'Hold the meeting', 'no meeting held: Hold the meeting');
+  t.check(S.mgrBriefThumbPick({ hold: true, known: false }) === null,
+    'a journal that is missing or could not be read cannot say no meeting is held: the bar does not promote one');
+  t.check(d.mid === 'm1' && S.mgrBriefThumbPick({ door: { ...door, pips: null } }).small === '01 · Finance',
+    'the move it carries is named by id; no confidence stated, none said');
   t.check(S.mgrBriefThumbPick({ finish: true, hold: true }).kind === 'finish', 'a meeting that stopped short: finish it, never a second one');
   t.check(S.mgrBriefThumbPick({ hold: true, running: true }) === null, 'a meeting in progress: nothing to carry');
   t.check(S.mgrBriefThumbPick({ door, stale: true }) === null, 'a last-known panel: nothing to carry -- its buttons are not wired');
   t.check(S.mgrBriefThumbPick({}) === null && S.mgrBriefThumbPick({ door: { title: 'x' } }) === null, 'a decision with no door: no bar');
+
+  /* WHICH MOVE IT CARRIES: the open row's when that row has a door;
+     else the first move still open, in the meeting's order, that has a
+     door and is drawn -- so a plan with a door left always gives the
+     screen its one action. */
+  const rows = [{ id: 'a', status: 'done', body: { door: 'queue' } }, { id: 'b', body: {} },
+    { id: 'c', body: { door: 'buy' } }, { id: 'd', body: { door: 'queue' } }];
+  const pickId = (...a) => { const r = S.mgrBriefThumbMove(...a); return r && [r.row.id, r.n]; };
+  eq(pickId(rows, 'd', true), ['d', 4], 'the open row with a door: that row, numbered in the meeting\'s order');
+  eq(pickId(rows, null, false), ['c', 3], 'no row open: the first open move with a door (a is done, b has none)');
+  eq(pickId(rows, 'b', false), ['c', 3], 'the open row has no door: the first open move with one');
+  eq(pickId(rows, null, false, (id) => id !== 'c'), ['d', 4], 'a row the panel does not draw (another department) is passed over');
+  t.check(S.mgrBriefThumbMove([{ id: 'a', status: 'done', body: { door: 'queue' } }], null, false) === null, 'nothing open with a door: nothing');
 
   /* NOTHING SENDS ITSELF: the bar never runs a meeting, sends to the
      assistant or marks a move -- a tap on it clicks the panel's own
@@ -162,6 +230,10 @@ const S = compileScope([
   /* The panel's copy steps aside only while the bar carries it. */
   t.check(/\.mgr-bed-b\.mgr-b-has-thumb #managerPlanWrap #mgrRunBtn\.btn-accent/.test(src) && /\.mgr-bed-b\.mgr-b-has-thumb \.mgr-b-dc\.mgr-b-x \.mgr-door/.test(src),
     'one accent on the phone: the panel\'s copy is hidden only while the bar shows');
+  /* The header's ask field keeps its go square navy on the Brief, as the
+     canvas draws it, so the bar's is the only oxide control on screen. */
+  t.check(/#tab-manager\.mgr-on-brief #mgrTalkBtn \.mgr-talk-go\{background:var\(--ow-steel-950\);\}/.test(src),
+    'the ask field\'s go square is navy on the Brief');
 }
 
 /* ---------- 6. the teaser: the Simulator's own count, "not known" ------- */
@@ -180,9 +252,15 @@ const S = compileScope([
   make({ walk: null, tz: { profitMonth: { lo: 100000, hi: 100000 }, lowest: { balance: -1060000, date: '2026-11-05' },
     shocksHeld: 0, shocksOf: 3, plan: 'my plan' } }, [{}, {}]).mgrBriefPaintTeaser();
   const tz = els.managerSimTeaserWrap.innerHTML;
-  t.check(/0<span class="of">of<\/span>3/.test(tz) && /at or above the floor, on both lines/.test(tz) && /3 shocks\. My plan, played out:/.test(tz)
-    && /Holds under shocks/.test(tz) && /2 decisions/.test(tz),
-    'the Simulator\'s own count (0 of 3), its own label and what holding means');
+  t.check(/0<span class="of">of<\/span>3/.test(tz) && /A shock holds when cash stays at or above the floor: the committed line, then the expected band where there is one\./.test(tz)
+    && /3 shocks\. My plan, played out:/.test(tz) && /Holds under shocks/.test(tz) && /2 decisions/.test(tz),
+    'the Simulator\'s own count (0 of 3), its own label and what holding means (mgrSimJudge: committed, then expected where there is one)');
+  t.check(/A shock that could not be tested counts as not held\./.test(tz),
+    'while the Simulator hands over no untestable count, the teaser says such a shock counts as not held');
+  make({ walk: null, tz: { profitMonth: null, lowest: null, shocksHeld: 1, shocksOf: 3, shocksUntestable: 2, plan: 'nothing changes' } }).mgrBriefPaintTeaser();
+  const ut = els.managerSimTeaserWrap.innerHTML;
+  t.check(/1<span class="of">of<\/span>3/.test(ut) && /<span class="mgr-b-fig">2<\/span> not testable/.test(ut) && !/counts as not held/.test(ut),
+    'given the count: 1 of 3 and "2 not testable", as the Simulator\'s own tile says it');
 }
 
 process.exit(t.done() ? 1 : 0);
