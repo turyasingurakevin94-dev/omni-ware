@@ -1165,8 +1165,11 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
     'statements': {
       retired: ['page-head', 'panel', 'st-bar', 'st-period', 'st-to', 'st-two', 'st-vital',
                 'st-vital-label', 'st-vital-note', 'rost-period', 'rost-per', 'empty'],
+      /* No ow-f-sel: what the period is measured against is two segmented
+         buttons now (the period before / the same dates last year), read
+         at a glance, rather than a dropdown that hid the other choice. */
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-ph-help', 'ow-ph-sp',
-             'ow-seg', 'ow-seg-b', 'ow-f', 'ow-f-l', 'ow-f-in', 'ow-f-v', 'ow-f-sel'],
+             'ow-seg', 'ow-seg-b', 'ow-f', 'ow-f-l', 'ow-f-in', 'ow-f-v'],
       /* THE PERFORMANCE HUB. The shop asked for the canvas design, line
          for line: eight views (Overview, profit and loss, break-even,
          cash flow, balance sheet, ratios, drivers, what if), each a

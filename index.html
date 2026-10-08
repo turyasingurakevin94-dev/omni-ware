@@ -13923,14 +13923,124 @@
   .sh-wi-save{display:flex;align-items:center;gap:8px;padding:12px 16px;}
   .sh-tiles-4{grid-template-columns:repeat(auto-fit,minmax(170px,1fr));}
 
-  /* THE PERIOD STEPPER AND THE TAB BAR */
-  .sh-per-step{display:flex;align-items:center;border:1px solid #E6E3DD;border-radius:9px;background:#FFFFFF;height:34px;}
-  .sh-per-step > button{height:32px;border:0;background:transparent;color:#5F6980;cursor:pointer;font:inherit;}
-  .sh-per-arrow{width:34px;display:flex;align-items:center;justify-content:center;}
-  .sh-per-arrow svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
-  .sh-per-lbl{padding:0 6px;font-weight:600;color:#1C2233 !important;white-space:nowrap;}
-  .sh-per-lbl:hover{color:#1A5A8A !important;}
-  .st-dates[hidden]{display:none;}
+  /* THE PERIOD CARD. The range and how to move it; the calendar that picks
+     one with two taps; and the year, drawn, with the chosen months and the
+     ones they are measured against marked. */
+  .sh-ph-acts{display:flex;align-items:center;gap:8px;}
+  .sh-ph-print{display:inline-flex;align-items:center;gap:6px;}
+  .sh-ph-print svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .sh-pc{position:relative;z-index:15;background:#FFFFFF;border:1px solid #E6E3DD;border-radius:12px;margin-bottom:16px;}
+  .sh-pc-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px;padding:12px 16px;}
+  .sh-pc-row .ow-seg-b{padding:0 10px;}
+  .sh-pc-pick{display:flex;align-items:center;gap:6px;position:relative;}
+  .sh-pc-nav{width:34px;height:40px;padding:0;border:1px solid #E6E3DD;border-radius:9px;background:#FFFFFF;color:#1C2233;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .sh-pc-nav:disabled{color:#C9C4BA;cursor:default;}
+  .sh-pc-nav svg,.sh-cal-nav svg,.sh-pc-cal,.sh-pc-chev{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .sh-pc-rng{height:40px;min-width:216px;padding:0 10px 0 12px;border:1px solid #E6E3DD;border-radius:9px;background:#FFFFFF;color:#1C2233;cursor:pointer;display:flex;align-items:center;gap:10px;text-align:left;font:inherit;}
+  .sh-pc-rng:hover{border-color:#C9C4BA;}
+  .sh-pc-rng.sh-on{border-color:#16203C;outline:3px solid #DCEAF8;outline-offset:0;}
+  .sh-pc-cal{width:18px;height:18px;color:#5F6980;}
+  .sh-pc-chev{color:#5F6980;transition:transform .15s;}
+  .sh-pc-rng.sh-on .sh-pc-chev{transform:rotate(180deg);}
+  .sh-pc-rt{display:flex;flex-direction:column;align-items:flex-start;min-width:0;flex:1 1 auto;line-height:1.3;}
+  .sh-pc-rt b{font-size:14px;font-weight:600;white-space:nowrap;}
+  .sh-pc-rt span{font-size:11px;color:#767F91;white-space:nowrap;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;letter-spacing:-.02em;}
+  .sh-pc-div{width:1px;height:28px;background:#EFECE6;}
+  .sh-pc-vs{display:flex;align-items:center;gap:8px;}
+  .sh-pc-vs-l{font-size:12px;color:#767F91;}
+  .sh-pc-year{border-top:1px solid #EFECE6;padding:10px 16px 12px;display:flex;align-items:flex-end;gap:24px;flex-wrap:wrap;}
+  .sh-ys-l{flex:1 1 520px;display:flex;flex-direction:column;gap:6px;min-width:0;}
+  .sh-ys{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px;align-items:end;height:58px;}
+  .sh-ys-b{height:58px;padding:0;border:0;background:transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;min-width:0;font:inherit;}
+  .sh-ys-b i{display:block;width:100%;max-width:46px;border-radius:3px;background:#E0DCD4;}
+  .sh-ys-b span{font-size:11px;line-height:1;color:#767F91;}
+  .sh-ys-b:hover i{background:#C9C4BA;}
+  .sh-ys-b.sh-ys-on i{background:#16203C;}
+  .sh-ys-b.sh-ys-on span{color:#1C2233;font-weight:700;}
+  .sh-ys-b.sh-ys-cmp i{background:#8DB3D6;}
+  .sh-ys-k{display:grid;grid-template-columns:auto auto;gap:4px 16px;align-items:baseline;flex:none;}
+  .sh-ys-k > :nth-child(even){justify-self:end;text-align:right;}
+  .sh-ys-k b{font-size:16px;font-weight:600;}
+  .sh-ys-kl{display:flex;align-items:center;gap:6px;font-size:12px;color:#5F6980;}
+  .sh-k-on,.sh-k-cmp,.sh-k-cmpb,.sh-k-bar{display:inline-block;flex:none;}
+  .sh-k-on,.sh-k-cmpb,.sh-k-cmp{width:10px;height:10px;border-radius:3px;box-sizing:border-box;}
+  .sh-k-on{background:#16203C;}
+  .sh-k-cmpb{background:#8DB3D6;}
+  .sh-k-cmp{background:#DCEAF8;border:1px solid #8DB3D6;}
+  .sh-k-bar{width:12px;height:3px;border-radius:2px;background:#8DB3D6;}
+  .sh-cal{position:absolute;top:48px;left:0;z-index:30;width:720px;max-width:calc(100vw - 48px);background:#FFFFFF;border:1px solid #E6E3DD;border-radius:12px;box-shadow:var(--ow-lift);overflow:hidden;}
+  .sh-cal[hidden]{display:none;}
+  .sh-cal-in{display:grid;grid-template-columns:176px minmax(0,1fr);}
+  .sh-cal-pre{border-right:1px solid #EFECE6;padding:12px 10px;display:flex;flex-direction:column;gap:2px;background:#FCFBF9;}
+  .sh-cal-pre-h{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#767F91;padding:0 10px 6px;}
+  .sh-cal-pre button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 10px;border:0;border-radius:8px;text-align:left;cursor:pointer;font:inherit;font-size:13px;font-weight:500;background:transparent;color:#1C2233;}
+  .sh-cal-pre button:hover{background:#EFECE6;}
+  .sh-cal-pre button .sh-fig{font-size:11px;font-weight:400;color:#767F91;}
+  .sh-cal-pre button.sh-on{background:#16203C;color:#FFFFFF;font-weight:600;}
+  .sh-cal-pre button.sh-on .sh-fig{color:#C5CDDF;}
+  .sh-cal-main{padding:12px 16px;display:flex;flex-direction:column;gap:10px;min-width:0;}
+  .sh-cal-ms{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  .sh-cal-m{display:flex;flex-direction:column;gap:6px;min-width:0;}
+  .sh-cal-mh{display:flex;align-items:center;gap:8px;height:32px;}
+  .sh-cal-mh b{flex:1 1 auto;text-align:center;font-size:14px;font-weight:600;white-space:nowrap;}
+  .sh-cal-tot{font-size:11px;color:#767F91;}
+  .sh-cal-nav{width:32px;height:32px;padding:0;border:1px solid #E6E3DD;border-radius:9px;background:#FFFFFF;color:#1C2233;display:inline-flex;align-items:center;justify-content:center;flex:none;cursor:pointer;}
+  .sh-cal-nav:disabled{color:#C9C4BA;cursor:default;}
+  .sh-cal-m:first-child .sh-cal-next,.sh-cal-m + .sh-cal-m .sh-cal-prev{display:none;}
+  .sh-cal-g{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));row-gap:2px;text-align:center;}
+  .sh-cal-w{font-size:11px;font-weight:600;color:#767F91;height:22px;line-height:22px;}
+  .sh-cal-d{height:38px;padding:0;border:0;background:transparent;color:#1C2233;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:13px;}
+  .sh-cal-d i{display:block;height:3px;border-radius:2px;background:#8DB3D6;}
+  .sh-cal-d:hover{background:#F7F5F2;border-radius:8px;}
+  .sh-cal-d:disabled{opacity:.35;cursor:default;}
+  .sh-cal-blank{visibility:hidden;}
+  .sh-cal-d.sh-cal-cmp{background:#EAF2FA;}
+  .sh-cal-d.sh-cal-span,.sh-cal-d.sh-cal-span:hover{background:#E6E3DD;border-radius:0;}
+  .sh-cal-d.sh-cal-edge,.sh-cal-d.sh-cal-edge:hover{background:#16203C;color:#FFFFFF;border-radius:8px;}
+  .sh-cal-d.sh-cal-edge i{background:#FFFFFF;}
+  .sh-cal-d.sh-cal-now{outline:1.5px solid #16203C;outline-offset:-2px;border-radius:8px;}
+  .sh-cal-d.sh-cal-anchor{outline:2px solid #C93A30;outline-offset:-2px;}
+  .sh-cal-f{display:flex;align-items:center;gap:14px;border-top:1px solid #EFECE6;padding-top:10px;flex-wrap:wrap;}
+  .sh-cal-sum{display:flex;flex-direction:column;gap:2px;flex:1 1 240px;min-width:0;font-size:13px;color:#767F91;}
+  .sh-cal-sum b{color:#1C2233;font-weight:600;}
+  .sh-cal-hint{font-size:12px;color:#5F6980;}
+  .sh-cal-key{display:flex;gap:10px;font-size:11px;color:#767F91;align-items:center;}
+  .sh-cal-key > span{display:flex;align-items:center;gap:5px;}
+  .sh-cal-type{display:flex;align-items:flex-end;gap:10px;padding:10px 16px 12px 192px;border-top:1px solid #EFECE6;background:#FCFBF9;flex-wrap:wrap;}
+  .sh-cal-type-l{font-size:12px;color:#767F91;padding-bottom:8px;}
+  @media (max-width:820px){
+    .sh-ph-acts{display:none;}
+    .sh-pc{display:none;margin-bottom:12px;}
+    #tab-statements.st-per-open .sh-pc{display:block;}
+    .sh-pc-row{padding:12px;}
+    .sh-pc-pick{width:100%;flex-wrap:wrap;}
+    .sh-pc-rng{flex:1 1 0;min-width:0;height:var(--ow-tap);}
+    .sh-pc-nav{width:var(--ow-tap);height:var(--ow-tap);}
+    .sh-pc-div{display:none;}
+    .sh-pc-row .ow-seg{width:100%;}
+    .sh-pc-row .ow-seg-b{flex:1 1 0;min-width:0;padding:0 4px;justify-content:center;text-align:center;min-height:var(--ow-tap);}
+    .sh-pc-vs{width:100%;flex-wrap:wrap;}
+    .sh-cal{position:static;width:100%;max-width:none;flex:1 1 100%;margin-top:4px;}
+    .sh-cal-in{grid-template-columns:1fr;}
+    .sh-cal-pre{flex-direction:row;flex-wrap:wrap;gap:6px;border-right:0;border-bottom:1px solid #EFECE6;}
+    .sh-cal-pre-h{width:100%;padding:0 0 2px;}
+    .sh-cal-pre button{border:1px solid #E6E3DD;border-radius:999px;padding:6px 12px;min-height:36px;}
+    .sh-cal-pre button .sh-fig{display:none;}
+    .sh-cal-ms{grid-template-columns:1fr;}
+    .sh-cal-m:first-child{display:none;}
+    .sh-cal-m + .sh-cal-m .sh-cal-prev{display:inline-flex;}
+    .sh-cal-nav{width:var(--ow-tap);height:var(--ow-tap);}
+    .sh-cal-d{height:44px;}
+    .sh-cal-key{display:none;}
+    .sh-cal-f .btn{width:100%;min-height:var(--ow-tap);}
+    .sh-cal-type{padding:10px 12px;}
+    .sh-pc-year{padding:10px 12px;gap:12px;}
+    .sh-ys{gap:3px;}
+    .sh-ys-l{flex-basis:100%;}
+    .sh-ys-k{width:100%;}
+  }
+
+  /* THE TAB BAR */
   .sh-trust{display:flex;align-items:center;gap:8px;height:40px;padding:0 4px;border:0;background:transparent;color:#5F6980;font:inherit;font-size:12px;cursor:pointer;white-space:nowrap;}
   .sh-trust-d{display:flex;gap:3px;}
   .sh-trust-d i{width:7px;height:7px;border-radius:50%;}
@@ -13943,9 +14053,6 @@
   #st_tabs .st-tab-n.bad{color:#8E2A22;}
   #st_tabs .st-tab.active .st-tab-n{background:#16203C;color:#FFFFFF;}
   .st-docs{align-items:center;}
-  .st-per .st-f-cmp{flex-direction:row;align-items:center;gap:6px;}
-  .st-per .st-f-cmp > .ow-f-l{margin:0;}
-  .st-per{align-items:center;}
   .sh-glance-h .st-verdict{display:block;background:none;border:0;border-radius:0;padding:0;margin:0;}
   .sh-c > .sh-chip{align-self:center;}
   /* The side view sits on the drill panel's own classes (they carry the
@@ -37724,41 +37831,56 @@
             <svg class="st-per-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6"></path><path d="M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"></path><path d="M6 14h12v7H6z"></path></svg>
           </button>
         </div>
-        <!-- The period governs every view, so it belongs to the page: a
-             stepper that walks it a period at a time (its name opens two
-             dates for any other range), the four lengths it is usually
-             read over, what it is measured against, and the two things
-             that act on what is chosen. -->
-        <div class="st-per" id="st_per">
-          <div class="sh-per-step">
-            <button type="button" class="sh-per-arrow" id="st_prev" aria-label="The period before"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
-            <button type="button" class="sh-per-lbl" id="st_per_lbl" aria-expanded="false" aria-controls="st_dates" title="Choose your own dates">This month</button>
-            <button type="button" class="sh-per-arrow" id="st_next" aria-label="The period after"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <!-- The two things that act on the period, beside the name. -->
+        <div class="sh-ph-acts">
+          <button type="button" class="btn btn-ghost ow-sm sh-ph-print" id="st_print" title="Print the view on screen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6"></path><path d="M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"></path><path d="M6 14h12v7H6z"></path></svg>Print</button>
+          <button type="button" class="btn btn-accent ow-sm" id="st_print_all" title="Print all five statements, one per page, checks included">Prepare the set for the bank</button>
+        </div>
+      </div>
+
+      <!-- THE PERIOD. One card: the chosen range and how to move it on the
+           first row -- its name opens a calendar where two taps pick any
+           range, as on the Day statement -- and below, where it sits in the
+           year and what it is measured against, drawn from the books. -->
+      <section class="sh-pc" id="st_per" aria-label="The period on screen">
+        <div class="sh-pc-row">
+          <div class="sh-pc-pick">
+            <button type="button" class="sh-pc-nav" id="st_prev" aria-label="The period before"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+            <button type="button" class="sh-pc-rng" id="st_per_lbl" aria-haspopup="dialog" aria-expanded="false" aria-controls="st_cal">
+              <svg class="sh-pc-cal" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg>
+              <span class="sh-pc-rt"><b id="st_rng_t">This month</b><span id="st_rng_s"></span></span>
+              <svg class="sh-pc-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+            </button>
+            <button type="button" class="sh-pc-nav" id="st_next" aria-label="The period after"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+            <div class="sh-cal" id="st_cal" role="dialog" aria-label="Pick a period" hidden>
+              <div id="st_cal_body"></div>
+              <!-- The same two dates by keyboard, for any range the taps
+                   above would take too long to reach. -->
+              <div class="sh-cal-type" id="st_dates">
+                <span class="sh-cal-type-l">Or type the dates</span>
+                <label class="ow-f st-f"><span class="ow-f-l">From</span>
+                  <span class="ow-f-in"><input type="date" class="ow-f-v" id="st_from"></span></label>
+                <label class="ow-f st-f"><span class="ow-f-l">To</span>
+                  <span class="ow-f-in"><input type="date" class="ow-f-v" id="st_to"></span></label>
+              </div>
+            </div>
           </div>
+          <span class="sh-pc-div" aria-hidden="true"></span>
           <div class="ow-seg" id="st_presets" role="group" aria-label="Length of period">
             <button type="button" class="ow-seg-b st-preset" data-preset="month">Month</button>
             <button type="button" class="ow-seg-b st-preset" data-preset="quarter">Quarter</button>
             <button type="button" class="ow-seg-b st-preset" data-preset="year">Year to date</button>
             <button type="button" class="ow-seg-b st-preset" data-preset="12m">12 months</button>
           </div>
-          <div class="st-dates" id="st_dates" hidden>
-            <label class="ow-f st-f"><span class="ow-f-l">From</span>
-              <span class="ow-f-in"><input type="date" class="ow-f-v" id="st_from"></span></label>
-            <label class="ow-f st-f"><span class="ow-f-l">To</span>
-              <span class="ow-f-in"><input type="date" class="ow-f-v" id="st_to"></span></label>
-          </div>
-          <!-- A div, never a label: a label forwards its click to the
-               select it wraps and shuts the list again. -->
-          <div class="ow-f st-f st-f-cmp"><span class="ow-f-l">vs</span>
-            <span class="ow-f-in"><select class="ow-f-sel" id="st_basis" title="What this period is measured against">
-              <option value="">Compare automatically</option>
-              <option value="lastyear">vs same dates last year</option>
-              <option value="previous">vs the period just before</option>
-            </select></span></div>
-          <button type="button" class="btn btn-ghost ow-sm" id="st_print" title="Print the view on screen">Print</button>
-          <button type="button" class="btn btn-accent ow-sm" id="st_print_all" title="Print all five statements, one per page, checks included">Prepare the set for the bank</button>
+          <span class="sh-pc-div" aria-hidden="true"></span>
+          <div class="sh-pc-vs"><span class="sh-pc-vs-l">Against</span>
+            <div class="ow-seg" id="st_basis" role="group" aria-label="What the period is measured against">
+              <button type="button" class="ow-seg-b sh-basis-b" data-basis="previous">The period before</button>
+              <button type="button" class="ow-seg-b sh-basis-b" data-basis="lastyear">Same dates last year</button>
+            </div></div>
         </div>
-      </div>
+        <div class="sh-pc-year" id="st_year"></div>
+      </section>
 
       <!-- Which view. Eight names on a hairline, each carrying its own
            answer, and at the far end whether the figures can be believed. -->
@@ -126627,8 +126749,12 @@ function renderStatements(){
     body.innerHTML = '<div class="ow-empty"><b>The start of the period is after its end.</b><br>Put the earlier date in From.</div>';
     return;
   }
-  says.textContent = `${SH_TABS.find(t=> t.key === stActiveTab) ? SH_TABS.find(t=> t.key === stActiveTab).label : 'Overview'} · ${stPeriodWords(ctx)} · ${ST_BASES[ctx.basis].toLowerCase()}`;
-  document.getElementById('st_per_lbl').textContent = shPeriodLabel(ctx.from, ctx.to);
+  /* What is on screen, in one line: the view, the period and its length,
+     and what it is measured against -- named, not described. */
+  const viewName = SH_TABS.find(t=> t.key === stActiveTab) ? SH_TABS.find(t=> t.key === stActiveTab).label : 'Overview';
+  const nDays = periodDays(ctx.from, ctx.to);
+  says.innerHTML = `${esc(viewName)} of <b>${esc(shRangeName(ctx.from, ctx.to))}</b> · ${nDays} day${nDays === 1 ? '' : 's'}, against ${esc(ctx.basis === 'lastyear' ? 'the same dates in ' + ctx.prevFrom.slice(0, 4) : shRangeName(ctx.prevFrom, ctx.prevTo))}`;
+  shPeriodCard(ctx);
   document.getElementById('st_next').disabled = ctx.to >= todayISO();
   document.querySelectorAll('#st_tabs .st-tab').forEach(b=>
     b.classList.toggle('active', b.dataset.stab === stActiveTab));
@@ -126643,12 +126769,7 @@ function renderStatements(){
   }
   const lit = document.querySelector('#st_presets .st-preset.ow-on');
   document.getElementById('st_per_sum_t').textContent =
-    `${lit ? lit.textContent.trim() : shPeriodLabel(ctx.from, ctx.to)} · vs ${ctx.basis === 'lastyear' ? 'last year' : 'the period before'}`;
-  const basisEl = document.getElementById('st_basis');
-  basisEl.value = stComparisonBasis;
-  basisEl.title = `Comparing against ${ST_BASES[ctx.basis].toLowerCase()}`;
-  basisEl.querySelector('option[value=""]').textContent =
-    stComparisonBasis ? 'Compare automatically' : `Automatic — ${ST_BASES[ctx.basis].toLowerCase()}`;
+    `${lit ? lit.textContent.trim() : shRangeName(ctx.from, ctx.to)} · vs ${ctx.basis === 'lastyear' ? 'last year' : 'the period before'}`;
   /* The three statements open with an account already beside them, so
      the side view is never an empty box: the first line a reader would
      ask about. Closing it leaves it closed until the view changes. */
@@ -128459,11 +128580,179 @@ document.getElementById('st_body').addEventListener('change', (e)=>{
 });
 document.getElementById('st_prev').addEventListener('click', ()=> shStepPeriod(-1));
 document.getElementById('st_next').addEventListener('click', ()=> shStepPeriod(1));
+/* ---- THE PERIOD CARD ----
+
+   The range on screen, the calendar that picks it, and where it sits in
+   the year. A range is picked on the calendar itself, as on the Day
+   statement: tap a day, then a second day, and everything between them is
+   the period. Every figure on the card is the books' own -- a day's bar is
+   that day's invoiced sales, counted the way the profit and loss counts
+   revenue, and a month's bar is that month's revenue line. */
+let shCalOpen = false, shCalLeft = null, shCalAnchor = null;
+const SH_WK = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+/* Invoiced sales a day, over a window: goods, services and credit, as
+   incomeStatement's revenue adds them. Read once per draw of the calendar. */
+function shDaySales(from, to){
+  const by = {};
+  anInvoicesInRange(from, to).forEach(q=>{
+    const t = anInvoiceTotals(q);
+    const d = String(q.invoicedAt || q.date || '').slice(0, 10);
+    by[d] = (by[d] || 0) + t.sales + t.services + t.credit;
+  });
+  return by;
+}
+function shNiceDay(iso, withYear){
+  return `${+iso.slice(8)} ${periodLabel(iso.slice(0, 7)).slice(0, 3)}${withYear ? ' ' + iso.slice(0, 4) : ''}`;
+}
+function shRangeWords(from, to){
+  return from === to ? shNiceDay(from) : `${shNiceDay(from)} – ${shNiceDay(to)}`;
+}
+/* A period's name a person says, never two raw dates: "September 2026",
+   "Jul – Sep 2026", or "2 – 31 Aug 2026" when it is not whole months. */
+function shRangeName(from, to){
+  const w = shPeriodLabel(from, to);
+  if(!/^\d{4}-\d\d-\d\d/.test(w)) return w;
+  if(from === to) return shNiceDay(from, true);
+  if(from.slice(0, 7) === to.slice(0, 7)) return `${+from.slice(8)} – ${shNiceDay(to, true)}`;
+  return `${shNiceDay(from, from.slice(0, 4) !== to.slice(0, 4))} – ${shNiceDay(to, true)}`;
+}
+/* The calendar's quick picks: fixed to today, not to what is on screen. */
+function shCalPresets(){
+  const today = todayISO(), tp = periodOf(today);
+  const q0 = periodShift(tp, -((+tp.slice(5, 7) - 1) % 3));
+  const capped = (iso)=> iso > today ? today : iso;
+  return [
+    ['This month', tp + '-01', today],
+    ['Last month', periodShift(tp, -1) + '-01', periodEndDate(periodShift(tp, -1))],
+    ['This quarter', q0 + '-01', today],
+    ['Last quarter', periodShift(q0, -3) + '-01', periodEndDate(periodShift(q0, -1))],
+    ['Year to date', tp.slice(0, 4) + '-01-01', today],
+    ['Last 12 months', periodShift(tp, -11) + '-01', capped(periodEndDate(tp))],
+  ];
+}
+function shCalHTML(ctx){
+  const today = todayISO(), from = ctx.from, to = ctx.to;
+  const left = shCalLeft || periodShift(periodOf(to), -1);
+  const right = periodShift(left, 1);
+  const sales = shDaySales(left + '-01', periodEndDate(right));
+  const peak = Math.max(1, ...Object.values(sales));
+  const pf = ctx.prevFrom, pt = ctx.prevTo;
+  const month = (ym, k)=>{
+    const lead = (new Date(ym + '-01T00:00:00Z').getUTCDay() + 6) % 7;
+    const end = periodEndDate(ym), n = +end.slice(8);
+    let cells = '', total = 0;
+    for(let j = 0; j < lead; j++) cells += '<span class="sh-cal-d sh-cal-blank" aria-hidden="true"></span>';
+    for(let dn = 1; dn <= n; dn++){
+      const d = ym + '-' + String(dn).padStart(2, '0');
+      const v = sales[d] || 0; total += v;
+      const future = d > today, on = d >= from && d <= to, edge = d === from || d === to;
+      const cls = edge ? ' sh-cal-edge' : on ? ' sh-cal-span' : d >= pf && d <= pt ? ' sh-cal-cmp' : '';
+      cells += `<button type="button" class="sh-cal-d${cls}${d === today ? ' sh-cal-now' : ''}${shCalAnchor === d ? ' sh-cal-anchor' : ''}" data-sh-cal="${d}"${future ? ' disabled' : ''}
+        aria-pressed="${on}" aria-label="${esc(shNiceDay(d, true) + (v ? ', ' + fmtUGX(Math.round(v)) + ' sold' : ', nothing invoiced'))}"><span>${dn}</span><i style="width:${v && !future ? Math.max(3, Math.round(v / peak * 22)) : 0}px"></i></button>`;
+    }
+    return `<div class="sh-cal-m">
+      <div class="sh-cal-mh">
+        <button type="button" class="sh-cal-nav sh-cal-prev" data-sh-calmon="-1" aria-label="Earlier months"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <b>${esc(periodLabel(ym))}</b><span class="sh-fig sh-cal-tot">${shMil(total)}</span>
+        <button type="button" class="sh-cal-nav sh-cal-next" data-sh-calmon="1"${right >= periodOf(today) ? ' disabled' : ''} aria-label="Later months"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+      </div>
+      <div class="sh-cal-g">${SH_WK.map(w=> `<span class="sh-cal-w">${w}</span>`).join('')}${cells}</div>
+    </div>`;
+  };
+  const presets = shCalPresets();
+  const days = periodDays(from, to);
+  return `<div class="sh-cal-in">
+    <div class="sh-cal-pre"><span class="sh-cal-pre-h">Quick picks</span>${presets.map(([l, f, t], i)=>{ const on = f === from && t === to;
+      return `<button type="button" data-sh-calpre="${i}" class="${on ? 'sh-on' : ''}" aria-pressed="${on}"><span>${esc(l)}</span><span class="sh-fig">${esc(shRangeWords(f, t))}</span></button>`; }).join('')}</div>
+    <div class="sh-cal-main">
+      <div class="sh-cal-ms">${month(left, 0)}${month(right, 1)}</div>
+      <div class="sh-cal-f">
+        <span class="sh-cal-sum"><span><b>${esc(shRangeWords(from, to))}</b> · ${days} day${days === 1 ? '' : 's'} · sales ${esc(shMil(ctx.is.revenue))}</span>
+          <span class="sh-cal-hint">${shCalAnchor ? 'Now tap the last day of the range.' : 'Tap a day, then a second day, for any range — or use a quick pick.'}</span></span>
+        <span class="sh-cal-key"><span><i class="sh-k-on"></i>chosen</span><span><i class="sh-k-cmp"></i>compared with</span><span><i class="sh-k-bar"></i>sales that day</span></span>
+        <button type="button" class="btn btn-primary ow-sm" data-sh-calclose="1">Show ${esc(shRangeName(from, to))}</button>
+      </div>
+    </div>
+  </div>`;
+}
+/* Twelve months of revenue, the chosen months navy and the ones they are
+   measured against sky. A bar is a door: tap a month to put it on screen. */
+function shYearStripHTML(ctx){
+  const M = shModel(ctx);
+  const peak = Math.max(1, ...M.trend.map(m=> m.revenue));
+  const pf = ctx.prevFrom, pt = ctx.prevTo;
+  const bars = M.trend.map(m=>{
+    const sel = m.from <= ctx.to && m.to >= ctx.from, cmp = !sel && m.from <= pt && m.to >= pf;
+    return `<button type="button" class="sh-ys-b${sel ? ' sh-ys-on' : cmp ? ' sh-ys-cmp' : ''}" data-sh-month="${m.period}" title="${esc(m.label + ' · ' + shMil(m.revenue) + ' sold')}" aria-label="${esc(m.label + ', ' + shMil(m.revenue) + ' sold')}" aria-pressed="${sel}">
+      <i style="height:${Math.max(2, Math.round(m.revenue / peak * 36))}px"></i><span>${esc(m.short)}</span></button>`;
+  }).join('');
+  const cur = ctx.is.revenue, was = ctx.prevHasActivity ? ctx.prev.revenue : null;
+  const chg = was ? (cur - was) / Math.abs(was) * 100 : null;
+  return `<div class="sh-ys-l"><span class="sh-eyebrow">Sales by month · tap one to see it</span><div class="sh-ys">${bars}</div></div>
+    <div class="sh-ys-k">
+      <span class="sh-ys-kl"><i class="sh-k-on"></i>On screen</span><b class="sh-fig">${esc(shMil(cur))}</b>
+      <span class="sh-ys-kl"><i class="sh-k-cmpb"></i>${esc(shRangeName(pf, pt))}</span><span class="sh-fig sh-muted">${was == null ? 'nothing on file' : esc(shMil(was))}</span>
+      <span class="sh-ys-kl">Sales change</span><span>${chg == null ? shChip('nothing to compare', 'n') : shChip(`${chg >= 0 ? '↑' : '↓'} ${Math.abs(chg).toFixed(1)}%`, chg >= 0 ? 'good' : 'bad', 'sh-fig')}</span>
+    </div>`;
+}
+/* Everything on the card that follows the period, drawn from the one ctx. */
+function shPeriodCard(ctx){
+  document.getElementById('st_rng_t').textContent = shRangeName(ctx.from, ctx.to);
+  const n = periodDays(ctx.from, ctx.to);
+  document.getElementById('st_rng_s').textContent = `${shRangeWords(ctx.from, ctx.to)} · ${n} day${n === 1 ? '' : 's'}`;
+  document.querySelectorAll('#st_basis .sh-basis-b').forEach(b=>{
+    const on = b.dataset.basis === ctx.basis;
+    b.classList.toggle('ow-on', on); b.setAttribute('aria-pressed', String(on));
+  });
+  document.getElementById('st_basis').title = stComparisonBasis ? `Comparing against ${ST_BASES[ctx.basis].toLowerCase()}`
+    : `Automatic — ${ST_BASES[ctx.basis].toLowerCase()}, the comparison the books can support`;
+  document.getElementById('st_year').innerHTML = shYearStripHTML(ctx);
+  const cal = document.getElementById('st_cal'), lbl = document.getElementById('st_per_lbl');
+  lbl.setAttribute('aria-expanded', String(shCalOpen));
+  lbl.classList.toggle('sh-on', shCalOpen);
+  if(shCalOpen){ cal.removeAttribute('hidden'); document.getElementById('st_cal_body').innerHTML = shCalHTML(ctx); }
+  else cal.setAttribute('hidden', '');
+}
+function shSetRange(from, to){
+  const today = todayISO();
+  document.getElementById('st_from').value = from;
+  document.getElementById('st_to').value = to > today ? today : to;
+  stDrillKey = null; stDrillAuto = true;
+  renderStatements();
+}
 document.getElementById('st_per_lbl').addEventListener('click', ()=>{
-  const box = document.getElementById('st_dates');
-  const open = box.hasAttribute('hidden');
-  if(open) box.removeAttribute('hidden'); else box.setAttribute('hidden', '');
-  document.getElementById('st_per_lbl').setAttribute('aria-expanded', String(open));
+  shCalOpen = !shCalOpen; shCalAnchor = null; shCalLeft = null;
+  renderStatements();
+});
+document.getElementById('st_per').addEventListener('click', (e)=>{
+  const t = e.target.closest('[data-sh-cal],[data-sh-calpre],[data-sh-calmon],[data-sh-calclose],[data-sh-month],.sh-basis-b');
+  if(!t) return;
+  const d = t.dataset;
+  if(d.shCal){
+    /* The two months stay where they are between the two taps, so the
+       second day is still under the finger. */
+    if(!shCalLeft) shCalLeft = periodShift(periodOf(shLastCtx ? shLastCtx.to : todayISO()), -1);
+    if(shCalAnchor){ const a = shCalAnchor; shCalAnchor = null; shSetRange(a < d.shCal ? a : d.shCal, a < d.shCal ? d.shCal : a); }
+    else { shCalAnchor = d.shCal; shSetRange(d.shCal, d.shCal); }
+    return;
+  }
+  if(d.shCalpre){ const p = shCalPresets()[Number(d.shCalpre)]; shCalAnchor = null; shCalLeft = null; if(p) shSetRange(p[1], p[2]); return; }
+  if(d.shCalmon){
+    const ctx = shLastCtx; const base = shCalLeft || periodShift(periodOf(ctx ? ctx.to : todayISO()), -1);
+    shCalLeft = periodShift(base, Number(d.shCalmon)); shRedraw(); return;
+  }
+  if(d.shCalclose){ shCalOpen = false; shCalAnchor = null; shCalLeft = null; shRedraw(); document.getElementById('st_per_lbl').focus(); return; }
+  if(d.shMonth){ shSetRange(d.shMonth + '-01', periodEndDate(d.shMonth)); return; }
+  if(t.classList.contains('sh-basis-b')){ stComparisonBasis = d.basis; renderStatements(); }
+});
+/* Escape, or a click anywhere else, puts the calendar away without
+   changing what was picked. */
+document.addEventListener('keydown', (e)=>{
+  if(e.key === 'Escape' && shCalOpen){ shCalOpen = false; shCalAnchor = null; shRedraw(); document.getElementById('st_per_lbl').focus(); }
+});
+document.addEventListener('click', (e)=>{
+  if(!shCalOpen || !e.target.isConnected || e.target.closest('.sh-pc-pick')) return;
+  shCalOpen = false; shCalAnchor = null; shRedraw();
 });
 document.getElementById('st_trust_link').addEventListener('click', ()=>{
   stActiveTab = 'overview'; stDrillKey = null; renderStatements();
@@ -128478,7 +128767,7 @@ document.getElementById('st_body').addEventListener('click', (e)=>{
   if(e.target.closest('#st_print_all_m')) printStatements('all');
 });
 document.getElementById('st_per_sum').addEventListener('click', ()=>{
-  const head = document.getElementById('st_per').closest('.ow-ph');
+  const head = document.getElementById('tab-statements');
   const open = !head.classList.contains('st-per-open');
   head.classList.toggle('st-per-open', open);
   document.getElementById('st_per_sum').setAttribute('aria-expanded', String(open));
@@ -128568,7 +128857,7 @@ document.querySelectorAll('.st-preset').forEach(b=>b.addEventListener('click', (
   // A preset is a whole choice; the phone folds its controls away again
   // so the figures it chose come back into view. Typed dates keep them
   // open, since a range is two edits.
-  const head = document.getElementById('st_per').closest('.ow-ph');
+  const head = document.getElementById('tab-statements');
   head.classList.remove('st-per-open');
   document.getElementById('st_per_sum').setAttribute('aria-expanded', 'false');
   renderStatements();
@@ -128583,10 +128872,6 @@ document.querySelectorAll('.st-preset').forEach(b=>b.addEventListener('click', (
 document.getElementById('st_body').addEventListener('click', (e)=>{
   const go = e.target.closest ? e.target.closest('.st-verdict-a[data-goto]') : null;
   if(go) goToTab(go.dataset.goto);
-});
-document.getElementById('st_basis').addEventListener('change', (e)=>{
-  stComparisonBasis = e.target.value;
-  renderStatements();
 });
 
 /* ---- Loans on screen ---- */
