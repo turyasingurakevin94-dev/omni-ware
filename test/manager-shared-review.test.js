@@ -72,11 +72,11 @@ const eq = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(wa
   eq(managerNotesMissing(null), false, 'no error is not');
 
   /* The probe's own two lines, run on each answer. */
-  const m = /\n  managerNotesTable = [^\n]*\n  managerNotesProbeErr = [^;]*;/.exec(src);
+  const m = /\n  managerNotesTable = [^\n]*\n  managerNotesProbeError = [^;]*;/.exec(src);
   t.check(!!m, 'loadData sets both flags from the probe');
   const probe = (answer) => {
     const S = compileScope([fn('managerNotesMissing'),
-      'function run(managerNotesR){ let managerNotesTable, managerNotesProbeErr;' + (m ? m[0] : '') + ' return [managerNotesTable, managerNotesProbeErr]; }'],
+      'function run(managerNotesR){ let managerNotesTable, managerNotesProbeError;' + (m ? m[0] : '') + ' return [managerNotesTable, managerNotesProbeError]; }'],
     {}, ['run']);
     return S.run(answer);
   };
@@ -85,8 +85,59 @@ const eq = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(wa
     'a 500 on the probe keeps the journal, and keeps why the read failed -- no 0081 banner');
   eq(probe({ data: null, error: { code: '42P01', message: 'relation "manager_notes" does not exist' } }), [false, null],
     'only a missing table means "not set up"');
-  t.check(/let managerNotesProbeErr = null;/.test(src), 'the reason is a module flag, empty until a probe fails');
+  t.check(/let managerNotesProbeError = null;/.test(src), 'the reason is a module flag, empty until a probe fails');
+  /* WAS: the flag was managerNotesProbeErr, while the Brief reads
+     managerNotesProbeError -- so nothing ever read why the probe failed. */
+  t.check(!/managerNotesProbeErr\b/.test(src), 'one name for it: managerNotesProbeError, the one the Brief reads');
+  eq(managerNotesMissing({ code: 'XX000', message: 'relation "manager_notes" does not exist (proxied)' }), false,
+    'an error with any other code is a failed read, whatever its words');
+  /* The memory note: a missing table asks for 0081; a failed probe names
+     the failure and asks for nothing. */
+  const grow = fn('renderManager');
+  const note = grow.slice(grow.indexOf('memoryNote.innerHTML'), grow.indexOf('memoryNote.innerHTML') + 900);
+  t.check(/managerNotesTable \? \(managerNotesProbeError \?/.test(note) && /did not answer when the books were loaded/.test(note)
+    && note.indexOf('0081') > note.indexOf(': \'\') : `'), 'a failed probe is named on the memory note, and only a missing table asks for 0081');
+
+  /* A missing COLUMN is 42703 / PGRST204; a 500 on the supplier-terms
+     probe leaves the terms on offer. */
+  const { dbColumnMissing } = compileScope([fn('dbColumnMissing')], {}, ['dbColumnMissing']);
+  eq([dbColumnMissing({ code: '42703', message: 'column suppliers.stop_at_days does not exist' }),
+    dbColumnMissing({ code: 'PGRST204', message: 'Could not find the \'stop_at_days\' column of \'suppliers\' in the schema cache' }),
+    dbColumnMissing({ code: 'STUBFAIL', message: 'the suppliers are down' }), dbColumnMissing({ code: '57014', message: 'timeout' }), dbColumnMissing(null)],
+  [true, true, false, false, false], 'only 42703 and PGRST204 are a missing column');
+  t.check(/supplierTermsColumns = !\(supplierTermsColR && supplierTermsColR\.error && dbColumnMissing\(supplierTermsColR\.error\)\);/.test(src),
+    'supplierTermsColumns is false only for a missing column');
+  /* The supplier form says why the terms are not offered. */
+  t.check(/<div class="sup-hint" id="s_terms_off" style="display:none;">[^<]*database update: 0107\.<\/div>/.test(src)
+    && /off\.style\.display = supplierTermsColumns \? 'none' : '';/.test(fn('sfShowTerms')),
+  'where the terms block is hidden, one line names database update 0107');
 }
+
+/* ---------- 2b. the day's snapshot says why it was not kept ----------- */
+const snapDone = (async () => {
+  /* Three mornings: 0107 not applied (the kind check refuses: 23514 ->
+     migration true); a 500 (migration false, its own words); then a
+     morning it is kept (cleared). */
+  let answer = null, haveErr = null;
+  const sb = { from: () => { const q = {}; q.select = () => q; q.eq = () => q; q.limit = () => Promise.resolve({ data: [], error: haveErr }); return q; } };
+  const S = compileScope([fn('mgrSaveSnapshot'), fn('mgrMigrationNote'), decl('MGR_MIGRATION_0107'),
+    'let mgrSnapshotKept = null; let mgrSnapshotWriteErr = null; function state(){ return mgrSnapshotWriteErr; } function reset(){ mgrSnapshotKept = null; }'], {
+    managerNotesTable: true, currentShopId: 1, sb, todayISO: () => '2026-10-07', mgrSnapshotBody: () => ({}),
+    mgrNoteInsert: async () => answer, console: { warn() {} },
+  }, ['mgrSaveSnapshot', 'state', 'reset']);
+  answer = { ok: false, error: 'new row violates check constraint "manager_notes_kind_check"', code: '23514' };
+  await S.mgrSaveSnapshot();
+  eq(S.state(), { migration: true, msg: 'new row violates check constraint "manager_notes_kind_check"' }, 'a refusal by the old kind check names 0107');
+  answer = { ok: false, error: 'the journal is down', code: 'STUBFAIL' };
+  await S.mgrSaveSnapshot();
+  eq(S.state(), { migration: false, msg: 'the journal is down' }, 'any other refusal by its own words, never as 0107');
+  haveErr = { message: 'timeout' };
+  await S.mgrSaveSnapshot();
+  eq(S.state(), { migration: false, msg: 'the journal could not be checked for today\'s reading — timeout' }, 'a check that could not be read is named too');
+  haveErr = null; answer = { ok: true, row: { id: 9 } };
+  await S.mgrSaveSnapshot();
+  eq(S.state(), null, 'kept: the refusal is cleared');
+})().catch((e) => { t.check(false, 'the snapshot writer threw: ' + (e && e.message)); });
 
 /* ---------- 3. an unknown floor is not known, never 0 ----------------- */
 {
@@ -277,4 +328,4 @@ const eq = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(wa
     'the ask field\'s go-square is navy on every section; each section keeps the one oxide action');
 }
 
-process.exit(t.done() ? 1 : 0);
+snapDone.then(() => process.exit(t.done() ? 1 : 0));

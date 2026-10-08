@@ -37361,6 +37361,8 @@
               <div class="sp-tt" id="s_terms_track"></div>
               <div class="sup-hint" id="s_terms_hint"></div>
             </div>
+            <!-- Where the terms cannot be kept, said in one line, not hidden in silence. -->
+            <div class="sup-hint" id="s_terms_off" style="display:none;">Their terms (stop-delivery age, credit days, delivery days) can be kept after one database update: 0107.</div>
             <!-- The mirror of the customer form's question. Either side can
                  tie the knot; both write the same symmetric link. -->
             <div class="sup-block">
@@ -40998,9 +41000,11 @@ async function loadData(shopId){
      policy hiccup on the probe is a journal that could not be read
      this once, and calling it a missing migration would send the owner
      to paste 0081 again. Such a shop keeps its journal; each section's
-     own read then fails and names itself, and the reason is kept. */
+     own read then fails and names itself, and the reason is kept in
+     managerNotesProbeError (the Brief and the memory note read it) --
+     never as "paste 0081". */
   managerNotesTable = !(managerNotesR && managerNotesR.error && managerNotesMissing(managerNotesR.error));
-  managerNotesProbeErr = managerNotesR && managerNotesR.error && managerNotesTable
+  managerNotesProbeError = managerNotesR && managerNotesR.error && managerNotesTable
     ? String(managerNotesR.error.message || managerNotesR.error.code || 'the journal did not answer') : null;
   /* 0076, its own probe like the two above. Guards a busy write: every
      cash entry goes up on every save, so sending transfer_id before the
@@ -41023,8 +41027,10 @@ async function loadData(shopId){
   stockLogMetaColumns = !(stockLogMetaColR && stockLogMetaColR.error);
   debtLogLinkColumns = !(debtLogLinkColR && debtLogLinkColR.error);
   /* 0107. Without them a supplier still saves exactly as it did; the
-     terms simply cannot be written, and the form does not offer them. */
-  supplierTermsColumns = !(supplierTermsColR && supplierTermsColR.error);
+     terms simply cannot be written, and the form does not offer them.
+     Only a MISSING column (42703 / PGRST204) means 0107 is not applied:
+     a probe that failed for any other reason is not evidence of it. */
+  supplierTermsColumns = !(supplierTermsColR && supplierTermsColR.error && dbColumnMissing(supplierTermsColR.error));
   // sourcing_leads is out of the list for the same reason.
   const sourcingLeadRows = (sourcingLeadsR && !sourcingLeadsR.error && sourcingLeadsR.data) || [];
   // And follow_ups (0077), newest of the lot. A shop whose migration has
@@ -41577,15 +41583,25 @@ let managerNotesTable = false;
 /* Why the boot probe of manager_notes failed when the table is THERE
    (null when it answered): the journal is kept, but this load could not
    read it. */
-let managerNotesProbeErr = null;
-/* The probe's error says the table does not exist: Postgres's 42P01,
-   PostgREST's PGRST205 (not in the schema cache), or those words. Any
-   other error is a failed read, not a missing migration. */
+let managerNotesProbeError = null;
+/* The probe's error says the table does not exist: Postgres's 42P01 or
+   PostgREST's PGRST205 (not in the schema cache). An error that carries
+   any other code is a failed read, not a missing migration; only one
+   with no code at all is judged by its words. */
 function managerNotesMissing(err){
   if(!err) return false;
   const code = String(err.code || '');
-  if(code === '42P01' || code === 'PGRST205') return true;
+  if(code) return code === '42P01' || code === 'PGRST205';
   return /relation .* does not exist|could not find the table/i.test(String(err.message || ''));
+}
+/* The same rule for a missing COLUMN: Postgres's 42703 or PostgREST's
+   PGRST204 (not in the schema cache). A 500 or a timeout on the probe
+   is not a missing migration. */
+function dbColumnMissing(err){
+  if(!err) return false;
+  const code = String(err.code || '');
+  if(code) return code === '42703' || code === 'PGRST204';
+  return /column .* does not exist|could not find the .* column/i.test(String(err.message || ''));
 }
 /* Whether 0087 has landed. A shop without it knows nothing about the
    market -- which is what every shop here knew until now -- so the
@@ -76924,6 +76940,8 @@ function sfShowTerms(s){
   const block = document.getElementById('s_terms_block');
   if(!block) return;
   block.style.display = supplierTermsColumns ? '' : 'none';
+  const off = document.getElementById('s_terms_off');
+  if(off) off.style.display = supplierTermsColumns ? 'none' : '';
   SF_TERM_FIELDS.forEach(([id, key])=>{
     const el = document.getElementById(id);
     if(el) el.value = s && s[key] != null ? s[key] : '';
@@ -129564,6 +129582,11 @@ function mgrSnapshotBody(ctx){
    kept"). Silent on failure -- nothing the owner asked for failed --
    but every failure is logged with what fixes it. */
 let mgrSnapshotKept = null;
+/* The day's snapshot refused (null when kept or not tried): { migration:
+   true when the refusal was the missing 0107 kind, msg }. The Brief's
+   "trend after 7 days" reads it, so a reading that cannot be kept says
+   why instead of waiting for a seventh day that never comes. */
+let mgrSnapshotWriteErr = null;
 async function mgrSaveSnapshot(ctx){
   const today = todayISO();
   const key = String(currentShopId) + '|' + today;
@@ -129572,19 +129595,24 @@ async function mgrSaveSnapshot(ctx){
   try {
     const have = await sb.from('manager_notes').select('id').eq('shop_id', currentShopId).eq('kind', 'snapshot').eq('date', today).limit(1);
     /* Nothing was worked out yet, so a later load may try again. */
-    if(have.error){ console.warn('Manager: the day\'s snapshot was not checked —', have.error.message); return { ok: false, error: have.error.message, retry: true }; }
-    if((have.data || []).length){ mgrSnapshotKept = key; return { ok: true, already: true }; }
+    if(have.error){ console.warn('Manager: the day\'s snapshot was not checked —', have.error.message);
+      mgrSnapshotWriteErr = { migration: false, msg: 'the journal could not be checked for today\'s reading — ' + String(have.error.message || have.error) };
+      return { ok: false, error: have.error.message, retry: true }; }
+    if((have.data || []).length){ mgrSnapshotKept = key; mgrSnapshotWriteErr = null; return { ok: true, already: true }; }
     const body = mgrSnapshotBody(ctx);
     const r = await mgrNoteInsert('snapshot', body, 'held', true);
     if(!r.ok){
-      if(r.code === '23505' || /duplicate key|unique/i.test(String(r.error || ''))){ mgrSnapshotKept = key; return { ok: true, already: true }; }
+      if(r.code === '23505' || /duplicate key|unique/i.test(String(r.error || ''))){ mgrSnapshotKept = key; mgrSnapshotWriteErr = null; return { ok: true, already: true }; }
       console.warn('Manager: the day\'s snapshot was not kept —', mgrMigrationNote(r.error) || r.error);
+      mgrSnapshotWriteErr = { migration: !!mgrMigrationNote(r.error), msg: String(r.error || 'the journal refused it') };
       return r;
     }
     mgrSnapshotKept = key;
+    mgrSnapshotWriteErr = null;
     return { ok: true, row: r.row };
   } catch(e){
     console.warn('Manager: the day\'s snapshot was not kept —', e && e.message);
+    mgrSnapshotWriteErr = { migration: !!mgrMigrationNote(e), msg: (e && e.message) || String(e) };
     return { ok: false, error: (e && e.message) || String(e) };
   }
 }
@@ -136372,7 +136400,12 @@ function renderManager(){
   /* Taken AFTER the early return: a render that paints nothing has no
      business cancelling one that is still painting. */
   const gen = ++mgrRenderGen;
-  memoryNote.innerHTML = managerNotesTable ? '' : `<div class="cb-chain-break">
+  /* A journal that is THERE but did not answer the boot probe is named
+     as a failed read -- never sent to paste 0081 again. */
+  memoryNote.innerHTML = managerNotesTable ? (managerNotesProbeError ? `<div class="cb-chain-break">
+    <div><b>The Manager’s journal did not answer when the books were loaded</b> — ${esc(String(managerNotesProbeError))}.
+      Its memory is kept; each section reads it again and says so if it still cannot.</div>
+  </div>` : '') : `<div class="cb-chain-break">
     <div><b>The manager cannot remember yet.</b> Meetings run, but nothing is kept — no advice,
       no account of what it earned, no scoreboard and no record. One database update fixes it.</div>
     <div class="deb-drift-why">Paste <b>supabase/migrations/0081_manager_notes.sql</b> into the

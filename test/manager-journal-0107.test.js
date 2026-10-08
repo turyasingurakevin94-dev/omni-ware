@@ -58,7 +58,9 @@ const code = mig.split(/\r?\n/).filter((l) => !/^\s*--/.test(l)).join('\n');
   const load = extractFunction(src, 'loadData', 'index.html');
   t.check(/sb\.from\('suppliers'\)\.select\('stop_at_days, credit_days, delivery_days'\)\.limit\(1\)/.test(load),
     'loadData probes for the three terms');
-  t.check(/supplierTermsColumns = !\(supplierTermsColR && supplierTermsColR\.error\);/.test(load), 'and remembers the answer');
+  /* Only a missing column (42703 / PGRST204, dbColumnMissing) is "0107
+     not applied"; a probe that failed otherwise leaves the terms on offer. */
+  t.check(/supplierTermsColumns = !\(supplierTermsColR && supplierTermsColR\.error && dbColumnMissing\(supplierTermsColR\.error\)\);/.test(load), 'and remembers the answer');
   t.check(/^let supplierTermsColumns = false;$/m.test(src), 'false until the probe says otherwise');
 
   // The supplier mapper, run on rows as the database returns them.
