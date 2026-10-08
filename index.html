@@ -43189,6 +43189,10 @@ function buildSyncRows(d, shopId){
         // this quote (advancing its status, editing an item, etc.) never
         // silently strips what agent-submit-order originally set.
         originAgentId:q.originAgentId, agentClientId:q.agentClientId, deliveryMode:q.deliveryMode, deliveryAddress:q.deliveryAddress, agentPaymentStatus:q.agentPaymentStatus,
+        // The shop's check of an agent's lines (confirmAgentOrder) and the
+        // lines it dropped on the way -- the agent's app shows both, and
+        // the payment function refuses until the confirmation is there.
+        shopConfirmedAt:q.shopConfirmedAt, shopConfirmedTerms:q.shopConfirmedTerms, droppedLines:q.droppedLines,
         /* Portal-originated orders only, and here for the same reason
            the two groups either side of it are: this mapping rebuilds
            the payload from NAMED keys, so a key not named is stripped
@@ -61171,8 +61175,33 @@ function orderLeaveDraft(q, opts){
   const force = !!(opts && opts.auto === false);
   if(!force && !orderDraftReady(q)) return false;
   if(!orderDraftReady(q)) return false;
+  if(agentOrderNeedsShopCheck(q)) return false;
   if(agentPaymentBlocksPreparing(q)) return false;
   setSavedQuoteStatus(q.id, orderAwaitsGoods(q) ? 'awaiting_goods' : 'preparing', { auto: !force });
+  return true;
+}
+
+/* The owner's word that an agent's order can be supplied as it now
+   stands -- every line still on it is one the shop will deliver. Only
+   then is a prepay agent asked to pay, and only for these lines, so a
+   line the shop could not supply is dropped BEFORE any money moves and
+   nobody is ever owed a refund for it. Stamped with the lines' signature
+   (agentOrderTerms): an edit afterwards makes it stale and asks again. */
+function confirmAgentOrder(q){
+  if(!q || q.status !== 'draft' || !q.originAgentId) return false;
+  if(!(q.items||[]).length){ toast('Nothing is left on this order — cancel it instead'); return false; }
+  q.shopConfirmedAt = Date.now();
+  q.shopConfirmedTerms = agentOrderTerms(q);
+  saveData();
+  renderSavedQuotes();
+  const agent = (data.agents||[]).find(a=> a.id === q.originAgentId);
+  if(agentPaymentBlocksPreparing(q)){
+    toast(`Confirmed — ${agent ? agent.name : 'the agent'} is asked to pay ${fmtUGX(invoiceBalanceDue(q))} for these lines.`, 5000);
+  } else if(orderLeaveDraft(q, { auto:true })){
+    toast(`Confirmed — ${quoteClientName(q)}'s order has moved to ${ORDER_STATUS_SHORT_LABELS[q.status]}.`, 5000);
+  } else {
+    toast('Confirmed.', 3000);
+  }
   return true;
 }
 
@@ -63264,6 +63293,10 @@ function orderNeedsYou(q, isOverdue){
       const askedAgo = otDuration(Date.now() - Math.min(...silent.map(x=> x.st.askedAt)));
       need = { chip:'Supplier silent', tone: late ? 'ow-warn' : '', acts:[], html: orderSupplierActsHTML(q, { max:2 }),
         say:`${silent.map(x=> em(supplierName(x.g.supplierId))).join(' and ')} ${silent.length === 1 ? 'was' : 'were'} asked ${askedAgo} ago and ${silent.length === 1 ? 'has' : 'have'} not answered. Ask again, or mark them confirmed if they rang.` };
+    } else if(agentOrderNeedsShopCheck(q)){
+      const agent = (data.agents||[]).find(a=> a.id === q.originAgentId);
+      need = { chip:'Confirm for agent', tone: late ? 'ow-warn' : '', acts:[{act:'agentconfirm', label:'Confirm lines'}],
+        say:`Drop any line you cannot supply, then confirm. ${em(agent ? agent.name : 'The agent')} is asked to pay only after that — ${fig(invoiceBalanceDue(q))} for the lines as they stand.` };
     } else if(agentPaymentBlocksPreparing(q)){
       const agent = (data.agents||[]).find(a=> a.id === q.originAgentId);
       need = { chip:'Agent unpaid', tone:'ow-warn', acts:[{act:'prepay', label:'Record payment'}],
@@ -63328,6 +63361,7 @@ function orderNeedsYou(q, isOverdue){
 function orderActSpec(q){
   if(q.status === 'draft'){
     if(!orderDraftReady(q)) return { act:'open', label:'Suppliers' };
+    if(agentOrderNeedsShopCheck(q)) return { act:'agentconfirm', label:'Confirm lines' };
     if(agentPaymentBlocksPreparing(q)) return { act:'prepay', label:'Record payment' };
     return { act:'leave', label: orderSupplierGroups(q).length ? 'Move on' : 'To the pickers' };
   }
@@ -67608,6 +67642,13 @@ var OF_SUP_HUES = [
 var ofQ = {};            // board id -> the saved quote behind it
 var ofSwitched = {};     // "qid:lineId" -> the line as it was before a switch, for Undo
 var ofDropped = {};      // qid -> [{ it, at }] lines dropped from a draft, for Undo
+function ofDroppedRecord(it, at) {
+  return {
+    productId: it.productId, variantIdx: (it.variantIdx === undefined ? null : it.variantIdx),
+    productName: it.productName || '', unit: it.unit || '', qty: Number(it.qty) || 0,
+    sellPrice: Number(it.sellPrice) || 0, agentSellPrice: Number(it.agentSellPrice) || 0, at: at
+  };
+}
 var ofMarked = {};       // "qid:sid" -> the confirm state before the owner's tick, for Undo
 function ofBoardId(q) { return 'SO-' + String(q.id).padStart(4, '0'); }
 function ofWhen(ms) {
@@ -67929,6 +67970,12 @@ class OrderFlowBoard extends Component {
     if (!q || q.status !== 'draft' || !q.items[idx]) return;
     var it = q.items.splice(idx, 1)[0];
     (ofDropped[q.id] || (ofDropped[q.id] = [])).unshift({ it: it, at: idx });
+    // An agent's order keeps a record of what the shop could not supply, so the
+    // agent's app can show the line struck through (and the client sees why the
+    // total went down) instead of the line silently vanishing.
+    if (q.originAgentId) {
+      q.droppedLines = (q.droppedLines || []).concat([ofDroppedRecord(it, idx)]);
+    }
     ofSave();
   }
   restoreLine(id, k) {
@@ -67936,6 +67983,13 @@ class OrderFlowBoard extends Component {
     if (!list || !list[k]) return;
     var d = list.splice(k, 1)[0];
     q.items.splice(Math.min(d.at, q.items.length), 0, d.it);
+    if (q.droppedLines && q.droppedLines.length) {
+      var gone = ofDroppedRecord(d.it, d.at), dl = q.droppedLines;
+      for (var i = dl.length - 1; i >= 0; i--) {
+        if (dl[i].productId === gone.productId && dl[i].variantIdx === gone.variantIdx && dl[i].qty === gone.qty) { dl.splice(i, 1); break; }
+      }
+      if (!dl.length) delete q.droppedLines;
+    }
     ofSave();
   }
   reopenQuote(id) {
@@ -68888,6 +68942,7 @@ function otAct(act, id, el){
     case 'invoiceall': invoiceAllDelivered(); break;
     case 'shortpick': openPickShortfallModal(id, false); break;
     case 'prepay': if(q) promptAgentPrepayment(q); break;
+    case 'agentconfirm': if(q) confirmAgentOrder(q); break;
     case 'invoice': toggleQuoteInvoiced(id); break;
     case 'print': if(q) printQuotesA5([q]); break;
     case 'preview': openOrderPreview(id); break;

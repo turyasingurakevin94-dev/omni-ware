@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * The Customers list, and two things Best Next Action was not saying.
+ * The Clients list, and the orders that are waiting on the agent.
  *
  * The client rows carried a name and "N orders · phone" -- and that N
  * counted voided orders, because clientRowHTML read straight off
@@ -11,9 +11,10 @@
  * business. The phone sat there as plain text with no way to ring it.
  *
  * On Home, an order sitting at the shop with the agent's name on it said
- * nothing. orderStatusInfo() has rendered "Ready -- come pick up your
- * order" all along, but only to someone who already opened the order, so
- * the one action with stock already waiting was the easiest to miss.
+ * nothing, so the one action with stock already waiting was the easiest
+ * to miss. Today now names every order that waits on the agent -- to
+ * collect, or to pay for once the shop has checked it -- straight under
+ * the tiles, from the same orderStage() the track itself reads.
  *
  * Run: node test/agent-clients-and-actions.test.js   (or: npm test)
  */
@@ -45,35 +46,42 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
 
   // Ordering matters: esc() rewrites ' to &#39;, so escaping first would
   // leave every name ending in a semicolon and the rule would never fire.
-  t.check(/esc\(possessive\(client\.name\)\)/.test(code),
-    'possessive is applied to the raw name and the result escaped, never the other way round');
+  t.check(/possessive\(client\.name\)/.test(code),
+    'possessive is applied to the raw name -- the toast it builds is text, so nothing is escaped first');
   t.check(!/possessive\(esc\(/.test(code), 'and never the other way round anywhere');
 }
 
-/* ---------- 2. the two Best Next Action messages -------------------- */
+/* ---------- 2. what waits on the agent ----------------------------- */
 {
-  t.check(/order is waiting on your payment to start processing/.test(code),
-    'the prepay message says the ORDER is waiting, and names what the payment unblocks');
-  t.check(!/is waiting on your payment before it can be prepared/.test(code),
-    'the old wording is gone');
-
-  t.check(/order is ready -- come pick it up/.test(code), 'and a ready order says so');
-  t.check(/key: `ready_pickup:\$\{o\.id\}`/.test(code), 'under its own key, so it dismisses independently');
-  t.check(/urgency: 'high'/.test((/ready_pickup[\s\S]{0,200}/.exec(code) || [''])[0]),
-    'ranked high -- the stock is already paid for and sitting there');
-
-  // The condition, which must match what the order screen already calls ready.
-  t.check(/o\.status==='pending_delivery' && o\.deliveryMode==='agent_pickup'/.test(code),
-    'and it fires on exactly the state orderStatusInfo already calls ready for pickup');
-  t.check(/myOrders\.filter\(o=>!o\.voided && o\.status==='pending_delivery' && o\.deliveryMode==='agent_pickup'\)/.test(code),
-    'skipping voided orders');
-
-  // A shop_delivery order is being brought to the client -- there is
-  // nothing for the agent to collect, and telling them to come would send
-  // them across town for nothing.
-  const pickupBlock = (/ready_pickup[\s\S]{0,400}/.exec(code) || [''])[0];
-  t.check(!/shop_delivery/.test(pickupBlock),
-    'a shop-delivered order never raises it');
+  let st = null, err = null;
+  const myAgent = { paymentTerm: 'prepay' };
+  try {
+    st = compileScope(['const orderStaffNames = new Map();',
+      ...['agentOrderTerms', 'orderShopChecked', 'staffName', 'orderOwedAmount', 'orderStage'].map((n) => extractFunction(src, n, 'agent.html'))],
+      { myAgent, fmtNum: (n) => String(n) }, ['orderStage', 'agentOrderTerms']);
+  } catch (e) { err = e; }
+  t.check(!!st, `orderStage compiles${err ? ` (${err.message})` : ''}`);
+  if (st) {
+    const o = (over) => Object.assign({ status: 'draft', voided: false, deliveryMode: 'agent_pickup', agentPaymentStatus: 'unpaid',
+      items: [{ productId: 'P', variantIdx: null, qty: 2, sellPrice: 100 }] }, over);
+    t.check(st.orderStage(o({ status: 'pending_delivery' })).needs === 'collect',
+      'an order ready at the shop for the agent to pick up waits on them');
+    t.check(!st.orderStage(o({ status: 'pending_delivery', deliveryMode: 'shop_delivery' })).needs,
+      'a shop-delivered one does not -- there is nothing to collect, and telling them to come sends them across town for nothing');
+    t.check(!st.orderStage(o({})).needs && st.orderStage(o({})).key === 'checking',
+      'a prepay order the shop has not checked asks for nothing yet');
+    const checked = o({ shopConfirmedAt: 1 });
+    checked.shopConfirmedTerms = st.agentOrderTerms(checked);
+    t.check(st.orderStage(checked).needs === 'pay', 'once the shop has confirmed its lines, it waits on the payment');
+    t.check(!st.orderStage(Object.assign({}, checked, { agentPaymentStatus: 'paid' })).needs, 'and stops waiting once paid');
+    t.check(st.orderStage(o({ status: 'pending_delivery', voided: true })).key === 'cancelled',
+      'a voided order is cancelled, not something to collect');
+  }
+  const move = extractFunction(src, 'renderMove', 'agent.html');
+  t.check(/filter\(x=> x\.st\.needs\)/.test(move), 'Today lists every order that waits on the agent');
+  t.check(/Collect/.test(move) && /'Settle' : 'Pay'/.test(move) && /fmtCompactUGX\(orderOwedAmount\(o\)\)/.test(move),
+    'saying what to do and, for a payment, how much');
+  t.check(/data-track="\$\{esc\(o\.id\)\}"/.test(move), 'and each row opens that order\'s track');
 }
 
 /* ---------- 3. what a client row now says --------------------------- */
@@ -137,35 +145,25 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
       t.check(g(at(500)) === 'Over a year ago', 'and stops pretending to be precise');
       t.check(g('') === '' && g(null) === '' && g('not a date') === '', 'a missing or unparseable date renders nothing');
     }
-    t.check(/esc\(daysAgoLabel\(s\.lastAt\)\)/.test(code), 'and the client row uses it');
+    t.check(/daysAgoLabel\(clientStats\(orders\)\.lastAt\)/.test(code), 'and the client row uses it');
   }
 
   t.check(/No orders yet/.test(code), 'a client with no orders says so rather than showing "0 orders"');
-  t.check(/fmtCompactUGX\(s\.spent\)/.test(code), 'the spend is compacted so three figures fit a phone row');
+  t.check(/fmtCompactUGX\(stats\.earned\)/.test(code), 'what they have earned you is compacted so it fits the end of a row');
 }
 
 /* ---------- 4. you can actually ring them --------------------------- */
 {
-  t.check(/href="tel:\$\{esc\(c\.phone\)\}"/.test(code), 'the row carries a real tel: link');
-  t.check(/aria-label="Call \$\{esc\(c\.name\)\}"/.test(code),
-    'named, since the button itself is only an icon');
-  /* The control is .fx-call now rather than .ag-call-btn -- the client
-     row was rebuilt and the old class is in no markup at all. Everything
-     this block asserts is unchanged and still worth asserting: it appears
-     only for a client who has a number, it is 44px of actual control
-     rather than 44 plus padding, and it keeps a visible focus ring. */
-  t.check(/c\.phone\s*\n?\s*\?\s*`<a class="fx-call"/.test(code) || /\$\{c\.phone[\s\S]{0,40}fx-call/.test(code),
-    'and it appears only for a client who has a number');
-
-  t.check(/\.fx-call\{[^}]*width:44px/.test(src) && /\.fx-call\{[^}]*height:44px/.test(src),
-    'sized 44px for a thumb');
-  t.check(/\.fx-call\{[^}]*box-sizing:border-box/.test(src),
-    'restoring border-box after all:unset, so 44 means 44');
-  t.check(/\.fx-call:focus-visible\{outline:/.test(src), 'with a visible focus ring');
-
+  const sheet = extractFunction(src, 'openClientSheet', 'agent.html');
+  t.check(/href="tel:\$\{esc\(c\.phone\)\}"/.test(sheet), 'the client sheet carries a real tel: link');
+  t.check(/aria-label="Call \$\{esc\(c\.name\)\}"/.test(sheet), 'named, since the button itself is only an icon');
+  t.check(/\$\{c\.phone \? `<a class="ax-iconbtn/.test(sheet), 'and it appears only for a client who has a number');
+  t.check(/\.ax-iconbtn\{[^}]*width:44px;height:44px/.test(src), 'sized 44px for a thumb');
+  t.check(/\.ax-iconbtn\{[^}]*box-sizing:border-box/.test(src), 'restoring border-box after all:unset, so 44 means 44');
+  t.check(/:focus-visible\{outline:/.test(src), 'with a visible focus ring');
   // The number stays readable as well: a tel: link hands it to the dialer,
   // which is no use to an agent saving a contact or sending a WhatsApp.
-  t.check(/c\.phone \? esc\(c\.phone\) : ''/.test(code),
+  t.check(/\[c\.location, c\.phone\]\.filter\(Boolean\)/.test(sheet),
     'and the number is still shown, not hidden behind the button');
 }
 

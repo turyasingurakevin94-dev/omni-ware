@@ -32,21 +32,32 @@ const styleBlock = (/<style>([\s\S]*?)<\/style>/.exec(src) || ['', ''])[1];
 /* ---------- 1. nothing tappable is under 44px ------------------------ */
 {
   const CONTROLS = [
-    ['.ag-back-btn', 'the back button'],
-    ['.ag-month-nav-btn', 'the month arrows'],
-    ['.ag-seg-btn', 'the segment tabs'],
-    ['.ag-view-toggle button', 'the grid/list toggle'],
-    // .ag-recent-chip is gone with the recent-search row. It was labelled
-    // "recent-client chips" here, which it never was -- it held previous
-    // search terms.
-    ['.ag-chip', 'the client chip'],
+    // The screens were rebuilt; these are the controls an agent's thumb
+    // actually reaches for on them. Each is checked for its HEIGHT -- a
+    // fixed height or a min-height -- of at least 44px.
+    ['.ax-tab', 'a tab'],
+    ['.ax-iconbtn', 'the round icon buttons (close, back, call)'],
+    ['.ax-tile', 'the On-the-move tiles'],
+    ['.ax-needrow', 'a row of something waiting on you'],
+    ['.ax-who', 'the client pill on an order'],
+    ['.ax-ob', 'the other orders in the strip'],
+    ['.ax-step button', 'the quantity stepper'],
+    ['.ax-cheaper', 'the cheaper-quantity pill'],
+    ['.ax-sub', 'the shelf chips in Find'],
+    ['.ax-flt button', 'the Find filters'],
+    ['.ax-add', 'the add button on a tile'],
+    ['.ax-fchips button', 'the client filters'],
+    ['.ax-bar', 'a month in the chart'],
+    ['.ax-act', 'Call, Update and Receipt on a track'],
+    ['.ax-prov button', 'the payment choices'],
+    ['.ag-inquiry-done', 'the tick on a request'],
   ];
   CONTROLS.forEach(([sel, what]) => {
-    const rule = new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\{([^}]*)\\}').exec(styleBlock);
+    const rule = new RegExp('\\n\\s*' + sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\{([^}]*)\\}').exec(styleBlock);
     const body = rule ? rule[1] : '';
-    const m = /min-height:(\d+)px/.exec(body);
+    const m = /(?:^|;|\s)(?:min-)?height:(\d+)px/.exec(body);
     t.check(m && Number(m[1]) >= 44,
-      `${what} declares a 44px minimum (${m ? m[1] + 'px' : 'none'})`);
+      `${what} is at least 44px tall (${m ? m[1] + 'px' : 'none'})`);
   });
 }
 

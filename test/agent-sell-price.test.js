@@ -136,29 +136,36 @@ const line = (over) => Object.assign({
     'the title is escaped, since it is built from figures and text rather than fixed copy');
 }
 
-/* ---------- 6. wired into all three surfaces -------------------------- */
+/* ---------- 6. wired into every place a line is priced --------------- */
 {
   const code = stripComments(src);
-
-  t.check(/\$\{cartMarginFlagHTML\(f\.margin\)\}/.test(code),
-    'the rendered cart row uses the shared chip');
-  t.check(/const rowMargin = cartLineMargin\(previewSellPrice, item\.floorPrice, baseQty\);/.test(code),
+  const render = extractFunction(src, 'renderCart', 'agent.html');
+  t.check(/<div data-flag>\$\{cartMarginFlagHTML\(f\.margin\)\}<\/div>/.test(render),
+    'the open line uses the shared chip, under the price it explains');
+  t.check(/function earnChipHTML\(margin, profit\)/.test(code) && /earnChipHTML\(f\.margin, f\.profit\)/.test(render),
+    'and every line\'s own chip reads the same level -- green, amber at nothing, red at a loss');
+  const typing = (/getElementById\('ag_cartWrap'\)\.addEventListener\('input'[\s\S]*?\n\}\);/.exec(code) || [''])[0];
+  t.check(/const f = cartLineFigures\(preview\);/.test(typing),
     'the live-typing patch resolves through the same helper, so typing cannot say something the commit will not');
-  t.check(/input\.classList\.toggle\('below-floor', rowMargin\.level==='loss'\)/.test(code),
-    'and marks the input while a loss is being typed');
-  t.check(/const addedMargin = cartLineMargin\(added\.agentSellPrice, added\.floorPrice, added\.qty\);/.test(code),
+  t.check(/classList\.toggle\('loss', f\.margin\.level === 'loss'\)/.test(typing),
+    'and marks the price box while a loss is being typed');
+  const add = extractFunction(src, 'addCatalogLine', 'agent.html');
+  t.check(/const m = cartLineMargin\(line\.agentSellPrice, line\.floorPrice, line\.qty\);/.test(add),
     'adding a line checks it once, at the moment it can still be a surprise');
-  t.check(/toast\(addedMargin\.level==='ok' \? 'Added to quote' : `Added — \$\{addedMargin\.detail\}`/.test(code),
-    'folded into the existing add message rather than raised as a second toast');
+  t.check(/if\(m\.level !== 'ok'\) toast\(`Added — \$\{m\.detail\}`, 6000\);/.test(add),
+    'and says so only when there is something to say');
 }
 
 /* ---------- 7. the client never sees any of it ------------------------ */
 {
-  // The client receipt is rendered from its own template. Margin, floor
-  // and profit must not appear in it -- this is the agent's business.
-  const client = extractFunction(src, 'renderClientReceiptTable', 'agent.html');
-  t.check(!/margin|floorPrice|profit|cartMarginFlagHTML/i.test(client),
-    'the client-facing receipt renders no margin, floor price or profit');
+  // What the client is sent is built from rows that carry only the
+  // quantity, the name, the rate the agent charges and the amount.
+  for (const name of ['sentSnapshot', 'orderReceiptRows', 'drawReceiptCanvas']) {
+    const body = extractFunction(src, name, 'agent.html');
+    const rows = name === 'sentSnapshot' ? (/rows: .*$/m.exec(body) || [''])[0] : body;
+    t.check(rows.length > 0 && !/floorPrice|sellPrice\b|profit|margin|cartMarginFlagHTML/i.test(rows.replace(/agentSellPrice/g, '')),
+      `${name}: the client-facing receipt carries no floor price, shop price, margin or profit`);
+  }
 }
 
 process.exit(t.done() ? 1 : 0);

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * The agent Customers tab.
+ * The agent's Clients tab.
  *
  * A catalogue banner, the requests from it, and then -- with no heading of
  * its own -- the client list simply began. It was every client, in the
@@ -12,8 +12,10 @@
  * number meant starting a quote you did not want.
  *
  * Alphabetical answers "where is X in the alphabet", which is only asked
- * while hunting for someone -- and hunting is what the search box added
- * here is for. Who you dealt with last is the more useful default.
+ * while hunting for someone -- and hunting is what the search box is for.
+ * The list is ordered by who needs seeing: late on their own rhythm
+ * first, then due today, then anyone with an order on the way, then
+ * whoever is due soonest; within a group, who you dealt with last.
  *
  * Run: node test/agent-customers.test.js   (or: npm test)
  */
@@ -25,34 +27,19 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
 
 /* ---------- 1. the list has a heading, a count and an action -------- */
 {
-  // This used to pin the exact markup
-  //
-  //   <span>Your clients <span class="ag-seg-count" id="ag_clientsCount"></span></span>
-  //
-  // with the literal space called out, because without it the count runs
-  // into the label and reads "Your clients12". The heading is a .fx-sec
-  // now: the label and the count are separate flex children with a gap
-  // between them, so the hazard the space guarded against cannot occur --
-  // there is no text node for them to share. What is still pinned is that
-  // the count is its own element beside the label rather than inside it.
-  //
-  // The count also had to leave .ag-seg-count. That class moved onto the
-  // Orders segment control, which now sits on a dark header, so its text
-  // went white -- and white on this screen's page ground is invisible.
-  const head = (/<div class="fx-sec">\s*<h2>Your clients<\/h2>([\s\S]{0,600}?)<\/div>/.exec(src) || [])[1] || '';
-  t.check(/id="ag_clientsCount"/.test(head),
-    'the list is named and counted -- and the count is its own element beside the label, not run into it');
-  t.check(!/ag-seg-count/.test(head),
-    'and not on the class that turned white when the segment control moved to a dark ground');
-  t.check(/\.fx-sec \.cnt\{[^}]*color:var\(--fx-ink-3\)/.test(src),
-    'it is a readable ink on the page ground');
-  t.check(/id="ag_addClientBtn"/.test(head), 'with an Add control beside it');
-  t.check(/\.fx-sec-add\{[^}]*min-height:44px/.test(src), 'sized 44px for a thumb');
-  t.check(/\.fx-sec-add\{[^}]*box-sizing:border-box/.test(src),
-    'restoring border-box after all:unset, so 44 means 44');
-  t.check(/\.fx-sec-add:focus-visible\{outline:/.test(src), 'with a visible focus ring');
-  t.check(/agentClients\.length \|\| ''/.test(code),
-    'and an empty account shows no count rather than a zero');
+  t.check(/<h1>Clients <span id="ag_clientsCount"><\/span><\/h1>/.test(src),
+    'the list is named and counted -- the count is its own element beside the label, with a real space before it');
+  t.check(/\.ax-page-h h1 span\{[^}]*color:var\(--ink-soft\)/.test(src),
+    'in a readable ink on the page ground');
+  t.check(/agentClients\.length \|\| ''/.test(code), 'and an empty account shows no count rather than a zero');
+  // Adding is the search box itself: type a name that is not there, and
+  // the first row offers to add it. No separate button to find.
+  const render = extractFunction(src, 'renderClientsListScreen', 'agent.html');
+  t.check(/data-client-add/.test(render) && /Add &ldquo;/.test(render),
+    'a name that is not on the list is offered as a new client, right where it was typed');
+  t.check(/Add your first client/.test(render), 'and an empty list is one tap from its first client');
+  t.check(/\.ax-cr\{\s*all:unset;box-sizing:border-box/.test(src) && /\.ax-ringav\{[^}]*width:44px;height:44px/.test(src),
+    'every row is a full-width tap target, restoring border-box after all:unset');
 }
 
 /* ---------- 2. adding a client does not hijack the quote ------------ */
@@ -65,16 +52,14 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
 {
   t.check(/function openNewClientPanel\(prefillName, onDone, \{ makeActive = true \} = \{\}\)/.test(code),
     'the panel takes an opt-out, defaulting to the behaviour its existing callers rely on');
-  t.check(/if\(makeActive\) selectClient\(inserted\);/.test(code),
+  t.check(/if\(makeActive\) goToClientBasket\(inserted\);/.test(code),
     'and only selects when asked to');
-  t.check(/openNewClientPanel\('', \(\)=>\{[\s\S]{0,200}?\}, \{ makeActive: false \}\)/.test(code),
-    'the Customers tab opts out');
-
-  // The two mid-quote callers must NOT have been changed.
-  t.check(/openNewClientPanel\(typed, \(\)=> switchTab\('sell'\)\);/.test(code),
-    'the new-quote sheet still selects the client it just created');
-  t.check(/openNewClientPanel\(query\.trim\(\)\)/.test(code),
-    'and so does the quote screen\'s own "add new"');
+  t.check(/openNewClientPanel\(typed, \(c\)=>\{[\s\S]{0,240}?\}, \{ makeActive: false \}\)/.test(code),
+    'the Clients tab opts out -- saving a contact you just met does not swap the order you are building');
+  // The order screen's own "add" is mid-order and does want the new
+  // client to be the one the order is for.
+  t.check(/openNewClientPanel\(typed, \(\)=>\{ if\(currentView === 'order'\) renderOrder\(\); \}\);/.test(code),
+    'the order screen\'s picker still makes the client it just created the one the order is for');
 
   t.check(/\bsaveClientBtn\.disabled = true;/.test(code),
     'the double-tap guard on the save button is still there');
@@ -95,7 +80,8 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   t.check(typeof f === 'function', 'clientStats compiles');
 
   if (f) {
-    // The comparator, transcribed from the render.
+    // The tie-breaker, transcribed from the render: within a group, who
+    // you dealt with last, then by name.
     const cmp = (a, b) =>
       String(f(b.orders).lastAt || '').localeCompare(String(f(a.orders).lastAt || ''))
       || String(a.c.name || '').localeCompare(String(b.c.name || ''));
@@ -103,21 +89,21 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
     const rows = [
       { c: { name: 'Zawadi' }, orders: [ord('2026-01-05')] },
       { c: { name: 'Ahmed' }, orders: [ord('2026-08-01')] },
-      { c: { name: 'Bugolobi' }, orders: [] },
       { c: { name: 'Moses' }, orders: [ord('2026-07-20')] },
-      { c: { name: 'Aaron' }, orders: [] },
     ];
     const order = rows.slice().sort(cmp).map(r => r.c.name);
-    t.check(order.join(',') === 'Ahmed,Moses,Zawadi,Aaron,Bugolobi',
-      `most recent first, never-ordered last, ties by name (${order.join(' > ')})`);
-    t.check(order.indexOf('Bugolobi') > order.indexOf('Zawadi'),
-      'a client who has never ordered sorts to the end, not into the middle on an empty date');
-    t.check(order.indexOf('Aaron') < order.indexOf('Bugolobi'),
-      'and the never-ordered ones are alphabetical among themselves rather than arbitrary');
+    t.check(order.join(',') === 'Ahmed,Moses,Zawadi', `within a group, most recent first (${order.join(' > ')})`);
   }
-
-  t.check(/\.sort\(\(a,b\)=> String\(clientStats\(b\.orders\)\.lastAt\|\|''\)\.localeCompare\(String\(clientStats\(a\.orders\)\.lastAt\|\|''\)\)/.test(code),
-    'which is what the screen does');
+  const render = extractFunction(src, 'renderClientsListScreen', 'agent.html');
+  t.check(/rows\.sort\(\(a,b\)=> a\.s\.rank - b\.s\.rank \|\| \(b\.s\.late\|\|0\) - \(a\.s\.late\|\|0\) \|\| \(a\.s\.soon\|\|0\) - \(b\.s\.soon\|\|0\)/.test(render),
+    'the list leads with who needs seeing: the most overdue first, then whoever is due soonest');
+  t.check(/String\(b\.stats\.lastAt\|\|''\)\.localeCompare\(String\(a\.stats\.lastAt\|\|''\)\)/.test(render),
+    'and falls back to who you dealt with last');
+  const status = extractFunction(src, 'clientStatus', 'agent.html');
+  const rank = (re) => { const m = re.exec(status); return m ? Number(m[1]) : -1; };
+  const late = rank(/rank: (\d), cls:'late'/), due = rank(/rank: (\d), cls:'due'/), live = rank(/rank: (\d), cls: st\.needs/), quiet = rank(/rank: (\d), cls:'', text:`Quiet/);
+  t.check(late < due && due < live && live < quiet,
+    `late, then due today, then an order on the way, and the quiet ones last (${[late, due, live, quiet].join(',')})`);
 }
 
 /* ---------- 4. finding one --------------------------------------- */
@@ -137,20 +123,16 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
     t.check(f({}, 'x') === false, 'a client with no details at all does not throw');
   }
 
-  // Furniture control: a search box above three names is noise.
-  t.check(/const CLIENT_SEARCH_MIN = 8;/.test(code), 'the search box has a threshold');
-  t.check(/searchWrap\.style\.display = agentClients\.length >= CLIENT_SEARCH_MIN \? 'block' : 'none';/.test(code),
-    'and appears only once the list is long enough to need it');
+  // The search box is also how a client is added, so it is always there.
+  t.check(/id="ag_clientListSearch" placeholder="Name or phone"/.test(src), 'the search box finds by name or phone');
   t.check(/No client matches &ldquo;\$\{esc\(q\)\}&rdquo;\./.test(code),
     'a search with no hits repeats what was searched for');
 }
 
 /* ---------- 5. arriving at the tab -------------------------------- */
 {
-  t.check(/if\(tab==='customers'\)\{ document\.getElementById\('ag_clientListSearch'\)\.value = ''; renderClientsListScreen\(\); \}/.test(code),
-    'a query left from the last visit is cleared on the way in, as on order history');
-  t.check(/add the first one above, or one gets saved the next time you build a quote/.test(code),
-    'and the empty state points at the button above it instead of sending the agent to the quote screen');
+  t.check(/if\(tab === 'clients'\)\{ document\.getElementById\('ag_clientListSearch'\)\.value = ''; renderClientsListScreen\(\); \}/.test(code),
+    'a query left from the last visit is cleared on the way in');
 }
 
 process.exit(t.done() ? 1 : 0);

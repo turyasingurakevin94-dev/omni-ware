@@ -184,38 +184,31 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   t.check(orphan.length === 1 && orphan[0].missing,
     'a basket whose client is no longer on file is still reachable');
 
-  const render = extractFunction(src, 'renderSellClientChip', 'agent.html');
-  /* The row is the WHOLE control now — no "For: X" line above it saying
-     the same name a second time, which made the taller of the two read as
-     a heading for the other. So it is always drawn, and always carries a
-     way to start another order. */
-  t.check(!/For: \$\{esc\(chosenClient\.name\)\}/.test(render) && !/No client yet/.test(render),
-    'the client is named once, on the open tab, and not again above it');
-  t.check(/Orders in Progress/.test(render),
-    'the row is headed for what it holds');
-  t.check(/class="ag-quote-tab ag-quote-tab-new" id="ag_sell_client_add"/.test(render)
-    && /\+ New order/.test(render),
-    'and ends with the way to start another, which is what the removed chip carried');
-  /* It sits in the same row and wears the same class, so it has to be
-     excluded from the switch handler — otherwise tapping it would try to
-     switch to an order with no id, on top of opening the picker. */
-  t.check(/wrap\.querySelectorAll\('\.ag-quote-tab:not\(\.ag-quote-tab-new\)'\)/.test(render),
-    'and is not itself treated as an order to switch to');
-  t.check(/\$\{b\.count\} item\$\{b\.count===1\?'':'s'\} in this order/.test(render),
-    'each tab says how much is in that order, in those words');
-  /* The line that matters: switching parks and swaps, and never calls
-     selectClient, which would adopt what is in hand. */
-  t.check(render.includes("stashActiveCart();")
-    && render.includes("chosenClient = client;") && render.includes("activateCartFor(client);"),
-    'tapping a tab parks what is in hand and swaps in theirs');
-  t.check(!/selectClient\(client\)/.test(render),
-    'and does not go through selectClient, which would claim the loose items for them');
-  /* BOTH branches park first — the client one and the unnamed one. Either
-     alone would still let a basket be dropped on the way out. */
-  t.check((render.match(/stashActiveCart\(\);/g) || []).length === 2,
-    'and every branch of the switcher parks what is in hand before swapping');
-  t.check(/showQuoteFor\(client\)/.test(render) && /showQuoteUnassigned\(\)/.test(render),
-    'reusing the same chip rendering as choosing a client, so the two cannot disagree');
+  /* The strip along the top of the Order screen is the switcher now: whose
+     order this is, the other orders in progress (each with how many items
+     wait in it), then the people served most. */
+  const render = extractFunction(src, 'renderClientStrip', 'agent.html');
+  t.check(/quoteBasketSummaries\(agentClients, carts, chosenClient \? chosenClient\.id : null, unnamedCart\)/.test(render),
+    'the strip lists the same baskets the summary works out, so the two cannot disagree');
+  t.check(/b\.unnamed/.test(render) && /data-strip="unnamed"/.test(render),
+    'the unclaimed basket is reachable from it, not only the named ones');
+  t.check(/<span class="c">\$\{b\.count\}<\/span>/.test(render),
+    'each waiting order carries how many items are in it');
+  t.check(/Who's this for\?/.test(render) && /data-strip="pick"/.test(render),
+    'with nobody named, the first thing on the screen asks who it is for');
+  /* The line that matters: moving between orders parks and swaps, and only
+     the very first naming -- with nobody chosen yet -- goes through
+     selectClient, which is the gesture that hands loose items over. */
+  const go = extractFunction(src, 'goToClientBasket', 'agent.html');
+  t.check(/if\(!chosenClient\)\{ selectClient\(client\); return; \}/.test(go),
+    'naming a client for the unnamed basket is the one path that adopts what is in hand');
+  t.check(go.includes('stashActiveCart();') && go.includes('chosenClient = client;') && go.includes('activateCartFor(client);'),
+    'every other move parks what is in hand and swaps in theirs');
+  t.check((go.match(/selectClient\(/g) || []).length === 1,
+    'and does not otherwise go through selectClient, which would claim the loose items for them');
+  const un = extractFunction(src, 'switchToUnnamed', 'agent.html');
+  t.check(/stashActiveCart\(\);\s*chosenClient = null;\s*activateCartFor\(null\);/.test(un),
+    'going back to the unclaimed basket parks the named one first, too');
 }
 
 /* ---------- 5d. submitting one order leaves the others alone --------- */
@@ -234,17 +227,17 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
 
 /* ---------- 6. the nudge, which is a statement not a barrier ---------- */
 {
-  const tab = extractFunction(src, 'renderCartTab', 'agent.html');
-  t.check(/const unassigned = hasItems && !chosenClient;/.test(tab),
-    'the note shows only when there are items and nobody named for them');
-  t.check(/will follow whoever you pick/.test(tab),
-    'and says the items are safe, which is now true and is the reassuring half');
-  t.check(/You will need one before sending this quote/.test(tab),
-    'as well as why a client is wanted, which is the encouraging half');
-  /* Submitting has always required a client. The note tells you that up
-     front instead of at the last step. */
-  t.check(/if\(!chosenClient\)\{ toast\('Choose or add a client first'\); return; \}/.test(src),
-    'and the send button still requires one, so the note is describing a real rule');
+  /* There is no separate note any more: the slider says what is missing
+     in place of "Slide to send", and the strip's first pill asks who it
+     is for. The items are safe either way -- they follow whoever is
+     picked. */
+  const block = extractFunction(src, 'sendBlocker', 'agent.html');
+  t.check(/if\(!chosenClient\) return 'Pick a client to send';/.test(block),
+    'with items and nobody named, the slider asks for a client rather than sending');
+  t.check(block.indexOf("'Add an item to send'") < block.indexOf("'Pick a client to send'"),
+    'an empty basket says so first -- naming a client for nothing is not the next step');
+  t.check(/if\(!chosenClient\)\{ toast\('Choose or add a client first'\); resetSlide\(\); return; \}/.test(src),
+    'and sending still requires one, so the slider is describing a real rule');
 }
 
 process.exit(t.done() ? 1 : 0);

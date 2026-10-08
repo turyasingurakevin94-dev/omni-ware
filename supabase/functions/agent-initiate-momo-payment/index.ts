@@ -171,6 +171,14 @@ async function airtelRequestToPay(creds: any, environment: string, opts: { refer
   return { providerTransactionId: body?.data?.transaction?.id || null };
 }
 
+// Mirrors agentOrderTerms in shared-worker.js -- keep the two in step.
+function agentOrderTerms(payload: any): string {
+  return (payload.items || []).map((it: any) => [
+    it.productId, (it.variantIdx === null || it.variantIdx === undefined) ? "" : it.variantIdx,
+    Number(it.qty) || 0, Math.round(Number(it.sellPrice) || 0),
+  ].join(":")).join("|");
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
@@ -204,13 +212,21 @@ Deno.serve(async (req) => {
     if (!providerRow || !providerRow.enabled) return json({ error: `${provider} is not enabled for this shop` }, 400);
 
     const { data: order, error: orderErr } = await admin
-      .from("saved_quotes").select("id, payload, amount_paid")
+      .from("saved_quotes").select("id, status, payload, amount_paid")
       .eq("shop_id", shopId).eq("id", orderId).maybeSingle();
     if (orderErr) return json({ error: orderErr.message, stage: "order_lookup" }, 500);
     if (!order) return json({ error: "Order not found" }, 404);
     const payload = order.payload || {};
     if (payload.originAgentId !== agentId) return json({ error: "This order does not belong to you" }, 403);
     if (payload.agentPaymentStatus === "paid") return json({ error: "This order is already paid" }, 400);
+    // Check first, pay second. While the order is still a draft the shop has
+    // not yet said which lines it can supply; taking money for lines it may
+    // drop would mean a refund. The shop's confirmation signs the lines as
+    // they stood (agentOrderTerms in shared-worker.js) -- if a line changed
+    // after that, the signature no longer matches and the shop confirms again.
+    if (order.status === "draft" && !(payload.shopConfirmedAt && payload.shopConfirmedTerms === agentOrderTerms(payload))) {
+      return json({ error: "The shop is still checking this order — you can pay once it is confirmed" }, 409);
+    }
 
     // What is still OWED, not the order total. amount_paid was already being
     // selected here and then ignored, so an order the agent had part-paid --

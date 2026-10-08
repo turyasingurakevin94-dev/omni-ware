@@ -32,15 +32,19 @@ const submitFn = read('supabase/functions/agent-submit-order/index.ts');
 /* A DOM small enough to hold the two elements the state touches, so the
    state machine is exercised rather than described. */
 const made = [];
+// The send control is a slider: a knob (the button) on a track, with the
+// words written across the track. The note goes above the whole slider.
 const els = {
   ag_pausedBanner: { style: { display: 'none' } },
-  ag_submit_btn: { disabled: false, textContent: 'Submit order', parentNode: null },
+  ag_submit_btn: { disabled: false },
+  ag_slideLabel: { textContent: 'Slide to send · 2 items' },
+  ag_slide: { parentNode: null },
 };
 const btnParent = {
   children: [],
   insertBefore(node) { this.children.push(node); els[node.id] = node; },
 };
-els.ag_submit_btn.parentNode = btnParent;
+els.ag_slide.parentNode = btnParent;
 const document = {
   getElementById: (id) => els[id] || null,
   createElement: () => {
@@ -62,6 +66,9 @@ try {
   scope = compileScope([
     'let agentPaused = false;',
     'let currentShopId = "shop-1";',
+    'let sendingOrder = false;',
+    // What the order screen redraws the slider with once nothing blocks it.
+    "function renderDock(){ document.getElementById('ag_slideLabel').textContent = 'Slide to send · 2 items'; }",
     ...NAMES.map((n) => extractFunction(src, n, 'agent.html')),
     'function readPaused(){ return agentPaused; }',
   ], { document, sb }, [...NAMES, 'readPaused']);
@@ -84,7 +91,7 @@ const callFn = (/async function callAgentFn\(name, body\)\{[\s\S]*?\n\}/.exec(co
 const boot = (/async function boot\(\)\{[\s\S]*?\n\}/.exec(code) || [''])[0];
 const fetchRows = (/async function fetchAgentHomeRows\(\)\{[\s\S]*?\n\}/.exec(code) || [''])[0];
 const loadHome = (/async function loadAgentHomeData\(\)\{[\s\S]*?\n\}/.exec(code) || [''])[0];
-const submitClick = (/getElementById\('ag_submit_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(code) || [''])[0];
+const submitClick = (/async function submitOrder\(\)\{[\s\S]*?\n\}/.exec(code) || [''])[0];
 const ensureAuth = (/async function ensureAgentAuth\(\)\{[\s\S]*?\n\}/.exec(code) || [''])[0];
 
 (async () => {
@@ -93,7 +100,7 @@ if (scope) {
   scope.setAgentPaused(true);
   eq(els.ag_pausedBanner.style.display, 'flex', 'a pause raises a banner that stays put');
   eq(els.ag_submit_btn.disabled, true, 'and takes the submit button away');
-  eq(els.ag_submit_btn.textContent, 'Orders are paused',
+  eq(els.ag_slideLabel.textContent, 'Orders are paused',
     'which says what it is rather than looking broken');
   t.check(!!els.ag_submit_blocked, 'with the reason written beside it');
   t.check(/stay in your basket until they lift it/.test(els.ag_submit_blocked.textContent),
@@ -102,7 +109,7 @@ if (scope) {
   scope.setAgentPaused(false);
   eq(els.ag_pausedBanner.style.display, 'none', 'lifting it puts the banner away');
   eq(els.ag_submit_btn.disabled, false, 'gives the button back');
-  eq(els.ag_submit_btn.textContent, 'Submit order', 'under its own name again');
+  eq(els.ag_slideLabel.textContent, 'Slide to send · 2 items', 'under its own words again');
   t.check(!els.ag_submit_blocked, 'and clears the note rather than leaving it under a working button');
 
   // Called twice running, which is what a refresh does, and must not

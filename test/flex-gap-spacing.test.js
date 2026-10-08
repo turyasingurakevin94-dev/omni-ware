@@ -346,20 +346,14 @@ function unspacedUnits(src, flexClasses, marginClasses = new Set()) {
   // The hazard is unchanged: two sibling spans in one text flow, with a
   // 6px margin doing the separating and nothing in the text to match it.
   // Both call sites are still found, and both still carry the real space.
+  // The quote tables are gone. An order line and a track line now put the
+  // name and the variant in ONE span, joined by " · " inside the text, so
+  // the two cannot run together however the line is styled.
   const agent = read('agent.html');
-  const hits = [...agent.matchAll(/<span class="ag-receipt-name"[^>]*>\$\{esc\(it\.name\)\}<\/span>\$\{it\.variantLabel \? (.)/g)]
-    .map(m => m[1]);
-  t.check(hits.length === 2, `both quote views are found (${hits.length})`);
-  t.check(hits.every(c => c === '`'), 'each opens its conditional with a template literal, as expected');
-
-  const spaced = [...agent.matchAll(/<\/span>\$\{it\.variantLabel \? ` <span class="ag-grid-variant">/g)].length;
-  t.check(spaced === 2,
-    `both put a real space between the product name and its variant (${spaced} of ${hits.length})`);
-
-  // And the margin that hid it is still there, which is why the space has
-  // to be: remove the margin and this would be a different conversation.
-  t.check(/\.fx-qlist \.ag-grid-variant\{[^}]*margin:0 0 0 6px/.test(agent),
-    'the variant is still separated visually by a margin, with nothing in the text to match it');
+  t.check(/\$\{esc\(it\.name\)\}\$\{it\.variantLabel \? ` · \$\{esc\(it\.variantLabel\)\}` : ''\}/.test(agent),
+    'an order line joins the name and its variant with a real separator in the text');
+  t.check(!/<span class="ag-grid-variant">/.test(agent),
+    'and no separate variant span is left to sit against the name with only a margin between them');
   t.check(!/\.ag-receipt-table/.test(agent),
     'and the table it used to be selected through is gone, not merely bypassed');
 }

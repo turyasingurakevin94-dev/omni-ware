@@ -1,159 +1,132 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * The shape of the agent's quote screen.
+ * The Order screen: the whole sale on one screen.
  *
- * The alternative considered was Items / Client / Delivery as tabs.
- * Measured at 375x812 the whole screen is 752px with one item and 886px
- * with four, so tabs would have added navigation to something that barely
- * scrolls. And they would have hidden what Submit requires: pressed on a
- * Delivery tab with no client chosen, the complaint is about a tab you
- * cannot see.
+ * Who it is for along the top, the lines in the middle -- each one opened
+ * in place to change its quantity or price -- and a navy dock at the foot
+ * holding how it gets there, what it comes to, what it leaves the agent,
+ * and one slide to send. There is no review page, because this is the
+ * review.
  *
- * So the sections FOLD instead. The distinction that makes folding worth
- * doing rather than tabbing is that a shut section still shows its
- * answer -- "Dickson Muwanga", "Shop delivers, Plot 12" -- so everything
- * Submit needs stays readable from one screen. A fold that hid its answer
- * would be a tab with extra steps.
+ * What is pinned:
  *
- * And Submit is pinned, which is what actually helps the long-quote case:
- * on a 25-line quote the scrolling is through the agent's own items, and
- * no tab arrangement would shorten that.
+ *   - the dock's figures come from the same helper as every line's chip,
+ *     so the two cannot disagree, including while a price is being typed
+ *   - the slider says what is missing in place of "Slide to send", and
+ *     the send itself still refuses on its own
+ *   - a slide, not a tap, sends: a basket is not sent from a pocket. A
+ *     keyboard still presses it like any button
+ *   - typing a price never redraws the field under the thumb
  *
  * Run: node test/agent-quote-layout.test.js   (or: npm test)
  */
-const { read, extractFunction, createReporter } = require('./_extract');
+const { read, extractFunction, compileScope, createReporter } = require('./_extract');
 
-const t = createReporter('agent quote layout');
+const t = createReporter('agent order screen');
 const src = read('agent.html');
-const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
-const sums = (new Function(
-  extractFunction(src, 'quoteFoldSummaries', 'agent.html') + '\nreturn quoteFoldSummaries;'))();
+const fn = (n) => extractFunction(src, n, 'agent.html');
 
-const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
-
-/* ---------- 1. a shut section still answers its own question --------- */
+/* ---------- 1. one set of figures ---------------------------------- */
 {
-  eq(sums({ name: 'Dickson Muwanga' }, 'agent_pickup', '').client, 'Dickson Muwanga',
-    'the client section names the client while shut');
-  eq(sums(null, 'agent_pickup', '').client, null,
-    'and says nothing rather than something, when there is nobody yet');
-  eq(sums({ name: '   ' }, 'agent_pickup', '').client, null,
-    'a name of only spaces is no name');
-
-  eq(sums(null, 'agent_pickup', '').delivery, "I'll pick it up myself",
-    'collecting it yourself is a complete answer on its own');
-
-  /* For a shop delivery the ADDRESS is the answer. "Shop delivers" alone
-     would leave the one thing that can still block the send out of
-     sight -- which is the trap tabs would have set everywhere. */
-  eq(sums(null, 'shop_delivery', 'Plot 12, Ntinda Road').delivery, 'Shop delivers · Plot 12, Ntinda Road',
-    'a shop delivery reads as the address it is going to');
-  eq(sums(null, 'shop_delivery', '').delivery, null,
-    'and counts as unanswered until there is one, since the send needs it');
-  eq(sums(null, 'shop_delivery', '   ').delivery, null, 'spaces being no address');
+  let api = null, err = null;
+  const env = { cart: [], openLineIdx: -1, fmtUGX: (n) => 'UGX ' + n, esc: (s) => String(s) };
+  try {
+    api = compileScope([fn('cartLineMargin'), fn('cartLineFigures'), fn('cartTotals'),
+      'function setCart(rows, open, preview){ cart.length = 0; rows.forEach((r)=> cart.push(r)); openLineIdx = open; }'],
+    env, ['cartTotals', 'setCart']);
+  } catch (e) { err = e; }
+  t.check(!!api, `the totals compile${err ? ` (${err.message})` : ''}`);
+  if (api) {
+    api.setCart([
+      { qty: 40, floorPrice: 32000, agentSellPrice: 33500 },
+      { qty: 25, floorPrice: 3700, agentSellPrice: 4100, displayQty: 1, displayUnit: 'ctn' },
+    ], -1);
+    const tot = api.cartTotals();
+    t.check(tot.total === 40 * 33500 + 25 * 4100, `the dock's total is every line at the agent's price (${tot.total})`);
+    t.check(tot.profit === 40 * 1500 + 25 * 400, 'and what it leaves them is every line\'s margin');
+    api.setCart([{ qty: 40, floorPrice: 32000, agentSellPrice: 33500 }], 0);
+    const typing = api.cartTotals({ qty: 40, floorPrice: 32000, agentSellPrice: 31000 });
+    t.check(typing.profit === -40000, 'while a price is being typed, the dock already shows what it would leave -- a loss, here');
+  }
+  const dock = fn('renderDock');
+  t.check(/const t = cartTotals\(preview\);/.test(dock), 'the dock draws from that one helper');
+  t.check(/e\.classList\.toggle\('loss', t\.profit < 0\)/.test(dock), 'and turns its figure when the order runs at a loss');
 }
 
-/* ---------- 2. open when it still needs something -------------------- */
+/* ---------- 2. what stops a send, said where you would slide ---------- */
 {
-  const fn = extractFunction(src, 'renderQuoteFolds', 'agent.html');
-  t.check(/if\(!card\.dataset\.touched\) card\.classList\.toggle\('open', !answer\);/.test(fn),
-    'a section starts open while unanswered and shuts once answered');
-  /* Without this a fold would spring back open under the finger that had
-     just shut it. */
-  t.check(/card\.dataset\.touched = '1';/.test(code),
-    'and stays where it is put once it has been opened or shut by hand');
-  t.check(/ans\.textContent = answer \|\| prompt;/.test(fn)
-    && /ans\.classList\.toggle\('empty', !answer\);/.test(fn),
-    'an unanswered section shows a prompt, styled apart from a real answer');
-  t.check(/Choose a client/.test(fn) && /How does it get there\?/.test(fn),
-    'and the prompt asks for what is missing');
-
-  // Kept current by everything that could change either answer.
-  ['renderCartTab'].forEach((f) => {
-    t.check(/renderQuoteFolds\(\);/.test(extractFunction(src, f, 'agent.html')),
-      `${f} refreshes the summaries`);
-  });
-  /* Named individually rather than counted: a count is satisfied while
-     any one of them quietly stops, and the summary going stale is the one
-     way a fold turns back into a tab — showing an answer that is no
-     longer true is worse than showing none. */
-  t.check(/document\.getElementById\('ag_delivery_address'\)\.addEventListener\('input', \(\)=>\{ saveQuoteDraft\(\); renderQuoteFolds\(\); \}\);/.test(code),
-    'typing an address updates what the shut section says');
-  t.check(/saveQuoteDraft\(\);\s*\r?\n\s*renderQuoteFolds\(\);\s*\r?\n\s*\}\);\s*\r?\n\}\);/.test(code),
-    'and so does switching between collecting it and having it delivered');
-  t.check((code.match(/renderQuoteFolds\(\)/g) || []).length >= 5,
-    'along with choosing a client and clearing one');
+  let api = null;
+  const els = { ag_delivery_shop: { checked: false }, ag_delivery_address: { value: '' } };
+  try {
+    api = compileScope(['let agentPaused = false, chosenClient = null; const cart = [];',
+      'function set(p, c, n){ agentPaused = p; chosenClient = c; cart.length = 0; for(let i=0;i<n;i++) cart.push({}); }',
+      fn('deliveryMode'), fn('sendBlocker')],
+    { document: { getElementById: (id) => els[id] } }, ['sendBlocker', 'set']);
+  } catch (e) { /* below */ }
+  t.check(!!api, 'sendBlocker compiles');
+  if (api) {
+    api.set(false, null, 0);
+    t.check(api.sendBlocker() === 'Add an item to send', 'an empty order asks for an item first');
+    api.set(false, null, 2);
+    t.check(api.sendBlocker() === 'Pick a client to send', 'then for whom it is');
+    api.set(false, { id: 1 }, 2);
+    t.check(api.sendBlocker() === null, 'and with both, nothing stops it');
+    els.ag_delivery_shop.checked = true;
+    t.check(api.sendBlocker() === 'Add the address to send', 'a delivery needs somewhere to go');
+    els.ag_delivery_address.value = 'Plot 12, Ntinda';
+    t.check(api.sendBlocker() === null, 'and has it once the address is typed');
+    api.set(true, { id: 1 }, 2);
+    t.check(api.sendBlocker() === 'Orders are paused', 'a paused account says so before anything else');
+  }
+  const dock = fn('renderDock');
+  t.check(/knob\.disabled = !!block;/.test(dock) && /block\s*\|\| `Slide to send · \$\{cart\.length\} item/.test(dock),
+    'the slider is disabled and says what is missing; otherwise it says how many items go');
+  const submit = fn('submitOrder');
+  t.check(/if\(!cart\.length\)\{ toast\('Add at least one item'\); resetSlide\(\); return; \}/.test(submit)
+    && /if\(deliveryMode==='shop_delivery' && !deliveryAddress\)\{ toast\('Enter a delivery address'\); resetSlide\(\); return; \}/.test(submit),
+    'and the send refuses on its own as well, so the slider is describing a real rule');
 }
 
-/* ---------- 3. Submit is pinned, and honest about the figure --------- */
+/* ---------- 3. a slide, not a tap ----------------------------------- */
 {
-  t.check(/\.ag-submit-bar\{[^}]*position:sticky/.test(src),
-    'the submit bar is pinned rather than sitting at the end of the scroll');
-  t.check(/\.ag-submit-bar\{[^}]*env\(safe-area-inset-bottom\)/.test(src),
-    'clearing the home indicator on a phone that has one');
-  t.check(/id="ag_submitBarTotal"/.test(src), 'and carries the total, so pressing it is not blind');
-
-  /* One figure, set in one place. Two totals that could disagree about
-     what is being sent is worse than no total at all. */
-  const cart = extractFunction(src, 'renderCart', 'agent.html');
-  t.check(/document\.getElementById\('ag_cartTotalValue'\)\.textContent = fmtUGX\(total\);\s*\r?\n[\s\S]{0,220}?bar\.textContent = fmtUGX\(total\);/.test(cart),
-    'the pinned total is set from the same line as the card total');
-  t.check((code.match(/ag_submitBarTotal/g) || []).length >= 3,
-    'and is kept in step where the rate is edited in place, too');
-
-  // Only one Submit button, or two could disagree about being enabled.
-  t.check((src.match(/id="ag_submit_btn"/g) || []).length === 1,
-    'there is one Submit button, not one per section');
+  const wire = (/\(function wireSlide\(\)\{[\s\S]*?\}\)\(\);/.exec(src) || [''])[0];
+  t.check(wire.length > 0, 'the slider is wired');
+  t.check(/dx >= max \* 0\.85/.test(wire) && /submitOrder\(\);/.test(wire),
+    'it sends only once the knob is dragged most of the way across');
+  t.check(/if\(!moved\) toast\('Slide the red button across to send'\);/.test(wire),
+    'a plain tap does not send, and says how to');
+  t.check(/addEventListener\('click', \(e\)=>\{ if\(e\.detail === 0\) submitOrder\(\); \}\);/.test(wire),
+    'a keyboard press still sends -- the knob is a real button');
+  t.check(/\.ax-slide\{[^}]*touch-action:pan-y/.test(src) && /\.ag-knob\{[^}]*touch-action:none/.test(src),
+    'and the drag is the knob\'s alone: the page still scrolls under a thumb that misses it');
+  t.check((src.match(/id="ag_submit_btn"/g) || []).length === 1, 'there is exactly one send control');
 }
 
-/* ---------- 3b. Save as Solution rides on the Items heading ---------- */
-/*
- * It used to be a sentence under the table -- "Save these items as a
- * Solution" -- which at the foot of a long list is read as a footnote by
- * anyone who has scrolled past it. It acts on the items, so it now sits
- * beside their name.
- *
- * The risk in trading words for a glyph is the tap target and the label.
- * A 20px icon is a 20px thing to aim at unless the button around it is
- * bigger, and an icon with no accessible name is unreachable by anyone
- * not looking at it.
- */
+/* ---------- 4. editing a line in place ------------------------------- */
 {
-  t.check(!/Save these items as a Solution<\/span>/.test(src),
-    'the sentence under the table is gone');
-  t.check(src.includes('<div class="ag-card-head-row">')
-    && src.includes('<div class="ag-card-title">Items</div>')
-    && src.includes('<button type="button" class="ag-icon-action" id="ag_save_solution_btn"')
-    && src.indexOf('<div class="ag-card-head-row">') < src.indexOf('id="ag_save_solution_btn"'),
-    'and the action sits on the same line as Items');
-  t.check(/aria-label="Save these items as a Solution"/.test(src) && /title="Save these items as a Solution"/.test(src),
-    'carrying the words it replaced, for anyone not going by the picture');
-  /* 44px around a 20px glyph. Traded prose for an icon, so the icon has
-     to be at least as easy to hit as the sentence was. */
-  t.check(/\.ag-icon-action\{[^}]*width:44px;height:44px;/.test(src),
-    'with a full-sized tap target around it');
-  t.check(/\.ag-icon-action svg\{width:20px;height:20px;/.test(src),
-    'and a glyph that reads at a glance inside it');
-  // Same handler, same modal -- only where the control lives has changed.
-  t.check(/document\.getElementById\('ag_save_solution_btn'\)\.addEventListener\('click', openSaveSolutionModal\);/.test(code),
-    'opening the same sheet it always did');
-  t.check((src.match(/id="ag_save_solution_btn"/g) || []).length === 1,
-    'from one control, not two');
+  const typing = (/getElementById\('ag_cartWrap'\)\.addEventListener\('input'[\s\S]*?\n\}\);/.exec(src) || [''])[0];
+  t.check(/const preview = Object\.assign\(\{\}, it, \{ agentSellPrice: entered \/ lineMult\(it\) \}\);/.test(typing),
+    'a typed price is previewed per base unit, the way it will be stored');
+  t.check(!/renderCart\(\)/.test(typing) && /renderDock\(preview\)/.test(typing),
+    'and patches the chips and the dock without redrawing the field under the thumb');
+  const commit = (/getElementById\('ag_cartWrap'\)\.addEventListener\('change'[\s\S]*?\n\}\);/.exec(src) || [''])[0];
+  t.check(/it\.agentSellPrice = entered \/ lineMult\(it\);/.test(commit) && /saveQuoteDraft\(\);/.test(commit),
+    'it is committed when the field is left, and kept');
+  const render = fn('renderCart');
+  t.check(/class="ax-sug" data-sug=/.test(render) && /last <b>/.test(render) && /shop <b>/.test(render),
+    'under the price: what this client paid last time, and the shop\'s own price, one tap each');
+  t.check(/data-del aria-label="Remove/.test(render), 'and the way to take the line out');
 }
 
-/* ---------- 4. what was deliberately NOT done ------------------------ */
+/* ---------- 5. the dock stays in reach ------------------------------- */
 {
-  /* Pinned here so the decision is not quietly reversed by someone who
-     did not see the measurements. */
-  t.check(/Items \/ Client \/ Delivery as tabs/.test(src),
-    'the tabs alternative and the reason against it are recorded in the stylesheet');
-  t.check(/hide what Submit requires/.test(src),
-    'naming the reason, which is that a tab hides the thing that blocks the send');
-  // The Items card keeps its own toggle: two readings of one thing, which
-  // is what a toggle is genuinely for.
-  t.check(/id="ag_quoteview_yours_btn"/.test(src) && /id="ag_quoteview_client_btn"/.test(src),
-    'and the Your view / Client view toggle inside Items is untouched');
+  t.check(/\.ax-dock\{[^}]*position:fixed/.test(src) && /\.ax-dock\{[\s\S]*?env\(safe-area-inset-bottom/.test(src.replace(/--safe-b/g, 'env(safe-area-inset-bottom')),
+    'the dock is pinned to the foot and clears the phone\'s home bar');
+  t.check(/\.ax-order\{[^}]*padding:14px 16px calc\(250px/.test(src), 'and the last line scrolls clear of it');
+  t.check(/document\.querySelectorAll\('input\[name="ag_delivery"\]'\)/.test(src)
+    && /id="ag_delivery_pickup"/.test(src) && /id="ag_delivery_shop"/.test(src),
+    'pickup and delivery are real radio inputs behind the toggle, so the choice survives a reload');
 }
 
 process.exit(t.done() ? 1 : 0);

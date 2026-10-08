@@ -5,7 +5,9 @@
  * already holds. These checks pin the parts that decide what an agent is
  * told -- what one sale pays him, which items count as bought together,
  * how the cards are ordered, and that "Not for me" actually hides a card
- * -- plus the wiring that makes Feed a tab of its own.
+ * -- plus the wiring that puts the feed's best cards on Today as "Next
+ * move". The feed stopped being a tab of its own when Feed and Home
+ * merged into Today; its ranking is what decides that row.
  *
  * Run: node test/agent-feed.test.js   (or: npm test)
  */
@@ -143,8 +145,10 @@ const fn = (name) => extractFunction(src, name, 'agent.html');
   const now = new Date('2026-09-27T10:00:00');
   const orders = [
     { id: 1, status: 'pending_delivery', deliveryMode: 'agent_pickup', agentClientId: 1, items: [] },
-    { id: 2, status: 'draft', agentPaymentStatus: 'unpaid', amountPaid: 50, agentClientId: 1,
+    { id: 2, status: 'draft', agentPaymentStatus: 'unpaid', amountPaid: 50, agentClientId: 1, checked: true,
       items: [{ sellPrice: 100, qty: 3 }] },
+    // Still being checked by the shop: not money waiting on him yet.
+    { id: 5, status: 'draft', agentPaymentStatus: 'unpaid', agentClientId: 1, items: [{ sellPrice: 100, qty: 1 }] },
     { id: 3, status: 'draft', agentPaymentStatus: 'paid', items: [] },
     { id: 4, status: 'pending_delivery', deliveryMode: 'agent_pickup', voided: true, items: [] },
   ];
@@ -156,6 +160,7 @@ const fn = (name) => extractFunction(src, name, 'agent.html');
     monthEarnings: (m) => ({ bonus: m === '2026-08' ? 7000 : m === '2026-07' ? 3000 : 0 }),
     findClaim: (m) => (m === '2026-07' ? { month: m } : null),
     orderTotal: () => 900, orderEarnings: (o) => ({ margin: o.id * 1000 }),
+    orderShopChecked: (o) => !!o.checked,
   };
   let feedMoneyWaiting;
   try { ({ feedMoneyWaiting } = compileScope([fn('feedMoneyWaiting')], env, ['feedMoneyWaiting'])); } catch (e) { /* below */ }
@@ -166,6 +171,8 @@ const fn = (name) => extractFunction(src, name, 'agent.html');
     t.check(kinds === 'claim,pickup,prepay', `a finished month's unclaimed bonus, an order at the counter and a prepay to start (${kinds})`);
     t.check(!rows.some((r) => r.kind === 'claim' && r.month === '2026-07'), 'a month already claimed is not asked for again');
     t.check(rows.find((r) => r.kind === 'prepay').amount === 250, 'the prepay row is what is still owed to start it');
+    t.check(!rows.some((r) => r.order && r.order.id === 5),
+      'an order the shop is still checking asks for no money -- he pays once the lines are confirmed');
     t.check(rows[0].earn >= rows[rows.length - 1].earn, 'what pays him most comes first');
   }
 }
@@ -206,15 +213,19 @@ const fn = (name) => extractFunction(src, name, 'agent.html');
     'pins: the shop writes them, its agents only read them');
 }
 
-/* ---------- 4. Feed is a tab of its own, and the first one ------------- */
+/* ---------- 4. the feed's best cards are Today's "Next move" --------- */
 {
-  t.check(/const TABS = \['feed',/.test(src), 'Feed is the first tab');
-  t.check(/feed: 'ag_feedView'/.test(src), 'and it maps to its own view');
-  t.check(/<div id="ag_feedView"/.test(src), 'which exists in the page');
-  t.check(/data-tab="feed"/.test(src), 'with a button in the tab bar');
-  t.check(/grid-template-columns:repeat\(4,1fr\)/.test(src), 'and the bar has room for four');
-  t.check(/if\(tab==='feed'\) openFeedView\(\);/.test(src), 'switching to it builds the feed');
-  t.check(/savedTab\) \? savedTab : 'feed'\)/.test(src), 'a first launch opens on the feed');
+  const fnSrc = (n) => { try { return fn(n); } catch (e) { return ''; } };
+  const renderNext = fnSrc('renderNext');
+  t.check(/buildFeedCards\(new Date\(\)\)/.test(renderNext), 'Next move is drawn from the feed ranking, not a second list');
+  t.check(/c\.kind === 'ask'/.test(renderNext) && /\['due','bonus','addon','bulk','pin'\]/.test(renderNext),
+    'requests from the shop link come first, then the money cards in the order the feed ranked them');
+  t.check(/\.slice\(0, 8\)/.test(renderNext), 'and it stops at eight -- a row that never ends is time not spent with customers');
+  t.check(/You're all caught up/.test(renderNext), 'with nothing to suggest, it says so and offers the next order');
+  t.check(/const TABS = \['today','clients'\];/.test(src) && !/data-tab="feed"/.test(src),
+    'Today and Clients are the two tabs; Feed and Home are one place now');
+  t.check(/if\(tab === 'feed' \|\| tab === 'home'\) tab = 'today';/.test(src),
+    'a saved "feed" tab or a notification still lands on Today');
 }
 
 process.exit(t.done() ? 1 : 0);

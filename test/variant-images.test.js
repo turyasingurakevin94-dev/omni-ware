@@ -118,11 +118,19 @@ const admin = read('index.html');
  * these two functions return.
  */
 {
-  const agentApp = strip(read('agent.html'));
-  t.check(/selected\.image \? `<img class="ag-grid-thumb" src="\$\{esc\(selected\.image\)\}"/.test(agentApp),
-    'the card shows the row\'s image');
-  t.check(/: `<div class="ag-grid-thumb-placeholder">\$\{ICON_PLACEHOLDER\}<\/div>`/.test(agentApp),
-    'and the placeholder only when there is none -- which is what every variant was getting');
+  const agentApp = read('agent.html');
+  let thumb = null;
+  try {
+    ({ itemThumbHTML: thumb } = compileScope([extractFunction(agentApp, 'itemThumbHTML', 'agent.html')], {
+      esc: (v) => String(v), categoryIconSVG: (c) => `<svg data-cat="${c}"></svg>`, itemCategory: (it) => it.category || 'Other',
+    }, ['itemThumbHTML']));
+  } catch (e) { /* reported below */ }
+  t.check(!!thumb && /<img src="gauge30\.jpg"/.test(thumb({ image: 'gauge30.jpg', category: 'Roofing' })),
+    'a Find tile shows the row\'s own image');
+  t.check(!!thumb && /data-cat="Roofing"/.test(thumb({ image: null, category: 'Roofing' })) && !/<img/.test(thumb({ image: null, category: 'Roofing' })),
+    'and its aisle\'s mark only when there is none -- which is what every variant was getting');
+  t.check(/itemThumbHTML\(sel\)/.test(extractFunction(agentApp, 'findTileHTML', 'agent.html')),
+    'drawn from the variant the tile has selected, not the product\'s first');
 }
 
 /* ---------- 5. the worker's pick card ------------------------------- */

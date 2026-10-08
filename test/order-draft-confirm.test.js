@@ -94,6 +94,7 @@ const scope = compileScope([
   orderAwaitsGoods: (q) => ((q && q.items) || []).some((it) => it.supplierId && it.supplierId !== '__stock__'),
   // Gates belonging to other stages, held open so this file measures its own.
   agentPaymentBlocksPreparing: () => false,
+  agentOrderNeedsShopCheck: () => false,
   promptAgentPrepayment: () => {},
   openAssignStaffModal: () => {},
   resetPickingProgress: () => {},

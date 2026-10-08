@@ -152,6 +152,7 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   const leave = compileScope([extractFunction(src, 'orderLeaveDraft', 'index.html')], {
     orderDraftReady: (q) => !!q.ready,
     agentPaymentBlocksPreparing: (q) => !!q.unpaid,
+    agentOrderNeedsShopCheck: (q) => !!q.unchecked,
     orderAwaitsGoods: (q) => !!q.incoming,
     setSavedQuoteStatus: (id, st, o) => seen.statuses.push([id, st, o]),
   }, ['orderLeaveDraft']).orderLeaveDraft;
@@ -164,6 +165,8 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     'a draft still waiting on a supplier is not moved');
   t.check(leave(mk({ ready: true, unpaid: true }), { auto: true }) === false && seen.statuses.length === 0,
     "nor a prepay agent's order before the money is recorded -- the gate holds either way");
+  t.check(leave(mk({ ready: true, unchecked: true }), { auto: true }) === false && seen.statuses.length === 0,
+    "nor a prepay agent's order the shop has not yet checked line by line -- the agent is asked to pay only after that");
   t.check(leave(mk({ ready: true, status: 'preparing' }), { auto: true }) === false, 'and an order past Taken is left alone');
   leave(mk({ ready: true }), { auto: false });
   t.check(seen.statuses.pop()[2].auto === false, "the owner's own tap is recorded as theirs, not the app's");

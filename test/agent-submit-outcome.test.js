@@ -34,25 +34,10 @@ const { read, extractFunction, compileScope, createReporter } = require('./_extr
 const t = createReporter('agent submit outcome');
 const src = read('agent.html');
 
-// The handler is an anonymous arrow inside addEventListener, so there is no
-// name for extractFunction to anchor on. Sliced by brace matching from its
-// one call site; throws rather than skipping if the shape ever moves,
-// because a test that quietly stops exercising this would report green
-// while checking nothing.
+// The send is a named function now -- the slider and a keyboard press on
+// its knob both call it -- so it is extracted by name.
 function extractSubmitHandler() {
-  const anchor = "document.getElementById('ag_submit_btn').addEventListener('click', async ()=>{";
-  const at = src.indexOf(anchor);
-  if (at < 0) throw new Error('could not find the ag_submit_btn click handler in agent.html');
-  if (src.indexOf(anchor, at + 1) >= 0) throw new Error('more than one ag_submit_btn click handler');
-  const open = at + anchor.length - 1;
-  let depth = 0;
-  for (let i = open; i < src.length; i++) {
-    if (src[i] === '{') depth++;
-    else if (src[i] === '}' && --depth === 0) {
-      return `async function submitOrder()${src.slice(open, i + 1)}`;
-    }
-  }
-  throw new Error('unbalanced braces in the ag_submit_btn handler');
+  return extractFunction(src, 'submitOrder', 'agent.html');
 }
 
 // The three the handler actually reasons about. Everything else
@@ -62,12 +47,14 @@ const fields = {
   // parentNode/textContent because applyPausedToCart writes the reason in
   // beside the button -- the handler's finally calls it, so it runs on
   // every outcome in this file, not only the paused one.
-  ag_submit_btn: { disabled: false, textContent: 'Submit order', parentNode: null },
+  ag_submit_btn: { disabled: false },
+  ag_slideLabel: { textContent: 'Slide to send · 1 item' },
+  ag_slide: { parentNode: null },
   ag_delivery_shop: { checked: false },
   ag_delivery_address: { value: '' },
 };
 const btnParent = { children: [], insertBefore(n) { this.children.push(n); fields[n.id] = n; } };
-fields.ag_submit_btn.parentNode = btnParent;
+fields.ag_slide.parentNode = btnParent;
 const noopEl = () => ({
   value: '', checked: false, disabled: false, innerHTML: '', textContent: '',
   style: {}, dataset: {},
@@ -86,7 +73,7 @@ try {
     'let cart = [], carts = Object.create(null), chosenClient = null, myAgent = null, myOrders = [];',
     // The real one, not a stub: whether the finally hands a disabled
     // button back is exactly the kind of thing this file exists to catch.
-    'let agentPaused = false;',
+    'let agentPaused = false, sendingOrder = false, openLineIdx = -1;',
     'function setAgentPaused(on){ agentPaused = !!on; applyPausedToCart(); }',
     extractFunction(src, 'applyPausedToCart', 'agent.html'),
     'const cartKey = (client) => client ? String(client.id) : null;',
@@ -103,14 +90,14 @@ try {
        fields.ag_delivery_shop.checked = !!o.shopDelivery;
        fields.ag_delivery_address.value = o.address || '';
        fields.ag_submit_btn.disabled = false;
-       state.told = []; state.submits = 0; state.paymentPrompted = false; state.tab = null;
+       state.told = []; state.submits = 0; state.paymentPrompted = false; state.tab = null; state.sent = null;
      }`,
     `function readState(){ return {
        told: state.told.slice(), submits: state.submits,
        cartLeft: cart.length, basketsLeft: Object.keys(carts),
        buttonUsable: !fields.ag_submit_btn.disabled,
-       buttonSays: fields.ag_submit_btn.textContent,
-       paymentPrompted: state.paymentPrompted, tab: state.tab,
+       buttonSays: fields.ag_slideLabel.textContent,
+       paymentPrompted: state.paymentPrompted, tab: state.tab, sent: state.sent,
      }; }`,
   ], {
     fields, state,
@@ -118,6 +105,11 @@ try {
     toast: (m) => { state.told.push(String(m)); },
     switchTab: (tab) => { state.tab = tab; },
     openPaymentChoiceModal: () => { state.paymentPrompted = true; },
+    openMomoPaymentModal: () => { state.paymentPrompted = true; },
+    sentSnapshot: () => ({ count: 1 }),
+    showSent: (snap, orderId) => { state.sent = { snap, orderId }; },
+    renderCurrentView: () => {},
+    resetSlide: () => {},
     saveQuoteDraft: () => {},
     clearQuoteDraft: () => {},
     updateCartBadge: () => {},
@@ -164,9 +156,9 @@ const run = async (submitResult, loadResult) => {
       t.check(r.submits === 1, 'the order was submitted once');
       t.check(!said(r, /can't submit|Could not submit/),
         `the agent is not told the order failed, because it did not (${JSON.stringify(r.told)})`);
-      t.check(said(r, /Order submitted/), 'they are told it was submitted');
-      t.check(said(r, /under Orders/),
-        'and where to find it, since the refresh that would have shown it is what broke');
+      t.check(r.sent && r.sent.orderId === 4242, 'they are shown the Sent screen for it');
+      t.check(said(r, /Order submitted/) && said(r, /waiting for you on Today/),
+        'and told where to find it, since the refresh that would have shown it is what broke');
       t.check(r.cartLeft === 0 && r.basketsLeft.length === 0,
         'the basket is cleared, so nothing invites them to send the same order again');
       t.check(r.buttonUsable, 'and the button is usable again');
@@ -175,20 +167,22 @@ const run = async (submitResult, loadResult) => {
     /* ---------- 2. the ordinary path is unchanged ---------------------- */
     {
       const r = await run(() => ({ ok: true, orderId: 4242 }), async () => {});
-      t.check(r.told.length === 1 && /Order submitted/.test(r.told[0]),
-        `a clean submit still says one thing (${JSON.stringify(r.told)})`);
-      t.check(r.cartLeft === 0 && r.tab === 'sell', 'clears the basket and returns to Sell');
+      t.check(r.told.length === 0 && r.sent && r.sent.orderId === 4242,
+        `a clean submit says it with the Sent screen, and nothing else (${JSON.stringify(r.told)})`);
+      t.check(r.cartLeft === 0 && r.tab === 'today', 'clears the basket, and Today is underneath when Sent is closed');
     }
 
-    /* ---------- 3. a prepay agent is still asked to pay ---------------- */
+    /* ---------- 3. nobody is asked to pay on sending ----------------- *
+     * A prepay agent used to be asked for the money the moment the order
+     * went. If the shop then dropped a line, they had paid for goods they
+     * would never get. The shop checks the lines first now; payment is
+     * asked for on the order's track, once it has.
+     */
     {
-      s.setUp({ client: CLIENT, agent: AGENT, cart: BASKET });
-      state.submitResult = () => ({ ok: true, orderId: 4242 });
-      state.loadResult = () => { s.readState(); };
-      // The reload is what puts the new order in myOrders; mimic that.
-      state.loadResult = async () => { state.injected = true; };
-      await s.submitOrder();
-      t.check(state.injected === true, 'the orders reload still runs on the happy path');
+      const r = await run(() => ({ ok: true, orderId: 4242 }), async () => {});
+      t.check(!r.paymentPrompted, 'sending opens no payment prompt, for a prepay agent either');
+      t.check(!/openPaymentChoiceModal|openMomoPaymentModal/.test(extractSubmitHandler()),
+        'and the send cannot reach one');
     }
 
     /* ---------- 4. a genuine submit failure keeps the basket ----------- */
@@ -253,7 +247,7 @@ const run = async (submitResult, loadResult) => {
          the agent should not lose a basket over it. */
       t.check(r.cartLeft === 1 && r.basketsLeft.length === 1,
         'and the basket is still there for when the pause is lifted');
-      t.check(!r.paymentPrompted && r.tab === null,
+      t.check(!r.paymentPrompted && r.tab === null && !r.sent,
         'with none of the order-placed housekeeping run for an order that was never placed');
     }
   }

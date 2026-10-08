@@ -28,6 +28,9 @@ const myInquiries = [];
 // Buttons wired by renderInquiries land here so a click can be replayed.
 const wired = [];
 const NAMES = ['inquiryAgoLabel', 'inquiryProductLabel', 'inquiriesForDisplay', 'renderInquiries', 'toggleInquiryHandled'];
+// The Clients tab shows requests two ways: the open ones on top of the
+// list, and all of them (handled ones too) under the "Asked" filter.
+const FILTER_SRC = "let clientFilter = 'asked'; function setClientFilter(f){ clientFilter = f; }";
 const env = {
   document: {
     getElementById: (id) => Object.assign(el(id), {
@@ -45,8 +48,10 @@ const env = {
   saveOfflineCache: () => { env.__cached = (env.__cached || 0) + 1; },
   esc: (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])),
   sb: { from: () => ({ update: (v) => { env.__update = v; return { eq: () => ({ eq: () => Promise.resolve({ error: env.__err || null }) }) }; } }) },
+  AX_ICON: { chat: '<svg></svg>', check: '<svg></svg>', phone: '<svg></svg>' },
+  firstWord: (n) => String(n || '').trim().split(/\s+/)[0] || 'them',
 };
-const scope = compileScope(NAMES.map((n) => extractFunction(src, n, 'agent.html')), env, NAMES);
+const scope = compileScope([FILTER_SRC, ...NAMES.map((n) => extractFunction(src, n, 'agent.html'))], env, NAMES.concat(['setClientFilter']));
 const setInquiries = (rows) => { myInquiries.length = 0; rows.forEach((r) => myInquiries.push(r)); };
 const setCatalog = (rows) => { catalog.length = 0; rows.forEach((r) => catalog.push(r)); };
 const render = () => { scope.renderInquiries(); return el('ag_inquiriesWrap').innerHTML; };
@@ -114,8 +119,6 @@ const ago = (mins) => new Date(Date.now() - mins * 60000).toISOString();
   // The phone is ALSO displayed as text, so the word "onmouseover" appears
   // in the markup legitimately -- escaped. What must not appear is a real
   // attribute, which needs an unescaped quote to close the one before it.
-  t.check(/&quot;onmouseover=&quot;/.test(html),
-    'the phone shown as text has its quotes escaped, so it stays text');
   t.check(!/\s+onmouseover\s*=\s*["'a-z]/i.test(html),
     'and no attribute is smuggled through the phone field');
 }
@@ -129,7 +132,7 @@ const ago = (mins) => new Date(Date.now() - mins * 60000).toISOString();
     { id: 2, customer_name: 'Mustafa', customer_phone: '0700000001', message: null, created_at: ago(300) },
   ]);
   const html = render();
-  t.check(/Requests from your catalogue/.test(html), 'the section is headed');
+  t.check(/Asked through your link/.test(html), 'the section is headed');
   t.check(/Need 40 by Friday/.test(html),
     'the message the customer actually typed is on screen — the whole point of this');
   t.check(/Sofa Legs · Gold \/ 6&quot;/.test(html), 'alongside what they asked about');
@@ -139,8 +142,25 @@ const ago = (mins) => new Date(Date.now() - mins * 60000).toISOString();
 }
 {
   setInquiries([]);
+  scope.setClientFilter('all');
   t.check(render() === '',
     'no requests renders nothing at all — no empty-state clutter above the client list');
+  scope.setClientFilter('asked');
+  t.check(/Nobody has asked/.test(render()),
+    'while the Asked filter, chosen on purpose, says so rather than showing a blank');
+  // Above the list, only what still needs a call -- the handled ones are
+  // under Asked, so finished work never pushes clients down the screen.
+  setInquiries([
+    { id: 1, customer_name: 'A', customer_phone: '07', message: 'm', created_at: ago(1), handled_at: ago(1) },
+    { id: 2, customer_name: 'B', customer_phone: '07', message: 'm', created_at: ago(2) },
+    { id: 3, customer_name: 'C', customer_phone: '07', message: 'm', created_at: ago(3) },
+    { id: 4, customer_name: 'D', customer_phone: '07', message: 'm', created_at: ago(4) },
+  ]);
+  scope.setClientFilter('all');
+  const top = render();
+  t.check((top.match(/ag-inquiry-card/g) || []).length === 2 && !/ag-inquiry-card handled/.test(top),
+    'above the client list: the two newest open requests, and nothing handled');
+  scope.setClientFilter('asked');
 }
 {
   // The query already caps at 50; the screen shows fewer still. A wall of
@@ -181,12 +201,12 @@ const ago = (mins) => new Date(Date.now() - mins * 60000).toISOString();
 {
   const screen = extractFunction(src, 'renderClientsListScreen', 'agent.html');
   t.check(/renderInquiries\(\)/.test(screen),
-    'the Customers screen draws them');
-  const iCat = src.indexOf('id="ag_catalogueWrap"');
+    'the Clients screen draws them');
+  const iLink = src.indexOf('id="ag_shopLinkBtn"');
   const iInq = src.indexOf('id="ag_inquiriesWrap"');
   const iList = src.indexOf('id="ag_clientsListWrap"');
-  t.check(iCat > -1 && iInq > iCat && iList > iInq,
-    'directly under the catalogue card that promised them, and above the client list');
+  t.check(iLink > -1 && iInq > iLink && iList > iInq,
+    'under the shop link that brings them in, and above the client list');
 }
 
 /* ---------- 6. outstanding vs handled --------------------------------- */
@@ -214,8 +234,9 @@ const ago = (mins) => new Date(Date.now() - mins * 60000).toISOString();
     'the heading carries the number still needing a call, not the total');
   t.check((html.match(/ag-inquiry-card handled/g) || []).length === 1,
     'a handled request is marked as such rather than removed');
-  t.check(/>Done</.test(html) && /<button[^>]*>Undo</.test(html),
+  t.check(/aria-label="Done"/.test(html) && /<button[^>]*aria-label="Undo"/.test(html),
     'each offers the action that applies to it — Done when open, Undo when handled');
+  t.check(/aria-pressed="true"/.test(html), 'and the tick says, to a screen reader too, which state it is in');
 }
 {
   setInquiries([{ id: 1, customer_name: 'A', customer_phone: '07', message: 'm', created_at: ago(1), handled_at: ago(1) }]);

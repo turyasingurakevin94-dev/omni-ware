@@ -1,7 +1,14 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * The agent Order history screen.
+ * Where an agent finds an order.
+ *
+ * There used to be an Order history screen: two segments and a flat list.
+ * It is gone, merged into the places an order is actually looked for --
+ * every live order is on Today, tile by tile, with the ones waiting on the
+ * agent named under them; a client's orders are on that client's sheet;
+ * a month's are on the Money sheet for that month. What it taught still
+ * holds, and is pinned here:
  *
  * Two segments and a flat list. Completed only ever grows, and scrolling
  * was the only way to reach last month's order for a particular client.
@@ -40,12 +47,13 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   // Scoped to the function. An identical sort lives in orderAgainItems, so
   // an unscoped match is satisfied by THAT one -- a mutation putting this
   // screen back on savedAt sailed straight past the first version.
-  let render = '';
-  try { render = extractFunction(src, 'renderOrderHistoryScreen', 'agent.html'); } catch (e) { /* reported below */ }
-  t.check(render.length > 0, 'renderOrderHistoryScreen is found');
-  t.check(/String\(orderDate\(b\)\|\|''\)\.localeCompare\(String\(orderDate\(a\)\|\|''\)\)/.test(render),
-    'it sorts on the same field it groups by, or the groups would interleave');
-  t.check(!/savedAt/.test(render), 'and reads savedAt nowhere');
+  for (const name of ['openClientSheet', 'openMoneySheet']) {
+    let render = '';
+    try { render = extractFunction(src, name, 'agent.html'); } catch (e) { /* reported below */ }
+    t.check(/String\(orderDate\(b\)\|\|''\)\.localeCompare\(String\(orderDate\(a\)\|\|''\)\)/.test(render),
+      `${name} lists orders newest first by the order's own date`);
+    t.check(render.length > 0 && !/savedAt/.test(render), `and reads savedAt nowhere`);
+  }
 
   // Swept, not listed. The same substitution was needed in six places and
   // the ones that mattered most were not on this screen at all: the reorder
@@ -81,114 +89,52 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   t.check(/cached\.savedAt/.test(code), 'and still used for when the offline snapshot was written');
 }
 
-/* ---------- 2. Ongoing separates what needs the agent --------------- */
+/* ---------- 2. what needs the agent, by their own terms --------------- */
 {
-  let f = null;
-  try {
-    ({ orderNeedsAgent: f } = compileScope(
-      [extractFunction(src, 'orderNeedsAgent', 'agent.html')],
-      { myAgent: { paymentTerm: 'prepay' } }, ['orderNeedsAgent'],
-    ));
-  } catch (e) { /* reported below */ }
-  t.check(typeof f === 'function', 'orderNeedsAgent compiles');
-  if (f) {
-    t.check(f({ status: 'draft', agentPaymentStatus: 'unpaid' }) === true,
-      'an unpaid prepay order needs the agent -- nothing moves until they pay');
-    t.check(f({ status: 'draft', agentPaymentStatus: 'paid' }) === false,
-      'once paid it does not');
-    t.check(f({ status: 'pending_delivery', deliveryMode: 'agent_pickup' }) === true,
-      'and stock standing ready to collect needs them to go and get it');
-    t.check(f({ status: 'pending_delivery', deliveryMode: 'shop_delivery' }) === false,
-      'while an order being delivered to the client needs nothing from them');
-    t.check(f({ status: 'preparing' }) === false, 'nor does one the shop is still preparing');
-  }
-
-  // A pay_on_delivery agent has no unpaid-draft state at all.
-  let g = null;
-  try {
-    ({ orderNeedsAgent: g } = compileScope(
-      [extractFunction(src, 'orderNeedsAgent', 'agent.html')],
-      { myAgent: { paymentTerm: 'pay_on_delivery' } }, ['orderNeedsAgent'],
-    ));
-  } catch (e) { /* reported below */ }
-  if (g) {
-    t.check(g({ status: 'draft', agentPaymentStatus: 'unpaid' }) === false,
-      'a pay-on-delivery agent is never asked to pay a draft, so it never lands in Needs you');
-  }
-
-  t.check(/orderNeedsAgent\(o\) \? 'Needs you' : 'With the shop'/.test(code),
-    'which is what splits the Ongoing list');
-  t.check(/keys\.sort\(\(a,b\)=> \(a==='Needs you'\?0:1\) - \(b==='Needs you'\?0:1\)\)/.test(code),
-    'and Needs you comes first whatever the dates say');
-}
-
-/* ---------- 3. Completed groups by period --------------------------- */
-{
-  let f = null;
-  try {
-    ({ orderPeriodLabel: f } = compileScope(
-      [extractFunction(src, 'orderDate', 'agent.html'), extractFunction(src, 'orderPeriodLabel', 'agent.html')],
-      {}, ['orderPeriodLabel'],
-    ));
-  } catch (e) { /* reported below */ }
-  t.check(typeof f === 'function', 'orderPeriodLabel compiles');
-  if (f) {
-    const at = (days) => {
-      const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - days);
-      return { date: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` };
-    };
-    t.check(f(at(0)) === 'Today', 'today says so');
-    t.check(f(at(1)) === 'Yesterday', 'and yesterday');
-    t.check(f(at(3)) === 'Earlier this week', 'a few days back is still this week');
-    t.check(f(at(200)).length > 0 && !/^(Today|Yesterday|Earlier)/.test(f(at(200))),
-      'and anything older falls back to a month');
-    t.check(/\d{4}/.test(f(at(400))), 'a month in a previous year carries the year');
-    t.check(!/\d{4}/.test(f(at(40))) || new Date().getMonth() < 2,
-      'while one in this year does not, so "March" need not be read as "March of some year"');
-    t.check(f({}) === 'Undated' && f({ date: 'not a date' }) === 'Undated',
-      'an unparseable date is labelled, not rendered as Invalid Date');
+  const stageFor = (term) => compileScope(['const orderStaffNames = new Map();',
+    ...['agentOrderTerms', 'orderShopChecked', 'staffName', 'orderOwedAmount', 'orderStage'].map((n) => extractFunction(src, n, 'agent.html'))],
+    { myAgent: { paymentTerm: term }, fmtNum: (n) => String(n) }, ['orderStage', 'agentOrderTerms']);
+  let pre = null, pod = null;
+  try { pre = stageFor('prepay'); pod = stageFor('pay_on_delivery'); } catch (e) { /* reported below */ }
+  t.check(!!pre && !!pod, 'orderStage compiles for both settlement terms');
+  if (pre && pod) {
+    const o = (over) => Object.assign({ status: 'draft', voided: false, deliveryMode: 'agent_pickup', agentPaymentStatus: 'unpaid', amountPaid: 0,
+      items: [{ productId: 'P', variantIdx: null, qty: 2, sellPrice: 100 }] }, over);
+    const checked = (over) => { const x = o(over); x.shopConfirmedAt = 1; x.shopConfirmedTerms = pre.agentOrderTerms(x); return x; };
+    t.check(pre.orderStage(checked({})).needs === 'pay',
+      'a checked prepay draft needs the agent -- nothing moves until they pay');
+    t.check(!pod.orderStage(checked({})).needs,
+      'a pay-on-delivery agent is never asked to pay a draft');
+    t.check(pod.orderStage(o({ status: 'completed' })).needs === 'pay' && pod.orderStage(o({ status: 'completed' })).key === 'settle',
+      'they settle once it is delivered, and that is when it waits on them');
+    t.check(!pod.orderStage(o({ status: 'completed', amountPaid: 200 })).needs,
+      'and a delivered order already paid for waits on nobody');
+    t.check(!pre.orderStage(o({ status: 'preparing', agentPaymentStatus: 'paid' })).needs,
+      'one the shop is preparing needs nothing from them');
   }
 }
 
-/* ---------- 4. you can find an order ------------------------------- */
+/* ---------- 3. every live order is on Today ------------------------ */
 {
-  t.check(/id="ag_orderSearch"/.test(src), 'the screen has a search field');
-  t.check(/function orderMatchesQuery\(o, q\)/.test(code), 'with a matcher');
-  t.check(/\[client \? client\.name : '', \.\.\.\(o\.items\|\|\[\]\)\.map\(it=>it\.productName\|\|''\)\]/.test(code),
-    'searching the client name AND the product names -- an agent remembers one or the other, rarely both');
-  t.check(/document\.getElementById\('ag_orderSearch'\)\.addEventListener\('input', renderOrderHistoryScreen\)/.test(code),
-    'it filters as you type');
-
-  // Counts describe the segment, not the filtered view.
-  t.check(/live\.filter\(o=>o\.status!=='completed'\)\.length \|\| ''/.test(code)
-    && /live\.filter\(o=>o\.status==='completed'\)\.length \|\| ''/.test(code),
-    'the tab counts come off the whole segment -- "Completed 2" during a search would be a lie about how many exist');
-
-  t.check(/No \$\{esc\(orderHistorySegment\)\} orders match/.test(code),
-    'and a search with no hits says what it searched for');
+  const move = extractFunction(src, 'renderMove', 'agent.html');
+  t.check(/const live = liveOrders\(\);/.test(move) && /\$\{live\.length\} live/.test(move),
+    'Today counts every order still moving');
+  t.check(/MOVE_GROUPS\.map/.test(move) && /x\.st\.group === g/.test(move),
+    'and sorts them into Sent, Packing and Out by the same orderStage the track reads');
+  const live = extractFunction(src, 'liveOrders', 'agent.html');
+  t.check(/!o\.voided && o\.status !== 'completed'/.test(live), 'a live order is any not voided and not finished');
+  t.check(/if\(list\.length === 1\)\{ openTrackSheet\(list\[0\]\.o\.id\); return; \}/.test(code),
+    'a tile holding one order opens it straight away; more than one opens the short list');
 }
 
-/* ---------- 5. arriving at the screen ------------------------------- */
+/* ---------- 4. finding an older order ------------------------------- */
 {
-  t.check(/document\.getElementById\('ag_orderSearch'\)\.value = '';\s*orderHistorySegment = 'ongoing';/.test(code),
-    'opening the screen clears the query and returns to Ongoing');
-  t.check(/b\.classList\.toggle\('active', b\.dataset\.seg === 'ongoing'\)/.test(code),
-    'with the tab highlight following, so the buttons cannot disagree with the list');
-}
-
-/* ---------- 6. the group heading is one text node too --------------- */
-/*
- * The heading is a flex row with a gap, label beside count. Without a real
- * space it reads "Needs you3" to a screen reader and to a copy-paste --
- * the same fault flex-gap-spacing.test.js was written for, which caught
- * this one on the way in.
- */
-{
-  t.check(/>\$\{esc\(k\)\} <span class="ag-hist-group-n">/.test(code),
-    'the group heading separates its label from its count with a real space');
-  t.check(/>Ongoing <span class="ag-seg-count"/.test(src) && /># <span class="ag-seg-count"/.test(src) === false,
-    'and so does the Ongoing tab');
-  t.check(/>Completed <span class="ag-seg-count"/.test(src), 'and the Completed tab');
+  // An agent remembers who an order was for far more often than when it
+  // was -- so the way to an old order is the client.
+  const sheet = extractFunction(src, 'openClientSheet', 'agent.html');
+  t.check(/data-track="\$\{esc\(o\.id\)\}"/.test(sheet), 'a client\'s orders are on their sheet, each opening its track');
+  const money = extractFunction(src, 'openMoneySheet', 'agent.html');
+  t.check(/data-track="\$\{esc\(o\.id\)\}"/.test(money), 'and a month\'s are on the Money sheet for that month');
 }
 
 process.exit(t.done() ? 1 : 0);

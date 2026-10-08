@@ -2192,6 +2192,39 @@ function agentPaymentBlocksPreparing(q){
   return !!(agent && agent.paymentTerm==='prepay' && q.agentPaymentStatus!=='paid');
 }
 
+// THE SHOP CHECKS BEFORE THE AGENT PAYS. A prepay agent used to be asked
+// for the money the moment they sent an order -- and then, when the shop
+// could not supply a line and dropped it, the agent had paid for goods
+// that never came and somebody owed somebody a refund. Now the shop
+// confirms the lines first; the agent is asked only for what was
+// confirmed.
+//
+// The confirmation is a signature of the lines it covered, the same way a
+// supplier's confirmation is (orderSupplierTerms): edit the order after
+// confirming and the stamp no longer matches, so it has to be confirmed
+// again before anyone is asked to pay a figure that has since changed.
+// agent-initiate-momo-payment computes the same signature server-side.
+function agentOrderTerms(q){
+  return (q.items||[]).map(it=> [
+    it.productId, (it.variantIdx === null || it.variantIdx === undefined) ? '' : it.variantIdx,
+    Number(it.qty)||0, Math.round(Number(it.sellPrice)||0)
+  ].join(':')).join('|');
+}
+function agentOrderConfirmed(q){
+  return !!(q.shopConfirmedAt && q.shopConfirmedTerms === agentOrderTerms(q));
+}
+// Only a prepay agent's unpaid draft waits for this. A pay-on-delivery
+// agent pays nothing up front, so there is nothing a dropped line could
+// leave them owed, and an order already paid (before this check existed)
+// is past the point it protects.
+function agentOrderNeedsShopCheck(q){
+  if(!q || !q.originAgentId || q.status !== 'draft') return false;
+  const agent = (data.agents||[]).find(a=>a.id===q.originAgentId);
+  if(!agent || agent.paymentTerm !== 'prepay') return false;
+  if(q.agentPaymentStatus === 'paid') return false;
+  return !agentOrderConfirmed(q);
+}
+
 // A worker says the order is picked and packed. That is the whole of
 // what they are reporting, and it is all this does.
 //

@@ -90,7 +90,8 @@ t.check(/data-fd-act="push-on"/.test(agent) && /if\(act === 'push-on'\)\{ if\(aw
   'notifications are asked for from a button he pressed');
 t.check(!/requestPermission\(\)[\s\S]{0,40}boot\(\)/.test(agent) && !/^\s*enableAgentPush\(\);/m.test(agent),
   'and never on load');
-t.check(/openParam === 'feed' \? 'feed'/.test(agent), 'a tapped notification opens the app on the Feed');
+t.check(/switchTab\(openParam \? 'today'/.test(agent),
+  'a tapped notification opens the app on Today, where the feed\'s best cards now live');
 const sw = read('agent-sw.js');
 t.check(/showNotification/.test(sw) && /notificationclick/.test(sw) && !/caches\./.test(sw),
   'the service worker shows and opens notifications, and caches nothing');

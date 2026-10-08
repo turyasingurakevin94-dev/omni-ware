@@ -1,22 +1,23 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * The price ladder in the agent app -- the volume curve drawn as a shape,
- * above the table that already spelled out each band.
+ * The price ladder in the agent app -- now one pill on an order line:
+ * "↓ 80 cheaper".
  *
- * The table answers "what does each band cost". The chart answers "where
- * am I on the curve and how far is the next drop", which is the question
- * an agent standing in front of a customer is actually asking, and the one
- * a list of rows cannot answer at a glance.
+ * The ladder used to be a chart and a table in an add sheet. The order
+ * line carries the only part of it an agent acts on standing in front of
+ * a customer: the next quantity that makes the line cheaper. Tapping it
+ * sets that quantity, and the line re-reads what the shop charges.
  *
- * It makes a claim about money -- "worth N on this line" -- so the
- * arithmetic is checked here rather than trusted. The rules it must not
- * break:
+ * It makes a claim about money, so the rules are checked here rather than
+ * trusted:
  *
- *   - never advertise a saving on a rung that is not cheaper
- *   - never state a gap in packs unless it lands on whole packs, the same
- *     honesty rule buildTierDisplayRows() already follows
- *   - never show a nudge once the top rung is reached
+ *   - never offer a rung that is not cheaper
+ *   - never offer a leap: past three times what is on the line it stops
+ *     being "a few more" and becomes a different customer
+ *   - never state a rung in packs unless it lands on whole packs
+ *   - once the line reaches a rung, it is priced at it -- the same rule the
+ *     server applies again on submit (tieredUnitPrice)
  *
  * Run: node test/price-ladder.test.js   (or: npm test)
  */
@@ -25,21 +26,16 @@ const { read, extractFunction, compileScope, createReporter } = require('./_extr
 const t = createReporter('price ladder');
 const src = read('agent.html');
 
-const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const fmtUGX = (n) => Math.round(Number(n) || 0).toLocaleString('en-US');
-
 let fns = null, err = null;
+const saved = [];
 try {
   fns = compileScope(
-    [
-      extractFunction(src, 'tierGapLabel', 'agent.html'),
-      extractFunction(src, 'tierLadderChartHTML', 'agent.html'),
-      extractFunction(src, 'tierForQty', 'agent.html'),
-    ],
-    { esc, fmtUGX }, ['tierGapLabel', 'tierLadderChartHTML', 'tierForQty'],
+    ['tierForQty', 'lineUsesPack', 'lineMult', 'nextTierHint', 'setLineQty'].map((n) => extractFunction(src, n, 'agent.html')),
+    { saveQuoteDraft: () => saved.push(1) },
+    ['tierForQty', 'nextTierHint', 'setLineQty', 'lineMult'],
   );
 } catch (e) { err = e; }
-t.check(!!fns, `the ladder compiles${err ? ` (${err.message})` : ''}`);
+t.check(!!fns, `the ladder helpers compile${err ? ` (${err.message})` : ''}`);
 
 const LADDER = [
   { minQty: 1, unitPrice: 4500, tier: 'retail' },
@@ -47,120 +43,71 @@ const LADDER = [
   { minQty: 60, unitPrice: 3900, tier: 'wholesale' },
   { minQty: 120, unitPrice: 3700, tier: 'wholesale' },
 ];
+const line = (qty, over) => Object.assign({
+  qty, displayQty: qty, unit: 'pc', displayUnit: 'pc', packUnit: 'box', packQty: 12,
+  tiers: LADDER, floorPrice: fns ? fns.tierForQty(LADDER, qty).unitPrice : 0, agentSellPrice: 5000,
+}, over || {});
 
 if (fns) {
-  const { tierGapLabel, tierLadderChartHTML, tierForQty } = fns;
-  const chart = (qty, viewUnit) =>
-    tierLadderChartHTML(LADDER, tierForQty(LADDER, qty), qty, 'pc', 'box', 12, viewUnit || 'unit');
+  const { tierForQty, nextTierHint, setLineQty } = fns;
 
-  /* ---------- 1. the saving figure ---------------------------------- */
+  /* ---------- 1. the rung a quantity earns ---------------------------- */
   {
-    // At 24 the agent is on the 4,200 rung. Next is 60 at 3,900.
-    // Gap 36. Saving is the 300 drop across the 60 they would then buy.
-    const h = chart(24);
-    t.check(/36 more pc/.test(h), 'the gap to the next breakpoint is stated');
-    t.check(/3,900/.test(h), 'so is the price it unlocks');
-    t.check(/18,000/.test(h), 'and the saving is drop x next breakpoint (300 x 60 = 18,000)');
-
-    // Arithmetic held separately from the markup, so a formatting change
-    // cannot quietly alter what is being claimed.
-    const worth = (cur, next) => Math.round((cur.unitPrice - next.unitPrice) * next.minQty);
-    t.check(worth(LADDER[1], LADDER[2]) === 18000, 'saving from the 12 rung to the 60 rung');
-    t.check(worth(LADDER[2], LADDER[3]) === 24000, 'saving from the 60 rung to the 120 rung');
+    t.check(tierForQty(LADDER, 1).unitPrice === 4500, 'one is retail');
+    t.check(tierForQty(LADDER, 11).unitPrice === 4500 && tierForQty(LADDER, 12).unitPrice === 4200,
+      'the breakpoint is inclusive -- twelve is the first wholesale piece');
+    t.check(tierForQty(LADDER, 500).unitPrice === 3700, 'and the top rung holds above it');
   }
 
-  /* ---------- 2. it stays quiet when there is nothing to offer ------- */
+  /* ---------- 2. the hint is a step, and cheaper ---------------------- */
   {
-    const top = chart(140);
-    t.check(/Best price on this item/.test(top), 'the top rung says so rather than inventing a next step');
-    t.check(!/more pc/.test(top), 'and offers no gap to close');
-
-    // A ladder that does not fall must not advertise a saving.
-    const flat = [
-      { minQty: 1, unitPrice: 4500, tier: 'retail' },
-      { minQty: 12, unitPrice: 4500, tier: 'wholesale' },
-    ];
-    const h = tierLadderChartHTML(flat, tierForQty(flat, 4), 4, 'pc', 'box', 12, 'unit');
-    t.check(!/worth/.test(h), 'a flat ladder promises nothing');
-
-    // Neither must one that rises -- a real possibility once a floor price
-    // is max(cost, discounted) and cost moves between bands.
-    const rising = [
-      { minQty: 1, unitPrice: 4000, tier: 'retail' },
-      { minQty: 12, unitPrice: 4300, tier: 'wholesale' },
-    ];
-    const r = tierLadderChartHTML(rising, tierForQty(rising, 4), 4, 'pc', 'box', 12, 'unit');
-    t.check(!/worth/.test(r), 'a rising ladder promises nothing either');
+    const h = nextTierHint(line(24));
+    t.check(h && h.baseQty === 60 && h.unitPrice === 3900, 'at 24 the next rung is 60 at 3,900');
+    t.check(nextTierHint(line(10)).baseQty === 12, 'at 10, two more reach the first wholesale rung');
+    t.check(nextTierHint(line(3)) === null,
+      'at 3 the next rung (12) is four times the line -- a leap, not a nudge, so nothing is offered');
+    t.check(nextTierHint(line(130)) === null, 'at the top rung there is nothing cheaper to offer');
+    const flat = [{ minQty: 1, unitPrice: 4500 }, { minQty: 12, unitPrice: 4500 }];
+    t.check(nextTierHint(line(10, { tiers: flat, floorPrice: 4500 })) === null,
+      'a rung that is not cheaper is never offered -- a saving the agent cannot deliver is worse than silence');
+    t.check(nextTierHint(line(10, { tiers: null })) === null, 'and a line with no ladder offers nothing');
   }
 
-  /* ---------- 3. the gap is said in a unit that can be bought -------- */
+  /* ---------- 3. said in the unit on the line, when it divides --------- */
   {
-    t.check(tierGapLabel(24, 'pc', 'box', 12, 'pack') === '2 more box',
-      'a gap landing on whole packs is stated in packs');
-    t.check(tierGapLabel(25, 'pc', 'box', 12, 'pack') === '25 more pc',
-      'one that does not falls back to the base unit rather than inventing 2.08 boxes');
-    t.check(tierGapLabel(24, 'pc', 'box', 12, 'unit') === '24 more pc',
-      'and it follows whichever unit the agent is actually typing in');
-    t.check(tierGapLabel(5, 'pc', 'box', 0, 'pack') === '5 more pc',
-      'an item with no pack size never claims packs');
+    const boxes = line(24, { displayQty: 2, displayUnit: 'box' });
+    const h = nextTierHint(boxes);
+    t.check(h.baseQty === 60 && h.displayQty === 5, 'a line in boxes is told "5" -- sixty pieces is five whole boxes');
+    const odd = [{ minQty: 1, unitPrice: 4500 }, { minQty: 50, unitPrice: 3900 }];
+    const h2 = nextTierHint(line(24, { displayQty: 2, displayUnit: 'box', tiers: odd, floorPrice: 4500 }));
+    t.check(h2.baseQty === 50 && h2.displayQty === null,
+      'a rung that does not land on whole boxes is stated in pieces, never as a fraction of a box');
   }
 
-  /* ---------- 4. the bars encode the curve --------------------------- */
+  /* ---------- 4. reaching it reprices the line ------------------------ */
   {
-    const h = chart(24);
-    const heights = (h.match(/height:(\d+)%/g) || []).map(s => Number(s.match(/\d+/)[0]));
-    t.check(heights.length === LADDER.length, `one bar per rung (${heights.length})`);
-    t.check(heights[0] === 100, 'the dearest rung is full height');
-    t.check(heights[heights.length - 1] === 44, 'the cheapest is still a visible bar, not a sliver');
-    t.check(heights.every((v, i) => i === 0 || v <= heights[i - 1]),
-      'and they descend, because the price does');
-
-    // Relative, not absolute: the same curve shape at a different scale
-    // must produce the same bars.
-    const scaled = LADDER.map(x => ({ ...x, unitPrice: x.unitPrice * 20 }));
-    const hs = (tierLadderChartHTML(scaled, tierForQty(scaled, 24), 24, 'pc', 'box', 12, 'unit')
-      .match(/height:(\d+)%/g) || []).map(s => Number(s.match(/\d+/)[0]));
-    t.check(JSON.stringify(hs) === JSON.stringify(heights),
-      'a ladder twenty times the price draws the same shape');
-  }
-
-  /* ---------- 5. current and next rung are marked apart -------------- */
-  {
-    const h = chart(24);
-    t.check((h.match(/class="b on"/g) || []).length === 1, 'exactly one rung is marked as reached');
-    t.check((h.match(/class="b next"/g) || []).length === 1, 'and exactly one as the next step');
-    t.check(h.indexOf('class="b on"') < h.indexOf('class="b next"'),
-      'with the next step to the right of the current one');
-
-    const low = chart(1);
-    t.check(/class="b on"/.test(low), 'quantity 1 sits on a real rung');
-  }
-
-  /* ---------- 6. it never renders for a ladder with nothing to show -- */
-  {
-    t.check(tierLadderChartHTML([{ minQty: 1, unitPrice: 4500 }], null, 1, 'pc', 'box', 12, 'unit') === '',
-      'a single-band item draws no chart');
-    t.check(tierLadderChartHTML([], null, 1, 'pc', 'box', 12, 'unit') === '', 'nor does an empty ladder');
-    t.check(tierLadderChartHTML(null, null, 1, 'pc', 'box', 12, 'unit') === '', 'nor a missing one');
-  }
-
-  /* ---------- 7. it is escaped ---------------------------------------- */
-  {
-    const h = tierLadderChartHTML(LADDER, tierForQty(LADDER, 24), 24, '<img src=x onerror=alert(1)>', 'box', 12, 'unit');
-    t.check(!/<img src=x/.test(h), 'a unit carrying markup is escaped, not rendered');
-    t.check(/&lt;img/.test(h), 'and survives as text');
+    const it = line(24);
+    setLineQty(it, 60);
+    t.check(it.qty === 60 && it.floorPrice === 3900 && it.tier === 'wholesale',
+      'sixty pieces is priced at the sixty rung, and the line says which tier it is on');
+    t.check(it.agentSellPrice === 5000, 'while the price the agent charges their client is left as they set it');
+    const b = line(24, { displayQty: 2, displayUnit: 'box' });
+    setLineQty(b, 5);
+    t.check(b.qty === 60 && b.floorPrice === 3900, 'five boxes is sixty pieces, and priced as sixty');
+    t.check(saved.length === 2, 'and every change is kept, so a reload does not undo it');
   }
 }
 
-/* ---------- 8. wired into the render, chart before table ------------- */
+/* ---------- 5. wired into the line ---------------------------------- */
 {
-  const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
-  t.check(/ladderWrap\.innerHTML = tierLadderChartHTML\(/.test(code),
-    'the chart is rendered into the ladder mount');
-  t.check(code.indexOf('tierLadderChartHTML(tiers, earnedRow') < code.indexOf('<div class="ag-tier-ladder">'),
-    'above the table rather than below it');
-  t.check(/rerender\(\)/.test(code) && /qtyEl\.addEventListener\('change', rerender\)/.test(code),
-    'and redraws whenever the quantity changes');
+  const render = extractFunction(src, 'renderCart', 'agent.html');
+  t.check(/const hint = nextTierHint\(it\);/.test(render) && /data-tier="\$\{hint\.baseQty\}"/.test(render),
+    'the open line shows the hint, carrying the rung it would reach');
+  t.check(/aria-label="Make it \$\{hint\.displayQty \|\| hint\.baseQty\} for a cheaper price"/.test(render),
+    'and says what tapping it does, since its face is only a number and an arrow');
+  const click = (/const tier = e\.target\.closest\('\[data-tier\]'\);[\s\S]*?return;\s*\}/.exec(src) || [''])[0];
+  t.check(/it\.displayUnit = it\.unit;/.test(click) && /setLineQty\(it, base \/ mult\)/.test(click),
+    'tapping it sets the quantity, switching the line to pieces only when the rung is not whole boxes');
 }
 
 process.exit(t.done() ? 1 : 0);

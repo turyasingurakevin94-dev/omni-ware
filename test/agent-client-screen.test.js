@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * The one-client screen.
+ * One client, as a sheet over whatever screen you were on.
  *
  * The Customers tab answers "who", and answered nothing else: a name was a
  * row you could call, and that was the end of it. This screen is what
@@ -40,11 +40,13 @@ try {
       extractFunction(src, 'clientRegulars', 'agent.html'),
       extractFunction(src, 'medianOf', 'agent.html'),
       extractFunction(src, 'usualQty', 'agent.html'),
-      extractFunction(src, 'clientRhythmHTML', 'agent.html'),
+      extractFunction(src, 'dayBlocksHTML', 'agent.html'),
+      extractFunction(src, 'lateBy', 'agent.html'),
+      extractFunction(src, 'lateLabel', 'agent.html'),
       extractFunction(src, 'firstWord', 'agent.html'),
     ],
-    { esc, ICON_CLOCK: '<svg class="icon"></svg>' },
-    ['orderDate', 'clientRegulars', 'medianOf', 'usualQty', 'clientRhythmHTML', 'firstWord'],
+    { esc },
+    ['orderDate', 'clientRegulars', 'medianOf', 'usualQty', 'dayBlocksHTML', 'lateLabel', 'firstWord'],
   );
 } catch (e) { err = e; }
 t.check(!!f, `the screen's helpers compile${err ? ` (${err.message})` : ''}`);
@@ -131,41 +133,34 @@ if (f) {
     // The screen uses it for both "usually" and "typical".
     t.check(/medianOf\(orders\.map\(orderTotal\)\)/.test(code),
       'the typical order is a median too -- the mean is only right for the TOTAL he has earned');
-    t.check(/stats\.count \? fmtNum\(Math\.round\(medianOf/.test(code),
+    t.check(/stats\.count \? fmtCompactUGX\(Math\.round\(medianOf/.test(code),
       'and a client with no orders gets a dash rather than a measured zero');
   }
 
-  /* ---------- 4. their rhythm, as a sentence ------------------------ */
+  /* ---------- 4. their rhythm, as day blocks ---------------------- */
   /*
-   * On the list a "Due" mark is enough: twelve names, and you are
-   * scanning. Here there is one name and the question is whether to drive
-   * out there, which a pill cannot answer.
+   * One block a day since their last order: grey inside their own rhythm,
+   * a bar where it ran out, amber for each day past it. The amber run IS
+   * how late they are, readable without a sentence; the words beside it
+   * say the same number.
    */
   {
-    const cad = (avgGapDays, daysSince, n) => ({
-      avgGapDays, daysSince, lastDateKey: '2026-08-14', orders: new Array(n).fill(0),
-    });
-    const late = f.clientRhythmHTML(cad(21, 31, 6), { lastAt: '2026-08-14' }, 6);
-    t.check(/10 days late/.test(late), 'past their own gap, it says how far past');
-    t.check(/every <b>21 days<\/b>/.test(late) && /14 August/.test(late),
-      'with the gap it is measured against and the date it is measured from');
-    t.check(/6 orders so far/.test(late), 'and how much history that is drawn from');
-    t.check(/fx-alert late/.test(late), 'and the card is marked');
-
-    t.check(/Due today/.test(f.clientRhythmHTML(cad(21, 21, 6), {}, 6)),
-      'exactly on the gap is due today, not "0 days late"');
-    const soon = f.clientRhythmHTML(cad(21, 14, 6), {}, 6);
-    t.check(/Due in about 7 days/.test(soon), 'and short of it, it counts forward instead');
-    t.check(!/fx-alert late/.test(soon), 'without the mark, which would make every client look overdue');
-
-    // Below two orders there is no gap to average, so there is nothing to
-    // claim. cadence returns null and the screen says so.
-    const once = f.clientRhythmHTML(null, { lastAt: '2026-08-14' }, 1);
-    t.check(/ordered once/.test(once) && /not enough yet/.test(once),
-      'one order admits it cannot tell you their rhythm');
-    t.check(/14 August/.test(once), 'while still saying when it was');
-    t.check(/No orders yet/.test(f.clientRhythmHTML(null, {}, 0)),
-      'and none says that plainly');
+    const cad = (avgGapDays, daysSince) => ({ avgGapDays, daysSince });
+    const late = f.dayBlocksHTML(cad(14, 18));
+    t.check((late.match(/<span class="late"><\/span>/g) || []).length === 4 && (late.match(/<span><\/span>/g) || []).length === 14,
+      'four days past a fourteen-day rhythm is fourteen grey blocks, a bar, and four amber ones');
+    t.check(/every 14 days/.test(late) && />\+4</.test(late), 'labelled with the rhythm and how far past it');
+    t.check(f.lateLabel(cad(14, 18.7)).text === '4 days late',
+      'and the words agree with the blocks -- whole days on both sides, so a late evening is not a day later in one and not the other');
+    t.check(f.lateLabel(cad(21, 21.4)).text === 'Due today', 'exactly on the gap is due today, not "0 days late"');
+    const soon = f.dayBlocksHTML(cad(21, 14));
+    t.check(/class="ahead"/.test(soon) && /due in 7/.test(soon) && !/class="late"/.test(soon),
+      'short of it, the days still to come are drawn open and counted forward -- nothing is amber');
+    t.check(f.lateLabel(cad(21, 14)).text === 'Due in 7 days', 'and said the same way');
+    const long = f.dayBlocksHTML(cad(60, 90));
+    const n = (long.match(/<span(?: class="late")?><\/span>/g) || []).length;
+    t.check(n <= 27, `a long rhythm is scaled to fit a phone, not drawn as ninety blocks (${n})`);
+    t.check(/\+30/.test(long), 'while the label keeps the real number of days');
   }
 
   /* ---------- 5. the button has to fit a name ----------------------- */
@@ -183,15 +178,10 @@ if (f) {
  * The mockup's rhythm line ended "six orders, never a missed payment".
  */
 {
-  const view = (/<div id="ag_clientView"[\s\S]*?\n  <\/div>/.exec(src) || [''])[0];
-  t.check(view.length > 0, 'the client view is found');
-
-  const renderer = (/function clientRhythmHTML\([\s\S]*?\n}/.exec(src) || [''])[0]
-    + (/function renderClientScreen\(\)\{[\s\S]*?\n}/.exec(src) || [''])[0];
-  t.check(renderer.length > 0, 'and its renderers are found');
+  const renderer = extractFunction(src, 'openClientSheet', 'agent.html') + extractFunction(src, 'dayBlocksHTML', 'agent.html');
+  t.check(renderer.length > 0, 'the client sheet and its rhythm are found');
   // Scanned with every comment stripped. The note in agent.html explaining
-  // why the claim is absent quotes the claim, and matching prose rather
-  // than code has caught several checks in this suite before.
+  // why the claim is absent quotes the claim.
   const prose = src
     .replace(/<!--[\s\S]*?-->/g, '')
     .replace(/\/\*[\s\S]*?\*\//g, '')
@@ -199,51 +189,46 @@ if (f) {
   t.check(!/missed payment|pays on time|never missed|good payer|reliable payer/i.test(prose),
     'nothing the app can RENDER claims the customer pays on time');
   t.check(!/agentPaymentStatus|amountPaid/.test(renderer),
-    'and the screen never reads the agent-owes-shop fields to imply it -- '
+    'and the sheet never reads the agent-owes-shop fields to imply it -- '
     + 'that is a different debt, in the other direction');
 }
 
 /* ---------- 7. wired in ------------------------------------------- */
 {
-  t.check(/'ag_clientView'/.test(code) && /ALL_VIEWS = \[[^\]]*'ag_clientView'/.test(code),
-    'the view is registered, so showing it hides the others');
-
-  // The Call link sits inside the row that opens the screen. A thumb
-  // aimed at the phone must not land on the screen behind it.
-  const guard = code.indexOf("if(e.target.closest('.fx-call')) return;");
-  const open = code.indexOf("closest('[data-client-open]')");
-  t.check(guard > 0 && open > guard,
-    'the Call link is handled BEFORE the row branch, so calling never opens the screen');
-
+  const sheet = extractFunction(src, 'openClientSheet', 'agent.html');
+  t.check(/kind:'client'/.test(sheet) && /refresh: \(\)=> paint\(\)/.test(sheet),
+    'the sheet repaints when the data under it refreshes');
   // A stale id off a cached snapshot must not leave a name-shaped gap.
-  t.check(/if\(!c\)\{ switchTab\('customers'\); return; \}/.test(code),
-    'a client that has vanished under the screen sends you back to the list');
-
+  t.check(/if\(!c\)\{ sheet\.close\(\); return; \}/.test(sheet),
+    'a client that has vanished under the sheet closes it rather than drawing a blank');
+  t.check(/href="tel:\$\{esc\(c\.phone\)\}"/.test(sheet) && /https:\/\/wa\.me\//.test(sheet),
+    'call and WhatsApp are one tap from the top of the sheet');
   // The whole point of arriving here.
-  t.check(/\.fx-cta\{[^}]*position:fixed/.test(src) && /\.fx-cta\{[^}]*min-height:52px/.test(src),
-    'the order button is pinned and full-sized -- the screen runs past a phone');
-  t.check(/\.fx-cta\{[^}]*box-sizing:border-box/.test(src),
-    'and restores border-box after all:unset, so 52 means 52');
-  t.check(/\.fx-cta:focus-visible\{outline:/.test(src), 'with a visible focus ring');
+  t.check(/\.ax-cta-dock\{position:sticky;bottom:0/.test(src) && /data-start/.test(sheet),
+    'the order button stays in reach however long their history is');
+  t.check(/\.btn\{[^}]*min-height:48px/.test(src) && /\.btn\{[^}]*box-sizing:border-box/.test(src),
+    'and is full-sized, restoring border-box after all:unset so 48 means 48');
+  t.check(/:focus-visible\{outline:/.test(src), 'with a visible focus ring');
 }
 
 /* ---------- 8. one tap into the order ------------------------------ */
 /*
- * The fastest sale in the app: a product they always buy, the quantity
- * they usually take already in the field.
+ * The fastest sale in the app: a product they always buy, at the quantity
+ * they usually take and the price they paid last time.
  */
 {
-  t.check(/openAddItemPanel\(item, \{ qty: Number\(row\.dataset\.qty\) \|\| 0 \}\)/.test(code),
-    'tapping a regular carries its usual quantity into the add sheet');
-  // Order lines record BASE quantity. A packed product whose sheet opens
-  // on its pack selector would read "usually 12" as twelve PACKS.
-  t.check(/if\(Number\(opts\.qty\) > 0\)\{ qtyEl\.value = String\(Number\(opts\.qty\)\); unitEl\.value = 'unit'; \}/.test(code),
-    'and sets the unit selector to base with it, since past orders record base quantities');
-  t.check(/if\(c && cartKey\(chosenClient\) !== cartKey\(c\)\) selectClient\(c\);/.test(code),
+  const add = extractFunction(src, 'addRegular', 'agent.html');
+  t.check(/const qty = usualQty\(r\.qtys\) \|\| 1;/.test(add), 'a regular goes in at their usual quantity');
+  // Order lines record BASE quantity. "usually 50" of a 25-a-carton nail
+  // is two cartons, and is shown that way; "usually 12" is twelve pieces.
+  t.check(/const usePack = pq > 0 && qty % pq === 0;/.test(add) && /displayQty: usePack \? qty \/ pq : qty/.test(add),
+    'shown in packs only when the usual is a whole number of them, since past orders record base quantities');
+  t.check(/priceBase: r\.lastRate > 0 \? r\.lastRate : null/.test(add), 'at the price they were charged last time');
+  t.check(/if\(!it\)\{ toast\(/.test(add),
+    'a product that has left the catalogue says so rather than adding a line with no price');
+  const sheet = extractFunction(src, 'openClientSheet', 'agent.html');
+  t.check(sheet.indexOf('goToClientBasket(c);') < sheet.indexOf('await addRegular(r);'),
     'the item lands in THIS client\'s basket, not whoever was last in hand');
-  // A regular can have been discontinued since they last bought it.
-  t.check(/if\(!item\)\{ toast\(/.test(code),
-    'a product that has left the catalogue says so rather than opening an empty sheet');
 }
 
 process.exit(t.done() ? 1 : 0);

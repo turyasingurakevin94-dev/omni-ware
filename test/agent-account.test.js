@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * The agent Account screen.
+ * Who you are signed in as -- once its own Account screen, now the foot of
+ * the Money sheet, directly above the sign-out button.
  *
  * It held an avatar, a name, one contact line, a link to order history and
  * a sign-out row -- the thinnest screen in the app, and it left out the one
@@ -109,37 +110,25 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   ['prepay', 'pay_on_delivery'].forEach(k => {
     t.check(new RegExp(`${k}: \\{`).test(code), `${k} is covered -- the two values 0012_sales_agents.sql allows`);
   });
-  t.check(/const term = PAYMENT_TERM_COPY\[myAgent\.paymentTerm\];/.test(code), 'the agent\'s own term is looked up');
-  t.check(/if\(!term\)\{[\s\S]{0,120}Ask the shop how your orders are settled/.test(code),
+  const card = extractFunction(src, 'termCardHTML', 'agent.html');
+  t.check(/const term = PAYMENT_TERM_COPY\[myAgent\.paymentTerm\];/.test(card), 'the agent\'s own term is looked up');
+  t.check(/if\(!term\)\{[\s\S]{0,120}Ask the shop how your orders are settled/.test(card),
     'an unrecognised term is admitted, not guessed at -- inventing the wrong one is worse than saying nothing');
-
   // No edit affordance: it is a trust setting only an admin can change.
-  t.check(/Only the shop can change this\./.test(code),
+  t.check(/Only the shop can change this\./.test(card),
     'and the card says who can change it, so it does not read as a broken control');
-  t.check(!/id="ag_termCard"[^>]*>\s*<(button|input|select)/.test(src),
-    'with nothing on it to tap');
+  t.check(!/<(button|input|select)/.test(card), 'with nothing on it to tap');
 }
 
-/* ---------- 4. what the screen shows about you ----------------------- */
+/* ---------- 4. what the sheet shows about you ------------------------ */
 {
-  t.check(/\[myAgent\.phone, myAgent\.email\]\.filter\(Boolean\)/.test(code),
+  t.check(/\[myAgent\.phone, myAgent\.email\]\.filter\(Boolean\)\.join\(/.test(code),
     'phone and email are both shown -- it was `phone || email`, which hid whichever came second');
   t.check(/No phone or email on file/.test(code), 'and an agent with neither is told so');
-
-  t.check(/const s = computeAgentStats\(\);/.test(code),
-    'the lifetime figures reuse the stats Home already computes -- no new query');
-  t.check(/fmtCompactUGX\(s\.lifetimeEarnings\)/.test(code), 'earnings are compacted to fit a third of a phone');
-  t.check(/s\.completedOrders===1\?'order done':'orders done'/.test(code)
-    && /agentClients\.length===1\?'client':'clients'/.test(code),
-    'and the labels are pluralised, since a new agent sees exactly one of each');
 }
 
-/* ---------- 5. the sync card, and why it is on this screen ----------- */
+/* ---------- 5. the sync line, and why it sits beside sign-out -------- */
 {
-  // Scoped to the function. `const cached = ownCachedSnapshot();` appears
-  // three times in this file, so an unscoped match is satisfied by any of
-  // them -- a mutation swapping THIS one for loadOfflineCache() slipped
-  // straight past the first version of this check.
   let body = '';
   try { body = extractFunction(src, 'renderSyncCard', 'agent.html'); } catch (e) { /* reported below */ }
   t.check(body.length > 0, 'renderSyncCard is found');
@@ -158,8 +147,8 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
  * not reversible until you have a connection again.
  */
 {
-  t.check(/ag_signout_btn'\)\.addEventListener\('click', confirmSignOut\)/.test(code),
-    'the sign-out row opens a confirmation instead of signing out');
+  t.check(/if\(e\.target\.closest\('#ag_signout_btn'\)\) confirmSignOut\(\);/.test(code),
+    'the sign-out button opens a confirmation instead of signing out');
   t.check(/function confirmSignOut\(\)/.test(code), 'which exists');
   t.check(/signOutAndReload\(\)/.test(code) && /id="ag_signout_confirm"/.test(code),
     'and only the confirm button actually signs out');
@@ -168,21 +157,18 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   t.check(/signing back in needs a connection/.test(code),
     'naming the part that makes it unrecoverable -- the cache is gone and you cannot re-authenticate');
   t.check(/Stay signed in/.test(code), 'the way out is a plain label, not "Cancel"');
-
-  // clearOfflineCache is what makes this destructive; it must still be
-  // reached only through signOutAndReload.
   t.check(/async function signOutAndReload\(\)\{\s*[\s\S]{0,300}?clearOfflineCache\(\);/.test(code),
     'sign-out still clears the snapshot -- the confirmation is the guard, not a change of behaviour');
 }
 
-/* ---------- 7. the screen is ordered by what it is for --------------- */
+/* ---------- 7. the foot of the Money sheet is ordered by what it is for */
 {
-  const view = (/<div id="ag_accountView"[\s\S]*?\n  <\/div>/.exec(src) || [''])[0];
-  const seq = [...view.matchAll(/id="(ag_termCard|ag_lifetimeStats|ag_menu_orders|ag_syncCard|ag_signout_btn)"/g)].map(m => m[1]);
-  t.check(seq.join(',') === 'ag_termCard,ag_lifetimeStats,ag_menu_orders,ag_syncCard,ag_signout_btn',
-    `who you are, then what you have done, then where to go, then the device, then the way out (${seq.join(' -> ')})`);
-  t.check(view.indexOf('ag_syncCard') < view.indexOf('ag_signout_btn'),
-    'and what sign-out destroys is stated directly above the button that destroys it');
+  const money = extractFunction(src, 'openMoneySheet', 'agent.html');
+  const iTerm = money.indexOf('termCardHTML()'), iSync = money.indexOf('id="ag_syncCard"'), iOut = money.indexOf('id="ag_signout_btn"');
+  t.check(iTerm > 0 && iTerm < iSync && iSync < iOut,
+    'the terms you work on, then who you are and what this phone holds, then the way out');
+  t.check(iOut - iSync < 900,
+    'and what sign-out destroys is stated on the same card as the button that destroys it');
 }
 
 process.exit(t.done() ? 1 : 0);

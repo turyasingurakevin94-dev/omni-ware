@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * The agent Earnings screen.
+ * Your money: once the Earnings screen, now the Money sheet that comes up
+ * from the ring on Today.
  *
  * The screen answers one question -- how much did I make -- and its
  * six-month chart could not answer it. A 64px sparkline: no figures, no
@@ -28,45 +29,36 @@ const t = createReporter('agent earnings');
 const src = read('agent.html');
 const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
 
-/* ---------- 1. the order the user asked for ------------------------- */
+const money = extractFunction(src, 'openMoneySheet', 'agent.html');
+
+/* ---------- 1. the sheet reads top to bottom by month ---------------- */
 /*
- * Bonus opportunities below the six-month graph. Everything from the
- * wallet down to the order list is about the selected month; bonus
- * opportunities are not month-scoped, so they follow that block rather
- * than splitting it.
+ * The month and what makes it up, then the six-month chart that picks it,
+ * then what is waiting to be claimed, then where you stand, then the
+ * month's orders. The account sits at the very foot, under all of it.
  */
 {
-  const view = (/<div id="ag_earningsView"[\s\S]*?\n  <\/div>/.exec(src) || [''])[0];
-  t.check(view.length > 0, 'the earnings view is found');
-  const seq = [...view.matchAll(/id="(ag_trendCardWrap|ag_claimWrap|ag_earningsOrdersWrap|ag_bonusOpportunitiesWrap)"/g)].map(m => m[1]);
-  t.check(seq.join(',') === 'ag_trendCardWrap,ag_claimWrap,ag_earningsOrdersWrap,ag_bonusOpportunitiesWrap',
-    `the graph comes first and bonus opportunities last (${seq.join(' -> ')})`);
-  t.check(view.indexOf('ag_trendCardWrap') < view.indexOf('ag_bonusOpportunitiesWrap'),
-    'which is the whole point: bonus opportunities sit BELOW the last-6-months graph');
+  const at = (re) => { const m = re.exec(money); return m ? m.index : -1; };
+  const seq = [at(/class="ax-big"/), at(/class="ax-bars"/), at(/claimMonths\.map/), at(/\$\{standing\}/), at(/sortedOrders\.slice\(0, 12\)/), at(/termCardHTML\(\)/)];
+  t.check(seq.every((x, i) => x > 0 && (i === 0 || x > seq[i - 1])),
+    `the figure, the chart, claims, standing, the month's orders, then the account (${seq.join(' -> ')})`);
 }
 
 /* ---------- 2. the chart carries figures ---------------------------- */
 {
   t.check(!/agSparkFill/.test(src), 'the sparkline is gone');
-  t.check(/<span class="v">\$\{empty \? '&mdash;' : esc\(fmtCompactUGX\(t\)\)\}<\/span>/.test(code),
+  t.check(/<span class="v">\$\{empty \? '—' : esc\(fmtCompactUGX\(stats\[i\]\.total\)\)\}<\/span>/.test(money),
     'every column states what that month earned');
-  t.check(/aria-label="\$\{esc\(monthLabel\(m\)\)\}, \$\{empty \? 'no orders' : esc\(fmtUGX\(t\)\)\}"/.test(code),
+  t.check(/aria-label="\$\{esc\(monthLabel\(m\)\)\}, \$\{empty \? 'no orders' : esc\(fmtUGX\(stats\[i\]\.total\)\)\}"/.test(money),
     'and the exact, uncompacted figure is on the label, so the rounding is not the only access to it');
-
-  // A ZERO month still occupies a column. This used to be the whole rule:
-  //
-  //     const pct = max > 0 ? Math.max((t/max)*100, 3) : 3;
-  //
-  // which gave every month a stub, including months with no orders in
-  // them at all -- and printed "0" over them. That is a zero that looks
-  // measured, and a measured zero cannot be told from a real one: on this
-  // screen the difference is between a bad month and a month the app
-  // failed to read. So the rule splits in two, and both halves are pinned.
-  t.check(/const px = \(t\)=> max > 0 \? Math\.max\(Math\.round\(\(t\/max\)\*TREND_BAR_PX\), 3\) : 3;/.test(code),
+  // A month that earned nothing still gets a stub; a month with no ORDERS
+  // gets a hairline and a dash -- a zero that looks measured cannot be
+  // told from a month the app failed to read.
+  t.check(/const h = Math\.max\(3, Math\.round\(/.test(money),
     'a month that earned nothing gets a stub -- no bar at all reads as missing data, not as a bad month');
-  t.check(/const empty = !stats\[i\]\.orders\.length;/.test(code),
+  t.check(/const empty = !stats\[i\]\.orders\.length;/.test(money),
     'but a month with no ORDERS is a different thing, and is told apart by its orders, not by its total');
-  t.check(/<span class="none"><\/span>/.test(code) && /\.fx-col \.none\{[^}]*height:2px/.test(src),
+  t.check(/<span class="none"><\/span>/.test(money) && /\.ax-bar \.none\{[^}]*height:2px/.test(src),
     'and draws a hairline and a dash instead of a stub and a zero');
 }
 
@@ -95,30 +87,19 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
 
 /* ---------- 4. the chart is the month picker ------------------------ */
 {
-  t.check(/data-trend-month="\$\{esc\(m\)\}"/.test(code), 'each column carries its month');
-  t.check(/const col = e\.target\.closest\('\[data-trend-month\]'\);/.test(code)
-    && /earningsViewMonth = col\.dataset\.trendMonth;\s*renderEarnings\(\);/.test(code),
-    'and tapping one loads that month into the rest of the screen');
-  t.check(/const sel = m === earningsViewMonth;/.test(code) && /aria-pressed="\$\{sel\}"/.test(code),
+  t.check(/data-month="\$\{esc\(m\)\}"/.test(money), 'each column carries its month');
+  t.check(/const bar = e\.target\.closest\('\[data-month\]'\);\s*if\(bar\)\{ moneyMonth = bar\.dataset\.month; paint\(\); return; \}/.test(money),
+    'and tapping one loads that month into the rest of the sheet');
+  t.check(/aria-pressed="\$\{m===key\}"/.test(money),
     'the selected column is marked, in the accessibility tree as well as visually');
-
-  // The marker has to follow the prev/next arrows too, which is exactly
-  // what the old "deliberately not re-rendered" comment ruled out.
-  t.check(/renderTrendChart\(\);\s*renderClaimCard\(monthKey, bonus\);/.test(code),
-    'renderEarnings redraws the chart, so the arrows move the marker as well as the figures');
-  t.check(!/deliberately not\s*\n?\/\/ re-rendered on prev\/next/.test(src),
-    'and the comment that forbade it is gone');
-
+  t.check(/data-mnav="-1"/.test(money) && /if\(nextKey > currentMonthKey\(\)\) return;/.test(money),
+    'the arrows page by month, and never into the future');
   // Paging past the six-month window must not silently lose you.
-  t.check(/!months\.includes\(earningsViewMonth\)/.test(code),
-    'a month outside the window is detected');
-  t.check(/before this window/.test(code),
-    'and named, rather than leaving no column marked and no explanation');
-
-  t.check(/\.fx-col\{[^}]*min-height:44px/.test(src), 'a column is a 44px tap target');
-  t.check(/\.fx-col\{[^}]*box-sizing:border-box/.test(src),
+  t.check(/!months\.includes\(key\)/.test(money) && /is before this window/.test(money),
+    'a month outside the window is named, rather than leaving no column marked and no explanation');
+  t.check(/\.ax-bar\{[^}]*min-height:44px/.test(src), 'a column is a 44px tap target');
+  t.check(/\.ax-bar\{all:unset;box-sizing:border-box/.test(src),
     'and it restores border-box after all:unset, so 44 means 44');
-  t.check(/\.fx-col:focus-visible\{outline:/.test(src), 'with a visible focus ring');
 }
 
 /* ---------- 5. the rows add up to the total above them -------------- */
@@ -159,18 +140,18 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
     'the old rows summed to 185,000 under a total reading 160,000');
 
   // The source states the rule once, next to the figure it governs.
-  t.check(/const counted = o\.status === 'completed';/.test(code)
-    && /const earned = e\.margin \+ \(counted \? e\.bonus : 0\);/.test(code),
+  t.check(/const counted = o\.status === 'completed';/.test(money)
+    && /e\.margin \+ \(counted \? e\.bonus : 0\)/.test(money),
     'the row applies the same qualification the wallet does');
-  t.check(/bonus when completed/.test(code),
+  t.check(/bonus when done/.test(money),
     'and an unqualified bonus is shown as pending rather than dropped, so it is not simply missing');
 }
 
-/* ---------- 6. the screen says which month it is showing ------------ */
+/* ---------- 6. the sheet says which month it is showing ------------ */
 {
-  t.check(/ag_earningsOrdersTitle'\)\.textContent = `Orders in \$\{monthLabel\(monthKey\)\}`/.test(code),
-    'the order list names its month instead of saying "that month"');
-  t.check(/No orders in \$\{esc\(monthLabel\(monthKey\)\)\}\./.test(code),
+  t.check(/Yours \$\{thisMonth \? 'this month' : 'in ' \+ esc\(monthName\(key\)\)\}/.test(money),
+    'the figure names its month, so a past month is never read as this one');
+  t.check(/No orders in \$\{esc\(monthName\(key\)\)\}\./.test(money),
     'and so does the empty state');
 }
 
