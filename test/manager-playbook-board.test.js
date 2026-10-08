@@ -161,8 +161,20 @@ function scope(over) {
   /* The meeting is handed the pair with its windows, so a week's worth
      is never read as the whole span's sum. */
   const hist = src.slice(src.indexOf('  manager_history: { confirm: false, async run(input){'));
-  t.check(/kind: 'play_moving'[\s\S]{0,600}\{ read_days: pl\.progress\.days_read, per: pl\.progress\.per \|\| 'sum' \}/.test(hist),
-    'manager_history’s play_moving says the days its pair was read over, and whether it is a week’s worth or the sum');
+  const moving = (hist.match(/worth\.push\((\{ kind: 'play_moving'[\s\S]*?caution: '[^']*' \})\);/) || [])[1];
+  t.check(!!moving, 'manager_history builds a play_moving entry');
+  const movingOf = new Function('pl', `return (${moving});`);
+  /* A margin play is a SHARE over its window: 9.0% before, 8.7% since,
+     read over 14 days -- not a sum and not a week's worth. */
+  const mv = movingOf({ name: 'Price steel to the rival', progress: steel.progress });
+  eq([mv.measures, mv.before, mv.now, mv.read_days, mv.per], ['the share kept', 9, 8.7, 14, 'share'],
+    'a share-of-sales play reaches the meeting as a share over its 14 days, never called a sum');
+  eq(movingOf({ name: 'Old margin play', progress: { measures: 'the share kept', unit: 'pct', before: 9, since: 8.7, days_read: 14 } }).per, 'share',
+    'even a reading carried from before the field existed says share for a percentage');
+  eq([steel.progress.per, bundle.progress.per, sat.progress.per], ['share', 'sum', 'week'],
+    'the progress names its reading: margin a share, sales unstamped the 14 days’ sum, sales stamped a week’s worth');
+  eq([movingOf({ name: 'bundle', progress: bundle.progress }).per, movingOf({ name: 'sat', progress: sat.progress }).per], ['sum', 'week'],
+    'and the meeting is handed that same word');
 
   /* The books start 18 Sep, after the 7 Sep the before needs. */
   const shortP = { ...steel }; shortP.progress = progressOf({ margin }, '2026-09-18')(shortP, TODAY, [shortP]);

@@ -134961,6 +134961,11 @@ function managerPlayProgress(view, dateISO, plays){
     const since = m.measure(started, sinceTo);
     out.days_read = read;
     out.since_span = `${started} to ${sinceTo}`;
+    /* WHAT KIND OF READING the pair is, for anyone handed it without
+       the board: a share of sales is a share over the window ('share'),
+       money unstamped is the window's sum ('sum'), and money stamped is
+       a week's worth ('week', set below). */
+    out.per = m.unit === 'pct' ? 'share' : 'sum';
     /* STAMPED THE DAY IT STARTED: a play started with a span had its
        before fixed then -- the span's own length of days before the
        start, a sum as a week's worth -- and that one figure is what its
@@ -164122,7 +164127,7 @@ const ASSISTANT_TOOLS = {
         worth.push({ kind: 'play_moving', name: pl.name, measures: pl.progress.measures,
           before: pl.progress.before, now: pl.progress.now != null ? pl.progress.now : pl.progress.since,
           days_running: pl.progress.days_running,
-          ...(pl.progress.days_read ? { read_days: pl.progress.days_read, per: pl.progress.per || 'sum' } : {}),
+          ...(pl.progress.days_read ? { read_days: pl.progress.days_read, per: pl.progress.per || (pl.progress.unit === 'pct' ? 'share' : 'sum') } : {}),
           caution: 'what moved alongside it, never what it did' });
       });
     /* A review written since the last meeting: today is the first
