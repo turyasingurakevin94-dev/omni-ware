@@ -138,14 +138,15 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
 /*
  * Home once carried a quick-action row, then Earnings did: buttons that
  * only named other screens. There is no such row now. Your money opens
- * from the two things that show it -- the ring and your initials on Today
- * -- and clients are a tab.
+ * from your initials on Today, the ring opens your goal, and clients are
+ * a tab.
  */
 {
   t.check(!/ag-quick-actions|ag-qa-label/.test(src), 'no quick-action menu anywhere');
-  t.check(/getElementById\('ag_ringBtn'\)\.addEventListener\('click'/.test(code)
-    && /getElementById\('ag_meBtn'\)\.addEventListener\('click', \(\)=> openMoneySheet\(\)\)/.test(code),
-    'the ring and the initials both open the Money sheet');
+  t.check(/getElementById\('ag_meBtn'\)\.addEventListener\('click', \(\)=> openMoneySheet\(\)\)/.test(code),
+    'the initials open the Money sheet');
+  t.check(/getElementById\('ag_ringBtn'\)\.addEventListener\('click', \(\)=> openGoalSheet\(\)\)/.test(code),
+    'the ring is the goal, so it opens the goal');
 }
 
 /* ---------- 3. the account button ----------------------------------- */
