@@ -2806,6 +2806,10 @@
     border-radius:var(--ow-r-pill);}
   .mgr-bed-p .mgr-play-clock.over{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
   .mgr-pl-wk{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:var(--ow-sp-4);}
+  /* Up to eight cells (before + 7 weeks) stand in ONE row, equal columns,
+     so the before and the latest week are read on one line. */
+  .mgr-pl-wk.mgr-pl-wk1{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);}
+  .mgr-pl-wk.mgr-pl-wk1.mgr-pl-wkn .mgr-pl-wv{font-size:var(--ow-t-11);}
   .mgr-pl-wc{display:flex;flex-direction:column;align-items:center;gap:var(--ow-sp-2);padding:var(--ow-sp-4) 0;
     border-radius:6px;background:var(--ow-rule-soft);font-size:var(--ow-t-11);color:var(--ow-ink-600);min-width:0;}
   .mgr-pl-wv{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
@@ -134886,7 +134890,7 @@ async function managerPlaybook(){
   /* 200, not 30: a proven recipe is COUNTED across every verdict the
      owner gave it, and a count taken on the newest thirty rows would
      forget the first run of a play by the time its second was judged. */
-  const r = await sb.from('manager_notes').select('id, date, body, status')
+  const r = await sb.from('manager_notes').select('id, date, body, status, meeting_id')
     .eq('shop_id', currentShopId).eq('kind', 'play')
     .order('id', { ascending: false }).limit(200);
   /* A READING THAT FAILED IS NOT AN EMPTY SHOP. Handed back as an
@@ -134909,7 +134913,7 @@ async function managerPlaybook(){
        it was saved (managerPlayFields), so the screen reads the same
        hypothesis, stop, cost and dependency the journal holds. Absent
        on plays written before they were asked for. */
-    ...['dept', 'hypothesis', 'stop', 'cost', 'dependsOn', 'startOn', 'aimValue'].reduce((o, k)=>
+    ...['dept', 'hypothesis', 'stop', 'cost', 'dependsOn', 'startOn', 'aimValue', 'measure', 'baselineFrom', 'baselineTo'].reduce((o, k)=>
       ((x.body||{})[k] != null ? { ...o, [k]: (x.body||{})[k] } : o), {}) });
   const running = rows.filter(x=> x.status === 'running').map(view);
   /* What moved alongside each running play, worked out here so the
@@ -134989,9 +134993,19 @@ async function managerPlaybook(){
       judgedWorked: g.judgedWorked, judged: g.runs.length, runs: g.runs,
       lastOn: g.runs[g.runs.length - 1].ended_on || null, running: runningKeys.has(g.key), template: g.template }))
     .sort((a, b)=> b.judgedWorked - a.judgedWorked || String(b.lastOn || '').localeCompare(String(a.lastOn || '')));
+  /* IN THE MEETING'S ORDER (law 6, Q5). The rows are read newest id
+     first, but a meeting writes its plays in one batch in its own order,
+     so its first play has the LOWER id: read as they come, every
+     meeting's plays stood reversed. Newest meeting first, and inside a
+     meeting the order it gave them. A play the owner queued is its own
+     group, placed by when it was written. */
+  const groupOf = (x)=> (x.meeting_id != null && Number.isFinite(Number(x.meeting_id)) ? Number(x.meeting_id) : Number(x.id));
+  const meetingOf = new Map(rows.map(x=> [x.id, groupOf(x)]));
+  const proposed = [...byKey.values()].sort((a, b)=> String(b.proposed_on || '').localeCompare(String(a.proposed_on || ''))
+    || (meetingOf.get(b.id) - meetingOf.get(a.id)) || (a.id - b.id));
   return {
     running,
-    proposed: [...byKey.values()],
+    proposed,
     /* Set aside: the plays the owner stopped or turned down, never
        proposed again -- each with its key; one the owner set aside and
        later judged worked into a recipe is marked superseded. */
@@ -135112,7 +135126,10 @@ const MANAGER_PROBLEM_METRICS = {
    judgement of whether the play caused it is the manager's to argue and
    the owner's to make, and the prompt says so in those words. */
 function managerPlayProgress(view, dateISO, plays){
-  const m = MANAGER_PROBLEM_METRICS[String((view||{}).treats||'')];
+  /* A play that names its own measure (Q41: one weekday's sales, new
+     builder accounts' sales) is read on that measure; any other on its
+     problem's. */
+  const m = (typeof mgrPlayMetric === 'function' ? mgrPlayMetric(view) : null) || MANAGER_PROBLEM_METRICS[String((view||{}).treats||'')];
   if(!m) return null;
   const today = dateISO || todayISO();
   const started = (view||{}).started_on || (view||{}).proposed_on;
@@ -135124,21 +135141,51 @@ function managerPlayProgress(view, dateISO, plays){
   if(days < 7){ out.too_early = true; return out; }
 
   if(m.kind === 'flow'){
-    const since = m.measure(started, today);
-    const beforeFrom = anShiftDate(started, -days);
-    const beforeTo = anShiftDate(started, -1);
-    /* Like for like, or not at all: a shorter 'before' than 'after'
-       flatters or damns by nothing but the length of the window. */
-    const first = booksStartDate();
-    if(first && beforeFrom < first){
-      out.since = since;
-      out.no_before = 'the books do not reach back far enough for the same number of days before it started';
-      return out;
+    /* WHOLE WEEKS, BOTH SIDES. 'Since' ran from the start to today
+       inclusive -- one day longer than the 'before' it was set against,
+       and the extra day today's unfinished one, so by evening a single
+       day's takings could turn 'moved' round. Read over the whole weeks
+       it has run (the board's week cells, exactly), and the same number
+       of days before it: a weekday's sales see each weekday as often on
+       both sides. */
+    const read = Math.floor(days / 7) * 7;
+    const sinceTo = anShiftDate(started, read - 1);
+    const since = m.measure(started, sinceTo);
+    out.days_read = read;
+    out.since_span = `${started} to ${sinceTo}`;
+    /* WHAT KIND OF READING the pair is, for anyone handed it without
+       the board: a share of sales is a share over the window ('share'),
+       money unstamped is the window's sum ('sum'), and money stamped is
+       a week's worth ('week', set below). */
+    out.per = m.unit === 'pct' ? 'share' : 'sum';
+    /* STAMPED THE DAY IT STARTED: a play started with a span had its
+       before fixed then -- the span's own length of days before the
+       start, a sum as a week's worth -- and that one figure is what its
+       weeks, its stop rule and this reading are all held to. */
+    const bf = (view||{}).baselineFrom, bt = (view||{}).baselineTo, stamp = (view||{}).baseline;
+    if(/^\d{4}-\d{2}-\d{2}$/.test(String(bf || '')) && /^\d{4}-\d{2}-\d{2}$/.test(String(bt || '')) && stamp != null && Number.isFinite(Number(stamp))){
+      out.stamped = true;
+      out.before_span = `${bf} to ${bt}`;
+      out.before = Number(stamp);
+      if(m.unit === 'pct') out.since = since;
+      else { out.per = 'week'; out.since = since == null ? null : Math.round(Number(since) * 7 / read); }
+      if(out.since != null) out.moved = Math.round((out.since - out.before) * 10) / 10;
+    } else {
+      const beforeFrom = anShiftDate(started, -read);
+      const beforeTo = anShiftDate(started, -1);
+      /* Like for like, or not at all: a shorter 'before' than 'after'
+         flatters or damns by nothing but the length of the window. */
+      const first = booksStartDate();
+      if(first && beforeFrom < first){
+        out.since = since;
+        out.no_before = 'the books do not reach back far enough for the same number of days before it started';
+        return out;
+      }
+      const before = m.measure(beforeFrom, beforeTo);
+      out.since = since; out.before = before;
+      out.before_span = `${beforeFrom} to ${beforeTo}`;
+      if(since != null && before != null) out.moved = Math.round((since - before) * 10) / 10;
     }
-    const before = m.measure(beforeFrom, beforeTo);
-    out.since = since; out.before = before;
-    out.before_span = `${beforeFrom} to ${beforeTo}`;
-    if(since != null && before != null) out.moved = Math.round((since - before) * 10) / 10;
   } else {
     const base = (view||{}).baseline;
     if(base == null || !(Number(base) >= 0)){
@@ -135157,8 +135204,56 @@ function managerPlayProgress(view, dateISO, plays){
   return out;
 }
 
+/* WHERE A PLAY STANDS THE DAY IT IS SWITCHED ON, stamped by both
+   writers so a play started from the board and one started from "Write a
+   play" are held to the same kind of figure. A LEVEL: where it stands
+   now -- once the day has passed it cannot be worked out at all. A FLOW
+   with a span: the span's own length of days before today (a share as it
+   is, a sum as a week's worth), the before "Write a play" showed and the
+   one its weeks, its stop rule and the meeting's reading are then all
+   held to -- one number, not one that moves every day. The books must
+   reach that far back; otherwise nothing is stamped and the meeting's
+   rolling window stands. */
+function managerPlayStamp(body, today){
+  const m = (typeof mgrPlayMetric === 'function' ? mgrPlayMetric(body) : null) || MANAGER_PROBLEM_METRICS[String((body||{}).treats||'')];
+  if(!m) return {};
+  if(m.kind === 'level') return { baseline: Math.round(m.measure()) };
+  const w = Number((body||{}).weeks);
+  if(!(Number.isInteger(w) && w >= 1)) return {};
+  const days = Math.min(13, w) * 7, from = anShiftDate(today, -days), to = anShiftDate(today, -1);
+  const first = booksStartDate();
+  if(!first || from < first) return {};
+  const v = m.measure(from, to);
+  if(v == null || !Number.isFinite(Number(v))) return {};
+  return { baseline: m.unit === 'pct' ? Math.round(Number(v) * 10) / 10 : Math.round(Number(v) * 7 / days),
+    baselineFrom: from, baselineTo: to };
+}
+/* Put the stamp on a body being switched on, and hold a stop rule
+   written as "no better than where it starts" (stop.vs 'before') to
+   that same figure -- or to nothing, said as unchecked, when no stamp
+   could be taken. */
+function managerPlayApplyStamp(body, today){
+  delete body.baseline; delete body.baselineFrom; delete body.baselineTo;
+  Object.assign(body, managerPlayStamp(body, today));
+  if(body.stop && typeof body.stop === 'object' && body.stop.vs === 'before'){
+    if(body.baseline != null) body.stop.value = body.baseline;
+    else delete body.stop.value;
+  }
+  return body;
+}
+/* ONE PLAYBOOK WRITE AT A TIME. Two quick taps on "Start the play" both
+   read the slots before either had written, and both started: four
+   running, past the cap of three (Q15), and the same play twice. A
+   second write while one is in flight is refused, and said. */
+const MGR_PLAY_WRITE = { busy: false };
 async function managerPlayStatus(rowId, status, dupIds){
   if(!managerNotesTable || rowId == null) return { ok: false };
+  if(MGR_PLAY_WRITE.busy){ toast('Still saving the last change to the playbook — tap again in a moment'); return { ok: false, reason: 'busy' }; }
+  MGR_PLAY_WRITE.busy = true;
+  try{ return await managerPlayStatusWrite(rowId, status, dupIds); }
+  finally{ MGR_PLAY_WRITE.busy = false; }
+}
+async function managerPlayStatusWrite(rowId, status, dupIds){
   /* A VERDICT IS A CLOSE WITH THE OWNER'S WORD ON IT (approval Q14).
      The screen hands { verdict, result, resultRead, lesson } in place of
      'done': worked, didn't or can't tell, what moved alongside it as the
@@ -135191,12 +135286,8 @@ async function managerPlayStatus(rowId, status, dupIds){
   }
   if(status === 'running'){
     body.startedOn = todayISO();
-    /* Where the shop stands the moment it is switched on. Only for the
-       problems whose measure reads a LEVEL -- a flow can be worked out
-       backwards from the invoices, a level cannot be worked out at all
-       once the day has passed. */
-    const m = MANAGER_PROBLEM_METRICS[String(body.treats||'')];
-    if(m && m.kind === 'level') body.baseline = Math.round(m.measure());
+    /* Where the shop stands the moment it is switched on (managerPlayStamp). */
+    managerPlayApplyStamp(body, todayISO());
   }
   if(status === 'dropped' || status === 'done') body.endedOn = todayISO();
   const up = await sb.from('manager_notes').update({ status, body })
@@ -135232,6 +135323,12 @@ async function managerPlayStatus(rowId, status, dupIds){
    re-run of a proven recipe keeps the source of the play it copies. */
 async function managerAddOwnPlay(name, how, plan){
   if(!managerNotesTable) return { ok: false };
+  if(MGR_PLAY_WRITE.busy){ toast('Still saving the last change to the playbook — tap again in a moment'); return { ok: false, reason: 'busy' }; }
+  MGR_PLAY_WRITE.busy = true;
+  try{ return await managerAddOwnPlayWrite(name, how, plan); }
+  finally{ MGR_PLAY_WRITE.busy = false; }
+}
+async function managerAddOwnPlayWrite(name, how, plan){
   const n = String(name||'').trim();
   if(n.length < 3){ toast('Give the play a name first'); return { ok: false, reason: 'no name' }; }
   const p = (plan && typeof plan === 'object') ? plan : {};
@@ -135246,6 +135343,12 @@ async function managerAddOwnPlay(name, how, plan){
   if(status === 'running' || plan){
     const book = await managerPlaybook();
     if(status === 'running'){
+      /* The same play is never running twice: one already on under this
+         name (letters and digits, as the duplicate guard keys it) is said
+         -- before the slots, which it would otherwise be blamed on. */
+      const key = n.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+      const on = !book.error && (book.running || []).find(x=> String(x.name || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '') === key);
+      if(on){ toast('“' + on.name + '” is already running'); return { ok: false, reason: 'already running' }; }
       const refusal = mgrPlaySlotRefusal(book, null);
       if(refusal){ toast(refusal, 9000); return { ok: false, reason: refusal }; }
     } else {
@@ -135254,16 +135357,20 @@ async function managerAddOwnPlay(name, how, plan){
       if(there){ toast('“' + there.name + '” is already on the board, waiting to start'); return { ok: false, reason: 'already proposed' }; }
     }
   }
+  /* What the designer said it would add, in its words, so the queued
+     card shows the same figure the designer did (mgrPlayProposedHTML). */
+  const sized = String(p.sized || '').trim().slice(0, 160);
   const body = { name: n.slice(0, 120), treats, how: String(how||'').trim().slice(0, 400),
-    sized: '', watch: '', source: p.source === 'manager' ? 'manager' : 'owner',
+    sized, watch: '', source: p.source === 'manager' ? 'manager' : 'owner',
     ...(span ? { weeks: span } : {}),
     ...(plan ? managerPlayFields({ dept: p.dept, hypothesis: p.hypothesis, stop: p.stop, cost: p.cost,
       depends_on: p.depends_on, weeks: span }) : {}),
     ...(status === 'running' ? { startedOn: todayISO() } : {}) };
-  /* Where the shop stands the day it starts, for a measure that reads a
-     LEVEL -- the same stamp a proposal gets when it is switched on. */
-  const m = MANAGER_PROBLEM_METRICS[treats];
-  if(status === 'running' && m && m.kind === 'level') body.baseline = Math.round(m.measure());
+  /* A sales play may name its own measure (Q41): one weekday's sales,
+     in named delivery areas, or new builder accounts' sales. */
+  const measure = typeof mgrPlayMeasureClean === 'function' ? mgrPlayMeasureClean(p.measure, treats) : null;
+  if(measure) body.measure = measure;
+  const m = (typeof mgrPlayMetric === 'function' ? mgrPlayMetric(body) : null) || MANAGER_PROBLEM_METRICS[treats];
   /* What the designer computed, kept as figures beside the words: the
      stop rule's figure and direction (above / at or above / below / at
      or below), so the board can say when it is met; the aim as a figure
@@ -135275,6 +135382,14 @@ async function managerAddOwnPlay(name, how, plan){
     body.stop.value = m.unit === 'pct' ? Math.round(Number(p.stop.value) * 10) / 10 : Math.round(Number(p.stop.value));
     body.stop.when = p.stop.when;
   }
+  /* "No better than where it starts": held to the stamp taken when it is
+     switched on, whenever that is. */
+  if(m && body.stop && p.stop && p.stop.vs === 'before' && ['above', 'atleast', 'below', 'atmost'].includes(p.stop.when)){
+    body.stop.vs = 'before'; body.stop.when = p.stop.when;
+  }
+  /* Where the shop stands the day it starts -- the same stamp a proposal
+     gets when it is switched on (managerPlayStamp). */
+  if(status === 'running') managerPlayApplyStamp(body, todayISO());
   if(m && p.aim_value != null && p.aim_value !== '' && Number.isFinite(Number(p.aim_value)))
     body.aimValue = m.unit === 'pct' ? Math.round(Number(p.aim_value) * 10) / 10 : Math.round(Number(p.aim_value));
   if(status === 'proposed' && /^\d{4}-\d{2}-\d{2}$/.test(String(p.start_on || '')) && p.start_on > todayISO()) body.startOn = p.start_on;
@@ -135292,7 +135407,10 @@ async function managerAddOwnPlay(name, how, plan){
       : 'Could not keep that play — ' + ins.error.message, 9000);
     return { ok: false, reason: ins.error.message };
   }
+  /* A re-run of a recipe the meeting proposed stays the meeting's play:
+     it is not the shop's own, and the toast does not say it is. */
   toast(status === 'proposed' ? 'Queued on the board — start it when a slot is free'
+    : body.source === 'manager' ? 'Running again — the meeting reads it as running from the next meeting'
     : 'Kept — the manager reads it as the shop\'s own from the next meeting');
   renderManager();
   return { ok: true };
@@ -143208,14 +143326,29 @@ function mgrPaintPlays(gen, ctx){
   /* The taps. Nothing here writes without one: starting, setting aside,
      judging, replacing and re-running each go through the journal's own
      writers. */
+  /* ONE TAP, ONE WRITE. A button that writes is switched off the moment
+     it is tapped -- with the card's other writers -- and back on only
+     when the write was refused, so a second quick tap cannot start a
+     play twice or take a fourth slot. */
+  const WRITES = ['start', 'aside', 'stop', 'keep', 'replace', 'rerun'];
+  const hold = (b)=>{
+    /* The card, not the button: a recipe's "Run it again" carries
+       data-key itself, and closest() would stop at it. */
+    const card = b.closest('article') || b.parentElement || b;
+    const btns = [...new Set([b, ...card.querySelectorAll('[data-pl-act]')])].filter(x=> WRITES.includes(x.dataset.plAct) && !x.disabled);
+    btns.forEach(x=> { x.disabled = true; });
+    return (r)=>{ if(!(r && r.ok)) btns.forEach(x=> { x.disabled = false; }); return r; };
+  };
   const go = (id, status, dups)=> managerPlayStatus(id, status, dups);
   playWrap.querySelectorAll('[data-pl-act]').forEach(b=> b.addEventListener('click', ()=>{
     const card = b.closest('[data-pid]');
     const id = card ? Number(card.dataset.pid) : null;
     const dups = card ? String(card.dataset.dups || '').split(',').filter(Boolean).map(Number) : [];
     const act = b.dataset.plAct;
-    if(act === 'start') go(id, 'running', dups);
-    else if(act === 'aside' || act === 'stop') go(id, 'dropped', dups);
+    if(WRITES.includes(act) && b.disabled) return;
+    const done = WRITES.includes(act) ? hold(b) : null;
+    if(act === 'start') go(id, 'running', dups).then(done, done);
+    else if(act === 'aside' || act === 'stop') go(id, 'dropped', dups).then(done, done);
     else if(act === 'judge'){
       const form = card.querySelector('.mgr-pl-judge');
       if(form){ form.hidden = !form.hidden; b.setAttribute('aria-expanded', String(!form.hidden)); }
@@ -143227,13 +143360,14 @@ function mgrPaintPlays(gen, ctx){
       const pick = card.querySelector('[data-pl-act="verdict"][aria-pressed="true"]');
       const said = mgrPlayResult(reads.get(id));
       go(id, { verdict: pick ? pick.dataset.v : '', result: said.text, resultRead: said.read,
-        lesson: (card.querySelector('.mgr-pl-lesson') || {}).value || '' }, []);
+        lesson: (card.querySelector('.mgr-pl-lesson') || {}).value || '' }, []).then(done, done);
     } else if(act === 'replace'){
       /* Replace = stop this one, then start the proposal on the same
          lever -- through the same writer, so the slot count and its
          refusal still stand between them. */
       const twin = (book.proposed || []).find(q=> String(q.id) === String(b.dataset.twin));
-      if(twin) go(id, 'dropped', []).then(r=>{ if(r && r.ok) go(twin.id, 'running', twin.dupIds || []); });
+      if(twin) go(id, 'dropped', []).then(r=> (r && r.ok ? go(twin.id, 'running', twin.dupIds || []) : r)).then(done, done);
+      else done(null);
     } else if(act === 'finish'){
       mgrPlayLetFinish(id);
       /* ctx is renderManager's, and its landed moves on with every read
@@ -143241,7 +143375,8 @@ function mgrPaintPlays(gen, ctx){
       mgrPaintPlays(mgrRenderGen, { ...ctx, landed: 'book' });
     } else if(act === 'rerun'){
       const rec = (book.proven || []).find(x=> x.key === b.dataset.key);
-      if(rec) managerAddOwnPlay(rec.template.name, rec.template.how, mgrPlayRerunPlan(rec.template));
+      if(rec) managerAddOwnPlay(rec.template.name, rec.template.how, mgrPlayRerunPlan(rec.template)).then(done, done);
+      else done(null);
     }
   }));
   mgrPlayDesignPaint(book, today);
@@ -143272,6 +143407,95 @@ function mgrPlaySlotRefusal(book, exceptId){
   const names = live.map(p=> '“' + p.name + '”');
   return `All ${MGR_PLAY_SLOTS} experiment slots are in use — ${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}. `
     + 'Judge or stop one first: a fourth at once would blur which play did what.';
+}
+/* A PLAY'S OWN MEASURE (approval Q41). Most plays are read on their
+   problem's measure (MANAGER_PROBLEM_METRICS). A sales play may name a
+   narrower one, because the whole week's sales would dilute it:
+     weekday       one weekday's sales -- "Saturday delivery" is judged
+                   on Saturdays, not on six other days that did not
+                   change -- in the named delivery areas where the
+                   invoices carry a place (the customer's location, or
+                   the delivery address an agent order gave);
+     new_accounts  sales to new builder accounts: a customer with a
+                   building site on the books (site stage), in their
+                   first 8 weeks from their first invoice -- or every
+                   new account, said so, where no customer is marked
+                   with a site.
+   Each is a FLOW over a window and adds up over the days, so a week's
+   cell, the before and the meeting's since are the same kind of sum. */
+const MGR_PLAY_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MGR_PLAY_NEW_DAYS = 56;
+function mgrPlayAreas(list){
+  return (Array.isArray(list) ? list : String(list || '').split(/[,;&]|\band\b/i))
+    .map(a=> String(a || '').trim().slice(0, 40)).filter(Boolean).slice(0, 4);
+}
+/* The measure as saved: only for a sales play, only these two shapes. */
+function mgrPlayMeasureClean(ms, treats){
+  if(treats !== 'growth' || !ms || typeof ms !== 'object') return null;
+  if(ms.kind === 'weekday' && Number.isInteger(Number(ms.dow)) && Number(ms.dow) >= 0 && Number(ms.dow) <= 6)
+    return { kind: 'weekday', dow: Number(ms.dow), areas: mgrPlayAreas(ms.areas) };
+  if(ms.kind === 'new_accounts') return { kind: 'new_accounts', who: ms.who === 'builders' ? 'builders' : 'accounts' };
+  return null;
+}
+function mgrPlayMetric(p){
+  const base = MANAGER_PROBLEM_METRICS[String((p && p.treats) || '')] || null;
+  const ms = mgrPlayMeasureClean(p && p.measure, p && p.treats);
+  if(!base || !ms) return base;
+  if(ms.kind === 'weekday'){
+    const day = MGR_PLAY_DAYS[ms.dow], areas = ms.areas;
+    return { label: `${day} sales${areas.length ? ' in ' + areas.join(' & ') : ''}`, unit: 'money', kind: 'flow', direction: 'up', own: ms,
+      measure: (from, to)=> mgrPlayWeekdaySales(from, to, ms.dow, areas) };
+  }
+  const builders = ms.who === 'builders';
+  return { label: builders ? 'new builder accounts’ sales' : 'new accounts’ sales', unit: 'money', kind: 'flow', direction: 'up', own: ms,
+    measure: (from, to)=> mgrPlayNewAccountSales(from, to, builders) };
+}
+/* What a play is after, said in a sentence: its problem, or for
+   'other' what the play itself is after -- never "measures other". */
+function mgrPlayAfter(treats){
+  return !treats || treats === 'other' || !MANAGER_PROBLEMS[treats] ? 'what this play is after' : String(MANAGER_PROBLEMS[treats]).toLowerCase();
+}
+function mgrPlayInvoiceDay(q){ return String((q && (q.invoicedAt || q.date)) || '').slice(0, 10); }
+/* Where an invoice went: the customer's place on file, else the
+   delivery address an agent order gave (orderCustomerLocation). */
+function mgrPlayPlaceOf(q){
+  try{ return String(orderCustomerLocation(q) || '').trim(); }catch(e){ return ''; }
+}
+function mgrPlayInAreas(q, areas){
+  if(!areas || !areas.length) return true;
+  const place = mgrPlayPlaceOf(q).toLowerCase();
+  return !!place && areas.some(a=> place.includes(String(a).toLowerCase()));
+}
+function mgrPlayWeekdaySales(from, to, dow, areas){
+  const list = anInvoicesInRange(from, to).filter(q=>{
+    const d = mgrPlayInvoiceDay(q);
+    return d && new Date(d + 'T12:00:00Z').getUTCDay() === dow && mgrPlayInAreas(q, areas);
+  });
+  return anOverallTotals(list).sales;
+}
+/* Each customer's first invoiced sale on the books. */
+function mgrPlayFirstBuys(){
+  const first = new Map();
+  (data.savedQuotes || []).forEach(q=>{
+    if(!q || q.voided || !(q.status === 'completed' && q.invoiced) || q.customerId == null) return;
+    const d = mgrPlayInvoiceDay(q), k = String(q.customerId);
+    if(d && (!first.has(k) || d < first.get(k))) first.set(k, d);
+  });
+  return first;
+}
+/* A builder is a customer with a building site on the books. */
+function mgrPlayBuilderIds(){
+  return new Set((data.customers || []).filter(c=> c && String(c.siteStage || '').trim()).map(c=> String(c.id)));
+}
+function mgrPlayNewAccountSales(from, to, builders){
+  const first = mgrPlayFirstBuys(), only = builders ? mgrPlayBuilderIds() : null;
+  const list = anInvoicesInRange(from, to).filter(q=>{
+    if(q.customerId == null) return false;
+    const k = String(q.customerId), f = first.get(k);
+    if(!f || (only && !only.has(k))) return false;
+    return mgrPlayDays(f, mgrPlayInvoiceDay(q)) < MGR_PLAY_NEW_DAYS;
+  });
+  return anOverallTotals(list).sales;
 }
 /* A figure in the board's cells and lines: a share as a percentage with
    one decimal, money short (the full figure rides in a title). */
@@ -143363,9 +143587,8 @@ function mgrPlayWeekValue(p, m, w, snaps){
    read, { error } when the read failed -- a failure is said as one,
    never as "no snapshot kept". */
 function mgrPlayReads(p, today, snaps){
-  const m = MANAGER_PROBLEM_METRICS[String((p && p.treats) || '')];
-  if(!m) return { measured: false, why: 'Nothing in the books measures ' + String(MANAGER_PROBLEMS[(p && p.treats) || ''] || 'it').toLowerCase()
-    + ' — you judge it by what you see.' };
+  const m = mgrPlayMetric(p);
+  if(!m) return { measured: false, why: `Nothing in the books measures ${mgrPlayAfter((p && p.treats) || '')} — you judge it by what you see.` };
   const start = p.started_on || p.proposed_on;
   const weeks = mgrPlayWeeks(start, p.weeks, today);
   if(!weeks.length) return { measured: false, why: 'It has no start day on the record.' };
@@ -143374,9 +143597,22 @@ function mgrPlayReads(p, today, snaps){
   const out = { measured: true, label: m.label, unit: m.unit, direction: m.direction, kind: m.kind,
     before: null, beforeWhy: null, beforeBasis: null, line: null, readError: isDead ? snapErr : null };
   const pr = p.progress || null;
-  if(m.kind === 'flow'){
-    if(pr && pr.before != null && Number(pr.days_running) >= 7){
-      const days = Number(pr.days_running);
+  const stamped = m.kind === 'flow' && /^\d{4}-\d{2}-\d{2}$/.test(String(p.baselineFrom || '')) && /^\d{4}-\d{2}-\d{2}$/.test(String(p.baselineTo || ''))
+    && p.baseline != null && Number.isFinite(Number(p.baseline));
+  if(stamped){
+    /* STAMPED THE DAY IT STARTED: the span's length of days before the
+       start, fixed then -- the figure "Write a play" showed, its stop
+       rule holds, and the meeting reads (managerPlayProgress). */
+    const span = mgrPlayDays(p.baselineFrom, p.baselineTo) + 1;
+    out.before = m.unit === 'pct' ? Number(p.baseline) : Math.round(Number(p.baseline));
+    out.beforeBasis = m.unit === 'pct' ? `the ${span} days before it started (${p.baselineFrom} to ${p.baselineTo}), stamped the day it started`
+      : `a week’s worth of the ${span} days before it started (${p.baselineFrom} to ${p.baselineTo}), stamped the day it started`;
+    if(pr && pr.since != null && Number(pr.days_read) >= 7) out.line = m.unit === 'pct'
+      ? { before: out.before, after: Number(pr.since), beforeSpan: 'before', span: `in the ${pr.days_read} days since` }
+      : { before: out.before, after: Number(pr.since), beforeSpan: 'a week before', span: `a week since, over ${pr.days_read} days` };
+  } else if(m.kind === 'flow'){
+    const days = pr ? Number(pr.days_read != null ? pr.days_read : pr.days_running) : 0;
+    if(pr && pr.before != null && days >= 7){
       out.before = m.unit === 'pct' ? Number(pr.before) : Math.round(Number(pr.before) * 7 / days);
       out.beforeBasis = m.unit === 'pct' ? `the ${days} days before it started (${pr.before_span}), as the meeting reads it`
         : `a week’s worth of the ${days} days before it started (${pr.before_span}), as the meeting reads it`;
@@ -143453,12 +143689,15 @@ function mgrPlayResult(r){
    atmost (<=). */
 const MGR_PLAY_STOP_SAY = { above: 'above', atleast: 'at or above', below: 'below', atmost: 'at or below' };
 function mgrPlayStopRule(p){
-  const m = MANAGER_PROBLEM_METRICS[String((p && p.treats) || '')];
+  const m = mgrPlayMetric(p);
   const s = p && p.stop;
   if(!m || !s || typeof s !== 'object') return null;
   const byWeek = Number.isInteger(Number(s.byWeek)) && Number(s.byWeek) >= 1 ? Number(s.byWeek) : null;
   if(s.value != null && s.value !== '' && Number.isFinite(Number(s.value)) && MGR_PLAY_STOP_SAY[s.when])
     return { value: Number(s.value), when: s.when, byWeek, from: 'kept' };
+  /* "No better than where it starts", read against the stamp. */
+  if(s.vs === 'before' && MGR_PLAY_STOP_SAY[s.when] && p.baseline != null && Number.isFinite(Number(p.baseline)))
+    return { value: Number(p.baseline), when: s.when, byWeek, from: 'kept' };
   const hit = /\b(no better than|not above|not below|no lower than|no higher than|more than|higher than|less than|lower than|at least|at most|above|over|below|under)\s+(?:UGX\s*)?(\d[\d,]*(?:\.\d+)?)\s*(%|bn\b|million\b|m\b|k\b)?/i
     .exec(String(s.threshold || ''));
   if(!hit) return null;
@@ -143483,7 +143722,7 @@ function mgrPlayStopRule(p){
 function mgrPlayStopCheck(p, today, snaps, r){
   const rule = mgrPlayStopRule(p);
   if(!rule) return null;
-  const m = MANAGER_PROBLEM_METRICS[p.treats];
+  const m = mgrPlayMetric(p);
   let cell = null;
   if(r && r.measured && r.cells){
     cell = rule.byWeek ? r.cells[rule.byWeek - 1] || null : r.cells.filter(c=> c.value != null).slice(-1)[0] || null;
@@ -143526,13 +143765,13 @@ function mgrPlayOdds(treats, judged){
    last 12 finished weeks, how many read at the aim or better -- weeks
    with no reading left out of n. null when there is no figure to aim at
    or nothing measures it. */
-function mgrPlayAimOdds(treats, aim, today, snaps){
-  const m = MANAGER_PROBLEM_METRICS[String(treats || '')];
+function mgrPlayAimOdds(treats, aim, today, snaps, play){
+  const m = play ? mgrPlayMetric(play) : MANAGER_PROBLEM_METRICS[String(treats || '')];
   if(!m || aim == null || aim === '' || !Number.isFinite(Number(aim))) return null;
   if(treats === 'dead_stock' && !Array.isArray(snaps)) return null;
   let k = 0, n = 0;
   mgrPlayPastWeeks(today, 12).forEach(w=>{
-    const v = mgrPlayWeekValue({ treats }, m, w, snaps);
+    const v = mgrPlayWeekValue(play || { treats }, m, w, snaps);
     if(v == null) return;
     n++;
     if(m.direction === 'down' ? v <= Number(aim) : v >= Number(aim)) k++;
@@ -143544,9 +143783,11 @@ function mgrPlayAimOdds(treats, aim, today, snaps){
 function mgrPlayRerunPlan(t){
   const h = t.hypothesis || null, s = t.stop || null;
   return { status: 'running', treats: t.treats, weeks: t.weeks, dept: t.dept, cost: t.cost,
-    depends_on: t.dependsOn, source: t.source,
+    depends_on: t.dependsOn, source: t.source, measure: t.measure || undefined,
     hypothesis: h ? { if: h.if, then: h.then, target: h.target } : undefined,
-    stop: s ? { threshold: s.threshold, by_week: s.byWeek, ...(s.value != null && s.when ? { value: s.value, when: s.when } : {}) } : undefined,
+    /* A rule held to where it started is held to the NEW run's start. */
+    stop: s ? { threshold: s.threshold, by_week: s.byWeek, ...(s.vs === 'before' && s.when ? { vs: 'before', when: s.when }
+      : s.value != null && s.when ? { value: s.value, when: s.when } : {}) } : undefined,
     aim_value: t.aimValue != null ? t.aimValue : undefined };
 }
 /* The kind of money a play's sizing is in, by what it treats: the share
@@ -143574,9 +143815,9 @@ function mgrPlayBoard(book, reads, today, snaps){
     const pick = !!twin && worth(p) > 0 && worth(twin.with) > 0 && worth(p) > worth(twin.with);
     if(pick) twin.level = 'vg';
     const level = conflicts.some(c=> c.level === 'cr') ? 'cr' : conflicts.some(c=> c.level === 'am') ? 'am' : 'vg';
-    const aim = p.aimValue != null ? mgrPlayAimOdds(p.treats, p.aimValue, today, snaps) : null;
+    const aim = p.aimValue != null ? mgrPlayAimOdds(p.treats, p.aimValue, today, snaps, p) : null;
     return { p, conflicts, level, pick, worth: mgrPlayWorth(p.sized), kind: MGR_PLAY_MONEY_KIND[p.treats] || null,
-      odds: aim && aim.n ? { ...aim, basis: 'aim', aim: p.aimValue, treats: p.treats } : { ...mgrPlayOdds(p.treats, judged), basis: 'verdicts' } };
+      odds: aim && aim.n ? { ...aim, basis: 'aim', aim: p.aimValue, treats: p.treats, measure: p.measure } : { ...mgrPlayOdds(p.treats, judged), basis: 'verdicts' } };
   });
   /* THE ONE TO START NEXT: the only play that fits a free slot, or the
      biggest of several -- only when every one was sized, in one kind of
@@ -143611,7 +143852,7 @@ function mgrPlayBoard(book, reads, today, snaps){
      clause a count or a date. */
   const say = ['A play is an experiment, not a wish.'];
   if(tripped) say.push(`${tripped.p.name} has met ${tripped.p.source === 'owner' ? 'the stop rule you wrote' : 'its stop rule'}: week ${tripped.stop.week} read ${
-    mgrPlayFig(tripped.stop.value, (MANAGER_PROBLEM_METRICS[tripped.p.treats] || {}).unit)}. Judge it or stop it${
+    mgrPlayFig(tripped.stop.value, (mgrPlayMetric(tripped.p) || {}).unit)}. Judge it or stop it${
     tripped.replaceWith ? ` — or replace it with ${tripped.replaceWith.name}` : ''}.`);
   if(past.length && !(tripped && tripped.p === past[0])) say.push(`${past[0].name} is ${past[0].clock.daysOver} day${past[0].clock.daysOver === 1 ? '' : 's'} past its ${past[0].clock.weeks} weeks and needs your verdict.`);
   else if(!past.length && due && !(tripped && tripped.p === due)) say.push(`${due.name} is due for your verdict ${due.clock.daysLeft === 0 ? 'today' : 'in ' + due.clock.daysLeft + ' day' + (due.clock.daysLeft === 1 ? '' : 's')}.`);
@@ -143682,7 +143923,7 @@ function mgrPlayBoardHTML(model){
       ${lane('', 'k', 'Proposed', model.proposed.length, 'In the meeting’s order. What each would add is the Manager’s own sizing.',
         model.proposed.length ? model.proposed.slice(0, 6).map(x=> mgrPlayProposedHTML(x, model)).join('') + more(model.proposed.length - 6, 'proposed')
           : empty('Nothing proposed. A meeting brings at most two plays, and only where the books show a pattern arithmetic cannot fix.'))}
-      ${lane('mgr-pl-run', 'am', 'Running', model.running.length, 'Read week by week against the before the meeting reads.',
+      ${lane('mgr-pl-run', 'am', 'Running', model.running.length, 'Read week by week against the same span before it started, as the meeting reads it.',
         model.running.length ? model.running.map(x=> mgrPlayRunningHTML(x, model)).join('')
           : empty(`No play is running — all ${s.cap} slots are free.`))}
       ${lane('', 'vg', 'Judged', model.judged.length, 'Every verdict leaves a lesson, worked or not.',
@@ -143702,7 +143943,7 @@ function mgrPlayBoardHTML(model){
    ("+150,000 a week") where the count is of a level. */
 function mgrPlayOddsHTML(odds, problem){
   if(odds.basis === 'aim'){
-    const m = MANAGER_PROBLEM_METRICS[String(odds.treats || '')];
+    const m = mgrPlayMetric({ treats: odds.treats, measure: odds.measure });
     const what = m ? `${m.label} at ${mgrPlayFig(odds.aim, m.unit)} or ${m.direction === 'down' ? 'less' : 'more'}` : 'its aim or better';
     const full = m && m.unit !== 'pct' ? ` title="${esc(fmtUGX(odds.aim))}"` : '';
     return `${esc(`${odds.k} of ${odds.n}`)}<small class="mgr-pl-ob"${full}>weeks of the last ${odds.of} with ${esc(what)}</small>`;
@@ -143715,7 +143956,7 @@ function mgrPlayProposedHTML(x, model){
   const c = x.conflicts;
   const clash = c.find(z=> z.kind === 'clash'), twin = c.find(z=> z.kind === 'twin'), dep = c.find(z=> z.kind === 'depends'),
     slots = c.find(z=> z.kind === 'slots');
-  const measure = (MANAGER_PROBLEM_METRICS[p.treats] || {}).label;
+  const measure = (mgrPlayMetric(p) || {}).label;
   const problem = String(p.problem || MANAGER_PROBLEMS[p.treats] || 'it').toLowerCase();
   const notes = [];
   /* A play the owner scheduled says its day first. */
@@ -143790,24 +144031,35 @@ function mgrPlayRunningHTML(x, model){
     const movedLine = L ? `<p class="mgr-play-moved">${esc(r.label)} ${esc(mgrPlayFig(L.before, r.unit))} ${esc(L.beforeSpan)} → ${esc(mgrPlayFig(L.after, r.unit))} ${esc(L.span)}, alongside it${
       shared.length ? ` · also running: ${esc(shared.map(z=> z.with.name).join(', '))}` : ''}</p>` : '';
     reads = `<span class="mgr-pl-micro">${esc(r.label)} · week by week</span>
-      <div class="mgr-pl-wk"><span class="mgr-pl-wc mgr-pl-bl" title="${esc(r.beforeBasis || r.beforeWhy || '')}"><b class="mgr-pl-wv">${esc(mgrPlayCellFig(r.before, r.unit))}</b>before</span>${cells}</div>
+      <div class="mgr-pl-wk${r.cells.length <= 7 ? ' mgr-pl-wk1' : ''}${r.cells.length > 5 && r.cells.length <= 7 ? ' mgr-pl-wkn' : ''}"><span class="mgr-pl-wc mgr-pl-bl" title="${esc(r.beforeBasis || r.beforeWhy || '')}"><b class="mgr-pl-wv">${esc(mgrPlayCellFig(r.before, r.unit))}</b>before</span>${cells}</div>
       <div class="mgr-pl-read"><span class="mgr-pl-sig mgr-pl-${state}"></span><span class="mgr-pl-rt">${line}</span></div>
       ${movedLine}
       ${r.n > 0 && r.unmeasured ? `<p class="mgr-pl-sub">${wk(r.unmeasured)} not measured: no daily snapshot kept then.</p>` : ''}`;
   } else if(r) reads = `<p class="mgr-pl-sub">${esc(r.why)}</p>`;
   const pips = r && r.measured ? `<span class="mgr-pl-pips" role="img" aria-label="${r.k} of ${r.n} weeks better">${[1, 2, 3, 4, 5].map(i=> `<i class="mgr-pl-pip${i <= r.pips ? ' mgr-pl-on' : ''}"></i>`).join('')}</span> <span class="mgr-pl-kn">${r.k} of ${r.n} wk</span>` : 'not measured';
   const st = x.stop;
+  const unit = (mgrPlayMetric(p) || {}).unit;
   /* The rule in the meeting's words; a rule given only as a figure
-     (Q38) is said from the figure -- "below 8.0%" -- never left blank. */
-  const said = p.stop && p.stop.threshold ? mgrPlayText(p.stop.threshold)
+     (Q38) is said from the figure -- "below 8.0%" -- never left blank;
+     one held to where it started says the stamp it is held to. */
+  const said = p.stop && p.stop.vs === 'before' && st && st.rule && MGR_PLAY_STOP_SAY[st.rule.when]
+    ? `${MGR_PLAY_STOP_SAY[st.rule.when]} ${mgrPlayFig(st.rule.value, unit)}, where it started`
+    : p.stop && p.stop.threshold ? mgrPlayText(p.stop.threshold)
     : p.stop && p.stop.value != null && MGR_PLAY_STOP_SAY[p.stop.when]
-      ? MGR_PLAY_STOP_SAY[p.stop.when] + ' ' + mgrPlayFig(p.stop.value, (MANAGER_PROBLEM_METRICS[p.treats] || {}).unit) : '';
-  const stop = said ? `${esc(said)}${p.stop.byWeek ? ` by week ${p.stop.byWeek}` : ''}${
-    st && st.value != null ? ` · read ${esc(mgrPlayFig(st.value, r && r.unit))}` : ''}` : 'no stop rule written';
+      ? MGR_PLAY_STOP_SAY[p.stop.when] + ' ' + mgrPlayFig(p.stop.value, unit) : '';
+  /* A rule the board cannot hold a figure to says so: its silence is
+     not "not met". */
+  const held = /, where it started$/.test(said);
+  const stop = said ? `${esc(said)}${p.stop.byWeek ? `${held ? ',' : ''} by week ${p.stop.byWeek}` : ''}${
+    st && st.value != null ? ` · read ${esc(mgrPlayFig(st.value, r && r.unit))}` : ''}${
+    !st ? ' <span class="mgr-pl-sub">· not checked by the board — your call</span>' : ''}` : 'no stop rule written';
   /* The Manager's note on the card: a stop rule met first, then a
      replacement it would make, then what is due, and what else is
      moving the same measure. */
-  const twin = x.replaceWith && !mgrPlayFinishing(p.id) ? x.replaceWith : null;
+  /* "Let it finish" turns the offer away for weak weeks only: a stop
+     rule met always keeps Judge it and Stop it, with Replace beside them. */
+  const met = !!(st && st.met);
+  const twin = x.replaceWith && (met || !mgrPlayFinishing(p.id)) ? x.replaceWith : null;
   const swap = twin ? ` “${esc(twin.name)}” treats the same — I’d replace it, not just stop it.` : '';
   const note = st && st.met ? ['cr', `${p.source === 'owner' ? 'Your' : 'Its'} stop rule is met: week ${st.week} read ${esc(mgrPlayFig(st.value, r && r.unit))}, ${MGR_PLAY_STOP_SAY[st.rule.when]} ${
       esc(mgrPlayFig(st.rule.value, r && r.unit))} — judge it or stop it.${swap}`]
@@ -143818,10 +144070,12 @@ function mgrPlayRunningHTML(x, model){
     : c && c.noSpan ? ['k', 'No span was named — give it one, or judge it when you have seen enough.']
     : ['k', `Week ${c ? c.weekOf : 1} is read once ${esc(mgrPlayDate(anShiftDate(p.started_on || p.proposed_on, (c ? c.weekOf : 1) * 7 - 1)))} is over.`];
   const res = mgrPlayResult(r);
-  const acts = twin ? `<button type="button" class="btn btn-ghost ow-sm" data-pl-act="replace" data-twin="${esc(String(twin.id))}">Replace with “${esc(twin.name)}”</button>
-      <button type="button" class="btn btn-ghost ow-sm mgr-pl-quiet" data-pl-act="finish">Let it finish</button>`
-    : `<button type="button" class="btn btn-ghost ow-sm" data-pl-act="judge" aria-expanded="false">Judge it</button>
+  const judgeStop = `<button type="button" class="btn btn-ghost ow-sm" data-pl-act="judge" aria-expanded="false">Judge it</button>
       <button type="button" class="btn btn-ghost ow-sm mgr-pl-quiet" data-pl-act="stop">Stop it</button>`;
+  const replace = twin ? `<button type="button" class="btn btn-ghost ow-sm" data-pl-act="replace" data-twin="${esc(String(twin.id))}" title="${esc(`Stop it and start “${twin.name}”`)}">Replace it</button>` : '';
+  const acts = met ? judgeStop + replace
+    : twin ? `${replace}<button type="button" class="btn btn-ghost ow-sm mgr-pl-quiet" data-pl-act="finish">Let it finish</button>`
+    : judgeStop;
   return `<article class="mgr-pl-c" data-pid="${esc(String(p.id))}" data-dups="">
     <div class="mgr-pl-ct">${mgrPlayMonoHTML(p)}<b class="mgr-pl-nm">${esc(p.name)}</b>${p.source === 'owner' ? '<span class="mgr-pl-yours">yours</span>' : ''}</div>
     ${mgrPlayHypHTML(p)}
@@ -143866,7 +144120,7 @@ function mgrPlayRecipeHTML(x, model){
   const avgText = mixed ? 'not comparable' : avg == null ? 'not recorded' : (avg > 0 ? '+' : avg < 0 ? '−' : '') + mgrPlayFig(Math.abs(avg), unit);
   const avgTitle = mixed ? 'The runs you judged worked were read on different measures'
     : avg == null ? 'No run you judged worked kept what moved alongside it'
-    : `${same[0].label} moved ${avgText} on average alongside the ${same.length} run${same.length === 1 ? '' : 's'} you judged worked`;
+    : `${same[0].label} moved ${avgText} on average alongside ${same.length < worked.length ? `${same.length} of the ${worked.length}` : `the ${same.length}`} run${same.length === 1 && same.length === worked.length ? '' : 's'} you judged worked`;
   const full = model.slots.free === 0 && !x.running;
   return `<article class="mgr-pl-c" data-key="${esc(x.key)}">
     <div class="mgr-pl-ct">${mgrPlayMonoHTML(x.template)}<b class="mgr-pl-nm">${esc(x.name)}</b></div>
@@ -143875,7 +144129,9 @@ function mgrPlayRecipeHTML(x, model){
       <span class="mgr-pl-fig">${x.judgedWorked} of ${x.judged} judged worked</span></div>
     <dl class="mgr-pl-kv"><dt>Moved alongside, avg</dt><dd title="${esc(avgTitle)}">${esc(avgText)}</dd>
       <dt>Last run</dt><dd>${x.running ? 'running now' : x.lastOn ? esc(mgrPlayDate(x.lastOn)) : 'not recorded'}</dd></dl>
-    ${avg == null ? '' : `<p class="mgr-pl-sub">${esc(same[0].label)}, across the ${same.length} run${same.length === 1 ? '' : 's'} you judged worked</p>`}
+    ${avg == null ? '' : `<p class="mgr-pl-sub">${esc(same[0].label)}, across ${same.length < worked.length
+      ? `${same.length} of the ${worked.length} runs you judged worked (the other${worked.length - same.length === 1 ? '' : 's'} kept no reading)`
+      : `the ${same.length} run${same.length === 1 ? '' : 's'} you judged worked`}</p>`}
     ${mgrPlayNoteHTML('vg', x.running ? 'Running again now — judge it when its span ends.' : 'Your verdict, counted: the meeting may propose it again.', true)}
     <div class="mgr-pl-ca">${x.running ? '<button type="button" class="btn btn-ghost ow-sm" disabled>Running now</button>'
       : `<button type="button" class="btn btn-ghost ow-sm" data-pl-act="rerun" data-key="${esc(x.key)}"${full ? ` disabled title="${esc(`All ${MGR_PLAY_SLOTS} slots are in use — judge or stop one first.`)}"` : ''}>Run it again</button>`}</div>
@@ -143955,36 +144211,59 @@ function mgrPlayP75(values){
   const v = values.filter(x=> x != null && Number.isFinite(Number(x))).map(Number).sort((a, b)=> a - b);
   return v.length ? v[Math.ceil(0.75 * v.length) - 1] : null;
 }
+/* An aim from a measure's own last 12 weeks: the 75th percentile (a
+   week it beat 1 time in 4) when that is above the last 7 days;
+   otherwise its best week, when that is; otherwise no aim is derived and
+   the owner sets one. weekly[0] IS the last 7 days. */
+function mgrPlayAimFrom(m, today){
+  const weekly = mgrPlayPastWeeks(today, 12).map(w=> m.measure(w.from, w.to));
+  const p75 = mgrPlayP75(weekly), best = Math.max(...weekly.map(v=> Number(v) || 0)), last = Number(weekly[0]) || 0;
+  const aim = p75 != null && p75 > last ? p75 : best > last ? best : null;
+  const basis = aim == null ? '' : aim === p75 ? `the 75th percentile of the last 12 weeks’ ${m.label} (a week beaten 1 time in 4)`
+    : `your best week of the last 12 for ${m.label} — the last 7 days already beat the 75th percentile`;
+  return { aim, basis, best };
+}
+/* Did an order go out on the truck: its stage log says it went out for
+   delivery, or an agent order asked the shop to deliver it. */
+function mgrPlayWentOut(q){
+  const log = Array.isArray(q && q.stageLog) ? q.stageLog : [];
+  return log.some(e=> e && e.status === 'pending_delivery') || !!(q && q.deliveryMode === 'shop_delivery');
+}
 function mgrPlayPresets(today){
   const out = [];
-  /* A sales aim from the shop's own last 12 weeks: the 75th percentile
-     (a week it beat 1 time in 4) when that is above the last 7 days;
-     otherwise its best week, when that is; otherwise no aim is derived
-     and the owner sets one. weekly[0] IS the last 7 days. */
-  const weekly = mgrPlayPastWeeks(today, 12).map(w=> MANAGER_PROBLEM_METRICS.growth.measure(w.from, w.to));
-  const p75 = mgrPlayP75(weekly), bestWeek = Math.max(...weekly.map(v=> Number(v) || 0)), last = Number(weekly[0]) || 0;
-  const salesAim = p75 != null && p75 > last ? p75 : bestWeek > last ? bestWeek : null;
-  const salesBasis = salesAim == null ? '' : salesAim === p75 ? 'the 75th percentile of the last 12 weeks’ sales (a week beaten 1 time in 4)'
-    : 'your best week of the last 12 — the last 7 days already beat the 75th percentile';
   /* cash */
   const dd = mgrDebtorDays(today);
   const owed = Math.round(MANAGER_METRICS.debtors_total.measure());
   if(owed > 0 && dd.creditPerDay > 0) out.push({ id: 'cash', label: 'Cash price', name: 'Cash price under credit', treats: 'debt',
     if: 'give cash buyers a lower price than credit buyers', weeks: 6, target: Math.max(0, owed - dd.creditPerDay * 7),
     aimBasis: `a week of credit sales (${mgrShortUGX(dd.creditPerDay)} a day over ${dd.windowDays} days) taken in cash instead` });
-  /* sat */
+  /* sat (Q41): the strongest weekday by the last 8 weeks' sales,
+     measured on THAT day's sales -- in the areas its deliveries went,
+     where the invoices carry a place; every area, said so, where none do. */
   const from = anShiftDate(today, -56), to = anShiftDate(today, -1);
   const byDay = [0, 1, 2, 3, 4, 5, 6].map(()=> []);
   anInvoicesInRange(from, to).forEach(q=>{
-    const d = String(q.invoicedAt || q.date || '').slice(0, 10);
+    const d = mgrPlayInvoiceDay(q);
     if(d) byDay[new Date(d + 'T12:00:00Z').getUTCDay()].push(q);
   });
   const avg = byDay.map(list=> anOverallTotals(list).sales / 8);
   const top = avg.indexOf(Math.max(...avg));
-  const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  if(avg[top] > 0) out.push({ id: 'sat', label: DAYS[top] + ' delivery', name: DAYS[top] + ' delivery to builders’ sites', treats: 'growth',
-    if: `deliver to builders’ sites on ${DAYS[top]}s`, weeks: 4, target: salesAim,
-    aimBasis: `${salesBasis ? salesBasis + '; ' : ''}${DAYS[top]} is your strongest day, ${mgrShortUGX(avg[top])} on average over the last 8` });
+  if(avg[top] > 0){
+    const DAY = MGR_PLAY_DAYS[top];
+    const byPlace = new Map();
+    byDay[top].filter(mgrPlayWentOut).forEach(q=>{
+      const place = mgrPlayPlaceOf(q).split(',')[0].trim();
+      if(place) byPlace.set(place, (byPlace.get(place) || 0) + anOverallTotals([q]).sales);
+    });
+    const areas = [...byPlace.entries()].sort((a, b)=> b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 2).map(x=> x[0]);
+    const measure = { kind: 'weekday', dow: top, areas };
+    const mm = mgrPlayMetric({ treats: 'growth', measure });
+    const aim = mgrPlayAimFrom(mm, today);
+    out.push({ id: 'sat', label: DAY + ' delivery', name: areas.length ? `${DAY} delivery, ${areas.join(' & ')}` : `${DAY} delivery to builders’ sites`,
+      treats: 'growth', measure, if: `deliver to ${areas.length ? areas.join(' and ') : 'builders’ sites'} on ${DAY}s`, weeks: 4, target: aim.aim,
+      aimBasis: `${aim.basis ? aim.basis + '; ' : ''}${DAY} is your strongest day, ${mgrShortUGX(avg[top])} on average over the last 8; ${
+        areas.length ? `${areas.join(' and ')} took the most of its deliveries` : `no ${DAY} delivery carries a place on the books, so every area counts`}` });
+  }
   /* paint */
   const dead = deadStockRows(today).filter(r=> r.value > 0)[0];
   const best = anRowsByItem(anInvoicesInRange(anShiftDate(today, -30), to)).sort((a, b)=> b.sales - a.sales)[0];
@@ -143993,18 +144272,30 @@ function mgrPlayPresets(today){
     const prod = (data.products || []).find(x=> x.id === dead.productId);
     const deadName = prod ? productVariantLabel(prod, dead.variantIdx) : dead.line;
     const bestName = best.variant || best.name;
-    out.push({ id: 'paint', label: `${prod ? prod.name : deadName} with every order`, name: `${deadName} with every ${bestName} order`, treats: 'dead_stock',
+    /* The pill says only what kind of play it is: a product's name is as
+       long as the shop made it, and the five pills share one row on a
+       desktop. The name it bundles is in the play's name and its aim. */
+    out.push({ id: 'paint', label: 'Dead-stock bundle', name: `${deadName} with every ${bestName} order`, treats: 'dead_stock',
       if: `offer ${deadName} with every ${bestName} order`, weeks: 3, target: Math.max(0, deadNow - dead.value),
       aimBasis: `dead stock less ${deadName} (${mgrShortUGX(dead.value)} at cost, unsold ${dead.daysQuiet == null ? 'since it came in' : dead.daysQuiet + ' days'}); ${bestName} sold most in the last 30 days` });
   }
-  /* moses */
+  /* moses (Q41): a field hand on the books sent to new building sites,
+     measured on new builder accounts' sales -- a builder being a customer
+     with a building site on the books; every new account, said so, where
+     no customer has one. */
   const agent = (data.agents || []).find(a=> a && a.name && !a.retiredAt)
     || (data.staff || []).find(s=> s && s.name && !s.unavailable && /deliver|driver|field|agent|sales/i.test(String(s.role || '') + ' ' + String(s.notes || '')));
-  if(agent && bestWeek > 0){
+  if(agent){
     const first = String(agent.name).split(/\s+/)[0];
-    out.push({ id: 'moses', label: `${first} to new sites`, name: `${first} to new building sites`, treats: 'growth',
-      if: `send ${first} to new building sites every week`, weeks: 8, target: salesAim,
-      aimBasis: salesBasis || 'no week of the last 12 beat the last 7 days — set your own aim' });
+    const builders = mgrPlayBuilderIds().size > 0;
+    const measure = { kind: 'new_accounts', who: builders ? 'builders' : 'accounts' };
+    const mm = mgrPlayMetric({ treats: 'growth', measure });
+    const aim = mgrPlayAimFrom(mm, today);
+    out.push({ id: 'moses', label: `${first} to new sites`, name: `${first} to new building sites`, treats: 'growth', measure,
+      if: `send ${first} to new building sites every week`, weeks: 8, target: aim.aim,
+      aimBasis: `${aim.basis || `no week of the last 12 beat the last 7 days for ${mm.label} — set your own aim`}; ${builders
+        ? 'a builder is a customer with a building site on the books, new for 8 weeks from their first invoice'
+        : 'no customer is marked with a building site, so every new account counts, for 8 weeks from its first invoice'}` });
   }
   return out.map(p=> ({ ...p, cost: null, dependsOn: '', stopBy: Math.ceil(p.weeks / 2) }));
 }
@@ -144015,8 +144306,11 @@ function mgrPlayPresets(today){
    a share as it is, a sum as a week's worth; the books must reach that
    far back (PB.7: booksStartDate covers the span). A level is where it
    stands today: the stamp it gets when it starts. */
-function mgrPlayDraftBase(treats, today, snaps, weeks){
-  const m = MANAGER_PROBLEM_METRICS[treats];
+function mgrPlayDraftBase(draft, today, snaps, weeks){
+  /* A draft, or a problem's key alone. */
+  const d = draft && typeof draft === 'object' ? draft : { treats: draft };
+  const treats = d.treats;
+  const m = mgrPlayMetric(d);
   if(!m) return { measured: false };
   if(m.kind === 'flow'){
     const w = Number.isInteger(Number(weeks)) && Number(weeks) >= 1 ? Math.min(13, Number(weeks)) : 1;
@@ -144042,7 +144336,7 @@ function mgrPlayDraftBase(treats, today, snaps, weeks){
    judged record in; four checks and one verdict out. */
 function mgrPlayDesignCheck(draft, base, book, judged){
   const checks = [];
-  const problem = String(MANAGER_PROBLEMS[draft.treats] || 'it').toLowerCase();
+  const problem = mgrPlayAfter(draft.treats);
   const fig = (v)=> base.m ? mgrPlayFig(v, base.m.unit) : '—';
   /* 1. baseline found */
   if(!base.measured) checks.push({ c: 'am', t: `Nothing in the books measures ${problem} — your verdict will rest on what you see.` });
@@ -144088,6 +144382,12 @@ function mgrPlayDesignCheck(draft, base, book, judged){
       dep ? `; it waits on ${dep.text}, so start it when that is done` : ''}${cost == null ? '; write its cost first if it costs anything' : ''}.`, act: 'start' };
   return { checks, verdict, odds };
 }
+/* The designer's span in its sentence: a span the owner cleared is
+   asked for, never printed as "null". */
+function mgrPlayWeeksText(weeks){
+  return weeks != null && weeks !== '' && Number.isInteger(Number(weeks)) && Number(weeks) >= 1
+    ? `${Number(weeks)} week${Number(weeks) === 1 ? '' : 's'}` : 'how many weeks?';
+}
 function mgrPlayDesignPaint(book, today){
   const el = document.getElementById('mgrPlayDesign');
   if(!el) return;
@@ -144098,7 +144398,7 @@ function mgrPlayDesignPaint(book, today){
   }
   const d = mgrPlayDraft;
   const snaps = mgrPlaysSnapFor(book, 'design', ()=>{ if(mgrView === 'plays') mgrPlayDesignPaint(book, today); });
-  const base = mgrPlayDraftBase(d.treats, today, snaps, d.weeks);
+  const base = mgrPlayDraftBase(d, today, snaps, d.weeks);
   const chk = mgrPlayDesignCheck(d, base, book, book.judged || []);
   const m = base.m;
   const fig = (v)=> m ? mgrPlayFig(v, m.unit) : '—';
@@ -144116,15 +144416,21 @@ function mgrPlayDesignPaint(book, today){
     : (add > 0 ? '+' : add < 0 ? '−' : '') + (m.unit === 'pct' ? (Math.round(Math.abs(add) * 10) / 10).toFixed(1) : fig(Math.abs(add))) + (addPer ? ' ' + addPer : '');
   /* ODDS (Q4): how often the last 12 weeks reached the aim; with no aim,
      the owner's own verdicts on plays like it, said as such. */
-  const aimOdds = add != null ? mgrPlayAimOdds(d.treats, d.target, today, snaps) : null;
+  const aimOdds = add != null ? mgrPlayAimOdds(d.treats, d.target, today, snaps, d) : null;
   const oddsFig = aimOdds && aimOdds.n ? `${aimOdds.k} of ${aimOdds.n}` : chk.odds.n ? `${chk.odds.k} of ${chk.odds.n}` : 'not known';
   const oddsSub = aimOdds && aimOdds.n ? `weeks of the last ${aimOdds.of} at your aim or better`
-    : chk.odds.n ? 'your verdicts on ' + String(MANAGER_PROBLEMS[d.treats]).toLowerCase() + ' plays' : 'no verdicts on plays like it';
-  /* The stop rule keeps its figure: no better than where it starts, by
-     its week -- so the board can say when it is met. */
-  const stopText = m && base.base != null ? `${m.label} no better than ${fig(base.base)} by week ${d.stopBy}` : `no reading to stop on — judge it by week ${d.stopBy}`;
-  const stopRule = m && base.base != null ? { value: base.base, when: m.direction === 'down' ? 'atleast' : 'atmost' } : {};
-  const thenText = m ? m.label : d.treats === 'other' ? 'what you are after' : String(MANAGER_PROBLEMS[d.treats] || 'it').toLowerCase();
+    : chk.odds.n ? 'your verdicts on ' + mgrPlayAfter(d.treats) + ' plays' : 'no verdicts on plays like it';
+  /* The stop rule: no better than where it starts, by its week. Kept as
+     "where it starts" (vs 'before'), so the board holds it to the stamp
+     taken the day it is switched on -- today's figure when it starts now,
+     the figure of its start day when it is queued -- the same number its
+     weeks are read against. */
+  const startsNow = chk.verdict.act === 'start';
+  const stopText = m && base.base != null ? `${m.label} no better than ${startsNow ? `${fig(base.base)}, where it starts,` : `where it starts (${fig(base.base)} today)`} by week ${d.stopBy}`
+    : `no reading to stop on — judge it by week ${d.stopBy}`;
+  const stopRule = m && base.base != null ? { value: base.base, when: m.direction === 'down' ? 'atleast' : 'atmost', vs: 'before' } : {};
+  const thenText = m ? m.label : mgrPlayAfter(d.treats);
+  const weeksText = mgrPlayWeeksText(d.weeks);
   const icon = { vg: MGR_PLAY_MARK.ok, am: MGR_PLAY_MARK.warn, cr: MGR_PLAY_MARK.no };
   const slot = (t)=> `<span class="mgr-pl-slot">${esc(t)}</span>`;
   /* A sentence the owner writes sits in a box that grows with it: an
@@ -144144,12 +144450,13 @@ function mgrPlayDesignPaint(book, today){
             `<option value="${k}"${k === d.treats ? ' selected' : ''}>${esc(MANAGER_PROBLEMS[k])}</option>`).join('')}</select></div>
           ${field('if', 'If we', d.if, 'area', ' maxlength="200"')}
           ${m ? field('target', `Aim for ${m.label}${m.unit === 'pct' ? ' (%)' : ' (UGX)'}`, d.target == null ? '' : (m.unit === 'pct' ? d.target : Math.round(d.target)), 'number', ' inputmode="decimal"') : ''}
+          ${m && m.own && m.own.kind === 'weekday' ? field('areas', `${MGR_PLAY_DAYS[m.own.dow]} delivery areas (blank: every area)`, (m.own.areas || []).join(', '), 'text', ' maxlength="160"') : ''}
           ${field('weeks', 'Weeks', d.weeks, 'number', ' min="2" max="13" inputmode="numeric"')}
           ${field('stopBy', 'Stop rule read at week', d.stopBy, 'number', ' min="1" max="13" inputmode="numeric"')}
           ${field('cost', 'What it costs (UGX)', d.cost, 'number', ' min="0" inputmode="numeric"')}
           ${field('dependsOn', 'Waits on (optional)', d.dependsOn, 'area', ' maxlength="120"')}
         </div>` : ''}
-        <p class="mgr-pl-sent"><span class="mgr-pl-w">If we</span>${slot(d.if || 'say what you will do')}, <span class="mgr-pl-w">then</span>${slot(thenText)} <span class="mgr-pl-w">will</span>${slot(by)} <span class="mgr-pl-w">within</span>${slot(`${d.weeks} week${Number(d.weeks) === 1 ? '' : 's'}`)}.</p>
+        <p class="mgr-pl-sent"><span class="mgr-pl-w">If we</span>${slot(d.if || 'say what you will do')}, <span class="mgr-pl-w">then</span>${slot(thenText)} <span class="mgr-pl-w">will</span>${slot(by)} <span class="mgr-pl-w">within</span>${slot(weeksText)}${/\?$/.test(weeksText) ? '' : '.'}</p>
         <div class="mgr-pl-facts">
           <div class="mgr-pl-fc"><span class="mgr-pl-micro">Before it starts</span><b class="mgr-pl-fig">${esc(base.base != null ? fig(base.base) : base.measured ? 'not found' : 'not measured')}</b><small class="mgr-pl-fs">${esc(base.basis || '')}</small></div>
           <div class="mgr-pl-fc"><span class="mgr-pl-micro">Would add</span><b class="mgr-pl-fig">${esc(addText)}</b><small class="mgr-pl-fs">${add == null ? '' : 'if it reaches your aim'}</small></div>
@@ -144179,7 +144486,8 @@ function mgrPlayDesignPaint(book, today){
     const num = (x)=> String(x).trim() === '' ? null : Number(x);
     if(k === 'weeks' || k === 'stopBy') d[k] = num(v) == null ? null : Math.round(num(v));
     else if(k === 'target' || k === 'cost') d[k] = num(v) != null && Number.isFinite(num(v)) ? num(v) : null;
-    else if(k === 'treats'){ d.treats = v; d.target = null; d.aimBasis = ''; }
+    else if(k === 'treats'){ d.treats = v; d.target = null; d.aimBasis = ''; d.measure = null; }
+    else if(k === 'areas'){ if(d.measure && d.measure.kind === 'weekday'){ d.measure = { ...d.measure, areas: mgrPlayAreas(v) }; d.target = null; d.aimBasis = ''; } }
     else d[k] = v;
     if(d.stopBy == null || d.stopBy > d.weeks) d.stopBy = Math.max(1, Math.ceil((Number(d.weeks) || 2) / 2));
     mgrPlayDesignPaint(book, today);
@@ -144187,16 +144495,22 @@ function mgrPlayDesignPaint(book, today){
   const goBtn = el.querySelector('[data-pl-go]');
   if(goBtn) goBtn.addEventListener('click', ()=>{
     const act = goBtn.dataset.plGo;
-    if(!act) return;
+    if(!act || goBtn.disabled) return;
+    /* One tap, one play: the button is off until the save answers, and
+       back on only when it was refused. */
+    goBtn.disabled = true;
     const name = String(d.name || '').trim() || String(d.if || '').trim();
-    managerAddOwnPlay(name, d.if, { status: act === 'start' ? 'running' : 'proposed', treats: d.treats, weeks: Number(d.weeks),
+    managerAddOwnPlay(name, d.if, { status: act === 'start' ? 'running' : 'proposed', treats: d.treats, weeks: Number(d.weeks), measure: d.measure || undefined,
       hypothesis: { if: d.if, then: `${thenText} will ${by}`, target: d.target != null && m ? fig(d.target) : '' },
-      stop: { threshold: stopText.replace(/ by week \d+$/, ''), by_week: d.stopBy, ...stopRule },
+      stop: { threshold: stopText.replace(/,? by week \d+$/, ''), by_week: d.stopBy, ...stopRule },
       cost: d.cost == null || d.cost === '' ? undefined : Number(d.cost), depends_on: d.dependsOn || undefined,
+      /* What it would add, as the designer showed it, kept with the play. */
+      sized: add != null ? `${addText} if it reaches your aim` : undefined,
       aim_value: d.target != null && m ? d.target : undefined, start_on: act === 'schedule' ? chk.verdict.on : undefined })
       /* Kept: the designer starts again from the first of the shop's own
          situations rather than offering the play it just saved. */
-      .then((r)=>{ if(r && r.ok){ mgrPlayDraft = null; mgrPlayDraftEdit = false; } });
+      .then((r)=>{ if(r && r.ok){ mgrPlayDraft = null; mgrPlayDraftEdit = false; } else goBtn.disabled = false; },
+        ()=>{ goBtn.disabled = false; });
   });
 }
 /* THE MANAGER'S OWN SIZING OF A PLAY, as a figure: the first sum it
@@ -165128,6 +165442,7 @@ const ASSISTANT_TOOLS = {
         worth.push({ kind: 'play_moving', name: pl.name, measures: pl.progress.measures,
           before: pl.progress.before, now: pl.progress.now != null ? pl.progress.now : pl.progress.since,
           days_running: pl.progress.days_running,
+          ...(pl.progress.days_read ? { read_days: pl.progress.days_read, per: pl.progress.per } : {}),
           caution: 'what moved alongside it, never what it did' });
       });
     /* A review written since the last meeting: today is the first

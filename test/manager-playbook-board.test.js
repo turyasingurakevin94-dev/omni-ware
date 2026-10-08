@@ -38,8 +38,12 @@ const esc = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 
 const FNS = ['mgrPlayDept', 'mgrPlaySlotRefusal', 'mgrPlayFig', 'mgrPlayCellFig', 'mgrPlayDate', 'mgrPlayDays', 'mgrPlayWeeks',
   'mgrPlayLevelAt', 'mgrPlayWeekValue', 'mgrPlayReads', 'mgrNavCountPlays', 'mgrPlayStopRule', 'mgrPlayStopCheck', 'mgrPlayAimOdds', 'mgrPlayResult', 'mgrPlayConflicts', 'mgrPlayOdds', 'mgrPlayRerunPlan', 'mgrPlayBoard',
-  'mgrPlayPastWeeks', 'mgrPlayP75', 'mgrPlayPresets', 'mgrPlayDraftBase', 'mgrPlayDesignCheck', 'mgrPlayWorth', 'mgrShortUGX', 'mgrDept'];
-const DECLS = ['MGR_PLAY_SLOTS', 'MGR_PLAY_TREAT_DEPT', 'MGR_PLAY_VERDICT_WORDS', 'MGR_PLAY_STOP_SAY', 'MGR_PLAY_MONEY_KIND', 'MANAGER_PROBLEMS', 'MGR_DEPTS', 'MGR_WHOLE_SHOP'];
+  'mgrPlayPastWeeks', 'mgrPlayP75', 'mgrPlayPresets', 'mgrPlayDraftBase', 'mgrPlayDesignCheck', 'mgrPlayWorth', 'mgrShortUGX', 'mgrDept',
+  /* a play's own measure (Q41) */
+  'mgrPlayMetric', 'mgrPlayMeasureClean', 'mgrPlayAreas', 'mgrPlayAfter', 'mgrPlayInvoiceDay', 'mgrPlayPlaceOf', 'mgrPlayInAreas',
+  'mgrPlayWeekdaySales', 'mgrPlayFirstBuys', 'mgrPlayBuilderIds', 'mgrPlayNewAccountSales', 'mgrPlayAimFrom', 'mgrPlayWentOut'];
+const DECLS = ['MGR_PLAY_SLOTS', 'MGR_PLAY_TREAT_DEPT', 'MGR_PLAY_VERDICT_WORDS', 'MGR_PLAY_STOP_SAY', 'MGR_PLAY_MONEY_KIND', 'MANAGER_PROBLEMS', 'MGR_DEPTS', 'MGR_WHOLE_SHOP',
+  'MGR_PLAY_DAYS', 'MGR_PLAY_NEW_DAYS'];
 
 /* The block's functions, compiled over a book the test controls. */
 function scope(over) {
@@ -51,6 +55,7 @@ function scope(over) {
     mgrDebtorDays: () => ({ creditPerDay: 0, windowDays: 90 }), anInvoicesInRange: () => [],
     anOverallTotals: (l) => ({ sales: l.reduce((n, q) => n + q.total, 0) }), deadStockRows: () => [], anRowsByItem: () => [],
     productVariantLabel: (p) => p.name,
+    orderCustomerLocation: (q) => q.place || '',
     ...over,
   };
   return compileScope([...FNS.map((n) => extractFunction(src, n, 'index.html')),
@@ -80,13 +85,15 @@ function scope(over) {
 /* ---------- 2. the weekly reads and how sure, so far ---------- */
 {
   /* A FLOW: the share kept, read against THE MEETING'S BEFORE. The
-     play started Mon 21 Sep and has run 16 days by Wed 7 Oct, so
-     managerPlayProgress (the real one, compiled below) reads the 16 days
-     before it, 5-20 Sep = 9.0%, and the 16 days since, 21 Sep-7 Oct =
-     8.7%. The board's before is that same 9.0%. Week 1 9.2% is better
+     play started Mon 21 Sep and has run 16 days by Wed 7 Oct: two WHOLE
+     weeks (review P4 -- 'since' used to run to today inclusive, a day
+     longer than 'before' and holding today's unfinished day). So
+     managerPlayProgress (the real one, compiled below) reads the 14 days
+     since, 21 Sep-4 Oct = 8.7%, and the 14 days before, 7-20 Sep =
+     9.0%. The board's before is that same 9.0%. Week 1 9.2% is better
      (it wants up), week 2 8.2% worse: k = 1 of n = 2; pips = round(5 x
      1/2) = round(2.5) = 3; latest 8.2%. */
-  const SHARE = { '2026-09-05|2026-09-20': 9.0, '2026-09-21|2026-10-07': 8.7,
+  const SHARE = { '2026-09-07|2026-09-20': 9.0, '2026-09-21|2026-10-04': 8.7,
     '2026-09-21|2026-09-27': 9.2, '2026-09-28|2026-10-04': 8.2 };
   const margin = { label: 'the share kept', unit: 'pct', kind: 'flow', direction: 'up',
     measure: (f, to) => (SHARE[f + '|' + to] == null ? null : SHARE[f + '|' + to]) };
@@ -98,11 +105,12 @@ function scope(over) {
   steel.progress = progressOf({ margin })(steel, TODAY, [steel]);
   const S = scope({ MANAGER_PROBLEM_METRICS: { margin } });
   const r = S.mgrPlayReads(steel, TODAY, []);
-  eq([steel.progress.before, steel.progress.since, steel.progress.before_span], [9, 8.7, '2026-09-05 to 2026-09-20'],
-    'the meeting reads 9.0% in the 16 days before against 8.7% in the 16 since');
+  eq([steel.progress.before, steel.progress.since, steel.progress.before_span, steel.progress.since_span, steel.progress.days_read],
+    [9, 8.7, '2026-09-07 to 2026-09-20', '2026-09-21 to 2026-10-04', 14],
+    'the meeting reads 9.0% in the 14 days before against 8.7% in the 14 since — two whole weeks each side');
   eq([r.measured, r.before, r.before === steel.progress.before], [true, 9, true],
     'ONE READING: the board’s before for a flow IS the before the meeting and the weekly review are handed');
-  eq(r.beforeBasis, 'the 16 days before it started (2026-09-05 to 2026-09-20), as the meeting reads it', 'and says so');
+  eq(r.beforeBasis, 'the 14 days before it started (2026-09-07 to 2026-09-20), as the meeting reads it', 'and says so');
   eq(r.cells.map((c) => [c.value, c.state]), [[9.2, 'better'], [8.2, 'worse'], [null, 'open'], [null, 'open']],
     'each finished week read and called better or worse the way the play wants it');
   eq([r.k, r.n, r.pips, r.latest], [1, 2, 3, 8.2], 'better in 1 of 2 weeks: round(5 x 1/2) = 3 pips, and the latest reading is week 2');
@@ -110,21 +118,63 @@ function scope(over) {
     read: { label: 'the share kept', unit: 'pct', direction: 'up', before: 9, after: 8.7, moved: -0.3, k: 1, n: 2, basis: 'before → since it started' } },
   'a verdict keeps the meeting’s own pair in words and figures: 8.7 - 9.0 = -0.3 points');
 
-  /* SALES, a sum: the meeting reads 32,000,000 in the 16 days before and
-     30,000,000 in the 16 since. A week's cell is set against a week's
-     worth of that: 32,000,000 x 7 / 16 = 14,000,000. Week 1 15m better,
-     week 2 13m worse. */
-  const SALES = { '2026-09-05|2026-09-20': 32000000, '2026-09-21|2026-10-07': 30000000,
+  /* SALES, a sum: the meeting reads 28,000,000 in the 14 days before and
+     28,000,000 in the 14 since (15m + 13m). A week's cell is set against
+     a week's worth of the before: 28,000,000 x 7 / 14 = 14,000,000. Week
+     1 15m better, week 2 13m worse. */
+  const SALES = { '2026-09-07|2026-09-20': 28000000, '2026-09-21|2026-10-04': 28000000,
     '2026-09-21|2026-09-27': 15000000, '2026-09-28|2026-10-04': 13000000 };
   const growth = { label: 'sales', unit: 'money', kind: 'flow', direction: 'up', measure: (f, to) => SALES[f + '|' + to] };
   const bundle = { id: 5, treats: 'growth', started_on: '2026-09-21', weeks: 4 };
   bundle.progress = progressOf({ growth })(bundle, TODAY, [bundle]);
   const g = scope({ MANAGER_PROBLEM_METRICS: { growth } }).mgrPlayReads(bundle, TODAY, []);
-  eq([g.before, g.cells[0].state, g.cells[1].state], [14000000, 'better', 'worse'], 'a sum: a week’s worth of the meeting’s before, 32m x 7/16 = 14m');
-  eq(scope({ MANAGER_PROBLEM_METRICS: { growth } }).mgrPlayResult(g).text, 'sales 32m in the 16 days before → 30m in the 16 days since, better in 1 of 2 weeks',
+  eq([g.before, g.cells[0].state, g.cells[1].state], [14000000, 'better', 'worse'], 'a sum: a week’s worth of the meeting’s before, 28m x 7/14 = 14m');
+  eq(scope({ MANAGER_PROBLEM_METRICS: { growth } }).mgrPlayResult(g).text, 'sales 28m in the 14 days before → 28m in the 14 days since, better in 1 of 2 weeks',
     'and the line quotes the meeting’s two sums as they are');
 
-  /* The books start 18 Sep, after the 5 Sep the before needs. */
+  /* STAMPED THE DAY IT STARTED (review P4: "I'll read it each week
+     against 44.3m" -- and the board then read its weeks against a
+     before that moved every day). Saturday delivery, 4 weeks, started
+     Wed 23 Sep with its before stamped: a week's worth of the 28 days
+     26 Aug-22 Sep, 44,278,813 -- the figure the designer showed. Two
+     whole weeks run by 7 Oct: 23-29 Sep 52m, 30 Sep-6 Oct 48m, 100m in
+     the 14 days = a week's worth of 100m x 7/14 = 50m. Both weeks beat
+     44.28m. The stop rule "no better than where it starts" is held to
+     that same stamp: week 2's 48m is above it, so not met. */
+  const STAMPED = { '2026-09-23|2026-10-06': 100000000, '2026-09-23|2026-09-29': 52000000, '2026-09-30|2026-10-06': 48000000 };
+  const stampedSales = { label: 'sales', unit: 'money', kind: 'flow', direction: 'up', measure: (f, to) => STAMPED[f + '|' + to] };
+  const sat = { id: 8, treats: 'growth', started_on: '2026-09-23', weeks: 4, baseline: 44278813, baselineFrom: '2026-08-26', baselineTo: '2026-09-22',
+    stop: { threshold: 'sales no better than 44.3m, where it starts', byWeek: 2, vs: 'before', when: 'atmost' } };
+  sat.progress = progressOf({ growth: stampedSales })(sat, TODAY, [sat]);
+  eq([sat.progress.stamped, sat.progress.before, sat.progress.since, sat.progress.moved, sat.progress.days_read, sat.progress.before_span],
+    [true, 44278813, 50000000, 5721187, 14, '2026-08-26 to 2026-09-22'],
+    'the meeting reads the stamp, against a week’s worth of the whole weeks since: 50m − 44,278,813 = 5,721,187');
+  const SS = scope({ MANAGER_PROBLEM_METRICS: { growth: stampedSales } });
+  const sr = SS.mgrPlayReads(sat, TODAY, []);
+  eq([sr.before, sr.cells.slice(0, 2).map((c) => c.state), sr.line],
+    [44278813, ['better', 'better'], { before: 44278813, after: 50000000, beforeSpan: 'a week before', span: 'a week since, over 14 days' }],
+    'ONE NUMBER: the board’s before cell is the stamp the designer promised, not the 14 days before the start');
+  eq(sr.beforeBasis, 'a week’s worth of the 28 days before it started (2026-08-26 to 2026-09-22), stamped the day it started', 'and says so');
+  eq(SS.mgrPlayStopCheck(sat, TODAY, [], sr), { rule: { value: 44278813, when: 'atmost', byWeek: 2, from: 'kept' }, met: false, week: 2, value: 48000000 },
+    'its stop rule is held to the same stamp: week 2 read 48m, above 44.28m — not met');
+
+  /* The meeting is handed the pair with its windows, so a week's worth
+     is never read as the whole span's sum. */
+  const hist = src.slice(src.indexOf('  manager_history: { confirm: false, async run(input){'));
+  const moving = (hist.match(/worth\.push\((\{ kind: 'play_moving'[\s\S]*?caution: '[^']*' \})\);/) || [])[1];
+  t.check(!!moving, 'manager_history builds a play_moving entry');
+  const movingOf = new Function('pl', `return (${moving});`);
+  /* A margin play is a SHARE over its window: 9.0% before, 8.7% since,
+     read over 14 days -- not a sum and not a week's worth. */
+  const mv = movingOf({ name: 'Price steel to the rival', progress: steel.progress });
+  eq([mv.measures, mv.before, mv.now, mv.read_days, mv.per], ['the share kept', 9, 8.7, 14, 'share'],
+    'a share-of-sales play reaches the meeting as a share over its 14 days, never called a sum');
+  eq([steel.progress.per, bundle.progress.per, sat.progress.per], ['share', 'sum', 'week'],
+    'the progress names its reading: margin a share, sales unstamped the 14 days’ sum, sales stamped a week’s worth');
+  eq([movingOf({ name: 'bundle', progress: bundle.progress }).per, movingOf({ name: 'sat', progress: sat.progress }).per], ['sum', 'week'],
+    'and the meeting is handed that same word');
+
+  /* The books start 18 Sep, after the 7 Sep the before needs. */
   const shortP = { ...steel }; shortP.progress = progressOf({ margin }, '2026-09-18')(shortP, TODAY, [shortP]);
   const short = S.mgrPlayReads(shortP, TODAY, []);
   eq([short.before, short.beforeWhy, short.k, short.n], [null, 'the books do not reach back far enough for the same number of days before it started', 0, 0],
@@ -366,50 +416,105 @@ function scope(over) {
 
 /* ---------- 6. write a play: the presets are this shop's own ---------- */
 {
-  /* Twelve finished weeks of sales, newest first: 10m, 20m ... 120m.
-     The 75th percentile by nearest rank is the 9th of 12 sorted: 90m. */
-  const weeks = Array.from({ length: 12 }, (_, i) => ({ from: shift(TODAY, -7 * (i + 1)), v: (i + 1) * 10e6 }));
-  const sales = { label: 'sales', unit: 'money', kind: 'flow', direction: 'up',
-    measure: (f) => (weeks.find((w) => w.from === f) || { v: 0 }).v };
+  /* AN AIM FROM A MEASURE'S OWN LAST 12 WEEKS. Twelve finished weeks,
+     newest first: 10m, 20m ... 120m. The 75th percentile by nearest rank
+     is the 9th of 12 sorted: 90m, above the last 7 days' 10m. */
+  const S0 = scope();
+  eq(S0.mgrPlayP75([5, 1, 3, 2, 4, 6, 7, 8, 9, 10, 11, 12]), 9, 'p75 of 1..12 is the 9th: ceil(0.75 x 12) = 9');
+  eq(S0.mgrPlayP75([10, null]), 10, 'one value is its own p75; a missing one is left out');
+  eq(S0.mgrPlayP75([]), null, 'and none is not known');
+  const weekly = (vals) => ({ label: 'sales', measure: (f) => vals[[...Array(12).keys()].find((i) => shift(TODAY, -7 * (i + 1)) === f)] });
+  const tenTo120 = Array.from({ length: 12 }, (_, i) => (i + 1) * 10e6);
+  eq(S0.mgrPlayAimFrom(weekly(tenTo120), TODAY).aim, 90e6, 'the 75th percentile week, 90m, above the last 7 days');
+  t.check(/^the 75th percentile of the last 12 weeks’ sales \(a week beaten 1 time in 4\)$/.test(S0.mgrPlayAimFrom(weekly(tenTo120), TODAY).basis), 'and says what it is');
+  /* last 7 days 95m, weeks 2..12 20m..120m: sorted 20..90 (8), 95, 100,
+     110, 120 -> 9th = 95m = the last week, not above it: the best, 120m. */
+  const at95 = S0.mgrPlayAimFrom(weekly([95e6, ...tenTo120.slice(1)]), TODAY);
+  eq([at95.aim, /best week/.test(at95.basis)], [120e6, true], 'last 7 days at the 75th percentile: aim at the best week');
+  eq(S0.mgrPlayAimFrom(weekly([130e6, ...tenTo120.slice(1)]), TODAY).aim, null, 'last 7 days the best of all: no aim derived — the owner sets one');
+
+  /* THE BOOK. Saturdays (the strongest day), for the 12 weeks back from
+     3 Oct: a delivery to Kawempe of (i+1) x 600,000 and one to Bwaise of
+     (i+1) x 400,000 in week i (newest i = 0), both out on the truck, and a
+     1,000,000 counter sale in Ntinda that went nowhere. Tuesdays: Kato
+     (a builder, site on the books) first bought 15 Sep 2m and again 29
+     Sep 3m; Musa (no site) first bought 22 Sep 5m; Okello (a builder
+     since January) bought 29 Sep 4m. One Monday sale of 500,000. */
+  const Q = [];
+  for (let i = 0; i < 12; i += 1) {
+    const d = shift('2026-10-03', -7 * i);
+    Q.push({ invoicedAt: d, total: (i + 1) * 600000, place: 'Kawempe', stageLog: [{ status: 'pending_delivery' }] },
+      { invoicedAt: d, total: (i + 1) * 400000, place: 'Bwaise', stageLog: [{ status: 'pending_delivery' }] },
+      { invoicedAt: d, total: 1000000, place: 'Ntinda' });
+  }
+  Q.push({ invoicedAt: '2026-09-15', total: 2000000, customerId: 'C1' }, { invoicedAt: '2026-09-29', total: 3000000, customerId: 'C1' },
+    { invoicedAt: '2026-09-22', total: 5000000, customerId: 'C2' }, { invoicedAt: '2026-01-10', total: 1000000, customerId: 'C3' },
+    { invoicedAt: '2026-09-29', total: 4000000, customerId: 'C3' }, { invoicedAt: '2026-10-05', total: 500000 });
+  Q.forEach((q) => { q.status = 'completed'; q.invoiced = true; });
+  const inRange = (f, to) => Q.filter((q) => q.invoicedAt >= f && q.invoicedAt <= to);
   const presetEnv = {
+    MANAGER_PROBLEM_METRICS: { growth: { label: 'sales', unit: 'money', kind: 'flow', direction: 'up', measure: (f, to) => inRange(f, to).reduce((n, q) => n + q.total, 0) } },
     MANAGER_METRICS: { debtors_total: { measure: () => 50000000 }, dead_stock_value: { measure: () => 13000000 } },
     mgrDebtorDays: () => ({ creditPerDay: 1000000, windowDays: 90 }),
-    /* Two invoices on Saturday 3 Oct (16m in all), one on Monday 5 Oct
-       (8m). Over 8 weeks: Saturday averages 16m/8 = 2m, Monday 1m. */
-    anInvoicesInRange: () => [{ invoicedAt: '2026-10-03T09:00:00Z', total: 10e6 }, { date: '2026-10-03', total: 6e6 },
-      { invoicedAt: '2026-10-05', total: 8e6 }],
+    anInvoicesInRange: inRange,
     deadStockRows: () => [{ productId: 'P9', variantIdx: null, line: 'P9 — Floor tiles', value: 5000000, daysQuiet: 120 }],
     anRowsByItem: () => [{ name: 'Iron sheet', variant: 'Iron sheet — G28', sales: 5 }, { name: 'Roofing nails', variant: '', sales: 9 }],
-    data: { products: [{ id: 'P9', name: 'Floor tiles' }], agents: [],
+    data: { products: [{ id: 'P9', name: 'Floor tiles' }], agents: [], savedQuotes: Q,
+      customers: [{ id: 'C1', name: 'Kato', siteStage: 'walling' }, { id: 'C2', name: 'Musa' }, { id: 'C3', name: 'Okello', siteStage: 'roofing' }],
       staff: [{ name: 'Joan Nakato', role: 'counter' }, { name: 'Moses Kibirige', role: 'delivery' }] },
   };
-  const S = scope({ ...presetEnv, MANAGER_PROBLEM_METRICS: { growth: sales } });
-  eq(S.mgrPlayP75([5, 1, 3, 2, 4, 6, 7, 8, 9, 10, 11, 12]), 9, 'p75 of 1..12 is the 9th: ceil(0.75 x 12) = 9');
-  eq(S.mgrPlayP75([10, null]), 10, 'one value is its own p75; a missing one is left out');
-  eq(S.mgrPlayP75([]), null, 'and none is not known');
+  const S = scope(presetEnv);
   const P = S.mgrPlayPresets(TODAY);
   eq(P.map((p) => p.id), ['cash', 'sat', 'paint', 'moses'], 'the canvas’s four, each mapped onto a situation these books hold');
   /* cash: 50m owed less a week of credit sales, 7 x 1m = 43m. */
   eq([P[0].label, P[0].treats, P[0].weeks, P[0].target, P[0].stopBy, P[0].cost], ['Cash price', 'debt', 6, 43000000, 3, null],
     'cash price aims at money owed less a week of credit sales; its cost is the owner’s to write');
-  eq([P[1].label, P[1].if, P[1].target, P[1].stopBy], ['Saturday delivery', 'deliver to builders’ sites on Saturdays', 90000000, 2],
-    'the strongest weekday by the last 8 weeks’ sales, aimed at the 75th percentile week');
-  t.check(/Saturday is your strongest day, 2m on average over the last 8/.test(P[1].aimBasis), 'and its basis says how it was chosen');
+  /* SATURDAY DELIVERY, MEASURED ON SATURDAY SALES IN ITS DELIVERY AREAS
+     (Q41). Of the last 8 Saturdays' deliveries Kawempe took 600,000 x
+     (1+...+8) = 21.6m and Bwaise 14.4m; Ntinda's counter sale went out
+     on no truck, so it is no delivery area. Its weeks: Saturday sales in
+     Kawempe & Bwaise, (i+1) x 1m -- 1m last week up to 12m: p75 = 9m. */
+  eq([P[1].label, P[1].name, P[1].if, P[1].measure, P[1].target, P[1].stopBy],
+    ['Saturday delivery', 'Saturday delivery, Kawempe & Bwaise', 'deliver to Kawempe and Bwaise on Saturdays', { kind: 'weekday', dow: 6, areas: ['Kawempe', 'Bwaise'] }, 9000000, 2],
+    'the strongest weekday, measured on that day’s sales in the areas its deliveries went, aimed at its own 75th percentile');
+  t.check(/^the 75th percentile of the last 12 weeks’ Saturday sales in Kawempe & Bwaise \(a week beaten 1 time in 4\); Saturday is your strongest day/.test(P[1].aimBasis)
+    && /Kawempe and Bwaise took the most of its deliveries$/.test(P[1].aimBasis), 'and its basis says how the day, the areas and the aim were chosen');
+  const satM = S.mgrPlayMetric({ treats: 'growth', measure: P[1].measure });
+  eq([satM.label, satM.measure('2026-09-27', '2026-10-03'), satM.measure('2026-10-04', '2026-10-06')], ['Saturday sales in Kawempe & Bwaise', 1000000, 0],
+    'the week to 3 Oct: 600,000 + 400,000 in the two areas — the 1m Ntinda counter sale and the Monday sale are not Saturday deliveries there');
+  eq(S.mgrPlayMetric({ treats: 'growth', measure: { kind: 'weekday', dow: 6, areas: [] } }).measure('2026-09-27', '2026-10-03'), 2000000,
+    'with no area named, every Saturday sale counts: 1m + 1m Ntinda');
   /* paint: 13m dead less the 5m tiles = 8m; the best seller has no variant, so its name. */
-  eq([P[2].label, P[2].name, P[2].treats, P[2].target], ['Floor tiles with every order', 'Floor tiles with every Roofing nails order', 'dead_stock', 8000000],
-    'the biggest dead line offered with the best seller, aimed at dead stock less that line');
-  eq([P[3].label, P[3].if, P[3].target, P[3].weeks, P[3].stopBy], ['Moses to new sites', 'send Moses to new building sites every week', 90000000, 8, 4],
-    'the field hand on the books, by first name');
-  t.check(/^the 75th percentile of the last 12 weeks’ sales \(a week beaten 1 time in 4\)/.test(P[1].aimBasis), 'the aim says what it is');
-  /* The last 7 days (weekly[0]) already above the 75th percentile: the
-     aim is the best week, when one beat it; none, when none did. */
-  const withLast = (last) => scope({ ...presetEnv, MANAGER_PROBLEM_METRICS: { growth: { ...sales,
-    measure: (f) => (f === shift(TODAY, -7) ? last : (weeks.find((w) => w.from === f) || { v: 0 }).v) } } }).mgrPlayPresets(TODAY);
-  /* weeks 2..12 are 20m..120m: p75 of {95m, 20m..120m} is the 9th of 12 sorted = 95m? sorted: 20..90 (8 values), 95, 100, 110, 120 -> 9th = 95m = last: not above it, so the best week, 120m. */
-  eq([withLast(95e6)[1].target, /best week/.test(withLast(95e6)[1].aimBasis)], [120e6, true], 'last 7 days at the 75th percentile: aim at the best week');
-  eq(withLast(130e6)[1].target, null, 'last 7 days the best of all: no aim is derived — the owner sets one');
-  eq(withLast(130e6)[3].aimBasis, 'no week of the last 12 beat the last 7 days — set your own aim', 'and says so');
-  const bare = scope({ MANAGER_PROBLEM_METRICS: { growth: { ...sales, measure: () => 0 } },
+  eq([P[2].label, P[2].name, P[2].treats, P[2].target], ['Dead-stock bundle', 'Floor tiles with every Roofing nails order', 'dead_stock', 8000000],
+    'the biggest dead line offered with the best seller, aimed at dead stock less that line — its pill short enough for one row');
+  t.check(/^dead stock less Floor tiles \(/.test(P[2].aimBasis), 'the pill’s hover names the line it bundles, as the play’s name does');
+  /* MOSES TO NEW SITES, MEASURED ON NEW BUILDER ACCOUNTS' SALES (Q41). A
+     builder = a site on the books; new = within 8 weeks (56 days) of the
+     first invoice. Weeks newest first: 30 Sep-6 Oct 0; 23-29 Sep Kato's
+     3m (14 days in; Okello's 4m is no new account); 16-22 Sep 0 (Musa
+     has no site); 9-15 Sep Kato's first 2m; the rest 0. p75 = 0, not
+     above the last week's 0, so the best week: 3m. */
+  eq([P[3].label, P[3].if, P[3].measure, P[3].target, P[3].weeks, P[3].stopBy],
+    ['Moses to new sites', 'send Moses to new building sites every week', { kind: 'new_accounts', who: 'builders' }, 3000000, 8, 4],
+    'the field hand on the books, by first name, measured on new builder accounts’ sales');
+  const newM = S.mgrPlayMetric({ treats: 'growth', measure: P[3].measure });
+  eq([newM.label, newM.measure('2026-09-01', '2026-10-06')], ['new builder accounts’ sales', 5000000],
+    'September: Kato’s 2m + 3m — not Musa (no site), not Okello (a customer since January)');
+  t.check(/a builder is a customer with a building site on the books/.test(P[3].aimBasis), 'and says what a builder is');
+  const noSites = scope({ ...presetEnv, data: { ...presetEnv.data, customers: presetEnv.data.customers.map((c) => ({ id: c.id, name: c.name })) } });
+  const P2 = noSites.mgrPlayPresets(TODAY);
+  eq([P2[3].measure, noSites.mgrPlayMetric({ treats: 'growth', measure: P2[3].measure }).measure('2026-09-01', '2026-10-06')],
+    [{ kind: 'new_accounts', who: 'accounts' }, 10000000],
+    'no customer marked with a site: every new account counts (Kato 5m + Musa 5m), said so');
+  t.check(/no customer is marked with a building site, so every new account counts/.test(P2[3].aimBasis), 'in its basis');
+  const noPlace = scope({ ...presetEnv, anInvoicesInRange: (f, to) => inRange(f, to).map((q) => ({ ...q, place: '' })) }).mgrPlayPresets(TODAY);
+  eq([noPlace[1].name, noPlace[1].measure.areas], ['Saturday delivery to builders’ sites', []], 'no delivery carries a place: every area counts');
+  t.check(/no Saturday delivery carries a place on the books, so every area counts/.test(noPlace[1].aimBasis), 'and it says so');
+  /* A measure is kept only on a sales play, only in these shapes. */
+  eq([S.mgrPlayMeasureClean({ kind: 'weekday', dow: 6, areas: 'Kawempe, Bwaise and Kira' }, 'growth'), S.mgrPlayMeasureClean({ kind: 'weekday', dow: 9 }, 'growth'),
+    S.mgrPlayMeasureClean({ kind: 'weekday', dow: 6 }, 'debt'), S.mgrPlayMeasureClean({ kind: 'new_accounts', who: 'x' }, 'growth')],
+  [{ kind: 'weekday', dow: 6, areas: ['Kawempe', 'Bwaise', 'Kira'] }, null, null, { kind: 'new_accounts', who: 'accounts' }], 'the measure whitelist');
+  const bare = scope({ MANAGER_PROBLEM_METRICS: { growth: { label: 'sales', unit: 'money', kind: 'flow', direction: 'up', measure: () => 0 } },
     MANAGER_METRICS: { debtors_total: { measure: () => 0 }, dead_stock_value: { measure: () => 0 } } }).mgrPlayPresets(TODAY);
   eq(bare, [], 'a shop whose books hold none of the four situations is offered none — only "your own"');
 }
@@ -547,6 +652,22 @@ function scope(over) {
     [['depositcashtwiceaweek', 2, 3, ['didnt', 'worked', 'worked'], true, 19]],
     'proven = judged worked twice or more, counted by play key, every run kept in order; the newest worked run is the template');
   eq(book.proven[0].lastOn, '2026-09-28', 'with the day of its last verdict');
+
+  /* IN THE MEETING'S ORDER (law 6, Q5; review P4). The journal is read
+     newest id first, but a meeting writes its plays in one batch in its
+     own order: meeting 140 wrote "AAA first" (145) then "ZZZ second"
+     (146). Read as they came, the lane said ZZZ, AAA. The owner queued
+     130 the same day (no meeting: placed by its own id, before meeting
+     140 wrote). Meeting 120 on 1 Oct wrote 128 then 129. Newest day
+     first; within a day the later meeting first; inside a meeting its
+     own order: 145, 146, 130, 128, 129. */
+  const ordered = await readBook([
+    { id: 146, date: '2026-10-07', status: 'proposed', meeting_id: 140, body: { name: 'ZZZ second play of the meeting', treats: 'growth' } },
+    { id: 145, date: '2026-10-07', status: 'proposed', meeting_id: 140, body: { name: 'AAA first play of the meeting', treats: 'cash' } },
+    { id: 130, date: '2026-10-07', status: 'proposed', meeting_id: null, body: { name: 'Owner queued', treats: 'debt', source: 'owner' } },
+    { id: 129, date: '2026-10-01', status: 'proposed', meeting_id: 120, body: { name: 'Y second of 1 Oct', treats: 'margin' } },
+    { id: 128, date: '2026-10-01', status: 'proposed', meeting_id: 120, body: { name: 'X first of 1 Oct', treats: 'dead_stock' } }]);
+  eq(ordered.proposed.map((p) => p.id), [145, 146, 130, 128, 129], 'managerPlaybook keeps each meeting’s plays in the order the meeting gave them');
 })().then(() => {
   /* ---------- 10. the screen draws it all from these ---------- */
   const block = src.slice(src.indexOf('/* ═══ MGR BED: Plays — begin ═══ */\n/* ---- THE PLAYBOOK'),
@@ -601,7 +722,7 @@ function scope(over) {
     /* 12 finished weeks read 10m … 120m; 90m or more in 4 of them. */
     eq(board.proposed[0].odds, { k: 4, n: 12, of: 12, basis: 'aim', aim: 90000000, treats: 'growth' }, 'EXACT ODDS (Q4): weeks of the last 12 at its aim of 90m or better — 4 of 12, the figure and the measure carried for the card to name');
     eq(board.proposed[1].odds, { k: 1, n: 2, basis: 'verdicts' }, 'the play with words only keeps the fallback: your verdicts on sales plays, 1 of 2');
-    const H = compileScope(['mgrPlayOddsHTML', 'mgrPlayFig', 'mgrPlayCellFig'].map((f) => extractFunction(src, f, 'index.html')),
+    const H = compileScope(['mgrPlayOddsHTML', 'mgrPlayFig', 'mgrPlayCellFig', 'mgrPlayMetric', 'mgrPlayMeasureClean', 'mgrPlayAreas'].map((f) => extractFunction(src, f, 'index.html')),
       { esc, MANAGER_PROBLEM_METRICS: METRICS, fmtUGX: (n) => Number(n).toLocaleString('en-US') + ' UGX' }, ['mgrPlayOddsHTML']).mgrPlayOddsHTML;
     /* WAS: "weeks of the last 12 at its aim or better" -- the figure
        counted against never appeared, and the words beside it may read a
@@ -645,6 +766,110 @@ function scope(over) {
     t.check(/<dt>Stop if<\/dt><dd class="mgr-pl-words">above 100m by week 3 · read 141m<\/dd>/.test(card),
       `a stop given only as a figure reads "above 100m by week 3", with what the week read (${(card.match(/Stop if<\/dt><dd[^>]*>[^<]*/) || [''])[0]})`);
     t.check(/stop rule is met: week 3 read 141m, above 100m/.test(card), 'and the card says the rule is met, in the same figures');
+
+    /* A STOP RULE MET WITH A TWIN ON THE SAME LEVER (review P4). The
+       note says "judge it or stop it"; the card used to offer only
+       "Replace with …" and "Let it finish". Now Judge it and Stop it
+       stand, Replace it beside them -- never "Let it finish". */
+    const acts = (html) => [...html.matchAll(/data-pl-act="(\w+)"/g)].map((m) => m[1]).filter((a) => a !== 'verdict' && a !== 'keep');
+    const twin = { id: 40, name: 'Cash price under credit' };
+    const metCard = R.mgrPlayRunningHTML({ p: { ...chase, clock: null }, r: null, conflicts: [], stop: Q.mgrPlayStopCheck(chase, TODAY, []), replaceWith: twin },
+      { running: [], today: TODAY });
+    eq(acts(metCard), ['judge', 'stop', 'replace'], 'stop rule met: Judge it, Stop it, and Replace it beside them');
+    t.check(/judge it or stop it\. “Cash price under credit” treats the same/.test(metCard) && /title="Stop it and start “Cash price under credit”">Replace it<\/button>/.test(metCard),
+      'the note names the twin, and the button is short enough not to wrap in its small height');
+    /* Weak weeks only (not met): the replacement is offered, and "Let it
+       finish" turns it away. */
+    const laterR = Q.mgrPlayReads(later, TODAY, []);
+    const weakCard = R.mgrPlayRunningHTML({ p: { ...later, clock: null }, r: laterR, conflicts: [], stop: Q.mgrPlayStopCheck(later, TODAY, [], laterR), replaceWith: twin },
+      { running: [], today: TODAY });
+    eq(acts(weakCard), ['replace', 'finish'], 'not met, weak weeks: Replace it or Let it finish');
+
+    /* A RULE HELD TO WHERE IT STARTED says the stamp it is held to. */
+    const heldTo = { ...viewOf(27, { name: 'Friday chase', treats: 'debt', weeks: 6 }, { started_on: '2026-09-07', baseline: 102672963 }),
+      stop: { threshold: 'money owed to you no better than where it starts (103m today)', byWeek: 3, vs: 'before', when: 'atleast', value: 102672963 } };
+    const heldCard = R.mgrPlayRunningHTML({ p: { ...heldTo, clock: null }, r: null, conflicts: [], stop: Q.mgrPlayStopCheck(heldTo, TODAY, []), replaceWith: null },
+      { running: [], today: TODAY });
+    t.check(/<dd class="mgr-pl-words">at or above 103m, where it started, by week 3 · read 141m<\/dd>/.test(heldCard),
+      `a rule held to its start says the stamp: "at or above 103m, where it started, by week 3" (${(heldCard.match(/Stop if<\/dt><dd[^>]*>[^<]*/) || [''])[0]})`);
+
+    /* A RULE THE BOARD CANNOT CHECK says so: its silence is not "not met". */
+    const vague = viewOf(26, { name: 'Price ladder', treats: 'margin', weeks: 4, stop: { threshold: 'if the share kept slips', by_week: 2 } }, { started_on: '2026-09-21' });
+    const vagueCard = R.mgrPlayRunningHTML({ p: { ...vague, clock: null }, r: null, conflicts: [], stop: Q.mgrPlayStopCheck(vague, TODAY, []), replaceWith: null },
+      { running: [], today: TODAY });
+    t.check(/if the share kept slips by week 2 <span class="mgr-pl-sub">· not checked by the board — your call<\/span>/.test(vagueCard),
+      'words that name no figure: "not checked by the board — your call"');
+    t.check(!/not checked by the board/.test(metCard), 'a rule the board checks does not say so');
+
+    /* THE WEEK STRIP IN ONE ROW: six weeks and the before, eight cells at
+       most, stand in one row (canvas: before + wk 1-6). */
+    const chaseR = Q.mgrPlayReads(chase, TODAY, []);
+    const stripCard = R.mgrPlayRunningHTML({ p: { ...chase, clock: null }, r: chaseR, conflicts: [], stop: Q.mgrPlayStopCheck(chase, TODAY, [], chaseR), replaceWith: null },
+      { running: [], today: TODAY });
+    eq([chaseR.cells.length, (stripCard.match(/class="mgr-pl-wk[^"]*"/) || [''])[0]], [6, 'class="mgr-pl-wk mgr-pl-wk1 mgr-pl-wkn"'],
+      'six weeks: one row, its figures at the smaller size');
+    t.check(/\.mgr-pl-wk\.mgr-pl-wk1\{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax\(0,1fr\);\}/.test(src),
+      'and the one-row rule lays the cells out as equal columns, never wrapping');
+
+    /* A PROVEN RECIPE WHERE ONE WORKED RUN KEPT NO READING (review P4:
+       "2 of 2 judged worked … across the 1 run you judged worked"). */
+    const RR = compileScope([block, ...['mgrShortUGX', 'mgrDept', 'anShiftDate'].map((n) => extractFunction(src, n, 'index.html')),
+      ...['MANAGER_PROBLEMS', 'MGR_DEPTS', 'MGR_WHOLE_SHOP'].map((n) => extractDeclaration(src, n, 'index.html'))], {
+      esc, MANAGER_PROBLEM_METRICS: METRICS, fmtUGX: (n) => String(n), localStorage: null, todayISO: () => TODAY,
+      data: { products: [], agents: [], staff: [] }, Map, Set, Math, Number, String, Array, Object, JSON, Date,
+    }, ['mgrPlayRecipeHTML', 'mgrPlayWeeksText', 'mgrPlayAfter', 'mgrPlayDesignCheck', 'mgrPlayReads']);
+    const recipe = { key: 'depositcashtwiceaweek', name: 'Deposit cash twice a week', template: { name: 'Deposit cash twice a week', treats: 'cash' },
+      judgedWorked: 2, judged: 2, running: false, lastOn: '2026-09-28',
+      runs: [{ verdict: 'worked', ended_on: '2026-08-28', resultRead: null },
+        { verdict: 'worked', ended_on: '2026-09-28', resultRead: { unit: 'money', label: 'cash in hand', moved: 4300000 } }] };
+    const rh = RR.mgrPlayRecipeHTML(recipe, { slots: { free: 1 } });
+    t.check(/<p class="mgr-pl-sub">cash in hand, across 1 of the 2 runs you judged worked \(the other kept no reading\)<\/p>/.test(rh),
+      'the average says it covers 1 of the 2 worked runs, the other having kept no reading');
+    t.check(/title="cash in hand moved \+4\.3m on average alongside 1 of the 2 runs you judged worked"/.test(rh), 'and its title says the same');
+    const both = RR.mgrPlayRecipeHTML({ ...recipe, runs: [{ ...recipe.runs[1], ended_on: '2026-08-28' }, recipe.runs[1]] }, { slots: { free: 1 } });
+    t.check(/cash in hand, across the 2 runs you judged worked<\/p>/.test(both), 'when every worked run kept one, it says all of them');
+
+    /* A CLEARED SPAN is asked for, never printed as "null". */
+    eq([RR.mgrPlayWeeksText(null), RR.mgrPlayWeeksText(''), RR.mgrPlayWeeksText(NaN), RR.mgrPlayWeeksText(1), RR.mgrPlayWeeksText(6)],
+      ['how many weeks?', 'how many weeks?', 'how many weeks?', '1 week', '6 weeks'], 'the designer’s span in its sentence');
+    t.check(extractFunction(src, 'mgrPlayDesignPaint', 'index.html').includes("${slot(weeksText)}${/\\?$/.test(weeksText) ? '' : '.'}"),
+      'and the sentence uses it, with no full stop after the question');
+    /* ONE TAP, ONE WRITE: the buttons switched off are the CARD's -- a
+       recipe's "Run it again" carries data-key itself, so the card is
+       found as its article, and the tapped button is always among them. */
+    const painter = extractFunction(src, 'mgrPaintPlays', 'index.html');
+    t.check(/const card = b\.closest\('article'\) \|\| b\.parentElement \|\| b;/.test(painter) && /new Set\(\[b, \.\.\.card\.querySelectorAll\('\[data-pl-act\]'\)\]\)/.test(painter)
+      && /if\(WRITES\.includes\(act\) && b\.disabled\) return;/.test(painter), 'a write button is off from the first tap until its write answers');
+
+    /* "OTHER" IS NOT A THING THE BOOKS MEASURE (review P4: "Nothing in
+       the books measures other"). */
+    eq([RR.mgrPlayAfter('other'), RR.mgrPlayAfter(''), RR.mgrPlayAfter('debt')], ['what this play is after', 'what this play is after', 'debt'],
+      'what a play is after, in a sentence');
+    const own = RR.mgrPlayDesignCheck({ treats: 'other', weeks: 4, cost: 0 }, { measured: false }, { running: [], proposed: [] }, []);
+    eq([own.checks[0].t, own.verdict.b], ['Nothing in the books measures what this play is after — your verdict will rest on what you see.',
+      'Nothing in the books measures what this play is after; your verdict will be the only reading.'], 'the designer’s check and verdict for "your own"');
+    eq(RR.mgrPlayReads({ id: 9, treats: 'other', started_on: '2026-09-21', weeks: 4 }, TODAY, []).why,
+      'Nothing in the books measures what this play is after — you judge it by what you see.', 'and the running card');
+
+    /* THE RUNNING LANE'S SUBTITLE reads as English. */
+    const boardHTML = extractFunction(src, 'mgrPlayBoardHTML', 'index.html');
+    t.check(/'Read week by week against the same span before it started, as the meeting reads it\.'/.test(boardHTML)
+      && !/against the before the meeting reads/.test(boardHTML), 'the running lane says what its weeks are read against');
+
+    /* WHAT THE DESIGNER SAID IT WOULD ADD rides with the play it queues,
+       and the queued card shows it rather than "not sized". */
+    t.check(/sized: add != null \? `\$\{addText\} if it reaches your aim` : undefined/.test(extractFunction(src, 'mgrPlayDesignPaint', 'index.html')),
+      'the designer hands its "would add" to the writer');
+    const PH = compileScope([block, ...['mgrShortUGX', 'mgrDept', 'anShiftDate'].map((n) => extractFunction(src, n, 'index.html')),
+      ...['MANAGER_PROBLEMS', 'MGR_DEPTS', 'MGR_WHOLE_SHOP'].map((n) => extractDeclaration(src, n, 'index.html'))], {
+      esc, MANAGER_PROBLEM_METRICS: METRICS, fmtUGX: (n) => String(n), localStorage: null, todayISO: () => TODAY,
+      data: { products: [], agents: [], staff: [] }, Map, Set, Math, Number, String, Array, Object, JSON, Date,
+    }, ['mgrPlayProposedHTML']);
+    const queued = { id: 50, name: 'Cash price under credit', treats: 'debt', source: 'owner', sized: '+27.2m collected if it reaches your aim', proposed_on: TODAY };
+    const qh = PH.mgrPlayProposedHTML({ p: queued, conflicts: [], level: 'vg', pick: false, worth: null, kind: 'cash', odds: { k: 0, n: 0, basis: 'verdicts' } },
+      { slots: { free: 1, cap: 3 }, running: [], proposed: [], today: TODAY });
+    t.check(/<dt>Would add<\/dt><dd class="mgr-pl-words"[^>]*>\+27\.2m collected if it reaches your aim<\/dd>/.test(qh) && !/not sized/.test(qh),
+      'the queued card shows the designer’s figure, never "not sized"');
   }
   process.exit(t.done() ? 1 : 0);
 }).catch((e) => { console.error(e); process.exit(1); });
