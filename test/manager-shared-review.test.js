@@ -223,9 +223,24 @@ const snapDone = (async () => {
      October is on the line, so it is not named as "not raised". */
   data.dues = data.dues.filter((d) => d.period !== '2026-10');
   data.presetManager.payday = null;
+  /* No payday, October not raised: ONE lowest-cash figure (Q42). The
+     Manager's walk costs October from Joan's rate at month end (the
+     payroll's date), so the buying budget does too: September owed
+     today 5.0m - 0.6m = 4.4m; the bill on the 20th 0.4m; October's
+     600,000 on the 31st -0.2m. Lowest -200,000 on 31 Oct, the same
+     point the walk's wage events give; October is on the line, so it
+     is not named. */
   const unraised = S.cashAhead();
-  eq([unraised.tightest, unraised.wagesNotRaised], [{ date: '2026-10-20', balance: 400000 }, ['2026-10']],
-    'no payday, October not raised: lowest 400,000 on 20 Oct and October named as not raised (never guessed)');
+  eq([unraised.tightest, unraised.safeToSpend, unraised.wagesNotRaised], [{ date: '2026-10-31', balance: -200000 }, 0, []],
+    'no payday, October not raised: one lowest point, -200,000 on 31 Oct, nothing safe to spend, no month named');
+  eq(unraised.commitments.filter((c) => c.kind === 'wage').map((c) => [c.date, c.amount, c.raised]),
+    [['2026-10-07', 600000, true], ['2026-10-31', 600000, false]],
+    'September owed today, October costed from the pay rate at month end');
+  const W = compileScope([fn('mgrWageEvents'), fn('mgrPaydayDates'), fn('mgrWageShares'), fn('mgrPaydaySettles'),
+    fn('mgrPaydaySettlesDefault'), fn('mgrPaydayLabel'), fn('mgrOrdinal'), decl('MGR_WEEKDAYS')], env, ['mgrWageEvents']);
+  eq(unraised.commitments.filter((c) => c.kind === 'wage').map((c) => [c.date, c.amount]),
+    W.mgrWageEvents('2026-10-07', '2026-11-06', null).events.map((w) => [w.date, w.amount]),
+    'and they are exactly the wage events the Manager\'s cash walk puts on its line with no payday');
   data.presetManager.payday = { kind: 'monthly', day: 25 };
   const costed = S.cashAhead();
   eq(costed.commitments.filter((c) => c.kind === 'wage').map((c) => [c.date, c.amount, c.raised]),
@@ -233,6 +248,27 @@ const snapDone = (async () => {
     'payday the 25th: September owed today, October costed from the pay rate on the 25th');
   eq([costed.tightest, costed.safeToSpend, costed.wagesNotRaised], [{ date: '2026-10-25', balance: -200000 }, 0, []],
     'lowest -200,000 on 25 Oct, nothing safe to spend, no month named as missing');
+
+  /* NOT RAISED IS JUDGED BY THE PAYDAY, not by month end. Payday the
+     10th (pays the month just ended), 30 days from Thu 8 Oct to 7 Nov,
+     October not raised. September (raised) leaves on 10 Oct: 5.0m -
+     0.6m = 4.4m; the bill on the 20th: 0.4m. October's wages leave on
+     10 Nov, after the window -- not due in it, so not named, and not on
+     the line. Lowest 400,000 on 20 Oct. */
+  data.presetManager.payday = { kind: 'monthly', day: 10 };
+  const later = S.cashAhead('2026-10-08');
+  eq([later.tightest, later.wagesNotRaised], [{ date: '2026-10-20', balance: 400000 }, []],
+    'payday the 10th, October not raised, from 8 Oct: lowest 400,000 on 20 Oct, and October is not named -- it falls due on 10 Nov, after the window');
+  /* A month that DOES fall due in the window and cannot be costed is
+     still named. Joan paid by the day (no standing month cost), payday
+     the 25th (pays the month in progress): October leaves on 25 Oct,
+     inside the window, nobody has raised it and nothing costs it. */
+  data.staff[0].payBasis = 'daily';
+  data.presetManager.payday = { kind: 'monthly', day: 25 };
+  eq(S.cashAhead('2026-10-08').wagesNotRaised, ['2026-10'], 'paid by the day, payday the 25th: October is due on 25 Oct and is named, never guessed');
+  data.presetManager.payday = { kind: 'monthly', day: 10 };
+  eq(S.cashAhead('2026-10-08').wagesNotRaised, [], 'paid by the day, payday the 10th: October is due on 10 Nov, after the window -- not named');
+  data.staff[0].payBasis = 'monthly';
 }
 
 /* ---------- 5. Today shows the worst states, in their own colours ----- */

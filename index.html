@@ -52940,16 +52940,23 @@ function cashCommitments(fromISO, days){
      -- comes from mgrWageEvents, the one rule the Manager's cash walk,
      the late-wages check and the dated risks date wages by. So the
      buying budget, the dashboard, the meeting's safe_to_spend and the
-     Manager's lowest cash are one line, to the shilling. With no
-     payday nothing here changes: raised dues at the payroll's date. */
+     Manager's lowest cash are one line, to the shilling.
+     With NO payday the raised dues stay at the payroll's own date
+     (below), and a salaried month not raised yet is costed from the pay
+     rate at month end -- the payroll's date, and the very event the
+     Manager's cash walk puts on its line -- so the two lowest points are
+     one with or without a payday (Q42). A daily worker's month is still
+     never guessed at: mgrWageEvents names it off the line. */
   const payday = typeof mgrPayday === 'function' ? mgrPayday() : null;
-  const byPayday = !!(payday && typeof mgrWageEvents === 'function');
-  if(byPayday){
+  const wageEvents = typeof mgrWageEvents === 'function';
+  const byPayday = !!(payday && wageEvents);
+  if(wageEvents){
     mgrWageEvents(from, to, payday).events.forEach(w=>{
       if(!(w.amount > 0.5)) return;
+      if(!byPayday && w.raised) return;
       out.push({ date: w.date, dueOn: w.dueOn, overdue: !!w.overdue, kind: 'wage', label: w.label,
-        amount: Math.round(w.amount), unknown: false, raised: !!w.raised, period: w.period, payday: true,
-        ...(w.split ? { split: w.split } : {}) });
+        amount: Math.round(w.amount), unknown: false, raised: !!w.raised, period: w.period, payday: byPayday,
+        fromRate: !w.raised, ...(w.split ? { split: w.split } : {}) });
     });
   }
   /* Dues already raised. Valued the way payroll values them: a null
@@ -53051,17 +53058,22 @@ function cashAhead(dateISO, days){
   });
   let tightest = { date: from, balance: onHand };
   commitments.forEach(c=>{ if(c.balanceAfter < tightest.balance) tightest = { date: c.date, balance: c.balanceAfter }; });
-  /* Months inside the window whose wages nobody has raised. Named, not
-     guessed at -- the figure is not knowable until the days are in.
-     With a payday set, a month whose salaries the payday line already
+  /* Months whose wages FALL DUE inside the window and nobody has raised.
+     Named, not guessed at -- the figure is not knowable until the days
+     are in. A month falls due on the day its wages leave: the owner's
+     payday when one is set (mgrPaydayDates -- the 10th of November pays
+     October, so October is not due in a window that ends on the 7th),
+     month end when none is. A month whose salaries the line already
      costs from the pay rate IS on the line, so it is not named here. */
-  const costedOnPayday = new Set(commitments.filter(c=> c.kind === 'wage' && c.payday && !c.raised).map(c=> String(c.period)));
+  const costedFromRate = new Set(commitments.filter(c=> c.kind === 'wage' && c.fromRate).map(c=> String(c.period)));
+  const paydayNow = typeof mgrPayday === 'function' ? mgrPayday() : null;
+  const paidOn = (period)=> paydayNow && typeof mgrPaydayDates === 'function'
+    ? mgrPaydayDates(period, paydayNow, null) : [periodEndDate(period)];
   const wagesNotRaised = [];
-  for(let i = 0; i <= 2; i++){
+  for(let i = paydayNow ? -1 : 0; i <= 2; i++){
     const period = periodShift(periodOf(from), i);
-    const end = periodEndDate(period);
-    if(end < from || end > to) continue;
-    if(costedOnPayday.has(period)) continue;
+    if(!paidOn(period).some(d=> d >= from && d <= to)) continue;
+    if(costedFromRate.has(period)) continue;
     if((data.staff || []).length && !(data.dues || []).some(d=> d.kind === 'wage' && String(d.period) === period))
       wagesNotRaised.push(period);
   }
