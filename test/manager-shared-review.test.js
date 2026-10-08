@@ -13,9 +13,8 @@
  *     exist", so a 500 sent the owner to paste migration 0081 again.
  *  3. With no floor set and nothing to stand in, the floor was carried
  *     as 0 and printed "0 UGX" -- an unknown read as a figure.
- *  4. The payday may date wages on the Manager's line only: the buying
- *     budget (cashAhead) is not moved without the owner's word, and the
- *     meeting is told which figure the payday moves.
+ *  4. The owner's payday moved only the Manager's line; cashAhead (the
+ *     buying budget, the meeting's safe_to_spend) kept wages at month end.
  *  5. Today's pace strip ranked by pace.on_course, so an At-risk cash
  *     floor fell off it behind an On-track target; At risk wore crimson.
  *  6. Today's invite said moves were "ranked by the money on them".
@@ -112,21 +111,17 @@ const eq = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(wa
   t.check(/floor\.amount == null \? 'Blank: nothing stands in'/.test(g), 'and the field does not offer 0 as the stand-in');
 }
 
-/* ---------- 4. the payday stays on the Manager's line ---------------- */
+/* ---------- 4. the payday dates wages on the buying budget too -------- */
 {
-  /* The final review's verifier: dating wages by the payday inside
-     cashAhead moved the What-to-buy budget, the dashboard and the cash
-     forecast app-wide with no owner approval (Q4's note warns against
-     exactly that), and outside the shared frame's regions. So cashAhead
-     is left as approved -- wages at the payroll's month end -- and the
-     meeting is told where the payday applies. The owner is asked.
-     Today Wed 7 Oct 2026, 5,000,000 in hand. Joan earns 600,000 a month;
+  /* Today Wed 7 Oct 2026, 5,000,000 in hand. Joan earns 600,000 a month;
      September's wages (raised, due 30 Sep) and October's (raised, due
      31 Oct) are unpaid. One bill is due 20 Oct, 4,000,000.
-       Sep's on today (overdue), the bill on the 20th, Oct's on the 31st:
-       5.0m - 0.6m = 4.4m, - 4.0m = 0.4m, - 0.6m = -0.2m.
-       Lowest -200,000 on 31 Oct; safe to spend 0 -- with or without a
-       payday set. */
+       No payday: Sep's on today (overdue), the bill on the 20th, Oct's on
+       the 31st: 5.0m - 0.6m = 4.4m, - 4.0m = 0.4m, - 0.6m = -0.2m.
+       Lowest -200,000 on 31 Oct; safe to spend 0.
+       Payday the 10th (pays the month just ended): Sep's on 10 Oct,
+       Oct's on 10 Nov (past the 6 Nov window): 4.4m, then 0.4m on the
+       20th. Lowest 400,000 on 20 Oct; safe to spend 400,000. */
   const data = {
     presetManager: {},
     staff: [{ id: 'ST1', name: 'Joan', payBasis: 'monthly', payRate: 600000 }],
@@ -159,19 +154,34 @@ const eq = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(wa
   ['cashAhead']);
   const before = S.cashAhead();
   eq([before.tightest, before.safeToSpend], [{ date: '2026-10-31', balance: -200000 }, 0],
-    'no payday: wages at the payroll\'s month end, lowest -200,000 on 31 Oct, nothing safe to spend');
+    'no payday: wages at the payroll\'s month end, lowest -200,000 on 31 Oct, nothing safe to spend (unchanged)');
   data.presetManager.payday = { kind: 'monthly', day: 10 };
   const after = S.cashAhead();
-  eq([after.tightest, after.safeToSpend], [{ date: '2026-10-31', balance: -200000 }, 0],
-    'payday the 10th: the buying budget is not moved by it -- the same -200,000 on 31 Oct, the same 0 to spend');
-  eq(after.commitments.filter((c) => c.kind === 'wage').map((c) => [c.date, c.amount]), [['2026-10-07', 600000], ['2026-10-31', 600000]],
-    'the wages stay where the payroll dates them');
-  t.check(!/mgrPayday|mgrWageEvents/.test(fn('cashCommitments') + fn('cashAhead')), 'cashCommitments and cashAhead do not read the Manager\'s payday');
-  const M = compileScope([fn('mgrMeetingSettings'), fn('mgrPaydayLabel'), fn('mgrPaydaySettlesLabel'), fn('mgrPaydaySettles'),
-    fn('mgrPaydaySettlesDefault'), fn('mgrOrdinal'), decl('MGR_WEEKDAYS')], {}, ['mgrMeetingSettings']);
-  eq(M.mgrMeetingSettings({ amount: 1, source: 'set', note: '' }, { kind: 'monthly', day: 10 }).payday.wages_dated,
-    'on this payday on the Manager\u2019s cash line; safe_to_spend (the buying budget) still dates them at month end',
-    'the meeting is told the payday moves the Manager\'s lowest cash, not safe_to_spend');
+  eq([after.tightest, after.safeToSpend], [{ date: '2026-10-20', balance: 400000 }, 400000],
+    'payday the 10th: September\'s wages leave on 10 Oct, October\'s after the window -- lowest 400,000 on 20 Oct, and that is the budget');
+  eq(after.commitments.filter((c) => c.kind === 'wage').map((c) => [c.date, c.amount]), [['2026-10-10', 600000]],
+    'one wage on the line, on the payday, never also at month end');
+  eq(after.wagesNotRaised, [], 'and no month is named as missing');
+
+  /* A salaried month NOBODY HAS RAISED is costed from the pay rate on the
+     payday. October's due is not raised; payday the 25th (pays the month
+     in progress). September's (raised, its payday 25 Sep gone by) is owed
+     today: 5.0m - 0.6m = 4.4m; the bill on the 20th: 0.4m; October's
+     600,000 from Joan's rate on the 25th: -0.2m. November's payday (25
+     Nov) is past the 6 Nov window. Lowest -200,000 on 25 Oct; 0 to spend;
+     October is on the line, so it is not named as "not raised". */
+  data.dues = data.dues.filter((d) => d.period !== '2026-10');
+  data.presetManager.payday = null;
+  const unraised = S.cashAhead();
+  eq([unraised.tightest, unraised.wagesNotRaised], [{ date: '2026-10-20', balance: 400000 }, ['2026-10']],
+    'no payday, October not raised: lowest 400,000 on 20 Oct and October named as not raised (never guessed)');
+  data.presetManager.payday = { kind: 'monthly', day: 25 };
+  const costed = S.cashAhead();
+  eq(costed.commitments.filter((c) => c.kind === 'wage').map((c) => [c.date, c.amount, c.raised]),
+    [['2026-10-07', 600000, true], ['2026-10-25', 600000, false]],
+    'payday the 25th: September owed today, October costed from the pay rate on the 25th');
+  eq([costed.tightest, costed.safeToSpend, costed.wagesNotRaised], [{ date: '2026-10-25', balance: -200000 }, 0, []],
+    'lowest -200,000 on 25 Oct, nothing safe to spend, no month named as missing');
 }
 
 /* ---------- 5. Today shows the worst states, in their own colours ----- */

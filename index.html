@@ -52918,6 +52918,24 @@ function cashCommitments(fromISO, days){
   const from = fromISO || todayISO();
   const to = anShiftDate(from, Math.max(1, Number(days) || CASH_AHEAD_DAYS));
   const out = [];
+  /* THE OWNER'S PAYDAY (the Manager's settings, Q28). Once one is set,
+     wages leave on it, not at month end: every wage -- raised dues at
+     their balance, and a salaried month not raised yet at its pay rate
+     -- comes from mgrWageEvents, the one rule the Manager's cash walk,
+     the late-wages check and the dated risks date wages by. So the
+     buying budget, the dashboard, the meeting's safe_to_spend and the
+     Manager's lowest cash are one line, to the shilling. With no
+     payday nothing here changes: raised dues at the payroll's date. */
+  const payday = typeof mgrPayday === 'function' ? mgrPayday() : null;
+  const byPayday = !!(payday && typeof mgrWageEvents === 'function');
+  if(byPayday){
+    mgrWageEvents(from, to, payday).events.forEach(w=>{
+      if(!(w.amount > 0.5)) return;
+      out.push({ date: w.date, dueOn: w.dueOn, overdue: !!w.overdue, kind: 'wage', label: w.label,
+        amount: Math.round(w.amount), unknown: false, raised: !!w.raised, period: w.period, payday: true,
+        ...(w.split ? { split: w.split } : {}) });
+    });
+  }
   /* Dues already raised. Valued the way payroll values them: a null
      balance is UNCOSTED, not nothing -- fold it in at zero and the
      forecast is short by exactly the wages of the people who did the
@@ -52927,6 +52945,8 @@ function cashCommitments(fromISO, days){
     if(!when || when > to) return;
     const bal = dueBalance(d);
     if(bal !== null && !(bal > 0.5)) return;
+    /* A costed wage is already on the line at its payday (above). */
+    if(byPayday && d.kind === 'wage' && bal !== null) return;
     out.push({ date: when < from ? from : when, dueOn: when, overdue: when < from,
       kind: d.kind === 'wage' ? 'wage' : 'rent', label: dueName(d),
       amount: bal === null ? 0 : Math.round(bal), unknown: bal === null, raised: true });
@@ -53016,12 +53036,16 @@ function cashAhead(dateISO, days){
   let tightest = { date: from, balance: onHand };
   commitments.forEach(c=>{ if(c.balanceAfter < tightest.balance) tightest = { date: c.date, balance: c.balanceAfter }; });
   /* Months inside the window whose wages nobody has raised. Named, not
-     guessed at -- the figure is not knowable until the days are in. */
+     guessed at -- the figure is not knowable until the days are in.
+     With a payday set, a month whose salaries the payday line already
+     costs from the pay rate IS on the line, so it is not named here. */
+  const costedOnPayday = new Set(commitments.filter(c=> c.kind === 'wage' && c.payday && !c.raised).map(c=> String(c.period)));
   const wagesNotRaised = [];
   for(let i = 0; i <= 2; i++){
     const period = periodShift(periodOf(from), i);
     const end = periodEndDate(period);
     if(end < from || end > to) continue;
+    if(costedOnPayday.has(period)) continue;
     if((data.staff || []).length && !(data.dues || []).some(d=> d.kind === 'wage' && String(d.period) === period))
       wagesNotRaised.push(period);
   }
@@ -128356,9 +128380,10 @@ function mgrTradingPattern(today, placedIds){
    instalments still owed, rent not yet raised, bills the owner dated --
    with WAGES moved to the owner's payday (month end until one is set)
    and salaried months not yet raised costed from the pay rate. Nothing
-   coming in is ever on it. Its lowest point is cashAhead's when no
-   payday is set and every month in the window is raised; safeToSpend
-   is never touched.
+   coming in is ever on it. With a payday set, cashAhead dates wages by
+   the same mgrWageEvents (Q42), so its lowest point IS cashAhead's --
+   one lowest-cash figure across the app; with none set it is when every
+   month in the window is raised. safeToSpend is never touched here.
 
    EXPECTED is a separate band, labelled with its method: the committed
    line plus what customers are expected to pay -- a day they named
@@ -129649,12 +129674,7 @@ function mgrMeetingSettings(floor, payday){
         ...(f.parts.dailyPaid ? { daily_paid_staff_not_costed: f.parts.dailyPaid } : {}) } } : {}) };
   const pd = payday && typeof payday === 'object' ? payday : null;
   return { cash_floor: cashFloor,
-    /* The payday dates wages on the Manager's own cash line only. The
-       buying budget (cashAhead, so safe_to_spend) still dates them at
-       month end until the owner says otherwise -- said, so the meeting
-       never reads the two lows as one figure. */
-    payday: pd ? { kind: pd.kind, reads: mgrPaydayLabel(pd), ...(mgrPaydaySettlesLabel(pd) ? { settles: mgrPaydaySettlesLabel(pd) } : {}),
-        wages_dated: 'on this payday on the Manager\u2019s cash line; safe_to_spend (the buying budget) still dates them at month end' }
+    payday: pd ? { kind: pd.kind, reads: mgrPaydayLabel(pd), ...(mgrPaydaySettlesLabel(pd) ? { settles: mgrPaydaySettlesLabel(pd) } : {}) }
       : { reads: 'not set', wages_dated: 'at month end, the date the payroll gives every wage due' } };
 }
 /* mgrOffers()' answer: the owner's offers still open, soonest expiry

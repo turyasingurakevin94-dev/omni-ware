@@ -103,16 +103,14 @@ const H = {
 {
   const set = F.mgrMeetingSettings({ amount: 3000000, source: 'set', note: 'the floor you set' }, { kind: 'monthly', day: 25 });
   eq(set.cash_floor, { amount: 3000000, source: 'set by the owner', note: 'the floor you set' }, 'a floor the owner set, said so');
-  eq(set.payday, { kind: 'monthly', reads: 'the 25th of each month', settles: 'pays the month in progress',
-    wages_dated: 'on this payday on the Manager\u2019s cash line; safe_to_spend (the buying budget) still dates them at month end' },
+  eq(set.payday, { kind: 'monthly', reads: 'the 25th of each month', settles: 'pays the month in progress' },
     'the 25th pays the month in progress (the 16th on)');
   const stand = F.mgrMeetingSettings({ amount: 2600000, source: 'stand-in', note: 'not set — a month of rent and salaries stands in',
     parts: { rent: 2000000, wages: 600000, dailyPaid: 1, noRate: 0 } }, { kind: 'weekly', day: 5 });
   eq(stand.cash_floor, { amount: 2600000, source: 'stand-in', note: 'not set — a month of rent and salaries stands in',
     stands_in_with: { rent: 2000000, salaries: 600000, daily_paid_staff_not_costed: 1 } },
     'a stand-in says it is one, and what stands in: 2,000,000 rent + 600,000 salaries, one daily-paid wage not costed');
-  eq(stand.payday, { kind: 'weekly', reads: 'every Friday', settles: 'each pays an even share of its month',
-    wages_dated: 'on this payday on the Manager\u2019s cash line; safe_to_spend (the buying budget) still dates them at month end' }, 'a weekly payday, and where it dates wages');
+  eq(stand.payday, { kind: 'weekly', reads: 'every Friday', settles: 'each pays an even share of its month' }, 'a weekly payday');
   eq(F.mgrMeetingSettings({ amount: 0, source: 'stand-in', note: 'n' }, null).payday,
     { reads: 'not set', wages_dated: 'at month end, the date the payroll gives every wage due' }, 'no payday: "not set", and how wages are dated');
   eq(F.mgrMeetingSettings(null, null).cash_floor, { error: 'the cash floor could not be read' }, 'a floor that cannot be read is named');
@@ -191,9 +189,7 @@ const H = {
   const pulse = build().ASSISTANT_TOOLS.shop_pulse.run();
   eq([pulse.health.score, pulse.health.departments[0].failing.length], [38, 3], 'shop_pulse hands the health reading, department by department');
   eq(pulse.cash_floor, { amount: 3000000, source: 'set by the owner', note: 'the floor you set' }, 'the floor the owner set, with its source');
-  eq(pulse.payday, { kind: 'monthly', reads: 'the 5th of each month', settles: 'pays the month just ended',
-    wages_dated: 'on this payday on the Manager\u2019s cash line; safe_to_spend (the buying budget) still dates them at month end' },
-    'and the payday wages are dated by, and where');
+  eq(pulse.payday, { kind: 'monthly', reads: 'the 5th of each month', settles: 'pays the month just ended' }, 'and the payday wages are dated by');
   const broken = build({ mgrHealthChecks: () => { throw new Error('stock log unreadable'); } }).ASSISTANT_TOOLS.shop_pulse.run();
   eq(broken.health, { error: 'the health checks could not be read — stock log unreadable' }, 'health that cannot be read is named');
   eq(broken.cash_floor.amount, 3000000, 'and the floor still stands beside it');
