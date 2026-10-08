@@ -122,6 +122,10 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
        2b -- so this records that it was asked, and moves the order the
        way the real one would. */
     orderLeaveDraft: (q, o) => { seen.moves.push([q.id, o]); q.status = 'awaiting_goods'; return true; },
+    // Not an agent's order: the agent's own path is exercised in 2c.
+    agentOrderNeedsShopCheck: () => false,
+    orderLinesWithNoSupplier: () => [],
+    confirmAgentOrder: () => { throw new Error('not an agent order'); },
   }, NAMES);
   const { setOrderSupplierConfirm } = scope;
 
@@ -143,6 +147,41 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   setOrderSupplierConfirm(3, 'S2', 'confirmed');
   t.check(seen.moves.length === 0 && seen.toasts.length === 0,
     'an order that was already ready is not moved or announced again on every later answer');
+}
+
+/* ---------- 2c. a prepay agent's order confirms itself --------------- */
+/*
+ * The agent watches each line tick as its supplier says yes. When the
+ * last one does, the shop's own confirmation follows -- the lines as they
+ * stand are what can be supplied -- so Pay opens for the agent without a
+ * second tap nobody knew to make. Not when a line still has no supplier:
+ * nobody has said yes to that one.
+ */
+{
+  const seen = { confirmed: [], moves: [] };
+  const data = { savedQuotes: [] };
+  const NAMES = ['setOrderSupplierConfirm'];
+  const scope = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html')), {
+    data, saveData: () => {}, renderSavedQuotes: () => {}, toast: () => {},
+    quoteClientName: () => 'Kato', orderSupplierTerms: () => 't',
+    ORDER_STATUS_SHORT_LABELS: {},
+    orderDraftReady: (q) => (q.suppliers || []).every((id) => (q.supplierConfirms || {})[id] && q.supplierConfirms[id].state === 'confirmed'),
+    orderLeaveDraft: (q) => { seen.moves.push(q.id); return false; },
+    agentOrderNeedsShopCheck: (q) => !!q.prepayAgent,
+    orderLinesWithNoSupplier: (q) => q.loose || [],
+    confirmAgentOrder: (q) => { seen.confirmed.push(q.id); q.shopConfirmedAt = 1; return true; },
+  }, NAMES);
+  data.savedQuotes = [
+    { id: 7, status: 'draft', prepayAgent: true, suppliers: ['S1', 'S2'] },
+    { id: 8, status: 'draft', prepayAgent: true, suppliers: ['S1'], loose: [{ productId: 'x' }] },
+  ];
+  scope.setOrderSupplierConfirm(7, 'S1', 'confirmed');
+  t.check(seen.confirmed.length === 0, 'one supplier of two saying yes confirms nothing yet');
+  scope.setOrderSupplierConfirm(7, 'S2', 'confirmed');
+  t.check(seen.confirmed.join() === '7' && !seen.moves.includes(7),
+    "the last supplier's yes confirms the agent's order, which is what opens Pay for them");
+  scope.setOrderSupplierConfirm(8, 'S1', 'confirmed');
+  t.check(!seen.confirmed.includes(8), 'but not while a line has no supplier -- nobody has said yes to it');
 }
 
 /* ---------- 2b. the move itself -------------------------------------- */

@@ -63035,6 +63035,18 @@ function setOrderSupplierConfirm(orderId, supplierId, state, note){
      went, because a row that moved itself with no word about it is how
      somebody loses track of their own board. */
   if(!wasReady && q.status === 'draft' && orderDraftReady(q)){
+    /* A prepay agent's order: every supplier has said yes to their own
+       lines, and no line is waiting on a supplier being chosen -- so the
+       lines as they stand ARE what the shop can supply. That is the
+       shop's confirmation (confirmAgentOrder), given here rather than
+       waiting on a second tap nobody knew to make: the agent watched every
+       line tick and then sat in front of a locked Pay. It asks the agent
+       for the money itself, and says so. A line still to be dropped by
+       hand is the exception, and Confirm lines stays for it. */
+    if(agentOrderNeedsShopCheck(q) && !orderLinesWithNoSupplier(q).length){
+      confirmAgentOrder(q);
+      return q.supplierConfirms[key] || null;
+    }
     if(orderLeaveDraft(q, { auto:true })){
       toast(`All suppliers confirmed — ${quoteClientName(q)}'s order has moved to ${ORDER_STATUS_SHORT_LABELS[q.status]}. Announce it to the group when you like.`, 6000);
     } else {

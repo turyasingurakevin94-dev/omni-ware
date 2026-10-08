@@ -1454,6 +1454,11 @@
   .ax-livedot i{width:6px;height:6px;border-radius:999px;background:var(--mint);animation:axPulse 2s infinite;}
   .ax-livedot.off{color:#F5B26B;}
   .ax-livedot.off i{background:#F5B26B;animation:none;}
+
+  .ax-lock.ready{border-style:solid;border-color:var(--good);background:var(--good-bg);}
+  .ax-lock.ready .ic{background:var(--panel);color:var(--good);}
+  .ax-lock.ready .t{color:var(--good);}
+  .ax-lock.ready .s{color:var(--ink-soft);}
 </style>
 </head>
 <body class="app-loading">
@@ -7073,9 +7078,15 @@ function openTrackSheet(orderId){
         <span class="cnt">${counts}</span><span class="ax-chev">${AX_ICON.chevD}</span></summary>
       ${lines.map(({ it, chk })=> lineRow(it, chk)).join('')}
     </details>`;
+    // Every line ticked but the shop has not signed it off yet: the lock
+    // says that is all it is waiting on, and how to hurry it.
+    const allIn = k.items > 0 && k.ok >= k.items;
     const lock = st.key === 'checking' && prepay
-      ? `<div class="ax-lock"><span class="ic">${AX_ICON.lock}</span><span class="b"><span class="t">${k.items === 1 ? 'Pay opens once it is checked' : `Pay opens when all ${k.items} are checked`}</span>
-          <span class="s">for what was confirmed · ${agentPushState() === 'on' ? "we'll alert you" : 'it opens right here'}</span></span></div>` : '';
+      ? `<div class="ax-lock${allIn ? ' ready' : ''}"><span class="ic">${AX_ICON[allIn ? 'clock' : 'lock']}</span><span class="b">${allIn
+          ? `<span class="t">All ${k.items} confirmed</span><span class="s">Pay opens when the shop signs it off</span>`
+          : `<span class="t">${k.items === 1 ? 'Pay opens once it is checked' : `Pay opens when all ${k.items} are checked`}</span>
+          <span class="s">for what was confirmed · ${agentPushState() === 'on' ? "we'll alert you" : 'it opens right here'}</span>`}</span>
+          ${allIn && shopInfo && shopInfo.phone ? `<button type="button" class="btn btn-dark sm" data-shop>${AX_ICON.phone}Ask</button>` : ''}</div>` : '';
     const sh = shopInfo && shopInfo.phone ? shopInfo : null;
     const ready = st.key === 'ready' ? `<div class="ax-counter"><span class="ic">${AX_ICON.store}</span><span class="b"><span class="k">Show at the counter</span><span class="v">${esc(o.id)}</span></span>
       ${sh && (sh.name || sh.address) ? `<span class="w">${esc(sh.name || '')}${sh.address ? `<br>${esc(sh.address)}` : ''}</span>` : ''}</div>` : '';
