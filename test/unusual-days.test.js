@@ -199,7 +199,7 @@ function build(days, books) {
      manager-unusual-pulse.test.js section 19. This detector stays for the
      Brief's own reading (mgrUnusualReading). */
   t.check(/const unusual = await mgrUnusualForMeeting\(\);/.test(hist) && !/unusualDays\(/.test(hist.slice(0, hist.indexOf('\n  standing_policies: {')))
-    && /kind: 'unusual_day'/.test(hist) && /unusual_days: unusual\.items\.slice\(0, 8\)/.test(hist) && /unusual_days_not_listed/.test(hist),
+    && /kind: 'unusual_day'/.test(hist) && /unusual_days: mgrMeetingUnusualPick\(unusual\.items, /.test(hist) && /, 8\)\.map\(\(\{ x, said \}\)=>/.test(hist) && /unusual_days_not_listed/.test(hist),
     'the Manager reads the screen\'s own findings every meeting, raises the ones since the last, and names how many it did not list');
   t.check(/stock counted short is a question, not a theft/.test(hist) && /never name a cause/.test(api),
     'and is told a finding is a question, never a verdict');
