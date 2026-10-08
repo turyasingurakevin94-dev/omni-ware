@@ -5816,8 +5816,11 @@ document.getElementById('ag_cartWrap').addEventListener('click', (e)=>{
   }
 });
 /* Typing a price updates the line's chip and the dock as you go, without
-   redrawing the field under your thumb. It is committed when you leave
-   the field. */
+   redrawing the field under your thumb. It is kept on every keystroke,
+   not when the field is left: sliding to send does not take the focus
+   off the field, and neither does closing the keyboard on Android, so a
+   price kept only on leaving went out as the price the line was added
+   at -- while the dock showed the one typed. */
 function parseMoney(v){ return Number(String(v||'').replace(/[^\d.]/g, '')); }
 document.getElementById('ag_cartWrap').addEventListener('input', (e)=>{
   const it = cart[openLineIdx];
@@ -5825,14 +5828,26 @@ document.getElementById('ag_cartWrap').addEventListener('input', (e)=>{
   if(e.target.matches('[data-rate]')){
     const entered = parseMoney(e.target.value);
     if(!(entered >= 0)) return;
-    const preview = Object.assign({}, it, { agentSellPrice: entered / lineMult(it) });
-    const f = cartLineFigures(preview);
+    it.agentSellPrice = entered / lineMult(it);
+    saveQuoteDraft();
+    const f = cartLineFigures(it);
     const line = e.target.closest('.ax-line');
     line.querySelector('[data-chip-big]').innerHTML = earnChipHTML(f.margin, f.profit);
     line.querySelector(`[data-chip="${openLineIdx}"]`).innerHTML = earnChipHTML(f.margin, f.profit);
     line.querySelector('.ax-price').classList.toggle('loss', f.margin.level === 'loss');
     line.querySelector('[data-flag]').innerHTML = cartMarginFlagHTML(f.margin);
-    renderDock(preview);
+    renderDock();
+  }
+  // The quantity the same way, for the same reason.
+  if(e.target.matches('[data-qty-in]')){
+    const v = Number(e.target.value);
+    if(!(v > 0)) return;
+    setLineQty(it, v);
+    const f = cartLineFigures(it);
+    const line = e.target.closest('.ax-line');
+    line.querySelector('[data-chip-big]').innerHTML = earnChipHTML(f.margin, f.profit);
+    line.querySelector(`[data-chip="${openLineIdx}"]`).innerHTML = earnChipHTML(f.margin, f.profit);
+    renderDock();
   }
 });
 document.getElementById('ag_cartWrap').addEventListener('change', (e)=>{
