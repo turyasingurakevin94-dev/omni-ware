@@ -43,7 +43,10 @@ const modal = (/<div class="modal-overlay" id="priceModal">[\s\S]*?\n<\/div>/.ex
      the top of the form and not in the form. */
   const notes = (modal.match(/class="pfx-note/g) || []).length;
   const hints = (modal.match(/class="field-hint"/g) || []).length;
-  t.check(notes === 5, `the five step notes are still written in the markup (${notes})`);
+  /* Four. The product step's paragraph went with the numbered steps when
+     the form was laid out as the design board draws it: a product card
+     says what is being priced without a sentence explaining it. */
+  t.check(notes === 4, `the four section notes are still written in the markup (${notes})`);
   /* Two now. The second belongs to "Pieces in one unit", added so the
      comparison page can weigh a Box of one brand against a Pack of
      another; its hint is the only place that explains why a shop would
@@ -86,8 +89,8 @@ const modal = (/<div class="modal-overlay" id="priceModal">[\s\S]*?\n<\/div>/.ex
   /* The fixed half of step 2's explanation and the half setPrBulkMode
      rewrites were one continuous thought split across the fields. One
      bubble carries both. */
-  t.check(/\[s2\.querySelector\('\.pfx-note:not\(\.pfx-quiet\)'\), document\.getElementById\('pr_pack_note'\)\]/.test(fn),
-    'step 2 folds both of its notes into a single bubble rather than growing a second badge');
+  t.check(/\[pack\.closest\('\.prx-sec'\)\.querySelector\('\.pfx-note:not\(\.pfx-quiet\)'\), document\.getElementById\('pr_pack_note'\)\]/.test(fn),
+    'packing folds both of its notes into a single bubble rather than growing a second badge');
 }
 
 /* ---------- 3. an "i" with nothing behind it ------------------------- */

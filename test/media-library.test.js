@@ -37,7 +37,8 @@ const src = read('index.html');
 
 const NAMES = ['mediaFmtBytes', 'mediaUsageIndex', 'mediaUsage', 'mediaUserLabel',
   'findMediaBySha', 'mediaStripStats', 'mediaBackfillPlan', 'mediaFolderRemovalPlan',
-  'mediaVisibleRows', 'mediaCardLabel'];
+  'mediaVisibleRows', 'mediaCardLabel', 'mediaWeeklyAdds', 'mediaDupBytes',
+  'mediaBadName'];
 const env = {
   data: { products: [], presetCategories: [], media: [], mediaFolders: [] },
   mlState: { folder: 'all', filter: 'all', search: '' },
@@ -233,6 +234,75 @@ const eqJ = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(w
   env.mlState.search = '';
 }
 
+/* ---------- 6c. the toolbar's orders -------------------------------
+   Newest first stays the default -- every assertion above runs with no
+   sort set at all. The other three are what the sort menu offers. */
+{
+  env.data.products = [{ id: 'P1', name: 'Bolt', image: 'ub', variants: [] }];
+  env.data.presetCategories = [];
+  env.data.media = [
+    { id: 1, url: 'ua', name: 'zinc plate', bytes: 500, createdAt: '2026-01-01' },
+    { id: 2, url: 'ub', name: 'x.jpg', bytes: 9000, createdAt: '2026-03-01' },
+    { id: 3, url: 'uc', name: 'anchor', bytes: null, createdAt: '2026-02-01' },
+  ];
+  const usage = scope.mediaUsageIndex();
+  env.mlState.folder = 'all'; env.mlState.filter = 'all'; env.mlState.search = '';
+  env.mlState.sort = 'big';
+  eqJ(scope.mediaVisibleRows(usage).map((m) => m.id), [2, 1, 3],
+    'largest first -- and a photo with no recorded size sorts last, not as the smallest');
+  env.mlState.sort = 'old';
+  eqJ(scope.mediaVisibleRows(usage).map((m) => m.id), [1, 3, 2], 'oldest first');
+  env.mlState.sort = 'name';
+  eqJ(scope.mediaVisibleRows(usage).map((m) => m.id), [3, 2, 1],
+    'by name sorts by what the CARD says -- "Bolt", not the object name "x.jpg"');
+  delete env.mlState.sort;
+}
+
+/* ---------- 6d. the weekly additions ---------------------------------
+   The activity panel's twelve columns. Weeks start on Monday; a photo
+   with no date is counted apart rather than dropped into a week. */
+{
+  // 2026-10-07 is a Wednesday, so its week starts Monday 2026-10-05.
+  const w = scope.mediaWeeklyAdds([
+    { createdAt: '2026-10-05T08:00:00Z' },     // Monday of this week
+    { createdAt: '2026-10-07' },               // today
+    { createdAt: '2026-10-04' },               // Sunday: last week
+    { createdAt: '2026-07-01' },               // before the window
+    { createdAt: null },                       // never dated
+  ], '2026-10-07', 12);
+  eq(w.weeks.length, 12, 'twelve weeks, one column each');
+  eq(w.weeks[11].start, '2026-10-05', 'the last column is the week holding today, starting Monday');
+  eq(w.weeks[0].start, '2026-07-20', 'and the first is eleven weeks before it');
+  eq(w.weeks[11].n, 2, 'this week counts Monday and today');
+  eq(w.weeks[10].n, 1, 'Sunday belongs to the week before');
+  eq(w.earlier, 1, 'a photo older than the window is outside it, not in its first column');
+  eq(w.undated, 1, 'and an undated photo is counted apart, never drawn');
+  eq(w.weeks.reduce((a, x) => a + x.n, 0), 3, 'so the columns add up to the dated photos inside the window');
+}
+
+/* ---------- 6e. what the extra copies give back ----------------------- */
+{
+  eq(scope.mediaDupBytes([
+    { sha256: 'a', bytes: 300 }, { sha256: 'a', bytes: 100 }, { sha256: 'a', bytes: 200 },
+    { sha256: 'b', bytes: 50 },
+    { sha256: null, bytes: 999 }, { sha256: null, bytes: 999 },
+  ]), 500, 'the cheapest copy of each group is kept, the rest is recoverable; unhashed photos never count');
+}
+
+/* (6f, the storage donut's slices, went with the donut: the owner had
+   the band of storage, recent and housekeeping panels taken off the
+   Media screen, and the helper had no other caller.) */
+
+/* ---------- 6g. a name that says nothing --------------------------- */
+{
+  t.check(scope.mediaBadName('WhatsApp Image 2026-03-14 at 09.12.44.jpeg'), 'a WhatsApp export name says nothing');
+  t.check(scope.mediaBadName('IMG_2041.jpg') && scope.mediaBadName('02bc2ed7-8a03-45c5-9b35.jpg'),
+    'nor does a camera counter or a storage key');
+  t.check(scope.mediaBadName('') && scope.mediaBadName(null), 'an empty name is not a name');
+  t.check(!scope.mediaBadName('Iron sheet 28g stack') && !scope.mediaBadName('Imigongo tile'),
+    'while a name that describes the picture passes, even one starting with "Im"');
+}
+
 /* ---------- 7. sizes read like sizes --------------------------------- */
 {
   eq(scope.mediaFmtBytes(null), null, 'no recorded size formats as nothing, not "0 B"');
@@ -353,6 +423,20 @@ const eqJ = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(w
     'and the check asks the real scan, not a stand-in');
   t.check(/mediaUserLabel\(u\)/.test(detail.slice(guardAt, deleteAt)),
     'and the refusal names what uses the photo');
+
+  /* The selection bar's Delete keeps the same guard, for every picked
+     photo: what is in use is kept and named, and usage is asked again at
+     the moment of deleting rather than trusted from when the dialog
+     opened. */
+  const bulkAt = src.indexOf("document.getElementById('ml_bulk_del').addEventListener");
+  const bulk = src.slice(bulkAt, src.indexOf('\n});', bulkAt));
+  t.check(bulkAt > -1 && /const blocked = rows\.filter\(m=> \(usage\.get\(m\.url\)\|\|\[\]\)\.length\);/.test(bulk)
+    && /if\(mediaUsage\(m\.url\)\.length\) continue;\s*await performMediaDelete\(m\);/.test(bulk),
+    'the bulk delete skips anything in use, and checks again just before each delete');
+  t.check(/await mediaConfirm\(/.test(bulk) && bulk.indexOf('mediaConfirm(') < bulk.indexOf('performMediaDelete'),
+    'and nothing is deleted before the owner confirms');
+  t.check(detail.indexOf('mediaConfirm(') > guardAt && detail.indexOf('mediaConfirm(') < deleteAt,
+    'the record\'s own delete confirms after the in-use refusal and before deleting');
 
   /* The abandoned-form cleanup only ever touches this session's genuinely
      new uploads. */

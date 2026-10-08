@@ -146,8 +146,22 @@ const src = read('index.html');
      saying that everything saves on leaving a field is .ow-ph-help
      behind the "i", where every console screen before it put theirs.
      One fewer screen to police, not one that stopped being policed. */
+  /* 1 -> 0, and the floor becomes a fact. The fastener guide was the
+     last screen on .page-head, and it did not fold its paragraph behind
+     an "i" -- the owner redrew the whole page on a design canvas and had
+     it put on the live site exactly as drawn. Its head is the canvas's:
+     the name, and one line of what the screen is ("Spanner, bolt and
+     inch sizes, matched to the nut and washers that go with them"),
+     which is a sub, and a sub is never folded. The long explanation it
+     used to carry is what the converter, the kit cards and the 3D view
+     now show rather than say.
+
+     So no screen carries the old head, and that is asserted as zero
+     rather than left as a floor nothing can fall below: a .page-head
+     coming back is a screen built on the retired header, which every
+     screen has now left. */
   const heads = src.match(/<div class="page-head">/g) || [];
-  t.check(heads.length >= 1, `the app has ${heads.length} screens carrying a page head`);
+  t.check(heads.length === 0, `no screen still carries the retired page head (${heads.length})`);
 
   // The paragraphs are still IN the markup -- this is a fold, not a
   // deletion. If the copy had been retyped into JS, editing the visible
@@ -180,9 +194,13 @@ const src = read('index.html');
      panes, and those are folded nowhere because the panes are gone. The
      page's own explanation is new, and it is an .ow-ph-help, which is
      the fold this file exists to police. */
+  /* 1 -> 0 with it. Every description that lived in a .page-head now
+     lives in an .ow-ph-help in the markup (the fold below), or was a
+     one-line sub that never folded; none was retyped into the script,
+     which the next check holds. */
   const paras = src.match(/<div class="page-head">[\s\S]{0,900}?<p>[^<]{20,}<\/p>/g) || [];
-  t.check(paras.length >= 1,
-    `${paras.length} of them still hold their description in the markup, where it was written`);
+  t.check(paras.length === 0,
+    `and no description is left in one (${paras.length})`);
 
   t.check(!/pageInstructionText\s*=/.test(src) && !/const PAGE_HELP/.test(src),
     'and none of it was copied into a second list in the script, which would be free to drift');

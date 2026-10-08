@@ -90,14 +90,42 @@ eq(scope.invZoneRows([line('fine', { rule: { coverDays: 30 } })])[0].zone, 'buy'
 
 // The wiring the view depends on.
 const render = extractFunction(src, 'renderInventory', 'index.html');
-t.check(/const zrAll = invView === 'lanes' \? invZoneRows\(allLines\) : null;/.test(render),
-  'the whole shelf is zoned once per render, for the map');
-t.check(/invLanesHTML\(zrAll\.filter\(z=> listed\.has\(z\.key\)\)\)/.test(render),
-  'and the lanes take only the lines the filters left');
-t.check(/renderInvRail\(allLines\)/.test(render) && /renderInvDrawer\(zrAll\)/.test(render),
-  'List keeps its rail; Lanes puts the open line in its place');
-const lanes = extractFunction(src, 'invLanesHTML', 'index.html');
-t.check(/INV_LANE_MAX/.test(lanes) && /more &mdash; in the list/.test(lanes),
-  'a long lane names what it does not show, rather than dropping it');
+/* It read "invView === 'lanes' ? invZoneRows(allLines) : null" -- zoned
+   only for the Lanes view's map. The map is gone (the position band
+   replaced it in BOTH views) and the List now wears every line's state
+   as a column, so the zoning is needed in both: still once per render,
+   still over the whole shelf. */
+t.check(/const zrAll = invZoneRows\(allLines\);/.test(render),
+  'the whole shelf is zoned once per render, for the band, the rows and the lanes');
+/* THE LANES ARE GONE, and with them the three checks that stood here:
+   "invLanesHTML(zrAll.filter(z=> listed.has(z.key)))", "renderInvRail
+   (allLines) && renderInvDrawer(zrAll)", and INV_LANE_MAX naming what a
+   long lane left out.
+
+   WHAT THEY MEANT: the zones are drawn only over the lines the filters
+   left; whichever view is open has its side panel; and nothing a lane
+   cannot fit is silently dropped.
+
+   WHY THEY STOPPED BEING TRUE: the owner asked for one good view, then
+   for the register and the intelligence as two pages of their own, and
+   the canvas they signed off has no lanes, no rail and no drawer. The
+   zones this file pins did not go anywhere -- invZoneRows above is
+   unchanged -- they are drawn on every register row (the outlook pill,
+   the dot on the thumbnail, the one action) and pressed as the pills.
+
+   WHAT THE NEW CHECKS MEAN: the same three rules on the register. A
+   pressed state filters what the filters already left; the table draws
+   the page and nothing but the page, with the pager saying how many
+   there are; and a filtered list that comes up empty names the filter
+   that emptied it. */
+t.check(/const pillBase = lines;/.test(render) && /if\(invZone\) lines = lines\.filter\(l=> invPillMatch\(l, invZone\)\);/.test(render)
+     && render.indexOf('const pillBase = lines;') > render.indexOf('if(supplierFilter) lines = lines.filter('),
+  'and a pressed state takes only the lines the other filters left');
+t.check(/pageLines\.map\(invLineHTML\)/.test(render) && /invPagerHTML\(lines\.length, pageCount, from, pageLines\.length\)/.test(render),
+  'the register draws one page of rows, and the pager says how many there are in all');
+t.check(/hiddenByZero > 0 && !invZone/.test(render) && /show every line/.test(render),
+  'a list emptied by a filter names the filter and offers it back, rather than dropping the lines silently');
+t.check(!/function (invLanesHTML|renderInvRail|renderInvDrawer|invBandHTML)\(/.test(src),
+  'and the lanes, the rail, the drawer and the band are gone from the file, not left behind unused');
 
 process.exit(t.done() ? 1 : 0);

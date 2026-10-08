@@ -353,15 +353,18 @@ if (scope) {
   t.check(/'prices-watch': \{ tab: 'prices-watch'/.test(src),
     'the Manager\'s door keeps the key, which is what the alias is for');
   const panel = extractFunction(src, 'renderPriceWatch', 'index.html');
-  t.check(/listPageSlice\('priceUp', w\.up\)/.test(panel) && /listPageSlice\('priceFile', w\.outOfStep\)/.test(panel),
-    'each section shows the few that matter, with the rest one tap away');
+  /* Redrawn on the owner's canvas as ONE table, paged, rather than four
+     card sections each with its own "show all". The rule is the same:
+     the few that matter on the page, the rest one tap away. */
+  t.check(/const rows = out\.concat\(inStep\);/.test(panel) && /rows\.slice\(\(pwPage - 1\) \* pwPer, pwPage \* pwPer\)/.test(panel),
+    'each page shows the few that matter, with the rest one tap away');
   t.check(/selectPrProduct\(sr\.productId, sr\.variantIdx\)/.test(panel) && /openModal\('priceModal'\)/.test(panel),
     'and an out-of-step row opens the price form — this screen never edits the file itself');
   t.check(!/every supplier is charging what they charged/.test(panel),
     'the empty state no longer reassures — it accounts for what it read');
   t.check(/accountLines/.test(panel) && /Read <b>\$\{r\.linesRead\}<\/b> purchase line/.test(panel),
     'saying how many lines it read and how many pairs they make');
-  t.check(/listPageSlice\('priceSteady', w\.steady\)/.test(panel),
+  t.check(/sr\.silence === 'steady'/.test(panel) && /\$\{who\(sr\)\}/.test(panel),
     'and naming the suppliers who held their price rather than claiming it of everyone');
   t.check(/priceWatchDays:d\.presetPriceWatchDays/.test(src)
     && /presetPriceWatchDays: presets\.priceWatchDays != null \? Number\(presets\.priceWatchDays\) : 180/.test(src),
@@ -381,8 +384,11 @@ if (scope) {
 {
   const panel = extractFunction(src, 'renderPriceWatch', 'index.html');
 
-  t.check(/class="ow-strip/.test(panel) && /'pairs compared'/.test(panel)
-    && /'held their price'/.test(panel) && /'out of step with the file'/.test(panel),
+  /* The strip now draws its numbers: the net effect as a waterfall of
+     each supplier's part, the file against the bills as one chip per
+     pair, and how many pairs could be compared as one square each. */
+  t.check(/class="ow-strip/.test(panel) && /Net effect/.test(panel)
+    && /File vs bills/.test(panel) && /Compared/.test(panel),
     'what the side read is in the layer\'s strip, the one every converted screen uses for it');
   t.check(!/pw_summary/.test(src),
     'and not squeezed into a hint beside the look-back box — that element is gone');
@@ -390,17 +396,15 @@ if (scope) {
   /* The file section first. Everything else here is information; a
      registry row that no longer matches what the shop pays is the one
      thing on the screen silently costing the buying plan its accuracy. */
-  const iFile = panel.indexOf("listPageSlice('priceFile'");
-  const iUp = panel.indexOf("listPageSlice('priceUp'");
-  const iSteady = panel.indexOf("listPageSlice('priceSteady'");
-  t.check(iFile > 0 && iFile < iUp && iUp < iSteady,
+  t.check(/const rows = out\.concat\(inStep\);/.test(panel) && /const out = w\.outOfStep;/.test(panel),
     'the out-of-step rows lead, because they are the ones with something to do about them');
 
-  // The consequence, then the evidence.
-  const iWhat = panel.indexOf('class="pw-what"');
-  const iTrail = panel.indexOf('class="pw-trailline"');
-  t.check(iWhat > 0 && iWhat < iTrail,
-    'a row says what the move is worth before it shows the prices behind it');
+  /* The consequence, then the evidence: the strip opens on what the
+     moves are worth, and the table is ranked by money, not percent. */
+  t.check(panel.indexOf('pw-mt-net') > 0 && panel.indexOf('pw-mt-net') < panel.indexOf('What you paid vs the file'),
+    'the side says what the moves are worth before it shows the prices behind them');
+  t.check(/Math\.abs\(b\.extra\) - Math\.abs\(a\.extra\)/.test(panel),
+    'and ranks the pairs by what the move is worth');
 
   /* Each bucket its own row. A breakdown wants a column of counts that
      can be added up by eye. */
@@ -432,9 +436,12 @@ if (scope) {
   /* On the layer's chip now, with the mark before the word: a held row
      wears the flat bar, a file row the not-equal sign in amber. The
      chip's own names stay. */
+  /* A file row is now a row in the out-of-step group, its registry
+     column the door to the form -- the chip column is left to what the
+     price did, so a held pair says held there and never "+0%". */
   t.check(/<span class="ow-cp pw-move"[^>]*>\$\{ICON_TREND_FLAT\}held<\/span>/.test(panel)
-    && /<span class="ow-cp ow-warn pw-move file"[^>]*>\$\{ICON_NEQ\}file<\/span>/.test(panel),
-    'a held row says held and a file row says file — the chip is passed in, not derived');
+    && /Out of step · file needs updating/.test(panel) && /class="btn btn-ghost ow-sm pw-fix"/.test(panel),
+    'a held row says held and a file row sits in the out-of-step group with its door to the form');
   t.check(/pw-move\$\{sr\.rise > 0 \? ' up' : ' down'\}/.test(panel),
     'and only a moved row carries a percentage, up or down');
 }

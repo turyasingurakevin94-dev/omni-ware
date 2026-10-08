@@ -194,24 +194,19 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
  * cards silently killed the Sort by dropdown.
  */
 {
-  t.check(/priceCardHTML/.test(code), 'the registry is drawn as cards again');
-  t.check(/priceGroupsFor\(rows, sortMode\)\.flatMap\(g=> g\.rows\)/.test(code),
+  /* Redrawn again on the owner's canvas: ONE card per line, its quotes
+     inside it, so a product's competing prices are not merely adjacent
+     but side by side in one table. What must still not go is
+     priceGroupsFor: the cards are its groups, in its order, so the Sort
+     dropdown and "undated last" survive the redraw. The only thing
+     between the groups and the cards is the quick view and the page. */
+  t.check(/prxCardHTML/.test(code), 'the registry is drawn as one card per line');
+  t.check(/const groups = priceGroupsFor\(rows, sortMode\);/.test(code),
     'through priceGroupsFor, so the chosen sort still applies');
-  /* And a product's competing quotes stay consecutive in the grid, which
-     is the one thing the grouped layout had that a plain card grid did
-     not. Flattening the groups keeps it for free.
-
-     This was one expression until the registry started showing a page of
-     twenty-four rather than all 276. The chain is now broken over a
-     binding and a slice, so the check is on the ORDER SURVIVING that
-     journey rather than on its punctuation: the flattened groups go into
-     `ordered`, and the only thing between `ordered` and the cards is the
-     page. Anything else inserted there -- a re-sort, a filter, a second
-     grouping -- fails this. */
-  t.check(/const ordered = priceGroupsFor\(rows, sortMode\)\.flatMap\(g=> g\.rows\);/.test(code),
-    'the flattened groups are what gets rendered');
-  t.check(/listPageSlice\('prices', ordered\)\.map\(r=> priceCardHTML\(r, tokens\)\)/.test(code),
-    'and one product\'s quotes land next to each other rather than scattered by date — nothing but the page sits between grouping and drawing');
+  t.check(/const all = groups\.map\(g=> prxLineAt\(g, prxQty\)\);/.test(code),
+    'every group becomes a line priced at the quantity being bought, in the grouped order');
+  t.check(/wrap\.innerHTML = `<div class="prx-grid">\$\{page\.map\(prxCardHTML\)\.join\(''\)\}<\/div>/.test(code),
+    'and one product\'s quotes land in one card rather than scattered by date — nothing but the page sits between grouping and drawing');
 
   /* .price-card and .price-grid are NOT dead with it. They were worn by
      three screens: this registry, the agent promotions and the
@@ -243,16 +238,21 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
      line can hold different numbers of units, so per-carton figures are
      not comparable and per-unit ones are. A card that dropped it could
      not explain its own "Cheapest" chip. */
-  t.check(/class="ow-fig ow-fig-lg[^"]*"[^>]*>\$\{fmtPriceCompactPack\(r\.wholesale, r\)\}/.test(code),
-    'and the wholesale one is quoted by the pack, as every other screen quotes it');
-  t.check(/class="pr-fig-b"[^>]*>\$\{fmtPriceCompact\(r\.wholesale, r\.unit\)\}/.test(code),
-    'with the base rate kept under it — the rate the ranking is really made at');
+  /* Redrawn per LINE: the card is now a comparison table, so every
+     figure on it is the per-unit rate the ranking is made at -- two
+     cartons can hold different numbers of units, and only per-unit
+     figures read across suppliers -- and the card says which unit, once,
+     beside the headline. The pack price, which is how wholesale is
+     quoted and thought about, is kept where one supplier's wholesale is
+     read on its own: the line popup's wholesale figure. */
+  t.check(/<small> \/\$\{esc\(unit \|\| 'unit'\)\}<\/small>/.test(code),
+    'the card names the unit its figures are per, beside the headline');
+  t.check(/' · ' \+ prxMoney\(x\.at \* r\.packQty\) \+ ' a ' \+ String\(r\.packUnit\)\.toLowerCase\(\)/.test(code),
+    'and each supplier’s wholesale is quoted by the pack in the popup row, where it is read on its own, as every other screen quotes it');
   t.check(/\.pr-fig-b\{[^}]*font-variant-numeric:tabular-nums;/.test(src),
     'tabular too, since it is the figure being read down a column of cards');
-  /* And the delta beside them is per UNIT, which had to start saying so
-     the moment the figure above it became per pack. */
-  t.check(/\+\$\{fmtPriceCompact\(buy - best\)\}<\/span>\$\{r\.unit \? `<span class="prc-unit">\/\$\{esc\(r\.unit\)\}<\/span>` : ''\} vs cheapest/.test(code),
-    'the "vs cheapest" gap names its unit, because it is per unit while the figure above it is per pack');
+  t.check(/<span class="prx-vs">\+\$\{prxMoney\(w - bw\)\}<\/span>/.test(code),
+    'the "vs best" gap is per unit, like every figure in the table it sits in');
 
   // Same gap the Presets page had: a summary that only drew at boot.
   t.check(/if\(tab==='prices'\)\{ refreshPriceDropdowns\(\); triggerPricesRender\(\); \}/.test(code),
