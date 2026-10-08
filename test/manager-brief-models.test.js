@@ -39,11 +39,13 @@ const S = compileScope([
     'mgrBriefForesightPick', 'mgrBriefUnread',
     'mgrBriefHitRate', 'mgrBriefLinkedChains', 'mgrBriefReadingChains', 'mgrBriefChainDepts', 'mgrBriefDecisionList', 'mgrBriefMindTrigger',
     'mgrBriefForesight', 'mgrBriefOrderBy', 'mgrBriefPatterns', 'mgrBriefBlindSpots', 'mgrBriefAskChips', 'mgrBriefDay', 'mgrBriefLastYear', 'mgrBriefOwn',
-    'mgrShortUGX', 'mgrPipsFromRate', 'chaseRate', 'anShiftDate', 'waWeekday', 'managerPips', 'mgrPossessive', 'mgrDept'].map(fn),
+    'mgrShortUGX', 'mgrPipsFromRate', 'chaseRate', 'anShiftDate', 'waWeekday', 'managerPips', 'mgrPossessive', 'mgrDept',
+    'mgrBriefUnusualItems', 'mgrBriefAnsweredKeys', 'mgrBriefWeekTrend', 'mgrBriefExpectedParts', 'mgrBriefDerivedText', 'mgrBriefBoard',
+    'mgrBriefTrendText', 'mgrBriefLamp', 'mgrStripCells'].map(fn),
   ...['MGR_BRIEF_KINDS', 'MGR_BRIEF_ALERT', 'MGR_BRIEF_UNUSUAL_DEPT', 'MGR_BRIEF_FS_ORDER', 'MGR_BRIEF_MONTHS', 'MGR_DEPTS', 'MGR_KIND_DEPT',
-    'TRACK_WINDOWED', 'MGR_WEEKDAYS', 'MGR_BRIEF_BLIND_ORDER', 'MGR_BRIEF_NEEDS'].map(decl),
+    'TRACK_WINDOWED', 'MGR_WEEKDAYS', 'MGR_BRIEF_BLIND_ORDER', 'MGR_BRIEF_NEEDS', 'MGR_WHOLE_SHOP', 'MGR_WAIT_CELLS', 'mgrOf'].map(decl),
 ], {
-  todayISO: () => TODAY, CHASE_WINDOW: 7,
+  todayISO: () => TODAY, CHASE_WINDOW: 7, esc: (x) => String(x),
   daysBetweenISO: (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000),
   fmtShortDate: (d) => {
     const m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -52,7 +54,8 @@ const S = compileScope([
 }, ['mgrBriefKind', 'mgrBriefSignals', 'mgrBriefPlanAdds', 'mgrBriefUpside', 'mgrBriefOver60', 'mgrBriefCashToFree', 'mgrBriefForesightPick', 'mgrBriefUnread',
   'mgrBriefHitRate', 'mgrBriefLinkedChains',
   'mgrBriefReadingChains', 'mgrBriefChainDepts', 'mgrBriefDecisionList', 'mgrBriefMindTrigger', 'mgrBriefForesight', 'mgrBriefOrderBy',
-  'mgrBriefPatterns', 'mgrBriefBlindSpots', 'mgrBriefAskChips', 'mgrBriefDay', 'mgrBriefLastYear', 'mgrPipsFromRate', 'mgrShortUGX']);
+  'mgrBriefPatterns', 'mgrBriefBlindSpots', 'mgrBriefAskChips', 'mgrBriefDay', 'mgrBriefLastYear', 'mgrPipsFromRate', 'mgrShortUGX',
+  'mgrBriefUnusualItems', 'mgrBriefAnsweredKeys', 'mgrBriefWeekTrend', 'mgrBriefExpectedParts', 'mgrBriefDerivedText', 'mgrBriefBoard', 'mgrStripCells']);
 
 /* ---------- 1. the signals the band counts (A1.2) ----------------------- */
 {
@@ -190,23 +193,24 @@ const S = compileScope([
   ];
   /* The time each is given: a chase or a payment 7 days; a restock its
      supplier's lead and two days -- nails 1 + 2 = 3, cement 10 + 2 = 12.
-       Kato, done 2 Sept, weighed [3 Sept, 8 Sept): followed -- a hit.
-       Nails, done 5 Sept, never advised again: [6 Sept, 7 Oct) is 31
-         days, past its 3 -- nothing followed, a miss ("in the 31 days
+     The window starts ON the done day, as the chase record counts it.
+       Kato, done 2 Sept, weighed [2 Sept, 8 Sept): followed -- a hit.
+       Nails, done 5 Sept, never advised again: [5 Sept, 7 Oct) is 32
+         days, past its 3 -- nothing followed, a miss ("in the 32 days
          after").
-       Achieng, done 1 Sept, advised again 20 Sept: [2 Sept, 20 Sept) is
-         18 days, past its 7 -- a miss ("before it was advised again").
-       Ssali, done 11 Sept, advised again 12 Sept: [12 Sept, 12 Sept) is
-         0 days -- cut short, not measurable, never a miss.
-       Steel, done yesterday: [7 Oct, 7 Oct) is 0 of its 7 -- waiting.
-       Cement, done 1 Oct: [2 Oct, 7 Oct) is 5 of its 12 -- waiting.
+       Achieng, done 1 Sept, advised again 20 Sept: [1 Sept, 20 Sept) is
+         19 days, past its 7 -- a miss ("before it was advised again").
+       Ssali, done 11 Sept, advised again 12 Sept: [11 Sept, 12 Sept) is
+         1 day of its 7 -- cut short, not measurable, never a miss.
+       Steel, done yesterday: [6 Oct, 7 Oct) is 1 of its 7 -- waiting.
+       Cement, done 1 Oct: [1 Oct, 7 Oct) is 6 of its 12 -- waiting.
        Y12 (a price), Okot (no day it was done), the store (named nobody)
          and Gone (no longer on file): not measurable.
      k 1 of n 3; not measurable 4 + 1 cut short = 5; waiting 2. */
   const windowOf = (kind, body) => kind === 'buy' ? ({ P019: 1, P001: 10 }[body.subject.key] + 2) : 7;
   const h = S.mgrBriefHitRate(rows, derive, { today: TODAY, windowOf });
   eq([h.k, h.n, h.notMeasurable, h.cutShort, h.waiting], [1, 3, 5, 1, 2], 'k of n over what the books can weigh, the rest named apart');
-  eq(h.misses.map((m) => [m.title, m.days, m.again]), [['Restock nails', 31, false], ['Chase Achieng', 18, true]],
+  eq(h.misses.map((m) => [m.title, m.days, m.again]), [['Restock nails', 32, false], ['Chase Achieng', 19, true]],
     'only a whole window can miss, and each miss says how long it had and whether the advice came round again');
   /* Without windowOf a restock is given a week, as a chase is. */
   const h2 = S.mgrBriefHitRate(rows.slice(13), derive, { today: TODAY });
@@ -214,7 +218,16 @@ const S = compileScope([
   /* The Kato occasion of 1 Sept closes at the next one, 8 Sept. */
   const seen = [];
   S.mgrBriefHitRate(rows.slice(0, 2).concat(rows[7]), (row, until) => { seen.push([row.date, until]); return { happened: true }; }, { today: TODAY });
-  eq(seen, [['2026-09-03', '2026-09-08']], 'a done move is weighed from the day after it was done until the advice came round again');
+  eq(seen, [['2026-09-02', '2026-09-08']], 'a done move is weighed from the day it was done, that day counted, until the advice came round again');
+  /* THE DONE DAY COUNTS (review: Ssali's chase of 3 Sept, paid 2,261,400
+     the same day). The books answer "a payment on 3 Sept", so a window
+     that starts on 3 Sept sees it and one that starts on 4 Sept does
+     not. The chase record (mgrChaseLags, i = 0) and the Record count it
+     as followed; so does the hit rate. */
+  const paidOn3 = (row) => ({ happened: row.date <= '2026-09-03' });
+  const ss = S.mgrBriefHitRate([{ date: '2026-09-03', status: 'done', body: { title: 'Chase Ssali', mkind: 'chase', doneOn: '2026-09-03', subject: { customerId: 'C005' } } }],
+    paidOn3, { today: TODAY });
+  eq([ss.k, ss.n, ss.misses.length], [1, 1, 0], 'a chase paid on the day it was done is followed, not a miss');
 }
 
 /* ---------- 6. chains linked in the books (A4, Q3) ----------------------- */
@@ -391,7 +404,8 @@ const S = compileScope([
      Kato 3 of 4: 1.2302 / 1.9604 = 0.628, × 5 = 3.1 -> 3 pips. */
   eq([p[0].pips, p[1].pips], [4, 3], 'how sure, from the k of n behind each');
   /* Achieng: 2 of 7 is "rarely", so its pips count the 5 of 7 that agree. */
-  t.check(p[3].pips === S.mgrPipsFromRate(5, 7) && p[3].ev === 'my advice, done: 2 of 7 times', 'a pattern is as sure as the count that agrees with it');
+  t.check(p[3].pips === S.mgrPipsFromRate(5, 7) && p[3].ev === 'followed 2 of the 7 times it was done and had its full week',
+    'a pattern is as sure as the count that agrees with it, and says what that count is: done AND given its full week');
   t.check(p[0].ev === 'your chase record: 9 of 10 chases', 'and each names what it was counted from -- the chase record, or the Manager\'s own advice');
   t.check(p.length === 6 && p[4].text === 'Most new customers come back within 30 days'
     && p[5].text === 'A WhatsApp post is usually followed by more of that line sold than the week before',
@@ -464,13 +478,16 @@ const S = compileScope([
   /* As the Debtors aging buckets it, charge by charge, today 7 Oct 2026:
        1 Jul, 100 still due -- 98 days old: in.
        7 Aug, 30 still due -- 61 days old: in.
-       8 Aug, 50 still due -- 60 days old: not over 60.
+       8 Aug, 50 still due -- 60 days old: in, as the aging's "60 to 90
+         days" column starts AT 60 (AGING_BANDS b90: d >= 60).
+       9 Aug, 7 still due -- 59 days old: not in.
        1 Jun, 0.2 still due -- under half a shilling: settled.
        20 Sep, 999 -- 17 days old: not in.
-     100 + 30 = 130. */
+     100 + 30 + 50 = 180. */
   eq(S.mgrBriefOver60([{ date: '2026-07-01', remaining: 100 }, { date: '2026-08-07', remaining: 30 }, { date: '2026-08-08', remaining: 50 },
-    { date: '2026-06-01', remaining: 0.2 }, { date: '2026-09-20', remaining: 999 }, { date: null, remaining: 5 }], TODAY), 130,
-    'only the charges themselves older than 60 days, never the whole balance');
+    { date: '2026-08-09', remaining: 7 },
+    { date: '2026-06-01', remaining: 0.2 }, { date: '2026-09-20', remaining: 999 }, { date: null, remaining: 5 }], TODAY), 180,
+    'only the charges themselves 60 days old or more -- the Debtors aging\'s own boundary -- never the whole balance');
 }
 
 /* ---------- 17. what the next 30 days shows first (A6.*) -------------------- */
@@ -519,6 +536,147 @@ const S = compileScope([
   eq(S.mgrBriefUnread(['the cash ahead', 'supplier of P001', 'supplier of P002', 'posts'], ['the cash ahead', 'risks', 'supplier of ']),
     ['the cash ahead', 'who supplies each line'], 'the readings a box is drawn from that failed, each named once');
   eq(S.mgrBriefUnread([], ['the cash ahead']), [], 'and none when nothing failed');
+}
+
+
+/* ---------- 19. the final review's findings, each pinned ------------------- */
+{
+  /* (a) THE BAND'S UNUSUAL SIGNALS ARE OUT OF THE ORDINARY'S (the pulse).
+     The section lists three findings: till 29 Sep (people), cash in
+     6 Oct (finance), sales 3 Oct (answered there). The old detector's
+     2 Oct cash-out day is not among them, so it is not counted. Answered:
+     3 Oct sales (the section's own key), and an older row that listed
+     28 Sep too for cash_in -> "2026-09-28|cash_in". Unexplained, so
+     counted: till 29 Sep and cash in 6 Oct = 2, in people and finance. */
+  const reading = { judged: true, findings: [
+    { date: '2026-09-29', metric: 'till', sig: { dept: 'people' } },
+    { date: '2026-10-06', metric: 'cash_in', sig: { dept: 'finance' } },
+    { date: '2026-10-03', metric: 'sales', sig: { dept: 'sales' } }] };
+  const items = S.mgrBriefUnusualItems(reading);
+  eq(items, [{ date: '2026-09-29', metric: 'till', dept: 'people' }, { date: '2026-10-06', metric: 'cash_in', dept: 'finance' },
+    { date: '2026-10-03', metric: 'sales', dept: 'sales' }], 'each pulse finding, its day, its row and the department the section files it under');
+  eq(S.mgrBriefUnusualItems({ judged: false, findings: reading.findings }), [], 'a pulse that could not judge (too little history) gives no signal');
+  const answered = S.mgrBriefAnsweredKeys([{ body: { unusualDay: '2026-10-04', metric: 'cash_in', unusualDays: ['2026-09-28'] } }], ['2026-10-03|sales']);
+  eq(answered.sort(), ['2026-09-28|cash_in', '2026-10-03|sales', '2026-10-04|cash_in'],
+    'the answers as the section reads them: each row\'s own day, the days an older row listed, and the section\'s own live answers');
+  const sg = S.mgrBriefSignals({ unusual: items, answered });
+  eq(sg.list.map((x) => x.subject + ' ' + x.dept).sort(), ['u:2026-09-29|till people', 'u:2026-10-06|cash_in finance'],
+    'the band counts exactly the section\'s unanswered findings -- two -- and never the old detector\'s cash-out day');
+  /* The section's own count (mgrNavCountUnusual): findings whose key
+     (mgrUnusualKey: date|metric) has no answer. The same 2. */
+  const navCount = reading.findings.filter((f) => !answered.includes(f.date + '|' + f.metric)).length;
+  t.check(sg.count === navCount && navCount === 2, 'and that is the nav\'s own count of the section\'s findings (2)');
+  const read = extractFunction(src, 'mgrBriefRead', 'index.html');
+  t.check(/mgrPulseReading\(\)/.test(read) && !/mgrUnusualReading\(/.test(read) && /mgrPulseAnswersErr/.test(read),
+    'the Brief reads the pulse, never the old unusual-day detector, and a failed read of the section\'s answers is named');
+
+  /* (b) THE WEEK'S CHANGE IS TO THE SCORE ON SCREEN. Snapshots 30 Sep
+     (39; store 31) .. 6 Oct (43; store 24), live today 40 (store 25).
+     Today 7 Oct; seven days back is 30 Sep, the latest snapshot on or
+     before it: 39. 40 - 39 = +1, never the snapshots' 43 - 39 = +4. Store
+     25 - 31 = -6... against 30 Sep's 31: -6; marketing too thin: none. */
+  const snaps = [['2026-09-29', 38, 30], ['2026-09-30', 39, 31], ['2026-10-01', 40, 29], ['2026-10-02', 41, 28], ['2026-10-03', 41, 27],
+    ['2026-10-04', 42, 26], ['2026-10-05', 42, 25], ['2026-10-06', 43, 24]]
+    .map(([date, score, store]) => ({ date, score, depts: { store: { score: store }, marketing: { score: 50 } } }));
+  const health = { score: 40, byDept: { store: { score: 25 }, marketing: { score: null, thin: true, known: 1 } } };
+  const wt = S.mgrBriefWeekTrend(health, snaps, { change: 4 }, TODAY);
+  eq([wt.change, wt.from, wt.to, wt.byDept.store, wt.byDept.marketing], [1, { date: '2026-09-30', score: 39 }, { date: TODAY, score: 40 }, -6, null],
+    'today\'s 40 less 30 Sep\'s 39 = +1; the store 25 less 31 = -6; a thin department has no change');
+  t.check(S.mgrBriefWeekTrend(health, snaps, null, TODAY) === null, 'and nothing until seven daily snapshots are kept');
+  t.check(S.mgrBriefWeekTrend(health, snaps.slice(2), { change: 1 }, TODAY) === null, 'nor when no snapshot is a week old');
+
+  /* (c) THE STRIP SAYS WHEN NO DAILY READING CAN BE KEPT (law 3). */
+  const cell = (M) => S.mgrStripCells({ health: { score: 37 }, ...M })[0].sub;
+  t.check(cell({ snapWrite: { migration: '0107' } }) === 'trend needs database update 0107 — daily readings are not being kept',
+    'before 0107: the trend names the update it waits on, never "trend after 7 days"');
+  t.check(cell({ snapWrite: { msg: 'permission denied' } }) === 'daily reading not kept — permission denied', 'another refusal is named');
+  t.check(cell({}) === 'trend after 7 days' && cell({ trend: { change: 1 } }) === '+1 this week', 'and the ordinary waits and changes are said as before');
+
+  /* (d) THE HIT RATE'S PROBE: a journal the probe could not read names it. */
+  const hitCell = (hit) => S.mgrStripCells({ hit })[5];
+  t.check(hitCell({ error: 'Failed to fetch' }).sub === 'the journal could not be read', 'a failed journal read: "the journal could not be read", never "no memory"');
+  t.check(/mgrJournalUnreadHTML\(probeErr\)/.test(extractFunction(src, 'mgrPaintBrief', 'index.html')) && /heldNoJournalHTML\(\)/.test(extractFunction(src, 'mgrPaintBrief', 'index.html')),
+    'the plan panel draws the failure, or "held on this device", never "No meeting has been held" for a meeting already held');
+
+  /* (e) THE EXPECTED LOW, ADDED UP (law 4). On Fri 6 Nov the committed
+     line stands at 3,148,424. Receipts expected by then: 10,000,000 +
+     6,417,787 = 16,417,787. A usual day's trading on 2 days: 4,000,000 +
+     4,000,000 = 8,000,000. Dated bills inside the usual paying of
+     suppliers, not taken off twice: 5,029,643. 3,148,424 + 16,417,787 +
+     8,000,000 + 5,029,643 = 32,595,854 -- the expected low. */
+  const walk = { expectedTightest: { date: '2026-11-06', balance: 32595854 }, days: [
+    { date: '2026-11-04', committed: 8178067, events: [{ line: 'expected', kind: 'receipt', amount: 10000000 }, { line: 'expected', kind: 'trading', amount: 4000000 }] },
+    { date: '2026-11-05', committed: 3148424, events: [{ line: 'committed', kind: 'bill', amount: -5029643 }, { line: 'expected', kind: 'chase', amount: 6417787 }] },
+    { date: '2026-11-06', committed: 3148424, events: [{ line: 'expected', kind: 'trading', amount: 4000000 }] },
+    { date: '2026-11-07', committed: 3148424, events: [{ line: 'expected', kind: 'trading', amount: 4000000 }] }] };
+  const x = S.mgrBriefExpectedParts(walk);
+  eq([x.committed, x.receipts, x.trading, x.tradingDays, x.billsBack, x.expected], [3148424, 16417787, 8000000, 2, 5029643, 32595854],
+    'what the expected low is made of, each part from the walk');
+  t.check(x.committed + x.receipts + x.trading + x.billsBack === x.expected, 'and the parts add to the expected low, to the shilling');
+  const detail = extractFunction(src, 'mgrBriefStripDetailHTML', 'index.html');
+  t.check(/w\.method\.expectedTrading/.test(detail) && /mgrBriefExpectedRowsHTML\(mgrBriefExpectedParts\(w\)/.test(detail),
+    'the lowest cell\'s detail states the band\'s whole method -- its receipts and its usual trading -- and draws the parts');
+
+  /* (f) THE LOWEST DAY'S CHAIN DRAWS EVERY KIND, so it adds up to its
+     root. Before Thu 5 Nov: bills 34,840,000 (12), rent 5,000,000 (2),
+     wages 1,980,000 (4), a loan 1,830,000 (1) = 19 payments, 43,650,000. */
+  const ev = (kind, amount) => ({ line: 'committed', kind, amount: -amount });
+  const days = [{ date: '2026-10-08', events: [...Array(12)].map((_, i) => ev('bill', i < 11 ? 2900000 : 2940000)) },
+    { date: '2026-10-25', events: [ev('rent', 2500000), ev('rent', 2500000), ...[...Array(4)].map(() => ev('wage', 495000))] },
+    { date: '2026-11-01', events: [ev('loan', 1830000)] }, { date: '2026-11-05', events: [] }];
+  const lc = S.mgrBriefLinkedChains({ walk: { tightest: { date: '2026-11-05', balance: -1060000 }, days }, floor: { amount: 3000000, source: 'set' } })
+    .find((c) => c.id === 'b:lowest');
+  eq([lc.root.text, lc.root.figure], ['19 dated payments leave before Thu 5 Nov', '43.65m out'], 'the root: 19 payments, 43.65m');
+  eq(lc.nodes.slice(0, -1).map((n) => n.text + ' ' + n.figure), ['Bills you named a day for — 12 payments 34.84m', 'Rent — 2 payments 5m',
+    'Wages — 4 payments 1.98m', 'Loan repayments 1.83m'], 'every kind is drawn, the loan too: 12 + 2 + 4 + 1 = 19 and 34.84 + 5 + 1.98 + 1.83 = 43.65m');
+
+  /* (g) A SETTLE TRIGGER FIRES ONLY ON A DAY STILL AHEAD. PINV-0891 due
+     24 Aug, overdue when the advice was given: nothing has changed. */
+  const st = (d) => S.mgrBriefMindTrigger({ mkind: 'settle' }, { today: TODAY, settle: { datedOn: d } });
+  t.check(!st('2026-08-24').fired && st('2026-08-24').firedText === '', 'a bill overdue since 24 Aug: the trigger has not fired');
+  t.check(st('2026-10-07').fired && st('2026-10-10').fired && /a day named ahead, 10 Oct 2026/.test(st('2026-10-10').firedText),
+    'a day today or ahead: it has, and says the day');
+  const mind = extractFunction(src, 'mgrBriefMindFor', 'index.html');
+  t.check(/x\.dueOn && String\(x\.dueOn\) >= today/.test(mind), 'and the reader hands it only the bills dated today or later');
+
+  /* (h) "SINCE" IS FINISHED WITH ITS DAY. */
+  eq([S.mgrBriefDerivedText('no payment seen since', '2026-10-02', TODAY), S.mgrBriefDerivedText('nothing paid to them since', TODAY, TODAY),
+    S.mgrBriefDerivedText('paid 2.4m on 3 Oct', '2026-10-02', TODAY)],
+  ['no payment seen since 2 Oct 2026', 'nothing paid to them since this morning’s meeting', 'paid 2.4m on 3 Oct'],
+  'a sentence that ends at "since" gets the day the advice was given; any other is left alone');
+
+  /* (i) THE WHOLE SHOP'S LINE: SIDE BY SIDE, AND ITS THIN CHECKS SAID. */
+  const board = S.mgrBriefBoard({ score: 40, passed: 8, known: 20, byDept: { marketing: { score: null, thin: true, passed: 1, known: 1 } } },
+    null, 18, 3);
+  t.check(board[0].line === '18 signals · 3 chains' && !/behind|through|explain/.test(board[0].line),
+    'the whole shop\'s line puts the signals and the chains side by side, never one behind the other');
+  t.check(board[0].thinNote === 'Counts 1 check from Marketing, too thin to score on its own',
+    'and says the 8 of 20 holds a Marketing check the Marketing tile does not score (so 7 of 19 + 1)');
+  const mk = board.find((d) => d.id === 'marketing');
+  t.check(mk.score === null && mk.trend === null && mk.lamp === 'none', 'a thin department: no score, no trend, no lamp -- drawn as "not known"');
+  const paintMap = extractFunction(src, 'mgrPaintMap', 'index.html');
+  t.check(/not known/.test(paintMap) && !/'—'/.test(paintMap), 'the board draws an unknown in words (law 1), never a dash');
+
+  /* (j) THE PLAYS' OWN SIZING, SHOWN APART. */
+  t.check(!/const playSizes = \[\];/.test(read) && /mgrPlayWorth\(p\.sized\)/.test(read) && /MGR_PLAY_MONEY_KIND\[p\.treats\] !== 'profit'/.test(read),
+    'the proposed plays\' own sizing is read (profit plays only), never hard-coded empty');
+  const up = S.mgrBriefUpside({ marginLines: [{ key: 'P1', line: 'x', atStake: 100 }], moves: [], plays: [{ name: 'Bundle', amount: 620000, per: 'a month' }] });
+  t.check(up.total === 100 && up.plays.total === 620000, 'and kept out of the total: 100, the play\'s 620k apart');
+
+  /* (k) THE BLIND SPOT AND FORESIGHT NOTE NAME 0107. */
+  const bt = S.mgrBriefBlindSpots({ terms: { unknownOwing: 6, owed: 1000, needsUpdate: true } }).find((y) => y.id === 'terms');
+  t.check(/until one update \(0107\) is applied/.test(bt.why), 'before 0107, terms "not known" says the shop cannot keep them yet');
+  t.check(/Supplier deadlines need one database update \(0107\)/.test(extractFunction(src, 'mgrBriefPaintForesight', 'index.html')),
+    'and the next 30 days\' footnote says the same');
+
+  /* (l) ON A PHONE THE ROWS START COMPACT. */
+  const openId = (phone, open, first) => compileScope([fn('mgrBriefOpenId')], { mgrBriefOpen: open, mgrBriefFirstOpen: first,
+    mgrBriefPhone: () => phone }, ['mgrBriefOpenId']).mgrBriefOpenId();
+  eq([openId(true, undefined, 'm1'), openId(false, undefined, 'm1'), openId(true, 'm2', 'm1')], [null, 'm1', 'm2'],
+    'phone: no row open until tapped; desk: the first open move; the owner\'s own pick on both');
+
+  /* (m) THE DEAD STOCK IS VALUED AS THE INVENTORY REGISTER VALUES IT. */
+  t.check(/inventoryLineFor\(pts\.product, pts\.variantIdx\)/.test(read), 'a dead line\'s value is the Inventory register\'s (inventoryLineFor)');
 }
 
 process.exit(t.done() ? 1 : 0);

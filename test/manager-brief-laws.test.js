@@ -76,24 +76,41 @@ const all = (re) => { const out = []; let m; const g = new RegExp(re.source, 'g'
 
 /* ---------- 3. the band says only what is true ------------------------ */
 {
-  const S = compileScope([fn('mgrBriefSubHTML'), fn('mgrShortUGX')], {
+  const S = compileScope([fn('mgrBriefSubHTML'), fn('mgrBriefTestedText'), fn('mgrBriefDay'), fn('waWeekday'), fn('mgrShortUGX'),
+    decl('MGR_BRIEF_MONTHS'), decl('MGR_WEEKDAYS')], {
     esc: (s) => String(s),
-  }, ['mgrBriefSubHTML']);
+  }, ['mgrBriefSubHTML', 'mgrBriefTestedText']);
   const base = { signals: { count: 18, depts: 6 }, linked: [1, 2, 3], reading: [1], errors: [],
-    adds: { cash: 15233850, profit: 1279185, loss: 0, saving: 0, sales: 0 } };
+    adds: { cash: 15233850, profit: 1279185, loss: 0, saving: 0, sales: 0 }, floor: { amount: 3000000, source: 'set' } };
   const plan = { verdict: 'x' };
   const say = (extra) => S.mgrBriefSubHTML({ ...base, ...extra }, plan).replace(/<[^>]+>/g, '');
   const plain = say({});
-  t.check(/I connected 18 signals across all six departments; 4 chains run through them — 3 linked in your books, 1 my reading\./.test(plain),
-    'the signals, the departments and the chains, by source (got ' + plain + ')');
+  /* Side by side, never "run through them" (law 5): nothing joins a
+     chain to a signal. */
+  t.check(/I connected 18 signals across all six departments; 4 chains join departments — 3 linked in your books, 1 my reading\./.test(plain),
+    'the signals, the departments and the chains, by source, side by side (got ' + plain + ')');
+  t.check(!/run through|behind|explain/.test(plain), 'and no word says the chains explain the signals');
   t.check(/Today’s plan adds \+1\.28m of profit over 30 days and 15\.23m of cash\./.test(plain), 'what the plan adds, each kind apart');
   t.check(!/tested/.test(plain) && !/corrected/.test(plain), 'no Simulator figure and no correction: neither clause is said');
   t.check(!/tested/.test(say({ tz: { plan: 'nothing changes', lowest: { balance: 1, date: '2026-10-10' }, profitMonth: null } })),
     'a Simulator that played "nothing changes" has not tested the plan, so the band does not say it has');
-  t.check(/I’ve tested the plan against the next 30 days\./.test(say({ tz: { plan: 'my plan', lowest: { balance: 1, date: '2026-10-10' } } })),
-    'a Simulator that played my plan: "tested against the next 30 days"');
-  t.check(/I’ve tested the plan against the next 30 days — and I corrected one of my own earlier calls\./
-    .test(say({ tz: { plan: 'my plan', profitMonth: { lo: 1, hi: 2 } }, corrected: { body: { corrections: [{}] } } })),
+  /* "tested" is never said without what the test found (review). Thu 5 Nov
+     2026: the committed line on my plan at -1,060,000, under the 3m floor
+     and under zero. 8 Oct 2026 is a Thursday; 5 Nov is 28 days on: Thu. */
+  const failed = say({ tz: { plan: 'my plan', lowest: { balance: -1060000, date: '2026-11-05' }, shocksHeld: 0, shocksOf: 3 } });
+  t.check(/I’ve tested the plan against the next 30 days: on it, cash goes as low as −1\.06m on Thu 5 Nov, under your 3m floor and below zero — see the Simulator\./.test(failed),
+    'a plan the test finds under the floor: "tested" says where and when (got ' + failed + ')');
+  const held = say({ tz: { plan: 'my plan', lowest: { balance: 3450000, date: '2026-10-20' }, shocksHeld: 3, shocksOf: 3 } });
+  t.check(/I’ve tested the plan against the next 30 days: at its lowest, 3\.45m on Tue 20 Oct, cash stays above your 3m floor, and it holds 3 of 3 shocks on the expected line\./.test(held),
+    'a plan that holds: said with its lowest and the shocks it holds on the expected line, Q40 (got ' + held + ')');
+  t.check(S.mgrBriefTestedText({ plan: 'my plan', lowest: null, profitMonth: { lo: 1, hi: 2 } }, base.floor) === null
+    && !/tested/.test(say({ tz: { plan: 'my plan', profitMonth: { lo: 1, hi: 2 } } })),
+    'a test with no lowest worked out is not said to have been made');
+  /* Every place the band can say "tested", the result rides with it. */
+  const sub = extractFunction(src, 'mgrBriefSubHTML', 'index.html');
+  t.check(!/tested the plan/.test(sub) && /mgrBriefTestedText\(/.test(sub), 'the band\'s "tested" comes only from mgrBriefTestedText, which always carries the outcome');
+  t.check(/I’ve tested the plan against the next 30 days: at its lowest, 3\.45m on Tue 20 Oct, cash stays above your 3m floor, and it holds 3 of 3 shocks on the expected line\. I corrected one of my own earlier calls\./
+    .test(say({ tz: { plan: 'my plan', lowest: { balance: 3450000, date: '2026-10-20' }, shocksHeld: 3, shocksOf: 3 }, corrected: { body: { corrections: [{}] } } })),
     'both, when both are true');
   t.check(/ I corrected one of my own earlier calls\.$/.test(say({ corrected: { body: { corrections: [{}] } } })) ,
     'a correction alone, when only a review corrected itself');
@@ -138,6 +155,38 @@ const all = (re) => { const out = []; let m; const g = new RegExp(re.source, 'g'
   S.mgrBriefPaintForesight();
   t.check(/Nothing is dated in the next 30 days\./.test(els.managerForesightWrap.innerHTML) && !/could not be read/.test(els.managerForesightWrap.innerHTML),
     'with every reading in, an empty box says so plainly');
+}
+
+
+/* ---------- 5. the band on a morning with no meeting, and with no journal -- */
+{
+  const H = compileScope([fn('mgrHeroHTML')], {
+    mgrBriefModel: null, managerMeetingRunning: false, apMode: null, apWasCutOff: false, managerCommittedPlan: null, assistantBusy: false,
+    mgrBriefSpokeAt: () => null, managerPips: () => null, esc: (s) => String(s), mgrBriefSubHTML: () => '', mgrBriefReadsHTML: () => '',
+    String, Number,
+  }, ['mgrHeroHTML']);
+  const txt = (h) => h.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+  /* Q30, Q41: no meeting yet -- the band says so WITH the control. */
+  const none = H.mgrHeroHTML(null, null, false, null, false);
+  t.check(/No meeting has been held yet today\./.test(txt(none)) && /<button type="button" class="btn btn-accent mgr-b-hold" id="mgrRunBtn">Hold the morning meeting<\/button>/.test(none)
+    && /It spends a little AI credit and never runs itself\./.test(txt(none)) && !/button below/.test(txt(none)),
+    'no meeting yet: the band carries the one accent "Hold the morning meeting", never "from the button below"');
+  t.check(!/mgrRunBtn/.test(H.mgrHeroHTML({ verdict: 'x' }, [], true, null, false)) && !/mgrRunBtn/.test(H.mgrHeroHTML(null, null, null, null, false))
+    && !/mgrRunBtn/.test(H.mgrHeroHTML(null, null, null, 'Failed to fetch', false)),
+    'and never while a plan is in, the journal is still being read, or it could not be read');
+  /* A meeting stamped on this device, with no journal to read it back:
+     held, said as held here -- never "Reading today's meeting…" forever. */
+  const dev = txt(H.mgrHeroHTML(null, null, true, null, true));
+  t.check(/Today’s meeting was held on this device\./.test(dev) && /Its plan is not kept/.test(dev) && !/Reading today/.test(dev),
+    'held on this device with no journal: said as that, never a read that never resolves');
+  const fail = txt(H.mgrHeroHTML(null, null, null, 'Failed to fetch', false));
+  t.check(/The journal could not be read\./.test(fail) && /Failed to fetch/.test(fail) && !/No meeting has been held/.test(fail),
+    'a journal the probe could not read: the band names the failure, never "no meeting"');
+  /* The painter routes a failed probe to that band, and a stamp with no
+     journal to "held". */
+  const paint = extractFunction(src, 'mgrPaintBrief', 'index.html');
+  t.check(/else if\(probeErr\) paintBand\(\{ plan: sessionPlan\(\), moves: null, held: null, unread: probeErr \}\);/.test(paint)
+    && /held: heldGuess \? \(ctx\.notes \? null : true\) : false/.test(paint), 'the painter hands the band the failure, or the device\'s own stamp');
 }
 
 process.exit(t.done() ? 1 : 0);

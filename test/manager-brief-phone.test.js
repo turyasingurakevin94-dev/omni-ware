@@ -38,7 +38,7 @@ const TODAY = '2026-10-07';
 const S = compileScope([
   ...['mgrBriefGoalCheckpoints', 'mgrBriefNext7', 'mgrBriefForesightPick', 'mgrBriefForesight', 'mgrBriefPhoneCells', 'mgrBriefNeeds',
     'mgrBriefThumbPick', 'mgrBriefThumbMove', 'mgrBriefOwn', 'mgrBriefDay', 'mgrTgFig', 'mgrShortUGX', 'anShiftDate', 'waWeekday'].map(fn),
-  ...['MGR_BRIEF_METRIC_DEPT', 'MGR_BRIEF_WEEK_KEEP', 'MGR_BRIEF_PHONE_CELLS', 'MGR_BRIEF_FS_ORDER', 'MGR_BRIEF_MONTHS', 'MGR_WEEKDAYS'].map(decl),
+  ...['MGR_BRIEF_METRIC_DEPT', 'MGR_BRIEF_WEEK_KEEP', 'MGR_BRIEF_PHONE_CELLS', 'MGR_BRIEF_FS_ORDER', 'MGR_BRIEF_MONTHS', 'MGR_WEEKDAYS', 'MGR_BRIEF_NEEDS_SHOWN'].map(decl),
 ], {
   todayISO: () => TODAY,
   fmtShortDate: (d) => {
@@ -172,18 +172,42 @@ const S = compileScope([
   t.check(failed.n === null && failed.atLeast === 2 && failed.failed === true,
     'a count that could not be read (null, as managerOpenAskCount answers a failure): no count, and it says it failed');
   /* The card itself: never gone without a word. */
-  const card = (ctx) => compileScope([fn('mgrBriefNeedsHTML'), fn('mgrBriefNeeds')], {
+  const card = (ctx, extra) => compileScope([fn('mgrBriefNeedsCard'), fn('mgrBriefNeeds'), decl('MGR_BRIEF_NEEDS_SHOWN')], {
     mgrBriefCtx: ctx, mgrBriefIcon: () => '', esc: (x) => String(x), mgrBriefDeptChip: (d) => '[' + d + ']', mgrShortUGX: (v) => String(v),
-    mgrAskModel: () => ({ items }), mgrAskRead: null, Number, Math, String, Array, Object, console,
-  }, ['mgrBriefNeedsHTML']).mgrBriefNeedsHTML().replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-  t.check(/It needs to know/.test(card({ notes: false })) && /does not have yet/.test(card({ notes: false })),
+    mgrAskModel: () => ({ items, today: TODAY }), mgrAskRead: null, mgrBriefWireGo() {},
+    mgrAskCardHTML: (it) => '<div class="mgr-k-q" data-qkey="' + it.question + '">[' + it.dept + '] ' + it.question + ' <button class="mgr-k-an">chip</button></div>',
+    mgrWireAsks() {}, managerNotesProbeError: (extra || {}).probeErr || null, Number, Math, String, Array, Object, console,
+  }, ['mgrBriefNeedsCard']).mgrBriefNeedsCard();
+  const txt = (c) => c.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+  t.check(/It needs to know/.test(txt(card({ notes: false }))) && /does not have yet/.test(txt(card({ notes: false }))),
     'no journal: the card stays and says its questions are kept in a memory this shop does not have yet');
-  t.check(/could not be read — the journal is down/.test(card({ notes: true, st: { error: 'the journal is down' } })),
+  /* A journal whose probe FAILED is not a shop with no memory (law 3). */
+  const down = txt(card({ notes: false }, { probeErr: 'Failed to fetch' }));
+  t.check(/could not be read — Failed to fetch/.test(down) && !/does not have yet/.test(down),
+    'a journal the boot probe could not read: the card names that failure, never "no memory yet" (got ' + down + ')');
+  t.check(/could not be read — the journal is down/.test(txt(card({ notes: true, st: { error: 'the journal is down' } }))),
     'a journal that could not be read: the card names the failure');
-  t.check(/at least 2 · the count could not be read/.test(card({ notes: true, st: { questions: [] }, openAsks: null })),
+  t.check(/at least 2 · the count could not be read/.test(txt(card({ notes: true, st: { questions: [] }, openAsks: null }))),
     'a failed count: "at least 2", and the count named as unread');
-  t.check(/at least 2 · still counting/.test(card({ notes: true, st: { questions: [] } })), 'a count not yet landed: "still counting"');
-  t.check(/8 · only you can find out/.test(card({ notes: true, st: { questions: [] }, openAsks: 7 })), 'the landed count: 7 + 1 = 8');
+  t.check(/at least 2 · still counting/.test(txt(card({ notes: true, st: { questions: [] } }))), 'a count not yet landed: "still counting"');
+  /* THE FIRST TWO, ANSWERED HERE (review, the phone canvas's two cards):
+     the open ones in the section's order -- Kasubi's price (sales), then
+     Roofings' terms (procurement) -- each drawn by the Ask section's own
+     card, answer chips and all; 8 open, so "All 8 questions". */
+  const landed = card({ notes: true, st: { questions: [] }, openAsks: 7 });
+  t.check(/8 · only you can find out/.test(txt(landed)), 'the landed count: 7 + 1 = 8');
+  t.check((landed.html.match(/class="mgr-k-q"/g) || []).length === 2 && /\[sales\] What is Kasubi charging/.test(landed.html)
+    && /\[procurement\] When does Roofings stop supplying\?/.test(landed.html) && (landed.html.match(/mgr-k-an/g) || []).length === 2,
+    'the first two open questions, each the Ask section\'s own card with its answer chips (got ' + txt(landed) + ')');
+  t.check(/All 8 questions →/.test(txt(landed)) && typeof landed.wire === 'function',
+    'and the door to all 8, with the cards wired by the Ask section\'s own wiring');
+  eq(S.mgrBriefNeeds(7, items).shown.map((x) => x.question), ['What is Kasubi charging for G28 this week?', 'When does Roofings stop supplying?'],
+    'two shown, the answered ones passed over');
+  /* Nothing is kept untapped: the card's only writer is the Ask section's
+     wiring (its "Keep this answer"), and the Brief calls no write. */
+  const cardSrc = fn('mgrBriefNeedsCard');
+  t.check(/mgrWireAsks\(/.test(cardSrc) && !/managerAnswerQuestion|sb\.from|apSend|runManagerMeeting/.test(cardSrc),
+    'the Brief writes nothing itself: answers are kept only by the Ask section\'s own "Keep this answer"');
   const none = S.mgrBriefNeeds(0, []);
   t.check(none.n === 0 && none.top === null, 'nothing open: none, and no question invented');
 }
@@ -224,41 +248,83 @@ const S = compileScope([
   const paint = fn('mgrBriefPaintThumb');
   t.check(!/runManagerMeeting|apSend|apOpenPanel|managerSetMoveStatus|goToTab|apMode\s*=/.test(paint),
     'the bar calls no meeting, no assistant, no status write and no door of its own');
-  t.check(/target\.click\(\)/.test(paint) && /\.mgr-b-dc\.mgr-b-x \.mgr-door/.test(paint) && /#mgrRunBtn\.btn-accent/.test(paint) && /#mgrFinishBtn/.test(paint),
-    'it clicks the panel\'s own door, Hold or Finish button');
+  t.check(/target\.click\(\)/.test(paint) && /\.mgr-b-dc\.mgr-b-x \.mgr-door/.test(paint) && /managerBandWrap/.test(paint) && /#mgrRunBtn\.btn-accent/.test(paint) && /#mgrFinishBtn/.test(paint),
+    'it clicks the panel\'s own door or Finish button, or the band\'s Hold button');
   t.check(/addEventListener\('click'/.test(paint) && !/setTimeout|setInterval/.test(paint), 'only on a click, never on a timer');
-  /* The panel's copy steps aside only while the bar carries it. */
-  t.check(/\.mgr-bed-b\.mgr-b-has-thumb #managerPlanWrap #mgrRunBtn\.btn-accent/.test(src) && /\.mgr-bed-b\.mgr-b-has-thumb \.mgr-b-dc\.mgr-b-x \.mgr-door/.test(src),
-    'one accent on the phone: the panel\'s copy is hidden only while the bar shows');
-  /* The header's ask field keeps its go square navy on the Brief, as the
-     canvas draws it, so the bar's is the only oxide control on screen. */
-  t.check(/#tab-manager\.mgr-on-brief #mgrTalkBtn \.mgr-talk-go\{background:var\(--ow-steel-950\);\}/.test(src),
-    'the ask field\'s go square is navy on the Brief');
+  /* The copy steps aside only while the bar carries it: the band's Hold
+     (Q30, Q41) and the panel's door. */
+  t.check(/\.mgr-bed-b\.mgr-b-has-thumb #managerBandWrap \.btn\.mgr-b-hold/.test(src) && /\.mgr-bed-b\.mgr-b-has-thumb \.mgr-b-dc\.mgr-b-x \.mgr-door/.test(src),
+    'one accent on the phone: the band\'s Hold and the panel\'s door are hidden only while the bar shows');
+  /* THE ASK BAR UNDER THE MANAGER (review: the phone canvas puts it right
+     under the hero). The header's field steps aside on the Brief so there
+     is one place to ask, and the bar's go square is navy so the thumb
+     bar's stays the one oxide control. */
+  t.check(/#tab-manager\.mgr-on-brief #mgrTalkBtn\{display:none;\}/.test(src) && /\.mgr-bed-b \.mgr-b-askbar-go\{[^}]*background:var\(--ow-steel-950\)/.test(src),
+    'on the phone the Brief\'s own ask bar stands in for the header\'s field, its go square navy');
+  t.check(/\.mgr-bed-b \.mgr-b-askbar\{display:none;\}/.test(src), 'and on the desk the bar is not drawn: the ask card is the desk\'s');
+  const bandSrc = fn('mgrBriefPaintBand');
+  t.check(/\$\{who\}\$\{mgrBriefAskBarHTML\(\)\}/.test(bandSrc) && /bar\.addEventListener\('click', \(\)=> mgrBriefAsk\(''\)\)/.test(bandSrc),
+    'the bar sits right under the Manager and only a tap opens the shared panel -- with nothing typed, nothing is sent');
 }
 
-/* ---------- 6. the teaser: the Simulator's own count, "not known" ------- */
+/* ---------- 6. the teaser: the Simulator's own figures, said as what they are -- */
 {
   const els = {};
-  const document = { getElementById: (id) => (els[id] = els[id] || { id, innerHTML: '', querySelectorAll: () => [] }) };
-  const make = (M, rows) => compileScope([fn('mgrBriefPaintTeaser'), fn('mgrShortUGX'), fn('mgrBriefDay'), fn('waWeekday'),
-    decl('mgrOf'), decl('MGR_BRIEF_MONTHS'), decl('MGR_WEEKDAYS')], {
-    document, mgrBriefModel: M, mgrBriefRows: rows || [], esc: (s) => String(s), mgrBriefWireGo() {}, mgrBriefNeedsHTML: () => '',
-    Date, Math, Number, String, Array, Object,
-  }, ['mgrBriefPaintTeaser']);
+  const wrapEl = { id: 'managerSimTeaserWrap', innerHTML: '', querySelector: () => null, querySelectorAll: () => [] };
+  const document = { getElementById: (id) => (id === 'managerSimTeaserWrap' ? wrapEl : (els[id] = els[id] || { id, innerHTML: '', querySelectorAll: () => [] })) };
+  const make = (M, rows) => compileScope([fn('mgrBriefPaintTeaser'), fn('mgrBriefTeaserFigs'), fn('mgrShortUGX'), fn('mgrBriefDay'), fn('waWeekday'),
+    fn('mgrBriefLampHTML'), decl('mgrOf'), decl('MGR_BRIEF_MONTHS'), decl('MGR_WEEKDAYS')], {
+    document, mgrBriefModel: M, mgrBriefRows: rows || [], esc: (s) => String(s), mgrBriefWireGo() {},
+    mgrBriefNeedsCard: () => ({ html: '', sig: '', wire: null }), mgrDeptOf: (r) => r.dept || null, mgrTouchesOf: (r) => r.touches || [],
+    Date, Math, Number, String, Array, Object, Set,
+  }, ['mgrBriefPaintTeaser', 'mgrBriefTeaserFigs']);
   make({ tz: null, walk: null }).mgrBriefPaintTeaser();
-  const none = els.managerSimTeaserWrap.innerHTML;
+  const none = wrapEl.innerHTML;
   t.check((none.match(/not known/g) || []).length === 3 && !/>—</.test(none),
     'nothing worked out: profit, lowest cash and the shocks each read "not known"');
-  make({ walk: null, tz: { profitMonth: { lo: 100000, hi: 100000 }, lowest: { balance: -1060000, date: '2026-11-05' },
-    shocksHeld: 0, shocksOf: 3, plan: 'my plan' } }, [{}, {}]).mgrBriefPaintTeaser();
-  const tz = els.managerSimTeaserWrap.innerHTML;
-  t.check(/0<span class="of">of<\/span>3/.test(tz) && /A shock holds when cash stays at or above the floor: the committed line, then the expected band where there is one\./.test(tz)
-    && /3 shocks\. My plan, played out:/.test(tz) && /Holds under shocks/.test(tz) && /2 decisions/.test(tz),
-    'the Simulator\'s own count (0 of 3), its own label and what holding means (mgrSimJudge: committed, then expected where there is one)');
+  /* THE PROFIT IS THE PLAN'S CHANGE AGAINST TODAY (the cross-section
+     contract; review: "+10.17m" in verdigris for a plan that changes
+     nothing). My plan: change {0, 0}, level 10,172,190 a month.
+     -> "+0", "as today", the level "10.17m" unsigned, never the gain colour. */
+  const floor = { amount: 3000000, source: 'set' };
+  const tz0 = { profitMonth: { lo: 0, hi: 0 }, profitLevel: { lo: 10172190, hi: 10172190 }, lowest: { balance: -1060000, date: '2026-11-05' },
+    shocksHeld: 0, shocksOf: 3, plan: 'my plan' };
+  make({ walk: null, floor, tz: tz0 }, [{ dept: 'finance', touches: ['sales'] }, { dept: 'store' }]).mgrBriefPaintTeaser();
+  const tz = wrapEl.innerHTML;
+  t.check(/mgr-b-tz-v mgr-b-fig">\+0</.test(tz) && /as today · <span class="mgr-b-fig">10\.17m<\/span> a month/.test(tz)
+    && !/mgr-b-good/.test(tz) && !/\+10\.17m/.test(tz),
+    'a plan that changes nothing: "+0", "as today", the month\'s 10.17m as a level -- no "+10.17m", no gain colour (got ' + tz.replace(/\s+/g, ' ').slice(0, 900) + ')');
+  /* The lowest: -1,060,000 on Thu 5 Nov, under the 3m floor and zero. A
+     true minus, the loss's colour and the bad lamp, its title naming the
+     floor. */
+  t.check(/mgr-b-tz-v mgr-b-fig mgr-b-bad" title="under your floor of 3m, and below zero"><span class="mgr-b-lamp mgr-b-lamp-bad"[^>]*><\/span>−1\.06m/.test(tz)
+    && /Thu 5 Nov/.test(tz) && !/-1\.06m/.test(tz),
+    'lowest cash under the floor: "−1.06m" with a true minus, in the bad state, its title naming the floor');
+  /* Q40: shocks held on the EXPECTED line; the committed low beside it. */
+  t.check(/0<span class="of">of<\/span>3/.test(tz) && /A shock holds when the expected line stays at or above the floor; the lowest cash beside it is the committed line’s\./.test(tz)
+    && /3 shocks\. My plan, played out:/.test(tz) && /Holds under shocks/.test(tz),
+    'the Simulator\'s own count (0 of 3), held on the expected line (Q40), the committed low beside it');
+  /* The departments, counted from the decisions: finance + sales + store = 3, never the canvas's literal six. */
+  t.check(/2 decisions · 3 departments · 30 days of cash · 3 shocks/.test(tz) && !/6 departments/.test(tz),
+    'the departments the decisions touch, counted (finance, sales, store = 3), never a literal "6 departments"');
+  t.check(!/'6 departments'|6 departments/.test(fn('mgrBriefPaintTeaser')), 'no literal department count in the teaser\'s code');
   t.check(/A shock that could not be tested counts as not held\./.test(tz),
     'while the Simulator hands over no untestable count, the teaser says such a shock counts as not held');
+  /* A gain is green only when even its low end is a gain: +2.13m -> good;
+     -200k to +500k -> neither; -300k -> bad. */
+  const F = (pm) => make({}).mgrBriefTeaserFigs({ profitMonth: pm, profitLevel: { lo: 6830000, hi: 6830000 }, plan: 'my plan' }, null, floor, 0).profit;
+  eq([F({ lo: 2130000, hi: 2130000 }).text, F({ lo: 2130000, hi: 2130000 }).state], ['+2.13m', 'good'], 'a plan that adds 2.13m a month: "+2.13m", the gain colour');
+  eq([F({ lo: -200000, hi: 500000 }).text, F({ lo: -200000, hi: 500000 }).state], ['−200k – +500k', null], 'a range that may go either way: signed both ends, no colour');
+  eq([F({ lo: -300000, hi: -300000 }).text, F({ lo: -300000, hi: -300000 }).state], ['−300k', 'bad'], 'a plan that costs profit: "−300k", the loss colour');
+  /* A Simulator still handing only a level (no profitLevel): the change
+     is not known, and the level is said unsigned. */
+  const old = make({}).mgrBriefTeaserFigs({ profitMonth: { lo: 10172190, hi: 10172190 }, plan: 'my plan' }, null, floor, 0).profit;
+  eq([old.text, old.state, old.level], ['not known', null, '10.17m'], 'a level alone is never shown as a change');
+  /* Above the floor: the good lamp; no floor: no lamp. */
+  const L = (bal, fl) => make({}).mgrBriefTeaserFigs({ lowest: { balance: bal, date: '2026-10-20' } }, null, fl, 0).lowest;
+  eq([L(3450000, floor).state, L(3450000, floor).text, L(3450000, null).state], ['good', '3.45m', 'none'], 'above the floor: good; no floor set: no lamp');
   make({ walk: null, tz: { profitMonth: null, lowest: null, shocksHeld: 1, shocksOf: 3, shocksUntestable: 2, plan: 'nothing changes' } }).mgrBriefPaintTeaser();
-  const ut = els.managerSimTeaserWrap.innerHTML;
+  const ut = wrapEl.innerHTML;
   t.check(/1<span class="of">of<\/span>3/.test(ut) && /<span class="mgr-b-fig">2<\/span> not testable/.test(ut) && !/counts as not held/.test(ut),
     'given the count: 1 of 3 and "2 not testable", as the Simulator\'s own tile says it');
 }
