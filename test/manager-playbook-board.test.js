@@ -606,6 +606,34 @@ function scope(over) {
   eq(S.mgrPlayDays('2026-09-21', TODAY), 16, 'days by the calendar');
 }
 
+/* ---------- 8b. the meeting's sizing of its proposals, for the Brief ---------- */
+{
+  /* Four proposals in the meeting's order:
+       margin       "adds 1,466,051 over 30 days"   -> 1,466,051 over 30 days, profit
+       dead_stock   "about 250,000 a month"         -> 250,000 a month, cash
+       growth       "more builders, no figure"       -> left out (words alone)
+       concentration "sold 23,305,000 in 30 days; adds 400,000 a month"
+                                                     -> 400,000 a month, sales (what the lines already sell is never the prize)
+     and one with no problem the kinds know -> kind null. */
+  const P = compileScope([extractFunction(src, 'mgrPlayProposedSizes', 'index.html'), extractFunction(src, 'mgrPlayWorth', 'index.html'),
+    extractDeclaration(src, 'MGR_PLAY_MONEY_KIND', 'index.html')], {}, ['mgrPlayProposedSizes']);
+  const book = { proposed: [
+    { name: 'Price steel to the rival', treats: 'margin', sized: 'adds 1,466,051 over 30 days' },
+    { name: 'Bundle roofing nails', treats: 'dead_stock', sized: 'about 250,000 a month' },
+    { name: 'New builder accounts', treats: 'growth', sized: 'more builders, no figure' },
+    { name: 'Second buyer for steel', treats: 'concentration', sized: 'the lines sold 23,305,000 in 30 days; adds 400,000 a month' },
+    { name: 'Something else', treats: 'other', sized: 'about 90,000 a month' },
+  ] };
+  eq(P.mgrPlayProposedSizes(book), [
+    { name: 'Price steel to the rival', amount: 1466051, per: 'over 30 days', kind: 'profit' },
+    { name: 'Bundle roofing nails', amount: 250000, per: 'a month', kind: 'cash' },
+    { name: 'Second buyer for steel', amount: 400000, per: 'a month', kind: 'sales' },
+    { name: 'Something else', amount: 90000, per: 'a month', kind: null },
+  ], 'each proposal\'s own sizing, in its kind of money, in the meeting\'s order; words alone left out');
+  eq([P.mgrPlayProposedSizes(null), P.mgrPlayProposedSizes({ error: 'x' }), P.mgrPlayProposedSizes({ proposed: [null] })], [[], [], []],
+    'no book, a failed book or an empty row: nothing, never a made-up figure');
+}
+
 /* ---------- 9. the playbook's judged and proven lanes (managerPlaybook) ---------- */
 (async () => {
   const rows = [

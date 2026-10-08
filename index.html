@@ -144572,6 +144572,20 @@ function mgrPlayWorth(text){
   const pick = found.find(f=> f.gain && !f.sold) || found.find(f=> !f.sold);
   return pick && pick.amount > 0 ? { amount: pick.amount, per: pick.per } : null;
 }
+/* THE MEETING'S OWN SIZING OF ITS PROPOSED PLAYS, for another section
+   (the Brief's profit upside shows the profit ones apart, as the
+   Manager's claim, never added in). Each proposal's words read by
+   mgrPlayWorth, in the money its problem is in (MGR_PLAY_MONEY_KIND).
+   A play sized in words alone has no figure and is left out; the
+   meeting's order is kept. -> [{ name, amount, per, kind }] */
+function mgrPlayProposedSizes(book){
+  const proposed = book && Array.isArray(book.proposed) ? book.proposed : [];
+  return proposed.map(p=>{
+    const w = p ? mgrPlayWorth(p.sized) : null;
+    return w && Number(w.amount) > 0 ? { name: String(p.name || 'A proposed play'), amount: Math.round(Number(w.amount)),
+      per: w.per === 'over 30 days' ? 'over 30 days' : 'a month', kind: MGR_PLAY_MONEY_KIND[p.treats] || null } : null;
+  }).filter(Boolean);
+}
 /* A line key the meeting copied into its prose ("P051::17") is read
    back as the line's own name: the owner never learns the codes. */
 function mgrPlayText(text){
