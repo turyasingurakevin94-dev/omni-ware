@@ -139428,13 +139428,14 @@ function mgrBriefNeedsCard(){
     : m.failed ? (m.atLeast ? `at least <span class="mgr-b-fig">${m.atLeast}</span> · ` : '') + 'the count could not be read'
     : (m.atLeast ? `at least <span class="mgr-b-fig">${m.atLeast}</span> · ` : '') + 'still counting';
   /* ANSWERED HERE, with the Ask section's own card (mgrAskCardHTML) and
-     its own wiring (mgrWireAsks: the chips, the effect line, Found by
+     its own wiring (mgrAskWireCards, the section's public door to
+     mgrWireAsks: the chips, the effect line, Found by
      and Keep this answer) -- so a question reads, answers and is kept
      the same in both places. WAS: this waited on an export hook no
      section defines, so the phone always fell back to one bare
      question. Where the wiring is missing, no chip is drawn that a tap
      could not answer: the first question with the door to the section. */
-  const answerable = typeof mgrWireAsks === 'function';
+  const answerable = typeof mgrAskWireCards === 'function';
   const sig = (answerable ? 'a:' : 't:') + m.shown.map(it=> it.key).join(',') + '|' + (m.n == null ? '' : m.n);
   const door = (label)=> label ? `<button type="button" class="mgr-b-more" data-mgrgo="ask">${label} →</button>` : '';
   if(!answerable){
@@ -139458,7 +139459,7 @@ function mgrBriefNeedsCard(){
   out.wire = (el)=>{
     const root = el.querySelector('.mgr-b-needk');
     if(root){
-      try { mgrWireAsks(root, { ...model, items: m.shown, route: null }); } catch(e){ console.error('The Brief could not wire a question', e); }
+      try { mgrAskWireCards(root, { ...model, items: m.shown, route: null }); } catch(e){ console.error('The Brief could not wire a question', e); }
       /* The Ask section's place filter is that section's: every card here
          stays shown. */
       root.querySelectorAll('.mgr-k-q').forEach(q=>{ q.hidden = false; });
@@ -147789,6 +147790,16 @@ function mgrAskByOf(sel){
   if(v.startsWith('st:')){ const s = find(data.staff, v.slice(3)); return s ? { staffId: s.id, name: s.name || '' } : 'you'; }
   if(v.startsWith('ag:')){ const a = find(data.agents, v.slice(3)); return a ? { agentId: a.id, name: a.name || '' } : 'you'; }
   return 'you';
+}
+/* THE ASK SECTION'S WIRING, FOR ANOTHER SECTION'S CARDS. The Brief's
+   phone card "It needs to know" draws this section's own question cards
+   (mgrAskCardHTML) and hands them here, so the answer chips, the effect
+   line, Found by and "Keep this answer" work exactly as they do on this
+   screen -- one tap keeps an answer the same way in both places, and
+   nothing is kept untapped. A thin public door over mgrWireAsks. */
+function mgrAskWireCards(root, model){
+  if(!root || !model) return;
+  mgrWireAsks(root, model);
 }
 function mgrWireAsks(root, model){
   const byKey = new Map(((model && model.items) || []).map(it=> [it.key, { ...it, today: model.today }]));

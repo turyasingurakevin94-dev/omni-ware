@@ -170,7 +170,7 @@ const blockOf = {};
     `outside the blocks there is only the shared frame${stray.length ? ' — also: ' + stray.join(', ') : ''}`);
   /* And each helper a block holds is called from that block alone, so
      moving it in did not leave a caller outside. */
-  ['mgrPaintMap', 'mgrPaintVerdict', 'mgrHeroHTML', 'mgrProposalHTML', 'mgrTgRowHTML', 'mgrAsksHTML', 'mgrWireAsks',
+  ['mgrPaintMap', 'mgrPaintVerdict', 'mgrHeroHTML', 'mgrProposalHTML', 'mgrTgRowHTML', 'mgrAsksHTML', 'mgrWireAsks', 'mgrAskWireCards',
     'mgrPlayWorth', 'mgrUnusualHTML', 'mgrJournalChartHTML', 'mgrPaintLevers', 'mgrPaintAcctAdvice', 'mgrMoveView']
     .forEach((n) => {
       const def = js.indexOf(`\nfunction ${n}(`);
@@ -178,8 +178,9 @@ const blockOf = {};
       const calls = [...js.matchAll(new RegExp(`[^\\w$.]${n}\\(`, 'g'))].map((m) => m.index).filter((p) => p !== def);
       /* The Ask section's wiring also answers the two questions on the
          Brief's phone card ("It needs to know"), so one tap keeps an
-         answer the same way in both places. */
-      const also = n === 'mgrWireAsks' ? ['Brief'] : [];
+         answer the same way in both places -- through its public door,
+         mgrAskWireCards; mgrWireAsks itself is called from Ask alone. */
+      const also = n === 'mgrAskWireCards' ? ['Brief'] : [];
       const ok = (p) => [owner, ...also].some((b) => b && p > blockOf[b][0] && p < blockOf[b][1]);
       t.check(owner && calls.length && calls.every(ok),
         `${n} lives in the ${owner || '(no)'} block and is called from there${also.length ? ' and the ' + also.join(', ') + ' block' : ''} alone`);
