@@ -108,7 +108,7 @@ const env = (data, over) => ({
   ...(over || {}),
 });
 
-const NAMES = ['cashCommitments', 'cashAhead', 'dueBalance', 'dueName', 'findDue',
+const NAMES = ['cashCommitments', 'cashAhead', 'cashWageDates', 'dueBalance', 'dueName', 'findDue',
   'rentAgreementsFor', 'periodOf', 'periodShift', 'periodEndDate',
   /* Whole, not stubbed, for the same reason the promises are: what the
      line still asks for on a loan and what the loans screen counts as

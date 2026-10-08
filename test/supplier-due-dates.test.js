@@ -95,7 +95,7 @@ const env = (data) => ({
 });
 
 const NAMES = ['billDueDate', 'setBillDueDate', 'clearBillDueDate', 'credOpenInvoices',
-  'credDueRows', 'cashCommitments', 'cashAhead'];
+  'credDueRows', 'cashCommitments', 'cashAhead', 'cashWageDates'];
 const build = (data) => compileScope(
   NAMES.map((n) => extractFunction(src, n, 'index.html')), env(data), NAMES);
 

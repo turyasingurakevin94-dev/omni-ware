@@ -53044,6 +53044,16 @@ function cashCommitments(fromISO, days){
   return out;
 }
 
+/* THE DAYS A MONTH'S WAGES LEAVE, as the cash line dates them: the
+   owner's payday when one is set (the Manager's settings, Q28 -- read
+   through mgrPaydayDates, the one rule every reading of wages dates them
+   by), the payroll's month end when none is. */
+function cashWageDates(period){
+  const payday = typeof mgrPayday === 'function' ? mgrPayday() : null;
+  if(payday && typeof mgrPaydayDates === 'function') return mgrPaydayDates(period, payday, null);
+  return [periodEndDate(period)];
+}
+
 /* The line itself, and the one figure the buying screen needs.
 
    SAFE TO SPEND IS THE LOWEST POINT, not the closing balance and not
@@ -53066,18 +53076,15 @@ function cashAhead(dateISO, days){
   /* Months whose wages FALL DUE inside the window and nobody has raised.
      Named, not guessed at -- the figure is not knowable until the days
      are in. A month falls due on the day its wages leave: the owner's
-     payday when one is set (mgrPaydayDates -- the 10th of November pays
+     payday when one is set (cashWageDates -- the 10th of November pays
      October, so October is not due in a window that ends on the 7th),
      month end when none is. A month whose salaries the line already
      costs from the pay rate IS on the line, so it is not named here. */
   const costedFromRate = new Set(commitments.filter(c=> c.kind === 'wage' && c.fromRate).map(c=> String(c.period)));
-  const paydayNow = typeof mgrPayday === 'function' ? mgrPayday() : null;
-  const paidOn = (period)=> paydayNow && typeof mgrPaydayDates === 'function'
-    ? mgrPaydayDates(period, paydayNow, null) : [periodEndDate(period)];
   const wagesNotRaised = [];
-  for(let i = paydayNow ? -1 : 0; i <= 2; i++){
+  for(let i = -1; i <= 2; i++){
     const period = periodShift(periodOf(from), i);
-    if(!paidOn(period).some(d=> d >= from && d <= to)) continue;
+    if(!cashWageDates(period).some(d=> d >= from && d <= to)) continue;
     if(costedFromRate.has(period)) continue;
     if((data.staff || []).length && !(data.dues || []).some(d=> d.kind === 'wage' && String(d.period) === period))
       wagesNotRaised.push(period);

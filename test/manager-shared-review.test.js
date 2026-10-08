@@ -200,7 +200,7 @@ const snapDone = (async () => {
     periodEndDate: (p) => { const [y, mo] = p.split('-').map(Number); return p + '-' + pad(new Date(Date.UTC(y, mo, 0)).getUTCDate()); },
     waWeekday: (iso) => new Date(iso + 'T00:00:00Z').getUTCDay(),
   };
-  const S = compileScope([fn('cashCommitments'), fn('cashAhead'), fn('mgrPayday'), fn('mgrPaydaySettles'), fn('mgrPaydaySettlesDefault'),
+  const S = compileScope([fn('cashCommitments'), fn('cashAhead'), fn('cashWageDates'), fn('mgrPayday'), fn('mgrPaydaySettles'), fn('mgrPaydaySettlesDefault'),
     fn('mgrPaydayDates'), fn('mgrWageShares'), fn('mgrWageEvents'), fn('mgrPaydayLabel'), fn('mgrOrdinal'), decl('MGR_WEEKDAYS')], env,
   ['cashAhead']);
   const before = S.cashAhead();
