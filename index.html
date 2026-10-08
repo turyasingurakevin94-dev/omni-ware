@@ -13923,6 +13923,16 @@
   .cn{--cn-shelf:#C3CAD7;--cn-shelf-2:#E3E7EE;--cn-settle:#D08A2E;--cn-settle-2:#F6E2C6;
     --cn-billed:var(--ow-sky);--cn-paid:#9FCFB3;--cn-sold:#6B7385;--cn-in:#3C4560;
     --cn-short:#F3C9C4;display:flex;flex-direction:column;gap:var(--ow-sp-16);}
+  .cn-tabs{display:flex;flex-wrap:wrap;gap:var(--ow-sp-4);border-bottom:1px solid var(--ow-rule);margin-top:calc(-1 * var(--ow-sp-8));}
+  .cn-tab{display:inline-flex;align-items:center;gap:var(--ow-sp-8);height:42px;padding:0 var(--ow-sp-12);margin-bottom:-1px;
+    border:0;border-bottom:2px solid transparent;background:none;cursor:pointer;font-family:inherit;
+    font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);color:var(--ow-ink-600);}
+  .cn-tab[aria-selected="true"]{border-bottom-color:var(--ow-steel-950);color:var(--ow-ink-900);font-weight:var(--ow-fw-700);}
+  .cn-tab:focus-visible{outline:2px solid var(--ow-steel-950);outline-offset:-2px;}
+  .cn-tab-n{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 var(--ow-sp-6);
+    border-radius:var(--ow-r-pill);background:var(--ow-rule-soft);color:var(--ow-ink-600);
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-size:var(--ow-t-11);}
+  .cn-tab[aria-selected="true"] .cn-tab-n{background:var(--ow-steel-950);color:var(--ow-paper);}
   .cn-h0{--cn-ink:var(--ow-teal);--cn-soft:var(--ow-teal-soft);}
   .cn-h1{--cn-ink:var(--ow-indigo);--cn-soft:var(--ow-indigo-soft);}
   .cn-h2{--cn-ink:var(--ow-plum);--cn-soft:var(--ow-plum-soft);}
@@ -14304,6 +14314,8 @@
     .cn-agf{flex-wrap:wrap;}
     .cn-agf .btn{min-height:var(--ow-tap);flex:1 1 100%;}
     .cn-tl ol{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .cn-tabs{margin-top:0;}
+    .cn-tab{flex:1 1 auto;justify-content:center;min-height:var(--ow-tap);}
     .cn-ev::before{display:none;}
     .cn-t-pt{display:none;}
     .cn-fl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}
@@ -95635,6 +95647,11 @@ function renderDebMap(){
    those with something to look at, or those settled up. Kept between
    renders so a settle or a return does not throw the owner's view away. */
 let consFilter = 'all';
+/* Which half of the screen is up: the money at a glance, or the
+   consignors to work through. The owner asked for the two apart -- the
+   ledger and its two shelf pictures are a working list, the rest is a
+   reading -- so each gets the whole page instead of sharing one scroll. */
+let consTab = 'overview';
 function renderConsignment(){
   const el = document.getElementById('consign_body');
   if(!el) return;
@@ -96377,14 +96394,23 @@ function renderConsignment(){
       </section>`;
   })();
 
+  const lookCount = views.filter(v=> v.chip && v.chip.c === 'ow-warn').length;
+  const tabsHTML = `<div class="cn-tabs" role="tablist" aria-label="Consignment views">
+      <button type="button" class="cn-tab" role="tab" data-tab="overview" aria-selected="${consTab === 'overview'}">Overview</button>
+      <button type="button" class="cn-tab" role="tab" data-tab="consignors" aria-selected="${consTab === 'consignors'}">Consignors <span class="cn-tab-n">${views.length}</span>${
+        lookCount ? ` <span class="ow-cp ow-warn"><span class="ow-cp-d"></span>${lookCount} need${lookCount === 1 ? 's' : ''} a look</span>` : ''}</button>
+    </div>`;
   el.innerHTML = blocked + `<div class="cn">
-    ${heroHTML}
+    ${tabsHTML}
+    ${consTab === 'overview' ? `${heroHTML}
     ${needsHTML}
-    ${trendHTML}
     <div class="ow-grid">
+      ${trendHTML}
+      <div class="ow-side">${movesHTML}</div>
+    </div>` : `<div class="ow-grid">
       ${listHTML}
-      <div class="ow-side">${quadHTML}${ageHTML}${movesHTML}</div>
-    </div>
+      <div class="ow-side">${quadHTML}${ageHTML}</div>
+    </div>`}
   </div>`;
 
   /* ---- wiring ---- */
@@ -96398,7 +96424,14 @@ function renderConsignment(){
   };
   el.querySelectorAll('.cn-go').forEach(btn=> btn.addEventListener('click', ()=>
     openRow(btn.closest('.cn-q').dataset.id, btn.dataset.act)));
-  el.querySelectorAll('.cn-nyr').forEach(btn=> btn.addEventListener('click', ()=> openRow(btn.dataset.open, null)));
+  el.querySelectorAll('.cn-tab').forEach(btn=> btn.addEventListener('click', ()=>{
+    consTab = btn.dataset.tab; renderConsignment(); }));
+  // A finding lives on the Consignors tab, so the list opens there on it.
+  el.querySelectorAll('.cn-nyr').forEach(btn=> btn.addEventListener('click', ()=>{
+    consTab = 'consignors'; renderConsignment();
+    const again = [...el.querySelectorAll('.cn-q')].find(x=> x.dataset.id === btn.dataset.open);
+    if(again){ again.classList.add('ow-open'); again.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+  }));
   el.querySelectorAll('.cn-fb').forEach(btn=> btn.addEventListener('click', ()=>{
     consFilter = btn.dataset.f; renderConsignment(); }));
   const all = el.querySelector('.cn-all');
