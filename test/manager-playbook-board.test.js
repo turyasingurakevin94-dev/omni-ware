@@ -161,8 +161,8 @@ function scope(over) {
   /* The meeting is handed the pair with its windows, so a week's worth
      is never read as the whole span's sum. */
   const hist = src.slice(src.indexOf('  manager_history: { confirm: false, async run(input){'));
-  t.check(/kind: 'play_moving'[\s\S]{0,600}read_over_days: pl\.progress\.days_read[\s\S]{0,200}per: pl\.progress\.per[\s\S]{0,200}before_span: pl\.progress\.before_span[\s\S]{0,200}since_span: pl\.progress\.since_span/.test(hist),
-    'manager_history’s play_moving carries the windows and "per week" the pair was read over');
+  t.check(/kind: 'play_moving'[\s\S]{0,600}\{ read_days: pl\.progress\.days_read, per: pl\.progress\.per \|\| 'sum' \}/.test(hist),
+    'manager_history’s play_moving says the days its pair was read over, and whether it is a week’s worth or the sum');
 
   /* The books start 18 Sep, after the 7 Sep the before needs. */
   const shortP = { ...steel }; shortP.progress = progressOf({ margin }, '2026-09-18')(shortP, TODAY, [shortP]);

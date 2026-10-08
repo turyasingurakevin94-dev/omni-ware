@@ -164122,12 +164122,7 @@ const ASSISTANT_TOOLS = {
         worth.push({ kind: 'play_moving', name: pl.name, measures: pl.progress.measures,
           before: pl.progress.before, now: pl.progress.now != null ? pl.progress.now : pl.progress.since,
           days_running: pl.progress.days_running,
-          /* The pair's own windows: whole weeks read, and "a week's worth"
-             where the before was stamped the day it started. */
-          ...(pl.progress.days_read != null ? { read_over_days: pl.progress.days_read } : {}),
-          ...(pl.progress.per ? { per: pl.progress.per } : {}),
-          ...(pl.progress.before_span ? { before_span: pl.progress.before_span } : {}),
-          ...(pl.progress.since_span ? { since_span: pl.progress.since_span } : {}),
+          ...(pl.progress.days_read ? { read_days: pl.progress.days_read, per: pl.progress.per || 'sum' } : {}),
           caution: 'what moved alongside it, never what it did' });
       });
     /* A review written since the last meeting: today is the first
