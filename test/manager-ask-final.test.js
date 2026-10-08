@@ -154,6 +154,28 @@ await sec(async () => {
     S.mgrAskTermsFromAnswer({ question: 'What are their terms?', termsAsked: ['stopAtDays', 'creditDays', 'deliveryDays'] }, '30')],
   [{ stopAtDays: 60 }, { stopAtDays: 75 }, null, null, null, null],
   'only the whole answer, a number of days, to a question asking one term');
+  /* A meeting question about money, a date or a discount is not a term.
+     WAS: "How much credit…" asked creditDays and "500" filed 500 days'
+     credit on the supplier; "When will they deliver…" asked
+     deliveryDays and "3" filed 3 days; "stop the 5% discount" hid the
+     stop-age box on the terms card. */
+  const SUP = { kind: 'supplier', id: 'S1' };
+  const HOW_MUCH = 'How much credit will Roto extend us this month?';
+  const WHEN = 'When will Roto deliver the 160 sheets?';
+  eq([S.mgrAskTermsAskedBy({ question: HOW_MUCH }, SUP),
+    S.mgrAskTermsAskedBy({ question: WHEN }, SUP),
+    S.mgrAskTermsAskedBy({ question: 'Will Roto stop the 5% discount?' }, SUP),
+    S.mgrAskTermsAskedBy({ question: 'How many days’ credit do they give, and when will they deliver the sheets?' }, SUP),
+    S.mgrAskTermsAskedBy({ question: 'After how many days do they stop supplying us?' }, SUP)],
+  [[], [], [], ['creditDays'], ['stopAtDays']],
+  'only a clause naming the term and speaking of days asks it: money, a date, a discount ask none');
+  eq([S.mgrAskTermsFromAnswer({ question: HOW_MUCH, termsAsked: S.mgrAskTermsAskedBy({ question: HOW_MUCH }, SUP) }, '500'),
+    S.mgrAskTermsFromAnswer({ question: WHEN, termsAsked: S.mgrAskTermsAskedBy({ question: WHEN }, SUP) }, '3'),
+    S.mgrAskTermsFromAnswer({ question: HOW_MUCH, termsAsked: ['creditDays'] }, '500'),
+    S.mgrAskTermsFromAnswer({ question: WHEN, termsAsked: ['deliveryDays'] }, '3'),
+    S.mgrAskTermsFromAnswer({ question: 'How long does Roto take to deliver?', termsAsked: ['deliveryDays'] }, '3 days')],
+  [null, null, null, null, { deliveryDays: 3 }],
+  '"500" to how much credit and "3" to when they deliver stay words; "3 days" to how long they take is the delivery time');
   const calls = [];
   const K = scope(book(), { credOpenInvoices: BILLS, managerAnswerQuestion: (id, text, o) => { calls.push([id, text, o]); return Promise.resolve({ ok: true }); } });
   const it = K.mgrAskModel([ROTO_STOP], null, TODAY).items.find((x) => x.key === 'q:7');

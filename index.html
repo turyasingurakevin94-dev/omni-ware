@@ -145629,28 +145629,41 @@ function mgrAskTermsAsks(today, opts){
   return out;
 }
 /* THE TERMS A MEETING'S QUESTION ASKS. A question the meeting put about
-   a supplier (not a line's price) that asks when they stop supplying,
-   the credit they give, or how long they take to deliver -- or their
-   terms, all three. The app's own terms card then leaves those out, so
-   the owner is asked once. */
+   a supplier (not a line's price) that asks for a number of days: the
+   age a bill reaches before they stop supplying, the days' credit they
+   give, or how long they take to deliver -- or their terms, all three.
+   A clause (between commas or a question mark) must name the term AND
+   speak of days in it: "How much credit will they extend this month?"
+   asks money, "When will they deliver the 160 sheets?" a date, "Will
+   they stop the 5% discount?" a discount -- none of them a term. The
+   app's own terms card then leaves the terms asked out, so the owner is
+   asked once. */
 function mgrAskTermsAskedBy(b, place){
   const x = b || {};
   if(!place || place.kind !== 'supplier' || place.id == null || x.source === 'terms' || x.productId) return [];
   const q = String(x.question || '');
   if(/\bterms\b/i.test(q)) return ['stopAtDays', 'creditDays', 'deliveryDays'];
+  const days = /\bhow old\b|\bhow many days\b|\bafter how (?:many|long)\b|\bhow long\b|\bdays?\b|\blead time\b/i;
   const out = [];
-  if(/\bstop|\bkeep supplying|\bsupply(?:ing)? (?:us )?past|\bcut (?:us )?off/i.test(q)) out.push('stopAtDays');
-  if(/\bcredit\b/i.test(q)) out.push('creditDays');
-  if(/\bdeliver|\blead time/i.test(q)) out.push('deliveryDays');
-  return out;
+  const add = (k)=>{ if(!out.includes(k)) out.push(k); };
+  q.split(/[,;?]/).forEach(c=>{
+    if(!days.test(c)) return;
+    if(/\bstop|\bkeep supplying|\bsupply(?:ing)? (?:us )?past|\bcut (?:us )?off/i.test(c)) add('stopAtDays');
+    if(/\bcredit\b/i.test(c)) add('creditDays');
+    if(/\bdeliver|\blead time/i.test(c)) add('deliveryDays');
+  });
+  return ['stopAtDays', 'creditDays', 'deliveryDays'].filter(k=> out.includes(k));
 }
 /* An answer that is a number of days and nothing else ("60", "60 days"),
-   to a question asking for one term (how old, how many, how long), is
-   that term -- filed on the supplier's record as a terms answer is.
-   Anything else is kept as the words it is. */
+   to a question asking for one term AS A COUNT OF DAYS (how old, how
+   many days, how long, after how many), is that term -- filed on the
+   supplier's record as a terms answer is. A yes/no, a "when" (a date)
+   or a "how much" (money) is never read as days. Anything else is kept
+   as the words it is. */
 function mgrAskTermsFromAnswer(it, text){
   const asked = (it && it.termsAsked) || [];
-  if(asked.length !== 1 || !/^\s*(how|what|when|after)\b/i.test(String(it.question || ''))) return null;
+  const q = String((it && it.question) || '');
+  if(asked.length !== 1 || !/\bhow old\b|\bhow many days\b|\bafter how (?:many|long)\b|\bhow long\b/i.test(q)) return null;
   const m = String(text || '').match(/^\s*(\d{1,4})\s*(?:days?)?\s*$/i);
   const t = m ? mgrAskTermsClean({ [asked[0]]: m[1] }) : {};
   return Object.keys(t).length ? t : null;
