@@ -372,10 +372,11 @@ if (scope) {
     'editing keeps it on the record');
   t.check(/data\.customers\.push\(\{[\s\S]{0,40}id, name, location, phone, phone2,/.test(code2),
     'and creating a new customer keeps it too');
-  t.check(/phone2: document\.getElementById\('s_phone2'\)\.value\.trim\(\),/.test(code2),
+  // The supplier form shows +256 in front, so it converts back to 07... as it saves.
+  t.check(/phone2: supPhoneSaved\(document\.getElementById\('s_phone2'\)\.value\),/.test(code2),
     'the supplier save keeps it too');
   t.check(/document\.getElementById\('c_phone2'\)\.value = c\.phone2 \|\| '';/.test(code2)
-    && /document\.getElementById\('s_phone2'\)\.value = s\.phone2 \|\| '';/.test(code2),
+    && /document\.getElementById\('s_phone2'\)\.value = supPhoneShown\(s\.phone2\);/.test(code2),
     'and editing either form fills it back');
 
   // Both directions, or the number empties itself on the next reload.
