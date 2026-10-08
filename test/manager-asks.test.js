@@ -585,7 +585,9 @@ const PRODUCTS = [
     data: { products, suppliers: [], staff, agents, customers: [], prices: [], purchaseInvoices: [] },
     todayISO: () => DAY, mgrMemo: (n, f) => f(), fmtUGX: String,
     productVariantLabel: (p, v) => p.name + (v == null ? '' : ' ' + p.variants[v].name),
-    ourCostFor: () => null, ourPriceFor: () => 95000, rivalMarketRows: () => [],
+    /* Wholesale 95,000, retail 97,000: the planned price is wholesale
+       (the contract's word), so "my plan" sits beside the wholesale one. */
+    ourCostFor: () => null, ourPriceFor: (id, v, kind) => (kind === 'retail' ? 97000 : 95000), rivalMarketRows: () => [],
     rivalPriceLatest: () => [], marketVerdict: () => ({ under: [], lift: [] }), rivalNeverChecked: () => [], waSalesByKey: () => new Map(),
     credOpenInvoices: () => [], purchasePlan: () => ({ lines: [] }), supplierLeadTimes: () => [], invCountRecords: () => [],
     mgrConfidence: () => ({ pips: null }), placePin: () => null, mapHomePin: () => null, mapCentrePin: () => null, mapPlaceRows: () => [],
@@ -600,7 +602,8 @@ const PRODUCTS = [
   const model = A.mgrAskModel(qs, null, DAY, { moves });
   const html = A.mgrAsksHTML(model);
   t.check(/my plan <b>93,000<\/b>/.test(html) && /yours <b>95,000<\/b>/.test(html),
-    'the scale draws "my plan" at 93,000 beside our own 95,000 — the figure the meeting planned, never one read from a title');
+    'the scale draws "my plan" at 93,000 beside our own WHOLESALE 95,000 (never the retail 97,000) — the figure the meeting planned, never one read from a title');
+  t.check(!/97,000/.test(html), 'the retail price is not on the plan’s scale: one side, the wholesale one');
   t.check(!/my plan/.test(A.mgrAsksHTML(A.mgrAskModel(qs, null, DAY, { moves: [] }))), 'with no planned price there is no mark');
 
   /* THE DAY: Thursday 8 October is the day after this Wednesday. */

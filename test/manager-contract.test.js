@@ -130,11 +130,15 @@ const DATA = () => ({
   t.check(/stop \(threshold and by_week, the reading that ends it\); cost in shillings; depends_on, the play or move it waits for/.test(meeting),
     'with the reading that would stop it, its cost and what it waits for');
   /* WAS: "...the play or move it waits for. Never say a play caused...".
-     NOW: the aim and the stop as figures come between (Q38). */
-  t.check(/the play or move it waits for; aim\.value and stop\.value: figures on a week’s reading of what it treats; stop\.when: above or below\. Never say a play caused what followed it\./.test(meeting),
-    'a play’s aim and stop are also figures on a week’s reading, the stop above or below (Q38) — and NO CREDIT: a play is never said to have caused what followed it');
-  t.check(/from_question[^']*; price, a price or policy move’s planned unit price for its subject line, whole shillings\./.test(meeting),
-    'a price or policy move carries the price it plans, per unit of its line, in whole shillings (Q38)');
+     NOW: the aim and the stop as figures come between (Q38) -- LEVELS of
+     a week's reading (never a rise), margin in % points, the rest in
+     shillings as every figure in the contract is. */
+  t.check(/the play or move it waits for; aim\.value, stop\.value: a week’s level of what it treats \(margin in % points\); stop\.when: above or below\. Never say a play caused what followed it\./.test(meeting),
+    'a play’s aim and stop are also figures — a week’s level of what it treats, margin in % points — the stop above or below (Q38); and NO CREDIT: a play is never said to have caused what followed it');
+  /* NOW: the planned price is said to be WHOLESALE -- the side the Ask
+     scale draws it on and the Simulator's lever prices it on. */
+  t.check(/from_question[^']*; price, a price\/policy move’s planned wholesale unit price for its line, in shillings\./.test(meeting),
+    'a price or policy move carries the WHOLESALE unit price it plans for its line, in shillings (Q38)');
   t.check(/NEVER propose a play the shop has tried and dropped/.test(meeting),
     'and the rule against re-proposing a dropped play stands');
   /* A PLAY COMES BACK ONLY THROUGH A FIELD THAT COUNTS IT (Q14).
@@ -186,8 +190,13 @@ const DATA = () => ({
     'and a chain with its links, fix and confidence');
   t.check(/"choices":\[\{"label":"","effect":"","confidence_after":4\}\]/.test(meeting) && /"delegate":\{"staff":"","day":"Thu"\}/.test(meeting),
     'and an ask with choices as objects and a delegate with the day they go');
-  t.check(/"hypothesis":\{"if":"","then":"","target":""\},"stop":\{"threshold":"","by_week":2,"value":8,"when":"below"\},"aim":\{"value":10,"unit":"%"\}/.test(meeting),
-    'and a play as a test, its stop and aim as figures');
+  /* WAS: the example's stop carried "value":8,"when":"below" and its aim
+     "unit":"%". NOW: both are said in the prose above (stop.value,
+     stop.when: above or below; margin in % points), and the example
+     keeps the aim's shape -- room for the targets track's sat_load under
+     the 20,000 ceiling. */
+  t.check(/"hypothesis":\{"if":"","then":"","target":""\},"stop":\{"threshold":"","by_week":2\},"aim":\{"value":10\}/.test(meeting),
+    'and a play as a test, its aim as a figure');
 
   /* THE LAWS THAT WERE ALREADY THERE, still there. */
   t.check(/Never forecast: argue only from what is recorded/.test(common), 'never forecast');
@@ -731,6 +740,17 @@ const moves = rowsOf(inserted, 'move').map((r) => r.body);
   same(play({ treats: 'other', aim: { value: 5 }, stop: { value: 5, when: 'below' } }), {}, 'a problem nothing here measures takes no figure at all');
   same(play({ treats: 'growth', aim: { value: '90000000', unit: 'ugx' }, stop: { value: '60000000.7', when: 'below' } }),
     { aimValue: 90000000, stop: { value: 60000001, when: 'below' } }, 'figures written as plain numbers are read, money rounded to the shilling');
+  /* A SHARE IS IN POINTS. 0.1 with no unit could be a tenth of a point
+     or 10% written as a fraction: nothing, never a guess -- the board
+     then counts the owner's verdicts, labelled. With its unit it is what
+     it says; whole points and nothing at all stand. */
+  same(play({ treats: 'margin', aim: { value: 0.1 } }), {}, 'a margin aim of 0.1 with no unit is nothing — a fraction cannot be told from a tenth of a point');
+  same(play({ treats: 'margin', stop: { value: 0.08, when: 'below' } }), {}, 'and so is a margin stop of 0.08');
+  same(play({ treats: 'margin', aim: { value: 0.5, unit: '%' } }), { aimValue: 0.5 }, 'a share labelled % is taken as written');
+  same(play({ treats: 'margin', aim: { value: 12 }, stop: { value: 0, when: 'below' } }), { aimValue: 12, stop: { value: 0, when: 'below' } },
+    'whole points stand with no unit, and a stop at nothing is a figure');
+  same([play({ treats: 'growth', aim: 90000000 }), play({ treats: 'margin', aim: '11' })], [{ aimValue: 90000000 }, { aimValue: 11 }],
+    'an aim written as a bare figure is read as its value');
   same(F.managerMoveFields({ kind: 'policy', subject: { key: 'P1' }, price: 12000 }), { price: 12000 },
     'a line with no variant is a line');
   same(F.managerMoveFields({ kind: 'price', subject: { key: 'P1::5' }, price: 12000 }), {},

@@ -599,11 +599,20 @@ function scope(over) {
     const judged = [{ id: 30, treats: 'growth', verdict: 'worked' }, { id: 31, treats: 'growth', verdict: 'didnt' }];
     const board = Q.mgrPlayBoard({ running: [], proposed: [promo, old], judged }, new Map(), TODAY, []);
     /* 12 finished weeks read 10m … 120m; 90m or more in 4 of them. */
-    eq(board.proposed[0].odds, { k: 4, n: 12, of: 12, basis: 'aim' }, 'EXACT ODDS (Q4): weeks of the last 12 at its aim of 90m or better — 4 of 12');
+    eq(board.proposed[0].odds, { k: 4, n: 12, of: 12, basis: 'aim', aim: 90000000, treats: 'growth' }, 'EXACT ODDS (Q4): weeks of the last 12 at its aim of 90m or better — 4 of 12, the figure and the measure carried for the card to name');
     eq(board.proposed[1].odds, { k: 1, n: 2, basis: 'verdicts' }, 'the play with words only keeps the fallback: your verdicts on sales plays, 1 of 2');
-    const H = compileScope([extractFunction(src, 'mgrPlayOddsHTML', 'index.html')], { esc }, ['mgrPlayOddsHTML']).mgrPlayOddsHTML;
-    t.check(/^4 of 12<small class="mgr-pl-ob">weeks of the last 12 at its aim or better<\/small>$/.test(H(board.proposed[0].odds, 'growth')),
-      'and each says what it counted: weeks at its aim');
+    const H = compileScope(['mgrPlayOddsHTML', 'mgrPlayFig', 'mgrPlayCellFig'].map((f) => extractFunction(src, f, 'index.html')),
+      { esc, MANAGER_PROBLEM_METRICS: METRICS, fmtUGX: (n) => Number(n).toLocaleString('en-US') + ' UGX' }, ['mgrPlayOddsHTML']).mgrPlayOddsHTML;
+    /* WAS: "weeks of the last 12 at its aim or better" -- the figure
+       counted against never appeared, and the words beside it may read a
+       rise ("+150,000 a week"). NOW: the measure and the figure, named. */
+    eq(H(board.proposed[0].odds, 'growth'), '4 of 12<small class="mgr-pl-ob" title="90,000,000 UGX">weeks of the last 12 with sales at 90m or more</small>',
+      'and each says what it counted: weeks with sales at the aim’s own figure, 90m, or more — the full figure in its title');
+    eq(H({ k: 2, n: 12, of: 12, basis: 'aim', aim: 50e6, treats: 'debt' }, 'debt'),
+      '2 of 12<small class="mgr-pl-ob" title="50,000,000 UGX">weeks of the last 12 with money owed to you at 50m or less</small>',
+      'a measure that should fall counts the weeks at the figure or less');
+    eq(H({ k: 5, n: 12, of: 12, basis: 'aim', aim: 10, treats: 'margin' }, 'margin'),
+      '5 of 12<small class="mgr-pl-ob">weeks of the last 12 with the share kept at 10.0% or more</small>', 'a share is named in points, no money title');
     t.check(/^1 of 2<small class="mgr-pl-ob">your verdicts on growth plays<\/small>$/.test(H(board.proposed[1].odds, 'growth')),
       'or the owner’s own verdicts, labelled as such');
 
