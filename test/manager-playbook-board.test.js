@@ -158,6 +158,12 @@ function scope(over) {
   eq(SS.mgrPlayStopCheck(sat, TODAY, [], sr), { rule: { value: 44278813, when: 'atmost', byWeek: 2, from: 'kept' }, met: false, week: 2, value: 48000000 },
     'its stop rule is held to the same stamp: week 2 read 48m, above 44.28m — not met');
 
+  /* The meeting is handed the pair with its windows, so a week's worth
+     is never read as the whole span's sum. */
+  const hist = src.slice(src.indexOf('  manager_history: { confirm: false, async run(input){'));
+  t.check(/kind: 'play_moving'[\s\S]{0,600}read_over_days: pl\.progress\.days_read[\s\S]{0,200}per: pl\.progress\.per[\s\S]{0,200}before_span: pl\.progress\.before_span[\s\S]{0,200}since_span: pl\.progress\.since_span/.test(hist),
+    'manager_history’s play_moving carries the windows and "per week" the pair was read over');
+
   /* The books start 18 Sep, after the 7 Sep the before needs. */
   const shortP = { ...steel }; shortP.progress = progressOf({ margin }, '2026-09-18')(shortP, TODAY, [shortP]);
   const short = S.mgrPlayReads(shortP, TODAY, []);
