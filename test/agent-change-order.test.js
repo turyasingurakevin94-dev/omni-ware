@@ -116,7 +116,7 @@ const agent = read('agent.html');
   t.check(c.agentCancel && c.agentCancel.agreed && c.agentCredit.amount === 200 && c.agentCredit.used.length === 1,
     'agreeing to cancel everything leaves a cancel for the shop to close, with all of it as credit, and keeps the record of credit used');
 
-  t.check(/if\(agentOrderOnHold\(q\)\) return false;/.test(extractFunction(html, 'orderLeaveDraft', 'index.html')),
+  t.check(/agentOrderOnHold\(q\)\) return false;/.test(extractFunction(html, 'orderLeaveDraft', 'index.html')),
     'nothing leaves Quoted by itself while the agent has cancelled or asked');
   t.check(/agentOrderOnHold\(q\)\) return;/.test(html), "and the board's autopilot leaves it alone");
 }

@@ -63028,7 +63028,7 @@ function orderLeaveDraft(q, opts){
   if(!orderDraftReady(q)) return false;
   if(agentOrderNeedsShopCheck(q)) return false;
   if(agentPaymentBlocksPreparing(q)) return false;
-  if(agentOrderOnHold(q)) return false;
+  if(typeof agentOrderOnHold === 'function' && agentOrderOnHold(q)) return false;
   setSavedQuoteStatus(q.id, orderAwaitsGoods(q) ? 'awaiting_goods' : 'preparing', { auto: !force });
   return true;
 }
