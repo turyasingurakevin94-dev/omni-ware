@@ -118,7 +118,7 @@ const agent = read('agent.html');
 
   t.check(/if\(agentOrderOnHold\(q\)\) return false;/.test(extractFunction(html, 'orderLeaveDraft', 'index.html')),
     'nothing leaves Quoted by itself while the agent has cancelled or asked');
-  t.check(/if \(agentOrderOnHold\(q\)\) return;/.test(html), "and the board's autopilot leaves it alone");
+  t.check(/agentOrderOnHold\(q\)\) return;/.test(html), "and the board's autopilot leaves it alone");
 }
 
 /* ---------- 4. a save never puts back what the agent changed --------- */

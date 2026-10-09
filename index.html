@@ -69712,7 +69712,7 @@ function ofHist(q) {
 function ofDressChange(dw, oo, self) {
   var q = ofLiveQ(oo.id), xc = oo.xc;
   (dw.lines || []).forEach(function (ln) { ln.hasXc = false; ln.noXc = true; ln.canDecide = false; ln.xcRow = ''; });
-  dw.hasXc = false; dw.canMsgAgent = false; dw.canClose = false; dw.hasXcValue = false;
+  dw.hasXc = false; dw.canMsgAgent = false; dw.canClose = false; dw.hasXcValue = false; dw.autoNoteTip = '';
   if (!q || !xc || xc.kind === 'edit') return;
   var tone = xc.kind === 'cancel' ? ['#FBE5E2', '#8E2A22'] : ['#FDEEE1', '#7A4A02'];
   dw.hasXc = true;
@@ -69913,7 +69913,7 @@ class OrderFlowBoard extends Component {
     orders.forEach(function (o) {
       var q = ofLiveQ(o.id); if (!q || o.backdated) return;
       // An agent's cancel or open ask holds the order where it is.
-      if (agentOrderOnHold(q)) return;
+      if (typeof agentOrderOnHold === 'function' && agentOrderOnHold(q)) return;
       if (o.stage === 'draft' && typeof orderLeaveDraft === 'function' && orderDraftReady(q) && orderLeaveDraft(q, { auto: true })) {
         moved++; self.feedMove(o, q.status, self.whyFor(o));
       } else if (o.stage === 'awaiting_goods' && !orderAwaitsGoods(q) && !agentPaymentBlocksPreparing(q)) {
