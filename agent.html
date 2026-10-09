@@ -1536,6 +1536,19 @@
   .ax-pbtn.dark{background:var(--navy);color:#fff;}
   .ax-pbtn .icon{width:17px;height:17px;stroke-width:2.2;}
   .ax-prow .ax-earn{padding:5px 8px;}
+
+  /* An order's status as a badge that looks like what it means. */
+  .ax-badge{flex:none;display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px 0 8px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;}
+  .ax-badge .icon{width:14px;height:14px;stroke-width:2.2;}
+  .ax-badge.pay{background:var(--warn);color:#fff;font-family:var(--font-sans);}
+  .ax-badge.go{background:var(--good);color:#fff;}
+  .ax-badge.shop{background:#E3EEFB;color:#1A5A8A;}
+  .ax-badge.done{background:var(--tile);color:var(--ink-faint);}
+  .ax-badge.off{background:var(--bad-bg);color:var(--bad);}
+  .ax-po.needs,.ax-pickrow.needs{position:relative;}
+  .ax-po.needs::before,.ax-pickrow.needs::before{content:'';position:absolute;left:-14px;top:8px;bottom:8px;width:4px;border-radius:0 4px 4px 0;background:var(--warn);}
+  .ax-po .b .e{font-family:var(--font-money);font-size:12px;font-weight:600;color:var(--good);}
+  .ax-mo .s .v-in{font-family:var(--font-money);color:var(--good);}
 </style>
 </head>
 <body class="app-loading">
@@ -4980,15 +4993,31 @@ document.getElementById('ag_move').addEventListener('click', (e)=>{
   openOrderListSheet(staged.filter(x=> x.st.needs).map(x=> x.o), 'Waiting on you');
 });
 
+/* Where an order is, as a badge that looks like what it means wherever
+   an order is listed: amber and carrying the amount when it is waiting on
+   the agent's money, green when it is ready to collect, blue while the
+   shop has it, quiet grey once it is done. An order waiting on you is
+   never just another grey line. */
+const STAGE_BADGE = {
+  checking:{ icon:'clip', cls:'shop' }, queued:{ icon:'check', cls:'shop' }, packing:{ icon:'box', cls:'shop' },
+  out:{ icon:'truck', cls:'shop' }, ready:{ icon:'store', cls:'go' }, pay:{ icon:'cash', cls:'pay' },
+  settle:{ icon:'cash', cls:'pay' }, done:{ icon:'check', cls:'done' }, cancelled:{ icon:'x', cls:'off' },
+};
+function orderBadgeHTML(o, st){
+  st = st || orderStage(o);
+  const b = STAGE_BADGE[st.key] || STAGE_BADGE.checking;
+  const label = st.needs === 'pay' ? `${st.key === 'settle' ? 'Settle' : 'Pay'} ${fmtCompactUGX(orderOwedAmount(o))}`
+    : st.key === 'ready' ? 'Collect' : st.title;
+  return `<span class="ax-badge ${b.cls}">${AX_ICON[b.icon]}${esc(label)}</span>`;
+}
 /* A short list of orders, each a row that opens its track. */
 function orderRowHTML(o){
   const c = agentClients.find(x=> String(x.id) === String(o.agentClientId)) || { id: o.agentClientId, name: 'Client' };
   const st = orderStage(o);
-  const tone = st.tone === 'warn' ? 'warn' : st.tone === 'good' ? 'good' : 'soft';
-  return `<button type="button" class="ax-pickrow" data-track="${esc(o.id)}">
+  return `<button type="button" class="ax-pickrow${st.needs ? ' needs' : ''}" data-track="${esc(o.id)}">
     ${avHTML(c)}
     <span class="b"><span class="nm">${esc(c.name)}</span><span class="s m">${fmtNum(orderTotal(o))} &middot; ${esc(dateShort(orderDate(o)))}</span></span>
-    <span class="ax-pill ${tone}">${esc(st.title)}</span>
+    ${orderBadgeHTML(o, st)}
   </button>`;
 }
 function openOrderListSheet(orders, title){
@@ -7034,7 +7063,7 @@ function openNearSheet(){
       `<span class="ax-pill warn sm">Basket · ${r.count} item${r.count === 1 ? '' : 's'}</span>`, r.profit, `data-basket="${esc(r.key == null ? '' : r.key)}"`)).join('');
     const bonusList = n.bonusRows.map(({ o, bonus })=>{
       const st = orderStage(o);
-      return row(avHTML(orderClient(o)), orderClient(o).name, `<span class="ax-pill ${st.tone === 'warn' ? 'warn' : st.tone === 'good' ? 'good' : 'soft'} sm">${esc(st.title)}</span>`, bonus, `data-track="${esc(o.id)}"`);
+      return row(avHTML(orderClient(o)), orderClient(o).name, orderBadgeHTML(o, st), bonus, `data-track="${esc(o.id)}"`);
     }).join('');
     const nOrders = n.sendRows.length + n.bonusRows.length;
     sheet.el.innerHTML = `
@@ -7627,10 +7656,11 @@ function openClientSheet(clientId){
           const dt = d ? new Date(d+'T00:00:00') : null;
           const e = orderEarnings(o);
           const earned = e.margin + (o.status === 'completed' ? e.bonus : 0);
-          return `<button type="button" class="ax-po" data-track="${esc(o.id)}">
+          const st = orderStage(o);
+          return `<button type="button" class="ax-po${st.needs ? ' needs' : ''}" data-track="${esc(o.id)}">
             <span class="ax-date"><b>${dt ? dt.getDate() : '—'}</b><span>${dt ? esc(dt.toLocaleDateString('en-GB',{month:'short'})) : ''}</span></span>
-            <span class="b"><span class="t">${fmtNum(orderTotal(o))}</span><span class="s">${esc(orderStage(o).title)}</span></span>
-            ${earned ? `<span class="e">${fmtSigned(earned)}</span>` : ''}
+            <span class="b"><span class="t">${fmtNum(orderTotal(o))}</span>${earned ? `<span class="e">${fmtSigned(earned)} yours</span>` : ''}</span>
+            ${orderBadgeHTML(o, st)}
           </button>`;
         }).join('')}</div>` : ''}
         <div style="height:64px;"></div>
@@ -7759,8 +7789,9 @@ function openMoneySheet(month){
           const c = agentClients.find(x=> String(x.id) === String(o.agentClientId));
           const e = orderEarnings(o);
           const counted = o.status === 'completed';
-          return `<button type="button" class="ax-mo ax-po" data-track="${esc(o.id)}"><span class="b"><span class="nm">${esc(c ? c.name : 'Client')}</span><span class="s">${esc(dateShort(orderDate(o)))} · ${esc(orderStage(o).title)}</span></span>
-            <span class="v">${fmtSigned(e.margin + (counted ? e.bonus : 0))}${!counted && e.bonus ? `<small>+${fmtNum(e.bonus)} bonus when done</small>` : ''}</span></button>`;
+          const st = orderStage(o);
+          return `<button type="button" class="ax-mo ax-po${st.needs ? ' needs' : ''}" data-track="${esc(o.id)}"><span class="b"><span class="nm">${esc(c ? c.name : 'Client')}</span><span class="s">${esc(dateShort(orderDate(o)))} · <span class="v-in">${fmtSigned(e.margin + (counted ? e.bonus : 0))}</span>${!counted && e.bonus ? ` +${fmtNum(e.bonus)} bonus when done` : ''}</span></span>
+            ${orderBadgeHTML(o, st)}</button>`;
         }).join('')}</div>` : `<div class="ax-empty">No orders in ${esc(monthName(key))}.</div>`}
       </div>`;
   }

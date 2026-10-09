@@ -177,4 +177,16 @@ const fn = (n) => extractFunction(src, n, 'agent.html');
   t.check(/data-nx-act="\$\{act\}"/.test(fn('playRowHTML')), 'every row has its one button, wired the same way as the large card');
 }
 
+/* ---------- 13. an order waiting on you stands out in every list -------- */
+{
+  const badge = fn('orderBadgeHTML');
+  t.check(/st\.needs === 'pay' \? `\$\{st\.key === 'settle' \? 'Settle' : 'Pay'\} \$\{fmtCompactUGX\(orderOwedAmount\(o\)\)\}`/.test(badge),
+    'an order waiting on payment says "Pay" and how much, not just its stage name');
+  t.check(/pay:\{ icon:'cash', cls:'pay' \}/.test(src) && /\.ax-badge\.pay\{background:var\(--warn\);color:#fff/.test(src),
+    'in solid amber, unlike any other status');
+  for (const f of ['openClientSheet', 'openMoneySheet', 'orderRowHTML']) {
+    t.check(/orderBadgeHTML\(o, st\)/.test(fn(f)) && /st\.needs \? ' needs' : ''/.test(fn(f)), `${f}: shows the badge, and marks the row of an order waiting on you`);
+  }
+}
+
 process.exit(t.done() ? 1 : 0);
