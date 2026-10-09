@@ -240,6 +240,9 @@ Deno.serve(async (req) => {
     const payload = order.payload || {};
     if (payload.originAgentId !== agentId) return json({ error: "This order does not belong to you" }, 403);
     if (payload.agentPaymentStatus === "paid") return json({ error: "This order is already paid" }, 400);
+    // Cancelled by the agent and waiting for the shop to close it: nothing
+    // is owed on an order nobody is going to supply (agent-change-order).
+    if (payload.agentCancel) return json({ error: "You cancelled this order" }, 409);
     // Check first, pay second. While the order is still a draft the shop has
     // not yet said which lines it can supply; taking money for lines it may
     // drop would mean a refund. The shop's confirmation signs the lines as

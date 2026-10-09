@@ -122,7 +122,9 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   t.check(/MOVE_GROUPS\.map/.test(move) && /x\.st\.group === g/.test(move),
     'and sorts them into Sent, Packing and Out by the same orderStage the track reads');
   const live = extractFunction(src, 'liveOrders', 'agent.html');
-  t.check(/!o\.voided && o\.status !== 'completed'/.test(live), 'a live order is any not voided and not finished');
+  /* And not cancelled by the agent either: an order they called off is
+     waiting only for the shop to close it, which is not moving. */
+  t.check(/!o\.voided && !o\.agentCancel && o\.status !== 'completed'/.test(live), 'a live order is any not voided, not cancelled by the agent, and not finished');
   t.check(/if\(key !== 'needs'\)\{ openStageSheet\(key\); return; \}/.test(code),
     'every stage tile opens its own page -- the orders in it and where each one is -- even with only one in it');
 }

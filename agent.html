@@ -684,7 +684,7 @@
   .ax-mk.ok{background:var(--good);color:#fff;}
   .ax-mk.no{background:var(--bad-bg);color:var(--bad);}
   .ax-mk .icon{width:14px;height:14px;stroke-width:3;}
-  .ax-acts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .ax-acts{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px;}
   .ax-act{
     all:unset;box-sizing:border-box;cursor:pointer;height:56px;border-radius:14px;background:var(--panel);border:1px solid var(--line);
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px;font-weight:700;color:var(--ink);
@@ -1549,6 +1549,114 @@
   .ax-po.needs::before,.ax-pickrow.needs::before{content:'';position:absolute;left:-14px;top:8px;bottom:8px;width:4px;border-radius:0 4px 4px 0;background:var(--warn);}
   .ax-po .b .e{font-family:var(--font-money);font-size:12px;font-weight:600;color:var(--good);}
   .ax-mo .s .v-in{font-family:var(--font-money);color:var(--good);}
+
+  /* Changing an order: the six steps with what each span still allows,
+     the sheets that do it, and what was asked, on the order itself. */
+  .ax-chh{display:flex;align-items:flex-start;gap:10px;}
+  .ax-chh .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
+  .ax-chh .k{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--ink-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ax-chh .t{font-size:21px;font-weight:700;letter-spacing:-.01em;}
+  .ax-ed .ax-chh{align-items:center;}
+  .ax-ed .ax-chh .t{font-size:19px;}
+  .ax-zn{display:flex;flex-direction:column;gap:10px;padding:14px 12px 12px;border-radius:16px;background:var(--panel);border:1px solid var(--line);}
+  .ax-zn-r{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;}
+  .ax-zn-s{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;}
+  .ax-zn-s .t{width:100%;height:38px;border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;}
+  .ax-zn-s .t .icon{width:15px;height:15px;stroke-width:2.2;}
+  .ax-zn-s .l{font-size:11px;font-weight:600;color:var(--ink-faint);white-space:nowrap;}
+  .ax-zn-s.free .t{color:var(--good);} .ax-zn-s.ask .t{color:var(--warn);} .ax-zn-s.ret .t{color:var(--ink-faint);}
+  .ax-zn-s.done .t{color:var(--ink-faint);}
+  .ax-zn-s.on .l{font-weight:700;color:var(--ink);}
+  .ax-zn-s.on.free .t{background:var(--good);color:#fff;box-shadow:0 0 0 3px var(--good-bg);}
+  .ax-zn-s.on.ask .t{background:var(--warn);color:#fff;box-shadow:0 0 0 3px var(--warn-bg);}
+  .ax-zn-b{display:flex;flex-direction:column;gap:5px;font-size:11px;font-weight:700;text-align:center;white-space:nowrap;}
+  .ax-zn-b i{display:block;height:3px;border-radius:999px;background:currentColor;opacity:.85;}
+  .ax-zn-b.free{color:var(--good);} .ax-zn-b.ask{color:var(--warn);} .ax-zn-b.ret{color:var(--ink-faint);}
+  .ax-chlist{overflow:hidden;display:flex;flex-direction:column;}
+  .ax-chrow{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:14px;min-height:68px;padding:0 14px;border-bottom:1px solid var(--tile);color:var(--ink);}
+  .ax-chrow:last-child{border-bottom:0;}
+  .ax-chrow .ic{width:40px;height:40px;flex:none;border-radius:12px;background:var(--tile);display:flex;align-items:center;justify-content:center;}
+  .ax-chrow .ic .icon{width:19px;height:19px;}
+  .ax-chrow .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .ax-chrow .t{font-size:15px;font-weight:700;}
+  .ax-chrow .s{font-size:12px;font-weight:600;color:var(--ink-faint);}
+  .ax-chrow > .icon{width:17px;height:17px;color:var(--dash);}
+  .ax-chrow.bad{color:var(--bad);} .ax-chrow.bad .ic{background:var(--bad-bg);}
+  .ax-chfig{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:hidden;}
+  .ax-chfig > span{padding:12px;display:flex;flex-direction:column;gap:3px;}
+  .ax-chfig > span + span{border-left:1px solid var(--tile);}
+  .ax-chfig.plain > span{padding:0;}
+  .ax-chfig.plain > span + span{border-left:0;}
+  .ax-chfig .r{align-items:flex-end;}
+  .ax-chfig .k{font-size:11px;font-weight:600;color:var(--ink-faint);}
+  .ax-chfig .v{font-size:15px;font-weight:600;}
+  .ax-chfig .v.good{color:var(--good);} .ax-chfig .v.bad{color:var(--bad);} .ax-chfig .v.warn{color:var(--warn);}
+  .ax-chfig .v.was{color:var(--ink-faint);text-decoration:line-through;}
+  .ax-chlab{font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--ink-faint);padding:4px 2px 0;}
+  .ax-radio{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:12px;min-height:48px;padding:0 14px;border-bottom:1px solid var(--tile);font-size:14px;font-weight:600;color:var(--ink-soft);}
+  .ax-radio:last-child{border-bottom:0;}
+  .ax-radio i{width:20px;height:20px;flex:none;border-radius:999px;border:2px solid var(--dash);box-sizing:border-box;}
+  .ax-radio[aria-checked="true"]{color:var(--ink);font-weight:700;}
+  .ax-radio[aria-checked="true"] i{border:6px solid var(--navy);}
+  .ax-keep{background:var(--panel);border:1px solid var(--line);color:var(--ink);height:52px;}
+  .ax-kill{background:var(--bad);color:#fff;height:52px;}
+  .ax-gobtn{height:54px;font-size:15px;font-weight:700;}
+  .ax-gobtn .icon{width:17px;height:17px;}
+  .ax-edl{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--tile);}
+  .ax-edl.gone{opacity:.5;}
+  .ax-edl.gone .nm{text-decoration:line-through;}
+  .ax-edl .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;}
+  .ax-edl .nm{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ax-edl .ax-edq{display:flex;align-items:center;gap:6px;white-space:nowrap;font-size:12px;color:var(--ink-faint);}
+  .ax-edl .ax-step{background:var(--panel);border:1px solid var(--line);flex:none;}
+  .ax-edl .ax-step input{width:40px;}
+  .ax-step .n{min-width:34px;text-align:center;font-size:14px;font-weight:600;}
+  .ax-step button:disabled{opacity:.3;cursor:default;}
+  .ax-tag{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 7px;border-radius:6px;font-size:11px;font-weight:700;}
+  .ax-tag .icon{width:11px;height:11px;stroke-width:2.4;}
+  .ax-tag.warn{background:var(--warn-bg);color:var(--warn);}
+  .ax-tag.bad{background:var(--bad-bg);color:var(--bad);}
+  .ax-tag s{color:var(--ink-faint);font-weight:600;}
+  .ax-undo{all:unset;box-sizing:border-box;cursor:pointer;flex:none;height:44px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel);font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;}
+  .ax-undo .icon{width:14px;height:14px;stroke-width:2.2;}
+  .ax-edadd{display:flex;align-items:center;gap:12px;padding:0 14px;min-height:56px;}
+  .ax-edadd .ic{width:40px;height:40px;flex:none;border-radius:10px;border:1.5px dashed var(--dash);display:flex;align-items:center;justify-content:center;}
+  .ax-edadd .ic .icon{width:17px;height:17px;stroke-width:2.4;}
+  .ax-edadd input{all:unset;flex:1;min-width:0;height:44px;font-size:14px;font-weight:700;color:var(--ink);}
+  .ax-edhit{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:12px;min-height:52px;padding:6px 14px;border-top:1px solid var(--tile);}
+  .ax-edhit .nm{flex:1;min-width:0;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ax-edhit > .icon{width:18px;height:18px;color:var(--good);stroke-width:2.4;}
+  .ax-ednote{display:flex;align-items:center;gap:8px;padding:0 4px;font-size:12px;font-weight:600;color:var(--ink-faint);}
+  .ax-ednote .icon{width:15px;height:15px;color:var(--good);}
+  .ax-eddock{position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:14px 16px calc(18px + var(--safe-b));display:flex;flex-direction:column;gap:12px;box-shadow:var(--shadow-up);}
+  .ax-chwhy{display:flex;align-items:center;gap:10px;padding:0 2px;font-size:13px;font-weight:600;color:var(--warn-ink);}
+  .ax-chwhy .icon{width:16px;height:16px;color:var(--warn);stroke-width:2.2;}
+  .ax-seg2 button .icon{width:15px;height:15px;stroke-width:2.2;margin-right:6px;}
+  .ax-newo{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:8px;min-height:44px;padding:0 4px;font-size:13px;font-weight:700;color:var(--ink-soft);}
+  .ax-newo .icon{width:16px;height:16px;}
+  .ax-newo .icon:last-child{margin-left:auto;width:14px;height:14px;}
+  .ax-chmsg{display:flex;flex-direction:column;gap:6px;padding:12px 14px;}
+  .ax-chmsg .ax-chlab{padding:0;font-size:11px;}
+  .ax-chmsg textarea{all:unset;box-sizing:border-box;width:100%;font-size:14px;line-height:1.45;color:var(--ink);white-space:pre-wrap;field-sizing:content;min-height:2.9em;}
+  .ax-chcredit,.ax-askst{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;background:var(--tile);}
+  .ax-chcredit{background:var(--good-bg);}
+  .ax-chcredit .ic,.ax-askst .ic{width:34px;height:34px;flex:none;border-radius:10px;background:var(--panel);display:flex;align-items:center;justify-content:center;}
+  .ax-chcredit .ic{color:var(--good);}
+  .ax-chcredit .ic .icon,.ax-askst .ic .icon{width:17px;height:17px;stroke-width:2.2;}
+  .ax-chcredit .b,.ax-askst .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+  .ax-chcredit .t{font-size:13px;font-weight:700;color:var(--good);}
+  .ax-chcredit .s{font-size:12px;font-weight:600;color:#3F6B57;}
+  .ax-askst .t{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ax-askst .s{font-size:12px;font-weight:600;color:var(--ink-soft);}
+  .ax-askst.wait{background:var(--warn-bg);}
+  .ax-askst.wait .ic{color:var(--warn);}
+  .ax-askst.wait .t{color:var(--warn-ink);}
+  .ax-askst.good{background:var(--good-bg);}
+  .ax-askst.good .ic{color:var(--good);}
+  .ax-askst.good .t{color:var(--good);}
+  .ax-paycredit{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:2px 2px 10px;font-size:13px;font-weight:600;color:var(--good);}
+  .ax-paycredit span{display:flex;align-items:center;gap:6px;}
+  .ax-paycredit .icon{width:15px;height:15px;}
 </style>
 </head>
 <body class="app-loading">
@@ -2744,6 +2852,14 @@ function mapOrderRow(q){
     stageLog: Array.isArray(payload.stageLog) ? payload.stageLog : [],
     payments: Array.isArray(payload.payments) ? payload.payments : [],
     createdAt: payload.createdAt || null,
+    /* The agent changing their mind (agent-change-order): a cancel
+       before paying, an ask once paid and how the shop answered it, the
+       last edit, and the credit an agreed change left. */
+    deliveryAddress: payload.deliveryAddress || null,
+    agentCancel: payload.agentCancel || null,
+    agentChange: payload.agentChange || null,
+    agentEdit: payload.agentEdit || null,
+    agentCredit: payload.agentCredit || null,
   };
 }
 
@@ -4659,6 +4775,7 @@ function orderStage(o){
   const prepay = !!(myAgent && myAgent.paymentTerm === 'prepay');
   const owed = orderOwedAmount(o);
   const pickup = o.deliveryMode === 'agent_pickup';
+  if(o.agentCancel) return { key:'cancelled', title:'Cancelled', sub: o.voided ? 'You cancelled this order' : 'You cancelled it · the shop closes it', group:null, tone:'warn' };
   if(o.voided) return { key:'cancelled', title:'Cancelled', sub:'The shop cancelled this order', group:null, tone:'warn' };
   if(o.status === 'draft'){
     if(!orderShopChecked(o)){
@@ -4815,7 +4932,7 @@ function stepDotsHTML(o, st){
 }
 
 function liveOrders(){
-  return myOrders.filter(o=> !o.voided && o.status !== 'completed');
+  return myOrders.filter(o=> !o.voided && !o.agentCancel && o.status !== 'completed');
 }
 
 /* ================= TODAY ================= */
@@ -7295,7 +7412,10 @@ function openTrackSheet(orderId){
     const ready = st.key === 'ready' ? `<div class="ax-counter"><span class="ic">${AX_ICON.store}</span><span class="b"><span class="k">Show at the counter</span><span class="v">${esc(o.id)}</span></span>
       ${sh && (sh.name || sh.address) ? `<span class="w">${esc(sh.name || '')}${sh.address ? `<br>${esc(sh.address)}` : ''}</span>` : ''}</div>` : '';
     const owed = orderOwedAmount(o);
-    const pay = st.needs === 'pay' ? payPanelHTML(owed, payState) : '';
+    const zone = changeZone(o);
+    const pay = st.needs === 'pay' ? payPanelHTML(owed, payState, agentCreditLeft(o.id)) : '';
+    const asked = askStatusHTML(o);
+    const canChange = zone !== 'none' && !changeAskOpen(o);
     const finish = st.key === 'done' ? `<button type="button" class="btn btn-block ax-finish" data-finish>${AX_ICON.check}Finish</button>` : '';
     sheet.el.innerHTML = `
       <div class="ax-sheet-top">
@@ -7314,6 +7434,7 @@ function openTrackSheet(orderId){
           <div class="${checked ? 'yours' : 'maybe'}"><span class="k">${checked ? 'Yours' : 'Yours, if all confirmed'}</span><span class="v ${yours < 0 ? 'bad' : 'good'}">${fmtSigned(yours)}</span>${droppedYours > 0 ? `<s>${fmtSigned(yours + droppedYours)}</s>` : ''}</div>
         </div>
         ${items}
+        ${asked}
         ${lock}
         <div class="ax-foot">
           ${pay}
@@ -7322,6 +7443,7 @@ function openTrackSheet(orderId){
             <a class="ax-act" ${c.phone ? `href="tel:${esc(c.phone)}"` : 'aria-disabled="true"'} aria-label="Call ${esc(c.name)}">${AX_ICON.phone}Call</a>
             <button type="button" class="ax-act" data-update>${AX_ICON.chat}Update</button>
             <button type="button" class="ax-act" data-receipt>${AX_ICON.share}Receipt</button>
+            ${canChange ? `<button type="button" class="ax-act" data-change aria-label="Change or cancel this order">${AX_ICON.pencil}Change</button>` : ''}
           </div>
         </div>
       </div>`;
@@ -7335,6 +7457,9 @@ function openTrackSheet(orderId){
     if(e.target.closest('[data-receipt]')){ openReceiptSheet(o.id); return; }
     if(e.target.closest('[data-shop]')){ openShopSheet(o.id); return; }
     if(e.target.closest('[data-finish]')){ sheet.close(); openThankYou(o.id); return; }
+    if(e.target.closest('[data-change]')){ openChangeSheet(o.id); return; }
+    if(e.target.closest('[data-withdraw]')){ withdrawAsk(o); return; }
+    if(e.target.closest('[data-credit]')){ payWithCredit(o, payState, paint); return; }
     const prov = e.target.closest('[data-prov]');
     if(prov){ payState.provider = prov.dataset.prov; payState.note = null; paint(); return; }
     if(e.target.closest('[data-pay]')) payOrder(o, payState, paint);
@@ -7345,8 +7470,17 @@ function openTrackSheet(orderId){
   if(shopInfo == null) ensureShopInfo().then(()=>{ if(sheet.el.isConnected) paint(); });
   return sheet;
 }
-function payPanelHTML(owed, ps){
+/* Credit an agreed change left behind is taken first, by itself; the
+   phone or the counter is asked only for what it does not cover. */
+function payPanelHTML(owed, ps, credit){
   const cash = ps.provider === 'cash';
+  const use = Math.min(Number(credit) || 0, owed);
+  const rest = owed - use;
+  const creditRow = use > 0 ? `<div class="ax-paycredit"><span>${AX_ICON.again}Your credit</span><b class="m">−${fmtNum(use)}</b></div>` : '';
+  const btn = rest <= 0
+    ? `<button type="button" class="btn btn-accent btn-block ax-paybtn" data-credit${ps.busy ? ' disabled' : ''}>${ps.busy ? 'Paying…' : `Pay with credit <span class="m">${fmtNum(use)}</span>`}</button>`
+    : cash ? (use > 0 ? `<button type="button" class="btn btn-block ax-paybtn ax-keep" data-credit${ps.busy ? ' disabled' : ''}>Use <span class="m">${fmtNum(use)}</span> credit first</button>` : '')
+    : `<button type="button" class="btn btn-accent btn-block ax-paybtn" data-pay${ps.busy ? ' disabled' : ''}>${ps.busy ? 'Waiting for approval…' : `Pay <span class="m">${fmtNum(rest)}</span>`}</button>`;
   return `<div class="ax-card ax-pay" style="padding:12px;">
     <div class="ax-prov" role="group" aria-label="How you pay">
       <button type="button" data-prov="mtn" aria-pressed="${ps.provider==='mtn'}"><span class="dot mtn"></span>MTN</button>
@@ -7354,12 +7488,29 @@ function payPanelHTML(owed, ps){
       <button type="button" data-prov="cash" aria-pressed="${cash}">${AX_ICON.cash}Cash</button>
     </div>
     <label class="ax-phone"${cash ? ' hidden' : ''}>${AX_ICON.phone}<input type="tel" data-pay-phone value="${esc(ps.phone)}" placeholder="Phone to pay from" aria-label="Phone number to pay from"></label>
-    <div class="ax-paynote${ps.tone ? ' ' + ps.tone : ''}"${ps.note || cash ? '' : ' hidden'}>${ps.note ? ps.note : `${AX_ICON.store}<span>Hand <b class="m">${fmtNum(owed)}</b> to the shop. They mark it paid and packing starts.</span>`}</div>
-    ${cash ? '' : `<button type="button" class="btn btn-accent btn-block ax-paybtn" data-pay${ps.busy ? ' disabled' : ''}>${ps.busy ? 'Waiting for approval…' : `Pay <span class="m">${fmtNum(owed)}</span>`}</button>`}
+    ${creditRow}
+    <div class="ax-paynote${ps.tone ? ' ' + ps.tone : ''}"${ps.note || (cash && rest > 0) ? '' : ' hidden'}>${ps.note ? ps.note : `${AX_ICON.store}<span>Hand <b class="m">${fmtNum(rest)}</b> to the shop. They mark it paid and packing starts.</span>`}</div>
+    ${btn}
   </div>`;
 }
 /* A real MTN/Airtel "request to pay" on the agent's own phone, then a
    short poll until it is approved, refused or times out. */
+async function payWithCredit(order, ps, paint){
+  if(ps.busy) return;
+  ps.busy = true; ps.tone = ''; ps.note = `${AX_ICON.clock}<span>Using your credit…</span>`;
+  paint();
+  try{
+    const res = await useCreditOn(order);
+    ps.busy = false; ps.tone = 'good';
+    ps.note = `${AX_ICON.check}<span>${fmtNum(res.credited)} paid from your credit${res.owed > 0 ? ` · ${fmtNum(res.owed)} still to pay` : ''}</span>`;
+    paint();
+    renderCurrentView();
+  }catch(err){
+    ps.busy = false; ps.tone = 'bad';
+    ps.note = `<span>Could not use your credit: ${esc(err.message||err)}</span>`;
+    paint();
+  }
+}
 async function payOrder(order, ps, paint){
   if(ps.busy) return;
   const phone = String(ps.phone||'').trim();
@@ -7367,6 +7518,16 @@ async function payOrder(order, ps, paint){
   ps.busy = true; ps.tone = ''; ps.note = `${AX_ICON.clock}<span>Sending the payment request…</span>`;
   paint();
   try{
+    // Credit first, by itself: the phone is only asked for the rest.
+    if(agentCreditLeft(order.id) > 0){
+      const used = await useCreditOn(order);
+      if(!(used.owed > 0)){
+        ps.busy = false; ps.tone = 'good';
+        ps.note = `${AX_ICON.check}<span>Paid from your credit</span>`;
+        paint(); renderCurrentView();
+        return;
+      }
+    }
     const res = await callAgentFn('agent-initiate-momo-payment', { orderId: order.id, provider: ps.provider, phone });
     ps.note = `${AX_ICON.phone}<span>Check your phone and approve the payment.</span>`;
     paint();
@@ -8333,6 +8494,358 @@ async function boot(){
   switchTab(openParam ? 'today' : TABS.includes(savedTab) ? savedTab : 'today');
   document.body.classList.remove('app-loading');
 }
+/* ================= CHANGING AN ORDER =================
+   Where the order has got to decides what can still be done to it, and
+   the sheet shows that as the six steps with three spans under them:
+   up to paying it is the agent's to change, once paid (or once the shop
+   has started) they ask the shop, and once it is done it is a return.
+   The server holds the same line (agent-change-order,
+   agent-submit-order's replaceOrderId) -- this only draws it. */
+const CANCEL_REASONS = ['Client changed their mind', 'Wrong items or quantities', 'Taking too long', 'Something else'];
+function changeZone(o){
+  if(!o || o.voided || o.agentCancel || o.status === 'completed') return 'none';
+  if(o.status === 'draft' && o.agentPaymentStatus !== 'paid' && !(Number(o.amountPaid) > 0)) return 'free';
+  return 'ask';
+}
+function changeAskOpen(o){
+  const c = o && o.agentChange;
+  return c && c.state === 'asked' ? c : null;
+}
+// What is left of the credit an order carries -- agent-change-order's
+// own sum, so the screen and the server agree about it.
+function creditLeftOf(o){
+  const c = o && o.agentCredit;
+  if(!c) return 0;
+  const used = (Array.isArray(c.used) ? c.used : []).reduce((s,u)=> s + (Number(u.amount)||0), 0);
+  return Math.max(0, Math.round((Number(c.amount)||0) - used));
+}
+function agentCreditLeft(exceptId){
+  return myOrders.reduce((s,o)=> String(o.id) === String(exceptId) ? s : s + creditLeftOf(o), 0);
+}
+function changeLineKey(x){
+  return `${x && x.productId}::${x == null || x.variantIdx == null ? '' : x.variantIdx}`;
+}
+/* A line bought by the pack moves a pack at a time, and says so. */
+function lineStep(it){
+  const dq = Number(it && it.displayQty);
+  return dq > 0 && it.displayUnit ? Math.max(1, Math.round((Number(it.qty) || 0) / dq)) : 1;
+}
+function itemLabel(it){
+  const ce = catalogEntry(it.productId, it.variantIdx);
+  return `${it.productName || it.name || (ce && ce.name) || 'Item'}${ce && ce.variantLabel ? ` · ${ce.variantLabel}` : ''}`;
+}
+
+/* The six steps, and the three spans under them. */
+function changeZonesHTML(o){
+  const steps = orderSteps(o);
+  const st = orderStage(o);
+  const here = orderStepIndex(o, st);
+  const prepay = !!(myAgent && myAgent.paymentTerm === 'prepay');
+  const spans = prepay ? [3, 2, 1] : [2, 2, 2];
+  const kinds = ['free', 'ask', 'ret'];
+  const zoneOf = (i)=> i < spans[0] ? 'free' : i < spans[0] + spans[1] ? 'ask' : 'ret';
+  const tiles = steps.map((s, i)=>{
+    const on = i === here, done = i < here;
+    return `<span class="ax-zn-s${on ? ' on' : ''}${done ? ' done' : ''} ${zoneOf(i)}"><span class="t">${done ? AX_ICON.check : AX_ICON[s.icon] || AX_ICON.check}</span><span class="l">${esc(s.label)}</span></span>`;
+  }).join('');
+  const words = { free:'Change freely', ask:'Ask the shop', ret:'Return' };
+  const brackets = kinds.map((k, i)=> `<span class="ax-zn-b ${k}" style="grid-column:span ${spans[i]};"><i></i>${words[k]}</span>`).join('');
+  return `<div class="ax-zn"><div class="ax-zn-r">${tiles}</div><div class="ax-zn-r">${brackets}</div></div>`;
+}
+function changeHeadHTML(o, title){
+  const c = orderClient(o);
+  return `<div class="ax-chh"><span class="b"><span class="k">ORDER #${esc(o.id)} · ${esc(String(c.name || '').toUpperCase())}</span><span class="t">${esc(title)}</span></span>
+    <button type="button" class="ax-iconbtn" data-close aria-label="Close">${AX_ICON.x}</button></div>`;
+}
+
+/* The way in, from the order's Change button. Before paying there are
+   two things to do; after, there is only asking. */
+function openChangeSheet(orderId){
+  const o = myOrders.find(x=> String(x.id) === String(orderId));
+  if(!o) return null;
+  const zone = changeZone(o);
+  if(zone === 'ask') return openAskSheet(o.id);
+  if(zone !== 'free'){ toast('This order can no longer be changed'); return null; }
+  const sheet = openSheet(`<button type="button" class="ax-grab" data-close aria-label="Close"></button>
+    <div class="ax-sheet-pad">
+      ${changeHeadHTML(o, 'Change this order')}
+      ${changeZonesHTML(o)}
+      <div class="ax-card ax-chlist">
+        <button type="button" class="ax-chrow" data-edit><span class="ic">${AX_ICON.pencil}</span>
+          <span class="b"><span class="t">Edit items</span><span class="s">Add, remove or change quantities</span></span>${AX_ICON.chevR}</button>
+        <button type="button" class="ax-chrow bad" data-cancel><span class="ic">${AX_ICON.x}</span>
+          <span class="b"><span class="t">Cancel order</span><span class="s">Nothing is paid yet, so there is no charge</span></span>${AX_ICON.chevR}</button>
+      </div>
+    </div>`, { label: 'Change this order', white: true, kind: 'change' });
+  sheet.el.addEventListener('click', (e)=>{
+    if(e.target.closest('[data-edit]')){ sheet.close(); openEditItemsSheet(o.id); }
+    else if(e.target.closest('[data-cancel]')){ sheet.close(); openCancelSheet(o.id); }
+  });
+  return sheet;
+}
+
+/* ---- cancel, before paying ---- */
+function openCancelSheet(orderId){
+  const o = myOrders.find(x=> String(x.id) === String(orderId));
+  if(!o) return null;
+  const e = orderEarnings(o);
+  let reason = CANCEL_REASONS[0], busy = false;
+  const sheet = openSheet('', { label: 'Cancel this order', white: true, kind: 'change' });
+  const paint = ()=>{
+    sheet.el.innerHTML = `<button type="button" class="ax-grab" data-close aria-label="Close"></button>
+      <div class="ax-sheet-pad">
+        ${changeHeadHTML(o, 'Cancel this order?')}
+        <div class="ax-card ax-chfig">
+          <span><span class="k">Order</span><span class="v m">${fmtNum(orderTotal(o))}</span></span>
+          <span><span class="k">Paid</span><span class="v m good">0</span></span>
+          <span><span class="k">You lose</span><span class="v m bad">${fmtNum(Math.max(0, e.margin))}</span></span>
+        </div>
+        <span class="ax-chlab">REASON · SHARED WITH THE SHOP</span>
+        <div class="ax-card ax-chlist" role="radiogroup" aria-label="Why">
+          ${CANCEL_REASONS.map(r=> `<button type="button" class="ax-radio" role="radio" aria-checked="${r === reason}" data-reason="${esc(r)}"><i></i>${esc(r)}</button>`).join('')}
+        </div>
+        <div class="ax-row2">
+          <button type="button" class="btn ax-keep" data-close>Keep order</button>
+          <button type="button" class="btn ax-kill" data-go${busy ? ' disabled' : ''}>${busy ? 'Cancelling…' : 'Cancel order'}</button>
+        </div>
+      </div>`;
+  };
+  sheet.el.addEventListener('click', async (ev)=>{
+    const r = ev.target.closest('[data-reason]');
+    if(r){ reason = r.dataset.reason; paint(); return; }
+    if(!ev.target.closest('[data-go]') || busy) return;
+    busy = true; paint();
+    try{
+      await callAgentFn('agent-change-order', { orderId: o.id, action: 'cancel', reason });
+      sheet.close();
+      toast('Order cancelled — the shop has been told', 4000, { tone:'good' });
+      await loadAgentHomeData();
+      renderCurrentView();
+      refreshOpenSheets();
+    }catch(err){
+      busy = false; paint();
+      toast(`Could not cancel: ${err.message || err}`, 5000, { tone:'bad' });
+    }
+  });
+  paint();
+  return sheet;
+}
+
+/* ---- edit the items, before paying ----
+   Each line as it stands, with a stepper. A line taken to nothing is
+   struck through and can be brought back; a line changed is marked for
+   the shop to check again; a line not touched keeps its supplier's yes.
+   Sent as a resubmission, priced by the server like any order. */
+function openEditItemsSheet(orderId){
+  const o = myOrders.find(x=> String(x.id) === String(orderId));
+  if(!o) return null;
+  const client = orderClient(o);
+  const lines = (o.items||[]).map(it=> ({ productId: it.productId, variantIdx: it.variantIdx == null ? null : it.variantIdx,
+    name: itemLabel(it), unit: it.displayUnit || it.unit || '', step: lineStep(it), was: Number(it.qty)||0, qty: Number(it.qty)||0, price: Number(it.agentSellPrice)||0, fresh: false, src: it }));
+  let query = '', busy = false;
+  const sheet = openSheet('', { label: 'Edit items', full: true, kind: 'change' });
+  const state = (l)=> l.fresh ? 'new' : l.qty === 0 ? 'removed' : l.qty !== l.was ? 'changed' : 'same';
+  const paint = ()=>{
+    const now = lines.reduce((s,l)=> s + l.qty * l.price, 0);
+    const recheck = lines.filter(l=> state(l) === 'changed' || state(l) === 'new').length;
+    const changed = lines.some(l=> state(l) !== 'same');
+    const left = lines.filter(l=> l.qty > 0).length;
+    const q = query.trim().toLowerCase();
+    const taken = new Set(lines.map(changeLineKey));
+    const hits = q.length >= 2 ? catalog.filter(c=> !taken.has(changeLineKey(c)) && `${c.name} ${c.variantLabel||''}`.toLowerCase().includes(q)).slice(0, 6) : [];
+    const tag = { changed:`<span class="ax-tag warn">${AX_ICON.clock}Re-check</span>`, new:`<span class="ax-tag warn">${AX_ICON.plus}New</span>`,
+      removed:`<span class="ax-tag bad">Removed</span>`, same:'' };
+    sheet.el.innerHTML = `<div class="ax-sheet-pad ax-ed">
+        <div class="ax-chh"><button type="button" class="ax-iconbtn" data-close aria-label="Back">${AX_ICON.chevL}</button>
+          <span class="b"><span class="k">ORDER #${esc(o.id)} · ${esc(String(client.name||'').toUpperCase())}</span><span class="t">Edit items</span></span></div>
+        <div class="ax-card ax-chlist">
+          ${lines.map((l, i)=>{
+            const st = state(l);
+            const ce = catalogEntry(l.productId, l.variantIdx);
+            return `<div class="ax-edl${st === 'removed' ? ' gone' : ''}"><span class="ax-th">${itemThumbHTML(ce || l.src || { name: l.name })}</span>
+              <span class="b"><span class="nm">${esc(l.name)}</span><span class="ax-edq">${tag[st]} <span class="m">${fmtNum(l.qty * l.price || l.was * l.price)}</span></span></span>
+              ${st === 'removed'
+                ? `<button type="button" class="ax-undo" data-undo="${i}">${AX_ICON.again}Undo</button>`
+                : `<span class="ax-step"><button type="button" data-dec="${i}" aria-label="One fewer">${AX_ICON.minus}</button><input type="number" inputmode="numeric" min="0" data-qty="${i}" value="${l.qty / l.step}" aria-label="Quantity of ${esc(l.name)}">${l.step > 1 ? `<span class="u">${esc(l.unit)}</span>` : ''}<button type="button" data-inc="${i}" aria-label="One more">${AX_ICON.plus}</button></span>`}
+            </div>`;
+          }).join('')}
+          <label class="ax-edadd"><span class="ic">${AX_ICON.plus}</span><input type="search" data-find value="${esc(query)}" placeholder="Add an item" aria-label="Add an item"></label>
+          ${hits.map(c=> `<button type="button" class="ax-edhit" data-add="${esc(changeLineKey(c))}"><span class="ax-th">${itemThumbHTML(c)}</span><span class="nm">${esc(c.name)}${c.variantLabel ? ` · ${esc(c.variantLabel)}` : ''}</span>${AX_ICON.plus}</button>`).join('')}
+        </div>
+        <div class="ax-ednote">${AX_ICON.clip}Lines you don't touch stay confirmed</div>
+      </div>
+      <div class="ax-eddock">
+        <div class="ax-chfig plain">
+          <span><span class="k">Was</span><span class="v m was">${fmtNum(orderTotal(o))}</span></span>
+          <span><span class="k">Now</span><span class="v m">${fmtNum(now)}</span></span>
+          <span class="r"><span class="k">Re-check</span><span class="v m warn">${recheck} line${recheck === 1 ? '' : 's'}</span></span>
+        </div>
+        ${left ? `<button type="button" class="btn btn-dark btn-block ax-gobtn" data-send${!changed || busy ? ' disabled' : ''}>${AX_ICON.send}${busy ? 'Sending…' : changed ? 'Send changes to the shop' : 'Change something to send'}</button>`
+          : `<button type="button" class="btn btn-block ax-big ax-kill" data-tocancel>${AX_ICON.x}Nothing left — cancel the order</button>`}
+      </div>`;
+  };
+  const setQty = (i, v)=>{ const l = lines[i]; if(!l) return; l.qty = Math.max(0, Math.floor(Number(v) || 0)) * l.step; if(l.fresh && l.qty === 0) lines.splice(i, 1); paint(); };
+  sheet.el.addEventListener('click', async (ev)=>{
+    const b = ev.target.closest('[data-dec],[data-inc],[data-undo],[data-add],[data-send],[data-tocancel]');
+    if(!b) return;
+    if(b.dataset.dec != null){ const i = Number(b.dataset.dec); setQty(i, lines[i].qty / lines[i].step - 1); return; }
+    if(b.dataset.inc != null){ const i = Number(b.dataset.inc); setQty(i, lines[i].qty / lines[i].step + 1); return; }
+    if(b.dataset.undo != null){ const l = lines[Number(b.dataset.undo)]; l.qty = l.was; paint(); return; }
+    if(b.dataset.add != null){
+      const c = catalog.find(x=> changeLineKey(x) === b.dataset.add);
+      if(c){
+        const price = lastRateFor(client, c.productId, c.variantIdx) || Number(c.ourPrice) || Number(c.floorPrice) || 0;
+        lines.push({ productId: c.productId, variantIdx: c.variantIdx == null ? null : c.variantIdx, name: itemLabel(c), unit: c.unit || '', step: 1, was: 0, qty: 1, price, fresh: true, src: c });
+        query = '';
+      }
+      paint(); return;
+    }
+    if(b.dataset.tocancel != null){ sheet.close(); openCancelSheet(o.id); return; }
+    if(busy) return;
+    busy = true; paint();
+    try{
+      const res = await callAgentFn('agent-submit-order', {
+        replaceOrderId: o.id, agentClientId: o.agentClientId,
+        items: lines.filter(l=> l.qty > 0).map(l=> ({ productId: l.productId, variantIdx: l.variantIdx, qty: l.qty, agentSellPrice: l.price })),
+        deliveryMode: o.deliveryMode || 'agent_pickup',
+        deliveryAddress: o.deliveryMode === 'shop_delivery' ? (o.deliveryAddress || '') : undefined,
+      });
+      sheet.close();
+      const n = lines.filter(l=> state(l) === 'changed' || state(l) === 'new').length;
+      toast(res && res.unchanged ? 'Nothing had changed' : n ? `Changes sent — ${n} line${n === 1 ? '' : 's'} back to the shop to check` : 'Changes sent to the shop', 4000, { tone:'good' });
+      await loadAgentHomeData();
+      renderCurrentView();
+      refreshOpenSheets();
+    }catch(err){
+      busy = false; paint();
+      toast(`Could not send the changes: ${err.message || err}`, 5000, { tone:'bad' });
+    }
+  });
+  sheet.el.addEventListener('change', (ev)=>{ if(ev.target.matches('[data-qty]')) setQty(Number(ev.target.dataset.qty), ev.target.value); });
+  sheet.el.addEventListener('input', (ev)=>{
+    if(!ev.target.matches('[data-find]')) return;
+    query = ev.target.value;
+    paint();
+    const f = sheet.el.querySelector('[data-find]');
+    if(f){ f.focus(); f.setSelectionRange(f.value.length, f.value.length); }
+  });
+  paint();
+  return sheet;
+}
+
+/* ---- ask the shop, once paid or started ----
+   Fewer of a line, or none of anything. More is a new order: the shop
+   has packed or bought for this one, and topping it up would unpick
+   that. What an agreed ask takes off a paid order comes back as credit,
+   spent on the next one by itself (payOrder). */
+function openAskSheet(orderId){
+  const o = myOrders.find(x=> String(x.id) === String(orderId));
+  if(!o) return null;
+  const paid = Number(o.amountPaid) > 0 || o.agentPaymentStatus === 'paid';
+  const lines = (o.items||[]).map(it=> ({ productId: it.productId, variantIdx: it.variantIdx == null ? null : it.variantIdx,
+    name: itemLabel(it), unit: it.displayUnit || it.unit || '', step: lineStep(it), was: Number(it.qty)||0, qty: Number(it.qty)||0, sell: Number(it.sellPrice)||0, src: it }));
+  let mode = 'fewer', note = '', busy = false;
+  const sheet = openSheet('', { label: 'Ask the shop to change', white: true, kind: 'change' });
+  const paint = ()=>{
+    const back = mode === 'cancel'
+      ? lines.reduce((s,l)=> s + l.was * l.sell, 0)
+      : lines.reduce((s,l)=> s + (l.was - l.qty) * l.sell, 0);
+    const asking = mode === 'cancel' || lines.some(l=> l.qty < l.was);
+    const st = orderStage(o);
+    sheet.el.innerHTML = `<button type="button" class="ax-grab" data-close aria-label="Close"></button>
+      <div class="ax-sheet-pad">
+        ${changeHeadHTML(o, 'Ask the shop to change')}
+        ${changeZonesHTML(o)}
+        <div class="ax-chwhy">${AX_ICON.lock}${paid ? `Paid and ${st.key === 'packing' ? 'being packed' : 'with the shop'}, so the shop decides` : 'The shop has started on it, so they decide'}</div>
+        <div class="ax-seg2" role="group" aria-label="What you are asking">
+          <button type="button" data-mode="fewer" aria-pressed="${mode === 'fewer'}">${AX_ICON.minus}Fewer</button>
+          <button type="button" data-mode="cancel" aria-pressed="${mode === 'cancel'}">${AX_ICON.x}Cancel it</button>
+        </div>
+        ${mode === 'fewer' ? `<div class="ax-card ax-chlist">${lines.map((l, i)=> `<div class="ax-edl${l.qty < l.was ? ' cut' : ''}"><span class="ax-th">${itemThumbHTML(catalogEntry(l.productId, l.variantIdx) || l.src)}</span>
+            <span class="b"><span class="nm">${esc(l.name)}</span><span class="ax-edq">${l.qty < l.was ? `<span class="ax-tag warn"><s class="m">${l.was / l.step}</s>${AX_ICON.chevR}<b class="m">${l.qty / l.step}</b></span>` : `<span class="m">${l.was / l.step} ${esc(l.unit)} now</span>`}</span></span>
+            <span class="ax-step"><button type="button" data-dec="${i}" aria-label="One fewer"${l.qty <= 0 ? ' disabled' : ''}>${AX_ICON.minus}</button><span class="m n">${l.qty / l.step}</span><button type="button" data-inc="${i}" aria-label="One more"${l.qty >= l.was ? ' disabled' : ''}>${AX_ICON.plus}</button></span>
+          </div>`).join('')}</div>
+          <button type="button" class="ax-newo" data-more>${AX_ICON.basket}Need more? Start a new order${AX_ICON.chevR}</button>` : ''}
+        <label class="ax-card ax-chmsg"><span class="ax-chlab">MESSAGE TO THE SHOP</span><textarea rows="2" data-note placeholder="Why, in a line — it helps them say yes">${esc(note)}</textarea></label>
+        ${paid && back > 0 ? `<div class="ax-chcredit"><span class="ic">${AX_ICON.again}</span><span class="b"><span class="t">If they agree, <b class="m">${fmtNum(back)}</b> comes back as credit</span><span class="s">used by itself on your next order</span></span></div>` : ''}
+        <button type="button" class="btn btn-dark btn-block ax-gobtn" data-send${!asking || busy ? ' disabled' : ''}>${AX_ICON.send}${busy ? 'Sending…' : 'Send request'}</button>
+      </div>`;
+  };
+  sheet.el.addEventListener('click', async (ev)=>{
+    const b = ev.target.closest('[data-mode],[data-dec],[data-inc],[data-more],[data-send]');
+    if(!b) return;
+    if(b.dataset.mode){ mode = b.dataset.mode; paint(); return; }
+    if(b.dataset.dec != null){ const l = lines[Number(b.dataset.dec)]; l.qty = Math.max(0, l.qty - l.step); paint(); return; }
+    if(b.dataset.inc != null){ const l = lines[Number(b.dataset.inc)]; l.qty = Math.min(l.was, l.qty + l.step); paint(); return; }
+    if(b.dataset.more != null){
+      const c = agentClients.find(x=> String(x.id) === String(o.agentClientId));
+      closeSheetsOfKind('change'); closeSheetsOfKind('track');
+      if(c) goToClientBasket(c);
+      switchTab('order');
+      return;
+    }
+    if(busy) return;
+    busy = true; paint();
+    try{
+      await callAgentFn('agent-change-order', { orderId: o.id, action: 'ask', cancel: mode === 'cancel', note,
+        lines: mode === 'cancel' ? [] : lines.filter(l=> l.qty < l.was).map(l=> ({ productId: l.productId, variantIdx: l.variantIdx, to: l.qty })) });
+      sheet.close();
+      toast('Sent — the shop decides, and you will see it here', 4000, { tone:'good' });
+      await loadAgentHomeData();
+      renderCurrentView();
+      refreshOpenSheets();
+    }catch(err){
+      busy = false; paint();
+      toast(`Could not send the request: ${err.message || err}`, 5000, { tone:'bad' });
+    }
+  });
+  sheet.el.addEventListener('input', (ev)=>{ if(ev.target.matches('[data-note]')) note = ev.target.value; });
+  paint();
+  return sheet;
+}
+
+/* What the agent asked, on the order itself: waiting, or how it went. */
+function askStatusHTML(o){
+  const c = o.agentChange;
+  if(!c || c.state === 'withdrawn') return '';
+  const lines = c.lines || [];
+  const what = c.cancel ? 'Cancel the order' : lines.map(l=> `${l.from} → ${l.to} · ${esc(ofShortName(l.name))}`).join(', ');
+  if(c.state === 'asked'){
+    const done = lines.filter(l=> l.decision).length;
+    return `<div class="ax-askst wait"><span class="ic">${AX_ICON.clock}</span>
+      <span class="b"><span class="t">You asked: ${what}</span><span class="s">${done ? `${done} of ${lines.length} answered · ` : ''}Waiting for the shop</span></span>
+      <button type="button" class="ax-undo" data-withdraw>Withdraw</button></div>`;
+  }
+  const agreed = lines.filter(l=> l.decision === 'agreed');
+  const credit = creditLeftOf(o) + ((o.agentCredit && Array.isArray(o.agentCredit.used)) ? o.agentCredit.used.reduce((s,u)=> s + (Number(u.amount)||0), 0) : 0);
+  if(agreed.length){
+    return `<div class="ax-askst good"><span class="ic">${AX_ICON.check}</span>
+      <span class="b"><span class="t">The shop agreed${agreed.length < lines.length ? ` to ${agreed.length} of ${lines.length}` : ''}</span><span class="s">${credit ? `<b class="m">${fmtNum(credit)}</b> to your credit` : 'The order is changed'}</span></span></div>`;
+  }
+  return `<div class="ax-askst"><span class="ic">${AX_ICON.x}</span><span class="b"><span class="t">The shop kept it as it was</span><span class="s">${what}</span></span></div>`;
+}
+function ofShortName(n){
+  n = String(n || '').split(/\s+[—(·]/)[0].trim();
+  return n.length > 18 ? n.slice(0, 17) + '…' : n;
+}
+async function withdrawAsk(o){
+  try{
+    await callAgentFn('agent-change-order', { orderId: o.id, action: 'withdraw' });
+    toast('Request withdrawn', 3000);
+    await loadAgentHomeData();
+    renderCurrentView();
+    refreshOpenSheets();
+  }catch(err){
+    toast(`Could not withdraw: ${err.message || err}`, 5000, { tone:'bad' });
+  }
+}
+/* Credit first, then the phone for whatever it does not cover. */
+async function useCreditOn(o){
+  const res = await callAgentFn('agent-change-order', { orderId: o.id, action: 'useCredit' });
+  await loadAgentHomeData();
+  return res;
+}
+
 boot();
 </script>
 </body>

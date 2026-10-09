@@ -286,3 +286,26 @@ without sending, call it with `{"action":"run","dryRun":true}`.
 An agent turns notifications on from the **Alert me** chip on their Feed.
 On an iPhone that only works once the app has been added to the Home
 Screen (Safari's rule, iOS 16.4+).
+
+## 7. Agents changing an order (agent-change-order)
+
+An agent can change their mind about an order they already sent. Before
+they pay, it is theirs: **Edit items** goes back through
+`agent-submit-order` with `replaceOrderId` (priced like any order; a line
+they did not touch keeps its supplier's yes), and **Cancel order** sets
+`agentCancel` for the shop to close from the board. Once paid, or once the
+shop has started, they can only **ask** for fewer of a line or none of
+anything (`agentChange`); the shop answers each line with ✓ or ✕ in the
+order's drawer on Order tracking, and what an agreed line takes off a paid
+order becomes `agentCredit`, spent first the next time they pay
+(`action: "useCredit"`).
+
+```
+supabase functions deploy agent-change-order
+supabase functions deploy agent-submit-order
+supabase functions deploy agent-initiate-momo-payment
+```
+
+It verifies the caller's JWT like every other agent function — no
+`config.toml` entry needed — and needs no migration: everything it writes
+rides the order's payload.

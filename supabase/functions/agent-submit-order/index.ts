@@ -202,6 +202,50 @@ function json(body: unknown, status = 200) {
   });
 }
 
+// The agent changing an order they already sent is a resubmission, so it
+// comes through here to be priced like one (`replaceOrderId`). Only while
+// the order is still theirs to change: a draft with nothing paid on it,
+// that they have not cancelled. Past that they ask the shop instead
+// (agent-change-order).
+function replaceRefusal(order: any, agentId: string, agentClientId: unknown): string | null {
+  const p = (order && order.payload) || {};
+  if (!order) return "Order not found";
+  if (p.originAgentId !== agentId) return "This order does not belong to you";
+  if (String(p.agentClientId ?? "") !== String(agentClientId ?? "")) return "That order is for a different client";
+  if (order.voided || p.agentCancel) return "This order is cancelled";
+  if (order.status !== "draft") return "The shop has started on this order — ask them to change it instead";
+  if (p.agentPaymentStatus === "paid" || Number(order.amount_paid) > 0) return "This order is paid — ask the shop to change it instead";
+  return null;
+}
+
+// A line the agent did not touch is kept exactly as it was -- the same
+// supplier, cost and price, so the supplier's yes on it still stands.
+// Their own price to the client is theirs to change without that.
+function keptLine(prevItems: any[], it: any): any | null {
+  const vi = it.variantIdx == null ? null : Number(it.variantIdx);
+  const was = (prevItems || []).find((x: any) => String(x.productId) === String(it.productId)
+    && (x.variantIdx == null ? null : Number(x.variantIdx)) === vi
+    && (Number(x.qty) || 0) === Number(it.qty));
+  return was ? { ...was, agentSellPrice: Number(it.agentSellPrice) } : null;
+}
+
+// What an edit changed, line by line, for the shop's board to say:
+// `from` 0 is a line added, `to` 0 a line removed.
+function describeEdit(prevItems: any[], nextItems: any[]): any[] {
+  const key = (x: any) => `${x.productId}::${x.variantIdx == null ? "" : x.variantIdx}`;
+  const before = new Map((prevItems || []).map((x: any) => [key(x), x]));
+  const after = new Map((nextItems || []).map((x: any) => [key(x), x]));
+  const out: any[] = [];
+  after.forEach((x, k) => {
+    const from = Number((before.get(k) as any)?.qty) || 0, to = Number(x.qty) || 0;
+    if (from !== to) out.push({ productId: x.productId, variantIdx: x.variantIdx ?? null, name: x.productName || "", from, to });
+  });
+  before.forEach((x, k) => {
+    if (!after.has(k)) out.push({ productId: x.productId, variantIdx: x.variantIdx ?? null, name: x.productName || "", from: Number(x.qty) || 0, to: 0 });
+  });
+  return out;
+}
+
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -218,6 +262,7 @@ Deno.serve(async (req) => {
       return json({ error: "Invalid JSON body" }, 400);
     }
     const { shopId, agentClientId, items, deliveryMode, deliveryAddress } = body;
+    const replaceOrderId = body.replaceOrderId ?? null;
     if (!shopId || !agentClientId || !Array.isArray(items) || !items.length) {
       return json({ error: "shopId, agentClientId and a non-empty items array are required" }, 400);
     }
@@ -279,6 +324,17 @@ Deno.serve(async (req) => {
     // the same default the catalog showed.
     const defaultMarkup = presets.defaultMarkup || null;
 
+    let replacing: any = null;
+    if (replaceOrderId != null) {
+      const { data: cur, error: curErr } = await admin
+        .from("saved_quotes").select("id, status, voided, amount_paid, payload")
+        .eq("shop_id", shopId).eq("id", replaceOrderId).maybeSingle();
+      if (curErr) return json({ error: curErr.message, stage: "replace_lookup" }, 500);
+      const why = replaceRefusal(cur, agentId, agentClientId);
+      if (why) return json({ error: why }, cur ? 409 : 404);
+      replacing = cur;
+    }
+
     // A submit that lands server-side while the agent's connection drops
     // looks like a failure to them: agent.html re-enables its button in a
     // finally block, they tap again, and the shop gets two identical orders
@@ -290,22 +346,25 @@ Deno.serve(async (req) => {
     // the original is handed back. Deliberately short: an agent who really
     // does want to place the same order twice waits a moment rather than
     // losing the second one. `duplicate` says which happened.
-    const fingerprint = orderFingerprint(agentClientId, items);
-    const cutoff = new Date(Date.now() - SUBMIT_DEDUPE_MS).toISOString();
-    const { data: recent, error: recentErr } = await admin
-      .from("saved_quotes")
-      .select("id, payload")
-      .eq("shop_id", shopId)
-      .eq("agent_id", agentId)
-      .eq("voided", false)
-      .gte("payload->>savedAt", cutoff);
-    if (recentErr) return json({ error: recentErr.message, stage: "dedupe_lookup" }, 500);
-    const alreadyIn = (recent || []).find((q: any) =>
-      orderFingerprint(q.payload?.agentClientId, q.payload?.items) === fingerprint
-    );
-    if (alreadyIn) {
-      console.log("agent-submit-order: duplicate submission returned existing order", { orderId: alreadyIn.id });
-      return json({ ok: true, orderId: alreadyIn.id, duplicate: true });
+    // An edit is the same order on purpose, so it is never "a duplicate".
+    if (!replacing) {
+      const fingerprint = orderFingerprint(agentClientId, items);
+      const cutoff = new Date(Date.now() - SUBMIT_DEDUPE_MS).toISOString();
+      const { data: recent, error: recentErr } = await admin
+        .from("saved_quotes")
+        .select("id, payload")
+        .eq("shop_id", shopId)
+        .eq("agent_id", agentId)
+        .eq("voided", false)
+        .gte("payload->>savedAt", cutoff);
+      if (recentErr) return json({ error: recentErr.message, stage: "dedupe_lookup" }, 500);
+      const alreadyIn = (recent || []).find((q: any) =>
+        orderFingerprint(q.payload?.agentClientId, q.payload?.items) === fingerprint
+      );
+      if (alreadyIn) {
+        console.log("agent-submit-order: duplicate submission returned existing order", { orderId: alreadyIn.id });
+        return json({ ok: true, orderId: alreadyIn.id, duplicate: true });
+      }
     }
 
     const productIds = [...new Set(items.map((it: any) => String(it.productId)))];
@@ -357,6 +416,8 @@ Deno.serve(async (req) => {
 
     const lineItems: any[] = [];
     for (const it of items) {
+      const kept = replacing ? keptLine(replacing.payload.items, it) : null;
+      if (kept) { lineItems.push(kept); continue; }
       const product = productsById.get(String(it.productId));
       if (!product) return json({ error: `Product ${it.productId} not found` }, 404);
       const variantIdx = it.variantIdx == null ? null : Number(it.variantIdx);
@@ -417,6 +478,21 @@ Deno.serve(async (req) => {
     }
 
     const now = new Date().toISOString();
+    if (replacing) {
+      const prev = replacing.payload || {};
+      const lines = describeEdit(prev.items, lineItems);
+      if (!lines.length && prev.deliveryMode === deliveryMode && JSON.stringify(prev.items) === JSON.stringify(lineItems)) return json({ ok: true, orderId: replacing.id, unchanged: true });
+      const nextPayload = {
+        ...prev, items: lineItems, savedAt: now,
+        deliveryMode,
+        deliveryAddress: deliveryMode === "shop_delivery" ? String(deliveryAddress).trim() : null,
+        agentEdit: { at: now, lines },
+      };
+      const { error: editErr } = await admin.from("saved_quotes").update({ payload: nextPayload })
+        .eq("shop_id", shopId).eq("id", replacing.id).eq("status", "draft");
+      if (editErr) return json({ error: editErr.message, stage: "edit" }, 500);
+      return json({ ok: true, orderId: replacing.id, edited: true });
+    }
     const insertRow = {
       shop_id: shopId,
       client_name: agent.name,

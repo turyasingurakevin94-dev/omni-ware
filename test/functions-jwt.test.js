@@ -44,7 +44,9 @@ const names = fs.readdirSync(FN_DIR)
   .filter((n) => fs.statSync(path.join(FN_DIR, n)).isDirectory())
   .sort();
 
-t.check(names.length === 19, `all ${names.length} functions found`);
+// 20 with agent-change-order: an agent cancelling, asking for fewer, or
+// spending credit. It reads the caller's JWT like the rest of the agent's.
+t.check(names.length === 20, `all ${names.length} functions found`);
 
 const open = [];   // no incoming Authorization — must be verify_jwt = false
 const closed = [];
