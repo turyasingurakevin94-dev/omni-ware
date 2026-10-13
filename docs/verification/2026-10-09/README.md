@@ -1,5 +1,8 @@
 # Bug-report verification — reviewed commit `b5513c2`
 
+> **Status: all ten findings are fixed** (see [After the fix](#after-the-fix) at the end).
+> The report below is the verification of `b5513c2` as it stood.
+
 Independent verification of the 2026-10-09 handoff (BUG-1 … BUG-10 and the dead-code candidate list).
 **No application file was changed.** The only addition to the repository is this folder: probes and a
 throwaway-database setup script. `npm test` does not pick it up (the runner reads `test/*.test.js` only).
@@ -94,3 +97,44 @@ Nothing was removed.
 6. **BUG-4:** paginate with a stable `order('id')` + `range()` loop, compare against `count=exact` (or `Content-Range`), and mark the books partial and refuse saves on a mismatch. Move the claim and leaderboard sums into SQL with the month filter in the query. Add 1,000/1,001 boundary tests.
 7. **BUG-7:** check every pricing read's `error` (submit, `price`, `catalogue`, `advice`) and refuse rather than price.
 8. **BUG-10:** keep the first value seen per key when walking newest-first, or compare `(date, id)`. Add a same-day test to both copies.
+
+## After the fix
+
+The fixes follow the plan above. One migration does the database side:
+[`supabase/migrations/0109_atomic_money_writes.sql`](../../../supabase/migrations/0109_atomic_money_writes.sql).
+
+| ID | What changed |
+|---|---|
+| BUG-1 | `use_agent_credit()` locks the order and every credit source in id order. It re-checks each source's balance and the amount owed under the lock, then writes both sides with `jsonb_set`. `useCredit` re-reads and re-plans when the database reports a change, and refuses with a 503 if 0109 is missing. The stale-copy rollback is gone. |
+| BUG-2 / BUG-9 | No migration. Each try is taken by a compare-and-set on `(pin_hash, pin_attempts)` *before* hashing. A right PIN writes its session first, then spends the PIN only if its hash is unchanged; otherwise it deletes that session. A failed session write hands the try back. A token is returned only when both writes held. |
+| BUG-3 | `replace_stock_lots()` is SECURITY INVOKER, so 0083's owner-only policies still apply. It runs the delete and insert in one transaction. The app falls back to the old path only when the function is missing. |
+| BUG-4 | `selectAllRows()` reads each table by keyset (`gt` last key, ordered by the table's key) until nothing is left, at any server limit. The claim and the leaderboard filter the month in SQL and read every page, checked against the exact count. |
+| BUG-5 | `apply_momo_payment()` writes the receipt, the order and `applied_at` in one transaction. A successful payment whose `applied_at` is null is retried on the next check, and an applied one is never retried. Payments that were successful before 0109 are marked applied. |
+| BUG-6 | A partial unique index allows one *pending* request per order. A concurrent second insert gets 23505 and is handed the winning request. A request older than the reuse window becomes `timeout`; the checker and both webhooks still resolve it, so a late approval is still banked. |
+| BUG-7 | Every pricing read's `error` is checked in `client-submit-order` and in the portal's `price`, `catalogue` and `advice` actions. Any failure returns a 503, so nothing is priced from a guess. |
+| BUG-8 | `voided` is selected and refused. The order is read again after the request is reserved; a cancellation or payment that landed meanwhile cancels the request before the push. |
+| BUG-10 | Both copies of `rememberedPrices` use a strict `>`. Walking newest-first, the newest order wins a same-day tie. |
+
+**Evidence**
+
+- **`after-fix.js`:** every scenario re-run on real Postgres 16 + PostgREST (max-rows 1000) with all migrations including 0109. It asserts the invariant for each finding and exits 1 on any failure. All 24 invariants hold.
+- **[`test/money-write-guards.test.js`](../../../test/money-write-guards.test.js)** (part of `npm test`): the same cases run as handlers against an in-memory double, with barriers that hold every request until all have read. All 24 checks fail on `b5513c2` and pass now.
+- **Updated tests:** four existing tests pinned the old shape and were updated. `agent-change-order` asserted the write-source-first ordering that was itself the bug. `payment-webhooks` and `consignment` pinned the old write paths. The `client-boundary-walk` stub now returns the rows an update *matched*, as PostgREST does.
+
+```bash
+bash docs/verification/2026-10-09/setup-realdb.sh
+psql -h 127.0.0.1 -p 55432 -U postgres -f supabase/migrations/0109_atomic_money_writes.sql   # if the DB predates it
+psql -h 127.0.0.1 -p 55432 -U postgres -c "notify pgrst, 'reload schema'"
+node docs/verification/2026-10-09/after-fix.js
+```
+
+**Deploy order:**
+1. Apply 0109.
+2. Paste the edge functions: `agent-change-order`, `agent-claim-commission`, `agent-initiate-momo-payment`, `agent-leaderboard`, `airtel-payment-webhook`, `check-momo-payment-status`, `client-portal`, `client-submit-order`, `mtn-payment-webhook`.
+
+index.html works either side of the migration.
+
+**Not addressed:**
+- The portal's `catalogue` and `advice` reads, and the other pages' loaders (agent, worker), also read whole tables in one request. They are subject to the same row limit.
+- Concurrent stock movements on one key from two devices are still last-writer-wins.
+- These were outside the report.

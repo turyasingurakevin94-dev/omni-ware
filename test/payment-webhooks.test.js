@@ -54,13 +54,20 @@ HOOKS.forEach(([name, src]) => {
     `${name} asks check-momo-payment-status for the real answer`);
 });
 
-/* ---------- 2. the lookup is a lookup, and only matches pending ------- */
+/* ---------- 2. the lookup is a lookup, and only matches unresolved --- */
+/*
+ * Unresolved is 'pending', or 'timeout': a request set aside when a newer
+ * one was raised for the same order (agent-initiate-momo-payment, 0109's
+ * one-pending-per-order index). If the old prompt is approved after all
+ * that money is real, so its callback must still be followed up. Nothing
+ * already resolved -- successful, failed, cancelled -- is ever revisited.
+ */
 HOOKS.forEach(([name, src]) => {
   const code = strip(src);
   t.check(/\.select\("id, shop_id"\)/.test(code),
     `${name} reads only what it needs to identify the payment`);
-  t.check(/\.eq\("status", "pending"\)/.test(code),
-    `${name} only acts on a payment that is still pending`);
+  t.check(/\.in\("status", \["pending", "timeout"\]\)/.test(code) && !/successful|"failed"|"cancelled"/.test(code.slice(code.indexOf('agent_mobile_payments'))),
+    `${name} only acts on a payment that is still unresolved`);
   t.check(/no matching pending payment/.test(code),
     `${name} answers harmlessly when the reference means nothing`);
 });
@@ -91,8 +98,9 @@ HOOKS.forEach(([name, src]) => {
   // the one who decides, and the row is still only updated from pending.
   t.check(/fetchMtnStatus|fetchAirtelStatus/.test(code),
     'the status still comes from the provider, whoever asked');
-  t.check(/\.eq\("id", paymentId\)\.eq\("status", "pending"\)/.test(code),
-    'and the update still only fires on a row that is still pending');
+  t.check(/\.eq\("id", paymentId\)\.eq\("status", txn\.status\)/.test(code)
+    && /if \(txn\.status !== "pending" && txn\.status !== "timeout"\) return json/.test(code),
+    'and the update still only fires on a row still unresolved, as it was read');
 
   // Anchored on the CALL, not the name -- fetchMtnStatus is defined above
   // the handler, so matching the identifier finds the definition and the

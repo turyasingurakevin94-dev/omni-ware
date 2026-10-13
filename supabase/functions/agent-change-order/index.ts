@@ -38,6 +38,13 @@ function json(body: unknown, status = 200) {
   });
 }
 
+// A database without the function (its migration not applied yet), as
+// PostgREST and Postgres each say it.
+function rpcMissing(err: any): boolean {
+  const code = String((err && err.code) || "");
+  return code === "PGRST202" || code === "42883" || /could not find the function/i.test(String((err && err.message) || ""));
+}
+
 const CANCEL_REASONS = ["Client changed their mind", "Wrong items or quantities", "Taking too long", "Something else"];
 
 // What the shop is owed for the lines as they stand.
@@ -164,46 +171,47 @@ Deno.serve(async (req) => {
 
     if (action === "useCredit") {
       if (order.voided || payload.agentCancel) return json({ error: "This order is cancelled" }, 409);
-      const due = Math.round(orderShopTotal(payload) - (Number(order.amount_paid) || 0));
+      let due = Math.round(orderShopTotal(payload) - (Number(order.amount_paid) || 0));
       if (!(due > 0)) return json({ error: "Nothing owed on this order" }, 400);
-      const { data: mine, error: mineErr } = await admin
-        .from("saved_quotes").select("id, payload")
-        .eq("shop_id", shopId).eq("agent_id", agentId);
-      if (mineErr) return json({ error: mineErr.message, stage: "credit_lookup" }, 500);
-      const plan = planCredit((mine || []).filter((q: any) => String(q.id) !== String(order.id)), due);
-      if (!plan.length) return json({ error: "You have no credit to use" }, 409);
-      // The credit is marked spent on the orders it came from FIRST, so a
-      // failure between the two writes can only lose a payment the agent
-      // can see is missing, never spend the same credit twice.
-      const spent: { from: any; amount: number; prev: any }[] = [];
-      for (const p of plan) {
-        const prev = p.from.payload.agentCredit;
-        const used = (Array.isArray(prev.used) ? prev.used : []).concat([{ to: order.id, amount: p.amount, at: now }]);
-        const { error: srcErr } = await admin.from("saved_quotes")
-          .update({ payload: { ...p.from.payload, agentCredit: { ...prev, used } } })
-          .eq("shop_id", shopId).eq("id", p.from.id);
-        if (srcErr) break;
-        spent.push({ ...p, prev });
-      }
-      const total = spent.reduce((s, p) => s + p.amount, 0);
-      if (!total) return json({ error: "Could not use your credit — try again", stage: "credit_spend" }, 500);
-      const payments = (Array.isArray(payload.payments) ? payload.payments : []).concat(spent.map((p) => ({
-        date: now.slice(0, 10), amount: p.amount, note: `Credit from order #${p.from.id}`, creditFrom: p.from.id,
-      })));
-      const newPaid = (Number(order.amount_paid) || 0) + total;
-      const nextPayload: any = { ...payload, payments };
-      if (newPaid + 0.5 >= orderShopTotal(payload)) nextPayload.agentPaymentStatus = "paid";
-      const { error: updErr } = await admin.from("saved_quotes")
-        .update({ amount_paid: newPaid, payload: nextPayload })
-        .eq("shop_id", shopId).eq("id", order.id);
-      if (updErr) {
-        for (const p of spent) {
-          await admin.from("saved_quotes").update({ payload: { ...p.from.payload, agentCredit: p.prev } })
-            .eq("shop_id", shopId).eq("id", p.from.id);
+      // The plan is made from what was read, and use_agent_credit (0109)
+      // checks it under row locks and writes both sides in one
+      // transaction. Two requests that read the same balance used to both
+      // spend it -- writing the source first did not stop that, and the
+      // rollback put back a stale copy of the whole source order. Now the
+      // second one finds the credit gone, reads again and plans from what
+      // is really left. Bounded: a credit that keeps moving under us is
+      // reported rather than chased.
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const { data: mine, error: mineErr } = await admin
+          .from("saved_quotes").select("id, payload")
+          .eq("shop_id", shopId).eq("agent_id", agentId);
+        if (mineErr) return json({ error: mineErr.message, stage: "credit_lookup" }, 500);
+        const plan = planCredit((mine || []).filter((q: any) => String(q.id) !== String(order.id)), due);
+        if (!plan.length) return json({ error: "You have no credit to use" }, 409);
+        const { data: res, error: rpcErr } = await admin.rpc("use_agent_credit", {
+          p_shop_id: shopId, p_agent_id: agentId, p_order_id: order.id,
+          p_plan: plan.map((p) => ({ from: p.from.id, amount: p.amount })), p_at: now,
+        });
+        if (rpcErr) {
+          // Refused rather than done the old way: the old way is the one
+          // that spent credit twice. Nothing has been written.
+          if (rpcMissing(rpcErr)) return json({ error: "Using credit needs database update 0109 — ask the shop", stage: "credit_spend" }, 503);
+          return json({ error: rpcErr.message, stage: "credit_spend" }, 500);
         }
-        return json({ error: updErr.message, stage: "credit_apply" }, 500);
+        if (res && res.ok) {
+          return json({ ok: true, orderId: order.id, credited: res.credited, owed: res.owed, paid: !!res.paid });
+        }
+        // Something moved between the read and the lock. Re-read the order
+        // too: it may have been paid, cancelled or voided meanwhile.
+        const { data: fresh, error: freshErr } = await admin
+          .from("saved_quotes").select("id, voided, payload, amount_paid")
+          .eq("shop_id", shopId).eq("id", order.id).maybeSingle();
+        if (freshErr) return json({ error: freshErr.message, stage: "order_lookup" }, 500);
+        if (!fresh || fresh.voided || (fresh.payload || {}).agentCancel) return json({ error: "This order is cancelled" }, 409);
+        due = Math.round(orderShopTotal(fresh.payload || {}) - (Number(fresh.amount_paid) || 0));
+        if (!(due > 0)) return json({ error: "Nothing owed on this order" }, 400);
       }
-      return json({ ok: true, orderId: order.id, credited: total, owed: Math.max(0, due - total), paid: nextPayload.agentPaymentStatus === "paid" });
+      return json({ error: "Your credit changed while it was being used — try again", stage: "credit_spend" }, 409);
     }
 
     const why = changeRefusal(order, agentId, action);

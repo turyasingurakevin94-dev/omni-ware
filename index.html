@@ -43921,8 +43921,42 @@ const SOURCING_SHORT_LABELS = {asked:'Asked For', looking:'Looking', sourced:'So
 // propagate, that means Clear all data actually deletes the shop's rows
 // in Supabase too (previously it only ever cleared the in-memory copy).
 
+/* EVERY ROW OF A TABLE, NOT ITS FIRST PAGE.
+
+   PostgREST answers at most max_rows rows (1,000 on this project) and
+   says nothing -- a 206 and a Content-Range nobody read. loadData took
+   one answer per table as the whole table, so past a thousand cash
+   entries, orders or stock lots the books were computed from part of
+   them and still stamped as freshly read; and a product whose lots
+   straddled the cut had the unseen ones DELETED by the next save, which
+   rewrites a key from what is in memory.
+
+   Read by key, a page at a time, in the table's own key order: each page
+   asks for rows past the last key it has, so a row added or removed
+   while it reads can neither be read twice nor shift another out of
+   view, and whatever the server's limit is, the walk goes on until
+   there is nothing left. The first page's exact count saves the final
+   empty request. */
+const LOAD_PAGE_ROWS = 1000;
+const LOAD_KEY_COLUMN = { stock: 'key', cash_days: 'date', places: 'name' };
+async function selectAllRows(table, shopId){
+  const keyCol = LOAD_KEY_COLUMN[table] || 'id';
+  let rows = [], total = null;
+  for(;;){
+    let q = sb.from(table).select('*', total === null ? { count: 'exact' } : undefined).eq('shop_id', shopId);
+    if(rows.length) q = q.gt(keyCol, rows[rows.length - 1][keyCol]);
+    const r = await q.order(keyCol, { ascending: true }).limit(LOAD_PAGE_ROWS);
+    if(r.error) return r;
+    if(total === null) total = (typeof r.count === 'number') ? r.count : null;
+    const page = r.data || [];
+    rows = rows.concat(page);
+    if(!page.length || (total !== null && rows.length >= total)) break;
+  }
+  return { data: rows, error: null, count: rows.length };
+}
+
 async function loadData(shopId){
-  const sel = (table) => sb.from(table).select('*').eq('shop_id', shopId);
+  const sel = (table) => selectAllRows(table, shopId);
   const [
     suppliersR, staffR, customersR, debtLogR, productsR, pricesR,
     stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR,
@@ -44659,6 +44693,15 @@ function dbColumnMissing(err){
   if(code) return code === '42703' || code === 'PGRST204';
   return /column .* does not exist|could not find the .* column/i.test(String(err.message || ''));
 }
+/* And for a missing FUNCTION: Postgres's 42883 or PostgREST's PGRST202
+   (not in the schema cache). Anything else the call answered is a
+   failure of the call, not a migration that has not been applied. */
+function dbFunctionMissing(err){
+  if(!err) return false;
+  const code = String(err.code || '');
+  if(code) return code === '42883' || code === 'PGRST202';
+  return /function .* does not exist|could not find the function/i.test(String(err.message || ''));
+}
 /* Whether 0087 has landed. A shop without it knows nothing about the
    market -- which is what every shop here knew until now -- so the
    screens say so plainly rather than offering a box that swallows
@@ -45173,16 +45216,26 @@ function addStockLotsDiffOps(ops, shopId, stockLotsMap){
 
   ops.push({
     run: async ()=>{
+      /* ONE STATEMENT, NOT TWO. This was a delete and then an insert: when
+         the insert failed, the key's lots were already gone from the
+         database -- its FIFO costs and whose consigned goods they are --
+         and any other device that read before this tab retried saw none.
+         replace_stock_lots (0109) does both in one transaction, as the
+         signed-in member, so the old lots stay unless the new ones land.
+         A shop that has not applied 0109 keeps the old two-step path. */
+      const lotRows = [];
+      changedKeys.forEach(k=> (stockLotsMap[k]||[]).forEach(l=> lotRows.push({
+        key:k, qty:l.qty, cost:l.cost, consign: l.consign || null})));
+      const one = await sb.rpc('replace_stock_lots', { p_shop_id: shopId, p_keys: rewriteKeys, p_rows: lotRows });
+      if(!one.error || !dbFunctionMissing(one.error)) return one;
       const del = await sb.from('stock_lots').delete().eq('shop_id', shopId).in('key', rewriteKeys);
       if(del.error) return del;
-      const insertRows = [];
       /* Guarded: PostgREST rejects the entire insert for one unknown
          column, and every sale rewrites the key it touched -- so sending
          this before 0080 is applied would stop the shop saving its FIFO
          cost lots altogether, not merely lose the consignor. */
-      changedKeys.forEach(k=> (stockLotsMap[k]||[]).forEach(l=> insertRows.push({
-        shop_id:shopId, key:k, qty:l.qty, cost:l.cost,
-        ...(stockLotConsignColumn ? {consign: l.consign || null} : {})})));
+      const insertRows = lotRows.map(l=> ({shop_id:shopId, key:l.key, qty:l.qty, cost:l.cost,
+        ...(stockLotConsignColumn ? {consign: l.consign} : {})}));
       return insertRows.length ? await sb.from('stock_lots').insert(insertRows) : {error:null};
     },
     commit: ()=>{

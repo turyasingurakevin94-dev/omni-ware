@@ -83,7 +83,7 @@ class FakeDB {
         const inj = await db.runHooks(op);
         if (inj) return { data: null, error: inj.error };
         const fn = db.rpcs[name];
-        if (!fn) return { data: null, error: { message: 'no rpc ' + name } };
+        if (!fn) return { data: null, error: { code: 'PGRST202', message: 'Could not find the function public.' + name } };
         return { data: await fn(args, label), error: null };
       },
       auth: {

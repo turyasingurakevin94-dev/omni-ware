@@ -61,7 +61,9 @@ Deno.serve(async (req) => {
       .from("agent_mobile_payments")
       .select("id, shop_id")
       .eq("external_reference", referenceId)
-      .eq("status", "pending")
+      // pending, or set aside for a newer request on the same order
+      // (timeout) -- an approval of either is real money.
+      .in("status", ["pending", "timeout"])
       .maybeSingle();
     if (txnErr) return json({ error: txnErr.message, stage: "txn_lookup" }, 500);
     if (!txn) {

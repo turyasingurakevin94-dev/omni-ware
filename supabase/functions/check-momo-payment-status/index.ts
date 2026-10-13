@@ -19,11 +19,10 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", ...CORS_HEADERS } });
 }
 
-// Mirrors applyMomoPaymentToOrder's twin in the webhook functions --
-// duplicated rather than imported from a shared module, same convention
-// this project already uses for agent-submit-order/agent-catalog's
-// parallel pickBestPriceRow()/tieredUnitPrice() implementations, since
-// each Edge Function here is deployed as one standalone file.
+// The step-by-step apply, kept ONLY for a database without
+// apply_momo_payment (0109) -- see applyConfirmed below. Its rules are
+// that function's rules (the "momo" account, paid only once covered);
+// keep the two in step.
 async function applyMomoPaymentToOrder(admin: any, txn: any) {
   if (txn.order_id == null) return;
   const { data: agentRow } = await admin.from("agents").select("name").eq("shop_id", txn.shop_id).eq("id", txn.agent_id).maybeSingle();
@@ -67,6 +66,33 @@ async function applyMomoPaymentToOrder(admin: any, txn: any) {
     payload: nextPayload,
   }).eq("shop_id", txn.shop_id).eq("id", txn.order_id);
   if (updateErr) throw new Error(`saved_quotes update failed: ${updateErr.message}`);
+}
+
+function rpcMissing(err: any): boolean {
+  const code = String((err && err.code) || "");
+  return code === "PGRST202" || code === "42883" || /could not find the function/i.test(String((err && err.message) || ""));
+}
+
+// Banks a confirmed payment and credits its order -- ONCE, whatever
+// happens. apply_momo_payment (0109) does the receipt, the order and the
+// payment's applied_at in one transaction, so a failure leaves nothing
+// half-written and a retry can neither lose the money nor bank it twice.
+// A database without it still gets the old step-by-step apply below,
+// which cannot be retried safely; `retried` says which one ran.
+async function applyConfirmed(admin: any, txn: any): Promise<{ ok: boolean; retried: boolean }> {
+  const { error } = await admin.rpc("apply_momo_payment", { p_payment_id: txn.id });
+  if (!error) return { ok: true, retried: true };
+  if (!rpcMissing(error)) {
+    console.error("check-momo-payment-status: apply failed, will retry", error);
+    return { ok: false, retried: true };
+  }
+  try {
+    await applyMomoPaymentToOrder(admin, txn);
+    return { ok: true, retried: false };
+  } catch (err) {
+    console.error("check-momo-payment-status: apply failed", err);
+    return { ok: false, retried: false };
+  }
 }
 
 // MTN's sandbox WAF sometimes rejects requests with a generic block page
@@ -156,7 +182,21 @@ Deno.serve(async (req) => {
       if (!(agentId && agentId === txn.agent_id) && !isAdmin) return json({ error: "Not authorized to view this payment" }, 403);
     }
 
-    if (txn.status !== "pending") return json({ ok: true, status: txn.status });
+    // Confirmed by the provider but not yet written to the books -- an
+    // earlier apply failed, or the function stopped half way. This used to
+    // return here like any finished payment, so the money never reached
+    // the order. applied_at (0109) is null exactly then; on a database
+    // without the column it is undefined and nothing is retried, since
+    // there is no way to tell an unapplied payment from an applied one.
+    if (txn.status === "successful" && txn.applied_at === null) {
+      const applied = await applyConfirmed(admin, txn);
+      return json(applied.ok ? { ok: true, status: "successful" }
+        : { ok: true, status: "successful", warning: "Payment confirmed but applying it to the order failed -- it will be tried again on the next check." });
+    }
+    // 'timeout' is a request set aside for a newer one on the same order
+    // (agent-initiate-momo-payment). It is still asked about: if the old
+    // prompt was approved after all, that money is real.
+    if (txn.status !== "pending" && txn.status !== "timeout") return json({ ok: true, status: txn.status });
 
     const { data: providerRow } = await admin.from("shop_payment_providers").select("*").eq("shop_id", shopId).eq("provider", txn.provider).maybeSingle();
     if (!providerRow) return json({ ok: true, status: "pending" }); // provider got disabled mid-flight; nothing to check against
@@ -175,17 +215,17 @@ Deno.serve(async (req) => {
 
     const { data: updated, error: updateErr } = await admin.from("agent_mobile_payments")
       .update({ status: result.status, raw_response: result.raw, updated_at: new Date().toISOString() })
-      .eq("id", paymentId).eq("status", "pending")
+      .eq("id", paymentId).eq("status", txn.status)
       .select().maybeSingle();
     if (updateErr) return json({ error: updateErr.message, stage: "update" }, 500);
     if (!updated) return json({ ok: true, status: "pending" }); // lost the race to a concurrent webhook/poll -- fine, whoever won already applied it
 
     if (result.status === "successful") {
-      try {
-        await applyMomoPaymentToOrder(admin, updated);
-      } catch (err) {
-        console.error("check-momo-payment-status: apply failed", err);
-        return json({ ok: true, status: "successful", warning: "Payment confirmed but applying it to the order failed -- check manually." });
+      const applied = await applyConfirmed(admin, updated);
+      if (!applied.ok) {
+        return json({ ok: true, status: "successful", warning: applied.retried
+          ? "Payment confirmed but applying it to the order failed -- it will be tried again on the next check."
+          : "Payment confirmed but applying it to the order failed -- check manually." });
       }
     }
     return json({ ok: true, status: result.status });
