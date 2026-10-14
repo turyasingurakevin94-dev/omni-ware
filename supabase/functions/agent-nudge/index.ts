@@ -5,6 +5,8 @@
 //
 //   { action: "config" }  -> { publicKey }. The VAPID public key the browser
 //                            app subscribes with. Public by design.
+//   { action: "test" }    -> signed in: one notification now to the caller's
+//                            own phones, with why any did not go.
 //   { action: "run" }     -> called on a schedule (hourly is right). For
 //                            every agent with notifications on, works out
 //                            what is worth a tap RIGHT NOW and sends the
@@ -227,7 +229,7 @@ function nudgesFor(agentId: string, ctx: any, nowMs: number): Nudge[] {
     add({ kind: "due", ref: `${r.cid}:${r.last}`, prio: 2, open: `client:${r.cid}`,
       title: `${r.name} is due`,
       body: voice(playful, `Buys about every ${Math.round(r.gap)} days, and it has been ${Math.round(r.since)}. Their usual earns you about ${fmt(r.earn)}.`,
-        `Buys about every ${Math.round(r.gap)} days -- it has been ${Math.round(r.since)}. Open their order?`) });
+        `Buys about every ${Math.round(r.gap)} days. It has been ${Math.round(r.since)}. Open their order?`) });
   }
 
   // The month so far, against the goal.
@@ -246,7 +248,7 @@ function nudgesFor(agentId: string, ctx: any, nowMs: number): Nudge[] {
       add({ kind: "morning", ref: today, prio: -2, open: dueNow.length === 1 ? `client:${dueNow[0].cid}` : "today",
         title: voice(playful, me ? `Morning, ${me}` : "Good morning", `Today: ${dueNow.length} client${dueNow.length === 1 ? "" : "s"} due`),
         body: voice(playful, `${names} ${dueNow.length === 1 ? "is" : "are"} due today. ${dueNow.length === 1 ? "That is" : "Together,"} about ${fmt(sum)} for you.`,
-          `${names} -- about ${fmt(sum)} for you.`) });
+          `${names}: about ${fmt(sum)} for you.`) });
     } else if (target > 0 && earned < target && daysLeft > 0) {
       add({ kind: "morning", ref: today, prio: -2, open: "goal",
         title: voice(playful, me ? `Morning, ${me}` : "Good morning", `Goal: ${Math.floor(earned / target * 100)}% with ${daysLeft} days left`),
@@ -378,8 +380,9 @@ function nudgesFor(agentId: string, ctx: any, nowMs: number): Nudge[] {
         : voice(playful, `You pay ${fmt(d.p.today)} ${a}, down ${fmt(d.drop)}.`, `Now ${fmt(d.p.today)} ${a} (was ${fmt(d.p.prev)}).`) });
   }
 
-  // Promotions: a new one on something they sell or carry, and one in
-  // their cluster about to end.
+  // Promotions: every new one reaches every agent -- with what it would
+  // add to a real client's usual when they have one -- and one in their
+  // cluster about to end.
   const clusterKeys = new Set((ctx.clusters || []).filter((c: any) => c.agent_id === agentId)
     .map((c: any) => `${c.product_id}::${c.variant_idx || ""}`));
   for (const p of ctx.promos || []) {
@@ -388,15 +391,16 @@ function nudgesFor(agentId: string, ctx: any, nowMs: number): Nudge[] {
     if (p.ends_at && p.ends_at < today) continue;
     const key = `${p.product_id}::${p.variant_idx || ""}`;
     const u = usual.get(key);
-    if (!clusterKeys.has(key) && u === undefined) continue;
+    const mine = clusterKeys.has(key) || u !== undefined;
     const bonus = p.bonus_type === "fixed" ? `+${fmt(p.bonus_value)}` : `+${p.bonus_value}%`;
     const until = p.ends_at ? `Until ${WEEKDAYS[new Date(p.ends_at + "T00:00:00Z").getUTCDay()]}` : "While it lasts";
     const extra = u ? (p.bonus_type === "fixed" ? Number(p.bonus_value) * u.qty : Number(p.bonus_value) / 100 * u.price * u.qty) : 0;
-    add({ kind: "bonus_new", ref: String(p.id), prio: 2, open: `item:${p.product_id}:${p.variant_idx || ""}`, image: (ctx.images && ctx.images.get(p.product_id)) || "",
+    add({ kind: "bonus_new", ref: String(p.id), prio: mine ? 2 : 3, open: `item:${p.product_id}:${p.variant_idx || ""}`, image: (ctx.images && ctx.images.get(p.product_id)) || "",
       title: voice(playful, `New bonus: ${bonus} on ${productName(p.product_id)}`, `${bonus} bonus on ${productName(p.product_id)}`),
       body: u && extra > 0
         ? voice(playful, `${until}. ${first(u.who)} took ${fmt(u.qty)} last time: at that, ${fmt(extra)} extra.`, `${until}. ${fmt(extra)} on ${first(u.who)}'s usual.`)
-        : `${until}. It is in your cluster.` });
+        : clusterKeys.has(key) ? `${until}. It is in your cluster.`
+        : voice(playful, `${until}. ${bonus} on every one you sell. First client to hear about it wins.`, `${until}. ${bonus} on every one you sell.`) });
   }
 
   // Within one good sale of the next place up this month.
@@ -421,7 +425,7 @@ function nudgesFor(agentId: string, ctx: any, nowMs: number): Nudge[] {
     const bonus = p.bonus_type === "fixed" ? `+${fmt(p.bonus_value)}` : `+${p.bonus_value}%`;
     add({ kind: "bonus", ref: `${p.id}:${p.ends_at}`, prio: 4, open: `item:${p.product_id}:${p.variant_idx || ""}`,
       title: `${bonus} bonus ends ${left === 0 ? "today" : left === 1 ? "tomorrow" : "in 2 days"}`,
-      body: `${productName(p.product_id)} -- it is in your cluster.` });
+      body: `${productName(p.product_id)} is in your cluster.` });
   }
 
   return out.filter((n) => wants(prefs, n.kind)).sort((a, b) => a.prio - b.prio);
@@ -535,31 +539,38 @@ async function sendApns(token: string, n: Nudge): Promise<number> {
 }
 
 async function deliver(admin: any, s: any, n: Nudge, sa: any): Promise<boolean> {
+  return (await deliverWhy(admin, s, n, sa)).ok;
+}
+// The same, saying why not -- the test button shows it to the agent.
+async function deliverWhy(admin: any, s: any, n: Nudge, sa: any): Promise<{ ok: boolean; why: string }> {
   try {
     let code = 0;
     if (s.platform === "android") {
-      if (!sa || !s.push_token) return false;
+      if (!sa) return { ok: false, why: "no_firebase_key" };
+      if (!s.push_token) return { ok: false, why: "no_token" };
       code = await sendFcm(sa, s.push_token, n);
     } else if (s.platform === "ios") {
-      if (!(APNS_KEY_P8 && APNS_KEY_ID && APNS_TEAM_ID) || !s.push_token) return false;
+      if (!(APNS_KEY_P8 && APNS_KEY_ID && APNS_TEAM_ID)) return { ok: false, why: "no_apns_key" };
+      if (!s.push_token) return { ok: false, why: "no_token" };
       code = await sendApns(s.push_token, n);
     } else {
-      if (!(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) || !s.endpoint) return false;
+      if (!(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY)) return { ok: false, why: "no_vapid_key" };
+      if (!s.endpoint) return { ok: false, why: "no_token" };
       await webpush.sendNotification(
         { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth_key } },
         JSON.stringify({ title: n.title, body: n.body, kind: n.kind, open: n.open, url: `/agent.html?open=${encodeURIComponent(n.open || "today")}` }),
         { TTL: 6 * 3600 },
       );
-      return true;
+      return { ok: true, why: "" };
     }
     if (code === 410) await admin.from("agent_push_subscriptions").delete().eq("id", s.id);
     if (code !== 200) console.error("agent-nudge: send failed", { agent: s.agent_id, platform: s.platform, code });
-    return code === 200;
+    return { ok: code === 200, why: code === 200 ? "" : code === 410 ? "token_expired" : `refused_${code}` };
   } catch (e: any) {
     const code = e && e.statusCode;
-    console.error("agent-nudge: send failed", { agent: s.agent_id, platform: s.platform, code });
+    console.error("agent-nudge: send failed", { agent: s.agent_id, platform: s.platform, code, e: String(e && e.message || e) });
     if (code === 404 || code === 410) await admin.from("agent_push_subscriptions").delete().eq("id", s.id);
-    return false;
+    return { ok: false, why: code === 404 || code === 410 ? "token_expired" : `error_${code || "send"}` };
   }
 }
 
@@ -626,6 +637,32 @@ async function runShop(admin: any, shopId: string, subs: any[], nowMs: number, d
   return { shopId, plan };
 }
 
+/* "Send me a test": one notification, now, to every phone of the agent
+   who asked -- signed in, so it can only ever buzz their own phones. Not
+   logged and not counted, quiet hours or not, and it says per phone why
+   one did not go, so a silence can be told apart from a fault. */
+async function testSend(req: Request) {
+  const jwt = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+  const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+  const { data: who } = await admin.auth.getUser(jwt);
+  const user = who && who.user;
+  if (!user) return json({ ok: false, why: "signed_out" }, 401);
+  const { data: subs, error } = await admin.from("agent_push_subscriptions")
+    .select("id, shop_id, agent_id, platform, push_token, endpoint, p256dh, auth_key").eq("user_id", user.id);
+  if (error) return json({ ok: false, why: "db", detail: error.message }, 500);
+  if (!subs || !subs.length) return json({ ok: false, why: "not_registered", phones: [] });
+  const { data: ag } = await admin.from("agents").select("name").eq("user_id", user.id).limit(1);
+  const me = ag && ag[0] && ag[0].name ? first(ag[0].name) : "";
+  let sa: any = null;
+  if (FIREBASE_SERVICE_ACCOUNT_JSON) { try { sa = JSON.parse(FIREBASE_SERVICE_ACCOUNT_JSON); } catch (_e) { /* reported as no key */ } }
+  const n: Nudge = { kind: "test", ref: String(Date.now()), prio: 0, open: "today", image: "",
+    title: me ? `It works, ${me}` : "It works",
+    body: "This is how your wins, your clients' days and the prices that move your money will reach you." };
+  const phones = [];
+  for (const s of subs) phones.push({ platform: s.platform || "web", ...(await deliverWhy(admin, s, n, sa)) });
+  return json({ ok: phones.some((p) => p.ok), phones });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
@@ -635,6 +672,7 @@ Deno.serve(async (req) => {
     return json({ ok: true, publicKey: VAPID_PUBLIC_KEY || null });
   }
 
+  if (body.action === "test") return testSend(req);
   if (body.action !== "run") return json({ error: "Unknown action" }, 400);
   // Closed unless the secret is set: an open endpoint here could make
   // every agent's phone buzz on demand.

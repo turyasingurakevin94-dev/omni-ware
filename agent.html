@@ -2030,6 +2030,18 @@
   .ax-nt-off .b b{font-size:15px;color:var(--ink);}
   .ax-nt-off .b span{font-size:13px;color:var(--ink-soft);}
   .ax-nt-off .btn{flex:none;min-height:44px;}
+  .ax-nt-test{padding:12px 14px;display:flex;flex-direction:column;gap:10px;border-radius:20px;}
+  .ax-nt-test .r{display:flex;align-items:center;gap:12px;}
+  .ax-nt-test .ic{width:40px;height:40px;flex:none;border-radius:12px;background:#E7EAF2;color:var(--navy);display:flex;align-items:center;justify-content:center;}
+  .ax-nt-test .ic .icon{width:20px;height:20px;}
+  .ax-nt-test .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .ax-nt-test .n{font-size:15px;font-weight:700;}
+  .ax-nt-test .s{font-size:13px;color:var(--ink-soft);}
+  .ax-nt-test .btn{flex:none;min-height:44px;}
+  .ax-nt-test .res{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border-radius:12px;font-size:14px;font-weight:600;line-height:1.35;}
+  .ax-nt-test .res .icon{width:18px;height:18px;flex:none;margin-top:1px;}
+  .ax-nt-test .res.good{background:var(--good-bg);color:var(--good);}
+  .ax-nt-test .res.warn{background:var(--warn-bg);color:var(--warn-ink);}
   .ax-nt-tone{padding:12px 14px;display:flex;flex-direction:column;gap:10px;border-radius:20px;}
   .ax-nt-tone .k{font-size:15px;font-weight:700;}
   .ax-nt-tone .s{font-size:13px;line-height:1.4;color:var(--ink-soft);padding:2px 2px 0;}
@@ -9739,8 +9751,46 @@ function notifyOn(id){
   const k = (notifyPrefs && notifyPrefs.kinds) || {};
   return id in k ? !!k[id] : !!NOTIFY_DEFAULTS[id];
 }
+/* "Send me a test": one real notification through the whole chain --
+   the server, Firebase or Apple, this phone -- and, when it does not
+   come, the one thing that is missing, in words. */
+const PUSH_WHY = {
+  signed_out: 'You are signed out on the server. Sign out and back in.',
+  not_registered: 'This phone is not registered. Turn notifications on again.',
+  token_expired: 'This phone’s registration ran out. Turn notifications on again.',
+  no_token: 'This phone is not registered. Turn notifications on again.',
+  no_firebase_key: 'The server has no Firebase key yet. Ask the shop to add it.',
+  no_apns_key: 'The server has no Apple key yet. Ask the shop to add it.',
+  no_vapid_key: 'The server has no browser key yet. Ask the shop to add it.',
+  old_server: 'The server is still on the old version. Ask the shop to update it.',
+  offline: 'Could not reach the server. Check the connection and try again.',
+};
+async function sendTestPush(){
+  let data = null;
+  try{
+    const r = await sb.functions.invoke('agent-nudge', { body: { action: 'test' } });
+    data = r.data;
+    if(r.error){
+      try{ data = await r.error.context.json(); }catch(_e){ data = null; }
+      if(data && data.error === 'Unknown action') return { ok: false, why: 'old_server' };
+      if(!data || !data.why) return { ok: false, why: 'offline' };
+    }
+  }catch(_e){ return { ok: false, why: 'offline' }; }
+  if(!data) return { ok: false, why: 'offline' };
+  if(data.ok) return { ok: true, why: '' };
+  const C = window.Capacitor;
+  const here = nativePush() ? C.getPlatform() : 'web';
+  const phones = data.phones || [];
+  const mine = phones.find(p=> p.platform === here) || phones[0];
+  const why = data.why || (mine && mine.why) || 'offline';
+  if(why === 'not_registered' || why === 'token_expired' || why === 'no_token'){
+    try{ localStorage.removeItem(agentLocalKey('agentPushOn')); }catch(_e){}
+  }
+  return { ok: false, why };
+}
 function openNotifySheet(){
   closeSheetsOfKind('notify');
+  let test = null;   // null, 'sending', or { ok, why }
   const sheet = openSheet('', { label:'Notifications', kind:'notify', full:true, refresh: ()=> paint() });
   function paint(){
     const p = notifyPrefs || { kinds: {}, morning_hour: 8, tone: 'playful' };
@@ -9757,6 +9807,13 @@ function openNotifySheet(){
         <button type="button" class="ax-iconbtn" data-close aria-label="Close">${AX_ICON.x}</button></div>
       <div class="ax-sheet-pad">
         ${status}
+        ${state === 'on' || test ? `<div class="ax-card ax-nt-test">
+          <div class="r"><span class="ic">${AX_ICON.phone}</span>
+            <span class="b"><span class="n">Check this phone</span><span class="s">Sends one notification now</span></span>
+            <button type="button" class="btn btn-dark sm" data-nt="test"${test === 'sending' ? ' disabled' : ''}>${test === 'sending' ? 'Sending…' : 'Send test'}</button></div>
+          ${test && test !== 'sending' ? `<div class="res ${test.ok ? 'good' : 'warn'}" role="status">${test.ok ? AX_ICON.check : AX_ICON.bang}
+            <span>${test.ok ? 'Sent. It should arrive in a few seconds.' : esc(PUSH_WHY[test.why] || `It did not go (${test.why}).`)}</span></div>` : ''}
+        </div>` : ''}
         <div class="ax-card ax-nt-tone">
           <span class="k">How should we talk to you?</span>
           <div class="ax-nt-seg" role="radiogroup" aria-label="Tone">
@@ -9785,7 +9842,15 @@ function openNotifySheet(){
   sheet.el.addEventListener('click', async (e)=>{
     const t = e.target.closest('[data-nt],[data-tone],[data-kind],[data-hour]');
     if(!t) return;
-    if(t.dataset.nt === 'on'){ if(await enableAgentPush()) paint(); return; }
+    if(t.dataset.nt === 'on'){ if(await enableAgentPush()){ test = null; paint(); } return; }
+    if(t.dataset.nt === 'test'){
+      if(test === 'sending') return;
+      test = 'sending'; paint();
+      test = await sendTestPush();
+      if(window.owHaptic) owHaptic(test.ok ? 'success' : 'warning');
+      if(sheet.el.isConnected) paint();
+      return;
+    }
     const p = notifyPrefs;
     if(!p) return;
     if(t.dataset.tone) p.tone = t.dataset.tone;

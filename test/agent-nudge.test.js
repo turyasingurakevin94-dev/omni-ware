@@ -124,6 +124,14 @@ if (api) {
   const bonus = find('bonus_new');
   t.check(bonus && /^Until Friday\. Ken took 60 last time: at that, [\d,]+ extra\.$/.test(bonus.body),
     `a new bonus says what it would have added to a real client's order (${bonus && bonus.body})`);
+  // A promotion on something no client of his has bought still reaches him.
+  const other = Object.assign({}, base, { promos: base.promos.concat([{ id: 42, product_id: 'nails', variant_idx: '', bonus_type: 'percent', bonus_value: 3,
+    active: true, ends_at: '2026-10-16', created_at: '2026-10-14T09:00:00Z' }]) });
+  const nb = api.nudgesFor('H', other, at(8)).filter((x) => x.kind === 'bonus_new');
+  const fresh = nb.find((x) => x.ref === '42');
+  t.check(fresh && fresh.body === 'Until Friday. +3% on every one you sell. First client to hear about it wins.',
+    `every new promotion reaches every agent, even on an item he has not sold yet (${fresh && fresh.body})`);
+  t.check(nb.find((x) => x.ref === '41').prio < fresh.prio, 'though one his clients buy comes first');
   t.check(!find('goal'), 'and no goal milestone before a quarter of it');
   const rich = Object.assign({}, base, { goals: new Map([['H', 70000]]) });   // 54,000 so far
   const g = api.nudgesFor('H', rich, at(10)).find((x) => x.kind === 'goal');
@@ -142,7 +150,7 @@ if (api) {
 }
 
 /* ---------- 3c. every phone, its own way ------------------------------ */
-t.check(/platform === "android"[\s\S]{0,120}sendFcm/.test(fnSrc) && /platform === "ios"[\s\S]{0,160}sendApns/.test(fnSrc),
+t.check(/platform === "android"[\s\S]{0,300}sendFcm/.test(fnSrc) && /platform === "ios"[\s\S]{0,300}sendApns/.test(fnSrc),
   'Android through FCM, iPhone through APNs, the browser through Web Push');
 t.check(/if \(code === 410\) await admin\.from\("agent_push_subscriptions"\)\.delete\(\)/.test(fnSrc), 'and a phone that is gone is forgotten');
 t.check(/if \(k === "request"\) return true;/.test(fnSrc), 'a customer waiting on an answer is never switched off');
@@ -154,6 +162,21 @@ t.check(/x-cron-secret/.test(fnSrc) && /401/.test(fnSrc), 'and turns away a call
 t.check(/retired_at/.test(fnSrc) && /unavailable/.test(fnSrc), 'a paused or retired agent is never nudged');
 t.check(/unique index if not exists agent_push_log_once/.test(read('supabase/migrations/0103_agent_push.sql')),
   'the database itself refuses the same moment twice');
+
+/* ---------- 3d. "send me a test" -------------------------------------- */
+{
+  const ts = fn('testSend');
+  t.check(/admin\.auth\.getUser\(jwt\)/.test(ts) && /\.eq\("user_id", user\.id\)/.test(ts) && /why: "signed_out" \}, 401/.test(ts),
+    'the test is for the signed-in agent, and only ever reaches their own phones');
+  t.check(/why: "not_registered"/.test(ts) && /deliverWhy\(/.test(ts) && !/agent_push_log/.test(ts),
+    'it says which phone did not get it and why, and is never logged or counted against the day');
+  t.check(/if \(body\.action === "test"\) return testSend\(req\);[\s\S]{0,120}if \(body\.action !== "run"\)/.test(fnSrc)
+    && fnSrc.indexOf('return testSend(req)') < fnSrc.indexOf('isQuiet(nowMs) && !body.ignoreQuietHours'),
+    'and it goes at any hour: it is answered before the quiet-hours rule');
+  const dw = fn('deliverWhy');
+  t.check(['no_firebase_key', 'no_apns_key', 'no_vapid_key', 'no_token', 'token_expired'].every((w) => dw.includes(`"${w}"`)),
+    'each missing piece has its own name: no Firebase, APNs or browser key, no token, an expired one');
+}
 
 /* ---------- 5. the agent side ------------------------------------------ */
 const agent = read('agent.html');
@@ -187,6 +210,9 @@ const kindsIds = [...(agent.match(/const NOTIFY_KINDS = \[([\s\S]*?)\n\];/) || [
 const serverKinds = Object.keys(JSON.parse(fnSrc.match(/DEFAULT_KINDS[^=]*=\s*(\{[^}]*\})/)[1].replace(/(\w+):/g, '"$1":')));
 t.check(kindsIds.length === 7 && kindsIds.join() === serverKinds.join(),
   `the sheet's switches are the kinds agent-nudge knows (${kindsIds.join(', ')})`);
+t.check(/data-nt="test"/.test(agent) && /action: 'test'/.test(fnBody('sendTestPush')) && /old_server/.test(fnBody('sendTestPush'))
+  && ['not_registered', 'token_expired', 'no_firebase_key', 'no_apns_key', 'old_server', 'offline'].every((w)=> new RegExp(`\\b${w}:`).test(agent)),
+  'the sheet can send a test now, and says in words what is missing when it does not come');
 t.check(/\[7, 8, 9\]/.test(fnBody('openNotifySheet')) && /data-tone="playful"/.test(agent) && /data-tone="straight"/.test(agent)
   && /onConflict: 'shop_id,agent_id'/.test(fnBody('saveNotifyPrefs')),
   'morning time and tone are saved as the table allows them');

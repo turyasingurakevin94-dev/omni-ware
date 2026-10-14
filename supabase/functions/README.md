@@ -318,6 +318,14 @@ tone (playful or straight) in You -> Notifications; that is
 `agent_notify_prefs`. A tap opens the thing it is about. To see what it
 WOULD send without sending, call it with `{"action":"run","dryRun":true}`.
 
+**Checking it works:** You -> Notifications -> **Send test** sends one
+notification to that phone straight away (any hour, not counted) and, if
+it does not come, says what is missing: the phone not registered, the
+Firebase or Apple key not set, or this function not yet redeployed.
+
+Every new promotion reaches every agent; those whose clients already buy
+the item also get what it would add to that client's usual order.
+
 The app asks once, after an agent's first order is sent; after that it is
 in You -> Notifications. In a browser on an iPhone that only works once the
 page has been added to the Home Screen (Safari's rule, iOS 16.4+).

@@ -50,12 +50,19 @@ t.check(names.length === 20, `all ${names.length} functions found`);
 
 const open = [];   // no incoming Authorization — must be verify_jwt = false
 const closed = [];
+// Open AND reading a JWT: the caller without one (a Cron job) is let in by
+// its own shared secret, and the one action a signed-in agent may call
+// checks their token itself. Named here so a function cannot drift into
+// this state unnoticed.
+const MIXED = ['agent-nudge'];
 names.forEach((n) => {
   const dir = path.join(FN_DIR, n);
   const files = fs.readdirSync(dir).filter((f) => f.endsWith('.ts'));
   if (!files.length) throw new Error(`no TypeScript source in supabase/functions/${n}`);
   const src = files.map((f) => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
-  (READS_INCOMING.test(src) ? closed : open).push(n);
+  (READS_INCOMING.test(src) && MIXED.indexOf(n) === -1 ? closed : open).push(n);
+  if (MIXED.indexOf(n) !== -1) t.check(READS_INCOMING.test(src) && /auth\.getUser\(/.test(src),
+    `${n} is open for its schedule and checks the JWT itself where it reads one`);
 });
 
 /* ---------- what config.toml declares -------------------------------- */
