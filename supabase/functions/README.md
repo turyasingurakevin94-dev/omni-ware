@@ -305,8 +305,8 @@ capability ticked.
    type "Supabase Edge Function", `agent-nudge`, POST, schedule `0 * * * *`,
    body `{"action":"run"}`, header `x-cron-secret: <AGENT_NUDGE_SECRET>`.
 
-It sends nothing before 07:00 or from 20:00 Kampala time, at most three a
-day per agent, and each moment once. What it sends, in the agent's own
+It sends at any hour (there are no quiet hours), at most three a day per
+agent, and each moment once. What it sends, in the agent's own
 words and numbers: a morning plan (who is due today and what it earns
 them), celebrations (a new client, a best week, a streak), price drops
 worked out on a client's usual order, new bonuses on things they sell, goal
@@ -319,7 +319,7 @@ tone (playful or straight) in You -> Notifications; that is
 WOULD send without sending, call it with `{"action":"run","dryRun":true}`.
 
 **Checking it works:** You -> Notifications -> **Send test** sends one
-notification to that phone straight away (any hour, not counted) and, if
+notification to that phone straight away (not counted) and, if
 it does not come, says what is missing: the phone not registered, the
 Firebase or Apple key not set, or this function not yet redeployed.
 

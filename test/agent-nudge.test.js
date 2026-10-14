@@ -3,7 +3,7 @@
 /*
  * agent-nudge: what an agent's phone is told, and when. A notification is
  * the one part of the feed that reaches into someone's pocket uninvited,
- * so these pin the rules that keep it worth having: quiet hours, a daily
+ * so these pin the rules that keep it worth having: a daily
  * cap, each moment sent once, the most urgent first, and a closed
  * endpoint. Plus the agent side: asked for only from a button, and a tap
  * lands on the Feed.
@@ -20,21 +20,19 @@ const DAY = 86400000;
 let api;
 try {
   api = compileScope(
-    ['kampalaHour', 'isQuiet', 'kampalaDate', 'linePriced', 'orderEarnings', 'earnedOf', 'sumEarned', 'voice', 'fmt', 'first',
+    ['kampalaHour', 'kampalaDate', 'linePriced', 'orderEarnings', 'earnedOf', 'sumEarned', 'voice', 'fmt', 'first',
       'namesList', 'unitWord', 'weekOf', 'daysInMonth', 'wants', 'nudgesFor', 'pickToSend', 'monthBoard', 'priceMoves'].map(fn),
-    { QUIET_FROM: 20, QUIET_TO: 7, KAMPALA_OFFSET_H: 3, DAY, WRAP_HOUR: 19,
+    { KAMPALA_OFFSET_H: 3, DAY, WRAP_HOUR: 19,
       MONTHS: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
       WEEKDAYS: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
       DEFAULT_KINDS: { morning: true, win: true, price: true, bonus: true, goal: true, due: true, wrap: false } },
-    ['isQuiet', 'nudgesFor', 'pickToSend', 'monthBoard', 'priceMoves'],
+    ['nudgesFor', 'pickToSend', 'monthBoard', 'priceMoves'],
     { typescript: true });
 } catch (e) { t.check(false, `the nudge rules compile (${e.message})`); }
 
 if (api) {
-  /* ---------- 1. quiet hours, Kampala time ---------------------------- */
-  t.check(api.isQuiet(Date.parse('2026-09-27T17:30:00Z')), '20:30 in Kampala is quiet');
-  t.check(api.isQuiet(Date.parse('2026-09-27T03:30:00Z')), '06:30 in Kampala is quiet');
-  t.check(!api.isQuiet(Date.parse('2026-09-27T05:00:00Z')), '08:00 in Kampala is not');
+  /* ---------- 1. any hour ------------------------------------------- */
+  t.check(!/isQuiet|QUIET_FROM|quiet hours/.test(fnSrc), 'no hour of the day is held back -- the owner asked for none');
 
   /* ---------- 2. what is worth a nudge, most urgent first -------------- */
   const now = Date.parse('2026-09-27T07:00:00Z');      // 10:00 in Kampala
@@ -171,8 +169,8 @@ t.check(/unique index if not exists agent_push_log_once/.test(read('supabase/mig
   t.check(/why: "not_registered"/.test(ts) && /deliverWhy\(/.test(ts) && !/agent_push_log/.test(ts),
     'it says which phone did not get it and why, and is never logged or counted against the day');
   t.check(/if \(body\.action === "test"\) return testSend\(req\);[\s\S]{0,120}if \(body\.action !== "run"\)/.test(fnSrc)
-    && fnSrc.indexOf('return testSend(req)') < fnSrc.indexOf('isQuiet(nowMs) && !body.ignoreQuietHours'),
-    'and it goes at any hour: it is answered before the quiet-hours rule');
+    && fnSrc.indexOf('return testSend(req)') < fnSrc.indexOf('AGENT_NUDGE_SECRET) return json'),
+    'and the test is answered before the schedule\'s secret is asked for');
   const dw = fn('deliverWhy');
   t.check(['no_firebase_key', 'no_apns_key', 'no_vapid_key', 'no_token', 'token_expired'].every((w) => dw.includes(`"${w}"`)),
     'each missing piece has its own name: no Firebase, APNs or browser key, no token, an expired one');

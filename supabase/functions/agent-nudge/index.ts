@@ -36,7 +36,6 @@
 //   bonus    -- a bonus on an item in their cluster ends soon        (4)
 //
 // The rules that keep it worth having:
-//   quiet hours -- nothing before 07:00 or from 20:00, Kampala time
 //   a cap       -- at most NUDGE_DAILY_CAP a day per agent
 //   once        -- each moment is sent once (agent_push_log has a unique
 //                  key on it), however many times this runs
@@ -65,7 +64,6 @@ const APNS_BUNDLE_ID = Deno.env.get("APNS_BUNDLE_ID") || "com.omniware.agent";
 const APNS_SANDBOX = (Deno.env.get("APNS_SANDBOX") || "") === "1";
 
 const NUDGE_DAILY_CAP = 3;
-const QUIET_FROM = 20, QUIET_TO = 7;          // Kampala hours
 const WRAP_HOUR = 19;
 const KAMPALA_OFFSET_H = 3;
 const DAY = 86400000;
@@ -90,10 +88,6 @@ if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
 
 function kampalaHour(nowMs: number): number {
   return new Date(nowMs + KAMPALA_OFFSET_H * 3600000).getUTCHours();
-}
-function isQuiet(nowMs: number): boolean {
-  const h = kampalaHour(nowMs);
-  return h >= QUIET_FROM || h < QUIET_TO;
 }
 function kampalaDate(nowMs: number): string {
   return new Date(nowMs + KAMPALA_OFFSET_H * 3600000).toISOString().slice(0, 10);
@@ -639,7 +633,7 @@ async function runShop(admin: any, shopId: string, subs: any[], nowMs: number, d
 
 /* "Send me a test": one notification, now, to every phone of the agent
    who asked -- signed in, so it can only ever buzz their own phones. Not
-   logged and not counted, quiet hours or not, and it says per phone why
+   logged and not counted, and it says per phone why
    one did not go, so a silence can be told apart from a fault. */
 async function testSend(req: Request) {
   const jwt = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
@@ -687,7 +681,6 @@ Deno.serve(async (req) => {
   if (!canSend && !body.dryRun) return json({ ok: true, skipped: "no push keys configured (VAPID, Firebase or APNs)" });
 
   const nowMs = Date.now();
-  if (isQuiet(nowMs) && !body.ignoreQuietHours) return json({ ok: true, skipped: "quiet hours" });
 
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
   const { data: subs, error } = await admin.from("agent_push_subscriptions")
