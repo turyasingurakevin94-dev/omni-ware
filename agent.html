@@ -80,7 +80,11 @@
     --font-money: 'IBM Plex Mono',ui-monospace,'SF Mono','Roboto Mono',Menlo,monospace;
     --shadow: 0 6px 20px rgba(27,36,56,.18);
     --shadow-up: 0 -8px 24px rgba(22,32,60,.18);
-    --safe-b: env(safe-area-inset-bottom, 0px);
+    /* The phone's own bars. In the Android app Capacitor measures them into
+       --safe-area-inset-*; a browser or the iPhone app reports them through
+       env(). Zero on a desktop browser. */
+    --safe-t: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+    --safe-b: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
 
     /* Avatar tints: identity, never state. Picked by the client's id so a
        person keeps their colour across every screen. */
@@ -106,7 +110,8 @@
   :focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 
   .agent-shell{max-width:520px;margin:0 auto;position:relative;min-height:100vh;}
-  .ax-view{padding-bottom:calc(104px + var(--safe-b));}
+  .ax-view{padding-top:var(--safe-t);padding-bottom:calc(104px + var(--safe-b));}
+  #ag_todayView{padding-top:0;}
   .ax-view[hidden]{display:none;}
 
   /* ---- generic pieces ---- */
@@ -199,7 +204,7 @@
   .ax-plus .badge[hidden]{display:none;}
 
   /* ================= TODAY ================= */
-  .ax-hero{background:var(--navy);border-radius:0 0 28px 28px;padding:18px 20px 26px;display:flex;flex-direction:column;gap:18px;color:#fff;}
+  .ax-hero{background:var(--navy);border-radius:0 0 28px 28px;padding:calc(18px + var(--safe-t)) 20px 26px;display:flex;flex-direction:column;gap:18px;color:#fff;}
   .ax-hero-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}
   .ax-hero-day{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;}
   .ax-live{display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.08);font-size:12px;font-weight:600;color:var(--on-navy);}
@@ -618,11 +623,11 @@
      comes up over the screen you were on rather than replacing it. */
   .ax-scrim{position:fixed;inset:0;z-index:60;background:rgba(12,19,38,.72);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;align-items:flex-end;justify-content:center;animation:axFade .18s ease-out;}
   .ax-sheet{
-    width:100%;max-width:520px;max-height:calc(100vh - 44px);overflow-y:auto;overscroll-behavior:contain;background:var(--bg);border-radius:26px 26px 0 0;
+    width:100%;max-width:520px;max-height:calc(100vh - 44px - var(--safe-t));overflow-y:auto;overscroll-behavior:contain;background:var(--bg);border-radius:26px 26px 0 0;
     padding-bottom:calc(20px + var(--safe-b));animation:axUp .24s cubic-bezier(.2,.8,.2,1);
   }
   .ax-sheet.white{background:var(--panel);}
-  .ax-sheet.full{height:calc(100vh - 24px);height:calc(100dvh - 24px);max-height:none;display:flex;flex-direction:column;box-shadow:0 -8px 30px rgba(0,0,0,.35);}
+  .ax-sheet.full{height:calc(100vh - 24px - var(--safe-t));height:calc(100dvh - 24px - var(--safe-t));max-height:none;display:flex;flex-direction:column;box-shadow:0 -8px 30px rgba(0,0,0,.35);}
   .ax-sheet.full > *{flex-shrink:0;}
   .ax-sheet.full > .ax-sheet-pad{flex:1 0 auto;}
   .ax-sheet.full .ax-acts{margin-top:auto;}
@@ -702,7 +707,7 @@
 
   /* ---- Sent ---- */
   .ax-sent{position:fixed;inset:0;z-index:70;background:var(--navy);color:#fff;display:flex;flex-direction:column;overflow-y:auto;animation:axFade .2s ease-out;}
-  .ax-sent-in{max-width:520px;width:100%;margin:0 auto;padding:16px 20px calc(24px + var(--safe-b));display:flex;flex-direction:column;gap:22px;flex:1;}
+  .ax-sent-in{max-width:520px;width:100%;margin:0 auto;padding:calc(16px + var(--safe-t)) 20px calc(24px + var(--safe-b));display:flex;flex-direction:column;gap:22px;flex:1;}
   .ax-sent-top{display:flex;justify-content:space-between;}
   .ax-sent-hero{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding-top:8px;}
   .ax-sent-ok{width:84px;height:84px;border-radius:999px;background:var(--mint);color:var(--navy);display:flex;align-items:center;justify-content:center;animation:axPop .4s cubic-bezier(.2,1.4,.4,1);}
@@ -991,7 +996,7 @@
   .ag-lightbox img{max-width:100%;max-height:100%;border-radius:12px;}
 
   .toast{
-    position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top, 0px));transform:translateX(-50%) translateY(-16px) scale(.96);z-index:100;
+    position:fixed;left:50%;top:calc(14px + var(--safe-t));transform:translateX(-50%) translateY(-16px) scale(.96);z-index:100;
     max-width:calc(100% - 32px);width:max-content;box-sizing:border-box;display:flex;align-items:center;gap:10px;
     min-height:44px;padding:8px 18px 8px 8px;border-radius:24px;font-size:14px;font-weight:600;line-height:1.3;
     background:var(--navy);color:#fff;box-shadow:0 10px 28px rgba(22,32,60,.25);
@@ -1116,7 +1121,7 @@
   /* ================= TODAY'S HEADER, PREMIUM =================
      A greeting, the ring (your goal) beside the figure (your money), and a
      glass bar of two doors: what is within reach, where you stand. */
-  .ax-hero{border-radius:0 0 32px 32px;padding:16px 20px 20px;gap:20px;}
+  .ax-hero{border-radius:0 0 32px 32px;padding:calc(16px + var(--safe-t)) 20px 20px;gap:20px;}
   .ax-hello{display:flex;flex-direction:column;gap:3px;min-width:0;}
   .ax-hello .g{font-size:20px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .ax-hero-day{gap:8px;font-size:12px;color:var(--on-navy);}
@@ -1193,7 +1198,7 @@
   .ax-thanks .cf{position:absolute;inset:0;overflow:hidden;pointer-events:none;}
   .ax-thanks .cf i{position:absolute;top:-12px;width:7px;height:12px;border-radius:2px;opacity:0;animation:axConf 2.6s ease-in both;}
   @keyframes axConf{0%{transform:translateY(0) rotate(0);opacity:1}100%{transform:translateY(105vh) rotate(540deg);opacity:.9}}
-  .ax-thanks .in{position:relative;max-width:520px;min-height:100%;margin:0 auto;box-sizing:border-box;padding:14px 20px calc(24px + var(--safe-b));display:flex;flex-direction:column;gap:14px;}
+  .ax-thanks .in{position:relative;max-width:520px;min-height:100%;margin:0 auto;box-sizing:border-box;padding:calc(14px + var(--safe-t)) 20px calc(24px + var(--safe-b));display:flex;flex-direction:column;gap:14px;}
   .ax-thanks .top{display:flex;justify-content:flex-end;}
   .ax-thanks .hero{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;}
   .ax-thanks .tick{width:116px;height:116px;border-radius:999px;background:rgba(111,220,176,.16);display:flex;align-items:center;justify-content:center;}
@@ -1615,7 +1620,7 @@
   .ax-ps-go{all:unset;box-sizing:border-box;cursor:pointer;flex:none;height:52px;padding:0 16px 0 20px;border-radius:16px;background:var(--accent);color:#fff;display:flex;align-items:center;gap:6px;font-size:16px;font-weight:800;}
   .ax-ps-go:active{background:var(--accent-dark);}
   .ax-ps-go .icon{width:16px;height:16px;stroke-width:2.6;}
-  .ax-sheet[data-step]{display:flex;flex-direction:column;max-height:calc(100vh - 56px);}
+  .ax-sheet[data-step]{display:flex;flex-direction:column;max-height:calc(100vh - 56px - var(--safe-t));}
   .ax-ps{flex:1;min-height:0;overflow-y:auto;padding:8px 20px 16px;display:flex;flex-direction:column;gap:16px;}
   .ax-ps.center{align-items:center;text-align:center;padding-top:20px;}
   .ax-ps-h{display:flex;align-items:center;gap:12px;}
@@ -2159,7 +2164,7 @@ function showLoginScreen(){
       const email = (el.querySelector('#auth_email').value||'').trim();
       if(!email){ setStatus('Enter your email above first, then tap "Forgot password?"', 'err'); return; }
       setStatus('Sending reset link…', 'busy');
-      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.Capacitor ? 'https://omni-ware.vercel.app/agent.html' : location.origin + location.pathname });
       setStatus(error ? error.message : 'Check your email for a password reset link.', error ? 'err' : 'ok');
     });
   });

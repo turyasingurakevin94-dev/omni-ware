@@ -92,6 +92,11 @@ APPS.forEach((app) => {
        at runtime, and a fallback in front of them is exactly right. */
     ...[...src.matchAll(/setProperty\(\s*['"`](--[a-zA-Z0-9-]+)/g)].map((m) => m[1]),
     ...[...shared.matchAll(/setProperty\(\s*['"`](--[a-zA-Z0-9-]+)/g)].map((m) => m[1]),
+    /* Set by the native shell, not by anything in this repo: inside the
+       Android app Capacitor's SystemBars measures the phone's bars into
+       these (apps/agent/capacitor.config.json, insetsHandling "css").
+       In a browser they are unset and the env() fallback is the answer. */
+    ...(app === 'agent.html' ? ['--safe-area-inset-top', '--safe-area-inset-bottom'] : []),
   ]);
   [[app, src], [SHARED_BY[app], shared]].forEach(([name, text]) => {
     if (!text) return;
