@@ -24,6 +24,10 @@ A change to `agent.html` reaches installed apps on its own:
 3. The app switches to it the next time it goes to the background, never in
    the middle of an order.
 
+That includes the app's own native layer (back button, status bar, these
+updates). It is inside `agent.html`, not a separate file, so fixing it
+reaches phones the same way.
+
 A **store release** is needed only when the native side changes: anything
 under `android/` or `ios/`, a new Capacitor plugin, or the app icon.
 Installing a newer store version replaces any saved page.

@@ -8,8 +8,8 @@
  *   www/index.html        agent.html with the swaps in src/transform.js
  *   www/vendor/           the Supabase client, pinned by package-lock.json
  *   www/fonts/            Figtree and IBM Plex Mono, the weights the page uses
- *   www/native.js         back button, status bar, live updates (src/)
- *   www/transform.js      the swaps again, for the live updates
+ *   www/transform.js      the swaps again, for the live updates (the
+ *                         native layer itself is inside agent.html)
  *   www/bundle.json       which agent.html this is, and the files beside it
  *
  * Run: node scripts/build-www.js   (or: npm run build)
@@ -32,7 +32,8 @@ const html = transform(src);
 const must = [
   ['the local fonts', '<link rel="stylesheet" href="fonts/fonts.css">'],
   ['the local Supabase client', '<script src="vendor/supabase.js"></script>'],
-  ['the native layer', '<script src="native.js"></script>'],
+  ['the swaps for live updates', '<script src="transform.js"></script>'],
+  ['the native layer', "The phone app's native layer"],
 ];
 for (const [what, needle] of must) {
   if (!html.includes(needle)) throw new Error(`build-www: ${what} did not go in -- has the top of agent.html changed? See src/transform.js`);
@@ -50,7 +51,6 @@ function put(rel, data) {
 
 put('index.html', html);
 put('vendor/supabase.js', fs.readFileSync(path.join(NM, '@supabase/supabase-js/dist/umd/supabase.js')));
-put('native.js', fs.readFileSync(path.join(APP, 'src/native.js')));
 put('transform.js', fs.readFileSync(path.join(APP, 'src/transform.js')));
 
 const faces = [
