@@ -1784,27 +1784,24 @@
   .ax-ed-typing .ax-eddock{display:none;}
   .ax-edpr{display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:14px;border:1.5px solid var(--line);background:var(--bg);}
   .ax-edpr.loss{border-color:#E7B9B3;background:#FDF5F3;}
-  .ax-edpr-h{display:flex;align-items:center;gap:12px;}
-  .ax-edpr-h .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
-  .ax-edpr-h .k{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);}
-  .ax-edpr-h .in{display:flex;align-items:baseline;gap:6px;}
-  .ax-edpr-h .cur{font-size:12px;font-weight:700;color:var(--ink-soft);}
-  .ax-edpr-h input{all:unset;flex:1;min-width:0;height:36px;font-size:24px;font-weight:600;letter-spacing:-.02em;color:var(--ink);}
+  .ax-edpr-f{display:flex;flex-direction:column;gap:8px;cursor:text;}
+  .ax-edpr-f .h{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+  .ax-edpr-f .k{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);}
+  .ax-edpr-f .in{display:flex;align-items:center;gap:8px;height:56px;padding:0 6px 0 14px;box-sizing:border-box;border-radius:14px;border:2px solid var(--navy);background:var(--panel);box-shadow:0 2px 0 rgba(22,32,60,.08);}
+  .ax-edpr-f .in:focus-within{box-shadow:0 0 0 4px rgba(22,32,60,.14);}
+  .ax-edpr-f .cur{font-size:12px;font-weight:700;color:var(--ink-soft);}
+  .ax-edpr-f input{all:unset;flex:1;min-width:0;height:44px;font-size:22px;font-weight:600;letter-spacing:-.02em;color:var(--ink);}
+  .ax-edpr-f .pen{width:44px;height:44px;flex:none;border-radius:10px;background:var(--tile);color:var(--navy);display:flex;align-items:center;justify-content:center;}
+  .ax-edpr-f .pen .icon{width:18px;height:18px;stroke-width:2.2;}
+  .ax-edpr.loss .ax-edpr-f .in{border-color:var(--bad);}
   .ax-edearn{flex:none;padding:7px 11px;border-radius:999px;font-family:var(--font-money);font-size:13px;font-weight:600;background:var(--tile);color:var(--ink-soft);}
   .ax-edearn.good{background:var(--good-bg);color:var(--good);}
   .ax-edearn.bad{background:var(--bad-bg);color:var(--bad);}
-  .ax-edbar{display:flex;height:10px;border-radius:999px;overflow:hidden;background:var(--tile);}
-  .ax-edbar i{display:block;height:100%;}
-  .ax-edbar .s{background:var(--navy);}
-  .ax-edbar .g{background:#2FA36B;}
-  .ax-edbar .l{background:repeating-linear-gradient(135deg,#C93A30 0 4px,#F2B8B1 4px 8px);}
   .ax-edleg{display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:600;color:var(--ink-soft);}
   .ax-edleg > span{display:flex;align-items:center;gap:6px;}
-  .ax-edleg i{width:8px;height:8px;border-radius:2px;background:#2FA36B;}
-  .ax-edleg i.s{background:var(--navy);}
   .ax-edleg b{color:var(--ink);font-weight:600;}
   .ax-edleg .good{color:var(--good);} .ax-edleg .good b{color:var(--good);}
-  .ax-edleg .bad{color:var(--bad);} .ax-edleg .bad b{color:var(--bad);} .ax-edleg .bad i{background:#C93A30;}
+  .ax-edleg .bad{color:var(--bad);} .ax-edleg .bad b{color:var(--bad);}
   .ax-edpr .ax-sugs{flex-wrap:wrap;}
   .ax-edpr .ax-sug.on{background:var(--navy);border-color:var(--navy);color:#fff;}
   .ax-edpr .ax-sug.on b{color:#fff;}
@@ -8721,19 +8718,15 @@ function openEditItemsSheet(orderId){
     const each = l.price - l.shop, total = each * l.qty;
     const tone = !known ? '' : each < 0 ? 'bad' : each === 0 ? '' : 'good';
     const chip = !known ? '' : each < 0 ? `${signed(total)} loss` : each === 0 ? 'Nothing to you' : `+${fmtNum(total)} yours`;
-    const scale = Math.max(l.price, l.shop) || 1;
-    const w = (n)=> `${(Math.max(0, n) / scale * 100).toFixed(1)}%`;
     const last = Math.round(lastRateFor(client, l.productId, l.variantIdx));
     const list = Math.round(Number(l.src && l.src.ourPrice) || 0);
     const sug = (v, k)=> v > 0 ? `<button type="button" class="ax-sug${Math.round(l.price) === v ? ' on' : ''}" data-setprice="${i}:${v}">${k} <b class="m">${fmtNum(v)}</b></button>` : '';
     return `<div class="ax-edpr${tone === 'bad' ? ' loss' : ''}">
-        <div class="ax-edpr-h">
-          <label class="b"><span class="k">Your price, each${l.unit ? ` ${esc(l.unit)}` : ''}</span>
-            <span class="in"><span class="cur">UGX</span><input type="text" inputmode="numeric" class="m" data-price="${i}" value="${fmtNum(l.price)}" aria-label="Your price for each ${esc(l.unit || 'one')} of ${esc(l.name)}"></span></label>
-          ${chip ? `<span class="ax-edearn ${tone}">${chip}</span>` : ''}
-        </div>
-        ${known ? `<div class="ax-edbar" aria-hidden="true"><i class="s" style="width:${w(Math.min(l.price, l.shop))}"></i><i class="g" style="width:${w(each)}"></i><i class="l" style="width:${w(-each)}"></i></div>
-        <div class="ax-edleg"><span><i class="s"></i>Shop gets <b class="m">${fmtNum(l.shop)}</b></span><span class="${each < 0 ? 'bad' : 'good'}"><i></i>${each < 0 ? 'From your pocket' : 'You keep'} <b class="m">${each < 0 ? '' : '+'}${signed(each)}</b></span></div>` : ''}
+        <label class="ax-edpr-f">
+          <span class="h"><span class="k">Your price, each${l.unit ? ` ${esc(l.unit)}` : ''}</span>${chip ? `<span class="ax-edearn ${tone}">${chip}</span>` : ''}</span>
+          <span class="in"><span class="cur">UGX</span><input type="text" inputmode="numeric" class="m" data-price="${i}" value="${fmtNum(l.price)}" aria-label="Your price for each ${esc(l.unit || 'one')} of ${esc(l.name)}"><span class="pen" aria-hidden="true">${AX_ICON.pencil}</span></span>
+        </label>
+        ${known ? `<div class="ax-edleg"><span>Shop gets <b class="m">${fmtNum(l.shop)}</b></span><span class="${each < 0 ? 'bad' : 'good'}">${each < 0 ? 'From your pocket' : 'You keep'} <b class="m">${each < 0 ? '' : '+'}${signed(each)}</b></span></div>` : ''}
         ${last > 0 || list > 0 ? `<div class="ax-sugs">${sug(last, `${esc(String(client.name || 'Client').split(/\s+/)[0])} paid last`)}${list !== last ? sug(list, "Shop's list") : ''}</div>` : ''}
       </div>`;
   };
