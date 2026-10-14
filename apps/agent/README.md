@@ -82,10 +82,10 @@ agent's first order is sent, saves the phone's token in
 Android, APNs on iPhone. A tap opens the goal, order, client or item it is
 about. Setup, once:
 
-1. **Android:** in the worker app's Firebase project add an Android app
-   `com.omniware.agent`, download `google-services.json` to
-   `android/app/google-services.json` and commit it. The build picks it up
-   by itself; without it, the app runs but cannot turn notifications on.
+1. **Android:** done -- `android/app/google-services.json` is the
+   `com.omniware.agent` app in the worker app's Firebase project
+   (`telagon-b20bd`), so the same `FIREBASE_SERVICE_ACCOUNT_JSON` secret
+   sends to both. The build picks it up by itself.
 2. **iPhone:** an APNs key from the Apple Developer account, set as
    Supabase secrets, and the Push Notifications capability on the App ID.
    The app already carries the entitlement (`ios/App/App/App.entitlements`).
