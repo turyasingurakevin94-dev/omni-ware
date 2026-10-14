@@ -20,9 +20,13 @@ const DAY = 86400000;
 let api;
 try {
   api = compileScope(
-    ['kampalaHour', 'isQuiet', 'kampalaDate', 'linePriced', 'orderEarnings', 'fmt', 'first', 'nudgesFor', 'pickToSend', 'monthBoard'].map(fn),
-    { QUIET_FROM: 20, QUIET_TO: 7, KAMPALA_OFFSET_H: 3, DAY },
-    ['isQuiet', 'nudgesFor', 'pickToSend', 'monthBoard'],
+    ['kampalaHour', 'isQuiet', 'kampalaDate', 'linePriced', 'orderEarnings', 'earnedOf', 'sumEarned', 'voice', 'fmt', 'first',
+      'namesList', 'unitWord', 'weekOf', 'daysInMonth', 'wants', 'nudgesFor', 'pickToSend', 'monthBoard', 'priceMoves'].map(fn),
+    { QUIET_FROM: 20, QUIET_TO: 7, KAMPALA_OFFSET_H: 3, DAY, WRAP_HOUR: 19,
+      MONTHS: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+      WEEKDAYS: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+      DEFAULT_KINDS: { morning: true, win: true, price: true, bonus: true, goal: true, due: true, wrap: false } },
+    ['isQuiet', 'nudgesFor', 'pickToSend', 'monthBoard', 'priceMoves'],
     { typescript: true });
 } catch (e) { t.check(false, `the nudge rules compile (${e.message})`); }
 
@@ -76,6 +80,73 @@ if (api) {
   t.check(api.pickToSend(n, new Set(), 3, 3).length === 0, 'three already today means none more');
 }
 
+/* ---------- 3b. personal, precise, in the agent's own voice ------------ */
+if (api) {
+  // Thursday 15 October 2026, 08:00 in Kampala.
+  const at = (h) => Date.parse(`2026-10-15T${String(h - 3).padStart(2, '0')}:00:00Z`);
+  const day = (n) => new Date(Date.parse('2026-10-15T00:00:00Z') - n * DAY).toISOString().slice(0, 10);
+  const line = (pid, qty, sell, price) => ({ productId: pid, variantIdx: null, qty, agentSellPrice: sell, sellPrice: price });
+  const o = (date, cid, items, status) => ({ agent_id: 'H', date, status: status || 'completed', payload: { agentClientId: cid, items } });
+  const orders = [
+    o(day(14), 1, [line('cem', 40, 33000, 32600)]), o(day(7), 1, [line('cem', 40, 33000, 32600)]),   // Junior, every 7 days, due today
+    o(day(20), 2, [line('g28', 60, 41000, 40800)]), o(day(10), 2, [line('g28', 60, 41000, 40800)]),  // Ken, every 10 days, due today
+    o(day(0), 3, [line('cem', 5, 34000, 32000)], 'draft'),                                          // Grace's very first order, today
+  ];
+  const base = {
+    inquiries: [], pins: [], clusters: [], orders,
+    promos: [{ id: 41, product_id: 'g28', variant_idx: '', bonus_type: 'percent', bonus_value: 5, active: true, ends_at: '2026-10-16', created_at: '2026-10-14T09:00:00Z' }],
+    products: new Map([['cem', 'Hima cement 50kg'], ['g28', 'Iron sheet G28']]),
+    images: new Map([['cem', 'https://img.example/cem.jpg']]),
+    clients: new Map([['H|1', 'Junior'], ['H|2', 'Ken Okello'], ['H|3', 'Grace N.']]),
+    agentNames: new Map([['H', 'Henry Mugisha']]),
+    clientCounts: new Map([['H', 13]]),
+    goals: new Map([['H', 400000]]),
+    prefs: new Map(),
+    prices: api.priceMoves([
+      { product_id: 'cem', variant_key: '', price: 32000, unit: 'bag', taken_on: day(1) },
+      { product_id: 'cem', variant_key: '', price: 31200, unit: 'bag', taken_on: day(0) },
+    ], day(0)),
+    board: [],
+  };
+  const n8 = api.nudgesFor('H', base, at(8));
+  const find = (k) => n8.find((x) => x.kind === k);
+  t.check(find('morning') && find('morning').title === 'Morning, Henry' && /^Junior and Ken are due today\. Together, about [\d,]+ for you\.$/.test(find('morning').body),
+    `the morning plan names him, names who is due, and says what it earns (${find('morning') && find('morning').body})`);
+  t.check(n8[0].kind === 'morning', 'and it comes first, at his hour');
+  t.check(!api.nudgesFor('H', base, at(10)).some((x) => x.kind === 'morning'), 'and only at his hour');
+  const price = find('price');
+  t.check(price && price.title === 'Hima cement 50kg just got cheaper, Henry'
+    && price.body === "You pay 31,200 a bag, down 800. On Junior's usual 40 bags, that is +32,000 for you.",
+    `a price drop is worked out on the client who takes the most of it (${price && price.body})`);
+  t.check(price && price.image === 'https://img.example/cem.jpg' && price.open === 'item:cem:', 'with the product photo, and a tap opens the item');
+  const win = n8.find((x) => x.kind === 'win' && /client/.test(x.ref));
+  t.check(win && win.title === 'Grace is client number 13', `a first order is celebrated with the client's number (${win && win.title})`);
+  const bonus = find('bonus_new');
+  t.check(bonus && /^Until Friday\. Ken took 60 last time: at that, [\d,]+ extra\.$/.test(bonus.body),
+    `a new bonus says what it would have added to a real client's order (${bonus && bonus.body})`);
+  t.check(!find('goal'), 'and no goal milestone before a quarter of it');
+  const rich = Object.assign({}, base, { goals: new Map([['H', 70000]]) });   // 54,000 so far
+  const g = api.nudgesFor('H', rich, at(10)).find((x) => x.kind === 'goal');
+  t.check(g && g.ref === '2026-10:75' && g.title === 'Three quarters done' && g.open === 'goal',
+    `a goal milestone is the highest one crossed, once (${g && g.ref})`);
+
+  const plain = Object.assign({}, base, { prefs: new Map([['H', { tone: 'straight', kinds: { price: false }, morning_hour: 9 }]]) });
+  const p9 = api.nudgesFor('H', plain, at(9));
+  t.check(p9.find((x) => x.kind === 'morning').title === 'Today: 2 clients due', 'straight to the point when he asks for that');
+  t.check(!p9.some((x) => x.kind === 'price'), 'a kind he switched off is never sent');
+  t.check(!api.nudgesFor('H', plain, at(8)).some((x) => x.kind === 'morning'), 'and the morning plan comes at the hour he picked');
+  t.check(!api.nudgesFor('H', base, at(19)).some((x) => x.kind === 'wrap'), 'the evening wrap-up is off until he turns it on');
+  const eve = Object.assign({}, base, { prefs: new Map([['H', { kinds: { wrap: true } }]]) });
+  const w = api.nudgesFor('H', eve, at(19)).find((x) => x.kind === 'wrap');
+  t.check(w && /^1 order, \+[\d,]+\. Tomorrow is wide open\.$/.test(w.body), `and then says today in one line (${w && w.body})`);
+}
+
+/* ---------- 3c. every phone, its own way ------------------------------ */
+t.check(/platform === "android"[\s\S]{0,120}sendFcm/.test(fnSrc) && /platform === "ios"[\s\S]{0,160}sendApns/.test(fnSrc),
+  'Android through FCM, iPhone through APNs, the browser through Web Push');
+t.check(/if \(code === 410\) await admin\.from\("agent_push_subscriptions"\)\.delete\(\)/.test(fnSrc), 'and a phone that is gone is forgotten');
+t.check(/if \(k === "request"\) return true;/.test(fnSrc), 'a customer waiting on an answer is never switched off');
+
 /* ---------- 4. closed unless the shop set a secret --------------------- */
 t.check(/if \(!AGENT_NUDGE_SECRET\) return json\(\{ error: "AGENT_NUDGE_SECRET is not set" \}, 503\);/.test(fnSrc),
   'the run endpoint refuses to work at all without AGENT_NUDGE_SECRET');
@@ -86,12 +157,56 @@ t.check(/unique index if not exists agent_push_log_once/.test(read('supabase/mig
 
 /* ---------- 5. the agent side ------------------------------------------ */
 const agent = read('agent.html');
-t.check(/data-p="push" role="switch"/.test(agent) && /if\(k === 'push'\)\{ if\(await enableAgentPush\(\)\)/.test(agent),
+const fnBody = (name)=>{
+  const i = agent.search(new RegExp(`(async )?function ${name}\\(`));
+  if(i < 0) return '';
+  const j = agent.indexOf('\n}\n', i);
+  return agent.slice(i, j < 0 ? i + 4000 : j);
+};
+t.check(/data-p="push"/.test(agent) && /else if\(k === 'push'\) openNotifySheet\(\);/.test(agent),
+  'You -> Notifications opens the notifications sheet');
+t.check(/data-nt="on"/.test(agent) && /t\.dataset\.nt === 'on'\)\{ if\(await enableAgentPush\(\)\)/.test(agent)
+  && /data-ask="on"/.test(agent) && /if\(await enableAgentPush\(\)\) sheet\.close\(\);/.test(agent),
   'notifications are asked for from a button he pressed');
-t.check(!/requestPermission\(\)[\s\S]{0,40}boot\(\)/.test(agent) && !/^\s*enableAgentPush\(\);/m.test(agent),
-  'and never on load');
-t.check(/switchTab\(openParam \? 'today'/.test(agent),
-  'a tapped notification opens the app on Today, where the feed\'s best cards now live');
+t.check(!/requestPermission\(\)[\s\S]{0,40}boot\(\)/.test(agent) && !/^\s*enableAgentPush\(\);/m.test(agent)
+  && !/requestPermissions/.test(fnBody('startAgentPush')),
+  'and never on load -- starting up only refreshes a token already allowed');
+t.check(/pushAskDue = true;/.test(fnBody('showSent')) && /localStorage\.setItem\(pushAskedKey\(\), '1'\)/.test(fnBody('openPushAskSheet'))
+  && /agentPushState\(\) !== 'off'/.test(fnBody('maybeAskForPush')),
+  'the first ask comes once, after an order is sent, and only while notifications are off');
+t.check(/onConflict: 'push_token'/.test(fnBody('saveNativeToken')) && /platform: C\.getPlatform\(\)/.test(fnBody('saveNativeToken')),
+  'in the phone app the push token is saved against the agent, one row per phone');
+const route = fnBody('routePush');
+t.check(['goal', 'order', 'client', 'item'].every(k=> route.includes(`what === '${k}'`)) && /startAgentPush\(\);/.test(agent)
+  && /pushNotificationActionPerformed/.test(fnBody('startAgentPush')),
+  'a tapped notification lands where it points: the goal, an order, a client, an item');
+t.check(/switchTab\(openParam \? 'today'/.test(agent) && /routePush\(openParam\)/.test(agent) && /routePush\(e\.data\.open\)/.test(agent),
+  'in the browser too, via ?open= and the service worker');
+// The sheet's choices are the ones agent-nudge reads.
+const kindsIds = [...(agent.match(/const NOTIFY_KINDS = \[([\s\S]*?)\n\];/) || ['', ''])[1].matchAll(/id:'(\w+)'/g)].map(m=> m[1]);
+const serverKinds = Object.keys(JSON.parse(fnSrc.match(/DEFAULT_KINDS[^=]*=\s*(\{[^}]*\})/)[1].replace(/(\w+):/g, '"$1":')));
+t.check(kindsIds.length === 7 && kindsIds.join() === serverKinds.join(),
+  `the sheet's switches are the kinds agent-nudge knows (${kindsIds.join(', ')})`);
+t.check(/\[7, 8, 9\]/.test(fnBody('openNotifySheet')) && /data-tone="playful"/.test(agent) && /data-tone="straight"/.test(agent)
+  && /onConflict: 'shop_id,agent_id'/.test(fnBody('saveNotifyPrefs')),
+  'morning time and tone are saved as the table allows them');
+const mig = read('supabase/migrations/0110_agent_native_push.sql');
+t.check(/morning_hour between 6 and 10/.test(mig) && /tone in \('playful', 'straight'\)/.test(mig)
+  && /create unique index if not exists agent_push_subscriptions_token_key\s+on agent_push_subscriptions \(push_token\);/.test(mig),
+  'the table takes those values, and a plain unique index answers ON CONFLICT (push_token)');
+// The phone apps.
+const manifest = read('apps/agent/android/app/src/main/AndroidManifest.xml');
+t.check(/POST_NOTIFICATIONS/.test(manifest) && /default_notification_icon" android:resource="@drawable\/ic_stat_ow"/.test(manifest)
+  && /default_notification_channel_id/.test(manifest) && /<vector/.test(read("apps/agent/android/app/src/main/res/drawable/ic_stat_ow.xml"))
+  && /icon: "ic_stat_ow"/.test(fnSrc),
+  'Android: asks on 13+, and shows the app\'s own mark');
+t.check(/<string name="ow_notify_channel">ow_agent<\/string>/.test(read('apps/agent/android/app/src/main/res/values/notify.xml'))
+  && /createChannel\(\{ id:'ow_agent'/.test(agent) && /channel_id: "ow_agent"/.test(fnSrc),
+  'Android: one channel, named the same in the app, the manifest and agent-nudge');
+t.check(/capacitorDidRegisterForRemoteNotifications/.test(read('apps/agent/ios/App/App/AppDelegate.swift'))
+  && /aps-environment/.test(read('apps/agent/ios/App/App/App.entitlements'))
+  && /CODE_SIGN_ENTITLEMENTS = App\/App\.entitlements;/.test(read('apps/agent/ios/App/App.xcodeproj/project.pbxproj')),
+  'iPhone: the APNs token reaches the app, and the app may receive pushes');
 const sw = read('agent-sw.js');
 t.check(/showNotification/.test(sw) && /notificationclick/.test(sw) && !/caches\./.test(sw),
   'the service worker shows and opens notifications, and caches nothing');

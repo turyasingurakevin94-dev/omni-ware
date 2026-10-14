@@ -74,13 +74,23 @@ On a Mac: open the project in Xcode, choose your Team under Signing, then
 Product → Archive → Distribute. Signing can later be moved into the GitHub
 workflow, with the certificate stored as a secret.
 
-## Next: notifications
+## Notifications
 
-The app is ready for native push. The plan:
+Built in (`@capacitor/push-notifications`): the app asks once after an
+agent's first order is sent, saves the phone's token in
+`agent_push_subscriptions`, and `agent-nudge` sends to it -- FCM on
+Android, APNs on iPhone. A tap opens the goal, order, client or item it is
+about. Setup, once:
 
-1. Add `@capacitor/push-notifications` here.
-2. Register an Android app `com.omniware.agent` in the Firebase project that
-   the worker app already uses, and add an APNs key for the iPhone.
-3. Store each phone's token next to `agent_push_subscriptions`.
-4. Have `agent-nudge` send through FCM, the way `notify-worker` does for the
-   worker app.
+1. **Android:** in the worker app's Firebase project add an Android app
+   `com.omniware.agent`, download `google-services.json` to
+   `android/app/google-services.json` and commit it. The build picks it up
+   by itself; without it, the app runs but cannot turn notifications on.
+2. **iPhone:** an APNs key from the Apple Developer account, set as
+   Supabase secrets, and the Push Notifications capability on the App ID.
+   The app already carries the entitlement (`ios/App/App/App.entitlements`).
+3. Run migration `0110_agent_native_push.sql` and redeploy `agent-nudge`
+   and `agent-catalog`.
+
+The steps and secret names are in `supabase/functions/README.md`,
+section 6.

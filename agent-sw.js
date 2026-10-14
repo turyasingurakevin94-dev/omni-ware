@@ -1,6 +1,6 @@
 /* The agent app's service worker. It does one job: show the notifications
    agent-nudge sends (supabase/functions/agent-nudge), and open the app on
-   the Feed when one is tapped. It caches nothing -- the app has its own
+   the screen it points at when one is tapped. It caches nothing -- the app has its own
    offline snapshot, and a second cache here would be a second copy of the
    truth to go stale. */
 self.addEventListener('install', () => self.skipWaiting());
@@ -14,7 +14,7 @@ self.addEventListener('push', (event) => {
     body: msg.body || '',
     tag: msg.kind || 'feed',
     renotify: true,
-    data: { url: msg.url || '/agent.html?open=feed' },
+    data: { url: msg.url || '/agent.html?open=feed', open: msg.open || 'today' },
   }));
 });
 
@@ -26,7 +26,7 @@ self.addEventListener('notificationclick', (event) => {
     for (const w of wins) {
       if (w.url.includes('/agent.html')) {
         await w.focus();
-        w.postMessage({ type: 'open', tab: 'feed' });
+        w.postMessage({ type: 'open', open: (event.notification.data && event.notification.data.open) || 'today' });
         return;
       }
     }

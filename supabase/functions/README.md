@@ -251,10 +251,37 @@ for this one, `shop_payment_providers` holds them per-shop.
    numbers in their sandbox docs that auto-approve or auto-reject, for
    testing both the success and failure paths without a real phone).
 
-## 6. Agent notifications (agent-nudge, Web Push)
+## 6. Agent notifications (agent-nudge)
 
-Agents use `agent.html` in a phone browser, so their notifications are
-standard Web Push, not the workers' FCM. Needs migration `0103_agent_push.sql`.
+Agents get them three ways, all from the same `agent-nudge` run: the
+Android app through FCM, the iPhone app through APNs, and `agent.html` in a
+phone browser through Web Push. Needs migrations `0103_agent_push.sql` and
+`0110_agent_native_push.sql`, and `agent-catalog` redeployed (it keeps the
+daily price snapshot that price-drop notifications are worked out from).
+Each way is optional: whichever keys are set are used.
+
+**Android app (FCM).** Uses the same Firebase project and the same
+`FIREBASE_SERVICE_ACCOUNT_JSON` secret as the worker app (section 1). In
+the Firebase Console add a second Android app, package `com.omniware.agent`,
+download its `google-services.json` and put it at
+`apps/agent/android/app/google-services.json` (public config, safe to
+commit). Until it is there the app builds and runs, but cannot turn
+notifications on.
+
+**iPhone app (APNs).** Apple Developer account -> Certificates, IDs &
+Profiles -> Keys -> + -> tick "Apple Push Notifications service (APNs)" ->
+download the `.p8` (once only -- keep it safe, never commit it). Then:
+```
+supabase secrets set APNS_KEY_P8="$(cat AuthKey_XXXXXXXXXX.p8)" \
+  APNS_KEY_ID="XXXXXXXXXX" APNS_TEAM_ID="<your 10-character team id>"
+```
+`APNS_BUNDLE_ID` defaults to `com.omniware.agent`. Builds signed for
+development (Xcode, TestFlight internal debug builds) talk to Apple's
+sandbox: set `APNS_SANDBOX=1` while testing those, and unset it for App
+Store / TestFlight builds. The App ID needs the Push Notifications
+capability ticked.
+
+**Browser (Web Push):**
 
 1. Make a VAPID key pair once (any machine with Node):
    ```
@@ -272,20 +299,28 @@ standard Web Push, not the workers' FCM. Needs migration `0103_agent_push.sql`.
    ```
    supabase functions deploy agent-nudge --no-verify-jwt
    supabase functions deploy agent-leaderboard
+   supabase functions deploy agent-catalog
    ```
 4. Schedule it hourly: Dashboard -> Integrations -> Cron -> New job ->
    type "Supabase Edge Function", `agent-nudge`, POST, schedule `0 * * * *`,
    body `{"action":"run"}`, header `x-cron-secret: <AGENT_NUDGE_SECRET>`.
 
 It sends nothing before 07:00 or from 20:00 Kampala time, at most three a
-day per agent, and each moment once (a request on their catalogue page, an
-item the shop pinned, a client who is due, being one good sale from the
-next place, a bonus in their cluster ending). To see what it WOULD send
-without sending, call it with `{"action":"run","dryRun":true}`.
+day per agent, and each moment once. What it sends, in the agent's own
+words and numbers: a morning plan (who is due today and what it earns
+them), celebrations (a new client, a best week, a streak), price drops
+worked out on a client's usual order, new bonuses on things they sell, goal
+milestones (a quarter, half, three quarters, done), clients due back, an
+optional evening wrap-up at 19:00, plus the older catalogue requests,
+pinned items, leaderboard nudges and ending bonuses. Each agent chooses
+which of these they get, when the morning plan comes (7, 8 or 9) and the
+tone (playful or straight) in You -> Notifications; that is
+`agent_notify_prefs`. A tap opens the thing it is about. To see what it
+WOULD send without sending, call it with `{"action":"run","dryRun":true}`.
 
-An agent turns notifications on from the **Alert me** chip on their Feed.
-On an iPhone that only works once the app has been added to the Home
-Screen (Safari's rule, iOS 16.4+).
+The app asks once, after an agent's first order is sent; after that it is
+in You -> Notifications. In a browser on an iPhone that only works once the
+page has been added to the Home Screen (Safari's rule, iOS 16.4+).
 
 ## 7. Agents changing an order (agent-change-order)
 

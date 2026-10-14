@@ -273,6 +273,32 @@ function resolveClusterWaitDays(presets: any): number {
   return v != null && v !== "" ? Math.max(0, Number(v) || 0) : DEFAULT_CLUSTER_WAIT_DAYS;
 }
 
+// Today's agent price of every item, kept so agent-nudge can tell an
+// agent when one has dropped (0110). Prices here are rules on cost worked
+// out on demand, so nothing else remembers yesterday's figure. Written the
+// first time the catalogue is listed each day (Kampala date) -- one cheap
+// read on every other call -- and two weeks are kept. Never allowed to
+// fail the listing itself: a missed snapshot only delays a notification.
+async function snapshotPrices(admin: any, shopId: string, items: any[]) {
+  try {
+    const today = new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10);
+    const { data: have } = await admin.from("agent_price_snapshots").select("taken_on")
+      .eq("shop_id", shopId).eq("taken_on", today).limit(1);
+    if (have && have.length) return;
+    const rows = items.filter((it) => it.available && Number(it.floorPrice) > 0).map((it) => ({
+      shop_id: shopId, product_id: String(it.productId), variant_key: it.variantIdx == null ? "" : String(it.variantIdx),
+      price: Number(it.floorPrice), unit: it.unit || null, taken_on: today,
+    }));
+    for (let i = 0; i < rows.length; i += 500) {
+      await admin.from("agent_price_snapshots").upsert(rows.slice(i, i + 500), { onConflict: "shop_id,product_id,variant_key,taken_on", ignoreDuplicates: true });
+    }
+    const cutoff = new Date(Date.now() - 14 * 86400000).toISOString().slice(0, 10);
+    await admin.from("agent_price_snapshots").delete().eq("shop_id", shopId).lt("taken_on", cutoff);
+  } catch (e) {
+    console.error("agent-catalog: price snapshot skipped", e);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
@@ -421,6 +447,7 @@ Deno.serve(async (req) => {
         });
       });
 
+      await snapshotPrices(admin, shopId, items);
       return json({ ok: true, items });
     }
 
