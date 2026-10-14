@@ -9764,11 +9764,17 @@ const PUSH_WHY = {
   no_vapid_key: 'The server has no browser key yet. Ask the shop to add it.',
   old_server: 'The server is still on the old version. Ask the shop to update it.',
   offline: 'Could not reach the server. Check the connection and try again.',
+  no_answer: 'The server did not answer. Its notification function needs redeploying.',
 };
 async function sendTestPush(){
   let data = null;
   try{
-    const r = await sb.functions.invoke('agent-nudge', { body: { action: 'test' } });
+    // A broken deploy never answers at all; twenty seconds is plenty.
+    const r = await Promise.race([
+      sb.functions.invoke('agent-nudge', { body: { action: 'test' } }),
+      new Promise((ok)=> setTimeout(()=> ok({ timedOut: true }), 20000)),
+    ]);
+    if(r.timedOut) return { ok: false, why: 'no_answer' };
     data = r.data;
     if(r.error){
       try{ data = await r.error.context.json(); }catch(_e){ data = null; }

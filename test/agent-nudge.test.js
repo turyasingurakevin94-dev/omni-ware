@@ -211,7 +211,7 @@ const serverKinds = Object.keys(JSON.parse(fnSrc.match(/DEFAULT_KINDS[^=]*=\s*(\
 t.check(kindsIds.length === 7 && kindsIds.join() === serverKinds.join(),
   `the sheet's switches are the kinds agent-nudge knows (${kindsIds.join(', ')})`);
 t.check(/data-nt="test"/.test(agent) && /action: 'test'/.test(fnBody('sendTestPush')) && /old_server/.test(fnBody('sendTestPush'))
-  && ['not_registered', 'token_expired', 'no_firebase_key', 'no_apns_key', 'old_server', 'offline'].every((w)=> new RegExp(`\\b${w}:`).test(agent)),
+  && ['not_registered', 'token_expired', 'no_firebase_key', 'no_apns_key', 'old_server', 'offline', 'no_answer'].every((w)=> new RegExp(`\\b${w}:`).test(agent)),
   'the sheet can send a test now, and says in words what is missing when it does not come');
 t.check(/\[7, 8, 9\]/.test(fnBody('openNotifySheet')) && /data-tone="playful"/.test(agent) && /data-tone="straight"/.test(agent)
   && /onConflict: 'shop_id,agent_id'/.test(fnBody('saveNotifyPrefs')),
