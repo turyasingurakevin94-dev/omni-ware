@@ -77,7 +77,7 @@ const src = read('agent.html');
   t.check(/getElementById\('ag_ringBtn'\)\.addEventListener\('click', \(\)=> openGoalSheet\(\)\)/.test(src), 'the ring opens the goal');
   t.check(!/openGoalSetSheet/.test(src), 'there is no second sheet for setting it');
   const open = extractFunction(src, 'openGoalSheet', 'agent.html');
-  t.check(/class="ax-gin">of<input type="text" inputmode="numeric" id="ag_goalInput"/.test(open), 'the goal figure under the gauge is the field');
+  t.check(/class="ax-gfield"[\s\S]{0,200}?<input type="text" inputmode="numeric" id="ag_goalInput"/.test(open), 'the goal is an outlined field you type into');
   t.check(/input\.addEventListener\('input', \(\)=>\{[\s\S]*?paint\(\);\s*\}\);/.test(open), 'and everything redraws as it is typed');
   t.check(/input\.addEventListener\('change', keep\)/.test(open) && /value = presets\[Number\(p\.dataset\.preset\)\]\.v;[\s\S]*?keep\(\);/.test(open),
     'a new number is kept on leaving the field or picking a chip -- no save step');
