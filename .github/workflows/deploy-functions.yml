@@ -1,0 +1,78 @@
+name: Deploy functions to the live shop
+
+# Run by hand, from the Actions tab: "Run workflow", then the names of the
+# functions to update. There is no push trigger and there must not be one
+# -- a change to the live shop's server happens because someone pressed
+# the button, never because a file was edited.
+#
+# It exists for the same reason as staging.yml: deploying an edge function
+# needs the Supabase CLI, and the person running the shop does not have a
+# terminal. Only edge functions -- never the database. Migrations stay a
+# paste into the SQL editor, read before they are run.
+on:
+  workflow_dispatch:
+    inputs:
+      functions:
+        description: Functions to deploy, separated by spaces
+        type: string
+        default: agent-nudge agent-catalog
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      LIVE_PROJECT_REF: hgywjaifdmgrcnwxstxg
+      # Through env, never pasted into the script: the input is text anyone
+      # with the button can type.
+      FUNCTIONS: ${{ inputs.functions }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check what was asked for
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "::error::SUPABASE_ACCESS_TOKEN is not set. Add it under Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+          for f in $FUNCTIONS; do
+            if ! printf '%s' "$f" | grep -Eq '^[a-z0-9-]+$' || [ ! -d "supabase/functions/$f" ]; then
+              echo "::error::'$f' is not a function in supabase/functions."
+              exit 1
+            fi
+          done
+          echo "Deploying to the live project ($LIVE_PROJECT_REF): $FUNCTIONS"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Nothing reaches the live shop that fails the suite -- including the
+      # check that config.toml says which functions take no JWT, which is
+      # what the deploy below reads.
+      - name: Run tests
+        run: npm test
+
+      - name: Install the Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Deploy
+        run: |
+          for f in $FUNCTIONS; do
+            echo "::group::$f"
+            supabase functions deploy "$f" --project-ref "$LIVE_PROJECT_REF"
+            echo "::endgroup::"
+          done
+
+      - name: Summary
+        run: |
+          echo "### Live shop updated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          for f in $FUNCTIONS; do echo "- \`$f\`" >> $GITHUB_STEP_SUMMARY; done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Secrets and the database were not touched." >> $GITHUB_STEP_SUMMARY
