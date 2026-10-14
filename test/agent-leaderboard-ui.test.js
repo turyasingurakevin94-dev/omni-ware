@@ -58,8 +58,11 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
     'with no board to stand on, the card falls back to your own orders done rather than going blank');
   t.check(/streak >= 2/.test(money), 'a running streak is said only once it is a streak');
   const hero = extractFunction(src, 'renderTodayHero', 'agent.html');
-  t.check(/leaderboard\.you && leaderboard\.totalAgents >= 2/.test(hero) && /#\$\{esc\(lb\.you\.rank\)\}/.test(hero),
-    'Today carries the same rank, under the same one-agent rule');
+  t.check(/leaderboard\.you && leaderboard\.totalAgents >= 2/.test(hero) && /const rank = lb && lb\.totalAgents >= 3 \? lb : null;/.test(hero)
+    && /#\$\{esc\(rank\.you\.rank\)\}/.test(hero),
+    'Today carries the same rank, but only once there are three to stand among -- second of two is not a headline');
+  t.check(/if\(rank \|\| streak >= 2\) doors\.push/.test(hero) && /if\(p\.near > 0\) doors\.push/.test(hero) && /glass\.hidden = !doors\.length;/.test(hero),
+    'and a door on Today shows only with something behind it -- no "0 within reach"');
 }
 
 /* ---------- 3. no emoji ------------------------------------------- */

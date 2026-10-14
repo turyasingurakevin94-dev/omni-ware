@@ -38,6 +38,13 @@
   // The first installs carried this layer as their own native.js. On those
   // it is already running from above, and only the bars' size (3) is new.
   var legacy = !!document.querySelector('script[src="native.js"]');
+  // A light tap when something lands in the basket, a firm one when an
+  // order is sent or paid. Silent on a build without the plugin.
+  window.owHaptic = function(kind){
+    var H = P.Haptics;
+    if(!H) return;
+    (kind === 'success' ? H.notification({ type: 'SUCCESS' }) : H.impact({ style: 'LIGHT' })).catch(function(){});
+  };
 
   /* ---- 1. back ---- */
   function back(){
@@ -364,7 +371,7 @@
   .ax-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;}
   .ax-sec{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:0 4px;}
   .ax-sec h2{margin:0;font-size:17px;font-weight:700;}
-  .ax-sec .n{font-family:var(--font-money);font-size:13px;color:var(--ink-soft);}
+  .ax-sec .n{font-size:13px;font-weight:600;color:var(--ink-soft);}
   .ax-empty{padding:22px 16px;text-align:center;color:var(--ink-soft);font-size:14px;}
   .ax-gap{height:12px;}
 
@@ -1322,7 +1329,7 @@
   /* ================= TODAY'S HEADER, PREMIUM =================
      A greeting, the ring (your goal) beside the figure (your money), and a
      glass bar of two doors: what is within reach, where you stand. */
-  .ax-hero{border-radius:0 0 32px 32px;padding:calc(16px + var(--safe-t)) 20px 20px;gap:20px;}
+  .ax-hero{border-radius:0 0 28px 28px;padding:calc(14px + var(--safe-t)) 20px 18px;gap:16px;}
   .ax-hello{display:flex;flex-direction:column;gap:3px;min-width:0;}
   .ax-hello .g{font-size:20px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .ax-hero-day{gap:8px;font-size:12px;color:var(--on-navy);}
@@ -1330,22 +1337,25 @@
   .ax-live{padding:0;background:none;color:var(--mint);gap:5px;}
   .ax-live.off{color:#F5B26B;}
   .ax-me{width:46px;height:46px;background:#243052;font-size:15px;box-shadow:0 0 0 2px var(--navy),0 0 0 4px rgba(111,220,176,.55);}
-  .ax-ring-row{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:18px;width:100%;}
-  .ax-ringbtn{all:unset;box-sizing:border-box;cursor:pointer;flex:none;border-radius:999px;display:block;}
   .ax-ring{display:block;}
-  .ax-ring{width:136px;height:136px;}
-  .ax-ring-c .p{font-size:28px;letter-spacing:-.04em;line-height:1;}
-  .ax-ring-c .set{display:flex;flex-direction:column;align-items:center;gap:4px;}
-  .ax-ring-c .set .icon{width:20px;height:20px;}
-  .ax-yours{all:unset;box-sizing:border-box;cursor:pointer;flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;}
-  .ax-yours .l{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;letter-spacing:.1em;}
+  .ax-yours{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:6px;min-height:44px;}
+  .ax-yours .l{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--on-navy);}
   .ax-yours .l .icon{width:14px;height:14px;opacity:.7;stroke-width:2.4;}
-  .ax-yours .v{display:flex;align-items:baseline;gap:6px;font-size:31px;letter-spacing:-.04em;}
-  .ax-yours .v small{font-family:var(--font-sans);font-size:13px;font-weight:700;color:#8D99B5;letter-spacing:0;}
-  .ax-yours .of{display:flex;justify-content:space-between;gap:8px;font-family:var(--font-sans);font-size:11px;font-weight:600;}
-  .ax-yours .of .m{font-family:var(--font-money);}
+  .ax-yours .v{display:flex;align-items:baseline;gap:8px;font-size:38px;font-weight:600;letter-spacing:-.04em;line-height:1;}
+  .ax-yours .v small{font-family:var(--font-sans);font-size:14px;font-weight:700;color:#8D99B5;letter-spacing:0;}
+  .ax-goalbar{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:9px;min-height:44px;justify-content:center;}
+  .ax-goalbar .t{display:flex;height:8px;border-radius:999px;background:rgba(255,255,255,.12);overflow:hidden;}
+  .ax-goalbar .t i{display:block;height:100%;min-width:8px;border-radius:999px;background:#fff;transition:width .4s cubic-bezier(.2,.8,.2,1);}
+  .ax-goalbar .t i.near{min-width:0;border-radius:0 999px 999px 0;background:rgba(111,220,176,.45);}
+  .ax-goalbar .l{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;font-weight:600;color:var(--on-navy);}
+  .ax-goalbar .l > span{display:flex;align-items:center;gap:5px;}
+  .ax-goalbar .l b{color:#fff;font-weight:600;}
+  .ax-goalbar .l .icon{width:14px;height:14px;opacity:.7;stroke-width:2.4;}
+  .ax-goalbar .set{color:var(--mint);font-weight:700;}
+  .ax-goalbar .set .icon{opacity:1;}
+  .ax-glass[hidden]{display:none;}
   .ax-glass{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-radius:18px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);overflow:hidden;}
-  .ax-glass button{all:unset;box-sizing:border-box;cursor:pointer;min-height:64px;padding:10px 12px 10px 14px;display:flex;align-items:center;gap:10px;min-width:0;}
+  .ax-glass button{all:unset;box-sizing:border-box;cursor:pointer;min-height:56px;padding:10px 12px 10px 14px;display:flex;align-items:center;gap:10px;min-width:0;}
   .ax-glass button + button{border-left:1px solid rgba(255,255,255,.08);}
   .ax-glass .ic{width:36px;height:36px;flex:none;border-radius:12px;display:flex;align-items:center;justify-content:center;}
   .ax-glass .ic .icon{width:18px;height:18px;stroke-width:2.2;}
@@ -1497,10 +1507,18 @@
   .ax-oc .h .v{font-size:16px;font-weight:600;}
   .ax-oc .f{display:flex;align-items:center;justify-content:space-between;gap:10px;}
   .ax-oc .f .s{font-size:13px;color:var(--ink-soft);min-width:0;}
-  .ax-oc .go{flex:none;height:40px;padding:0 12px 0 14px;border-radius:12px;background:var(--tile);color:var(--ink);font-size:14px;font-weight:700;display:flex;align-items:center;gap:4px;}
+  /* One look per meaning: solid when it is yours to do now, a plain link
+     when it only opens the order. */
+  .ax-oc .go{flex:none;height:40px;padding:0 2px 0 8px;border-radius:12px;background:none;color:var(--ink-soft);font-size:14px;font-weight:700;display:flex;align-items:center;gap:4px;}
   .ax-oc .go .icon{width:15px;height:15px;stroke-width:2.4;}
-  .ax-oc .go.warn{background:var(--warn-bg);color:var(--warn-ink);}
-  .ax-oc .go.good{background:var(--good-bg);color:var(--good);}
+  .ax-oc .go.warn{padding:0 12px 0 14px;background:var(--warn);color:#fff;}
+  .ax-oc .go.good{padding:0 12px 0 14px;background:var(--good);color:#fff;}
+  .ax-sgrp{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 4px 0;font-size:13px;font-weight:700;color:var(--ink-soft);}
+  .ax-sgrp span{display:flex;align-items:center;gap:6px;}
+  .ax-sgrp .icon{width:15px;height:15px;stroke-width:2.2;}
+  .ax-sgrp b{font-size:12px;font-weight:700;min-width:22px;height:22px;padding:0 6px;box-sizing:border-box;border-radius:999px;background:var(--tile);display:flex;align-items:center;justify-content:center;}
+  .ax-sgrp.warn{color:var(--warn-ink);}
+  .ax-sgrp.warn b{background:var(--warn-bg);}
   .ax-empty .icon{display:block;margin:0 auto 8px;width:26px;height:26px;color:var(--ink-faint);}
   .ax-empty .btn{margin:12px auto 0;}
 
@@ -1611,7 +1629,7 @@
   .ax-plays-none .t{font-size:15px;font-weight:700;}
   .ax-play{position:relative;border-radius:22px;background:radial-gradient(120% 90% at 100% 0%,#2B3866 0%,var(--navy) 58%);color:#fff;padding:16px;display:flex;flex-direction:column;gap:14px;box-shadow:0 14px 30px rgba(22,32,60,.22);overflow:hidden;}
   .ax-hero-top2{display:flex;align-items:center;justify-content:space-between;gap:8px;}
-  .ax-hero-top2 .m{font-size:12px;color:#8D99B5;}
+  .ax-hero-top2 .n{font-size:12px;font-weight:600;color:#8D99B5;}
   .ax-ptag{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:999px;background:rgba(255,255,255,.1);color:#DDE3F0;font-size:12px;font-weight:700;}
   .ax-ptag .icon{width:13px;height:13px;stroke-width:2.4;}
   .ax-ptag.warn{background:rgba(245,178,107,.16);color:#F5B26B;}
@@ -1985,6 +2003,11 @@
   .ax-edzero s{color:var(--ink-faint);}
   .ax-edtwo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
   .ax-killo{background:var(--panel);border:1.5px solid #E7B9B3;color:var(--bad);}
+  /* Press: what you tap gives under your thumb, the way a native control
+     does, so a tap is felt before anything loads. */
+  .ax-oc,.ax-tile,.ax-play-go,.ax-pickrow,.ax-yours,.ax-goalbar,.ax-grow,.ax-edhit,.ax-ps-m,.btn,.ax-sug,.ax-glass button{transition:transform .12s ease;}
+  .ax-oc:active,.ax-tile:active,.ax-play-go:active,.ax-pickrow:active,.ax-yours:active,.ax-goalbar:active,.ax-grow:active,.ax-edhit:active,.btn:active,.ax-sug:active,.ax-glass button:active{transform:scale(.97);}
+  @media (prefers-reduced-motion:reduce){ .ax-oc,.ax-tile,.ax-play-go,.ax-pickrow,.ax-yours,.ax-goalbar,.ax-grow,.ax-edhit,.ax-ps-m,.btn,.ax-sug,.ax-glass button{transition:none;} }
 </style>
 </head>
 <body class="app-loading">
@@ -2016,10 +2039,8 @@
         </div>
         <button type="button" class="ax-me" id="ag_meBtn" aria-label="You, your shop and this phone"></button>
       </div>
-      <div class="ax-ring-row">
-        <button type="button" class="ax-ringbtn" id="ag_ringBtn" aria-label="Your goal"></button>
-        <button type="button" class="ax-yours" id="ag_moneyBtn" aria-label="Your money"></button>
-      </div>
+      <button type="button" class="ax-yours" id="ag_moneyBtn" aria-label="Your money"></button>
+      <button type="button" class="ax-goalbar" id="ag_ringBtn" aria-label="Your goal"></button>
       <div class="ax-glass" id="ag_glass"></div>
     </div>
 
@@ -3825,18 +3846,18 @@ function fdUnits(n, unit){
 function clientCadence(c, counts, today){
   const orders = (counts.get(c.id)||[]).filter(o=>!o.voided && orderDate(o)).slice()
     .sort((a,b)=> String(orderDate(a)).localeCompare(String(orderDate(b))));
-  if(orders.length < 2) return null;
-  const dates = orders.map(o=>new Date(orderDate(o)+'T00:00:00'));
+  const days = [...new Set(orders.map(o=> orderDate(o)))]; // a rhythm is between visits: two orders on one day are one, not "every 0 days"
+  if(days.length < 2) return null; const dates = days.map(d=> new Date(d+'T00:00:00'));
   let gapSum = 0;
   for(let i=1;i<dates.length;i++) gapSum += (dates[i]-dates[i-1]) / 86400000;
   const avgGapDays = gapSum / (dates.length - 1);
   const lastDate = dates[dates.length-1];
   return {
     orders, avgGapDays, lastDate,
-    lastDateKey: orderDate(orders[orders.length-1]),
+    lastDateKey: days[days.length-1],
     daysSince: (today - lastDate) / 86400000,
-    avgMargin: orders.reduce((s,o)=>s+orderEarnings(o).margin,0) / orders.length,
-    avgOrder: orders.reduce((s,o)=>s+orderTotal(o),0) / orders.length,
+    avgMargin: orders.reduce((s,o)=>s+orderEarnings(o).margin,0) / days.length,
+    avgOrder: orders.reduce((s,o)=>s+orderTotal(o),0) / days.length,
   };
 }
 
@@ -5328,11 +5349,11 @@ function greeting(now){
   const h = now.getHours();
   return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
 }
-/* The header answers three questions at a glance, each one a tap into
-   its own page: how is my month going (the ring -- the goal), what is
-   mine so far (the figure -- the money), and what is still to come and
-   where do I stand (the glass bar). Initials open you: account, shop,
-   this phone. */
+/* The header, kept to a quarter of the screen so the next move shows
+   without scrolling: what is yours this month (the figure -- the money),
+   how far along the goal on one thin bar (the goal), and below them only
+   the doors with something behind them -- what is within reach once there
+   is any, where you stand once that says something. Initials open you. */
 function renderTodayHero(){
   const now = new Date();
   const p = monthPicture(now);
@@ -5340,32 +5361,36 @@ function renderTodayHero(){
   const btn = document.getElementById('ag_ringBtn');
   const frac = p.aim > 0 ? p.earned / p.aim : 0;
   const nearFrac = p.aim > 0 ? p.near / p.aim : 0;
-  const ring = ringSVG(136, 10, [
-    { frac: Math.min(1, frac), color:'#FFFFFF', round:true },
-    { frac: nearFrac, color:'#6FDCB0', opacity:'.4' },
-  ], 'rgba(255,255,255,.08)');
+  const pct = (f)=> `${(Math.max(0, Math.min(1, f)) * 100).toFixed(1)}%`;
+  const days = `${p.days} day${p.days===1?'':'s'} left`;
   btn.setAttribute('aria-label', p.aim > 0
-    ? `Your goal: ${Math.round(frac*100)} percent of ${fmtNum(p.aim)}, ${p.days} days left`
+    ? `Your goal: ${Math.round(frac*100)} percent of ${fmtNum(p.aim)}, ${days}`
     : 'Set a goal');
-  btn.innerHTML = `<span class="ax-ring">${ring}<span class="ax-ring-c">${p.aim > 0
-    ? `<span class="p">${Math.round(frac * 100)}%</span><span class="d">${p.target ? 'of goal' : 'of your best'}</span>`
-    : `<span class="set">${AX_ICON.flag}Set a goal</span>`}</span></span>`;
+  btn.innerHTML = p.aim > 0
+    ? `<span class="t" aria-hidden="true"><i style="width:${pct(frac)};"></i><i class="near" style="width:${pct(Math.min(nearFrac, 1 - Math.min(1, frac)))};"></i></span>
+       <span class="l"><span><b class="m">${Math.round(frac * 100)}%</b> of ${p.target ? 'your' : 'your best,'} <span class="m">${esc(fmtCompactUGX(p.aim))}</span>${p.target ? ' goal' : ''}</span><span>${days}${AX_ICON.chevR}</span></span>`
+    : `<span class="l"><span class="set">${AX_ICON.flag}Set a goal for ${esc(monthName(p.key))}</span><span>${days}${AX_ICON.chevR}</span></span>`;
   const money = document.getElementById('ag_moneyBtn');
   money.setAttribute('aria-label', `${fmtNum(p.earned)} yours in ${monthName(p.key)}. Open your money.`);
   money.innerHTML = `<span class="l">Yours &middot; ${esc(monthName(p.key))}${AX_ICON.chevR}</span>
-    <span class="v"><small>UGX</small>${fmtNum(p.earned)}</span>
-    <span class="of">${p.aim > 0 ? `<span class="m">of ${fmtNum(p.aim)}</span>` : '<span></span>'} <span>${p.days} day${p.days===1?'':'s'} left</span></span>`;
+    <span class="v m"><small>UGX</small>${fmtNum(p.earned)}</span>`;
   const streak = computeSellingStreak();
   const lb = leaderboard && leaderboard.you && leaderboard.totalAgents >= 2 ? leaderboard : null;
-  const nearN = p.near > 0 ? `+${fmtCompactUGX(p.near)}` : '0';
-  document.getElementById('ag_glass').innerHTML = `
-    <button type="button" data-hero="near" aria-label="${esc(nearN)} within reach"><span class="ic near">${AX_ICON.trend}</span>
-      <span class="b"><span class="v m${p.near > 0 ? ' mint' : ''}">${esc(nearN)}</span><span class="s">within reach</span></span>${AX_ICON.chevR}</button>
-    <button type="button" data-hero="standing" aria-label="Your standing"><span class="ic fire">${AX_ICON.flame}</span>
-      <span class="b">${lb ? `<span class="v">#${esc(lb.you.rank)} <small>of ${esc(lb.totalAgents)}</small></span>` : `<span class="v">${streak >= 1 ? `${streak} wk` : 'Standing'}</span>`}
-        <span class="s">${streak >= 2 ? `${streak}-week streak` : lb ? 'this month' : streak === 1 ? 'selling this week' : 'first sale starts it'}</span></span>${AX_ICON.chevR}</button>`;
+  // Second of two is not a standing worth a headline; a streak of one
+  // week is not a streak. Either is still one tap away on Money.
+  const rank = lb && lb.totalAgents >= 3 ? lb : null;
+  const doors = [];
+  if(p.near > 0) doors.push(`<button type="button" data-hero="near" aria-label="${esc(fmtCompactUGX(p.near))} more within reach"><span class="ic near">${AX_ICON.trend}</span>
+      <span class="b"><span class="v m mint">+${esc(fmtCompactUGX(p.near))}</span><span class="s">within reach</span></span>${AX_ICON.chevR}</button>`);
+  if(rank || streak >= 2) doors.push(`<button type="button" data-hero="standing" aria-label="Your standing"><span class="ic fire">${AX_ICON.flame}</span>
+      <span class="b">${rank ? `<span class="v">#${esc(rank.you.rank)} <small>of ${esc(rank.totalAgents)}</small></span>` : `<span class="v">${streak} wk</span>`}
+        <span class="s">${rank ? 'this month' : `${streak}-week streak`}</span></span>${AX_ICON.chevR}</button>`);
+  const glass = document.getElementById('ag_glass');
+  glass.hidden = !doors.length;
+  glass.style.gridTemplateColumns = `repeat(${Math.max(1, doors.length)},minmax(0,1fr))`;
+  glass.innerHTML = doors.join('');
 }
-// The ring is the goal, so it opens the goal; the figure beside it opens
+// The bar is the goal, so it opens the goal; the figure above it opens
 // the money; your initials open you.
 document.getElementById('ag_ringBtn').addEventListener('click', ()=> openGoalSheet());
 document.getElementById('ag_moneyBtn').addEventListener('click', ()=> openMoneySheet());
@@ -5638,7 +5663,7 @@ function lateLabel(cad){
 function nextCardHTML(c, i, n){
   const d = `data-nx="${i}"`;
   const k = playKind(c);
-  const top = (label, tone)=> `<div class="ax-hero-top2"><span class="ax-ptag ${tone || ''}">${AX_ICON[k.icon]}${esc(label)}</span>${n > 1 ? `<span class="m">1 of ${n}</span>` : ''}</div>`;
+  const top = (label, tone)=> `<div class="ax-hero-top2"><span class="ax-ptag ${tone || ''}">${AX_ICON[k.icon]}${esc(label)}</span>${n > 1 ? `<span class="n">1 of ${n}</span>` : ''}</div>`;
   const earnHTML = (label, v)=> v > 0 ? `<span class="e"><span class="k">${esc(label)}</span><span class="v m">+${fmtNum(v)}</span></span>` : '<span class="e"></span>';
   if(c.kind === 'due'){
     const ll = lateLabel(c.cad);
@@ -6257,6 +6282,7 @@ function bumpOrderBar(target){
   setTimeout(()=>{ p.remove(); bar.classList.remove('ax-bump'); }, 2000);
 }
 function dropIntoOrder(item, from){
+  if(window.owHaptic) owHaptic('tap');
   const target = dropTarget();
   if(!target) return;
   const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -7315,6 +7341,7 @@ function sentSnapshot(){
   return { client: chosenClient, total: t.total, count: cart.length };
 }
 function showSent(s, orderId){
+  if(window.owHaptic) owHaptic('success');
   const el = document.createElement('div');
   el.className = 'ax-sent2';
   el.setAttribute('role', 'dialog');
@@ -7419,10 +7446,16 @@ function openThankYou(orderId){
    it, each showing where on the six steps it is -- the same named steps
    as the order's own screen -- and the one thing to do with it. */
 const STAGE_PAGES = {
-  sent:    { title:'Sent',    sub:'With the shop, before packing',   icon:'send',  lit:['send','check','cash'] },
+  sent:    { title:'Sent',    sub:'With the shop, not packing yet',  icon:'send',  lit:['send','check','cash'] },
   packing: { title:'Packing', sub:'The shop is getting it ready',    icon:'box',   lit:['box'] },
   out:     { title:'Out',     sub:'Ready to collect, or on the way', icon:'store', lit:['store','truck'] },
 };
+const SENT_GROUPS = [
+  { keys:['pay','settle'], icon:'cash', label:'Waiting for your payment', warn:true },
+  { keys:['queued'], icon:'cash', label:'Paid, packing next' },
+  { keys:['checking'], icon:'check', label:'The shop is checking' },
+  { keys:['sent','submitted','new'], icon:'send', label:'Just sent' },
+];
 function orderCardHTML(o){
   const c = orderClient(o);
   const st = orderStage(o);
@@ -7445,8 +7478,16 @@ function openStageSheet(key){
     const warn = rows.some(x=> x.st.needs === 'pay');
     const tone = key === 'packing' ? 'done' : key === 'sent' && warn ? 'warn' : 'now';
     const steps = orderSteps({ deliveryMode: 'agent_pickup' });
-    const tiles = steps.map(s=> `<span class="ax-stp${page.lit.includes(s.icon) ? ` now ${tone === 'warn' ? 'warn' : tone === 'done' ? 'white' : ''}` : ''}">${AX_ICON[s.icon === 'check' ? 'clip' : s.icon]}</span>`).join('');
-    const labels = steps.map(s=> `<span class="${page.lit.includes(s.icon) ? `on${tone === 'warn' ? ' warn' : tone === 'done' ? ' white' : ''}` : ''}">${esc(stepLabel(s, false))}</span>`).join('');
+    // Sent spans three steps. Light only the ones an order is actually on,
+    // and list the orders under the step they are on -- a page called Sent
+    // with an order waiting on your money in it read as a mistake.
+    const groups = key === 'sent' ? SENT_GROUPS.map(g=> ({ g, rows: rows.filter(x=> g.keys.includes(x.st.key)) })).filter(x=> x.rows.length) : null;
+    const lit = groups && groups.length ? groups.map(x=> x.g.icon) : page.lit;
+    const tiles = steps.map(s=> `<span class="ax-stp${lit.includes(s.icon) ? ` now ${tone === 'warn' ? 'warn' : tone === 'done' ? 'white' : ''}` : ''}">${AX_ICON[s.icon === 'check' ? 'clip' : s.icon]}</span>`).join('');
+    const labels = steps.map(s=> `<span class="${lit.includes(s.icon) ? `on${tone === 'warn' ? ' warn' : tone === 'done' ? ' white' : ''}` : ''}">${esc(stepLabel(s, false))}</span>`).join('');
+    const list = !rows.length ? `<div class="ax-empty">${AX_ICON[page.icon]}Nothing here right now</div>`
+      : groups ? groups.map(x=> `<div class="ax-sgrp${x.g.warn ? ' warn' : ''}"><span>${AX_ICON[x.g.icon]}${esc(x.g.label)}</span><b>${x.rows.length}</b></div>${x.rows.map(r=> orderCardHTML(r.o)).join('')}`).join('')
+      : `<span class="ax-count">${rows.length} order${rows.length === 1 ? '' : 's'}</span>${rows.map(x=> orderCardHTML(x.o)).join('')}`;
     sheet.el.innerHTML = `
       <div class="ax-sheet-top">
         <button type="button" class="ax-grab" data-close aria-label="Close"></button>
@@ -7456,8 +7497,7 @@ function openStageSheet(key){
         <div class="ax-steps" aria-hidden="true"><div class="r">${tiles}</div><div class="l">${labels}</div></div>
       </div>
       <div class="ax-sheet-pad">
-        <span class="ax-count m">${rows.length} order${rows.length === 1 ? '' : 's'}</span>
-        ${rows.length ? rows.map(x=> orderCardHTML(x.o)).join('') : `<div class="ax-empty">${AX_ICON[page.icon]}Nothing here right now</div>`}
+        ${list}
       </div>`;
   }
   sheet.el.addEventListener('click', (e)=>{
@@ -9294,6 +9334,7 @@ function openPaySheet(orderId){
   }
   function finish(via, amount){
     ps.step = 'paid'; ps.via = via; ps.amount = amount; ps.paidAt = Date.now(); ps.busy = false; ps.polling = false;
+    if(window.owHaptic) owHaptic('success');
     paint();
     loadAgentHomeData().then(()=>{ renderCurrentView(); refreshOpenSheets(); }).catch(()=>{});
   }
