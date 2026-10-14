@@ -48,4 +48,16 @@ const src = read('agent.html');
     'section counts are words, not code: the money font is for amounts');
 }
 
+/* ---------- 4. a sheet comes down the way it went up ---------- */
+{
+  const open = extractFunction(src, 'openSheet', 'agent.html');
+  const drag = extractFunction(src, 'sheetDrag', 'agent.html');
+  t.check(/sheetDrag\(sheet\);/.test(open), 'every sheet can be pulled down to close');
+  t.check(/on = t\.clientY - el\.getBoundingClientRect\(\)\.top < 72 \|\| !scrolledInside\(e\.target\);/.test(drag),
+    'from its handle and header, or from anywhere once what is under the finger is at its top -- so it never steals a scroll');
+  t.check(/if\(dy > el\.offsetHeight \/ 3 \|\| flick\)/.test(drag) && /el\.style\.transform = '';/.test(drag),
+    'past a third, or a flick, it closes; short of that it springs back');
+  t.check(/e\.target\.closest\('input, textarea, select, \[contenteditable\]'\)/.test(drag), 'and a field keeps its own drag');
+}
+
 process.exit(t.done() ? 1 : 0);
