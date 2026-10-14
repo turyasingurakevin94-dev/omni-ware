@@ -696,27 +696,9 @@
   .ax-counter .b{flex:1;display:flex;flex-direction:column;gap:2px;}
   .ax-counter .k{font-size:12px;font-weight:700;}
   .ax-counter .v{font-family:var(--font-money);font-size:30px;font-weight:600;letter-spacing:-.02em;color:var(--ink);}
-  .ax-pay{display:flex;flex-direction:column;gap:10px;}
-  .ax-prov{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
-  .ax-prov button{
     all:unset;box-sizing:border-box;cursor:pointer;height:52px;border-radius:14px;border:1px solid var(--line);background:var(--panel);
     display:flex;align-items:center;justify-content:center;gap:6px;font-size:14px;font-weight:700;color:var(--ink-soft);
   }
-  .ax-prov button[aria-pressed="true"]{border:2px solid var(--ink);color:var(--ink);}
-  .ax-prov .dot{width:12px;height:12px;border-radius:999px;}
-  .ax-prov .dot.mtn{background:#FFCB05;border:1px solid #D9A800;}
-  .ax-prov .dot.airtel{background:#E40000;}
-  .ax-prov .icon{width:18px;height:18px;}
-  .ax-phone{display:flex;align-items:center;gap:10px;height:52px;padding:0 14px;border-radius:14px;border:1px solid var(--line);background:var(--panel);}
-  .ax-phone[hidden]{display:none;}
-  .ax-phone input{flex:1;min-width:0;border:none;outline:none;background:transparent;font-family:var(--font-money);font-size:17px;color:var(--ink);}
-  .ax-paynote{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;font-size:13px;font-weight:600;line-height:1.4;background:var(--tile);color:var(--ink);}
-  .ax-paynote[hidden]{display:none;}
-  .ax-paynote.good{background:var(--good-bg);color:var(--good);}
-  .ax-paynote.bad{background:var(--bad-bg);color:var(--bad);}
-  .ax-paynote .icon{flex:none;}
-  .ax-paybtn{min-height:56px;font-size:16px;}
-  .ax-paybtn .m{font-size:16px;}
 
   /* ---- Sent ---- */
   .ax-sent{position:fixed;inset:0;z-index:70;background:var(--navy);color:#fff;display:flex;flex-direction:column;overflow-y:auto;animation:axFade .2s ease-out;}
@@ -1654,9 +1636,144 @@
   .ax-askst.good{background:var(--good-bg);}
   .ax-askst.good .ic{color:var(--good);}
   .ax-askst.good .t{color:var(--good);}
-  .ax-paycredit{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:2px 2px 10px;font-size:13px;font-weight:600;color:var(--good);}
-  .ax-paycredit span{display:flex;align-items:center;gap:6px;}
-  .ax-paycredit .icon{width:15px;height:15px;}
+
+  /* Paying the shop: what is due on the order, and the sheet that takes
+     the money -- choosing, the phone prompt, the counter ticket, the
+     receipt and what went wrong. Its own sheet, so it can never be
+     mistaken for one more card on the order. */
+  .ax-ps-dock{position:sticky;bottom:10px;z-index:2;display:flex;align-items:center;gap:12px;padding:12px 12px 12px 18px;border-radius:22px;background:var(--navy);color:#fff;box-shadow:0 14px 34px rgba(22,32,60,.35);}
+  .ax-ps-dock .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
+  .ax-ps-dock .k{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--on-navy);}
+  .ax-ps-dock .v{display:flex;align-items:baseline;gap:6px;}
+  .ax-ps-dock .v i{font-style:normal;font-size:12px;font-weight:700;color:var(--on-navy);}
+  .ax-ps-dock .v b{font-size:24px;font-weight:600;letter-spacing:-.02em;line-height:1;}
+  .ax-ps-dock .c{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--mint);}
+  .ax-ps-dock .c .icon{width:12px;height:12px;}
+  .ax-ps-go{all:unset;box-sizing:border-box;cursor:pointer;flex:none;height:52px;padding:0 16px 0 20px;border-radius:16px;background:var(--accent);color:#fff;display:flex;align-items:center;gap:6px;font-size:16px;font-weight:800;}
+  .ax-ps-go:active{background:var(--accent-dark);}
+  .ax-ps-go .icon{width:16px;height:16px;stroke-width:2.6;}
+  .ax-sheet[data-step]{display:flex;flex-direction:column;max-height:calc(100vh - 56px);}
+  .ax-ps{flex:1;min-height:0;overflow-y:auto;padding:8px 20px 16px;display:flex;flex-direction:column;gap:16px;}
+  .ax-ps.center{align-items:center;text-align:center;padding-top:20px;}
+  .ax-ps-h{display:flex;align-items:center;gap:12px;}
+  .ax-ps-h .ic{width:40px;height:40px;flex:none;border-radius:12px;background:var(--good-bg);color:var(--good);display:flex;align-items:center;justify-content:center;}
+  .ax-ps-h .ic .icon{width:20px;height:20px;}
+  .ax-ps-h .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+  .ax-ps-h .t{font-size:18px;font-weight:800;letter-spacing:-.01em;}
+  .ax-ps-h .s{font-size:12px;font-weight:600;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ax-ps-big{display:flex;align-items:baseline;gap:8px;}
+  .ax-ps-big i{font-style:normal;font-size:15px;font-weight:700;opacity:.7;}
+  .ax-ps-big b{font-size:38px;font-weight:600;letter-spacing:-.03em;line-height:1;}
+  .ax-ps-amt{border-radius:20px;background:var(--navy);color:#fff;overflow:hidden;}
+  .ax-ps-amt .top{padding:18px 18px 14px;display:flex;flex-direction:column;gap:6px;}
+  .ax-ps-amt .k{font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--on-navy);}
+  .ax-ps-amt .cut{border-top:2px dashed rgba(255,255,255,.18);margin:0 14px;}
+  .ax-ps-amt .rows{padding:12px 18px 16px;display:flex;flex-direction:column;gap:8px;font-size:13px;}
+  .ax-ps-amt .rows > div{display:flex;justify-content:space-between;gap:12px;}
+  .ax-ps-amt .rows span{color:var(--on-navy);}
+  .ax-ps-amt .rows b{font-weight:600;}
+  .ax-ps-amt .rows .gone span,.ax-ps-amt .rows .gone s{color:#8D99B5;}
+  .ax-ps-amt .rows .cr span,.ax-ps-amt .rows .cr b{color:var(--mint);}
+  .ax-ps-lab{font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--ink-soft);}
+  .ax-ps-ms{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:18px;overflow:hidden;margin-top:-6px;}
+  .ax-ps-m{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:14px;min-height:68px;padding:10px 14px;background:var(--panel);}
+  .ax-ps-m + .ax-ps-m{border-top:1px solid var(--tile);}
+  .ax-ps-m[aria-checked="true"]{background:#F7F9FD;box-shadow:inset 3px 0 0 var(--navy);}
+  .ax-ps-m .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .ax-ps-m .t{font-size:15px;font-weight:700;}
+  .ax-ps-m .s{font-size:12px;font-weight:600;color:var(--ink-soft);}
+  .ax-ps-m .rd{width:22px;height:22px;flex:none;border-radius:999px;border:2px solid var(--dash);box-sizing:border-box;}
+  .ax-ps-m[aria-checked="true"] .rd{border:7px solid var(--navy);}
+  .ax-ps-lg{flex:none;display:inline-flex;align-items:center;justify-content:center;font-weight:800;}
+  .ax-ps-m .ax-ps-lg{width:44px;height:44px;border-radius:12px;font-size:13px;}
+  .ax-ps-lg.mtn{background:#FFCC00;color:var(--ink);}
+  .ax-ps-lg.airtel{background:#E4002B;color:#fff;font-size:12px;}
+  .ax-ps-lg.cash{background:var(--good-bg);color:var(--good);}
+  .ax-ps-ph{display:flex;flex-direction:column;gap:8px;}
+  .ax-ps-ph .f{display:flex;align-items:center;gap:10px;height:56px;padding:0 8px;border-radius:16px;border:2px solid var(--navy);}
+  .ax-ps-ph .cc{height:40px;padding:0 10px;border-radius:10px;background:var(--tile);display:flex;align-items:center;font-size:14px;font-weight:600;}
+  .ax-ps-ph input{flex:1;min-width:0;height:44px;border:0;outline:0;background:transparent;font-size:18px;font-weight:600;color:var(--ink);}
+  .ax-ps-ph .net{flex:none;height:28px;padding:0 9px;border-radius:999px;display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;}
+  .ax-ps-ph .net .icon{width:12px;height:12px;stroke-width:3;}
+  .ax-ps-ph .net.ok{background:var(--good-bg);color:var(--good);}
+  .ax-ps-ph .net.warn{background:var(--warn-bg);color:var(--warn-ink);}
+  .ax-ps-ph .net.off{background:var(--tile);color:var(--ink-soft);}
+  .ax-ps-note{width:100%;box-sizing:border-box;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;background:var(--bg);text-align:left;}
+  .ax-ps-note .ic{width:36px;height:36px;flex:none;border-radius:10px;background:var(--panel);display:flex;align-items:center;justify-content:center;}
+  .ax-ps-note .ic .icon{width:18px;height:18px;}
+  .ax-ps-note .b{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .ax-ps-note .t{font-size:14px;font-weight:700;}
+  .ax-ps-note .s{font-size:12px;font-weight:600;color:var(--ink-soft);}
+  .ax-ps-note.good{background:var(--good-bg);}
+  .ax-ps-note.good .ic,.ax-ps-note.good .t{color:var(--good);}
+  .ax-ps-note.good .s{color:#3F6B57;}
+  .ax-ps-err{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:var(--bad-bg);color:var(--bad);font-size:13px;font-weight:700;text-align:left;}
+  .ax-ps-err .icon{width:18px;height:18px;flex:none;}
+  .ax-ps-foot{flex:none;padding:14px 20px calc(18px + var(--safe-b));border-top:1px solid var(--tile);display:flex;flex-direction:column;gap:10px;background:var(--panel);}
+  .ax-ps-foot.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}
+  .ax-ps-cta{all:unset;box-sizing:border-box;cursor:pointer;height:58px;border-radius:18px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;gap:10px;font-size:17px;font-weight:800;letter-spacing:-.01em;box-shadow:0 10px 24px rgba(201,58,48,.32);}
+  .ax-ps-cta .icon{width:18px;height:18px;stroke-width:2.2;}
+  .ax-ps-cta.good{background:var(--good);box-shadow:0 10px 24px rgba(15,107,67,.28);}
+  .ax-ps-cta.navy{background:var(--navy);box-shadow:none;}
+  .ax-ps-cta[disabled]{opacity:.55;cursor:default;}
+  .ax-ps-trust{display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;font-weight:600;color:var(--ink-soft);text-align:center;}
+  .ax-ps-trust .icon{width:13px;height:13px;flex:none;}
+  .ax-ps-sec{all:unset;box-sizing:border-box;cursor:pointer;height:54px;border-radius:16px;border:1px solid var(--line);background:var(--panel);color:var(--ink);display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:700;}
+  .ax-ps-sec.dark{border-color:var(--navy);background:var(--navy);color:#fff;}
+  .ax-ps-sec[disabled]{opacity:.55;cursor:default;}
+  .ax-ps-sec .icon{width:16px;height:16px;}
+  .ax-ps-ping{position:relative;width:132px;height:132px;display:flex;align-items:center;justify-content:center;}
+  .ax-ps-ping i{position:absolute;inset:0;border-radius:999px;background:#FFF3C2;animation:axPing 1.8s ease-out infinite;}
+  .ax-ps-ping em{position:absolute;inset:14px;border-radius:999px;background:#FFE680;}
+  .ax-ps-ping.airtel i{background:#FDE3E7;} .ax-ps-ping.airtel em{background:#F9B8C3;}
+  .ax-ps-ping > .icon{position:relative;width:64px;height:64px;stroke-width:1.6;color:var(--ink);}
+  .ax-ps-ping .bd{position:absolute;right:14px;top:16px;height:26px;padding:0 8px;border-radius:999px;background:#FFCC00;color:var(--ink);font-size:11px;font-weight:800;display:flex;align-items:center;box-shadow:0 4px 10px rgba(0,0,0,.15);}
+  .ax-ps-ping.airtel .bd{background:#E4002B;color:#fff;}
+  @keyframes axPing{0%{transform:scale(.85);opacity:.7}100%{transform:scale(1.35);opacity:0}}
+  .ax-ps-title{font-size:24px;font-weight:800;letter-spacing:-.02em;}
+  .ax-ps-sub{font-size:15px;line-height:1.45;color:var(--ink-soft);margin-top:-8px;}
+  .ax-ps-sub b{color:var(--ink);}
+  .ax-ps-steps{list-style:none;margin:0;padding:14px 16px;width:100%;box-sizing:border-box;border-radius:18px;background:var(--bg);display:flex;flex-direction:column;gap:14px;text-align:left;}
+  .ax-ps-steps li{display:flex;align-items:center;gap:12px;}
+  .ax-ps-steps .d{width:28px;height:28px;flex:none;border-radius:999px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;}
+  .ax-ps-steps .d .icon{width:14px;height:14px;stroke-width:3;}
+  .ax-ps-steps .d.done{background:var(--good);color:#fff;}
+  .ax-ps-steps .d.spin{border:3px solid #F5B26B;border-top-color:transparent;animation:axSpin 1s linear infinite;}
+  .ax-ps-steps .d.next{border:2px dashed var(--dash);color:var(--ink-faint);}
+  .ax-ps-steps .d.one{background:var(--navy);color:#fff;}
+  .ax-ps-steps .d.two{border:2px solid var(--navy);color:var(--navy);background:var(--panel);}
+  .ax-ps-steps .t{flex:1;font-size:14px;font-weight:600;}
+  .ax-ps-steps .t.now,.ax-ps-steps .w.now{color:var(--warn-ink);font-weight:700;}
+  .ax-ps-steps .t.later{color:var(--ink-faint);}
+  .ax-ps-steps .w{font-size:12px;color:var(--ink-soft);}
+  .ax-ps-ticket{border-radius:22px;background:var(--navy);color:#fff;overflow:hidden;}
+  .ax-ps-ticket .no{padding:20px 20px 18px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;}
+  .ax-ps-ticket .k{font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--on-navy);}
+  .ax-ps-ticket .no b{font-size:60px;font-weight:600;letter-spacing:-.02em;line-height:1;}
+  .ax-ps-ticket .no .s{font-size:13px;font-weight:600;color:var(--on-navy);}
+  .ax-ps-ticket .cut{position:relative;border-top:2px dashed rgba(255,255,255,.2);margin:0 18px;}
+  .ax-ps-ticket .cut i{position:absolute;top:-11px;width:22px;height:22px;border-radius:999px;background:var(--panel);}
+  .ax-ps-ticket .cut i:first-child{left:-32px;} .ax-ps-ticket .cut i:last-child{right:-32px;}
+  .ax-ps-ticket .due{padding:16px 20px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+  .ax-ps-ticket .due .b{display:flex;flex-direction:column;gap:4px;}
+  .ax-ps-ticket .due .ax-ps-big b{font-size:30px;}
+  .ax-ps-ticket .live{height:34px;padding:0 12px;border-radius:999px;background:rgba(111,220,176,.16);color:var(--mint);font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;}
+  .ax-ps-ticket .live i{width:8px;height:8px;border-radius:999px;background:var(--mint);animation:axBlink 1.4s ease-in-out infinite;}
+  @keyframes axBlink{0%,100%{opacity:1}50%{opacity:.35}}
+  .ax-ps-tick{width:96px;height:96px;border-radius:999px;background:var(--good-bg);display:flex;align-items:center;justify-content:center;}
+  .ax-ps-tick i{width:68px;height:68px;border-radius:999px;background:var(--good);color:#fff;display:flex;align-items:center;justify-content:center;}
+  .ax-ps-tick .icon{width:34px;height:34px;stroke-width:2.8;}
+  .ax-ps-ok{font-size:15px;font-weight:700;color:var(--good);margin-bottom:-10px;}
+  .ax-ps-rcpt{width:100%;box-sizing:border-box;border-radius:18px;border:1px solid var(--line);overflow:hidden;text-align:left;}
+  .ax-ps-rcpt > div{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;font-size:14px;}
+  .ax-ps-rcpt > div + div{border-top:1px solid var(--tile);}
+  .ax-ps-rcpt span{color:var(--ink-soft);flex:none;}
+  .ax-ps-rcpt b{font-weight:700;text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ax-ps-rcpt .via{display:flex;align-items:center;gap:6px;}
+  .ax-ps-rcpt .via span{color:var(--ink);}
+  .ax-ps-rcpt .ax-ps-lg{height:20px;padding:0 6px;border-radius:6px;font-size:11px;}
+  .ax-ps-warn{width:84px;height:84px;border-radius:999px;background:var(--bad-bg);color:var(--bad);display:flex;align-items:center;justify-content:center;}
+  .ax-ps-warn .icon{width:36px;height:36px;stroke-width:2.2;}
 </style>
 </head>
 <body class="app-loading">
@@ -7353,15 +7470,14 @@ function trackStateIcon(st){
 }
 function openTrackSheet(orderId){
   const id = String(orderId);
-  let payState = { provider: 'mtn', phone: (myAgent && myAgent.phone) || '', busy:false, note:null, tone:'' };
   // Whether the agent has opened or shut the item list themselves: their
   // choice outlives the repaint a refresh brings.
   let itemsOpen = null;
-  // A refresh repaints the page, so it waits while the agent is typing in
-  // it -- the phone number to pay from -- rather than snatch the field.
+  // Paying happens in its own sheet (openPaySheet); this one only says
+  // what is due and opens it.
   const sheet = openSheet('', { label:'Order', kind:'track', full:true,
     refresh: ()=>{ const a = document.activeElement; if(a && sheet.el.contains(a) && a.matches('input, textarea')) return; paint(); },
-    onClose: ()=>{ payState.polling = false; } });
+  });
   function paint(){
     const o = myOrders.find(x=> String(x.id) === id);
     if(!o){ sheet.close(); return; }
@@ -7413,7 +7529,7 @@ function openTrackSheet(orderId){
       ${sh && (sh.name || sh.address) ? `<span class="w">${esc(sh.name || '')}${sh.address ? `<br>${esc(sh.address)}` : ''}</span>` : ''}</div>` : '';
     const owed = orderOwedAmount(o);
     const zone = changeZone(o);
-    const pay = st.needs === 'pay' ? payPanelHTML(owed, payState, agentCreditLeft(o.id)) : '';
+    const pay = st.needs === 'pay' ? payDockHTML(o, owed, agentCreditLeft(o.id)) : '';
     const asked = askStatusHTML(o);
     const canChange = zone !== 'none' && !changeAskOpen(o);
     const finish = st.key === 'done' ? `<button type="button" class="btn btn-block ax-finish" data-finish>${AX_ICON.check}Finish</button>` : '';
@@ -7459,112 +7575,12 @@ function openTrackSheet(orderId){
     if(e.target.closest('[data-finish]')){ sheet.close(); openThankYou(o.id); return; }
     if(e.target.closest('[data-change]')){ openChangeSheet(o.id); return; }
     if(e.target.closest('[data-withdraw]')){ withdrawAsk(o); return; }
-    if(e.target.closest('[data-credit]')){ payWithCredit(o, payState, paint); return; }
-    const prov = e.target.closest('[data-prov]');
-    if(prov){ payState.provider = prov.dataset.prov; payState.note = null; paint(); return; }
-    if(e.target.closest('[data-pay]')) payOrder(o, payState, paint);
+    if(e.target.closest('[data-paynow]')){ openPaySheet(o.id); return; }
   });
-  sheet.el.addEventListener('input', (e)=>{ if(e.target.matches('[data-pay-phone]')) payState.phone = e.target.value; });
   paint();
   ensureOrderStaffNamesLoaded().then(()=>{ if(sheet.el.isConnected) paint(); });
   if(shopInfo == null) ensureShopInfo().then(()=>{ if(sheet.el.isConnected) paint(); });
   return sheet;
-}
-/* Credit an agreed change left behind is taken first, by itself; the
-   phone or the counter is asked only for what it does not cover. */
-function payPanelHTML(owed, ps, credit){
-  const cash = ps.provider === 'cash';
-  const use = Math.min(Number(credit) || 0, owed);
-  const rest = owed - use;
-  const creditRow = use > 0 ? `<div class="ax-paycredit"><span>${AX_ICON.again}Your credit</span><b class="m">−${fmtNum(use)}</b></div>` : '';
-  const btn = rest <= 0
-    ? `<button type="button" class="btn btn-accent btn-block ax-paybtn" data-credit${ps.busy ? ' disabled' : ''}>${ps.busy ? 'Paying…' : `Pay with credit <span class="m">${fmtNum(use)}</span>`}</button>`
-    : cash ? (use > 0 ? `<button type="button" class="btn btn-block ax-paybtn ax-keep" data-credit${ps.busy ? ' disabled' : ''}>Use <span class="m">${fmtNum(use)}</span> credit first</button>` : '')
-    : `<button type="button" class="btn btn-accent btn-block ax-paybtn" data-pay${ps.busy ? ' disabled' : ''}>${ps.busy ? 'Waiting for approval…' : `Pay <span class="m">${fmtNum(rest)}</span>`}</button>`;
-  return `<div class="ax-card ax-pay" style="padding:12px;">
-    <div class="ax-prov" role="group" aria-label="How you pay">
-      <button type="button" data-prov="mtn" aria-pressed="${ps.provider==='mtn'}"><span class="dot mtn"></span>MTN</button>
-      <button type="button" data-prov="airtel" aria-pressed="${ps.provider==='airtel'}"><span class="dot airtel"></span>Airtel</button>
-      <button type="button" data-prov="cash" aria-pressed="${cash}">${AX_ICON.cash}Cash</button>
-    </div>
-    <label class="ax-phone"${cash ? ' hidden' : ''}>${AX_ICON.phone}<input type="tel" data-pay-phone value="${esc(ps.phone)}" placeholder="Phone to pay from" aria-label="Phone number to pay from"></label>
-    ${creditRow}
-    <div class="ax-paynote${ps.tone ? ' ' + ps.tone : ''}"${ps.note || (cash && rest > 0) ? '' : ' hidden'}>${ps.note ? ps.note : `${AX_ICON.store}<span>Hand <b class="m">${fmtNum(rest)}</b> to the shop. They mark it paid and packing starts.</span>`}</div>
-    ${btn}
-  </div>`;
-}
-/* A real MTN/Airtel "request to pay" on the agent's own phone, then a
-   short poll until it is approved, refused or times out. */
-async function payWithCredit(order, ps, paint){
-  if(ps.busy) return;
-  ps.busy = true; ps.tone = ''; ps.note = `${AX_ICON.clock}<span>Using your credit…</span>`;
-  paint();
-  try{
-    const res = await useCreditOn(order);
-    ps.busy = false; ps.tone = 'good';
-    ps.note = `${AX_ICON.check}<span>${fmtNum(res.credited)} paid from your credit${res.owed > 0 ? ` · ${fmtNum(res.owed)} still to pay` : ''}</span>`;
-    paint();
-    renderCurrentView();
-  }catch(err){
-    ps.busy = false; ps.tone = 'bad';
-    ps.note = `<span>Could not use your credit: ${esc(err.message||err)}</span>`;
-    paint();
-  }
-}
-async function payOrder(order, ps, paint){
-  if(ps.busy) return;
-  const phone = String(ps.phone||'').trim();
-  if(!phone){ toast('Enter the phone number to pay from'); return; }
-  ps.busy = true; ps.tone = ''; ps.note = `${AX_ICON.clock}<span>Sending the payment request…</span>`;
-  paint();
-  try{
-    // Credit first, by itself: the phone is only asked for the rest.
-    if(agentCreditLeft(order.id) > 0){
-      const used = await useCreditOn(order);
-      if(!(used.owed > 0)){
-        ps.busy = false; ps.tone = 'good';
-        ps.note = `${AX_ICON.check}<span>Paid from your credit</span>`;
-        paint(); renderCurrentView();
-        return;
-      }
-    }
-    const res = await callAgentFn('agent-initiate-momo-payment', { orderId: order.id, provider: ps.provider, phone });
-    ps.note = `${AX_ICON.phone}<span>Check your phone and approve the payment.</span>`;
-    paint();
-    ps.polling = true;
-    pollMomo(res.paymentId, 30, ps, paint);
-  }catch(err){
-    ps.busy = false; ps.tone = 'bad';
-    ps.note = `<span>Could not send the request: ${esc(err.message||err)}</span>`;
-    paint();
-  }
-}
-async function pollMomo(paymentId, attemptsLeft, ps, paint){
-  if(!ps.polling) return;
-  try{
-    const res = await callAgentFn('check-momo-payment-status', { paymentId });
-    if(res.status === 'successful'){
-      ps.polling = false; ps.busy = false; ps.tone = 'good';
-      ps.note = `${AX_ICON.check}<span>Payment received</span>`;
-      paint();
-      await loadAgentHomeData();
-      renderCurrentView();
-      return;
-    }
-    if(res.status === 'failed' || res.status === 'cancelled'){
-      ps.polling = false; ps.busy = false; ps.tone = 'bad';
-      ps.note = `<span>Payment ${esc(res.status)}. You can try again.</span>`;
-      paint();
-      return;
-    }
-  }catch(_e){ /* a flaky connection while polling -- keep trying */ }
-  if(attemptsLeft <= 0){
-    ps.polling = false; ps.busy = false; ps.tone = '';
-    ps.note = `<span>Still waiting. If you approved it, it can take a moment — tap Pay to check again.</span>`;
-    paint();
-    return;
-  }
-  setTimeout(()=> pollMomo(paymentId, attemptsLeft - 1, ps, paint), 3000);
 }
 function orderReceiptRows(o){
   return (o.items||[]).map(it=>{
@@ -8737,7 +8753,7 @@ function openEditItemsSheet(orderId){
    Fewer of a line, or none of anything. More is a new order: the shop
    has packed or bought for this one, and topping it up would unpick
    that. What an agreed ask takes off a paid order comes back as credit,
-   spent on the next one by itself (payOrder). */
+   spent on the next one by itself (openPaySheet). */
 function openAskSheet(orderId){
   const o = myOrders.find(x=> String(x.id) === String(orderId));
   if(!o) return null;
@@ -8844,6 +8860,338 @@ async function useCreditOn(o){
   const res = await callAgentFn('agent-change-order', { orderId: o.id, action: 'useCredit' });
   await loadAgentHomeData();
   return res;
+}
+
+/* ================= PAYING THE SHOP =================
+   Money is its own moment, so it has its own sheet rather than a panel
+   among the order's cards. The order shows only what is due and one
+   Pay now; the sheet takes it from there: what is owed and why, the way
+   to pay, then the phone prompt, the counter ticket, the receipt, or
+   what went wrong -- each a state of the same sheet, so the agent never
+   loses the amount they are paying.
+
+   Credit an agreed change left behind is used first, by itself
+   (useCreditOn); the phone or the counter is asked only for the rest. */
+const PAY_NETS = {
+  mtn: { name: 'MTN Mobile Money', short: 'MTN', logo: 'MTN', pin: 'MoMo' },
+  airtel: { name: 'Airtel Money', short: 'Airtel', logo: 'airtel', pin: 'Airtel Money' },
+};
+// How long the phone prompt stays open, as the networks hold it.
+const PAY_WAIT_MS = 2 * 60 * 1000;
+const PAY_SHIELD = '<svg class="icon" viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.2 7.5 9.5 4.3-1.3 7.5-4.9 7.5-9.5V6L12 3Z"/><path d="m9 12 2.2 2.2L15.5 10"/></svg>';
+const PAY_HANDSET = '<svg class="icon" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.2"/><path d="M11 18.5h2M9.5 9.5h5M9.5 12h3"/></svg>';
+
+/* The nine digits after +256, however the number was typed. */
+function payLocal(phone){
+  let d = String(phone || '').replace(/\D/g, '');
+  if(d.startsWith('256')) d = d.slice(3);
+  else if(d.startsWith('0')) d = d.slice(1);
+  return d.slice(0, 9);
+}
+/* Which network a line is on, from its prefix: MTN 76-79, Airtel 70,
+   74, 75. Null for anything that is not a whole Ugandan mobile number. */
+function payNetOf(phone){
+  const l = payLocal(phone);
+  if(!/^7\d{8}$/.test(l)) return null;
+  const p = l.slice(0, 2);
+  return ['76', '77', '78', '79'].includes(p) ? 'mtn' : ['70', '74', '75'].includes(p) ? 'airtel' : null;
+}
+function payPhoneShow(local){
+  const l = String(local || '');
+  return [l.slice(0, 3), l.slice(3, 6), l.slice(6)].filter(Boolean).join(' ');
+}
+/* What the sheet says about the money: what the kept lines cost, what
+   the dropped ones would have, anything already paid, the credit that
+   goes first and what is left after it. */
+function payFigures(o){
+  const items = o.items || [], dropped = o.droppedLines || [];
+  const sum = (xs)=> xs.reduce((s, it)=> s + (Number(it.sellPrice) || 0) * (Number(it.qty) || 0), 0);
+  const owed = orderOwedAmount(o);
+  const credit = Math.min(agentCreditLeft(o.id), owed);
+  return {
+    kept: Math.round(sum(items)), gone: Math.round(sum(dropped)), goneName: dropped.length ? (dropped[0].productName || 'An item') : '',
+    goneCount: dropped.length, items: items.length, all: items.length + dropped.length,
+    paidSoFar: owed > 0 ? Math.round(Number(o.amountPaid) || 0) : 0,
+    owed, credit, rest: owed - credit,
+  };
+}
+
+/* On the order: what is due, and one way into the sheet. */
+function payDockHTML(o, owed, credit){
+  const use = Math.min(Number(credit) || 0, owed);
+  return `<div class="ax-ps-dock">
+    <span class="b"><span class="k">${o.status === 'completed' ? 'TO SETTLE WITH THE SHOP' : 'DUE TO THE SHOP'}</span>
+      <span class="v"><i>UGX</i><b class="m">${fmtNum(owed)}</b></span>
+      ${use > 0 ? `<span class="c">${AX_ICON.again}${fmtNum(use)} of it from your credit</span>` : ''}</span>
+    <button type="button" class="ax-ps-go" data-paynow>Pay now${AX_ICON.chevR}</button>
+  </div>`;
+}
+
+function openPaySheet(orderId){
+  const id = String(orderId);
+  const cur = ()=> myOrders.find(x=> String(x.id) === id);
+  const o0 = cur();
+  if(!o0 || !(orderOwedAmount(o0) > 0)){ toast('Nothing is owed on this order'); return null; }
+  const own = payLocal(myAgent && myAgent.phone);
+  const ps = { step: 'choose', method: payNetOf(own) || 'mtn', phone: own, busy: false, error: '',
+    paymentId: null, sentAt: 0, polling: false, amount: 0, via: '', paidAt: 0, late: false,
+    // Prepaid and not yet packed: paying starts the packing. Otherwise it
+    // settles what is owed at the end.
+    starts: o0.status === 'draft' };
+  let timer = null;
+  const sheet = openSheet('', { label: 'Pay the shop', white: true, kind: 'pay',
+    refresh: ()=>{
+      const a = document.activeElement;
+      if(a && sheet.el.contains(a) && a.matches('input')) return;
+      const o = cur();
+      // The counter marked it paid while the ticket was up.
+      if(o && ps.step === 'counter' && !(orderOwedAmount(o) > 0)){ ps.step = 'paid'; ps.via = 'cash'; ps.paidAt = Date.now(); }
+      paint();
+    },
+    onClose: ()=>{ ps.polling = false; clearInterval(timer); } });
+
+  const head = (icon, title, sub, tone)=> `<div class="ax-ps-h"><span class="ic ${tone || 'good'}">${icon}</span>
+      <span class="b"><span class="t">${title}</span><span class="s">${sub}</span></span>
+      <button type="button" class="ax-iconbtn" data-close aria-label="Close">${AX_ICON.x}</button></div>`;
+  const shopLine = ()=>{ const sh = shopInfo || {}; return esc([sh.name || 'The shop', sh.address].filter(Boolean).join(', ')); };
+  const amountHTML = (n)=> `<span class="ax-ps-big"><i>UGX</i><b class="m">${fmtNum(n)}</b></span>`;
+
+  function chooseHTML(o){
+    const f = payFigures(o);
+    const covered = f.rest <= 0 && f.credit > 0;
+    const momo = !covered && ps.method !== 'cash';
+    const net = payNetOf(ps.phone);
+    const methods = [
+      { id: 'mtn', name: PAY_NETS.mtn.name, sub: 'A prompt on your phone · PIN to approve', logo: 'MTN' },
+      { id: 'airtel', name: PAY_NETS.airtel.name, sub: 'A prompt on your phone · PIN to approve', logo: 'airtel' },
+      { id: 'cash', name: 'Cash at the counter', sub: 'Hand it over at the shop', logo: 'UGX' },
+    ];
+    const cta = covered ? `Pay with credit · UGX ${fmtNum(f.credit)}` : momo ? `Pay UGX ${fmtNum(f.rest)}` : 'I’ll pay at the counter';
+    return `<button type="button" class="ax-grab" data-close aria-label="Close"></button>
+      <div class="ax-ps">
+        ${head(PAY_SHIELD, 'Pay the shop', `Order #${esc(o.id)} · ${shopLine()}`)}
+        <div class="ax-ps-amt">
+          <div class="top"><span class="k">${covered ? 'PAID FROM YOUR CREDIT' : f.credit > 0 || f.paidSoFar > 0 ? 'LEFT TO PAY' : 'AMOUNT DUE'}</span>${amountHTML(covered ? f.credit : f.rest)}</div>
+          <div class="cut" aria-hidden="true"></div>
+          <div class="rows">
+            <div><span>${f.items} of ${f.all} item${f.all === 1 ? '' : 's'} confirmed</span><b class="m">${fmtNum(f.kept)}</b></div>
+            ${f.gone > 0 ? `<div class="gone"><span>${esc(ofShortName(f.goneName))}${f.goneCount > 1 ? ` +${f.goneCount - 1}` : ''} · shop couldn't supply</span><s class="m">${fmtNum(f.gone)}</s></div>` : ''}
+            ${f.paidSoFar > 0 ? `<div><span>Already paid</span><b class="m">−${fmtNum(f.paidSoFar)}</b></div>` : ''}
+            ${f.credit > 0 ? `<div class="cr"><span>Your credit, used first</span><b class="m">−${fmtNum(f.credit)}</b></div>` : ''}
+          </div>
+        </div>
+        ${covered ? `<div class="ax-ps-note good"><span class="ic">${AX_ICON.again}</span><span class="b"><span class="t">Your credit covers all of it</span><span class="s">Agreed by the shop · no phone needed</span></span></div>`
+          : `<span class="ax-ps-lab">${f.credit > 0 ? 'PAY THE REST WITH' : 'PAY WITH'}</span>
+          <div class="ax-ps-ms" role="radiogroup" aria-label="How you pay">
+            ${methods.map(m=> `<button type="button" class="ax-ps-m" role="radio" aria-checked="${ps.method === m.id}" data-m="${m.id}">
+              <span class="ax-ps-lg ${m.id}">${m.logo}</span><span class="b"><span class="t">${m.name}</span><span class="s">${m.sub}</span></span><span class="rd"></span></button>`).join('')}
+          </div>
+          ${momo ? `<label class="ax-ps-ph"><span class="ax-ps-lab">PROMPT GOES TO</span>
+              <span class="f"><span class="cc m">+256</span><input type="tel" inputmode="numeric" class="m" data-phone value="${esc(payPhoneShow(ps.phone))}" aria-label="Phone number to charge" autocomplete="tel-national">
+              <span class="net ${net === ps.method ? 'ok' : net ? 'warn' : 'off'}" data-net>${net ? (net === ps.method ? AX_ICON.check : '') + PAY_NETS[net].short : 'Number?'}</span></span></label>`
+            : `<div class="ax-ps-note"><span class="ic">${AX_ICON.store}</span><span class="b"><span class="t">Hand <b class="m">UGX ${fmtNum(f.rest)}</b> at the counter</span><span class="s">${shopLine()} · they mark it paid${ps.starts ? ', and packing starts' : ''}</span></span></div>`}`}
+        ${ps.error ? `<div class="ax-ps-err">${AX_ICON.bang}<span>${esc(ps.error)}</span></div>` : ''}
+      </div>
+      <div class="ax-ps-foot">
+        <button type="button" class="ax-ps-cta ${covered ? 'good' : momo ? '' : 'navy'}" data-go${ps.busy ? ' disabled' : ''}>${AX_ICON.lock}<span>${ps.busy ? 'One moment…' : cta}</span></button>
+        <span class="ax-ps-trust">${PAY_SHIELD}${covered ? 'Taken from your credit — nothing is charged to a phone' : momo ? 'Nothing leaves your account until you enter your PIN' : 'The shop confirms when the money is in'}</span>
+      </div>`;
+  }
+
+  function waitingHTML(o){
+    const n = PAY_NETS[ps.method] || PAY_NETS.mtn;
+    return `<button type="button" class="ax-grab" data-close aria-label="Close"></button>
+      <div class="ax-ps center">
+        <div class="ax-ps-ping ${ps.method}" aria-hidden="true"><i></i><em></em>${PAY_HANDSET}<span class="bd">${n.logo}</span></div>
+        <span class="ax-ps-title">Approve on your phone</span>
+        <span class="ax-ps-sub">We sent a prompt to <b class="m">+256 ${esc(payPhoneShow(ps.phone))}</b>. Enter your ${n.pin} PIN to pay <b class="m">UGX ${fmtNum(ps.amount)}</b>.</span>
+        <ol class="ax-ps-steps" aria-label="Progress">
+          <li><span class="d done">${AX_ICON.check}</span><span class="t">Request sent to ${n.short}</span><span class="w m">${esc(whenShort(ps.sentAt))}</span></li>
+          <li><span class="d spin"></span><span class="t now">Waiting for your PIN</span><span class="w m now" data-left>${payLeft()}</span></li>
+          <li><span class="d next"></span><span class="t later">${ps.starts ? 'The shop starts packing' : 'The order is settled'}</span></li>
+        </ol>
+      </div>
+      <div class="ax-ps-foot two">
+        <button type="button" class="ax-ps-sec" data-back>Change method</button>
+        <button type="button" class="ax-ps-sec dark" data-resend${ps.busy ? ' disabled' : ''}>${ps.busy ? 'Sending…' : 'Resend prompt'}</button>
+      </div>`;
+  }
+
+  function counterHTML(o){
+    const sh = shopInfo || {};
+    const n = (o.items || []).length;
+    return `<button type="button" class="ax-grab" data-close aria-label="Close"></button>
+      <div class="ax-ps">
+        ${head(AX_ICON.store, 'Show this at the counter', shopLine())}
+        <div class="ax-ps-ticket">
+          <div class="no"><span class="k">ORDER</span><b class="m">#${esc(o.id)}</b><span class="s">${esc(orderClient(o).name)} · ${n} item${n === 1 ? '' : 's'}</span></div>
+          <div class="cut" aria-hidden="true"><i></i><i></i></div>
+          <div class="due"><span class="b"><span class="k">HAND OVER</span>${amountHTML(ps.amount)}</span><span class="live"><i></i>Live</span></div>
+        </div>
+        <ol class="ax-ps-steps" aria-label="What happens">
+          <li><span class="d one">1</span><span class="t">Show the order number and pay the cashier</span></li>
+          <li><span class="d two">2</span><span class="t">They mark it paid — this screen turns green</span></li>
+          <li><span class="d next">3</span><span class="t later">${ps.starts ? 'Packing starts' : 'The order is settled'}</span></li>
+        </ol>
+      </div>
+      <div class="ax-ps-foot two">
+        <button type="button" class="ax-ps-sec" data-back="phone">Pay by phone</button>
+        ${sh.phone ? `<a class="ax-ps-sec dark" href="tel:${esc(sh.phone)}">${AX_ICON.phone}Call the shop</a>` : `<button type="button" class="ax-ps-sec dark" data-close>Done</button>`}
+      </div>`;
+  }
+
+  function paidHTML(o){
+    const via = ps.via;
+    const title = via === 'cash' ? 'Cash received by the shop' : via === 'credit' ? 'Paid with your credit' : 'Payment received';
+    const chip = via === 'mtn' || via === 'airtel' ? `<span class="ax-ps-lg ${via}">${PAY_NETS[via].logo}</span><span class="m">${esc(payPhoneShow(ps.phone))}</span>`
+      : via === 'cash' ? `<span class="ax-ps-lg cash">CASH</span><span>At the counter</span>` : `<span class="ax-ps-lg cash">CREDIT</span><span>Agreed by the shop</span>`;
+    return `<button type="button" class="ax-grab" data-close aria-label="Close"></button>
+      <div class="ax-ps center">
+        <span class="ax-ps-tick" aria-hidden="true"><i>${AX_ICON.check}</i></span>
+        <span class="ax-ps-ok">${title}</span>
+        ${amountHTML(ps.amount)}
+        <div class="ax-ps-rcpt">
+          <div><span>Paid to</span><b>${shopLine()}</b></div>
+          <div><span>${via === 'cash' ? 'Paid' : 'From'}</span><b class="via">${chip}</b></div>
+          <div><span>For</span><b>Order #${esc(o.id)} · ${esc(orderClient(o).name)}</b></div>
+          <div><span>${ps.paymentId ? 'Reference' : 'When'}</span><b class="m">${ps.paymentId ? esc(String(ps.paymentId).slice(0, 8).toUpperCase()) + ' · ' : ''}${esc(whenShort(ps.paidAt))}</b></div>
+        </div>
+        <div class="ax-ps-note good"><span class="ic">${AX_ICON[ps.starts ? 'box' : 'check']}</span><span class="b"><span class="t">${ps.starts ? 'Packing starts now' : 'Nothing more owed on this order'}</span><span class="s">${ps.starts ? 'You will see it move on this order' : 'Thank you'}</span></span></div>
+      </div>
+      <div class="ax-ps-foot two">
+        <button type="button" class="ax-ps-sec" data-share>${AX_ICON.share}Share receipt</button>
+        <button type="button" class="ax-ps-sec dark" data-close>Done</button>
+      </div>`;
+  }
+
+  function declinedHTML(o){
+    const late = ps.late;
+    return `<button type="button" class="ax-grab" data-close aria-label="Close"></button>
+      <div class="ax-ps center">
+        <span class="ax-ps-warn" aria-hidden="true">${AX_ICON.bang}</span>
+        <span class="ax-ps-title">${late ? 'No answer from your phone' : 'Payment didn’t go through'}</span>
+        <span class="ax-ps-sub">The prompt on <b class="m">${esc(payPhoneShow(ps.phone))}</b> ${late ? 'ran out of time' : 'was declined or cancelled'}.</span>
+        <div class="ax-ps-note ${late ? '' : 'good'}"><span class="ic">${late ? AX_ICON.clock : PAY_SHIELD}</span><span class="b"><span class="t">${late ? 'If you approved it late, it still counts' : 'Nothing left your account'}</span>${late ? '<span class="s">It will show on this order the moment it lands</span>' : ''}</span></div>
+      </div>
+      <div class="ax-ps-foot">
+        <button type="button" class="ax-ps-cta" data-retry${ps.busy ? ' disabled' : ''}>${ps.busy ? 'Sending…' : `Try again · UGX ${fmtNum(orderOwedAmount(o) || ps.amount)}`}</button>
+        <button type="button" class="ax-ps-sec" data-back>Pay another way</button>
+      </div>`;
+  }
+
+  function payLeft(){
+    const ms = Math.max(0, PAY_WAIT_MS - (Date.now() - ps.sentAt));
+    const s = Math.ceil(ms / 1000);
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} left`;
+  }
+  function paint(){
+    const o = cur();
+    if(!o){ sheet.close(); return; }
+    clearInterval(timer);
+    sheet.el.dataset.step = ps.step;
+    sheet.el.innerHTML = ps.step === 'waiting' ? waitingHTML(o) : ps.step === 'counter' ? counterHTML(o)
+      : ps.step === 'paid' ? paidHTML(o) : ps.step === 'declined' ? declinedHTML(o) : chooseHTML(o);
+    if(ps.step === 'waiting'){
+      timer = setInterval(()=>{ const el = sheet.el.querySelector('[data-left]'); if(el) el.textContent = payLeft(); }, 1000);
+    }
+  }
+  function finish(via, amount){
+    ps.step = 'paid'; ps.via = via; ps.amount = amount; ps.paidAt = Date.now(); ps.busy = false; ps.polling = false;
+    paint();
+    loadAgentHomeData().then(()=>{ renderCurrentView(); refreshOpenSheets(); }).catch(()=>{});
+  }
+  async function startPrompt(){
+    const o = cur();
+    const res = await callAgentFn('agent-initiate-momo-payment', { orderId: o.id, provider: ps.method, phone: '+256' + ps.phone });
+    ps.paymentId = res.paymentId;
+    ps.amount = Number(res.amount) || orderOwedAmount(o);
+    ps.sentAt = Date.now(); ps.late = false;
+    ps.step = 'waiting'; ps.busy = false; ps.error = '';
+    paint();
+    poll(res.paymentId);
+  }
+  async function poll(pid){
+    ps.polling = true; ps.pollId = pid;
+    while(ps.polling && ps.pollId === pid){
+      await new Promise(r=> setTimeout(r, 3000));
+      if(!ps.polling || ps.pollId !== pid || !sheet.el.isConnected) return;
+      let res = null;
+      try{ res = await callAgentFn('check-momo-payment-status', { paymentId: pid }); }catch(_e){ /* a flaky line while waiting: ask again */ }
+      if(!ps.polling || ps.pollId !== pid) return;
+      const status = res && res.status;
+      if(status === 'successful'){ finish(ps.method, ps.amount); return; }
+      if(status === 'failed' || status === 'cancelled' || status === 'timeout' || Date.now() - ps.sentAt > PAY_WAIT_MS + 30000){
+        ps.polling = false; ps.late = status !== 'failed' && status !== 'cancelled';
+        ps.step = 'declined'; paint();
+        return;
+      }
+    }
+  }
+  // The one button on the first state: credit first, by itself, then the
+  // counter or the phone for what is left.
+  async function go(){
+    const o = cur();
+    if(!o || ps.busy) return;
+    const f = payFigures(o);
+    const covered = f.rest <= 0 && f.credit > 0;
+    const momo = !covered && ps.method !== 'cash';
+    ps.error = '';
+    if(momo){
+      const net = payNetOf(ps.phone);
+      if(!/^7\d{8}$/.test(ps.phone)){ ps.error = 'Enter the 9 digits after +256, like 772 123 456'; paint(); return; }
+      if(net && net !== ps.method){ ps.error = `That is ${PAY_NETS[net].short === 'MTN' ? 'an MTN' : 'an Airtel'} line — choose ${PAY_NETS[net].name}, or use a ${PAY_NETS[ps.method].short} number`; paint(); return; }
+    }
+    ps.busy = true; paint();
+    try{
+      if(f.credit > 0 && agentCreditLeft(o.id) > 0){
+        const used = await useCreditOn(o);
+        if(!(used.owed > 0)){ finish('credit', used.credited); return; }
+      }
+      const left = orderOwedAmount(cur()) || f.rest;
+      if(!momo){ ps.amount = left; ps.step = 'counter'; ps.busy = false; paint(); return; }
+      await startPrompt();
+    }catch(err){
+      ps.busy = false;
+      ps.error = isNetworkError(err) ? 'You are offline — paying needs a connection' : String(err.message || err);
+      paint();
+    }
+  }
+  async function resend(){
+    if(ps.busy) return;
+    ps.busy = true; ps.polling = false; paint();
+    try{ await startPrompt(); }
+    catch(err){ ps.busy = false; ps.step = 'choose'; ps.error = String(err.message || err); paint(); }
+  }
+  function shareReceipt(o){
+    const via = ps.via === 'cash' ? 'cash at the counter' : ps.via === 'credit' ? 'credit' : `${PAY_NETS[ps.via].short} +256 ${payPhoneShow(ps.phone)}`;
+    const text = `Paid UGX ${fmtNum(ps.amount)} to ${(shopInfo && shopInfo.name) || 'the shop'} for order #${o.id} (${orderClient(o).name}) by ${via}${ps.paymentId ? `, ref ${String(ps.paymentId).slice(0, 8).toUpperCase()}` : ''}.`;
+    if(navigator.share){ navigator.share({ text }).catch(()=>{}); return; }
+    (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(()=> toast('Receipt copied', 2500, { tone: 'good' }), ()=> toast(text, 6000));
+  }
+
+  sheet.el.addEventListener('click', (e)=>{
+    const o = cur();
+    if(!o) return;
+    const m = e.target.closest('[data-m]');
+    if(m){ ps.method = m.dataset.m; ps.error = ''; paint(); return; }
+    if(e.target.closest('[data-go]')){ go(); return; }
+    const back = e.target.closest('[data-back]');
+    if(back){ ps.polling = false; ps.step = 'choose'; ps.busy = false; if(back.dataset.back === 'phone') ps.method = payNetOf(ps.phone) || 'mtn'; paint(); return; }
+    if(e.target.closest('[data-resend]') || e.target.closest('[data-retry]')){ resend(); return; }
+    if(e.target.closest('[data-share]')){ shareReceipt(o); return; }
+  });
+  sheet.el.addEventListener('input', (e)=>{
+    if(!e.target.matches('[data-phone]')) return;
+    ps.phone = payLocal(e.target.value);
+    const net = payNetOf(ps.phone), tag = sheet.el.querySelector('[data-net]');
+    if(tag){
+      tag.className = `net ${net === ps.method ? 'ok' : net ? 'warn' : 'off'}`;
+      tag.innerHTML = net ? (net === ps.method ? AX_ICON.check : '') + PAY_NETS[net].short : 'Number?';
+    }
+  });
+  paint();
+  if(shopInfo == null) ensureShopInfo().then(()=>{ if(sheet.el.isConnected) paint(); });
+  return sheet;
 }
 
 boot();

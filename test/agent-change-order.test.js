@@ -177,7 +177,7 @@ const agent = read('agent.html');
   t.check(/!o\.voided && !o\.agentCancel && o\.status !== 'completed'/.test(agent), 'a cancelled order is no longer live');
   t.check(/replaceOrderId: o\.id/.test(agent) && /'agent-change-order', \{ orderId: o\.id, action: 'ask'/.test(agent),
     'an edit goes as a resubmission and an ask to agent-change-order');
-  t.check(/if\(agentCreditLeft\(order\.id\) > 0\)/.test(agent), 'credit is used by itself before the phone is asked to pay');
+  t.check(/agentCreditLeft\(o\.id\) > 0\)\{\s*const used = await useCreditOn\(o\)/.test(agent), 'credit is used by itself before the phone is asked to pay');
 }
 
 process.exit(t.done() ? 1 : 0);

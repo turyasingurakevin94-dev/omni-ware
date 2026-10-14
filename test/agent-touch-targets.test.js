@@ -49,7 +49,10 @@ const styleBlock = (/<style>([\s\S]*?)<\/style>/.exec(src) || ['', ''])[1];
     ['.ax-fchips button', 'the client filters'],
     ['.ax-bar', 'a month in the chart'],
     ['.ax-act', 'Call, Update and Receipt on a track'],
-    ['.ax-prov button', 'the payment choices'],
+    ['.ax-ps-go', 'Pay now on an order'],
+    ['.ax-ps-m', 'the payment choices'],
+    ['.ax-ps-cta', 'the pay button in the sheet'],
+    ['.ax-ps-sec', 'Back and Resend while waiting'],
     ['.ag-inquiry-done', 'the tick on a request'],
   ];
   CONTROLS.forEach(([sel, what]) => {

@@ -61,7 +61,7 @@ const fn = (n) => extractFunction(src, n, 'agent.html');
   const track = fn('openTrackSheet');
   t.check(/st\.key === 'checking' && prepay/.test(track) && /Pay opens when all \$\{k\.items\} are checked/.test(track),
     'while it is being checked, a prepay agent sees that paying opens once every line is checked');
-  t.check(/const pay = st\.needs === 'pay' \? payPanelHTML/.test(track), 'and the pay buttons appear only when there is something to pay');
+  t.check(/const pay = st\.needs === 'pay' \? payDockHTML/.test(track), 'and the pay buttons appear only when there is something to pay');
 }
 
 /* ---------- 3. named steps, never a bare bar ------------------------- */
