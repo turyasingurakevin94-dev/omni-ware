@@ -1363,28 +1363,25 @@
   .ax-cat.on .n{color:var(--on-navy);}
   .ax-cat .bn{position:absolute;top:8px;right:8px;height:18px;padding:0 6px;border-radius:999px;background:var(--warn-bg);color:var(--warn-ink);font-size:11px;font-weight:700;display:flex;align-items:center;gap:3px;}
   .ax-cat .bn .icon{width:10px;height:10px;color:var(--warn);}
-  .ax-quick{display:flex;gap:8px;}
+  .ax-quick{display:flex;flex-wrap:wrap;gap:8px;}
   .ax-q{
-    all:unset;box-sizing:border-box;cursor:pointer;flex:1;min-width:0;height:84px;border-radius:18px;padding:10px;
-    display:flex;flex-direction:column;justify-content:space-between;
+    all:unset;box-sizing:border-box;cursor:pointer;flex:none;height:44px;border-radius:999px;padding:0 6px 0 5px;
+    display:flex;align-items:center;gap:7px;
   }
-  .ax-q .ic{width:30px;height:30px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;}
+  .ax-q .ic{width:34px;height:34px;border-radius:999px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.06);display:flex;align-items:center;justify-content:center;}
   .ax-q .ic .icon{width:18px;height:18px;}
-  .ax-q .b{display:flex;flex-direction:column;line-height:1.2;min-width:0;}
   .ax-q .nm{font-size:13px;font-weight:700;white-space:nowrap;}
-  .ax-q .n{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .ax-q.navy{background:linear-gradient(150deg,#243052,var(--navy));box-shadow:0 8px 20px rgba(22,32,60,.22);color:#fff;}
-  .ax-q.navy .ic{background:rgba(255,255,255,.12);color:#fff;}
-  .ax-q.navy .n{color:var(--on-navy);}
-  .ax-q.amber{background:linear-gradient(150deg,#FFF4E4,#FDE6C9);box-shadow:inset 0 0 0 1px #F5D9B0;color:#7A4A02;}
+  .ax-q .n{min-width:24px;height:24px;padding:0 7px;box-sizing:border-box;border-radius:999px;background:rgba(255,255,255,.7);font-family:var(--font-money);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;}
+  .ax-q.navy{background:#E3E6EE;color:var(--ink);}
+  .ax-q.navy .ic{color:var(--ink);}
+  .ax-q.amber{background:#FDEBD3;color:#7A4A02;}
   .ax-q.amber .ic{color:var(--warn);}
-  .ax-q.amber .n{color:var(--warn-ink);}
-  .ax-q.green{background:linear-gradient(150deg,#EAF8F0,#D6F0E2);box-shadow:inset 0 0 0 1px #BFE3CF;color:var(--good);}
-  .ax-q.green .n{color:#3F6B57;}
-  .ax-q.violet{background:linear-gradient(150deg,#F3EFFB,#E6DEF7);box-shadow:inset 0 0 0 1px #D6CBEF;color:#3E2F6E;}
+  .ax-q.green{background:#DDF1E6;color:var(--good);}
+  .ax-q.green .ic{color:var(--good);}
+  .ax-q.violet{background:#ECE7F7;color:#3E2F6E;}
   .ax-q.violet .ic{color:#5B4B8A;}
-  .ax-q.violet .n{color:#5B4B8A;}
-  .ax-q.on{outline:2px solid var(--ink);outline-offset:2px;}
+  .ax-q.on{box-shadow:inset 0 0 0 2px currentColor;}
+  .ax-cat-n{font-family:var(--font-money);font-size:12px;font-weight:600;color:var(--ink-faint);}
 
   /* bundles: each one as what is in it */
   .ax-stk{display:flex;align-items:center;flex:none;}
@@ -8023,13 +8020,13 @@ function openCategorySheet(){
   const againN = catalog.filter(it=> again.has(feedItemKey(it.productId, it.variantIdx))).length;
   const bundles = solutionTemplates.length;
   // The four ways in that are not an aisle: what this client buys, what
-  // earns a bonus, what is new, and your own bundles. Each in its own
-  // colour, so a glance finds the one you want.
+  // earns a bonus, what is new, and your own bundles. Round pills, each in
+  // its own colour, so they never read as one more aisle.
   const quick = [
-    { k:'again', n: againN, l: 'Usual', s: chosenClient ? `${shortName(chosenClient.name,1)} · ${againN}` : `${againN} sold`, icon: PH.again, tone:'navy' },
-    { k:'bonus', n: promoted.size, l:'Bonus', s:`${promoted.size} extra`, icon: PH.star, tone:'amber' },
-    { k:'fresh', n: fresh, l:'New', s:`${fresh} this month`, icon: PH.sparkle, tone:'green' },
-    { k:'bundles', n: bundles, l:'Bundles', s:`${bundles} saved`, icon: PH.stack, tone:'violet' },
+    { k:'again', n: againN, l: chosenClient ? `${possessive(firstWord(chosenClient.name))} usual` : 'Sold before', icon: PH.again, tone:'navy' },
+    { k:'bonus', n: promoted.size, l:'Bonus', icon: PH.star, tone:'amber' },
+    { k:'fresh', n: fresh, l:'New', icon: PH.sparkle, tone:'green' },
+    { k:'bundles', n: bundles, l:'Bundles', icon: PH.stack, tone:'violet' },
   ].filter(x=> x.n > 0);
   const cats = findCategories();
   const sheet = openSheet(`<button type="button" class="ax-grab" data-close aria-label="Close"></button>
@@ -8037,12 +8034,13 @@ function openCategorySheet(){
     <div class="ax-form" style="padding-bottom:12px;">
       <button type="button" class="ax-bsearch" data-bsearch>${PH.search} <span>Search ${fmtNum(catalog.length)} items</span></button>
       ${quick.length ? `<div class="ax-quick">${quick.map(x=>
-        `<button type="button" class="ax-q ${x.tone}${x.k !== 'bundles' && findFilter[x.k] && !findCategory ? ' on' : ''}" ${x.k === 'bundles' ? 'data-bundles' : `data-quick="${x.k}"`}><span class="ic">${x.icon}</span><span class="b"><span class="nm">${esc(x.l)}</span><span class="n">${esc(x.s)}</span></span></button>`).join('')}</div>` : ''}
+        `<button type="button" class="ax-q ${x.tone}${x.k !== 'bundles' && findFilter[x.k] && !findCategory ? ' on' : ''}" ${x.k === 'bundles' ? 'data-bundles' : `data-quick="${x.k}"`}><span class="ic">${x.icon}</span> <span class="nm">${esc(x.l)}</span> <span class="n">${fmtNum(x.n)}</span></button>`).join('')}</div>` : ''}
+      <div class="ax-lp-h">${PH.grid} <span>Aisles</span><b class="ax-cat-n">${cats.length}</b></div>
       <div class="ax-catgrid">${cats.map(c=>{
         const inAisle = catalog.filter(it=> itemCategory(it) === c);
         const n = groupCatalogItems(catalog.filter(it=> itemCategory(it) === c)).length;
         const bonus = inAisle.filter(it=> promoted.has(feedItemKey(it.productId, it.variantIdx))).length;
-        return `<button type="button" class="ax-cat${findCategory===c?' on':''}" data-cat="${esc(c)}" style="${aisleTint(c)}">${bonus ? `<span class="bn">${PH.star}${bonus}</span>` : ''} <span class="ic">${categoryIconSVG(c)}</span><span class="t"><span class="nm">${esc(c)}</span><span class="n">${fmtNum(n)} items</span></span></button>`;
+        return `<button type="button" class="ax-cat${findCategory===c?' on':''}" data-cat="${esc(c)}" style="${aisleTint(c)}">${bonus ? `<span class="bn">${PH.star}${bonus}</span>` : ''} <span class="ic">${categoryIconSVG(c)}</span><span class="t"><span class="nm">${esc(c)}</span><span class="n">${fmtNum(n)} item${n===1?'':'s'}</span></span></button>`;
       }).join('')}</div>
     </div>`, { label:'Browse aisles' });
   sheet.el.addEventListener('click', (e)=>{

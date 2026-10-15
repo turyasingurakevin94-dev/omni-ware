@@ -166,7 +166,7 @@ const constBlock = (name) => {
   t.check(/aisleStackHTML\(/.test(card) && /class="ax-bd-c"/.test(card) && /data-bundle-edit=/.test(card) && /Add all <b>/.test(card),
     'each bundle shows its aisles, its items, one button for all of it, and a way to edit it');
   const cats = fn('openCategorySheet');
-  t.check(/k:'bundles'/.test(cats) && /data-bundles/.test(cats) && /PH\.stack/.test(cats),
+  t.check(/k:'bundles'/.test(cats) && /data-bundles/.test(cats) && /PH\.stack/.test(cats) && /<span>Aisles<\/span>/.test(cats),
     'Bundles is one of the four ways into the shop, beside Usual, Bonus and New');
   const edit = fn('openBundleEdit');
   t.check(/\.update\(\{ name, line_items: items \}\)\.eq\('id', tpl\.id\)/.test(edit) && /\.delete\(\)\.eq\('id', tpl\.id\)/.test(edit),
