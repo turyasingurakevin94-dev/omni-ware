@@ -21,7 +21,7 @@ let api;
 try {
   api = compileScope(
     ['kampalaHour', 'kampalaDate', 'linePriced', 'orderEarnings', 'earnedOf', 'sumEarned', 'voice', 'fmt', 'first',
-      'namesList', 'unitWord', 'weekOf', 'daysInMonth', 'wants', 'nudgesFor', 'pickToSend', 'monthBoard', 'priceMoves'].map(fn),
+      'namesList', 'unitWord', 'weekOf', 'daysInMonth', 'wants', 'goalCrossings', 'possessive', 'nudgesFor', 'pickToSend', 'monthBoard', 'priceMoves'].map(fn),
     { KAMPALA_OFFSET_H: 3, DAY, WRAP_HOUR: 19,
       MONTHS: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
       WEEKDAYS: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
@@ -133,8 +133,30 @@ if (api) {
   t.check(!find('goal'), 'and no goal milestone before a quarter of it');
   const rich = Object.assign({}, base, { goals: new Map([['H', 70000]]) });   // 54,000 so far
   const g = api.nudgesFor('H', rich, at(10)).find((x) => x.kind === 'goal');
-  t.check(g && g.ref === '2026-10:75' && g.title === 'Three quarters done' && g.open === 'goal',
+  t.check(g && g.ref === '2026-10:75' && g.title === 'Three quarters done, Henry' && g.open === 'goal',
     `a goal milestone is the highest one crossed, once (${g && g.ref})`);
+  t.check(g && /^Grace's order took you over\. 16,000 to go, 16 days left\./.test(g.body) && g.prio === -1,
+    `it names the order that did it, says what is left, and goes ahead of everything but the morning plan (${g && g.body})`);
+  t.check(!api.nudgesFor('H', rich, at(10)).some((x) => x.ref === '2026-10:near'),
+    'and "how close" waits: never the same day a milestone was crossed');
+
+  // How close.
+  const close = Object.assign({}, base, { goals: new Map([['H', 56000]]) });   // 54,000 of 56,000; three quarters crossed on the 8th
+  const nr = api.nudgesFor('H', close, at(10)).find((x) => x.ref === '2026-10:near');
+  t.check(nr && nr.title === 'Junior could finish your goal' && nr.open === 'client:1'
+    && nr.body === "2,000 to go, and Junior's usual earns you about 16,000. They are due now.",
+    `when one client's usual would finish it, it says who, and opens their order (${nr && nr.body})`);
+  const lone = Object.assign({}, base, { goals: new Map([['H', 58000]]), clients: new Map([['H|3', 'Grace N.']]) });
+  const so = api.nudgesFor('H', lone, at(10)).find((x) => x.ref === '2026-10:near');
+  t.check(so && so.title === 'So close, Henry' && so.body === 'Just 4,000 to go to 58,000. One good order does it.',
+    `nine-tenths done says so (${so && so.body})`);
+  const late = Object.assign({}, base, { goals: new Map([['H', 80000]]) });
+  const at29 = Date.parse('2026-10-29T05:00:00Z');
+  const ls = api.nudgesFor('H', late, at29).find((x) => x.ref === '2026-10:last');
+  t.check(ls && ls.title === '2 days left, Henry' && ls.body === '26,000 between you and 80,000. 13,000 a day gets you there.',
+    `and in the last three days, what a day has to bring (${ls && ls.body})`);
+  t.check(!api.nudgesFor('H', Object.assign({}, base, { goals: new Map([['H', 400000]]) }), at29).some((x) => x.ref === '2026-10:last'),
+    'but not when the goal is out of reach -- a reminder of a lost cause is not a nudge');
 
   const plain = Object.assign({}, base, { prefs: new Map([['H', { tone: 'straight', kinds: { price: false }, morning_hour: 9 }]]) });
   const p9 = api.nudgesFor('H', plain, at(9));

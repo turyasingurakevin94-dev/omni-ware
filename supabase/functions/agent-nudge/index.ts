@@ -115,6 +115,20 @@ function earnedOf(o: any): number {
   }
   return margin + (o.status === "completed" ? bonus : 0);
 }
+// Which order took the month's total over each quarter of the goal, in
+// the order they happened.
+function goalCrossings(monthOrders: any[], target: number): any {
+  const at: any = {};
+  let sum = 0;
+  for (const o of [...monthOrders].sort((a, b) => String(a.date).localeCompare(String(b.date)))) {
+    sum += earnedOf(o);
+    for (const m of [25, 50, 75, 100]) if (!at[m] && sum >= target * m / 100) at[m] = { order: o, sum };
+  }
+  return at;
+}
+function possessive(name: string): string {
+  return /s$/i.test(name) ? `${name}'` : `${name}'s`;
+}
 function sumEarned(list: any[]): number {
   let s = 0;
   for (const o of list) s += earnedOf(o);
@@ -314,20 +328,54 @@ function nudgesFor(agentId: string, ctx: any, nowMs: number): Nudge[] {
   }
 
   // The goal: the highest of a quarter, half, three quarters or all of it
-  // that has been crossed, once each.
+  // that has been crossed, once each -- named after the order that did it,
+  // and ahead of everything but the morning plan: it is what they are
+  // working for.
   if (target > 0) {
     const pct = earned / target * 100;
     const m = [100, 75, 50, 25].find((x) => pct >= x);
+    const crossed = goalCrossings(mine.filter((o: any) => String(o.date).startsWith(month)), target);
+    const left = Math.max(0, target - earned);
+    const perDay = daysLeft > 0 ? Math.ceil(left / daysLeft) : 0;
+    const projected = earned + (earned / Math.max(1, dayOfMonth)) * daysLeft;
+    const pace = projected >= target ? "You are on pace." : `${fmt(perDay)} a day gets you there.`;
     if (m) {
-      const perDay = daysLeft > 0 ? Math.ceil((target - earned) / daysLeft) : 0;
-      const projected = earned + (earned / Math.max(1, dayOfMonth)) * daysLeft;
-      const pace = projected >= target ? "You are on pace." : `${fmt(perDay)} a day gets you there.`;
+      const by = crossed[m] && crossed[m].order;
+      const cid = by && by.payload && by.payload.agentClientId;
+      const who = cid != null ? ctx.clients.get(`${agentId}|${cid}`) : "";
+      const did = who ? `${possessive(first(who))} order ${m === 100 ? "did it" : "took you over"}. ` : "";
       const head: any = { 25: "A quarter of the way", 50: "Halfway to your goal", 75: "Three quarters done" };
-      add({ kind: "goal", ref: `${month}:${m}`, prio: m === 100 ? -1 : 3, open: "goal",
-        title: m === 100 ? voice(playful, me ? `Goal smashed, ${me}` : "Goal smashed", `Goal reached for ${monthName}`) : voice(playful, head[m], `${m}% of your ${monthName} goal`),
+      add({ kind: "goal", ref: `${month}:${m}`, prio: -1, open: "goal",
+        title: m === 100 ? voice(playful, me ? `Goal smashed, ${me}` : "Goal smashed", `Goal reached for ${monthName}`) : voice(playful, me ? `${head[m]}, ${me}` : head[m], `${m}% of your ${monthName} goal`),
         body: m === 100
-          ? voice(playful, `${fmt(earned)} for ${monthName}${daysLeft > 0 ? `, with ${daysLeft} day${daysLeft === 1 ? "" : "s"} to spare` : ""}. Fancy raising the bar?`, `${fmt(earned)} of ${fmt(target)}.`)
-          : voice(playful, `${fmt(earned)} of ${fmt(target)} with ${daysLeft} days left. ${pace}`, `${fmt(earned)} of ${fmt(target)}. ${pace}`) });
+          ? voice(playful, `${did}${fmt(earned)} for ${monthName}${daysLeft > 0 ? `, with ${daysLeft} day${daysLeft === 1 ? "" : "s"} to spare` : ""}. Fancy raising the bar?`, `${fmt(earned)} of ${fmt(target)}.`)
+          : voice(playful, `${did}${fmt(left)} to go, ${daysLeft} days left. ${pace}`, `${fmt(earned)} of ${fmt(target)}. ${pace}`) });
+    }
+
+    // How close: once a month when one client's usual would finish it or
+    // it is nine-tenths done, and once more in the last three days. Never
+    // the day a milestone was crossed -- that one has said enough.
+    const lastStep = [75, 50, 25].find((x) => crossed[x]);
+    const steppedToday = lastStep && String(crossed[lastStep].order.date) === today;
+    if (left > 0 && !steppedToday) {
+      const finisher = rhythm.filter((r) => r.earn >= left && r.since >= r.gap - 3 && r.since < r.gap + 7)
+        .sort((a, b) => (a.gap - a.since) - (b.gap - b.since))[0];
+      if (finisher) {
+        const inDays = Math.ceil(finisher.gap - finisher.since);
+        add({ kind: "goal", ref: `${month}:near`, prio: 0, open: `client:${finisher.cid}`,
+          title: voice(playful, `${first(finisher.name)} could finish your goal`, `${fmt(left)} from your goal`),
+          body: voice(playful, `${fmt(left)} to go, and ${possessive(first(finisher.name))} usual earns you about ${fmt(finisher.earn)}. ${inDays > 0 ? `Due in ${inDays} day${inDays === 1 ? "" : "s"}.` : "They are due now."}`,
+            `${finisher.name}'s usual: about ${fmt(finisher.earn)}.`) });
+      } else if (pct >= 90) {
+        add({ kind: "goal", ref: `${month}:near`, prio: 0, open: "goal",
+          title: voice(playful, me ? `So close, ${me}` : "So close", `${fmt(left)} from your goal`),
+          body: voice(playful, `Just ${fmt(left)} to go to ${fmt(target)}. One good order does it.`, `${Math.floor(pct)}% of ${fmt(target)}.`) });
+      }
+      if (daysLeft >= 1 && daysLeft <= 3 && pct >= 60) {
+        add({ kind: "goal", ref: `${month}:last`, prio: 0, open: "goal",
+          title: voice(playful, `${daysLeft} day${daysLeft === 1 ? "" : "s"} left${me ? `, ${me}` : ""}`, `${daysLeft} day${daysLeft === 1 ? "" : "s"} left: ${fmt(left)} to go`),
+          body: voice(playful, `${fmt(left)} between you and ${fmt(target)}. ${fmt(perDay)} a day gets you there.`, `${fmt(perDay)} a day reaches ${fmt(target)}.`) });
+      }
     }
   }
 
