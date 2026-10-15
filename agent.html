@@ -1770,8 +1770,23 @@
   .ax-foot{display:flex;flex-direction:column;gap:8px;}
   .ax-sheet.full .ax-foot{margin-top:auto;}
   .ax-sheet.full .ax-foot .ax-acts{margin-top:0;}
-  .ax-finish{background:var(--navy);color:#fff;height:56px;font-size:16px;}
-  .ax-finish .icon{color:var(--mint);width:20px;height:20px;stroke-width:2.6;}
+  .ax-finish{all:unset;cursor:pointer;box-sizing:border-box;width:100%;min-height:58px;border-radius:18px;background:var(--navy);color:#fff;display:flex;align-items:center;gap:12px;padding:0 8px 0 18px;box-shadow:0 10px 24px rgba(22,32,60,.22);}
+  .ax-finish .icon{color:var(--mint);width:22px;height:22px;stroke-width:2.6;flex:none;}
+  .ax-finish .t{flex:1;font-size:16px;font-weight:700;}
+  .ax-finish .y{height:42px;padding:0 12px;border-radius:12px;background:rgba(111,220,176,.16);color:var(--mint);display:flex;align-items:center;font-size:14px;font-weight:600;}
+  /* the order's acts, one joined bar */
+  .ax-tk-acts{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:20px;overflow:hidden;}
+  .ax-tk-act{all:unset;cursor:pointer;box-sizing:border-box;flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 4px 10px;text-align:center;}
+  .ax-tk-act + .ax-tk-act{border-left:1px solid #F1EEE8;}
+  .ax-tk-act .ic{width:42px;height:42px;border-radius:999px;display:flex;align-items:center;justify-content:center;margin-bottom:2px;}
+  .ax-tk-act .ic .icon{width:19px;height:19px;}
+  .ax-tk-act.call .ic{background:#E4E6FA;color:#3A3F9B;}
+  .ax-tk-act.tell .ic{background:var(--good-bg);color:var(--good);}
+  .ax-tk-act.rcpt .ic{background:#DCEAF8;color:#1A5A8A;}
+  .ax-tk-act.chg .ic{background:var(--warn-bg);color:var(--warn-ink);}
+  .ax-tk-act .l{font-size:13px;font-weight:700;color:var(--ink);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ax-tk-act .s{font-size:11px;font-weight:600;color:var(--ink-faint);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ax-tk-act[aria-disabled="true"]{opacity:.4;pointer-events:none;}
 
   /* The six steps, small, on a light card. */
   .ax-dots6{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:2px;padding:4px 0 2px;}
@@ -10175,6 +10190,25 @@ function trackStateIcon(st){
   return st.key === 'pay' || st.key === 'settle' ? 'cash' : st.key === 'ready' ? 'store' : st.key === 'out' ? 'truck'
     : st.key === 'done' ? 'check' : st.key === 'checking' ? 'clip' : st.key === 'cancelled' ? 'x' : 'box';
 }
+/* What the agent can do from an order: one joined bar, each act with its
+   own colour and a word on what it does -- call them, tell them where it
+   is on WhatsApp, the receipt and what it comes to, and (while it can
+   still change) Change. On a done order, Finish sits under it in thumb
+   reach with what it earned. */
+function trackActsHTML(o, c, st, total, canChange){
+  const first = firstWord(c.name);
+  const pickup = o.deliveryMode === 'agent_pickup';
+  const tell = st.key === 'done' ? (pickup ? "it's collected" : "it's delivered")
+    : st.key === 'out' ? "it's on the way" : st.key === 'ready' ? "it's ready"
+    : st.key === 'packing' ? 'being packed' : st.key === 'cancelled' ? "it's cancelled" : 'where it is';
+  const seg = (attrs, tone, icon, label, sub)=> `<${attrs.startsWith('href') || attrs.startsWith('aria-disabled') ? 'a' : 'button type="button"'} class="ax-tk-act ${tone}" ${attrs}><span class="ic">${icon}</span><span class="l">${esc(label)}</span><span class="s${/^\d/.test(sub) ? ' m' : ''}">${esc(sub)}</span></${attrs.startsWith('href') || attrs.startsWith('aria-disabled') ? 'a' : 'button'}>`;
+  return `<div class="ax-tk-acts">
+    ${seg(c.phone ? `href="tel:${esc(c.phone)}" aria-label="Call ${esc(c.name)}"` : 'aria-disabled="true"', 'call', AX_ICON.phone, 'Call', first)}
+    ${seg('data-update', 'tell', AX_ICON.whatsapp, `Tell ${first}`, tell)}
+    ${seg('data-receipt', 'rcpt', AX_ICON.receipt, 'Receipt', fmtNum(total))}
+    ${canChange ? seg('data-change aria-label="Change or cancel this order"', 'chg', AX_ICON.pencil, 'Change', 'or cancel') : ''}
+  </div>`;
+}
 function openTrackSheet(orderId){
   const id = String(orderId);
   // Whether the agent has opened or shut the item list themselves: their
@@ -10239,7 +10273,7 @@ function openTrackSheet(orderId){
     const pay = st.needs === 'pay' ? payDockHTML(o, owed, agentCreditLeft(o.id)) : '';
     const asked = askStatusHTML(o);
     const canChange = zone !== 'none' && !changeAskOpen(o);
-    const finish = st.key === 'done' ? `<button type="button" class="btn btn-block ax-finish" data-finish>${AX_ICON.check}Finish</button>` : '';
+    const finish = st.key === 'done' ? `<button type="button" class="ax-finish" data-finish>${AX_ICON.check}<span class="t">Finish</span>${yours > 0 ? `<span class="y m">${fmtSigned(yours)} yours</span>` : ''}</button>` : '';
     sheet.el.innerHTML = `
       <div class="ax-sheet-top">
         <button type="button" class="ax-grab" data-close aria-label="Close"></button>
@@ -10264,13 +10298,8 @@ function openTrackSheet(orderId){
         ${lock}
         <div class="ax-foot">
           ${pay}
+          ${trackActsHTML(o, c, st, total, canChange)}
           ${finish}
-          <div class="ax-acts">
-            <a class="ax-act" ${c.phone ? `href="tel:${esc(c.phone)}"` : 'aria-disabled="true"'} aria-label="Call ${esc(c.name)}">${AX_ICON.phone}Call</a>
-            <button type="button" class="ax-act" data-update>${AX_ICON.chat}Update</button>
-            <button type="button" class="ax-act" data-receipt>${AX_ICON.share}Receipt</button>
-            ${canChange ? `<button type="button" class="ax-act" data-change aria-label="Change or cancel this order">${AX_ICON.pencil}Change</button>` : ''}
-          </div>
         </div>
       </div>`;
   }
