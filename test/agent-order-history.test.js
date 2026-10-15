@@ -125,7 +125,7 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   /* And not cancelled by the agent either: an order they called off is
      waiting only for the shop to close it, which is not moving. */
   t.check(/!o\.voided && !o\.agentCancel && o\.status !== 'completed'/.test(live), 'a live order is any not voided, not cancelled by the agent, and not finished');
-  t.check(/if\(key !== 'needs'\)\{ openStageSheet\(key\); return; \}/.test(code),
+  t.check(/\n  openStageSheet\(key\);\n\}/.test(extractFunction(src, 'onMoveClick', 'agent.html')),
     'every stage tile opens its own page -- the orders in it and where each one is -- even with only one in it');
 }
 

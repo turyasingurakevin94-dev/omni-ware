@@ -79,9 +79,10 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   }
   const move = extractFunction(src, 'renderMove', 'agent.html');
   t.check(/filter\(x=> x\.st\.needs\)/.test(move), 'Today lists every order that waits on the agent');
-  t.check(/Collect/.test(move) && /'Settle' : 'Pay'/.test(move) && /fmtCompactUGX\(orderOwedAmount\(o\)\)/.test(move),
+  t.check(/'Ready to collect'/.test(move) && /'Pay the shop'/.test(move) && /orderOwedAmount\(x\.o\)/.test(move),
     'saying what to do and, for a payment, how much');
-  t.check(/data-track="\$\{esc\(o\.id\)\}"/.test(move), 'and each row opens that order\'s track');
+  t.check(/data-need="\$\{k\}"/.test(move) && /class="ax-br" data-track="\$\{esc\(o\.id\)\}"/.test(extractFunction(src, 'busyRowHTML', 'agent.html')),
+    'each kind opens its list, and each row there opens that order\'s track');
 }
 
 /* ---------- 3. what a client row now says --------------------------- */

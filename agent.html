@@ -6352,11 +6352,9 @@ function renderMove(){
   document.getElementById('ag_moveCount').textContent = `${live.length} live · ${doneN} done`;
   const baskets = quoteBasketSummaries(agentClients, carts, chosenClient ? chosenClient.id : null, unnamedCart).filter(b=> b.count > 0);
   // Who is in each, as faces: the count says how many, the faces say who.
-  const busyFaces = (clients)=> clients.length
+  const faces = (clients)=> clients.length
     ? `<span class="ax-faces dots">${clients.slice(0, 3).map(c=> `<i class="${avTint(c.id)}"></i>`).join('')}${clients.length > 3 ? `<small>+${clients.length - 3}</small>` : ''}</span>` : '';
-  const faces = (clients)=> live.length > BUSY_AT ? busyFaces(clients) : clients.length
-    ? `<span class="ax-faces">${clients.slice(0, 2).map(c=> avHTML(c, 'xs')).join('')}${clients.length > 2 ? `<span class="ax-av xs more">+${clients.length - 2}</span>` : ''}</span>` : '';
-  // A dot says something is waiting; at volume, how many.
+  // A badge says how many of it need you.
   const tile = (key, label, icon, n, dot, cls, who, need)=>
     `<button type="button" class="ax-tile${cls ? ' ' + cls : ''}${n ? '' : ' zero'}" data-move="${key}" aria-label="${n} ${esc(label)}${need ? `, ${need} need you` : ''}">
       ${need ? `<span class="need ${dot}">${need}</span>` : dot ? `<span class="dot ${dot}"></span>` : ''}
@@ -6365,52 +6363,34 @@ function renderMove(){
   const inGroup = (g)=> staged.filter(x=> x.st.group === g);
   const clientOf = (o)=> agentClients.find(x=> String(x.id) === String(o.agentClientId)) || { id: o.agentClientId, name: 'Client' };
   const basketWho = baskets.filter(b=> !b.unnamed).map(b=> agentClients.find(c=> String(c.id) === String(b.key))).filter(Boolean);
-  const busy = live.length > BUSY_AT;
   const cold = baskets.filter(b=> !b.active && (calDaysAgo(basketTouched(basketRowsFor(b))) || 0) >= 14);
   const late = inGroup('packing').filter(x=> (calDaysAgo(stageSince(x.o, x.st)) || 0) >= 2);
-  const tiles = tile('basket', baskets.length === 1 ? 'Basket' : 'Baskets', 'basket', baskets.length, cold.length ? 'cold' : '', 'basket', basketWho, busy && cold.length ? cold.length : 0)
+  const tiles = tile('basket', baskets.length === 1 ? 'Basket' : 'Baskets', 'basket', baskets.length, cold.length ? 'cold' : '', 'basket', basketWho, cold.length)
     + MOVE_GROUPS.map(g=>{
       const rows = inGroup(g.key);
       const pay = rows.filter(x=> x.st.needs === 'pay').length, collect = rows.filter(x=> x.st.needs === 'collect').length;
       const lateN = g.key === 'packing' ? late.length : 0;
       const dot = pay ? 'warn' : collect ? 'good' : lateN ? 'bad' : '';
-      return tile(g.key, g.label, g.icon, rows.length, dot, '', rows.map(x=> clientOf(x.o)), busy ? (pay || collect || lateN) : 0);
+      return tile(g.key, g.label, g.icon, rows.length, dot, '', rows.map(x=> clientOf(x.o)), pay || collect || lateN);
     }).join('');
   const needs = staged.concat(myOrders.filter(o=> !o.voided && o.status === 'completed').map(o=> ({ o, st: orderStage(o) })))
     .filter(x=> x.st.needs)
     .sort((a,b)=> (a.st.needs === 'collect' ? 1 : 0) - (b.st.needs === 'collect' ? 1 : 0));
-  // Many orders: what needs doing, by kind, each with what it is worth
-  // and one button -- not forty names.
-  if(busy && needs.length > BUSY_AT){
-    const pays = needs.filter(x=> x.st.needs === 'pay'), coll = needs.filter(x=> x.st.needs === 'collect');
-    const oldest = pays.map(x=> stageSince(x.o, x.st)).filter(v=> v != null).sort((a,b)=> a-b)[0];
-    const kind = (k, icon, tone, label, n, sub, cta)=> n ? `<button type="button" class="ax-nk" data-need="${k}"><span class="ic ${tone}">${icon}</span>
-      <span class="b"><span class="n">${label}</span><span class="s">${sub}</span></span><b class="c ${tone}">${n}</b><span class="go">${cta}</span></button>` : '';
-    const kinds = kind('pay', PH.coins, 'warn', 'Pay the shop', pays.length, `${fmtNum(pays.reduce((s,x)=> s + orderOwedAmount(x.o), 0))}${oldest ? ` · oldest ${esc(busyAge(oldest))}` : ''}`, 'Pay')
-      + kind('collect', PH.store, 'good', 'Ready to collect', coll.length, fmtNum(coll.reduce((s,x)=> s + orderTotal(x.o), 0)), 'Codes')
-      + kind('late', PH.hourglass, 'bad', 'Packing 2+ days', late.length, 'ask the shop in one message', 'Ask')
-      + kind('cold', PH.basket, 'cold', 'Baskets gone cold', cold.length, `${fmtNum(cold.reduce((s,b)=> s + basketTotal(basketRowsFor(b)), 0))} untouched 2+ weeks`, 'Clear');
-    const n = pays.length + coll.length + late.length + cold.length;
-    document.getElementById('ag_move').innerHTML = `<div class="ax-tiles busy">${tiles}</div>`;
-    const nd = document.getElementById('ag_moveNeeds');
-    nd.hidden = !n;
-    nd.innerHTML = `<div class="ax-nk-h"><i></i><span>Needs you</span><b>${n}</b></div>${kinds}`;
-    return;
-  }
-  const rows = needs.slice(0, 4).map(({ o, st })=>{
-    const c = agentClients.find(x=> String(x.id) === String(o.agentClientId)) || { id: o.agentClientId, name: 'Client' };
-    const pill = st.needs === 'collect'
-      ? `<span class="ax-pill good">${AX_ICON.store}Collect</span>`
-      : `<span class="ax-pill warn">${st.key === 'settle' ? 'Settle' : 'Pay'} <span class="m">${esc(fmtCompactUGX(orderOwedAmount(o)))}</span></span>`;
-    return `<button type="button" class="ax-needrow" data-track="${esc(o.id)}">
-      ${avHTML(c, 'sm')}<span class="nm" title="${esc(c.name)}">${esc(c.name)}</span>${pill}
-    </button>`;
-  }).join('');
-  const more = needs.length > 4
-    ? `<button type="button" class="ax-needrow" data-move="needs"><span class="nm" style="color:var(--ink-soft);">+${needs.length - 4} more waiting on you</span>${AX_ICON.chevR}</button>` : '';
-  document.getElementById('ag_move').innerHTML = `<div class="ax-tiles">${tiles}</div>${rows}${more}`;
+  // What needs doing, by kind, each with what it is worth and one
+  // button -- the same at one order as at forty.
+  const pays = needs.filter(x=> x.st.needs === 'pay'), coll = needs.filter(x=> x.st.needs === 'collect');
+  const oldest = pays.map(x=> stageSince(x.o, x.st)).filter(v=> v != null).sort((a,b)=> a-b)[0];
+  const kind = (k, icon, tone, label, n, sub, cta)=> n ? `<button type="button" class="ax-nk" data-need="${k}"><span class="ic ${tone}">${icon}</span>
+    <span class="b"><span class="n">${label}</span><span class="s">${sub}</span></span><b class="c ${tone}">${n}</b><span class="go">${cta}</span></button>` : '';
+  const kinds = kind('pay', PH.coins, 'warn', 'Pay the shop', pays.length, `${fmtNum(pays.reduce((s,x)=> s + orderOwedAmount(x.o), 0))}${oldest ? ` · oldest ${esc(busyAge(oldest))}` : ''}`, 'Pay')
+    + kind('collect', PH.store, 'good', 'Ready to collect', coll.length, fmtNum(coll.reduce((s,x)=> s + orderTotal(x.o), 0)), 'Codes')
+    + kind('late', PH.hourglass, 'bad', 'Packing 2+ days', late.length, 'ask the shop in one message', 'Ask')
+    + kind('cold', PH.basket, 'cold', 'Baskets gone cold', cold.length, `${fmtNum(cold.reduce((s,b)=> s + basketTotal(basketRowsFor(b)), 0))} untouched 2+ weeks`, 'Clear');
+  const n = pays.length + coll.length + late.length + cold.length;
+  document.getElementById('ag_move').innerHTML = `<div class="ax-tiles busy">${tiles}</div>`;
   const nd = document.getElementById('ag_moveNeeds');
-  nd.hidden = true; nd.innerHTML = '';
+  nd.hidden = !n;
+  nd.innerHTML = `<div class="ax-nk-h"><i></i><span>Needs you</span><b>${n}</b></div>${kinds}`;
 }
 ['ag_move', 'ag_moveNeeds'].forEach(id=> document.getElementById(id).addEventListener('click', onMoveClick));
 function onMoveClick(e){
@@ -6423,14 +6403,11 @@ function onMoveClick(e){
   const key = m.dataset.move;
   if(key === 'basket'){
     const n = quoteBasketSummaries(agentClients, carts, chosenClient ? chosenClient.id : null, unnamedCart).filter(b=> b.count > 0).length;
-    if(n > 1) openBasketsSheet(); else switchTab('order');
+    if(n) openBasketsSheet(); else switchTab('order');
     return;
   }
-  // Each stage opens its own page -- the orders in it, each showing where
-  // on the six steps it is -- even when there is only one.
-  if(key !== 'needs'){ openStageSheet(key); return; }
-  const staged = liveOrders().concat(myOrders.filter(o=> !o.voided && o.status === 'completed')).map(o=> ({ o, st: orderStage(o) }));
-  openOrderListSheet(staged.filter(x=> x.st.needs).map(x=> x.o), 'Waiting on you');
+  // Each stage opens its own list, even when there is only one order.
+  openStageSheet(key);
 }
 
 /* Where an order is, as a badge that looks like what it means wherever
@@ -6450,28 +6427,6 @@ function orderBadgeHTML(o, st){
     : st.key === 'ready' ? 'Collect' : st.title;
   return `<span class="ax-badge ${b.cls}">${AX_ICON[b.icon]}${esc(label)}</span>`;
 }
-/* A short list of orders, each a row that opens its track. */
-function orderRowHTML(o){
-  const c = agentClients.find(x=> String(x.id) === String(o.agentClientId)) || { id: o.agentClientId, name: 'Client' };
-  const st = orderStage(o);
-  return `<button type="button" class="ax-pickrow${st.needs ? ' needs' : ''}" data-track="${esc(o.id)}">
-    ${avHTML(c)}
-    <span class="b"><span class="nm">${esc(c.name)}</span><span class="s m">${fmtNum(orderTotal(o))} &middot; ${esc(dateShort(orderDate(o)))}</span></span>
-    ${orderBadgeHTML(o, st)}
-  </button>`;
-}
-function openOrderListSheet(orders, title){
-  const sheet = openSheet(`<button type="button" class="ax-grab" data-close aria-label="Close"></button>
-    <div class="ax-sheet-title"><h3>${esc(title || 'Orders')}</h3>
-      <button type="button" class="ax-iconbtn" data-close aria-label="Close">${AX_ICON.x}</button></div>
-    <div class="ax-form">${orders.length ? orders.map(orderRowHTML).join('') : '<div class="ax-empty">Nothing here right now.</div>'}</div>`,
-    { label: title, white: true });
-  sheet.el.addEventListener('click', (e)=>{
-    const t = e.target.closest('[data-track]');
-    if(t){ sheet.close(); openTrackSheet(t.dataset.track); }
-  });
-}
-
 /* ---- Next move ----
    The feed's own ranking (buildFeedCards), as a ranked list rather than a
    row of cards to swipe: the best play large -- who, why, what it earns,
@@ -8755,72 +8710,10 @@ function openThankYou(orderId){
 }
 
 /* ================= A STAGE, OPENED =================
-   Tapping Sent, Packing or Out on Today opens that stage: every order in
-   it, each showing where on the six steps it is -- the same named steps
-   as the order's own screen -- and the one thing to do with it. */
-const STAGE_PAGES = {
-  sent:    { title:'Sent',    sub:'With the shop, not packing yet',  icon:'send',  lit:['send','check','cash'] },
-  packing: { title:'Packing', sub:'The shop is getting it ready',    icon:'box',   lit:['box'] },
-  out:     { title:'Out',     sub:'Ready to collect, or on the way', icon:'store', lit:['store','truck'] },
-};
-const SENT_GROUPS = [
-  { keys:['pay','settle'], icon:'cash', label:'Waiting for your payment', warn:true },
-  { keys:['queued'], icon:'cash', label:'Paid, packing next' },
-  { keys:['checking'], icon:'check', label:'The shop is checking' },
-  { keys:['sent','submitted','new'], icon:'send', label:'Just sent' },
-];
-function orderCardHTML(o){
-  const c = orderClient(o);
-  const st = orderStage(o);
-  const go = st.needs === 'pay' ? `<span class="go warn">${st.key === 'settle' ? 'Settle' : 'Pay'} ${esc(fmtCompactUGX(orderOwedAmount(o)))}${AX_ICON.chevR}</span>`
-    : st.needs === 'collect' ? `<span class="go good">Collect${AX_ICON.chevR}</span>` : `<span class="go">Open${AX_ICON.chevR}</span>`;
-  return `<button type="button" class="ax-card ax-oc" data-track="${esc(o.id)}">
-    <span class="h">${avHTML(c)}<span class="b"><span class="n">${esc(c.name)}</span><span class="s m">#${esc(o.id)} · ${esc(orderStepTimes(o).send)}</span></span><span class="v m">${fmtNum(orderTotal(o))}</span></span>
-    ${stepDotsHTML(o, st)}
-    <span class="f"><span class="s">${esc(st.sub)}</span>${go}</span>
-  </button>`;
-}
-function openStageSheet(key, small){
-  const page = STAGE_PAGES[key];
-  if(!page) return null;
-  // More than a handful reads as a list to work through.
-  if(!small && liveOrders().filter(o=> orderStage(o).group === key).length > BUSY_AT) return openBusyStage(key);
-  closeSheetsOfKind('stage');
-  const sheet = openSheet('', { label: page.title, kind:'stage', full:true, refresh: ()=> paint() });
-  function paint(){
-    const rows = liveOrders().map(o=> ({ o, st: orderStage(o) })).filter(x=> x.st.group === key)
-      .sort((a,b)=> (b.st.needs ? 1 : 0) - (a.st.needs ? 1 : 0) || String(orderDate(b.o) || '').localeCompare(String(orderDate(a.o) || '')));
-    const warn = rows.some(x=> x.st.needs === 'pay');
-    const tone = key === 'packing' ? 'done' : key === 'sent' && warn ? 'warn' : 'now';
-    const steps = orderSteps({ deliveryMode: 'agent_pickup' });
-    // Sent spans three steps. Light only the ones an order is actually on,
-    // and list the orders under the step they are on -- a page called Sent
-    // with an order waiting on your money in it read as a mistake.
-    const groups = key === 'sent' ? SENT_GROUPS.map(g=> ({ g, rows: rows.filter(x=> g.keys.includes(x.st.key)) })).filter(x=> x.rows.length) : null;
-    const lit = groups && groups.length ? groups.map(x=> x.g.icon) : page.lit;
-    const tiles = steps.map(s=> `<span class="ax-stp${lit.includes(s.icon) ? ` now ${tone === 'warn' ? 'warn' : tone === 'done' ? 'white' : ''}` : ''}">${AX_ICON[s.icon === 'check' ? 'clip' : s.icon]}</span>`).join('');
-    const labels = steps.map(s=> `<span class="${lit.includes(s.icon) ? `on${tone === 'warn' ? ' warn' : tone === 'done' ? ' white' : ''}` : ''}">${esc(stepLabel(s, false))}</span>`).join('');
-    const list = !rows.length ? `<div class="ax-empty">${AX_ICON[page.icon]}Nothing here right now</div>`
-      : groups ? groups.map(x=> `<div class="ax-sgrp${x.g.warn ? ' warn' : ''}"><span>${AX_ICON[x.g.icon]}${esc(x.g.label)}</span><b>${x.rows.length}</b></div>${x.rows.map(r=> orderCardHTML(r.o)).join('')}`).join('')
-      : `<span class="ax-count">${rows.length} order${rows.length === 1 ? '' : 's'}</span>${rows.map(x=> orderCardHTML(x.o)).join('')}`;
-    sheet.el.innerHTML = `
-      <div class="ax-sheet-top">
-        <button type="button" class="ax-grab" data-close aria-label="Close"></button>
-        <div class="ax-state"><span class="ax-state-ic ${tone}">${AX_ICON[page.icon]}</span>
-          <span class="b"><span class="t">${esc(page.title)}</span><span class="s">${esc(page.sub)}</span></span>
-          <button type="button" class="ax-iconbtn on-navy" data-close aria-label="Close" style="margin-left:auto;">${AX_ICON.x}</button></div>
-        <div class="ax-steps" aria-hidden="true"><div class="r">${tiles}</div><div class="l">${labels}</div></div>
-      </div>
-      <div class="ax-sheet-pad">
-        ${list}
-      </div>`;
-  }
-  sheet.el.addEventListener('click', (e)=>{
-    const t = e.target.closest('[data-track]');
-    if(t) openTrackSheet(t.dataset.track);
-  });
-  paint();
-  return sheet;
+   Tapping Sent, Packing or Out on Today opens that stage as one list to
+   work through, the same at one order as at thirty (openBusyStage). */
+function openStageSheet(key){
+  return BUSY_PAGES[key] ? openBusyStage(key) : null;
 }
 
 /* ================= WITHIN REACH =================
@@ -12068,13 +11961,17 @@ function openBusyStage(key){
   closeSheetsOfKind('stage');
   const state = { only: null, q: '', newest: false, open: new Set() };
   const sheet = openSheet('', { label: page.title, kind:'stage', full:true, refresh: ()=> paint() });
-  const rowsNow = ()=> liveOrders().map(o=>{ const st = orderStage(o); return { o, st, since: stageSince(o, st) }; }).filter(x=> x.st.group === key);
+  // Sent also holds a finished order still owed to the shop: it waits on
+  // your money like the rest of Pay the shop.
+  const rowsNow = ()=> liveOrders().concat(key === 'sent' ? myOrders.filter(o=> !o.voided && o.status === 'completed') : [])
+    .map(o=>{ const st = orderStage(o); return { o, st, since: stageSince(o, st) }; })
+    .filter(x=> x.st.group === key || (key === 'sent' && x.st.key === 'settle'));
   function listHTML(parts){
     const q = state.q.trim().toLowerCase();
     const pick = (rows)=> rows.filter(x=> !q || String(orderClient(x.o).name || '').toLowerCase().includes(q) || String(x.o.id).includes(q))
       .sort((a,b)=> ((a.since || 0) - (b.since || 0)) * (state.newest ? -1 : 1));
     const shown = parts.filter(p=> p.rows.length && (!state.only || state.only === p.id));
-    if(!shown.length) return `<div class="ax-empty">${AX_ICON.search}Nothing matches</div>`;
+    if(!shown.length) return `<div class="ax-empty">${state.q ? `${AX_ICON.search}Nothing matches` : `${page.icon()}Nothing here right now`}</div>`;
     return shown.map(p=>{
       const rows = pick(p.rows);
       if(!rows.length) return '';
@@ -12094,7 +11991,6 @@ function openBusyStage(key){
   }
   function paint(){
     const rows = rowsNow();
-    if(rows.length <= BUSY_AT){ sheet.close(); openStageSheet(key, true); return; }
     const parts = busyParts(key, rows);
     const total = rows.reduce((s, x)=> s + orderTotal(x.o), 0);
     const bar = parts.filter(p=> p.rows.length).map(p=> `<i style="flex:${p.rows.length};background:${p.color};"></i>`).join('');
@@ -12110,12 +12006,12 @@ function openBusyStage(key){
         <div class="ax-bz-chips">${chips}</div>
       </div>
       <div class="ax-sheet-pad">
-        <div class="ax-bz-q"><label>${PH.search}<input type="search" data-q placeholder="Client or order #" value="${esc(state.q)}" aria-label="Find a client or order"></label>
-          <button type="button" data-sort>${PH.sort}${state.newest ? 'Newest first' : 'Oldest first'}</button></div>
+        ${rows.length > BUSY_AT ? `<div class="ax-bz-q"><label>${PH.search}<input type="search" data-q placeholder="Client or order #" value="${esc(state.q)}" aria-label="Find a client or order"></label>
+          <button type="button" data-sort>${PH.sort}${state.newest ? 'Newest first' : 'Oldest first'}</button></div>` : ''}
         <div data-list>${listHTML(parts)}</div>
       </div>`;
     const q = sheet.el.querySelector('[data-q]');
-    q.addEventListener('input', ()=>{ state.q = q.value; sheet.el.querySelector('[data-list]').innerHTML = listHTML(busyParts(key, rowsNow())); });
+    if(q) q.addEventListener('input', ()=>{ state.q = q.value; sheet.el.querySelector('[data-list]').innerHTML = listHTML(busyParts(key, rowsNow())); });
   }
   sheet.el.addEventListener('click', (e)=>{
     const only = e.target.closest('[data-only]');
@@ -12194,8 +12090,9 @@ function openBasketsSheet(){
         <div class="ax-bz-chips">${chips}</div>
       </div>
       <div class="ax-sheet-pad">
-        <div class="ax-bz-q"><label>${PH.search}<input type="search" data-q placeholder="Client name" value="${esc(state.q)}" aria-label="Find a client's basket"></label>
-          <button type="button" data-sort>${PH.sort}${state.oldest ? 'Oldest first' : 'Newest first'}</button></div>
+        ${list.length > BUSY_AT || state.q ? `<div class="ax-bz-q"><label>${PH.search}<input type="search" data-q placeholder="Client name" value="${esc(state.q)}" aria-label="Find a client's basket"></label>
+          <button type="button" data-sort>${PH.sort}${state.oldest ? 'Oldest first' : 'Newest first'}</button></div>` : ''}
+        ${list.length ? '' : `<div class="ax-empty">${state.q ? `${AX_ICON.search}Nothing matches` : `${PH.basket}No baskets right now`}</div>`}
         ${parts.filter(p=> p.rows.length && showP(p.id)).map(p=> `<div class="ax-bg"><div class="ax-bg-h"><i style="background:${p.color};"></i><span class="l">${p.label}</span><span class="n">${p.rows.length}</span><b class="ax-bg-sum">${fmtNum(p.rows.reduce((s, x)=> s + x.total, 0))}</b></div>
           <div class="ax-bg-list">${p.rows.map(row).join('')}</div></div>`).join('')}
         ${cold.length && showP('cold') ? `<div class="ax-cold"><span class="ax-faces">${cold.slice(0, 4).map(x=>{ const c = agentClients.find(k=> String(k.id) === String(x.b.key)); return c ? avHTML(c, 'xs') : ''; }).join('')}</span>
@@ -12204,7 +12101,7 @@ function openBasketsSheet(){
       </div>`;
     sheet.cold = cold;
     const q = sheet.el.querySelector('[data-q]');
-    q.addEventListener('change', ()=>{ state.q = q.value; paint(); });
+    if(q) q.addEventListener('change', ()=>{ state.q = q.value; paint(); });
   }
   sheet.el.addEventListener('click', (e)=>{
     const only = e.target.closest('[data-only]');

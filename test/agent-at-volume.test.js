@@ -22,8 +22,11 @@ const fn = (n) => extractFunction(src, n, 'agent.html');
 /* ---------- 1. a stage past a handful is a list ---------------------- */
 {
   t.check(/const BUSY_AT = 4;/.test(src), 'a handful is four');
-  t.check(/if\(!small && liveOrders\(\)\.filter\(o=> orderStage\(o\)\.group === key\)\.length > BUSY_AT\) return openBusyStage\(key\);/.test(fn('openStageSheet')),
-    'past it, a stage opens as a list to work through; at or under it, as before');
+  t.check(/return BUSY_PAGES\[key\] \? openBusyStage\(key\) : null;/.test(fn('openStageSheet')) && !/BUSY_AT/.test(fn('openStageSheet')),
+    'a stage always opens as the list to work through, at one order as at thirty');
+  t.check(/\$\{rows\.length > BUSY_AT \? `<div class="ax-bz-q">/.test(fn('openBusyStage')),
+    'with search and sort only past a handful, where there is something to find');
+  t.check(/Nothing here right now/.test(fn('openBusyStage')), 'and an empty stage says so');
   const parts = compileScope([fn('calDaysAgo'), fn('busyParts')], {}, ['busyParts']).busyParts;
   const day = 86400000, now = Date.now();
   const p = parts('packing', [{ since: now - 3 * day }, { since: now - day }, { since: now }, { since: now - 5 * day }]);
@@ -55,8 +58,8 @@ const fn = (n) => extractFunction(src, n, 'agent.html');
 /* ---------- 3. Today names what needs doing ------------------------- */
 {
   const move = fn('renderMove');
-  t.check(/if\(busy && needs\.length > BUSY_AT\)/.test(move) && /data-need="\$\{k\}"/.test(move),
-    'with many orders, Today lists kinds of work, not orders');
+  t.check(!/BUSY_AT|ax-needrow/.test(move) && /data-need="\$\{k\}"/.test(move),
+    'Today lists kinds of work, not orders -- at one order as at forty');
   t.check(/'Pay the shop'/.test(move) && /'Ready to collect'/.test(move) && /'Packing 2\+ days'/.test(move) && /'Baskets gone cold'/.test(move),
     'pay, collect, chase the shop, clear old baskets');
   t.check(/class="need \$\{dot\}"/.test(move), 'and each stage tile says how many of it need you');

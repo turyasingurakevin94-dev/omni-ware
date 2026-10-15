@@ -31,13 +31,13 @@ const src = read('agent.html');
   t.check(c && c.avgMargin === 10, `what a visit usually earns is per visit, so a split order is not halved (${c && c.avgMargin})`);
 }
 
-/* ---------- 2. Sent says which step each order is on ---------- */
+/* ---------- 2. Sent says which part each order is in ---------- */
 {
-  const sheet = extractFunction(src, 'openStageSheet', 'agent.html');
-  t.check(/const SENT_GROUPS = \[\s*\{ keys:\['pay','settle'\], icon:'cash', label:'Waiting for your payment', warn:true \}/.test(src),
+  const parts = extractFunction(src, 'busyParts', 'agent.html');
+  t.check(/if\(key === 'sent'\) return \[\s*\{ id:'pay', label:'Pay the shop'/.test(parts),
     'an order waiting on the money is listed under that, first');
-  t.check(/const lit = groups && groups\.length \? groups\.map\(x=> x\.g\.icon\) : page\.lit;/.test(sheet),
-    'and only the steps an order is actually on are lit');
+  t.check(/key === 'sent' && x\.st\.key === 'settle'/.test(extractFunction(src, 'openBusyStage', 'agent.html')),
+    'including a finished order still owed to the shop');
 }
 
 /* ---------- 3. one look per meaning ---------- */

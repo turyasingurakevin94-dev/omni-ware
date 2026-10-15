@@ -70,7 +70,8 @@ const fn = (n) => extractFunction(src, n, 'agent.html');
   t.check(/stepLabel\(s, i < at \|\| all\)/.test(tiles) && /stepLabel\(s, done\)/.test(dots), 'every step is drawn with its name');
   t.check(!/class="bar"|width:\$\{/.test(tiles + dots), 'and neither draws a progress bar an agent would have to decode');
   t.check(/orderStepTimes\(o\)/.test(tiles), 'a step that is done carries when it happened');
-  t.check(/stepDotsHTML\(o, st\)/.test(fn('orderCardHTML')), 'the cards on a stage page use the same named steps');
+  t.check(/class="ax-br" data-track=/.test(fn('busyRowHTML')) && !/function orderCardHTML/.test(src),
+    'a stage page lists its orders as rows that open the order, never as big cards');
   t.check(/o\.createdAt \? whenShort\(o\.createdAt\)/.test(fn('orderStepTimes')),
     'Sent shows the time it was sent where the server recorded it, never savedAt -- the shop rewrites that');
   t.check(/createdAt: now,/.test(read('supabase/functions/agent-submit-order/index.ts')), 'and the server records it');
@@ -124,7 +125,7 @@ const fn = (n) => extractFunction(src, n, 'agent.html');
   t.check(/getElementById\('ag_moneyBtn'\)\.addEventListener\('click', \(\)=> openMoneySheet\(\)\)/.test(src), 'the figure opens the money');
   t.check(/getElementById\('ag_meBtn'\)\.addEventListener\('click', \(\)=> openProfileSheet\(\)\)/.test(src), 'your initials open you');
   t.check(/b\.dataset\.hero === 'near'\) openNearSheet\(\);\s*else openStandingSheet\(\);/.test(src), 'and the glass bar opens what is within reach, and where you stand');
-  t.check(/if\(key !== 'needs'\)\{ openStageSheet\(key\); return; \}/.test(src), 'each stage tile opens its own page');
+  t.check(/  openStageSheet\(key\);\n\}/.test(fn('onMoveClick')), 'each stage tile opens its own page');
 }
 
 /* ---------- 9. live without a reload ---------------------------------- */
@@ -187,7 +188,7 @@ const fn = (n) => extractFunction(src, n, 'agent.html');
     'an order waiting on payment says "Pay" and how much, not just its stage name');
   t.check(/pay:\{ icon:'cash', cls:'pay' \}/.test(src) && /\.ax-badge\.pay\{background:var\(--warn\);color:#fff/.test(src),
     'in solid amber, unlike any other status');
-  for (const f of ['openClientSheet', 'openMoneySheet', 'orderRowHTML']) {
+  for (const f of ['openClientSheet', 'openMoneySheet']) {
     t.check(/orderBadgeHTML\(o, st\)/.test(fn(f)) && /st\.needs \? ' needs' : ''/.test(fn(f)), `${f}: shows the badge, and marks the row of an order waiting on you`);
   }
 }
