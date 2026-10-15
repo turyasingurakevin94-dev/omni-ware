@@ -475,12 +475,29 @@ Deno.serve(async (req) => {
       if (settingsErr) return json({ error: settingsErr.message, stage: "settings_lookup" }, 500);
       const presets = settingsRow?.presets || {};
       const str = (v: unknown) => (v == null ? "" : String(v).trim());
+      // Where the shop is on the map, for an agent's "how far" and
+      // Directions: the pin of the place the shop names itself after, the
+      // same rule the shop's own map uses (mapHomePin). The place it names
+      // is matched whole first, then as a place named inside the address.
+      // No pin is null -- never a guess.
+      let pin: { lat: number; lng: number } | null = null;
+      const named = (str(presets.shopLocation) || str(presets.shopAddress)).toLowerCase();
+      if (named) {
+        const { data: places } = await admin.from("places").select("name, lat, lng")
+          .eq("shop_id", shopId).not("lat", "is", null);
+        const rows = (places || []) as any[];
+        const hit = rows.find((p) => String(p.name || "").trim().toLowerCase() === named)
+          || rows.filter((p) => { const n = String(p.name || "").trim().toLowerCase(); return n.length >= 3 && named.includes(n); })
+            .sort((a, b) => String(b.name).length - String(a.name).length)[0];
+        if (hit && Number.isFinite(Number(hit.lat)) && Number.isFinite(Number(hit.lng))) pin = { lat: Number(hit.lat), lng: Number(hit.lng) };
+      }
       return json({
         ok: true,
         shop: {
           name: str(presets.shopLegalName) || str(shopRow?.name),
           phone: str(presets.shopPhone) || str(presets.waPhone),
           address: str(presets.shopAddress),
+          pin,
         },
       });
     }

@@ -80,7 +80,10 @@ const fn = (n) => extractFunction(src, n, 'agent.html');
 {
   const fold = /const FOLD_ITEMS_AT = \[([^\]]*)\]/.exec(src);
   const keys = fold ? fold[1].replace(/'/g, '').split(',').map((s) => s.trim()) : [];
-  t.check(['packing', 'ready', 'out', 'done'].every((k) => keys.includes(k)), `from packing on, the lines fold into one row (${keys.join(', ')})`);
+  // Packing and Ready keep them open: while it is being packed, and at the
+  // counter, what is in it is the thing being looked at.
+  t.check(['out', 'done'].every((k) => keys.includes(k)) && !keys.includes('packing') && !keys.includes('ready'),
+    `once it is out the lines fold into one row; packing and ready keep them open (${keys.join(', ')})`);
   t.check(!keys.includes('checking') && !keys.includes('pay'), 'but stay open while they are being checked and paid for');
   t.check(/<details class="ax-card ax-gets"\$\{open \? ' open' : ''\}/.test(fn('openTrackSheet')), 'and one tap opens them');
 }
