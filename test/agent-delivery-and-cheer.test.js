@@ -166,4 +166,34 @@ t.check(/s\.reminded = true/.test(a('sayHiReminder')), 'and it reminds once, the
   t.check(/<img class="card" src="\$\{cv\.toDataURL\('image\/png'\)\}"/.test(open), 'the preview is the picture itself, so what is shown is what goes out');
 }
 
+/* ---------- 8. from our shelf ------------------------------------------ */
+{
+  // The server: a line the shelf covers arrives as our stock, confirmed.
+  const sq = extractFunction(submit, 'shelfQtyOf', 'agent-submit-order');
+  const uk = extractFunction(submit, 'unitKey', 'agent-submit-order');
+  const { shelfQtyOf } = compileScope([uk, sq].map((x) => x.replace(/: (any\[\]|any|number|string)( \| null)?(?=[,)=\s{])/g, '')), {}, ['shelfQtyOf']);
+  const rows = [{ unit: 'Dozen', pack_unit: 'Ctn', pack_qty: 6 }];
+  t.check(shelfQtyOf(rows, 10, 'Dozen') === 10 && shelfQtyOf(rows, 2, 'Ctn') === 12,
+    'a line is counted in the shelf\'s own unit -- two cartons of six dozen is twelve dozen off the shelf');
+  t.check(shelfQtyOf(rows, 3, 'Box') === null, 'and a unit the shelf cannot be restated in is never guessed at');
+  t.check(/supplierId: fromShelf \? "__stock__" : best\.supplier_id/.test(submit) && /\.\.\.\(fromShelf \? \{ shelfAuto: true \} : \{\}\)/.test(submit),
+    'a covered line goes on as our stock, marked as set on arrival');
+  t.check(/\.eq\("invoiced", false\)\.eq\("voided", false\)/.test(submit) && /spoken\.set\(k, /.test(submit),
+    'what other open orders were promised from the shelf is taken off first -- stock only leaves on invoicing');
+  t.check(/if \(!stockR\.error && !lotsR\.error && !openR\.error\)/.test(submit),
+    'and if the shelf cannot be read the order still goes in, every line with its supplier as before');
+  t.check(/agentSellPrice: Number\(it\.agentSellPrice\)/.test(submit) && !/fromShelf[^\n]*sellPrice/.test(submit),
+    'the agent\'s price is never touched by where the goods come from');
+
+  // The board: one tap to take a line from the shelf, and back.
+  const src = board;
+  t.check(/var free = on\.qty - ofShelfSpoken\(it\.productId, vi, q\.id\);/.test(src) && /if \(!on\.counted\) return null;/.test(src),
+    'the board offers the shelf only for stock that has been counted and is not already promised elsewhere');
+  t.check(/it\.supplierId = '__stock__';[\s\S]{0,200}agentShelfConfirm\(q\);/.test(src),
+    '"Use our stock" moves the line to our stock and, once every line is settled, confirms the order for the agent');
+  t.check(/if \(q\.shopConfirmedAt && q\.agentPaymentStatus !== 'paid'\) \{ q\.shopConfirmedAt = null; q\.shopConfirmedTerms = null; \}/.test(src),
+    'taking it back to a supplier withdraws that confirmation, so the agent is never told it is settled when it is not');
+  t.check(/Use our stock<\/button>/.test(src) && /\{\{ln\.unShelfLabel\}\}/.test(src), 'both acts are on the line itself');
+}
+
 process.exit(t.done() ? 1 : 0);
