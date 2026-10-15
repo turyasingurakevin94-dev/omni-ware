@@ -301,3 +301,84 @@ So answers land in **`supplier_answers`**:
    4. Within one 30-second poll, the owner's board should move the order out of Draft and the
       agent's Pay should open.
    5. Edit a line and check that the answer goes stale.
+
+## Part D: Trust and partnership
+
+The screens in Part C let the supplier tell us things. Part D is about us proving things to the
+supplier. Suppliers in Kampala hold back from a new buyer for three reasons:
+
+1. **Will my goods be lost or damaged?**
+2. **Will I be paid, and on time?**
+3. **Will anyone tell me what is going on?**
+
+Totals don't answer any of these. Evidence does. The mockups are row 5, "Trust & partnership", of
+the Omni-Ware Supplier App design canvas.
+
+### D1. Gaps today
+
+| Fear | What the portal shows | What is missing |
+|---|---|---|
+| My goods | Consigned totals, sold against on the shelf | Proof of receipt, stock counts, a damage policy, a way to get goods back |
+| My money | Amount owed, ageing, next payment | Payment references, receipts, our on-time record, a way to query a bill |
+| Being told | The order request | A message for every stage of an order, an inbox, message preferences, replying from WhatsApp |
+| Partnership | Sales and agent counts | A two-way scorecard, a reward for reliability, signals about what to stock |
+| Personal | Initials | A business profile, a named contact at Omni-Ware, staff roles, language |
+
+### D2. Recommendations, in priority order
+
+**Tier 1: proof**
+
+| # | Feature | Builds on | Needs |
+|---|---|---|---|
+| 1 | **Goods-received receipt** after every pickup: a photo at our store, sent against counted per line, who counted it and when, and "That's right / I sent N" when a line is short | `collection_trips.lines` (ordered against received) | Photos for each trip; a goods-received record the supplier can answer |
+| 2 | **Rider handover code.** The rider's name and plate, plus a 4-digit code the supplier reads out, so the handover is provable on both sides | `collection_trips` statuses | Code generation and a check in `shared-worker.js` |
+| 3 | **"Your stock with us"** for each consigned item: a received / sold / on shelf / damaged bar, the last count with a photo, a dated history, damage shown openly as our loss, and **Request a return** | `stock_log` (`count`, `damaged`), `stock_lots.consign` | Count photos; a record type for **returns to the supplier** (none exists) |
+| 4 | **Payment record:** "Paid on time 11 of 12", each payment with its MoMo or bank reference and a receipt, and a monthly statement as a PDF | `supplierStatementRows`, `supplierStatementSheet`, `suppliers.terms_days` | Payout reference fields on supplier payments |
+| 5 | **Query a bill:** reason, then a tracked status with a promised reply time | `purchase_invoices` | A small `supplier_queries` table |
+
+**Tier 2: partnership**
+
+| # | Feature | Builds on | Needs |
+|---|---|---|---|
+| 6 | **Two-way scorecard.** Theirs: fill rate, reply time, how current their prices are. Ours: paid on time, pickups on time, how fast queries are sorted. **Reliability earns faster payment**, for example 21 → 14 → 7 days | `suppliers.terms_days`, `supplier_answers` (M1) | A scheduled rollup of scores |
+| 7 | **Demand signals:** next week's expected orders, and items agents ask for that the supplier doesn't list, with one-tap Add. Counts only, buyers stay private (C3) | `sourcing_leads`, order history | A simple 8-week forecast; extends M5 Wanted |
+| 8 | **Get paid early** for a fee (later, Stage 4 trade finance) | Payment terms | Finance partner |
+
+**Tier 3: personal**
+
+| # | Feature | Needs |
+|---|---|---|
+| 9 | **A named contact at Omni-Ware** (photo, WhatsApp, call) | A field on `suppliers` for the account manager |
+| 10 | **Business profile:** pickup place and hours, and payout details that are **locked** (changing them needs a call-back from Omni-Ware, to stop fraud) | Payout details on `suppliers` |
+| 11 | **Staff roles:** the owner sees everything; a storekeeper confirms orders only | A `supplier_staff` table, with the 0109 session carrying the role |
+| 12 | **Language** (English or Luganda) and **quiet hours** | Preference columns |
+
+**Tier 4: communication**
+
+| # | Feature | Builds on | Needs |
+|---|---|---|---|
+| 13 | **WhatsApp at every step**, as utility templates: the order request (**Have all / Some short / None** buttons), pickup with rider and code, goods received, payment sent with reference, price check (**Still correct**), price approved or declined, and a Monday summary | `wa-send`, `wa-webhook`, `wa_messages` | Supplier templates, and handling of **interactive button replies** in `wa-webhook` (it ignores them today) |
+| 14 | **Inbox** in the app: every message, unread state, a link to its screen | Same message rows | A view over supplier messages |
+| 15 | **Preferences:** a grid of message type by channel (WhatsApp, app push). Order requests are always on | FCM push in `notify-worker`, `agent_push_subscriptions` pattern (0103) | `supplier_push_subscriptions` and preference columns |
+
+### D3. Where it fits in the build order
+
+- Items 1, 2, 4 and 13 (receipt, handover code, payment record, WhatsApp set) go with **M2 and
+  M3**. They are what make a supplier trust the first pickups.
+- Items 3, 5, 9 and 14 follow straight after M3.
+- Items 6, 7, 10, 11, 12 and 15 go with **M5**.
+- Item 8 waits for Stage 4.
+
+### D4. Data gaps in one place
+
+1. Photos for trips and stock counts: a private storage bucket, as `bill-photos` (0100) does.
+2. A goods-received record that the supplier can confirm or dispute.
+3. A record type for returns to the supplier.
+4. Payout references on supplier payments.
+5. `supplier_queries`.
+6. `supplier_staff`, with roles.
+7. Supplier WhatsApp templates and button-reply handling in `wa-webhook`.
+8. Supplier push subscriptions and message preferences.
+
+None of these weakens the C3 boundary. Every new screen shows only the supplier's own goods,
+money and counts.
