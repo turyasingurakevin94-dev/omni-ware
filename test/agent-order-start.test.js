@@ -144,4 +144,61 @@ const constBlock = (name) => {
     'an aisle tile wears its own tint, with a star for how many earn a bonus there');
 }
 
+/* ---------- 5. bundles show what is in them --------------------------- */
+{
+  const env = {
+    catalogEntry: (p) => ({ ir1: { productId: 'ir1', name: 'Iron sheet', floorPrice: 30000, ourPrice: 32000 }, n3: { productId: 'n3', name: 'Nails', floorPrice: 9000, ourPrice: 9500 } })[p] || null,
+    feedItemKey: (p, v) => `${p}::${v == null ? '' : v}`,
+    myOrders: [
+      { items: [{ productId: 'ir1', variantIdx: null }, { productId: 'n3', variantIdx: null }, { productId: 'x', variantIdx: null }] },
+      { items: [{ productId: 'ir1', variantIdx: null }] },
+      { voided: true, items: [{ productId: 'ir1', variantIdx: null }, { productId: 'n3', variantIdx: null }] },
+    ],
+  };
+  const { bundleFigures, bundleUses } = compileScope([fn('bundleLines'), fn('bundleFigures'), fn('bundleUses')], env, ['bundleFigures', 'bundleUses']);
+  const tpl = { line_items: [{ productId: 'ir1', variantIdx: null, qty: 20 }, { productId: 'n3', variantIdx: null, qty: 2 }, { productId: 'gone', variantIdx: null, qty: 1 }] };
+  const f = bundleFigures(tpl);
+  t.check(f.total === 20 * 32000 + 2 * 9500 && f.yours === 20 * 2000 + 2 * 500 && f.gone === 1,
+    'a bundle comes to today\'s shelf price, with what it pays you, and says what is no longer sold');
+  t.check(bundleUses(tpl.line_items.slice(0, 2) && { line_items: tpl.line_items.slice(0, 2) }) === 1,
+    'and counts the orders that had every item of it (a voided one does not count)');
+  const card = fn('bundleCardHTML');
+  t.check(/aisleStackHTML\(/.test(card) && /class="ax-bd-c"/.test(card) && /data-bundle-edit=/.test(card) && /Add all <b>/.test(card),
+    'each bundle shows its aisles, its items, one button for all of it, and a way to edit it');
+  const cats = fn('openCategorySheet');
+  t.check(/k:'bundles'/.test(cats) && /data-bundles/.test(cats) && /PH\.stack/.test(cats),
+    'Bundles is one of the four ways into the shop, beside Usual, Bonus and New');
+  const edit = fn('openBundleEdit');
+  t.check(/\.update\(\{ name, line_items: items \}\)\.eq\('id', tpl\.id\)/.test(edit) && /\.delete\(\)\.eq\('id', tpl\.id\)/.test(edit),
+    'a bundle can be renamed, trimmed or deleted');
+  const save = fn('openSaveSolutionModal');
+  t.check(/data-idea=/.test(save) && /aisleStackHTML\(/.test(save) && /Save <b>\$\{cart\.length\}<\/b>/.test(save),
+    'saving one shows what goes in, offers names to tap, and says how many items');
+}
+
+/* ---------- 6. a usual of one, and what goes with it ------------------ */
+{
+  const usual = fn('renderUsual');
+  t.check(/if\(regs\.length === 1\)\{/.test(usual) && /class="ax-uc-one" data-usual=/.test(usual),
+    'a usual of one item is one wide tile, not a lone tile in a row of four');
+  t.check(/if\(!cart\.length\) top \+= launchpadHTML\(\);/.test(usual),
+    'and before anything is in, the aisles and what you sell most follow the usual');
+  t.check(/cart\.length < 3 && catalog\.length \? oftenWithHTML\(cart\[cart\.length - 1\]\)/.test(usual),
+    'once a line is in, what usually goes with it comes next, while the order is short');
+  const { oftenWith } = compileScope([fn('oftenWith')], {
+    feedItemKey: (p, v) => `${p}::${v == null ? '' : v}`,
+    cart: [{ productId: 'pipe', variantIdx: null }],
+    chosenClient: { id: 'A' },
+    catalogEntry: (p) => ({ productId: p }),
+    myOrders: [
+      { agentClientId: 'A', items: [{ productId: 'pipe' }, { productId: 'elbow' }, { productId: 'tee' }] },
+      { agentClientId: 'A', items: [{ productId: 'pipe' }, { productId: 'elbow' }] },
+      { agentClientId: 'B', items: [{ productId: 'pipe' }, { productId: 'glue' }] },
+    ],
+  }, ['oftenWith']);
+  const w = oftenWith({ productId: 'pipe', variantIdx: null }, 3);
+  t.check(w.mine && w.of === 2 && w.rows[0].it.productId === 'elbow' && w.rows[0].n === 2 && w.rows.length === 2,
+    'what goes with it is read from this client\'s own orders when they have bought it twice, most often first');
+}
+
 process.exit(t.done() ? 1 : 0);

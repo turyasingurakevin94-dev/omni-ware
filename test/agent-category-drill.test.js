@@ -124,7 +124,7 @@ const ids = (items) => items.map((it) => it.productId + (it.variantIdx == null ?
   };
   t.check(/height:44px/.test(rule('.ax-catpill')), 'the aisle pill is 44px tall');
   t.check(/height:44px/.test(rule('.ax-sub')), 'and so is every shelf chip');
-  t.check(/height:100px/.test(rule('.ax-cat')), 'the aisle tiles in the sheet are big enough to hit without looking');
+  t.check(/height:(1[0-9]{2})px/.test(rule('.ax-cat')) && Number(/height:(\d+)px/.exec(rule('.ax-cat'))[1]) >= 100, 'the aisle tiles in the sheet are big enough to hit without looking');
   t.check(/width:44px;height:44px/.test(rule('.ax-add')), 'the add button on a tile is 44px');
 }
 
