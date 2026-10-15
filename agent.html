@@ -3406,6 +3406,348 @@
   .ax-mx-card.donut .it > b{font-family:var(--font-money);font-size:12px;font-weight:600;color:#767F91;}
   .ax-mx-card.donut .tip{background:#F4F2EE;color:#5F6980;}
   .ax-mx-card.donut .tip b{color:#1C2233;}
+  /* ================= THE FEED =================
+     Full screen, one play at a time, swipe up for the next. Built to the
+     "Agent feed, rethought" boards. */
+  .ax-fs{position:fixed;inset:0;z-index:70;max-width:520px;margin:0 auto;background:#060A16;color:#fff;font-family:var(--font-sans);overflow:hidden;animation:axFade .18s ease-out;}
+  .ax-fs .k-hello{background:radial-gradient(90% 55% at 50% 36%,#1F3A5C 0%,#111A33 55%,#070B18 100%);}
+  .ax-fs .k-bonus,.ax-fs .k-pin,.ax-fs-caught .k-bonus,.ax-fs-caught .k-pin{background:radial-gradient(90% 50% at 50% 26%,#7A4517 0%,#2E1B12 52%,#0B0910 100%);}
+  .ax-fs .k-due,.ax-fs-caught .k-due{background:radial-gradient(90% 50% at 50% 28%,#463A7E 0%,#1A1B42 52%,#07081A 100%);}
+  .ax-fs .k-ask,.ax-fs-caught .k-ask{background:radial-gradient(90% 50% at 50% 28%,#22598A 0%,#0F2745 52%,#050B16 100%);}
+  .ax-fs .k-addon,.ax-fs-caught .k-addon{background:radial-gradient(90% 50% at 50% 28%,#137468 0%,#0A3534 52%,#030F0F 100%);}
+  .ax-fs .k-bulk,.ax-fs-caught .k-bulk{background:radial-gradient(90% 50% at 50% 28%,#1F5E7A 0%,#0E2A3A 52%,#040D14 100%);}
+  .ax-fs .k-waiting,.ax-fs-caught .k-waiting{background:radial-gradient(90% 50% at 50% 28%,#6B5212 0%,#2A2110 52%,#0B0906 100%);}
+  .ax-fs .k-win,.ax-fs .k-end,.ax-fs-caught .k-win{background:radial-gradient(90% 50% at 50% 30%,#145C4A 0%,#0D2433 52%,#050A14 100%);}
+  .ax-fs .k-about,.ax-fs .k-lesson{background:radial-gradient(90% 50% at 50% 28%,#6E2C61 0%,#2B1239 52%,#0B0614 100%);}
+
+  .ax-fs-top{position:absolute;left:12px;right:12px;top:calc(12px + var(--safe-t));z-index:6;display:flex;align-items:center;justify-content:space-between;pointer-events:none;}
+  .ax-fs-x{all:unset;box-sizing:border-box;cursor:pointer;width:44px;height:44px;flex:none;border-radius:999px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#fff;pointer-events:auto;}
+  .ax-fs-x .icon{width:18px;height:18px;stroke-width:2.4;}
+  .ax-fs-tabs{display:flex;align-items:center;gap:14px;pointer-events:auto;}
+  .ax-fs-tabs button{all:unset;box-sizing:border-box;cursor:pointer;position:relative;height:44px;padding:0 2px;display:flex;align-items:center;font-size:15px;font-weight:600;color:rgba(255,255,255,.62);}
+  .ax-fs-tabs button.on{color:#fff;font-size:16px;font-weight:700;}
+  .ax-fs-tabs button.on::after{content:'';position:absolute;left:50%;bottom:4px;width:22px;height:3px;margin-left:-11px;border-radius:9px;background:#fff;}
+  .ax-fs-scroll{position:absolute;inset:0;overflow-y:auto;overscroll-behavior:contain;scroll-snap-type:y mandatory;scrollbar-width:none;}
+  .ax-fs-scroll::-webkit-scrollbar{display:none;}
+  .ax-fs-s{position:relative;height:100%;overflow:hidden;scroll-snap-align:start;scroll-snap-stop:always;}
+  .ax-fs-prog{position:absolute;left:16px;right:16px;bottom:calc(18px + var(--safe-b));z-index:6;display:flex;gap:4px;pointer-events:none;}
+  .ax-fs-prog i{flex:1;height:3px;border-radius:9px;background:rgba(255,255,255,.22);}
+  .ax-fs-prog i.on{background:#fff;}
+  .ax-fs-prog i.acted{background:#6FDCB0;}
+  .ax-fs-prog i.saved{background:#FFD27A;}
+  .ax-fs-prog i.skip{background:rgba(255,255,255,.42);}
+
+  .ax-fs-art{position:absolute;left:0;right:0;top:calc(72px + var(--safe-t));bottom:calc(296px + var(--safe-b));padding:0 20px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;}
+  .ax-fs-fade{position:absolute;left:0;right:0;bottom:0;height:360px;background:linear-gradient(0deg,rgba(4,6,14,.94) 32%,rgba(4,6,14,0) 100%);pointer-events:none;}
+  .ax-fs-rail{position:absolute;right:10px;bottom:calc(118px + var(--safe-b));z-index:3;display:flex;flex-direction:column;align-items:center;gap:12px;}
+  .ax-fs-rail .r{all:unset;box-sizing:border-box;cursor:pointer;min-width:58px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;font-weight:700;color:#fff;text-decoration:none;text-shadow:0 1px 2px rgba(0,0,0,.4);}
+  .ax-fs-rail .o{position:relative;width:50px;height:50px;border-radius:999px;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#fff;}
+  .ax-fs-rail .o .icon{width:24px;height:24px;}
+  .ax-fs-rail .o.gold{color:#FFD27A;}
+  .ax-fs-rail .o.wa{background:#1F9D5B;}
+  .ax-fs-rail .o.pink{color:#FF8FC8;}
+  .ax-fs-rail .o.pink-on{background:rgba(255,143,200,.25);}
+  .ax-fs-rail .o em{position:absolute;right:-4px;top:-4px;min-width:20px;height:20px;padding:0 5px;box-sizing:border-box;border-radius:999px;background:#fff;color:#0F6B43;font-family:var(--font-money);font-size:11px;font-weight:600;font-style:normal;display:flex;align-items:center;justify-content:center;}
+  .ax-fs-rail .l{max-width:64px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ax-fs-cap{position:absolute;left:18px;right:84px;bottom:calc(118px + var(--safe-b));z-index:3;display:flex;flex-direction:column;gap:8px;}
+  .ax-fs-cap .chip{align-self:flex-start;max-width:100%;height:26px;padding:0 10px;box-sizing:border-box;border-radius:8px;display:flex;align-items:center;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgba(255,255,255,.16);color:#fff;}
+  .ax-fs-cap .chip.due{background:#F5B26B;color:#3A2006;}
+  .ax-fs-cap .chip.ask{background:#7FB2F0;color:#0B2440;}
+  .ax-fs-cap .chip.bonus,.ax-fs-cap .chip.gold{background:#FFD27A;color:#4A2A06;}
+  .ax-fs-cap .chip.addon,.ax-fs-cap .chip.bulk,.ax-fs-cap .chip.win{background:#6FDCB0;color:#063D24;}
+  .ax-fs-cap .chip.about{background:#E9B8DC;color:#4A1640;}
+  .ax-fs-cap .t{font-size:27px;font-weight:800;letter-spacing:-.02em;line-height:1.12;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+  .ax-fs-cap .s{font-size:14px;font-weight:600;line-height:1.4;color:rgba(255,255,255,.86);}
+  .ax-fs-cap .s .m{font-size:18px;font-weight:600;color:#6FDCB0;}
+  .ax-fs-cap .w{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:rgba(255,255,255,.62);min-width:0;}
+  .ax-fs-cap .w > span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ax-fs-cap .w .icon{width:13px;height:13px;flex:none;color:#FFD27A;}
+  .ax-fs-cta{all:unset;box-sizing:border-box;cursor:pointer;position:absolute;left:16px;right:16px;bottom:calc(40px + var(--safe-b));z-index:3;height:54px;border-radius:16px;background:#fff;color:#16203C;font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px;}
+  .ax-fs-cta .icon{width:18px;height:18px;stroke-width:2.4;}
+  .ax-fs-cta.go{background:#fff;}
+  .ax-fs-cta.wa{background:#25D366;color:#06301A;}
+
+  .ax-fs-hello{position:absolute;left:0;right:0;top:calc(74px + var(--safe-t));padding:0 20px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:10px;}
+  .ax-fs-hello .d{font-size:12px;font-weight:700;letter-spacing:.14em;color:#8D99B5;}
+  .ax-fs-hello .g{font-size:28px;font-weight:800;letter-spacing:-.02em;}
+  .ax-fs-hello .ring{position:relative;width:min(236px,58vw);aspect-ratio:1;}
+  .ax-fs-hello .ring svg{display:block;width:100%;height:100%;}
+  .ax-fs-hello .c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;}
+  .ax-fs-hello .c small{font-size:12px;font-weight:700;color:#B3BCD2;}
+  .ax-fs-hello .c b{font-family:var(--font-money);font-size:clamp(26px,9vw,38px);font-weight:600;letter-spacing:-.03em;color:#6FDCB0;}
+  .ax-fs-hello .leg{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+  .ax-fs-hello .leg > span{min-width:0;height:52px;padding:0 12px;box-sizing:border-box;border-radius:14px;background:rgba(255,255,255,.06);display:flex;align-items:center;gap:9px;}
+  .ax-fs-hello .leg i{width:10px;height:10px;border-radius:3px;flex:none;}
+  .ax-fs-hello .leg .n{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+  .ax-fs-hello .leg .n > span{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ax-fs-hello .leg b{font-size:12px;font-weight:600;}
+  .ax-fs-hello .two{width:100%;display:flex;gap:8px;}
+  .ax-fs-hello .two > span{flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:16px;background:rgba(255,255,255,.06);}
+  .ax-fs-hello .two .ic{width:38px;height:38px;flex:none;border-radius:12px;background:rgba(255,159,90,.16);color:#FF9F5A;display:flex;align-items:center;justify-content:center;}
+  .ax-fs-hello .two .ic .icon{width:20px;height:20px;}
+  .ax-fs-hello .two .v{display:flex;flex-direction:column;gap:1px;min-width:0;}
+  .ax-fs-hello .two .v b{font-family:var(--font-money);font-size:15px;font-weight:600;}
+  .ax-fs-hello .two .v small{font-size:11px;font-weight:700;color:#8D99B5;}
+  .ax-fs-up{all:unset;box-sizing:border-box;cursor:pointer;position:absolute;left:0;right:0;bottom:calc(44px + var(--safe-b));display:flex;flex-direction:column;align-items:center;gap:4px;animation:axFsNudge 1.6s ease-in-out infinite;}
+  .ax-fs-up .icon{width:26px;height:26px;}
+  .ax-fs-up b{font-size:15px;font-weight:700;}
+  .ax-fs-up small{font-size:12px;font-weight:600;color:#8D99B5;}
+
+  .ax-fs-art .poster{position:relative;width:min(210px,52vw);aspect-ratio:1;border-radius:48px;background:linear-gradient(150deg,#FFE7C7 0%,#F5B26B 58%,#D9822E 100%);box-shadow:0 30px 60px rgba(0,0,0,.45),inset 0 2px 0 rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;animation:axFsFloat 3.2s ease-in-out infinite;flex:none;}
+  .ax-fs-art .poster img{width:78%;height:78%;object-fit:contain;border-radius:24px;}
+  .ax-fs-art .poster .ic{display:flex;color:#5A2E0C;}
+  .ax-fs-art .poster .ic .icon{width:110px;height:110px;}
+  .ax-fs-art .clock{position:absolute;right:-20px;top:-16px;width:64px;height:64px;border-radius:999px;background:#16203C;box-shadow:0 8px 20px rgba(0,0,0,.4);}
+  .ax-fs-art .clock svg{position:absolute;inset:0;}
+  .ax-fs-art .clock > span{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;}
+  .ax-fs-art .clock b{font-family:var(--font-money);font-size:17px;font-weight:600;}
+  .ax-fs-art .clock small{font-size:11px;font-weight:700;color:#B3BCD2;}
+  .ax-fs-art .tag{position:absolute;left:-26px;bottom:30px;height:34px;padding:0 12px;border-radius:999px;background:#FFD27A;color:#4A2A06;font-family:var(--font-money);font-size:14px;font-weight:600;display:flex;align-items:center;white-space:nowrap;box-shadow:0 8px 18px rgba(0,0,0,.35);}
+  .ax-fs-art .coins{align-self:stretch;margin-right:66px;display:flex;flex-direction:column;gap:8px;}
+  .ax-fs-art .coins .h{font-size:12px;font-weight:700;letter-spacing:.08em;color:#E8C9A8;}
+  .ax-fs-art .coins .row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;align-items:end;}
+  .ax-fs-art .coins .col{display:flex;flex-direction:column;align-items:center;gap:3px;}
+  .ax-fs-art .coins .v{font-family:var(--font-money);font-size:11px;font-weight:600;color:#E8C9A8;white-space:nowrap;}
+  .ax-fs-art .coins .v.top{font-size:12px;color:#6FDCB0;}
+  .ax-fs-art .coins i{width:34px;max-width:100%;height:10px;border-radius:999px;background:linear-gradient(180deg,#FFE19A,#E9A23B);box-shadow:0 2px 0 #9C5F12;}
+
+  .ax-fs-art .face{position:relative;width:min(200px,50vw);aspect-ratio:1;flex:none;}
+  .ax-fs-art .face svg{position:absolute;inset:0;width:100%;height:100%;}
+  .ax-fs-art .face .av{position:absolute;inset:11%;border-radius:999px;background:linear-gradient(150deg,#E4E6FA 0%,#B9BEEF 100%);color:#2C3180;font-size:clamp(34px,11vw,50px);font-weight:800;letter-spacing:-.02em;display:flex;align-items:center;justify-content:center;animation:axFsPulse 2.4s ease-out infinite;}
+  .ax-fs-art .face .late{position:absolute;left:50%;bottom:-12px;transform:translateX(-50%);height:30px;padding:0 12px;border-radius:999px;background:#F5B26B;color:#3A2006;font-family:var(--font-money);font-size:14px;font-weight:600;display:flex;align-items:center;white-space:nowrap;box-shadow:0 6px 16px rgba(0,0,0,.35);}
+  .ax-fs-art .face .late.ok{background:#6FDCB0;color:#063D24;}
+  .ax-fs-art .line{position:relative;align-self:stretch;margin:12px 66px 0 0;height:16px;}
+  .ax-fs-art .line::before{content:'';position:absolute;left:0;right:0;top:7px;height:2px;background:rgba(255,255,255,.25);}
+  .ax-fs-art .line i{position:absolute;top:3px;width:10px;height:10px;margin-left:-5px;border-radius:999px;box-sizing:border-box;}
+  .ax-fs-art .line .v{background:rgba(255,255,255,.85);}
+  .ax-fs-art .line .due{top:2px;width:12px;height:12px;margin-left:-6px;border:2px dashed rgba(255,255,255,.6);}
+  .ax-fs-art .line .gap{top:6px;height:4px;width:auto;margin-left:0;border-radius:9px;background:#F5B26B;}
+  .ax-fs-art .line .now{top:1px;width:14px;height:14px;margin-left:-7px;background:#F5B26B;}
+  .ax-fs-art .dates{align-self:stretch;margin-right:66px;display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:rgba(255,255,255,.55);}
+  .ax-fs-art .dates .now{color:#F5B26B;}
+  .ax-fs-art .usual{align-self:stretch;margin-right:66px;display:flex;flex-wrap:wrap;gap:6px;}
+  .ax-fs-art .usual > span{max-width:100%;height:32px;padding:0 11px;box-sizing:border-box;border-radius:999px;background:rgba(255,255,255,.1);display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+  .ax-fs-art.ask{align-items:stretch;}
+  .ax-fs-art .who{display:flex;align-items:center;gap:10px;min-width:0;}
+  .ax-fs-art .who > .av{width:52px;height:52px;flex:none;border-radius:999px;background:linear-gradient(150deg,#F6E4F1,#E3B9D8);color:#6A2558;font-size:18px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+  .ax-fs-art .who .b{display:flex;flex-direction:column;gap:1px;min-width:0;}
+  .ax-fs-art .who b{font-size:17px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ax-fs-art .who small{font-size:12px;font-weight:600;color:rgba(255,255,255,.6);}
+  .ax-fs-art .in{align-self:flex-start;max-width:82%;padding:14px 16px;box-sizing:border-box;border-radius:6px 22px 22px 22px;background:#fff;color:#1C2233;box-shadow:0 14px 30px rgba(0,0,0,.3);display:flex;flex-direction:column;gap:6px;}
+  .ax-fs-art .in b{font-size:clamp(17px,5.4vw,22px);font-weight:700;line-height:1.25;letter-spacing:-.01em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;}
+  .ax-fs-art .in small{font-size:11px;font-weight:700;color:#8A93A3;}
+  .ax-fs-art .item{align-self:flex-start;width:82%;box-sizing:border-box;display:flex;align-items:center;gap:10px;padding:10px;border-radius:18px;background:rgba(255,255,255,.1);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);}
+  .ax-fs-art .item .ic{width:46px;height:46px;flex:none;border-radius:13px;background:var(--ai-s);color:var(--ai);display:flex;align-items:center;justify-content:center;}
+  .ax-fs-art .item .ic .icon{width:24px;height:24px;}
+  .ax-fs-art .item .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .ax-fs-art .item .b b{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ax-fs-art .item .b small{font-size:12px;color:rgba(255,255,255,.7);}
+  .ax-fs-art .item > b{font-size:14px;font-weight:600;}
+  .ax-fs-art .out{align-self:flex-end;max-width:80%;padding:12px 14px;box-sizing:border-box;border-radius:22px 6px 22px 22px;background:#D9FDD3;color:#10331F;font-size:14px;font-weight:600;line-height:1.4;box-shadow:0 14px 30px rgba(0,0,0,.3);overflow:hidden;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;}
+
+  .ax-fs-art .pill{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px 0 4px;border-radius:999px;background:rgba(255,255,255,.1);font-size:13px;font-weight:700;}
+  .ax-fs-art .pill .ax-av{width:26px;height:26px;font-size:11px;}
+  .ax-fs-art .pair{align-self:stretch;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .ax-fs-art .tile{position:relative;width:38%;aspect-ratio:136/168;padding:10px;box-sizing:border-box;border-radius:30px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;}
+  .ax-fs-art .tile .icon{width:56px;height:56px;}
+  .ax-fs-art .tile b{font-size:14px;font-weight:800;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+  .ax-fs-art .tile small{font-family:var(--font-money);font-size:12px;font-weight:600;}
+  .ax-fs-art .tile.have{background:linear-gradient(150deg,#FFFFFF 0%,var(--ai-s) 100%);color:var(--ai);box-shadow:0 20px 40px rgba(0,0,0,.4);}
+  .ax-fs-art .tile.have b{color:#16203C;}
+  .ax-fs-art .tile.have > i{position:absolute;top:-10px;right:-10px;width:30px;height:30px;border-radius:999px;background:#6FDCB0;color:#063D24;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px #0C4844;}
+  .ax-fs-art .tile.have > i .icon{width:15px;height:15px;stroke-width:3;}
+  .ax-fs-art .tile.miss{background:rgba(111,220,176,.08);border:2px dashed #6FDCB0;color:#6FDCB0;animation:axFsGlow 2.2s ease-in-out infinite;}
+  .ax-fs-art .tile.miss b{color:#fff;}
+  .ax-fs-art .plus{display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .ax-fs-art .plus > .icon{width:40px;height:40px;padding:11px;box-sizing:border-box;border-radius:999px;background:#fff;color:#0A3534;stroke-width:2.6;}
+  .ax-fs-art .plus b{font-size:13px;font-weight:600;color:#6FDCB0;}
+  .ax-fs-art .plus small{font-size:11px;font-weight:700;color:rgba(255,255,255,.6);}
+
+  .ax-fs-art .scale{position:relative;align-self:stretch;margin-right:66px;height:52px;}
+  .ax-fs-art .scale::before{content:'';position:absolute;left:0;right:0;top:22px;height:12px;border-radius:999px;background:rgba(255,255,255,.1);}
+  .ax-fs-art .scale i{position:absolute;top:22px;height:12px;}
+  .ax-fs-art .scale .now{left:0;border-radius:999px;background:rgba(255,255,255,.55);}
+  .ax-fs-art .scale .up{border-radius:0 999px 999px 0;background:#6FDCB0;}
+  .ax-fs-art .scale em{position:absolute;top:0;transform:translateX(-50%);font-style:normal;font-family:var(--font-money);font-size:12px;font-weight:600;color:rgba(255,255,255,.7);}
+  .ax-fs-art .scale em.t{color:#6FDCB0;}
+  .ax-fs-art .cmp{align-self:stretch;margin-right:66px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+  .ax-fs-art .cmp > span{min-width:0;padding:12px;border-radius:16px;background:rgba(255,255,255,.08);display:flex;flex-direction:column;gap:6px;}
+  .ax-fs-art .cmp > span.best{background:rgba(111,220,176,.14);box-shadow:inset 0 0 0 1.5px #6FDCB0;}
+  .ax-fs-art .cmp small{font-size:12px;font-weight:700;color:rgba(255,255,255,.7);}
+  .ax-fs-art .cmp b{font-size:18px;font-weight:600;}
+  .ax-fs-art .cmp .best b{color:#6FDCB0;}
+  .ax-fs-art .cmp i{display:block;height:6px;border-radius:9px;background:rgba(255,255,255,.5);}
+  .ax-fs-art .cmp .best i{background:#6FDCB0;}
+
+  .ax-fs-art .big{display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .ax-fs-art .big small{font-size:13px;font-weight:700;color:#E8D49A;}
+  .ax-fs-art .big b{font-size:44px;font-weight:600;letter-spacing:-.03em;color:#FFD27A;}
+  .ax-fs-art .rows{align-self:stretch;margin-right:66px;display:flex;flex-direction:column;gap:8px;}
+  .ax-fs-art .rows .row{all:unset;box-sizing:border-box;cursor:pointer;min-height:56px;padding:8px 10px;border-radius:16px;background:rgba(255,255,255,.08);display:flex;align-items:center;gap:10px;}
+  .ax-fs-art .rows .ic{width:38px;height:38px;flex:none;border-radius:12px;background:rgba(255,210,122,.16);color:#FFD27A;display:flex;align-items:center;justify-content:center;}
+  .ax-fs-art .rows .ic .icon{width:20px;height:20px;}
+  .ax-fs-art .rows .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .ax-fs-art .rows .b b{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ax-fs-art .rows .b small{font-size:12px;color:#6FDCB0;}
+  .ax-fs-art .rows .go{height:32px;padding:0 12px;border-radius:999px;background:#FFD27A;color:#4A2A06;font-size:12px;font-weight:800;display:flex;align-items:center;}
+
+  .ax-fs-art .cup{width:150px;height:150px;border-radius:999px;background:linear-gradient(150deg,#9BF0CC 0%,#2FA36B 100%);color:#063D24;display:flex;align-items:center;justify-content:center;box-shadow:0 24px 50px rgba(0,0,0,.45);}
+  .ax-fs-art .cup svg{width:70px;height:70px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .ax-fs-art .next{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:18px;background:rgba(255,255,255,.08);}
+  .ax-fs-art .next .b{display:flex;flex-direction:column;gap:2px;}
+  .ax-fs-art .next small{font-size:12px;font-weight:700;color:rgba(255,255,255,.7);}
+  .ax-fs-art .next b{font-size:16px;font-weight:600;}
+
+  .ax-fs-art .h{align-self:stretch;font-size:12px;font-weight:700;letter-spacing:.1em;color:#E9B8DC;}
+  .ax-fs-art .week{align-self:stretch;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;align-items:end;height:190px;}
+  .ax-fs-art .week > span{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;}
+  .ax-fs-art .week i{display:block;width:100%;border-radius:10px 10px 4px 4px;background:rgba(255,255,255,.14);}
+  .ax-fs-art .week small{font-size:12px;font-weight:700;color:rgba(255,255,255,.55);}
+  .ax-fs-art .week .best i{background:linear-gradient(180deg,#FFB8E8 0%,#C04FA0 100%);box-shadow:0 0 30px rgba(255,140,220,.45);}
+  .ax-fs-art .week .best small{color:#fff;font-weight:800;}
+  .ax-fs-art .week em{position:absolute;top:-30px;height:24px;padding:0 8px;border-radius:999px;background:#fff;color:#5E2550;font-style:normal;font-size:12px;font-weight:600;display:flex;align-items:center;white-space:nowrap;}
+  .ax-fs-art .tiles{align-self:stretch;margin-right:66px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+  .ax-fs-art .tiles > span{min-width:0;display:flex;align-items:center;gap:10px;padding:10px;border-radius:16px;background:rgba(255,255,255,.08);}
+  .ax-fs-art .tiles > span > svg{flex:none;}
+  .ax-fs-art .tiles .ic{width:38px;height:38px;flex:none;border-radius:12px;background:rgba(111,220,176,.16);color:#6FDCB0;display:flex;align-items:center;justify-content:center;}
+  .ax-fs-art .tiles .ic .icon{width:20px;height:20px;}
+  .ax-fs-art .tiles .b{display:flex;flex-direction:column;gap:1px;min-width:0;}
+  .ax-fs-art .tiles b{font-size:15px;font-weight:600;}
+  .ax-fs-art .tiles small{font-size:11px;font-weight:700;color:rgba(255,255,255,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ax-fs-art .cmp2{display:flex;align-items:flex-end;gap:24px;height:220px;}
+  .ax-fs-art .cmp2 > span{width:90px;display:flex;flex-direction:column;align-items:center;gap:6px;}
+  .ax-fs-art .cmp2 i{display:block;width:100%;border-radius:12px 12px 4px 4px;background:linear-gradient(180deg,#FFB8E8 0%,#C04FA0 100%);}
+  .ax-fs-art .cmp2 .you i{background:rgba(255,255,255,.2);}
+  .ax-fs-art .cmp2 b{font-size:16px;font-weight:600;}
+  .ax-fs-art .cmp2 small{font-size:12px;font-weight:700;color:rgba(255,255,255,.6);}
+  .ax-fs-art .say{align-self:stretch;margin-right:66px;padding:12px 14px;border-radius:18px;background:rgba(255,255,255,.08);font-size:14px;font-weight:600;line-height:1.4;}
+
+  .ax-fs-end{position:absolute;left:18px;right:18px;top:calc(76px + var(--safe-t));display:flex;flex-direction:column;align-items:center;gap:12px;}
+  .ax-fs-end .tick{width:128px;height:128px;border-radius:999px;background:linear-gradient(150deg,#9BF0CC 0%,#2FA36B 100%);color:#063D24;display:flex;align-items:center;justify-content:center;box-shadow:0 24px 50px rgba(0,0,0,.45),0 0 0 24px rgba(111,220,176,.08);animation:axFsPop .8s ease-out both;}
+  .ax-fs-end .tick .icon{width:60px;height:60px;stroke-width:2.6;}
+  .ax-fs-end .t{margin-top:8px;font-size:28px;font-weight:800;letter-spacing:-.02em;}
+  .ax-fs-end .e{display:flex;align-items:baseline;gap:8px;}
+  .ax-fs-end .e b{font-size:28px;font-weight:600;letter-spacing:-.03em;color:#6FDCB0;}
+  .ax-fs-end .e span{font-size:14px;font-weight:600;color:#B3D9CB;}
+  .ax-fs-end .h{align-self:stretch;margin-top:8px;font-size:12px;font-weight:700;letter-spacing:.1em;color:rgba(255,255,255,.55);}
+  .ax-fs-end .thumbs,.ax-fs-caught .thumbs{align-self:stretch;display:flex;gap:5px;}
+  .ax-fs-end .thumbs i,.ax-fs-caught .thumbs i{flex:1;position:relative;height:58px;border-radius:10px;}
+  .ax-fs-caught .thumbs i{height:40px;border-radius:8px;}
+  .ax-fs-end .thumbs i,.ax-fs-caught .thumbs i{filter:saturate(1.25) brightness(1.55);}
+  .ax-fs-end .thumbs i.skip,.ax-fs-caught .thumbs i.skip{opacity:.5;}
+  .ax-fs-end .thumbs i::after,.ax-fs-caught .thumbs i::after{content:'';position:absolute;right:3px;bottom:3px;width:11px;height:11px;border-radius:999px;}
+  .ax-fs-end .thumbs i.acted::after,.ax-fs-caught .thumbs i.acted::after{background:#6FDCB0;}
+  .ax-fs-end .thumbs i.saved::after,.ax-fs-caught .thumbs i.saved::after{background:#FFD27A;}
+  .ax-fs-end .key{align-self:stretch;display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;font-weight:700;color:rgba(255,255,255,.7);}
+  .ax-fs-end .key span{display:flex;align-items:center;gap:6px;}
+  .ax-fs-end .key i{width:10px;height:10px;border-radius:999px;}
+  .ax-fs-end .key i.acted{background:#6FDCB0;}
+  .ax-fs-end .key i.saved{background:#FFD27A;}
+  .ax-fs-end .key i.skip{border-radius:3px;background:rgba(255,255,255,.3);}
+  .ax-fs-end .fresh{align-self:stretch;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:18px;background:rgba(255,255,255,.08);}
+  .ax-fs-end .fresh .ic{width:40px;height:40px;flex:none;border-radius:12px;background:rgba(255,210,122,.16);color:#FFD27A;display:flex;align-items:center;justify-content:center;}
+  .ax-fs-end .fresh .ic .icon{width:22px;height:22px;}
+  .ax-fs-end .fresh .b{display:flex;flex-direction:column;gap:1px;}
+  .ax-fs-end .fresh b{font-size:15px;font-weight:700;}
+  .ax-fs-end .fresh small{font-size:12px;font-weight:600;color:rgba(255,255,255,.6);}
+
+  .ax-fs-nm{position:absolute;inset:0;z-index:8;background:rgba(6,7,26,.78);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);animation:axFade .18s ease-out;}
+  .ax-fs-nm .peek{position:absolute;left:0;right:0;top:calc(36px + var(--safe-t));height:220px;display:flex;align-items:center;justify-content:center;gap:16px;}
+  .ax-fs-nm .gone{position:relative;width:132px;height:190px;padding:10px;box-sizing:border-box;border-radius:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;box-shadow:0 24px 50px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.1);animation:axFsAway .9s ease-out both;}
+  .ax-fs-nm .gone .ic{width:64px;height:64px;border-radius:18px;background:var(--ai-s);color:var(--ai);display:flex;align-items:center;justify-content:center;}
+  .ax-fs-nm .gone .ic .icon{width:34px;height:34px;}
+  .ax-fs-nm .gone .av{width:64px;height:64px;border-radius:999px;background:linear-gradient(150deg,#E4E6FA,#B9BEEF);color:#2C3180;font-size:22px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+  .ax-fs-nm .gone b{font-size:13px;font-weight:800;}
+  .ax-fs-nm .gone em{position:absolute;right:-12px;top:-12px;width:36px;height:36px;border-radius:999px;background:#fff;color:#16203C;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 14px rgba(0,0,0,.4);}
+  .ax-fs-nm .gone em .icon{width:18px;height:18px;}
+  .ax-fs-nm .arrow{width:34px;border-top:2.4px dashed rgba(255,255,255,.45);}
+  .ax-fs-nm .next{width:104px;height:150px;border-radius:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;opacity:.85;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);}
+  .ax-fs-nm .next small{font-size:11px;font-weight:700;color:#B3BCD2;}
+  .ax-fs-nm .next b{font-size:14px;font-weight:800;padding:0 6px;text-align:center;}
+  .ax-fs-nm .sh{position:absolute;left:0;right:0;bottom:0;top:calc(270px + var(--safe-t));overflow-y:auto;background:#11152A;border-radius:28px 28px 0 0;box-shadow:0 -1px 0 rgba(255,255,255,.08),0 -20px 40px rgba(0,0,0,.4);padding:10px 16px calc(22px + var(--safe-b));box-sizing:border-box;display:flex;flex-direction:column;gap:12px;}
+  .ax-fs-nm .grab{align-self:center;flex:none;width:40px;height:5px;border-radius:999px;background:rgba(255,255,255,.2);}
+  .ax-fs-nm .hd{display:flex;align-items:center;gap:12px;}
+  .ax-fs-nm .hd .b{flex:1;display:flex;flex-direction:column;gap:2px;}
+  .ax-fs-nm .hd b{font-size:20px;font-weight:800;letter-spacing:-.01em;}
+  .ax-fs-nm .hd small{font-size:13px;font-weight:600;color:#8D99B5;}
+  .ax-fs-nm .opts{display:flex;flex-direction:column;gap:6px;}
+  .ax-fs-nm .opts button{all:unset;box-sizing:border-box;cursor:pointer;min-height:58px;padding:0 12px;border-radius:16px;background:rgba(255,255,255,.05);display:flex;align-items:center;gap:12px;color:#fff;}
+  .ax-fs-nm .opts button.on{background:rgba(111,220,176,.1);box-shadow:inset 0 0 0 1.5px #6FDCB0;}
+  .ax-fs-nm .opts .ic{width:36px;height:36px;flex:none;border-radius:11px;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;}
+  .ax-fs-nm .opts .ic .icon{width:18px;height:18px;}
+  .ax-fs-nm .opts .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .ax-fs-nm .opts b{font-size:15px;font-weight:700;}
+  .ax-fs-nm .opts small{font-size:12px;color:#8D99B5;}
+  .ax-fs-nm .opts .on small{color:#6FDCB0;}
+  .ax-fs-nm .opts i{width:22px;height:22px;flex:none;border-radius:999px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;}
+  .ax-fs-nm .opts .on i{background:#6FDCB0;color:#063D24;box-shadow:none;}
+  .ax-fs-nm .opts i .icon{width:12px;height:12px;stroke-width:3;}
+  .ax-fs-nm .tune{display:flex;align-items:flex-end;gap:12px;padding:12px 14px;border-radius:18px;background:rgba(255,255,255,.05);}
+  .ax-fs-nm .tune .h{flex:none;display:flex;flex-direction:column;gap:3px;}
+  .ax-fs-nm .tune .h b{font-size:13px;font-weight:800;}
+  .ax-fs-nm .tune .h small{font-size:12px;font-weight:600;color:#8D99B5;}
+  .ax-fs-nm .tune .bars{flex:1;min-width:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;align-items:end;}
+  .ax-fs-nm .tune .bars > span{min-width:0;display:flex;flex-direction:column;align-items:center;gap:5px;}
+  .ax-fs-nm .tune .col{position:relative;width:100%;height:56px;display:flex;align-items:flex-end;}
+  .ax-fs-nm .tune .col i{position:relative;display:block;width:100%;border-radius:8px 8px 3px 3px;}
+  .ax-fs-nm .tune .col i.was{position:absolute;left:0;right:0;bottom:0;border:1.5px dashed rgba(245,178,107,.7);box-sizing:border-box;background:none;}
+  .ax-fs-nm .tune .bars small{max-width:100%;font-size:11px;font-weight:700;color:#B3BCD2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ax-fs-nm .tune .down small{color:#F5B26B;}
+  .ax-fs-nm .acts{margin-top:auto;display:flex;gap:8px;}
+  .ax-fs-nm .acts button{all:unset;box-sizing:border-box;cursor:pointer;height:52px;border-radius:16px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:700;}
+  .ax-fs-nm .acts .undo{padding:0 18px;background:rgba(255,255,255,.08);color:#fff;}
+  .ax-fs-nm .acts .ok{flex:1;background:#fff;color:#11152A;font-size:16px;font-weight:800;}
+  .ax-fs-nm .acts .icon{width:16px;height:16px;}
+
+  .ax-fs-tell .r{display:flex;align-items:center;gap:12px;min-height:58px;border-bottom:1px solid var(--line);}
+  .ax-fs-tell .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .ax-fs-tell b{font-size:15px;font-weight:700;}
+  .ax-fs-tell small{font-size:12px;color:var(--ink-soft);}
+  .ax-fs-tell .go{height:44px;padding:0 16px;border-radius:999px;background:#1F9D5B;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;text-decoration:none;}
+  .ax-fs-tell .go .icon{width:16px;height:16px;}
+  .ax-fs-tell .none{font-size:12px;color:var(--ink-soft);}
+
+  .ax-fs-fab{position:fixed;right:16px;bottom:calc(98px + var(--safe-b));z-index:35;display:flex;align-items:center;gap:10px;}
+  .ax-fs-fab[hidden]{display:none;}
+  .ax-fs-fab.tight .lbl{display:none;}
+  .ax-fs-fab .lbl{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;align-items:flex-end;gap:1px;padding:8px 12px;border-radius:14px;background:var(--navy);color:#fff;box-shadow:0 10px 24px rgba(22,32,60,.3);}
+  .ax-fs-fab .lbl b{font-size:13px;font-weight:800;}
+  .ax-fs-fab .lbl small{font-size:12px;font-weight:600;color:#6FDCB0;}
+  .ax-fs-fab .orb{all:unset;box-sizing:border-box;cursor:pointer;position:relative;width:66px;height:66px;flex:none;border-radius:999px;animation:axFsRing 2.2s ease-out infinite;}
+  .ax-fs-fab .spin{position:absolute;inset:0;border-radius:999px;background:conic-gradient(#6FDCB0,#7FB2F0,#E9B8DC,#F5B26B,#6FDCB0);animation:axFsSpin 6s linear infinite;}
+  .ax-fs-fab .core{position:absolute;inset:4px;border-radius:999px;background:radial-gradient(circle at 30% 25%,#2B3866 0%,#16203C 70%);border:2px solid var(--bg);box-sizing:border-box;display:flex;align-items:center;justify-content:center;color:#fff;}
+  .ax-fs-fab .core .icon{width:26px;height:26px;}
+  .ax-fs-fab .orb em{position:absolute;right:-2px;top:-2px;min-width:22px;height:22px;padding:0 6px;box-sizing:border-box;border-radius:999px;background:#E5483D;color:#fff;font-style:normal;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px var(--bg);}
+  .ax-fs-play{all:unset;box-sizing:border-box;cursor:pointer;position:relative;height:36px;padding:0 12px 0 7px;border-radius:999px;background:var(--navy);color:#fff;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;white-space:nowrap;}
+  .ax-fs-play::after{content:'';position:absolute;inset:-4px -2px;}
+  .ax-fs-play .pi{width:22px;height:22px;border-radius:999px;background:#6FDCB0;color:#16203C;display:flex;align-items:center;justify-content:center;}
+  .ax-fs-play .pi .icon{width:10px;height:10px;}
+  .ax-fs-play b{font-size:12px;font-weight:600;color:#6FDCB0;}
+  .ax-fs-play.ghost{padding:0 12px;background:#fff;color:var(--navy);box-shadow:inset 0 0 0 1px var(--line);}
+  .ax-fs-play.ghost > .icon{width:12px;height:12px;}
+  .ax-fs-caught{all:unset;box-sizing:border-box;cursor:pointer;width:100%;padding:16px;border-radius:22px;background:radial-gradient(120% 90% at 100% 0%,#145C4A 0%,#0D2433 62%);color:#fff;box-shadow:0 14px 30px rgba(13,36,51,.24);display:flex;flex-direction:column;gap:14px;}
+  .ax-fs-caught .top{position:relative;display:flex;align-items:center;gap:14px;}
+  .ax-fs-caught .top > svg{flex:none;}
+  .ax-fs-caught .f{position:absolute;left:0;top:0;width:64px;height:64px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;}
+  .ax-fs-caught .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
+  .ax-fs-caught .b > b{font-size:18px;font-weight:800;letter-spacing:-.01em;}
+  .ax-fs-caught .b span b{font-size:18px;font-weight:600;color:#6FDCB0;}
+  .ax-fs-caught .b small{font-size:12px;font-weight:600;color:#B3D9CB;}
+  .ax-fs-caught .foot{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;font-weight:700;color:#B3D9CB;}
+  .ax-fs-caught .foot > span{display:flex;align-items:center;gap:6px;}
+  .ax-fs-caught .foot .icon{width:14px;height:14px;color:#FFD27A;}
+  .ax-fs-caught .foot .see{color:#fff;}
+  @keyframes axFsNudge{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+  @keyframes axFsFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+  @keyframes axFsPulse{0%{box-shadow:0 0 0 0 rgba(245,178,107,.5)}70%{box-shadow:0 0 0 22px rgba(245,178,107,0)}100%{box-shadow:0 0 0 0 rgba(245,178,107,0)}}
+  @keyframes axFsGlow{0%,100%{box-shadow:0 0 0 0 rgba(111,220,176,0)}50%{box-shadow:0 0 0 8px rgba(111,220,176,.22)}}
+  @keyframes axFsPop{0%{transform:scale(.9)}55%{transform:scale(1.05)}100%{transform:scale(1)}}
+  @keyframes axFsAway{0%{transform:none;opacity:1}100%{transform:translate(-12px,-8px) rotate(-8deg);opacity:.92}}
+  @keyframes axFsSpin{to{transform:rotate(360deg)}}
+  @keyframes axFsRing{0%{box-shadow:0 0 0 0 rgba(111,220,176,.45)}70%{box-shadow:0 0 0 14px rgba(111,220,176,0)}100%{box-shadow:0 0 0 0 rgba(111,220,176,0)}}
+  @media (prefers-reduced-motion: reduce){.ax-fs *,.ax-fs-fab *{animation:none !important;}}
+
 
 </style>
 </head>
@@ -14152,6 +14494,691 @@ function openMoneySheet(month){
   ensureLeaderboardLoaded();
   return sheet;
 }
+
+/* ================= THE FEED =================
+   Built to the "Agent feed, rethought" boards. The same ranked plays as
+   Next move (buildFeedCards), one full screen at a time: swipe up for the
+   next, the way a phone already teaches. Each play is its own picture --
+   a client's rhythm, a bonus poster, the conversation itself -- with the
+   one thing to do at the bottom and the other moves down the right edge.
+
+   There is no tab for it. A floating button on Today says how many plays
+   are waiting and goes away once you are caught up; Next move carries
+   "Play all" (then "Replay feed"), and its top card opens the feed at
+   that play.
+
+   "Not for me" teaches it: hide an item, see fewer of an aisle, or put a
+   play off to another day. What it learns is the same preferences the
+   ranking already reads (agentFeedPrefs), plus a short snooze list kept
+   here. Every figure is the books'; nothing on a slide is invented. */
+Object.assign(PH, {
+  eyeSlash: '<svg class="icon ph" viewBox="0 0 256 256" aria-hidden="true"><path d="M53.92,34.62A8,8,0,1,0,42.08,45.38L61.32,66.55C25,88.84,9.38,123.2,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208a127.11,127.11,0,0,0,52.07-10.83l22,24.21a8,8,0,1,0,11.84-10.76Zm47.33,75.84,41.67,45.85a32,32,0,0,1-41.67-45.85ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.16,133.16,0,0,1,25,128c4.69-8.79,19.66-33.39,47.35-49.38l18,19.75a48,48,0,0,0,63.66,70l14.73,16.2A112,112,0,0,1,128,192Zm6-95.43a8,8,0,0,1,3-15.72,48.16,48.16,0,0,1,38.77,42.64,8,8,0,0,1-7.22,8.71,6.39,6.39,0,0,1-.75,0,8,8,0,0,1-8-7.26A32.09,32.09,0,0,0,134,96.57Zm113.28,34.69c-.42.94-10.55,23.37-33.36,43.8a8,8,0,1,1-10.67-11.92A132.77,132.77,0,0,0,231.05,128a133.15,133.15,0,0,0-23.12-30.77C185.67,75.19,158.78,64,128,64a118.37,118.37,0,0,0-19.36,1.57A8,8,0,1,1,106,49.79,134,134,0,0,1,128,48c34.88,0,66.57,13.26,91.66,38.35,18.83,18.83,27.3,37.62,27.65,38.41A8,8,0,0,1,247.31,131.26Z"/></svg>',
+  thumbsDown: '<svg class="icon ph" viewBox="0 0 256 256" aria-hidden="true"><path d="M239.82,157l-12-96A24,24,0,0,0,204,40H32A16,16,0,0,0,16,56v88a16,16,0,0,0,16,16H75.06l37.78,75.58A8,8,0,0,0,120,240a40,40,0,0,0,40-40V184h56a24,24,0,0,0,23.82-27ZM72,144H32V56H72Zm150,21.29a7.88,7.88,0,0,1-6,2.71H152a8,8,0,0,0-8,8v24a24,24,0,0,1-19.29,23.54L88,150.11V56H204a8,8,0,0,1,7.94,7l12,96A7.87,7.87,0,0,1,222,165.29Z"/></svg>',
+  heartFill: '<svg class="icon ph" viewBox="0 0 256 256" aria-hidden="true"><path d="M240,102c0,70-103.79,126.66-108.21,129a8,8,0,0,1-7.58,0C119.79,228.66,16,172,16,102A62.07,62.07,0,0,1,78,40c20.65,0,38.73,8.88,50,23.89C139.27,48.88,157.35,40,178,40A62.07,62.07,0,0,1,240,102Z"/></svg>',
+  bookmarkFill: '<svg class="icon ph" viewBox="0 0 256 256" aria-hidden="true"><path d="M184,32H72A16,16,0,0,0,56,48V224a8,8,0,0,0,12.24,6.78L128,193.43l59.77,37.35A8,8,0,0,0,200,224V48A16,16,0,0,0,184,32Z"/></svg>',
+  stackPh: '<svg class="icon ph" viewBox="0 0 256 256" aria-hidden="true"><path d="M230.91,172A8,8,0,0,1,228,182.91l-96,56a8,8,0,0,1-8.06,0l-96-56A8,8,0,0,1,36,169.09l92,53.65,92-53.65A8,8,0,0,1,230.91,172ZM220,121.09l-92,53.65L36,121.09A8,8,0,0,0,28,134.91l96,56a8,8,0,0,0,8.06,0l96-56A8,8,0,1,0,220,121.09ZM24,80a8,8,0,0,1,4-6.91l96-56a8,8,0,0,1,8.06,0l96,56a8,8,0,0,1,0,13.82l-96,56a8,8,0,0,1-8.06,0l-96-56A8,8,0,0,1,24,80Zm23.88,0L128,126.74,208.12,80,128,33.26Z"/></svg>',
+  caretUp2: '<svg class="icon ph" viewBox="0 0 256 256" aria-hidden="true"><path d="M216.49,191.51a12,12,0,0,1-17,17L128,137,56.49,208.49a12,12,0,0,1-17-17l80-80a12,12,0,0,1,17,0Zm-160-63L128,57l71.51,71.52a12,12,0,0,0,17-17l-80-80a12,12,0,0,0-17,0l-80,80a12,12,0,0,0,17,17Z"/></svg>',
+  xCircle: '<svg class="icon ph" viewBox="0 0 256 256" aria-hidden="true"><path d="M165.66,101.66,139.31,128l26.35,26.34a8,8,0,0,1-11.32,11.32L128,139.31l-26.34,26.35a8,8,0,0,1-11.32-11.32L116.69,128,90.34,101.66a8,8,0,0,1,11.32-11.32L128,116.69l26.34-26.35a8,8,0,0,1,11.32,11.32ZM232,128A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z"/></svg>',
+  sunHorizon: '<svg class="icon ph" viewBox="0 0 256 256" aria-hidden="true"><path d="M248,160a8,8,0,0,1-8,8H16a8,8,0,0,1,0-16H56.45a73.54,73.54,0,0,1-.45-8,72,72,0,0,1,144,0,73.54,73.54,0,0,1-.45,8H240A8,8,0,0,1,248,160Zm-40,32H48a8,8,0,0,0,0,16H208a8,8,0,0,0,0-16ZM80.84,59.58a8,8,0,0,0,14.32-7.16l-8-16a8,8,0,0,0-14.32,7.16ZM20.42,103.16l16,8a8,8,0,1,0,7.16-14.31l-16-8a8,8,0,1,0-7.16,14.31ZM216,112a8,8,0,0,0,3.57-.84l16-8a8,8,0,1,0-7.16-14.31l-16,8A8,8,0,0,0,216,112ZM164.42,63.16a8,8,0,0,0,10.74-3.58l8-16a8,8,0,0,0-14.32-7.16l-8,16A8,8,0,0,0,164.42,63.16Z"/></svg>',
+  trendUp: '<svg class="icon ph" viewBox="0 0 256 256" aria-hidden="true"><path d="M244,56v64a12,12,0,0,1-24,0V85l-75.51,75.52a12,12,0,0,1-17,0L96,129,32.49,192.49a12,12,0,0,1-17-17l72-72a12,12,0,0,1,17,0L136,135l67-67H168a12,12,0,0,1,0-24h64A12,12,0,0,1,244,56Z"/></svg>',
+  playFill: '<svg class="icon ph" viewBox="0 0 256 256" aria-hidden="true"><path d="M240,128a15.74,15.74,0,0,1-7.6,13.51L88.32,229.65a16,16,0,0,1-16.2.3A15.86,15.86,0,0,1,64,216.13V39.87a15.86,15.86,0,0,1,8.12-13.82,16,16,0,0,1,16.2.3L232.4,114.49A15.74,15.74,0,0,1,240,128Z"/></svg>',
+});
+
+/* ---- today's run: what was done with each play, kept for the day ---- */
+function feedToday(){ const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+function feedRun(){
+  try{ const s = JSON.parse(localStorage.getItem(agentLocalKey('agentFeedRun')) || 'null'); if(s && s.day === feedToday()) return s; }catch(_e){}
+  return { day: feedToday(), out: {}, earn: {}, done: false };
+}
+function saveFeedRun(s){ try{ localStorage.setItem(agentLocalKey('agentFeedRun'), JSON.stringify(s)); }catch(_e){} }
+function feedOutcome(card, how){
+  if(!card || !card.key) return;
+  const s = feedRun();
+  // Acting wins over saving, saving over skipping: a play once acted on
+  // stays acted on, however it is scrolled past afterwards.
+  const rank = { skipped: 1, saved: 2, acted: 3 };
+  if((rank[s.out[card.key]] || 0) >= rank[how]) return;
+  s.out[card.key] = how;
+  if(how === 'acted') s.earn[card.key] = Math.max(0, feedPlayEarn(card));
+  saveFeedRun(s);
+}
+function feedSnoozes(){ try{ return JSON.parse(localStorage.getItem(agentLocalKey('agentFeedSnooze')) || '{}') || {}; }catch(_e){ return {}; } }
+function feedSnooze(key, days){
+  const s = feedSnoozes(), now = Date.now();
+  Object.keys(s).forEach(k=>{ if(s[k] < now) delete s[k]; });
+  s[key] = now + days * 86400000;
+  try{ localStorage.setItem(agentLocalKey('agentFeedSnooze'), JSON.stringify(s)); }catch(_e){}
+}
+
+/* ---- what the feed holds ---- */
+// "G28 iron sheets, 60 pcs?" wants 60: a number stuck to a letter (G28)
+// or carrying a size unit (3m, 50kg) is part of the name, not the count.
+function feedAskQty(q){
+  const re = /(^|[^A-Za-z0-9.])(\d{1,5})(?![\d.])(?!\s*(?:mm|cm|m|kg|g|l|ltr|litres?|inch(?:es)?|in|ft|")\b)(?!\s*")/g;
+  const m = re.exec(String(q && q.message || ''));
+  return m ? Math.max(1, Math.min(9999, Number(m[2]))) : 1;
+}
+function feedPlayEarn(c){
+  if(!c) return 0;
+  if(c.kind === 'ask'){ const it = c.item || (c.matches && c.matches[0]); return it ? feedEarnEach(it).margin * feedAskQty(c.inq) : 0; }
+  if(c.kind === 'waiting') return c.rows.reduce((s, r)=> s + Math.max(0, Number(r.earn) || 0), 0);
+  if(['due', 'bonus', 'addon', 'bulk', 'pin'].includes(c.kind)) return Math.max(0, Number(c.earn && c.earn.total) || 0);
+  return 0;
+}
+const FEED_PLAYS = ['due', 'bonus', 'addon', 'bulk', 'pin', 'ask', 'waiting', 'win'];
+function feedDeck(){
+  let cards = [];
+  try{ cards = buildFeedCards(new Date()); }catch(err){ console.warn('The feed could not be worked out:', err); cards = []; }
+  const sn = feedSnoozes(), now = Date.now();
+  const ok = (c)=> !(sn[c.key] > now);
+  const picks = cards.filter(c=> ['due', 'bonus', 'addon', 'bulk', 'pin'].includes(c.kind) && ok(c));
+  const asks = cards.filter(c=> c.kind === 'ask' && ok(c));
+  const waiting = cards.filter(c=> c.kind === 'waiting' && ok(c));
+  const wins = cards.filter(c=> c.kind === 'win');
+  // The same order as Next move: the best money play, then whoever is
+  // waiting on a reply, money already yours, the other plays, milestones.
+  const deck = picks.slice(0, 1).concat(asks, waiting, picks.slice(1));
+  // What it has learned about you sits among the plays, not after them.
+  const about = cards.find(c=> c.kind === 'about' && ok(c));
+  const lesson = cards.find(c=> c.kind === 'lesson' && ok(c));
+  if(about) deck.splice(Math.min(4, deck.length), 0, about);
+  if(lesson) deck.splice(Math.min(7, deck.length), 0, lesson);
+  return deck.concat(wins).slice(0, 12);
+}
+function feedPlays(deck){ return (deck || feedDeck()).filter(c=> FEED_PLAYS.includes(c.kind)); }
+function feedCaughtUp(deck){
+  const s = feedRun();
+  const plays = feedPlays(deck);
+  if(!plays.length) return true;
+  return s.done || plays.every(c=> s.out[c.key]);
+}
+
+/* ---- the screen ---- */
+let feedState = null;
+const FEED_TABS = { you: null, clients: ['due', 'ask', 'addon'], deals: ['bonus', 'pin', 'bulk'] };
+function openFeed(startKey, opts){
+  opts = opts || {};
+  closeFeed(true);
+  const all = feedDeck();
+  const el = document.createElement('div');
+  el.className = 'ax-fs';
+  el.setAttribute('role', 'dialog');
+  el.setAttribute('aria-modal', 'true');
+  el.setAttribute('aria-label', 'Your plays');
+  document.body.appendChild(el);
+  document.body.classList.add('ax-locked');
+  feedState = { el, all, tab: 'you', deck: all, at: 0, nm: null };
+  const sheet = { el, scrim: el, kind: 'feed', refresh: null, close(){ closeFeed(); } };
+  feedState.sheet = sheet;
+  openSheets.push(sheet);
+  feedPaint();
+  let start = 0;
+  if(opts.end) start = feedState.deck.length + 1;
+  else if(startKey){ const i = feedState.deck.findIndex(c=> c.key === startKey); if(i >= 0) start = i + 1; }
+  if(start) requestAnimationFrame(()=> feedGo(start, true));
+  el.addEventListener('click', feedClick);
+}
+function closeFeed(silent){
+  if(!feedState) return;
+  const { el, sheet } = feedState;
+  if(feedState.io) feedState.io.disconnect();
+  el.remove();
+  const i = openSheets.indexOf(sheet);
+  if(i >= 0) openSheets.splice(i, 1);
+  if(!openSheets.length) document.body.classList.remove('ax-locked');
+  feedState = null;
+  if(!silent && currentView === 'today') renderToday();
+}
+function feedPaint(){
+  const f = feedState;
+  const filter = FEED_TABS[f.tab];
+  f.deck = filter ? f.all.filter(c=> filter.includes(c.kind)) : f.all;
+  const slides = [feedHelloHTML(f.all)].concat(f.deck.map((c, i)=> feedSlideHTML(c, i)), [feedEndHTML(f.all)]);
+  const tab = (k, label)=> `<button type="button" class="${f.tab === k ? 'on' : ''}" data-fs-tab="${k}" aria-pressed="${f.tab === k}">${label}</button>`;
+  f.el.innerHTML = `
+    <div class="ax-fs-top">
+      <button type="button" class="ax-fs-x" data-fs-close aria-label="Back to Today">${AX_ICON.x}</button>
+      <span class="ax-fs-tabs">${tab('clients', 'Clients')} ${tab('you', 'For you')} ${tab('deals', 'Deals')}</span>
+      <button type="button" class="ax-fs-x" data-fs-find aria-label="Find an item">${AX_ICON.search}</button>
+    </div>
+    <div class="ax-fs-scroll">${slides.join('')}</div>
+    <div class="ax-fs-prog" aria-hidden="true">${f.deck.map((c, i)=> `<i data-fs-seg="${i}"></i>`).join('')}</div>`;
+  f.scroller = f.el.querySelector('.ax-fs-scroll');
+  if(f.io) f.io.disconnect();
+  f.io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{ if(en.isIntersecting) feedAt(Number(en.target.dataset.fs)); });
+  }, { root: f.scroller, threshold: 0.6 });
+  f.scroller.querySelectorAll('[data-fs]').forEach(s=> f.io.observe(s));
+  feedProgress();
+}
+// Slide 0 is the morning; plays are 1..n; the end is n+1.
+function feedAt(i){
+  const f = feedState;
+  if(!f || i === f.at) return;
+  // A play scrolled past with nothing done is a skip -- it shows on
+  // Today under "You skipped", still open for the day.
+  if(i > f.at && f.at >= 1){ const prev = f.deck[f.at - 1]; if(prev && FEED_PLAYS.includes(prev.kind)) feedOutcome(prev, 'skipped'); }
+  f.at = i;
+  const card = f.deck[i - 1];
+  if(card) feedLogShown(card);
+  if(i === f.deck.length + 1){ const s = feedRun(); s.done = true; saveFeedRun(s); const end = f.el.querySelector('[data-fs-end]'); if(end) end.outerHTML = feedEndHTML(f.all); }
+  feedProgress();
+}
+function feedProgress(){
+  const f = feedState;
+  const s = feedRun();
+  f.el.querySelectorAll('[data-fs-seg]').forEach(seg=>{
+    const i = Number(seg.dataset.fsSeg), c = f.deck[i];
+    seg.className = i + 1 === f.at ? 'on' : s.out[c.key] === 'acted' ? 'acted' : s.out[c.key] === 'saved' ? 'saved' : s.out[c.key] ? 'skip' : '';
+  });
+}
+function feedGo(i, instant){
+  const f = feedState;
+  if(!f) return;
+  const s = f.scroller.querySelector(`[data-fs="${i}"]`);
+  if(s) f.scroller.scrollTo({ top: s.offsetTop, behavior: instant ? 'auto' : 'smooth' });
+}
+function feedNext(){ if(feedState) feedGo(feedState.at + 1); }
+
+/* ---- the pieces every slide shares ---- */
+const FEED_LOOK = {
+  due: { chip: 'Due for their usual', tone: 'due' }, ask: { chip: 'Asked on your link', tone: 'ask' },
+  bonus: { chip: 'Bonus', tone: 'bonus' }, pin: { chip: 'From the shop', tone: 'bonus' },
+  addon: { chip: 'Goes with it', tone: 'addon' }, bulk: { chip: 'Sell more, earn more', tone: 'bulk' },
+  waiting: { chip: 'Money waiting on you', tone: 'gold' }, win: { chip: 'New milestone', tone: 'win' },
+  about: { chip: 'What I’ve learned about you', tone: 'about' }, lesson: { chip: 'A tip from your numbers', tone: 'about' },
+};
+function feedRailHTML(btns){
+  return `<div class="ax-fs-rail">${btns.filter(Boolean).map(b=> b.href
+    ? `<a class="r" href="${esc(b.href)}"${b.blank ? ' target="_blank" rel="noopener"' : ''} data-fs-act="${b.act}"><span class="o${b.cls ? ' ' + b.cls : ''}">${b.icon}</span><span class="l">${esc(b.label)}</span></a>`
+    : `<button type="button" class="r" data-fs-act="${b.act}"${b.pressed != null ? ` aria-pressed="${b.pressed}"` : ''}><span class="o${b.cls ? ' ' + b.cls : ''}">${b.icon}${b.count ? ` <em>${esc(b.count)}</em>` : ''}</span><span class="l">${esc(b.label)}</span></button>`).join('')}</div>`;
+}
+function feedCapHTML(c, title, sub, why, chip){
+  const look = FEED_LOOK[c.kind] || { chip: '', tone: '' };
+  return `<div class="ax-fs-cap"><span class="chip ${look.tone}">${esc(chip || look.chip)}</span>
+      <span class="t">${title}</span>${sub ? `<span class="s">${sub}</span>` : ''}
+      ${why ? `<span class="w">${PH.sparkle} <span>${esc(why)}</span></span>` : ''}</div>`;
+}
+function feedCtaHTML(act, label, icon, cls){ return `<button type="button" class="ax-fs-cta${cls ? ' ' + cls : ''}" data-fs-act="${act}">${icon || ''}${esc(label)}</button>`; }
+function feedWhyAisle(it, soldN){
+  if(soldN > 0) return `For you · you've sold it ${soldN} time${soldN === 1 ? '' : 's'}`;
+  const taste = feedTaste(myOrders, catalog);
+  const cat = itemCategory(it);
+  const rank = [...taste.share.entries()].sort((a, b)=> b[1] - a[1]).findIndex(([k])=> k === cat);
+  if(rank === 0) return `For you · ${cat} is what you sell most`;
+  if(rank > 0 && rank < 5) return `For you · ${cat} is your #${rank + 1} aisle`;
+  return 'For you · something new your clients could use';
+}
+function feedPhone(c){ return String(c && c.phone || '').replace(/[^\d]/g, ''); }
+function feedWa(phone, text){ return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`; }
+const FEED_WEEKDAY = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function feedSlideHTML(c, i){
+  const n = i + 1;
+  const body = c.kind === 'due' ? feedDueHTML(c) : c.kind === 'ask' ? feedAskHTML(c)
+    : c.kind === 'bonus' || c.kind === 'pin' ? feedBonusHTML(c) : c.kind === 'addon' ? feedAddonHTML(c)
+    : c.kind === 'bulk' ? feedBulkHTML(c) : c.kind === 'waiting' ? feedWaitingHTML(c)
+    : c.kind === 'win' ? feedWinHTML(c) : c.kind === 'about' ? feedAboutHTML(c) : c.kind === 'lesson' ? feedLessonHTML(c) : '';
+  return `<section class="ax-fs-s k-${esc(c.kind)}" data-fs="${n}">${body}</section>`;
+}
+
+/* The morning: everything within reach, as one ring split by kind. */
+function feedHelloHTML(deck){
+  const plays = feedPlays(deck);
+  const groups = [
+    { k: 'due', label: (n)=> `${n} client${n === 1 ? '' : 's'} due`, color: '#F5B26B', kinds: ['due'] },
+    { k: 'ask', label: (n)=> `${n} asked`, color: '#7FB2F0', kinds: ['ask'] },
+    { k: 'more', label: (n)=> n === 1 ? 'Bigger order' : `${n} bigger orders`, color: '#6FDCB0', kinds: ['bulk', 'addon'] },
+    { k: 'bonus', label: (n)=> `${n} bonus${n === 1 ? '' : 'es'}`, color: '#E9B8DC', kinds: ['bonus', 'pin'] },
+    { k: 'gold', label: ()=> 'Money waiting', color: '#FFD27A', kinds: ['waiting'] },
+  ].map(g=>{ const cs = plays.filter(c=> g.kinds.includes(c.kind)); return { ...g, n: cs.length, v: cs.reduce((s, c)=> s + feedPlayEarn(c), 0) }; }).filter(g=> g.n);
+  const total = groups.reduce((s, g)=> s + g.v, 0);
+  const R = 95, C = 2 * Math.PI * R, sum = groups.reduce((s, g)=> s + Math.max(g.v, total * .04 || 1), 0);
+  let off = 0;
+  const arcs = groups.map(g=>{ const L = Math.max(g.v, total * .04 || 1) / sum * C; const a = `<circle cx="118" cy="118" r="${R}" fill="none" stroke="${g.color}" stroke-width="20" stroke-linecap="round" stroke-dasharray="${Math.max(1, L - 10).toFixed(1)} ${C.toFixed(1)}" stroke-dashoffset="${(-off).toFixed(1)}" transform="rotate(-90 118 118)"/>`; off += L; return a; }).join('');
+  const p = monthPicture(new Date());
+  const pct = p.aim > 0 ? Math.round(p.earned / p.aim * 100) : null;
+  const streak = computeSellingStreak();
+  const now = new Date();
+  return `<section class="ax-fs-s k-hello" data-fs="0">
+      <div class="ax-fs-hello">
+        <span class="d">${esc(now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase())}</span>
+        <span class="g">${esc(greeting(now))}</span>
+        <span class="ring"><svg viewBox="0 0 236 236" aria-hidden="true"><circle cx="118" cy="118" r="${R}" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="20"/>${arcs}</svg>
+          <span class="c"><small>In reach today</small><b>+${total >= 1e6 ? esc(fmtCompactUGX(total)) : fmtNum(total)}</b><small>across ${plays.length} play${plays.length === 1 ? '' : 's'}</small></span></span>
+        ${groups.length ? `<span class="leg">${groups.map(g=> `<span><i style="background:${g.color};"></i><span class="n"><span>${esc(g.label(g.n))}</span><b class="m" style="color:${g.color};">${g.v > 0 ? `+${esc(fmtCompactUGX(g.v))}` : '—'}</b></span></span>`).join('')}</span>` : ''}
+        <span class="two">${pct != null ? `<span>${ringSVG(38, 5, [{ frac: Math.min(1, pct / 100), color: '#6FDCB0', round: true }], 'rgba(255,255,255,.12)')}<span class="v"><b>${pct}%</b><small>of ${esc(monthName(currentMonthKey()))}</small></span></span>` : ''}
+          ${streak >= 2 ? `<span><span class="ic">${PH.fire}</span><span class="v"><b>${streak} weeks</b><small>selling streak</small></span></span>` : ''}</span>
+      </div>
+      <button type="button" class="ax-fs-up" data-fs-act="start">${PH.caretUp2}<b>${plays.length ? 'Swipe up to start' : 'Nothing waiting right now'}</b><small>${plays.length ? 'best money first' : 'new plays come as clients fall due'}</small></button>
+    </section>`;
+}
+
+/* A bonus, or the shop's own pick: the item as a poster. */
+function feedBonusHTML(c){
+  const it = c.item, cat = itemCategory(it);
+  const e = c.earn || { margin: 0, bonus: 0, total: 0 };
+  const days = c.daysLeft;
+  const ends = days != null ? new Date(Date.now() + days * 86400000) : null;
+  const unit = String(it.unit || 'unit');
+  const stacks = [1, 2, 3, 4, 5].map(k=> `<span class="col"><span class="v${k === 5 ? ' top' : ''}">${esc(fmtCompactUGX(e.total * k))}</span>${'<i></i>'.repeat(k)}</span>`).join('');
+  const chip = c.kind === 'pin' ? 'From the shop' : ends ? `Bonus · ${days === 0 ? 'ends today' : `ends ${FEED_WEEKDAY[ends.getDay()]}`}` : 'Bonus';
+  const buyers = c.buyers || [];
+  return `<div class="ax-fs-art bonus">
+      <span class="poster">${it.image ? `<img src="${esc(it.image)}" alt="">` : `<span class="ic" style="${aisleTint(cat)}">${categoryIconSVG(cat)}</span>`}
+        ${days != null ? `<span class="clock">${ringSVG(64, 5, [{ frac: Math.max(.05, Math.min(1, days / 7)), color: '#F5B26B', round: true }], 'rgba(255,255,255,.12)')}<span><b>${days}d</b><small>left</small></span></span>` : ''}
+        ${e.bonus > 0 ? `<span class="tag">+${fmtNum(e.bonus)} bonus</span>` : ''}</span>
+      ${e.total > 0 ? `<span class="coins"><span class="h">${ends ? `SELL FIVE BEFORE ${esc(FEED_WEEKDAY[ends.getDay()].toUpperCase())}` : 'WHAT FIVE SALES PAY'}</span><span class="row">${stacks}</span></span>` : ''}
+    </div>
+    <span class="ax-fs-fade"></span>
+    ${feedRailHTML([
+      { act: 'star', icon: PH.bookmarkFill, label: c.inCluster ? 'Saved' : 'Save', cls: c.inCluster ? 'gold' : '', pressed: !!c.inCluster },
+      { act: 'similar', icon: PH.stackPh, label: 'Similar' },
+      buyers.length ? { act: 'tell', icon: PH.whatsapp, label: 'Tell buyers', cls: 'wa', count: buyers.length } : null,
+      { act: 'notme', icon: PH.eyeSlash, label: 'Not for me' },
+    ])}
+    ${feedCapHTML(c, `${esc(it.name)}${it.variantLabel ? ` ${esc(it.variantLabel)}` : ''}`,
+      e.total > 0 ? `One ${esc(unit)} pays you <b class="m">+${fmtNum(e.total)}</b>` : '', c.kind === 'pin' && c.pin && c.pin.note ? String(c.pin.note) : feedWhyAisle(it, c.soldN || 0), chip)}
+    ${feedCtaHTML('add', 'Add to an order', AX_ICON.plus)}`;
+}
+
+/* A client due on their own rhythm: their face in it, and the visits
+   that made it. */
+function feedDueHTML(c){
+  const cad = c.cad, gap = Math.max(1, Math.round(cad.avgGapDays)), late = lateBy(cad);
+  const R = 100, C = 2 * Math.PI * R;
+  const lateFrac = Math.max(0, Math.min(1, late / gap));
+  const days = [...new Set(cad.orders.map(o=> orderDate(o)))].slice(-3);
+  const due = new Date(cad.lastDate.getTime() + gap * 86400000);
+  const t0 = new Date(days[0] + 'T00:00:00').getTime(), today = Date.now(), t1 = Math.max(today, due.getTime());
+  const X = (t)=> Math.max(0, Math.min(100, (t - t0) / Math.max(1, t1 - t0) * 100));
+  const dl = (d)=> d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const phone = feedPhone(c.client);
+  return `<div class="ax-fs-art due">
+      <span class="face"><svg viewBox="0 0 216 216" aria-hidden="true"><circle cx="108" cy="108" r="${R}" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="6"/>
+          <circle cx="108" cy="108" r="${R}" fill="none" stroke="#FFFFFF" stroke-opacity=".9" stroke-width="6" stroke-linecap="round" stroke-dasharray="${(Math.min(1, cad.daysSince / gap) * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 108 108)"/>
+          ${lateFrac > 0 ? `<circle cx="108" cy="108" r="${R}" fill="none" stroke="#F5B26B" stroke-width="10" stroke-linecap="round" stroke-dasharray="${(lateFrac * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 108 108)"/>` : ''}</svg>
+        <span class="av">${esc(clientInitials(c.client.name))}</span>
+        <span class="late${late > 0 ? '' : ' ok'}">${late > 0 ? `+${late} day${late === 1 ? '' : 's'} late` : late === 0 ? 'Due today' : `Due in ${-late} days`}</span></span>
+      <span class="line" aria-hidden="true">${days.map(d=> `<i class="v" style="left:${X(new Date(d + 'T00:00:00').getTime()).toFixed(1)}%;"></i>`).join('')}
+        <i class="due" style="left:${X(due.getTime()).toFixed(1)}%;"></i>${late > 0 ? `<i class="gap" style="left:${X(due.getTime()).toFixed(1)}%;right:0;"></i>` : ''}<i class="now" style="left:${X(today).toFixed(1)}%;"></i></span>
+      <span class="dates"><span>${esc(dl(new Date(days[0] + 'T00:00:00')))}</span><span>due ${esc(dl(due))}</span><span class="now">today</span></span>
+      ${c.regulars.length ? `<span class="usual">${c.regulars.map(x=> `<span><b class="m">${esc(usualLabel(x.r, x.it))}</b> ${esc(shortName(x.it.name, 2))}</span>`).join('')}</span>` : ''}
+    </div>
+    <span class="ax-fs-fade"></span>
+    ${feedRailHTML([
+      phone ? { act: 'call', href: `tel:${phone}`, icon: PH.phone || AX_ICON.phone, label: 'Call' } : null,
+      phone ? { act: 'wa', href: feedWa(phone, `Hello ${firstWord(c.client.name)}, it's time for your usual order. Shall I send it?`), blank: true, icon: PH.whatsapp, label: 'WhatsApp', cls: 'wa' } : null,
+      { act: 'tomorrow', icon: AX_ICON.clock, label: 'Tomorrow' },
+      { act: 'notme', icon: PH.xCircle, label: 'Not now' },
+    ])}
+    ${feedCapHTML(c, esc(c.client.name), c.earn.total > 0 ? `Their usual pays you <b class="m">+${fmtNum(c.earn.total)}</b>` : '', `For you · every ${gap} days, like clockwork`)}
+    ${feedCtaHTML('usual', c.regulars.length ? 'Order their usual' : 'Start their order', '', 'go')}`;
+}
+
+/* Someone asked on the shop link: the conversation itself, and the reply
+   already written. */
+function feedAskHTML(c){
+  const q = c.inq, it = c.item || (c.matches && c.matches[0]) || null, qty = feedAskQty(q);
+  const first = firstWord(q.customer_name || 'They');
+  const price = it ? Number(it.ourPrice || it.floorPrice) || 0 : 0;
+  const reply = `Hello ${first}, thanks for asking.` + (it ? ` ${it.name}${it.variantLabel ? ' ' + it.variantLabel : ''} is UGX ${fmtNum(price)}${qty > 1 ? ` each. ${qty} comes to UGX ${fmtNum(price * qty)}` : ''}.` : '') + ' Shall I book it for you?';
+  const earn = feedPlayEarn(c);
+  const phone = String(q.customer_phone || '').replace(/[^\d]/g, '');
+  return `<div class="ax-fs-art ask">
+      <span class="who"><span class="av">${esc(clientInitials(q.customer_name || '?'))}</span><span class="b"><b>${esc(q.customer_name || 'Someone')}</b><small>found you through your shop link</small></span></span>
+      <span class="in"><b>${esc(q.message || 'Asked you to get in touch')}</b><small>${esc(inquiryAgoLabel(q.created_at))}</small></span>
+      ${it ? `<span class="item"><span class="ic" style="${aisleTint(itemCategory(it))}">${categoryIconSVG(itemCategory(it))}</span><span class="b"><b>${esc(it.name)}</b><small class="m">${qty > 1 ? `${qty} × ` : ''}${fmtNum(price)}</small></span><b class="m">${esc(fmtCompactUGX(price * qty))}</b></span>` : ''}
+      ${phone ? `<span class="out">${esc(reply)}</span>` : ''}
+    </div>
+    <span class="ax-fs-fade"></span>
+    ${feedRailHTML([
+      phone ? { act: 'call', href: `tel:${phone}`, icon: PH.phone || AX_ICON.phone, label: 'Call' } : null,
+      { act: 'answered', icon: AX_ICON.check, label: 'Answered' },
+      { act: 'notme', icon: PH.xCircle, label: 'Not now' },
+    ])}
+    ${feedCapHTML(c, `${esc(first)} ${it ? `wants ${esc(shortName(it.name, 3))}` : 'asked you'}`, earn > 0 ? `If they buy, you earn <b class="m">+${fmtNum(earn)}</b>` : '', 'For you · an ask goes cold in a day', `Asked on your link · ${inquiryAgoLabel(q.created_at)}`)}
+    ${phone ? feedCtaHTML('reply', 'Send this reply', PH.whatsapp, 'wa') : feedCtaHTML('answered', 'Mark as answered', AX_ICON.check)}`;
+}
+
+/* The item a client always takes with what they just ordered -- and
+   didn't, this time. */
+function feedAddonHTML(c){
+  const it = c.item, base = c.base, first = firstWord(c.client.name);
+  const phone = feedPhone(c.client);
+  return `<div class="ax-fs-art addon">
+      <span class="pill">${avHTML(c.client, 'xs')} ${esc(first)}'s recent order</span>
+      <span class="pair"><span class="tile have" style="${aisleTint(itemCategory(base))}">${categoryIconSVG(itemCategory(base))}<b>${esc(shortName(base.name, 2))}</b><i>${AX_ICON.check}</i></span>
+        <span class="plus">${AX_ICON.plus}<b class="m">${esc(c.together)}×</b><small>together</small></span>
+        <span class="tile miss">${categoryIconSVG(itemCategory(it))}<b>${esc(shortName(it.name, 2))}</b><small>missing</small></span></span>
+    </div>
+    <span class="ax-fs-fade"></span>
+    ${feedRailHTML([
+      phone ? { act: 'call', href: `tel:${phone}`, icon: PH.phone || AX_ICON.phone, label: `Call ${first}` } : null,
+      phone ? { act: 'wa', href: feedWa(phone, `Hello ${first}, do you need ${it.name} to go with your ${base.name}?`), blank: true, icon: PH.whatsapp, label: 'Ask them', cls: 'wa' } : null,
+      { act: 'star', icon: PH.bookmarkFill, label: c.inCluster ? 'Saved' : 'Save', cls: isInCluster(it.productId, it.variantIdx) ? 'gold' : '' },
+      { act: 'notme', icon: PH.thumbsDown, label: 'Not for me' },
+    ])}
+    ${feedCapHTML(c, `${esc(first)} forgot the ${esc(shortName(it.name, 2).toLowerCase())}`, c.earn.total > 0 ? `One ${esc(it.unit || 'unit')} pays you <b class="m">+${fmtNum(c.earn.total)}</b>` : '', `For you · bought together ${c.together} times`)}
+    ${feedCtaHTML('add', `Add for ${first}`, AX_ICON.plus)}`;
+}
+
+/* A step up in quantity that drops the price and pays more. */
+function feedBulkHTML(c){
+  const it = c.item, first = firstWord(c.client.name);
+  const max = Math.max(c.tierQty * 1.2, 1);
+  const phone = feedPhone(c.client);
+  return `<div class="ax-fs-art bulk">
+      <span class="who">${avHTML(c.client, 'lg')}<span class="b"><b>${esc(c.client.name)}</b><small>always takes ${esc(fdUnits(c.usual, it.unit))} of ${esc(shortName(it.name, 3))}</small></span></span>
+      <span class="scale" aria-hidden="true"><i class="now" style="width:${(c.usual / max * 100).toFixed(1)}%;"></i><i class="up" style="left:${(c.usual / max * 100).toFixed(1)}%;width:${((c.tierQty - c.usual) / max * 100).toFixed(1)}%;"></i>
+        <em style="left:${(c.usual / max * 100).toFixed(1)}%;">${esc(c.usual)}</em><em class="t" style="left:${(c.tierQty / max * 100).toFixed(1)}%;">${esc(c.tierQty)}</em></span>
+      <span class="cmp"><span><small>${esc(fdUnits(c.usual, it.unit))}</small><b class="m">+${fmtNum(c.nowEarn)}</b><i style="width:${Math.round(c.nowEarn / c.tierEarn * 100)}%;"></i></span>
+        <span class="best"><small>${esc(fdUnits(c.tierQty, it.unit))} · cheaper each</small><b class="m">+${fmtNum(c.tierEarn)}</b><i style="width:100%;"></i></span></span>
+    </div>
+    <span class="ax-fs-fade"></span>
+    ${feedRailHTML([
+      phone ? { act: 'call', href: `tel:${phone}`, icon: PH.phone || AX_ICON.phone, label: 'Call' } : null,
+      phone ? { act: 'wa', href: feedWa(phone, `Hello ${first}, if you take ${c.tierQty} of ${it.name} this time the price per ${it.unit || 'unit'} drops. Shall I do ${c.tierQty}?`), blank: true, icon: PH.whatsapp, label: 'Offer it', cls: 'wa' } : null,
+      { act: 'notme', icon: PH.thumbsDown, label: 'Not for me' },
+    ])}
+    ${feedCapHTML(c, `${esc(first)}: make it ${esc(c.tierQty)}`, `Extra for you <b class="m">+${fmtNum(c.tierEarn - c.nowEarn)}</b>`, `For you · ${first} pays less per ${it.unit || 'unit'}, you earn more`)}
+    ${feedCtaHTML('add', `Make it ${c.tierQty}`, '')}`;
+}
+
+/* Money already yours, one move away. */
+function feedWaitingHTML(c){
+  const total = feedPlayEarn(c);
+  const rows = c.rows.slice(0, 4).map((r, i)=>{
+    const label = r.kind === 'claim' ? `${monthName(r.month)} bonus` : r.kind === 'pickup' ? `${r.client ? r.client.name : 'An order'} · at the counter` : `${r.client ? r.client.name : 'An order'} · pay to start`;
+    const act = r.kind === 'claim' ? 'Claim' : r.kind === 'pickup' ? 'Collect' : 'Pay';
+    return `<button type="button" class="row" data-fs-act="wait" data-fs-row="${i}"><span class="ic">${r.kind === 'claim' ? PH.gift : AX_ICON.box}</span><span class="b"><b>${esc(label)}</b><small class="m">+${fmtNum(r.earn)}</small></span><span class="go">${act}</span></button>`;
+  }).join('');
+  return `<div class="ax-fs-art gold"><span class="big"><small>Yours, one step away</small><b class="m">+${fmtNum(total)}</b></span><span class="rows">${rows}</span></div>
+    <span class="ax-fs-fade"></span>
+    ${feedRailHTML([{ act: 'tomorrow', icon: AX_ICON.clock, label: 'Tomorrow' }])}
+    ${feedCapHTML(c, `${c.rows.length} thing${c.rows.length === 1 ? '' : 's'} to collect`, '', 'For you · this money is already earned')}
+    ${feedCtaHTML('wait0', c.rows[0] && c.rows[0].kind === 'claim' ? 'Claim it' : 'Open it', '')}`;
+}
+function feedWinHTML(c){
+  const a = c.fresh[0], next = c.next;
+  return `<div class="ax-fs-art win"><span class="cup">${ACHIEVEMENT_ICONS[a.id] || ACHIEVEMENT_ICONS.first_sale}</span>
+      ${next ? `<span class="next">${ringSVG(54, 6, [{ frac: Math.min(1, next.current / next.target), color: '#6FDCB0', round: true }], 'rgba(255,255,255,.12)')}<span class="b"><small>Next · ${esc(next.title)}</small><b class="m">${esc(milestoneKind(next) === 'money' ? fmtCompactUGX(next.current) : next.current)}/${esc(milestoneTargetLabel(next))}</b></span></span>` : ''}</div>
+    <span class="ax-fs-fade"></span>
+    ${feedCapHTML(c, esc(a.title), esc(a.desc), '')}
+    ${feedCtaHTML('win', 'Nice', AX_ICON.check)}`;
+}
+/* What the feed has learned about you, from your own orders. */
+function feedDayShares(){
+  const n = [0, 0, 0, 0, 0, 0, 0];
+  myOrders.filter(o=> !o.voided && orderDate(o)).forEach(o=>{ n[new Date(orderDate(o) + 'T00:00:00').getDay()]++; });
+  const tot = n.reduce((s, x)=> s + x, 0) || 1;
+  return [1, 2, 3, 4, 5, 6, 0].map(d=> ({ d, n: n[d], share: n[d] / tot }));
+}
+function feedAboutHTML(c){
+  const t = c.taste, days = feedDayShares();
+  const max = Math.max(...days.map(x=> x.share), .01);
+  const best = days.reduce((a, b)=> b.share > a.share ? b : a);
+  const bigger = t.singleAvg > 0 && t.multiAvg > t.singleAvg ? Math.round((t.multiAvg / t.singleAvg - 1) * 100) : null;
+  return `<div class="ax-fs-art about">
+      <span class="h">YOUR ORDERS, BY DAY</span>
+      <span class="week">${days.map(x=> `<span class="${x === best ? 'best' : ''}">${x === best ? `<em class="m">${Math.round(x.share * 100)}%</em>` : ''}<i style="height:${Math.max(6, Math.round(x.share / max * 150))}px;"></i><small>${FEED_WEEKDAY[x.d].slice(0, 3)}</small></span>`).join('')}</span>
+      <span class="tiles">${t.topCat ? `<span>${ringSVG(38, 6, [{ frac: t.topCatShare, color: '#7FB2F0' }], 'rgba(255,255,255,.14)')}<span class="b"><b class="m">${Math.round(t.topCatShare * 100)}%</b><small>is ${esc(String(t.topCat).toLowerCase())}</small></span></span>` : ''}
+        ${bigger != null ? `<span><span class="ic">${PH.trendUp}</span><span class="b"><b class="m">+${bigger}%</b><small>bigger baskets</small></span></span>` : ''}</span>
+    </div>
+    <span class="ax-fs-fade"></span>
+    ${feedRailHTML([{ act: 'useful', icon: PH.heartFill, label: 'Useful', cls: 'pink' }, { act: 'notuseful', icon: PH.thumbsDown, label: 'Not useful' }])}
+    ${feedCapHTML(c, `${FEED_WEEKDAY[best.d]} is your money day`, `${Math.round(best.share * 100)}% of your orders land on a ${esc(FEED_WEEKDAY[best.d])}.${bigger != null ? ' Two items or more pay more.' : ''}`, `From your own ${t.orders} orders`)}
+    ${feedCtaHTML('next', 'Got it', '')}`;
+}
+function feedLessonHTML(c){
+  const l = c.lesson, max = Math.max(l.them, l.you, 1);
+  return `<div class="ax-fs-art about lesson">
+      <span class="cmp2"><span><i style="height:${Math.round(l.them / max * 150)}px;"></i><b class="m">${esc(l.gain ? fmtCompactUGX(l.them) : l.them)}</b><small>${esc(l.themL)}</small></span>
+        <span class="you"><i style="height:${Math.round(l.you / max * 150)}px;"></i><b class="m">${esc(l.gain ? fmtCompactUGX(l.you) : l.you)}</b><small>${esc(l.youL)}</small></span></span>
+      <span class="say">“${l.say}”</span>
+    </div>
+    <span class="ax-fs-fade"></span>
+    ${feedRailHTML([{ act: 'useful', icon: PH.heartFill, label: 'Useful', cls: 'pink' }, { act: 'notuseful', icon: PH.thumbsDown, label: 'Not useful' }])}
+    ${feedCapHTML(c, esc(l.title), l.gain ? `About <b class="m">+${fmtNum(l.gain)}</b> more each time` : '', 'From your own orders')}
+    ${feedCtaHTML('lessondone', 'Got it', '')}`;
+}
+
+/* The end of the run: what was done, what was skipped, when more come. */
+function feedEndHTML(deck){
+  const s = feedRun(), plays = feedPlays(deck);
+  const acted = plays.filter(c=> s.out[c.key] === 'acted').length;
+  const saved = plays.filter(c=> s.out[c.key] === 'saved').length;
+  const skipped = plays.length - acted - saved;
+  const earned = Object.values(s.earn || {}).reduce((a, b)=> a + (Number(b) || 0), 0);
+  const hour = (typeof notifyPrefs !== 'undefined' && notifyPrefs && notifyPrefs.morning_hour) || 7;
+  const n = (typeof feedState !== 'undefined' && feedState) ? feedState.deck.length + 1 : plays.length + 1;
+  return `<section class="ax-fs-s k-end" data-fs="${n}" data-fs-end>
+      <div class="ax-fs-end">
+        <span class="tick">${AX_ICON.check}</span>
+        <b class="t">You're all caught up</b>
+        ${earned > 0 ? `<span class="e"><b class="m">+${fmtNum(earned)}</b> <span>set in motion</span></span>` : ''}
+        ${plays.length ? `<span class="h">TODAY · ${plays.length} PLAY${plays.length === 1 ? '' : 'S'}</span>
+          <span class="thumbs">${plays.map(c=> `<i class="k-${esc(c.kind)}${s.out[c.key] === 'acted' ? ' acted' : s.out[c.key] === 'saved' ? ' saved' : ' skip'}"></i>`).join('')}</span>
+          <span class="key"><span><i class="acted"></i>${acted} acted on</span>${saved ? `<span><i class="saved"></i>${saved} saved</span>` : ''}<span><i class="skip"></i>${skipped} skipped</span></span>` : ''}
+        <span class="fresh"><span class="ic">${PH.sunHorizon}</span><span class="b"><b>Fresh plays at ${hour}:00</b><small>sooner if a client asks</small></span></span>
+      </div>
+      <button type="button" class="ax-fs-cta" data-fs-close>Back to Today</button>
+    </section>`;
+}
+
+/* ---- "Not for me": why, what changes, and the feed re-tuned ---- */
+function feedNotMeOptions(c){
+  const day = (n)=> { const d = new Date(Date.now() + n * 86400000); return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); };
+  if(c.item && ['bonus', 'pin', 'addon', 'bulk'].includes(c.kind)){
+    const cat = itemCategory(c.item);
+    const taste = feedTaste(myOrders, catalog);
+    const sh = Math.round((taste.share.get(cat) || 0) * 100);
+    return [
+      { id: 'aisle', icon: categoryIconSVG(cat), t: `Show me fewer ${String(cat).toLowerCase()}`, s: sh ? `${String(cat).toLowerCase()} ${sh}% → ${Math.max(0, Math.round(sh * .66))}%` : 'less of this aisle', cat },
+      { id: 'item', icon: PH.eyeSlash, t: 'Hide just this item', s: `back on ${day(FEED_NOT_ME_DAYS)}` },
+      { id: 'clients', icon: PH.usersThree, t: 'My clients don’t buy it', s: 'only if a client orders it' },
+      { id: 'later', icon: AX_ICON.clock, t: 'Not right now', s: `ask me next ${FEED_WEEKDAY[new Date(Date.now() + 7 * 86400000).getDay()]}` },
+    ];
+  }
+  if(c.kind === 'due') return [
+    { id: 'later1', icon: AX_ICON.clock, t: 'Not today', s: 'back tomorrow' },
+    { id: 'quiet', icon: PH.moonStars || PH.eyeSlash, t: 'They’re on a break', s: `quiet until ${day(FEED_NOT_ME_DAYS)}` },
+  ];
+  if(c.kind === 'ask') return [
+    { id: 'answered', icon: AX_ICON.check, t: 'I’ve answered them', s: 'moves to Asked · answered' },
+    { id: 'later1', icon: AX_ICON.clock, t: 'Not right now', s: 'back tomorrow' },
+  ];
+  return [{ id: 'item', icon: PH.eyeSlash, t: 'Hide this', s: `back on ${day(FEED_NOT_ME_DAYS)}` }];
+}
+function feedTuneHTML(c, pick){
+  if(!c.item) return '';
+  const taste = feedTaste(myOrders, catalog);
+  const cat = itemCategory(c.item);
+  const top = [...taste.share.entries()].sort((a, b)=> b[1] - a[1]).slice(0, 5);
+  if(!top.some(([k])=> k === cat)) top.splice(Math.min(4, top.length), top.length >= 5 ? 1 : 0, [cat, taste.share.get(cat) || .05]);
+  const max = Math.max(...top.map(x=> x[1]), .01);
+  const COLORS = ['#7FB2F0', '#B6BFD3', '#F5B26B', '#E9B8DC', '#6FDCB0'];
+  return `<div class="tune"><span class="h"><b>Your feed</b><small>after this</small></span><span class="bars">${top.map(([k, v], i)=>{
+    const h = Math.max(8, Math.round(v / max * 56));
+    const down = k === cat && pick === 'aisle';
+    return `<span class="${down ? 'down' : ''}"><span class="col">${down ? `<i class="was" style="height:${h}px;"></i>` : ''}<i style="height:${down ? Math.max(6, Math.round(h * .66)) : h}px;background:${COLORS[i % COLORS.length]};"></i></span><small>${esc(shortName(k, 1))}${down ? ' ▼' : ''}</small></span>`;
+  }).join('')}</span></div>`;
+}
+function feedOpenNotMe(c){
+  const f = feedState;
+  if(!f || !c) return;
+  const opts = feedNotMeOptions(c);
+  f.nm = { card: c, pick: opts[0].id };
+  const next = f.deck[f.at] || null;
+  const paint = ()=>{
+    const pick = f.nm.pick;
+    nm.innerHTML = `<div class="peek"><span class="gone k-${esc(c.kind)}">${c.item ? `<span class="ic" style="${aisleTint(itemCategory(c.item))}">${categoryIconSVG(itemCategory(c.item))}</span><b>${esc(shortName(c.item.name, 3))}</b>` : c.client ? `<span class="av">${esc(clientInitials(c.client.name))}</span><b>${esc(shortName(c.client.name, 2))}</b>` : `<b>${esc((FEED_LOOK[c.kind] || {}).chip || '')}</b>`}<em>${PH.eyeSlash}</em></span>
+        ${next ? `<span class="arrow" aria-hidden="true"></span><span class="next k-${esc(next.kind)}"><small>up next</small><b>${esc(next.client ? shortName(next.client.name, 1) : next.item ? shortName(next.item.name, 2) : (FEED_LOOK[next.kind] || {}).chip || '')}</b></span>` : ''}</div>
+      <div class="sh"><span class="grab"></span>
+        <div class="hd"><span class="b"><b>Not for me — why?</b><small>your feed learns from this</small></span><button type="button" class="ax-fs-x" data-nm-close aria-label="Close">${AX_ICON.x}</button></div>
+        <div class="opts">${opts.map(o=> `<button type="button" class="${o.id === pick ? 'on' : ''}" data-nm-pick="${o.id}" aria-pressed="${o.id === pick}"><span class="ic">${o.icon}</span><span class="b"><b>${esc(o.t)}</b><small class="m">${esc(o.s)}</small></span><i>${o.id === pick ? AX_ICON.check : ''}</i></button>`).join('')}</div>
+        ${feedTuneHTML(c, pick)}
+        <div class="acts"><button type="button" class="undo" data-nm-close>Undo</button><button type="button" class="ok" data-nm-ok>Done · next play${AX_ICON.chevR}</button></div>
+      </div>`;
+  };
+  const nm = document.createElement('div');
+  nm.className = 'ax-fs-nm';
+  f.el.appendChild(nm);
+  paint();
+  nm.addEventListener('click', async (e)=>{
+    e.stopPropagation();
+    const p = e.target.closest('[data-nm-pick]');
+    if(p){ f.nm.pick = p.dataset.nmPick; paint(); return; }
+    if(e.target.closest('[data-nm-close]') || e.target === nm){ nm.remove(); f.nm = null; return; }
+    if(e.target.closest('[data-nm-ok]')){
+      const pick = f.nm.pick, prefs = feedPrefs();
+      if(pick === 'aisle'){ prefs.notMe[c.itemKey || c.key] = Date.now(); const cat = itemCategory(c.item); prefs.acted[cat] = 0; saveFeedPrefs(prefs); }
+      else if(pick === 'item' || pick === 'clients' || pick === 'quiet'){ prefs.notMe[c.itemKey || c.key] = Date.now(); saveFeedPrefs(prefs); }
+      else if(pick === 'later') feedSnooze(c.key, 7);
+      else if(pick === 'later1') feedSnooze(c.key, 1);
+      else if(pick === 'answered'){ await toggleInquiryHandled(Number(c.inq.id)); }
+      feedLog(c, 'notme');
+      feedOutcome(c, 'skipped');
+      nm.remove(); f.nm = null;
+      feedProgress();
+      feedNext();
+    }
+  });
+}
+
+/* ---- what the buttons do ---- */
+async function feedClick(e){
+  const f = feedState;
+  if(!f) return;
+  if(e.target.closest('[data-fs-close]')){ closeFeed(); return; }
+  if(e.target.closest('[data-fs-find]')){ closeFeed(true); switchTab('find'); return; }
+  const tab = e.target.closest('[data-fs-tab]');
+  if(tab){ f.tab = tab.dataset.fsTab; f.at = 0; feedPaint(); return; }
+  const b = e.target.closest('[data-fs-act]');
+  if(!b) return;
+  const act = b.dataset.fsAct;
+  if(act === 'start' || act === 'next'){ feedNext(); return; }
+  const slide = b.closest('[data-fs]');
+  const card = slide ? f.deck[Number(slide.dataset.fs) - 1] : null;
+  if(!card) return;
+  const leave = ()=> closeFeed(true);
+  if(act === 'call' || act === 'wa'){ feedLog(card, act === 'wa' ? 'shared' : 'acted'); feedOutcome(card, 'acted'); return; }
+  if(act === 'notme'){ feedOpenNotMe(card); return; }
+  if(act === 'tomorrow'){ feedSnooze(card.key, 1); feedOutcome(card, 'skipped'); feedProgress(); toast('Back tomorrow'); feedNext(); return; }
+  if(act === 'usual'){ feedLog(card, 'acted'); feedRemember(card, 'acted'); feedOutcome(card, 'acted'); leave(); orderUsual(card.client); return; }
+  if(act === 'add'){
+    feedLog(card, 'quoted'); feedRemember(card, 'acted'); feedOutcome(card, 'acted');
+    leave();
+    if(card.client) goToClientBasket(card.client);
+    await addCatalogLine(card.item, { unit: 'unit', displayQty: card.kind === 'bulk' ? card.tierQty : 1 });
+    switchTab('order');
+    return;
+  }
+  if(act === 'star'){
+    await toggleClusterMembership(card.item.productId, card.item.variantIdx);
+    const on = isInCluster(card.item.productId, card.item.variantIdx);
+    card.inCluster = on;
+    if(on){ feedLog(card, 'cluster'); feedOutcome(card, 'saved'); }
+    const o = b.querySelector('.o'), l = b.querySelector('.l');
+    if(o) o.classList.toggle('gold', on);
+    if(l) l.textContent = on ? 'Saved' : 'Save';
+    b.setAttribute('aria-pressed', String(on));
+    feedProgress();
+    return;
+  }
+  if(act === 'similar'){ leave(); goToAisle(itemCategory(card.item)); return; }
+  if(act === 'tell'){ feedTell(card); return; }
+  if(act === 'reply'){ feedLog(card, 'acted'); feedOutcome(card, 'acted'); replyToInquiry(card.inq, card.item || (card.matches && card.matches[0])); if(!card.inq.handled_at) toggleInquiryHandled(Number(card.inq.id)); setTimeout(feedNext, 600); return; }
+  if(act === 'answered'){ await toggleInquiryHandled(Number(card.inq.id)); feedOutcome(card, 'acted'); feedProgress(); feedNext(); return; }
+  if(act === 'wait' || act === 'wait0'){
+    const r = card.rows[act === 'wait0' ? 0 : Number(b.dataset.fsRow)];
+    if(!r) return;
+    feedOutcome(card, 'acted'); leave();
+    if(r.kind === 'claim') openMoneySheet(r.month); else openTrackSheet(r.order.id);
+    return;
+  }
+  if(act === 'win'){ markAchievementsSeen(card.fresh.map(a=> a.id)); feedOutcome(card, 'acted'); feedProgress(); feedNext(); return; }
+  if(act === 'useful'){ const p = feedPrefs(); p.about = 'yes'; saveFeedPrefs(p); b.querySelector('.o').classList.add('pink-on'); toast('Glad it helps'); return; }
+  if(act === 'notuseful'){ const p = feedPrefs(); if(card.kind === 'lesson') p.lessons[card.lesson.id] = Date.now(); else p.about = 'no'; saveFeedPrefs(p); feedNext(); return; }
+  if(act === 'lessondone'){ const p = feedPrefs(); p.lessons[card.lesson.id] = Date.now(); saveFeedPrefs(p); feedNext(); return; }
+}
+// "Tell buyers": the clients who bought it before, one WhatsApp each.
+function feedTell(card){
+  const it = card.item;
+  const e = card.earn || {};
+  const sheet = openSheet(`<div class="ax-sheet-title"><h3>Tell your buyers</h3><button type="button" class="ax-iconbtn" data-close aria-label="Close">${AX_ICON.x}</button></div>
+    <div class="ax-sheet-pad ax-fs-tell">${(card.buyers || []).map(x=>{
+      const ph = feedPhone(x.client);
+      const text = `Hello ${firstWord(x.client.name)}, ${it.name}${it.variantLabel ? ' ' + it.variantLabel : ''} is UGX ${fmtNum(Number(it.ourPrice || it.floorPrice) || 0)} this week. Shall I put some aside for you?`;
+      return `<div class="r">${avHTML(x.client, 'sm')}<span class="b"><b>${esc(x.client.name)}</b><small>last bought ${esc(x.last ? dateShort(x.last) : '—')}</small></span>${ph ? `<a class="go" href="${esc(feedWa(ph, text))}" target="_blank" rel="noopener" data-tell>${PH.whatsapp}Send</a>` : '<span class="none">no number</span>'}</div>`;
+    }).join('')}${e.total > 0 ? `<p class="ax-said">Each sale pays you +${fmtNum(e.total)}.</p>` : ''}</div>`, { label: 'Tell your buyers', kind: 'feedtell', white: true });
+  sheet.el.addEventListener('click', (ev)=>{ if(ev.target.closest('[data-tell]')){ feedLog(card, 'shared'); feedOutcome(card, 'acted'); } });
+}
+
+/* ---- the doors on Today ---- */
+function feedFabRender(){
+  let fab = document.getElementById('ag_feedFab');
+  const view = document.getElementById('ag_todayView');
+  if(!view) return;
+  if(!fab){
+    fab = document.createElement('div');
+    fab.id = 'ag_feedFab';
+    fab.className = 'ax-fs-fab';
+    view.appendChild(fab);
+    fab.addEventListener('click', (e)=>{ if(e.target.closest('[data-fab]')) openFeed(); });
+    // The label says what is waiting while you are at the top; once you
+    // scroll into the page it folds away and only the round button stays.
+    window.addEventListener('scroll', ()=> fab.classList.toggle('tight', window.scrollY > 60), { passive: true });
+  }
+  const deck = feedDeck(), plays = feedPlays(deck);
+  const s = feedRun();
+  const left = plays.filter(c=> !s.out[c.key]);
+  const hide = !left.length || feedCaughtUp(deck);
+  fab.hidden = hide;
+  if(hide){ fab.innerHTML = ''; return; }
+  const reach = left.reduce((a, c)=> a + feedPlayEarn(c), 0);
+  fab.innerHTML = `<button type="button" class="lbl" data-fab><b>${left.length} play${left.length === 1 ? '' : 's'} for you</b>${reach > 0 ? `<small class="m">+${fmtNum(reach)} in reach</small>` : ''}</button>
+    <button type="button" class="orb" data-fab aria-label="Open your plays, ${left.length} waiting"><span class="spin"></span><span class="core">${PH.sparkle}</span><em class="m">${left.length}</em></button>`;
+}
+function feedDecorateNext(){
+  const deck = feedDeck(), plays = feedPlays(deck);
+  const dots = document.getElementById('ag_nextDots');
+  const wrap = document.getElementById('ag_next');
+  if(!dots || !wrap) return;
+  const done = feedCaughtUp(deck);
+  const reach = plays.reduce((a, c)=> a + feedPlayEarn(c), 0);
+  if(plays.length){
+    dots.innerHTML = done
+      ? `<button type="button" class="ax-fs-play ghost" data-feed-open>${PH.playFill} <span>Replay feed</span></button>`
+      : `<button type="button" class="ax-fs-play" data-feed-open><span class="pi">${PH.playFill}</span><span>Play all ${plays.length}</span>${reach > 0 ? ` <b class="m">+${esc(fmtCompactUGX(reach))}</b>` : ''}</button>`;
+  }
+  if(done && plays.length){
+    const s = feedRun();
+    const earned = Object.values(s.earn || {}).reduce((a, b)=> a + (Number(b) || 0), 0);
+    const acted = plays.filter(c=> s.out[c.key] === 'acted').length;
+    const skipped = plays.filter(c=> s.out[c.key] !== 'acted' && s.out[c.key] !== 'saved');
+    const hour = (typeof notifyPrefs !== 'undefined' && notifyPrefs && notifyPrefs.morning_hour) || 7;
+    nextCards = skipped.slice(0, 6);
+    wrap.innerHTML = `<button type="button" class="ax-fs-caught" data-feed-end>
+        <span class="top">${ringSVG(64, 5, [{ frac: acted / plays.length, color: '#6FDCB0', round: true }], 'rgba(255,255,255,.14)')}<span class="f m">${acted}/${plays.length}</span>
+          <span class="b"><b>All caught up for today</b>${earned > 0 ? `<span><b class="m">+${fmtNum(earned)}</b> <small>set in motion</small></span>` : '<small>nothing left waiting</small>'}</span></span>
+        <span class="thumbs">${plays.map(c=> `<i class="k-${esc(c.kind)}${s.out[c.key] === 'acted' ? ' acted' : s.out[c.key] === 'saved' ? ' saved' : ' skip'}"></i>`).join('')}</span>
+        <span class="foot"><span>${PH.sunHorizon} Fresh plays at ${hour}:00</span><span class="see">See the recap ›</span></span>
+      </button>
+      ${nextCards.length ? `<div class="ax-plays-h"><span>You skipped ${nextCards.length}</span><span class="ax-plays-k">still open today</span></div>
+        <div class="ax-card ax-plays-list">${nextCards.map((c, i)=> playRowHTML(c, i)).join('')}</div>` : ''}`;
+  }
+}
+const feedBaseRenderNext = renderNext;
+renderNext = function(){ feedBaseRenderNext(); try{ feedDecorateNext(); feedFabRender(); }catch(err){ console.warn('Feed doors:', err); } };
+document.getElementById('ag_nextHead').addEventListener('click', (e)=>{ if(e.target.closest('[data-feed-open]')) openFeed(); });
+document.getElementById('ag_next').addEventListener('click', (e)=>{
+  if(e.target.closest('[data-feed-end]')){ openFeed(null, { end: true }); return; }
+  // The top card opens the feed at that play; its own buttons still act.
+  if(e.target.closest('button, a')) return;
+  const play = e.target.closest('.ax-play[data-nx]');
+  if(play){ const c = nextCards[Number(play.dataset.nx)]; if(c) openFeed(c.key); }
+});
 
 boot();
 </script>
