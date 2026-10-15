@@ -78,7 +78,8 @@ const fn = (n) => extractFunction(src, n, 'agent.html');
   const usual = fn('renderUsual');
   t.check(/possessive\(firstWord\(chosenClient\.name\)\)\)\} usual/.test(usual) && /data-usual-all/.test(usual),
     'a regular gets their usual as tiles, with one button for all of it');
-  t.check(/topCategories\(5\)/.test(usual) && /sellMostItems\(6\)/.test(usual),
+  const pad = fn('launchpadHTML');
+  t.check(/launchpadHTML\(\)/.test(usual) && /topCategories\(5\)/.test(pad) && /sellMostItems\(6\)/.test(pad),
     'someone new gets the aisles and what you sell most');
 }
 

@@ -296,6 +296,8 @@
 
     /* Avatar tints: identity, never state. Picked by the client's id so a
        person keeps their colour across every screen. */
+    /* an aisle tint, set per tile by aisleTint(); these are the untinted look */
+    --ai: var(--ink-soft); --ai-s: var(--tile);
     --av-0-bg:#DCEAF8; --av-0-fg:#1A5A8A;
     --av-1-bg:#F6E4F1; --av-1-fg:#7A3268;
     --av-2-bg:#DDF1EE; --av-2-fg:#0E5E57;
@@ -512,29 +514,37 @@
   /* ================= ORDER ================= */
   .ax-order{padding:14px 16px calc(250px + var(--safe-b));display:flex;flex-direction:column;gap:12px;}
   .ax-strip{display:flex;align-items:center;gap:8px;}
-  .ax-strip-scroll{display:flex;align-items:center;gap:8px;overflow-x:auto;flex:1;min-width:0;scrollbar-width:none;padding:4px 4px 4px 0;}
+  .ax-strip-scroll{display:flex;align-items:center;gap:8px;overflow-x:auto;flex:1;min-width:0;scrollbar-width:none;padding:6px 6px 4px 0;}
   .ax-strip-scroll::-webkit-scrollbar{display:none;}
   .ax-who{
-    all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:8px;flex:none;height:44px;padding:0 14px 0 4px;
-    border-radius:999px;background:var(--ink);color:#fff;max-width:230px;
+    all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:10px;flex:1;min-width:0;height:52px;padding:0 12px 0 7px;
+    border-radius:16px;background:var(--panel);color:var(--ink);
+    box-shadow:0 1px 2px rgba(22,32,60,.05),0 6px 16px rgba(22,32,60,.06),inset 0 0 0 1px var(--line);
   }
-  .ax-who .ax-av{width:36px;height:36px;font-size:13px;}
-  .ax-who .nm{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .ax-who.empty{background:transparent;color:var(--ink);border:1.5px dashed var(--ink-soft);padding:0 16px;}
-  .ax-who.empty .icon{width:18px;height:18px;}
+  .ax-who .ax-av{width:38px;height:38px;font-size:13px;}
+  .ax-who .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+  .ax-who .nm{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ax-who .s{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--ink-faint);white-space:nowrap;overflow:hidden;}
+  .ax-who .s i{width:6px;height:6px;flex:none;border-radius:999px;background:var(--good);}
+  .ax-who .s.new{color:var(--good);font-weight:700;}
+  .ax-who .s .icon{width:12px;height:12px;stroke-width:2.4;}
+  .ax-who > .icon{width:18px;height:18px;color:var(--ink-soft);stroke-width:2.2;}
+  .ax-who.empty{background:transparent;box-shadow:none;border:1.5px dashed var(--ink-soft);padding:0 14px;}
+  .ax-who.empty > .icon:first-child{width:20px;height:20px;color:var(--ink);}
   .ax-ob{
-    all:unset;box-sizing:border-box;cursor:pointer;position:relative;width:44px;height:44px;flex:none;border-radius:999px;
-    display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;
+    all:unset;box-sizing:border-box;cursor:pointer;position:relative;height:52px;flex:none;border-radius:16px;padding:0 10px 0 7px;
+    display:flex;align-items:center;gap:6px;background:var(--panel);box-shadow:0 1px 2px rgba(22,32,60,.05),inset 0 0 0 1px var(--line);
   }
-  .ax-ob.t0{background:var(--av-0-bg);color:var(--av-0-fg);}
-  .ax-ob.t1{background:var(--av-1-bg);color:var(--av-1-fg);}
-  .ax-ob.t2{background:var(--av-2-bg);color:var(--av-2-fg);}
-  .ax-ob.t3{background:var(--av-3-bg);color:var(--av-3-fg);}
-  .ax-ob.t4{background:var(--av-4-bg);color:var(--av-4-fg);}
-  .ax-ob.parked{border:2px dashed #9AA1AE;background:var(--panel);}
-  .ax-ob.new{border:1.5px dashed #9AA1AE;color:var(--ink-soft);}
-  .ax-ob .icon{width:18px;height:18px;stroke-width:2;}
-  .ax-ob .c{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:var(--ink);color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;}
+  .ax-ob .icon{width:18px;height:18px;color:var(--ink-soft);}
+  .ax-ob-av{width:34px;height:34px;flex:none;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;
+    background:var(--tile);color:var(--ink);box-shadow:0 0 0 2px var(--panel),0 0 0 3.5px var(--warn);}
+  .ax-ob-av.t0{background:var(--av-0-bg);color:var(--av-0-fg);}
+  .ax-ob-av.t1{background:var(--av-1-bg);color:var(--av-1-fg);}
+  .ax-ob-av.t2{background:var(--av-2-bg);color:var(--av-2-fg);}
+  .ax-ob-av.t3{background:var(--av-3-bg);color:var(--av-3-fg);}
+  .ax-ob-av.t4{background:var(--av-4-bg);color:var(--av-4-fg);}
+  .ax-ob .c{position:absolute;top:-5px;right:-5px;min-width:20px;height:20px;padding:0 5px;box-sizing:border-box;border-radius:999px;background:var(--warn);color:#fff;
+    font-family:var(--font-money);font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px var(--bg);}
   .ax-search{
     box-sizing:border-box;cursor:text;display:flex;align-items:center;gap:10px;height:52px;padding:0 6px 0 14px;border-radius:14px;
     background:var(--panel);border:1px solid var(--line);color:var(--ink-soft);width:100%;
@@ -576,14 +586,17 @@
   .ax-uc-h .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
   .ax-uc-h .n{font-size:16px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .ax-uc-h .s{font-size:12px;color:var(--on-navy);}
+  .ax-uc-h .sg{display:flex;gap:3px;margin-top:5px;}
+  .ax-uc-h .sg i{flex:1;height:4px;border-radius:999px;background:rgba(255,255,255,.14);}
+  .ax-uc-h .sg i.on{background:var(--mint);}
   .ax-uc-h .e{display:flex;flex-direction:column;align-items:flex-end;gap:1px;}
   .ax-uc-h .e b{font-family:var(--font-money);font-size:15px;font-weight:600;color:var(--mint);}
   .ax-uc-h .e small{font-size:11px;color:var(--on-navy);}
   .ax-uc-g{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
   .ax-uct{border-radius:14px;background:var(--panel);color:var(--ink);overflow:hidden;display:flex;flex-direction:column;}
-  .ax-uct .im{height:58px;background:var(--tile);color:var(--ink-soft);display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .ax-uct .im{height:58px;background:linear-gradient(150deg,var(--ai-s) 0%,#fff 160%);color:var(--ai);display:flex;align-items:center;justify-content:center;overflow:hidden;}
   .ax-uct .im img{width:100%;height:100%;object-fit:cover;}
-  .ax-uct .im .icon{width:24px;height:24px;stroke-width:1.6;}
+  .ax-uct .im .icon{width:30px;height:30px;}
   .ax-uct .t{flex:1;padding:8px 8px 0;display:flex;flex-direction:column;gap:2px;}
   .ax-uct .nm{font-size:12px;font-weight:700;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
   .ax-uct .f{font-size:11px;font-weight:600;color:var(--ink-faint);}
@@ -598,33 +611,95 @@
   .ax-uc-in .icon{width:16px;height:16px;stroke-width:2.6;}
 
   /* someone new: the aisles and what you sell most */
+  .icon.ph{fill:currentColor;stroke:none;}
   .ax-lp-cats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
-  .ax-lpc{all:unset;box-sizing:border-box;cursor:pointer;height:80px;border-radius:14px;background:var(--panel);border:1px solid var(--line);
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:700;color:var(--ink);text-align:center;padding:0 4px;}
-  .ax-lpc span:last-child{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .ax-lpc .ic{color:var(--ink-soft);display:flex;}
-  .ax-lpc .ic .icon,.ax-lpc .ic svg{width:24px;height:24px;}
-  .ax-lpc.all{background:var(--tile);color:var(--ink-soft);}
-  .ax-lp-h{display:flex;align-items:center;gap:6px;font-size:15px;font-weight:700;padding:6px 2px 0;}
-  .ax-lp-h .icon{width:16px;height:16px;color:var(--warn);stroke-width:2;}
-  .ax-lp-row{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px 4px;}
+  .ax-lpc{all:unset;box-sizing:border-box;cursor:pointer;position:relative;height:92px;border-radius:18px;background:var(--panel);
+    box-shadow:0 1px 2px rgba(22,32,60,.06),inset 0 0 0 1px var(--line);display:flex;flex-direction:column;justify-content:space-between;
+    padding:11px 12px;color:var(--ink);min-width:0;}
+  .ax-lpc .ic{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(145deg,var(--ai-s) 0%,#fff 150%);color:var(--ai);}
+  .ax-lpc .ic .icon{width:22px;height:22px;}
+  .ax-lpc .t{display:flex;flex-direction:column;min-width:0;}
+  .ax-lpc .nm{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ax-lpc .n{font-family:var(--font-money);font-size:11px;color:var(--ink-faint);white-space:nowrap;}
+  .ax-lpc .bn{position:absolute;top:8px;right:8px;height:18px;padding:0 6px;border-radius:999px;background:var(--warn-bg);color:var(--warn-ink);
+    font-size:11px;font-weight:700;display:flex;align-items:center;gap:3px;}
+  .ax-lpc .bn .icon{width:10px;height:10px;fill:currentColor;stroke:none;}
+  .ax-lpc.all{background:linear-gradient(150deg,#243052,var(--navy));box-shadow:0 8px 20px rgba(22,32,60,.22);color:#fff;}
+  .ax-lpc.all .ic{background:rgba(255,255,255,.12);color:#fff;}
+  .ax-lpc.all .n{color:var(--on-navy);}
+  .ax-lp-h{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;padding:6px 2px 0;}
+  .ax-lp-h > span:first-of-type{flex:1;}
+  .ax-lp-h .icon{width:18px;height:18px;color:var(--ink-soft);}
+  .ax-lp-h.hot .icon{color:#C93A30;fill:currentColor;}
+  .ax-lp-h.bonus .icon{color:var(--warn);fill:currentColor;}
+  .ax-lp-n{font-family:var(--font-money);font-size:12px;font-weight:600;color:var(--warn-ink);}
+  .ax-lp-load{display:flex;align-items:center;gap:6px;height:26px;padding:0 10px 0 8px;border-radius:999px;background:var(--panel);
+    box-shadow:inset 0 0 0 1px var(--line);font-size:12px;font-weight:600;color:var(--ink-soft);}
+  .ax-spin{width:12px;height:12px;border-radius:999px;border:2px solid var(--line);border-top-color:var(--ink);animation:axSpin .8s linear infinite;box-sizing:border-box;}
+  .ax-lp-row{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px 6px;}
   .ax-lp-row::-webkit-scrollbar{display:none;}
-  .ax-lpi{flex:none;width:132px;border-radius:14px;background:var(--panel);border:1px solid var(--line);overflow:hidden;display:flex;flex-direction:column;}
-  .ax-lpi .im{height:72px;background:var(--tile);color:var(--ink-soft);display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .ax-lpi{flex:none;width:148px;border-radius:20px;background:var(--panel);overflow:hidden;display:flex;flex-direction:column;
+    box-shadow:0 1px 2px rgba(22,32,60,.06),0 8px 20px rgba(22,32,60,.06),inset 0 0 0 1px var(--line);}
+  .ax-lpi.bonus{box-shadow:0 1px 2px rgba(22,32,60,.06),0 8px 20px rgba(22,32,60,.06),inset 0 0 0 1px #F5D9B0;}
+  .ax-lpi .im{position:relative;height:104px;display:flex;align-items:center;justify-content:center;overflow:hidden;
+    background:linear-gradient(150deg,var(--ai-s) 0%,#fff 160%);color:var(--ai);}
   .ax-lpi .im img{width:100%;height:100%;object-fit:cover;}
-  .ax-lpi .im .icon{width:26px;height:26px;stroke-width:1.6;}
-  .ax-lpi .nm{padding:8px 10px 0;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .ax-lpi .r{display:flex;align-items:center;justify-content:space-between;padding:6px 6px 8px 10px;}
-  .ax-lpi .p{font-family:var(--font-money);font-size:13px;font-weight:600;}
-  .ax-lpi button{all:unset;box-sizing:border-box;cursor:pointer;width:44px;height:44px;border-radius:999px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;}
+  .ax-lpi .im .icon{width:48px;height:48px;}
+  .ax-lpi .rk{position:absolute;top:8px;left:8px;min-width:24px;height:24px;padding:0 6px;box-sizing:border-box;border-radius:999px;background:#fff;color:var(--ink);
+    font-family:var(--font-money);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.12);}
+  .ax-lpi .rk.gold{background:linear-gradient(150deg,#F5C451,#C27A12);color:#fff;}
+  .ax-lpi .im .bn{position:absolute;top:8px;right:8px;height:20px;padding:0 7px;border-radius:999px;background:#fff;color:var(--warn-ink);
+    font-size:11px;font-weight:700;display:flex;align-items:center;gap:3px;box-shadow:0 1px 2px rgba(0,0,0,.08);}
+  .ax-lpi .im .bn .icon{width:10px;height:10px;fill:currentColor;stroke:none;color:var(--warn);}
+  .ax-lpi .bd{padding:10px 10px 10px 12px;display:flex;flex-direction:column;gap:7px;flex:1;}
+  .ax-lpi .nm{font-size:13px;font-weight:700;line-height:1.25;height:33px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+  .ax-lpi .hb{display:flex;align-items:center;gap:6px;}
+  .ax-lpi .hb .tr{flex:1;height:4px;border-radius:999px;background:var(--tile);overflow:hidden;}
+  .ax-lpi .hb .tr i{display:block;height:100%;border-radius:999px;background:var(--ai);}
+  .ax-lpi .hb b{font-family:var(--font-money);font-size:11px;font-weight:600;color:var(--ink-soft);}
+  .ax-lpi .yo{align-self:flex-start;height:22px;padding:0 8px;border-radius:999px;background:var(--good-bg);color:var(--good);
+    font-family:var(--font-money);font-size:11px;font-weight:600;display:flex;align-items:center;}
+  .ax-lpi .yb{align-self:flex-start;height:22px;padding:0 8px;border-radius:999px;background:var(--warn-bg);color:var(--warn-ink);
+    font-size:11px;font-weight:700;display:flex;align-items:center;gap:4px;}
+  .ax-lpi .yb b{font-family:var(--font-money);font-weight:600;}
+  .ax-lpi .yb .icon{width:11px;height:11px;fill:currentColor;stroke:none;color:var(--warn);}
+  .ax-lpi .r{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:auto;}
+  .ax-lpi .p{display:flex;flex-direction:column;line-height:1.15;min-width:0;}
+  .ax-lpi .p b{font-family:var(--font-money);font-size:14px;font-weight:600;}
+  .ax-lpi .p small{font-size:11px;font-weight:600;color:var(--ink-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ax-lpi button{all:unset;box-sizing:border-box;cursor:pointer;flex:none;width:44px;height:44px;border-radius:999px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;}
   .ax-lpi button .icon{width:16px;height:16px;stroke-width:2.6;}
-  .ax-lpi .in{width:44px;height:44px;border-radius:999px;background:var(--good-bg);color:var(--good);display:flex;align-items:center;justify-content:center;}
+  .ax-lpi .in{flex:none;width:44px;height:44px;border-radius:999px;background:var(--good-bg);color:var(--good);display:flex;align-items:center;justify-content:center;}
   .ax-lpi .in .icon{width:16px;height:16px;stroke-width:2.6;}
+  .ax-lp-ghost{display:flex;align-items:center;gap:12px;height:52px;padding:0 14px;border-radius:16px;border:1.5px dashed #CFCAC0;
+    box-sizing:border-box;font-size:13px;font-weight:600;color:var(--ink-soft);}
+  .ax-lp-ghost .bars{display:flex;align-items:flex-end;gap:3px;height:28px;}
+  .ax-lp-ghost .bars i{width:8px;border-radius:3px;background:var(--line);}
+  .ax-lp-ghost .bars i:nth-child(1){height:14px;}
+  .ax-lp-ghost .bars i:nth-child(2){height:28px;background:#D9D4CA;}
+  .ax-lp-ghost .bars i:nth-child(3){height:20px;}
+  .ax-lp-none{display:flex;align-items:center;justify-content:center;gap:8px;min-height:64px;font-size:14px;font-weight:600;color:var(--ink-faint);}
+  .ax-lp-none .icon{width:18px;height:18px;}
+  /* the shape of the list while it is on its way */
+  .ax-sk{display:block;border-radius:6px;background:linear-gradient(90deg,#EDEAE4 0%,#F7F5F2 40%,#EDEAE4 80%);background-size:300% 100%;animation:axShim 1.4s linear infinite;}
+  @keyframes axShim{0%{background-position:100% 0}100%{background-position:-200% 0}}
+  @media (prefers-reduced-motion:reduce){ .ax-sk,.ax-spin{animation:none;} }
+  .ax-sk-tile{height:92px;border-radius:18px;background:var(--panel);box-shadow:inset 0 0 0 1px var(--line);display:flex;flex-direction:column;gap:6px;padding:11px 12px;box-sizing:border-box;}
+  .ax-sk-tile .sq{width:38px;height:38px;border-radius:12px;flex:none;}
+  .ax-sk-tile .ln{height:11px;width:70%;margin-top:auto;}
+  .ax-sk-tile .ln.s{height:9px;width:40%;margin-top:0;}
+  .ax-sk-card{flex:none;width:148px;height:230px;border-radius:20px;background:var(--panel);box-shadow:inset 0 0 0 1px var(--line);overflow:hidden;display:flex;flex-direction:column;gap:8px;}
+  .ax-sk-card .art{height:104px;border-radius:0;flex:none;}
+  .ax-sk-card .sb{flex:1;display:flex;flex-direction:column;gap:8px;padding:2px 12px 14px;}
+  .ax-sk-card .ln{height:11px;width:90%;}
+  .ax-sk-card .ln.s{width:60%;}
+  .ax-sk-card .ln.p{width:45%;height:14px;margin-top:auto;}
   .ax-lp-chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:4px 16px;}
   .ax-lp-chips::-webkit-scrollbar{display:none;}
-  .ax-lp-chips button{all:unset;box-sizing:border-box;cursor:pointer;flex:none;height:44px;padding:0 14px;border-radius:999px;background:var(--panel);border:1px solid var(--line);
+  .ax-lp-chips button{all:unset;box-sizing:border-box;cursor:pointer;flex:none;height:44px;padding:0 14px 0 10px;border-radius:999px;background:var(--panel);border:1px solid var(--line);
     font-size:13px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px;}
-  .ax-lp-chips .icon{width:15px;height:15px;color:var(--ink-soft);}
+  .ax-lp-chips .icon{width:18px;height:18px;color:var(--ai);}
 
   .ax-lines{display:flex;flex-direction:column;gap:8px;}
   .ax-line{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:14px;}
@@ -754,9 +829,9 @@
   .ax-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
   .ax-pt{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden;display:flex;flex-direction:column;}
   .ax-pt.in{border:2px solid var(--ink);}
-  .ax-pt-im{all:unset;box-sizing:border-box;height:88px;background:var(--tile);display:flex;align-items:center;justify-content:center;position:relative;color:var(--ink-soft);cursor:zoom-in;}
+  .ax-pt-im{all:unset;box-sizing:border-box;height:88px;background:linear-gradient(150deg,var(--ai-s) 0%,#fff 170%);display:flex;align-items:center;justify-content:center;position:relative;color:var(--ai);cursor:zoom-in;}
   .ax-pt-im img{width:100%;height:100%;object-fit:cover;}
-  .ax-pt-im .icon{width:34px;height:34px;stroke-width:1.5;}
+  .ax-pt-im .icon{width:40px;height:40px;stroke-width:1.5;}
   .ax-pt-tag{position:absolute;top:8px;left:8px;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:4px;}
   .ax-pt-tag.in{background:var(--ink);color:#fff;}
   .ax-pt-tag.zero{background:var(--warn-bg);color:var(--warn-ink);font-family:var(--font-money);}
@@ -1154,11 +1229,49 @@
   .ax-grow .v{font-family:var(--font-money);font-size:15px;font-weight:600;color:var(--good);}
   .ax-grow .go{width:36px;height:36px;border-radius:999px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;flex:none;}
   .ax-grow .go .icon{width:16px;height:16px;stroke-width:2.4;}
-  .ax-pickrow{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:12px;padding:8px 0;width:100%;min-height:56px;}
+  .ax-cp-list{display:flex;flex-direction:column;gap:8px;}
+  .ax-cp-h{display:flex;align-items:center;gap:8px;padding:6px 2px 0;font-size:14px;font-weight:700;}
+  .ax-cp-h span{flex:1;}
+  .ax-cp-h .icon{width:18px;height:18px;color:var(--ink-soft);}
+  .ax-cp-h b{font-family:var(--font-money);font-size:12px;font-weight:600;color:var(--ink-faint);}
+  .ax-cp-open{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:12px;min-height:64px;padding:0 10px 0 12px;border-radius:18px;
+    background:linear-gradient(150deg,#FFF8EE,#FDEBD3);box-shadow:inset 0 0 0 1px #F5D9B0;color:var(--ink);}
+  .ax-cp-open .ax-av{width:38px;height:38px;font-size:12px;box-shadow:0 0 0 2px #FFF8EE,0 0 0 3.5px var(--warn);}
+  .ax-cp-open .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .ax-cp-open .nm{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ax-cp-open .s{font-family:var(--font-money);font-size:12px;font-weight:600;color:var(--warn-ink);}
+  .ax-cp-open .go{flex:none;height:40px;padding:0 14px;border-radius:999px;background:var(--navy);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;}
+  .ax-cp-open .go .icon{width:14px;height:14px;stroke-width:2.4;}
+  .ax-pickrow{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:12px;padding:0 12px 0 10px;width:100%;min-height:60px;
+    border-radius:16px;background:var(--panel);box-shadow:0 1px 2px rgba(22,32,60,.05),inset 0 0 0 1px var(--line);}
+  .ax-pickrow.now{box-shadow:0 1px 2px rgba(22,32,60,.05),inset 0 0 0 1.5px var(--good);}
   .ax-pickrow .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
-  .ax-pickrow .nm{font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .ax-pickrow .s{font-size:12px;font-weight:600;color:var(--ink-faint);}
-  .ax-pickrow .s.warn{color:var(--warn);}
+  .ax-pickrow .nm{font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ax-pickrow .s{font-size:12px;font-weight:600;color:var(--ink-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ax-pickrow .s.warn{color:var(--warn-ink);}
+  .ax-pickrow .s.quiet{color:var(--bad,#8E2A22);}
+  .ax-pickrow .now{flex:none;height:28px;padding:0 10px 0 7px;border-radius:999px;background:var(--good-bg);color:var(--good);font-size:12px;font-weight:700;display:flex;align-items:center;gap:4px;}
+  .ax-pickrow .now .icon{width:14px;height:14px;stroke-width:2.8;}
+  .ax-pickrow .live{flex:none;width:34px;height:34px;border-radius:999px;background:var(--tile);color:var(--ink-soft);display:flex;align-items:center;justify-content:center;}
+  .ax-pickrow .live .icon{width:16px;height:16px;}
+  .ax-cp-ring{position:relative;flex:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;}
+  .ax-cp-ring svg{position:absolute;inset:0;}
+  .ax-cp-ring circle{stroke:var(--good);}
+  .ax-cp-ring circle.tr{stroke:var(--line);}
+  .ax-cp-ring.due circle{stroke:var(--warn);}
+  .ax-cp-ring.quiet circle{stroke:var(--bad,#C93A30);}
+  .ax-cp-ring.due circle.tr,.ax-cp-ring.quiet circle.tr{stroke:var(--line);}
+  .ax-cp-ring b{position:relative;font-family:var(--font-money);font-size:11px;letter-spacing:-.03em;font-weight:600;color:var(--ink);}
+  .ax-cp-none{display:flex;align-items:center;justify-content:center;gap:8px;min-height:64px;font-size:14px;font-weight:600;color:var(--ink-faint);}
+  .ax-cp-none .icon{width:18px;height:18px;}
+  .ax-cp-ghost{display:flex;align-items:center;gap:12px;min-height:64px;padding:0 14px;border-radius:16px;border:1.5px dashed #CFCAC0;font-size:13px;font-weight:600;color:var(--ink-soft);}
+  .ax-cp-ghost-avs{display:flex;}
+  .ax-cp-ghost-avs i{width:28px;height:28px;border-radius:999px;background:var(--tile);box-shadow:0 0 0 2px var(--panel);}
+  .ax-cp-ghost-avs i + i{transform:translateX(-8px);}
+  .ax-cp-ghost-avs i + i + i{transform:translateX(-16px);}
+  .ax-cp-new{all:unset;box-sizing:border-box;cursor:pointer;position:sticky;bottom:8px;height:56px;border-radius:999px;background:var(--navy);color:#fff;
+    font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 8px 20px rgba(22,32,60,.22);margin-top:4px;}
+  .ax-cp-new .icon{width:20px;height:20px;}
   .ax-linkbox{display:flex;align-items:center;gap:8px;padding:12px 14px;border-radius:14px;background:var(--tile);font-family:var(--font-money);font-size:13px;word-break:break-all;}
   .ax-confirm{font-size:14px;line-height:1.5;color:var(--ink-soft);margin:0;}
   .ax-confirm b{color:var(--ink);}
@@ -1169,7 +1282,7 @@
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:0 6px;
   }
   .ax-cat.on{border:2px solid var(--ink);}
-  .ax-cat .ic{width:40px;height:40px;border-radius:12px;background:var(--tile);display:flex;align-items:center;justify-content:center;color:var(--ink-soft);}
+  .ax-cat .ic{width:40px;height:40px;border-radius:12px;background:linear-gradient(145deg,var(--ai-s) 0%,#fff 150%);display:flex;align-items:center;justify-content:center;color:var(--ai);}
   .ax-cat .nm{font-size:12px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .ax-cat .n{font-family:var(--font-money);font-size:11px;color:var(--ink-faint);}
   .ax-quick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
@@ -4991,28 +5104,42 @@ function bonusFlagLabel(promo){
 }
 
 
-const ICON_PLACEHOLDER = `<svg class="icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>`;
 const ICON_WARN = `<svg class="icon" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>`;
 
-// Flat, single-path category icons keyed by keyword match against the
-// shop's own free-text category names -- there's no fixed taxonomy to
-// hardcode a real icon set against, so this degrades gracefully to a
-// generic package icon for anything unrecognized.
-const CAT_ICONS = [
-  { test: /cement|concrete/, svg: `<path d="M9 3h6l1.5 4.5v11A2.5 2.5 0 0114 21h-4a2.5 2.5 0 01-2.5-2.5v-11L9 3z"/><path d="M9 8h6"/><path d="M9 13h6"/>` },
-  { test: /steel|iron|metal/, svg: `<path d="M14.7 6.3a4 4 0 10-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 005.4-5.4l-2.8 2.8-2-2z"/>` },
-  { test: /pipe|plumb|water/, svg: `<path d="M12 2c4 5 7 9.5 7 13a7 7 0 01-14 0c0-3.5 3-8 7-13z"/>` },
-  { test: /electr|cable|wire/, svg: `<path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/>` },
-  { test: /paint/, svg: `<rect x="4" y="4" width="12" height="6" rx="1.5"/><path d="M10 10v3a2 2 0 002 2h1a2 2 0 002-2v-1a2 2 0 012-2h1"/><path d="M18 12v6"/>` },
-  { test: /wood|timber/, svg: `<rect x="3" y="6" width="18" height="3" rx="1"/><rect x="3" y="11" width="18" height="3" rx="1"/><rect x="3" y="16" width="18" height="3" rx="1"/>` },
-  { test: /roof/, svg: `<path d="M3 11L12 4l9 7"/><path d="M5 10v10h14V10"/>` },
-  { test: /tool|hardware/, svg: `<path d="M17 3l4 4-3 3-4-4 3-3z"/><path d="M14 6l-9.5 9.5a1.5 1.5 0 002 2L16 8"/>` },
-  { test: /nail|screw|fasten|bolt/, svg: `<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>` },
+/* ================= AISLE ICONS =================
+   Each aisle has one real icon and one tint, the same on every screen --
+   a tile, a chip, an item with no photo of its own. An agent learns the
+   blue house is roofing and stops reading the word. Drawn from the
+   Phosphor set (MIT), duotone: a soft fill under a clean line. */
+const AISLE_ICONS = [
+  { test: /roof|sheet/, ink:'#1A5A8A', soft:'#DCEAF8', d: '<path d="M216,116.69V216H152V152H104v64H40V116.69l82.34-82.35a8,8,0,0,1,11.32,0Z" opacity="0.2"/><path d="M240,208H224V136l2.34,2.34A8,8,0,0,0,237.66,127L139.31,28.68a16,16,0,0,0-22.62,0L18.34,127a8,8,0,0,0,11.32,11.31L32,136v72H16a8,8,0,0,0,0,16H240a8,8,0,0,0,0-16ZM48,120l80-80,80,80v88H160V152a8,8,0,0,0-8-8H104a8,8,0,0,0-8,8v56H48Zm96,88H112V160h32Z"/>' },
+  { test: /cement|concrete|sand|aggregate|ballast|mortar/, ink:'#5F6980', soft:'#EFECE6', d: '<path d="M128,129.09V232a8,8,0,0,1-3.84-1l-88-48.18a8,8,0,0,1-4.16-7V80.18a8,8,0,0,1,.7-3.25Z" opacity="0.2"/><path d="M223.68,66.15,135.68,18a15.88,15.88,0,0,0-15.36,0l-88,48.17a16,16,0,0,0-8.32,14v95.64a16,16,0,0,0,8.32,14l88,48.17a15.88,15.88,0,0,0,15.36,0l88-48.17a16,16,0,0,0,8.32-14V80.18A16,16,0,0,0,223.68,66.15ZM128,32l80.34,44-29.77,16.3-80.35-44ZM128,120,47.66,76l33.9-18.56,80.34,44ZM40,90l80,43.78v85.79L40,175.82Zm176,85.78h0l-80,43.79V133.82l32-17.51V152a8,8,0,0,0,16,0V107.55L216,90v85.77Z"/>' },
+  { test: /block|brick|stone|wall/, ink:'#8E4A22', soft:'#F6E6DC', d: '<path d="M128,104H32V56h96Zm48,0v48H128v48h96V104Z" opacity="0.2"/><path d="M224,48H32a8,8,0,0,0-8,8V200a8,8,0,0,0,8,8H224a8,8,0,0,0,8-8V56A8,8,0,0,0,224,48ZM88,144V112h80v32Zm-48,0V112H72v32Zm144-32h32v32H184Zm32-16H136V64h80ZM120,64V96H40V64ZM40,160h80v32H40Zm96,32V160h80v32Z"/>' },
+  { test: /nail|screw|fasten|bolt|nut|rivet/, ink:'#3A3F9B', soft:'#E4E6FA', d: '<path d="M219.84,73.16,131.84,25a8,8,0,0,0-7.68,0l-88,48.18a8,8,0,0,0-4.16,7v95.64a8,8,0,0,0,4.16,7l88,48.18a8,8,0,0,0,7.68,0l88-48.18a8,8,0,0,0,4.16-7V80.18A8,8,0,0,0,219.84,73.16ZM128,168a40,40,0,1,1,40-40A40,40,0,0,1,128,168Z" opacity="0.2"/><path d="M128,80a48,48,0,1,0,48,48A48.06,48.06,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm95.68-93.85L135.68,18a15.88,15.88,0,0,0-15.36,0l-88,48.17a16,16,0,0,0-8.32,14v95.64a16,16,0,0,0,8.32,14l88,48.17a15.88,15.88,0,0,0,15.36,0l88-48.17h0a16,16,0,0,0,8.32-14V80.18A16,16,0,0,0,223.68,66.15ZM128,224,40,175.82V80.18L128,32l88,48.17v95.63Z"/>' },
+  { test: /pipe|plumb|water|ppr|pvc|fitting/, ink:'#0E6A6A', soft:'#DDF1F0', d: '<path d="M168,48v64H144a32,32,0,0,0-32,32v24H48V144a96,96,0,0,1,96-96Z" opacity="0.2"/><path d="M232,104H208V56h24a8,8,0,0,0,0-16H205.83A16,16,0,0,0,192,32H176a16,16,0,0,0-13.83,8H144A104.11,104.11,0,0,0,40,144v18.16A16,16,0,0,0,32,176v16a16,16,0,0,0,8,13.84V232a8,8,0,0,0,16,0V208h48v24a8,8,0,0,0,16,0V205.84A16,16,0,0,0,128,192V176a16,16,0,0,0-8-13.84V144a24,24,0,0,1,24-24h18.17A16,16,0,0,0,176,128h16a16,16,0,0,0,13.83-8H232a8,8,0,0,0,0-16ZM112,176v16H48V176Zm-8-32v16H56V144a88.1,88.1,0,0,1,88-88h16v48H144A40,40,0,0,0,104,144Zm72-32V48h16v63.8c0,.07,0,.13,0,.2Z"/>' },
+  { test: /sanit|toilet|basin|sink|tap|shower|bath/, ink:'#1A5A8A', soft:'#DCF0F8', d: '<path d="M167.92,222.87A8,8,0,0,1,160,232H96a8,8,0,0,1-7.92-9.13l4.34-30.36h0a88.21,88.21,0,0,0,71.14,0h0ZM184,32H72a8,8,0,0,0-8,8v72H192V40A8,8,0,0,0,184,32Z" opacity="0.2"/><path d="M120,64a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h16A8,8,0,0,1,120,64Zm52.32,133.14,3.52,24.6A16,16,0,0,1,160,240H96a16,16,0,0,1-15.84-18.26l3.52-24.6A96.09,96.09,0,0,1,32,112a8,8,0,0,1,8-8H56V40A16,16,0,0,1,72,24H184a16,16,0,0,1,16,16v64h16a8,8,0,0,1,8,8A96.09,96.09,0,0,1,172.32,197.14ZM72,104H184V40H72Zm85.07,99.5a96.15,96.15,0,0,1-58.14,0L96,224h64ZM207.6,120H48.4a80,80,0,0,0,159.2,0Z"/>' },
+  { test: /paint|colou?r|varnish|primer|emulsion/, ink:'#7A3268', soft:'#F6E4F1', d: '<path d="M208,64v64a8,8,0,0,1-8,8H48a8,8,0,0,1-8-8V64a8,8,0,0,1,8-8H200A8,8,0,0,1,208,64Z" opacity="0.2"/><path d="M232,88H216V64a16,16,0,0,0-16-16H48A16,16,0,0,0,32,64V88H16a8,8,0,0,0,0,16H32v24a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V104h16v50L131.6,182.65A16.07,16.07,0,0,0,120,198v34a8,8,0,0,0,16,0V198l100.4-28.68A16.07,16.07,0,0,0,248,154V104A16,16,0,0,0,232,88Zm-32,40H48V64H200v64Z"/>' },
+  { test: /electr|cable|wire|switch|socket|bulb|light/, ink:'#95530C', soft:'#FDEEE1', d: '<path d="M96,240l16-80L48,136,160,16,144,96l64,24Z" opacity="0.2"/><path d="M215.79,118.17a8,8,0,0,0-5-5.66L153.18,90.9l14.66-73.33a8,8,0,0,0-13.69-7l-112,120a8,8,0,0,0,3,13l57.63,21.61L88.16,238.43a8,8,0,0,0,13.69,7l112-120A8,8,0,0,0,215.79,118.17ZM109.37,214l10.47-52.38a8,8,0,0,0-5-9.06L62,132.71l84.62-90.66L136.16,94.43a8,8,0,0,0,5,9.06l52.8,19.8Z"/>' },
+  { test: /wood|timber|board|ply|log/, ink:'#7A4A02', soft:'#F6EBD9', d: '<path d="M240,136c0,35.35-17.91,64-40,64s-40-28.65-40-64,17.91-64,40-64S240,100.65,240,136Z" opacity="0.2"/><path d="M212,136a12,12,0,1,1-12-12A12,12,0,0,1,212,136Zm36,0c0,40.37-21.08,72-48,72H56c-26.92,0-48-31.63-48-72S29.08,64,56,64H92.69l37.65-37.66A8,8,0,0,1,136,24h32a8,8,0,0,1,0,16H139.31l-24,24H200C226.92,64,248,95.63,248,136ZM56,192H169.51a73.46,73.46,0,0,1-12.67-24H80a8,8,0,0,1,0-16h73.16A110.63,110.63,0,0,1,152,136c0-22.86,6.76-42.9,17.51-56H56c-12.47,0-23.55,13.26-28.8,32H104a8,8,0,0,1,0,16H24.35q-.34,3.93-.35,8C24,166.36,38.65,192,56,192Zm176-56c0-30.36-14.65-56-32-56s-32,25.64-32,56,14.65,56,32,56S232,166.36,232,136Z"/>' },
+  { test: /steel|metal|rebar|rod|bar\b|iron/, ink:'#3D4A5C', soft:'#E8EBF0', d: '<path d="M112,48V208a8,8,0,0,1-8,8H64a8,8,0,0,1-8-8V48a8,8,0,0,1,8-8h40A8,8,0,0,1,112,48Zm80-8H152a8,8,0,0,0-8,8V208a8,8,0,0,0,8,8h40a8,8,0,0,0,8-8V48A8,8,0,0,0,192,40Z" opacity="0.2"/><path d="M104,32H64A16,16,0,0,0,48,48V208a16,16,0,0,0,16,16h40a16,16,0,0,0,16-16V48A16,16,0,0,0,104,32Zm0,176H64V48h40ZM192,32H152a16,16,0,0,0-16,16V208a16,16,0,0,0,16,16h40a16,16,0,0,0,16-16V48A16,16,0,0,0,192,32Zm0,176H152V48h40Z"/>' },
+  { test: /door|lock|hinge|handle/, ink:'#0F6B43', soft:'#E4F4EA', d: '<path d="M200,40V224H56V40a8,8,0,0,1,8-8H192A8,8,0,0,1,200,40Z" opacity="0.2"/><path d="M232,216H208V40a16,16,0,0,0-16-16H64A16,16,0,0,0,48,40V216H24a8,8,0,0,0,0,16H232a8,8,0,0,0,0-16ZM64,40H192V216H64Zm104,92a12,12,0,1,1-12-12A12,12,0,0,1,168,132Z"/>' },
+  { test: /glue|adhes|seal|silicone|chemical/, ink:'#5B4B8A', soft:'#ECE7F7', d: '<path d="M208,144a80,80,0,0,1-160,0c0-72,80-128,80-128S208,72,208,144Z" opacity="0.2"/><path d="M174,47.75a254.19,254.19,0,0,0-41.45-38.3,8,8,0,0,0-9.18,0A254.19,254.19,0,0,0,82,47.75C54.51,79.32,40,112.6,40,144a88,88,0,0,0,176,0C216,112.6,201.49,79.32,174,47.75ZM128,216a72.08,72.08,0,0,1-72-72c0-57.23,55.47-105,72-118,16.53,13,72,60.75,72,118A72.08,72.08,0,0,1,128,216Zm55.89-62.66a57.6,57.6,0,0,1-46.56,46.55A8.75,8.75,0,0,1,136,200a8,8,0,0,1-1.32-15.89c16.57-2.79,30.63-16.85,33.44-33.45a8,8,0,0,1,15.78,2.68Z"/>' },
+  { test: /tile|floor/, ink:'#0E5E57', soft:'#DDF1EE', d: '<path d="M208,56V200a8,8,0,0,1-8,8H56a8,8,0,0,1-8-8V56a8,8,0,0,1,8-8H200A8,8,0,0,1,208,56Z" opacity="0.2"/><path d="M200,40H56A16,16,0,0,0,40,56V200a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V56A16,16,0,0,0,200,40Zm0,80H136V56h64ZM120,56v64H56V56ZM56,136h64v64H56Zm144,64H136V136h64v64Z"/>' },
+  { test: /tool|hammer|spanner|saw|drill|hardware/, ink:'#8E2A22', soft:'#FBE5E2', d: '<path d="M245.66,129,217,157.66a8,8,0,0,1-11.3,0L168.1,120l-28,28-32-32,28-28L80,31.78a87.81,87.81,0,0,1,98.31,18l67.35,67.89A8,8,0,0,1,245.66,129Z" opacity="0.2"/><path d="M251.34,112,183.88,44.08a96.1,96.1,0,0,0-135.77,0l-.09.09L34.25,58.4A8,8,0,0,0,45.74,69.53L59.47,55.35a79.92,79.92,0,0,1,18.71-13.9L124.68,88l-96,96a16,16,0,0,0,0,22.63l20.69,20.69a16,16,0,0,0,22.63,0l96-96,14.34,14.34h0L200,163.3a16,16,0,0,0,22.63,0l28.69-28.69A16,16,0,0,0,251.34,112ZM60.68,216,40,195.31l68-68L128.68,148ZM162.34,114.32,140,136.67,119.31,116l22.35-22.35a8,8,0,0,0,0-11.32L94.32,35a80,80,0,0,1,78.23,20.41l44.22,44.51L188,128.66l-14.34-14.34A8,8,0,0,0,162.34,114.32Zm49,37.66-12-12L228,111.25l12,12Z"/>' },
 ];
+const AISLE_FALLBACK = { ink:'#5F6980', soft:'#EFECE6', d: '<path d="M128,129.09V232a8,8,0,0,1-3.84-1l-88-48.16a8,8,0,0,1-4.16-7V80.2a8,8,0,0,1,.7-3.27Z" opacity="0.2"/><path d="M223.68,66.15,135.68,18h0a15.88,15.88,0,0,0-15.36,0l-88,48.17a16,16,0,0,0-8.32,14v95.64a16,16,0,0,0,8.32,14l88,48.17a15.88,15.88,0,0,0,15.36,0l88-48.17a16,16,0,0,0,8.32-14V80.18A16,16,0,0,0,223.68,66.15ZM128,32h0l80.34,44L128,120,47.66,76ZM40,90l80,43.78v85.79L40,175.82Zm96,129.57V133.82L216,90v85.78Z"/>' };
+function aisleLook(name){
+  const n = String(name || '').toLowerCase();
+  return AISLE_ICONS.find(a=> a.test.test(n)) || AISLE_FALLBACK;
+}
+// The aisle's tint as two custom properties, for a tile that wants its
+// own colour: --ai the line, --ai-s the soft square behind it.
+function aisleTint(name){
+  const a = aisleLook(name);
+  return `--ai:${a.ink};--ai-s:${a.soft};`;
+}
 function categoryIconSVG(name){
-  const n = (name||'').toLowerCase();
-  const match = CAT_ICONS.find(c=>c.test.test(n));
-  return `<svg class="icon" viewBox="0 0 24 24">${match ? match.svg : ICON_PLACEHOLDER.replace(/<\/?svg[^>]*>/g,'')}</svg>`;
+  return `<svg class="icon ph" viewBox="0 0 256 256" aria-hidden="true">${aisleLook(name).d}</svg>`;
 }
 
 // The aisle an item belongs to. A product with no category, or one whose
@@ -5278,6 +5405,9 @@ const AX_ICON = {
   flag: '<svg class="icon" viewBox="0 0 24 24"><path d="M5.5 21V3.5M5.5 4.5h11l-2 3.5 2 3.5h-11"/></svg>',
   bundle: '<svg class="icon" viewBox="0 0 24 24"><path d="M3 8l9-4 9 4-9 4-9-4z"/><path d="M3 12.5l9 4 9-4M3 17l9 4 9-4"/></svg>',
   user: '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>',
+  userPlus: '<svg class="icon" viewBox="0 0 24 24"><circle cx="10" cy="8" r="4"/><path d="M3 21c0-3.9 3.1-7 7-7 1.4 0 2.7.4 3.8 1.1M18 14v6M15 17h6"/></svg>',
+  swap: '<svg class="icon" viewBox="0 0 24 24"><path d="m8 9 4-4 4 4M8 15l4 4 4-4"/></svg>',
+  arrowR: '<svg class="icon" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
   out: '<svg class="icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>',
   save: '<svg class="icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>',
   trophy: '<svg class="icon" viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M9 20h6"/></svg>',
@@ -6267,42 +6397,51 @@ function renderOrder(){
 }
 document.getElementById('ag_orderClose').addEventListener('click', ()=> switchTab(lastMainTab));
 
-/* Most recently served clients first, for the strip and the picker. */
+/* Most recently served clients first, for the picker. */
 function recentClients(limit){
   const counts = clientOrderCounts();
   return agentClients.map(c=>({ c, last: clientStats(counts.get(c.id)||[]).lastAt || '' }))
     .sort((a,b)=> String(b.last).localeCompare(String(a.last)) || String(a.c.name||'').localeCompare(String(b.c.name||'')))
     .slice(0, limit || agentClients.length).map(x=> x.c);
 }
-/* The strip along the top of the order: whose order this is, then the
-   other orders in progress (dashed, with how many items are waiting),
-   then the people you serve most. One tap moves between them. */
+/* Who this client is to you, in one short line under their name: new,
+   a regular with a rhythm, or someone who has bought before. */
+function clientLine(c){
+  const orders = (clientOrderCounts().get(c.id)||[]).filter(o=> !o.voided);
+  if(!orders.length) return { text: 'New client · first order', tone: 'new' };
+  const n = `${orders.length} order${orders.length===1?'':'s'}`;
+  const cad = clientCadence(c, clientOrderCounts(), new Date());
+  if(cad) return { text: `Every ${Math.max(1, Math.round(cad.avgGapDays))} days · ${n}`, tone: 'reg' };
+  return { text: `${n} · last ${dateShort(clientStats(orders).lastAt)}`, tone: '' };
+}
+/* The top of the order: one card saying whose order this is, and a chip
+   for each other basket still waiting (with how many items are in it).
+   Tapping the card brings up everyone else -- open baskets first, then
+   who is due. */
 function renderClientStrip(){
   const wrap = document.getElementById('ag_clientStrip');
   const baskets = quoteBasketSummaries(agentClients, carts, chosenClient ? chosenClient.id : null, unnamedCart);
   const parked = baskets.filter(b=> !b.active && b.count > 0);
-  const seen = new Set(parked.map(b=> String(b.key)));
-  if(chosenClient) seen.add(String(chosenClient.id));
-  const recent = recentClients(8).filter(c=> !seen.has(String(c.id))).slice(0, 5);
-  const who = chosenClient
-    ? `<button type="button" class="ax-who" data-strip="me" title="${esc(chosenClient.name)}">${avHTML(chosenClient)}<span class="nm">${esc(chosenClient.name)}</span></button>
-       <button type="button" class="ax-ob new" data-strip="pick" aria-label="Another client">${AX_ICON.plus}</button>`
-    : `<button type="button" class="ax-who empty" data-strip="pick">${AX_ICON.user}<span class="nm">Who's this for?</span></button>`;
+  let who;
+  if(chosenClient){
+    const ln = clientLine(chosenClient);
+    who = `<button type="button" class="ax-who" data-strip="pick" aria-label="${esc(chosenClient.name)}. Change client">${avHTML(chosenClient)}
+      <span class="b"><span class="nm">${esc(chosenClient.name)}</span><span class="s ${ln.tone}">${ln.tone === 'new' ? AX_ICON.spark : ln.tone === 'reg' ? '<i></i>' : ''}${esc(ln.text)}</span></span>${AX_ICON.swap}</button>`;
+  } else {
+    who = `<button type="button" class="ax-who empty" data-strip="pick">${AX_ICON.user}<span class="b"><span class="nm">Who's this for?</span></span>${AX_ICON.swap}</button>`;
+  }
   const parkedHTML = parked.map(b=>{
-    if(b.unnamed) return `<button type="button" class="ax-ob parked" data-strip="unnamed" aria-label="Not yet named, ${b.count} items">?<span class="c">${b.count}</span></button>`;
+    if(b.unnamed) return `<button type="button" class="ax-ob" data-strip="unnamed" aria-label="Not yet named, ${b.count} items"><span class="ax-ob-av">?</span>${AX_ICON.basket}<span class="c">${b.count}</span></button>`;
     const c = agentClients.find(x=> String(x.id) === String(b.key)) || { id: b.key, name: b.name };
-    return `<button type="button" class="ax-ob ${avTint(c.id)} parked" data-strip="${esc(b.key)}" aria-label="${esc(c.name)}, ${b.count} items waiting">${esc(clientInitials(c.name))}<span class="c">${b.count}</span></button>`;
+    return `<button type="button" class="ax-ob" data-strip="${esc(b.key)}" aria-label="${esc(c.name)}, ${b.count} items waiting"><span class="ax-ob-av ${avTint(c.id)}">${esc(clientInitials(c.name))}</span>${AX_ICON.basket}<span class="c">${b.count}</span></button>`;
   }).join('');
-  const recentHTML = recent.map(c=>
-    `<button type="button" class="ax-ob ${avTint(c.id)}" data-strip="${esc(c.id)}" aria-label="${esc(c.name)}">${esc(clientInitials(c.name))}</button>`).join('');
-  wrap.innerHTML = who + parkedHTML + recentHTML;
+  wrap.innerHTML = who + parkedHTML;
 }
 document.getElementById('ag_clientStrip').addEventListener('click', (e)=>{
   const b = e.target.closest('[data-strip]');
   if(!b) return;
   const key = b.dataset.strip;
   if(key === 'pick'){ openClientPicker(); return; }
-  if(key === 'me'){ if(chosenClient) openClientSheet(chosenClient.id); return; }
   if(key === 'unnamed'){ switchToUnnamed(); return; }
   const c = agentClients.find(x=> String(x.id) === String(key));
   if(c) goToClientBasket(c);
@@ -6338,40 +6477,85 @@ function afterClientChosen(client){
   if(currentView === 'order') renderOrder();
 }
 
+/* Who's buying? Baskets still open come first -- an order half built is
+   the likeliest thing to go back to. Then everyone, the ones due soonest
+   at the top, each with a ring that fills as their usual gap runs out
+   (amber once due, red once they have gone quiet). Search narrows it;
+   a new name is one button away at the bottom. */
+function basketTotal(rows){
+  return (rows||[]).reduce((s, r)=> s + cartLineFigures(r).amount, 0);
+}
+function pickRing(st, cad){
+  if(!cad || st.cls === 'live') return '';
+  const r = 13, c = 2 * Math.PI * r;
+  const on = Math.max(0, Math.min(1, Number(st.frac)||0)) * c;
+  const tone = st.quiet ? 'quiet' : st.due ? 'due' : '';
+  return `<span class="ax-cp-ring ${tone}" aria-hidden="true"><svg width="34" height="34" viewBox="0 0 34 34">
+      <circle cx="17" cy="17" r="${r}" fill="none" stroke-width="3" class="tr"/>
+      ${on > 0 ? `<circle cx="17" cy="17" r="${r}" fill="none" stroke-width="3" stroke-linecap="round" stroke-dasharray="${on.toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 17 17)"/>` : ''}
+    </svg><b>${Math.max(0, Math.round(cad.daysSince))}d</b></span>`;
+}
 function openClientPicker(){
   const paint = (q)=>{
     const query = String(q||'').trim().toLowerCase();
     const counts = clientOrderCounts(), today = new Date();
     const liveBy = new Map();
     liveOrders().forEach(o=>{ if(o.agentClientId && !liveBy.has(String(o.agentClientId))) liveBy.set(String(o.agentClientId), o); });
-    const list = (query ? agentClients.filter(c=> clientMatchesQuery(c, query)) : recentClients()).slice(0, 40);
-    const rows = list.map(c=>{
+    const baskets = quoteBasketSummaries(agentClients, carts, chosenClient ? chosenClient.id : null, unnamedCart)
+      .filter(b=> !b.active && b.count > 0);
+    const openHTML = !query && baskets.length ? `<div class="ax-cp-h">${AX_ICON.basket}<span>Still open</span></div>
+      ${baskets.map(b=>{
+        const c = b.unnamed ? null : (agentClients.find(x=> String(x.id) === String(b.key)) || { id: b.key, name: b.name });
+        const rows = b.unnamed ? unnamedCart : carts[String(b.key)];
+        const total = basketTotal(rows);
+        return `<button type="button" class="ax-cp-open" ${b.unnamed ? 'data-pick-unnamed' : `data-pick="${esc(b.key)}"`}>
+          ${c ? avHTML(c) : '<span class="ax-av">?</span>'}
+          <span class="b"><span class="nm">${esc(c ? c.name : 'Not yet named')}</span><span class="s">${b.count} item${b.count===1?'':'s'}${total > 0 ? ` · ${fmtNum(total)}` : ''}</span></span>
+          <span class="go">Resume${AX_ICON.arrowR}</span></button>`;
+      }).join('')}` : '';
+    const all = (query ? agentClients.filter(c=> clientMatchesQuery(c, query)) : agentClients.slice())
+      .map(c=> ({ c, st: clientStatus(c, counts, today, liveBy), cad: clientCadence(c, counts, today) }));
+    const isNow = (c)=> chosenClient && String(chosenClient.id) === String(c.id);
+    all.sort((a,b)=> (isNow(b.c) - isNow(a.c)) || (a.st.rank - b.st.rank)
+      || ((a.st.soon||0) - (b.st.soon||0)) || String(a.c.name||'').localeCompare(String(b.c.name||'')));
+    const rows = all.slice(0, 40).map(({ c, st, cad })=>{
       const waiting = (carts[String(c.id)]||[]).length;
-      // The same words the client list uses, so a name reads the same
-      // wherever it is picked from.
-      const st = clientStatus(c, counts, today, liveBy);
-      const sub = waiting ? `<span class="s warn">${waiting} item${waiting===1?'':'s'} waiting</span>`
-        : `<span class="s${st.cls === 'late' ? ' warn' : ''}">${esc(st.text)}</span>`;
-      return `<button type="button" class="ax-pickrow" data-pick="${esc(c.id)}">${avHTML(c)}<span class="b"><span class="nm">${esc(c.name)}</span>${sub}</span></button>`;
+      const now = isNow(c);
+      const sub = now ? clientLine(c).text
+        : waiting ? `${waiting} item${waiting===1?'':'s'} waiting`
+        : st.soon ? `Due in ${st.soon} day${st.soon===1?'':'s'}` : st.text;
+      const subCls = st.quiet ? 'quiet' : (st.cls === 'late' || st.due || waiting) && !now ? 'warn' : '';
+      const right = now ? `<span class="now">${AX_ICON.check}Now</span>`
+        : st.cls === 'live' ? `<span class="live">${st.icon || ''}</span>` : pickRing(st, cad);
+      return `<button type="button" class="ax-pickrow${now ? ' now' : ''}" data-pick="${esc(c.id)}">${avHTML(c)}<span class="b"><span class="nm">${esc(c.name)}</span><span class="s ${subCls}">${esc(sub)}</span></span>${right}</button>`;
     }).join('');
     const add = query && !agentClients.some(c=> String(c.name||'').trim().toLowerCase() === query)
       ? `<button type="button" class="ax-pickrow" data-pick-new><span class="ax-av" style="background:var(--tile);color:var(--ink);">${AX_ICON.plus}</span><span class="b"><span class="nm">Add &ldquo;${esc(String(q).trim())}&rdquo;</span><span class="s">New client</span></span></button>` : '';
-    sheet.el.querySelector('[data-list]').innerHTML = add + rows || '<div class="ax-empty">No clients yet. Type a name to add one.</div>';
+    const list = add + (rows ? `${!query ? `<div class="ax-cp-h">${AX_ICON.clock}<span>Who's due</span><b>${agentClients.length}</b></div>` : ''}${rows}` : '');
+    sheet.el.querySelector('[data-list]').innerHTML = openHTML + (list || (query
+      ? `<div class="ax-cp-none">${AX_ICON.search}Nobody called &ldquo;${esc(String(q).trim())}&rdquo;</div>`
+      : `<div class="ax-cp-ghost"><span class="ax-cp-ghost-avs" aria-hidden="true"><i></i><i></i><i></i></span><span>The people you sell to gather here</span></div>`));
   };
   const sheet = openSheet(`<button type="button" class="ax-grab" data-close aria-label="Close"></button>
-    <div class="ax-sheet-title"><h3>Who's this for?</h3><button type="button" class="ax-iconbtn" data-close aria-label="Close">${AX_ICON.x}</button></div>
+    <div class="ax-sheet-title"><h3>Who's buying?</h3><button type="button" class="ax-iconbtn" data-close aria-label="Close">${AX_ICON.x}</button></div>
     <div class="ax-form">
       <label class="ax-field">${AX_ICON.search}<input type="search" data-q placeholder="Name or phone" autocomplete="off"></label>
-      <div data-list></div>
-    </div>`, { label:"Who's this for?", white:true });
+      <div class="ax-cp-list" data-list></div>
+      <button type="button" class="ax-cp-new" data-pick-new>${AX_ICON.userPlus}New client</button>
+    </div>`, { label:"Who's buying?", white:true });
   const input = sheet.el.querySelector('[data-q]');
   input.addEventListener('input', ()=> paint(input.value));
   sheet.el.addEventListener('click', (e)=>{
+    if(e.target.closest('[data-pick-unnamed]')){ sheet.close(); switchToUnnamed(); return; }
     const row = e.target.closest('[data-pick]');
     if(row){
       const c = agentClients.find(x=> String(x.id) === row.dataset.pick);
       sheet.close();
-      if(c) goToClientBasket(c);
+      if(!c) return;
+      // The one already open: their own sheet, which is what tapping the
+      // name used to do.
+      if(chosenClient && String(chosenClient.id) === String(c.id)){ openClientSheet(c.id); return; }
+      goToClientBasket(c);
       return;
     }
     if(e.target.closest('[data-pick-new]')){
@@ -6381,7 +6565,6 @@ function openClientPicker(){
     }
   });
   paint('');
-  setTimeout(()=> input.focus(), 60);
 }
 
 /* ---- starting an order ----
@@ -6424,7 +6607,9 @@ function topCategories(n){
   });
   return findCategories().slice().sort((a,b)=> (by.get(b)||0) - (by.get(a)||0)).slice(0, n);
 }
-// What this agent sells most across every client, else what earns a bonus.
+// What this agent sells most across every client, with how many orders
+// each has been in -- else, before a first sale, what earns a bonus
+// (sold 0, so the screen can tell the two apart).
 function sellMostItems(n){
   const by = new Map();
   myOrders.forEach(o=>{
@@ -6435,13 +6620,77 @@ function sellMostItems(n){
     });
   });
   let items = [...by.entries()].sort((a,b)=> b[1]-a[1])
-    .map(([k])=>{ const [p, v] = k.split('::'); return catalogEntry(p, v === '' ? null : Number(v)); })
+    .map(([k, sold])=>{ const [p, v] = k.split('::'); const it = catalogEntry(p, v === '' ? null : Number(v)); return it ? { it, sold } : null; })
     .filter(Boolean);
   if(!items.length){
     const promoted = promotedMap();
-    items = catalog.filter(it=> promoted.has(feedItemKey(it.productId, it.variantIdx)));
+    items = catalog.filter(it=> promoted.has(feedItemKey(it.productId, it.variantIdx))).map(it=> ({ it, sold: 0 }));
   }
   return items.slice(0, n);
+}
+/* An aisle as a tile: its icon on its own tint, the name, how much is in
+   it, and a star with how many earn a bonus there. */
+function aisleTileHTML(c, promoted){
+  const inAisle = catalog.filter(it=> itemCategory(it) === c);
+  const bonus = inAisle.filter(it=> promoted.has(feedItemKey(it.productId, it.variantIdx))).length;
+  return `<button type="button" class="ax-lpc" data-go-cat="${esc(c)}" style="${aisleTint(c)}">
+    ${bonus ? `<span class="bn">${AX_ICON.star}${bonus}</span>` : ''}
+    <span class="ic">${categoryIconSVG(c)}</span>
+    <span class="t"><span class="nm">${esc(c)}</span><span class="n">${fmtNum(inAisle.length)} item${inAisle.length===1?'':'s'}</span></span></button>`;
+}
+/* One of what you sell most: big art, its rank, how often it sells as a
+   bar against your best seller, what you make on one, the price, a +.
+   Before a first sale the same card carries the bonus instead. */
+function sellCardHTML(x, i, top, promoted){
+  const it = x.it, key = feedItemKey(it.productId, it.variantIdx);
+  const mode = defaultUnit(it);
+  const pq = Number(it.packQty) || 0;
+  const mult = mode === 'pack' && pq > 0 ? pq : 1;
+  const floor = Number(it.floorPrice) || 0, our = Number(it.ourPrice) || 0;
+  const yours = our > floor ? (our - floor) * mult : 0;
+  const promo = promoted.get(key);
+  const per = String(mode === 'pack' ? it.packUnit : (it.unit || 'each')).toLowerCase();
+  const isIn = lineFor(cart, it.productId, it.variantIdx) >= 0;
+  const cat = itemCategory(it);
+  return `<div class="ax-lpi${x.sold ? '' : ' bonus'}" style="${aisleTint(cat)}">
+    <span class="im">${itemThumbHTML(it)}${x.sold ? `<span class="rk${i === 0 ? ' gold' : ''}">${i + 1}</span>` : ''}${promo && x.sold ? `<span class="bn">${AX_ICON.star}${esc(bonusFlagLabel(promo))}</span>` : ''}</span>
+    <span class="bd">
+      <span class="nm">${esc(it.name)}${it.variantLabel ? ` · ${esc(it.variantLabel)}` : ''}</span>
+      ${x.sold ? `<span class="hb"><span class="tr"><i style="width:${Math.max(8, Math.round(100 * x.sold / Math.max(1, top)))}%"></i></span><b>${x.sold}×</b></span>` : ''}
+      ${!x.sold && promo ? `<span class="yb">${AX_ICON.star}<b>${esc(bonusFlagLabel(promo))}</b> each</span>`
+        : yours > 0 ? `<span class="yo">+${fmtNum(yours)} yours</span>` : ''}
+      <span class="r"><span class="p"><b>${fmtNum(shelfPrice(it, mode))}</b><small>per ${esc(per)}</small></span>
+        ${isIn ? `<span class="in">${AX_ICON.check}</span>`
+          : `<button type="button" data-lp-add="${esc(key)}" aria-label="Add ${esc(it.name)}">${AX_ICON.plus}</button>`}</span>
+    </span>
+  </div>`;
+}
+/* Someone new: the aisles you sell from most, then what you sell most.
+   On a first day the second row is what earns extra, with a place kept
+   for the best sellers still to come. Before the shop's list arrives,
+   the shape of both -- never a blank. */
+function launchpadHTML(){
+  const head = (ic, t, r, tone)=> `<div class="ax-lp-h${tone ? ' ' + tone : ''}">${ic} <span>${t}</span>${r || ''}</div>`;
+  if(!catalog.length){
+    if(browseDataLoaded) return `<div class="ax-lp-none">${AX_ICON.box}<span>The shop has no items listed yet</span></div>`;
+    const tile = `<span class="ax-sk-tile"><i class="ax-sk sq"></i><i class="ax-sk ln"></i><i class="ax-sk ln s"></i></span>`;
+    const card = `<span class="ax-sk-card"><i class="ax-sk art"></i><span class="sb"><i class="ax-sk ln"></i><i class="ax-sk ln s"></i><i class="ax-sk ln p"></i></span></span>`;
+    return `${head(AX_ICON.grid, 'Aisles', `<span class="ax-lp-load"><i class="ax-spin"></i>Getting the shop list</span>`)}
+      <div class="ax-lp-cats" aria-hidden="true">${tile.repeat(6)}</div>
+      ${head(AX_ICON.flame, 'You sell most')}
+      <div class="ax-lp-row" aria-hidden="true">${card.repeat(3)}</div>`;
+  }
+  const promoted = promotedMap();
+  const cats = topCategories(5);
+  const sells = sellMostItems(6);
+  const sold = sells.length && sells[0].sold > 0;
+  const top = sold ? sells[0].sold : 0;
+  return `${head(AX_ICON.grid, 'Aisles')}
+    <div class="ax-lp-cats">${cats.map(c=> aisleTileHTML(c, promoted)).join('')}
+      <button type="button" class="ax-lpc all" data-go-all><span class="ic">${AX_ICON.grid}</span><span class="t"><span class="nm">All aisles</span><span class="n">${findCategories().length} · ${fmtNum(catalog.length)}</span></span></button></div>
+    ${sells.length ? `${sold ? head(AX_ICON.flame, 'You sell most', '', 'hot') : head(AX_ICON.star, 'Earn extra on these', `<b class="ax-lp-n">${sells.length}</b>`, 'bonus')}
+      <div class="ax-lp-row">${sells.map((x, i)=> sellCardHTML(x, i, top, promoted)).join('')}</div>
+      ${sold ? '' : `<div class="ax-lp-ghost"><span class="bars" aria-hidden="true"><i></i><i></i><i></i></span><span>Your best sellers land here</span></div>`}` : ''}`;
 }
 function shelfPrice(it, mode){
   const pq = Number(it.packQty) || 0;
@@ -6477,13 +6726,14 @@ function renderUsual(){
     const earn = cad && cad.avgMargin > 0 ? Math.round(cad.avgMargin) : 0;
     top = `<div class="ax-uc">
       <div class="ax-uc-h"><span class="ic">${AX_ICON.again}</span>
-        <span class="b"><span class="n">${esc(possessive(firstWord(chosenClient.name)))} usual</span>${last ? `<span class="s">last order ${esc(dateShort(last))}</span>` : ''}</span>
+        <span class="b"><span class="n">${esc(possessive(firstWord(chosenClient.name)))} usual</span>${last ? `<span class="s">last order ${esc(dateShort(last))}</span>` : ''}
+          <span class="sg" aria-label="${regs.length - missing.length} of ${regs.length} in">${regs.map(r=> `<i${lineFor(cart, r.productId, r.variantIdx) >= 0 ? ' class="on"' : ''}></i>`).join('')}</span></span>
         ${earn ? `<span class="e"><b>+${fmtNum(earn)}</b><small>yours</small></span>` : ''}</div>
       <div class="ax-uc-g">${shown.map(r=>{
         const it = catalogEntry(r.productId, r.variantIdx);
         const isIn = lineFor(cart, r.productId, r.variantIdx) >= 0;
         const every = r.orders >= orders.length;
-        return `<div class="ax-uct${isIn ? ' in' : ''}">
+        return `<div class="ax-uct${isIn ? ' in' : ''}" style="${aisleTint(itemCategory(it || r))}">
           <span class="im">${itemThumbHTML(it || r)}</span>
           <span class="t"><span class="nm">${esc(r.name)}</span><span class="f${every ? ' good' : ''}">${every ? 'every order' : `${r.orders} of ${orders.length} orders`}</span></span>
           <button type="button" data-usual="${esc(r.key)}" aria-label="${isIn ? `${esc(r.name)} is in the order` : `Add ${esc(r.name)}, ${esc(usualLabel(r, it))}`}">${isIn ? `${AX_ICON.check}In` : `${AX_ICON.plus}${esc(usualLabel(r, it))}`}</button>
@@ -6491,24 +6741,13 @@ function renderUsual(){
       }).join('')}</div>
       <button type="button" class="ax-uc-all" data-usual-all>Add ${missing.length === regs.length ? 'all ' : 'the other '}${missing.length}${allTotal > 0 ? `<span>${fmtNum(allTotal)}</span>` : ''}</button>
     </div>`;
-  } else if(!cart.length && catalog.length){
-    const cats = topCategories(5);
-    const sells = sellMostItems(6);
-    top = `<div class="ax-lp-cats">${cats.map(c=> `<button type="button" class="ax-lpc" data-go-cat="${esc(c)}"><span class="ic">${categoryIconSVG(c)}</span><span>${esc(c)}</span></button>`).join('')}
-        <button type="button" class="ax-lpc all" data-go-all><span class="ic">${AX_ICON.grid}</span><span>All</span></button></div>
-      ${sells.length ? `<div class="ax-lp-h">${AX_ICON.flame}You sell most</div>
-      <div class="ax-lp-row">${sells.map(it=> `<div class="ax-lpi">
-          <span class="im">${itemThumbHTML(it)}</span>
-          <span class="nm">${esc(it.name)}</span>
-          <span class="r"><span class="p">${fmtNum(shelfPrice(it, defaultUnit(it)))}</span>
-            ${lineFor(cart, it.productId, it.variantIdx) >= 0 ? `<span class="in">${AX_ICON.check}</span>`
-              : `<button type="button" data-lp-add="${esc(feedItemKey(it.productId, it.variantIdx))}" aria-label="Add ${esc(it.name)}">${AX_ICON.plus}</button>`}</span>
-        </div>`).join('')}</div>` : ''}`;
+  } else if(!cart.length){
+    top = launchpadHTML();
   }
   wrap.innerHTML = top;
   // Once there is an order, the aisles are a row of chips under it.
   more.innerHTML = cart.length && catalog.length
-    ? `<div class="ax-lp-chips">${topCategories(6).map(c=> `<button type="button" data-go-cat="${esc(c)}">${esc(c)}</button>`).join('')}<button type="button" data-go-all>${AX_ICON.grid}All</button></div>` : '';
+    ? `<div class="ax-lp-chips">${topCategories(6).map(c=> `<button type="button" data-go-cat="${esc(c)}" style="${aisleTint(c)}">${categoryIconSVG(c)}${esc(c)}</button>`).join('')}<button type="button" data-go-all>${AX_ICON.grid}All</button></div>` : '';
 }
 /* The matches for what is typed, in the order screen itself. One size:
    a + that adds it, then a stepper. Many sizes: a + that opens the size
@@ -7339,7 +7578,7 @@ function findTileHTML(group, promoted, before){
         <button type="button" class="ax-add${busy?' busy':''}" data-add aria-label="Add ${esc(group.name)}">${busy ? '<span class="ag-spinner" style="width:18px;height:18px;border-width:2px;"></span>' : AX_ICON.plus}</button>
       </div>`;
   return `<div class="ax-pt${line ? ' in' : ''}" data-pid="${esc(sel.productId)}" data-vidx="${sel.variantIdx==null?'':esc(sel.variantIdx)}">
-    <button type="button" class="ax-pt-im" data-img="${esc(sel.image||'')}" aria-label="${esc(group.name)}${sel.image ? ', view photo' : ''}">
+    <button type="button" class="ax-pt-im" style="${aisleTint(itemCategory(sel))}" data-img="${esc(sel.image||'')}" aria-label="${esc(group.name)}${sel.image ? ', view photo' : ''}">
       ${itemThumbHTML(sel)}${tag}
     </button>
     ${promo ? `<button type="button" class="ax-pt-star${inCluster?' on':''}" data-star aria-pressed="${!!inCluster}" aria-label="${inCluster ? 'In your cluster' : 'Star it to earn its bonus'}">${AX_ICON.star}</button>` : ''}
@@ -7540,7 +7779,7 @@ function openCategorySheet(){
         ${bundles ? `<button type="button" class="ax-q" data-bundles>${AX_ICON.bundle}<span class="b"><span class="nm">Bundles</span><span class="n">${bundles}</span></span></button>` : ''}</div>` : ''}
       <div class="ax-catgrid">${cats.map(c=>{
         const n = groupCatalogItems(catalog.filter(it=> itemCategory(it) === c)).length;
-        return `<button type="button" class="ax-cat${findCategory===c?' on':''}" data-cat="${esc(c)}"><span class="ic">${categoryIconSVG(c)}</span><span class="nm">${esc(c)}</span><span class="n">${n}</span></button>`;
+        return `<button type="button" class="ax-cat${findCategory===c?' on':''}" data-cat="${esc(c)}" style="${aisleTint(c)}"><span class="ic">${categoryIconSVG(c)}</span><span class="nm">${esc(c)}</span><span class="n">${n}</span></button>`;
       }).join('')}</div>
     </div>`, { label:'Browse aisles' });
   sheet.el.addEventListener('click', (e)=>{
