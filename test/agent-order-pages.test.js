@@ -26,7 +26,7 @@ const fn = (n) => extractFunction(src, n, 'agent.html');
 /* ---------- 1. one line at a time ------------------------------------ */
 {
   const api = compileScope(['const orderStaffNames = new Map();',
-    ...['agentOrderTerms', 'orderShopChecked', 'supplierLineTerms', 'lineSupplierCheck', 'lineCheck', 'orderCheckCount', 'staffName', 'orderOwedAmount', 'orderStage'].map(fn)],
+    ...['agentOrderTerms', 'orderShopChecked', 'supplierLineTerms', 'lineSupplierCheck', 'lineCheck', 'orderCheckCount', 'staffName', 'chargeValue', 'orderShopGoods', 'orderChargesAmount', 'orderOwedAmount', 'orderStage'].map(fn)],
     { myAgent: { paymentTerm: 'prepay' }, fmtNum: (n) => String(n) }, ['lineCheck', 'orderCheckCount', 'orderStage', 'agentOrderTerms']);
   const cem = { productId: 'cem', variantIdx: null, qty: 40, price: 31000, sellPrice: 32000, supplierId: 'S1' };
   const iron = { productId: 'ir', variantIdx: null, qty: 60, price: 35000, sellPrice: 36500, supplierId: 'S2' };

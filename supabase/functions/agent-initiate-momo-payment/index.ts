@@ -171,6 +171,19 @@ async function airtelRequestToPay(creds: any, environment: string, opts: { refer
   return { providerTransactionId: body?.data?.transaction?.id || null };
 }
 
+// What the order's charges come to (a delivery fee, say) on top of the
+// goods -- the shop's own rule: a percent is of the goods, a fixed one is
+// whole shillings, nothing at or below zero. Same rule in agent.html,
+// check-momo-payment-status, agent-initiate-momo-payment and
+// agent-change-order; keep them in step.
+function chargesTotal(payload: any, goods: number): number {
+  return (Array.isArray(payload && payload.charges) ? payload.charges : []).reduce((s: number, ch: any) => {
+    const v = Number(ch && ch.value) || 0;
+    if (!(v > 0)) return s;
+    return s + (ch.type === "percent" ? Math.round(goods * v / 100) : Math.round(v));
+  }, 0);
+}
+
 // Mirrors agentOrderTerms in shared-worker.js -- keep the two in step.
 function agentOrderTerms(payload: any): string {
   return (payload.items || []).map((it: any) => [
@@ -264,7 +277,8 @@ Deno.serve(async (req) => {
     // instalment the admin confirmed -- was pushed for its full value again.
     // Approving that charged them the part they had already settled a second
     // time, since both webhooks add to amount_paid rather than replacing it.
-    const orderTotal = (payload.items || []).reduce((s: number, it: any) => s + (Number(it.sellPrice) || 0) * (Number(it.qty) || 0), 0);
+    const goodsTotal = (payload.items || []).reduce((s: number, it: any) => s + (Number(it.sellPrice) || 0) * (Number(it.qty) || 0), 0);
+    const orderTotal = goodsTotal + chargesTotal(payload, goodsTotal);
     const alreadyPaid = Number(order.amount_paid) || 0;
     const amount = Math.round(orderTotal - alreadyPaid);
     if (!(amount > 0)) {

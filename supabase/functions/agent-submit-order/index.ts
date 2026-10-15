@@ -41,6 +41,18 @@ const SUBMIT_DEDUPE_MS = 90 * 1000;
 // floor price, bonus -- is derived server-side and would legitimately
 // differ between two runs if a price moved in between, which must not stop
 // a genuine re-send being recognised.
+const DELIVERY_WHEN = ["today_pm", "tomorrow_am", "tomorrow_pm"];
+
+// The shop's own delivery charge: the service it named "Delivery" (or
+// "Transport") under What you charge for. None named, no fee -- the app
+// never invents one. Mirrored in agent-catalog, which shows it to the agent
+// before they send.
+function shopDeliveryFee(presets: any): any {
+  const list = Array.isArray(presets?.services) ? presets.services : [];
+  const s = list.find((x: any) => x && /deliver|transport/i.test(String(x.name || "")) && Number(x.value) > 0);
+  return s ? { label: String(s.name), type: s.type === "percent" ? "percent" : "fixed", value: Number(s.value) } : null;
+}
+
 function orderFingerprint(agentClientId: any, items: any): string {
   const lines = (Array.isArray(items) ? items : [])
     .map((it: any) => [
@@ -261,7 +273,7 @@ Deno.serve(async (req) => {
     } catch {
       return json({ error: "Invalid JSON body" }, 400);
     }
-    const { shopId, agentClientId, items, deliveryMode, deliveryAddress } = body;
+    const { shopId, agentClientId, items, deliveryMode, deliveryAddress, deliveryContact, deliveryWhen } = body;
     const replaceOrderId = body.replaceOrderId ?? null;
     if (!shopId || !agentClientId || !Array.isArray(items) || !items.length) {
       return json({ error: "shopId, agentClientId and a non-empty items array are required" }, 400);
@@ -271,6 +283,9 @@ Deno.serve(async (req) => {
     }
     if (deliveryMode === "shop_delivery" && !String(deliveryAddress || "").trim()) {
       return json({ error: "deliveryAddress is required when the shop is delivering" }, 400);
+    }
+    if (deliveryWhen != null && !DELIVERY_WHEN.includes(deliveryWhen)) {
+      return json({ error: `deliveryWhen must be one of ${DELIVERY_WHEN.join(", ")}` }, 400);
     }
     for (const it of items) {
       if (!it.productId || !(Number(it.qty) > 0) || !(Number(it.agentSellPrice) >= 0)) {
@@ -477,15 +492,37 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Delivery: where, who takes it in (the driver calls them), when, and
+    // the shop's own delivery charge -- an order charge like any other on
+    // the shop's board, owed by the agent with the goods.
+    const delivering = deliveryMode === "shop_delivery";
+    const fee = delivering ? shopDeliveryFee(settingsRow?.presets) : null;
+    const delivery = {
+      deliveryMode,
+      deliveryAddress: delivering ? String(deliveryAddress).trim().slice(0, 200) : null,
+      deliveryContact: delivering && deliveryContact ? {
+        name: String(deliveryContact.name || "").trim().slice(0, 80) || null,
+        phone: String(deliveryContact.phone || "").trim().slice(0, 30) || null,
+      } : null,
+      deliveryWhen: delivering ? (deliveryWhen || null) : null,
+    };
+    // The fee is marked as the agent's delivery charge, so an edit swaps
+    // only that one and never a charge the shop added on its board.
+    const feeCharge = (id: number) => fee ? [{ id, service: fee.label, label: fee.label, type: fee.type, value: fee.value, cost: null, agentDelivery: true }] : [];
+
     const now = new Date().toISOString();
     if (replacing) {
       const prev = replacing.payload || {};
       const lines = describeEdit(prev.items, lineItems);
-      if (!lines.length && prev.deliveryMode === deliveryMode && JSON.stringify(prev.items) === JSON.stringify(lineItems)) return json({ ok: true, orderId: replacing.id, unchanged: true });
+      const sameDelivery = prev.deliveryMode === deliveryMode && (prev.deliveryAddress || null) === delivery.deliveryAddress
+        && JSON.stringify(prev.deliveryContact || null) === JSON.stringify(delivery.deliveryContact) && (prev.deliveryWhen || null) === delivery.deliveryWhen;
+      if (!lines.length && sameDelivery && JSON.stringify(prev.items) === JSON.stringify(lineItems)) return json({ ok: true, orderId: replacing.id, unchanged: true });
+      const kept = (Array.isArray(prev.charges) ? prev.charges : []).filter((ch: any) => !(ch && ch.agentDelivery));
+      const nextId = kept.reduce((m: number, ch: any) => Math.max(m, Number(ch && ch.id) || 0), 0) + 1;
       const nextPayload = {
         ...prev, items: lineItems, savedAt: now,
-        deliveryMode,
-        deliveryAddress: deliveryMode === "shop_delivery" ? String(deliveryAddress).trim() : null,
+        ...delivery,
+        charges: kept.concat(feeCharge(nextId)),
         agentEdit: { at: now, lines },
       };
       const { error: editErr } = await admin.from("saved_quotes").update({ payload: nextPayload })
@@ -515,8 +552,8 @@ Deno.serve(async (req) => {
         debtCharged: 0,
         originAgentId: agentId,
         agentClientId: client.id,
-        deliveryMode,
-        deliveryAddress: deliveryMode === "shop_delivery" ? String(deliveryAddress).trim() : null,
+        ...delivery,
+        charges: feeCharge(1),
         agentPaymentStatus: "unpaid",
       },
     };

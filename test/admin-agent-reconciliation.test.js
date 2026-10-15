@@ -45,7 +45,7 @@ try {
 } catch (e) { adminErr = e; }
 try {
   agent = compileScope(
-    ['orderTotal', 'agentLinePriced', 'orderEarnings'].map(n => extractFunction(agentSrc, n, 'agent.html')),
+    ['chargeValue', 'orderShopGoods', 'orderChargesAmount', 'orderTotal', 'agentLinePriced', 'orderEarnings'].map(n => extractFunction(agentSrc, n, 'agent.html')),
     {}, ['orderTotal', 'orderEarnings'],
   );
 } catch (e) { agentErr = e; }

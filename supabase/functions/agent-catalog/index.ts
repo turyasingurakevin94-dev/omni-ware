@@ -250,6 +250,15 @@ function buildFloorPriceLadder(product: any, priceRow: any, discountWholesalePct
 // already clamps both boxes on save; this is the same bound applied to
 // what is actually on file, since neither column carries a constraint and
 // a figure typed straight into the database has never passed through it.
+// The shop's own delivery charge: the service it named "Delivery" (or
+// "Transport") under What you charge for, in its settings. None named, no
+// fee -- the app never invents one. Mirrored in agent-submit-order.
+function shopDeliveryFee(presets: any): any {
+  const list = Array.isArray(presets?.services) ? presets.services : [];
+  const s = list.find((x: any) => x && /deliver|transport/i.test(String(x.name || "")) && Number(x.value) > 0);
+  return s ? { label: String(s.name), type: s.type === "percent" ? "percent" : "fixed", value: Number(s.value) } : null;
+}
+
 function resolveDiscountPcts(product: any, presets: any) {
   const clamp = (v: number) => Math.min(100, Math.max(0, Number(v) || 0));
   const defaultWholesalePct = clamp(presets?.agentDiscountWholesalePct);
@@ -448,7 +457,7 @@ Deno.serve(async (req) => {
       });
 
       await snapshotPrices(admin, shopId, items);
-      return json({ ok: true, items });
+      return json({ ok: true, items, deliveryFee: shopDeliveryFee(presets) });
     }
 
     if (action === "shop") {

@@ -44,6 +44,10 @@ const scope = compileScope([
      the reading behind that comes with it. */
   extractFunction(src, 'stockKey', 'index.html'),
   extractFunction(src, 'peekStockLots', 'index.html'),
+  /* The chit names who takes in an agent's delivery, and when. */
+  extractDeclaration(src, 'AGENT_DELIVERY_WHEN', 'index.html'),
+  extractFunction(src, 'agentDeliveryWhenLabel', 'index.html'),
+  extractFunction(src, 'agentDeliveryHandover', 'index.html'),
   extractFunction(src, 'consignTally', 'index.html'),
   extractFunction(src, 'consignedForLine', 'index.html'),
   extractFunction(src, 'consignTagLabel', 'index.html'),

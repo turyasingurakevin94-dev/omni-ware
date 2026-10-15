@@ -15,6 +15,19 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+// What the order's charges come to (a delivery fee, say) on top of the
+// goods -- the shop's own rule: a percent is of the goods, a fixed one is
+// whole shillings, nothing at or below zero. Same rule in agent.html,
+// check-momo-payment-status, agent-initiate-momo-payment and
+// agent-change-order; keep them in step.
+function chargesTotal(payload: any, goods: number): number {
+  return (Array.isArray(payload && payload.charges) ? payload.charges : []).reduce((s: number, ch: any) => {
+    const v = Number(ch && ch.value) || 0;
+    if (!(v > 0)) return s;
+    return s + (ch.type === "percent" ? Math.round(goods * v / 100) : Math.round(v));
+  }, 0);
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", ...CORS_HEADERS } });
 }
@@ -58,7 +71,8 @@ async function applyMomoPaymentToOrder(admin: any, txn: any) {
   // Only release the order once the money actually covers it -- see the
   // matching note in mtn-payment-webhook. A short payment is still banked
   // and credited above; it just doesn't unlock preparing.
-  const orderTotal = (payload.items || []).reduce((s: number, it: any) => s + (Number(it.sellPrice) || 0) * (Number(it.qty) || 0), 0);
+  const goodsTotal = (payload.items || []).reduce((s: number, it: any) => s + (Number(it.sellPrice) || 0) * (Number(it.qty) || 0), 0);
+  const orderTotal = goodsTotal + chargesTotal(payload, goodsTotal);
   const nextPayload: any = { ...payload, payments };
   if (newAmountPaid + 0.5 >= orderTotal) nextPayload.agentPaymentStatus = "paid";
   const { error: updateErr } = await admin.from("saved_quotes").update({

@@ -57,7 +57,7 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   const myAgent = { paymentTerm: 'prepay' };
   try {
     st = compileScope(['const orderStaffNames = new Map();',
-      ...['agentOrderTerms', 'orderShopChecked', 'supplierLineTerms', 'lineSupplierCheck', 'lineCheck', 'orderCheckCount', 'staffName', 'orderOwedAmount', 'orderStage'].map((n) => extractFunction(src, n, 'agent.html'))],
+      ...['agentOrderTerms', 'orderShopChecked', 'supplierLineTerms', 'lineSupplierCheck', 'lineCheck', 'orderCheckCount', 'staffName', 'chargeValue', 'orderShopGoods', 'orderChargesAmount', 'orderOwedAmount', 'orderStage'].map((n) => extractFunction(src, n, 'agent.html'))],
       { myAgent, fmtNum: (n) => String(n) }, ['orderStage', 'agentOrderTerms']);
   } catch (e) { err = e; }
   t.check(!!st, `orderStage compiles${err ? ` (${err.message})` : ''}`);
@@ -90,7 +90,8 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   try { ({ clientStats: f } = compileScope(
     // orderDate too: the last-order date reads the order's own date now,
     // not payload.savedAt, which is rewritten on every save.
-    [extractFunction(src, 'orderTotal', 'agent.html'),
+    [...['chargeValue', 'orderShopGoods', 'orderChargesAmount'].map((n) => extractFunction(src, n, 'agent.html')),
+     extractFunction(src, 'orderTotal', 'agent.html'),
       extractFunction(src, 'agentLinePriced', 'agent.html'),
       extractFunction(src, 'orderEarnings', 'agent.html'),
      extractFunction(src, 'orderDate', 'agent.html'), extractFunction(src, 'clientStats', 'agent.html')],

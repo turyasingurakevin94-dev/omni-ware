@@ -116,6 +116,9 @@ try {
     clearQuoteDraft: () => {},
     updateCartBadge: () => {},
     renderSellClientChip: () => {},
+    // The receiver and slot a delivery carries (ui: the delivery sheet).
+    deliveryInfo: () => ({}),
+    setDeliveryInfo: () => {},
     /* Models the real one's contract, not just its return value.
        callAgentFn is the single place that sees the server's `paused`
        flag and raises the state -- the handler's finally only re-applies

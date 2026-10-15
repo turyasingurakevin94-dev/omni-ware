@@ -47,9 +47,23 @@ function rpcMissing(err: any): boolean {
 
 const CANCEL_REASONS = ["Client changed their mind", "Wrong items or quantities", "Taking too long", "Something else"];
 
-// What the shop is owed for the lines as they stand.
+// What the order's charges come to (a delivery fee, say) on top of the
+// goods -- the shop's own rule: a percent is of the goods, a fixed one is
+// whole shillings, nothing at or below zero. Same rule in agent.html,
+// check-momo-payment-status, agent-initiate-momo-payment and
+// agent-change-order; keep them in step.
+function chargesTotal(payload: any, goods: number): number {
+  return (Array.isArray(payload && payload.charges) ? payload.charges : []).reduce((s: number, ch: any) => {
+    const v = Number(ch && ch.value) || 0;
+    if (!(v > 0)) return s;
+    return s + (ch.type === "percent" ? Math.round(goods * v / 100) : Math.round(v));
+  }, 0);
+}
+
+// What the shop is owed for the lines as they stand, and its charges.
 function orderShopTotal(payload: any): number {
-  return (payload.items || []).reduce((s: number, it: any) => s + (Number(it.sellPrice) || 0) * (Number(it.qty) || 0), 0);
+  const goods = (payload.items || []).reduce((s: number, it: any) => s + (Number(it.sellPrice) || 0) * (Number(it.qty) || 0), 0);
+  return goods + chargesTotal(payload, goods);
 }
 
 // Still the agent's to change: a draft nobody has paid anything on.

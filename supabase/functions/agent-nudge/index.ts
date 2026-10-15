@@ -7,6 +7,13 @@
 //                            app subscribes with. Public by design.
 //   { action: "test" }    -> signed in: one notification now to the caller's
 //                            own phones, with why any did not go.
+//   { action: "shout", shopId, id }
+//                         -> signed in as the shop's admin: the shout-out
+//                            they just wrote (agent_shoutouts, 0111) goes
+//                            to that agent's phones now. Readable through
+//                            the caller's own key or it is refused, so
+//                            nobody can buzz a phone with a row they
+//                            could not see. "run" sends any it missed.
 //   { action: "run" }     -> called on a schedule (hourly is right). For
 //                            every agent with notifications on, works out
 //                            what is worth a tap RIGHT NOW and sends the
@@ -50,6 +57,7 @@ import webpush from "npm:web-push@3.6.7";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
 const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY") || "";
 const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY") || "";
 const VAPID_SUBJECT = Deno.env.get("VAPID_SUBJECT") || "mailto:owner@omni-ware.app";
@@ -679,6 +687,62 @@ async function runShop(admin: any, shopId: string, subs: any[], nowMs: number, d
   return { shopId, plan };
 }
 
+/* A shout-out is a person speaking, not the app: it is never capped and
+   never weighed against the day's other nudges. Claimed BEFORE it is
+   sent (notified_at set where still empty), so the button and the
+   hourly run can never both deliver it. */
+function shoutNudge(row: any, shopName: string): Nudge {
+  const from = shopName || "The shop";
+  const msg = String(row.message || "").trim();
+  return { kind: "shout", ref: String(row.id), prio: -3, open: "today", image: "",
+    title: row.reason ? `${from} · ${String(row.reason).slice(0, 60)}` : `A word from ${from}`,
+    body: msg.length > 180 ? msg.slice(0, 177) + "…" : msg };
+}
+async function sendShout(admin: any, row: any, subs: any[], shopName: string, sa: any) {
+  const { data: claimed } = await admin.from("agent_shoutouts").update({ notified_at: new Date().toISOString() })
+    .eq("shop_id", row.shop_id).eq("id", row.id).is("notified_at", null).select("id");
+  if (!claimed || !claimed.length) return { id: row.id, delivered: 0, already: true };
+  const n = shoutNudge(row, shopName);
+  let delivered = 0;
+  for (const s of subs.filter((x: any) => x.shop_id === row.shop_id && x.agent_id === row.agent_id)) {
+    if (await deliver(admin, s, n, sa)) delivered++;
+  }
+  if (delivered) {
+    await admin.from("agent_push_log").insert({ shop_id: row.shop_id, agent_id: row.agent_id, kind: n.kind, ref: n.ref,
+      title: n.title, body: n.body });
+  }
+  return { id: row.id, delivered };
+}
+function firebaseKey(): any {
+  if (!FIREBASE_SERVICE_ACCOUNT_JSON) return null;
+  try { return JSON.parse(FIREBASE_SERVICE_ACCOUNT_JSON); } catch (_e) { return null; }
+}
+async function shoutSend(req: Request, body: any) {
+  const auth = req.headers.get("Authorization") || "";
+  const jwt = auth.replace(/^Bearer\s+/i, "");
+  const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+  const { data: who } = await admin.auth.getUser(jwt);
+  if (!who || !who.user) return json({ ok: false, why: "signed_out" }, 401);
+  const shopId = String(body.shopId || "");
+  const id = Number(body.id);
+  if (!shopId || !Number.isFinite(id)) return json({ ok: false, why: "bad_request" }, 400);
+  // Through the caller's own key: RLS hands an admin their shop's rows
+  // and nobody else's, so a row this cannot read is not theirs to send.
+  const asUser = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: auth } } });
+  const { data: row, error } = await asUser.from("agent_shoutouts")
+    .select("shop_id, id, agent_id, reason, message, notified_at").eq("shop_id", shopId).eq("id", id).maybeSingle();
+  if (error) return json({ ok: false, why: "db", detail: error.message }, 500);
+  if (!row) return json({ ok: false, why: "not_found" }, 404);
+  if (row.notified_at) return json({ ok: true, already: true, delivered: 0 });
+  const [{ data: subs }, { data: shop }] = await Promise.all([
+    admin.from("agent_push_subscriptions").select("id, shop_id, agent_id, platform, push_token, endpoint, p256dh, auth_key")
+      .eq("shop_id", shopId).eq("agent_id", row.agent_id),
+    admin.from("shops").select("name").eq("id", shopId).maybeSingle(),
+  ]);
+  const r = await sendShout(admin, row, subs || [], (shop && shop.name) || "", firebaseKey());
+  return json({ ok: true, ...r, phones: (subs || []).length });
+}
+
 /* "Send me a test": one notification, now, to every phone of the agent
    who asked -- signed in, so it can only ever buzz their own phones. Not
    logged and not counted, and it says per phone why
@@ -715,6 +779,7 @@ Deno.serve(async (req) => {
   }
 
   if (body.action === "test") return testSend(req);
+  if (body.action === "shout") return shoutSend(req, body);
   if (body.action !== "run") return json({ error: "Unknown action" }, 400);
   // Closed unless the secret is set: an open endpoint here could make
   // every agent's phone buzz on demand.
@@ -736,6 +801,17 @@ Deno.serve(async (req) => {
   if (error) return json({ error: error.message, stage: "subscriptions" }, 500);
   const shops = [...new Set((subs || []).map((s: any) => s.shop_id))];
   const results = [];
+  // Shout-outs the button did not get out (the admin's phone dropped the
+  // call, the function was cold): two days back, oldest first.
+  if (!body.dryRun) {
+    const { data: missed } = await admin.from("agent_shoutouts").select("shop_id, id, agent_id, reason, message")
+      .is("notified_at", null).gte("created_at", new Date(nowMs - 2 * DAY).toISOString()).order("created_at").limit(200);
+    if (missed && missed.length) {
+      const { data: shopRows } = await admin.from("shops").select("id, name").in("id", [...new Set(missed.map((m: any) => m.shop_id))]);
+      const names = new Map((shopRows || []).map((r: any) => [r.id, r.name]));
+      for (const m of missed) results.push({ shout: await sendShout(admin, m, subs || [], String(names.get(m.shop_id) || ""), sa) });
+    }
+  }
   for (const shopId of shops) {
     results.push(await runShop(admin, shopId, (subs || []).filter((s: any) => s.shop_id === shopId), nowMs, !!body.dryRun, sa));
   }

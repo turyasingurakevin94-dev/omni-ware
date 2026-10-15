@@ -92,7 +92,7 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
 /* ---------- 2. what needs the agent, by their own terms --------------- */
 {
   const stageFor = (term) => compileScope(['const orderStaffNames = new Map();',
-    ...['agentOrderTerms', 'orderShopChecked', 'staffName', 'orderOwedAmount', 'orderStage'].map((n) => extractFunction(src, n, 'agent.html'))],
+    ...['agentOrderTerms', 'orderShopChecked', 'staffName', 'chargeValue', 'orderShopGoods', 'orderChargesAmount', 'orderOwedAmount', 'orderStage'].map((n) => extractFunction(src, n, 'agent.html'))],
     { myAgent: { paymentTerm: term }, fmtNum: (n) => String(n) }, ['orderStage', 'agentOrderTerms']);
   let pre = null, pod = null;
   try { pre = stageFor('prepay'); pod = stageFor('pay_on_delivery'); } catch (e) { /* reported below */ }
