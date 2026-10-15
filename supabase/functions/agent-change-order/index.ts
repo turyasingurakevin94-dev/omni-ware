@@ -16,6 +16,8 @@
 //     agreed line takes off a paid order becomes the agent's credit.
 //   - Credit is spent here too (`useCredit`): taken from the orders that
 //     carry it, oldest first, and paid onto the order in front of them.
+//   - Once an order is cancelled, the agent can say what happened with
+//     the client (`why`), for the shop's eyes only.
 //
 // Deployed alone, like every function in this folder, so the helpers it
 // needs live in this file.
@@ -46,6 +48,9 @@ function rpcMissing(err: any): boolean {
 }
 
 const CANCEL_REASONS = ["Client changed their mind", "Wrong items or quantities", "Taking too long", "Something else"];
+// What happened with the client, said after a cancel has gone through --
+// for the shop to learn from, and only the shop sees it.
+const CLIENT_WHYS = ["Changed their mind", "Found it cheaper", "Took too long", "Wrong items", "Other"];
 
 // What the order's charges come to (a delivery fee, say) on top of the
 // goods -- the shop's own rule: a percent is of the goods, a fixed one is
@@ -226,6 +231,16 @@ Deno.serve(async (req) => {
         if (!(due > 0)) return json({ error: "Nothing owed on this order" }, 400);
       }
       return json({ error: "Your credit changed while it was being used — try again", stage: "credit_spend" }, 409);
+    }
+
+    if (action === "why") {
+      if (!(order.voided || payload.agentCancel)) return json({ error: "Only a cancelled order takes a reason" }, 409);
+      if (!CLIENT_WHYS.includes(body.why)) return json({ error: `why must be one of ${CLIENT_WHYS.join(", ")}` }, 400);
+      const { error: whyErr } = await admin.from("saved_quotes")
+        .update({ payload: { ...payload, agentCancelWhy: { at: now, why: body.why } } })
+        .eq("shop_id", shopId).eq("id", order.id);
+      if (whyErr) return json({ error: whyErr.message, stage: "update" }, 500);
+      return json({ ok: true, orderId: order.id, action });
     }
 
     const why = changeRefusal(order, agentId, action);

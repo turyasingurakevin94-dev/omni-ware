@@ -283,6 +283,23 @@ function describeEdit(prevItems: any[], nextItems: any[]): any[] {
   return out;
 }
 
+// An add-on rides with an order already on its way through the shop: the
+// same client, packed with it and sent on the same trip, but checked and
+// paid on its own so the first order's invoice never reopens. Only while
+// that order has not left the shop -- once it is out, more is simply a
+// new order. Never an add-on of an add-on: it rides with the first.
+const ADDON_STATUSES = ["draft", "awaiting_goods", "preparing"];
+function addonRefusal(order: any, agentId: string, agentClientId: unknown): string | null {
+  const p = (order && order.payload) || {};
+  if (!order) return "Order not found";
+  if (p.originAgentId !== agentId) return "This order does not belong to you";
+  if (String(p.agentClientId ?? "") !== String(agentClientId ?? "")) return "That order is for a different client";
+  if (order.voided || p.agentCancel) return "This order is cancelled";
+  if (p.addonOf != null) return "Add to the first order instead";
+  if (!ADDON_STATUSES.includes(order.status)) return "This order has left the shop — start a new order";
+  return null;
+}
+
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -300,13 +317,17 @@ Deno.serve(async (req) => {
     }
     const { shopId, agentClientId, items, deliveryMode, deliveryAddress, deliveryContact, deliveryWhen } = body;
     const replaceOrderId = body.replaceOrderId ?? null;
+    const addonOf = body.addonOf ?? null;
+    if (replaceOrderId != null && addonOf != null) {
+      return json({ error: "An edit cannot also be an add-on" }, 400);
+    }
     if (!shopId || !agentClientId || !Array.isArray(items) || !items.length) {
       return json({ error: "shopId, agentClientId and a non-empty items array are required" }, 400);
     }
-    if (deliveryMode !== "agent_pickup" && deliveryMode !== "shop_delivery") {
+    if (addonOf == null && deliveryMode !== "agent_pickup" && deliveryMode !== "shop_delivery") {
       return json({ error: "deliveryMode must be 'agent_pickup' or 'shop_delivery'" }, 400);
     }
-    if (deliveryMode === "shop_delivery" && !String(deliveryAddress || "").trim()) {
+    if (addonOf == null && deliveryMode === "shop_delivery" && !String(deliveryAddress || "").trim()) {
       return json({ error: "deliveryAddress is required when the shop is delivering" }, 400);
     }
     if (deliveryWhen != null && !DELIVERY_WHEN.includes(deliveryWhen)) {
@@ -373,6 +394,16 @@ Deno.serve(async (req) => {
       const why = replaceRefusal(cur, agentId, agentClientId);
       if (why) return json({ error: why }, cur ? 409 : 404);
       replacing = cur;
+    }
+    let riding: any = null;
+    if (addonOf != null) {
+      const { data: first, error: firstErr } = await admin
+        .from("saved_quotes").select("id, status, voided, payload")
+        .eq("shop_id", shopId).eq("id", addonOf).maybeSingle();
+      if (firstErr) return json({ error: firstErr.message, stage: "addon_lookup" }, 500);
+      const why = addonRefusal(first, agentId, agentClientId);
+      if (why) return json({ error: why }, first ? 409 : 404);
+      riding = first;
     }
 
     // A submit that lands server-side while the agent's connection drops
@@ -563,9 +594,18 @@ Deno.serve(async (req) => {
     // Delivery: where, who takes it in (the driver calls them), when, and
     // the shop's own delivery charge -- an order charge like any other on
     // the shop's board, owed by the agent with the goods.
-    const delivering = deliveryMode === "shop_delivery";
-    const fee = delivering ? shopDeliveryFee(settingsRow?.presets) : null;
-    const delivery = {
+    // An add-on goes where its order goes, on the same trip, so it takes
+    // that order's delivery as it stands and carries no fee of its own:
+    // one trip, one fee, already on the first order.
+    const rp = riding ? (riding.payload || {}) : null;
+    const delivering = rp ? rp.deliveryMode === "shop_delivery" : deliveryMode === "shop_delivery";
+    const fee = delivering && !rp ? shopDeliveryFee(settingsRow?.presets) : null;
+    const delivery = rp ? {
+      deliveryMode: rp.deliveryMode === "shop_delivery" ? "shop_delivery" : "agent_pickup",
+      deliveryAddress: delivering ? (rp.deliveryAddress || null) : null,
+      deliveryContact: delivering ? (rp.deliveryContact || null) : null,
+      deliveryWhen: delivering ? (rp.deliveryWhen || null) : null,
+    } : {
       deliveryMode,
       deliveryAddress: delivering ? String(deliveryAddress).trim().slice(0, 200) : null,
       deliveryContact: delivering && deliveryContact ? {
@@ -623,13 +663,14 @@ Deno.serve(async (req) => {
         ...delivery,
         charges: feeCharge(1),
         agentPaymentStatus: "unpaid",
+        ...(riding ? { addonOf: riding.id } : {}),
       },
     };
 
     const { data: inserted, error: insertErr } = await admin.from("saved_quotes").insert(insertRow).select("id").single();
     if (insertErr) return json({ error: insertErr.message, stage: "insert" }, 500);
 
-    return json({ ok: true, orderId: inserted.id });
+    return json({ ok: true, orderId: inserted.id, ...(riding ? { addonOf: riding.id } : {}) });
   } catch (err) {
     console.error("agent-submit-order: uncaught error", err);
     return json({ error: String(err && (err as Error).message || err), stage: "uncaught" }, 500);

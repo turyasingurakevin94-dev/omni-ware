@@ -13789,6 +13789,10 @@
   .sq-client-name{flex:1;min-width:0;}
   .sq-client-total{flex-shrink:0;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink);}
   .sq-location-row{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink-soft);margin-top:3px;}
+  .sq-addon-row{display:flex;align-items:center;gap:6px;margin-top:4px;padding:5px 8px;border-radius:var(--ow-r-sm);background:var(--ow-verdigris-soft);border:1px dashed #B9DCC8;font-size:var(--ow-t-12);font-weight:600;color:var(--ow-verdigris);}
+  .sq-addon-row > span:nth-child(2){flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .sq-addon-row b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;color:var(--ow-ink-900);font-weight:600;}
+  .sq-addon-tag{flex:none;height:18px;padding:0 6px;border-radius:6px;background:var(--ow-verdigris);color:#fff;font-size:11px;font-weight:700;display:inline-flex;align-items:center;}
   .sq-location-row .icon{width:12px;height:12px;flex-shrink:0;}
   /* One gap governs the stack. The rows used to each carry their own
      margin-top on top of this gap, so spacing depended on which rows an
@@ -45091,6 +45095,12 @@ function buildSyncRows(d, shopId){
         ...(q.agentChange ? {agentChange:q.agentChange} : {}),
         ...(q.agentEdit ? {agentEdit:q.agentEdit} : {}),
         ...(q.agentCredit ? {agentCredit:q.agentCredit} : {}),
+        /* An add-on that rides with an earlier order of the same agent's
+           (agent-submit-order's addonOf), and what the agent says
+           happened with the client after a cancel (agentCancelWhy) --
+           named for the same reason. */
+        ...(q.addonOf != null ? {addonOf:q.addonOf} : {}),
+        ...(q.agentCancelWhy ? {agentCancelWhy:q.agentCancelWhy} : {}),
         /* Delivering to an agent's client: who takes it in and when
            (agent-submit-order), and the shop's word that it arrived --
            who received it, when, and the photo's path in the private
@@ -45443,7 +45453,7 @@ function addSettingsDiffOp(ops, shopId, settingsCore){
 async function mergeServerStageLogs(shopId, rows){
   if(!rows.length) return;
   const { data: current, error } = await sb.from('saved_quotes')
-    .select('id, amount_paid, stageLog:payload->stageLog, items:payload->items, payments:payload->payments, agentPaymentStatus:payload->agentPaymentStatus, agentCancel:payload->agentCancel, agentChange:payload->agentChange, agentEdit:payload->agentEdit, agentCredit:payload->agentCredit')
+    .select('id, amount_paid, stageLog:payload->stageLog, items:payload->items, payments:payload->payments, agentPaymentStatus:payload->agentPaymentStatus, agentCancel:payload->agentCancel, agentChange:payload->agentChange, agentEdit:payload->agentEdit, agentCredit:payload->agentCredit, agentCancelWhy:payload->agentCancelWhy')
     .eq('shop_id', shopId).in('id', rows.map(r=> r.id));
   if(error) throw error;
   const recs = new Map((current || []).map(r=> [String(r.id), r]));
@@ -45493,6 +45503,7 @@ function mergeAgentOwnedKeys(server, row, q){
   const set = (k, v)=>{ p[k] = v; if(q) q[k] = v; };
   const t = (x)=> String(x || '');
   if(server.agentCancel && !p.agentCancel) set('agentCancel', server.agentCancel);
+  if(server.agentCancelWhy && t(server.agentCancelWhy.at) > t(p.agentCancelWhy && p.agentCancelWhy.at)) set('agentCancelWhy', server.agentCancelWhy);
   const sc = server.agentChange, mc = p.agentChange;
   if(sc && (!mc || t(sc.at) > t(mc.at)
     || (t(sc.at) === t(mc.at) && sc.state === 'withdrawn' && mc.state === 'asked' && !(mc.lines || []).some(l=> l && l.decision)))) set('agentChange', sc);
@@ -63898,6 +63909,24 @@ function orderConfirmRowHTML(q){
     <button type="button" class="sq-confirm-btn" data-id="${q.id}">Confirm</button>
   </div>`;
 }
+/* AN ADD-ON RIDES WITH ITS ORDER. An agent who needs more for an order
+   already being packed sends it as an add-on (agent-submit-order's
+   addonOf): checked and paid on its own, so the first order's invoice
+   never reopens, but packed with it and sent on the same trip for the
+   one fee already on the first. Each card says which it is, so the two
+   are packed and sent together. */
+function orderAddons(q){
+  return (data.savedQuotes || []).filter(x=> x && !x.voided && !x.agentCancel && x.addonOf != null && String(x.addonOf) === String(q.id));
+}
+function orderAddonRowHTML(q){
+  if(q.addonOf != null){
+    const first = (data.savedQuotes || []).find(x=> String(x.id) === String(q.addonOf));
+    return `<div class="sq-addon-row" title="Pack and send with order #${esc(String(q.addonOf))}"><span class="sq-addon-tag">ADD-ON</span><span>rides with #${esc(String(q.addonOf))}${first ? ` · ${esc(SQ_STATUSES[first.status] ? SQ_STATUSES[first.status].label : first.status)}` : ''} · one trip, no second fee</span></div>`;
+  }
+  const adds = orderAddons(q);
+  if(!adds.length) return '';
+  return adds.map(a=> `<div class="sq-addon-row" title="An add-on from the same agent: pack it with this order and send them together"><span class="sq-addon-tag">ADD-ON</span><span>#${esc(String(a.id))} rides with this · ${esc((a.items || []).map(it=> `${it.productName || 'Item'} × ${it.qty}`).slice(0, 2).join(', '))}${(a.items || []).length > 2 ? ` +${(a.items || []).length - 2}` : ''}</span><b>${esc(fmtUGX(savedQuoteTotal(a)))}</b></div>`).join('');
+}
 function orderTripsRowHTML(q){
   if(!q || !orderAwaitsGoods(q)) return '';
   const trips = orderLiveTrips(q);
@@ -71073,6 +71102,7 @@ function renderSavedQuotes(){
             ${orderConfirmRowHTML(q)}
             ${orderGoodsRowHTML(q)}
             ${orderTripsRowHTML(q)}
+            ${orderAddonRowHTML(q)}
             ${(q.status==='preparing' && !orderNeedsWorker(q)) ? `<div class="sq-assignee-row" title="Being prepared by">${ICON_PREP_ANIM}<span class="sq-assignee-name">${esc(staffName(q.assignedWorkerId))}</span>${q.pickingStatus==='awaiting_accept' ? `<span class="st-status-pill busy" title="Not yet accepted on their device">Awaiting accept…</span>` : ''}</div>` : ''}
             ${orderNeedsWorker(q) ? `<div class="sq-assignee-row sq-unassigned" title="Nobody is preparing this order">${ICON_WARN}<span class="sq-assignee-name">${q.assignedWorkerId ? 'Assigned to someone no longer on staff' : 'Nobody assigned'}</span><button type="button" class="sq-assign-btn" data-id="${q.id}">Assign</button></div>` : ''}
             ${(q.status==='pending_delivery' && !orderNeedsDelivery(q)) ? `<div class="sq-assignee-row" title="Being delivered by">${ICON_DELIVERY_ANIM}<span class="sq-assignee-name">${esc(deliveryAssigneeLabel(q))}</span></div>` : ''}
