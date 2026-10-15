@@ -291,6 +291,26 @@ So answers land in **`supplier_answers`**:
 - `supplier-accounts-admin-ui.test.js`
 - `supplier.html` added to `environment-switch.test.js`
 
+### C9a. Build status
+
+Shipped (the supplier's side, end to end):
+
+| Piece | File | Notes |
+|---|---|---|
+| Tables | `supabase/migrations/0109_supplier_accounts.sql` | Accounts, sessions, answers and proposals in one migration (0110 folded in). |
+| Portal function | `supabase/functions/supplier-portal/index.ts` | Sign in, Today, order answer, products, price and stock, add and new item, money, consignment, insights, pickups, partnership, profile. `verify_jwt = false`. |
+| Admin function | `supabase/functions/supplier-accounts/index.ts` | `list`, `open`, `reissue`, `suspend`, `restore`, `revoke`. Admin JWT only. |
+| App | `supplier.html`, `manifest-supplier.json`, `supplier-sw.js` | Matches the canvas screens. `?demo` runs it on sample data with no backend. |
+| Tests | `test/supplier-portal.test.js`; `supplier.html` added to `environment-switch.test.js`; `functions-jwt.test.js` | The boundary, terms parity with `orderSupplierTerms`, verbatim helpers, the PIN. |
+
+Not yet built (the owner's side, C7):
+
+- The Suppliers-screen invite and PIN UI that calls `supplier-accounts`.
+- Folding `supplier_answers` into orders, and the proposals queue in the Price Registry.
+- The one-tap answer link inside `supplierConfirmMessage`, and WhatsApp templates.
+- The Wanted board's live data (`sourcing_leads`). Until then the screen shows sample data in demo
+  mode and "Coming soon" when signed in.
+
 ### C10. How the build is verified
 
 1. `npm test`, `node test/design-system.test.js`, and the new boundary and parity tests.
