@@ -303,10 +303,19 @@ Shipped (the supplier's side, end to end):
 | App | `supplier.html`, `manifest-supplier.json`, `supplier-sw.js` | Matches the canvas screens. `?demo` runs it on sample data with no backend. |
 | Tests | `test/supplier-portal.test.js`; `supplier.html` added to `environment-switch.test.js`; `functions-jwt.test.js` | The boundary, terms parity with `orderSupplierTerms`, verbatim helpers, the PIN. |
 
-Not yet built (the owner's side, C7):
+The owner's side (C7), built into the existing screens rather than as new pages:
 
-- The Suppliers-screen invite and PIN UI that calls `supplier-accounts`.
-- Folding `supplier_answers` into orders, and the proposals queue in the Price Registry.
+| Where | What was added |
+|---|---|
+| A supplier's account (Suppliers → a supplier) | A **Supplier app** panel: their status, Invite / Issue a new PIN (shown once, with Send on WhatsApp), Sign out their phones, Suspend / Let them back in. |
+| The supplier book | A **Waiting for a new PIN** strip, shown only while someone is locked out or tapped "Forgot PIN?". Each row's details line names their app status. |
+| An order's **Confirm with suppliers** panel | Answers from the app fold in on load and on every 30-second refresh. "Have all" at the current terms settles the row, marked "Confirmed in the supplier app". "None" and "short" are recorded as a problem with their words. A short answer offers **Accept their terms**, which cuts the lines. An answer to an older version of the order is shown, not applied. |
+| Price Registry → Quotes | A **From suppliers** queue above the strip: new prices, still-correct checks, offers to supply, and new items. Each has Accept / Decline (with an optional note), plus Accept N safe ones. A new item is marked done after it is added under Products. |
+
+Pinned by `test/supplier-owner-ui.test.js`.
+
+Not yet built:
+
 - The one-tap answer link inside `supplierConfirmMessage`, and WhatsApp templates.
 - The Wanted board's live data (`sourcing_leads`). Until then the screen shows sample data in demo
   mode and "Coming soon" when signed in.
