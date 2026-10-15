@@ -48,7 +48,7 @@
 
   /* ---- 1. back ---- */
   function back(){
-    var tap = document.querySelector('.ag-lightbox') || document.querySelector('.ax-thanks [data-ty-close]') || document.querySelector('.ax-sent2');
+    var tap = document.querySelector('.ag-lightbox') || document.querySelector('.ax-thanks [data-ty-close]') || document.querySelector('.ax-goalwin [data-gw-close]') || document.querySelector('.ax-sent2');
     if(tap){ tap.click(); return; }
     if(typeof openSheets !== 'undefined' && openSheets.length){ openSheets[openSheets.length - 1].close(); return; }
     if(typeof currentView !== 'undefined' && currentView !== 'today' && typeof switchTab === 'function' && !document.querySelector('.ag-auth')){ switchTab('today'); return; }
@@ -2105,6 +2105,97 @@
   .ax-ask-go .icon{width:20px;height:20px;}
   .ax-ask-no{all:unset;box-sizing:border-box;cursor:pointer;height:48px;margin-top:-8px;border-radius:14px;color:#B3BCD2;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;}
   @media (prefers-reduced-motion: reduce){ .ax-ask-stack .card{animation:none;} }
+
+  /* ================= GOAL MILESTONES =================
+     A quarter, half and three quarters get a moment; the goal itself gets
+     the big one. Navy like the thank-you, gold for the win. */
+  .ax-goalbar.hit .t{background:transparent;gap:2px;}
+  .ax-goalbar.hit .t i.won{min-width:0;border-radius:999px 2px 2px 999px;background:var(--mint);}
+  .ax-goalbar.hit .t i.over{min-width:0;border-radius:2px 999px 999px 2px;background:#F5B26B;}
+  .ax-goalbar.hit .t i.won:last-child{border-radius:999px;}
+  .ax-goalbar .l .won{color:var(--mint);font-weight:700;}
+  .ax-goalbar .l .won .icon{opacity:1;color:#F5B26B;width:16px;height:16px;}
+  .ax-goalbar .l .won b{color:#F5B26B;}
+
+  .ax-goalwin{position:fixed;inset:0;z-index:73;background:var(--navy);color:#fff;overflow-y:auto;animation:axFade .2s ease-out;}
+  .ax-goalwin.out{opacity:0;transition:opacity .2s;}
+  .ax-goalwin .in{position:relative;max-width:520px;min-height:100%;margin:0 auto;box-sizing:border-box;padding:calc(14px + var(--safe-t)) 20px calc(24px + var(--safe-b));display:flex;flex-direction:column;gap:16px;}
+  .ax-goalwin .top{display:flex;justify-content:space-between;align-items:center;}
+  .ax-goalwin .tag{display:flex;align-items:center;height:32px;padding:0 12px;border-radius:999px;background:rgba(255,255,255,.08);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--on-navy);}
+  .ax-goalwin .head{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;animation:axGwUp .5s ease-out .5s both;}
+  .ax-goalwin h2{margin:0;font-size:30px;font-weight:800;letter-spacing:-.02em;line-height:1.1;}
+  .ax-goalwin .who{display:flex;align-items:center;gap:8px;height:38px;padding:0 14px 0 4px;border-radius:999px;background:rgba(255,255,255,.08);font-size:14px;font-weight:600;}
+  .ax-goalwin .who .ax-av{width:30px;height:30px;font-size:11px;}
+  .ax-goalwin .grow-space{flex:1;}
+  .ax-goalwin .go{all:unset;box-sizing:border-box;cursor:pointer;height:58px;border-radius:16px;background:#fff;color:var(--navy);font-size:17px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px;}
+  .ax-goalwin .go .icon{width:18px;height:18px;stroke-width:2.4;}
+  .ax-goalwin .go .m{font-family:var(--font-money);font-weight:600;}
+  .ax-goalwin .later{all:unset;box-sizing:border-box;cursor:pointer;height:48px;margin-top:-6px;border-radius:14px;color:var(--on-navy);font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  @keyframes axGwUp{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+  @keyframes axGwBurst{0%{transform:scale(.2);opacity:0}55%{transform:scale(1.25);opacity:1}100%{transform:scale(1);opacity:1}}
+  @keyframes axGwRay{0%{opacity:0;transform:scale(.4)}40%{opacity:1}100%{opacity:0;transform:scale(1.3)}}
+  @keyframes axGwArc{from{stroke-dasharray:0 603.2}}
+  /* the step */
+  .ax-goalwin .arc{position:relative;align-self:center;width:240px;height:214px;}
+  .ax-goalwin .arc svg{display:block;}
+  .ax-goalwin .arc .grow{animation:axGwArc 1s ease-out both;}
+  .ax-goalwin .arc .burst{animation:axGwBurst .6s cubic-bezier(.2,.8,.2,1) .8s both;}
+  .ax-goalwin .arc .rays{animation:axGwRay 1.4s ease-out .9s both;}
+  .ax-goalwin .arc .mid{position:absolute;inset:0;padding-top:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;}
+  .ax-goalwin .arc .mid b{font-size:50px;font-weight:600;letter-spacing:-.05em;line-height:1;}
+  .ax-goalwin .arc .mid span{font-size:13px;color:var(--on-navy);}
+  .ax-goalwin .track{position:relative;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:14px 6px 12px;border-radius:20px;background:rgba(255,255,255,.06);}
+  .ax-goalwin .track .rail,.ax-goalwin .track .fill{position:absolute;left:12.5%;top:31px;height:4px;border-radius:999px;}
+  .ax-goalwin .track .rail{right:12.5%;background:rgba(255,255,255,.12);}
+  .ax-goalwin .track .fill{background:var(--mint);}
+  .ax-goalwin .track > span{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;}
+  .ax-goalwin .track .n{width:38px;height:38px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:#F5B26B;color:var(--navy);box-shadow:0 0 0 6px rgba(245,178,107,.2);}
+  .ax-goalwin .track .n .icon{width:18px;height:18px;stroke-width:2.8;}
+  .ax-goalwin .track .n.done{background:var(--mint);box-shadow:none;}
+  .ax-goalwin .track .n.next{background:var(--navy);box-shadow:inset 0 0 0 2px rgba(255,255,255,.3);color:var(--on-navy);}
+  .ax-goalwin .track .n.next .icon{width:16px;height:16px;stroke-width:2.2;}
+  .ax-goalwin .track b{font-size:14px;}
+  .ax-goalwin .track .s{font-size:12px;font-weight:600;color:var(--on-navy);}
+  .ax-goalwin .track .now b,.ax-goalwin .track .now .s{color:#F5B26B;font-weight:700;}
+  .ax-goalwin .gap{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:12px;min-height:60px;padding:12px 12px 12px 14px;border-radius:18px;background:rgba(255,255,255,.06);}
+  .ax-goalwin .gap .faces{display:flex;flex:none;}
+  .ax-goalwin .gap .faces .ax-av{width:34px;height:34px;font-size:11px;box-shadow:0 0 0 2px #1E2846;}
+  .ax-goalwin .gap .faces .ax-av + .ax-av{margin-left:-8px;}
+  .ax-goalwin .gap .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;font-size:12px;font-weight:600;color:var(--on-navy);}
+  .ax-goalwin .gap .b b{font-size:14px;font-weight:700;color:#fff;}
+  .ax-goalwin .gap .v{font-size:15px;font-weight:600;color:var(--mint);}
+  .ax-goalwin .gap > .icon{width:14px;height:14px;color:#5F6A85;stroke-width:2.4;}
+  /* the goal */
+  .ax-goalwin .cf{position:absolute;inset:0;overflow:hidden;pointer-events:none;}
+  .ax-goalwin .cf i{position:absolute;width:8px;height:12px;border-radius:2px;opacity:0;animation:axConf 2.8s ease-in both;}
+  .ax-goalwin .medal{position:relative;align-self:center;width:176px;height:176px;margin-top:-8px;}
+  .ax-goalwin .medal .sun{position:absolute;inset:0;width:176px;height:176px;fill:none;animation:axGwSpin 24s linear infinite;}
+  @keyframes axGwSpin{to{transform:rotate(360deg)}}
+  .ax-goalwin .medal .cup{position:absolute;left:30px;top:30px;width:116px;height:116px;border-radius:999px;background:#F5B26B;color:var(--navy);box-shadow:0 0 0 8px rgba(245,178,107,.18),inset 0 0 0 6px #E39A4C;display:flex;align-items:center;justify-content:center;animation:axGwPop .8s cubic-bezier(.2,.8,.2,1) .2s both;}
+  .ax-goalwin .medal .cup .icon{width:56px;height:56px;stroke-width:2;}
+  @keyframes axGwPop{0%{transform:scale(.2) rotate(-20deg);opacity:0}60%{transform:scale(1.12) rotate(4deg);opacity:1}100%{transform:none}}
+  .ax-goalwin .eye{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#F5B26B;}
+  .ax-goalwin.done h2{font-size:34px;}
+  .ax-goalwin .big{font-size:40px;font-weight:600;letter-spacing:-.04em;line-height:1.1;color:var(--mint);}
+  .ax-goalwin .pill{display:flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;background:rgba(111,220,176,.16);color:var(--mint);font-size:13px;font-weight:700;}
+  .ax-goalwin .pill .icon{width:15px;height:15px;}
+  .ax-goalwin .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;animation:axGwUp .5s ease-out .8s both;}
+  .ax-goalwin .stats > span{height:64px;border-radius:16px;background:rgba(255,255,255,.06);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;font-weight:600;color:var(--on-navy);}
+  .ax-goalwin .stats b{font-size:20px;font-weight:600;color:#fff;}
+  .ax-goalwin .stats .gold{background:rgba(245,178,107,.12);color:#F5B26B;}
+  .ax-goalwin .stats .gold b{color:#F5B26B;}
+  .ax-goalwin .who-got{display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:18px;background:rgba(255,255,255,.06);animation:axGwUp .5s ease-out 1s both;}
+  .ax-goalwin .who-got .k{font-size:13px;font-weight:700;color:var(--on-navy);}
+  .ax-goalwin .who-got .bar{display:flex;height:14px;gap:3px;}
+  .ax-goalwin .who-got .bar i{min-width:6px;border-radius:4px;}
+  .ax-goalwin .who-got .bar i:first-child{border-radius:999px 4px 4px 999px;}
+  .ax-goalwin .who-got .bar i:last-child{border-radius:4px 999px 999px 4px;}
+  .ax-goalwin .who-got .bar i:only-child{border-radius:999px;}
+  .ax-goalwin .who-got .legend{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px 10px;font-size:12px;font-weight:600;}
+  .ax-goalwin .who-got .legend span{display:flex;align-items:center;gap:6px;}
+  .ax-goalwin .who-got .legend i{width:8px;height:8px;border-radius:999px;}
+  .ax-goalwin .who-got .legend b{font-weight:600;color:var(--on-navy);}
+  @media (prefers-reduced-motion: reduce){ .ax-goalwin *, .ax-goalwin{animation:none !important;} .ax-goalwin .cf{display:none;} }
 </style>
 </head>
 <body class="app-loading">
@@ -5172,8 +5263,9 @@ function openSheet(html, opts){
       const i = openSheets.indexOf(sheet);
       if(i >= 0) openSheets.splice(i, 1);
       if(!openSheets.length) document.body.classList.remove('ax-locked');
-      // Back on the page after a first order: the moment to ask about notifications.
-      if(!openSheets.length && pushAskDue) setTimeout(maybeAskForPush, 500);
+      // Back on the page: a goal milestone crossed, else (after a first
+      // order) the moment to ask about notifications.
+      if(!openSheets.length) setTimeout(afterSheetsClosed, 500);
       if(opts.onClose) opts.onClose();
     } };
   scrim.addEventListener('click', (e)=>{ if(e.target === scrim) sheet.close(); });
@@ -5517,7 +5609,13 @@ function renderTodayHero(){
   btn.setAttribute('aria-label', p.aim > 0
     ? `Your goal: ${Math.round(frac*100)} percent of ${fmtNum(p.aim)}, ${days}`
     : 'Set a goal');
-  btn.innerHTML = p.aim > 0
+  const hit = p.target > 0 && p.earned >= p.target;
+  btn.classList.toggle('hit', hit);
+  if(hit) btn.setAttribute('aria-label', `${monthName(p.key)} goal hit: ${fmtNum(p.earned)} of ${fmtNum(p.target)}, ${fmtNum(p.earned - p.target)} over`);
+  btn.innerHTML = hit
+    ? `<span class="t" aria-hidden="true"><i class="won" style="flex:${Math.round(p.target)};"></i>${p.earned > p.target ? `<i class="over" style="flex:${Math.max(Math.round(p.earned - p.target), Math.round(p.target * 0.02))};"></i>` : ''}</span>
+       <span class="l"><span class="won">${AX_ICON.trophy}Goal hit${p.earned > p.target ? ` · <b class="m">+${esc(fmtCompactUGX(p.earned - p.target))}</b> over` : ''}</span><span>${days}${AX_ICON.chevR}</span></span>`
+    : p.aim > 0
     ? `<span class="t" aria-hidden="true"><i style="width:${pct(frac)};"></i><i class="near" style="width:${pct(Math.min(nearFrac, 1 - Math.min(1, frac)))};"></i></span>
        <span class="l"><span><b class="m">${Math.round(frac * 100)}%</b> of ${p.target ? 'your' : 'your best,'} <span class="m">${esc(fmtCompactUGX(p.aim))}</span>${p.target ? ' goal' : ''}</span><span>${days}${AX_ICON.chevR}</span></span>`
     : `<span class="l"><span class="set">${AX_ICON.flag}Set a goal for ${esc(monthName(p.key))}</span><span>${days}${AX_ICON.chevR}</span></span>`;
@@ -7585,7 +7683,7 @@ function openThankYou(orderId){
       <button type="button" class="ax-link-l" data-ty-close>Back to Today</button>
     </div>`;
   document.body.appendChild(el);
-  const close = ()=>{ if(el.parentNode) el.remove(); };
+  const close = ()=>{ if(el.parentNode){ el.remove(); setTimeout(afterSheetsClosed, 400); } };
   el.addEventListener('click', (ev)=>{
     if(ev.target.closest('[data-ty-close]')){ close(); if(currentView !== 'today') switchTab('today'); return; }
     if(ev.target.closest('[data-ty-again]')){ close(); orderUsual(c); }
@@ -8846,6 +8944,7 @@ async function boot(){
   document.body.classList.remove('app-loading');
   if(openParam && openParam !== 'feed' && openParam !== 'today') routePush(openParam);
   startAgentPush();
+  setTimeout(maybeCelebrateGoal, 1200);
 }
 /* ================= CHANGING AN ORDER =================
    Where the order has got to decides what can still be done to it, and
@@ -9878,7 +9977,7 @@ function openNotifySheet(){
 let pushAskDue = false;
 function pushAskedKey(){ return agentLocalKey('agentPushAsked'); }
 function maybeAskForPush(){
-  if(!pushAskDue || openSheets.length || document.querySelector('.ax-sent2, .ax-thanks')) return;
+  if(!pushAskDue || openSheets.length || document.querySelector('.ax-sent2, .ax-thanks, .ax-goalwin')) return;
   if(agentPushState() !== 'off') { pushAskDue = false; return; }
   try{ if(localStorage.getItem(pushAskedKey()) === '1'){ pushAskDue = false; return; } }catch(_e){}
   pushAskDue = false;
@@ -9909,6 +10008,247 @@ function openPushAskSheet(){
     if(await enableAgentPush()) sheet.close();
   });
   return sheet;
+}
+
+/* ================= GOAL MILESTONES, CELEBRATED =================
+   The goal is what an agent looks at while hunting for sales, so crossing
+   a quarter, half or three quarters of it gets a moment of its own, and
+   hitting it gets the big one. Each plays once, on this phone, the next
+   time the screen is free -- after the order that did it is sent or
+   completed and its sheet is closed. Only a goal the agent set counts:
+   "your best month" is a yardstick, not a promise.
+
+   A new month or a new goal starts quietly from where the agent already
+   is -- nothing earlier is replayed -- except a goal already hit, which is
+   worth seeing once. */
+const GOAL_STEPS = [25, 50, 75, 100];
+const GOAL_STEP_TITLE = { 25: 'A quarter of the way', 50: 'Halfway there', 75: 'Three quarters done' };
+
+// The month's orders in the order they happened, earning as
+// monthEarnings counts it, and the order that took the total over
+// each milestone.
+function goalTimeline(key, target){
+  const orders = myOrders.filter(o=> !o.voided && o.date && String(o.date).startsWith(key)).slice()
+    .sort((a, b)=> String(a.date).localeCompare(String(b.date)) || String(a.id).localeCompare(String(b.id), undefined, { numeric: true }));
+  let sum = 0;
+  const at = {};
+  for(const o of orders){
+    const e = orderEarnings(o);
+    const before = sum;
+    sum += e.margin + (o.status === 'completed' ? e.bonus : 0);
+    GOAL_STEPS.forEach(m=>{ if(!at[m] && target > 0 && sum >= target * m / 100) at[m] = { order: o, before }; });
+  }
+  return { at, orders, total: sum };
+}
+function goalStepReached(earned, target){
+  return target > 0 ? (GOAL_STEPS.filter(s=> earned >= target * s / 100).pop() || 0) : 0;
+}
+function goalWinKey(monthKey){ return agentLocalKey(`agentGoalWin:${monthKey}`); }
+function goalWinDue(){
+  const p = monthPicture(new Date());
+  if(!(p.target > 0)) return null;
+  const m = goalStepReached(p.earned, p.target);
+  let seen = null;
+  try{ seen = JSON.parse(localStorage.getItem(goalWinKey(p.key)) || 'null'); }catch(_e){}
+  const save = (mm)=>{ try{ localStorage.setItem(goalWinKey(p.key), JSON.stringify({ t: p.target, m: mm })); }catch(_e){} };
+  if(!seen || seen.t !== p.target){
+    if(!seen && m === 100) return { p, m, save };
+    save(m);
+    return null;
+  }
+  return m > seen.m ? { p, m, save } : null;
+}
+function maybeCelebrateGoal(){
+  if(!myAgent || openSheets.length || document.body.classList.contains('app-loading')
+    || document.querySelector('.ax-sent2, .ax-thanks, .ax-goalwin, .ag-auth')) return false;
+  const due = goalWinDue();
+  if(!due) return false;
+  due.save(due.m);
+  if(due.m === 100) openGoalDone(due.p);
+  else openGoalStep(due.p, due.m);
+  return true;
+}
+// Whatever was on screen has gone: a milestone first, else the one-time
+// notifications ask.
+function afterSheetsClosed(){
+  if(maybeCelebrateGoal()) return;
+  if(pushAskDue) maybeAskForPush();
+}
+
+function goalDay(o){
+  const [y, m, d] = String(o && o.date || '').slice(0, 10).split('-').map(Number);
+  return y ? new Date(y, m - 1, d) : null;
+}
+function goalDayLabel(o){
+  const d = goalDay(o);
+  if(!d) return '';
+  const t = new Date();
+  return d.toDateString() === t.toDateString() ? 'Today' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+// A point on the 270° arc the goal sheet uses, centre (120,118), r 96.
+function goalArcPoint(f){
+  const a = (135 + 270 * f) * Math.PI / 180;
+  return [120 + 96 * Math.cos(a), 118 + 96 * Math.sin(a)];
+}
+function goalOverlay(cls, label, html){
+  const el = document.createElement('div');
+  el.className = `ax-goalwin ${cls}`;
+  el.setAttribute('role', 'dialog');
+  el.setAttribute('aria-modal', 'true');
+  el.setAttribute('aria-label', label);
+  el.innerHTML = html;
+  document.body.appendChild(el);
+  if(window.owHaptic) owHaptic('success');
+  const close = ()=>{
+    if(!el.parentNode) return;
+    el.classList.add('out');
+    setTimeout(()=>{ el.remove(); afterSheetsClosed(); }, 200);
+  };
+  el.addEventListener('click', (e)=>{ if(e.target.closest('[data-gw-close]')) close(); });
+  const onKey = (e)=>{ if(e.key === 'Escape' && el.parentNode){ close(); document.removeEventListener('keydown', onKey); } };
+  document.addEventListener('keydown', onKey);
+  const focus = el.querySelector('[data-gw-main]');
+  if(focus) setTimeout(()=> focus.focus({ preventScroll: true }), 50);
+  return { el, close };
+}
+
+/* ---- a quarter, half, three quarters ---- */
+function openGoalStep(p, m){
+  const name = myAgent && myAgent.name ? firstWord(myAgent.name) : '';
+  const tl = goalTimeline(p.key, p.target);
+  const hit = tl.at[m];
+  const frac = Math.max(0, Math.min(1, p.earned / p.target));
+  const before = hit ? Math.max(0, Math.min(frac, hit.before / p.target)) : Math.max(0, m / 100 - 0.03);
+  const L = 452.4;
+  const [bx, by] = goalArcPoint(m / 100);
+  const [fx, fy] = goalArcPoint(1);
+  const rays = [0, 45, 90, 135, 180, 225, 270, 315].map(d=>{
+    const a = d * Math.PI / 180;
+    return `M${(bx + 26 * Math.cos(a)).toFixed(1)} ${(by + 26 * Math.sin(a)).toFixed(1)}L${(bx + 35 * Math.cos(a)).toFixed(1)} ${(by + 35 * Math.sin(a)).toFixed(1)}`;
+  }).join('');
+  const notches = GOAL_STEPS.filter(s=> s < m).map(s=>{ const [x, y] = goalArcPoint(s / 100); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="#16203C"/>`; }).join('');
+  const c = hit ? orderClient(hit.order) : null;
+  const left = Math.max(0, p.target - p.earned);
+  const { pick, sum } = goalGapClients(left, new Date(), p.days);
+  const two = pick.slice(0, 3);
+  const finishes = two.length && sum >= left;
+  const node = (s)=>{
+    if(s === 100) return `<span role="listitem"><span class="n next">${AX_ICON.flag}</span><b>Goal</b><span class="s m">${esc(fmtCompactUGX(left))} to go</span></span>`;
+    const label = s === 25 ? '¼' : s === 50 ? '½' : '¾';
+    if(s === m) return `<span role="listitem" class="now"><span class="n">${GOAL_STAR}</span><b>${label}</b><span class="s">${esc(goalDayLabel(hit && hit.order) || 'Today')}</span></span>`;
+    if(s < m) return `<span role="listitem"><span class="n done">${AX_ICON.check}</span><b>${label}</b><span class="s">${esc(goalDayLabel(tl.at[s] && tl.at[s].order))}</span></span>`;
+    return `<span role="listitem"><span class="n next"></span><b>${label}</b><span class="s"></span></span>`;
+  };
+  return goalOverlay('step', `${GOAL_STEP_TITLE[m]}: ${m} percent of your goal`, `
+    <div class="in">
+      <div class="top"><span class="tag">${esc(monthName(p.key))} goal</span>
+        <button type="button" class="ax-iconbtn on-navy" data-gw-close aria-label="Close">${AX_ICON.x}</button></div>
+      <div class="arc">
+        <svg width="240" height="214" viewBox="0 0 240 214" role="img" aria-label="${Math.floor(frac * 100)} percent of ${esc(fmtNum(p.target))}">
+          <circle cx="120" cy="118" r="96" fill="none" stroke="rgba(255,255,255,.10)" stroke-width="16" stroke-linecap="round" stroke-dasharray="${L} 603.2" transform="rotate(135 120 118)"/>
+          <circle class="grow" cx="120" cy="118" r="96" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round" stroke-dasharray="${(before * L).toFixed(1)} 603.2" transform="rotate(135 120 118)"/>
+          <circle cx="120" cy="118" r="96" fill="none" stroke="#6FDCB0" stroke-width="16" stroke-dasharray="${((frac - before) * L).toFixed(1)} 603.2" stroke-dashoffset="${(-before * L).toFixed(1)}" transform="rotate(135 120 118)"/>
+          ${notches}
+          <circle cx="${fx.toFixed(1)}" cy="${fy.toFixed(1)}" r="11" fill="#16203C" stroke="rgba(255,255,255,.35)" stroke-width="2"/>
+          <g class="rays" style="transform-origin:${bx.toFixed(1)}px ${by.toFixed(1)}px"><path d="${rays}" stroke="#F5B26B" stroke-width="3" stroke-linecap="round"/></g>
+          <g class="burst" style="transform-origin:${bx.toFixed(1)}px ${by.toFixed(1)}px">
+            <circle cx="${bx.toFixed(1)}" cy="${by.toFixed(1)}" r="20" fill="#6FDCB0" fill-opacity=".22"/>
+            <circle cx="${bx.toFixed(1)}" cy="${by.toFixed(1)}" r="13" fill="#6FDCB0"/>
+            <path d="M${(bx - 5.5).toFixed(1)} ${(by + .3).toFixed(1)}l3.8 3.8 7.4-7.6" fill="none" stroke="#16203C" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
+        </svg>
+        <span class="mid"><b class="m">${Math.floor(frac * 100)}%</b><span class="m">${esc(fmtNum(p.earned))} / ${esc(fmtNum(p.target))}</span></span>
+      </div>
+      <div class="head">
+        <h2>${esc(GOAL_STEP_TITLE[m])}${name ? `, ${esc(name)}` : ''}</h2>
+        ${c ? `<span class="who">${avHTML(c, 'sm')}<span>${esc(possessive(firstWord(c.name || 'Your client')))} order took you over</span></span>` : ''}
+      </div>
+      <div class="track" role="list" aria-label="Milestones"><i class="rail"></i><i class="fill" style="width:${GOAL_STEPS.indexOf(m) * 25}%"></i>${GOAL_STEPS.map(node).join('')}</div>
+      ${two.length ? `<button type="button" class="gap" data-gw-goal>
+          <span class="faces">${two.map(r=> avHTML(r.client, 'sm')).join('')}</span>
+          <span class="b"><b>${finishes ? (two.length === 1 ? 'One usual order finishes it' : `${two.length} usual orders finish it`) : `${two.length} client${two.length === 1 ? '' : 's'} due back`}</b>
+            <span>Due before the month ends</span></span>
+          <span class="v m">+${esc(fmtNum(sum))}</span>${AX_ICON.chevR}</button>` : ''}
+      <span class="grow-space"></span>
+      <button type="button" class="go" data-gw-close data-gw-main>Keep going${AX_ICON.chevR}</button>
+    </div>`).el.addEventListener('click', (e)=>{
+      if(!e.target.closest('[data-gw-goal]')) return;
+      const el = e.target.closest('.ax-goalwin');
+      el.remove();
+      openGoalSheet();
+    });
+}
+const GOAL_STAR = '<svg class="icon" viewBox="0 0 24 24" style="fill:currentColor;stroke:none"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>';
+
+/* ---- the goal itself ---- */
+function openGoalDone(p){
+  const name = myAgent && myAgent.name ? firstWord(myAgent.name) : '';
+  const tl = goalTimeline(p.key, p.target);
+  const hitDay = goalDay(tl.at[100] && tl.at[100].order) || new Date();
+  const dim = new Date(hitDay.getFullYear(), hitDay.getMonth() + 1, 0).getDate();
+  const early = dim - hitDay.getDate();
+  const byClient = new Map();
+  tl.orders.forEach(o=>{
+    const e = orderEarnings(o);
+    const k = String(o.agentClientId != null ? o.agentClientId : (o.payload && o.payload.agentClientId) || '');
+    const cur = byClient.get(k) || { c: orderClient(o), v: 0 };
+    cur.v += e.margin + (o.status === 'completed' ? e.bonus : 0);
+    byClient.set(k, cur);
+  });
+  const ranked = [...byClient.values()].filter(r=> r.v > 0).sort((a, b)=> b.v - a.v);
+  const top = ranked.slice(0, 2);
+  const rest = ranked.slice(2);
+  const restV = rest.reduce((s, r)=> s + r.v, 0);
+  const parts = top.map((r, i)=> ({ l: firstWord(r.c && r.c.name || 'Client'), v: r.v, col: i ? '#E9B8DC' : '#9DB8F2' }))
+    .concat(restV > 0 ? [{ l: `${rest.length} more`, v: restV, col: 'rgba(255,255,255,.32)' }] : []);
+  const lb = leaderboard && leaderboard.you && leaderboard.totalAgents >= 3 ? leaderboard : null;
+  const streak = computeSellingStreak();
+  const g = goalFigures(new Date(), p.target);
+  const r10 = (n)=> Math.max(10000, Math.round(n / 10000) * 10000);
+  const higher = r10(Math.max(p.earned * 1.1, Math.min(g.earned + g.pace * g.days, p.target * 1.3)));
+  const confetti = Array.from({ length: 22 }, (_, i)=> `<i style="left:${(i * 41) % 100}%;top:${(i * 23) % 40}%;animation-delay:${(i % 8) * 0.09}s;animation-duration:${2.4 + (i % 5) * 0.3}s;background:${['#F5B26B','#6FDCB0','#FFFFFF','#E9B8DC','#9DB8F2'][i % 5]};"></i>`).join('');
+  const ov = goalOverlay('done', `${monthName(p.key)} goal hit`, `
+    <div class="cf" aria-hidden="true">${confetti}</div>
+    <div class="in">
+      <div class="top"><span></span><button type="button" class="ax-iconbtn on-navy" data-gw-close aria-label="Close">${AX_ICON.x}</button></div>
+      <div class="medal" aria-hidden="true"><svg class="sun" viewBox="0 0 176 176"><path d="M88 4v22M88 150v22M4 88h22M150 88h22M28.6 28.6l15.6 15.6M131.8 131.8l15.6 15.6M147.4 28.6l-15.6 15.6M44.2 131.8l-15.6 15.6" stroke="#F5B26B" stroke-opacity=".45" stroke-width="3" stroke-linecap="round"/></svg>
+        <span class="cup">${AX_ICON.trophy}</span></div>
+      <div class="head">
+        <span class="eye">${esc(monthName(p.key))} goal · done</span>
+        <h2>You did it${name ? `, ${esc(name)}` : ''}!</h2>
+        <span class="big m">${esc(fmtNum(p.earned))}</span>
+        <span class="pill">${AX_ICON.trend}${early > 0 ? `${early} day${early === 1 ? '' : 's'} early` : 'Right on time'}</span>
+      </div>
+      <div class="stats">
+        <span><b class="m">${tl.orders.length}</b><span>order${tl.orders.length === 1 ? '' : 's'}</span></span>
+        <span><b class="m">${byClient.size}</b><span>client${byClient.size === 1 ? '' : 's'}</span></span>
+        ${lb ? `<span class="gold"><b class="m">#${esc(lb.you.rank)}</b><span>of ${esc(lb.totalAgents)}</span></span>`
+          : `<span class="gold"><b class="m">${streak}</b><span>wk streak</span></span>`}
+      </div>
+      ${parts.length ? `<div class="who-got">
+        <span class="k">Who got you here</span>
+        <span class="bar" role="img" aria-label="${esc(parts.map(x=> `${x.l} ${fmtNum(x.v)}`).join(', '))}">${parts.map(x=> `<i style="flex:${Math.round(x.v)};background:${x.col};"></i>`).join('')}</span>
+        <span class="legend">${parts.map(x=> `<span><i style="background:${x.col};"></i>${esc(x.l)} <b class="m">${esc(fmtCompactUGX(x.v))}</b></span>`).join('')}</span>
+      </div>` : ''}
+      <span class="grow-space"></span>
+      <button type="button" class="go" data-gw-higher data-gw-main>${AX_ICON.flag}Aim higher: <span class="m">${esc(fmtNum(higher))}</span></button>
+      <button type="button" class="later" data-gw-close>Enjoy it</button>
+    </div>`);
+  ov.el.addEventListener('click', async (e)=>{
+    const b = e.target.closest('[data-gw-higher]');
+    if(!b || b.disabled) return;
+    b.disabled = true;
+    try{
+      await saveAgentGoal(higher, goalPerDay(higher, new Date()));
+      ov.close();
+      if(currentView === 'today') renderTodayHero();
+      toast(`New goal: ${fmtNum(higher)}`, 3500, { tone: 'good' });
+    }catch(_err){
+      b.disabled = false;
+      toast("Couldn't save that just now. Try again in a moment");
+    }
+  });
+  return ov;
 }
 
 boot();
