@@ -2058,6 +2058,16 @@
   .ax-upd-st .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;}
   .ax-upd-st .n{font-size:15px;font-weight:700;}
   .ax-upd-st .ax-dots6 i{width:24px;height:24px;}
+  .ax-upd-st{align-items:center;padding:12px 14px;background:var(--bg);}
+  .ax-upd-st .h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;}
+  .ax-upd-st .n{font-size:14px;}
+  .ax-upd-st .s{font-size:12px;color:var(--ink-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+  .ax-upd-bar{display:flex;gap:4px;}
+  .ax-upd-bar i{flex:1;height:6px;border-radius:999px;background:var(--line);}
+  .ax-upd-bar i.done{background:var(--navy);} .ax-upd-bar i.now{background:#F5B26B;}
+  .ax-sheet.full .ax-upd-pad{flex:1;display:flex;flex-direction:column;}
+  .ax-sheet.full .ax-upd-pad .ax-upd-chat{flex:1;min-height:220px;}
+  .ax-upd-pad .ax-foot{margin-top:0;}
   .ax-rcpt-bg{border-radius:18px;background:var(--tile);padding:16px;}
   .ax-rcpt{background:#fff;border-radius:6px;box-shadow:0 6px 18px rgba(27,36,56,.12);padding:16px;display:flex;flex-direction:column;gap:2px;}
   .ax-rcpt .h{display:flex;justify-content:space-between;gap:10px;padding-bottom:12px;}
@@ -9829,6 +9839,18 @@ function updateMessage(o, c){
   }
   return text;
 }
+/* Where the order is, as the board draws it on the Update sheet: the
+   stage, a short line beside it, and the six steps as one slim bar --
+   done in navy, the one it is on in amber. */
+function updStatusLine(o, st){
+  if(st.key === 'checking'){ const k = orderCheckCount(o); return `${k.ok} of ${k.all} confirmed`; }
+  return String(st.sub || '').replace(/ with the supplier$/, '');
+}
+function updStepBarHTML(o, st){
+  const n = orderSteps(o).length;
+  const at = st.key === 'cancelled' ? -1 : orderStepIndex(o, st);
+  return `<span class="ax-upd-bar" aria-hidden="true">${Array.from({ length: n }, (_, i)=> `<i class="${i < at ? 'done' : i === at ? 'now' : ''}"></i>`).join('')}</span>`;
+}
 function openUpdateSheet(orderId){
   const o = myOrders.find(x=> String(x.id) === String(orderId));
   if(!o) return null;
@@ -9837,9 +9859,9 @@ function openUpdateSheet(orderId){
   let attach = true;
   const sheet = openSheet(`<button type="button" class="ax-grab" data-close aria-label="Close"></button>
     <div class="ax-sheet-title"><h3>Update ${esc(firstWord(c.name))}</h3><button type="button" class="ax-iconbtn" data-close aria-label="Close">${AX_ICON.x}</button></div>
-    <div class="ax-sheet-pad">
-      <div class="ax-upd-st">${avHTML(c, 'sm')}<span class="b"><span class="n">${esc(st.title)}</span>${stepDotsHTML(o, st)}</span></div>
-      <div class="ax-chatbg tall">
+    <div class="ax-sheet-pad ax-upd-pad">
+      <div class="ax-upd-st">${avHTML(c, 'sm')}<span class="b"><span class="h"><span class="n">${esc(st.title)}</span><span class="s${/^\d/.test(updStatusLine(o, st)) ? ' m' : ''}">${esc(updStatusLine(o, st))}</span></span>${updStepBarHTML(o, st)}</span></div>
+      <div class="ax-chatbg tall ax-upd-chat">
         <label class="ax-bub"><textarea rows="4" data-msg aria-label="Message to ${esc(c.name)}">${esc(updateMessage(o, c))}</textarea>
           <span class="hint">${AX_ICON.pencil}edit before sending</span></label>
         <button type="button" class="ax-attach" data-attach role="switch" aria-checked="true"><i></i>Attach receipt</button>
