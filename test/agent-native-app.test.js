@@ -15,7 +15,7 @@
  * Run: node test/agent-native-app.test.js   (or: npm test)
  */
 const path = require('path');
-const { read, createReporter } = require('./_extract');
+const { read, createReporter, extractFunction } = require('./_extract');
 
 const t = createReporter('agent native app');
 const transform = require(path.join(__dirname, '..', 'apps', 'agent', 'src', 'transform.js'));
@@ -74,6 +74,20 @@ const src = read('agent.html');
   t.check(/directory: 'DOCUMENTS'/.test(src), 'and an app from before the plugin keeps it in Documents instead of losing it');
   t.check(/handOverImage\(r, \{ save: !share/.test(src) && (src.match(/handOverImage\(/g) || []).length >= 4,
     'the month card and both receipt routes go through it');
+}
+
+/* ---------- saving on a phone ---------------------------------------- *
+ * A download is ignored by the browsers inside WhatsApp and Facebook and
+ * by a page added to the home screen, so a receipt "saved" there went
+ * nowhere. On a phone Save goes through the share sheet, and with no
+ * share sheet the picture is shown to hold and save. */
+{
+  const hand = extractFunction(src, 'handOverImage', 'agent.html');
+  t.check(/\(!opts\.save \|\| phone\) && navigator\.canShare/.test(hand), 'on a phone, Save opens the share sheet, which carries Save image');
+  t.check(/if\(phone\) return showImageToKeep\(r, opts\);/.test(hand), 'and with no share sheet the picture is shown to hold and save');
+  t.check(!/'failed'/.test(hand), 'a picture is never just lost: every way out ends with it in hand');
+  const keep = extractFunction(src, 'showImageToKeep', 'agent.html');
+  t.check(/Press and hold the picture/.test(keep) && /data-keep-dl/.test(keep), 'it says how, and still offers the download');
 }
 
 process.exit(t.done() ? 1 : 0);

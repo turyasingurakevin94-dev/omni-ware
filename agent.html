@@ -1332,6 +1332,17 @@
   .ax-gchips .v{font-size:14px;font-weight:600;color:var(--ink);}
   .ax-gchips button.on{background:var(--navy);border-color:var(--navy);}
   .ax-gchips button.on .l,.ax-gchips button.on .v{color:#fff;}
+  /* ---- a picture to hold and save ---- */
+  .ax-keepimg .in{align-items:center;}
+  .ax-keepimg .top{align-self:stretch;}
+  .ax-keepimg img{display:block;max-width:100%;max-height:62vh;border-radius:16px;box-shadow:0 18px 40px rgba(0,0,0,.4);-webkit-touch-callout:default;user-select:auto;}
+  .ax-keepimg .how{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:16px;background:rgba(255,255,255,.08);color:#fff;}
+  .ax-keepimg .how .icon{width:24px;height:24px;color:var(--mint);flex:none;}
+  .ax-keepimg .how span{display:flex;flex-direction:column;gap:2px;}
+  .ax-keepimg .how b{font-size:15px;font-weight:700;}
+  .ax-keepimg .how small{font-size:12px;font-weight:600;color:#B3BCD2;}
+  .ax-keepimg .dl{all:unset;cursor:pointer;display:flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;font-size:13px;font-weight:700;color:#B3BCD2;}
+  .ax-keepimg .dl .icon{width:16px;height:16px;}
   /* ---- how it comes: packing, on results, lines and its own card ---- */
   .ax-pk-chip{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 8px;border-radius:7px;background:#F1EEE8;color:var(--ink-soft);font-size:12px;font-weight:600;max-width:100%;white-space:nowrap;}
   .ax-pk-chip .icon{width:13px;height:13px;flex:none;}
@@ -9760,7 +9771,7 @@ async function sendReceipt(o, how, ready){
   const r = ready || await receiptFile(rows, c.name, o.id);
   const text = `Here is your receipt, ${firstWord(c.name)}`;
   const done = await handOverImage(r, { save: how === 'save', title: 'Receipt', text });
-  if(done === 'shared' || done === 'cancelled') return;
+  if(done === 'shared' || done === 'cancelled' || (done === 'shown' && how === 'save')) return;
   // Where the phone cannot hand an image to WhatsApp, the image is saved
   // and the chat opened beside it, so attaching it is one tap.
   if(how === 'wa') window.open(`https://wa.me/${waNumber(c.phone)}?text=${encodeURIComponent(text)}`, '_blank');
@@ -10419,7 +10430,7 @@ function downloadBlob(blob, filename){
    keeps the picture in Documents rather than losing it.
    Called straight from the tap, with the picture already drawn, so the
    browser still counts the share as the tap's own. Says what happened:
-   shared, cancelled, documents, downloaded or failed. */
+   shared, cancelled, documents, downloaded or shown. */
 function nativePlugins(){
   const C = window.Capacitor;
   return C && typeof C.isNativePlatform === 'function' && C.isNativePlatform() ? (C.Plugins || {}) : null;
@@ -10432,31 +10443,58 @@ function blobBase64(blob){
     fr.readAsDataURL(blob);
   });
 }
+/* SAVING ON A PHONE. A download is the desktop's way of keeping a
+   picture, and on a phone it is the least reliable: the browsers inside
+   WhatsApp and Facebook, and a page added to the home screen, ignore it
+   without a word, and where it does work the picture lands in Downloads,
+   not the gallery. So on a phone, Save opens the share sheet too -- it
+   carries the phone's own "Save image" / "Save to Photos" -- and where
+   there is no share sheet the picture is shown full size with a word on
+   holding it to save, which works in every one of those browsers. The
+   phone app does the same through its Share plugin, rather than writing
+   to a Documents folder nobody opens. */
 async function handOverImage(r, opts){
   opts = opts || {};
   const P = nativePlugins();
   if(P){
-    if(!P.Filesystem) return 'failed';
+    if(!P.Filesystem) return showImageToKeep(r, opts);
     try{
       const data = await blobBase64(r.blob);
-      if(P.Share && !opts.save){
+      if(P.Share){
         const { uri } = await P.Filesystem.writeFile({ path: r.filename, data, directory: 'CACHE' });
-        try{ await P.Share.share({ files: [uri], text: opts.text || undefined, title: opts.title || undefined, dialogTitle: opts.title || 'Share' }); return 'shared'; }
-        catch(err){ return /cancel/i.test(String((err && err.message) || err)) ? 'cancelled' : 'failed'; }
+        try{ await P.Share.share({ files: [uri], text: opts.save ? undefined : opts.text || undefined, title: opts.title || undefined, dialogTitle: opts.save ? 'Save the picture' : opts.title || 'Share' }); return 'shared'; }
+        catch(err){ return /cancel/i.test(String((err && err.message) || err)) ? 'cancelled' : showImageToKeep(r, opts); }
       }
       await P.Filesystem.writeFile({ path: r.filename, data, directory: 'DOCUMENTS', recursive: true });
       return 'documents';
-    }catch(err){ console.warn('Could not hand the picture over:', err); return 'failed'; }
+    }catch(err){ console.warn('Could not hand the picture over:', err); return showImageToKeep(r, opts); }
   }
-  if(!opts.save && navigator.canShare && navigator.canShare({ files: [r.file] })){
+  const phone = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  if((!opts.save || phone) && navigator.canShare && navigator.canShare({ files: [r.file] })){
     const share = { files: [r.file] };
-    if(opts.text) share.text = opts.text;
+    if(opts.text && !opts.save) share.text = opts.text;
     if(opts.title) share.title = opts.title;
     try{ await navigator.share(share); return 'shared'; }
     catch(err){ if(err && err.name === 'AbortError') return 'cancelled'; }
   }
+  if(phone) return showImageToKeep(r, opts);
   downloadBlob(r.blob, r.filename);
   return 'downloaded';
+}
+// The picture itself, full size, to hold and save -- with a download
+// offered too, for a browser that does take one.
+function showImageToKeep(r, opts){
+  const url = URL.createObjectURL(r.blob);
+  const ov = goalOverlay('ax-keepimg', opts.title || 'Picture', `<div class="in">
+      <div class="top" style="justify-content:flex-end;"><button type="button" class="ax-iconbtn on-navy" data-gw-close aria-label="Close">${AX_ICON.x}</button></div>
+      <img src="${url}" alt="${esc(opts.title || 'Picture')}" data-gw-main tabindex="-1">
+      <div class="how">${PH.hand || AX_ICON.download}<span><b>Press and hold the picture</b><small>then tap Save image, or Add to Photos</small></span></div>
+      <button type="button" class="dl" data-keep-dl>${AX_ICON.download}Download instead</button>
+    </div>`);
+  ov.el.addEventListener('click', (e)=>{ if(e.target.closest('[data-keep-dl]')) downloadBlob(r.blob, r.filename); });
+  const gone = new MutationObserver(()=>{ if(!ov.el.isConnected){ URL.revokeObjectURL(url); gone.disconnect(); } });
+  gone.observe(document.body, { childList: true });
+  return 'shown';
 }
 /* ================= CLIENTS ================= */
 let clientFilter = 'all';
