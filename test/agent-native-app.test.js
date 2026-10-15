@@ -61,4 +61,19 @@ const src = read('agent.html');
   t.check(/redirectTo: window\.Capacitor \? 'https:\/\/omni-ware\.vercel\.app\/agent\.html'/.test(src), 'a password reset link opens the web page, which a phone can reach');
 }
 
+/* ---------- pictures leave the app ----------------------------------- *
+ * A WebView has no share sheet and ignores a download, so Share to
+ * Status, Save and the receipt buttons did nothing in the phone app. */
+{
+  const pkg = JSON.parse(read('apps/agent/package.json'));
+  t.check(!!pkg.dependencies['@capacitor/share'], 'the app carries the Share plugin');
+  t.check(/capacitor-share/.test(read('apps/agent/android/capacitor.settings.gradle')) && /CapacitorShare/.test(read('apps/agent/ios/App/CapApp-SPM/Package.swift')),
+    'in both the Android and the iPhone build');
+  t.check(/P\.Filesystem\.writeFile\(\{ path: r\.filename, data, directory: 'CACHE' \}\)/.test(src) && /P\.Share\.share\(\{ files: \[uri\]/.test(src),
+    'in the app a picture is written to the phone and handed to the share sheet');
+  t.check(/directory: 'DOCUMENTS'/.test(src), 'and an app from before the plugin keeps it in Documents instead of losing it');
+  t.check(/handOverImage\(r, \{ save: !share/.test(src) && (src.match(/handOverImage\(/g) || []).length >= 4,
+    'the month card and both receipt routes go through it');
+}
+
 process.exit(t.done() ? 1 : 0);

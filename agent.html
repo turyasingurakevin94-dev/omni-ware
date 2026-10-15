@@ -8490,21 +8490,18 @@ function receiptFile(rows, clientName, ref){
   const filename = `quote-${String(clientName || 'client').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'client'}.png`;
   return new Promise(res=> canvas.toBlob(blob=> res({ blob, filename, file: new File([blob], filename, { type: 'image/png' }) }), 'image/png'));
 }
-async function sendReceipt(o, how){
+async function sendReceipt(o, how, ready){
   const c = orderClient(o);
   const rows = orderReceiptRows(o);
   if(!rows.length) return;
-  const r = await receiptFile(rows, c.name, o.id);
+  const r = ready || await receiptFile(rows, c.name, o.id);
   const text = `Here is your receipt, ${firstWord(c.name)}`;
-  if(how !== 'save' && navigator.canShare && navigator.canShare({ files: [r.file] })){
-    try{ await navigator.share({ files: [r.file], title: 'Receipt', text }); return; }
-    catch(err){ if(err && err.name === 'AbortError') return; }
-  }
-  downloadBlob(r.blob, r.filename);
+  const done = await handOverImage(r, { save: how === 'save', title: 'Receipt', text });
+  if(done === 'shared' || done === 'cancelled') return;
   // Where the phone cannot hand an image to WhatsApp, the image is saved
   // and the chat opened beside it, so attaching it is one tap.
   if(how === 'wa') window.open(`https://wa.me/${waNumber(c.phone)}?text=${encodeURIComponent(text)}`, '_blank');
-  else toast('Receipt saved');
+  else toast(done === 'failed' ? 'Could not save the receipt' : done === 'documents' ? 'Receipt saved to your Documents' : 'Receipt saved');
 }
 function openReceiptSheet(orderId){
   const o = myOrders.find(x=> String(x.id) === String(orderId));
@@ -8531,9 +8528,12 @@ function openReceiptSheet(orderId){
         </div>
       </div>
     </div>`, { label: 'Receipt', full: true, white: true, kind: 'receipt' });
+  // Drawn now, so a tap shares at once.
+  let ready = null;
+  if(rows.length) receiptFile(rows, c.name, o.id).then(r=> ready = r);
   sheet.el.addEventListener('click', (e)=>{
     const b = e.target.closest('[data-r]');
-    if(b) sendReceipt(o, b.dataset.r);
+    if(b) sendReceipt(o, b.dataset.r, ready);
   });
   return sheet;
 }
@@ -8585,11 +8585,8 @@ function openUpdateSheet(orderId){
       const rows = orderReceiptRows(o);
       if(rows.length){
         const r = await receiptFile(rows, c.name, o.id);
-        if(navigator.canShare && navigator.canShare({ files: [r.file] })){
-          try{ await navigator.share({ files: [r.file], text }); return; }
-          catch(err){ if(err && err.name === 'AbortError') return; }
-        }
-        downloadBlob(r.blob, r.filename);
+        const done = await handOverImage(r, { text });
+        if(done === 'shared' || done === 'cancelled') return;
       }
     }
     window.open(`https://wa.me/${waNumber(c.phone)}?text=${encodeURIComponent(text)}`, '_blank');
@@ -9130,6 +9127,54 @@ function downloadBlob(blob, filename){
   a.href = url; a.download = filename;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(()=> URL.revokeObjectURL(url), 4000);
+}
+/* Handing a picture on -- to WhatsApp, Status, anywhere -- or keeping it.
+   A browser shares it with the phone's own share sheet, or downloads it.
+   Inside the phone app neither works: a WebView has no share sheet and
+   ignores a download, so a button there did nothing at all. The app
+   writes the picture to the phone and hands it to the share sheet
+   through its Share plugin instead; an app installed before that plugin
+   keeps the picture in Documents rather than losing it.
+   Called straight from the tap, with the picture already drawn, so the
+   browser still counts the share as the tap's own. Says what happened:
+   shared, cancelled, documents, downloaded or failed. */
+function nativePlugins(){
+  const C = window.Capacitor;
+  return C && typeof C.isNativePlatform === 'function' && C.isNativePlatform() ? (C.Plugins || {}) : null;
+}
+function blobBase64(blob){
+  return new Promise((ok, fail)=>{
+    const fr = new FileReader();
+    fr.onload = ()=> ok(String(fr.result).split(',')[1] || '');
+    fr.onerror = ()=> fail(fr.error);
+    fr.readAsDataURL(blob);
+  });
+}
+async function handOverImage(r, opts){
+  opts = opts || {};
+  const P = nativePlugins();
+  if(P){
+    if(!P.Filesystem) return 'failed';
+    try{
+      const data = await blobBase64(r.blob);
+      if(P.Share && !opts.save){
+        const { uri } = await P.Filesystem.writeFile({ path: r.filename, data, directory: 'CACHE' });
+        try{ await P.Share.share({ files: [uri], text: opts.text || undefined, title: opts.title || undefined, dialogTitle: opts.title || 'Share' }); return 'shared'; }
+        catch(err){ return /cancel/i.test(String((err && err.message) || err)) ? 'cancelled' : 'failed'; }
+      }
+      await P.Filesystem.writeFile({ path: r.filename, data, directory: 'DOCUMENTS', recursive: true });
+      return 'documents';
+    }catch(err){ console.warn('Could not hand the picture over:', err); return 'failed'; }
+  }
+  if(!opts.save && navigator.canShare && navigator.canShare({ files: [r.file] })){
+    const share = { files: [r.file] };
+    if(opts.text) share.text = opts.text;
+    if(opts.title) share.title = opts.title;
+    try{ await navigator.share(share); return 'shared'; }
+    catch(err){ if(err && err.name === 'AbortError') return 'cancelled'; }
+  }
+  downloadBlob(r.blob, r.filename);
+  return 'downloaded';
 }
 /* ================= CLIENTS ================= */
 let clientFilter = 'all';
@@ -11847,9 +11892,12 @@ function openMonthCard(key){
   const s = monthStory(key);
   const sheet = openSheet('', { label: `Your ${monthName(key)}`, kind: 'monthcard', full: true });
   sheet.el.classList.add('ax-mcard-sheet');
-  let cv = null;
+  let cv = null, file = null;
   function paint(){
     cv = drawMonthCard(s, showMoney);
+    file = null;
+    const drawn = cv;
+    monthCardFile(cv, key).then(r=>{ if(cv === drawn) file = r; });
     sheet.el.innerHTML = `<button type="button" class="ax-grab" data-close aria-label="Close"></button>
       <div class="ax-mcard">
         <div class="h"><span>Your ${esc(monthName(key))}</span><button type="button" class="x" data-close aria-label="Close">${AX_ICON.x}</button></div>
@@ -11864,13 +11912,11 @@ function openMonthCard(key){
   sheet.el.addEventListener('click', async (e)=>{
     const share = e.target.closest('[data-mcshare]'), save = e.target.closest('[data-mcsave]');
     if(!share && !save) return;
-    const r = await monthCardFile(cv, key);
-    if(share && navigator.canShare && navigator.canShare({ files: [r.file] })){
-      try{ await navigator.share({ files: [r.file] }); return; }
-      catch(err){ if(err && err.name === 'AbortError') return; }
-    }
-    downloadBlob(r.blob, r.filename);
-    toast(share ? 'Saved — add it to your Status from your photos' : 'Picture saved');
+    const r = file || await monthCardFile(cv, key);
+    const how = await handOverImage(r, { save: !share, title: `My ${monthName(key)}` });
+    if(how === 'failed') toast('Could not share the picture: try Save instead');
+    else if(how === 'documents') toast(share ? 'Saved to Documents: add it to your Status from there' : 'Saved to your Documents');
+    else if(how === 'downloaded') toast(share ? 'Saved: add it to your Status from your photos' : 'Picture saved');
   });
   // The faces load late on a cold start; draw again once they are in.
   paint();
