@@ -44,9 +44,10 @@ try {
       extractFunction(src, 'lateBy', 'agent.html'),
       extractFunction(src, 'lateLabel', 'agent.html'),
       extractFunction(src, 'firstWord', 'agent.html'),
+      extractFunction(src, 'clientRhythmHTML', 'agent.html'),
     ],
-    { esc },
-    ['orderDate', 'clientRegulars', 'medianOf', 'usualQty', 'dayBlocksHTML', 'lateLabel', 'firstWord'],
+    { esc, dateShort: (k) => String(k) },
+    ['orderDate', 'clientRegulars', 'medianOf', 'usualQty', 'dayBlocksHTML', 'lateLabel', 'firstWord', 'clientRhythmHTML'],
   );
 } catch (e) { err = e; }
 t.check(!!f, `the screen's helpers compile${err ? ` (${err.message})` : ''}`);
@@ -163,6 +164,26 @@ if (f) {
     t.check(/\+30/.test(long), 'while the label keeps the real number of days');
   }
 
+  /* ---------- 4b. the client sheet draws the board's rhythm -------- */
+  /*
+   * On the sheet, the rhythm is the board's: a pill for the verdict, a
+   * block per day of the gap, a white bar, an amber block per day late
+   * with the last one ringed as today, and the dates under their days.
+   */
+  {
+    const due = new Date(2026, 9, 4);
+    const late = f.clientRhythmHTML({ avgGapDays: 14, daysSince: 18, lastDateKey: '20 Sep' }, due);
+    t.check(/class="pill warn">4 days late</.test(late), 'the verdict is a pill, not loose amber text');
+    t.check((late.match(/<span><\/span>/g) || []).length === 14 && (late.match(/class="late( now)?"><\/span>/g) || []).length === 4
+      && (late.match(/class="late now"/g) || []).length === 1,
+      'fourteen grey, a bar, four amber -- and only the last is ringed as today');
+    t.check(/flex:14;"><span>20 Sep<\/span> <span class="w">due 4 Oct<\/span>/.test(late) && /class="t late" style="flex:4;">today/.test(late),
+      'the dates sit under their own days: last order and due under the grey run, today under the amber');
+    const soon = f.clientRhythmHTML({ avgGapDays: 21, daysSince: 14, lastDateKey: '1 Oct' }, due);
+    t.check(!/late/.test(soon) && /class="ahead"/.test(soon) && /class="gone now"/.test(soon),
+      'short of the gap, nothing is amber: the days gone are filled and today is ringed white');
+  }
+
   /* ---------- 5. the button has to fit a name ----------------------- */
   {
     t.check(f.firstWord('Ssekitoleko Hardware Ltd') === 'Ssekitoleko',
@@ -178,7 +199,7 @@ if (f) {
  * The mockup's rhythm line ended "six orders, never a missed payment".
  */
 {
-  const renderer = extractFunction(src, 'openClientSheet', 'agent.html') + extractFunction(src, 'dayBlocksHTML', 'agent.html');
+  const renderer = extractFunction(src, 'openClientSheet', 'agent.html') + extractFunction(src, 'dayBlocksHTML', 'agent.html') + extractFunction(src, 'clientRhythmHTML', 'agent.html');
   t.check(renderer.length > 0, 'the client sheet and its rhythm are found');
   // Scanned with every comment stripped. The note in agent.html explaining
   // why the claim is absent quotes the claim.

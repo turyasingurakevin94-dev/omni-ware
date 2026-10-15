@@ -713,6 +713,7 @@
   .ax-lpc.all .n{color:var(--on-navy);}
   .ax-lp-h{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;padding:6px 2px 0;}
   .ax-lp-h > span:first-of-type{flex:1;}
+  .ax-lp-cats + .ax-lp-h{margin-top:18px;}
   .ax-lp-h .icon{width:18px;height:18px;color:var(--ink-soft);}
   .ax-lp-h.hot .icon{color:#C93A30;}
   .ax-lp-h.bonus .icon{color:var(--warn);}
@@ -722,7 +723,8 @@
   .ax-lp-load{display:flex;align-items:center;gap:6px;height:26px;padding:0 10px 0 8px;border-radius:999px;background:var(--panel);
     box-shadow:inset 0 0 0 1px var(--line);font-size:12px;font-weight:600;color:var(--ink-soft);}
   .ax-spin{width:12px;height:12px;border-radius:999px;border:2px solid var(--line);border-top-color:var(--ink);animation:axSpin .8s linear infinite;box-sizing:border-box;}
-  .ax-lp-row{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px 6px;}
+  .ax-lp-row{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:4px 16px 8px;}
+  .ax-lp-h + .ax-lp-row{margin-top:6px;}
   .ax-lp-row::-webkit-scrollbar{display:none;}
   .ax-lpi{flex:none;width:148px;border-radius:20px;background:var(--panel);overflow:hidden;display:flex;flex-direction:column;
     box-shadow:0 1px 2px rgba(22,32,60,.06),0 8px 20px rgba(22,32,60,.06),inset 0 0 0 1px var(--line);}
@@ -1178,17 +1180,25 @@
   .ax-cr.add .ax-av{background:var(--tile);color:var(--ink);}
 
   /* ---- Client sheet ---- */
-  .ax-rhythm{background:rgba(255,255,255,.06);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px;}
-  .ax-rhythm .h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13px;font-weight:600;color:var(--on-navy);}
-  .ax-rhythm .h b{color:#F5B26B;font-weight:700;}
-  .ax-rhythm .h b.good{color:var(--mint);}
-  .ax-rhythm .ax-days-r span{background:rgba(255,255,255,.18);}
-  .ax-rhythm .ax-days-r span.late{background:#F5B26B;}
-  .ax-rhythm .ax-days-r span.due{background:var(--mint);}
-  .ax-rhythm .ax-days-r span.ahead{background:transparent;border-color:rgba(255,255,255,.18);}
-  .ax-rhythm .ax-days-r i{background:#fff;}
-  .ax-rhythm .ax-days-l{color:var(--on-navy);}
-  .ax-rhythm .ax-days-l .late{color:#F5B26B;}
+  .ax-rhythm{display:flex;flex-direction:column;gap:8px;}
+  .ax-rhythm .h{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;font-weight:600;color:#B3BCD2;}
+  .ax-rhythm .h .pill{padding:4px 10px;border-radius:999px;background:#F5B26B;color:#16203C;font-size:12px;font-weight:700;white-space:nowrap;}
+  .ax-rhythm .h .pill.good{background:var(--mint);}
+  .ax-rhythm .h .pill.soft{background:rgba(255,255,255,.12);color:#fff;}
+  .ax-rhythm .h b.good:not(.pill){color:var(--mint);}
+  .ax-rh-r{display:flex;align-items:center;gap:3px;}
+  .ax-rh-r span{flex:1;height:22px;border-radius:5px;background:rgba(255,255,255,.18);}
+  .ax-rh-r span.late{background:#F5B26B;}
+  .ax-rh-r span.gone{background:rgba(255,255,255,.42);}
+  .ax-rh-r span.ahead{background:transparent;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.18);}
+  .ax-rh-r span.now{box-shadow:0 0 0 2px #16203C,0 0 0 3.5px #F5B26B;}
+  .ax-rh-r span.gone.now{box-shadow:0 0 0 2px #16203C,0 0 0 3.5px #fff;}
+  .ax-rh-r i{width:2px;height:32px;margin:0 2px;border-radius:999px;background:#fff;flex:none;}
+  .ax-rh-l{display:flex;gap:6px;font-size:11px;font-weight:600;color:#8D99B5;}
+  .ax-rh-l > div{display:flex;justify-content:space-between;gap:6px;min-width:0;white-space:nowrap;}
+  .ax-rh-l .w{color:#fff;}
+  .ax-rh-l .t{justify-content:flex-end;text-align:right;}
+  .ax-rh-l .late{color:#F5B26B;}
   .ax-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(255,255,255,.1);border-radius:14px;overflow:hidden;}
   .ax-stats > div{background:var(--navy);padding:10px 8px;display:flex;flex-direction:column;gap:2px;text-align:center;}
   .ax-stats .k{font-size:11px;font-weight:600;color:var(--on-navy);}
@@ -10123,6 +10133,40 @@ function clientStatus(c, counts, today, liveBy){
   return { rank: 3, cls:'', text:`in ${-gap} day${gap===-1?'':'s'}`, frac, tone: frac >= 0.8 ? 'due' : '', soon: -gap };
 }
 /* ================= ONE CLIENT ================= */
+/* The client sheet's rhythm, as the board draws it: one block a day of
+   their usual gap, a white bar where it ran out, then one amber block per
+   day past it -- the last one ringed, because that one is today. Short
+   of the gap, the days gone are filled and the days left are open. The
+   label row splits the same way, so each date sits under its own day. */
+function clientRhythmHTML(cad, dueOn){
+  const gap = Math.max(1, Math.round(cad.avgGapDays));
+  const since = Math.max(0, Math.floor(cad.daysSince));
+  const ll = lateLabel(cad);
+  const MAX = 26;
+  const scale = Math.max(gap, since) > MAX ? MAX / Math.max(gap, since) : 1;
+  const due = esc(dueOn.toLocaleDateString('en-GB',{day:'numeric',month:'short'}));
+  const last = esc(dateShort(cad.lastDateKey));
+  const pill = `<b class="pill ${ll.tone}">${esc(ll.text)}</b>`;
+  let row, lab;
+  if(since > gap){
+    const grey = Math.max(1, Math.round(gap * scale));
+    const late = Math.max(1, Math.round((since - gap) * scale));
+    row = '<span></span>'.repeat(grey) + '<i></i>' + '<span class="late"></span>'.repeat(late - 1) + '<span class="late now"></span>';
+    lab = `<div style="flex:${grey};"><span>${last}</span> <span class="w">due ${due}</span></div><div class="t late" style="flex:${late};">today</div>`;
+  } else {
+    const done = Math.max(1, Math.round(since * scale));
+    const ahead = Math.round((gap - since) * scale);
+    row = '<span class="gone"></span>'.repeat(done - 1) + '<span class="gone now"></span>' + '<span class="ahead"></span>'.repeat(ahead) + '<i></i>';
+    lab = ahead
+      ? `<div style="flex:${done};"><span>${last}</span> <span class="w t">today</span></div><div class="t" style="flex:${ahead};">due ${due}</div>`
+      : `<div style="flex:${done};"><span>${last}</span> <span class="w">today · due ${due}</span></div>`;
+  }
+  return `<div class="ax-rhythm">
+    <div class="h"><span>Orders every ${gap} days</span>${pill}</div>
+    <div class="ax-rh-r" aria-hidden="true">${row}</div>
+    <div class="ax-rh-l">${lab}</div>
+  </div>`;
+}
 function openClientSheet(clientId){
   const id = String(clientId);
   const sheet = openSheet('', { label:'Client', kind:'client', full:true, refresh: ()=> paint() });
@@ -10139,13 +10183,8 @@ function openClientSheet(clientId){
     const phone = String(c.phone||'').replace(/[^\d]/g, '');
     let rhythm;
     if(cad){
-      const ll = lateLabel(cad);
       const dueOn = new Date(cad.lastDate.getTime() + Math.round(cad.avgGapDays) * 86400000);
-      rhythm = `<div class="ax-rhythm">
-        <div class="h"><span>Orders every ${Math.round(cad.avgGapDays)} days</span><b class="${ll.tone==='warn' ? '' : 'good'}">${esc(ll.text)}</b></div>
-        ${dayBlocksHTML(cad)}
-        <div class="ax-days-l"><span style="flex:1;">${esc(dateShort(cad.lastDateKey))}</span><span style="flex:1;text-align:center;">due ${esc(dueOn.toLocaleDateString('en-GB',{day:'numeric',month:'short'}))}</span><span style="flex:1;text-align:right;">today</span></div>
-      </div>`;
+      rhythm = clientRhythmHTML(cad, dueOn);
     } else {
       rhythm = `<div class="ax-rhythm"><div class="h"><span>${stats.count ? `Ordered once · ${esc(dateShort(stats.lastAt))}` : 'No orders yet'}</span><b class="good">${stats.count ? 'rhythm after 2 orders' : ''}</b></div></div>`;
     }
