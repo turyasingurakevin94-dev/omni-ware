@@ -308,6 +308,11 @@ async function snapshotPrices(admin: any, shopId: string, items: any[]) {
   }
 }
 
+// The board's stockKey(): a product without sizes by its id alone.
+function stockKeyOf(productId: string, variantIdx: number | null): string {
+  return variantIdx == null ? String(productId) : `${productId}::${variantIdx}`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
@@ -381,12 +386,26 @@ Deno.serve(async (req) => {
       // representative (qty=1, always retail-tier) floor price -- good
       // enough for browsing/Explore; the New Quote screen calls "price"
       // again live once a real quantity is entered.
-      const [{ data: products, error: productsErr }, { data: priceRows, error: priceErr }] = await Promise.all([
+      const [{ data: products, error: productsErr }, { data: priceRows, error: priceErr }, namesRes, stockRes] = await Promise.all([
         admin.from("products").select("*").eq("shop_id", shopId),
         admin.from("prices").select("*").eq("shop_id", shopId),
+        // The words clients use for an item (0112). A shop that has not run
+        // that migration gets an error here, read as "no names yet".
+        admin.from("item_names").select("word, product_id, variant_idx").eq("shop_id", shopId),
+        admin.from("stock").select("key, qty").eq("shop_id", shopId),
       ]);
       if (productsErr) return json({ error: productsErr.message, stage: "products_list" }, 500);
       if (priceErr) return json({ error: priceErr.message, stage: "prices_list" }, 500);
+      const namesFor = new Map<string, string[]>();
+      (namesRes.error ? [] : (namesRes.data || [])).forEach((n: any) => {
+        const key = `${n.product_id}::${n.variant_idx == null ? "*" : n.variant_idx}`;
+        if (!namesFor.has(key)) namesFor.set(key, []);
+        namesFor.get(key)!.push(String(n.word));
+      });
+      // Only a counted shelf says anything: no row is "not counted", never 0.
+      // Keyed as the board's stockKey(): the product id, then ::variant.
+      const shelf = new Map<string, number>();
+      (stockRes.error ? [] : (stockRes.data || [])).forEach((r: any) => shelf.set(String(r.key), Number(r.qty) || 0));
 
       const rowsByProduct = new Map<string, any[]>();
       (priceRows || []).forEach((r) => {
@@ -452,6 +471,10 @@ Deno.serve(async (req) => {
             packQty: priced?.packQty ?? 0,
             bestTierMinQty,
             bestTierPrice,
+            aliases: (namesFor.get(`${p.id}::*`) || []).concat(variantIdx == null ? [] : (namesFor.get(`${p.id}::${variantIdx}`) || [])),
+            // Whether the shop has any on its shelf: false when it counted
+            // none, null when it never counted. Never the number itself.
+            onShelf: shelf.has(stockKeyOf(p.id, variantIdx)) ? shelf.get(stockKeyOf(p.id, variantIdx))! > 0 : null,
           };
         });
       });

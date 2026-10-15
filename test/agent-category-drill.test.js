@@ -39,12 +39,20 @@ const env = {
   document: { getElementById: () => search },
   promotedMap: () => new Map([['d::', { bonusType: 'fixed', bonusValue: 500 }]]),
   feedItemKey: (p, v) => `${p}::${v == null ? '' : v}`,
+  localStorage: { getItem: () => null, setItem() {} }, agentLocalKey: (k) => k,
+  clientUsuals: () => ({ regs: [] }), orderDate: () => '',
 };
+// A search runs through the same matcher as the order box (searchCatalog).
+const findSrc = (re) => { const m = re.exec(src); if (!m) throw new Error(`missing ${re}`); return m[0]; };
+const MATCHER = ['normFind', 'findStem', 'readFindQuery', 'findDistance', 'myTaughtNames', 'findHay', 'findWordFit',
+  'findScoreItem', 'findLeanings', 'searchCatalog', 'findCommonName', 'findBaseName'];
 const api = compileScope([
   "const AGENT_OTHER_CATEGORY = 'Other';",
   "let findCategory = null, findSub = null, findFilter = { again:false, bonus:false, fresh:false };",
   'function setFind(c, s, f){ findCategory = c; findSub = s; findFilter = Object.assign({ again:false, bonus:false, fresh:false }, f || {}); }',
   fn('itemCategory'), fn('findCategories'), fn('boughtBeforeKeys'), fn('findItems'), fn('groupCatalogItems'),
+  findSrc(/const FIND_PACK_WORDS = [^\n]+/), findSrc(/const FIND_SIZE_RE = [^\n]+/), 'let findHayCache = new WeakMap();',
+  ...MATCHER.map(fn),
 ], env, ['itemCategory', 'findCategories', 'findItems', 'setFind', 'groupCatalogItems']);
 const ids = (items) => items.map((it) => it.productId + (it.variantIdx == null ? '' : it.variantIdx)).join(',');
 
