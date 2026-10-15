@@ -188,7 +188,7 @@ const fn = (n) => extractFunction(src, n, 'agent.html');
     'an order waiting on payment says "Pay" and how much, not just its stage name');
   t.check(/pay:\{ icon:'cash', cls:'pay' \}/.test(src) && /\.ax-badge\.pay\{background:var\(--warn\);color:#fff/.test(src),
     'in solid amber, unlike any other status');
-  for (const f of ['openClientSheet', 'openMoneySheet']) {
+  for (const f of ['openClientSheet', 'moneyOrdersHTML', 'moneyWayHTML']) {
     t.check(/orderBadgeHTML\(o, st\)/.test(fn(f)) && /st\.needs \? ' needs' : ''/.test(fn(f)), `${f}: shows the badge, and marks the row of an order waiting on you`);
   }
 }

@@ -47,7 +47,7 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   // Scoped to the function. An identical sort lives in orderAgainItems, so
   // an unscoped match is satisfied by THAT one -- a mutation putting this
   // screen back on savedAt sailed straight past the first version.
-  for (const name of ['openClientSheet', 'openMoneySheet']) {
+  for (const name of ['openClientSheet', 'moneyOrdersHTML']) {
     let render = '';
     try { render = extractFunction(src, name, 'agent.html'); } catch (e) { /* reported below */ }
     t.check(/String\(orderDate\(b\)\|\|''\)\.localeCompare\(String\(orderDate\(a\)\|\|''\)\)/.test(render),
@@ -135,8 +135,8 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   // was -- so the way to an old order is the client.
   const sheet = extractFunction(src, 'openClientSheet', 'agent.html');
   t.check(/data-track="\$\{esc\(o\.id\)\}"/.test(sheet), 'a client\'s orders are on their sheet, each opening its track');
-  const money = extractFunction(src, 'openMoneySheet', 'agent.html');
-  t.check(/data-track="\$\{esc\(o\.id\)\}"/.test(money), 'and a month\'s are on the Money sheet for that month');
+  const money = extractFunction(src, 'moneyOrdersHTML', 'agent.html');
+  t.check(/data-track="\$\{esc\(o\.id\)\}"/.test(money) && /moneyOrdersHTML\(f\)/.test(extractFunction(src, 'openMoneySheet', 'agent.html')), 'and a month\'s are on the Money sheet for that month');
 }
 
 process.exit(t.done() ? 1 : 0);
