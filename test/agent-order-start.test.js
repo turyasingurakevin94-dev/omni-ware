@@ -47,13 +47,13 @@ const constBlock = (name) => {
 /* ---------- 2. whose order it is, as one card --------------------------- */
 {
   const strip = fn('renderClientStrip');
-  t.check(/class="ax-who" data-strip="pick"/.test(strip) && /AX_ICON\.swap/.test(strip),
+  t.check(/class="ax-who" data-strip="pick"/.test(strip) && /PH\.swap/.test(strip),
     'the client card is the switch, and says so');
   t.check(/clientLine\(chosenClient\)/.test(strip),
     'under the name, who they are to you');
   t.check(!/recentClients\(/.test(strip),
     'the row of other people\'s initials is gone from the top of the order');
-  t.check(/parked\.map/.test(strip) && /AX_ICON\.basket/.test(strip),
+  t.check(/parked\.map/.test(strip) && /PH\.basket/.test(strip),
     'a basket still waiting keeps its own chip, with how many items are in it');
 
   const { clientLine } = compileScope([fn('clientLine')], {
@@ -93,7 +93,7 @@ const constBlock = (name) => {
       { items: [{ productId: 'p1', variantIdx: null }] },
       { voided: true, items: [{ productId: 'p2', variantIdx: null }] },
     ],
-    feedItemKey: (p, v) => `${p}::${v == null ? '' : v}`,
+    feedItemKey: (p, v) => `${p}::${v == null ? '' : v}`, orderDate: () => '',
     catalogEntry: (p) => ({ productId: p, name: p }),
     promotedMap: () => new Map([['b1::', {}]]),
     catalog: [{ productId: 'b1', variantIdx: null }, { productId: 'z', variantIdx: null }],
@@ -101,9 +101,18 @@ const constBlock = (name) => {
   const got = sells(6);
   t.check(got.length === 2 && got[0].it.productId === 'p1' && got[0].sold === 2 && got[1].sold === 1,
     'what you sell most is ranked, with how many orders each has been in (a voided one does not count)');
+  t.check(got.recent === false, 'with nothing in the last 30 days it falls back to every order, and does not claim the window');
+  const today = new Date().toISOString().slice(0, 10);
+  const recent = compileScope([fn('sellMostItems')], {
+    myOrders: [{ d: today, items: [{ productId: 'p2', variantIdx: null }] }, { d: '2020-01-01', items: [{ productId: 'p1', variantIdx: null }, { productId: 'p1', variantIdx: null }] }],
+    feedItemKey: (p, v) => `${p}::${v == null ? '' : v}`, orderDate: (o) => o.d,
+    catalogEntry: (p) => ({ productId: p }), promotedMap: () => new Map(), catalog: [],
+  }, ['sellMostItems']).sellMostItems(6);
+  t.check(recent.recent === true && recent.length === 1 && recent[0].it.productId === 'p2',
+    'what moves now: the last 30 days, when there is anything in them');
 
   const first = compileScope([fn('sellMostItems')], {
-    myOrders: [], feedItemKey: (p, v) => `${p}::${v == null ? '' : v}`, catalogEntry: () => null,
+    myOrders: [], feedItemKey: (p, v) => `${p}::${v == null ? '' : v}`, catalogEntry: () => null, orderDate: () => '',
     promotedMap: () => new Map([['b1::', {}]]),
     catalog: [{ productId: 'b1', variantIdx: null }, { productId: 'z', variantIdx: null }],
   }, ['sellMostItems']).sellMostItems(6);
@@ -122,6 +131,15 @@ const constBlock = (name) => {
     'each card carries its rank and a bar against your best seller');
   t.check(/\+\$\{fmtNum\(yours\)\} yours/.test(card) && /data-lp-add=/.test(card),
     'what you make on one, and a + to add it');
+  const usual = fn('renderUsual');
+  t.check(/regs\.slice\(0, 4\)/.test(usual) && /class="ax-uct\$\{isIn \? ' in' : ''\}" data-usual=/.test(usual) && /\$\{inN\}\/\$\{regs\.length\}/.test(usual),
+    'a regular\'s usual is up to four tiles, each one tap, with how many are in');
+  t.check(/missing\.length > 1 \? `<button type="button" class="ax-uc-all" data-usual-all>/.test(usual),
+    'and one button for the rest only when more than one is missing');
+  t.check(/classList\.toggle\('empty', !cart\.length\)/.test(fn('renderDock')) && /\.ax-dock\.empty \.ag-knob \.kno\{display:block;/.test(src),
+    'an empty order looks empty at the bottom too: no total, a basket where the arrow was');
+  t.check(/id="ag_orderCats"/.test(src) && /placeholder="Add an item"/.test(src),
+    'the box says what it is for, with every aisle one tap beside it');
   t.check(/aisleTint\(c\)/.test(fn('aisleTileHTML')) && /bonus \?/.test(fn('aisleTileHTML')),
     'an aisle tile wears its own tint, with a star for how many earn a bonus there');
 }
