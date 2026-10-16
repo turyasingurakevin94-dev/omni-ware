@@ -1945,6 +1945,16 @@
   .ax-bz-h .t b{font-family:var(--font-money);font-weight:600;}
   .ax-bz-h .s{font-family:var(--font-money);font-size:12px;font-weight:600;color:var(--on-navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .ax-bz-bar{display:flex;gap:3px;padding:14px 16px 0;}
+  .ax-bz-h.lite{padding-top:4px;}
+  .ax-bz-h.lite .t{font-size:24px;}
+  .ax-bz-rail{--lo:0;--w:1;--tone:var(--mint);padding:14px 16px 0;}
+  .ax-bz-rail .r{height:36px;}
+  .ax-bz-rail .ln{top:17px;}
+  .ax-bz-rail .band{position:absolute;top:0;bottom:0;left:calc(100% / var(--n) * var(--lo) + 2px);width:calc(100% / var(--n) * var(--w) - 4px);border-radius:999px;background:color-mix(in srgb, var(--tone) 16%, transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--tone) 35%, transparent);}
+  .ax-rl-d.lit{width:28px;height:28px;color:var(--navy);box-shadow:none;}
+  .ax-rl-d.lit .icon{width:14px;height:14px;}
+  .ax-bz-rail .l .lit{font-weight:700;}
+  .ax-bz-rail + .ax-bz-bar{display:none;}
   .ax-bz-bar i{height:10px;border-radius:999px;}
   .ax-bz-chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:14px 16px 0;}
   .ax-bz-chips::-webkit-scrollbar{display:none;}
@@ -13343,6 +13353,22 @@ function busyRowHTML(key, part, x){
     ${x.since != null ? `<span class="age ${tone}">${esc(busyAge(x.since))}</span>` : ''}
     <span class="v">${fmtNum(amount)}</span>${right}</button>`;
 }
+/* Where this list sits in an order's life: the six steps as the same
+   light rail the order's own screen uses, with the ones this list covers
+   lit together in a soft band of its colour (Sent: sent, checked, paid). */
+function stageRailHTML(key, tone, rows){
+  const prepay = !!(myAgent && myAgent.paymentTerm === 'prepay');
+  const steps = orderSteps(rows && rows[0] ? rows[0].o : { deliveryMode: 'agent_pickup' });
+  const span = prepay ? { sent: [0, 2], packing: [3, 3], out: [4, 4] }[key] : { sent: [0, 1], packing: [2, 2], out: [3, 3] }[key];
+  if(!span) return '';
+  const [lo, hi] = span;
+  const dots = steps.map((s, i)=> i >= lo && i <= hi
+    ? `<span class="ax-rl-d lit" style="background:${tone};">${AX_ICON[s.icon === 'check' ? 'clip' : s.icon]}</span>`
+    : `<span class="ax-rl-d">${AX_ICON[s.icon === 'check' ? 'clip' : s.icon]}</span>`).join('');
+  const labels = steps.map((s, i)=> `<span class="${i >= lo && i <= hi ? 'lit' : ''}"${i >= lo && i <= hi ? ` style="color:${tone};"` : ''}><b>${esc(s.label)}</b></span>`).join('');
+  return `<div class="ax-rail ax-bz-rail" role="img" aria-label="${esc(steps.slice(lo, hi + 1).map(s=> s.label).join(', '))}" style="--n:${steps.length};--f:0;--lo:${lo};--w:${hi - lo + 1};--tone:${tone};">
+    <div class="r"><i class="ln"></i><i class="band"></i>${dots}</div><div class="l">${labels}</div></div>`;
+}
 function openBusyStage(key){
   const page = BUSY_PAGES[key];
   closeSheetsOfKind('stage');
@@ -13386,9 +13412,10 @@ function openBusyStage(key){
     sheet.el.innerHTML = `
       <div class="ax-sheet-top ax-bz-top">
         <button type="button" class="ax-grab" data-close aria-label="Close"></button>
-        <div class="ax-bz-h"><span class="ic" style="background:${page.tone};">${page.icon()}</span>
+        <div class="ax-bz-h lite">
           <span class="b"><span class="t">${esc(page.title)} <b style="color:${page.tone};">${rows.length}</b></span><span class="s">${fmtNum(total)} ${esc(page.worth)}</span></span>
           <button type="button" class="ax-iconbtn on-navy" data-close aria-label="Close">${AX_ICON.x}</button></div>
+        ${stageRailHTML(key, page.tone, rows)}
         <div class="ax-bz-bar" aria-hidden="true">${bar}</div>
         <div class="ax-bz-chips">${chips}</div>
       </div>
