@@ -103,7 +103,8 @@ const names = (q, o) => S.searchCatalog(q, o).hits.map((h) => h.it.name);
   t.check(/findNoneHTML\(q, r\.read\)/.test(render) && /Ask the shop to stock it/.test(fn('findNoneHTML')) && /data-fd-teach/.test(fn('findNoneHTML')),
     'nothing found: the closest, ask the shop to stock it, or teach it the word');
   t.check(/You searched/.test(fn('findRecentHTML')) && /You added lately/.test(fn('findRecentHTML')), 'the empty box offers what was searched and added lately');
-  t.check(/none on the shelf/.test(fn('findTagsHTML')) && /yours/.test(fn('findTagsHTML')), 'a bonus says what it earns; an empty shelf says so');
+  t.check(/comes in later · shop confirms/.test(fn('findTagsHTML')) && !/none on the shelf/.test(fn('findTagsHTML')) && /yours/.test(fn('findTagsHTML')),
+  'a bonus says what it earns; an empty shelf says what it means for the agent -- it comes in later, the shop confirms -- not the shop\'s stock count');
   t.check(/searchCatalog\(document\.getElementById\('ag_browse_search'\)\.value\)/.test(fn('findItems')), 'Browse searches the same way');
 }
 

@@ -123,8 +123,9 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
 /* ---------- 4. what the sheet shows about you ------------------------ */
 {
   const you = extractFunction(src, 'openProfileSheet', 'agent.html');
-  t.check(/item\('phone', 'Phone', esc\(myAgent\.phone \|\| '—'\)\)/.test(you) && /item\('chat', 'Email', esc\(myAgent\.email \|\| '—'\)\)/.test(you),
-    'phone and email each get a row of their own -- it was `phone || email`, which hid whichever came second');
+  t.check(/const phone = myAgent\.phone \|\| '';/.test(you) && /<span class="k">Phone<\/span><span class="v m">\$\{esc\(phone \|\| '—'\)\}/.test(you)
+    && /Signed in as<\/span><span class="v">\$\{esc\(myAgent\.email \|\| myAgent\.phone \|\| '—'\)\}/.test(you),
+    'phone and email each have a place of their own -- the phone on your card, the email you sign in with by the way out (it was `phone || email`, which hid whichever came second)');
 }
 
 /* ---------- 5. the sync line, and why it sits beside sign-out -------- */
