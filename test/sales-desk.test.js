@@ -120,12 +120,12 @@ const invite = read('supabase/functions/invite-worker/index.ts');
   t.check(gateAt > 0 && gateAt < waSend.indexOf('action === "broadcast"') && gateAt < waSend.indexOf('action === "register"'),
     'asked before any of those actions runs');
 
-  t.check(/select\("id, user_id, role"\)/.test(invite) && /const memberRole = isSales \? "sales" : "staff"/.test(invite),
-    'an invite gives somebody who sells a sales membership, everybody else staff as before');
-  t.check(/redirectTo: isSales \? ADMIN_APP_URL : WORKER_APP_URL/.test(invite),
-    'and lands them in the admin app, not the worker app');
-  t.check(/\.in\("role", \["staff", "sales"\]\)/.test(invite) && /member\.role === "staff" \|\| member\.role === "sales"/.test(invite),
-    'an existing login moves between the floor and the desk only — an owner\'s or admin\'s membership is never touched');
+  t.check(/select\("id, user_id, role"\)/.test(invite) && /const memberRole = isSales \? "sales" : isBuyer \? "buyer" : "staff"/.test(invite),
+    'an invite gives somebody who sells a sales membership, somebody who buys a buyer one, everybody else staff as before');
+  t.check(/redirectTo: isSales \? ADMIN_APP_URL : isBuyer \? BUYER_APP_URL : WORKER_APP_URL/.test(invite),
+    'and lands a salesperson in the admin app and a buyer in the Buyer app, not the worker app');
+  t.check(/const DESK_ROLES = \["staff", "sales", "buyer"\]/.test(invite) && /\.in\("role", DESK_ROLES\)/.test(invite) && /DESK_ROLES\.includes\(member\.role\)/.test(invite),
+    'an existing login moves between the floor and the desks only — an owner\'s or admin\'s membership is never touched');
 }
 
 /* ---------- 3. the save --------------------------------------------- */
@@ -265,7 +265,7 @@ const invite = read('supabase/functions/invite-worker/index.ts');
 /* ---------- 5. the staff screen ------------------------------------- */
 {
   const roles = eval(extractDeclaration(src, 'SF_ROLES', 'index.html').replace(/^const SF_ROLES = /, ''));
-  eq(roles.map((r) => r.key), ['worker', 'delivery', 'sales'], 'Sells is offered after the two floor roles');
+  eq(roles.map((r) => r.key).slice(0, 3), ['worker', 'delivery', 'sales'], 'Sells is offered after the two floor roles (Buys follows it)');
   const state = compileScope([extractFunction(src, 'staffDispatchState', 'index.html')],
     { staffAttendanceOn: () => ({ state: 'in' }), todayISO: () => '2026-10-16', staffActiveOrders: () => [], esc: (x) => x },
     ['staffDispatchState']).staffDispatchState;
