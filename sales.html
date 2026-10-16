@@ -1,0 +1,1877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#16203C">
+<title>Omni-Ware Sales</title>
+<!-- The phone app's native layer (apps/sales). Inert in a browser. It
+     lives here rather than in the app's own files so a fix to it reaches
+     installed phones the same way any change to this page does. -->
+<script>
+/* The sales page inside the Android app (apps/sales).
+
+   First in <head>, and only does anything inside the app. Four jobs:
+
+   1. Back (Android) closes what is on top -- a photo, a sheet, then the tab
+      -- before it ever leaves the app, and leaving only puts it in the
+      background so it reopens instantly.
+   2. The status bar: the page draws to the top edge, so a strip behind the
+      clock takes the colour of whatever is under it, and its icons stay
+      readable against it.
+   3. The bars' size: Capacitor measures them into --safe-area-inset-*,
+      but a page it has not measured (some phones, after a reload) would
+      read zero and slide under the clock -- so the last good measurement
+      stands in until it does.
+   4. Staying current without a store release: the installed app checks the
+      live sales.html now and then, keeps a copy of a new one on the phone,
+      and switches to it the next time the app goes to the background --
+      never in the middle of an order. */
+(function(){
+  'use strict';
+  var C = window.Capacitor;
+  if(!C || typeof C.isNativePlatform !== 'function' || !C.isNativePlatform()) return;
+  var P = C.Plugins || {};
+  var App = P.App, Bars = P.SystemBars, WebView = P.WebView, Http = P.CapacitorHttp, FS = P.Filesystem;
+  var NAVY = '#16203C';
+  var root = document.documentElement;
+  // The first installs carried this layer as their own native.js. On those
+  // it is already running from above, and only the bars' size (3) is new.
+  var legacy = !!document.querySelector('script[src="native.js"]');
+
+  window.owHaptic = function(kind){
+    var H = P.Haptics;
+    if(!H) return;
+    (kind === 'success' ? H.notification({ type: 'SUCCESS' }) : H.impact({ style: 'LIGHT' })).catch(function(){});
+  };
+
+  /* ---- 1. back ---- */
+  // The page keeps its own stack of what is open (window.sxBack): a sheet,
+  // then a screen pushed over a tab, then the tab itself back to Today.
+  function back(){
+    if(typeof window.sxBack === 'function' && window.sxBack()) return;
+    if(App) App.minimizeApp();
+  }
+  if(App && !legacy) App.addListener('backButton', back);
+
+  /* ---- 2. the strip behind the status bar ---- */
+  var strip = null, lastStyle = '';
+  function paintBar(){
+    if(!strip) return;
+    var top = strip.offsetHeight;
+    var host = document.querySelector('#sx_pages .sx-page:last-child') || document;
+    var navy = host.querySelector('[data-navy-top]:not([hidden])');
+    var onNavy = !!document.querySelector('.sx-auth') || (navy && navy.getBoundingClientRect().top <= top && navy.getBoundingClientRect().bottom > top);
+    strip.style.background = onNavy ? NAVY : 'var(--bg)';
+    var style = onNavy || document.querySelector('.sx-scrim') ? 'DARK' : 'LIGHT';
+    if(style !== lastStyle && Bars){ lastStyle = style; Bars.setStyle({ style: style }).catch(function(){}); }
+  }
+  var queued = false;
+  function soon(){ if(queued) return; queued = true; requestAnimationFrame(function(){ queued = false; paintBar(); }); }
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(insets, 800);
+    setTimeout(insets, 2500);
+    window.addEventListener('resize', function(){ setTimeout(insets, 300); });
+    if(App) App.addListener('resume', function(){ setTimeout(insets, 300); });
+    if(legacy) return;
+    strip = document.createElement('div');
+    strip.setAttribute('aria-hidden', 'true');
+    strip.style.cssText = 'position:fixed;top:0;left:0;right:0;height:var(--safe-t, 0px);z-index:59;pointer-events:none;background:' + NAVY + ';';
+    document.body.appendChild(strip);
+    new MutationObserver(soon).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'class'] });
+    document.addEventListener('scroll', soon, { passive: true, capture: true });
+    paintBar();
+  });
+
+
+  /* ---- 3. the bars' size ---- */
+  var INSETS = 'ow-app-insets';
+  function insets(){
+    if(typeof C.getPlatform === 'function' && C.getPlatform() !== 'android') return;
+    var probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;top:0;left:0;visibility:hidden;pointer-events:none;padding-top:var(--safe-t, 0px);padding-bottom:var(--safe-b, 0px);';
+    document.body.appendChild(probe);
+    var cs = getComputedStyle(probe), top = parseFloat(cs.paddingTop) || 0, bottom = parseFloat(cs.paddingBottom) || 0;
+    probe.remove();
+    var measured = root.style.getPropertyValue('--safe-area-inset-top') !== '';
+    var last = {};
+    try{ last = JSON.parse(localStorage.getItem(INSETS)) || {}; }catch(_e){}
+    if(measured && top > 0){
+      if(last.top !== top || last.bottom !== bottom){ try{ localStorage.setItem(INSETS, JSON.stringify({ top: top, bottom: bottom, ours: false })); }catch(_e){} }
+      return;
+    }
+    // Measured at zero: Android has laid the page out below its bars itself.
+    if(measured || top > 0) return;
+    // Not measured, and the page fills the whole screen -- it is under the
+    // bars with nothing telling it how tall they are.
+    if(!last.top && Math.abs(screen.height - window.innerHeight) > 16) return;
+    root.style.setProperty('--safe-area-inset-top', (last.top || 32) + 'px');
+    root.style.setProperty('--safe-area-inset-bottom', (last.bottom || 32) + 'px');
+  }
+
+  /* ---- 4. staying current ---- */
+  if(legacy || !(WebView && Http && FS && App && window.crypto && crypto.subtle)) return;
+  var SOURCE = 'https://omni-ware.vercel.app/sales.html';
+  var KEY = 'ow-sales-bundle';
+  var EVERY = 30 * 60 * 1000;
+  function load(){ try{ return JSON.parse(localStorage.getItem(KEY)) || {}; }catch(_e){ return {}; } }
+  function save(s){ try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(_e){} }
+  function header(h, name){
+    var k = Object.keys(h || {}).filter(function(x){ return x.toLowerCase() === name; })[0];
+    return k ? h[k] : '';
+  }
+  function sha256(text){
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)).then(function(b){
+      return Array.prototype.map.call(new Uint8Array(b), function(x){ return ('0' + x.toString(16)).slice(-2); }).join('');
+    });
+  }
+  // A file of the bundle running now, as base64 for the Filesystem plugin.
+  function fileB64(name){
+    return fetch(name, { cache: 'no-store' }).then(function(r){
+      if(!r.ok) throw new Error(name + ': ' + r.status);
+      return r.blob();
+    }).then(function(blob){
+      return new Promise(function(ok, fail){
+        var fr = new FileReader();
+        fr.onload = function(){ ok(String(fr.result).split(',')[1] || ''); };
+        fr.onerror = fail;
+        fr.readAsDataURL(blob);
+      });
+    });
+  }
+  function current(){ return fetch('bundle.json', { cache: 'no-store' }).then(function(r){ return r.json(); }); }
+
+  // After a switch: make the new copy the one the app opens with, and drop
+  // the copies nothing points at any more.
+  function settle(){
+    var s = load();
+    if(!s.staged) return Promise.resolve();
+    return WebView.getServerBasePath().then(function(cur){
+      if(!cur || cur.path !== s.staged.path) return;
+      return WebView.persistServerBasePath().then(function(){
+        var keep = s.staged.dir;
+        s.etag = s.staged.etag;
+        delete s.staged;
+        save(s);
+        return FS.readdir({ path: 'live', directory: 'DATA' }).then(function(r){
+          return Promise.all((r.files || []).map(function(f){
+            var n = typeof f === 'string' ? f : f.name;
+            return n === keep.split('/').pop() ? null : FS.rmdir({ path: 'live/' + n, directory: 'DATA', recursive: true }).catch(function(){});
+          }));
+        }).catch(function(){});
+      });
+    });
+  }
+
+  function check(){
+    var s = load();
+    if(s.staged || Date.now() - (s.checked || 0) < EVERY) return Promise.resolve();
+    s.checked = Date.now();
+    save(s);
+    return Promise.all([current(), Http.request({ url: SOURCE, method: 'GET', responseType: 'text',
+      headers: s.etag ? { 'If-None-Match': s.etag } : {} })]).then(function(pair){
+      var mine = pair[0], res = pair[1];
+      if(res.status !== 200) return;
+      var html = typeof res.data === 'string' ? res.data : '';
+      // Half a page is worse than an old page.
+      if(html.length < 100000 || html.indexOf('</html>') === -1) return;
+      var etag = header(res.headers, 'etag');
+      return sha256(html).then(function(hash){
+        if(hash === mine.source){ s.etag = etag; save(s); return; }
+        var dir = 'live/' + hash.slice(0, 16);
+        var rest = (mine.files || []).filter(function(f){ return f !== 'index.html' && f !== 'bundle.json'; });
+        return FS.writeFile({ path: dir + '/index.html', data: window.owAppTransform(html), directory: 'DATA', encoding: 'utf8', recursive: true })
+          .then(function(){
+            return rest.reduce(function(p, f){
+              return p.then(function(){ return fileB64(f); })
+                .then(function(b64){ return FS.writeFile({ path: dir + '/' + f, data: b64, directory: 'DATA', recursive: true }); });
+            }, Promise.resolve());
+          })
+          .then(function(){
+            return FS.writeFile({ path: dir + '/bundle.json', data: JSON.stringify({ source: hash, files: mine.files }), directory: 'DATA', encoding: 'utf8', recursive: true });
+          })
+          .then(function(){ return FS.getUri({ path: dir, directory: 'DATA' }); })
+          .then(function(u){
+            var s2 = load();
+            s2.staged = { dir: dir, path: decodeURI(String(u.uri).replace(/^file:\/\//, '')), etag: etag };
+            save(s2);
+          });
+      });
+    }).catch(function(){
+      // No signal, or the server is down: the copy already here carries on.
+    });
+  }
+
+  App.addListener('pause', function(){
+    var s = load();
+    if(s.staged) WebView.setServerBasePath({ path: s.staged.path }).catch(function(){});
+  });
+  App.addListener('resume', function(){ check(); });
+  settle().catch(function(){}).then(function(){ setTimeout(check, 5000); });
+})();
+</script>
+<link rel="manifest" href="/manifest-sales.json">
+<!-- The faces load without holding the page up: on a dead connection the
+     sheet never lands and the system stack carries on. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" media="print" onload="this.media='all'"
+  href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root{
+  --bg:#F7F5F2; --paper:#FFFFFF; --navy:#16203C; --navy2:#243052; --ink:#1C2233; --ink2:#5F6980; --ink3:#767F91;
+  --line:#ECE8E1; --rule:#E6E3DD; --soft:#F4F2EE; --soft2:#EFECE6;
+  --red:#C93A30; --mint:#6FDCB0; --amber:#F5B26B; --amberInk:#95530C; --amberSoft:#FDEEE1;
+  --green:#0F6B43; --greenSoft:#E4F4EA; --crimson:#8E2A22; --crimsonSoft:#FBE5E2;
+  --indigo:#3A3F9B; --indigoSoft:#E4E6FA; --sky:#1A5A8A; --skySoft:#DCEAF8; --plum:#7A3268; --plumSoft:#F6E4F1;
+  --navyInk:#B3BCD2; --navyInk2:#8D99B5;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --safe-area-inset-top:env(safe-area-inset-top,0px); --safe-area-inset-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Figtree,system-ui,sans-serif;font-size:15px;-webkit-font-smoothing:antialiased}
+body{min-height:100vh;overscroll-behavior-y:none}
+button{font-family:inherit;color:inherit;cursor:pointer}
+a{color:inherit;text-decoration:none}
+input,textarea{font-family:inherit;color:var(--ink)}
+.m{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+[hidden]{display:none!important}
+.ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.icon{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* ---- shell ---- */
+#sx_app{max-width:520px;margin:0 auto;min-height:100vh;position:relative;padding-bottom:calc(96px + var(--safe-area-inset-bottom))}
+.sx-view{animation:sxFade .25s ease-out}
+@keyframes sxFade{from{opacity:.4}to{opacity:1}}
+.sx-nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#FFFFFF;box-shadow:0 -1px 0 var(--line),0 -10px 24px rgba(22,32,60,.05);padding:10px 0 calc(12px + var(--safe-area-inset-bottom));display:grid;grid-template-columns:repeat(5,1fr);align-items:start;max-width:520px;margin:0 auto}
+.sx-nav button{border:none;background:none;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--ink3);font-size:11px;font-weight:600;padding:0;position:relative}
+.sx-nav button[aria-current="page"]{color:var(--navy);font-weight:700}
+.sx-nav button[aria-current="page"] .icon{fill:var(--navy)}
+.sx-nav .sx-plus{justify-self:center;margin-top:-30px;width:64px;height:64px;border-radius:999px;background:var(--red);color:#fff;box-shadow:0 0 0 5px var(--bg),0 10px 24px rgba(201,58,48,.35);justify-content:center}
+.sx-nav .sx-plus .icon{width:28px;height:28px;stroke-width:2.6;fill:none!important}
+.sx-badge{position:absolute;top:-4px;left:50%;margin-left:6px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--red);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #fff}
+
+/* ---- navy hero ---- */
+.sx-hero{background:radial-gradient(120% 90% at 18% 20%,#26335E 0%,#16203C 60%);color:#fff;border-radius:0 0 28px 28px;padding:calc(14px + var(--safe-area-inset-top)) 18px 20px;display:flex;flex-direction:column;gap:16px}
+.sx-eyebrow{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--navyInk2)}
+.sx-h1{font-size:20px;font-weight:700;letter-spacing:-.01em;margin:0}
+.sx-pagehead{padding:calc(14px + var(--safe-area-inset-top)) 16px 0;display:flex;align-items:center;gap:10px}
+.sx-pagehead h1{flex:1;font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0}
+.sx-body{padding:14px 16px 0;display:flex;flex-direction:column;gap:12px}
+.sx-glass{border-radius:16px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)}
+.sx-circle{width:40px;height:40px;border-radius:999px;border:none;background:rgba(255,255,255,.08);color:#fff;display:flex;align-items:center;justify-content:center;flex:none}
+.sx-circle.light{background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1px var(--rule)}
+
+/* ---- cards / rows ---- */
+.sx-card{background:#fff;border-radius:18px;box-shadow:0 1px 2px rgba(22,32,60,.05),inset 0 0 0 1px var(--line)}
+.sx-card.pad{padding:14px}
+.sx-list{padding:0 14px}
+.sx-row{display:flex;align-items:center;gap:12px;min-height:60px;border:none;background:none;width:100%;text-align:left;padding:8px 0}
+.sx-row + .sx-row{border-top:1px solid #F1EEE8}
+.sx-av{width:40px;height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex:none}
+.sx-av.s{width:32px;height:32px;font-size:11px}
+.sx-t{font-size:15px;font-weight:700}
+.sx-sub{font-size:12px;color:var(--ink3)}
+.sx-chip{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.sx-sec{display:flex;align-items:baseline;justify-content:space-between;padding:4px 4px 0}
+.sx-sec b{font-size:14px;font-weight:700}
+.sx-sec span{font-size:12px;font-weight:600;color:var(--ink3)}
+.sx-empty{padding:28px 16px;text-align:center;color:var(--ink3);font-size:14px}
+.sx-empty b{display:block;color:var(--ink);font-size:16px;margin-bottom:4px}
+
+/* ---- buttons ---- */
+.sx-btn{height:52px;border-radius:16px;border:none;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 16px}
+.sx-btn.red{background:var(--red);color:#fff;box-shadow:0 10px 22px rgba(201,58,48,.3)}
+.sx-btn.navy{background:var(--navy);color:#fff}
+.sx-btn.ghost{background:#fff;box-shadow:inset 0 0 0 1px var(--rule);color:var(--ink)}
+.sx-btn.green{background:var(--green);color:#fff}
+.sx-btn[disabled]{opacity:.45;pointer-events:none}
+.sx-pill{height:36px;padding:0 14px;border:none;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule);font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;flex:none}
+.sx-pill[aria-pressed="true"]{background:var(--navy);color:#fff;box-shadow:none;font-weight:700}
+.sx-seg{display:flex;padding:3px;border-radius:999px;background:var(--soft2)}
+.sx-seg button{height:34px;padding:0 14px;border:none;border-radius:999px;background:transparent;font-size:13px;font-weight:600;color:var(--ink2)}
+.sx-seg button[aria-pressed="true"]{background:#fff;color:var(--ink);font-weight:700;box-shadow:0 1px 2px rgba(22,32,60,.1)}
+.sx-seg.dark{background:rgba(255,255,255,.08)}
+.sx-seg.dark button{color:var(--navyInk)}
+.sx-seg.dark button[aria-pressed="true"]{background:#fff;color:var(--navy)}
+
+/* ---- search ---- */
+.sx-search{display:flex;align-items:center;gap:10px;height:52px;padding:0 10px 0 14px;border-radius:16px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule)}
+.sx-search:focus-within{box-shadow:0 0 0 2px var(--navy),0 6px 16px rgba(22,32,60,.08)}
+.sx-search input{flex:1;min-width:0;border:none;outline:none;background:transparent;font-size:16px;padding:0}
+
+/* ---- paper slip ---- */
+.sx-paper{filter:drop-shadow(0 1px 1px rgba(22,32,60,.08)) drop-shadow(0 6px 14px rgba(22,32,60,.08));margin:0 4px}
+.sx-paper:before,.sx-paper:after{content:'';display:block;height:8px}
+.sx-paper:before{background:linear-gradient(45deg,transparent 50%,#fff 50%) 0 0/12px 8px repeat-x,linear-gradient(-45deg,transparent 50%,#fff 50%) 0 0/12px 8px repeat-x}
+.sx-paper:after{background:linear-gradient(135deg,#fff 50%,transparent 50%) 0 0/12px 8px repeat-x,linear-gradient(-135deg,#fff 50%,transparent 50%) 0 0/12px 8px repeat-x}
+.sx-paper-in{background:#fff;padding:6px 14px 4px}
+.sx-paper-h{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:8px;border-bottom:1.5px solid var(--ink)}
+.sx-paper-h .t{font-size:11px;font-weight:700;letter-spacing:.12em}
+.sx-paper-f{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:9px 0 8px;border-top:1.5px solid var(--ink)}
+.sx-pl{display:grid;grid-template-columns:52px 1fr auto;align-items:center;gap:10px;padding:9px 0}
+.sx-pl + .sx-pl{border-top:1px dashed #E2DED6}
+.sx-pl .q{font-family:var(--mono);font-size:13px;font-weight:600}
+.sx-pl .q small{font-family:Figtree,sans-serif;font-size:12px;font-weight:600;color:#6B7480}
+.sx-pl .n{font-size:14px;font-weight:600}
+.sx-pl.struck .q,.sx-pl.struck .n{text-decoration:line-through;color:#8A93A3}
+.sx-stamp{padding:6px 12px 5px;border:3px double currentColor;border-radius:10px;opacity:.88;display:inline-flex;flex-direction:column;align-items:center;gap:1px;transform:rotate(-9deg);animation:sxStamp .5s cubic-bezier(.3,1.4,.5,1) .3s both}
+.sx-stamp b{font-size:20px;letter-spacing:.2em;line-height:1;padding-left:.2em}
+.sx-stamp span{font-size:9px;font-weight:700;letter-spacing:.12em}
+@keyframes sxStamp{0%{transform:rotate(-9deg) scale(1.8);opacity:0}60%{transform:rotate(-9deg) scale(.94);opacity:.95}100%{transform:rotate(-9deg) scale(1);opacity:.88}}
+
+/* ---- order draft bands ---- */
+.sx-band{display:flex;flex-direction:column;gap:8px;margin:0 -8px;padding:10px 8px;border-radius:12px;border:none;text-align:left;width:calc(100% + 16px);background:#fff}
+.sx-band:nth-child(even){background:#FAF8F4}
+.sx-band.open{background:var(--bg);box-shadow:inset 0 0 0 1.5px var(--navy)}
+.sx-band.new{animation:sxNew 1.1s cubic-bezier(.2,.9,.3,1) both}
+@keyframes sxNew{0%{opacity:0;transform:translateY(-14px) scale(.97);box-shadow:0 0 0 2px var(--green)}35%{opacity:1;transform:none;box-shadow:0 0 0 2px var(--green)}100%{box-shadow:0 0 0 2px rgba(15,107,67,0)}}
+.sx-band .top{display:grid;grid-template-columns:48px 1fr auto;align-items:center;gap:12px}
+.sx-qb{height:44px;border-radius:10px;background:var(--navy);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05}
+.sx-qb b{font-family:var(--mono);font-size:16px;font-weight:600}
+.sx-qb small{font-size:10px;font-weight:600;color:var(--navyInk)}
+.sx-ctl{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:8px;padding:8px;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1px var(--line)}
+.sx-step{display:flex;align-items:center;height:46px;border-radius:12px;background:var(--soft)}
+.sx-step button{width:36px;height:46px;border:none;background:transparent;font-size:20px;color:var(--ink2)}
+.sx-step input{width:46px;text-align:center;border:none;background:transparent;font-family:var(--mono);font-size:16px;font-weight:600;outline:none;padding:0}
+.sx-del{width:46px;height:46px;border:none;border-radius:12px;background:var(--crimsonSoft);color:var(--crimson);display:flex;align-items:center;justify-content:center}
+
+/* ---- bottom sheets ---- */
+.sx-scrim{position:fixed;inset:0;z-index:60;background:rgba(10,14,28,.5);animation:sxScrim .25s ease-out}
+@keyframes sxScrim{from{opacity:0}}
+.sx-sheet{position:fixed;left:0;right:0;bottom:0;z-index:61;max-width:520px;margin:0 auto;max-height:92vh;overflow:auto;background:var(--bg);border-radius:26px 26px 0 0;padding:10px 16px calc(22px + var(--safe-area-inset-bottom));display:flex;flex-direction:column;gap:12px;animation:sxUp .35s cubic-bezier(.2,.9,.3,1)}
+.sx-sheet.navy{background:var(--navy);color:#fff}
+@keyframes sxUp{from{transform:translateY(100%)}}
+.sx-handle{align-self:center;width:40px;height:5px;border-radius:999px;background:#D9D4CB;flex:none}
+.sx-sheet.navy .sx-handle{background:rgba(255,255,255,.22)}
+
+/* ---- pushed pages ---- */
+.sx-page{position:fixed;inset:0;z-index:50;background:var(--bg);overflow:auto;max-width:520px;margin:0 auto;padding-bottom:calc(120px + var(--safe-area-inset-bottom));animation:sxIn .3s cubic-bezier(.2,.9,.3,1)}
+.sx-page.still{animation:none}
+@keyframes sxIn{from{transform:translateX(24px);opacity:.3}}
+.sx-dock{position:fixed;left:0;right:0;bottom:0;z-index:55;max-width:520px;margin:0 auto;background:var(--navy);color:#fff;border-radius:24px 24px 0 0;padding:8px 16px calc(20px + var(--safe-area-inset-bottom));display:flex;flex-direction:column;gap:12px;box-shadow:0 -8px 24px rgba(22,32,60,.18)}
+
+/* ---- slider ---- */
+.sx-slide{position:relative;height:56px;border-radius:999px;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);display:flex;align-items:center;padding:4px;touch-action:none;user-select:none}
+.sx-slide .k{width:48px;height:48px;border-radius:999px;background:var(--red);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 14px rgba(201,58,48,.45);position:relative;z-index:1;transition:transform .2s}
+.sx-slide .l{position:absolute;left:52px;right:0;text-align:center;font-size:15px;font-weight:700;pointer-events:none}
+.sx-slide.money{background:rgba(111,220,176,.12);box-shadow:inset 0 0 0 1px rgba(111,220,176,.25)}
+.sx-slide.money .k{background:var(--mint);color:var(--navy);box-shadow:0 6px 16px rgba(111,220,176,.4)}
+.sx-slide.money .l{color:var(--mint)}
+.sx-slide[aria-disabled="true"]{opacity:.5}
+
+/* ---- toast ---- */
+.sx-toast{position:fixed;left:50%;bottom:calc(110px + var(--safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);z-index:90;background:var(--navy);color:#fff;padding:12px 16px;border-radius:14px;font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:all .25s;max-width:90vw;box-shadow:0 10px 24px rgba(22,32,60,.3)}
+.sx-toast.on{opacity:1;transform:translateX(-50%)}
+
+/* ---- motion ---- */
+@keyframes sxPop{0%{transform:scale(0) rotate(-30deg);opacity:0}55%{transform:scale(1.18) rotate(4deg);opacity:1}100%{transform:none}}
+@keyframes sxRing{0%{transform:scale(.85);opacity:.8}100%{transform:scale(2.3);opacity:0}}
+@keyframes sxUpIn{from{opacity:0;transform:translateY(12px)}}
+@keyframes sxFall{0%{transform:translate(0,-30px) rotate(0);opacity:0}10%{opacity:1}80%{opacity:1}100%{transform:translate(var(--dx),620px) rotate(var(--rot));opacity:0}}
+@keyframes sxBlink{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes sxGrow{from{transform:scaleX(0)}}
+@keyframes sxDelta{0%{opacity:0;transform:translateY(8px)}15%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0;transform:translateY(-10px)}}
+@keyframes sxCoin{0%{transform:translateY(-70px) rotate(0);opacity:0}15%{opacity:1}70%{transform:translateY(46px) rotate(200deg);opacity:1}100%{transform:translateY(52px) rotate(220deg);opacity:0}}
+@keyframes sxDrawer{0%,20%{transform:translateY(0)}35%,70%{transform:translateY(16px)}85%,100%{transform:translateY(0)}}
+.sx-blink{animation:sxBlink 1.5s ease-in-out infinite}
+.sx-grow{transform-origin:left;animation:sxGrow .9s cubic-bezier(.3,.8,.3,1) .2s both}
+.sx-upin{animation:sxUpIn .5s ease-out both}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+
+/* ---- sign in ---- */
+.sx-auth{position:fixed;inset:0;z-index:100;background:radial-gradient(120% 80% at 20% 10%,#2B3866 0%,#16203C 60%);color:#fff;display:flex;flex-direction:column;justify-content:center;padding:24px 22px calc(24px + var(--safe-area-inset-bottom))}
+.sx-auth .card{max-width:420px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.sx-auth label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--navyInk2)}
+.sx-auth input{height:52px;border-radius:14px;border:none;padding:0 14px;font-size:16px;background:rgba(255,255,255,.08);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);outline:none}
+.sx-auth input:focus{box-shadow:inset 0 0 0 2px var(--mint)}
+.sx-auth .msg{min-height:20px;font-size:13px;color:var(--navyInk)}
+.sx-auth .msg.err{color:#F59A92}
+</style>
+</head>
+<body>
+<div id="sx_app"><div id="sx_main"><div class="sx-empty" style="padding-top:40vh"><b>Omni-Ware Sales</b>Opening…</div></div></div>
+<div id="sx_pages"></div>
+<div id="sx_sheet"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+/* ==================================================================
+   Omni-Ware Sales — the sales desk on a phone.
+
+   One self-contained page, like agent.html: the same Supabase project,
+   the same rows the admin app reads and writes (see the contracts noted
+   beside each write), and nothing a sales login is not allowed to do
+   (0113_sales_role.sql). Costs, suppliers and margins are read only to
+   PRICE a line the way the admin would; they are never drawn.
+   ================================================================== */
+'use strict';
+
+const OW_ENV = (function () {
+  const PRODUCTION = { name: 'production', url: 'https://hgywjaifdmgrcnwxstxg.supabase.co', anon: 'sb_publishable_KsUIBYzuZRdoPsqP4T2ULw__AsCEhzV' };
+  const STAGING = { name: 'staging', url: 'https://lmmyzhqdxixjnkkkgnnu.supabase.co', anon: 'sb_publishable_K7A4jZC6RSgFtyiSfV2P_w_oh8crHa5' };
+  const PRODUCTION_HOSTS = ['omni-ware.vercel.app', 'omni-ware-preview.turyasingurakevin94.workers.dev'];
+  if (typeof window !== 'undefined' && window.Capacitor) return PRODUCTION;
+  const host = ((typeof location !== 'undefined' && location.hostname) || '').toLowerCase();
+  return PRODUCTION_HOSTS.indexOf(host) === -1 ? STAGING : PRODUCTION;
+})();
+const sb = window.supabase.createClient(OW_ENV.url, OW_ENV.anon);
+
+/* ---------------- small helpers ---------------- */
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function n0(n){ return Math.round(Number(n) || 0).toLocaleString('en-US'); }
+function short(n){
+  n = Number(n) || 0; const a = Math.abs(n);
+  if (a >= 1e6) return (n / 1e6).toFixed(a >= 1e7 ? 1 : 2).replace(/\.0+$/, '') + 'M';
+  if (a >= 1e4) return Math.round(n / 1e3) + 'k';
+  return n0(n);
+}
+function todayISO(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function isoOf(ts){ if (!ts) return ''; const d = new Date(ts); if (isNaN(d)) return String(ts).slice(0, 10); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function nowHM(){ const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+function daysBetween(a, b){ if (!a || !b) return 0; return Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 864e5); }
+function agoWords(ms){
+  if (!ms) return '';
+  const m = Math.round((Date.now() - ms) / 60000);
+  if (m < 1) return 'just now'; if (m < 60) return m + ' min ago';
+  const h = Math.round(m / 60); if (h < 24) return h + 'h ago';
+  const d = Math.round(h / 24); return d === 1 ? 'yesterday' : d + ' days ago';
+}
+function timeOf(ms){ if (!ms) return ''; const d = new Date(ms); return d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0'); }
+function dayLabel(iso){ if (!iso) return ''; const d = new Date(iso + 'T00:00:00'); return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); }
+function initials(name){
+  const w = String(name || '?').replace(/[^A-Za-z0-9 ]/g, ' ').trim().split(/\s+/).filter(Boolean);
+  if (!w.length) return '?';
+  return (w[0][0] + (w[1] ? w[1][0] : (w[0][1] || ''))).toUpperCase();
+}
+const TINTS = [['#DCEAF8','#1A5A8A'],['#E4E6FA','#3A3F9B'],['#E4F4EA','#0F6B43'],['#FDEEE1','#95530C'],['#F6E4F1','#7A3268'],['#FDE8E4','#A82D24'],['#E6F0EF','#0E6A6A']];
+function tintFor(key){ let h = 0; String(key || '').split('').forEach(c => { h = (h * 31 + c.charCodeAt(0)) >>> 0; }); return TINTS[h % TINTS.length]; }
+function avatar(name, cls){ const t = tintFor(name); return `<span class="sx-av ${cls || ''}" style="background:${t[0]};color:${t[1]}">${esc(initials(name))}</span>`; }
+function firstWord(name){ return String(name || '').trim().split(/\s+/)[0] || ''; }
+function phoneDigits(p){ let d = String(p || '').replace(/[^0-9]/g, ''); if (d.startsWith('0')) d = '256' + d.slice(1); return d; }
+
+const ICON = {
+  today: '<path d="M12 3.4v2.3M5.4 6.5l1.6 1.6M18.6 6.5l-1.6 1.6M6.3 16.4a5.7 5.7 0 0 1 11.4 0M2.4 16.4h19.2M5.6 20.4h12.8"/>',
+  orders: '<path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/>',
+  people: '<circle cx="9" cy="8" r="3.2"/><path d="M3 19c0-3 2.7-5 6-5s6 2 6 5M16 5.5a3 3 0 0 1 0 5.6M18 14c2 .6 3 2.2 3 4.5"/>',
+  me: '<circle cx="12" cy="8" r="4"/><path d="M4 20c1-4 4.3-6 8-6s7 2 8 6"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+  close: '<path d="M6 6l12 12M18 6L6 18"/>',
+  back: '<path d="M15 6l-6 6 6 6"/>',
+  chev: '<path d="M9 6l6 6-6 6"/>',
+  tick: '<path d="m5 12.5 4.5 4.5L19 7"/>',
+  chat: '<path d="M4 5h16v11H9l-5 4z"/>',
+  phone: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>',
+  trash: '<path d="M5 7h14M10 7V4.5h4V7M7 7l1 13h8l1-13"/>',
+  cash: '<rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9.5v.01M18 14.5v.01"/>',
+  momo: '<rect x="7" y="2.5" width="10" height="19" rx="2.2"/><path d="M11 18.3h2"/>',
+  bank: '<path d="M3 9.5 12 4l9 5.5M5 10.5v7M9.7 10.5v7M14.3 10.5v7M19 10.5v7M3 20.5h18"/>',
+  truck: '<path d="M1.5 6.5h12.5v9.5H1.5zM14 10h4.5l3 3v3H14"/><circle cx="5.5" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/>',
+  bag: '<path d="M4 7h16l-1.5 11a2 2 0 0 1-2 1.7h-9a2 2 0 0 1-2-1.7zM8.5 7a3.5 3.5 0 0 1 7 0"/>',
+  lens: '<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>',
+  box: '<path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/>',
+  pin: '<path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/>',
+  out: '<path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10"/>',
+  bookmark: '<path d="M6 3h12v18l-6-4-6 4z"/>',
+  refresh: '<path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/>',
+  sound: '<path d="M4 9.5h3.5L12 5.5v13L7.5 14.5H4z"/><path d="M15.5 9a4.5 4.5 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/>',
+  lock: '<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>',
+  store: '<path d="M3 9l1.5-5h15L21 9M4 9v11h16V9M3 9h18M9 20v-6h6v6"/>',
+  item: '<path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/>',
+};
+function ic(name, size, extra){ return `<svg class="icon" viewBox="0 0 24 24" ${size ? `style="width:${size}px;height:${size}px"` : ''} ${extra || ''} aria-hidden="true">${ICON[name] || ''}</svg>`; }
+
+let toastTimer = null;
+function toast(msg, ms){
+  let el = document.getElementById('sx_toast');
+  if (!el) { el = document.createElement('div'); el.id = 'sx_toast'; el.className = 'sx-toast'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
+  el.textContent = msg; el.classList.add('on');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('on'), ms || 3200);
+}
+function haptic(kind){ try { if (window.owHaptic) window.owHaptic(kind); } catch (_e) {} }
+function isNetworkError(e){ return !!e && /fetch|network|Failed to fetch|NetworkError|Load failed/i.test(String(e.message || e)); }
+
+/* ==================================================================
+   Who is signed in, which shop, and the shop's books as the admin app
+   reads them (index.html loadData) -- the same tables, the same
+   mapping, so every figure here is the figure on the owner's screen.
+   ================================================================== */
+const S = {
+  user: null, shopId: null, shopName: '', role: null,
+  data: null, loadedAt: 0,
+  view: 'today', stack: [], sheet: null,
+  ordersStage: 'draft', custFilter: 'all', custArea: '', custQuery: '',
+  draft: null,
+};
+window.SX = S;
+
+async function selectAll(table, keyCol){
+  keyCol = keyCol || 'id';
+  let rows = [], total = null;
+  for (;;) {
+    let q = sb.from(table).select('*', total === null ? { count: 'exact' } : undefined).eq('shop_id', S.shopId);
+    if (rows.length) q = q.gt(keyCol, rows[rows.length - 1][keyCol]);
+    const r = await q.order(keyCol, { ascending: true }).limit(1000);
+    if (r.error) throw r.error;
+    if (total === null) total = (typeof r.count === 'number') ? r.count : null;
+    const page = r.data || [];
+    rows = rows.concat(page);
+    if (!page.length || (total !== null && rows.length >= total)) break;
+  }
+  return rows;
+}
+function monthStartISO(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-01'; }
+
+async function loadAll(){
+  const [suppliers, customers, debtLog, products, prices, stock, lots, quotes, links, settingsR, cashR, staff] = await Promise.all([
+    selectAll('suppliers'), selectAll('customers'), selectAll('customer_debt_log'), selectAll('products'), selectAll('prices'),
+    selectAll('stock', 'key'), selectAll('stock_lots'), selectAll('saved_quotes'), selectAll('product_links').catch(() => []),
+    sb.from('app_settings').select('presets').eq('shop_id', S.shopId).maybeSingle(),
+    sb.from('cash_txns').select('*').eq('shop_id', S.shopId).gte('date', monthStartISO()).order('id').limit(5000),
+    selectAll('staff').catch(() => []),
+  ]);
+  const presets = (settingsR && settingsR.data && settingsR.data.presets) || {};
+  const debtBy = {};
+  debtLog.forEach(l => { (debtBy[l.customer_id] ||= []).push({ id: l.id, date: l.date, type: l.type, amount: Number(l.amount) || 0, note: l.note || '', cashTxnId: l.cash_txn_id == null ? null : Number(l.cash_txn_id), quoteId: l.quote_id == null ? null : Number(l.quote_id) }); });
+  const stockMap = {}; stock.forEach(s => { stockMap[s.key] = Number(s.qty) || 0; });
+  const lotMap = {}; lots.forEach(l => { const lot = { qty: Number(l.qty) || 0, cost: l.cost == null ? null : Number(l.cost) }; (lotMap[l.key] ||= []).push(lot); });
+  S.data = {
+    suppliers: suppliers.map(s => ({ id: s.id, name: s.name })),
+    staff: staff.map(s => ({ id: s.id, name: s.name, userId: s.user_id || null, role: s.role })),
+    customers: customers.map(c => ({ id: c.id, name: c.name || '', phone: c.phone || '', phone2: c.phone2 || '', location: c.location || '', notes: c.notes || '', debt: Number(c.debt) || 0, termsDays: c.terms_days ?? null, creditLimit: c.credit_limit ?? null, debtLog: debtBy[c.id] || [] })),
+    products: products.map(p => ({ id: p.id, name: p.name || '', type: p.type || 'simple', category: p.category || '', subcategory: p.subcategory || '', image: p.image || null,
+      wholesaleMarkupType: p.wholesale_markup_type, wholesaleMarkupValue: Number(p.wholesale_markup_value) || 0,
+      retailMarkupType: p.retail_markup_type, retailMarkupValue: Number(p.retail_markup_value) || 0,
+      stockWholesaleMarkupType: p.stock_wholesale_markup_type || 'percent', stockWholesaleMarkupValue: Number(p.stock_wholesale_markup_value) || 0,
+      stockRetailMarkupType: p.stock_retail_markup_type || 'percent', stockRetailMarkupValue: Number(p.stock_retail_markup_value) || 0,
+      variantAttributes: p.variant_attributes || [], variants: p.variants || [] })),
+    prices: prices.map(pr => ({ id: pr.id, productId: pr.product_id, variantIdx: pr.variant_idx == null || pr.variant_idx === '' ? null : Number(pr.variant_idx),
+      supplierId: pr.supplier_id, wholesale: pr.wholesale == null ? null : Number(pr.wholesale), retail: pr.retail == null ? null : Number(pr.retail),
+      unit: pr.unit || '', packUnit: pr.pack_unit || '', packQty: Number(pr.pack_qty) || 0, outOfStock: !!pr.out_of_stock, tiers: Array.isArray(pr.tiers) ? pr.tiers : [] })),
+    stock: stockMap, stockLots: lotMap,
+    savedQuotes: quotes.map(rowToQuote),
+    productLinks: (links || []).map(r => ({ id: r.id, fromId: r.from_id, verb: r.verb, toId: r.to_id, toVariantIdx: r.to_variant_idx == null ? null : Number(r.to_variant_idx), fromVariantIdx: r.from_variant_idx == null ? null : Number(r.from_variant_idx), qty: r.qty == null ? null : Number(r.qty), per: r.per || '', active: r.active !== false })),
+    cashTxns: ((cashR && cashR.data) || []).map(t => ({ id: t.id, date: t.date, account: t.account, type: t.type, category: t.category, amount: Number(t.amount) || 0, description: t.description || '', time: t.time || '', quoteId: t.quote_id == null ? null : Number(t.quote_id), enteredBy: t.entered_by || null })),
+    presetCreditPct: presets.creditPct != null ? Number(presets.creditPct) : 0,
+    presetDefaultMarkup: presets.defaultMarkup || {},
+    presetChaseAfterDays: presets.chaseAfterDays != null ? Number(presets.chaseAfterDays) : 7,
+    presetCategories: presets.categories || [],
+  };
+  S.loadedAt = Date.now();
+  saveSnapshot();
+}
+// index.html 45290: the payload is spread over these defaults.
+function rowToQuote(q){
+  return { id: q.id, status: q.status || 'draft', invoiced: !!q.invoiced, invoicedAt: q.invoiced_at, invoicedTs: q.invoiced_ts ? new Date(q.invoiced_ts).getTime() : null,
+    amountPaid: Number(q.amount_paid) || 0, voided: !!q.voided, date: q.date,
+    client: { name: '', phone: '' }, items: [], savedAt: null, payments: [], customerId: null, debtCharged: 0, charges: [], credit: null,
+    ...(q.payload || {}) };
+}
+async function refreshQuotes(){
+  try { const rows = await selectAll('saved_quotes'); S.data.savedQuotes = rows.map(rowToQuote); S.loadedAt = Date.now(); saveSnapshot(); render(); }
+  catch (e) { if (!isNetworkError(e)) console.warn(e); }
+}
+
+/* An offline start: the last books this login saw, so a phone that wakes
+   on no signal still opens on Today. Never another login's. */
+function snapKey(){ return 'ow-sales-snap:' + (S.user && S.user.id); }
+function saveSnapshot(){ try { localStorage.setItem(snapKey(), JSON.stringify({ shopId: S.shopId, shopName: S.shopName, role: S.role, at: S.loadedAt, data: S.data })); } catch (_e) {} }
+function loadSnapshot(userId){ try { const s = JSON.parse(localStorage.getItem('ow-sales-snap:' + userId)); return s && s.data ? s : null; } catch (_e) { return null; } }
+
+/* ---------------- ids, issued by the server (0034 / 0032) ---------------- */
+async function issueRowId(kind, localMax){
+  const floors = {}; floors[kind] = localMax;
+  const { data, error } = await sb.rpc('next_row_id_blocks', { p_shop_id: S.shopId, p_kinds: [kind], p_count: 1, p_floors: floors });
+  if (error) throw error;
+  const v = data && data[kind];
+  if (v == null) throw new Error('No id came back for ' + kind);
+  return Number(v);
+}
+async function issueCustomerId(){
+  const nums = S.data.customers.map(c => Number(String(c.id).replace(/[^0-9]/g, '')) || 0);
+  const floor = nums.length ? Math.max(...nums) : 0;
+  const { data, error } = await sb.rpc('next_entity_id', { p_shop_id: S.shopId, p_kind: 'customer', p_prefix: 'C', p_pad: 3, p_floor: floor });
+  if (error) throw error;
+  return String(data);
+}
+
+/* ==================================================================
+   The shop's rules, carried over from index.html line for line where a
+   figure depends on them -- a price here must be the price the owner's
+   screen would give. Each function names its original.
+   ================================================================== */
+const D = () => S.data;
+const cmpUnitKey = s => String(s || '').trim().toLowerCase();
+function productById(id){ return D().products.find(p => p.id === id) || null; }
+function supplierName(id){ if (id === '__stock__') return 'Our stock'; const s = D().suppliers.find(x => x.id === id); return s ? s.name : ''; }
+function variantLabel(combo){ return Object.values(combo || {}).join(' / '); }
+function productVariantLabel(p, vi){ if (vi == null || vi === '' || !p.variants) return p.name; const v = p.variants[vi]; return v ? `${p.name} — ${variantLabel(v.combo)}` : p.name; }
+function stockKey(pid, vi){ return (vi == null || vi === '') ? pid : `${pid}::${vi}`; }
+function getStockQty(pid, vi){ return Number(D().stock[stockKey(pid, vi)]) || 0; }
+function getFIFOUnitCost(pid, vi){ const lots = D().stockLots[stockKey(pid, vi)] || []; const lot = lots.find(l => l.qty > 0 && l.cost != null); return lot ? Number(lot.cost) : null; }
+// index.html 55428
+function productPriceRows(pid, vi){ vi = vi == null ? null : vi; return D().prices.filter(p => p.productId === pid && (p.variantIdx == null ? null : p.variantIdx) === vi); }
+// 59200
+function rankedPriceRows(pid, vi){
+  return productPriceRows(pid, vi).filter(r => !r.outOfStock).sort((a, b) => {
+    const aw = a.wholesale != null ? a.wholesale : Infinity, bw = b.wholesale != null ? b.wholesale : Infinity;
+    if (aw !== bw) return aw - bw;
+    const ar = a.retail != null ? a.retail : Infinity, br = b.retail != null ? b.retail : Infinity;
+    return ar - br;
+  });
+}
+// 59223 / 59229
+function tiersForKind(row, kind){ const pq = Number(row.packQty) || 0; return (Array.isArray(row.tiers) ? row.tiers : []).filter(t => kind === 'wholesale' ? (pq > 0 && t.minQty >= pq) : (pq === 0 || t.minQty < pq)); }
+function tieredUnitPrice(row, qty, kind){
+  if (!row) return null;
+  const base = row[kind], tiers = tiersForKind(row, kind);
+  if (!tiers.length) return base;
+  let best = base, bestMin = 0;
+  tiers.forEach(t => { if (t.price != null && qty >= t.minQty && t.minQty >= bestMin) { best = t.price; bestMin = t.minQty; } });
+  return best;
+}
+// 59468
+function purchasePriceAtQty(row, qty){
+  const pq = Number(row.packQty) || 0;
+  const natural = (pq > 0 && qty >= pq) ? 'wholesale' : 'retail', other = natural === 'wholesale' ? 'retail' : 'wholesale';
+  const p = tieredUnitPrice(row, qty, natural);
+  return p != null ? p : tieredUnitPrice(row, qty, other);
+}
+// 59512
+function purchaseSideAtQty(row, qty){
+  if (!row) return null;
+  const pq = Number(row.packQty) || 0;
+  const natural = (pq > 0 && qty >= pq) ? 'wholesale' : 'retail', other = natural === 'wholesale' ? 'retail' : 'wholesale';
+  if (tieredUnitPrice(row, qty, natural) != null) return natural;
+  return tieredUnitPrice(row, qty, other) != null ? other : null;
+}
+// 59492
+function sellSideFor(row, qty, packQty, ruleAt){
+  const natural = (Number(packQty) > 0 && Number(qty) >= Number(packQty)) ? 'wholesale' : 'retail', other = natural === 'wholesale' ? 'retail' : 'wholesale';
+  const fromRow = row ? purchaseSideAtQty(row, qty) : null;
+  if (fromRow) return fromRow;
+  if (typeof ruleAt === 'function' && !ruleAt(natural) && ruleAt(other)) return other;
+  return natural;
+}
+// 55475
+function rankedPurchaseRowsAtQty(pid, vi, qty){
+  return rankedPriceRows(pid, vi).map(r => ({ ...r, purchasePrice: purchasePriceAtQty(r, qty) })).sort((a, b) => {
+    const ap = a.purchasePrice != null ? a.purchasePrice : Infinity, bp = b.purchasePrice != null ? b.purchasePrice : Infinity;
+    return ap - bp;
+  });
+}
+// 60097 / 60119
+function effectiveMarkupRule(product, vi, kind){
+  if (!product) return null;
+  if (vi != null && product.variants && product.variants[vi]) {
+    const v = product.variants[vi], vVal = Number(v[kind + 'MarkupValue']) || 0;
+    if (vVal > 0) return { type: v[kind + 'MarkupType'], value: vVal, source: 'variant' };
+  }
+  const pVal = Number(product[kind + 'MarkupValue']) || 0;
+  if (pVal > 0) return { type: product[kind + 'MarkupType'], value: pVal, source: 'product' };
+  const d = D().presetDefaultMarkup, dVal = d ? Number(d[kind + 'Value']) || 0 : 0;
+  if (dVal > 0) return { type: d[kind + 'Type'] === 'fixed' ? 'fixed' : 'percent', value: dVal, source: 'default' };
+  return null;
+}
+function effectiveStockMarkupRule(product, vi, kind){
+  if (!product) return null;
+  const K = kind.charAt(0).toUpperCase() + kind.slice(1), typeKey = 'stock' + K + 'MarkupType', valKey = 'stock' + K + 'MarkupValue';
+  if (vi != null && product.variants && product.variants[vi]) { const v = product.variants[vi], vVal = Number(v[valKey]) || 0; if (vVal > 0) return { type: v[typeKey], value: vVal, source: 'variant-stock' }; }
+  const pVal = Number(product[valKey]) || 0;
+  if (pVal > 0) return { type: product[typeKey], value: pVal, source: 'product-stock' };
+  return effectiveMarkupRule(product, vi, kind);
+}
+// 116750 / 60132
+function applyRule(rule, base, kind, packQty){
+  if (!rule) return null;
+  if (rule.type === 'fixed') return base + ((kind === 'wholesale' && packQty > 0) ? rule.value / packQty : rule.value);
+  return base * (1 + rule.value / 100);
+}
+// 59846: a line's selling price, each, in its base unit.
+function quoteItemSellPrice(it){
+  if (it.sellPrice != null && it.sellPrice !== '') return Number(it.sellPrice) || 0;
+  const buy = Number(it.price) || 0;
+  const product = productById(it.productId);
+  if (!product) return buy;
+  const vi = it.variantIdx == null ? null : it.variantIdx;
+  const packQty = Number(it.packQty) || 0, qty = Number(it.qty) || 0;
+  const fromStock = it.supplierId === '__stock__';
+  const ruleAt = k => fromStock ? effectiveStockMarkupRule(product, vi, k) : effectiveMarkupRule(product, vi, k);
+  const row = !fromStock ? (productPriceRows(it.productId, vi).find(r => r.supplierId === it.supplierId) || null) : null;
+  const kind = sellSideFor(row, qty, packQty, ruleAt);
+  const s = applyRule(ruleAt(kind), buy, kind, packQty);
+  return s != null ? s : buy;
+}
+/* Whether a line has a selling price the shop decided, or would go out
+   at cost. A sales login never sells at cost: the line says "price to
+   confirm" instead and the buyer prices it at Checking. */
+function lineHasRule(it){
+  const product = productById(it.productId); if (!product) return false;
+  const vi = it.variantIdx == null ? null : it.variantIdx, fromStock = it.supplierId === '__stock__';
+  const ruleAt = k => fromStock ? effectiveStockMarkupRule(product, vi, k) : effectiveMarkupRule(product, vi, k);
+  const row = !fromStock ? (productPriceRows(it.productId, vi).find(r => r.supplierId === it.supplierId) || null) : null;
+  return !!ruleAt(sellSideFor(row, Number(it.qty) || 0, Number(it.packQty) || 0, ruleAt));
+}
+function linePriceToConfirm(it){ return !(Number(it.price) > 0) || ((it.sellPrice == null || it.sellPrice === '') && !lineHasRule(it)); }
+
+// 112191: the shelf's one unit and pack.
+function stockUnitFor(pid, vi){
+  const rows = productPriceRows(pid, vi == null || vi === '' ? null : Number(vi));
+  const packs = r => Number(r.packQty) > 0 && !!r.packUnit && cmpUnitKey(r.packUnit) !== cmpUnitKey(r.unit);
+  const packed = rows.filter(r => !r.outOfStock).find(packs) || rows.find(packs) || null;
+  const unit = String((packed ? packed.unit : (rows.find(r => r.unit) || {}).unit) || '').trim();
+  const packQty = packed ? Number(packed.packQty) : 0, packUnit = packed ? String(packed.packUnit).trim() : '';
+  return { unit, packQty, packUnit, hasPack: packQty > 0 && !!packUnit };
+}
+
+/* A line, sourced the way the quote rail and startQuoteForCustomer do
+   (index.html 62516-62528, 90729-90740): off the shelf when the shelf
+   covers the quantity, else from the supplier cheapest at that quantity.
+   Same fields as the item picker's Add (61779). */
+function makeLine(pid, vi, qty, opts){
+  opts = opts || {};
+  const p = productById(pid); if (!p) return null;
+  vi = vi == null || vi === '' ? null : Number(vi);
+  qty = Math.max(0, Number(qty) || 0);
+  const shelf = getStockQty(pid, vi), stockCost = getFIFOUnitCost(pid, vi);
+  const ranked = rankedPurchaseRowsAtQty(pid, vi, qty || 1);
+  const best = ranked[0] || null;
+  const fromShelf = shelf >= qty && shelf > 0;
+  const supplierId = fromShelf ? '__stock__' : (best ? best.supplierId : (shelf > 0 ? '__stock__' : ''));
+  const refRow = best;
+  let price = 0;
+  if (supplierId === '__stock__' && stockCost != null) price = Math.round(stockCost);
+  else if (refRow) price = Math.round(purchasePriceAtQty(refRow, qty || 1) || 0);
+  const su = stockUnitFor(pid, vi);
+  const it = { lineId: opts.lineId || 1, productId: pid, variantIdx: vi, productName: productVariantLabel(p, vi),
+    unit: (refRow && refRow.unit) || su.unit || '', packUnit: refRow ? (refRow.packUnit || '') : (su.packUnit || ''), packQty: refRow ? (refRow.packQty || 0) : (su.packQty || ''),
+    qtyIn: opts.qtyIn || 'unit', qty, supplierId, supplierName: supplierName(supplierId), price, sellPrice: null };
+  if (price > 0 && lineHasRule(it)) it.sellPrice = Math.round(quoteItemSellPrice(it));
+  return it;
+}
+
+/* ---- totals: savedQuoteGoodsTotal 63537 ... savedQuoteTotal 63768 ---- */
+function goodsTotal(q){ return (q.items || []).reduce((s, it) => s + (Number(it.qty) || 0) * quoteItemSellPrice(it), 0); }
+/* What the salesperson can quote today: lines still to be priced are left
+   out and counted, never shown at cost. */
+function pricedView(q){ const open = (q.items || []).filter(linePriceToConfirm); const known = { ...q, items: (q.items || []).filter(it => !linePriceToConfirm(it)) }; return { total: quoteTotal(known), cash: cashTotal(known), credit: creditCharge(known), toConfirm: open.length }; }
+function chargeAmount(ch, goods){ if (!ch) return 0; const v = Number(ch.value) || 0; if (!(v > 0)) return 0; return ch.type === 'percent' ? Math.round((Number(goods) || 0) * v / 100) : Math.round(v); }
+function chargesTotal(q){ const g = goodsTotal(q); return (q.charges || []).reduce((s, ch) => s + chargeAmount(ch, g), 0); }
+function cashTotal(q){ const gross = goodsTotal(q) + chargesTotal(q); return gross - Math.min(Math.max(0, Number(q.discount) || 0), gross); }
+function creditTerms(q){ const c = q && q.credit; if (!c || !(Number(c.pct) > 0)) return null; return { pct: Number(c.pct), days: Math.max(0, Number(c.days) || 0) }; }
+function creditCharge(q){ const t = creditTerms(q); return t ? Math.round(cashTotal(q) * t.pct / 100) : 0; }
+function quoteTotal(q){ const credited = (q.creditNotes || []).reduce((s, cn) => s + (cn && !cn.voided ? Number(cn.amount) || 0 : 0), 0); return cashTotal(q) + creditCharge(q) - credited; }
+function balanceDue(q){ return Math.max(0, quoteTotal(q) - (Number(q.amountPaid) || 0)); }
+function shopCreditPct(){ const n = Number(D().presetCreditPct); return Number.isFinite(n) && n > 0 ? n : 0; }
+function invoiceLabel(q){ return 'INV-' + String(q.id).padStart(4, '0'); }
+function orderNo(q){ return '#' + String(q.id).padStart(4, '0'); }
+
+/* ---- stages ---- */
+const STAGES = [
+  { key: 'draft', label: 'Checking', short: 'Checking', col: '#F5B26B' },
+  { key: 'awaiting_goods', label: 'Buying', short: 'Buying', col: '#3A3F9B' },
+  { key: 'preparing', label: 'Packing', short: 'Packing', col: '#95530C' },
+  { key: 'pending_delivery', label: 'On the road', short: 'On road', col: '#1A5A8A' },
+  { key: 'completed', label: 'Delivered', short: 'Delivered', col: '#0F6B43' },
+];
+function stageOf(q){ return STAGES.find(s => s.key === q.status) || STAGES[0]; }
+function stageIdx(q){ return Math.max(0, STAGES.findIndex(s => s.key === q.status)); }
+function liveOrders(){ return D().savedQuotes.filter(q => !q.voided && !q.cancelledAt); }
+function createdMs(q){ return Date.parse(q.createdAt || q.savedAt || '') || (q.date ? Date.parse(q.date + 'T08:00:00') : 0); }
+function stageEnteredMs(q){ return Number(q.stageEnteredAt) || createdMs(q); }
+
+// 64254 / 64282 / 64295: a supplier's yes counts only for the terms it was given.
+function orderLineIsBoughtIn(it){ return !!(it && it.supplierId && it.supplierId !== '__stock__'); }
+function supplierGroups(q){ const by = {}, order = []; (q.items || []).forEach(it => { const sid = it && it.supplierId; if (!sid || sid === '__stock__') return; const k = String(sid); if (!by[k]) { by[k] = { supplierId: sid, lines: [] }; order.push(k); } by[k].lines.push(it); }); return order.map(k => by[k]); }
+function supplierTerms(q, sid){ const g = supplierGroups(q).find(x => String(x.supplierId) === String(sid)); return (g ? g.lines : []).map(it => [it.productId, it.variantIdx == null ? '' : it.variantIdx, Number(it.qty) || 0, Math.round(Number(it.price) || 0)].join(':')).join('|'); }
+function confirmState(q, sid){ const rec = ((q && q.supplierConfirms) || {})[String(sid)] || {}; const state = (rec.state === 'confirmed' && rec.terms !== supplierTerms(q, sid)) ? 'stale' : (rec.state || 'pending'); return { state, at: rec.at || null, askedAt: rec.askedAt || null }; }
+function lineReceived(it){ return !!(it && it.receivedAt && Number(it.receivedQty) > 0); }
+function lineShort(it){ return orderLineIsBoughtIn(it) && lineReceived(it) ? Math.max(0, (Number(it.qty) || 0) - (Number(it.receivedQty) || 0)) : 0; }
+/* One line's state for the salesperson, in their words. */
+function lineState(q, it){
+  if (!it.supplierId) return { k: 'wait', word: 'waiting for a supplier', col: '#8A93A3' };
+  if (it.supplierId === '__stock__') return { k: 'ok', word: 'on the shelf', col: '#767F91' };
+  if (q.status === 'draft') {
+    const c = confirmState(q, it.supplierId);
+    if (c.state === 'confirmed') return { k: 'ok', word: 'found' + (c.at ? ' · ' + timeOf(Date.parse(c.at) || c.at) : ''), col: '#0F6B43' };
+    if (c.state === 'problem') return { k: 'no', word: 'not found yet', col: '#8E2A22' };
+    if (c.askedAt) return { k: 'ask', word: 'asking a supplier…', col: '#95530C' };
+    return { k: 'wait', word: 'shop checks for supplier', col: '#95530C' };
+  }
+  if (lineReceived(it)) { const sh = lineShort(it); return sh > 0 ? { k: 'short', word: `short · got ${n0(it.receivedQty)} of ${n0(it.qty)}`, col: '#95530C' } : { k: 'ok', word: 'came in', col: '#0F6B43' }; }
+  if (q.status === 'awaiting_goods') return { k: 'way', word: 'being bought in', col: '#3A3F9B' };
+  return { k: 'ok', word: 'ready', col: '#0F6B43' };
+}
+function orderLineStates(q){ return (q.items || []).map(it => lineState(q, it)); }
+
+/* ---- customers ---- */
+function customerById(id){ return D().customers.find(c => String(c.id) === String(id)) || null; }
+// 65287
+function customerOrdersFor(cid){
+  const c = customerById(cid), name = c ? String(c.name || '').trim().toLowerCase() : '';
+  const sameName = D().customers.filter(x => String(x.name || '').trim().toLowerCase() === name).length;
+  return D().savedQuotes.filter(q => {
+    if (q.voided) return false;
+    if (q.customerId != null && q.customerId !== '') return String(q.customerId) === String(cid);
+    if (sameName !== 1) return false;
+    return !!name && String((q.client && q.client.name) || '').trim().toLowerCase() === name;
+  });
+}
+// 65468
+function outstandingInvoices(cid){ return customerOrdersFor(cid).filter(q => q.invoiced && !q.voided && balanceDue(q) > 0).sort((a, b) => String(a.invoicedAt || a.date || '').localeCompare(String(b.invoicedAt || b.date || ''))); }
+// 90541 / 90667
+function orderHistory(cid){ return customerOrdersFor(cid).filter(q => q.invoiced && !q.voided).map(q => ({ q, date: q.invoicedAt || q.date || '' })).filter(o => o.date).sort((a, b) => a.date.localeCompare(b.date) || ((a.q.id || 0) - (b.q.id || 0))); }
+function usualLines(cid){
+  const hist = orderHistory(cid); if (!hist.length) return [];
+  const key = it => `${it.productId}|${it.variantIdx == null ? '' : it.variantIdx}`;
+  const seen = new Map();
+  hist.forEach((o, i) => { const here = new Set(); (o.q.items || []).forEach(it => { if (!it.productId) return; const k = key(it); const e = seen.get(k) || { productId: it.productId, variantIdx: it.variantIdx == null ? null : it.variantIdx, name: it.productName || '', orders: 0, qtys: [], lastAt: -1 }; if (!here.has(k)) { e.orders++; here.add(k); } e.qtys.push(Number(it.qty) || 0); if (i >= e.lastAt) e.lastAt = i; seen.set(k, e); }); });
+  const n = hist.length, need = n < 2 ? 1 : Math.max(2, Math.ceil(n / 2)), lastOrder = n - 1;
+  return [...seen.values()].filter(e => n < 2 ? e.lastAt === lastOrder : e.orders >= need).sort((a, b) => b.orders - a.orders).map(e => { const qs = e.qtys.filter(x => x > 0).sort((a, b) => a - b); return { productId: e.productId, variantIdx: e.variantIdx, name: e.name, qty: qs.length ? qs[qs.length >> 1] : 1, orders: e.orders, of: n }; });
+}
+// 65304: how often they come back
+function customerRhythm(cid){
+  const dates = orderHistory(cid).map(o => o.date).sort();
+  const first = dates[0] || null, last = dates.length ? dates[dates.length - 1] : null;
+  const every = dates.length > 1 ? Math.max(1, Math.round(daysBetween(first, last) / (dates.length - 1))) : null;
+  const since = last ? daysBetween(last, todayISO()) : null;
+  return { every, since, last, orders: dates.length, due: every != null && since != null && since >= every, overdue: every != null && since != null && since > every * 2 };
+}
+
+/* ---- what goes with what (93288 / 93432 / 93669) ---- */
+const PAIR_REVERSE = { needs: 'with', with: 'with', instead: 'instead', part: 'part' };
+const PAIR_WORD = { needs: 'needs', with: 'goes with', part: 'same job' };
+function goesWith(pid, vi, lineQty){
+  const live = D().productLinks.filter(l => l.active !== false && l.verb !== 'after' && l.verb !== 'instead');
+  const fits = l => l.fromVariantIdx == null || l.fromVariantIdx === vi;
+  const mine = live.filter(l => l.fromId === pid).filter(fits);
+  const said = new Set(mine.map(l => l.verb + ' ' + l.toId));
+  live.filter(l => l.toId === pid && l.fromId !== pid).forEach(l => {
+    const rev = PAIR_REVERSE[l.verb]; if (!rev) return;
+    const r = { verb: rev, fromId: pid, fromVariantIdx: l.toVariantIdx, toId: l.fromId, toVariantIdx: l.fromVariantIdx, qty: null, per: '' };
+    if (fits(r) && !said.has(r.verb + ' ' + r.toId)) mine.push(r);
+  });
+  return mine.filter(l => productById(l.toId)).map(l => ({ toId: l.toId, toVariantIdx: l.toVariantIdx, verb: l.verb, per: l.per,
+    qty: (l.qty && lineQty > 0) ? Math.max(1, Math.round(l.qty * lineQty)) : null, rate: l.qty }));
+}
+
+/* ==================================================================
+   Sign in, the shop, and the shell: tabs, pushed pages, sheets, back.
+   ================================================================== */
+function authScreen(kind){
+  return new Promise(resolve => {
+    let el = document.querySelector('.sx-auth');
+    if (!el) { el = document.createElement('div'); el.className = 'sx-auth'; document.body.appendChild(el); }
+    if (kind === 'denied') {
+      el.innerHTML = `<div class="card"><span class="sx-eyebrow" style="color:var(--mint)">Omni-Ware Sales</span>
+        <h1 style="margin:0;font-size:26px">This login has no sales desk</h1>
+        <p style="margin:0;color:var(--navyInk);font-size:14px;line-height:1.5">Ask the shop owner to invite you as a salesperson. Owners and admins use the full Omni-Ware app.</p>
+        <button class="sx-btn ghost" data-a="signout" style="margin-top:8px">Sign out</button></div>`;
+      el.querySelector('[data-a=signout]').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+      return;
+    }
+    el.innerHTML = `<div class="card">
+      <span style="width:56px;height:56px;border-radius:18px;background:var(--red);display:flex;align-items:center;justify-content:center;box-shadow:0 12px 26px rgba(201,58,48,.4)">${ic('bag', 28, 'style="stroke:#fff;width:28px;height:28px"')}</span>
+      <div><span class="sx-eyebrow" style="color:var(--mint)">Omni-Ware Sales</span><h1 style="margin:6px 0 0;font-size:28px;letter-spacing:-.02em">Your sales desk</h1></div>
+      <label>EMAIL<input id="sx_email" type="email" autocomplete="username" inputmode="email"></label>
+      <label>PASSWORD<input id="sx_pw" type="password" autocomplete="current-password"></label>
+      <div class="msg" id="sx_msg"></div>
+      <button class="sx-btn red" id="sx_go">Sign in</button>
+      <button class="sx-btn" id="sx_forgot" style="background:transparent;color:var(--navyInk);height:40px;font-weight:600">Forgot password?</button></div>`;
+    const msg = (t, err) => { const m = el.querySelector('#sx_msg'); m.textContent = t; m.className = 'msg' + (err ? ' err' : ''); };
+    const go = async () => {
+      const email = el.querySelector('#sx_email').value.trim(), password = el.querySelector('#sx_pw').value;
+      if (!email || !password) { msg('Enter your email and password', true); return; }
+      el.querySelector('#sx_go').disabled = true; msg('Signing in…');
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      el.querySelector('#sx_go').disabled = false;
+      if (error) { msg(error.message, true); return; }
+      resolve();
+    };
+    el.querySelector('#sx_go').onclick = go;
+    el.querySelectorAll('input').forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') go(); }));
+    el.querySelector('#sx_forgot').onclick = async () => {
+      const email = el.querySelector('#sx_email').value.trim();
+      if (!email) { msg('Type your email above first', true); return; }
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: 'https://omni-ware.vercel.app/sales.html' });
+      msg(error ? error.message : 'Check your email for a reset link', !!error);
+    };
+  });
+}
+function setPasswordScreen(){
+  return new Promise(resolve => {
+    let el = document.querySelector('.sx-auth');
+    if (!el) { el = document.createElement('div'); el.className = 'sx-auth'; document.body.appendChild(el); }
+    el.innerHTML = `<div class="card"><span class="sx-eyebrow" style="color:var(--mint)">Welcome to the sales desk</span>
+      <h1 style="margin:0;font-size:26px">Choose a password</h1>
+      <label>NEW PASSWORD<input id="sx_np" type="password" autocomplete="new-password"></label>
+      <div class="msg" id="sx_msg">At least 8 characters.</div><button class="sx-btn red" id="sx_go">Save and start</button></div>`;
+    el.querySelector('#sx_go').onclick = async () => {
+      const pw = el.querySelector('#sx_np').value;
+      if (pw.length < 8) { el.querySelector('#sx_msg').textContent = 'At least 8 characters, please.'; el.querySelector('#sx_msg').className = 'msg err'; return; }
+      const { error } = await sb.auth.updateUser({ password: pw });
+      if (error) { el.querySelector('#sx_msg').textContent = error.message; el.querySelector('#sx_msg').className = 'msg err'; return; }
+      resolve();
+    };
+  });
+}
+function hideAuth(){ const el = document.querySelector('.sx-auth'); if (el) el.remove(); }
+
+const initialLinkType = (() => { try { const h = new URLSearchParams(location.hash.slice(1)); return h.get('type'); } catch (_e) { return null; } })();
+
+async function boot(){
+  let { data: u, error: ue } = await sb.auth.getUser();
+  let user = (!ue && u && u.user) ? u.user : null;
+  if (!user) {
+    const { data: sess } = await sb.auth.getSession();
+    const sid = sess && sess.session && sess.session.user && sess.session.user.id;
+    const snap = sid ? loadSnapshot(sid) : null;
+    if (isNetworkError(ue) && snap) {
+      S.user = sess.session.user; Object.assign(S, { shopId: snap.shopId, shopName: snap.shopName, role: snap.role, data: snap.data, loadedAt: snap.at });
+      hideAuth(); start(); toast('Offline — showing what you last saw'); return;
+    }
+    await authScreen();
+    ({ data: u } = await sb.auth.getUser()); user = u && u.user;
+    if (!user) return;
+  } else if (initialLinkType === 'invite' || initialLinkType === 'recovery') {
+    await setPasswordScreen();
+  }
+  S.user = user;
+  const { data: ms, error } = await sb.from('shop_members').select('shop_id, role, shops(name)').eq('user_id', user.id);
+  if (error) {
+    const snap = loadSnapshot(user.id);
+    if (isNetworkError(error) && snap) { Object.assign(S, { shopId: snap.shopId, shopName: snap.shopName, role: snap.role, data: snap.data, loadedAt: snap.at }); hideAuth(); start(); toast('Offline — showing what you last saw'); return; }
+    toast('Could not reach the shop: ' + error.message, 6000); return;
+  }
+  const rows = ms || [];
+  // A sales membership first; an owner or admin may open the desk too.
+  const pick = rows.find(m => m.role === 'sales') || rows.find(m => ['owner', 'admin', 'manager'].includes(m.role));
+  if (!pick) { authScreen('denied'); return; }
+  S.shopId = pick.shop_id; S.role = pick.role; S.shopName = (pick.shops && pick.shops.name) || 'The shop';
+  hideAuth();
+  const snap = loadSnapshot(user.id);
+  if (snap && snap.shopId === S.shopId) { S.data = snap.data; S.loadedAt = snap.at; start(); }
+  else document.getElementById('sx_main').innerHTML = `<div class="sx-empty" style="padding-top:40vh"><b>Opening the books…</b>${esc(S.shopName)}</div>`;
+  try { await loadAll(); if (!S.started) start(); else render(); }
+  catch (e) { if (S.data) toast(isNetworkError(e) ? 'Offline — showing what you last saw' : 'Could not refresh: ' + e.message, 5000); else document.getElementById('sx_main').innerHTML = `<div class="sx-empty" style="padding-top:35vh"><b>Could not open the books</b>${esc(e.message || e)}<br><br><button class="sx-btn navy" onclick="location.reload()">Try again</button></div>`; }
+}
+function start(){
+  S.started = true;
+  restoreDraft();
+  render();
+  setInterval(() => { if (document.visibilityState === 'visible') refreshQuotes(); }, 60000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Date.now() - S.loadedAt > 30000) loadAll().then(render).catch(() => {}); });
+}
+
+/* ---------------- navigation ---------------- */
+function go(view){ S.view = view; S.stack = []; closeSheet(true); render(); window.scrollTo(0, 0); }
+function push(type, args){ S.stack.push({ type, args: args || {} }); render(); const p = document.querySelector('.sx-page:last-of-type'); if (p) p.scrollTop = 0; }
+function pop(){ S.stack.pop(); render(); }
+window.sxBack = function(){
+  if (S.sheet) { closeSheet(); return true; }
+  if (S.stack.length) { pop(); return true; }
+  if (S.view !== 'today') { go('today'); return true; }
+  return false;
+};
+function openSheet(type, args){ S.sheet = { type, args: args || {} }; renderSheet(); }
+function closeSheet(silent){ S.sheet = null; if (!silent) renderSheet(); }
+
+function navHTML(){
+  const b = (v, label, icon) => `<button data-act="tab" data-v="${v}" ${S.view === v && !S.stack.length ? 'aria-current="page"' : ''}>${ic(icon, 24)}${label}</button>`;
+  const due = liveOrders().filter(q => q.status === 'draft' && orderLineStates(q).some(s => s.k === 'no')).length;
+  return `<nav class="sx-nav" aria-label="Sales">${b('today', 'Today', 'today')}
+    <button data-act="tab" data-v="orders" ${S.view === 'orders' && !S.stack.length ? 'aria-current="page"' : ''}>${ic('orders', 24)}${due ? `<span class="sx-badge">${due}</span>` : ''}Orders</button>
+    <button class="sx-plus" data-act="neworder" aria-label="Take an order">${ic('plus')}</button>
+    ${b('customers', 'Customers', 'people')}${b('me', 'You', 'me')}</nav>`;
+}
+function render(){
+  if (!S.data) return;
+  const main = document.getElementById('sx_main');
+  const V = { today: viewToday, orders: viewOrders, customers: viewCustomers, me: viewMe }[S.view] || viewToday;
+  main.innerHTML = `<div class="sx-view">${V()}</div>${navHTML()}`;
+  const pages = document.getElementById('sx_pages');
+  // A page that was already open keeps its place and does not slide in again.
+  const prev = [...pages.children].map(el => ({ type: el.dataset.type, top: el.scrollTop }));
+  pages.innerHTML = S.stack.map((p, i) => { const f = PAGE[p.type], same = prev[i] && prev[i].type === p.type;
+    return `<div class="sx-page${same ? ' still' : ''}" data-depth="${i}" data-type="${p.type}"${f && f.bg ? ` style="background:${f.bg}"` : ''}>${f ? f(p.args) : ''}</div>`; }).join('');
+  [...pages.children].forEach((el, i) => { if (prev[i] && prev[i].type === el.dataset.type) el.scrollTop = prev[i].top; });
+  document.body.style.overflow = S.stack.length ? 'hidden' : '';
+  afterRender();
+}
+function renderSheet(){
+  const host = document.getElementById('sx_sheet');
+  if (!S.sheet) { host.innerHTML = ''; return; }
+  const f = SHEET[S.sheet.type];
+  host.innerHTML = `<div class="sx-scrim" data-act="closesheet"></div><div class="sx-sheet ${f && f.navy ? 'navy' : ''}" role="dialog"><span class="sx-handle"></span>${f ? f(S.sheet.args) : ''}</div>`;
+  const inp = host.querySelector('[autofocus]'); if (inp) setTimeout(() => inp.focus(), 250);
+  afterRender();
+}
+const PAGE = {}, SHEET = {}, ACT = {}, AFTER = [];
+function afterRender(){ AFTER.forEach(f => { try { f(); } catch (e) { console.warn(e); } }); bindSliders(); }
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]'); if (!t) return;
+  const a = t.dataset.act;
+  if (a === 'tab') { go(t.dataset.v); return; }
+  if (a === 'back') { pop(); return; }
+  if (a === 'closesheet') { closeSheet(); return; }
+  if (ACT[a]) { e.preventDefault(); ACT[a](t, e); }
+});
+document.addEventListener('input', e => { const t = e.target.closest('[data-in]'); if (t && ACT['in:' + t.dataset.in]) ACT['in:' + t.dataset.in](t, e); });
+document.addEventListener('change', e => { const t = e.target.closest('[data-ch]'); if (t && ACT['ch:' + t.dataset.ch]) ACT['ch:' + t.dataset.ch](t, e); });
+
+/* ---------------- the slide-to-do-it control ---------------- */
+function sliderHTML(id, label, opts){
+  opts = opts || {};
+  const k = opts.money ? ic('cash', 24, 'style="stroke:#16203C"') : ic('chev', 20, 'style="stroke:#fff;stroke-width:2.4"');
+  return `<div class="sx-slide ${opts.money ? 'money' : ''}" data-slide="${id}" ${opts.disabled ? 'aria-disabled="true"' : ''} role="button" aria-label="${esc(label)}" tabindex="0"><span class="k">${k}</span><span class="l">${esc(label)}</span></div>`;
+}
+function bindSliders(){
+  document.querySelectorAll('[data-slide]').forEach(el => {
+    if (el._bound) return; el._bound = true;
+    const k = el.querySelector('.k'); let sx = 0, dx = 0, drag = false;
+    const max = () => el.clientWidth - k.clientWidth - 8;
+    const done = () => { if (el.getAttribute('aria-disabled') === 'true') return; haptic('success'); const f = ACT['slide:' + el.dataset.slide]; if (f) f(el); };
+    el.addEventListener('pointerdown', e => { if (el.getAttribute('aria-disabled') === 'true') return; drag = true; sx = e.clientX; dx = 0; k.style.transition = 'none'; el.setPointerCapture(e.pointerId); });
+    el.addEventListener('pointermove', e => { if (!drag) return; dx = Math.max(0, Math.min(max(), e.clientX - sx)); k.style.transform = `translateX(${dx}px)`; });
+    const end = () => { if (!drag) return; drag = false; k.style.transition = ''; if (dx >= max() * 0.82) { k.style.transform = `translateX(${max()}px)`; setTimeout(done, 120); } else k.style.transform = ''; };
+    el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+    el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); done(); } });
+  });
+}
+
+/* ==================================================================
+   Today, Orders, one order, and You.
+   ================================================================== */
+function greeting(){ const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; }
+function myName(){
+  const st = D().staff.find(s => s.userId && S.user && s.userId === S.user.id);
+  if (st && st.name) return st.name;
+  const m = (S.user && (S.user.user_metadata && (S.user.user_metadata.name || S.user.user_metadata.full_name))) || '';
+  return m || String((S.user && S.user.email) || '').split('@')[0];
+}
+function ordersOn(iso){ return liveOrders().filter(q => isoOf(createdMs(q)) === iso); }
+function moneyIn(fromISO, toISO){ return D().cashTxns.filter(t => t.type === 'receipt' && t.date >= fromISO && t.date <= toISO); }
+function ring(pct, size, stroke, col, inner){
+  const r = (size - stroke) / 2, c = 2 * Math.PI * r, off = c * (1 - Math.max(0, Math.min(1, pct)));
+  return `<span style="position:relative;width:${size}px;height:${size}px;flex:none;display:block"><svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="transform:rotate(-90deg)" aria-hidden="true"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="${stroke}"/><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${col}" stroke-width="${stroke}" stroke-linecap="round" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" style="transition:stroke-dashoffset 1s"/></svg><span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">${inner}</span></span>`;
+}
+function stripHTML(states, w){
+  const col = { ok: '#0F6B43', ask: '#F5B26B', wait: '#D9D4CB', no: '#8E2A22', way: '#3A3F9B', short: '#F5B26B' };
+  return `<span style="display:flex;gap:2px;width:${w || 58}px">${states.map(s => `<i class="${s.k === 'ask' || s.k === 'way' ? 'sx-blink' : ''}" style="flex:1;height:5px;border-radius:999px;background:${col[s.k] || '#D9D4CB'}"></i>`).join('')}</span>`;
+}
+
+/* ---------------- Today ---------------- */
+function viewToday(){
+  const today = todayISO(), mStart = monthStartISO();
+  const month = liveOrders().filter(q => isoOf(createdMs(q)) >= mStart);
+  const monthSold = month.reduce((s, q) => s + pricedView(q).total, 0);
+  const gone = month.filter(q => stageIdx(q) >= 3).length;
+  const t = ordersOn(today);
+  const tSold = t.reduce((s, q) => s + pricedView(q).total, 0);
+  const tOut = t.filter(q => stageIdx(q) >= 3).length;
+  const tPaid = t.filter(q => (Number(q.amountPaid) || 0) > 0 && balanceDue(q) === 0).length;
+  const inToday = moneyIn(today, today).reduce((s, x) => s + x.amount, 0);
+  const pct = month.length ? gone / month.length : 0;
+  const bar = (n, of, col) => `<span style="height:6px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden;display:block"><span class="sx-grow" style="display:block;height:100%;width:${of ? Math.round(n / of * 100) : 0}%;background:${col}"></span></span>`;
+  const needs = needsYou();
+  return `<div class="sx-hero" data-navy-top>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span style="font-size:20px;font-weight:700">${greeting()}, ${esc(firstWord(myName()))}</span>
+        <span style="font-size:13px;color:var(--navyInk);display:flex;align-items:center;gap:6px">${new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}<i style="width:3px;height:3px;border-radius:9px;background:#5C6788"></i><span style="color:var(--mint);display:inline-flex;align-items:center;gap:5px"><i style="width:7px;height:7px;border-radius:9px;background:var(--mint)"></i>${esc(S.shopName)}</span></span></div>
+      <button class="sx-circle" data-act="refresh" aria-label="Refresh">${ic('refresh', 18)}</button>
+      <button class="sx-circle" data-act="tab" data-v="me" aria-label="You" style="box-shadow:inset 0 0 0 2px var(--mint);font-weight:700;font-size:14px">${esc(initials(myName()))}</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px">
+      ${ring(pct, 92, 8, '#6FDCB0', `<span class="m" style="font-size:22px;font-weight:600">${Math.round(pct * 100)}%</span><span style="font-size:10px;font-weight:600;color:var(--navyInk2)">gone out</span>`)}
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span class="sx-eyebrow">This month · ${month.length} order${month.length === 1 ? '' : 's'}</span>
+        <span class="m" style="font-size:28px;font-weight:600">${n0(monthSold)}</span>
+        <span style="font-size:12px;font-weight:600;color:var(--navyInk2)"><span class="m" style="color:#fff">${gone}</span> of ${month.length} delivered or on the road</span></div>
+    </div>
+    <div role="img" aria-label="Today: ${t.length} orders, ${tOut} gone out, ${tPaid} paid" style="display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:center;gap:6px">
+      <div style="display:flex;flex-direction:column;gap:6px"><span><b class="m" style="font-size:20px">${t.length}</b> <span style="font-size:12px;font-weight:600;color:var(--navyInk)">order${t.length === 1 ? '' : 's'}</span></span>${bar(t.length, t.length, '#DDE3F0')}</div>${ic('chev', 14, 'style="stroke:#5C6788"')}
+      <div style="display:flex;flex-direction:column;gap:6px"><span><b class="m" style="font-size:20px">${tOut}</b> <span style="font-size:12px;font-weight:600;color:var(--navyInk)">gone out</span></span>${bar(tOut, t.length, '#9BA3F0')}</div>${ic('chev', 14, 'style="stroke:#5C6788"')}
+      <div style="display:flex;flex-direction:column;gap:6px"><span><b class="m" style="font-size:20px;color:var(--mint)">${tPaid}</b> <span style="font-size:12px;font-weight:600;color:var(--navyInk)">paid</span></span>${bar(tPaid, t.length, '#6FDCB0')}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button data-act="day" data-mode="sold" class="sx-glass" style="border:none;color:#fff;text-align:left;padding:12px;display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;font-weight:600;color:var(--navyInk2)">Sold today · ${t.length}</span><span class="m" style="font-size:18px;font-weight:600">${n0(tSold)}</span></button>
+      <button data-act="day" data-mode="money" class="sx-glass" style="border:none;color:#fff;text-align:left;padding:12px;display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;font-weight:600;color:var(--navyInk2)">Money in today</span><span class="m" style="font-size:18px;font-weight:600;color:var(--mint)">${n0(inToday)}</span></button>
+    </div>
+  </div>
+  <div class="sx-body">
+    <div class="sx-sec"><b style="font-size:17px">Needs you</b><span>${needs.length ? needs.length + ' things' : ''}</span></div>
+    ${needs.length ? `<div class="sx-card sx-list">${needs.map(n => `<button class="sx-row" data-act="${n.act}" data-id="${esc(n.id)}">
+      <span style="width:38px;height:38px;border-radius:12px;background:${n.bg};color:${n.fg};display:flex;align-items:center;justify-content:center;flex:none">${ic(n.icon, 19)}</span>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:14px;font-weight:700">${esc(n.title)}</span><span class="ell sx-sub">${esc(n.sub)}</span></span>
+      <span style="height:34px;padding:0 14px;border-radius:999px;background:${n.primary ? 'var(--navy)' : 'var(--soft)'};color:${n.primary ? '#fff' : 'var(--ink)'};font-size:13px;font-weight:700;display:inline-flex;align-items:center;flex:none">${esc(n.cta)}</span></button>`).join('')}</div>`
+      : `<div class="sx-card sx-empty"><b>All caught up</b>Nothing is waiting on you. Take an order with the red button.</div>`}
+  </div>`;
+}
+function needsYou(){
+  const out = [];
+  liveOrders().filter(q => q.status === 'draft').forEach(q => {
+    const st = orderLineStates(q), no = st.filter(s => s.k === 'no').length;
+    if (no) out.push({ act: 'order', id: q.id, icon: 'lens', bg: '#FBE5E2', fg: '#8E2A22', title: (q.client && q.client.name) || 'Walk-in', sub: `${no} item${no > 1 ? 's' : ''} not found · ${st.length - no} of ${st.length} ok`, cta: 'Tell them', primary: true, w: 0 });
+  });
+  liveOrders().filter(q => q.status === 'pending_delivery').forEach(q => {
+    out.push({ act: 'order', id: q.id, icon: 'truck', bg: '#DCEAF8', fg: '#1A5A8A', title: (q.client && q.client.name) || 'Walk-in', sub: `On the road · ${agoWords(stageEnteredMs(q))}`, cta: 'Tell them', w: 2 });
+  });
+  D().customers.forEach(c => {
+    const inv = outstandingInvoices(c.id); if (!inv.length) return;
+    const age = daysBetween(inv[0].invoicedAt || inv[0].date, todayISO());
+    const terms = c.termsDays != null ? Number(c.termsDays) : D().presetChaseAfterDays;
+    if (age > terms) out.push({ act: 'customer', id: c.id, icon: 'cash', bg: '#FDEEE1', fg: '#95530C', title: c.name, sub: `Owes ${n0(c.debt)} · oldest bill ${age} days`, cta: 'Collect', w: 1 });
+  });
+  const listed = new Set(out.filter(n => n.act === 'customer').map(n => String(n.id)));
+  D().customers.forEach(c => {
+    const r = customerRhythm(c.id);
+    if (!listed.has(String(c.id)) && r.due && !r.overdue && r.every) out.push({ act: 'sellto', id: c.id, icon: 'bag', bg: '#E4F4EA', fg: '#0F6B43', title: c.name, sub: `Buys every ${r.every} days · last ${r.since} days ago`, cta: 'Sell', w: 3 });
+  });
+  return out.sort((a, b) => a.w - b.w).slice(0, 8);
+}
+ACT.refresh = async () => { toast('Refreshing…', 1200); try { await loadAll(); render(); toast('Up to date', 1400); } catch (e) { toast(isNetworkError(e) ? 'No connection right now' : e.message); } };
+ACT.order = t => push('order', { id: Number(t.dataset.id) });
+ACT.customer = t => push('customer', { id: t.dataset.id });
+ACT.day = t => push('day', { mode: t.dataset.mode });
+
+/* ---------------- Orders ---------------- */
+function viewOrders(){
+  const live = liveOrders(), today = todayISO();
+  const by = k => k === 'completed' ? live.filter(q => q.status === 'completed' && isoOf(stageEnteredMs(q)) === today) : live.filter(q => q.status === k);
+  const moving = live.filter(q => q.status !== 'completed');
+  const sel = S.ordersStage;
+  const tiles = STAGES.map(s => { const on = s.key === sel, n = by(s.key).length;
+    return `<button data-act="stage" data-k="${s.key}" aria-pressed="${on}" style="border:none;height:66px;border-radius:16px;${on ? 'background:var(--navy);color:#fff;box-shadow:0 8px 18px rgba(22,32,60,.22)' : 'background:#fff;box-shadow:inset 0 0 0 1px var(--rule)'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0"><span class="m" style="font-size:19px;font-weight:600">${n}</span><span style="font-size:11px;font-weight:700;${on ? '' : 'color:var(--ink2)'}">${s.key === 'completed' ? 'Done today' : s.short}</span><span style="width:18px;height:3px;border-radius:9px;background:${s.col}"></span></button>`; }).join('');
+  const list = by(sel).sort((a, b) => stageEnteredMs(a) - stageEnteredMs(b));
+  let body = '';
+  if (!list.length) body = `<div class="sx-card sx-empty"><b>Nothing ${sel === 'completed' ? 'delivered today yet' : 'here right now'}</b>${sel === 'draft' ? 'New orders wait here while the shop checks suppliers.' : ''}</div>`;
+  else if (sel === 'draft') {
+    const groups = [['Tell them', '#8E2A22', list.filter(q => orderLineStates(q).some(s => s.k === 'no'))],
+      ['Still checking', '#F5B26B', list.filter(q => { const st = orderLineStates(q); return !st.some(s => s.k === 'no') && st.some(s => s.k !== 'ok'); })],
+      ['All found', '#0F6B43', list.filter(q => orderLineStates(q).every(s => s.k === 'ok'))]];
+    body = groups.filter(g => g[2].length).map(g => `<div class="sx-sec" style="justify-content:flex-start;gap:8px"><i style="width:8px;height:8px;border-radius:9px;background:${g[1]}"></i><b>${g[0]}</b><span class="m">${g[2].length}</span></div>
+      <div class="sx-card sx-list">${g[2].map(orderRow).join('')}</div>`).join('');
+  } else body = `<div class="sx-card sx-list">${list.map(orderRow).join('')}</div>`;
+  const total = moving.reduce((s, q) => s + pricedView(q).total, 0);
+  return `<div class="sx-pagehead"><h1>Orders</h1><span class="sx-sub"><span class="m" style="color:var(--ink);font-weight:600">${moving.length}</span> on the move · <span class="m" style="color:var(--ink);font-weight:600">${short(total)}</span></span></div>
+  <div class="sx-body"><div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px">${tiles}</div>${body}</div>`;
+}
+function orderRow(q){
+  const st = orderLineStates(q), pv = pricedView(q);
+  const no = st.filter(s => s.k === 'no').length, ask = st.filter(s => s.k !== 'ok' && s.k !== 'no').length;
+  let note = '', col = 'var(--ink3)';
+  if (q.status === 'draft') { if (no) { note = `${no} not found`; col = 'var(--crimson)'; } else if (ask) { note = `${st.length - ask} of ${st.length} found`; col = 'var(--amberInk)'; } else { note = 'all found'; col = 'var(--green)'; } }
+  else if (q.status === 'awaiting_goods') { const inn = (q.items || []).filter(it => !orderLineIsBoughtIn(it) || lineReceived(it)).length; note = `${inn} of ${st.length} in`; }
+  else note = stageOf(q).label;
+  return `<button class="sx-row" data-act="order" data-id="${q.id}">${avatar((q.client && q.client.name) || 'Walk-in', 's')}
+    <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px"><span style="display:flex;align-items:baseline;gap:8px"><span class="ell" style="flex:1;font-size:14px;font-weight:700">${esc((q.client && q.client.name) || 'Walk-in')}</span><span class="m" style="font-size:13px;font-weight:600">${n0(pv.total)}${pv.toConfirm ? ' +?' : ''}</span></span>
+    <span style="display:flex;align-items:center;gap:8px">${stripHTML(st)}<span class="ell" style="font-size:12px;font-weight:600;color:${col}">${esc(note)} · ${agoWords(stageEnteredMs(q))}</span></span></span>${ic('chev', 16, 'style="stroke:#9AA1AE"')}</button>`;
+}
+ACT.stage = t => { S.ordersStage = t.dataset.k; render(); };
+
+/* ---------------- One order ---------------- */
+function quoteById(id){ return D().savedQuotes.find(q => Number(q.id) === Number(id)) || null; }
+function stampHTML(q){
+  if (!q.invoiced && !(Number(q.amountPaid) > 0)) return '';
+  const tot = quoteTotal(q), paid = Number(q.amountPaid) || 0, last = (q.payments || []).slice(-1)[0];
+  const method = last && last.method ? ({ cash: 'CASH', momo: 'MOBILE MONEY', bank: 'BANK' }[last.method] || '') : '';
+  if (paid >= tot && tot > 0) return `<span class="sx-stamp" style="color:#0F6B43;background:rgba(228,244,234,.35)"><b>PAID</b><span>${method}${last && last.date ? (method ? ' · ' : '') + esc(dayLabel(last.date).toUpperCase()) : ''}</span></span>`;
+  if (paid > 0) return `<span class="sx-stamp" style="color:#95530C;background:rgba(253,238,225,.35)"><b>PART PAID</b><span class="m">${n0(paid)} OF ${n0(tot)}</span></span>`;
+  return `<span class="sx-stamp" style="color:#8E2A22;background:rgba(251,229,226,.35)"><b>NOT PAID</b><span class="m">${n0(balanceDue(q))} OWED</span></span>`;
+}
+function stageTrack(q){
+  const idx = stageIdx(q), steps = ['Taken'].concat(STAGES.map(s => s.short));
+  const cur = idx + 1;
+  let h = '<div style="display:flex;align-items:center;gap:4px">';
+  steps.forEach((s, i) => {
+    if (i) h += `<span style="flex:1;height:3px;border-radius:9px;background:${i <= cur ? '#6FDCB0' : 'rgba(255,255,255,.14)'}"></span>`;
+    if (i < cur || (i === cur && q.status === 'completed')) h += `<span style="width:24px;height:24px;border-radius:999px;background:rgba(111,220,176,.18);color:#6FDCB0;display:flex;align-items:center;justify-content:center;flex:none">${ic('tick', 12, 'style="stroke-width:3"')}</span>`;
+    else if (i === cur) h += `<span style="width:30px;height:30px;border-radius:999px;background:#fff;color:var(--navy);display:flex;align-items:center;justify-content:center;flex:none;animation:sxBlink 2s ease-in-out infinite">${ic(['', 'lens', 'bag', 'box', 'truck', 'tick'][i] || 'tick', 15)}</span>`;
+    else h += '<span style="width:22px;height:22px;border-radius:999px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.25);flex:none"></span>';
+  });
+  h += '</div><div style="display:flex;justify-content:space-between;font-size:10px;font-weight:600;color:var(--navyInk2)">' + steps.map((s, i) => `<span style="${i === cur ? 'color:#fff' : i < cur ? 'color:var(--mint)' : ''}">${s}</span>`).join('') + '</div>';
+  return h;
+}
+PAGE.order = ({ id }) => {
+  const q = quoteById(id);
+  if (!q) return `<div class="sx-empty" style="padding-top:30vh"><b>That order is not here any more</b><button class="sx-btn navy" data-act="back" style="margin:16px auto 0">Back</button></div>`;
+  const st = orderLineStates(q), pv = pricedView(q), name = (q.client && q.client.name) || 'Walk-in';
+  const ok = st.filter(s => s.k === 'ok').length, no = st.filter(s => s.k === 'no').length;
+  const sub = q.status === 'draft' ? `${ok} of ${st.length} ready${no ? ` · ${no} not found` : ''}` : q.status === 'awaiting_goods' ? `${(q.items || []).filter(it => !orderLineIsBoughtIn(it) || lineReceived(it)).length} of ${st.length} in` : q.status === 'completed' ? (q.deliveredTo ? 'to ' + q.deliveredTo : '') + (q.deliveredAt ? ' · ' + timeOf(Date.parse(q.deliveredAt)) : '') : agoWords(stageEnteredMs(q));
+  const lines = (q.items || []).map((it, i) => { const s = st[i], toc = linePriceToConfirm(it);
+    return `<div class="sx-pl ${s.k === 'no' ? 'struck' : ''}"><span class="q">${n0(it.qty)} <small>${esc(it.unit || '')}</small></span>
+      <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span class="n ell">${esc(it.productName || '')}</span><span style="font-size:10px;font-weight:700;letter-spacing:.05em;color:${s.col}">${esc(s.word.toUpperCase())}</span></span>
+      <span class="m" style="font-size:14px;font-weight:600;${toc ? 'color:var(--amberInk)' : ''}">${toc ? 'to price' : n0((Number(it.qty) || 0) * quoteItemSellPrice(it))}</span></div>`; }).join('')
+    + (q.droppedLines || []).map(d => `<div class="sx-pl struck"><span class="q">${n0(d.qty)}</span><span class="n ell">${esc(d.productName || d.name || '')}</span><span style="font-size:10px;font-weight:700;color:var(--crimson)">DROPPED</span></div>`).join('');
+  const phone = q.client && q.client.phone;
+  return `<div class="sx-hero" data-navy-top style="border-radius:0 0 26px 26px">
+    <div style="display:flex;align-items:center;gap:12px"><button class="sx-circle" data-act="back" aria-label="Back">${ic('back', 18)}</button>${avatar(name)}
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:17px;font-weight:700">${esc(name)}</span><span class="m" style="font-size:12px;color:var(--navyInk)">${orderNo(q)} · ${createdMs(q) ? dayLabel(isoOf(createdMs(q))) + ' ' + timeOf(createdMs(q)) : ''}</span></span></div>
+    <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><span style="font-size:26px;font-weight:700;letter-spacing:-.02em;${q.status === 'completed' ? 'color:var(--mint)' : ''}">${stageOf(q).label}</span><span style="font-size:13px;color:var(--navyInk)">${esc(sub)}</span></div>
+    <div style="display:flex;flex-direction:column;gap:6px">${stageTrack(q)}</div></div>
+  <div class="sx-body">
+    <div class="sx-paper"><div class="sx-paper-in">
+      <div class="sx-paper-h"><span class="t">WHAT ${esc(firstWord(name).toUpperCase())} GETS</span><span style="font-size:12px;font-weight:600;color:var(--ink3)">${ok} of ${st.length} ${q.status === 'draft' ? 'ready' : 'in'}</span></div>
+      ${lines}
+      <div class="sx-paper-f"><span style="font-size:13px;font-weight:700">Total${creditTerms(q) ? ' · credit' : ''}</span><span class="m" style="font-size:17px;font-weight:600">${n0(pv.total)}${pv.toConfirm ? ` <span style="font-size:12px;color:var(--amberInk)">+ ${pv.toConfirm} to price</span>` : ''}</span></div>
+    </div></div>
+    <div style="display:flex;justify-content:flex-end;padding:0 14px">${stampHTML(q)}</div>
+  </div>
+  <div class="sx-dock" style="background:transparent;box-shadow:none;flex-direction:row;padding-top:12px">
+    ${phone ? `<a class="sx-btn ghost" href="tel:${esc(phone)}" aria-label="Call" style="width:56px;padding:0">${ic('phone', 20)}</a>` : ''}
+    <button class="sx-btn red" style="flex:1" data-act="tell" data-id="${q.id}">${ic('chat', 20)}Tell ${esc(firstWord(name) || 'them')}</button></div>`;
+};
+function tellText(q){
+  const name = firstWord((q.client && q.client.name) || '') || 'there';
+  const st = orderLineStates(q), lines = q.items || [];
+  const ready = lines.filter((it, i) => st[i].k === 'ok').map(it => it.productName);
+  const no = lines.filter((it, i) => st[i].k === 'no').map(it => it.productName);
+  const wait = lines.filter((it, i) => st[i].k !== 'ok' && st[i].k !== 'no').map(it => it.productName);
+  const pv = pricedView(q);
+  let msg = `Hello ${name}, about your order ${orderNo(q)} from ${S.shopName}: `;
+  if (q.status === 'pending_delivery') msg += 'it is on the way to you now.';
+  else if (q.status === 'completed') msg += 'it has been delivered. Thank you!';
+  else if (q.status === 'preparing') msg += 'everything is in and we are packing it.';
+  else {
+    if (ready.length) msg += `${ready.length === lines.length ? 'everything is' : ready.length + ' of ' + lines.length + ' items are'} ready. `;
+    if (wait.length) msg += `We are still confirming ${wait.join(', ')}. `;
+    if (no.length) msg += `We could not get ${no.join(', ')} this time, so it is off the bill. `;
+  }
+  msg += ` Total ${n0(pv.total)}${pv.toConfirm ? ' (some prices to confirm)' : ''}.`;
+  return msg.replace(/\s+/g, ' ').trim();
+}
+ACT.tell = t => { const q = quoteById(t.dataset.id); if (q) openSheet('tell', { id: q.id, text: tellText(q) }); };
+SHEET.tell = ({ id, text }) => {
+  const q = quoteById(id), name = (q && q.client && q.client.name) || '', phone = q && q.client && q.client.phone;
+  return `<div style="display:flex;align-items:center;gap:10px">${avatar(name || 'Walk-in')}<span style="flex:1;display:flex;flex-direction:column"><b style="font-size:16px">Tell ${esc(firstWord(name) || 'them')}</b><span class="sx-sub">on WhatsApp · written from the order</span></span><button class="sx-circle light" data-act="closesheet" aria-label="Close">${ic('close', 15)}</button></div>
+    <textarea id="sx_tell" rows="6" style="width:100%;border:none;border-radius:16px 16px 4px 16px;padding:12px 14px;font-size:15px;line-height:1.45;background:#D9FDD3;color:#111B21;resize:vertical;box-shadow:0 1px 1px rgba(0,0,0,.08)">${esc(text)}</textarea>
+    ${phone ? '' : '<span class="sx-sub" style="color:var(--amberInk)">No phone number on this order — WhatsApp will ask who to send it to.</span>'}
+    <div style="background:var(--navy);border-radius:20px;padding:12px">${sliderHTML('tell', 'Slide to open WhatsApp')}</div>`;
+};
+ACT['slide:tell'] = () => {
+  const q = quoteById(S.sheet.args.id), text = (document.getElementById('sx_tell') || {}).value || S.sheet.args.text;
+  const ph = q && q.client && phoneDigits(q.client.phone);
+  window.open(`https://wa.me/${ph || ''}?text=${encodeURIComponent(text)}`, '_blank');
+  closeSheet();
+};
+
+/* ---------------- Your day ---------------- */
+PAGE.day = ({ mode }) => {
+  const today = todayISO(), t = ordersOn(today), money = moneyIn(today, today);
+  const sold = t.reduce((s, q) => s + pricedView(q).total, 0), inSum = money.reduce((s, x) => s + x.amount, 0);
+  const forToday = money.filter(x => x.quoteId && t.some(q => Number(q.id) === Number(x.quoteId))).reduce((s, x) => s + x.amount, 0);
+  const old = inSum - forToday, unpaid = Math.max(0, sold - forToday);
+  const acct = { cash: ['Cash', 'cash'], momo: ['Mobile money', 'momo'], bank: ['Bank', 'bank'] };
+  const rows = mode === 'money'
+    ? money.slice().sort((a, b) => String(a.time).localeCompare(String(b.time))).map(x => `<div class="sx-pl" style="grid-template-columns:40px 1fr auto"><span class="m" style="font-size:12px;color:var(--ink2)">${esc(x.time || '')}</span><span style="display:flex;align-items:center;gap:6px;min-width:0"><span style="color:var(--green);display:flex">${ic((acct[x.account] || ['', 'cash'])[1], 14)}</span><span class="ell n">${esc(x.description || x.category)}</span></span><span class="m" style="font-size:14px;font-weight:600;color:var(--green)">+${n0(x.amount)}</span></div>`).join('')
+    : t.sort((a, b) => createdMs(a) - createdMs(b)).map(q => `<button class="sx-pl" data-act="order" data-id="${q.id}" style="border:none;background:none;width:100%;text-align:left;grid-template-columns:40px 1fr auto"><span class="m" style="font-size:12px;color:var(--ink2)">${timeOf(createdMs(q))}</span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span class="n ell">${esc((q.client && q.client.name) || 'Walk-in')}</span><span style="font-size:11px;color:var(--ink3)">${stageOf(q).label} · ${(q.items || []).length} items</span></span><span class="m" style="font-size:14px;font-weight:600">${n0(pricedView(q).total)}</span></button>`).join('');
+  return `<div class="sx-hero" data-navy-top>
+    <div style="display:flex;align-items:center;gap:10px"><button class="sx-circle" data-act="back" aria-label="Back">${ic('back', 18)}</button><span style="flex:1;display:flex;flex-direction:column"><span class="sx-eyebrow">${new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase()}</span><span class="sx-h1">Your day</span></span></div>
+    <div class="sx-glass" style="display:grid;grid-template-columns:1fr 1fr">
+      <button data-act="daymode" data-mode="sold" style="border:none;background:none;color:#fff;text-align:left;padding:12px;border-radius:16px 0 0 16px;${mode !== 'money' ? 'box-shadow:inset 0 -3px 0 #fff' : ''}"><span style="font-size:11px;font-weight:700;color:var(--navyInk2)">Sold · ${t.length}</span><br><span class="m" style="font-size:22px;font-weight:600">${n0(sold)}</span></button>
+      <button data-act="daymode" data-mode="money" style="border:none;background:none;color:#fff;text-align:left;padding:12px;border-left:1px solid rgba(255,255,255,.07);border-radius:0 16px 16px 0;${mode === 'money' ? 'box-shadow:inset 0 -3px 0 #6FDCB0' : ''}"><span style="font-size:11px;font-weight:700;color:var(--navyInk2)">Money in · ${money.length}</span><br><span class="m" style="font-size:22px;font-weight:600;color:var(--mint)">${n0(inSum)}</span></button></div>
+    <div style="display:flex;flex-direction:column;gap:7px"><span style="display:flex;height:12px;gap:2px;border-radius:999px;overflow:hidden"><i class="sx-grow" style="flex:${forToday || 0.0001};background:#6FDCB0"></i><i class="sx-grow" style="flex:${old || 0.0001};background:#2F8F6A"></i><i style="flex:${unpaid || 0.0001};background:repeating-linear-gradient(135deg,rgba(255,255,255,.08) 0 4px,rgba(255,255,255,.16) 4px 7px)"></i></span>
+      <span style="display:grid;grid-template-columns:1fr 1fr 1fr;font-size:11px;font-weight:600;color:var(--navyInk)"><span><b class="m" style="color:var(--mint);font-size:13px">${short(forToday)}</b><br>paid on today's</span><span style="text-align:center"><b class="m" style="color:#fff;font-size:13px">${short(old)}</b><br>older bills</span><span style="text-align:right"><b class="m" style="color:#fff;font-size:13px">${short(unpaid)}</b><br>not paid yet</span></span></div>
+  </div>
+  <div class="sx-body"><div class="sx-paper"><div class="sx-paper-in"><div class="sx-paper-h"><span class="t">${mode === 'money' ? 'MONEY IN TODAY' : 'SOLD TODAY'}</span></div>
+    ${rows || `<div class="sx-empty">Nothing yet today.</div>`}
+    <div class="sx-paper-f"><span style="font-size:13px;font-weight:700">Total</span><span class="m" style="font-size:17px;font-weight:600;${mode === 'money' ? 'color:var(--green)' : ''}">${n0(mode === 'money' ? inSum : sold)}</span></div></div></div></div>`;
+};
+ACT.daymode = t => { S.stack[S.stack.length - 1].args.mode = t.dataset.mode; render(); };
+
+/* ---------------- You ---------------- */
+function viewMe(){
+  const mStart = monthStartISO(), month = liveOrders().filter(q => isoOf(createdMs(q)) >= mStart);
+  const inMonth = moneyIn(mStart, todayISO()).reduce((s, x) => s + x.amount, 0);
+  const sold = month.reduce((s, q) => s + pricedView(q).total, 0);
+  const door = (icn, l) => `<span style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="position:relative;width:46px;height:46px;border-radius:15px;background:var(--navy);color:var(--mint);display:flex;align-items:center;justify-content:center">${ic(icn, 20)}<span style="position:absolute;right:-4px;top:-4px;width:18px;height:18px;border-radius:9px;background:var(--mint);color:var(--navy);box-shadow:0 0 0 2px #fff;display:flex;align-items:center;justify-content:center">${ic('tick', 10, 'style="stroke-width:3.4"')}</span></span><span style="font-size:12px;font-weight:700">${l}</span></span>`;
+  return `<div class="sx-hero" data-navy-top>
+    <div style="display:flex;align-items:center;gap:14px"><span style="width:66px;height:66px;border-radius:999px;background:linear-gradient(160deg,#2E3B66,#1D2747);box-shadow:0 0 0 3px #16203C,0 0 0 5px var(--mint);display:flex;align-items:center;justify-content:center;font-size:23px;font-weight:700">${esc(initials(myName()))}</span>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><span class="ell" style="font-size:21px;font-weight:700">${esc(myName())}</span><span class="ell" style="font-size:13px;font-weight:600;color:var(--navyInk)">${S.role === 'sales' ? 'Sales desk' : esc(S.role)} · ${esc(S.shopName)}</span></span></div>
+    <div class="sx-glass" style="display:grid;grid-template-columns:repeat(3,1fr)">
+      <span style="padding:10px 12px;display:flex;flex-direction:column;gap:4px"><span style="font-size:11px;font-weight:700;color:var(--navyInk2)">This month</span><span class="m" style="font-size:16px;font-weight:600">${short(sold)}</span></span>
+      <span style="padding:10px 12px;display:flex;flex-direction:column;gap:4px;border-left:1px solid rgba(255,255,255,.07)"><span style="font-size:11px;font-weight:700;color:var(--navyInk2)">Orders</span><span class="m" style="font-size:16px;font-weight:600">${month.length}</span></span>
+      <span style="padding:10px 12px;display:flex;flex-direction:column;gap:4px;border-left:1px solid rgba(255,255,255,.07)"><span style="font-size:11px;font-weight:700;color:var(--navyInk2)">Money in</span><span class="m" style="font-size:16px;font-weight:600;color:var(--mint)">${short(inMonth)}</span></span></div>
+    <span style="font-size:11px;color:var(--navyInk2)">Shop totals for the month — the shop does not yet record who took each order.</span>
+  </div>
+  <div class="sx-body">
+    <div class="sx-card pad" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:13px">What your login opens</b><span class="sx-sub" style="display:flex;align-items:center;gap:4px">${ic('lock', 12)}set by the owner</span></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);justify-items:center">${door('orders', 'Orders')}${door('people', 'Customers')}${door('cash', 'Payments')}${door('chat', 'Chats')}</div>
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--bg)"><span style="color:#8A93A3;display:flex">${ic('lock', 16)}</span><span style="flex:1;font-size:12px;font-weight:600;color:var(--ink2)">Costs, suppliers, books and backups stay with the owner</span></div></div>
+    <div class="sx-card pad" style="display:flex;align-items:center;gap:12px"><span style="width:42px;height:42px;border-radius:13px;background:var(--navy);color:var(--mint);display:flex;align-items:center;justify-content:center">${ic('store', 20)}</span><span style="flex:1;min-width:0"><b style="font-size:15px">${esc(S.shopName)}</b><br><span class="sx-sub">Books read ${agoWords(S.loadedAt)}</span></span><button class="sx-circle light" data-act="refresh" aria-label="Refresh">${ic('refresh', 17)}</button></div>
+    <div style="display:flex;align-items:center;gap:10px;padding:4px 4px 0"><span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:11px;font-weight:700;color:var(--ink3)">Signed in as</span><span class="ell" style="font-size:13px;font-weight:600">${esc((S.user && S.user.email) || '')}</span></span>
+      <button class="sx-btn ghost" data-act="signout" style="height:40px;color:var(--crimson)">${ic('out', 16)}Sign out</button></div>
+  </div>`;
+}
+ACT.signout = async () => { try { localStorage.removeItem(snapKey()); } catch (_e) {} await sb.auth.signOut(); location.reload(); };
+
+/* ==================================================================
+   Customers, and one customer: what they owe, how often they come back,
+   what they usually take. Every figure is derived from their orders and
+   invoices, the way the owner's Customers tab derives it.
+   ================================================================== */
+function custTerms(c){ return c.termsDays != null ? Number(c.termsDays) : D().presetChaseAfterDays; }
+function custOldestAge(c){ const inv = outstandingInvoices(c.id); return inv.length ? daysBetween(inv[0].invoicedAt || inv[0].date, todayISO()) : 0; }
+function custOverdue(c){ return c.debt > 0 && custOldestAge(c) > custTerms(c); }
+function custMatches(c, q){
+  if (!q) return true;
+  const hay = (c.name + ' ' + c.phone + ' ' + c.phone2 + ' ' + c.location).toLowerCase();
+  const phones = [c.phone, c.phone2].filter(Boolean).map(phoneDigits);
+  return q.toLowerCase().split(/\s+/).filter(Boolean).every(w => hay.includes(w) || (/^[0-9+]{4,}$/.test(w) && phones.some(p => p.includes(phoneDigits(w)))));
+}
+
+/* ---------------- Customers ---------------- */
+function viewCustomers(){
+  const all = D().customers;
+  const owe = all.filter(c => c.debt > 0), due = all.filter(c => customerRhythm(c.id).due);
+  const owed = owe.reduce((s, c) => s + c.debt, 0), late = owe.filter(custOverdue).reduce((s, c) => s + c.debt, 0);
+  const pill = (k, l, n) => `<button class="sx-pill" data-act="custfilter" data-k="${k}" aria-pressed="${S.custFilter === k}">${l}${n != null ? ` <span class="m" style="opacity:.7">${n}</span>` : ''}</button>`;
+  return `<div class="sx-pagehead"><h1>Customers</h1><button class="sx-pill" data-act="addcust" style="background:var(--navy);color:#fff;box-shadow:none;font-weight:700">${ic('plus', 16, 'style="stroke-width:2.4"')}New</button></div>
+  <div class="sx-body">
+    ${owed ? `<button data-act="custfilter" data-k="owe" class="sx-card pad" style="border:none;text-align:left;display:flex;flex-direction:column;gap:8px">
+      <span style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:12px;font-weight:700;color:var(--ink3)">${owe.length} owe the shop</span><span class="m" style="font-size:20px;font-weight:600">${n0(owed)}</span></span>
+      <span style="display:flex;height:8px;gap:2px;border-radius:999px;overflow:hidden"><i class="sx-grow" style="flex:${late || 0.0001};background:var(--crimson)"></i><i class="sx-grow" style="flex:${(owed - late) || 0.0001};background:var(--amber)"></i></span>
+      <span style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--ink3)"><span><b class="m" style="color:var(--crimson)">${short(late)}</b> past terms</span><span><b class="m" style="color:var(--amberInk)">${short(owed - late)}</b> within terms</span></span></button>` : ''}
+    <label class="sx-search">${ic('search', 20, 'style="stroke:#767F91"')}<input data-in="custq" type="search" placeholder="Name, phone or area" value="${esc(S.custQuery)}" autocomplete="off"></label>
+    <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none">${pill('all', 'All', all.length)}${pill('owe', 'Owe', owe.length)}${pill('due', 'Due back', due.length)}</div>
+    <div id="sx_custlist" style="display:flex;flex-direction:column;gap:12px">${custListHTML()}</div>
+  </div>`;
+}
+function custListHTML(){
+  let list = D().customers.filter(c => custMatches(c, S.custQuery));
+  if (S.custFilter === 'owe') list = list.filter(c => c.debt > 0).sort((a, b) => b.debt - a.debt);
+  else if (S.custFilter === 'due') list = list.filter(c => customerRhythm(c.id).due);
+  if (!list.length) return `<div class="sx-card sx-empty"><b>${S.custQuery ? 'Nobody by that name' : 'Nobody here'}</b>${S.custQuery ? `<button class="sx-btn navy" data-act="addcust" style="margin:12px auto 0">${ic('plus', 18)}Add “${esc(S.custQuery)}”</button>` : ''}</div>`;
+  if (S.custFilter === 'owe') return `<div class="sx-card sx-list">${list.map(custRow).join('')}</div>`;
+  const by = {}; list.forEach(c => { const a = (c.location || '').trim() || 'No area'; (by[a] ||= []).push(c); });
+  const areas = Object.keys(by).sort((a, b) => a === 'No area' ? 1 : b === 'No area' ? -1 : a.localeCompare(b));
+  const cap = 60; let shown = 0, cut = 0;
+  const html = areas.map(a => { const rows = by[a].sort((x, y) => x.name.localeCompare(y.name)); const take = rows.slice(0, Math.max(0, cap - shown)); shown += take.length; cut += rows.length - take.length;
+    return take.length ? `<div style="display:flex;flex-direction:column;gap:6px"><div class="sx-sec" style="justify-content:flex-start;gap:6px"><span style="color:var(--ink3);display:flex">${ic('pin', 14)}</span><b>${esc(a)}</b><span class="m">${rows.length}</span></div><div class="sx-card sx-list">${take.map(custRow).join('')}</div></div>` : ''; }).join('');
+  return html + (cut ? `<div class="sx-empty" style="padding:8px">${cut} more — search to find them</div>` : '');
+}
+function custRow(c){
+  const r = customerRhythm(c.id), late = custOverdue(c);
+  const sub = r.every ? `every ${r.every} days · last ${r.since === 0 ? 'today' : r.since + 'd ago'}` : r.orders ? `last bought ${dayLabel(r.last)}` : (c.phone || 'no orders yet');
+  const dot = r.overdue ? 'var(--crimson)' : r.due ? 'var(--amber)' : r.every ? 'var(--green)' : '#D9D4CB';
+  return `<button class="sx-row" data-act="customer" data-id="${esc(c.id)}">${avatar(c.name)}
+    <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span class="ell" style="font-size:15px;font-weight:700">${esc(c.name)}</span><span class="ell sx-sub" style="display:flex;align-items:center;gap:6px"><i style="width:7px;height:7px;border-radius:9px;background:${dot};flex:none"></i>${esc(sub)}</span></span>
+    ${c.debt > 0 ? `<span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><span class="m" style="font-size:14px;font-weight:600;${late ? 'color:var(--crimson)' : ''}">${n0(c.debt)}</span><span style="font-size:10px;font-weight:700;letter-spacing:.06em;color:${late ? 'var(--crimson)' : 'var(--ink3)'}">${late ? 'LATE' : 'OWES'}</span></span>` : ''}</button>`;
+}
+ACT.custfilter = t => { S.custFilter = S.custFilter === t.dataset.k && t.dataset.k !== 'all' ? 'all' : t.dataset.k; if (S.view !== 'customers') go('customers'); else render(); };
+ACT['in:custq'] = t => { S.custQuery = t.value; const el = document.getElementById('sx_custlist'); if (el) el.innerHTML = custListHTML(); };
+
+/* ---------------- One customer ---------------- */
+PAGE.customer = ({ id }) => {
+  const c = customerById(id);
+  if (!c) return `<div class="sx-empty" style="padding-top:30vh"><b>That customer is not here any more</b><button class="sx-btn navy" data-act="back" style="margin:16px auto 0">Back</button></div>`;
+  const r = customerRhythm(c.id), inv = outstandingInvoices(c.id), usual = usualLines(c.id);
+  const live = customerOrdersFor(c.id).filter(q => !q.invoiced && q.status !== 'completed' && !q.cancelledAt);
+  const late = custOverdue(c), terms = custTerms(c);
+  const ringPct = r.every ? Math.min(1, r.since / r.every) : 0;
+  const ringCol = r.overdue ? '#F59A92' : r.due ? '#F5B26B' : '#6FDCB0';
+  const rhythm = r.every
+    ? ring(ringPct, 84, 7, ringCol, `<span class="m" style="font-size:20px;font-weight:600">${r.since}</span><span style="font-size:10px;font-weight:600;color:var(--navyInk2)">of ${r.every} days</span>`)
+    : ring(0, 84, 7, ringCol, `<span class="m" style="font-size:20px;font-weight:600">${r.orders}</span><span style="font-size:10px;font-weight:600;color:var(--navyInk2)">order${r.orders === 1 ? '' : 's'}</span>`);
+  const rhythmWord = r.every ? (r.overdue ? 'Gone quiet' : r.due ? 'Due back now' : 'On rhythm') : r.orders ? 'One order so far' : 'New customer';
+  const rhythmSub = r.every ? `buys every ${r.every} days · last ${dayLabel(r.last)}` : r.orders ? `bought ${dayLabel(r.last)}` : 'no invoiced orders yet';
+  const ph = c.phone || c.phone2;
+  const limit = Number(c.creditLimit) || 0;
+  const invTotal = inv.reduce((s, q) => s + balanceDue(q), 0);
+  const billRow = q => { const age = daysBetween(q.invoicedAt || q.date, todayISO()), over = age > terms;
+    return `<div class="sx-pl" style="grid-template-columns:auto 1fr auto"><span class="m" style="font-size:12px;font-weight:600;color:var(--ink2)">${invoiceLabel(q)}</span>
+      <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:12px;font-weight:600;color:${over ? 'var(--crimson)' : 'var(--ink3)'}">${dayLabel(isoOf(q.invoicedAt || q.date))} · ${age} day${age === 1 ? '' : 's'}</span><span style="height:4px;border-radius:9px;background:var(--soft2);overflow:hidden;display:block"><span class="sx-grow" style="display:block;height:100%;width:${Math.min(100, Math.round(age / Math.max(1, terms) * 100))}%;background:${over ? 'var(--crimson)' : 'var(--amber)'}"></span></span></span>
+      <span class="m" style="font-size:14px;font-weight:600">${n0(balanceDue(q))}</span></div>`; };
+  return `<div class="sx-hero" data-navy-top style="border-radius:0 0 26px 26px">
+    <div style="display:flex;align-items:center;gap:12px"><button class="sx-circle" data-act="back" aria-label="Back">${ic('back', 18)}</button>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:18px;font-weight:700">${esc(c.name)}</span><span class="ell" style="font-size:12px;color:var(--navyInk);display:flex;align-items:center;gap:4px">${c.location ? ic('pin', 12) + esc(c.location) + ' · ' : ''}${esc(c.phone || 'no phone')}</span></span>
+      ${ph ? `<a class="sx-circle" href="tel:${esc(ph)}" aria-label="Call">${ic('phone', 17)}</a><a class="sx-circle" href="https://wa.me/${phoneDigits(ph)}" target="_blank" aria-label="WhatsApp">${ic('chat', 17)}</a>` : ''}</div>
+    <div style="display:flex;align-items:center;gap:16px">${rhythm}
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><span style="font-size:20px;font-weight:700;color:${ringCol}">${rhythmWord}</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${esc(rhythmSub)}</span>
+      ${live.length ? `<button data-act="order" data-id="${live[0].id}" style="align-self:flex-start;border:none;margin-top:4px;height:28px;padding:0 10px;border-radius:999px;background:rgba(255,255,255,.1);color:#fff;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:5px">${ic('orders', 13)}${live.length} order${live.length > 1 ? 's' : ''} on the move</button>` : ''}</span></div>
+  </div>
+  <div class="sx-body">
+    <div class="sx-card pad" style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:12px;font-weight:700;color:var(--ink3)">${c.debt > 0 ? 'Owes the shop' : 'Owes nothing'}</span><span class="m" style="font-size:24px;font-weight:600;${late ? 'color:var(--crimson)' : c.debt > 0 ? '' : 'color:var(--green)'}">${n0(c.debt)}</span></div>
+      ${limit > 0 ? `<span style="display:flex;flex-direction:column;gap:5px"><span style="height:8px;border-radius:999px;background:var(--soft2);overflow:hidden;display:block"><span class="sx-grow" style="display:block;height:100%;width:${Math.min(100, Math.round(c.debt / limit * 100))}%;background:${c.debt > limit ? 'var(--crimson)' : c.debt > limit * 0.8 ? 'var(--amber)' : 'var(--green)'}"></span></span><span style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--ink3)"><span>credit used</span><span>limit <b class="m">${n0(limit)}</b></span></span></span>` : ''}
+      ${inv.length ? `<div style="display:flex;flex-direction:column">${inv.map(billRow).join('')}</div>` : ''}
+      ${c.debt > invTotal && inv.length ? `<span class="sx-sub">+ ${n0(c.debt - invTotal)} not tied to a bill</span>` : ''}
+      ${late ? `<span style="font-size:12px;font-weight:700;color:var(--crimson)">Past the ${terms}-day terms</span>` : ''}
+    </div>
+    ${usual.length ? `<div class="sx-paper"><div class="sx-paper-in"><div class="sx-paper-h"><span class="t">USUALLY TAKES</span><span style="font-size:12px;font-weight:600;color:var(--ink3)">from ${r.orders} order${r.orders === 1 ? '' : 's'}</span></div>
+      ${usual.slice(0, 8).map(u => `<div class="sx-pl"><span class="q">${n0(u.qty)}</span><span class="n ell">${esc(u.name)}</span><span style="display:flex;gap:2px">${Array.from({ length: Math.min(u.of, 8) }, (_, i) => `<i style="width:6px;height:6px;border-radius:9px;background:${i < u.orders ? 'var(--green)' : '#E2DED6'}"></i>`).join('')}</span></div>`).join('')}
+      <div class="sx-paper-f" style="justify-content:center"><button class="sx-btn ghost" data-act="sellto" data-id="${esc(c.id)}" data-usual="1" style="height:42px;width:100%">${ic('bag', 17)}Start with the usual</button></div></div></div>` : ''}
+  </div>
+  <div class="sx-dock" style="background:transparent;box-shadow:none;flex-direction:row;padding-top:12px">
+    ${c.debt > 0 ? `<button class="sx-btn ghost" style="flex:1;color:var(--green)" data-act="pay" data-id="${esc(c.id)}">${ic('cash', 20)}Take payment</button>` : ''}
+    <button class="sx-btn red" style="flex:1" data-act="sellto" data-id="${esc(c.id)}">${ic('bag', 20)}Sell to ${esc(firstWord(c.name))}</button></div>`;
+};
+
+/* ==================================================================
+   Taking an order: who it is for, then one screen -- search, the usual,
+   what goes with it, the slip, and a slide to place it. The order lands
+   in saved_quotes exactly as the owner's quote screen saves one, at
+   Checking, where the shop prices anything still to price and asks the
+   suppliers.
+   ================================================================== */
+function draftKey(){ return 'ow-sales-draft:' + (S.user && S.user.id); }
+function saveDraft(){ try { if (S.draft) localStorage.setItem(draftKey(), JSON.stringify({ ...S.draft, q: '' })); else localStorage.removeItem(draftKey()); } catch (_e) {} }
+function restoreDraft(){ try { const d = JSON.parse(localStorage.getItem(draftKey())); if (d && d.client) S.draft = { openLine: null, lastAdded: null, credit: false, items: [], ...d, q: '' }; } catch (_e) {} }
+function newDraft(c){ return { client: c ? { name: c.name, phone: c.phone || '' } : { name: 'Walk-in', phone: '' }, customerId: c ? c.id : null, items: [], credit: false, openLine: null, lastAdded: null, q: '' }; }
+function draftQuote(){ const d = S.draft || newDraft(null); const pct = shopCreditPct(); return { items: d.items, charges: [], discount: 0, credit: d.credit && pct > 0 ? { pct, days: custTermsDays(), agreedAt: todayISO() } : null }; }
+function custTermsDays(){ return Math.max(0, Number(D().presetChaseAfterDays) || 0); }
+function lineQtyWords(it){
+  const pq = Number(it.packQty) || 0;
+  if (it.qtyIn === 'pack' && pq > 0 && it.packUnit) { const n = (Number(it.qty) || 0) / pq; return { n: Math.round(n * 100) / 100, u: it.packUnit }; }
+  return { n: Number(it.qty) || 0, u: it.unit || '' };
+}
+// A link that names no variant of a product that has them is on the order once any of its variants is.
+function onOrder(pid, vi){ const p = productById(pid), any = vi == null && p && Array.isArray(p.variants) && p.variants.length; return !!S.draft && S.draft.items.some(it => it.productId === pid && (any || (it.variantIdx == null ? null : it.variantIdx) === (vi == null ? null : vi))); }
+function nextLineId(){ return (S.draft.items.reduce((m, it) => Math.max(m, Number(it.lineId) || 0), 0)) + 1; }
+
+/* ---------------- starting an order ---------------- */
+ACT.neworder = () => { if (S.draft) openOrderPage(); else openSheet('client', {}); };
+function openOrderPage(){ closeSheet(true); renderSheet(); if (S.stack.some(p => p.type === 'placed')) S.stack = []; const top = S.stack[S.stack.length - 1]; if (top && top.type === 'neworder') render(); else push('neworder'); }
+ACT.sellto = t => {
+  const c = customerById(t.dataset.id); if (!c) return;
+  const usual = !!t.dataset.usual;
+  if (S.draft && S.draft.items.length && String(S.draft.customerId) !== String(c.id)) { openSheet('switch', { id: c.id, usual }); return; }
+  startFor(c, usual, true);
+};
+function startFor(c, usual, keep){
+  const items = keep && S.draft && String(S.draft.customerId) === String(c && c.id) ? S.draft.items : (keep === 'move' && S.draft ? S.draft.items : []);
+  S.draft = { ...newDraft(c), items };
+  if (usual && c) usualLines(c.id).forEach(u => addLine(u.productId, u.variantIdx, u.qty, 'unit', true));
+  saveDraft(); openOrderPage();
+}
+SHEET.switch = ({ id, usual }) => {
+  const c = customerById(id), n = S.draft.items.length, was = firstWord(S.draft.client.name) || 'this';
+  return `<div style="display:flex;align-items:center;gap:10px">${avatar(c.name)}<span style="flex:1;display:flex;flex-direction:column"><b style="font-size:16px">Sell to ${esc(c.name)}</b><span class="sx-sub">${was}’s order has ${n} line${n > 1 ? 's' : ''} not placed yet</span></span><button class="sx-circle light" data-act="closesheet" aria-label="Close">${ic('close', 15)}</button></div>
+    <button class="sx-btn navy" data-act="switchgo" data-id="${esc(id)}" data-mode="move" ${usual ? 'data-usual="1"' : ''}>Move the ${n} line${n > 1 ? 's' : ''} to ${esc(firstWord(c.name))}</button>
+    <button class="sx-btn ghost" data-act="switchgo" data-id="${esc(id)}" data-mode="fresh" ${usual ? 'data-usual="1"' : ''} style="color:var(--crimson)">${ic('trash', 17)}Clear ${esc(was)}’s lines, start fresh</button>`;
+};
+ACT.switchgo = t => { const c = customerById(t.dataset.id); closeSheet(true); renderSheet(); startFor(c, !!t.dataset.usual, t.dataset.mode === 'move' ? 'move' : false); };
+
+/* ---------------- who is it for ---------------- */
+SHEET.client = args => {
+  return `<div style="display:flex;align-items:center;gap:10px"><b style="flex:1;font-size:18px">Who is it for?</b><button class="sx-circle light" data-act="closesheet" aria-label="Close">${ic('close', 15)}</button></div>
+    <label class="sx-search">${ic('search', 20, 'style="stroke:#767F91"')}<input data-in="clientq" type="search" placeholder="Name, phone or area" autocomplete="off" value="${esc(args.q || '')}"></label>
+    <div id="sx_clientlist" class="sx-card sx-list" style="max-height:46vh;overflow:auto">${clientListHTML(args.q || '')}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="sx-btn ghost" data-act="pickwalkin">${ic('bag', 18)}Walk-in</button><button class="sx-btn navy" data-act="addcust" data-for="order">${ic('plus', 18)}New customer</button></div>`;
+};
+function clientListHTML(q){
+  let list;
+  if (q) list = D().customers.filter(c => custMatches(c, q)).slice(0, 30);
+  else {
+    // Due back first, then whoever bought most recently.
+    const scored = D().customers.map(c => ({ c, r: customerRhythm(c.id) })).filter(x => x.r.orders);
+    scored.sort((a, b) => (b.r.due - a.r.due) || String(b.r.last).localeCompare(String(a.r.last)));
+    list = scored.slice(0, 12).map(x => x.c);
+    if (!list.length) list = D().customers.slice(0, 12);
+  }
+  if (!list.length) return `<div class="sx-empty"><b>Nobody by that name</b>Add them as a new customer.</div>`;
+  return list.map(c => { const r = customerRhythm(c.id);
+    return `<button class="sx-row" data-act="pickclient" data-id="${esc(c.id)}">${avatar(c.name, 's')}<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:14px;font-weight:700">${esc(c.name)}</span><span class="ell sx-sub">${esc([c.location, c.phone].filter(Boolean).join(' · '))}</span></span>${r.due ? '<span class="sx-chip" style="background:var(--greenSoft);color:var(--green)">due back</span>' : ''}</button>`; }).join('');
+}
+ACT['in:clientq'] = t => { S.sheet.args.q = t.value; const el = document.getElementById('sx_clientlist'); if (el) el.innerHTML = clientListHTML(t.value); };
+ACT.pickclient = t => {
+  const c = customerById(t.dataset.id); if (!c) return;
+  if (S.draft && S.draft.items.length) { S.draft.client = { name: c.name, phone: c.phone || '' }; S.draft.customerId = c.id; saveDraft(); openOrderPage(); return; }
+  startFor(c, false, false);
+};
+ACT.pickwalkin = () => { if (S.draft) { S.draft.client = { name: 'Walk-in', phone: '' }; S.draft.customerId = null; } else S.draft = newDraft(null); saveDraft(); openOrderPage(); };
+ACT.changeclient = () => openSheet('client', {});
+
+/* ---------------- a new customer ---------------- */
+ACT.addcust = t => openSheet('addcust', { for: t.dataset.for || '', name: S.view === 'customers' && S.custQuery && !/^[0-9+ ]+$/.test(S.custQuery) ? S.custQuery : '' });
+SHEET.addcust = args => {
+  const areas = [...new Set(D().customers.map(c => (c.location || '').trim()).filter(Boolean))];
+  const count = a => D().customers.filter(c => (c.location || '').trim() === a).length;
+  areas.sort((a, b) => count(b) - count(a));
+  return `<div style="display:flex;align-items:center;gap:10px"><b style="flex:1;font-size:18px">New customer</b><button class="sx-circle light" data-act="closesheet" aria-label="Close">${ic('close', 15)}</button></div>
+    <label class="sx-search">${ic('me', 19, 'style="stroke:#767F91"')}<input id="sx_nc_name" placeholder="Name" value="${esc(args.name || '')}" autocomplete="off" autofocus></label>
+    <label class="sx-search">${ic('phone', 19, 'style="stroke:#767F91"')}<input id="sx_nc_phone" data-in="ncphone" type="tel" inputmode="tel" placeholder="Phone" autocomplete="off"></label>
+    <div id="sx_nc_dup"></div>
+    <label class="sx-search">${ic('pin', 19, 'style="stroke:#767F91"')}<input id="sx_nc_area" placeholder="Area" autocomplete="off"></label>
+    ${areas.length ? `<div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-top:-4px">${areas.slice(0, 10).map(a => `<button class="sx-pill" data-act="ncarea" data-a="${esc(a)}">${esc(a)}</button>`).join('')}</div>` : ''}
+    <span class="sx-sub" style="display:flex;align-items:center;gap:6px">${ic('lock', 13)}Starts owing nothing. Credit limits and terms are set by the owner.</span>
+    <button class="sx-btn red" data-act="ncsave">${args.for === 'order' ? 'Add and take the order' : 'Add customer'}</button>`;
+};
+ACT.ncarea = t => { const el = document.getElementById('sx_nc_area'); if (el) el.value = t.dataset.a; document.querySelectorAll('[data-act=ncarea]').forEach(b => b.setAttribute('aria-pressed', b === t)); };
+function phoneTwin(ph){ const d = phoneDigits(ph); if (d.length < 9) return null; return D().customers.find(c => [c.phone, c.phone2].some(p => p && phoneDigits(p) === d)) || null; }
+ACT['in:ncphone'] = t => { const twin = phoneTwin(t.value), el = document.getElementById('sx_nc_dup'); if (!el) return;
+  el.innerHTML = twin ? `<button class="sx-row" data-act="${S.sheet.args.for === 'order' ? 'pickclient' : 'customer'}" data-id="${esc(twin.id)}" style="min-height:0;padding:10px 12px;border-radius:14px;background:var(--amberSoft)">${avatar(twin.name, 's')}<span style="flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--amberInk)">That number is already <b>${esc(twin.name)}</b></span><span style="font-size:13px;font-weight:700;color:var(--amberInk)">Use them</span></button>` : ''; };
+ACT.ncsave = async t => {
+  const name = (document.getElementById('sx_nc_name').value || '').trim(), phone = (document.getElementById('sx_nc_phone').value || '').trim(), location = (document.getElementById('sx_nc_area').value || '').trim();
+  if (!name) { toast('Type their name'); return; }
+  if (phoneTwin(phone)) { toast('That number is already a customer — tap them above'); return; }
+  t.disabled = true; t.textContent = 'Adding…';
+  try {
+    const id = await issueCustomerId();
+    const { error } = await sb.from('customers').insert({ id, shop_id: S.shopId, name, phone, location, notes: '', debt: 0 });
+    if (error) throw error;
+    const c = { id, name, phone, phone2: '', location, notes: '', debt: 0, termsDays: null, creditLimit: null, debtLog: [] };
+    D().customers.push(c); saveSnapshot(); haptic('success');
+    const forOrder = S.sheet && S.sheet.args.for === 'order';
+    closeSheet(true); renderSheet();
+    if (forOrder) { if (S.draft && S.draft.items.length) { S.draft.client = { name, phone }; S.draft.customerId = id; saveDraft(); openOrderPage(); } else startFor(c, false, false); }
+    else { S.custQuery = ''; push('customer', { id }); }
+    toast(name + ' added');
+  } catch (e) { t.disabled = false; t.textContent = 'Try again'; toast(isNetworkError(e) ? 'No connection — they were not added' : 'Could not add: ' + e.message, 5000); }
+};
+
+/* ---------------- search ---------------- */
+/* "20 cement", "cement x20", "3 bags cement": numbers are the quantity, a
+   word that is the product's pack name counts packs. */
+function parseQuery(s){
+  const words = String(s || '').toLowerCase().replace(/[×x](\d)/g, ' $1').split(/\s+/).filter(Boolean);
+  let qty = null; const rest = [];
+  words.forEach(w => { if (qty == null && /^\d+(\.\d+)?$/.test(w)) qty = Number(w); else rest.push(w); });
+  return { qty, words: rest };
+}
+const singular = w => String(w || '').toLowerCase().replace(/(es|s)$/, '');
+function searchResults(s){
+  const { qty, words } = parseQuery(s);
+  if (!words.length) return { qty, list: [] };
+  const out = [];
+  D().products.forEach(p => {
+    const vs = Array.isArray(p.variants) && p.variants.length ? p.variants.map((v, i) => i) : [null];
+    vs.forEach(vi => {
+      const label = productVariantLabel(p, vi), hay = (label + ' ' + p.category + ' ' + p.subcategory).toLowerCase();
+      const su = stockUnitFor(p.id, vi), packWord = singular(su.packUnit);
+      const nameWords = words.filter(w => !(packWord && singular(w) === packWord));
+      if (!nameWords.length || !nameWords.every(w => hay.includes(w))) return;
+      if (!productPriceRows(p.id, vi).length && !getStockQty(p.id, vi)) return;
+      const inPacks = su.hasPack && words.some(w => singular(w) === packWord);
+      const starts = label.toLowerCase().startsWith(nameWords[0]) ? 0 : 1;
+      out.push({ p, vi, label, inPacks, su, rank: starts * 10 + (getStockQty(p.id, vi) > 0 ? 0 : 1) });
+    });
+  });
+  out.sort((a, b) => a.rank - b.rank || a.label.localeCompare(b.label));
+  return { qty, list: out.slice(0, 12), more: Math.max(0, out.length - 12) };
+}
+function resultsHTML(){
+  const s = S.draft && S.draft.q; if (!s) return '';
+  const { qty, list, more } = searchResults(s);
+  if (!list.length) return `<div class="sx-card sx-empty" style="padding:18px"><b>Nothing called “${esc(parseQuery(s).words.join(' '))}”</b>Try another word — the shop can add new items from the full app.</div>`;
+  return `<div class="sx-card sx-list">${list.map(r => {
+    const base = (qty || 1) * (r.inPacks ? r.su.packQty : 1);
+    const it = makeLine(r.p.id, r.vi, base, { qtyIn: r.inPacks ? 'pack' : 'unit' });
+    const toc = !it || linePriceToConfirm(it), shelf = getStockQty(r.p.id, r.vi), qw = it ? lineQtyWords(it) : { n: base, u: '' };
+    const on = onOrder(r.p.id, r.vi);
+    return `<button class="sx-row" data-act="addres" data-pid="${esc(r.p.id)}" data-vi="${r.vi == null ? '' : r.vi}" data-q="${base}" data-u="${r.inPacks ? 'pack' : 'unit'}">
+      ${r.p.image ? `<img src="${esc(r.p.image)}" alt="" style="width:42px;height:42px;border-radius:12px;object-fit:cover;flex:none;background:var(--soft)">` : `<span style="width:42px;height:42px;border-radius:12px;background:var(--soft);color:var(--ink3);display:flex;align-items:center;justify-content:center;flex:none">${ic('item', 20)}</span>`}
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span class="ell" style="font-size:14px;font-weight:700">${esc(r.label)}</span>
+        <span style="display:flex;align-items:center;gap:6px"><span class="m" style="font-size:12px;color:var(--ink2)">${n0(qw.n)} ${esc(qw.u)}</span>${shelf >= base && shelf > 0 ? `<span class="sx-chip" style="background:var(--greenSoft);color:var(--green)">${n0(shelf)} on shelf</span>` : `<span class="sx-chip" style="background:var(--amberSoft);color:var(--amberInk)">${shelf > 0 ? n0(shelf) + ' on shelf · rest bought in' : 'bought in'}</span>`}</span></span>
+      <span style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">${toc ? '<span style="font-size:12px;font-weight:700;color:var(--amberInk)">price to confirm</span>' : `<span class="m" style="font-size:14px;font-weight:600">${n0(base * quoteItemSellPrice(it))}</span>`}<span style="width:28px;height:28px;border-radius:9px;background:${on ? 'var(--navy)' : 'var(--greenSoft)'};color:${on ? 'var(--mint)' : 'var(--green)'};display:flex;align-items:center;justify-content:center">${ic(on ? 'tick' : 'plus', 15, 'style="stroke-width:2.6"')}</span></span></button>`; }).join('')}
+    ${more ? `<div class="sx-empty" style="padding:10px">${more} more — add a word to narrow it</div>` : ''}</div>`;
+}
+ACT['in:q'] = t => { if (!S.draft) return; S.draft.q = t.value; const el = document.getElementById('sx_results'), rest = document.getElementById('sx_rest'); if (el) el.innerHTML = resultsHTML(); if (rest) rest.hidden = !!t.value.trim(); };
+
+/* ---------------- the lines ---------------- */
+function addLine(pid, vi, qty, qtyIn, quiet){
+  vi = vi == null || vi === '' ? null : Number(vi);
+  const ex = S.draft.items.find(it => it.productId === pid && (it.variantIdx == null ? null : it.variantIdx) === vi);
+  if (ex) { setLineQty(ex, (Number(ex.qty) || 0) + Number(qty || 1)); S.draft.lastAdded = ex.lineId; return ex; }
+  const it = makeLine(pid, vi, qty || 1, { lineId: nextLineId(), qtyIn: qtyIn || 'unit' });
+  if (!it) return null;
+  S.draft.items.push(it); S.draft.lastAdded = it.lineId; S.draft.fresh = it.lineId;
+  if (!quiet) haptic('light');
+  return it;
+}
+// A new quantity re-sources the line the way the quote rail does: the
+// shelf when it covers it, else the supplier cheapest at that quantity.
+function setLineQty(it, qty){
+  qty = Math.max(0, Math.round((Number(qty) || 0) * 100) / 100);
+  const nl = makeLine(it.productId, it.variantIdx, qty, { lineId: it.lineId, qtyIn: it.qtyIn });
+  if (nl) Object.assign(it, nl);
+}
+function lineById(id){ return S.draft && S.draft.items.find(it => Number(it.lineId) === Number(id)); }
+ACT.addres = t => {
+  addLine(t.dataset.pid, t.dataset.vi, Number(t.dataset.q) || 1, t.dataset.u);
+  S.draft.q = ''; saveDraft(); render();
+};
+ACT.addusual = t => { const u = usualLines(S.draft.customerId).find(x => x.productId === t.dataset.pid && String(x.variantIdx == null ? '' : x.variantIdx) === t.dataset.vi); if (!u) return; if (onOrder(u.productId, u.variantIdx)) return; addLine(u.productId, u.variantIdx, u.qty, 'unit'); saveDraft(); render(); };
+ACT.addwith = t => {
+  const p = productById(t.dataset.pid);
+  // Which variant is the salesperson's call: show them all in the results.
+  if (p && Array.isArray(p.variants) && p.variants.length && t.dataset.vi === '') { S.draft.q = (t.dataset.q || 1) + ' ' + p.name; render(); return; }
+  addLine(t.dataset.pid, t.dataset.vi, Number(t.dataset.q) || 1, 'unit'); saveDraft(); render(); };
+ACT.lopen = t => { const id = Number(t.dataset.lid); S.draft.openLine = S.draft.openLine === id ? null : id; S.draft.fresh = null; render(); };
+ACT.lstep = t => { const it = lineById(t.dataset.lid); if (!it) return; const step = it.qtyIn === 'pack' && Number(it.packQty) > 0 ? Number(it.packQty) : 1; const n = (Number(it.qty) || 0) + step * Number(t.dataset.d); if (n <= 0) return; setLineQty(it, n); S.draft.fresh = null; haptic('light'); saveDraft(); render(); };
+ACT['ch:lq'] = t => { const it = lineById(t.dataset.lid); if (!it) return; const v = Number(t.value); if (!(v > 0)) { render(); return; } const mult = it.qtyIn === 'pack' && Number(it.packQty) > 0 ? Number(it.packQty) : 1; setLineQty(it, v * mult); S.draft.fresh = null; saveDraft(); render(); };
+ACT.lunit = t => { const it = lineById(t.dataset.lid); if (!it) return; it.qtyIn = t.dataset.u; if (it.qtyIn === 'pack') { const pq = Number(it.packQty) || 1; setLineQty(it, Math.max(1, Math.round((Number(it.qty) || 0) / pq)) * pq); } S.draft.fresh = null; saveDraft(); render(); };
+ACT.ldel = t => { S.draft.items = S.draft.items.filter(it => Number(it.lineId) !== Number(t.dataset.lid)); S.draft.openLine = null; S.draft.fresh = null; haptic('light'); saveDraft(); render(); };
+ACT.credit = t => { S.draft.credit = t.dataset.v === '1'; haptic('light'); saveDraft(); render(); };
+ACT.cleardraft = () => { S.draft = null; saveDraft(); S.stack = S.stack.filter(p => p.type !== 'neworder'); render(); toast('Order cleared'); };
+
+function bandHTML(it){
+  const toc = linePriceToConfirm(it), qw = lineQtyWords(it), open = S.draft.openLine === Number(it.lineId);
+  const shelf = it.supplierId === '__stock__', src = shelf ? ['on the shelf', 'var(--greenSoft)', 'var(--green)'] : it.supplierId ? ['shop checks for supplier', 'var(--amberSoft)', 'var(--amberInk)'] : ['no supplier yet', 'var(--crimsonSoft)', 'var(--crimson)'];
+  const pq = Number(it.packQty) || 0, hasPack = pq > 0 && it.packUnit && cmpUnitKey(it.packUnit) !== cmpUnitKey(it.unit);
+  return `<div class="sx-band ${open ? 'open' : ''} ${S.draft.fresh === it.lineId ? 'new' : ''}">
+    <button class="top" data-act="lopen" data-lid="${it.lineId}" style="border:none;background:none;padding:0;text-align:left;width:100%" aria-expanded="${open}">
+      <span class="sx-qb"><b>${n0(qw.n)}</b><small class="ell" style="max-width:44px">${esc(qw.u || 'pcs')}</small></span>
+      <span style="min-width:0;display:flex;flex-direction:column;gap:4px"><span class="ell" style="font-size:14px;font-weight:700">${esc(it.productName)}</span><span style="display:flex;gap:6px;align-items:center"><span class="sx-chip" style="background:${src[1]};color:${src[2]}">${src[0]}</span>${!toc ? `<span class="m" style="font-size:11px;color:var(--ink3)">${n0(quoteItemSellPrice(it))} each</span>` : ''}</span></span>
+      <span class="m" style="font-size:14px;font-weight:600;${toc ? 'color:var(--amberInk);font-family:Figtree;font-size:12px;font-weight:700' : ''}">${toc ? 'to price' : n0((Number(it.qty) || 0) * quoteItemSellPrice(it))}</span></button>
+    ${open ? `<div class="sx-ctl"><span class="sx-step"><button data-act="lstep" data-lid="${it.lineId}" data-d="-1" aria-label="One fewer">−</button><input data-ch="lq" data-lid="${it.lineId}" inputmode="decimal" value="${qw.n}" aria-label="Quantity"><button data-act="lstep" data-lid="${it.lineId}" data-d="1" aria-label="One more" style="color:var(--ink)">+</button></span>
+      ${hasPack ? `<span class="sx-seg"><button data-act="lunit" data-lid="${it.lineId}" data-u="unit" aria-pressed="${it.qtyIn !== 'pack'}">${esc(it.unit || 'pcs')}</button><button data-act="lunit" data-lid="${it.lineId}" data-u="pack" aria-pressed="${it.qtyIn === 'pack'}">${esc(it.packUnit)}</button></span>` : '<span></span>'}
+      <button class="sx-del" data-act="ldel" data-lid="${it.lineId}" aria-label="Remove ${esc(it.productName)}">${ic('trash', 18)}</button></div>` : ''}
+  </div>`;
+}
+PAGE.neworder = () => {
+  const d = S.draft;
+  if (!d) return `<div class="sx-empty" style="padding-top:30vh"><b>No order open</b><button class="sx-btn red" data-act="neworder" style="margin:16px auto 0">Take an order</button></div>`;
+  const c = d.customerId ? customerById(d.customerId) : null, name = d.client.name || 'Walk-in';
+  const usual = c ? usualLines(c.id).slice(0, 8) : [];
+  const last = d.lastAdded != null ? lineById(d.lastAdded) : null;
+  const withs = last ? goesWith(last.productId, last.variantIdx, Number(last.qty) || 0).filter(w => !onOrder(w.toId, w.toVariantIdx)).slice(0, 4) : [];
+  const q = draftQuote(), pv = pricedView(q), pct = shopCreditPct();
+  const cashQ = { ...q, credit: null }, credQ = { ...q, credit: pct > 0 ? { pct, days: custTermsDays() } : null };
+  const n = d.items.length;
+  return `<div class="sx-pagehead" style="padding-bottom:2px"><button class="sx-circle light" data-act="back" aria-label="Back">${ic('back', 18)}</button>
+    <button data-act="changeclient" style="flex:1;min-width:0;border:none;background:#fff;box-shadow:inset 0 0 0 1px var(--rule);border-radius:999px;height:48px;padding:0 14px 0 5px;display:flex;align-items:center;gap:10px;text-align:left">${avatar(name, 's')}<span style="flex:1;min-width:0;display:flex;flex-direction:column"><span class="ell" style="font-size:14px;font-weight:700">${esc(name)}</span><span class="ell" style="font-size:11px;color:var(--ink3)">${c ? esc([c.location, c.phone].filter(Boolean).join(' · ') || 'customer') : 'not a saved customer'}</span></span><span style="font-size:12px;font-weight:700;color:var(--sky)">Change</span></button>
+    ${n ? `<button class="sx-circle light" data-act="cleardraft" aria-label="Clear the order" style="color:var(--crimson)">${ic('trash', 17)}</button>` : ''}</div>
+  <div class="sx-body">
+    <label class="sx-search">${ic('search', 20, 'style="stroke:#767F91"')}<input id="sx_q" data-in="q" type="search" placeholder="Type “20 cement” or “nails”" autocomplete="off" enterkeyhint="search" value="${esc(d.q || '')}"></label>
+    <div id="sx_results">${resultsHTML()}</div>
+    <div id="sx_rest" ${d.q ? 'hidden' : ''} style="display:flex;flex-direction:column;gap:12px">
+      ${withs.length ? `<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--amberInk)">GOES WITH ${esc(String(last.productName).split(' — ')[0].toUpperCase())}</span><div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none">${withs.map(w => { const p = productById(w.toId), lbl = productVariantLabel(p, w.toVariantIdx);
+        return `<button data-act="addwith" data-pid="${esc(w.toId)}" data-vi="${w.toVariantIdx == null ? '' : w.toVariantIdx}" data-q="${w.qty || 1}" style="flex:none;height:44px;padding:0 12px 0 6px;border:none;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1.5px #E7D6C2;display:flex;align-items:center;gap:8px;text-align:left"><span style="width:30px;height:30px;border-radius:9px;background:var(--amberSoft);color:var(--amberInk);display:flex;align-items:center;justify-content:center">${ic('plus', 14, 'style="stroke-width:2.6"')}</span><span style="display:flex;flex-direction:column;line-height:1.15"><span style="font-size:13px;font-weight:700">${esc(lbl)}${w.qty ? ` <span class="m" style="color:var(--amberInk)">${w.qty}</span>` : ''}</span><span style="font-size:10px;font-weight:600;color:var(--ink3)">${esc(PAIR_WORD[w.verb] || 'goes with')}</span></span></button>`; }).join('')}</div></div>` : ''}
+      ${usual.length ? `<div style="display:flex;align-items:center;gap:6px;overflow-x:auto;scrollbar-width:none"><span style="flex:none;font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--ink3)">USUAL</span>${usual.map(u => { const on = onOrder(u.productId, u.variantIdx);
+        return `<button data-act="addusual" data-pid="${esc(u.productId)}" data-vi="${u.variantIdx == null ? '' : u.variantIdx}" aria-pressed="${on}" style="flex:none;height:38px;padding:0 12px 0 5px;border:none;border-radius:999px;${on ? 'background:var(--navy);color:#fff' : 'background:#fff;box-shadow:inset 0 0 0 1px var(--rule)'};font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px"><span style="width:28px;height:28px;border-radius:999px;background:${on ? 'var(--mint)' : 'var(--greenSoft)'};color:${on ? 'var(--navy)' : 'var(--green)'};display:flex;align-items:center;justify-content:center">${ic(on ? 'tick' : 'plus', 13, 'style="stroke-width:2.8"')}</span>${esc(String(u.name).split(' — ')[0])}${on ? '' : ` <span class="m" style="color:var(--green)">${n0(u.qty)}</span>`}</button>`; }).join('')}</div>` : ''}
+      ${n ? `<div class="sx-paper"><div class="sx-paper-in"><div class="sx-paper-h"><span class="t">${esc((firstWord(name) || 'THE').toUpperCase())}’S ORDER</span><span style="font-size:12px;font-weight:600;color:var(--ink3)">${n} line${n > 1 ? 's' : ''} · tap one to change it</span></div>
+        <div style="display:flex;flex-direction:column;padding:4px 0">${d.items.map(bandHTML).join('')}</div>
+        ${pv.toConfirm ? `<div style="display:flex;gap:8px;align-items:center;padding:8px 10px;margin-bottom:8px;border-radius:10px;background:var(--amberSoft);font-size:12px;font-weight:600;color:var(--amberInk)">${ic('lens', 15)}${pv.toConfirm} line${pv.toConfirm > 1 ? 's' : ''} the shop prices at Checking</div>` : ''}</div></div>`
+      : `<div class="sx-empty" style="padding:36px 16px"><span style="width:64px;height:64px;margin:0 auto 12px;border-radius:20px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule);display:flex;align-items:center;justify-content:center;color:var(--ink3)">${ic('bag', 28)}</span><b>Nothing on it yet</b>Search above${usual.length ? ' or tap their usual' : ''}.</div>`}
+    </div>
+  </div>
+  <div style="height:110px"></div>
+  <div class="sx-dock" style="padding-top:14px">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:10px"><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--navyInk2)">${n} LINE${n === 1 ? '' : 'S'}${d.credit && pct > 0 ? ` · CREDIT ${custTermsDays()} DAYS` : ''}</span><span class="m" style="font-size:28px;font-weight:600;line-height:1.1">${n0(pv.total)}</span></span>
+      ${pv.toConfirm ? `<span style="font-size:12px;font-weight:700;color:var(--amber);text-align:right">+ ${pv.toConfirm} to price</span>` : ''}</div>
+    ${pct > 0 && n ? `<div class="sx-seg dark" role="group" aria-label="How they pay"><button style="flex:1" data-act="credit" data-v="0" aria-pressed="${!d.credit}">Cash · <span class="m">${short(pricedView(cashQ).total)}</span></button><button style="flex:1" data-act="credit" data-v="1" aria-pressed="${!!d.credit}">Credit +${pct}% · <span class="m">${short(pricedView(credQ).total)}</span></button></div>` : ''}
+    ${sliderHTML('place', n ? 'Slide to place the order' : 'Add something first', { disabled: !n || S.placing })}
+  </div>`;
+};
+
+/* ---------------- placing it ---------------- */
+ACT['slide:place'] = async el => {
+  const d = S.draft; if (!d || !d.items.length || S.placing) return;
+  S.placing = true; el.querySelector('.l').textContent = 'Placing…';
+  try {
+    const maxId = D().savedQuotes.reduce((m, q) => Math.max(m, Number(q.id) || 0), 0);
+    const id = await issueRowId('row:saved_quote', maxId);
+    const now = Date.now(), iso = new Date(now).toISOString(), q = draftQuote();
+    const items = d.items.map(it => ({ lineId: it.lineId, productId: it.productId, variantIdx: it.variantIdx, productName: it.productName, unit: it.unit, packUnit: it.packUnit, packQty: it.packQty, qtyIn: it.qtyIn, qty: it.qty, supplierId: it.supplierId, supplierName: it.supplierName, price: it.price, sellPrice: it.sellPrice }));
+    const payload = { client: { name: d.client.name || 'Walk-in', phone: d.client.phone || '' }, items, charges: [], credit: q.credit, savedAt: iso, createdAt: iso,
+      payments: [], customerId: d.customerId || null, debtCharged: 0, stageEnteredAt: now, stageLog: [{ status: 'draft', at: now }] };
+    const row = { id, shop_id: S.shopId, client_name: payload.client.name, client_phone: payload.client.phone || null, date: todayISO(), status: 'draft',
+      invoiced: false, invoiced_at: null, invoiced_ts: null, amount_paid: 0, voided: false, payload };
+    const { error } = await sb.from('saved_quotes').insert(row);
+    if (error) throw error;
+    D().savedQuotes.push(rowToQuote(row)); saveSnapshot();
+    S.draft = null; saveDraft(); S.placing = false;
+    S.stack = [{ type: 'placed', args: { id } }]; render();
+  } catch (e) {
+    S.placing = false; render();
+    toast(isNetworkError(e) ? 'No connection — the order is kept here. Slide again when you have signal.' : 'Could not place it: ' + (e.message || e), 6000);
+  }
+};
+function confettiHTML(){
+  const cols = ['#6FDCB0', '#F5B26B', '#E5483D', '#9BA3F0', '#FFFFFF', '#7FC4F0'];
+  return `<div aria-hidden="true" style="position:absolute;inset:0;overflow:hidden;pointer-events:none">${Array.from({ length: 44 }, (_, i) => {
+    const l = Math.round(Math.random() * 100), dx = Math.round(Math.random() * 120 - 60), rot = Math.round(Math.random() * 720 - 360), del = (Math.random() * 0.9).toFixed(2), dur = (2.2 + Math.random() * 1.6).toFixed(2), w = 6 + Math.round(Math.random() * 6);
+    return `<i style="position:absolute;top:0;left:${l}%;width:${w}px;height:${Math.round(w * 1.6)}px;border-radius:2px;background:${cols[i % cols.length]};--dx:${dx}px;--rot:${rot}deg;animation:sxFall ${dur}s cubic-bezier(.25,.6,.4,1) ${del}s both"></i>`; }).join('')}</div>`;
+}
+PAGE.placed = ({ id }) => {
+  const q = quoteById(id); if (!q) return '';
+  const pv = pricedView(q), name = (q.client && q.client.name) || 'Walk-in', n = (q.items || []).length;
+  const shelf = (q.items || []).filter(it => it.supplierId === '__stock__').length;
+  return `<div style="position:relative;min-height:100%;background:radial-gradient(120% 70% at 50% 20%,#26335E 0%,#16203C 65%);color:#fff;display:flex;flex-direction:column;align-items:center;padding:calc(48px + var(--safe-area-inset-top)) 20px 140px;gap:18px;text-align:center">
+    ${confettiHTML()}
+    <span style="position:relative;width:96px;height:96px;display:flex;align-items:center;justify-content:center"><i style="position:absolute;inset:0;border-radius:999px;border:3px solid var(--mint);animation:sxRing 1.4s ease-out .3s both"></i><span style="width:96px;height:96px;border-radius:999px;background:var(--mint);color:var(--navy);display:flex;align-items:center;justify-content:center;animation:sxPop .6s cubic-bezier(.3,1.4,.5,1) both">${ic('tick', 48, 'style="stroke-width:2.8"')}</span></span>
+    <span class="sx-upin" style="display:flex;flex-direction:column;gap:6px;animation-delay:.3s"><span class="sx-eyebrow" style="color:var(--mint)">Order placed · ${orderNo(q)}</span><span style="font-size:28px;font-weight:700;letter-spacing:-.02em">${esc(name)}’s order is in</span><span class="m" style="font-size:22px;font-weight:600">${n0(pv.total)}${pv.toConfirm ? ` <span style="font-family:Figtree;font-size:13px;color:var(--amber)">+ ${pv.toConfirm} to price</span>` : ''}</span></span>
+    <div class="sx-glass sx-upin" style="width:100%;display:grid;grid-template-columns:1fr 1fr 1fr;animation-delay:.5s">
+      <span style="padding:12px 8px;display:flex;flex-direction:column;gap:3px"><b class="m" style="font-size:18px">${n}</b><span style="font-size:11px;font-weight:600;color:var(--navyInk)">lines</span></span>
+      <span style="padding:12px 8px;display:flex;flex-direction:column;gap:3px;border-left:1px solid rgba(255,255,255,.07)"><b class="m" style="font-size:18px;color:var(--mint)">${shelf}</b><span style="font-size:11px;font-weight:600;color:var(--navyInk)">on the shelf</span></span>
+      <span style="padding:12px 8px;display:flex;flex-direction:column;gap:3px;border-left:1px solid rgba(255,255,255,.07)"><b class="m" style="font-size:18px;color:var(--amber)">${n - shelf}</b><span style="font-size:11px;font-weight:600;color:var(--navyInk)">shop checks</span></span></div>
+    <span class="sx-upin" style="font-size:13px;color:var(--navyInk);animation-delay:.6s">It is at <b style="color:#fff">Checking</b>. You’ll see each line turn green as the shop confirms it.</span>
+  </div>
+  <div class="sx-dock" style="background:transparent;box-shadow:none;padding-top:12px">
+    <button class="sx-btn red" data-act="tell" data-id="${q.id}">${ic('chat', 20)}Tell ${esc(firstWord(name) || 'them')} it’s in</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="sx-btn" style="background:rgba(255,255,255,.1);color:#fff" data-act="placeddone">Done</button><button class="sx-btn" style="background:rgba(255,255,255,.1);color:#fff" data-act="neworder">${ic('plus', 18)}Another</button></div></div>`;
+};
+ACT.placeddone = () => { S.ordersStage = 'draft'; go('orders'); };
+
+PAGE.placed.bg = '#16203C';
+
+/* ==================================================================
+   Taking a payment. The same path as the owner's recordCustomerPayment
+   (index.html 65589): the money is spread over the customer's open
+   bills oldest first -- each portion a cash receipt, a payment on the
+   invoice and the invoice's debt brought back in line -- and whatever
+   is left lowers the balance not tied to a bill. There is no RPC for
+   this, so the rows are written one by one, each re-read first.
+   ================================================================== */
+const PAY_METHODS = [['cash', 'Cash', 'cash'], ['momo', 'Mobile money', 'momo'], ['bank', 'Bank', 'bank']];
+function payPlan(c, amount){
+  let left = Math.max(0, Math.round(Number(amount) || 0));
+  const bills = outstandingInvoices(c.id).map(q => { const due = balanceDue(q), pay = Math.min(left, due); left -= pay; return { q, due, pay }; });
+  const loose = Math.max(0, c.debt - bills.reduce((s, b) => s + b.due, 0));
+  return { bills, rest: left, loose, over: Math.max(0, left - loose) };
+}
+ACT.pay = t => { const c = customerById(t.dataset.id); if (!c) return; closeSheet(true); renderSheet(); push('pay', { id: c.id, amt: c.debt, method: 'cash' }); };
+PAGE.pay = args => {
+  const c = customerById(args.id); if (!c) return '';
+  const quick = [[c.debt, 'All they owe']].concat(outstandingInvoices(c.id).slice(0, 2).map(q => [balanceDue(q), invoiceLabel(q)])).filter((x, i, a) => x[0] > 0 && a.findIndex(y => y[0] === x[0]) === i);
+  return `<div class="sx-hero" data-navy-top style="border-radius:0 0 26px 26px">
+    <div style="display:flex;align-items:center;gap:12px"><button class="sx-circle" data-act="back" aria-label="Back">${ic('back', 18)}</button>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span class="sx-eyebrow">Take payment</span><span class="ell" style="font-size:17px;font-weight:700">${esc(c.name)}</span></span>
+      <span style="display:flex;flex-direction:column;align-items:flex-end"><span style="font-size:11px;font-weight:600;color:var(--navyInk2)">owes</span><span class="m" style="font-size:15px;font-weight:600">${n0(c.debt)}</span></span></div>
+    <label style="display:flex;flex-direction:column;align-items:center;gap:4px"><span class="sx-eyebrow" style="color:var(--mint)">Amount received</span>
+      <input id="sx_payamt" data-in="payamt" inputmode="numeric" aria-label="Amount received" value="${args.amt ? n0(args.amt) : ''}" placeholder="0" style="width:100%;border:none;background:transparent;color:#fff;text-align:center;font-family:var(--mono);font-size:40px;font-weight:600;letter-spacing:-.03em;outline:none;padding:0"></label>
+    <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap">${quick.map(x => `<button data-act="payquick" data-v="${x[0]}" style="height:32px;padding:0 12px;border:none;border-radius:999px;background:rgba(255,255,255,.08);color:#fff;font-size:12px;font-weight:700">${esc(x[1])} · <span class="m">${short(x[0])}</span></button>`).join('')}</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px" role="radiogroup" aria-label="How they paid">${PAY_METHODS.map(m => `<button data-act="paymethod" data-m="${m[0]}" role="radio" aria-checked="${args.method === m[0]}" style="height:64px;border:none;border-radius:16px;${args.method === m[0] ? 'background:#fff;color:var(--navy)' : 'background:rgba(255,255,255,.06);color:var(--navyInk);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:12px;font-weight:700">${ic(m[2], 22)}${m[1]}</button>`).join('')}</div>
+  </div>
+  <div class="sx-body"><div id="sx_alloc">${allocHTML(c, args.amt)}</div><div style="height:90px"></div></div>
+  <div class="sx-dock"><div id="sx_payslide">${sliderHTML('pay', args.amt > 0 ? 'Slide to record ' + n0(args.amt) : 'Type the amount', { money: true, disabled: !(args.amt > 0) || S.paying })}</div></div>`;
+};
+function allocHTML(c, amt){
+  const plan = payPlan(c, amt);
+  if (!(amt > 0)) return `<div class="sx-card sx-empty">Type what ${esc(firstWord(c.name))} handed over.</div>`;
+  const row = (label, sub, due, pay) => `<div class="sx-pl" style="grid-template-columns:auto 1fr auto"><span style="width:26px;height:26px;border-radius:999px;background:${pay >= due && due > 0 ? 'var(--green)' : pay > 0 ? 'var(--greenSoft)' : 'var(--soft)'};color:${pay >= due ? '#fff' : 'var(--green)'};display:flex;align-items:center;justify-content:center">${pay > 0 ? ic('tick', 13, 'style="stroke-width:3"') : ''}</span>
+    <span style="display:flex;flex-direction:column;gap:4px;min-width:0"><span style="display:flex;justify-content:space-between;gap:6px"><span class="ell" style="font-size:13px;font-weight:700">${esc(label)}</span><span class="sx-sub">${esc(sub)}</span></span><span style="height:6px;border-radius:9px;background:var(--soft2);overflow:hidden;display:block"><span style="display:block;height:100%;width:${due > 0 ? Math.round(pay / due * 100) : 0}%;background:var(--green);transition:width .3s"></span></span></span>
+    <span style="display:flex;flex-direction:column;align-items:flex-end"><span class="m" style="font-size:14px;font-weight:600;color:${pay > 0 ? 'var(--green)' : 'var(--ink3)'}">${pay > 0 ? n0(pay) : '—'}</span><span class="m" style="font-size:10px;color:var(--ink3)">of ${n0(due)}</span></span></div>`;
+  const looseRow = plan.loose > 0 ? row('Balance not on a bill', '', plan.loose, Math.min(plan.rest, plan.loose)) : '';
+  const after = Math.max(0, c.debt - Math.min(amt, c.debt));
+  return `<div class="sx-paper"><div class="sx-paper-in"><div class="sx-paper-h"><span class="t">GOES TO</span><span style="font-size:12px;font-weight:600;color:var(--ink3)">oldest first</span></div>
+    ${plan.bills.map(b => row(invoiceLabel(b.q), `${daysBetween(b.q.invoicedAt || b.q.date, todayISO())} days`, b.due, b.pay)).join('')}${looseRow}
+    <div class="sx-paper-f"><span style="font-size:13px;font-weight:700">Owes after</span><span class="m" style="font-size:17px;font-weight:600;color:${after === 0 ? 'var(--green)' : 'var(--ink)'}">${n0(after)}</span></div></div></div>
+    ${plan.over > 0 ? `<div style="margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--amberSoft);color:var(--amberInk);font-size:12px;font-weight:600">${n0(plan.over)} more than they owe. It is recorded as money in; their balance stops at 0.</div>` : ''}`;
+}
+function payArgs(){ return S.stack[S.stack.length - 1].args; }
+function refreshPay(){
+  const a = payArgs(), c = customerById(a.id);
+  const al = document.getElementById('sx_alloc'); if (al) al.innerHTML = allocHTML(c, a.amt);
+  const sl = document.getElementById('sx_payslide'); if (sl) { sl.innerHTML = sliderHTML('pay', a.amt > 0 ? 'Slide to record ' + n0(a.amt) : 'Type the amount', { money: true, disabled: !(a.amt > 0) || S.paying }); bindSliders(); }
+}
+ACT['in:payamt'] = t => { const v = Number(String(t.value).replace(/[^0-9]/g, '')) || 0; payArgs().amt = v; const s = v ? n0(v) : ''; if (t.value !== s) t.value = s; refreshPay(); };
+ACT.payquick = t => { payArgs().amt = Number(t.dataset.v) || 0; const i = document.getElementById('sx_payamt'); if (i) i.value = n0(payArgs().amt); haptic('light'); refreshPay(); };
+ACT.paymethod = t => { payArgs().method = t.dataset.m; haptic('light'); render(); };
+
+/* Columns added after the first set ride only where their migration has
+   landed (0105 entered_by, 0107 the debt-log links), as the owner's sync
+   guards them; a database without one gets the row without it. */
+async function insertRow(table, row, optional){
+  let r = await sb.from(table).insert(row);
+  if (r.error && optional && /column|schema cache/i.test(r.error.message || '')) { const lean = { ...row }; optional.forEach(k => delete lean[k]); r = await sb.from(table).insert(lean); }
+  if (r.error) throw r.error;
+}
+ACT['slide:pay'] = async () => {
+  const a = payArgs(), c0 = customerById(a.id), amount = Math.round(Number(a.amt) || 0);
+  if (!c0 || !(amount > 0) || S.paying) return;
+  S.paying = true; refreshPay();
+  const date = todayISO(), time = new Date().toTimeString().slice(0, 5), method = a.method || 'cash';
+  const done = []; let written = 0;
+  try {
+    // Re-read what they owe and each bill, so two phones cannot spread one payment over stale balances.
+    const fresh = await sb.from('customers').select('debt').eq('shop_id', S.shopId).eq('id', c0.id).maybeSingle();
+    if (fresh.error) throw fresh.error;
+    let debt = Number(fresh.data && fresh.data.debt) || 0; const debt0 = debt;
+    const plan = payPlan({ ...c0, debt }, amount);
+    let cashMax = D().cashTxns.reduce((m, x) => Math.max(m, Number(x.id) || 0), 0);
+    let logMax = D().customers.reduce((m, c) => (c.debtLog || []).reduce((mm, l) => Math.max(mm, Number(l.id) || 0), m), 0);
+    const cashRow = async (amt, category, description, quoteId) => {
+      const id = await issueRowId('row:cash_txn', cashMax); cashMax = Math.max(cashMax, id);
+      await insertRow('cash_txns', { id, shop_id: S.shopId, date, account: method, type: 'receipt', category, amount: amt, description, time, quote_id: quoteId == null ? null : quoteId, entered_by: S.user ? String(S.user.id) : null }, ['entered_by']);
+      return id;
+    };
+    const logRow = async (row) => {
+      const id = await issueRowId('row:debt_log', logMax); logMax = Math.max(logMax, id);
+      await insertRow('customer_debt_log', { id, shop_id: S.shopId, customer_id: c0.id, date, type: 'payment', ...row }, ['cash_txn_id', 'quote_id']);
+    };
+    for (const b of plan.bills) {
+      if (!(b.pay > 0)) continue;
+      const cur = await sb.from('saved_quotes').select('amount_paid, payload').eq('shop_id', S.shopId).eq('id', b.q.id).maybeSingle();
+      if (cur.error) throw cur.error;
+      const payload = (cur.data && cur.data.payload) || {};
+      const q = rowToQuote({ ...b.q, id: b.q.id, invoiced: true, amount_paid: cur.data ? cur.data.amount_paid : b.q.amountPaid, payload });
+      q.invoicedAt = b.q.invoicedAt; q.date = b.q.date;
+      const pay = Math.min(b.pay, balanceDue(q)); if (!(pay > 0)) continue;
+      const label = invoiceLabel(q);
+      const cashTxnId = await cashRow(pay, 'Debt Payment', `Payment — ${label}`, q.id); written += pay;
+      const payments = (Array.isArray(payload.payments) ? payload.payments : []).concat([{ date, amount: pay, note: '', cashTxnId }]);
+      const amountPaid = (Number(q.amountPaid) || 0) + pay;
+      // syncInvoiceDebtCharge: the invoice's share of the debt follows its balance.
+      const desired = Math.max(0, quoteTotal(q) - amountPaid), current = Number(payload.debtCharged) || 0;
+      const before = debt, after = Math.max(0, before + (desired - current)), applied = after - before;
+      // A Sales login can only lower a debt; were the bill's share ever to
+      // rise here, the baseline is left for the owner's app to settle.
+      const up = await sb.from('saved_quotes').update({ amount_paid: amountPaid, payload: { ...payload, payments, debtCharged: applied > 0 ? current : desired, customerId: c0.id } }).eq('shop_id', S.shopId).eq('id', q.id);
+      if (up.error) throw up.error;
+      if (applied < 0) {
+        await logRow({ amount: -applied, note: `Auto-sync — ${label}`, quote_id: q.id, cash_txn_id: null });
+        const cu = await sb.from('customers').update({ debt: after }).eq('shop_id', S.shopId).eq('id', c0.id); if (cu.error) throw cu.error;
+        debt = after;
+      }
+      done.push({ label, pay, cleared: pay >= b.due });
+    }
+    const rest = amount - done.reduce((s, d) => s + d.pay, 0);
+    if (rest > 0) {
+      const before = debt, after = Math.max(0, before - rest);
+      const cashTxnId = await cashRow(rest, 'Debt Payment', `Payment — ${c0.name}`, null); written += rest;
+      if (before !== after) {
+        const cu = await sb.from('customers').update({ debt: after }).eq('shop_id', S.shopId).eq('id', c0.id); if (cu.error) throw cu.error;
+        await logRow({ amount: before - after, note: '', cash_txn_id: cashTxnId, quote_id: null });
+        debt = after;
+      }
+      done.push({ label: 'Balance', pay: rest, cleared: after === 0 });
+    }
+    S.paying = false;
+    S.stack[S.stack.length - 1] = { type: 'paid', args: { id: c0.id, amount, method, bills: done, before: debt0, after: debt, at: Date.now() } };
+    S.kaching = true; render();
+    loadAll().then(() => { if (S.stack.length && S.stack[S.stack.length - 1].type === 'paid') render(); }).catch(() => {});
+  } catch (e) {
+    S.paying = false;
+    if (written > 0) { toast(`Stopped part-way: ${n0(written)} of ${n0(amount)} was recorded. Tell the owner before trying again.`, 9000); loadAll().then(render).catch(() => {}); }
+    else { refreshPay(); toast(isNetworkError(e) ? 'No connection — nothing was recorded. Try again.' : 'Nothing was recorded: ' + (e.message || e), 6000); }
+  }
+};
+
+/* ---------------- Paid ---------------- */
+function kaching(){
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    const ac = kaching.ac || (kaching.ac = new AC()), t0 = ac.currentTime + 0.02;
+    const tone = (f, at, dur, type, vol) => { const o = ac.createOscillator(), g = ac.createGain(); o.type = type; o.frequency.value = f; g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, at + dur); o.connect(g).connect(ac.destination); o.start(at); o.stop(at + dur + 0.05); };
+    tone(1900, t0, 0.05, 'square', 0.05); tone(1500, t0 + 0.06, 0.05, 'square', 0.05);               // ka
+    [2637, 3520, 5274, 1318].forEach((f, i) => tone(f, t0 + 0.14, 1.3 - i * 0.2, 'sine', [0.16, 0.09, 0.05, 0.07][i])); // ching
+  } catch (_e) {}
+}
+AFTER.push(() => { if (S.kaching) { S.kaching = false; kaching(); haptic('success'); } });
+PAGE.paid = ({ id, amount, method, bills, before, after }) => {
+  const c = customerById(id) || { name: '', phone: '' }, m = PAY_METHODS.find(x => x[0] === method) || PAY_METHODS[0];
+  const coins = Array.from({ length: 5 }, (_, i) => `<i style="position:absolute;left:${38 + i * 6}%;top:0;width:26px;height:26px;border-radius:999px;background:radial-gradient(circle at 35% 30%,#FFE9A8,#E7B53C 60%,#B9861C);box-shadow:inset 0 0 0 2px rgba(150,100,10,.35);animation:sxCoin 1.1s cubic-bezier(.4,.1,.6,1) ${(0.15 + i * 0.12).toFixed(2)}s both"></i>`).join('');
+  const receipt = `Hello ${firstWord(c.name) || 'there'}, ${S.shopName} received ${n0(amount)} from you today by ${m[1].toLowerCase()}. ${after > 0 ? `You now owe ${n0(after)}.` : 'You are fully paid up.'} Thank you!`;
+  return `<div data-navy-top style="position:relative;min-height:100%;background:radial-gradient(120% 70% at 50% 18%,#26335E 0%,#16203C 65%);color:#fff;display:flex;flex-direction:column;align-items:center;padding:calc(36px + var(--safe-area-inset-top)) 20px 150px;gap:16px;text-align:center">
+    <span aria-hidden="true" style="position:relative;width:180px;height:120px">${coins}
+      <span style="position:absolute;left:30px;right:30px;bottom:0;height:56px;border-radius:12px 12px 16px 16px;background:linear-gradient(180deg,#2F3D6B,#1F2A4D);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);animation:sxDrawer 1.4s ease-in-out .9s both;display:flex;align-items:center;justify-content:center"><span style="width:40px;height:6px;border-radius:9px;background:rgba(255,255,255,.18)"></span></span></span>
+    <span class="sx-upin" style="display:flex;flex-direction:column;gap:4px;animation-delay:.4s"><span class="sx-eyebrow" style="color:var(--mint);display:inline-flex;align-items:center;gap:6px;justify-content:center">${ic(m[2], 14)}${esc(m[1])} · ${nowHM()}</span>
+      <span class="m" style="font-size:40px;font-weight:600;color:var(--mint);letter-spacing:-.03em">+${n0(amount)}</span><span style="font-size:15px;font-weight:600">from ${esc(c.name)}</span></span>
+    <div class="sx-glass sx-upin" style="width:100%;padding:14px;display:flex;flex-direction:column;gap:10px;text-align:left;animation-delay:.6s">
+      <span style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:12px;font-weight:700;color:var(--navyInk2)">Owed</span><span style="display:flex;align-items:baseline;gap:8px"><span class="m" style="font-size:13px;color:var(--navyInk2);text-decoration:line-through">${n0(before)}</span>${ic('chev', 12, 'style="stroke:#8D99B5"')}<span class="m" style="font-size:20px;font-weight:600;${after === 0 ? 'color:var(--mint)' : ''}">${n0(after)}</span></span></span>
+      <span style="display:flex;height:8px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08)"><i class="sx-grow" style="flex:${Math.min(amount, before) || 0.0001};background:var(--mint)"></i><i style="flex:${after || 0.0001};background:rgba(255,255,255,.18)"></i></span>
+      ${(bills || []).map(b => `<span style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--navyInk)"><span style="display:flex;align-items:center;gap:6px">${b.cleared ? `<span style="color:var(--mint);display:flex">${ic('tick', 13, 'style="stroke-width:3"')}</span>` : '<i style="width:13px"></i>'}${esc(b.label)}${b.cleared ? ' · cleared' : ''}</span><span class="m" style="color:#fff">${n0(b.pay)}</span></span>`).join('')}
+    </div>
+    ${after === 0 ? `<span class="sx-stamp" style="color:var(--mint);background:rgba(111,220,176,.08)"><b>PAID UP</b><span>${esc(dayLabel(todayISO()).toUpperCase())}</span></span>` : ''}
+  </div>
+  <div class="sx-dock" style="background:transparent;box-shadow:none;padding-top:12px">
+    ${c.phone ? `<a class="sx-btn" style="background:#25D366;color:#fff" target="_blank" href="https://wa.me/${phoneDigits(c.phone)}?text=${encodeURIComponent(receipt)}">${ic('chat', 20)}Send ${esc(firstWord(c.name))} a receipt</a>` : ''}
+    <button class="sx-btn" style="background:rgba(255,255,255,.1);color:#fff" data-act="back">Done</button></div>`;
+};
+PAGE.paid.bg = '#16203C';
+
+boot();
+</script>
+</body>
+</html>
