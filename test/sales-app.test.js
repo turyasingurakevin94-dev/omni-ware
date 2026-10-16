@@ -211,12 +211,59 @@ matrix.forEach(([what, it]) => {
     t.check(X.S.stack[0].type === 'paid' && X.S.stack[0].args.before === 500000 && X.S.stack[0].args.after === 50000, 'the paid screen shows 500,000 → 50,000');
   }
 
+  // 4b. choosing the bills: only the picked bill is paid; what is over lowers the loose balance
+  {
+    const bill = (id, at, total) => ({ id, shop_id: SH, invoiced: true, invoiced_at: at, amount_paid: 0, status: 'completed', voided: false, date: at,
+      payload: { client: { name: 'Kato Construction' }, customerId: 'C001', debtCharged: total, items: [line('P1', null, total / 50000, 'S1', 32000, { sellPrice: 50000 })], payments: [] } });
+    const q1 = bill(1, '2026-08-01', 100000), q2 = bill(2, '2026-09-01', 300000);
+    const db = fakeDb({ saved_quotes: [q1, q2], customers: [{ id: 'C001', shop_id: SH, debt: 500000 }], cash_txns: [], customer_debt_log: [] });
+    const X = loadPage(db);
+    Object.assign(X.S, { data: fixture(), shopId: SH, user: { id: 'u1' } });
+    const toQ = r => ({ id: r.id, status: r.status, invoiced: true, invoicedAt: r.invoiced_at, amountPaid: 0, voided: false, date: r.date, ...JSON.parse(JSON.stringify(r.payload)) });
+    X.S.data.savedQuotes = [toQ(q1), toQ(q2)];
+    const plan = X.payPlan(X.S.data.customers[0], 350000, [2]);
+    t.check(plan.bills[0].q.id === 2 && plan.bills[0].pay === 300000 && plan.bills[1].pay === 0 && plan.rest === 50000 && plan.after === 150000, 'a picked bill is paid first, an unpicked one not at all, and the plan says what they owe after');
+    X.S.stack = [{ type: 'pay', args: { id: 'C001', amt: 350000, method: 'cash', mode: 'pick', picks: [2] } }];
+    await X.ACT['slide:pay']();
+    const cash = db.writes.filter(x => x[0] === 'insert' && x[1] === 'cash_txns').map(x => x[2]);
+    t.check(cash.length === 2 && cash[0].quote_id === 2 && cash[0].amount === 300000 && cash[1].quote_id === null && cash[1].amount === 50000, 'one receipt on the picked bill, one for the rest: ' + cash.map(c => c.amount + '/' + c.quote_id).join());
+    t.check(db.tables.saved_quotes[0].amount_paid === 0 && db.tables.saved_quotes[1].amount_paid === 300000, 'the bill not picked is left alone');
+    const pm = db.tables.saved_quotes[1].payload.payments[0];
+    t.check(pm.cashTxnId === cash[0].id && pm.method === 'cash' && pm.id === 1, 'the payment carries its receipt, its account and its own number');
+    t.check(db.tables.customers[0].debt === 150000, 'they owe 150,000 after paying 350,000 of 500,000');
+    t.check(X.S.stack[0].type === 'paid' && X.S.stack[0].args.after === 150000, 'the paid screen shows what is left');
+  }
+
+  // 4c. an order paid before its invoice: a receipt and a payment on the order, no debt
+  {
+    const q7 = { id: 7, shop_id: SH, invoiced: false, amount_paid: 0, status: 'draft', voided: false, date: '2026-10-01',
+      payload: { client: { name: 'Kato Construction' }, customerId: 'C001', debtCharged: 0, items: [line('P1', null, 2, 'S1', 32000, { sellPrice: 50000 })], payments: [] } };
+    const db = fakeDb({ saved_quotes: [q7], customers: [{ id: 'C001', shop_id: SH, debt: 500000 }], cash_txns: [], customer_debt_log: [] });
+    const X = loadPage(db);
+    Object.assign(X.S, { data: fixture(), shopId: SH, user: { id: 'u1' } });
+    X.S.data.savedQuotes = [{ id: 7, status: 'draft', invoiced: false, amountPaid: 0, voided: false, date: q7.date, ...JSON.parse(JSON.stringify(q7.payload)) }];
+    X.S.stack = [{ type: 'pay', args: { orderId: 7, amt: 150000, method: 'momo' } }];
+    await X.ACT['slide:pay']();
+    t.check(db.writes.length === 0, 'more than the order takes writes nothing');
+    X.S.paying = false;
+    X.S.stack = [{ type: 'pay', args: { orderId: 7, amt: 60000, method: 'momo' } }];
+    await X.ACT['slide:pay']();
+    const cash = db.writes.filter(x => x[0] === 'insert' && x[1] === 'cash_txns').map(x => x[2]);
+    t.check(cash.length === 1 && cash[0].category === 'Invoice Payment' && cash[0].quote_id === 7 && cash[0].amount === 60000 && cash[0].account === 'momo', 'one Invoice Payment receipt on the order');
+    const row = db.tables.saved_quotes[0];
+    t.check(row.amount_paid === 60000 && row.invoiced === false && row.payload.payments[0].cashTxnId === cash[0].id, 'the order carries the payment and stays uninvoiced');
+    t.check(!db.writes.some(x => x[1] === 'customers' || x[1] === 'customer_debt_log'), 'no debt is touched before the invoice');
+    t.check(X.S.stack[0].type === 'paid' && X.S.stack[0].args.after === 40000, 'the paid screen says 40,000 is left to pay');
+  }
+
   // the screens draw from the fixture without throwing
   {
     const X = loadPage(fakeDb({}));
     Object.assign(X.S, { data: fixture(), shopId: SH, user: { id: 'u1', email: 'a@b.c' }, shopName: 'Shop' });
     ['viewToday', 'viewOrders', 'viewCustomers', 'viewMe'].forEach(v => { let ok = true; try { X[v](); } catch (e) { ok = false; t.fail(v + ' threw: ' + e.message); } if (ok) t.pass(v + ' draws'); });
     ['customer', 'neworder', 'pay'].forEach(pg => { try { X.PAGE[pg]({ id: 'C001', amt: 1000, method: 'cash' }); t.pass('page ' + pg + ' draws'); } catch (e) { t.fail('page ' + pg + ' threw: ' + e.message); } });
+    X.S.data.cashTxns = [{ id: 11, date: '2026-10-01', time: '09:00', account: 'cash', type: 'receipt', category: 'Debt Payment', amount: 50000, quoteId: null }];
+    try { const h = X.PAGE.paid({ fromTxn: 11 }); t.check(h.includes('50,000'), 'page paid draws from a receipt in the books'); } catch (e) { t.fail('page paid (fromTxn) threw: ' + e.message); }
   }
 
   process.exit(t.done() ? 1 : 0);
