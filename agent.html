@@ -1809,6 +1809,27 @@
   .ax-finish .icon{color:var(--mint);width:22px;height:22px;stroke-width:2.6;flex:none;}
   .ax-finish .t{flex:1;font-size:16px;font-weight:700;}
   .ax-finish .y{height:42px;padding:0 12px;border-radius:12px;background:rgba(111,220,176,.16);color:var(--mint);display:flex;align-items:center;font-size:14px;font-weight:600;}
+  /* what the client pays and what is yours, one light card */
+  .ax-tmoney{padding:12px 14px;display:flex;flex-direction:column;gap:10px;}
+  .ax-tmoney .top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+  .ax-tmoney .b{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .ax-tmoney .k{font-size:12px;font-weight:600;color:var(--ink-faint);}
+  .ax-tmoney .v{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 8px;}
+  .ax-tmoney .v b{font-size:20px;font-weight:600;letter-spacing:-.02em;}
+  .ax-tmoney s{font-size:12px;color:var(--ink-faint);}
+  .ax-tmoney .y{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex:none;}
+  .ax-tmoney .y b{height:30px;padding:0 10px;border-radius:999px;background:var(--good-bg);color:var(--good);display:flex;align-items:center;font-size:14px;font-weight:600;white-space:nowrap;}
+  .ax-tmoney .y.maybe b{background:repeating-linear-gradient(135deg,#fff 0 6px,#F3FAF6 6px 12px);box-shadow:inset 0 0 0 1.5px var(--good);}
+  .ax-tmoney .y.bad b{background:var(--bad-bg);color:var(--bad);}
+  .ax-tmoney .y small{font-size:11px;font-weight:600;color:var(--good);}
+  .ax-tmoney .split{display:flex;flex-direction:column;gap:5px;}
+  .ax-tmoney .bar{display:flex;gap:2px;height:8px;border-radius:999px;overflow:hidden;}
+  .ax-tmoney .bar i{background:var(--navy);}
+  .ax-tmoney .bar i.me{background:var(--good);min-width:8px;}
+  .ax-tmoney .bar i.me.maybe{background:repeating-linear-gradient(135deg,var(--good) 0 3px,var(--mint) 3px 6px);}
+  .ax-tmoney .lg{display:flex;justify-content:space-between;gap:8px;font-size:11px;font-weight:600;color:var(--ink-faint);}
+  .ax-tmoney .lg b{font-weight:600;color:var(--ink);}
+  .ax-tmoney .lg .good{color:var(--good);} .ax-tmoney .lg .bad{color:var(--bad);}
   /* the order's acts, one joined bar */
   .ax-tk-acts{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:20px;overflow:hidden;}
   .ax-tk-act{all:unset;cursor:pointer;box-sizing:border-box;flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 4px 10px;text-align:center;}
@@ -10263,6 +10284,23 @@ function trackStateIcon(st){
    is on WhatsApp, the receipt and what it comes to, and (while it can
    still change) Change. On a done order, Finish sits under it in thumb
    reach with what it earned. */
+/* What the client pays and what is the agent's, as one light card: the
+   figure, what it was before the shop dropped a line, the agent's share
+   as a pill (striped while it still depends on the check), and one thin
+   bar of how the client's money splits -- the shop's, and the agent's. */
+function trackMoneyHTML(total, droppedTotal, yours, droppedYours, checked){
+  const keep = Math.max(0, yours);
+  const shop = Math.max(0, total - keep);
+  const pct = total > 0 ? keep / total * 100 : 0;
+  return `<div class="ax-card ax-tmoney">
+      <div class="top">
+        <span class="b"><span class="k">Client pays</span><span class="v"><b class="m">${fmtNum(total)}</b>${droppedTotal > 0 ? `<s class="m">${fmtNum(total + droppedTotal)}</s>` : ''}</span></span>
+        <span class="y${checked ? '' : ' maybe'}${yours < 0 ? ' bad' : ''}"><b class="m">${fmtSigned(yours)}${checked ? ' yours' : ''}</b>${!checked ? '<small>yours, if all confirmed</small>' : droppedYours > 0 ? `<s class="m">${fmtSigned(yours + droppedYours)}</s>` : ''}</span>
+      </div>
+      <div class="split"><span class="bar"><i style="flex:${Math.max(1, Math.round(shop))};"></i>${keep > 0 ? `<i class="me${checked ? '' : ' maybe'}" style="flex:${Math.max(1, Math.round(keep))};"></i>` : ''}</span>
+        <span class="lg"><span>shop gets <b class="m">${fmtNum(shop)}</b></span><span class="${yours < 0 ? 'bad' : 'good'}">${yours < 0 ? `you lose ${fmtNum(-yours)}` : keep > 0 ? `you keep ${pct < 10 ? pct.toFixed(1) : Math.round(pct)}%` : 'nothing to you'}</span></span></div>
+    </div>`;
+}
 function trackActsHTML(o, c, st, total, canChange){
   const first = firstWord(c.name);
   const pickup = o.deliveryMode === 'agent_pickup';
@@ -10356,10 +10394,7 @@ function openTrackSheet(orderId){
       <div class="ax-sheet-pad">
         ${ready}
         ${deliveryCardHTML(o, st, c)}
-        <div class="ax-money">
-          <div><span class="k">Client pays</span><span class="v">${fmtNum(total)}</span>${droppedTotal > 0 ? `<s>${fmtNum(total + droppedTotal)}</s>` : ''}</div>
-          <div class="${checked ? 'yours' : 'maybe'}"><span class="k">${checked ? 'Yours' : 'Yours, if all confirmed'}</span><span class="v ${yours < 0 ? 'bad' : 'good'}">${fmtSigned(yours)}</span>${droppedYours > 0 ? `<s>${fmtSigned(yours + droppedYours)}</s>` : ''}</div>
-        </div>
+        ${trackMoneyHTML(total, droppedTotal, yours, droppedYours, checked)}
         ${items}
         ${readyExtrasHTML(o, st)}
         ${asked}
