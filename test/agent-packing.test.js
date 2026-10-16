@@ -93,7 +93,10 @@ const cement = { productId: 'c', name: 'Hima cement', unit: 'bag', packUnit: nul
   t.check(/packChipHTML\(it\)/.test(fn('findRowHTML')) && /packPriceHTML\(it\)/.test(fn('findRowHTML')), 'every result carries it');
   const cart = fn('renderCart');
   t.check(/packLineSubHTML\(it, f\)/.test(cart) && /packLineBarHTML\(it, i\)/.test(cart) && /packLineToggleHTML\(it\)/.test(cart)
-    && /packLineCountHTML\(it, f\)/.test(cart), 'every order line carries it');
+    , 'every order line carries it');
+  t.check(!/packLineCountHTML/.test(cart) && !/ax-pk-count/.test(src), 'the "= 75 kg · 3 × 95,000" box is gone -- the line already says what a carton holds');
+  t.check(/ax-line-row\$\{packOf\(it\) \? ' pk' : ''\}/.test(cart) && /packStepUnit\(it, f\)/.test(cart),
+    'Carton | kg and the stepper share one row, the stepper saying "cartons" under its number');
 }
 
 process.exit(t.done() ? 1 : 0);

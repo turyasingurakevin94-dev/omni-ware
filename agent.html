@@ -1367,15 +1367,13 @@
   .ax-pk-seg{display:flex;gap:4px;padding:4px;border-radius:12px;background:#EDEAE4;flex:none;}
   .ax-pk-seg button{all:unset;cursor:pointer;box-sizing:border-box;min-width:52px;height:36px;padding:0 10px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--ink-faint);}
   .ax-pk-seg button[aria-pressed="true"]{background:var(--panel);box-shadow:0 1px 3px rgba(22,32,60,.12);color:var(--ink);font-weight:700;}
-  .ax-pk-count{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:var(--bg);}
-  .ax-pk-count .boxes{display:flex;align-items:center;gap:4px;flex:none;}
-  .ax-pk-count .boxes i{width:28px;height:28px;border-radius:8px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;}
-  .ax-pk-count .boxes i .icon{width:15px;height:15px;}
-  .ax-pk-count .boxes b{font-size:12px;font-weight:700;color:var(--ink-soft);margin-left:2px;}
-  .ax-pk-count .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
-  .ax-pk-count .b b{font-size:15px;font-weight:600;color:var(--ink);}
-  .ax-pk-count .b small{font-size:11px;color:var(--ink-faint);}
-  .ax-pk-count .v{font-size:15px;font-weight:600;color:var(--ink);}
+  .ax-line-row.pk{gap:8px;}
+  .ax-line-row.pk .ax-step{margin-left:auto;background:none;height:auto;gap:6px;flex:none;}
+  .ax-line-row.pk .ax-step button{border-radius:999px;background:#F1EEE8;color:var(--ink);}
+  .ax-line-row.pk .ax-step button[data-qty="1"]{background:var(--navy);color:#fff;}
+  .ax-line-row.pk .ax-step .v{min-width:52px;display:flex;flex-direction:column;align-items:center;line-height:1.1;}
+  .ax-line-row.pk .ax-step input{width:52px;height:26px;font-size:20px;}
+  .ax-line-row.pk .ax-step .u{margin:0;font-size:11px;font-weight:700;}
   .ax-pk-card{display:flex;flex-direction:column;gap:14px;}
   .ax-pk-card .hd{display:flex;align-items:center;gap:12px;}
   .ax-pk-card .hd .ax-th.lg{width:56px;height:56px;border-radius:16px;}
@@ -8871,17 +8869,17 @@ function renderCart(){
       shopBase > 0 && Math.round(shopBase) !== Math.round(lastBase) ? `<button type="button" class="ax-sug" data-sug="${Math.round(shopBase*mult)}">shop <b>${fmtNum(shopBase*mult)}</b></button>` : '',
     ].join('');
     return `<div class="ax-line open">${head}
-      <div class="ax-line-row">
+      <div class="ax-line-row${packOf(it) ? ' pk' : ''}">
         ${packLineToggleHTML(it)}
         <div class="ax-step">
           <button type="button" data-qty="-1" aria-label="Fewer">${AX_ICON.minus}</button>
-          <input type="number" inputmode="decimal" min="0" step="any" value="${esc(f.displayQty)}" data-qty-in aria-label="Quantity">
-          <span class="u">${esc(f.displayUnit)}</span>
+          ${packOf(it) ? `<span class="v"><input type="number" inputmode="decimal" min="0" step="any" value="${esc(f.displayQty)}" data-qty-in aria-label="Quantity"><span class="u">${esc(packStepUnit(it, f))}</span></span>` : `<input type="number" inputmode="decimal" min="0" step="any" value="${esc(f.displayQty)}" data-qty-in aria-label="Quantity">
+          <span class="u">${esc(f.displayUnit)}</span>`}
           <button type="button" data-qty="1" aria-label="More">${AX_ICON.plus}</button>
         </div>
         ${hint ? `<button type="button" class="ax-cheaper" data-tier="${hint.baseQty}" aria-label="Make it ${hint.displayQty || hint.baseQty} for a cheaper price">${AX_ICON.down}<b>${hint.displayQty || hint.baseQty}</b> cheaper</button>` : ''}
       </div>
-      ${packLineCountHTML(it, f)}${packLineBarHTML(it, i)}
+      ${packLineBarHTML(it, i)}
       <div style="display:flex;flex-direction:column;gap:8px;">
         <label class="ax-price${f.margin.level==='loss'?' loss':''}">
           <span class="b"><span class="k">Your price, each ${esc(f.displayUnit)}</span>
@@ -16348,14 +16346,12 @@ function packLineToggleHTML(it){
   const byPack = lineUsesPack(it);
   return `<div class="ax-pk-seg" role="group" aria-label="Sell by"><button type="button" data-pack-unit="pack" aria-pressed="${byPack}">${esc(p.word.charAt(0).toUpperCase() + p.word.slice(1))}</button><button type="button" data-pack-unit="unit" aria-pressed="${!byPack}">${esc(p.unit)}</button></div>`;
 }
-function packLineCountHTML(it, f){
-  const s = packLineState(it);
-  if(!s || !s.byPack) return '';
-  const n = Math.round(s.qty / s.p.q);
-  const shown = Math.min(n, 6);
-  return `<div class="ax-pk-count"><span class="boxes" aria-hidden="true">${Array.from({ length: shown }, ()=> `<i>${AX_ICON.box}</i>`).join('')}${n > shown ? `<b>+${n - shown}</b>` : ''}</span>
-    <span class="b"><b class="m">= ${fmtNum(s.qty)} ${esc(packUnitWord(s.p.unit, s.qty))}</b><small class="m">${fmtNum(n)} × ${fmtNum(f.rate)}</small></span>
-    <b class="v m">${fmtNum(n * f.rate)}</b></div>`;
+// Under the stepper's number: "cartons" by the carton, the loose unit
+// otherwise -- the word a person would say, not the code.
+function packStepUnit(it, f){
+  const p = packOf(it);
+  const n = Number(f.displayQty) || 0;
+  return p && lineUsesPack(it) ? packWordN(p, n) : packUnitWord(f.displayUnit, n);
 }
 function packSetLineUnit(it, to){
   const p = packOf(it);
