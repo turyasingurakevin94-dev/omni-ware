@@ -216,8 +216,8 @@ if (scope) {
 
   t.check(/Only one of them pays, and which is not decided anywhere/.test(queue),
     'and Needs you says the ambiguity is unresolved, not merely that there are two');
-  t.check(/overlaps, see Needs you/.test(card),
-    'while the item\'s card marks each clashing sponsor and says where it is dealt with');
+  t.check(/overlaps, see above/.test(card) && /data-agx-keep=/.test(render),
+    'while the item\'s card marks each clashing sponsor, and the clash is dealt with above it -- keep one, the rest switched off');
   /* Pinned on the guard, not the words inside it: `if(false && ...)`
      leaves every string present and unreachable. */
   t.check(/if\(clashing\.length && !confirm\(/.test(save),
@@ -349,7 +349,7 @@ if (scope) {
      waiting is a row in Needs you with its Settle, the header's one
      accent settles them all, and the position card says what you owe --
      or, with none waiting, that every claim is settled. */
-  const pos = (/function agentRosterPositionHTML\(\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+  const pos = (/function agxHeroHTML\(F\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
   t.check(/every bonus claim is settled/.test(pos) && /verb:'Settle'/.test(queue),
     'with no claim waiting, the screen says so, and a waiting one is settled from Needs you');
 }

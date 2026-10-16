@@ -171,9 +171,9 @@ const { nameInitials } = compileScope(
      straight to the shared function. */
   t.check(!/function agentInitials\(/.test(src),
     'the admin app keeps no private initials function of its own');
-  /* The queue's avatar is the canvas's now -- .agv-qa, tinted by the
-     row's key -- and still lettered by the shared function. */
-  t.check(/<span class="agv-qa[^"]*"[^>]*>\$\{esc\(nameInitials\(r\.who\)\)\}<\/span>/.test(src),
+  /* The page's avatar is the canvas's now -- .agx-av, tinted by the
+     agent's identity -- and still lettered by the shared function. */
+  t.check(/<span class="agx-av agx-t\$\{agxTint\(a && a\.id\)\}[^"]*"[^>]*>\$\{esc\(nameInitials\(a \? a\.name : '\?'\)\)\}<\/span>/.test(src),
     'and its agent avatar is lettered by the shared one');
 }
 

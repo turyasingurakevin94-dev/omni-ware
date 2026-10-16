@@ -85,17 +85,18 @@ const d = (days) => new Date(now - days * DAY).toISOString().slice(0, 10);
 
 /* ---------- 3. the panel is on the screen, and never acts by itself ---- */
 {
-  /* The studio no longer stands open on the screen: the canvas put the
-     feed in the rail as a funnel, and "Open feed" there opens this
-     panel. It is still in the markup and still drawn with the screen;
-     it waits, hidden, for the owner to ask for it. */
-  t.check(/<div class="ow-pan ow-fs" id="agFeedPan" hidden>/.test(src), 'the Sales agents screen carries the feed panel, opened from the rail');
-  t.check(/function agentFeedCardHTML\(\)\{[\s\S]*?id="agFeedOpen"/.test(src) && /fp\.hidden = !fp\.hidden/.test(src),
-    'and the rail\'s feed card is the door to it');
+  /* The feed is a tab of its own now: the Sales agents page is five
+     tabs, and the Overview's feed card is the door to it. */
+  t.check(/\{ k:'feed', t:'Feed', i:'spark' \}/.test(src) && /<div class="agx-pane" id="agFeedWrap"><\/div>/.test(src), 'the Sales agents screen carries the feed, as a tab of its own');
+  t.check(/agxTeaser\('feed', 'spark'/.test(src) && /data-agx-tab="\$\{tab\}"/.test(src),
+    'and the Overview\'s feed card is the door to it');
   t.check(/loadAgentFeedTables\(\);\s*renderAgentFeedStudio\(\);/.test(src), 'and it is read and drawn with the rest of the screen');
-  const start = (/getElementById\('agFeedStartBonus'\)[\s\S]*?openModal\('promoModal'\);/.exec(src) || [''])[0];
-  t.check(/openModal\('promoModal'\)/.test(start) && !/agent_promotions/.test(start),
-    '"Set up this bonus" opens the ordinary promotion form filled in -- nothing is saved until the owner saves it');
+  /* What a bonus would likely do moved into the promotion form itself,
+     drawn while it is filled in. It reads the forecast and writes
+     nothing: the promotion is saved only by the form's own Save. */
+  const paint = (/function promoPaint\(\)\{[\s\S]*?\n\}\n/.exec(src) || [''])[0];
+  t.check(/agentBonusForecast\(key, per,/.test(paint) && !/agent_promotions/.test(paint) && !/\.insert\(/.test(paint),
+    'the promotion form shows what the bonus would likely do -- nothing is saved until the owner saves it');
   t.check(/A card is a nudge, not a sale/.test(src), 'and the panel says a card is a nudge, not proof of a sale');
 }
 
