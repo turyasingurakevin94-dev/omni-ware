@@ -33,4 +33,10 @@ const track = fn('openTrackSheet');
 t.check(/\$\{trackActsHTML\(o, c, st, total, canChange\)\}\s*\$\{finish\}/.test(track), 'Finish sits under the bar, in thumb reach');
 t.check(/<span class="y m">\$\{fmtSigned\(yours\)\} yours<\/span>/.test(track), 'and says what the order earned');
 
+/* What the client gets reads as a receipt slip, as on the MukasaPay board */
+t.check(/<div class="ax-slip"><i class="edge top"/.test(track) && /<i class="edge bot"/.test(track), 'the items sit on a slip with torn edges');
+t.check(/class="ax-gl\$\{st2 === 'no' \? ' gone' : ''\}"/.test(track) && /DROPPED/.test(track), 'a dropped line is struck and says so in place of its amount');
+t.check(/class="ax-slip-tot"><span>Total<\/span><b class="m">\$\{fmtNum\(total\)\}/.test(track), 'and the slip ends on its total');
+t.check(/\.ax-slip\s*\{/.test(src) && /\.ax-slip-tot\s*\{/.test(src), 'the slip is styled');
+
 process.exit(t.done() ? 1 : 0);

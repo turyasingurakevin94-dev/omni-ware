@@ -1809,6 +1809,34 @@
   .ax-finish .icon{color:var(--mint);width:22px;height:22px;stroke-width:2.6;flex:none;}
   .ax-finish .t{flex:1;font-size:16px;font-weight:700;}
   .ax-finish .y{height:42px;padding:0 12px;border-radius:12px;background:rgba(111,220,176,.16);color:var(--mint);display:flex;align-items:center;font-size:14px;font-weight:600;}
+  /* what the client gets, as a receipt slip */
+  .ax-slip{margin:2px 4px 0;filter:drop-shadow(0 1px 1px rgba(22,32,60,.08)) drop-shadow(0 6px 14px rgba(22,32,60,.08));}
+  .ax-slip .edge{display:block;height:8px;}
+  .ax-slip .edge.top{background:linear-gradient(45deg,transparent 50%,#fff 50%) 0 0/12px 8px repeat-x,linear-gradient(-45deg,transparent 50%,#fff 50%) 0 0/12px 8px repeat-x;}
+  .ax-slip .edge.bot{background:linear-gradient(135deg,#fff 50%,transparent 50%) 0 0/12px 8px repeat-x,linear-gradient(-135deg,#fff 50%,transparent 50%) 0 0/12px 8px repeat-x;}
+  .ax-slip details.ax-gets{border:none;border-radius:0;box-shadow:none;background:#fff;padding:0 16px;}
+  .ax-slip details.ax-gets > summary{min-height:44px;}
+  .ax-slip details.ax-gets > summary .h{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);}
+  .ax-slip details.ax-gets[open] > summary{border-bottom:1.5px solid var(--ink);}
+  .ax-slip .ax-gl{display:grid;grid-template-columns:62px minmax(0,1fr) auto;align-items:center;gap:10px;padding:10px 0;border-top:1px dashed #E2DED6;}
+  .ax-slip .ax-gl:first-of-type{border-top:none;}
+  .ax-slip .ax-gl .q{font-size:13px;font-weight:600;white-space:nowrap;}
+  .ax-slip .ax-gl .q small{font-family:Figtree,system-ui,sans-serif;font-size:12px;font-weight:600;color:var(--ink-faint);}
+  .ax-slip .ax-gl .nm{display:flex;align-items:center;gap:6px;min-width:0;font-size:14px;font-weight:600;}
+  .ax-slip .ax-gl .nm > span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  .ax-slip .ax-gl .a{font-size:14px;font-weight:600;text-align:right;}
+  .ax-slip .ax-gl .a.drop{font-size:11px;font-weight:700;letter-spacing:.02em;color:var(--bad);}
+  .ax-slip .ax-gl.gone{color:var(--ink-faint);}
+  .ax-slip .ax-gl.gone .q,.ax-slip .ax-gl.gone .nm > span{text-decoration:line-through;}
+  .ax-slip .ax-mk{width:16px;height:16px;}
+  .ax-slip .ax-mk .icon{width:11px;height:11px;}
+  .ax-slip .ax-mk.ok{background:transparent;color:var(--good);}
+  .ax-slip .ax-mk.ok .icon{width:14px;height:14px;stroke-width:3.2;}
+  .ax-slip .ax-mk.wait{border-width:1.5px;}
+  .ax-slip .ax-mk.spin{border-width:2px;}
+  .ax-slip .ax-gl .t{font-size:11px;}
+  .ax-slip-tot{display:flex;align-items:baseline;justify-content:space-between;padding:10px 0 8px;border-top:1.5px solid var(--ink);font-size:13px;font-weight:700;}
+  .ax-slip-tot b{font-size:17px;font-weight:600;}
   /* what the client pays and what is yours, one light card */
   .ax-tmoney{padding:12px 14px;display:flex;flex-direction:column;gap:10px;}
   .ax-tmoney .top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
@@ -10349,19 +10377,23 @@ function openTrackSheet(orderId){
     const yours = e.margin + (o.status === 'completed' ? e.bonus : 0);
     const droppedYours = dropped.reduce((s,d)=> agentLinePriced(d) ? s + (Number(d.agentSellPrice) - (Number(d.sellPrice)||0)) * (Number(d.qty)||0) : s, 0);
     const k = orderCheckCount(o);
+    // Each line as a receipt reads: how many, what, how much -- and,
+    // small beside the name, where the shop's check of it stands.
     const lineRow = (it, chk)=>{
-      const qty = it.displayQty != null ? `${it.displayQty} ${it.displayUnit||''}` : `${fmtNum(it.qty)} ${it.unit||''}`;
+      const qn = it.displayQty != null ? it.displayQty : fmtNum(it.qty);
+      const qu = it.displayQty != null ? (it.displayUnit || '') : (it.unit || '');
       const amt = (Number(it.agentSellPrice)||0) * (Number(it.qty)||0);
       const ce = catalogEntry(it.productId, it.variantIdx);
       const st2 = chk.state;
       const when = st2 === 'ok' && !checked && chk.at ? `<span class="t m">${esc(whenShort(chk.at))}</span>` : '';
-      const markHTML = st2 === 'ok' ? `${when}<span class="ax-mk ok${tickIsFresh(o, it) ? ' pop' : ''}" aria-label="Confirmed">${AX_ICON.check}</span>`
-        : st2 === 'no' ? `<span class="ax-mk no" aria-label="Dropped by the shop">${AX_ICON.x}</span>`
-        : st2 === 'asking' ? `<span class="t warn">checking</span><span class="ax-mk spin" aria-label="Being checked now"></span>`
+      const markHTML = st2 === 'ok' ? `<span class="ax-mk ok${tickIsFresh(o, it) ? ' pop' : ''}" aria-label="Confirmed">${AX_ICON.check}</span>${when}`
+        : st2 === 'no' ? ''
+        : st2 === 'asking' ? `<span class="ax-mk spin" aria-label="Being checked now"></span>`
         : st2 === 'problem' ? `<span class="ax-mk prob" aria-label="The supplier has a problem with this">${AX_ICON.bang}</span>`
         : `<span class="ax-mk wait" aria-label="Not checked yet"></span>`;
-      return `<div class="ax-gl${st2 === 'no' ? ' gone' : ''}"><span class="ax-th">${itemThumbHTML(ce || it)}</span>
-        <span class="b"><span class="nm">${esc(it.productName || it.name || '')}${ce && ce.variantLabel ? ` · ${esc(ce.variantLabel)}` : ''}</span><span class="q">${esc(String(qty).trim())} · ${fmtNum(amt)}</span></span>${markHTML}</div>`;
+      return `<div class="ax-gl${st2 === 'no' ? ' gone' : ''}"><span class="q m">${esc(qn)} <small>${esc(String(qu).trim())}</small></span>
+        <span class="nm"><span>${esc(it.productName || it.name || '')}${ce && ce.variantLabel ? ` · ${esc(ce.variantLabel)}` : ''}</span>${markHTML}</span>
+        ${st2 === 'no' ? `<span class="a drop" aria-label="Dropped by the shop">DROPPED</span>` : `<span class="a m">${fmtNum(amt)}</span>`}</div>`;
     };
     const lines = (o.items||[]).map(it=> ({ it, chk: lineCheck(o, it) })).concat(dropped.map(d=> ({ it: d, chk: { state:'no' } })));
     const counts = checked || dropped.length
@@ -10373,11 +10405,14 @@ function openTrackSheet(orderId){
       const ce = catalogEntry(it.productId, it.variantIdx);
       return `<span class="${chk.state === 'no' ? 'gone' : ''}">${itemThumbHTML(ce || it)}</span>`;
     }).join('');
-    const items = `<details class="ax-card ax-gets"${open ? ' open' : ''} data-items>
-      <summary><span class="ax-stack sq">${stack}</span><span class="h"><span class="shut">Items</span><span class="opn">What the client gets</span></span>
+    // What the client gets, drawn as the paper it is: a slip with torn
+    // edges, a line a row, and the total under a rule.
+    const items = `<div class="ax-slip"><i class="edge top" aria-hidden="true"></i><details class="ax-card ax-gets"${open ? ' open' : ''} data-items>
+      <summary><span class="ax-stack sq">${stack}</span><span class="h"><span class="shut">Items</span><span class="opn">What ${esc(firstWord(c.name))} gets</span></span>
         <span class="cnt">${counts}</span><span class="ax-chev">${AX_ICON.chevD}</span></summary>
       ${lines.map(({ it, chk })=> lineRow(it, chk)).join('')}
-    </details>`;
+      <div class="ax-slip-tot"><span>Total</span><b class="m">${fmtNum(total)}</b></div>
+    </details><i class="edge bot" aria-hidden="true"></i></div>`;
     const lock = st.key === 'checking' && prepay
       ? `<div class="ax-lock"><span class="ic">${AX_ICON.lock}</span><span class="b"><span class="t">${k.items === 1 ? 'Pay opens once it is checked' : `Pay opens when all ${k.items} are checked`}</span>
           <span class="s">for what was confirmed · ${agentPushState() === 'on' ? "we'll alert you" : 'it opens right here'}</span></span></div>` : '';
