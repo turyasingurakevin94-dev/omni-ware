@@ -191,7 +191,11 @@ const INDEX = railIndex();
      shows the one you are on. Neither was true of the flyouts. */
   t.check(/\.nav-group\.folded > \.nav-section-label::after\{[\s\S]{0,200}?content:attr\(data-n\)/.test(src),
     'a shut door says how much is behind it');
-  t.check(/head\.dataset\.n = g\.querySelectorAll\(':scope > button\[data-tab\]'\)\.length;/.test(src),
+  /* The count still includes a row hidden by its own inline style. The
+     one exception since 0113 is the sales desk, which subtracts the
+     screens that will never open for that login -- by name, from
+     SALES_TABS, never by reading what is hidden. */
+  t.check(/head\.dataset\.n = g\.querySelectorAll\(':scope > button\[data-tab\]'\)\.length\s*(?:\/\*[\s\S]*?\*\/\s*)?- \(\(typeof salesDesk !== 'undefined' && salesDesk\) \? \[\.\.\.g\.querySelectorAll\(':scope > button\[data-tab\]'\)\]\.filter\(b=> !SALES_TABS\.includes\(b\.dataset\.tab\)\)\.length : 0\);/.test(src),
     'counting the destinations in that section, including one its own inline style hides — a number that jumped when a worker signed in would mean nothing');
   t.check(/\.nav-group\.folded > button\[data-tab\]\.active\{display:flex;\}/.test(src),
     'and a shut section still shows the row you are on, so the rail never loses your place');

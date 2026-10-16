@@ -57,6 +57,8 @@ function reset() {
 reset();
 
 const env = {
+  // The owner's session: the sales desk's refusal (0113) never fires here.
+  salesDeskRefuses: () => false,
   data,
   todayISO: () => '2026-08-01',
   productVariantLabel: (p, v) => (v == null ? p.name : `${p.name} / ${v}`),

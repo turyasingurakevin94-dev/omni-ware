@@ -166,9 +166,12 @@ const reset = () => {
      is satisfied by the new-customer line below it, so deleting this one
      left the test green while editing a customer silently stopped
      writing the link at all. */
+  /* Since 0113 both calls are skipped on the sales desk, whose login
+     does not write the supplier list -- the guard is allowed for, the
+     call itself is pinned as before. */
   t.check(/linkCustomerSupplier\(id, linkSupplierId\);\s*\r?\n\s*\} else \{/.test(code),
     'editing a customer writes the link through the symmetric writer');
-  t.check(/if\(!editingCustomerId\) linkCustomerSupplier\(id, linkSupplierId\);/.test(code),
+  t.check(/if\(!editingCustomerId(?: && !\(typeof salesDesk !== 'undefined' && salesDesk\))?\) linkCustomerSupplier\(id, linkSupplierId\);/.test(code),
     'including a brand new customer, once the record exists to point at');
   t.check(/linkCustomerSupplier\(document\.getElementById\('s_link_customer'\)\.value \|\| null, id\);/.test(code),
     'and saving a supplier writes it through the same one');

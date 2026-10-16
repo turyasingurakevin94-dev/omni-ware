@@ -33,6 +33,8 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
 const store = { customers: [], savedQuotes: [], products: [] };
 let nextId = 1, rendered = [];
 const env = {
+  // The owner's session: the sales desk's refusal (0113) never fires here.
+  salesDeskRefuses: () => false,
   data: store,
   allocRowId: () => nextId++,
   todayISO: () => '2026-08-02',
@@ -146,8 +148,13 @@ if (fns) {
 {
   /* The body now opens by asking, then does exactly what it always
      did. Both halves are pinned: the guard cannot be dropped, and the
-     flag and the sync still cannot be separated. */
-  t.check(/function setInvoicesVoided\(quotes, voided\)\{\s*\n\s*if\(voided\)\{\s*\n\s*const warning = voidInvoicesWarning\(quotes\);\s*\n\s*if\(warning && !confirm\(warning\)\) return false;\s*\n\s*\}\s*\n\s*quotes\.forEach\(q=>\{ q\.voided = voided; syncInvoiceDebtCharge\(q\); \}\);/.test(code),
+     flag and the sync still cannot be separated.
+
+     Ahead of the asking since 0113: the sales desk's refusal, which
+     returns false exactly as a cancelled confirm does, so every caller
+     below already stops on it. Allowed for here and nothing else -- the
+     rest of the shape is pinned as before. */
+  t.check(/function setInvoicesVoided\(quotes, voided\)\{\s*\n(?:\s*\/\/[^\n]*\n)?\s*if\(typeof salesDeskRefuses === 'function' && salesDeskRefuses\([^\n]*\)\) return false;\s*\n\s*if\(voided\)\{\s*\n\s*const warning = voidInvoicesWarning\(quotes\);\s*\n\s*if\(warning && !confirm\(warning\)\) return false;\s*\n\s*\}\s*\n\s*quotes\.forEach\(q=>\{ q\.voided = voided; syncInvoiceDebtCharge\(q\); \}\);/.test(code),
     'it asks before voiding, then the flag and the sync happen together for every quote passed');
   t.check(/setInvoicesVoided\(\[q\], !q\.voided\)/.test(code), 'the single toggle uses it');
   t.check(/setInvoicesVoided\(quotes, true\)/.test(code), 'bulk void uses it');

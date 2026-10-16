@@ -70,6 +70,9 @@ function addDiffOps(ops, collectionKey, tableName, idField, shopId, rows, opts){
   if(toUpsert.length){
     const beforeUpsert = opts && opts.beforeUpsert;
     ops.push({
+      // Named, so a host that may write only some tables (the admin's
+      // sales desk) can tell which op is which before any of them runs.
+      key: collectionKey, table: tableName,
       run: beforeUpsert
         ? async ()=>{
             try{ await beforeUpsert(toUpsert); }
@@ -107,6 +110,7 @@ function addDiffOps(ops, collectionKey, tableName, idField, shopId, rows, opts){
       }
     }
     ops.push({
+      key: collectionKey, table: tableName, deletes: true,
       run: ()=> sb.from(tableName).delete().eq('shop_id', shopId).in(idField, toDeleteValues),
       commit: ()=> removedKeys.forEach(k=> delete prev[k])
     });

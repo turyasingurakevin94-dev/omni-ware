@@ -16,6 +16,9 @@ const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 // also be added to Supabase Auth's Redirect URLs allow-list (Dashboard ->
 // Authentication -> URL Configuration) or the link will be rejected.
 const WORKER_APP_URL = Deno.env.get("WORKER_APP_URL") || "https://omni-ware.vercel.app/worker.html";
+// A Sales login works in the admin app, on the Sales desk -- not in the
+// worker app -- so its invite lands there instead. Same allow-list rule.
+const ADMIN_APP_URL = Deno.env.get("ADMIN_APP_URL") || "https://omni-ware.vercel.app/";
 
 // The browser sends an OPTIONS preflight before the real POST (it carries
 // custom headers like apikey/authorization). Without these on every
@@ -82,8 +85,9 @@ Deno.serve(async (req) => {
     // The invitee's address is personal data and these logs are retained;
     // enough to trace a failed invite, not the whole address.
     console.log("invite-worker: parsed body", { shopId, staffId, emailDomain: String(email || "").split("@")[1] || null });
-    if (!shopId || !staffId || !email) {
-      return json({ error: "shopId, staffId and email are required" }, 400);
+    // The email is asked for only when there is no login yet -- see below.
+    if (!shopId || !staffId) {
+      return json({ error: "shopId and staffId are required" }, 400);
     }
 
     const authHeader = req.headers.get("Authorization");
@@ -107,21 +111,50 @@ Deno.serve(async (req) => {
 
     const { data: staffRow, error: staffErr } = await admin
       .from("staff")
-      .select("id, user_id")
+      .select("id, user_id, role")
       .eq("shop_id", shopId)
       .eq("id", staffId)
       .maybeSingle();
     console.log("invite-worker: staff lookup", { staffRow, staffErr });
     if (staffErr) return json({ error: staffErr.message, stage: "staff_lookup" }, 500);
     if (!staffRow) return json({ error: "Staff member not found" }, 404);
-    if (staffRow.user_id) return json({ error: "This staff member already has a login" }, 409);
+    // Who they are decides where they sign in and what the database lets
+    // them write: somebody who sells joins as 'sales' (0113), everybody
+    // else as 'staff' on the worker app, exactly as before.
+    const isSales = staffRow.role === "sales";
+    const memberRole = isSales ? "sales" : "staff";
+
+    if (staffRow.user_id) {
+      // Already signed up. Moving somebody between the floor and the sales
+      // desk changes what their EXISTING login may do, so their membership
+      // follows their staff role -- between 'staff' and 'sales' only. An
+      // owner's or admin's membership is never touched from here.
+      const { data: member, error: memberReadErr } = await admin
+        .from("shop_members").select("role")
+        .eq("shop_id", shopId).eq("user_id", staffRow.user_id).maybeSingle();
+      if (memberReadErr) return json({ error: memberReadErr.message, stage: "member_lookup" }, 500);
+      if (member && (member.role === "staff" || member.role === "sales") && member.role !== memberRole) {
+        const { error: roleErr } = await admin
+          .from("shop_members").update({ role: memberRole })
+          .eq("shop_id", shopId).eq("user_id", staffRow.user_id).in("role", ["staff", "sales"]);
+        if (roleErr) {
+          const say = isSales && /shop_members_role_check/.test(roleErr.message)
+            ? "This database does not know the Sales role yet — paste migration 0113_sales_role.sql in the SQL editor, then try again."
+            : roleErr.message;
+          return json({ error: say, stage: "member_role_update" }, 500);
+        }
+        return json({ ok: true, userId: staffRow.user_id, roleChanged: true, role: memberRole });
+      }
+      return json({ error: "This staff member already has a login" }, 409);
+    }
+    if (!email) return json({ error: "An email is needed to send the invite" }, 400);
 
     // inviteUserByEmail creates the auth user (sends the invite email) if the
     // address is new; if it already belongs to an existing user, fall back to
     // looking that user up so this staff row can still be linked to it.
     let userId: string;
     const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
-      redirectTo: WORKER_APP_URL,
+      redirectTo: isSales ? ADMIN_APP_URL : WORKER_APP_URL,
     });
     console.log("invite-worker: inviteUserByEmail result", {
       invitedUserId: invited?.user?.id,
@@ -139,9 +172,15 @@ Deno.serve(async (req) => {
 
     const { error: memberErr } = await admin
       .from("shop_members")
-      .upsert({ shop_id: shopId, user_id: userId, role: "staff" }, { onConflict: "shop_id,user_id", ignoreDuplicates: true });
-    console.log("invite-worker: shop_members upsert", { memberErr });
-    if (memberErr) return json({ error: memberErr.message, stage: "shop_members_upsert" }, 500);
+      .upsert({ shop_id: shopId, user_id: userId, role: memberRole }, { onConflict: "shop_id,user_id", ignoreDuplicates: true });
+    console.log("invite-worker: shop_members upsert", { memberErr, memberRole });
+    if (memberErr) {
+      // The one failure a shop can fix itself: the role did not exist yet.
+      const say = isSales && /shop_members_role_check/.test(memberErr.message)
+        ? "This database does not know the Sales role yet — paste migration 0113_sales_role.sql in the SQL editor, then send the invite again."
+        : memberErr.message;
+      return json({ error: say, stage: "shop_members_upsert" }, 500);
+    }
 
     const { error: linkErr } = await admin
       .from("staff")

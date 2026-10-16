@@ -82,6 +82,19 @@ Deno.serve(async (req) => {
   if (memberErr) return json({ error: memberErr.message, stage: "is_shop_member" }, 500);
   if (!isMember) return json({ error: "Not a member of this shop" }, 403);
 
+  // Replying in a chat is any member's work -- a Sales login answers
+  // customers all day. Everything else here speaks for the whole shop or
+  // rewires it (a broadcast to every customer, re-registering the number,
+  // the catalogue, templates), and is the owner's. Asked with
+  // is_shop_admin, which every database has had since 0001, so this
+  // never depends on a later migration having been pasted.
+  const REPLY_ACTIONS = ["status", "send", "send-image", "send-catalog"];
+  if (!REPLY_ACTIONS.includes(action)) {
+    const { data: isAdmin, error: adminErr } = await callerClient.rpc("is_shop_admin", { p_shop_id: shopId });
+    if (adminErr) return json({ error: adminErr.message, stage: "is_shop_admin" }, 500);
+    if (!isAdmin) return json({ error: "Only the owner can do this — replies are open to the team, the rest is the owner's" }, 403);
+  }
+
   const { data: numRow } = await admin.from("wa_numbers")
     .select("phone_number_id, catalog_id, waba_id").eq("shop_id", shopId).maybeSingle();
 

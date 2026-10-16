@@ -320,6 +320,11 @@ const MODEL_NAMES = ['itemPickAnswered', 'itemOrderedQty', 'itemPickedQty',
       const s3 = compileScope([
         ...MODEL,
         extractDeclaration(indexHtml, 'togglingInvoiced', 'index.html'),
+        /* The sales desk's gate sits first in toggleQuoteInvoiced (0113:
+           invoicing is the owner's). Off here -- this is the owner's
+           session -- so the money gate below is what is being tested. */
+        extractDeclaration(indexHtml, 'salesDesk', 'index.html'),
+        extractFunction(indexHtml, 'salesDeskRefuses', 'index.html'),
         extractFunction(indexHtml, 'orderChargesTotal', 'index.html'),
         extractFunction(indexHtml, 'orderCharges', 'index.html'),
         extractFunction(indexHtml, 'chargeAmount', 'index.html'),
