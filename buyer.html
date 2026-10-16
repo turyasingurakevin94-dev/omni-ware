@@ -5,23 +5,216 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#16203C">
 <title>Omni-Ware Buyer</title>
-<!-- Inert in a browser. Inside a Capacitor shell it gives Back and the
-     haptics the same meaning they have in the Sales app. -->
+<!-- The phone app's native layer (apps/buyer). Inert in a browser. It
+     lives here rather than in the app's own files so a fix to it reaches
+     installed phones the same way any change to this page does. -->
 <script>
+/* The buyer page inside the Android app (apps/buyer).
+
+   First in <head>, and only does anything inside the app. Four jobs:
+
+   1. Back (Android) closes what is on top -- a photo, a sheet, then the tab
+      -- before it ever leaves the app, and leaving only puts it in the
+      background so it reopens instantly.
+   2. The status bar: the page draws to the top edge, so a strip behind the
+      clock takes the colour of whatever is under it, and its icons stay
+      readable against it.
+   3. The bars' size: Capacitor measures them into --safe-area-inset-*,
+      but a page it has not measured (some phones, after a reload) would
+      read zero and slide under the clock -- so the last good measurement
+      stands in until it does.
+   4. Staying current without a store release: the installed app checks the
+      live buyer.html now and then, keeps a copy of a new one on the phone,
+      and switches to it the next time the app goes to the background --
+      never in the middle of a trip. */
 (function(){
   'use strict';
   var C = window.Capacitor;
   if(!C || typeof C.isNativePlatform !== 'function' || !C.isNativePlatform()) return;
-  var P = C.Plugins || {}, App = P.App;
+  var P = C.Plugins || {};
+  var App = P.App, Bars = P.SystemBars, WebView = P.WebView, Http = P.CapacitorHttp, FS = P.Filesystem;
+  var NAVY = '#16203C';
+  var root = document.documentElement;
+  // The first installs carried this layer as their own native.js. On those
+  // it is already running from above, and only the bars' size (3) is new.
+  var legacy = !!document.querySelector('script[src="native.js"]');
+
   window.owHaptic = function(kind){
     var H = P.Haptics;
     if(!H) return;
     (kind === 'success' ? H.notification({ type: 'SUCCESS' }) : kind === 'warn' ? H.notification({ type: 'WARNING' }) : H.impact({ style: 'LIGHT' })).catch(function(){});
   };
-  if(App) App.addListener('backButton', function(){
+
+  /* ---- 1. back ---- */
+  // The page keeps its own stack of what is open (window.bxBack): a sheet,
+  // then a screen pushed over a tab, then the tab itself back to Today.
+  function back(){
     if(typeof window.bxBack === 'function' && window.bxBack()) return;
-    App.minimizeApp();
+    if(App) App.minimizeApp();
+  }
+  if(App && !legacy) App.addListener('backButton', back);
+
+  /* ---- 2. the strip behind the status bar ---- */
+  var strip = null, lastStyle = '';
+  function paintBar(){
+    if(!strip) return;
+    var top = strip.offsetHeight;
+    // Today's navy hero is marked data-navy-top. A pushed page opens on its
+    // own dark ground -- the tap-to-go-back strip -- unless it is a page
+    // whose navy hero has scrolled away under the clock.
+    var page = document.querySelector('#bx_pages .bx-page:last-child');
+    var navy = (page || document).querySelector('[data-navy-top]:not([hidden])');
+    var navyAtTop = !!navy && navy.getBoundingClientRect().top <= top && navy.getBoundingClientRect().bottom > top;
+    var ground = page ? getComputedStyle(page).backgroundColor : '';
+    var rgb = (ground.match(/\d+/g) || []).map(Number);
+    var darkGround = !navyAtTop && !navy && rgb.length >= 3 && (rgb[0] * 299 + rgb[1] * 587 + rgb[2] * 114) / 1000 < 90;
+    var auth = !!document.querySelector('.bx-auth');
+    strip.style.background = auth || navyAtTop ? NAVY : darkGround ? ground : 'var(--bg)';
+    var style = auth || navyAtTop || darkGround || document.querySelector('.bx-scrim') ? 'DARK' : 'LIGHT';
+    if(style !== lastStyle && Bars){ lastStyle = style; Bars.setStyle({ style: style }).catch(function(){}); }
+  }
+  var queued = false;
+  function soon(){ if(queued) return; queued = true; requestAnimationFrame(function(){ queued = false; paintBar(); }); }
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(insets, 800);
+    setTimeout(insets, 2500);
+    window.addEventListener('resize', function(){ setTimeout(insets, 300); });
+    if(App) App.addListener('resume', function(){ setTimeout(insets, 300); });
+    if(legacy) return;
+    strip = document.createElement('div');
+    strip.setAttribute('aria-hidden', 'true');
+    strip.style.cssText = 'position:fixed;top:0;left:0;right:0;height:var(--safe-t, 0px);z-index:59;pointer-events:none;background:' + NAVY + ';';
+    document.body.appendChild(strip);
+    new MutationObserver(soon).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'class'] });
+    document.addEventListener('scroll', soon, { passive: true, capture: true });
+    paintBar();
   });
+
+
+  /* ---- 3. the bars' size ---- */
+  var INSETS = 'ow-app-insets';
+  function insets(){
+    if(typeof C.getPlatform === 'function' && C.getPlatform() !== 'android') return;
+    var probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;top:0;left:0;visibility:hidden;pointer-events:none;padding-top:var(--safe-t, 0px);padding-bottom:var(--safe-b, 0px);';
+    document.body.appendChild(probe);
+    var cs = getComputedStyle(probe), top = parseFloat(cs.paddingTop) || 0, bottom = parseFloat(cs.paddingBottom) || 0;
+    probe.remove();
+    var measured = root.style.getPropertyValue('--safe-area-inset-top') !== '';
+    var last = {};
+    try{ last = JSON.parse(localStorage.getItem(INSETS)) || {}; }catch(_e){}
+    if(measured && top > 0){
+      if(last.top !== top || last.bottom !== bottom){ try{ localStorage.setItem(INSETS, JSON.stringify({ top: top, bottom: bottom, ours: false })); }catch(_e){} }
+      return;
+    }
+    // Measured at zero: Android has laid the page out below its bars itself.
+    if(measured || top > 0) return;
+    // Not measured, and the page fills the whole screen -- it is under the
+    // bars with nothing telling it how tall they are.
+    if(!last.top && Math.abs(screen.height - window.innerHeight) > 16) return;
+    root.style.setProperty('--safe-area-inset-top', (last.top || 32) + 'px');
+    root.style.setProperty('--safe-area-inset-bottom', (last.bottom || 32) + 'px');
+  }
+
+  /* ---- 4. staying current ---- */
+  if(legacy || !(WebView && Http && FS && App && window.crypto && crypto.subtle)) return;
+  var SOURCE = 'https://omni-ware.vercel.app/buyer.html';
+  var KEY = 'ow-buyer-bundle';
+  var EVERY = 30 * 60 * 1000;
+  function load(){ try{ return JSON.parse(localStorage.getItem(KEY)) || {}; }catch(_e){ return {}; } }
+  function save(s){ try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(_e){} }
+  function header(h, name){
+    var k = Object.keys(h || {}).filter(function(x){ return x.toLowerCase() === name; })[0];
+    return k ? h[k] : '';
+  }
+  function sha256(text){
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)).then(function(b){
+      return Array.prototype.map.call(new Uint8Array(b), function(x){ return ('0' + x.toString(16)).slice(-2); }).join('');
+    });
+  }
+  // A file of the bundle running now, as base64 for the Filesystem plugin.
+  function fileB64(name){
+    return fetch(name, { cache: 'no-store' }).then(function(r){
+      if(!r.ok) throw new Error(name + ': ' + r.status);
+      return r.blob();
+    }).then(function(blob){
+      return new Promise(function(ok, fail){
+        var fr = new FileReader();
+        fr.onload = function(){ ok(String(fr.result).split(',')[1] || ''); };
+        fr.onerror = fail;
+        fr.readAsDataURL(blob);
+      });
+    });
+  }
+  function current(){ return fetch('bundle.json', { cache: 'no-store' }).then(function(r){ return r.json(); }); }
+
+  // After a switch: make the new copy the one the app opens with, and drop
+  // the copies nothing points at any more.
+  function settle(){
+    var s = load();
+    if(!s.staged) return Promise.resolve();
+    return WebView.getServerBasePath().then(function(cur){
+      if(!cur || cur.path !== s.staged.path) return;
+      return WebView.persistServerBasePath().then(function(){
+        var keep = s.staged.dir;
+        s.etag = s.staged.etag;
+        delete s.staged;
+        save(s);
+        return FS.readdir({ path: 'live', directory: 'DATA' }).then(function(r){
+          return Promise.all((r.files || []).map(function(f){
+            var n = typeof f === 'string' ? f : f.name;
+            return n === keep.split('/').pop() ? null : FS.rmdir({ path: 'live/' + n, directory: 'DATA', recursive: true }).catch(function(){});
+          }));
+        }).catch(function(){});
+      });
+    });
+  }
+
+  function check(){
+    var s = load();
+    if(s.staged || Date.now() - (s.checked || 0) < EVERY) return Promise.resolve();
+    s.checked = Date.now();
+    save(s);
+    return Promise.all([current(), Http.request({ url: SOURCE, method: 'GET', responseType: 'text',
+      headers: s.etag ? { 'If-None-Match': s.etag } : {} })]).then(function(pair){
+      var mine = pair[0], res = pair[1];
+      if(res.status !== 200) return;
+      var html = typeof res.data === 'string' ? res.data : '';
+      // Half a page is worse than an old page.
+      if(html.length < 100000 || html.indexOf('</html>') === -1) return;
+      var etag = header(res.headers, 'etag');
+      return sha256(html).then(function(hash){
+        if(hash === mine.source){ s.etag = etag; save(s); return; }
+        var dir = 'live/' + hash.slice(0, 16);
+        var rest = (mine.files || []).filter(function(f){ return f !== 'index.html' && f !== 'bundle.json'; });
+        return FS.writeFile({ path: dir + '/index.html', data: window.owAppTransform(html), directory: 'DATA', encoding: 'utf8', recursive: true })
+          .then(function(){
+            return rest.reduce(function(p, f){
+              return p.then(function(){ return fileB64(f); })
+                .then(function(b64){ return FS.writeFile({ path: dir + '/' + f, data: b64, directory: 'DATA', recursive: true }); });
+            }, Promise.resolve());
+          })
+          .then(function(){
+            return FS.writeFile({ path: dir + '/bundle.json', data: JSON.stringify({ source: hash, files: mine.files }), directory: 'DATA', encoding: 'utf8', recursive: true });
+          })
+          .then(function(){ return FS.getUri({ path: dir, directory: 'DATA' }); })
+          .then(function(u){
+            var s2 = load();
+            s2.staged = { dir: dir, path: decodeURI(String(u.uri).replace(/^file:\/\//, '')), etag: etag };
+            save(s2);
+          });
+      });
+    }).catch(function(){
+      // No signal, or the server is down: the copy already here carries on.
+    });
+  }
+
+  App.addListener('pause', function(){
+    var s = load();
+    if(s.staged) WebView.setServerBasePath({ path: s.staged.path }).catch(function(){});
+  });
+  App.addListener('resume', function(){ check(); });
+  settle().catch(function(){}).then(function(){ setTimeout(check, 5000); });
 })();
 </script>
 <link rel="manifest" href="/manifest-buyer.json">
@@ -38,6 +231,8 @@
   --navyInk:#B3BCD2; --navyInk2:#8D99B5;
   --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
   --safe-area-inset-top:env(safe-area-inset-top,0px); --safe-area-inset-bottom:env(safe-area-inset-bottom,0px);
+  /* The native layer's names for the same two bars (its strip and its probe). */
+  --safe-t:var(--safe-area-inset-top); --safe-b:var(--safe-area-inset-bottom);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Figtree,system-ui,sans-serif;font-size:15px;-webkit-font-smoothing:antialiased}
@@ -2326,7 +2521,7 @@ PAGE.trip = ({ id }) => {
   else if (leftN > 0) foot = `<span style="flex:1;height:56px;border-radius:999px;background:var(--rule);color:var(--ink2);font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px"><span style="display:flex;gap:3px">${Array.from({ length: Math.min(leftN, 6) }, () => '<i style="width:8px;height:8px;border-radius:3px;box-shadow:inset 0 0 0 1.5px #8A93A3"></i>').join('')}</span>${leftN} line${leftN > 1 ? 's' : ''} still to load</span>`;
   else foot = slideHTML('handin', 'Slide to hand in', 'box', { disabled: S.busy });
   return `<div class="card" style="margin-top:0;min-height:100%;border-radius:0">
-    <div class="bx-hero" style="padding-top:calc(14px + var(--safe-area-inset-top));gap:12px">
+    <div class="bx-hero" data-navy-top style="padding-top:calc(14px + var(--safe-area-inset-top));gap:12px">
       <div style="display:flex;align-items:center;gap:12px">
         <button class="bx-circle" data-act="back" aria-label="Back" style="background:rgba(255,255,255,.08)">${ic('back', 16, 'style="stroke-width:2.2"')}</button>
         <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.14em;color:var(--lilac)"><span class="${t.status === 'collecting' ? 'a-pulsel' : ''}" style="width:8px;height:8px;border-radius:999px;background:var(--lilac);flex:none"></span>${esc((bySup ? 'THEY BRING IT' : t.status === 'collecting' ? 'LOADING' : t.status === 'assigned' ? 'SENT TO ' + tripCarrierLabel(t) : 'TO SEND') + (sup.location ? ' · ' + sup.location : '')).toUpperCase()}</span><span class="ell" style="font-size:18px;font-weight:700">${esc(sup.name)}</span></span>
@@ -2445,7 +2640,7 @@ PAGE.done = ({ id }) => {
   const where = supplierShort(t.supplierId).toUpperCase(), next = runsToGo()[0];
   const crates = lines.slice(0, 12).map((l, i) => { const g = tripLineGot(l), s = g != null && g < l.qty; return `<i class="a-crate" style="animation-delay:${(1.9 + i * .15).toFixed(2)}s;border-radius:5px;${g === 0 ? 'box-shadow:inset 0 0 0 2px rgba(245,154,146,.6)' : s ? 'background:repeating-linear-gradient(135deg,#F5B26B 0 4px,#E59A4E 4px 7px);box-shadow:inset 0 0 0 2px rgba(22,32,60,.18)' : 'background:#6FDCB0;box-shadow:inset 0 0 0 2px rgba(22,32,60,.18)'}"></i>`; }).join('');
   const step = t.status === 'confirmed' ? 2 : 1;
-  return `<div style="position:relative;min-height:100%;background:var(--navy);color:#fff;padding-bottom:calc(110px + var(--safe-area-inset-bottom));overflow:hidden">
+  return `<div data-navy-top style="position:relative;min-height:100%;background:var(--navy);color:#fff;padding-bottom:calc(110px + var(--safe-area-inset-bottom));overflow:hidden">
     <span aria-hidden="true" style="position:absolute;left:50%;top:10px;width:380px;height:300px;margin-left:-190px;border-radius:999px;background:radial-gradient(circle,rgba(111,220,176,.16) 0%,rgba(111,220,176,0) 62%)"></span>
     <button data-act="horn" aria-label="Play the horn again" style="position:absolute;top:calc(18px + var(--safe-area-inset-top));right:16px;width:40px;height:40px;border:none;border-radius:999px;background:rgba(255,255,255,.08);color:var(--navyInk);display:flex;align-items:center;justify-content:center;z-index:3">${ic('sound', 18)}</button>
     <button data-act="horn" aria-label="The truck is back with ${full} lines in full and ${sh.length} short. Tap to hear the horn" style="position:relative;display:block;margin:calc(54px + var(--safe-area-inset-top)) 20px 0;width:calc(100% - 40px);height:170px;border:none;background:transparent;padding:0">
