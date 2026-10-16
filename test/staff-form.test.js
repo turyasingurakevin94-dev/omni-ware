@@ -54,17 +54,22 @@ const modal = (/<div class="modal-overlay" id="staffModal">[\s\S]*?\n<\/div>\n/.
   t.check(/return s\.role===role;/.test(elig),
     'while a delivery person can only be given delivery');
 
-  /* Three since the sales desk (0113). The first two are still the pair
+  /* Four since the buying desk (0114). The first two are still the pair
      this section is about -- a picker and a narrower driver -- in the
      same order; the third is a different kind of person altogether, so
      it comes last and says it is never handed floor work. */
   const list = scope.roles();
-  eq(list.length, 3, 'three roles are offered');
+  eq(list.length, 4, 'four roles are offered');
   eq(list[0].key, 'worker', 'the broader one first, because it is the safer default');
   eq(list[1].key, 'delivery', 'and the narrowing one second');
   eq(list[2].key, 'sales', 'and the sales desk last, apart from the floor');
   t.check(/Never handed picking or delivery/.test(list[2].note),
     'which says outright that a salesperson is never handed picking or delivery');
+  /* The buying desk (0114) comes after it: also off the floor, but a
+     trip can still be theirs. */
+  eq(list[3].key, 'buyer', 'and the buying desk after it');
+  t.check(/never handed picking or delivery/.test(list[3].note) && /sent on trips/.test(list[3].note),
+    'which says a buyer is never handed floor work but can be sent on trips');
 
   /* Each says what it UNLOCKS, which is the fact the dropdown hid. */
   t.check(/Picking and delivery/.test(list[0].gives),
