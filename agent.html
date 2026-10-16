@@ -1720,6 +1720,30 @@
   @keyframes axGlow{0%{box-shadow:0 0 0 0 rgba(111,220,176,.55)}70%{box-shadow:0 0 0 9px rgba(111,220,176,0)}100%{box-shadow:0 0 0 0 rgba(111,220,176,0)}}
   @keyframes axGlowW{0%{box-shadow:0 0 0 0 rgba(245,178,107,.55)}70%{box-shadow:0 0 0 9px rgba(245,178,107,0)}100%{box-shadow:0 0 0 0 rgba(245,178,107,0)}}
   .ax-steps{display:flex;flex-direction:column;gap:7px;}
+  /* the track's state and its steps, light: a title with its line, then one rail */
+  .ax-stage{display:flex;flex-direction:column;gap:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08);}
+  .ax-stage .h{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;}
+  .ax-stage .t{font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1.1;}
+  .ax-stage .s{font-size:13px;font-weight:600;color:var(--on-navy);min-width:0;}
+  .ax-rail{--n:6;--f:0;display:flex;flex-direction:column;gap:6px;}
+  .ax-rail .r,.ax-rail .l{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));}
+  .ax-rail .r{position:relative;height:34px;align-items:center;}
+  .ax-rail .ln{position:absolute;top:16px;height:2px;border-radius:999px;left:calc(50% / var(--n));right:calc(50% / var(--n));background:rgba(255,255,255,.14);}
+  .ax-rail .ln.on{right:auto;width:calc((100% - 100% / var(--n)) * var(--f));background:var(--mint);}
+  .ax-rl-d{position:relative;justify-self:center;width:24px;height:24px;border-radius:999px;background:var(--navy);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.2),0 0 0 3px var(--navy);color:#8D99B5;display:flex;align-items:center;justify-content:center;}
+  .ax-rl-d .icon{width:12px;height:12px;stroke-width:2.2;}
+  .ax-rl-d.done{background:#22305A;box-shadow:0 0 0 3px var(--navy);color:var(--mint);}
+  .ax-rl-d.done .icon{stroke-width:2.8;}
+  .ax-rl-d.now{width:34px;height:34px;background:var(--mint);color:var(--navy);box-shadow:none;animation:axGlow 2s infinite;}
+  .ax-rl-d.now.warn{background:#F5B26B;animation:axGlowW 2s infinite;}
+  .ax-rl-d.now .icon{width:16px;height:16px;}
+  .ax-rail .l{font-size:11px;font-weight:600;text-align:center;line-height:1.25;color:#8D99B5;}
+  .ax-rail .l span{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:0;}
+  .ax-rail .l b{font-weight:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+  .ax-rail .l em{font-style:normal;min-height:14px;}
+  .ax-rail .l em.m{font-family:var(--font-money);font-variant-numeric:tabular-nums;}
+  .ax-rail .l .done{color:var(--on-navy);} .ax-rail .l .done em{color:#8D99B5;}
+  .ax-rail .l .on{color:var(--mint);font-weight:700;} .ax-rail .l .on.warn{color:#F5B26B;}
   .ax-steps .r,.ax-steps .l{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;}
   .ax-stp{height:52px;border-radius:12px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.16);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#8D99B5;}
   .ax-stp .icon{width:16px;height:16px;stroke-width:2;}
@@ -7485,17 +7509,28 @@ function orderStepTimes(o){
    it is on now is lit, the rest wait faintly. Named underneath in the
    words of the order screen -- the money step says "Pay shop" until it
    is paid. */
+/* The order's six steps as one light rail, not six boxes: small dots on
+   a thin line that fills mint as the order moves, the step it is on
+   larger and glowing (amber when it waits on the agent), and under each
+   its name and when it happened -- or "now". */
 function stepTilesHTML(o, st){
   const steps = orderSteps(o), at = orderStepIndex(o, st), times = orderStepTimes(o);
   const all = at >= steps.length;
-  const tiles = steps.map((s,i)=>{
+  const warn = st.tone === 'warn';
+  const icon = (s)=> AX_ICON[s.icon === 'check' ? 'clip' : s.icon];
+  const dots = steps.map((s,i)=>{
     const done = i < at || all;
-    if(done) return `<span class="ax-stp done">${AX_ICON[s.icon === 'check' ? 'clip' : s.icon]}${times[s.icon] ? `<em class="m">${esc(times[s.icon])}</em>` : `<em>${AX_ICON.check}</em>`}</span>`;
-    if(i === at) return `<span class="ax-stp now${st.tone === 'warn' ? ' warn' : ''}">${AX_ICON[s.icon === 'check' ? 'clip' : s.icon]}<em>now</em></span>`;
-    return `<span class="ax-stp">${AX_ICON[s.icon === 'check' ? 'clip' : s.icon]}</span>`;
+    if(done) return `<span class="ax-rl-d done">${AX_ICON.check}</span>`;
+    if(i === at) return `<span class="ax-rl-d now${warn ? ' warn' : ''}">${icon(s)}</span>`;
+    return `<span class="ax-rl-d">${icon(s)}</span>`;
   }).join('');
-  const labels = steps.map((s,i)=> `<span class="${i === at ? `on${st.tone === 'warn' ? ' warn' : ''}` : i < at || all ? 'done' : ''}">${esc(stepLabel(s, i < at || all))}</span>`).join('');
-  return `<div class="ax-steps" role="img" aria-label="${esc(st.title)}: step ${Math.min(at + 1, steps.length)} of ${steps.length}"><div class="r">${tiles}</div><div class="l">${labels}</div></div>`;
+  const labels = steps.map((s,i)=>{
+    const done = i < at || all;
+    const sub = done ? (times[s.icon] ? `<em class="m">${esc(times[s.icon])}</em>` : '<em></em>') : i === at ? '<em>now</em>' : '<em></em>';
+    return `<span class="${i === at ? `on${warn ? ' warn' : ''}` : done ? 'done' : ''}"><b>${esc(stepLabel(s, i < at || all))}</b>${sub}</span>`;
+  }).join('');
+  const f = all ? 1 : Math.max(0, Math.min(1, at / Math.max(1, steps.length - 1)));
+  return `<div class="ax-rail" role="img" aria-label="${esc(st.title)}: step ${Math.min(at + 1, steps.length)} of ${steps.length}" style="--n:${steps.length};--f:${f.toFixed(3)};"><div class="r"><i class="ln"></i><i class="ln on"></i>${dots}</div><div class="l">${labels}</div></div>`;
 }
 /* The same six on a light card, small: ticked circles behind, the one it
    is on in its colour and named in bold, the rest faint. Read the way the
@@ -10313,9 +10348,9 @@ function openTrackSheet(orderId){
         <div class="ax-sheet-h">${avHTML(c)}<span class="b"><span class="n">${esc(c.name)}</span><span class="s m">#${esc(o.id)} · ${esc(orderStepTimes(o).send)}${o.deliveryMode === 'shop_delivery' ? ' · delivery' : ''}${FOLD_ITEMS_AT.includes(st.key) && st.key !== 'queued' ? '' : `<span class="ax-livedot${isOffline ? ' off' : ''}"><i></i>${isOffline ? 'offline' : 'live'}</span>`}</span></span>
           ${sh ? `<button type="button" class="ax-shopbtn" data-shop aria-label="Contact the shop">${AX_ICON.phone}Shop</button>` : ''}
           <button type="button" class="ax-iconbtn on-navy" data-close aria-label="Close">${AX_ICON.x}</button></div>
-        <div class="ax-state"><span class="ax-state-ic ${st.key === 'done' ? 'done' : st.key === 'cancelled' ? 'off' : st.tone === 'warn' ? 'warn' : 'now'}">${AX_ICON[trackStateIcon(st)]}</span>
-          <span class="b"><span class="t">${esc(st.title)}</span><span class="s">${esc(st.sub)}</span></span></div>
-        ${st.key !== 'cancelled' ? stepTilesHTML(o, st) : ''}
+        ${st.key === 'cancelled' ? `<div class="ax-state"><span class="ax-state-ic off">${AX_ICON[trackStateIcon(st)]}</span>
+          <span class="b"><span class="t">${esc(st.title)}</span><span class="s">${esc(st.sub)}</span></span></div>`
+          : `<div class="ax-stage"><div class="h"><span class="t">${esc(st.title)}</span><span class="s">${esc(st.sub)}</span></div>${stepTilesHTML(o, st)}</div>`}
         ${pairChipHTML(o)}
       </div>
       <div class="ax-sheet-pad">
