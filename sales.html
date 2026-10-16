@@ -532,12 +532,18 @@ async function selectAll(table, keyCol){
 function monthStartISO(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-01'; }
 
 async function loadAll(){
-  const [suppliers, customers, debtLog, products, prices, stock, lots, quotes, links, settingsR, cashR, staff] = await Promise.all([
+  const [suppliers, customers, debtLog, products, prices, stock, lots, quotes, links, settingsR, cashR, staff, tripsR, targetsR, stmR] = await Promise.all([
     selectAll('suppliers'), selectAll('customers'), selectAll('customer_debt_log'), selectAll('products'), selectAll('prices'),
     selectAll('stock', 'key'), selectAll('stock_lots'), selectAll('saved_quotes'), selectAll('product_links').catch(() => []),
     sb.from('app_settings').select('presets').eq('shop_id', S.shopId).maybeSingle(),
     sb.from('cash_txns').select('*').eq('shop_id', S.shopId).gte('date', monthStartISO()).order('id').limit(5000),
     selectAll('staff').catch(() => []),
+    // Who is out collecting what (0070); members read.
+    sb.from('collection_trips').select('*').eq('shop_id', S.shopId).eq('voided', false).neq('status', 'confirmed').limit(500).then(r => r, () => ({ data: [] })),
+    // The owner's open targets (0085 kind 'target'); members read.
+    sb.from('manager_notes').select('*').eq('shop_id', S.shopId).eq('kind', 'target').eq('status', 'open').limit(50).then(r => r, () => ({ data: [] })),
+    // Statements already sent (0101); Sales may add one (statement.send).
+    sb.from('statements_sent').select('*').eq('shop_id', S.shopId).order('sent_on', { ascending: false }).limit(500).then(r => r, () => ({ data: [] })),
   ]);
   const presets = (settingsR && settingsR.data && settingsR.data.presets) || {};
   const debtBy = {};
@@ -565,6 +571,14 @@ async function loadAll(){
     presetDefaultMarkup: presets.defaultMarkup || {},
     presetChaseAfterDays: presets.chaseAfterDays != null ? Number(presets.chaseAfterDays) : 7,
     presetCategories: presets.categories || [],
+    presetServices: Array.isArray(presets.services) ? presets.services : [],
+    presetOrderStageLimits: presets.orderStageLimits || {},
+    presetShopAddress: presets.shopAddress || '',
+    presetShopPhone: presets.shopPhone != null ? presets.shopPhone : (presets.waPhone || ''),
+    collectionTrips: ((tripsR && tripsR.data) || []).map(t => ({ id: t.id, supplierId: t.supplier_id, status: t.status, workerId: t.assigned_worker_id || null,
+      createdAt: t.created_at, assignedAt: t.assigned_at, acceptedAt: t.accepted_at, collectedAt: t.collected_at, note: t.note || '', lines: Array.isArray(t.lines) ? t.lines : [] })),
+    targets: ((targetsR && targetsR.data) || []).map(r => ({ id: r.id, date: r.date, body: r.body || {}, status: r.status })),
+    statementsSent: (stmR && stmR.data) || [],
   };
   S.loadedAt = Date.now();
   saveSnapshot();
@@ -602,6 +616,112 @@ async function issueCustomerId(){
   const { data, error } = await sb.rpc('next_entity_id', { p_shop_id: S.shopId, p_kind: 'customer', p_prefix: 'C', p_pad: 3, p_floor: floor });
   if (error) throw error;
   return String(data);
+}
+
+/* ==================================================================
+   The shop's WhatsApp number, read the way the owner's inbox reads it
+   (index.html 50100-52100, 0052): conversations and messages are rows
+   the webhook writes; any member reads them; a reply goes through
+   wa-send, which any member may call for "send" and "send-image"
+   (wa-send REPLY_ACTIONS) and which refuses a closed 24-hour window.
+   Nothing here sends by itself.
+   ================================================================== */
+const WA_WINDOW_MS = 24 * 60 * 60 * 1000;
+S.wa = { convs: [], msgs: [], threads: {}, loadedAt: 0, error: null, configured: null };
+
+async function loadWA(){
+  try {
+    const [cR, mR] = await Promise.all([
+      sb.from('wa_conversations').select('*').eq('shop_id', S.shopId).order('last_message_at', { ascending: false }).limit(100),
+      // The newest 500, as the owner's lanes read them: enough for who is waiting and what they last said.
+      sb.from('wa_messages').select('*').eq('shop_id', S.shopId).order('sent_at', { ascending: false }).limit(500),
+    ]);
+    if (cR.error) throw cR.error; if (mR.error) throw mR.error;
+    S.wa.convs = cR.data || []; S.wa.msgs = (mR.data || []).slice().reverse(); S.wa.loadedAt = Date.now(); S.wa.error = null;
+  } catch (e) { S.wa.error = e.message || String(e); }
+}
+async function loadThread(convId){
+  const { data, error } = await sb.from('wa_messages').select('*').eq('conversation_id', convId).order('sent_at', { ascending: true }).limit(300);
+  if (error) throw error;
+  S.wa.threads[convId] = data || [];
+  return S.wa.threads[convId];
+}
+async function waStatus(){
+  if (S.wa.configured != null) return S.wa.configured;
+  try { const { data } = await sb.functions.invoke('wa-send', { body: { shopId: S.shopId, action: 'status' } }); S.wa.configured = !!(data && data.configured); }
+  catch (_e) { S.wa.configured = false; }
+  return S.wa.configured;
+}
+
+/* ---- reading ---- */
+// 50107: no inbound ever means closed.
+function waWindowInfo(lastInboundAt, nowMs){
+  if (!lastInboundAt) return { open: false, hoursLeft: 0 };
+  const opened = Date.parse(lastInboundAt); if (!isFinite(opened)) return { open: false, hoursLeft: 0 };
+  const msLeft = opened + WA_WINDOW_MS - (nowMs || Date.now());
+  return { open: msLeft > 0, hoursLeft: Math.max(0, Math.floor(msLeft / 3600000)) };
+}
+function waConvUnread(c){ if (!c.last_inbound_at) return false; return !c.last_read_at || c.last_inbound_at > c.last_read_at; }
+function waConvUnreadCount(c){ return S.wa.msgs.filter(m => m.conversation_id === c.id && m.direction === 'in' && (!c.last_read_at || String(m.sent_at) > String(c.last_read_at))).length; }
+function waLastMsg(convId){ let last = null; S.wa.msgs.forEach(m => { if (m.conversation_id === convId && (!last || String(m.sent_at) > String(last.sent_at))) last = m; }); return last; }
+// 52032: whose newest message is theirs, longest wait first.
+function waWaiting(){
+  const now = Date.now(), out = [];
+  S.wa.convs.forEach(c => { const last = waLastMsg(c.id); if (!last || last.direction !== 'in') return; const at = Date.parse(last.sent_at); out.push({ conv: c, last, mins: isFinite(at) ? Math.max(0, (now - at) / 60000) : null }); });
+  return out.sort((a, b) => (b.mins == null ? -1 : b.mins) - (a.mins == null ? -1 : a.mins));
+}
+// 52053
+function waFmtWait(mins){ if (mins == null) return '—'; if (mins < 1) return 'just now'; if (mins < 60) return Math.round(mins) + ' min'; if (mins < 48 * 60) return Math.round(mins / 60) + ' h'; return Math.round(mins / 1440) + ' d'; }
+function waSnippet(m){ if (!m) return ''; const body = m.msg_type === 'order' ? 'Order from the catalogue' : (m.body || '[' + m.msg_type + ']'); return (m.direction === 'out' ? 'You: ' : '') + body; }
+// The last 9 digits, as cfNormalisedPhone keeps them.
+function phone9(p){ const d = String(p || '').replace(/[^0-9]/g, ''); return d.length >= 9 ? d.slice(-9) : ''; }
+// 50128: the one customer whose number ends the same, if exactly one does.
+function waMatchCustomer(waId){
+  const suf = phone9(waId); if (!suf) return null;
+  const hits = D().customers.filter(c => [c.phone, c.phone2].some(p => phone9(p) === suf));
+  return hits.length === 1 ? hits[0] : null;
+}
+function waConvForCustomer(c){ if (!c) return null; const sufs = [c.phone, c.phone2].map(phone9).filter(Boolean); return S.wa.convs.find(v => sufs.includes(phone9(v.wa_id))) || null; }
+function waConvForPhone(phone){ const suf = phone9(phone); return suf ? S.wa.convs.find(v => phone9(v.wa_id) === suf) || null : null; }
+function waConvTitle(c){ const cu = waMatchCustomer(c.wa_id); return (cu && cu.name) || c.profile_name || ('+' + c.wa_id); }
+// 164728: what a message is about, by its words. The first rule that fires wins.
+const MSG_READS = [
+  ['stop', /\b(stop|unsubscribe|remove me|don'?t (text|message|send))\b/i, 'Asked to stop'],
+  ['paid', /\b(paid|sent|deposited|momo|mobile money|transferred|banked)\b/i, 'Says they paid'],
+  ['dispute', /\b(wrong|not (correct|right|mine)|don'?t owe|mistake|never (took|bought))\b/i, 'Disputes a figure'],
+  ['day', /\b((mon|tues|wednes|thurs|fri|satur|sun)day|tomorrow|next week|month end|end of (the )?month|\d{1,2}(st|nd|rd|th)|\d{1,2}\/\d{1,2})\b/i, 'Names a day'],
+  ['buy', /\b(price|how much|send me|do you have|need|want|order|quote|available)\b/i, 'Wants to buy'],
+];
+function msgRead(text){ const s = String(text || ''); for (const [key, re, label] of MSG_READS) { const m = re.exec(s); if (m) return { key, label, word: m[0] }; } return { key: 'other', label: '', word: '' }; }
+// The figure a "says they paid" message names, if it names one. A hint to pre-fill, never a record.
+function msgAmount(text){ const m = String(text || '').replace(/,/g, '').match(/\b(\d{4,9})(?:\s*(?:\/=|ugx|shs?|k\b))?/i); if (!m) return 0; let n = Number(m[1]); if (/k\b/i.test(m[0]) && n < 10000) n *= 1000; return n >= 1000 ? n : 0; }
+
+/* ---- writing: only on a tap ---- */
+async function waErr(error){ let m = error.message; try { const b = await error.context.json(); if (b && b.error) m = b.error; } catch (_e) {} return m; }
+async function waSendText(convId, text){
+  const { error } = await sb.functions.invoke('wa-send', { body: { shopId: S.shopId, action: 'send', conversationId: convId, text } });
+  if (error) throw new Error(await waErr(error));
+  try { await loadThread(convId); await loadWA(); } catch (_e) {}
+}
+// 50733: the picture goes up to the shop's image bucket, then wa-send posts the link.
+async function waUploadBlob(blob, ext){
+  const path = `${S.shopId}/receipts/${(crypto.randomUUID && crypto.randomUUID()) || Date.now()}.${ext || 'png'}`;
+  const { error } = await sb.storage.from('product-images').upload(path, blob, { contentType: blob.type || 'image/png' });
+  if (error) throw error;
+  return sb.storage.from('product-images').getPublicUrl(path).data.publicUrl;
+}
+async function waSendImage(convId, blob, caption){
+  const link = await waUploadBlob(blob, (blob.type || '').includes('jpeg') ? 'jpg' : 'png');
+  const { data, error } = await sb.functions.invoke('wa-send', { body: { shopId: S.shopId, action: 'send-image', conversationId: convId, link, caption: caption || '' } });
+  if (error) throw new Error(await waErr(error));
+  if (!(data && data.sent)) throw new Error('the send was refused');
+  try { await loadThread(convId); await loadWA(); } catch (_e) {}
+}
+async function waMarkRead(c){
+  if (!c || !waConvUnread(c)) return;
+  const now = new Date().toISOString(); c.last_read_at = now;
+  const { error } = await sb.from('wa_conversations').update({ last_read_at: now }).eq('id', c.id);
+  if (error) console.warn('read marker failed', error);
 }
 
 /* ==================================================================
@@ -977,11 +1097,16 @@ async function boot(){
   try { await loadAll(); if (!S.started) start(); else render(); }
   catch (e) { if (S.data) toast(isNetworkError(e) ? 'Offline — showing what you last saw' : 'Could not refresh: ' + e.message, 5000); else document.getElementById('sx_main').innerHTML = `<div class="sx-empty" style="padding-top:35vh"><b>Could not open the books</b>${esc(e.message || e)}<br><br><button class="sx-btn navy" onclick="location.reload()">Try again</button></div>`; }
 }
+function isTyping(){ const a = document.activeElement; return !!a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA') && !!a.value; }
+const AFTER_WA = [];
 function start(){
   S.started = true;
   restoreDraft();
   render();
   setInterval(() => { if (document.visibilityState === 'visible') refreshQuotes(); }, 60000);
+  // The chats, every 15 seconds while the app is open. A redraw waits while someone is typing.
+  const waTick = async () => { if (document.visibilityState !== 'visible') return; const before = S.wa.loadedAt; await loadWA(); if (S.wa.loadedAt !== before && !isTyping()) { AFTER_WA.forEach(f => { try { f(); } catch (e) { console.warn(e); } }); render(); } };
+  waTick(); setInterval(waTick, 15000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Date.now() - S.loadedAt > 30000) loadAll().then(render).catch(() => {}); });
 }
 
@@ -1001,15 +1126,18 @@ function closeSheet(silent){ S.sheet = null; if (!silent) renderSheet(); }
 function navHTML(){
   const b = (v, label, icon) => `<button data-act="tab" data-v="${v}" ${S.view === v && !S.stack.length ? 'aria-current="page"' : ''}>${ic(icon, 24)}${label}</button>`;
   const due = liveOrders().filter(q => q.status === 'draft' && orderLineStates(q).some(s => s.k === 'no')).length;
+  const waiting = waWaiting().length;
+  // Today · Chats · + · Orders · Customers, as the canvas has it; You opens from the face on Today.
   return `<nav class="sx-nav" aria-label="Sales">${b('today', 'Today', 'today')}
-    <button data-act="tab" data-v="orders" ${S.view === 'orders' && !S.stack.length ? 'aria-current="page"' : ''}>${ic('orders', 24)}${due ? `<span class="sx-badge">${due}</span>` : ''}Orders</button>
+    <button data-act="tab" data-v="chats" ${S.view === 'chats' && !S.stack.length ? 'aria-current="page"' : ''}>${ic('chat', 24)}${waiting ? `<span class="sx-badge">${waiting}</span>` : ''}Chats</button>
     <button class="sx-plus" data-act="neworder" aria-label="Take an order">${ic('plus')}</button>
-    ${b('customers', 'Customers', 'people')}${b('me', 'You', 'me')}</nav>`;
+    <button data-act="tab" data-v="orders" ${S.view === 'orders' && !S.stack.length ? 'aria-current="page"' : ''}>${ic('orders', 24)}${due ? `<span class="sx-badge">${due}</span>` : ''}Orders</button>
+    ${b('customers', 'Customers', 'people')}</nav>`;
 }
 function render(){
   if (!S.data) return;
   const main = document.getElementById('sx_main');
-  const V = { today: viewToday, orders: viewOrders, customers: viewCustomers, me: viewMe }[S.view] || viewToday;
+  const V = { today: viewToday, chats: viewChats, orders: viewOrders, customers: viewCustomers, me: viewMe }[S.view] || viewToday;
   main.innerHTML = `<div class="sx-view">${V()}</div>${navHTML()}`;
   const pages = document.getElementById('sx_pages');
   // A page that was already open keeps its place and does not slide in again.
@@ -1063,7 +1191,7 @@ function bindSliders(){
 }
 
 /* ==================================================================
-   Today, Orders, one order, and You.
+   Today, and the helpers the other screens share.
    ================================================================== */
 function greeting(){ const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; }
 function myName(){
@@ -1156,6 +1284,9 @@ ACT.order = t => push('order', { id: Number(t.dataset.id) });
 ACT.customer = t => push('customer', { id: t.dataset.id });
 ACT.day = t => push('day', { mode: t.dataset.mode });
 
+/* ==================================================================
+   Orders by stage, one order, and telling the customer.
+   ================================================================== */
 /* ---------------- Orders ---------------- */
 function viewOrders(){
   const live = liveOrders(), today = todayISO();
@@ -1278,6 +1409,9 @@ ACT['slide:tell'] = () => {
   closeSheet();
 };
 
+/* ==================================================================
+   Your day, the month, and You.
+   ================================================================== */
 /* ---------------- Your day ---------------- */
 PAGE.day = ({ mode }) => {
   const today = todayISO(), t = ordersOn(today), money = moneyIn(today, today);
@@ -1430,6 +1564,44 @@ PAGE.customer = ({ id }) => {
     <button class="sx-btn red" style="flex:1" data-act="sellto" data-id="${esc(c.id)}">${ic('bag', 20)}Sell to ${esc(firstWord(c.name))}</button></div>`;
 };
 
+/* ---------------- a new customer ---------------- */
+ACT.addcust = t => openSheet('addcust', { for: t.dataset.for || '', name: S.view === 'customers' && S.custQuery && !/^[0-9+ ]+$/.test(S.custQuery) ? S.custQuery : '' });
+SHEET.addcust = args => {
+  const areas = [...new Set(D().customers.map(c => (c.location || '').trim()).filter(Boolean))];
+  const count = a => D().customers.filter(c => (c.location || '').trim() === a).length;
+  areas.sort((a, b) => count(b) - count(a));
+  return `<div style="display:flex;align-items:center;gap:10px"><b style="flex:1;font-size:18px">New customer</b><button class="sx-circle light" data-act="closesheet" aria-label="Close">${ic('close', 15)}</button></div>
+    <label class="sx-search">${ic('me', 19, 'style="stroke:#767F91"')}<input id="sx_nc_name" placeholder="Name" value="${esc(args.name || '')}" autocomplete="off" autofocus></label>
+    <label class="sx-search">${ic('phone', 19, 'style="stroke:#767F91"')}<input id="sx_nc_phone" data-in="ncphone" type="tel" inputmode="tel" placeholder="Phone" autocomplete="off"></label>
+    <div id="sx_nc_dup"></div>
+    <label class="sx-search">${ic('pin', 19, 'style="stroke:#767F91"')}<input id="sx_nc_area" placeholder="Area" autocomplete="off"></label>
+    ${areas.length ? `<div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-top:-4px">${areas.slice(0, 10).map(a => `<button class="sx-pill" data-act="ncarea" data-a="${esc(a)}">${esc(a)}</button>`).join('')}</div>` : ''}
+    <span class="sx-sub" style="display:flex;align-items:center;gap:6px">${ic('lock', 13)}Starts owing nothing. Credit limits and terms are set by the owner.</span>
+    <button class="sx-btn red" data-act="ncsave">${args.for === 'order' ? 'Add and take the order' : 'Add customer'}</button>`;
+};
+ACT.ncarea = t => { const el = document.getElementById('sx_nc_area'); if (el) el.value = t.dataset.a; document.querySelectorAll('[data-act=ncarea]').forEach(b => b.setAttribute('aria-pressed', b === t)); };
+function phoneTwin(ph){ const d = phoneDigits(ph); if (d.length < 9) return null; return D().customers.find(c => [c.phone, c.phone2].some(p => p && phoneDigits(p) === d)) || null; }
+ACT['in:ncphone'] = t => { const twin = phoneTwin(t.value), el = document.getElementById('sx_nc_dup'); if (!el) return;
+  el.innerHTML = twin ? `<button class="sx-row" data-act="${S.sheet.args.for === 'order' ? 'pickclient' : 'customer'}" data-id="${esc(twin.id)}" style="min-height:0;padding:10px 12px;border-radius:14px;background:var(--amberSoft)">${avatar(twin.name, 's')}<span style="flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--amberInk)">That number is already <b>${esc(twin.name)}</b></span><span style="font-size:13px;font-weight:700;color:var(--amberInk)">Use them</span></button>` : ''; };
+ACT.ncsave = async t => {
+  const name = (document.getElementById('sx_nc_name').value || '').trim(), phone = (document.getElementById('sx_nc_phone').value || '').trim(), location = (document.getElementById('sx_nc_area').value || '').trim();
+  if (!name) { toast('Type their name'); return; }
+  if (phoneTwin(phone)) { toast('That number is already a customer — tap them above'); return; }
+  t.disabled = true; t.textContent = 'Adding…';
+  try {
+    const id = await issueCustomerId();
+    const { error } = await sb.from('customers').insert({ id, shop_id: S.shopId, name, phone, location, notes: '', debt: 0 });
+    if (error) throw error;
+    const c = { id, name, phone, phone2: '', location, notes: '', debt: 0, termsDays: null, creditLimit: null, debtLog: [] };
+    D().customers.push(c); saveSnapshot(); haptic('success');
+    const forOrder = S.sheet && S.sheet.args.for === 'order';
+    closeSheet(true); renderSheet();
+    if (forOrder) { if (S.draft && S.draft.items.length) { S.draft.client = { name, phone }; S.draft.customerId = id; saveDraft(); openOrderPage(); } else startFor(c, false, false); }
+    else { S.custQuery = ''; push('customer', { id }); }
+    toast(name + ' added');
+  } catch (e) { t.disabled = false; t.textContent = 'Try again'; toast(isNetworkError(e) ? 'No connection — they were not added' : 'Could not add: ' + e.message, 5000); }
+};
+
 /* ==================================================================
    Taking an order: who it is for, then one screen -- search, the usual,
    what goes with it, the slip, and a slide to place it. The order lands
@@ -1504,44 +1676,6 @@ ACT.pickclient = t => {
 };
 ACT.pickwalkin = () => { if (S.draft) { S.draft.client = { name: 'Walk-in', phone: '' }; S.draft.customerId = null; } else S.draft = newDraft(null); saveDraft(); openOrderPage(); };
 ACT.changeclient = () => openSheet('client', {});
-
-/* ---------------- a new customer ---------------- */
-ACT.addcust = t => openSheet('addcust', { for: t.dataset.for || '', name: S.view === 'customers' && S.custQuery && !/^[0-9+ ]+$/.test(S.custQuery) ? S.custQuery : '' });
-SHEET.addcust = args => {
-  const areas = [...new Set(D().customers.map(c => (c.location || '').trim()).filter(Boolean))];
-  const count = a => D().customers.filter(c => (c.location || '').trim() === a).length;
-  areas.sort((a, b) => count(b) - count(a));
-  return `<div style="display:flex;align-items:center;gap:10px"><b style="flex:1;font-size:18px">New customer</b><button class="sx-circle light" data-act="closesheet" aria-label="Close">${ic('close', 15)}</button></div>
-    <label class="sx-search">${ic('me', 19, 'style="stroke:#767F91"')}<input id="sx_nc_name" placeholder="Name" value="${esc(args.name || '')}" autocomplete="off" autofocus></label>
-    <label class="sx-search">${ic('phone', 19, 'style="stroke:#767F91"')}<input id="sx_nc_phone" data-in="ncphone" type="tel" inputmode="tel" placeholder="Phone" autocomplete="off"></label>
-    <div id="sx_nc_dup"></div>
-    <label class="sx-search">${ic('pin', 19, 'style="stroke:#767F91"')}<input id="sx_nc_area" placeholder="Area" autocomplete="off"></label>
-    ${areas.length ? `<div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-top:-4px">${areas.slice(0, 10).map(a => `<button class="sx-pill" data-act="ncarea" data-a="${esc(a)}">${esc(a)}</button>`).join('')}</div>` : ''}
-    <span class="sx-sub" style="display:flex;align-items:center;gap:6px">${ic('lock', 13)}Starts owing nothing. Credit limits and terms are set by the owner.</span>
-    <button class="sx-btn red" data-act="ncsave">${args.for === 'order' ? 'Add and take the order' : 'Add customer'}</button>`;
-};
-ACT.ncarea = t => { const el = document.getElementById('sx_nc_area'); if (el) el.value = t.dataset.a; document.querySelectorAll('[data-act=ncarea]').forEach(b => b.setAttribute('aria-pressed', b === t)); };
-function phoneTwin(ph){ const d = phoneDigits(ph); if (d.length < 9) return null; return D().customers.find(c => [c.phone, c.phone2].some(p => p && phoneDigits(p) === d)) || null; }
-ACT['in:ncphone'] = t => { const twin = phoneTwin(t.value), el = document.getElementById('sx_nc_dup'); if (!el) return;
-  el.innerHTML = twin ? `<button class="sx-row" data-act="${S.sheet.args.for === 'order' ? 'pickclient' : 'customer'}" data-id="${esc(twin.id)}" style="min-height:0;padding:10px 12px;border-radius:14px;background:var(--amberSoft)">${avatar(twin.name, 's')}<span style="flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--amberInk)">That number is already <b>${esc(twin.name)}</b></span><span style="font-size:13px;font-weight:700;color:var(--amberInk)">Use them</span></button>` : ''; };
-ACT.ncsave = async t => {
-  const name = (document.getElementById('sx_nc_name').value || '').trim(), phone = (document.getElementById('sx_nc_phone').value || '').trim(), location = (document.getElementById('sx_nc_area').value || '').trim();
-  if (!name) { toast('Type their name'); return; }
-  if (phoneTwin(phone)) { toast('That number is already a customer — tap them above'); return; }
-  t.disabled = true; t.textContent = 'Adding…';
-  try {
-    const id = await issueCustomerId();
-    const { error } = await sb.from('customers').insert({ id, shop_id: S.shopId, name, phone, location, notes: '', debt: 0 });
-    if (error) throw error;
-    const c = { id, name, phone, phone2: '', location, notes: '', debt: 0, termsDays: null, creditLimit: null, debtLog: [] };
-    D().customers.push(c); saveSnapshot(); haptic('success');
-    const forOrder = S.sheet && S.sheet.args.for === 'order';
-    closeSheet(true); renderSheet();
-    if (forOrder) { if (S.draft && S.draft.items.length) { S.draft.client = { name, phone }; S.draft.customerId = id; saveDraft(); openOrderPage(); } else startFor(c, false, false); }
-    else { S.custQuery = ''; push('customer', { id }); }
-    toast(name + ' added');
-  } catch (e) { t.disabled = false; t.textContent = 'Try again'; toast(isNetworkError(e) ? 'No connection — they were not added' : 'Could not add: ' + e.message, 5000); }
-};
 
 /* ---------------- search ---------------- */
 /* "20 cement", "cement x20", "3 bags cement": numbers are the quantity, a
@@ -1692,7 +1826,9 @@ ACT['slide:place'] = async el => {
     const now = Date.now(), iso = new Date(now).toISOString(), q = draftQuote();
     const items = d.items.map(it => ({ lineId: it.lineId, productId: it.productId, variantIdx: it.variantIdx, productName: it.productName, unit: it.unit, packUnit: it.packUnit, packQty: it.packQty, qtyIn: it.qtyIn, qty: it.qty, supplierId: it.supplierId, supplierName: it.supplierName, price: it.price, sellPrice: it.sellPrice }));
     const payload = { client: { name: d.client.name || 'Walk-in', phone: d.client.phone || '' }, items, charges: [], credit: q.credit, savedAt: iso, createdAt: iso,
-      payments: [], customerId: d.customerId || null, debtCharged: 0, stageEnteredAt: now, stageLog: [{ status: 'draft', at: now }] };
+      payments: [], customerId: d.customerId || null, debtCharged: 0, stageEnteredAt: now, stageLog: [{ status: 'draft', at: now }],
+      // Who took it: the sales desk's own record, so "your sales" can be true from today on.
+      takenBy: S.user ? String(S.user.id) : null };
     const row = { id, shop_id: S.shopId, client_name: payload.client.name, client_phone: payload.client.phone || null, date: todayISO(), status: 'draft',
       invoiced: false, invoiced_at: null, invoiced_ts: null, amount_paid: 0, voided: false, payload };
     const { error } = await sb.from('saved_quotes').insert(row);
@@ -1898,6 +2034,11 @@ PAGE.paid = ({ id, amount, method, bills, before, after }) => {
     <button class="sx-btn" style="background:rgba(255,255,255,.1);color:#fff" data-act="back">Done</button></div>`;
 };
 PAGE.paid.bg = '#16203C';
+
+/* ==================================================================
+   Chats: who is waiting on the shop's WhatsApp, and one chat.
+   ================================================================== */
+function viewChats(){ return `<div class="sx-pagehead"><h1>Chats</h1></div><div class="sx-body"><div class="sx-card sx-empty">Coming next.</div></div>`; }
 
 boot();
 </script>
