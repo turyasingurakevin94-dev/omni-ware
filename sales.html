@@ -350,6 +350,8 @@ input,textarea{font-family:inherit;color:var(--ink)}
 @keyframes sxScrim{from{opacity:0}}
 .sx-sheet{position:fixed;left:0;right:0;bottom:0;z-index:61;max-width:520px;margin:0 auto;max-height:92vh;overflow:auto;background:var(--bg);border-radius:26px 26px 0 0;padding:10px 16px calc(22px + var(--safe-area-inset-bottom));display:flex;flex-direction:column;gap:12px;animation:sxUp .35s cubic-bezier(.2,.9,.3,1)}
 .sx-sheet.navy{background:var(--navy);color:#fff}
+/* A long sheet scrolls; it must never squash its rows to fit (the search box went flat). */
+.sx-sheet > *{flex-shrink:0}
 @keyframes sxUp{from{transform:translateY(100%)}}
 .sx-handle{align-self:center;width:40px;height:5px;border-radius:999px;background:#D9D4CB;flex:none}
 .sx-sheet.navy .sx-handle{background:rgba(255,255,255,.22)}
@@ -1871,11 +1873,15 @@ function waWindowInfo(lastInboundAt, nowMs){
 }
 function waConvUnread(c){ if (!c.last_inbound_at) return false; return !c.last_read_at || c.last_inbound_at > c.last_read_at; }
 function waConvUnreadCount(c){ return S.wa.msgs.filter(m => m.conversation_id === c.id && m.direction === 'in' && (!c.last_read_at || String(m.sent_at) > String(c.last_read_at))).length; }
-function waLastMsg(convId){ let last = null; S.wa.msgs.forEach(m => { if (m.conversation_id === convId && (!last || String(m.sent_at) > String(last.sent_at))) last = m; }); return last; }
-// 52032: whose newest message is theirs, longest wait first.
+function waLastMsg(convId){ return waLastMap().get(convId) || null; }
+// 52032: whose newest message is theirs, longest wait first. A last word
+// older than three days ("thanks, received") is not someone waiting --
+// counted, it filled the badge with months-old chats.
+const WA_WAIT_MAX_MINS = 3 * 24 * 60;
+function waLastMap(){ const k = S.wa.loadedAt + ':' + S.wa.msgs.length; if (S.wa._last && S.wa._last.k === k) return S.wa._last.m; const m = new Map(); S.wa.msgs.forEach(x => { const cur = m.get(x.conversation_id); if (!cur || String(x.sent_at) > String(cur.sent_at)) m.set(x.conversation_id, x); }); S.wa._last = { k, m }; return m; }
 function waWaiting(){
-  const now = Date.now(), out = [];
-  S.wa.convs.forEach(c => { const last = waLastMsg(c.id); if (!last || last.direction !== 'in') return; const at = Date.parse(last.sent_at); out.push({ conv: c, last, mins: isFinite(at) ? Math.max(0, (now - at) / 60000) : null }); });
+  const now = Date.now(), out = [], last = waLastMap();
+  S.wa.convs.forEach(c => { const m = last.get(c.id); if (!m || m.direction !== 'in') return; const at = Date.parse(m.sent_at); const mins = isFinite(at) ? Math.max(0, (now - at) / 60000) : null; if (mins != null && mins > WA_WAIT_MAX_MINS) return; out.push({ conv: c, last: m, mins }); });
   return out.sort((a, b) => (b.mins == null ? -1 : b.mins) - (a.mins == null ? -1 : a.mins));
 }
 // 52053
@@ -1939,7 +1945,28 @@ async function waMarkRead(c){
    ================================================================== */
 const D = () => S.data;
 const cmpUnitKey = s => String(s || '').trim().toLowerCase();
-function productById(id){ return D().products.find(p => p.id === id) || null; }
+/* Lookups, built once per set of books rather than searched on every
+   draw: a shop with a few thousand orders and prices would otherwise
+   scan them all for every row of every screen, and every tap would lag.
+   The key changes whenever the books are re-read or a row is added. */
+let _ix = null;
+function ixKey(){ const d = S.data; if (!d) return ''; const q = d.savedQuotes; return [S.loadedAt, q.length, q.length ? q[q.length - 1].id : '', d.customers.length, d.products.length, d.prices.length, d.cashTxns.length].join(':'); }
+function IX(){
+  const k = ixKey(); if (_ix && _ix.k === k) return _ix;
+  const d = D(), rows = new Map(), byCust = new Map(), byName = new Map(), nameCount = new Map();
+  d.prices.forEach(r => { const key = r.productId + '|' + (r.variantIdx == null ? '' : r.variantIdx); if (!rows.has(key)) rows.set(key, []); rows.get(key).push(r); });
+  d.customers.forEach(c => { const n = String(c.name || '').trim().toLowerCase(); nameCount.set(n, (nameCount.get(n) || 0) + 1); });
+  d.savedQuotes.forEach(q => {
+    if (q.voided) return;
+    if (q.customerId != null && q.customerId !== '') { const k2 = String(q.customerId); if (!byCust.has(k2)) byCust.set(k2, []); byCust.get(k2).push(q); return; }
+    const n = String((q.client && q.client.name) || '').trim().toLowerCase(); if (!n) return;
+    if (!byName.has(n)) byName.set(n, []); byName.get(n).push(q);
+  });
+  _ix = { k, prod: new Map(d.products.map(p => [p.id, p])), cust: new Map(d.customers.map(c => [String(c.id), c])), rows, byCust, byName, nameCount, memo: new Map() };
+  return _ix;
+}
+function memo(name, arg, fn){ const m = IX().memo, k = name + '|' + arg; if (m.has(k)) return m.get(k); const v = fn(); m.set(k, v); return v; }
+function productById(id){ return IX().prod.get(id) || null; }
 function supplierName(id){ if (id === '__stock__') return 'Our stock'; const s = D().suppliers.find(x => x.id === id); return s ? s.name : ''; }
 function variantLabel(combo){ return Object.values(combo || {}).join(' / '); }
 function productVariantLabel(p, vi){ if (vi == null || vi === '' || !p.variants) return p.name; const v = p.variants[vi]; return v ? `${p.name} — ${variantLabel(v.combo)}` : p.name; }
@@ -1960,7 +1987,7 @@ function stockKey(pid, vi){ return (vi == null || vi === '') ? pid : `${pid}::${
 function getStockQty(pid, vi){ return Number(D().stock[stockKey(pid, vi)]) || 0; }
 function getFIFOUnitCost(pid, vi){ const lots = D().stockLots[stockKey(pid, vi)] || []; const lot = lots.find(l => l.qty > 0 && l.cost != null); return lot ? Number(lot.cost) : null; }
 // index.html 55428
-function productPriceRows(pid, vi){ vi = vi == null ? null : vi; return D().prices.filter(p => p.productId === pid && (p.variantIdx == null ? null : p.variantIdx) === vi); }
+function productPriceRows(pid, vi){ return (IX().rows.get(pid + '|' + (vi == null || vi === '' ? '' : Number(vi))) || []).slice(); }
 // 59200
 function rankedPriceRows(pid, vi){
   return productPriceRows(pid, vi).filter(r => !r.outOfStock).sort((a, b) => {
@@ -2155,23 +2182,23 @@ function lineState(q, it){
 function orderLineStates(q){ return (q.items || []).map(it => lineState(q, it)); }
 
 /* ---- customers ---- */
-function customerById(id){ return D().customers.find(c => String(c.id) === String(id)) || null; }
+function customerById(id){ return IX().cust.get(String(id)) || null; }
 // 65287
 function customerOrdersFor(cid){
-  const c = customerById(cid), name = c ? String(c.name || '').trim().toLowerCase() : '';
-  const sameName = D().customers.filter(x => String(x.name || '').trim().toLowerCase() === name).length;
-  return D().savedQuotes.filter(q => {
-    if (q.voided) return false;
-    if (q.customerId != null && q.customerId !== '') return String(q.customerId) === String(cid);
-    if (sameName !== 1) return false;
-    return !!name && String((q.client && q.client.name) || '').trim().toLowerCase() === name;
-  });
+  return memo('orders', cid, () => {
+    const ix = IX(), c = customerById(cid), name = c ? String(c.name || '').trim().toLowerCase() : '';
+    const own = ix.byCust.get(String(cid)) || [];
+    // Orders from before the customer record existed carry only the name -- counted when that name is one customer's.
+    const byName = name && ix.nameCount.get(name) === 1 ? (ix.byName.get(name) || []) : [];
+    return byName.length ? own.concat(byName) : own;
+  }).slice();
 }
 // 65468
 function outstandingInvoices(cid){ return customerOrdersFor(cid).filter(q => q.invoiced && !q.voided && balanceDue(q) > 0).sort((a, b) => String(a.invoicedAt || a.date || '').localeCompare(String(b.invoicedAt || b.date || ''))); }
 // 90541 / 90667
-function orderHistory(cid){ return customerOrdersFor(cid).filter(q => q.invoiced && !q.voided).map(q => ({ q, date: q.invoicedAt || q.date || '' })).filter(o => o.date).sort((a, b) => a.date.localeCompare(b.date) || ((a.q.id || 0) - (b.q.id || 0))); }
-function usualLines(cid){
+function orderHistory(cid){ return memo('hist', cid, () => customerOrdersFor(cid).filter(q => q.invoiced && !q.voided).map(q => ({ q, date: q.invoicedAt || q.date || '' })).filter(o => o.date).sort((a, b) => a.date.localeCompare(b.date) || ((a.q.id || 0) - (b.q.id || 0)))).slice(); }
+function usualLines(cid){ return memo('usual', cid, () => usualLinesNow(cid)).slice(); }
+function usualLinesNow(cid){
   const hist = orderHistory(cid); if (!hist.length) return [];
   const key = it => `${it.productId}|${it.variantIdx == null ? '' : it.variantIdx}`;
   const seen = new Map();
@@ -2180,7 +2207,8 @@ function usualLines(cid){
   return [...seen.values()].filter(e => n < 2 ? e.lastAt === lastOrder : e.orders >= need).sort((a, b) => b.orders - a.orders).map(e => { const qs = e.qtys.filter(x => x > 0).sort((a, b) => a - b); return { productId: e.productId, variantIdx: e.variantIdx, name: e.name, qty: qs.length ? qs[qs.length >> 1] : 1, orders: e.orders, of: n }; });
 }
 // 65304: how often they come back
-function customerRhythm(cid){
+function customerRhythm(cid){ return memo('rhythm', cid + '|' + todayISO(), () => customerRhythmNow(cid)); }
+function customerRhythmNow(cid){
   const dates = orderHistory(cid).map(o => o.date).sort();
   const first = dates[0] || null, last = dates.length ? dates[dates.length - 1] : null;
   const every = dates.length > 1 ? Math.max(1, Math.round(daysBetween(first, last) / (dates.length - 1))) : null;
@@ -2342,26 +2370,70 @@ function navHTML(){
     <button data-act="tab" data-v="orders" ${S.view === 'orders' && !S.stack.length ? 'aria-current="page"' : ''}>${ic('orders', 24)}${due ? `<span class="sx-badge">${due}</span>` : ''}Orders</button>
     ${b('customers', 'Customers', 'people')}</nav>`;
 }
+/* ---------------- drawing without redrawing ----------------
+   Every tap used to throw the screen away and build it again, so every
+   card slid in, every bar regrew and every stamp landed again -- the
+   app looked as if it reloaded on each touch. morph() lays the new HTML
+   over what is already there and changes only what differs: an element
+   that stays keeps its animation state, its scroll, its focus and what
+   is typed in it. A node whose tag or data-key changes is replaced, so
+   a new screen still arrives with its entrance. */
+function morph(host, html){
+  const tpl = document.createElement('template');
+  if (!host.childNodes || !tpl.content) { host.innerHTML = html; return; }   // no real DOM (tests)
+  tpl.innerHTML = html;
+  morphKids(host, tpl.content);
+}
+function morphKey(n){ return n.nodeType === 1 ? n.tagName + '#' + (n.getAttribute('data-key') || '') : n.nodeType; }
+function morphKids(from, to){
+  const a = Array.from(from.childNodes), b = Array.from(to.childNodes);
+  for (let i = 0; i < b.length; i++) {
+    const nb = b[i], na = a[i];
+    if (!na) { from.appendChild(nb); continue; }
+    if (morphKey(na) !== morphKey(nb)) { from.replaceChild(nb, na); continue; }
+    if (na.nodeType !== 1) { if (na.nodeValue !== nb.nodeValue) na.nodeValue = nb.nodeValue; continue; }
+    morphAttrs(na, nb);
+    const tag = na.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+      if (na !== document.activeElement) {
+        if (tag === 'TEXTAREA') na.value = nb.value;
+        else if (na.type === 'checkbox' || na.type === 'radio') na.checked = nb.hasAttribute('checked');
+        else if (tag === 'INPUT' && na.type !== 'file') na.value = nb.getAttribute('value') || '';
+      }
+      if (tag === 'TEXTAREA') continue;
+    }
+    morphKids(na, nb);
+  }
+  for (let i = a.length - 1; i >= b.length; i--) if (a[i].parentNode === from) from.removeChild(a[i]);
+}
+function morphAttrs(na, nb){
+  for (const at of Array.from(na.attributes)) if (!nb.hasAttribute(at.name)) na.removeAttribute(at.name);
+  for (const at of Array.from(nb.attributes)) if (na.getAttribute(at.name) !== at.value) na.setAttribute(at.name, at.value);
+}
+let lastMainView = null;
 function render(){
   if (!S.data) return;
   const main = document.getElementById('sx_main');
   const V = { today: viewToday, chats: viewChats, orders: viewOrders, customers: viewCustomers, me: viewMe }[S.view] || viewToday;
-  main.innerHTML = `<div class="sx-view">${V()}</div>${navHTML()}`;
+  // Under an open page the view can't be seen: draw it only when it changes or comes back into sight.
+  if (!S.stack.length || lastMainView !== S.view) {
+    morph(main, `<div class="sx-view" data-key="v-${S.view}">${V()}</div>${navHTML()}`);
+    lastMainView = S.view;
+  }
   const pages = document.getElementById('sx_pages');
-  // A page that was already open keeps its place and does not slide in again.
-  const prev = [...pages.children].map(el => ({ type: el.dataset.type, top: el.scrollTop }));
-  pages.innerHTML = S.stack.map((p, i) => { const f = PAGE[p.type], same = prev[i] && prev[i].type === p.type;
-    return `<div class="sx-page${same ? ' still' : ''}" data-depth="${i}" data-type="${p.type}"${f && f.bg ? ` style="background:${f.bg}"` : ''}>${f ? f(p.args) : ''}</div>`; }).join('');
-  [...pages.children].forEach((el, i) => { if (prev[i] && prev[i].type === el.dataset.type) el.scrollTop = prev[i].top; });
+  morph(pages, S.stack.map((p, i) => { const f = PAGE[p.type];
+    return `<div class="sx-page" data-key="${p.type}-${i}" data-depth="${i}" data-type="${p.type}"${f && f.bg ? ` style="background:${f.bg}"` : ''}>${f ? f(p.args) : ''}</div>`; }).join(''));
   document.body.style.overflow = S.stack.length ? 'hidden' : '';
   afterRender();
 }
+let lastSheetType = null;
 function renderSheet(){
   const host = document.getElementById('sx_sheet');
-  if (!S.sheet) { host.innerHTML = ''; return; }
-  const f = SHEET[S.sheet.type];
-  host.innerHTML = `<div class="sx-scrim" data-act="closesheet"></div><div class="sx-sheet ${f && f.navy ? 'navy' : ''}" role="dialog"><span class="sx-handle"></span>${f ? f(S.sheet.args) : ''}</div>`;
-  const inp = host.querySelector('[autofocus]'); if (inp) setTimeout(() => inp.focus(), 250);
+  if (!S.sheet) { host.innerHTML = ''; lastSheetType = null; return; }
+  const f = SHEET[S.sheet.type], fresh = lastSheetType !== S.sheet.type;
+  morph(host, `<div class="sx-scrim" data-act="closesheet"></div><div class="sx-sheet ${f && f.navy ? 'navy' : ''}" data-key="sh-${S.sheet.type}" role="dialog"><span class="sx-handle"></span>${f ? f(S.sheet.args) : ''}</div>`);
+  lastSheetType = S.sheet.type;
+  if (fresh) { const inp = host.querySelector('[autofocus]'); if (inp) setTimeout(() => inp.focus(), 250); }
   afterRender();
 }
 const PAGE = {}, SHEET = {}, ACT = {}, AFTER = [];
@@ -3688,7 +3760,7 @@ PAGE.customer = ({ id }) => {
   } else ringHTML = custRing(0, '#6FDCB0', `<span class="m cu-rn">${r.orders}</span><span class="cu-rw" style="color:var(--navyInk2)">ORDER${r.orders === 1 ? '' : 'S'}</span>`, false);
   const amtCol = !(c.debt > 0) ? '#6FDCB0' : over || pastTerms ? '#F59A92' : '#F5B26B';
   const capBits = [limit > 0 ? `of <b class="m">${n0(limit)}</b> credit` : (c.debt > 0 ? 'no credit limit set' : (r.orders ? `last bought ${esc(dayLabel(custISO(r.last)))}` : 'on cash'))];
-  if (oldest != null) capBits.push(`oldest <b class="m" style="color:${oldest > 60 ? '#F59A92' : pastTerms || oldest >= 30 ? '#F5B26B' : '#6FDCB0'}">${oldest} d</b>`);
+  if (oldest != null) capBits.push(`oldest <b style="color:${oldest > 60 ? '#F59A92' : pastTerms || oldest >= 30 ? '#F5B26B' : '#6FDCB0'}"><span class="m">${oldest}</span> days</b>`);
   const conv = typeof waConvForCustomer === 'function' ? waConvForCustomer(c) : null;
   const chat = conv && typeof PAGE.chat === 'function'
     ? `<button class="cu-hb" data-act="custchat" data-conv="${esc(conv.id)}" aria-label="Open their chat">${ic('chat', 18)}</button>`
@@ -4089,12 +4161,15 @@ function restoreDraft(){
   if (S.draft && !S.draft.dkey) S.draft.dkey = nwKey();
 }
 function newDraft(c){ return { dkey: nwKey(), client: c ? { name: c.name, phone: c.phone || '' } : { name: 'Walk-in', phone: '' }, customerId: c ? c.id : null, items: [], charges: [], credit: false, creditWhy: null, pic: null, openLine: null, lastAdded: null, q: '' }; }
-function nwDrafts(){ try { const a = JSON.parse(localStorage.getItem(nwDraftsKey())); return Array.isArray(a) ? a.filter(d => d && d.client && Array.isArray(d.items)) : []; } catch (_e) { return []; } }
+// One draft per person: the open order is never listed again beside itself, and a person's older copy gives way to the newer.
+function nwWho(d){ if (!d) return ''; if (d.customerId != null && d.customerId !== '') return 'c:' + d.customerId; const ph = phone9(d.client && d.client.phone); return ph ? 'p:' + ph : 'k:' + d.dkey; }
+function nwDraftsRaw(){ try { const a = JSON.parse(localStorage.getItem(nwDraftsKey())); return Array.isArray(a) ? a.filter(d => d && d.client && Array.isArray(d.items)) : []; } catch (_e) { return []; } }
+function nwDrafts(){ const seen = new Set([S.draft && nwHasLines(S.draft) ? nwWho(S.draft) : '']); return nwDraftsRaw().filter(d => { const w = nwWho(d); if (seen.has(w) || (S.draft && d.dkey === S.draft.dkey)) return false; seen.add(w); return true; }); }
 function nwSaveDrafts(a){ try { if (a.length) localStorage.setItem(nwDraftsKey(), JSON.stringify(a.slice(0, 20))); else localStorage.removeItem(nwDraftsKey()); } catch (_e) {} }
 function nwHasLines(d){ return !!d && ((d.items || []).length > 0 || (d.charges || []).length > 0); }
 // Kept, never lost: an order set aside goes to the drafts list on this phone.
-function nwPark(d){ if (!nwHasLines(d)) return false; const a = nwDrafts().filter(x => x.dkey !== d.dkey); a.unshift({ ...d, q: '', openLine: null, fresh: null, savedAt: Date.now() }); nwSaveDrafts(a); return true; }
-function nwUnpark(k){ const a = nwDrafts(), d = a.find(x => x.dkey === k); nwSaveDrafts(a.filter(x => x.dkey !== k)); return d ? { openLine: null, lastAdded: null, charges: [], pic: null, ...d, q: '' } : null; }
+function nwPark(d){ if (!nwHasLines(d)) return false; const w = nwWho(d); const a = nwDraftsRaw().filter(x => x.dkey !== d.dkey && nwWho(x) !== w); a.unshift({ ...d, q: '', openLine: null, fresh: null, savedAt: Date.now() }); nwSaveDrafts(a); return true; }
+function nwUnpark(k){ const a = nwDraftsRaw(), d = a.find(x => x.dkey === k); nwSaveDrafts(a.filter(x => x.dkey !== k)); return d ? { openLine: null, lastAdded: null, charges: [], pic: null, ...d, q: '' } : null; }
 function nwQuoteOf(d){ const pct = shopCreditPct(); return { items: d.items || [], charges: d.charges || [], discount: 0, credit: d.credit && pct > 0 ? { pct, days: custTermsDays(), agreedAt: todayISO() } : null }; }
 function draftQuote(){ return nwQuoteOf(S.draft || newDraft(null)); }
 function custTermsDays(){ return Math.max(0, Number(D().presetChaseAfterDays) || 0); }
@@ -4198,7 +4273,7 @@ ACT.nwresume = t => {
 ACT.nwdropdraft = t => {
   const a = S.sheet && S.sheet.args, k = t.dataset.k; if (!a) return;
   if (a.confirm !== k) { a.confirm = k; renderSheet(); return; }
-  nwSaveDrafts(nwDrafts().filter(x => x.dkey !== k)); a.confirm = null; haptic('light'); renderSheet(); toast('Draft removed');
+  nwSaveDrafts(nwDraftsRaw().filter(x => x.dkey !== k)); a.confirm = null; haptic('light'); renderSheet(); toast('Draft removed');
 };
 
 /* ---------------- who is it for (ClientPick) ---------------- */
@@ -4871,7 +4946,7 @@ ACT['slide:place'] = async el => {
     const { error } = await sb.from('saved_quotes').insert(row);
     if (error) throw error;
     D().savedQuotes.push(rowToQuote(row)); saveSnapshot();
-    S.draft = null; saveDraft(); nwSaveDrafts(nwDrafts().filter(x => x.dkey !== d.dkey)); S.placing = false; NW.find = null; NW.delta = null;
+    S.draft = null; saveDraft(); nwSaveDrafts(nwDraftsRaw().filter(x => x.dkey !== d.dkey && nwWho(x) !== nwWho(d))); S.placing = false; NW.find = null; NW.delta = null;
     S.stack = [{ type: 'placed', args: { id } }]; render();
     // The picture goes only because the switch was on when they slid.
     if (picConv) nwSendPicture(id, picConv.id);
@@ -5674,7 +5749,12 @@ function chqQty(text, m, others){
 /* EXPOSED: what a message asks for, as order lines. Only clear matches;
    a doubtful one is left out rather than guessed. qtySaid false means
    they named the thing but not how many, and the line starts at 1. */
+// Read once per message and set of books: reading every chat on every draw made each tap lag.
 function waReadItems(text, customerId){
+  const t = String(text || '').trim(); if (!t || !S.data) return [];
+  return memo('wri', (customerId == null ? '' : customerId) + '|' + t, () => waReadItemsNow(t, customerId)).map(x => ({ ...x }));
+}
+function waReadItemsNow(text, customerId){
   const t = String(text || '').trim(); if (!t || !S.data) return [];
   const cands = chqCands();
   let customerKeys = null;
@@ -5714,7 +5794,8 @@ function chatAbout(conv, list){
 // EXPOSED: the waiting asks, longest first: [{conv, customer, mins, text, items}].
 function waAsks(){
   if (!S.data) return [];
-  return waWaiting().map(w => ({ w, a: chatAbout(w.conv) })).filter(x => x.a.ask).map(x => ({ conv: x.w.conv, customer: x.a.cust, mins: x.w.mins, text: x.a.text, items: x.a.items }));
+  // Only asks that can still be answered from the app: the 24-hour window is open.
+  return waWaiting().filter(w => waWindowInfo(w.conv.last_inbound_at).open).map(w => ({ w, a: chatAbout(w.conv) })).filter(x => x.a.ask).map(x => ({ conv: x.w.conv, customer: x.a.cust, mins: x.w.mins, text: x.a.text, items: x.a.items }));
 }
 // The one live order a matched customer has on the move, newest first.
 function chatLiveOrder(cust){
