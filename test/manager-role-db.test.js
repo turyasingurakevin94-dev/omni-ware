@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * The manager role (0115), asked of a REAL database: everything a Manager
+ * The manager role (0116), asked of a REAL database: everything a Manager
  * login may write, the hand-overs and the credit yes on top, and the same
- * refusals on debts, limits, terms, invoicing and voiding -- 0115 moves
+ * refusals on debts, limits, terms, invoicing and voiding -- 0116 moves
  * the two guards from Sales alone onto both desk roles.
  *
  * So this applies every migration, in order, to a fresh Postgres
@@ -48,9 +48,9 @@ fs.readdirSync(migDir).filter((f) => f.endsWith('.sql')).sort().forEach((f) => {
 });
 t.check(failed.length === 0, `every migration applied, in order (${JSON.stringify(failed)})`);
 
-/* 0115 is pasted by hand, and sometimes twice. */
-const again = onDb(['-qAt', '-v', 'ON_ERROR_STOP=1', '-f', path.join(migDir, '0115_manager_role.sql')]);
-t.check(again.status === 0, `0115 runs a second time without error (${(again.stderr || '').trim().split('\n')[0] || 'ok'})`);
+/* 0116 is pasted by hand, and sometimes twice. */
+const again = onDb(['-qAt', '-v', 'ON_ERROR_STOP=1', '-f', path.join(migDir, '0116_manager_role.sql')]);
+t.check(again.status === 0, `0116 runs a second time without error (${(again.stderr || '').trim().split('\n')[0] || 'ok'})`);
 
 const scenario = fs.readFileSync(path.join(__dirname, 'fixtures', 'manager-role-scenario.sql'), 'utf8');
 const run = onDb(['-qAt', '-F', '\t'], scenario);

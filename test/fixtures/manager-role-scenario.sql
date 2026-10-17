@@ -1,4 +1,4 @@
--- What a Manager login (0115) may and may not write, asked of a real database.
+-- What a Manager login (0116) may and may not write, asked of a real database.
 -- Each row: what is tried, as whom, and whether it must go through or be
 -- refused. 'refused' also covers row-level security quietly matching no
 -- rows on an update or delete -- the database's way of saying no there.

@@ -634,7 +634,7 @@ input{font-family:inherit;color:var(--ink)}
    carried over from sales.html / index.html / shared-worker.js and
    named beside it.
 
-   What a Manager login writes (0115_manager_role.sql), and nothing else:
+   What a Manager login writes (0116_manager_role.sql), and nothing else:
      saved_quotes      a packing job handed to another packer, a delivery
                        to another driver, the yes / hold / cash-first on
                        an order held for credit (payload.creditCheck),
@@ -1283,7 +1283,9 @@ function deliveredToday(){ const t = todayISO(); return liveOrders().filter(q =>
 
 /* ---- shared-worker.js 2166: who may do which job ---- */
 function staffEligibleForRole(s, role){
-  if(role==='delivery') return s.role==='delivery' || s.role==='worker';
+  // Somebody who runs the store (store.html) picks and delivers too.
+  if(role==='delivery') return s.role==='delivery' || s.role==='worker' || s.role==='store';
+  if(role==='worker') return s.role==='worker' || s.role==='store';
   return s.role===role;
 }
 function staffById(id){ return id == null ? null : D().staff.find(s => String(s.id) === String(id)) || null; }
@@ -1299,7 +1301,7 @@ function team(){
   const st = D().staff.filter(notMe);
   const sales = st.filter(s => s.role === 'sales').sort((a, b) => a.name.localeCompare(b.name));
   sales.forEach((s, i) => { s.col = PERSON_COLS[i % PERSON_COLS.length]; });
-  return { sales, buyers: st.filter(s => s.role === 'buyer'), packers: st.filter(s => s.role === 'worker'), drivers: st.filter(s => s.role === 'delivery'), all: st };
+  return { sales, buyers: st.filter(s => s.role === 'buyer'), packers: st.filter(s => s.role === 'worker' || s.role === 'store'), drivers: st.filter(s => s.role === 'delivery'), all: st };
 }
 function personCol(s){ if (s && s.col) return s.col; const t = tintFor(s ? s.name : ''); return [t[0], t[1], t[1]]; }
 function pav(s, size, ring){
@@ -1510,7 +1512,7 @@ async function giveTrip(tripId, staffId){
   saveSnapshot();
   return t;
 }
-// What this login may do, from role_tasks (0113 / 0115). Owners do it all.
+// What this login may do, from role_tasks (0113 / 0116). Owners do it all.
 const ALL_TASKS = ['order.move', 'order.assign', 'credit.release', 'team.nudge', 'customer.edit', 'payment.receive', 'statement.send'];
 function tasks(){
   if (['owner', 'admin'].includes(S.role)) return ALL_TASKS;
@@ -2055,9 +2057,9 @@ PAGE.person = a => {
         <span style="display:flex;gap:3px;height:10px">${bands.map((v, i) => v > 0 ? `<i class="a-grow" style="flex:${v};border-radius:3px;background:${BANDS[i].hatch ? 'repeating-linear-gradient(135deg,#F59A92 0 3px,#E5483D 3px 6px)' : BANDS[i].col}"></i>` : '').join('') || '<i style="flex:1;border-radius:999px;background:#F1EEE8"></i>'}</span>
         <span style="display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;font-weight:600;color:var(--ink2)">${BANDS.map((b, i) => bands[i] > 0 ? `<span style="display:inline-flex;align-items:center;gap:5px"><i style="width:7px;height:7px;border-radius:999px;background:${b.col}"></i>${b.w} · <span class="m">${short(bands[i])}</span></span>` : '').join('') || 'Nobody owes'}</span></button>`;
   } else {
-    const jobs = s.role === 'worker' ? packLoad(s.id) : s.role === 'delivery' ? driveLoad(s.id) : [];
+    const jobs = s.role === 'worker' || s.role === 'store' ? packLoad(s.id) : s.role === 'delivery' ? driveLoad(s.id) : [];
     const trips = s.role === 'buyer' ? tripsOf(s.id) : [];
-    const doneToday = s.role === 'worker' ? packedToday(s.id) : s.role === 'delivery' ? deliveredToday().filter(q => String(q.assignedDeliveryId) === String(s.id)).length : (D().collectionTrips || []).filter(t => !t.voided && String(t.assignedWorkerId) === String(s.id) && t.collectedAt && isoOf(t.collectedAt) === today).length;
+    const doneToday = s.role === 'worker' || s.role === 'store' ? packedToday(s.id) : s.role === 'delivery' ? deliveredToday().filter(q => String(q.assignedDeliveryId) === String(s.id)).length : (D().collectionTrips || []).filter(t => !t.voided && String(t.assignedWorkerId) === String(s.id) && t.collectedAt && isoOf(t.collectedAt) === today).length;
     stats = [[s.role === 'buyer' ? 'Trips out' : 'In hand', String(s.role === 'buyer' ? trips.length : jobs.length), ''], ['Done today', String(doneToday), 'color:var(--mint)'], ['Late', String(jobs.filter(isStuck).length), jobs.some(isStuck) ? 'color:var(--amber)' : '']];
     body = `<div class="bx-card bx-list">${jobs.length ? jobs.map(q => `<div class="mx-srow"><button class="mid" data-act="push" data-p="order" data-id="${q.id}"><span style="display:flex;align-items:baseline;gap:8px"><b class="ell" style="flex:1;font-size:14px">${esc(clientName(q))}</b><span class="m" style="font-size:12px;font-weight:600;color:${isStuck(q) ? 'var(--crimson)' : 'var(--ink3)'}">${ageWords(inStageMins(q))}</span></span><span style="display:flex;align-items:center;gap:8px">${overBarHTML(q)}<span class="ell" style="font-size:12px;font-weight:600;color:var(--ink3)">${esc(whyStuck(q).w)}</span></span></button>
         <button class="mx-sq navy" data-act="reassign" data-id="${q.id}" aria-label="Hand ${esc(clientName(q))}'s order to someone else">${ic('swap', 16, 'style="stroke-width:2.2"')}</button></div>`).join('')
@@ -2274,7 +2276,7 @@ function reasonsFor(s){
     const owing = debtors().filter(d => d.age > 30 && lastSeller(d.c) && String(lastSeller(d.c).id) === String(s.id)).slice(0, 1);
     owing.forEach(d => out.push({ t: `Chase ${d.c.name}`, s: `${n0(d.c.debt)} · ${d.age} days`, m: `${first}, ${d.c.name} owes ${n0(d.c.debt)} for ${d.age} days. Can you call them today?` }));
   }
-  if (s.role === 'worker' && packedToday(s.id)) out.push({ t: `${packedToday(s.id)} packed today`, s: 'a thank-you', m: `${first}, ${packedToday(s.id)} orders packed today. Thank you!` });
+  if ((s.role === 'worker' || s.role === 'store') && packedToday(s.id)) out.push({ t: `${packedToday(s.id)} packed today`, s: 'a thank-you', m: `${first}, ${packedToday(s.id)} orders packed today. Thank you!` });
   if (s.role === 'delivery') { const n = deliveredToday().filter(q => String(q.assignedDeliveryId) === String(s.id)).length; if (n) out.push({ t: `${n} delivered today`, s: 'a thank-you', m: `${first}, ${n} drops done today. Thank you!` }); }
   if (s.role === 'sales' && s.userId) { const n = takenOn(s.userId, todayISO()).length; if (n && out.length < 3) out.push({ t: `${n} orders today`, s: 'a thank-you', m: `${first}, ${n} orders taken today. Great work!` }); }
   out.push({ t: 'Call me when you can', s: 'just a word', m: `${first}, please call me when you have a minute.` });

@@ -30,5 +30,5 @@ never in the middle of taking a payment. A new APK is only needed when something
 ## Who can sign in
 
 A login whose shop membership has the role `manager` (see
-`supabase/migrations/0115_manager_role.sql` for how to give somebody that role).
+`supabase/migrations/0116_manager_role.sql` for how to give somebody that role).
 The owner can sign in too and sees the same screens.
