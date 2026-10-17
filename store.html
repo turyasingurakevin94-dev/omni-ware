@@ -528,7 +528,7 @@ input{font-family:inherit;color:var(--ink)}
 .pk-slide img{position:absolute;left:50%;top:40%;max-width:78%;max-height:44%;transform:translate(-50%,-50%);object-fit:contain;filter:drop-shadow(0 14px 24px rgba(22,32,60,.22))}
 @keyframes pkStamp{0%{transform:rotate(-12deg) scale(2.2);opacity:0}60%{transform:rotate(-12deg) scale(.92);opacity:1}100%{transform:rotate(-12deg) scale(1);opacity:.95}}
 @keyframes pkFlash{0%{opacity:.55}100%{opacity:0}}
-@keyframes pkBob{0%,100%{transform:translateY(0) scale(1.6)}50%{transform:translateY(-6px) scale(1.6)}}
+@keyframes pkBob{0%,100%{transform:translateY(0) scale(1.2)}50%{transform:translateY(-6px) scale(1.2)}}
 @keyframes pkHint{0%,60%,100%{transform:translateX(0)}75%{transform:translateX(-8px)}}
 @keyframes pkDrain{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 @keyframes pkIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
@@ -536,7 +536,7 @@ input{font-family:inherit;color:var(--ink)}
 .pk-stamp{animation:pkStamp .45s cubic-bezier(.3,1.4,.5,1) both}
 .pk-flash{animation:pkFlash .6s ease-out both}
 .pk-bob{animation:pkBob 3.2s ease-in-out infinite;display:flex}
-.pk-still{display:flex;transform:scale(1.6)}
+.pk-still{display:flex;transform:scale(1.2)}
 .pk-hint{animation:pkHint 2.6s ease-in-out 1.2s 2}
 .pk-drain{transform-origin:left;animation:pkDrain 5s linear both}
 .pk-in{animation:pkIn .35s ease-out both}
@@ -606,6 +606,8 @@ input{font-family:inherit;color:var(--ink)}
 html.big .pk-big,html.big .st-slide{height:76px}
 html.big .ct-key{height:60px}
 @media (prefers-reduced-motion: reduce){.pk-track{transition:none}}
+.sh-aisles{scrollbar-width:none}.sh-aisles::-webkit-scrollbar{display:none}
+.st-sec2 span[style*="Figtree"] span{font-family:Figtree,system-ui,sans-serif}
 </style>
 </head>
 <body>
@@ -926,7 +928,7 @@ async function refreshLive(){
   } catch (e) { if (!isNetworkError(e)) console.warn(e); }
 }
 function snapKey(){ return 'ow-store-snap:' + (S.user && S.user.id); }
-function saveSnapshot(){ try { localStorage.setItem(snapKey(), JSON.stringify({ shopId: S.shopId, shopName: S.shopName, role: S.role, at: S.loadedAt, data: S.data })); } catch (_e) {
+function saveSnapshot(){ S.rev = (S.rev || 0) + 1; try { localStorage.setItem(snapKey(), JSON.stringify({ shopId: S.shopId, shopName: S.shopName, role: S.role, at: S.loadedAt, data: S.data })); } catch (_e) {
   // Product pictures can be big; keep the yard without them rather than nothing.
   try { localStorage.setItem(snapKey(), JSON.stringify({ shopId: S.shopId, shopName: S.shopName, role: S.role, at: S.loadedAt, data: { ...S.data, products: S.data.products.map(p => ({ ...p, image: null, variants: (p.variants || []).map(v => ({ ...v, image: null })) })) } })); } catch (_e2) {} } }
 function loadSnapshot(userId){ try { const s = JSON.parse(localStorage.getItem('ow-store-snap:' + userId)); return s && s.data ? s : null; } catch (_e) { return null; } }
@@ -955,7 +957,8 @@ function productImage(p, vi){
 function lineImage(it){ return productImage(productById(it.productId), it.variantIdx); }
 
 /* ---- the aisles: one per category, lettered in the order they sort ---- */
-function aisleList(){
+function aisleList(){ return memo('aisles', aisleListNow); }
+function aisleListNow(){
   const names = [...new Set(D().products.map(p => p.category || 'Other'))].sort((a, b) => a === 'Other' ? 1 : b === 'Other' ? -1 : a.localeCompare(b));
   return names.map((name, i) => ({ name, letter: i < 26 ? String.fromCharCode(65 + i) : String(i + 1) }));
 }
@@ -1080,37 +1083,59 @@ function tripOrders(t){ return [...new Set(tripLines(t).map(l => String(l.orderI
 /* ---- stock: what is on the shelf and who it is promised to ---- */
 function unitsFor(pid, vi){ vi = vi == null || vi === '' ? null : Number(vi); return D().units.find(u => u.productId === pid && u.variantIdx === vi) || D().units.find(u => u.productId === pid) || null; }
 // Open orders that will take this off the shelf, biggest first.
-function promisedFor(pid, vi){
-  const key = stockKey(pid, vi), out = [];
-  boardOrders().forEach(q => {
-    if (!['awaiting_goods', 'preparing'].includes(q.status)) return;
-    (q.items || []).forEach(it => {
-      if (stockKey(it.productId, it.variantIdx) !== key) return;
-      if (orderLineIsBoughtIn(it) && !quoteLineReceived(it)) return;
-      const n = Number(it.qty) || 0; if (!n) return;
-      const ex = out.find(o => o.q.id === q.id);
-      if (ex) ex.n += n; else out.push({ q, n, packed: q.pickingStatus === 'done', packing: q.pickingStatus === 'in_progress' });
+/* Worked out once per refresh, not once per item: a shelf of a few
+   thousand items would otherwise scan every order for every one of them.
+   Anything that writes goes through saveSnapshot, which moves S.rev on. */
+const MEMO = { deps: null, v: {} };
+function memo(name, fn){
+  const deps = [S.data, S.rev];
+  if (!MEMO.deps || deps.some((x, i) => x !== MEMO.deps[i])) { MEMO.deps = deps; MEMO.v = {}; }
+  return name in MEMO.v ? MEMO.v[name] : (MEMO.v[name] = fn());
+}
+function promisedIndex(){
+  return memo('promised', () => {
+    const idx = {};
+    boardOrders().forEach(q => {
+      if (!['awaiting_goods', 'preparing'].includes(q.status)) return;
+      (q.items || []).forEach(it => {
+        if (orderLineIsBoughtIn(it) && !quoteLineReceived(it)) return;
+        const n = Number(it.qty) || 0; if (!n) return;
+        const key = stockKey(it.productId, it.variantIdx), out = idx[key] || (idx[key] = []);
+        const ex = out.find(o => o.q.id === q.id);
+        if (ex) ex.n += n; else out.push({ q, n, packed: q.pickingStatus === 'done', packing: q.pickingStatus === 'in_progress' });
+      });
     });
+    Object.values(idx).forEach(l => l.sort((a, b) => b.n - a.n));
+    return idx;
   });
-  return out.sort((a, b) => b.n - a.n);
 }
+function promisedFor(pid, vi){ return promisedIndex()[stockKey(pid, vi)] || []; }
 function stockItems(){
-  const seen = new Set(), out = [];
-  D().products.forEach(p => {
-    const vs = Array.isArray(p.variants) && p.variants.length ? p.variants.map((_, i) => i) : [null];
-    vs.forEach(vi => { const key = stockKey(p.id, vi); if (seen.has(key)) return; seen.add(key);
-      out.push({ key, productId: p.id, variantIdx: vi, productName: productVariantLabel(p, vi), qty: Number(D().stock[key]) || 0, aisle: aisleOf(p.id) }); });
+  return memo('items', () => {
+    const seen = new Set(), out = [], aisles = {};
+    aisleList().forEach(a => { aisles[a.name] = a; });
+    D().products.forEach(p => {
+      const vs = Array.isArray(p.variants) && p.variants.length ? p.variants.map((_, i) => i) : [null];
+      const aisle = aisles[p.category || 'Other'] || { name: p.category || 'Other', letter: '?' };
+      vs.forEach(vi => { const key = stockKey(p.id, vi); if (seen.has(key)) return; seen.add(key);
+        out.push({ key, productId: p.id, variantIdx: vi, productName: productVariantLabel(p, vi), qty: Number(D().stock[key]) || 0, aisle }); });
+    });
+    return out;
   });
-  return out;
 }
-function weeksOf(key){
-  const w = [[0, 0], [0, 0], [0, 0], [0, 0]], now = Date.now();
-  (D().stockLog || []).forEach(r => { if (r.key !== key) return; const age = Math.floor((now - (msOf(r.at) || msOf(r.date))) / (7 * 864e5)); if (age < 0 || age > 3) return;
-    const d = Number(r.delta) || 0; if (r.type === 'count' || r.type === 'correction') return; if (d > 0) w[3 - age][0] += d; else w[3 - age][1] += -d; });
-  return w;
+function weeksIndex(){
+  return memo('weeks', () => {
+    const idx = {}, now = Date.now();
+    (D().stockLog || []).forEach(r => { if (r.type === 'count' || r.type === 'correction') return;
+      const age = Math.floor((now - (msOf(r.at) || msOf(r.date))) / (7 * 864e5)); if (age < 0 || age > 3) return;
+      const w = idx[r.key] || (idx[r.key] = [[0, 0], [0, 0], [0, 0], [0, 0]]), d = Number(r.delta) || 0;
+      if (d > 0) w[3 - age][0] += d; else w[3 - age][1] += -d; });
+    return idx;
+  });
 }
+function weeksOf(key){ return weeksIndex()[key] || [[0, 0], [0, 0], [0, 0], [0, 0]]; }
 function daysSinceCount(key){ const t = D().lastCounted[key]; return t ? Math.floor((Date.now() - t) / 864e5) : null; }
-function productById(id){ return D().products.find(p => p.id === id) || null; }
+function productById(id){ const m = memo('byId', () => { const o = new Map(); D().products.forEach(p => o.set(p.id, p)); return o; }); return m.get(id) || null; }
 function staffById(id){ return D().staff.find(s => String(s.id) === String(id)) || null; }
 // shared-worker.js 2173
 function staffName(id){ if (!id) return ''; const s = staffById(id); return s ? s.name : '(removed staff)'; }
@@ -1425,7 +1450,7 @@ function emptyCard(title, sub){ return `<div class="st-card"><div class="st-empt
    delivery -> Completed with the delivery proof, and the gate handover.
    ================================================================== */
 const ORDER_KEYS = ['items', 'assignedWorkerId', 'assignedDeliveryId', 'pickingStatus', 'pickCursor', 'pickingAssignedAt', 'workerAcceptedAt', 'pickingDoneAt',
-  'carrier', 'stageEnteredAt', 'stageLog', 'deliveredTo', 'deliveredAt', 'deliveredPhoto', 'handoverCheckedAt'];
+  'carrier', 'stageEnteredAt', 'stageLog', 'deliveredTo', 'deliveredAt', 'deliveredPhoto', 'deliveredPhotoKind', 'handoverCheckedAt'];
 const STORE_STATUS_MOVES = { preparing: ['pending_delivery', 'completed'], pending_delivery: ['completed'] };
 function needs0115(e){ return e && (e.code === '42P01' || e.code === '42703' || e.code === 'PGRST204' || e.code === 'PGRST205' || /does not exist|schema cache/i.test(e.message || '')); }
 function failSay(e){ if (e && (e.code === '42501' || /row-level security/i.test(e.message || ''))) return 'Your login cannot do this one — ask the owner.'; return needs0115(e) ? 'This needs migration 0115 on the database — ask the owner to run it.' : failWord(e); }
@@ -1690,6 +1715,9 @@ function sfxNotes(notes, type){
 function buzzOn(){ return S.prefs.buzz !== false; }
 
 /* ---------------- pieces ---------------- */
+function nLines(n){ n = Number(n) || 0; return n + (n === 1 ? ' line' : ' lines'); }
+// A time today reads as a clock; yesterday says so; older says the day.
+function whenSaid(ms){ if (!ms) return ''; if (isTodayMs(ms)) return hm(ms); if (isTodayMs(ms + 864e5)) return 'yesterday ' + hm(ms); return shortDay(isoOf(ms)) + ' ' + hm(ms); }
 function av(name, key, size, extra){ const t = tintFor(key || name); size = size || 40; return `<span class="st-av round" style="width:${size}px;height:${size}px;font-size:${Math.round(size * .32)}px;background:${t[0]};color:${t[1]};${extra || ''}">${esc(initials(name))}</span>`; }
 function closeX(light){ return `<button class="st-x${light ? ' light' : ''}" data-act="back" aria-label="Close">${ic('close', 16, 'style="stroke-width:2.2"')}</button>`; }
 function grip(){ return `<span style="align-self:center;width:40px;height:5px;border-radius:999px;background:rgba(255,255,255,.22);flex:none"></span>`; }
@@ -1724,7 +1752,7 @@ function myDrops(){ const me = myStaff(); return onRoad().filter(q => me ? (Stri
    ================================================================== */
 function viewToday(){
   const out = outToday(), load = loadQueue().length, pack = packQueue().length, total = out + load + pack;
-  const first = firstWord(myName()) || 'there';
+  const first = (w => w ? w[0].toUpperCase() + w.slice(1) : 'there')(firstWord(myName()));
   const day = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
   // One arc per order, in the order they leave: out, packed, to pack.
   const segs = [], seg = 90 / Math.max(1, total);
@@ -1781,7 +1809,7 @@ function nextJobCard(){
     const lines = tripLines(back);
     return `<div class="st-sec2"><b>Next job</b><span>1 of ${all}</span></div>
     <div class="a-card" style="border-radius:22px;background:radial-gradient(120% 90% at 100% 0%,#2B3866 0%,#16203C 58%);color:#fff;padding:16px;display:flex;flex-direction:column;gap:14px;box-shadow:0 14px 30px rgba(22,32,60,.22)">
-      <div style="display:flex;align-items:center;justify-content:space-between"><span class="st-chip" style="background:rgba(155,163,240,.16);color:#C9CDF7;height:26px">${ic('inbox', 13, 'style="stroke-width:2.2"')}Trip back · ${esc(ago(msOf(back.collectedAt)))}</span><span style="font-size:12px;font-weight:600;color:var(--navyInk2)">${lines.length} lines</span></div>
+      <div style="display:flex;align-items:center;justify-content:space-between"><span class="st-chip" style="background:rgba(155,163,240,.16);color:#C9CDF7;height:26px">${ic('inbox', 13, 'style="stroke-width:2.2"')}Trip back · ${esc(ago(msOf(back.collectedAt)))}</span><span style="font-size:12px;font-weight:600;color:var(--navyInk2)">${nLines(lines.length)}</span></div>
       <div style="display:flex;align-items:center;gap:14px">${av(tripWho(back) || 'Trip', 'w' + back.assignedWorkerId, 56)}<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><span class="ell" style="font-size:18px;font-weight:700">Unload ${esc(firstWord(tripWho(back)) || 'the')}'s trip</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">for ${esc(tripOrders(back).map(o => shortName(quoteClientName(o))).join(', ') || 'the shelf')}</span></span></div>
       <div style="display:flex;gap:6px">${lines.slice(0, 3).map(l => `<span style="flex:1;min-width:0;height:62px;border-radius:12px;background:rgba(255,255,255,.07);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">${art(l, 'small')}<span class="m" style="font-size:12px;font-weight:500">${esc(quoteLineCount(l, tripExpect(l)).n)} ${esc(quoteLineCount(l, 1).unit)}</span></span>`).join('')}${lines.length > 3 ? `<span style="width:44px;flex:none;height:62px;border-radius:12px;background:rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--navyInk)">+${lines.length - 3}</span>` : ''}</div>
       <button data-act="receive" data-id="${esc(back.id)}" style="height:52px;border:none;border-radius:14px;background:#fff;color:var(--navy);font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">Check it in${ic('chev', 16, 'style="stroke-width:2.2"')}</button>
@@ -1801,7 +1829,7 @@ function nextJobCard(){
       <div style="display:flex;align-items:center;gap:14px">
         <span style="position:relative;width:64px;height:64px;flex:none">${pctRing(p.n ? p.done / p.n : 0, 64, 5, '#6FDCB0', '', `${p.done} of ${p.n} picked`)}<span style="position:absolute;inset:10px">${av(quoteClientName(q), q.id, 44)}</span></span>
         <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><span class="ell" style="font-size:18px;font-weight:700;letter-spacing:-.01em">${esc(quoteClientName(q))}</span>
-          <span style="display:flex;align-items:baseline;gap:6px"><span class="m" style="font-size:22px;font-weight:600">${p.n} lines</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">in ${aisles.length} aisle${aisles.length > 1 ? 's' : ''}${p.done ? ` · ${p.done} picked` : ''}</span></span></span>
+          <span style="display:flex;align-items:baseline;gap:6px"><span class="m" style="font-size:22px;font-weight:600">${nLines(p.n)}</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">in ${aisles.length} aisle${aisles.length > 1 ? 's' : ''}${p.done ? ` · ${p.done} picked` : ''}</span></span></span>
       </div>
       <div role="img" aria-label="Biggest lines: ${esc(big.slice(0, 3).map(it => quoteLineCount(it, it.qty).n + ' ' + lineName(it).base).join(', '))}" style="display:flex;gap:6px">
         ${big.slice(0, 3).map(it => { const c = quoteLineCount(it, it.qty); return `<span style="flex:1;min-width:0;height:62px;border-radius:12px;background:rgba(255,255,255,.07);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">${art(it, 'small')}<span class="m" style="font-size:12px;font-weight:500">${esc(c.n)} ${esc(c.unit)}</span></span>`; }).join('')}
@@ -1824,14 +1852,14 @@ PAGE.movein = () => {
   const nextT = back[0] || riding[0];
   const dots = [];
   // Along the road: back at the gate, out buying, and not taken yet.
-  back.slice(0, 2).forEach((t, i) => dots.push({ t, left: `calc(${84 - i * 6}% - 22px)`, top: 0, size: 40, label: `${tripLines(t).length} lines · back`, cls: 'i-pulse', ring: '0 0 0 3px #16203C,0 0 0 5px #6FDCB0' }));
+  back.slice(0, 2).forEach((t, i) => dots.push({ t, left: `calc(${84 - i * 6}% - 22px)`, top: 0, size: 40, label: `${nLines(tripLines(t).length)} · back`, cls: 'i-pulse', ring: '0 0 0 3px #16203C,0 0 0 5px #6FDCB0' }));
   riding.slice(0, 2).forEach((t, i) => dots.push({ t, left: `calc(${40 - i * 12}% - 17px)`, top: 18, size: 34, label: 'buying', ring: '0 0 0 3px #16203C' }));
   const open = waiting[0];
   const head = `<div class="st-sheettop">${grip()}
       <div style="display:flex;align-items:center;gap:12px"><span style="flex:1;font-size:24px;font-weight:700;letter-spacing:-.02em">In</span>${closeX()}</div>
       <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-top:-6px">
         <span style="display:flex;flex-direction:column;gap:2px"><span style="display:flex;align-items:baseline;gap:8px"><span class="m" style="font-size:44px;font-weight:600;letter-spacing:-.04em;line-height:1">${lines}</span><span style="font-size:14px;font-weight:600;color:var(--navyInk)">lines on the road</span></span><span style="font-size:12px;font-weight:600;color:var(--navyInk2)">${trips.length} trip${trips.length === 1 ? '' : 's'} · for ${orders} order${orders === 1 ? '' : 's'}</span></span>
-        ${nextT ? `<span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><span style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--navyInk2)">${back.length ? 'AT THE GATE' : 'OUT BUYING'}</span><span style="display:flex;align-items:baseline;gap:4px;color:var(--mint)"><span class="m" style="font-size:26px;font-weight:600">${esc(waitClock(minsSince(msOf(back.length ? nextT.collectedAt : nextT.acceptedAt))))}</span><span style="font-size:13px;font-weight:700">${back.length ? 'waiting' : 'out'}</span></span></span>` : ''}
+        ${nextT ? `<span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><span style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--navyInk2)">${back.length ? 'AT THE GATE' : 'OUT BUYING'}</span><span style="display:flex;align-items:baseline;gap:4px;color:var(--mint)"><span class="m" style="font-size:26px;font-weight:600">${esc(waitWords(minsSince(msOf(back.length ? nextT.collectedAt : nextT.acceptedAt))))}</span><span style="font-size:13px;font-weight:700">${back.length ? 'waiting' : 'out'}</span></span></span>` : ''}
       </div>
       <div role="img" aria-label="The road to the yard: ${back.length} back, ${riding.length} out buying, ${waiting.length} not taken yet" style="position:relative;height:104px;margin:0 -4px">
         <span style="position:absolute;left:0;right:52px;top:58px;height:16px;border-radius:999px;background:#243052"></span>
@@ -1846,9 +1874,9 @@ PAGE.movein = () => {
       </div></div>`;
   const card = t => { const ls = tripLines(t), who = tripWho(t) || 'Nobody yet', ords = tripOrders(t);
     if (t.status === 'collected') return `<button data-act="receive" data-id="${esc(t.id)}" class="st-card a-card" style="border:none;text-align:left;border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px;width:100%">
-      <div style="display:flex;align-items:center;gap:12px">${av(who, 'w' + t.assignedWorkerId, 44)}<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:15px;font-weight:700">${esc(who)}</span><span class="m ell" style="font-size:12px;color:#6B7480">${ls.length} line${ls.length === 1 ? '' : 's'} · for ${esc(ords.map(o => shortName(quoteClientName(o))).join(', ') || 'the shelf')}</span></span><span style="display:flex;align-items:baseline;gap:3px;color:var(--indigo)"><span class="m" style="font-size:22px;font-weight:600">${esc(waitClock(minsSince(msOf(t.collectedAt))))}</span></span></div>
+      <div style="display:flex;align-items:center;gap:12px">${av(who, 'w' + t.assignedWorkerId, 44)}<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:15px;font-weight:700">${esc(who)}</span><span class="m ell" style="font-size:12px;color:#6B7480">${ls.length} line${ls.length === 1 ? '' : 's'} · for ${esc(ords.map(o => shortName(quoteClientName(o))).join(', ') || 'the shelf')}</span></span><span style="display:flex;align-items:baseline;gap:3px;color:var(--indigo)"><span class="m" style="font-size:22px;font-weight:600">${esc(waitWords(minsSince(msOf(t.collectedAt))))}</span></span></div>
       <span style="position:relative;height:16px"><span style="position:absolute;left:0;right:0;top:7px;border-top:2px solid var(--indigo)"></span><span style="position:absolute;right:16px;top:-1px;color:var(--indigo);background:#fff;display:flex" class="a-truck">${ic('truck', 18, 'style="stroke-width:2"')}</span><span style="position:absolute;right:-2px;top:1px;width:14px;height:14px;border-radius:3px;background:var(--navy)"></span></span>
-      <div style="display:flex;align-items:center;gap:10px"><span style="flex:1;font-size:13px;font-weight:600;color:var(--ink2)">Back ${esc(hm(msOf(t.collectedAt)))} · at the gate</span><span class="st-pill">Check in${ic('chev', 15, 'style="stroke-width:2"')}</span></div></button>`;
+      <div style="display:flex;align-items:center;gap:10px"><span style="flex:1;font-size:13px;font-weight:600;color:var(--ink2)">Back ${esc(whenSaid(msOf(t.collectedAt)))} · at the gate</span><span class="st-pill">Check in${ic('chev', 15, 'style="stroke-width:2"')}</span></div></button>`;
     const buying = t.status === 'collecting';
     return `<div style="display:flex;align-items:center;gap:12px;min-height:66px">${t.assignedWorkerId ? av(who, 'w' + t.assignedWorkerId, 42) : `<span style="width:42px;height:42px;border-radius:999px;border:1.5px dashed #C9C4BA;color:#9AA1AE;display:flex;align-items:center;justify-content:center;flex:none">${ic('person', 18)}</span>`}
       <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span class="ell" style="font-size:14px;font-weight:700">${esc(t.assignedWorkerId ? who : ls.map(l => lineName(l).base)[0] || 'A trip')}${ords.length ? ' · for ' + esc(shortName(quoteClientName(ords[0]))) : ''}</span><span style="font-size:12px;font-weight:600;color:var(--ink2)">${ls.length} line${ls.length === 1 ? '' : 's'} · ${buying ? 'buying since ' + esc(hm(msOf(t.acceptedAt))) : t.status === 'assigned' ? 'not set off yet' : 'no one on it yet'}</span></span>
@@ -1870,7 +1898,7 @@ const STEPS = [['Taken', 'check'], ['Bought', 'bag'], ['Packing', 'pack'], ['Out
 PAGE.movepack = () => {
   const pq = packQueue(), lines = pq.reduce((n, q) => n + (q.items || []).length, 0), wait = waitingOnGoods();
   const head = `<div class="st-sheettop">${grip()}
-      <div style="display:flex;align-items:center;gap:12px"><span style="flex:1;min-width:0;display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px"><span style="font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1.1">Pack</span><span style="font-size:13px;font-weight:600;color:var(--navyInk)">${pq.length} order${pq.length === 1 ? '' : 's'} · ${lines} lines · oldest first</span></span>${closeX()}</div>
+      <div style="display:flex;align-items:center;gap:12px"><span style="flex:1;min-width:0;display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px"><span style="font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1.1">Pack</span><span style="font-size:13px;font-weight:600;color:var(--navyInk)">${pq.length} order${pq.length === 1 ? '' : 's'} · ${nLines(lines)} · oldest first</span></span>${closeX()}</div>
       <div style="display:flex;flex-direction:column;gap:6px">
         <div style="position:relative;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center;height:36px">
           <span style="position:absolute;left:10%;right:10%;top:17px;height:2px;border-radius:999px;background:rgba(255,255,255,.14)"></span>
@@ -1885,7 +1913,7 @@ PAGE.movepack = () => {
       <div style="display:flex;align-items:center;gap:12px">${av(quoteClientName(q), q.id, 44)}<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:15px;font-weight:700">${esc(quoteClientName(q))}</span><span class="m ell" style="font-size:12px;color:#6B7480">${orderNo(q)} · ${esc(placeShort(q))}${orderDestination(q) ? ' · we deliver' : ''}</span></span>
         ${p.done ? `<span class="m" style="font-size:15px;font-weight:600">${p.done}/${p.n}</span>` : `<span class="st-chip m ${mins > 30 ? 'st-waitdot' : ''}" style="height:28px;background:var(--amberSoft);color:var(--amberDeep);font-weight:600">${esc(waitClock(mins))}</span>`}</div>
       <div role="img" aria-label="${p.done} of ${p.n} packed, ${p.short} short" style="display:flex;gap:3px">${p.items.map(it => `<i style="flex:1;height:8px;border-radius:999px;background:${it.pickStatus === 'short' ? '#F5B26B' : it.pickStatus === 'done' ? '#0F6B43' : '#F1EEE8'}"></i>`).join('')}</div>
-      <div style="display:flex;align-items:center;gap:10px">${sh.length ? `<span class="ell" style="flex:1;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--amberInk)">${esc(lineName(sh[0].it).base)} ${esc(quoteLineCount(sh[0].it, itemPicked(sh[0].it)).n)} of ${esc(quoteLineCount(sh[0].it, sh[0].it.qty).n)} · short</span>` : `<span class="ell" style="flex:1;font-size:13px;font-weight:600;color:var(--ink2)">${other ? esc(staffName(q.assignedWorkerId)) + ' is packing' : `${p.n} lines · aisle${aisles.length > 1 ? 's' : ''} ${esc(aisles.join(', '))}`}</span>`}
+      <div style="display:flex;align-items:center;gap:10px">${sh.length ? `<span class="ell" style="flex:1;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--amberInk)">${esc(lineName(sh[0].it).base)} ${esc(quoteLineCount(sh[0].it, itemPicked(sh[0].it)).n)} of ${esc(quoteLineCount(sh[0].it, sh[0].it.qty).n)} · short</span>` : `<span class="ell" style="flex:1;font-size:13px;font-weight:600;color:var(--ink2)">${other ? esc(staffName(q.assignedWorkerId)) + ' is packing' : `${nLines(p.n)} · aisle${aisles.length > 1 ? 's' : ''} ${esc(aisles.join(', '))}`}</span>`}
         <span class="st-pill${p.done || other ? ' soft' : ''}">${other ? 'Look' : p.done ? 'Open' : 'Start'}${ic('chev', 15, 'style="stroke-width:2"')}</span></div></button>`; };
   const body = `${pq.length ? pq.map(card).join('') : emptyCard('Nothing to pack', 'Every order in Packing is done')}
     ${wait.map(q => { const inc = orderIncomingLines(q), tr = inc.map(it => (D().collectionTrips || []).find(t => tripIsLive(t) && tripLines(t).some(l => String(l.orderId) === String(q.id) && String(l.lineId) === String(it.lineId)))).filter(Boolean)[0];
@@ -1927,11 +1955,11 @@ PAGE.receive = ({ id }) => {
   const sel = ui.sel != null ? lines[ui.sel] : null;
   const head = `<div style="background:radial-gradient(120% 100% at 90% 0%,#2B3866 0%,#16203C 60%);color:#fff;padding:8px 16px 14px;display:flex;flex-direction:column;gap:10px;flex:none">${grip()}
       <div style="display:flex;align-items:center;gap:12px">${av(who, 'w' + t.assignedWorkerId, 34)}
-        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span class="ell" style="font-size:15px;font-weight:700">Unload ${esc(firstWord(who))}'s trip</span><span class="m ell" style="font-size:11px;color:var(--navyInk)">back ${esc(hm(msOf(t.collectedAt)))} · ${lines.length} lines</span></div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span class="ell" style="font-size:15px;font-weight:700">Unload ${esc(firstWord(who))}'s trip</span><span class="m ell" style="font-size:11px;color:var(--navyInk)">back ${esc(whenSaid(msOf(t.collectedAt)))} · ${nLines(lines.length)}</span></div>
         ${telUrl(phone) ? `<a href="${telUrl(phone)}" aria-label="Call ${esc(who)}" style="width:40px;height:40px;border-radius:999px;background:rgba(111,220,176,.14);color:var(--mint);display:flex;align-items:center;justify-content:center;flex:none">${ic('phone', 16, 'style="stroke-width:2"')}</a>` : ''}
         <button class="st-x" data-act="back" aria-label="Close" style="width:40px;height:40px">${ic('close', 16, 'style="stroke-width:2.2"')}</button></div>
-      <div style="display:flex;align-items:center;gap:12px"><span style="font-size:15px;font-weight:700;white-space:nowrap"><span class="m" style="font-weight:600;color:var(--mint)">${fullN}</span>/${lines.length} came</span>
-        <div role="img" aria-label="${fullN} lines full, ${shortN} short" style="flex:1;display:flex;gap:3px">${lines.map((_, i) => `<i style="flex:1;height:6px;border-radius:999px;transition:background .3s;background:${isShort(i) ? '#F5B26B' : '#6FDCB0'}"></i>`).join('')}</div>
+      <div style="display:flex;align-items:center;gap:12px"><span style="font-size:15px;font-weight:700;white-space:nowrap"><span class="m" style="font-weight:600;color:var(--mint)">${fullN}</span>/${lines.length} in full${shortN ? ` · <span class="m" style="color:var(--amber)">${shortN}</span> short` : ''}</span>
+        <div role="img" aria-label="${nLines(fullN)} full, ${shortN} short" style="flex:1;display:flex;gap:3px">${lines.map((_, i) => `<i style="flex:1;height:6px;border-radius:999px;transition:background .3s;background:${isShort(i) ? '#F5B26B' : '#6FDCB0'}"></i>`).join('')}</div>
         <span style="font-size:11px;font-weight:600;color:var(--navyInk2);white-space:nowrap">tap only what's short</span></div></div>`;
   const body = `<span style="font-size:12px;font-weight:700;letter-spacing:.08em;color:#6B7480;padding:0 4px">PUT IT DOWN BY THE ORDER IT'S FOR</span>
     ${bays.map((b, k) => { const sh = b.tiles.filter(isShort).length, q = b.q;
@@ -2035,7 +2063,7 @@ PAGE.pack = ({ id }) => {
         <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span class="ell" style="font-size:15px;font-weight:700">${esc(quoteClientName(q))}</span><span class="m ell" style="font-size:12px;color:#DDE3F0">${orderNo(q)} · ${esc(howGoes(q))}</span></span>
         <button class="st-x light" data-act="pksound" aria-pressed="${!!S.prefs.sound}" aria-label="${S.prefs.sound ? 'Sound on. Tap to mute' : 'Sound off. Tap for sound'}">${ic(S.prefs.sound ? 'sound' : 'mute', 18)}</button>
         <span style="display:flex;align-items:baseline;gap:2px;flex:none"><span class="m" style="font-size:22px;font-weight:600">${decided}</span><span class="m" style="font-size:13px;color:#DDE3F0">/${n}</span></span></div>
-      <div role="img" aria-label="${decided} of ${n} lines picked" style="display:flex;gap:4px">${items.map((it, k) => `<i style="flex:1;height:5px;border-radius:999px;transition:background .3s;background:${it.pickStatus === 'short' ? '#F5B26B' : it.pickStatus === 'done' ? '#6FDCB0' : k === ui.i ? '#FFFFFF' : 'rgba(255,255,255,.3)'}"></i>`).join('')}</div>
+      <div role="img" aria-label="${decided} of ${nLines(n)} picked" style="display:flex;gap:4px">${items.map((it, k) => `<i style="flex:1;height:5px;border-radius:999px;transition:background .3s;background:${it.pickStatus === 'short' ? '#F5B26B' : it.pickStatus === 'done' ? '#6FDCB0' : k === ui.i ? '#FFFFFF' : 'rgba(255,255,255,.3)'}"></i>`).join('')}</div>
       <div style="display:flex;align-items:center;gap:8px"><span style="height:32px;padding:0 12px 0 4px;border-radius:999px;background:rgba(255,255,255,.16);display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700"><span style="width:24px;height:24px;border-radius:999px;background:#fff;color:var(--navy);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center">${esc(a.letter)}</span>${esc(a.name)}</span><span style="font-size:12px;font-weight:600;color:#DDE3F0">${aisleLeft ? aisleLeft + ' to pick in this aisle' : 'aisle done'}</span></div>
     </div>
     <button type="button" class="pk-arrow" data-act="pkgo" data-d="-1" aria-label="Previous item" style="left:6px">${ic('back', 20, 'style="stroke-width:2.4"')}</button>
@@ -2055,7 +2083,7 @@ PAGE.pack = ({ id }) => {
 };
 PAGE.pack.bg = '#16203C';
 function pkQ(){ return quoteById(S.ui.pk && S.ui.pk.id); }
-function pkGo(i){ const q = pkQ(); if (!q) return; const n = (q.items || []).length, to = Math.max(0, Math.min(n - 1, i)); if (to !== S.ui.pk.i) sfxNotes([[520, 0, 0.06, 0.05]], 'triangle');
+function pkGo(i){ const q = pkQ(); if (!q) return; clearTimeout(pkMark.t); const n = (q.items || []).length, to = Math.max(0, Math.min(n - 1, i)); if (to !== S.ui.pk.i) sfxNotes([[520, 0, 0.06, 0.05]], 'triangle');
   S.ui.pk = { ...S.ui.pk, i: to, shortOpen: false, editing: true }; S.ui.pkStamp = null; render(); }
 function pkNextOpen(items, from){ for (let k = 1; k <= items.length; k++) { const j = (from + k) % items.length; if (!PICK_ANSWERED.includes(items[j].pickStatus)) return j; } return -1; }
 function pkMark(kind, got){
@@ -2159,6 +2187,7 @@ AFTER.push(paintTiles);
    LOAD -- pick the drops by direction, one truck, three drops.
    ================================================================== */
 const MAX_DROPS = 3;
+let mapLabelShown = {};
 const COMPASS = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'];
 function staffDrivers(){ return D().staff.filter(s => !s.unavailable && ['delivery', 'worker', 'driver', 'store'].includes(String(s.role).toLowerCase())); }
 function pastHired(){
@@ -2209,11 +2238,18 @@ PAGE.load = args => {
     map = `<div class="mp" role="group" aria-label="Map of today's drops from the yard" style="height:${h}px">
       <div class="tiles">${tilesHTML(f)}</div>
       <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true">${wedges}${lines}</svg>
-      ${packing.map(p => { const P = f.px(p.pin); return `<span class="pin" style="left:${P.x}px;top:${P.y}px;opacity:.6"><span style="width:28px;height:28px;border-radius:999px;border:1.5px dashed rgba(255,255,255,.5);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">${esc(initials(quoteClientName(p.q)))}</span><span style="font-size:10px;font-weight:600;color:var(--navyInk);white-space:nowrap">packing</span></span>`; }).join('')}
+      ${packing.map(p => { const P = f.px(p.pin); return `<span class="pin" style="left:${P.x}px;top:${P.y}px;opacity:.6"><span style="width:28px;height:28px;border-radius:999px;border:1.5px dashed rgba(255,255,255,.5);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">${esc(initials(quoteClientName(p.q)))}</span></span>`; }).join('')}
+      ${(() => { // A label is drawn only where it does not land on another one.
+        const boxes = [{ x0: Y.x - 22, x1: Y.x + 22, y0: Y.y - 22, y1: Y.y + 34 }], show = {};
+        drops.filter(d => d.pin).concat(packing).forEach(d => { const P = f.px(d.pin); boxes.push({ x0: P.x - 17, x1: P.x + 17, y0: P.y - 17, y1: P.y + 17 }); });
+        drops.filter(d => d.pin).sort((a, b) => !!ui.sel[b.q.id] - !!ui.sel[a.q.id]).forEach(d => { const P = f.px(d.pin), txt = d.pin.name + (d.km != null ? ' · ~' + (Math.round(d.km * 10) / 10) + ' km' : ''), hw = txt.length * 3.1 + 4;
+          const bx = { x0: P.x - hw, x1: P.x + hw, y0: P.y + 17, y1: P.y + 31 };
+          if (!boxes.some(o => bx.x0 < o.x1 && bx.x1 > o.x0 && bx.y0 < o.y1 && bx.y1 > o.y0)) { boxes.push(bx); show[d.q.id] = true; } });
+        mapLabelShown = show; return ''; })()}
       ${drops.filter(d => d.pin).map(d => { const on = !!ui.sel[d.q.id], P = f.px(d.pin), t = tintFor(d.q.id);
         return `<button type="button" class="pin" data-act="ldpin" data-id="${d.q.id}" aria-pressed="${on}" aria-label="${esc(quoteClientName(d.q))}, ${esc(d.pin.name)}${on ? ', on the truck' : ', not on the truck'}" style="left:${P.x}px;top:${P.y}px">
           <span class="${on ? 'mp-ping' : ''}" style="width:34px;height:34px;border-radius:999px;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;${on ? `background:${t[0]};color:${t[1]};box-shadow:0 0 0 3px #16203C,0 0 0 5px #6FDCB0` : 'background:#243052;color:#8D99B5;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.25)'}">${esc(initials(quoteClientName(d.q)))}</span>
-          <span style="font-size:10px;font-weight:700;white-space:nowrap;color:${on ? '#fff' : '#8D99B5'};text-shadow:0 1px 2px #16203C">${esc(d.pin.name)}${d.km != null ? ' · ' + (d.rt ? '' : '~') + (Math.round(d.km * 10) / 10) + ' km' : ''}</span></button>`; }).join('')}
+          <span style="font-size:10px;font-weight:700;white-space:nowrap;color:${on ? '#fff' : '#8D99B5'};text-shadow:0 1px 2px #16203C;${mapLabelShown[d.q.id] ? '' : 'visibility:hidden'}">${esc(d.pin.name)}${d.km != null ? ' · ' + (d.rt ? '' : '~') + (Math.round(d.km * 10) / 10) + ' km' : ''}</span></button>`; }).join('')}
       <span class="pin" style="left:${Y.x}px;top:${Y.y}px"><span style="width:40px;height:40px;border-radius:12px;background:var(--mint);color:var(--navy);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 14px rgba(0,0,0,.3)">${ic('yard', 20, 'style="stroke-width:2"')}</span><span style="font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--mint)">YARD</span></span>
       <span class="attr">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></span></div>`;
   } else {
@@ -2237,7 +2273,7 @@ PAGE.load = args => {
     const dist = d.rt ? `${d.rt.km} km · ${d.rt.mins} min` : d.km != null ? `~${Math.round(d.km * 10) / 10} km · route not locked` : `${canonicalPlace(d.place)} · no pin`;
     return `<div style="display:flex;align-items:center;gap:8px;${j ? 'border-top:1px solid #F1EEE8' : ''}"><button type="button" data-act="ldpin" data-id="${d.q.id}" aria-pressed="${on}" class="a-up" style="flex:1;min-width:0;border:none;background:transparent;padding:0;min-height:62px;display:flex;align-items:center;gap:12px;text-align:left;color:var(--ink)">
       <span class="st-av round" style="width:38px;height:38px;font-size:12px;background:${t[0]};color:${t[1]}">${esc(initials(quoteClientName(d.q)))}</span>
-      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><span class="ell" style="font-size:14px;font-weight:700">${esc(quoteClientName(d.q))}</span><span style="display:flex;align-items:flex-end;gap:3px;min-width:0">${items.slice(0, 5).map(it => art(it, 'small', 'transform:scale(.7)')).join('')}<span class="ell" style="font-size:12px;font-weight:600;color:#6B7480;margin-left:6px">${esc(dist)} · ${items.length} lines</span></span></span>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><span class="ell" style="font-size:14px;font-weight:700">${esc(quoteClientName(d.q))}</span><span style="display:flex;align-items:flex-end;gap:3px;min-width:0">${items.slice(0, 5).map(it => art(it, 'small', 'transform:scale(.7)')).join('')}<span class="ell" style="font-size:12px;font-weight:600;color:#6B7480;margin-left:6px">${esc(dist)} · ${nLines(items.length)}</span></span></span>
       <span style="width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex:none;${on ? 'background:#16203C;color:#6FDCB0' : 'box-shadow:inset 0 0 0 2px #D6D0C6;color:transparent'}">${ic('tick', 16, 'style="stroke-width:3"')}</span></button>
       ${!d.rt && d.pin && yard && D().routes !== null ? `<button data-act="ldlock" data-place="${esc(d.place)}" aria-label="Lock the road route to ${esc(d.pin.name)}" style="height:36px;padding:0 10px;border:none;border-radius:11px;background:#F1EEE8;color:var(--ink);font-size:12px;font-weight:700;display:flex;align-items:center;gap:4px;flex:none">${ic('route', 14)}Lock</button>` : ''}</div>`; }).join('');
   const carRow = car ? `<button data-act="open" data-page="loadhired" style="display:flex;align-items:center;gap:12px;min-height:56px;padding:0 12px;border:none;border-radius:16px;background:#F1EEE8;text-align:left;width:100%">${av(car.name || 'Driver', car.staffId || car.phone || car.name, 34)}
@@ -2246,10 +2282,10 @@ PAGE.load = args => {
     : `<button data-act="open" data-page="loadhired" style="display:flex;align-items:center;gap:12px;min-height:56px;padding:0 12px;border:none;border-radius:16px;background:#F1EEE8;width:100%">${ic('person', 18)}<span style="flex:1;text-align:left;font-size:14px;font-weight:700">Who drives?</span>${ic('chev', 14)}</button>`;
   const body = `${roadCards ? `<div role="group" aria-label="Pick a direction" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">${roadCards}</div>` : ''}
     ${drops.length ? `<div class="st-card" style="padding:0 12px;border-radius:18px">${dropRows || `<div style="min-height:62px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#6B7480">Tap a road, or a pin on the map</div>`}</div>${carRow}` : ''}
-    ${collect.length ? `<div class="st-sec2" style="padding-top:6px"><b style="font-size:15px">At the gate</b><span>they collect</span></div><div class="st-card" style="padding:0 12px;border-radius:18px">${collect.map((d, j) => `<button data-act="collect" data-id="${d.q.id}" style="width:100%;border:none;background:none;text-align:left;display:flex;align-items:center;gap:12px;min-height:60px;${j ? 'border-top:1px solid #F1EEE8' : ''}">${av(quoteClientName(d.q), d.q.id, 36)}<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:14px;font-weight:700">${esc(quoteClientName(d.q))}</span><span class="m" style="font-size:12px;color:#6B7480">${orderNo(d.q)} · ${(d.q.items || []).length} lines${d.place ? '' : orderIsCollected(d.q) ? '' : ' · no place on file'}</span></span><span class="st-pill soft">Hand over${ic('chev', 14)}</span></button>`).join('')}</div>` : ''}
+    ${collect.length ? `<div class="st-sec2" style="padding-top:6px"><b style="font-size:15px">At the gate</b><span>they collect</span></div><div class="st-card" style="padding:0 12px;border-radius:18px">${collect.map((d, j) => `<button data-act="collect" data-id="${d.q.id}" style="width:100%;border:none;background:none;text-align:left;display:flex;align-items:center;gap:12px;min-height:60px;${j ? 'border-top:1px solid #F1EEE8' : ''}">${av(quoteClientName(d.q), d.q.id, 36)}<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:14px;font-weight:700">${esc(quoteClientName(d.q))}</span><span class="m" style="font-size:12px;color:#6B7480">${orderNo(d.q)} · ${nLines((d.q.items || []).length)}${d.place ? '' : orderIsCollected(d.q) ? '' : ' · no place on file'}</span></span><span class="st-pill soft">Hand over${ic('chev', 14)}</span></button>`).join('')}</div>` : ''}
     ${!drops.length && !collect.length ? emptyCard('Nothing packed yet', 'Packed orders come here to be loaded') : ''}
     <span class="st-tag">OpenStreetMap · kept on the phone · routes locked once per place</span>`;
-  const foot = drops.length ? `<div class="row">${slideHTML('load', count ? `Slide · ${count} gone with ${firstWord(car ? car.name : '') || 'the driver'}` : 'Pick drops first', 'truck', { disabled: !count || !car || S.busy, done: ui.sent, doneLabel: ui.sentLabel })}</div>${ui.sent && ui.sentMine ? `<button data-act="deliver" data-id="${ui.sentMine}" style="height:44px;border:none;background:none;font-size:14px;font-weight:700;color:var(--navy)">At the door · take the photo</button>` : ui.sent ? `<button data-act="home" style="height:44px;border:none;background:none;font-size:14px;font-weight:700;color:var(--navy)">Done · back to Today</button>` : ''}` : '';
+  const foot = drops.length ? `<div class="row">${slideHTML('load', count ? `Slide · ${count} gone with ${firstWord(car ? car.name : '') || 'the driver'}` : 'Pick drops first', 'truck', { disabled: !count || !car || S.busy, done: ui.sent, doneLabel: ui.sentLabel })}</div>${ui.sent && ui.waUrl ? `<a class="st-btn green" href="${esc(ui.waUrl)}" target="_blank" rel="noopener" data-act="wasent" data-keep style="flex:none;height:52px">${ic('wa', 20)}Send ${esc(ui.waName)} the drops on WhatsApp</a>` : ''}${ui.sent && ui.sentMine ? `<button data-act="deliver" data-id="${ui.sentMine}" style="height:44px;border:none;background:none;font-size:14px;font-weight:700;color:var(--navy)">At the door · take the photo</button>` : ui.sent ? `<button data-act="home" style="height:44px;border:none;background:none;font-size:14px;font-weight:700;color:var(--navy)">Done · back to Today</button>` : ''}` : '';
   return `<button class="tapback" data-act="back" aria-label="Back" style="height:calc(40px + var(--safe-area-inset-top))"></button>
     <div class="card" style="margin-top:calc(40px + var(--safe-area-inset-top))">${head}<div style="padding:12px 16px 0;display:flex;flex-direction:column;gap:10px;flex:1">${body}</div>${foot ? `<div class="st-foot">${foot}</div>` : ''}</div>`;
 };
@@ -2270,7 +2306,8 @@ ACT['slide:load'] = async () => {
   const me = myStaff();
   ui.sent = true; ui.sentLabel = `${done.length} gone with ${firstWord(car.name)}`; ui.sentMine = car.kind === 'staff' && me && String(car.staffId) === String(me.id) ? done[0].id : null;
   render();
-  if (car.kind === 'hired' && car.phone) setTimeout(() => { location.href = waComposeUrl(car.phone, driverMessage(done)); }, 500);
+  ui.waUrl = car.kind === 'hired' ? waComposeUrl(car.phone, driverMessage(done)) : null; ui.waName = firstWord(car.name);
+  render();
 };
 function driverMessage(orders){
   return `Hello ${firstWord(S.ui.ld.carrier && S.ui.ld.carrier.name)}, today's drop${orders.length > 1 ? 's' : ''} from ${S.shopName}:\n\n` + orders.map((q, i) => `${i + 1}. ${quoteClientName(q)} — ${placeShort(q)}${orderPhone(q) ? ' · ' + orderPhone(q) : ''}\n   ${(q.items || []).map(it => `${quoteLineCount(it, it.pickStatus === 'short' ? it.pickedQty : it.qty).n} ${quoteLineCount(it, 1).unit} ${lineName(it).base}`).join(', ')}`).join('\n\n') + `\n\nPlease send a photo at each door.`;
@@ -2285,7 +2322,7 @@ PAGE.loadhired = () => {
   const nw = ui.newDriver || null;
   const d = car || { name: 'Pick a driver', phone: '', what: '' };
   const head = `<div style="background:radial-gradient(120% 100% at 90% 0%,#2B3866 0%,#16203C 60%);color:#fff;padding:8px 16px 18px;display:flex;flex-direction:column;gap:14px">${grip()}
-      <div style="display:flex;align-items:center;gap:12px"><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:20px;font-weight:700">${car && car.kind === 'hired' ? 'Hired transport' : 'Who drives'}</span><span class="ell" style="font-size:12px;font-weight:600;color:var(--navyInk)">${sel.length ? esc(sel.map(x => shortName(quoteClientName(x.q))).join(', ')) + ` · ${sel.reduce((n, x) => n + (x.q.items || []).length, 0)} lines` : 'no drops picked yet'}</span></span>${closeX()}</div>
+      <div style="display:flex;align-items:center;gap:12px"><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:20px;font-weight:700">${car && car.kind === 'hired' ? 'Hired transport' : 'Who drives'}</span><span class="ell" style="font-size:12px;font-weight:600;color:var(--navyInk)">${sel.length ? esc(sel.map(x => shortName(quoteClientName(x.q))).join(', ')) + ` · ${nLines(sel.reduce((n, x) => n + (x.q.items || []).length, 0))}` : 'no drops picked yet'}</span></span>${closeX()}</div>
       <div class="a-card" style="border-radius:20px;background:#fff;color:var(--ink);overflow:hidden;box-shadow:0 14px 30px rgba(0,0,0,.3)">
         <div style="display:flex;align-items:center;gap:12px;padding:14px">${av(d.name, d.staffId || d.phone || d.name, 48)}
           <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:10px;font-weight:700;letter-spacing:.12em;color:#6B7480">${car && car.kind === 'staff' ? 'OUR DRIVER' : 'DRIVER'}</span><span class="ell" style="font-size:17px;font-weight:700">${esc(d.name)}</span><span class="m" style="font-size:12px;color:#6B7480">${esc(fmtPhone(d.phone) || 'no phone')}</span></span>
@@ -2304,10 +2341,11 @@ PAGE.loadhired = () => {
       <button data-act="nwuse" class="st-btn navy" style="flex:none;height:50px">Use this driver</button></div>`
     : `<button type="button" data-act="nwopen" style="height:52px;border:none;border-radius:16px;background:#fff;box-shadow:inset 0 0 0 1.5px #C9C4BA;color:var(--ink);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">${ic('plus', 16, 'style="stroke-width:2.4"')}Someone new · name, plate, phone</button>`}
     ${car && car.kind === 'hired' ? `<div style="display:flex;align-items:center;gap:10px;min-height:52px;padding:0 12px;border-radius:14px;background:var(--greenSoft);color:#0B5435;font-size:13px;font-weight:600">${ic('wa', 18, 'style="stroke:#0F6B43"')}<span>${esc(firstWord(car.name))} gets the drops on WhatsApp: address, contact, what's on board</span></div>` : ''}`;
-  const foot = `<div class="row">${slideHTML('load', sel.length && car ? `Slide · gone with ${firstWord(car.name)}` : !car ? 'Pick a driver first' : 'Pick drops on Load first', 'truck', { disabled: !sel.length || !car || S.busy, done: ui.sent, doneLabel: ui.sentLabel })}</div>${ui.sent ? `<button data-act="home" style="height:44px;border:none;background:none;font-size:14px;font-weight:700;color:var(--navy)">Done · back to Today</button>` : ''}`;
+  const foot = `${ui.sent && ui.waUrl ? `<a class="st-btn green" href="${esc(ui.waUrl)}" target="_blank" rel="noopener" data-act="wasent" data-keep style="flex:none;height:52px">${ic('wa', 20)}Send ${esc(ui.waName)} the drops on WhatsApp</a>` : ''}<div class="row">${slideHTML('load', sel.length && car ? `Slide · gone with ${firstWord(car.name)}` : !car ? 'Pick a driver first' : 'Pick drops on Load first', 'truck', { disabled: !sel.length || !car || S.busy, done: ui.sent, doneLabel: ui.sentLabel })}</div>${ui.sent ? `<button data-act="home" style="height:44px;border:none;background:none;font-size:14px;font-weight:700;color:var(--navy)">Done · back to Today</button>` : ''}`;
   return `<button class="tapback" data-act="back" aria-label="Back" style="height:calc(40px + var(--safe-area-inset-top))"></button><div class="card" style="margin-top:calc(40px + var(--safe-area-inset-top))">${head}<div style="padding:14px 16px 0;display:flex;flex-direction:column;gap:10px;flex:1">${body}</div><div class="st-foot">${foot}</div></div>`;
 };
 PAGE.loadhired.bg = '#2A3350';
+ACT.wasent = () => { FEEL.tick(); };
 ACT.ldcar = t => { const ui = ldUI(), [k, v] = t.dataset.k.split(':'); FEEL.tick(); buzz(12);
   if (k === 's') { const s = staffById(v); if (s) ui.carrier = { kind: 'staff', staffId: s.id, name: s.name, phone: s.phone }; }
   else { const x = pastHired()[Number(v)]; if (x) ui.carrier = { kind: 'hired', name: x.name, phone: x.phone, what: x.what }; }
@@ -2482,14 +2520,43 @@ function aisleStats(){
     return { ...a, items: its, fresh: its.length ? Math.round(counted / its.length * 100) : 0, flags };
   });
 }
-function needsLook(x){ const pr = promisedFor(x.productId, x.variantIdx).reduce((n, p) => n + p.n, 0); if (pr > x.qty) return 'short';
-  const w = weeksOf(x.key), out = w.reduce((n, r) => n + r[1], 0) / 4; if (out > 0 && x.qty < out) return 'low';
-  const d = daysSinceCount(x.key); if (x.qty > 0 && (d == null || d > COUNT_DUE_DAYS * 1.5)) return 'due'; return null; }
+// What is wrong with an item, worst first -- or nothing. An empty shelf
+// nobody is asking for is not a problem; an empty one that sells is.
+function lookOf(x){
+  return memo('look:' + x.key, () => {
+    const pr = promisedFor(x.productId, x.variantIdx).reduce((n, p) => n + p.n, 0);
+    const w = weeksOf(x.key), out4 = w.reduce((n, r) => n + r[1], 0), wk = out4 / 4, d = daysSinceCount(x.key);
+    const why = pr > x.qty ? 'short' : x.qty <= 0 && out4 > 0 ? 'out' : x.qty > 0 && wk >= 1 && x.qty < wk ? 'low'
+      : x.qty > 0 && d != null && d > 21 ? 'due' : null;
+    return { why, pr, wk, out4, d };
+  });
+}
+function needsLook(x){ return lookOf(x).why; }
+const LOOK_RANK = { short: 0, out: 1, low: 2, due: 3 };
+function unitWord(x){ return String((unitsFor(x.productId, x.variantIdx) || {}).unit || 'pc').toLowerCase(); }
+function perWeek(wk, u){ return wk >= 1 ? `~${n0(wk)} ${u} a week` : wk > 0 ? `under 1 ${u} a week` : 'not moving'; }
+function lookRowHTML(x, i){
+  const L = lookOf(x), u = unitWord(x);
+  const chip = { short: [`${n0(L.pr - x.qty)} short`, 'background:var(--crimsonSoft);color:var(--crimson)'], out: ['out of stock', 'background:var(--crimsonSoft);color:var(--crimson)'],
+    low: ['running low', 'background:var(--amberSoft);color:var(--amberDeep)'], due: ['count due', 'background:var(--indigoSoft);color:var(--indigo)'] }[L.why];
+  const meter = (pct, col, track, label) => `<span role="img" aria-label="${esc(label)}" style="position:relative;height:6px;border-radius:999px;background:${track};overflow:hidden"><i style="position:absolute;left:0;top:0;bottom:0;width:${Math.max(0, Math.min(100, pct))}%;background:${col};border-radius:999px"></i></span>`;
+  const bar = L.why === 'short' ? meter(x.qty / Math.max(1, L.pr) * 100, 'var(--crimson)', 'var(--crimsonSoft)', `${n0(x.qty)} on the shelf against ${n0(L.pr)} promised`)
+    : L.why === 'out' ? `<span role="img" aria-label="Sold ${n0(L.out4)} in four weeks, none left" style="display:flex;gap:2px">${weeksOf(x.key).map(r => `<i style="flex:1;height:6px;border-radius:2px;background:${r[1] ? 'var(--crimson)' : '#F1EEE8'};opacity:${r[1] ? .35 + .65 * Math.min(1, r[1] / Math.max(1, L.wk * 2)) : 1}"></i>`).join('')}</span>`
+    : L.why === 'low' ? meter(x.qty / Math.max(1, L.wk) * 100, 'var(--amber)', '#F1EEE8', `${n0(x.qty)} left; about ${n0(L.wk)} go out a week`)
+    : `<span role="img" aria-label="${L.d == null ? 'Never counted' : 'Last counted ' + L.d + ' days ago'}" style="display:flex;gap:2px">${Array.from({ length: 10 }, (_, k) => `<i style="flex:1;height:6px;border-radius:2px;background:${k < Math.min(10, Math.round((L.d == null ? 30 : L.d) / 3)) ? '#9BA3F0' : '#F1EEE8'}"></i>`).join('')}</span>`;
+  const sub = L.why === 'short' ? `<span class="m">${n0(x.qty)}</span> on the shelf · <span class="m">${n0(L.pr)}</span> ${esc(u)} promised`
+    : L.why === 'out' ? `none left · ${n0(L.out4)} ${esc(u)} went out in 4 weeks`
+    : L.why === 'low' ? `<span class="m">${n0(x.qty)}</span> ${esc(u)} left · ${perWeek(L.wk, esc(u))}`
+    : `last counted <span class="m">${L.d}</span> days ago`;
+  return `<button data-act="${L.why === 'due' ? 'count' : 'stock'}" data-key="${esc(x.key)}" data-aisle="${esc(x.aisle.letter)}" style="width:100%;border:none;background:none;text-align:left;display:flex;align-items:center;gap:12px;min-height:70px;${i ? 'border-top:1px solid #F1EEE8' : ''}">
+    <span aria-hidden="true" style="width:46px;height:46px;border-radius:12px;background:#F7F5F2;display:flex;align-items:center;justify-content:center;flex:none">${art(x, 'small')}</span>
+    <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px"><span style="display:flex;align-items:center;gap:8px;min-width:0"><span class="ell" style="flex:1;font-size:14px;font-weight:700">${esc(nameParts(x.productId, x.variantIdx, x.productName).base)}</span><span class="st-chip" style="height:22px;font-size:11px;${chip[1]}">${chip[0]}</span></span>${bar}<span class="ell" style="font-size:12px;font-weight:600;color:var(--ink2)">${nameParts(x.productId, x.variantIdx, x.productName).variant ? `<b style="color:var(--ink)">${esc(nameParts(x.productId, x.variantIdx, x.productName).variant)}</b> · ` : ''}${sub}</span></span></button>`;
+}
 function viewShelf(){
   const st = aisleStats(), sel = S.ui.aisle != null ? Math.min(S.ui.aisle, st.length - 1) : 0, cur = st[sel];
   const total = st.reduce((n, a) => n + a.items.length, 0), qq = String(S.ui.find || '').trim().toLowerCase();
   const found = qq ? stockItems().filter(x => x.productName.toLowerCase().includes(qq)).slice(0, 12) : null;
-  const look = stockItems().map(x => ({ x, why: needsLook(x) })).filter(r => r.why).sort((a, b) => ['short', 'low', 'due'].indexOf(a.why) - ['short', 'low', 'due'].indexOf(b.why));
+  const look = memo('lookList', () => stockItems().filter(x => needsLook(x)).sort((a, b) => LOOK_RANK[needsLook(a)] - LOOK_RANK[needsLook(b)] || lookOf(b).out4 - lookOf(a).out4));
   const came = cameInToday();
   return `<div class="st-hero" data-navy-top style="border-radius:0 0 28px 28px;padding:calc(16px + var(--safe-area-inset-top)) 16px 16px;gap:14px;background:#16203C">
       <div style="display:flex;align-items:center;justify-content:space-between"><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:24px;font-weight:700;letter-spacing:-.02em">Shelf</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${total} items in ${st.length} aisle${st.length === 1 ? '' : 's'}</span></span>
@@ -2497,8 +2564,8 @@ function viewShelf(){
       <label class="st-search">${ic('search', 18, 'style="stroke:#8D99B5"')}<input id="sh_find" type="search" data-in="find" value="${esc(S.ui.find || '')}" placeholder="mabaati, 3 inch nails, sumunti…" aria-label="Find an item"><span aria-hidden="true" style="color:var(--navyInk2);display:flex">${ic('mic', 18)}</span></label>
       ${found ? `<div class="st-card" style="padding:0 12px;color:var(--ink)">${found.length ? found.map((x, i) => `<button data-act="stock" data-key="${esc(x.key)}" style="width:100%;border:none;background:none;text-align:left;display:flex;align-items:center;gap:10px;min-height:52px;${i ? 'border-top:1px solid #F1EEE8' : ''}"><span style="width:34px;height:34px;border-radius:10px;background:#F7F5F2;display:flex;align-items:center;justify-content:center">${art(x, 'small')}</span><span class="ell" style="flex:1;font-size:14px;font-weight:700">${esc(x.productName)}</span><span style="font-size:11px;font-weight:700;color:#6B7480">aisle ${esc(x.aisle.letter)}</span></button>`).join('') : `<div class="st-empty" style="padding:16px">Nothing called that</div>`}</div>` : `
       <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--navyInk2)">THE STORE · TAP AN AISLE</span><span style="display:flex;gap:10px;font-size:11px;font-weight:600;color:var(--navyInk)"><span style="display:flex;align-items:center;gap:4px"><i style="width:8px;height:8px;border-radius:3px;background:#6FDCB0"></i>counted</span><span style="display:flex;align-items:center;gap:4px"><i style="width:8px;height:8px;border-radius:3px;background:#F5B26B"></i>count due</span></span></div>
-      <div role="group" aria-label="Aisles of the store" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">${st.map((a, k) => { const on = k === sel, due = a.fresh < 60;
-        return `<button type="button" class="sh-aisle" data-act="aisle" data-k="${k}" aria-pressed="${on}" aria-label="Aisle ${esc(a.letter)}, ${esc(a.name)}${due ? ', count due' : ', counted'}${a.flags ? ', ' + a.flags + ' need a look' : ''}" style="${on ? 'background:#fff;color:#16203C;box-shadow:0 8px 18px rgba(0,0,0,.25)' : 'background:rgba(255,255,255,.07);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)'}">
+      ${!st.length ? `<div style="padding:18px 4px;text-align:center;color:var(--navyInk);font-size:13px;font-weight:600">No products on the books yet — they appear here, aisle by category, once the owner adds them</div>` : ''}<div role="group" aria-label="Aisles of the store" class="sh-aisles" style="display:grid;grid-auto-flow:column;grid-template-rows:repeat(${st.length > 3 ? 2 : 1},64px);grid-auto-columns:${st.length > 6 ? 'calc((100% - 50px) / 3.3)' : 'calc((100% - 44px) / 3)'};gap:6px;overflow-x:auto;scroll-snap-type:x proximity;margin:0 -16px;padding:0 16px;scroll-padding:0 16px">${st.map((a, k) => { const on = k === sel, due = a.fresh < 60;
+        return `<button type="button" class="sh-aisle" data-act="aisle" data-k="${k}" aria-pressed="${on}" aria-label="Aisle ${esc(a.letter)}, ${esc(a.name)}${due ? ', count due' : ', counted'}${a.flags ? ', ' + a.flags + ' need a look' : ''}" style="scroll-snap-align:start;${on ? 'background:#fff;color:#16203C;box-shadow:0 8px 18px rgba(0,0,0,.25)' : 'background:rgba(255,255,255,.07);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)'}">
           <span style="display:flex;align-items:center;gap:6px;min-width:0"><span style="width:20px;height:20px;border-radius:6px;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;${on ? 'background:#16203C;color:#fff' : 'background:rgba(255,255,255,.14)'}">${esc(a.letter)}</span><span class="ell" style="font-size:12px;font-weight:700">${esc(a.name)}</span></span>
           <span style="display:flex;align-items:center;gap:6px;width:100%"><span class="sh-bar" style="${on ? 'background:#EFECE6' : ''}"><i style="width:${a.fresh}%;background:${due ? '#F5B26B' : '#6FDCB0'};animation-delay:${k * .05}s"></i></span>${a.flags ? `<span class="st-waitdot" style="min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:var(--amber);color:var(--navy);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">${a.flags}</span>` : ''}</span></button>`; }).join('')}</div>`}
     </div>
@@ -2507,20 +2574,13 @@ function viewShelf(){
         <span style="width:44px;height:44px;border-radius:14px;background:var(--navy);color:var(--mint);display:flex;align-items:center;justify-content:center;flex:none">${ic('count', 22)}</span>
         <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:15px;font-weight:700">Stock take · Aisle ${esc(cur.letter)} · ${esc(cur.name)}</span><span style="font-size:12px;font-weight:600;color:var(--ink2)">${cur.items.length} items · counted blind · ${cur.fresh < 60 ? 'count due' : 'counted lately'}</span></span>
         <span class="st-pill">Start</span></button>` : ''}
-      ${look.length ? `<div class="st-sec2"><b>Needs a look</b><span>${look.length}</span></div>
-      <div class="st-card" style="padding:0 12px;border-radius:18px">${look.slice(0, 5).map(({ x, why }, i) => { const pr = promisedFor(x.productId, x.variantIdx).reduce((n, p) => n + p.n, 0), w = weeksOf(x.key), wk = Math.round(w.reduce((n, r) => n + r[1], 0) / 4), d = daysSinceCount(x.key), u = (unitsFor(x.productId, x.variantIdx) || {}).unit || '';
-        const chip = why === 'short' ? [`${n0(pr - x.qty)} short`, 'background:var(--crimsonSoft);color:var(--crimson)'] : why === 'low' ? ['running low', 'background:var(--amberSoft);color:var(--amberDeep)'] : ['count due', 'background:var(--indigoSoft);color:var(--indigo)'];
-        const bar = why === 'short' ? `<span role="img" aria-label="${n0(x.qty)} on the shelf against ${n0(pr)} promised" style="position:relative;height:6px;border-radius:999px;background:var(--crimsonSoft);overflow:hidden"><i style="position:absolute;left:0;top:0;bottom:0;width:${Math.min(100, x.qty / Math.max(1, pr) * 100)}%;background:var(--crimson);border-radius:999px"></i></span>`
-          : why === 'low' ? `<span role="img" aria-label="${n0(x.qty)} left; it sells about ${wk} a week" style="position:relative;height:6px;border-radius:999px;background:#F1EEE8;overflow:hidden"><i style="position:absolute;left:0;top:0;bottom:0;width:${Math.min(100, x.qty / Math.max(1, wk) * 100)}%;background:var(--amber);border-radius:999px"></i></span>`
-          : `<span role="img" aria-label="${d == null ? 'Never counted' : 'Last counted ' + d + ' days ago'}" style="display:flex;gap:2px">${Array.from({ length: 10 }, (_, k) => `<i style="flex:1;height:6px;border-radius:2px;background:${k < Math.min(10, Math.round((d == null ? 30 : d) / 3)) ? '#9BA3F0' : '#F1EEE8'}"></i>`).join('')}</span>`;
-        const sub = why === 'short' ? `<span class="m">${n0(x.qty)}</span> on the shelf · <span class="m">${n0(pr)}</span> promised` : why === 'low' ? `<span class="m">${n0(x.qty)}</span> left · sells ~<span class="m">${wk}</span> a week` : d == null ? 'never counted' : `last counted <span class="m">${d}</span> days ago`;
-        return `<button data-act="${why === 'due' ? 'count' : 'stock'}" data-key="${esc(x.key)}" data-aisle="${esc(x.aisle.letter)}" style="width:100%;border:none;background:none;text-align:left;display:flex;align-items:center;gap:12px;min-height:70px;${i ? 'border-top:1px solid #F1EEE8' : ''}">
-          <span aria-hidden="true" style="width:46px;height:46px;border-radius:12px;background:#F7F5F2;display:flex;align-items:center;justify-content:center;flex:none">${art(x, 'small')}</span>
-          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px"><span style="display:flex;align-items:center;gap:8px;min-width:0"><span class="ell" style="flex:1;font-size:14px;font-weight:700">${esc(x.productName)}</span><span class="st-chip" style="height:22px;font-size:11px;${chip[1]}">${chip[0]}</span></span>${bar}<span style="font-size:12px;font-weight:600;color:var(--ink2)">${sub}${why === 'due' ? '' : ' ' + esc(u)}</span></span></button>`; }).join('')}</div>` : ''}
+      ${look.length ? `<div class="st-sec2"><b>Needs a look</b><span style="display:flex;gap:8px;font-family:Figtree,system-ui,sans-serif;font-size:11px;font-weight:700">${['short', 'out', 'low', 'due'].map(k => { const n = look.filter(x => needsLook(x) === k).length; return n ? `<span style="font-family:Figtree,system-ui,sans-serif;color:${k === 'due' ? 'var(--indigo)' : k === 'low' ? 'var(--amberInk)' : 'var(--crimson)'}"><span class="m">${n}</span> <span style="font-family:Figtree,system-ui,sans-serif">${k}</span></span>` : ''; }).join('')}</span></div>
+      <div class="st-card" style="padding:0 12px;border-radius:18px">${look.slice(0, S.ui.lookAll ? 60 : 5).map(lookRowHTML).join('')}
+        ${look.length > 5 ? `<button data-act="lookall" style="width:100%;height:48px;border:none;border-top:1px solid #F1EEE8;background:none;font-size:13px;font-weight:700;color:var(--navy)">${S.ui.lookAll ? 'Show fewer' : `Show all ${look.length}`}</button>` : ''}</div>` : ''}
       <div class="st-sec2"><b>Came in today</b><span style="display:flex;gap:10px;font-family:Figtree,system-ui,sans-serif;font-size:11px;font-weight:600"><span style="display:flex;align-items:center;gap:4px"><i style="width:8px;height:8px;border-radius:999px;background:var(--navy)"></i>for an order</span><span style="display:flex;align-items:center;gap:4px"><i style="width:8px;height:8px;border-radius:999px;box-shadow:inset 0 0 0 2px #0F6B43"></i>to the shelf</span></span></div>
       ${came.length ? `<div class="st-card" style="padding:4px 12px;border-radius:18px">${came.map((c, i) => `<div style="display:flex;gap:12px;padding:10px 0;${i ? 'border-top:1px solid #F1EEE8' : ''}">
         <span style="display:flex;flex-direction:column;align-items:center;gap:4px;width:40px;flex:none">${av(c.who || 'Trip', c.key, 34)}<span class="m" style="font-size:11px;color:#6B7480">${esc(hm(c.at))}</span></span>
-        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px"><span style="font-size:13px;font-weight:700">${esc(c.title)} <span style="font-weight:600;color:#6B7480">· ${c.lines.length} lines${c.short ? `, ${c.short} short` : ''}</span></span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px"><span style="font-size:13px;font-weight:700">${esc(c.title)} <span style="font-weight:600;color:#6B7480">· ${c.lines.length} line${c.lines.length === 1 ? '' : 's'}${c.short ? `, ${c.short} short` : ''}</span></span>
           <span style="display:flex;gap:6px;flex-wrap:wrap">${c.lines.map(l => `<button data-act="stock" data-key="${esc(stockKey(l.productId, l.variantIdx))}" aria-label="+${esc(quoteLineCount(l, l.n).n)} ${l.forOrder ? 'for an order' : 'to the shelf'}" style="position:relative;display:flex;align-items:center;gap:6px;height:36px;padding:0 10px 0 6px;border:none;border-radius:10px;${l.forOrder ? 'background:#F1EEE8' : 'background:#fff;box-shadow:inset 0 0 0 1.5px #0F6B43'}"><span style="display:flex;width:24px;justify-content:center">${art(l, 'small', 'transform:scale(.8)')}</span><span class="m" style="font-size:13px;font-weight:600;${l.forOrder ? '' : 'color:#0F6B43'}">+${esc(quoteLineCount(l, l.n).n)}</span>${l.forOrder ? `<span style="width:7px;height:7px;border-radius:999px;background:var(--navy)"></span>` : ''}</button>`).join('')}</span></span></div>`).join('')}</div>` : `<div class="st-card"><div class="st-empty" style="padding:18px"><b style="font-size:14px">Nothing in yet today</b>Trips show here once they are back</div></div>`}
     </div>`;
 }
@@ -2531,7 +2591,9 @@ function cameInToday(){
     .map(t => { const ls = tripLines(t).map(l => { const n = l.yardQty != null ? Number(l.yardQty) : tripExpect(l); return { ...l, n, forOrder: !!(l.orderId && quoteById(l.orderId)) }; }).filter(l => l.n > 0);
       return { key: 'w' + t.assignedWorkerId, who: tripWho(t), at: msOf(t.yardCheckedAt || t.collectedAt), title: `${firstWord(tripWho(t)) || 'The'}'s trip`, lines: ls, short: tripLines(t).filter(l => (l.yardQty != null ? Number(l.yardQty) : tripExpect(l)) < (Number(l.qty) || 0)).length }; });
 }
-ACT.aisle = t => { FEEL.tick(); S.ui.aisle = Number(t.dataset.k); render(); };
+ACT.lookall = () => { S.ui.lookAll = !S.ui.lookAll; FEEL.tick(); render(); };
+ACT.aisle = t => { FEEL.tick(); S.ui.aisle = Number(t.dataset.k); S.ui.aisleScroll = true; render(); };
+AFTER.push(() => { const g = document.querySelector('.sh-aisles'); if (g) { g.scrollLeft = S.ui.aisleLeft || 0; g.onscroll = () => { S.ui.aisleLeft = g.scrollLeft; }; } if (!S.ui.aisleScroll) return; S.ui.aisleScroll = false; const b = document.querySelector('.sh-aisle[aria-pressed="true"]'); if (b && b.scrollIntoView) b.scrollIntoView({ inline: 'nearest', block: 'nearest' }); });
 ACT['in:find'] = t => { S.ui.find = t.value; clearTimeout(ACT.findT); ACT.findT = setTimeout(render, 200); };
 ACT.stock = t => { FEEL.open(); push('stock', { key: t.dataset.key }); };
 
@@ -2541,7 +2603,7 @@ ACT.stock = t => { FEEL.open(); push('stock', { key: t.dataset.key }); };
 function siblings(key){ const x = stockItems().find(i => i.key === key); if (!x) return []; return stockItems().filter(i => i.productId === x.productId); }
 PAGE.stock = ({ key }) => {
   const sibs = siblings(key), x = sibs.find(i => i.key === key) || stockItems().find(i => i.key === key); if (!x) return goneSheet('That item is gone');
-  const u = unitsFor(x.productId, x.variantIdx) || {}, per = u.packQty > 1 ? u.packQty : 0, unit = u.unit || 'pc';
+  const u = unitsFor(x.productId, x.variantIdx) || {}, per = u.packQty > 1 ? u.packQty : 0, unit = String(u.unit || 'pc').toLowerCase();
   const pr = promisedFor(x.productId, x.variantIdx), prN = pr.reduce((n, p) => n + p.n, 0), free = Math.max(0, x.qty - prN);
   const bundles = per ? Math.floor(x.qty / per) : 0, loose = per ? Math.round((x.qty - bundles * per) * 100) / 100 : x.qty;
   const w = weeksOf(x.key), max = Math.max(1, ...w.map(r => Math.max(r[0], r[1]))), perWeek = Math.round(w.reduce((n, r) => n + r[1], 0) / 4);
@@ -2551,25 +2613,30 @@ PAGE.stock = ({ key }) => {
   const cellsN = Math.ceil(x.qty), rowW = per || 20, drawable = cellsN <= 300;
   const cells = []; owners.forEach(o => { for (let k = 0; k < Math.ceil(o.n) && cells.length < cellsN; k++) cells.push(o.col); }); while (cells.length < cellsN) cells.push('#6FDCB0');
   const rows = []; for (let r = 0; r * rowW < cellsN; r++) { const sl = cells.slice(r * rowW, r * rowW + rowW); rows.push({ full: sl.length === rowW, sl }); }
-  const tabs = sibs.length > 1 ? sibs.map(s => ({ s, name: (productById(s.productId).variants[s.variantIdx] ? variantLabel(productById(s.productId).variants[s.variantIdx].combo) : s.productName) })) : [];
+  const full = sibs.map(s => { const v = productById(s.productId).variants[s.variantIdx]; return v ? Object.values(v.combo || {}).map(String) : [s.productName]; });
+  const shared = full.length > 1 ? full[0].filter((part, i) => full.every(f => f[i] === part)) : [];
+  const tabs = sibs.length > 1 ? sibs.map((s, i) => ({ s, name: full[i].filter((part, j) => !(shared.includes(part) && full.every(f => f[j] === part))).join(' / ') || full[i].join(' / ') })) : [];
+  const sharedWord = shared.join(' / ');
   const stage = `<div role="img" aria-label="${n0(x.qty)} ${esc(unit)} on the shelf${per ? `: ${bundles} ${esc(u.packUnit || 'packs')} of ${per} and ${loose} loose` : ''}" style="position:relative;height:300px;${stageBg(kind)};border-radius:0 0 28px 28px;overflow:hidden;flex:none">
-      <div style="position:absolute;left:0;right:0;top:70px;bottom:70px;display:flex;align-items:center;justify-content:center;gap:10px">${img ? `<img src="${esc(img)}" alt="" style="max-width:62%;max-height:100%;object-fit:contain;filter:drop-shadow(0 14px 24px rgba(22,32,60,.22))">` : `<span class="pk-still"><i style="display:block;${ART.big[kind]}"></i></span>`}</div>
+      <div style="position:absolute;left:0;right:0;top:70px;bottom:70px;display:flex;align-items:center;justify-content:center;gap:10px">${img ? `<img src="${esc(img)}" alt="" style="max-width:62%;max-height:100%;object-fit:contain;filter:drop-shadow(0 14px 24px rgba(22,32,60,.22))">` : `<span style="display:flex;transform:scale(.8)"><span class="pk-still"><i style="display:block;${ART.big[kind]}"></i></span></span>`}</div>
       <div style="position:absolute;left:0;right:0;top:0;padding:calc(12px + var(--safe-area-inset-top)) 14px 0;display:flex;align-items:center;justify-content:space-between"><span style="height:32px;padding:0 12px 0 4px;border-radius:999px;background:rgba(22,32,60,.8);color:#fff;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700"><span style="width:24px;height:24px;border-radius:999px;background:#fff;color:var(--navy);font-size:12px;display:flex;align-items:center;justify-content:center">${esc(x.aisle.letter)}</span>${esc(x.aisle.name)}</span>
         <button class="st-x" data-act="back" aria-label="Close" style="background:rgba(22,32,60,.8)">${ic('close', 16, 'style="stroke-width:2.2"')}</button></div>
       <div style="position:absolute;left:16px;right:16px;bottom:14px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px"><span style="min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:20px;font-weight:700;line-height:1.15">${esc(productById(x.productId).name)}</span><span style="font-size:12px;font-weight:600;color:var(--ink2)">sold by the ${esc(unit)}${per ? ` · ${esc(u.packUnit || 'packs')} of ${per}` : ''}</span></span>
-        <span style="display:flex;flex-direction:column;align-items:flex-end;flex:none"><span class="m" style="font-size:40px;font-weight:600;letter-spacing:-.04em;line-height:1;${x.qty < prN ? 'color:var(--crimson)' : ''}">${n0(x.qty)}</span><span class="m" style="font-size:12px;color:var(--ink2)">${per ? `${bundles}×${per} + ${loose}` : esc(unit)}</span></span></div></div>`;
-  const body = `${tabs.length ? `<div role="tablist" aria-label="Kind" style="display:flex;gap:4px;padding:4px;border-radius:16px;background:#EAE6DF;overflow-x:auto">${tabs.map(({ s, name }) => `<button type="button" role="tab" class="sk-tab" aria-selected="${s.key === key}" data-act="stocktab" data-key="${esc(s.key)}" style="${s.key === key ? 'background:#fff;color:var(--navy);box-shadow:0 2px 6px rgba(22,32,60,.12)' : 'background:transparent;color:var(--ink2)'}">${esc(name)}<span class="m" style="font-size:12px;${s.qty < 20 ? 'color:#95530C' : 'color:#6B7480'}">${n0(s.qty)}</span></button>`).join('')}</div>` : ''}
-    <div class="st-card" style="padding:14px;border-radius:18px;display:flex;flex-direction:column;gap:10px">
-      <div role="list" aria-label="Who these are for" style="display:flex;gap:6px;flex-wrap:wrap">${owners.map(o => `<span role="listitem" class="st-chip" style="height:28px;padding-left:3px;background:#F1EEE8;color:var(--ink)"><span style="width:22px;height:22px;border-radius:999px;background:${o.col};color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">${esc(o.ini)}</span><span class="m">${n0(o.n)}</span>${o.word}</span>`).join('')}<span role="listitem" class="st-chip" style="height:28px;background:var(--greenSoft);color:var(--green)"><i style="width:14px;height:14px;border-radius:4px;background:#6FDCB0"></i><span class="m">${n0(free)}</span>free to sell</span></div>
+        <span style="display:flex;flex-direction:column;align-items:flex-end;flex:none"><span class="m" style="font-size:40px;font-weight:600;letter-spacing:-.04em;line-height:1;${x.qty < prN ? 'color:var(--crimson)' : ''}">${n0(x.qty)}</span><span class="m" style="font-size:12px;color:var(--ink2)">${per && bundles ? `${bundles}×${per} + ${loose}` : esc(unit)}</span></span></div></div>`;
+  const body = `${tabs.length ? `${sharedWord ? `<span style="font-size:11px;font-weight:700;letter-spacing:.08em;color:#6B7480;padding:0 4px">${esc(sharedWord.toUpperCase())}</span>` : ''}<div role="tablist" aria-label="Kind" class="sh-aisles" style="display:flex;gap:4px;padding:4px;border-radius:16px;background:#EAE6DF;overflow-x:auto">${tabs.map(({ s, name }) => `<button type="button" role="tab" class="sk-tab" aria-selected="${s.key === key}" data-act="stocktab" data-key="${esc(s.key)}" style="flex:none;white-space:nowrap;padding:0 14px;${s.key === key ? 'background:#fff;color:var(--navy);box-shadow:0 2px 6px rgba(22,32,60,.12)' : 'background:transparent;color:var(--ink2)'}">${esc(name)}<span class="m" style="font-size:12px;${s.qty < 20 ? 'color:#95530C' : 'color:#6B7480'}">${n0(s.qty)}</span></button>`).join('')}</div>` : ''}
+    ${!cellsN && !owners.length ? `<div class="st-card" style="padding:16px;border-radius:18px;display:flex;align-items:center;gap:14px">
+      <span style="width:46px;height:46px;border-radius:14px;background:var(--crimsonSoft);color:var(--crimson);display:flex;align-items:center;justify-content:center;flex:none">${ic('box', 22)}</span>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><b style="font-size:15px">Nothing on the shelf</b><span style="font-size:12px;font-weight:600;color:var(--ink2)">${w.some(r => r[1]) ? `${n0(w.reduce((n, r) => n + r[1], 0))} ${esc(unit)} went out in the last 4 weeks` : 'and nobody is waiting on it'}</span></span></div>` : `<div class="st-card" style="padding:14px;border-radius:18px;display:flex;flex-direction:column;gap:10px">
+      <div role="list" aria-label="Who these are for" style="display:flex;gap:6px;flex-wrap:wrap">${owners.map(o => `<span role="listitem" class="st-chip" style="height:28px;padding-left:3px;background:#F1EEE8;color:var(--ink)"><span style="width:22px;height:22px;border-radius:999px;background:${o.col};color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">${esc(o.ini)}</span><span class="m">${n0(o.n)}</span>${o.word}</span>`).join('')}<span role="listitem" class="st-chip" style="height:28px;background:var(--greenSoft);color:var(--green)"><i style="width:14px;height:14px;border-radius:4px;background:#6FDCB0"></i><span class="m">${n0(free)}</span>free to sell</span>${prN > x.qty ? `<span role="listitem" class="st-chip" style="height:28px;background:var(--crimsonSoft);color:var(--crimson)"><span class="m">${n0(prN - x.qty)}</span>short</span>` : ''}</div>
       ${drawable && cellsN ? `<div role="img" aria-label="Of ${n0(x.qty)}: ${n0(prN)} promised, ${n0(free)} free" style="display:flex;flex-direction:column;gap:4px">${rows.map((r, i) => `<div style="display:flex;align-items:center;gap:8px"><span style="width:52px;flex:none;font-size:10px;font-weight:700;color:#6B7480">${r.full && per ? (u.packUnit || 'pack') + ' ' + (i + 1) : r.full ? '' : 'loose'}</span><span style="flex:1;display:grid;grid-template-columns:repeat(${rowW},minmax(0,1fr));gap:2px">${r.sl.map(c => `<i class="sk-cell" style="background:${c}"></i>`).join('')}${Array.from({ length: rowW - r.sl.length }, () => '<i class="sk-cell" style="box-shadow:inset 0 0 0 1px #EFECE6"></i>').join('')}</span></div>`).join('')}</div>
         <span style="font-size:11px;font-weight:600;color:#6B7480">Each square is one ${esc(unit)}${per ? ` · each row a ${esc(u.packUnit || 'pack')} of ${per}` : ''} · worked out from open orders</span>`
         : `<div role="img" aria-label="Of ${n0(x.qty)}: ${n0(prN)} promised, ${n0(free)} free" style="display:flex;height:34px;border-radius:10px;overflow:hidden;gap:2px">${owners.map(o => `<span style="flex:${o.n};background:${o.col};color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">${esc(o.ini)}</span>`).join('')}${free ? `<span style="flex:${free};background:var(--greenSoft);box-shadow:inset 0 0 0 1.5px #0F6B43;color:var(--green);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center" class="m">${n0(free)}</span>` : ''}</div>`}
-    </div>
+    </div>`}
     <div class="st-card" style="padding:14px;border-radius:18px;display:flex;flex-direction:column;gap:10px">
       <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;font-weight:700;letter-spacing:.1em;color:#6B7480">LAST 4 WEEKS</span><span style="display:flex;gap:10px;font-size:11px;font-weight:600;color:var(--ink2)"><span style="display:flex;align-items:center;gap:4px"><i style="width:8px;height:8px;border-radius:3px;background:var(--green)"></i>came in</span><span style="display:flex;align-items:center;gap:4px"><i style="width:8px;height:8px;border-radius:3px;background:var(--amber)"></i>went out</span></span></div>
       <div role="img" aria-label="${w.map((r, k) => ['3 weeks ago', '2 weeks ago', 'last week', 'this week'][k] + ': ' + n0(r[0]) + ' in, ' + n0(r[1]) + ' out').join('; ')}" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;height:90px">${w.map((r, k) => `<span style="display:flex;flex-direction:column;gap:2px"><span style="flex:1;display:flex;align-items:flex-end;justify-content:center"><i style="width:60%;height:${Math.round(r[0] / max * 100)}%;min-height:${r[0] ? 3 : 0}px;border-radius:4px 4px 0 0;background:var(--green);transform-origin:bottom;animation:stUpIn .6s ${k * .06}s both"></i></span><span style="flex:1;display:flex;align-items:flex-start;justify-content:center;border-top:1.5px solid #E6E3DD"><i style="width:60%;height:${Math.round(r[1] / max * 100)}%;min-height:${r[1] ? 3 : 0}px;border-radius:0 0 4px 4px;background:var(--amber)"></i></span></span>`).join('')}</div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;font-size:10px;font-weight:600;color:#6B7480;text-align:center"><span>3 wk ago</span><span>2 wk ago</span><span>last wk</span><span>this wk</span></div>
-      <span style="font-size:13px;font-weight:600;color:var(--ink2)">${perWeek ? `Goes out ~${perWeek} a week · free stock lasts about ${Math.max(1, Math.round(free / perWeek * 7))} days` : 'Not moving lately'}</span></div>`;
+      <span style="font-size:13px;font-weight:600;color:var(--ink2)">${perWeek ? `Goes out ~${perWeek} ${esc(unit)} a week · ${free > 0 ? (() => { const days = Math.max(1, Math.round(free / perWeek * 7)); return `free stock lasts about ${days} day${days === 1 ? '' : 's'}`; })() : 'none free to sell'}` : w.some(r => r[1]) ? `Under 1 ${esc(unit)} a week goes out` : 'Not moving lately'}</span></div>`;
   const foot = `<div class="row"><span style="width:76px;flex:none;display:flex;flex-direction:column;justify-content:center"><span class="m" style="font-size:20px;font-weight:600">${d == null ? '—' : d + 'd'}</span><span style="font-size:11px;font-weight:600;color:#6B7480">since count</span></span>
     <button data-act="count" data-key="${esc(x.key)}" data-aisle="${esc(x.aisle.letter)}" class="st-btn red">${ic('count', 20)}Count it · blind</button></div>`;
   return `<div class="card" style="margin-top:0;min-height:100%;border-radius:0">${stage}<div style="padding:14px 16px 0;display:flex;flex-direction:column;gap:10px;flex:1">${body}</div><div class="st-foot">${foot}</div></div>`;
@@ -2588,8 +2655,8 @@ function saveCt(){ try { localStorage.setItem(CT_KEY(), JSON.stringify(S.ui.ct |
 const PLURAL = { doz: 'dozens', ctn: 'cartons', pc: 'pieces', pcs: 'pieces', box: 'boxes', roll: 'rolls', bag: 'bags', bundle: 'bundles', pkt: 'packets', kg: 'kg', m: 'metres', ltr: 'litres', l: 'litres' };
 function plural(u){ const k = String(u || '').toLowerCase(); return PLURAL[k] || (/(s|x|ch|sh)$/.test(k) ? k + 'es' : k + 's'); }
 function levelsFor(x){
-  const u = unitsFor(x.productId, x.variantIdx) || {}, unit = u.unit || 'pc', L = [];
-  if (u.packQty > 1 && u.packUnit && u.packUnit.toLowerCase() !== unit.toLowerCase()) L.push([plural(u.packUnit) + ' of ' + u.packQty, u.packUnit, u.packQty]);
+  const u = unitsFor(x.productId, x.variantIdx) || {}, unit = String(u.unit || 'pc').toLowerCase(), pu = String(u.packUnit || '').toLowerCase(), L = [];
+  if (u.packQty > 1 && pu && pu !== unit) L.push([plural(pu) + ' of ' + u.packQty, pu, u.packQty]);
   L.push([plural(unit), unit, 1]);
   if (u.pieces > 1 && !/^(pc|pcs|piece|pieces)$/i.test(unit)) L.push(['loose pieces', 'pc', 1 / u.pieces]);
   return L;
@@ -2613,9 +2680,9 @@ PAGE.count = () => {
   const any = L.some((_, k) => val(k) !== null), total = L.reduce((t, l, k) => t + (val(k) || 0) * l[2], 0);
   const doneN = Object.keys(ct.counts).length, multi = L.length > 1, small = L[L.length - 1];
   const W0 = W();
-  const slides = items.map((x, k) => { const kind = kindOf(x.productName), img = productImage(productById(x.productId), x.variantIdx), done = ct.counts[k] !== undefined;
+  const slides = items.map((x, k) => { if (Math.abs(k - ct.i) > 1) return `<div style="width:${W0}px;height:100%;flex:none"></div>`; const kind = kindOf(x.productName), img = productImage(productById(x.productId), x.variantIdx), done = ct.counts[k] !== undefined;
     return `<div style="position:relative;width:${W0}px;height:100%;flex:none;overflow:hidden" aria-hidden="${k !== ct.i}"><span style="position:absolute;inset:0;${stageBg(kind)}"></span>
-      <span style="position:absolute;left:0;right:0;top:12%;height:60%;display:flex;align-items:center;justify-content:center">${img ? `<img src="${esc(img)}" alt="" style="max-width:70%;max-height:90%;object-fit:contain;filter:drop-shadow(0 14px 24px rgba(22,32,60,.22))">` : `<span style="display:flex;transform:scale(.62)"><span class="${k === ct.i && !done ? 'pk-bob' : 'pk-still'}"><i style="display:block;${ART.big[kind]}"></i></span></span>`}</span>
+      <span style="position:absolute;left:0;right:0;top:12%;height:60%;display:flex;align-items:center;justify-content:center">${img ? `<img src="${esc(img)}" alt="" style="max-width:70%;max-height:90%;object-fit:contain;filter:drop-shadow(0 14px 24px rgba(22,32,60,.22))">` : `<span style="display:flex;transform:scale(.82)"><span class="${k === ct.i && !done ? 'pk-bob' : 'pk-still'}"><i style="display:block;${ART.big[kind]}"></i></span></span>`}</span>
       ${done ? `<span class="ct-tick" style="position:absolute;left:50%;top:28%;margin-left:-120px;width:240px;padding:12px 0 8px;border:6px double #0F6B43;border-radius:18px;background:rgba(255,255,255,.9);color:#0F6B43;display:flex;flex-direction:column;align-items:center;gap:2px;transform:rotate(-10deg)"><span style="font-size:32px;font-weight:700;letter-spacing:.14em;padding-left:.14em">COUNTED</span><span class="m" style="font-size:12px;font-weight:600">${esc(fmtLevels(levelsFor(x), ct.counts[k]).toUpperCase())}</span></span>` : ''}</div>`; }).join('');
   const keyBtn = (label, act, aria, style, data) => `<button type="button" class="ct-key" data-act="${act}" ${data || ''} aria-label="${esc(aria)}" style="${style}">${label}</button>`;
   const kst = "background:#fff;box-shadow:inset 0 0 0 1px #E6E3DD;color:var(--ink);font-family:var(--mono)";
@@ -2629,12 +2696,12 @@ PAGE.count = () => {
         <div style="display:flex;align-items:center;gap:10px"><button class="st-x light" data-act="ctstop" aria-label="Stop counting">${ic('close', 16, 'style="stroke-width:2.2"')}</button>
           <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span class="ell" style="font-size:15px;font-weight:700">Stock take · ${esc(ct.aisle)}</span><span style="font-size:12px;color:#DDE3F0">count what you see</span></span>
           <span style="display:flex;align-items:baseline;gap:2px"><span class="m" style="font-size:22px;font-weight:600">${doneN}</span><span class="m" style="font-size:13px;color:#DDE3F0">/${n}</span></span></div>
-        <div role="img" aria-label="${doneN} of ${n} counted" style="display:flex;gap:4px">${items.map((_, k) => `<i style="flex:1;height:5px;border-radius:999px;background:${ct.counts[k] !== undefined ? '#6FDCB0' : k === ct.i ? '#fff' : 'rgba(255,255,255,.3)'}"></i>`).join('')}</div></div>
+        <div role="img" aria-label="${doneN} of ${n} counted" style="display:flex;gap:4px">${n <= 30 ? items.map((_, k) => `<i style="flex:1;height:5px;border-radius:999px;background:${ct.counts[k] !== undefined ? '#6FDCB0' : k === ct.i ? '#fff' : 'rgba(255,255,255,.3)'}"></i>`).join('') : `<span style="position:relative;flex:1;height:5px;border-radius:999px;background:rgba(255,255,255,.3);overflow:hidden"><i style="position:absolute;left:0;top:0;bottom:0;width:${doneN / n * 100}%;background:#6FDCB0;border-radius:999px"></i><i style="position:absolute;top:0;bottom:0;width:3px;left:${ct.i / n * 100}%;background:#fff"></i></span><span class="m" style="font-size:11px;color:#DDE3F0;flex:none">item ${ct.i + 1}</span>`}</div></div>
       <span style="position:absolute;left:50%;bottom:10px;transform:translateX(-50%);display:flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:999px;background:rgba(22,32,60,.78);color:#fff;font-size:12px;font-weight:600;white-space:nowrap">${ic('eye', 14, 'style="stroke:#F5B26B"')}Blind count · no number shown</span>
       ${n > 1 ? `<button class="pk-arrow" data-act="ctgo" data-d="-1" aria-label="Previous item" style="left:6px;top:42%">${ic('back', 20, 'style="stroke-width:2.4"')}</button><button class="pk-arrow" data-act="ctgo" data-d="1" aria-label="Next item" style="right:6px;top:42%">${ic('chev', 20, 'style="stroke-width:2.4"')}</button>` : ''}
     </div>
     <div style="flex:none;padding:14px 16px calc(16px + var(--safe-area-inset-bottom));border-radius:26px 26px 0 0;background:#fff;box-shadow:0 -10px 30px rgba(22,32,60,.12);display:flex;flex-direction:column;gap:10px">
-      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px"><span class="ell" style="font-size:18px;font-weight:700">${esc(cur.productName)}</span><span style="font-size:12px;font-weight:600;color:#6B7480;white-space:nowrap">${multi ? esc(L.slice(0, -1).map((l, i) => `1 ${l[1]} = ${n0(l[2] / L[i + 1][2])} ${L[i + 1][1]}`).join(' · ')) : 'each ' + esc(small[1])}</span></div>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:10px"><span style="min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:18px;font-weight:700">${esc(nameParts(cur.productId, cur.variantIdx, cur.productName).base)}</span>${nameParts(cur.productId, cur.variantIdx, cur.productName).variant ? `<span style="align-self:flex-start;padding:2px 8px;border-radius:7px;background:var(--navy);color:#fff;font-size:13px;font-weight:700">${esc(nameParts(cur.productId, cur.variantIdx, cur.productName).variant)}</span>` : ''}</span><span style="font-size:12px;font-weight:600;color:#6B7480;white-space:nowrap">${multi ? esc(L.slice(0, -1).map((l, i) => `1 ${l[1]} = ${n0(l[2] / L[i + 1][2])} ${L[i + 1][1]}`).join(' · ')) : 'each ' + esc(small[1])}</span></div>
       <div role="group" aria-label="What you counted, unit by unit" style="display:grid;grid-template-columns:repeat(${L.length},minmax(0,1fr));gap:8px">${L.map((l, k) => { const v = val(k), on = k === F;
         return `<button type="button" data-act="ctfocus" data-k="${k}" aria-pressed="${on}" aria-label="${esc(l[0])}: ${v === null ? 'nothing yet' : v}" style="height:68px;border:none;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;${on ? 'background:#fff;box-shadow:inset 0 0 0 2.5px #16203C' : 'background:#fff;box-shadow:inset 0 0 0 1px #E6E3DD'}"><span style="font-size:10px;font-weight:700;letter-spacing:.06em;${on ? 'color:#16203C' : 'color:#6B7480'}">${esc(l[0].toUpperCase())}</span><span class="m" style="font-size:26px;font-weight:600;${v === null ? 'color:#C9C4BA' : ''}">${v === null ? '—' : v}${on ? '<span class="a-caret" style="color:var(--red)">|</span>' : ''}</span></button>`; }).join('')}</div>
       <span class="m" style="min-height:16px;text-align:center;font-size:12px;font-weight:600;color:var(--ink2)">${any ? (multi ? `= ${n0(Math.round(total / small[2] * 100) / 100)} ${esc(small[1])} in all` : '') : (multi ? `Tap a unit, type, then ${esc(L[1][1])} →` : '')}</span>
