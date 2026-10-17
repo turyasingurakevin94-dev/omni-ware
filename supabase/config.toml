@@ -425,12 +425,13 @@ enabled = true
 # thing anyone debugs quickly.
 #
 # So it is declared here instead, where a deploy reads it and a test pins
-# it. The seven below are exactly the functions whose callers are not
+# it. The ones below are exactly the functions whose callers are not
 # signed-in users of this app:
 #
 #   the two payment webhooks   a provider posts them; it has no JWT
 #   wa-webhook                 Meta posts it, likewise
 #   notify-worker              a Database Webhook posts it
+#   notify-stock-count         likewise, on a finished stock take
 #   client-portal              the customer portal ships no key at all
 #   client-submit-order        same page, same promise
 #   catalogue-public           the public catalogue, same
@@ -466,6 +467,9 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.notify-worker]
+verify_jwt = false
+
+[functions.notify-stock-count]
 verify_jwt = false
 
 [functions.wa-webhook]

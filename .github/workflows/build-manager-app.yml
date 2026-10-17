@@ -1,0 +1,42 @@
+name: Build manager app (Android)
+
+# The manager app is manager.html inside a native shell (apps/manager). Every
+# change to either is built, and Android hands back an installable debug
+# APK under the run's Artifacts.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'manager.html'
+      - 'apps/manager/**'
+      - '.github/workflows/build-manager-app.yml'
+  workflow_dispatch: {}
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/manager
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - name: Build www from manager.html
+        run: npm run build
+      - run: npx cap sync android
+      - name: Build debug APK
+        working-directory: apps/manager/android
+        run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: omniware-manager-debug-apk
+          path: apps/manager/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
