@@ -70,14 +70,32 @@ function replyParam(s: string) {
     .replace(/\t/g, " ").replace(/ {2,}/g, " ").trim().slice(0, 900);
 }
 
-const MEDIA_MAX = 6 * 1024 * 1024;
-function toBase64(buf: Uint8Array) {
-  let s = "";
-  for (let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode(...buf.subarray(i, i + 0x8000));
-  return btoa(s);
+const MEDIA_MAX = 16 * 1024 * 1024;
+// The file's ending, from its type, else the document's own name.
+function mediaExt(mime: string, filename?: string) {
+  const known: Record<string, string> = {
+    "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif",
+    "audio/ogg": "ogg", "audio/mpeg": "mp3", "audio/mp4": "m4a", "audio/aac": "aac", "audio/amr": "amr",
+    "video/mp4": "mp4", "video/3gpp": "3gp", "application/pdf": "pdf",
+  };
+  if (known[mime]) return known[mime];
+  const fromName = /\.([a-z0-9]{1,8})$/i.exec(String(filename || ""));
+  return fromName ? fromName[1].toLowerCase() : "bin";
 }
 
+// Whatever goes wrong inside, the app gets an answer it can read: an
+// exception that escaped would leave the gateway's bare 500, which has no
+// CORS header, and the browser reports only "Failed to send a request".
 Deno.serve(async (req) => {
+  try {
+    return await handle(req);
+  } catch (e) {
+    console.error("wa-send: unhandled", e);
+    return json({ error: `The server stumbled: ${(e as Error)?.message || String(e)}` }, 500);
+  }
+});
+
+async function handle(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") return json({}, 200);
   if (req.method !== "POST") return json({ error: "method not allowed" }, 405);
 
@@ -836,38 +854,47 @@ Deno.serve(async (req) => {
   }
 
   // ---- A customer's picture, voice note or document, to look at. ----
-  // The webhook keeps Meta's media id, not the file: the file sits
+  // The webhook keeps Meta's media id, not the file, and the file sits
   // behind the access token, which never leaves this function. So the
-  // app asks for one message's media and gets its bytes back. Only a
-  // message of this shop, and only a file small enough for a phone.
+  // first time anyone opens it, it is fetched from Meta (which keeps
+  // media for a limited time only), put in the shop's image bucket under
+  // an unguessable name, and the link is written onto the message --
+  // every later look, in any app, is a plain link with no call here.
+  // Only a message of this shop, and only a file a phone can hold.
   if (action === "media") {
     const messageId = Number(body.messageId);
     if (!messageId) return json({ error: "messageId is required" }, 400);
-    if (!ACCESS_TOKEN) return json({ error: "WhatsApp is not connected yet" }, 409);
     const { data: msg, error: msgErr } = await admin.from("wa_messages")
       .select("id, msg_type, payload").eq("id", messageId).eq("shop_id", shopId).maybeSingle();
     if (msgErr) return json({ error: msgErr.message, stage: "message" }, 500);
     if (!msg) return json({ error: "Message not found" }, 404);
     // deno-lint-ignore no-explicit-any
     const p = (msg.payload ?? {}) as any;
+    if (p.media_link) return json({ link: p.media_link, mime: p.media_mime || "" });
     const mediaId = p?.[msg.msg_type]?.id;
     if (!mediaId) return json({ error: "This message has no file" }, 404);
-    const auth = { Authorization: `Bearer ${ACCESS_TOKEN}` };
-    const metaResp = await fetch(`${GRAPH_BASE}/${mediaId}`, { headers: auth });
+    if (!ACCESS_TOKEN) return json({ error: "WhatsApp is not connected yet" }, 409);
+    const headers = { Authorization: `Bearer ${ACCESS_TOKEN}`, "User-Agent": "omni-ware/1.0" };
+    const metaResp = await fetch(`${GRAPH_BASE}/${mediaId}`, { headers, signal: AbortSignal.timeout(15000) });
     const meta = await metaResp.json().catch(() => ({}));
     // deno-lint-ignore no-explicit-any
-    if (!metaResp.ok || !(meta as any).url) return json({ error: (meta as any)?.error?.message || "WhatsApp no longer has this file" }, 410);
-    // deno-lint-ignore no-explicit-any
-    const size = Number((meta as any).file_size || 0);
-    if (size > MEDIA_MAX) return json({ error: "The file is too big to open here" }, 413);
-    // deno-lint-ignore no-explicit-any
-    const fileResp = await fetch((meta as any).url, { headers: auth });
+    const m = meta as any;
+    if (!metaResp.ok || !m.url) return json({ error: m?.error?.message || "WhatsApp no longer has this file" }, 410);
+    if (Number(m.file_size || 0) > MEDIA_MAX) return json({ error: "The file is too big to open here" }, 413);
+    const fileResp = await fetch(m.url, { headers, signal: AbortSignal.timeout(30000) });
     if (!fileResp.ok) return json({ error: `WhatsApp refused the file (${fileResp.status})` }, 502);
     const buf = new Uint8Array(await fileResp.arrayBuffer());
     if (buf.length > MEDIA_MAX) return json({ error: "The file is too big to open here" }, 413);
-    // deno-lint-ignore no-explicit-any
-    return json({ mime: String((meta as any).mime_type || fileResp.headers.get("content-type") || ""), data: toBase64(buf) });
+    const mime = String(m.mime_type || fileResp.headers.get("content-type") || "application/octet-stream").split(";")[0].trim();
+    const path = `${shopId}/wa-media/${crypto.randomUUID()}.${mediaExt(mime, p?.document?.filename)}`;
+    const { error: upErr } = await admin.storage.from("product-images").upload(path, buf, { contentType: mime, upsert: false });
+    if (upErr) return json({ error: upErr.message, stage: "storage" }, 500);
+    const link = admin.storage.from("product-images").getPublicUrl(path).data.publicUrl;
+    const { error: updErr } = await admin.from("wa_messages")
+      .update({ payload: { ...p, media_link: link, media_mime: mime } }).eq("id", msg.id).eq("shop_id", shopId);
+    if (updErr) console.error("wa-send: media link not kept on the message", updErr);
+    return json({ link, mime });
   }
 
   return json({ error: `Unknown action "${action}"` }, 400);
-});
+}

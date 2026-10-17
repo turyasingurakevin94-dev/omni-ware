@@ -2169,21 +2169,18 @@ async function waSendCatalog(convId){
   try { await loadThread(convId); await loadWA(); } catch (_e) {}
 }
 /* A customer's picture, voice note or document. The file sits behind the
-   shop's access token, so wa-send fetches it and hands back the bytes;
-   it is kept for as long as the app is open, and asked for once. */
-async function waMedia(msgId, keepData){
+   shop's access token, so the first look asks wa-send, which keeps it in
+   the shop's bucket and writes the link onto the message; from then on
+   the message carries its own link (payload.media_link) and nobody asks. */
+async function waMedia(msgId){
   const cur = S.wa.media[msgId]; if (cur && (cur.state === 'ok' || cur.state === 'loading')) return cur;
   const st = S.wa.media[msgId] = { state: 'loading' };
   try {
     const { data, error } = await sb.functions.invoke('wa-send', { body: { shopId: S.shopId, action: 'media', messageId: msgId } });
     if (error) throw new Error(await waErr(error));
-    if (!data || !data.data) throw new Error('no file came back');
-    const bin = atob(data.data), u = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
-    st.mime = data.mime || ''; st.url = URL.createObjectURL(new Blob([u], { type: st.mime }));
-    if (keepData) st.data = data.data;
-    st.state = 'ok';
-  } catch (e) { st.state = 'err'; st.err = waNeedsUpdate(e) ? 'Opens after the server update' : isNetworkError(e) ? 'No connection' : (e.message || String(e)); }
+    if (!data || !data.link) throw new Error('no file came back');
+    st.url = data.link; st.mime = data.mime || ''; st.state = 'ok';
+  } catch (e) { st.state = 'err'; st.err = waNeedsUpdate(e) ? 'Opens after the server update' : isNetworkError(e) || /Failed to send a request/i.test(String(e && e.message)) ? 'Couldn’t reach the server — tap to try again' : (e.message || String(e)); }
   return st;
 }
 async function waMarkRead(c){
@@ -2557,9 +2554,11 @@ function authScreen(kind){
       const email = el.querySelector('#sx_email').value.trim(), password = el.querySelector('#sx_pw').value;
       if (!email || !password) { msg('Enter your email and password', true); return; }
       el.querySelector('#sx_go').disabled = true; msg('Signing in…');
-      const { error } = await sb.auth.signInWithPassword({ email, password });
+      // A phone on a weak signal drops the first try: one more, quietly, before saying so.
+      let { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error && isNetworkError(error)) { await new Promise(r => setTimeout(r, 1500)); ({ error } = await sb.auth.signInWithPassword({ email, password })); }
       el.querySelector('#sx_go').disabled = false;
-      if (error) { msg(error.message, true); return; }
+      if (error) { msg(isNetworkError(error) ? 'No internet — check the phone’s data or Wi-Fi, then tap Sign in again' : error.message, true); return; }
       resolve();
     };
     el.querySelector('#sx_go').onclick = go;
@@ -6595,9 +6594,10 @@ function chatTile(icon, title, sub, tint, attrs, tag){
   return `<${tag} class="cht-mt" ${attrs || ''}><span class="cht-mti"${tint ? ` style="background:${tint[0]};color:${tint[1]}"` : ''}>${icon}</span><span class="cht-mtx"><b class="ell">${esc(title)}</b>${sub ? `<span class="ell">${esc(sub)}</span>` : ''}</span></${tag}>`;
 }
 function chatMediaHTML(m){
-  const t = m.msg_type, link = m.payload && m.payload.link, st = link ? { state: 'ok', url: link } : S.wa.media[m.id], has = !!link || !!chatMediaId(m);
+  const t = m.msg_type, link = m.payload && (m.payload.link || m.payload.media_link), st = link ? { state: 'ok', url: link } : S.wa.media[m.id], has = !!link || !!chatMediaId(m);
   const ok = st && st.state === 'ok', busy = st && st.state === 'loading', err = st && st.state === 'err' ? st.err : '';
   const spin = '<span class="cht-spin dk"></span>', act = `data-act="chatmedia" data-mid="${m.id}" ${has && !busy ? '' : 'disabled'}`;
+  if (t === 'document' && ok) return chatTile(ic('chDoc', 20), chatSaid(m), 'Tap to open', ['var(--skySoft)', 'var(--sky)'], `href="${esc(st.url)}" target="_blank" rel="noopener"`, 'a');
   if (t === 'image' || t === 'sticker') {
     if (ok) return `<button class="cht-img${t === 'sticker' ? ' stk' : ''}" data-act="chatview" data-mid="${m.id}" aria-label="See the picture"><img src="${esc(st.url)}" alt="${t === 'sticker' ? 'Sticker' : 'Picture'}"></button>`;
     return `<button class="cht-ph" ${act}>${busy ? spin : ic('chImage', 26)}<span>${esc(err || (busy ? 'Opening…' : has ? 'Tap to see it' : 'Picture'))}</span></button>`;
@@ -6858,29 +6858,20 @@ ACT.chatproddone = () => { closeSheet(true); renderSheet(); render(); chatFocus(
 function chatMsgById(id){ const conv = chatOpenId(); return ((conv != null && S.wa.threads[conv]) || []).find(m => m.id === id) || S.wa.msgs.find(m => m.id === id) || null; }
 ACT.chatmedia = async t => {
   const id = Number(t.dataset.mid), m = chatMsgById(id); if (!m) return;
-  const doc = m.msg_type === 'document', p = waMedia(id, doc); render();
+  if (S.wa.media[id] && S.wa.media[id].state === 'err') delete S.wa.media[id];
+  const p = waMedia(id); render();
   const st = await p; render();
   if (st.state !== 'ok') return;
-  if (doc) chatOpenFile(st, chatSaid(m));
-  else if (m.msg_type === 'audio' || m.msg_type === 'video') { const el = document.querySelector(`.cht-aud[data-mid="${id}"]`); if (el && el.play) el.play().catch(() => {}); }
+  if (m.msg_type === 'document') window.open(st.url, '_blank');
+  else if (m.msg_type === 'audio') { const el = document.querySelector(`.cht-aud[data-mid="${id}"]`); if (el && el.play) el.play().catch(() => {}); }
 };
-// A document leaves through the phone's own "open with": the app's Share plugin, else a download.
-async function chatOpenFile(st, name){
-  const safe = String(name || 'document').replace(/[^\w.\-]+/g, '-').slice(0, 80) || 'document';
-  const C = window.Capacitor, P = C && typeof C.isNativePlatform === 'function' && C.isNativePlatform() ? (C.Plugins || {}) : null;
-  if (P && P.Share && P.Filesystem && st.data) {
-    try { const { uri } = await P.Filesystem.writeFile({ path: safe, data: st.data, directory: 'CACHE' }); await P.Share.share({ files: [uri], title: name, dialogTitle: 'Open with' }); return; }
-    catch (e) { if (/cancel/i.test(String((e && e.message) || e))) return; console.warn('open file failed', e); }
-  }
-  const a = document.createElement('a'); a.href = st.url; a.download = safe; document.body.appendChild(a); a.click(); a.remove();
-}
-ACT.chatview = t => { const st = S.wa.media[Number(t.dataset.mid)], m = chatMsgById(Number(t.dataset.mid)), url = (m && m.payload && m.payload.link) || (st && st.url); if (url) openSheet('chatview', { url, cap: m ? chatCaption(m) : '' }); };
+ACT.chatview = t => { const st = S.wa.media[Number(t.dataset.mid)], m = chatMsgById(Number(t.dataset.mid)), url = (m && m.payload && (m.payload.link || m.payload.media_link)) || (st && st.url); if (url) openSheet('chatview', { url, cap: m ? chatCaption(m) : '' }); };
 SHEET.chatview = ({ url, cap }) => `<div style="display:flex;align-items:center;gap:10px"><b style="flex:1;font-size:16px" class="ell">${esc(cap || 'Picture')}</b><button class="sx-circle light" data-act="closesheet" aria-label="Close">${ic('close', 15)}</button></div><img class="cht-full" src="${esc(url)}" alt="Picture">`;
 // Pictures open by themselves, newest first, a few at a time; voice notes and files wait for a tap.
 let chatAutoBusy = false;
 function chatAutoMedia(id){
   if (chatAutoBusy) return;
-  const want = chatThread(id).filter(m => (m.msg_type === 'image' || m.msg_type === 'sticker') && !(m.payload && m.payload.link) && chatMediaId(m) && !S.wa.media[m.id]).slice(-12).reverse();
+  const want = chatThread(id).filter(m => (m.msg_type === 'image' || m.msg_type === 'sticker') && !(m.payload && (m.payload.link || m.payload.media_link)) && chatMediaId(m) && !S.wa.media[m.id]).slice(-12).reverse();
   if (!want.length) return;
   chatAutoBusy = true;
   (async () => { try { for (const m of want) { if (chatOpenId() !== id) break; await waMedia(m.id); if (chatOpenId() === id) render(); } } finally { chatAutoBusy = false; } })();
