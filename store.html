@@ -1850,6 +1850,9 @@ PAGE.movein = () => {
   const trips = tripsToYard(), lines = trips.reduce((n, t) => n + tripLines(t).length, 0), orders = new Set(trips.flatMap(t => tripLines(t).map(l => String(l.orderId)))).size;
   const back = trips.filter(t => t.status === 'collected'), riding = trips.filter(t => t.status === 'collecting'), waiting = trips.filter(t => t.status === 'assigned' || t.status === 'open');
   const nextT = back[0] || riding[0];
+  /* One group per stage -- back at the gate, out buying, not taken --
+     each a short stack of faces and one label, so several trips from the
+     same person never land on top of each other. */
   const dots = [];
   // Along the road: back at the gate, out buying, and not taken yet.
   back.slice(0, 2).forEach((t, i) => dots.push({ t, left: `calc(${84 - i * 6}% - 22px)`, top: 0, size: 40, label: `${nLines(tripLines(t).length)} · back`, cls: 'i-pulse', ring: '0 0 0 3px #16203C,0 0 0 5px #6FDCB0' }));
@@ -1859,22 +1862,21 @@ PAGE.movein = () => {
       <div style="display:flex;align-items:center;gap:12px"><span style="flex:1;font-size:24px;font-weight:700;letter-spacing:-.02em">In</span>${closeX()}</div>
       <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-top:-6px">
         <span style="display:flex;flex-direction:column;gap:2px"><span style="display:flex;align-items:baseline;gap:8px"><span class="m" style="font-size:44px;font-weight:600;letter-spacing:-.04em;line-height:1">${lines}</span><span style="font-size:14px;font-weight:600;color:var(--navyInk)">lines on the road</span></span><span style="font-size:12px;font-weight:600;color:var(--navyInk2)">${trips.length} trip${trips.length === 1 ? '' : 's'} · for ${orders} order${orders === 1 ? '' : 's'}</span></span>
-        ${nextT ? `<span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><span style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--navyInk2)">${back.length ? 'AT THE GATE' : 'OUT BUYING'}</span><span style="display:flex;align-items:baseline;gap:4px;color:var(--mint)"><span class="m" style="font-size:26px;font-weight:600">${esc(waitWords(minsSince(msOf(back.length ? nextT.collectedAt : nextT.acceptedAt))))}</span><span style="font-size:13px;font-weight:700">${back.length ? 'waiting' : 'out'}</span></span></span>` : ''}
+        ${nextT ? `<span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><span style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--navyInk2)">${back.length ? 'AT THE GATE' : 'OUT BUYING'}</span><span style="display:flex;align-items:baseline;gap:4px;color:var(--mint)"><span class="m" style="font-size:26px;font-weight:600">${esc(waitBig(minsSince(msOf(back.length ? nextT.collectedAt : nextT.acceptedAt))))}</span><span style="font-size:13px;font-weight:700">${back.length ? 'waiting' : 'out'}</span></span></span>` : ''}
       </div>
       <div role="img" aria-label="The road to the yard: ${back.length} back, ${riding.length} out buying, ${waiting.length} not taken yet" style="position:relative;height:104px;margin:0 -4px">
         <span style="position:absolute;left:0;right:52px;top:58px;height:16px;border-radius:999px;background:#243052"></span>
         <span style="position:absolute;left:10px;right:62px;top:65px;border-top:2px dashed rgba(255,255,255,.16)"></span>
         ${back.length ? `<span class="a-blink" style="position:absolute;left:0;top:58px;width:calc(84% - 24px);height:16px;border-radius:999px;background:linear-gradient(90deg,rgba(111,220,176,0),rgba(111,220,176,.35))"></span>` : ''}
         <span style="position:absolute;right:0;top:40px;width:50px;height:52px;border-radius:14px;background:var(--mint);color:var(--navy);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;box-shadow:0 8px 18px rgba(0,0,0,.25)">${ic('yard', 20, 'style="stroke-width:2"')}<span style="font-size:9px;font-weight:700;letter-spacing:.06em">YARD</span></span>
-        ${dots.map(d => `<span style="position:absolute;left:${d.left};top:${d.top}px;display:flex;flex-direction:column;align-items:center;gap:4px">
-          <span style="height:22px;padding:0 8px;border-radius:999px;background:${d.label === 'buying' ? 'rgba(155,163,240,.18)' : '#fff'};color:${d.label === 'buying' ? '#C9CDF7' : 'var(--navy)'};font-size:11px;font-weight:700;display:flex;align-items:center;gap:4px;white-space:nowrap">${d.label === 'buying' ? ic('bag', 11, 'style="stroke-width:2.4"') : ''}${esc(d.label)}</span>
-          <span class="${d.cls === 'i-pulse' ? 'mp-ping' : ''}" style="display:flex;border-radius:999px">${av(tripWho(d.t) || 'Trip', 'w' + d.t.assignedWorkerId, d.size, `box-shadow:${d.ring}`)}</span></span>`).join('')}
-        ${open ? `<span style="position:absolute;left:4px;top:22px;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="height:22px;padding:0 8px;border-radius:999px;border:1px dashed rgba(255,255,255,.3);color:var(--navyInk2);font-size:11px;font-weight:700;display:flex;align-items:center;white-space:nowrap">${open.status === 'open' ? 'no one yet' : 'not taken'}</span><span style="width:30px;height:30px;border-radius:999px;border:1.5px dashed rgba(255,255,255,.35);background:#16203C"></span></span>` : ''}
+        ${roadGroup(back, 'right:56px', 'back', '#fff', 'var(--navy)', true)}
+        ${roadGroup(riding, 'left:calc(50% - 40px)', 'buying', 'rgba(155,163,240,.18)', '#C9CDF7', false)}
+        ${roadGroup(waiting, 'left:4px', 'not taken', 'transparent', 'var(--navyInk2)', false, true)}
         <span style="position:absolute;left:0;right:52px;top:82px;display:flex;justify-content:flex-end;font-size:11px;font-weight:600;color:var(--navyInk2)"><span><span style="color:var(--mint)">●</span> ${checkedInToday().length} checked in today</span></span>
       </div></div>`;
   const card = t => { const ls = tripLines(t), who = tripWho(t) || 'Nobody yet', ords = tripOrders(t);
     if (t.status === 'collected') return `<button data-act="receive" data-id="${esc(t.id)}" class="st-card a-card" style="border:none;text-align:left;border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px;width:100%">
-      <div style="display:flex;align-items:center;gap:12px">${av(who, 'w' + t.assignedWorkerId, 44)}<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:15px;font-weight:700">${esc(who)}</span><span class="m ell" style="font-size:12px;color:#6B7480">${ls.length} line${ls.length === 1 ? '' : 's'} · for ${esc(ords.map(o => shortName(quoteClientName(o))).join(', ') || 'the shelf')}</span></span><span style="display:flex;align-items:baseline;gap:3px;color:var(--indigo)"><span class="m" style="font-size:22px;font-weight:600">${esc(waitWords(minsSince(msOf(t.collectedAt))))}</span></span></div>
+      <div style="display:flex;align-items:center;gap:12px">${av(who, 'w' + t.assignedWorkerId, 44)}<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:15px;font-weight:700">${esc(who)}</span><span class="m ell" style="font-size:12px;color:#6B7480">${ls.length} line${ls.length === 1 ? '' : 's'} · for ${esc(ords.map(o => shortName(quoteClientName(o))).join(', ') || 'the shelf')}</span></span><span style="display:flex;align-items:baseline;gap:3px;color:var(--indigo)"><span class="m" style="font-size:22px;font-weight:600">${esc(waitBig(minsSince(msOf(t.collectedAt))))}</span></span></div>
       <span style="position:relative;height:16px"><span style="position:absolute;left:0;right:0;top:7px;border-top:2px solid var(--indigo)"></span><span style="position:absolute;right:16px;top:-1px;color:var(--indigo);background:#fff;display:flex" class="a-truck">${ic('truck', 18, 'style="stroke-width:2"')}</span><span style="position:absolute;right:-2px;top:1px;width:14px;height:14px;border-radius:3px;background:var(--navy)"></span></span>
       <div style="display:flex;align-items:center;gap:10px"><span style="flex:1;font-size:13px;font-weight:600;color:var(--ink2)">Back ${esc(whenSaid(msOf(t.collectedAt)))} · at the gate</span><span class="st-pill">Check in${ic('chev', 15, 'style="stroke-width:2"')}</span></div></button>`;
     const buying = t.status === 'collecting';
@@ -1890,6 +1892,19 @@ PAGE.movein = () => {
   return sheetPage(head, body);
 };
 PAGE.movein.bg = '#2A3350';
+
+function roadGroup(trips, pos, word, bg, fg, live, empty){
+  if (!trips.length) return '';
+  const n = trips.length, lines = trips.reduce((k, t) => k + tripLines(t).length, 0), who = [...new Set(trips.map(t => t.assignedWorkerId || ''))];
+  const faces = who.slice(0, 3).map((w, i) => w ? `<span style="margin-left:${i ? -12 : 0}px;display:flex;border-radius:999px;position:relative;z-index:${3 - i}" class="${live && !i ? 'mp-ping' : ''}">${av(staffName(w) || 'Trip', 'w' + w, live ? 40 : 34, `box-shadow:0 0 0 3px #16203C${live ? ',0 0 0 5px #6FDCB0' : ''}`)}</span>`
+    : `<span style="margin-left:${i ? -12 : 0}px;width:30px;height:30px;border-radius:999px;border:1.5px dashed rgba(255,255,255,.35);background:#16203C;flex:none"></span>`).join('');
+  const label = word === 'back' ? `${n > 1 ? n + ' back · ' : ''}${nLines(lines)}${n > 1 ? '' : ' · back'}` : `${n > 1 ? n + ' ' : ''}${word}`;
+  return `<span style="position:absolute;${pos};top:${live ? 0 : 16}px;display:flex;flex-direction:column;align-items:center;gap:4px">
+    <span style="height:22px;padding:0 9px;border-radius:999px;background:${bg};color:${fg};${empty ? 'border:1px dashed rgba(255,255,255,.3);' : ''}font-size:11px;font-weight:700;display:flex;align-items:center;gap:4px;white-space:nowrap">${word === 'buying' ? ic('bag', 11, 'style="stroke-width:2.4"') : ''}${esc(label)}</span>
+    <span style="display:flex;align-items:center">${faces}${who.length > 3 ? `<span style="margin-left:4px;font-size:11px;font-weight:700;color:var(--navyInk)">+${who.length - 3}</span>` : ''}</span></span>`;
+}
+// A wait as a big figure: minutes under the hour, hours under a day, then days.
+function waitBig(mins){ mins = Math.max(0, Math.round(mins)); return mins < 60 ? mins + ' min' : mins < 1440 ? Math.floor(mins / 60) + ' h' : Math.round(mins / 1440) + ' d'; }
 
 /* ==================================================================
    PACK -- the orders to pack, oldest first
