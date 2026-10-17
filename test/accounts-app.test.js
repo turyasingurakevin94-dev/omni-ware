@@ -14,7 +14,10 @@
  *   3. The writes: a supplier paid in full and in part, a count, a close
  *      that waits for all three accounts to agree, a variance booked, an
  *      invoice marked sent.
- *   4. Every screen draws from the fixture without throwing.
+ *   4. What the review found, kept found: two counts typed fast both
+ *      land, nothing is booked onto a closed day, a minus survives a
+ *      count, suppliers without an id are never paid together.
+ *   5. Every screen draws from the fixture without throwing.
  *
  * Runs the page's real script in a sandbox with a fake database; nothing
  * is copied into this file.
@@ -94,7 +97,7 @@ function fakeDb(tb){
 }
 
 /* ---------------- the page, in a sandbox ---------------- */
-const EXPORT = ['S', 'ACT', 'PAGE', 'D', 'loadAll', 'can', 'cbDayPosition', 'acctState', 'saveCount', 'closeDay', 'bookVariance', 'payBills', 'billDue', 'openBills', 'creditors', 'recordInvoiceSend', 'invoiceSent',
+const EXPORT = ['S', 'ACT', 'PAGE', 'D', 'loadAll', 'parseMoney', 'supplierKey', 'can', 'cbDayPosition', 'acctState', 'saveCount', 'closeDay', 'bookVariance', 'payBills', 'billDue', 'openBills', 'creditors', 'recordInvoiceSend', 'invoiceSent',
   'custAging', 'debtors', 'statementDue', 'summaryDebtors', 'summaryCreditors', 'TASK_WORDS', 'viewToday', 'viewOwed', 'viewBills', 'viewClose', 'billState', 'cameWord', 'inHandBy'];
 function loadPage(db){
   const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
@@ -209,7 +212,33 @@ FROM_SALES.forEach(n => { const a = fnText(html, n), b = fnText(salesSrc, n); t.
     t.check(p.items.length === 1 && p.debtCharged === 50000, 'and the rest of the order is left as it was');
   }
 
-  /* ---------------- 4. every screen draws ---------------- */
+  /* ---------------- 4. what the review found ---------------- */
+  {
+    const { X, db } = await page();
+    // Two counts saved at once: each reads the row before writing it back.
+    await Promise.all([X.saveCount(T, 'cash', 111), X.saveCount(T, 'momo', 222)]);
+    const row = db.tb.cash_days.find(r => r.date === T);
+    t.check(row && row.actual.cash === 111 && row.actual.momo === 222 && db.tb.cash_days.filter(r => r.date === T).length === 1, 'two counts typed one after the other both land, in one row');
+    t.check(X.parseMoney('-25,000') === -25000 && X.parseMoney('25,000') === 25000 && X.parseMoney('') === null, 'a count keeps its minus sign (an overdrawn bank)');
+    for (const a of X.cbDayPosition(T).accounts) await X.saveCount(T, a.key, a.closing);
+    await X.closeDay(T);
+    t.check(X.cbDayPosition(T).closed, 'the day closes once all three agree');
+    await X.saveCount(T, 'cash', 1);
+    const before = db.writes.filter(w => w[1] === 'cash_txns').length;
+    X.D().cashTxns.push({ id: 999, date: T, account: 'cash', type: 'receipt', category: 'Sales', amount: 7000 });
+    t.check((await X.bookVariance(T, 'cash')) === false && db.writes.filter(w => w[1] === 'cash_txns').length === before, 'nothing is booked onto a closed day, even when a late receipt makes it look over');
+    t.check(!/is over|is short/.test(X.viewToday()), 'and Today stops asking to book it');
+  }
+  {
+    const { X } = await page();
+    X.D().bills.push({ id: 91, supplierId: null, supplierName: 'Walk-in timber', items: [{ qty: 1, price: 10000 }], amountPaid: 0, payments: [], credits: [] },
+      { id: 92, supplierId: null, supplierName: 'Roadside sand', items: [{ qty: 1, price: 20000 }], amountPaid: 0, payments: [], credits: [] });
+    X.S.loadedAt++;
+    const keys = X.creditors().map(r => r.sid);
+    t.check(keys.includes('name:Walk-in timber') && keys.includes('name:Roadside sand') && X.openBills('name:Walk-in timber').length === 1, 'two suppliers with no id stay two, each with its own bills');
+  }
+
+  /* ---------------- 5. every screen draws ---------------- */
   {
     const { X } = await page();
     const a = X.custAging(X.D().customers[0]);

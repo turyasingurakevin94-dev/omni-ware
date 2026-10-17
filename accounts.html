@@ -481,7 +481,11 @@ input{font-family:inherit;color:var(--ink)}
 .bx-nav .bx-go{background:var(--navy);box-shadow:0 0 0 5px var(--bg),0 10px 24px rgba(22,32,60,.3)}
 .bx-nav .bx-go .icon{stroke-width:2.6}
 .bx-badge.navy{background:var(--navy)}
-.bx-foot > .bx-btn,.bx-foot > a.bx-btn{flex:none}
+.bx-foot > .bx-btn,.bx-foot > a.bx-btn,.bx-dock > .bx-btn,.bx-dock > a.bx-btn{flex:none}
+.bx-page .card > .bx-dock{margin-top:auto}
+.bx-btn{white-space:nowrap;min-width:0}
+.ac-billpaid .bx-btn,.ac-paid .bx-btn,.ac-closed .bx-btn{font-size:15px}
+.ac-more{width:100%;border:none;background:transparent;display:flex;align-items:center;gap:8px;min-height:48px;padding:0;border-top:1px solid #F1EEE8;font-size:13px;font-weight:700;color:var(--navy)}
 .bx-slide{flex:none}
 .row > .bx-slide{flex:1}
 .bx-slide.mint .k{background:var(--mint);color:var(--navy);box-shadow:0 6px 14px rgba(111,220,176,.45)}
@@ -564,7 +568,7 @@ input{font-family:inherit;color:var(--ink)}
 
 /* ---- one payment: where the money went ---- */
 .ac-flow{position:relative;height:184px}
-.ac-flow svg{position:absolute;inset:0;width:100%;height:100%}
+.ac-flow > svg{position:absolute;inset:0;width:100%;height:100%}
 .ac-flowline{stroke-dasharray:200;animation:acFlow 1s cubic-bezier(.3,.8,.3,1) .3s both}
 .ac-dash{animation:acDash 1.4s linear infinite}
 @keyframes acFlow{from{stroke-dashoffset:200}to{stroke-dashoffset:0}}
@@ -927,6 +931,8 @@ Object.assign(ICON, {
   bank: '<path d="M3 9.5L12 4l9 5.5M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/>',
   momo: '<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/>',
   cam: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
+  noinv: '<path d="M6 3h9l4 4v14H6zM14 3v5h5"/><path d="M9 12h7M9 16h3M15 16l3 3M18 16l-3 3"/>',
+  download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
 });
 // Money in rings the till; a closed day chimes up the scale.
 FEEL.kaching = () => { buzz([14, 30, 14, 30, 40]); sfx('kaching'); };
@@ -1395,7 +1401,7 @@ async function loadAll(){
     presets,
   };
   S.cuPresets = presets;
-  S.loadedAt = Date.now();
+  S.loadedAt = Date.now(); S.ui.dirty = false;
   saveSnapshot();
 }
 function snapKey(){ return 'ow-accounts-snap:' + (S.user && S.user.id); }
@@ -1514,7 +1520,15 @@ function inHandBy(date){ const p = cbDayPosition(date || todayISO()); const o = 
 /* ---- writing the day: the count, the close, a difference booked ---- */
 // The row the owner's app writes (index.html 45838), opening untouched.
 function cashDayRow(date, rec){ return { shop_id: S.shopId, date, opening: rec.opening, actual: rec.actual, opening_set: !!rec.openingSet, closed_at: rec.closedAt || null, closed_by: rec.closedBy || null }; }
-async function writeDay(date, change){
+// One day-write at a time: two counts typed quickly must not each read the
+// row before the other lands and write the other's figure back as empty.
+let dayQueue = Promise.resolve();
+function writeDay(date, change){
+  const run = dayQueue.then(() => writeDayNow(date, change));
+  dayQueue = run.catch(() => {});
+  return run;
+}
+async function writeDayNow(date, change){
   // Re-read first: the owner's count or close on another screen wins.
   const cur = await sb.from('cash_days').select('*').eq('shop_id', S.shopId).eq('date', date).maybeSingle();
   if (cur.error) throw cur.error;
@@ -1536,7 +1550,11 @@ async function saveCount(date, key, value){
 }
 // index.html 117924
 async function closeDay(date){
+  // Agree against the books as they are now, not as they were at the last refresh:
+  // a receipt that landed a minute ago would close a day that does not agree.
+  try { await loadAll(); } catch (e) { toast(failWord(e), 6000); return false; }
   const pos = cbDayPosition(date);
+  if (pos.closed) return true;
   if (pos.countedAccounts < pos.accounts.length) { toast('Count every account first'); return false; }
   if (pos.accounts.some(a => Math.abs(a.variance) >= 1)) { toast('An account does not agree yet — find or book the difference first'); return false; }
   if (!can('day.close')) { toast('Closing needs “Close the day” — ask the owner to switch it on'); return false; }
@@ -1545,7 +1563,8 @@ async function closeDay(date){
 }
 // index.html 119844: what nobody can trace goes in as Cash Shortage / Overage.
 async function bookVariance(date, key){
-  const a = cbDayPosition(date).accounts.find(x => x.key === key);
+  const pos = cbDayPosition(date), a = pos.accounts.find(x => x.key === key);
+  if (pos.closed) { toast('This day is closed — only the owner books anything on it now'); return false; }
   if (!a || a.counted === null) { toast('Count it first'); return false; }
   const variance = Math.round(a.variance);
   if (Math.abs(variance) < 1) { toast('The count already agrees with the book'); return false; }
@@ -1634,7 +1653,10 @@ function billDue(pi){ return Math.max(0, purchaseInvoiceTotal(pi) - (Number(pi.a
 function billLabel(pi){ return 'PINV-' + String(pi.id).padStart(4, '0'); }
 function supplierById(id){ return D().suppliers.find(s => String(s.id) === String(id)) || null; }
 function billSupplierName(pi){ const s = supplierById(pi.supplierId); return (s && s.name) || pi.supplierName || 'Supplier'; }
-function openBills(sid){ return D().bills.filter(pi => !pi.voided && billDue(pi) > 0.5 && (sid == null || String(pi.supplierId) === String(sid))).sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')) || (a.id - b.id)); }
+// Bills are grouped by their supplier's id, or by name when a bill carries none,
+// so two suppliers without an id are never paid together.
+function supplierKey(pi){ return pi.supplierId != null && pi.supplierId !== '' ? String(pi.supplierId) : 'name:' + (pi.supplierName || ''); }
+function openBills(sid){ return D().bills.filter(pi => !pi.voided && billDue(pi) > 0.5 && (sid == null || supplierKey(pi) === String(sid))).sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')) || (a.id - b.id)); }
 function billState(pi){
   const t = todayISO(), wk = isoOf(new Date(Date.now() + 6 * 864e5));
   if (!pi.dueDate) return { k: 'nodate', word: 'no date', ink: '#5F6980', bg: '#F4F2EE' };
@@ -1645,7 +1667,7 @@ function billState(pi){
 function creditors(){
   return memo('creditors', '', () => {
     const by = {};
-    openBills().forEach(pi => { const k = String(pi.supplierId || pi.supplierName); const r = by[k] || (by[k] = { sid: pi.supplierId, name: billSupplierName(pi), bills: [], due: 0, worst: null }); r.bills.push(pi); r.due += billDue(pi); });
+    openBills().forEach(pi => { const k = supplierKey(pi); const r = by[k] || (by[k] = { sid: k, name: billSupplierName(pi), bills: [], due: 0, worst: null }); r.bills.push(pi); r.due += billDue(pi); });
     const rank = { late: 0, week: 1, later: 2, nodate: 3 };
     return Object.values(by).map(r => { r.bills.forEach(pi => { const s = billState(pi); if (!r.worst || rank[s.k] < rank[r.worst.k] || (s.k === r.worst.k && (pi.dueDate || '') < (r.worstBill.dueDate || ''))) { r.worst = s; r.worstBill = pi; } }); return r; })
       .sort((a, b) => rank[a.worst.k] - rank[b.worst.k] || String(a.worstBill.dueDate || '9').localeCompare(String(b.worstBill.dueDate || '9')) || b.due - a.due);
@@ -1936,7 +1958,7 @@ async function paintInvoice(q){
   await fontsReady();
   const items = (q.items || []).filter(it => (Number(it.qty) || 0) > 0), total = quoteTotal(q), paid = Number(q.amountPaid) || 0, left = Math.max(0, total - paid);
   const c0 = q.customerId != null ? customerById(q.customerId) : null;
-  const H = 240 + 36 * items.length + 170;
+  const H = 240 + 36 * items.length + 170 + 24 * (q.payments || []).length + 30;
   const { c, x } = pc(H);
   x.fillStyle = '#FFFFFF'; x.fillRect(0, 0, 540, H);
   pnavy(x, 0, 150);
@@ -2106,8 +2128,13 @@ async function boot(){
 function start(){
   S.started = true;
   render();
-  setInterval(() => { if (document.visibilityState === 'visible' && !S.dragging && !S.busy && !S.sheet) loadAll().then(() => { if (!S.dragging && !S.busy) render(); }).catch(() => {}); }, 90000);
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Date.now() - S.loadedAt > 30000 && !S.busy) loadAll().then(render).catch(() => {}); });
+  setInterval(() => { if (document.visibilityState === 'visible' && quiet() && !S.sheet) loadAll().then(() => { if (quiet()) render(); }).catch(() => {}); }, 90000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Date.now() - S.loadedAt > 30000 && quiet()) loadAll().then(() => { if (quiet()) render(); }).catch(() => {}); });
+}
+// A refresh never redraws under a finger: not mid-slide, mid-write, or while a figure is being typed.
+function quiet(){
+  const el = document.activeElement;
+  return !S.dragging && !S.busy && !(el && /^(INPUT|TEXTAREA)$/.test(el.tagName) && el.type !== 'search');
 }
 function applyPrefs(){ document.documentElement.classList.toggle('big', !!S.prefs.big); }
 
@@ -2118,6 +2145,7 @@ function pop(){ S.stack.pop(); render(); }
 function replaceTop(type, args){ S.stack[S.stack.length - 1] = { type, args: args || {} }; render(); }
 function topArgs(){ return S.stack.length ? S.stack[S.stack.length - 1].args : {}; }
 window.bxBack = function(){
+  if (S.busy) { toast('One moment — it is still being written'); return true; }
   if (S.sheet) { closeSheet(); return true; }
   if (S.stack.length) { pop(); return true; }
   if (S.view !== 'today') { go('today'); return true; }
@@ -2170,12 +2198,17 @@ function afterRender(){ AFTER.forEach(f => { try { f(); } catch (e) { console.wa
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-act]'); if (!t) return;
   const a = t.dataset.act;
+  if (S.busy && (a === 'tab' || a === 'back' || a === 'closesheet')) { toast('One moment — it is still being written'); return; }
   if (a === 'tab') { if (S.view !== t.dataset.v || S.stack.length) FEEL.tick(); go(t.dataset.v); return; }
   if (a === 'back') { FEEL.back(); pop(); return; }
   if (a === 'closesheet') { closeSheet(); return; }
   if (ACT[a]) { if (!t.hasAttribute('data-keep')) e.preventDefault(); ACT[a](t, e); }
 });
-document.addEventListener('input', e => { const t = e.target.closest('[data-in]'); if (t && ACT['in:' + t.dataset.in]) ACT['in:' + t.dataset.in](t, e); });
+// A word still being composed on an Android keyboard is left alone until it lands;
+// redrawing the box mid-word garbles what is typed.
+const onIn = e => { if (e.isComposing) return; const t = e.target.closest('[data-in]'); if (t && ACT['in:' + t.dataset.in]) ACT['in:' + t.dataset.in](t, e); };
+document.addEventListener('input', onIn);
+document.addEventListener('compositionend', onIn);
 document.addEventListener('change', e => { const t = e.target.closest('[data-ch]'); if (t && ACT['ch:' + t.dataset.ch]) ACT['ch:' + t.dataset.ch](t, e); });
 
 /* ---------------- shared pieces ---------------- */
@@ -2250,7 +2283,7 @@ function viewToday(){
   const issues = [];
   pos.accounts.forEach(a => {
     const s = acctState(a);
-    if (s === 'short' || s === 'over') issues.push({ act: 'short', key: a.key, tone: s === 'short' ? 'bad' : 'warn', icon: ACCT_LOOK[a.key].icon, title: `${a.label} ${s === 'short' ? 'is short' : 'is over'}`, sub: `counted <span class="m">${n0(a.counted)}</span> · book <span class="m">${n0(a.closing)}</span>`, fig: signed(a.variance) });
+    if (!pos.closed && (s === 'short' || s === 'over')) issues.push({ act: 'short', key: a.key, tone: s === 'short' ? 'bad' : 'warn', icon: ACCT_LOOK[a.key].icon, title: `${a.label} ${s === 'short' ? 'is short' : 'is over'}`, sub: `counted <span class="m">${n0(a.counted)}</span> · book <span class="m">${n0(a.closing)}</span>`, fig: signed(a.variance) });
   });
   if (!pos.closed) pos.accounts.filter(a => a.counted === null).forEach(a => issues.push({ act: 'tab', v: 'cash', tone: 'warn', icon: ACCT_LOOK[a.key].icon, title: `${a.label} not ${a.key === 'bank' ? 'checked' : 'counted'} yet`, sub: a.key === 'bank' ? 'type today’s statement balance' : a.key === 'momo' ? 'type the balance on the phone' : 'count the drawer', cta: a.key === 'bank' ? 'Check' : 'Count' }));
   onAccountToday().forEach(x => { const tr = txnTrace(x); issues.push({ act: 'payment', id: x.id, tone: 'warn', icon: 'noinv', title: `${tr.cust ? tr.cust.name : 'A customer'} · paid no invoice`, sub: `${acctWord(x)} · by ${esc(whoName(x.enteredBy) || 'the owner')} · lowered their debt only`, fig: n0(x.amount) }); });
@@ -2321,7 +2354,7 @@ function waterfallHTML(a){
 function scaleHTML(a, live){
   const tilt = a.counted === null ? 0 : Math.max(-7, Math.min(7, (a.closing - a.counted) / Math.max(1, Math.abs(a.closing)) * 400));
   const bad = acctState(a) === 'short' || acctState(a) === 'over';
-  return `<div style="position:relative;height:150px">
+  return `<div style="position:relative;height:124px">
     <svg width="100%" height="96" viewBox="0 0 300 88" aria-hidden="true" style="position:absolute;left:0;top:4px;overflow:visible">
       <path d="M150 26 L136 78 H164 Z" fill="#2B3866"/><rect x="112" y="78" width="76" height="6" rx="3" fill="#2B3866"/>
       <g style="transform-origin:150px 22px;transform:rotate(${(-tilt).toFixed(2)}deg);transition:transform .9s cubic-bezier(.3,.8,.3,1)">
@@ -2377,7 +2410,8 @@ function smallAcctCard(a, live){
     ${s === 'short' || s === 'over' ? `<button class="bx-btn ghost" style="height:44px;font-size:14px" data-act="short" data-key="${a.key}">Find the <span class="m">${n0(Math.abs(a.variance))}</span></button>` : ''}
   </div>`;
 }
-function parseMoney(v){ const s = String(v || '').replace(/[^0-9.]/g, ''); return s === '' ? null : Math.round(Number(s)); }
+// A leading minus is kept: an overdrawn bank is counted below zero.
+function parseMoney(v){ const raw = String(v || '').trim(), s = raw.replace(/[^0-9.]/g, ''); return s === '' ? null : (raw.startsWith('-') || raw.startsWith('−') ? -1 : 1) * Math.round(Number(s)); }
 ACT['ch:count'] = async t => {
   const key = t.dataset.key, v = parseMoney(t.value);
   t.disabled = true;
@@ -2408,7 +2442,7 @@ PAGE.acct = ({ key }) => {
       <div style="display:grid;grid-template-columns:minmax(0,1fr) 44px minmax(0,1fr);align-items:center">
         <span class="bx-glass" style="padding:12px;display:flex;flex-direction:column;gap:3px;border-radius:16px"><span style="font-size:11px;font-weight:700;color:var(--navyInk2)">BOOK SAYS</span><span class="m" style="font-size:19px;font-weight:600">${n0(a.closing)}</span><span style="font-size:11px;color:var(--navyInk)"><span class="m">${n0(a.opening)}</span> + <span class="m">${n0(a.in)}</span>${a.out ? ` − <span class="m">${n0(a.out)}</span>` : ''}</span></span>
         <span style="display:flex;align-items:center;justify-content:center">${acctState(a) === 'agrees' ? `<span class="a-done" style="width:32px;height:32px;border-radius:999px;background:var(--mint);color:var(--navy);display:flex;align-items:center;justify-content:center">${ic('tick', 16, 'style="stroke-width:3"')}</span>` : acctState(a) === 'count' ? `<span style="color:var(--navyInk2)">${ic('arrow', 18)}</span>` : `<span class="m" style="font-size:11px;font-weight:600;color:var(--rose)">${signed(a.variance)}</span>`}</span>
-        <label style="padding:12px;border-radius:16px;background:#fff;color:var(--ink);display:flex;flex-direction:column;gap:3px"><span style="font-size:11px;font-weight:700;color:var(--ink2)">${key === 'bank' ? 'STATEMENT' : key === 'momo' ? 'ON THE PHONE' : 'COUNTED'}</span><input id="cnt_${key}" data-ch="count" data-key="${key}" inputmode="numeric" ${can('day.count') && !pos.closed ? '' : 'disabled'} placeholder="type it" value="${a.counted === null ? '' : n0(a.counted)}" style="width:100%;border:none;outline:none;background:transparent;padding:0;font-family:var(--mono);font-size:19px;font-weight:600"><span style="font-size:11px;color:var(--ink2)">${key === 'momo' ? 'MTN and Airtel together' : key === 'bank' ? 'from the bank app' : 'notes and coins'}</span></label>
+        <label style="padding:12px;border-radius:16px;background:#fff;color:var(--ink);display:flex;flex-direction:column;gap:3px"><span style="font-size:11px;font-weight:700;color:var(--ink2)">${key === 'bank' ? 'STATEMENT' : key === 'momo' ? 'ON THE PHONE' : 'COUNTED'}</span><input id="pcnt_${key}" data-ch="count" data-key="${key}" inputmode="numeric" ${can('day.count') && !pos.closed ? '' : 'disabled'} placeholder="type it" value="${a.counted === null ? '' : n0(a.counted)}" style="width:100%;border:none;outline:none;background:transparent;padding:0;font-family:var(--mono);font-size:19px;font-weight:600"><span style="font-size:11px;color:var(--ink2)">${key === 'momo' ? 'MTN and Airtel together' : key === 'bank' ? 'from the bank app' : 'notes and coins'}</span></label>
       </div>
     </div>
     <div class="bx-body">
@@ -2430,6 +2464,7 @@ const NOTES = [50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100];
 function notesFor(n){ const out = []; let left = Math.round(Math.abs(n)); NOTES.forEach(v => { while (left >= v && out.length < 6) { out.push(v); left -= v; } }); return out; }
 PAGE.short = ({ key, who }) => {
   const t = todayISO(), pos = cbDayPosition(t), a = pos.accounts.find(x => x.key === key) || pos.accounts[0];
+  if (pos.closed) return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card"><div class="bx-empty" style="padding-top:28vh"><b>${esc(new Date().toLocaleDateString('en-GB', { weekday: 'long' }))} is closed</b>Only the owner books anything on a closed day.<br><br><button class="bx-btn ghost" style="flex:none;margin:0 auto" data-act="back">Back</button></div></div>`;
   const v = a.variance || 0, short = v < 0, abs = Math.abs(Math.round(v));
   const lines = dayTxns(t).filter(x => acctOf(x) === a.key);
   const lanes = {};
@@ -2444,7 +2479,7 @@ PAGE.short = ({ key, who }) => {
   const laneCol = k => k === '__out' ? '#95530C' : tintFor('p:' + k)[1];
   const svg = `<svg width="100%" height="${laneKeys.length * 26 + 30}" viewBox="0 0 330 ${laneKeys.length * 26 + 30}" role="img" aria-label="Cash lines through the day by person" style="display:block">
     ${[8, 10, 12, 14, 16, 18].map(hh => `<line x1="${xOf(hh * 60).toFixed(1)}" y1="4" x2="${xOf(hh * 60).toFixed(1)}" y2="${laneKeys.length * 26 + 8}" stroke="#EFECE6"/><text x="${xOf(hh * 60).toFixed(1)}" y="${laneKeys.length * 26 + 24}" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="#767F91">${hh}</text>`).join('')}
-    ${laneKeys.map((k, i) => { const y = 16 + i * 26; return `${k === sel ? `<rect x="0" y="${y - 12}" width="330" height="24" rx="8" fill="#EEF0F8"/>` : ''}<text x="6" y="${y + 4}" font-family="Figtree, sans-serif" font-size="11" font-weight="700" fill="${k === sel ? '#16203C' : laneCol(k)}">${esc(laneName(k)).slice(0, 7)}</text>${lanes[k].map(x => `<circle cx="${xOf(toMin(x.time)).toFixed(1)}" cy="${y}" r="${(3 + Math.sqrt(x.amount / 400000) * 7).toFixed(1)}" fill="${laneCol(k)}" fill-opacity="${k === sel ? 1 : .5}"/>`).join('')}`; }).join('')}
+    ${laneKeys.map((k, i) => { const y = 16 + i * 26; return `${k === sel ? `<rect x="0" y="${y - 12}" width="330" height="24" rx="8" fill="#EEF0F8"/>` : ''}<text x="6" y="${y + 4}" font-family="Figtree, sans-serif" font-size="11" font-weight="700" fill="${k === sel ? '#16203C' : laneCol(k)}">${esc(String(laneName(k)).slice(0, 7))}</text>${lanes[k].map(x => `<circle cx="${xOf(toMin(x.time)).toFixed(1)}" cy="${y}" r="${(3 + Math.sqrt(x.amount / 400000) * 7).toFixed(1)}" fill="${laneCol(k)}" fill-opacity="${k === sel ? 1 : .5}"/>`).join('')}`; }).join('')}
   </svg>`;
   const selLines = (lanes[sel] || []).slice().sort((p, q) => String(p.time).localeCompare(String(q.time)));
   return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
@@ -2488,6 +2523,7 @@ ACT.bookvar = async t => {
 /* ---- the day closed: the books balance ---- */
 PAGE.closed = ({ fresh }) => {
   const t = todayISO(), pos = cbDayPosition(t), dayWord = new Date().toLocaleDateString('en-GB', { weekday: 'long' });
+  if (!pos.closed) return `<div class="ac-closed"><div class="bx-empty" style="padding-top:30vh;color:var(--navyInk)"><b style="color:#fff">${esc(dayWord)} isn’t closed yet</b><span class="m">${pos.agree}</span> of 3 accounts agree<br><br><button class="bx-btn red" style="flex:none;margin:0 auto;padding:0 22px" data-act="tab" data-v="cash">Go to the cash book</button></div></div>`;
   const short = dayTxns(t).filter(x => x.category === CASH_SHORTAGE_CATEGORY).reduce((s, x) => s + x.amount, 0), over = dayTxns(t).filter(x => x.category === CASH_OVERAGE_CATEGORY).reduce((s, x) => s + x.amount, 0);
   const inN = receiptsOn(t).length, lines = dayTxns(t).length;
   if (fresh) setTimeout(() => FEEL.close(), 2100);
@@ -2581,6 +2617,7 @@ ACT.owesort = t => { S.ui.owesSort = t.dataset.v; S.ui.owesMore = 40; FEEL.tick(
 ACT.owesband = t => { S.ui.owesBand = S.ui.owesBand === t.dataset.v ? null : t.dataset.v; FEEL.tick(); render(); };
 ACT.owesmore = () => { S.ui.owesMore = (S.ui.owesMore || 40) + 40; render(); };
 ACT['in:owesq'] = t => { S.ui.owesQ = t.value; S.ui.owesMore = 40; render(); };
+ACT.acctall = t => { S.ui.acctAll = t.dataset.id; FEEL.tick(); render(); };
 ACT.account = t => { FEEL.open(); push('account', { id: t.dataset.id }); };
 
 /* ---- one customer: invoices, and what paid them ---- */
@@ -2597,8 +2634,8 @@ PAGE.account = ({ id }) => {
     const total = quoteTotal(q), paid = Number(q.amountPaid) || 0, left = balanceDue(q), late = invLateDays(q), age = custBillAge(q);
     const pays = (q.payments || []).filter(p => p && Number(p.amount) > 0);
     return `<div class="ac-inv">
-      <span style="display:flex;align-items:baseline;gap:8px"><button data-act="invoice" data-id="${q.id}" class="m" style="border:none;background:none;padding:0;font-size:14px;font-weight:600;${done ? 'color:var(--ink3)' : ''}">${invoiceLabel(q)}</button><span style="font-size:12px;font-weight:600;color:${late ? 'var(--amberInk)' : 'var(--ink3)'}">${esc(shortDay(invoicedOn(q)))}${done ? '' : late ? ` · <span class="m">${late}</span> d past terms` : ` · <span class="m">${age}</span> d`}</span>
-        <span style="margin-left:auto;font-size:12px;color:var(--ink3)">${done ? '' : paid ? `of <span class="m">${n0(total)}</span>` : 'nothing paid'}</span>${done ? `<span class="bx-chip" style="height:20px;background:var(--greenSoft);color:var(--green);font-size:10px;letter-spacing:.08em">${ic('tick', 11, 'style="stroke-width:3"')}SETTLED</span>` : ''}<span class="m" style="font-size:14px;font-weight:600;${done ? 'color:var(--ink3)' : ''}">${n0(done ? total : left)}</span></span>
+      <span style="display:flex;align-items:baseline;gap:8px"><button data-act="invoice" data-id="${q.id}" class="m" style="border:none;background:none;padding:0;font-size:14px;font-weight:600;white-space:nowrap;${done ? 'color:var(--ink3)' : ''}">${invoiceLabel(q)}</button>${done ? `<span class="bx-chip" style="height:20px;background:var(--greenSoft);color:var(--green);font-size:10px;letter-spacing:.08em">${ic('tick', 11, 'style="stroke-width:3"')}SETTLED</span>` : ''}<span class="m" style="margin-left:auto;font-size:15px;font-weight:600;${done ? 'color:var(--ink3)' : ''}">${n0(done ? total : left)}</span></span>
+      <span style="display:flex;align-items:baseline;gap:8px;margin-top:-4px;font-size:12px;font-weight:600;white-space:nowrap"><span style="color:${late && !done ? 'var(--amberInk)' : 'var(--ink3)'}">${esc(shortDay(invoicedOn(q)))}${done ? '' : late ? ` · <span class="m">${late}</span> d past terms` : ` · <span class="m">${age}</span> d`}</span><span style="margin-left:auto;color:var(--ink3)">${done ? '' : paid ? `<span class="m">${n0(paid)}</span> paid of <span class="m">${n0(total)}</span>` : 'nothing paid'}</span></span>
       <span class="ac-bar">${pays.map((p, i) => `<i class="a-grow" style="flex:${p.amount};background:${i % 2 ? '#5C6788' : '#16203C'}"></i>`).join('')}${left > 0 ? `<i style="flex:${left}"></i>` : ''}</span>
       ${pays.length ? `<span style="display:flex;gap:6px;flex-wrap:wrap">${pays.map(p => payChip(p, q)).join('')}</span>` : ''}</div>`;
   };
@@ -2614,7 +2651,7 @@ PAGE.account = ({ id }) => {
     </div>
     <div class="bx-body">
       <div class="bx-sec"><b>Invoices, and what paid them</b><span style="display:flex;gap:10px;font-size:11px"><span style="display:inline-flex;align-items:center;gap:4px"><i style="width:8px;height:8px;border-radius:2px;background:var(--navy)"></i>paid</span><span style="display:inline-flex;align-items:center;gap:4px"><i style="width:8px;height:8px;border-radius:2px;background:var(--soft2);box-shadow:inset 0 0 0 1px #D9D4CB"></i>left</span></span></div>
-      ${open.length || settled.length ? `<div class="bx-card" style="padding:0 14px">${open.map(q => invRow(q, false)).join('')}${settled.map(q => invRow(q, true)).join('')}</div>` : emptyCard('No invoices on file', 'What they owe came from before the invoices were kept here')}
+      ${open.length || settled.length ? `<div class="bx-card" style="padding:0 14px">${(open.length > 8 && !(S.ui.acctAll === c.id) ? open.slice(0, 8) : open).map(q => invRow(q, false)).join('')}${open.length > 8 && S.ui.acctAll !== c.id ? `<button class="ac-more" data-act="acctall" data-id="${esc(c.id)}">${ic('down', 16)}<span>Show all <span class="m">${open.length}</span> open invoices</span><span class="m" style="margin-left:auto;color:var(--ink3)">+${n0(open.slice(8).reduce((s, q) => s + balanceDue(q), 0))}</span></button>` : ''}${settled.map(q => invRow(q, true)).join('')}</div>` : emptyCard('No invoices on file', 'What they owe came from before the invoices were kept here')}
       ${custAging(c).unknown > 0.5 ? `<span class="bx-hint">${ic('clock', 14)}<span class="m">${n0(custAging(c).unknown)}</span> of it is from before the invoices were kept</span>` : ''}
       <span class="bx-hint" style="justify-content:center;color:var(--ink3)">${ic('lock', 13)}Void, credit note, limit, terms — owner</span>
     </div>
@@ -2720,7 +2757,7 @@ PAGE.receive = a => {
     return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
       <div class="bx-sheethead"><span class="bx-grip"></span><div style="display:flex;align-items:center;gap:10px"><span style="flex:1;display:flex;flex-direction:column;gap:2px"><span class="bx-eyebrow">Record a payment</span><span style="font-size:20px;font-weight:700">Who paid?</span></span>${closeBtn()}</div>
         <label class="bx-search">${ic('search', 19, 'style="color:var(--navyInk)"')}<input id="rcv_q" data-in="rcvq" type="search" placeholder="Name, phone or place" value="${esc(S.ui.rcvQ || '')}"></label></div>
-      <div class="bx-body">${list.length ? `<div class="bx-card bx-list">${list.map(c => `<button class="bx-row" data-act="rcvwho" data-id="${esc(c.id)}">${avatar(c.name, c.id, 40, true)}<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="bx-t ell">${esc(c.name)}</span><span class="bx-sub ell">${esc(c.location || '')}${custOpen(c.id).length ? ` · <span class="m">${custOpen(c.id).length}</span> open` : ''}</span></span><span class="m" style="font-weight:600">${n0(c.debt)}</span></button>`).join('')}</div>` : emptyCard('Nobody matches', 'Try part of the name or a phone number')}</div></div>`;
+      <div class="bx-body">${list.length ? `<div class="bx-card bx-list">${list.map(c => `<button class="bx-row" data-act="rcvwho" data-id="${esc(c.id)}">${avatar(c.name, c.id, 40, true)}<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="bx-t ell">${esc(c.name)}</span><span class="bx-sub ell">${[c.location ? esc(c.location) : '', custOpen(c.id).length ? `<span class="m">${custOpen(c.id).length}</span> open` : ''].filter(Boolean).join(' · ') || 'no open invoices'}</span></span><span class="m" style="font-weight:600">${n0(c.debt)}</span></button>`).join('')}</div>` : emptyCard('Nobody matches', 'Try part of the name or a phone number')}</div></div>`;
   }
   const c = customerById(a.id); if (!c) return `<div class="card"><div class="bx-empty"><b>Not on file</b></div></div>`;
   const open = custOpen(c.id);
@@ -2736,10 +2773,11 @@ PAGE.receive = a => {
         <span style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--ink3)"><span>owes <b class="m" style="color:var(--ink)">${n0(c.debt)}</b></span><span style="${after === 0 ? 'color:var(--green)' : ''}">owes <b class="m">${n0(after)}</b> after</span></span></div>
       ${open.length ? `<div class="bx-slip"><div class="bx-slip-in">
         <div class="ac-sliphead"><span>WHAT IT PAYS</span><span style="font-weight:600;color:var(--ink3);letter-spacing:0">in the order you tick</span></div>
-        ${plan.bills.map((b, i) => `<button class="ac-tickrow" data-act="rcvtick" data-v="${b.q.id}" aria-pressed="${b.picked}" style="${i === plan.bills.length - 1 ? 'border-bottom:none' : ''}${b.picked ? '' : ';opacity:.6'}">
+        ${(plan.bills.length > 8 && !a.allBills ? plan.bills.filter((b, i) => b.pay > 0 || i < 8).slice(0, Math.max(8, plan.bills.filter(b => b.pay > 0).length + 2)) : plan.bills).map((b, i, arr) => `<button class="ac-tickrow" data-act="rcvtick" data-v="${b.q.id}" aria-pressed="${b.picked}" style="${i === arr.length - 1 ? 'border-bottom:none' : ''}${b.picked ? '' : ';opacity:.6'}">
           <span class="m" style="width:26px;height:26px;border-radius:999px;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;${b.picked ? 'background:var(--green);color:#fff' : 'box-shadow:inset 0 0 0 2px #D9D4CB'}">${b.picked ? b.n : ''}</span>
           <span style="display:flex;flex-direction:column;gap:2px;text-align:left"><span class="m" style="font-size:14px;font-weight:600">${invoiceLabel(b.q)}</span><span style="font-size:12px;font-weight:600;color:${invLateDays(b.q) ? 'var(--amberInk)' : 'var(--ink3)'}">${esc(shortDay(invoicedOn(b.q)))} · ${invLateDays(b.q) ? 'past terms' : `<span class="m">${custBillAge(b.q)}</span> d`}</span></span>
           <span style="display:flex;flex-direction:column;align-items:flex-end;gap:3px"><span class="m" style="font-size:14px;font-weight:600">${n0(b.due)}</span>${b.pay > 0 ? (b.pay >= b.due ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--green)">${ic('tick', 12, 'style="stroke-width:3"')}CLEARED</span>` : `<span style="font-size:11px;font-weight:700;color:var(--amberInk)"><span class="m">${n0(b.pay)}</span> paid · <span class="m">${n0(b.due - b.pay)}</span> left</span>`) : ''}</span></button>`).join('')}
+        ${plan.bills.length > 8 && !a.allBills ? `<button class="ac-more" data-act="rcvall">${ic('down', 16)}<span>All <span class="m">${plan.bills.length}</span> open invoices</span></button>` : ''}
         ${plan.rest > 0 ? `<div class="ac-kv" style="border-top:1.5px solid var(--ink);border-bottom:none"><span style="color:var(--amberInk)">On account · no invoice</span><span class="m">${n0(plan.rest)}</span></div>` : ''}
       </div></div>` : `<span class="bx-hint">${ic('clock', 14)}No open invoices on file — it lowers what they owe.</span>`}
       ${open.length ? `<span class="bx-hint" style="color:var(--amberInk)">${ic('bang', 14)}Tick none and it only lowers the debt — no invoice paid</span>` : ''}
@@ -2747,7 +2785,7 @@ PAGE.receive = a => {
     <div class="bx-dock" style="margin-top:auto">
       <div role="radiogroup" aria-label="Received by" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">${ACCOUNTS.map(x => `<button role="radio" aria-checked="${a.method === x.key}" data-act="rcvmethod" data-v="${x.key}" class="ac-meth" style="${a.method === x.key ? 'background:#fff;color:var(--navy);box-shadow:0 8px 18px rgba(0,0,0,.25)' : ''}">${ic(ACCT_LOOK[x.key].icon, 22)}<span>${esc(x.label)}</span></button>`).join('')}</div>
       <button role="switch" aria-checked="${!!a.receipt}" data-act="rcvreceipt" class="bx-chip" style="align-self:flex-start;border:none;height:36px;padding:0 12px 0 6px;font-size:13px;${a.receipt ? 'background:rgba(111,220,176,.14);color:var(--mint)' : 'background:rgba(255,255,255,.07);color:var(--navyInk)'}"><span style="width:24px;height:24px;border-radius:999px;display:flex;align-items:center;justify-content:center;${a.receipt ? 'background:var(--mint);color:var(--navy)' : 'box-shadow:inset 0 0 0 2px rgba(255,255,255,.3)'}">${a.receipt ? ic('tick', 12, 'style="stroke-width:3"') : ''}</span>Receipt ready to share after</button>
-      ${slideHTML('pay', busy ? 'Recording…' : `Slide to record ${n0(a.amt)}`, 'cash', { disabled: busy || !(a.amt > 0), mint: true })}
+      ${!can('payment.receive') ? lockedNote('payment.receive') : slideHTML('pay', busy ? 'Recording…' : `Slide to record ${n0(a.amt)}`, 'cash', { disabled: busy || !(a.amt > 0), mint: true })}
     </div>
   </div>`;
 };
@@ -2756,15 +2794,22 @@ ACT['in:rcvq'] = t => { S.ui.rcvQ = t.value; render(); };
 ACT.rcvwho = t => { replaceTop('receive', { id: t.dataset.id, picks: null, amt: null, method: 'cash', receipt: true }); FEEL.tick(); };
 ACT['in:rcvamt'] = t => { const a = topArgs(); a.amt = parseMoney(t.value) || 0; clearTimeout(ACT._rcvT); ACT._rcvT = setTimeout(render, 350); };
 ACT.rcvtick = t => { const a = topArgs(), id = t.dataset.v; const i = (a.picks || []).findIndex(x => String(x) === String(id)); if (i >= 0) a.picks.splice(i, 1); else (a.picks ||= []).push(Number(id) || id); FEEL.tick(); render(); };
+ACT.rcvall = () => { topArgs().allBills = true; FEEL.tick(); render(); };
 ACT.rcvmethod = t => { topArgs().method = t.dataset.v; FEEL.tick(); render(); };
 ACT.rcvreceipt = () => { const a = topArgs(); a.receipt = !a.receipt; FEEL.tick(); render(); };
 ACT['slide:pay'] = async () => {
-  const a = topArgs(), c = customerById(a.id); if (!c || S.busy || !(a.amt > 0)) return;
+  const a = topArgs(), c0 = customerById(a.id); if (!c0 || S.busy || !(a.amt > 0)) return;
+  if (!can('payment.receive')) { toast('Recording a payment needs “Record payments in” — ask the owner to switch it on'); return; }
+  const top = S.stack[S.stack.length - 1];
   S.busy = true; render();
   try {
+    // The last payment's own refresh may not have landed: read the books first,
+    // so its invoices are not paid a second time as money on account.
+    if (S.ui.dirty) await loadAll();
+    const c = customerById(a.id) || c0;
     const r = await recordPayment(c, Math.round(a.amt), a.method || 'cash', a.picks || []);
-    S.busy = false;
-    replaceTop('paid', { ...r, receipt: a.receipt });
+    S.busy = false; S.ui.dirty = true;
+    (S.stack[S.stack.length - 1] === top ? replaceTop : push)('paid', { ...r, receipt: a.receipt });
     FEEL.kaching();
     loadAll().then(() => { if (S.stack.length && S.stack[S.stack.length - 1].type === 'paid') render(); }).catch(() => {});
   } catch (e) {
@@ -2826,7 +2871,7 @@ function stmtSheetFor(cid){
 function stmtQueue(){
   const t = todayISO(), skip = S.ui.stmtSkip || {};
   const sentToday = (D().statementsSent || []).filter(s => String(s.sent_on) === t);
-  const due = debtors().filter(c => statementDue(c) && !skip[c.id]).sort((a, b) => custAging(b).oldest - custAging(a).oldest || b.debt - a.debt);
+  const done = S.ui.stmtDone || {}, due = debtors().filter(c => statementDue(c) && !skip[c.id] && !done[c.id]).sort((a, b) => custAging(b).oldest - custAging(a).oldest || b.debt - a.debt);
   const order = S.ui.stmtOrder || [];
   due.sort((a, b) => { const ia = order.indexOf(String(a.id)), ib = order.indexOf(String(b.id)); return (ia < 0 ? 1e9 : ia) - (ib < 0 ? 1e9 : ib); });
   return { due, sentToday, skipped: debtors().filter(c => skip[c.id]) };
@@ -2917,17 +2962,21 @@ PAGE.stmt = ({ id, batch }) => {
 ACT.stmtskipone = t => { (S.ui.stmtSkip ||= {})[t.dataset.id] = true; FEEL.back(); pop(); };
 ACT.stmtshare = async t => {
   const id = t.dataset.id, batch = !!t.dataset.batch, sh = stmtSheetFor(id); if (!sh || S.busy) return;
+  const top = S.stack[S.stack.length - 1];
   S.busy = true; render();
   try {
     const text = `Your balance with ${custShopIdentity().name} is UGX ${n0(sh.st.closing)} as at ${custFmtDate(sh.st.to)}. Statement attached.`;
     const slug = String(sh.side.who.name).replace(/[^\w]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'account';
     const blob = S.ui.fmt === 'pdf' ? new Blob([custStmtPdfBytes(sh.st, sh.side)], { type: 'application/pdf' }) : await paintStatement(sh);
     const how = await shareBlob(blob, `statement-${slug}-${sh.st.to}.${S.ui.fmt === 'pdf' ? 'pdf' : 'png'}`, text, sh.side.who.phone, 'Send the statement');
-    S.busy = false;
-    if (how === 'cancelled') { render(); return; }
+    if (how === 'cancelled') { S.busy = false; render(); return; }
     if (can('statement.send')) { try { await custRecordStatement(id, sh.st); } catch (e) { toast('Sent — but it was not noted: ' + (e.message || e), 6000); } }
+    S.busy = false;
+    // Kept for the session, so a batch never comes back round to someone already sent.
+    (S.ui.stmtDone ||= {})[id] = true;
     FEEL.stamp(); toast(`${shortName(sh.side.who.name)}’s statement is out`);
-    if (batch) { const { due } = stmtQueue(); const nx = due.find(c => String(c.id) !== String(id)); if (nx) { replaceTop('stmt', { id: nx.id, batch: true }); return; } }
+    if (S.stack[S.stack.length - 1] !== top) { render(); return; }
+    if (batch) { const { due } = stmtQueue(); const nx = due.find(c => !S.ui.stmtDone[c.id]); if (nx) { replaceTop('stmt', { id: nx.id, batch: true }); return; } }
     pop();
   } catch (e) { S.busy = false; render(); toast(failWord(e), 6000); }
 };
@@ -3078,15 +3127,17 @@ ACT.invskip = t => { const q = D().savedQuotes.find(x => String(x.id) === String
 ACT.invshare = async t => {
   const q = D().savedQuotes.find(x => String(x.id) === String(t.dataset.id)); if (!q || S.busy) return;
   const queue = !!t.dataset.queue, c = invoiceCust(q), phone = (c && (c.phone || c.phone2)) || (q.client && q.client.phone) || '';
+  const top = S.stack[S.stack.length - 1];
   S.busy = true; render();
   try {
     const png = await paintInvoice(q), pdf = S.ui.fmt === 'pdf';
     const blob = pdf ? await pngToPdf(png) : png;
     const how = await shareBlob(blob, `${invoiceLabel(q).toLowerCase()}.${pdf ? 'pdf' : 'png'}`, `Thank you for buying with ${custShopIdentity().name}. Your invoice ${invoiceLabel(q)} is attached — UGX ${n0(balanceDue(q))} left to pay.`, phone, 'Send the invoice');
-    S.busy = false;
-    if (how === 'cancelled') { render(); return; }
+    if (how === 'cancelled') { S.busy = false; render(); return; }
     if (can('invoice.send')) { try { await recordInvoiceSend(q, pdf ? 'pdf' : 'picture'); } catch (e) { toast('Sent — but it was not marked: ' + (e.message || e), 6000); } }
+    S.busy = false;
     FEEL.stamp(); toast(`${invoiceLabel(q)} is out`);
+    if (S.stack[S.stack.length - 1] !== top) { render(); return; }
     if (queue) { const ns = D().savedQuotes.filter(x => x.invoiced && !x.voided && invoicedOn(x) === todayISO() && !invoiceSent(x) && x !== q); if (ns[0]) { replaceTop('invoice', { id: ns[0].id, queue: true }); return; } }
     pop();
   } catch (e) { S.busy = false; render(); toast(failWord(e), 6000); }
@@ -3158,7 +3209,7 @@ function cameWord(pi){
   return { ok: false, word: `${full} of ${rows.length} line${rows.length === 1 ? '' : 's'} came in · ${rows.length - full} short` };
 }
 function paidTodayTo(sid){ return paidToSuppliersOn(todayISO()).filter(t => openBillsAll(sid).some(b => (b.payments || []).some(p => String(p.cashTxnId) === String(t.id)))).reduce((s, t) => s + t.amount, 0); }
-function openBillsAll(sid){ return D().bills.filter(pi => !pi.voided && String(pi.supplierId) === String(sid)); }
+function openBillsAll(sid){ return D().bills.filter(pi => !pi.voided && supplierKey(pi) === String(sid)); }
 
 function viewBills(){
   const rows = creditors(), owe = rows.reduce((s, r) => s + r.due, 0), nBills = rows.reduce((s, r) => s + r.bills.length, 0);
@@ -3254,17 +3305,19 @@ ACT['slide:billpay'] = async () => {
   await payAndConfirm(a, bills, null);
 };
 async function payAndConfirm(a, bills, amounts){
-  const sid = a.sid != null ? a.sid : bills[0].supplierId, name = billSupplierName(bills[0]);
+  const sid = a.sid != null ? a.sid : supplierKey(bills[0]), name = billSupplierName(bills[0]);
   const before = openBills(sid).reduce((s, b) => s + billDue(b), 0), hand = inHandBy()[a.from];
-  a.busy = true; render();
+  const top = S.stack[S.stack.length - 1];
+  a.busy = true; S.busy = true; render();
   try {
     const done = await payBills(bills, a.from, amounts);
+    S.busy = false;
     const paid = done.reduce((s, d) => s + d.pay, 0);
     FEEL.kaching();
-    replaceTop('billpaid', { sid, name, from: a.from, paid, hand, after: hand - paid, owedAfter: Math.max(0, before - paid), at: Date.now(),
+    (S.stack[S.stack.length - 1] === top ? replaceTop : push)('billpaid', { sid, name, from: a.from, paid, hand, after: hand - paid, owedAfter: Math.max(0, before - paid), at: Date.now(),
       lines: done.map(d => ({ ref: billRef(d.bill), pay: d.pay, cleared: billDue(d.bill) <= 0.5 })) });
   } catch (e) {
-    a.busy = false; FEEL.no();
+    a.busy = false; S.busy = false; FEEL.no();
     toast(e.partial ? `Paid ${n0(e.partial)} before it stopped — ${e.message}` : failWord(e), 6000);
     if (e.partial) loadAll().then(render).catch(() => render()); else render();
   }
@@ -3299,14 +3352,14 @@ PAGE.billpaid.bg = '#16203C';
 PAGE.bill = a => {
   const b = D().bills.find(x => Number(x.id) === Number(a.id));
   if (!b) return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card"><div class="bx-empty" style="padding-top:30vh"><b>Not in the books any more</b><br><button class="bx-btn ghost" style="flex:none;margin:0 auto" data-act="back">Back</button></div></div>`;
-  const name = billSupplierName(b), owe = openBills(b.supplierId).reduce((s, x) => s + billDue(x), 0), terms = supplierTerms(b.supplierId);
+  const name = billSupplierName(b), owe = openBills(supplierKey(b)).reduce((s, x) => s + billDue(x), 0), terms = supplierTerms(b.supplierId);
   const left = billDue(b), rows = billCameIn(b) || (b.items || []).map(it => ({ it, got: null, full: null }));
   const allIn = rows.length && rows.every(r => r.full === true), anyShort = rows.some(r => r.full === false);
   if (a.mode == null) a.mode = 'all';
   const amt = a.mode === 'all' ? left : Math.min(left, Math.max(0, Number(a.amt) || 0));
   a.from = pickFrom(a, amt);
   const due = b.dueDate ? new Date(b.dueDate + 'T00:00:00') : null, st = billState(b);
-  const inDate = (D().stockIn || []).filter(r => String(r.pi_id) === String(b.id)).map(r => r.created_at || r.at).filter(Boolean).sort()[0];
+  const inDate = (D().stockIn || []).filter(r => String(r.pi_id) === String(b.id)).map(r => r.date).filter(Boolean).sort()[0];
   const who = b.createdBy ? whoName(b.createdBy) : (b.boughtBy || '');
   return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
     <div style="padding:10px 16px 0;display:flex;flex-direction:column;gap:12px"><span class="bx-grip" style="background:#D9D4CB"></span>
@@ -3344,7 +3397,7 @@ ACT['slide:billone'] = async () => {
   const a = topArgs(), b = D().bills.find(x => Number(x.id) === Number(a.id)); if (!b || a.busy) return;
   const amt = a.mode === 'all' ? billDue(b) : Math.min(billDue(b), Number(a.amt) || 0);
   if (!(amt > 0)) return;
-  a.sid = b.supplierId;
+  a.sid = supplierKey(b);
   await payAndConfirm(a, [b], { [b.id]: amt });
 };
 ACT.billphoto = async t => {
@@ -3378,10 +3431,10 @@ PAGE.me = () => {
     </div>
     <div class="bx-body">
       <span class="ac-h"><i class="bx-dot" style="width:10px;height:10px;background:var(--green)"></i>Yours${owner ? ' — every key, as ' + esc(S.role) : ''}<span class="m">${mine.length + 2}</span></span>
-      <div class="ac-keys">${k('See all the books', '', 'background:var(--greenSoft);color:var(--green)')}<button class="ac-key" data-act="backup" style="border:none;background:var(--greenSoft);color:var(--green);text-align:left">${ic('down', 16)}Download a backup</button>${mine.map(x => k(TASK_WORDS[x], x, 'background:var(--greenSoft);color:var(--green)')).join('')}</div>
+      <div class="ac-keys">${k('See all the books', '', 'background:var(--greenSoft);color:var(--green)')}<button class="ac-key" data-act="backup" style="border:none;background:var(--greenSoft);color:var(--green);text-align:left">${ic('download', 16)}Download a backup</button>${mine.map(x => k(TASK_WORDS[x], x, 'background:var(--greenSoft);color:var(--green)')).join('')}</div>
       ${prop.length ? `<span class="ac-h" style="padding-top:4px"><i class="bx-dot" style="width:10px;height:10px;box-shadow:inset 0 0 0 2px var(--ink)"></i>Proposed for accounts<span class="m">${prop.length} task${prop.length === 1 ? '' : 's'}</span></span>
       <div class="ac-keys">${prop.map(x => k(TASK_WORDS[x], x, 'background:#fff;box-shadow:inset 0 0 0 1.5px var(--navyInk)')).join('')}</div>
-      <span class="bx-hint">${ic('lock', 14)}The owner switches these on in Settings → Roles</span>` : ''}
+      <span class="bx-hint">${ic('lock', 14)}The owner turns these on — migration 0117 in the Supabase SQL editor</span>` : ''}
       <span class="ac-h" style="padding-top:4px">${ic('lock', 14)}Owner keeps<span class="m">${OWNER_KEEPS.length}</span></span>
       <div class="ac-keys">${OWNER_KEEPS.map(x => k(x, '', 'background:var(--soft2);color:var(--ink2)')).join('')}</div>
       <div class="bx-card bx-list" style="margin-top:4px">${[['sound', 'Sounds & buzz', 'the till, the stamp, the chime', 'sound'], ['big', 'Big text', 'easier to read at the counter', 'big']].map(([key, w, sub, icn], i) => `<div style="display:flex;align-items:center;gap:12px;min-height:58px;${i ? 'border-top:1px solid #F1EEE8' : ''}"><span style="width:32px;height:32px;border-radius:10px;background:var(--soft);display:flex;align-items:center;justify-content:center;flex:none">${ic(icn, 17)}</span><span style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:14px;font-weight:700">${w}</span><span class="bx-sub">${sub}</span></span><button class="bx-switch" role="switch" aria-checked="${!!S.prefs[key]}" aria-label="${w}" data-act="pref" data-k="${key}"></button></div>`).join('')}</div>
@@ -3402,7 +3455,7 @@ ACT.backup = async () => {
 };
 
 // A refresh as soon as there is signal again.
-window.addEventListener('online', () => { if (S.started && !S.busy) loadAll().then(render).catch(() => {}); });
+window.addEventListener('online', () => { if (S.started && quiet()) loadAll().then(() => { if (quiet()) render(); }).catch(() => {}); });
 
 boot();
 </script>
