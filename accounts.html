@@ -2258,11 +2258,13 @@ function short(n){ n = Number(n) || 0; const a = Math.abs(n); if (a >= 1e6) retu
    TODAY — what came in, what doesn't match, what's due.
    ================================================================== */
 const ACCT_LOOK = { cash: { bar: '#FFFFFF', icon: 'cash' }, momo: { bar: '#B3BCD2', icon: 'momo' }, bank: { bar: '#5C6788', icon: 'bank' } };
+// Millions fold to 15.84M where a figure has a tile's width, not a row's.
+function fit(n){ return Math.abs(Number(n) || 0) >= 1e6 ? short(n) : n0(n); }
 function stateChipNavy(a){
   const s = acctState(a);
   if (s === 'agrees') return `<span class="bx-chip" style="height:22px;font-size:11px;background:rgba(111,220,176,.16);color:var(--mint)">${ic('tick', 11, 'style="stroke-width:3.2"')}agrees</span>`;
-  if (s === 'short') return `<span class="bx-chip a-pulsered" style="height:22px;font-size:11px;background:var(--crimsonSoft);color:var(--crimson)">short <span class="m">${n0(-a.variance)}</span></span>`;
-  if (s === 'over') return `<span class="bx-chip" style="height:22px;font-size:11px;background:var(--amberSoft);color:var(--amberDeep)">over <span class="m">${n0(a.variance)}</span></span>`;
+  if (s === 'short') return `<span class="bx-chip a-pulsered" style="height:22px;font-size:11px;background:var(--crimsonSoft);color:var(--crimson)">short <span class="m">${fit(-a.variance)}</span></span>`;
+  if (s === 'over') return `<span class="bx-chip" style="height:22px;font-size:11px;background:var(--amberSoft);color:var(--amberDeep)">over <span class="m">${fit(a.variance)}</span></span>`;
   return `<span class="bx-chip" style="height:22px;font-size:11px;background:rgba(245,178,107,.16);color:var(--amber)">to count</span>`;
 }
 function stateChip(a){
@@ -2283,9 +2285,9 @@ function viewToday(){
   const issues = [];
   pos.accounts.forEach(a => {
     const s = acctState(a);
-    if (!pos.closed && (s === 'short' || s === 'over')) issues.push({ act: 'short', key: a.key, tone: s === 'short' ? 'bad' : 'warn', icon: ACCT_LOOK[a.key].icon, title: `${a.label} ${s === 'short' ? 'is short' : 'is over'}`, sub: `counted <span class="m">${n0(a.counted)}</span> · book <span class="m">${n0(a.closing)}</span>`, fig: signed(a.variance) });
+    if (!pos.closed && (s === 'short' || s === 'over')) issues.push({ act: 'short', key: a.key, tone: s === 'short' ? 'bad' : 'warn', icon: ACCT_LOOK[a.key].icon, title: `${a.label} ${s === 'short' ? 'is short' : 'is over'}`, sub: `counted <span class="m">${fit(a.counted)}</span> · book <span class="m">${fit(a.closing)}</span>`, fig: signed(a.variance) });
   });
-  if (!pos.closed) pos.accounts.filter(a => a.counted === null).forEach(a => issues.push({ act: 'tab', v: 'cash', tone: 'warn', icon: ACCT_LOOK[a.key].icon, title: `${a.label} not ${a.key === 'bank' ? 'checked' : 'counted'} yet`, sub: a.key === 'bank' ? 'type today’s statement balance' : a.key === 'momo' ? 'type the balance on the phone' : 'count the drawer', cta: a.key === 'bank' ? 'Check' : 'Count' }));
+  if (!pos.closed) pos.accounts.filter(a => a.counted === null).forEach(a => issues.push({ act: 'tab', v: 'cash', tone: 'warn', icon: ACCT_LOOK[a.key].icon, title: `${a.key === 'momo' ? 'Mobile' : a.label} not ${a.key === 'bank' ? 'checked' : 'counted'} yet`, sub: a.key === 'bank' ? 'type today’s statement balance' : a.key === 'momo' ? 'type the balance on the phone' : 'count the drawer', cta: a.key === 'bank' ? 'Check' : 'Count' }));
   onAccountToday().forEach(x => { const tr = txnTrace(x); issues.push({ act: 'payment', id: x.id, tone: 'warn', icon: 'noinv', title: `${tr.cust ? tr.cust.name : 'A customer'} · paid no invoice`, sub: `${acctWord(x)} · by ${esc(whoName(x.enteredBy) || 'the owner')} · lowered their debt only`, fig: n0(x.amount) }); });
   const carried = carriedOpening(t);
   if (pos.rec.openingSet && carried && ACCOUNTS.some(a => Math.round(carried.values[a.key]) !== Math.round(Number(pos.rec.opening[a.key]) || 0)))
