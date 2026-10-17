@@ -74,7 +74,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -272,6 +272,34 @@ matrix.forEach(([what, it]) => {
     t.check(!X.linePriceToConfirm({ ...nocost, sellPrice: 25000, priceBy: 'u1', priceNote: 'nocost' }), 'a quoted price counts in the total');
     const pv = X.pricedView({ items: [{ ...nocost, sellPrice: 25000, priceBy: 'u1', priceNote: 'nocost' }], charges: [] });
     t.check(pv.total === 50000 && pv.pending === 1, 'and the order says one price is still to be confirmed');
+  }
+
+  // 6. chats: a reply always has a road, and what fails says why
+  {
+    const X = loadPage(fakeDb({}));
+    Object.assign(X.S, { data: fixture(), shopId: SH });
+    const now = Date.now(), open = { id: 1, wa_id: '256772123456', last_inbound_at: new Date(now - 3600e3).toISOString() };
+    const shut = { id: 2, wa_id: '256772000000', last_inbound_at: new Date(now - 30 * 3600e3).toISOString() };
+    t.check(X.chatKind(open, null) === 'text' && X.chatKind(open, { url: 'x' }) === 'image', 'an open chat takes words and pictures as they are');
+    t.check(X.chatKind(shut, null) === 'template' && X.chatCanSend(shut, 'We can replace it', null), 'a shut chat still takes a reply — inside the shop\'s reply message');
+    t.check(!X.chatCanSend(shut, '', { url: 'x' }) && X.chatCanSend(open, '', { url: 'x' }), 'a picture goes only while the chat is open');
+    t.check(!X.chatCanSend({ ...open, opt_out: true }, 'hello', null), 'nobody who said STOP is written to');
+    t.check(!X.chatCanSend(open, '   ', null), 'nothing to send is not sent');
+    t.check(/No connection/.test(X.chatWhyNot(new TypeError('Failed to fetch'), 'text')), 'a dropped connection says so');
+    t.check(/server update/.test(X.chatWhyNot(new Error('Unknown action "send-reply-template"'), 'template')), 'an old server says it needs the update, not a riddle');
+    t.check(/reply message/.test(X.chatWhyNot(new Error('The 24-hour reply window is closed — the customer has to message first.'), 'text')), 'a window that shut mid-send points at the reply message');
+    const m = (msg_type, body, payload) => ({ msg_type, body, payload });
+    t.check(X.chatSaid(m('audio', '[audio]')) === 'Voice note' && X.chatSaid(m('image', '[image] torn')) === 'torn' && X.chatSaid(m('image', '[image]')) === 'Picture', 'voice notes and pictures read as what they are, not "[audio]"');
+    t.check(X.chatSaid(m('document', '[document]', { document: { filename: 'BOQ.pdf' } })) === 'BOQ.pdf' && X.chatSaid(m('location', '[location]', { location: { name: 'Najjera site' } })) === 'Najjera site', 'a document by its name, a location by its place');
+    t.check(X.chatSaid(m('interactive', '[catalog] Browse')) === 'Catalogue' && X.chatSaid(m('template', 'We can replace it')) === 'We can replace it', 'the catalogue card and a reply message read plainly');
+    X.S.user = { id: 'u1' };
+    const out = (o) => ({ direction: 'out', msg_type: 'text', body: 'ok', ...o });
+    t.check(X.chatSender(out({ sent_by: 'u1', sent_by_name: 'Amina' })).name === 'You' && X.chatSender(out({ sent_by: 'u9', sent_by_name: 'Grace Namubiru' })).name === 'Grace Namubiru', 'every reply names who on the team sent it — you, or them by name');
+    t.check(X.chatSender(out({ payload: { from: '2567', timestamp: '1' } })).name === 'Shop phone' && X.chatSender(out({ payload: { auto: true } })).name === 'Automatic', 'typed on the shop phone, or sent by itself, it says so');
+    t.check(X.chatSender(out({})) === null && X.chatSender({ direction: 'in', sent_by_name: 'x' }) === null, 'a reply from before the stamp names nobody rather than a guess; a customer\'s message is theirs');
+    const one = X.chatPriceLine('P2', 0, 1), bulk = X.chatPriceLine('P2', 0, 40), none = X.chatPriceLine('P3', null, 1);
+    t.check(one && one.price === Math.round(X.quoteItemSellPrice(X.makeLine('P2', 0, 1))) && bulk.price === Math.round(X.quoteItemSellPrice(X.makeLine('P2', 0, 40))) && /^40 Iron sheets G28: /.test(bulk.text), 'a price is the selling price at the quantity they asked for');
+    t.check(none && none.price === null && /price to confirm/.test(none.text) && !/90,000|3,600/.test(none.text), 'no selling rule: "price to confirm", never the cost');
   }
 
   // the screens draw from the fixture without throwing

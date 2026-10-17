@@ -112,8 +112,20 @@ const invite = read('supabase/functions/invite-worker/index.ts');
 /* ---------- 2. the server functions --------------------------------- */
 {
   const replies = (/const REPLY_ACTIONS = \[([^\]]*)\]/.exec(waSend) || ['', ''])[1];
-  eq([...replies.matchAll(/"([a-z-]+)"/g)].map((m) => m[1]).sort(), ['send', 'send-catalog', 'send-image', 'status'],
-    'any member may reply in a chat');
+  eq([...replies.matchAll(/"([a-z-]+)"/g)].map((m) => m[1]).sort(), ['media', 'send', 'send-catalog', 'send-image', 'send-reply-template', 'status'],
+    'any member may reply in a chat, open what a customer sent, and answer a shut chat through the reply template');
+  const tplBlock = waSend.slice(waSend.indexOf('action === "send-reply-template"'), waSend.indexOf('action === "media"'));
+  t.check(/category: "UTILITY"/.test(tplBlock) && /\{\{2\}\}/.test(tplBlock) && /tpl\.status !== "APPROVED"/.test(tplBlock) && /conv\.opt_out/.test(tplBlock),
+    'a shut chat is answered only through the approved shop_reply template, never to someone who said STOP');
+  t.check(/async function recordOut/.test(waSend) && (waSend.match(/admin\.from\("wa_messages"\)\.insert\(/g) || []).length === 2
+    && /sent_by_name: name/.test(waSend) && /\.eq\("user_id", u\.id\)/.test(waSend),
+    'every message wa-send records goes through recordOut, stamped with who sent it (their staff name, else Owner)');
+  t.check(/if \(error && \/sent_by\/\.test/.test(waSend), 'and a database without 0118 still gets the record, without the stamp');
+  const mig118 = read('supabase/migrations/0118_wa_message_sender.sql');
+  t.check(/add column if not exists sent_by uuid/.test(mig118) && /add column if not exists sent_by_name text/.test(mig118), '0118 adds who sent it, safe to run twice');
+  const mediaBlock = waSend.slice(waSend.indexOf('action === "media"'));
+  t.check(/\.eq\("shop_id", shopId\)/.test(mediaBlock) && /MEDIA_MAX/.test(mediaBlock) && !/ACCESS_TOKEN[^)]*json\(\{[^}]*token/i.test(mediaBlock),
+    'a file is fetched only for this shop\'s own message, size-capped, and the token never goes back to the app');
   t.check(/if \(!REPLY_ACTIONS\.includes\(action\)\)[\s\S]{0,200}rpc\("is_shop_admin"/.test(waSend),
     'and everything else — a broadcast, re-registering the number, templates — asks for the owner');
   const gateAt = waSend.indexOf('REPLY_ACTIONS.includes');
