@@ -10371,6 +10371,8 @@
   /* Four roles since the buying desk: two by two, so "Picks & delivers"
      and its two marks keep their width instead of being clipped. */
   #st_roles.sf-sw{grid-auto-flow:row;grid-template-columns:repeat(2,minmax(0,1fr));}
+  /* An odd one out (the store yard, fifth) takes the whole last row. */
+  #st_roles .sf-role:last-child:nth-child(odd){grid-column:1 / -1;}
   #st_roles .sf-sw-b:nth-child(odd){border-left:0;}
   #st_roles .sf-sw-b:nth-child(n+3){border-top:1px solid var(--ow-rule);}
   .sf-sw-b:hover{background:var(--ow-paper-2);color:var(--ow-ink-900);}
@@ -39718,6 +39720,7 @@
               <button type="button" class="sx-seg-b on" data-role="all" aria-pressed="true">Everyone<span class="sx-seg-n"></span></button>
               <button type="button" class="sx-seg-b" data-role="worker" aria-pressed="false">Pickers<span class="sx-seg-n"></span></button>
               <button type="button" class="sx-seg-b" data-role="delivery" aria-pressed="false">Drivers<span class="sx-seg-n"></span></button>
+              <button type="button" class="sx-seg-b" data-role="store" aria-pressed="false">Store<span class="sx-seg-n"></span></button>
               <button type="button" class="sx-seg-b" data-role="off" aria-pressed="false">Can&rsquo;t be sent<span class="sx-seg-n"></span></button>
             </div>
             <label class="sx-srch"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="st_search" type="search" placeholder="Name or phone" aria-label="Find a person" autocomplete="off"></label>
@@ -71214,7 +71217,7 @@ function ofSync(self) {
   ofQ = {};
   var staff = (data.staff || []);
   STAFF.length = 0;
-  staff.filter(function (s) { return s.role === 'worker'; }).forEach(function (s) { STAFF.push({ id: String(s.id), name: ofFirst(s.name), off: !!s.unavailable }); });
+  staff.filter(function (s) { return s.role === 'worker' || s.role === 'store'; }).forEach(function (s) { STAFF.push({ id: String(s.id), name: ofFirst(s.name), off: !!s.unavailable }); });
   DRIVERS.length = 0;
   var drivers = staff.filter(function (s) { return s.role === 'delivery'; });
   drivers.forEach(function (s) { if (!s.unavailable) DRIVERS.push({ id: String(s.id), name: ofFirst(s.name), kind: 'Driver', cap: 3 }); });
@@ -84647,6 +84650,7 @@ function staffPersonHTML(s, range, maxCount){
   const pips = load ? `<span class="sx-pips" aria-hidden="true">${'<i></i>'.repeat(Math.min(load, 8))}</span>` : '';
   const capsHTML = s.role === 'sales' ? `<span class="sx-capb">${ICON_SX_SELL}Sells</span>`
     : s.role === 'buyer' ? `<span class="sx-capb">${ICON_SX_BUY}Buys</span>`
+    : s.role === 'store' ? `<span class="sx-capb">${ICON_SX_STORE}Store</span><span class="sx-capb">${ICON_SX_PICK}Pick</span><span class="sx-capb">${ICON_SX_DRIVE}Deliver</span>`
     : caps.length ? caps.map(c=> `<span class="sx-capb">${c === 'Picking' ? ICON_SX_PICK : ICON_SX_DRIVE}${c === 'Picking' ? 'Pick' : 'Deliver'}</span>`).join('')
     : '<span class="sx-capb">no role set</span>';
   const figHTML = `<span class="sx-fig${fig.bad?' is-bad':''}${fig.quiet?' is-quiet':''}">${fig.value}</span>`;
@@ -85503,6 +85507,7 @@ function renderStaff(filter=''){
     all: rows.length,
     worker: rows.filter(s=> s.role === 'worker').length,
     delivery: rows.filter(s=> s.role === 'delivery').length,
+    store: rows.filter(s=> s.role === 'store').length,
     off: rows.filter(s=> ['off','absent','nologin'].includes(staffDispatchState(s).key)).length,
   };
   document.querySelectorAll('#staffRoleFilter .sx-seg-b').forEach(b=>{
@@ -85554,7 +85559,7 @@ function staffEmptyHTML(){
     wage on Payroll &amp; rent.`;
   if(staffRoleFilter === 'off') return 'Everybody can be sent work: nobody is unavailable, absent today or without a login.';
   if(staffRoleFilter !== 'all') return `Nobody is filed under ${
-    staffRoleFilter === 'worker' ? 'picking' : 'delivery'}. A worker can still be sent on a
+    staffRoleFilter === 'worker' ? 'picking' : staffRoleFilter === 'store' ? 'the store' : 'delivery'}. A worker can still be sent on a
     delivery &mdash; the filter sorts on the job somebody holds, not on what they could be asked to do.`;
   return 'Nobody matches that search.';
 }
@@ -85653,7 +85658,14 @@ const SF_ROLES = [
      or delivery -- but still somebody a trip can be given to. */
   {key:'buyer', name:'Buys', gives:'The buying desk — supplier answers and collection trips',
    note:'Signs in to the Buyer app. Can be sent on trips; never handed picking or delivery.'},
+  /* The store yard (0115, store.html): picks and delivers like somebody
+     on the floor -- staffEligibleForRole gives them both -- and also takes
+     trips in at the yard, loads the truck and counts the shelf. Their
+     invite opens the Store app instead of the worker app. */
+  {key:'store', name:'Runs the store', gives:'The store yard — trips in, picking, loading, delivery and stock takes',
+   note:'Signs in to the Store app. Can be handed picking and delivery, and counts the shelf blind.'},
 ];
+const ICON_SX_STORE = '<svg class="sx-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 9.5L5 4h14l1.5 5.5zM3.5 9.5V20h17V9.5"/><path d="M9.5 20v-5.5h5V20"/></svg>';
 const ICON_SX_BUY = '<svg class="sx-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M1.5 6.5h12.5v9.5H1.5zM14 10h4.5l3 3v3H14"/><circle cx="5.5" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/></svg>';
 const ICON_SX_SELL = '<svg class="sx-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M11.6 3.2H5.4a2.2 2.2 0 0 0-2.2 2.2v6.2a2 2 0 0 0 .6 1.4l7.4 7.4a2 2 0 0 0 2.8 0l6.2-6.2a2 2 0 0 0 0-2.8L13 3.8a2 2 0 0 0-1.4-.6z"/><circle cx="7.9" cy="7.9" r="1.45"/></svg>';
 
@@ -85666,7 +85678,7 @@ function sfRenderRoles(){
      it gives and what it costs is on the button's title. */
   wrap.innerHTML = SF_ROLES.map(r=> `<button type="button" class="sf-sw-b sf-role${r.key===chosen?' on':''}"
       data-role="${esc(r.key)}" aria-pressed="${r.key===chosen}" title="${esc(r.gives)}. ${esc(r.note)}">${
-      r.key === 'sales' ? ICON_SX_SELL : r.key === 'buyer' ? ICON_SX_BUY : `${r.key === 'worker' ? ICON_SX_PICK : ''}${ICON_SX_DRIVE}`}${esc(r.name)}</button>`).join('');
+      r.key === 'sales' ? ICON_SX_SELL : r.key === 'buyer' ? ICON_SX_BUY : r.key === 'store' ? ICON_SX_STORE : `${r.key === 'worker' ? ICON_SX_PICK : ''}${ICON_SX_DRIVE}`}${esc(r.name)}</button>`).join('');
   wrap.querySelectorAll('.sf-role').forEach(b=> b.addEventListener('click', ()=>{
     document.getElementById('st_role').value = b.dataset.role;
     sfRenderRoles();
@@ -85699,9 +85711,19 @@ function sfUpdateRoleWarning(){
       ? ' Their login moves with them when you save.' : ''}</div>`;
     return;
   }
+  if(s && chosen === 'store' && s.role !== 'store'){
+    el.innerHTML = `<div class="sf-warn">${esc(s.name)} runs the store: still handed picking and delivery, and now takes trips in, loads and counts the shelf too.${s.userId
+      ? ' Their login moves with them when you save — it opens the Store app.' : ''}</div>`;
+    return;
+  }
+  if(s && s.role === 'store' && chosen !== 'store'){
+    el.innerHTML = `<div class="sf-warn">${esc(s.name)} stops running the store.${s.userId
+      ? ` Their login moves with them when you save — it opens the ${chosen === 'sales' ? 'sales desk' : chosen === 'buyer' ? 'Buyer app' : 'worker app'} instead of the Store app.` : ''}</div>`;
+    return;
+  }
   if(s && s.role === 'buyer' && chosen !== 'buyer'){
     el.innerHTML = `<div class="sf-warn">${esc(s.name)} leaves the buying desk.${s.userId
-      ? ` Their login moves with them when you save — it opens the ${chosen === 'sales' ? 'sales desk' : 'worker app'} instead of the Buyer app.` : ''}</div>`;
+      ? ` Their login moves with them when you save — it opens the ${chosen === 'sales' ? 'sales desk' : chosen === 'store' ? 'Store app' : 'worker app'} instead of the Buyer app.` : ''}</div>`;
     return;
   }
   if(s && s.role === 'sales' && chosen !== 'sales'){
@@ -85972,7 +85994,7 @@ document.getElementById('st_save').addEventListener('click', ()=>{
      app and a former one keeps writing the books. Read before the row
      is overwritten. */
   const prevRole = editingStaffId ? ((data.staff.find(s=> s.id===editingStaffId)||{}).role || null) : null;
-  const desks = ['sales', 'buyer'];
+  const desks = ['sales', 'buyer', 'store'];
   const crossesDesk = !!prevRole && prevRole !== record.role && (desks.includes(prevRole) || desks.includes(record.role));
   if(editingStaffId){
     const idx = data.staff.findIndex(s=>s.id===editingStaffId);
@@ -86007,6 +86029,8 @@ async function moveStaffLoginToRole(id){
         ? `${firstName(s.name)}'s login now opens the sales desk`
         : out.role === 'buyer'
           ? `${firstName(s.name)}'s login now opens the Buyer app`
+        : out.role === 'store'
+          ? `${firstName(s.name)}'s login now opens the Store app`
           : `${firstName(s.name)}'s login now opens the worker app`, 4000);
     }
   }catch(err){

@@ -39,6 +39,16 @@ Until then the queue still works — an open worker app polls it once a
 minute — but a closed app hears nothing about a new order until somebody
 finishes a pick and is handed the next one.
 
+`notify-stock-count` sends one push: **Stock take done** to every owner,
+admin and manager of the shop when the Store app (`store.html`) sends a blind
+count to `stock_counts` (0115), with what differs. It uses the same
+`FIREBASE_SERVICE_ACCOUNT_JSON`. Deploy it open, like `notify-worker`, and add
+a Database Webhook on `stock_counts` INSERT pointing at it (header
+`x-webhook-secret` = `NOTIFY_STOCK_SECRET` once that secret is set):
+```
+supabase functions deploy notify-stock-count --no-verify-jwt
+```
+
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided automatically to
 every deployed function — no need to set those.
 
