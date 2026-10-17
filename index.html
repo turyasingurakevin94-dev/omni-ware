@@ -84361,6 +84361,12 @@ function staffDispatchState(s){
         note:'Checks suppliers and rides trips in the Buyer app &mdash; never handed picking or delivery' }
     : { key:'nologin', rank:200, cls:'ow-warn', text:'No login yet',
         note:'Signs in to the Buyer app once they accept an invite' };
+  // And the books (0115): payments in, the day's count, statements, bills.
+  if(s.role === 'accounts') return s.userId
+    ? { key:'accounts', rank:250, cls:'', text:'On the accounts desk',
+        note:'Keeps the books in the Accounts app &mdash; never handed picking or delivery' }
+    : { key:'nologin', rank:200, cls:'ow-warn', text:'No login yet',
+        note:'Signs in to the Accounts app once they accept an invite' };
   if(!s.userId) return { key:'nologin', rank:200, cls:'ow-warn', text:'No app login',
     note:'Cannot be handed an order until they accept an invite' };
   const active = staffActiveOrders(s);
@@ -84476,7 +84482,7 @@ function sxShort(n){
 function staffInLine(){
   /* The line is who can take the NEXT ORDER -- pickers and drivers. A
      Sales login is staff, and on the list below, but never in this line. */
-  return (data.staff||[]).filter(s=> s.role !== 'sales' && s.role !== 'buyer').map(s=> ({ s, st: staffDispatchState(s) }))
+  return (data.staff||[]).filter(s=> s.role !== 'sales' && s.role !== 'buyer' && s.role !== 'accounts').map(s=> ({ s, st: staffDispatchState(s) }))
     .sort((a,b)=> a.st.rank - b.st.rank || String(a.s.name||'').localeCompare(String(b.s.name||'')));
 }
 
@@ -84647,6 +84653,7 @@ function staffPersonHTML(s, range, maxCount){
   const pips = load ? `<span class="sx-pips" aria-hidden="true">${'<i></i>'.repeat(Math.min(load, 8))}</span>` : '';
   const capsHTML = s.role === 'sales' ? `<span class="sx-capb">${ICON_SX_SELL}Sells</span>`
     : s.role === 'buyer' ? `<span class="sx-capb">${ICON_SX_BUY}Buys</span>`
+    : s.role === 'accounts' ? `<span class="sx-capb">${ICON_SX_BOOKS}Books</span>`
     : caps.length ? caps.map(c=> `<span class="sx-capb">${c === 'Picking' ? ICON_SX_PICK : ICON_SX_DRIVE}${c === 'Picking' ? 'Pick' : 'Deliver'}</span>`).join('')
     : '<span class="sx-capb">no role set</span>';
   const figHTML = `<span class="sx-fig${fig.bad?' is-bad':''}${fig.quiet?' is-quiet':''}">${fig.value}</span>`;
@@ -85653,8 +85660,14 @@ const SF_ROLES = [
      or delivery -- but still somebody a trip can be given to. */
   {key:'buyer', name:'Buys', gives:'The buying desk — supplier answers and collection trips',
    note:'Signs in to the Buyer app. Can be sent on trips; never handed picking or delivery.'},
+  /* The accounts desk (0115, accounts.html): takes payments in, counts
+     and closes the day, sends statements and invoices, pays supplier
+     bills -- each only with its task switched on in role_tasks. */
+  {key:'accounts', name:'Keeps the books', gives:'The accounts desk — payments in, the day’s count and close, statements, invoices and supplier bills',
+   note:'Signs in to the Accounts app. Never handed picking or delivery.'},
 ];
 const ICON_SX_BUY = '<svg class="sx-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M1.5 6.5h12.5v9.5H1.5zM14 10h4.5l3 3v3H14"/><circle cx="5.5" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/></svg>';
+const ICON_SX_BOOKS = '<svg class="sx-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5c3-1 6-1 9 1 3-2 6-2 9-1v13c-3-1-6-1-9 1-3-2-6-2-9-1z"/><path d="M12 6.5v13"/></svg>';
 const ICON_SX_SELL = '<svg class="sx-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M11.6 3.2H5.4a2.2 2.2 0 0 0-2.2 2.2v6.2a2 2 0 0 0 .6 1.4l7.4 7.4a2 2 0 0 0 2.8 0l6.2-6.2a2 2 0 0 0 0-2.8L13 3.8a2 2 0 0 0-1.4-.6z"/><circle cx="7.9" cy="7.9" r="1.45"/></svg>';
 
 function sfRenderRoles(){
@@ -85666,7 +85679,7 @@ function sfRenderRoles(){
      it gives and what it costs is on the button's title. */
   wrap.innerHTML = SF_ROLES.map(r=> `<button type="button" class="sf-sw-b sf-role${r.key===chosen?' on':''}"
       data-role="${esc(r.key)}" aria-pressed="${r.key===chosen}" title="${esc(r.gives)}. ${esc(r.note)}">${
-      r.key === 'sales' ? ICON_SX_SELL : r.key === 'buyer' ? ICON_SX_BUY : `${r.key === 'worker' ? ICON_SX_PICK : ''}${ICON_SX_DRIVE}`}${esc(r.name)}</button>`).join('');
+      r.key === 'sales' ? ICON_SX_SELL : r.key === 'buyer' ? ICON_SX_BUY : r.key === 'accounts' ? ICON_SX_BOOKS : `${r.key === 'worker' ? ICON_SX_PICK : ''}${ICON_SX_DRIVE}`}${esc(r.name)}</button>`).join('');
   wrap.querySelectorAll('.sf-role').forEach(b=> b.addEventListener('click', ()=>{
     document.getElementById('st_role').value = b.dataset.role;
     sfRenderRoles();
@@ -85690,6 +85703,18 @@ function sfUpdateRoleWarning(){
     el.innerHTML = `<div class="sf-warn">${esc(s.name)} moves to the sales desk and is never handed picking or delivery again.${holding
       ? ` They hold ${holding} order${holding===1?'':'s'} right now — those stay theirs until they are finished.` : ''}${s.userId
       ? ' Their login moves with them when you save.' : ''}</div>`;
+    return;
+  }
+  if(s && chosen === 'accounts' && s.role !== 'accounts'){
+    const holding = staffActiveOrders(s).length;
+    el.innerHTML = `<div class="sf-warn">${esc(s.name)} moves to the accounts desk and is never handed picking or delivery again.${holding
+      ? ` They hold ${holding} order${holding===1?'':'s'} right now — those stay theirs until they are finished.` : ''}${s.userId
+      ? ' Their login moves with them when you save.' : ''}</div>`;
+    return;
+  }
+  if(s && s.role === 'accounts' && chosen !== 'accounts'){
+    el.innerHTML = `<div class="sf-warn">${esc(s.name)} leaves the accounts desk.${s.userId
+      ? ` Their login moves with them when you save — it opens the ${chosen === 'sales' ? 'sales desk' : chosen === 'buyer' ? 'Buyer app' : 'worker app'} instead of the Accounts app.` : ''}</div>`;
     return;
   }
   if(s && chosen === 'buyer' && s.role !== 'buyer'){
@@ -85972,7 +85997,7 @@ document.getElementById('st_save').addEventListener('click', ()=>{
      app and a former one keeps writing the books. Read before the row
      is overwritten. */
   const prevRole = editingStaffId ? ((data.staff.find(s=> s.id===editingStaffId)||{}).role || null) : null;
-  const desks = ['sales', 'buyer'];
+  const desks = ['sales', 'buyer', 'accounts'];
   const crossesDesk = !!prevRole && prevRole !== record.role && (desks.includes(prevRole) || desks.includes(record.role));
   if(editingStaffId){
     const idx = data.staff.findIndex(s=>s.id===editingStaffId);
@@ -86007,6 +86032,8 @@ async function moveStaffLoginToRole(id){
         ? `${firstName(s.name)}'s login now opens the sales desk`
         : out.role === 'buyer'
           ? `${firstName(s.name)}'s login now opens the Buyer app`
+        : out.role === 'accounts'
+          ? `${firstName(s.name)}'s login now opens the Accounts app`
           : `${firstName(s.name)}'s login now opens the worker app`, 4000);
     }
   }catch(err){
