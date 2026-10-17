@@ -58,12 +58,12 @@ const store = read('store.html');
 
 /* ---------------- 3. the login ---------------- */
 {
-  t.check(/const desks = \['sales', 'buyer', 'store'(?:, 'manager')?\];/.test(src), 'changing somebody onto or off the store moves their login');
+  t.check(/const desks = \['sales', 'buyer', 'store'(?:, 'manager')?(?:, 'accounts')?\];/.test(src), 'changing somebody onto or off the store moves their login');
   const move = extractFunction(src, 'moveStaffLoginToRole', 'index.html');
   t.check(/out\.role === 'store'\s*\? `\$\{firstName\(s\.name\)\}'s login now opens the Store app`/.test(move), 'and says where it now opens');
   const invite = read('supabase/functions/invite-worker/index.ts');
   t.check(/const STORE_APP_URL = Deno\.env\.get\("STORE_APP_URL"\) \|\| "https:\/\/omni-ware\.vercel\.app\/store\.html"/.test(invite) && /isStore \? STORE_APP_URL/.test(invite), 'a store invite lands on store.html');
-  t.check(/isStore \? "store"/.test(invite) && /const DESK_ROLES = \["staff", "sales", "buyer", "store"(?:, "manager")?\]/.test(invite), 'as a store member, which a later role change may move');
+  t.check(/isStore \? "store"/.test(invite) && /const DESK_ROLES = \["staff", "sales", "buyer", "store"(?:, "manager")?(?:, "accounts")?\]/.test(invite), 'as a store member, which a later role change may move');
   t.check(/const pick = rows\.find\(m => m\.role === 'store'\)/.test(store), 'and the Store app opens for a store membership');
 }
 

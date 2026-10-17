@@ -21,6 +21,8 @@ const WORKER_APP_URL = Deno.env.get("WORKER_APP_URL") || "https://omni-ware.verc
 const ADMIN_APP_URL = Deno.env.get("ADMIN_APP_URL") || "https://omni-ware.vercel.app/";
 // A Buyer login works in the Buyer app (buyer.html). Same allow-list rule.
 const BUYER_APP_URL = Deno.env.get("BUYER_APP_URL") || "https://omni-ware.vercel.app/buyer.html";
+// An Accounts login keeps the books in the Accounts app (accounts.html, 0117).
+const ACCOUNTS_APP_URL = Deno.env.get("ACCOUNTS_APP_URL") || "https://omni-ware.vercel.app/accounts.html";
 // The memberships this function hands out and may move a login between.
 // An owner's or admin's membership is never touched from here.
 // A Store login works in the Store app (store.html). Same allow-list rule.
@@ -29,7 +31,7 @@ const STORE_APP_URL = Deno.env.get("STORE_APP_URL") || "https://omni-ware.vercel
 // rule. A manager is not an admin (is_shop_admin is owner/admin only): what
 // they may write is their role_tasks (0116), so the owner may hand it out.
 const MANAGER_APP_URL = Deno.env.get("MANAGER_APP_URL") || "https://omni-ware.vercel.app/manager.html";
-const DESK_ROLES = ["staff", "sales", "buyer", "store", "manager"];
+const DESK_ROLES = ["staff", "sales", "buyer", "store", "manager", "accounts"];
 
 // The browser sends an OPTIONS preflight before the real POST (it carries
 // custom headers like apikey/authorization). Without these on every
@@ -141,9 +143,12 @@ Deno.serve(async (req) => {
     // Somebody who manages the team joins as 'manager' (0113 allowed it,
     // 0116 gave it its tasks) and signs in to the Manager app.
     const isManager = staffRow.role === "manager";
-    const memberRole = isSales ? "sales" : isBuyer ? "buyer" : isStore ? "store" : isManager ? "manager" : "staff";
-    const roleUnknown = (msg: string) => (isSales || isBuyer || isStore || isManager) && /shop_members_role_check/.test(msg);
-    const roleUnknownSay = `This database does not know the ${isSales ? "Sales" : isBuyer ? "Buyer" : isStore ? "Store" : "Manager"} role yet — paste migration 0113_sales_role.sql${isBuyer ? " and 0114_buyer_role.sql" : isStore ? " and 0115_store_role.sql" : isManager ? " and 0116_manager_role.sql" : ""} in the SQL editor, then try again.`;
+    // Somebody who keeps the books joins as 'accounts' (0113 allowed it,
+    // 0117 gave it its tasks) and signs in to the Accounts app.
+    const isAccounts = staffRow.role === "accounts";
+    const memberRole = isSales ? "sales" : isBuyer ? "buyer" : isStore ? "store" : isManager ? "manager" : isAccounts ? "accounts" : "staff";
+    const roleUnknown = (msg: string) => (isSales || isBuyer || isStore || isManager || isAccounts) && /shop_members_role_check/.test(msg);
+    const roleUnknownSay = `This database does not know the ${isSales ? "Sales" : isBuyer ? "Buyer" : isStore ? "Store" : isManager ? "Manager" : "Accounts"} role yet — paste migration 0113_sales_role.sql${isBuyer ? " and 0114_buyer_role.sql" : isStore ? " and 0115_store_role.sql" : isManager ? " and 0116_manager_role.sql" : isAccounts ? " and 0117_accounts_role.sql" : ""} in the SQL editor, then try again.`;
 
     if (staffRow.user_id) {
       // Already signed up. Moving somebody between the floor, the sales
@@ -174,7 +179,7 @@ Deno.serve(async (req) => {
     // looking that user up so this staff row can still be linked to it.
     let userId: string;
     const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
-      redirectTo: isSales ? ADMIN_APP_URL : isBuyer ? BUYER_APP_URL : isStore ? STORE_APP_URL : isManager ? MANAGER_APP_URL : WORKER_APP_URL,
+      redirectTo: isSales ? ADMIN_APP_URL : isBuyer ? BUYER_APP_URL : isStore ? STORE_APP_URL : isManager ? MANAGER_APP_URL : isAccounts ? ACCOUNTS_APP_URL : WORKER_APP_URL,
     });
     console.log("invite-worker: inviteUserByEmail result", {
       invitedUserId: invited?.user?.id,
