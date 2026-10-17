@@ -313,6 +313,8 @@ input,textarea{font-family:inherit;color:var(--ink)}
 .sx-pl .q{font-family:var(--mono);font-size:13px;font-weight:600}
 .sx-pl .q small{font-family:Figtree,sans-serif;font-size:12px;font-weight:600;color:#6B7480}
 .sx-pl .n{font-size:14px;font-weight:600}
+.sx-ptag{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;white-space:nowrap}
+.sx-ptag i{width:7px;height:7px;border-radius:9px;display:inline-block;flex:none}
 .sx-nm{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0}
 .sx-nm .b{font-size:14px;font-weight:700;line-height:1.25;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .sx-nm .v{max-width:100%;padding:1px 7px;border-radius:6px;background:var(--soft2);font-size:12px;font-weight:600;line-height:1.35;color:var(--ink2);overflow-wrap:anywhere}
@@ -1123,6 +1125,29 @@ body.nw-typing .nw-dock{display:none}
   .nw-pay button{padding:0 9px;font-size:12.5px}
   .nw-agrid,.nw-utiles{gap:6px}
 }
+
+/* ---- setting the price ---- */
+.nw-pbtn{grid-column:1/-1;margin-top:6px;height:40px;border:none;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1px var(--line);display:flex;align-items:center;gap:8px;padding:0 12px;font-size:13px;font-weight:700;color:var(--sky);width:100%}
+.nw-pbtn .m{margin-left:auto;font-size:13px;font-weight:600;color:var(--ink2)}
+.nw-band .sx-ptag{margin-top:2px}
+.nw-ph{display:flex;align-items:center;gap:12px}
+.nw-ph .sx-qb{width:48px;flex:none}
+.nw-ph .sx-nm{flex:1}
+.nw-pick{display:flex;gap:8px}
+.nw-pcard{flex:1;min-width:0;border:none;border-radius:14px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule);padding:10px 12px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;color:var(--ink)}
+.nw-pcard.on{box-shadow:inset 0 0 0 2px var(--navy)}
+.nw-pcard.off{opacity:.5}
+.nw-pcard .k{font-size:11px;font-weight:600;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.nw-pcard .v{font-size:16px;font-weight:600}
+.nw-pcard .v.w{font-size:13px;font-family:Figtree,sans-serif}
+.nw-pbig{display:flex;align-items:baseline;justify-content:center;gap:8px;padding:2px 0 0}
+.nw-pbig .u{font-size:13px;font-weight:700;color:var(--ink3)}
+.nw-pbig input{width:0;flex:1;max-width:230px;border:none;background:transparent;outline:none;font-family:var(--mono);font-size:38px;font-weight:600;letter-spacing:-.03em;color:var(--ink);padding:0;text-align:center;caret-color:var(--red)}
+.nw-psub{text-align:center;font-size:12px;font-weight:600;color:var(--ink3);margin-top:-6px}
+.nw-phint{text-align:center;font-size:12.5px;font-weight:600;min-height:17px}
+.nw-phint.bad{color:var(--crimson)}.nw-phint.amb{color:var(--amberInk)}.nw-phint.sky{color:var(--sky)}
+.nw-plink{border:none;background:none;height:36px;font-size:13px;font-weight:600;color:var(--ink2)}
+.nw-conf{font-family:Figtree,sans-serif;font-size:.5em;font-weight:700;letter-spacing:0;white-space:nowrap;vertical-align:middle}
 /* ---- numbers: Your day, the goal, You (5c_numbers.js) ---- */
 .nm-top{background:#2A3350;padding-top:calc(14px + var(--safe-area-inset-top))}
 .nm-hero{background:radial-gradient(120% 90% at 18% 20%,#26335E 0%,#16203C 60%);color:#fff;border-radius:26px 26px 0 0;padding:10px 18px 18px;display:flex;flex-direction:column;gap:16px}
@@ -2206,7 +2231,48 @@ function lineHasRule(it){
   const row = !fromStock ? (productPriceRows(it.productId, vi).find(r => r.supplierId === it.supplierId) || null) : null;
   return !!ruleAt(sellSideFor(row, Number(it.qty) || 0, Number(it.packQty) || 0, ruleAt));
 }
-function linePriceToConfirm(it){ return !(Number(it.price) > 0) || ((it.sellPrice == null || it.sellPrice === '') && !lineHasRule(it)); }
+function linePriceToConfirm(it){
+  // A price somebody typed -- the owner, or a salesperson within the rules below -- is a price.
+  if (it.sellPrice != null && it.sellPrice !== '' && Number(it.sellPrice) > 0) return false;
+  return !(Number(it.price) > 0) || !lineHasRule(it);
+}
+
+/* ---- the salesperson's price (canvas "Setting the price") ----
+   Three facts beside the box: the shop's price (its markup rule), what
+   this customer usually pays, and -- never shown, only obeyed -- the
+   cost, which is the floor. A price the salesperson types carries who
+   set it and why the owner should look:
+     under    below the shop's price
+     nomargin the shop has a cost but no selling rule; they set it
+     nocost   no cost known yet; quoted, to be confirmed            */
+function lineCost(it){ const c = Number(it.price); return c > 0 ? c : null; }
+function shopSellPrice(it){ if (!lineCost(it) || !lineHasRule(it)) return null; return Math.round(quoteItemSellPrice({ ...it, sellPrice: null })); }
+function customerPaysFor(cid, pid, vi){
+  if (cid == null || cid === '') return null;
+  return memo('paysfor', cid + '|' + pid + '|' + (vi == null ? '' : vi), () => {
+    const seen = [];
+    orderHistory(cid).slice().reverse().forEach(o => (o.q.items || []).forEach(it => {
+      if (seen.length >= 3 || it.productId !== pid || (it.variantIdx == null ? null : Number(it.variantIdx)) !== (vi == null ? null : Number(vi))) return;
+      const p = linePriceToConfirm(it) ? 0 : quoteItemSellPrice(it); if (p > 0) seen.push({ price: Math.round(p), date: isoOf(o.date) });
+    }));
+    if (!seen.length) return null;
+    const sorted = seen.map(x => x.price).sort((a, b) => a - b);
+    return { price: sorted[sorted.length >> 1], last: seen[0], n: seen.length };
+  });
+}
+function priceNoteFor(it, v){
+  const cost = lineCost(it), shop = shopSellPrice(it);
+  if (!cost) return 'nocost';
+  if (shop == null) return 'nomargin';
+  return v < shop ? 'under' : null;
+}
+// Below cost is refused wherever the cost is known.
+function priceTooLow(it, v){ const cost = lineCost(it); return cost != null && v < cost; }
+const PRICE_TAG = { under: ['var(--sky)', 'your price'], nomargin: ['var(--amberInk)', 'your price · owner reviews'], nocost: ['var(--ink3)', 'to be confirmed'] };
+function priceTagHTML(it){
+  const t = it && it.priceBy && PRICE_TAG[it.priceNote]; if (!t) return '';
+  return `<span class="sx-ptag" style="color:${t[0]}"><i style="background:${t[0]}"></i>${t[1]}</span>`;
+}
 
 // 112191: the shelf's one unit and pack.
 function stockUnitFor(pid, vi){
@@ -2248,7 +2314,7 @@ function makeLine(pid, vi, qty, opts){
 function goodsTotal(q){ return (q.items || []).reduce((s, it) => s + (Number(it.qty) || 0) * quoteItemSellPrice(it), 0); }
 /* What the salesperson can quote today: lines still to be priced are left
    out and counted, never shown at cost. */
-function pricedView(q){ const open = (q.items || []).filter(linePriceToConfirm); const known = { ...q, items: (q.items || []).filter(it => !linePriceToConfirm(it)) }; return { total: quoteTotal(known), cash: cashTotal(known), credit: creditCharge(known), toConfirm: open.length }; }
+function pricedView(q){ const open = (q.items || []).filter(linePriceToConfirm); const known = { ...q, items: (q.items || []).filter(it => !linePriceToConfirm(it)) }; return { total: quoteTotal(known), cash: cashTotal(known), credit: creditCharge(known), toConfirm: open.length, pending: (q.items || []).filter(it => it.priceNote === 'nocost' && !linePriceToConfirm(it)).length }; }
 function chargeAmount(ch, goods){ if (!ch) return 0; const v = Number(ch.value) || 0; if (!(v > 0)) return 0; return ch.type === 'percent' ? Math.round((Number(goods) || 0) * v / 100) : Math.round(v); }
 function chargesTotal(q){ const g = goodsTotal(q); return (q.charges || []).reduce((s, ch) => s + chargeAmount(ch, g), 0); }
 function cashTotal(q){ const gross = goodsTotal(q) + chargesTotal(q); return gross - Math.min(Math.max(0, Number(q.discount) || 0), gross); }
@@ -3168,7 +3234,7 @@ function ordPaperLine(q, it, v){
   const ico = { tick: ordIc('tick', 12, 'stroke:#0F6B43;stroke-width:3.2'), ask: '<i class="ord-dot ord-ask" style="background:#F5B26B"></i>', amber: '<i class="ord-dot" style="background:#F5B26B"></i>', hollow: '<i class="ord-dot hollow"></i>', truck: `<span class="ord-blink" style="color:#3A3F9B;display:flex">${ordIc('truck', 14, 'stroke-width:1.9')}</span>` }[v.icon] || '';
   const amt = v.k === 'no' ? '<span class="ord-nf">NOT FOUND</span>' : toc ? '<span class="ord-toprice">to price</span>' : `<span class="m amt">${n0((Number(it.qty) || 0) * quoteItemSellPrice(it))}</span>`;
   return `<div class="ord-pl${v.struck ? ' struck' : ''}" data-key="l-${esc(it.lineId)}"><span class="q m">${n0(qw.n)} <small>${esc(qw.u)}</small></span>
-    <span class="st" aria-hidden="true">${ico}</span><span class="nm">${nameHTML(nameParts(it.productId, it.variantIdx, it.productName))}${v.word ? `<span class="w" style="color:${v.col}">${esc(v.word)}</span>` : ''}</span>${amt}</div>`;
+    <span class="st" aria-hidden="true">${ico}</span><span class="nm">${nameHTML(nameParts(it.productId, it.variantIdx, it.productName))}${v.word ? `<span class="w" style="color:${v.col}">${esc(v.word)}</span>` : ''}${priceTagHTML(it)}</span>${amt}</div>`;
 }
 function ordPaperHead(q, views){
   const c = ordCount(views), n = views.length, all = n && c.in === n;
@@ -4444,7 +4510,7 @@ function draftQuote(){ return nwQuoteOf(S.draft || newDraft(null)); }
 function custTermsDays(){ return Math.max(0, Number(D().presetChaseAfterDays) || 0); }
 function nwTotal(){ return S.draft ? pricedView(draftQuote()).total : 0; }
 // A total said honestly: nothing priced yet reads "to price", not "0 + ?".
-function nwMoney(pv){ return pv.total > 0 || !pv.toConfirm ? `<span class="m">${n0(pv.total)}</span>${pv.toConfirm ? ' + ?' : ''}` : '<span class="nw-amb">to price</span>'; }
+function nwMoney(pv){ const conf = pv.pending ? `<span class="nw-amb nw-conf"> · ${pv.pending} to confirm</span>` : ''; return pv.total > 0 || !pv.toConfirm ? `<span class="m">${n0(pv.total)}</span>${pv.toConfirm ? ' + ?' : ''}${conf}` : '<span class="nw-amb">to price</span>'; }
 
 /* ---------------- words ---------------- */
 function lineQtyWords(it){
@@ -4909,7 +4975,13 @@ function addLine(pid, vi, qty, qtyIn, quiet){
 function setLineQty(it, qty){
   qty = Math.max(0, Math.round((Number(qty) || 0) * 100) / 100);
   const nl = makeLine(it.productId, it.variantIdx, qty, { lineId: it.lineId, qtyIn: it.qtyIn });
-  if (nl) Object.assign(it, nl);
+  if (!nl) return;
+  const mine = it.priceBy ? { sellPrice: it.sellPrice, priceBy: it.priceBy, priceAt: it.priceAt } : null;
+  Object.assign(it, nl);
+  if (!mine) { delete it.priceBy; delete it.priceNote; delete it.priceShop; delete it.priceAt; return; }
+  // A new quantity can move the line to another supplier and another cost: the price stands only while it is still above it.
+  if (priceTooLow(it, Number(mine.sellPrice))) { delete it.priceBy; delete it.priceNote; delete it.priceShop; delete it.priceAt; toast('Your price is under the cost at this quantity — back to the shop’s price', 4500); return; }
+  Object.assign(it, mine, { priceNote: priceNoteFor(it, Number(mine.sellPrice)), priceShop: shopSellPrice(it) });
 }
 function lineById(id){ return S.draft && S.draft.items.find(it => Number(it.lineId) === Number(id)); }
 function nwDeltaFrom(before){ const after = nwTotal(); NW.delta = after > before ? { text: '+' + n0(after - before), t: Date.now() } : null; }
@@ -5001,12 +5073,62 @@ function bandHTML(it){
   return `<div class="sx-band nw-band ${open ? 'open' : ''} ${d.fresh === it.lineId ? 'new' : ''}" data-key="l-${it.lineId}">
     <button class="top" data-act="lopen" data-lid="${it.lineId}" aria-expanded="${open}">
       <span class="sx-qb"><b class="${nwNum(qw.n).length >= 6 ? 'xs' : nwNum(qw.n).length >= 4 ? 'sm' : ''}">${nwNum(qw.n)}</b><small class="ell">${esc(qw.u || 'pcs')}</small></span>
-      <span class="nw-ct">${nameHTML(nameParts(it.productId, it.variantIdx, it.productName), { cls: 'nw-bn' })}<span class="nw-bchip">${chip}</span></span>
+      <span class="nw-ct">${nameHTML(nameParts(it.productId, it.variantIdx, it.productName), { cls: 'nw-bn' })}<span class="nw-bchip">${chip}</span>${priceTagHTML(it)}</span>
       <span class="nw-bamt">${toc ? `<span class="nw-tocchip">price to confirm</span><span class="m nw-qtx">${nwNum(qw.n)} ${esc(qw.u || 'pc')} × ?</span>` : `<span class="m">${n0(qty * sell)}</span>`}</span></button>
     ${open ? `<div class="sx-ctl ${wide ? 'nw-wide' : ''}">${seg}<span class="sx-step"><button data-act="lstep" data-lid="${it.lineId}" data-d="-1" aria-label="One fewer">−</button><input data-ch="lq" data-lid="${it.lineId}" inputmode="decimal" value="${qw.n}" aria-label="Quantity"><button data-act="lstep" data-lid="${it.lineId}" data-d="1" aria-label="One more" style="color:var(--ink)">+</button></span>
-      <button class="sx-del" data-act="ldel" data-lid="${it.lineId}" aria-label="Remove ${esc(it.productName)}">${ic('trash', 18)}</button></div>` : ''}
+      <button class="sx-del" data-act="ldel" data-lid="${it.lineId}" aria-label="Remove ${esc(it.productName)}">${ic('trash', 18)}</button></div>
+      <button class="nw-pbtn" data-act="nwprice" data-lid="${it.lineId}">${ic('nwpen', 15)}${toc ? 'Set a price' : it.priceBy ? 'Your price · change it' : 'Change the price'}<span class="m">${toc ? '' : n0(sell) + ' ' + esc(nwPer(it.unit || 'piece'))}</span></button>` : ''}
   </div>`;
 }
+/* ---------------- setting the price (canvas: Setting the price) ---------------- */
+ICON.nwpen = '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>';
+function nwPriceState(it, v){
+  const cost = lineCost(it), shop = shopSellPrice(it);
+  if (!(v > 0)) return { ok: false, hint: '', tone: '' };
+  if (priceTooLow(it, v)) return { ok: false, hint: 'Too low — that’s under what it costs the shop', tone: 'bad' };
+  if (!cost) return { ok: true, hint: 'They’re told it’s to be confirmed', tone: 'amb', btn: 'Quote · to be confirmed' };
+  if (shop == null) return { ok: true, hint: 'No selling price is set, so you set it · the owner reviews it', tone: 'amb' };
+  if (v < shop) return { ok: true, hint: 'Under the shop’s price · the owner will see it', tone: 'sky' };
+  return { ok: true, hint: v === shop ? 'The shop’s price' : '', tone: '' };
+}
+SHEET.nwprice = args => {
+  const it = lineById(args.lid); if (!it) return '';
+  const d = S.draft, shop = shopSellPrice(it), cost = lineCost(it), pays = customerPaysFor(d.customerId, it.productId, it.variantIdx);
+  const who = firstWord(d.client && d.client.name) || 'They';
+  const v = Number(String(args.v == null ? (it.sellPrice || shop || (pays && pays.price) || '') : args.v).replace(/[^0-9]/g, '')) || 0;
+  const st = nwPriceState(it, v), qty = Number(it.qty) || 0, unit = it.unit || 'piece';
+  const card = (label, val, on, off) => `<button class="nw-pcard ${on ? 'on' : ''} ${off ? 'off' : ''}" ${off ? 'disabled' : `data-act="nwpick" data-v="${val}"`}><span class="k">${esc(label)}</span><span class="v ${off ? 'w' : 'm'}">${off ? esc(off) : n0(val)}</span></button>`;
+  const qw = lineQtyWords(it);
+  return `<div class="nw-ph"><span class="sx-qb"><b>${nwNum(qw.n)}</b><small class="ell">${esc(qw.u || 'pcs')}</small></span>${nameHTML(nameParts(it.productId, it.variantIdx, it.productName))}<button class="sx-circle light" data-act="closesheet" aria-label="Close">${ic('close', 15)}</button></div>
+    <div class="nw-pick">${shop != null ? card('Shop’s price', shop, v === shop) : card('Shop’s price', 0, false, cost ? 'not set' : 'no cost yet')}
+      ${pays ? card(pays.n > 1 ? `${who} usually pays` : `${who} paid last`, pays.price, v === pays.price) : card(`${who} paid`, 0, false, 'never bought it')}</div>
+    <label class="nw-pbig"><span class="u">UGX</span><input data-in="nwpv" inputmode="numeric" autocomplete="off" aria-label="Price ${esc(nwPer(unit))}" value="${v ? n0(v) : ''}" placeholder="0" autofocus></label>
+    <span class="nw-psub">${esc(nwPer(unit))}${v ? ` · ${nwNum(qty)} ${esc(unit)} = <b class="m">${n0(v * qty)}</b>` : ''}</span>
+    <span class="nw-phint ${st.tone}" id="nw_phint">${esc(st.hint)}</span>
+    <button class="sx-btn ${st.btn ? 'navy' : 'red'}" data-act="nwpset" ${st.ok ? '' : 'disabled'}>${esc(st.btn || 'Use this price')}</button>
+    ${it.priceBy && shop != null ? `<button class="nw-plink" data-act="nwpreset">Back to the shop’s price</button>` : it.priceBy && !cost ? `<button class="nw-plink" data-act="nwpreset">Leave it for the shop to price</button>` : ''}`;
+};
+ACT.nwprice = t => { const it = lineById(t.dataset.lid); if (!it) return; openSheet('nwprice', { lid: it.lineId }); };
+ACT['in:nwpv'] = t => { const v = String(t.value).replace(/[^0-9]/g, ''); S.sheet.args.v = v; const s = v ? n0(Number(v)) : ''; if (t.value !== s) t.value = s; renderSheet(); };
+ACT.nwpick = t => { S.sheet.args.v = t.dataset.v; haptic('light'); renderSheet(); };
+ACT.nwpset = () => {
+  const a = S.sheet && S.sheet.args, it = a && lineById(a.lid); if (!it) return;
+  const v = Number(String(a.v == null ? '' : a.v).replace(/[^0-9]/g, '')) || 0;
+  const st = nwPriceState(it, v); if (!st.ok) return;
+  const shop = shopSellPrice(it);
+  if (shop != null && v === shop && it.priceBy) { ACT.nwpreset(); return; }
+  if (shop != null && v === shop) { closeSheet(); return; }
+  const before = nwTotal();
+  Object.assign(it, { sellPrice: v, priceBy: S.user ? String(S.user.id) : 'sales', priceNote: priceNoteFor(it, v), priceShop: shop, priceAt: new Date().toISOString() });
+  nwDeltaFrom(before); haptic('success'); saveDraft(); closeSheet(true); renderSheet(); render();
+};
+ACT.nwpreset = () => {
+  const a = S.sheet && S.sheet.args, it = a && lineById(a.lid); if (!it) return;
+  const shop = shopSellPrice(it);
+  it.sellPrice = shop != null ? shop : null; delete it.priceBy; delete it.priceNote; delete it.priceShop; delete it.priceAt;
+  if (shop == null) { const nl = makeLine(it.productId, it.variantIdx, Number(it.qty) || 0, { lineId: it.lineId, qtyIn: it.qtyIn }); if (nl) it.sellPrice = nl.sellPrice; }
+  haptic('light'); saveDraft(); closeSheet(true); renderSheet(); render();
+};
 function nwChargeBand(ch, goods){
   const d = S.draft, open = d.openCharge === Number(ch.id), pct = ch.type === 'percent', amt = chargeAmount(ch, goods);
   return `<div class="sx-band nw-band ${open ? 'open' : ''}" data-key="ch-${ch.id}">
@@ -5219,7 +5341,9 @@ ACT['slide:place'] = async el => {
     const maxId = D().savedQuotes.reduce((m, q) => Math.max(m, Number(q.id) || 0), 0);
     const id = await issueRowId('row:saved_quote', maxId);
     const now = Date.now(), iso = new Date(now).toISOString(), q = draftQuote();
-    const items = d.items.map(it => ({ lineId: it.lineId, productId: it.productId, variantIdx: it.variantIdx, productName: it.productName, unit: it.unit, packUnit: it.packUnit, packQty: it.packQty, qtyIn: it.qtyIn, qty: it.qty, supplierId: it.supplierId, supplierName: it.supplierName, price: it.price, sellPrice: it.sellPrice }));
+    const items = d.items.map(it => ({ lineId: it.lineId, productId: it.productId, variantIdx: it.variantIdx, productName: it.productName, unit: it.unit, packUnit: it.packUnit, packQty: it.packQty, qtyIn: it.qtyIn, qty: it.qty, supplierId: it.supplierId, supplierName: it.supplierName, price: it.price, sellPrice: it.sellPrice,
+      // Who set this price and why the owner should look (canvas: Setting the price).
+      ...(it.priceBy ? { priceBy: it.priceBy, priceNote: it.priceNote || null, priceShop: it.priceShop == null ? null : it.priceShop, priceAt: it.priceAt || null } : {}) }));
     // A charge keeps the rule it was agreed on, as wireQuoteCharges stores it.
     const charges = (d.charges || []).map(ch => ({ id: ch.id, service: ch.service || null, label: ch.label || '', type: ch.type === 'percent' ? 'percent' : 'fixed', value: Math.max(0, Number(ch.value) || 0), cost: null }));
     const payload = { client: { name: d.client.name || 'Walk-in', phone: d.client.phone || '' }, items, charges, credit: q.credit, savedAt: iso, createdAt: iso,

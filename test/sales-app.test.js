@@ -74,7 +74,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -254,6 +254,24 @@ matrix.forEach(([what, it]) => {
     t.check(row.amount_paid === 60000 && row.invoiced === false && row.payload.payments[0].cashTxnId === cash[0].id, 'the order carries the payment and stays uninvoiced');
     t.check(!db.writes.some(x => x[1] === 'customers' || x[1] === 'customer_debt_log'), 'no debt is touched before the invoice');
     t.check(X.S.stack[0].type === 'paid' && X.S.stack[0].args.after === 40000, 'the paid screen says 40,000 is left to pay');
+  }
+
+  // 5. the salesperson's price (canvas: Setting the price): never under cost, and flagged for the owner
+  {
+    const X = loadPage(fakeDb({}));
+    Object.assign(X.S, { data: fixture(), shopId: SH, user: { id: 'u1' } });
+    const ruled = line('P1', null, 3, 'S1', 32000), shop = X.shopSellPrice(ruled);
+    t.check(shop === 36800, 'the shop\'s price is the markup rule\'s price (' + shop + ')');
+    t.check(X.priceTooLow(ruled, 31999) && !X.priceTooLow(ruled, 32000), 'a price under the cost is refused, the cost itself is allowed');
+    t.check(X.priceNoteFor(ruled, 35000) === 'under' && X.priceNoteFor(ruled, 36800) === null, 'under the shop\'s price is marked for the owner; the shop\'s price is not');
+    X.S.data.presetDefaultMarkup = {};
+    const bare = line('P3', null, 30, 'S1', 3600);
+    t.check(X.shopSellPrice(bare) === null && X.priceNoteFor(bare, 5000) === 'nomargin', 'no margin set: the salesperson sets it and the owner reviews it');
+    const nocost = line('P3', null, 2, '', 0);
+    t.check(!X.priceTooLow(nocost, 1) && X.priceNoteFor(nocost, 25000) === 'nocost', 'no cost known: any price, marked to be confirmed');
+    t.check(!X.linePriceToConfirm({ ...nocost, sellPrice: 25000, priceBy: 'u1', priceNote: 'nocost' }), 'a quoted price counts in the total');
+    const pv = X.pricedView({ items: [{ ...nocost, sellPrice: 25000, priceBy: 'u1', priceNote: 'nocost' }], charges: [] });
+    t.check(pv.total === 50000 && pv.pending === 1, 'and the order says one price is still to be confirmed');
   }
 
   // the screens draw from the fixture without throwing
