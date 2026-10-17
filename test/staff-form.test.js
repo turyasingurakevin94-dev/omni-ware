@@ -59,7 +59,7 @@ const modal = (/<div class="modal-overlay" id="staffModal">[\s\S]*?\n<\/div>\n/.
      same order; the third is a different kind of person altogether, so
      it comes last and says it is never handed floor work. */
   const list = scope.roles();
-  eq(list.length, 5, 'five roles are offered');
+  eq(list.length, 6, 'six roles are offered');
   eq(list[0].key, 'worker', 'the broader one first, because it is the safer default');
   eq(list[1].key, 'delivery', 'and the narrowing one second');
   eq(list[2].key, 'sales', 'and the sales desk last, apart from the floor');
@@ -75,6 +75,11 @@ const modal = (/<div class="modal-overlay" id="staffModal">[\s\S]*?\n<\/div>\n/.
   eq(list[4].key, 'store', 'and the store yard last');
   t.check(/Store app/.test(list[4].note) && /picking and delivery/.test(list[4].note),
     'which says they sign in to the Store app and can still be handed picking and delivery');
+  /* The manager (0116) after it: runs the team from the Manager app, and
+     is never handed the floor work itself. */
+  eq(list[5].key, 'manager', 'and the manager after the store');
+  t.check(/Manager app/.test(list[5].note) && /Never handed picking or delivery/.test(list[5].note) && /books stay yours/.test(list[5].note),
+    'which says they sign in to the Manager app, are never handed floor work, and the books stay the owner\'s');
 
   /* Each says what it UNLOCKS, which is the fact the dropdown hid. */
   t.check(/Picking and delivery/.test(list[0].gives),
