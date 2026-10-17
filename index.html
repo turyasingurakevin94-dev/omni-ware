@@ -84371,6 +84371,12 @@ function staffDispatchState(s){
         note:'Watches the floor and hands work over in the Manager app &mdash; never handed picking or delivery' }
     : { key:'nologin', rank:200, cls:'ow-warn', text:'No login yet',
         note:'Signs in to the Manager app once they accept an invite' };
+  // And the books (0117): payments in, the day's count, statements, bills.
+  if(s.role === 'accounts') return s.userId
+    ? { key:'accounts', rank:250, cls:'', text:'On the accounts desk',
+        note:'Keeps the books in the Accounts app &mdash; never handed picking or delivery' }
+    : { key:'nologin', rank:200, cls:'ow-warn', text:'No login yet',
+        note:'Signs in to the Accounts app once they accept an invite' };
   if(!s.userId) return { key:'nologin', rank:200, cls:'ow-warn', text:'No app login',
     note:'Cannot be handed an order until they accept an invite' };
   const active = staffActiveOrders(s);
@@ -84486,7 +84492,7 @@ function sxShort(n){
 function staffInLine(){
   /* The line is who can take the NEXT ORDER -- pickers and drivers. A
      Sales login is staff, and on the list below, but never in this line. */
-  return (data.staff||[]).filter(s=> s.role !== 'sales' && s.role !== 'buyer' && s.role !== 'manager').map(s=> ({ s, st: staffDispatchState(s) }))
+  return (data.staff||[]).filter(s=> s.role !== 'sales' && s.role !== 'buyer' && s.role !== 'manager' && s.role !== 'accounts').map(s=> ({ s, st: staffDispatchState(s) }))
     .sort((a,b)=> a.st.rank - b.st.rank || String(a.s.name||'').localeCompare(String(b.s.name||'')));
 }
 
@@ -84659,6 +84665,7 @@ function staffPersonHTML(s, range, maxCount){
     : s.role === 'buyer' ? `<span class="sx-capb">${ICON_SX_BUY}Buys</span>`
     : s.role === 'manager' ? `<span class="sx-capb">${ICON_SX_MANAGE}Manages</span>`
     : s.role === 'store' ? `<span class="sx-capb">${ICON_SX_STORE}Store</span><span class="sx-capb">${ICON_SX_PICK}Pick</span><span class="sx-capb">${ICON_SX_DRIVE}Deliver</span>`
+    : s.role === 'accounts' ? `<span class="sx-capb">${ICON_SX_BOOKS}Books</span>`
     : caps.length ? caps.map(c=> `<span class="sx-capb">${c === 'Picking' ? ICON_SX_PICK : ICON_SX_DRIVE}${c === 'Picking' ? 'Pick' : 'Deliver'}</span>`).join('')
     : '<span class="sx-capb">no role set</span>';
   const figHTML = `<span class="sx-fig${fig.bad?' is-bad':''}${fig.quiet?' is-quiet':''}">${fig.value}</span>`;
@@ -85678,10 +85685,16 @@ const SF_ROLES = [
      costs, prices, limits and the books stay the owner's. */
   {key:'manager', name:'Manages the team', gives:'The Manager app — the team\'s day, hand-overs, nudges and payments',
    note:'Signs in to the Manager app. Never handed picking or delivery; costs, prices, credit limits and the books stay yours.'},
+  /* The accounts desk (0117, accounts.html): takes payments in, counts
+     and closes the day, sends statements and invoices, pays supplier
+     bills -- each only with its task switched on in role_tasks. */
+  {key:'accounts', name:'Keeps the books', gives:'The accounts desk — payments in, the day’s count and close, statements, invoices and supplier bills',
+   note:'Signs in to the Accounts app. Never handed picking or delivery.'},
 ];
 const ICON_SX_MANAGE = '<svg class="sx-i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7.5" r="3.2"/><path d="M5.5 20.5a6.5 6.5 0 0 1 13 0"/><path d="M3 11.5l2 2 3.5-3.5"/></svg>';
 const ICON_SX_STORE = '<svg class="sx-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 9.5L5 4h14l1.5 5.5zM3.5 9.5V20h17V9.5"/><path d="M9.5 20v-5.5h5V20"/></svg>';
 const ICON_SX_BUY = '<svg class="sx-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M1.5 6.5h12.5v9.5H1.5zM14 10h4.5l3 3v3H14"/><circle cx="5.5" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/></svg>';
+const ICON_SX_BOOKS = '<svg class="sx-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5c3-1 6-1 9 1 3-2 6-2 9-1v13c-3-1-6-1-9 1-3-2-6-2-9-1z"/><path d="M12 6.5v13"/></svg>';
 const ICON_SX_SELL = '<svg class="sx-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M11.6 3.2H5.4a2.2 2.2 0 0 0-2.2 2.2v6.2a2 2 0 0 0 .6 1.4l7.4 7.4a2 2 0 0 0 2.8 0l6.2-6.2a2 2 0 0 0 0-2.8L13 3.8a2 2 0 0 0-1.4-.6z"/><circle cx="7.9" cy="7.9" r="1.45"/></svg>';
 
 function sfRenderRoles(){
@@ -85693,7 +85706,7 @@ function sfRenderRoles(){
      it gives and what it costs is on the button's title. */
   wrap.innerHTML = SF_ROLES.map(r=> `<button type="button" class="sf-sw-b sf-role${r.key===chosen?' on':''}"
       data-role="${esc(r.key)}" aria-pressed="${r.key===chosen}" title="${esc(r.gives)}. ${esc(r.note)}">${
-      r.key === 'sales' ? ICON_SX_SELL : r.key === 'buyer' ? ICON_SX_BUY : r.key === 'store' ? ICON_SX_STORE : r.key === 'manager' ? ICON_SX_MANAGE : `${r.key === 'worker' ? ICON_SX_PICK : ''}${ICON_SX_DRIVE}`}${esc(r.name)}</button>`).join('');
+      r.key === 'sales' ? ICON_SX_SELL : r.key === 'buyer' ? ICON_SX_BUY : r.key === 'store' ? ICON_SX_STORE : r.key === 'manager' ? ICON_SX_MANAGE : r.key === 'accounts' ? ICON_SX_BOOKS : `${r.key === 'worker' ? ICON_SX_PICK : ''}${ICON_SX_DRIVE}`}${esc(r.name)}</button>`).join('');
   wrap.querySelectorAll('.sf-role').forEach(b=> b.addEventListener('click', ()=>{
     document.getElementById('st_role').value = b.dataset.role;
     sfRenderRoles();
@@ -85719,6 +85732,18 @@ function sfUpdateRoleWarning(){
       ? ' Their login moves with them when you save.' : ''}</div>`;
     return;
   }
+  if(s && chosen === 'accounts' && s.role !== 'accounts'){
+    const holding = staffActiveOrders(s).length;
+    el.innerHTML = `<div class="sf-warn">${esc(s.name)} moves to the accounts desk and is never handed picking or delivery again.${holding
+      ? ` They hold ${holding} order${holding===1?'':'s'} right now — those stay theirs until they are finished.` : ''}${s.userId
+      ? ' Their login moves with them when you save.' : ''}</div>`;
+    return;
+  }
+  if(s && s.role === 'accounts' && chosen !== 'accounts'){
+    el.innerHTML = `<div class="sf-warn">${esc(s.name)} leaves the accounts desk.${s.userId
+      ? ` Their login moves with them when you save — it opens the ${chosen === 'sales' ? 'sales desk' : chosen === 'buyer' ? 'Buyer app' : chosen === 'store' ? 'Store app' : chosen === 'manager' ? 'Manager app' : 'worker app'} instead of the Accounts app.` : ''}</div>`;
+    return;
+  }
   if(s && chosen === 'buyer' && s.role !== 'buyer'){
     const holding = staffActiveOrders(s).length;
     el.innerHTML = `<div class="sf-warn">${esc(s.name)} moves to the buying desk and is never handed picking or delivery again — trips can still be theirs.${holding
@@ -85735,7 +85760,7 @@ function sfUpdateRoleWarning(){
   }
   if(s && s.role === 'manager' && chosen !== 'manager'){
     el.innerHTML = `<div class="sf-warn">${esc(s.name)} stops managing the team.${s.userId
-      ? ` Their login moves with them when you save — it opens the ${chosen === 'sales' ? 'sales desk' : chosen === 'buyer' ? 'Buyer app' : chosen === 'store' ? 'Store app' : 'worker app'} instead of the Manager app.` : ''}</div>`;
+      ? ` Their login moves with them when you save — it opens the ${chosen === 'sales' ? 'sales desk' : chosen === 'buyer' ? 'Buyer app' : chosen === 'store' ? 'Store app' : chosen === 'accounts' ? 'Accounts app' : 'worker app'} instead of the Manager app.` : ''}</div>`;
     return;
   }
   if(s && chosen === 'store' && s.role !== 'store'){
@@ -85745,12 +85770,12 @@ function sfUpdateRoleWarning(){
   }
   if(s && s.role === 'store' && chosen !== 'store'){
     el.innerHTML = `<div class="sf-warn">${esc(s.name)} stops running the store.${s.userId
-      ? ` Their login moves with them when you save — it opens the ${chosen === 'sales' ? 'sales desk' : chosen === 'buyer' ? 'Buyer app' : 'worker app'} instead of the Store app.` : ''}</div>`;
+      ? ` Their login moves with them when you save — it opens the ${chosen === 'sales' ? 'sales desk' : chosen === 'buyer' ? 'Buyer app' : chosen === 'accounts' ? 'Accounts app' : 'worker app'} instead of the Store app.` : ''}</div>`;
     return;
   }
   if(s && s.role === 'buyer' && chosen !== 'buyer'){
     el.innerHTML = `<div class="sf-warn">${esc(s.name)} leaves the buying desk.${s.userId
-      ? ` Their login moves with them when you save — it opens the ${chosen === 'sales' ? 'sales desk' : chosen === 'store' ? 'Store app' : 'worker app'} instead of the Buyer app.` : ''}</div>`;
+      ? ` Their login moves with them when you save — it opens the ${chosen === 'sales' ? 'sales desk' : chosen === 'store' ? 'Store app' : chosen === 'accounts' ? 'Accounts app' : 'worker app'} instead of the Buyer app.` : ''}</div>`;
     return;
   }
   if(s && s.role === 'sales' && chosen !== 'sales'){
@@ -86021,7 +86046,7 @@ document.getElementById('st_save').addEventListener('click', ()=>{
      app and a former one keeps writing the books. Read before the row
      is overwritten. */
   const prevRole = editingStaffId ? ((data.staff.find(s=> s.id===editingStaffId)||{}).role || null) : null;
-  const desks = ['sales', 'buyer', 'store', 'manager'];
+  const desks = ['sales', 'buyer', 'store', 'manager', 'accounts'];
   const crossesDesk = !!prevRole && prevRole !== record.role && (desks.includes(prevRole) || desks.includes(record.role));
   if(editingStaffId){
     const idx = data.staff.findIndex(s=>s.id===editingStaffId);
@@ -86060,6 +86085,8 @@ async function moveStaffLoginToRole(id){
           ? `${firstName(s.name)}'s login now opens the Store app`
         : out.role === 'manager'
           ? `${firstName(s.name)}'s login now opens the Manager app`
+        : out.role === 'accounts'
+          ? `${firstName(s.name)}'s login now opens the Accounts app`
           : `${firstName(s.name)}'s login now opens the worker app`, 4000);
     }
   }catch(err){

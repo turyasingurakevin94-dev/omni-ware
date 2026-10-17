@@ -56,12 +56,12 @@ const app = read('manager.html');
 
 /* ---------------- 3. the login ---------------- */
 {
-  t.check(/const desks = \['sales', 'buyer', 'store', 'manager'\];/.test(src), 'changing somebody onto or off it moves their login');
+  t.check(/const desks = \['sales', 'buyer', 'store', 'manager'(?:, 'accounts')?\];/.test(src), 'changing somebody onto or off it moves their login');
   const move = extractFunction(src, 'moveStaffLoginToRole', 'index.html');
   t.check(/out\.role === 'manager'\s*\? `\$\{firstName\(s\.name\)\}'s login now opens the Manager app`/.test(move), 'and says where it now opens');
   const invite = read('supabase/functions/invite-worker/index.ts');
   t.check(/const MANAGER_APP_URL = Deno\.env\.get\("MANAGER_APP_URL"\) \|\| "https:\/\/omni-ware\.vercel\.app\/manager\.html"/.test(invite) && /isManager \? MANAGER_APP_URL/.test(invite), 'a manager invite lands on manager.html');
-  t.check(/isManager \? "manager"/.test(invite) && /const DESK_ROLES = \["staff", "sales", "buyer", "store", "manager"\]/.test(invite), 'as a manager member, which a later role change may move');
+  t.check(/isManager \? "manager"/.test(invite) && /const DESK_ROLES = \["staff", "sales", "buyer", "store", "manager"(?:, "accounts")?\]/.test(invite), 'as a manager member, which a later role change may move');
   t.check(!/"owner"|"admin"/.test(/const DESK_ROLES = \[[^\]]*\]/.exec(invite)[0]), 'and an owner\'s or admin\'s membership is still never touched');
   t.check(/0116_manager_role\.sql/.test(invite), 'a database without the role is told which migration to paste');
   t.check(/const pick = rows\.find\(m => m\.role === 'manager'\)/.test(app), 'and the Manager app opens for a manager membership');
