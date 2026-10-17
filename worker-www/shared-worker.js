@@ -2162,9 +2162,11 @@ function renderWorkerFinishButton(q){
 // Workers can also be picked as the delivery person for an order (many
 // shops don't have dedicated riders spare for every order) -- dedicated
 // delivery personnel aren't assumed to also prepare/pack, though.
-const STAFF_ROLE_LABELS = {worker:'Worker', delivery:'Delivery personnel'};
+const STAFF_ROLE_LABELS = {worker:'Worker', delivery:'Delivery personnel', store:'Store'};
 function staffEligibleForRole(s, role){
-  if(role==='delivery') return s.role==='delivery' || s.role==='worker';
+  // Somebody who runs the store (store.html) picks and delivers too.
+  if(role==='delivery') return s.role==='delivery' || s.role==='worker' || s.role==='store';
+  if(role==='worker') return s.role==='worker' || s.role==='store';
   return s.role===role;
 }
 // Resolves a staff id to a display name -- falls back gracefully if the

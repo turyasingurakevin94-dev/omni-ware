@@ -46,7 +46,8 @@ const names = fs.readdirSync(FN_DIR)
 
 // 20 with agent-change-order: an agent cancelling, asking for fewer, or
 // spending credit. It reads the caller's JWT like the rest of the agent's.
-t.check(names.length === 20, `all ${names.length} functions found`);
+// 21 with notify-stock-count: a Database Webhook, like notify-worker.
+t.check(names.length === 21, `all ${names.length} functions found`);
 
 const open = [];   // no incoming Authorization — must be verify_jwt = false
 const closed = [];
@@ -97,9 +98,9 @@ t.check(declared.length > 0, `config.toml declares ${declared.length} function(s
 
 /* ---------- the ones the README calls out by name -------------------- */
 {
-  // Named rather than derived, because these four are the cases where
+  // Named rather than derived, because these are the cases where
   // getting it wrong is silent: nobody is watching a provider callback.
-  ['notify-worker', 'mtn-payment-webhook', 'airtel-payment-webhook', 'wa-webhook'].forEach((n) => {
+  ['notify-worker', 'notify-stock-count', 'mtn-payment-webhook', 'airtel-payment-webhook', 'wa-webhook'].forEach((n) => {
     t.check(declared.indexOf(n) !== -1, `${n} is open — its caller is a webhook with no JWT`);
   });
   // And the two the customer portal posts to, from a page asserted to
