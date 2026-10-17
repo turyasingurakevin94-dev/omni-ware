@@ -1148,6 +1148,22 @@ body.nw-typing .nw-dock{display:none}
 .nw-phint.bad{color:var(--crimson)}.nw-phint.amb{color:var(--amberInk)}.nw-phint.sky{color:var(--sky)}
 .nw-plink{border:none;background:none;height:36px;font-size:13px;font-weight:600;color:var(--ink2)}
 .nw-conf{font-family:Figtree,sans-serif;font-size:.5em;font-weight:700;letter-spacing:0;white-space:nowrap;vertical-align:middle}
+
+/* ---- the dock, compact (canvas: order bar reduced) ---- */
+.nw-dock{padding:12px 14px calc(14px + var(--safe-area-inset-bottom));gap:10px;border-radius:20px 20px 0 0}
+.nw-dock .nw-big{font-size:21px}.nw-dock .nw-big.md{font-size:19px}.nw-dock .nw-big.sm{font-size:17px}.nw-dock .nw-big.xs{font-size:15px}
+.nw-dock .nw-tsub{font-size:11px}
+.nw-dock .nw-pay{padding:2px}
+.nw-dock .nw-pay button{height:32px;padding:0 10px;font-size:12px}
+.nw-dock .nw-dk2{gap:8px;min-height:0}
+.nw-picb,.nw-keepb{position:relative;width:44px;height:44px;flex:none;border:none;border-radius:999px;background:rgba(255,255,255,.08);color:var(--navyInk);display:flex;align-items:center;justify-content:center}
+.nw-picb.on{background:rgba(111,220,176,.16);color:var(--mint)}
+.nw-picb.off{opacity:.55}
+.nw-picb .tk{position:absolute;right:1px;top:1px;width:14px;height:14px;border-radius:999px;background:var(--mint);color:var(--navy);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px var(--navy)}
+.nw-keepb[disabled]{opacity:.35}
+.nw-dk2 .sx-slide{flex:1;min-width:0;height:48px}
+.nw-dk2 .sx-slide .k{width:40px;height:40px}
+.nw-dk2 .sx-slide .l{left:44px;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* ---- numbers: Your day, the goal, You (5c_numbers.js) ---- */
 .nm-top{background:#2A3350;padding-top:calc(14px + var(--safe-area-inset-top))}
 .nm-hero{background:radial-gradient(120% 90% at 18% 20%,#26335E 0%,#16203C 60%);color:#fff;border-radius:26px 26px 0 0;padding:10px 18px 18px;display:flex;flex-direction:column;gap:16px}
@@ -5081,6 +5097,7 @@ function bandHTML(it){
   </div>`;
 }
 /* ---------------- setting the price (canvas: Setting the price) ---------------- */
+ICON.nwpic = '<rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-8 8"/>';
 ICON.nwpen = '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>';
 function nwPriceState(it, v){
   const cost = lineCost(it), shop = shopSellPrice(it);
@@ -5205,13 +5222,14 @@ function nwDockHTML(){
   let pic = '<span></span>';
   if (nwPicPossible(d)) {
     const v = nwConv(d), open = waWindowInfo(v.last_inbound_at).open, on = nwPicOn(d);
-    pic = open ? `<button class="nw-pic ${on ? 'on' : ''}" data-act="nwpic" role="switch" aria-checked="${on}" aria-label="Send ${esc(who)} a picture of the order">${on ? `<span class="nw-pk">${ic('tick', 12, 'style="stroke-width:3"')}</span>` : '<span class="nw-pk"></span>'}<span class="ell">Picture to ${esc(who)}</span></button>`
-      : `<span class="nw-pic off" aria-label="WhatsApp is closed until ${esc(who)} writes">${ic('chat', 14)}Chat closed</span>`;
+    // Compact, as the canvas has it: a round picture switch with a tick, beside the bookmark and the slide.
+    pic = open ? `<button class="nw-picb ${on ? 'on' : ''}" data-act="nwpic" role="switch" aria-checked="${on}" aria-label="Send ${esc(who)} a picture of the order" title="Picture to ${esc(who)}">${ic('nwpic', 19)}${on ? `<span class="tk">${ic('tick', 8, 'style="stroke-width:4"')}</span>` : ''}</button>`
+      : `<span class="nw-picb off" role="img" aria-label="WhatsApp is closed until ${esc(who)} writes" title="Chat closed">${ic('chat', 17)}</span>`;
   }
-  return `<div class="sx-dock nw-dock" data-key="dock-big"><span class="nw-grab" aria-hidden="true"></span><span class="nw-dslot">${delta}</span>
+  return `<div class="sx-dock nw-dock" data-key="dock-big"><span class="nw-dslot">${delta}</span>
     <div class="nw-dk1"><span class="nw-tot"><span class="m nw-big ${tsz}">${n0(pv.total)}${pv.toConfirm ? '<span class="nw-qm"> + ?</span>' : ''}</span><span class="nw-tsub">${n ? sub : 'Nothing on the order yet'}</span></span>${seg}</div>
-    <div class="nw-dk2">${pic}<button class="nw-keep" data-act="nwkeep" ${nwHasLines(d) ? '' : 'disabled'}>${ic('bookmark', 15)}Keep as draft</button></div>
-    ${sliderHTML('place', n ? `Slide to place · ${n} item${n === 1 ? '' : 's'}` : 'Add an item first', { disabled: !n || S.placing })}</div>`;
+    <div class="nw-dk2">${pic === '<span></span>' ? '' : pic}<button class="nw-keepb" data-act="nwkeep" ${nwHasLines(d) ? '' : 'disabled'} aria-label="Keep as draft" title="Keep as draft">${ic('bookmark', 17)}</button>
+    ${sliderHTML('place', n ? `Slide to place · ${n}` : 'Add an item first', { disabled: !n || S.placing })}</div></div>`;
 }
 function nwMiniDock(){
   const d = S.draft, n = d ? d.items.length : 0, pv = d ? pricedView(draftQuote()) : { total: 0, toConfirm: 0 };
