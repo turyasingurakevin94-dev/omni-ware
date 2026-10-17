@@ -1088,7 +1088,11 @@ function lineHasRule(it){
   const row = !fromStock ? (productPriceRows(it.productId, vi).find(r => r.supplierId === it.supplierId) || null) : null;
   return !!ruleAt(sellSideFor(row, Number(it.qty) || 0, Number(it.packQty) || 0, ruleAt));
 }
-function linePriceToConfirm(it){ return !(Number(it.price) > 0) || ((it.sellPrice == null || it.sellPrice === '') && !lineHasRule(it)); }
+function linePriceToConfirm(it){
+  // A price somebody typed -- the owner, or a salesperson within the rules below -- is a price.
+  if (it.sellPrice != null && it.sellPrice !== '' && Number(it.sellPrice) > 0) return false;
+  return !(Number(it.price) > 0) || !lineHasRule(it);
+}
 
 // 112191: the shelf's one unit and pack.
 function stockUnitFor(pid, vi){
@@ -1130,7 +1134,7 @@ function makeLine(pid, vi, qty, opts){
 function goodsTotal(q){ return (q.items || []).reduce((s, it) => s + (Number(it.qty) || 0) * quoteItemSellPrice(it), 0); }
 /* What the salesperson can quote today: lines still to be priced are left
    out and counted, never shown at cost. */
-function pricedView(q){ const open = (q.items || []).filter(linePriceToConfirm); const known = { ...q, items: (q.items || []).filter(it => !linePriceToConfirm(it)) }; return { total: quoteTotal(known), cash: cashTotal(known), credit: creditCharge(known), toConfirm: open.length }; }
+function pricedView(q){ const open = (q.items || []).filter(linePriceToConfirm); const known = { ...q, items: (q.items || []).filter(it => !linePriceToConfirm(it)) }; return { total: quoteTotal(known), cash: cashTotal(known), credit: creditCharge(known), toConfirm: open.length, pending: (q.items || []).filter(it => it.priceNote === 'nocost' && !linePriceToConfirm(it)).length }; }
 function chargeAmount(ch, goods){ if (!ch) return 0; const v = Number(ch.value) || 0; if (!(v > 0)) return 0; return ch.type === 'percent' ? Math.round((Number(goods) || 0) * v / 100) : Math.round(v); }
 function chargesTotal(q){ const g = goodsTotal(q); return (q.charges || []).reduce((s, ch) => s + chargeAmount(ch, g), 0); }
 function cashTotal(q){ const gross = goodsTotal(q) + chargesTotal(q); return gross - Math.min(Math.max(0, Number(q.discount) || 0), gross); }
