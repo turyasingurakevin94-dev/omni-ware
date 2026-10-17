@@ -120,11 +120,11 @@ const invite = read('supabase/functions/invite-worker/index.ts');
   t.check(gateAt > 0 && gateAt < waSend.indexOf('action === "broadcast"') && gateAt < waSend.indexOf('action === "register"'),
     'asked before any of those actions runs');
 
-  t.check(/select\("id, user_id, role"\)/.test(invite) && /const memberRole = isSales \? "sales" : isBuyer \? "buyer" : "staff"/.test(invite),
-    'an invite gives somebody who sells a sales membership, somebody who buys a buyer one, everybody else staff as before');
-  t.check(/redirectTo: isSales \? ADMIN_APP_URL : isBuyer \? BUYER_APP_URL : WORKER_APP_URL/.test(invite),
+  t.check(/select\("id, user_id, role"\)/.test(invite) && /const memberRole = isSales \? "sales" : isBuyer \? "buyer" : isStore \? "store" : "staff"/.test(invite),
+    'an invite gives somebody who sells a sales membership, somebody who buys a buyer one, somebody who runs the store a store one, everybody else staff as before');
+  t.check(/redirectTo: isSales \? ADMIN_APP_URL : isBuyer \? BUYER_APP_URL : isStore \? STORE_APP_URL : WORKER_APP_URL/.test(invite),
     'and lands a salesperson in the admin app and a buyer in the Buyer app, not the worker app');
-  t.check(/const DESK_ROLES = \["staff", "sales", "buyer"\]/.test(invite) && /\.in\("role", DESK_ROLES\)/.test(invite) && /DESK_ROLES\.includes\(member\.role\)/.test(invite),
+  t.check(/const DESK_ROLES = \["staff", "sales", "buyer", "store"\]/.test(invite) && /\.in\("role", DESK_ROLES\)/.test(invite) && /DESK_ROLES\.includes\(member\.role\)/.test(invite),
     'an existing login moves between the floor and the desks only — an owner\'s or admin\'s membership is never touched');
 }
 

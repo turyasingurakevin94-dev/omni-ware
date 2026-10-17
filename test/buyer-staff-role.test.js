@@ -58,7 +58,7 @@ const buyer = read('buyer.html');
 
 /* ---------------- 3. the login ---------------- */
 {
-  t.check(/const desks = \['sales', 'buyer'\];\s*const crossesDesk = !!prevRole && prevRole !== record\.role && \(desks\.includes\(prevRole\) \|\| desks\.includes\(record\.role\)\);/.test(src),
+  t.check(/const desks = \['sales', 'buyer'(?:, 'store')?\];\s*const crossesDesk = !!prevRole && prevRole !== record\.role && \(desks\.includes\(prevRole\) \|\| desks\.includes\(record\.role\)\);/.test(src),
     'changing somebody onto or off the buying desk moves their login, as the sales desk does');
   const move = extractFunction(src, 'moveStaffLoginToRole', 'index.html');
   t.check(/out\.role === 'buyer'\s*\? `\$\{firstName\(s\.name\)\}'s login now opens the Buyer app`/.test(move), 'and says where it now opens');
