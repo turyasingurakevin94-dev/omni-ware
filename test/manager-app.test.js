@@ -150,7 +150,7 @@ function page(db, data, role){
   };
   sandbox.window = sandbox; sandbox.window.open = () => {}; sandbox.window.addEventListener = () => {};
   vm.createContext(sandbox);
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, SHEET, D, render, renderSheet, viewToday, viewTeam, viewOrders, viewMoney, holderOf, whyStuck, stuckOrders, isStuck, heldOrders, heldWaiting, creditCase, debtBands, debtors, lastSeller, personGoal, salesTarget, teamMonth, stageTimes, promiseState, rowToQuote, handToPacker, handToDriver, changeOrder, quoteTotal, balanceDue, custOldestAge, team, payPlan, customerById, showWin };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, SHEET, D, render, renderSheet, viewToday, viewTeam, viewOrders, viewMoney, holderOf, whyStuck, stuckOrders, isStuck, heldOrders, heldWaiting, creditCase, debtBands, debtors, lastSeller, personGoal, salesTarget, teamMonth, stageTimes, promiseState, rowToQuote, handToPacker, handToDriver, changeOrder, quoteTotal, balanceDue, custOldestAge, team, payPlan, customerById, showWin, candidatesFor };', sandbox);
   const X = sandbox.__x;
   Object.assign(X.S, { data: data || fixture(), shopId: SH, user: { id: 'u1', email: 'sarah@shop.ug' }, shopName: 'Mukasa Hardware', role: role || 'manager', started: true,
     tasks: ['order.move', 'order.assign', 'credit.release', 'team.nudge', 'customer.edit', 'payment.receive', 'statement.send'] });
@@ -173,6 +173,13 @@ const quoteRow = (q) => {
     t.check(/no trip|trip/.test(X.whyStuck(X.D().savedQuotes.find(q => q.id === 23)).w) && X.holderOf(X.D().savedQuotes.find(q => q.id === 23)).staff.id === 'B1', 'an order being bought in is held by the buyer on its trip');
     const times = X.stageTimes(q21);
     t.check(Math.round(times.draft) === 30 && Math.round(times.awaiting_goods) === 200 && Math.round(times.preparing) === 190, 'time in each stage comes from the order\'s own stage log');
+    // An order from before the stage log: only the stage it is in has a time,
+    // from when it entered it -- the earlier ones are not recorded, not "skipped".
+    const q22 = X.D().savedQuotes.find(q => q.id === 22), t22 = X.stageTimes(q22);
+    t.check(Math.round(t22.pending_delivery) === 300 && !t22.draft && !t22.preparing && t22.timed === false, 'with no stage log, the stage it is in is timed from when it entered it, and the rest are not recorded');
+    // Delivery can go to anybody the owner's board would offer: a picker drives too.
+    const drv = X.candidatesFor(q22).map(c => c.p.id);
+    t.check(drv[0] === 'D1' && drv.includes('W1') && drv.includes('W2') && !drv.includes('S1') && !drv.includes('B1'), 'a delivery can be handed to a driver or a picker, drivers first, never sales or the buyer');
     const held = X.heldOrders().map(x => x.q.id);
     t.check(held.includes(20) && held.includes(24), 'held for credit: over the limit (Kyaligonza) and owing past the hold line (Mukono, 26 days)');
     const k = X.creditCase(X.D().savedQuotes.find(q => q.id === 20));

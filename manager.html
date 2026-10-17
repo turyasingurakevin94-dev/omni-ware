@@ -588,7 +588,7 @@ input{font-family:inherit;color:var(--ink)}
 .mx-gauge.bad{background:var(--crimsonSoft)}
 .mx-gtrack{position:relative;height:14px;border-radius:999px;background:#EFECE6}
 .mx-gtrack i{position:absolute;top:0;bottom:0}
-.mx-dots{display:flex;gap:4px}
+.mx-dots{display:flex;align-items:center;gap:4px}
 .mx-dots i{width:14px;height:14px;border-radius:999px;display:inline-block}
 .mx-hint{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:var(--greenSoft);font-size:13px;font-weight:600;color:#0B4F31;line-height:1.35}
 .mx-3btn{display:grid;grid-template-columns:1fr 1fr 1.3fr;gap:8px}
@@ -615,6 +615,21 @@ input{font-family:inherit;color:var(--ink)}
 .mx-win .seg{animation:mxSeg 1s cubic-bezier(.4,0,.2,1) both}
 .mx-win .wstamp{position:absolute;right:-28px;bottom:8px;padding:6px 12px 5px;border:3px double var(--mint);border-radius:10px;color:var(--mint);background:rgba(22,32,60,.85);display:flex;flex-direction:column;align-items:center;gap:1px;animation:mxWinStamp 2.6s cubic-bezier(.3,1.3,.5,1) both}
 @media (prefers-reduced-motion: reduce){.mx-win .tile{display:none}}
+/* A big button says its words on one line; a small phone gets a size down, not a wrap. */
+.bx-btn{white-space:nowrap}
+/* The smallest phones (320-360 wide): the same screens, a little tighter. */
+@media (max-width:360px){
+  .bx-btn{font-size:15px;padding:0 12px;gap:6px}
+  .mx-pipe{gap:3px}
+  .mx-pipe .w{font-size:10px}
+  .mx-pack{grid-template-columns:48px minmax(0,1fr) auto;gap:10px}
+  .mx-pack .mx-packed,.mx-shelfwrap{display:none!important}
+  .mx-drivegrid{grid-template-columns:minmax(0,1fr)!important}
+  .mx-tabs3:has(> :nth-child(4)){grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  .mx-tabs3 > :nth-child(4){display:none}
+  .mx-pack .mx-act{width:36px;padding:0;justify-content:center}
+  .mx-pack .mx-act .t{display:none}
+}
 </style>
 </head>
 <body>
@@ -1274,6 +1289,8 @@ function stageLimits(){
 }
 function limitMins(status){ return Number(stageLimits().limits[status]) || 0; }
 function limitWords(mins){ if (!mins) return 'no limit'; if (mins % 1440 === 0) return (mins / 1440) + 'd'; if (mins % 60 === 0) return (mins / 60) + 'h'; return mins + 'm'; }
+// "1 order", "3 orders" -- a count and its noun, never "1 orders".
+function pl(n, word){ return n === 1 ? word : word + 's'; }
 function ageWords(mins){ mins = Math.max(0, Math.round(mins)); if (mins < 60) return mins + 'm'; const h = Math.floor(mins / 60), m = mins % 60; if (h < 24) return h + 'h' + (m ? ' ' + String(m).padStart(2, '0') + 'm' : ''); const d = Math.floor(h / 24), hh = h % 24; return d + 'd' + (hh ? ' ' + hh + 'h' : ''); }
 function inStageMins(q){ return minsSince(stageEnteredMs(q)); }
 function onTheMove(){ return liveOrders().filter(q => q.status !== 'completed'); }
@@ -1385,8 +1402,14 @@ function whyStuck(q){
 // Time in each stage, from the order's own stage log.
 function stageTimes(q){
   const log = (Array.isArray(q.stageLog) ? q.stageLog : []).filter(e => e && e.status).map(e => ({ status: e.status, at: Number(e.at) || msOf(e.at) })).sort((a, b) => a.at - b.at);
-  if (!log.length || log[0].status !== 'draft') log.unshift({ status: 'draft', at: createdMs(q) });
+  // An order from before the stage log has no record of the stages it
+  // passed: only the one it is in, timed from when it entered it.
+  const timed = log.length > 0;
+  if (timed && log[0].status !== 'draft') log.unshift({ status: 'draft', at: createdMs(q) });
+  const entered = Number(q.stageEnteredAt) || 0;
+  if ((!log.length || log[log.length - 1].status !== q.status) && entered) log.push({ status: q.status, at: entered });
   const out = {};
+  Object.defineProperty(out, 'timed', { value: timed });
   log.forEach((e, i) => { const end = i + 1 < log.length ? log[i + 1].at : (q.status === e.status ? Date.now() : e.at); out[e.status] = (out[e.status] || 0) + Math.max(0, (end - e.at) / 60000); });
   return out;
 }
@@ -1816,10 +1839,9 @@ function pipeHTML(){
 }
 // The single most useful hand for the oldest stuck order.
 function freeHandFor(q){
-  const T = team();
-  if (q.status === 'preparing') return T.packers.filter(p => !p.unavailable && String(p.id) !== String(q.assignedWorkerId)).sort((a, b) => packLoad(a.id).length - packLoad(b.id).length)[0] || null;
-  if (q.status === 'pending_delivery') return T.drivers.filter(p => !p.unavailable && String(p.id) !== String(q.assignedDeliveryId)).sort((a, b) => driveLoad(a.id).length - driveLoad(b.id).length)[0] || null;
-  return null;
+  // The same people the hand-over sheet offers, the least loaded first.
+  const c = candidatesFor(q).filter(x => !x.current && !x.p.unavailable).sort((x, y) => x.n - y.n)[0];
+  return c ? c.p : null;
 }
 function overBarHTML(q, w, h){
   const lim = limitMins(q.status), age = inStageMins(q);
@@ -1830,7 +1852,7 @@ function overBarHTML(q, w, h){
 function needsYou(){
   const out = [], stuck = stuckOrders(), held = heldWaiting(), T = team();
   T.sales.forEach(s => { const g = s.userId ? personGoal(s.userId) : null; if (g && g.ahead < 0 && !g.reached) out.push({ k: 'behind', s, g }); });
-  if (held.length) out.push({ k: 'held', n: held.length, names: held.slice(0, 2).map(x => x.c.name) });
+  if (held.length) out.push({ k: 'held', n: held.length, first: held[0].c.name });
   const old = debtors().filter(d => d.age > 30);
   if (old.length) out.push({ k: 'old', n: old.length, v: sum(old, d => d.c.debt) });
   return { first: stuck[0] || null, rest: out, total: stuck.length + out.length };
@@ -1861,11 +1883,11 @@ function viewToday(){
       <span class="mx-act navy" style="height:34px;border-radius:999px">Look</span></button>`;
     if (n.k === 'held') return `<button class="bx-row" data-act="push" data-p="approvals">
       <span style="width:38px;height:38px;border-radius:12px;background:var(--amberSoft);color:var(--amberInk);display:flex;align-items:center;justify-content:center;flex:none">${ic('cash', 19)}</span>
-      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="bx-t ell">${n.n} order${n.n > 1 ? 's' : ''} need${n.n > 1 ? '' : 's'} a yes</span><span class="bx-sub ell">${esc(n.names.join(' · '))}</span></span>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="bx-t ell">${n.n} ${pl(n.n, 'order')} need${n.n > 1 ? '' : 's'} a yes</span><span class="bx-sub" style="display:flex;min-width:0"><span class="ell">${esc(n.first)}</span>${n.n > 1 ? `<span style="flex:none">&nbsp;+${n.n - 1} more</span>` : ''}</span></span>
       <span class="mx-act soft" style="height:34px;border-radius:999px">See</span></button>`;
     return `<button class="bx-row" data-act="tab" data-v="money">
       <span style="width:38px;height:38px;border-radius:12px;background:var(--crimsonSoft);color:var(--crimson);display:flex;align-items:center;justify-content:center;flex:none">${ic('clock', 19)}</span>
-      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="bx-t ell">${n.n} owing over 30 days</span><span class="bx-sub"><span class="m">${short(n.v)}</span> to collect</span></span>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="bx-t ell">${n.n} owing 30+ days</span><span class="bx-sub"><span class="m">${short(n.v)}</span> to collect</span></span>
       <span class="mx-act soft" style="height:34px;border-radius:999px">Chase</span></button>`;
   }).join('');
   return `<div class="bx-hero" data-navy-top>
@@ -1876,7 +1898,7 @@ function viewToday(){
       <span class="fig"><span class="mx-lbl">Team sales · ${esc(monthWord())}</span><span class="mx-big">${n0(m.actual)}</span>
         ${m.tg ? `<span style="display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:600;color:var(--navyInk2)"><span>of <span class="m" style="color:#DDE3F0">${n0(m.tg.aim)}</span></span><span style="color:${behind ? 'var(--amber)' : 'var(--mint)'}">${m.tg.reached ? 'goal reached' : (behind ? '−' : '+') + short(Math.abs(m.tg.ahead)) + (behind ? ' behind' : ' ahead')}</span></span>` : `<span style="font-size:12px;font-weight:600;color:var(--navyInk2)">invoiced this month · the owner sets the goal</span>`}
         ${legend}</span></button>
-    <button class="bx-glass mx-day" data-act="push" data-p="teamday" aria-label="Today: sold ${n0(day.soldV)} in ${day.sold.length} orders, money in ${n0(day.inV)}">
+    <button class="bx-glass mx-day" data-act="push" data-p="teamday" aria-label="Today: sold ${n0(day.soldV)} in ${day.sold.length} ${pl(day.sold.length, 'order')}, money in ${n0(day.inV)}">
       <span class="two"><span><span class="l">Sold today · <span class="m">${day.sold.length}</span></span><span class="v">${n0(day.soldV)}</span></span><span style="align-items:flex-end"><span class="l">Money in today</span><span class="v" style="color:var(--mint)">${n0(day.inV)}</span></span></span>
       <span class="mx-bar"><i class="a-grow" style="width:${day.soldV ? Math.min(100, Math.round(day.inV / day.soldV * 100)) : day.inV ? 100 : 0}%;background:var(--mint);border-radius:999px"></i></span></button>
   </div>
@@ -1899,8 +1921,11 @@ PAGE.teamday = () => {
   const oldBills = day.inV - onToday, notYet = Math.max(0, day.soldV - onToday);
   const rows = T.sales.map(s => { const sold = s.userId ? takenOn(s.userId, t) : [], soldV = sumTotal(sold), inV = s.userId ? sum(moneyInBy(s.userId, t, t), x => x.amount) : 0; return { s, sold, soldV, inV }; });
   const max = Math.max(1, ...rows.map(r => Math.max(r.soldV, r.inV)));
+  // The shop's whole day, 7 to 7, stretched for anything earlier or later;
+  // the hours still to come are drawn empty rather than left off.
   const hours = []; const nowH = new Date().getHours();
-  for (let h = Math.min(7, nowH); h <= Math.max(nowH, 8); h++) hours.push(h);
+  const seen = day.sold.map(q => new Date(createdMs(q)).getHours()).concat(day.rec.map(x => Number(String(x.time || '').split(':')[0])).filter(h => h >= 0 && h < 24));
+  for (let h = Math.min(7, nowH, ...seen); h <= Math.max(19, nowH, ...seen); h++) hours.push(h);
   const soldH = h => sum(day.sold.filter(q => new Date(createdMs(q)).getHours() === h), q => orderTotal(q));
   const inH = h => sum(day.rec.filter(x => Number(String(x.time || '').split(':')[0]) === h), x => x.amount);
   const hmax = Math.max(1, ...hours.map(h => Math.max(soldH(h), inH(h))));
@@ -1909,8 +1934,8 @@ PAGE.teamday = () => {
     <div class="bx-sheethead" style="gap:16px"><span class="bx-grip"></span>
       <div style="display:flex;align-items:center;gap:10px"><span style="flex:1;display:flex;flex-direction:column;gap:2px"><span class="bx-eyebrow">${esc(new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase())} · ${esc(hm(Date.now()))}</span><span style="font-size:20px;font-weight:700">The team's day</span></span>${closeBtn()}</div>
       <div class="bx-glass" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-radius:16px">
-        <span style="padding:12px;display:flex;flex-direction:column;gap:4px"><span style="font-size:11px;font-weight:700;color:var(--navyInk2)">Sold · <span class="m">${day.sold.length}</span> orders</span><span class="m" style="font-size:22px;font-weight:600">${n0(day.soldV)}</span></span>
-        <span style="padding:12px;display:flex;flex-direction:column;gap:4px;border-left:1px solid rgba(255,255,255,.07)"><span style="font-size:11px;font-weight:700;color:var(--navyInk2)">Money in · <span class="m">${day.rec.length}</span> payments</span><span class="m" style="font-size:22px;font-weight:600;color:var(--mint)">${n0(day.inV)}</span></span></div>
+        <span style="padding:12px;display:flex;flex-direction:column;gap:4px"><span style="font-size:11px;font-weight:700;color:var(--navyInk2)">Sold · <span class="m">${day.sold.length}</span> ${pl(day.sold.length, 'order')}</span><span class="m" style="font-size:22px;font-weight:600">${n0(day.soldV)}</span></span>
+        <span style="padding:12px;display:flex;flex-direction:column;gap:4px;border-left:1px solid rgba(255,255,255,.07)"><span style="font-size:11px;font-weight:700;color:var(--navyInk2)">Money in · <span class="m">${day.rec.length}</span> ${pl(day.rec.length, 'payment')}</span><span class="m" style="font-size:22px;font-weight:600;color:var(--mint)">${n0(day.inV)}</span></span></div>
       <div style="display:flex;flex-direction:column;gap:7px"><span style="display:flex;height:12px;gap:2px;border-radius:999px;overflow:hidden">${onToday ? `<i class="a-grow" style="flex:${onToday};background:var(--mint)"></i>` : ''}${oldBills > 0 ? `<i class="a-grow" style="flex:${oldBills};background:#2F8F6A"></i>` : ''}${notYet ? `<i style="flex:${notYet};background:repeating-linear-gradient(135deg,rgba(255,255,255,.08) 0 4px,rgba(255,255,255,.16) 4px 7px)"></i>` : ''}${!onToday && !(oldBills > 0) && !notYet ? '<i style="flex:1;background:rgba(255,255,255,.08)"></i>' : ''}</span>
         <span style="display:grid;grid-template-columns:1fr 1fr 1fr;font-size:11px;font-weight:600;color:var(--navyInk)"><span style="display:flex;flex-direction:column"><b class="m" style="color:var(--mint);font-size:13px">${short(onToday)}</b>paid on today's sales</span><span style="display:flex;flex-direction:column;text-align:center"><b class="m" style="color:#fff;font-size:13px">${short(Math.max(0, oldBills))}</b>old bills paid</span><span style="display:flex;flex-direction:column;text-align:right"><b class="m" style="color:#fff;font-size:13px">${short(notYet)}</b>sold, not yet paid</span></span></div>
     </div>
@@ -1922,14 +1947,14 @@ PAGE.teamday = () => {
             <span style="display:flex;flex-direction:column;gap:4px;min-width:0"><span style="display:flex;justify-content:space-between;font-size:13px;font-weight:700"><span class="ell">${esc(firstWord(r.s.name))}</span><span class="m" style="font-size:12px">${n0(r.soldV)}</span></span>
               <span class="mx-bar light" style="height:7px"><i class="a-grow" style="width:${(r.soldV / max * 100).toFixed(1)}%;background:var(--navy);border-radius:999px"></i></span>
               <span class="mx-bar light" style="height:7px"><i class="a-grow" style="width:${(r.inV / max * 100).toFixed(1)}%;background:var(--green);border-radius:999px"></i></span>
-              <span style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink3)"><span><span class="m">${r.sold.length}</span> orders</span><span class="m" style="color:var(--green);font-weight:600">${n0(r.inV)}</span></span></span>
+              <span style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink3)"><span><span class="m">${r.sold.length}</span> ${pl(r.sold.length, 'order')}</span><span class="m" style="color:var(--green);font-weight:600">${n0(r.inV)}</span></span></span>
             <span class="m" style="width:46px;height:26px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;${r.soldV ? (good ? 'background:var(--greenSoft);color:var(--green)' : 'background:var(--amberSoft);color:var(--amberInk)') : 'background:var(--soft2);color:var(--ink3)'}">${r.soldV ? pct(p) : '—'}</span></button>`; }).join('')
           : `<div class="bx-empty" style="padding:12px"><b>No salespeople yet</b>A staff row with the sales job and a login shows here.</div>`}
       </div>
       <div class="bx-card" style="padding:14px 14px 10px;display:flex;flex-direction:column;gap:10px">
         <div style="display:flex;align-items:center;justify-content:space-between"><b style="font-size:13px">Through the day</b><span style="font-size:11px;font-weight:600;color:var(--ink3)">each hour</span></div>
-        <div role="img" aria-label="Sales and money in for each hour. Busiest hour ${busiest}:00." style="height:78px;display:grid;grid-template-columns:repeat(${hours.length},minmax(0,1fr));gap:6px;align-items:end">${hours.map((h, i) => `<span style="display:flex;gap:2px;align-items:flex-end;height:100%"><i class="a-up" style="animation-delay:${i * .04}s;flex:1;height:${Math.max(2, Math.round(soldH(h) / hmax * 76))}px;border-radius:3px 3px 1px 1px;background:var(--navy)"></i><i class="a-up" style="animation-delay:${i * .04}s;flex:1;height:${Math.max(2, Math.round(inH(h) / hmax * 76))}px;border-radius:3px 3px 1px 1px;background:var(--green)"></i></span>`).join('')}</div>
-        <div class="m" style="display:grid;grid-template-columns:repeat(${hours.length},minmax(0,1fr));gap:6px;font-size:10px;color:var(--ink3);text-align:center">${hours.map(h => `<span style="${h === busiest && soldH(h) ? 'color:var(--ink);font-weight:600' : h === nowH ? 'color:var(--amberInk);font-weight:600' : ''}">${h > 12 ? h - 12 : h}</span>`).join('')}</div>
+        <div role="img" aria-label="Sales and money in for each hour. Busiest hour ${busiest}:00." style="height:78px;display:grid;grid-template-columns:repeat(${hours.length},minmax(0,1fr));gap:3px;align-items:end">${hours.map((h, i) => h > nowH ? `<span style="height:2px;border-radius:1px;background:var(--soft2)"></span>` : `<span style="display:flex;gap:1px;align-items:flex-end;height:100%"><i class="a-up" style="animation-delay:${i * .04}s;flex:1;height:${Math.max(2, Math.round(soldH(h) / hmax * 76))}px;border-radius:3px 3px 1px 1px;background:var(--navy)"></i><i class="a-up" style="animation-delay:${i * .04}s;flex:1;height:${Math.max(2, Math.round(inH(h) / hmax * 76))}px;border-radius:3px 3px 1px 1px;background:var(--green)"></i></span>`).join('')}</div>
+        <div class="m" style="display:grid;grid-template-columns:repeat(${hours.length},minmax(0,1fr));gap:3px;font-size:10px;color:var(--ink3);text-align:center;white-space:nowrap">${hours.map((h, i) => `<span style="${h === nowH ? 'color:var(--amberInk);font-weight:600' : h === busiest && soldH(h) ? 'color:var(--ink);font-weight:600' : ''}">${h === nowH ? 'now' : (i % 2 === 0 && Math.abs(h - nowH) > 1) || (h === busiest && soldH(h)) ? (h > 12 ? h - 12 : h) + (h < 12 ? 'a' : 'p') : ''}</span>`).join('')}</div>
       </div>
       <span class="bx-hint" style="font-size:11px;color:var(--ink3)">${ic('eye', 13)}Who sold = who took it in the Sales app · money in = who recorded it</span>
     </div></div>`;
@@ -1990,35 +2015,35 @@ function floorHTML(T){
       const done = (D().collectionTrips || []).filter(t => !t.voided && String(t.assignedWorkerId) === String(b.id) && t.collectedAt && isoOf(t.collectedAt) === todayISO()).length;
       const out = tr.find(t => t.status === 'collecting');
       return `<button data-act="push" data-p="person" data-id="${b.id}" style="display:grid;grid-template-columns:38px 1fr auto;gap:10px;align-items:center;border:none;background:none;padding:0;text-align:left;color:var(--ink)">${pav(b, 38)}
-        <span style="display:flex;flex-direction:column;gap:5px;min-width:0"><span class="ell" style="font-size:14px;font-weight:700">${esc(firstWord(b.name))} <span style="font-size:12px;font-weight:600;color:var(--ink3)">· ${asking} line${asking === 1 ? '' : 's'} asking</span></span>
+        <span style="display:flex;flex-direction:column;gap:5px;min-width:0"><span class="ell" style="font-size:14px;font-weight:700">${esc(firstWord(b.name))} <span style="font-size:12px;font-weight:600;color:var(--ink3)">· ${asking ? `${asking} ${pl(asking, 'line')} asking` : 'nothing asked yet'}</span></span>
           <span style="display:grid;grid-template-columns:repeat(${Math.max(3, done + tr.length)},minmax(0,1fr));gap:3px">${Array.from({ length: done }, () => '<i style="height:6px;border-radius:999px;background:var(--green)"></i>').join('')}${tr.map(t => `<i class="${t.status === 'collecting' ? 'a-blink' : ''}" style="height:6px;border-radius:999px;background:${t.status === 'collecting' ? 'var(--amber)' : '#C9C4BA'}"></i>`).join('')}${Array.from({ length: Math.max(0, 3 - done - tr.length) }, () => '<i style="height:6px;border-radius:999px;background:#EFECE6"></i>').join('')}</span>
-          <span style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink3)"><span>${done} back today</span><span>${out ? `out · <span class="m" style="color:var(--amberInk)">${ageWords(minsSince(msOf(out.acceptedAt || out.assignedAt || out.createdAt)))}</span>` : tr.length ? tr.length + ' planned' : 'no trip planned'}</span></span></span>${ic('chev', 16, 'style="color:#9AA1AE"')}</button>`; }).join('')}</div>` : '';
+          <span style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink3)"><span>${done ? `${done} back today` : 'none back yet'}</span><span>${out ? `out · <span class="m" style="color:var(--amberInk)">${ageWords(minsSince(msOf(out.acceptedAt || out.assignedAt || out.createdAt)))}</span>` : tr.length ? tr.length + ' planned' : 'no trip planned'}</span></span></span>${ic('chev', 16, 'style="color:#9AA1AE"')}</button>`; }).join('')}</div>` : '';
   const packers = T.packers.map(p => { const jobs = packLoad(p.id), late = jobs.filter(isStuck).length, notTaken = jobs.find(q => q.pickingStatus === 'awaiting_accept' && isStuck(q)); return { p, jobs, late, notTaken, n: jobs.length, free: !p.unavailable && jobs.length < 2 }; });
   const held = sum(packers, x => x.n), lateAll = sum(packers, x => x.late), cap = Math.max(10, packers.filter(x => !x.p.unavailable).length * PACK_CAP);
   const free = packers.filter(x => x.free).sort((a, b) => a.n - b.n)[0];
   const storeCard = packers.length ? `<div class="bx-card" style="border-radius:20px;padding:12px 14px 6px;display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(22,32,60,.05),0 8px 22px rgba(22,32,60,.06),inset 0 0 0 1px var(--line)">
     <div style="display:flex;align-items:center;gap:10px;padding-bottom:10px"><span style="width:32px;height:32px;border-radius:10px;background:var(--slateSoft);color:var(--slate);display:flex;align-items:center;justify-content:center;flex:none">${ic('box', 17)}</span>
-      <span style="flex:1;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px">Store · packing</b><span style="font-size:11px;font-weight:600;color:var(--ink3)"><span class="m" style="color:var(--ink)">${held}</span> in hand · <span class="m" style="color:var(--ink)">${sum(packers, x => packedToday(x.p.id))}</span> packed today</span></span>
-      <span style="display:flex;flex-direction:column;align-items:flex-end;gap:3px" role="img" aria-label="${held} of ${cap} packing slots in use, ${lateAll} late"><span style="font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--ink3)">SHELF</span><span class="mx-shelf">${Array.from({ length: Math.min(12, cap) }, (_, i) => `<i class="${i < Math.min(lateAll, 12) ? 'late' : i < held ? '' : 'free'}"></i>`).join('')}</span></span></div>
+      <span style="flex:1;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px;white-space:nowrap">Store · packing</b><span style="font-size:11px;font-weight:600;color:var(--ink3)"><span class="m" style="color:var(--ink)">${held}</span> in hand · <span class="m" style="color:var(--ink)">${sum(packers, x => packedToday(x.p.id))}</span> packed today</span></span>
+      <span class="mx-shelfwrap" style="display:flex;flex-direction:column;align-items:flex-end;gap:3px" role="img" aria-label="${held} of ${cap} packing slots in use, ${lateAll} late"><span style="font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--ink3)">SHELF</span><span class="mx-shelf">${Array.from({ length: Math.min(12, cap) }, (_, i) => `<i class="${i < Math.min(lateAll, 12) ? 'late' : i < held ? '' : 'free'}"></i>`).join('')}</span></span></div>
     ${packers.map(x => { const p = x.p, off = p.unavailable;
       const pill = off ? `<span class="mx-pill idle">Off today</span>`
         : x.notTaken ? `<span class="mx-pill bad" title="${esc(clientName(x.notTaken))}: not taken for ${esc(ageWords(inStageMins(x.notTaken)))}"><span class="bx-dot a-blink" style="background:#E5483D"></span><span class="w">Not taken</span><span class="m">${ageWords(inStageMins(x.notTaken))}</span></span>`
         : x.late ? `<span class="mx-pill bad"><span class="bx-dot" style="background:#E5483D"></span><span class="w">${x.late} past the limit</span></span>`
         : x.free ? `<span class="mx-pill ok"><span class="bx-dot" style="background:var(--green)"></span><span class="w">Room for</span><span class="m">${PACK_CAP - x.n}</span></span>`
         : `<span class="mx-pill mid"><span class="w">Busy · ${x.n} in hand</span></span>`;
-      const act = off ? '' : x.late || x.notTaken ? `<button class="mx-act navy" data-act="reassign" data-id="${(x.notTaken || x.jobs.find(isStuck)).id}">${ic('swap', 14, 'style="stroke:#6FDCB0;stroke-width:2.4"')}Move</button>`
-        : x === free ? `<span class="mx-act mint">${ic('plus', 14, 'style="stroke-width:2.4"')}Has room</span>` : '';
+      const act = off ? '' : x.late || x.notTaken ? `<button class="mx-act navy" data-act="reassign" data-id="${(x.notTaken || x.jobs.find(isStuck)).id}">${ic('swap', 14, 'style="stroke:#6FDCB0;stroke-width:2.4"')}<span class="t">Move</span></button>`
+        : x === free ? `<span class="mx-act mint">${ic('plus', 14, 'style="stroke-width:2.4"')}<span class="t">Has room</span></span>` : '';
       return `<div class="mx-pack" style="${off ? 'opacity:.6' : ''}"><button data-act="push" data-p="person" data-id="${p.id}" aria-label="${esc(p.name)}: ${x.n} in hand${x.late ? ', ' + x.late + ' late' : ''}" style="position:relative;width:54px;height:54px;border:none;background:none;padding:0">${loadRing({ n: x.n, late: x.late, free: x.free }, 54)}
           <span style="position:absolute;inset:9px;border-radius:999px;background:${personCol(p)[0]};color:${personCol(p)[1]};font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">${esc(initials(p.name))}</span>
           ${x.n ? `<span class="m" style="position:absolute;right:-2px;bottom:0;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--navy);color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #fff">${x.n}</span>` : ''}</button>
-        <span style="display:flex;flex-direction:column;gap:6px;min-width:0"><span style="display:flex;align-items:baseline;gap:8px"><b style="font-size:15px">${esc(firstWord(p.name))}</b><span style="font-size:11px;font-weight:600;color:var(--ink3)">packed <span class="m" style="color:var(--ink)">${packedToday(p.id)}</span></span></span>${pill}</span>${act}</div>`; }).join('')}
+        <span style="display:flex;flex-direction:column;gap:6px;min-width:0"><span style="display:flex;align-items:baseline;gap:8px"><b style="font-size:15px">${esc(firstWord(p.name))}</b><span class="mx-packed" style="font-size:11px;font-weight:600;color:var(--ink3);white-space:nowrap">packed <span class="m" style="color:var(--ink)">${packedToday(p.id)}</span></span></span>${pill}</span>${act}</div>`; }).join('')}
   </div>` : '';
   const drivers = T.drivers;
   const driveCard = drivers.length ? `<div class="bx-card" style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
     <span style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:3px;background:var(--ink2)"></span><b style="font-size:13px">Delivery</b></span>
-    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">${drivers.map(d => { const jobs = driveLoad(d.id), late = jobs.filter(isStuck).length, off = d.unavailable;
+    <div class="mx-drivegrid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">${drivers.map(d => { const jobs = driveLoad(d.id), late = jobs.filter(isStuck).length, off = d.unavailable;
       return `<button data-act="push" data-p="person" data-id="${d.id}" style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:14px;border:none;text-align:left;color:var(--ink);${off ? 'background:transparent;box-shadow:inset 0 0 0 1.5px var(--rule);opacity:.7' : 'background:#F7F5F2'}">${pav(d, 34)}
-        <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b class="ell" style="font-size:13px">${esc(firstWord(d.name))}</b><span class="ell" style="font-size:11px;font-weight:600;color:${off ? 'var(--ink3)' : late ? 'var(--crimson)' : jobs.length ? 'var(--ink2)' : 'var(--green)'}">${off ? 'Off today' : jobs.length ? `On road · ${jobs.length}${late ? ' · ' + late + ' late' : ''}` : 'At the shop · free'}</span></span></button>`; }).join('')}</div></div>` : '';
+        <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b class="ell" style="font-size:13px">${esc(firstWord(d.name))}</b><span class="ell" style="font-size:11px;font-weight:600;color:${off ? 'var(--ink3)' : late ? 'var(--crimson)' : jobs.length ? 'var(--ink2)' : 'var(--green)'}">${off ? 'Off today' : jobs.length ? `${jobs.length} out${late ? ' · ' + late + ' late' : ''}` : 'At the shop · free'}</span></span></button>`; }).join('')}</div></div>` : '';
   return buyCard + storeCard + driveCard;
 }
 function viewTeam(){
@@ -2026,7 +2051,7 @@ function viewTeam(){
   const anyGoal = T.sales.some(s => s.userId && personGoal(s.userId));
   return `<div class="bx-hero" data-navy-top>
     <div class="mx-top"><span class="t"><span style="font-size:26px;font-weight:700;letter-spacing:-.02em">Team <span class="m" style="font-size:16px;color:var(--navyInk2)">${T.all.length}</span></span><span style="font-size:13px;color:var(--navyInk)">${T.all.length - off.length} in today${off.length ? ' · ' + esc(off.slice(0, 2).map(s => firstWord(s.name)).join(', ')) + (off.length > 2 ? ' +' + (off.length - 2) : '') + ' off' : ''}</span></span>
-      <span style="display:flex">${T.all.slice(0, 4).map((s, i) => `<span style="margin-left:${i ? -8 : 0}px;border-radius:999px;box-shadow:0 0 0 2px #16203C">${pav(s, 30)}</span>`).join('')}${T.all.length > 4 ? `<span class="m" style="margin-left:-8px;width:30px;height:30px;border-radius:999px;background:var(--navy2);color:var(--navyInk);font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #16203C">+${T.all.length - 4}</span>` : ''}</span></div>
+      <span style="display:flex">${T.all.slice(0, 4).map((s, i) => `<span style="margin-left:${i ? -5 : 0}px;border-radius:999px;box-shadow:0 0 0 2px #16203C">${pav(s, 30)}</span>`).join('')}${T.all.length > 4 ? `<span class="m" style="margin-left:-5px;width:30px;height:30px;border-radius:999px;background:var(--navy2);color:var(--navyInk);font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #16203C">+${T.all.length - 4}</span>` : ''}</span></div>
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span class="mx-lbl" style="white-space:nowrap">Selling · <span class="m">${T.sales.length}</span> · ${esc(monthWord())}</span>${anyGoal ? '' : '<span class="mx-prop dark">PROPOSED · OWNER SETS GOALS</span>'}</div>
     ${sellingHTML(T)}
   </div>
@@ -2034,10 +2059,11 @@ function viewTeam(){
 }
 
 /* ---------------- one person ---------------- */
+const TRIP_WORDS = { open: 'not given out', assigned: 'not started', collecting: 'out collecting', collected: 'back · not checked in' };
 PAGE.person = a => {
   const s = staffById(a.id); if (!s) return goneCard('That person is no longer on the staff list');
   const today = todayISO(), isSales = s.role === 'sales', pm = isSales ? personMonth(s) : null;
-  const jobWord = { sales: 'Sales desk', buyer: 'Buying', worker: 'Store · packing', delivery: 'Delivery' }[s.role] || s.role || 'Staff';
+  const jobWord = { sales: 'Sells', buyer: 'Buys', worker: 'Picks & delivers', delivery: 'Delivers', store: 'Runs the store', manager: 'Manages the team' }[s.role] || 'Staff';
   let stats = '', body = '';
   if (isSales) {
     const sold = s.userId ? takenOn(s.userId, today) : [], inV = s.userId ? sum(moneyInBy(s.userId, today, today), x => x.amount) : 0;
@@ -2063,7 +2089,7 @@ PAGE.person = a => {
     stats = [[s.role === 'buyer' ? 'Trips out' : 'In hand', String(s.role === 'buyer' ? trips.length : jobs.length), ''], ['Done today', String(doneToday), 'color:var(--mint)'], ['Late', String(jobs.filter(isStuck).length), jobs.some(isStuck) ? 'color:var(--amber)' : '']];
     body = `<div class="bx-card bx-list">${jobs.length ? jobs.map(q => `<div class="mx-srow"><button class="mid" data-act="push" data-p="order" data-id="${q.id}"><span style="display:flex;align-items:baseline;gap:8px"><b class="ell" style="flex:1;font-size:14px">${esc(clientName(q))}</b><span class="m" style="font-size:12px;font-weight:600;color:${isStuck(q) ? 'var(--crimson)' : 'var(--ink3)'}">${ageWords(inStageMins(q))}</span></span><span style="display:flex;align-items:center;gap:8px">${overBarHTML(q)}<span class="ell" style="font-size:12px;font-weight:600;color:var(--ink3)">${esc(whyStuck(q).w)}</span></span></button>
         <button class="mx-sq navy" data-act="reassign" data-id="${q.id}" aria-label="Hand ${esc(clientName(q))}'s order to someone else">${ic('swap', 16, 'style="stroke-width:2.2"')}</button></div>`).join('')
-      : trips.length ? trips.map(t => `<div class="mx-srow"><span class="mid"><b class="ell" style="font-size:14px">Trip to ${esc((D().suppliers.find(x => x.id === t.supplierId) || {}).name || 'a supplier')}</b><span style="font-size:12px;font-weight:600;color:var(--ink3)">${esc(t.status)} · ${(t.lines || []).length} lines</span></span>${['open', 'assigned'].includes(t.status) ? `<button class="mx-sq navy" data-act="reassigntrip" data-id="${esc(t.id)}" aria-label="Give this trip to another buyer">${ic('swap', 16, 'style="stroke-width:2.2"')}</button>` : ''}</div>`).join('')
+      : trips.length ? trips.map(t => `<div class="mx-srow"><span class="mid"><b class="ell" style="font-size:14px">Trip to ${esc((D().suppliers.find(x => x.id === t.supplierId) || {}).name || 'a supplier')}</b><span style="font-size:12px;font-weight:600;color:var(--ink3)">${esc(TRIP_WORDS[t.status] || t.status)} · ${(t.lines || []).length} ${pl((t.lines || []).length, 'line')}</span></span>${['open', 'assigned'].includes(t.status) ? `<button class="mx-sq navy" data-act="reassigntrip" data-id="${esc(t.id)}" aria-label="Give this trip to another buyer">${ic('swap', 16, 'style="stroke-width:2.2"')}</button>` : ''}</div>`).join('')
       : `<div class="bx-empty" style="padding:20px"><b>Nothing in hand</b>${s.unavailable ? 'Off today.' : 'Free for the next job.'}</div>`}</div>`;
   }
   const ring = pm ? personRing(s, pm, 76, 4) : `<span style="width:76px;height:76px;display:flex;align-items:center;justify-content:center">${pav(s, 64)}</span>`;
@@ -2072,7 +2098,7 @@ PAGE.person = a => {
     <div class="bx-sheethead" style="gap:14px"><span class="bx-grip"></span>
       <div style="display:flex;align-items:center;gap:14px">${ring}
         <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><span class="ell" style="font-size:21px;font-weight:700">${esc(s.name)}</span><span style="font-size:13px;font-weight:600;color:var(--navyInk)">${esc(jobWord)}</span>${chip}</span>${closeBtn()}</div>
-      <div class="bx-glass" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-radius:16px">${stats.map((x, i) => `<span style="padding:10px 12px;display:flex;flex-direction:column;gap:4px;min-width:0;${i ? 'border-left:1px solid rgba(255,255,255,.07)' : ''}"><span class="ell" style="font-size:11px;font-weight:700;color:var(--navyInk2)">${esc(x[0])}</span><span class="m ell" style="font-size:16px;font-weight:600;${x[2]}">${esc(x[1])}</span></span>`).join('')}</div>
+      <div class="bx-glass" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-radius:16px">${stats.map((x, i) => `<span style="padding:10px 12px;display:flex;flex-direction:column;gap:4px;min-width:0;${i ? 'border-left:1px solid rgba(255,255,255,.07)' : ''}"><span class="ell" style="font-size:11px;font-weight:700;color:var(--navyInk2)">${esc(x[0])}</span><span class="m" style="font-size:clamp(13px,4.3vw,16px);font-weight:600;white-space:nowrap;${x[2]}">${esc(x[1])}</span></span>`).join('')}</div>
     </div>
     <div class="bx-body">${body}</div>
     <div class="bx-foot"><div class="row">${callBtn(s.phone, s.name)}<button class="bx-btn red" data-act="nudge" data-who="${s.id}">${ic('nudge', 20)}Nudge ${esc(firstWord(s.name))}</button></div></div>
@@ -2145,12 +2171,12 @@ PAGE.order = a => {
   }).join('');
   const rows = STAGES.slice(0, 4).filter((st, i) => i <= idx).map(st => { const m = times[st.key] || 0, lim = limitMins(st.key), okW = Math.min(m, lim || m) / scaleMax * 100, overW = lim && m > lim ? (m - lim) / scaleMax * 100 : 0;
     return `<span style="font-size:12px;font-weight:${st.key === q.status && stuck ? 700 : 600};color:${st.key === q.status && stuck ? 'var(--crimson)' : 'var(--ink2)'}">${st.short}</span>
-      <span style="position:relative;height:10px">${m ? `<i class="a-grow" style="position:absolute;left:0;top:0;bottom:0;width:${Math.min(100, okW).toFixed(1)}%;border-radius:999px 0 0 999px;background:var(--green)"></i>` : `<span style="position:absolute;inset:0;font-size:10px;font-weight:600;color:var(--ink3)">skipped</span>`}${overW ? `<i class="a-grow" style="animation-delay:.3s;position:absolute;left:${Math.min(100, okW).toFixed(1)}%;top:0;bottom:0;width:${Math.min(100 - okW, overW).toFixed(1)}%;border-radius:0 999px 999px 0;background:repeating-linear-gradient(135deg,#E5483D 0 5px,#C93A30 5px 9px)"></i>` : ''}${lim && lim <= scaleMax ? `<i style="position:absolute;left:${(lim / scaleMax * 100).toFixed(1)}%;top:-3px;bottom:-3px;width:2px;background:var(--ink)"></i>` : ''}</span>
+      <span style="position:relative;height:10px">${m ? `<i class="a-grow" style="position:absolute;left:0;top:0;bottom:0;width:${Math.min(100, okW).toFixed(1)}%;border-radius:999px 0 0 999px;background:var(--green)"></i>` : `<span style="position:absolute;inset:0;font-size:10px;font-weight:600;color:var(--ink3);line-height:10px">${times.timed || st.key === q.status ? 'skipped' : 'not recorded'}</span>`}${overW ? `<i class="a-grow" style="animation-delay:.3s;position:absolute;left:${Math.min(100, okW).toFixed(1)}%;top:0;bottom:0;width:${Math.min(100 - okW, overW).toFixed(1)}%;border-radius:0 999px 999px 0;background:repeating-linear-gradient(135deg,#E5483D 0 5px,#C93A30 5px 9px)"></i>` : ''}${m && lim && lim <= scaleMax ? `<i style="position:absolute;left:${(lim / scaleMax * 100).toFixed(1)}%;top:-3px;bottom:-3px;width:2px;background:var(--ink)"></i>` : ''}</span>
       <span class="m" style="font-size:12px;font-weight:600;text-align:right;color:${st.key === q.status && stuck ? 'var(--crimson)' : 'var(--ink)'}">${m ? ageWords(m) : '—'}</span>`; }).join('');
   const stamp = paidStamp(q), lines = q.items || [];
   const free = freeHandFor(q);
   const main = (q.status === 'preparing' || q.status === 'pending_delivery') ? `<button class="bx-btn red" data-act="reassign" data-id="${q.id}">${ic('swap', 20, 'style="stroke-width:2.2"')}${free ? 'Hand it to ' + esc(firstWord(free.name)) : 'Hand it to someone else'}</button>`
-    : q.status === 'awaiting_goods' && h.trip && ['open', 'assigned'].includes(h.trip.status) ? `<button class="bx-btn red" data-act="reassigntrip" data-id="${esc(h.trip.id)}">${ic('swap', 20, 'style="stroke-width:2.2"')}Give the trip to another buyer</button>`
+    : q.status === 'awaiting_goods' && h.trip && ['open', 'assigned'].includes(h.trip.status) ? `<button class="bx-btn red" data-act="reassigntrip" data-id="${esc(h.trip.id)}">${ic('swap', 20, 'style="stroke-width:2.2"')}Give it to another buyer</button>`
     : `<button class="bx-btn red" data-act="nudge" data-who="${h.staff ? h.staff.id : ''}" data-order="${q.id}">${ic('nudge', 20)}Nudge ${esc(h.staff ? firstWord(h.staff.name) : 'them')}</button>`;
   return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
     <div class="bx-sheethead" style="gap:14px"><span class="bx-grip"></span>
@@ -2188,15 +2214,17 @@ PAGE.order = a => {
 /* ---------------- hand it to someone free ---------------- */
 function candidatesFor(q){
   const T = team();
-  if (q.status === 'preparing') return T.packers.map(p => ({ p, n: packLoad(p.id).length, late: packLoad(p.id).filter(isStuck).length, current: String(p.id) === String(q.assignedWorkerId) }));
-  if (q.status === 'pending_delivery') return T.drivers.map(p => ({ p, n: driveLoad(p.id).length, late: driveLoad(p.id).filter(isStuck).length, current: String(p.id) === String(q.assignedDeliveryId) }));
+  // Everybody the owner's own board would offer (staffEligibleForRole):
+  // a picker may also drive, and somebody who runs the store does both.
+  if (q.status === 'preparing') return T.all.filter(s => staffEligibleForRole(s, 'worker')).map(p => ({ p, n: packLoad(p.id).length, late: packLoad(p.id).filter(isStuck).length, current: String(p.id) === String(q.assignedWorkerId) }));
+  if (q.status === 'pending_delivery') return T.all.filter(s => staffEligibleForRole(s, 'delivery')).sort((a, b) => (b.role === 'delivery') - (a.role === 'delivery')).map(p => ({ p, n: driveLoad(p.id).length, late: driveLoad(p.id).filter(isStuck).length, current: String(p.id) === String(q.assignedDeliveryId) }));
   return [];
 }
 SHEET.reassign = a => {
   const isTrip = a.kind === 'trip';
   const tr = isTrip ? (D().collectionTrips || []).find(t => String(t.id) === String(a.id)) : null;
   const q = isTrip ? null : quoteById(a.id);
-  if (!q && !tr) return `<div class="bx-empty"><b>That job is no longer open</b></div>`;
+  if (!q && !tr) return `<div class="bx-empty" style="color:var(--navyInk)"><b style="color:#fff">That job is no longer open</b>It moved on or was finished while you looked.</div><button class="bx-btn" style="flex:none;width:100%;background:#fff;color:var(--navy)" data-act="closesheet">Close</button>`;
   const cands = isTrip ? team().buyers.map(p => ({ p, n: tripsOf(p.id).length, late: 0, current: String(p.id) === String(tr.assignedWorkerId) })) : candidatesFor(q);
   const avail = cands.filter(c => !c.current && !c.p.unavailable).sort((x, y) => x.n - y.n);
   if (a.done) {
@@ -2222,10 +2250,11 @@ SHEET.reassign = a => {
           <span style="display:flex;gap:4px">${Array.from({ length: PACK_CAP }, (_, i) => `<i style="width:22px;height:10px;border-radius:4px;${i < c.late ? 'background:#E5483D' : i < c.n ? 'background:#fff' : 'box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.22)'}"></i>`).join('')}</span></span></button>`; }).join('')
       : `<div class="bx-empty" style="color:var(--navyInk)"><b style="color:#fff">Nobody else does this job</b>Add staff with this job in the owner's app.</div>`}</div>
     ${!isTrip && q.status === 'preparing' ? `<span style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--navyInk)">${ic('bell', 14, 'style="stroke:#6FDCB0"')}${pick ? esc(firstWord(pick.p.name)) + ' gets' : 'They get'} “Next to pick” on their phone</span>` : ''}
-    <button class="bx-btn red" style="flex:none" ${pick && !pick.current ? `data-act="rgo" data-id="${pick.p.id}"` : 'disabled'}>${ic('swap', 20, 'style="stroke-width:2.2"')}${pick ? 'Give it to ' + esc(firstWord(pick.p.name)) : 'Pick somebody'}</button>`;
+    ${pick && !pick.current ? `<button class="bx-btn red" style="flex:none" data-act="rgo" data-id="${pick.p.id}">${ic('swap', 20, 'style="stroke-width:2.2"')}Give it to ${esc(firstWord(pick.p.name))}</button>`
+      : `<span style="text-align:center;font-size:13px;font-weight:600;color:var(--navyInk)">${cands.length ? 'Nobody else is free for it today.' : ''}</span><button class="bx-btn" style="flex:none;background:#fff;color:var(--navy)" data-act="closesheet">Close</button>`}`;
 };
 SHEET.reassign.dark = true;
-ACT.reassign = t => { FEEL.open(); if (S.stack.length && S.stack[S.stack.length - 1].type === 'order') {} openSheet('reassign', { id: Number(t.dataset.id) }); };
+ACT.reassign = t => { FEEL.open(); openSheet('reassign', { id: Number(t.dataset.id) }); };
 ACT.reassigntrip = t => { FEEL.open(); openSheet('reassign', { id: t.dataset.id, kind: 'trip' }); };
 ACT.rpick = t => { if (!S.sheet) return; S.sheet.args.sel = t.dataset.id; FEEL.tick(); renderSheet(); };
 ACT.rgo = async t => {
@@ -2342,7 +2371,7 @@ function viewMoney(){
   const rows = shown.map(({ c, age }) => {
     const ls = lastSeller(c), over = custOverLimit(c), prom = promisesFor(c).filter(p => promiseState(p, c) !== 'kept').slice(-1)[0];
     const pst = prom ? promiseState(prom, c) : null;
-    const sub = `<span class="m">${age}</span> day${age === 1 ? '' : 's'} · ` + (over ? '<span style="color:var(--amberInk)">over their limit</span>' : pst === 'broken' ? `<span style="color:var(--crimson)">promise broken ${esc(dayLabel(prom.promisedOn))}</span>` : pst === 'open' ? `<span style="color:var(--green)">promised ${prom.amount ? '<span class="m">' + n0(prom.amount) + '</span> ' : ''}by ${esc(dayLabel(prom.promisedOn))}</span>` : 'no promise');
+    const sub = (custOpen(c.id).length ? `<span class="m">${age}</span> ${pl(age, 'day')} · ` : 'no dated bill · ') + (over ? '<span style="color:var(--amberInk)">over their limit</span>' : pst === 'broken' ? `<span style="color:var(--crimson)">promise broken ${esc(dayLabel(prom.promisedOn))}</span>` : pst === 'open' ? `<span style="color:var(--green)">promised ${prom.amount ? '<span class="m">' + n0(prom.amount) + '</span> ' : ''}by ${esc(dayLabel(prom.promisedOn))}</span>` : 'no promise');
     return `<button class="mx-crow" data-act="push" data-p="debtor" data-id="${esc(c.id)}"><span class="mx-face">${custAv(c, 42, bandCol(age))}${sellerBadge(ls)}</span>
       <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><b class="ell" style="font-size:15px">${esc(c.name)}</b><span class="ell" style="font-size:12px;font-weight:600;color:${age > 30 ? 'var(--crimson)' : 'var(--ink3)'}">${sub}</span></span>
       <span class="m" style="font-size:15px;font-weight:600;color:${over ? 'var(--crimson)' : 'var(--ink)'}">${n0(c.debt)}</span></button>`; }).join('');
@@ -2421,7 +2450,7 @@ PAGE.approvals = () => {
   const head = `<div class="bx-sheethead" style="gap:12px;padding-bottom:46px"><span class="bx-grip"></span>
       <div style="display:flex;align-items:center;gap:10px"><span style="flex:1;display:flex;flex-direction:column;gap:3px"><span style="display:flex;align-items:center;gap:8px"><span class="bx-eyebrow">ON HOLD IN CHECKING</span>${holdIsOn() ? '' : '<span class="mx-prop dark">PROPOSED</span>'}</span><span style="font-size:20px;font-weight:700">Needs a yes · <span class="m">${left}</span> left</span></span>${closeBtn()}</div>
       ${list.length ? `<div class="mx-tabs3" role="tablist" aria-label="Held orders" style="grid-template-columns:repeat(${Math.min(4, list.length)},minmax(0,1fr))">${list.slice(0, 4).map((y, k) => { const dd = S.ui.decided[y.q.id];
-        return `<button class="mx-tab3" role="tab" aria-selected="${k === i}" data-act="hpick" data-i="${k}">${custAv(y.c, 26)}<span style="display:flex;flex-direction:column;min-width:0"><span class="m" style="font-size:12px;font-weight:600">${short(y.amt)}</span><span class="ell" style="font-size:10px;font-weight:700;color:${dd ? 'var(--mint)' : 'var(--rose)'}">${dd ? dd : y.over ? 'over limit' : 'owing ' + y.age + 'd'}</span></span></button>`; }).join('')}</div>` : ''}</div>`;
+        return `<button class="mx-tab3" role="tab" aria-selected="${k === i}" data-act="hpick" data-i="${k}" aria-label="${esc(y.c.name)}: ${y.over ? 'over their credit limit' : 'owing ' + y.age + ' days'}">${custAv(y.c, 26)}<span style="display:flex;flex-direction:column;min-width:0"><span class="m" style="font-size:12px;font-weight:600">${short(y.amt)}</span><span class="ell" style="font-size:10px;font-weight:700;color:${dd ? 'var(--mint)' : 'var(--rose)'}">${dd ? dd : y.over ? 'over' : y.age + 'd'}</span></span></button>`; }).join('')}</div>` : ''}</div>`;
   if (!x) return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">${head.replace('padding-bottom:46px', '')}<div class="bx-body">${emptyCard('Nothing waits for a yes', `Orders stop here when a customer would go over their credit limit, or has owed past ${holdDays()} days.`)}</div></div>`;
   const q = x.q, c = x.c, taker = staffByUser(takenBy(q)), times = x.withIt / (x.limit || 1);
   const max = Math.max(x.withIt, x.limit) * 1.06, pc = v => Math.min(100, v / max * 100).toFixed(1) + '%';
@@ -2444,7 +2473,7 @@ PAGE.approvals = () => {
           ${pctRing(Math.min(1, x.age / 30), 70, 7, x.age <= custTerms(c) ? '#0F6B43' : x.old ? '#E5483D' : '#F5B26B', `<span class="m" style="font-size:18px;font-weight:600;color:${x.old ? 'var(--crimson)' : 'var(--ink)'}">${x.age}d</span>`, `Oldest bill ${x.age} days; the hold line is ${holdDays()} days`, '#EFECE6').replace('</svg>', `<line x1="35" y1="0" x2="35" y2="12" stroke="#1C2233" stroke-width="2.5" stroke-linecap="round" transform="rotate(${(holdDays() / 30 * 360).toFixed(0)} 35 35)"/></svg>`)}
           <span style="font-size:10px;font-weight:600;color:var(--ink3)">hold line <b class="m" style="color:var(--ink)">${holdDays()}d</b></span></div>
       </div>
-      <div style="display:flex;align-items:center;gap:10px;padding:0 2px"><span style="font-size:12px;font-weight:700;color:var(--ink2)">Promises</span><span class="mx-dots">${proms.length ? proms.map(p => { const s2 = promiseState(p, c); return `<i style="${s2 === 'kept' ? 'background:var(--green)' : s2 === 'broken' ? 'background:#fff;box-shadow:inset 0 0 0 3px #E5483D' : 'background:#fff;box-shadow:inset 0 0 0 2px #C9C4BA'}" title="${s2}"></i>`; }).join('') : '<span style="font-size:12px;color:var(--ink3)">none</span>'}</span>
+      <div style="display:flex;align-items:center;gap:10px;padding:0 2px"><span style="font-size:12px;font-weight:700;color:var(--ink2)">Promises</span><span class="mx-dots">${proms.length ? proms.map(p => { const s2 = promiseState(p, c); return `<i style="${s2 === 'kept' ? 'background:var(--green)' : s2 === 'broken' ? 'background:#fff;box-shadow:inset 0 0 0 3px #E5483D' : 'background:#fff;box-shadow:inset 0 0 0 2px #C9C4BA'}" title="${s2}"></i>`; }).join('') : '<span style="font-size:12px;color:var(--ink3)">none</span>'}${proms.length ? (() => { const k = proms.filter(p => promiseState(p, c) === 'kept').length, b = proms.filter(p => promiseState(p, c) === 'broken').length; return `<span style="font-size:11px;font-weight:600;color:var(--ink3);white-space:nowrap">${k ? k + ' kept' : ''}${k && b ? ' · ' : ''}${b ? `<span style="color:var(--crimson)">${b} broken</span>` : ''}${!k && !b ? 'open' : ''}</span>`; })() : ''}</span>
         <span style="margin-left:auto;font-size:12px;font-weight:600;color:var(--ink3)">${pays != null ? `usually pays in <b class="m" style="color:var(--ink)">~${pays}d</b>` : 'no paid bills yet'}</span></div>
       <div class="mx-hint"><span style="width:30px;height:30px;flex:none;border-radius:999px;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center">${ic('bulb', 16, 'style="stroke-width:2.2"')}</span><span style="flex:1">${way}</span></div>
       ${dec ? `<div style="display:flex;align-items:center;gap:10px"><span class="mx-stampw" style="color:${stampCol}">${dec}</span><span style="flex:1;font-size:12px;font-weight:600;color:var(--ink2);line-height:1.35">${dec === 'RELEASED' ? 'It can move on from Checking now.' : dec === 'ASKED' ? (taker ? esc(firstWord(taker.name)) : 'Sales') + ' collects first. It stays held until then.' : 'It stays in Checking.'}</span>${list.length > 1 ? `<button class="mx-act navy" style="height:46px;font-size:14px" data-act="hnext">Next${ic('chev', 14, 'style="stroke-width:2.4"')}</button>` : ''}</div>`
