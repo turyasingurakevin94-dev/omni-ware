@@ -1168,11 +1168,15 @@ body.nw-typing .nw-dock{display:none}
 .nw-chin input::placeholder{font-family:Figtree,system-ui,sans-serif;font-size:14px;font-weight:600;color:#A7A096}
 .nw-band .sx-qb b.sm{font-size:13px;letter-spacing:-.04em}
 .nw-band .sx-qb b.xs{font-size:11px;letter-spacing:-.05em}
-.sx-ctl.nw-wide{grid-template-columns:minmax(0,1fr) auto}
-.sx-ctl.nw-wide .nw-sell{grid-column:1/-1}
-.sx-ctl.nw-wide .nw-sell button{height:44px}
-.sx-ctl.nw-wide .nw-sell .m{font-size:12px}
-.sx-ctl.nw-wide .sx-step{justify-self:start}
+/* Sell by stays on the one line: the stepper and the bin give it room (the
+   quantity is already on the line's own badge), so a pack price reads whole. */
+.nw-band .sx-ctl{gap:6px}
+.nw-band .nw-sell{gap:2px}
+.nw-band .nw-sell button{font-size:12px;gap:1px;padding:0 4px}
+.nw-band .nw-sell .m{font-size:12px}
+.nw-band .sx-step button{width:26px}
+.nw-band .sx-step input{width:40px}
+.nw-band .sx-del{width:36px}
 .nw-each .nw-a{font-size:17px}
 .nw-filters .sx-pill{height:40px}
 .nw-mtot{font-family:var(--mono)}
@@ -1781,6 +1785,163 @@ button.py-row:active{background:var(--soft)}
 .pd-bw{white-space:nowrap}
 /* the keyboard is up: the dock keeps only the slide, so what it clears stays in sight */
 @media (max-height:520px){.py-dock .py-methods,.py-dock .py-sws{display:none}.py-dock{padding-bottom:12px}}
+/* ---- who decides: the Manager's face (Insight's plum, as on the canvas) ---- */
+.sx-mgr{border-radius:999px;background:var(--plumSoft);color:var(--plum);font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex:none;line-height:1;letter-spacing:0}
+/* The three answers on a price, each its own shape as well as colour. */
+.sx-ptag.chip{gap:6px;padding:3px 9px 3px 3px;border-radius:999px;font-weight:700;max-width:100%;min-width:0;align-self:flex-start}
+.sx-ptag.chip.wait{background:var(--amberSoft);color:var(--amberInk)}
+.sx-ptag.chip.wait > i{width:6px;height:6px;background:var(--amber)}
+.sx-ptag.chip.ok{background:var(--greenSoft);color:var(--green)}
+.sx-ptag.chip.chg{background:var(--skySoft);color:var(--sky)}
+.sx-ptag.chip.chg{white-space:normal;border-radius:12px;line-height:1.3;align-items:center}
+.ord-pl .nm .sx-ptag{margin-top:4px}
+
+/* ---- the order page: a changed price, the old figure struck ---- */
+.ord-amts{display:flex;flex-direction:column;align-items:flex-end;gap:1px}
+.ord-was{font-size:11px;color:#8A93A3;text-decoration:line-through;white-space:nowrap}
+.ord-told{display:flex;align-items:center;gap:8px;padding:8px 0 10px;border-top:1px dashed #E2DED6;font-size:12px;font-weight:600;color:var(--green)}
+
+/* ---- the Checking gate: three tiles in the navy head ---- */
+.ord-gates{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.ord-gate{min-width:0;display:flex;flex-direction:column;gap:4px;padding:10px;border-radius:14px;background:rgba(255,255,255,.06);--gc:#F5B26B;--gt:rgba(245,178,107,.2);box-shadow:inset 0 0 0 1px var(--gt)}
+.ord-gate.ok{--gc:#6FDCB0;--gt:rgba(111,220,176,.2)}
+.ord-gate.bad{--gc:#F59A92;--gt:rgba(245,154,146,.22)}
+.ord-gate .gk{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:.06em;color:#8D99B5;min-width:0}
+.ord-gate .gi{width:22px;height:22px;border-radius:999px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--gt);color:var(--gc)}
+.ord-gate.wait .gi{background:var(--gc);color:var(--navy)}
+.ord-gate .gi b{font-size:13px;font-weight:700;line-height:1}
+.ord-gate .gv{font-size:13px;font-weight:700;color:var(--gc)}
+.ord-gate .gs{font-size:11px;color:#B3BCD2}
+.ord-ring{animation:ordRing 1.8s ease-out infinite}
+@keyframes ordRing{0%{box-shadow:0 0 0 0 rgba(245,178,107,.55)}70%,100%{box-shadow:0 0 0 7px rgba(245,178,107,0)}}
+
+/* ---- Tell them the new price ---- */
+.ord-tellp{display:flex;align-items:center;gap:10px;width:100%;padding:12px 14px;border:none;border-radius:16px;background:#fff;box-shadow:inset 0 0 0 1.5px var(--sky);text-align:left;color:var(--ink)}
+.ord-tellp .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.ord-tellp .tx b{font-size:14px}
+.ord-tellp .tx span{font-size:12px;font-weight:600;color:var(--ink3)}
+.ord-tellp .go{padding:4px 9px;border-radius:999px;background:var(--skySoft);color:var(--sky);font-size:11px;font-weight:700;white-space:nowrap}
+.ord-note.c{text-align:center;flex:none}
+
+/* ---- something wrong after the sale: ask the Manager ---- */
+.ord-wrong{display:flex;align-items:center;justify-content:center;gap:8px;height:44px;border:none;border-radius:14px;background:transparent;color:var(--ink3);font-size:13px;font-weight:600}
+.ord-askrow{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:16px;background:#fff;box-shadow:inset 0 0 0 1.5px var(--amber)}
+.ord-askrow .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.ord-askrow .tx b{font-size:13px}
+.ord-askrow .tx span{font-size:12px;font-weight:600;color:var(--ink3)}
+.ord-askx{height:34px;padding:0 12px;border:none;border-radius:999px;background:var(--soft);color:var(--ink);font-size:12px;font-weight:700;white-space:nowrap}
+.ord-askdone{display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;font-weight:700}
+.ord-askdone.accepted{color:var(--green)}
+.ord-askdone.declined{color:var(--crimson)}
+.ord-fixh{display:flex;align-items:center;gap:12px}
+.ord-fixh .fi,.ord-fixopt .fi{width:44px;height:44px;border-radius:14px;flex:none;display:flex;align-items:center;justify-content:center}
+.ord-fixh .tx,.ord-fixopt .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.ord-fixh .tx b{font-size:18px;font-weight:700}
+.ord-fixh .tx span,.ord-fixopt .tx span{font-size:12px;font-weight:600;color:var(--ink3)}
+.ord-fixopt{display:flex;align-items:center;gap:12px;width:100%;padding:14px;border:none;border-radius:18px;background:#fff;box-shadow:inset 0 0 0 1px #ECE8E1;text-align:left;color:var(--ink)}
+.ord-fixopt .fi{width:42px;height:42px;border-radius:13px}
+.ord-fixopt .tx b{font-size:15px}
+.ord-fixopt .who{display:flex;flex-direction:column;align-items:center;gap:2px;flex:none}
+.ord-fixopt .who small{font-size:10px;font-weight:700;color:var(--ink3)}
+.ord-fixnote{display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;font-weight:600;color:var(--ink3);text-align:center}
+.ord-lab{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--ink3);margin-bottom:-6px}
+.ord-chips{display:flex;flex-wrap:wrap;gap:8px}
+.ord-chips button{height:38px;padding:0 14px;border:none;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 1px var(--line);color:var(--ink);font-size:13px;font-weight:700}
+.ord-chips button[aria-checked="true"]{background:var(--navy);color:#fff;box-shadow:none}
+.ord-asknote{display:flex;align-items:center;gap:10px;height:46px;padding:0 12px;border-radius:14px;background:#fff;box-shadow:inset 0 0 0 1px var(--line);color:var(--ink3)}
+.ord-asknote input{flex:1;min-width:0;border:none;outline:none;background:transparent;font-size:13px;font-weight:600;color:var(--ink)}
+.ord-vpair{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:8px}
+.ord-vpair > b{font-size:18px;color:var(--crimson)}
+.ord-vinv{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:14px;background:#fff;box-shadow:inset 0 0 0 1px var(--line);min-width:0}
+.ord-vinv .m{font-size:13px;font-weight:600}
+.ord-vinv small{font-size:11px;font-weight:600;color:var(--ink3)}
+.ord-vinv .v{font-size:15px}
+.ord-vinv.me{background:var(--crimsonSoft);color:var(--crimson);box-shadow:inset 0 0 0 1.5px var(--crimson)}
+.ord-vinv.me small{color:var(--crimson)}
+.ord-vinv.me .v{text-decoration:line-through}
+.ord-owe{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border-radius:14px;background:#fff;box-shadow:inset 0 0 0 1px var(--line);font-size:13px;font-weight:600;color:var(--ink3)}
+.ord-owe > span:last-child{display:flex;align-items:baseline;gap:8px}
+.ord-owe .was{font-size:13px;text-decoration:line-through}
+.ord-owe b{font-size:18px;font-weight:600;color:var(--ink)}
+.ord-retl{padding:0 14px;border-radius:18px;background:#fff;box-shadow:inset 0 0 0 1px #ECE8E1}
+.ord-ret{display:flex;align-items:center;gap:10px;padding:10px 0}
+.ord-ret + .ord-ret{border-top:1px dashed #E2DED6}
+.ord-ret .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;opacity:.6}
+.ord-ret.on .tx{opacity:1}
+.ord-ret .tx b{font-size:14px}
+.ord-ret .tx span{font-size:12px;font-weight:600;color:var(--ink3)}
+.ord-retstep{display:flex;align-items:center;gap:4px;padding:3px;border-radius:12px;background:var(--soft)}
+.ord-ret.on .ord-retstep{background:var(--greenSoft)}
+.ord-retstep button{width:32px;height:32px;border:none;border-radius:9px;background:#fff;font-size:18px;color:var(--ink)}
+.ord-retstep b{width:26px;text-align:center;font-size:16px;font-weight:600;color:var(--ink3)}
+.ord-ret.on .ord-retstep b{color:var(--green)}
+.ord-credit{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:14px;background:var(--greenSoft);color:var(--green);font-size:13px;font-weight:700}
+.ord-credit b{font-size:20px;font-weight:600}
+
+/* ---- the order screen from a WhatsApp message: what they said ---- */
+.nw-td.skip{box-shadow:inset 0 0 0 2px rgba(111,220,176,.35)}
+.nw-td.skip i{width:9px;height:2px;border-radius:2px;background:rgba(111,220,176,.6)}
+.nw-asksaid{padding:10px 12px;border-radius:4px 12px 12px 4px;background:var(--bg);box-shadow:inset 3px 0 0 var(--green);font-size:13px;line-height:1.4;color:var(--ink2);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.cht-wwait{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;background:var(--amberSoft);color:var(--amberInk);font-family:var(--mono);font-size:12px;font-weight:600}
+.cht-wsaid{padding:10px 12px;border-radius:4px 14px 14px 4px;background:var(--bg);box-shadow:inset 3px 0 0 var(--green);font-size:14px;line-height:1.45;color:var(--ink2);display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.cht-wnote{text-align:center;font-size:12px;font-weight:600;color:var(--ink3)}
+
+/* ---- Today: tell them the new price ---- */
+.tdy-tell{background:#fff;border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 2px rgba(22,32,60,.05),0 8px 22px rgba(22,32,60,.07),inset 0 0 0 1.5px var(--sky);animation:sxUpIn .4s ease both}
+.tdy-th{display:flex;align-items:center;gap:10px}
+.tdy-th .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.tdy-th .tx b{font-size:15px;line-height:1.25}
+.tdy-th .tx span{font-size:12px;font-weight:600;color:var(--ink3)}
+.tdy-tav{position:relative;width:42px;height:42px;border-radius:999px;flex:none;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700}
+.tdy-tav .b{position:absolute;right:-4px;bottom:-4px;border-radius:999px;box-shadow:0 0 0 2px #fff;display:flex}
+.tdy-tchip{padding:4px 9px;border-radius:999px;background:var(--skySoft);color:var(--sky);font-size:11px;font-weight:700;white-space:nowrap}
+.tdy-tline{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;align-items:center;gap:8px;padding:10px 12px;border-radius:14px;background:var(--soft)}
+.tdy-tline .tx{min-width:0;display:flex;flex-direction:column;gap:1px}
+.tdy-tline .tx b{font-size:13px;font-weight:700}
+.tdy-tline .tx small{font-size:11px;font-weight:600;color:var(--ink3)}
+.tdy-tline .was{font-size:13px;color:var(--ink3);text-decoration:line-through}
+.tdy-tline .now{font-size:16px;font-weight:600;color:var(--sky)}
+.tdy-tmore{font-size:12px;font-weight:600;color:var(--ink3);padding:0 2px}
+.tdy-tsum{display:flex;align-items:center;justify-content:space-between;padding:0 2px;font-size:12px;font-weight:600;color:var(--ink3)}
+.tdy-tsum .n{font-size:14px;color:var(--ink)}
+.tdy-tsum .d{color:var(--amberInk)}
+.tdy-tact{display:flex;gap:8px}
+.tdy-tact .sx-btn{flex:1;box-shadow:none}
+.tdy-tdone{width:52px;height:52px;flex:none;border:none;border-radius:16px;background:var(--soft);color:var(--ink);display:flex;align-items:center;justify-content:center}
+
+/* ---- the customer: a promise to pay ---- */
+.cu-bhb{display:flex;align-items:center;gap:6px}
+.cu-prombtn{display:inline-flex;align-items:center;gap:5px;height:32px;padding:0 11px;border:none;border-radius:999px;background:var(--skySoft);color:var(--sky);font-size:13px;font-weight:700}
+.cu-prom{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;background:var(--skySoft);color:var(--sky);font-size:12px;font-weight:600;min-width:0}
+.cu-prom .ell{flex:1;min-width:0;color:var(--ink2)}
+.cu-prom .w{font-weight:700;white-space:nowrap}
+.cu-prom.kept{background:var(--greenSoft);color:var(--green)}
+.cu-prom.broken{background:var(--crimsonSoft);color:var(--crimson)}
+.cu-prom .n{padding:2px 7px;border-radius:999px;background:var(--crimson);color:#fff;font-size:11px;font-weight:700;white-space:nowrap}
+.cu-phead{display:flex;align-items:center;gap:12px}
+.cu-pico{width:44px;height:44px;border-radius:14px;background:var(--skySoft);color:var(--sky);display:flex;align-items:center;justify-content:center;flex:none}
+.cu-phead .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.cu-phead .tx b{font-size:18px}
+.cu-phead .tx span{font-size:12px;font-weight:600;color:var(--ink3)}
+.cu-pbig{display:flex;align-items:baseline;justify-content:center;gap:8px}
+.cu-pbig .u{font-size:13px;font-weight:700;color:var(--ink3)}
+.cu-pbig .m,.cu-pbig input{font-size:40px;font-weight:600;letter-spacing:-.03em;color:var(--ink)}
+.cu-pbig input{width:100%;max-width:240px;border:none;outline:none;background:transparent;text-align:center;font-family:var(--mono);padding:0;border-bottom:2px solid var(--line)}
+.cu-pwhat{text-align:center;font-size:12px;font-weight:600;color:var(--ink3);margin-top:-8px}
+.cu-pchips{display:flex;gap:8px}
+.cu-pchip{flex:1;min-width:0;height:46px;border:none;border-radius:14px;background:#fff;box-shadow:inset 0 0 0 1px var(--line);color:var(--ink);font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px}
+.cu-pchip.on{background:var(--navy);color:#fff;box-shadow:none}
+.cu-pwhen{display:flex;flex-direction:column;gap:6px}
+.cu-plab{display:flex;justify-content:space-between;gap:8px;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--ink3)}
+.cu-plab b{letter-spacing:0;color:var(--ink);font-size:12px}
+.cu-pdays{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cu-pdays button{height:44px;border:none;border-radius:10px;background:#fff;box-shadow:inset 0 0 0 1px var(--line);color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:0}
+.cu-pdays button small{font-size:9px;font-weight:700;opacity:.7}
+.cu-pdays button .m{font-size:14px;font-weight:600}
+.cu-pdays button.on{background:var(--navy);color:#fff;box-shadow:none}
+.cu-plater{position:relative;align-self:center;display:inline-flex;align-items:center;gap:6px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--sky)}
+.cu-plater input{position:absolute;inset:0;opacity:0;width:100%}
+.cu-pwho{display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;font-weight:600;color:var(--ink3)}
 /* ---- Today (5a_today.js) ---- */
 .tdy-c44{width:44px;height:44px}
 .tdy-goal{position:relative;width:92px;height:92px;flex:none;border:none;background:none;padding:0;color:#fff;display:block}
@@ -1960,7 +2121,7 @@ async function selectAll(table, keyCol){
 function monthStartISO(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-01'; }
 
 async function loadAll(){
-  const [suppliers, customers, debtLog, products, prices, stock, lots, quotes, links, settingsR, cashR, staff, tripsR, targetsR, stmR] = await Promise.all([
+  const [suppliers, customers, debtLog, products, prices, stock, lots, quotes, links, settingsR, cashR, staff, tripsR, targetsR, stmR, membersR, promises, asks] = await Promise.all([
     selectAll('suppliers'), selectAll('customers'), selectAll('customer_debt_log'), selectAll('products'), selectAll('prices'),
     selectAll('stock', 'key'), selectAll('stock_lots'), selectAll('saved_quotes'), selectAll('product_links').catch(() => []),
     sb.from('app_settings').select('presets').eq('shop_id', S.shopId).maybeSingle(),
@@ -1972,6 +2133,12 @@ async function loadAll(){
     sb.from('manager_notes').select('*').eq('shop_id', S.shopId).eq('kind', 'target').eq('status', 'open').limit(50).then(r => r, () => ({ data: [] })),
     // Statements already sent (0101); Sales may add one (statement.send).
     sb.from('statements_sent').select('*').eq('shop_id', S.shopId).order('sent_on', { ascending: false }).limit(500).then(r => r, () => ({ data: [] })),
+    // Who holds which role: the Manager decides prices under the shop's, credit and voids (docs/decision-rights.md).
+    sb.from('shop_members').select('user_id, role').eq('shop_id', S.shopId).then(r => r, () => ({ data: [] })),
+    // Promises to pay (0089); Sales may add one (promise.record, 0121). null: not on this database.
+    selectAll('payment_promises').catch(() => null),
+    // Asks to the Manager for a void or a credit note (0123). null: not on this database, and the button stays away.
+    sb.from('invoice_asks').select('*').eq('shop_id', S.shopId).gte('created_at', new Date(Date.now() - 120 * 864e5).toISOString()).then(r => r.error ? null : r.data || [], () => null),
   ]);
   const presets = (settingsR && settingsR.data && settingsR.data.presets) || {};
   const debtBy = {};
@@ -2007,6 +2174,10 @@ async function loadAll(){
       createdAt: t.created_at, assignedAt: t.assigned_at, acceptedAt: t.accepted_at, collectedAt: t.collected_at, note: t.note || '', lines: Array.isArray(t.lines) ? t.lines : [] })),
     targets: ((targetsR && targetsR.data) || []).map(r => ({ id: r.id, date: r.date, body: r.body || {}, status: r.status })),
     statementsSent: (stmR && stmR.data) || [],
+    presetCreditHold: presets.creditHold || null,
+    members: (membersR && membersR.data) || [],
+    promises: promises == null ? null : promises.map(rowToPromise),
+    asks: asks == null ? null : asks.map(rowToAsk),
   };
   S.loadedAt = Date.now();
   saveSnapshot();
@@ -2018,6 +2189,8 @@ function rowToQuote(q){
     client: { name: '', phone: '' }, items: [], savedAt: null, payments: [], customerId: null, debtCharged: 0, charges: [], credit: null,
     ...(q.payload || {}) };
 }
+function rowToPromise(r){ return { id: Number(r.id), customerId: String(r.customer_id), promisedOn: r.promised_on, madeOn: r.made_on, amount: r.amount == null ? null : Number(r.amount), note: r.note || '' }; }
+function rowToAsk(r){ return { id: r.id, quoteId: r.quote_id, customerId: r.customer_id, kind: r.kind, amount: Number(r.amount) || 0, reason: r.reason || '', note: r.note || '', askedBy: r.asked_by, askedByName: r.asked_by_name || '', status: r.status, decidedAt: r.decided_at, createdAt: r.created_at }; }
 async function refreshQuotes(){
   try { const rows = await selectAll('saved_quotes'); S.data.savedQuotes = rows.map(rowToQuote); S.loadedAt = Date.now(); saveSnapshot(); render(); }
   catch (e) { if (!isNetworkError(e)) console.warn(e); }
@@ -2351,7 +2524,7 @@ function linePriceToConfirm(it){
    Three facts beside the box: the shop's price (its markup rule), what
    this customer usually pays, and -- never shown, only obeyed -- the
    cost, which is the floor. A price the salesperson types carries who
-   set it and why the owner should look:
+   set it and why the Manager decides it (docs/decision-rights.md):
      under    below the shop's price
      nomargin the shop has a cost but no selling rule; they set it
      nocost   no cost known yet; quoted, to be confirmed            */
@@ -2378,10 +2551,55 @@ function priceNoteFor(it, v){
 }
 // Below cost is refused wherever the cost is known.
 function priceTooLow(it, v){ const cost = lineCost(it); return cost != null && v < cost; }
-const PRICE_TAG = { under: ['var(--sky)', 'your price'], nomargin: ['var(--amberInk)', 'your price · owner reviews'], nocost: ['var(--ink3)', 'to be confirmed'] };
-function priceTagHTML(it){
-  const t = it && it.priceBy && PRICE_TAG[it.priceNote]; if (!t) return '';
-  return `<span class="sx-ptag" style="color:${t[0]}"><i style="background:${t[0]}"></i>${t[1]}</span>`;
+
+/* ---- who decides: the Manager (shop_members role 'manager') ----
+   Named by their staff record; "the Manager" when the shop has none yet. */
+// The shop's hold line in days (presets.creditHold, 21 when unset), as the Manager's app reads it.
+function holdDays(){ const h = D().presetCreditHold; return h && Number(h.days) > 0 ? Number(h.days) : 21; }
+/* The credit hold, read as the Manager's app reads it (manager.html
+   creditCase): with this order they go over their credit limit, or they
+   have owed past the hold line. Such an order waits in Checking for the
+   Manager's yes (payload.creditCheck). */
+function creditHoldFor(c, amt){
+  if (!c) return null;
+  const debt = Number(c.debt) || 0, limit = custLimit(c), withIt = debt + Math.max(0, Number(amt) || 0);
+  const over = limit > 0 && withIt > limit, age = debt > 0 ? custOldestAge(c) : 0, old = age > holdDays();
+  return over || old ? { over, old, age, limit, withIt } : null;
+}
+function mgrMember(){ return (D().members || []).find(m => m.role === 'manager') || null; }
+function mgrFull(){ const m = mgrMember(); const st = m ? (D().staff || []).find(s => s.userId && s.userId === m.user_id) : null; return st && st.name ? String(st.name).trim() : ''; }
+function mgrName(){ return firstWord(mgrFull()) || 'the Manager'; }
+function ownerName(){ const m = (D().members || []).find(x => x.role === 'owner'); const st = m ? (D().staff || []).find(s => s.userId && s.userId === m.user_id) : null; return st && st.name ? firstWord(st.name) : ''; }
+// Their initials, from the full name (Ruth Nakato: RN); fullName is who answered, when known.
+function mgrFace(size, fullName){ const n = String(fullName || mgrFull() || 'Manager'); return `<span class="sx-mgr" style="width:${size}px;height:${size}px;font-size:${Math.max(7, Math.round(size * .42))}px" aria-hidden="true">${esc(initials(n))}</span>`; }
+
+/* ---- the Manager's answer on a price (payload.items[].priceReview) ----
+   { state: 'approved' | 'changed', price, was, by, byName, at }, written
+   by the Manager's app (price.approve). A price under the shop's, or one
+   where the shop has no selling rule, waits for it. An answer is for the
+   figure it named: change the price after, and it waits again. */
+const PRICE_DECIDES = { under: true, nomargin: true };
+function priceReviewState(it){
+  if (!it || !it.priceBy || !PRICE_DECIDES[it.priceNote]) return null;
+  const r = it.priceReview;
+  if (r && (r.state === 'approved' || r.state === 'changed') && Math.round(Number(r.price)) === Math.round(Number(it.sellPrice))) return r.state;
+  return 'wait';
+}
+function priceReviewer(it){ const r = it && it.priceReview; return (r && firstWord(r.byName)) || mgrName(); }
+function priceReviewMs(it){ const v = it && it.priceReview && it.priceReview.at; if (v == null || v === '') return 0; const n = Number(v); return isFinite(n) && n > 1e11 ? n : (Date.parse(v) || 0); }
+// A changed price the customer has not been told yet (priceToldAt, written when they are).
+function priceToTell(it){ return priceReviewState(it) === 'changed' && !(Date.parse(it.priceToldAt || '') >= priceReviewMs(it)); }
+function pricesWaiting(q){ return (q.items || []).filter(it => priceReviewState(it) === 'wait'); }
+/* The tag under a line. chip: the order page's pill, with the Manager's face. */
+function priceTagHTML(it, chip){
+  if (!it || !it.priceBy) return '';
+  const st = priceReviewState(it), r = it.priceReview || {};
+  if (st === 'wait') return chip ? `<span class="sx-ptag chip wait">${mgrFace(18)}<i class="sx-blink"></i>waiting for ${esc(mgrName())}</span>`
+    : `<span class="sx-ptag" style="color:var(--amberInk)"><i style="background:var(--amberInk)"></i>your price · waiting for ${esc(mgrName())}</span>`;
+  if (st === 'approved') return `<span class="sx-ptag chip ok">${mgrFace(18, r.byName)}${ic('tick', 11, 'style="stroke-width:3"')}approved by ${esc(priceReviewer(it))}</span>`;
+  if (st === 'changed') return `<span class="sx-ptag chip chg">${mgrFace(18, r.byName)}<span>${esc(priceReviewer(it))} set <span class="m">${n0(r.price)}</span>${Number(r.was) > 0 ? ` · you said <span class="m">${n0(r.was)}</span>` : ''}</span></span>`;
+  if (it.priceNote === 'nocost') return `<span class="sx-ptag" style="color:var(--ink3)"><i style="background:var(--ink3)"></i>to be confirmed</span>`;
+  return '';
 }
 
 // 112191: the shelf's one unit and pack.
@@ -2822,7 +3040,7 @@ function viewToday(){
   const waiting = (S.wa && S.wa.convs) ? waWaiting() : [];
   const ask = typeof waAsks === 'function' ? waAsks()[0] || null : null;
   const chatRows = tdyChatRows(waiting, ask);
-  const needs = needsYou(), me = firstWord(myName()), greet = greeting() + (me ? ', ' + me : '');
+  const needs = needsYou(), tells = tdyTells(), me = firstWord(myName()), greet = greeting() + (me ? ', ' + me : '');
   return `<span id="tdy_ptr" class="tdy-ptr" aria-hidden="true">${ic('refresh', 18)}</span>
   <div class="sx-hero" data-navy-top>
     <div style="display:flex;align-items:center;gap:12px">
@@ -2845,10 +3063,11 @@ function viewToday(){
     </div>
   </div>
   <div class="sx-body" style="gap:10px">
-    <div class="tdy-sec"><span>Needs you</span>${waiting.length ? `<button class="tdy-wait" data-act="tab" data-v="chats">${waiting.length} waiting</button>` : (needs.length ? `<span class="tdy-n">${needs.length} thing${needs.length === 1 ? '' : 's'}</span>` : '')}</div>
+    <div class="tdy-sec"><span>Needs you</span>${waiting.length ? `<button class="tdy-wait" data-act="tab" data-v="chats">${waiting.length} waiting</button>` : (needs.length + tells.length ? `<span class="tdy-n">${needs.length + tells.length} thing${needs.length + tells.length === 1 ? '' : 's'}</span>` : '')}</div>
+    ${tells.map(tdyTellCard).join('')}
     ${ask ? tdyAskCard(ask) : ''}
     ${chatRows.length || needs.length ? `<div class="sx-card sx-list" data-key="tdy-needs">${chatRows.concat(needs.map(tdyNeedRow)).join('')}</div>`
-      : ask ? '' : `<div class="sx-card cht-empty"><span class="cht-emico" style="background:var(--greenSoft);color:var(--green)">${ic('tick', 26)}</span><b>All caught up</b><span>Nothing is waiting on you. Take an order with the red button.</span></div>`}
+      : ask || tells.length ? '' : `<div class="sx-card cht-empty"><span class="cht-emico" style="background:var(--greenSoft);color:var(--green)">${ic('tick', 26)}</span><b>All caught up</b><span>Nothing is waiting on you. Take an order with the red button.</span></div>`}
   </div>`;
 }
 // Ten digits and more step the big figure down a size, so it never runs under the ring.
@@ -2862,14 +3081,34 @@ function tdyGoalRing(frac, pace){
    they said, and the two moves -- reply, or take the order. */
 function tdyAskCard(a){
   const c = a.conv, title = chatTitle(c), late = a.mins != null && a.mins >= 30;
-  const n = (a.items || []).length;
   return `<div class="tdy-ask" data-key="ask-${c.id}">
     <div style="display:flex;align-items:center;gap:10px">${chatFace(title, 42)}
       <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:15px;font-weight:700" title="${esc(title)}">${esc(title)}</span><span style="font-size:12px;font-weight:600;color:var(--ink3)">Wants to buy · on WhatsApp</span></span>
       ${a.mins != null ? `<span class="tdy-clock${late ? ' late' : ''}">${ic('chClock', 12, 'style="stroke-width:2.2"')}${esc(chatWait(a.mins))}</span>` : ''}</div>
     <div class="tdy-bub">${esc(a.text)}</div>
     <div style="display:flex;gap:8px"><button class="tdy-reply" data-act="openchat" data-conv="${c.id}" aria-label="Reply to ${esc(title)}">${ic('chat', 22)}</button>
-      <button class="sx-btn red" style="flex:1;box-shadow:none" data-act="takeorder" data-conv="${c.id}">${ic('chTag', 18, 'style="stroke-width:2.2"')}Take the order${n ? ` · ${n} item${n === 1 ? '' : 's'}` : ''}</button></div>
+      <button class="sx-btn red" style="flex:1;box-shadow:none" data-act="takeorder" data-conv="${c.id}">${ic('chTag', 18, 'style="stroke-width:2.2"')}Take the order</button></div>
+  </div>`;
+}
+/* "Tell them": the Manager changed a price the customer was told, and
+   they have not heard the new one yet. Orders this login took (or nobody
+   recorded taking), newest change first. */
+function tdyTells(){
+  const uid = S.user ? String(S.user.id) : null;
+  return liveOrders().filter(q => (q.takenBy == null || String(q.takenBy) === uid) && (q.items || []).some(priceToTell))
+    .map(q => ({ q, lines: q.items.filter(priceToTell), at: Math.max(...q.items.filter(priceToTell).map(priceReviewMs)) })).sort((a, b) => b.at - a.at).slice(0, 3);
+}
+function tdyTellCard(x){
+  const q = x.q, name = (q.client && q.client.name) || 'Walk-in', first = firstWord(name) || 'them', by = priceReviewer(x.lines[0]), t = tintFor(name);
+  const was = ordWasTotal(q), now = pricedView(q).total, diff = was == null ? 0 : now - was;
+  const rows = x.lines.slice(0, 2).map(it => { const r = it.priceReview, qw = ordQty(it);
+    return `<div class="tdy-tline"><span class="tx"><b class="ell">${esc(ordItemName(it))}</b><small><span class="m">${n0(qw.n)}</span> ${esc(qw.u)}</small></span><span class="m was">${n0(r.was)}</span>${ic('chev', 14, 'style="stroke-width:2.4;color:var(--ink3)"')}<span class="m now">${n0(r.price)}</span></div>`; }).join('');
+  return `<div class="tdy-tell" data-key="tell-${q.id}">
+    <div class="tdy-th"><span class="tdy-tav" style="background:${t[0]};color:${t[1]}">${esc(initials(name))}<span class="b">${mgrFace(20, (x.lines[0].priceReview || {}).byName)}</span></span>
+      <span class="tx"><b>Tell ${esc(first)} the new price</b><span>${esc(by)} changed ${x.lines.length === 1 ? '1 price' : x.lines.length + ' prices'} · ${orderNo(q)}${x.at ? ' · ' + timeOf(x.at) : ''}</span></span><span class="tdy-tchip">Tell them</span></div>
+    ${rows}${x.lines.length > 2 ? `<span class="tdy-tmore">+ ${x.lines.length - 2} more on the order</span>` : ''}
+    <div class="tdy-tsum"><span>Order now</span><span><span class="m n">${n0(now)}</span>${diff ? ` <span class="m d">${diff > 0 ? '+' : '−'}${n0(Math.abs(diff))}</span>` : ''}</span></div>
+    <div class="tdy-tact"><button class="tdy-tdone" data-act="toldprice" data-id="${q.id}" aria-label="Done, ${esc(first)} knows">${ic('tick', 22, 'style="stroke-width:2.2"')}</button><button class="sx-btn red" data-act="tellprice" data-id="${q.id}">${ic('chat', 18)}<span class="ell">${first.length <= 9 ? 'Tell ' + esc(first) + ' on WhatsApp' : 'Tell them on WhatsApp'}</span></button></div>
   </div>`;
 }
 /* The other waiting chats, each with the one thing to do about it. */
@@ -3344,12 +3583,15 @@ function ordCollectors(q, views){
 function ordPaperLine(q, it, v){
   const qw = ordQty(it), toc = linePriceToConfirm(it);
   const ico = { tick: ordIc('tick', 12, 'stroke:#0F6B43;stroke-width:3.2'), ask: '<i class="ord-dot ord-ask" style="background:#F5B26B"></i>', amber: '<i class="ord-dot" style="background:#F5B26B"></i>', hollow: '<i class="ord-dot hollow"></i>', truck: `<span class="ord-blink" style="color:#3A3F9B;display:flex">${ordIc('truck', 14, 'stroke-width:1.9')}</span>` }[v.icon] || '';
-  const amt = v.k === 'no' ? '<span class="ord-nf">NOT FOUND</span>' : toc ? '<span class="ord-toprice">to price</span>' : `<span class="m amt">${n0((Number(it.qty) || 0) * quoteItemSellPrice(it))}</span>`;
+  const was = priceReviewState(it) === 'changed' && Number((it.priceReview || {}).was) > 0 ? (Number(it.qty) || 0) * Number(it.priceReview.was) : 0;
+  const amt = v.k === 'no' ? '<span class="ord-nf">NOT FOUND</span>' : toc ? '<span class="ord-toprice">to price</span>' : `<span class="ord-amts"><span class="m amt">${n0((Number(it.qty) || 0) * quoteItemSellPrice(it))}</span>${was ? `<span class="m ord-was">${n0(was)}</span>` : ''}</span>`;
   return `<div class="ord-pl${v.struck ? ' struck' : ''}" data-key="l-${esc(it.lineId)}"><span class="q m">${n0(qw.n)} <small>${esc(qw.u)}</small></span>
-    <span class="st" aria-hidden="true">${ico}</span><span class="nm">${nameHTML(nameParts(it.productId, it.variantIdx, it.productName))}${v.word ? `<span class="w" style="color:${v.col}">${esc(v.word)}</span>` : ''}${priceTagHTML(it)}</span>${amt}</div>`;
+    <span class="st" aria-hidden="true">${ico}</span><span class="nm">${nameHTML(nameParts(it.productId, it.variantIdx, it.productName))}${v.word ? `<span class="w" style="color:${v.col}">${esc(v.word)}</span>` : ''}${priceTagHTML(it, true)}</span>${amt}</div>`;
 }
 function ordPaperHead(q, views){
   const c = ordCount(views), n = views.length, all = n && c.in === n;
+  const wait = pricesWaiting(q).length;
+  if (q.status === 'draft' && wait) return [`${wait} waiting for ${mgrName()}`, '#95530C'];
   if (q.status === 'draft') return [`${c.ok} of ${n} ready`, c.ok === n ? '#0F6B43' : c.ok ? '#0F6B43' : '#767F91'];
   if (q.status === 'awaiting_goods') return [`${c.in + c.short} of ${n} in`, '#3A3F9B'];
   if (q.status === 'preparing') return (q.items || []).some(it => it.pickStatus) ? [`${c.in + c.short} of ${n} packed`, '#95530C'] : [`all ${n} in · packing`, '#0F6B43'];
@@ -3398,7 +3640,7 @@ PAGE.order = ({ id }) => {
   const done = q.status === 'completed';
   const foot = tt.dropped && q.status === 'draft'
     ? `<div class="ord-pf"><span class="l"><b>Total</b><small>if the not-found ${tt.dropped > 1 ? 'lines are' : 'line is'} dropped</small></span><span class="m was">${n0(tt.all)}</span><span class="m now">${n0(tt.kept)}</span></div>`
-    : `<div class="ord-pf"><span class="l"><b>Total${creditTerms(q) ? ' · credit' : ''}</b></span><span class="m now">${n0(tt.all)}${tt.toConfirm ? ` <small>+ ${tt.toConfirm} to price</small>` : ''}</span></div>`;
+    : `<div class="ord-pf"><span class="l"><b>Total${creditTerms(q) ? ' · credit' : ''}</b></span>${ordWasTotal(q) != null && ordWasTotal(q) !== tt.all ? `<span class="m was">${n0(ordWasTotal(q))}</span>` : ''}<span class="m now">${n0(tt.all)}${tt.toConfirm ? ` <small>+ ${tt.toConfirm} to price</small>` : ''}</span></div>${ordToldLine(q)}`;
   const photo = done && q.deliveredPhoto ? (() => { const src = ordPhotoSrc(q.deliveredPhoto), d = ordDeliveredMs(q), st = ordPhotoState(q.deliveredPhoto);
     return `<button class="ord-photo ${st}" data-act="ordphoto" data-id="${q.id}" data-ordphotowrap="${esc(q.deliveredPhoto)}" data-key="ph-${q.id}" aria-label="Delivery photo${d ? ', ' + ordClock(d) : ''}. Tap to enlarge"><img src="${esc(src)}" data-ordphoto="${esc(q.deliveredPhoto)}" alt="">${ordPhotoMsg()}<span class="cap">${ic('camera', 14)}At their door${d ? ` · <span class="m">${ordClock(d)}</span>` : ''}</span><span class="ex">${ordIc('expand', 14, 'stroke-width:2')}</span></button>`; })() : '';
   const cust = q.customerId != null && q.customerId !== '' ? customerById(q.customerId) : null;
@@ -3419,6 +3661,7 @@ PAGE.order = ({ id }) => {
     <div class="ord-head"><span class="ord-handle"></span>
       <div class="ord-who">${ordAv(name, 46)}<span class="tx"><span class="n" title="${esc(name)}">${esc(name)}</span><span class="m s">${orderNo(q)} · ${esc(ordWhen(createdMs(q)))}</span></span><button class="sx-circle" data-act="back" aria-label="Close">${ordIc('close', 16, 'stroke-width:2.2')}</button></div>
       ${ordHeroHTML(q, views)}
+      ${q.status === 'draft' ? ordGateHTML(q, views) : ''}
       <div class="ord-trkw">${ordTrack(q)}</div></div>
     <div class="ord-in">
       ${q.status === 'awaiting_goods' ? ordCollectors(q, views) : ''}
@@ -3428,12 +3671,188 @@ PAGE.order = ({ id }) => {
         ${lines || '<div class="sx-empty" style="padding:14px">No lines on this order</div>'}
         ${foot}
       </div></div>
+      ${ordTellPriceRow(q)}
       ${done && q.invoiced ? `<div class="ord-invrow"><span class="ord-inv">${ordIc('doc', 15, 'stroke:#0F6B43')}Invoice <span class="m">${invoiceLabel(q)}</span></span>${stamp}</div>` : stamp ? `<div class="ord-stampw">${stamp}</div>` : ''}
+      ${q.invoiced && !q.voided ? ordAskRow(q) : ''}
     </div>
   </div>
   <div class="ord-dock">${left}<button class="sx-btn red ord-cta" data-act="tell" data-id="${q.id}">${ordIc('chat', 20, 'stroke-width:2')}<span class="ell">${esc(cta)}</span></button></div>`;
 };
 PAGE.order.bg = '#2A3350';
+
+/* ---------------- the Checking gate ----------------
+   Three tiles, the three things an order waits for before it leaves
+   Checking (docs/decision-rights.md): every supplier's yes, a decision on
+   every price under the shop's, and no credit hold. Read off the order. */
+ICON.ordClock = '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>';
+function ordGateTile(k, ok, v, sub, warn, pulse){
+  const ico = ok ? ordIc('tick', 12, 'stroke-width:3') : warn ? '<b>!</b>' : ordIc('ordClock', 13, 'stroke-width:2.4');
+  return `<span class="ord-gate${ok ? ' ok' : warn ? ' bad' : ' wait'}"><span class="gk"><span class="gi${pulse ? ' ord-ring' : ''}">${ico}</span>${k}</span><span class="gv ell">${v}</span><span class="gs ell">${sub}</span></span>`;
+}
+function ordGateHTML(q, views){
+  const c = ordCount(views), mgr = esc(mgrName()), its = q.items || [];
+  // Suppliers: every bought-in line has their yes.
+  const bought = its.filter(it => it.supplierId && it.supplierId !== '__stock__'), open = c.ask + c.toask;
+  const lastYes = bought.map(it => Date.parse(confirmState(q, it.supplierId).at || '') || 0).reduce((m, x) => Math.max(m, x), 0);
+  const sup = !its.length ? ordGateTile('SUPPLIERS', false, 'Nothing yet', 'no lines') : c.no ? ordGateTile('SUPPLIERS', false, `${c.no} not found`, open ? `${open} still to hear` : 'tell them, or drop it', true)
+    : open ? ordGateTile('SUPPLIERS', false, `${open} to hear from`, c.ask ? 'asking now' : 'the Buyer asks') : ordGateTile('SUPPLIERS', true, bought.length ? 'All said yes' : 'All on our shelf', bought.length && lastYes ? 'by ' + ordClock(lastYes) : 'nothing to ask');
+  // Prices: a decision on every price under the shop's.
+  const decide = its.filter(it => priceReviewState(it)), wait = decide.filter(it => priceReviewState(it) === 'wait');
+  const since = wait.map(it => Date.parse(it.priceAt || '') || 0).filter(Boolean).reduce((m, x) => Math.min(m, x), Infinity);
+  const lastR = decide.map(priceReviewMs).reduce((m, x) => Math.max(m, x), 0);
+  const pri = wait.length ? ordGateTile('PRICES', false, `${wait.length} with ${mgr}`, isFinite(since) ? 'since ' + ordClock(since) : 'waiting', false, true)
+    : decide.length ? ordGateTile('PRICES', true, 'Decided', esc(priceReviewer(decide[0])) + (lastR ? ' · ' + ordClock(lastR) : ''))
+    : ordGateTile('PRICES', true, 'Shop’s prices', 'nothing to decide');
+  // Credit: the hold the Manager's app reads, and their answer (payload.creditCheck).
+  const cust = q.customerId != null && q.customerId !== '' ? customerById(q.customerId) : null;
+  const hold = cust ? creditHoldFor(cust, Math.max(0, pricedView(q).total - (Number(q.amountPaid) || 0))) : null, cc = q.creditCheck || null;
+  const ccBy = cc && cc.byName ? esc(firstWord(cc.byName)) : mgr;
+  const cre = !cust ? ordGateTile('CREDIT', true, 'Cash sale', 'no account')
+    : !hold ? ordGateTile('CREDIT', true, creditTerms(q) ? 'On credit' : 'Cash order', creditTerms(q) ? 'within their limit' : 'no credit needed')
+    : cc && cc.decision === 'release' ? ordGateTile('CREDIT', true, 'Released', ccBy + (cc.at ? ' · ' + ordClock(ordMs(cc.at)) : ''))
+    : cc && cc.decision === 'cash' ? ordGateTile('CREDIT', false, 'Cash first', ccBy + ' asks for cash', true)
+    : ordGateTile('CREDIT', false, `With ${mgr}`, hold.over ? 'over their limit' : `owes ${hold.age} days`, false, true);
+  return `<div class="ord-gates" role="group" aria-label="Leaves Checking when all three say yes">${sup}${pri}${cre}</div>`;
+}
+/* What the order came to before the Manager changed a price; null when nothing was changed. */
+function ordWasTotal(q){
+  const its = q.items || []; if (!its.some(it => priceReviewState(it) === 'changed' && Number((it.priceReview || {}).was) > 0)) return null;
+  return pricedView({ ...q, items: its.map(it => priceReviewState(it) === 'changed' && Number((it.priceReview || {}).was) > 0 ? { ...it, sellPrice: Number(it.priceReview.was) } : it) }).total;
+}
+function ordToldLine(q){
+  const told = (q.items || []).filter(it => priceReviewState(it) === 'changed' && !priceToTell(it)).map(it => Date.parse(it.priceToldAt) || 0).reduce((m, x) => Math.max(m, x), 0);
+  return told ? `<div class="ord-told">${ordIc('tick', 15, 'stroke-width:2.6')}${esc(ordGreet(ordName(q)) || 'They')} told the new price · <span class="m">${ordClock(told)}</span></div>` : '';
+}
+/* A price the Manager changed that the customer has not heard yet. */
+function ordTellPriceRow(q){
+  const lines = (q.items || []).filter(priceToTell); if (!lines.length || q.voided) return '';
+  const first = ordGreet(ordName(q)) || 'them';
+  return `<button class="ord-tellp" data-act="tellprice" data-id="${q.id}">${mgrFace(30, (lines[0].priceReview || {}).byName)}<span class="tx"><b>Tell ${esc(first)} the new price</b><span>${esc(priceReviewer(lines[0]))} changed ${lines.length === 1 ? '1 price' : lines.length + ' prices'}</span></span><span class="go">Tell them</span></button>`;
+}
+function ordPriceText(q){
+  const name = ordGreet(ordName(q) === 'Walk-in' ? '' : ordName(q)) || 'there', lines = (q.items || []).filter(it => priceReviewState(it) === 'changed');
+  const parts = lines.map(it => `${ordItemName(it)} is now ${n0(it.priceReview.price)} each, not ${n0(it.priceReview.was)}`);
+  const was = ordWasTotal(q), now = ordTotals(q).all;
+  return [`Hello ${name}, ${lines.length === 1 ? 'one change' : 'a change'} on your order ${orderNo(q)}: ${ordList(parts)}.`,
+    now > 0 ? `Your order is now ${n0(now)}${was != null && was !== now ? `, not ${n0(was)}` : ''}.` : '', 'Everything else is the same.'].filter(Boolean).join(' ');
+}
+ACT.tellprice = t => {
+  const q = quoteById(t.dataset.id); if (!q) return;
+  openSheet('tell', { id: q.id, text: ordPriceText(q), pic: true, editing: false, price: true });
+  if (S.wa.configured == null) waStatus().then(() => { if (S.sheet && S.sheet.type === 'tell') renderSheet(); });
+};
+/* They know: the changed lines carry when they were told (priceToldAt),
+   written into the order as it is now on the server, so "Tell them"
+   leaves Today. Nothing else on the order changes. */
+async function ordMarkTold(qid){
+  const cur = await sb.from('saved_quotes').select('payload').eq('shop_id', S.shopId).eq('id', qid).maybeSingle();
+  if (cur.error) throw cur.error;
+  if (!cur.data) throw new Error('that order is not on the server');
+  const payload = cur.data.payload || {}, at = new Date().toISOString();
+  const items = (payload.items || []).map(it => priceToTell(it) ? { ...it, priceToldAt: at } : it);
+  const up = await sb.from('saved_quotes').update({ payload: { ...payload, items } }).eq('shop_id', S.shopId).eq('id', qid);
+  if (up.error) throw up.error;
+  const q = quoteById(qid); if (q) q.items = (q.items || []).map(it => priceToTell(it) ? { ...it, priceToldAt: at } : it);
+  S.loadedAt = Date.now(); saveSnapshot();
+}
+ACT.toldprice = async t => {
+  if (S.ordTelling) return; S.ordTelling = true;
+  try { await ordMarkTold(Number(t.dataset.id)); haptic('success'); toast('Marked as told'); }
+  catch (e) { toast(isNetworkError(e) ? 'No connection — try again when you have signal' : 'Not saved: ' + (e.message || e), 5000); }
+  finally { S.ordTelling = false; render(); }
+};
+
+/* ---------------- something wrong after the sale ----------------
+   Sales proposes, the Manager decides (invoice.void, credit_note.raise).
+   The ask is a row in invoice_asks (0123); nothing on the invoice changes
+   until the Manager says yes. Shown only where that table exists. */
+ICON.ordBack = '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>';
+ICON.ordVoid = '<circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/>';
+ICON.ordWarn = '<path d="M12 3 2 20h20zM12 9v5M12 17v.5"/>';
+function ordAsks(q){ return (D().asks || []).filter(x => String(x.quoteId) === String(q.id)).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))); }
+function ordAskOpen(q){ return ordAsks(q).find(x => x.status === 'sent') || null; }
+function ordCredited(q, idx){ return (q.creditNotes || []).filter(cn => cn && !cn.voided).reduce((s, cn) => s + (cn.lines || []).filter(l => l.idx === idx).reduce((t, l) => t + (Number(l.qty) || 0), 0), 0); }
+function ordAskRow(q){
+  if (D().asks == null) return '';
+  const open = ordAskOpen(q), last = ordAsks(q)[0], mgr = mgrName();
+  if (open) return `<div class="ord-askrow wait">${mgrFace(30)}<span class="tx"><b>Asked ${esc(mgr)} · ${open.kind === 'void' ? 'void it' : 'credit note'} <span class="m">${n0(open.amount)}</span></b><span>${esc(ordAgo(Date.parse(open.createdAt)))} · nothing changes until they say yes</span></span><button class="ord-askx" data-act="ordaskback" data-v="${esc(open.id)}">Take back</button></div>`;
+  const told = last && (last.status === 'accepted' || last.status === 'declined') && Date.now() - Date.parse(last.decidedAt || last.createdAt) < 7 * 864e5
+    ? `<span class="ord-askdone ${last.status}">${last.status === 'accepted' ? ordIc('tick', 13, 'stroke-width:3') : ordIc('close', 12, 'stroke-width:2.6')}${esc(mgr)} ${last.status === 'accepted' ? 'said yes' : 'said no'} to the ${last.kind === 'void' ? 'void' : 'credit note'}</span>` : '';
+  return `${told}<button class="ord-wrong" data-act="ordfix" data-id="${q.id}">${ordIc('ordWarn', 16, 'stroke-width:2')}Something wrong with this sale?</button>`;
+}
+ACT.ordfix = t => openSheet('ordfix', { id: Number(t.dataset.id) });
+SHEET.ordfix = ({ id }) => {
+  const q = quoteById(id); if (!q) return '';
+  const mgr = mgrName(), opt = (act, icon, tint, title, sub) => `<button class="ord-fixopt" data-act="${act}" data-id="${q.id}"><span class="fi" style="background:${tint[0]};color:${tint[1]}">${ordIc(icon, 20, 'stroke-width:1.9')}</span><span class="tx"><b>${title}</b><span>${sub}</span></span><span class="who">${mgrFace(28)}<small>${esc(mgr === 'the Manager' ? 'Manager' : mgr)}</small></span></button>`;
+  return `<div class="ord-fixh"><span class="fi" style="background:var(--amberSoft);color:var(--amberInk)">${ordIc('ordWarn', 22, 'stroke-width:1.8')}</span><span class="tx"><b>Something wrong with this sale?</b><span>${esc(ordName(q))} · ${invoiceLabel(q)}</span></span><button class="sx-circle light" data-act="closesheet" aria-label="Close">${ic('close', 15)}</button></div>
+    ${opt('ordaskcredit', 'ordBack', ['var(--greenSoft)', 'var(--green)'], 'They’re bringing goods back', 'A return, and a credit note for it')}
+    ${opt('ordaskvoid', 'ordVoid', ['var(--crimsonSoft)', 'var(--crimson)'], 'This invoice shouldn’t exist', 'Raised twice, or for the wrong customer')}
+    <span class="ord-fixnote">You propose · nothing changes until ${esc(mgr)} says yes</span>`;
+};
+ACT.ordaskcredit = t => openSheet('ordask', { id: Number(t.dataset.id), kind: 'credit', qty: {}, reason: 'Damaged' });
+ACT.ordaskvoid = t => openSheet('ordask', { id: Number(t.dataset.id), kind: 'void', reason: 'Raised twice' });
+// The invoice this one may repeat: the same customer, the same total, within two days.
+function ordTwin(q){
+  const total = Math.round(quoteTotal(q)), day = String(q.invoicedAt || q.date || '').slice(0, 10);
+  return D().savedQuotes.find(x => x.id !== q.id && x.invoiced && !x.voided && Math.round(quoteTotal(x)) === total
+    && (q.customerId != null ? String(x.customerId) === String(q.customerId) : ordName(x) === ordName(q))
+    && Math.abs(daysBetween(String(x.invoicedAt || x.date || '').slice(0, 10), day)) <= 2) || null;
+}
+SHEET.ordask = a => {
+  const q = quoteById(a.id); if (!q) return '';
+  const mgr = mgrName(), cust = q.customerId != null ? customerById(q.customerId) : null, name = ordName(q), first = ordGreet(name) || 'They', total = quoteTotal(q);
+  const chips = opts => `<div class="ord-chips" role="radiogroup" aria-label="Why">${opts.map(o => `<button role="radio" aria-checked="${a.reason === o}" data-act="ordaskwhy" data-v="${esc(o)}">${esc(o)}</button>`).join('')}</div>`;
+  const note = `<label class="ord-asknote">${ic('pen', 15)}<input data-in="ordasknote" value="${esc(a.note || '')}" placeholder="A word for ${esc(mgr)}" aria-label="Note for ${esc(mgr)}"></label>`;
+  const owes = cust ? Number(cust.debt) || 0 : balanceDue(q);
+  if (a.kind === 'void') {
+    const tw = ordTwin(q), card = (x, me) => `<span class="ord-vinv${me ? ' me' : ''}"><span class="m">${invoiceLabel(x)}</span><small>${esc(dayLabel(String(x.invoicedAt || x.date || '').slice(0, 10)))}</small><span class="m v">${n0(quoteTotal(x))}</span></span>`;
+    const after = Math.max(0, owes - balanceDue(q));
+    return `<div class="ord-fixh"><span class="fi" style="background:var(--crimsonSoft);color:var(--crimson)">${ordIc('ordVoid', 22, 'stroke-width:1.9')}</span><span class="tx"><b>Void ${invoiceLabel(q)}?</b><span>${esc(name)} · <span class="m">${n0(total)}</span></span></span><button class="sx-circle light" data-act="closesheet" aria-label="Close">${ic('close', 15)}</button></div>
+      ${tw ? `<div class="ord-vpair">${card(tw)}<b class="m">=</b>${card(q, true)}</div>` : ''}
+      <span class="ord-lab">WHY</span>${chips(['Raised twice', 'Wrong customer', 'Wrong order'])}
+      <div class="ord-owe"><span>${esc(first)} would owe</span><span><span class="m was">${n0(owes)}</span><b class="m">${n0(after)}</b></span></div>
+      ${note}
+      <button class="sx-btn red" data-act="ordasksend" ${S.ordAsking ? 'disabled' : ''}>Ask ${esc(mgr)} to void it</button>
+      <span class="ord-fixnote">${mgrFace(22)}${esc(mgr)} decides · Accounts sees it</span>`;
+  }
+  const lines = (q.items || []).map((it, idx) => ({ it, idx, price: quoteItemSellPrice(it), max: Math.max(0, (Number(it.qty) || 0) - ordCredited(q, idx)) })).filter(l => l.max > 0 && l.price > 0);
+  const off = lines.reduce((s, l) => s + Math.min(l.max, a.qty[l.idx] || 0) * l.price, 0);
+  return `<div class="ord-fixh"><span class="fi" style="background:var(--greenSoft);color:var(--green)">${ordIc('ordBack', 22, 'stroke-width:1.9')}</span><span class="tx"><b>${esc(first)} is bringing goods back</b><span>${invoiceLabel(q)} · <span class="m">${n0(total)}</span></span></span><button class="sx-circle light" data-act="closesheet" aria-label="Close">${ic('close', 15)}</button></div>
+    <div class="ord-retl">${lines.length ? lines.map(l => { const n = Math.min(l.max, a.qty[l.idx] || 0), qw = ordQty(l.it);
+      return `<div class="ord-ret${n ? ' on' : ''}" data-key="r-${l.idx}"><span class="tx"><b class="ell">${esc(ordItemName(l.it))}</b><span>took <span class="m">${n0(qw.n)}</span> ${esc(qw.u)} · <span class="m">${n0(l.price)}</span> each</span></span><span class="ord-retstep"><button data-act="ordretq" data-i="${l.idx}" data-d="-1" aria-label="Fewer back">−</button><b class="m">${n}</b><button data-act="ordretq" data-i="${l.idx}" data-d="1" aria-label="More back">+</button></span></div>`; }).join('') : '<span class="ord-fixnote">Every line is credited already</span>'}</div>
+    <span class="ord-lab">WHY</span>${chips(['Damaged', 'Wrong item', 'Too many'])}
+    <div class="ord-credit"><span>Credit to ${esc(first)}</span><b class="m">${n0(off)}</b></div>
+    ${note}
+    <button class="sx-btn red" data-act="ordasksend" ${off > 0 && !S.ordAsking ? '' : 'disabled'}>Send to ${esc(mgr)}</button>
+    <span class="ord-fixnote">${mgrFace(22)}${esc(mgr)} raises the credit note · Accounts sees it</span>`;
+};
+ACT.ordaskwhy = t => { S.sheet.args.reason = t.dataset.v; haptic('light'); renderSheet(); };
+ACT['in:ordasknote'] = t => { if (S.sheet) S.sheet.args.note = t.value; };
+ACT.ordretq = t => {
+  const a = S.sheet.args, q = quoteById(a.id), i = Number(t.dataset.i), it = q && q.items[i]; if (!it) return;
+  const max = Math.max(0, (Number(it.qty) || 0) - ordCredited(q, i));
+  a.qty[i] = Math.max(0, Math.min(max, (a.qty[i] || 0) + Number(t.dataset.d))); haptic('light'); renderSheet();
+};
+ACT.ordasksend = async () => {
+  if (S.ordAsking || !S.sheet || S.sheet.type !== 'ordask') return;
+  const a = S.sheet.args, q = quoteById(a.id); if (!q) return;
+  const lines = a.kind === 'void' ? [] : (q.items || []).map((it, idx) => ({ idx, name: it.productName || '', qty: Math.min(Math.max(0, (Number(it.qty) || 0) - ordCredited(q, idx)), a.qty[idx] || 0), price: quoteItemSellPrice(it) })).filter(l => l.qty > 0).map(l => ({ ...l, amount: Math.round(l.qty * l.price) }));
+  const amount = a.kind === 'void' ? Math.round(quoteTotal(q)) : lines.reduce((s, l) => s + l.amount, 0); if (!(amount > 0)) return;
+  S.ordAsking = true; renderSheet();
+  try {
+    const row = { shop_id: S.shopId, quote_id: q.id, customer_id: q.customerId != null && q.customerId !== '' ? String(q.customerId) : null, kind: a.kind, lines, amount, reason: a.reason || null, note: String(a.note || '').trim() || null, asked_by: S.user.id, asked_by_name: myName(), asked_role: S.role, status: 'sent' };
+    const r = await sb.from('invoice_asks').insert(row).select().maybeSingle(); if (r.error) throw r.error;
+    (D().asks ||= []).push(rowToAsk(r.data || { ...row, id: 'local-' + Date.now(), created_at: new Date().toISOString() })); S.loadedAt = Date.now(); saveSnapshot();
+    S.ordAsking = false; haptic('success'); closeSheet(); toast(`Asked ${mgrName()} — you’ll see the answer on the order`); render();
+  } catch (e) { S.ordAsking = false; renderSheet(); toast(isNetworkError(e) ? 'No connection — nothing was sent' : 'Not sent: ' + (e.message || e), 5000); }
+};
+ACT.ordaskback = async t => {
+  if (S.ordAsking) return; S.ordAsking = true;
+  try { const r = await sb.rpc('withdraw_invoice_ask', { p_id: t.dataset.v }); if (r.error) throw r.error;
+    const x = (D().asks || []).find(k => String(k.id) === String(t.dataset.v)); if (x) x.status = 'withdrawn'; saveSnapshot(); haptic('light'); toast('The ask is taken back'); }
+  catch (e) { toast('Not taken back: ' + (e.message || e), 5000); }
+  finally { S.ordAsking = false; render(); }
+};
 
 /* ---------------- what to tell them ---------------- */
 function ordTellText(q){
@@ -3485,7 +3904,10 @@ function ordPictureRows(q){
     else if (v.k === 'wait') tag = 'BEING BOUGHT';
     else if (v.k === 'short') tag = v.word.replace(/^SHORT · /, '');
     if (v.k === 'no') tag = '';
-    return { qty: qw.n, unit: qw.u, name: ordItemName(it), tag, tagCol, struck: v.k === 'no', amount: v.k === 'no' ? null : toc ? 'to price' : (Number(it.qty) || 0) * quoteItemSellPrice(it) };
+    // A price the Manager changed shows what it was, struck, beside what it is.
+    const r = it.priceReview || {}, was = !toc && v.k !== 'no' && priceReviewState(it) === 'changed' && Number(r.was) > 0 ? (Number(it.qty) || 0) * Number(r.was) : null;
+    if (was != null && !tag) { tag = `NEW PRICE · ${n0(r.price)} EACH`; tagCol = '#1A5A8A'; }
+    return { qty: qw.n, unit: qw.u, name: ordItemName(it), tag, tagCol, struck: v.k === 'no', was, amount: v.k === 'no' ? null : toc ? 'to price' : (Number(it.qty) || 0) * quoteItemSellPrice(it) };
   });
 }
 function ordDrawPicture(canvas, q){
@@ -3517,7 +3939,10 @@ function ordDrawPicture(canvas, q){
     c.textAlign = 'right';
     if (r.amount == null) { c.font = '700 11px ' + SANS; c.fillStyle = '#8E2A22'; c.fillText('NOT FOUND', w - 32, base); }
     else if (r.amount === 'to price') { c.font = '700 12px ' + SANS; c.fillStyle = '#95530C'; c.fillText('price to confirm', w - 32, base); }
-    else { c.font = '600 14px ' + MONO; c.fillStyle = INK; c.fillText(f(r.amount), w - 32, base); }
+    else {
+      c.font = '600 14px ' + MONO; c.fillStyle = INK; c.fillText(f(r.amount), w - 32, base);
+      if (r.was != null) { const aw = c.measureText(f(r.amount)).width; c.font = '500 12px ' + MONO; c.fillStyle = '#8A93A3'; const ww = c.measureText(f(r.was)).width, x = w - 32 - aw - 12; c.fillText(f(r.was), x, base); c.strokeStyle = '#8A93A3'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(x - ww, base - 4); c.lineTo(x, base - 4); c.stroke(); }
+    }
     c.textAlign = 'left';
     if (i < rows.length - 1) { c.strokeStyle = '#E2DED6'; c.lineWidth = 1; c.setLineDash([4, 3]); c.beginPath(); c.moveTo(32, y + rowH - 8); c.lineTo(w - 32, y + rowH - 8); c.stroke(); c.setLineDash([]); }
     y += rowH;
@@ -3586,6 +4011,7 @@ SHEET.tell = a => {
       <div class="opts">${send ? `<button class="ord-sw${a.pic ? ' on' : ''}" role="switch" aria-checked="${!!a.pic}" data-act="tellpic"><i>${a.pic ? ordIc('tick', 12, 'stroke-width:3') : ''}</i>Order picture</button>` : `<span class="ord-note">${note}</span>`}
         <button class="ord-edit" data-act="telledit">${ic(a.editing ? 'tick' : 'pen', 15)}${a.editing ? 'Done' : 'Edit'}</button></div>
       ${sliderHTML('tell', send ? `Slide to send to ${first}` : 'Slide to open WhatsApp', { disabled: !!S.ordSending })}
+      ${a.price ? `<span class="ord-note c">The card leaves Today once it’s ${send ? 'sent' : 'opened in WhatsApp'}</span>` : ''}
     </div></div>`;
 };
 ACT['in:telltext'] = t => { if (S.sheet && S.sheet.type === 'tell') S.sheet.args.text = t.value; ordFitText(t); };
@@ -3602,13 +4028,17 @@ ACT['slide:tell'] = async () => {
   if (!conv) {
     const ph = q.client && phoneDigits(q.client.phone);
     window.open(`https://wa.me/${ph || ''}?text=${encodeURIComponent(text)}`, '_blank');
-    closeSheet(); return;
+    closeSheet();
+    if (a.price) ordMarkTold(q.id).then(render).catch(e => toast('Not marked as told: ' + (e.message || e), 5000));
+    return;
   }
   S.ordSending = true; toast('Sending to ' + first + '…');
   try {
     if (a.pic) { const blob = await orderPictureBlob(q); await waSendImage(conv.id, blob, text); }
     else await waSendText(conv.id, text);
-    S.ordSending = false; haptic('success'); toast('Sent to ' + first + ' on WhatsApp'); closeSheet(); render();
+    S.ordSending = false; haptic('success'); toast('Sent to ' + first + ' on WhatsApp'); closeSheet();
+    if (a.price) { try { await ordMarkTold(q.id); } catch (e) { toast('Sent, but not marked as told: ' + (e.message || e), 5000); } }
+    render();
   } catch (e) {
     S.ordSending = false; toast('Not sent: ' + (e.message || e), 5000); renderSheet();
   }
@@ -3627,6 +4057,8 @@ ICON.nmUp = '<path d="M4 18l6-6 4 4 6-8"/>';
 ICON.nmDown = '<path d="M4 6l6 6 4-4 6 8"/>';
 ICON.nmFlag = '<path d="M5 21V4M5 4h12l-2.5 4L17 12H5"/>';
 
+// Goals are the Manager's (docs/decision-rights.md): the goal page says whose it is.
+function nmGoalBy(){ const m = mgrName(); return m === 'the Manager' ? 'SET BY THE MANAGER' : `SET BY ${m.toUpperCase()} · MANAGER`; }
 /* ---------------- the owner's measure ---------------- */
 function nmInvoiceDate(q){ return String(q.invoicedAt || q.date || '').slice(0, 10); }
 // anInvoicesInRange: completed, invoiced, not voided; dated by invoicedAt, else the quote date.
@@ -3855,8 +4287,8 @@ PAGE.goal = () => {
   if (!tg) {
     const from = monthStartISO(), to = nmMonthEnd(from), month = nmMonthName(from);
     const sold = nmInvoicesIn(from, today).reduce((s, q) => s + nmInvoiceSales(q), 0);
-    return `<div class="nm-top" data-navy-top><div class="nm-hero">${nmSheetTop('SET BY THE OWNER', month + ' goal')}
-      <div class="nm-nogoal"><span class="nm-flag">${ic('nmFlag', 30)}</span><span style="display:flex;flex-direction:column;gap:6px;min-width:0"><b>The owner hasn't set a sales goal</b>
+    return `<div class="nm-top" data-navy-top><div class="nm-hero">${nmSheetTop(mgrName() === 'the Manager' ? 'THE MANAGER SETS IT' : mgrName().toUpperCase() + ' SETS IT · MANAGER', month + ' goal')}
+      <div class="nm-nogoal"><span class="nm-flag">${ic('nmFlag', 30)}</span><span style="display:flex;flex-direction:column;gap:6px;min-width:0"><b>${esc(mgrName() === 'the Manager' ? 'The Manager hasn’t' : mgrName() + ' hasn’t')} set a sales goal yet</b>
         <span>${month} so far: <span class="m" style="color:#fff">${n0(sold)}</span> invoiced</span></span></div></div></div>
       <div class="sx-body">${nmChartHTML(from, to, null)}${nmWhoHTML(from, to)}</div>`;
   }
@@ -3865,7 +4297,7 @@ PAGE.goal = () => {
   const chip = tg.reached ? `<span class="nm-chip">${ic('tick', 13, 'style="stroke-width:2.6"')}Goal reached</span>`
     : `<span class="nm-chip ${ahead ? '' : 'behind'}">${ic(ahead ? 'nmUp' : 'nmDown', 13, 'style="stroke-width:2.2"')}<span class="m">${ahead ? '+' : '−'}${short(Math.abs(tg.ahead))}</span> ${ahead ? 'ahead' : 'behind'}</span>`;
   const done = tg.reached ? `<span class="v" style="color:var(--mint)">Reached</span>` : tg.doneBy ? `<span class="v" style="color:${tg.onTime ? 'var(--mint)' : 'var(--amber)'}">${esc(dayLabel(tg.doneBy))}</span>` : `<span class="v" style="color:var(--navyInk2)">—</span>`;
-  return `<div class="nm-top" data-navy-top><div class="nm-hero">${nmSheetTop('SET BY THE OWNER', title)}
+  return `<div class="nm-top" data-navy-top><div class="nm-hero">${nmSheetTop(nmGoalBy(), title)}
     <div class="nm-goal">
       <span class="nm-goalring" role="img" aria-label="${nmPct(tg.pct)} of ${n0(tg.aim)}, day ${tg.dayN} of ${tg.days}">${nmGoalRing(tg, 132)}
         <span class="nm-goalin"><span class="m p${nmPct(tg.pct).length > 4 ? ' long' : ''}">${nmPct(tg.pct)}</span><span class="d">day <span class="m">${tg.dayN}</span> of ${tg.days}</span></span></span>
@@ -3934,9 +4366,9 @@ function viewMe(){
     <span class="nm-note">${ic('store', 12)}Whole-shop figures</span>
   </div></div>
   <div class="sx-body">
-    <div class="sx-card pad nm-doors"><div class="nm-card-h"><b>What your login opens</b><span>${ic('lock', 12)}set by the owner</span></div>
+    <div class="sx-card pad nm-doors"><div class="nm-card-h"><b>What your login opens</b><span>${ic('lock', 12)}${ownerName() ? `switched on by ${esc(ownerName())}, the owner` : 'switched on by the owner'}</span></div>
       <div class="nm-door-g">${NM_DOORS.map(door).join('')}</div>
-      ${owner ? '' : `<div class="nm-locks"><span class="nm-lockstack">${[0, 1, 2, 3].map(() => `<span>${ic('lock', 12, 'style="stroke-width:2"')}</span>`).join('')}</span><span>Costs, suppliers, books and backups stay with the owner</span></div>`}</div>
+      ${owner ? '' : `<div class="nm-locks"><span class="nm-lockstack">${[0, 1, 2, 3].map(() => `<span>${ic('lock', 12, 'style="stroke-width:2"')}</span>`).join('')}</span><span>Prices under the shop’s, credit and invoicing: ${esc(mgrName())} decides</span></div>`}</div>
     <div class="sx-card nm-shop"><span class="nm-shop-i">${ic('store', 20)}</span>
       <span class="nm-shop-t"><b class="ell">${esc(S.shopName)}</b><span class="nm-shop-s">${addr ? `<i></i><span class="ell">${esc(addr)}</span>` : `<span class="ell">Books read ${esc(agoWords(S.loadedAt))}</span>`}</span></span>
       ${phone ? `<a class="nm-call" href="tel:${esc(String(phone).replace(/[^0-9+]/g, ''))}" aria-label="Call the shop">${ic('phone', 18)}</a>` : `<button class="nm-call" data-act="refresh" aria-label="Refresh">${ic('refresh', 17)}</button>`}</div>
@@ -4228,7 +4660,8 @@ PAGE.customer = ({ id }) => {
   const billRow = p => { const tag = p.id != null ? 'button' : 'span', ageCol = p.age == null ? '' : p.age > 60 ? 'var(--crimson)' : p.age > terms ? 'var(--amberInk)' : 'var(--ink3)';
     return `<${tag} class="cu-bl"${p.id != null ? ` data-act="order" data-id="${p.id}" data-key="b-${p.id}"` : ' data-key="b-loose"'}><i style="background:${p.col}"></i><b class="m">${n0(p.amt)}</b><span class="cu-bn">${esc(p.label)}</span>${p.age != null ? `<span class="cu-ba" style="color:${ageCol}">${p.age === 0 ? 'today' : p.age + (p.age === 1 ? ' day' : ' days')}</span>` : '<span class="cu-ba"></span>'}${p.id != null ? ic('chev', 14) : '<span></span>'}</${tag}>`; };
   const billsHTML = c.debt > 0 || parts.length ? `<div class="sx-card cu-bills">
-      <span class="cu-bh"><b>Open bills <span class="m">${inv.length}</span></b>${c.debt > 0 ? `<button class="cu-takepay" data-act="pay" data-id="${esc(c.id)}"><span>${ic('cash', 14, 'style="stroke-width:2"')}</span>Take payment</button>` : ''}</span>
+      <span class="cu-bh"><b>Open bills <span class="m">${inv.length}</span></b><span class="cu-bhb">${c.debt > 0 && D().promises != null ? `<button class="cu-prombtn" data-act="promise" data-id="${esc(c.id)}" aria-label="${esc(firstWord(c.name))} promises to pay">${ic('hand', 15)}Promise</button>` : ''}${c.debt > 0 ? `<button class="cu-takepay" data-act="pay" data-id="${esc(c.id)}"><span>${ic('cash', 14, 'style="stroke-width:2"')}</span>Take payment</button>` : ''}</span></span>
+      ${custPromiseLine(c)}
       <span class="cu-bbar sx-grow${barParts.length > 12 ? ' thin' : ''}">${barParts.map(p => `<i style="flex:${p.amt};background:${p.col}"></i>`).join('')}</span>
       <span class="cu-blabels" style="--aw:${Math.max(4, ...show.map(p => n0(p.amt).length))}ch">${show.map(billRow).join('')}</span>
       ${hidden.length ? `<button class="cu-bmore" data-act="cubills" data-id="${esc(c.id)}">Show all ${parts.length} bills<span>${hidden.length} more · <span class="m">${n0(hidden.reduce((s, p) => s + p.amt, 0))}</span></span></button>`
@@ -4253,6 +4686,80 @@ PAGE.customer = ({ id }) => {
   <div class="sx-dock cu-dock">
     <button class="cu-pdf" data-act="custstmt" data-id="${esc(c.id)}" aria-label="Send a statement">${ic('doc', 18)}PDF</button>
     <button class="sx-btn red cu-sell" data-act="sellto" data-id="${esc(c.id)}"${usual.length ? ' data-usual="1"' : ''}>${ic('plus', 20, 'style="stroke-width:2.4"')}${usual.length ? 'Sell them their usual' : 'Sell to ' + esc(firstWord(c.name))}</button></div>`;
+};
+/* ---------------- a promise to pay (promise.record, 0089 / 0121) ----------------
+   How much and by when, in the customer's own words. Added, never
+   replaced: a second promise is a second row. Kept, broken or still open
+   is worked out from the payments every time, never stored
+   (index.html promiseState). The Manager sees it. */
+ICON.calendar = '<rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M4 10h16M9 3v4M15 3v4"/>';
+ICON.hand = '<path d="M7 11V6.5a1.5 1.5 0 0 1 3 0V11M10 10V4.5a1.5 1.5 0 0 1 3 0V10M13 10V5.5a1.5 1.5 0 0 1 3 0V12M16 9.5a1.5 1.5 0 0 1 3 0V14a7 7 0 0 1-7 7h-1a6 6 0 0 1-5-2.7L3.3 14.6a1.5 1.5 0 0 1 2.4-1.8L7 14.5"/>';
+function custPromises(c){ return (D().promises || []).filter(p => String(p.customerId) === String(c.id)).sort((a, b) => String(b.madeOn || '').localeCompare(String(a.madeOn || '')) || b.id - a.id); }
+function custPromiseState(p, c){
+  if (!(Number(c.debt) > 0.5)) return 'kept';
+  const paid = (c.debtLog || []).filter(l => l.type === 'payment' && String(l.date) >= String(p.madeOn) && String(l.date) <= String(p.promisedOn)).reduce((s, l) => s + (Number(l.amount) || 0), 0);
+  if (Number(p.amount) > 0 && paid >= Number(p.amount) - 0.5) return 'kept';
+  return String(p.promisedOn) < todayISO() ? 'broken' : 'open';
+}
+function custPromiseLine(c){
+  const p = custPromises(c)[0]; if (!p) return '';
+  const st = custPromiseState(p, c), broken = custPromises(c).filter(x => custPromiseState(x, c) === 'broken').length;
+  const d = new Date(p.promisedOn + 'T00:00:00'), when = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+  const word = st === 'kept' ? 'kept' : st === 'broken' ? 'missed' : p.promisedOn === todayISO() ? 'due today' : `in ${daysBetween(todayISO(), p.promisedOn)} day${daysBetween(todayISO(), p.promisedOn) === 1 ? '' : 's'}`;
+  return `<span class="cu-prom ${st}">${ic(st === 'kept' ? 'tick' : 'hand', 15)}<span class="ell">Promised ${Number(p.amount) > 0 ? `<b class="m">${n0(p.amount)}</b>` : 'to pay'} by ${esc(when)}</span><b class="w">${word}</b>${broken > 1 ? `<span class="n">${broken} missed</span>` : ''}</span>`;
+}
+ACT.promise = t => {
+  const c = customerById(t.dataset.id); if (!c) return;
+  const inv = custOpen(c.id), bill = inv.length ? Math.round(balanceDue(inv[0])) : 0;
+  openSheet('promise', { id: c.id, amt: bill > 0 && bill < c.debt ? 'bill' : 'all', other: '', day: null });
+};
+SHEET.promise = a => {
+  const c = customerById(a.id); if (!c) return '';
+  const first = firstWord(c.name) || 'They', inv = custOpen(c.id), bill = inv.length ? Math.round(balanceDue(inv[0])) : 0, oldest = inv.length ? custBillAge(inv[0]) : null;
+  const amount = custPromiseAmount(a, c), today = todayISO();
+  const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(today + 'T00:00:00'); d.setDate(d.getDate() + i); return isoOf(d.getTime()); });
+  if (!a.day) a.day = days[Math.min(6, Math.max(0, Number(c.termsDays) > 0 ? 3 : 2))];
+  const dd = new Date(a.day + 'T00:00:00'), inN = daysBetween(today, a.day);
+  const chip = (k, label) => `<button class="cu-pchip${a.amt === k ? ' on' : ''}" data-act="promamt" data-v="${k}" role="radio" aria-checked="${a.amt === k}">${label}</button>`;
+  return `<div class="cu-phead"><span class="cu-pico">${ic('hand', 22)}</span><span class="tx"><b class="ell">${esc(first)} promises to pay</b><span>Owes <span class="m">${n0(c.debt)}</span>${oldest != null ? ` · oldest bill ${oldest} day${oldest === 1 ? '' : 's'}` : ''}</span></span><button class="sx-circle light" data-act="closesheet" aria-label="Close">${ic('close', 15)}</button></div>
+    <div class="cu-pbig"><span class="u">UGX</span>${a.amt === 'other' ? `<input class="m" data-in="promother" inputmode="numeric" autocomplete="off" value="${a.other ? n0(Number(a.other)) : ''}" placeholder="0" aria-label="How much they promise">` : `<span class="m">${n0(amount)}</span>`}</div>
+    <span class="cu-pwhat">${a.amt === 'bill' && inv.length ? `clears ${esc(invoiceLabel(inv[0]))}, the oldest bill` : a.amt === 'all' ? 'everything they owe' : 'what they named'}</span>
+    <div class="cu-pchips" role="radiogroup" aria-label="How much">${chip('all', `All · <span class="m">${short(c.debt)}</span>`)}${bill > 0 && bill < c.debt ? chip('bill', `${esc(invoiceLabel(inv[0]))} · <span class="m">${short(bill)}</span>`) : ''}${chip('other', 'Other')}</div>
+    <div class="cu-pwhen"><span class="cu-plab"><span>BY WHEN</span><b>${esc(dd.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }))} · ${inN === 0 ? 'today' : inN === 1 ? 'tomorrow' : 'in ' + inN + ' days'}</b></span>
+      <div class="cu-pdays" role="radiogroup" aria-label="By when">${days.map(d => { const x = new Date(d + 'T00:00:00'), on = d === a.day;
+        return `<button role="radio" aria-checked="${on}" class="${on ? 'on' : ''}" data-act="promday" data-v="${d}"><small>${x.toLocaleDateString('en-GB', { weekday: 'short' }).slice(0, 1)}</small><span class="m">${x.getDate()}</span></button>`; }).join('')}</div>
+      <label class="cu-plater">${ic('calendar', 14)}${days.includes(a.day) ? 'Another day' : 'Changed to ' + esc(dd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }))}<input type="date" data-ch="promdate" min="${today}" aria-label="Another day"></label></div>
+    <button class="sx-btn red" data-act="promsave" ${amount > 0 && !S.cuPromising ? '' : 'disabled'}>Record the promise</button>
+    <span class="cu-pwho">${mgrFace(22)}On ${esc(first)}’s account · ${esc(mgrName())} sees it</span>`;
+};
+function custPromiseAmount(a, c){
+  if (a.amt === 'other') return Math.max(0, Number(String(a.other || '').replace(/[^0-9]/g, '')) || 0);
+  if (a.amt === 'bill') { const inv = custOpen(c.id); return inv.length ? Math.round(balanceDue(inv[0])) : 0; }
+  return Math.round(Number(c.debt) || 0);
+}
+ACT.promamt = t => { S.sheet.args.amt = t.dataset.v; haptic('light'); renderSheet(); if (t.dataset.v === 'other') setTimeout(() => { const i = document.querySelector('[data-in="promother"]'); if (i) i.focus(); }, 60); };
+ACT['in:promother'] = t => { const v = String(t.value).replace(/[^0-9]/g, ''); S.sheet.args.other = v; const btn = document.querySelector('[data-act="promsave"]'); if (btn) btn.disabled = !(Number(v) > 0); const s2 = v ? n0(Number(v)) : ''; if (t.value !== s2) t.value = s2; };
+ACT.promday = t => { S.sheet.args.day = t.dataset.v; haptic('light'); renderSheet(); };
+ACT['ch:promdate'] = t => { if (t.value && t.value >= todayISO()) { S.sheet.args.day = t.value; renderSheet(); } };
+ACT.promsave = async () => {
+  if (S.cuPromising || !S.sheet || S.sheet.type !== 'promise') return;
+  const a = S.sheet.args, c = customerById(a.id); if (!c) return;
+  const amount = custPromiseAmount(a, c); if (!(amount > 0) || !a.day) return;
+  S.cuPromising = true; renderSheet();
+  try {
+    const id = await issueRowId('row:payment_promise', (D().promises || []).reduce((m, p) => Math.max(m, Number(p.id) || 0), 0));
+    const row = { shop_id: S.shopId, id, customer_id: String(c.id), promised_on: a.day, made_on: todayISO(), amount, note: '' };
+    const { error } = await sb.from('payment_promises').insert(row);
+    if (error) throw error;
+    (D().promises ||= []).push(rowToPromise(row)); S.loadedAt = Date.now(); saveSnapshot();
+    // The owner's log (0123), when it is there: who heard it, and what.
+    sb.from('decision_log').insert({ shop_id: S.shopId, by: S.user ? S.user.id : null, by_name: myName(), role: S.role, task: 'promise.record', what: `${c.name} promised ${n0(amount)} by ${a.day}`, amount, ref: { table: 'payment_promises', id } }).then(() => {}, () => {});
+    S.cuPromising = false; haptic('success'); closeSheet(); toast(`Promise recorded on ${firstWord(c.name)}’s account`); render();
+  } catch (e) {
+    S.cuPromising = false; renderSheet();
+    const denied = e && (e.code === '42501' || /row-level security|permission/i.test(String(e.message || '')));
+    toast(isNetworkError(e) ? 'No connection — nothing was recorded' : denied ? 'This login can’t record promises yet — the owner runs supabase/migrations/0121_sales_rights.sql' : 'Not recorded: ' + (e.message || e), 7000);
+  }
 };
 ACT.cubills = t => { if (!cuTapOnce('bills')) return; S.cuBillsAll = S.cuBillsAll === String(t.dataset.id) ? null : String(t.dataset.id); render(); };
 ACT.custchat = t => { if (typeof PAGE.chat === 'function') push('chat', { convId: Number(t.dataset.conv) || t.dataset.conv }); };
@@ -4479,7 +4986,7 @@ SHEET.custstmt = ({ id }) => {
         <span class="cu-stagl">${ag.map((b, i) => `<span${b.value > 0.5 ? '' : ' class="z"'}><i style="background:${agCol[i]}"></i>${b.label}<b class="m">${short(b.value)}</b></span>`).join('')}</span></span>` : ''}
       <span class="cu-strows">${ic('doc', 14)}${st.rows.length} line${st.rows.length === 1 ? '' : 's'} on the sheet${sh.open.length ? ` · ${side.openLine}` : ''}</span>
     </div>
-    ${st.agrees ? '' : `<div class="cu-stflag">${ic('lock', 15)}<span>The debt book comes to <b class="m">${n0(st.closing)}</b> but their balance says <b class="m">${n0(st.recorded)}</b>. The sheet will say so — the owner should settle it first.</span></div>`}
+    ${st.agrees ? '' : `<div class="cu-stflag">${ic('lock', 15)}<span>The debt book comes to <b class="m">${n0(st.closing)}</b> but their balance says <b class="m">${n0(st.recorded)}</b>. The sheet will say so — Accounts should settle it first.</span></div>`}
     ${stm ? `<span class="cu-stm flat">${ic('tick', 14)}Last sent ${esc(dayLabel(custISO(stm.sent_on)))}${stm.due != null ? ` · <b class="m">${n0(stm.due)}</b> then due` : ''}</span>` : ''}
     <button class="sx-btn red" data-act="custstmtsend" data-id="${esc(id)}">${ic('share', 19)}Send the statement</button>
     <span class="sx-sub" style="text-align:center;margin-top:-4px">A PDF, through your phone’s share sheet</span>`;
@@ -4529,7 +5036,7 @@ SHEET.addcust = args => {
         <div class="cu-ncf area"><label><span class="cu-nci" style="background:#FDE8E4;color:var(--red)">${ic('pin', 18)}</span><span class="cu-ncin"><span>Where they are</span><input id="sx_nc_area" data-in="ncarea" value="${esc(args.area || '')}" placeholder="Area" autocomplete="off"></span></label>
           ${areas.length ? `<span class="cu-ncareas">${areas.map(a => `<button data-act="ncarea" data-a="${esc(a)}" aria-pressed="${(args.area || '').trim().toLowerCase() === a.toLowerCase()}">${esc(a)}</button>`).join('')}</span>` : ''}</div>
       </div>
-      <span class="cu-ncnote">${ic('lock', 14, 'style="stroke-width:2"')}Starts on cash · the owner gives credit</span>
+      <span class="cu-ncnote">${ic('lock', 14, 'style="stroke-width:2"')}Starts on cash · ${esc(mgrName() === 'the Manager' ? 'the Manager' : mgrName() + ', your manager,')} gives credit</span>
     </div>
     <div class="cu-ncdock"><button class="sx-btn ghost" data-act="ncsave" data-then="save">Just save</button><button class="sx-btn red" data-act="ncsave" data-then="sell">Save and sell${ic('arrow', 18, 'style="stroke-width:2.4"')}</button></div>
   </div>`;
@@ -4623,7 +5130,10 @@ function custTermsDays(){ return Math.max(0, Number(D().presetChaseAfterDays) ||
 function nwTotal(){ return S.draft ? pricedView(draftQuote()).total : 0; }
 // A total said honestly: nothing priced yet reads "to price", not "0 + ?".
 // noConf: the caller says how many are to be confirmed on a line of its own (the order bar's second line).
-function nwMoney(pv, noConf){ const conf = pv.pending && !noConf ? `<span class="nw-amb nw-pconf"> · ${pv.pending} to confirm</span>` : ''; return pv.total > 0 || !pv.toConfirm ? `<span class="m">${n0(pv.total)}</span>${pv.toConfirm ? ' + ?' : ''}${conf}` : '<span class="nw-amb">to price</span>'; }
+// pricedView plus how many prices wait for the Manager (pricedView itself is copied word for word into manager.html).
+function nwPv(q){ return { ...pricedView(q), waiting: pricesWaiting(q).length }; }
+function nwForWords(pv){ return [pv.waiting ? `${pv.waiting} for ${esc(mgrName())}` : '', pv.pending ? `${pv.pending} to confirm` : ''].filter(Boolean).join(' · '); }
+function nwMoney(pv, noConf){ const w = noConf ? '' : nwForWords(pv), conf = w ? `<span class="nw-amb nw-pconf"> · ${w}</span>` : ''; return pv.total > 0 || !pv.toConfirm ? `<span class="m">${n0(pv.total)}</span>${pv.toConfirm ? ' + ?' : ''}${conf}` : '<span class="nw-amb">to price</span>'; }
 
 /* ---------------- words ---------------- */
 function lineQtyWords(it){
@@ -4785,11 +5295,10 @@ function nwClientBody(args){
     h += `<div class="nw-sec" data-key="sec-asks"><b><i class="nw-live"></i>Asking on WhatsApp now</b><span class="m">${asks.length}</span></div><div class="nw-carousel" data-key="asks">${asks.map(a => {
       const c = a.customer, name = c ? c.name : waConvTitle(a.conv), late = a.mins != null && a.mins >= 30;
       if (c) shown.add(String(c.id));
-      const its = (a.items || []).slice(0, 3), more = (a.items || []).length - its.length;
       return `<div class="nw-ask" data-key="ask-${esc(a.conv.id)}">
         <span class="nw-askh">${avatar(name)}<span class="nw-ct"><span class="ell nw-cn">${esc(name)}</span><span class="ell sx-sub">${c ? nwSubOf(c) : 'not a saved customer'}</span></span>${a.mins != null ? `<span class="nw-wait ${late ? 'late' : ''}" title="Waiting for a reply">${esc(nwWaitWords(a.mins))}</span>` : ''}</span>
-        <span class="nw-asklines">${its.length ? its.map(it => `<span><b class="m">${n0(it.qty)}</b><span class="ell">${esc(it.label)}</span></span>`).join('') + (more > 0 ? `<span class="sx-sub">+ ${more} more</span>` : '') : `<span class="nw-asktext">${esc(a.text || '')}</span>`}</span>
-        <button class="nw-askgo" data-act="nwask" data-conv="${esc(a.conv.id)}">${its.length ? 'Start with these' : 'Start an order'}${ic('nwarrow', 16)}</button></div>`; }).join('')}</div>`;
+        <span class="nw-asksaid">“${esc(String(a.text || '').replace(/\s+/g, ' ').trim())}”</span>
+        <button class="nw-askgo" data-act="nwask" data-conv="${esc(a.conv.id)}">Start ${esc(nwPoss(firstWord(name) || 'their'))} order${ic('nwarrow', 16)}</button></div>`; }).join('')}</div>`;
   }
   // Due for their usual, by their rhythm.
   const due = D().customers.map(c => ({ c, r: customerRhythm(c.id) })).filter(x => x.r.every && x.r.since != null && !shown.has(String(x.c.id)) && x.r.since >= x.r.every - Math.min(3, Math.ceil(x.r.every * 0.2)) && !x.r.overdue && usualLines(x.c.id).length)
@@ -4811,7 +5320,8 @@ function nwClientBody(args){
   if (!h) h = `<div class="sx-card sx-empty" data-key="none"><b>No customers yet</b>Add one, or sell to a walk-in.</div>`;
   return h;
 }
-// "Start with these": the order, pre-filled from what they asked on WhatsApp.
+// What they said opens their order; the salesperson adds what they asked for.
+function nwPoss(n){ return n === 'their' ? n : /s$/i.test(n) ? n + '’' : n + '’s'; }
 ACT.nwask = t => {
   const a = nwAsks().find(x => x.conv && String(x.conv.id) === t.dataset.conv); if (!a) return;
   const c = a.customer || null;
@@ -4819,15 +5329,8 @@ ACT.nwask = t => {
   startFor(c, false, same ? true : false, { noOpen: true });
   if (!c && !same) { const w = String(a.conv.wa_id || ''); S.draft.client = { name: a.conv.profile_name || ('+' + w), phone: w.startsWith('256') ? '0' + w.slice(3) : '+' + w }; }
   S.draft.waConvId = a.conv.id;
-  nwAddAsk(a);
   saveDraft(); openOrderPage();
 };
-function nwAddAsk(a){
-  const d = S.draft; d.waAsk = (a.items || []).map(nwLineKey);
-  const before = nwTotal();
-  (a.items || []).forEach(it => { if (!onOrder(it.productId, it.variantIdx)) addLine(it.productId, it.variantIdx, it.qty, 'unit', true); });
-  nwDeltaFrom(before);
-}
 
 /* ---------------- switch who it is for (QSwitch) ---------------- */
 SHEET.switch = args => {
@@ -5126,7 +5629,6 @@ ACT.addwith = t => {
   const before = nwTotal(); addLine(t.dataset.pid, t.dataset.vi, Number(t.dataset.q) || 1, t.dataset.u || 'unit'); nwDeltaFrom(before); saveDraft();
   if ((S.draft.q || '').trim()) { const dock = document.getElementById('nw_dock'); nwRefreshFind(); if (dock) morph(dock, nwMiniDock()); } else render();
 };
-ACT.nwaskadd = t => { const a = nwAskFor(S.draft); if (!a) return; if (a.conv) S.draft.waConvId = a.conv.id; nwAddAsk(a); saveDraft(); render(); };
 ACT.lopen = t => { const id = Number(t.dataset.lid); S.draft.openLine = S.draft.openLine === id ? null : id; S.draft.fresh = null; S.draft.openCharge = null; render(); };
 ACT.lstep = t => { const it = lineById(t.dataset.lid); if (!it) return; const step = it.qtyIn === 'pack' && Number(it.packQty) > 0 ? Number(it.packQty) : 1; const n = (Number(it.qty) || 0) + step * Number(t.dataset.d); if (n <= 0) return; const before = nwTotal(); setLineQty(it, n); if (Number(t.dataset.d) > 0) nwDeltaFrom(before); S.draft.fresh = null; haptic('light'); saveDraft(); render(); };
 ACT['ch:lq'] = t => { const it = lineById(t.dataset.lid); if (!it) return; const v = Number(t.value); if (!(v > 0)) { render(); return; } const mult = it.qtyIn === 'pack' && Number(it.packQty) > 0 ? Number(it.packQty) : 1; setLineQty(it, v * mult); S.draft.fresh = null; saveDraft(); render(); };
@@ -5177,10 +5679,9 @@ function bandHTML(it){
   else if (it.supplierId) chip = `<span class="nw-c a">bought in</span><span class="ell">· shop checks for supplier</span>`;
   else chip = `<span class="nw-c a">to find</span><span class="ell">· shop finds a supplier</span>`;
   const sell = toc ? 0 : quoteItemSellPrice(it);
-  let wide = false, seg = `<span class="nw-each">${toc ? '<b class="m nw-a">?</b><small>no price yet</small>' : `<b class="m">${n0(sell)}</b><small>${esc(nwPer(it.unit || 'piece'))}</small>`}</span>`;
+  let seg = `<span class="nw-each">${toc ? '<b class="m nw-a">?</b><small>no price yet</small>' : `<b class="m">${n0(sell)}</b><small>${esc(nwPer(it.unit || 'piece'))}</small>`}</span>`;
   if (open && hasPack) {
     const pl = makeLine(it.productId, it.variantIdx, Math.max(1, Math.round(qty / pq)) * pq), pp = pl && !linePriceToConfirm(pl) ? quoteItemSellPrice(pl) * pq : null;
-    wide = (toc ? 1 : n0(sell).length) > 7 || (pp == null ? 1 : n0(pp).length) > 7;
     seg = `<span class="nw-sell" role="radiogroup" aria-label="Sell by"><button role="radio" data-act="lunit" data-lid="${it.lineId}" data-u="unit" aria-checked="${it.qtyIn !== 'pack'}">${esc(it.unit || 'pcs')}<span class="m">${toc ? '?' : n0(sell)}</span></button><button role="radio" data-act="lunit" data-lid="${it.lineId}" data-u="pack" aria-checked="${it.qtyIn === 'pack'}">${esc(it.packUnit)} ×${n0(pq)}<span class="m">${pp == null ? '?' : n0(pp)}</span></button></span>`;
   }
   return `<div class="sx-band nw-band ${open ? 'open' : ''} ${d.fresh === it.lineId ? 'new' : ''}" data-key="l-${it.lineId}">
@@ -5188,7 +5689,7 @@ function bandHTML(it){
       <span class="sx-qb"><b class="${nwNum(qw.n).length >= 6 ? 'xs' : nwNum(qw.n).length >= 4 ? 'sm' : ''}">${nwNum(qw.n)}</b><small class="ell">${esc(qw.u || 'pcs')}</small></span>
       <span class="nw-ct">${nameHTML(nameParts(it.productId, it.variantIdx, it.productName), { cls: 'nw-bn' })}<span class="nw-bchip">${chip}</span>${priceTagHTML(it)}</span>
       <span class="nw-bamt">${toc ? `<span class="nw-tocchip">price to confirm</span><span class="m nw-qtx">${nwNum(qw.n)} ${esc(qw.u || 'pc')} × ?</span>` : `<span class="m">${n0(qty * sell)}</span>`}</span></button>
-    ${open ? `<div class="sx-ctl ${wide ? 'nw-wide' : ''}">${seg}<span class="sx-step"><button data-act="lstep" data-lid="${it.lineId}" data-d="-1" aria-label="One fewer">−</button><input data-ch="lq" data-lid="${it.lineId}" inputmode="decimal" value="${qw.n}" aria-label="Quantity"><button data-act="lstep" data-lid="${it.lineId}" data-d="1" aria-label="One more" style="color:var(--ink)">+</button></span>
+    ${open ? `<div class="sx-ctl">${seg}<span class="sx-step"><button data-act="lstep" data-lid="${it.lineId}" data-d="-1" aria-label="One fewer">−</button><input data-ch="lq" data-lid="${it.lineId}" inputmode="decimal" value="${qw.n}" aria-label="Quantity"><button data-act="lstep" data-lid="${it.lineId}" data-d="1" aria-label="One more" style="color:var(--ink)">+</button></span>
       <button class="sx-del" data-act="ldel" data-lid="${it.lineId}" aria-label="Remove ${esc(it.productName)}">${ic('trash', 18)}</button></div>
       <button class="nw-pbtn" data-act="nwprice" data-lid="${it.lineId}">${ic('nwpen', 15)}${toc ? 'Set a price' : it.priceBy ? 'Your price · change it' : 'Change the price'}<span class="m">${toc ? '' : n0(sell) + ' ' + esc(nwPer(it.unit || 'piece'))}</span></button>` : ''}
   </div>`;
@@ -5201,8 +5702,8 @@ function nwPriceState(it, v){
   if (!(v > 0)) return { ok: false, hint: '', tone: '' };
   if (priceTooLow(it, v)) return { ok: false, hint: 'Too low — that’s under what it costs the shop', tone: 'bad' };
   if (!cost) return { ok: true, hint: 'They’re told it’s to be confirmed', tone: 'amb', btn: 'Quote · to be confirmed' };
-  if (shop == null) return { ok: true, hint: 'No selling price is set, so you set it · the owner reviews it', tone: 'amb' };
-  if (v < shop) return { ok: true, hint: 'Under the shop’s price · the owner will see it', tone: 'sky' };
+  if (shop == null) return { ok: true, hint: `No selling price is set, so you set it · ${mgrName()} decides it`, tone: 'amb' };
+  if (v < shop) return { ok: true, hint: `Under the shop’s price · ${mgrName()}, your manager, decides — the order waits in Checking`, tone: 'sky' };
   return { ok: true, hint: v === shop ? 'The shop’s price' : '', tone: '' };
 }
 SHEET.nwprice = args => {
@@ -5254,11 +5755,10 @@ function nwChargeBand(ch, goods){
 }
 function nwSlipHTML(){
   const d = S.draft, n = d.items.length, chs = d.charges || [], name = d.client.name || 'Walk-in';
-  const q = draftQuote(), pv = pricedView(q), goods = goodsTotal(q);
+  const q = draftQuote(), pv = nwPv(q), goods = goodsTotal(q);
   let src = '';
   if (d.waConvId != null) {
-    const keys = d.waAsk || ((nwAskFor(d) || {}).items || []).map(nwLineKey), inN = keys.filter(k => d.items.some(it => nwLineKey(it) === k)).length;
-    src = `<span class="nw-src">${ic('chat', 12)}from ${esc(firstWord(name))}’s message${keys.length ? ` · ${inN} of ${keys.length} in` : ''}</span>`;
+    src = `<span class="nw-src">${ic('chat', 12)}from ${esc(firstWord(name))}’s message</span>`;
   }
   return `<div class="sx-paper" data-key="slip"><div class="sx-paper-in">
     <div class="sx-paper-h"><span class="nw-sh"><span class="t">${esc((firstWord(name) || 'THE').toUpperCase())}’S ORDER</span>${src}</span><span class="nw-stamp">DRAFT</span></div>
@@ -5288,13 +5788,9 @@ function nwRestHTML(){
     return `<button class="nw-us ${on ? 'on' : ''}" data-key="u-${esc(u.productId)}-${u.variantIdx == null ? '' : u.variantIdx}" data-act="addusual" data-pid="${esc(u.productId)}" data-vi="${u.variantIdx == null ? '' : u.variantIdx}" data-u="${uq.u}" aria-pressed="${on}" aria-label="${esc(np.base)}${on ? ' is on the order — tap to take it off' : ', add ' + esc(uq.text)}"><span class="nw-usi">${ic(on ? 'tick' : 'plus', 13, 'style="stroke-width:2.8"')}</span><span class="nw-ust"><span><span class="ell">${esc(np.base)}</span> <span class="m">${esc(uq.text)}</span></span>${np.variant ? `<small class="ell">${esc(np.variant)}</small>` : ''}</span></button>`; }).join('')}</div><span class="nw-fade" aria-hidden="true"></span></div>`;
   if (!n) {
     const a = nwAskFor(d);
-    if (a && (a.items || []).length) {
-      const its = a.items;
-      mid += `<div class="nw-askcard" data-key="askcard"><span class="nw-akh">${ic('chat', 18)}<b>Asked on WhatsApp${a.mins != null ? ' · ' + esc(nwWaitWords(a.mins)) : ''}</b></span>
-        <div class="nw-aklines">${its.slice(0, 5).map(it => { const l = makeLine(it.productId, it.variantIdx, it.qty), t2 = !l || linePriceToConfirm(l);
-          return `<span class="nw-akl"><b class="m">${n0(it.qty)}</b><span class="ell">${esc(it.label)}</span><span class="m">${t2 ? 'to price' : n0(quoteItemSellPrice(l))}</span></span>`; }).join('')}</div>
-        <button class="nw-akgo" data-act="nwaskadd">${ic('plus', 18, 'style="stroke-width:2.4"')}${its.length === 1 ? 'Add it' : its.length === 2 ? 'Add both' : 'Add all ' + its.length}</button></div>`;
-    }
+    // What they said, word for word: the salesperson adds what they asked for.
+    if (a && String(a.text || '').trim()) mid += `<div class="nw-askcard" data-key="askcard"><span class="nw-akh">${ic('chat', 18)}<b>Asked on WhatsApp${a.mins != null ? ' · ' + esc(nwWaitWords(a.mins)) : ''}</b></span>
+        <span class="nw-asksaid">“${esc(String(a.text).replace(/\s+/g, ' ').trim())}”</span></div>`;
     if (usual.length) {
       const r = customerRhythm(c.id);
       mid += `<div class="nw-sec" data-key="sec-usual"><b>${esc(firstWord(c.name))} usually buys</b>${r.every ? `<span>every ${r.every} day${r.every === 1 ? '' : 's'}</span>` : ''}</div><div class="nw-utiles" data-key="utiles">${usual.slice(0, 6).map(u => { const p = productById(u.productId), np = nwName(u.productId, u.variantIdx, u.name), uq = nwUsualQty(u);
@@ -5329,11 +5825,11 @@ function nwDockHTML(){
     ${sliderHTML('place', n ? `Slide to place · ${n}` : 'Add an item first', { disabled: !n || S.placing })}</div></div>`;
 }
 function nwMiniDock(){
-  const d = S.draft, n = d ? d.items.length : 0, pv = d ? pricedView(draftQuote()) : { total: 0, toConfirm: 0 };
+  const d = S.draft, n = d ? d.items.length : 0, pv = d ? nwPv(draftQuote()) : { total: 0, toConfirm: 0 };
   const last = d && d.lastAdded != null ? lineById(d.lastAdded) : null;
   const lw = last ? `${nameParts(last.productId, last.variantIdx, last.productName).base} ×${nwNum(lineQtyWords(last).n)}` : '';
   return `<div class="sx-dock nw-mini" data-key="dock-mini"><span class="nw-slipic" aria-hidden="true"><i class="bk"></i><span class="pp"><i></i><i></i><i></i><i></i></span>${n ? `<b class="m">${n}</b>` : ''}</span>
-    <span class="nw-mt"><span class="nw-mtot">${nwMoney(pv, true)}</span><span class="nw-msub ell">${n ? `${pv.pending ? `<span class="nw-amb" style="font-weight:700">${pv.pending} to confirm</span> · ` : ''}<span class="m">${n}</span> line${n === 1 ? '' : 's'}${last ? ` · last <em>${esc(lw)}</em>` : ''}` : 'Nothing on the order yet'}</span></span>
+    <span class="nw-mt"><span class="nw-mtot">${nwMoney(pv, true)}</span><span class="nw-msub ell">${n ? `${nwForWords(pv) ? `<span class="nw-amb" style="font-weight:700">${nwForWords(pv)}</span> · ` : ''}<span class="m">${n}</span> line${n === 1 ? '' : 's'}${last ? ` · last <em>${esc(lw)}</em>` : ''}` : 'Nothing on the order yet'}</span></span>
     <button class="nw-review" data-act="nwreview">Review${ic('chev', 16, 'style="stroke-width:2.4"')}</button></div>`;
 }
 PAGE.neworder = () => {
@@ -5457,15 +5953,16 @@ ACT['slide:place'] = async el => {
     const id = await issueRowId('row:saved_quote', maxId);
     const now = Date.now(), iso = new Date(now).toISOString(), q = draftQuote();
     const items = d.items.map(it => ({ lineId: it.lineId, productId: it.productId, variantIdx: it.variantIdx, productName: it.productName, unit: it.unit, packUnit: it.packUnit, packQty: it.packQty, qtyIn: it.qtyIn, qty: it.qty, supplierId: it.supplierId, supplierName: it.supplierName, price: it.price, sellPrice: it.sellPrice,
-      // Who set this price and why the owner should look (canvas: Setting the price).
+      // Who set this price and why the Manager decides it (canvas: Setting the price).
       ...(it.priceBy ? { priceBy: it.priceBy, priceNote: it.priceNote || null, priceShop: it.priceShop == null ? null : it.priceShop, priceAt: it.priceAt || null } : {}) }));
     // A charge keeps the rule it was agreed on, as wireQuoteCharges stores it.
     const charges = (d.charges || []).map(ch => ({ id: ch.id, service: ch.service || null, label: ch.label || '', type: ch.type === 'percent' ? 'percent' : 'fixed', value: Math.max(0, Number(ch.value) || 0), cost: null }));
+    const status = nwShelfOnly(d) ? 'preparing' : 'draft';
     const payload = { client: { name: d.client.name || 'Walk-in', phone: d.client.phone || '' }, items, charges, credit: q.credit, savedAt: iso, createdAt: iso,
-      payments: [], customerId: d.customerId || null, debtCharged: 0, stageEnteredAt: now, stageLog: [{ status: 'draft', at: now }],
+      payments: [], customerId: d.customerId || null, debtCharged: 0, stageEnteredAt: now, stageLog: [{ status, at: now }],
       // Who took it: the sales desk's own record, so "your sales" can be true from today on.
       takenBy: S.user ? String(S.user.id) : null };
-    const row = { id, shop_id: S.shopId, client_name: payload.client.name, client_phone: payload.client.phone || null, date: todayISO(), status: 'draft',
+    const row = { id, shop_id: S.shopId, client_name: payload.client.name, client_phone: payload.client.phone || null, date: todayISO(), status,
       invoiced: false, invoiced_at: null, invoiced_ts: null, amount_paid: 0, voided: false, payload };
     const { error } = await sb.from('saved_quotes').insert(row);
     if (error) throw error;
@@ -5479,6 +5976,20 @@ ACT['slide:place'] = async el => {
     toast(isNetworkError(e) ? 'No connection — the order is kept here. Slide again when you have signal.' : 'Could not place it: ' + (e.message || e), 6000);
   }
 };
+/* All from our own shelf, nothing for the Manager to decide: no supplier
+   to ask, so the order skips Checking and goes straight to Packing
+   (docs/decision-rights.md, "Orders that need nothing from a supplier").
+   Any price waiting, any line still to price, or a credit hold stops in Checking. */
+function nwShelfOnly(d){
+  const its = (d && d.items) || [];
+  if (!its.length || nwCreditHeld(d)) return false;
+  return its.every(it => it.supplierId === '__stock__' && getStockQty(it.productId, it.variantIdx) >= (Number(it.qty) || 0)
+    && !linePriceToConfirm(it) && !priceReviewState(it) && it.priceNote !== 'nocost');
+}
+function nwCreditHeld(d){
+  const c = d && d.customerId != null && d.customerId !== '' ? customerById(d.customerId) : null;
+  return !!creditHoldFor(c, pricedView(draftQuote()).total);
+}
 async function nwSendPicture(id, convId){
   const q = quoteById(id); if (!q || typeof orderPictureBlob !== 'function') return;
   NW.sent[id] = { state: 'sending', convId, at: Date.now() }; nwRedrawPic(id);
@@ -5507,10 +6018,13 @@ function nwPicCard(q){
 }
 function nwTrack(q){
   const cur = stageIdx(q) + 1, steps = ['Taken'].concat(STAGES.map(s => s.short)), icons = ['', 'lens', 'bag', 'box', 'truck', 'tick'];
+  // A stage the order never entered (an order from the shelf skips Checking and Buying) is a dash, not a tick.
+  const log = Array.isArray(q.stageLog) && q.stageLog.length ? q.stageLog : null, been = k => !log || log.some(e => e && e.status === k);
   let h = '<div class="nw-trk">';
   steps.forEach((s, i) => {
     if (i) h += `<span class="nw-tl">${i <= cur ? '<i class="sx-grow"></i>' : ''}</span>`;
-    if (i < cur) h += `<span class="nw-td done">${ic('tick', 12, 'style="stroke-width:3"')}</span>`;
+    if (i && i < cur && !been(STAGES[i - 1].key)) h += '<span class="nw-td skip" title="Skipped"><i></i></span>';
+    else if (i < cur) h += `<span class="nw-td done">${ic('tick', 12, 'style="stroke-width:3"')}</span>`;
     else if (i === cur) h += `<span class="nw-td now">${ic(icons[i] || 'tick', 15)}</span>`;
     else h += '<span class="nw-td"></span>';
   });
@@ -5519,7 +6033,10 @@ function nwTrack(q){
 function nwPlacedNote(q){
   const its = q.items || [], base = it => nameParts(it.productId, it.variantIdx, it.productName).base;
   const bought = its.filter(orderLineIsBoughtIn), find = its.filter(it => !it.supplierId), toc = its.filter(linePriceToConfirm).length;
-  let s = bought.length ? `The shop checks ${nwList(bought.map(base))} with a supplier — you’ll see what’s found` : find.length ? `The shop finds a supplier for ${nwList(find.map(base))}` : 'All from the shelf — the shop checks it and packs it';
+  const wait = pricesWaiting(q).length;
+  if (q.status === 'preparing') return esc('All from our shelf · straight to Packing');
+  let s = bought.length ? `The shop checks ${nwList(bought.map(base))} with a supplier — you’ll see what’s found` : find.length ? `The shop finds a supplier for ${nwList(find.map(base))}` : `All from the shelf — ${wait ? 'it waits in Checking for ' + mgrName() : 'the shop checks it and packs it'}`;
+  if (wait && (bought.length || find.length)) s += ` · ${wait} price${wait === 1 ? '' : 's'} for ${mgrName()}`;
   if (toc) s += ` · ${toc} to price`;
   return esc(s);
 }
@@ -5533,7 +6050,7 @@ function nwMineToday(){
 function nwTarget(){ try { return typeof salesTarget === 'function' ? salesTarget() : null; } catch (_e) { return null; } }
 PAGE.placed = args => {
   const q = quoteById(args.id); if (!q) return '';
-  const fresh = !args.shown, pv = pricedView(q), name = (q.client && q.client.name) || 'Walk-in';
+  const fresh = !args.shown, pv = nwPv(q), name = (q.client && q.client.name) || 'Walk-in';
   let me = ''; try { me = typeof myName === 'function' ? firstWord(myName()) : ''; } catch (_e) {}
   const mine = nwMineToday(), tg = nwTarget();
   const mineLine = mine.n ? `Your ${nwOrdinal(mine.n)} order today${mine.best ? ' — your best day this week' : ''}` : '';
@@ -5557,7 +6074,7 @@ PAGE.placed = args => {
     <div class="nw-plrow"><button data-act="nwopenorder" data-id="${q.id}">Open the order</button><button data-act="placeddone">Today</button></div></div>`;
 };
 PAGE.placed.bg = '#16203C';
-ACT.nwopenorder = t => { S.view = 'orders'; S.ordersStage = 'draft'; S.stack = [{ type: 'order', args: { id: Number(t.dataset.id) } }]; render(); };
+ACT.nwopenorder = t => { S.view = 'orders'; S.ordersStage = (quoteById(Number(t.dataset.id)) || {}).status || 'draft'; S.stack = [{ type: 'order', args: { id: Number(t.dataset.id) } }]; render(); };
 ACT.placeddone = () => go('today');
 function confettiHTML(){
   const cols = ['#6FDCB0', '#F5B26B', '#C93A30', '#9BA3F0', '#FFFFFF'];
@@ -5903,7 +6420,7 @@ ACT['slide:pay'] = async () => {
     payLand({ kind: 'cust', id: c0.id, name: c0.name, phone: c0.phone || c0.phone2 || '', amount, method, bills: done, before: debt0, after: debt, at: Date.now(), time, group: !!a.group }, a);
   } catch (e) {
     S.paying = false;
-    if (written > 0) { toast(`Stopped part-way: ${n0(written)} of ${n0(amount)} was recorded. Tell the owner before trying again.`, 9000); loadAll().then(render).catch(() => {}); }
+    if (written > 0) { toast(`Stopped part-way: ${n0(written)} of ${n0(amount)} was recorded. Tell Accounts before trying again.`, 9000); loadAll().then(render).catch(() => {}); }
     else { refreshPay(); toast(isNetworkError(e) ? 'No connection — nothing was recorded. Try again.' : 'Nothing was recorded: ' + (e.message || e), 6000); }
   }
 };
@@ -5921,7 +6438,7 @@ async function payOrderSlide(a){
     if (cur.error) throw cur.error;
     if (!cur.data) throw new Error('this order is no longer in the books.');
     if (cur.data.voided) throw new Error('the order was cancelled.');
-    if (cur.data.invoiced) throw new Error('the owner has just invoiced this order — take it from the customer\'s bills.');
+    if (cur.data.invoiced) throw new Error('this order has just been invoiced — take it from the customer\'s bills.');
     const payload = cur.data.payload || {};
     const q = rowToQuote({ id: v.q.id, status: cur.data.status, invoiced: false, amount_paid: cur.data.amount_paid, payload });
     const toPay = Math.max(0, Math.round(pricedView(q).total - (Number(q.amountPaid) || 0)));
@@ -5937,7 +6454,7 @@ async function payOrderSlide(a){
       bills: [{ quoteId: q.id, label: 'Order ' + orderNo(q), pay, cleared: pay >= toPay, left: toPay - pay, total: toPay + (Number(q.amountPaid) || 0) }], before: toPay, after: toPay - pay }, a);
   } catch (e) {
     S.paying = false;
-    if (written > 0) { toast(`The receipt for ${n0(written)} was written but the order was not updated. Tell the owner before trying again.`, 9000); loadAll().then(render).catch(() => {}); }
+    if (written > 0) { toast(`The receipt for ${n0(written)} was written but the order was not updated. Tell Accounts before trying again.`, 9000); loadAll().then(render).catch(() => {}); }
     else { refreshPay(); toast(isNetworkError(e) ? 'No connection — nothing was recorded. Try again.' : 'Nothing was recorded: ' + (e.message || e), 6000); }
   }
 }
@@ -6642,10 +7159,12 @@ PAGE.chat = ({ convId }) => {
   thread += (S.chatOut[c.id] || []).map(chatOutHTML).join('');
   const a = chatAbout(c, msgs);
   const first = firstWord(cust ? cust.name : (c.profile_name || 'They')) || 'They';
-  const card = a.items.length ? `<div class="cht-wants"><div style="display:flex;align-items:center;gap:8px"><span class="cht-wico">${ic('chTag', 16)}</span><span style="flex:1;font-size:14px;font-weight:700">${esc(first)} wants</span><span style="font-size:12px;font-weight:600;color:var(--ink3)">read from the chat</span></div>
-      <div class="cht-wl">${a.items.map(it => { const ln = makeLine(it.productId, it.variantIdx, it.qty); const where = !ln || !ln.supplierId ? chatChip('to check') : ln.supplierId === '__stock__' ? chatChip('on shelf', ['var(--greenSoft)', 'var(--green)']) : chatChip('bought in', ['var(--amberSoft)', 'var(--amberInk)']);
-        return `<div class="cht-wr"><span class="m" style="font-size:14px;font-weight:600;width:34px;flex:none;${it.qtySaid ? '' : 'color:var(--ink3)'}" ${it.qtySaid ? '' : 'title="They didn’t say how many"'}>${n0(it.qty)}${it.qtySaid ? '' : '?'}</span><span style="flex:1;min-width:0">${nameHTML(nameParts(it.productId, it.variantIdx, it.label))}</span>${where}</div>`; }).join('')}</div>
-      <button class="sx-btn red" data-act="takeorder" data-conv="${c.id}">Take the order${ic('chArrow', 18, 'style="stroke-width:2.4"')}</button></div>` : '';
+  // They want to buy: what they said, and their order one tap away. The salesperson adds the items.
+  const waitMins = a.last && a.last.direction === 'in' ? (Date.now() - Date.parse(a.last.sent_at)) / 60000 : null;
+  const card = a.ask && String(a.text || '').trim() ? `<div class="cht-wants"><div style="display:flex;align-items:center;gap:8px"><span class="cht-wico">${ic('chat', 16)}</span><span style="flex:1;font-size:14px;font-weight:700">${esc(first)} wants to buy</span>${waitMins != null && waitMins >= 0 ? `<span class="cht-wwait">${ic('chClock', 12, 'style="stroke-width:2.2"')}${esc(chatWait(waitMins))}</span>` : ''}</div>
+      <span class="cht-wsaid">“${esc(String(a.text).replace(/\s+/g, ' ').trim())}”</span>
+      <button class="sx-btn red" data-act="takeorder" data-conv="${c.id}">Take ${esc(first === 'They' ? 'their' : first + '’s')} order${ic('chArrow', 18, 'style="stroke-width:2.4"')}</button>
+      <span class="cht-wnote">Opens a new order for ${esc(first === 'They' ? 'them' : first)} · you add what they asked for</span></div>` : '';
   // They say they paid: the figure they name is a pre-fill to check against the money, never a record.
   const paidAmt = msgAmount(a.text);
   const paidCard = cust && a.reads.some(r => r.key === 'paid') ? `<div class="cht-paid"><span class="cht-wico" style="background:var(--skySoft);color:var(--sky)">${ic('cash', 16)}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px">${esc(first)} says they paid</b><span class="sx-sub">${paidAmt ? `<span class="m">${n0(paidAmt)}</span> · ` : ''}check, then record</span></span><button class="tdy-cta p" style="border:none" data-act="tdyrecord" data-id="${esc(cust.id)}" data-amt="${paidAmt}" data-m="${chatPaidHow(a.text)}">Record</button></div>` : '';
@@ -6688,15 +7207,8 @@ PAGE.chat.bg = '#EFEAE2';
 function chatSuggest(c, a, cust){
   if (!a.last) return '';
   const name = firstWord(cust ? cust.name : c.profile_name);
-  if (a.ask && a.items.length) {
-    const parts = a.items.slice(0, 3).map(it => {
-      const ln = makeLine(it.productId, it.variantIdx, it.qty), label = String(it.label).replace(' — ', ' ');
-      if (!ln || linePriceToConfirm(ln)) return `${label}: price to confirm`;
-      const each = Math.round(quoteItemSellPrice(ln));
-      return `${it.qtySaid ? n0(it.qty) + ' ' : ''}${label} ${n0(each)}${ln.unit ? ' a ' + ln.unit : ' each'}`;
-    });
-    return `${name ? 'Hello ' + name + '. ' : ''}${parts.join(', ')}${a.items.length > 3 ? ' …' : ''}. Shall I put the order in?`;
-  }
+  // They want to buy: a thank-you while the order is put together. Prices go on the order picture, not guessed from their words.
+  if (a.ask) return `${name ? 'Hello ' + name + ', thank' : 'Thank'} you — I’m putting your order together now and will send it with the prices.`;
   if (a.reads.some(r => r.key === 'paid')) return `Thank you${name ? ' ' + name : ''} — we’re checking it now and will send your receipt.`;
   return '';
 }
@@ -6894,7 +7406,7 @@ ACT.takeorder = t => {
   const d = S.draft, same = d && (cust ? String(d.customerId) === String(cust.id) : d.waConvId === c.id);
   if (d && d.items && d.items.length && !same && !t.dataset.force) { openSheet('takeswitch', { conv: c.id }); return; }
   closeSheet(true); renderSheet();
-  chatStartOrder(c, cust, a.items, same);
+  chatStartOrder(c, cust, [], same);
 };
 function chatStartOrder(c, cust, items, keep){
   if (typeof newDraft !== 'function' || typeof addLine !== 'function' || typeof openOrderPage !== 'function') { toast('Taking an order isn’t available here'); return; }
