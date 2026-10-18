@@ -1208,7 +1208,7 @@ body.nw-typing .nw-dock{display:none}
 .nw-phint{text-align:center;font-size:12.5px;font-weight:600;min-height:17px}
 .nw-phint.bad{color:var(--crimson)}.nw-phint.amb{color:var(--amberInk)}.nw-phint.sky{color:var(--sky)}
 .nw-plink{border:none;background:none;height:36px;font-size:13px;font-weight:600;color:var(--ink2)}
-.nw-conf{font-family:Figtree,sans-serif;font-size:.5em;font-weight:700;letter-spacing:0;white-space:nowrap;vertical-align:middle}
+.nw-pconf{font-family:Figtree,sans-serif;font-size:.5em;font-weight:700;letter-spacing:0;white-space:nowrap;vertical-align:middle}
 
 /* ---- the dock, compact (canvas: order bar reduced) ---- */
 .nw-dock{padding:12px 14px calc(14px + var(--safe-area-inset-bottom));gap:10px;border-radius:20px 20px 0 0}
@@ -4622,7 +4622,8 @@ function draftQuote(){ return nwQuoteOf(S.draft || newDraft(null)); }
 function custTermsDays(){ return Math.max(0, Number(D().presetChaseAfterDays) || 0); }
 function nwTotal(){ return S.draft ? pricedView(draftQuote()).total : 0; }
 // A total said honestly: nothing priced yet reads "to price", not "0 + ?".
-function nwMoney(pv){ const conf = pv.pending ? `<span class="nw-amb nw-conf"> · ${pv.pending} to confirm</span>` : ''; return pv.total > 0 || !pv.toConfirm ? `<span class="m">${n0(pv.total)}</span>${pv.toConfirm ? ' + ?' : ''}${conf}` : '<span class="nw-amb">to price</span>'; }
+// noConf: the caller says how many are to be confirmed on a line of its own (the order bar's second line).
+function nwMoney(pv, noConf){ const conf = pv.pending && !noConf ? `<span class="nw-amb nw-pconf"> · ${pv.pending} to confirm</span>` : ''; return pv.total > 0 || !pv.toConfirm ? `<span class="m">${n0(pv.total)}</span>${pv.toConfirm ? ' + ?' : ''}${conf}` : '<span class="nw-amb">to price</span>'; }
 
 /* ---------------- words ---------------- */
 function lineQtyWords(it){
@@ -5332,7 +5333,7 @@ function nwMiniDock(){
   const last = d && d.lastAdded != null ? lineById(d.lastAdded) : null;
   const lw = last ? `${nameParts(last.productId, last.variantIdx, last.productName).base} ×${nwNum(lineQtyWords(last).n)}` : '';
   return `<div class="sx-dock nw-mini" data-key="dock-mini"><span class="nw-slipic" aria-hidden="true"><i class="bk"></i><span class="pp"><i></i><i></i><i></i><i></i></span>${n ? `<b class="m">${n}</b>` : ''}</span>
-    <span class="nw-mt"><span class="nw-mtot">${nwMoney(pv)}</span><span class="nw-msub ell">${n ? `<span class="m">${n}</span> line${n === 1 ? '' : 's'}${last ? ` · last <em>${esc(lw)}</em>` : ''}` : 'Nothing on the order yet'}</span></span>
+    <span class="nw-mt"><span class="nw-mtot">${nwMoney(pv, true)}</span><span class="nw-msub ell">${n ? `${pv.pending ? `<span class="nw-amb" style="font-weight:700">${pv.pending} to confirm</span> · ` : ''}<span class="m">${n}</span> line${n === 1 ? '' : 's'}${last ? ` · last <em>${esc(lw)}</em>` : ''}` : 'Nothing on the order yet'}</span></span>
     <button class="nw-review" data-act="nwreview">Review${ic('chev', 16, 'style="stroke-width:2.4"')}</button></div>`;
 }
 PAGE.neworder = () => {
