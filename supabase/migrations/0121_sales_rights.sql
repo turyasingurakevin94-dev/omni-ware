@@ -5,6 +5,12 @@
 --   promise.record  a customer's promise to pay: how much and by when.
 --                   The salesperson at the counter hears it first. The
 --                   Manager sees it (Told); nobody approves it.
+--   sourcing.ask    an item we don't sell, forwarded to Sourcing while
+--                   taking the order: a request on a sourcing_leads row
+--                   (source 'sourcing.ask', who asked, how many, which
+--                   salesperson). 0126 already draws the sourcing_leads
+--                   wall to let this task write, so this is the grant
+--                   alone.
 --
 -- The rest of what the Sales app now shows needs no grant here:
 --
@@ -20,8 +26,7 @@
 --     the Accounts build (0123) creates and lets Sales add to.
 --
 -- Not built here, and still planned in the table: counter.sell (needs
--- the one invoicing function, 0119) and sourcing.ask (needs the Sourcing
--- requests, 0126).
+-- the one invoicing function, 0119).
 --
 -- payment_promises (0089) let only the owner write. The policies below
 -- are drawn exactly as 0123 draws them for Accounts, so whichever of the
@@ -32,13 +37,14 @@
 --
 -- CHECK AFTERWARDS:
 --   select task from role_tasks where role = 'sales' order by task;
---   -- 7 rows, promise.record among them
+--   -- 8 rows, promise.record and sourcing.ask among them
 --
 -- ROLLBACK:
---   delete from role_tasks where role = 'sales' and task = 'promise.record';
+--   delete from role_tasks where role = 'sales' and task in ('promise.record', 'sourcing.ask');
 
 insert into role_tasks (role, task) values
-  ('sales', 'promise.record')
+  ('sales', 'promise.record'),
+  ('sales', 'sourcing.ask')
 on conflict do nothing;
 
 do $$
