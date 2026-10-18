@@ -159,7 +159,7 @@ select _try('check: one log row per decision, all the Manager''s', 'ok', $q$sele
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000e';
 select _try('store: mark a trip''s difference accepted directly', 'refused', $q$update collection_trips set difference_accepted_at = now() where id = 'T2'$q$);
 select _try('store: count a trip (still open to members)', 'ok', $q$update collection_trips set yard_checked_at = now() where id = 'T2'$q$);
-select _try('store: report stock (stock.report not granted yet)', 'refused', $q$insert into stock_reports(shop_id,name,qty,why,reported_by) values ('11111111-1111-1111-1111-111111111111','Cement',1,'damaged','00000000-0000-0000-0000-00000000000e')$q$);
+select _try('store: report stock (stock.report, granted by 0124)', 'ok', $q$insert into stock_reports(shop_id,name,qty,why,reported_by) values ('11111111-1111-1111-1111-111111111111','Cement',1,'damaged','00000000-0000-0000-0000-00000000000e')$q$);
 
 -- ---- as OWNER: everything
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';

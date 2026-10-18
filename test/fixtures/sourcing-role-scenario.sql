@@ -3,12 +3,7 @@
 -- refused. 'refused' also covers row-level security quietly matching no
 -- rows on an update or delete -- the database's way of saying no there.
 --
--- The 'sourcing' role itself comes from the shared foundation (0119). Until
--- that migration is here, the role check is widened below exactly as 0119
--- will widen it, so the tasks 0126 grants can be asked about.
-alter table shop_members drop constraint if exists shop_members_role_check;
-alter table shop_members add constraint shop_members_role_check
-  check (role in ('owner', 'admin', 'staff', 'sales', 'manager', 'buyer', 'store', 'accounts', 'sourcing'));
+-- The 'sourcing' role itself is allowed by 0128.
 grant all on all tables in schema public to authenticated;
 grant all on all sequences in schema public to authenticated;
 grant execute on all functions in schema public to authenticated;

@@ -357,7 +357,7 @@ intelligence centre for analytics, the AI manager and reports (section 1).
    - the one invoicing function, used by the Manager's button and the 24-hour
      run
    - the server job for the 24-hour automatic invoice
-   - adding the `'sourcing'` role
+   - adding the `'sourcing'` role (done ahead of the rest, in 0128)
    - push for every app
    - the console switched to the same functions
 
@@ -385,7 +385,7 @@ intelligence centre for analytics, the AI manager and reports (section 1).
    - agent change requests
    - write-offs, with the Store's report
    - returns, voids, credit notes
-5. **Sourcing** (the role itself comes with step 0)
+5. **Sourcing** (the role itself was added ahead of step 0, in 0128)
    - the staff form and the invite link for the role
    - the Sales "we don't sell it" button
    - requests, products, suppliers, the price list, the daily confirmations
@@ -398,7 +398,7 @@ Several sessions build at once, so each one has its number. Use yours; never
 
 | Number | For |
 |---|---|
-| 0119 | The shared foundation: gate, invoicing function, 24-hour job, `'sourcing'` role |
+| 0119 | The shared foundation: gate, invoicing function, 24-hour job (the `'sourcing'` role went ahead in 0128) |
 | 0120 | Push for every app |
 | 0121 | Sales |
 | 0122 | Manager |
@@ -407,6 +407,7 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0125 | Buyer |
 | 0126 | Sourcing |
 | 0127 | Owner app |
+| 0128 | The `'sourcing'` role, ahead of the rest of the shared foundation (0119) |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.
