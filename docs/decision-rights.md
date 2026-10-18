@@ -162,11 +162,11 @@ row in the same commit. The test fails on any mismatch, in either direction.
 
 | Decision | Task | Who decides | Proposes | Told | Built |
 |---|---|---|---|---|---|
-| **Work a request: asked, looking, found, priced, listed** | `sourcing.lead` | Sourcing | Sales | Sales (who asked) | no |
-| **Add a new item to what we sell, or edit a product's details (not its markup)** | `product.edit` | Sourcing | — | Manager (to set the markup) | no |
-| **Add or edit suppliers** | `supplier.edit` | Sourcing | Buyer | — | no |
-| **Keep the supplier price list and rival prices right** | `price.list` | Sourcing | Buyer | — | no |
-| **Confirm today's share of prices** (the owner sets how many); the Buyer confirms by phone for a supplier who is slow or can't | `price.confirm` | Sourcing, Buyer | — | owner's log | no |
+| **Work a request: asked, looking, found, priced, listed** | `sourcing.lead` | Sourcing | Sales | Sales (who asked) | yes |
+| **Add a new item to what we sell, or edit a product's details (not its markup)** | `product.edit` | Sourcing | — | Manager (to set the markup) | yes |
+| **Add or edit suppliers** | `supplier.edit` | Sourcing | Buyer | — | yes |
+| **Keep the supplier price list and rival prices right** | `price.list` | Sourcing | Buyer | — | yes |
+| **Confirm today's share of prices** (the owner sets how many); the Buyer confirms by phone for a supplier who is slow or can't | `price.confirm` | Sourcing, Buyer | — | owner's log | yes: Sourcing |
 
 ### The team
 

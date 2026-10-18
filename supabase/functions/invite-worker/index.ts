@@ -31,7 +31,10 @@ const STORE_APP_URL = Deno.env.get("STORE_APP_URL") || "https://omni-ware.vercel
 // rule. A manager is not an admin (is_shop_admin is owner/admin only): what
 // they may write is their role_tasks (0116), so the owner may hand it out.
 const MANAGER_APP_URL = Deno.env.get("MANAGER_APP_URL") || "https://omni-ware.vercel.app/manager.html";
-const DESK_ROLES = ["staff", "sales", "buyer", "store", "manager", "accounts"];
+// A Sourcing login finds items and suppliers in the Sourcing app
+// (sourcing.html, 0126). Same allow-list rule.
+const SOURCING_APP_URL = Deno.env.get("SOURCING_APP_URL") || "https://omni-ware.vercel.app/sourcing.html";
+const DESK_ROLES = ["staff", "sales", "buyer", "store", "manager", "accounts", "sourcing"];
 
 // The browser sends an OPTIONS preflight before the real POST (it carries
 // custom headers like apikey/authorization). Without these on every
@@ -146,9 +149,15 @@ Deno.serve(async (req) => {
     // Somebody who keeps the books joins as 'accounts' (0113 allowed it,
     // 0117 gave it its tasks) and signs in to the Accounts app.
     const isAccounts = staffRow.role === "accounts";
-    const memberRole = isSales ? "sales" : isBuyer ? "buyer" : isStore ? "store" : isManager ? "manager" : isAccounts ? "accounts" : "staff";
-    const roleUnknown = (msg: string) => (isSales || isBuyer || isStore || isManager || isAccounts) && /shop_members_role_check/.test(msg);
-    const roleUnknownSay = `This database does not know the ${isSales ? "Sales" : isBuyer ? "Buyer" : isStore ? "Store" : isManager ? "Manager" : "Accounts"} role yet — paste migration 0113_sales_role.sql${isBuyer ? " and 0114_buyer_role.sql" : isStore ? " and 0115_store_role.sql" : isManager ? " and 0116_manager_role.sql" : isAccounts ? " and 0117_accounts_role.sql" : ""} in the SQL editor, then try again.`;
+    // Somebody who finds new items and suppliers joins as 'sourcing' (the
+    // shared foundation, 0119, allows it; 0126 gives it its tasks) and
+    // signs in to the Sourcing app.
+    const isSourcing = staffRow.role === "sourcing";
+    const memberRole = isSales ? "sales" : isBuyer ? "buyer" : isStore ? "store" : isManager ? "manager" : isAccounts ? "accounts" : isSourcing ? "sourcing" : "staff";
+    const roleUnknown = (msg: string) => (isSales || isBuyer || isStore || isManager || isAccounts || isSourcing) && /shop_members_role_check/.test(msg);
+    const roleUnknownSay = isSourcing
+      ? "This database does not know the Sourcing role yet — paste migration 0119 (the shared foundation) and 0126_sourcing.sql in the SQL editor, then try again."
+      : `This database does not know the ${isSales ? "Sales" : isBuyer ? "Buyer" : isStore ? "Store" : isManager ? "Manager" : "Accounts"} role yet — paste migration 0113_sales_role.sql${isBuyer ? " and 0114_buyer_role.sql" : isStore ? " and 0115_store_role.sql" : isManager ? " and 0116_manager_role.sql" : isAccounts ? " and 0117_accounts_role.sql" : ""} in the SQL editor, then try again.`;
 
     if (staffRow.user_id) {
       // Already signed up. Moving somebody between the floor, the sales
@@ -179,7 +188,7 @@ Deno.serve(async (req) => {
     // looking that user up so this staff row can still be linked to it.
     let userId: string;
     const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
-      redirectTo: isSales ? ADMIN_APP_URL : isBuyer ? BUYER_APP_URL : isStore ? STORE_APP_URL : isManager ? MANAGER_APP_URL : isAccounts ? ACCOUNTS_APP_URL : WORKER_APP_URL,
+      redirectTo: isSales ? ADMIN_APP_URL : isBuyer ? BUYER_APP_URL : isStore ? STORE_APP_URL : isManager ? MANAGER_APP_URL : isAccounts ? ACCOUNTS_APP_URL : isSourcing ? SOURCING_APP_URL : WORKER_APP_URL,
     });
     console.log("invite-worker: inviteUserByEmail result", {
       invitedUserId: invited?.user?.id,
