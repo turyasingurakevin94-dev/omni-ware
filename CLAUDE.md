@@ -5,6 +5,8 @@ Before changing any role app (sales, buyer, store, manager, accounts, the consol
 - **Accounts** is the treasurer and runs everything finance (expenses, income, transfers, payroll, loans, assets, supplier and agent payments, the daily close);
 - **Sourcing** finds items and suppliers and keeps the price list right.
 
+Actions live in the phone apps. The Owner app holds only the owner's governance and the decision log. The desktop console is the intelligence centre (analytics, the AI manager, reports). Every handoff that waits on someone sends that person a push. Each build has a reserved migration number in that file; use yours. Role canvases draw the sample shop in `docs/canvas-cast.md`.
+
 If a day-to-day job has no role in that file, ask the owner which role takes it; never default it to the owner. `test/decision-rights.test.js` fails if the migrations and that file disagree.
 
 # Permanent UI/UX Design Preference — Visual-First Communication

@@ -42,7 +42,12 @@ function docRows() {
     const task = (/^`([a-z_]+\.[a-z_]+)`$/.exec(cells[1]) || [])[1];
     if (!task) continue;
     const who = cells[2].split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
-    out.push({ decision: cells[0].replace(/\*\*/g, ''), task, who, built: cells[5].toLowerCase() });
+    // Built: "yes" (every role listed), "no" (none), or "yes: Buyer, Store"
+    // (only the roles named, the rest still planned).
+    const b = cells[5].toLowerCase();
+    const part = /^yes:\s*(.+)$/.exec(b);
+    const builtFor = b === 'yes' ? who.slice() : b === 'no' ? [] : part ? part[1].split(',').map((x) => x.trim()) : null;
+    out.push({ decision: cells[0].replace(/\*\*/g, ''), task, who, built: b, builtFor });
   }
   return out;
 }
@@ -71,7 +76,7 @@ const grants = migrationGrants();
 /* ---------------- 1. every session reads it ---------------- */
 t.check(/docs\/decision-rights\.md/.test(claude), 'CLAUDE.md points every session at docs/decision-rights.md');
 t.check(rows.length >= 30, `the table reads as rows (${rows.length} found)`);
-t.check(rows.every((r) => r.built === 'yes' || r.built === 'no'), 'every row says Built yes or no');
+t.check(rows.every((r) => r.builtFor && r.builtFor.every((w) => r.who.includes(w))), 'every row says Built yes, no, or "yes:" with roles it lists');
 t.check(rows.every((r) => r.who.length && r.who.every((w) => ROLES.includes(w))), 'every "Who decides" names only role logins (the owner holds every task already)');
 
 /* ---------------- 2. no grant the table does not allow ---------------- */
@@ -88,14 +93,14 @@ t.check(rows.every((r) => r.who.length && r.who.every((w) => ROLES.includes(w)))
   const missing = new Set(), early = new Set();
   for (const r of rows) {
     for (const w of r.who) {
-      const has = grants.has(w + ' ' + r.task);
-      if (r.built === 'yes' && !has) missing.add(`${w} ${r.task}`);
-      if (r.built === 'no' && has) early.add(`${w} ${r.task} (${grants.get(w + ' ' + r.task)})`);
+      const has = grants.has(w + ' ' + r.task), should = r.builtFor.includes(w);
+      if (should && !has) missing.add(`${w} ${r.task}`);
+      if (!should && has) early.add(`${w} ${r.task} (${grants.get(w + ' ' + r.task)})`);
     }
   }
-  t.check(missing.size === 0, 'every row marked Built yes is granted by a migration'
+  t.check(missing.size === 0, 'every role a row marks built is granted by a migration'
     + (missing.size ? ` -- not granted: ${[...missing].join(', ')}` : ''));
-  t.check(early.size === 0, 'every row marked Built no is granted to nobody yet -- flip the row when you build it'
+  t.check(early.size === 0, 'no role holds a task its row still marks planned -- update the row when you build it'
     + (early.size ? ` -- already granted: ${[...early].join(', ')}` : ''));
 }
 
@@ -104,7 +109,7 @@ t.check(rows.every((r) => r.who.length && r.who.every((w) => ROLES.includes(w)))
   const byTask = new Map();
   const clash = [];
   for (const r of rows) {
-    const k = r.who.slice().sort().join(',') + ' / ' + r.built;
+    const k = r.who.slice().sort().join(',') + ' / ' + r.builtFor.slice().sort().join(',');
     if (byTask.has(r.task) && byTask.get(r.task) !== k) clash.push(r.task);
     byTask.set(r.task, k);
   }
@@ -120,13 +125,13 @@ t.check(rows.every((r) => r.who.length && r.who.every((w) => ROLES.includes(w)))
   const HOME = {
     manager: ['price.approve', 'markup.set', 'margin.see', 'credit.set', 'credit.release', 'invoice.make',
       'pick.settle', 'credit_note.raise', 'invoice.void', 'stock.writeoff', 'stock.correct', 'trip.difference',
-      'customer.edit', 'agent.change', 'goal.set', 'team.limits'],
+      'customer.edit', 'agent.change', 'goal.set', 'team.limits', 'restock.hold'],
     accounts: ['cash.expense', 'cash.income', 'cash.transfer', 'payment.edit', 'day.open', 'bill.record', 'bill.pay',
-      'consign.settle', 'payroll.run', 'loan.edit', 'asset.edit', 'agent.pay', 'finance.see'],
+      'consign.settle', 'payroll.run', 'loan.edit', 'asset.edit', 'agent.pay', 'finance.see', 'trip.cash'],
     sourcing: ['sourcing.lead', 'product.edit', 'supplier.edit', 'price.list', 'price.confirm'],
     sales: ['counter.sell', 'sourcing.ask'],
-    store: ['stock.receive', 'stock.report'],
-    buyer: ['buy.restock'],
+    store: ['stock.receive', 'stock.report', 'trip.collect', 'route.lock'],
+    buyer: ['buy.restock', 'price.confirm', 'trip.collect'],
   };
   for (const [role, tasks] of Object.entries(HOME)) {
     const off = tasks.filter((task) => !rows.some((r) => r.task === task && r.who.includes(role)));
@@ -138,6 +143,21 @@ t.check(rows.every((r) => r.who.length && r.who.every((w) => ROLES.includes(w)))
   const kept = (/## 4\.[\s\S]*?\n## 5\./.exec(doc) || [''])[0];
   t.check(/governance, never operations/.test(kept) && !/invoic|expense|payroll|price list|markup/i.test(kept),
     'what the owner keeps is governance only -- no invoicing, money, prices or markups');
+}
+
+/* ---------------- no two migrations share a number ----------------
+   Several sessions build at once. Each has a reserved number in section 5;
+   two files with one number would run in an order nobody chose. */
+{
+  const dir = path.join(__dirname, '..', 'supabase', 'migrations');
+  const seen = new Map(), dup = [];
+  for (const f of fs.readdirSync(dir).filter((x) => /^\d{4}_.*\.sql$/.test(x))) {
+    const n = f.slice(0, 4);
+    if (seen.has(n)) dup.push(`${seen.get(n)} and ${f}`); else seen.set(n, f);
+  }
+  t.check(dup.length === 0, 'no two migrations share a number' + (dup.length ? ` -- ${dup.join('; ')}` : ''));
+  const reserved = [...doc.matchAll(/^\| (01\d\d) \| /gm)].map((m) => m[1]);
+  t.check(reserved.length >= 9 && new Set(reserved).size === reserved.length, 'section 5 reserves one number per build, none twice');
 }
 
 process.exit(t.done() ? 1 : 0);

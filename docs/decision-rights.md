@@ -1,7 +1,9 @@
 # Who decides what: decision rights for the Omni-Ware team
 
-**Status: binding.** Agreed with the owner on 18 Oct 2026 and revised the
-same day. This file is the authority on who may decide what in every
+**Status: binding.** Agreed with the owner on 18 Oct 2026, revised the same
+day, and completed with the owner's answers on the open questions (trips,
+restock, trip cash, sourcing intake, supplier confirmations, delivery
+directions, push, and where the owner works). This file is the authority on who may decide what in every
 Omni-Ware app and in every migration that writes `role_tasks`. The apps are
 index.html, sales.html, buyer.html, store.html, manager.html, accounts.html,
 and the Sourcing app.
@@ -28,6 +30,19 @@ below against the migrations, so the two cannot drift apart silently.
 | 4 | **Sourcing** | Finds new items and new suppliers and negotiates. Keeps the supplier price list right, confirming the share of prices the owner sets for each day. |
 | 5 | **Sales, Buyer, Store** | Do the work and propose exceptions. Nobody decides their own exception. |
 
+### Where each kind of work lives
+
+- **Actions live in the phone apps.** Every operational action has a home in
+  the role's phone app. That includes everything that today can only be done on
+  the desktop console.
+- **The Owner app** holds only what needs the owner: hiring, roles and task
+  switches, the policy numbers, the log of every decision, stepping in, and the
+  governance in section 4.
+- **The desktop console becomes the intelligence centre**: analytics, the AI
+  manager, forecasts and reports. It informs and advises, and it is not where
+  the day's work is done. Until each action exists in a phone app, the console
+  keeps it working. Once the phone app has it, the console's copy is retired.
+
 Three rules hold for every role:
 
 - **Nobody sells below cost** in a role app. Cost is the only price floor.
@@ -46,13 +61,15 @@ described the first build, not the policy. Where it covers a row in section
 
 `Who decides` lists the roles that hold the task. The owner and admins hold every
 task through `has_task()` (0113) and are not listed: they *can*, but are never
-*needed*. `Built` says whether the task is in `role_tasks` yet: **yes** means a
-migration grants it to every role listed; **no** means nobody holds it yet (it
-is planned, see section 5).
+*needed*. `Built` says which of those roles a migration grants the task to
+today:
 
-A session that builds a "no" row grants the task in a migration and changes
-the row to "yes" in the same commit. The test fails on any mismatch, in either
-direction.
+- **yes**: every role listed holds it
+- **no**: none holds it yet (it is planned, see section 5)
+- **yes: Buyer**: only the roles named hold it so far
+
+A session that builds a row grants the task in a migration and updates the
+row in the same commit. The test fails on any mismatch, in either direction.
 
 ### Selling and pricing
 
@@ -110,6 +127,7 @@ direction.
 | **Record and repay loans** | `loan.edit` | Accounts | — | owner's log | no |
 | **Record assets, and their sale or disposal** | `asset.edit` | Accounts | — | owner's log | no |
 | **Pay agents: commission claims, cash an agent brings in** | `agent.pay` | Accounts | — | the agent, owner's log | no |
+| **Count a buying trip's cash back against the cash given** | `trip.cash` | Accounts | Buyer | Manager, owner's log | no |
 | **See every financial figure: P&L, balance sheet, cash flow, debtors, creditors** | `finance.see` | Accounts | — | — | no |
 
 ### Stock and the yard
@@ -126,7 +144,7 @@ direction.
 | Pick and pack an order | `order.pick` | Store | — | — | yes |
 | Load the truck, choose the driver | `order.load` | Store | — | — | yes |
 | Deliver, with proof | `order.deliver` | Store | — | — | yes |
-| Lock a road route to a place | `route.lock` | Store | — | — | yes |
+| Lock a road route to a place; **name the delivery directions on the load map** | `route.lock` | Store | — | — | yes |
 
 ### Buying
 
@@ -136,8 +154,9 @@ direction.
 | Switch a line to another supplier or our shelf | `line.switch` | Buyer | — | Sales | yes |
 | Drop a line nobody has | `line.drop` | Buyer | — | Sales | yes |
 | Plan a buying trip, with the cash for it | `trip.plan` | Buyer | — | — | yes |
-| Ride a trip and hand it in | `trip.collect` | Buyer | — | Store | yes |
+| Ride a trip and hand it in (**Store staff may ride one too**) | `trip.collect` | Buyer, Store | — | Store | yes: Buyer |
 | **Buy to refill the shelf when no order needs it (what to buy)** | `buy.restock` | Buyer | — | Manager | no |
+| **Hold a restock line ("not yet")** | `restock.hold` | Manager | — | Buyer | no |
 
 ### Sourcing
 
@@ -147,7 +166,7 @@ direction.
 | **Add a new item to what we sell, or edit a product's details (not its markup)** | `product.edit` | Sourcing | — | Manager (to set the markup) | no |
 | **Add or edit suppliers** | `supplier.edit` | Sourcing | Buyer | — | no |
 | **Keep the supplier price list and rival prices right** | `price.list` | Sourcing | Buyer | — | no |
-| **Confirm today's share of prices** (the owner sets how many) | `price.confirm` | Sourcing | — | owner's log | no |
+| **Confirm today's share of prices** (the owner sets how many); the Buyer confirms by phone for a supplier who is slow or can't | `price.confirm` | Sourcing, Buyer | — | owner's log | no |
 
 ### The team
 
@@ -267,8 +286,42 @@ the supplier price list automatically.
   asked, looking, found, priced and listed.
 - Listing it creates the product. The Manager sets its markup.
 - Everyone who asked is told.
+- **A line dropped at Checking** because nobody has it becomes a Sourcing
+  request by itself, with the customer who asked.
+- Agents' stock requests (`agent_requests`, kind `stock`) land there too.
 - Each day, **Sourcing confirms the owner's set number of supplier prices**
   (`presets.priceReview`), oldest first: still right, or the new figure.
+- **The Buyer confirms on a supplier's behalf** by phone when the supplier is
+  slow or can't do it themselves. It counts toward the day's share.
+- **Later, suppliers confirm their own prices and items** in a supplier app.
+  Like agents, suppliers are outside the shop and not a shop role. Their
+  confirmations go through server functions, the way agent orders do. Until
+  that app exists, Sourcing and the Buyer cover it.
+
+### Cash for a buying trip
+
+The Buyer plans a trip with the cash for it (`trip.plan`). When the trip is
+handed in, **Accounts** counts the cash that came back against the cash given
+and what was paid at each stop (`trip.cash`). Any difference is booked the way a
+close difference is, and the Manager is told.
+
+### Push notifications are part of the system
+
+Every handoff in this file that waits for someone **sends that person a push**.
+That covers:
+
+- a price to approve, a credit hold, a short pick, a trip difference, a
+  write-off report, an agent's request, and the counter-sale yes, all to the
+  Manager;
+- a trip back, to the Store and to Accounts for the trip's cash;
+- a price changed, to Sales ("tell them");
+- a request listed, to the salesperson who asked;
+- the owner's log, as a daily digest, not a ping per decision.
+
+Every phone app ships with push. The apps that still lack their Firebase set-up
+(`google-services.json` for sales, buyer, store, manager, accounts, sourcing
+and the Owner app) get it as part of the build, not later. A nudge is a push,
+no longer only a WhatsApp link.
 
 ### Settings stored as one block
 
@@ -291,13 +344,24 @@ lets `product.edit` change only everything else.
   Day-to-day corrections are voids, reversals and credit notes, which the
   roles above make.
 
-The owner's view is the log of every decision made on their behalf, and every
-report. Whether this becomes an Owner phone app or stays the desktop console is
-not decided yet.
+Where it lives: the **Owner phone app** holds these and the log of every
+decision made on the owner's behalf. The **desktop console** is the
+intelligence centre for analytics, the AI manager and reports (section 1).
 
 ---
 
 ## 5. Build order
+
+0. **The shared foundation, built once, before any app builds on it:**
+   - the Checking gate (prices and credit) as a database guard
+   - the one invoicing function, used by the Manager's button and the 24-hour
+     run
+   - the server job for the 24-hour automatic invoice
+   - adding the `'sourcing'` role
+   - push for every app
+   - the console switched to the same functions
+
+   No app session builds its own copy of any of these.
 
 1. **Nothing waits for the owner on an order**
    - shelf-only orders skip Checking
@@ -321,12 +385,31 @@ not decided yet.
    - agent change requests
    - write-offs, with the Store's report
    - returns, voids, credit notes
-5. **Sourcing**
-   - add `'sourcing'` to the `shop_members` role check (0113) and to the staff
-     form
+5. **Sourcing** (the role itself comes with step 0)
+   - the staff form and the invite link for the role
    - the Sales "we don't sell it" button
    - requests, products, suppliers, the price list, the daily confirmations
 6. **Restock buying** in the Buyer app.
+
+### Migration numbers, reserved
+
+Several sessions build at once, so each one has its number. Use yours; never
+"the next free number".
+
+| Number | For |
+|---|---|
+| 0119 | The shared foundation: gate, invoicing function, 24-hour job, `'sourcing'` role |
+| 0120 | Push for every app |
+| 0121 | Sales |
+| 0122 | Manager |
+| 0123 | Accounts |
+| 0124 | Store |
+| 0125 | Buyer |
+| 0126 | Sourcing |
+| 0127 | Owner app |
+
+A session that needs a second migration takes the next number after 0127 and
+adds it to this table in the same commit.
 
 ### Known text that now contradicts this file
 
