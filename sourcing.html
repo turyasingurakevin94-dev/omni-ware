@@ -4426,7 +4426,7 @@ SCREENS.Main = {
   <div style="flex: none; background: #16203C; color: #FFFFFF; border-radius: 0 0 28px 28px; padding: 16px 18px 16px; display: flex; flex-direction: column; gap: 14px" data-navy-top>
     <div style="display: flex; align-items: center; gap: 12px">
       <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
-        <span style="font-size: 20px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ greeting }}</span>
+        <span style="font-size: 20px; font-weight: 700; letter-spacing: -.01em; line-height: 1.15">{{ greeting }}</span>
         <span style="font-size: 13px; color: #B3BCD2; display: flex; align-items: center; gap: 6px">{{ dateWord }}<span style="width: 3px; height: 3px; border-radius: 999px; background: #5C6788"></span><span style="display: inline-flex; align-items: center; gap: 5px; color: #6FDCB0"><span style="width: 7px; height: 7px; border-radius: 999px; background: #6FDCB0"></span>{{ roleWord }}</span></span>
       </div>
       <a href="MarketRun.dc.html" aria-label="Plan a market run" style="width: 44px; height: 44px; border-radius: 999px; background: rgba(255,255,255,.1); display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.3"></circle></svg></a>
@@ -4777,7 +4777,7 @@ SCREENS.MarketRun = {
       <span style="display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px; border-radius: 999px; background: rgba(111,220,176,.14); color: #6FDCB0; font-size: 11px; font-weight: 700"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"></path></svg>on phone</span>
     </div>
     <sc-if value="{{ hasAreas }}">
-    <div role="tablist" aria-label="Area" class="r-tabs" style="display: flex; gap: 6px; overflow-x: auto">
+    <div role="tablist" aria-label="Area" class="r-tabs" style="display: flex; gap: 6px; overflow-x: auto; padding-right: 16px; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 22px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 22px), transparent)">
       <sc-for list="{{ areas }}" as="a"><button type="button" role="tab" aria-selected="{{ a.on }}" onClick="{{ a.pick }}" style="{{ a.style }}">{{ a.name }} <span style="font-family: 'IBM Plex Mono', monospace">{{ a.n }}</span></button></sc-for>
     </div>
     </sc-if>
@@ -5649,7 +5649,7 @@ SCREENS.Prices = {
         <sc-for list="{{ today }}" as="r">
           <div style="{{ r.wrap }}">
             <span style="display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 58px">
-              <span style="min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ r.name }}</span><span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6B7480; white-space: nowrap; overflow: hidden"><span style="font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-weight: 600; {{ r.ageInk }}">{{ r.age }}</span>{{ r.sup }}<span style="font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-weight: 600; color: #1C2233">{{ r.cost }}</span></span></span>
+              <span style="min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ r.name }}</span><span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6B7480; white-space: nowrap; min-width: 0"><span style="flex: none; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-weight: 600; {{ r.ageInk }}">{{ r.age }}</span><span style="flex: none; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-weight: 600; color: #1C2233">{{ r.cost }}</span><span style="min-width: 0; overflow: hidden; text-overflow: ellipsis">{{ r.sup }}</span></span></span>
               <sc-if value="{{ r.open }}">
                 <span style="display: flex; gap: 6px">
                   <button type="button" onClick="{{ r.ok }}" aria-label="{{ r.okLabel }}" style="height: 40px; padding: 0 10px; border: none; border-radius: 12px; background: #E4F4EA; color: #0F6B43; font-family: inherit; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 4px; cursor: pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Still right</button>
@@ -5756,7 +5756,7 @@ SCREENS.Prices = {
         }
         const who = x.who || { by: '?', name: 'someone', phone: false };
         const av = avStyle(who.name, 28) + '; font-size: 11px';
-        return { name, sup: (sup ? sup.name : r.supplierId) + ' ·', cost: cost ? n0(cost) : '— —',
+        return { name, sup: '· ' + (sup ? sup.name : r.supplierId), cost: cost ? n0(cost) : '— —',
           age: x.shownAge == null ? (x.done ? 'today' : 'no date') : x.shownAge + 'd',
           ageInk: 'color: ' + (x.done && x.shownAge == null ? '#0F6B43' : (x.shownAge == null || x.shownAge > 30) ? '#8E2A22' : '#95530C'),
           open, done: !!x.done, editing,
@@ -6337,7 +6337,7 @@ SCREENS.RunDone = {
         <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 9px 0; border-bottom: 1px dashed #E0DCD4"><span style="font-size: 14px; font-weight: 600">Rival price tags</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; color: #7A3268">{{ tags }}</span></div>
         <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 9px 0; border-bottom: 1px dashed #E0DCD4"><span style="font-size: 14px; font-weight: 600">{{ newSupLabel }}</span><span style="{{ newSupStyle }}">{{ newSup }}</span></div>
         <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 9px 0; color: #8E2A22"><span style="font-size: 14px; font-weight: 600">Can’t supply</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600">{{ cant }}</span></div>
-        <sc-if value="{{ hasStamp }}"><span class="d-stamp" style="{{ stampStyle }}">{{ stamp }}</span></sc-if>
+        <sc-if value="{{ hasStamp }}"><div style="display: flex; justify-content: flex-end; padding: 6px 4px 6px"><span class="d-stamp" style="{{ stampStyle }}">{{ stamp }}</span></div></sc-if>
       </div>
       <div style="height: 8px; background: linear-gradient(135deg, #FFFFFF 50%, transparent 50%) 0 0 / 12px 8px repeat-x, linear-gradient(-135deg, #FFFFFF 50%, transparent 50%) 0 0 / 12px 8px repeat-x"></div>
     </div>
@@ -6385,7 +6385,7 @@ SCREENS.RunDone = {
         newSupStyle: r.newSups.length ? 'font-size: 13px; font-weight: 700; text-align: right' : 'font-size: 13px; font-weight: 700; color: #B9B2A6',
         hasStamp: total > 0,
         stamp: allIn ? 'ALL IN' : plural(left, 'STOP', 'STOPS') + ' LEFT',
-        stampStyle: 'position: absolute; right: 12px; bottom: 54px; transform: rotate(-10deg); padding: 4px 10px 3px; border-radius: 9px; mix-blend-mode: multiply; font-size: 16px; font-weight: 700; letter-spacing: .16em; ' + (allIn ? 'border: 3px double #0F6B43; color: #0F6B43; background: rgba(228,244,234,.4)' : 'border: 3px double #95530C; color: #95530C; background: rgba(253,238,225,.4)'),
+        stampStyle: 'display: inline-block; transform: rotate(-6deg); padding: 4px 10px 3px; border-radius: 9px; mix-blend-mode: multiply; font-size: 16px; font-weight: 700; letter-spacing: .16em; ' + (allIn ? 'border: 3px double #0F6B43; color: #0F6B43; background: rgba(228,244,234,.4)' : 'border: 3px double #95530C; color: #95530C; background: rgba(253,238,225,.4)'),
         moved: r.moved.map(m => ({ name: m.l.name, from: STAGE_WORD[m.from] || m.from, to: STAGE_WORD[m.l.status] || m.l.status, sx: JSON.stringify({ leadId: m.l.id }) })),
         noMoved: !r.moved.length,
         hasSample: r.sampleCash > 0, sampleCash: n0(r.sampleCash),
@@ -6678,7 +6678,7 @@ SCREENS.Spotted = {
     <div style="display: flex; flex-direction: column; gap: 6px">
       <span style="display: flex; align-items: center; justify-content: space-between; padding-left: 2px"><span style="font-size: 12px; font-weight: 700; color: #5F6980">{{ whoTitle }}</span><span role="tablist" aria-label="Whose price" style="display: flex; gap: 2px; padding: 2px; border-radius: 10px; background: #F1EEE8"><sc-for list="{{ kinds }}" as="k" hint-placeholder-count="2"><button type="button" role="tab" aria-selected="{{ k.on }}" onClick="{{ k.pick }}" style="{{ k.style }}">{{ k.label }}</button></sc-for></span></span>
       <sc-if value="{{ isSup }}">
-      <div style="display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none">
+      <div style="display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-right: 16px; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 22px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 22px), transparent)">
         <sc-for list="{{ sups }}" as="s" hint-placeholder-count="3">
           <button type="button" aria-pressed="{{ s.on }}" onClick="{{ s.pick }}" aria-label="{{ s.full }}" style="{{ s.style }}"><span style="{{ s.dot }}">{{ s.ini }}</span><span style="font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ s.name }}</span></button>
         </sc-for>
@@ -6840,8 +6840,10 @@ SCREENS.Spotted = {
         const ra = String(a.id) === String(st.sup) ? -1 : rel.has(String(a.id)) ? rel.get(String(a.id)) : 999, rb = String(b.id) === String(st.sup) ? -1 : rel.has(String(b.id)) ? rel.get(String(b.id)) : 999;
         return ra - rb || a.name.localeCompare(b.name);
       });
-      const supDefs = ordered.map(s => { const t = tintFor(s.id); return { id: s.id, ini: initials(s.name), name: firstWord(s.name), full: s.name, bg: t[0], ink: t[1] }; })
-        .concat([{ id: 'NEW', ini: '+', name: 'New', full: 'A new supplier', bg: '#F1EEE8', ink: '#5F6980' }]);
+      // "New" sits right after the likeliest two, as drawn -- never past
+      // the edge of the row where nobody would find it.
+      const supDefs = ordered.map(s => { const t = tintFor(s.id); return { id: s.id, ini: initials(s.name), name: firstWord(s.name), full: s.name, bg: t[0], ink: t[1] }; });
+      supDefs.splice(Math.min(2, supDefs.length), 0, { id: 'NEW', ini: '+', name: 'New', full: 'A new supplier', bg: '#F1EEE8', ink: '#5F6980' });
       const sups = supDefs.map(x => { const on = String(x.id) === String(st.sup); return { ini: x.ini, name: x.name, full: x.full, on: on ? 'true' : 'false',
         pick: () => { FEEL.tick(); set({ sup: x.id }); },
         dot: 'width: 28px; height: 28px; flex: none; border-radius: 999px; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; background: ' + x.bg + '; color: ' + x.ink,
