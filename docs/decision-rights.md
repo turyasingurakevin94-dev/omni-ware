@@ -77,7 +77,7 @@ row in the same commit. The test fails on any mismatch, in either direction.
 |---|---|---|---|---|---|
 | Make an order at or above the shop's price | `quote.make` | Sales | — | — | yes |
 | **Sell over the counter: pay and go, for goods on the shelf** | `counter.sell` | Sales | — | Manager | yes |
-| **Forward an item we don't sell to Sourcing, while taking the order** | `sourcing.ask` | Sales | — | Sourcing | no |
+| **Forward an item we don't sell to Sourcing, while taking the order** | `sourcing.ask` | Sales | — | Sourcing | yes |
 | **Sell below the shop's price (at or above cost)** | `price.approve` | Manager | Sales | Sales, owner's log | yes |
 | **Price a line that has no selling price or no known cost** | `price.approve` | Manager | Sales, Buyer | Sales, owner's log | yes |
 | **Change a product's markups or the shop's default markup** | `markup.set` | Manager | Manager | owner's log | yes |
@@ -151,11 +151,11 @@ row in the same commit. The test fails on any mismatch, in either direction.
 | Decision | Task | Who decides | Proposes | Told | Built |
 |---|---|---|---|---|---|
 | Record a supplier's yes or out on an order | `supplier.confirm` | Buyer | — | Sales | yes |
-| Switch a line to another supplier or our shelf | `line.switch` | Buyer | — | Sales | yes |
+| Switch a line to another supplier or our shelf, **or to another item (make or size)** | `line.switch` | Buyer | — | Sales | yes |
 | Drop a line nobody has | `line.drop` | Buyer | — | Sales | yes |
 | Plan a buying trip, with the cash for it | `trip.plan` | Buyer | — | — | yes |
 | Ride a trip and hand it in (**Store staff may ride one too**) | `trip.collect` | Buyer, Store | — | Store | yes |
-| **Buy to refill the shelf when no order needs it (what to buy)** | `buy.restock` | Buyer | — | Manager | no |
+| **Buy to refill the shelf when no order needs it (what to buy)** | `buy.restock` | Buyer | — | Manager | yes |
 | **Hold a restock line ("not yet")** | `restock.hold` | Manager | — | Buyer | yes |
 
 ### Sourcing
@@ -166,7 +166,7 @@ row in the same commit. The test fails on any mismatch, in either direction.
 | **Add a new item to what we sell, or edit a product's details (not its markup)** | `product.edit` | Sourcing | — | Manager (to set the markup) | yes |
 | **Add or edit suppliers** | `supplier.edit` | Sourcing | Buyer | — | yes |
 | **Keep the supplier price list and rival prices right** | `price.list` | Sourcing | Buyer | — | yes |
-| **Confirm today's share of prices** (the owner sets how many); the Buyer confirms by phone for a supplier who is slow or can't | `price.confirm` | Sourcing, Buyer | — | owner's log | yes: Sourcing |
+| **Confirm today's share of prices** (the owner sets how many); the Buyer confirms by phone for a supplier who is slow or can't | `price.confirm` | Sourcing, Buyer | — | owner's log | yes: Sourcing, Buyer |
 
 ### The team
 
@@ -369,7 +369,7 @@ intelligence centre for analytics, the AI manager and reports (section 1).
    - the one invoicing function, `invoice_order`, used by the Manager's
      button, the counter sale and the 24-hour run
    - the server job for the 24-hour automatic invoice (every hour, on pg_cron)
-   - adding the `'sourcing'` role
+   - adding the `'sourcing'` role (done ahead of the rest, in 0128)
    - push for every app: `push_outbox`, filled by the database at each
      handoff, delivered by the `push-send` Edge Function. Each phone app
      registers its FCM token in `push_subscriptions` under its own login.
@@ -400,7 +400,7 @@ intelligence centre for analytics, the AI manager and reports (section 1).
    - agent change requests
    - write-offs, with the Store's report
    - returns, voids, credit notes
-5. **Sourcing** (the role itself comes with step 0)
+5. **Sourcing** (the role itself was added ahead of step 0, in 0128)
    - the staff form and the invite link for the role
    - the Sales "we don't sell it" button
    - requests, products, suppliers, the price list, the daily confirmations
@@ -413,7 +413,7 @@ Several sessions build at once, so each one has its number. Use yours; never
 
 | Number | For |
 |---|---|
-| 0119 | The shared foundation: gate, invoicing function, 24-hour job, `'sourcing'` role |
+| 0119 | The shared foundation: gate, invoicing function, 24-hour job (the `'sourcing'` role went ahead in 0128) |
 | 0120 | Push for every app |
 | 0121 | Sales |
 | 0122 | Manager |
@@ -422,6 +422,7 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0125 | Buyer |
 | 0126 | Sourcing |
 | 0127 | Owner app |
+| 0128 | The `'sourcing'` role, ahead of the rest of the shared foundation (0119) |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.

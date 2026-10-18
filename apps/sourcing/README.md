@@ -30,6 +30,6 @@ never in the middle of a visit. A new APK is only needed when something under
 
 ## Who can sign in
 
-A `sourcing` membership (the role comes with the shared foundation, 0119; its
-tasks with `0126_sourcing.sql`), or an owner or admin. Each thing the page
+A `sourcing` membership (the role comes with `0128_sourcing_role.sql`;
+its tasks with `0126_sourcing.sql`), or an owner or admin. Each thing the page
 writes needs its task in `role_tasks`.

@@ -332,6 +332,11 @@ input{font-family:inherit;color:var(--ink)}
 .bx-sl .n .v{display:inline-block;margin-top:2px;padding:0 6px;border-radius:6px;background:var(--soft2);font-size:11px;font-weight:600;color:var(--ink2)}
 .bx-sl .meta{grid-column:1 / -1;display:flex;align-items:center;gap:8px;padding-top:4px}
 .bx-sl.struck .n{color:#8A93A3;text-decoration:line-through}
+.bx-why{grid-column:1 / -1;display:flex;gap:6px;margin:0 -4px}
+.bx-why button{display:flex;align-items:center;gap:6px;min-height:28px;border:none;border-radius:9px;font-size:11px;font-weight:700;text-align:left}
+.bx-why .w{flex:1;min-width:0;padding:0 8px;background:var(--indigoSoft);color:var(--indigo)}
+.bx-why .s{flex:none;gap:5px;padding:0 9px;background:#FDEEE1;color:#7A4A02}
+.bx-why svg{flex:none}
 .bx-tile{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex:none}
 .bx-stamp{position:absolute;right:12px;top:-2px;transform:rotate(-8deg);padding:3px 8px 2px;border:2.5px double currentColor;border-radius:7px;mix-blend-mode:multiply;font-size:12px;font-weight:700;letter-spacing:.14em;animation:bxStamp .4s cubic-bezier(.3,1.4,.5,1) both;display:flex;flex-direction:column;align-items:center;line-height:1.1;pointer-events:none}
 .bx-stamp small{font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:0}
@@ -558,6 +563,8 @@ const ICON = {
   store: '<path d="M3.5 9.5L5 4h14l1.5 5.5zM3.5 9.5V20h17V9.5"/><path class="hole" d="M9.5 20v-5.5h5V20"/>',
   truck: '<path d="M1.5 6.5h12.5v9.5H1.5zM14 10h4.5l3 3v3H14"/><circle cx="5.5" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/>',
   search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+  spark: '<path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>',
+  swap: '<path d="M4 8h13l-3-3M20 16H7l3 3"/>',
   close: '<path d="M6 6l12 12M18 6L6 18"/>',
   back: '<path d="M15 6l-6 6 6 6"/>',
   chev: '<path d="M9 6l6 6-6 6"/>',
@@ -579,6 +586,8 @@ const ICON = {
   sound: '<path d="M4 9.5h3.5L12 5.5v13L7.5 14.5H4z"/><path d="M15.5 9a4.5 4.5 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/>',
   big: '<path d="M4 18L9 6l5 12M5.8 14h6.4M16 18l3-7 3 7M17 16h4"/>',
   out: '<path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  camera: '<path d="M4 8h3l2-2.5h6L17 8h3v11H4z"/><circle cx="12" cy="13.2" r="3.4"/>',
   eye: '<path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.8"/>',
   lines: '<path d="M4 7h16M4 12h10M4 17h7M17 14l3 3-3 3"/>',
   share: '<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
@@ -713,7 +722,7 @@ function rowToTrip(r){ return { id: r.id, supplierId: r.supplier_id, status: r.s
 function rowToPrice(pr){ return { id: pr.id, productId: pr.product_id, variantIdx: pr.variant_idx == null || pr.variant_idx === '' ? null : Number(pr.variant_idx),
   supplierId: pr.supplier_id, wholesale: pr.wholesale == null ? null : Number(pr.wholesale), retail: pr.retail == null ? null : Number(pr.retail),
   date: pr.date || null, unit: pr.unit || '', packUnit: pr.pack_unit || '', packQty: Number(pr.pack_qty) || 0, outOfStock: !!pr.out_of_stock, outOfStockSince: pr.out_of_stock_since || null,
-  lastAskedAt: pr.last_asked_at || null, tiers: Array.isArray(pr.tiers) ? pr.tiers : [] }; }
+  lastAskedAt: pr.last_asked_at || null, tiers: Array.isArray(pr.tiers) ? pr.tiers : [], confirmedVia: pr.confirmed_via || null }; }
 // index.html 45290: the payload is spread over these defaults.
 function rowToQuote(q){
   return { id: q.id, status: q.status || 'draft', invoiced: !!q.invoiced, invoicedAt: q.invoiced_at, invoicedTs: q.invoiced_ts ? new Date(q.invoiced_ts).getTime() : null,
@@ -722,10 +731,12 @@ function rowToQuote(q){
     ...(q.payload || {}) };
 }
 async function loadAll(){
-  const [suppliers, products, prices, stock, lots, quotes, trips, staff, invoices, agents, settingsR] = await Promise.all([
+  const [suppliers, products, prices, stock, lots, quotes, trips, staff, invoices, agents, settingsR, handoffs, restock] = await Promise.all([
     selectAll('suppliers'), selectAll('products'), selectAll('prices'), selectAll('stock', 'key'), selectAll('stock_lots'), selectAll('saved_quotes'),
     selectAll('collection_trips').catch(() => []), selectAll('staff').catch(() => []), selectAll('purchase_invoices').catch(() => []), selectAll('agents').catch(() => []),
     sb.from('app_settings').select('presets').eq('shop_id', S.shopId).maybeSingle(),
+    // 0125: until it is applied these read as empty, and nothing is passed on.
+    selectAll('buyer_handoffs').catch(() => []), selectAll('restock_buys').catch(() => []),
   ]);
   const presets = (settingsR && settingsR.data && settingsR.data.presets) || {};
   const stockMap = {}; stock.forEach(s => { stockMap[s.key] = Number(s.qty) || 0; });
@@ -741,15 +752,24 @@ async function loadAll(){
     collectionTrips: trips.map(rowToTrip),
     purchaseInvoices: invoices.map(pi => ({ id: pi.id, quoteId: pi.quote_id, date: pi.date, supplierId: null, items: [], amountPaid: 0, voided: false, transport: 0, credits: [], ...(pi.payload || {}) })),
     presetPriceReview: presets.priceReview || {},
+    presetSupplierScore: presets.supplierScore || null,
+    presetSupplierTieBand: presets.supplierTieBand == null ? null : presets.supplierTieBand,
+    presetBuyHolds: presets.buyHolds || {},
+    presetReorderRules: presets.reorderRules || {},
+    presetRestockCoverDays: presets.restockCoverDays == null ? null : presets.restockCoverDays,
+    handoffs: (handoffs || []).map(rowToHandoff),
+    restockBuys: (restock || []).map(rowToRestock),
   };
   S.loadedAt = Date.now();
   saveSnapshot();
 }
 async function refreshLive(){
   try {
-    const [quotes, trips] = await Promise.all([selectAll('saved_quotes'), selectAll('collection_trips').catch(() => null)]);
+    const [quotes, trips, handoffs, restock] = await Promise.all([selectAll('saved_quotes'), selectAll('collection_trips').catch(() => null), selectAll('buyer_handoffs').catch(() => null), selectAll('restock_buys').catch(() => null)]);
     S.data.savedQuotes = quotes.map(rowToQuote);
     if (trips) S.data.collectionTrips = trips.map(rowToTrip);
+    if (handoffs) S.data.handoffs = handoffs.map(rowToHandoff);
+    if (restock) S.data.restockBuys = restock.map(rowToRestock);
     S.loadedAt = Date.now(); saveSnapshot(); if (!S.dragging) render();
   } catch (e) { if (!isNetworkError(e)) console.warn(e); }
 }
@@ -969,6 +989,9 @@ function orderLeaveDraft(q){
   if (agentOrderNeedsShopCheck(q)) return false;
   if (agentPaymentBlocksPreparing(q)) return false;
   if (agentOrderOnHold(q)) return false;
+  // decision-rights §3: the Manager's price and credit decisions, and a
+  // line nobody sells, hold it in Checking whatever the suppliers say.
+  if (priceWaits(q).length || creditHolds(q) || noneOpen(q).length) return false;
   setSavedQuoteStatus(q, orderAwaitsGoods(q) ? 'awaiting_goods' : 'preparing', { auto: true });
   return true;
 }
@@ -1098,7 +1121,9 @@ function tripById(id){ return (D().collectionTrips || []).find(t => t.id === id)
 // createCollectionTripFromRun applies, so the figure is the money a new
 // trip would actually carry.
 function runsToGo(){
-  return buyingListRuns(beingPreparedOrders()).map(r => {
+  const runs = buyingListRuns(beingPreparedOrders());
+  restockRunLines().forEach(l => { const id = String(l.best.supplierId); let r = runs.find(x => String(x.supplierId) === id); if (!r) runs.push(r = { supplierId: l.best.supplierId, total: 0, lines: [] }); r.lines.push(l); r.total += l.lineCost; });
+  return runs.map(r => {
     const lines = r.lines.filter(l => !lineIsOnATrip(l.order.id, l.it.lineId));
     return { ...r, lines, total: lines.reduce((s, l) => s + (l.lineCost || 0), 0) };
   }).filter(r => r.lines.length).sort((a, b) => b.total - a.total);
@@ -1570,6 +1595,8 @@ function todayJobs(){
   (D().collectionTrips || []).filter(t => !t.voided && (t.status === 'collected' || t.status === 'confirmed') && tripShortLines(t).length && Date.now() - msOf(t.collectedAt) < 2 * 864e5)
     .slice(0, 1).forEach(t => jobs.push({ k: 'short', trip: t }));
   ask.filter(r => r.askedAt && minsSince(r.askedAt) <= 60).forEach(r => jobs.push({ k: 'ask', r }));
+  const shelf = restockRows().filter(r => r.need > 0 && !r.hold && r.best);
+  if (shelf.length && shelf.some(r => r.tight)) jobs.splice(Math.min(jobs.length, mineOut ? 2 : 3), 0, { k: 'restock', rows: shelf });
   const seen = new Set();
   return jobs.filter(j => { const key = j.k + ':' + (j.o ? j.o.q.id : j.r ? j.r.supplierId : j.trip ? j.trip.id : j.run ? j.run.supplierId : ''); if (seen.has(key)) return false; seen.add(key); return true; }).slice(0, 5);
 }
@@ -1617,6 +1644,11 @@ function nextUpHTML(){
       chip = ans + '/' + lines.length; cta = t.status === 'assigned' ? 'Take the trip' : 'Open the truck'; ctaAct = `data-act="trip" data-id="${esc(t.id)}"`;
       alt = { href: telUrl(supplierPhone(t.supplierId)), icon: 'phone', label: 'Call ' + title };
       detail = `<span role="img" aria-label="${ans} of ${lines.length} lines loaded" style="display:flex;gap:3px">${lines.map(l => { const g = tripLineGot(l); return `<i style="flex:1;height:20px;border-radius:5px;${g == null ? 'box-shadow:inset 0 0 0 1.5px #D9D4CB' : g < l.qty ? 'box-shadow:inset 0 0 0 1.5px #F5B26B;background:repeating-linear-gradient(135deg,#FDEEE1 0 3px,#fff 3px 6px)' : 'background:linear-gradient(180deg,#8DE8C2,#5CCB9E)'}"></i>`; }).join('')}</span>`;
+    } else if (j.k === 'restock') {
+      const rows = j.rows, tight = rows.filter(r => r.tight), cost = rows.reduce((s, r) => s + r.need * r.best.purchasePrice, 0);
+      kind = 'WHAT TO BUY'; kindInk = '#8E2A22'; node = '#F59A92'; title = tight.length + ' run' + (tight.length === 1 ? 's' : '') + ' out before a refill'; who = { name: 'The shelf', key: 'shelf' };
+      chip = short(cost); cta = 'See what to buy'; ctaAct = 'data-act="restock"'; alt = null;
+      detail = `<span role="img" aria-label="${rows.length} lines to refill" style="display:flex;flex-direction:column;gap:6px">${rows.slice(0, 3).map(r => `<span style="display:grid;grid-template-columns:minmax(0,1fr) 90px;align-items:center;gap:8px"><span class="ell" style="font-size:13px;font-weight:600">${esc(nameParts(r.pid, r.vi, r.name).base)}</span><span style="position:relative;height:8px;border-radius:999px;background:#F1EEE8"><span style="position:absolute;left:0;top:0;bottom:0;width:${(Math.min(14, r.left == null ? 0 : r.left) / 14 * 100).toFixed(0)}%;border-radius:999px;background:${r.tight ? '#C93A30' : '#F5B26B'}"></span><span style="position:absolute;top:-3px;bottom:-3px;left:${(Math.min(14, r.lead) / 14 * 100).toFixed(0)}%;border-left:2px solid var(--navy)"></span></span></span>`).join('')}</span>`;
     } else {
       const t = j.trip, sh = tripShortLines(t), r0 = sh[0], c = quoteLineCount(r0.l, r0.sent - r0.got);
       kind = 'SHORT · ' + (isoOf(t.collectedAt) === todayISO() ? 'TODAY' : 'YESTERDAY'); kindInk = '#95530C'; node = '#F5B26B';
@@ -1626,7 +1658,7 @@ function nextUpHTML(){
       const pieces = Math.min(12, r0.sent), gotP = Math.round(r0.got / r0.sent * pieces);
       detail = `<span role="img" aria-label="${n0(r0.got)} of ${n0(r0.sent)} came" style="display:flex;gap:3px">${Array.from({ length: pieces }, (_, k) => `<i style="flex:1;height:20px;border-radius:5px;${k < gotP ? 'background:linear-gradient(180deg,#8DE8C2,#5CCB9E)' : 'box-shadow:inset 0 0 0 1.5px #F5B26B;background:repeating-linear-gradient(135deg,#FDEEE1 0 3px,#fff 3px 6px)'}"></i>`).join('')}</span>
         <span style="display:flex;justify-content:space-between;font-size:12px;font-weight:700"><span style="display:inline-flex;align-items:center;gap:5px;color:var(--green)"><i style="width:10px;height:10px;border-radius:3px;background:#5CCB9E"></i>${n0(r0.got)} came</span><span style="display:inline-flex;align-items:center;gap:5px;color:var(--amberInk)"><i style="width:10px;height:10px;border-radius:3px;box-shadow:inset 0 0 0 1.5px #F5B26B"></i>${n0(r0.sent - r0.got)} still to come</span></span>
-        <span style="font-size:12px;font-weight:600;color:var(--ink3)">${t.status === 'confirmed' ? 'Checked in · back on the buying list' : 'Back on the buying list once the owner checks it in'}</span>`;
+        <span style="font-size:12px;font-weight:600;color:var(--ink3)">${t.status === 'confirmed' ? 'Counted in · back on the buying list' : 'Back on the buying list once ' + esc(whoShort('store')) + ' counts it in'}</span>`;
     }
     const tint = tintFor(who.key || who.name);
     return `<li style="position:relative;display:flex;gap:10px;align-items:flex-start">
@@ -1724,12 +1756,15 @@ PAGE.order = ({ id }) => {
   const yes = n(['yes']), asking = n(['asking', 'again', 'new']), no = n(['no']);
   const segs = groups.map(g => ({ n: 1, col: ANSWER[g.a.k].ring === 'rgba(255,255,255,.22)' ? 'rgba(255,255,255,.3)' : ANSWER[g.a.k].ring, blink: g.a.k === 'asking' || g.a.k === 'again' }));
   const moved = q.status !== 'draft';
-  const headline = moved ? 'Moved to ' + STAGE_WORD[q.status] : no ? 'Held' : asking ? 'Checking' : 'Ready to buy';
+  const mw = moved ? 0 : managerWaits(q), nOpen = moved ? 0 : noneOpen(q).length;
+  const headline = moved ? 'Moved to ' + STAGE_WORD[q.status] : no || nOpen ? 'Held' : asking ? 'Checking' : mw ? 'Waits' : 'Ready to buy';
   const firstNo = groups.find(g => g.a.k === 'no'), firstAsk = groups.find(g => g.a.k === 'new') || groups.find(g => g.a.k === 'again') || groups.find(g => g.a.k === 'asking');
   let next;
   if (moved) next = `<button class="bx-btn green" data-act="back">${ic('tick', 20, 'style="stroke-width:3"')}All confirmed · in ${esc(STAGE_WORD[q.status])}</button>`;
   else if (firstNo) next = `<button class="bx-btn red" data-act="problem" data-id="${q.id}" data-sid="${esc(firstNo.supplierId)}">Fix the ${no} problem${no > 1 ? 's' : ''}</button>`;
   else if (firstAsk) next = `<button class="bx-btn red" data-act="ask" data-sid="${esc(firstAsk.supplierId)}" data-id="${q.id}">${ic('wa', 20)}${firstAsk.a.k === 'asking' ? 'Chase' : 'Ask'} ${esc(supplierShort(firstAsk.supplierId))} · ${asking} to settle</button>`;
+  else if (nOpen) next = `<button class="bx-btn red" data-act="findsup" data-id="${q.id}" data-line="${esc(noneOpen(q)[0].lineId)}">Decide ${nOpen} line${nOpen > 1 ? 's' : ''} nobody sells</button>`;
+  else if (mw) next = `<button class="bx-btn navy" data-act="ruth" data-id="${q.id}">${ic('lock', 18)}${esc(orderHoldReason(q))}</button>`;
   else next = `<button class="bx-btn ghost" aria-disabled="true">${orderHoldReason(q)}</button>`;
   const firstSid = (firstAsk || groups[0] || {}).supplierId;
   return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
@@ -1738,13 +1773,14 @@ PAGE.order = ({ id }) => {
         ${segRing(segs, 48, 7, `<span class="m" style="font-size:14px;font-weight:600">${yes}/${groups.length}</span>`, `${groups.length} suppliers: ${yes} confirmed, ${asking} asking, ${no} problem`)}
         <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
           <span style="display:flex;align-items:baseline;gap:8px;min-width:0"><span class="ell" style="font-size:17px;font-weight:700">${esc(quoteClientName(q))}</span><span class="m" style="font-size:12px;color:var(--navyInk);flex:none">${orderNo(q)}</span></span>
-          <span style="display:flex;flex-wrap:wrap;column-gap:8px;row-gap:1px;font-size:13px;color:var(--navyInk)"><b style="color:#fff;white-space:nowrap">${esc(headline)}</b><b style="color:var(--mint);white-space:nowrap">${yes} ready</b><b style="color:var(--amber);white-space:nowrap">${asking} asking</b><b style="color:var(--rose);white-space:nowrap">${no} problem</b></span>
+          <span style="display:flex;flex-wrap:wrap;column-gap:8px;row-gap:1px;font-size:13px;color:var(--navyInk)"><b style="color:#fff;white-space:nowrap">${esc(headline)}</b><b style="color:var(--mint);white-space:nowrap">${yes} ready</b><b style="color:var(--amber);white-space:nowrap">${asking} asking</b><b style="color:var(--rose);white-space:nowrap">${no} problem</b>${mw ? `<b style="color:#C9CDF8;white-space:nowrap">${mw} with ${esc(whoShort('manager'))}</b>` : ''}${nOpen ? `<b style="color:var(--rose);white-space:nowrap">${nOpen} undecided</b>` : ''}</span>
         </span>${closeBtn()}
       </div>
     </div>
     <div style="padding:8px 14px 0;display:flex;flex-direction:column;gap:8px">
-      ${shelf.length ? `<div style="display:flex;align-items:center;gap:10px;min-height:32px;padding:4px 12px;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1px var(--line)"><span class="bx-tile" style="width:26px;height:26px;border-radius:8px;background:var(--soft2);color:var(--ink2)">${ic('shelf', 14)}</span><span class="ell" style="flex:1;font-size:13px;font-weight:600"><b>Our shelf</b> <span style="color:var(--ink3)">· ${shelf.map(it => esc(quoteLineCount(it, it.qty).n + ' ' + lineName(it).base)).join(' · ')}</span></span>${ic('tick', 14, 'style="stroke:#0F6B43;stroke-width:3"')}</div>` : ''}
-      ${none.length ? `<div style="display:flex;align-items:center;gap:10px;min-height:32px;padding:4px 12px;border-radius:12px;background:var(--amberSoft);box-shadow:inset 0 0 0 1px #F5B26B"><span class="ell" style="flex:1;font-size:13px;font-weight:600;color:var(--amberDeep)"><b>No supplier chosen</b> · ${none.map(it => esc(lineName(it).base)).join(' · ')}</span></div>` : ''}
+      ${shelfCardHTML(q, shelf)}
+      ${managerCardHTML(q)}
+      ${noneCardHTML(q, none)}
       ${groups.map(g => supplierSlipHTML(q, g)).join('')}
     </div>
     <div class="bx-foot"><div class="row">
@@ -1753,6 +1789,9 @@ PAGE.order = ({ id }) => {
   </div>`;
 };
 function orderHoldReason(q){
+  if (noneOpen(q).length) return 'All yes · a line nobody sells is undecided';
+  if (priceWaits(q).length) return 'All yes · a price waits for ' + whoShort('manager');
+  if (creditHolds(q)) return 'All yes · credit waits for ' + whoShort('manager');
   if (agentOrderOnHold(q)) return 'All yes · the agent asked for a change';
   if (agentOrderNeedsShopCheck(q) || agentPaymentBlocksPreparing(q)) return 'All yes · waits for the agent to pay';
   return 'All yes';
@@ -1768,7 +1807,8 @@ function supplierSlipHTML(q, g){
       ${itemTile(it.productName, tint)}
       <span class="q">${esc(c.n)} <small>${esc(c.unit)}</small></span>
       <span class="n">${nameHTML(lineName(it))}</span>
-      <span class="meta">${rankChipHTML(it)}<span class="ell" style="flex:1;font-size:12px;font-weight:600;color:${A.ink}">${it.repricedAt ? 'new price ' + hm(it.repricedAt) : ''}</span><span class="m" style="font-size:13px;font-weight:600">@ ${n0(ea.price)}${ea.unit && quoteLinePack(it) ? '<small style="font-family:Figtree;font-size:11px;color:var(--ink3)">/' + esc(ea.unit) + '</small>' : ''}</span></span>
+      <span class="meta">${rankChipHTML(it)}<span class="ell" style="flex:1;font-size:12px;font-weight:600;color:${A.ink}">${it.switchedFrom ? 'was ' + esc(nameParts(null, null, it.switchedFrom.name).base) : it.repricedAt ? 'new price ' + hm(it.repricedAt) : ''}</span><span class="m" style="font-size:13px;font-weight:600">@ ${n0(ea.price)}${ea.unit && quoteLinePack(it) ? '<small style="font-family:Figtree;font-size:11px;color:var(--ink3)">/' + esc(ea.unit) + '</small>' : ''}</span></span>
+      ${q.status === 'draft' ? (() => { const why = pickReason(it); return `<span class="bx-why"><button data-act="why" data-id="${q.id}" data-line="${esc(it.lineId)}" aria-label="Why ${esc(supplierShort(it.supplierId))}: ${esc(why.text)}. Open the reason" class="w">${ic('spark', 12)}<span class="ell" style="flex:1;min-width:0">${esc(why.text)}</span><span aria-hidden="true">›</span></button><button data-act="swap" data-id="${q.id}" data-line="${esc(it.lineId)}" aria-label="Switch ${esc(lineName(it).base)} to another item" class="s">${ic('swap', 12)}Switch item</button></span>`; })() : ''}
     </div>`;
   }).join('');
   const readyRow = a.k === 'yes' && q.status === 'draft' ? `<div style="display:flex;align-items:center;gap:6px;padding:0 2px"><span style="font-size:11px;font-weight:700;color:${tint[1]}">Ready</span>${['today', 'tomorrow', '+2'].map((w, i) => { const d = new Date(); d.setDate(d.getDate() + i); const iso = isoOf(d), on = a.readyOn === iso; return `<button data-act="ready" data-id="${q.id}" data-sid="${esc(g.supplierId)}" data-day="${iso}" aria-pressed="${on}" style="height:26px;padding:0 10px;border:none;border-radius:999px;font-size:12px;font-weight:700;${on ? 'background:var(--green);color:#fff' : 'background:#fff;color:var(--ink2)'}">${i === 2 ? esc(shortDay(iso)) : w}</button>`; }).join('')}</div>` : '';
@@ -1826,7 +1866,7 @@ ACT.answer = async (qid, sid, to) => {
   catch (e) { toast(failWord(e), 5000); render(); return null; }
   if (!res) { toast('That order has already left Checking'); render(); return null; }
   if (res.out.moved) { movedToast(res.q); setTimeout(FEEL.stamp, 350); }
-  else if (res.out.held) toast('All suppliers said yes — the order waits for the agent before it moves.', 5000);
+  else if (res.out.held) toast(orderHoldReason(res.q) + ' · it moves once that is decided', 5000);
   render();
   return res;
 };
@@ -1909,6 +1949,11 @@ PAGE.problem = (args) => {
         <span class="bx-tile" style="width:38px;height:38px;border-radius:12px;background:var(--soft2);color:${shelf ? 'var(--ink)' : 'var(--ink4)'}">${ic('shelf', 18)}</span>
         <span style="flex:1;font-size:14px;font-weight:700">Our shelf</span>
         <span class="m" style="font-size:12px;font-weight:600">${shelf ? n0(shelf.free) + ' free' : n0(Math.max(0, getStockQty(it.productId, it.variantIdx) - shelfSpoken(it.productId, it.variantIdx, q.id))) + ' free'}</span>
+      </button>
+      <button class="bx-pick" data-act="swap" data-id="${q.id}" data-line="${esc(it.lineId)}">
+        <span class="bx-tile" style="width:38px;height:38px;border-radius:12px;background:#FDEEE1;color:var(--amberDeep)">${ic('swap', 18, 'style="stroke-width:2"')}</span>
+        <span style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:700">A different item</span><span style="font-size:12px;font-weight:600;color:var(--ink3)">another make or size · ${esc(sellerOf(q))} is told</span></span>
+        ${ic('chev', 16, 'style="stroke:#9AA1AE;stroke-width:2"')}
       </button>
       ${canDrop ? `<button class="bx-pick drop" role="radio" aria-checked="${drop}" data-act="ppick" data-v="drop">
         <span class="bx-tile" style="width:38px;height:38px;border-radius:12px;background:var(--crimsonSoft);color:var(--crimson)">${ic('trash', 18)}</span>
@@ -1996,10 +2041,11 @@ PAGE.ask = (args) => {
       ${a.k === 'again' ? `<div style="font-size:12px;font-weight:600;color:var(--amberInk);padding:0 4px">They said yes to different quantities or prices — this is the order as it is now.</div>` : ''}
       <div style="margin-top:auto;display:flex;flex-direction:column;gap:6px;padding-top:8px">
         <span style="font-size:12px;font-weight:700;color:var(--ink2);padding-left:2px">When they answer</span>
-        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px">
           <button data-act="atile" data-v="yes" aria-pressed="${a.k === 'yes'}" style="height:64px;border:none;border-radius:16px;background:var(--greenSoft);box-shadow:inset 0 0 0 ${a.k === 'yes' ? '2.5px #0F6B43' : '1.5px rgba(15,107,67,.35)'};color:var(--green);font-size:13px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">${ic('tick', 20, 'style="stroke-width:2.8"')}Yes</button>
           <button data-act="atile" data-v="price" style="height:64px;border:none;border-radius:16px;background:var(--amberSoft);box-shadow:inset 0 0 0 1.5px rgba(149,83,12,.35);color:var(--amberDeep);font-size:13px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><span class="m" style="font-size:18px;line-height:20px">±</span>New price</button>
           <button data-act="atile" data-v="no" aria-pressed="${a.k === 'no'}" style="height:64px;border:none;border-radius:16px;background:var(--crimsonSoft);box-shadow:inset 0 0 0 ${a.k === 'no' ? '2.5px #8E2A22' : '1.5px rgba(142,42,34,.35)'};color:var(--crimson);font-size:13px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">${ic('outc', 20, 'style="stroke-width:2.4"')}Out</button>
+          <button data-act="swap" data-id="${cur.q.id}" data-line="${esc(cur.g.lines[0].lineId)}" style="height:64px;border:none;border-radius:16px;background:var(--indigoSoft);box-shadow:inset 0 0 0 1.5px rgba(58,63,155,.35);color:var(--indigo);font-size:13px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">${ic('swap', 20, 'style="stroke-width:2.2"')}Other item</button>
         </div>
       </div>
     </div>
@@ -2085,8 +2131,12 @@ PAGE.price = (args) => {
       </div>
 ` : ''}
       <div class="bx-pad">${['1', '2', '3', '4', '5', '6', '7', '8', '9', '00', '0', 'del'].map(k => `<button data-act="pkey" data-k="${k}" aria-label="${k === 'del' ? 'Delete' : k}">${k === 'del' ? '⌫' : k}</button>`).join('')}</div>
-      <span style="display:flex;align-items:center;gap:8px;padding:0 2px;font-size:11px;font-weight:600;color:var(--navyInk);line-height:1.35">${ic('clock', 13, 'style="stroke:#F5B26B;stroke-width:2.2"')}<span style="flex:1">The line takes the new price now · ${esc(supplierShort(sid))} then needs one slide to confirm it</span></span>
-      <button class="bx-btn red" id="bx_pgo" data-act="pgo" style="flex:none">Re-price the line · <span class="m" id="bx_peach">${n0(Number(args.v) || 0)}</span></button>
+      ${(() => { const ph = !!args.phone, done = phoneConfirmsToday();
+        return `<button role="switch" aria-checked="${ph}" data-act="pphone" style="width:100%;border:none;display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:14px;text-align:left;${ph ? 'background:rgba(111,220,176,.12);box-shadow:inset 0 0 0 1px rgba(111,220,176,.4)' : 'background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)'}">
+        <span style="width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex:none;background:${ph ? 'rgba(111,220,176,.2)' : 'rgba(255,255,255,.08)'};color:${ph ? 'var(--mint)' : 'var(--navyInk)'}">${ic('phone', 15)}</span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span class="ell" style="font-size:13px;font-weight:700;color:#fff">${esc(supplierShort(sid))} said it on the phone</span><span class="ell" style="font-size:11px;font-weight:600;color:var(--navyInk)">${ph ? 'You confirm for them · counts in the price check' + (done ? ' · ' + done + ' today' : '') : esc(supplierShort(sid)) + ' still has to say yes'}</span></span>
+        <span style="position:relative;width:44px;height:26px;border-radius:999px;flex:none;background:${ph ? 'var(--green)' : 'rgba(255,255,255,.18)'}"><span style="position:absolute;top:3px;left:${ph ? 21 : 3}px;width:20px;height:20px;border-radius:999px;background:#fff;transition:left .2s cubic-bezier(.3,1.3,.5,1)"></span></span></button>`; })()}
+      <button class="bx-btn red" id="bx_pgo" data-act="pgo" style="flex:none">${args.phone ? 'Re-price and confirm' : 'Re-price the line'} · <span class="m" id="bx_peach">${n0(Number(args.v) || 0)}</span></button>
     </div>
   </div>`;
 };
@@ -2123,6 +2173,9 @@ function refreshPrice(){
 ACT.pkey = t => { const a = topArgs(), k = t.dataset.k; let v = String(a.v || ''); if (k === 'del') v = v.slice(0, -1); else if (v.length < 9) v = (v === '0' ? '' : v) + k; a.v = v.replace(/^0+(?=\d)/, ''); buzz(6); sfx('tick'); refreshPrice(); };
 ACT.pquick = t => { topArgs().v = t.dataset.v; FEEL.tick(); refreshPrice(); };
 ACT.punit = t => { const a = topArgs(), q = quoteById(a.id), it = q && q.items.find(x => String(x.lineId) === String(a.lineId)); if (!it || a.unit === t.dataset.v) return; const u = priceUnits(it); const each = (Number(a.v) || 0) / (a.unit === 'pack' && u.pack ? u.pack.qty : 1); a.unit = t.dataset.v; a.v = String(Math.round(each * (a.unit === 'pack' && u.pack ? u.pack.qty : 1))); FEEL.tick(); render(); };
+ACT.pphone = () => { const a = topArgs(); a.phone = !a.phone; FEEL.tick(); render(); };
+// Prices the Buyer confirmed by phone today: they count in the price check.
+function phoneConfirmsToday(){ const d = isoOf(new Date()); return D().prices.filter(r => r.confirmedVia === 'phone' && r.date === d).length; }
 ACT.pricel = t => { const a = topArgs(); a.lineId = t.dataset.line; a.v = null; a.unit = null; FEEL.tick(); render(); };
 ACT.pgo = async () => {
   const a = topArgs(), q0 = quoteById(a.id), it0 = q0 && q0.items.find(x => String(x.lineId) === String(a.lineId));
@@ -2136,11 +2189,20 @@ ACT.pgo = async () => {
       // The figure the order was built on is kept beside the new one, once.
       if (it.priceWas == null) it.priceWas = Number(it.price) || 0;
       it.price = each; it.repricedAt = Date.now(); if (S.user) it.repricedBy = S.user.id;
+      // price.confirm: they said it on the phone, so the Buyer gives their
+      // yes on the new terms, the same record a slide would write.
+      if (a.phone) return setOrderSupplierConfirm(q, it.supplierId, 'confirmed', 'said it on the phone', { via: 'phone' });
       return true;
     });
+    if (!res) { S.busy = false; toast('That line has already changed'); render(); return; }
+    let listed = null;
+    if (a.phone) {
+      const row = productPriceRows(it0.productId, it0.variantIdx).find(r => String(r.supplierId) === String(it0.supplierId));
+      if (row) listed = await sb.rpc('buyer_confirm_price', { p_shop_id: S.shopId, p_price_id: row.id, p_wholesale: each }).then(r => { if (r.error) throw r.error; row.wholesale = each; row.date = isoOf(new Date()); row.confirmedVia = 'phone'; saveSnapshot(); return true; }).catch(() => false);
+    }
     S.busy = false;
-    if (!res) { toast('That line has already changed'); render(); return; }
-    FEEL.stamp(); toast('Re-priced — slide right when they confirm it');
+    if (a.phone) { FEEL.yes(); toast('Confirmed for ' + supplierShort(it0.supplierId) + (listed ? ' · price list updated' : listed === false ? ' · the price list could not be updated' : ' · not on their price list') + (res.out && res.out.held ? ' · ' + orderHoldReason(res.q) : ''), 4500); if (res.out && res.out.moved) movedToast(res.q); }
+    else { FEEL.stamp(); toast('Re-priced — slide right when they confirm it'); }
     const back = S.stack.map(p => p.type).lastIndexOf('order');
     if (back >= 0) { S.stack = S.stack.slice(0, back + 1); render(); } else replaceTop('order', { id: a.id });
   } catch (e) { S.busy = false; toast(failWord(e), 5000); }
@@ -2305,7 +2367,7 @@ PAGE.supplier = ({ sid }) => {
         ${closeBtn()}
       </div>
       <div role="img" aria-label="We owe ${n0(o.owed)}.${o.owed ? ' Oldest bill is ' + o.days + ' days old.' : ''}${terms != null ? ' Their terms are ' + terms + ' days.' : ''}${stop ? ' The shop stops buying at ' + stop + ' days.' : ''}" style="display:flex;flex-direction:column;gap:8px;padding:12px" class="bx-glass">
-        <span style="display:flex;align-items:baseline;justify-content:space-between;gap:10px"><span style="display:flex;align-items:center;gap:6px;min-width:0;font-size:12px;font-weight:600;color:var(--navyInk2)">${ic('lock', 12, 'style="stroke-width:2.2;flex:none"')}<span class="ell">We owe them · the owner pays</span></span><span class="m" style="font-size:20px;font-weight:600;letter-spacing:-.03em">${n0(o.owed)}</span></span>
+        <span style="display:flex;align-items:baseline;justify-content:space-between;gap:10px"><span style="display:flex;align-items:center;gap:6px;min-width:0;font-size:12px;font-weight:600;color:var(--navyInk2)">${ic('lock', 12, 'style="stroke-width:2.2;flex:none"')}<span class="ell">We owe them · Accounts pays</span></span><span class="m" style="font-size:20px;font-weight:600;letter-spacing:-.03em">${n0(o.owed)}</span></span>
         <span style="position:relative;height:10px;border-radius:999px;background:rgba(255,255,255,.1)">
           ${o.owed ? `<span class="a-grow" style="position:absolute;left:0;top:0;bottom:0;width:${Math.min(100, o.days / scale * 100).toFixed(1)}%;border-radius:999px;background:${terms != null && o.days > terms ? '#F59A92' : '#6FDCB0'}"></span>` : ''}
           ${terms != null ? `<span style="position:absolute;left:${Math.min(100, terms / scale * 100).toFixed(1)}%;top:-4px;bottom:-4px;border-left:2px solid #F5B26B"></span>` : ''}
@@ -2320,15 +2382,17 @@ PAGE.supplier = ({ sid }) => {
       </div>
     </div>
     <div class="bx-body">
+      ${(() => { const bill = billOpen(s.id), fix = fixOpen(s.id), card = (act, on, icon, bg, ink, t1, t2) => `<button data-act="${act}" data-sid="${esc(s.id)}" style="min-width:0;border:none;display:flex;align-items:center;gap:10px;min-height:56px;padding:8px 10px;border-radius:14px;background:#fff;text-align:left;color:var(--ink);box-shadow:${on ? 'inset 0 0 0 1.5px var(--green)' : 'inset 0 0 0 1px var(--line)'}"><span style="width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex:none;background:${on ? 'var(--greenSoft)' : bg};color:${on ? 'var(--green)' : ink}">${ic(on ? 'tick' : icon, 16)}</span><span style="min-width:0;display:flex;flex-direction:column;gap:1px"><span class="ell" style="font-size:13px;font-weight:700">${esc(t1)}</span><span class="ell" style="font-size:11px;font-weight:600;color:${on ? 'var(--green)' : 'var(--ink3)'}">${esc(t2)}</span></span></button>`;
+        return `<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">${card('bill', !!bill, 'camera', '#FDE8E4', '#A82D24', bill ? 'Bill with ' + whoShort('accounts') : 'Pass a paper bill', bill ? 'Accounts records it' : 'photo → ' + whoShort('accounts') + ' · Accounts')}${card('fix', !!fix, 'tag', 'var(--indigoSoft)', 'var(--indigo)', fix ? 'Sent to ' + whoShort('sourcing') : 'Suggest a fix', fix ? 'Sourcing updates the list' : 'price or details → ' + whoShort('sourcing'))}</div>`; })()}
       <div class="bx-sec"><b style="font-size:14px">What they sell us</b><span style="display:flex;gap:10px;font-size:11px"><span style="display:inline-flex;align-items:center;gap:4px"><i class="bx-dot" style="background:var(--green)"></i>fresh</span><span style="display:inline-flex;align-items:center;gap:4px"><i class="bx-dot" style="box-shadow:inset 0 0 0 2px var(--amberInk)"></i>over ${lim} d</span></span></div>
       ${rows.length ? `<div class="bx-card bx-list">${show.map((x, i) => { const r = x.r, old = x.age == null || x.age > lim, each = r.retail != null ? r.retail : r.wholesale;
-        const sub = [r.unit ? 'a ' + r.unit : '', r.packQty && r.packUnit ? r.packUnit + ' of ' + n0(r.packQty) : '', r.outOfStock ? 'out of stock' + (r.outOfStockSince ? ' since ' + dayLabel(isoOf(r.outOfStockSince)) : '') : x.age == null ? 'never dated' : x.age === 0 ? 'today' : x.age + ' d ago'].filter(Boolean).join(' · ');
+        const sub = [r.unit ? 'a ' + r.unit : '', r.packQty && r.packUnit ? r.packUnit + ' of ' + n0(r.packQty) : '', r.outOfStock ? 'out of stock' + (r.outOfStockSince ? ' since ' + dayLabel(isoOf(r.outOfStockSince)) : '') : x.age == null ? 'never dated' : x.age === 0 ? (r.confirmedVia === 'phone' ? 'you confirmed it today' : r.confirmedVia === 'trip' ? 'paid on a trip today' : 'today') : x.age + ' d ago'].filter(Boolean).join(' · ');
         return `<div class="a-up" style="animation-delay:${Math.min(i, 10) * .04}s;display:grid;grid-template-columns:10px 1fr auto;align-items:center;gap:10px;min-height:52px;${i ? 'border-top:1px solid #F1EEE8' : ''}">
           <i style="width:8px;height:8px;border-radius:${r.outOfStock ? '2px' : '999px'};${r.outOfStock ? 'background:var(--crimson)' : old ? 'box-shadow:inset 0 0 0 2px var(--amberInk)' : 'background:var(--green)'}"></i>
           <span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span class="ell" style="font-size:14px;font-weight:600;${r.outOfStock ? 'color:var(--ink4);text-decoration:line-through' : ''}">${esc(x.name)}</span><span class="ell" style="font-size:12px;color:${r.outOfStock ? 'var(--crimson)' : old ? 'var(--amberInk)' : 'var(--ink3)'}">${esc(sub)}</span></span>
           <span class="m" style="font-size:14px;font-weight:600;${r.outOfStock || old ? 'color:var(--ink2)' : ''}">${each != null ? n0(each) : '—'}</span></div>`; }).join('')}
         ${rows.length > show.length ? `<button class="bx-row" data-act="supall" data-sid="${esc(s.id)}" style="min-height:48px"><span style="flex:1;font-size:13px;font-weight:700;color:var(--ink2)"><span class="m">${rows.length - show.length}</span> more prices</span>${ic('chev', 16, 'style="stroke:#9AA1AE"')}</button>` : ''}</div>`
-        : emptyCard('No prices on file', 'The owner keeps the price list.')}
+        : emptyCard('No prices on file', whoShort('sourcing') + ' keeps the price list.')}
       ${stale.length ? `<a href="${esc(waComposeUrl(phone, supplierPriceAskMessage(s.id, stale)))}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;height:46px;padding:0 14px;border-radius:14px;background:var(--indigoSoft);color:var(--indigo);font-size:13px;font-weight:700">${ic('tag', 15, 'style="stroke-width:2.2"')}<span style="flex:1">Ask them <span class="m">${stale.length}</span> price${stale.length > 1 ? 's' : ''} over ${lim} days old</span>${ic('chev', 16)}</a>` : ''}
     </div>
     <div class="bx-foot"><div class="row">${callBtn(phone, s.name)}${waBtn(waComposeUrl(phone, `Hello *${s.name}*,`), 'WhatsApp ' + supplierShort(s.id))}</div></div>
@@ -2387,7 +2451,8 @@ PAGE.plan = (args) => {
         <span style="display:flex;align-items:baseline;justify-content:space-between;width:100%"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--ink2)">${ic('cash', 14, 'style="stroke:#0F6B43"')}Cash given for this stop</span><span class="m" style="font-size:15px;font-weight:600">${given != null ? n0(given) : 'tap to set'}</span></span>
         ${given != null ? `<span style="display:flex;height:8px;gap:2px;border-radius:999px;overflow:hidden;width:100%;background:var(--soft2)"><i style="flex:${Math.max(1, Math.min(run.total, given))};background:var(--navy)"></i>${spare > 0 ? `<i style="flex:${spare};background:var(--mint)"></i>` : ''}${spare < 0 ? `<i style="flex:${-spare};background:#E5483D"></i>` : ''}</span>
         <span style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--ink3);width:100%"><span>planned <span class="m" style="color:var(--ink)">${n0(run.total)}</span></span><span>${spare >= 0 ? `bring back at least <span class="m" style="color:var(--green)">${n0(spare)}</span>` : `short by <span class="m" style="color:var(--crimson)">${n0(-spare)}</span>`}</span></span>` : ''}
-      </button>`;
+      </button>
+      ${given != null ? cashAskHTML(run, given, args.who === 'me' ? 'you' : picked ? firstWord(picked.name) : 'them') : ''}`;
     }
     const stale = stalePricesFor(run.supplierId).length;
     tip = args.who === 'sup' ? `${supplierName(run.supplierId)} gets the list, no prices · pay on their bill` : stale ? `While there, ask ${stale} price${stale > 1 ? 's' : ''} over ${priceStaleDays()} days old` : `Carry ${n0(run.total)} for ${supplierShort(run.supplierId)}`;
@@ -2414,10 +2479,34 @@ PAGE.plan = (args) => {
     </div>
   </div>`;
 };
+/* Cash comes from Accounts (trip.cash): ask for it, then say it is in hand.
+   The ask is a hand-off for Accounts; they count what comes back. */
+function cashRef(sid){ return 'run:' + sid + ':' + isoOf(new Date()); }
+function cashAskHTML(run, given, who){
+  const h = handoffsFor('trip_cash', cashRef(run.supplierId)).slice(-1)[0], cs = !h ? 'none' : h.status === 'done' ? 'got' : 'asked', acc = whoShort('accounts');
+  const head = cs === 'got' ? n0(h.payload.amount || given) + ' in hand · from ' + acc : cs === 'asked' ? 'Asked ' + whoRole('accounts') : 'Cash comes from ' + whoRole('accounts');
+  const sub = cs === 'got' ? 'they count what comes back' : cs === 'asked' ? 'collect it before ' + (who === 'you' ? 'you go' : who + ' goes') : 'ask for ' + n0(given) + ' for ' + who;
+  return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:16px;background:#fff;box-shadow:inset 0 0 0 1px var(--line)">
+    <span class="bx-av round" style="width:34px;height:34px;font-size:11px;background:var(--greenSoft);color:var(--green)">${esc(whoIni('accounts'))}</span>
+    <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span class="ell" style="font-size:13px;font-weight:700">${esc(head)}</span><span class="ell" style="font-size:11px;font-weight:600;color:${cs === 'got' ? 'var(--green)' : cs === 'asked' ? 'var(--amberInk)' : 'var(--ink3)'}">${esc(sub)}</span></span>
+    <button data-act="cashask" data-sid="${esc(run.supplierId)}" data-v="${given}" aria-label="${cs === 'none' ? 'Ask ' + esc(acc) + ' for ' + n0(given) : cs === 'asked' ? 'Mark the cash as handed over' : 'In hand'}" ${cs === 'got' || S.busy ? 'aria-disabled="true"' : ''} style="flex:none;height:40px;padding:0 14px;border:none;border-radius:12px;font-size:13px;font-weight:700;${cs === 'none' ? 'background:var(--navy);color:#fff' : cs === 'asked' ? 'background:#FDEEE1;color:#7A4A02;box-shadow:inset 0 0 0 1.5px #F5B26B' : 'background:var(--greenSoft);color:var(--green)'}">${cs === 'none' ? 'Ask ' + esc(acc) : cs === 'asked' ? 'Got it' : '✓ in hand'}</button>
+  </div>`;
+}
+ACT.cashask = async t => {
+  const sid = t.dataset.sid, v = Number(t.dataset.v) || 0, a = topArgs(); if (S.busy) return;
+  const h = handoffsFor('trip_cash', cashRef(sid)).slice(-1)[0];
+  if (h && h.status === 'done') return;
+  S.busy = true;
+  try {
+    if (!h) { await passOn('trip_cash', 'accounts', cashRef(sid), { supplierId: sid, supplier: supplierName(sid), amount: v, for: a.who === 'me' ? myName() : a.who === 'sup' ? null : staffName(a.who) }); FEEL.ask(); toast('Asked ' + whoShort('accounts') + ' for ' + n0(v)); }
+    else { await closeHandoff(h.id, 'done'); FEEL.yes(); toast(n0(v) + ' in hand · ' + whoShort('accounts') + ' counts what comes back'); }
+  } catch (e) { toast(isNetworkError(e) ? 'No connection — try again with signal' : 'Not passed on: ' + (e.message || e) + (/buyer_handoffs/.test(String(e.message)) ? ' · migration 0125 is not on this database yet' : ''), 6000); }
+  S.busy = false; render();
+};
 ACT.pstop = t => { const a = topArgs(); if (String(a.sid) !== String(t.dataset.sid)) { FEEL.tick(); a.given = undefined; } a.sid = t.dataset.sid; render(); };
 ACT.pwho = t => {
   const a = topArgs(), v = t.dataset.v;
-  if (t.getAttribute('aria-disabled') === 'true') { if (v === 'me') toast('Your login has no staff row yet — ask the owner to link one'); return; }
+  if (t.getAttribute('aria-disabled') === 'true') { if (v === 'me') toast('Your login has no staff row yet — ask ' + whoShort('manager') + ' to link one'); return; }
   if (v === 'send') { openSheet('staff', {}); return; }
   if (a.who !== v) FEEL.tick(); a.who = v; render();
 };
@@ -2460,6 +2549,7 @@ ACT['slide:trip'] = async () => {
     if (r.error && /cash_given|column|schema cache/i.test(r.error.message || '')) { const lean = { ...row }; delete lean.cash_given; r = await sb.from('collection_trips').insert(lean); lostCash = trip.cashGiven != null; trip.cashGiven = null; }
     if (r.error) throw r.error;
     D().collectionTrips.push(trip); saveSnapshot();
+    await restockOnTrip(trip).catch(() => {});
     S.busy = false; FEEL.go();
     if (lostCash) toast('Trip started — the cash given was not saved: migration 0114 is not on this database yet', 6000);
     if (trip.status === 'collecting' && !tripIsSupplierDelivered(trip)) replaceTop('trip', { id: trip.id });
@@ -2661,8 +2751,79 @@ ACT['slide:handin'] = async () => {
     const u = await sb.from('collection_trips').update(patch).eq('shop_id', S.shopId).eq('id', id);
     if (u.error) throw u.error;
     D().collectionTrips = D().collectionTrips.map(x => x.id === id ? rowToTrip({ ...r.data, ...patch }) : x); saveSnapshot();
+    await pricesPaidToList(t);
+    await restockCollected(t).catch(() => {});
     S.busy = false; S.ui.horn = id; replaceTop('done', { id });
   } catch (e) { S.busy = false; toast(isNetworkError(e) ? 'No connection — it is kept on this phone. Hand it in when you have signal.' : 'Not handed in: ' + (e.message || e), 6000); render(); }
+};
+
+/* "The Buyer's prices paid update the supplier price list automatically"
+   (decision-rights): each line's price paid becomes that supplier's price
+   for the item, dated today. Done on the server (0125), for rows already on
+   the list; a new item or supplier is Sourcing's to add. */
+async function pricesPaidToList(t){
+  S.ui.listed = S.ui.listed || {};
+  try {
+    const r = await sb.rpc('trip_prices_to_list', { p_shop_id: S.shopId, p_trip_id: t.id });
+    if (r.error) throw r.error;
+    const today = isoOf(new Date());
+    tripLines(t).forEach(l => { if (l.gotPrice == null) return; const row = productPriceRows(l.productId, l.variantIdx == null ? null : l.variantIdx).find(x => String(x.supplierId) === String(t.supplierId)); if (row) { row.wholesale = Number(l.gotPrice); row.date = today; row.confirmedVia = 'trip'; } });
+    S.ui.listed[t.id] = Number(r.data) || 0; saveSnapshot();
+  } catch (e) { S.ui.listed[t.id] = -1; }
+}
+function tripYardDiffs(t){ return tripLines(t).map((l, i) => ({ l, i, got: tripLineGot(l), yard: l.yardQty == null || l.yardQty === '' ? null : Number(l.yardQty) })).filter(x => x.yard != null && x.got != null && x.yard !== x.got); }
+function tripYardCounted(t){ return tripLines(t).some(l => l.yardQty != null && l.yardQty !== ''); }
+
+/* ---------------- the yard counted something else ---------------- */
+const YARD_WHY = [['gave', 'they loaded the yard’s count · I counted wrong'], ['road', 'It fell off or broke on the road'], ['dunno', 'I don’t know']];
+ACT.yard = t => { FEEL.open(); push('yard', { id: t.dataset.id, why: null }); };
+PAGE.yard = (args) => {
+  const t = tripById(args.id); if (!t) return goneCard('That trip is no longer on the books');
+  const diffs = tripYardDiffs(t), lines = tripLines(t), sent = handoffsFor('yard_note', t.id).slice(-1)[0];
+  const why = args.why || (sent && sent.payload.why) || 'gave', d0 = diffs[0];
+  const store = whoShort('store'), mgr = whoShort('manager'), me = myStaff();
+  const steps = [[whoIni('store'), store + ' counted'], [me ? initials(me.name) : 'YOU', 'You say why'], [whoIni('manager'), mgr + ' accepts']], at = sent ? 2 : 1;
+  const words = YARD_WHY.map(([k, w]) => [k, k === 'gave' ? supplierShort(t.supplierId) + ' loaded ' + (d0 ? n0(quoteLineCount(d0.l, d0.yard).n) : 'it') + ' · I counted wrong' : w]);
+  return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
+    <div class="bx-sheethead"><span class="bx-grip"></span>
+      <div style="display:flex;align-items:center;gap:12px"><span class="bx-av round" style="width:40px;height:40px;font-size:13px;background:var(--greenSoft);color:var(--green)">${esc(whoIni('store'))}</span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:700;letter-spacing:.14em;color:#9BA3F0">YARD COUNT · ${diffs.length} DIFFER${diffs.length === 1 ? 'S' : ''}</span><span class="ell" style="font-size:17px;font-weight:700">${esc(supplierShort(t.supplierId))} trip <span class="m" style="font-size:12px;font-weight:500;color:var(--navyInk)">back ${hm(msOf(t.collectedAt))}</span></span></span>${closeBtn()}</div>
+      ${d0 ? `<div role="img" aria-label="You said ${d0.got}, the yard counted ${d0.yard}" style="display:grid;grid-template-columns:minmax(0,1fr) 34px minmax(0,1fr);align-items:center;gap:6px">
+        <span style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px;border-radius:14px;background:rgba(255,255,255,.06)"><span style="font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--navyInk2)">YOU</span><span class="m" style="font-size:30px;font-weight:600;letter-spacing:-.04em">${n0(quoteLineCount(d0.l, d0.got).n)}</span></span>
+        <span style="text-align:center;font-size:22px;font-weight:700;color:var(--amber)">≠</span>
+        <span style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px;border-radius:14px;background:#fff;color:var(--navy)"><span style="font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--green)">${esc(store.toUpperCase())} · YARD</span><span class="m" style="font-size:30px;font-weight:600;letter-spacing:-.04em">${n0(quoteLineCount(d0.l, d0.yard).n)}</span></span>
+      </div>` : ''}
+    </div>
+    <div class="bx-body" style="gap:12px">
+      <div class="bx-card" style="padding:4px 12px">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 44px 44px;gap:8px;padding:8px 0;font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--ink3)"><span>LINE</span><span style="text-align:right">YOU</span><span style="text-align:right">YARD</span></div>
+        ${lines.map(l => { const g = tripLineGot(l), y = l.yardQty == null || l.yardQty === '' ? null : Number(l.yardQty), off = y != null && g != null && y !== g, ea = quoteLineEach(l, Number(l.gotPrice != null ? l.gotPrice : l.expectedPrice) || 0).price;
+          return `<div style="display:grid;grid-template-columns:minmax(0,1fr) 44px 44px;gap:8px;align-items:center;min-height:44px;border-top:1px dashed var(--dash)"><span style="min-width:0;display:flex;flex-direction:column;gap:1px"><span class="ell" style="font-size:13px;font-weight:700">${esc(lineName(l).base)}</span>${off ? `<span class="ell" style="font-size:11px;font-weight:600;color:var(--amberInk)">the shelf takes ${n0(quoteLineCount(l, y).n)} · ${n0(Math.abs(g - y))} × ${n0(ea)}</span>` : ''}</span><span class="m" style="text-align:right;font-size:14px;font-weight:600;${off ? 'color:#8A93A3;text-decoration:line-through' : ''}">${g == null ? '—' : n0(quoteLineCount(l, g).n)}</span><span class="m" style="text-align:right;font-size:14px;font-weight:600;color:${off ? 'var(--amberInk)' : 'var(--ink)'}">${y == null ? '—' : n0(quoteLineCount(l, y).n)}</span></div>`; }).join('')}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;font-weight:700;color:var(--ink2);padding-left:2px">What you know · goes to ${esc(mgr)} with it</span>
+        <div role="radiogroup" aria-label="What you know" style="display:flex;flex-direction:column;gap:6px">${words.map(([k, w]) => `<button role="radio" aria-checked="${why === k}" data-act="yardwhy" data-v="${k}" ${sent ? 'aria-disabled="true"' : ''} style="width:100%;min-height:48px;border:none;display:flex;align-items:center;gap:10px;padding:0 12px;border-radius:14px;background:#fff;text-align:left;font-size:13px;font-weight:700;color:var(--ink);box-shadow:${why === k ? 'inset 0 0 0 2px var(--navy)' : 'inset 0 0 0 1px var(--line)'}"><span style="width:18px;height:18px;border-radius:999px;flex:none;${why === k ? 'background:var(--navy);box-shadow:inset 0 0 0 4px #fff,0 0 0 2px var(--navy)' : 'box-shadow:inset 0 0 0 2px #C9C4BA'}"></span>${esc(w)}</button>`).join('')}</div></div>
+      <div role="img" aria-label="${esc(steps.map(x => x[1]).join(', then '))}" style="display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:16px;background:var(--navy);color:#fff">
+        <div style="display:flex;align-items:center;gap:4px">${steps.map((x, i) => `<span style="width:30px;height:30px;border-radius:999px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;${i < at ? 'background:#6FDCB0;color:var(--navy)' : i === at ? 'background:#F5B26B;color:var(--navy);box-shadow:0 0 0 3px rgba(245,178,107,.25)' : 'background:rgba(255,255,255,.08);color:var(--navyInk2)'}">${esc(x[0])}</span>${i < 2 ? `<span style="flex:1;height:3px;border-radius:999px;background:${i < at ? '#6FDCB0' : 'rgba(255,255,255,.14)'}"></span>` : ''}`).join('')}</div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:600">${steps.map((x, i) => `<span style="color:${i <= at ? '#fff' : 'var(--navyInk2)'}">${esc(x[1])}</span>`).join('')}</div>
+      </div>
+    </div>
+    <div class="bx-foot"><div class="row"><button class="bx-btn ${sent ? 'green' : 'red'}" data-act="yardsend" ${S.busy || !diffs.length ? 'aria-disabled="true"' : ''}>${sent ? 'With ' + esc(mgr) + ' · tap to withdraw' : 'Send to ' + esc(mgr)}</button></div></div>
+  </div>`;
+};
+ACT.yardwhy = t => { const a = topArgs(); if (handoffsFor('yard_note', a.id).length) return; a.why = t.dataset.v; FEEL.tick(); render(); };
+ACT.yardsend = async () => {
+  const a = topArgs(), t = tripById(a.id); if (!t || S.busy) return;
+  const sent = handoffsFor('yard_note', t.id).slice(-1)[0];
+  S.busy = true;
+  try {
+    if (sent) { await closeHandoff(sent.id, 'withdrawn'); FEEL.back(); toast('Withdrawn'); }
+    else {
+      const why = a.why || 'gave';
+      await passOn('yard_note', 'manager', t.id, { tripId: t.id, supplierId: t.supplierId, why, words: (YARD_WHY.find(w => w[0] === why) || YARD_WHY[2])[1], lines: tripYardDiffs(t).map(x => ({ lineId: x.l.lineId, orderId: x.l.orderId, productId: x.l.productId, name: x.l.productName, you: x.got, yard: x.yard })) });
+      FEEL.yes(); toast('Sent to ' + whoShort('manager') + ' · the shelf takes the yard’s count');
+    }
+  } catch (e) { toast(isNetworkError(e) ? 'No connection — try again with signal' : 'Not sent: ' + (e.message || e), 6000); }
+  S.busy = false; render();
 };
 
 /* ---------------- handed in: the tailgate ---------------- */
@@ -2706,7 +2867,7 @@ PAGE.done = ({ id }) => {
         ${t.cashGiven != null ? `<span role="img" aria-label="Of ${n0(t.cashGiven)} given, ${n0(paid)} paid and ${n0(back)} to bring back" style="display:flex;height:10px;gap:2px;border-radius:999px;overflow:hidden"><i style="flex:${Math.max(1, Math.min(paid, t.cashGiven))};background:#DDE3F0"></i>${back > 0 ? `<i style="flex:${back};background:var(--mint)"></i>` : ''}${back < 0 ? `<i style="flex:${-back};background:#E5483D"></i>` : ''}</span>
         <span style="display:flex;justify-content:space-between;font-size:12px;color:var(--navyInk)"><span>${back >= 0 ? `Bring back <b class="m" style="color:var(--mint)">${n0(back)}</b>` : `Over by <b class="m" style="color:var(--rose)">${n0(-back)}</b>`}</span><span>planned <span class="m">${n0(planned)}</span>${sh.length ? ` · ${sh.length} short` : ''}</span></span>` : `<span style="font-size:12px;color:var(--navyInk)">No cash was recorded for this trip${paid !== planned ? ` · <span class="m">${signed(paid - planned)}</span> against the plan` : ''}</span>`}
       </div>
-      <div class="a-up" role="img" aria-label="${step === 2 ? 'Checked in and on the shelf' : 'Collected. Now waiting for the owner to check it in. Then it is on the shelf.'}" style="animation-delay:3.7s;width:100%;margin-top:10px;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.05);display:flex;flex-direction:column;gap:8px">
+      <div class="a-up" role="img" aria-label="${step === 2 ? 'Counted in and on the shelf' : 'Collected. Now waiting for the Store to count it in. Then it is on the shelf.'}" style="animation-delay:3.7s;width:100%;margin-top:10px;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.05);display:flex;flex-direction:column;gap:8px">
         <div style="display:flex;align-items:center;gap:4px">
           <span style="width:24px;height:24px;border-radius:999px;background:rgba(111,220,176,.18);color:var(--mint);display:flex;align-items:center;justify-content:center;flex:none">${ic('tick', 12, 'style="stroke-width:2.8"')}</span>
           <span style="flex:1;height:3px;border-radius:999px;background:var(--mint)"></span>
@@ -2714,12 +2875,23 @@ PAGE.done = ({ id }) => {
           <span style="flex:1;height:3px;border-radius:999px;background:${step === 2 ? 'var(--mint)' : 'rgba(255,255,255,.14)'}"></span>
           <span style="width:24px;height:24px;border-radius:999px;${step === 2 ? 'background:var(--mint);color:var(--navy);display:flex;align-items:center;justify-content:center' : 'box-shadow:inset 0 0 0 2px rgba(255,255,255,.25)'};flex:none">${step === 2 ? ic('shelf', 12) : ''}</span>
         </div>
-        <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--navyInk2)"><span style="color:var(--mint)">Collected</span><span style="color:${step === 1 ? '#fff' : 'var(--mint)'}">Owner checks it in</span><span style="color:${step === 2 ? 'var(--mint)' : ''}">On the shelf</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--navyInk2)"><span style="color:var(--mint)">Collected</span><span style="color:${step === 1 ? '#fff' : 'var(--mint)'}">${esc(whoShort('store'))} counts it in</span><span style="color:${step === 2 ? 'var(--mint)' : ''}">On the shelf</span></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr);gap:6px">
+          ${(() => { const yd = tripYardDiffs(t), counted = tripYardCounted(t), sent = handoffsFor('yard_note', t.id).length;
+            return yd.length ? `<button data-act="yard" data-id="${esc(t.id)}" style="min-width:0;height:34px;border:none;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:5px;padding:0 8px;font-size:12px;font-weight:700;${sent ? 'background:rgba(111,220,176,.14);color:var(--mint)' : 'background:rgba(155,163,240,.18);color:#C9CDF8;box-shadow:inset 0 0 0 1px rgba(155,163,240,.5)'}"><span class="ell">${sent ? 'yard ≠ yours · with ' + esc(whoShort('manager')) : 'yard ≠ yours → ' + esc(whoShort('manager'))}</span><span aria-hidden="true">›</span></button>`
+              : `<span style="min-width:0;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;padding:0 8px;font-size:12px;font-weight:700;background:rgba(255,255,255,.05);color:${counted ? 'var(--mint)' : 'var(--navyInk2)'}"><span class="ell">${counted ? 'yard = yours' : 'yard not counted yet'}</span></span>`; })()}
+          ${(() => { const n = (S.ui.listed || {})[t.id]; return `<span style="min-width:0;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:5px;padding:0 8px;font-size:12px;font-weight:700;background:rgba(255,255,255,.05);color:${n === -1 ? 'var(--amber)' : 'var(--mint)'}">${n === -1 ? '' : ic('tick', 12, 'style="stroke-width:2.8"')}<span class="ell">${n === -1 ? 'price list not updated' : n != null ? 'prices paid → list · ' + n : 'prices paid → price list'}</span></span>`; })()}
+        </div>
       </div>
+      ${t.cashGiven != null ? `<div class="a-up" style="animation-delay:3.8s;width:100%;margin-top:10px;display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:16px;background:rgba(255,255,255,.05)">
+        <span style="width:36px;height:36px;border-radius:999px;background:var(--greenSoft);color:var(--green);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">${esc(whoIni('accounts'))}</span>
+        <span style="flex:1;min-width:0;font-size:12px;font-weight:600;line-height:1.35;color:var(--navyInk)"><b style="color:#fff">${esc(whoShort('accounts'))}</b> counts the cash back against <span class="m" style="color:#fff">${n0(t.cashGiven)}</span> given · Accounts</span>
+        ${back > 0 ? `<span class="m" style="flex:none;font-size:15px;font-weight:600;color:var(--mint)">${n0(back)}</span>` : ''}
+      </div>` : ''}
       ${sh.map((r, i) => { const c = quoteLineCount(r.l, r.sent - r.got), ct = tintFor(r.l.clientName);
         return `<div class="a-up" style="animation-delay:${(3.9 + i * .1).toFixed(1)}s;width:100%;margin-top:10px;display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:16px;background:rgba(245,178,107,.1);box-shadow:inset 0 0 0 1px rgba(245,178,107,.3)">
           <span style="width:36px;height:36px;border-radius:999px;background:${ct[0]};color:${ct[1]};font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">${esc(initials(r.l.clientName))}</span>
-          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:14px;font-weight:700"><span class="m">${esc(c.n)}</span> ${esc(lineName(r.l).base)} short</span><span class="ell" style="font-size:12px;color:var(--navyInk)">${esc(r.l.clientName)} · ${t.status === 'confirmed' ? 'back on the buying list' : 'back on the list once checked in'}</span></span>
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:14px;font-weight:700"><span class="m">${esc(c.n)}</span> ${esc(lineName(r.l).base)} short</span><span class="ell" style="font-size:12px;color:var(--navyInk)">${esc(r.l.clientName)} · ${t.status === 'confirmed' ? 'back on the buying list' : 'back on the list once counted in'}${quoteById(r.l.orderId) && quoteById(r.l.orderId).takenBy ? ' · sold by ' + esc(sellerOf(quoteById(r.l.orderId))) : ''}</span></span>
         </div>`; }).join('')}
       ${sh.length ? `<a class="a-up" href="${esc(waComposeUrl('', shortMessage(t)))}" target="_blank" rel="noopener" style="animation-delay:4s;width:100%;margin-top:10px;display:flex;align-items:center;gap:10px;height:48px;padding:0 14px;border-radius:14px;background:rgba(111,220,176,.12);color:var(--mint);font-size:14px;font-weight:700">${ic('bell', 18)}<span style="flex:1">Tell the shop what's short</span>${ic('wa', 18)}</a>` : ''}
     </div>
@@ -2742,23 +2914,29 @@ function myMonthFull(){
   const fullN = lines.filter(l => tripLineGot(l) != null && tripLineGot(l) >= l.qty).length;
   return { trips: mine, lines: lines.length, full: fullN, pct: lines.length ? Math.round(fullN / lines.length * 100) : 0 };
 }
-const DOORS = [
-  ['check', 'Checking', 'suppliers’ answers', 'check', true, 'Confirm, ask or mark a problem on every order in Checking'],
-  ['lines', 'Lines', 'switch, drop, re‑price', 'lines', true, 'Move a line to another supplier or our shelf, drop it with a reason, or put in a new price'],
-  ['trips', 'Trips', 'plan, ride, hand in', 'truck', true, 'Plan the round, collect, say what came and what you paid'],
-  ['see', 'Suppliers', 'prices, terms, owed', 'eye', true, 'See every supplier, their prices, their terms and what we owe them'],
-  ['shelf', 'Check-in', 'Owner', 'lock', false, 'The owner checks a trip in — that is what puts the goods on the shelf'],
-  ['bills', 'Bills & paying', 'Owner', 'lock', false, 'Supplier bills and paying them stay with the owner'],
-  ['edit', 'Edit suppliers', 'Owner', 'lock', false, 'Adding or changing a supplier or a listed price is the owner’s'],
-  ['margin', 'Margins', 'Sales · Owner', 'lock', false, 'Selling prices and margins belong to Sales and the owner'],
-];
+// Whose each door is, by name when the staff list says (decision-rights).
+function doors(){
+  const w = r => whoShort(r), wr = r => whoRole(r);
+  return [
+    ['check', 'Checking', 'suppliers’ answers', 'check', true, 'Confirm, ask or mark a problem on every order in Checking'],
+    ['lines', 'Lines', 'switch, drop, re‑price', 'lines', true, 'Move a line to another supplier, another item or our shelf, drop it with a reason, or put in a new price'],
+    ['trips', 'Trips', 'plan, ride, hand in', 'truck', true, 'Plan the round, collect, say what came and what you paid · what you paid updates the price list'],
+    ['see', 'Suppliers', 'prices, terms, owed', 'eye', true, 'See every supplier, their prices, their terms and what we owe them · suggest a fix to ' + wr('sourcing')],
+    ['restock', 'What to buy', 'refill the shelf', 'shelf', true, 'Buy to refill the shelf when no order needs it · ' + wr('manager') + ' sees it'],
+    ['shelf', 'Onto the shelf', wr('store'), 'lock', false, w('store') + '’s yard count puts a trip on the shelf · a difference from your count goes to ' + w('manager')],
+    ['bills', 'Bills & paying', wr('accounts'), 'lock', false, wr('accounts') + ' pays bills and records paper ones · pass one on from a supplier’s page'],
+    ['edit', 'Suppliers & price list', wr('sourcing'), 'lock', false, wr('sourcing') + ' keeps suppliers and the price list · suggest a fix from a supplier’s page'],
+    ['margin', 'Margins', wr('manager'), 'lock', false, 'Prices under the shop’s, markups and margins are ' + w('manager') + '’s'],
+    ['agent', 'Agent changes', wr('manager'), 'lock', false, 'An agent’s change or cancel is ' + w('manager') + '’s · it shows on the order’s Check card'],
+  ];
+}
 PAGE.me = () => {
   const f = myMonthFull(), me = myStaff(), mStart = todayISO().slice(0, 7), month = new Date().toLocaleDateString('en-GB', { month: 'short' });
   const weeks = [0, 0, 0, 0, 0]; f.trips.forEach(t => { const d = new Date(msOf(t.collectedAt)).getDate(); weeks[Math.min(4, Math.floor((d - 1) / 7))]++; });
   const wk = weeks.slice(0, Math.min(5, Math.ceil(new Date().getDate() / 7))), wmax = Math.max(1, ...wk);
   let checked = 0, yes = 0, out = 0;
   if (S.user) D().savedQuotes.forEach(q => { let mineHere = false; Object.values(q.supplierConfirms || {}).forEach(r => { if (r && r.by === S.user.id && r.at && isoOf(r.at).slice(0, 7) === mStart) { mineHere = true; if (r.state === 'confirmed') yes++; else if (r.state === 'problem') out++; } }); if (mineHere) checked++; });
-  const sel = S.ui.door || 'check', cur = DOORS.find(d => d[0] === sel);
+  const DOORS = doors(), sel = S.ui.door || 'check', cur = DOORS.find(d => d[0] === sel) || DOORS[0];
   const roleWord = S.role === 'buyer' ? 'Buyer' : S.role ? S.role[0].toUpperCase() + S.role.slice(1) : 'Buyer';
   return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
     <div class="bx-sheethead" style="gap:14px"><span class="bx-grip"></span>
@@ -2790,6 +2968,771 @@ PAGE.me = () => {
 ACT.door = t => { if (S.ui.door !== t.dataset.v) FEEL.tick(); S.ui.door = t.dataset.v; render(); };
 ACT.pref = t => { const k = t.dataset.k; S.prefs[k] = !S.prefs[k]; savePrefs(); applyPrefs(); if (k === 'sound' && S.prefs.sound) FEEL.yes(); render(); };
 ACT.signout = async () => { try { await sb.auth.signOut(); } catch (_e) {} location.reload(); };
+
+/* ==================================================================
+   WHO DECIDES WHAT (docs/decision-rights.md). Nothing day-to-day waits
+   for the owner: each hand-off names the role that takes it, and the
+   person in that role when the staff list says who it is.
+   ================================================================== */
+const ROLE_WORD = { manager: 'Manager', accounts: 'Accounts', sourcing: 'Sourcing', store: 'Store', sales: 'Sales' };
+function personFor(role){ const s = (D().staff || []).find(x => !x.unavailable && String(x.role || '').toLowerCase().includes(role)); return s ? firstWord(s.name) : ''; }
+function whoShort(role){ return personFor(role) || ('the ' + ROLE_WORD[role]); }
+function whoRole(role){ const n = personFor(role); return n ? n + ' · ' + ROLE_WORD[role] : ROLE_WORD[role]; }
+function whoIni(role){ const s = (D().staff || []).find(x => !x.unavailable && String(x.role || '').toLowerCase().includes(role)); return s ? initials(s.name) : ROLE_WORD[role].slice(0, 2).toUpperCase(); }
+function sellerOf(q){ const s = q && q.takenBy ? (D().staff || []).find(x => x.userId && String(x.userId) === String(q.takenBy)) : null; return s ? firstWord(s.name) : 'Sales'; }
+
+/* ---- what waits for the Manager on an order (decision-rights §3) ----
+   A price Sales set under the shop's price (or with no margin rule, or no
+   cost) is marked on its line (priceNote, sales.html priceNoteFor) and
+   waits until the Manager's priceReview is on it. A credit hold is the
+   Manager's payload.creditCheck. An agent's change or cancel is the
+   Manager's too. The buyer sees that they wait, never the margins. */
+const PRICE_WAIT_NOTES = ['under', 'nomargin', 'nocost'];
+function priceWaits(q){
+  return (q.items || []).filter(it => it && PRICE_WAIT_NOTES.includes(it.priceNote) && !(it.priceReview && it.priceReview.state));
+}
+function creditHolds(q){ return !!(q && q.creditCheck && q.creditCheck.decision === 'hold'); }
+function managerWaits(q){ return priceWaits(q).length + (creditHolds(q) ? 1 : 0) + (agentOrderOnHold(q) ? 1 : 0); }
+// A line nobody sells must be decided: found, dropped off the bill, or the
+// client agrees to wait for it (billed only when it comes).
+function noneOpen(q){ return (q.items || []).filter(it => it && !it.supplierId && !it.clientWaits); }
+
+/* ---- why this supplier: a tie on price goes to the best score ----
+   Price first. Inside the tie band (2% unless the owner set another,
+   presets.supplierTieBand) the highest score wins. The score is the
+   supplier's own record in this shop, and the buyer's own picks for the
+   item, so a pick made today counts tomorrow. The weights are the
+   owner's policy numbers (presets.supplierScore). */
+const SCORE_PARTS = [['filled', 'Orders they fill', 30, '#0E6470'], ['reply', 'How fast they reply', 20, '#5FC4CF'], ['fresh', 'Prices up to date', 20, '#9BA3F0'], ['full', 'Came in full on trips', 15, '#6FDCB0'], ['you', 'Your picks', 15, '#3A3F9B']];
+function scoreWeights(){ const w = (D().presetSupplierScore && typeof D().presetSupplierScore === 'object') ? D().presetSupplierScore : {}; return SCORE_PARTS.map(p => [p[0], p[1], Number(w[p[0]]) >= 0 && w[p[0]] !== undefined && w[p[0]] !== '' ? Number(w[p[0]]) : p[2], p[3]]); }
+function tieBand(){ const b = Number(D().presetSupplierTieBand); return b >= 0 && D().presetSupplierTieBand != null ? b : 2; }
+function recentPicks(pid, vi){
+  vi = vi == null ? null : Number(vi);
+  const out = [];
+  liveOrders().slice().sort((a, b) => createdMs(b) - createdMs(a)).forEach(q => (q.items || []).forEach(it => {
+    if (out.length >= 5 || it.productId !== pid || (it.variantIdx == null ? null : Number(it.variantIdx)) !== vi) return;
+    if (!it.supplierId || it.supplierId === '__stock__') return;
+    out.push({ sid: String(it.supplierId), at: createdMs(q), qid: q.id });
+  }));
+  return out.reverse();
+}
+const _scoreMemo = new Map();
+function supplierRecord(sid){
+  const k = String(sid) + '|' + S.loadedAt;
+  if (_scoreMemo.has(k)) return _scoreMemo.get(k);
+  let yes = 0, no = 0; const waits = [];
+  liveOrders().forEach(q => { const r = (q.supplierConfirms || {})[String(sid)]; if (!r) return;
+    if (r.state === 'confirmed') yes++; else if (r.state === 'problem') no++;
+    if (r.askedAt && r.at && r.at > r.askedAt) waits.push((r.at - r.askedAt) / 60000); });
+  waits.sort((a, b) => a - b);
+  const med = waits.length ? waits[waits.length >> 1] : null;
+  const rows = D().prices.filter(r => String(r.supplierId) === String(sid)), lim = priceStaleDays();
+  const fresh = rows.length ? rows.filter(r => { const a = priceAgeDays(r.date); return a != null && a <= lim; }).length / rows.length * 100 : null;
+  let lines = 0, full = 0;
+  (D().collectionTrips || []).filter(t => !t.voided && String(t.supplierId) === String(sid) && ['collected', 'confirmed'].includes(t.status)).forEach(t => tripLines(t).forEach(l => { const g = tripLineGot(l); if (g == null) return; lines++; if (g >= Number(l.qty)) full++; }));
+  const rec = {
+    filled: yes + no ? yes / (yes + no) * 100 : null,
+    reply: med == null ? null : Math.max(10, Math.min(100, 100 - (med - 15) * (80 / 165))),
+    replyMins: med, fresh, full: lines ? full / lines * 100 : null, answers: yes + no, trips: lines
+  };
+  _scoreMemo.set(k, rec);
+  return rec;
+}
+function supplierScore(sid, picks){
+  const rec = supplierRecord(sid), W = scoreWeights();
+  const v = { filled: rec.filled, reply: rec.reply, fresh: rec.fresh, full: rec.full, you: picks && picks.length ? picks.filter(p => p.sid === String(sid)).length / picks.length * 100 : 0 };
+  // A part with no record yet scores the middle, so a new supplier is neither punished nor favoured.
+  Object.keys(v).forEach(k => { if (v[k] == null) v[k] = 50; });
+  const wsum = W.reduce((t, w) => t + w[2], 0) || 1;
+  return { v, rec, total: W.reduce((t, w) => t + w[2] * v[w[0]], 0) / wsum };
+}
+function pickReason(it){
+  const r = lineRank(it), rows = r.rows;
+  if (!rows.length) return { text: 'Not on the price list yet', tie: false };
+  if (rows.length === 1) return { text: 'Only ' + supplierShort(rows[0].supplierId) + ' sells it', tie: false };
+  const p0 = rows[0].purchasePrice, band = tieBand();
+  const tied = rows.filter(x => x.purchasePrice <= p0 * (1 + band / 100));
+  const mine = rows.find(x => String(x.supplierId) === String(it.supplierId));
+  if (tied.length < 2) {
+    if (mine && rows[0] === mine) { const gap = (rows[1].purchasePrice - p0) / (p0 || 1) * 100; return { text: 'Cheapest by ' + Math.max(1, Math.round(gap)) + '% · no tie', tie: false }; }
+    return { text: supplierShort(rows[0].supplierId) + ' is cheaper', tie: false };
+  }
+  const picks = recentPicks(it.productId, it.variantIdx);
+  const sc = tied.map(x => ({ sid: String(x.supplierId), s: supplierScore(x.supplierId, picks) })).sort((a, b) => b.s.total - a.s.total);
+  const best = sc[0], mineSc = sc.find(x => x.sid === String(it.supplierId)), mineN = picks.filter(p => p.sid === String(it.supplierId)).length;
+  if (mineSc && best === mineSc) return { text: 'Tie on price · best score ' + Math.round(best.s.total) + (picks.length ? ' · your pick ' + mineN + ' of ' + picks.length : ''), tie: true };
+  return { text: 'Tie on price · ' + supplierShort(best.sid) + ' scores ' + Math.round(best.s.total), tie: true };
+}
+
+/* ---------------- why this supplier: the page ---------------- */
+ACT.why = t => { FEEL.open(); push('why', { id: Number(t.dataset.id), lineId: t.dataset.line }); };
+PAGE.why = (args) => {
+  const q = quoteById(args.id), it = q && (q.items || []).find(x => String(x.lineId) === String(args.lineId));
+  if (!q || !it) return goneCard('That line is no longer on the order');
+  const r = lineRank(it), rows = r.rows, band = tieBand(), p0 = rows.length ? rows[0].purchasePrice : 0;
+  const tied = rows.filter(x => x.purchasePrice <= p0 * (1 + band / 100));
+  const picks = recentPicks(it.productId, it.variantIdx);
+  const scored = (tied.length > 1 ? tied : rows).map(x => ({ x, s: supplierScore(x.supplierId, picks) })).sort((a, b) => tied.length > 1 ? b.s.total - a.s.total : a.x.purchasePrice - b.x.purchasePrice);
+  const W = scoreWeights(), c = quoteLineCount(it, it.qty), draft = q.status === 'draft';
+  const lo = rows.length ? Math.min(...rows.map(x => x.purchasePrice)) : 0, hi = rows.length ? Math.max(...rows.map(x => x.purchasePrice)) : 1;
+  const span = Math.max(hi - lo, p0 * band / 50, 1), at = v => ((v - lo) / span * 80 + 10).toFixed(1);
+  const bandW = Math.min(80, (p0 * band / 100) / span * 80);
+  const head = tied.length > 1 ? 'A TIE · ALL WITHIN ' + band + '%' : rows.length > 1 ? 'NO TIE · PRICE PICKS' : 'ONE SUPPLIER';
+  const marks = rows.slice(0, 4).map((x, i) => { const t = tintFor(x.supplierId);
+    return `<span style="position:absolute;top:${i % 2 ? 0 : 10}px;left:${at(x.purchasePrice)}%;transform:translateX(-50%);display:flex;flex-direction:${i % 2 ? 'column-reverse' : 'column'};align-items:center;gap:2px"><span style="width:24px;height:24px;border-radius:999px;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;background:${t[0]};color:${t[1]};box-shadow:0 0 0 2px var(--navy)">${esc(initials(supplierName(x.supplierId)))}</span><span class="m" style="font-size:10px;font-weight:600;color:#DDE3F0">${n0(quoteLineEach(it, x.purchasePrice).price)}</span></span>`; }).join('');
+  const rowsHTML = scored.map(({ x, s }, i) => { const t = tintFor(x.supplierId), top = i === 0, cur = String(x.supplierId) === String(it.supplierId), rec = s.rec;
+    const facts = [rec.filled != null ? Math.round(rec.filled) + '% filled' : 'new to us', rec.replyMins != null ? 'replies in ' + waitWords(rec.replyMins) : ''].filter(Boolean).join(' · ');
+    return `<div class="a-up" style="display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:16px;background:#fff;box-shadow:${top ? 'inset 0 0 0 2px #0F6B43,0 8px 18px rgba(15,107,67,.12)' : 'inset 0 0 0 1px var(--line)'}">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="bx-av" style="width:36px;height:36px;border-radius:11px;font-size:12px;background:${t[0]};color:${t[1]}">${esc(initials(supplierName(x.supplierId)))}</span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="display:flex;align-items:center;gap:6px;min-width:0"><span class="ell" style="font-size:14px;font-weight:700">${esc(supplierName(x.supplierId))}</span>${top ? '<span class="bx-chip" style="height:20px;font-size:10px;letter-spacing:.06em;background:var(--green);color:#fff">BEST</span>' : ''}${cur ? '<span class="bx-chip" style="height:20px;font-size:10px;background:var(--soft);color:var(--ink2)">on the line</span>' : ''}</span><span class="ell" style="font-size:12px;font-weight:600;color:var(--ink3)">${n0(quoteLineEach(it, x.purchasePrice).price)} · ${esc(facts)}</span></span>
+        <span class="m" style="flex:none;font-size:26px;font-weight:600;letter-spacing:-.04em;color:${top ? 'var(--green)' : '#8A93A3'}">${Math.round(s.total)}</span>
+      </div>
+      <span role="img" aria-label="${esc(supplierShort(x.supplierId))} scores ${Math.round(s.total)}" style="display:flex;gap:2px;height:10px;border-radius:999px;overflow:hidden;background:#F1EEE8">${W.map(w => `<i style="display:block;flex:${(w[2] * s.v[w[0]] / 100).toFixed(2)} 1 0;background:${w[3]}"></i>`).join('')}<i style="display:block;flex:${Math.max(0, 100 - s.total).toFixed(2)} 1 0"></i></span>
+      ${!cur && draft && it.supplierId !== '__stock__' ? `<button data-act="whyuse" data-sid="${esc(x.supplierId)}" style="align-self:flex-start;height:34px;padding:0 12px;border:none;border-radius:10px;background:var(--soft);color:var(--ink);font-size:12px;font-weight:700">Use ${esc(supplierShort(x.supplierId))} instead</button>` : ''}
+    </div>`; }).join('');
+  return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
+    <div class="bx-sheethead"><span class="bx-grip"></span>
+      <div style="display:flex;align-items:center;gap:12px">${itemTile(it.productName, tintFor(it.supplierId), 40)}
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:11px;font-weight:700;letter-spacing:.14em;color:var(--mint)">WHY ${esc(supplierShort(scored[0] ? scored[0].x.supplierId : it.supplierId).toUpperCase())} · THE PICK</span><span class="ell" style="font-size:17px;font-weight:700">${esc(c.n)} ${esc(lineName(it).base)} <span style="font-size:12px;font-weight:500;color:var(--navyInk)">for ${esc(shortName(quoteClientName(q)))}</span></span></span>${closeBtn()}</div>
+      ${rows.length > 1 ? `<div role="img" aria-label="Prices for this line from each supplier" style="display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--navyInk2)"><span>1 · PRICE</span><span style="color:var(--amber)">${head}</span></div>
+        <div style="position:relative;height:46px"><span style="position:absolute;left:0;right:0;top:20px;height:4px;border-radius:999px;background:rgba(255,255,255,.12)"></span>${tied.length > 1 ? `<span style="position:absolute;left:${at(p0)}%;width:${bandW.toFixed(1)}%;top:12px;height:20px;border-radius:8px;background:rgba(245,178,107,.16);box-shadow:inset 0 0 0 1px rgba(245,178,107,.45)"></span>` : ''}${marks}</div>
+      </div>` : ''}
+    </div>
+    <div class="bx-body" style="gap:12px">
+      <div class="bx-sec"><b style="font-size:14px">${tied.length > 1 ? '2 · The tie goes to the best score' : 'Each supplier, cheapest first'}</b><span style="font-size:11px">out of 100</span></div>
+      ${rowsHTML || emptyCard('Nobody sells it on the price list', 'Ask Sourcing to find one.')}
+      <div class="bx-card" style="padding:12px;display:flex;flex-direction:column;gap:8px"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><b style="font-size:13px">What the score is made of</b><span class="bx-chip" style="height:20px;font-size:10px;letter-spacing:.1em;background:var(--amberSoft);color:var(--amberInk)">THE OWNER SETS WEIGHTS</span></div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 10px">${W.map(w => `<span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--ink2);min-width:0"><i style="width:10px;height:10px;border-radius:3px;flex:none;background:${w[3]}"></i><span class="ell" style="flex:1">${esc(w[1])}</span><b class="m" style="font-size:11px;color:var(--ink)">${w[2]}%</b></span>`).join('')}</div></div>
+      <div style="display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:16px;background:var(--indigoSoft)">
+        <b style="font-size:13px;color:var(--indigo)">Your last ${picks.length || 5} picks for ${esc(lineName(it).base)}</b>
+        <div style="display:flex;align-items:center;gap:6px">${picks.length ? picks.map(p => { const t = tintFor(p.sid); return `<span style="width:30px;height:30px;border-radius:999px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;background:${t[0]};color:${t[1]};box-shadow:0 0 0 2px #fff">${esc(initials(supplierName(p.sid)))}</span>`; }).join('') : '<span style="font-size:12px;font-weight:600;color:var(--indigo)">None yet</span>'}<span style="flex:1;height:2px;border-radius:999px;background:rgba(58,63,155,.25)"></span><span style="font-size:11px;font-weight:700;color:var(--indigo)">now</span></div>
+        <span style="font-size:12px;font-weight:600;color:var(--indigo)">Each pick you make is remembered for this item, and counts in the score next time</span>
+      </div>
+    </div>
+    <div class="bx-foot"><div class="row"><button class="bx-btn red" data-act="back">Keep ${esc(supplierShort(it.supplierId))}</button></div></div>
+  </div>`;
+};
+ACT.whyuse = async t => {
+  const a = topArgs(), sid = t.dataset.sid; if (S.busy) return;
+  S.busy = true;
+  try {
+    const res = await changeOrder(a.id, q => {
+      if (q.status !== 'draft') return false;
+      const it = (q.items || []).find(x => String(x.lineId) === String(a.lineId)); if (!it) return false;
+      const row = lineRank(it).rows.find(r => String(r.supplierId) === String(sid)); if (!row) return false;
+      if (!setLineSupplier(it, sid)) return false;
+      it.price = Math.round(row.purchasePrice);
+      return true;
+    });
+    S.busy = false;
+    if (!res) { toast('That line has already changed'); render(); return; }
+    FEEL.yes(); toast('Switched to ' + supplierName(sid) + ' · remembered for next time · ask them next');
+    replaceTop('ask', { sid, id: a.id });
+  } catch (e) { S.busy = false; toast(failWord(e), 5000); render(); }
+};
+
+/* ---------------- a line nobody sells, or the shelf is short: find one ---------------- */
+ACT.findsup = t => { FEEL.open(); push('findsup', { id: Number(t.dataset.id), lineId: t.dataset.line }); };
+PAGE.findsup = (args) => {
+  const q = quoteById(args.id), it = q && (q.items || []).find(x => String(x.lineId) === String(args.lineId));
+  if (!q || !it) return goneCard('That line is no longer on the order');
+  if (q.status !== 'draft') return goneCard('That order has left Checking');
+  const rows = rankedPurchaseRowsAtQty(it.productId, it.variantIdx == null ? null : it.variantIdx, Number(it.qty) || 1).filter(r => r.purchasePrice != null);
+  const c = quoteLineCount(it, it.qty);
+  return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
+    <div class="bx-sheethead"><span class="bx-grip"></span>
+      <div style="display:flex;align-items:center;gap:12px">${itemTile(it.productName, ['#FBE5E2', '#8E2A22'], 40)}
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:700;letter-spacing:.14em;color:var(--rose)">FIND A SUPPLIER</span><span class="ell" style="font-size:17px;font-weight:700">${esc(c.n)} ${esc(c.unit)} ${esc(lineName(it).base)}</span></span>${closeBtn()}</div>
+    </div>
+    <div class="bx-body">
+      ${rows.length ? `<div class="bx-card bx-list">${rows.map(r => { const t = tintFor(r.supplierId), age = priceAgeDays(r.date);
+        return `<button class="bx-row" data-act="findpick" data-sid="${esc(r.supplierId)}">
+          <span class="bx-av" style="width:38px;height:38px;border-radius:12px;font-size:12px;background:${t[0]};color:${t[1]}">${esc(initials(supplierName(r.supplierId)))}</span>
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="bx-t ell">${esc(supplierName(r.supplierId))}</span><span class="bx-sub ell">${age == null ? 'price not dated' : age === 0 ? 'price from today' : 'price from ' + age + ' d ago'}</span></span>
+          <span class="m" style="font-size:15px;font-weight:600">${n0(quoteLineEach(it, r.purchasePrice).price)}</span></button>`; }).join('')}</div>`
+        : emptyCard('Nobody on the price list sells it', 'Drop it off the bill, or the client waits while ' + whoShort('sourcing') + ' finds one.')}
+    </div>
+  </div>`;
+};
+ACT.findpick = async t => {
+  const a = topArgs(), sid = t.dataset.sid; if (S.busy) return;
+  S.busy = true;
+  try {
+    const res = await changeOrder(a.id, q => {
+      if (q.status !== 'draft') return false;
+      const it = (q.items || []).find(x => String(x.lineId) === String(a.lineId)); if (!it) return false;
+      const row = rankedPurchaseRowsAtQty(it.productId, it.variantIdx == null ? null : it.variantIdx, Number(it.qty) || 1).find(r => String(r.supplierId) === String(sid));
+      if (!row || row.purchasePrice == null) return false;
+      it.supplierId = sid; it.supplierName = supplierName(sid); it.price = Math.round(row.purchasePrice);
+      delete it.clientWaits; delete it.shelfAuto;
+      return true;
+    });
+    S.busy = false;
+    if (!res) { toast('That line has already changed'); render(); return; }
+    FEEL.yes(); toast(supplierName(sid) + ' has it · ask them next');
+    replaceTop('ask', { sid, id: a.id });
+  } catch (e) { S.busy = false; toast(failWord(e), 5000); render(); }
+};
+// Nobody has it: drop it off the order and the bill, or the client waits.
+ACT.nonedrop = async t => {
+  const id = Number(t.dataset.id), lineId = t.dataset.line; if (S.busy) return;
+  S.busy = true;
+  try {
+    const res = await changeOrder(id, q => {
+      if (q.status !== 'draft' || (q.items || []).length < 2) return false;
+      const idx = q.items.findIndex(x => String(x.lineId) === String(lineId)), it = q.items[idx];
+      if (!it || it.supplierId) return false;
+      q.items.splice(idx, 1);
+      q.droppedLines = (q.droppedLines || []).concat([{ ...ofDroppedRecord(it, idx), reason: 'Nobody has it', droppedAt: Date.now(), ...(S.user ? { by: S.user.id } : {}) }]);
+      return { moved: orderDraftReady(q) && orderLeaveDraft(q) };
+    });
+    S.busy = false;
+    if (!res) { toast((quoteById(id) || {}).items && quoteById(id).items.length < 2 ? 'It is the only line — the order would be empty' : 'That line has already changed'); render(); return; }
+    FEEL.no(); toast('Dropped · off the order and the bill · ' + sellerOf(res.q) + ' is told');
+    if (res.out.moved) movedToast(res.q);
+    render();
+  } catch (e) { S.busy = false; toast(failWord(e), 5000); render(); }
+};
+ACT.nonewait = async t => {
+  const id = Number(t.dataset.id), lineId = t.dataset.line, undo = t.dataset.undo === '1'; if (S.busy) return;
+  S.busy = true;
+  try {
+    const res = await changeOrder(id, q => {
+      if (q.status !== 'draft') return false;
+      const it = (q.items || []).find(x => String(x.lineId) === String(lineId)); if (!it || it.supplierId) return false;
+      if (undo) delete it.clientWaits; else it.clientWaits = { at: Date.now(), ...(S.user ? { by: S.user.id } : {}) };
+      return { moved: !undo && orderDraftReady(q) && orderLeaveDraft(q) };
+    });
+    S.busy = false;
+    if (!res) { toast('That line has already changed'); render(); return; }
+    FEEL[undo ? 'back' : 'yes'](); toast(undo ? 'Back to undecided' : 'The client waits · billed only when it comes in');
+    if (res.out.moved) movedToast(res.q);
+    render();
+  } catch (e) { S.busy = false; toast(failWord(e), 5000); render(); }
+};
+
+/* ---------------- the order's own cards: shelf, the Manager, nobody has it ---------------- */
+function shelfCardHTML(q, shelf){
+  if (!shelf.length) return '';
+  const rows = shelf.map(it => { const c = quoteLineCount(it, it.qty), have = getStockQty(it.productId, it.variantIdx), need = Number(it.qty) || 0, short = have < need;
+    return `<div style="display:flex;align-items:center;gap:10px;min-height:52px;padding:5px 10px;border-radius:14px;background:#fff;box-shadow:${short ? 'inset 0 0 0 1.5px #F5B26B' : 'inset 0 0 0 1px var(--line)'}">
+      <span class="m" style="flex:none;font-size:15px;font-weight:600">${esc(c.n)} <span style="font-family:Figtree;font-size:11px;color:#6B7480">${esc(c.unit)}</span></span>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span class="ell" style="font-size:14px;font-weight:700">${esc(lineName(it).base)}</span><span class="ell" style="font-size:12px;font-weight:600;color:${short ? 'var(--amberInk)' : 'var(--ink3)'}">books say ${n0(have)} · ${short ? n0(need - have) + ' short' : whoShort('store') + ' counts it at packing'}</span></span>
+      ${short && q.status === 'draft' ? `<button data-act="findsup" data-id="${q.id}" data-line="${esc(it.lineId)}" style="flex:none;height:32px;padding:0 12px;border:none;border-radius:999px;background:var(--amberSoft);color:var(--amberInk);font-size:12px;font-weight:700">Buy it</button>` : `<span class="bx-chip" style="flex:none;height:28px;background:var(--greenSoft);color:var(--green)">on the shelf</span>`}
+    </div>`; }).join('');
+  return `<div style="display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:18px;background:#EFECE6">
+    <div style="display:flex;align-items:center;gap:10px;padding:0 2px"><span class="bx-tile" style="width:32px;height:32px;border-radius:10px;background:#fff;color:var(--ink2)">${ic('shelf', 16)}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px">Our shelf</b><span style="font-size:12px;color:var(--ink3)">The Store counts it · a shelf-only order skips Checking</span></span></div>
+    ${rows}</div>`;
+}
+function managerCardHTML(q){
+  const pw = priceWaits(q), ch = q.creditCheck || null, ag = agentOrderOnHold(q);
+  if (!pw.length && !ch && !ag && !(q.items || []).some(it => it && it.priceReview)) return '';
+  const tile = (k, v, sub, wait) => `<span style="min-width:0;display:flex;flex-direction:column;gap:2px;padding:8px 9px;border-radius:12px;background:#fff;box-shadow:${wait ? 'inset 0 0 0 1.5px #9BA3F0' : 'inset 0 0 0 1px var(--line)'}"><span style="font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--ink2)">${k}</span><span style="font-size:14px;font-weight:700;white-space:nowrap;color:${wait ? 'var(--indigo)' : 'var(--green)'}">${esc(v)}</span><span class="ell" style="font-size:11px;font-weight:600;color:var(--ink3)">${esc(sub)}</span></span>`;
+  const reviewed = (q.items || []).filter(it => it && it.priceReview && it.priceReview.state).length;
+  const agentLines = agentChangeOpenLines(q).length;
+  return `<div style="display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:18px;background:var(--indigoSoft);box-shadow:inset 0 0 0 1.5px rgba(58,63,155,.35)">
+    <div style="display:flex;align-items:center;gap:10px;padding:0 2px"><span class="bx-tile" style="width:32px;height:32px;border-radius:10px;background:#fff;color:var(--indigo)">${ic('lock', 16)}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px">Also waits for ${esc(whoRole('manager'))}</b><span style="font-size:12px;color:var(--ink2)">A yes from every supplier won’t move it alone</span></span></div>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">
+      ${tile('PRICE', pw.length ? pw.length + ' waiting' : reviewed ? 'decided' : 'clear', pw.length ? 'set by ' + sellerOf(q) : reviewed ? reviewed + ' decided' : 'nothing to decide', !!pw.length)}
+      ${tile('CREDIT', creditHolds(q) ? 'held' : ch ? 'decided' : 'no hold', creditHolds(q) ? 'waits for ' + whoShort('manager') : ch ? ({ yes: 'goes on credit', cash: 'cash first' }[ch.decision] || 'decided') : 'none recorded', creditHolds(q))}
+      ${tile('AGENT', ag ? (q.agentCancel ? 'cancel asked' : agentLines + ' change' + (agentLines > 1 ? 's' : '')) : 'none', ag ? 'decided by ' + whoShort('manager') : 'no ask', ag)}
+    </div>
+    <div style="display:flex;align-items:center;gap:8px"><span style="flex:1;min-width:0;font-size:12px;font-weight:600;color:var(--ink2)">${managerWaits(q) ? 'You are told when ' + esc(whoShort('manager')) + ' decides' : 'Nothing waits for the Manager'}</span><button data-act="ruth" data-id="${q.id}" style="flex:none;height:32px;padding:0 12px;border:none;border-radius:999px;background:var(--indigo);color:#fff;font-size:12px;font-weight:700">See all ›</button></div>
+  </div>`;
+}
+function noneCardHTML(q, none){
+  return none.map(it => { const c = quoteLineCount(it, it.qty), waits = !!it.clientWaits, can = q.status === 'draft', single = (q.items || []).length < 2;
+    return `<div style="display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:18px;${waits ? 'background:#F4F2EE;box-shadow:inset 0 0 0 1px var(--rule)' : 'background:var(--crimsonSoft);box-shadow:inset 0 0 0 1.5px rgba(142,42,34,.45)'}">
+      <div style="display:flex;align-items:center;gap:10px;padding:0 2px"><span class="bx-tile" style="width:32px;height:32px;border-radius:10px;background:#fff;color:${waits ? 'var(--ink2)' : 'var(--crimson)'}">${ic('outc', 16)}</span><span style="flex:1;min-width:0;display:flex;align-items:baseline;gap:6px"><span class="m" style="flex:none;font-size:15px;font-weight:600">${esc(c.n)} <span style="font-family:Figtree;font-size:11px;color:#6B7480">${esc(c.unit)}</span></span><span class="ell" style="font-size:14px;font-weight:700">${esc(lineName(it).base)}</span></span></div>
+      <span style="font-size:12px;font-weight:600;line-height:1.35;color:${waits ? 'var(--green)' : 'var(--crimson)'}">${waits ? esc(shortName(quoteClientName(q))) + ' waits · billed only when it comes in' : 'No supplier chosen · ' + esc(shortName(quoteClientName(q))) + ' is billed for it unless you decide'}</span>
+      ${can ? (waits ? `<button data-act="nonewait" data-undo="1" data-id="${q.id}" data-line="${esc(it.lineId)}" style="align-self:flex-start;height:32px;padding:0 12px;border:none;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule);color:var(--ink2);font-size:12px;font-weight:700">Undo</button>`
+        : `<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">
+          <button data-act="findsup" data-id="${q.id}" data-line="${esc(it.lineId)}" style="height:44px;border:none;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule);color:var(--ink);font-size:13px;font-weight:700">Find one</button>
+          <button data-act="nonedrop" data-id="${q.id}" data-line="${esc(it.lineId)}" ${single ? 'aria-disabled="true"' : ''} style="height:44px;border:none;border-radius:12px;background:var(--crimson);color:#fff;font-size:13px;font-weight:700;${single ? 'opacity:.4' : ''}">Drop · off bill</button>
+          <button data-act="nonewait" data-id="${q.id}" data-line="${esc(it.lineId)}" style="height:44px;border:none;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule);color:var(--ink);font-size:13px;font-weight:700">Client waits</button>
+        </div>`) : ''}
+    </div>`; }).join('');
+}
+
+/* ---------------- with the Manager: what their decisions do ---------------- */
+ACT.ruth = t => { FEEL.open(); push('ruth', { id: Number(t.dataset.id), tab: null }); };
+PAGE.ruth = (args) => {
+  const q = quoteById(args.id); if (!q) return goneCard('That order is no longer on the books');
+  const pw = priceWaits(q), reviewed = (q.items || []).filter(it => it && it.priceReview && it.priceReview.state), ch = q.creditCheck || null;
+  const agLines = agentChangeOpenLines(q), ag = agentOrderOnHold(q), left = managerWaits(q);
+  const tab = args.tab || (pw.length ? 'price' : creditHolds(q) ? 'credit' : ag ? 'agent' : 'price');
+  const tabs = [['price', 'PRICE', pw.length ? pw.length + ' waiting' : 'clear', !pw.length], ['credit', 'CREDIT', creditHolds(q) ? 'held' : ch ? 'decided' : 'no hold', !creditHolds(q)], ['agent', 'AGENT', ag ? (q.agentCancel ? 'cancel' : agLines.length + ' asked') : 'none', !ag]];
+  const lineRow = (it, word, col) => { const c = quoteLineCount(it, it.qty); return `<div style="display:flex;align-items:center;gap:10px;min-height:48px;padding:6px 12px;border-radius:14px;background:#fff;box-shadow:inset 0 0 0 1px var(--line)"><span class="m" style="flex:none;font-size:14px;font-weight:600">${esc(c.n)}</span><span class="ell" style="flex:1;font-size:14px;font-weight:700">${esc(lineName(it).base)}</span><span class="bx-chip" style="height:24px;font-size:11px;${col}">${esc(word)}</span></div>`; };
+  let body = '';
+  if (tab === 'price') body = (pw.length || reviewed.length) ? `<div style="display:flex;flex-direction:column;gap:6px">${pw.map(it => lineRow(it, 'with ' + whoShort('manager'), 'background:var(--indigoSoft);color:var(--indigo)')).join('')}${reviewed.map(it => lineRow(it, it.priceReview.state === 'changed' ? 'price set' : 'approved', 'background:var(--greenSoft);color:var(--green)')).join('')}</div>
+      <span style="padding:10px 12px;border-radius:14px;background:var(--indigoSoft);color:var(--indigo);font-size:12px;font-weight:600;line-height:1.35">${esc(sellerOf(q))} set ${pw.length > 1 ? 'these prices' : 'this price'} under the shop’s · ${esc(whoShort('manager'))} approves or sets it · ${esc(sellerOf(q))} tells the client · your supplier prices are untouched</span>`
+    : emptyCard('No price waits', 'Every price on this order is at or above the shop’s.');
+  else if (tab === 'credit') body = `<div class="bx-card" style="padding:14px;display:flex;flex-direction:column;gap:6px"><b style="font-size:14px">${creditHolds(q) ? 'Held for credit' : ch ? 'Credit decided' : 'No credit hold'}</b><span style="font-size:12px;font-weight:600;color:var(--ink3);line-height:1.35">${creditHolds(q) ? esc(whoShort('manager')) + ' decides whether this order goes on credit · it stays in Checking until then' : ch ? 'Decided by ' + esc(ch.byName || whoShort('manager')) + (ch.at ? ' · ' + hm(ch.at) : '') + ' · ' + esc({ yes: 'it goes on credit', cash: 'cash first' }[ch.decision] || ch.decision) : 'Nothing recorded · if the client owes past the hold line, ' + esc(whoShort('manager')) + ' decides'}</span></div>`;
+  else body = ag ? `<div style="display:flex;flex-direction:column;gap:6px">${q.agentCancel ? `<div class="bx-card" style="padding:14px;font-size:14px;font-weight:700">The agent asks to cancel the order</div>` : agLines.map(l => `<div style="display:flex;align-items:center;gap:10px;min-height:48px;padding:6px 12px;border-radius:14px;background:#fff;box-shadow:inset 0 0 0 1px var(--line)"><span class="ell" style="flex:1;font-size:14px;font-weight:700">${esc(productVariantLabel(productById(l.productId) || { name: l.productName || 'Item' }, l.variantIdx))}</span><span class="m" style="font-size:13px;font-weight:600">${n0(l.from)} → ${n0(l.to)}</span></div>`).join('')}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><span style="display:flex;flex-direction:column;gap:4px;padding:12px;border-radius:14px;background:var(--greenSoft)"><span style="font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--green)">IF YES</span><span style="font-size:13px;font-weight:700">The order changes</span><span style="font-size:12px;font-weight:600;color:var(--ink2)">new lines come to your Check</span></span><span style="display:flex;flex-direction:column;gap:4px;padding:12px;border-radius:14px;background:#F4F2EE"><span style="font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--ink2)">IF NO</span><span style="font-size:13px;font-weight:700">The agent is told</span><span style="font-size:12px;font-weight:600;color:var(--ink2)">nothing changes for you</span></span></div>`
+    : emptyCard('No agent ask', 'Nothing the agent asked waits on this order.');
+  return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
+    <div class="bx-sheethead"><span class="bx-grip"></span>
+      <div style="display:flex;align-items:center;gap:12px"><span class="bx-av round" style="width:40px;height:40px;font-size:13px;background:var(--indigoSoft);color:var(--indigo)">${esc(whoIni('manager'))}</span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:700;letter-spacing:.14em;color:#9BA3F0">WITH ${esc(whoRole('manager').toUpperCase())}</span><span class="ell" style="font-size:17px;font-weight:700">${esc(quoteClientName(q))} <span class="m" style="font-size:12px;font-weight:500;color:var(--navyInk)">${orderNo(q)}</span></span></span>${closeBtn()}</div>
+      <div role="img" aria-label="${left ? left + ' decision' + (left > 1 ? 's' : '') + ' wait for the Manager before Packing' : 'Nothing waits for the Manager'}" style="display:flex;align-items:center;gap:6px">
+        <span style="width:30px;height:30px;border-radius:999px;display:flex;align-items:center;justify-content:center;${orderDraftReady(q) ? 'background:#6FDCB0;color:var(--navy)' : 'background:#F5B26B;color:var(--navy)'}">${orderDraftReady(q) ? ic('tick', 14, 'style="stroke-width:3"') : ic('clock', 14)}</span>
+        <span style="flex:1;height:3px;border-radius:999px;background:${orderDraftReady(q) ? '#6FDCB0' : 'rgba(255,255,255,.14)'}"></span>
+        <span class="${left ? 'a-blink' : ''}" style="width:30px;height:30px;border-radius:999px;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;${left ? 'background:#9BA3F0;color:var(--navy)' : 'background:#6FDCB0;color:var(--navy)'}">${left || ic('tick', 14, 'style="stroke-width:3"')}</span>
+        <span style="flex:1;height:3px;border-radius:999px;background:${left ? 'rgba(255,255,255,.14)' : '#6FDCB0'}"></span>
+        <span style="width:30px;height:30px;border-radius:999px;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.25);color:var(--navyInk)">${ic('box', 14)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:600;color:var(--navyInk)"><span>Suppliers</span><span>${esc(whoShort('manager'))}</span><span>Packing</span></div>
+      <div role="tablist" aria-label="Decisions" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">${tabs.map(([k, K, v, ok]) => `<button role="tab" aria-selected="${tab === k}" data-act="ruthtab" data-v="${k}" style="height:56px;border:none;border-radius:14px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;padding:0 10px;${tab === k ? 'background:#fff;color:' + (ok ? 'var(--green)' : 'var(--indigo)') : 'background:rgba(255,255,255,.08);color:' + (ok ? 'var(--mint)' : '#C9CDF8')}"><span style="font-size:10px;font-weight:700;letter-spacing:.1em;opacity:.75">${K}</span><span style="font-size:14px;font-weight:700">${esc(v)}</span></button>`).join('')}</div>
+    </div>
+    <div class="bx-body" style="gap:10px">${body}</div>
+    <div class="bx-foot"><span class="bx-hint">${ic('bell', 13, 'style="stroke:#3A3F9B;stroke-width:2.2"')}Nothing for you to do · you are told when ${esc(whoShort('manager'))} decides</span><div class="row"><button class="bx-btn navy" data-act="back">Back to the order</button></div></div>
+  </div>`;
+};
+ACT.ruthtab = t => { const a = topArgs(); if (a.tab !== t.dataset.v) FEEL.tick(); a.tab = t.dataset.v; render(); };
+
+/* ---------------- switch the line to another item ----------------
+   line.switch (decision-rights): another make or size, from the price
+   list. The line keeps its quantity; the supplier's yes and any price
+   decision on it go stale, because the terms changed. Sales is told
+   (a hand-off for them), and tells the client. */
+ACT.swap = t => { FEEL.open(); push('swap', { id: Number(t.dataset.id), lineId: t.dataset.line, q: '', pick: null, why: 'client' }); };
+const SWAP_WHY = [['client', 'Client wants it'], ['wrong', 'Wrong one taken'], ['out', 'That one is out']];
+function swapCatalogue(){
+  const out = [], seen = new Set();
+  D().prices.forEach(r => { const k = r.productId + '::' + (r.variantIdx == null ? '' : r.variantIdx); if (seen.has(k)) return; seen.add(k);
+    const p = productById(r.productId); if (!p) return; out.push({ k, pid: r.productId, vi: r.variantIdx == null ? null : r.variantIdx, name: productVariantLabel(p, r.variantIdx), base: p.name, category: p.category || '' }); });
+  return out;
+}
+function swapOptions(it, query){
+  const cat = swapCatalogue(), here = it.productId + '::' + (it.variantIdx == null ? '' : it.variantIdx);
+  const words = String(query || '').toLowerCase().replace(/["″]/g, '').split(/\s+/).filter(Boolean);
+  const p = productById(it.productId), cat0 = p ? p.category : '';
+  let list;
+  if (words.length) list = cat.filter(x => { const hay = (x.name + ' ' + x.category + ' ' + productPriceRows(x.pid, x.vi).map(r => supplierName(r.supplierId)).join(' ')).toLowerCase().replace(/["″]/g, ''); return words.every(w => hay.includes(w)); });
+  else list = cat.filter(x => x.pid === it.productId || (cat0 && x.category === cat0));
+  return list.filter(x => x.k !== here).slice(0, 30).map(x => { const best = rankedPurchaseRowsAtQty(x.pid, x.vi, Number(it.qty) || 1).find(r => r.purchasePrice != null); return best ? { ...x, sid: best.supplierId, price: best.purchasePrice, row: best } : null; }).filter(Boolean)
+    .sort((a, b) => (a.pid === it.productId ? 0 : 1) - (b.pid === it.productId ? 0 : 1) || a.name.localeCompare(b.name));
+}
+PAGE.swap = (args) => {
+  const q = quoteById(args.id), it = q && (q.items || []).find(x => String(x.lineId) === String(args.lineId));
+  if (!q || !it) return goneCard('That line is no longer on the order');
+  if (q.status !== 'draft') return goneCard('That order has left Checking');
+  const opts = swapOptions(it, args.q), pick = opts.find(o => o.k === args.pick) || null, qty = Number(it.qty) || 0, was = Number(it.price) || 0;
+  const typed = it.sellPrice != null && it.sellPrice !== '';
+  const seller = sellerOf(q);
+  return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
+    <div class="bx-sheethead"><span class="bx-grip"></span>
+      <div style="display:flex;align-items:center;gap:10px">${avatar(quoteClientName(q), quoteClientName(q), 34, true)}
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:11px;font-weight:700;letter-spacing:.14em;color:var(--amber)">SWITCH THE ITEM</span><span class="ell" style="font-size:14px;font-weight:700">${esc(quoteClientName(q))} <span class="m" style="font-size:12px;font-weight:500;color:var(--navyInk)">${orderNo(q)}</span></span></span>${closeBtn()}</div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 28px minmax(0,1fr);align-items:center;gap:6px">
+        <span style="display:flex;flex-direction:column;gap:3px;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1)"><span style="font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--navyInk2)">${esc(seller.toUpperCase())} TOOK</span><span class="ell" style="font-size:14px;font-weight:700;color:var(--navyInk);${pick ? 'text-decoration:line-through;text-decoration-color:#F59A92' : ''}">${esc(lineName(it).base)}${lineName(it).variant ? ' · ' + esc(lineName(it).variant) : ''}</span><span class="m" style="font-size:12px;color:var(--navyInk2)">${n0(quoteLineCount(it, qty).n)} × ${n0(quoteLineEach(it, was).price)}</span></span>
+        <span style="width:28px;height:28px;border-radius:999px;background:${pick ? 'var(--amber)' : 'rgba(255,255,255,.12)'};color:var(--navy);display:flex;align-items:center;justify-content:center">${ic('arrow', 14, 'style="stroke-width:2.6"')}</span>
+        <span style="display:flex;flex-direction:column;gap:3px;padding:10px 12px;border-radius:14px;${pick ? 'background:#fff;color:var(--navy);box-shadow:0 8px 18px rgba(0,0,0,.25)' : 'background:rgba(255,255,255,.04);box-shadow:inset 0 0 0 1.5px dashed rgba(255,255,255,.2);color:var(--navyInk2)'}"><span style="font-size:10px;font-weight:700;letter-spacing:.12em;color:${pick ? 'var(--green)' : 'var(--navyInk2)'}">NOW</span><span class="ell" style="font-size:14px;font-weight:700">${pick ? esc(pick.name) : 'pick below'}</span><span class="m" style="font-size:12px;color:${pick ? 'var(--ink2)' : 'var(--navyInk2)'}">${pick ? n0(quoteLineCount(it, qty).n) + ' × ' + n0(pick.price) : '—'}</span></span>
+      </div>
+    </div>
+    <div class="bx-body" style="gap:12px">
+      <label style="position:relative;display:block"><span style="position:absolute;left:14px;top:0;bottom:0;display:flex;align-items:center;color:var(--ink3);pointer-events:none">${ic('search', 18)}</span>
+        <input id="bx_swapq" type="search" aria-label="Search what to switch to" placeholder="Search any item, make or size" value="${esc(args.q || '')}" autocomplete="off" style="width:100%;min-width:0;box-sizing:border-box;height:50px;border:none;border-radius:16px;padding:0 14px 0 44px;background:#fff;box-shadow:inset 0 0 0 1.5px var(--rule),0 4px 12px rgba(22,32,60,.05);font-size:15px;font-weight:600;color:var(--ink)"></label>
+      <div class="bx-sec"><b style="font-size:14px">${args.q ? opts.length + ' match' + (opts.length === 1 ? '' : 'es') + ' on the price list' : 'Same item, other makes'}</b><span style="font-size:11px">${args.q ? 'any item you can switch to' : esc(lineName(it).base)}</span></div>
+      <div role="radiogroup" aria-label="Which item" id="bx_swaplist" style="display:flex;flex-direction:column;gap:6px">${swapListHTML(it, opts, args.pick)}</div>
+      <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;font-weight:700;color:var(--ink2);padding-left:2px">Why · ${esc(seller)} sees it</span>
+        <div role="radiogroup" aria-label="Why" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">${SWAP_WHY.map(([k, w]) => `<button role="radio" aria-checked="${args.why === k}" data-act="swapwhy" data-v="${k}" style="height:40px;border:none;border-radius:12px;font-size:12px;font-weight:700;${args.why === k ? 'background:var(--navy);color:#fff' : 'background:#fff;color:var(--ink2);box-shadow:inset 0 0 0 1px var(--rule)'}">${w}</button>`).join('')}</div></div>
+      ${pick ? `<div class="bx-card" style="padding:12px;display:flex;flex-direction:column;gap:8px">
+        <span style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--ink3)">OUR COST</span><span class="m" style="font-size:13px;color:#8A93A3">${n0(quoteLineEach(it, was).price)} → <b style="color:var(--ink)">${n0(pick.price)}</b></span><span class="bx-chip m" style="height:22px;font-size:11px;${pick.price > was ? 'background:var(--amberSoft);color:var(--amberInk)' : 'background:var(--greenSoft);color:var(--green)'}">${signed((pick.price - was) * qty)} line</span></span>
+        <span style="font-size:12px;font-weight:600;color:var(--ink2);line-height:1.35">${typed ? esc(seller) + '’s client price stays · if it is now under the shop’s, ' + esc(whoShort('manager')) + ' decides it' : 'The client’s price follows the shop’s'} · ${esc(supplierShort(pick.sid))} then needs a yes</span></div>` : ''}
+    </div>
+    <div class="bx-foot"><div class="row"><button class="bx-btn red" data-act="swapgo" ${pick && !S.busy ? '' : 'aria-disabled="true"'}>${pick ? 'Switch · tell ' + esc(seller) : 'Pick the item it should be'}</button></div></div>
+  </div>`;
+};
+function swapListHTML(it, opts, pickK){
+  if (!opts.length) return `<span class="bx-card" style="padding:14px;font-size:13px;font-weight:600;color:var(--ink3);text-align:center">Nothing on the price list matches · ask ${esc(whoShort('sourcing'))} to add it</span>`;
+  const qty = Number(it.qty) || 0, was = Number(it.price) || 0;
+  return opts.map(o => { const on = o.k === pickK, t = tintFor(o.sid), d = (o.price - was) * qty;
+    return `<button role="radio" aria-checked="${on}" data-act="swappick" data-v="${esc(o.k)}" style="width:100%;border:none;display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:16px;background:#fff;text-align:left;${on ? 'box-shadow:inset 0 0 0 2px var(--navy),0 8px 18px rgba(22,32,60,.1)' : 'box-shadow:inset 0 0 0 1px var(--line)'}">
+      ${itemTile(o.name, t, 38)}
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:14px;font-weight:700;color:var(--ink)">${esc(o.name)}</span><span class="ell" style="font-size:12px;font-weight:600;color:var(--ink3)">${esc(supplierName(o.sid))}${o.row.outOfStock ? ' · out' : ''}</span></span>
+      <span style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;flex:none"><span class="m" style="font-size:15px;font-weight:600;color:var(--ink)">${n0(o.price)}</span><span class="m" style="font-size:11px;font-weight:600;color:${d > 0 ? 'var(--amberInk)' : d < 0 ? 'var(--green)' : 'var(--ink3)'}">${d ? signed(d) + ' line' : 'same'}</span></span></button>`; }).join('');
+}
+ACT.swappick = t => { const a = topArgs(); a.pick = a.pick === t.dataset.v ? null : t.dataset.v; FEEL.tick(); render(); };
+ACT.swapwhy = t => { topArgs().why = t.dataset.v; FEEL.tick(); render(); };
+// Typing filters the list in place, so the keyboard stays up.
+document.addEventListener('input', e => {
+  if (!e.target || e.target.id !== 'bx_swapq') return;
+  const a = topArgs(); a.q = e.target.value;
+  const q = quoteById(a.id), it = q && (q.items || []).find(x => String(x.lineId) === String(a.lineId)); if (!it) return;
+  const opts = swapOptions(it, a.q), el = document.getElementById('bx_swaplist'); if (el) el.innerHTML = swapListHTML(it, opts, a.pick);
+  const sec = el && el.previousElementSibling; if (sec) sec.innerHTML = `<b style="font-size:14px">${a.q ? opts.length + ' match' + (opts.length === 1 ? '' : 'es') + ' on the price list' : 'Same item, other makes'}</b><span style="font-size:11px">${a.q ? 'any item you can switch to' : esc(lineName(it).base)}</span>`;
+});
+ACT.swapgo = async () => {
+  const a = topArgs(), q0 = quoteById(a.id), it0 = q0 && (q0.items || []).find(x => String(x.lineId) === String(a.lineId));
+  if (!it0 || S.busy) return;
+  const o = swapOptions(it0, a.q).find(x => x.k === a.pick) || swapOptions(it0, '').find(x => x.k === a.pick); if (!o) return;
+  const from = { name: productVariantLabel(productById(it0.productId) || { name: it0.productName }, it0.variantIdx), price: Number(it0.price) || 0, supplierId: it0.supplierId };
+  S.busy = true;
+  try {
+    const res = await changeOrder(a.id, q => {
+      if (q.status !== 'draft') return false;
+      const it = (q.items || []).find(x => String(x.lineId) === String(a.lineId)); if (!it || it.productId !== it0.productId) return false;
+      const row = o.row;
+      it.productId = o.pid; it.variantIdx = o.vi; it.productName = o.name;
+      if (row.unit) it.unit = row.unit; it.packUnit = row.packUnit || ''; it.packQty = Number(row.packQty) || 0;
+      it.supplierId = o.sid; it.supplierName = supplierName(o.sid); it.price = Math.round(o.price);
+      delete it.priceReview; delete it.clientWaits;
+      it.switchedFrom = { name: from.name, price: from.price, at: Date.now(), why: (SWAP_WHY.find(w => w[0] === a.why) || SWAP_WHY[0])[1], ...(S.user ? { by: S.user.id } : {}) };
+      return true;
+    });
+    if (!res) { S.busy = false; toast('That line has already changed'); render(); return; }
+    await passOn('item_switch', 'sales', String(a.id), { orderId: a.id, client: quoteClientName(res.q), lineId: a.lineId, from: from.name, to: o.name, why: (SWAP_WHY.find(w => w[0] === a.why) || SWAP_WHY[0])[1], priceWas: from.price, priceNow: Math.round(o.price), supplierId: o.sid }).catch(() => null);
+    S.busy = false;
+    FEEL.yes(); toast('Switched to ' + o.name + ' · ' + sellerOf(res.q) + ' is told · ask ' + supplierShort(o.sid) + ' next');
+    replaceTop('ask', { sid: o.sid, id: a.id });
+  } catch (e) { S.busy = false; toast(failWord(e), 5000); render(); }
+};
+
+/* ---------------- hand-offs: what the Buyer passes on ---------------- */
+function newUuid(){
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); });
+}
+async function passOn(kind, forRole, ref, payload){
+  const row = { id: newUuid(), shop_id: S.shopId, kind, for_role: forRole, ref: ref == null ? null : String(ref), payload: payload || {}, ...(S.user ? { created_by: S.user.id } : {}) };
+  const r = await sb.from('buyer_handoffs').insert(row);
+  if (r.error) throw r.error;
+  (D().handoffs ||= []).push(rowToHandoff({ ...row, status: 'open', created_at: new Date().toISOString() })); saveSnapshot();
+  return row;
+}
+function rowToRestock(r){ return { id: r.id, productId: r.product_id, variantIdx: r.variant_idx == null ? null : Number(r.variant_idx), qty: Number(r.qty) || 0, unit: r.unit || '', supplierId: r.supplier_id, price: r.price == null ? null : Number(r.price), status: r.status, tripId: r.trip_id || null, createdBy: r.created_by, createdAt: r.created_at }; }
+function rowToHandoff(h){ return { id: h.id, kind: h.kind, forRole: h.for_role, ref: h.ref, payload: h.payload || {}, status: h.status, createdBy: h.created_by, createdAt: h.created_at, doneAt: h.done_at }; }
+function handoffsFor(kind, ref){ return (D().handoffs || []).filter(h => h.kind === kind && (ref == null || String(h.ref) === String(ref)) && h.status !== 'withdrawn'); }
+async function closeHandoff(id, status){
+  const r = await sb.from('buyer_handoffs').update({ status }).eq('shop_id', S.shopId).eq('id', id);
+  if (r.error) throw r.error;
+  const h = (D().handoffs || []).find(x => x.id === id); if (h) { h.status = status; h.doneAt = new Date().toISOString(); }
+  saveSnapshot();
+}
+
+/* ---------------- a supplier's paper bill: photo to Accounts ----------------
+   bill.record is Accounts'. The Buyer photographs the paper, says its number
+   and total, and passes it on (a paper_bill hand-off, photo in the private
+   bill-photos bucket, 0100). The paper itself goes in the bill tray. */
+ACT.bill = t => { FEEL.open(); push('bill', { sid: t.dataset.sid, no: '', total: '' }); };
+function billTrip(sid){ return (D().collectionTrips || []).filter(t => !t.voided && String(t.supplierId) === String(sid) && ['collected', 'confirmed'].includes(t.status)).sort((a, b) => msOf(b.collectedAt) - msOf(a.collectedAt))[0] || null; }
+function billOpen(sid){ return handoffsFor('paper_bill', sid).filter(h => h.status === 'open').slice(-1)[0] || null; }
+function dueWord(d){ return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); }
+function dueOn(days){ const d = new Date(); d.setDate(d.getDate() + days); return d; }
+PAGE.bill = (args) => {
+  const s = supplierById(args.sid); if (!s) return goneCard('That supplier is no longer on the books');
+  const t = tintFor(s.id), sent = billOpen(s.id), acc = whoShort('accounts'), o = supplierOwed(s.id);
+  const tr = billTrip(s.id), lines = tr ? tripLines(tr).filter(l => tripLineGot(l) > 0) : [];
+  const came = billCame(lines), total = Number(String(args.total || (sent && sent.payload.total) || '').replace(/[^0-9]/g, '')) || 0;
+  const photo = S.billPhoto && S.billPhoto.sid === s.id ? S.billPhoto : null, has = !!photo || !!(sent && sent.payload.photoPath);
+  const match = total && came ? Math.abs(total - came) < 1 : null, terms = s.termsDays, due = terms != null ? dueOn(terms) : null;
+  const steps = [[myStaff() ? initials(myStaff().name) : 'YOU', 'You pass it'], [whoIni('accounts'), acc + ' records'], [whoIni('accounts'), due ? 'Pays by ' + dueWord(due) : acc + ' pays']], at = sent ? 1 : 0;
+  const ready = has && total > 0 && !S.busy;
+  return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
+    <div class="bx-sheethead"><span class="bx-grip"></span>
+      <div style="display:flex;align-items:center;gap:12px"><span class="bx-av" style="width:40px;height:40px;border-radius:12px;font-size:13px;background:${t[0]};color:${t[1]}">${esc(initials(s.name))}</span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:11px;font-weight:700;letter-spacing:.14em;color:var(--rose)">PAPER BILL · TO ${esc(acc.toUpperCase())}</span><span class="ell" style="font-size:17px;font-weight:700">${esc(s.name)}</span></span>${closeBtn()}</div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:center">
+        <label style="position:relative;display:block;aspect-ratio:4/3;border-radius:10px;overflow:hidden;background:${has ? '#fff' : 'rgba(255,255,255,.06)'};box-shadow:${has ? '0 10px 22px rgba(0,0,0,.3)' : 'inset 0 0 0 1.5px rgba(255,255,255,.2)'};transform:rotate(-2deg)">
+          <input id="bx_billphoto" type="file" accept="image/*" capture="environment" aria-label="Photograph the paper bill" style="position:absolute;inset:0;opacity:0;width:100%;height:100%">
+          ${photo ? `<img alt="The bill you photographed" src="${esc(photo.url)}" style="width:100%;height:100%;object-fit:cover;display:block">` : has ? `<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--green)">${ic('tick', 30, 'style="stroke-width:2.6"')}</span>` : `<span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:#fff;font-size:13px;font-weight:700">${ic('camera', 26)}Photograph it</span>`}
+        </label>
+        <span style="min-width:0;display:flex;flex-direction:column;gap:8px">
+          ${has ? `<span class="bx-chip" style="align-self:flex-start;background:rgba(111,220,176,.15);color:var(--mint)">${ic('tick', 12, 'style="stroke-width:2.8"')}Photo ${photo ? 'taken ' + hm(photo.at) : 'passed'}</span>` : `<span class="bx-chip" style="align-self:flex-start;background:rgba(245,178,107,.16);color:var(--amber)">No photo yet</span>`}
+          ${has && !sent ? `<label style="position:relative;align-self:flex-start;display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 12px;border-radius:12px;background:rgba(255,255,255,.1);font-size:13px;font-weight:700">${ic('camera', 15)}Retake<input type="file" accept="image/*" capture="environment" data-billphoto style="position:absolute;inset:0;opacity:0"></label>` : ''}
+          <span style="font-size:12px;color:var(--navyInk);line-height:1.35">The paper goes in the bill tray · ${esc(acc)} keeps it</span>
+        </span>
+      </div>
+    </div>
+    <div class="bx-body" style="gap:12px">
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:8px">
+        <label style="min-width:0;display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;font-weight:700;color:var(--ink2)">Bill number</span><input id="bx_billno" ${sent ? 'disabled' : ''} inputmode="text" autocomplete="off" value="${esc(sent ? sent.payload.billNo || '' : args.no)}" style="width:100%;min-width:0;box-sizing:border-box;height:46px;border:none;border-radius:14px;padding:0 12px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule);font-family:var(--mono);font-size:16px;font-weight:600;color:var(--ink)"></label>
+        <label style="min-width:0;display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;font-weight:700;color:var(--ink2)">Total on the paper</span><input id="bx_billtotal" ${sent ? 'disabled' : ''} inputmode="numeric" autocomplete="off" value="${total ? n0(total) : ''}" style="width:100%;min-width:0;box-sizing:border-box;height:46px;border:none;border-radius:14px;padding:0 12px;background:#fff;box-shadow:inset 0 0 0 ${match ? '1.5px var(--green)' : '1px var(--rule)'};font-family:var(--mono);font-size:16px;font-weight:600;color:var(--ink)"></label>
+      </div>
+      <div id="bx_billcheck">${billCheckHTML(s, tr, lines, came, total)}</div>
+      <div class="bx-card" style="padding:12px;display:flex;flex-direction:column;gap:8px">
+        <span style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><b style="font-size:14px">${terms != null ? 'Their ' + terms + ' days' : 'No terms on file'}</b>${due ? `<span style="font-size:12px;font-weight:600;color:var(--ink3)">due <b style="color:var(--ink)">${esc(dueWord(due))}</b></span>` : ''}</span>
+        <span style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;font-weight:600;color:var(--ink3)"><span class="ell">We owe them <span class="m">${n0(o.owed)}</span>${total ? ` → <b class="m" style="color:var(--ink)">${n0(o.owed + total)}</b>` : ''}</span><span style="flex:none">${esc(acc)} pays</span></span>
+      </div>
+    </div>
+    <div class="bx-foot">
+      <div role="img" aria-label="${esc(steps.map(x => x[1]).join(', then '))}" style="display:flex;align-items:center;gap:4px;padding:0 4px">${steps.map((x, i) => `<span style="display:flex;align-items:center;gap:6px;min-width:0;${i < 2 ? 'flex:1' : ''}"><span style="width:26px;height:26px;border-radius:999px;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;${i < at ? 'background:#6FDCB0;color:var(--navy)' : i === at ? 'background:var(--amber);color:var(--navy)' : 'background:var(--soft2);color:var(--ink3)'}">${esc(x[0])}</span><span class="ell" style="font-size:11px;font-weight:600;color:${i <= at ? 'var(--ink)' : 'var(--ink3)'}">${esc(x[1])}</span></span>`).join('')}</div>
+      <div class="row"><button class="bx-btn ${sent ? 'green' : 'red'}" data-act="billgo" ${sent || ready ? '' : 'aria-disabled="true"'}>${sent ? 'With ' + esc(acc) + ' · tap to withdraw' : !has ? 'Photograph the bill first' : !total ? 'Key in its total' : 'Pass to ' + esc(acc) + ' · Accounts'}</button></div></div>
+  </div>`;
+};
+// What came in, at the price paid: the yard's count when the Store has one.
+function billQty(l){ return l.yardQty != null && l.yardQty !== '' ? Number(l.yardQty) : tripLineGot(l); }
+function billCame(lines){ return lines.reduce((x, l) => x + billQty(l) * (Number(l.gotPrice != null ? l.gotPrice : l.expectedPrice) || 0), 0); }
+function billCheckHTML(s, tr, lines, came, total){
+  if (!tr || !lines.length) return `<div class="bx-card" style="padding:12px;font-size:13px;font-weight:600;color:var(--ink3)">No trip from ${esc(supplierShort(s.id))} to check it against · ${esc(whoShort('accounts'))} checks it</div>`;
+  const yard = tripYardCounted(tr), diff = total ? total - came : 0, ok = total && Math.abs(diff) < 1;
+  return `<div class="bx-card" style="padding:4px 12px 12px;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:10px 0 8px;border-bottom:1px dashed var(--dash)"><b style="font-size:14px">Against what came in</b><span class="ell" style="font-size:11px;font-weight:600;color:var(--ink3)">${yard ? esc(whoShort('store')) + '’s yard count' : 'your count · ' + hm(msOf(tr.collectedAt))}</span></div>
+    ${lines.slice(0, 6).map(l => { const g = billQty(l); return `<div style="display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;gap:8px;min-height:42px;border-bottom:1px dashed var(--dash)"><span class="m" style="font-size:14px;font-weight:600">${n0(quoteLineCount(l, g).n)}</span><span class="ell" style="font-size:13px;font-weight:600">${esc(lineName(l).base)}</span><span class="m" style="font-size:13px;font-weight:600">${n0(g * (Number(l.gotPrice != null ? l.gotPrice : l.expectedPrice) || 0))}</span></div>`; }).join('')}
+    <span style="display:flex;height:8px;gap:2px;border-radius:999px;overflow:hidden;margin-top:10px;background:var(--soft2)"><i style="flex:${Math.max(1, came)};background:${!total ? '#C9C4BA' : ok ? 'var(--green)' : 'var(--amber)'}"></i>${total && diff > 0 ? `<i style="flex:${diff};background:var(--crimson)"></i>` : ''}</span>
+    <span style="display:flex;justify-content:space-between;gap:8px;padding-top:6px;font-size:12px;font-weight:700;color:${!total ? 'var(--ink3)' : ok ? 'var(--green)' : 'var(--amberInk)'}"><span>${!total ? 'Key in the paper’s total' : ok ? 'Matches the paper' : 'The paper says ' + signed(diff) + ' · ' + esc(whoShort('accounts')) + ' sees it'}</span><span class="m">${n0(came)}</span></span>
+  </div>`;
+}
+document.addEventListener('change', e => {
+  const el = e.target; if (!el || !(el.id === 'bx_billphoto' || el.hasAttribute('data-billphoto'))) return;
+  const f = el.files && el.files[0]; if (!f) return;
+  const a = topArgs(); if (S.billPhoto && S.billPhoto.url) { try { URL.revokeObjectURL(S.billPhoto.url); } catch (_e) {} }
+  S.billPhoto = { sid: a.sid, file: f, url: URL.createObjectURL(f), at: Date.now() };
+  FEEL.yes(); render();
+});
+document.addEventListener('input', e => {
+  const el = e.target; if (!el || !['bx_billno', 'bx_billtotal'].includes(el.id)) return;
+  const a = topArgs();
+  if (el.id === 'bx_billno') { a.no = el.value; return; }
+  const n = Number(el.value.replace(/[^0-9]/g, '')) || 0; a.total = n ? String(n) : '';
+  const s = supplierById(a.sid), tr = billTrip(a.sid), lines = tr ? tripLines(tr).filter(l => tripLineGot(l) > 0) : [];
+  el.value = n ? n0(n) : '';
+  const box = document.getElementById('bx_billcheck'); if (box && s) box.innerHTML = billCheckHTML(s, tr, lines, billCame(lines), n);
+  const go = document.querySelector('[data-act="billgo"]'); if (go && !billOpen(a.sid)) { const has = !!(S.billPhoto && S.billPhoto.sid === a.sid); go.textContent = !has ? 'Photograph the bill first' : !n ? 'Key in its total' : 'Pass to ' + whoShort('accounts') + ' · Accounts'; if (has && n) go.removeAttribute('aria-disabled'); else go.setAttribute('aria-disabled', 'true'); }
+});
+ACT.billgo = async () => {
+  const a = topArgs(), s = supplierById(a.sid); if (!s || S.busy) return;
+  const sent = billOpen(s.id);
+  const total = Number(String(a.total || '').replace(/[^0-9]/g, '')) || 0, photo = S.billPhoto && S.billPhoto.sid === s.id ? S.billPhoto : null;
+  if (!sent && (!photo || !total)) return;
+  S.busy = true; render();
+  try {
+    if (sent) { await closeHandoff(sent.id, 'withdrawn'); FEEL.back(); toast('Withdrawn · ' + whoShort('accounts') + ' no longer has it'); }
+    else {
+      const ext = (String(photo.file.name || '').split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5) || 'jpg';
+      const path = S.shopId + '/' + newUuid() + '.' + ext;
+      const up = await sb.storage.from('bill-photos').upload(path, photo.file, { contentType: photo.file.type || 'image/jpeg' });
+      if (up.error) throw up.error;
+      const tr = billTrip(s.id);
+      await passOn('paper_bill', 'accounts', s.id, { supplierId: s.id, supplier: s.name, billNo: String(a.no || '').trim(), total, photoPath: path, takenAt: photo.at, tripId: tr ? tr.id : null, termsDays: s.termsDays });
+      FEEL.yes(); toast('With ' + whoShort('accounts') + ' · the paper goes in the bill tray');
+    }
+  } catch (e) { toast(isNetworkError(e) ? 'No connection — nothing was passed on. Try again with signal.' : 'Not passed on: ' + (e.message || e), 6000); }
+  S.busy = false; render();
+};
+
+/* ---------------- suggest a fix: what the list should say ----------------
+   price.list and supplier.edit are Sourcing's. The Buyer says what is
+   wrong and what it should be, and how they know; Sourcing checks it. */
+const FIX_HOW = [['phone', 'Call', 'phone'], ['wa', 'WhatsApp', 'wa'], ['saw', 'Saw it', 'eye'], ['bill', 'On a bill', 'tag']];
+ACT.fix = t => { FEEL.open(); push('fix', { sid: t.dataset.sid, tab: null, sel: null, how: 'phone', edits: {} }); };
+function fixOpen(sid){ return handoffsFor('sourcing_fix', sid).filter(h => h.status === 'open').slice(-1)[0] || null; }
+function fixTabs(s){
+  const lim = priceStaleDays();
+  const rows = D().prices.filter(r => String(r.supplierId) === String(s.id)).map(r => ({ r, name: productVariantLabel(productById(r.productId) || { name: 'Item' }, r.variantIdx), age: priceAgeDays(r.date) }))
+    .sort((a, b) => ((b.age == null ? 1e9 : b.age) > lim) - ((a.age == null ? 1e9 : a.age) > lim) || a.name.localeCompare(b.name));
+  const tabs = rows.slice(0, 12).map(x => { const r = x.r, each = r.wholesale != null ? r.wholesale : r.retail;
+    return { k: 'p' + r.id, t: x.name, sub: (each != null ? n0(each) : 'no price') + ' · ' + (x.age == null ? 'not dated' : x.age === 0 ? 'today' : x.age + ' d old'), icon: itemIcon(x.name), priceId: r.id, fields: [
+      ['name', 'ITEM', 'text', x.name, 'Its right name and size'],
+      ['unit', 'SOLD BY', 'text', r.unit || '', 'Sold by'],
+      ['pack', 'PACK', 'text', r.packQty && r.packUnit ? r.packUnit + ' of ' + r.packQty : '', 'What a pack holds'],
+      ['price', 'PRICE', 'price', each != null ? String(Math.round(each)) : '', 'Their price now' + (r.unit ? ', a ' + r.unit : '')],
+      ['status', 'STOCK', 'choice', r.outOfStock ? 'out for now' : 'sells it', 'Do they still sell it', ['sells it', 'out for now', 'stopped']]] }; });
+  tabs.push({ k: 'sup', t: 'The supplier', sub: 'phone · place · terms', icon: 'M4 20V9l8-5 8 5v11M9 20v-6h6v6', fields: [
+    ['phone', 'PHONE', 'text', contactPhones(s)[0] || '', 'The number that answers'],
+    ['place', 'WHERE', 'text', supplierWhere(s), 'Where to find them'],
+    ['terms', 'TERMS', 'text', s.termsDays != null ? s.termsDays + ' days' : '', 'Days to pay their bills'],
+    ['deliv', 'DELIVERS', 'text', s.deliveryDays != null ? (s.deliveryDays === 0 ? 'same day' : s.deliveryDays + ' day' + (s.deliveryDays === 1 ? '' : 's')) : '', 'How long they take']] });
+  return tabs;
+}
+const fixNum = v => Number(String(v == null ? '' : v).replace(/[^0-9]/g, '')) || 0;
+function fixChanged(f, e){ return e != null && String(e).trim() !== '' && (f[2] === 'price' ? fixNum(e) !== fixNum(f[3]) : String(e).trim() !== String(f[3])); }
+function fixShow(f, v){ return f[2] === 'price' ? (fixNum(v) ? n0(fixNum(v)) : '—') : (String(v || '').trim() || '—'); }
+function fixAll(tabs, edits){ const out = []; tabs.forEach(tb => tb.fields.forEach(f => { const e = edits[tb.k + ':' + f[0]]; if (fixChanged(f, e)) out.push({ tab: tb.k, item: tb.t, priceId: tb.priceId || null, field: f[0], label: f[1], was: f[3], now: f[2] === 'price' ? fixNum(e) : String(e).trim() }); })); return out; }
+PAGE.fix = (args) => {
+  const s = supplierById(args.sid); if (!s) return goneCard('That supplier is no longer on the books');
+  const t = tintFor(s.id), tabs = fixTabs(s), src = whoShort('sourcing'), sent = fixOpen(s.id);
+  if (!args.tab || !tabs.find(x => x.k === args.tab)) args.tab = tabs[0].k;
+  const cur = tabs.find(x => x.k === args.tab), edits = args.edits || (args.edits = {}), all = fixAll(tabs, edits), n = all.length;
+  const rail = tabs.map(tb => { const on = tb.k === args.tab, c = tb.fields.filter(f => fixChanged(f, edits[tb.k + ':' + f[0]])).length;
+    return `<button role="tab" aria-selected="${on}" data-act="fixtab" data-v="${esc(tb.k)}" style="flex:none;max-width:220px;display:flex;align-items:center;gap:10px;height:56px;padding:0 14px 0 8px;border:none;border-radius:16px;text-align:left;${on ? 'background:#fff;color:var(--ink)' : 'background:rgba(255,255,255,.06);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)'}">
+      <span style="width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex:none;${on ? 'background:' + t[0] + ';color:' + t[1] : 'background:rgba(255,255,255,.08);color:#C9CDF8'}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${tb.icon}"/></svg></span>
+      <span style="min-width:0;display:flex;flex-direction:column;gap:1px"><span class="ell" style="font-size:14px;font-weight:700">${esc(tb.t)}</span><span class="ell" style="font-size:12px;font-weight:600;color:${c ? (on ? 'var(--green)' : 'var(--mint)') : on ? 'var(--ink3)' : 'var(--navyInk)'}">${c ? c + ' fix' + (c > 1 ? 'es' : '') : esc(tb.sub)}</span></span></button>`; }).join('');
+  const rows = cur.fields.map((f, i) => { const k = cur.k + ':' + f[0], e = edits[k], ch = fixChanged(f, e), open = args.sel === f[0], val = e != null ? e : f[3];
+    let editor = '';
+    if (open && !sent) {
+      if (f[2] === 'choice') editor = `<div role="radiogroup" aria-label="${esc(f[4])}" style="display:grid;grid-template-columns:repeat(${f[5].length},minmax(0,1fr));gap:6px">${f[5].map(o => { const on = String(val) === o; return `<button role="radio" aria-checked="${on}" data-act="fixset" data-k="${esc(k)}" data-v="${esc(o === f[3] ? '' : o)}" style="height:40px;border:none;border-radius:11px;font-size:12px;font-weight:700;${on ? (o === f[3] ? 'background:var(--navy);color:#fff' : 'background:var(--green);color:#fff') : 'background:#fff;color:var(--ink2);box-shadow:inset 0 0 0 1px var(--rule)'}">${esc(o)}</button>`; }).join('')}</div>`;
+      else if (f[2] === 'price') { const was = fixNum(f[3]), now = fixNum(val), step = was >= 20000 ? 500 : 100, pct = was ? (now - was) / was * 100 : 0;
+        editor = `<div style="display:flex;gap:8px"><input data-fix="${esc(k)}" inputmode="numeric" autocomplete="off" aria-label="${esc(f[4])}" value="${now ? n0(now) : ''}" style="flex:1;min-width:0;box-sizing:border-box;height:52px;border:none;border-radius:14px;padding:0 14px;background:#fff;box-shadow:inset 0 0 0 1.5px #9BA3F0;font-family:var(--mono);font-size:22px;font-weight:600;color:var(--ink)"><span data-fixpct="${esc(k)}" class="m" style="flex:none;min-width:72px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;${pct > 0 ? 'background:var(--amberSoft);color:var(--amberInk)' : pct < 0 ? 'background:var(--greenSoft);color:var(--green)' : 'background:var(--soft);color:var(--ink3)'}">${was ? (pct > 0 ? '+' : pct < 0 ? '−' : '±') + Math.abs(pct).toFixed(1) + '%' : 'new'}</span></div>
+          <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px">${[-2 * step, -step, step, 2 * step].map(d => `<button data-act="fixstep" data-k="${esc(k)}" data-d="${d}" class="m" style="height:40px;border:none;border-radius:11px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule);font-size:13px;font-weight:600;color:var(--indigo)">${d > 0 ? '+' : '−'}${n0(Math.abs(d))}</button>`).join('')}</div>`; }
+      else editor = `<input data-fix="${esc(k)}" autocomplete="off" aria-label="${esc(f[4])}" value="${esc(val)}" style="width:100%;min-width:0;box-sizing:border-box;height:48px;border:none;border-radius:14px;padding:0 14px;background:#fff;box-shadow:inset 0 0 0 1.5px #9BA3F0;font-size:16px;font-weight:600;color:var(--ink)">`;
+      editor = `<div style="display:flex;flex-direction:column;gap:8px;margin:0 -2px 10px;padding:12px;border-radius:16px;background:var(--indigoSoft);box-shadow:inset 0 0 0 1px rgba(155,163,240,.5)"><span style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--indigo)">${esc(f[4])}</span>${ch ? `<button data-act="fixset" data-k="${esc(k)}" data-v="" style="border:none;background:none;padding:0;font-size:12px;font-weight:700;color:var(--indigo);text-decoration:underline">Keep as is</button>` : ''}</span>${editor}</div>`;
+    }
+    return `<div style="${i ? 'border-top:1px dashed var(--dash);' : ''}${open ? 'background:#FCFCFF;' : ''}">
+      <button data-act="fixsel" data-v="${esc(f[0])}" aria-expanded="${open}" aria-label="${esc(f[1].toLowerCase())}: ${esc(ch ? fixShow(f, f[3]) + ' should be ' + fixShow(f, e) : fixShow(f, f[3]))}. Tap to ${open ? 'close' : 'fix'}" ${sent ? 'aria-disabled="true"' : ''} style="width:100%;border:none;background:none;display:grid;grid-template-columns:76px minmax(0,1fr) auto;align-items:center;gap:8px;min-height:52px;padding:6px 0;text-align:left;color:var(--ink)">
+        <span style="font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--ink3)">${esc(f[1])}</span>
+        <span style="min-width:0;display:flex;flex-direction:column;gap:1px">${ch ? `<span class="ell${f[2] === 'price' ? ' m' : ''}" style="font-size:11px;font-weight:600;color:#8A93A3;text-decoration:line-through;text-decoration-color:var(--red)">${esc(fixShow(f, f[3]))}</span>` : ''}<span class="ell${f[2] === 'price' ? ' m' : ''}" style="font-size:${f[2] === 'price' ? 16 : 14}px;font-weight:700;color:${ch ? 'var(--green)' : 'var(--ink)'}" data-fixval="${esc(k)}">${esc(fixShow(f, ch ? e : f[3]))}</span></span>
+        <span class="bx-chip" style="height:24px;font-size:11px;${ch ? 'background:var(--greenSoft);color:var(--green)' : open ? 'background:var(--indigoSoft);color:var(--indigo)' : 'background:var(--soft);color:var(--ink3)'}">${ch ? 'fixed' : open ? 'editing' : 'fix'}</span></button>
+      ${editor}</div>`; }).join('');
+  return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
+    <div class="bx-sheethead"><span class="bx-grip"></span>
+      <div style="display:flex;align-items:center;gap:12px"><span class="bx-av" style="width:40px;height:40px;border-radius:12px;font-size:13px;background:${t[0]};color:${t[1]}">${esc(initials(s.name))}</span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:11px;font-weight:700;letter-spacing:.14em;color:#9BA3F0">SUGGEST A FIX · TO ${esc(src.toUpperCase())}</span><span class="ell" style="font-size:17px;font-weight:700">${esc(s.name)}</span></span>
+        <span id="bx_fixn" role="img" aria-label="${n} fixes ready for ${esc(src)}" style="width:44px;height:44px;border-radius:13px;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;${n ? 'background:#6FDCB0;color:var(--navy)' : 'background:rgba(255,255,255,.08);color:var(--navyInk2)'}"><span class="m" style="font-size:17px;font-weight:600;line-height:1">${sent ? (sent.payload.fixes || []).length : n}</span><span style="font-size:8px;font-weight:700;letter-spacing:.1em">${(sent ? (sent.payload.fixes || []).length : n) === 1 ? 'FIX' : 'FIXES'}</span></span>${closeBtn()}</div>
+      <div role="tablist" aria-label="What to fix" style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -18px;padding:0 18px">${rail}</div>
+    </div>
+    <div class="bx-body" style="gap:12px">
+      <div class="bx-sec"><b style="font-size:14px">${cur.k === 'sup' ? esc(supplierShort(s.id)) + ' on our books' : 'On the price list'}</b><span style="font-size:11px">${sent ? 'with ' + esc(src) : 'tap what’s wrong'}</span></div>
+      <div class="bx-slip"><div class="bx-slip-in" style="padding:4px 14px">${rows}</div></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;font-weight:700;color:var(--ink2);padding-left:2px">How you know · ${esc(src)} checks it against this</span>
+        <div role="radiogroup" aria-label="How you know" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px">${FIX_HOW.map(([k, w, icon]) => { const on = (sent ? sent.payload.how : args.how) === k; return `<button role="radio" aria-checked="${on}" data-act="fixhow" data-v="${k}" ${sent ? 'aria-disabled="true"' : ''} style="height:60px;border:none;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:12px;font-weight:700;${on ? 'background:var(--navy);color:#fff' : 'background:#fff;color:var(--ink2);box-shadow:inset 0 0 0 1px var(--rule)'}">${ic(icon, 18)}${w}</button>`; }).join('')}</div></div>
+      <span style="display:flex;align-items:center;gap:8px;padding:0 4px;font-size:11px;font-weight:600;color:var(--ink3);line-height:1.35">${ic('tick', 13, 'style="stroke:#0F6B43;stroke-width:2.4"')}Prices you pay on a trip update the list by themselves</span>
+      <span aria-hidden="true" style="flex:none;height:84px"></span>
+    </div>
+    <div class="bx-foot" style="background:var(--navy);border-radius:22px 22px 0 0;padding-top:12px">
+      <div id="bx_fixsum">${fixSumHTML(sent ? sent.payload.fixes || [] : all)}</div>
+      <div class="row"><button class="bx-btn ${sent ? 'green' : 'red'}" data-act="fixgo" ${sent || (n && !S.busy) ? '' : 'aria-disabled="true"'}>${sent ? 'With ' + esc(src) + ' · tap to withdraw' : n ? 'Send ' + n + ' fix' + (n > 1 ? 'es' : '') + ' to ' + esc(src) : 'Tap a line to fix it'}</button></div></div>
+  </div>`;
+};
+function fixSumHTML(all){
+  if (!all.length) return '';
+  return `<div role="img" aria-label="${esc(all.map(d => d.label.toLowerCase() + ' ' + d.was + ' to ' + d.now).join('; '))}" style="display:flex;flex-direction:column;gap:4px;padding:0 4px 8px">${all.slice(0, 3).map(d => `<span style="display:grid;grid-template-columns:62px minmax(0,1fr) minmax(0,1fr);align-items:center;gap:8px;font-size:12px"><span style="font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--navyInk2)">${esc(d.label)}</span><span class="ell" style="color:var(--navyInk2);text-decoration:line-through">${esc(d.field === 'price' ? n0(fixNum(d.was)) : d.was || '—')}</span><span class="ell" style="display:flex;align-items:center;gap:6px;color:#fff;font-weight:600">${ic('arrow', 14, 'style="stroke:#6FDCB0;stroke-width:2.2"')}${esc(d.field === 'price' ? n0(d.now) : d.now)}</span></span>`).join('')}${all.length > 3 ? `<span style="font-size:11px;font-weight:600;color:var(--navyInk)">and ${all.length - 3} more</span>` : ''}</div>`;
+}
+ACT.fixtab = t => { const a = topArgs(); if (a.tab !== t.dataset.v) FEEL.tick(); a.tab = t.dataset.v; a.sel = null; render(); };
+ACT.fixsel = t => { const a = topArgs(); if (fixOpen(a.sid)) return; a.sel = a.sel === t.dataset.v ? null : t.dataset.v; FEEL.tick(); render(); };
+ACT.fixset = t => { const a = topArgs(), k = t.dataset.k; if (t.dataset.v) a.edits[k] = t.dataset.v; else delete a.edits[k]; FEEL.tick(); render(); };
+ACT.fixhow = t => { const a = topArgs(); if (fixOpen(a.sid)) return; a.how = t.dataset.v; FEEL.tick(); render(); };
+ACT.fixstep = t => { const a = topArgs(), k = t.dataset.k, s = supplierById(a.sid), tb = fixTabs(s).find(x => k.startsWith(x.k + ':')), f = tb && tb.fields.find(x => tb.k + ':' + x[0] === k); if (!f) return;
+  const now = Math.max(0, fixNum(a.edits[k] != null ? a.edits[k] : f[3]) + Number(t.dataset.d)); if (now === fixNum(f[3])) delete a.edits[k]; else a.edits[k] = String(now); buzz(6); sfx('tick'); render(); };
+// Typing changes the line in place, so the keyboard stays up.
+document.addEventListener('input', e => {
+  const el = e.target; if (!el || !el.hasAttribute || !el.hasAttribute('data-fix')) return;
+  const a = topArgs(), k = el.getAttribute('data-fix'), s = supplierById(a.sid), tabs = fixTabs(s), tb = tabs.find(x => k.startsWith(x.k + ':')), f = tb && tb.fields.find(x => tb.k + ':' + x[0] === k); if (!f) return;
+  if (f[2] === 'price') { const n = fixNum(el.value); el.value = n ? n0(n) : ''; if (n) a.edits[k] = String(n); else delete a.edits[k];
+    const p = document.querySelector(`[data-fixpct="${CSS.escape(k)}"]`), was = fixNum(f[3]), pct = was ? (n - was) / was * 100 : 0; if (p) p.textContent = was ? (pct > 0 ? '+' : pct < 0 ? '−' : '±') + Math.abs(pct).toFixed(1) + '%' : 'new'; }
+  else { if (String(el.value).trim()) a.edits[k] = el.value; else delete a.edits[k]; }
+  const v = document.querySelector(`[data-fixval="${CSS.escape(k)}"]`); if (v) v.textContent = fixShow(f, fixChanged(f, a.edits[k]) ? a.edits[k] : f[3]);
+  const all = fixAll(tabs, a.edits), n = all.length, src = whoShort('sourcing');
+  const sum = document.getElementById('bx_fixsum'); if (sum) sum.innerHTML = fixSumHTML(all);
+  const c = document.getElementById('bx_fixn'); if (c) { c.firstElementChild.textContent = n; c.lastElementChild.textContent = n === 1 ? 'FIX' : 'FIXES'; c.style.background = n ? '#6FDCB0' : 'rgba(255,255,255,.08)'; c.style.color = n ? 'var(--navy)' : 'var(--navyInk2)'; }
+  const go = document.querySelector('[data-act="fixgo"]'); if (go) { go.textContent = n ? 'Send ' + n + ' fix' + (n > 1 ? 'es' : '') + ' to ' + src : 'Tap a line to fix it'; if (n) go.removeAttribute('aria-disabled'); else go.setAttribute('aria-disabled', 'true'); }
+});
+ACT.fixgo = async () => {
+  const a = topArgs(), s = supplierById(a.sid); if (!s || S.busy) return;
+  const sent = fixOpen(s.id), all = fixAll(fixTabs(s), a.edits || {});
+  if (!sent && !all.length) return;
+  S.busy = true;
+  try {
+    if (sent) { await closeHandoff(sent.id, 'withdrawn'); FEEL.back(); toast('Withdrawn'); }
+    else { await passOn('sourcing_fix', 'sourcing', s.id, { supplierId: s.id, supplier: s.name, how: a.how || 'phone', fixes: all }); a.edits = {}; a.sel = null; FEEL.yes(); toast('With ' + whoShort('sourcing') + ' · they check each one'); }
+  } catch (e) { toast(isNetworkError(e) ? 'No connection — nothing was sent. Try again with signal.' : 'Not sent: ' + (e.message || e), 6000); }
+  S.busy = false; render();
+};
+
+/* ==================================================================
+   WHAT TO BUY · THE SHELF (buy.restock). No order needs these; the
+   shelf does. index.html purchasePlan, cut to what the Buyer acts on:
+   a line qualifies when the shelf runs out before a refill could land
+   (its own cover from presets.reorderRules, else the shop's
+   restockCoverDays, plus the supplier's wait), or sits under its floor.
+   What is already bought, or on a trip, counts against it. A line the
+   Manager holds (presets.buyHolds) is shown, not offered.
+   ================================================================== */
+const RESTOCK_ORDER = { id: 'restock', client: { name: 'The shelf' }, items: [] };
+function restockCover(){ const c = Number(D().presetRestockCoverDays); return c > 0 ? c : 14; }
+function restockRule(key){ const r = (D().presetReorderRules || {})[key]; if (!r) return null; const m = Number(r.minUnits) || 0, c = Number(r.coverDays) || 0; return m > 0 || c > 0 ? { minUnits: m, coverDays: c } : null; }
+function restockHold(key){ const h = (D().presetBuyHolds || {})[key]; return h && String(h.reason || '').trim() && !h.endedOn ? h : null; }
+function restockOpen(){ return (D().restockBuys || []).filter(r => r.status === 'planned' || r.status === 'on_trip'); }
+// Sold off our own shelf in the last 30 days, per item.
+function shelfSales30(){
+  const since = Date.now() - 30 * 864e5, by = new Map();
+  D().savedQuotes.forEach(q => { if (q.voided || q.status === 'draft' || createdMs(q) < since) return;
+    (q.items || []).forEach(it => { if (!it || it.supplierId !== '__stock__') return; const k = stockKey(it.productId, it.variantIdx == null ? null : it.variantIdx); by.set(k, (by.get(k) || 0) + (Number(it.qty) || 0)); }); });
+  return by;
+}
+function restockRows(){
+  const sales = shelfSales30(), cover = restockCover(), open = restockOpen(), rows = [], keys = new Set(sales.keys());
+  Object.keys(D().presetReorderRules || {}).forEach(k => keys.add(k));
+  keys.forEach(key => {
+    const i = key.indexOf('::'), pid = i < 0 ? key : key.slice(0, i), vi = i < 0 ? null : Number(key.slice(i + 2)), p = productById(pid); if (!p) return;
+    const rule = restockRule(key), lineCover = rule && rule.coverDays ? rule.coverDays : cover, floor = (rule && rule.minUnits) || 0;
+    const rate = (sales.get(key) || 0) / 30, qty = getStockQty(pid, vi);
+    if (!(rate > 0) && !(floor > 0)) return;
+    const plain = Math.max(1, Math.ceil(lineCover * rate - qty), floor ? Math.ceil(floor - qty) : 0);
+    const best = rankedPurchaseRowsAtQty(pid, vi, plain).find(r => r.purchasePrice != null) || null;
+    const sup = best && supplierById(best.supplierId), lead = sup && sup.deliveryDays != null ? Math.max(1, sup.deliveryDays) : 1;
+    const short = Math.max(Math.ceil((lineCover + lead) * rate - qty), floor > 0 ? Math.ceil(floor - qty) : 0);
+    if (!(short > 0)) return;
+    const coming = open.filter(r => stockKey(r.productId, r.variantIdx) === key).reduce((s, r) => s + r.qty, 0);
+    const name = productVariantLabel(p, vi), left = rate > 0 ? qty / rate : null;
+    const row = { key, pid, vi, name, qty, rate, left, lead, floor, below: floor > 0 && qty < floor, best, need: Math.max(0, short - coming), coming, hold: restockHold(key) };
+    row.tight = row.left != null ? row.left - lead <= 2 : row.below;
+    rows.push(row);
+  });
+  return rows.sort((a, b) => (a.left == null ? 1e9 : a.left - a.lead) - (b.left == null ? 1e9 : b.left - b.lead));
+}
+ACT.restock = () => { FEEL.open(); push('restock', { picked: null }); };
+PAGE.restock = (args) => {
+  const all = restockRows(), buy = all.filter(r => r.need > 0 && !r.hold && r.best), skip = all.filter(r => r.hold || (r.need <= 0 && r.coming)), noPrice = all.filter(r => r.need > 0 && !r.hold && !r.best);
+  if (!args.picked) args.picked = buy.filter(r => r.tight).map(r => r.key);
+  const picked = buy.filter(r => args.picked.includes(r.key)), total = picked.reduce((s, r) => s + r.need * r.best.purchasePrice, 0), SPAN = 14, mgr = whoShort('manager');
+  const card = (r, i) => { const on = args.picked.includes(r.key), t = tintFor(r.best.supplierId), c = quoteLineCount({ productId: r.pid, variantIdx: r.vi, unit: r.best.unit, packUnit: r.best.packUnit, packQty: r.best.packQty }, r.need);
+    const left = r.left == null ? 0 : Math.min(SPAN, r.left), col = r.tight ? '#C93A30' : '#F5B26B';
+    const why = r.left == null ? 'under its ' + n0(r.floor) + ' floor' : n0(r.qty) + ' on the shelf · ' + (r.rate >= 1 ? n0(Math.round(r.rate)) + ' go a day' : 'about ' + n0(Math.round(r.rate * 7)) + ' a week') + (r.below ? ' · under its ' + n0(r.floor) + ' floor' : '');
+    return `<div class="a-up" style="animation-delay:${(i * .06).toFixed(2)}s;display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:16px;background:#fff;box-shadow:${on ? 'inset 0 0 0 1.5px var(--navy),0 8px 18px rgba(22,32,60,.08)' : 'inset 0 0 0 1px var(--line)'}">
+      <div style="display:flex;align-items:center;gap:10px">${itemTile(r.name, t, 36)}
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span class="ell" style="font-size:14px;font-weight:700">${esc(nameParts(r.pid, r.vi, r.name).base)}</span><span class="ell" style="font-size:12px;font-weight:600;color:var(--ink3)">${esc(supplierName(r.best.supplierId))} · @ ${n0(r.best.purchasePrice)}</span></span>
+        <button role="checkbox" aria-checked="${on}" data-act="rspick" data-k="${esc(r.key)}" aria-label="${on ? 'On the list: ' : 'Add to the list: '}${esc(r.name)}" style="width:44px;height:44px;border:none;border-radius:13px;display:flex;align-items:center;justify-content:center;flex:none;${on ? 'background:var(--green);color:#fff' : 'background:#F4F2EE;color:var(--ink2);box-shadow:inset 0 0 0 1px #E6E3DD'}">${ic(on ? 'tick' : 'plus', 20, 'style="stroke-width:2.6"')}</button></div>
+      <span role="img" aria-label="${esc(r.name)}: ${r.left == null ? 'under its floor' : Math.floor(r.left) + ' days of shelf left'}, a refill takes ${r.lead} day${r.lead > 1 ? 's' : ''}" style="position:relative;display:block;height:10px;border-radius:999px;background:#F1EEE8"><span class="a-grow" style="position:absolute;left:0;top:0;bottom:0;width:${(left / SPAN * 100).toFixed(1)}%;border-radius:999px;background:${col}"></span><span style="position:absolute;top:-4px;bottom:-4px;left:${(Math.min(SPAN, r.lead) / SPAN * 100).toFixed(1)}%;border-left:2px solid var(--navy)"></span></span>
+      <span style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span class="ell" style="min-width:0;font-size:12px;font-weight:600;color:${r.tight ? 'var(--crimson)' : 'var(--amberInk)'}">${r.left == null ? '' : Math.floor(r.left) + ' day' + (Math.floor(r.left) === 1 ? '' : 's') + ' left · '}${esc(why)}</span><span class="m" style="flex:none;font-size:12px;font-weight:600;color:var(--ink2)">buy ${esc(c.n)} ${esc(c.unit)} · ${n0(r.need * r.best.purchasePrice)}</span></span>
+    </div>`; };
+  return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
+    <div class="bx-sheethead" style="gap:12px"><span class="bx-grip"></span>
+      <div style="display:flex;align-items:center;gap:12px"><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="bx-eyebrow">What to buy · the shelf</span><span style="font-size:20px;font-weight:700;letter-spacing:-.01em">Refill before it runs out</span><span style="font-size:12px;color:var(--navyInk)">No order needs these · the shelf does</span></span>${closeBtn()}</div>
+      <div role="img" aria-label="${picked.length} lines picked, ${n0(total)} in all" style="display:flex;flex-direction:column;gap:6px">
+        <span style="display:flex;gap:2px">${picked.length ? picked.map(r => `<i class="a-grow" style="flex:${Math.max(1, r.need * r.best.purchasePrice)};height:10px;border-radius:999px;background:${r.tight ? '#F59A92' : '#F5B26B'}"></i>`).join('') : '<i style="flex:1;height:10px;border-radius:999px;background:rgba(255,255,255,.12)"></i>'}</span>
+        <span style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--navyInk2)">Cash for what you picked</span><span class="m" style="font-size:22px;font-weight:600;letter-spacing:-.03em">${n0(total)}</span></span>
+      </div>
+    </div>
+    <div class="bx-body" style="gap:10px">
+      ${buy.length ? `<div class="bx-sec"><b style="font-size:14px">Runs out first</b><span style="display:flex;gap:10px;font-size:11px"><span style="display:inline-flex;align-items:center;gap:4px"><i style="width:14px;height:6px;border-radius:999px;background:#F5B26B"></i>days left</span><span style="display:inline-flex;align-items:center;gap:4px"><i style="width:2px;height:10px;background:var(--navy)"></i>a refill lands</span></span></div>${buy.map(card).join('')}` : emptyCard('The shelf is fine', 'Nothing runs out before a refill could land.')}
+      ${skip.length || noPrice.length ? `<div class="bx-sec" style="padding-top:4px"><b style="font-size:14px">Not to buy now</b></div>
+        <div class="bx-card bx-list">${skip.map(r => `<div class="bx-row" style="min-height:52px"><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span class="bx-t ell">${esc(nameParts(r.pid, r.vi, r.name).base)}</span><span class="bx-sub ell">${r.hold ? esc(firstWord(r.hold.by === 'you' ? 'The owner' : mgr)) + ' said not yet · ' + esc(String(r.hold.reason).slice(0, 60)) : n0(r.coming) + ' already bought · on its way'}</span></span><span class="bx-chip" style="${r.hold ? 'background:var(--indigoSoft);color:var(--indigo)' : 'background:var(--greenSoft);color:var(--green)'}">${r.hold ? 'Manager’s hold' : 'coming'}</span></div>`).join('')}${noPrice.map(r => `<div class="bx-row" style="min-height:52px"><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span class="bx-t ell">${esc(nameParts(r.pid, r.vi, r.name).base)}</span><span class="bx-sub ell">nobody on the price list · ${esc(whoShort('sourcing'))} finds one</span></span><span class="bx-chip" style="background:var(--soft);color:var(--ink3)">no price</span></div>`).join('')}</div>` : ''}
+    </div>
+    <div class="bx-foot"><span class="bx-hint">${ic('bell', 13, 'style="stroke:#3A3F9B;stroke-width:2.2"')}${esc(whoRole('manager'))} sees what you buy · it rides your next trip</span>
+      <div class="row"><button class="bx-btn red" data-act="rsgo" ${picked.length && !S.busy ? '' : 'aria-disabled="true"'}>${picked.length ? 'Add ' + picked.length + ' to the buying list' : 'Pick what to buy'}</button></div></div>
+  </div>`;
+};
+ACT.rspick = t => { const a = topArgs(), k = t.dataset.k; a.picked = a.picked.includes(k) ? a.picked.filter(x => x !== k) : a.picked.concat([k]); FEEL.tick(); render(); };
+ACT.rsgo = async () => {
+  const a = topArgs(); if (S.busy) return;
+  const rows = restockRows().filter(r => r.need > 0 && !r.hold && r.best && (a.picked || []).includes(r.key)); if (!rows.length) return;
+  S.busy = true;
+  try {
+    for (const r of rows) {
+      // The id is made here, so the line is on this phone's buying list at once.
+      const row = { id: newUuid(), shop_id: S.shopId, product_id: r.pid, variant_idx: r.vi, qty: r.need, unit: r.best.unit || '', supplier_id: String(r.best.supplierId), price: Math.round(r.best.purchasePrice), status: 'planned', ...(S.user ? { created_by: S.user.id } : {}) };
+      const ins = await sb.from('restock_buys').insert(row);
+      if (ins.error) throw ins.error;
+      (D().restockBuys ||= []).push(rowToRestock({ ...row, created_at: new Date().toISOString() }));
+    }
+    saveSnapshot(); S.busy = false; FEEL.yes();
+    toast(rows.length + ' on the buying list · ' + whoShort('manager') + ' sees it');
+    replaceTop('plan', { sid: String(rows[0].best.supplierId) });
+  } catch (e) { S.busy = false; toast(isNetworkError(e) ? 'No connection — nothing was added. Try again with signal.' : 'Not added: ' + (e.message || e) + (/restock_buys/.test(String(e.message)) ? ' · migration 0125 is not on this database yet' : ''), 6000); render(); }
+};
+// The shelf's buys ride the buying list beside the orders' lines.
+function restockRunLines(){
+  return (D().restockBuys || []).filter(r => r.status === 'planned' && !lineIsOnATrip('restock', r.id)).map(r => {
+    const p = productById(r.productId), best = productPriceRows(r.productId, r.variantIdx).find(x => String(x.supplierId) === String(r.supplierId)) || { supplierId: r.supplierId, unit: r.unit };
+    const it = { lineId: r.id, productId: r.productId, variantIdx: r.variantIdx, productName: p ? productVariantLabel(p, r.variantIdx) : 'Item', unit: r.unit || best.unit || '', packUnit: best.packUnit || '', packQty: Number(best.packQty) || 0, qtyIn: '', qty: r.qty, supplierId: r.supplierId };
+    return { order: RESTOCK_ORDER, it, qty: r.qty, quotedQty: r.qty, best: { ...best, supplierId: r.supplierId }, unitCost: r.price, lineCost: (r.price || 0) * r.qty, movedFrom: null, restock: r };
+  });
+}
+async function restockOnTrip(trip){
+  const ids = tripLines(trip).filter(l => l.orderId === 'restock').map(l => l.lineId); if (!ids.length) return;
+  for (const id of ids) { const r = (D().restockBuys || []).find(x => x.id === id); const u = await sb.from('restock_buys').update({ status: 'on_trip', trip_id: trip.id }).eq('shop_id', S.shopId).eq('id', id); if (!u.error && r) { r.status = 'on_trip'; r.tripId = trip.id; } }
+  saveSnapshot();
+}
+async function restockCollected(t){
+  const ids = tripLines(t).filter(l => l.orderId === 'restock').map(l => l.lineId);
+  for (const id of ids) { const r = (D().restockBuys || []).find(x => x.id === id); const u = await sb.from('restock_buys').update({ status: 'collected' }).eq('shop_id', S.shopId).eq('id', id); if (!u.error && r) r.status = 'collected'; }
+  if (ids.length) saveSnapshot();
+}
 
 // Answers kept on the phone go out as soon as there is signal again.
 window.addEventListener('online', () => { Object.keys(S.tripDraft || {}).forEach(id => flushTrip(id).then(() => render()).catch(() => {})); });

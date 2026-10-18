@@ -150,13 +150,13 @@ Deno.serve(async (req) => {
     // 0117 gave it its tasks) and signs in to the Accounts app.
     const isAccounts = staffRow.role === "accounts";
     // Somebody who finds new items and suppliers joins as 'sourcing' (the
-    // shared foundation, 0119, allows it; 0126 gives it its tasks) and
+    // role check allows it from 0128; 0126 gives it its tasks) and
     // signs in to the Sourcing app.
     const isSourcing = staffRow.role === "sourcing";
     const memberRole = isSales ? "sales" : isBuyer ? "buyer" : isStore ? "store" : isManager ? "manager" : isAccounts ? "accounts" : isSourcing ? "sourcing" : "staff";
     const roleUnknown = (msg: string) => (isSales || isBuyer || isStore || isManager || isAccounts || isSourcing) && /shop_members_role_check/.test(msg);
     const roleUnknownSay = isSourcing
-      ? "This database does not know the Sourcing role yet — paste migration 0119 (the shared foundation) and 0126_sourcing.sql in the SQL editor, then try again."
+      ? "This database does not know the Sourcing role yet — paste migrations 0126_sourcing.sql and 0128_sourcing_role.sql in the SQL editor, then try again."
       : `This database does not know the ${isSales ? "Sales" : isBuyer ? "Buyer" : isStore ? "Store" : isManager ? "Manager" : "Accounts"} role yet — paste migration 0113_sales_role.sql${isBuyer ? " and 0114_buyer_role.sql" : isStore ? " and 0115_store_role.sql" : isManager ? " and 0116_manager_role.sql" : isAccounts ? " and 0117_accounts_role.sql" : ""} in the SQL editor, then try again.`;
 
     if (staffRow.user_id) {

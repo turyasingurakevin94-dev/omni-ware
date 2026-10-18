@@ -101,6 +101,17 @@
     var cs = getComputedStyle(probe), top = parseFloat(cs.paddingTop) || 0, bottom = parseFloat(cs.paddingBottom) || 0;
     probe.remove();
     var measured = root.style.getPropertyValue('--safe-area-inset-top') !== '';
+    // Some phones (older Android, no edge-to-edge) lay the page out below
+    // the status bar themselves yet still report its height: the page is
+    // already clear of the clock, so reserving the height again leaves an
+    // empty band. Judged with no keyboard up, which also shortens the page.
+    var typing = /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || '');
+    if(top > 0 && !typing){
+      var gap = screen.height - window.innerHeight, below = gap >= top - 2;
+      if(below) root.style.setProperty('--safe-t', '0px');
+      if(below && bottom > 0 && gap >= top + bottom - 2) root.style.setProperty('--safe-b', '0px');
+      if(below) return;
+    }
     var last = {};
     try{ last = JSON.parse(localStorage.getItem(INSETS)) || {}; }catch(_e){}
     if(measured && top > 0){
@@ -2710,7 +2721,7 @@ function atsGrad(name){ const t = tintFor(name); return `linear-gradient(160deg,
 
 SCREENS.AtShop = {
   markup: String.raw`
-<div style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
+<div style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column; --ats-h: clamp(300px, calc(100dvh - var(--safe-t) - var(--safe-b) - 292px), 510px)">
   <div style="flex: none; padding: 14px 16px 0; display: flex; flex-direction: column; gap: 12px">
     <div style="display: flex; align-items: center; gap: 8px">
       <a href="MarketRun.dc.html" data-back aria-label="Back to the run" style="width: 44px; height: 44px; flex: none; border-radius: 999px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1C2233" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
@@ -2728,12 +2739,12 @@ SCREENS.AtShop = {
   <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px calc(96px + var(--safe-b)); display: flex; flex-direction: column; gap: 12px">
     <div style="{{ stackStyle }}">
       <sc-if value="{{ hasCard }}">
-        <sc-if value="{{ peek2 }}"><span aria-hidden="true" style="position: absolute; left: 22px; right: 22px; top: 22px; height: 490px; border-radius: 26px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD; opacity: .55"></span></sc-if>
-        <sc-if value="{{ peek1 }}"><span aria-hidden="true" style="position: absolute; left: 11px; right: 11px; top: 11px; height: 500px; border-radius: 26px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD, 0 6px 14px rgba(22,32,60,.06)"></span></sc-if>
+        <sc-if value="{{ peek2 }}"><span aria-hidden="true" style="position: absolute; left: 22px; right: 22px; top: 22px; height: calc(var(--ats-h) - 20px); border-radius: 26px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD; opacity: .55"></span></sc-if>
+        <sc-if value="{{ peek1 }}"><span aria-hidden="true" style="position: absolute; left: 11px; right: 11px; top: 11px; height: calc(var(--ats-h) - 10px); border-radius: 26px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD, 0 6px 14px rgba(22,32,60,.06)"></span></sc-if>
 
         <div class="{{ cardClass }}" data-ats-card onPointerDown="{{ down }}" onPointerMove="{{ move }}" onPointerUp="{{ up }}" onPointerLeave="{{ up }}" onPointerCancel="{{ cancel }}" style="{{ cardStyle }}">
           <div style="{{ photoStyle }}">
-            <sc-if value="{{ c.noPhoto }}"><span aria-hidden="true" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.85)"><svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="{{ c.icon }}"></path></svg></span></sc-if>
+            <sc-if value="{{ c.noPhoto }}"><span aria-hidden="true" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.85)"><svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="width: min(120px, 45%); height: min(120px, 45%)" stroke-linecap="round" stroke-linejoin="round"><path d="{{ c.icon }}"></path></svg></span></sc-if>
             <span style="position: absolute; left: 12px; top: 12px; height: 26px; padding: 0 10px; border-radius: 999px; background: rgba(22,32,60,.72); color: #FFFFFF; font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 5px">{{ c.badge }}</span>
             <span style="position: absolute; right: 12px; top: 12px; height: 26px; padding: 0 10px; border-radius: 999px; background: rgba(255,255,255,.88); color: #1C2233; font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; display: flex; align-items: center">{{ c.pos }}</span>
             <span style="{{ yesStamp }}">{{ c.yesWord }}</span>
@@ -2811,9 +2822,9 @@ SCREENS.AtShop = {
   </div>
 
   <div style="position: absolute; left: 0; right: 0; bottom: 0; background: #16203C; color: #FFFFFF; border-radius: 24px 24px 0 0; padding: 12px 14px calc(22px + var(--safe-b)); display: flex; align-items: center; gap: 10px; box-shadow: 0 -8px 24px rgba(22,32,60,.18)">
-    <div role="list" aria-label="This stop, item by item" class="s-tray" style="flex: 1; min-width: 0; display: flex; gap: 8px; overflow-x: auto; padding: 6px 6px 0 4px; margin: -6px 0 0 -4px">
+    <div role="list" aria-label="This stop, item by item" class="s-tray" style="flex: 1; min-width: 0; display: flex; gap: 8px; overflow-x: auto; padding: 6px 20px 0 4px; margin: -6px 0 0 -4px; scroll-padding: 0 40px; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 20px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 20px), transparent)">
       <sc-for list="{{ slots }}" as="t">
-        <span role="listitem" aria-label="{{ t.label }}" style="flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px">
+        <span role="listitem" aria-label="{{ t.label }}" data-cur="{{ t.cur }}" style="flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px">
           <span class="{{ t.cls }}" style="{{ t.box }}"><span style="{{ t.badge }}">{{ t.mark }}</span></span>
           <span style="{{ t.valStyle }}">{{ t.val }}</span>
         </span>
@@ -2823,6 +2834,8 @@ SCREENS.AtShop = {
   </div>
 </div>`,
   Component: class extends SrvLogic {
+    // The item in hand stays in sight on the tray.
+    afterRender(host){ const t = host.querySelector('.s-tray'), c = t && t.querySelector('[data-cur="yes"]'); if (!c || c === this._trayAt) return; this._trayAt = c; const tb = t.getBoundingClientRect(), cb = c.getBoundingClientRect(); if (cb.right > tb.right - 24 || cb.left < tb.left) t.scrollLeft += cb.left - tb.left - 44; }
     constructor(props) {
       super(props);
       this.state = { dx: 0, drag: false, pricing: false, newFig: false, ladder: [], from: '1', line: '', ui: 0, per: {}, photo: null, review: false, ri: 0 };
@@ -2972,7 +2985,7 @@ SCREENS.AtShop = {
           box: 'position: relative; width: 44px; height: 44px; border-radius: 12px; ' + photoStyle(img, 'background: ' + atsGrad(x.name)) + '; ' + (stt === 'cur' ? 'box-shadow: 0 0 0 2px #16203C, 0 0 0 4px #FFFFFF' : stt === 'next' ? 'opacity: .35' : stt === 'no' ? 'filter: grayscale(1); opacity: .55' : ''),
           badge: 'position: absolute; right: -5px; top: -5px; width: 18px; height: 18px; border-radius: 999px; font-size: 10px; font-weight: 700; display: ' + (a && !cur ? 'flex' : 'none') + '; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #16203C; ' + (stt === 'no' ? 'background: #E5483D; color: #FFFFFF' : 'background: #6FDCB0; color: #16203C'),
           mark: stt === 'no' ? '✕' : '✓',
-          val: stt === 'yes' ? a.val : stt === 'no' ? 'none' : stt === 'cur' ? 'now' : '',
+          cur: stt === 'cur' ? 'yes' : '', val: stt === 'yes' ? a.val : stt === 'no' ? 'none' : stt === 'cur' ? 'now' : '',
           valStyle: 'height: 12px; font-family: \'IBM Plex Mono\', monospace; font-size: 10px; font-weight: 600; white-space: nowrap; color: ' + (stt === 'no' ? '#F59A92' : stt === 'cur' ? '#FFFFFF' : '#6FDCB0'),
         };
       });
@@ -3034,9 +3047,9 @@ SCREENS.AtShop = {
         peek1: !s.pricing && idx >= 0 && list.slice(idx + 1).some(x => !x.answered || s.review),
         peek2: !s.pricing && idx >= 0 && list.slice(idx + 1).filter(x => !x.answered || s.review).length > 1,
         cardClass: idx === 0 && !s.drag && doneN === 0 ? 's-hint' : 's-in',
-        cardStyle: 'position: absolute; left: 0; right: 0; top: 0; height: ' + (s.pricing ? 286 : 510) + 'px; border-radius: 26px; background: #FFFFFF; overflow: hidden; box-shadow: 0 2px 4px rgba(22,32,60,.06), 0 18px 40px rgba(22,32,60,.14), inset 0 0 0 1px #E6E3DD; touch-action: pan-y; user-select: none; cursor: grab; transform: translateX(' + dx + 'px) rotate(' + (dx / 18).toFixed(2) + 'deg); transition: ' + (s.drag ? 'none' : 'transform .3s cubic-bezier(.2,.9,.3,1), height .35s cubic-bezier(.2,.9,.3,1)'),
-        stackStyle: 'position: relative; flex: none; transition: height .35s cubic-bezier(.2,.9,.3,1); height: ' + (s.pricing ? 290 : 524) + 'px',
-        photoStyle: 'position: relative; overflow: hidden; border-radius: 26px 26px 0 0; transition: height .35s cubic-bezier(.2,.9,.3,1); ' + bg + '; height: ' + (s.pricing ? 170 : 394) + 'px',
+        cardStyle: 'position: absolute; left: 0; right: 0; top: 0; height: ' + (s.pricing ? '286px' : 'var(--ats-h)') + '; display: flex; flex-direction: column; border-radius: 26px; background: #FFFFFF; overflow: hidden; box-shadow: 0 2px 4px rgba(22,32,60,.06), 0 18px 40px rgba(22,32,60,.14), inset 0 0 0 1px #E6E3DD; touch-action: pan-y; user-select: none; cursor: grab; transform: translateX(' + dx + 'px) rotate(' + (dx / 18).toFixed(2) + 'deg); transition: ' + (s.drag ? 'none' : 'transform .3s cubic-bezier(.2,.9,.3,1), height .35s cubic-bezier(.2,.9,.3,1)'),
+        stackStyle: 'position: relative; flex: none; transition: height .35s cubic-bezier(.2,.9,.3,1); height: ' + (s.pricing ? '290px' : 'calc(var(--ats-h) + 14px)'),
+        photoStyle: 'position: relative; overflow: hidden; flex: 1 1 auto; min-height: 0; border-radius: 26px 26px 0 0; transition: height .35s cubic-bezier(.2,.9,.3,1); ' + bg + '; max-height: ' + (s.pricing ? 170 : 394) + 'px',
         yesStamp: stamp('left', '#0F6B43', yesA), noStamp: stamp('right', '#8E2A22', noA),
         down: (e) => { if (this.state.pricing || !it || S.busy) return; this._x0 = e.clientX; try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_e) {} this.setState({ drag: true, dx: 0 }); },
         move: (e) => { if (this._x0 == null) return; this.setState({ dx: e.clientX - this._x0 }); },
@@ -4426,7 +4439,7 @@ SCREENS.Main = {
   <div style="flex: none; background: #16203C; color: #FFFFFF; border-radius: 0 0 28px 28px; padding: 16px 18px 16px; display: flex; flex-direction: column; gap: 14px" data-navy-top>
     <div style="display: flex; align-items: center; gap: 12px">
       <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
-        <span style="font-size: 20px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ greeting }}</span>
+        <span style="font-size: 20px; font-weight: 700; letter-spacing: -.01em; line-height: 1.15">{{ greeting }}</span>
         <span style="font-size: 13px; color: #B3BCD2; display: flex; align-items: center; gap: 6px">{{ dateWord }}<span style="width: 3px; height: 3px; border-radius: 999px; background: #5C6788"></span><span style="display: inline-flex; align-items: center; gap: 5px; color: #6FDCB0"><span style="width: 7px; height: 7px; border-radius: 999px; background: #6FDCB0"></span>{{ roleWord }}</span></span>
       </div>
       <a href="MarketRun.dc.html" aria-label="Plan a market run" style="width: 44px; height: 44px; border-radius: 999px; background: rgba(255,255,255,.1); display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.3"></circle></svg></a>
@@ -4438,7 +4451,7 @@ SCREENS.Main = {
       <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
         <span style="font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #B3BCD2">Asked for · this week</span>
         <span style="display: flex; align-items: baseline; gap: 8px"><span style="font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-size: 30px; font-weight: 600; letter-spacing: -.03em">{{ weekMoney }}</span><sc-if value="{{ hasUnpriced }}"><span style="font-size: 12px; font-weight: 600; color: #F5B26B">+ {{ unpriced }} unpriced</span></sc-if></span>
-        <span style="font-size: 12px; font-weight: 600; color: #B3BCD2"><span style="font-family: 'IBM Plex Mono', monospace; color: #FFFFFF">{{ weekAsks }}</span> asks · <span style="font-family: 'IBM Plex Mono', monospace; color: #FFFFFF">{{ weekItems }}</span> items · <span style="font-family: 'IBM Plex Mono', monospace; color: #FFFFFF">{{ weekClients }}</span> clients</span>
+        <span style="font-size: 12px; font-weight: 600; color: #B3BCD2"><span style="font-family: 'IBM Plex Mono', monospace; color: #FFFFFF">{{ weekAsks }}</span> {{ asksWord }} · <span style="font-family: 'IBM Plex Mono', monospace; color: #FFFFFF">{{ weekItems }}</span> {{ itemsWord }} · <span style="font-family: 'IBM Plex Mono', monospace; color: #FFFFFF">{{ weekClients }}</span> {{ clientsWord }}</span>
       </div>
       <div role="img" aria-label="{{ barsLabel }}" style="display: flex; align-items: flex-end; gap: 4px; height: 46px; padding-bottom: 2px">
         <sc-for list="{{ bars }}" as="b" hint-placeholder-count="5"><span class="s-grow" style="{{ b.style }}"></span></sc-for>
@@ -4454,7 +4467,7 @@ SCREENS.Main = {
       </span>
     </a>
     <a href="Prices.dc.html" aria-label="{{ pricesLabel }}" style="display: flex; align-items: center; gap: 10px; margin-top: -4px">
-      <span style="flex: 1; display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-radius: 12px; background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6FDCB0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.6 3.2H5.4a2.2 2.2 0 0 0-2.2 2.2v6.2a2 2 0 0 0 .6 1.4l7.4 7.4a2 2 0 0 0 2.8 0l6.2-6.2a2 2 0 0 0 0-2.8L13 3.8a2 2 0 0 0-1.4-.6z"></path></svg><span style="font-size: 12px; font-weight: 700; color: #B3BCD2">Prices</span><span style="flex: 1; height: 5px; border-radius: 999px; background: rgba(255,255,255,.12); overflow: hidden"><span style="{{ shareFill }}"></span></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600">{{ shareWord }}</span></span>
+      <span style="flex: 1; display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-radius: 12px; background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6FDCB0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.6 3.2H5.4a2.2 2.2 0 0 0-2.2 2.2v6.2a2 2 0 0 0 .6 1.4l7.4 7.4a2 2 0 0 0 2.8 0l6.2-6.2a2 2 0 0 0 0-2.8L13 3.8a2 2 0 0 0-1.4-.6z"></path></svg><span style="font-size: 12px; font-weight: 700; color: #B3BCD2">Prices</span><span style="flex: 1; min-width: 12px; height: 5px; border-radius: 999px; background: rgba(255,255,255,.12); overflow: hidden"><span style="{{ shareFill }}"></span></span><span style="flex: none; white-space: nowrap; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600">{{ shareWord }}</span></span>
       <span style="height: 36px; padding: 0 10px; border-radius: 12px; background: rgba(245,178,107,.14); color: #F5B26B; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 4px; white-space: nowrap"><span style="font-family: 'IBM Plex Mono', monospace">{{ oldN }}</span> old</span>
       <span style="height: 36px; padding: 0 10px; border-radius: 12px; background: rgba(246,228,241,.12); color: #E7B8DA; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 4px; white-space: nowrap"><span style="font-family: 'IBM Plex Mono', monospace">{{ rivalN }}</span> rivals</span>
     </a>
@@ -4489,13 +4502,13 @@ SCREENS.Main = {
         <span style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px"><span style="font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-size: 15px; font-weight: 600">{{ top.money }}</span><span style="font-size: 11px; font-weight: 600; color: #6B7480">{{ top.moneyWord }}</span></span>
       </a>
       <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; line-height: 1; white-space: nowrap">
-        <span style="{{ top.factStyle }}">{{ top.fact }}</span>
+        <sc-if value="{{ top.hasFact }}"><span style="{{ top.factStyle }}">{{ top.fact }}</span></sc-if>
         <span style="{{ top.stageStyle }}">{{ top.stage }} <span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600">{{ top.days }}</span></span>
         <span style="margin-left: auto; flex: none; display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 10px; border-radius: 999px; box-shadow: inset 0 0 0 1px #E6E3DD; color: #5F6980"><span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: #1C2233">{{ top.quotes }}</span>{{ top.quotesWord }}</span>
       </div>
       <div style="display: flex; gap: 8px">
         <a href="Spotted.dc.html" data-sx="{{ top.sx }}" aria-label="Add a quote with a photo" style="width: 52px; height: 52px; flex: none; border-radius: 16px; background: #F1EEE8; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1C2233" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg></a>
-        <a href="Hunt.dc.html" data-sx="{{ top.sx }}" style="flex: 1; height: 52px; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4.2-4.2"></path></svg>{{ top.cta }}</a>
+        <a href="{{ top.ctaHref }}" data-sx="{{ top.sx }}" style="flex: 1; height: 52px; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ top.ctaIcon }}"></path></svg>{{ top.cta }}</a>
       </div>
     </div>
     </sc-if>
@@ -4571,7 +4584,7 @@ SCREENS.Main = {
       const ranked = open.map(l => {
         const best = leadBestCost(l), q = leadDemandQty(l);
         const sell = Math.max(0, ...(l.requests || []).map(r => Number(r.sellPrice) || 0)) || (best ? best * (1 + markup / 100) : 0);
-        return { l, people: leadDistinctAskers(l), q, value: sell && q ? sell * q : 0 };
+        return { l, people: leadDistinctAskers(l), q, sell, value: sell && q ? sell * q : 0 };
       }).sort((a, b) => b.people - a.people || b.value - a.value || leadFirstAskedAt(a.l) - leadFirstAskedAt(b.l));
       const unit = (l) => (leadSuppliers(l).map(c => c.unit).find(Boolean)) || (l.requests || []).map(r => r.unit).find(Boolean) || 'pc';
       const stateOf = (l) => {
@@ -4591,10 +4604,11 @@ SCREENS.Main = {
         top = { sx: JSON.stringify({ leadId: l.id }), name: l.name, photo: photoStyle(l.image, 'background: linear-gradient(145deg, #F1EEE8 0%, #FFFFFF 150%)'), noPhoto: !l.image, icon: itemIconPath(l.name),
           faces: askers.slice(0, 3).map((a, i) => ({ ini: initials(a.name), style: avStyle(a.key, 22) + `; font-size: 9px; box-shadow: 0 0 0 2px #FFFFFF${i ? '; margin-left: -6px' : ''}` })),
           clients: plural(x.people, 'client'), qtyWord: x.q ? ` · ${n0(x.q)} ${unit(l)}` : '',
-          money: x.value ? n0(x.value) : '— —', moneyWord: x.value ? 'on their orders' : 'no price yet',
-          fact: found ? (f.price ? 'Priced' : 'Found') : 'Not found', factStyle: found ? pill('#E4F4EA', '#0F6B43') : pill('#FBE5E2', '#8E2A22'),
+          money: x.value ? n0(x.value) : x.sell ? n0(x.sell) : '— —', moneyWord: x.value ? 'on their orders' : x.sell ? 'a ' + unit(l) : 'no price yet',
+          hasFact: !['sourced', 'priced'].includes(l.status), fact: found ? (f.price ? 'Priced' : 'Found') : 'Not found', factStyle: found ? pill('#E4F4EA', '#0F6B43') : pill('#FBE5E2', '#8E2A22'),
           stage: STAGE_WORD[l.status], days: leadDaysInStage(l) + 'd', stageStyle: leadOver(l) ? pill('#FDEEE1', '#95530C') : pill('#F1EEE8', '#5F6980'),
           quotes, quotesWord: quotes === 1 ? 'quote' : 'quotes',
+          ctaHref: l.status === 'priced' ? 'AddItem.dc.html' : 'Hunt.dc.html', ctaIcon: l.status === 'priced' ? 'M12 5v14M5 12h14' : 'M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM20 20l-4.2-4.2',
           cta: (l.status === 'priced' ? 'List it' : 'Hunt it') + ' · ' + x.people + ' waiting' };
       }
       const rest = ranked.slice(1, 5).map((x, i, arr) => {
@@ -4612,7 +4626,7 @@ SCREENS.Main = {
       return {
         nav: navVals(),
         greeting, dateWord: dayWord(todayISO()), roleWord: S.role === 'sourcing' ? 'Sourcing' : S.role === 'owner' ? 'Owner' : 'Admin', me: initials(me ? me.name : myName()),
-        weekMoney: n0(money), hasUnpriced: unpriced > 0, unpriced, weekAsks: asks, weekItems: items.size, weekClients: clients.size,
+        weekMoney: n0(money), hasUnpriced: unpriced > 0, unpriced, weekAsks: asks, weekItems: items.size, weekClients: clients.size, asksWord: asks === 1 ? 'ask' : 'asks', itemsWord: items.size === 1 ? 'item' : 'items', clientsWord: clients.size === 1 ? 'client' : 'clients',
         bars, barsLabel: 'Asks per day: ' + perDay.map((n, i) => dayName(i) + ' ' + n).join(', '),
         funnel, funnelLabel: `Open the hunts by stage: ${stageWords}. ${overAll} over their time.`, overAll, hasOver: overAll > 0, noOver: overAll === 0,
         shareFill: `display: block; width: ${Math.round(share.done / Math.max(1, share.perDay) * 100)}%; height: 100%; background: #6FDCB0`,
@@ -4777,7 +4791,7 @@ SCREENS.MarketRun = {
       <span style="display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px; border-radius: 999px; background: rgba(111,220,176,.14); color: #6FDCB0; font-size: 11px; font-weight: 700"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"></path></svg>on phone</span>
     </div>
     <sc-if value="{{ hasAreas }}">
-    <div role="tablist" aria-label="Area" class="r-tabs" style="display: flex; gap: 6px; overflow-x: auto">
+    <div role="tablist" aria-label="Area" class="r-tabs" style="display: flex; gap: 6px; overflow-x: auto; margin: 0 -16px; padding: 0 16px; scroll-padding: 0 40px; -webkit-mask-image: linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 22px), transparent); mask-image: linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 22px), transparent)">
       <sc-for list="{{ areas }}" as="a"><button type="button" role="tab" aria-selected="{{ a.on }}" onClick="{{ a.pick }}" style="{{ a.style }}">{{ a.name }} <span style="font-family: 'IBM Plex Mono', monospace">{{ a.n }}</span></button></sc-for>
     </div>
     </sc-if>
@@ -4788,7 +4802,7 @@ SCREENS.MarketRun = {
     </div>
   </div>
 
-  <div style="flex: 1; min-height: 0; overflow-y: auto; padding-bottom: calc(96px + var(--safe-b))">
+  <div style="flex: 1; min-height: 0; overflow-y: auto; padding-bottom: calc(116px + var(--safe-b))">
   <div style="position: relative; padding: 14px 16px 0 16px; display: flex; flex-direction: column; gap: 10px">
     <sc-if value="{{ hasStops }}"><span class="r-line" aria-hidden="true" style="position: absolute; left: 35px; top: 34px; bottom: 30px; width: 2px; background: repeating-linear-gradient(180deg, #C9C4BA 0 6px, transparent 6px 11px)"></span></sc-if>
 
@@ -4827,13 +4841,15 @@ SCREENS.MarketRun = {
   </div>
 
   <sc-if value="{{ hasStops }}">
-  <div style="position: absolute; left: 16px; right: 16px; bottom: calc(22px + var(--safe-b)); display: flex; gap: 8px">
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 28px 16px calc(22px + var(--safe-b)); background: linear-gradient(180deg, rgba(247,245,242,0), #F7F5F2 30px); display: flex; gap: 8px; pointer-events: none"><div style="flex: 1; display: flex; gap: 8px; pointer-events: auto">
     <button type="button" onClick="{{ toggleReorder }}" aria-label="Reorder the stops" aria-pressed="{{ reorderOn }}" style="{{ reorderStyle }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4v16M4 8l4-4 4 4M16 20V4M12 16l4 4 4-4"></path></svg></button>
     <a href="{{ startHref }}" data-sx="{{ startSx }}" style="flex: 1; height: 52px; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.3"></circle></svg>{{ startWord }}</a>
-  </div>
+  </div></div>
   </sc-if>
 </div>`,
   Component: class extends SrvLogic {
+    // The picked area stays in sight on the tabs.
+    afterRender(host){ const t = host.querySelector('.r-tabs'), c = t && t.querySelector('[aria-selected="true"]'); if (!c || c === this._tabAt) return; this._tabAt = c; const tb = t.getBoundingClientRect(), cb = c.getBoundingClientRect(); if (cb.right > tb.right - 24 || cb.left < tb.left + 16) t.scrollLeft += cb.left - tb.left - 40; }
     constructor(props) { super(props); this.state = { reorder: false }; }
     renderVals() {
       const run = mrRun(), s = this.state;
@@ -4845,7 +4861,7 @@ SCREENS.MarketRun = {
           style: 'flex: none; height: 34px; padding: 0 12px; border: none; border-radius: 999px; font-family: inherit; font-size: 13px; cursor: pointer; ' + (on ? 'background: #FFFFFF; color: #16203C; font-weight: 700' : 'background: rgba(255,255,255,.08); color: #FFFFFF; font-weight: 600') };
       });
       const chip = (bg, ink) => `height: 22px; padding: 0 7px; border-radius: 7px; background: ${bg}; color: ${ink}; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center`;
-      const GREY = chip('#F1EEE8', '#1C2233'), AMBER = chip('#FDEEE1', '#95530C'), PINK = chip('#F6E4F1', '#7A3268'), DONE = chip('#E4F4EA', '#0F6B43') + '; text-decoration: line-through', DONEN = chip('#E4F4EA', '#0F6B43');
+      const GREY = chip('#F1EEE8', '#1C2233'), AMBER = chip('#FDEEE1', '#95530C'), PINK = chip('#F6E4F1', '#7A3268'), DONE = chip('#E4F4EA', '#0F6B43'), DONEN = chip('#E4F4EA', '#0F6B43');
       const keys = run.list.map(st => st.key);
       const move = (key, by) => {
         const k = keys.slice(), i = k.indexOf(key), j = i + by;
@@ -4858,14 +4874,14 @@ SCREENS.MarketRun = {
         const cur = run.current && run.current.key === st.key;
         const chips = [];
         if (st.type === 'sup') {
-          st.own.filter(x => x.kind === 'recheck').forEach(x => chips.push({ t: 're-check ' + mrShort(x.name), style: x.answered ? DONE : AMBER }));
-          st.own.filter(x => x.kind === 'hunt').forEach(x => chips.push({ t: mrShort(x.name), style: x.answered ? DONE : GREY }));
+          st.own.filter(x => x.kind === 'recheck').forEach(x => chips.push({ t: (x.answered ? '✓ ' : 're-check ') + mrShort(x.name), style: x.answered ? DONE : AMBER }));
+          st.own.filter(x => x.kind === 'hunt').forEach(x => chips.push({ t: (x.answered ? '✓ ' : '') + mrShort(x.name), style: x.answered ? DONE : GREY }));
           const pr = st.own.filter(x => x.kind === 'price'), prLeft = pr.filter(x => !x.answered).length;
           if (prLeft) chips.push({ t: '+' + prLeft + (prLeft === 1 ? ' price' : ' prices') + ' to confirm', style: AMBER });
           if (pr.length - prLeft) chips.push({ t: '✓ ' + (pr.length - prLeft) + ' confirmed', style: DONEN });
         } else {
           const hunts = st.own.filter(x => x.lead), lines = st.own.filter(x => x.product);
-          hunts.forEach(x => chips.push({ t: mrShort(x.name) + ' tag', style: x.answered ? DONE : PINK }));
+          hunts.forEach(x => chips.push({ t: (x.answered ? '✓ ' : '') + mrShort(x.name) + ' tag', style: x.answered ? DONE : PINK }));
           const ll = lines.filter(x => !x.answered);
           if (ll.length) chips.push({ t: '+ ' + ll.slice(0, 2).map(x => mrShort(x.name)).join(', ') + (ll.length > 2 ? ' +' + (ll.length - 2) : ''), style: PINK });
           if (lines.length - ll.length) chips.push({ t: '✓ ' + (lines.length - ll.length) + ' seen', style: DONEN });
@@ -5649,7 +5665,7 @@ SCREENS.Prices = {
         <sc-for list="{{ today }}" as="r">
           <div style="{{ r.wrap }}">
             <span style="display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 58px">
-              <span style="min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ r.name }}</span><span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6B7480; white-space: nowrap; overflow: hidden"><span style="font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-weight: 600; {{ r.ageInk }}">{{ r.age }}</span>{{ r.sup }}<span style="font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-weight: 600; color: #1C2233">{{ r.cost }}</span></span></span>
+              <span style="min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ r.name }}</span><span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6B7480; white-space: nowrap; min-width: 0"><span style="flex: none; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-weight: 600; {{ r.ageInk }}">{{ r.age }}</span><span style="flex: none; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-weight: 600; color: #1C2233">{{ r.cost }}</span><span style="min-width: 0; overflow: hidden; text-overflow: ellipsis">{{ r.sup }}</span></span></span>
               <sc-if value="{{ r.open }}">
                 <span style="display: flex; gap: 6px">
                   <button type="button" onClick="{{ r.ok }}" aria-label="{{ r.okLabel }}" style="height: 40px; padding: 0 10px; border: none; border-radius: 12px; background: #E4F4EA; color: #0F6B43; font-family: inherit; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 4px; cursor: pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Still right</button>
@@ -5756,7 +5772,7 @@ SCREENS.Prices = {
         }
         const who = x.who || { by: '?', name: 'someone', phone: false };
         const av = avStyle(who.name, 28) + '; font-size: 11px';
-        return { name, sup: (sup ? sup.name : r.supplierId) + ' ·', cost: cost ? n0(cost) : '— —',
+        return { name, sup: '· ' + (sup ? sup.name : r.supplierId), cost: cost ? n0(cost) : '— —',
           age: x.shownAge == null ? (x.done ? 'today' : 'no date') : x.shownAge + 'd',
           ageInk: 'color: ' + (x.done && x.shownAge == null ? '#0F6B43' : (x.shownAge == null || x.shownAge > 30) ? '#8E2A22' : '#95530C'),
           open, done: !!x.done, editing,
@@ -6337,7 +6353,7 @@ SCREENS.RunDone = {
         <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 9px 0; border-bottom: 1px dashed #E0DCD4"><span style="font-size: 14px; font-weight: 600">Rival price tags</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; color: #7A3268">{{ tags }}</span></div>
         <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 9px 0; border-bottom: 1px dashed #E0DCD4"><span style="font-size: 14px; font-weight: 600">{{ newSupLabel }}</span><span style="{{ newSupStyle }}">{{ newSup }}</span></div>
         <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 9px 0; color: #8E2A22"><span style="font-size: 14px; font-weight: 600">Can’t supply</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600">{{ cant }}</span></div>
-        <sc-if value="{{ hasStamp }}"><span class="d-stamp" style="{{ stampStyle }}">{{ stamp }}</span></sc-if>
+        <sc-if value="{{ hasStamp }}"><div style="display: flex; justify-content: flex-end; padding: 6px 4px 6px"><span class="d-stamp" style="{{ stampStyle }}">{{ stamp }}</span></div></sc-if>
       </div>
       <div style="height: 8px; background: linear-gradient(135deg, #FFFFFF 50%, transparent 50%) 0 0 / 12px 8px repeat-x, linear-gradient(-135deg, #FFFFFF 50%, transparent 50%) 0 0 / 12px 8px repeat-x"></div>
     </div>
@@ -6385,7 +6401,7 @@ SCREENS.RunDone = {
         newSupStyle: r.newSups.length ? 'font-size: 13px; font-weight: 700; text-align: right' : 'font-size: 13px; font-weight: 700; color: #B9B2A6',
         hasStamp: total > 0,
         stamp: allIn ? 'ALL IN' : plural(left, 'STOP', 'STOPS') + ' LEFT',
-        stampStyle: 'position: absolute; right: 12px; bottom: 54px; transform: rotate(-10deg); padding: 4px 10px 3px; border-radius: 9px; mix-blend-mode: multiply; font-size: 16px; font-weight: 700; letter-spacing: .16em; ' + (allIn ? 'border: 3px double #0F6B43; color: #0F6B43; background: rgba(228,244,234,.4)' : 'border: 3px double #95530C; color: #95530C; background: rgba(253,238,225,.4)'),
+        stampStyle: 'display: inline-block; transform: rotate(-6deg); padding: 4px 10px 3px; border-radius: 9px; mix-blend-mode: multiply; font-size: 16px; font-weight: 700; letter-spacing: .16em; ' + (allIn ? 'border: 3px double #0F6B43; color: #0F6B43; background: rgba(228,244,234,.4)' : 'border: 3px double #95530C; color: #95530C; background: rgba(253,238,225,.4)'),
         moved: r.moved.map(m => ({ name: m.l.name, from: STAGE_WORD[m.from] || m.from, to: STAGE_WORD[m.l.status] || m.l.status, sx: JSON.stringify({ leadId: m.l.id }) })),
         noMoved: !r.moved.length,
         hasSample: r.sampleCash > 0, sampleCash: n0(r.sampleCash),
@@ -6678,7 +6694,7 @@ SCREENS.Spotted = {
     <div style="display: flex; flex-direction: column; gap: 6px">
       <span style="display: flex; align-items: center; justify-content: space-between; padding-left: 2px"><span style="font-size: 12px; font-weight: 700; color: #5F6980">{{ whoTitle }}</span><span role="tablist" aria-label="Whose price" style="display: flex; gap: 2px; padding: 2px; border-radius: 10px; background: #F1EEE8"><sc-for list="{{ kinds }}" as="k" hint-placeholder-count="2"><button type="button" role="tab" aria-selected="{{ k.on }}" onClick="{{ k.pick }}" style="{{ k.style }}">{{ k.label }}</button></sc-for></span></span>
       <sc-if value="{{ isSup }}">
-      <div style="display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none">
+      <div style="display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-right: 16px; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 22px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 22px), transparent)">
         <sc-for list="{{ sups }}" as="s" hint-placeholder-count="3">
           <button type="button" aria-pressed="{{ s.on }}" onClick="{{ s.pick }}" aria-label="{{ s.full }}" style="{{ s.style }}"><span style="{{ s.dot }}">{{ s.ini }}</span><span style="font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ s.name }}</span></button>
         </sc-for>
@@ -6840,8 +6856,10 @@ SCREENS.Spotted = {
         const ra = String(a.id) === String(st.sup) ? -1 : rel.has(String(a.id)) ? rel.get(String(a.id)) : 999, rb = String(b.id) === String(st.sup) ? -1 : rel.has(String(b.id)) ? rel.get(String(b.id)) : 999;
         return ra - rb || a.name.localeCompare(b.name);
       });
-      const supDefs = ordered.map(s => { const t = tintFor(s.id); return { id: s.id, ini: initials(s.name), name: firstWord(s.name), full: s.name, bg: t[0], ink: t[1] }; })
-        .concat([{ id: 'NEW', ini: '+', name: 'New', full: 'A new supplier', bg: '#F1EEE8', ink: '#5F6980' }]);
+      // "New" sits right after the likeliest two, as drawn -- never past
+      // the edge of the row where nobody would find it.
+      const supDefs = ordered.map(s => { const t = tintFor(s.id); return { id: s.id, ini: initials(s.name), name: firstWord(s.name), full: s.name, bg: t[0], ink: t[1] }; });
+      supDefs.splice(Math.min(2, supDefs.length), 0, { id: 'NEW', ini: '+', name: 'New', full: 'A new supplier', bg: '#F1EEE8', ink: '#5F6980' });
       const sups = supDefs.map(x => { const on = String(x.id) === String(st.sup); return { ini: x.ini, name: x.name, full: x.full, on: on ? 'true' : 'false',
         pick: () => { FEEL.tick(); set({ sup: x.id }); },
         dot: 'width: 28px; height: 28px; flex: none; border-radius: 999px; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; background: ' + x.bg + '; color: ' + x.ink,

@@ -25,10 +25,10 @@
 -- Nothing here waits for the owner. Every decision the app makes for the
 -- owner goes in the owner's log (decision_log, 0123), never a queue.
 --
--- The 'sourcing' role itself is added to shop_members by the shared
--- foundation (0119), built once and separately. Until it lands, these rows
--- are granted to a role nobody can hold yet, and nothing below lets any
--- existing login do more than it could.
+-- The 'sourcing' role itself is added to shop_members by 0128 (the owner
+-- chose not to wait for the shared foundation, 0119). Until it is applied,
+-- these rows are granted to a role nobody can hold yet, and nothing below
+-- lets any existing login do more than it could.
 --
 -- A LINE DROPPED AT CHECKING becomes a Sourcing request by itself (section
 -- 5, "Sourcing and prices"): the trigger in section 7 turns every line the
@@ -51,7 +51,7 @@
 -- function is dropped or replaced before it is created; a table this
 -- database never got is skipped and named. Safe to run twice.
 --
--- MAKE SOMEBODY SOURCING (once 0119 allows the role):
+-- MAKE SOMEBODY SOURCING (once 0128 allows the role):
 --   update shop_members set role = 'sourcing'
 --   where shop_id = 'YOUR-SHOP-ID' and user_id = 'THEIR-USER-ID';
 --
