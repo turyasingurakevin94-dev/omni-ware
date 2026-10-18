@@ -1,44 +1,54 @@
 # Who decides what: decision rights for the Omni-Ware team
 
-**Status: binding.** Agreed with the owner on 18 Oct 2026. This file is the
-authority on who may decide what in every Omni-Ware app (index.html,
-sales.html, buyer.html, store.html, manager.html, accounts.html) and in every
-migration that writes `role_tasks`.
+**Status: binding.** Agreed with the owner on 18 Oct 2026 and revised the
+same day. This file is the authority on who may decide what in every
+Omni-Ware app and in every migration that writes `role_tasks`. The apps are
+index.html, sales.html, buyer.html, store.html, manager.html, accounts.html,
+and the Sourcing app.
 
 If code, a comment, a migration header or a line of UI text says "the owner"
-for a decision this file gives to the Manager, **this file wins**. Correct the
+for a decision this file gives to a role, **this file wins**. Correct the
 other place in the same change. `test/decision-rights.test.js` holds the table
 below against the migrations, so the two cannot drift apart silently.
 
 ---
 
-## 1. The principle
+## 1. The principle: the owner watches the machine, and is not part of it
+
+> **Nothing in the day-to-day running of the shop waits for the owner.**
+> Every operational decision belongs to a role. The owner reviews, watches
+> and sets policy. The owner can step in on anything, but no order, payment
+> or job may ever sit waiting for an owner who may not reply.
 
 | | Role | Job |
 |---|---|---|
-| 1 | **Owner** | Sets policy, sees everything, keeps the few decisions listed in section 4. **Gets a log, not a queue.** The owner never has to approve each order. |
-| 2 | **Manager** | Runs the team on the owner's behalf. **Decides** prices, markups, credit, returns, voids and credit notes, stock write-offs, and each salesperson's goal. |
-| 3 | **Sales, Buyer, Store, Accounts** | Do the work and **propose** exceptions. Nobody decides their own exception. |
+| 1 | **Owner** | Hires, sets policy numbers, and watches. **Gets a log, never a queue.** Keeps only the governance listed in section 4. |
+| 2 | **Manager** | Runs the team on the ground. Decides prices (anything at or above cost) and markups. Decides credit and invoicing, returns, voids and credit notes, short picks and stock write-offs. Edits customers, watches debtors, and sets each salesperson's goal. |
+| 3 | **Accounts** | The treasurer, chosen by the owner with trust. Runs **everything finance**: payments in and out, expenses and other income, transfers, payroll and rent, loans and assets, supplier and agent payments, and the daily close. Sees every financial figure and report. |
+| 4 | **Sourcing** | Finds new items and new suppliers and negotiates. Keeps the supplier price list right, confirming the share of prices the owner sets for each day. |
+| 5 | **Sales, Buyer, Store** | Do the work and propose exceptions. Nobody decides their own exception. |
 
-Two hard rules hold for every role:
+Three rules hold for every role:
 
-- **Nobody sells below cost** in a role app. Cost is the floor, and it is the
-  only floor. Above it, the Manager has full price authority.
-- **Every Manager decision is logged** with who, when and what it was before,
-  so the owner can see it without approving it.
+- **Nobody sells below cost** in a role app. Cost is the only price floor.
+- **Every decision a role makes for the owner is logged**: who, when, and what
+  it was before. The owner sees it without approving it.
+- **A day-to-day job with no row in section 2 is a gap, not the owner's.** Ask
+  the owner which role takes it; never default it to the owner.
 
-The old wording, "stays the owner's" (migrations 0083, 0113 to 0117), described
-the first build, not the policy. Where it covers a row this file gives to the
-Manager, it is out of date.
+The old wording, "stays the owner's" (migrations 0083, 0113 to 0117),
+described the first build, not the policy. Where it covers a row in section
+2, it is out of date.
 
 ---
 
 ## 2. The decision table
 
 `Who decides` lists the roles that hold the task. The owner and admins hold every
-task through `has_task()` (0113) and are not listed. `Built` says whether the
-task is in `role_tasks` yet: **yes** means a migration grants it to every role
-listed; **no** means nobody holds it yet (it is planned, see section 5).
+task through `has_task()` (0113) and are not listed: they *can*, but are never
+*needed*. `Built` says whether the task is in `role_tasks` yet: **yes** means a
+migration grants it to every role listed; **no** means nobody holds it yet (it
+is planned, see section 5).
 
 A session that builds a "no" row grants the task in a migration and changes
 the row to "yes" in the same commit. The test fails on any mismatch, in either
@@ -49,40 +59,70 @@ direction.
 | Decision | Task | Who decides | Proposes | Told | Built |
 |---|---|---|---|---|---|
 | Make an order at or above the shop's price | `quote.make` | Sales | — | — | yes |
+| **Sell over the counter: pay and go, for goods on the shelf** | `counter.sell` | Sales | — | Manager | no |
+| **Forward an item we don't sell to Sourcing, while taking the order** | `sourcing.ask` | Sales | — | Sourcing | no |
 | **Sell below the shop's price (at or above cost)** | `price.approve` | Manager | Sales | Sales, owner's log | no |
 | **Price a line that has no selling price or no known cost** | `price.approve` | Manager | Sales, Buyer | Sales, owner's log | no |
 | **Change a product's markups or the shop's default markup** | `markup.set` | Manager | Manager | owner's log | no |
 | **See costs and margins** | `margin.see` | Manager | — | — | no |
 | Take a supplier's new price on an order line | `line.reprice` | Buyer | — | Manager (margin) | yes |
 | Move an order along the board | `order.move` | Sales, Manager | — | — | yes |
-| Add or edit a customer | `customer.edit` | Sales, Manager | — | — | yes |
+| Add a customer (Sales); **edit any customer's details (Manager)** | `customer.edit` | Sales, Manager | — | — | yes |
 | Reply in WhatsApp chats | `msg.reply` | Sales | — | — | yes |
 
-### Credit and money owed
+### Invoicing, returns and voids
+
+| Decision | Task | Who decides | Proposes | Told | Built |
+|---|---|---|---|---|---|
+| **Invoice a delivered order** (the nightly job invoices the rest, see section 3) | `invoice.make` | Manager | — | Accounts, Sales | no |
+| **Settle a short pick: bill what went, or the full quantity** | `pick.settle` | Manager | Store | Sales | no |
+| **Accept a customer return, raise a credit note** | `credit_note.raise` | Manager | Sales, Accounts, Store | Accounts, owner's log | no |
+| **Void an invoice** | `invoice.void` | Manager | Sales, Accounts | Accounts, owner's log | no |
+| Send an invoice | `invoice.send` | Accounts | — | — | yes |
+
+### Credit, debtors and agents
 
 | Decision | Task | Who decides | Proposes | Told | Built |
 |---|---|---|---|---|---|
 | Release an order held for credit | `credit.release` | Manager | Sales | Sales | yes |
 | **Set a customer's credit limit, payment terms, and the shop's hold days** | `credit.set` | Manager | Sales, Accounts | owner's log | no |
+| **Record a customer's promise to pay** | `promise.record` | Sales, Manager, Accounts | — | Manager | no |
+| **Decide an agent's change or cancel request** | `agent.change` | Manager | the agent | Buyer, the agent | no |
 | Take a customer's payment | `payment.receive` | Sales, Manager, Accounts | — | — | yes |
 | Send a statement | `statement.send` | Sales, Manager, Accounts | — | — | yes |
-| Send an invoice | `invoice.send` | Accounts | — | — | yes |
 
-### Returns, voids and credit notes
-
-| Decision | Task | Who decides | Proposes | Told | Built |
-|---|---|---|---|---|---|
-| **Accept a customer return, raise a credit note** | `credit_note.raise` | Manager | Sales, Accounts, Store | Accounts, owner's log | no |
-| **Void an invoice** | `invoice.void` | Manager | Sales, Accounts | Accounts, owner's log | no |
-
-### Stock
+### Money: the treasurer
 
 | Decision | Task | Who decides | Proposes | Told | Built |
 |---|---|---|---|---|---|
+| Count each account at close | `day.count` | Accounts | — | — | yes |
+| Close a day that agrees | `day.close` | Accounts | — | owner's log | yes |
+| Book an untraced shortage or overage | `variance.book` | Accounts | — | owner's log | yes |
+| Pay a supplier's bill | `bill.pay` | Accounts | — | owner's log | yes |
+| **Set an opening balance; reopen a closed day** | `day.open` | Accounts | — | owner's log | no |
+| **Record an expense: rent, fuel, transport, utilities, anything paid out** | `cash.expense` | Accounts | — | owner's log | no |
+| **Record other income: a loan received, owner investment, other** | `cash.income` | Accounts | — | owner's log | no |
+| **Move money between Cash, Mobile Money and Bank** | `cash.transfer` | Accounts | — | owner's log | no |
+| **Correct a recorded payment, or move it to the right invoice** | `payment.edit` | Accounts | Sales, Manager | owner's log | no |
+| **Record a supplier's paper bill or a supplier credit** | `bill.record` | Accounts | Buyer | owner's log | no |
+| **Settle with a consignor** | `consign.settle` | Accounts | — | owner's log | no |
+| **Run payroll and rent: dues, days worked, absences, paying them** | `payroll.run` | Accounts | Manager (days) | owner's log | no |
+| **Record and repay loans** | `loan.edit` | Accounts | — | owner's log | no |
+| **Record assets, and their sale or disposal** | `asset.edit` | Accounts | — | owner's log | no |
+| **Pay agents: commission claims, cash an agent brings in** | `agent.pay` | Accounts | — | the agent, owner's log | no |
+| **See every financial figure: P&L, balance sheet, cash flow, debtors, creditors** | `finance.see` | Accounts | — | — | no |
+
+### Stock and the yard
+
+| Decision | Task | Who decides | Proposes | Told | Built |
+|---|---|---|---|---|---|
+| Count a trip off the truck at the yard | `trip.checkin` | Store | — | — | yes |
+| **Put a trip's goods on the shelf, from the yard's count** | `stock.receive` | Store | Buyer | Manager when it differs | no |
+| **Accept a difference between the buyer's and the yard's count** | `trip.difference` | Manager | Store | Buyer | no |
 | Count the shelf (blind stock take) | `stock.count` | Store | — | Manager | yes |
 | Accept a stock take, which corrects the stock | `stock.correct` | Manager | Store | owner's log | yes |
+| **Report damaged, lost or stolen stock** | `stock.report` | Store | — | Manager | no |
 | **Write off damaged, lost or stolen stock** | `stock.writeoff` | Manager | Store | owner's log | no |
-| Count a trip off the truck at the yard | `trip.checkin` | Store | — | — | yes |
 | Pick and pack an order | `order.pick` | Store | — | — | yes |
 | Load the truck, choose the driver | `order.load` | Store | — | — | yes |
 | Deliver, with proof | `order.deliver` | Store | — | — | yes |
@@ -97,29 +137,50 @@ direction.
 | Drop a line nobody has | `line.drop` | Buyer | — | Sales | yes |
 | Plan a buying trip, with the cash for it | `trip.plan` | Buyer | — | — | yes |
 | Ride a trip and hand it in | `trip.collect` | Buyer | — | Store | yes |
+| **Buy to refill the shelf when no order needs it (what to buy)** | `buy.restock` | Buyer | — | Manager | no |
+
+### Sourcing
+
+| Decision | Task | Who decides | Proposes | Told | Built |
+|---|---|---|---|---|---|
+| **Work a request: asked, looking, found, priced, listed** | `sourcing.lead` | Sourcing | Sales | Sales (who asked) | no |
+| **Add a new item to what we sell, or edit a product's details (not its markup)** | `product.edit` | Sourcing | — | Manager (to set the markup) | no |
+| **Add or edit suppliers** | `supplier.edit` | Sourcing | Buyer | — | no |
+| **Keep the supplier price list and rival prices right** | `price.list` | Sourcing | Buyer | — | no |
+| **Confirm today's share of prices** (the owner sets how many) | `price.confirm` | Sourcing | — | owner's log | no |
 
 ### The team
 
 | Decision | Task | Who decides | Proposes | Told | Built |
 |---|---|---|---|---|---|
 | **Set each salesperson's goal** | `goal.set` | Manager | — | the salesperson, owner's log | no |
+| **Set how long an order may sit in each stage** | `team.limits` | Manager | — | — | no |
 | Hand a job to another person | `order.assign` | Manager | — | both people | yes |
 | Nudge someone | `team.nudge` | Manager | — | the person | yes |
 
-### Closing the day and paying suppliers
-
-| Decision | Task | Who decides | Proposes | Told | Built |
-|---|---|---|---|---|---|
-| Count each account at close | `day.count` | Accounts | — | — | yes |
-| Close a day that agrees | `day.close` | Accounts | — | owner's log | yes |
-| Book an untraced shortage or overage | `variance.book` | Accounts | — | owner's log | yes |
-| Pay a supplier's bill | `bill.pay` | Accounts | — | owner's log | yes |
-
 ---
 
-## 3. The price decision, as it must be built
+## 3. How the key flows must work
 
-### The price ladder
+### Invoicing: the Manager, or automatic after 24 hours
+
+- The **Manager** invoices delivered orders from the Manager app.
+- **Automatically**, 24 hours after `deliveredAt`, every delivered order that is
+  still not invoiced gets invoiced by a server job. This must not depend on
+  anybody having an app open.
+- The job skips an order only when something is still undecided: an unsettled
+  short pick, or a price waiting for a decision. That order goes to the
+  Manager's Needs a yes. It never waits for the owner.
+- Invoicing does three things at once:
+  - takes the stock off the shelf, oldest lots first;
+  - raises the customer's debt;
+  - creates one bill per supplier.
+
+  Today it lives in index.html (`toggleQuoteInvoiced`). Move it to **one**
+  database function, used by both the Manager's button and the nightly job.
+  Never write a second copy in JavaScript.
+
+### The price decision
 
 ```
   below cost      │  cost ──────────── Manager decides ──────────── shop's price  │  above the shop's price
@@ -128,10 +189,7 @@ direction.
 
 - **The shop's price** is cost plus the product's markup (`products.*_markup_*`,
   else `presets.defaultMarkup`). It is what sales.html calls `shopSellPrice`.
-- **Cost** is what sales.html calls `lineCost`: the shelf lot or the supplier's
-  price at that quantity.
-
-### The flow
+- **Cost** is what sales.html calls `lineCost`.
 
 ```mermaid
 flowchart LR
@@ -141,110 +199,134 @@ flowchart LR
   M -->|Approve| OK[Line approved at 200,000]
   M -->|Set price| NP[Manager sets 205,000<br/>Sales tells the client]
   M -->|Back to shop's price| SP[210,000<br/>Sales tells the client]
-  B --> G{Every supplier yes<br/>AND every price approved<br/>AND credit not held?}
+  B --> G{Every supplier yes<br/>AND every price decided<br/>AND credit not held?}
   OK --> G
   NP --> G
   SP --> G
   G -->|yes| NX[Order moves to Buying or Packing]
 ```
 
-1. **Sales** sets a price below the shop's price. Today the app already tags it
-   `priceNote: 'under'`, `priceBy`, `priceShop` and `priceAt`. The tag reads
-   **"waiting for <Manager's name>"**, not "the owner will see it". The order is
-   placed into Checking as normal.
+1. **Sales** sets a price below the shop's price. The line is tagged
+   `priceNote: 'under'`, `priceBy`, `priceShop`, `priceAt` (already written
+   today). The tag reads **"waiting for <Manager's name>"**.
 2. **The Buyer** checks suppliers in parallel. No time is lost.
-3. **The Manager** sees the line in **Prices to approve**, on the same Needs a
-   yes page as the credit holds. They see it as a ladder: cost, the
-   salesperson's price, the shop's price, and what this customer usually pays,
-   each with its margin. Three actions:
-   - **Approve**: the salesperson's price stands.
-   - **Set price**: any figure at or above cost.
-   - **Back to the shop's price**: this is the refusal.
-4. **Sales** gets "Tell them" on Today whenever the Manager's price differs from
+3. **The Manager** sees the line in **Prices to approve**, on Needs a yes beside
+   the credit holds. They see it as a ladder: cost, the salesperson's price, the
+   shop's price, and what this customer usually pays, each with its margin.
+   Three actions:
+   - **Approve**
+   - **Set price**: any figure at or above cost
+   - **Back to the shop's price**
+4. **Sales** gets "Tell them" on Today when the Manager's price differs from
    what the client was told.
 5. **The order leaves Checking** only when every supplier has said yes, every
    price that needed a decision has one, and the credit check is not holding it.
-   **Whoever clears the last gate moves the order**: the Buyer's last yes, or
-   the Manager's last decision.
-6. **The decision goes stale** if the salesperson changes the price or quantity
-   afterwards, the same way a supplier's yes does. The line needs a decision
-   again.
+   Whoever clears the last gate moves the order.
+6. A decision **goes stale** if the price or quantity changes afterwards.
 
-The same gate covers `nomargin` lines (no selling price set) and `nocost` lines
-(no known cost). A `nocost` line waits for the Buyer's cost. It then needs the
-Manager only if it turns out to be under the shop's price or without one.
+The same gate covers `nomargin` and `nocost` lines. A `nocost` line waits for
+the Buyer's cost first.
 
-### The data
-
-The decision is kept on the order line, in `saved_quotes.payload.items[]`:
+**Data.** The decision is kept on the order line, in `saved_quotes.payload.items[]`:
 
 ```
 priceReview: { state: 'approved' | 'changed', price, was, by, byName, at }
 ```
 
-- A line that needs a decision and has no `priceReview` is waiting.
-- A `priceReview` whose `price` no longer matches the line is stale, and the
-  line is waiting again.
-- "Back to the shop's price" is `state: 'changed'` with the shop's price.
+**Enforced in the database.** A guard on `saved_quotes` has two rules:
 
-### Where it is enforced
+- only `has_task('price.approve')` may write `priceReview`;
+- an order cannot leave `draft` while a price waits, or while `creditCheck`
+  holds it.
 
-- **In the database:** a migration (number 0119 or later) grants the tasks in
-  section 2. It also adds a guard on `saved_quotes` with two rules:
-  - only `has_task('price.approve')` may write `priceReview`;
-  - an order may not leave `draft` while a line waits on a price, or while
-    `creditCheck` holds it.
-- **In each app that can move an order out of Checking**, the same rule:
-  `orderDraftReady` in buyer.html and index.html, plus the console's autopilot.
-- **Settings stored as one block** (`app_settings` presets: `defaultMarkup`,
-  `creditHold`) are written through narrow functions that check `has_task`, never
-  by opening the whole settings row to the Manager.
-- **Product markups:** a guard on `products` lets `markup.set` change only the
-  markup columns.
+The same rule is enforced in every app that can move an order out of Checking.
+
+### Orders that need nothing from a supplier
+
+An order filled entirely from our own shelf **skips Checking** and goes straight
+to Packing. It stops in Checking only when the Manager has a price or credit
+decision to make on it.
+
+A **counter sale** at or above the shop's price is sold, paid and invoiced in
+one slide. A counter sale below the shop's price needs the Manager's yes first,
+by push to the Manager's phone.
+
+### Goods from a trip onto the shelf
+
+The Store's yard count (`yardQty`) is what puts the goods on the shelf, and it
+moves the orders on from Buying to Packing. If the yard's count differs from
+the Buyer's, the shelf takes the yard's count. The Manager sees the
+difference and accepts it (`trip.difference`). The Buyer's prices paid update
+the supplier price list automatically.
+
+### Sourcing and prices
+
+- **Sales** forwards an item we don't sell while taking the order: what the
+  customer asked for, how many, and who asked.
+- It lands in the **Sourcing** app as a request. Sourcing takes it through
+  asked, looking, found, priced and listed.
+- Listing it creates the product. The Manager sets its markup.
+- Everyone who asked is told.
+- Each day, **Sourcing confirms the owner's set number of supplier prices**
+  (`presets.priceReview`), oldest first: still right, or the new figure.
+
+### Settings stored as one block
+
+`app_settings` presets such as `defaultMarkup`, `creditHold`, stage limits
+and `priceReview` are written through narrow functions that check `has_task`.
+Never open the whole settings row to a role. The same goes for product markups:
+a guard on `products` lets `markup.set` change only the markup columns, and
+lets `product.edit` change only everything else.
 
 ---
 
-## 4. What the owner keeps
+## 4. What the owner keeps: governance, never operations
 
-These stay the owner's (and admins'). No role holds a task for them:
+- Hiring: staff records, pay rates, roles, and switching on each role's tasks
+- The policy numbers: how many prices Sourcing confirms per day, and the
+  shop's own goal
+- One-time shop set-up: receipt details, MoMo merchant set-up, the words and
+  categories
+- Restoring a backup, clearing data, and every permanent delete (0058).
+  Day-to-day corrections are voids, reversals and credit notes, which the
+  roles above make.
 
-- Staff, roles, and switching on each role's tasks
-- Reopening a closed day; setting an opening balance
-- Editing or deleting a recorded payment or cash-book line
-- Restoring a backup, clearing data
-- The shop's settings other than markups and credit (receipt details, MoMo
-  set-up, stage time limits, words)
-- Every delete (0058)
+The owner's view is the log of every decision made on their behalf, and every
+report. Whether this becomes an Owner phone app or stays the desktop console is
+not decided yet.
 
 ---
 
-## 5. Build order, and what is not decided yet
+## 5. Build order
 
-**Build in this order:**
-
-1. **Price approval.** Migration 0119 or later, then sales.html, manager.html,
-   buyer.html, and the index.html gate. Also make the credit hold real: it is
-   recorded today but enforced nowhere.
-2. **Markups and margins in the Manager app.** `margin.see`, `markup.set`.
-3. **Credit limits, terms and hold days.** `credit.set`.
-4. **Each salesperson's goal.** `goal.set`, as `manager_notes` target rows with
-   `body.who`.
-5. **Stock write-offs.** Store reports, the Manager accepts, the same pattern as
-   the stock take.
-6. **Returns, voids, credit notes.** `credit_note.raise`, `invoice.void`. These
-   depend on invoicing, which is not decided yet (below).
-
-**Not decided yet.** Ask the owner before building any of these, and do not
-invent who does them:
-
-- Invoicing. Only the console can invoice, and invoicing is what takes stock off
-  the shelf, raises the debt and creates the supplier bills.
-- Checking a trip in (goods onto the shelf).
-- Releasing an order filled entirely from our own shelf; the counter sale.
-- Expenses, transfers between accounts, wages, rent.
-- Agent money: commission claims, cash prepayments, change requests.
-- Promises to pay.
-- Sourcing new items; restock buying; editing suppliers and the price list.
+1. **Nothing waits for the owner on an order**
+   - shelf-only orders skip Checking
+   - the Store's count puts goods on the shelf
+   - the Manager invoices, and the 24-hour automatic invoice
+   - the Manager settles short picks
+   - the counter sale
+2. **Price approval**, and making the credit hold real (recorded today,
+   enforced nowhere).
+3. **Accounts as treasurer**
+   - expenses, income, transfers
+   - payroll and rent, loans and assets
+   - supplier bills on paper, consignment, agent payments
+   - payment corrections, openings
+   - the finance reports
+4. **The Manager's remaining decisions**
+   - markups and margins
+   - credit limits and terms
+   - editing a customer (granted already, no screen yet)
+   - goals and stage limits
+   - agent change requests
+   - write-offs, with the Store's report
+   - returns, voids, credit notes
+5. **Sourcing**
+   - add `'sourcing'` to the `shop_members` role check (0113) and to the staff
+     form
+   - the Sales "we don't sell it" button
+   - requests, products, suppliers, the price list, the daily confirmations
+6. **Restock buying** in the Buyer app.
 
 ### Known text that now contradicts this file
 
@@ -260,6 +342,13 @@ These are fixed when the matching row is built:
   - "The owner sets limits, terms and the N-day hold line"
   - "Each salesperson's own goal — the owner sets it."
   - the You page: "Costs, margins … credit limits and terms, prices, invoicing … stay with the owner"
-- **The headers of migrations 0113 and 0116**, where they say prices, margins
-  and credit stay the owner's. Leave applied migrations as they are. The
-  migration that builds each row records the change.
+- **accounts.html**
+  - "Ask the owner to put it on INV-…"
+  - the You page's "Owner keeps" list: "Edit or void a payment", "Opening
+    balance, reopen a day", and the rest
+- **store.html**: "The console still puts it on the shelf"
+- **buyer.html**: "Owner checks it in", "the owner pays", "The owner keeps the
+  price list."
+- **The headers of migrations 0113, 0116 and 0117**, where they say these stay
+  the owner's. Leave applied migrations as they are. The migration that builds
+  each row records the change.

@@ -18,6 +18,8 @@
  *      means granting the task AND flipping the row, in one change.
  *   5. One task, one set of deciders: a task on two rows says the same
  *      roles on both.
+ *   6. Nothing day-to-day waits for the owner: each job the owner handed
+ *      over is held to its role, and what the owner keeps is governance.
  *
  * Run: node test/decision-rights.test.js   (or: npm test)
  */
@@ -29,7 +31,7 @@ const t = createReporter('decision rights');
 const doc = read('docs/decision-rights.md');
 const claude = read('CLAUDE.md');
 
-const ROLES = ['sales', 'buyer', 'store', 'manager', 'accounts'];
+const ROLES = ['sales', 'buyer', 'store', 'manager', 'accounts', 'sourcing'];
 
 /* ---- the table, as the file writes it ---- */
 function docRows() {
@@ -110,15 +112,32 @@ t.check(rows.every((r) => r.who.length && r.who.every((w) => ROLES.includes(w)))
     + (clash.length ? ` -- differs: ${clash.join(', ')}` : ''));
 }
 
-/* ---------------- the decisions the owner gave the Manager ---------------- */
+/* ---------------- the owner watches the machine, and is not part of it ----------------
+   Each day-to-day job the owner handed over, held to the role that now
+   decides it. Moving one back to "the owner" means changing this list,
+   which is a conversation with the owner, not a quiet edit. */
 {
-  const managerDecides = ['price.approve', 'markup.set', 'margin.see', 'credit.set', 'credit.release',
-    'credit_note.raise', 'invoice.void', 'stock.writeoff', 'stock.correct', 'goal.set'];
-  const off = managerDecides.filter((task) => !rows.some((r) => r.task === task && r.who.includes('manager')));
-  t.check(off.length === 0, 'prices, markups, margins, credit, returns, voids, write-offs and goals are the Manager\'s'
-    + (off.length ? ` -- not the Manager's in the table: ${off.join(', ')}` : ''));
-  const notSales = ['price.approve', 'markup.set', 'credit.set'].filter((task) => rows.some((r) => r.task === task && r.who.includes('sales')));
-  t.check(notSales.length === 0, 'and Sales never approves its own price, markup or credit');
+  const HOME = {
+    manager: ['price.approve', 'markup.set', 'margin.see', 'credit.set', 'credit.release', 'invoice.make',
+      'pick.settle', 'credit_note.raise', 'invoice.void', 'stock.writeoff', 'stock.correct', 'trip.difference',
+      'customer.edit', 'agent.change', 'goal.set', 'team.limits'],
+    accounts: ['cash.expense', 'cash.income', 'cash.transfer', 'payment.edit', 'day.open', 'bill.record', 'bill.pay',
+      'consign.settle', 'payroll.run', 'loan.edit', 'asset.edit', 'agent.pay', 'finance.see'],
+    sourcing: ['sourcing.lead', 'product.edit', 'supplier.edit', 'price.list', 'price.confirm'],
+    sales: ['counter.sell', 'sourcing.ask'],
+    store: ['stock.receive', 'stock.report'],
+    buyer: ['buy.restock'],
+  };
+  for (const [role, tasks] of Object.entries(HOME)) {
+    const off = tasks.filter((task) => !rows.some((r) => r.task === task && r.who.includes(role)));
+    t.check(off.length === 0, `the ${role[0].toUpperCase() + role.slice(1)} role holds what the owner handed it`
+      + (off.length ? ` -- not ${role}'s in the table: ${off.join(', ')}` : ''));
+  }
+  const selfApprove = ['price.approve', 'markup.set', 'credit.set'].filter((task) => rows.some((r) => r.task === task && r.who.includes('sales')));
+  t.check(selfApprove.length === 0, 'and Sales never approves its own price, markup or credit');
+  const kept = (/## 4\.[\s\S]*?\n## 5\./.exec(doc) || [''])[0];
+  t.check(/governance, never operations/.test(kept) && !/invoic|expense|payroll|price list|markup/i.test(kept),
+    'what the owner keeps is governance only -- no invoicing, money, prices or markups');
 }
 
 process.exit(t.done() ? 1 : 0);
