@@ -43,7 +43,7 @@
 -- The walls 0083 and 0087 drew ("owner writes only", "owner updates only")
 -- are restrictive, and restrictive policies all have to pass. So each wall
 -- below is re-drawn ONCE per table, naming every task that may write it --
--- including tasks other builds grant (markup.set, sourcing.ask) -- so that
+-- including tasks other builds grant (sourcing.ask) -- so that
 -- a later build adds rows to role_tasks rather than a second wall that
 -- would block this one.
 --
@@ -88,7 +88,9 @@ begin
       when 'sourcing_leads' then array['sourcing.lead', 'sourcing.ask']
       when 'follow_ups'     then array['sourcing.lead', 'sourcing.ask']
       when 'suppliers'      then array['supplier.edit']
-      when 'products'       then array['product.edit', 'markup.set']
+      -- Not markup.set: the Manager changes markups only through
+      -- set_product_markup() (0122), never by writing products directly.
+      when 'products'       then array['product.edit']
       when 'prices'         then array['price.list', 'price.confirm']
       when 'rival_prices'   then array['price.list']
       when 'product_links'  then array['product.edit']
