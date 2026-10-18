@@ -303,6 +303,7 @@ input{font-family:inherit;color:var(--ink)}
 /* the fade above a pinned footer must never sit on the last thing above it */
 .bx-page :has(+ .bx-foot){margin-bottom:20px}
 .bx-foot .row{display:flex;gap:8px}
+.bx-foot > .bx-btn,.bx-foot > .bx-slide,.bx-foot > .mx-yesno{flex:none}
 .bx-hint{display:flex;align-items:center;gap:6px;padding-left:4px;font-size:12px;font-weight:600;color:var(--ink2)}
 .bx-seg{position:relative;display:grid;padding:4px;border-radius:20px;background:#EAE6DF;box-shadow:inset 0 1px 2px rgba(22,32,60,.08)}
 .bx-seg .thumb{position:absolute;top:4px;bottom:4px;left:4px;border-radius:16px;background:#fff;box-shadow:0 1px 2px rgba(22,32,60,.08),0 6px 14px rgba(22,32,60,.12),inset 0 0 0 1.5px var(--navy);transition:transform .35s cubic-bezier(.3,1.25,.5,1)}
@@ -601,6 +602,18 @@ input{font-family:inherit;color:var(--ink)}
 .mx-reason{border:none;width:100%;min-height:56px;padding:8px 12px;border-radius:14px;display:flex;align-items:center;gap:12px;color:#fff;background:rgba(255,255,255,.05);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);text-align:left}
 .mx-reason[aria-checked="true"]{background:rgba(111,220,176,.12);box-shadow:inset 0 0 0 1.5px var(--mint)}
 .mx-bubble{padding:12px 14px;border-radius:4px 16px 16px 16px;background:#DCF8C6;color:var(--ink);font-size:14px;line-height:1.45;white-space:pre-line;border:none;width:100%;font-family:inherit;resize:none;min-height:88px;outline:none}
+.mx-yesno{position:relative;height:60px;border-radius:18px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule);overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+.mx-yesno .fl,.mx-yesno .fr{position:absolute;top:0;bottom:0;width:0;opacity:.3}
+.mx-yesno .fl{right:50%;background:var(--navy)}
+.mx-yesno .fr{left:50%;background:var(--red)}
+.mx-yesno .ll,.mx-yesno .lr{position:absolute;top:0;bottom:0;display:flex;flex-direction:column;justify-content:center;gap:1px;pointer-events:none;transition:color .2s}
+.mx-yesno .ll{left:16px;align-items:flex-start;color:var(--ink)}
+.mx-yesno .lr{right:16px;align-items:flex-end;color:#A82D24}
+.mx-yesno .ll b,.mx-yesno .lr b{font-size:15px;font-weight:700}
+.mx-yesno .ll .m,.mx-yesno .lr .m{font-size:11px;font-weight:600}
+.mx-yesno.l .ll,.mx-yesno.r .lr{color:#fff}
+.mx-yesno .k{position:absolute;top:4px;left:calc(50% - 26px);width:52px;height:52px;border:none;border-radius:14px;padding:0;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none;box-shadow:0 2px 8px rgba(22,32,60,.25),inset 0 1px 0 rgba(255,255,255,.12)}
+.mx-yesno.settle .k,.mx-yesno.settle .fl,.mx-yesno.settle .fr{transition:transform .32s cubic-bezier(.3,1.3,.5,1),width .32s cubic-bezier(.3,1.3,.5,1),opacity .2s}
 .mx-navysheet{background:radial-gradient(120% 70% at 20% 0%,#26335E 0%,#16203C 55%);color:#fff}
 .mx-navysheet .bx-grip{background:rgba(255,255,255,.22)}
 
@@ -879,13 +892,10 @@ function rowToQuote(q){
 }
 function rowToTrip(r){ return { id: r.id, supplierId: r.supplier_id, status: r.status, assignedWorkerId: r.assigned_worker_id, createdAt: r.created_at, assignedAt: r.assigned_at,
   acceptedAt: r.accepted_at, collectedAt: r.collected_at, confirmedAt: r.confirmed_at, note: r.note || '', lines: Array.isArray(r.lines) ? r.lines : [], voided: !!r.voided,
-  difference: Array.isArray(r.difference) ? r.difference : null, differenceStatus: r.difference_status || null }; }
-// 0124: what the Store reported damaged, lost or stolen.
-function rowToReport(r){ return { id: r.id, key: r.key, productId: r.product_id, name: r.name || '', qty: Number(r.qty) || 0, reason: r.reason, photo: r.photo || null,
-  byName: r.reported_by_name || '', status: r.status, createdAt: r.created_at }; }
+  yardCheckedAt: r.yard_checked_at || null, yardCheckedBy: r.yard_checked_by || null, differenceAcceptedAt: r.difference_accepted_at || null, cashCount: r.cash_count || null }; }
 
 async function loadAll(){
-  const [suppliers, customers, debtLog, products, prices, stock, lots, quotes, settingsR, cashR, staff, trips, targetsR, stmR, promises] = await Promise.all([
+  const [suppliers, customers, debtLog, products, prices, stock, lots, quotes, settingsR, cashR, staff, trips, targetsR, stmR, promises, asksR, countsR, reportsR, restockR, rivalsR] = await Promise.all([
     selectAll('suppliers'), selectAll('customers'), selectAll('customer_debt_log'), selectAll('products'), selectAll('prices'),
     selectAll('stock', 'key'), selectAll('stock_lots'), selectAll('saved_quotes'),
     sb.from('app_settings').select('presets').eq('shop_id', S.shopId).maybeSingle(),
@@ -896,8 +906,14 @@ async function loadAll(){
     sb.from('manager_notes').select('*').eq('shop_id', S.shopId).eq('kind', 'target').eq('status', 'open').limit(100).then(r => r, () => ({ data: [] })),
     sb.from('statements_sent').select('*').eq('shop_id', S.shopId).order('sent_on', { ascending: false }).limit(500).then(r => r, () => ({ data: [] })),
     selectAll('payment_promises').catch(() => []),
+    // The Manager's queues (0115, 0122, 0123): each optional, so an older
+    // database draws an empty list rather than no app.
+    sb.from('invoice_asks').select('*').eq('shop_id', S.shopId).eq('status', 'sent').limit(200).then(r => r, () => ({ data: [] })),
+    sb.from('stock_counts').select('*').eq('shop_id', S.shopId).order('created_at', { ascending: false }).limit(40).then(r => r, () => ({ data: [] })),
+    sb.from('stock_reports').select('*').eq('shop_id', S.shopId).eq('status', 'sent').limit(200).then(r => r, () => ({ data: [] })),
+    sb.from('restock_lines').select('*').eq('shop_id', S.shopId).in('status', ['planned', 'held']).limit(300).then(r => r, () => ({ data: [] })),
+    sb.from('rival_prices').select('product_id, variant_idx, price, seen_on').eq('shop_id', S.shopId).order('seen_on', { ascending: false }).limit(2000).then(r => r, () => ({ data: [] })),
   ]);
-  const reports = await sb.from('stock_reports').select('*').eq('shop_id', S.shopId).order('created_at', { ascending: false }).limit(60).then(r => r.error ? null : r.data, () => null);
   const presets = (settingsR && settingsR.data && settingsR.data.presets) || {};
   const debtBy = {};
   debtLog.forEach(l => { (debtBy[l.customer_id] ||= []).push({ id: l.id, date: l.date, type: l.type, amount: Number(l.amount) || 0, note: l.note || '', cashTxnId: l.cash_txn_id == null ? null : Number(l.cash_txn_id), quoteId: l.quote_id == null ? null : Number(l.quote_id) }); });
@@ -920,7 +936,6 @@ async function loadAll(){
     savedQuotes: quotes.map(rowToQuote),
     cashTxns: ((cashR && cashR.data) || []).map(t => ({ id: t.id, date: t.date, account: t.account, type: t.type, category: t.category, amount: Number(t.amount) || 0, description: t.description || '', time: t.time || '', quoteId: t.quote_id == null ? null : Number(t.quote_id), enteredBy: t.entered_by || null })),
     collectionTrips: trips.map(rowToTrip),
-    reports: reports === null ? null : reports.map(rowToReport),
     targets: ((targetsR && targetsR.data) || []).map(r => ({ id: r.id, date: r.date, body: r.body || {}, status: r.status })),
     statementsSent: (stmR && stmR.data) || [],
     promises: promises.map(p => ({ id: p.id, customerId: p.customer_id, promisedOn: p.promised_on, madeOn: p.made_on, amount: p.amount == null ? null : Number(p.amount) })),
@@ -931,17 +946,20 @@ async function loadAll(){
     presetCreditHold: presets.creditHold || null,
     presetShopAddress: presets.shopAddress || '',
     presetShopPhone: presets.shopPhone != null ? presets.shopPhone : (presets.waPhone || ''),
+    invoiceAsks: ((asksR && !asksR.error && asksR.data) || []).map(a => ({ id: a.id, quoteId: Number(a.quote_id), customerId: a.customer_id, kind: a.kind, lines: Array.isArray(a.lines) ? a.lines : [], amount: Number(a.amount) || 0, reason: a.reason || '', note: a.note || '', askedBy: a.asked_by, askedByName: a.asked_by_name || '', askedRole: a.asked_role || '', status: a.status, createdAt: a.created_at })),
+    stockCounts: ((countsR && !countsR.error && countsR.data) || []).map(c => ({ id: c.id, aisle: c.aisle || '', countedBy: c.counted_by, countedByName: c.counted_by_name || '', lines: Array.isArray(c.lines) ? c.lines : [], status: c.status, createdAt: c.created_at })),
+    stockReports: ((reportsR && !reportsR.error && reportsR.data) || []).map(r => ({ id: r.id, key: r.key, productId: r.product_id, variantIdx: r.variant_idx == null || r.variant_idx === '' ? null : r.variant_idx, name: r.name || 'Item', qty: Number(r.qty) || 0, why: r.why || 'damaged', note: r.note || '', reportedBy: r.reported_by, reportedByName: r.reported_by_name || '', status: r.status, createdAt: r.created_at })),
+    restockLines: ((restockR && !restockR.error && restockR.data) || []).map(r => ({ id: r.id, key: r.key, productId: r.product_id, variantIdx: r.variant_idx == null || r.variant_idx === '' ? null : r.variant_idx, name: r.name || 'Item', qty: Number(r.qty) || 0, unit: r.unit || '', cost: r.cost == null ? null : Number(r.cost), forDate: r.for_date, status: r.status, createdBy: r.created_by })),
+    rivals: ((rivalsR && !rivalsR.error && rivalsR.data) || []).map(r => ({ productId: r.product_id, variantIdx: r.variant_idx, price: Number(r.price) || 0 })),
   };
   S.loadedAt = Date.now();
   saveSnapshot();
 }
 async function refreshLive(){
   try {
-    const [quotes, trips, reports] = await Promise.all([selectAll('saved_quotes'), selectAll('collection_trips').catch(() => null),
-      sb.from('stock_reports').select('*').eq('shop_id', S.shopId).order('created_at', { ascending: false }).limit(60).then(r => r.error ? null : r.data, () => null)]);
+    const [quotes, trips] = await Promise.all([selectAll('saved_quotes'), selectAll('collection_trips').catch(() => null)]);
     S.data.savedQuotes = quotes.map(rowToQuote);
     if (trips) S.data.collectionTrips = trips.map(rowToTrip);
-    if (reports) S.data.reports = reports.map(rowToReport);
     S.loadedAt = Date.now(); saveSnapshot(); if (!S.dragging && !S.paying) render();
   } catch (e) { if (!isNetworkError(e)) console.warn(e); }
 }
@@ -1547,8 +1565,11 @@ async function giveTrip(tripId, staffId){
   saveSnapshot();
   return t;
 }
-// What this login may do, from role_tasks (0113 / 0116). Owners do it all.
-const ALL_TASKS = ['order.move', 'order.assign', 'credit.release', 'team.nudge', 'customer.edit', 'payment.receive', 'statement.send', 'pick.settle', 'trip.difference', 'stock.writeoff'];
+// What this login may do, from role_tasks (0113 / 0116 / 0122). Owners do it all.
+const ALL_TASKS = ['order.move', 'order.assign', 'credit.release', 'team.nudge', 'customer.edit', 'payment.receive', 'statement.send',
+  // The Manager's decisions (docs/decision-rights.md, 0122) and stock.correct (0115).
+  'price.approve', 'markup.set', 'margin.see', 'invoice.make', 'pick.settle', 'credit_note.raise', 'invoice.void', 'credit.set',
+  'promise.record', 'agent.change', 'trip.difference', 'stock.writeoff', 'stock.correct', 'restock.hold', 'goal.set', 'team.limits'];
 function tasks(){
   if (['owner', 'admin'].includes(S.role)) return ALL_TASKS;
   if (S.tasks) return S.tasks;
@@ -1862,11 +1883,8 @@ function overBarHTML(q, w, h){
   return `<span class="mx-over" style="width:${typeof w === 'string' ? w : (w || 64) + 'px'};height:${h || 5}px"><i style="flex:${okPart / whole};border-radius:999px 0 0 999px;background:var(--green)"></i>${overPart ? `<i class="a-grow" style="flex:${overPart / whole};border-radius:0 999px 999px 0;background:${overPart > lim ? '#E5483D' : '#F5B26B'}"></i>` : `<i style="flex:${1 - okPart / whole}"></i>`}</span>`;
 }
 function needsYou(){
-  const out = [], stuck = stuckOrders(), held = heldWaiting(), T = team();
+  const out = [], stuck = stuckOrders(), T = team();
   T.sales.forEach(s => { const g = s.userId ? personGoal(s.userId) : null; if (g && g.ahead < 0 && !g.reached) out.push({ k: 'behind', s, g }); });
-  if (held.length) out.push({ k: 'held', n: held.length, first: held[0].c.name });
-  const sa = storeAsks().filter(x => !(S.ui.storeDone || {})[x.k]);
-  if (sa.length) out.push({ k: 'store', n: sa.length, first: sa[0] });
   const old = debtors().filter(d => d.age > 30);
   if (old.length) out.push({ k: 'old', n: old.length, v: sum(old, d => d.c.debt) });
   return { first: stuck[0] || null, rest: out, total: stuck.length + out.length };
@@ -1895,10 +1913,6 @@ function viewToday(){
     if (n.k === 'behind') return `<button class="bx-row" data-act="push" data-p="person" data-id="${n.s.id}">${pctRing(n.g.pct, 38, 3, '#95530C', pav(n.s, 28), '', '#EFECE6')}
       <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="bx-t">${esc(firstWord(n.s.name))} is behind pace</span><span class="bx-sub"><span class="m" style="color:var(--amberInk)">${short(-n.g.ahead)}</span> short</span></span>
       <span class="mx-act navy" style="height:34px;border-radius:999px">Look</span></button>`;
-    if (n.k === 'store') return `<button class="bx-row" data-act="openasks">
-      <span style="width:38px;height:38px;border-radius:12px;background:#FDEEE1;color:#95530C;display:flex;align-items:center;justify-content:center;flex:none">${ic('box', 19)}</span>
-      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="bx-t ell">${n.n} from the Store need${n.n > 1 ? '' : 's'} you</span><span class="bx-sub ell">${esc(n.first.kindWord)} · ${esc(n.first.title)}${n.n > 1 ? ` +${n.n - 1} more` : ''}</span></span>
-      <span class="mx-act soft" style="height:34px;border-radius:999px">Decide</span></button>`;
     if (n.k === 'held') return `<button class="bx-row" data-act="push" data-p="approvals">
       <span style="width:38px;height:38px;border-radius:12px;background:var(--amberSoft);color:var(--amberInk);display:flex;align-items:center;justify-content:center;flex:none">${ic('cash', 19)}</span>
       <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="bx-t ell">${n.n} ${pl(n.n, 'order')} need${n.n > 1 ? '' : 's'} a yes</span><span class="bx-sub" style="display:flex;min-width:0"><span class="ell">${esc(n.first)}</span>${n.n > 1 ? `<span style="flex:none">&nbsp;+${n.n - 1} more</span>` : ''}</span></span>
@@ -1914,17 +1928,18 @@ function viewToday(){
       <button class="mx-me" data-act="push" data-p="me" aria-label="You: profile and what your login opens">${esc(initials(myName()))}</button></div>
     <button class="mx-goal" data-act="tab" data-v="team">${teamRingHTML(m, 88, 8)}
       <span class="fig"><span class="mx-lbl">Team sales · ${esc(monthWord())}</span><span class="mx-big">${n0(m.actual)}</span>
-        ${m.tg ? `<span style="display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:600;color:var(--navyInk2)"><span>of <span class="m" style="color:#DDE3F0">${n0(m.tg.aim)}</span></span><span style="color:${behind ? 'var(--amber)' : 'var(--mint)'}">${m.tg.reached ? 'goal reached' : (behind ? '−' : '+') + short(Math.abs(m.tg.ahead)) + (behind ? ' behind' : ' ahead')}</span></span>` : `<span style="font-size:12px;font-weight:600;color:var(--navyInk2)">invoiced this month · the owner sets the goal</span>`}
+        ${m.tg ? `<span style="display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:600;color:var(--navyInk2)"><span>of <span class="m" style="color:#DDE3F0">${n0(m.tg.aim)}</span></span><span style="color:${behind ? 'var(--amber)' : 'var(--mint)'}">${m.tg.reached ? 'goal reached' : (behind ? '−' : '+') + short(Math.abs(m.tg.ahead)) + (behind ? ' behind' : ' ahead')}</span></span>` : `<span style="font-size:12px;font-weight:600;color:var(--navyInk2)">invoiced this month · no shop goal yet</span>`}
         ${legend}</span></button>
     <button class="bx-glass mx-day" data-act="push" data-p="teamday" aria-label="Today: sold ${n0(day.soldV)} in ${day.sold.length} ${pl(day.sold.length, 'order')}, money in ${n0(day.inV)}">
       <span class="two"><span><span class="l">Sold today · <span class="m">${day.sold.length}</span></span><span class="v">${n0(day.soldV)}</span></span><span style="align-items:flex-end"><span class="l">Money in today</span><span class="v" style="color:var(--mint)">${n0(day.inV)}</span></span></span>
       <span class="mx-bar"><i class="a-grow" style="width:${day.soldV ? Math.min(100, Math.round(day.inV / day.soldV * 100)) : day.inV ? 100 : 0}%;background:var(--mint);border-radius:999px"></i></span></button>
   </div>
   <div class="bx-body">
+    ${decideCardHTML()}
     <button class="bx-card" data-act="tab" data-v="orders" style="border:none;width:100%;text-align:left;padding:12px 14px 10px;display:flex;flex-direction:column;gap:10px;color:var(--ink)">
       <span style="display:flex;align-items:center;justify-content:space-between"><b style="font-size:13px">Orders on the move · <span class="m">${onTheMove().length}</span></b>${stuckOrders().length ? `<span class="bx-chip" style="background:var(--crimsonSoft);color:var(--crimson)"><span class="bx-dot a-blink" style="background:var(--crimson)"></span><span class="m">${stuckOrders().length}</span> stuck</span>` : `<span class="bx-chip" style="background:var(--greenSoft);color:var(--green)">${ic('tick', 12, 'style="stroke-width:2.6"')}none stuck</span>`}</span>
       ${pipeHTML()}</button>
-    <div class="bx-sec"><b style="font-size:17px">Needs you</b>${ny.total ? `<span class="bx-chip" style="background:#FDE8E4;color:#A82D24"><span class="m">${ny.total}</span>&nbsp;waiting</span>` : ''}</div>
+    <div class="bx-sec"><b style="font-size:17px">${decideCounts().total ? 'Watch' : 'Needs you'}</b>${ny.total ? `<span class="bx-chip" style="background:#FDE8E4;color:#A82D24"><span class="m">${ny.total}</span>&nbsp;waiting</span>` : ''}</div>
     ${featured}
     ${rows ? `<div class="bx-card bx-list">${rows}</div>` : ''}
     ${!f && !rows ? emptyCard('Nothing needs you right now', 'No order is past its limit, nobody is behind, no order waits for a yes.') : ''}
@@ -2070,7 +2085,7 @@ function viewTeam(){
   return `<div class="bx-hero" data-navy-top>
     <div class="mx-top"><span class="t"><span style="font-size:26px;font-weight:700;letter-spacing:-.02em">Team <span class="m" style="font-size:16px;color:var(--navyInk2)">${T.all.length}</span></span><span style="font-size:13px;color:var(--navyInk)">${T.all.length - off.length} in today${off.length ? ' · ' + esc(off.slice(0, 2).map(s => firstWord(s.name)).join(', ')) + (off.length > 2 ? ' +' + (off.length - 2) : '') + ' off' : ''}</span></span>
       <span style="display:flex">${T.all.slice(0, 4).map((s, i) => `<span style="margin-left:${i ? -5 : 0}px;border-radius:999px;box-shadow:0 0 0 2px #16203C">${pav(s, 30)}</span>`).join('')}${T.all.length > 4 ? `<span class="m" style="margin-left:-5px;width:30px;height:30px;border-radius:999px;background:var(--navy2);color:var(--navyInk);font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #16203C">+${T.all.length - 4}</span>` : ''}</span></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span class="mx-lbl" style="white-space:nowrap">Selling · <span class="m">${T.sales.length}</span> · ${esc(monthWord())}</span>${anyGoal ? '' : '<span class="mx-prop dark">PROPOSED · OWNER SETS GOALS</span>'}</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span class="mx-lbl" style="white-space:nowrap">Selling · <span class="m">${T.sales.length}</span> · ${esc(monthWord())}</span>${can('goal.set') ? `<button data-act="push" data-p="teamrules" style="border:none;background:none;padding:0;display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:var(--mint)">${anyGoal ? 'Set goals' : 'Set each goal'}${ic('chev', 12, 'style="stroke-width:2.4"')}</button>` : ''}</div>
     ${sellingHTML(T)}
   </div>
   <div class="bx-body">${floorHTML(T) || emptyCard('No buyers, packers or drivers yet', 'Staff with those jobs show here, with what each holds.')}</div>`;
@@ -2161,7 +2176,7 @@ function viewOrders(){
     <div class="mx-top"><span class="t"><span style="font-size:28px;font-weight:700;letter-spacing:-.02em">${show === 'done' ? 'Delivered' : show === 'all' ? 'Orders' : 'Stuck'} <span class="m" style="font-size:18px;color:${show === 'stuck' && stuck.length ? 'var(--crimson)' : 'var(--ink3)'}">${show === 'done' ? deliveredToday().length : show === 'all' ? live.length : stuck.length}</span></span>
       <span style="font-size:13px;color:var(--ink3)">${show === 'stuck' ? `of ${live.length} on the move · <span class="m" style="color:var(--ink);font-weight:600">${n0(waiting)}</span> waiting` : show === 'all' ? 'on the move, stuck first' : 'today, newest first'}</span></span></div>
     <div class="mx-chips" role="tablist" aria-label="Show">${chip('stuck', 'Stuck', stuck.length)}${chip('all', 'All', live.length)}${chip('done', 'Delivered today', deliveredToday().length)}</div>
-    ${lim.own || show === 'done' ? '' : `<span class="bx-hint" style="font-size:11px;color:var(--ink3)">${ic('clock', 13)}Suggested limits · the owner can set the shop's own</span>`}
+    ${lim.own || show === 'done' ? '' : `<span class="bx-hint" style="font-size:11px;color:var(--ink3)">${ic('clock', 13)}Suggested limits${can('team.limits') ? ` · <button data-act="push" data-p="teamrules" style="border:none;background:none;padding:0;font-size:11px;font-weight:700;color:var(--sky)">set the shop's own</button>` : ''}</span>`}
   </div>
   <div class="bx-body" style="padding-top:10px">${body}</div>`;
 }
@@ -2347,7 +2362,7 @@ SHEET.nudge = a => {
       ${rs.map((r, i) => `<button class="mx-reason" role="radio" aria-checked="${i === ri}" data-act="nwhy" data-i="${i}"><span style="width:18px;height:18px;flex:none;border-radius:999px;box-shadow:inset 0 0 0 ${i === ri ? '5px var(--mint)' : '2px rgba(255,255,255,.3)'}"></span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><b class="ell" style="font-size:14px">${esc(r.t)}</b><span class="ell" style="font-size:12px;color:var(--navyInk)">${esc(r.s)}</span></span></button>`).join('')}</div>
     <div style="display:flex;flex-direction:column;gap:6px"><label for="mx_nmsg" style="font-size:12px;font-weight:700;color:var(--navyInk2)">The message · you can change it</label><textarea id="mx_nmsg" class="mx-bubble" data-in="nmsg" rows="3">${esc(msg)}</textarea></div>
     <a class="bx-btn red" style="flex:none" id="mx_nsend" href="${esc(waComposeUrl(phone, msg))}" target="_blank" rel="noopener" data-act="nsent" data-keep>${ic('wa', 20)}Open WhatsApp to ${esc(firstWord(s.name))}</a>
-    <span style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;font-weight:600;color:var(--navyInk2)">${phone ? 'You send it' : 'No phone on their staff card — pick the chat in WhatsApp'} · a push to their phone is <span class="mx-prop dark" style="height:18px">PROPOSED</span></span>`;
+    <span style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;font-weight:600;color:var(--navyInk2)">${phone ? 'You send it' : 'No phone on their staff card — pick the chat in WhatsApp'} · ${pushOn() ? 'it also lands as a push' : 'a push to their phone comes with push for every app'}</span>`;
 };
 SHEET.nudge.dark = true;
 ACT.nudge = t => { FEEL.open(); openSheet('nudge', { who: t.dataset.who || '', order: t.dataset.order != null && t.dataset.order !== '' ? Number(t.dataset.order) : null }); };
@@ -2431,7 +2446,7 @@ PAGE.debtor = a => {
   return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
     <div class="bx-sheethead" style="gap:14px"><span class="bx-grip"></span>
       <div style="display:flex;align-items:center;gap:12px"><span class="mx-face">${avatar(c.name, c.id, 46, true)}${sellerBadge(ls).replace('box-shadow:0 0 0 2px #fff', '')}</span>
-        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:17px;font-weight:700">${esc(c.name)}</span><span class="ell" style="font-size:12px;color:var(--navyInk)">${ls ? esc(firstWord(ls.name)) + ' last sold · ' : ''}terms <span class="m">${terms}</span> days${custAreaOf(c) ? ' · ' + esc(custAreaOf(c)) : ''}</span></span>${closeBtn()}</div>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:17px;font-weight:700">${esc(c.name)}</span><span class="ell" style="font-size:12px;color:var(--navyInk)">${ls ? esc(firstWord(ls.name)) + ' last sold · ' : ''}terms <span class="m">${terms}</span> days${custAreaOf(c) ? ' · ' + esc(custAreaOf(c)) : ''}</span></span>${can('credit.set') || can('customer.edit') ? `<button class="bx-circle" data-act="push" data-p="custedit" data-id="${esc(c.id)}" aria-label="Edit ${esc(c.name)}: limit and terms">${ic('lines', 16)}</button>` : ''}${closeBtn()}</div>
       <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:700;color:var(--navyInk2)">Owes the shop</span><span class="mx-big" style="font-size:30px">${n0(c.debt)}</span></span>${c.debt > 0 ? `<span class="bx-chip" style="background:${age > terms ? 'rgba(229,72,61,.18)' : 'rgba(111,220,176,.14)'};color:${age > terms ? 'var(--rose)' : 'var(--mint)'}">oldest <span class="m" style="margin:0 3px">${age}</span> days</span>` : ''}</div>
       <div role="img" aria-label="Owes ${n0(c.debt)}${limit ? ' of a ' + n0(limit) + ' limit' : ', no credit limit set'}${pend ? '; orders on the way add ' + n0(pend) : ''}" style="display:flex;flex-direction:column;gap:6px">
         <span style="position:relative;height:14px;border-radius:999px;background:rgba(255,255,255,.08)"><i class="a-grow" style="position:absolute;left:0;top:0;bottom:0;width:${pc(c.debt)};border-radius:999px 0 0 999px;background:${limit && c.debt > limit ? '#E5483D' : 'var(--amber)'}"></i>${pend ? `<i class="a-grow" style="animation-delay:.5s;position:absolute;left:${pc(c.debt)};top:0;bottom:0;width:${pc(pend)};border-radius:0 999px 999px 0;background:repeating-linear-gradient(135deg,${over ? 'rgba(229,72,61,.7)' : 'rgba(245,178,107,.55)'} 0 4px,rgba(245,178,107,.2) 4px 7px)"></i>` : ''}${limit ? `<i style="position:absolute;left:${pc(limit)};top:-5px;bottom:-5px;width:2.5px;border-radius:2px;background:#fff"></i>` : ''}</span>
@@ -2446,13 +2461,13 @@ PAGE.debtor = a => {
           <span class="m" style="position:absolute;left:0;bottom:0;font-size:10px;color:var(--ink3)">30d+</span><span class="m" style="position:absolute;left:${(100 - x(Math.min(terms, scale))).toFixed(1)}%;bottom:0;transform:translateX(-50%);font-size:10px;font-weight:600;color:var(--crimson)">${terms}d</span><span class="m" style="position:absolute;right:0;bottom:0;font-size:10px;color:var(--ink3)">today</span></div>` : `<span class="bx-sub">No open bills${c.debt > 0 ? ' — the debt is on account' : ''}.</span>`}
       </div>
       <div class="bx-card" style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
-        <div style="display:flex;align-items:center;justify-content:space-between"><b style="font-size:13px">Promises</b><span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--ink3)">${ic('lock', 11, 'style="stroke-width:2.2"')}the owner records them</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between"><b style="font-size:13px">Promises</b>${can('promise.record') ? `<button class="mx-act soft" style="height:30px" data-act="push" data-p="promise" data-id="${esc(c.id)}">${ic('plus', 13, 'style="stroke-width:2.4"')}Record a promise</button>` : `<span style="font-size:11px;font-weight:600;color:var(--ink3)">kept or broken</span>`}</div>
         ${proms.length ? `<div style="display:flex;align-items:flex-start">${proms.map((p, i) => { const s2 = pst(p); return `${i ? `<span style="flex:1;height:2px;margin-top:15px;background:${s2 === 'open' ? 'repeating-linear-gradient(90deg,#D9D4CB 0 4px,transparent 4px 8px)' : '#E6E3DD'}"></span>` : ''}<span style="display:flex;flex-direction:column;align-items:center;gap:4px;width:92px"><span style="width:30px;height:30px;border-radius:999px;display:flex;align-items:center;justify-content:center;${s2 === 'kept' ? 'background:var(--greenSoft);color:var(--green)' : s2 === 'broken' ? 'background:var(--crimsonSoft);color:var(--crimson)' : 'box-shadow:inset 0 0 0 1.5px #C9C4BA;color:var(--ink3)'}">${ic(s2 === 'kept' ? 'tick' : s2 === 'broken' ? 'close' : 'clock', 14, 'style="stroke-width:2.8"')}</span><span style="font-size:11px;font-weight:600;color:var(--ink2);text-align:center">${p.amount ? `<b class="m" style="color:var(--ink)">${short(p.amount)}</b> · ` : ''}${esc(dayLabel(p.promisedOn))}<br><span style="color:${s2 === 'broken' ? 'var(--crimson)' : s2 === 'kept' ? 'var(--green)' : 'var(--ink3)'}">${s2}</span></span></span>`; }).join('')}</div>` : '<span class="bx-sub">No promises on record.</span>'}
       </div>
       <div class="bx-card" style="display:flex;align-items:center;gap:10px;padding:10px 12px">${ic('doc', 18, 'style="color:var(--ink2)"')}<span style="flex:1;font-size:13px;font-weight:600;color:var(--ink2)">${st ? `Statement sent <b style="color:var(--ink)">${esc(dayLabel(st.sent_on))}</b>` : 'No statement sent yet'}</span>${st ? `<span class="m" style="font-size:12px;font-weight:600;color:var(--ink3)">${daysBetween(String(st.sent_on).slice(0, 10), todayISO())}d ago</span>` : ''}</div>
     </div>
     <div class="bx-foot"><div class="row">${callBtn(c.phone || c.phone2, c.name)}${ls ? `<button class="bx-sq" data-act="nudge" data-who="${ls.id}" aria-label="Ask ${esc(ls.name)} to chase">${ic('nudge', 22)}</button>` : ''}
-      ${c.debt > 0 ? (canPay ? `<button class="bx-btn red" data-act="push" data-p="pay" data-id="${esc(c.id)}">${ic('cash', 20)}Take a payment</button>` : `<button class="bx-btn ghost" disabled>${ic('lock', 18)}Taking payments · owner turns on</button>`) : `<span class="bx-btn ghost" style="color:var(--green)">${ic('tick', 18, 'style="stroke-width:2.6"')}All paid</span>`}</div></div>
+      ${c.debt > 0 ? (canPay ? `<button class="bx-btn red" data-act="push" data-p="pay" data-id="${esc(c.id)}">${ic('cash', 20)}Take a payment</button>` : `<button class="bx-btn ghost" disabled>${ic('lock', 18)}Taking payments · not on for this login</button>`) : `<span class="bx-btn ghost" style="color:var(--green)">${ic('tick', 18, 'style="stroke-width:2.6"')}All paid</span>`}</div></div>
   </div>`;
 };
 
@@ -2496,9 +2511,9 @@ PAGE.approvals = () => {
       <div class="mx-hint"><span style="width:30px;height:30px;flex:none;border-radius:999px;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center">${ic('bulb', 16, 'style="stroke-width:2.2"')}</span><span style="flex:1">${way}</span></div>
       ${dec ? `<div style="display:flex;align-items:center;gap:10px"><span class="mx-stampw" style="color:${stampCol}">${dec}</span><span style="flex:1;font-size:12px;font-weight:600;color:var(--ink2);line-height:1.35">${dec === 'RELEASED' ? 'It can move on from Checking now.' : dec === 'ASKED' ? (taker ? esc(firstWord(taker.name)) : 'Sales') + ' collects first. It stays held until then.' : 'It stays in Checking.'}</span>${list.length > 1 ? `<button class="mx-act navy" style="height:46px;font-size:14px" data-act="hnext">Next${ic('chev', 14, 'style="stroke-width:2.4"')}</button>` : ''}</div>`
       : canYes ? `<div class="mx-3btn"><button data-act="hdecide" data-v="hold" style="background:var(--soft);color:var(--ink)">${ic('lock', 16)}Keep held</button><button data-act="hdecide" data-v="cash" style="background:var(--navy);color:#fff">${ic('cash', 16, 'style="stroke:#6FDCB0"')}${x.over ? 'Cash first' : 'Old bill first'}</button><button data-act="hdecide" data-v="release" style="background:var(--red);color:#fff;font-size:15px;flex-direction:row;gap:6px;box-shadow:0 8px 18px rgba(201,58,48,.28)">${ic('tick', 18, 'style="stroke-width:2.6"')}Release</button></div>`
-      : `<div class="mx-lock">${ic('lock', 16)}Saying yes is a manager task the owner turns on (credit.release).</div>`}
+      : `<div class="mx-lock">${ic('lock', 16)}Saying yes is a Manager task (credit.release) not on for this login yet.</div>`}
     </div></div>
-    <div class="bx-body" style="margin-top:auto"><div class="mx-lock">${ic('lock', 14)}<span>The owner sets limits, terms and the ${holdDays()}-day hold line${holdIsOn() ? '' : ' · the hold itself is proposed'}</span></div></div>
+    <div class="bx-body" style="margin-top:auto"><div style="display:flex;gap:8px"><button class="bx-btn ghost" style="height:44px;font-size:13px" data-act="push" data-p="custedit" data-id="${esc(c.id)}">${ic('cust', 16)}Limit and terms</button><button class="bx-btn ghost" style="height:44px;font-size:13px" data-act="push" data-p="teamrules">${ic('clock', 16)}Hold line · ${holdDays()}d</button></div></div>
   </div>`;
 };
 ACT.hpick = t => { S.ui.hold = Number(t.dataset.i); S.ui.holdAnim = true; FEEL.tick(); render(); S.ui.holdAnim = false; };
@@ -2513,83 +2528,6 @@ ACT.hdecide = async t => {
     S.ui.decided[x.q.id] = { release: 'RELEASED', cash: 'ASKED', hold: 'HELD' }[v];
     (v === 'release' ? FEEL.yes : v === 'hold' ? FEEL.no : FEEL.stamp)();
   } catch (e) { toast(failWord(e), 5000); }
-  S.busy = false; render();
-};
-
-/* ---------------- from the Store: short picks, trip differences, write-offs (0124) ----------------
-   The Store proposes, the Manager decides; every yes goes to the owner's log.
-   Each card is one decision: the key figure big, a strip of squares that
-   shows it, and two answers. */
-function storeAsks(){
-  if (!S.data) return [];
-  const out = [], done = S.ui.storeDone || {};
-  D().savedQuotes.forEach(q => { if (q.voided || q.invoiced || !['preparing', 'pending_delivery', 'completed'].includes(q.status)) return;
-    (q.items || []).forEach(it => { if (it.pickStatus !== 'short' || it.pickSettle) return; const k = 'p' + q.id + ':' + it.lineId;
-      out.push({ k, kind: 'pick', kindWord: 'Short pick', title: it.productName || 'A line', sub: `${clientName(q)} · Q-${String(q.id).padStart(4, '0')}`, q, it,
-        got: Number(it.pickedQty) || 0, of: Number(it.qty) || 0, unit: it.unit || '', at: msOf(q.pickingDoneAt) || q.stageEnteredAt || 0 }); }); });
-  D().collectionTrips.forEach(t => { if (t.differenceStatus !== 'open' || !t.difference) return;
-    t.difference.forEach((d, i) => out.push({ k: 't' + t.id + ':' + i, kind: 'trip', kindWord: 'Trip', title: d.productName || 'A line', sub: `${firstWord((staffById(t.assignedWorkerId) || {}).name) || supplierName(t.supplierId) || 'A'}'s trip · the shop counted ${d.shop < d.buyer ? 'fewer' : 'more'}`,
-      t, buyer: Number(d.buyer) || 0, shop: Number(d.shop) || 0, unit: d.unit || '', at: msOf(t.confirmedAt) })); });
-  (D().reports || []).forEach(r => { if (r.status !== 'reported') return;
-    out.push({ k: 'r' + r.id, kind: 'off', kindWord: 'Write-off', title: r.name || 'An item', sub: `${firstWord(r.byName) || 'The Store'} reported ${r.qty} ${r.reason}${r.photo ? ' · photo' : ''}`, r, at: msOf(r.createdAt) }); });
-  // A decision stays on the page, stamped, until the page is left.
-  const seen = S.ui.storeSeen || (S.ui.storeSeen = {});
-  out.forEach(x => { seen[x.k] = x; });
-  Object.keys(done).forEach(k => { if (!out.some(x => x.k === k) && seen[k]) out.push(seen[k]); });
-  return out.sort((a, b) => (b.at || 0) - (a.at || 0));
-}
-function strip(parts, n){ const c = []; parts.forEach(([k, col]) => { for (let i = 0; i < k && c.length < n; i++) c.push(col); }); while (c.length < n) c.push('#E6E3DD'); return c; }
-function stripRow(label, cells, fig, figCol){
-  return `<div style="display:flex;align-items:center;gap:8px"><span style="width:46px;font-size:9px;font-weight:700;letter-spacing:.08em;color:#9AA1AE;flex:none">${esc(label)}</span>
-    <span style="flex:1;display:grid;grid-template-columns:repeat(${cells.length},minmax(0,1fr));gap:2px">${cells.map(c => `<i style="height:9px;border-radius:2px;background:${c}"></i>`).join('')}</span>
-    <span class="m" style="width:24px;text-align:right;font-size:11px;font-weight:600;color:${figCol || 'var(--ink)'}">${esc(fig)}</span></div>`;
-}
-PAGE.storeasks = () => {
-  const list = storeAsks(), done = S.ui.storeDone || (S.ui.storeDone = {}), open = list.filter(x => !done[x.k]).length;
-  const head = `<div class="bx-sheethead"><span class="bx-grip"></span>
-    <div style="display:flex;align-items:center;gap:10px"><span style="flex:1;display:flex;flex-direction:column;gap:3px"><span class="bx-eyebrow">THE STORE PROPOSES · YOU DECIDE</span><span style="font-size:20px;font-weight:700">From the Store · <span class="m">${open}</span> left</span></span>${closeBtn()}</div>
-    <span role="img" aria-label="${list.length - open} of ${list.length} decided" style="display:flex;gap:4px">${list.map(x => `<i style="flex:1;height:6px;border-radius:999px;background:${done[x.k] ? 'var(--mint)' : 'rgba(255,255,255,.22)'}"></i>`).join('')}</span></div>`;
-  if (!list.length) return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">${head}<div class="bx-body">${emptyCard('Nothing from the Store', 'Short picks, trip counts that differ from the Buyer\'s, and damaged or lost stock land here.')}</div></div>`;
-  const tint = { pick: ['#FDEEE1', '#95530C', 'box'], trip: ['#DCEAF8', '#1A5A8A', 'truck'], off: ['#FDE8E4', '#A82D24', 'bang'] };
-  const cards = list.map((x, i) => { const [bg, col, icon] = tint[x.kind], d = done[x.k];
-    let fig, word, vis, no, yes;
-    if (x.kind === 'pick') { const n = Math.max(x.of, 1), per = n > 20 ? n / 20 : 1;
-      fig = `${n0(x.got)}/${n0(x.of)}`; word = 'went'; vis = stripRow('WENT', strip([[Math.round(x.got / per), '#0F6B43'], [20, '#F5B26B']], Math.min(20, n)), n0(x.got), '#0F6B43');
-      no = ['full', `Bill all ${n0(x.of)}`]; yes = ['went', `Bill the ${n0(x.got)} that went`]; }
-    else if (x.kind === 'trip') { const n = Math.max(x.buyer, x.shop, 1), per = n > 20 ? n / 20 : 1;
-      fig = (x.shop - x.buyer > 0 ? '+' : '−') + n0(Math.abs(x.shop - x.buyer)); word = x.unit || 'units';
-      vis = stripRow('BUYER', strip([[Math.round(x.buyer / per), '#16203C']], Math.min(20, n)), n0(x.buyer)) + stripRow('SHOP', strip([[Math.round(Math.min(x.shop, x.buyer) / per), '#0F6B43'], [Math.round(Math.abs(x.buyer - x.shop) / per), '#F5B26B']], Math.min(20, n)), n0(x.shop), '#95530C');
-      no = ['ask', 'Ask the Buyer']; yes = ['accept', `Accept the shop's ${n0(x.shop)}`]; }
-    else { const n = 20; fig = n0(x.r.qty); word = x.r.reason;
-      vis = stripRow('ITEMS', strip([[Math.min(n, Math.round(x.r.qty)), '#F5B26B']], n).map((c, k) => k < Math.round(x.r.qty) ? c : '#C3CAD4'), n0(x.r.qty), '#95530C');
-      no = ['ask', `Ask ${firstWord(x.r.byName) || 'them'} why`]; yes = ['off', `Write off ${n0(x.r.qty)}`]; }
-    return `<div class="bx-card" style="border-radius:22px;padding:12px;display:flex;flex-direction:column;gap:9px;animation:mxIn .4s ${i * .06}s both">
-      <div style="display:flex;align-items:center;gap:8px"><span class="bx-chip" style="height:20px;font-size:10px;letter-spacing:.06em;background:${bg};color:${col}">${esc(x.kindWord.toUpperCase())}</span><span style="flex:1"></span><span style="font-size:11px;color:var(--ink3)">${x.at ? esc(ageWords(minsSince(x.at))) + ' ago' : ''}</span></div>
-      <div style="display:flex;align-items:center;gap:10px"><span style="width:42px;height:42px;border-radius:13px;background:${bg};color:${col};display:flex;align-items:center;justify-content:center;flex:none">${ic(icon, 22)}</span>
-        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><b class="ell" style="font-size:15px">${esc(x.title)}</b><span class="ell" style="font-size:12px;font-weight:600;color:var(--ink3)">${esc(x.sub)}</span></span>
-        <span style="display:flex;flex-direction:column;align-items:flex-end;flex:none"><span class="m" style="font-size:22px;font-weight:600;letter-spacing:-.03em;line-height:1;color:${col}">${esc(fig)}</span><span style="font-size:10px;font-weight:700;color:#9AA1AE;margin-top:3px">${esc(word)}</span></span></div>
-      <div role="img" aria-label="${esc(x.kindWord + ': ' + x.title + ', ' + fig + ' ' + word)}" style="display:flex;flex-direction:column;gap:5px;padding:8px 10px;border-radius:12px;background:var(--soft)">${vis}</div>
-      ${d ? `<div style="height:44px;border-radius:14px;background:var(--greenSoft);color:var(--green);display:flex;align-items:center;gap:8px;padding:0 6px 0 12px;font-size:13px;font-weight:700"><span style="width:22px;height:22px;border-radius:999px;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;flex:none">${ic('tick', 12, 'style="stroke:#fff;stroke-width:3.4"')}</span><span class="ell" style="flex:1">${esc(d.label)}</span><span style="height:30px;padding:0 10px;border-radius:10px;background:#fff;color:var(--ink3);font-size:11px;font-weight:700;display:flex;align-items:center">owner's log</span></div>`
-        : can({ pick: 'pick.settle', trip: 'trip.difference', off: 'stock.writeoff' }[x.kind]) ? `<div style="display:flex;gap:8px"><button class="bx-btn" style="flex:1;height:44px;font-size:13px;background:var(--soft);color:var(--ink)" data-act="sadecide" data-k="${esc(x.k)}" data-v="${no[0]}" ${S.busy ? 'disabled' : ''}>${esc(no[1])}</button><button class="bx-btn red" style="flex:1.35;height:44px;font-size:13px" data-act="sadecide" data-k="${esc(x.k)}" data-v="${yes[0]}" ${S.busy ? 'disabled' : ''}>${esc(yes[1])}</button></div>`
-        : `<div class="mx-lock">${ic('lock', 14)}The owner turns this on for a manager (${esc({ pick: 'pick.settle', trip: 'trip.difference', off: 'stock.writeoff' }[x.kind])}).</div>`}</div>`; }).join('');
-  return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">${head}<div class="bx-body">${cards}</div></div>`;
-};
-ACT.openasks = () => { S.ui.storeDone = {}; FEEL.open(); push('storeasks', {}); };
-ACT.sadecide = async t => {
-  if (S.busy) return; const x = storeAsks().find(y => y.k === t.dataset.k); if (!x) return; const v = t.dataset.v; S.busy = true; render();
-  let label = '';
-  try {
-    if (x.kind === 'pick') { const { error } = await sb.rpc('settle_short_pick', { p_shop: S.shopId, p_order: Number(x.q.id), p_line: String(x.it.lineId), p_mode: v }); if (error) throw error;
-      label = v === 'went' ? `Billing ${n0(x.got)} · Sales told` : `Billing all ${n0(x.of)} · Sales told`;
-      x.it.pickSettle = { bill: v, at: Date.now() }; if (v === 'went') { x.it.orderedQty = x.it.qty; x.it.qty = x.got; } }
-    else if (x.kind === 'trip') { const { error } = await sb.rpc('accept_trip_difference', { p_shop: S.shopId, p_trip: x.t.id, p_accept: v === 'accept' }); if (error) throw error;
-      label = v === 'accept' ? `${n0(x.shop)} accepted · the Buyer told` : 'Asked the Buyer'; x.t.differenceStatus = v === 'accept' ? 'accepted' : 'asked'; }
-    else { const { error } = await sb.rpc(v === 'off' ? 'write_off_stock' : 'ask_about_report', { p_id: x.r.id }); if (error) throw error;
-      label = v === 'off' ? `${n0(x.r.qty)} written off · shelf ${n0(Math.max(0, (D().stock[x.r.key] || 0) - x.r.qty))}` : `Asked ${firstWord(x.r.byName) || 'the Store'}`;
-      if (v === 'off') D().stock[x.r.key] = Math.max(0, (D().stock[x.r.key] || 0) - x.r.qty); x.r.status = v === 'off' ? 'written_off' : 'asked'; }
-    (S.ui.storeDone || (S.ui.storeDone = {}))[x.k] = { label, keep: true };
-    saveSnapshot(); (v === 'ask' || v === 'full' ? FEEL.stamp : FEEL.yes)();
-  } catch (e) { FEEL.no(); toast(/function|schema cache|does not exist/i.test(e.message || '') ? 'This needs migration 0124 on the database — ask the owner to run it.' : failWord(e), 5000); }
   S.busy = false; render();
 };
 
@@ -2621,7 +2559,7 @@ PAGE.pay = a => {
     <div class="bx-dock" style="margin-top:auto">
       <div role="radiogroup" aria-label="Received by" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">${PAY_METHODS.map(m => `<button role="radio" aria-checked="${a.method === m[0]}" data-act="paymethod" data-m="${m[0]}" style="height:62px;border:none;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:12px;font-weight:700;${a.method === m[0] ? 'background:#fff;color:var(--navy);box-shadow:0 8px 18px rgba(0,0,0,.25)' : 'background:rgba(255,255,255,.07);color:var(--navyInk)'}">${ic(m[2], 22)}${m[1]}</button>`).join('')}</div>
       ${c.phone || c.phone2 ? `<button role="switch" aria-checked="${!!a.receipt}" data-act="payreceipt" style="align-self:flex-start;height:36px;padding:0 12px 0 6px;border:none;border-radius:999px;background:rgba(111,220,176,.14);color:var(--mint);font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px"><span style="width:24px;height:24px;border-radius:999px;display:flex;align-items:center;justify-content:center;${a.receipt ? 'background:var(--mint);color:var(--navy)' : 'box-shadow:inset 0 0 0 2px var(--mint)'}">${a.receipt ? ic('tick', 12, 'style="stroke-width:3"') : ''}</span>Receipt to ${esc(firstWord(c.name))}</button>` : ''}
-      ${canPay ? slideHTML('pay', S.paying ? 'Recording…' : amt > 0 ? 'Slide to record ' + n0(amt) : 'Type the amount', 'cash', { disabled: !(amt > 0) || S.paying }) : `<div class="mx-lock" style="background:rgba(255,255,255,.07);color:var(--navyInk)">${ic('lock', 16)}Taking payments is a manager task the owner turns on (payment.receive).</div>`}
+      ${canPay ? slideHTML('pay', S.paying ? 'Recording…' : amt > 0 ? 'Slide to record ' + n0(amt) : 'Type the amount', 'cash', { disabled: !(amt > 0) || S.paying }) : `<div class="mx-lock" style="background:rgba(255,255,255,.07);color:var(--navyInk)">${ic('lock', 16)}Taking payments is a Manager task (payment.receive) not on for this login yet.</div>`}
       <span style="font-size:11px;font-weight:600;color:var(--navyInk2);text-align:center">Counts as money in under your name${taker ? ' · the sale stays ' + esc(firstWord(taker.name)) + "'s" : ''}</span>
     </div>
   </div>`;
@@ -2709,7 +2647,7 @@ ACT['slide:pay'] = async () => {
     render(); FEEL.stamp(); playKaching();
   } catch (e) {
     S.paying = false;
-    if (written > 0) { toast(`Stopped part-way: ${n0(written)} of ${n0(amount)} was recorded. Tell the owner before trying again.`, 9000); loadAll().then(render).catch(() => {}); }
+    if (written > 0) { toast(`Stopped part-way: ${n0(written)} of ${n0(amount)} was recorded. Tell Accounts before trying again.`, 9000); loadAll().then(render).catch(() => {}); }
     else { render(); toast(isNetworkError(e) ? 'No connection — nothing was recorded. Try again.' : 'Nothing was recorded: ' + (e.message || e), 6000); }
   }
 };
@@ -2730,22 +2668,929 @@ PAGE.paid = p => `<div class="mx-win" style="position:relative;min-height:100%">
 PAGE.paid.bg = '#16203C';
 
 /* ==================================================================
+   DECIDE — everything that waits for the Manager (docs/decision-rights.md
+   section 2). Nothing here waits for the owner: the owner gets the log.
+
+   Each decision is drawn from what the books already hold, written the
+   way the console writes it (each port names its original), and logged
+   to decision_log (0123) with what it was before.
+   ================================================================== */
+Object.assign(ICON, {
+  ret: '<path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>',
+  pct: '<path d="M19 5L5 19"/><circle cx="7" cy="7" r="2.5"/><circle cx="17" cy="17" r="2.5"/>',
+  agent: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 8.5h5M18.5 6v5"/>',
+  cust: '<path d="M4 20V9l8-5 8 5v11z"/><path d="M9 20v-5h6v5"/>',
+  list: '<path d="M9 5h10M9 12h10M9 19h10M4 5h.01M4 12h.01M4 19h.01"/>',
+  scale: '<path d="M12 4v16M5 20h14M6 8h12M6 8l-3 6a3 3 0 0 0 6 0zM18 8l-3 6a3 3 0 0 0 6 0z"/>',
+  warn: '<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.01"/>',
+});
+
+/* ---------------- the owner's log ----------------
+   One line per decision, with what it was before (0123 decision_log). A
+   log line that cannot be written never undoes the decision: the change
+   is the shop's; the line is a record of it. */
+async function logDecision(task, what, extra){
+  extra = extra || {};
+  try {
+    const r = await sb.from('decision_log').insert({ shop_id: S.shopId, by: S.user ? S.user.id : undefined, by_name: myName(), role: S.role,
+      task, what: String(what).slice(0, 300), amount: extra.amount == null ? null : Math.round(Number(extra.amount) || 0),
+      ref: extra.ref || null, before: extra.before === undefined ? null : extra.before, after: extra.after === undefined ? null : extra.after });
+    if (r && r.error) console.warn('decision_log', r.error.message || r.error);
+  } catch (e) { console.warn('decision_log', e); }
+}
+/* A server function the shared build or 0122 owns. Missing (an older
+   database) reads as "not switched on yet", never as a broken screen. */
+function rpcMissing(e){ const m = String((e && (e.message || e.code)) || e || ''); return /PGRST202|could not find the function|does not exist|42883/i.test(m); }
+async function callFn(name, args){
+  const r = await sb.rpc(name, args);
+  if (r && r.error) throw r.error;
+  return r ? r.data : null;
+}
+
+/* ---------------- prices that wait for the Manager ----------------
+   sales.html lineCost / shopSellPrice / priceNoteFor: a salesperson's own
+   price carries priceBy and a note -- 'under' (below the shop's price),
+   'nomargin' (no markup rule, so no shop's price), 'nocost' (no known
+   cost). The Manager's answer rides on the line as priceReview (section
+   3), and goes stale the moment the price or the quantity moves. */
+function lineCost(it){ const c = Number(it.price); return c > 0 ? c : null; }
+function shopSellPrice(it){ if (!lineCost(it) || !lineHasRule(it)) return null; return Math.round(quoteItemSellPrice({ ...it, sellPrice: null })); }
+function linePriceNow(it){ return Math.round(Number(it.sellPrice) > 0 ? Number(it.sellPrice) : quoteItemSellPrice(it)); }
+function reviewFresh(it){ const r = it && it.priceReview; return !!r && Number(r.price) === linePriceNow(it) && Number(r.qty) === Number(it.qty); }
+function lineWaitsPrice(it){ return !!it && !!it.priceBy && ['under', 'nomargin', 'nocost'].includes(it.priceNote) && !reviewFresh(it); }
+function lineKind(it){ if (!lineCost(it)) return 'nocost'; if (it.priceNote === 'nomargin' || shopSellPrice(it) == null) return 'nomargin'; return 'under'; }
+function priceCases(){
+  return liveOrders().filter(q => !q.invoiced)
+    .map(q => ({ q, lines: (q.items || []).map((it, idx) => ({ it, idx, kind: lineKind(it) })).filter(l => lineWaitsPrice(l.it)) }))
+    .filter(x => x.lines.length).sort((a, b) => createdMs(a.q) - createdMs(b.q));
+}
+// A counter sale below the shop's price: the customer is standing there.
+function counterCases(){ return priceCases().filter(x => x.q.counter); }
+function ladderCases(){ return priceCases().filter(x => !x.q.counter && x.lines.some(l => l.kind === 'under')); }
+function openPriceCases(){ return priceCases().filter(x => !x.q.counter && x.lines.some(l => l.kind !== 'under')); }
+// What this customer usually pays for it: the middle of their last five.
+function usuallyPays(cid, it){
+  if (cid == null || cid === '') return null;
+  const seen = [];
+  customerOrdersFor(cid).filter(q => q.invoiced).sort((a, b) => createdMs(b) - createdMs(a)).forEach(q => (q.items || []).forEach(x => {
+    if (seen.length >= 5 || x.productId !== it.productId || String(x.variantIdx ?? '') !== String(it.variantIdx ?? '')) return;
+    const p = linePriceNow(x); if (p > 0) seen.push(p);
+  }));
+  if (!seen.length) return null;
+  const s = seen.sort((a, b) => a - b); return { price: s[s.length >> 1], n: seen.length };
+}
+function marginOf(price, cost){ return price > 0 && cost ? (price - cost) / price : null; }
+function marginWord(m){ return m == null ? '—' : (m * 100).toFixed(1) + '%'; }
+function marginCol(m){ return m == null ? 'var(--ink3)' : m >= 0.1 ? 'var(--green)' : m >= 0.05 ? 'var(--amberInk)' : 'var(--crimson)'; }
+function priceStep(cost){ return (Number(cost) || 0) > 50000 ? 1000 : (Number(cost) || 0) > 5000 ? 250 : 50; }
+
+/* The decision itself: approve, a price of the Manager's own, or back to
+   the shop's. Written on the line, re-read from the server first, and
+   refused if somebody changed the line meanwhile. */
+async function decidePrice(qid, idx, how, price){
+  if (S.busy) return null; S.busy = true;
+  let res = null, was = null;
+  try {
+    res = await changeOrder(qid, q => {
+      const it = (q.items || [])[idx];
+      if (!it || !lineWaitsPrice(it)) return false;
+      const cost = lineCost(it);
+      was = linePriceNow(it);
+      const v = how === 'approve' ? was : how === 'shop' ? shopSellPrice(it) : Math.round(Number(price) || 0);
+      if (!(v > 0)) throw new Error('there is no price to set');
+      if (cost && v < cost) throw new Error('that is below the cost, ' + n0(cost));
+      if (how !== 'approve') it.sellPrice = v;
+      it.priceReview = { state: how === 'approve' ? 'approved' : 'changed', price: v, was, qty: Number(it.qty), by: S.user ? S.user.id : null, byName: myName(), at: new Date().toISOString() };
+    }, ['items']);
+    if (!res) throw new Error('that line has changed or been decided already');
+    const it = res.q.items[idx];
+    logDecision('price.approve', `${how === 'approve' ? 'Approved' : 'Set'} ${it.productName || 'a line'} at ${n0(it.priceReview.price)} for ${clientName(res.q)}`, { amount: it.priceReview.price * (Number(it.qty) || 0), ref: { table: 'saved_quotes', id: qid, line: idx }, before: { price: was }, after: { price: it.priceReview.price, state: it.priceReview.state } });
+    (how === 'approve' ? FEEL.yes : FEEL.stamp)();
+  } catch (e) { toast(failWord(e), 5000); res = null; }
+  S.busy = false; render(); renderSheet();
+  return res;
+}
+
+/* ---------------- what waits, counted ----------------
+   One list, so Today, Decide and the badge never disagree. */
+function decideCounts(){
+  const prices = priceCases().reduce((s, x) => s + x.lines.length, 0);
+  const credit = heldWaiting().length;
+  const invoices = invoiceQueue().length;
+  const stock = shortPicks().length + tripDiffs().length + openReports().length + openCounts().length;
+  const returns = openAsks('credit').length + openAsks('void').length + agentAsks().length;
+  return { prices, credit, invoices, stock, returns, total: prices + credit + invoices + stock + returns };
+}
+function oldestWaitMins(){
+  const ms = [].concat(priceCases().map(x => createdMs(x.q)), heldWaiting().map(x => createdMs(x.q)), invoiceQueue().map(x => stageEnteredMs(x.q)),
+    openAsks('credit').concat(openAsks('void')).map(a => Date.parse(a.createdAt) || 0)).filter(Boolean);
+  return ms.length ? minsSince(Math.min(...ms)) : 0;
+}
+const DECIDE_SEGS = [['prices', 'Prices', '#A9AEF0'], ['credit', 'Credit', '#F5B26B'], ['invoices', 'Invoices', '#8EC3F0'], ['stock', 'Stock', '#C5CDDF'], ['returns', 'Returns, voids, agents', '#F59A92']];
+
+// Today's card: six tiles and one red way in.
+function decideCardHTML(){
+  const c = decideCounts();
+  if (!c.total) return '';
+  const tile = (n, w, icn, bg, ink, act) => `<button ${act} style="display:flex;align-items:center;gap:8px;padding:9px 8px;border:none;border-radius:14px;background:var(--bg);min-width:0;text-align:left;color:var(--ink)${n ? '' : ';opacity:.5'}"><span style="width:30px;height:30px;flex:none;border-radius:10px;background:${bg};color:${ink};display:flex;align-items:center;justify-content:center">${ic(icn, 16)}</span><span style="display:flex;flex-direction:column;min-width:0"><span class="m" style="font-size:16px;font-weight:600;line-height:1.1">${n}</span><span class="ell" style="font-size:11px;font-weight:600;color:var(--ink2)">${w}</span></span></button>`;
+  const sp = shortPicks().length, st = tripDiffs().length + openReports().length + openCounts().length;
+  return `<div class="bx-card" style="border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 1px 2px rgba(22,32,60,.05),0 8px 22px rgba(22,32,60,.07),inset 0 0 0 1px var(--line)">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="display:flex;flex-direction:column;gap:1px"><b style="font-size:17px">Decide now</b><span style="font-size:12px;font-weight:600;color:var(--ink3)">oldest waits <span class="m" style="color:var(--crimson)">${esc(ageWords(oldestWaitMins()))}</span></span></span><span class="bx-chip" style="background:#FDE8E4;color:#A82D24"><span class="m">${c.total}</span>&nbsp;waiting</span></div>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">
+      ${tile(c.prices, 'Prices', 'tag', '#E4E6FA', '#3A3F9B', 'data-act="push" data-p="decide"')}
+      ${tile(c.credit, 'Credit', 'cash', 'var(--amberSoft)', 'var(--amberInk)', 'data-act="push" data-p="approvals"')}
+      ${tile(c.invoices, 'Invoices', 'doc', 'var(--skySoft)', 'var(--sky)', 'data-act="push" data-p="invoices"')}
+      ${tile(sp, 'Picks', 'box', 'var(--soft2)', 'var(--slate)', 'data-act="push" data-p="decide"')}
+      ${tile(st, 'Stock', 'truck', 'var(--soft2)', 'var(--slate)', 'data-act="push" data-p="decide"')}
+      ${tile(c.returns, 'Returns', 'ret', 'var(--crimsonSoft)', 'var(--crimson)', 'data-act="push" data-p="decide"')}
+    </div>
+    <button class="bx-btn red" style="flex:none;height:50px;font-size:15px;border-radius:16px" data-act="push" data-p="decide">${ic('tick', 18, 'style="stroke-width:2.4"')}Start with the oldest</button></div>`;
+}
+
+function decideRow(o){
+  return `<button class="bx-row" ${o.act} style="min-height:${o.h || 54}px">
+    <span style="position:relative;width:38px;height:38px;flex:none"><span style="width:38px;height:38px;border-radius:12px;background:${o.bg};color:${o.ink};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">${o.icon ? ic(o.icon, 18) : esc(o.ini || '')}</span>${o.who ? `<span style="position:absolute;right:-5px;bottom:-5px;border-radius:999px;box-shadow:0 0 0 2px #fff">${pav(o.who, 20)}</span>` : ''}</span>
+    <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="bx-t ell">${o.t}</span><span class="bx-sub ell">${o.s}</span></span>
+    ${o.v != null ? `<span style="display:flex;flex-direction:column;align-items:flex-end;gap:3px"><span class="m" style="font-size:13px;font-weight:600">${n0(o.v)}</span>${o.age != null ? `<span class="m" style="padding:1px 7px;border-radius:999px;font-size:11px;font-weight:600;${o.late ? 'background:var(--crimsonSoft);color:var(--crimson)' : 'background:var(--soft2);color:var(--ink2)'}">${esc(ageWords(o.age))}</span>` : ''}</span>` : ic('chev', 16, 'style="color:#9AA1AE;stroke-width:2.2"')}</button>`;
+}
+
+PAGE.decide = () => {
+  const c = decideCounts();
+  const segs = DECIDE_SEGS.filter(s => c[s[0]] > 0);
+  const counter = counterCases(), ladder = ladderCases(), open = openPriceCases(), held = heldWaiting();
+  const lim = limitMins('draft');
+  const sumLines = x => x.lines.reduce((s, l) => s + linePriceNow(l.it) * (Number(l.it.qty) || 0), 0);
+  const check = [].concat(
+    ladder.map(x => ({ at: createdMs(x.q), html: decideRow({ act: `data-act="push" data-p="price" data-id="${x.q.id}"`, icon: 'tag', bg: '#E4E6FA', ink: '#3A3F9B', who: staffByUser(takenBy(x.q)), t: `${esc(clientName(x.q))} · ${x.lines.length} ${pl(x.lines.length, 'price')}`, s: (() => { const l = x.lines.find(y => y.kind === 'under'), sh = l && shopSellPrice(l.it); return sh ? `under the shop's price · <span class="m" style="color:var(--amberInk)">−${Math.round((1 - linePriceNow(l.it) / sh) * 100)}%</span>` : 'under the shop\'s price'; })(), v: Math.round(orderTotal(x.q)), age: minsSince(createdMs(x.q)), late: lim && minsSince(createdMs(x.q)) > lim, h: 56 }) })),
+    held.length ? [{ at: Math.min(...held.map(h => createdMs(h.q))), html: decideRow({ act: 'data-act="push" data-p="approvals"', icon: 'cash', bg: 'var(--amberSoft)', ink: 'var(--amberInk)', who: staffByUser(takenBy(held[0].q)), t: `${held.length} held for credit`, s: `over a limit · owing past ${holdDays()} days`, v: sum(held, h => h.amt), age: minsSince(Math.min(...held.map(h => createdMs(h.q)))), late: true, h: 56 }) }] : [],
+    open.map(x => ({ at: createdMs(x.q), html: decideRow({ act: `data-act="push" data-p="pricenew" data-id="${x.q.id}"`, icon: 'tag', bg: '#E4E6FA', ink: '#3A3F9B', who: staffByUser(takenBy(x.q)), t: `${esc(clientName(x.q))} · ${x.lines.length} ${pl(x.lines.length, 'price')}`, s: x.lines.some(l => l.kind === 'nocost') ? 'a line with no known cost' : 'no selling price yet', v: Math.round(sumLines(x)), age: minsSince(createdMs(x.q)), h: 56 }) }))
+  ).sort((a, b) => a.at - b.at).map(x => x.html).join('');
+  const inv = invoiceQueue(), sp = shortPicks(), td = tripDiffs(), rep = openReports(), cnt = openCounts(), cr = openAsks('credit'), vo = openAsks('void'), ag = agentAsks();
+  const after = [
+    inv.length ? decideRow({ act: 'data-act="push" data-p="invoices"', icon: 'doc', bg: 'var(--skySoft)', ink: 'var(--sky)', t: `${inv.length} ${pl(inv.length, 'invoice')} to raise`, s: inv.filter(x => x.block).length ? `${inv.filter(x => x.block).length} the night run skipped` : 'delivered, not billed yet' }) : '',
+    ...sp.map(x => decideRow({ act: `data-act="push" data-p="shortpick" data-id="${x.q.id}"`, icon: 'box', bg: 'var(--soft2)', ink: 'var(--slate)', t: `Short pick · ${esc(clientName(x.q))}`, s: x.lines.length === 1 ? `${esc(x.lines[0].it.productName || 'a line')} · <span class="m">${x.lines[0].picked}</span> of <span class="m">${x.lines[0].ordered}</span> went` : `${x.lines.length} lines came up short` })),
+    ...td.map(x => decideRow({ act: `data-act="push" data-p="tripcount" data-id="${x.t.id}"`, icon: 'truck', bg: 'var(--soft2)', ink: 'var(--slate)', t: `Trip count differs · ${esc(supplierName(x.t.supplierId) || 'a trip')}`, s: `yard counted <span class="m" style="color:${x.cost < 0 ? 'var(--crimson)' : 'var(--amberInk)'}">${x.cost < 0 ? '−' : '+'}${short(Math.abs(x.cost))}</span> at cost` })),
+    rep.length ? decideRow({ act: 'data-act="push" data-p="writeoff"', icon: 'warn', bg: 'var(--soft2)', ink: 'var(--slate)', t: 'Damaged stock to write off', s: `reported by the store · <span class="m">${rep.length}</span> ${pl(rep.length, 'report')}` }) : '',
+    ...cnt.map(k => decideRow({ act: `data-act="push" data-p="stocktake" data-id="${k.id}"`, icon: 'list', bg: 'var(--soft2)', ink: 'var(--slate)', t: `Stock take · ${esc(k.aisle || 'the shelf')}`, s: `${esc(firstWord(k.countedByName || 'the store'))} counted <span class="m">${(k.lines || []).length}</span> items` })),
+    ...cr.map(a => decideRow({ act: `data-act="push" data-p="return" data-id="${a.id}"`, icon: 'ret', bg: 'var(--crimsonSoft)', ink: 'var(--crimson)', t: `Return · ${esc(clientName(quoteById(a.quoteId) || {}))}`, s: `${esc(firstWord(a.askedByName || 'someone'))} asks · <span class="m">${n0(a.amount)}</span> back` })),
+    ...vo.map(a => decideRow({ act: `data-act="push" data-p="void" data-id="${a.id}"`, icon: 'outc', bg: 'var(--crimsonSoft)', ink: 'var(--crimson)', t: `Void · ${esc(clientName(quoteById(a.quoteId) || {}))}`, s: `${esc(firstWord(a.askedByName || 'someone'))} asks · ${esc(invoiceLabel({ id: a.quoteId }))} ${esc(a.reason || '')}` })),
+    ...ag.map(x => decideRow({ act: `data-act="push" data-p="agentask" data-id="${x.q.id}"`, icon: 'agent', bg: 'var(--amberSoft)', ink: 'var(--amberInk)', t: `Agent asks · ${esc(firstWord(x.agent || 'an agent'))}`, s: x.cancel ? `cancel ${esc(clientName(x.q))}` : `change ${esc(clientName(x.q))} · <span class="m">${x.lines.length}</span> ${pl(x.lines.length, 'line')}` })),
+  ].filter(Boolean).join('');
+  const rs = restockLines();
+  return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
+    <div class="bx-sheethead" style="gap:12px"><span class="bx-grip"></span>
+      <div style="display:flex;align-items:center;gap:10px"><span style="flex:1;display:flex;flex-direction:column;gap:3px"><span class="bx-eyebrow">DECIDE NOW</span><span style="font-size:20px;font-weight:700"><span class="m">${c.total}</span> waiting for you</span></span>${closeBtn()}</div>
+      ${c.total ? `<div role="img" aria-label="${c.total} decisions: ${segs.map(s => c[s[0]] + ' ' + s[1].toLowerCase()).join(', ')}" style="display:flex;flex-direction:column;gap:8px">
+        <span style="display:flex;gap:3px;height:12px">${segs.map((s, i) => `<i class="a-grow" style="flex:${c[s[0]]};border-radius:${i === 0 ? '999px' : '3px'} ${i === segs.length - 1 ? '999px 999px' : '3px 3px'} ${i === 0 ? '999px' : '3px'};background:${s[2]}"></i>`).join('')}</span>
+        <span style="display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;font-weight:600;color:var(--navyInk)">${segs.map(s => `<span style="display:inline-flex;align-items:center;gap:5px"><i style="width:7px;height:7px;border-radius:999px;background:${s[2]}"></i>${s[1]} <b class="m" style="color:#fff">${c[s[0]]}</b></span>`).join('')}</span></div>` : ''}
+    </div>
+    <div class="bx-body">
+      ${counter.map(x => { const l = x.lines[0], it = l.it, sh = shopSellPrice(it), w = Math.round(minsSince(createdMs(x.q))), seller = staffByUser(takenBy(x.q));
+        return `<button data-act="counter" data-id="${x.q.id}" aria-label="At the counter now: ${esc(seller ? firstWord(seller.name) : 'Sales')} asks to sell ${esc(it.productName || 'an item')} at ${n0(linePriceNow(it))}" style="display:flex;align-items:center;gap:10px;min-height:52px;padding:0 12px;border:none;border-radius:18px;background:#FDE8E4;box-shadow:inset 0 0 0 1.5px #F2B7AE;text-align:left;color:var(--ink)">
+          ${pctRing(Math.min(1, w / 5), 38, 3, '#C93A30', `<span class="m" style="font-size:10px;font-weight:600;color:var(--crimson)">${w < 60 ? w + 'm' : ageWords(w)}</span>`, '', '#F6CFC8')}
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:11px;font-weight:700;letter-spacing:.1em;color:#A82D24">AT THE COUNTER NOW · ${esc((seller ? firstWord(seller.name) : 'SALES').toUpperCase())}</span><span class="ell" style="font-size:14px;font-weight:700">${esc(it.productName || 'An item')} at <span class="m">${n0(linePriceNow(it))}</span></span></span>
+          ${sh ? `<span class="m" style="font-size:11px;font-weight:600;color:var(--ink3);text-decoration:line-through">${n0(sh)}</span>` : ''}${ic('chev', 16, 'style="color:#A82D24;stroke-width:2.2"')}</button>`; }).join('')}
+      ${check ? `<div class="bx-sec" style="padding-top:2px"><span style="font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--ink2)">ORDERS WAITING IN CHECKING</span><span>oldest first</span></div><div class="bx-card bx-list">${check}</div>` : ''}
+      ${after || rs.length ? `<div class="bx-sec" style="padding-top:6px"><span style="font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--ink2)">AFTER DELIVERY · STOCK</span>${rs.length ? `<button data-act="push" data-p="restock" style="border:none;background:none;padding:0;display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:#3A3F9B">${esc(firstWord(restockBuyer()))}’s restock list${ic('chev', 12, 'style="stroke-width:2.4"')}</button>` : ''}</div>${after ? `<div class="bx-card bx-list">${after}</div>` : ''}` : ''}
+      ${!c.total && !counter.length ? emptyCard('Nothing waits for you', 'Prices, credit, invoices, stock and returns are all decided.') : ''}
+      <span class="bx-hint" style="font-size:11px;color:var(--ink3)">${ic('doc', 13)}Every decision goes in the owner’s log</span>
+    </div></div>`;
+};
+
+/* ---------------- a price under the shop's: the ladder ---------------- */
+PAGE.price = a => {
+  const x = priceCases().find(y => Number(y.q.id) === Number(a.id));
+  if (!x) return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card"><div class="bx-sheethead"><span class="bx-grip"></span><div style="display:flex;align-items:center"><b style="flex:1;font-size:18px">Prices to approve</b>${closeBtn()}</div></div><div class="bx-body">${emptyCard('All decided', 'Every price on this order has an answer.')}</div></div>`;
+  const q = x.q, lines = x.lines, i = Math.min(Number(S.ui.pline) || 0, lines.length - 1), l = lines[i], it = l.it;
+  const seller = staffByUser(takenBy(q)), cost = lineCost(it), shop = shopSellPrice(it), rep = linePriceNow(it), usual = usuallyPays(q.customerId, it);
+  const setting = S.ui.psetting === q.id + ':' + l.idx, setV = setting ? Number(S.ui.pset) || rep : rep;
+  const chosen = setting ? setV : rep;
+  const lo = cost || Math.min(rep, shop || rep) * 0.9, hi = Math.max(shop || 0, rep, usual ? usual.price : 0) * 1.04;
+  const rungs = [shop ? { k: 'shop', l: 'Shop’s price', n: 'cost + markup', p: shop, col: '#16203C' } : null, usual ? { k: 'usual', l: 'Usually pays', n: `their last ${usual.n}`, p: usual.price, col: '#0E6470' } : null,
+    { k: 'rep', l: setting ? 'Your price' : (seller ? firstWord(seller.name) + '’s price' : 'Their price'), n: setting ? (seller ? firstWord(seller.name) : 'Sales') + ' offered ' + n0(rep) : 'what they told them', p: chosen, col: '#C93A30', hot: true },
+    cost ? { k: 'cost', l: 'Cost', n: 'the floor, never below', p: cost, col: '#8E2A22' } : null].filter(Boolean).sort((a, b) => b.p - a.p || (a.hot ? -1 : 1));
+  // Evenly spaced, highest first: two prices a few shillings apart never sit on each other.
+  const y = p => { const i = rungs.findIndex(r => r.p === p); return rungs.length > 1 ? (rungs.length - 1 - i) / (rungs.length - 1) * 100 : 50; };
+  const pill = r => { const m = marginOf(r.p, cost); return r.k === 'cost' ? 'background:var(--crimsonSoft);color:var(--crimson)' : m >= .1 ? 'background:var(--greenSoft);color:var(--green)' : m >= .05 ? 'background:var(--amberSoft);color:var(--amberInk)' : 'background:var(--crimsonSoft);color:var(--crimson)'; };
+  const held = heldOrders().find(h => Number(h.q.id) === Number(q.id) && (!h.decision || h.decision.decision !== 'release'));
+  const decided = (q.items || []).filter(z => z.priceBy && ['under', 'nomargin', 'nocost'].includes(z.priceNote)).length - lines.length;
+  const tot = decided + lines.length, step = priceStep(cost);
+  return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
+    <div class="bx-sheethead" style="gap:12px"><span class="bx-grip"></span>
+      <div style="display:flex;align-items:center;gap:12px"><span class="mx-face">${custAv(customerById(q.customerId) || { name: clientName(q), id: q.id }, 44)}${seller ? sellerBadge(seller) : ''}</span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="bx-eyebrow">PRICE TO APPROVE · ${i + 1} OF ${lines.length}</span><span class="ell" style="font-size:17px;font-weight:700">${esc(clientName(q))}</span><span style="font-size:12px;color:var(--navyInk)">${seller ? esc(firstWord(seller.name)) + ' priced it · ' : ''}<span class="m">Q-${String(q.id).padStart(4, '0')}</span> ${q.status === 'completed' ? 'delivered · waits to be billed' : 'waits in ' + esc(stageOf(q).label)}</span></span>${closeBtn()}</div>
+      ${lines.length > 1 ? `<div class="mx-tabs3" role="tablist" aria-label="Lines to decide" style="grid-template-columns:repeat(${Math.min(3, lines.length)},minmax(0,1fr))">${lines.slice(0, 3).map((z, k) => { const sh = shopSellPrice(z.it); return `<button class="mx-tab3" role="tab" aria-selected="${k === i}" data-act="pline" data-i="${k}"><span style="display:flex;flex-direction:column;min-width:0"><span class="ell" style="font-size:12px;font-weight:700">${esc(String(z.it.productName || 'Line').split(' · ')[0])}</span><span class="ell" style="font-size:11px;font-weight:700;color:var(--amber)">${sh ? '−' + Math.round((1 - linePriceNow(z.it) / sh) * 100) + '% under the shop’s' : 'no shop’s price'}</span></span></button>`; }).join('')}</div>` : ''}
+    </div>
+    <div class="bx-body">
+      <div class="bx-card a-card" style="border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b class="ell" style="font-size:15px">${esc(it.productName || 'A line')}</b><span style="font-size:12px;font-weight:600;color:var(--ink3)"><span class="m">${n0(it.qty)}</span> ${esc(it.unit || '')} · each</span></span>
+          <span style="display:flex;flex-direction:column;align-items:flex-end"><span style="font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--ink3)">LINE AT THIS PRICE</span><span class="m" style="font-size:16px;font-weight:600">${n0(chosen * (Number(it.qty) || 0))}</span></span></div>
+        <div role="img" aria-label="${esc(rungs.map(r => r.l + ' ' + n0(r.p) + (r.k === 'cost' ? '' : ' at ' + marginWord(marginOf(r.p, cost)))).join(', '))}" style="display:grid;grid-template-columns:26px 1fr;gap:10px;height:${rungs.length * 50 + 14}px">
+          <span style="position:relative;margin:18px 0"><span style="position:absolute;left:11px;top:4px;bottom:4px;width:4px;border-radius:999px;background:linear-gradient(#0F6B43,#F5B26B 70%,#E5483D)"></span>
+            ${rungs.map(r => `<span style="position:absolute;left:${r.hot ? 4 : 7}px;bottom:calc(${y(r.p).toFixed(1)}% - ${r.hot ? 9 : 6}px);width:${r.hot ? 18 : 12}px;height:${r.hot ? 18 : 12}px;border-radius:999px;transition:bottom .35s cubic-bezier(.3,.9,.3,1);${r.hot ? `background:#fff;box-shadow:inset 0 0 0 5px ${r.col},0 0 0 4px rgba(201,58,48,.16)` : `background:${r.col};box-shadow:0 0 0 3px #fff`}"></span>`).join('')}</span>
+          <span style="position:relative;margin:18px 0">${rungs.map(r => `<span style="position:absolute;left:0;right:0;bottom:calc(${y(r.p).toFixed(1)}% - 18px);height:36px;display:grid;grid-template-columns:1fr auto 58px;gap:8px;align-items:center;padding:0 8px;border-radius:12px;box-sizing:border-box;transition:bottom .35s cubic-bezier(.3,.9,.3,1);${r.hot ? 'background:#FDE8E4;box-shadow:inset 0 0 0 1.5px #F2B7AE' : ''}">
+              <span style="display:flex;flex-direction:column;min-width:0"><span class="ell" style="font-size:13px;font-weight:700;color:${r.hot ? '#A82D24' : 'var(--ink)'}">${esc(r.l)}</span><span class="ell" style="font-size:11px;font-weight:600;color:var(--ink3)">${esc(r.n)}</span></span>
+              <span class="m" style="font-size:14px;font-weight:600;color:${r.k === 'cost' ? 'var(--crimson)' : 'var(--ink)'}">${n0(r.p)}</span>
+              <span class="m" style="justify-self:end;height:22px;padding:0 8px;border-radius:999px;display:flex;align-items:center;font-size:11px;font-weight:600;${pill(r)}">${r.k === 'cost' ? '0%' : marginWord(marginOf(r.p, cost))}</span></span>`).join('')}</span>
+        </div>
+        ${setting ? priceInputHTML('pset', setV, cost, shop, it.qty, step) : ''}
+        <div class="mx-3btn">
+          ${shop ? `<button data-act="pdecide" data-how="shop" style="background:var(--soft);color:var(--ink)"><span>Shop’s price</span><span class="m" style="font-size:11px;color:var(--ink2)">${n0(shop)}</span></button>` : '<span></span>'}
+          <button data-act="pdecide" data-how="set" style="background:var(--navy);color:#fff">${setting ? `<span>Use this</span><span class="m" style="font-size:11px;opacity:.8">${n0(setV)}</span>` : 'Set price'}</button>
+          <button data-act="pdecide" data-how="approve" style="background:var(--red);color:#fff;font-size:14px;box-shadow:0 8px 18px rgba(201,58,48,.28)"><span style="display:flex;align-items:center;gap:5px">${ic('tick', 15, 'style="stroke-width:2.6"')}Approve</span><span class="m" style="font-size:11px;opacity:.85">${n0(rep)}</span></button></div>
+      </div>
+      <div class="bx-card" style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
+        <span style="display:flex;align-items:center;justify-content:space-between"><b style="font-size:13px">It leaves Checking when</b><span style="font-size:12px;font-weight:700;color:${held ? 'var(--crimson)' : 'var(--amberInk)'}">${lines.length} to decide${held ? ' · credit holds it' : ''}</span></span>
+        <div style="display:grid;grid-template-columns:repeat(${held ? 2 : 1},minmax(0,1fr));gap:6px">
+          <span style="display:flex;align-items:center;gap:6px;padding:8px;border-radius:12px;background:var(--amberSoft);color:var(--amberDeep);font-size:12px;font-weight:700"><span class="m" style="width:22px;height:18px;border-radius:999px;background:var(--amber);color:var(--navy);display:flex;align-items:center;justify-content:center;font-size:10px">${decided}/${tot}</span>Prices</span>
+          ${held ? `<button data-act="push" data-p="approvals" style="display:flex;align-items:center;gap:6px;padding:8px;border:none;border-radius:12px;background:var(--crimsonSoft);color:var(--crimson);font-size:12px;font-weight:700">${ic('lock', 14)}Credit · held</button>` : ''}</div>
+      </div>
+      <span class="bx-hint" style="font-size:11px;color:var(--ink3)">${ic('up', 13)}Never below cost · above the shop’s price needs nobody</span>
+    </div></div>`;
+};
+// A price typed or stepped: the number pad opens, commas as you type.
+function priceInputHTML(key, v, cost, shop, qty, step){
+  const m = marginOf(v, cost), low = cost && v < cost;
+  return `<div style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:16px;background:var(--bg)">
+    <button class="bx-sq" style="width:44px;height:44px;border-radius:12px;font-size:20px" data-act="pstep" data-k="${key}" data-d="${-step}" aria-label="${n0(step)} less">−</button>
+    <label style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:text"><input class="m" type="text" inputmode="numeric" autocomplete="off" aria-label="Type your price" data-in="ptype" data-k="${key}" value="${n0(v)}" style="border:none;outline:none;width:100%;max-width:170px;padding:2px 0;background:transparent;text-align:center;font-size:22px;font-weight:600;letter-spacing:-.02em;color:var(--ink);box-shadow:inset 0 -1.5px 0 #D9D4CB;caret-color:var(--red)">
+      <span style="font-size:11px;font-weight:700;color:${low ? 'var(--crimson)' : marginCol(m)}">${low ? 'below cost · goes back to ' + n0(cost) : marginWord(m) + ' margin' + (shop ? ' · ' + (v >= shop ? 'at the shop’s or over' : short((shop - v) * (Number(qty) || 0)) + ' under the shop’s') : '')}</span></label>
+    <button class="bx-sq" style="width:44px;height:44px;border-radius:12px;font-size:20px" data-act="pstep" data-k="${key}" data-d="${step}" aria-label="${n0(step)} more">+</button></div>`;
+}
+ACT.pline = t => { S.ui.pline = Number(t.dataset.i); S.ui.psetting = null; FEEL.tick(); render(); };
+ACT.pstep = t => { const k = t.dataset.k; S.ui[k] = Math.max(0, (Number(S.ui[k]) || 0) + Number(t.dataset.d)); FEEL.tick(); render(); renderSheet(); };
+ACT['in:ptype'] = t => { const k = t.dataset.k, v = Math.min(99999999, parseInt(String(t.value).replace(/[^0-9]/g, ''), 10) || 0); S.ui[k] = v;
+  const pos = t.value.length - t.selectionStart; t.value = v ? n0(v) : ''; try { t.setSelectionRange(Math.max(0, t.value.length - pos), Math.max(0, t.value.length - pos)); } catch (_e) {}
+  const lab = t.nextElementSibling; if (lab && t.dataset.k === 'pset') { const x = priceCases().find(y => Number(y.q.id) === Number(topArgs().id)); const l = x && x.lines[Math.min(Number(S.ui.pline) || 0, x.lines.length - 1)]; const cost = l && lineCost(l.it); if (cost) { const low = v < cost; lab.style.color = low ? 'var(--crimson)' : marginCol(marginOf(v, cost)); lab.textContent = low ? 'below cost · goes back to ' + n0(cost) : marginWord(marginOf(v, cost)) + ' margin'; } } };
+document.addEventListener('focusin', e => { const t = e.target.closest && e.target.closest('[data-in="ptype"]'); if (t && t.select) t.select(); });
+// Leaving the box: a price under the cost goes back up to it.
+document.addEventListener('focusout', e => { const t = e.target.closest && e.target.closest('[data-in="ptype"]'); if (!t) return; const floor = Number(t.dataset.floor) || 0; if (floor && (Number(S.ui[t.dataset.k]) || 0) < floor) { S.ui[t.dataset.k] = floor; render(); renderSheet(); } else if (!S.busy) { render(); renderSheet(); } });
+ACT.pdecide = async t => {
+  const x = priceCases().find(y => Number(y.q.id) === Number(topArgs().id)); if (!x) return;
+  const l = x.lines[Math.min(Number(S.ui.pline) || 0, x.lines.length - 1)], key = x.q.id + ':' + l.idx, how = t.dataset.how;
+  if (!can('price.approve')) { toast('Deciding prices is a Manager task (price.approve) that is not on for this login yet.', 5000); return; }
+  if (how === 'set' && S.ui.psetting !== key) { S.ui.psetting = key; S.ui.pset = linePriceNow(l.it); FEEL.tick(); render(); return; }
+  const v = how === 'set' ? Math.max(lineCost(l.it) || 0, Number(S.ui.pset) || 0) : null;
+  const r = await decidePrice(x.q.id, l.idx, how, v);
+  if (r) { S.ui.psetting = null; S.ui.pline = 0; if (!priceCases().find(y => Number(y.q.id) === Number(x.q.id))) { toast(`${clientName(x.q)}: every price decided`); pop(); } }
+};
+
+/* ---------------- a line with no selling price, or no known cost ----------------
+   'nomargin': the Manager sets the price against the cost and what rivals
+   charge. 'nocost': nothing can be priced until the Buyer gives the cost,
+   so the Manager asks for it -- by push when push is on, else WhatsApp. */
+function rivalPrice(it){
+  const rows = (D().rivals || []).filter(r => r.productId === it.productId && String(r.variantIdx ?? '') === String(it.variantIdx ?? '') && Number(r.price) > 0);
+  if (!rows.length) return null; const s = rows.map(r => Number(r.price)).sort((a, b) => a - b); return s[s.length >> 1];
+}
+function defaultMarkupPrice(it){ const cost = lineCost(it); if (!cost) return null; const dm = D().presetDefaultMarkup || {}; const v = Number(dm.wholesaleValue) || 25; return dm.wholesaleType === 'fixed' ? Math.round(cost + v) : Math.round(cost * (1 + v / 100) / 50) * 50; }
+PAGE.pricenew = a => {
+  const x = priceCases().find(y => Number(y.q.id) === Number(a.id));
+  if (!x) return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card"><div class="bx-sheethead"><span class="bx-grip"></span><div style="display:flex;align-items:center"><b style="flex:1;font-size:18px">Price a line</b>${closeBtn()}</div></div><div class="bx-body">${emptyCard('All priced', 'Every line on this order has a price.')}</div></div>`;
+  const q = x.q, seller = staffByUser(takenBy(q)), nocost = x.lines.filter(l => l.kind === 'nocost'), priced = x.lines.filter(l => l.kind !== 'nocost' && l.kind !== 'under');
+  const buyer = team().all.find(s => s.role === 'buyer');
+  const pv = l => { const k = 'pn:' + q.id + ':' + l.idx; if (S.ui[k] == null) S.ui[k] = Number(l.it.sellPrice) > 0 ? Number(l.it.sellPrice) : (defaultMarkupPrice(l.it) || 0); return S.ui[k]; };
+  const card = l => { const it = l.it, cost = lineCost(it), rv = rivalPrice(it), p = pv(l), dm = defaultMarkupPrice(it);
+    const lo = (cost || p) * 0.95, hi = Math.max(rv || 0, p, dm || 0) * 1.08, x2 = v => Math.max(0, Math.min(100, (v - lo) / Math.max(1, hi - lo) * 100)).toFixed(1) + '%';
+    const mark = (v, w, col, big) => `<span style="position:absolute;left:${x2(v)};top:0;transform:translateX(-50%);display:flex;flex-direction:${big ? 'column-reverse' : 'column'};align-items:center;gap:4px;${big ? 'top:-17px' : ''}"><i style="width:${big ? 18 : 12}px;height:${big ? 18 : 12}px;margin-top:${big ? 6 : 9}px;border-radius:999px;${big ? `background:#fff;box-shadow:inset 0 0 0 5px ${col},0 0 0 4px rgba(201,58,48,.16)` : `background:${col};box-shadow:0 0 0 3px #fff`}"></i><span class="m" style="font-size:10px;font-weight:600;white-space:nowrap;color:${col}">${w}</span></span>`;
+    return `<div class="bx-card" style="border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:10px">
+      <span style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><span style="display:flex;flex-direction:column;gap:1px;min-width:0"><b class="ell" style="font-size:15px">${esc(it.productName || 'A line')}</b><span style="font-size:12px;font-weight:600;color:var(--ink3)"><span class="m">${n0(it.qty)}</span> on the order</span></span><span style="flex:none;padding:2px 8px;border-radius:999px;background:#E4E6FA;color:#3A3F9B;font-size:10px;font-weight:700;letter-spacing:.06em">NO PRICE YET</span></span>
+      <div role="img" aria-label="Cost ${n0(cost)}${rv ? ', rivals ' + n0(rv) : ''}, your price ${n0(p)}" style="position:relative;height:46px;margin:18px 6px 0"><span style="position:absolute;left:0;right:0;top:12px;height:6px;border-radius:999px;background:linear-gradient(90deg,#E5483D,#F5B26B 35%,#0F6B43 80%)"></span>${mark(cost, 'cost ' + n0(cost), '#8E2A22')}${rv ? mark(rv, 'rivals ' + n0(rv), '#0E6470') : ''}${mark(p, 'yours', '#C93A30', true)}</div>
+      ${priceInputHTML('pn:' + q.id + ':' + l.idx, p, cost, null, it.qty, priceStep(cost)).replace('data-in="ptype"', `data-in="ptype" data-floor="${cost}"`)}</div>`; };
+  const steps = nocost.length ? `<div class="bx-card" style="border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:12px">${nocost.map(l => `<span style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><span style="display:flex;flex-direction:column;gap:1px;min-width:0"><b class="ell" style="font-size:15px">${esc(l.it.productName || 'A line')}</b><span style="font-size:12px;font-weight:600;color:var(--ink3)"><span class="m">${n0(l.it.qty)}</span> × <span class="m">${n0(linePriceNow(l.it))}</span>${seller ? ' · ' + esc(firstWord(seller.name)) + ' sold it' : ''}</span></span><span style="flex:none;padding:2px 8px;border-radius:999px;background:var(--amberSoft);color:var(--amberDeep);font-size:10px;font-weight:700;letter-spacing:.06em">NO KNOWN COST</span></span>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;text-align:center"><span style="display:flex;flex-direction:column;gap:3px;padding:10px 6px;border-radius:14px;background:var(--bg)"><span style="font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--ink3)">SOLD AT</span><span class="m" style="font-size:15px;font-weight:600">${n0(linePriceNow(l.it))}</span></span><span style="display:flex;flex-direction:column;gap:3px;padding:10px 6px;border-radius:14px;box-shadow:inset 0 0 0 1.5px #F5B26B;background:repeating-linear-gradient(135deg,#FFF8EF 0 6px,#FDEEE1 6px 12px)"><span style="font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--amberDeep)">COST</span><span class="m" style="font-size:15px;font-weight:600;color:var(--amberDeep)">?</span></span><span style="display:flex;flex-direction:column;gap:3px;padding:10px 6px;border-radius:14px;background:var(--bg)"><span style="font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--ink3)">MARGIN</span><span class="m" style="font-size:15px;font-weight:600;color:var(--ink3)">?</span></span></div>`).join('')}
+      <div role="img" aria-label="Three steps: the buyer gives the cost, you decide the price, then it is invoiced" style="display:grid;grid-template-columns:1fr 18px 1fr 18px 1fr;align-items:center;gap:4px;font-size:11px;font-weight:700;text-align:center">
+        <span style="padding:8px 4px;border-radius:12px;${q.costAsked ? 'background:#E4E6FA;color:#3A3F9B' : 'background:var(--amberSoft);color:var(--amberDeep);box-shadow:inset 0 0 0 1.5px #F5B26B'}">${esc(buyer ? firstWord(buyer.name) + '’s' : 'The buyer’s')} cost<br><span style="font-size:10px;font-weight:600">${q.costAsked ? 'asked ' + esc(ageWords(minsSince(Date.parse(q.costAsked.at)))) + ' ago' : 'waiting'}</span></span><span style="height:2px;background:var(--rule)"></span><span style="padding:8px 4px;border-radius:12px;background:var(--bg);color:var(--ink3)">Your yes<br><span style="font-size:10px;font-weight:600">next</span></span><span style="height:2px;background:var(--rule)"></span><span style="padding:8px 4px;border-radius:12px;background:var(--bg);color:var(--ink3)">Invoiced<br><span class="m" style="font-size:10px;font-weight:600">${n0(orderTotal(q))}</span></span></div></div>` : '';
+  const wa = buyer && waComposeUrl(buyer.phone, `${firstWord(buyer.name)}, what did ${nocost.map(l => l.it.productName || 'the item').join(', ')} cost us? ${clientName(q)} (Q-${String(q.id).padStart(4, '0')}) waits on it to be priced.`);
+  return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
+    <div class="bx-sheethead" style="gap:12px"><span class="bx-grip"></span>
+      <div style="display:flex;align-items:center;gap:12px"><span class="mx-face">${custAv(customerById(q.customerId) || { name: clientName(q), id: q.id }, 44)}${seller ? sellerBadge(seller) : ''}</span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="bx-eyebrow">${nocost.length ? 'NO KNOWN COST' : 'NO SELLING PRICE'}</span><span class="ell" style="font-size:17px;font-weight:700">${esc(clientName(q))}</span><span style="font-size:12px;color:var(--navyInk)">${seller ? esc(firstWord(seller.name)) + ' took it · ' : ''}<span class="m">Q-${String(q.id).padStart(4, '0')}</span> ${q.status === 'completed' ? 'delivered · waits to be billed' : 'waits in ' + esc(stageOf(q).label)}</span></span>${closeBtn()}</div></div>
+    <div class="bx-body">${priced.map(card).join('')}${steps}
+      <span class="bx-hint" style="font-size:11px;color:var(--ink3)">${ic('doc', 13)}Your prices become the shop’s · in the owner’s log</span></div>
+    <div class="bx-foot">${priced.length ? `<button class="bx-btn red" data-act="pnset" data-id="${q.id}">${ic('tick', 18, 'style="stroke-width:2.4"')}${priced.length > 1 ? 'Set ' + priced.length + ' prices' : 'Set the price'} · ${priced.map(l => short(pv(l))).join(' · ')}</button>` : ''}
+      ${nocost.length && !priced.length ? (wa ? `<a class="bx-btn red" href="${esc(wa)}" target="_blank" rel="noopener" data-act="costask" data-id="${q.id}" data-keep>${ic('bell', 18)}Ask ${esc(firstWord(buyer.name))} for the cost</a>` : `<button class="bx-btn red" data-act="costask" data-id="${q.id}">${ic('bell', 18)}Ask the buyer for the cost</button>`) : ''}</div></div>`;
+};
+ACT.pnset = async t => {
+  if (!can('price.approve')) { toast('Pricing a line is a Manager task (price.approve) that is not on for this login yet.', 5000); return; }
+  const x = priceCases().find(y => Number(y.q.id) === Number(t.dataset.id)); if (!x) return;
+  const todo = x.lines.filter(l => l.kind === 'nomargin');
+  for (const l of todo) { const v = Number(S.ui['pn:' + x.q.id + ':' + l.idx]) || 0; const r = await decidePrice(x.q.id, l.idx, 'set', Math.max(lineCost(l.it) || 0, v)); if (!r) return; }
+  toast('Priced. ' + (staffByUser(takenBy(x.q)) ? firstWord(staffByUser(takenBy(x.q)).name) + ' is told.' : '')); if (!priceCases().find(y => Number(y.q.id) === Number(x.q.id))) pop();
+};
+ACT.costask = async t => {
+  try { await changeOrder(t.dataset.id, q => { q.costAsked = { at: new Date().toISOString(), by: S.user ? S.user.id : null }; }, ['costAsked']); FEEL.ask(); } catch (e) { toast(failWord(e), 4000); }
+  render();
+};
+
+/* ---------------- a counter sale under the shop's price ----------------
+   The customer is at the counter, paying cash. One slide: right for yes,
+   left for no (decision-rights section 3, the counter sale). */
+SHEET.counter = a => {
+  const x = priceCases().find(y => Number(y.q.id) === Number(a.id));
+  const done = S.ui.counterDone && S.ui.counterDone.id === Number(a.id) ? S.ui.counterDone : null;
+  if (!x && !done) return `<div class="bx-empty"><b>Already answered</b>This sale has its yes or no.</div>`;
+  const q = x ? x.q : quoteById(a.id), l = x ? x.lines[0] : { it: (q.items || [])[done.idx] || {} }, it = l.it;
+  const seller = staffByUser(takenBy(q)), cost = lineCost(it), shop = shopSellPrice(it), p = done ? done.was : linePriceNow(it), w = Math.round(minsSince(createdMs(q)));
+  const fig = (lab, v, sub, hot, col) => `<span style="display:flex;flex-direction:column;gap:3px;padding:10px 6px;border-radius:14px;text-align:center;${hot ? 'background:#FDE8E4;box-shadow:inset 0 0 0 1.5px #F2B7AE' : 'background:#fff;box-shadow:inset 0 0 0 1px var(--line)'}"><span style="font-size:10px;font-weight:700;letter-spacing:.08em;color:${col}">${lab}</span><span class="m" style="font-size:15px;font-weight:600">${v == null ? '—' : n0(v)}</span><span class="m" style="font-size:11px;font-weight:600;color:var(--ink3)">${sub}</span></span>`;
+  return `<div style="display:flex;align-items:center;gap:12px">${pctRing(Math.min(1, w / 5), 52, 4, '#F5B26B', `<span class="m" style="font-size:12px;font-weight:600">${w < 60 ? w + 'm' : ageWords(w)}</span>`, `The customer has waited ${ageWords(w)}`, '#EFECE6')}
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--ink3)">COUNTER SALE · ${esc((seller ? firstWord(seller.name) : 'SALES').toUpperCase())}</span><b class="ell" style="font-size:18px">${esc(it.productName || 'An item')}</b><span style="font-size:12px;font-weight:600;color:var(--ink3)"><span class="m">${n0(it.qty)}</span> · pay and go</span></span></div>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">${fig('COST', cost, 'the floor', false, 'var(--crimson)')}${fig(seller ? esc(firstWord(seller.name).toUpperCase()) : 'ASKED', p, marginWord(marginOf(p, cost)), true, '#A82D24')}${fig('SHOP’S', shop, marginWord(marginOf(shop, cost)), false, 'var(--ink3)')}</div>
+    ${done ? `<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:18px;background:#fff;box-shadow:inset 0 0 0 1px var(--line)"><span class="mx-stampw" style="color:${done.yes ? 'var(--green)' : 'var(--navy)'}">${done.yes ? 'YES' : 'NO'}</span><span style="flex:1;font-size:12px;font-weight:600;color:var(--ink2);line-height:1.35">${done.yes ? `${esc(seller ? firstWord(seller.name) : 'Sales')} sees it at once: sell at ${n0(done.was)}.` : `${esc(seller ? firstWord(seller.name) : 'Sales')} sees it at once: hold the shop’s price, ${n0(done.price)}.`}</span></div>`
+    : can('price.approve') ? `<div class="mx-yesno settle" data-yesno="${q.id}|${l.idx}"><span class="fl" aria-hidden="true"></span><span class="fr" aria-hidden="true"></span><span class="ll" aria-hidden="true"><b>No</b><span class="m">${shop ? n0(shop) : 'shop’s'}</span></span><span class="lr" aria-hidden="true"><b>Yes</b><span class="m">${n0(p)}</span></span><button type="button" class="k" aria-label="Slide right for yes at ${n0(p)}, left for no${shop ? ' at the shop’s ' + n0(shop) : ''}. Arrow keys work too">${ic('swap', 20, 'style="stroke-width:2.2"')}</button></div>`
+    : `<div class="mx-lock">${ic('lock', 16)}Saying yes to a price is a Manager task (price.approve) not on for this login yet.</div>`}
+    <span class="bx-hint" style="justify-content:center;font-size:11px;color:var(--ink3)">${ic('doc', 13)}In the owner’s log either way</span>`;
+};
+ACT.counter = t => { FEEL.open(); S.ui.counterDone = null; openSheet('counter', { id: Number(t.dataset.id) }); };
+async function counterAnswer(qid, idx, yes){
+  const x = priceCases().find(y => Number(y.q.id) === Number(qid)); if (!x) return;
+  const it = x.lines.find(l => l.idx === idx).it, was = linePriceNow(it), shop = shopSellPrice(it);
+  const r = await decidePrice(qid, idx, yes ? 'approve' : 'shop');
+  if (r) { S.ui.counterDone = { id: Number(qid), idx, yes, was, price: yes ? was : shop }; renderSheet(); }
+}
+/* The two-way slide: right is yes, left is no; a short drag springs back. */
+function bindYesNo(){
+  document.querySelectorAll('[data-yesno]').forEach(el => {
+    if (el._bound) return; el._bound = true;
+    const k = el.querySelector('.k'), fl = el.querySelector('.fl'), fr = el.querySelector('.fr'), ll = el.querySelector('.ll'), lr = el.querySelector('.lr');
+    const [qid, idx] = el.dataset.yesno.split('|').map(Number);
+    let sx = 0, x = 0, drag = false, zone = 0;
+    const max = () => (el.offsetWidth - 60) / 2;
+    const paint = () => { const p = Math.min(1, Math.abs(x) / max()); k.style.transform = `translateX(${x.toFixed(1)}px)`; fr.style.width = (x > 0 ? x + 26 : 0).toFixed(1) + 'px'; fl.style.width = (x < 0 ? -x + 26 : 0).toFixed(1) + 'px'; fr.style.opacity = (.3 + .7 * (x > 0 ? p : 0)).toFixed(2); fl.style.opacity = (.3 + .7 * (x < 0 ? p : 0)).toFixed(2);
+      ll.style.opacity = x > 0 ? Math.max(0, 1 - p * 1.6).toFixed(2) : '1'; lr.style.opacity = x < 0 ? Math.max(0, 1 - p * 1.6).toFixed(2) : '1'; el.classList.toggle('r', x > max() * .45); el.classList.toggle('l', x < -max() * .45); };
+    const fire = yes => { x = yes ? max() : -max(); paint(); (yes ? FEEL.yes : FEEL.no)(); counterAnswer(qid, idx, yes); };
+    k.addEventListener('pointerdown', e => { drag = true; S.dragging = true; sx = e.clientX - x; el.classList.remove('settle'); try { k.setPointerCapture(e.pointerId); } catch (_e) {} });
+    k.addEventListener('pointermove', e => { if (!drag) return; x = Math.max(-max(), Math.min(max(), e.clientX - sx)); const z = Math.round(x / max() * 3); if (z !== zone) { zone = z; FEEL.tick(); } paint(); });
+    const end = () => { if (!drag) return; drag = false; S.dragging = false; el.classList.add('settle'); if (x >= max() * .88) fire(true); else if (x <= -max() * .88) fire(false); else { if (Math.abs(x) > 8) FEEL.back(); x = 0; paint(); } };
+    k.addEventListener('pointerup', end); k.addEventListener('pointercancel', end);
+    k.addEventListener('keydown', e => { if (e.key === 'ArrowRight') { e.preventDefault(); fire(true); } else if (e.key === 'ArrowLeft') { e.preventDefault(); fire(false); } });
+  });
+}
+AFTER.push(bindYesNo);
+
+/* ==================================================================
+   AFTER DELIVERY · STOCK — invoices, short picks, a trip's count, damaged
+   stock, the shelf's count, returns, voids, an agent's change, restock.
+   ================================================================== */
+function pageShell(o){
+  return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
+    <div class="bx-sheethead" style="gap:${o.gap || 14}px"><span class="bx-grip"></span>
+      <div style="display:flex;align-items:center;gap:12px">${o.face || ''}<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="bx-eyebrow">${o.eyebrow}</span><span class="ell" style="font-size:17px;font-weight:700">${o.title}</span>${o.sub ? `<span class="ell" style="font-size:12px;color:var(--navyInk)">${o.sub}</span>` : ''}</span>${closeBtn()}</div>${o.head || ''}</div>
+    <div class="bx-body">${o.body}</div>${o.foot ? `<div class="bx-foot">${o.foot}</div>` : ''}</div>`;
+}
+function faceIcon(icon){ return `<span style="width:44px;height:44px;flex:none;border-radius:14px;background:rgba(255,255,255,.08);color:var(--mint);display:flex;align-items:center;justify-content:center">${ic(icon, 22)}</span>`; }
+function lockedHTML(task, what){ return `<div class="mx-lock">${ic('lock', 16)}<span>${esc(what)} is a Manager task (${task}) not on for this login yet.</span></div>`; }
+function doneHTML(word, col, say){ return `<div class="a-done" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:18px;background:#fff;box-shadow:inset 0 0 0 1px var(--line)"><span class="mx-stampw" style="color:${col}">${word}</span><span style="flex:1;font-size:12px;font-weight:600;color:var(--ink2);line-height:1.35">${say}</span></div>`; }
+
+/* ---------------- invoices: the Manager's, or automatic after 24 hours ----------------
+   A delivered order not yet billed. The night run (0119, the shared
+   build) skips an order only while something is undecided: a short pick
+   nobody settled, or a price still waiting. Raising it here calls the
+   same one database function the night run uses -- never a second copy. */
+function pickShortfallLinesOf(q){
+  return ((q && q.items) || []).map((it, idx) => { const ordered = Math.max(0, Number(it.qty) || 0); let picked = null;
+    if (it.pickStatus === 'done') picked = ordered; else if (it.pickStatus === 'short') { const n = Number(it.pickedQty); picked = isFinite(n) && n >= 0 ? Math.min(ordered, n) : 0; }
+    return { it, idx, ordered, picked }; }).filter(r => r.picked != null && r.picked < r.ordered);
+}
+// shared-worker.js orderHasPickShortfall
+function hasShortfall(q){ return !!q && !q.pickShortfallAckAt && pickShortfallLinesOf(q).length > 0; }
+function invoiceBlock(q){
+  if (hasShortfall(q)) return { k: 'short', w: 'a short pick to settle' };
+  const p = (q.items || []).filter(lineWaitsPrice);
+  if (p.length) return { k: 'price', w: p.some(it => !lineCost(it)) ? 'a line with no known cost' : 'a price not decided' };
+  return null;
+}
+function invoiceQueue(){
+  return liveOrders().filter(q => q.status === 'completed' && !q.invoiced).map(q => {
+    const at = Date.parse(q.deliveredAt || '') || stageEnteredMs(q), block = invoiceBlock(q);
+    return { q, at, block, overdue: Date.now() - at > 24 * 3600e3 };
+  }).sort((a, b) => a.at - b.at);
+}
+PAGE.invoices = () => {
+  const list = invoiceQueue(), ready = list.filter(x => !x.block), skipped = list.filter(x => x.block);
+  const row = x => { const q = x.q, left = Math.max(0, 24 * 60 - minsSince(x.at));
+    return `<div class="bx-row" style="gap:10px">${custAv(customerById(q.customerId) || { name: clientName(q), id: q.id }, 38)}
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="bx-t ell">${esc(clientName(q))}</span><span class="bx-sub ell">${x.block ? `<span style="color:var(--crimson);font-weight:700">${esc(x.block.w)}</span>` : x.overdue ? 'past 24 hours · the night run takes it' : `auto in <span class="m">${esc(ageWords(left))}</span>`}</span></span>
+      <span class="m" style="font-size:13px;font-weight:600">${n0(orderTotal(q))}</span>
+      ${x.block ? `<button class="mx-act soft" data-act="push" data-p="${x.block.k === 'short' ? 'shortpick' : (q.items || []).some(it => lineWaitsPrice(it) && lineKind(it) === 'under') ? 'price' : 'pricenew'}" data-id="${q.id}">Settle</button>` : can('invoice.make') ? `<button class="mx-act navy" data-act="invoice" data-id="${q.id}">Invoice</button>` : ''}</div>`; };
+  return pageShell({ eyebrow: 'INVOICES · NOW, OR AUTO AT 24 H', title: `<span class="m">${list.length}</span> delivered, not billed`, face: faceIcon('doc'),
+    head: list.length ? `<div role="img" aria-label="${ready.length} ready, ${skipped.length} skipped by the night run" style="display:flex;flex-direction:column;gap:6px"><span style="display:flex;gap:3px;height:10px">${ready.length ? `<i class="a-grow" style="flex:${ready.length};border-radius:999px 3px 3px 999px;background:var(--mint)"></i>` : ''}${skipped.length ? `<i class="a-grow" style="flex:${skipped.length};border-radius:3px 999px 999px 3px;background:#F59A92"></i>` : ''}</span><span style="display:flex;gap:12px;font-size:11px;font-weight:600;color:var(--navyInk)"><span>ready <b class="m" style="color:#fff">${ready.length}</b></span><span>skipped · something undecided <b class="m" style="color:#fff">${skipped.length}</b></span></span></div>` : '',
+    body: (list.length ? `${skipped.length ? `<div class="bx-sec"><span style="font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--crimson)">SKIPPED BY THE NIGHT RUN</span></div><div class="bx-card bx-list">${skipped.map(row).join('')}</div>` : ''}
+      ${ready.length ? `<div class="bx-sec"><span style="font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--ink2)">READY TO BILL</span></div><div class="bx-card bx-list">${ready.map(row).join('')}</div>` : ''}` : emptyCard('Nothing to bill', 'Every delivered order is invoiced.'))
+      + `<span class="bx-hint" style="font-size:11px;color:var(--ink3)">${ic('doc', 13)}Invoicing takes the stock, raises the debt and the supplier bills, all at once. Accounts and the salesperson are told.</span>`,
+    foot: ready.length > 1 && can('invoice.make') ? `<button class="bx-btn red" data-act="invoiceall">${ic('doc', 18)}Invoice all ${ready.length} · ${short(sum(ready, x => orderTotal(x.q)))}</button>` : '' });
+};
+async function invoiceOne(id){
+  try { await callFn('invoice_order', { p_shop_id: S.shopId, p_quote_id: Number(id) }); return true; }
+  catch (e) { if (rpcMissing(e)) { toast('Invoicing from this phone switches on with the shared invoicing build. Until then the night run or the console raises it.', 7000); return null; } toast(failWord(e), 5000); return false; }
+}
+ACT.invoice = async t => { if (S.busy) return; S.busy = true; const ok = await invoiceOne(t.dataset.id); S.busy = false; if (ok) { FEEL.stamp(); await loadAll().catch(() => {}); } render(); };
+ACT.invoiceall = async () => { if (S.busy) return; S.busy = true; let n = 0; for (const x of invoiceQueue().filter(y => !y.block)) { const ok = await invoiceOne(x.q.id); if (ok === null) break; if (ok) n++; } S.busy = false; if (n) { FEEL.stamp(); toast(`${n} ${pl(n, 'invoice')} raised`); await loadAll().catch(() => {}); } render(); };
+
+/* ---------------- a short pick: bill what went, or the full quantity ----------------
+   index.html pickShortfallChoices / amendOrderToPickedQuantities: 'went'
+   brings each line down to what left the shop; 'full' stands by the
+   order (topped up off another shelf) and records it as settled. */
+function shortPicks(){ return liveOrders().filter(q => !q.invoiced && hasShortfall(q)).map(q => ({ q, lines: pickShortfallLinesOf(q) })); }
+PAGE.shortpick = a => {
+  const x = shortPicks().find(y => Number(y.q.id) === Number(a.id)), done = S.ui.spDone && S.ui.spDone.id === Number(a.id) ? S.ui.spDone : null;
+  if (!x && !done) return pageShell({ eyebrow: 'SHORT PICK', title: 'Settled', body: emptyCard('Nothing to settle', 'This order has no short pick waiting.') });
+  const q = x ? x.q : quoteById(a.id), lines = x ? x.lines : [], pick = S.ui.spPick || 'went', picker = staffById(q.assignedWorkerId), seller = staffByUser(takenBy(q));
+  const went = { ...q, items: (q.items || []).map((it, i) => { const l = lines.find(z => z.idx === i); return l ? { ...it, qty: l.picked } : it; }) };
+  const tWent = Math.round(quoteTotal(went)), tFull = Math.round(quoteTotal(q));
+  const opt = (k, w, v, why) => `<button class="bx-pick" role="radio" aria-checked="${pick === k}" data-act="sppick" data-v="${k}" style="flex-direction:column;align-items:flex-start;gap:4px"><span style="display:flex;align-items:center;gap:8px;width:100%"><span style="width:18px;height:18px;border-radius:999px;flex:none;box-shadow:inset 0 0 0 ${pick === k ? '5px var(--navy)' : '2px #C9C4BA'}"></span><b style="flex:1;font-size:14px">${w}</b><span class="m" style="font-size:15px;font-weight:600">${n0(v)}</span></span><span style="padding-left:26px;font-size:12px;font-weight:600;color:var(--ink3)">${why}</span></button>`;
+  return pageShell({ eyebrow: 'SHORT PICK · ' + esc((picker ? firstWord(picker.name) : 'the picker').toUpperCase()) + ' FOUND LESS', title: esc(clientName(q)), sub: `<span class="m">Q-${String(q.id).padStart(4, '0')}</span>${seller ? ' · ' + esc(firstWord(seller.name)) + ' sold it' : ''}`, face: faceIcon('box'),
+    body: `<div class="bx-card" style="padding:14px;display:flex;flex-direction:column;gap:12px">${(done ? [] : lines).map(l => `<div style="display:flex;flex-direction:column;gap:6px"><span style="display:flex;justify-content:space-between;gap:8px"><b class="ell" style="font-size:14px">${esc(l.it.productName || 'A line')}</b><span class="m" style="font-size:13px;font-weight:600"><span style="color:var(--crimson)">${l.picked}</span> of ${l.ordered}</span></span>
+        <span role="img" aria-label="${l.picked} of ${l.ordered} found" style="display:flex;gap:2px;height:10px">${Array.from({ length: Math.min(40, l.ordered) }, (_, k) => `<i style="flex:1;border-radius:2px;${k < Math.round(l.picked / l.ordered * Math.min(40, l.ordered)) ? 'background:var(--navy)' : 'box-shadow:inset 0 0 0 1.5px #F2B7AE;background:#FDE8E4'}"></i>`).join('')}</span></div>`).join('')}
+      ${done ? '' : `<div role="radiogroup" aria-label="What to bill" style="display:flex;flex-direction:column;gap:8px">${opt('went', 'Bill what went', tWent, 'What actually left the shop')}${opt('full', 'Bill the full quantity', tFull, 'Topped up off another shelf')}</div>`}</div>
+      ${!done && pick === 'went' && (Number(q.amountPaid) || 0) > tWent ? `<div class="mx-lock" style="background:var(--amberSoft);color:var(--amberDeep)">${ic('warn', 16)}<span>${esc(clientName(q))} has paid ${n0(q.amountPaid)} already — ${n0(q.amountPaid - tWent)} more than this. Accounts refunds it or carries it to the next order.</span></div>` : ''}
+      ${done ? doneHTML(done.pick === 'went' ? 'AMENDED' : 'SETTLED', done.pick === 'went' ? 'var(--navy)' : 'var(--green)', done.pick === 'went' ? `The order now bills ${n0(done.total)}. ${seller ? esc(firstWord(seller.name)) + ' is told.' : ''}` : `It bills the full ${n0(done.total)}. ${seller ? esc(firstWord(seller.name)) + ' is told.' : ''}`) : ''}`,
+    foot: done ? '' : can('pick.settle') ? `<button class="bx-btn red" data-act="spgo" data-id="${q.id}">${ic('tick', 18, 'style="stroke-width:2.4"')}${pick === 'went' ? 'Bill what went · ' + n0(tWent) : 'Bill the full ' + n0(tFull)}</button>` : lockedHTML('pick.settle', 'Settling a short pick') });
+};
+ACT.sppick = t => { S.ui.spPick = t.dataset.v; FEEL.tick(); render(); };
+ACT.spgo = async t => {
+  if (S.busy) return; S.busy = true; const pick = S.ui.spPick || 'went';
+  try {
+    const res = await changeOrder(t.dataset.id, q => {
+      const lines = pickShortfallLinesOf(q); if (!lines.length || q.pickShortfallAckAt || q.invoiced) return false;
+      if (pick === 'went') lines.forEach(l => { q.items[l.idx].qty = l.picked; }); else q.pickShortfallAckAt = Date.now();
+      q.pickSettle = { pick, by: S.user ? S.user.id : null, byName: myName(), at: new Date().toISOString(), lines: lines.map(l => ({ idx: l.idx, ordered: l.ordered, picked: l.picked })) };
+    }, ['items', 'pickShortfallAckAt', 'pickSettle']);
+    if (!res) throw new Error('that short pick is settled already');
+    const total = Math.round(quoteTotal(res.q));
+    S.ui.spDone = { id: Number(t.dataset.id), pick, total };
+    logDecision('pick.settle', `${pick === 'went' ? 'Billed what went' : 'Billed the full quantity'} on ${clientName(res.q)}`, { amount: total, ref: { table: 'saved_quotes', id: res.q.id }, before: res.q.pickSettle.lines, after: { pick } });
+    FEEL.stamp();
+  } catch (e) { toast(failWord(e), 5000); }
+  S.busy = false; S.ui.spPick = null; render();
+};
+
+/* ---------------- a trip's count differs: accept the yard's ----------------
+   store.html tripExpect: what the Buyer says came (gotQty, else the plan)
+   against what the yard counted off the truck (yardQty, 0115). The shelf
+   takes the yard's count; the Manager sees the difference and accepts it
+   (trip.difference). Accounts counts the trip's cash (0123 cash_count). */
+function tripGot(l){ const n = Number(l && l.gotQty); return l && l.gotQty != null && isFinite(n) && n >= 0 ? n : Number(l && l.qty) || 0; }
+function tripLineCost(l){ return Number(l.gotPrice) > 0 ? Number(l.gotPrice) : Number(l.expectedPrice) || 0; }
+function tripDiffs(){
+  return D().collectionTrips.filter(t => !t.voided && t.yardCheckedAt && !t.differenceAcceptedAt).map(t => {
+    const lines = (t.lines || []).map(l => ({ l, got: tripGot(l), yard: l.yardQty == null ? tripGot(l) : Number(l.yardQty) || 0 }));
+    const cost = lines.reduce((s, x) => s + (x.yard - x.got) * tripLineCost(x.l), 0);
+    return { t, lines, cost, off: lines.filter(x => x.yard !== x.got).length };
+  }).filter(x => x.off > 0);
+}
+PAGE.tripcount = a => {
+  const x = tripDiffs().find(y => String(y.t.id) === String(a.id)), done = S.ui.tdDone === String(a.id);
+  const t = x ? x.t : D().collectionTrips.find(y => String(y.id) === String(a.id));
+  if (!t) return pageShell({ eyebrow: 'TRIP COUNT', title: 'Gone', body: emptyCard('That trip is gone', '') });
+  const lines = x ? x.lines : (t.lines || []).map(l => ({ l, got: tripGot(l), yard: l.yardQty == null ? tripGot(l) : Number(l.yardQty) || 0 }));
+  const max = Math.max(1, ...lines.map(z => Math.max(z.got, z.yard))), buyer = staffById(t.assignedWorkerId), yardBy = staffByUser(t.yardCheckedBy);
+  const cost = x ? x.cost : 0, cc = t.cashCount;
+  const cash = cc && Number(cc.given) > 0 ? (() => { const given = Number(cc.given) || 0, paid = Number(cc.paid) || 0, back = Number(cc.counted) || 0, diff = Number(cc.diff) || (back - (given - paid));
+    return `<div role="img" aria-label="Trip cash: ${n0(given)} given, ${n0(paid)} in receipts, ${n0(back)} back, ${diff < 0 ? n0(-diff) + ' short' : diff > 0 ? n0(diff) + ' over' : 'agrees'}" class="bx-card" style="padding:12px 14px;display:flex;flex-direction:column;gap:9px">
+      <span style="display:flex;align-items:center;gap:8px">${pav({ name: cc.byName || 'Accounts', id: cc.by || 'acc' }, 26)}<span style="flex:1;display:flex;flex-direction:column"><b style="font-size:13px">Trip cash</b><span style="font-size:11px;font-weight:600;color:var(--ink3)">${esc(firstWord(cc.byName || 'Accounts'))} counted${cc.at ? ' ' + esc(hm(msOf(cc.at))) : ''} · theirs to settle, you’re told</span></span><span class="m" style="flex:none;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;${diff < 0 ? 'background:var(--crimsonSoft);color:var(--crimson)' : diff > 0 ? 'background:var(--amberSoft);color:var(--amberDeep)' : 'background:var(--greenSoft);color:var(--green)'}">${diff < 0 ? 'short ' + n0(-diff) : diff > 0 ? 'over ' + n0(diff) : 'agrees'}</span></span>
+      <span style="display:flex;gap:2px;height:10px"><i class="a-grow" style="flex:${paid || 1};border-radius:3px 0 0 3px;background:var(--navy)"></i><i class="a-grow" style="flex:${back || 0};background:var(--mint)"></i>${diff < 0 ? `<i class="a-grow" style="flex:${-diff};min-width:6px;border-radius:0 3px 3px 0;background:#E5483D"></i>` : ''}</span>
+      <span style="display:grid;grid-template-columns:repeat(3,auto);justify-content:space-between;font-size:11px;font-weight:600;color:var(--ink3)"><span>Given <b class="m" style="color:var(--ink)">${n0(given)}</b></span><span>Receipts <b class="m" style="color:var(--ink)">${n0(paid)}</b></span><span>Back <b class="m" style="color:var(--ink)">${n0(back)}</b></span></span></div>`; })() : '';
+  return pageShell({ eyebrow: 'TRIP COUNT DIFFERS', title: esc(supplierName(t.supplierId) || 'A buying trip'), sub: `${buyer ? esc(firstWord(buyer.name)) + ' bought' : 'Bought'} · ${yardBy ? esc(firstWord(yardBy.name)) : 'the yard'} counted ${t.yardCheckedAt ? esc(hm(msOf(t.yardCheckedAt))) : ''}`, face: faceIcon('truck'),
+    head: `<div style="display:flex;align-items:baseline;justify-content:space-between"><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:700;color:var(--navyInk2)">Difference at cost</span><span class="m" style="font-size:28px;font-weight:600;letter-spacing:-.03em;color:${cost < 0 ? '#F59A92' : cost > 0 ? 'var(--amber)' : 'var(--mint)'}">${cost < 0 ? '−' : cost > 0 ? '+' : ''}${n0(Math.abs(cost))}</span></span><span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-size:12px;font-weight:600;color:var(--navyInk)"><span><b class="m" style="color:#fff">${lines.filter(z => z.yard === z.got).length}</b> of ${lines.length} lines agree</span><span>the shelf took the yard’s count</span></span></div>`,
+    body: `<div class="bx-card" style="border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:12px">
+        <span style="display:flex;align-items:center;justify-content:space-between"><b style="font-size:13px">Line by line</b><span style="display:flex;gap:10px;font-size:11px;font-weight:600;color:var(--ink3)"><span style="display:inline-flex;align-items:center;gap:4px"><i style="width:10px;height:8px;border-radius:2px;box-shadow:inset 0 0 0 1.5px var(--navy)"></i>${esc(buyer ? firstWord(buyer.name) : 'buyer')}</span><span style="display:inline-flex;align-items:center;gap:4px"><i style="width:10px;height:8px;border-radius:2px;background:var(--navy)"></i>yard</span></span></span>
+        ${lines.map((z, i) => { const d = z.yard - z.got, w = v => (v / max * 100).toFixed(1) + '%';
+          return `<div style="display:flex;flex-direction:column;gap:6px;${i ? 'padding-top:10px;border-top:1px solid #F1EEE8' : ''}"><span style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><b class="ell" style="font-size:13px">${esc(z.l.productName || 'Item')}</b><span class="m" style="flex:none;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;${d === 0 ? 'background:var(--greenSoft);color:var(--green)' : d < 0 ? 'background:var(--crimsonSoft);color:var(--crimson)' : 'background:var(--amberSoft);color:var(--amberDeep)'}">${d === 0 ? 'agrees' : (d > 0 ? '+' : '−') + Math.abs(d) + ' · ' + (d > 0 ? '+' : '−') + n0(Math.abs(d) * tripLineCost(z.l))}</span></span>
+            <span style="display:grid;grid-template-columns:1fr 64px;gap:8px;align-items:center"><span style="display:flex;flex-direction:column;gap:3px"><span style="position:relative;height:8px"><i class="a-grow" style="position:absolute;left:0;top:0;bottom:0;width:${w(z.got)};border-radius:999px;box-shadow:inset 0 0 0 1.5px var(--navy)"></i></span><span style="position:relative;height:8px"><i class="a-grow" style="animation-delay:.3s;position:absolute;left:0;top:0;bottom:0;width:${w(z.yard)};border-radius:999px;background:${d < 0 ? '#E5483D' : d > 0 ? '#F5B26B' : 'var(--navy)'}"></i></span></span><span class="m" style="font-size:12px;font-weight:600;text-align:right;color:var(--ink2)">${z.got} → ${z.yard}</span></span></div>`; }).join('')}</div>
+      ${cash}${done ? doneHTML('ACCEPTED', 'var(--green)', `${esc(buyer ? firstWord(buyer.name) : 'The buyer')} is told. ${cost < 0 ? '−' : '+'}${n0(Math.abs(cost))} goes in the owner’s log.`) : ''}`,
+    foot: done ? '' : can('trip.difference') ? `<div class="row">${buyer ? `<button class="bx-sq" data-act="nudge" data-who="${buyer.id}" aria-label="Ask ${esc(firstWord(buyer.name))} about the difference">${ic('nudge', 22)}</button>` : ''}${slideHTML('tripok:' + t.id, 'Accept the yard’s count', 'tick')}</div>` : lockedHTML('trip.difference', 'Accepting a trip’s difference') });
+};
+ACT['slide:tripok'] = async el => {
+  const id = el.dataset.slide.split(':').slice(1).join(':'); if (S.busy) return; S.busy = true;
+  try { await callFn('accept_trip_difference', { p_trip_id: id }); const t = D().collectionTrips.find(y => String(y.id) === String(id)); if (t) t.differenceAcceptedAt = new Date().toISOString(); S.ui.tdDone = String(id); FEEL.stamp(); }
+  catch (e) { toast(rpcMissing(e) ? 'Accepting a trip’s difference needs the Manager’s database update (0122).' : failWord(e), 6000); }
+  S.busy = false; render();
+};
+
+/* ---------------- damaged, lost or stolen: write it off ----------------
+   The Store reports (stock_reports, 0122; stock.report is the Store's
+   build); the Manager writes off what was reported, through the one
+   server function that moves stock the way the console does. */
+function openReports(){ return (D().stockReports || []).filter(r => r.status === 'sent'); }
+PAGE.writeoff = () => {
+  const list = openReports(), sel = S.ui.wo || (S.ui.wo = Object.fromEntries(list.map(r => [r.id, true])));
+  const cost = r => { const c = getFIFOUnitCost(r.productId, r.variantIdx); return Math.round((Number(c) || 0) * (Number(r.qty) || 0)); };
+  const picked = list.filter(r => sel[r.id]), total = sum(picked, cost);
+  return pageShell({ eyebrow: 'WRITE OFF · THE STORE REPORTED', title: `<span class="m">${list.length}</span> ${pl(list.length, 'report')}`, face: faceIcon('warn'),
+    head: list.length ? `<div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--navyInk)">Off the shelf and the books, at cost</span><span class="m" style="font-size:24px;font-weight:600;color:#F59A92">−${n0(total)}</span></div>` : '',
+    body: list.length ? `<div class="bx-card bx-list">${list.map(r => { const who = staffByUser(r.reportedBy); return `<div class="bx-row" style="gap:10px">${itemTile(r.name, tintFor(r.name), 38)}
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="bx-t ell">${esc(r.name)}</span><span class="bx-sub ell"><span class="m">${n0(r.qty)}</span> · ${esc(r.why || 'damaged')}${who ? ' · ' + esc(firstWord(who.name)) : ''}${r.note ? ' · ' + esc(r.note) : ''}</span></span>
+        <span class="m" style="font-size:12px;font-weight:600;color:var(--crimson)">−${n0(cost(r))}</span>
+        <button class="bx-switch" role="switch" aria-checked="${!!sel[r.id]}" aria-label="Write off ${esc(r.name)}" data-act="wotoggle" data-id="${r.id}"></button></div>`; }).join('')}</div>
+      <span class="bx-hint" style="font-size:11px;color:var(--ink3)">${ic('doc', 13)}The reporter is told; it goes in the owner’s log</span>` : emptyCard('Nothing reported', 'When the store reports damaged, lost or stolen stock, it lands here.'),
+    foot: list.length ? (can('stock.writeoff') ? (picked.length ? slideHTML('writeoff', `Write off ${picked.length} · ${n0(total)}`, 'trash') : `<button class="bx-btn ghost" disabled>Pick what to write off</button>`) : lockedHTML('stock.writeoff', 'Writing off stock')) : '' });
+};
+ACT.wotoggle = t => { S.ui.wo[t.dataset.id] = !S.ui.wo[t.dataset.id]; FEEL.tick(); render(); };
+ACT['slide:writeoff'] = async () => {
+  const picked = openReports().filter(r => S.ui.wo[r.id]); if (!picked.length || S.busy) return; S.busy = true;
+  const lines = picked.map(r => ({ key: r.key || stockKey(r.productId, r.variantIdx), productId: r.productId, variantIdx: r.variantIdx, name: r.name, delta: -Math.abs(Number(r.qty) || 0), cost: getFIFOUnitCost(r.productId, r.variantIdx) }));
+  try { await callFn('write_off_stock', { p_shop_id: S.shopId, p_report_ids: picked.map(r => r.id), p_lines: lines, p_reason: picked.map(r => r.why || 'damaged').join(', ') });
+    picked.forEach(r => { r.status = 'written_off'; }); S.ui.wo = null; FEEL.stamp(); toast(`Written off: ${picked.length} ${pl(picked.length, 'line')}`); loadAll().then(render).catch(() => {}); }
+  catch (e) { toast(rpcMissing(e) ? 'Writing off needs the Manager’s database update (0122).' : failWord(e), 6000); }
+  S.busy = false; render();
+};
+
+/* ---------------- the shelf's blind count (0115) ---------------- */
+function openCounts(){ return (D().stockCounts || []).filter(c => c.status === 'sent'); }
+PAGE.stocktake = a => {
+  const k = (D().stockCounts || []).find(c => String(c.id) === String(a.id));
+  if (!k) return pageShell({ eyebrow: 'STOCK TAKE', title: 'Gone', body: emptyCard('That count is gone', '') });
+  const done = k.status !== 'sent', ls = (k.lines || []).map(l => ({ ...l, counted: Number(l.counted) || 0, system: l.system == null ? null : Number(l.system) || 0 }));
+  const diffs = ls.filter(l => l.system != null && l.counted !== l.system), agree = ls.length - diffs.length;
+  const net = sum(diffs, l => (l.counted - l.system) * (Number(getFIFOUnitCost(l.productId, l.variantIdx)) || 0)), who = k.countedByName || 'The store';
+  return pageShell({ eyebrow: 'BLIND STOCK TAKE', title: esc(k.aisle || 'The shelf'), sub: `${esc(firstWord(who))} counted ${ls.length} ${pl(ls.length, 'item')}`, face: faceIcon('list'),
+    head: `<div role="img" aria-label="${ls.length} items: ${agree} agree with the books, ${diffs.length} differ" style="display:flex;flex-direction:column;gap:8px"><div style="display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:4px">${ls.slice(0, 36).map(l => `<i class="a-done" style="height:20px;border-radius:6px;${l.system == null || l.counted === l.system ? 'background:rgba(111,220,176,.55)' : l.counted < l.system ? 'background:#E5483D' : 'background:#F5B26B'}"></i>`).join('')}</div>
+      <span style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--navyInk)"><span><b class="m" style="color:var(--mint)">${agree}</b> agree with the books</span><span><b class="m" style="color:#F59A92">${diffs.length}</b> differ · net <b class="m" style="color:#fff">${net < 0 ? '−' : '+'}${n0(Math.abs(Math.round(net)))}</b></span></span></div>`,
+    body: (diffs.length ? `<div class="bx-card bx-list">${diffs.map(l => { const n = l.counted - l.system; return `<div class="bx-row" style="gap:10px"><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><b class="ell" style="font-size:14px">${esc(l.name || 'Item')}</b><span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--ink3)">books <b class="m" style="color:var(--ink)">${l.system}</b>${ic('arrow', 12)}counted <b class="m" style="color:var(--ink)">${l.counted}</b></span></span><span class="m" style="font-size:13px;font-weight:600;padding:2px 9px;border-radius:999px;${n < 0 ? 'background:var(--crimsonSoft);color:var(--crimson)' : 'background:var(--amberSoft);color:var(--amberDeep)'}">${n > 0 ? '+' : '−'}${Math.abs(n)}</span></div>`; }).join('')}</div>` : emptyCard('Everything agrees', 'The count matches the books on every line.'))
+      + (done ? doneHTML(k.status === 'accepted' ? 'ACCEPTED' : 'RECOUNT', k.status === 'accepted' ? 'var(--green)' : 'var(--navy)', k.status === 'accepted' ? `Stock corrected to ${esc(firstWord(who))}’s count. In the owner’s log.` : `${esc(firstWord(who))} gets the items to count again, without the books’ figures.`) : `<span class="bx-hint" style="font-size:11px;color:var(--ink3)">${ic('eye', 13)}${esc(firstWord(who))} didn’t see the books’ figures. Accepting puts this count on the shelf.</span>`),
+    foot: done ? '' : can('stock.correct') ? `<div class="row">${diffs.length ? `<button class="bx-btn ghost" style="flex:none;padding:0 16px" data-act="recount" data-id="${k.id}">Recount ${diffs.length}</button>` : ''}${slideHTML('count:' + k.id, 'Accept the count', 'tick')}</div>` : lockedHTML('stock.correct', 'Accepting a stock take') });
+};
+ACT['slide:count'] = async el => { const id = el.dataset.slide.slice(6); if (S.busy) return; S.busy = true;
+  try { await callFn('accept_stock_count', { p_id: id }); const k = D().stockCounts.find(c => String(c.id) === id); if (k) k.status = 'accepted'; FEEL.stamp(); loadAll().then(render).catch(() => {}); }
+  catch (e) { toast(failWord(e), 5000); } S.busy = false; render(); };
+ACT.recount = async t => { if (S.busy) return; S.busy = true;
+  try { await callFn('ask_recount', { p_id: t.dataset.id }); const k = D().stockCounts.find(c => String(c.id) === t.dataset.id); if (k) k.status = 'recount'; FEEL.ask(); }
+  catch (e) { toast(failWord(e), 5000); } S.busy = false; render(); };
+
+/* ---------------- returns and voids: asked for on an invoice (0123 invoice_asks) ---------------- */
+function openAsks(kind){ return (D().invoiceAsks || []).filter(a => a.status === 'sent' && a.kind === kind && quoteById(a.quoteId)); }
+/* index.html applyInvoiceDebtCharge, downward only: what the customer owes
+   follows the bill down after a credit note or a void, logged on their
+   history as the invoice's own line. Raising a debt stays invoicing's. */
+async function lowerDebtFor(qid){
+  const r = await sb.from('saved_quotes').select('*').eq('shop_id', S.shopId).eq('id', qid).maybeSingle(); if (r.error) throw r.error;
+  const row = r.data, q = rowToQuote(row), cid = q.customerId; if (cid == null || cid === '') return 0;
+  const desired = q.invoiced && !q.voided ? Math.max(0, quoteTotal(q) - (Number(q.amountPaid) || 0)) : 0, current = Number(q.debtCharged) || 0;
+  if (desired >= current) return 0;
+  const cu = await sb.from('customers').select('debt').eq('shop_id', S.shopId).eq('id', cid).maybeSingle(); if (cu.error) throw cu.error;
+  const before = Number(cu.data && cu.data.debt) || 0, after = Math.max(0, before + (desired - current)), applied = after - before;
+  if (applied < 0) {
+    const logMax = D().customers.reduce((m, c) => (c.debtLog || []).reduce((mm, l) => Math.max(mm, Number(l.id) || 0), m), 0);
+    const id = await issueRowId('row:debt_log', logMax);
+    await insertRow('customer_debt_log', { id, shop_id: S.shopId, customer_id: cid, date: todayISO(), type: 'payment', amount: -applied, note: `Auto-sync — ${invoiceLabel(q)}`, quote_id: q.id }, ['quote_id']);
+    const up = await sb.from('customers').update({ debt: after }).eq('shop_id', S.shopId).eq('id', cid); if (up.error) throw up.error;
+  }
+  const u = await sb.from('saved_quotes').update({ payload: { ...(row.payload || {}), debtCharged: desired, customerId: cid } }).eq('shop_id', S.shopId).eq('id', q.id); if (u.error) throw u.error;
+  return -applied;
+}
+function creditedQty(q, idx){ return ((q.creditNotes) || []).filter(cn => !cn.voided).reduce((s, cn) => s + (cn.lines || []).filter(l => l.idx === idx).reduce((a, l) => a + (Number(l.qty) || 0), 0), 0); }
+PAGE.return = a => {
+  const ask = (D().invoiceAsks || []).find(x => String(x.id) === String(a.id)); const q = ask && quoteById(ask.quoteId);
+  if (!ask || !q) return pageShell({ eyebrow: 'RETURN', title: 'Gone', body: emptyCard('That ask is gone', '') });
+  const done = S.ui.rtDone && S.ui.rtDone.id === String(a.id) ? S.ui.rtDone : null, key = 'rt:' + ask.id;
+  const st = S.ui[key] || (S.ui[key] = { q: Object.fromEntries((ask.lines || []).map(l => [l.idx, Number(l.qty) || 0])), back: Object.fromEntries((ask.lines || []).map(l => [l.idx, !/scratch|damag|broken/i.test(ask.reason || '')])), way: 'debt' });
+  const items = (q.items || []).map((it, idx) => ({ it, idx, room: (Number(it.qty) || 0) - creditedQty(q, idx), price: linePriceNow(it) })).filter(x => x.room > 0 && (st.q[x.idx] != null || (ask.lines || []).length === 0));
+  const cu = customerById(q.customerId), credit = Math.round(items.reduce((s, x) => s + (st.q[x.idx] || 0) * x.price, 0)), owes = Math.round(cu ? Number(cu.debt) || 0 : balanceDue(q)), seller = staffByUser(takenBy(q)), asker = ask.askedByName || 'Someone';
+  return pageShell({ eyebrow: `RETURN · ${esc(firstWord(asker).toUpperCase())} ASKS`, title: esc(clientName(q)), sub: `<span class="m">${esc(invoiceLabel(q))}</span> · ${esc(dayLabel(q.invoicedAt || q.date))} · <span class="m">${n0(quoteTotal(q))}</span>`, face: custAv(customerById(q.customerId) || { name: clientName(q), id: q.id }, 44),
+    head: ask.reason || ask.note ? `<span style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);font-size:13px;font-weight:600;color:#DDE3F0">${ic('asking', 15, 'style="stroke:#6FDCB0"')}“${esc(ask.reason || ask.note)}”</span>` : '',
+    body: `<div class="bx-slip"><div class="bx-slip-in" style="padding:10px 14px">
+        <span style="display:flex;justify-content:space-between;padding:2px 0 6px"><span style="font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--ink3)">WHAT COMES BACK</span><span style="font-size:11px;font-weight:600;color:var(--ink3)">at the invoice price</span></span>
+        ${items.map(x => `<div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px 0;border-top:1px dashed var(--dash)"><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b class="ell" style="font-size:14px">${esc(x.it.productName || 'Item')}</b><span style="font-size:12px;font-weight:600;color:var(--ink3)">bought <span class="m">${x.room}</span> × <span class="m">${n0(x.price)}</span></span>
+            <button data-act="rtback" data-k="${key}" data-i="${x.idx}" style="align-self:flex-start;margin-top:4px;height:24px;padding:0 9px;border:none;border-radius:999px;font-size:11px;font-weight:700;${st.back[x.idx] ? 'background:var(--greenSoft);color:var(--green)' : 'background:var(--amberSoft);color:var(--amberDeep)'}">${st.back[x.idx] ? 'back on the shelf' : 'damaged · not resold'}</button></span>
+          ${done ? `<span class="m" style="font-size:16px;font-weight:600">${st.q[x.idx] || 0}</span>` : `<span style="display:flex;align-items:center;gap:6px"><button class="bx-sq" style="width:36px;height:36px;border-radius:10px;font-size:18px" data-act="rtq" data-k="${key}" data-i="${x.idx}" data-d="-1" aria-label="One less">−</button><span class="m" style="min-width:28px;text-align:center;font-size:17px;font-weight:600;color:${st.q[x.idx] ? 'var(--ink)' : '#9AA1AE'}">${st.q[x.idx] || 0}</span><button class="bx-sq" style="width:36px;height:36px;border-radius:10px;font-size:18px" data-act="rtq" data-k="${key}" data-i="${x.idx}" data-d="1" data-max="${x.room}" aria-label="One more">+</button></span>`}</div>`).join('')}
+        <div style="display:flex;align-items:baseline;justify-content:space-between;padding:10px 0 4px;border-top:1.5px solid var(--ink)"><b style="font-size:13px">Credit note</b><span class="m" style="font-size:20px;font-weight:600;color:var(--green)">${n0(credit)}</span></div></div></div>
+      ${done ? '' : `<div role="radiogroup" aria-label="How they get it back" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${[['debt', 'Off what they owe', `${n0(owes)} → ${n0(Math.max(0, owes - credit))}`], ['cash', 'Cash back', 'Accounts pays it out']].map(w => `<button class="bx-pick" role="radio" aria-checked="${st.way === w[0]}" data-act="rtway" data-k="${key}" data-v="${w[0]}" style="flex-direction:column;align-items:flex-start;gap:3px"><b style="font-size:13px">${w[1]}</b><span class="m" style="font-size:11px;font-weight:600;color:var(--ink2)">${w[2]}</span></button>`).join('')}</div>`}
+      ${seller && credit ? `<span class="bx-hint" style="font-size:11px;color:var(--ink3)">${ic('target', 13)}${esc(firstWord(seller.name))}’s ${esc(monthWord())} sales <span class="m" style="color:var(--crimson)">−${n0(credit)}</span></span>` : ''}
+      ${done ? doneHTML('CREDITED', 'var(--green)', done.way === 'debt' ? `${esc(clientName(q))} now owes ${n0(done.owes)}. ${done.restocked ? 'Stock back on the shelf. ' : ''}Accounts${seller ? ' and ' + esc(firstWord(seller.name)) : ''} are told.` : `Accounts pays ${n0(done.credit)} back. ${done.restocked ? 'Stock back on the shelf. ' : ''}${seller ? esc(firstWord(seller.name)) + ' is told.' : ''}`) : `<button data-act="push" data-p="void" data-id="${ask.id}" data-from="return" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:none;border-radius:14px;background:#fff;box-shadow:inset 0 0 0 1px var(--line);text-align:left">${ic('outc', 16, 'style="color:var(--crimson)"')}<span style="flex:1;display:flex;flex-direction:column"><b style="font-size:13px;color:var(--crimson)">Void the whole invoice instead</b><span style="font-size:11px;font-weight:600;color:var(--ink3)">for a bill raised by mistake</span></span>${ic('chev', 16, 'style="color:#9AA1AE"')}</button>`}
+      <span class="bx-hint" style="font-size:11px;color:var(--ink3)">${ic('doc', 13)}The credit note goes in the owner’s log</span>`,
+    foot: done ? '' : can('credit_note.raise') ? (credit ? slideHTML('credit:' + ask.id, 'Raise the credit note · ' + n0(credit), 'ret') : `<button class="bx-btn ghost" disabled>Choose what comes back</button>`) + `<button class="bx-btn ghost" style="height:44px;font-size:13px" data-act="askno" data-id="${ask.id}">Decline the ask</button>` : lockedHTML('credit_note.raise', 'Raising a credit note') });
+};
+ACT.rtq = t => { const st = S.ui[t.dataset.k], i = t.dataset.i, d = Number(t.dataset.d); st.q[i] = Math.max(0, Math.min(Number(t.dataset.max) || 1e9, (st.q[i] || 0) + d)); FEEL.tick(); render(); };
+ACT.rtback = t => { const st = S.ui[t.dataset.k]; st.back[t.dataset.i] = !st.back[t.dataset.i]; FEEL.tick(); render(); };
+ACT.rtway = t => { S.ui[t.dataset.k].way = t.dataset.v; FEEL.tick(); render(); };
+/* index.html raiseCreditNote, from the Manager's phone. The refund itself
+   is Accounts' (the money): a cash-back note records what is owed back. */
+ACT['slide:credit'] = async el => {
+  const askId = el.dataset.slide.slice(7), ask = (D().invoiceAsks || []).find(x => String(x.id) === askId); if (!ask || S.busy) return;
+  const st = S.ui['rt:' + askId]; S.busy = true;
+  try {
+    let cn = null, restock = [];
+    const no = await issueRowId('creditNote', D().savedQuotes.reduce((m, q) => (q.creditNotes || []).reduce((mm, c) => Math.max(mm, Number(c.no) || 0), m), 0));
+    const res = await changeOrder(ask.quoteId, q => {
+      if (!q.invoiced || q.voided) throw new Error('that invoice is voided or not raised');
+      const lines = [];
+      Object.keys(st.q).forEach(k => { const idx = Number(k), qty = Number(st.q[k]) || 0, it = (q.items || [])[idx]; if (!it || !(qty > 0)) return;
+        const room = (Number(it.qty) || 0) - creditedQty(q, idx); if (qty > room + 1e-9) throw new Error(`${it.productName || 'a line'}: only ${room} left to credit`);
+        lines.push({ idx, qty, price: linePriceNow(it), name: it.productName || 'Item' });
+        if (st.back[idx] && it.productId) restock.push({ key: stockKey(it.productId, it.variantIdx), productId: it.productId, variantIdx: it.variantIdx == null ? null : it.variantIdx, name: it.productName || 'Item', delta: qty, cost: Number(it.price) || null }); });
+      if (!lines.length) throw new Error('pick at least one line');
+      const amount = Math.round(lines.reduce((s, l) => s + l.qty * l.price, 0));
+      cn = { id: no, no, date: todayISO(), reason: String(ask.reason || '').slice(0, 300), lines, amount, restocked: restock.length > 0, refund: st.way === 'cash' ? { amount, due: true, account: null } : null, askId: ask.id, by: S.user ? S.user.id : null, byName: myName() };
+      q.creditNotes = (q.creditNotes || []).concat([cn]);
+      q.docLog = (q.docLog || []).concat([{ at: new Date().toISOString(), kind: 'credited', what: `CN-${String(no).padStart(4, '0')} raised · ${n0(amount)}` }]).slice(-60);
+    }, ['creditNotes', 'docLog']);
+    if (restock.length) await callFn('manager_stock_move', { p_shop_id: S.shopId, p_lines: restock, p_type: 'reversal', p_note: `Returned — CN-${String(no).padStart(4, '0')} on ${invoiceLabel(res.q)}`, p_task: 'credit_note.raise' });
+    if (st.way === 'debt') await lowerDebtFor(ask.quoteId);
+    await callFn('decide_invoice_ask', { p_id: ask.id, p_status: 'accepted' }).catch(e => console.warn(e));
+    logDecision('credit_note.raise', `Credit note CN-${String(no).padStart(4, '0')} · ${n0(cn.amount)} on ${invoiceLabel(res.q)} for ${clientName(res.q)}${st.way === 'cash' ? ' · cash back by Accounts' : ''}`, { amount: cn.amount, ref: { table: 'saved_quotes', id: res.q.id, creditNote: no }, before: { total: Math.round(quoteTotal(res.q) + cn.amount) }, after: { total: Math.round(quoteTotal(res.q)) } });
+    ask.status = 'accepted';
+    S.ui.rtDone = { id: askId, way: st.way, credit: cn.amount, owes: Math.max(0, Math.round(balanceDue(res.q))), restocked: restock.length > 0 };
+    FEEL.stamp(); loadAll().then(render).catch(() => {});
+  } catch (e) { toast(rpcMissing(e) ? 'Putting goods back needs the Manager’s database update (0122).' : failWord(e), 6000); }
+  S.busy = false; render();
+};
+ACT.askno = async t => { if (S.busy) return; S.busy = true;
+  try { await callFn('decide_invoice_ask', { p_id: t.dataset.id, p_status: 'declined' }); const a = D().invoiceAsks.find(x => String(x.id) === t.dataset.id); if (a) a.status = 'declined'; FEEL.no(); pop(); }
+  catch (e) { toast(rpcMissing(e) ? 'Answering an ask needs the Manager’s database update (0122).' : failWord(e), 6000); } S.busy = false; render(); };
+
+/* ---------------- void an invoice raised by mistake ----------------
+   index.html setInvoicesVoided + syncInvoiceDebtCharge: the bill is
+   cancelled and the debt follows it to nothing. Goods come back to the
+   shelf only when they never really went (raised twice, cancelled); a
+   wrong customer keeps the goods out -- the right bill is raised again. */
+const VOID_WHY = [['twice', 'Raised twice', true], ['wrong', 'Wrong customer', false], ['cancel', 'Order cancelled', true]];
+PAGE.void = a => {
+  const ask = (D().invoiceAsks || []).find(x => String(x.id) === String(a.id)); const q = ask && quoteById(ask.quoteId);
+  if (!ask || !q) return pageShell({ eyebrow: 'VOID', title: 'Gone', body: emptyCard('That ask is gone', '') });
+  const done = S.ui.vdDone === String(ask.id) || q.voided, why = S.ui.vdWhy || (/twice|duplic/i.test(ask.reason || '') ? 'twice' : /wrong/i.test(ask.reason || '') ? 'wrong' : 'twice');
+  const twin = D().savedQuotes.find(z => z.id !== q.id && z.invoiced && !z.voided && String(z.customerId) === String(q.customerId) && Math.abs(Math.round(quoteTotal(z)) - Math.round(quoteTotal(q))) < 1 && Math.abs(createdMs(z) - createdMs(q)) < 3 * 864e5);
+  const tot = Math.round(quoteTotal(q)), c = customerById(q.customerId), owes = c ? Math.round(c.debt) : null, back = (VOID_WHY.find(w => w[0] === why) || [])[2];
+  const slip = (z, keep) => `<span style="position:relative;display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:12px;${keep ? 'background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)' : 'background:rgba(229,72,61,.12);box-shadow:inset 0 0 0 1.5px rgba(245,154,146,.6)'}"><span class="m" style="display:flex;justify-content:space-between;font-size:11px;font-weight:600"><span>${esc(invoiceLabel(z))}</span><span style="color:${keep ? 'var(--mint)' : '#F59A92'}">${keep ? 'keeps' : 'goes'}</span></span><span style="height:1px;background:rgba(255,255,255,.14)"></span><span style="font-size:11px;color:var(--navyInk)">${(z.items || []).slice(0, 3).map(it => `${n0(it.qty)} × ${esc(String(it.productName || 'item').split(' · ')[0])}`).join('<br>')}</span><span class="m" style="font-size:14px;font-weight:600">${n0(quoteTotal(z))}</span>${!keep && done ? '<span class="a-done" style="position:absolute;left:50%;top:50%;margin:-15px 0 0 -42px;width:84px;padding:3px 0;border:3px double #F59A92;border-radius:8px;color:#F59A92;font-size:14px;font-weight:700;letter-spacing:.2em;text-align:center;transform:rotate(-12deg);background:rgba(22,32,60,.7)">VOID</span>' : ''}</span>`;
+  const eff = (icn, w, v, col) => `<span style="display:flex;align-items:center;justify-content:space-between;min-height:46px;gap:8px"><span style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink2)">${ic(icn, 15)}${w}</span><span class="m" style="font-size:13px;font-weight:600;${col || ''}">${v}</span></span>`;
+  return pageShell({ eyebrow: `VOID · ${esc(firstWord(ask.askedByName || 'someone').toUpperCase())} ASKS`, title: esc(clientName(q)), sub: twin ? 'two bills for one delivery' : esc(invoiceLabel(q)), face: custAv(c || { name: clientName(q), id: q.id }, 44),
+    head: `<div style="display:grid;grid-template-columns:${twin ? '1fr 1fr' : '1fr'};gap:8px">${twin ? slip(twin, true) : ''}${slip(q, false)}</div>${ask.reason ? `<span style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:#DDE3F0">${ic('asking', 14, 'style="stroke:#6FDCB0"')}“${esc(ask.reason)}”</span>` : ''}`,
+    body: `${done ? '' : `<div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:12px;font-weight:700;color:var(--ink2);padding:0 2px">Why it goes</span><div role="radiogroup" aria-label="Why it goes" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">${VOID_WHY.map(w => `<button role="radio" aria-checked="${why === w[0]}" data-act="vdwhy" data-v="${w[0]}" style="height:44px;border:none;border-radius:12px;font-size:12px;font-weight:700;${why === w[0] ? 'background:var(--navy);color:#fff' : 'background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)'}">${w[1]}</button>`).join('')}</div></div>`}
+      <div class="bx-card" style="padding:4px 14px">${eff('team', 'What they owe', owes != null ? `<span style="color:#9AA1AE;text-decoration:line-through">${n0(owes)}</span>&nbsp; ${n0(Math.max(0, owes - Math.round(balanceDue(q))))}` : '—')}<span style="display:block;height:1px;background:#F1EEE8"></span>${eff('box', 'Back on the shelf', back ? (q.items || []).map(it => '+' + n0(it.qty)).slice(0, 3).join(' · ') : 'stays out', back ? 'color:var(--green)' : 'color:var(--ink3)')}<span style="display:block;height:1px;background:#F1EEE8"></span>${eff('truck', 'Its supplier bills', 'cancelled too', 'color:var(--crimson);font-family:Figtree,sans-serif;font-weight:700')}</div>
+      ${done ? doneHTML('VOID', 'var(--crimson)', `${esc(invoiceLabel(q))} is void. ${c ? esc(c.name) + ' owes ' + n0(Math.max(0, owes - (S.ui.vdLower || 0))) + '. ' : ''}Accounts${staffByUser(takenBy(q)) ? ' and ' + esc(firstWord(staffByUser(takenBy(q)).name)) : ''} are told.`) : ''}
+      <span class="bx-hint" style="font-size:11px;color:var(--ink3)">${ic('doc', 13)}A void can’t be undone from here · it goes in the owner’s log</span>`,
+    foot: done ? '' : can('invoice.void') ? slideHTML('void:' + ask.id, 'Void ' + n0(tot), 'outc') + `<button class="bx-btn ghost" style="height:44px;font-size:13px" data-act="askno" data-id="${ask.id}">Keep it · decline</button>` : lockedHTML('invoice.void', 'Voiding an invoice') });
+};
+ACT.vdwhy = t => { S.ui.vdWhy = t.dataset.v; FEEL.tick(); render(); };
+ACT['slide:void'] = async el => {
+  const askId = el.dataset.slide.slice(5), ask = (D().invoiceAsks || []).find(x => String(x.id) === askId); if (!ask || S.busy) return; S.busy = true;
+  const why = S.ui.vdWhy || 'twice', back = (VOID_WHY.find(w => w[0] === why) || [])[2];
+  try {
+    const r = await sb.from('saved_quotes').select('*').eq('shop_id', S.shopId).eq('id', ask.quoteId).maybeSingle(); if (r.error) throw r.error;
+    const row = r.data, q = rowToQuote(row); if (!q.invoiced || q.voided) throw new Error('that invoice is not live');
+    const payload = { ...(row.payload || {}), voidedBy: { by: S.user ? S.user.id : null, byName: myName(), at: new Date().toISOString(), why, askId: ask.id }, docLog: (q.docLog || []).concat([{ at: new Date().toISOString(), kind: 'voided', what: 'Voided · ' + why }]).slice(-60) };
+    const u = await sb.from('saved_quotes').update({ voided: true, payload }).eq('shop_id', S.shopId).eq('id', q.id); if (u.error) throw u.error;
+    S.ui.vdLower = await lowerDebtFor(q.id);
+    if (back) { const lines = (q.items || []).filter(it => it.productId && Number(it.qty) > 0 && !it.boughtIn).map(it => ({ key: stockKey(it.productId, it.variantIdx), productId: it.productId, variantIdx: it.variantIdx == null ? null : it.variantIdx, name: it.productName || 'Item', delta: Number(it.qty), cost: Number(it.price) || null }));
+      if (lines.length) await callFn('manager_stock_move', { p_shop_id: S.shopId, p_lines: lines, p_type: 'reversal', p_note: `Voided — ${invoiceLabel(q)}`, p_task: 'invoice.void' }); }
+    await callFn('void_sale_bills', { p_shop_id: S.shopId, p_quote_id: q.id }).catch(e => console.warn(e));
+    await callFn('decide_invoice_ask', { p_id: ask.id, p_status: 'accepted' }).catch(e => console.warn(e));
+    // 0122's saved_quotes guard writes the owner's log line for a void itself.
+    ask.status = 'accepted'; S.ui.vdDone = askId; FEEL.stamp(); loadAll().then(render).catch(() => {});
+  } catch (e) { toast(rpcMissing(e) ? 'Voiding needs the Manager’s database update (0122).' : failWord(e), 6000); }
+  S.busy = false; render();
+};
+
+/* ---------------- an agent asks to change or cancel ----------------
+   index.html decideAgentChange, line by line: agreeing changes the line
+   (none of it takes it off); what a paid order then holds beyond its
+   worth is the agent's credit for their next order. */
+function agentAsks(){
+  return liveOrders().filter(q => !q.invoiced && (q.agentCancel && !q.agentCancel.closed || (q.agentChange && q.agentChange.state === 'asked' && (q.agentChange.lines || []).some(l => l && !l.decision))))
+    .map(q => ({ q, cancel: !!q.agentCancel && !q.agentCancel.agreed, lines: (q.agentChange && q.agentChange.state === 'asked' ? (q.agentChange.lines || []).filter(l => l && !l.decision) : []), agent: q.originAgentName || (q.client && q.client.name) || 'Agent' }));
+}
+function agentKey(x){ return String(x && x.productId) + '::' + (x == null || x.variantIdx == null ? '' : String(x.variantIdx)); }
+PAGE.agentask = a => {
+  const x = agentAsks().find(y => Number(y.q.id) === Number(a.id)), q = x ? x.q : quoteById(a.id);
+  if (!q) return pageShell({ eyebrow: 'AGENT ASKS', title: 'Gone', body: emptyCard('That order is gone', '') });
+  const lines = x ? x.lines : [], paid = Number(q.amountPaid) || 0, keep = S.ui.agKeep || (S.ui.agKeep = {});
+  const after = (() => { const z = { ...q, items: (q.items || []).map(it => { const l = lines.find(m => agentKey(m) === agentKey(it)); return l && keep[agentKey(l)] !== true ? (Number(l.to) > 0 ? { ...it, qty: Number(l.to) } : null) : it; }).filter(Boolean) }; return Math.round(quoteTotal(z)); })();
+  const credit = Math.max(0, paid - after);
+  return pageShell({ eyebrow: x && x.cancel ? 'AGENT ASKS TO CANCEL' : 'AGENT ASKS TO CHANGE', title: esc(clientName(q)), sub: `<span class="m">Q-${String(q.id).padStart(4, '0')}</span> · ${esc(stageOf(q).label)} · paid <span class="m">${n0(paid)}</span>`, face: faceIcon('agent'),
+    head: `<div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--navyInk)">The order, if you agree</span><span class="m" style="font-size:22px;font-weight:600"><span style="color:var(--navyInk2);font-size:13px;text-decoration:line-through">${n0(quoteTotal(q))}</span> ${n0(x && x.cancel ? 0 : after)}</span></div>`,
+    body: (x ? (x.cancel ? `<div class="bx-card" style="padding:14px;display:flex;flex-direction:column;gap:6px"><b style="font-size:14px">Cancel the whole order</b><span class="bx-sub">${esc(q.agentCancel.reason || 'No reason given')} · asked ${esc(ageWords(minsSince(Date.parse(q.agentCancel.at))))} ago</span></div>`
+      : `<div class="bx-card bx-list">${lines.map(l => { const it = (q.items || []).find(m => agentKey(m) === agentKey(l)) || {}, k = agentKey(l), kept = keep[k] === true;
+        return `<div class="bx-row" style="gap:10px"><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><b class="ell" style="font-size:14px">${esc(it.productName || l.productName || 'A line')}</b><span class="bx-sub"><span class="m">${n0(it.qty)}</span> → <span class="m" style="color:${kept ? 'var(--ink3)' : 'var(--crimson)'}">${n0(l.to || 0)}</span>${Number(l.to) > 0 ? '' : ' · take it off'}</span></span>
+          <button data-act="agkeep" data-k="${esc(k)}" style="height:34px;padding:0 12px;border:none;border-radius:11px;font-size:12px;font-weight:700;${kept ? 'background:var(--navy);color:#fff' : 'background:var(--soft);color:var(--ink)'}">${kept ? 'Keep · undo' : 'Agree'}</button></div>`; }).join('')}</div>`) : doneHTML('DECIDED', 'var(--green)', 'The agent and the buyer are told.'))
+      + (credit && x && !x.cancel ? `<span class="bx-hint" style="font-size:11px;color:var(--ink2)">${ic('cash', 13)}<span class="m">${n0(credit)}</span> becomes their credit for the next order</span>` : '')
+      + `<span class="bx-hint" style="font-size:11px;color:var(--ink3)">${ic('doc', 13)}The agent and the buyer are told · in the owner’s log</span>`,
+    foot: x ? (can('agent.change') ? `<button class="bx-btn red" data-act="agdo" data-id="${q.id}">${ic('tick', 18, 'style="stroke-width:2.4"')}${x.cancel ? 'Agree to cancel' : 'Answer the agent'}</button>${x.cancel ? `<button class="bx-btn ghost" style="height:44px;font-size:13px" data-act="agnocancel" data-id="${q.id}">Keep the order</button>` : ''}` : lockedHTML('agent.change', 'Answering an agent')) : '' });
+};
+ACT.agkeep = t => { S.ui.agKeep[t.dataset.k] = !S.ui.agKeep[t.dataset.k]; FEEL.tick(); render(); };
+ACT.agdo = async t => {
+  if (S.busy) return; S.busy = true; const keep = S.ui.agKeep || {};
+  try {
+    const res = await changeOrder(t.dataset.id, q => {
+      const now = new Date().toISOString();
+      if (q.agentCancel && !q.agentCancel.agreed) { q.agentCancel = { ...q.agentCancel, agreed: true, decidedAt: now, by: S.user ? S.user.id : null }; return; }
+      const c = q.agentChange; if (!c || c.state !== 'asked') return false;
+      (c.lines || []).filter(l => l && !l.decision).forEach(l => { const agree = keep[agentKey(l)] !== true; l.decision = agree ? 'agreed' : 'declined'; l.decidedAt = now;
+        if (agree) { const it = (q.items || []).find(m => agentKey(m) === agentKey(l)); if (it) { if (Number(l.to) > 0) it.qty = Number(l.to); else q.items = q.items.filter(m => m !== it); }
+          const before = (q.agentCredit && Number(q.agentCredit.amount)) || 0, owed = Math.max(0, Math.round((Number(q.amountPaid) || 0) - quoteTotal(q)));
+          if (owed > before) q.agentCredit = Object.assign({ used: [] }, q.agentCredit || {}, { amount: owed, at: (q.agentCredit && q.agentCredit.at) || now }); } });
+      if (!(c.lines || []).some(l => l && !l.decision)) { c.state = c.lines.some(l => l.decision === 'agreed') ? 'agreed' : 'declined'; c.decidedAt = now; }
+      if (!(q.items || []).length && !q.agentCancel) q.agentCancel = { at: now, reason: 'Agreed with the shop', agreed: true };
+    }, ['items', 'agentChange', 'agentCancel', 'agentCredit']);
+    if (!res) throw new Error('that ask is answered already');
+    logDecision('agent.change', `Answered ${res.q.originAgentName || 'an agent'} on ${clientName(res.q)}`, { amount: Math.round(quoteTotal(res.q)), ref: { table: 'saved_quotes', id: res.q.id }, after: { change: res.q.agentChange || null, cancel: res.q.agentCancel || null } });
+    S.ui.agKeep = null; FEEL.stamp(); toast('Answered. The agent and the buyer are told.');
+  } catch (e) { toast(failWord(e), 5000); }
+  S.busy = false; render();
+};
+ACT.agnocancel = async t => {
+  if (S.busy) return; S.busy = true;
+  try { const res = await changeOrder(t.dataset.id, q => { if (!q.agentCancel || q.agentCancel.agreed) return false; q.agentCancel = { ...q.agentCancel, declined: true, closed: true, decidedAt: new Date().toISOString(), by: S.user ? S.user.id : null }; }, ['agentCancel']);
+    if (res) { logDecision('agent.change', `Kept ${clientName(res.q)}: the agent's cancel declined`, { ref: { table: 'saved_quotes', id: res.q.id } }); FEEL.no(); pop(); } }
+  catch (e) { toast(failWord(e), 5000); } S.busy = false; render();
+};
+
+/* ---------------- the Buyer's restock list: "not yet" ----------------
+   Restock buying is the Buyer's (buy.restock, a later build); the lines
+   it writes land in restock_lines (0122), and the Manager may hold one. */
+function restockLines(){ return (D().restockLines || []).filter(r => r.status === 'planned' || r.status === 'held'); }
+function restockBuyer(){ const r = restockLines()[0], s = r && staffByUser(r.createdBy); return s ? s.name : 'The buyer'; }
+PAGE.restock = () => {
+  const list = restockLines(), total = sum(list.filter(r => r.status !== 'held'), r => (Number(r.qty) || 0) * (Number(r.cost) || 0)), all = sum(list, r => (Number(r.qty) || 0) * (Number(r.cost) || 0));
+  const COLS = ['#F59A92', '#F5B26B', '#8EC3F0', '#A9AEF0', '#9DD9B9', '#E3A9D3'];
+  return pageShell({ eyebrow: 'RESTOCK · NO ORDER NEEDS IT', title: `${esc(firstWord(restockBuyer()))}’s list${list[0] && list[0].forDate ? ' for ' + esc(dayLabel(list[0].forDate)) : ''}`, sub: 'they decide what · you can say “not yet”', face: list[0] ? pav(staffByUser(list[0].createdBy) || { name: restockBuyer(), id: 'b' }, 44) : faceIcon('box'),
+    head: list.length ? `<div role="img" aria-label="The list needs ${n0(total)}" style="display:flex;flex-direction:column;gap:7px"><span style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--navyInk)">Cash it needs</span><span style="display:flex;align-items:baseline;gap:8px">${total !== all ? `<span class="m" style="font-size:12px;color:var(--navyInk2);text-decoration:line-through">${n0(all)}</span>` : ''}<span class="m" style="font-size:22px;font-weight:600">${n0(total)}</span></span></span>
+      <span style="display:flex;gap:3px;height:10px">${list.map((r, i) => `<i style="flex:${(Number(r.qty) || 0) * (Number(r.cost) || 0) || 1};border-radius:3px;background:${COLS[i % COLS.length]};transition:opacity .3s;${r.status === 'held' ? 'opacity:.18' : ''}"></i>`).join('')}</span></div>` : '',
+    body: list.length ? `<div class="bx-sec"><b style="font-size:13px">What the shelf has left</b><span>at this month’s selling</span></div><div class="bx-card bx-list">${list.map(r => { const held = r.status === 'held', left = getStockQty(r.productId, r.variantIdx), wk = restockWeeks(r, left);
+        return `<div style="display:flex;flex-direction:column;gap:8px;padding:12px 0;${r !== list[0] ? 'border-top:1px solid #F1EEE8' : ''}"><span style="display:flex;align-items:center;gap:10px"><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><b class="ell" style="font-size:14px;${held ? 'color:#9AA1AE;text-decoration:line-through' : ''}">${esc(r.name)}</b><span style="font-size:11px;font-weight:600;color:var(--ink3)"><span class="m">${n0(r.qty)}</span> ${esc(r.unit || '')} · <span class="m">${n0((Number(r.qty) || 0) * (Number(r.cost) || 0))}</span></span></span>
+          ${can('restock.hold') ? `<button role="switch" aria-checked="${held}" data-act="rshold" data-id="${r.id}" aria-label="${held ? 'Release' : 'Hold'} ${esc(r.name)}" style="flex:none;height:36px;padding:0 12px;border:none;border-radius:11px;font-size:12px;font-weight:700;${held ? 'background:var(--navy);color:#fff' : 'background:var(--soft);color:var(--ink)'}">${held ? 'Held · undo' : 'Not yet'}</button>` : ''}</span>
+          ${wk != null ? `<span style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center"><span style="position:relative;height:8px;border-radius:999px;background:#EFECE6"><i class="a-grow" style="position:absolute;left:0;top:0;bottom:0;width:${Math.min(100, wk / 10 * 100).toFixed(1)}%;min-width:6px;border-radius:999px;background:${wk < 1 ? '#E5483D' : wk < 6 ? '#F5B26B' : 'var(--green)'}"></i></span><span style="font-size:11px;font-weight:700;white-space:nowrap;color:${wk < 1 ? 'var(--crimson)' : wk > 6 ? 'var(--green)' : 'var(--ink2)'}">${wk < 1 ? Math.max(0, Math.round(wk * 7)) + ' days left' : Math.round(wk) + ' weeks left'}</span></span>` : ''}</div>`; }).join('')}</div>
+      <span class="bx-hint" style="font-size:11px;color:var(--ink3)">${ic('bell', 13)}${esc(firstWord(restockBuyer()))} is told for each line you hold</span>` : emptyCard('No restock list yet', 'When the buyer plans what to refill, it shows here and you can hold a line.') });
+};
+// How long the shelf lasts at this month's selling of it.
+function restockWeeks(r, left){
+  const from = monthStartISO(), days = Math.max(1, daysBetween(from, todayISO()) + 1);
+  const sold = sum(D().savedQuotes.filter(q => q.invoiced && !q.voided && (q.invoicedAt || '') >= from), q => sum((q.items || []).filter(it => it.productId === r.productId && String(it.variantIdx ?? '') === String(r.variantIdx ?? '')), it => Number(it.qty) || 0));
+  if (!(sold > 0)) return null;
+  return (Number(left) || 0) / (sold / days) / 7;
+}
+ACT.rshold = async t => { if (S.busy) return; S.busy = true; const r = D().restockLines.find(x => String(x.id) === t.dataset.id); const hold = r && r.status !== 'held';
+  try { await callFn('hold_restock_line', { p_id: t.dataset.id, p_hold: hold }); if (r) r.status = hold ? 'held' : 'planned'; FEEL.tick(); }
+  catch (e) { toast(rpcMissing(e) ? 'Holding a restock line needs the Manager’s database update (0122).' : failWord(e), 6000); } S.busy = false; render(); };
+
+/* ==================================================================
+   THE MANAGER'S RULES — margins and markups, goals and stage limits, the
+   hold line, a customer's limit and terms, a promise to pay. Each is
+   written through a narrow server function or a guarded column (0122),
+   never by opening the whole settings row, and each is logged.
+   ================================================================== */
+
+/* ---------------- costs, margins and markups (margin.see, markup.set) ---------------- */
+function monthLines(){
+  const from = monthStartISO(), by = new Map();
+  D().savedQuotes.filter(q => q.invoiced && !q.voided && custISO(q.invoicedAt || q.date) >= from).forEach(q => (q.items || []).forEach(it => {
+    const cost = lineCost(it), p = linePriceNow(it), qty = Number(it.qty) || 0; if (!it.productId || !cost || !(p > 0) || !(qty > 0)) return;
+    const k = it.productId; const r = by.get(k) || { productId: k, name: String(it.productName || '').split(' · ')[0] || 'Item', sales: 0, cost: 0, under: 0 };
+    r.sales += p * qty; r.cost += cost * qty; const sh = shopSellPrice(it); if (sh && p < sh) r.under += (sh - p) * qty; by.set(k, r);
+  }));
+  return [...by.values()].map(r => ({ ...r, m: r.sales ? (r.sales - r.cost) / r.sales : 0 })).sort((a, b) => a.m - b.m);
+}
+function markupOf(p){ return p && p.wholesaleMarkupType !== 'fixed' && Number(p.wholesaleMarkupValue) > 0 ? Number(p.wholesaleMarkupValue) : null; }
+function defaultMarkupPct(){ const d = D().presetDefaultMarkup || {}; return Number(d.wholesaleValue) > 0 && d.wholesaleType !== 'fixed' ? Number(d.wholesaleValue) : 25; }
+PAGE.margins = () => {
+  if (!can('margin.see')) return pageShell({ eyebrow: 'COSTS AND MARGINS', title: 'Not open to this login', body: lockedHTML('margin.see', 'Seeing costs and margins') });
+  const rows = monthLines().slice(0, 12), ed = S.ui.mk || (S.ui.mk = {}), def = ed.__def != null ? ed.__def : defaultMarkupPct();
+  const sales = sum(rows, r => r.sales), cost = sum(rows, r => r.cost), m = sales ? (sales - cost) / sales : 0, under = sum(rows, r => r.under);
+  const changed = Object.keys(ed).length, canSet = can('markup.set');
+  return pageShell({ eyebrow: 'COSTS, MARGINS AND MARKUPS', title: `${esc(monthWord())} so far`, face: faceIcon('pct'),
+    head: `<div style="display:flex;align-items:center;gap:14px">${pctRing(m / .4, 72, 7, m >= .15 ? '#6FDCB0' : m >= .08 ? '#F5B26B' : '#F59A92', `<span class="m" style="font-size:16px;font-weight:600">${marginWord(m).replace('.0%', '%')}</span><span style="font-size:9px;font-weight:600;color:var(--navyInk2)">margin</span>`, 'Margin this month ' + marginWord(m))}
+        <span style="flex:1;display:flex;flex-direction:column;gap:6px"><span style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--navyInk)"><span>sold</span><b class="m" style="color:#fff">${n0(sales)}</b></span><span style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--navyInk)"><span>given away under the shop’s price</span><b class="m" style="color:var(--amber)">${n0(under)}</b></span></span></div>
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 8px 8px 12px;border-radius:14px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)"><span style="flex:1;display:flex;flex-direction:column"><b style="font-size:13px">Shop’s default markup</b><span style="font-size:11px;font-weight:600;color:var(--navyInk2)">for items with none of their own</span></span>
+        ${canSet ? `<button class="bx-circle" data-act="mkstep" data-k="__def" data-d="-1" aria-label="Lower the default markup">−</button>` : ''}<span class="m" style="min-width:48px;text-align:center;font-size:18px;font-weight:600">${def}%</span>${canSet ? `<button class="bx-circle" data-act="mkstep" data-k="__def" data-d="1" aria-label="Raise the default markup">+</button>` : ''}</div>`,
+    body: `<div class="bx-sec"><b style="font-size:13px">Thinnest first · this month</b><span>markup on cost</span></div>
+      ${rows.length ? `<div class="bx-card bx-list">${rows.map(r => { const p = productById(r.productId), cur = ed[r.productId] != null ? ed[r.productId] : markupOf(p), mc = r.m >= .15 ? 'var(--green)' : r.m >= .08 ? 'var(--amberInk)' : 'var(--crimson)';
+        return `<div style="display:flex;flex-direction:column;gap:8px;padding:12px 0;${r !== rows[0] ? 'border-top:1px solid #F1EEE8' : ''}"><span style="display:flex;align-items:center;gap:8px"><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><b class="ell" style="font-size:14px">${esc(r.name)}</b><span style="font-size:11px;font-weight:600;color:var(--ink3)">sold <span class="m">${short(r.sales)}</span> · <span class="m" style="color:${mc}">${marginWord(r.m)}</span> margin</span></span>
+          ${canSet ? `<span style="display:flex;align-items:center;gap:2px;padding:3px;border-radius:10px;background:var(--soft)"><button data-act="mkstep" data-k="${esc(r.productId)}" data-d="-1" aria-label="Lower the markup of ${esc(r.name)}" style="width:30px;height:30px;border:none;border-radius:8px;background:#fff;font-size:15px;font-weight:700">−</button><span class="m" style="min-width:40px;text-align:center;font-size:13px;font-weight:600;${ed[r.productId] != null ? 'color:var(--sky)' : ''}">${cur == null ? def + '%*' : cur + '%'}</span><button data-act="mkstep" data-k="${esc(r.productId)}" data-d="1" aria-label="Raise the markup of ${esc(r.name)}" style="width:30px;height:30px;border:none;border-radius:8px;background:#fff;font-size:15px;font-weight:700">+</button></span>` : `<span class="m" style="font-size:13px;font-weight:600">${cur == null ? def + '%*' : cur + '%'}</span>`}</span>
+          <span style="position:relative;height:8px;border-radius:999px;background:#EFECE6"><i class="a-grow" style="position:absolute;left:0;top:0;bottom:0;width:${Math.max(3, Math.min(100, r.m / .4 * 100)).toFixed(1)}%;border-radius:999px;background:${mc}"></i><i style="position:absolute;left:${(10 / 40 * 100).toFixed(1)}%;top:-3px;bottom:-3px;width:2px;border-radius:2px;background:var(--ink)"></i></span></div>`; }).join('')}</div>
+        <span class="bx-hint" style="font-size:11px;color:var(--ink3)">${ic('pct', 13)}* the shop’s default · the tick marks a 10% margin</span>` : emptyCard('Nothing sold yet this month', 'Margins show once invoices carry costs.')}
+      <span class="bx-hint" style="font-size:11px;color:var(--ink3)">${ic('doc', 13)}A markup change goes in the owner’s log, with what it was before</span>`,
+    foot: changed && canSet ? `<button class="bx-btn red" data-act="mksave">${ic('tick', 18, 'style="stroke-width:2.4"')}Save ${changed} ${pl(changed, 'markup')}</button>` : '' });
+};
+ACT.mkstep = t => { const k = t.dataset.k, ed = S.ui.mk; const base = ed[k] != null ? ed[k] : k === '__def' ? defaultMarkupPct() : (markupOf(productById(k)) || defaultMarkupPct()); ed[k] = Math.max(0, Math.min(300, base + Number(t.dataset.d))); FEEL.tick(); render(); };
+ACT.mksave = async () => {
+  if (S.busy) return; S.busy = true; const ed = S.ui.mk || {}; let n = 0;
+  try {
+    for (const k of Object.keys(ed)) {
+      if (k === '__def') { const d = { ...(D().presetDefaultMarkup || {}), wholesaleType: 'percent', wholesaleValue: ed[k] }; const r = await callFn('set_shop_preset', { p_shop_id: S.shopId, p_key: 'defaultMarkup', p_value: d }); D().presetDefaultMarkup = (r && r.presets && r.presets.defaultMarkup) || d; }
+      else { await callFn('set_product_markup', { p_shop_id: S.shopId, p_product_id: k, p_fields: { wholesaleMarkupType: 'percent', wholesaleMarkupValue: ed[k] } }); const p = productById(k); if (p) { p.wholesaleMarkupType = 'percent'; p.wholesaleMarkupValue = ed[k]; } }
+      n++;
+    }
+    S.ui.mk = null; FEEL.stamp(); toast(`${n} ${pl(n, 'markup')} saved · in the owner’s log`); saveSnapshot();
+  } catch (e) { toast(rpcMissing(e) ? 'Setting markups needs the Manager’s database update (0122).' : failWord(e), 6000); }
+  S.busy = false; render();
+};
+
+/* ---------------- goals, stage limits and the hold line ---------------- */
+const LIMIT_STEPS = { draft: 15, awaiting_goods: 60, preparing: 15, pending_delivery: 30 };
+PAGE.teamrules = () => {
+  const T = team(), ed = S.ui.tr || (S.ui.tr = {}), shop = salesTarget(), from = monthStartISO(), to = nmMonthEnd(from);
+  const goals = T.sales.filter(s => s.userId).map(s => { const g = personGoal(s.userId); return { s, was: g ? Math.round(g.aim / 1e6) : 0, v: ed['g:' + s.id] != null ? ed['g:' + s.id] : (g ? Math.round(g.aim / 1e6) : 0) }; });
+  const sumM = sum(goals, g => g.v), shopM = shop ? Math.round(shop.aim / 1e6) : null, rest = shopM != null ? Math.max(0, shopM - sumM) : 0;
+  const lim = stageLimits().limits, hold = ed.hold != null ? ed.hold : holdDays();
+  const canG = can('goal.set'), canL = can('team.limits'), canH = can('credit.set'), changed = Object.keys(ed).length;
+  const step = (k, d, label, on) => on ? `<button class="bx-sq" style="width:34px;height:34px;border-radius:10px;font-size:16px" data-act="trstep" data-k="${k}" data-d="${d}" aria-label="${label}">${d > 0 ? '+' : '−'}</button>` : '';
+  return pageShell({ eyebrow: 'THE TEAM’S RULES', title: 'Goals, limits and the hold line', face: faceIcon('target'),
+    head: shopM != null ? `<div role="img" aria-label="Goals add up to ${sumM}M of the shop's ${shopM}M" style="display:flex;flex-direction:column;gap:6px"><span style="display:flex;gap:2px;height:12px">${goals.map(g => g.v ? `<i style="flex:${g.v};border-radius:3px;background:${personCol(g.s)[2]}"></i>` : '').join('')}${rest ? `<i style="flex:${rest};border-radius:3px;background:repeating-linear-gradient(135deg,rgba(255,255,255,.1) 0 4px,rgba(255,255,255,.2) 4px 7px)"></i>` : ''}</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${rest ? `With <b class="m" style="color:#fff">${rest}M</b> from the counter and agents, it makes the shop’s <b class="m" style="color:#fff">${shopM}M</b>` : sumM > shopM ? `<b class="m" style="color:var(--amber)">${sumM - shopM}M</b> over the shop’s ${shopM}M` : `Adds up to the shop’s <b class="m" style="color:#fff">${shopM}M</b>`}</span></div>` : `<span style="font-size:12px;font-weight:600;color:var(--navyInk)">The shop’s own goal is the owner’s; yours are each person’s.</span>`,
+    body: `<div class="bx-sec"><b style="font-size:13px">Each salesperson’s goal · ${esc(monthWord())}</b><span>in millions</span></div>
+      <div class="bx-card bx-list">${goals.length ? goals.map(g => `<div class="bx-row" style="gap:10px">${pav(g.s, 34)}<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><b class="ell" style="font-size:14px">${esc(firstWord(g.s.name))}</b><span class="bx-sub">${g.v !== g.was ? `was <span class="m">${g.was}M</span>` : g.was ? 'set' : 'no goal yet'}</span></span>${step('g:' + g.s.id, -1, 'Lower ' + g.s.name + '’s goal', canG)}<span class="m" style="min-width:52px;text-align:center;font-size:17px;font-weight:600;${g.v !== g.was ? 'color:var(--sky)' : ''}">${g.v}M</span>${step('g:' + g.s.id, 1, 'Raise ' + g.s.name + '’s goal', canG)}</div>`).join('') : `<div class="bx-empty" style="padding:14px"><b>No salespeople with a login</b>A staff row with the sales job and a login shows here.</div>`}</div>
+      <div class="bx-sec"><b style="font-size:13px">How long an order may sit</b><span>then it shows as stuck</span></div>
+      <div class="bx-card bx-list">${STAGES.slice(0, 4).map(st => { const k = 'l:' + st.key, v = ed[k] != null ? ed[k] : Number(lim[st.key]) || SUGGESTED_LIMITS[st.key]; return `<div class="bx-row" style="gap:10px"><span style="width:10px;height:10px;border-radius:3px;flex:none;background:${st.col}"></span><b style="flex:1;font-size:14px">${st.label}</b>${step(k, -LIMIT_STEPS[st.key], 'Shorter in ' + st.label, canL)}<span class="m" style="min-width:56px;text-align:center;font-size:15px;font-weight:600;${ed[k] != null ? 'color:var(--sky)' : ''}">${limitWords(v)}</span>${step(k, LIMIT_STEPS[st.key], 'Longer in ' + st.label, canL)}</div>`; }).join('')}</div>
+      <div class="bx-sec"><b style="font-size:13px">The credit hold line</b><span>an order waits for your yes</span></div>
+      <div class="bx-card" style="padding:12px 14px;display:flex;flex-direction:column;gap:10px"><span style="display:flex;align-items:center;gap:10px"><span style="flex:1;font-size:13px;font-weight:600;color:var(--ink2)">when the oldest bill is past</span>${step('hold', -1, 'Fewer days', canH)}<span class="m" style="min-width:50px;text-align:center;font-size:17px;font-weight:600;${ed.hold != null ? 'color:var(--sky)' : ''}">${hold}d</span>${step('hold', 1, 'More days', canH)}</span>
+        <span role="img" aria-label="Hold line at ${hold} days on a 30-day scale" style="position:relative;height:8px;border-radius:999px;background:linear-gradient(90deg,#0F6B43 0 ${(7 / 30 * 100).toFixed(1)}%,#F5B26B ${(7 / 30 * 100).toFixed(1)}% ${(hold / 30 * 100).toFixed(1)}%,#E5483D ${(hold / 30 * 100).toFixed(1)}%)"><i style="position:absolute;left:${Math.min(100, hold / 30 * 100).toFixed(1)}%;top:-4px;bottom:-4px;width:2.5px;border-radius:2px;background:var(--ink)"></i></span></div>
+      <span class="bx-hint" style="font-size:11px;color:var(--ink3)">${ic('doc', 13)}Every change goes in the owner’s log, with what it was before</span>`,
+    foot: changed ? `<button class="bx-btn red" data-act="trsave">${ic('tick', 18, 'style="stroke-width:2.4"')}Save ${changed} ${pl(changed, 'change')}</button>` : '' });
+};
+ACT.trstep = t => { const k = t.dataset.k, ed = S.ui.tr, d = Number(t.dataset.d); let base;
+  if (k === 'hold') base = ed.hold != null ? ed.hold : holdDays();
+  else if (k.startsWith('l:')) base = ed[k] != null ? ed[k] : Number(stageLimits().limits[k.slice(2)]) || SUGGESTED_LIMITS[k.slice(2)];
+  else { const s = staffById(k.slice(2)), g = s && personGoal(s.userId); base = ed[k] != null ? ed[k] : g ? Math.round(g.aim / 1e6) : 0; }
+  ed[k] = Math.max(k === 'hold' ? 1 : 0, base + d); FEEL.tick(); render(); };
+ACT.trsave = async () => {
+  if (S.busy) return; S.busy = true; const ed = S.ui.tr || {}, from = monthStartISO(), to = nmMonthEnd(from);
+  try {
+    for (const k of Object.keys(ed).filter(x => x.startsWith('g:'))) { const s = staffById(k.slice(2)); if (s && s.userId) await callFn('set_person_goal', { p_shop_id: S.shopId, p_who: String(s.userId), p_aim: ed[k] * 1e6, p_from: from, p_to: to }); }
+    const ls = Object.keys(ed).filter(x => x.startsWith('l:'));
+    if (ls.length) { const v = { ...stageLimits().limits }; ls.forEach(k => { v[k.slice(2)] = ed[k]; }); const r = await callFn('set_shop_preset', { p_shop_id: S.shopId, p_key: 'orderStageLimits', p_value: v }); D().presetOrderStageLimits = v; }
+    if (ed.hold != null) { const v = { ...(D().presetCreditHold || {}), days: ed.hold }; await callFn('set_shop_preset', { p_shop_id: S.shopId, p_key: 'creditHold', p_value: v }); D().presetCreditHold = v; }
+    S.ui.tr = null; FEEL.stamp(); toast('Saved · each person is told · in the owner’s log'); loadAll().then(render).catch(() => {});
+  } catch (e) { toast(rpcMissing(e) ? 'Saving these needs the Manager’s database update (0122).' : failWord(e), 6000); }
+  S.busy = false; render();
+};
+
+/* ---------------- a customer's limit and terms (credit.set) ---------------- */
+PAGE.custedit = a => {
+  const c = customerById(a.id); if (!c) return goneCard('That customer is no longer on the books');
+  const k = 'ce:' + c.id, st = S.ui[k] || (S.ui[k] = { limit: Number(c.creditLimit) || 0, terms: c.termsDays != null ? Number(c.termsDays) : 7 });
+  const changed = st.limit !== (Number(c.creditLimit) || 0) || st.terms !== (c.termsDays != null ? Number(c.termsDays) : 7), can2 = can('credit.set');
+  const pend = pendingFor(c), max = Math.max(st.limit, c.debt + pend, 1) * 1.08, pc = v => Math.min(100, v / max * 100).toFixed(1) + '%';
+  const st2 = (key, d, label) => can2 ? `<button class="bx-sq" style="width:40px;height:40px;border-radius:12px;font-size:18px" data-act="cestep" data-k="${k}" data-f="${key}" data-d="${d}" aria-label="${label}">${d > 0 ? '+' : '−'}</button>` : '';
+  return pageShell({ eyebrow: 'EDIT A CUSTOMER', title: esc(c.name), sub: esc(c.location || c.phone || ''), face: avatar(c.name, c.id, 44, true),
+    head: `<div role="img" aria-label="Owes ${n0(c.debt)} against a limit of ${n0(st.limit)}" style="display:flex;flex-direction:column;gap:6px"><span style="position:relative;height:14px;border-radius:999px;background:rgba(255,255,255,.08)"><i class="a-grow" style="position:absolute;left:0;top:0;bottom:0;width:${pc(c.debt)};border-radius:999px 0 0 999px;background:${st.limit && c.debt > st.limit ? '#E5483D' : 'var(--amber)'}"></i>${st.limit ? `<i style="position:absolute;left:${pc(st.limit)};top:-5px;bottom:-5px;width:2.5px;border-radius:2px;background:#fff;transition:left .3s"></i>` : ''}</span><span style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--navyInk)"><span>owes <b class="m" style="color:#fff">${n0(c.debt)}</b></span><span>limit <b class="m" style="color:#fff">${st.limit ? n0(st.limit) : 'none'}</b></span></span></div>`,
+    body: `<div class="bx-card" style="padding:14px;display:flex;flex-direction:column;gap:14px">
+        <span style="display:flex;align-items:center;gap:10px"><span style="flex:1;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px">Credit limit</b><span class="bx-sub">what they may owe at once</span></span>${st2('limit', -500000, 'Lower the limit')}<span class="m" style="min-width:86px;text-align:center;font-size:16px;font-weight:600">${st.limit ? short(st.limit) : 'none'}</span>${st2('limit', 500000, 'Raise the limit')}</span>
+        <span style="display:block;height:1px;background:#F1EEE8"></span>
+        <span style="display:flex;align-items:center;gap:10px"><span style="flex:1;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px">Payment terms</b><span class="bx-sub">days to pay each bill</span></span>${st2('terms', -1, 'Fewer days')}<span class="m" style="min-width:60px;text-align:center;font-size:16px;font-weight:600">${st.terms}d</span>${st2('terms', 1, 'More days')}</span>
+        <div style="display:flex;gap:6px">${[0, 7, 14, 30].map(d => `<button data-act="ceset" data-k="${k}" data-v="${d}" ${can2 ? '' : 'disabled'} style="flex:1;height:34px;border:none;border-radius:10px;font-size:12px;font-weight:700;${st.terms === d ? 'background:var(--navy);color:#fff' : 'background:var(--soft);color:var(--ink)'}">${d ? d + ' days' : 'cash'}</button>`).join('')}</div></div>
+      ${can2 ? '' : lockedHTML('credit.set', 'Setting a limit and terms')}
+      <span class="bx-hint" style="font-size:11px;color:var(--ink3)">${ic('doc', 13)}In the owner’s log, with what it was before</span>`,
+    foot: changed && can2 ? `<button class="bx-btn red" data-act="cesave" data-id="${esc(c.id)}">${ic('tick', 18, 'style="stroke-width:2.4"')}Save · ${st.limit ? short(st.limit) : 'no limit'} · ${st.terms}d</button>` : '' });
+};
+ACT.cestep = t => { const st = S.ui[t.dataset.k]; st[t.dataset.f] = Math.max(0, (st[t.dataset.f] || 0) + Number(t.dataset.d)); FEEL.tick(); render(); };
+ACT.ceset = t => { S.ui[t.dataset.k].terms = Number(t.dataset.v); FEEL.tick(); render(); };
+ACT.cesave = async t => {
+  const c = customerById(t.dataset.id), st = S.ui['ce:' + t.dataset.id]; if (!c || S.busy) return; S.busy = true;
+    try { const u = await sb.from('customers').update({ credit_limit: st.limit || null, terms_days: st.terms }).eq('shop_id', S.shopId).eq('id', c.id); if (u.error) throw u.error;
+    c.creditLimit = st.limit || null; c.termsDays = st.terms; saveSnapshot();
+    // 0122's customers guard logs a limit or terms change itself.
+    S.ui['ce:' + c.id] = null; FEEL.stamp(); toast('Saved · in the owner’s log'); pop(); }
+  catch (e) { toast(failWord(e), 6000); } S.busy = false; render();
+};
+
+/* ---------------- a promise to pay (promise.record) ---------------- */
+PAGE.promise = a => {
+  const c = customerById(a.id); if (!c) return goneCard('That customer is no longer on the books');
+  const k = 'pr:' + c.id, st = S.ui[k] || (S.ui[k] = { day: null, amt: 'all' }), open = custOpen(c.id);
+  const days = Array.from({ length: 8 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() + i + 1); return isoOf(d); });
+  const proms = promisesFor(c).slice(-5), amount = st.amt === 'all' ? Math.round(c.debt) : st.amt === 'part' && open.length ? Math.round(balanceDue(open[0])) : null;
+  return pageShell({ eyebrow: 'RECORD A PROMISE', title: esc(c.name), sub: `owes <span class="m">${n0(c.debt)}</span>`, face: avatar(c.name, c.id, 44, true),
+    head: proms.length ? `<div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;font-weight:700;color:var(--navyInk2)">Before</span><span class="mx-dots">${proms.map(p => { const s2 = promiseState(p, c); return `<i title="${s2}" style="${s2 === 'kept' ? 'background:var(--mint)' : s2 === 'broken' ? 'background:transparent;box-shadow:inset 0 0 0 3px #F59A92' : 'background:transparent;box-shadow:inset 0 0 0 2px rgba(255,255,255,.4)'}"></i>`; }).join('')}</span></div>` : '',
+    body: `<div class="bx-sec"><b style="font-size:13px">They’ll pay on</b></div>
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px">${days.map(d => `<button data-act="prday" data-k="${k}" data-v="${d}" style="height:54px;border:none;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;${st.day === d ? 'background:var(--navy);color:#fff' : 'background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)'}"><span style="font-size:11px;font-weight:600">${esc(new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short' }))}</span><b class="m" style="font-size:16px">${Number(d.slice(8))}</b></button>`).join('')}</div>
+      <div class="bx-sec"><b style="font-size:13px">How much</b></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${[['all', `All <span class="m">${n0(c.debt)}</span>`], open.length && balanceDue(open[0]) < c.debt ? ['part', `Oldest bill <span class="m">${n0(balanceDue(open[0]))}</span>`] : null, ['none', 'Not said']].filter(Boolean).map(x => `<button class="mx-chip" aria-pressed="${st.amt === x[0]}" data-act="pramt" data-k="${k}" data-v="${x[0]}">${x[1]}</button>`).join('')}</div>
+      <span class="bx-hint" style="font-size:11px;color:var(--ink3)">${ic('bell', 13)}Today reminds you on the day · in the owner’s log</span>`,
+    foot: can('promise.record') ? `<button class="bx-btn red" data-act="prsave" data-id="${esc(c.id)}" ${st.day ? '' : 'disabled'}>${ic('promise', 18)}${st.day ? 'Keep the promise · ' + esc(dayLabel(st.day)) : 'Pick the day'}</button>` : lockedHTML('promise.record', 'Recording a promise') });
+};
+ACT.prday = t => { S.ui[t.dataset.k].day = t.dataset.v; FEEL.tick(); render(); };
+ACT.pramt = t => { S.ui[t.dataset.k].amt = t.dataset.v; FEEL.tick(); render(); };
+ACT.prsave = async t => {
+  const c = customerById(t.dataset.id), st = S.ui['pr:' + t.dataset.id]; if (!c || !st || !st.day || S.busy) return; S.busy = true;
+  const open = custOpen(c.id), amount = st.amt === 'all' ? Math.round(c.debt) : st.amt === 'part' && open.length ? Math.round(balanceDue(open[0])) : null;
+  try { const id = await issueRowId('row:payment_promise', (D().promises || []).reduce((m, p) => Math.max(m, Number(p.id) || 0), 0));
+    await insertRow('payment_promises', { shop_id: S.shopId, id, customer_id: c.id, promised_on: st.day, made_on: todayISO(), amount, note: '' });
+    D().promises.push({ id, customerId: c.id, promisedOn: st.day, madeOn: todayISO(), amount }); saveSnapshot();
+    logDecision('promise.record', `${c.name} promised ${amount ? n0(amount) : 'to pay'} on ${dayLabel(st.day)}`, { amount, ref: { table: 'payment_promises', id } });
+    S.ui['pr:' + c.id] = null; FEEL.yes(); toast(`Promise kept: ${dayLabel(st.day)}`); pop(); }
+  catch (e) { toast(failWord(e), 6000); } S.busy = false; render();
+};
+
+/* ==================================================================
    YOU — what a Manager login opens; and the team's win.
    ================================================================== */
+// What a Manager decides (docs/decision-rights.md): each tile opens its screen.
 const DOORS = [
-  { k: 'see', w: 'See the whole team', icon: 'eye', open: () => true, say: 'Every order, who holds it, what each person sold and brought in, and what customers owe.' },
-  { k: 'hand', w: 'Hand over pick, drive, trips', icon: 'swap', open: () => can('order.assign') || can('order.move'), say: 'Give a packing job, a delivery or a buying trip to somebody free.' },
-  { k: 'nudge', w: 'Nudge on WhatsApp', icon: 'wa', open: () => true, say: 'A message written from what is holding them up — you send it.' },
-  { k: 'pay', w: 'Take payments', icon: 'cash', open: () => can('payment.receive'), say: 'Record what a customer paid against their oldest bills; it lowers what they owe.' },
-  { k: 'yes', w: 'Yes to held orders', icon: 'tick', open: () => can('credit.release') && holdIsOn(), say: 'Release, keep held or ask for cash first on an order held for credit.' },
-  { k: 'goals', w: 'Goals per person', icon: 'target', open: () => team().sales.some(s => s.userId && personGoal(s.userId)), say: 'Each salesperson\'s own goal — the owner sets it.' },
-  { k: 'push', w: 'Push to their phone', icon: 'bell', open: () => false, say: 'A nudge straight to their phone, not through WhatsApp.' },
+  { k: 'prices', w: 'Prices', icon: 'tag', open: () => can('price.approve'), p: 'decide', say: 'Approve, set or send back a price under the shop’s; price a line with no price or no known cost.' },
+  { k: 'credit', w: 'Credit, limits', icon: 'cash', open: () => can('credit.release') || can('credit.set'), p: 'approvals', say: 'Release an order held for credit; set each customer’s limit, terms and the hold line.' },
+  { k: 'invoices', w: 'Invoices, voids', icon: 'doc', open: () => can('invoice.make') || can('invoice.void') || can('credit_note.raise'), p: 'invoices', say: 'Raise invoices, void one raised by mistake, raise a credit note for a return.' },
+  { k: 'stock', w: 'Short picks, stock', icon: 'box', open: () => can('pick.settle') || can('stock.writeoff') || can('stock.correct') || can('trip.difference'), p: 'decide', say: 'Settle a short pick, accept a trip’s count or a stock take, write off damaged stock.' },
+  { k: 'margins', w: 'Margins', icon: 'pct', open: () => can('margin.see'), p: 'margins', say: 'See costs and margins; set each product’s markup and the shop’s default.' },
+  { k: 'goals', w: 'Goals, limits', icon: 'target', open: () => can('goal.set') || can('team.limits'), p: 'teamrules', say: 'Set each salesperson’s goal and how long an order may sit in each stage.' },
+  { k: 'agents', w: 'Agent asks', icon: 'agent', open: () => can('agent.change'), p: 'decide', say: 'Agree or keep each line an agent asks to change, or their cancel.' },
+  { k: 'customers', w: 'Customers', icon: 'cust', open: () => can('customer.edit') || can('promise.record'), p: null, say: 'Edit a customer’s details and record their promise to pay — from Money.' },
+  { k: 'hand', w: 'Hand over, nudge', icon: 'swap', open: () => can('order.assign') || can('order.move'), p: null, say: 'Give a packing job, a delivery or a buying trip to somebody free, and nudge who is holding things up.' },
+  { k: 'see', w: 'See the team', icon: 'eye', open: () => true, p: null, say: 'Every order, who holds it, what each person sold and brought in, and what customers owe.' },
 ];
+function pushOn(){ return !!window.owPushReady; }
 PAGE.me = () => {
   const m = teamMonth(), log = dayLog(), T = team(), sel = S.ui.door || 'see';
   const doorBtn = d => { const open = d.open(), on = sel === d.k;
     return `<button aria-pressed="${on}" data-act="door" data-v="${d.k}" style="display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;border:none;background:none;padding:0;color:${open ? 'var(--ink)' : 'var(--ink2)'}"><span style="width:46px;height:46px;border-radius:15px;display:flex;align-items:center;justify-content:center;${open ? 'background:var(--navy);color:var(--mint)' : 'border:1.5px dashed #9AA1AE;color:var(--ink2)'};${on ? 'box-shadow:0 0 0 2px #fff,0 0 0 4px var(--navy)' : ''}">${ic(d.icon, 20)}</span><span style="font-size:11px;font-weight:600;line-height:1.2">${esc(d.w)}</span></button>`; };
-  const opened = DOORS.filter(d => d.open()), proposed = DOORS.filter(d => !d.open()), cur = DOORS.find(d => d.k === sel) || DOORS[0];
+  const cur = DOORS.find(d => d.k === sel) || DOORS[DOORS.length - 1];
   const phone = D().presetShopPhone;
   return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
     <div class="bx-sheethead" style="gap:16px"><span class="bx-grip"></span>
@@ -2755,13 +3600,11 @@ PAGE.me = () => {
     </div>
     <div class="bx-body">
       <div class="bx-card" style="padding:14px;display:flex;flex-direction:column;gap:12px">
-        <div style="display:flex;align-items:center;justify-content:space-between"><b style="font-size:13px">What your login opens</b><span style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--ink3)">${ic('lock', 12)}set by the owner</span></div>
-        <span style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--green)">OPEN NOW</span>
-        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 4px;justify-items:center">${opened.map(doorBtn).join('')}</div>
-        ${proposed.length ? `<span style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--ink2)">PROPOSED <span style="font-weight:600;letter-spacing:0;color:var(--ink3)">· the owner turns these on</span></span>
-        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 4px;justify-items:center">${proposed.map(doorBtn).join('')}</div>` : ''}
-        <span class="a-up" style="display:flex;align-items:center;min-height:36px;padding:8px 12px;border-radius:12px;font-size:12px;font-weight:600;line-height:1.35;${cur.open() ? 'background:var(--greenSoft);color:#0B5435' : 'background:var(--soft2);color:var(--ink2)'}">${esc(cur.say)}</span>
-        <div class="mx-lock">${ic('lock', 14)}<span>Costs, margins, books, backups, credit limits and terms, prices, invoicing and pay stay with the owner</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between"><b style="font-size:13px">What you decide</b><span style="font-size:11px;font-weight:600;color:var(--ink3)">nothing waits for the owner</span></div>
+        <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px 2px;justify-items:center">${DOORS.map(doorBtn).join('')}</div>
+        <span class="a-up" style="display:flex;align-items:center;gap:8px;min-height:36px;padding:8px 12px;border-radius:12px;font-size:12px;font-weight:600;line-height:1.35;${cur.open() ? 'background:var(--greenSoft);color:#0B5435' : 'background:var(--soft2);color:var(--ink2)'}"><span style="flex:1">${esc(cur.open() ? cur.say : cur.say + ' Not on for this login yet.')}</span>${cur.open() && cur.p ? `<button class="mx-act navy" data-act="push" data-p="${cur.p}">Open${ic('chev', 12, 'style="stroke-width:2.4"')}</button>` : ''}</span>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--bg)"><span style="width:28px;height:28px;border-radius:9px;background:var(--navy);color:var(--mint);display:flex;align-items:center;justify-content:center;flex:none">${ic('doc', 14)}</span><span style="flex:1;font-size:12px;font-weight:600;color:var(--ink2);line-height:1.35">Every decision goes in the <b style="color:var(--ink)">owner’s log</b>: who, when, and what it was before. The owner keeps hiring and pay, the policy numbers and backups.</span></div>
+        <div style="display:flex;align-items:center;gap:10px;padding:0 2px"><span style="width:28px;height:28px;border-radius:9px;${pushOn() ? 'background:var(--navy);color:var(--mint)' : 'border:1.5px dashed #9AA1AE;color:var(--ink2);box-sizing:border-box'};display:flex;align-items:center;justify-content:center;flex:none">${ic('bell', 14)}</span><span style="flex:1;display:flex;flex-direction:column"><b style="font-size:12px">Push to your phone</b><span style="font-size:11px;font-weight:600;color:var(--ink3)">each decision waiting · nudges reach staff the same way</span></span><span class="bx-chip" style="${pushOn() ? 'background:var(--greenSoft);color:var(--green)' : 'background:var(--soft2);color:var(--ink2)'}">${pushOn() ? 'On' : 'Coming with push'}</span></div>
       </div>
       ${m.tg && m.tg.reached ? `<button class="bx-card" data-act="win" style="border:none;width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;text-align:left;color:var(--ink)"><span style="width:42px;height:42px;border-radius:13px;background:var(--navy);color:var(--mint);display:flex;align-items:center;justify-content:center;flex:none">${ic('target', 20)}</span><span style="flex:1"><b style="font-size:14px">The team passed ${esc(monthWord())}</b><span class="bx-sub" style="display:block">Play the win again</span></span>${ic('chev', 16)}</button>` : ''}
       <div class="bx-card bx-list">${[['sound', 'Sounds & buzz', 'chimes, stamps, the team win', 'sound'], ['big', 'Big text', 'for the yard in daylight', 'big']].map(([k, w, sub, icn]) => `<div class="bx-row" style="gap:12px"><span style="width:38px;height:38px;border-radius:12px;background:var(--soft);color:var(--ink2);display:flex;align-items:center;justify-content:center;flex:none">${ic(icn, 19)}</span><span style="flex:1;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px">${w}</b><span class="bx-sub">${sub}</span></span><button class="bx-switch" role="switch" aria-checked="${!!S.prefs[k]}" aria-label="${w}" data-act="pref" data-k="${k}"></button></div>`).join('')}</div>
@@ -2770,7 +3613,7 @@ PAGE.me = () => {
         <button class="bx-btn ghost" style="flex:none;height:44px;font-size:14px;color:var(--crimson)" data-act="signout">${ic('out', 16)}${S.signoutSure ? 'Tap again to sign out' : 'Sign out'}</button></div>
     </div></div>`;
 };
-ACT.door = t => { if (S.ui.door !== t.dataset.v) FEEL.tick(); S.ui.door = t.dataset.v; render(); };
+ACT.door = t => { const d = DOORS.find(x => x.k === t.dataset.v); if (S.ui.door === t.dataset.v && d && d.p && d.open()) { FEEL.open(); push(d.p, {}); return; } if (S.ui.door !== t.dataset.v) FEEL.tick(); S.ui.door = t.dataset.v; render(); };
 ACT.pref = t => { const k = t.dataset.k; S.prefs[k] = !S.prefs[k]; savePrefs(); applyPrefs(); if (k === 'sound' && S.prefs.sound) FEEL.yes(); render(); };
 // One stray tap must not throw away the books on this phone: the first tap asks.
 ACT.signout = async () => {

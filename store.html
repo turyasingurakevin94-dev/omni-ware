@@ -870,17 +870,19 @@ async function selectCols(table, cols, keyCol, extra){
 function rowToTrip(r){ return { id: r.id, supplierId: r.supplier_id, status: r.status, assignedWorkerId: r.assigned_worker_id, createdAt: r.created_at, assignedAt: r.assigned_at,
   acceptedAt: r.accepted_at, collectedAt: r.collected_at, confirmedAt: r.confirmed_at, note: r.note || '', lines: Array.isArray(r.lines) ? r.lines : [], voided: !!r.voided,
   yardCheckedAt: r.yard_checked_at || null, yardCheckedBy: r.yard_checked_by || null, yardReceivedAt: r.yard_received_at || null,
-  difference: Array.isArray(r.difference) ? r.difference : null, differenceStatus: r.difference_status || null }; }
+  differenceAcceptedAt: r.difference_accepted_at || null }; }
 // index.html 45290: the payload is spread over these defaults.
 function rowToQuote(q){
   return { id: q.id, status: q.status || 'draft', invoiced: !!q.invoiced, invoicedTs: q.invoiced_ts ? new Date(q.invoiced_ts).getTime() : null,
     voided: !!q.voided, date: q.date, client: { name: q.client_name || '', phone: q.client_phone || '' }, items: [], savedAt: null, customerId: null,
     ...(q.payload || {}) };
 }
+// 0122 stock_reports: open while 'sent'; the Manager writes it off or dismisses it.
 function rowToReport(r){ return { id: r.id, key: r.key, productId: r.product_id, variantIdx: r.variant_idx == null || r.variant_idx === '' ? null : Number(r.variant_idx), name: r.name || '', qty: Number(r.qty) || 0,
-  reason: r.reason, photo: r.photo || null, by: r.reported_by, byName: r.reported_by_name || '', status: r.status, decidedAt: r.decided_at, createdAt: r.created_at }; }
-function rowToReturn(r){ return { id: r.id, orderId: r.order_id, clientName: r.client_name || '', lines: Array.isArray(r.lines) ? r.lines : [], photo: r.photo || null,
-  byName: r.proposed_by_name || '', status: r.status, createdAt: r.created_at }; }
+  reason: r.why || 'damaged', photo: r.photo_path || null, by: r.reported_by, byName: r.reported_by_name || '', status: r.status, decidedAt: r.decided_at, createdAt: r.created_at }; }
+// Goods back at the gate are a credit ask (0123 invoice_asks, kind 'credit'); the Manager raises the note.
+function rowToReturn(r){ return { id: r.id, orderId: r.quote_id, lines: Array.isArray(r.lines) ? r.lines : [], reason: r.reason || '', note: r.note || '',
+  byName: r.asked_by_name || '', status: r.status, createdAt: r.created_at }; }
 function rowToCount(c){ return { id: c.id, aisle: c.aisle || '', countedBy: c.counted_by, countedByName: c.counted_by_name || '', lines: Array.isArray(c.lines) ? c.lines : [],
   status: c.status, decidedBy: c.decided_by, decidedAt: c.decided_at, createdAt: c.created_at }; }
 
@@ -902,9 +904,9 @@ async function loadAll(){
     sb.from('app_settings').select('presets').eq('shop_id', S.shopId).maybeSingle(),
     // When each item was last counted, from any phone or the console.
     sb.from('stock_log').select('key,at,date').eq('shop_id', S.shopId).in('type', ['count', 'correction']).order('id', { ascending: false }).limit(1000).then(r => r.error ? [] : r.data),
-    // 0124: reports, returns and the names of the delivery directions; null before it.
+    // Reports (0122), credit asks (0123) and the names of the directions (0124); null before them.
     sb.from('stock_reports').select('*').eq('shop_id', S.shopId).order('created_at', { ascending: false }).limit(60).then(r => r.error ? null : r.data),
-    sb.from('stock_returns').select('*').eq('shop_id', S.shopId).order('created_at', { ascending: false }).limit(40).then(r => r.error ? null : r.data),
+    sb.from('invoice_asks').select('id,quote_id,kind,lines,reason,note,asked_by_name,status,created_at').eq('shop_id', S.shopId).eq('kind', 'credit').order('created_at', { ascending: false }).limit(40).then(r => r.error ? null : r.data),
     selectCols('road_names', 'way_key,name', 'way_key').catch(() => null),
     // Who decides for the shop on the ground, so a screen can name them.
     sb.from('shop_members').select('user_id,role').eq('shop_id', S.shopId).in('role', ['manager', 'buyer']).then(r => r.error ? [] : r.data),
@@ -944,7 +946,7 @@ async function refreshLive(){
       selectCols('stock', 'key,product_id,variant_idx,qty', 'key').catch(() => null),
       sb.from('stock_counts').select('*').eq('shop_id', S.shopId).order('created_at', { ascending: false }).limit(40).then(r => r.error ? null : r.data),
       sb.from('stock_reports').select('*').eq('shop_id', S.shopId).order('created_at', { ascending: false }).limit(60).then(r => r.error ? null : r.data),
-      sb.from('stock_returns').select('*').eq('shop_id', S.shopId).order('created_at', { ascending: false }).limit(40).then(r => r.error ? null : r.data)]);
+      sb.from('invoice_asks').select('id,quote_id,kind,lines,reason,note,asked_by_name,status,created_at').eq('shop_id', S.shopId).eq('kind', 'credit').order('created_at', { ascending: false }).limit(40).then(r => r.error ? null : r.data)]);
     S.data.savedQuotes = quotes.map(rowToQuote);
     if (trips) S.data.collectionTrips = trips.map(rowToTrip);
     if (stock) { const m = {}; stock.forEach(s => { m[s.key] = Number(s.qty) || 0; }); S.data.stock = m; }
@@ -1654,7 +1656,7 @@ async function receiveTrip(tripId, got){
   return data || {};
 }
 
-/* ---- damaged, lost or stolen (0124: stock_reports) ---- */
+/* ---- damaged, lost or stolen (0122: stock_reports; stock.report, 0124) ---- */
 async function uploadPhoto(blob, folder){
   const small = await shrinkPhoto(blob);
   const path = `${S.shopId}/${folder}/${(typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 8))}.jpg`;
@@ -1665,19 +1667,25 @@ async function uploadPhoto(blob, folder){
 async function sendReport(it, qty, reason, blob){
   const photo = blob ? await uploadPhoto(blob, 'reports') : null;
   const { data, error } = await sb.from('stock_reports').insert({ shop_id: S.shopId, key: it.key, product_id: it.productId, variant_idx: it.variantIdx == null ? null : String(it.variantIdx),
-    name: it.productName, qty, reason, photo, reported_by: S.user.id, reported_by_name: myName() }).select('*').single();
+    name: it.productName, qty, why: reason, photo_path: photo, reported_by: S.user.id, reported_by_name: myName() }).select('*').single();
   if (error) throw error;
   if (D().reports) D().reports.unshift(rowToReport(data)); else D().reports = [rowToReport(data)];
   saveSnapshot();
   return rowToReport(data);
 }
-function openReportFor(key){ return (D().reports || []).filter(r => r.key === key && r.status === 'reported'); }
+function openReportFor(key){ return (D().reports || []).filter(r => r.key === key && r.status === 'sent'); }
 
-/* ---- goods coming back at the gate (0124: stock_returns) ---- */
+/* ---- goods coming back at the gate: a credit ask (0123 invoice_asks) ----
+   The lines are the order's own (idx), as the Sales app asks; the amount
+   is what the order sold them at, for the Manager's list -- never shown
+   here. Each line says whether it can go back on the shelf. */
 async function sendReturn(q, lines, blob){
   const photo = blob ? await uploadPhoto(blob, 'returns') : null;
-  const { data, error } = await sb.from('stock_returns').insert({ shop_id: S.shopId, order_id: Number(q.id), client_name: quoteClientName(q), lines, photo,
-    proposed_by: S.user.id, proposed_by_name: myName() }).select('*').single();
+  const bad = lines.some(l => l.condition === 'damaged');
+  const amount = lines.reduce((n, l) => n + (Number(l.amount) || 0), 0);
+  const { data, error } = await sb.from('invoice_asks').insert({ shop_id: S.shopId, quote_id: Number(q.id), customer_id: q.customerId != null && q.customerId !== '' ? String(q.customerId) : null, kind: 'credit',
+    lines, amount, reason: bad ? (lines.every(l => l.condition === 'damaged') ? 'Came back damaged' : 'Came back · some damaged') : 'Came back · can sell',
+    note: ['Brought back at the gate', photo ? 'photo: ' + photo : ''].filter(Boolean).join(' · '), asked_by: S.user.id, asked_by_name: myName(), asked_role: S.role, status: 'sent' }).select('id,quote_id,kind,lines,reason,note,asked_by_name,status,created_at').single();
   if (error) throw error;
   if (D().returns) D().returns.unshift(rowToReturn(data)); else D().returns = [rowToReturn(data)];
   saveSnapshot();
@@ -1918,7 +1926,7 @@ function viewToday(){
           ${yardTile('onroad', 'pin', '#1A5A8A', onRoadN, 'Out', onRoad().slice(0, 3).map(q => [quoteClientName(q), q.id]))}
         </div>
       </div>
-      ${D().returns !== null ? `<button data-act="goret" class="a-card" style="display:flex;align-items:center;gap:12px;min-height:56px;padding:0 12px;border:none;border-radius:16px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule);text-align:left;color:var(--ink)"><span style="width:36px;height:36px;border-radius:11px;background:var(--amberSoft);color:var(--amberDeep);display:flex;align-items:center;justify-content:center;flex:none">${ic('ret', 18, 'style="stroke-width:2.2"')}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px">Goods back at the gate</b><span class="ell" style="font-size:12px;font-weight:600;color:var(--ink2)">${(() => { const open = (D().returns || []).filter(r => r.status === 'proposed').length; return open ? `${open} waiting on ${esc(managerName())}` : 'propose a return · ' + esc(managerName()) + ' decides'; })()}</span></span>${ic('chev', 16, 'style="stroke:#9AA1AE"')}</button>` : ''}
+      ${D().returns !== null ? `<button data-act="goret" class="a-card" style="display:flex;align-items:center;gap:12px;min-height:56px;padding:0 12px;border:none;border-radius:16px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule);text-align:left;color:var(--ink)"><span style="width:36px;height:36px;border-radius:11px;background:var(--amberSoft);color:var(--amberDeep);display:flex;align-items:center;justify-content:center;flex:none">${ic('ret', 18, 'style="stroke-width:2.2"')}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px">Goods back at the gate</b><span class="ell" style="font-size:12px;font-weight:600;color:var(--ink2)">${(() => { const open = (D().returns || []).filter(r => r.status === 'sent').length; return open ? `${open} waiting on ${esc(managerName())}` : 'propose a return · ' + esc(managerName()) + ' decides'; })()}</span></span>${ic('chev', 16, 'style="stroke:#9AA1AE"')}</button>` : ''}
       ${checkedInToday().length || doneToday().length ? `<div style="display:flex;align-items:center;gap:12px;min-height:52px;padding:0 14px;border-radius:16px;background:var(--greenSoft)">${ic('tick', 18, 'style="stroke:#0F6B43;stroke-width:2.6"')}<span style="flex:1;font-size:13px;font-weight:700;color:var(--green)">${doneToday().length} delivered · ${checkedInToday().length} trip${checkedInToday().length === 1 ? '' : 's'} checked in today</span></div>` : ''}
     </div>`;
 }
@@ -3299,10 +3307,11 @@ ACT.rtphoto = async () => { const ui = S.ui.rt; if (!ui || ui.sent) return; cons
 ACT['slide:ret'] = async () => {
   const ui = S.ui.rt, q = ui && quoteById(ui.id); if (!q || S.busy) return;
   const items = (q.items || []).filter(it => (Number(it.qty) || 0) > 0);
-  const lines = items.map((it, i) => ({ it, k: lineKey(it, i) })).filter(x => ui.back[x.k] > 0).map(({ it, k }) => ({ lineId: it.lineId == null ? null : it.lineId, productId: it.productId, variantIdx: it.variantIdx == null ? null : it.variantIdx,
-    name: lineName(it).base, unit: quoteLineCount(it, 1).unit, qty: ui.back[k], sent: Number(it.qty) || 0, condition: (ui.cond[k] || 0) === 1 ? 'damaged' : 'good' }));
+  const lines = items.map((it, i) => ({ it, k: lineKey(it, i) })).filter(x => ui.back[x.k] > 0).map(({ it, k }) => { const sell = Number(it.sellPrice) || 0;
+    return { idx: (q.items || []).indexOf(it), name: lineName(it).base, unit: quoteLineCount(it, 1).unit, qty: ui.back[k], condition: (ui.cond[k] || 0) === 1 ? 'damaged' : 'good',
+      ...(sell > 0 ? { price: sell, amount: Math.round(sell * ui.back[k]) } : {}) }; });
   S.busy = true;
-  try { const r = await sendReturn(q, lines, ui.blob); ui.sent = { ...r, no: 'R-' + String((D().returns || []).length).padStart(3, '0') }; chimeDone(); }
+  try { const r = await sendReturn(q, lines, ui.blob); ui.sent = { ...r, photo: !!ui.blob, no: 'R-' + String((D().returns || []).length).padStart(3, '0') }; chimeDone(); }
   catch (e) { FEEL.no(); toast(failSay(e, '0124'), 5000); }
   S.busy = false; render();
 };

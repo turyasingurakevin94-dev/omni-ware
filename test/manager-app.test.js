@@ -251,7 +251,7 @@ const quoteRow = (q) => {
     t.check(db.tables.saved_quotes.filter(x => x.payload.creditCheck).map(x => x.payload.creditCheck.decision).sort().join() === 'cash,release', 'cash-first is written the same way');
     const Y = page(fakeDb({ saved_quotes: data.savedQuotes.map(quoteRow) }), fixture());
     Y.S.tasks = [];
-    t.check(/owner turns on/.test(Y.PAGE.approvals({})) && !/data-act="hdecide"/.test(Y.PAGE.approvals({})), 'without credit.release the yes is shown locked, not offered');
+    t.check(/not on for this login/.test(Y.PAGE.approvals({})) && !/data-act="hdecide"/.test(Y.PAGE.approvals({})), 'without credit.release the yes is shown locked, not offered');
   }
   // 4. a payment, oldest bill first
   {
