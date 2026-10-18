@@ -151,11 +151,11 @@ row in the same commit. The test fails on any mismatch, in either direction.
 | Decision | Task | Who decides | Proposes | Told | Built |
 |---|---|---|---|---|---|
 | Record a supplier's yes or out on an order | `supplier.confirm` | Buyer | — | Sales | yes |
-| Switch a line to another supplier or our shelf | `line.switch` | Buyer | — | Sales | yes |
+| Switch a line to another supplier or our shelf, **or to another item (make or size)** | `line.switch` | Buyer | — | Sales | yes |
 | Drop a line nobody has | `line.drop` | Buyer | — | Sales | yes |
 | Plan a buying trip, with the cash for it | `trip.plan` | Buyer | — | — | yes |
 | Ride a trip and hand it in (**Store staff may ride one too**) | `trip.collect` | Buyer, Store | — | Store | yes: Buyer |
-| **Buy to refill the shelf when no order needs it (what to buy)** | `buy.restock` | Buyer | — | Manager | no |
+| **Buy to refill the shelf when no order needs it (what to buy)** | `buy.restock` | Buyer | — | Manager | yes |
 | **Hold a restock line ("not yet")** | `restock.hold` | Manager | — | Buyer | no |
 
 ### Sourcing
@@ -166,7 +166,7 @@ row in the same commit. The test fails on any mismatch, in either direction.
 | **Add a new item to what we sell, or edit a product's details (not its markup)** | `product.edit` | Sourcing | — | Manager (to set the markup) | no |
 | **Add or edit suppliers** | `supplier.edit` | Sourcing | Buyer | — | no |
 | **Keep the supplier price list and rival prices right** | `price.list` | Sourcing | Buyer | — | no |
-| **Confirm today's share of prices** (the owner sets how many); the Buyer confirms by phone for a supplier who is slow or can't | `price.confirm` | Sourcing, Buyer | — | owner's log | no |
+| **Confirm today's share of prices** (the owner sets how many); the Buyer confirms by phone for a supplier who is slow or can't | `price.confirm` | Sourcing, Buyer | — | owner's log | yes: Buyer |
 
 ### The team
 

@@ -21,6 +21,11 @@
  *      loader maps, its answers written as setTripLineGot does, and
  *      handed in only when every line is answered.
  *   5. Every screen draws from the fixture without throwing.
+ *   6. Who decides what (docs/decision-rights.md): the Manager's price and
+ *      credit decisions and a line nobody sells hold an order in Checking;
+ *      a switch to another item tells Sales; a phone confirm is the
+ *      Buyer's yes; a tie on price goes to the best score; the shelf's
+ *      buys ride the buying list; hand-offs go to the role that takes them.
  *
  * Runs the page's real script in a sandbox with a fake database; nothing
  * is copied into this file.
@@ -93,7 +98,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, SHEET, D, render, orderSupplierTerms, orderSupplierConfirmState, supplierConfirmMessage, supplierTripMessage, ipLineOutlay, quoteLineQtyText, quoteLineCount, quoteLineEach, purchaseInvoiceTotal, purchaseInvoiceBalanceDue, tripShortLines, tripAllAnswered, orderPurchaseLines, buyingListRuns, beingPreparedOrders, runsToGo, tripFromRun, flushTrip, setGot, rowToQuote, rowToTrip, checkOrders, askingSuppliers, supplierOwed, viewToday, viewCheck, viewAsking, viewSuppliers };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, SHEET, D, render, orderSupplierTerms, orderSupplierConfirmState, supplierConfirmMessage, supplierTripMessage, ipLineOutlay, quoteLineQtyText, quoteLineCount, quoteLineEach, purchaseInvoiceTotal, purchaseInvoiceBalanceDue, tripShortLines, tripAllAnswered, orderPurchaseLines, buyingListRuns, beingPreparedOrders, runsToGo, tripFromRun, flushTrip, setGot, rowToQuote, rowToTrip, checkOrders, askingSuppliers, supplierOwed, viewToday, viewCheck, viewAsking, viewSuppliers, orderLeaveDraft, priceWaits, noneOpen, pickReason, restockRows, managerWaits };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -113,7 +118,7 @@ function fakeDb(tables){
     if (this.op === 'update') { writes.push(['update', this.t, clone(this.row), hit.map(r => r.id)]); hit.forEach(r => Object.assign(r, clone(this.row))); return Promise.resolve({ error: null }).then(res, rej); }
     return Promise.resolve({ data: clone(this.one ? (hit[0] || null) : hit), count: hit.length, error: null }).then(res, rej);
   };
-  return { writes, tables, auth: { getUser: () => new Promise(() => {}), getSession: async () => ({ data: { session: null } }), signOut: async () => ({}) }, from: tb => new Q(tb), rpc: async () => ({ data: null, error: { message: 'no rpc' } }) };
+  return { writes, tables, auth: { getUser: () => new Promise(() => {}), getSession: async () => ({ data: { session: null } }), signOut: async () => ({}) }, from: tb => new Q(tb), rpc: async (fn, args) => { writes.push(['rpc', fn, args]); return tables.__rpcOk ? { data: 1, error: null } : { data: null, error: { message: 'no rpc' } }; } };
 }
 function page(db, data){
   const X = loadPage(db);
@@ -318,6 +323,97 @@ const P = page(fakeDb({}));
     t.check(/only one has it/.test(html2) && /cheapest of 2/.test(html2), 'each line says where its supplier ranks, or that they are the only one');
     const visible = (X.viewToday() + html2 + X.PAGE.plan({})).replace(/<[^>]*>/g, ' ');
     t.check(!/sell(ing)? ?price|margin|markup/i.test(visible), 'no selling price or margin is drawn');
+  }
+
+  // 6. who decides what
+  {
+    const X = page(fakeDb({}));
+    const yes = (q, sid) => { q.supplierConfirms = q.supplierConfirms || {}; q.supplierConfirms[sid] = { state: 'confirmed', at: NOW, terms: X.orderSupplierTerms(q, sid) }; };
+    const mk = (items, extra) => { const q = X.rowToQuote(orderRow(30, items, extra)); orderSupplierIds(q).forEach(sid => yes(q, sid)); return q; };
+    const orderSupplierIds = q => [...new Set(q.items.filter(i => i.supplierId && i.supplierId !== '__stock__').map(i => i.supplierId))];
+    let q = mk([it(1, 'P2', null, 6, 'S2', 28000, { priceNote: 'under', sellPrice: 27000 })]);
+    t.check(X.priceWaits(q).length === 1 && !X.orderLeaveDraft(q) && q.status === 'draft', 'a price Sales set under the shop’s holds the order in Checking, whatever the suppliers say');
+    q = mk([it(1, 'P2', null, 6, 'S2', 28000, { priceNote: 'under', priceReview: { state: 'approved' } })]);
+    t.check(X.orderLeaveDraft(q) && q.status !== 'draft', 'once the Manager has decided the price, the last yes moves it');
+    q = mk([it(1, 'P2', null, 6, 'S2', 28000)], { creditCheck: { decision: 'hold' } });
+    t.check(!X.orderLeaveDraft(q) && X.managerWaits(q) === 1, 'a credit hold is the Manager’s, and holds it too');
+    q = mk([it(1, 'P2', null, 6, 'S2', 28000), it(2, 'P3', null, 4, null, 0)]);
+    t.check(X.noneOpen(q).length === 1 && !X.orderLeaveDraft(q), 'a line nobody sells is never billed by default: the order waits until it is decided');
+    q.items[1].clientWaits = { at: NOW };
+    t.check(X.orderLeaveDraft(q), '"the client waits" decides it');
+  }
+  {
+    const row = orderRow(31, [it(1, 'P2', null, 6, 'S2', 28000), it(2, 'P3', null, 4, null, 0)], { takenBy: 'u9' });
+    const db = fakeDb({ saved_quotes: [row] }), X = page(db);
+    X.D().savedQuotes = [X.rowToQuote(JSON.parse(JSON.stringify(row)))];
+    await X.ACT.nonedrop({ dataset: { id: '31', line: '2' } });
+    const p = db.tables.saved_quotes[0].payload;
+    t.check(p.items.length === 1 && p.droppedLines && p.droppedLines[0].reason === 'Nobody has it', 'dropping a line nobody sells takes it off the order and the bill, kept on the record with why');
+  }
+  {
+    const row = orderRow(32, [it(1, 'P1', 0, 10, 'S1', 14000)], { takenBy: 'u9', supplierConfirms: { S1: { state: 'confirmed', at: NOW, terms: 'P1:0:10:14000' } } });
+    const data = fixture(); data.staff.push({ id: 'W9', name: 'Grace Auma', phone: '', role: 'sales', unavailable: false, userId: 'u9' }); data.handoffs = [];
+    const db = fakeDb({ saved_quotes: [row], buyer_handoffs: [] }), X = page(db, data);
+    X.D().savedQuotes = [X.rowToQuote(JSON.parse(JSON.stringify(row)))];
+    X.S.stack = [{ type: 'swap', args: { id: 32, lineId: 1, q: 'nails', pick: 'P3::', why: 'out' } }];
+    const h = X.PAGE.swap(X.S.stack[0].args);
+    t.check(/Roofing nails/.test(h) && /tell Grace/.test(h), 'search finds another item on the price list, and the switch names the seller who is told');
+    await X.ACT.swapgo();
+    const l = db.tables.saved_quotes[0].payload.items[0], ins = db.writes.find(w => w[0] === 'insert' && w[1] === 'buyer_handoffs');
+    t.check(l.productId === 'P3' && l.supplierId === 'S1' && l.price === 5000 && l.switchedFrom && l.switchedFrom.why === 'That one is out', 'the line becomes the other item, from its cheapest supplier, and remembers what it was and why');
+    t.check(ins && ins[2].kind === 'item_switch' && ins[2].for_role === 'sales' && ins[2].payload.to === 'Roofing nails', 'Sales is passed the switch to tell the client');
+    t.check(X.orderSupplierConfirmState(X.rowToQuote(db.tables.saved_quotes[0]), 'S1').state !== 'confirmed', 'the old yes does not cover the new item');
+  }
+  {
+    const row = orderRow(33, [it(1, 'P2', null, 6, 'S2', 28000)]);
+    const db = fakeDb({ saved_quotes: [row], __rpcOk: true }), X = page(db);
+    X.D().savedQuotes = [X.rowToQuote(JSON.parse(JSON.stringify(row)))];
+    X.S.stack = [{ type: 'order', args: { id: 33 } }, { type: 'price', args: { id: 33, lineId: 1, v: '29000', unit: 'base', phone: true } }];
+    await X.ACT.pgo();
+    const q = X.rowToQuote(db.tables.saved_quotes[0]), rpc = db.writes.find(w => w[0] === 'rpc');
+    t.check(q.items[0].price === 29000 && q.supplierConfirms.S2.state === 'confirmed' && q.supplierConfirms.S2.via === 'phone', '"they said it on the phone" re-prices the line and gives their yes on the new terms');
+    t.check(q.status !== 'draft', 'and the order moves on');
+    t.check(rpc && rpc[1] === 'buyer_confirm_price' && rpc[2].p_price_id === 3 && rpc[2].p_wholesale === 29000, 'the price list is updated through buyer_confirm_price, never a direct write');
+  }
+  {
+    const data = fixture();
+    data.prices.push({ id: 9, productId: 'P2', variantIdx: null, supplierId: 'S3', wholesale: 28300, retail: null, unit: 'pc', packUnit: '', packQty: 0, outOfStock: false, tiers: [] });
+    const X = page(fakeDb({}), data);
+    const r = X.pickReason(it(1, 'P2', null, 6, 'S2', 28000));
+    t.check(r.tie && /Tie on price/.test(r.text), 'two suppliers within 2% are a tie, and the reason says the score decided it: ' + r.text);
+    data.prices.push({ id: 10, productId: 'P3', variantIdx: null, supplierId: 'S3', wholesale: 6000, retail: null, unit: 'kg', packUnit: '', packQty: 0, outOfStock: false, tiers: [] });
+    t.check(/Cheapest by \d+%/.test(X.pickReason(it(1, 'P3', null, 10, 'S1', 5000)).text), 'no tie: price alone picks, by how much');
+  }
+  {
+    const data = fixture();
+    data.stock = { P3: 2 }; data.presetReorderRules = { P2: { minUnits: 10 } }; data.presetBuyHolds = { P3: { reason: 'slow season', by: 'manager' } }; data.restockBuys = [];
+    const X = page(fakeDb({ restock_buys: [] }), data);
+    X.D().savedQuotes = [X.rowToQuote(orderRow(40, [it(1, 'P3', null, 90, '__stock__', 4600)], { createdAt: new Date(NOW - 5 * 864e5).toISOString() }, { status: 'preparing' }))];
+    const rows = X.restockRows();
+    const p2 = rows.find(r => r.pid === 'P2'), p3 = rows.find(r => r.pid === 'P3');
+    t.check(p2 && p2.below && p2.need === 10 && p2.best && p2.best.supplierId === 'S2', 'a line under its floor is to buy, from its cheapest supplier');
+    t.check(p3 && p3.hold && p3.rate === 3, 'a line selling off the shelf that runs out is found, and the Manager’s hold is kept on it');
+    X.S.stack = [{ type: 'restock', args: { picked: ['P2'] } }];
+    await X.ACT.rsgo();
+    const db = X.S.stack; // replaced with the plan
+    const runs = X.runsToGo(), stop = runs.find(r => r.supplierId === 'S2');
+    t.check(stop && stop.lines.some(l => l.order.id === 'restock' && l.qty === 10), 'what you bought for the shelf rides the buying list beside the orders’ lines');
+    t.check(!runs.some(r => r.lines.some(l => l.it.productId === 'P3')), 'a held line is not bought');
+  }
+  {
+    const data = fixture();
+    data.staff.push({ id: 'W5', name: 'Esther Achen', phone: '', role: 'accounts', unavailable: false, userId: null }, { id: 'W6', name: 'Ruth N', phone: '', role: 'manager', unavailable: false, userId: null });
+    data.handoffs = []; data.restockBuys = [];
+    const X = page(fakeDb({}), data);
+    X.D().savedQuotes = [X.rowToQuote(orderRow(50, [it(1, 'P1', 0, 12, 'S1', 14500, { priceNote: 'under' }), it(2, 'P2', null, 6, null, 0)], { creditCheck: { decision: 'hold' } }))];
+    X.D().collectionTrips = [X.rowToTrip({ id: 'TRIP-Y', supplier_id: 'S1', status: 'collected', assigned_worker_id: 'W1', created_at: new Date(NOW - 7200e3).toISOString(), collected_at: new Date(NOW - 600e3).toISOString(), lines: [{ orderId: 50, lineId: 1, productId: 'P1', variantIdx: 0, productName: 'Ridge caps — G28', unit: 'pc', qty: 12, expectedPrice: 14000, gotQty: 12, gotPrice: 14000, yardQty: 11 }], cash_given: 200000 })];
+    const pages = [['order', { id: 50 }], ['why', { id: 50, lineId: 1 }], ['ruth', { id: 50 }], ['findsup', { id: 50, lineId: 2 }], ['swap', { id: 50, lineId: 1, q: '', pick: null, why: 'client' }], ['yard', { id: 'TRIP-Y' }], ['done', { id: 'TRIP-Y' }], ['bill', { sid: 'S1', no: '', total: '' }], ['fix', { sid: 'S1', tab: null, sel: 'price', how: 'phone', edits: {} }], ['restock', { picked: null }], ['plan', {}], ['me', {}]];
+    let all = '';
+    pages.forEach(([pg, a]) => { try { const h = X.PAGE[pg]({ ...a }); all += h; t.check(typeof h === 'string' && h.length > 200 && !/undefined|NaN/.test(h.replace(/data-[a-z]+="[^"]*"/g, '')), 'page ' + pg + ' draws, with no undefined or NaN in it'); } catch (e) { t.fail('page ' + pg + ' threw: ' + e.stack); } });
+    const vis = all.replace(/<[^>]*>/g, ' ');
+    t.check(/waits for Ruth/.test(vis) && /Esther/.test(vis), 'hand-offs name the person in the role that takes them');
+    t.check(!/\bthe owner (pays|checks|keeps)/i.test(vis), 'nothing day-to-day waits for the owner');
+    t.check(!/sell(ing)? ?price|margin %|markup/i.test(X.PAGE.swap({ id: 50, lineId: 1, q: '', pick: null, why: 'client' }).replace(/<[^>]*>/g, ' ')), 'switching an item never draws the selling price or a margin');
   }
 
   process.exit(t.done() ? 1 : 0);
