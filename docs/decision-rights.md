@@ -92,7 +92,7 @@ row in the same commit. The test fails on any mismatch, in either direction.
 | Decision | Task | Who decides | Proposes | Told | Built |
 |---|---|---|---|---|---|
 | **Invoice a delivered order** (the nightly job invoices the rest, see section 3) | `invoice.make` | Manager | — | Accounts, Sales | no |
-| **Settle a short pick: bill what went, or the full quantity** | `pick.settle` | Manager | Store | Sales | no |
+| **Settle a short pick: bill what went, or the full quantity** | `pick.settle` | Manager | Store | Sales | yes |
 | **Accept a customer return, raise a credit note** | `credit_note.raise` | Manager | Sales, Accounts, Store | Accounts, owner's log | no |
 | **Void an invoice** | `invoice.void` | Manager | Sales, Accounts | Accounts, owner's log | no |
 | Send an invoice | `invoice.send` | Accounts | — | — | yes |
@@ -135,12 +135,12 @@ row in the same commit. The test fails on any mismatch, in either direction.
 | Decision | Task | Who decides | Proposes | Told | Built |
 |---|---|---|---|---|---|
 | Count a trip off the truck at the yard | `trip.checkin` | Store | — | — | yes |
-| **Put a trip's goods on the shelf, from the yard's count** | `stock.receive` | Store | Buyer | Manager when it differs | no |
-| **Accept a difference between the buyer's and the yard's count** | `trip.difference` | Manager | Store | Buyer | no |
+| **Put a trip's goods on the shelf, from the yard's count** | `stock.receive` | Store | Buyer | Manager when it differs | yes |
+| **Accept a difference between the buyer's and the yard's count** | `trip.difference` | Manager | Store | Buyer | yes |
 | Count the shelf (blind stock take) | `stock.count` | Store | — | Manager | yes |
 | Accept a stock take, which corrects the stock | `stock.correct` | Manager | Store | owner's log | yes |
-| **Report damaged, lost or stolen stock** | `stock.report` | Store | — | Manager | no |
-| **Write off damaged, lost or stolen stock** | `stock.writeoff` | Manager | Store | owner's log | no |
+| **Report damaged, lost or stolen stock** | `stock.report` | Store | — | Manager | yes |
+| **Write off damaged, lost or stolen stock** | `stock.writeoff` | Manager | Store | owner's log | yes |
 | Pick and pack an order | `order.pick` | Store | — | — | yes |
 | Load the truck, choose the driver | `order.load` | Store | — | — | yes |
 | Deliver, with proof | `order.deliver` | Store | — | — | yes |
@@ -154,7 +154,7 @@ row in the same commit. The test fails on any mismatch, in either direction.
 | Switch a line to another supplier or our shelf | `line.switch` | Buyer | — | Sales | yes |
 | Drop a line nobody has | `line.drop` | Buyer | — | Sales | yes |
 | Plan a buying trip, with the cash for it | `trip.plan` | Buyer | — | — | yes |
-| Ride a trip and hand it in (**Store staff may ride one too**) | `trip.collect` | Buyer, Store | — | Store | yes: Buyer |
+| Ride a trip and hand it in (**Store staff may ride one too**) | `trip.collect` | Buyer, Store | — | Store | yes |
 | **Buy to refill the shelf when no order needs it (what to buy)** | `buy.restock` | Buyer | — | Manager | no |
 | **Hold a restock line ("not yet")** | `restock.hold` | Manager | — | Buyer | no |
 
@@ -420,7 +420,6 @@ These are fixed when the matching row is built:
   - "The owner sets limits, terms and the N-day hold line"
   - "Each salesperson's own goal — the owner sets it."
   - the You page: "Costs, margins … credit limits and terms, prices, invoicing … stay with the owner"
-- **store.html**: "The console still puts it on the shelf"
 - **buyer.html**: "Owner checks it in", "the owner pays", "The owner keeps the
   price list."
 - **The headers of migrations 0113, 0116 and 0117**, where they say these stay

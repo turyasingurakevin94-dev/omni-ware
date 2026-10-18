@@ -618,26 +618,30 @@ html.big .ct-key{height:60px}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
 /* ==================================================================
-   Omni-Ware Store — the yard and the storeroom on a phone.
+   Omni-Ware Store — the shop floor and the storeroom on a phone.
 
    The person who takes trips in, packs, loads the truck, hands goods
    over at the door or the gate, and counts the shelf. One self-contained
    page like buyer.html: the same Supabase project and the same rows the
    owner's app reads and writes. Every rule that moves an order is the
    owner's own, carried over from index.html / shared-worker.js and
-   named beside it.
+   named beside it. Who decides what: docs/decision-rights.md.
 
-   What a Store login writes (0115_store_role.sql):
+   What a Store login writes (0115_store_role.sql, 0124_store_decisions.sql):
      saved_quotes      picking, the carrier, Packing -> Out for delivery,
                        and Out -> Completed with the delivery proof (or
                        straight out at the gate when they collect).
-     collection_trips  the yard's count of what came off a trip.
-     stock_counts      a blind stock take, for the owner or a manager
-                       to accept (accept_stock_count) or send back.
+     collection_trips  the shop's count of a trip, and a trip the Buyer
+                       sent this person on (ticked, handed in).
+     receive_trip()    the shop's count puts the trip on the shelf; a
+                       count unlike the Buyer's waits for the Manager.
+     stock_counts      a blind stock take, for a manager to accept.
+     stock_reports     damaged, lost or stolen: the Manager writes it off.
+     stock_returns     goods back at the gate: the Manager credits them.
      place_routes      a road route, asked once and locked.
-     delivery-photos   the picture at the door.
-   Stock, lots, bills and places stay the owner's. No price, cost,
-   margin or payment is ever drawn here.
+     road_names        the name of a delivery direction.
+     delivery-photos   the pictures: the door, a report, a return.
+   No price, cost, margin or payment is ever drawn here.
    ================================================================== */
 'use strict';
 
@@ -1632,7 +1636,7 @@ async function checkInTrip(tripId, got){
    in moves from Buying to Packing, and where the shop counted differently
    from the Buyer the trip carries it for the Manager. pack is how many of
    the shelf's unit one of the line's is (index.html stockMoveOnRowUnit). */
-function cmpUnit(u){ return String(u || '').trim().toLowerCase().replace(/s$/, ''); }
+function cmpUnit(u){ return String(u || '').trim().toLowerCase(); }
 function shelfPackFor(l){
   const rows = D().units.filter(u => u.productId === l.productId && u.variantIdx === (l.variantIdx == null || l.variantIdx === '' ? null : Number(l.variantIdx)));
   const packs = r => r.packQty > 0 && r.packUnit && cmpUnit(r.packUnit) !== cmpUnit(r.unit);
