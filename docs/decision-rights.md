@@ -77,7 +77,7 @@ row in the same commit. The test fails on any mismatch, in either direction.
 |---|---|---|---|---|---|
 | Make an order at or above the shop's price | `quote.make` | Sales | — | — | yes |
 | **Sell over the counter: pay and go, for goods on the shelf** | `counter.sell` | Sales | — | Manager | no |
-| **Forward an item we don't sell to Sourcing, while taking the order** | `sourcing.ask` | Sales | — | Sourcing | no |
+| **Forward an item we don't sell to Sourcing, while taking the order** | `sourcing.ask` | Sales | — | Sourcing | yes |
 | **Sell below the shop's price (at or above cost)** | `price.approve` | Manager | Sales | Sales, owner's log | yes |
 | **Price a line that has no selling price or no known cost** | `price.approve` | Manager | Sales, Buyer | Sales, owner's log | yes |
 | **Change a product's markups or the shop's default markup** | `markup.set` | Manager | Manager | owner's log | yes |

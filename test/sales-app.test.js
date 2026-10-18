@@ -77,7 +77,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -217,6 +217,27 @@ matrix.forEach(([what, it]) => {
     t.check(under && under.status === 'draft', 'a shelf line under the shop\'s price waits in Checking for the Manager');
     const held = await place(X => { X.S.data.customers[0].creditLimit = 400000; X.S.draft.items = [X.makeLine('P1', null, 10, { lineId: 1 })]; });
     t.check(held && held.status === 'draft', 'a customer over their credit limit with the order waits in Checking (the credit hold)');
+  }
+
+  // 3c. "We don't sell it": a request to Sourcing, in the shape the Sourcing app reads
+  {
+    const lead = { id: 'SRC-A', shop_id: SH, name: 'Ceiling fan, 56 inch', status: 'looking', voided: false, requests: [{ at: '2026-10-14T09:00:00Z', source: 'sourcing', qty: 2 }], candidates: [] };
+    const db = fakeDb({ saved_quotes: [], sourcing_leads: [lead] });
+    const X = loadPage(db);
+    Object.assign(X.S, { data: fixture(), shopId: SH, user: { id: 'u1' } });
+    X.S.data.leads = [X.rowToLead(lead)];
+    X.S.draft = X.newDraft(X.S.data.customers[0]);
+    t.check(X.srcMatch('ceiling fan') && X.srcMatch('ceiling fan').id === 'SRC-A' && !X.srcMatch('solar pump'), 'the same item asked twice is one lead; a new item is not matched to it');
+    X.S.sheet = { type: 'srcask', args: { name: 'ceiling fan', qty: 3 } };
+    await X.ACT.srcsend();
+    const up = db.writes.find(w => w[0] === 'update' && w[1] === 'sourcing_leads');
+    const added = up && up[2].requests[up[2].requests.length - 1];
+    t.check(up && up[2].requests.length === 2 && up[2].requests[0].source === 'sourcing', 'a second ask is added to the lead\'s requests, nobody else\'s lost');
+    t.check(added && added.source === 'sourcing.ask' && added.by === 'u1' && added.customerId === 'C001' && added.customerName === 'Kato Construction' && added.qty === 3, 'it carries who asked, how many and which salesperson, as the Sourcing app reads it');
+    X.S.sheet = { type: 'srcask', args: { name: 'Solar water pump 1hp', qty: 2 } };
+    await X.ACT.srcsend();
+    const ins = db.writes.find(w => w[0] === 'insert' && w[1] === 'sourcing_leads');
+    t.check(ins && ins[2].status === 'asked' && ins[2].name === 'Solar water pump 1hp' && /^SRC-/.test(ins[2].id) && ins[2].requests.length === 1 && ins[2].requests[0].source === 'sourcing.ask', 'an item nobody has asked for starts a new lead at Asked');
   }
 
   // 4. a payment over two bills and a loose balance
