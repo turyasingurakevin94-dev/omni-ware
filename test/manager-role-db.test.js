@@ -51,6 +51,10 @@ t.check(failed.length === 0, `every migration applied, in order (${JSON.stringif
 /* 0116 is pasted by hand, and sometimes twice. */
 const again = onDb(['-qAt', '-v', 'ON_ERROR_STOP=1', '-f', path.join(migDir, '0116_manager_role.sql')]);
 t.check(again.status === 0, `0116 runs a second time without error (${(again.stderr || '').trim().split('\n')[0] || 'ok'})`);
+/* 0122 redraws the two guards 0116 makes, so a second paste of 0116 is
+   followed by 0122 again, as 0122's header says. */
+const after122 = onDb(['-qAt', '-v', 'ON_ERROR_STOP=1', '-f', path.join(migDir, '0122_manager_decisions.sql')]);
+t.check(after122.status === 0, `0122 runs again after it (${(after122.stderr || '').trim().split('\n')[0] || 'ok'})`);
 
 const scenario = fs.readFileSync(path.join(__dirname, 'fixtures', 'manager-role-scenario.sql'), 'utf8');
 const run = onDb(['-qAt', '-F', '\t'], scenario);

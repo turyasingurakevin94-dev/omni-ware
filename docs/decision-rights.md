@@ -78,10 +78,10 @@ row in the same commit. The test fails on any mismatch, in either direction.
 | Make an order at or above the shop's price | `quote.make` | Sales | — | — | yes |
 | **Sell over the counter: pay and go, for goods on the shelf** | `counter.sell` | Sales | — | Manager | no |
 | **Forward an item we don't sell to Sourcing, while taking the order** | `sourcing.ask` | Sales | — | Sourcing | no |
-| **Sell below the shop's price (at or above cost)** | `price.approve` | Manager | Sales | Sales, owner's log | no |
-| **Price a line that has no selling price or no known cost** | `price.approve` | Manager | Sales, Buyer | Sales, owner's log | no |
-| **Change a product's markups or the shop's default markup** | `markup.set` | Manager | Manager | owner's log | no |
-| **See costs and margins** | `margin.see` | Manager | — | — | no |
+| **Sell below the shop's price (at or above cost)** | `price.approve` | Manager | Sales | Sales, owner's log | yes |
+| **Price a line that has no selling price or no known cost** | `price.approve` | Manager | Sales, Buyer | Sales, owner's log | yes |
+| **Change a product's markups or the shop's default markup** | `markup.set` | Manager | Manager | owner's log | yes |
+| **See costs and margins** | `margin.see` | Manager | — | — | yes |
 | Take a supplier's new price on an order line | `line.reprice` | Buyer | — | Manager (margin) | yes |
 | Move an order along the board | `order.move` | Sales, Manager | — | — | yes |
 | Add a customer (Sales); **edit any customer's details (Manager)** | `customer.edit` | Sales, Manager | — | — | yes |
@@ -91,10 +91,10 @@ row in the same commit. The test fails on any mismatch, in either direction.
 
 | Decision | Task | Who decides | Proposes | Told | Built |
 |---|---|---|---|---|---|
-| **Invoice a delivered order** (the nightly job invoices the rest, see section 3) | `invoice.make` | Manager | — | Accounts, Sales | no |
-| **Settle a short pick: bill what went, or the full quantity** | `pick.settle` | Manager | Store | Sales | no |
-| **Accept a customer return, raise a credit note** | `credit_note.raise` | Manager | Sales, Accounts, Store | Accounts, owner's log | no |
-| **Void an invoice** | `invoice.void` | Manager | Sales, Accounts | Accounts, owner's log | no |
+| **Invoice a delivered order** (the nightly job invoices the rest, see section 3) | `invoice.make` | Manager | — | Accounts, Sales | yes |
+| **Settle a short pick: bill what went, or the full quantity** | `pick.settle` | Manager | Store | Sales | yes |
+| **Accept a customer return, raise a credit note** | `credit_note.raise` | Manager | Sales, Accounts, Store | Accounts, owner's log | yes |
+| **Void an invoice** | `invoice.void` | Manager | Sales, Accounts | Accounts, owner's log | yes |
 | Send an invoice | `invoice.send` | Accounts | — | — | yes |
 
 ### Credit, debtors and agents
@@ -102,9 +102,9 @@ row in the same commit. The test fails on any mismatch, in either direction.
 | Decision | Task | Who decides | Proposes | Told | Built |
 |---|---|---|---|---|---|
 | Release an order held for credit | `credit.release` | Manager | Sales | Sales | yes |
-| **Set a customer's credit limit, payment terms, and the shop's hold days** | `credit.set` | Manager | Sales, Accounts | owner's log | no |
-| **Record a customer's promise to pay** | `promise.record` | Sales, Manager, Accounts | — | Manager | yes: Accounts |
-| **Decide an agent's change or cancel request** | `agent.change` | Manager | the agent | Buyer, the agent | no |
+| **Set a customer's credit limit, payment terms, and the shop's hold days** | `credit.set` | Manager | Sales, Accounts | owner's log | yes |
+| **Record a customer's promise to pay** | `promise.record` | Sales, Manager, Accounts | — | Manager | yes: Manager, Accounts |
+| **Decide an agent's change or cancel request** | `agent.change` | Manager | the agent | Buyer, the agent | yes |
 | Take a customer's payment | `payment.receive` | Sales, Manager, Accounts | — | — | yes |
 | Send a statement | `statement.send` | Sales, Manager, Accounts | — | — | yes |
 
@@ -136,11 +136,11 @@ row in the same commit. The test fails on any mismatch, in either direction.
 |---|---|---|---|---|---|
 | Count a trip off the truck at the yard | `trip.checkin` | Store | — | — | yes |
 | **Put a trip's goods on the shelf, from the yard's count** | `stock.receive` | Store | Buyer | Manager when it differs | no |
-| **Accept a difference between the buyer's and the yard's count** | `trip.difference` | Manager | Store | Buyer | no |
+| **Accept a difference between the buyer's and the yard's count** | `trip.difference` | Manager | Store | Buyer | yes |
 | Count the shelf (blind stock take) | `stock.count` | Store | — | Manager | yes |
 | Accept a stock take, which corrects the stock | `stock.correct` | Manager | Store | owner's log | yes |
 | **Report damaged, lost or stolen stock** | `stock.report` | Store | — | Manager | no |
-| **Write off damaged, lost or stolen stock** | `stock.writeoff` | Manager | Store | owner's log | no |
+| **Write off damaged, lost or stolen stock** | `stock.writeoff` | Manager | Store | owner's log | yes |
 | Pick and pack an order | `order.pick` | Store | — | — | yes |
 | Load the truck, choose the driver | `order.load` | Store | — | — | yes |
 | Deliver, with proof | `order.deliver` | Store | — | — | yes |
@@ -156,7 +156,7 @@ row in the same commit. The test fails on any mismatch, in either direction.
 | Plan a buying trip, with the cash for it | `trip.plan` | Buyer | — | — | yes |
 | Ride a trip and hand it in (**Store staff may ride one too**) | `trip.collect` | Buyer, Store | — | Store | yes: Buyer |
 | **Buy to refill the shelf when no order needs it (what to buy)** | `buy.restock` | Buyer | — | Manager | no |
-| **Hold a restock line ("not yet")** | `restock.hold` | Manager | — | Buyer | no |
+| **Hold a restock line ("not yet")** | `restock.hold` | Manager | — | Buyer | yes |
 
 ### Sourcing
 
@@ -172,8 +172,8 @@ row in the same commit. The test fails on any mismatch, in either direction.
 
 | Decision | Task | Who decides | Proposes | Told | Built |
 |---|---|---|---|---|---|
-| **Set each salesperson's goal** | `goal.set` | Manager | — | the salesperson, owner's log | no |
-| **Set how long an order may sit in each stage** | `team.limits` | Manager | — | — | no |
+| **Set each salesperson's goal** | `goal.set` | Manager | — | the salesperson, owner's log | yes |
+| **Set how long an order may sit in each stage** | `team.limits` | Manager | — | — | yes |
 | Hand a job to another person | `order.assign` | Manager | — | both people | yes |
 | Nudge someone | `team.nudge` | Manager | — | the person | yes |
 
@@ -420,11 +420,6 @@ These are fixed when the matching row is built:
   - the set-price sheet: "the owner will see it" and "the owner reviews it"
   - the goal page: "SET BY THE OWNER"
   - the new-customer sheet: "the owner gives credit"
-- **manager.html**
-  - "PROPOSED · OWNER SETS GOALS"
-  - "The owner sets limits, terms and the N-day hold line"
-  - "Each salesperson's own goal — the owner sets it."
-  - the You page: "Costs, margins … credit limits and terms, prices, invoicing … stay with the owner"
 - **store.html**: "The console still puts it on the shelf"
 - **buyer.html**: "Owner checks it in", "the owner pays", "The owner keeps the
   price list."

@@ -1,4 +1,5 @@
--- What a Manager login (0116) may and may not write, asked of a real database.
+-- What a Manager login (0116, and 0122's credit.set and invoice.void) may and
+-- may not write, asked of a real database.
 -- Each row: what is tried, as whom, and whether it must go through or be
 -- refused. 'refused' also covers row-level security quietly matching no
 -- rows on an update or delete -- the database's way of saying no there.
@@ -29,12 +30,12 @@ set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select _try('manager: new customer, no debt, no terms', 'ok', $q$insert into customers(shop_id,id,name) values ('11111111-1111-1111-1111-111111111111','C002','Mukasa')$q$);
 select _try('manager: new customer WITH a debt', 'refused', $q$insert into customers(shop_id,id,name,debt) values ('11111111-1111-1111-1111-111111111111','C003','X',100)$q$);
-select _try('manager: new customer WITH terms', 'refused', $q$insert into customers(shop_id,id,name,terms_days) values ('11111111-1111-1111-1111-111111111111','C004','Y',30)$q$);
+select _try('manager: new customer WITH terms (credit.set, 0122)', 'ok', $q$insert into customers(shop_id,id,name,terms_days) values ('11111111-1111-1111-1111-111111111111','C004','Y',30)$q$);
 select _try('manager: edit a customer''s phone (upsert, like the app)', 'ok', $q$insert into customers(shop_id,id,name,phone,debt,credit_limit,terms_days) values ('11111111-1111-1111-1111-111111111111','C001','Kato','0772',500000,1000000,30) on conflict (shop_id,id) do update set phone=excluded.phone, debt=excluded.debt, credit_limit=excluded.credit_limit, terms_days=excluded.terms_days$q$);
 select _try('manager: lower a debt (payment, upsert)', 'ok', $q$insert into customers(shop_id,id,name,debt,credit_limit,terms_days) values ('11111111-1111-1111-1111-111111111111','C001','Kato',400000,1000000,30) on conflict (shop_id,id) do update set debt=excluded.debt$q$);
 select _try('manager: RAISE a debt', 'refused', $q$update customers set debt = 900000 where id='C001'$q$);
-select _try('manager: change a credit limit', 'refused', $q$update customers set credit_limit = 5000000 where id='C001'$q$);
-select _try('manager: change terms', 'refused', $q$update customers set terms_days = 60 where id='C001'$q$);
+select _try('manager: change a credit limit (credit.set, 0122)', 'ok', $q$update customers set credit_limit = 5000000 where id='C001'$q$);
+select _try('manager: change terms (credit.set, 0122)', 'ok', $q$update customers set terms_days = 60 where id='C001'$q$);
 select _try('manager: delete a customer', 'refused', $q$delete from customers where id='C002'$q$);
 select _try('manager: payment line in debt log', 'ok', $q$insert into customer_debt_log(shop_id,customer_id,date,type,amount) values ('11111111-1111-1111-1111-111111111111','C001',current_date,'payment',100000)$q$);
 select _try('manager: CHARGE line in debt log', 'refused', $q$insert into customer_debt_log(shop_id,customer_id,date,type,amount) values ('11111111-1111-1111-1111-111111111111','C001',current_date,'charge',100000)$q$);
@@ -49,7 +50,8 @@ select _try('manager: move an order along (upsert)', 'ok', $q$insert into saved_
 select _try('manager: record a payment on an INVOICED order (upsert)', 'ok', $q$insert into saved_quotes(id,shop_id,client_name,status,invoiced,amount_paid,payload) overriding system value values (9001,'11111111-1111-1111-1111-111111111111','Kato','completed',true,100000,'{}') on conflict (id) do update set amount_paid=excluded.amount_paid, invoiced=excluded.invoiced$q$);
 select _try('manager: INVOICE an order', 'refused', $q$update saved_quotes set invoiced = true where id = 9002$q$);
 select _try('manager: un-invoice an order', 'refused', $q$update saved_quotes set invoiced = false where id = 9001$q$);
-select _try('manager: VOID an order', 'refused', $q$update saved_quotes set voided = true where id = 9001$q$);
+select _try('manager: VOID an order (invoice.void, 0122)', 'ok', $q$update saved_quotes set voided = true where id = 9001$q$);
+select _try('manager: UN-void an order', 'refused', $q$update saved_quotes set voided = false where id = 9001$q$);
 select _try('manager: insert an already-invoiced order', 'refused', $q$insert into saved_quotes(shop_id,client_name,status,invoiced,payload) values ('11111111-1111-1111-1111-111111111111','Z','completed',true,'{}')$q$);
 select _try('manager: new map pin (owner only)', 'refused', $q$insert into places(shop_id,name) values ('11111111-1111-1111-1111-111111111111','Kira')$q$);
 select _try('manager: statement sent record', 'ok', $q$insert into statements_sent(shop_id, id, customer_id, sent_on) values ('11111111-1111-1111-1111-111111111111', 1, 'C001', current_date)$q$);
