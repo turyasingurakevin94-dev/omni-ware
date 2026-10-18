@@ -18,6 +18,10 @@
  *      land, nothing is booked onto a closed day, a minus survives a
  *      count, suppliers without an id are never paid together.
  *   5. Every screen draws from the fixture without throwing.
+ *   6. The treasurer (0123): the console's statements are carried into
+ *      the page word for word; an expense, a transfer, a corrected
+ *      payment, wages, a trip's cash, a loan and an asset each write the
+ *      console's own rows, in categories the 0123 wall lets through.
  *
  * Runs the page's real script in a sandbox with a fake database; nothing
  * is copied into this file.
@@ -31,7 +35,8 @@ const t = createReporter('accounts app');
 const html = read('accounts.html');
 const salesSrc = read('sales.html');
 const adminSrc = read('index.html');
-const mig = read('supabase/migrations/0117_accounts_role.sql');
+const mig = read('supabase/migrations/0117_accounts_role.sql') + '\n' + read('supabase/migrations/0123_accounts_treasurer.sql');
+const mig123 = read('supabase/migrations/0123_accounts_treasurer.sql');
 
 /* ---------------- the fixture: one small shop ---------------- */
 const SH = 'shop1';
@@ -47,7 +52,7 @@ function tables(){
     products: [], prices: [],
     saved_quotes: [q(11, 'C1', 'Mulongo Builders', 40, 200000, 0), q(12, 'C1', 'Mulongo Builders', 5, 100000, 0), q(13, 'C2', 'Okello & Sons', 0, 50000, 0)],
     suppliers: [{ id: 'S1', shop_id: SH, name: 'Steel & Tube', phone: '0414222333', terms_days: 30 }],
-    staff: [{ id: 'W1', shop_id: SH, name: 'Sarah Nakato', role: 'accounts', user_id: 'u1' }],
+    staff: [{ id: 'W1', shop_id: SH, name: 'Esther Auma', role: 'accounts', user_id: 'u1', pay_basis: 'monthly', pay_rate: 600000 }, { id: 'W2', shop_id: SH, name: 'Denis Okello', role: 'buyer', user_id: 'u2', pay_basis: 'monthly', pay_rate: 450000 }],
     cash_txns: [
       { id: 1, shop_id: SH, date: Y2, account: 'cash', type: 'receipt', category: 'Sales', amount: 500000 },
       { id: 2, shop_id: SH, date: Y, account: 'cash', type: 'receipt', category: 'Sales', amount: 300000 },
@@ -67,8 +72,14 @@ function tables(){
     ],
     stock_log: [{ shop_id: SH, pi_id: 21, product_id: 'P1', variant_idx: null, delta: 10, date: iso(19) }],
     statements_sent: [], payment_promises: [],
+    dues: [], loans: [{ id: 1, shop_id: SH, lender: 'Centenary Bank', principal: 1200000, rate_pct: 20, method: 'reducing_balance', term_months: 12, fees: 0, round_to: 1000, frequency: 'monthly', fee_per_instalment: 0, started_on: iso(70), payload: { repayments: [] } }],
+    fixed_assets: [{ id: 1, shop_id: SH, name: 'Platform scale', category: 'Machine', cost: 900000, acquired_on: iso(400), method: 'straight_line', life_months: 60, salvage: 0 }],
+    rent_agreements: [{ id: 1, shop_id: SH, premises: 'Kikuubo', landlord: 'Mr Kasozi', amount: 1000000, due_day: 1, start_month: '2026-01' }],
+    stock: [], stock_lots: [], agents: [], agent_commission_claims: [], invoice_asks: [], decision_log: [],
+    collection_trips: [{ id: 'TRIP-1', shop_id: SH, supplier_id: 'S1', status: 'collected', assigned_worker_id: 'W2', created_at: new Date().toISOString(), collected_at: new Date().toISOString(), cash_given: 500000, voided: false,
+      lines: [{ productName: 'Iron sheets', qty: 10, expectedPrice: 30000, gotQty: 10, gotPrice: 30000 }] }],
     app_settings: [{ shop_id: SH, presets: { ownerPhone: '0772555666' } }],
-    role_tasks: ['payment.receive', 'statement.send', 'invoice.send', 'day.count', 'day.close', 'variance.book', 'bill.pay'].map(task => ({ role: 'accounts', task })),
+    role_tasks: [...mig.matchAll(/\('accounts',\s*'([a-z.]+)'\)/g)].map(m => ({ role: 'accounts', task: m[1] })),
     shop_members: [{ shop_id: SH, user_id: 'u1', role: 'accounts' }],
   };
 }
@@ -80,6 +91,7 @@ function fakeDb(tb){
   Q.prototype.eq = function(k, v){ this.f.push(r => String(r[k]) === String(v)); return this; };
   Q.prototype.gt = function(k, v){ this.f.push(r => r[k] > v); return this; };
   Q.prototype.gte = function(k, v){ this.f.push(r => r[k] >= v); return this; };
+  Q.prototype.in = function(k, v){ this.f.push(r => v.map(String).includes(String(r[k]))); return this; };
   Q.prototype.not = function(k){ this.f.push(r => r[k] != null); return this; };
   Q.prototype.order = Q.prototype.limit = function(){ return this; };
   Q.prototype.maybeSingle = function(){ this.one = true; return this; };
@@ -87,7 +99,7 @@ function fakeDb(tb){
   Q.prototype.update = function(row){ this.op = 'update'; this.row = row; return this; };
   Q.prototype.then = function(res, rej){
     const rows = tb[this.t] || (tb[this.t] = []);
-    if (this.op === 'insert') { writes.push(['insert', this.t, clone(this.row)]); rows.push(clone(this.row)); return Promise.resolve({ error: null }).then(res, rej); }
+    if (this.op === 'insert') { const list = Array.isArray(this.row) ? this.row : [this.row]; list.forEach(r => { writes.push(['insert', this.t, clone(r)]); rows.push(clone(r)); }); return Promise.resolve({ error: null }).then(res, rej); }
     const hit = rows.filter(r => this.f.every(f => f(r)));
     if (this.op === 'update') { writes.push(['update', this.t, clone(this.row)]); hit.forEach(r => Object.assign(r, clone(this.row))); return Promise.resolve({ error: null }).then(res, rej); }
     return Promise.resolve({ data: clone(this.one ? (hit[0] || null) : hit), count: hit.length, error: null }).then(res, rej);
@@ -98,7 +110,8 @@ function fakeDb(tb){
 
 /* ---------------- the page, in a sandbox ---------------- */
 const EXPORT = ['S', 'ACT', 'PAGE', 'D', 'loadAll', 'parseMoney', 'supplierKey', 'can', 'cbDayPosition', 'acctState', 'saveCount', 'closeDay', 'bookVariance', 'payBills', 'billDue', 'openBills', 'creditors', 'recordInvoiceSend', 'invoiceSent',
-  'custAging', 'debtors', 'statementDue', 'summaryDebtors', 'summaryCreditors', 'TASK_WORDS', 'viewToday', 'viewOwed', 'viewBills', 'viewClose', 'billState', 'cameWord', 'inHandBy'];
+  'custAging', 'debtors', 'statementDue', 'summaryDebtors', 'summaryCreditors', 'TASK_WORDS', 'viewToday', 'viewOwed', 'viewBills', 'viewClose', 'billState', 'cameWord', 'inHandBy',
+  'CB', 'moneyPosition', 'payrollMonth', 'tripsToCount', 'topArgs', 'push', 'txnById'];
 function loadPage(db){
   const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
   const app = scripts.find(s => s.includes('function cbDayPosition'));
@@ -161,10 +174,10 @@ FROM_SALES.forEach(n => { const a = fnText(html, n), b = fnText(salesSrc, n); t.
 
   /* ---------------- 2. the walls ---------------- */
   const granted = [...mig.matchAll(/\('accounts',\s*'([a-z.]+)'\)/g)].map(m => m[1]);
-  Object.keys(X.TASK_WORDS).forEach(k => t.check(granted.includes(k), `“${X.TASK_WORDS[k]}” (${k}) is a task 0117 gives the accounts role`));
+  Object.keys(X.TASK_WORDS).forEach(k => t.check(granted.includes(k), `“${X.TASK_WORDS[k]}” (${k}) is a task 0117 or 0123 gives the accounts role`));
   const used = [...new Set([...html.matchAll(/has_task|can\('([a-z.]+)'\)/g)].map(m => m[1]).filter(Boolean))];
-  used.forEach(k => t.check(granted.includes(k), `the page only asks for tasks 0117 grants: ${k}`));
-  const policy = /create policy "owner, sales or accounts writes" on cash_txns[\s\S]*?;\n/.exec(mig)[0];
+  used.forEach(k => t.check(granted.includes(k), `the page only asks for tasks 0117 or 0123 grant: ${k}`));
+  const policy = /create policy "owner, sales or accounts writes" on cash_txns[\s\S]*?;\n/.exec(mig123)[0];
   ['Stock Purchase', 'Cash Shortage', 'Cash Overage', 'Debt Payment', 'Invoice Payment'].forEach(c => t.check(policy.includes(`'${c}'`), `the insert wall lets a ${c} row through`));
 
   /* ---------------- 3. the writes ---------------- */
@@ -250,9 +263,69 @@ FROM_SALES.forEach(n => { const a = fnText(html, n), b = fnText(salesSrc, n); t.
     const args = { account: { id: 'C1' }, acct: { key: 'cash' }, short: { key: 'momo' }, closed: {}, payment: { id: 5 }, find: { id: 5 }, receive: { pick: true }, statements: {}, stmt: { id: 'C1' }, range: { id: 'C1' },
       invoices: {}, invoice: { id: 13 }, share: {}, supplier: { sid: 'S1' }, bill: { id: 21 }, me: {},
       billpaid: { sid: 'S1', name: 'Steel & Tube', from: 'bank', paid: 300000, hand: 3000000, after: 2700000, owedAfter: 105000, at: Date.now(), lines: [{ ref: 'ST/1', pay: 300000, cleared: true }] },
-      paid: { name: 'Mulongo Builders', id: 'C1', phone: '', amount: 100000, method: 'cash', bills: [], before: 300000, after: 200000, time: '10:00' } };
+      paid: { name: 'Mulongo Builders', id: 'C1', phone: '', amount: 100000, method: 'cash', bills: [], before: 300000, after: 200000, time: '10:00' },
+      position: {}, reports: {}, days: {}, expense: {}, income: {}, transfer: {}, payedit: { id: 5 }, propose: { cid: 'C1' }, billrec: { sid: 'S1' }, consign: {}, agents: {}, tripcash: {}, payroll: {}, absence: { sid: 'W1' }, loans: {}, assets: {}, assetbuy: {} };
     Object.keys(X.PAGE).forEach(k => draw('the ' + k + ' page', () => { X.S.stack = [{ type: k, args: args[k] || {} }]; return X.PAGE[k](args[k] || {}); }));
     t.check(Object.keys(X.PAGE).every(k => k in args), 'every page the app has is drawn here');
+  }
+
+  /* ---------------- 6. the treasurer ---------------- */
+  {
+    // The console's statements, carried word for word: comments and spacing aside, each is index.html's own.
+    const block = /const CONSOLE_BOOKS = function\(data\)\{\n([\s\S]*?)\n  \/\* end of what is carried from index.html \*\//.exec(html)[1];
+    const plain = x => x.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"\\])\/\/[^\n]*/g, '$1').replace(/\s+/g, '');
+    const fns = [...block.matchAll(/^(?:async\s+)?function\s+([\w$]+)\s*\(/gm)].map(m => m[1]);
+    const differ = fns.filter(n => plain(fnText(block, n) || '') !== plain(fnText(adminSrc, n) || '-'));
+    t.check(fns.length > 120 && !differ.length, `${fns.length} of the console's statement functions are carried word for word` + (differ.length ? ` -- these differ: ${differ.join(', ')}` : ''));
+    t.check(['incomeStatement', 'balanceSheetAsAt', 'cashFlowStatement', 'consignmentRows', 'loanSchedule', 'dueCostOf'].every(n => fns.includes(n)), 'among them the profit and loss, the balance sheet, the cash flow, consignment, loans and wages');
+  }
+  {
+    const { X, db } = await page();
+    const allowed = new Set([...policy.matchAll(/'([A-Z][A-Za-z &]+)'/g)].map(m => m[1]));
+    // cash.expense lets any payment through but the categories it names; everything else is named.
+    const notExpense = new Set([.../category not in \(([^)]*)\)/.exec(policy)[1].matchAll(/'([^']+)'/g)].map(m => m[1]));
+    const cashOk = () => db.writes.filter(w => w[1] === 'cash_txns' && w[0] === 'insert').every(w => w[2].amount > 0 && (allowed.has(w[2].category) || (w[2].type === 'payment' && !notExpense.has(w[2].category))));
+    const s = X.CB().balanceSheetAsAt(T), p = X.moneyPosition();
+    t.check(p.owedUs === s.receivables && p.inHand === s.cash && p.net === s.cash + s.receivables - s.payables - s.loans, 'where the money stands is the balance sheet’s own figures');
+    t.check(typeof X.CB().incomeStatement(T.slice(0, 8) + '01', T).netProfit === 'number' && typeof X.CB().cashFlowStatement(Y2, T).netMovement === 'number', 'the profit and the cash flow come from the console’s statements');
+    // An expense.
+    X.S.stack = [{ type: 'expense', args: { amt: 50000, cat: 'Fuel', acct: 'cash', note: 'Shell Ntinda' } }];
+    await X.ACT['slide:expense']();
+    const ex = db.writes.filter(w => w[1] === 'cash_txns').pop()[2];
+    t.check(ex.type === 'payment' && ex.category === 'Fuel' && ex.amount === 50000 && ex.account === 'cash' && ex.description === 'Shell Ntinda', 'an expense is one Fuel payment, as the console writes it');
+    t.check(db.writes.some(w => w[1] === 'decision_log' && w[2].task === 'cash.expense'), 'and the owner gets it in the log');
+    // A transfer: two legs, each pointing at the other.
+    X.S.stack = [{ type: 'transfer', args: { amt: 100000, from: 'cash', to: 'bank' } }];
+    await X.ACT['slide:transfer']();
+    const legs = db.writes.filter(w => w[1] === 'cash_txns' && w[2].category === 'Account Transfer').map(w => w[2]);
+    t.check(legs.length === 2 && legs[0].type === 'payment' && legs[1].type === 'receipt' && legs[0].transfer_id === legs[1].id && legs[1].transfer_id === legs[0].id && legs[1].account === 'bank', 'a transfer is two Account Transfer lines that point at each other');
+    // A payment on account moved onto its invoice: the debt does not move.
+    const debt0 = db.tb.customers.find(c => c.id === 'C1').debt;
+    X.S.stack = [{ type: 'payedit', args: { id: 5, to: '12', amt: 100000 } }];
+    await X.ACT.payeditsave();
+    const q12 = db.tb.saved_quotes.find(r => r.id === 12), line = db.tb.customer_debt_log.find(l => l.id === 4), c5 = db.tb.cash_txns.find(r => r.id === 5);
+    t.check(q12.amount_paid === 100000 && q12.payload.payments.some(x => x.cashTxnId === 5) && q12.payload.debtCharged === 0, 'a payment moved to its invoice pays that invoice');
+    t.check(Number(line.quote_id) === 12 && line.amount === 100000 && Number(c5.quote_id) === 12 && c5.amount === 100000, 'the same cash line and debt line follow it, at the corrected amount');
+    t.check(db.tb.customers.find(c => c.id === 'C1').debt === debt0 + 20000, 'and the debt rises only by what the correction took off the payment');
+    // Wages: the month's due is raised, then paid as Salaries & Wages.
+    X.S.stack = [{ type: 'payroll', args: { sel: { 'wage:W1': true }, acct: 'bank' } }];
+    await X.ACT['slide:payroll']();
+    const due = db.tb.dues.find(d => d.ref_id === 'W1'), wage = db.writes.filter(w => w[1] === 'cash_txns').pop()[2];
+    t.check(due && due.paid === 600000 && due.payload.payments[0].cashTxnId === wage.id && wage.category === 'Salaries & Wages', 'wages raise the month’s due and pay it as Salaries & Wages');
+    // A trip's cash, short.
+    X.S.stack = [{ type: 'tripcash', args: { key: X.tripsToCount()[0].key, counted: 150000 } }];
+    await X.ACT['slide:tripcash']();
+    const trip = db.tb.collection_trips[0], sh = db.writes.filter(w => w[1] === 'cash_txns').pop()[2];
+    t.check(trip.cash_count && trip.cash_count.expected === 200000 && trip.cash_count.diff === -50000 && sh.category === 'Cash Shortage' && sh.amount === 50000, 'a trip’s cash 50,000 short is counted on the trip and booked as a Cash Shortage');
+    // A loan repaid, an asset bought.
+    X.S.stack = [{ type: 'loans', args: { lid: 1, amt: 111000, acct: 'bank' } }];
+    await X.ACT['slide:loanrepay']();
+    t.check(db.tb.loans[0].payload.repayments.length === 1 && db.writes.filter(w => w[1] === 'cash_txns').pop()[2].category === 'Loan Repayment', 'a repayment is kept on the loan and booked as Loan Repayment');
+    X.S.stack = [{ type: 'assetbuy', args: { amt: 1850000, name: 'Generator', cat: 'Machine', years: 5, acct: 'bank' } }];
+    await X.ACT['slide:assetbuy']();
+    const fa = db.tb.fixed_assets.find(a => a.name === 'Generator');
+    t.check(fa && fa.life_months === 60 && fa.method === 'straight_line' && db.writes.filter(w => w[1] === 'cash_txns').pop()[2].category === 'Equipment purchase', 'an asset bought joins the assets and is booked as Equipment purchase');
+    t.check(cashOk(), 'every cash line the treasurer writes is in a category the 0123 wall lets through');
   }
   process.exit(t.done() ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

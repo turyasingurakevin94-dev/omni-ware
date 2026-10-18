@@ -45970,6 +45970,7 @@ function buildSyncRows(d, shopId){
         ...(pi.dueDate ? {dueDate:pi.dueDate} : {}),
         ...(pi.openingBalance ? {openingBalance:true} : {}),
         ...(pi.consignSettlement ? {consignSettlement:true} : {}),
+        ...(pi.noStock ? {noStock:true} : {}),
         /* A bill corrected in place, or credited once paid: the
            supplier's own number, what they charged to deliver, the
            credits against it, whether its prices were checked, whether
@@ -75133,7 +75134,10 @@ function billEditable(pi){
    stock (not raised by a sale), and not an opening balance or a
    consignment settlement, whose goods were counted some other way. */
 function billStocksShelf(pi){
-  return !!pi && pi.quoteId == null && !pi.openingBalance && !pi.consignSettlement;
+  // noStock: a bill the treasurer recorded from the supplier's paper
+  // (accounts.html, 0123). Its goods came in through the Store's count,
+  // so the bill itself must never put them on the shelf a second time.
+  return !!pi && pi.quoteId == null && !pi.openingBalance && !pi.consignSettlement && !pi.noStock;
 }
 /* THE EDIT. next = {supplierId, supplierRef, date, dueDate, transport,
    lines:[{idx?, productId, variantIdx, productName, unit, packUnit,
@@ -104118,8 +104122,9 @@ function dueGross(d){
    paid sick day is still recorded -- the shop wants to know it happened,
    and so does the next conversation about it -- it simply costs the
    worker nothing. */
+// A half day (accounts.html marks {half:true}) costs half a day's pay.
 function dueUnpaidAbsenceDays(d){
-  return dueAbsences(d).filter(a=> !a.paid).length;
+  return dueAbsences(d).filter(a=> !a.paid).reduce((n, a)=> n + (a.half ? 0.5 : 1), 0);
 }
 
 /* What comes off this month's pay for days missed.

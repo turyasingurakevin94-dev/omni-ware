@@ -103,7 +103,7 @@ row in the same commit. The test fails on any mismatch, in either direction.
 |---|---|---|---|---|---|
 | Release an order held for credit | `credit.release` | Manager | Sales | Sales | yes |
 | **Set a customer's credit limit, payment terms, and the shop's hold days** | `credit.set` | Manager | Sales, Accounts | owner's log | no |
-| **Record a customer's promise to pay** | `promise.record` | Sales, Manager, Accounts | — | Manager | no |
+| **Record a customer's promise to pay** | `promise.record` | Sales, Manager, Accounts | — | Manager | yes: Accounts |
 | **Decide an agent's change or cancel request** | `agent.change` | Manager | the agent | Buyer, the agent | no |
 | Take a customer's payment | `payment.receive` | Sales, Manager, Accounts | — | — | yes |
 | Send a statement | `statement.send` | Sales, Manager, Accounts | — | — | yes |
@@ -116,19 +116,19 @@ row in the same commit. The test fails on any mismatch, in either direction.
 | Close a day that agrees | `day.close` | Accounts | — | owner's log | yes |
 | Book an untraced shortage or overage | `variance.book` | Accounts | — | owner's log | yes |
 | Pay a supplier's bill | `bill.pay` | Accounts | — | owner's log | yes |
-| **Set an opening balance; reopen a closed day** | `day.open` | Accounts | — | owner's log | no |
-| **Record an expense: rent, fuel, transport, utilities, anything paid out** | `cash.expense` | Accounts | — | owner's log | no |
-| **Record other income: a loan received, owner investment, other** | `cash.income` | Accounts | — | owner's log | no |
-| **Move money between Cash, Mobile Money and Bank** | `cash.transfer` | Accounts | — | owner's log | no |
-| **Correct a recorded payment, or move it to the right invoice** | `payment.edit` | Accounts | Sales, Manager | owner's log | no |
-| **Record a supplier's paper bill or a supplier credit** | `bill.record` | Accounts | Buyer | owner's log | no |
-| **Settle with a consignor** | `consign.settle` | Accounts | — | owner's log | no |
-| **Run payroll and rent: dues, days worked, absences, paying them** | `payroll.run` | Accounts | Manager (days) | owner's log | no |
-| **Record and repay loans** | `loan.edit` | Accounts | — | owner's log | no |
-| **Record assets, and their sale or disposal** | `asset.edit` | Accounts | — | owner's log | no |
-| **Pay agents: commission claims, cash an agent brings in** | `agent.pay` | Accounts | — | the agent, owner's log | no |
-| **Count a buying trip's cash back against the cash given** | `trip.cash` | Accounts | Buyer | Manager, owner's log | no |
-| **See every financial figure: P&L, balance sheet, cash flow, debtors, creditors** | `finance.see` | Accounts | — | — | no |
+| **Set an opening balance; reopen a closed day** | `day.open` | Accounts | — | owner's log | yes |
+| **Record an expense: rent, fuel, transport, utilities, anything paid out** | `cash.expense` | Accounts | — | owner's log | yes |
+| **Record other income: a loan received, owner investment, other** | `cash.income` | Accounts | — | owner's log | yes |
+| **Move money between Cash, Mobile Money and Bank** | `cash.transfer` | Accounts | — | owner's log | yes |
+| **Correct a recorded payment, or move it to the right invoice** | `payment.edit` | Accounts | Sales, Manager | owner's log | yes |
+| **Record a supplier's paper bill or a supplier credit** | `bill.record` | Accounts | Buyer | owner's log | yes |
+| **Settle with a consignor** | `consign.settle` | Accounts | — | owner's log | yes |
+| **Run payroll and rent: dues, days worked, absences, paying them** | `payroll.run` | Accounts | Manager (days) | owner's log | yes |
+| **Record and repay loans** | `loan.edit` | Accounts | — | owner's log | yes |
+| **Record assets, and their sale or disposal** | `asset.edit` | Accounts | — | owner's log | yes |
+| **Pay agents: commission claims, cash an agent brings in** | `agent.pay` | Accounts | — | the agent, owner's log | yes |
+| **Count a buying trip's cash back against the cash given** | `trip.cash` | Accounts | Buyer | Manager, owner's log | yes |
+| **See every financial figure: P&L, balance sheet, cash flow, debtors, creditors** | `finance.see` | Accounts | — | — | yes |
 
 ### Stock and the yard
 
@@ -425,10 +425,6 @@ These are fixed when the matching row is built:
   - "The owner sets limits, terms and the N-day hold line"
   - "Each salesperson's own goal — the owner sets it."
   - the You page: "Costs, margins … credit limits and terms, prices, invoicing … stay with the owner"
-- **accounts.html**
-  - "Ask the owner to put it on INV-…"
-  - the You page's "Owner keeps" list: "Edit or void a payment", "Opening
-    balance, reopen a day", and the rest
 - **store.html**: "The console still puts it on the shelf"
 - **buyer.html**: "Owner checks it in", "the owner pays", "The owner keeps the
   price list."
