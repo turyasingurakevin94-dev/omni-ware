@@ -12,8 +12,11 @@
  *      and without credit -- and must agree to the shilling.
  *   2. Never at cost. A line with no markup rule is "price to confirm",
  *      left out of the total and counted, not quoted at the shop's cost.
- *   3. Placing an order writes one saved_quotes row at Checking with the
- *      exact columns and payload keys the admin's loadData maps.
+ *   3. Placing an order writes one saved_quotes row with the exact columns
+ *      and payload keys the admin's loadData maps -- at Checking, or straight
+ *      at Packing when every line is on our shelf and nothing waits for the
+ *      Manager (docs/decision-rights.md, "Orders that need nothing from a
+ *      supplier").
  *   4. Taking a payment spreads it over open bills oldest first, as
  *      recordCustomerPayment does: a receipt per bill, the bill's payments
  *      and amount_paid, the debt brought down with an Auto-sync line, and
@@ -74,7 +77,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -149,6 +152,24 @@ matrix.forEach(([what, it]) => {
   P.S.data.presetDefaultMarkup = fixture().presetDefaultMarkup;
 }
 
+/* ---------------- 2b: the Manager's answer on a price ---------------- */
+{
+  P.S.data.members = [{ user_id: 'm1', role: 'manager' }];
+  P.S.data.staff = [{ id: 7, name: 'Ruth Nakato', userId: 'm1', role: 'manager' }];
+  t.check(P.mgrName() === 'Ruth', 'the Manager is named by their staff record');
+  const base = { productId: 'P1', qty: 2, sellPrice: 165000, priceBy: 'u1', priceNote: 'under', priceShop: 172000 };
+  t.check(P.priceReviewState(base) === 'wait', 'a price under the shop\'s waits for the Manager');
+  t.check(P.priceReviewState({ ...base, priceNote: 'nocost' }) === null, 'a price with no cost yet is not the Manager\'s to decide first');
+  t.check(P.priceReviewState({ ...base, priceReview: { state: 'approved', price: 165000, byName: 'Ruth Nakato', at: 1 } }) === 'approved', 'approved at the figure it names');
+  const changed = { ...base, sellPrice: 172000, priceReview: { state: 'changed', price: 172000, was: 165000, byName: 'Ruth Nakato', at: '2026-10-17T12:31:00Z' } };
+  t.check(P.priceReviewState(changed) === 'changed' && P.priceToTell(changed), 'the Manager\'s new price is one to tell the customer');
+  t.check(!P.priceToTell({ ...changed, priceToldAt: '2026-10-17T12:33:00Z' }), 'once told, it is not asked again');
+  t.check(P.priceReviewState({ ...changed, sellPrice: 170000 }) === 'wait', 'a decision goes stale when the price changes after it');
+  t.check(/waiting for Ruth/.test(P.priceTagHTML(base, true)) && /Ruth set/.test(P.priceTagHTML(changed, true)) && !/owner/.test(P.priceTagHTML(base) + P.priceTagHTML(base, true)), 'the tag names the Manager, never the owner');
+  P.S.data.members = []; P.S.data.staff = [];
+  t.check(P.mgrName() === 'the Manager', 'with no manager on the shop, it says "the Manager"');
+}
+
 /* ---------------- 3 & 4: the writes ---------------- */
 (async () => {
   // 3. placing an order
@@ -165,16 +186,37 @@ matrix.forEach(([what, it]) => {
     const row = ins[0] && ins[0][2];
     if (row) {
       t.check(row.id === 42, 'the id is the server\'s, above every order on the phone');
-      t.check(row.status === 'draft' && row.invoiced === false && row.voided === false && row.amount_paid === 0, 'it lands at Checking, not invoiced, nothing paid');
+      t.check(row.status === 'preparing' && row.invoiced === false && row.voided === false && row.amount_paid === 0, 'all from our shelf, it lands at Packing, not invoiced, nothing paid');
       t.check(row.shop_id === SH && row.client_name === 'Kato Construction' && row.date, 'the row columns the admin reads are filled');
       const p = row.payload;
       t.check(p.customerId === 'C001' && Array.isArray(p.payments) && p.debtCharged === 0 && Array.isArray(p.charges), 'payload carries customer, payments, debtCharged and charges');
       t.check(p.credit && p.credit.pct === 3 && p.credit.days === 30 && p.credit.agreedAt, 'credit is frozen on the order with its rate and term, as setOrderCredit does');
-      t.check(Array.isArray(p.stageLog) && p.stageLog[0].status === 'draft' && p.stageLog[0].at === p.stageEnteredAt, 'the stage log starts at Checking at stageEnteredAt');
+      t.check(Array.isArray(p.stageLog) && p.stageLog.length === 1 && p.stageLog[0].status === 'preparing' && p.stageLog[0].at === p.stageEnteredAt, 'the stage log starts at Packing at stageEnteredAt: Checking was never entered');
       const keys = Object.keys(p.items[0]).sort().join(',');
       t.check(keys === 'lineId,packQty,packUnit,price,productId,productName,qty,qtyIn,sellPrice,supplierId,supplierName,unit,variantIdx', 'each line has the item picker\'s fields and no others: ' + keys);
     }
     t.check(X.S.draft === null && X.S.stack[0] && X.S.stack[0].type === 'placed', 'the draft is cleared and the celebration opens');
+  }
+
+  // 3b. what still stops in Checking: a supplier to ask, a price for the Manager, a credit hold
+  {
+    const place = async (setup) => {
+      const db = fakeDb({ saved_quotes: [] });
+      const X = loadPage(db);
+      Object.assign(X.S, { data: fixture(), shopId: SH, user: { id: 'u1' } });
+      X.S.data.savedQuotes = [{ id: 41 }];
+      X.S.draft = { client: { name: 'Kato Construction', phone: '0772123456' }, customerId: 'C001', items: [], credit: false, q: '' };
+      setup(X);
+      await X.ACT['slide:place']({ querySelector: () => ({ textContent: '' }) });
+      const ins = db.writes.filter(w => w[0] === 'insert' && w[1] === 'saved_quotes');
+      return ins[0] && ins[0][2];
+    };
+    const bought = await place(X => { X.S.draft.items = [X.makeLine('P2', 0, 5, { lineId: 1 })]; });
+    t.check(bought && bought.status === 'draft' && bought.payload.stageLog[0].status === 'draft', 'a line bought in from a supplier: the order lands at Checking');
+    const under = await place(X => { const it = X.makeLine('P1', null, 10, { lineId: 1 }); Object.assign(it, { sellPrice: it.sellPrice - 500, priceBy: 'u1', priceNote: 'under', priceShop: it.sellPrice }); X.S.draft.items = [it]; });
+    t.check(under && under.status === 'draft', 'a shelf line under the shop\'s price waits in Checking for the Manager');
+    const held = await place(X => { X.S.data.customers[0].creditLimit = 400000; X.S.draft.items = [X.makeLine('P1', null, 10, { lineId: 1 })]; });
+    t.check(held && held.status === 'draft', 'a customer over their credit limit with the order waits in Checking (the credit hold)');
   }
 
   // 4. a payment over two bills and a loose balance

@@ -54,13 +54,13 @@ const modal = (/<div class="modal-overlay" id="staffModal">[\s\S]*?\n<\/div>\n/.
   t.check(/return s\.role===role;/.test(elig),
     'while a delivery person can only be given delivery');
 
-  /* Seven since the accounts desk (0117), after the store (0115) and the
+  /* Eight since Sourcing (0126), seven since the accounts desk (0117), after the store (0115) and the
      manager (0116); four since the buying desk (0114). The first two are still the pair
      this section is about -- a picker and a narrower driver -- in the
      same order; the third is a different kind of person altogether, so
      it comes last and says it is never handed floor work. */
   const list = scope.roles();
-  eq(list.length, 7, 'seven roles are offered');
+  eq(list.length, 8, 'eight roles are offered');
   eq(list[0].key, 'worker', 'the broader one first, because it is the safer default');
   eq(list[1].key, 'delivery', 'and the narrowing one second');
   eq(list[2].key, 'sales', 'and the sales desk last, apart from the floor');

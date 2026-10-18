@@ -33,7 +33,8 @@
 -- 4. Two narrow writes to the price list, which 0083 keeps owner-only:
 --      buyer_confirm_price  price.confirm: the supplier said so on the
 --                           phone. Sets the price (if it changed), today's
---                           date, and who confirmed and how.
+--                           date, and who confirmed and how, and logs it
+--                           in decision_log (0123) as Sourcing does.
 --      trip_prices_to_list  "the Buyer's prices paid update the supplier
 --                           price list automatically": on hand-in, each
 --                           line's price paid becomes that supplier's
@@ -149,6 +150,8 @@ alter table prices add column if not exists confirmed_via text;
 create or replace function buyer_confirm_price(p_shop_id uuid, p_price_id bigint, p_wholesale numeric)
 returns void
 language plpgsql security definer set search_path = public as $$
+declare
+  was prices%rowtype;
 begin
   if not (is_shop_admin(p_shop_id) or has_task(p_shop_id, 'price.confirm')) then
     raise exception 'Confirming a price needs price.confirm.' using errcode = '42501';
@@ -156,14 +159,27 @@ begin
   if p_wholesale is not null and p_wholesale < 0 then
     raise exception 'A price is never below zero.' using errcode = '22023';
   end if;
+  select * into was from prices where id = p_price_id and shop_id = p_shop_id;
+  if not found then
+    raise exception 'No such price on this shop''s list.' using errcode = 'P0002';
+  end if;
   update prices
      set wholesale = coalesce(p_wholesale, wholesale),
          date = current_date,
          confirmed_by = auth.uid(),
          confirmed_via = 'phone'
    where id = p_price_id and shop_id = p_shop_id;
-  if not found then
-    raise exception 'No such price on this shop''s list.' using errcode = 'P0002';
+  -- One line in the owner's log (0123), the shape Sourcing's app writes
+  -- for price.confirm, so a phone confirm counts in today's share.
+  if to_regclass('public.decision_log') is not null then
+    execute 'insert into decision_log (shop_id, by, role, task, what, amount, ref, before, after)
+             values ($1, auth.uid(), ''buyer'', ''price.confirm'', $2, $3, $4, $5, $6)'
+      using p_shop_id,
+            'Price confirmed by phone: ' || coalesce(was.wholesale::text, '—') || ' → ' || coalesce(p_wholesale, was.wholesale)::text,
+            coalesce(p_wholesale, was.wholesale),
+            jsonb_build_object('table', 'prices', 'id', p_price_id),
+            jsonb_build_object('wholesale', was.wholesale),
+            jsonb_build_object('wholesale', coalesce(p_wholesale, was.wholesale), 'how', 'phone');
   end if;
 end $$;
 revoke all on function buyer_confirm_price(uuid, bigint, numeric) from public;
