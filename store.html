@@ -865,19 +865,24 @@ async function selectCols(table, cols, keyCol, extra){
 }
 function rowToTrip(r){ return { id: r.id, supplierId: r.supplier_id, status: r.status, assignedWorkerId: r.assigned_worker_id, createdAt: r.created_at, assignedAt: r.assigned_at,
   acceptedAt: r.accepted_at, collectedAt: r.collected_at, confirmedAt: r.confirmed_at, note: r.note || '', lines: Array.isArray(r.lines) ? r.lines : [], voided: !!r.voided,
-  yardCheckedAt: r.yard_checked_at || null, yardCheckedBy: r.yard_checked_by || null }; }
+  yardCheckedAt: r.yard_checked_at || null, yardCheckedBy: r.yard_checked_by || null, yardReceivedAt: r.yard_received_at || null,
+  difference: Array.isArray(r.difference) ? r.difference : null, differenceStatus: r.difference_status || null }; }
 // index.html 45290: the payload is spread over these defaults.
 function rowToQuote(q){
   return { id: q.id, status: q.status || 'draft', invoiced: !!q.invoiced, invoicedTs: q.invoiced_ts ? new Date(q.invoiced_ts).getTime() : null,
     voided: !!q.voided, date: q.date, client: { name: q.client_name || '', phone: q.client_phone || '' }, items: [], savedAt: null, customerId: null,
     ...(q.payload || {}) };
 }
+function rowToReport(r){ return { id: r.id, key: r.key, productId: r.product_id, variantIdx: r.variant_idx == null || r.variant_idx === '' ? null : Number(r.variant_idx), name: r.name || '', qty: Number(r.qty) || 0,
+  reason: r.reason, photo: r.photo || null, by: r.reported_by, byName: r.reported_by_name || '', status: r.status, decidedAt: r.decided_at, createdAt: r.created_at }; }
+function rowToReturn(r){ return { id: r.id, orderId: r.order_id, clientName: r.client_name || '', lines: Array.isArray(r.lines) ? r.lines : [], photo: r.photo || null,
+  byName: r.proposed_by_name || '', status: r.status, createdAt: r.created_at }; }
 function rowToCount(c){ return { id: c.id, aisle: c.aisle || '', countedBy: c.counted_by, countedByName: c.counted_by_name || '', lines: Array.isArray(c.lines) ? c.lines : [],
   status: c.status, decidedBy: c.decided_by, decidedAt: c.decided_at, createdAt: c.created_at }; }
 
 async function loadAll(){
   const since = isoOf(Date.now() - 35 * 864e5);
-  const [products, units, stock, log, quotes, trips, staff, customers, agents, places, routes, counts, settingsR, lastCounts] = await Promise.all([
+  const [products, units, stock, log, quotes, trips, staff, customers, agents, places, routes, counts, settingsR, lastCounts, reports, returns, roadNames, managers, suppliers] = await Promise.all([
     selectAll('products'),
     selectCols('prices', 'id,product_id,variant_idx,unit,pack_unit,pack_qty,pieces_per_unit').catch(() => selectCols('prices', 'id,product_id,variant_idx,unit,pack_unit,pack_qty')).catch(() => []),
     selectCols('stock', 'key,product_id,variant_idx,qty', 'key'),
@@ -893,6 +898,13 @@ async function loadAll(){
     sb.from('app_settings').select('presets').eq('shop_id', S.shopId).maybeSingle(),
     // When each item was last counted, from any phone or the console.
     sb.from('stock_log').select('key,at,date').eq('shop_id', S.shopId).in('type', ['count', 'correction']).order('id', { ascending: false }).limit(1000).then(r => r.error ? [] : r.data),
+    // 0124: reports, returns and the names of the delivery directions; null before it.
+    sb.from('stock_reports').select('*').eq('shop_id', S.shopId).order('created_at', { ascending: false }).limit(60).then(r => r.error ? null : r.data),
+    sb.from('stock_returns').select('*').eq('shop_id', S.shopId).order('created_at', { ascending: false }).limit(40).then(r => r.error ? null : r.data),
+    selectCols('road_names', 'way_key,name', 'way_key').catch(() => null),
+    // Who decides for the shop on the ground, so a screen can name them.
+    sb.from('shop_members').select('user_id,role').eq('shop_id', S.shopId).in('role', ['manager', 'buyer']).then(r => r.error ? [] : r.data),
+    selectCols('suppliers', 'id,name,location').catch(() => []),
   ]);
   const presets = (settingsR && settingsR.data && settingsR.data.presets) || {};
   const stockMap = {}; stock.forEach(s => { stockMap[s.key] = Number(s.qty) || 0; });
@@ -909,6 +921,12 @@ async function loadAll(){
     places: places.map(p => ({ name: p.name, lat: p.lat == null ? null : Number(p.lat), lng: p.lng == null ? null : Number(p.lng) })),
     routes: routes === null ? null : routes.map(r => ({ from: r.from_place, to: r.to_place, km: Number(r.km), mins: Number(r.mins), line: Array.isArray(r.line) ? r.line : null })),
     counts: counts === null ? null : counts.map(rowToCount),
+    reports: reports === null ? null : reports.map(rowToReport),
+    returns: returns === null ? null : returns.map(rowToReturn),
+    roadNames: roadNames === null ? null : Object.fromEntries(roadNames.map(r => [r.way_key, r.name])),
+    managerIds: (managers || []).filter(m => m.role === 'manager').map(m => m.user_id),
+    buyerIds: (managers || []).filter(m => m.role === 'buyer').map(m => m.user_id),
+    suppliers: (suppliers || []).map(s => ({ id: s.id, name: s.name || '', location: s.location || '' })),
     categories: Array.isArray(presets.categories) ? presets.categories : [],
     locations: Array.isArray(presets.locations) ? presets.locations : [],
     shopPlace: presets.shopLocation || presets.shopAddress || '',
@@ -918,13 +936,17 @@ async function loadAll(){
 }
 async function refreshLive(){
   try {
-    const [quotes, trips, stock, counts] = await Promise.all([selectAll('saved_quotes'), selectAll('collection_trips').catch(() => null),
+    const [quotes, trips, stock, counts, reports, returns] = await Promise.all([selectAll('saved_quotes'), selectAll('collection_trips').catch(() => null),
       selectCols('stock', 'key,product_id,variant_idx,qty', 'key').catch(() => null),
-      sb.from('stock_counts').select('*').eq('shop_id', S.shopId).order('created_at', { ascending: false }).limit(40).then(r => r.error ? null : r.data)]);
+      sb.from('stock_counts').select('*').eq('shop_id', S.shopId).order('created_at', { ascending: false }).limit(40).then(r => r.error ? null : r.data),
+      sb.from('stock_reports').select('*').eq('shop_id', S.shopId).order('created_at', { ascending: false }).limit(60).then(r => r.error ? null : r.data),
+      sb.from('stock_returns').select('*').eq('shop_id', S.shopId).order('created_at', { ascending: false }).limit(40).then(r => r.error ? null : r.data)]);
     S.data.savedQuotes = quotes.map(rowToQuote);
     if (trips) S.data.collectionTrips = trips.map(rowToTrip);
     if (stock) { const m = {}; stock.forEach(s => { m[s.key] = Number(s.qty) || 0; }); S.data.stock = m; }
     if (counts) S.data.counts = counts.map(rowToCount);
+    if (reports) S.data.reports = reports.map(rowToReport);
+    if (returns) S.data.returns = returns.map(rowToReturn);
     S.loadedAt = Date.now(); saveSnapshot(); if (!S.dragging && !S.ui.noRefresh) render();
   } catch (e) { if (!isNetworkError(e)) console.warn(e); }
 }
@@ -943,6 +965,10 @@ function myName(){
   const m = (S.user && S.user.user_metadata && (S.user.user_metadata.name || S.user.user_metadata.full_name)) || '';
   return m || String((S.user && S.user.email) || '').split('@')[0];
 }
+// The Manager by first name, for "Ruth decides"; the role's word when the shop has none.
+function managerName(){ const ids = D().managerIds || []; const st = D().staff.find(s => s.userId && ids.includes(s.userId)); return st && st.name ? firstWord(st.name) : 'the manager'; }
+function theBuyer(){ const ids = D().buyerIds || []; return D().staff.find(s => s.userId && ids.includes(s.userId)) || null; }
+function supplierById(id){ return (D().suppliers || []).find(s => String(s.id) === String(id)) || null; }
 function canCorrect(){ return ['owner', 'admin', 'manager'].includes(S.role); }
 function canPin(){ return ['owner', 'admin'].includes(S.role); }
 function isTodayMs(ms){ return !!ms && isoOf(ms) === todayISO(); }
@@ -1076,6 +1102,7 @@ function tripsToYard(){
   const rank = { collected: 0, collecting: 1, assigned: 2, open: 3 };
   return (D().collectionTrips || []).filter(t => tripIsLive(t) && !t.yardCheckedAt && rank[t.status] != null).sort((a, b) => rank[a.status] - rank[b.status] || msOf(a.collectedAt || a.acceptedAt || a.createdAt) - msOf(b.collectedAt || b.acceptedAt || b.createdAt));
 }
+function myTrips(){ const me = myStaff(); return me ? (D().collectionTrips || []).filter(t => tripIsLive(t) && String(t.assignedWorkerId) === String(me.id) && ['assigned', 'collecting'].includes(t.status)) : []; }
 function checkedInToday(){ return (D().collectionTrips || []).filter(t => !t.voided && (isTodayMs(msOf(t.yardCheckedAt)) || (t.status === 'confirmed' && isTodayMs(msOf(t.confirmedAt))))); }
 function tripWho(t){ if (tripIsSupplierDelivered(t)) return 'the supplier'; return t.assignedWorkerId ? staffName(t.assignedWorkerId) : ''; }
 function tripExpect(l){ const g = tripLineGot(l); return g != null ? g : Number(l.qty) || 0; }
@@ -1247,7 +1274,7 @@ function authScreen(kind){
     if (!el) { el = document.createElement('div'); el.className = 'st-auth'; document.body.appendChild(el); }
     if (kind === 'denied') {
       el.innerHTML = `<div class="card"><span class="st-eyebrow" style="color:var(--mint)">Omni-Ware Store</span>
-        <h1 style="margin:0;font-size:26px">This login has no store yard</h1>
+        <h1 style="margin:0;font-size:26px">This login has no shop</h1>
         <p style="margin:0;color:var(--navyInk);font-size:14px;line-height:1.5">Ask the shop owner to give you the Store role. Workers, managers and the owner can open it too.</p>
         <button class="st-btn ghost" data-a="signout" style="margin-top:8px;flex:none">Sign out</button></div>`;
       el.querySelector('[data-a=signout]').onclick = async () => { await sb.auth.signOut(); location.reload(); };
@@ -1255,7 +1282,7 @@ function authScreen(kind){
     }
     el.innerHTML = `<div class="card">
       <span style="width:56px;height:56px;border-radius:18px;background:var(--red);display:flex;align-items:center;justify-content:center;box-shadow:0 12px 26px rgba(201,58,48,.4)">${ic('box', 30, 'style="stroke:#fff;width:30px;height:30px"')}</span>
-      <div><span class="st-eyebrow" style="color:var(--mint)">Omni-Ware Store</span><h1 style="margin:6px 0 0;font-size:28px;letter-spacing:-.02em">The yard, in your hand</h1></div>
+      <div><span class="st-eyebrow" style="color:var(--mint)">Omni-Ware Store</span><h1 style="margin:6px 0 0;font-size:28px;letter-spacing:-.02em">The shop floor, in your hand</h1></div>
       <label>EMAIL<input id="st_email" type="email" autocomplete="username" inputmode="email"></label>
       <label>PASSWORD<input id="st_pw" type="password" autocomplete="current-password"></label>
       <div class="msg" id="st_msg"></div>
@@ -1285,7 +1312,7 @@ function setPasswordScreen(){
   return new Promise(resolve => {
     let el = document.querySelector('.st-auth');
     if (!el) { el = document.createElement('div'); el.className = 'st-auth'; document.body.appendChild(el); }
-    el.innerHTML = `<div class="card"><span class="st-eyebrow" style="color:var(--mint)">Welcome to the store yard</span>
+    el.innerHTML = `<div class="card"><span class="st-eyebrow" style="color:var(--mint)">Welcome to the shop</span>
       <h1 style="margin:0;font-size:26px">Choose a password</h1>
       <label>NEW PASSWORD<input id="st_np" type="password" autocomplete="new-password"></label>
       <div class="msg" id="st_msg">At least 8 characters.</div><button class="st-btn red" id="st_go" style="flex:none">Save and start</button></div>`;
@@ -1453,8 +1480,8 @@ function emptyCard(title, sub){ return `<div class="st-card"><div class="st-empt
 const ORDER_KEYS = ['items', 'assignedWorkerId', 'assignedDeliveryId', 'pickingStatus', 'pickCursor', 'pickingAssignedAt', 'workerAcceptedAt', 'pickingDoneAt',
   'carrier', 'stageEnteredAt', 'stageLog', 'deliveredTo', 'deliveredAt', 'deliveredPhoto', 'deliveredPhotoKind', 'handoverCheckedAt'];
 const STORE_STATUS_MOVES = { preparing: ['pending_delivery', 'completed'], pending_delivery: ['completed'] };
-function needs0115(e){ return e && (e.code === '42P01' || e.code === '42703' || e.code === 'PGRST204' || e.code === 'PGRST205' || /does not exist|schema cache/i.test(e.message || '')); }
-function failSay(e){ if (e && (e.code === '42501' || /row-level security/i.test(e.message || ''))) return 'Your login cannot do this one — ask the owner.'; return needs0115(e) ? 'This needs migration 0115 on the database — ask the owner to run it.' : failWord(e); }
+function needs0115(e){ return e && (e.code === '42P01' || e.code === '42703' || e.code === '42883' || e.code === 'PGRST202' || e.code === 'PGRST204' || e.code === 'PGRST205' || /does not exist|schema cache|could not find the function/i.test(e.message || '')); }
+function failSay(e, mig){ if (e && (e.code === '42501' || /row-level security/i.test(e.message || ''))) return 'Your login cannot do this one — ask the owner.'; return needs0115(e) ? `This needs migration ${mig || '0115'} on the database — ask the owner to run it.` : failWord(e); }
 
 async function changeOrder(id, fn){
   const r = await sb.from('saved_quotes').select('*').eq('shop_id', S.shopId).eq('id', id).maybeSingle();
@@ -1599,6 +1626,98 @@ async function checkInTrip(tripId, got){
   saveSnapshot();
 }
 
+/* ---- the shop's count puts a trip on the shelf (0124: receive_trip) ----
+   One call: the count rides on each line, every line is received the way
+   the console's confirmCollectionTrip does, an order whose goods are all
+   in moves from Buying to Packing, and where the shop counted differently
+   from the Buyer the trip carries it for the Manager. pack is how many of
+   the shelf's unit one of the line's is (index.html stockMoveOnRowUnit). */
+function cmpUnit(u){ return String(u || '').trim().toLowerCase().replace(/s$/, ''); }
+function shelfPackFor(l){
+  const rows = D().units.filter(u => u.productId === l.productId && u.variantIdx === (l.variantIdx == null || l.variantIdx === '' ? null : Number(l.variantIdx)));
+  const packs = r => r.packQty > 0 && r.packUnit && cmpUnit(r.packUnit) !== cmpUnit(r.unit);
+  const shelf = rows.find(packs);
+  const said = cmpUnit(l.unit);
+  if (!shelf || !said || said !== cmpUnit(shelf.packUnit)) return 1;
+  return Number(l.packQty) > 0 && cmpUnit(l.packUnit) === said ? Number(l.packQty) : shelf.packQty;
+}
+async function receiveTrip(tripId, got){
+  const t = (D().collectionTrips || []).find(x => x.id === tripId); if (!t) throw new Error('that trip is gone');
+  const lines = tripLines(t).map((l, i) => ({ shop: got[i] != null ? got[i] : tripExpect(l), pack: shelfPackFor(l) }));
+  const { data, error } = await sb.rpc('receive_trip', { p_shop: S.shopId, p_trip: tripId, p_lines: lines });
+  if (error) throw error;
+  await refreshLive();
+  return data || {};
+}
+
+/* ---- damaged, lost or stolen (0124: stock_reports) ---- */
+async function uploadPhoto(blob, folder){
+  const small = await shrinkPhoto(blob);
+  const path = `${S.shopId}/${folder}/${(typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 8))}.jpg`;
+  const { error } = await sb.storage.from('delivery-photos').upload(path, small, { contentType: 'image/jpeg' });
+  if (error) throw error;
+  return path;
+}
+async function sendReport(it, qty, reason, blob){
+  const photo = blob ? await uploadPhoto(blob, 'reports') : null;
+  const { data, error } = await sb.from('stock_reports').insert({ shop_id: S.shopId, key: it.key, product_id: it.productId, variant_idx: it.variantIdx == null ? null : String(it.variantIdx),
+    name: it.productName, qty, reason, photo, reported_by: S.user.id, reported_by_name: myName() }).select('*').single();
+  if (error) throw error;
+  if (D().reports) D().reports.unshift(rowToReport(data)); else D().reports = [rowToReport(data)];
+  saveSnapshot();
+  return rowToReport(data);
+}
+function openReportFor(key){ return (D().reports || []).filter(r => r.key === key && r.status === 'reported'); }
+
+/* ---- goods coming back at the gate (0124: stock_returns) ---- */
+async function sendReturn(q, lines, blob){
+  const photo = blob ? await uploadPhoto(blob, 'returns') : null;
+  const { data, error } = await sb.from('stock_returns').insert({ shop_id: S.shopId, order_id: Number(q.id), client_name: quoteClientName(q), lines, photo,
+    proposed_by: S.user.id, proposed_by_name: myName() }).select('*').single();
+  if (error) throw error;
+  if (D().returns) D().returns.unshift(rowToReturn(data)); else D().returns = [rowToReturn(data)];
+  saveSnapshot();
+  return rowToReturn(data);
+}
+
+/* ---- the name of a delivery direction (0124: road_names) ---- */
+async function nameRoad(wayKey, name){
+  const v = String(name || '').trim().slice(0, 40); if (!v) throw new Error('give it a name');
+  const { error } = await sb.from('road_names').upsert({ shop_id: S.shopId, way_key: wayKey, name: v }, { onConflict: 'shop_id,way_key' });
+  if (error) throw error;
+  (D().roadNames || (D().roadNames = {}))[wayKey] = v;
+  saveSnapshot();
+}
+
+/* ---- riding a buying trip the Buyer sent (worker.html's trip flow) ---- */
+async function changeTrip(tripId, fn){
+  const r = await sb.from('collection_trips').select('*').eq('shop_id', S.shopId).eq('id', tripId).maybeSingle();
+  if (r.error) throw r.error; if (!r.data) throw new Error('that trip is gone');
+  const row = r.data; if (row.voided) throw new Error('that trip was called off');
+  const me = myStaff(); if (!me || String(row.assigned_worker_id) !== String(me.id)) throw new Error('that trip is not yours any more');
+  const patch = fn(row); if (!patch) return null;
+  const u = await sb.from('collection_trips').update(patch).eq('shop_id', S.shopId).eq('id', tripId);
+  if (u.error) throw u.error;
+  D().collectionTrips = D().collectionTrips.map(t => t.id === tripId ? rowToTrip({ ...row, ...patch }) : t);
+  saveSnapshot();
+  return true;
+}
+// Each line ticked onto the truck says it came in full; nothing about money.
+async function tickTripLine(tripId, i, on){
+  return changeTrip(tripId, row => {
+    if (!['assigned', 'collecting'].includes(row.status)) return null;
+    const lines = (row.lines || []).map((l, k) => k === i ? { ...l, gotQty: on ? Number(l.qty) || 0 : null } : l);
+    return { lines, status: 'collecting', accepted_at: row.accepted_at || new Date().toISOString() };
+  });
+}
+async function handInTrip(tripId){
+  return changeTrip(tripId, row => {
+    if (!['assigned', 'collecting'].includes(row.status)) return null;
+    if (!(row.lines || []).every(l => l.gotQty != null)) throw new Error('load every line first');
+    return { status: 'collected', collected_at: new Date().toISOString(), accepted_at: row.accepted_at || new Date().toISOString() };
+  });
+}
+
 /* ---- a blind count (0115: stock_counts) ---- */
 async function sendCount(aisle, lines){
   const { data, error } = await sb.from('stock_counts').insert({ shop_id: S.shopId, aisle, counted_by: S.user.id, counted_by_name: myName(), lines }).select('*').single();
@@ -1735,6 +1854,9 @@ function howGoes(q){ return orderIsCollected(q) ? 'they collect' : orderDestinat
 /* ---------------- what to do next ---------------- */
 function nextJob(){
   if (!S.data) return null;
+  // Sent on a buying trip: that is this person's next job, before the shop's.
+  const ride = myTrips();
+  if (ride.length) { const sup = supplierById(ride[0].supplierId); return { label: 'collect from ' + ((sup && sup.name) || 'the supplier'), icon: 'truck', act: () => { S.ui.rd = null; push('ride', {}); }, n: ride.length }; }
   const back = tripsToYard().filter(t => t.status === 'collected');
   if (back.length) return { label: 'check in ' + (tripWho(back[0]) || 'a trip'), icon: 'inbox', act: () => push('receive', { id: back[0].id }), n: back.length };
   const pq = packQueue().filter(q => !takenBySomeoneElse(q));
@@ -1745,7 +1867,7 @@ function nextJob(){
   if (mine.length) return { label: 'deliver to ' + quoteClientName(mine[0]), icon: 'camera', act: () => push('deliver', { id: mine[0].id }), n: mine.length };
   return null;
 }
-ACT.nextjob = () => { const j = nextJob(); if (!j) { FEEL.tick(); toast('Nothing waiting in the yard'); return; } FEEL.open(); j.act(); };
+ACT.nextjob = () => { const j = nextJob(); if (!j) { FEEL.tick(); toast('Nothing waiting in the shop'); return; } FEEL.open(); j.act(); };
 function myDrops(){ const me = myStaff(); return onRoad().filter(q => me ? (String(q.assignedDeliveryId) === String(me.id) || (q.carrier && String(q.carrier.staffId) === String(me.id))) : canCorrect()); }
 
 /* ==================================================================
@@ -1773,7 +1895,7 @@ function viewToday(){
           <span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px"><span class="m" style="font-size:26px;font-weight:600;letter-spacing:-.04em;line-height:1">${out}/${total}</span><span style="font-size:11px;font-weight:600;color:var(--navyInk)">out the gate</span></span>
         </span>
         <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px">
-          <span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--navyInk)">The yard · today</span>
+          <span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--navyInk)">The shop · today</span>
           <span style="display:flex;flex-direction:column;gap:7px">${[['#6FDCB0', out, 'gone out'], ['#FFFFFF', load, 'packed, to load'], ['#F5B26B', pack, 'to pack']].map(([c, n, w]) =>
             `<span style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:#DDE3F0"><span style="width:10px;height:10px;border-radius:3px;background:${c}"></span><span class="m" style="font-weight:600;color:#fff;min-width:14px">${n}</span>${w}</span>`).join('')}</span>
         </span>
@@ -1783,7 +1905,7 @@ function viewToday(){
       ${decide && decide.length ? `<button data-act="decide" data-id="${esc(decide[0].id)}" class="a-card" style="display:flex;align-items:center;gap:12px;min-height:60px;padding:0 14px;border:none;border-radius:16px;background:var(--amberSoft);color:var(--amberDeep);text-align:left">
         ${ic('count', 20)}<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px">Stock take to decide · ${esc(decide[0].aisle || 'the shelf')}</b><span style="font-size:12px;font-weight:600">${esc(decide[0].countedByName)} counted ${decide[0].lines.length} blind · ${decide[0].lines.filter(l => Number(l.counted) !== Number(l.system)).length} differ</span></span>${ic('chev', 16)}</button>` : ''}
       ${nextJobCard()}
-      <div class="st-sec2" style="padding-top:4px"><b>The yard</b><span>${inN + pack + load + onRoadN} live · ${doneToday().length} done</span></div>
+      <div class="st-sec2" style="padding-top:4px"><b>The shop</b><span>${inN + pack + load + onRoadN} live · ${doneToday().length} done</span></div>
       <div class="st-card" style="padding:10px;border-radius:16px">
         <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px">
           ${yardTile('movein', 'inbox', '#3A3F9B', inN, 'In', trips.slice(0, 3).map(t => [tripWho(t) || 'Trip', 'w' + t.assignedWorkerId]), trips.some(t => t.status === 'collected'))}
@@ -1792,6 +1914,7 @@ function viewToday(){
           ${yardTile('onroad', 'pin', '#1A5A8A', onRoadN, 'Out', onRoad().slice(0, 3).map(q => [quoteClientName(q), q.id]))}
         </div>
       </div>
+      ${D().returns !== null ? `<button data-act="goret" class="a-card" style="display:flex;align-items:center;gap:12px;min-height:56px;padding:0 12px;border:none;border-radius:16px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule);text-align:left;color:var(--ink)"><span style="width:36px;height:36px;border-radius:11px;background:var(--amberSoft);color:var(--amberDeep);display:flex;align-items:center;justify-content:center;flex:none">${ic('ret', 18, 'style="stroke-width:2.2"')}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px">Goods back at the gate</b><span class="ell" style="font-size:12px;font-weight:600;color:var(--ink2)">${(() => { const open = (D().returns || []).filter(r => r.status === 'proposed').length; return open ? `${open} waiting on ${esc(managerName())}` : 'propose a return · ' + esc(managerName()) + ' decides'; })()}</span></span>${ic('chev', 16, 'style="stroke:#9AA1AE"')}</button>` : ''}
       ${checkedInToday().length || doneToday().length ? `<div style="display:flex;align-items:center;gap:12px;min-height:52px;padding:0 14px;border-radius:16px;background:var(--greenSoft)">${ic('tick', 18, 'style="stroke:#0F6B43;stroke-width:2.6"')}<span style="flex:1;font-size:13px;font-weight:700;color:var(--green)">${doneToday().length} delivered · ${checkedInToday().length} trip${checkedInToday().length === 1 ? '' : 's'} checked in today</span></div>` : ''}
     </div>`;
 }
@@ -1802,9 +1925,27 @@ function yardTile(page, icon, col, n, word, people, live){
     <span style="font-size:11px;font-weight:600;color:var(--ink2)">${esc(word)}</span>
     <span class="st-stack" style="min-height:22px">${people.map(([nm, k]) => av(nm, k, 22, 'border:2px solid var(--bg)')).join('')}</span></button>`;
 }
+function rideCard(trips, all){
+  const t = trips[0], sup = supplierById(t.supplierId), lines = trips.flatMap(tripLines), buyer = theBuyer();
+  const orders = [...new Set(trips.flatMap(x => tripOrders(x)))];
+  const big = lines.slice().sort((a, b) => (Number(b.qty) || 0) - (Number(a.qty) || 0));
+  return `<div class="st-sec2"><b>Next job</b><span>1 of ${all}</span></div>
+    <div class="a-card" style="border-radius:22px;background:radial-gradient(120% 90% at 100% 0%,#2B3866 0%,#16203C 58%);color:#fff;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 14px 30px rgba(22,32,60,.22)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span class="st-chip" style="background:rgba(111,220,176,.14);color:var(--mint);height:26px;padding-left:4px">${buyer ? av(buyer.name, buyer.id, 18) : ic('truck', 13)}Collect · ${esc(buyer ? firstWord(buyer.name) + ' sent you' : 'you are sent')}</span><span class="ell" style="font-size:12px;font-weight:600;color:var(--amber)">${trips.length > 1 ? trips.length + ' stops' : esc(t.status === 'collecting' ? 'on your way' : 'sent ' + ago(msOf(t.assignedAt || t.createdAt)) + ' ago')}</span></div>
+      <div style="display:flex;align-items:center;gap:14px"><span style="position:relative;width:64px;height:64px;flex:none">${pctRing(lines.length ? lines.filter(l => tripLineGot(l) != null).length / lines.length : 0, 64, 5, '#6FDCB0', '', 'loaded so far')}<span style="position:absolute;inset:10px;border-radius:14px;background:#F1EEE8;color:#3D4A5C;display:flex;align-items:center;justify-content:center">${ic('shop', 22, 'style="stroke-width:1.9"')}</span></span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><span class="ell" style="font-size:18px;font-weight:700;letter-spacing:-.01em">${esc((sup && sup.name) || 'The supplier')}${trips.length > 1 ? ` +${trips.length - 1}` : ''}</span>
+          <span style="display:flex;align-items:baseline;gap:6px;min-width:0"><span class="m" style="font-size:22px;font-weight:600">${nLines(lines.length)}</span><span class="ell" style="font-size:12px;font-weight:600;color:var(--navyInk)">${esc([(sup && sup.location) || '', buyer ? 'paid by ' + firstWord(buyer.name) : 'already paid'].filter(Boolean).join(' · '))}</span></span></span></div>
+      <div role="img" aria-label="To collect: ${esc(big.slice(0, 3).map(l => quoteLineCount(l, l.qty).n + ' ' + lineName(l).base).join(', '))}" style="display:flex;gap:6px">
+        ${big.slice(0, 2).map(l => { const c = quoteLineCount(l, l.qty); return `<span style="flex:1;min-width:0;height:62px;border-radius:12px;background:rgba(255,255,255,.07);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">${art(l, 'small')}<span class="m ell" style="font-size:12px;font-weight:500;max-width:94%">${esc(c.n)} ${esc(c.unit)}</span></span>`; }).join('')}
+        <span style="width:86px;flex:none;height:62px;border-radius:12px;background:rgba(255,255,255,.07);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">${orders.length ? `<span class="st-stack">${orders.slice(0, 2).map(q => av(quoteClientName(q), q.id, 24)).join('')}</span><span class="ell" style="font-size:10px;font-weight:600;color:var(--navyInk);max-width:90%">for ${esc(shortName(quoteClientName(orders[0])))}</span>` : `${ic('shelfnav', 20, 'style="stroke:#B3BCD2"')}<span style="font-size:10px;font-weight:600;color:var(--navyInk)">for the shelf</span>`}</span></div>
+      <button data-act="goride" style="height:52px;border:none;border-radius:14px;background:#fff;color:var(--navy);font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">${ic('truck', 18, 'style="stroke-width:2"')}${t.status === 'collecting' ? 'Carry on loading' : 'Start the trip'}</button>
+    </div>`;
+}
 function nextJobCard(){
   const pq = packQueue(), q = pq.find(x => !takenBySomeoneElse(x));
-  const all = tripsToYard().filter(t => t.status === 'collected').length + pq.length + loadQueue().length + myDrops().length;
+  const ride = myTrips();
+  const all = ride.length + tripsToYard().filter(t => t.status === 'collected').length + pq.length + loadQueue().length + myDrops().length;
+  if (ride.length) return rideCard(ride, all);
   const back = tripsToYard().find(t => t.status === 'collected');
   if (back) {
     const lines = tripLines(back);
@@ -1819,7 +1960,7 @@ function nextJobCard(){
   if (!q) {
     const lq = loadQueue();
     if (lq.length) return `<div class="st-sec2"><b>Next job</b><span>1 of ${all}</span></div><button data-act="open" data-page="load" class="a-card" style="border:none;border-radius:22px;background:radial-gradient(120% 90% at 100% 0%,#2B3866 0%,#16203C 58%);color:#fff;padding:16px;display:flex;align-items:center;gap:14px;text-align:left"><span style="width:56px;height:56px;border-radius:16px;background:rgba(111,220,176,.16);display:flex;align-items:center;justify-content:center">${ic('truck', 28, 'style="stroke:#6FDCB0"')}</span><span style="flex:1"><b style="font-size:18px">${lq.length} packed · load the truck</b><br><span style="font-size:12px;color:var(--navyInk)">pick the drops by direction</span></span>${ic('chev', 18)}</button>`;
-    return `<div class="st-card a-card" style="padding:24px 16px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center"><span style="width:56px;height:56px;border-radius:999px;background:var(--greenSoft);display:flex;align-items:center;justify-content:center">${ic('tick', 28, 'style="stroke:#0F6B43;stroke-width:2.6"')}</span><b style="font-size:16px">The yard is clear</b><span class="st-sub">${waitingOnGoods().length ? `${waitingOnGoods().length} order${waitingOnGoods().length > 1 ? 's' : ''} waiting on goods` : 'Nothing to pack or load'}</span></div>`;
+    return `<div class="st-card a-card" style="padding:24px 16px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center"><span style="width:56px;height:56px;border-radius:999px;background:var(--greenSoft);display:flex;align-items:center;justify-content:center">${ic('tick', 28, 'style="stroke:#0F6B43;stroke-width:2.6"')}</span><b style="font-size:16px">The shop is clear</b><span class="st-sub">${waitingOnGoods().length ? `${waitingOnGoods().length} order${waitingOnGoods().length > 1 ? 's' : ''} waiting on goods` : 'Nothing to pack or load'}</span></div>`;
   }
   const p = packProgress(q), items = p.items, aisles = [...new Set(items.map(it => aisleOf(it.productId).letter))];
   const mins = minsSince(waitingSince(q));
@@ -1865,11 +2006,11 @@ PAGE.movein = () => {
         <span style="display:flex;flex-direction:column;gap:2px"><span style="display:flex;align-items:baseline;gap:8px"><span class="m" style="font-size:44px;font-weight:600;letter-spacing:-.04em;line-height:1">${lines}</span><span style="font-size:14px;font-weight:600;color:var(--navyInk)">lines on the road</span></span><span style="font-size:12px;font-weight:600;color:var(--navyInk2)">${trips.length} trip${trips.length === 1 ? '' : 's'} · for ${orders} order${orders === 1 ? '' : 's'}</span></span>
         ${nextT ? `<span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><span style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--navyInk2)">${back.length ? 'AT THE GATE' : 'OUT BUYING'}</span><span style="display:flex;align-items:baseline;gap:4px;color:var(--mint)"><span class="m" style="font-size:26px;font-weight:600">${esc(waitBig(minsSince(msOf(back.length ? nextT.collectedAt : nextT.acceptedAt))))}</span><span style="font-size:13px;font-weight:700">${back.length ? 'waiting' : 'out'}</span></span></span>` : ''}
       </div>
-      <div role="img" aria-label="The road to the yard: ${back.length} back, ${riding.length} out buying, ${waiting.length} not taken yet" style="position:relative;height:104px;margin:0 -4px">
+      <div role="img" aria-label="The road to the shop: ${back.length} back, ${riding.length} out buying, ${waiting.length} not taken yet" style="position:relative;height:104px;margin:0 -4px">
         <span style="position:absolute;left:0;right:52px;top:58px;height:16px;border-radius:999px;background:#243052"></span>
         <span style="position:absolute;left:10px;right:62px;top:65px;border-top:2px dashed rgba(255,255,255,.16)"></span>
         ${back.length ? `<span class="a-blink" style="position:absolute;left:0;top:58px;width:calc(84% - 24px);height:16px;border-radius:999px;background:linear-gradient(90deg,rgba(111,220,176,0),rgba(111,220,176,.35))"></span>` : ''}
-        <span style="position:absolute;right:0;top:40px;width:50px;height:52px;border-radius:14px;background:var(--mint);color:var(--navy);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;box-shadow:0 8px 18px rgba(0,0,0,.25)">${ic('yard', 20, 'style="stroke-width:2"')}<span style="font-size:9px;font-weight:700;letter-spacing:.06em">YARD</span></span>
+        <span style="position:absolute;right:0;top:40px;width:50px;height:52px;border-radius:14px;background:var(--mint);color:var(--navy);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;box-shadow:0 8px 18px rgba(0,0,0,.25)">${ic('yard', 20, 'style="stroke-width:2"')}<span style="font-size:9px;font-weight:700;letter-spacing:.06em">SHOP</span></span>
         ${roadGroup(back, 'right:56px', 'back', '#fff', 'var(--navy)', true)}
         ${roadGroup(riding, 'left:calc(50% - 40px)', 'buying', 'rgba(155,163,240,.18)', '#C9CDF7', false)}
         ${roadGroup(waiting, 'left:4px', 'not taken', 'transparent', 'var(--navyInk2)', false, true)}
@@ -1886,7 +2027,7 @@ PAGE.movein = () => {
       <span class="st-chip" style="height:30px;${buying ? 'background:var(--indigoSoft);color:var(--indigo)' : 'background:#F1EEE8;color:var(--ink2)'}">${buying ? 'Buying' : t.status === 'assigned' ? 'Sent' : 'Open'}</span></div>`; };
   const others = riding.concat(waiting);
   const ci = checkedInToday();
-  const body = `${trips.length ? `<span class="m" style="font-size:13px;color:#6B7480;padding:0 4px">soonest first</span>` : emptyCard('Nothing on the road', 'No trip is out for the yard right now')}
+  const body = `${trips.length ? `<span class="m" style="font-size:13px;color:#6B7480;padding:0 4px">soonest first</span>` : emptyCard('Nothing on the road', 'No trip is out for the shop right now')}
     ${back.map(card).join('')}
     ${others.length ? `<div class="st-card" style="padding:0 14px;border-radius:18px">${others.map(card).join('<div style="border-top:1px solid #F1EEE8"></div>')}</div>` : ''}
     ${ci.length ? ci.map(t => { const ls = tripLines(t); return `<div style="display:flex;align-items:center;gap:12px;min-height:56px;padding:0 14px;border-radius:16px;background:var(--greenSoft)">${ic('tick', 18, 'style="stroke:#0F6B43;stroke-width:2.6"')}<span style="flex:1;font-size:13px;font-weight:700;color:var(--green)">Checked in · ${esc(firstWord(tripWho(t)) || 'trip')} ${esc(hm(msOf(t.yardCheckedAt || t.confirmedAt)))}</span><span role="img" aria-label="${ls.filter(l => (l.yardQty != null ? l.yardQty : tripExpect(l)) >= tripExpect(l)).length} full" style="display:flex;gap:2px">${ls.slice(0, 12).map(l => `<i style="width:6px;height:14px;border-radius:2px;background:${(l.yardQty != null ? Number(l.yardQty) : tripExpect(l)) < (Number(l.qty) || 0) ? '#F5B26B' : '#0F6B43'}"></i>`).join('')}</span></div>`; }).join('') : ''}`;
@@ -1959,11 +2100,18 @@ ACT.deliver = t => { FEEL.open(); push('deliver', { id: Number(t.dataset.id) });
 PAGE.receive = ({ id }) => {
   const t = (D().collectionTrips || []).find(x => x.id === id);
   if (!t) return goneSheet('That trip is no longer on the books');
-  const ui = S.ui.rc && S.ui.rc.id === id ? S.ui.rc : (S.ui.rc = { id, got: {}, sel: null, done: !!t.yardCheckedAt });
-  const lines = tripLines(t), who = tripWho(t) || 'The trip', phone = (staffById(t.assignedWorkerId) || {}).phone;
-  const got = i => ui.got[i] != null ? ui.got[i] : (t.yardCheckedAt && lines[i].yardQty != null ? Number(lines[i].yardQty) : tripExpect(lines[i]));
-  const isShort = i => got(i) < tripExpect(lines[i]);
-  const shortN = lines.filter((_, i) => isShort(i)).length, fullN = lines.length - shortN;
+  const received = t.status === 'confirmed' || !!t.yardReceivedAt;
+  const ui = S.ui.rc && S.ui.rc.id === id ? S.ui.rc : (S.ui.rc = { id, got: {}, sel: null, done: received });
+  const lines = tripLines(t), who = tripWho(t) || 'The trip', phone = (staffById(t.assignedWorkerId) || {}).phone, buyerWord = tripIsSupplierDelivered(t) ? 'Supplier' : firstWord(who) || 'Buyer';
+  const got = i => ui.got[i] != null ? ui.got[i] : (lines[i].yardQty != null ? Number(lines[i].yardQty) : tripExpect(lines[i]));
+  const ordered = i => Number(lines[i].qty) || 0;
+  const buyer = i => tripLineGot(lines[i]);
+  // Short is against what was ordered; a difference is against what the Buyer counted.
+  const isShort = i => got(i) < ordered(i);
+  const isDiff = i => buyer(i) != null && got(i) !== buyer(i);
+  const shortN = lines.filter((_, i) => isShort(i)).length, fullN = lines.length - shortN, diffN = lines.filter((_, i) => isDiff(i)).length;
+  const buyerFull = lines.filter((_, i) => (buyer(i) != null ? buyer(i) : ordered(i)) >= ordered(i)).length;
+  const mgr = managerName();
   // Bays: one per order on the trip, then whatever is for the shelf.
   const bays = [];
   lines.forEach((l, i) => { const q = quoteById(l.orderId), k = q ? 'q' + q.id : 'shelf'; let b = bays.find(x => x.k === k);
@@ -1983,23 +2131,31 @@ PAGE.receive = ({ id }) => {
       return `<div class="rc-in" style="border-radius:20px;background:#fff;border:1px solid var(--rule);padding:10px 12px 18px;display:flex;flex-direction:column;gap:10px;animation-delay:${k * .08}s">
         <div style="display:flex;align-items:center;gap:10px">${av(b.name, q ? q.id : 'shelf', 30)}<span style="flex:1;min-width:0;display:flex;flex-direction:column"><span class="ell" style="font-size:14px;font-weight:700">${esc(b.name)}</span><span style="font-size:11px;font-weight:600;color:#6B7480">${esc(sub)} · bay ${k + 1}</span></span>
           <span class="st-chip" style="height:26px;font-size:11px;${sh ? 'background:var(--amberSoft);color:var(--amberDeep)' : 'background:var(--greenSoft);color:var(--green)'}">${sh ? sh + ' short' : q ? 'all in → pack' : 'all in'}</span></div>
-        <div style="display:flex;gap:10px 10px;flex-wrap:wrap">${b.tiles.map(i => { const l = lines[i], s = isShort(i), on = ui.sel === i, c = quoteLineCount(l, got(i)), e = quoteLineCount(l, tripExpect(l));
-          return `<button type="button" class="rc-tile" data-act="rcpick" data-i="${i}" aria-pressed="${on}" aria-label="${esc(lineName(l).base)}: ${s ? `${c.n} of ${e.n}` : `all ${e.n}`} came. Tap if short" style="${on ? 'background:#fff;box-shadow:inset 0 0 0 2.5px #16203C,0 8px 18px rgba(22,32,60,.15)' : s ? 'background:#FEF8F2;box-shadow:inset 0 0 0 1.5px #F5B26B' : 'background:#F1EEE8'}">${art(l, 'tile')}
+        <div style="display:flex;gap:10px 10px;flex-wrap:wrap">${b.tiles.map(i => { const l = lines[i], s = isShort(i), on = ui.sel === i, c = quoteLineCount(l, got(i)), e = quoteLineCount(l, ordered(i)), dif = isDiff(i);
+          return `<button type="button" class="rc-tile" data-act="rcpick" data-i="${i}" aria-pressed="${on}" aria-label="${esc(lineName(l).base)}: ${s ? `${c.n} of ${e.n}` : `all ${e.n}`} came${dif ? `, ${esc(buyerWord)} counted ${esc(quoteLineCount(l, buyer(i)).n)}` : ''}. Tap if short" style="${on ? 'background:#fff;box-shadow:inset 0 0 0 2.5px #16203C,0 8px 18px rgba(22,32,60,.15)' : s ? 'background:#FEF8F2;box-shadow:inset 0 0 0 1.5px #F5B26B' : 'background:#F1EEE8'}">${art(l, 'tile')}
+            ${dif ? `<span aria-hidden="true" style="position:absolute;left:5px;top:5px;width:18px;height:18px;border-radius:999px;background:#F6E4F1;color:#7A3268;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">≠</span>` : ''}
             <span class="m" style="position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);height:20px;padding:0 7px;border-radius:999px;font-size:11px;font-weight:600;display:flex;align-items:center;white-space:nowrap;${s ? 'background:#F5B26B;color:#16203C' : 'background:#fff;color:#0F6B43;box-shadow:0 0 0 1px #E6E3DD'}">${esc(s ? c.n + '/' + e.n : e.n)} ${esc(e.unit)}</span>
             <span style="position:absolute;right:5px;top:5px;width:18px;height:18px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:${s ? '#95530C' : '#0F6B43'}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="${s ? 'M6 12h12' : 'm5 12.5 4.5 4.5L19 7'}"/></svg></span></button>`; }).join('')}</div></div>`; }).join('')}`;
   let foot;
-  if (sel) { const c = quoteLineCount(sel, got(ui.sel)), e = quoteLineCount(sel, tripExpect(sel));
+  if (sel) { const c = quoteLineCount(sel, got(ui.sel)), e = quoteLineCount(sel, ordered(ui.sel)), bq = buyer(ui.sel), bc = bq != null ? quoteLineCount(sel, bq) : null;
     foot = `<div class="rc-in" style="display:flex;flex-direction:column;gap:10px;width:100%">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span class="ell" style="font-size:15px;font-weight:700">${esc(lineName(sel).base)}</span><span style="font-size:12px;font-weight:600;color:#6B7480;white-space:nowrap">ordered <span class="m" style="color:var(--ink)">${esc(e.n)}</span> ${esc(e.unit)}</span></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span class="ell" style="font-size:15px;font-weight:700">${esc(lineName(sel).base)}</span><span style="font-size:12px;font-weight:600;color:#6B7480;white-space:nowrap">ordered <span class="m" style="color:var(--ink)">${esc(e.n)}</span>${bc ? ` · ${esc(buyerWord)} <span class="m" style="color:${bq < ordered(ui.sel) ? 'var(--amberDeep)' : 'var(--ink)'}">${esc(bc.n)}</span>` : ''}</span></div>
       <div style="display:flex;align-items:center;gap:8px"><button type="button" data-act="rcstep" data-d="-1" aria-label="One less came" class="pk-step" style="background:#F1EEE8;height:58px">${ic('minus', 22, 'style="stroke-width:2.6"')}</button>
         <span style="flex:1;height:58px;border-radius:16px;background:#FEF8F2;box-shadow:inset 0 0 0 1.5px #F5B26B;display:flex;align-items:center;justify-content:center;gap:6px"><span style="font-size:12px;font-weight:700;color:var(--amberDeep)">came</span><span class="m" style="font-size:26px;font-weight:600">${esc(c.n)}</span><span class="m" style="font-size:14px;color:#9AA1AE">/ ${esc(e.n)}</span></span>
         <button type="button" data-act="rcstep" data-d="1" aria-label="One more came" class="pk-step" style="background:#F1EEE8;height:58px">${ic('plus', 22, 'style="stroke-width:2.6"')}</button>
         <button type="button" data-act="rcclose" style="width:72px;height:58px;border:none;border-radius:16px;background:var(--navy);color:#fff;font-size:15px;font-weight:700">Done</button></div>
+      ${isDiff(ui.sel) ? `<span style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--amberDeep)"><span style="width:22px;height:22px;border-radius:999px;background:#F6E4F1;color:#7A3268;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">${esc(initials(mgr))}</span>Not ${esc(buyerWord)}'s ${esc(bc.n)} · the shelf takes the shop's; ${esc(mgr)} decides</span>` : ''}
       <button type="button" data-act="rcall" style="height:40px;border:none;background:transparent;font-size:13px;font-weight:700;color:var(--green)">All ${esc(e.n)} came after all</button></div>`;
   } else {
-    const done = ui.done || !!t.yardCheckedAt;
-    foot = `<div style="display:flex;flex-direction:column;gap:8px;width:100%">${done ? '' : `<span class="st-tag">The console still puts it on the shelf</span>`}
-      <div class="row">${slideHTML('checkin', shortN ? `Slide · in, ${shortN} short` : `Slide · all ${lines.length} in`, 'shelfnav', { done, doneLabel: `Checked in · ${fullN} full${shortN ? ', ' + shortN + ' short' : ''}`, disabled: S.busy || t.status !== 'collected' })}</div>
+    const done = ui.done || received;
+    const row = (label, cells, n, col) => `<span style="font-size:10px;font-weight:700;letter-spacing:.06em;color:#9AA1AE">${esc(label)}</span><span style="display:flex;gap:2px">${cells.map(c => `<i style="flex:1;height:8px;border-radius:2px;background:${c}"></i>`).join('')}</span><span class="m" style="text-align:right;font-size:12px;font-weight:600;color:${col || 'var(--ink)'}">${n}</span>`;
+    const cmp = lines.some((_, i) => buyer(i) != null) ? `<div role="img" aria-label="Lines in full: ordered ${lines.length}, ${esc(buyerWord)} counted ${buyerFull}, the shop ${fullN}${diffN ? `; ${diffN} differ from ${esc(buyerWord)}, ${esc(mgr)} decides` : ''}" style="display:grid;grid-template-columns:60px 1fr 26px;gap:4px 8px;align-items:center">
+        ${row('ORDERED', lines.map(() => '#16203C'), lines.length)}
+        ${row(buyerWord.toUpperCase().slice(0, 8), lines.map((_, i) => (buyer(i) != null ? buyer(i) : ordered(i)) < ordered(i) ? '#F5B26B' : '#6FDCB0'), buyerFull, buyerFull < lines.length ? 'var(--amberDeep)' : '')}
+        ${row('SHOP', lines.map((_, i) => isDiff(i) ? '#E0A7D0' : isShort(i) ? '#F5B26B' : '#6FDCB0'), fullN, diffN ? '#7A3268' : '')}</div>` : '';
+    const doneLabel = diffN ? `On the shelf · ${firstWord(mgr) === 'the' ? 'the manager' : mgr} told` : shortN ? 'On the shelf · Sales told' : `On the shelf · all ${lines.length}`;
+    foot = `<div style="display:flex;flex-direction:column;gap:8px;width:100%">${cmp}
+      <div class="row">${slideHTML('checkin', shortN ? `Slide · on the shelf · ${shortN} short` : `Slide · all ${lines.length} on the shelf`, 'shelfnav', { done, doneLabel, disabled: S.busy || (!done && t.status !== 'collected') })}</div>
       ${done ? `<button data-act="home" style="height:44px;border:none;background:none;font-size:14px;font-weight:700;color:var(--navy)">Done · back to Today</button>` : ''}</div>`;
   }
   return `<button class="tapback" data-act="back" aria-label="Back" style="height:calc(40px + var(--safe-area-inset-top))"></button>
@@ -2009,17 +2165,27 @@ PAGE.receive = ({ id }) => {
 };
 PAGE.receive.bg = '#2A3350';
 function rcTrip(){ const a = topArgs(); return (D().collectionTrips || []).find(x => x.id === a.id); }
+// A tile starts at what the Buyer counted (or what was ordered); tapping
+// one says it is short of that by one. The shop's count can go past the
+// Buyer's, never past what was ordered.
 ACT.rcpick = t => { const tr = rcTrip(), ui = S.ui.rc; if (!tr || ui.done) return; const i = Number(t.dataset.i), l = tripLines(tr)[i]; buzz(12); FEEL.tick();
   if (ui.got[i] == null) ui.got[i] = Math.max(0, tripExpect(l) - quoteLineCountPer(l)); ui.sel = i; render(); };
-ACT.rcstep = t => { const tr = rcTrip(), ui = S.ui.rc; if (!tr || ui.sel == null) return; const l = tripLines(tr)[ui.sel], per = quoteLineCountPer(l), exp = tripExpect(l);
-  const v = Math.max(0, (ui.got[ui.sel] != null ? ui.got[ui.sel] : exp) + Number(t.dataset.d) * per); FEEL.tick();
-  if (v >= exp) delete ui.got[ui.sel]; else ui.got[ui.sel] = v; render(); };
-ACT.rcall = () => { const ui = S.ui.rc; if (ui.sel != null) delete ui.got[ui.sel]; ui.sel = null; FEEL.yes(); render(); };
+ACT.rcstep = t => { const tr = rcTrip(), ui = S.ui.rc; if (!tr || ui.sel == null) return; const l = tripLines(tr)[ui.sel], per = quoteLineCountPer(l), exp = tripExpect(l), top = Math.max(exp, Number(l.qty) || 0);
+  const v = Math.max(0, Math.min(top, (ui.got[ui.sel] != null ? ui.got[ui.sel] : exp) + Number(t.dataset.d) * per)); FEEL.tick();
+  if (v === exp) delete ui.got[ui.sel]; else ui.got[ui.sel] = v; render(); };
+ACT.rcall = () => { const tr = rcTrip(), ui = S.ui.rc; if (ui.sel != null) { const l = tr && tripLines(tr)[ui.sel]; if (l && tripExpect(l) < (Number(l.qty) || 0)) ui.got[ui.sel] = Number(l.qty) || 0; else delete ui.got[ui.sel]; } ui.sel = null; FEEL.yes(); render(); };
 ACT.rcclose = () => { S.ui.rc.sel = null; FEEL.tick(); render(); };
 ACT['slide:checkin'] = async () => {
   const tr = rcTrip(), ui = S.ui.rc; if (!tr) return; S.busy = true;
-  try { await checkInTrip(tr.id, ui.got); ui.done = true; chimeDone(); }
-  catch (e) { toast(failSay(e), 5000); }
+  try {
+    const r = await receiveTrip(tr.id, ui.got); ui.done = true; chimeDone();
+    if (r.moved) toast(`On the shelf · ${r.moved} order${r.moved > 1 ? 's' : ''} moved to Packing`, 4000);
+    else if (r.missing) toast(`On the shelf · ${r.missing} line${r.missing > 1 ? 's' : ''} had no order left — kept apart`, 5000);
+  } catch (e) {
+    // Before 0124 the count is still kept, for the console to check in.
+    if (needs0115(e)) { try { await checkInTrip(tr.id, ui.got); ui.done = true; toast('Count saved. Putting it on the shelf needs migration 0124 — ask the owner.', 6000); } catch (e2) { toast(failSay(e2), 5000); } }
+    else toast(failSay(e, '0124'), 5000);
+  }
   S.busy = false; render();
 };
 ACT.home = () => { FEEL.back(); go('today'); };
@@ -2055,7 +2221,7 @@ PAGE.pack = ({ id }) => {
       <span style="position:absolute;left:50%;top:58%;width:300px;height:40px;margin-left:-150px;border-radius:999px;background:radial-gradient(closest-side,rgba(22,32,60,.28),rgba(22,32,60,0))"></span>
       ${img ? `<span class="pk-photo"><img src="${esc(img)}" alt=""></span>` : `<span style="position:absolute;left:0;right:0;top:15%;height:45%;display:flex;align-items:center;justify-content:center"><span class="${k === ui.i && !s ? 'pk-bob' : 'pk-still'}"><i style="display:block;${ART.big[kind]}"></i></span></span>`}
       ${PICK_ANSWERED.includes(s) && k === ui.i ? `<span class="${stamped ? 'pk-flash' : ''}" style="position:absolute;inset:0;background:${short ? '#F5B26B' : '#6FDCB0'};opacity:0"></span>
-        <span class="${stamped ? 'pk-stamp' : ''}" style="position:absolute;left:50%;top:30%;margin-left:-130px;width:260px;padding:14px 0 10px;border:6px double currentColor;border-radius:20px;background:rgba(255,255,255,.9);display:flex;flex-direction:column;align-items:center;gap:4px;transform:rotate(-12deg);color:${short ? '#95530C' : '#0F6B43'}"><span style="font-size:42px;font-weight:700;letter-spacing:.16em;padding-left:.16em;line-height:1">${short ? 'SHORT' : 'PICKED'}</span><span class="m" style="font-size:12px;font-weight:600;letter-spacing:.08em">${esc(short ? `${quoteLineCount(it, itemPicked(it)).n} OF ${quoteLineCount(it, it.qty).n}` : `${quoteLineCount(it, it.qty).n} ${quoteLineCount(it, 1).unit.toUpperCase()} · AISLE ${aisleOf(it.productId).letter}`)}</span></span>` : ''}</div>`; }).join('');
+        <span class="${stamped ? 'pk-stamp' : ''}" style="position:absolute;left:50%;top:30%;margin-left:-130px;width:260px;padding:14px 0 10px;border:6px double currentColor;border-radius:20px;background:rgba(255,255,255,.9);display:flex;flex-direction:column;align-items:center;gap:4px;transform:rotate(-12deg);color:${short ? '#95530C' : '#0F6B43'}"><span style="font-size:42px;font-weight:700;letter-spacing:.16em;padding-left:.16em;line-height:1">${short ? 'SHORT' : 'PICKED'}</span><span class="m" style="font-size:12px;font-weight:600;letter-spacing:.08em">${esc(short ? `${quoteLineCount(it, itemPicked(it)).n} OF ${quoteLineCount(it, it.qty).n} · ${managerName().toUpperCase()} SETTLES` : `${quoteLineCount(it, it.qty).n} ${quoteLineCount(it, 1).unit.toUpperCase()} · AISLE ${aisleOf(it.productId).letter}`)}</span></span>` : ''}</div>`; }).join('');
   const t = ui.toast && items[ui.toast.k];
   let actions = '';
   if (ui.shortOpen) actions = `<div class="pk-in" style="padding:10px;border-radius:20px;background:#FEF8F2;box-shadow:inset 0 0 0 1.5px #F5B26B;display:flex;flex-direction:column;gap:8px">
@@ -2064,7 +2230,7 @@ PAGE.pack = ({ id }) => {
         <span class="m" style="flex:1;text-align:center;font-size:30px;font-weight:600">${esc(quoteLineCount(cur, ui.draft).n)}<span style="font-size:15px;color:#9AA1AE"> / ${esc(cq.n)}</span></span>
         <button type="button" data-act="pkstep" data-d="1" aria-label="One more" class="pk-step">${ic('plus', 22, 'style="stroke-width:2.6"')}</button>
         <button type="button" data-act="pkshortok" style="width:86px;height:60px;border:none;border-radius:16px;background:var(--navy);color:#fff;font-size:15px;font-weight:700">Pack ${esc(quoteLineCount(cur, ui.draft).n)}</button></div></div>`;
-  else if (allDone) actions = `<div class="pk-done" style="display:flex;flex-direction:column;gap:10px"><span style="align-self:center;display:flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:999px;background:var(--greenSoft);color:var(--green);font-size:14px;font-weight:700">${ic('tick', 16, 'style="stroke-width:3"')}${shortN ? `All ${n} done · ${shortN} short` : `All ${n} picked`}</span>
+  else if (allDone) actions = `<div class="pk-done" style="display:flex;flex-direction:column;gap:10px"><span style="align-self:center;display:flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:999px;background:var(--greenSoft);color:var(--green);font-size:14px;font-weight:700">${ic('tick', 16, 'style="stroke-width:3"')}${shortN ? `All ${n} done · ${shortN} short · ${esc(managerName())} settles` : `All ${n} picked`}</span>
       <button data-act="pkfinish" class="pk-big" style="background:var(--red);color:#fff;box-shadow:0 12px 24px rgba(201,58,48,.32)" ${S.busy ? 'disabled' : ''}>Packed · to the truck${ic('chev', 18, 'style="stroke-width:2.4"')}</button></div>`;
   else if (isDone) actions = `<div class="pk-in" style="display:flex;gap:8px"><button type="button" data-act="pkundo" style="width:110px;flex:none;height:68px;border:none;border-radius:20px;background:#F1EEE8;color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:13px;font-weight:700">${ic('undo', 20, 'style="stroke-width:2"')}Not picked</button>
       <button type="button" data-act="pkfix" class="pk-big" style="flex:1;background:#fff;box-shadow:inset 0 0 0 2px #16203C;color:var(--navy);font-size:15px">${st === 'short' ? `Found them all · ${esc(cq.n)} ${esc(cq.unit)}` : 'Change · it was short'}</button></div>`;
@@ -2228,7 +2394,9 @@ function loadDrops(){
 function roadsOf(drops){
   const g = new Map();
   drops.forEach(d => { const k = d.sector != null ? 's' + d.sector : 'p' + canonicalPlace(d.place).toLowerCase(); const r = g.get(k) || { k, drops: [] }; r.drops.push(d); g.set(k, r); });
-  return [...g.values()].map(r => { const far = r.drops.slice().sort((a, b) => (b.km || 0) - (a.km || 0))[0]; return { ...r, name: '→ ' + (far.pin ? far.pin.name : canonicalPlace(far.place)), far }; })
+  // A direction is keyed by its farthest place; the Store names it once (0124: road_names).
+  return [...g.values()].map(r => { const far = r.drops.slice().sort((a, b) => (b.km || 0) - (a.km || 0))[0], key = canonicalPlace(far.place), named = D().roadNames && D().roadNames[key];
+    return { ...r, key, named: !!named, name: '→ ' + (named || (far.pin ? far.pin.name : canonicalPlace(far.place))), far }; })
     .sort((a, b) => (a.far.km || 99) - (b.far.km || 99));
 }
 PAGE.load = args => {
@@ -2251,7 +2419,7 @@ PAGE.load = args => {
     // A soft wedge for every direction on the truck.
     const wedges = [...onSector].filter(s => s != null).map(s => { const a1 = (s * 45 - 22.5 - 90) * Math.PI / 180, a2 = (s * 45 + 22.5 - 90) * Math.PI / 180, R = 600;
       return `<path d="M${Y.x} ${Y.y} L ${Y.x + R * Math.cos(a1)} ${Y.y + R * Math.sin(a1)} L ${Y.x + R * Math.cos(a2)} ${Y.y + R * Math.sin(a2)} Z" fill="rgba(111,220,176,.09)"/>`; }).join('');
-    map = `<div class="mp" role="group" aria-label="Map of today's drops from the yard" style="height:${h}px">
+    map = `<div class="mp" role="group" aria-label="Map of today's drops from the shop" style="height:${h}px">
       <div class="tiles">${tilesHTML(f)}</div>
       <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true">${wedges}${lines}</svg>
       ${packing.map(p => { const P = f.px(p.pin); return `<span class="pin" style="left:${P.x}px;top:${P.y}px;opacity:.6"><span style="width:28px;height:28px;border-radius:999px;border:1.5px dashed rgba(255,255,255,.5);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">${esc(initials(quoteClientName(p.q)))}</span></span>`; }).join('')}
@@ -2269,11 +2437,12 @@ PAGE.load = args => {
       <span class="pin" style="left:${Y.x}px;top:${Y.y}px"><span style="width:40px;height:40px;border-radius:12px;background:var(--mint);color:var(--navy);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 14px rgba(0,0,0,.3)">${ic('yard', 20, 'style="stroke-width:2"')}</span><span style="font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--mint)">YARD</span></span>
       <span class="attr">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></span></div>`;
   } else {
-    map = `<div class="mp" style="height:${h}px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:16px;text-align:center;color:var(--navyInk)">${ic('pin', 28, 'style="stroke:#6FDCB0"')}<b style="color:#fff;font-size:14px">${yard ? 'No drop has a pin yet' : 'The yard has no pin yet'}</b><span style="font-size:12px">${canPin() ? 'Pin the shop and its places once on the Map in Omni-Ware' : 'The owner pins the shop and its places once, on the Map in Omni-Ware'}</span></div>`;
+    map = `<div class="mp" style="height:${h}px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:16px;text-align:center;color:var(--navyInk)">${ic('pin', 28, 'style="stroke:#6FDCB0"')}<b style="color:#fff;font-size:14px">${yard ? 'No drop has a pin yet' : 'The shop has no pin yet'}</b><span style="font-size:12px">${canPin() ? 'Pin the shop and its places once on the Map in Omni-Ware' : 'The owner pins the shop and its places once, on the Map in Omni-Ware'}</span></div>`;
   }
-  const headSub = count ? [...new Set(sel.map(d => roads.find(r => r.drops.includes(d)).name.replace('→ ', '')))].join(' + ') + (new Set(sel.map(d => d.sector)).size > 1 ? ' ways · one truck' : ' way · one direction') : drops.length ? 'Pick a direction' : 'Nothing packed to deliver';
+  const headSub = count ? [...new Set(sel.map(d => roads.find(r => r.drops.includes(d)).name.replace('→ ', '')))].join(' + ') + (new Set(sel.map(d => d.sector)).size > 1 ? ' · one truck' : ' · one direction') : drops.length ? 'Pick a direction' : 'Nothing packed to deliver';
+  const selRoads = [...new Set(sel.map(d => roads.find(r => r.drops.includes(d))))], oneRoad = selRoads.length === 1 ? selRoads[0] : null;
   const head = `<div style="background:radial-gradient(120% 100% at 90% 0%,#2B3866 0%,#16203C 60%);color:#fff;padding:8px 16px 16px;display:flex;flex-direction:column;gap:10px">${grip()}
-      <div style="display:flex;align-items:center;gap:12px"><span style="flex:1;display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:22px;font-weight:700;letter-spacing:-.02em">Load</span><span class="ell" style="font-size:12px;font-weight:600;color:var(--navyInk)">${esc(headSub)}</span></span>
+      <div style="display:flex;align-items:center;gap:12px"><span style="flex:1;display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:22px;font-weight:700;letter-spacing:-.02em">Load</span><span style="display:flex;align-items:center;gap:8px;min-width:0"><span class="ell" style="font-size:12px;font-weight:600;color:var(--navyInk)">${esc(headSub)}</span>${oneRoad && D().roadNames !== null ? `<button data-act="ldname" data-key="${esc(oneRoad.key)}" aria-label="Name this direction" style="flex:none;height:24px;padding:0 9px;border:none;border-radius:999px;background:rgba(255,255,255,.1);color:#fff;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:4px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>${oneRoad.named ? 'Rename' : 'Name'}</button>` : ''}</span></span>
         <span style="display:flex;align-items:baseline;gap:2px"><span class="m" style="font-size:26px;font-weight:600;color:var(--mint)">${count}</span><span class="m" style="font-size:13px;color:var(--navyInk2)">/${MAX_DROPS} drops</span></span>
         <button class="st-x" data-act="back" aria-label="Close" style="width:40px;height:40px">${ic('close', 16, 'style="stroke-width:2.2"')}</button></div>${map}</div>`;
   const packingRoads = [...new Set(packing.map(p => p.sector))].filter(s => !roads.some(r => r.k === 's' + s)).slice(0, Math.max(0, 3 - roads.length));
@@ -2413,6 +2582,20 @@ ACT['slide:handover'] = async () => {
   S.busy = false; render();
 };
 
+/* ---- naming a direction (route.lock; the owner no longer does) ---- */
+ACT.ldname = t => { FEEL.open(); const r = roadsOf(loadDrops().drops).find(x => x.key === t.dataset.key); openSheet('roadname', { key: t.dataset.key, v: r ? r.name.replace('→ ', '') : '' }); };
+SHEET.roadname = a => `<div style="font-size:18px;font-weight:700;padding:0 2px">Name this direction</div>
+  <span style="font-size:13px;font-weight:600;color:var(--ink2);padding:0 2px">Everyone loading the truck sees it on the map · drawn to ${esc(a.key)}</span>
+  <input id="ld_road" data-in="roadname" value="${esc(a.v)}" maxlength="40" placeholder="Ggaba road" style="height:56px;border:none;border-radius:16px;background:#F1EEE8;padding:0 16px;font-family:inherit;font-size:17px;font-weight:600;color:var(--ink)">
+  <div class="row"><button class="st-btn ghost" data-act="closesheet">Cancel</button><button class="st-btn red" data-act="ldnamesave" ${S.busy ? 'disabled' : ''}>Save the name</button></div>`;
+ACT['in:roadname'] = t => { if (S.sheet) S.sheet.args.v = t.value; };
+ACT.ldnamesave = async () => {
+  const a = S.sheet && S.sheet.args; if (!a || S.busy) return; S.busy = true;
+  try { await nameRoad(a.key, a.v); FEEL.yes(); closeSheet(true); toast('Named · ' + String(a.v).trim()); }
+  catch (e) { FEEL.no(); toast(failSay(e, '0124'), 5000); }
+  S.busy = false; renderSheet(); render();
+};
+
 /* ==================================================================
    AT THE DOOR -- the goods and their door, in one shot. The red
    shutter takes the photo and marks it delivered; the agent and the
@@ -2542,25 +2725,29 @@ function lookOf(x){
   return memo('look:' + x.key, () => {
     const pr = promisedFor(x.productId, x.variantIdx).reduce((n, p) => n + p.n, 0);
     const w = weeksOf(x.key), out4 = w.reduce((n, r) => n + r[1], 0), wk = out4 / 4, d = daysSinceCount(x.key);
-    const why = pr > x.qty ? 'short' : x.qty <= 0 && out4 > 0 ? 'out' : x.qty > 0 && wk >= 1 && x.qty < wk ? 'low'
+    const rep = openReportFor(x.key).reduce((n, r) => n + r.qty, 0);
+    const why = rep > 0 ? 'reported' : pr > x.qty ? 'short' : x.qty <= 0 && out4 > 0 ? 'out' : x.qty > 0 && wk >= 1 && x.qty < wk ? 'low'
       : x.qty > 0 && d != null && d > 21 ? 'due' : null;
-    return { why, pr, wk, out4, d };
+    return { why, pr, wk, out4, d, rep };
   });
 }
 function needsLook(x){ return lookOf(x).why; }
-const LOOK_RANK = { short: 0, out: 1, low: 2, due: 3 };
+const LOOK_RANK = { reported: 0, short: 1, out: 2, low: 3, due: 4 };
 function unitWord(x){ return String((unitsFor(x.productId, x.variantIdx) || {}).unit || 'pc').toLowerCase(); }
 function perWeek(wk, u){ return wk >= 1 ? `~${n0(wk)} ${u} a week` : wk > 0 ? `under 1 ${u} a week` : 'not moving'; }
 function lookRowHTML(x, i){
   const L = lookOf(x), u = unitWord(x);
   const chip = { short: [`${n0(L.pr - x.qty)} short`, 'background:var(--crimsonSoft);color:var(--crimson)'], out: ['out of stock', 'background:var(--crimsonSoft);color:var(--crimson)'],
-    low: ['running low', 'background:var(--amberSoft);color:var(--amberDeep)'], due: ['count due', 'background:var(--indigoSoft);color:var(--indigo)'] }[L.why];
+    low: ['running low', 'background:var(--amberSoft);color:var(--amberDeep)'], due: ['count due', 'background:var(--indigoSoft);color:var(--indigo)'],
+    reported: [`${n0(L.rep)} reported`, 'background:#F6E4F1;color:#7A3268'] }[L.why];
   const meter = (pct, col, track, label) => `<span role="img" aria-label="${esc(label)}" style="position:relative;height:6px;border-radius:999px;background:${track};overflow:hidden"><i style="position:absolute;left:0;top:0;bottom:0;width:${Math.max(0, Math.min(100, pct))}%;background:${col};border-radius:999px"></i></span>`;
-  const bar = L.why === 'short' ? meter(x.qty / Math.max(1, L.pr) * 100, 'var(--crimson)', 'var(--crimsonSoft)', `${n0(x.qty)} on the shelf against ${n0(L.pr)} promised`)
+  const bar = L.why === 'reported' ? meter(L.rep / Math.max(1, x.qty) * 100, '#C970B4', '#F6E4F1', `${n0(L.rep)} of ${n0(x.qty)} reported, waiting on ${managerName()}`)
+    : L.why === 'short' ? meter(x.qty / Math.max(1, L.pr) * 100, 'var(--crimson)', 'var(--crimsonSoft)', `${n0(x.qty)} on the shelf against ${n0(L.pr)} promised`)
     : L.why === 'out' ? `<span role="img" aria-label="Sold ${n0(L.out4)} in four weeks, none left" style="display:flex;gap:2px">${weeksOf(x.key).map(r => `<i style="flex:1;height:6px;border-radius:2px;background:${r[1] ? 'var(--crimson)' : '#F1EEE8'};opacity:${r[1] ? .35 + .65 * Math.min(1, r[1] / Math.max(1, L.wk * 2)) : 1}"></i>`).join('')}</span>`
     : L.why === 'low' ? meter(x.qty / Math.max(1, L.wk) * 100, 'var(--amber)', '#F1EEE8', `${n0(x.qty)} left; about ${n0(L.wk)} go out a week`)
     : `<span role="img" aria-label="${L.d == null ? 'Never counted' : 'Last counted ' + L.d + ' days ago'}" style="display:flex;gap:2px">${Array.from({ length: 10 }, (_, k) => `<i style="flex:1;height:6px;border-radius:2px;background:${k < Math.min(10, Math.round((L.d == null ? 30 : L.d) / 3)) ? '#9BA3F0' : '#F1EEE8'}"></i>`).join('')}</span>`;
-  const sub = L.why === 'short' ? `<span class="m">${n0(x.qty)}</span> on the shelf · <span class="m">${n0(L.pr)}</span> ${esc(u)} promised`
+  const sub = L.why === 'reported' ? `<span class="m">${n0(x.qty)}</span> on the shelf until ${esc(managerName())} decides`
+    : L.why === 'short' ? `<span class="m">${n0(x.qty)}</span> on the shelf · <span class="m">${n0(L.pr)}</span> ${esc(u)} promised`
     : L.why === 'out' ? `none left · ${n0(L.out4)} ${esc(u)} went out in 4 weeks`
     : L.why === 'low' ? `<span class="m">${n0(x.qty)}</span> ${esc(u)} left · ${perWeek(L.wk, esc(u))}`
     : `last counted <span class="m">${L.d}</span> days ago`;
@@ -2654,6 +2841,7 @@ PAGE.stock = ({ key }) => {
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;font-size:10px;font-weight:600;color:#6B7480;text-align:center"><span>3 wk ago</span><span>2 wk ago</span><span>last wk</span><span>this wk</span></div>
       <span style="font-size:13px;font-weight:600;color:var(--ink2)">${perWeek ? `Goes out ~${perWeek} ${esc(unit)} a week · ${free > 0 ? (() => { const days = Math.max(1, Math.round(free / perWeek * 7)); return `free stock lasts about ${days} day${days === 1 ? '' : 's'}`; })() : 'none free to sell'}` : w.some(r => r[1]) ? `Under 1 ${esc(unit)} a week goes out` : 'Not moving lately'}</span></div>`;
   const foot = `<div class="row"><span style="width:76px;flex:none;display:flex;flex-direction:column;justify-content:center"><span class="m" style="font-size:20px;font-weight:600">${d == null ? '—' : d + 'd'}</span><span style="font-size:11px;font-weight:600;color:#6B7480">since count</span></span>
+    ${D().reports !== null ? `<button data-act="report" data-key="${esc(x.key)}" aria-label="Report damaged, lost or stolen" style="width:58px;height:58px;flex:none;border:none;border-radius:18px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule);color:var(--amberDeep);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">${ic('warn', 20, 'style="stroke-width:2"')}<span style="font-size:10px;font-weight:700;color:#6B7480">Report</span></button>` : ''}
     <button data-act="count" data-key="${esc(x.key)}" data-aisle="${esc(x.aisle.letter)}" class="st-btn red">${ic('count', 20)}Count it · blind</button></div>`;
   return `<div class="card" style="margin-top:0;min-height:100%;border-radius:0">${stage}<div style="padding:14px 16px 0;display:flex;flex-direction:column;gap:10px;flex:1">${body}</div><div class="st-foot">${foot}</div></div>`;
 };
@@ -2915,6 +3103,272 @@ function afterStart(){
 window.addEventListener('online', () => { Object.keys(S.pickDraft || {}).forEach(id => flushPicks(id).then(() => render()).catch(() => {})); });
 
 boot();
+
+/* ==================================================================
+   The Store proposes, the Manager decides (docs/decision-rights.md,
+   0124). Reporting a loss, goods coming back at the gate, and riding a
+   buying trip the Buyer sent. Nothing here moves money or, until the
+   Manager says so, the shelf.
+   ================================================================== */
+Object.assign(ICON, {
+  warn: '<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17v.5"/>',
+  ret: '<path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>',
+  shop: '<path d="M3 9l1.5-5h15L21 9M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0zM5 13v8h14v-8M10 21v-5h4v5"/>',
+  shield: '<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/>',
+  crack: '<path d="M3 7l4-3 3 4 4-4 3 3 4-2v13H3zM9 12l2 2M15 11l-2 3"/>',
+  find: '<path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4M9 9.5a2 2 0 1 1 3 1.7c-.7.4-1 .9-1 1.6M11 15v.5"/>',
+});
+
+/* ---- shared pieces: the photo button, the receipt ---- */
+function photoBtn(act, has, label, sub){
+  const c = 'position:absolute;width:10px;height:10px;border-color:currentColor;border-style:solid;';
+  return `<button type="button" data-act="${act}" aria-label="${esc(has ? 'Photo taken. Tap to retake' : 'Take a photo')}" style="height:66px;border:none;border-radius:16px;padding:0 10px;display:flex;align-items:center;gap:12px;text-align:left;${has ? 'background:var(--greenSoft);color:var(--green)' : 'background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1px var(--rule)'}">
+    <span style="position:relative;width:48px;height:48px;border-radius:12px;flex:none;display:flex;align-items:center;justify-content:center;overflow:hidden;${has ? `background:#5F6B7C url('${esc(has)}') center/cover;color:#fff` : 'background:#F1EEE8;color:#5F6980'}">
+      <i style="${c}left:6px;top:6px;border-width:2px 0 0 2px;border-radius:3px 0 0 0"></i><i style="${c}right:6px;top:6px;border-width:2px 2px 0 0;border-radius:0 3px 0 0"></i><i style="${c}left:6px;bottom:6px;border-width:0 0 2px 2px;border-radius:0 0 0 3px"></i><i style="${c}right:6px;bottom:6px;border-width:0 2px 2px 0;border-radius:0 0 3px 0"></i>
+      ${has ? '' : ic('camera', 20)}</span>
+    <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:700">${esc(label)}</span><span style="font-size:12px;font-weight:600;color:#6B7480">${esc(sub)}</span></span></button>`;
+}
+// The phone's own camera, through the file picker -- no permission prompt of ours.
+function takePhoto(){
+  return new Promise(res => {
+    let f = document.getElementById('st_photo');
+    if (!f) { f = document.createElement('input'); f.type = 'file'; f.accept = 'image/*'; f.setAttribute('capture', 'environment'); f.id = 'st_photo'; f.hidden = true; document.body.appendChild(f); }
+    f.value = ''; f.onchange = () => { const x = f.files && f.files[0]; if (!x) { res(null); return; } const r = new FileReader(); r.onload = () => res({ blob: x, url: r.result }); r.onerror = () => res(null); r.readAsDataURL(x); };
+    f.click();
+  });
+}
+const TEAR_T = '<div style="height:8px;background:linear-gradient(45deg,transparent 50%,#fff 50%) 0 0/12px 8px repeat-x,linear-gradient(-45deg,transparent 50%,#fff 50%) 0 0/12px 8px repeat-x"></div>';
+const TEAR_B = '<div style="height:8px;background:linear-gradient(135deg,#fff 50%,transparent 50%) 0 0/12px 8px repeat-x,linear-gradient(-135deg,#fff 50%,transparent 50%) 0 0/12px 8px repeat-x"></div>';
+function receiptHTML(title, byline, rows, stamp, stampSub, col, footer){
+  return `<div class="rc-in" style="position:relative;filter:drop-shadow(0 1px 1px rgba(22,32,60,.08)) drop-shadow(0 10px 22px rgba(22,32,60,.12))">${TEAR_T}
+    <div style="background:#fff;padding:4px 16px 10px;display:flex;flex-direction:column">
+      <div style="display:flex;flex-direction:column;gap:2px;padding-bottom:8px;border-bottom:1.5px solid var(--ink)"><span style="font-size:11px;font-weight:700;letter-spacing:.12em">${esc(title)}</span><span class="m" style="font-size:11px;color:#6B7480">${esc(byline)}</span></div>
+      ${rows.map(([k, v, st]) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed #E2DED6;font-size:13px"><span style="font-weight:600;color:#6B7480">${esc(k)}</span><span style="font-weight:700;text-align:right;${st || ''}">${esc(v)}</span></div>`).join('')}
+      ${footer || ''}</div>${TEAR_B}
+    <span class="pk-stamp" style="position:absolute;right:14px;top:14px;padding:4px 9px 3px;border:3px double ${col};border-radius:9px;color:${col};background:rgba(255,255,255,.7);display:flex;flex-direction:column;align-items:center;transform:rotate(-8deg)"><span style="font-size:14px;font-weight:700;letter-spacing:.16em;line-height:1">${esc(stamp)}</span><span style="font-size:7px;font-weight:700;letter-spacing:.1em">${esc(stampSub)}</span></span></div>`;
+}
+function waitingOn(ini, title, sub, tint){
+  return `<div style="display:flex;align-items:center;gap:10px;padding-top:10px"><span class="st-waitdot" style="width:32px;height:32px;border-radius:999px;${tint};font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">${esc(ini)}</span>
+    <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:13px;font-weight:700">${esc(title)}</span><span style="font-size:11px;font-weight:600;color:#6B7480">${esc(sub)}</span></span></div>`;
+}
+function stampTime(ms){ return `${dayLabel(isoOf(ms))} · ${hm(ms)}`; }
+
+/* ==================================================================
+   REPORT -- damaged, lost or stolen. The shelf waits for the Manager.
+   ================================================================== */
+const REASONS = [
+  { k: 'damaged', name: 'Damaged', sub: 'bent · torn', icon: 'crack', disc: 'background:#FDEEE1;color:#95530C', ring: '#F5B26B', badge: '#95530C', word: 'damaged' },
+  { k: 'lost', name: 'Lost', sub: "can't find", icon: 'find', disc: 'background:#E8EBF0;color:#3D4A5C', ring: '#9AA1AE', badge: '#3D4A5C', word: 'lost' },
+  { k: 'stolen', name: 'Stolen', sub: 'taken', icon: 'lock', disc: 'background:#FDE8E4;color:#A82D24', ring: '#E88C83', badge: '#A82D24', word: 'stolen' },
+];
+PAGE.report = ({ key }) => {
+  const x = stockItems().find(i => i.key === key); if (!x) return goneSheet('That item is gone');
+  const ui = S.ui.rp && S.ui.rp.key === key ? S.ui.rp : (S.ui.rp = { key, why: 0, n: 1, photo: null, blob: null, sent: null });
+  const w = REASONS[ui.why], u = unitsFor(x.productId, x.variantIdx) || {}, unit = String(u.unit || 'pc').toLowerCase(), per = u.packQty > 1 ? Math.min(40, u.packQty) : 20;
+  const mgr = managerName(), after = Math.max(0, x.qty - ui.n), kind = kindOf(x.productName), img = productImage(productById(x.productId), x.variantIdx);
+  const badge = ui.why === 0 ? 'background:#F5B26B;color:#16203C' : ui.why === 1 ? 'background:#3D4A5C;color:#fff' : 'background:#C93A30;color:#fff';
+  const hero = `<div role="img" aria-label="${esc(x.productName)}: ${ui.n} ${esc(unit)} ${w.word}. ${n0(x.qty)} on the shelf, ${n0(after)} once ${esc(mgr)} writes it off" style="position:relative;height:232px;flex:none;${stageBg(kind)};overflow:hidden">
+      <div style="position:absolute;left:0;right:0;top:46px;bottom:64px;display:flex;align-items:center;justify-content:center">${img ? `<img src="${esc(img)}" alt="" style="max-width:60%;max-height:100%;object-fit:contain;border-radius:14px">` : `<span style="transform:scale(.72)"><i style="display:block;${ART.big[kind]}"></i></span>`}</div>
+      <span class="pk-stamp" style="position:absolute;left:50%;top:44px;margin-left:96px;height:30px;min-width:30px;padding:0 9px;box-sizing:border-box;border-radius:999px;font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 14px rgba(22,32,60,.18);${badge}">−${n0(ui.n)}</span>
+      <div style="position:absolute;left:0;right:0;top:0;padding:calc(12px + var(--safe-area-inset-top)) 14px 0;display:flex;align-items:center;justify-content:space-between">
+        <span style="height:32px;padding:0 12px 0 4px;border-radius:999px;background:rgba(22,32,60,.85);color:#fff;display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700"><span style="width:24px;height:24px;border-radius:999px;background:#fff;color:var(--navy);display:flex;align-items:center;justify-content:center">${esc(x.aisle.letter)}</span>${esc(x.aisle.name)}</span>
+        <button class="st-x" data-act="back" aria-label="Close" style="background:rgba(22,32,60,.85)">${ic('close', 16, 'style="stroke-width:2.2"')}</button></div>
+      <div style="position:absolute;left:14px;right:14px;bottom:12px;display:flex;align-items:flex-end;justify-content:space-between;gap:10px">
+        <span style="min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--amberDeep)">REPORT A LOSS</span><span class="ell" style="font-size:19px;font-weight:700">${esc(x.productName)}</span></span>
+        <span style="padding:8px 12px;border-radius:16px;background:var(--navy);color:#fff;display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex:none"><span class="m" style="display:flex;align-items:baseline;gap:6px"><span style="font-size:26px;font-weight:600;letter-spacing:-.03em;line-height:1">${n0(x.qty)}</span><span style="font-size:14px;color:var(--navyInk2)">→ ${n0(after)}</span></span><span style="font-size:10px;font-weight:600;color:var(--navyInk)">once ${esc(mgr)} writes it off</span></span></div></div>`;
+  let body;
+  if (ui.sent) {
+    const r = ui.sent;
+    body = receiptHTML(`STOCK REPORT · AISLE ${x.aisle.letter}`, `${stampTime(msOf(r.createdAt) || Date.now())} · ${firstWord(myName())}`,
+      [['Item', x.productName], ['What happened', w.name, `color:${w.badge}`], ['How many', `${n0(r.qty)} ${unit}`, "font-family:'IBM Plex Mono',monospace"], ['Photo', r.photo ? 'attached' : 'none', r.photo ? 'color:var(--green)' : 'color:#9AA1AE'], ['Shelf', `${n0(x.qty)}, until ${mgr} decides`]],
+      'REPORTED', 'SHELF UNCHANGED', '#95530C', waitingOn(initials(mgr), `Waiting on ${mgr}`, `${mgr === 'the manager' ? 'they write' : 'writes'} it off · the owner's log gets it`, 'background:#F6E4F1;color:#7A3268'));
+  } else {
+    const cells = Array.from({ length: per }, (_, k) => k < ui.n ? (ui.why === 0 ? 'background:#F5B26B' : ui.why === 1 ? 'background:#fff;box-shadow:inset 0 0 0 1.5px #8F9AAA' : 'background:#FDE8E4;box-shadow:inset 0 0 0 1.5px #C93A30') : 'background:#C3CAD4');
+    body = `<span style="font-size:11px;font-weight:700;letter-spacing:.12em;color:#6B7480;padding:0 2px">WHAT HAPPENED</span>
+      <div role="radiogroup" aria-label="What happened" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:-4px">${REASONS.map((r, i) => { const on = ui.why === i;
+        return `<button type="button" role="radio" aria-checked="${on}" data-act="rpwhy" data-i="${i}" class="rc-tile" style="position:relative;width:auto;height:104px;border-radius:18px;padding:12px 6px 10px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:6px;${on ? `background:#fff;box-shadow:inset 0 0 0 2px ${r.ring},0 10px 22px rgba(22,32,60,.1)` : 'background:#fff;box-shadow:inset 0 0 0 1px var(--rule)'}">
+          <span style="width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center;${r.disc}">${ic(r.icon, 22, 'style="stroke-width:1.9"')}</span><span style="font-size:14px;font-weight:700;color:var(--ink)">${r.name}</span><span style="font-size:11px;font-weight:600;color:#6B7480;margin-top:-4px">${r.sub}</span>
+          ${on ? `<span style="position:absolute;right:8px;top:8px;width:20px;height:20px;border-radius:999px;background:${r.badge};color:#fff;display:flex;align-items:center;justify-content:center">${ic('tick', 12, 'style="stroke:#fff;stroke-width:3.4"')}</span>` : ''}</button>`; }).join('')}</div>
+      <div class="st-card" style="padding:10px 12px 12px;border-radius:18px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;gap:8px;align-items:center"><button type="button" data-act="rpstep" data-d="-1" aria-label="One fewer" class="pk-step" style="background:#F1EEE8;height:54px">${ic('minus', 22, 'style="stroke-width:2.6"')}</button>
+          <span style="flex:1;height:54px;border-radius:16px;display:flex;align-items:center;justify-content:center;gap:6px;${ui.why === 0 ? 'background:#FEF8F2;box-shadow:inset 0 0 0 1.5px #F5B26B' : ui.why === 1 ? 'background:#F4F5F8;box-shadow:inset 0 0 0 1.5px #9AA1AE' : 'background:#FEF3F1;box-shadow:inset 0 0 0 1.5px #E88C83'}"><span class="m" style="font-size:28px;font-weight:600">${n0(ui.n)}</span><span style="font-size:13px;font-weight:700;color:${w.badge}">${esc(unit)} ${w.word}</span></span>
+          <button type="button" data-act="rpstep" data-d="1" aria-label="One more" class="pk-step" style="background:#F1EEE8;height:54px">${ic('plus', 22, 'style="stroke-width:2.6"')}</button></div>
+        <div style="display:flex;align-items:center;gap:8px"><span role="img" aria-label="${ui.n} of ${per} marked ${w.word}" style="flex:1;display:grid;grid-template-columns:repeat(${per},minmax(0,1fr));gap:2px">${cells.map(c => `<i style="height:12px;border-radius:2px;transition:background .3s;${c}"></i>`).join('')}</span><span style="font-size:10px;font-weight:700;color:#9AA1AE;white-space:nowrap">${u.packQty > 1 ? 'of a ' + esc(String(u.packUnit || 'pack').toLowerCase()) : 'of 20'}</span></div></div>
+      ${photoBtn('rpphoto', ui.photo, ui.photo ? 'Photo attached' : ui.why === 0 ? 'Photo of the damage' : 'Photo · if there is one', ui.photo ? `${mgr} sees it with the report · tap to retake` : ui.why === 0 ? `one tap · ${mgr} sees it` : 'optional')}`;
+  }
+  const foot = `<div style="display:flex;flex-direction:column;gap:8px;width:100%"><div class="row">${slideHTML('report', `Slide · report ${n0(ui.n)} ${w.word}`, 'warn', { done: !!ui.sent, doneLabel: `Reported · ${mgr} told`, disabled: S.busy || ui.n <= 0 })}</div>
+    ${ui.sent ? `<button data-act="back" style="height:44px;border:none;background:none;font-size:14px;font-weight:700;color:var(--navy)">Done · back to the item</button>` : ''}</div>`;
+  return `<button class="tapback" data-act="back" aria-label="Back" style="height:calc(40px + var(--safe-area-inset-top))"></button>
+    <div class="card" style="height:calc(100% - 40px - var(--safe-area-inset-top));min-height:0">${hero}
+      <div style="flex:1;min-height:0;overflow-y:auto;padding:14px 16px 8px;display:flex;flex-direction:column;gap:12px">${body}</div>
+      <div style="flex:none;padding:10px 16px calc(18px + var(--safe-area-inset-bottom));display:flex">${foot}</div></div>`;
+};
+PAGE.report.bg = '#2A3350';
+ACT.report = t => { FEEL.open(); S.ui.rp = null; push('report', { key: t.dataset.key }); };
+ACT.rpwhy = t => { const ui = S.ui.rp; if (!ui || ui.sent) return; ui.why = Number(t.dataset.i); FEEL.tick(); render(); };
+ACT.rpstep = t => { const ui = S.ui.rp; if (!ui || ui.sent) return; const x = stockItems().find(i => i.key === ui.key); ui.n = Math.max(1, Math.min(Math.max(1, Math.ceil((x && x.qty) || 1)), ui.n + Number(t.dataset.d))); FEEL.tick(); render(); };
+ACT.rpphoto = async () => { const ui = S.ui.rp; if (!ui || ui.sent) return; const p = await takePhoto(); if (!p) return; ui.photo = p.url; ui.blob = p.blob; FEEL.stamp(); render(); };
+ACT['slide:report'] = async () => {
+  const ui = S.ui.rp, x = ui && stockItems().find(i => i.key === ui.key); if (!x || S.busy) return; S.busy = true;
+  try { ui.sent = await sendReport(x, ui.n, REASONS[ui.why].k, ui.blob); chimeDone(); }
+  catch (e) { FEEL.no(); toast(failSay(e, '0124'), 5000); }
+  S.busy = false; render();
+};
+
+/* ==================================================================
+   RETURN -- goods coming back at the gate. The Store proposes; the
+   Manager raises the credit note. Held in the returns bay till then.
+   ================================================================== */
+function returnableOrders(){
+  const since = Date.now() - 30 * 864e5;
+  return liveOrders().filter(q => ['completed', 'pending_delivery'].includes(q.status) && (msOf(q.deliveredAt) || waitingSince(q)) >= since)
+    .sort((a, b) => (msOf(b.deliveredAt) || waitingSince(b)) - (msOf(a.deliveredAt) || waitingSince(a)));
+}
+PAGE.ret = () => {
+  const ui = S.ui.rt || (S.ui.rt = { id: null, find: '', back: {}, cond: {}, sel: 0, photo: null, blob: null, sent: null });
+  const q = ui.id != null ? quoteById(ui.id) : null;
+  if (!q) {
+    const f = ui.find.trim().toLowerCase(), list = returnableOrders().filter(o => !f || quoteClientName(o).toLowerCase().includes(f) || String(o.id).includes(f.replace(/^q-?0*/, ''))).slice(0, 30);
+    const head = `<div class="st-sheettop">${grip()}<div style="display:flex;align-items:center;gap:12px"><span style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--amber)">AT THE GATE</span><span style="font-size:22px;font-weight:700;letter-spacing:-.02em">Goods coming back</span></span>${closeX()}</div>
+      <label style="height:52px;border-radius:16px;background:#fff;color:var(--ink);display:flex;align-items:center;gap:10px;padding:0 14px">${ic('search', 20, 'style="stroke:#5F6980"')}<input id="rt_find" data-in="rtfind" value="${esc(ui.find)}" placeholder="Their name or the order number" aria-label="Find the order" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-family:inherit;font-size:16px;color:var(--ink)"></label></div>`;
+    const body = list.length ? `<span style="font-size:11px;font-weight:700;letter-spacing:.12em;color:#6B7480;padding:0 4px">WHOSE ORDER · LAST 30 DAYS</span><div class="st-card" style="padding:0 12px;border-radius:18px">${list.map((o, i) => `<button data-act="rtpick" data-id="${o.id}" style="display:flex;align-items:center;gap:12px;width:100%;min-height:62px;border:none;background:none;text-align:left;${i ? 'border-top:1px solid #F1EEE8' : ''}">${av(quoteClientName(o), o.id, 40)}
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:14px;font-weight:700">${esc(quoteClientName(o))}</span><span class="m ell" style="font-size:11px;color:#6B7480">Q-${String(o.id).padStart(4, '0')} · ${esc(o.deliveredAt ? 'delivered ' + whenSaid(msOf(o.deliveredAt)) : STAGE_WORD[o.status] || '')} · ${nLines((o.items || []).length)}</span></span>${ic('chev', 16, 'style="stroke:#9AA1AE"')}</button>`).join('')}</div>`
+      : emptyCard('No order to take back', f ? 'Nothing that went out in the last 30 days matches that.' : 'Nothing went out in the last 30 days.');
+    return sheetPage(head, body, '', { top: 24 });
+  }
+  const items = (q.items || []).filter(it => (Number(it.qty) || 0) > 0);
+  const cur = items[Math.min(ui.sel, items.length - 1)], ck = cur ? lineKey(cur, items.indexOf(cur)) : null, cb = ck ? ui.back[ck] || 0 : 0, cc = ck ? ui.cond[ck] || 0 : 0;
+  const backed = items.map((it, i) => ({ it, k: lineKey(it, i) })).filter(x => ui.back[x.k] > 0), mgr = managerName();
+  const rno = 'R-' + String((D().returns || []).length + 1).padStart(3, '0');
+  const head = `<div style="background:radial-gradient(120% 100% at 90% 0%,#2B3866 0%,#16203C 60%);color:#fff;padding:8px 16px 14px;display:flex;flex-direction:column;gap:12px;flex:none">${grip()}
+      <div style="display:flex;align-items:center;gap:10px"><span style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--amber)">AT THE GATE</span><span style="font-size:20px;font-weight:700;letter-spacing:-.02em">Goods coming back</span></span>${closeX()}</div>
+      <div class="rc-in" style="position:relative;border-radius:20px;background:#fff;color:var(--ink);overflow:hidden;box-shadow:0 18px 36px rgba(0,0,0,.35)">
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 14px 10px">${av(quoteClientName(q), q.id, 46)}
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:16px;font-weight:700">${esc(quoteClientName(q))}</span><span class="m ell" style="font-size:11px;color:#5F6980">Q-${String(q.id).padStart(4, '0')} · ${esc(q.deliveredAt ? 'delivered ' + whenSaid(msOf(q.deliveredAt)) : STAGE_WORD[q.status] || '')}</span></span>
+          <span style="display:flex;flex-direction:column;align-items:flex-end;gap:1px"><span style="font-size:9px;font-weight:700;letter-spacing:.12em;color:#9AA1AE">RETURN</span><span class="m" style="font-size:16px;font-weight:600">${esc(ui.sent ? ui.sent.no : rno)}</span></span></div>
+        <div style="position:relative;height:0;border-top:2px dashed #E6E3DD;margin:0 14px"><span style="position:absolute;left:-24px;top:-10px;width:18px;height:18px;border-radius:999px;background:#1B2546"></span><span style="position:absolute;right:-24px;top:-10px;width:18px;height:18px;border-radius:999px;background:#1B2546"></span></div>
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px 12px"><span aria-hidden="true" style="flex:1;height:26px;background:repeating-linear-gradient(90deg,#1C2233 0 2px,transparent 2px 4px,#1C2233 4px 5px,transparent 5px 8px,#1C2233 8px 11px,transparent 11px 13px)"></span>
+          <span class="st-chip" style="height:28px;background:var(--amberSoft);color:var(--amberDeep);font-size:11px">${ic('yard', 12, 'style="stroke-width:2.2"')}Returns bay</span></div></div></div>`;
+  let body = `<span style="font-size:11px;font-weight:700;letter-spacing:.12em;color:#6B7480;padding:0 2px">WHAT CAME BACK</span>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:-2px">${items.map((it, i) => { const k = lineKey(it, i), b = ui.back[k] || 0, on = !ui.sent && i === ui.sel, bad = (ui.cond[k] || 0) === 1, c = quoteLineCount(it, it.qty);
+      return `<button type="button" class="rc-tile" data-act="rtline" data-i="${i}" aria-pressed="${on}" aria-label="${esc(lineName(it).base)}: ${b ? `${b} of ${c.n} brought back` : `${c.n} sent, none back`}" style="position:relative;width:auto;height:100px;border-radius:18px;padding:10px 8px 8px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;${on ? 'background:#fff;box-shadow:inset 0 0 0 2.5px #16203C,0 10px 22px rgba(22,32,60,.14)' : b ? 'background:#fff;box-shadow:inset 0 0 0 1.5px #F5B26B' : 'background:#fff;box-shadow:inset 0 0 0 1px var(--rule)'}">
+        <span style="flex:1;display:flex;align-items:center">${art(it, 'tile')}</span><span class="ell" style="font-size:12px;font-weight:700;color:var(--ink);max-width:100%">${esc(lineName(it).base)}</span>
+        <span class="m" style="height:18px;padding:0 7px;border-radius:999px;font-size:10px;font-weight:600;display:flex;align-items:center;margin-top:3px;${b ? (bad ? 'background:#FDE8E4;color:#A82D24' : 'background:var(--greenSoft);color:var(--green)') : 'background:#F1EEE8;color:#6B7480'}">${b ? `${esc(quoteLineCount(it, b).n)} of ${esc(c.n)}` : `${esc(c.n)} sent`}</span>
+        ${b ? `<span style="position:absolute;right:7px;top:7px;width:20px;height:20px;border-radius:999px;color:#fff;display:flex;align-items:center;justify-content:center;background:${bad ? '#C93A30' : '#0F6B43'}">${ic('ret', 11, 'style="stroke:#fff;stroke-width:3"')}</span>` : ''}</button>`; }).join('')}</div>`;
+  if (ui.sent) {
+    const s = ui.sent;
+    body += receiptHTML(`RETURN ${s.no}`, `${stampTime(msOf(s.createdAt) || Date.now())} · ${firstWord(myName())}`,
+      s.lines.map(l => [l.name, `${n0(l.qty)} ${l.unit || ''} · ${l.condition}`.replace('  ', ' '), l.condition === 'damaged' ? 'color:#A82D24' : 'color:var(--green)']).concat([['Photo', s.photo ? 'attached' : 'none', s.photo ? 'color:var(--green)' : 'color:#9AA1AE'], ['Held in', 'the returns bay · off the shelf']]),
+      'PROPOSED', `${mgr.toUpperCase()} DECIDES`, '#1A5A8A',
+      `<div role="img" aria-label="The Store proposed; ${esc(mgr)} decides the credit note; Accounts is told" style="display:flex;align-items:flex-start;padding-top:12px">
+        <span style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="width:30px;height:30px;border-radius:999px;background:#0F6B43;color:#fff;display:flex;align-items:center;justify-content:center">${ic('tick', 13, 'style="stroke:#fff;stroke-width:3.4"')}</span><span style="font-size:10px;font-weight:700;color:var(--green)">Store</span></span>
+        <i style="flex:1;height:2px;margin-top:14px;background:#0F6B43"></i>
+        <span style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><span class="st-waitdot" style="width:30px;height:30px;border-radius:999px;background:#F6E4F1;color:#7A3268;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">${esc(initials(mgr))}</span><span style="font-size:10px;font-weight:700;color:#7A3268;white-space:nowrap">credit note</span></span>
+        <i style="flex:1;height:2px;margin-top:14px;background:repeating-linear-gradient(90deg,#C9C4BA 0 4px,transparent 4px 8px)"></i>
+        <span style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="width:30px;height:30px;border-radius:999px;background:#F1EEE8;color:#9AA1AE;display:flex;align-items:center;justify-content:center">${ic('cash', 14)}</span><span style="font-size:10px;font-weight:700;color:#9AA1AE">Accounts</span></span></div>`);
+  } else if (cur) {
+    const c = quoteLineCount(cur, cur.qty), bc = quoteLineCount(cur, cb);
+    body += `<div class="st-card" style="padding:10px 12px 12px;border-radius:18px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;gap:8px;align-items:center"><button type="button" data-act="rtstep" data-d="-1" aria-label="One fewer" class="pk-step" style="background:#F1EEE8;height:52px">${ic('minus', 22, 'style="stroke-width:2.6"')}</button>
+        <span style="flex:1;height:52px;border-radius:16px;background:#FEF8F2;box-shadow:inset 0 0 0 1.5px #F5B26B;display:flex;align-items:center;justify-content:center;gap:6px"><span class="m" style="font-size:26px;font-weight:600">${esc(bc.n)}</span><span class="m" style="font-size:14px;color:#9AA1AE">/ ${esc(c.n)}</span><span style="font-size:12px;font-weight:700;color:var(--amberDeep)">${esc(c.unit)} back</span></span>
+        <button type="button" data-act="rtstep" data-d="1" aria-label="One more" class="pk-step" style="background:#F1EEE8;height:52px">${ic('plus', 22, 'style="stroke-width:2.6"')}</button></div>
+      <div role="radiogroup" aria-label="What state it is in" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;padding:4px;border-radius:14px;background:#ECE8E1">${[['Good · can sell', 'tick', '#0F6B43'], ['Damaged', 'warn', '#C93A30']].map(([nm, icn, col], k) =>
+        `<button type="button" role="radio" aria-checked="${cc === k}" data-act="rtcond" data-k="${k}" style="height:42px;border:none;border-radius:11px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:13px;font-weight:700;${cc === k ? 'background:#fff;color:var(--ink);box-shadow:0 2px 8px rgba(22,32,60,.12)' : 'background:transparent;color:#5F6980'}">${ic(icn, 15, `style="stroke:${col};stroke-width:2.2"`)}${nm}</button>`).join('')}</div>
+      ${photoBtn('rtphoto', ui.photo, ui.photo ? 'Photo attached' : 'Photo of what came back', ui.photo ? `${mgr} sees it with the return` : `one tap · ${mgr} sees it`)}</div>`;
+  }
+  const foot = `<div style="display:flex;flex-direction:column;gap:8px;width:100%"><div class="row">${slideHTML('ret', backed.length ? `Slide · propose ${nLines(backed.length)} back` : 'Tap what came back', 'ret', { done: !!ui.sent, doneLabel: `Proposed · ${mgr} told`, disabled: S.busy || !backed.length })}</div>
+    ${ui.sent ? `<button data-act="home" style="height:44px;border:none;background:none;font-size:14px;font-weight:700;color:var(--navy)">Done · back to Today</button>` : ''}</div>`;
+  return `<button class="tapback" data-act="back" aria-label="Back" style="height:calc(40px + var(--safe-area-inset-top))"></button>
+    <div class="card" style="height:calc(100% - 40px - var(--safe-area-inset-top));min-height:0">${head}
+      <div style="flex:1;min-height:0;overflow-y:auto;padding:12px 16px 8px;display:flex;flex-direction:column;gap:10px">${body}</div>
+      <div style="flex:none;padding:10px 16px calc(18px + var(--safe-area-inset-bottom));display:flex">${foot}</div></div>`;
+};
+PAGE.ret.bg = '#2A3350';
+ACT.goret = () => { FEEL.open(); S.ui.rt = null; push('ret', {}); };
+ACT['in:rtfind'] = t => { S.ui.rt.find = t.value; render(); };
+ACT.rtpick = t => { const ui = S.ui.rt; ui.id = Number(t.dataset.id); ui.sel = 0; FEEL.open(); render(); };
+function rtCur(){ const ui = S.ui.rt, q = ui && quoteById(ui.id); if (!q) return null; const items = (q.items || []).filter(it => (Number(it.qty) || 0) > 0), it = items[Math.min(ui.sel, items.length - 1)]; return it ? { ui, q, it, k: lineKey(it, items.indexOf(it)) } : null; }
+ACT.rtline = t => { const ui = S.ui.rt; if (!ui || ui.sent) return; ui.sel = Number(t.dataset.i); const c = rtCur(); if (c && !ui.back[c.k]) ui.back[c.k] = quoteLineCountPer(c.it); FEEL.tick(); render(); };
+ACT.rtstep = t => { const c = rtCur(); if (!c || c.ui.sent) return; const per = quoteLineCountPer(c.it); c.ui.back[c.k] = Math.max(0, Math.min(Number(c.it.qty) || 0, (c.ui.back[c.k] || 0) + Number(t.dataset.d) * per)); FEEL.tick(); render(); };
+ACT.rtcond = t => { const c = rtCur(); if (!c || c.ui.sent) return; c.ui.cond[c.k] = Number(t.dataset.k); FEEL.tick(); render(); };
+ACT.rtphoto = async () => { const ui = S.ui.rt; if (!ui || ui.sent) return; const p = await takePhoto(); if (!p) return; ui.photo = p.url; ui.blob = p.blob; FEEL.stamp(); render(); };
+ACT['slide:ret'] = async () => {
+  const ui = S.ui.rt, q = ui && quoteById(ui.id); if (!q || S.busy) return;
+  const items = (q.items || []).filter(it => (Number(it.qty) || 0) > 0);
+  const lines = items.map((it, i) => ({ it, k: lineKey(it, i) })).filter(x => ui.back[x.k] > 0).map(({ it, k }) => ({ lineId: it.lineId == null ? null : it.lineId, productId: it.productId, variantIdx: it.variantIdx == null ? null : it.variantIdx,
+    name: lineName(it).base, unit: quoteLineCount(it, 1).unit, qty: ui.back[k], sent: Number(it.qty) || 0, condition: (ui.cond[k] || 0) === 1 ? 'damaged' : 'good' }));
+  S.busy = true;
+  try { const r = await sendReturn(q, lines, ui.blob); ui.sent = { ...r, no: 'R-' + String((D().returns || []).length).padStart(3, '0') }; chimeDone(); }
+  catch (e) { FEEL.no(); toast(failSay(e, '0124'), 5000); }
+  S.busy = false; render();
+};
+
+/* ==================================================================
+   RIDE -- a buying trip the Buyer sent this Store person on. One stop
+   per trip (a trip is one supplier); tick each line onto the truck and
+   hand it in. Paid by the Buyer: no money on this phone.
+   ================================================================== */
+PAGE.ride = () => {
+  const ui = S.ui.rd || (S.ui.rd = { handed: null });
+  const trips = ui.handed ? ui.handed.trips.map(id => (D().collectionTrips || []).find(t => t.id === id)).filter(Boolean) : myTrips();
+  if (!trips.length) return goneSheet('No trip waiting for you');
+  const buyer = theBuyer();
+  const stops = trips.map((t, i) => { const sup = supplierById(t.supplierId), ls = tripLines(t), got = ls.filter(l => tripLineGot(l) != null).length;
+    return { t, i, name: (sup && sup.name) || 'The supplier', place: (sup && sup.location) || '', ls, got, done: got === ls.length && ls.length > 0 }; });
+  const allIn = stops.every(s => s.done), left = stops.reduce((n, s) => n + s.ls.length - s.got, 0), back = !!ui.handed;
+  const W0 = Math.max(260, W() - 32), n = stops.length, xs = [26].concat(stops.map((_, i) => Math.round(26 + (W0 - 70) * (i + 1) / (n + .6)))), ys = [96].concat(stops.map((_, i) => i % 2 ? 66 : 34));
+  const seg = (a, b, on) => `<path d="M${xs[a]} ${ys[a]} C ${(xs[a] + xs[b]) / 2} ${ys[a]}, ${(xs[a] + xs[b]) / 2} ${ys[b]}, ${xs[b]} ${ys[b]}" fill="none" stroke-width="3" stroke-linecap="round" ${on ? 'stroke="#6FDCB0"' : 'stroke="rgba(255,255,255,.3)" stroke-dasharray="4 6"'}/>`;
+  const map = `<div role="img" aria-label="The shop, then ${esc(stops.map(s => s.name).join(', then '))}, then back to the shop. ${stops.filter(s => s.done).length} of ${n} loaded" style="position:relative;height:128px;border-radius:18px;overflow:hidden;background:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px) 0 0/22px 22px,linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px) 0 0/22px 22px,#1B2649;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)">
+    <svg width="${W0}" height="128" viewBox="0 0 ${W0} 128" aria-hidden="true" style="position:absolute;inset:0">${stops.map((s, i) => seg(i, i + 1, s.done)).join('')}<path d="M${xs[n]} ${ys[n]} C ${xs[n] - 40} 120, 80 122, ${xs[0]} ${ys[0]}" fill="none" stroke-width="3" stroke-linecap="round" ${back ? 'stroke="#6FDCB0"' : 'stroke="rgba(255,255,255,.3)" stroke-dasharray="4 6"'}/></svg>
+    <span style="position:absolute;left:${xs[0] - 13}px;top:${ys[0] - 13}px;width:26px;height:26px;border-radius:8px;background:var(--mint);color:var(--navy);display:flex;align-items:center;justify-content:center">${ic('yard', 14, 'style="stroke-width:2.2"')}</span><span style="position:absolute;left:6px;top:${ys[0] + 15}px;font-size:10px;font-weight:700;color:var(--mint)">SHOP</span>
+    ${stops.map((s, i) => { const next = !s.done && stops.slice(0, i).every(p => p.done); return `<span style="position:absolute;left:${xs[i + 1] - 13}px;top:${ys[i + 1] - 13}px;width:26px;height:26px;border-radius:999px;display:flex;align-items:center;justify-content:center;${s.done ? 'background:var(--mint);color:var(--navy);box-shadow:0 0 0 4px rgba(111,220,176,.2)' : next ? 'background:var(--navy);color:var(--amber);box-shadow:inset 0 0 0 3px #F5B26B,0 0 0 4px rgba(245,178,107,.18)' : 'background:var(--navy);color:#8D99B5;box-shadow:inset 0 0 0 2px rgba(255,255,255,.3)'}">${s.done ? ic('tick', 12, 'style="stroke-width:3"') : `<i style="width:4px;height:4px;border-radius:999px;background:currentColor"></i>`}</span>
+      <span class="ell" style="position:absolute;left:${xs[i + 1] - 50}px;top:${ys[i + 1] + 15}px;width:100px;text-align:center;font-size:10px;font-weight:700;color:var(--navyInk)">${esc(shortName(s.name))}</span>`; }).join('')}</div>`;
+  const head = `<div style="background:radial-gradient(120% 100% at 90% 0%,#2B3866 0%,#16203C 60%);color:#fff;padding:8px 16px 14px;display:flex;flex-direction:column;gap:12px;flex:none">${grip()}
+      <div style="display:flex;align-items:center;gap:12px"><span style="position:relative;width:38px;height:38px;flex:none">${av(myName(), 'me', 38)}${buyer ? `<span style="position:absolute;right:-6px;bottom:-4px;box-shadow:0 0 0 2px #16203C;border-radius:999px">${av(buyer.name, buyer.id, 20)}</span>` : ''}</span>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--mint)">${esc(buyer ? firstWord(buyer.name).toUpperCase() + ' SENT YOU' : 'YOU ARE SENT')}</span><span class="ell" style="font-size:17px;font-weight:700">Buying trip · ${esc(shortName(stops[0].name))}${n > 1 ? ` +${n - 1}` : ''}</span></div>
+        ${buyer && telUrl(buyer.phone) ? `<a href="${telUrl(buyer.phone)}" aria-label="Call ${esc(buyer.name)}" style="width:40px;height:40px;border-radius:999px;background:rgba(111,220,176,.14);color:var(--mint);display:flex;align-items:center;justify-content:center;flex:none">${ic('phone', 16, 'style="stroke-width:2"')}</a>` : ''}${closeX()}</div>${map}</div>`;
+  let body;
+  if (back) {
+    body = receiptHTML('TRIP HANDED IN', `${stampTime(ui.handed.at)} · ${firstWord(myName())}`,
+      [['Stops', `${n} of ${n} loaded`, 'color:var(--green)'], ['Lines', stops.map(s => s.ls.map(l => `${quoteLineCount(l, l.qty).n} ${quoteLineCount(l, 1).unit}`).join(' · ')).join(' · '), "font-family:'IBM Plex Mono',monospace;font-size:12px"],
+       ['For', [...new Set(trips.flatMap(t => tripOrders(t).map(q => shortName(quoteClientName(q)))))].join(' · ') || 'the shelf'], ['Money', buyer ? `with ${firstWord(buyer.name)}` : 'with the buyer', 'color:#6B7480']],
+      'AT THE SHOP', 'CHECK IT IN', '#0F6B43', waitingOn('IN', 'Check it in at the shop', 'it shows on In for whoever counts it', 'background:var(--greenSoft);color:var(--green)'));
+  } else {
+    body = stops.map(s => `<div class="rc-in st-card" style="border-radius:20px;padding:10px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:center;gap:10px;padding:0 2px"><span style="width:28px;height:28px;border-radius:999px;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;${s.done ? 'background:#0F6B43;color:#fff' : s.got ? 'background:var(--amberSoft);color:var(--amberDeep)' : 'background:#F1EEE8;color:#5F6980'}">${s.i + 1}</span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span class="ell" style="font-size:14px;font-weight:700">${esc(s.name)}</span><span class="ell" style="font-size:11px;font-weight:600;color:#6B7480">${esc(s.place || nLines(s.ls.length))}</span></span>
+        <span class="st-chip" style="height:24px;font-size:11px;${s.done ? 'background:var(--greenSoft);color:var(--green)' : 'background:#F1EEE8;color:#5F6980'}">${s.done ? 'loaded' : `${s.got} of ${s.ls.length}`}</span></div>
+      ${s.ls.map((l, k) => { const on = tripLineGot(l) != null, q = quoteById(l.orderId), c = quoteLineCount(l, l.qty);
+        return `<button type="button" class="rc-tile" data-act="rdtick" data-t="${esc(s.t.id)}" data-i="${k}" aria-pressed="${on}" aria-label="${esc(lineName(l).base)}, ${esc(c.n)} ${esc(c.unit)}${on ? ', on the truck' : ', tap when loaded'}" style="width:auto;height:62px;border-radius:16px;padding:0 10px 0 8px;display:flex;align-items:center;gap:10px;text-align:left;${on ? 'background:var(--greenSoft)' : 'background:#F7F5F2'}">
+          <span style="width:46px;height:46px;border-radius:13px;background:#fff;display:flex;align-items:center;justify-content:center;flex:none;box-shadow:0 2px 6px rgba(22,32,60,.08)">${art(l, 'small')}</span>
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span class="ell" style="font-size:14px;font-weight:700">${esc(lineName(l).base)}</span><span style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:#6B7480">${q ? av(quoteClientName(q), q.id, 16) + 'for ' + esc(shortName(quoteClientName(q))) : 'for the shelf'}</span></span>
+          <span class="m" style="font-size:16px;font-weight:600">${esc(c.n)} ${esc(c.unit)}</span>
+          <span style="width:28px;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex:none;${on ? 'background:#0F6B43;color:#fff' : 'background:#fff;color:transparent;box-shadow:inset 0 0 0 1.5px #C9C4BA'}">${ic('tick', 13, 'style="stroke:currentColor;stroke-width:3.4"')}</span></button>`; }).join('')}</div>`).join('')
+      + `<span style="display:flex;align-items:center;gap:8px;padding:0 4px;font-size:12px;font-weight:600;color:var(--ink2)">${ic('shield', 15, 'style="stroke:#0F6B43"')}${buyer ? esc(firstWord(buyer.name)) + ' has paid' : 'Already paid'} · you load and bring it</span>`;
+  }
+  const foot = `<div style="display:flex;flex-direction:column;gap:8px;width:100%"><div class="row">${slideHTML('ride', allIn ? 'Slide · hand it in at the shop' : `Load ${left} more first`, 'truck', { done: back, doneLabel: 'Handed in · at the shop', disabled: S.busy || !allIn })}</div>
+    ${back ? `<button data-act="home" style="height:44px;border:none;background:none;font-size:14px;font-weight:700;color:var(--navy)">Done · back to Today</button>` : ''}</div>`;
+  return `<button class="tapback" data-act="back" aria-label="Back" style="height:calc(40px + var(--safe-area-inset-top))"></button>
+    <div class="card" style="height:calc(100% - 40px - var(--safe-area-inset-top));min-height:0">${head}
+      <div style="flex:1;min-height:0;overflow-y:auto;padding:12px 16px 8px;display:flex;flex-direction:column;gap:10px">${body}</div>
+      <div style="flex:none;padding:10px 16px calc(18px + var(--safe-area-inset-bottom));display:flex">${foot}</div></div>`;
+};
+PAGE.ride.bg = '#2A3350';
+ACT.goride = () => { FEEL.open(); S.ui.rd = null; push('ride', {}); };
+ACT.rdtick = async t => {
+  if (S.busy || (S.ui.rd && S.ui.rd.handed)) return;
+  const tr = (D().collectionTrips || []).find(x => x.id === t.dataset.t), i = Number(t.dataset.i); if (!tr) return;
+  const on = tripLineGot(tripLines(tr)[i]) == null; on ? FEEL.load() : FEEL.tick();
+  // Shown at once; written a moment later, onto the row as the server has it.
+  tr.lines = tripLines(tr).map((l, k) => k === i ? { ...l, gotQty: on ? Number(l.qty) || 0 : null } : l); render();
+  try { await tickTripLine(tr.id, i, on); } catch (e) { toast(failSay(e), 5000); await refreshLive(); }
+};
+ACT['slide:ride'] = async () => {
+  if (S.busy) return; const trips = myTrips(); if (!trips.length) return; S.busy = true;
+  try { for (const t of trips) await handInTrip(t.id); S.ui.rd = { handed: { trips: trips.map(t => t.id), at: Date.now() } }; FEEL.hand(); }
+  catch (e) { FEEL.no(); toast(failSay(e), 5000); }
+  S.busy = false; render();
+};
 </script>
 </body>
 </html>

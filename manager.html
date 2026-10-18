@@ -878,7 +878,11 @@ function rowToQuote(q){
     ...(q.payload || {}) };
 }
 function rowToTrip(r){ return { id: r.id, supplierId: r.supplier_id, status: r.status, assignedWorkerId: r.assigned_worker_id, createdAt: r.created_at, assignedAt: r.assigned_at,
-  acceptedAt: r.accepted_at, collectedAt: r.collected_at, confirmedAt: r.confirmed_at, note: r.note || '', lines: Array.isArray(r.lines) ? r.lines : [], voided: !!r.voided }; }
+  acceptedAt: r.accepted_at, collectedAt: r.collected_at, confirmedAt: r.confirmed_at, note: r.note || '', lines: Array.isArray(r.lines) ? r.lines : [], voided: !!r.voided,
+  difference: Array.isArray(r.difference) ? r.difference : null, differenceStatus: r.difference_status || null }; }
+// 0124: what the Store reported damaged, lost or stolen.
+function rowToReport(r){ return { id: r.id, key: r.key, productId: r.product_id, name: r.name || '', qty: Number(r.qty) || 0, reason: r.reason, photo: r.photo || null,
+  byName: r.reported_by_name || '', status: r.status, createdAt: r.created_at }; }
 
 async function loadAll(){
   const [suppliers, customers, debtLog, products, prices, stock, lots, quotes, settingsR, cashR, staff, trips, targetsR, stmR, promises] = await Promise.all([
@@ -893,6 +897,7 @@ async function loadAll(){
     sb.from('statements_sent').select('*').eq('shop_id', S.shopId).order('sent_on', { ascending: false }).limit(500).then(r => r, () => ({ data: [] })),
     selectAll('payment_promises').catch(() => []),
   ]);
+  const reports = await sb.from('stock_reports').select('*').eq('shop_id', S.shopId).order('created_at', { ascending: false }).limit(60).then(r => r.error ? null : r.data, () => null);
   const presets = (settingsR && settingsR.data && settingsR.data.presets) || {};
   const debtBy = {};
   debtLog.forEach(l => { (debtBy[l.customer_id] ||= []).push({ id: l.id, date: l.date, type: l.type, amount: Number(l.amount) || 0, note: l.note || '', cashTxnId: l.cash_txn_id == null ? null : Number(l.cash_txn_id), quoteId: l.quote_id == null ? null : Number(l.quote_id) }); });
@@ -915,6 +920,7 @@ async function loadAll(){
     savedQuotes: quotes.map(rowToQuote),
     cashTxns: ((cashR && cashR.data) || []).map(t => ({ id: t.id, date: t.date, account: t.account, type: t.type, category: t.category, amount: Number(t.amount) || 0, description: t.description || '', time: t.time || '', quoteId: t.quote_id == null ? null : Number(t.quote_id), enteredBy: t.entered_by || null })),
     collectionTrips: trips.map(rowToTrip),
+    reports: reports === null ? null : reports.map(rowToReport),
     targets: ((targetsR && targetsR.data) || []).map(r => ({ id: r.id, date: r.date, body: r.body || {}, status: r.status })),
     statementsSent: (stmR && stmR.data) || [],
     promises: promises.map(p => ({ id: p.id, customerId: p.customer_id, promisedOn: p.promised_on, madeOn: p.made_on, amount: p.amount == null ? null : Number(p.amount) })),
@@ -931,9 +937,11 @@ async function loadAll(){
 }
 async function refreshLive(){
   try {
-    const [quotes, trips] = await Promise.all([selectAll('saved_quotes'), selectAll('collection_trips').catch(() => null)]);
+    const [quotes, trips, reports] = await Promise.all([selectAll('saved_quotes'), selectAll('collection_trips').catch(() => null),
+      sb.from('stock_reports').select('*').eq('shop_id', S.shopId).order('created_at', { ascending: false }).limit(60).then(r => r.error ? null : r.data, () => null)]);
     S.data.savedQuotes = quotes.map(rowToQuote);
     if (trips) S.data.collectionTrips = trips.map(rowToTrip);
+    if (reports) S.data.reports = reports.map(rowToReport);
     S.loadedAt = Date.now(); saveSnapshot(); if (!S.dragging && !S.paying) render();
   } catch (e) { if (!isNetworkError(e)) console.warn(e); }
 }
@@ -1540,7 +1548,7 @@ async function giveTrip(tripId, staffId){
   return t;
 }
 // What this login may do, from role_tasks (0113 / 0116). Owners do it all.
-const ALL_TASKS = ['order.move', 'order.assign', 'credit.release', 'team.nudge', 'customer.edit', 'payment.receive', 'statement.send'];
+const ALL_TASKS = ['order.move', 'order.assign', 'credit.release', 'team.nudge', 'customer.edit', 'payment.receive', 'statement.send', 'pick.settle', 'trip.difference', 'stock.writeoff'];
 function tasks(){
   if (['owner', 'admin'].includes(S.role)) return ALL_TASKS;
   if (S.tasks) return S.tasks;
@@ -1857,6 +1865,8 @@ function needsYou(){
   const out = [], stuck = stuckOrders(), held = heldWaiting(), T = team();
   T.sales.forEach(s => { const g = s.userId ? personGoal(s.userId) : null; if (g && g.ahead < 0 && !g.reached) out.push({ k: 'behind', s, g }); });
   if (held.length) out.push({ k: 'held', n: held.length, first: held[0].c.name });
+  const sa = storeAsks().filter(x => !(S.ui.storeDone || {})[x.k]);
+  if (sa.length) out.push({ k: 'store', n: sa.length, first: sa[0] });
   const old = debtors().filter(d => d.age > 30);
   if (old.length) out.push({ k: 'old', n: old.length, v: sum(old, d => d.c.debt) });
   return { first: stuck[0] || null, rest: out, total: stuck.length + out.length };
@@ -1885,6 +1895,10 @@ function viewToday(){
     if (n.k === 'behind') return `<button class="bx-row" data-act="push" data-p="person" data-id="${n.s.id}">${pctRing(n.g.pct, 38, 3, '#95530C', pav(n.s, 28), '', '#EFECE6')}
       <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="bx-t">${esc(firstWord(n.s.name))} is behind pace</span><span class="bx-sub"><span class="m" style="color:var(--amberInk)">${short(-n.g.ahead)}</span> short</span></span>
       <span class="mx-act navy" style="height:34px;border-radius:999px">Look</span></button>`;
+    if (n.k === 'store') return `<button class="bx-row" data-act="openasks">
+      <span style="width:38px;height:38px;border-radius:12px;background:#FDEEE1;color:#95530C;display:flex;align-items:center;justify-content:center;flex:none">${ic('box', 19)}</span>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="bx-t ell">${n.n} from the Store need${n.n > 1 ? '' : 's'} you</span><span class="bx-sub ell">${esc(n.first.kindWord)} · ${esc(n.first.title)}${n.n > 1 ? ` +${n.n - 1} more` : ''}</span></span>
+      <span class="mx-act soft" style="height:34px;border-radius:999px">Decide</span></button>`;
     if (n.k === 'held') return `<button class="bx-row" data-act="push" data-p="approvals">
       <span style="width:38px;height:38px;border-radius:12px;background:var(--amberSoft);color:var(--amberInk);display:flex;align-items:center;justify-content:center;flex:none">${ic('cash', 19)}</span>
       <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="bx-t ell">${n.n} ${pl(n.n, 'order')} need${n.n > 1 ? '' : 's'} a yes</span><span class="bx-sub" style="display:flex;min-width:0"><span class="ell">${esc(n.first)}</span>${n.n > 1 ? `<span style="flex:none">&nbsp;+${n.n - 1} more</span>` : ''}</span></span>
@@ -2499,6 +2513,83 @@ ACT.hdecide = async t => {
     S.ui.decided[x.q.id] = { release: 'RELEASED', cash: 'ASKED', hold: 'HELD' }[v];
     (v === 'release' ? FEEL.yes : v === 'hold' ? FEEL.no : FEEL.stamp)();
   } catch (e) { toast(failWord(e), 5000); }
+  S.busy = false; render();
+};
+
+/* ---------------- from the Store: short picks, trip differences, write-offs (0124) ----------------
+   The Store proposes, the Manager decides; every yes goes to the owner's log.
+   Each card is one decision: the key figure big, a strip of squares that
+   shows it, and two answers. */
+function storeAsks(){
+  if (!S.data) return [];
+  const out = [], done = S.ui.storeDone || {};
+  D().savedQuotes.forEach(q => { if (q.voided || q.invoiced || !['preparing', 'pending_delivery', 'completed'].includes(q.status)) return;
+    (q.items || []).forEach(it => { if (it.pickStatus !== 'short' || it.pickSettle) return; const k = 'p' + q.id + ':' + it.lineId;
+      out.push({ k, kind: 'pick', kindWord: 'Short pick', title: it.productName || 'A line', sub: `${clientName(q)} · Q-${String(q.id).padStart(4, '0')}`, q, it,
+        got: Number(it.pickedQty) || 0, of: Number(it.qty) || 0, unit: it.unit || '', at: msOf(q.pickingDoneAt) || q.stageEnteredAt || 0 }); }); });
+  D().collectionTrips.forEach(t => { if (t.differenceStatus !== 'open' || !t.difference) return;
+    t.difference.forEach((d, i) => out.push({ k: 't' + t.id + ':' + i, kind: 'trip', kindWord: 'Trip', title: d.productName || 'A line', sub: `${firstWord((staffById(t.assignedWorkerId) || {}).name) || supplierName(t.supplierId) || 'A'}'s trip · the shop counted ${d.shop < d.buyer ? 'fewer' : 'more'}`,
+      t, buyer: Number(d.buyer) || 0, shop: Number(d.shop) || 0, unit: d.unit || '', at: msOf(t.confirmedAt) })); });
+  (D().reports || []).forEach(r => { if (r.status !== 'reported') return;
+    out.push({ k: 'r' + r.id, kind: 'off', kindWord: 'Write-off', title: r.name || 'An item', sub: `${firstWord(r.byName) || 'The Store'} reported ${r.qty} ${r.reason}${r.photo ? ' · photo' : ''}`, r, at: msOf(r.createdAt) }); });
+  // A decision stays on the page, stamped, until the page is left.
+  const seen = S.ui.storeSeen || (S.ui.storeSeen = {});
+  out.forEach(x => { seen[x.k] = x; });
+  Object.keys(done).forEach(k => { if (!out.some(x => x.k === k) && seen[k]) out.push(seen[k]); });
+  return out.sort((a, b) => (b.at || 0) - (a.at || 0));
+}
+function strip(parts, n){ const c = []; parts.forEach(([k, col]) => { for (let i = 0; i < k && c.length < n; i++) c.push(col); }); while (c.length < n) c.push('#E6E3DD'); return c; }
+function stripRow(label, cells, fig, figCol){
+  return `<div style="display:flex;align-items:center;gap:8px"><span style="width:46px;font-size:9px;font-weight:700;letter-spacing:.08em;color:#9AA1AE;flex:none">${esc(label)}</span>
+    <span style="flex:1;display:grid;grid-template-columns:repeat(${cells.length},minmax(0,1fr));gap:2px">${cells.map(c => `<i style="height:9px;border-radius:2px;background:${c}"></i>`).join('')}</span>
+    <span class="m" style="width:24px;text-align:right;font-size:11px;font-weight:600;color:${figCol || 'var(--ink)'}">${esc(fig)}</span></div>`;
+}
+PAGE.storeasks = () => {
+  const list = storeAsks(), done = S.ui.storeDone || (S.ui.storeDone = {}), open = list.filter(x => !done[x.k]).length;
+  const head = `<div class="bx-sheethead"><span class="bx-grip"></span>
+    <div style="display:flex;align-items:center;gap:10px"><span style="flex:1;display:flex;flex-direction:column;gap:3px"><span class="bx-eyebrow">THE STORE PROPOSES · YOU DECIDE</span><span style="font-size:20px;font-weight:700">From the Store · <span class="m">${open}</span> left</span></span>${closeBtn()}</div>
+    <span role="img" aria-label="${list.length - open} of ${list.length} decided" style="display:flex;gap:4px">${list.map(x => `<i style="flex:1;height:6px;border-radius:999px;background:${done[x.k] ? 'var(--mint)' : 'rgba(255,255,255,.22)'}"></i>`).join('')}</span></div>`;
+  if (!list.length) return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">${head}<div class="bx-body">${emptyCard('Nothing from the Store', 'Short picks, trip counts that differ from the Buyer\'s, and damaged or lost stock land here.')}</div></div>`;
+  const tint = { pick: ['#FDEEE1', '#95530C', 'box'], trip: ['#DCEAF8', '#1A5A8A', 'truck'], off: ['#FDE8E4', '#A82D24', 'bang'] };
+  const cards = list.map((x, i) => { const [bg, col, icon] = tint[x.kind], d = done[x.k];
+    let fig, word, vis, no, yes;
+    if (x.kind === 'pick') { const n = Math.max(x.of, 1), per = n > 20 ? n / 20 : 1;
+      fig = `${n0(x.got)}/${n0(x.of)}`; word = 'went'; vis = stripRow('WENT', strip([[Math.round(x.got / per), '#0F6B43'], [20, '#F5B26B']], Math.min(20, n)), n0(x.got), '#0F6B43');
+      no = ['full', `Bill all ${n0(x.of)}`]; yes = ['went', `Bill the ${n0(x.got)} that went`]; }
+    else if (x.kind === 'trip') { const n = Math.max(x.buyer, x.shop, 1), per = n > 20 ? n / 20 : 1;
+      fig = (x.shop - x.buyer > 0 ? '+' : '−') + n0(Math.abs(x.shop - x.buyer)); word = x.unit || 'units';
+      vis = stripRow('BUYER', strip([[Math.round(x.buyer / per), '#16203C']], Math.min(20, n)), n0(x.buyer)) + stripRow('SHOP', strip([[Math.round(Math.min(x.shop, x.buyer) / per), '#0F6B43'], [Math.round(Math.abs(x.buyer - x.shop) / per), '#F5B26B']], Math.min(20, n)), n0(x.shop), '#95530C');
+      no = ['ask', 'Ask the Buyer']; yes = ['accept', `Accept the shop's ${n0(x.shop)}`]; }
+    else { const n = 20; fig = n0(x.r.qty); word = x.r.reason;
+      vis = stripRow('ITEMS', strip([[Math.min(n, Math.round(x.r.qty)), '#F5B26B']], n).map((c, k) => k < Math.round(x.r.qty) ? c : '#C3CAD4'), n0(x.r.qty), '#95530C');
+      no = ['ask', `Ask ${firstWord(x.r.byName) || 'them'} why`]; yes = ['off', `Write off ${n0(x.r.qty)}`]; }
+    return `<div class="bx-card" style="border-radius:22px;padding:12px;display:flex;flex-direction:column;gap:9px;animation:mxIn .4s ${i * .06}s both">
+      <div style="display:flex;align-items:center;gap:8px"><span class="bx-chip" style="height:20px;font-size:10px;letter-spacing:.06em;background:${bg};color:${col}">${esc(x.kindWord.toUpperCase())}</span><span style="flex:1"></span><span style="font-size:11px;color:var(--ink3)">${x.at ? esc(ageWords(minsSince(x.at))) + ' ago' : ''}</span></div>
+      <div style="display:flex;align-items:center;gap:10px"><span style="width:42px;height:42px;border-radius:13px;background:${bg};color:${col};display:flex;align-items:center;justify-content:center;flex:none">${ic(icon, 22)}</span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><b class="ell" style="font-size:15px">${esc(x.title)}</b><span class="ell" style="font-size:12px;font-weight:600;color:var(--ink3)">${esc(x.sub)}</span></span>
+        <span style="display:flex;flex-direction:column;align-items:flex-end;flex:none"><span class="m" style="font-size:22px;font-weight:600;letter-spacing:-.03em;line-height:1;color:${col}">${esc(fig)}</span><span style="font-size:10px;font-weight:700;color:#9AA1AE;margin-top:3px">${esc(word)}</span></span></div>
+      <div role="img" aria-label="${esc(x.kindWord + ': ' + x.title + ', ' + fig + ' ' + word)}" style="display:flex;flex-direction:column;gap:5px;padding:8px 10px;border-radius:12px;background:var(--soft)">${vis}</div>
+      ${d ? `<div style="height:44px;border-radius:14px;background:var(--greenSoft);color:var(--green);display:flex;align-items:center;gap:8px;padding:0 6px 0 12px;font-size:13px;font-weight:700"><span style="width:22px;height:22px;border-radius:999px;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;flex:none">${ic('tick', 12, 'style="stroke:#fff;stroke-width:3.4"')}</span><span class="ell" style="flex:1">${esc(d.label)}</span><span style="height:30px;padding:0 10px;border-radius:10px;background:#fff;color:var(--ink3);font-size:11px;font-weight:700;display:flex;align-items:center">owner's log</span></div>`
+        : can({ pick: 'pick.settle', trip: 'trip.difference', off: 'stock.writeoff' }[x.kind]) ? `<div style="display:flex;gap:8px"><button class="bx-btn" style="flex:1;height:44px;font-size:13px;background:var(--soft);color:var(--ink)" data-act="sadecide" data-k="${esc(x.k)}" data-v="${no[0]}" ${S.busy ? 'disabled' : ''}>${esc(no[1])}</button><button class="bx-btn red" style="flex:1.35;height:44px;font-size:13px" data-act="sadecide" data-k="${esc(x.k)}" data-v="${yes[0]}" ${S.busy ? 'disabled' : ''}>${esc(yes[1])}</button></div>`
+        : `<div class="mx-lock">${ic('lock', 14)}The owner turns this on for a manager (${esc({ pick: 'pick.settle', trip: 'trip.difference', off: 'stock.writeoff' }[x.kind])}).</div>`}</div>`; }).join('');
+  return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">${head}<div class="bx-body">${cards}</div></div>`;
+};
+ACT.openasks = () => { S.ui.storeDone = {}; FEEL.open(); push('storeasks', {}); };
+ACT.sadecide = async t => {
+  if (S.busy) return; const x = storeAsks().find(y => y.k === t.dataset.k); if (!x) return; const v = t.dataset.v; S.busy = true; render();
+  let label = '';
+  try {
+    if (x.kind === 'pick') { const { error } = await sb.rpc('settle_short_pick', { p_shop: S.shopId, p_order: Number(x.q.id), p_line: String(x.it.lineId), p_mode: v }); if (error) throw error;
+      label = v === 'went' ? `Billing ${n0(x.got)} · Sales told` : `Billing all ${n0(x.of)} · Sales told`;
+      x.it.pickSettle = { bill: v, at: Date.now() }; if (v === 'went') { x.it.orderedQty = x.it.qty; x.it.qty = x.got; } }
+    else if (x.kind === 'trip') { const { error } = await sb.rpc('accept_trip_difference', { p_shop: S.shopId, p_trip: x.t.id, p_accept: v === 'accept' }); if (error) throw error;
+      label = v === 'accept' ? `${n0(x.shop)} accepted · the Buyer told` : 'Asked the Buyer'; x.t.differenceStatus = v === 'accept' ? 'accepted' : 'asked'; }
+    else { const { error } = await sb.rpc(v === 'off' ? 'write_off_stock' : 'ask_about_report', { p_id: x.r.id }); if (error) throw error;
+      label = v === 'off' ? `${n0(x.r.qty)} written off · shelf ${n0(Math.max(0, (D().stock[x.r.key] || 0) - x.r.qty))}` : `Asked ${firstWord(x.r.byName) || 'the Store'}`;
+      if (v === 'off') D().stock[x.r.key] = Math.max(0, (D().stock[x.r.key] || 0) - x.r.qty); x.r.status = v === 'off' ? 'written_off' : 'asked'; }
+    (S.ui.storeDone || (S.ui.storeDone = {}))[x.k] = { label, keep: true };
+    saveSnapshot(); (v === 'ask' || v === 'full' ? FEEL.stamp : FEEL.yes)();
+  } catch (e) { FEEL.no(); toast(/function|schema cache|does not exist/i.test(e.message || '') ? 'This needs migration 0124 on the database — ask the owner to run it.' : failWord(e), 5000); }
   S.busy = false; render();
 };
 
