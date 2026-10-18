@@ -45946,6 +45946,21 @@ function buildSyncRows(d, shopId){
            and hiding the counter's share of the takings. Written only
            when there is one, so an ordinary order carries no key at all. */
         ...(q.counterSale ? {counterSale:true} : {}),
+        /* What the phone apps and the server write, named for the same
+           reason: the Manager's credit answer (creditCheck), the cost they
+           asked the Buyer for (costAsked), how a short pick was settled
+           (pickSettle), who took the order (takenBy), a counter sale
+           taken at the Sales desk (counter), a move the Checking gate
+           kept back (gateHeldMove), and who invoiced it (invoicedBy) --
+           the last is how the database tells this copy saw the invoice,
+           so dropping it would stop the owner ever taking one back. */
+        ...(q.creditCheck ? {creditCheck:q.creditCheck} : {}),
+        ...(q.costAsked ? {costAsked:q.costAsked} : {}),
+        ...(q.pickSettle ? {pickSettle:q.pickSettle} : {}),
+        ...(q.takenBy ? {takenBy:q.takenBy} : {}),
+        ...(q.counter ? {counter:true} : {}),
+        ...(q.gateHeldMove ? {gateHeldMove:q.gateHeldMove} : {}),
+        ...(q.invoicedBy ? {invoicedBy:q.invoicedBy} : {}),
         ...(q.waConversationId != null ? {waConversationId:q.waConversationId} : {}),
         // WhatsApp-originated orders only -- same preservation contract
         // as the agent fields above: absent for a normal order, and an
@@ -63937,6 +63952,16 @@ function setSavedQuoteStatus(id, status, opts){
   if(!SQ_STATUSES[status]) return;
   const q = data.savedQuotes.find(x=>x.id===id);
   if(!q) return;
+  // The Checking gate, asked before the move rather than after the
+  // server keeps it back (0119): the Manager's decision is still to make.
+  if(q.status==='draft' && status!=='draft' && !q.voided){
+    const held = typeof orderCheckingGate === 'function' ? orderCheckingGate(q) : null;
+    if(held){
+      toast(held==='price' ? 'A price on this order waits for the Manager — it moves on once they decide.'
+        : 'This order takes the customer over their credit limit — it moves on once the Manager releases it.', 5000);
+      return;
+    }
+  }
   // Moving an order ON out of Being Prepared ends the pick, whoever moved it
   // and for whatever reason. Here rather than in stepSavedQuoteStatus,
   // because this is the one place a status actually changes.
@@ -64319,6 +64344,26 @@ function orderUnconfirmedSuppliers(q){
 function orderDraftReady(q){
   return orderUnconfirmedSuppliers(q).length === 0;
 }
+/* THE CHECKING GATE, as the database holds it (0119_shared_foundation):
+   a salesperson's price under the shop's waits for the Manager's yes at
+   the price and quantity the line stands at now, and an order that takes
+   the customer over their credit limit waits until the Manager says
+   Release (manager.html lineWaitsPrice and creditCase). 'price', 'credit',
+   or null when nothing holds it. */
+function orderCheckingGate(q){
+  if(!q) return null;
+  const waits = it => !!it && !!it.priceBy && ['under','nomargin','nocost'].includes(it.priceNote)
+    && !(it.priceReview && Number(it.priceReview.price) === Math.round(Number(it.sellPrice) > 0 ? Number(it.sellPrice) : quoteItemSellPrice(it))
+         && Number(it.priceReview.qty) === Number(it.qty));
+  if((q.items||[]).some(waits)) return 'price';
+  const c = q.customerId ? (data.customers||[]).find(x=> String(x.id) === String(q.customerId)) : null;
+  const limit = c ? Number(c.creditLimit) || 0 : 0;
+  if(limit > 0){
+    const owes = Math.max(0, Math.round(savedQuoteTotal(q)) - (Number(q.amountPaid)||0));
+    if((Number(c.debt)||0) + owes > limit && (!q.creditCheck || q.creditCheck.decision === 'hold')) return 'credit';
+  }
+  return null;
+}
 /* LEAVING TAKEN. The one move the board used to hold for a tap, made
    here for both of the ways it can happen: by itself, when the last
    supplier confirms (auto), or by the owner's own tap on an order that
@@ -64337,6 +64382,7 @@ function orderLeaveDraft(q, opts){
   if(agentOrderNeedsShopCheck(q)) return false;
   if(agentPaymentBlocksPreparing(q)) return false;
   if(typeof agentOrderOnHold === 'function' && agentOrderOnHold(q)) return false;
+  if(typeof orderCheckingGate === 'function' && orderCheckingGate(q)) return false;
   setSavedQuoteStatus(q.id, orderAwaitsGoods(q) ? 'awaiting_goods' : 'preparing', { auto: !force });
   return true;
 }
@@ -65883,6 +65929,14 @@ async function toggleQuoteInvoiced(id){
   }
   togglingInvoiced.add(id);
   try{
+  /* The Manager or the 24-hour run may have invoiced it on the server
+     since this copy was loaded (invoice_order, 0119). Asked first, so its
+     stock, bills and debt are not raised a second time. */
+  if(!q.invoiced && typeof sb !== 'undefined' && sb && currentShopId){
+    let onServer = null;
+    try{ ({ data: onServer } = await sb.from('saved_quotes').select('invoiced').eq('shop_id', currentShopId).eq('id', id).maybeSingle()); }catch(_e){}
+    if(onServer && onServer.invoiced){ toast('Already invoiced — by the Manager or 24 hours after delivery. Reload to see it.', 6000); return; }
+  }
   q.invoiced = !q.invoiced;
   /* A late entry is invoiced on its own date -- the day the goods went --
      so the register, the supplier bills it raises and every age read from

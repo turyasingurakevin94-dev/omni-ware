@@ -49,6 +49,21 @@ a Database Webhook on `stock_counts` INSERT pointing at it (header
 supabase functions deploy notify-stock-count --no-verify-jwt
 ```
 
+`push-send` delivers every other push: each handoff that waits on someone
+(docs/decision-rights.md, "Push notifications are part of the system"). The
+database writes one row to `push_outbox` per handoff (0120) and says who it
+is for; `push-send` sends it to those logins' phones with the same
+`FIREBASE_SERVICE_ACCOUNT_JSON`, and sweeps any unsent row of the last day on
+every call. Deploy it open and add a Database Webhook on `push_outbox`
+INSERT pointing at it (header `x-webhook-secret` = `PUSH_SEND_SECRET`):
+```
+supabase secrets set PUSH_SEND_SECRET="$(openssl rand -hex 24)"
+supabase functions deploy push-send --no-verify-jwt
+```
+Each phone app registers its FCM token in `push_subscriptions` with its own
+`user_id` (a login without a staff row, like the owner's, leaves `staff_id`
+empty), and needs its own `google-services.json` to get one.
+
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided automatically to
 every deployed function — no need to set those.
 
@@ -126,8 +141,9 @@ The secrets that remain, and what reads them:
 
 | secret | read by |
 | --- | --- |
-| `FIREBASE_SERVICE_ACCOUNT_JSON` | `notify-worker`, for FCM |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | `notify-worker`, `notify-stock-count` and `push-send`, for FCM |
 | `NOTIFY_WORKER_SECRET` | `notify-worker`, to authenticate the webhook |
+| `PUSH_SEND_SECRET` | `push-send`, to authenticate the webhook |
 | `AIRTEL_CALLBACK_HMAC_KEY` *(optional, unset)* | `airtel-payment-webhook` |
 | `SUPABASE_*` | provided automatically to every function |
 

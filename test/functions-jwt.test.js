@@ -47,7 +47,8 @@ const names = fs.readdirSync(FN_DIR)
 // 20 with agent-change-order: an agent cancelling, asking for fewer, or
 // spending credit. It reads the caller's JWT like the rest of the agent's.
 // 21 with notify-stock-count: a Database Webhook, like notify-worker.
-t.check(names.length === 21, `all ${names.length} functions found`);
+// 22 with push-send (0120): the same, on every push_outbox insert.
+t.check(names.length === 22, `all ${names.length} functions found`);
 
 const open = [];   // no incoming Authorization — must be verify_jwt = false
 const closed = [];
