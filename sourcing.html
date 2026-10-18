@@ -268,6 +268,7 @@ button,input,select,textarea{font-family:inherit;color:inherit;}
 .sx-fail{min-height:70vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px;text-align:center;color:var(--ow-ink-600);font-size:14px;}
 .sx-fail b{color:var(--ow-ink-900);font-size:17px;}
 .sx-fail button{height:48px;padding:0 18px;border:none;border-radius:14px;background:var(--ow-navy);color:#fff;font-weight:700;font-size:15px;cursor:pointer;}
+.sx-kb-hide{visibility:hidden!important;pointer-events:none!important;}
 .sx-toast{position:fixed;left:50%;bottom:calc(104px + var(--safe-b));transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:80;max-width:min(92vw,480px);
   padding:12px 16px;border-radius:14px;background:var(--ow-navy);color:#fff;font-size:14px;font-weight:600;line-height:1.35;box-shadow:0 6px 20px rgba(27,36,56,.18);transition:opacity .2s,transform .2s;}
 .sx-toast.on{opacity:1;transform:translate(-50%,0);}
@@ -674,6 +675,7 @@ function srvMount(host, markup, comp) {
     out.forEach(n => frag.appendChild(n));
     srvMorphChildren(host, frag);
     if (typeof comp.afterRender === 'function') { try { comp.afterRender(host); } catch (e) { console.warn(e); } }
+    if (typeof KB !== 'undefined' && KB.up) { KB.up = false; kbCheck(); }
   };
   comp.__schedule = () => { if (queued) return; queued = true; Promise.resolve().then(render); };
   comp.__renderNow = render;
@@ -740,6 +742,42 @@ function toast(msg, ms){
   el.textContent = msg; el.classList.add('on');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('on'), ms || 3400);
 }
+
+/* ---------------- the keyboard ----------------
+   On a phone the page shrinks when the keyboard opens, and every bar
+   pinned to the bottom (the tabs, a Save or Put-it-in button, a hint)
+   rides up with it and lands on what is being typed into. While the
+   keyboard is up those bars step aside; they come back when it closes.
+   A bar that holds the box being typed in stays. */
+const KB = { tall: 0, up: false, hidden: [] };
+function kbTyping(){ const a = document.activeElement; return !!a && (a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && !/^(checkbox|radio|button|submit|range|file|color)$/i.test(a.type || '')) || a.isContentEditable); }
+function kbHeight(){ return window.visualViewport ? Math.round(window.visualViewport.height) : window.innerHeight; }
+function kbCheck(){
+  const h = kbHeight();
+  if (!kbTyping() || h > KB.tall) KB.tall = Math.max(KB.tall * (kbTyping() ? 1 : 0), h);
+  const up = kbTyping() && h < KB.tall - 120;
+  if (up === KB.up && !up) return;
+  KB.up = up;
+  KB.hidden.forEach(el => el.classList.remove('sx-kb-hide')); KB.hidden = [];
+  if (!up) return;
+  const host = document.getElementById('sx_screen'); if (!host) return;
+  const a = document.activeElement, hb = host.getBoundingClientRect();
+  host.querySelectorAll('*').forEach(el => {
+    const cs = getComputedStyle(el);
+    if (cs.position !== 'absolute' && cs.position !== 'fixed' && cs.position !== 'sticky') return;
+    const b = el.getBoundingClientRect();
+    if (!b.height || b.bottom < hb.bottom - 40 || b.top < hb.top + hb.height * 0.35 || el.contains(a)) return;
+    if (KB.hidden.some(x => x.contains(el))) return;
+    el.classList.add('sx-kb-hide'); KB.hidden.push(el);
+  });
+  const t = document.querySelector('.sx-toast'); if (t) t.classList.add('sx-kb-hide'), KB.hidden.push(t);
+  // The box being typed in stays in sight above the keyboard.
+  if (a && a.scrollIntoView) { const ab = a.getBoundingClientRect(); if (ab.top < hb.top + 8 || ab.bottom > kbHeight() - 8) a.scrollIntoView({ block: 'center' }); }
+}
+(window.visualViewport || window).addEventListener('resize', () => setTimeout(kbCheck, 60));
+document.addEventListener('focusin', () => setTimeout(kbCheck, 350));
+document.addEventListener('focusout', () => setTimeout(kbCheck, 120));
+setTimeout(kbCheck, 0);
 
 /* ---------------- sounds and buzz ----------------
    One answer, one feel, the pairs the buyer app uses: a click for a tick,
