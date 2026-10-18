@@ -1,3 +1,7 @@
+# Who decides what — read first
+
+Before changing any role app (sales, buyer, store, manager, accounts, the console) or any migration that touches `role_tasks`, read **`docs/decision-rights.md`**. It is binding and it overrides older comments that say "stays the owner's". In short: the **Manager** decides prices (anything at or above cost), markups, credit, returns, voids, credit notes, stock write-offs and each salesperson's goal. The **owner** gets a log, not a queue. For anything that file lists as not decided yet, ask the owner rather than inventing who does it. `test/decision-rights.test.js` fails if the migrations and that file disagree.
+
 # Permanent UI/UX Design Preference — Visual-First Communication
 
 Remember and apply the following design preference across all my projects, interfaces, dashboards, pages, and future UI/UX work.
