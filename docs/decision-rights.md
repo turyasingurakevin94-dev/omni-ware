@@ -103,7 +103,7 @@ row in the same commit. The test fails on any mismatch, in either direction.
 |---|---|---|---|---|---|
 | Release an order held for credit | `credit.release` | Manager | Sales | Sales | yes |
 | **Set a customer's credit limit, payment terms, and the shop's hold days** | `credit.set` | Manager | Sales, Accounts | owner's log | no |
-| **Record a customer's promise to pay** | `promise.record` | Sales, Manager, Accounts | — | Manager | yes: Accounts |
+| **Record a customer's promise to pay** | `promise.record` | Sales, Manager, Accounts | — | Manager | yes: Accounts, Sales |
 | **Decide an agent's change or cancel request** | `agent.change` | Manager | the agent | Buyer, the agent | no |
 | Take a customer's payment | `payment.receive` | Sales, Manager, Accounts | — | — | yes |
 | Send a statement | `statement.send` | Sales, Manager, Accounts | — | — | yes |
@@ -415,11 +415,6 @@ adds it to this table in the same commit.
 
 These are fixed when the matching row is built:
 
-- **sales.html**
-  - `PRICE_TAG` "owner reviews"
-  - the set-price sheet: "the owner will see it" and "the owner reviews it"
-  - the goal page: "SET BY THE OWNER"
-  - the new-customer sheet: "the owner gives credit"
 - **manager.html**
   - "PROPOSED · OWNER SETS GOALS"
   - "The owner sets limits, terms and the N-day hold line"
