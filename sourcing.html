@@ -1656,8 +1656,32 @@ async function boot(){
     else splash(`<b>Could not open the books</b><span>${esc(e.message || e)}</span><button type="button" onclick="location.reload()">Try again</button>`);
   }
 }
+/* ---- pushes to this phone (0120: push_outbox, sent by push-send) ----
+   Asked once, quietly, as the app starts: Android's own "allow
+   notifications" is the only thing that shows. The phone is this login's
+   (user_id), with its staff row when it has one. A tap opens the app on
+   fresh figures. Inside the installed app only. */
+function phonePush(){
+  const C = window.Capacitor, P = C && C.isNativePlatform && C.isNativePlatform() && C.Plugins && C.Plugins.PushNotifications;
+  if (!P || phonePush.on || !S.user || !S.shopId) return; phonePush.on = true;
+  P.addListener('registration', async t => {
+    try {
+      const { data: st } = await sb.from('staff').select('id').eq('shop_id', S.shopId).eq('user_id', S.user.id).maybeSingle();
+      await sb.from('push_subscriptions').upsert({ shop_id: S.shopId, staff_id: st ? st.id : null, user_id: S.user.id, fcm_token: t.value }, { onConflict: 'fcm_token' });
+    } catch (_e) {}
+  });
+  P.addListener('pushNotificationActionPerformed', () => { loadAll().then(() => A.redraw()).catch(() => {}); });
+  (async () => {
+    try {
+      let perm = await P.checkPermissions();
+      if (perm.receive !== 'granted' && perm.receive !== 'denied') perm = await P.requestPermissions();
+      if (perm.receive === 'granted') await P.register();
+    } catch (_e) {}
+  })();
+}
 function start(){
   S.started = true;
+  phonePush();
   A.tab('Main');
   const refresh = () => loadAll().then(() => A.redraw()).catch(() => {});
   setInterval(() => { if (document.visibilityState === 'visible' && !S.busy) refresh(); }, 90000);

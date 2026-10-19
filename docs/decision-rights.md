@@ -76,7 +76,7 @@ row in the same commit. The test fails on any mismatch, in either direction.
 | Decision | Task | Who decides | Proposes | Told | Built |
 |---|---|---|---|---|---|
 | Make an order at or above the shop's price | `quote.make` | Sales | — | — | yes |
-| **Sell over the counter: pay and go, for goods on the shelf** | `counter.sell` | Sales | — | Manager | no |
+| **Sell over the counter: pay and go, for goods on the shelf** | `counter.sell` | Sales | — | Manager | yes |
 | **Forward an item we don't sell to Sourcing, while taking the order** | `sourcing.ask` | Sales | — | Sourcing | yes |
 | **Sell below the shop's price (at or above cost)** | `price.approve` | Manager | Sales | Sales, owner's log | yes |
 | **Price a line that has no selling price or no known cost** | `price.approve` | Manager | Sales, Buyer | Sales, owner's log | yes |
@@ -195,9 +195,12 @@ row in the same commit. The test fails on any mismatch, in either direction.
   - raises the customer's debt;
   - creates one bill per supplier.
 
-  Today it lives in index.html (`toggleQuoteInvoiced`). Move it to **one**
-  database function, used by both the Manager's button and the nightly job.
-  Never write a second copy in JavaScript.
+  It lives in **one** database function, `invoice_order(shop, order)` (0119),
+  used by the Manager's button, a salesperson's counter sale and the hourly
+  run (`ow_invoice_due_orders`, on pg_cron). Never write a second copy in
+  JavaScript. The console's own `toggleQuoteInvoiced` is the owner's, from
+  before; it keeps the same keys on the order, so either can take an
+  invoice back, and a copy that never saw the server's invoice cannot.
 
 ### The price decision
 
@@ -318,6 +321,11 @@ That covers:
 - a request listed, to the salesperson who asked;
 - the owner's log, as a daily digest, not a ping per decision.
 
+Built in 0120: the database writes each of these to `push_outbox` in the
+same transaction as the handoff, addressed by task (so it follows this file),
+and `push-send` delivers it. A new handoff adds its trigger there, never a
+send from an app.
+
 Every phone app ships with push. The apps that still lack their Firebase set-up
 (`google-services.json` for sales, buyer, store, manager, accounts, sourcing
 and the Owner app) get it as part of the build, not later. A nudge is a push,
@@ -352,14 +360,21 @@ intelligence centre for analytics, the AI manager and reports (section 1).
 
 ## 5. Build order
 
-0. **The shared foundation, built once, before any app builds on it:**
+0. **The shared foundation, built once, before any app builds on it** (built:
+   0119 and 0120):
    - the Checking gate (prices and credit) as a database guard
-   - the one invoicing function, used by the Manager's button and the 24-hour
-     run
-   - the server job for the 24-hour automatic invoice
+     (`saved_quotes_ow_checking_gate`). A move it refuses is kept back on the
+     order (`gateHeldMove`) and made by the write that clears the last
+     decision. Only `price.approve` writes a line's `priceReview`.
+   - the one invoicing function, `invoice_order`, used by the Manager's
+     button, the counter sale and the 24-hour run
+   - the server job for the 24-hour automatic invoice (every hour, on pg_cron)
    - adding the `'sourcing'` role (done ahead of the rest, in 0128)
-   - push for every app
-   - the console switched to the same functions
+   - push for every app: `push_outbox`, filled by the database at each
+     handoff, delivered by the `push-send` Edge Function. Each phone app
+     registers its FCM token in `push_subscriptions` under its own login.
+   - the console asks the same gate (`orderCheckingGate`) before a move, and
+     keeps the keys the apps and the server write
 
    No app session builds its own copy of any of these.
 
@@ -408,6 +423,7 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0126 | Sourcing |
 | 0127 | Owner app |
 | 0128 | The `'sourcing'` role, ahead of the rest of the shared foundation (0119) |
+| 0129 | Push for 0122's tables: the write-off report and the held restock line (after 0120 and 0122) |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.
