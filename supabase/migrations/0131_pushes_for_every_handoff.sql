@@ -24,7 +24,7 @@
 --   to Sourcing
 --     A new request                  a sourcing.ask request      sourcing.lead
 --     A line was dropped at Checking a dropped-line request      sourcing.lead
---     N prices to confirm today      every working day, 08:00    price.list
+--     N prices to confirm today      every working day, 08:00    Sourcing, while price.confirm is on
 --
 -- Applied by hand like every migration here, after 0120 (the outbox),
 -- 0122 (stock_reports), 0123 (invoice_asks), 0125 (buyer_handoffs) and
@@ -255,9 +255,8 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------
--- 6. The mornings. A supplier bill due tomorrow (07:00) and the day's
---    prices to confirm (08:00, Monday to Saturday), as the console counts
---    them: a bill's balance is purchaseInvoiceTotal less what is paid.
+-- 6. The mornings. A supplier bill due tomorrow (07:00): its balance as
+--    the console counts it, purchaseInvoiceTotal less what is paid.
 create or replace function ow_push_bills_due()
 returns int
 language plpgsql security definer set search_path = public as $$
@@ -291,42 +290,79 @@ begin
 end $$;
 revoke all on function ow_push_bills_due() from public, anon, authenticated;
 
+-- The day's prices, counted as the Sourcing app counts them (sourcing.html
+-- todaysShare): the owner's number a day (priceReview.perDay, else a
+-- 26th of targetPerPeriod, else 6) less those already confirmed today;
+-- from prices older than the stale line (staleDays, else 30) for items
+-- asked for in the last 90 days or on the shelf; oldest first, a row with
+-- no date the oldest. To Sourcing, and only while Sourcing holds
+-- price.confirm and the owner has not switched it off (0127).
 create or replace function ow_push_prices_to_confirm()
 returns int
 language plpgsql security definer set search_path = public as $$
 declare
   s record;
+  pr jsonb;
   per int;
-  top record;
+  stale int;
+  done int;
+  lft int;
   total int;
+  top record;
   n int := 0;
   d date := ow_today();
+  off boolean;
 begin
   for s in
     select distinct m.shop_id from shop_members m
-     where exists (select 1 from role_tasks rt where rt.role = m.role and rt.task = 'price.list')
+     where m.role = 'sourcing'
+       and exists (select 1 from role_tasks rt where rt.role = 'sourcing' and rt.task = 'price.confirm')
   loop
-    per := coalesce(ow_num((select a.presets -> 'priceReview' ->> 'perDay' from app_settings a where a.shop_id = s.shop_id))::int, 6);
-    continue when per <= 0;
-    -- Today's share: the prices confirmed longest ago, oldest first.
-    with share as (
-      select r.supplier_id from prices r
-       where r.shop_id = s.shop_id and not coalesce(r.out_of_stock, false)
-       order by r.date nulls first, r.id
-       limit per)
-    select count(*) into total from share;
+    off := false;
+    if to_regclass('public.shop_task_off') is not null then
+      execute 'select exists (select 1 from shop_task_off where shop_id = $1 and role = $2 and task = $3)'
+        into off using s.shop_id, 'sourcing', 'price.confirm';
+    end if;
+    continue when off;
+    pr := coalesce((select a.presets -> 'priceReview' from app_settings a where a.shop_id = s.shop_id), '{}'::jsonb);
+    per := case when coalesce(ow_num(pr ->> 'perDay'), 0) > 0 then ow_num(pr ->> 'perDay')::int
+                when coalesce(ow_num(pr ->> 'targetPerPeriod'), 0) > 0 then greatest(1, ceil(ow_num(pr ->> 'targetPerPeriod') / 26))::int
+                else 6 end;
+    stale := case when coalesce(ow_num(pr ->> 'staleDays'), 0) > 0 then ow_num(pr ->> 'staleDays')::int else 30 end;
+
+    create temporary table if not exists _ow_share (supplier_id text, ord int) on commit drop;
+    truncate _ow_share;
+    with rows as (
+      select r.* from prices r
+       where r.shop_id = s.shop_id
+         and exists (select 1 from products p where p.shop_id = s.shop_id and p.id = r.product_id)
+         and exists (select 1 from suppliers su where su.shop_id = s.shop_id and su.id = r.supplier_id)),
+    demand as (
+      select ow_stock_key(e ->> 'productId', ow_num(e ->> 'variantIdx')) as k
+        from saved_quotes q, jsonb_array_elements(case when jsonb_typeof(q.payload -> 'items') = 'array' then q.payload -> 'items' else '[]'::jsonb end) e
+       where q.shop_id = s.shop_id and not q.voided and coalesce(e ->> 'productId', '') <> ''
+         and coalesce(ow_ts(coalesce(nullif(q.payload ->> 'savedAt', ''), nullif(q.payload ->> 'createdAt', ''))),
+                      (q.date + time '08:00') at time zone ow_shop_tz(), now()) >= now() - interval '90 days'
+      union
+      select st.key from stock st where st.shop_id = s.shop_id and st.qty > 0),
+    due as (
+      select r.supplier_id, r.id, case when r.date is null then null else d - r.date end as age
+        from rows r
+       where not (r.date = d and r.price_source in ('confirmed', 'purchase'))
+         and ow_stock_key(r.product_id, ow_num(r.variant_idx)) in (select k from demand))
+    insert into _ow_share (supplier_id, ord)
+    select x.supplier_id, row_number() over (order by (x.age is null) desc, x.age desc, x.id::text)
+      from due x where x.age is null or x.age > stale;
+    select count(*) into done from prices r where r.shop_id = s.shop_id and r.date = d and r.price_source in ('confirmed', 'purchase');
+    lft := greatest(0, per - done);
+    select count(*) into total from _ow_share where ord <= lft;
     continue when total = 0;
-    with share as (
-      select r.supplier_id from prices r
-       where r.shop_id = s.shop_id and not coalesce(r.out_of_stock, false)
-       order by r.date nulls first, r.id
-       limit per)
     select sh.supplier_id, count(*) as k,
            coalesce((select su.name from suppliers su where su.shop_id = s.shop_id and su.id = sh.supplier_id), 'one supplier') as name
-      into top from share sh group by sh.supplier_id order by count(*) desc, sh.supplier_id limit 1;
+      into top from _ow_share sh where sh.ord <= lft group by sh.supplier_id order by count(*) desc, sh.supplier_id limit 1;
     perform ow_push(s.shop_id, 'prices.confirm', total || ' price' || case when total = 1 then '' else 's' end || ' to confirm today',
       'Oldest first — ' || top.name || ' has ' || top.k,
-      null, 'price.list', null, jsonb_build_object('table', 'prices', 'date', d), 'confirm:' || d);
+      null, null, 'sourcing', jsonb_build_object('table', 'prices', 'date', d), 'confirm:' || d);
     n := n + 1;
   end loop;
   return n;

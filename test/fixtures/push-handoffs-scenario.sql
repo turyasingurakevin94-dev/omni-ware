@@ -30,7 +30,7 @@ insert into products(shop_id,id,name) values ('11111111-1111-1111-1111-111111111
 insert into prices(id, shop_id, product_id, supplier_id, retail, unit, date) values
  (1,'11111111-1111-1111-1111-111111111111','P1','S1',30000,'bag','2026-08-01'),
  (2,'11111111-1111-1111-1111-111111111111','P2','S1',18000,'piece','2026-08-03'),
- (3,'11111111-1111-1111-1111-111111111111','P2','S2',17500,'piece','2026-09-20');
+ (3,'11111111-1111-1111-1111-111111111111','P2','S2',17500,'piece',ow_today() - 29);
 insert into app_settings(shop_id, presets) values ('11111111-1111-1111-1111-111111111111','{"priceReview":{"perDay":2}}')
  on conflict (shop_id) do update set presets = excluded.presets;
 insert into customers(shop_id,id,name,debt,credit_limit) values ('11111111-1111-1111-1111-111111111111','C001','Kato Construction',500000,1000000);
@@ -126,6 +126,11 @@ select _try('check: Accounts is told the balance left, and not of a paid bill', 
 select _try('07:00 runs twice', 'ok', $q$select _is($c$ow_push_bills_due() = 1 and (select count(*) from push_outbox where kind='bill.due') = 1$c$)$q$);
 select _try('08:00: the day''s prices', 'ok', $q$select _is($c$ow_push_prices_to_confirm() = 1$c$)$q$);
 select _try('check: Sourcing alone, the oldest two, and whose', 'ok', $q$select _is($c$_to('prices.confirm')='11' and (select title from push_outbox where kind='prices.confirm') = '2 prices to confirm today' and _body('prices.confirm') = 'Oldest first — Nakawa Cement Depot has 2'$c$)$q$);
+select _try('check: a price confirmed 29 days ago is not stale yet, so Kiseka is not in it', 'ok', $q$select _is($c$_body('prices.confirm') not like '%Kiseka%'$c$)$q$);
+delete from push_outbox where kind = 'prices.confirm';
+insert into shop_task_off(shop_id, role, task) values ('11111111-1111-1111-1111-111111111111','sourcing','price.confirm');
+select _try('08:00 with Sourcing''s confirming switched off', 'ok', $q$select _is($c$ow_push_prices_to_confirm() = 0 and not exists(select 1 from push_outbox where kind='prices.confirm')$c$)$q$);
+delete from shop_task_off;
 
 -- ---- none of it reaches the owner
 select _try('check: the owner gets none of these', 'ok', $q$select _is($c$not exists(select 1 from push_outbox o, lateral ow_push_recipients(o.id) r where r.user_id='00000000-0000-0000-0000-00000000000a')$c$)$q$);

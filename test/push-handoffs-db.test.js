@@ -40,7 +40,7 @@ function fnBody(name) {
     buyer_handoffs_ow_push2: ["'trip.cash.ask'", "'trip.cash'", "'trip.cash.ready'", 'new.created_by'],
     sourcing_leads_ow_push2: ["'sourcing.request'", "'sourcing.dropped'", "'sourcing.lead'"],
     ow_push_bills_due: ["'bill.due'", "'bill.pay'"],
-    ow_push_prices_to_confirm: ["'prices.confirm'", "'price.list'"],
+    ow_push_prices_to_confirm: ["'prices.confirm'", "'price.confirm'", "'sourcing'", "shop_task_off"],
   };
   for (const [fn, bits] of Object.entries(want)) {
     const body = fnBody(fn);
@@ -55,8 +55,15 @@ function fnBody(name) {
   t.check(/new\.done_by is distinct from new\.created_by/.test(fnBody('buyer_handoffs_ow_push2')), 'the Buyer marking cash in hand themselves is not pushed back to them');
   t.check(/greatest\(0, coalesce\(ow_num\(pi\.payload ->> 'transport'\), 0\)\)/.test(fnBody('ow_push_bills_due')) && /'amountPaid'/.test(fnBody('ow_push_bills_due')),
     'a bill\'s balance is the console\'s purchaseInvoiceTotal less what is paid');
-  t.check(/order by r\.date nulls first, r\.id/.test(fnBody('ow_push_prices_to_confirm')) && /'perDay'/.test(fnBody('ow_push_prices_to_confirm')),
-    'the day\'s prices are the oldest confirmed, as many as the owner set (priceReview.perDay)');
+  {
+    const pc = fnBody('ow_push_prices_to_confirm');
+    t.check(/'perDay'/.test(pc) && /'targetPerPeriod'/.test(pc) && /'staleDays'/.test(pc) && /interval '90 days'/.test(pc) && /st\.qty > 0/.test(pc)
+      && /price_source in \('confirmed', 'purchase'\)/.test(pc) && /\(x\.age is null\) desc, x\.age desc/.test(pc),
+      'the day\'s prices are counted as the Sourcing app\'s todaysShare counts them: per day less today\'s, stale, asked for or stocked, oldest first');
+    const app = read('sourcing.html');
+    t.check(/function todaysShare\(\)/.test(app) && /Number\(r\.staleDays\) > 0 \? Number\(r\.staleDays\) : 30/.test(app) && /90 \* DAY/.test(app),
+      'and the app still counts them that way (staleDays, else 30; the last 90 days)');
+  }
   t.check(/cron\.schedule\('ow-bills-due', '0 4 \* \* \*'/.test(sql) && /cron\.schedule\('ow-prices-to-confirm', '0 5 \* \* 1-6'/.test(sql),
     '07:00 and 08:00 in Kampala (04:00 and 05:00 UTC), prices Monday to Saturday');
   t.check(/Safe\s+-- to run twice|Safe to run twice/.test(raw) && /ROLLBACK/.test(raw) && /CHECK AFTERWARDS/.test(raw), 'the header says it runs twice, and how to check and roll back');
