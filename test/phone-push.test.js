@@ -107,9 +107,16 @@ t.check(/function enablePush\(\)/.test(read('store.html')) && /push_subscription
   for (const [a, kind] of [['accounts', 'trip_cash'], ['accounts', 'paper_bill'], ['sourcing', 'sourcing_fix'], ['sales', 'item_switch'], ['manager', 'yard_note']]) {
     const src = read(`${a}.html`);
     t.check(/from\('buyer_handoffs'\)\.select|selectAll\('buyer_handoffs'/.test(src) && src.includes(`'${kind}'`), `${a}: loads the Buyer's ${kind} hand-offs`);
-    t.check(/from\('buyer_handoffs'\)\.update\(\{ status: 'done' \}\)/.test(src), `${a}: and closes them (status done; the guard fills who and when)`);
+    t.check(/from\('buyer_handoffs'\)\.update\(\{ status: 'done' \}\)\.eq\('shop_id', S\.shopId\)\.eq\('id', [\w.]+\)\.select\('id'\)/.test(src) && /!(r\.)?data\.length\) throw/.test(src),
+      `${a}: and closes them (status done), counting it closed only when the row came back -- a switched-off task is no error, just no row`);
   }
   const sales = read('sales.html');
+  t.check(/async function refreshQuotes\(\)\{\n  try \{ const \[rows, sw\] = await Promise\.all\(\[selectAll\('saved_quotes'\), switchesQuery\(\)\]\)/.test(sales), 'sales: a switch made while the app is open shows on the next live refresh');
+  {
+    const acc = read('accounts.html');
+    t.check(/tripId: h\.p\.tripId \|\| null/.test(acc) && /latestTripLines\(s\.id, a\.tripId\)/.test(acc) && /tripId == null \|\| String\(x\.id\) === String\(tripId\)/.test(acc),
+      'accounts: a paper bill fills from its own trip, never a newer one to the same supplier');
+  }
   t.check(!/priceWas|priceNow|costWas/.test(sales), 'sales: a switch\'s buying costs are never read into the Sales app');
 }
 

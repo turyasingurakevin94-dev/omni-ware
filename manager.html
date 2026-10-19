@@ -3281,8 +3281,10 @@ function yardNoteHTML(t, pending){
 // Closes the trip's open notes: deciding the difference, or "Seen".
 async function closeYardNotes(tripId){
   for (const h of yardNotes(tripId)) {
-    const r = await sb.from('buyer_handoffs').update({ status: 'done' }).eq('shop_id', S.shopId).eq('id', h.id);
+    // A refused update (the task switched off) is no error, just no row: ask for the row back.
+    const r = await sb.from('buyer_handoffs').update({ status: 'done' }).eq('shop_id', S.shopId).eq('id', h.id).select('id');
     if (r.error) throw r.error;
+    if (Array.isArray(r.data) && !r.data.length) throw new Error('That needs the owner to switch it on for you');
     h.status = 'done';
   }
   D().handoffs = (D().handoffs || []).filter(h => h.status === 'open'); saveSnapshot();

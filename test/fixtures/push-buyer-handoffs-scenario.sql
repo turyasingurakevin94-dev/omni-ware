@@ -28,7 +28,8 @@ insert into suppliers(shop_id, id, name) values
  ('11111111-1111-1111-1111-111111111111','S1','Nakawa Cement Depot'),('11111111-1111-1111-1111-111111111111','S2','Kiseka Steel');
 insert into saved_quotes(id, shop_id, client_name, status, invoiced, payload) overriding system value values
  (9302,'11111111-1111-1111-1111-111111111111','Kato Construction','awaiting_goods',false,'{"takenBy":"00000000-0000-0000-0000-00000000000d"}'),
- (9303,'11111111-1111-1111-1111-111111111111','Ggaba Stores','awaiting_goods',false,'{}');
+ (9303,'11111111-1111-1111-1111-111111111111','Ggaba Stores','awaiting_goods',false,'{}'),
+ (9304,'11111111-1111-1111-1111-111111111111','Lubowa Builders','awaiting_goods',false,'{"takenBy":"00000000-0000-0000-0000-000000000099"}');
 
 
 create table _r(n serial, label text, expect text, got text);
@@ -75,6 +76,9 @@ select _try('check: Grace, who took the order, is told', 'ok', $q$select _is($c$
 select _try('check: the push carries the order for the tap', 'ok', $q$select _is($c$(select ref ->> 'orderId' from push_outbox where kind='item.switch') = '9302'$c$)$q$);
 select _try('buyer: switches a line on an order nobody took', 'ok', $q$insert into buyer_handoffs(id, shop_id, kind, for_role, ref, payload) values ('eeeeeeee-0000-0000-0000-000000000004','11111111-1111-1111-1111-111111111111','item_switch','sales','9303','{"orderId":9303,"from":"Iron bar 12mm","to":"Iron bar 10mm"}')$q$);
 select _try('check: then Sales is told, by task, with the client from the order', 'ok', $q$select _is($c$(select string_agg(distinct right(r.user_id::text, 2), ',') from push_outbox o, lateral ow_push_recipients(o.id) r where o.dedupe = 'switch:eeeeeeee-0000-0000-0000-000000000004')='0d' and _body('item.switch') like '%| Ggaba Stores — Iron bar 12mm → Iron bar 10mm. Tell them.'$c$)$q$);
+
+select _try('buyer: switches a line on an order taken by someone who has left', 'ok', $q$insert into buyer_handoffs(id, shop_id, kind, for_role, ref, payload) values ('eeeeeeee-0000-0000-0000-000000000008','11111111-1111-1111-1111-111111111111','item_switch','sales','9304','{"orderId":9304,"from":"Nails 3\"","to":"Nails 4\""}')$q$);
+select _try('check: then Sales is told, by task, not nobody', 'ok', $q$select _is($c$(select string_agg(distinct right(r.user_id::text, 2), ',') from push_outbox o, lateral ow_push_recipients(o.id) r where o.dedupe = 'switch:eeeeeeee-0000-0000-0000-000000000008')='0d' and (select to_task from push_outbox where dedupe = 'switch:eeeeeeee-0000-0000-0000-000000000008') = 'quote.make'$c$)$q$);
 
 -- ---- a note on the yard's count, to the Manager
 select _try('buyer: says why the count differs', 'ok', $q$insert into buyer_handoffs(id, shop_id, kind, for_role, ref, payload) values ('eeeeeeee-0000-0000-0000-000000000005','11111111-1111-1111-1111-111111111111','yard_note','manager','T7','{"tripId":"T7","supplierId":"S2","why":"short","words":"the supplier gave fewer","lines":[{"lineId":"a"}]}')$q$);

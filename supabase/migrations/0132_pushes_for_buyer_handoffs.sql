@@ -54,7 +54,15 @@ begin
         jsonb_build_object('table', 'buyer_handoffs', 'id', new.id, 'supplierId', p ->> 'supplierId'), 'srcfix:' || new.id);
 
     elsif new.kind = 'item_switch' then
-      select ow_uuid(sq.payload ->> 'takenBy') as taker, sq.client_name into q
+      -- The salesperson on the order, while they are still in the shop with
+      -- quote.make on; otherwise (gone, switched off, or the order has none)
+      -- Sales by task, so the push always reaches someone who can tell them.
+      select case when exists (
+               select 1 from shop_members m join role_tasks rt on rt.role = m.role and rt.task = 'quote.make'
+                where m.shop_id = new.shop_id and m.user_id = ow_uuid(sq.payload ->> 'takenBy')
+                  and not exists (select 1 from shop_task_off x where x.shop_id = m.shop_id and x.role = m.role and x.task = 'quote.make'))
+             then ow_uuid(sq.payload ->> 'takenBy') end as taker,
+             sq.client_name into q
         from saved_quotes sq
        where sq.shop_id = new.shop_id and sq.id::text = coalesce(p ->> 'orderId', new.ref);
       client := coalesce(nullif(btrim(coalesce(p ->> 'client', '')), ''), nullif(btrim(coalesce(q.client_name, '')), ''), 'An order');

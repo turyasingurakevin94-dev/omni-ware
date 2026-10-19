@@ -2448,7 +2448,7 @@ async function loadAll(){
     sb.from('payment_asks').select('*').eq('shop_id', S.shopId).gte('created_at', new Date(Date.now() - 60 * 864e5).toISOString()).then(r => r.error ? null : r.data || [], () => null),
     sb.from('sourcing_leads').select('id, name, status, voided, product_id, assigned_staff_id, created_at, stage_entered_at, requests, candidates').eq('shop_id', S.shopId).eq('voided', false).limit(1000).then(r => r.error ? null : r.data || [], () => null),
     // Lines the Buyer switched to another item, for Sales to tell the customer (0125 item_switch). A missing table: none.
-    sb.from('buyer_handoffs').select('*').eq('shop_id', S.shopId).eq('for_role', 'sales').eq('kind', 'item_switch').eq('status', 'open').limit(500).then(r => r.error ? [] : r.data || [], () => []),
+    switchesQuery().then(r => r || [], () => []),
   ]);
   const presets = (settingsR && settingsR.data && settingsR.data.presets) || {};
   const debtBy = {};
@@ -2508,8 +2508,10 @@ function rowToPayAsk(r){ return { id: r.id, cashTxnId: Number(r.cash_txn_id), cu
 // The hand-off's buying costs are the Buyer's: never read here, never drawn.
 function rowToSwitch(h){ const p = h.payload || {}; return { id: h.id, orderId: p.orderId != null ? String(p.orderId) : String(h.ref || ''), lineId: p.lineId, client: p.client || '', from: p.from || '', to: p.to || '', why: p.why || '', by: h.created_by || null, at: Date.parse(h.created_at || '') || 0 }; }
 function rowToLead(r){ return { id: r.id, name: r.name || '', status: r.status || 'asked', productId: r.product_id || null, assignedStaffId: r.assigned_staff_id || null, createdAt: r.created_at, stageEnteredAt: r.stage_entered_at == null ? null : Number(r.stage_entered_at), requests: Array.isArray(r.requests) ? r.requests : [], candidates: Array.isArray(r.candidates) ? r.candidates : [] }; }
+// The Buyer's open item switches (0125 buyer_handoffs); null when the read fails.
+function switchesQuery(){ return sb.from('buyer_handoffs').select('*').eq('shop_id', S.shopId).eq('for_role', 'sales').eq('kind', 'item_switch').eq('status', 'open').limit(500).then(r => r.error ? null : r.data || [], () => null); }
 async function refreshQuotes(){
-  try { const rows = await selectAll('saved_quotes'); S.data.savedQuotes = rows.map(rowToQuote); S.loadedAt = Date.now(); saveSnapshot(); render(); }
+  try { const [rows, sw] = await Promise.all([selectAll('saved_quotes'), switchesQuery()]); S.data.savedQuotes = rows.map(rowToQuote); if (sw) S.data.switches = sw.map(rowToSwitch); S.loadedAt = Date.now(); saveSnapshot(); render(); }
   catch (e) { if (!isNetworkError(e)) console.warn(e); }
 }
 
@@ -4204,8 +4206,10 @@ function swText(q, s){
   return `Hello ${name}, one change on your order ${orderNo(q)}: ${s.to} instead of ${s.from}${pr.now != null ? `, at ${n0(pr.now)} each${pr.was != null ? `, not ${n0(pr.was)}` : ''}` : ''}. Everything else is the same.`;
 }
 async function swDone(id){
-  const r = await sb.from('buyer_handoffs').update({ status: 'done' }).eq('shop_id', S.shopId).eq('id', id);
+  // A refused update (the task switched off) is no error, just no row: ask for the row back.
+  const r = await sb.from('buyer_handoffs').update({ status: 'done' }).eq('shop_id', S.shopId).eq('id', id).select('id');
   if (r.error) throw r.error;
+  if (Array.isArray(r.data) && !r.data.length) throw new Error('That needs the owner to switch it on for you');
   D().switches = (D().switches || []).filter(x => String(x.id) !== String(id)); S.loadedAt = Date.now(); saveSnapshot();
 }
 ACT.tellswitch = t => {

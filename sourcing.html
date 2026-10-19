@@ -1167,8 +1167,10 @@ const FIX_HOW_WORD = { phone: 'by phone', wa: 'on WhatsApp', saw: 'saw it', bill
 function fixCount(h){ return Array.isArray(h.payload && h.payload.fixes) ? h.payload.fixes.length : 0; }
 function canCloseFix(){ return hasTask('price.list') || hasTask('supplier.edit'); }
 async function closeFix(h){
-  const { error } = await sb.from('buyer_handoffs').update({ status: 'done' }).eq('shop_id', S.shopId).eq('id', h.id);
+  // A refused update (the task switched off) is no error, just no row: ask for the row back.
+  const { data, error } = await sb.from('buyer_handoffs').update({ status: 'done' }).eq('shop_id', S.shopId).eq('id', h.id).select('id');
   if (error) throw error;
+  if (Array.isArray(data) && !data.length) throw new Error('That needs the owner to switch it on for you');
   const x = (D().handoffs || []).find(y => y.id === h.id); if (x) x.status = 'done';
   saveSnapshot();
 }

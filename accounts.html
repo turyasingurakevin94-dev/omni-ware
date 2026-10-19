@@ -2546,7 +2546,7 @@ ACT.hocash = async t => {
 };
 // The record-a-bill screen, filled from the Buyer's paper: the supplier, their number, the photo, what it totals.
 function handoffBillArgs(h){ const s = supplierById(h.p.supplierId);
-  return { ...(s ? { sid: s.id } : {}), hid: h.id, ref: String(h.p.billNo || '').trim(), photo: h.p.photoPath || null, paperTotal: Number(h.p.total) || 0 }; }
+  return { ...(s ? { sid: s.id } : {}), hid: h.id, ref: String(h.p.billNo || '').trim(), photo: h.p.photoPath || null, paperTotal: Number(h.p.total) || 0, tripId: h.p.tripId || null }; }
 ACT.horec = t => { const h = handoffById(t.dataset.id); if (!h || !needTask('bill.record')) return; FEEL.open(); push('billrec', handoffBillArgs(h)); };
 ACT.hophoto = async t => {
   const h = handoffById(t.dataset.id); if (!h || !h.p.photoPath) return;
@@ -5989,8 +5989,9 @@ ACT.propwithdraw = async t => {
 function supplierBills(sid){ return D().bills.filter(pi => !pi.voided && supplierKey(pi) === String(sid)).sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')) || b.id - a.id); }
 // Bills the books raised from orders and trips that still carry no paper from the supplier.
 function billsWithoutPaper(sid){ return supplierBills(sid).filter(pi => !pi.supplierRef && !pi.photo && !pi.consignSettlement && daysBetween(String(pi.date).slice(0, 10), todayISO()) <= 60); }
-function latestTripLines(sid){
-  const t = (D().trips || []).filter(x => String(x.supplierId) === String(sid) && !x.voided && (x.status === 'collected' || x.status === 'confirmed')).sort((a, b) => String(b.collectedAt || '').localeCompare(String(a.collectedAt || '')))[0];
+// tripId: the Buyer's paper names its trip; then that trip only, never a newer one to the same supplier.
+function latestTripLines(sid, tripId){
+  const t = (D().trips || []).filter(x => String(x.supplierId) === String(sid) && !x.voided && (x.status === 'collected' || x.status === 'confirmed') && (tripId == null || String(x.id) === String(tripId))).sort((a, b) => String(b.collectedAt || '').localeCompare(String(a.collectedAt || '')))[0];
   if (!t) return null;
   // Lines bought for an order are billed with that order when it is invoiced; only restock lines become a bill here.
   const lines = (t.lines || []).filter(l => !l.orderId && tripLineGot(l) > 0).map(l => ({ productId: l.productId, variantIdx: l.variantIdx == null ? null : l.variantIdx, productName: l.productName || '', unit: l.unit || '', packUnit: l.packUnit || '', packQty: l.packQty || 0, qty: tripLineGot(l), price: Number(l.gotPrice != null ? l.gotPrice : l.expectedPrice) || 0 }));
@@ -6019,7 +6020,7 @@ function billPaperView(a, s, head){
   const paperless = billsWithoutPaper(s.id);
   if (a.match === undefined) a.match = paperless.length ? paperless[0].id : null;
   const match = a.match != null ? D().bills.find(b => Number(b.id) === Number(a.match)) : null;
-  if (!match && !a.lines) { const tl = latestTripLines(s.id); a.lines = tl ? tl.lines : []; a.fromTrip = tl ? tl.trip.id : null; }
+  if (!match && !a.lines) { const tl = latestTripLines(s.id, a.tripId); a.lines = tl ? tl.lines : []; a.fromTrip = tl ? tl.trip.id : null; }
   // From the Buyer's paper with nothing to fill it from: one line for what their paper says.
   if (!match && a.paperTotal && !a.lines.length && !a.paperLine) { a.paperLine = true; a.lines.push({ productId: null, variantIdx: null, productName: 'Their bill' + (a.ref ? ' ' + a.ref : ''), unit: '', packUnit: '', packQty: 0, qty: 1, price: a.paperTotal }); }
   const lines = match ? match.items || [] : a.lines || [];
@@ -6068,7 +6069,7 @@ function billCreditView(a, s, head){
   </div>`;
 }
 ACT['in:brq'] = t => { S.ui.brQ = t.value; render(); };
-ACT.brsup = t => { const a = topArgs(); replaceTop('billrec', { sid: t.dataset.v, ...(a.hid ? { hid: a.hid, ref: a.ref, photo: a.photo, paperTotal: a.paperTotal } : {}) }); FEEL.tick(); };
+ACT.brsup = t => { const a = topArgs(); replaceTop('billrec', { sid: t.dataset.v, ...(a.hid ? { hid: a.hid, ref: a.ref, photo: a.photo, paperTotal: a.paperTotal, tripId: a.tripId } : {}) }); FEEL.tick(); };
 ACT.brkind = t => { topArgs().kind = t.dataset.v; FEEL.tick(); render(); };
 ACT.brmatch = t => { const a = topArgs(); a.match = t.dataset.v ? Number(t.dataset.v) : null; a.lines = null; FEEL.tick(); render(); };
 ACT.brdue = t => { topArgs().due = t.dataset.v; FEEL.tick(); render(); };
