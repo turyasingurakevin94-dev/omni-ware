@@ -2270,7 +2270,9 @@ SCREENS.AskSuppliers = {
       // Who can be asked: not one who already quoted it or said they can't.
       const offOf = (x) => !!(x.cand && (candidateHasPrice(x.cand) || x.cand.cantAt || x.cand.noStock));
       const shown = (st.all ? ranked : ranked.slice(0, 5));
-      const defOn = {}; (anyHit ? ranked.filter(x => x.hit.length || x.importer) : ranked.slice(0, 3)).forEach(x => { if (!offOf(x) && !(x.cand && x.cand.askedAt)) defOn[x.s.id] = true; });
+      // Only who is on screen is ticked to start with, and only a tick you can
+      // see is asked: the count on the button is the ticks in the list.
+      const defOn = {}; (anyHit ? shown.filter(x => x.hit.length || x.importer) : shown.slice(0, 3)).forEach(x => { if (!offOf(x) && !(x.cand && x.cand.askedAt)) defOn[x.s.id] = true; });
       const on = st.on || defOn;
       const tags = { supplier: 'background: #F1EEE8; color: #5F6980', importer: 'background: #E4E6FA; color: #3A3F9B', new: 'background: #E4F4EA; color: #0F6B43', asked: 'background: #FBE5E2; color: #8E2A22', quoted: 'background: #E4F4EA; color: #0F6B43', waiting: 'background: #FDEEE1; color: #95530C' };
       const sups = shown.map((x, i) => {
@@ -2292,7 +2294,7 @@ SCREENS.AskSuppliers = {
           tag: 'flex: none; height: 22px; padding: 0 8px; border-radius: 999px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; ' + tags[tag],
         };
       });
-      const picked = ranked.filter(x => !offOf(x) && on[x.s.id]);
+      const picked = shown.filter(x => !offOf(x) && on[x.s.id]);
       const pool = anyHit ? hitters : ranked;
       const allWord = anyHit ? (cat ? `All ${cat} suppliers` : 'All who sell it') : 'All suppliers';
 
