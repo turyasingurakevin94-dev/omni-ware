@@ -217,7 +217,14 @@ matrix.forEach(([what, it]) => {
     const under = await place(X => { const it = X.makeLine('P1', null, 10, { lineId: 1 }); Object.assign(it, { sellPrice: it.sellPrice - 500, priceBy: 'u1', priceNote: 'under', priceShop: it.sellPrice }); X.S.draft.items = [it]; });
     t.check(under && under.status === 'draft', 'a shelf line under the shop\'s price waits in Checking for the Manager');
     const held = await place(X => { X.S.data.customers[0].creditLimit = 400000; X.S.draft.items = [X.makeLine('P1', null, 10, { lineId: 1 })]; });
-    t.check(held && held.status === 'draft', 'a customer over their credit limit with the order waits in Checking (the credit hold)');
+    t.check(held && held.status === 'draft', 'a customer over their credit limit with the order waits in Checking (the credit hold)');    // A line placed "price to confirm" is tagged for the Manager, so the gate, the Manager's Prices and the invoice run see it.
+    const ask = await place(X => { X.S.data.presetDefaultMarkup = {}; X.S.draft.items = [X.makeLine('P1', null, 10, { lineId: 1 }), X.makeLine('P3', null, 30, { lineId: 2 })]; });
+    const asked = ask && ask.payload.items[1], priced = ask && ask.payload.items[0];
+    t.check(asked && asked.sellPrice == null && asked.priceBy === 'u1' && asked.priceAsk === true && ['nomargin', 'nocost'].includes(asked.priceNote), 'a line with no selling price is placed tagged for the Manager: ' + JSON.stringify(asked && { priceBy: asked.priceBy, priceNote: asked.priceNote }));
+    t.check(priced && !('priceBy' in priced) && !('priceAsk' in priced), 'a line the shop already prices carries no tag');
+    t.check(ask && ask.status === 'draft', 'an order with a line still to price waits in Checking');
+    t.check(asked.priceNote === 'nomargin' && P.priceReviewState(asked) === 'wait', 'the Manager has to decide it before it can leave Checking');
+    t.check(/to price/.test(P.priceTagHTML({ ...asked, priceNote: 'nomargin' })) && !/your price/.test(P.priceTagHTML({ ...asked, priceNote: 'nomargin' })), 'its tag says "to price", not "your price"');
   }
 
   // 3c. "We don't sell it": a request to Sourcing, in the shape the Sourcing app reads

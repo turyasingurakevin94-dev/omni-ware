@@ -2825,7 +2825,7 @@ function quoteItemSellPrice(it){
 }
 /* Whether a line has a selling price the shop decided, or would go out
    at cost. A sales login never sells at cost: the line says "price to
-   confirm" instead and the buyer prices it at Checking. */
+   confirm" instead and the Manager prices it at Checking. */
 function lineHasRule(it){
   const product = productById(it.productId); if (!product) return false;
   const vi = it.variantIdx == null ? null : it.variantIdx, fromStock = it.supplierId === '__stock__';
@@ -2870,6 +2870,18 @@ function priceNoteFor(it, v){
 }
 // Below cost is refused wherever the cost is known.
 function priceTooLow(it, v){ const cost = lineCost(it); return cost != null && v < cost; }
+/* A line placed with no selling price ("price to confirm") is tagged for
+   the Manager the same way a salesperson's own price is, so the Checking
+   gate (0119 ow_line_waits_price), the Manager's Prices and the 24-hour
+   invoice run all see it. Untagged, it passed every gate and went out
+   unbilled (docs/decision-rights.md: price.approve, "a line that has no
+   selling price or no known cost"). priceAsk marks that nobody typed a
+   figure, so the tag reads "to price" rather than "your price". */
+function placedPriceTag(it){
+  if (it.priceBy) return { priceBy: it.priceBy, priceNote: it.priceNote || null, priceShop: it.priceShop == null ? null : it.priceShop, priceAt: it.priceAt || null };
+  if (!linePriceToConfirm(it)) return {};
+  return { priceBy: S.user ? String(S.user.id) : 'sales', priceNote: priceNoteFor(it, 0), priceShop: null, priceAt: new Date().toISOString(), priceAsk: true };
+}
 
 /* ---- who decides: the Manager (shop_members role 'manager') ----
    Named by their staff record; "the Manager" when the shop has none yet. */
@@ -2915,8 +2927,8 @@ function pricesWaiting(q){ return (q.items || []).filter(it => priceReviewState(
 function priceTagHTML(it, chip){
   if (!it || !it.priceBy) return '';
   const st = priceReviewState(it), r = it.priceReview || {};
-  if (st === 'wait') return chip ? `<span class="sx-ptag chip wait">${mgrFace(18)}<i class="sx-blink"></i>waiting for ${esc(mgrName())}</span>`
-    : `<span class="sx-ptag" style="color:var(--amberInk)"><i style="background:var(--amberInk)"></i>your price · waiting for ${esc(mgrName())}</span>`;
+  if (st === 'wait') return chip ? `<span class="sx-ptag chip wait">${mgrFace(18)}<i class="sx-blink"></i>${it.priceAsk ? 'to price · ' : ''}waiting for ${esc(mgrName())}</span>`
+    : `<span class="sx-ptag" style="color:var(--amberInk)"><i style="background:var(--amberInk)"></i>${it.priceAsk ? 'to price' : 'your price'} · waiting for ${esc(mgrName())}</span>`;
   if (st === 'approved') return `<span class="sx-ptag chip ok">${mgrFace(18, r.byName)}${ic('tick', 11, 'style="stroke-width:3"')}approved by ${esc(priceReviewer(it))}</span>`;
   if (st === 'changed') return `<span class="sx-ptag chip chg">${mgrFace(18, r.byName)}<span>${esc(priceReviewer(it))} set <span class="m">${n0(r.price)}</span>${Number(r.was) > 0 ? ` · you said <span class="m">${n0(r.was)}</span>` : ''}</span></span>`;
   if (it.priceNote === 'nocost') return `<span class="sx-ptag" style="color:var(--ink3)"><i style="background:var(--ink3)"></i>to be confirmed</span>`;
@@ -6005,7 +6017,7 @@ function nwFindHTML(){
       ${bought ? `<button class="nw-fadd" ${addAttrs(qty)}>Add ${nwNum(qty)} · bought in <span class="m">${toc ? 'price to confirm' : n0(qty * sell)}</span></button><button class="nw-fsec" ${addAttrs(shelf, 'unit')}>Make it ${n0(shelf)} · from the shelf <span class="m">${tot2}</span></button>`
         : `<button class="nw-fadd" ${addAttrs(shelf, 'unit')}>Make it ${n0(shelf)} · from the shelf <span class="m">${tot2}</span></button><button class="nw-fsec" ${addAttrs(qty)}>Add ${nwNum(qty)} anyway</button>`}`;
   } else {
-    h += `<div class="nw-np"><span class="nw-npi">${ic('nwtag', 20)}</span><span class="nw-ct"><b>No selling price yet</b><span>The buyer prices it when they check the supplier</span></span><span class="m nw-npd">— —</span></div>
+    h += `<div class="nw-np"><span class="nw-npi">${ic('nwtag', 20)}</span><span class="nw-ct"><b>No selling price yet</b><span>${esc(mgrName())} prices it before it goes out</span></span><span class="m nw-npd">— —</span></div>
       <div class="nw-fact">${stepper(true)}<button class="nw-fadd navy" ${addAttrs(qty)}>Add · price to confirm</button></div>`;
   }
   h += `</div>`;
@@ -6427,8 +6439,8 @@ ACT['slide:place'] = async el => {
     const id = await issueRowId('row:saved_quote', maxId);
     const now = Date.now(), iso = new Date(now).toISOString(), q = draftQuote();
     const items = d.items.map(it => ({ lineId: it.lineId, productId: it.productId, variantIdx: it.variantIdx, productName: it.productName, unit: it.unit, packUnit: it.packUnit, packQty: it.packQty, qtyIn: it.qtyIn, qty: it.qty, supplierId: it.supplierId, supplierName: it.supplierName, price: it.price, sellPrice: it.sellPrice,
-      // Who set this price and why the Manager decides it (canvas: Setting the price).
-      ...(it.priceBy ? { priceBy: it.priceBy, priceNote: it.priceNote || null, priceShop: it.priceShop == null ? null : it.priceShop, priceAt: it.priceAt || null } : {}) }));
+      // Who set this price and why the Manager decides it (canvas: Setting the price); a line still to price is tagged for the Manager.
+      ...placedPriceTag(it) }));
     // A charge keeps the rule it was agreed on, as wireQuoteCharges stores it.
     const charges = (d.charges || []).map(ch => ({ id: ch.id, service: ch.service || null, label: ch.label || '', type: ch.type === 'percent' ? 'percent' : 'fixed', value: Math.max(0, Number(ch.value) || 0), cost: null }));
     const status = nwShelfOnly(d) ? 'preparing' : 'draft';
@@ -8308,7 +8320,7 @@ async function ctPlace(d){
   const id = await issueRowId('row:saved_quote', maxId);
   const now = Date.now(), iso = new Date(now).toISOString(), q = draftQuote();
   const items = d.items.map(it => ({ lineId: it.lineId, productId: it.productId, variantIdx: it.variantIdx, productName: it.productName, unit: it.unit, packUnit: it.packUnit, packQty: it.packQty, qtyIn: it.qtyIn, qty: it.qty, supplierId: it.supplierId, supplierName: it.supplierName, price: it.price, sellPrice: it.sellPrice,
-    ...(it.priceBy ? { priceBy: it.priceBy, priceNote: it.priceNote || null, priceShop: it.priceShop == null ? null : it.priceShop, priceAt: it.priceAt || null } : {}) }));
+    ...placedPriceTag(it) }));
   const charges = (d.charges || []).map(ch => ({ id: ch.id, service: ch.service || null, label: ch.label || '', type: ch.type === 'percent' ? 'percent' : 'fixed', value: Math.max(0, Number(ch.value) || 0), cost: null }));
   const payload = { client: { name: d.client.name || 'Walk-in', phone: d.client.phone || '' }, items, charges, credit: q.credit, savedAt: iso, createdAt: iso,
     payments: [], customerId: d.customerId || null, debtCharged: 0, stageEnteredAt: now, stageLog: [{ status: 'draft', at: now }], takenBy: S.user ? String(S.user.id) : null, counter: true };

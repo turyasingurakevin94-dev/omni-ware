@@ -2798,8 +2798,10 @@ async function callFn(name, args){
    sales.html lineCost / shopSellPrice / priceNoteFor: a salesperson's own
    price carries priceBy and a note -- 'under' (below the shop's price),
    'nomargin' (no markup rule, so no shop's price), 'nocost' (no known
-   cost). The Manager's answer rides on the line as priceReview (section
-   3), and goes stale the moment the price or the quantity moves. */
+   cost). A line placed with no selling price at all carries the same
+   tag plus priceAsk (sales.html placedPriceTag), so it lands here too.
+   The Manager's answer rides on the line as priceReview (section 3), and
+   goes stale the moment the price or the quantity moves. */
 function lineCost(it){ const c = Number(it.price); return c > 0 ? c : null; }
 function shopSellPrice(it){ if (!lineCost(it) || !lineHasRule(it)) return null; return Math.round(quoteItemSellPrice({ ...it, sellPrice: null })); }
 function linePriceNow(it){ return Math.round(Number(it.sellPrice) > 0 ? Number(it.sellPrice) : quoteItemSellPrice(it)); }
