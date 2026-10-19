@@ -1768,10 +1768,20 @@ async function lockRoute(place){
 }
 
 /* ---- alerts on this phone (shared-worker.js enableNativePush) ---- */
+/* Push needs an install that carries the shop's Firebase file: the
+   builds from versionCode 2 on. An older install still runs this page
+   (its live update fetches it), but its native side has no Firebase,
+   and asking it for a token closes the app. So the page asks the
+   install first, and an old one is told to install the new app. */
+async function pushInstalled(){
+  try { const A = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App; const i = A && await A.getInfo(); return !!i && Number(i.build) >= 2; }
+  catch (_e) { return false; }
+}
 function nativePush(){ const C = window.Capacitor; return C && C.isNativePlatform && C.isNativePlatform() && C.Plugins && C.Plugins.PushNotifications; }
 async function enablePush(){
   const P = nativePush(); if (!P) { toast('Alerts work in the installed app'); return false; }
   const me = myStaff(); if (!me) { toast('Your login needs a staff row for alerts — ask the owner'); return false; }
+  if (!(await pushInstalled())) { toast('Alerts need the new Store app — install it from the latest link', 5000); return false; }
   let perm = await P.checkPermissions(); if (perm.receive !== 'granted') perm = await P.requestPermissions();
   if (perm.receive !== 'granted') { toast('Alerts are off in the phone settings'); return false; }
   try { await P.register(); } catch (_e) { toast('Alerts are not set up in this app yet — ask the owner'); return false; }

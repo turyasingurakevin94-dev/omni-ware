@@ -30,6 +30,11 @@ for (const a of APPS) {
   t.check(pkgs.includes(appId), `${a}: google-services.json names ${appId}`);
   t.check(/apply plugin: 'com\.google\.gms\.google-services'/.test(read(`apps/${a}/android/app/build.gradle`)), `${a}: the build applies it`);
   t.check(/@capacitor\/push-notifications/.test(read(`apps/${a}/package.json`)), `${a}: the push plugin is in the app`);
+  const vc = Number((/versionCode (\d+)/.exec(read(`apps/${a}/android/app/build.gradle`)) || [])[1]);
+  t.check(vc >= 2, `${a}: the build that carries Firebase is versionCode 2 or later (${vc}), so the page can tell it from an older install`);
+  const page = read(`${a}.html`);
+  const inst = extractFunction(page, 'pushInstalled', `${a}.html`);
+  t.check(/getInfo\(\)/.test(inst) && /Number\(i\.build\) >= 2/.test(inst), `${a}: the page asks the install before it asks for a token`);
 }
 
 for (const a of APPS.filter((x) => x !== 'store')) {
@@ -39,12 +44,18 @@ for (const a of APPS.filter((x) => x !== 'store')) {
   t.check(/from\('push_subscriptions'\)\.upsert\(\{ shop_id: S\.shopId, staff_id: st \? st\.id : null, user_id: S\.user\.id, fcm_token: t\.value \}, \{ onConflict: 'fcm_token' \}\)/.test(fn),
     `${a}: the phone is this login's, with its staff row when it has one`);
   t.check(/perm\.receive !== 'denied'/.test(fn), `${a}: never asks again once the person said no`);
+  t.check(fn.indexOf('pushInstalled()') > -1 && fn.indexOf('pushInstalled()') < fn.indexOf('P.checkPermissions()'),
+    `${a}: an older install, with no Firebase, never asks for a token (it would close the app)`);
   t.check(/if \(error\) \{ window\.owPushError = [^;]+; [^}]+\} else \{ window\.owPushReady = true;/.test(fn),
     `${a}: says the phone is signed up only once the save landed (owPushReady), and keeps why not (owPushError)`);
   t.check(/addListener\('registrationError'/.test(fn), `${a}: a phone that gets no token says so`);
   t.check(/function start\(\)\{\n  S\.started = true;\n  phonePush\(\);/.test(src), `${a}: asked as the app starts`);
 }
 t.check(/function enablePush\(\)/.test(read('store.html')) && /push_subscriptions/.test(read('store.html')), 'store keeps its own alerts switch');
+{
+  const ep = extractFunction(read('store.html'), 'enablePush', 'store.html');
+  t.check(ep.indexOf('pushInstalled()') > -1 && ep.indexOf('pushInstalled()') < ep.indexOf('P.register()'), 'and its switch asks the install first, so an older Store app is told to update rather than closing');
+}
 
 {
   // The Manager's "Push to your phone" says why, when the phone is not signed up.
