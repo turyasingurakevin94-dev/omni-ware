@@ -1591,6 +1591,15 @@ async function boot(){
    notifications" is the only thing that shows. The phone is this login's
    (user_id), with its staff row when it has one. A tap opens the app on
    fresh figures. Inside the installed app only. */
+/* Push needs an install that carries the shop's Firebase file: the
+   builds from versionCode 2 on. An older install still runs this page
+   (its live update fetches it), but its native side has no Firebase,
+   and asking it for a token closes the app. So the page asks the
+   install first, and an old one is told to install the new app. */
+async function pushInstalled(){
+  try { const A = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App; const i = A && await A.getInfo(); return !!i && Number(i.build) >= 2; }
+  catch (_e) { return false; }
+}
 /* Not until the shop's Firebase project has this app (apps/owner/README.md):
    asking without its google-services.json can close the app on open. Set
    true in the commit that adds the file; test/owner-native-app.test.js
@@ -1613,6 +1622,7 @@ function phonePush(){
   P.addListener('pushNotificationActionPerformed', a => { const d = (a && a.notification && a.notification.data) || {}; if (d.kind === 'owner.digest') { S.stack = []; S.view = 'log'; S.ui.logDay = d.date && d.date !== todayISO() ? d.date : null; } loadAll().then(() => render()).catch(() => {}); });
   (async () => {
     try {
+      if (!(await pushInstalled())) { window.owPushError = 'install: this phone has the older app'; render(); return; }
       let perm = await P.checkPermissions();
       if (perm.receive !== 'granted' && perm.receive !== 'denied') perm = await P.requestPermissions();
       if (perm.receive === 'granted') await P.register(); else { window.owPushError = 'permission: ' + perm.receive; render(); }

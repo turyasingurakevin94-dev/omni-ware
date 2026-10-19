@@ -33,7 +33,10 @@ close the app on open. To switch pushes on:
    `com.omniware.owner`.
 2. Download the new `google-services.json` and put it at
    `apps/owner/android/app/google-services.json`.
-3. In the same commit, set `OWNER_PUSH_READY = true` in owner.html.
+3. In the same commit, set `OWNER_PUSH_READY = true` in owner.html and raise
+   `versionCode` in `android/app/build.gradle` to 2 (`versionName` 1.1): the
+   page asks for a token only on an install from build 2 on
+   (`pushInstalled`), so an older install never asks and never closes.
    `test/owner-native-app.test.js` holds the two together.
 
 Until then the digest still lands in the log, and the browser and the app show
