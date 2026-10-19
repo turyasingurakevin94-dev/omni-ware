@@ -248,7 +248,7 @@ input{font-family:inherit;color:var(--ink)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 
 /* ---- shell ---- */
-#bx_app{max-width:520px;margin:0 auto;min-height:100vh;position:relative;padding-bottom:calc(100px + var(--safe-area-inset-bottom))}
+#bx_app{max-width:520px;margin:0 auto;min-height:100vh;position:relative;padding-bottom:calc(128px + var(--safe-area-inset-bottom))}
 .bx-view{animation:bxFade .25s ease-out}
 @keyframes bxFade{from{opacity:.4}to{opacity:1}}
 .bx-nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#fff;box-shadow:0 -1px 0 var(--line),0 -10px 24px rgba(22,32,60,.05);padding:10px 0 calc(12px + var(--safe-area-inset-bottom));display:grid;grid-template-columns:repeat(5,1fr);align-items:start;max-width:520px;margin:0 auto}
@@ -1719,7 +1719,7 @@ function segRing(segs, size, stroke, inner, label){
 }
 function pctRing(pct, size, stroke, col, inner, label, track){
   const r = (size - stroke) / 2, p = Math.max(0, Math.min(1, pct)) * 100;
-  return `<span role="img" aria-label="${esc(label || '')}" style="position:relative;width:${size}px;height:${size}px;flex:none;display:block"><svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true" style="position:absolute;inset:0;transform:rotate(-90deg)"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${track || 'rgba(255,255,255,.12)'}" stroke-width="${stroke}"/><circle class="a-ring" cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${col}" stroke-width="${stroke}" stroke-linecap="round" pathLength="100" stroke-dasharray="${p.toFixed(1)} 100"/></svg><span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">${inner || ''}</span></span>`;
+  return `<span role="img" aria-label="${esc(label || '')}" style="position:relative;width:${size}px;height:${size}px;flex:none;display:block"><svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true" style="position:absolute;inset:0;transform:rotate(-90deg)"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${track || 'rgba(255,255,255,.12)'}" stroke-width="${stroke}"/>${p > 0 ? `<circle class="a-ring" cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${col}" stroke-width="${stroke}" stroke-linecap="round" pathLength="100" stroke-dasharray="${p.toFixed(1)} 100"/>` : ''}</svg><span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">${inner || ''}</span></span>`;
 }
 function sheetTop(title, eyebrow, eyeCol, opts){
   opts = opts || {};
@@ -3257,7 +3257,8 @@ function logAvatar(l, size){
   return `<span class="bx-av round" style="width:${size}px;height:${size}px;font-size:${Math.round(size * .33)}px;background:${t[0]};color:${t[1]}">${esc(initials(whoName(l) === 'You' ? (myName()) : (staffOfLog(l) || {}).name || l.byName || roleOf(l.role).label))}</span>`;
 }
 function myStaff(){ return S.user ? (D().staff || []).find(s => s.userId && s.userId === S.user.id) || null : null; }
-function myName(){ const m = myStaff(); if (m && m.name) return m.name; const e = S.user && S.user.email ? S.user.email.split('@')[0].replace(/[._-]+/g, ' ') : ''; return e ? e.replace(/\b\w/g, c => c.toUpperCase()) : 'You'; }
+function ownerName(){ const m = myStaff(); if (m && m.name) return m.name; const md = (S.user && S.user.user_metadata) || {}; return String(md.full_name || md.name || '').trim(); }
+function myName(){ return ownerName() || 'The owner'; }
 // A later line that answers this one (0127 steps_in).
 function steppedInOn(l){ return (D().log || []).find(x => x.stepsIn && String(x.stepsIn) === String(l.id)) || null; }
 // What the owner can step in on (owner_step_in, 0127).
@@ -3498,7 +3499,7 @@ Object.assign(ICON, {
 /* ==================================================================
    Shared pieces.
    ================================================================== */
-function hero(inner, opts){ opts = opts || {}; return `<div class="ox-hero${opts.cls ? ' ' + opts.cls : ''}"><span class="ox-glow" aria-hidden="true"></span>${inner}</div>`; }
+function hero(inner, opts){ opts = opts || {}; return `<div class="ox-hero${opts.cls ? ' ' + opts.cls : ''}" data-navy-top><span class="ox-glow" aria-hidden="true"></span>${inner}</div>`; }
 function backHead(title, sub, extra){
   return `<div class="ox-top"><button class="bx-circle" data-act="back" aria-label="Back">${ic('back', 18, 'style="stroke-width:2.2"')}</button>
     <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ox-title ell">${title}</span><span class="ox-sub ell">${sub || ''}</span></span>${extra || ''}</div>`;
@@ -3539,8 +3540,8 @@ function viewToday(){
   return `${hero(`
     <div class="ox-row"><span style="flex:1;display:flex;flex-direction:column;gap:4px">
       <span class="ox-eyebrow" style="display:flex;align-items:center;gap:8px">${esc(dayLabel(t).toUpperCase())}<span class="ox-live"><i class="a-now"></i>SHOP RUNNING</span></span>
-      <span class="ox-hi">${greeting()}, ${esc(firstWord(myName()))}</span></span>
-      <button class="ox-me" data-act="tab" data-v="yours" aria-label="Team and rules">${esc(initials(me ? me.name : myName()))}</button></div>
+      <span class="ox-hi">${ownerName() ? `${greeting()}, ${esc(firstWord(ownerName()))}` : greeting()}</span></span>
+      <button class="ox-me" data-act="tab" data-v="yours" aria-label="Team and rules">${ownerName() ? esc(initials(ownerName())) : ic('shop', 20)}</button></div>
     <button class="ox-glass ox-decided" data-act="tab" data-v="log">${ring}
       <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;text-align:left"><span style="font-size:16px;font-weight:700">Nothing waits for you</span>
       <span style="font-size:12px;color:var(--navyInk)"><b class="m" style="color:#fff">${mine.length}</b> ${pl(mine.length, 'decision')} made for you today</span>
@@ -3555,13 +3556,13 @@ function viewToday(){
       <div class="ox-kpis">${g.ok ? `
         <span><span class="ox-cap">CASH ON HAND</span><span class="m">${shortM(g.inHand)}</span></span>
         <span><span class="ox-cap">OWED TO YOU</span><span class="m">${shortM(g.owedUs)}</span></span>
-        <span><span class="ox-cap">PROFIT · ${esc(nmMonthName(t).slice(0, 3).toUpperCase())}</span><span class="m" style="color:${g.profit >= 0 ? 'var(--green)' : 'var(--crimson)'}">${shortM(g.profit)}</span></span>`
+        <span><span class="ox-cap">PROFIT · ${esc(nmMonthName(t).slice(0, 3).toUpperCase())}</span><span class="m" style="color:${g.profit > 0 ? 'var(--green)' : g.profit < 0 ? 'var(--crimson)' : 'var(--ink)'}">${shortM(g.profit)}</span></span>`
         : `<span style="grid-column:1/-1" class="bx-sub">The money figures could not be read: ${esc(g.why)}</span>`}</div>
     </div>
     <div class="bx-card ox-cardpad">
       <span class="ox-cap" style="display:flex;justify-content:space-between"><span>ORDERS NOW · ${M(total)}</span>${st.stuck.length ? `<span style="color:var(--amberInk)">${st.stuck.length} PAST A LIMIT</span>` : '<span style="color:var(--green)">ALL WITHIN LIMITS</span>'}</span>
       <span role="img" aria-label="${STAGES.map(s => (st[s.key] || 0) + ' ' + s.label).join(', ')}" class="ox-stack">${total ? STAGES.map(s => st[s.key] ? `<i class="a-grow" style="flex:${st[s.key]};background:${s.col}"></i>` : '').join('') : '<i style="flex:1;background:var(--soft2)"></i>'}</span>
-      <span style="display:flex;gap:3px">${STAGES.map(s => `<span style="flex:${Math.max(1, st[s.key] || 0)};min-width:0;display:flex;flex-direction:column;gap:1px"><b class="m" style="font-size:15px;color:${s.key === 'completed' ? 'var(--green)' : s.key === 'preparing' && st.stuck.some(q => q.status === 'preparing') ? 'var(--amberInk)' : 'var(--ink)'}">${st[s.key] || 0}</b><span style="font-size:10px;font-weight:600;color:var(--ink3);white-space:nowrap">${s.label}</span></span>`).join('')}</span>
+      <span style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px">${STAGES.map(s => `<span style="min-width:0;display:flex;flex-direction:column;gap:1px"><b class="m" style="font-size:15px;color:${s.key === 'completed' ? 'var(--green)' : s.key === 'preparing' && st.stuck.some(q => q.status === 'preparing') ? 'var(--amberInk)' : 'var(--ink)'}">${st[s.key] || 0}</b><span style="font-size:10px;font-weight:600;color:var(--ink3);white-space:nowrap">${s.label}</span></span>`).join('')}</span>
     </div>
     <span class="ox-cap" style="padding:4px 4px 0">WORTH A LOOK · SOMEONE'S ON EACH</span>
     ${look.length ? `<div class="bx-card" style="padding:0 12px 0 10px">${lookRows}</div>` : emptyCard('Nothing worth a look', 'No order past its limit, no debt past the hold, no price changed today.')}
@@ -3581,22 +3582,24 @@ function viewLog(){
   const who = S.ui.logWho;
   const shown = who === 'all' ? all : all.filter(l => l.role === who);
   const bar = ppl.length ? ppl.map(p => `<i class="a-grow" style="flex:${p.n};background:${roleOf(p.role).ring}"></i>`).join('') : '<i style="flex:1;background:rgba(255,255,255,.12)"></i>';
-  const lab = ppl.map(p => `<span style="flex:${p.n};min-width:0;overflow:hidden;white-space:nowrap">${p.n >= 2 ? esc(p.name) + ' ' : ''}<b class="m" style="color:#fff">${p.n}</b></span>`).join('');
+  const rest = ppl.slice(3).reduce((t, p) => t + p.n, 0);
+  const lab = ppl.slice(0, 3).map(p => `<span style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap"><i style="width:7px;height:7px;border-radius:2px;background:${roleOf(p.role).ring}"></i>${esc(p.name)} <b class="m" style="color:#fff">${p.n}</b></span>`).join('') + (rest ? `<span style="white-space:nowrap">+${ppl.length - 3} others <b class="m" style="color:#fff">${rest}</b></span>` : '');
   const prevDay = isoOf(new Date(Date.parse(day + 'T12:00:00') - 864e5)), nextDay = isoOf(new Date(Date.parse(day + 'T12:00:00') + 864e5));
   const seg = [['all', 'All']].concat(roles.map(r => [r, roleOf(r).label])).map(([k, label]) =>
-    `<button role="tab" aria-selected="${who === k}" data-act="logwho" data-v="${k}" class="ox-segb">${k !== 'all' ? `<i style="background:${roleOf(k).ring}"></i>` : ''}${esc(label)}</button>`).join('');
-  const rows = shown.map((l, i) => logRow(l, i === 0, i === shown.length - 1)).join('');
+    `<button role="tab" aria-selected="${who === k}" data-act="logwho" data-v="${k}" class="ox-segb">${k !== 'all' ? `<i style="background:${roleOf(k).ring}"></i>` : ''}${esc(k === 'auto' ? 'Auto' : label)}</button>`).join('');
+  const cap = S.ui.logAll ? shown.length : Math.min(shown.length, 60);
+  const rows = shown.slice(0, cap).map((l, i) => logRow(l, i === 0, i === cap - 1)).join('');
   return `${hero(`
     <div class="ox-row"><span style="flex:1;display:flex;flex-direction:column;gap:4px">
       <span class="ox-eyebrow">DECIDED FOR YOU · ${esc((day === todayISO() ? 'TODAY' : dayLabel(day)).toUpperCase())}</span>
       <span style="display:flex;align-items:center;gap:10px"><span class="m" style="font-size:36px;font-weight:600;letter-spacing:-.03em;line-height:1">${made.length}</span><span class="ox-live">${ic('tick', 11, 'style="stroke-width:3.2"')}0 waiting on you</span></span></span>
       <span style="display:flex;gap:6px"><button class="bx-circle" data-act="logday" data-v="${prevDay}" aria-label="The day before">${ic('back', 16)}</button><button class="bx-circle" data-act="logday" data-v="${nextDay}" aria-label="The day after" ${day >= todayISO() ? 'disabled style="opacity:.35"' : ''}>${ic('chev', 16)}</button></span></div>
-    <span style="display:flex;flex-direction:column;gap:6px"><span role="img" aria-label="${ppl.map(p => p.name + ' ' + p.n).join(', ') || 'No decisions'}" class="ox-stack dark">${bar}</span><span style="display:flex;gap:3px;font-size:10px;font-weight:700;color:var(--navyInk2)">${lab}</span></span>`)}
+    <span style="display:flex;flex-direction:column;gap:6px"><span role="img" aria-label="${ppl.map(p => p.name + ' ' + p.n).join(', ') || 'No decisions'}" class="ox-stack dark">${bar}</span><span style="display:flex;flex-wrap:wrap;gap:3px 12px;font-size:11px;font-weight:700;color:var(--navyInk2)">${lab}</span></span>`)}
   <div class="bx-body">
     ${roles.length > 1 ? `<div role="tablist" aria-label="Who decided" class="ox-seg">${seg}</div>` : ''}
     ${!D().logBuilt ? emptyCard('The log is not on this database yet', 'It comes with the Accounts update (0123). Nothing is lost: the apps keep working.') :
       shown.length ? `<div class="ox-timeline">${rows}</div>` : emptyCard(day === todayISO() ? 'Nothing decided yet today' : 'Nothing decided that day', 'Every decision the team makes for you lands here, with what it was before.')}
-    ${shown.length ? `<span class="ox-digestpill" style="position:static;transform:none;align-self:center">${M(shown.length)} ${pl(shown.length, 'line')} · oldest at the bottom</span>` : ''}
+    ${shown.length > cap ? `<button class="bx-btn ghost" data-act="logmore" style="flex:none">Show the other ${shown.length - cap} ${pl(shown.length - cap, 'line')}</button>` : shown.length ? `<span class="ox-digestpill" style="position:static;transform:none;align-self:center">${M(shown.length)} ${pl(shown.length, 'line')} · oldest at the bottom</span>` : ''}
   </div>`;
 }
 function logRow(l, first, last){
@@ -3608,8 +3611,9 @@ function logRow(l, first, last){
     : `<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;padding:9px 0"><span class="bx-t ell" style="font-size:13px">${esc(l.what)}</span><span class="bx-sub ell">${esc(whoName(l))}${l.amount != null ? ' · ' + M(n0(l.amount)) : ''}${sin ? ' · <b style="color:var(--navy)">you stepped in</b>' : ''}${l.stepsIn ? ' · <b style="color:var(--navy)">a step-in</b>' : ''}</span></span>`;
   return `<button class="ox-tl" data-act="push" data-p="entry" data-id="${esc(l.id)}"><span class="m ox-tlt">${hm(l.ms)}</span><span class="ox-tln">${rail}${logAvatar(l, 30)}</span>${content}</button>`;
 }
-ACT.logwho = t => { S.ui.logWho = t.dataset.v; FEEL.tick(); render(); };
-ACT.logday = t => { if (t.dataset.v > todayISO()) return; S.ui.logDay = t.dataset.v === todayISO() ? null : t.dataset.v; S.ui.logWho = 'all'; FEEL.tick(); render(); };
+ACT.logwho = t => { S.ui.logWho = t.dataset.v; S.ui.logAll = false; FEEL.tick(); render(); };
+ACT.logmore = () => { S.ui.logAll = true; FEEL.tick(); render(); };
+ACT.logday = t => { if (t.dataset.v > todayISO()) return; S.ui.logDay = t.dataset.v === todayISO() ? null : t.dataset.v; S.ui.logWho = 'all'; S.ui.logAll = false; FEEL.tick(); render(); };
 
 /* ---- one decision: before, after, effect ---- */
 function logById(id){ return (D().log || []).find(l => String(l.id) === String(id)) || null; }
@@ -3622,7 +3626,7 @@ function soldSince(pid, ms){
 }
 PAGE.entry = a => {
   const l = logById(a.id);
-  if (!l) return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">${emptyCard('That line is not in the last two months of the log', '')}</div>`;
+  if (!l) return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card"><div class="bx-body" style="padding-top:16px">${emptyCard('That line is not in the last two months of the log', 'The log here keeps 62 days.')}<button class="bx-btn ghost" data-act="back" style="flex:none">Back to the log</button></div></div>`;
   const rows = diffRows(l), st = staffOfLog(l), sin = steppedInOn(l), r0 = rows[0];
   const product = l.ref && l.ref.table === 'products' ? D().products.find(p => String(p.id) === String(l.ref.id)) : null;
   const cost = product ? baseCost(product.id) : null;
@@ -3678,7 +3682,7 @@ PAGE.entry = a => {
 /* ---- stepping in: optional, logged as the owner's, the person told by the log ---- */
 PAGE.stepin = a => {
   const l = logById(a.id);
-  if (!l || !canStepIn(l)) return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">${emptyCard('Nothing to step in on here', '')}</div>`;
+  if (!l || !canStepIn(l)) return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card"><div class="bx-body" style="padding-top:16px">${emptyCard('Nothing to step in on here', '')}<button class="bx-btn ghost" data-act="back" style="flex:none">Back</button></div></div>`;
   const rows = diffRows(l), r0 = rows[0];
   const choice = S.ui.step && S.ui.step.id === l.id ? S.ui.step : (S.ui.step = { id: l.id, pick: 'back', val: null });
   const single = rows.length === 1 && pctKey(r0.key) && typeof r0.was === 'number' && typeof r0.now === 'number';
@@ -3757,15 +3761,16 @@ function viewYours(){
   const avs = tm.slice(0, 5).map((s, i) => `<span style="margin-left:${i ? -4 : 0}px">${staffAv(s, 26)}</span>`).join('') + (tm.length > 5 ? `<span class="bx-av round" style="width:26px;height:26px;margin-left:-4px;font-size:10px;background:var(--soft2);color:var(--ink2)">+${tm.length - 5}</span>` : '');
   const hour = digestHour();
   return `${hero(`
-    <div class="ox-row"><span class="ox-meRing">${esc(initials(me ? me.name : myName()))}</span>
+    <div class="ox-row"><span class="ox-meRing">${ownerName() ? esc(initials(ownerName())) : ic('shop', 20)}</span>
       <span style="flex:1;display:flex;flex-direction:column;gap:3px"><span class="ox-eyebrow" style="color:var(--amber)">OWNER · ONLY YOU DECIDE THESE</span><span style="font-size:21px;font-weight:700;letter-spacing:-.02em">Team &amp; rules</span></span></div>
     <div role="img" aria-label="Team, goal, set-up and backups at a glance" style="display:flex;gap:6px">
-      ${ringT(tm.length ? (tm.length - pend) / tm.length : 0, '#6FDCB0', `${tm.length - pend}/${tm.length}`, 'Team', pend ? pend + ' pending' : 'all signed up')}
+      ${ringT(tm.length ? (tm.length - pend) / tm.length : 0, '#6FDCB0', tm.length ? `${tm.length - pend}/${tm.length}` : '—', 'Team', !tm.length ? 'nobody yet' : pend ? pend + ' pending' : 'all signed up')}
       ${ringT(goal ? goal.pct : 0, '#7FB3E0', goal ? Math.round(goal.pct * 100) + '%' : '—', 'Goal', goal ? (goal.ahead >= 0 ? 'ahead of pace' : 'behind pace') : 'not set')}
       ${ringT(done / 4, '#F5B26B', done + '/4', 'Set-up', (steps.find(s => !s.done) || { label: 'all done' }).label)}
       ${ringT(last ? Math.max(0.08, 1 - daysBetween(isoOf(last), todayISO()) / 7) : 0, '#6FDCB0', last ? hm(last) : '—', 'Copy', last ? (isoOf(last) === todayISO() ? 'today' : dayLabel(isoOf(last))) : 'none yet')}
     </div>`)}
   <div class="bx-body">
+    ${D().switchesBuilt ? '' : `<div class="ox-note amber">${ic('lock', 16)}<span>Run the database update <b class="m">0127</b> to switch on task switches, the digest hour, set-up edits, prices a day and stepping in. Everything else works now.</span></div>`}
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
       ${tile('team', '#FDEEE1', '#95530C', 'team', 'Team', `<span style="display:flex">${avs}</span>`, `${M(tm.length)} people${pend ? ` · <span style="color:var(--amberInk)">${pend} pending</span>` : ''}`)}
       ${tile('policy', '#DCEAF8', '#1A5A8A', 'goal', 'Your numbers', goal ? `<span class="ox-track sm"><i style="width:${Math.min(100, goal.pct * 100).toFixed(1)}%"></i><b style="left:${(goal.pacePct * 100).toFixed(1)}%"></b></span><span class="m" style="font-size:12px;font-weight:600">${shortM(goal.actual)} <span style="color:var(--ink3)">/ ${shortM(goal.aim)}</span></span>` : '<span class="bx-sub">no goal set</span>', 'goal · prices a day · markup')}
@@ -3808,15 +3813,15 @@ PAGE.team = () => {
     const stack = g.people.slice(0, 3).map((s, j) => `<span style="margin-left:${j ? -6 : 0}px">${staffAv(s, 32)}</span>`).join('');
     return `<button class="ox-rrow" data-act="push" data-p="role" data-role="${esc(g.role)}" ${i ? '' : 'style="border-top:none"'}>
       <span style="display:flex;width:84px">${stack}</span>
-      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><span class="bx-t ell">${esc(r.label)} <span style="font-weight:600;color:var(--ink3);font-size:12px">· ${esc(g.people.map(s => firstWord(s.name)).join(', '))}</span></span>
-      <span style="display:flex;align-items:center;gap:6px">${g.pend.length ? pill('PENDING', 'amber') + `<span class="bx-sub">${g.pend.length === g.people.length ? 'no login yet' : g.pend.length + ' without a login'}</span>` : all.length ? `<span class="ox-mini"><i style="width:${(on.length / all.length * 100).toFixed(0)}%;background:${r.tint[1]}"></i></span><span class="bx-sub"><span class="m">${on.length}</span> of <span class="m">${all.length}</span> tasks on</span>` : '<span class="bx-sub">the yard app</span>'}</span></span>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><span class="bx-t ell">${esc(r.label)} <span style="font-weight:600;color:var(--ink3);font-size:12px">· ${esc(g.people.slice(0, 3).map(s => firstWord(s.name)).join(', '))}${g.people.length > 3 ? ' +' + (g.people.length - 3) : ''}</span></span>
+      <span style="display:flex;align-items:center;gap:6px">${g.pend.length ? pill('PENDING', 'amber') + `<span class="bx-sub ell">${g.pend.length === g.people.length ? 'no login yet' : g.pend.length + ' no login'}</span>` : all.length ? `<span class="ox-mini"><i style="width:${(on.length / all.length * 100).toFixed(0)}%;background:${r.tint[1]}"></i></span><span class="bx-sub"><span class="m">${on.length}</span> of <span class="m">${all.length}</span> tasks on</span>` : '<span class="bx-sub">the yard app</span>'}</span></span>
       <span class="m" style="font-size:13px;font-weight:600">${g.pay ? n0(g.pay) : g.other.length ? '<span style="font-size:11px;color:var(--ink3)">by the ' + (g.other[0].payBasis === 'daily' ? 'day' : 'week') + '</span>' : '—'}</span></button>`;
   }).join('');
   return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
     <div class="bx-sheethead"><span class="bx-grip"></span>${backHead('Your team', 'who decides what · you hire and switch tasks on')}
       <div style="display:flex;flex-direction:column;gap:10px">
         <span style="display:flex;align-items:flex-end;justify-content:space-between;gap:10px"><span style="display:flex;flex-direction:column;gap:3px"><span class="ox-eyebrow">PAY A MONTH · UGX</span><span class="m" style="font-size:30px;font-weight:500;letter-spacing:-.04em;line-height:1">${n0(monthly)}</span></span>
-          <span style="display:flex;gap:6px">${pill(`<b class="m">${tm.length}</b> people`, 'glass')}${pill(`<b class="m">${tm.filter(s => s.userId).length}/${tm.length}</b> with a login`, 'glassmint')}</span></span>
+          ${tm.length ? `<span style="display:flex;gap:6px">${pill(`<b class="m">${tm.length}</b> people`, 'glass')}${pill(`<b class="m">${tm.filter(s => s.userId).length}/${tm.length}</b> with a login`, 'glassmint')}</span>` : ''}</span>
         ${bar ? `<span role="img" aria-label="Monthly pay by role" class="ox-stack dark" style="height:10px">${bar}</span><span class="ox-legend">${leg}</span>` : ''}
         ${other.length ? `<span style="font-size:11px;color:var(--navyInk)">+ ${other.length} paid by the ${other.some(s => s.payBasis === 'daily') ? 'day' : 'week'}: ${esc(other.map(s => firstWord(s.name) + ' ' + payWords(s)).join(', '))}</span>` : ''}
       </div></div>
@@ -3984,7 +3989,7 @@ PAGE.policy = () => {
       <div class="bx-card ox-cardpad" style="flex-direction:row;align-items:center;gap:10px"><span style="flex:1;display:flex;flex-direction:column;gap:2px"><b style="font-size:13px">The shop's markup</b><span class="bx-sub">cost + this, unless a line has its own</span></span>${stepper('markup', (dm.wholesaleType === 'fixed' ? n0(mk) : mk + '%'))}</div>
       <div class="ox-ruth">${staffAvFor('manager')}<span>The Manager's: line markups · credit hold ${hold && hold.days ? M(hold.days) + ' days' + (hold.on === false ? ' (off)' : '') : 'not set'} · stage limits ${Object.values(limits).some(v => Number(v) > 0) ? 'set' : 'not set'} · each seller's goal — every change is in your log</span></div>
     </div>
-    <div class="bx-foot"><button class="bx-btn red" data-act="policysave">${policyLabel(draft, per, mk)}</button></div>
+    <div class="bx-foot"><button class="bx-btn ${policyLabel(draft, per, mk) === 'Nothing changed' ? 'ghost" aria-disabled="true' : 'red'}" data-act="policysave">${policyLabel(draft, per, mk) === 'Nothing changed' ? 'Type a goal or change a number' : policyLabel(draft, per, mk)}</button></div>
   </div>`;
 };
 function staffAvFor(role){ const s = team().find(x => x.role === role); return s ? staffAv(s, 28) : `<span class="bx-av round" style="width:28px;height:28px;font-size:10px;background:${roleOf(role).tint[0]};color:${roleOf(role).tint[1]}">${esc(roleOf(role).label.slice(0, 2).toUpperCase())}</span>`; }
@@ -3995,7 +4000,13 @@ function policyLabel(draft, per, mk){
   const n = [goalCh, perCh, mkCh].filter(Boolean).length;
   return n ? `Save ${n} ${pl(n, 'change')}` : 'Nothing changed';
 }
-ACT['in:goal'] = t => { S.ui.goalDraft = Number(String(t.value).replace(/[^0-9]/g, '')) || 0; const b = document.querySelector('[data-act=policysave]'); if (b) b.textContent = policyLabel(S.ui.goalDraft, S.ui.perDay || priceReviewPerDay(), S.ui.markup != null ? S.ui.markup : Number((D().presetDefaultMarkup || {}).wholesaleValue) || 0); };
+ACT['in:goal'] = t => {
+  S.ui.goalDraft = Number(String(t.value).replace(/[^0-9]/g, '')) || 0;
+  const b = document.querySelector('[data-act=policysave]'); if (!b) return;
+  const lab = policyLabel(S.ui.goalDraft, S.ui.perDay || priceReviewPerDay(), S.ui.markup != null ? S.ui.markup : Number((D().presetDefaultMarkup || {}).wholesaleValue) || 0), none = lab === 'Nothing changed';
+  b.textContent = none ? 'Type a goal or change a number' : lab; b.classList.toggle('red', !none); b.classList.toggle('ghost', none);
+  if (none) b.setAttribute('aria-disabled', 'true'); else b.removeAttribute('aria-disabled');
+};
 ACT.perday = t => { S.ui.perDay = Math.max(1, Math.min(200, (S.ui.perDay || priceReviewPerDay()) + Number(t.dataset.d))); FEEL.tick(); render(); };
 ACT.markup = t => { const cur = S.ui.markup != null ? S.ui.markup : Number((D().presetDefaultMarkup || {}).wholesaleValue) || 0; S.ui.markup = Math.max(0, cur + Number(t.dataset.d)); FEEL.tick(); render(); };
 ACT.policysave = async () => {

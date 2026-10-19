@@ -143,6 +143,8 @@ const drawn = s => typeof s === 'string' && s.length > 200 && !/could not be dra
   /* ---------- 3. every screen draws ---------- */
   Object.keys(X.VIEWS).forEach(v => t.check(drawn(X.VIEWS[v]()), `the ${v} tab draws`));
   t.check(/Nothing waits for you/.test(X.VIEWS.today()) && /0 waiting on you/.test(X.VIEWS.log()), 'and says, before anything, that nothing waits for the owner');
+  t.check(!/joseph/i.test(X.VIEWS.today()), 'an owner with no staff row is greeted without their email address standing in for a name');
+  t.check(/data-navy-top/.test(X.VIEWS.today()), 'the navy header is marked for the phone\'s status-bar strip');
   const pages = [['entry', { id: 'L1' }], ['entry', { id: 'L4' }], ['stepin', { id: 'L1' }], ['stepin', { id: 'L3' }], ['digest', {}], ['team', {}], ['role', { role: 'manager' }], ['role', { role: 'delivery' }],
     ['hire', {}], ['hire', { id: 'ST003' }], ['policy', {}], ['setup', {}], ['receipt', {}], ['momo', { prov: 'mtn' }], ['momo', { prov: 'airtel' }], ['words', {}], ['backup', {}]];
   pages.forEach(([p, a]) => { let out = ''; try { out = X.PAGE[p](a); } catch (e) { out = 'THREW ' + e.message; } t.check(drawn(out), `the ${p} page draws${a.id || a.role || a.prov ? ' (' + (a.id || a.role || a.prov) + ')' : ''}`); });
