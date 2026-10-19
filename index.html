@@ -65908,6 +65908,65 @@ function deleteQuoteWarning(q){
 // the flag already flipped and start reversing what the first is still
 // halfway through writing.
 const togglingInvoiced = new Set();
+/* Every screen an invoice changes. Read from the box, like every other
+   caller. Bare, it redrew the register with an empty filter -- harmless
+   while this was only ever reached from the Order tracking board, and a
+   screen wiping its own search the moment you use it now that the act
+   lives on the register itself. */
+function redrawInvoiceScreens(){
+  renderSavedQuotes();
+  renderInvoices(document.getElementById('inv_doc_search') ? document.getElementById('inv_doc_search').value : '');
+  renderPurchaseInvoices(document.getElementById('inv_doc_search') ? document.getElementById('inv_doc_search').value : '');
+  renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
+  renderDebtorsList();
+  if(document.getElementById('tab-cashbook') && document.getElementById('tab-cashbook').style.display !== 'none'){
+    renderCbTransactions(); renderCbSummary(); renderCbTriggers();
+  }
+}
+/* The surplus is named, not just recorded. It is stock the shop did not
+   ask for and will not think to look for, and a silent restock is how
+   goods go missing on paper. */
+function toastInvoiced(shortfall, surplusStocked){
+  toast([
+    'Marked as invoiced — stock updated',
+    shortfall ? ' (some items had less on hand than quoted)' : '',
+    surplusStocked ? ` · ${surplusStocked} left over from packs added to stock` : '',
+  ].join(''), surplusStocked ? 6000 : undefined);
+}
+/* The invoice, made by the server (invoice_order, 0119). This copy goes
+   up first, so the order is invoiced as it stands here; then the shop is
+   read back, since the server moved the stock, raised the bills and the
+   debt. 'done', 'refused' (said why), or 'missing' -- a database without
+   0119, where the console still invoices for itself. Offline it waits:
+   an invoice made here and sent later is the one the server may already
+   have made. */
+async function invoiceOnServer(q){
+  if(typeof navigator !== 'undefined' && navigator.onLine === false){
+    toast('Invoicing needs the connection — it goes through the server, so it is never done twice.', 6000);
+    return 'refused';
+  }
+  if(!(await saveData())){
+    toast('This order could not be saved first, so it is not invoiced yet. Try again in a moment.', 6000);
+    return 'refused';
+  }
+  const { data: res, error } = await sb.rpc('invoice_order', { p_shop_id: currentShopId, p_quote_id: q.id });
+  if(error){
+    if(error.code === 'PGRST202' || error.code === '42883') return 'missing';
+    if(error.code === 'OWSHP'){ openPickShortfallModal(q.id, true); return 'refused'; }
+    toast(error.message || 'Could not invoice this order', 6000);
+    // Invoiced already, by the Manager or the 24-hour run: show it.
+    if(/invoiced already/.test(error.message || '')){ await pollForUpdatesNow({ force: true }); redrawInvoiceScreens(); }
+    return 'refused';
+  }
+  /* This copy is left as it was: marked here, the read-back's own save
+     would send it up over the server's invoice and lose what the server
+     wrote on the order (invoicedBy, debtCharged, _stockTaken, _stockLots,
+     _surplusStocked). The batch reads the fresh copy by id. */
+  await pollForUpdatesNow({ force: true });
+  redrawInvoiceScreens();
+  toastInvoiced(!!(res && res.shortOnShelf), res ? Number(res.surplusStocked) || 0 : 0);
+  return 'done';
+}
 async function toggleQuoteInvoiced(id){
   const q = data.savedQuotes.find(x=>x.id===id);
   if(!q || q.status!=='completed') return;
@@ -65929,13 +65988,14 @@ async function toggleQuoteInvoiced(id){
   }
   togglingInvoiced.add(id);
   try{
-  /* The Manager or the 24-hour run may have invoiced it on the server
-     since this copy was loaded (invoice_order, 0119). Asked first, so its
-     stock, bills and debt are not raised a second time. */
+  /* INVOICING IS THE SERVER'S (invoice_order, 0119): the function the
+     Manager's button and the 24-hour run use, under one lock on the
+     order, so an order is never invoiced twice -- from here, the Manager
+     and the hourly run at once. Only a database without 0119 falls
+     through to the console's own invoicing below. Taking an invoice back
+     stays here: the server leaves on the order what that needs. */
   if(!q.invoiced && typeof sb !== 'undefined' && sb && currentShopId){
-    let onServer = null;
-    try{ ({ data: onServer } = await sb.from('saved_quotes').select('invoiced').eq('shop_id', currentShopId).eq('id', id).maybeSingle()); }catch(_e){}
-    if(onServer && onServer.invoiced){ toast('Already invoiced — by the Manager or 24 hours after delivery. Reload to see it.', 6000); return; }
+    if((await invoiceOnServer(q)) !== 'missing') return;
   }
   q.invoiced = !q.invoiced;
   /* A late entry is invoiced on its own date -- the day the goods went --
@@ -65991,27 +66051,8 @@ async function toggleQuoteInvoiced(id){
   }
   syncInvoiceDebtCharge(q);
   saveData();
-  renderSavedQuotes();
-  /* Read from the box, like every other caller. Bare, it redrew the
-     register with an empty filter -- harmless while this was only ever
-     reached from the Order tracking board, and a screen wiping its own
-     search the moment you use it now that the act lives on the register
-     itself. */
-  renderInvoices(document.getElementById('inv_doc_search') ? document.getElementById('inv_doc_search').value : '');
-  renderPurchaseInvoices(document.getElementById('inv_doc_search') ? document.getElementById('inv_doc_search').value : '');
-  renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
-  renderDebtorsList();
-  if(document.getElementById('tab-cashbook') && document.getElementById('tab-cashbook').style.display !== 'none'){
-    renderCbTransactions(); renderCbSummary(); renderCbTriggers();
-  }
-  /* The surplus is named, not just recorded. It is stock the shop did not
-     ask for and will not think to look for, and a silent restock is how
-     goods go missing on paper. */
-  if(q.invoiced) toast([
-    'Marked as invoiced — stock updated',
-    shortfall ? ' (some items had less on hand than quoted)' : '',
-    surplusStocked ? ` · ${surplusStocked} left over from packs added to stock` : '',
-  ].join(''), surplusStocked ? 6000 : undefined);
+  redrawInvoiceScreens();
+  if(q.invoiced) toastInvoiced(shortfall, surplusStocked);
   /* NAME WHERE IT WENT. Undone from the Order tracking board the order
      is still in front of you; undone from the Invoices register the row
      disappears -- it is no longer an invoice -- and a document vanishing
@@ -68750,7 +68791,9 @@ async function invoicePickedOrders(ids){
   let done = 0;
   for(const q of ready){
     await toggleQuoteInvoiced(q.id);
-    if(q.invoiced){ done++; otInvoicePick.delete(q.id); }
+    // By id: the server's invoice reads the shop back as new copies.
+    const now = data.savedQuotes.find(x=> x.id === q.id);
+    if(now && now.invoiced){ done++; otInvoicePick.delete(q.id); }
   }
   renderSavedQuotes();
   otDlgDraw();
@@ -177209,7 +177252,16 @@ let pollInFlight = false;
 // whenever it could clobber something the user is mid-edit on: a modal
 // is open, or they typed in the last few seconds (a quote client's name,
 // an amount, etc.).
-async function pollForUpdatesNow(){
+async function pollForUpdatesNow(opts){
+  /* {force: true}: the read-back after the server wrote for this app
+     (invoiceOnServer). It waits for a refresh or a save already running
+     rather than skipping, and the hands-on-the-screen guards below do not
+     hold it off -- the owner just pressed the button and is waiting for
+     the result. The guard before the redraw still applies. */
+  const force = !!(opts && opts.force);
+  if(force){
+    for(let i = 0; i < 75 && (pollInFlight || syncSavesInFlight); i++) await new Promise(r=> setTimeout(r, 200));
+  }
   /* visibilitychange fires one of these the moment the tab comes back,
      which can land on top of the thirty-second tick's own await. Two
      refreshes interleaving would assign `data` from one load and
@@ -177222,6 +177274,7 @@ async function pollForUpdatesNow(){
      picked item came back unpicked; this one did not, and a receipt
      recorded against an invoice came back unrecorded the same way. */
   if(syncSavesInFlight) return;
+  if(!force){
   if(document.querySelector('.modal-overlay.show')) return;
   // The Worker tab's own prompts (the short-pick quantity entry) are built
   // at call time by shared-worker.js rather than from markup here, so they
@@ -177248,6 +177301,7 @@ async function pollForUpdatesNow(){
      walked away cannot hold the shop's refresh off for good: after a
      minute untouched this stops applying and the refresh goes ahead. */
   if(owControlInUse() && Date.now() - lastUserInputAt < 60000) return;
+  }
   pollInFlight = true;
   try{
     /* Work that has not reached the server yet must survive this.

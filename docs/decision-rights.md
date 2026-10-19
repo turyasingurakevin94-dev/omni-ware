@@ -198,9 +198,12 @@ row in the same commit. The test fails on any mismatch, in either direction.
   It lives in **one** database function, `invoice_order(shop, order)` (0119),
   used by the Manager's button, a salesperson's counter sale and the hourly
   run (`ow_invoice_due_orders`, on pg_cron). Never write a second copy in
-  JavaScript. The console's own `toggleQuoteInvoiced` is the owner's, from
-  before; it keeps the same keys on the order, so either can take an
-  invoice back, and a copy that never saw the server's invoice cannot.
+  JavaScript. The console's Invoice button calls the same function (it
+  saves the order first, then reads the shop back), so an order is never
+  invoiced twice; the console invoices for itself only on a database
+  without 0119. Taking an invoice back stays in the console: the server
+  leaves on the order what that needs, and a copy that never saw the
+  server's invoice cannot take it back.
 
 ### The price decision
 
@@ -403,8 +406,9 @@ Built in 0127 and `owner.html`:
    - push for every app: `push_outbox`, filled by the database at each
      handoff, delivered by the `push-send` Edge Function. Each phone app
      registers its FCM token in `push_subscriptions` under its own login.
-   - the console asks the same gate (`orderCheckingGate`) before a move, and
-     keeps the keys the apps and the server write
+   - the console asks the same gate (`orderCheckingGate`) before a move,
+     invoices through `invoice_order`, and keeps the keys the apps and the
+     server write
 
    No app session builds its own copy of any of these.
 

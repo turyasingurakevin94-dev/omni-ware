@@ -98,7 +98,10 @@ const bind = extractFunction(src, 'invBindDocActions', 'index.html');
 
 /* ---------- 3. undoing does not wipe the search that found the row --- */
 {
-  t.check(/renderInvoices\(document\.getElementById\('inv_doc_search'\) \? document\.getElementById\('inv_doc_search'\)\.value : ''\)/.test(toggle),
+  // The redraw is one function, shared with the server's invoice (invoiceOnServer).
+  const redraw = extractFunction(src, 'redrawInvoiceScreens', 'index.html');
+  t.check(/redrawInvoiceScreens\(\);/.test(toggle)
+    && /renderInvoices\(document\.getElementById\('inv_doc_search'\) \? document\.getElementById\('inv_doc_search'\)\.value : ''\)/.test(redraw),
     'the redraw reads the search box, the way every other caller does');
   t.check(!/\n\s*renderInvoices\(\);/.test(toggle),
     'and no bare call survives to empty it');
