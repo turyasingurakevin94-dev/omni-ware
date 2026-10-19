@@ -66,4 +66,51 @@ t.check(/function enablePush\(\)/.test(read('store.html')) && /push_subscription
   t.check(/registrationError', e => \{ window\.owPushError = [^;]+; render\(\); \}/.test(m), 'an error redraws the screen it shows on');
 }
 
+{
+  // A tap opens what the push is about: push-send puts { kind, ...ref } in
+  // the data, and each app's pushOpen sends that to its own screen.
+  const KINDS = {
+    sales: ['price.decided', 'price.changed', 'credit.decided', 'invoice.ask.decided', 'payment.ask.decided', 'request.listed', 'item.switch'],
+    manager: ['price.waits', 'credit.hold', 'pick.short', 'agent.change', 'order.delivered', 'trip.difference', 'trip.yard_note', 'stock.report', 'invoice.ask'],
+    buyer: ['order.buying', 'trip.cash.ready', 'restock.held'],
+    accounts: ['trip.cash', 'trip.cash.ask', 'bill.due', 'payment.ask', 'bill.paper'],
+    sourcing: ['sourcing.request', 'sourcing.dropped', 'prices.confirm', 'sourcing.fix'],
+    store: ['trip.back', 'stock.report.decided', 'stock_count'],
+  };
+  for (const [a, kinds] of Object.entries(KINDS)) {
+    const src = read(`${a}.html`);
+    const open = extractFunction(src, 'pushOpen', `${a}.html`);
+    t.check(/try \{/.test(open) && /catch \(/.test(open), `${a}: pushOpen never throws`);
+    const missing = kinds.filter((k) => !open.includes(`'${k}'`));
+    t.check(!missing.length, `${a}: a tap on each of its pushes opens its screen (${missing.join(', ') || 'all routed'})`);
+    t.check(/pushNotificationActionPerformed', a => \{ const d = \(a && a\.notification && a\.notification\.data\) \|\| \{\};/.test(src) && /pushOpen\(d\);/.test(src),
+      `${a}: the tap listener hands the push's data to pushOpen`);
+  }
+  t.check(/A tap never takes an order/.test(extractFunction(read('store.html'), 'pushOpen', 'store.html')) && /orderIsMine\(q\)/.test(extractFunction(read('store.html'), 'pushOpen', 'store.html')),
+    'store: a tap opens an order to pack only when it is already this person\'s');
+}
+
+{
+  // Notifications on this phone: one row on You, beside Sounds & buzz.
+  for (const [a, word] of [['sales', 'Sales'], ['buyer', 'Buyer'], ['accounts', 'Accounts'], ['sourcing', 'Sourcing']]) {
+    const src = read(`${a}.html`);
+    const st = extractFunction(src, 'pushState', `${a}.html`);
+    t.check(["'On'", "'Not on'", "'Checking'", 'pushWhy()', 'pushNative()'].every((b) => st.includes(b)), `${a}: the row says On, Checking, or Not on with why`);
+    t.check(extractFunction(src, 'pushWhy', `${a}.html`).includes(`install the new ${word} app`), `${a}: an older install is told to install the new ${word} app`);
+    const at = src.search(/>Notifications</);
+    t.check(at > 0 && /pushState\(\)|pushSub\(\)/.test(src.slice(at - 6000, at + 6000)), `${a}: the Notifications row is drawn from pushState`);
+  }
+}
+
+{
+  // What the Buyer passes on is read by the app it is for (0125, pushed by 0131 and 0132).
+  for (const [a, kind] of [['accounts', 'trip_cash'], ['accounts', 'paper_bill'], ['sourcing', 'sourcing_fix'], ['sales', 'item_switch'], ['manager', 'yard_note']]) {
+    const src = read(`${a}.html`);
+    t.check(/from\('buyer_handoffs'\)\.select|selectAll\('buyer_handoffs'/.test(src) && src.includes(`'${kind}'`), `${a}: loads the Buyer's ${kind} hand-offs`);
+    t.check(/from\('buyer_handoffs'\)\.update\(\{ status: 'done' \}\)/.test(src), `${a}: and closes them (status done; the guard fills who and when)`);
+  }
+  const sales = read('sales.html');
+  t.check(!/priceWas|priceNow|costWas/.test(sales), 'sales: a switch\'s buying costs are never read into the Sales app');
+}
+
 process.exit(t.done() ? 1 : 0);
