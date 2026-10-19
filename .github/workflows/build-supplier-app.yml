@@ -7,10 +7,11 @@ name: Build supplier app (Android)
 #
 #   https://github.com/<owner>/<repo>/releases/download/supplier-app/omniware-supplier.apk
 #
-# Signing: a debug build signs with the runner's debug key, which is new on
-# every run, so a phone must uninstall before it can take a newer APK. Add
-# the repo secret ANDROID_DEBUG_KEYSTORE_B64 (base64 of one debug.keystore)
-# and every build signs with that one key, so updates install over the top.
+# Signing: without a key, a debug build signs with the runner's own, new on
+# every run, so a phone must uninstall before it can take a newer APK. With
+# the repo secret ANDROID_DEBUG_KEYSTORE_B64 (base64 of one keystore, alias
+# androiddebugkey, passwords "android") every build signs with that one key
+# and updates install over the top. The log prints both fingerprints.
 
 on:
   push:
@@ -48,7 +49,13 @@ jobs:
           KEYSTORE_B64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_B64 }}
         run: |
           if [ -n "$KEYSTORE_B64" ]; then
-            mkdir -p ~/.android && echo "$KEYSTORE_B64" | base64 -d > ~/.android/debug.keystore
+            # Named explicitly (app/build.gradle reads OW_KEYSTORE): Gradle does
+            # not reliably look in ~/.android on the runner.
+            KS="$RUNNER_TEMP/supplier.keystore"
+            echo "$KEYSTORE_B64" | tr -d ' \r\n' | base64 -d > "$KS"
+            echo "OW_KEYSTORE=$KS" >> "$GITHUB_ENV"
+            # The fingerprint is public, and says which key this is.
+            keytool -list -v -keystore "$KS" -storepass android -alias androiddebugkey | grep 'SHA256:'
             echo "Signing with the shared key: updates install over the top."
           else
             echo "::notice::No ANDROID_DEBUG_KEYSTORE_B64 secret -- this APK has a one-off signature; phones must uninstall the old app first."
@@ -57,7 +64,10 @@ jobs:
         working-directory: apps/supplier/android
         run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
       - name: Name the APK
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk omniware-supplier.apk
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk omniware-supplier.apk
+          # Which key the APK really carries, to compare with the line above.
+          "$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)/apksigner" verify --print-certs omniware-supplier.apk | grep 'SHA-256'
       - uses: actions/upload-artifact@v4
         with:
           name: omniware-supplier-debug-apk
