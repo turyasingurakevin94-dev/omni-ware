@@ -1711,16 +1711,20 @@ function phonePush(){
   P.addListener('registration', async t => {
     try {
       const { data: st } = await sb.from('staff').select('id').eq('shop_id', S.shopId).eq('user_id', S.user.id).maybeSingle();
-      await sb.from('push_subscriptions').upsert({ shop_id: S.shopId, staff_id: st ? st.id : null, user_id: S.user.id, fcm_token: t.value }, { onConflict: 'fcm_token' });
-    } catch (_e) {}
+      const { error } = await sb.from('push_subscriptions').upsert({ shop_id: S.shopId, staff_id: st ? st.id : null, user_id: S.user.id, fcm_token: t.value }, { onConflict: 'fcm_token' });
+      // owPushReady: this phone is signed up (the Manager's "Push to your phone" reads it).
+      if (error) { window.owPushError = 'save: ' + error.message; render(); } else { window.owPushReady = true; window.owPushError = null; render(); }
+    } catch (e) { window.owPushError = 'save: ' + (e && e.message || e); render(); }
   });
+  // No token: a phone without Google Play services, or Firebase not in this build.
+  P.addListener('registrationError', e => { window.owPushError = 'register: ' + ((e && e.error) || e); render(); });
   P.addListener('pushNotificationActionPerformed', () => { loadAll().then(() => render()).catch(() => {}); });
   (async () => {
     try {
       let perm = await P.checkPermissions();
       if (perm.receive !== 'granted' && perm.receive !== 'denied') perm = await P.requestPermissions();
-      if (perm.receive === 'granted') await P.register();
-    } catch (_e) {}
+      if (perm.receive === 'granted') await P.register(); else { window.owPushError = 'permission: ' + perm.receive; render(); }
+    } catch (e) { window.owPushError = 'register: ' + (e && e.message || e); render(); }
   })();
 }
 function start(){
@@ -3610,6 +3614,14 @@ const DOORS = [
   { k: 'see', w: 'See the team', icon: 'eye', open: () => true, p: null, say: 'Every order, who holds it, what each person sold and brought in, and what customers owe.' },
 ];
 function pushOn(){ return !!window.owPushReady; }
+// Why this phone is not signed up (phonePush keeps it in owPushError), in a few words.
+function pushWhy(){
+  const e = String(window.owPushError || '');
+  if (!e || pushOn()) return '';
+  if (/^permission/.test(e)) return 'notifications are off for this app in the phone’s settings';
+  if (/^register/.test(e)) return 'this phone got no push token: it needs Google Play services';
+  return 'this phone could not be saved: open the app again';
+}
 PAGE.me = () => {
   const m = teamMonth(), log = dayLog(), T = team(), sel = S.ui.door || 'see';
   const doorBtn = d => { const open = d.open(), on = sel === d.k;
@@ -3628,7 +3640,7 @@ PAGE.me = () => {
         <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px 2px;justify-items:center">${DOORS.map(doorBtn).join('')}</div>
         <span class="a-up" style="display:flex;align-items:center;gap:8px;min-height:36px;padding:8px 12px;border-radius:12px;font-size:12px;font-weight:600;line-height:1.35;${cur.open() ? 'background:var(--greenSoft);color:#0B5435' : 'background:var(--soft2);color:var(--ink2)'}"><span style="flex:1">${esc(cur.open() ? cur.say : cur.say + ' Not on for this login yet.')}</span>${cur.open() && cur.p ? `<button class="mx-act navy" data-act="push" data-p="${cur.p}">Open${ic('chev', 12, 'style="stroke-width:2.4"')}</button>` : ''}</span>
         <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--bg)"><span style="width:28px;height:28px;border-radius:9px;background:var(--navy);color:var(--mint);display:flex;align-items:center;justify-content:center;flex:none">${ic('doc', 14)}</span><span style="flex:1;font-size:12px;font-weight:600;color:var(--ink2);line-height:1.35">Every decision goes in the <b style="color:var(--ink)">owner’s log</b>: who, when, and what it was before. The owner keeps hiring and pay, the policy numbers and backups.</span></div>
-        <div style="display:flex;align-items:center;gap:10px;padding:0 2px"><span style="width:28px;height:28px;border-radius:9px;${pushOn() ? 'background:var(--navy);color:var(--mint)' : 'border:1.5px dashed #9AA1AE;color:var(--ink2);box-sizing:border-box'};display:flex;align-items:center;justify-content:center;flex:none">${ic('bell', 14)}</span><span style="flex:1;display:flex;flex-direction:column"><b style="font-size:12px">Push to your phone</b><span style="font-size:11px;font-weight:600;color:var(--ink3)">each decision waiting · nudges reach staff the same way</span></span><span class="bx-chip" style="${pushOn() ? 'background:var(--greenSoft);color:var(--green)' : 'background:var(--soft2);color:var(--ink2)'}">${pushOn() ? 'On' : 'Coming with push'}</span></div>
+        <div style="display:flex;align-items:center;gap:10px;padding:0 2px"><span style="width:28px;height:28px;border-radius:9px;${pushOn() ? 'background:var(--navy);color:var(--mint)' : 'border:1.5px dashed #9AA1AE;color:var(--ink2);box-sizing:border-box'};display:flex;align-items:center;justify-content:center;flex:none">${ic('bell', 14)}</span><span style="flex:1;display:flex;flex-direction:column"><b style="font-size:12px">Push to your phone</b><span style="font-size:11px;font-weight:600;color:var(--ink3)">${esc(pushWhy() || 'each decision waiting · nudges reach staff the same way')}</span></span><span class="bx-chip" style="${pushOn() ? 'background:var(--greenSoft);color:var(--green)' : 'background:var(--soft2);color:var(--ink2)'}">${pushOn() ? 'On' : pushWhy() ? 'Not on' : 'Coming with push'}</span></div>
       </div>
       ${m.tg && m.tg.reached ? `<button class="bx-card" data-act="win" style="border:none;width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;text-align:left;color:var(--ink)"><span style="width:42px;height:42px;border-radius:13px;background:var(--navy);color:var(--mint);display:flex;align-items:center;justify-content:center;flex:none">${ic('target', 20)}</span><span style="flex:1"><b style="font-size:14px">The team passed ${esc(monthWord())}</b><span class="bx-sub" style="display:block">Play the win again</span></span>${ic('chev', 16)}</button>` : ''}
       <div class="bx-card bx-list">${[['sound', 'Sounds & buzz', 'chimes, stamps, the team win', 'sound'], ['big', 'Big text', 'for the yard in daylight', 'big']].map(([k, w, sub, icn]) => `<div class="bx-row" style="gap:12px"><span style="width:38px;height:38px;border-radius:12px;background:var(--soft);color:var(--ink2);display:flex;align-items:center;justify-content:center;flex:none">${ic(icn, 19)}</span><span style="flex:1;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px">${w}</b><span class="bx-sub">${sub}</span></span><button class="bx-switch" role="switch" aria-checked="${!!S.prefs[k]}" aria-label="${w}" data-act="pref" data-k="${k}"></button></div>`).join('')}</div>
