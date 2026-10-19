@@ -2945,18 +2945,18 @@ function phonePush(){
       const { data: st } = await sb.from('staff').select('id').eq('shop_id', S.shopId).eq('user_id', S.user.id).maybeSingle();
       const { error } = await sb.from('push_subscriptions').upsert({ shop_id: S.shopId, staff_id: st ? st.id : null, user_id: S.user.id, fcm_token: t.value }, { onConflict: 'fcm_token' });
       // owPushReady: this phone is signed up (the Manager's "Push to your phone" reads it).
-      if (error) window.owPushError = 'save: ' + error.message; else { window.owPushReady = true; window.owPushError = null; render(); }
-    } catch (e) { window.owPushError = 'save: ' + (e && e.message || e); }
+      if (error) { window.owPushError = 'save: ' + error.message; render(); } else { window.owPushReady = true; window.owPushError = null; render(); }
+    } catch (e) { window.owPushError = 'save: ' + (e && e.message || e); render(); }
   });
   // No token: a phone without Google Play services, or Firebase not in this build.
-  P.addListener('registrationError', e => { window.owPushError = 'register: ' + ((e && e.error) || e); });
+  P.addListener('registrationError', e => { window.owPushError = 'register: ' + ((e && e.error) || e); render(); });
   P.addListener('pushNotificationActionPerformed', () => { loadAll().then(() => render()).catch(() => {}); });
   (async () => {
     try {
       let perm = await P.checkPermissions();
       if (perm.receive !== 'granted' && perm.receive !== 'denied') perm = await P.requestPermissions();
-      if (perm.receive === 'granted') await P.register(); else window.owPushError = 'permission: ' + perm.receive;
-    } catch (e) { window.owPushError = 'register: ' + (e && e.message || e); }
+      if (perm.receive === 'granted') await P.register(); else { window.owPushError = 'permission: ' + perm.receive; render(); }
+    } catch (e) { window.owPushError = 'register: ' + (e && e.message || e); render(); }
   })();
 }
 function start(){

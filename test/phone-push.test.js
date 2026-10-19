@@ -39,11 +39,20 @@ for (const a of APPS.filter((x) => x !== 'store')) {
   t.check(/from\('push_subscriptions'\)\.upsert\(\{ shop_id: S\.shopId, staff_id: st \? st\.id : null, user_id: S\.user\.id, fcm_token: t\.value \}, \{ onConflict: 'fcm_token' \}\)/.test(fn),
     `${a}: the phone is this login's, with its staff row when it has one`);
   t.check(/perm\.receive !== 'denied'/.test(fn), `${a}: never asks again once the person said no`);
-  t.check(/if \(error\) window\.owPushError = [^;]+; else \{ window\.owPushReady = true;/.test(fn),
+  t.check(/if \(error\) \{ window\.owPushError = [^;]+; [^}]+\} else \{ window\.owPushReady = true;/.test(fn),
     `${a}: says the phone is signed up only once the save landed (owPushReady), and keeps why not (owPushError)`);
   t.check(/addListener\('registrationError'/.test(fn), `${a}: a phone that gets no token says so`);
   t.check(/function start\(\)\{\n  S\.started = true;\n  phonePush\(\);/.test(src), `${a}: asked as the app starts`);
 }
 t.check(/function enablePush\(\)/.test(read('store.html')) && /push_subscriptions/.test(read('store.html')), 'store keeps its own alerts switch');
+
+{
+  // The Manager's "Push to your phone" says why, when the phone is not signed up.
+  const m = read('manager.html');
+  const why = extractFunction(m, 'pushWhy', 'manager.html');
+  t.check(/owPushError/.test(why) && /Google Play services/.test(why) && /phone’s settings/.test(why), 'the Manager card reads why push is not on');
+  t.check(/\$\{pushOn\(\) \? 'On' : pushWhy\(\) \? 'Not on' : 'Coming with push'\}/.test(m), 'and says Not on, with the reason, instead of Coming with push');
+  t.check(/registrationError', e => \{ window\.owPushError = [^;]+; render\(\); \}/.test(m), 'an error redraws the screen it shows on');
+}
 
 process.exit(t.done() ? 1 : 0);
