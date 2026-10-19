@@ -41,6 +41,43 @@ const SUBMIT_DEDUPE_MS = 90 * 1000;
 // floor price, bonus -- is derived server-side and would legitimately
 // differ between two runs if a price moved in between, which must not stop
 // a genuine re-send being recognised.
+const DELIVERY_WHEN = ["today_pm", "tomorrow_am", "tomorrow_pm"];
+
+// The shop's own delivery charge: the service it named "Delivery" (or
+// "Transport") under What you charge for. None named, no fee -- the app
+// never invents one. Mirrored in agent-catalog, which shows it to the agent
+// before they send.
+function shopDeliveryFee(presets: any): any {
+  const list = Array.isArray(presets?.services) ? presets.services : [];
+  const s = list.find((x: any) => x && /deliver|transport/i.test(String(x.name || "")) && Number(x.value) > 0);
+  return s ? { label: String(s.name), type: s.type === "percent" ? "percent" : "fixed", value: Number(s.value) } : null;
+}
+
+/* FROM OUR SHELF. A line the shop's own stock already covers goes on the
+   order as "Our stock" -- confirmed from the start, for the shop's board
+   and the agent alike -- instead of being priced from a supplier and then
+   waiting on a confirmation nobody needs to ask for. What the shelf can
+   cover is what is on it less what other open (not yet invoiced) orders
+   have been promised from it, since stock only leaves on invoicing.
+   Counted in the shelf's unit, read the way the shop's app reads it
+   (stockUnitFor); a line in a unit the shelf cannot be restated in stays
+   with its supplier. The agent's price is untouched: only where the goods
+   come from, and what they cost the shop, change. Marked shelfAuto so the
+   board can say so and offer to buy it in instead. */
+function stockKeyOf(productId: any, variantIdx: any): string {
+  return variantIdx == null || variantIdx === "" ? String(productId) : `${productId}::${variantIdx}`;
+}
+function unitKey(u: any): string { return String(u || "").trim().toLowerCase(); }
+function shelfQtyOf(rows: any[], qty: number, unit: any): number | null {
+  const packs = (r: any) => Number(r.pack_qty) > 0 && !!r.pack_unit && unitKey(r.pack_unit) !== unitKey(r.unit);
+  const packed = rows.filter((r: any) => !r.out_of_stock).find(packs) || rows.find(packs) || null;
+  const shelfUnit = String((packed ? packed.unit : (rows.find((r: any) => r.unit) || {}).unit) || "");
+  const said = unitKey(unit);
+  if (!said || !shelfUnit || said === unitKey(shelfUnit)) return qty;
+  if (packed && said === unitKey(packed.pack_unit)) return qty * Number(packed.pack_qty);
+  return null;
+}
+
 function orderFingerprint(agentClientId: any, items: any): string {
   const lines = (Array.isArray(items) ? items : [])
     .map((it: any) => [
@@ -246,6 +283,23 @@ function describeEdit(prevItems: any[], nextItems: any[]): any[] {
   return out;
 }
 
+// An add-on rides with an order already on its way through the shop: the
+// same client, packed with it and sent on the same trip, but checked and
+// paid on its own so the first order's invoice never reopens. Only while
+// that order has not left the shop -- once it is out, more is simply a
+// new order. Never an add-on of an add-on: it rides with the first.
+const ADDON_STATUSES = ["draft", "awaiting_goods", "preparing"];
+function addonRefusal(order: any, agentId: string, agentClientId: unknown): string | null {
+  const p = (order && order.payload) || {};
+  if (!order) return "Order not found";
+  if (p.originAgentId !== agentId) return "This order does not belong to you";
+  if (String(p.agentClientId ?? "") !== String(agentClientId ?? "")) return "That order is for a different client";
+  if (order.voided || p.agentCancel) return "This order is cancelled";
+  if (p.addonOf != null) return "Add to the first order instead";
+  if (!ADDON_STATUSES.includes(order.status)) return "This order has left the shop — start a new order";
+  return null;
+}
+
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -261,16 +315,23 @@ Deno.serve(async (req) => {
     } catch {
       return json({ error: "Invalid JSON body" }, 400);
     }
-    const { shopId, agentClientId, items, deliveryMode, deliveryAddress } = body;
+    const { shopId, agentClientId, items, deliveryMode, deliveryAddress, deliveryContact, deliveryWhen } = body;
     const replaceOrderId = body.replaceOrderId ?? null;
+    const addonOf = body.addonOf ?? null;
+    if (replaceOrderId != null && addonOf != null) {
+      return json({ error: "An edit cannot also be an add-on" }, 400);
+    }
     if (!shopId || !agentClientId || !Array.isArray(items) || !items.length) {
       return json({ error: "shopId, agentClientId and a non-empty items array are required" }, 400);
     }
-    if (deliveryMode !== "agent_pickup" && deliveryMode !== "shop_delivery") {
+    if (addonOf == null && deliveryMode !== "agent_pickup" && deliveryMode !== "shop_delivery") {
       return json({ error: "deliveryMode must be 'agent_pickup' or 'shop_delivery'" }, 400);
     }
-    if (deliveryMode === "shop_delivery" && !String(deliveryAddress || "").trim()) {
+    if (addonOf == null && deliveryMode === "shop_delivery" && !String(deliveryAddress || "").trim()) {
       return json({ error: "deliveryAddress is required when the shop is delivering" }, 400);
+    }
+    if (deliveryWhen != null && !DELIVERY_WHEN.includes(deliveryWhen)) {
+      return json({ error: `deliveryWhen must be one of ${DELIVERY_WHEN.join(", ")}` }, 400);
     }
     for (const it of items) {
       if (!it.productId || !(Number(it.qty) > 0) || !(Number(it.agentSellPrice) >= 0)) {
@@ -333,6 +394,16 @@ Deno.serve(async (req) => {
       const why = replaceRefusal(cur, agentId, agentClientId);
       if (why) return json({ error: why }, cur ? 409 : 404);
       replacing = cur;
+    }
+    let riding: any = null;
+    if (addonOf != null) {
+      const { data: first, error: firstErr } = await admin
+        .from("saved_quotes").select("id, status, voided, payload")
+        .eq("shop_id", shopId).eq("id", addonOf).maybeSingle();
+      if (firstErr) return json({ error: firstErr.message, stage: "addon_lookup" }, 500);
+      const why = addonRefusal(first, agentId, agentClientId);
+      if (why) return json({ error: why }, first ? 409 : 404);
+      riding = first;
     }
 
     // A submit that lands server-side while the agent's connection drops
@@ -414,6 +485,39 @@ Deno.serve(async (req) => {
         .map((p) => [`${p.product_id}::${p.variant_idx || ""}`, p])
     );
 
+    // What the shelf holds for these items, and what open orders already
+    // have from it. Best effort: if any of this cannot be read, every line
+    // simply stays with its supplier, as before.
+    const shelfKeys = [...new Set(items.map((it: any) => stockKeyOf(it.productId, it.variantIdx == null ? null : Number(it.variantIdx))))];
+    let shelf: { have: Map<string, number>; lot: Map<string, number>; spoken: Map<string, number> } | null = null;
+    {
+      const [stockR, lotsR, openR] = await Promise.all([
+        admin.from("stock").select("key, qty").eq("shop_id", shopId).in("key", shelfKeys),
+        admin.from("stock_lots").select("id, key, qty, cost").eq("shop_id", shopId).in("key", shelfKeys).order("id"),
+        admin.from("saved_quotes").select("id, items:payload->items").eq("shop_id", shopId).eq("invoiced", false).eq("voided", false),
+      ]);
+      if (!stockR.error && !lotsR.error && !openR.error) {
+        const have = new Map<string, number>((stockR.data || []).map((r: any) => [String(r.key), Number(r.qty) || 0]));
+        const lot = new Map<string, number>();
+        for (const l of lotsR.data || []) {
+          if (!lot.has(l.key) && Number(l.qty) > 0 && Number(l.cost) > 0) lot.set(l.key, Number(l.cost));
+        }
+        const spoken = new Map<string, number>();
+        for (const o of (openR.data || []) as any[]) {
+          if (replacing && o.id === replacing.id) continue;
+          for (const x of (Array.isArray(o.items) ? o.items : []) as any[]) {
+            if (!x || x.supplierId !== "__stock__") continue;
+            const k = stockKeyOf(x.productId, x.variantIdx == null ? null : x.variantIdx);
+            if (!have.has(k)) continue;
+            const rows = (priceRows || []).filter((r: any) => stockKeyOf(r.product_id, r.variant_idx == null ? null : r.variant_idx) === k);
+            const n = shelfQtyOf(rows, Number(x.qty) || 0, x.unit);
+            spoken.set(k, (spoken.get(k) || 0) + (n == null ? Number(x.qty) || 0 : n));
+          }
+        }
+        shelf = { have, lot, spoken };
+      }
+    }
+
     const lineItems: any[] = [];
     for (const it of items) {
       const kept = replacing ? keptLine(replacing.payload.items, it) : null;
@@ -431,6 +535,12 @@ Deno.serve(async (req) => {
       if (!priced) return json({ error: `Could not price ${product.name}` }, 409);
 
       const key = `${product.id}::${variantIdx == null ? "" : variantIdx}`;
+      const sk = stockKeyOf(product.id, variantIdx);
+      const need = shelfQtyOf(rowsForItem, Number(it.qty), priced.unit);
+      const onShelf = shelf && shelf.have.has(sk) ? shelf.have.get(sk)! - (shelf.spoken.get(sk) || 0) : null;
+      const fromShelf = need != null && need > 0 && onShelf != null && onShelf >= need;
+      if (fromShelf) shelf!.spoken.set(sk, (shelf!.spoken.get(sk) || 0) + need!);
+      const shelfLot = fromShelf ? shelf!.lot.get(sk) : undefined;
       const promo = promoByKey.get(key);
       const bonusCommission = promo && eligibleClusterKeys.has(key)
         ? (promo.bonus_type === "fixed"
@@ -469,23 +579,58 @@ Deno.serve(async (req) => {
         // admin can reassign it to a different supplier from the order's
         // edit view like any other line item, e.g. if this one's since sold
         // out or a better price came in after the order was placed.
-        supplierId: best.supplier_id, supplierName: supplierNamesById.get(best.supplier_id) || null,
-        price: priced.cost, // the real supplier cost this floor price was computed from
+        supplierId: fromShelf ? "__stock__" : best.supplier_id,
+        supplierName: fromShelf ? "Our stock" : (supplierNamesById.get(best.supplier_id) || null),
+        // the real cost: our own oldest lot for a shelf line (per unit of
+        // this line), else the supplier cost this floor price came from
+        price: fromShelf && shelfLot ? Math.round(shelfLot * need! / Number(it.qty) * 100) / 100 : priced.cost,
+        ...(fromShelf ? { shelfAuto: true } : {}),
         sellPrice: priced.floorPrice, // what the shop is actually owed for this line
         agentSellPrice: Number(it.agentSellPrice), // the agent's own price to their client -- their business, not the shop's
         bonusCommission, // snapshot supplier-funded bonus, locked in at submit time -- see comment above
       });
     }
 
+    // Delivery: where, who takes it in (the driver calls them), when, and
+    // the shop's own delivery charge -- an order charge like any other on
+    // the shop's board, owed by the agent with the goods.
+    // An add-on goes where its order goes, on the same trip, so it takes
+    // that order's delivery as it stands and carries no fee of its own:
+    // one trip, one fee, already on the first order.
+    const rp = riding ? (riding.payload || {}) : null;
+    const delivering = rp ? rp.deliveryMode === "shop_delivery" : deliveryMode === "shop_delivery";
+    const fee = delivering && !rp ? shopDeliveryFee(settingsRow?.presets) : null;
+    const delivery = rp ? {
+      deliveryMode: rp.deliveryMode === "shop_delivery" ? "shop_delivery" : "agent_pickup",
+      deliveryAddress: delivering ? (rp.deliveryAddress || null) : null,
+      deliveryContact: delivering ? (rp.deliveryContact || null) : null,
+      deliveryWhen: delivering ? (rp.deliveryWhen || null) : null,
+    } : {
+      deliveryMode,
+      deliveryAddress: delivering ? String(deliveryAddress).trim().slice(0, 200) : null,
+      deliveryContact: delivering && deliveryContact ? {
+        name: String(deliveryContact.name || "").trim().slice(0, 80) || null,
+        phone: String(deliveryContact.phone || "").trim().slice(0, 30) || null,
+      } : null,
+      deliveryWhen: delivering ? (deliveryWhen || null) : null,
+    };
+    // The fee is marked as the agent's delivery charge, so an edit swaps
+    // only that one and never a charge the shop added on its board.
+    const feeCharge = (id: number) => fee ? [{ id, service: fee.label, label: fee.label, type: fee.type, value: fee.value, cost: null, agentDelivery: true }] : [];
+
     const now = new Date().toISOString();
     if (replacing) {
       const prev = replacing.payload || {};
       const lines = describeEdit(prev.items, lineItems);
-      if (!lines.length && prev.deliveryMode === deliveryMode && JSON.stringify(prev.items) === JSON.stringify(lineItems)) return json({ ok: true, orderId: replacing.id, unchanged: true });
+      const sameDelivery = prev.deliveryMode === deliveryMode && (prev.deliveryAddress || null) === delivery.deliveryAddress
+        && JSON.stringify(prev.deliveryContact || null) === JSON.stringify(delivery.deliveryContact) && (prev.deliveryWhen || null) === delivery.deliveryWhen;
+      if (!lines.length && sameDelivery && JSON.stringify(prev.items) === JSON.stringify(lineItems)) return json({ ok: true, orderId: replacing.id, unchanged: true });
+      const kept = (Array.isArray(prev.charges) ? prev.charges : []).filter((ch: any) => !(ch && ch.agentDelivery));
+      const nextId = kept.reduce((m: number, ch: any) => Math.max(m, Number(ch && ch.id) || 0), 0) + 1;
       const nextPayload = {
         ...prev, items: lineItems, savedAt: now,
-        deliveryMode,
-        deliveryAddress: deliveryMode === "shop_delivery" ? String(deliveryAddress).trim() : null,
+        ...delivery,
+        charges: kept.concat(feeCharge(nextId)),
         agentEdit: { at: now, lines },
       };
       const { error: editErr } = await admin.from("saved_quotes").update({ payload: nextPayload })
@@ -515,16 +660,17 @@ Deno.serve(async (req) => {
         debtCharged: 0,
         originAgentId: agentId,
         agentClientId: client.id,
-        deliveryMode,
-        deliveryAddress: deliveryMode === "shop_delivery" ? String(deliveryAddress).trim() : null,
+        ...delivery,
+        charges: feeCharge(1),
         agentPaymentStatus: "unpaid",
+        ...(riding ? { addonOf: riding.id } : {}),
       },
     };
 
     const { data: inserted, error: insertErr } = await admin.from("saved_quotes").insert(insertRow).select("id").single();
     if (insertErr) return json({ error: insertErr.message, stage: "insert" }, 500);
 
-    return json({ ok: true, orderId: inserted.id });
+    return json({ ok: true, orderId: inserted.id, ...(riding ? { addonOf: riding.id } : {}) });
   } catch (err) {
     console.error("agent-submit-order: uncaught error", err);
     return json({ error: String(err && (err as Error).message || err), stage: "uncaught" }, 500);

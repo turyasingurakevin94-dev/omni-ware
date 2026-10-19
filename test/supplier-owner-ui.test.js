@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * The owner's side of the supplier app (0109), inside index.html.
+ * The owner's side of the supplier app (0132), inside index.html.
  *
  * Three places the existing screens take what suppliers say from their
  * own app, without being redrawn around it:
@@ -48,8 +48,8 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   const panel = extractFunction(src, 'supplierPortalPanelHTML', 'index.html');
   t.check(/otherAccent/.test(panel) && /supplierAskList\(s\.id\)/.test(panel),
     'the PIN button is the accent only when the account has no "Ask for prices" accent of its own');
-  t.check(/supplierAccountsTable/.test(panel) && /0109_supplier_accounts\.sql/.test(panel),
-    'with no 0109 the panel says so, in one line, rather than offering a button that cannot work');
+  t.check(/supplierAccountsTable/.test(panel) && /0132_supplier_accounts\.sql/.test(panel),
+    'with no 0132 the panel says so, in one line, rather than offering a button that cannot work');
 }
 
 /* ---------- 3. folding answers from the supplier app ------------------- */

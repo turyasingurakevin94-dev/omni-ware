@@ -221,10 +221,10 @@ const code = src.split(/\r?\n/).map(l => l.replace(/\/\/.*$/, '')).join('\n');
   t.check(iRead > 0 && iRead < iGuard && iGuard < iSubs,
     'read, check it is still in the queue, then look up subscriptions');
 
-  // Every worker in the shop, and only workers: a delivery-only staff
-  // member does not pick, so a push telling them to would be noise on the
+  // Every picker in the shop -- workers and whoever runs the store -- and
+  // only them: a delivery-only staff member does not pick, so a push telling them to would be noise on the
   // one channel this app has.
-  t.check(/\.from\("staff"\)[\s\S]{0,160}?\.eq\("shop_id", order\.shop_id\)[\s\S]{0,60}?\.eq\("role", "worker"\)/.test(fn),
+  t.check(/\.from\("staff"\)[\s\S]{0,160}?\.eq\("shop_id", order\.shop_id\)[\s\S]{0,60}?\.in\("role", \["worker", "store"\]\)/.test(fn),
     "the shop's workers are looked up from the verified row's own shop");
   t.check(/\.in\("staff_id", workerIds\)/.test(fn),
     'and every one of their devices is told, because any of them may be the next one free');

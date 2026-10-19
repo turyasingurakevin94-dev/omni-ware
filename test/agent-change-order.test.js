@@ -64,8 +64,24 @@ const agent = read('agent.html');
     { id: 1, payload: { agentCredit: { amount: 300, at: '2026-10-01', used: [{ amount: 100 }] } } },
   ], 250);
   eq(plan.map((p) => [p.from.id, p.amount]), [[1, 200], [2, 50]], 'credit is spent oldest first, and never more than is owed');
-  t.check(fn.indexOf('agentCredit: { ...prev, used }') < fn.indexOf('amount_paid: newPaid'),
-    'credit is marked spent on its source before it is paid onto the order, so a failure can never spend it twice');
+  /* Spending credit was a read, then a write to each source, then a write
+     to the order. Two requests that read the same balance both spent it
+     (100 of credit paid 200 of orders), and the rollback put back a stale
+     copy of the whole source order. The plan made here is now checked and
+     written under row locks in one transaction, by use_agent_credit (0109). */
+  t.check(/admin\.rpc\("use_agent_credit"/.test(fn) && !/agentCredit: \{ \.\.\.prev, used \}/.test(fn)
+    && !/for \(const p of spent\)/.test(fn),
+    'credit is spent by one locked transaction, with no write-then-roll-back of a stale copy');
+  t.check(/if \(rpcMissing\(rpcErr\)\) return json\(\{ error: "Using credit needs database update 0109/.test(fn),
+    'a database without it refuses rather than falling back to the path that spent credit twice');
+  t.check(/for \(let attempt = 0; attempt < 3; attempt\+\+\)/.test(fn) && /Your credit changed while it was being used/.test(fn),
+    'a plan the database finds stale is re-read and re-planned, a bounded number of times');
+  const mig = read('supabase/migrations/0109_atomic_money_writes.sql');
+  const useFn = mig.slice(mig.indexOf('create or replace function public.use_agent_credit'), mig.indexOf('revoke all on function public.use_agent_credit'));
+  t.check(/order by id for update/.test(useFn) && /if credit_left < amt then/.test(useFn) && /total > due/.test(useFn),
+    'the database locks every order involved, in id order, and re-checks each source and the amount owed under the lock');
+  t.check(/revoke all on function public\.use_agent_credit\([^)]*\) from public, anon, authenticated;/.test(mig),
+    'and only the service role can call it -- it trusts the agent id the function established');
 }
 
 /* ---------- 2. editing is a resubmission, priced here ---------------- */
@@ -161,7 +177,7 @@ const agent = read('agent.html');
   t.check(/!o\.voided && !o\.agentCancel && o\.status !== 'completed'/.test(agent), 'a cancelled order is no longer live');
   t.check(/replaceOrderId: o\.id/.test(agent) && /'agent-change-order', \{ orderId: o\.id, action: 'ask'/.test(agent),
     'an edit goes as a resubmission and an ask to agent-change-order');
-  t.check(/if\(agentCreditLeft\(order\.id\) > 0\)/.test(agent), 'credit is used by itself before the phone is asked to pay');
+  t.check(/agentCreditLeft\(o\.id\) > 0\)\{\s*const used = await useCreditOn\(o\)/.test(agent), 'credit is used by itself before the phone is asked to pay');
 }
 
 process.exit(t.done() ? 1 : 0);

@@ -45,7 +45,7 @@ try {
 } catch (e) { adminErr = e; }
 try {
   agent = compileScope(
-    ['orderTotal', 'agentLinePriced', 'orderEarnings'].map(n => extractFunction(agentSrc, n, 'agent.html')),
+    ['chargeValue', 'orderShopGoods', 'orderChargesAmount', 'orderTotal', 'agentLinePriced', 'orderEarnings'].map(n => extractFunction(agentSrc, n, 'agent.html')),
     {}, ['orderTotal', 'orderEarnings'],
   );
 } catch (e) { agentErr = e; }
@@ -164,7 +164,10 @@ if (admin && agent) {
     t.check(/sellPrice: priced\.floorPrice,/.test(fn),
       'which is why agent-submit-order always writes sellPrice onto every line');
     t.check(/agentSellPrice: Number\(it\.agentSellPrice\),/.test(fn), 'and agentSellPrice');
-    t.check(/price: priced\.cost,/.test(fn), 'and the supplier cost the floor was computed from');
+    // A line off our own shelf is costed from our oldest lot instead
+    // (agent-submit-order, "from our shelf") -- still always written.
+    t.check(/price: fromShelf && shelfLot \? [^\n]+ : priced\.cost,/.test(fn),
+      'and what it cost: the supplier cost the floor was computed from, or our own lot for a line off the shelf');
   }
 
   /* ---------- 7. shown as earned vs actually payable ----------------- */

@@ -54,10 +54,37 @@ const modal = (/<div class="modal-overlay" id="staffModal">[\s\S]*?\n<\/div>\n/.
   t.check(/return s\.role===role;/.test(elig),
     'while a delivery person can only be given delivery');
 
+  /* Eight since Sourcing (0126), seven since the accounts desk (0117), after the store (0115) and the
+     manager (0116); four since the buying desk (0114). The first two are still the pair
+     this section is about -- a picker and a narrower driver -- in the
+     same order; the third is a different kind of person altogether, so
+     it comes last and says it is never handed floor work. */
   const list = scope.roles();
-  eq(list.length, 2, 'two roles are offered');
+  eq(list.length, 8, 'eight roles are offered');
   eq(list[0].key, 'worker', 'the broader one first, because it is the safer default');
   eq(list[1].key, 'delivery', 'and the narrowing one second');
+  eq(list[2].key, 'sales', 'and the sales desk last, apart from the floor');
+  t.check(/Never handed picking or delivery/.test(list[2].note),
+    'which says outright that a salesperson is never handed picking or delivery');
+  /* The buying desk (0114) comes after it: also off the floor, but a
+     trip can still be theirs. */
+  eq(list[3].key, 'buyer', 'and the buying desk after it');
+  t.check(/never handed picking or delivery/.test(list[3].note) && /sent on trips/.test(list[3].note),
+    'which says a buyer is never handed floor work but can be sent on trips');
+  /* The store yard (0115) last: on the floor -- picking and delivery --
+     but signs in to the Store app. */
+  eq(list[4].key, 'store', 'and the store yard last');
+  t.check(/Store app/.test(list[4].note) && /picking and delivery/.test(list[4].note),
+    'which says they sign in to the Store app and can still be handed picking and delivery');
+  /* The manager (0116) after it: runs the team from the Manager app, and
+     is never handed the floor work itself. */
+  eq(list[5].key, 'manager', 'and the manager after the store');
+  t.check(/Manager app/.test(list[5].note) && /Never handed picking or delivery/.test(list[5].note) && /books stay yours/.test(list[5].note),
+    'which says they sign in to the Manager app, are never handed floor work, and the books stay the owner\'s');
+  /* The accounts desk (0117) last: off the floor altogether. */
+  eq(list[6].key, 'accounts', 'and the accounts desk after the manager');
+  t.check(/Never handed picking or delivery/.test(list[6].note) && /Accounts app/.test(list[6].note),
+    'which says an accounts login works in the Accounts app and is never handed floor work');
 
   /* Each says what it UNLOCKS, which is the fact the dropdown hid. */
   t.check(/Picking and delivery/.test(list[0].gives),

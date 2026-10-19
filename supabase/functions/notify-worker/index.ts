@@ -280,12 +280,13 @@ async function notifyPickQueue(record: { id?: number; shop_id?: string }) {
     && (order.payload?.pickingStatus ?? null) !== "done";
   if (!stillQueued) return json({ ok: true, skipped: "order is no longer in the pickers' queue" });
 
-  // Workers only: a delivery-only staff member does not pick.
+  // Pickers only: a delivery-only staff member does not pick; somebody
+  // who runs the store (store.html) does.
   const { data: workers, error: staffErr } = await admin
     .from("staff")
     .select("id")
     .eq("shop_id", order.shop_id)
-    .eq("role", "worker");
+    .in("role", ["worker", "store"]);
   if (staffErr) return json({ error: staffErr.message, stage: "queue_staff" }, 500);
   const workerIds = (workers ?? []).map((w) => String(w.id));
   if (!workerIds.length) return json({ ok: true, skipped: "no workers on staff" });

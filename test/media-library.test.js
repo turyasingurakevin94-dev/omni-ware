@@ -320,8 +320,10 @@ const eqJ = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(w
   t.check((src.match(/data-tab="media"/g) || []).length >= 1,
     'and is on the rail, which is what the phone sheet is built from');
   /* Anchored to the start of the line: `if(false) await backfill...`
-     still CONTAINS the call, and this has to fail on it. */
-  t.check(/\n    await backfillMediaLibrary\(\);/.test(src), 'boot runs the backfill');
+     still CONTAINS the call, and this has to fail on it. The one guard
+     allowed is the sales desk's (0113): a Sales login does not write
+     media, so the owner's backfill is skipped there and only there. */
+  t.check(/\n    (?:if\(!\(typeof salesDesk !== 'undefined' && salesDesk\)\)\{\n  )?    await backfillMediaLibrary\(\);/.test(src), 'boot runs the backfill');
   t.check(/hashUnhashedMedia\(\)\.catch/.test(src), 'and starts fingerprinting behind it');
 
   /* The three upload points all go through the picker now. */

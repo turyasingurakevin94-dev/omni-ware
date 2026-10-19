@@ -70,6 +70,9 @@ function addDiffOps(ops, collectionKey, tableName, idField, shopId, rows, opts){
   if(toUpsert.length){
     const beforeUpsert = opts && opts.beforeUpsert;
     ops.push({
+      // Named, so a host that may write only some tables (the admin's
+      // sales desk) can tell which op is which before any of them runs.
+      key: collectionKey, table: tableName,
       run: beforeUpsert
         ? async ()=>{
             try{ await beforeUpsert(toUpsert); }
@@ -107,6 +110,7 @@ function addDiffOps(ops, collectionKey, tableName, idField, shopId, rows, opts){
       }
     }
     ops.push({
+      key: collectionKey, table: tableName, deletes: true,
       run: ()=> sb.from(tableName).delete().eq('shop_id', shopId).in(idField, toDeleteValues),
       commit: ()=> removedKeys.forEach(k=> delete prev[k])
     });
@@ -2158,9 +2162,11 @@ function renderWorkerFinishButton(q){
 // Workers can also be picked as the delivery person for an order (many
 // shops don't have dedicated riders spare for every order) -- dedicated
 // delivery personnel aren't assumed to also prepare/pack, though.
-const STAFF_ROLE_LABELS = {worker:'Worker', delivery:'Delivery personnel'};
+const STAFF_ROLE_LABELS = {worker:'Worker', delivery:'Delivery personnel', store:'Store'};
 function staffEligibleForRole(s, role){
-  if(role==='delivery') return s.role==='delivery' || s.role==='worker';
+  // Somebody who runs the store (store.html) picks and delivers too.
+  if(role==='delivery') return s.role==='delivery' || s.role==='worker' || s.role==='store';
+  if(role==='worker') return s.role==='worker' || s.role==='store';
   return s.role===role;
 }
 // Resolves a staff id to a display name -- falls back gracefully if the

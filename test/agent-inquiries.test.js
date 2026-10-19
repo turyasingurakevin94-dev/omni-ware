@@ -20,41 +20,31 @@ const { read, extractFunction, compileScope, createReporter } = require('./_extr
 const t = createReporter('agent inquiries');
 const src = read('agent.html');
 
-/* ---------- a DOM small enough to assert against --------------------- */
-const els = {};
-const el = (id) => (els[id] = els[id] || { id, innerHTML: '' });
+/* ---------- the Asked rows, rendered on their own ------------------- */
+/*
+ * The Clients tab draws requests as "Asked on your shop link": the open
+ * ones on top of the list, all of them (handled too) under the Asked chip.
+ * clxAskedHTML(list, all) is that row set.
+ */
 const catalog = [];
 const myInquiries = [];
-// Buttons wired by renderInquiries land here so a click can be replayed.
-const wired = [];
-const NAMES = ['inquiryAgoLabel', 'inquiryProductLabel', 'inquiriesForDisplay', 'renderInquiries', 'toggleInquiryHandled'];
-// The Clients tab shows requests two ways: the open ones on top of the
-// list, and all of them (handled ones too) under the "Asked" filter.
-const FILTER_SRC = "let clientFilter = 'asked'; function setClientFilter(f){ clientFilter = f; }";
+const NAMES = ['inquiryAgoLabel', 'inquiryProductLabel', 'inquiriesForDisplay', 'clxAskedHTML', 'toggleInquiryHandled'];
 const env = {
-  document: {
-    getElementById: (id) => Object.assign(el(id), {
-      // renderInquiries queries the markup it just wrote to attach handlers.
-      querySelectorAll: () => {
-        wired.length = 0;
-        const ids = [...String(el(id).innerHTML).matchAll(/class="ag-inquiry-done" data-inq="([^"]*)"/g)].map((m) => m[1]);
-        return ids.map((v) => ({ dataset: { inq: v }, addEventListener: (_e, fn) => wired.push({ inq: v, fn }) }));
-      },
-    }),
-  },
   catalog, myInquiries,
-  currentShopId: 'shop-1',
+  currentShopId: 'shop-1', currentView: 'today',
+  clxMore: new Set(),
+  PH: { chatDots: '<svg></svg>', whatsapp: '<svg></svg>', caretDown: '<svg></svg>' },
   toast: (m) => { env.__toast = m; },
   saveOfflineCache: () => { env.__cached = (env.__cached || 0) + 1; },
+  renderInquiries: () => {},
   esc: (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])),
   sb: { from: () => ({ update: (v) => { env.__update = v; return { eq: () => ({ eq: () => Promise.resolve({ error: env.__err || null }) }) }; } }) },
-  AX_ICON: { chat: '<svg></svg>', check: '<svg></svg>', phone: '<svg></svg>' },
   firstWord: (n) => String(n || '').trim().split(/\s+/)[0] || 'them',
 };
-const scope = compileScope([FILTER_SRC, ...NAMES.map((n) => extractFunction(src, n, 'agent.html'))], env, NAMES.concat(['setClientFilter']));
+const scope = compileScope(NAMES.map((n) => extractFunction(src, n, 'agent.html')), env, NAMES);
 const setInquiries = (rows) => { myInquiries.length = 0; rows.forEach((r) => myInquiries.push(r)); };
 const setCatalog = (rows) => { catalog.length = 0; rows.forEach((r) => catalog.push(r)); };
-const render = () => { scope.renderInquiries(); return el('ag_inquiriesWrap').innerHTML; };
+const render = () => scope.clxAskedHTML(scope.inquiriesForDisplay().list, true);
 const ago = (mins) => new Date(Date.now() - mins * 60000).toISOString();
 
 /* ---------- 1. how long ago, coarsely -------------------------------- */
@@ -102,7 +92,7 @@ const ago = (mins) => new Date(Date.now() - mins * 60000).toISOString();
     message: '<script>alert("xss")</script> & "quoted"', created_at: ago(5),
   }]);
   const html = render();
-  t.check(!/<img|<script|<b>/.test(html),
+  t.check(!/<img|<script|<b>07/.test(html),
     'no tag from the form survives into the markup');
   t.check(/&lt;img src=x onerror=alert\(1\)&gt;/.test(html),
     'the name is shown as the literal text it is');
@@ -110,10 +100,10 @@ const ago = (mins) => new Date(Date.now() - mins * 60000).toISOString();
     'and so are the message\'s tags, ampersands and quotes');
 }
 {
-  // The phone goes into a tel: href, which is a different context again.
+  // The phone goes into a wa.me href, which is a different context again.
   setInquiries([{ id: 1, customer_name: 'A', customer_phone: '0772 123 456"onmouseover="x', message: null, created_at: ago(5) }]);
   const html = render();
-  const href = /href="tel:([^"]*)"/.exec(html);
+  const href = /href="https:\/\/wa\.me\/([^?"]*)/.exec(html);
   t.check(href && /^[\d+]*$/.test(href[1]),
     `the dialled number is digits and plus only, whatever was typed (got "${href ? href[1] : 'no link'}")`);
   // The phone is ALSO displayed as text, so the word "onmouseover" appears
@@ -132,41 +122,37 @@ const ago = (mins) => new Date(Date.now() - mins * 60000).toISOString();
     { id: 2, customer_name: 'Mustafa', customer_phone: '0700000001', message: null, created_at: ago(300) },
   ]);
   const html = render();
-  t.check(/Asked through your link/.test(html), 'the section is headed');
+  t.check(/Asked on your shop link/.test(html), 'the section is headed');
   t.check(/Need 40 by Friday/.test(html),
     'the message the customer actually typed is on screen — the whole point of this');
   t.check(/Sofa Legs · Gold \/ 6&quot;/.test(html), 'alongside what they asked about');
-  t.check(/No details given/.test(html),
+  t.check(/Asked to be contacted/.test(html),
     'and a request with no message says so rather than showing an empty gap');
-  t.check((html.match(/ag-inquiry-card/g) || []).length === 2, 'one card per request');
+  t.check((html.match(/class="ax-clx-ask/g) || []).length === 2, 'one row per request');
+  t.check(/href="https:\/\/wa\.me\/0772123456\?text=/.test(html), 'each with a Reply that opens WhatsApp to them');
 }
 {
-  setInquiries([]);
-  scope.setClientFilter('all');
-  t.check(render() === '',
+  t.check(scope.clxAskedHTML([], false) === '' && scope.clxAskedHTML([], true) === '',
     'no requests renders nothing at all — no empty-state clutter above the client list');
-  scope.setClientFilter('asked');
-  t.check(/Nobody has asked/.test(render()),
-    'while the Asked filter, chosen on purpose, says so rather than showing a blank');
-  // Above the list, only what still needs a call -- the handled ones are
-  // under Asked, so finished work never pushes clients down the screen.
+  const screen = extractFunction(src, 'renderClientsListScreen', 'agent.html');
+  t.check(/clxAskedHTML\(inquiriesForDisplay\(\)\.list, true\) \|\| '<div class="ax-empty">Nobody has asked/.test(screen),
+    'while the Asked chip, chosen on purpose, shows every request and says so when there are none');
+  t.check(/clxAskedHTML\(inquiriesForDisplay\(\)\.open\)/.test(screen),
+    'above the client list: only what still needs an answer, so finished work never pushes clients down the screen');
   setInquiries([
-    { id: 1, customer_name: 'A', customer_phone: '07', message: 'm', created_at: ago(1), handled_at: ago(1) },
     { id: 2, customer_name: 'B', customer_phone: '07', message: 'm', created_at: ago(2) },
     { id: 3, customer_name: 'C', customer_phone: '07', message: 'm', created_at: ago(3) },
     { id: 4, customer_name: 'D', customer_phone: '07', message: 'm', created_at: ago(4) },
   ]);
-  scope.setClientFilter('all');
-  const top = render();
-  t.check((top.match(/ag-inquiry-card/g) || []).length === 2 && !/ag-inquiry-card handled/.test(top),
-    'above the client list: the two newest open requests, and nothing handled');
-  scope.setClientFilter('asked');
+  const top = scope.clxAskedHTML(scope.inquiriesForDisplay().open);
+  t.check((top.match(/class="ax-clx-ask/g) || []).length === 1 && /Show 2 more/.test(top),
+    'and folded to the newest, with the rest one tap away');
 }
 {
   // The query already caps at 50; the screen shows fewer still. A wall of
   // old requests buries the new ones.
   setInquiries(Array.from({ length: 40 }, (_, i) => ({ id: i, customer_name: 'C' + i, customer_phone: '07', message: 'm', created_at: ago(i) })));
-  t.check((render().match(/ag-inquiry-card/g) || []).length === 20,
+  t.check((render().match(/class="ax-clx-ask/g) || []).length === 20,
     'a long history is capped so the newest stay visible');
 }
 
@@ -199,14 +185,12 @@ const ago = (mins) => new Date(Date.now() - mins * 60000).toISOString();
     'but their absence never escalates to the whole-screen warning, since their load is non-fatal by design');
 }
 {
-  const screen = extractFunction(src, 'renderClientsListScreen', 'agent.html');
-  t.check(/renderInquiries\(\)/.test(screen),
-    'the Clients screen draws them');
   const iLink = src.indexOf('id="ag_shopLinkBtn"');
-  const iInq = src.indexOf('id="ag_inquiriesWrap"');
   const iList = src.indexOf('id="ag_clientsListWrap"');
-  t.check(iLink > -1 && iInq > iLink && iList > iInq,
-    'under the shop link that brings them in, and above the client list');
+  t.check(iLink > -1 && iList > iLink,
+    'under the shop link that brings them in, at the head of the client list');
+  t.check(/function renderInquiries\(\)\{ if\(currentView === 'clients'\) renderClientsListScreen\(\); \}/.test(src),
+    'and a change to one redraws the Clients screen it lives on');
 }
 
 /* ---------- 6. outstanding vs handled --------------------------------- */
@@ -230,18 +214,20 @@ const ago = (mins) => new Date(Date.now() - mins * 60000).toISOString();
 }
 {
   const html = render();
-  t.check(/ag-inquiry-count">2</.test(html),
-    'the heading carries the number still needing a call, not the total');
-  t.check((html.match(/ag-inquiry-card handled/g) || []).length === 1,
+  t.check(/Asked on your shop link<\/span> <b>2<\/b>/.test(html),
+    'the heading carries the number still needing an answer, not the total');
+  t.check((html.match(/class="ax-clx-ask done"/g) || []).length === 1 && /· answered/.test(html),
     'a handled request is marked as such rather than removed');
-  t.check(/aria-label="Done"/.test(html) && /<button[^>]*aria-label="Undo"/.test(html),
-    'each offers the action that applies to it — Done when open, Undo when handled');
-  t.check(/aria-pressed="true"/.test(html), 'and the tick says, to a screen reader too, which state it is in');
+  setInquiries([{ id: 5, customer_name: 'No phone', customer_phone: '', message: 'm', created_at: ago(1) },
+    { id: 6, customer_name: 'No phone done', customer_phone: null, message: 'm', created_at: ago(2), handled_at: ago(1) }]);
+  const np = render();
+  t.check(/aria-pressed="false">Done</.test(np) && /aria-pressed="true">Undo</.test(np),
+    'with no number to reply to, each offers the action that applies — Done when open, Undo when handled — and says which state it is in');
 }
 {
   setInquiries([{ id: 1, customer_name: 'A', customer_phone: '07', message: 'm', created_at: ago(1), handled_at: ago(1) }]);
   const html = render();
-  t.check(!/ag-inquiry-count/.test(html),
+  t.check(/Asked on your shop link<\/span><\/div>/.test(html),
     'with nothing outstanding the heading carries no count at all, rather than a zero');
 }
 {
@@ -283,14 +269,12 @@ const ago = (mins) => new Date(Date.now() - mins * 60000).toISOString();
     t.check(/Could not save/.test(env.__toast || ''), 'and the agent is told');
     t.check(env.__cached === 0, 'with nothing written to the offline snapshot either');
 
-    // Clicking a button the render wired must reach the same path.
-    env.__err = null;
-    setInquiries([{ id: 9, customer_name: 'B', customer_phone: '07', message: 'm', created_at: ago(2) }]);
-    render();
-    t.check(wired.length === 1 && wired[0].inq === '9',
-      `the rendered Done button is wired to its own request (${wired.length} wired)`);
-    await wired[0].fn();
-    t.check(!!myInquiries[0].handled_at, 'and clicking it marks that request handled');
+    // The rows are wired by delegation on the Clients view: Done toggles,
+    // and replying on WhatsApp marks it answered.
+    t.check(/closest\('\[data-inq-toggle\]'\);\s*if\(tog\)\{ toggleInquiryHandled\(Number\(tog\.dataset\.inqToggle\)\); return; \}/.test(src),
+      'the rendered Done button reaches the same path');
+    t.check(/closest\('\[data-inq-reply\]'\);\s*if\(rep\)\{[^\n]*if\(inq && !inq\.handled_at\) toggleInquiryHandled\(inq\.id\);/.test(src),
+      'and a Reply marks the request answered');
 
     /* ---------- 8. the agent may mark, and only mark ------------------ */
     const mig = read('supabase/migrations/0039_inquiry_handled_state.sql');

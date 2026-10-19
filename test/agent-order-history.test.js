@@ -47,7 +47,7 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   // Scoped to the function. An identical sort lives in orderAgainItems, so
   // an unscoped match is satisfied by THAT one -- a mutation putting this
   // screen back on savedAt sailed straight past the first version.
-  for (const name of ['openClientSheet', 'openMoneySheet']) {
+  for (const name of ['openClientSheet', 'moneyOrdersHTML']) {
     let render = '';
     try { render = extractFunction(src, name, 'agent.html'); } catch (e) { /* reported below */ }
     t.check(/String\(orderDate\(b\)\|\|''\)\.localeCompare\(String\(orderDate\(a\)\|\|''\)\)/.test(render),
@@ -92,7 +92,7 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
 /* ---------- 2. what needs the agent, by their own terms --------------- */
 {
   const stageFor = (term) => compileScope(['const orderStaffNames = new Map();',
-    ...['agentOrderTerms', 'orderShopChecked', 'staffName', 'orderOwedAmount', 'orderStage'].map((n) => extractFunction(src, n, 'agent.html'))],
+    ...['agentOrderTerms', 'orderShopChecked', 'staffName', 'chargeValue', 'orderShopGoods', 'orderChargesAmount', 'orderOwedAmount', 'orderStage'].map((n) => extractFunction(src, n, 'agent.html'))],
     { myAgent: { paymentTerm: term }, fmtNum: (n) => String(n) }, ['orderStage', 'agentOrderTerms']);
   let pre = null, pod = null;
   try { pre = stageFor('prepay'); pod = stageFor('pay_on_delivery'); } catch (e) { /* reported below */ }
@@ -125,7 +125,7 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   /* And not cancelled by the agent either: an order they called off is
      waiting only for the shop to close it, which is not moving. */
   t.check(/!o\.voided && !o\.agentCancel && o\.status !== 'completed'/.test(live), 'a live order is any not voided, not cancelled by the agent, and not finished');
-  t.check(/if\(key !== 'needs'\)\{ openStageSheet\(key\); return; \}/.test(code),
+  t.check(/\n  openStageSheet\(key\);\n\}/.test(extractFunction(src, 'onMoveClick', 'agent.html')),
     'every stage tile opens its own page -- the orders in it and where each one is -- even with only one in it');
 }
 
@@ -135,8 +135,8 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   // was -- so the way to an old order is the client.
   const sheet = extractFunction(src, 'openClientSheet', 'agent.html');
   t.check(/data-track="\$\{esc\(o\.id\)\}"/.test(sheet), 'a client\'s orders are on their sheet, each opening its track');
-  const money = extractFunction(src, 'openMoneySheet', 'agent.html');
-  t.check(/data-track="\$\{esc\(o\.id\)\}"/.test(money), 'and a month\'s are on the Money sheet for that month');
+  const money = extractFunction(src, 'moneyOrdersHTML', 'agent.html');
+  t.check(/data-track="\$\{esc\(o\.id\)\}"/.test(money) && /moneyOrdersHTML\(f\)/.test(extractFunction(src, 'openMoneySheet', 'agent.html')), 'and a month\'s are on the Money sheet for that month');
 }
 
 process.exit(t.done() ? 1 : 0);

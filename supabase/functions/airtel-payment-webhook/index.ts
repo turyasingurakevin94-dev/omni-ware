@@ -83,7 +83,8 @@ Deno.serve(async (req) => {
     }
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-    let query = admin.from("agent_mobile_payments").select("id, shop_id").eq("status", "pending");
+    // pending, or set aside for a newer request (timeout): either can still be approved.
+    let query = admin.from("agent_mobile_payments").select("id, shop_id").in("status", ["pending", "timeout"]);
     query = providerTransactionId
       ? query.eq("provider_transaction_id", providerTransactionId)
       : query.eq("external_reference", reference);

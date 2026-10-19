@@ -124,7 +124,7 @@ const reset = (locs) => {
      is for rather than what it is called — so this matches the marker on
      the field, not one particular wording of the label. */
   t.check(/<span class="cf-label">Where they are <span class="req">required<\/span><\/span>/.test(code)
-    && /Based at <span class="req">required<\/span>/.test(code),
+    && /Where they sell <span class="req">required<\/span>/.test(code),
   'both labels say so before the person fills the form in, not after');
   t.check(/press Enter to add it/.test(code) && /press Enter\./.test(code),
     'and both say how to add one that is not on the list');

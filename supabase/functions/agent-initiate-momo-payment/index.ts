@@ -171,6 +171,19 @@ async function airtelRequestToPay(creds: any, environment: string, opts: { refer
   return { providerTransactionId: body?.data?.transaction?.id || null };
 }
 
+// What the order's charges come to (a delivery fee, say) on top of the
+// goods -- the shop's own rule: a percent is of the goods, a fixed one is
+// whole shillings, nothing at or below zero. Same rule in agent.html,
+// check-momo-payment-status, agent-initiate-momo-payment and
+// agent-change-order; keep them in step.
+function chargesTotal(payload: any, goods: number): number {
+  return (Array.isArray(payload && payload.charges) ? payload.charges : []).reduce((s: number, ch: any) => {
+    const v = Number(ch && ch.value) || 0;
+    if (!(v > 0)) return s;
+    return s + (ch.type === "percent" ? Math.round(goods * v / 100) : Math.round(v));
+  }, 0);
+}
+
 // Mirrors agentOrderTerms in shared-worker.js -- keep the two in step.
 function agentOrderTerms(payload: any): string {
   return (payload.items || []).map((it: any) => [
@@ -233,7 +246,7 @@ Deno.serve(async (req) => {
     if (!providerRow || !providerRow.enabled) return json({ error: `${provider} is not enabled for this shop` }, 400);
 
     const { data: order, error: orderErr } = await admin
-      .from("saved_quotes").select("id, status, payload, amount_paid")
+      .from("saved_quotes").select("id, status, voided, payload, amount_paid")
       .eq("shop_id", shopId).eq("id", orderId).maybeSingle();
     if (orderErr) return json({ error: orderErr.message, stage: "order_lookup" }, 500);
     if (!order) return json({ error: "Order not found" }, 404);
@@ -243,6 +256,11 @@ Deno.serve(async (req) => {
     // Cancelled by the agent and waiting for the shop to close it: nothing
     // is owed on an order nobody is going to supply (agent-change-order).
     if (payload.agentCancel) return json({ error: "You cancelled this order" }, 409);
+    // Cancelled by the SHOP: its board voids the order and sets nothing
+    // else (cancelSavedQuote -> setInvoicesVoided), so a stale agent
+    // screen could still ask for money on an order nobody will supply.
+    // voided was not even selected here.
+    if (order.voided) return json({ error: "The shop has cancelled this order" }, 409);
     // Check first, pay second. While the order is still a draft the shop has
     // not yet said which lines it can supply; taking money for lines it may
     // drop would mean a refund. The shop's confirmation signs the lines as
@@ -259,7 +277,8 @@ Deno.serve(async (req) => {
     // instalment the admin confirmed -- was pushed for its full value again.
     // Approving that charged them the part they had already settled a second
     // time, since both webhooks add to amount_paid rather than replacing it.
-    const orderTotal = (payload.items || []).reduce((s: number, it: any) => s + (Number(it.sellPrice) || 0) * (Number(it.qty) || 0), 0);
+    const goodsTotal = (payload.items || []).reduce((s: number, it: any) => s + (Number(it.sellPrice) || 0) * (Number(it.qty) || 0), 0);
+    const orderTotal = goodsTotal + chargesTotal(payload, goodsTotal);
     const alreadyPaid = Number(order.amount_paid) || 0;
     const amount = Math.round(orderTotal - alreadyPaid);
     if (!(amount > 0)) {
@@ -270,19 +289,34 @@ Deno.serve(async (req) => {
     if (!msisdn) return json({ error: "That doesn't look like a Ugandan mobile number" }, 400);
 
     // Reuses an outstanding request rather than raising a second one.
-    const { data: inFlight, error: inFlightErr } = await admin
+    const findPending = () => admin
       .from("agent_mobile_payments")
       .select("id, external_reference, created_at, amount")
       .eq("shop_id", shopId).eq("order_id", orderId).eq("status", "pending")
       .order("created_at", { ascending: false }).limit(1).maybeSingle();
+    const reuse = (p: any) => json({
+      ok: true, paymentId: p.id, externalReference: p.external_reference,
+      reused: true, amount: Number(p.amount),
+    });
+    const { data: inFlight, error: inFlightErr } = await findPending();
     if (inFlightErr) return json({ error: inFlightErr.message, stage: "in_flight_lookup" }, 500);
-    if (inFlight && Date.now() - new Date(inFlight.created_at).getTime() < PENDING_REUSE_MS) {
-      return json({
-        ok: true, paymentId: inFlight.id, externalReference: inFlight.external_reference,
-        reused: true, amount: Number(inFlight.amount),
-      });
+    if (inFlight && Date.now() - new Date(inFlight.created_at).getTime() < PENDING_REUSE_MS) return reuse(inFlight);
+    if (inFlight) {
+      // Older than the window: set aside so a new prompt can be raised.
+      // 'timeout' is still resolved against the provider by the checker
+      // and both webhooks, so if the old prompt is approved after all, the
+      // money is still banked -- it is only no longer the order's ONE
+      // pending request.
+      await admin.from("agent_mobile_payments")
+        .update({ status: "timeout", updated_at: new Date().toISOString() })
+        .eq("id", inFlight.id).eq("status", "pending");
     }
 
+    // The look-up above and this insert are two statements, so two taps
+    // that both looked first used to both insert -- and both push the
+    // phone for the full amount. The database now holds at most one
+    // pending request per order (0109's unique index): the second insert
+    // is refused, and that caller is handed the request that won.
     const externalReference = crypto.randomUUID();
     const { data: txnRow, error: insertErr } = await admin
       .from("agent_mobile_payments")
@@ -291,7 +325,32 @@ Deno.serve(async (req) => {
         external_reference: externalReference, status: "pending",
       })
       .select().single();
-    if (insertErr) return json({ error: insertErr.message, stage: "insert_pending" }, 500);
+    if (insertErr) {
+      if (String(insertErr.code) === "23505") {
+        const { data: winner } = await findPending();
+        if (winner) return reuse(winner);
+      }
+      return json({ error: insertErr.message, stage: "insert_pending" }, 500);
+    }
+
+    // Read the order once more now that the request is reserved: a shop
+    // cancelling, or a payment landing, between the first read and the
+    // reservation would otherwise still send the phone a prompt.
+    const { data: still, error: stillErr } = await admin
+      .from("saved_quotes").select("voided, payload, amount_paid")
+      .eq("shop_id", shopId).eq("id", orderId).maybeSingle();
+    const stillPayload = (still && still.payload) || {};
+    const stopWhy = stillErr ? "We could not re-check the order" : !still ? "Order not found"
+      : still.voided ? "The shop has cancelled this order"
+      : stillPayload.agentCancel ? "You cancelled this order"
+      : stillPayload.agentPaymentStatus === "paid" || Number(still.amount_paid) !== alreadyPaid ? "This order's payments just changed — open it again"
+      : null;
+    if (stopWhy) {
+      await admin.from("agent_mobile_payments")
+        .update({ status: "cancelled", raw_response: { error: stopWhy }, updated_at: new Date().toISOString() })
+        .eq("id", txnRow.id).eq("status", "pending");
+      return json({ error: stopWhy, stage: "recheck_order" }, 409);
+    }
 
     try {
       if (provider === "mtn") {

@@ -143,7 +143,7 @@ const row = (id, name) => ({ id, shop_id: 'shop-1', name });
  * above, the next save deletes the difference.
  */
 {
-  const poll = /async function pollForUpdatesNow\(\)\{([\s\S]*?)\n\}/.exec(adminSrc);
+  const poll = /async function pollForUpdatesNow\((?:opts)?\)\{([\s\S]*?)\n\}/.exec(adminSrc);
   if (!poll) {
     t.fail('could not find pollForUpdatesNow() to check');
   } else {

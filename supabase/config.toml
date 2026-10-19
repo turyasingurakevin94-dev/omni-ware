@@ -425,17 +425,20 @@ enabled = true
 # thing anyone debugs quickly.
 #
 # So it is declared here instead, where a deploy reads it and a test pins
-# it. The seven below are exactly the functions whose callers are not
+# it. The ones below are exactly the functions whose callers are not
 # signed-in users of this app:
 #
 #   the two payment webhooks   a provider posts them; it has no JWT
 #   wa-webhook                 Meta posts it, likewise
 #   notify-worker              a Database Webhook posts it
+#   notify-stock-count         likewise, on a finished stock take
+#   push-send                  likewise, on every push_outbox insert (0120)
 #   client-portal              the customer portal ships no key at all
 #   client-submit-order        same page, same promise
 #   catalogue-public           the public catalogue, same
 #   supplier-portal            the supplier app, same: a PIN, then its own token
 #   agent-nudge                a Cron job posts it; closed by AGENT_NUDGE_SECRET
+#                              (its "test" action checks the agent's JWT itself)
 #
 # None of them trusts what it is sent -- each re-reads the row it is told
 # about, or checks its own shared secret -- which is what makes them safe
@@ -469,6 +472,12 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.notify-worker]
+verify_jwt = false
+
+[functions.notify-stock-count]
+verify_jwt = false
+
+[functions.push-send]
 verify_jwt = false
 
 [functions.wa-webhook]

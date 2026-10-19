@@ -26,7 +26,7 @@ const fn = (n) => extractFunction(src, n, 'agent.html');
 /* ---------- 1. one line at a time ------------------------------------ */
 {
   const api = compileScope(['const orderStaffNames = new Map();',
-    ...['agentOrderTerms', 'orderShopChecked', 'supplierLineTerms', 'lineSupplierCheck', 'lineCheck', 'orderCheckCount', 'staffName', 'orderOwedAmount', 'orderStage'].map(fn)],
+    ...['agentOrderTerms', 'orderShopChecked', 'supplierLineTerms', 'lineSupplierCheck', 'lineCheck', 'orderCheckCount', 'staffName', 'chargeValue', 'orderShopGoods', 'orderChargesAmount', 'orderOwedAmount', 'orderStage'].map(fn)],
     { myAgent: { paymentTerm: 'prepay' }, fmtNum: (n) => String(n) }, ['lineCheck', 'orderCheckCount', 'orderStage', 'agentOrderTerms']);
   const cem = { productId: 'cem', variantIdx: null, qty: 40, price: 31000, sellPrice: 32000, supplierId: 'S1' };
   const iron = { productId: 'ir', variantIdx: null, qty: 60, price: 35000, sellPrice: 36500, supplierId: 'S2' };
@@ -61,7 +61,7 @@ const fn = (n) => extractFunction(src, n, 'agent.html');
   const track = fn('openTrackSheet');
   t.check(/st\.key === 'checking' && prepay/.test(track) && /Pay opens when all \$\{k\.items\} are checked/.test(track),
     'while it is being checked, a prepay agent sees that paying opens once every line is checked');
-  t.check(/const pay = st\.needs === 'pay' \? payPanelHTML/.test(track), 'and the pay buttons appear only when there is something to pay');
+  t.check(/const pay = st\.needs === 'pay' \? payDockHTML/.test(track), 'and the pay buttons appear only when there is something to pay');
 }
 
 /* ---------- 3. named steps, never a bare bar ------------------------- */
@@ -70,7 +70,8 @@ const fn = (n) => extractFunction(src, n, 'agent.html');
   t.check(/stepLabel\(s, i < at \|\| all\)/.test(tiles) && /stepLabel\(s, done\)/.test(dots), 'every step is drawn with its name');
   t.check(!/class="bar"|width:\$\{/.test(tiles + dots), 'and neither draws a progress bar an agent would have to decode');
   t.check(/orderStepTimes\(o\)/.test(tiles), 'a step that is done carries when it happened');
-  t.check(/stepDotsHTML\(o, st\)/.test(fn('orderCardHTML')), 'the cards on a stage page use the same named steps');
+  t.check(/class="ax-br" data-track=/.test(fn('busyRowHTML')) && !/function orderCardHTML/.test(src),
+    'a stage page lists its orders as rows that open the order, never as big cards');
   t.check(/o\.createdAt \? whenShort\(o\.createdAt\)/.test(fn('orderStepTimes')),
     'Sent shows the time it was sent where the server recorded it, never savedAt -- the shop rewrites that');
   t.check(/createdAt: now,/.test(read('supabase/functions/agent-submit-order/index.ts')), 'and the server records it');
@@ -80,7 +81,10 @@ const fn = (n) => extractFunction(src, n, 'agent.html');
 {
   const fold = /const FOLD_ITEMS_AT = \[([^\]]*)\]/.exec(src);
   const keys = fold ? fold[1].replace(/'/g, '').split(',').map((s) => s.trim()) : [];
-  t.check(['packing', 'ready', 'out', 'done'].every((k) => keys.includes(k)), `from packing on, the lines fold into one row (${keys.join(', ')})`);
+  // Packing and Ready keep them open: while it is being packed, and at the
+  // counter, what is in it is the thing being looked at.
+  t.check(['out', 'done'].every((k) => keys.includes(k)) && !keys.includes('packing') && !keys.includes('ready'),
+    `once it is out the lines fold into one row; packing and ready keep them open (${keys.join(', ')})`);
   t.check(!keys.includes('checking') && !keys.includes('pay'), 'but stay open while they are being checked and paid for');
   t.check(/<details class="ax-card ax-gets"\$\{open \? ' open' : ''\}/.test(fn('openTrackSheet')), 'and one tap opens them');
 }
@@ -121,7 +125,7 @@ const fn = (n) => extractFunction(src, n, 'agent.html');
   t.check(/getElementById\('ag_moneyBtn'\)\.addEventListener\('click', \(\)=> openMoneySheet\(\)\)/.test(src), 'the figure opens the money');
   t.check(/getElementById\('ag_meBtn'\)\.addEventListener\('click', \(\)=> openProfileSheet\(\)\)/.test(src), 'your initials open you');
   t.check(/b\.dataset\.hero === 'near'\) openNearSheet\(\);\s*else openStandingSheet\(\);/.test(src), 'and the glass bar opens what is within reach, and where you stand');
-  t.check(/if\(key !== 'needs'\)\{ openStageSheet\(key\); return; \}/.test(src), 'each stage tile opens its own page');
+  t.check(/  openStageSheet\(key\);\n\}/.test(fn('onMoveClick')), 'each stage tile opens its own page');
 }
 
 /* ---------- 9. live without a reload ---------------------------------- */
@@ -184,7 +188,7 @@ const fn = (n) => extractFunction(src, n, 'agent.html');
     'an order waiting on payment says "Pay" and how much, not just its stage name');
   t.check(/pay:\{ icon:'cash', cls:'pay' \}/.test(src) && /\.ax-badge\.pay\{background:var\(--warn\);color:#fff/.test(src),
     'in solid amber, unlike any other status');
-  for (const f of ['openClientSheet', 'openMoneySheet', 'orderRowHTML']) {
+  for (const f of ['openClientSheet', 'moneyOrdersHTML', 'moneyWayHTML']) {
     t.check(/orderBadgeHTML\(o, st\)/.test(fn(f)) && /st\.needs \? ' needs' : ''/.test(fn(f)), `${f}: shows the badge, and marks the row of an order waiting on you`);
   }
 }

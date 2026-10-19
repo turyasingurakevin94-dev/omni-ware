@@ -77,13 +77,31 @@ const src = read('agent.html');
   t.check(/getElementById\('ag_ringBtn'\)\.addEventListener\('click', \(\)=> openGoalSheet\(\)\)/.test(src), 'the ring opens the goal');
   t.check(!/openGoalSetSheet/.test(src), 'there is no second sheet for setting it');
   const open = extractFunction(src, 'openGoalSheet', 'agent.html');
-  t.check(/class="ax-gin">of<input type="text" inputmode="numeric" id="ag_goalInput"/.test(open), 'the goal figure under the gauge is the field');
+  t.check(/class="ax-gfield"[\s\S]{0,200}?<input type="text" inputmode="numeric" id="ag_goalInput"/.test(open), 'the goal is an outlined field you type into');
   t.check(/input\.addEventListener\('input', \(\)=>\{[\s\S]*?paint\(\);\s*\}\);/.test(open), 'and everything redraws as it is typed');
-  t.check(/input\.addEventListener\('change', keep\)/.test(open) && /value = presets\[Number\(p\.dataset\.preset\)\]\.v;[\s\S]*?keep\(\);/.test(open),
-    'a new number is kept on leaving the field or picking a chip -- no save step');
+  t.check(/if\(e\.target\.closest\('\[data-set\]'\)\)\{ keep\(\); return; \}/.test(open) && !/input\.addEventListener\('change', keep\)/.test(open),
+    'a new number is kept when he taps Set -- dragging, typing and picks only move it');
+  t.check(/setValue\(presets\[Number\(p\.dataset\.preset\)\]\.v\)/.test(open), 'a pick puts its number on the dial');
+  t.check(/Set \$\{fmtNum\(value\)\} for \$\{esc\(monthName\(key\)\)\}/.test(open), 'and the button says the number it will set');
+  t.check(/dial\.addEventListener\('pointerdown'/.test(open) && /goalDialShare\(x, y\)/.test(open), 'the knob is dragged round the dial');
+  t.check(/Needed a day/.test(open) && /You make a day/.test(open) && /Who gets you there/.test(open),
+    'what it takes a day against what he makes, and who is due back to cover it');
   t.check(/if\(!\(value > 0\) \|\| value === saved\) return;/.test(open), 'and an unchanged or empty number is never written');
   t.check(/data-usual=/.test(open) && /orderUsual\(c\)/.test(open), 'a client in the gap list is one tap from their usual order');
   t.check(/if\(e\.target\.closest\('\[data-goal\]'\)\)\{ openGoalSheet\(\{ edit: true \}\); return; \}/.test(src), 'the goal button on Money opens it ready to type');
+}
+
+/* ---------- 4. the dial ------------------------------------------------- */
+{
+  const { goalDialShare, goalDialPoint } = compileScope(
+    [`const GOAL_DIAL = { cx: 160, cy: 132, r: 104, a0: 150, sweep: 240 };`, extractFunction(src, 'goalDialPoint', 'agent.html'), extractFunction(src, 'goalDialShare', 'agent.html')],
+    {}, ['goalDialShare', 'goalDialPoint']);
+  for (const f of [0, .25, .5, .9, 1]) {
+    const [x, y] = goalDialPoint(f, 104);
+    t.check(Math.abs(goalDialShare(x, y) - f) < 1e-6, `a point ${f * 100}% round the dial reads back as ${f * 100}%`);
+  }
+  t.check(goalDialShare(160, 260) === 0 || goalDialShare(160, 260) === 1, 'below the dial, in the gap, the knob holds at an end');
+  t.check(goalDialShare(130, 260) === 0 && goalDialShare(190, 260) === 1, 'the nearer end');
 }
 
 process.exit(t.done() ? 1 : 0);

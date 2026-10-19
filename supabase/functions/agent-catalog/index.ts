@@ -250,6 +250,15 @@ function buildFloorPriceLadder(product: any, priceRow: any, discountWholesalePct
 // already clamps both boxes on save; this is the same bound applied to
 // what is actually on file, since neither column carries a constraint and
 // a figure typed straight into the database has never passed through it.
+// The shop's own delivery charge: the service it named "Delivery" (or
+// "Transport") under What you charge for, in its settings. None named, no
+// fee -- the app never invents one. Mirrored in agent-submit-order.
+function shopDeliveryFee(presets: any): any {
+  const list = Array.isArray(presets?.services) ? presets.services : [];
+  const s = list.find((x: any) => x && /deliver|transport/i.test(String(x.name || "")) && Number(x.value) > 0);
+  return s ? { label: String(s.name), type: s.type === "percent" ? "percent" : "fixed", value: Number(s.value) } : null;
+}
+
 function resolveDiscountPcts(product: any, presets: any) {
   const clamp = (v: number) => Math.min(100, Math.max(0, Number(v) || 0));
   const defaultWholesalePct = clamp(presets?.agentDiscountWholesalePct);
@@ -271,6 +280,37 @@ const DEFAULT_CLUSTER_WAIT_DAYS = 7;
 function resolveClusterWaitDays(presets: any): number {
   const v = presets?.agentClusterWaitDays;
   return v != null && v !== "" ? Math.max(0, Number(v) || 0) : DEFAULT_CLUSTER_WAIT_DAYS;
+}
+
+// Today's agent price of every item, kept so agent-nudge can tell an
+// agent when one has dropped (0110). Prices here are rules on cost worked
+// out on demand, so nothing else remembers yesterday's figure. Written the
+// first time the catalogue is listed each day (Kampala date) -- one cheap
+// read on every other call -- and two weeks are kept. Never allowed to
+// fail the listing itself: a missed snapshot only delays a notification.
+async function snapshotPrices(admin: any, shopId: string, items: any[]) {
+  try {
+    const today = new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10);
+    const { data: have } = await admin.from("agent_price_snapshots").select("taken_on")
+      .eq("shop_id", shopId).eq("taken_on", today).limit(1);
+    if (have && have.length) return;
+    const rows = items.filter((it) => it.available && Number(it.floorPrice) > 0).map((it) => ({
+      shop_id: shopId, product_id: String(it.productId), variant_key: it.variantIdx == null ? "" : String(it.variantIdx),
+      price: Number(it.floorPrice), unit: it.unit || null, taken_on: today,
+    }));
+    for (let i = 0; i < rows.length; i += 500) {
+      await admin.from("agent_price_snapshots").upsert(rows.slice(i, i + 500), { onConflict: "shop_id,product_id,variant_key,taken_on", ignoreDuplicates: true });
+    }
+    const cutoff = new Date(Date.now() - 14 * 86400000).toISOString().slice(0, 10);
+    await admin.from("agent_price_snapshots").delete().eq("shop_id", shopId).lt("taken_on", cutoff);
+  } catch (e) {
+    console.error("agent-catalog: price snapshot skipped", e);
+  }
+}
+
+// The board's stockKey(): a product without sizes by its id alone.
+function stockKeyOf(productId: string, variantIdx: number | null): string {
+  return variantIdx == null ? String(productId) : `${productId}::${variantIdx}`;
 }
 
 Deno.serve(async (req) => {
@@ -346,12 +386,26 @@ Deno.serve(async (req) => {
       // representative (qty=1, always retail-tier) floor price -- good
       // enough for browsing/Explore; the New Quote screen calls "price"
       // again live once a real quantity is entered.
-      const [{ data: products, error: productsErr }, { data: priceRows, error: priceErr }] = await Promise.all([
+      const [{ data: products, error: productsErr }, { data: priceRows, error: priceErr }, namesRes, stockRes] = await Promise.all([
         admin.from("products").select("*").eq("shop_id", shopId),
         admin.from("prices").select("*").eq("shop_id", shopId),
+        // The words clients use for an item (0112). A shop that has not run
+        // that migration gets an error here, read as "no names yet".
+        admin.from("item_names").select("word, product_id, variant_idx").eq("shop_id", shopId),
+        admin.from("stock").select("key, qty").eq("shop_id", shopId),
       ]);
       if (productsErr) return json({ error: productsErr.message, stage: "products_list" }, 500);
       if (priceErr) return json({ error: priceErr.message, stage: "prices_list" }, 500);
+      const namesFor = new Map<string, string[]>();
+      (namesRes.error ? [] : (namesRes.data || [])).forEach((n: any) => {
+        const key = `${n.product_id}::${n.variant_idx == null ? "*" : n.variant_idx}`;
+        if (!namesFor.has(key)) namesFor.set(key, []);
+        namesFor.get(key)!.push(String(n.word));
+      });
+      // Only a counted shelf says anything: no row is "not counted", never 0.
+      // Keyed as the board's stockKey(): the product id, then ::variant.
+      const shelf = new Map<string, number>();
+      (stockRes.error ? [] : (stockRes.data || [])).forEach((r: any) => shelf.set(String(r.key), Number(r.qty) || 0));
 
       const rowsByProduct = new Map<string, any[]>();
       (priceRows || []).forEach((r) => {
@@ -417,11 +471,16 @@ Deno.serve(async (req) => {
             packQty: priced?.packQty ?? 0,
             bestTierMinQty,
             bestTierPrice,
+            aliases: (namesFor.get(`${p.id}::*`) || []).concat(variantIdx == null ? [] : (namesFor.get(`${p.id}::${variantIdx}`) || [])),
+            // Whether the shop has any on its shelf: false when it counted
+            // none, null when it never counted. Never the number itself.
+            onShelf: shelf.has(stockKeyOf(p.id, variantIdx)) ? shelf.get(stockKeyOf(p.id, variantIdx))! > 0 : null,
           };
         });
       });
 
-      return json({ ok: true, items });
+      await snapshotPrices(admin, shopId, items);
+      return json({ ok: true, items, deliveryFee: shopDeliveryFee(presets) });
     }
 
     if (action === "shop") {
@@ -439,12 +498,29 @@ Deno.serve(async (req) => {
       if (settingsErr) return json({ error: settingsErr.message, stage: "settings_lookup" }, 500);
       const presets = settingsRow?.presets || {};
       const str = (v: unknown) => (v == null ? "" : String(v).trim());
+      // Where the shop is on the map, for an agent's "how far" and
+      // Directions: the pin of the place the shop names itself after, the
+      // same rule the shop's own map uses (mapHomePin). The place it names
+      // is matched whole first, then as a place named inside the address.
+      // No pin is null -- never a guess.
+      let pin: { lat: number; lng: number } | null = null;
+      const named = (str(presets.shopLocation) || str(presets.shopAddress)).toLowerCase();
+      if (named) {
+        const { data: places } = await admin.from("places").select("name, lat, lng")
+          .eq("shop_id", shopId).not("lat", "is", null);
+        const rows = (places || []) as any[];
+        const hit = rows.find((p) => String(p.name || "").trim().toLowerCase() === named)
+          || rows.filter((p) => { const n = String(p.name || "").trim().toLowerCase(); return n.length >= 3 && named.includes(n); })
+            .sort((a, b) => String(b.name).length - String(a.name).length)[0];
+        if (hit && Number.isFinite(Number(hit.lat)) && Number.isFinite(Number(hit.lng))) pin = { lat: Number(hit.lat), lng: Number(hit.lng) };
+      }
       return json({
         ok: true,
         shop: {
           name: str(presets.shopLegalName) || str(shopRow?.name),
           phone: str(presets.shopPhone) || str(presets.waPhone),
           address: str(presets.shopAddress),
+          pin,
         },
       });
     }

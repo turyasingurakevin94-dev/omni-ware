@@ -75,7 +75,9 @@ const row = (/function agentRowHTML\(a\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0]
 const body = (/function agentOpenHTML\(a, s\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
 const card = row + body;
 const render = (/function renderAgents\(filter=''\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
-const posHTML = (/function agentRosterPositionHTML\(\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+/* The position card became the Overview tab's navy hero, drawn from
+   agxFigures -- which reads agentRosterPosition -- by agxHeroHTML. */
+const posHTML = ['agxFigures', 'agxHeroHTML'].map((n)=> (new RegExp(`function ${n}\\(\\w*\\)\\{[\\s\\S]*?\\n\\}\\n`).exec(code) || [''])[0]).join('');
 const retire = (/function retireAgent\(id\)\{[\s\S]*?\n\}/.exec(code) || [''])[0];
 /* The terms were a <select> inside the open row, and its change handler
    lived in renderAgents. The canvas made them two buttons -- Prepay and
@@ -183,7 +185,7 @@ if (scope) {
   eq(p.owedOnCredit, 2000000, 'and the part of it that is out on credit terms named separately');
   eq(p.onCredit, 1, 'along with how many agents are on those terms');
 
-  t.check(/const p = agentRosterPosition\(\);/.test(posHTML), 'the header is drawn from it');
+  t.check(/p: agentRosterPosition\(\)/.test(posHTML) && /F\.p\.selling/.test(posHTML), 'the header is drawn from it');
   t.check(/sold in the last \$\{AGENT_IDLE_DAYS\} days/.test(posHTML),
     'saying how many of the roster is actually working');
   /* It used to be a follow-on line under a total: "X of that is with the
@@ -192,7 +194,7 @@ if (scope) {
      sentence is that tile's own basis rather than a footnote to another
      one -- same pluralisation, same claim, no longer subordinate to a
      figure it is more important than. */
-  t.check(/with the \$\{p\.onCredit\} agent\$\{p\.onCredit===1\?' who takes':'s who take'\} goods before paying/.test(posHTML),
+  t.check(/\$\{owers\} agent\$\{owers === 1 \? '' : 's'\}/.test(posHTML),
     'and reading as English for one agent as well as several');
 }
 
@@ -390,10 +392,10 @@ if (scope) {
   t.check(/width:100%/.test(draw.agentAgeBarHTML(200, 'ow-bad')), 'and a very old one fills the bar rather than running out of it');
   eq(draw.agentAgeBarHTML(null, 'ow-bad'), '', 'no age draws no bar, never a bar of nought');
 
-  const pos = (/function agentRosterPositionHTML\(\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
-  t.check(/The claims could not be read, so this is missing rather than nothing/.test(pos) && /Still reading the claims/.test(pos),
+  const pos = (/function agxHeroHTML\(F\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+  t.check(/the claims could not be read/.test(pos) && /reading the claims&hellip;/.test(pos),
     'the balance still says when what you owe could not be read, rather than drawing it as nothing');
-  t.check(/const claimsRead = commissionClaims !== null && !commissionClaimsError;/.test(pos) && /claimsRead \? wait\.total : 0/.test(pos),
+  t.check(/const claimsRead = commissionClaims !== null && !commissionClaimsError;/.test(pos) && /commissionClaims === null \? '&mdash;' : agNum\(wait\.total\)/.test(pos),
     'and draws no "you owe them" side, and no net, until the claims are read');
   const q = (/function agentAttentionRows\(\)\{[\s\S]*?\n\}\n/.exec(code) || [''])[0];
   t.check((q.match(/viz:/g) || []).length === 5, 'every kind of queue row draws its reason');

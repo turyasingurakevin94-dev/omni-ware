@@ -171,9 +171,11 @@ function rememberedPrices(quotes: any[], mine: string): Record<string, { price: 
       const sell = Number(it.sellPrice);
       if (!(sell > 0)) return;
       const key = it.productId + "::" + (it.variantIdx == null ? "" : String(it.variantIdx));
-      // >= so that among orders on the same day the later one in the list
-      // wins, rather than whichever happened to be walked first.
-      if (!out[key] || at >= out[key].at) out[key] = { price: sell, at };
+      // Strictly later dates only. The list arrives newest first, so on a
+      // tie the order already held IS the newer one; `>=` let every older
+      // order on the same day overwrite it, and a price agreed this
+      // afternoon lost to this morning's.
+      if (!out[key] || at > out[key].at) out[key] = { price: sell, at };
     });
   });
   return out;
@@ -199,6 +201,11 @@ function customerUnitPrice(product: any, row: any, qty: number, dflt: any, held:
     packUnit: row.pack_unit || "",
     packQty,
   };
+}
+
+// The answer when anything an order is priced from could not be read.
+function unreadable() {
+  return json({ error: "We cannot take orders just now. Try again in a moment.", stage: "read" }, 503);
 }
 
 async function sessionAccount(shopId: string, token: string) {
@@ -238,8 +245,9 @@ Deno.serve(async (req) => {
     if (!session) return json({ error: "Sign in again" }, 401);
     const customerId = session.customer_id;
 
-    const { data: account } = await admin.from("client_accounts")
+    const { data: account, error: accountErr } = await admin.from("client_accounts")
       .select("status").eq("shop_id", shopId).eq("customer_id", customerId).maybeSingle();
+    if (accountErr) return unreadable();
     // A suspended account keeps its history and loses its counter. The
     // session is revoked when a shop suspends somebody, so this is the
     // belt to that braces — a token minted before the suspension must not
@@ -248,8 +256,9 @@ Deno.serve(async (req) => {
       return json({ error: "This account cannot place orders. Ring the shop." }, 403);
     }
 
-    const { data: customer } = await admin.from("customers")
+    const { data: customer, error: customerErr } = await admin.from("customers")
       .select("id, name, phone").eq("shop_id", shopId).eq("id", customerId).maybeSingle();
+    if (customerErr) return unreadable();
     if (!customer) return json({ error: "Sign in again" }, 401);
     const mine = normalisePhone(customer.phone);
 
@@ -257,16 +266,20 @@ Deno.serve(async (req) => {
     // already exists rather than making the shop prepare it twice.
     const fingerprint = basketFingerprint(items);
     const cutoff = new Date(Date.now() - SUBMIT_DEDUPE_MS).toISOString();
-    const { data: recent } = await admin.from("saved_quotes")
+    const { data: recent, error: recentErr } = await admin.from("saved_quotes")
       .select("id, payload").eq("shop_id", shopId).eq("voided", false)
       .gte("payload->>savedAt", cutoff);
+    // Unread is not "no recent order": a double tap during a hiccup would
+    // otherwise make the shop prepare the same basket twice.
+    if (recentErr) return unreadable();
     const already = (recent || []).find((q: any) =>
       q.payload?.customerId === customerId && basketFingerprint(q.payload?.items) === fingerprint);
     if (already) return json({ ok: true, orderId: already.id, duplicate: true, lines: [], total: 0 });
 
     const productIds = [...new Set(items.map((it: any) => String(it.productId)))];
     const PRICE_COLS = "product_id, variant_idx, supplier_id, wholesale, retail, pack_qty, unit, pack_unit, tiers, out_of_stock";
-    const [{ data: settingsRow }, { data: products }, { data: priceRows }, { data: quotes }] = await Promise.all([
+    const [{ data: settingsRow, error: settingsErr }, { data: products, error: productsErr },
+      { data: priceRows, error: priceErr }, { data: quotes, error: quotesErr }] = await Promise.all([
       admin.from("app_settings").select("presets").eq("shop_id", shopId).maybeSingle(),
       admin.from("products").select("id, name, variants, wholesale_markup_type, wholesale_markup_value, retail_markup_type, retail_markup_value")
         .eq("shop_id", shopId).in("id", productIds),
@@ -279,6 +292,13 @@ Deno.serve(async (req) => {
         .eq("shop_id", shopId).eq("voided", false)
         .order("id", { ascending: false }).limit(200),
     ]);
+    // EVERY INPUT TO THE PRICE IS CHECKED BEFORE ANYTHING IS PRICED. A
+    // failed read used to look exactly like a successful empty one: no
+    // settings meant no default markup, and the order was stored at the
+    // supplier's cost; no history meant no remembered price, and the
+    // customer was charged above the figure the portal had just shown
+    // them. A database failure must refuse the order, never reprice it.
+    if (settingsErr || productsErr || priceErr || quotesErr) return unreadable();
     const presets = settingsRow?.presets || {};
     const defaultMarkup = presets.defaultMarkup || null;
     // THE SAME remembered prices client-portal computed to show the

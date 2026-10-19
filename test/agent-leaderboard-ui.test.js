@@ -37,8 +37,7 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
     'the API sends only rank, name and isYou for other agents');
   t.check(!/top[\s\S]{0,120}amount/.test(fn.slice(fn.indexOf('const top ='), fn.indexOf('const top =') + 200)),
     'and no amount rides along with them');
-  const money = extractFunction(src, 'openMoneySheet', 'agent.html');
-  const standing = (/const lb = leaderboard[\s\S]*?const standing = `[\s\S]*?<\/div>`;/.exec(money) || [''])[0];
+  const standing = extractFunction(src, 'moneyStandingHTML', 'agent.html');
   t.check(standing.length > 0, 'the standing card is found');
   t.check(!/\.top\b/.test(standing) && !/displayName/.test(standing),
     'it never reads the list of other agents -- not their money, and not their names');
@@ -47,26 +46,30 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
 
 /* ---------- 2. where you stand ------------------------------------ */
 {
-  const money = extractFunction(src, 'openMoneySheet', 'agent.html');
+  const money = extractFunction(src, 'moneyStandingHTML', 'agent.html');
+  t.check(/moneyStandingHTML\(\)/.test(extractFunction(src, 'openMoneySheet', 'agent.html')), 'the Money sheet shows where you stand');
   t.check(/const lb = leaderboard && leaderboard\.you && leaderboard\.totalAgents >= 2 \? leaderboard : null;/.test(money),
     'a shop with one agent shows no board rather than a board of one');
-  t.check(/<b>#\$\{esc\(lb\.you\.rank\)\}<\/b><span>of \$\{esc\(lb\.totalAgents\)\}<\/span>/.test(money),
+  t.check(/<b>#\$\{esc\(lb\.you\.rank\)\}<\/b><small>of \$\{esc\(lb\.totalAgents\)\}<\/small>/.test(money),
     'your rank, out of how many');
-  t.check(/rank === lb\.you\.rank \? 'you' : ''/.test(money) && /\.ax-podium i\.you\{background:var\(--accent\);\}/.test(src),
+  t.check(/i \+ 1 === lb\.you\.rank \? 'you' : ''/.test(money) && /\.ax-mx-stand \.pod i\.you\{background:linear-gradient\(180deg,#E5675B,#C93A30\);\}/.test(src),
     'and your bar is the marked one, in the accent');
   t.check(/computeAgentStats\(\)\.completedOrders/.test(money),
     'with no board to stand on, the card falls back to your own orders done rather than going blank');
   t.check(/streak >= 2/.test(money), 'a running streak is said only once it is a streak');
   const hero = extractFunction(src, 'renderTodayHero', 'agent.html');
-  t.check(/leaderboard\.you && leaderboard\.totalAgents >= 2/.test(hero) && /#\$\{esc\(lb\.you\.rank\)\}/.test(hero),
-    'Today carries the same rank, under the same one-agent rule');
+  t.check(/leaderboard\.you && leaderboard\.totalAgents >= 2/.test(hero) && /const rank = lb && lb\.totalAgents >= 3 \? lb : null;/.test(hero)
+    && /#\$\{esc\(rank\.you\.rank\)\}/.test(hero),
+    'Today carries the same rank, but only once there are three to stand among -- second of two is not a headline');
+  t.check(/if\(rank \|\| streak >= 2\) doors\.push/.test(hero) && /if\(p\.near > 0\) doors\.push/.test(hero) && /glass\.hidden = !doors\.length;/.test(hero),
+    'and a door on Today shows only with something behind it -- no "0 within reach"');
 }
 
 /* ---------- 3. no emoji ------------------------------------------- */
 {
-  const money = extractFunction(src, 'openMoneySheet', 'agent.html');
+  const money = extractFunction(src, 'moneyStandingHTML', 'agent.html');
   t.check(!/[\u{1F300}-\u{1FAFF}]/u.test(money), 'no medal or trophy emoji -- the streak flame is a drawn icon');
-  t.check(/AX_ICON\.flame/.test(money), 'which it is');
+  t.check(/PH\.fire/.test(money), 'which it is');
 }
 
 process.exit(t.done() ? 1 : 0);

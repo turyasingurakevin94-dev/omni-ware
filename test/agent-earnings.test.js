@@ -30,37 +30,37 @@ const src = read('agent.html');
 const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
 
 const money = extractFunction(src, 'openMoneySheet', 'agent.html');
+const fn = (n) => extractFunction(src, n, 'agent.html');
+const six = fn('moneySixHTML'), hero = fn('moneyHeroHTML'), orderRows = fn('moneyOrdersHTML');
 
 /* ---------- 1. the sheet reads top to bottom by month ---------------- */
 /*
- * The month and what makes it up, then the six-month chart that picks it,
- * then what is waiting to be claimed, then where you stand, then the
- * month's orders. The account sits at the very foot, under all of it.
+ * This month: the gauge, anything waiting to be claimed, the climb, what
+ * is on its way, where it came from, where you stand, then every order.
+ * A closed month: the gauge, claims, the month day by day, who made it,
+ * six months, then every order. The account is on the You page.
  */
 {
   const at = (re) => { const m = re.exec(money); return m ? m.index : -1; };
-  const seq = [at(/class="ax-big"/), at(/class="ax-bars"/), at(/claimMonths\.map/), at(/\$\{standing\}/), at(/sortedOrders\.slice\(0, 12\)/)];
+  const seq = [at(/moneyHeroHTML\(f\)/), at(/moneyClaimHTML\(f\.key\)/), at(/moneyClimbHTML\(f\) \+ moneyWayHTML\(f\) \+ moneySourcesHTML\(f\) \+ moneyStandingHTML\(\)/), at(/moneyOrdersHTML\(f\)/)];
   t.check(seq.every((x, i) => x > 0 && (i === 0 || x > seq[i - 1])),
-    `the figure, the chart, claims, standing, then the month's orders (${seq.join(' -> ')})`);
+    `the gauge, claims, the month, then the month's orders (${seq.join(' -> ')})`);
+  t.check(/moneyHeatHTML\(f\) \+ moneyDonutHTML\(f\) \+ moneyClimbHTML\(f\)/.test(money),
+    'a closed month shows its days, who made it, and six months');
   t.check(!/termCardHTML\(\)|ag_signout_btn/.test(money), 'the account lives on the You page now, not under the money');
 }
 
 /* ---------- 2. the chart carries figures ---------------------------- */
 {
   t.check(!/agSparkFill/.test(src), 'the sparkline is gone');
-  t.check(/<span class="v">\$\{empty \? '—' : esc\(fmtCompactUGX\(stats\[i\]\.total\)\)\}<\/span>/.test(money),
+  t.check(/<span class="v">\$\{empty \? '—' : esc\(fmtCompactUGX\(v\.total\)\)\}<\/span>/.test(six),
     'every column states what that month earned');
-  t.check(/aria-label="\$\{esc\(monthLabel\(m\)\)\}, \$\{empty \? 'no orders' : esc\(fmtUGX\(stats\[i\]\.total\)\)\}"/.test(money),
+  t.check(/aria-label="\$\{esc\(monthLabel\(mk\)\)\}, \$\{empty \? 'no orders' : esc\(fmtUGX\(v\.total\)\)\}"/.test(six),
     'and the exact, uncompacted figure is on the label, so the rounding is not the only access to it');
-  // A month that earned nothing still gets a stub; a month with no ORDERS
-  // gets a hairline and a dash -- a zero that looks measured cannot be
-  // told from a month the app failed to read.
-  t.check(/const h = Math\.max\(3, Math\.round\(/.test(money),
+  t.check(/height:\$\{Math\.max\(4, Math\.round\(/.test(six),
     'a month that earned nothing gets a stub -- no bar at all reads as missing data, not as a bad month');
-  t.check(/const empty = !stats\[i\]\.orders\.length;/.test(money),
-    'but a month with no ORDERS is a different thing, and is told apart by its orders, not by its total');
-  t.check(/<span class="none"><\/span>/.test(money) && /\.ax-bar \.none\{[^}]*height:2px/.test(src),
-    'and draws a hairline and a dash instead of a stub and a zero');
+  t.check(/const empty = !v\.orders\.length;/.test(six),
+    'but a month with no ORDERS is a different thing, told apart by its orders, not by its total, and shows a dash');
 }
 
 /* ---------- 3. the compacted figures -------------------------------- */
@@ -88,19 +88,17 @@ const money = extractFunction(src, 'openMoneySheet', 'agent.html');
 
 /* ---------- 4. the chart is the month picker ------------------------ */
 {
-  t.check(/data-month="\$\{esc\(m\)\}"/.test(money), 'each column carries its month');
-  t.check(/const bar = e\.target\.closest\('\[data-month\]'\);\s*if\(bar\)\{ moneyMonth = bar\.dataset\.month; paint\(\); return; \}/.test(money),
+  t.check(/data-month="\$\{esc\(mk\)\}"/.test(six), 'each column carries its month');
+  t.check(/const bar = e\.target\.closest\('\[data-month\]'\);\s*if\(bar\)\{ moneyMonth = bar\.dataset\.month;[^}]*paint\(\);/.test(money),
     'and tapping one loads that month into the rest of the sheet');
-  t.check(/aria-pressed="\$\{m===key\}"/.test(money),
+  t.check(/aria-pressed="\$\{sel\}"/.test(six),
     'the selected column is marked, in the accessibility tree as well as visually');
-  t.check(/data-mnav="-1"/.test(money) && /if\(nextKey > currentMonthKey\(\)\) return;/.test(money),
+  t.check(/data-mnav="-1"/.test(hero) && /if\(k > currentMonthKey\(\)\) return;/.test(money),
     'the arrows page by month, and never into the future');
-  // Paging past the six-month window must not silently lose you.
-  t.check(/!months\.includes\(key\)/.test(money) && /is before this window/.test(money),
+  t.check(/!months\.includes\(key\)/.test(six) && /is before this window/.test(six),
     'a month outside the window is named, rather than leaving no column marked and no explanation');
-  t.check(/\.ax-bar\{[^}]*min-height:44px/.test(src), 'a column is a 44px tap target');
-  t.check(/\.ax-bar\{all:unset;box-sizing:border-box/.test(src),
-    'and it restores border-box after all:unset, so 44 means 44');
+  t.check(/\.ax-mx-card \.six \.b\{all:unset;box-sizing:border-box;[^}]*min-height:44px/.test(src),
+    'a column is a 44px tap target, restoring border-box after all:unset, so 44 means 44');
 }
 
 /* ---------- 5. the rows add up to the total above them -------------- */
@@ -141,18 +139,18 @@ const money = extractFunction(src, 'openMoneySheet', 'agent.html');
     'the old rows summed to 185,000 under a total reading 160,000');
 
   // The source states the rule once, next to the figure it governs.
-  t.check(/const counted = o\.status === 'completed';/.test(money)
-    && /e\.margin \+ \(counted \? e\.bonus : 0\)/.test(money),
+  t.check(/done = o\.status === 'completed'/.test(orderRows)
+    && /e\.margin \+ \(done \? e\.bonus : 0\)/.test(orderRows),
     'the row applies the same qualification the wallet does');
-  t.check(/bonus when done/.test(money),
+  t.check(/when done/.test(orderRows),
     'and an unqualified bonus is shown as pending rather than dropped, so it is not simply missing');
 }
 
 /* ---------- 6. the sheet says which month it is showing ------------ */
 {
-  t.check(/Yours \$\{thisMonth \? 'this month' : 'in ' \+ esc\(monthName\(key\)\)\}/.test(money),
+  t.check(/f\.isNow \? 'YOURS THIS MONTH' : `YOURS IN \$\{/.test(hero) && /<b>\$\{esc\(monthName\(f\.key\)\)\}<\/b>/.test(hero),
     'the figure names its month, so a past month is never read as this one');
-  t.check(/No orders in \$\{esc\(monthName\(key\)\)\}\./.test(money),
+  t.check(/No orders in \$\{esc\(monthName\(f\.key\)\)\}\./.test(orderRows),
     'and so does the empty state');
 }
 

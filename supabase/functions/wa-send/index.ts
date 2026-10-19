@@ -62,7 +62,40 @@ function windowState(lastInboundAt: string | null, nowMs: number): { open: boole
   return { open: msLeft > 0, msLeft: Math.max(0, msLeft) };
 }
 
+// A template parameter may not hold a newline, a tab or more than four
+// spaces in a row (Meta refuses the send), so a reply's lines are joined
+// the way a person would read them aloud.
+function replyParam(s: string) {
+  return s.replace(/\r/g, "").split("\n").map((l) => l.trim()).filter(Boolean).join(" · ")
+    .replace(/\t/g, " ").replace(/ {2,}/g, " ").trim().slice(0, 900);
+}
+
+const MEDIA_MAX = 16 * 1024 * 1024;
+// The file's ending, from its type, else the document's own name.
+function mediaExt(mime: string, filename?: string) {
+  const known: Record<string, string> = {
+    "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif",
+    "audio/ogg": "ogg", "audio/mpeg": "mp3", "audio/mp4": "m4a", "audio/aac": "aac", "audio/amr": "amr",
+    "video/mp4": "mp4", "video/3gpp": "3gp", "application/pdf": "pdf",
+  };
+  if (known[mime]) return known[mime];
+  const fromName = /\.([a-z0-9]{1,8})$/i.exec(String(filename || ""));
+  return fromName ? fromName[1].toLowerCase() : "bin";
+}
+
+// Whatever goes wrong inside, the app gets an answer it can read: an
+// exception that escaped would leave the gateway's bare 500, which has no
+// CORS header, and the browser reports only "Failed to send a request".
 Deno.serve(async (req) => {
+  try {
+    return await handle(req);
+  } catch (e) {
+    console.error("wa-send: unhandled", e);
+    return json({ error: `The server stumbled: ${(e as Error)?.message || String(e)}` }, 500);
+  }
+});
+
+async function handle(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") return json({}, 200);
   if (req.method !== "POST") return json({ error: "method not allowed" }, 405);
 
@@ -81,6 +114,51 @@ Deno.serve(async (req) => {
   const { data: isMember, error: memberErr } = await callerClient.rpc("is_shop_member", { p_shop_id: shopId });
   if (memberErr) return json({ error: memberErr.message, stage: "is_shop_member" }, 500);
   if (!isMember) return json({ error: "Not a member of this shop" }, 403);
+
+  // Who on the team is sending: their user id and the name the team
+  // knows them by (their staff row, else "Owner" for the shop's admin).
+  // Stamped on every message this function records (0118), so a thread
+  // shows who told the customer what. Asked once, only by a send.
+  let senderCache: { sent_by: string | null; sent_by_name: string | null } | null = null;
+  async function sender() {
+    if (senderCache) return senderCache;
+    const { data: who } = await callerClient.auth.getUser();
+    const u = who?.user ?? null;
+    let name: string | null = null;
+    if (u) {
+      const { data: st } = await admin.from("staff").select("name")
+        .eq("shop_id", shopId).eq("user_id", u.id).limit(1).maybeSingle();
+      name = (st && st.name) ? String(st.name) : null;
+      if (!name) {
+        const { data: isAdm } = await callerClient.rpc("is_shop_admin", { p_shop_id: shopId });
+        name = isAdm ? "Owner" : (u.email ? String(u.email).split("@")[0] : null);
+      }
+    }
+    senderCache = { sent_by: u ? u.id : null, sent_by_name: name };
+    return senderCache;
+  }
+  // A message's record, with who sent it. A database that has not had
+  // 0118 yet has no such columns: the record is written without them
+  // rather than lost, because the message has already gone.
+  // deno-lint-ignore no-explicit-any
+  async function recordOut(row: Record<string, any>) {
+    const { error } = await admin.from("wa_messages").insert({ ...row, ...(await sender()) });
+    if (error && /sent_by/.test(error.message || "")) return await admin.from("wa_messages").insert(row);
+    return { error };
+  }
+
+  // Replying in a chat is any member's work -- a Sales login answers
+  // customers all day. Everything else here speaks for the whole shop or
+  // rewires it (a broadcast to every customer, re-registering the number,
+  // the catalogue, templates), and is the owner's. Asked with
+  // is_shop_admin, which every database has had since 0001, so this
+  // never depends on a later migration having been pasted.
+  const REPLY_ACTIONS = ["status", "send", "send-image", "send-catalog", "send-reply-template", "media"];
+  if (!REPLY_ACTIONS.includes(action)) {
+    const { data: isAdmin, error: adminErr } = await callerClient.rpc("is_shop_admin", { p_shop_id: shopId });
+    if (adminErr) return json({ error: adminErr.message, stage: "is_shop_admin" }, 500);
+    if (!isAdmin) return json({ error: "Only the owner can do this — replies are open to the team, the rest is the owner's" }, 403);
+  }
 
   const { data: numRow } = await admin.from("wa_numbers")
     .select("phone_number_id, catalog_id, waba_id").eq("shop_id", shopId).maybeSingle();
@@ -414,7 +492,7 @@ Deno.serve(async (req) => {
     // deno-lint-ignore no-explicit-any
     const wamid = String((result as any)?.messages?.[0]?.id ?? "");
     const now = new Date().toISOString();
-    const { error: insErr } = await admin.from("wa_messages").insert({
+    const { error: insErr } = await recordOut({
       shop_id: shopId, conversation_id: conv.id, wamid: wamid || `local:${crypto.randomUUID()}`,
       direction: "out", msg_type: "interactive", body: "[catalog] " + catText,
       status: "sent", sent_at: now,
@@ -545,7 +623,7 @@ Deno.serve(async (req) => {
       // deno-lint-ignore no-explicit-any
       const wamid = String((result as any)?.messages?.[0]?.id ?? "");
       const now = new Date().toISOString();
-      const { error } = await admin.from("wa_messages").insert({
+      const { error } = await recordOut({
         shop_id: shopId, conversation_id: conv.id, wamid: wamid || `local:${crypto.randomUUID()}`,
         direction: "out", msg_type: "template", body: text, status: "sent", sent_at: now,
         // The campaign id rides the message, so sent/delivered/read per
@@ -599,7 +677,7 @@ Deno.serve(async (req) => {
     // Record what was sent. If this insert fails the message HAS still
     // gone to the customer -- say so loudly rather than pretending the
     // send failed, or the shop would send it twice.
-    const { error: insErr } = await admin.from("wa_messages").insert({
+    const { error: insErr } = await recordOut({
       shop_id: shopId, conversation_id: conv.id, wamid: wamid || `local:${crypto.randomUUID()}`,
       direction: "out", msg_type: "text", body: text, status: "sent", sent_at: now,
     });
@@ -664,7 +742,7 @@ Deno.serve(async (req) => {
     // thread bubbles and snippets render it with code they already
     // have. If this insert fails the image HAS still reached the
     // customer; say so rather than pretending the send failed.
-    const { error: insErr } = await admin.from("wa_messages").insert({
+    const { error: insErr } = await recordOut({
       shop_id: shopId, conversation_id: conv.id, wamid: wamid || `local:${crypto.randomUUID()}`,
       direction: "out", msg_type: "image", body: caption ? "[image] " + caption : "[image]",
       status: "sent", sent_at: now, payload: { link },
@@ -677,5 +755,146 @@ Deno.serve(async (req) => {
     return json({ sent: true, wamid, recorded: !insErr });
   }
 
+  // ---- Replying after the window has shut. ----
+  // A free-form reply is refused once the customer's last message is a
+  // day old, and a salesperson is left holding an answer they cannot
+  // give. The one road Meta leaves open is an approved template, so the
+  // app owns a plain one -- shop_reply, a UTILITY message that carries
+  // the salesperson's own words in {{2}}. It is ensured here, by any
+  // member, because its text is fixed in this file: there is nothing for
+  // a member to choose. Until Meta approves it the send says so, and
+  // never pretends to have gone. Someone who said STOP is not written to.
+  const REPLY_TEMPLATE = "shop_reply";
+  if (action === "send-reply-template") {
+    const conversationId = Number(body.conversationId);
+    const text = replyParam(String(body.text ?? ""));
+    const name = replyParam(String(body.name ?? "")).slice(0, 40) || "there";
+    if (!conversationId || !text) return json({ error: "conversationId and text are required" }, 400);
+    if (!ACCESS_TOKEN || !numRow) return json({ error: "WhatsApp is not connected yet" }, 409);
+    const wabaId = numRow.waba_id;
+    if (!wabaId) return json({ error: "The owner has to save the WhatsApp Business Account ID first" }, 409);
+
+    const { data: conv, error: convErr } = await admin.from("wa_conversations")
+      .select("id, wa_id, opt_out").eq("id", conversationId).eq("shop_id", shopId).maybeSingle();
+    if (convErr) return json({ error: convErr.message, stage: "conversation" }, 500);
+    if (!conv) return json({ error: "Conversation not found" }, 404);
+    if (conv.opt_out) return json({ error: "They asked the shop to stop messaging them" }, 403);
+
+    const headers = { "content-type": "application/json", Authorization: `Bearer ${ACCESS_TOKEN}` };
+    const listResp = await fetch(`${GRAPH_BASE}/${wabaId}/message_templates?name=${REPLY_TEMPLATE}`, { headers });
+    const list = await listResp.json().catch(() => ({}));
+    if (!listResp.ok) {
+      // deno-lint-ignore no-explicit-any
+      return json({ error: (list as any)?.error?.message || `Graph API error ${listResp.status}` }, 502);
+    }
+    // deno-lint-ignore no-explicit-any
+    let tpl = ((list as any).data ?? []).find((t: any) => t.name === REPLY_TEMPLATE);
+    if (!tpl) {
+      const createResp = await fetch(`${GRAPH_BASE}/${wabaId}/message_templates`, {
+        method: "POST", headers,
+        body: JSON.stringify({
+          name: REPLY_TEMPLATE,
+          category: "UTILITY",
+          language: "en",
+          components: [
+            // A variable may not start or end the body (see shop_update).
+            { type: "BODY", text: "Hello {{1}}, this is our reply to your message: {{2}}. Reply here to carry on.",
+              example: { body_text: [["Kato", "Yes, 40 iron sheets G28 are in stock at 33,000 each"]] } },
+          ],
+        }),
+      });
+      const created = await createResp.json().catch(() => ({}));
+      if (!createResp.ok) {
+        // deno-lint-ignore no-explicit-any
+        const err = (created as any)?.error;
+        return json({ error: err?.error_user_msg || err?.message || `Graph API error ${createResp.status}` }, 502);
+      }
+      // deno-lint-ignore no-explicit-any
+      tpl = { status: (created as any).status || "PENDING" };
+    }
+    if (tpl.status !== "APPROVED") {
+      return json({
+        error: tpl.status === "REJECTED"
+          ? "WhatsApp turned down the shop's reply message — the owner can see why in Meta's WhatsApp Manager"
+          : "WhatsApp is still approving the shop's reply message — usually a few minutes. Try again shortly.",
+        templateStatus: tpl.status,
+      }, 409);
+    }
+
+    const resp = await fetch(`${GRAPH_BASE}/${numRow.phone_number_id}/messages`, {
+      method: "POST", headers,
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: conv.wa_id,
+        type: "template",
+        template: {
+          name: REPLY_TEMPLATE,
+          language: { code: "en" },
+          components: [{ type: "body", parameters: [{ type: "text", text: name }, { type: "text", text }] }],
+        },
+      }),
+    });
+    const result = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      console.error("wa-send: reply template failed", resp.status, result);
+      // deno-lint-ignore no-explicit-any
+      return json({ error: (result as any)?.error?.message || `Graph API error ${resp.status}` }, 502);
+    }
+    // deno-lint-ignore no-explicit-any
+    const wamid = String((result as any)?.messages?.[0]?.id ?? "");
+    const now = new Date().toISOString();
+    const { error: insErr } = await recordOut({
+      shop_id: shopId, conversation_id: conv.id, wamid: wamid || `local:${crypto.randomUUID()}`,
+      direction: "out", msg_type: "template", body: text, status: "sent", sent_at: now,
+      payload: { reply_template: REPLY_TEMPLATE },
+    });
+    if (insErr) console.error("wa-send: reply template record failed AFTER delivery", insErr);
+    await admin.from("wa_conversations").update({ last_message_at: now }).eq("id", conv.id);
+    return json({ sent: true, wamid, recorded: !insErr });
+  }
+
+  // ---- A customer's picture, voice note or document, to look at. ----
+  // The webhook keeps Meta's media id, not the file, and the file sits
+  // behind the access token, which never leaves this function. So the
+  // first time anyone opens it, it is fetched from Meta (which keeps
+  // media for a limited time only), put in the shop's image bucket under
+  // an unguessable name, and the link is written onto the message --
+  // every later look, in any app, is a plain link with no call here.
+  // Only a message of this shop, and only a file a phone can hold.
+  if (action === "media") {
+    const messageId = Number(body.messageId);
+    if (!messageId) return json({ error: "messageId is required" }, 400);
+    const { data: msg, error: msgErr } = await admin.from("wa_messages")
+      .select("id, msg_type, payload").eq("id", messageId).eq("shop_id", shopId).maybeSingle();
+    if (msgErr) return json({ error: msgErr.message, stage: "message" }, 500);
+    if (!msg) return json({ error: "Message not found" }, 404);
+    // deno-lint-ignore no-explicit-any
+    const p = (msg.payload ?? {}) as any;
+    if (p.media_link) return json({ link: p.media_link, mime: p.media_mime || "" });
+    const mediaId = p?.[msg.msg_type]?.id;
+    if (!mediaId) return json({ error: "This message has no file" }, 404);
+    if (!ACCESS_TOKEN) return json({ error: "WhatsApp is not connected yet" }, 409);
+    const headers = { Authorization: `Bearer ${ACCESS_TOKEN}`, "User-Agent": "omni-ware/1.0" };
+    const metaResp = await fetch(`${GRAPH_BASE}/${mediaId}`, { headers, signal: AbortSignal.timeout(15000) });
+    const meta = await metaResp.json().catch(() => ({}));
+    // deno-lint-ignore no-explicit-any
+    const m = meta as any;
+    if (!metaResp.ok || !m.url) return json({ error: m?.error?.message || "WhatsApp no longer has this file" }, 410);
+    if (Number(m.file_size || 0) > MEDIA_MAX) return json({ error: "The file is too big to open here" }, 413);
+    const fileResp = await fetch(m.url, { headers, signal: AbortSignal.timeout(30000) });
+    if (!fileResp.ok) return json({ error: `WhatsApp refused the file (${fileResp.status})` }, 502);
+    const buf = new Uint8Array(await fileResp.arrayBuffer());
+    if (buf.length > MEDIA_MAX) return json({ error: "The file is too big to open here" }, 413);
+    const mime = String(m.mime_type || fileResp.headers.get("content-type") || "application/octet-stream").split(";")[0].trim();
+    const path = `${shopId}/wa-media/${crypto.randomUUID()}.${mediaExt(mime, p?.document?.filename)}`;
+    const { error: upErr } = await admin.storage.from("product-images").upload(path, buf, { contentType: mime, upsert: false });
+    if (upErr) return json({ error: upErr.message, stage: "storage" }, 500);
+    const link = admin.storage.from("product-images").getPublicUrl(path).data.publicUrl;
+    const { error: updErr } = await admin.from("wa_messages")
+      .update({ payload: { ...p, media_link: link, media_mime: mime } }).eq("id", msg.id).eq("shop_id", shopId);
+    if (updErr) console.error("wa-send: media link not kept on the message", updErr);
+    return json({ link, mime });
+  }
+
   return json({ error: `Unknown action "${action}"` }, 400);
-});
+}

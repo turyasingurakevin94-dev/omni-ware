@@ -35,9 +35,10 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   // Adding is the search box itself: type a name that is not there, and
   // the first row offers to add it. No separate button to find.
   const render = extractFunction(src, 'renderClientsListScreen', 'agent.html');
-  t.check(/data-client-add/.test(render) && /Add &ldquo;/.test(render),
+  t.check(/data-client-add/.test(render) && /Add “\$\{esc\(raw\)\}”/.test(render),
     'a name that is not on the list is offered as a new client, right where it was typed');
-  t.check(/Add your first client/.test(render), 'and an empty list is one tap from its first client');
+  t.check(/wrap\.innerHTML = clxEmptyHTML\(\)/.test(render) && /data-client-add>\$\{PH\.userPlusBold\}Add a client/.test(extractFunction(src, 'clxEmptyHTML', 'agent.html')),
+    'and an empty list is one tap from its first client');
   t.check(/\.ax-cr\{\s*all:unset;box-sizing:border-box/.test(src) && /\.ax-ringav\{[^}]*width:44px;height:44px/.test(src),
     'every row is a full-width tap target, restoring border-box after all:unset');
 }
@@ -70,7 +71,8 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   let f = null;
   try {
     ({ clientStats: f } = compileScope(
-      [extractFunction(src, 'orderTotal', 'agent.html'),
+      [...['chargeValue', 'orderShopGoods', 'orderChargesAmount'].map((n) => extractFunction(src, n, 'agent.html')),
+       extractFunction(src, 'orderTotal', 'agent.html'),
         extractFunction(src, 'agentLinePriced', 'agent.html'),
         extractFunction(src, 'orderEarnings', 'agent.html'),
        extractFunction(src, 'orderDate', 'agent.html'), extractFunction(src, 'clientStats', 'agent.html')],
@@ -95,10 +97,11 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
     t.check(order.join(',') === 'Ahmed,Moses,Zawadi', `within a group, most recent first (${order.join(' > ')})`);
   }
   const render = extractFunction(src, 'renderClientsListScreen', 'agent.html');
-  t.check(/rows\.sort\(\(a,b\)=> a\.s\.rank - b\.s\.rank \|\| \(b\.s\.late\|\|0\) - \(a\.s\.late\|\|0\) \|\| \(a\.s\.soon\|\|0\) - \(b\.s\.soon\|\|0\)/.test(render),
-    'the list leads with who needs seeing: the most overdue first, then whoever is due soonest');
-  t.check(/String\(b\.stats\.lastAt\|\|''\)\.localeCompare\(String\(a\.stats\.lastAt\|\|''\)\)/.test(render),
-    'and falls back to who you dealt with last');
+  t.check(/clxGroupHTML\('reach'[\s\S]*clxGroupHTML\('coming'[\s\S]*clxQuietHTML\(\)[\s\S]*clxEveryoneHTML\(rows\)/.test(render),
+    'the list leads with who needs seeing: reach out today, then coming up this week, then the quiet ones, then everyone');
+  t.check(/\.sort\(\(a, b\)=> \(b\.s\.late \|\| 0\) - \(a\.s\.late \|\| 0\) \|\| b\.stats\.earned - a\.stats\.earned\)/.test(render)
+    && /\(a\.s\.soon \|\| 0\) - \(b\.s\.soon \|\| 0\)/.test(render),
+    'the most overdue first, then whoever is due soonest');
   const status = extractFunction(src, 'clientStatus', 'agent.html');
   const rank = (re) => { const m = re.exec(status); return m ? Number(m[1]) : -1; };
   const late = rank(/rank: (\d), cls:'late'/), due = rank(/rank: (\d), cls:'due'/), live = rank(/rank: (\d), cls: st\.needs/), quiet = rank(/rank: (\d), cls:'', text:`Quiet/);
@@ -124,8 +127,8 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   }
 
   // The search box is also how a client is added, so it is always there.
-  t.check(/id="ag_clientListSearch" placeholder="Name or phone"/.test(src), 'the search box finds by name or phone');
-  t.check(/No client matches &ldquo;\$\{esc\(q\)\}&rdquo;\./.test(code),
+  t.check(/id="ag_clientListSearch" placeholder="Name, phone or place"/.test(src), 'the search box finds by name, phone or place');
+  t.check(/No client matches “\$\{esc\(raw\)\}”\./.test(code),
     'a search with no hits repeats what was searched for');
 }
 

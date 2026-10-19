@@ -64,6 +64,38 @@ function orderEarnings(items: any[]): number {
   return total;
 }
 
+// Every row a query matches, not the first page of them. PostgREST stops
+// at its row limit (1,000 here) without an error, so one select read as
+// "all of them" silently dropped the rest once an agent had enough
+// orders. Pages are walked in a stable order and the total is checked
+// against the exact count; a mismatch (rows moving under the read) is an
+// error, never a short answer.
+// `build` must select with { count: "exact" }.
+async function readAll(build: () => any, orderCol = "id"): Promise<{ data: any[] | null; error: any }> {
+  const PAGE = 1000;
+  let rows: any[] = [];
+  let total: number | null = null;
+  for (let guard = 0; guard < 10000; guard++) {
+    const { data, error, count } = await build()
+      .order(orderCol, { ascending: true })
+      .range(rows.length, rows.length + PAGE - 1);
+    if (error) return { data: null, error };
+    total = count ?? null;
+    rows = rows.concat(data || []);
+    if (!data || !data.length || (total !== null && rows.length >= total)) break;
+  }
+  if (total !== null && rows.length !== total) {
+    return { data: null, error: { message: `read ${rows.length} of ${total} rows -- try again` } };
+  }
+  return { data: rows, error: null };
+}
+
+// The first day of the month after `ym` ("2026-08" -> "2026-09-01").
+function nextMonthStart(ym: string): string {
+  const [y, m] = ym.split("-").map(Number);
+  return m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, "0")}-01`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
@@ -90,14 +122,19 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
+    const monthKey = new Date().toISOString().slice(0, 7);
     const [{ data: agents, error: agentsErr }, { data: orders, error: ordersErr }] = await Promise.all([
       admin.from("agents").select("id, name").eq("shop_id", shopId),
-      admin.from("saved_quotes").select("date, agent_id, payload").eq("shop_id", shopId).eq("status", "completed").eq("voided", false),
+      // This month only, chosen in the query, and every page of it: the
+      // whole shop's completed orders, all time, were read and filtered
+      // afterwards, so past the row limit this month's were simply missing.
+      readAll(() => admin.from("saved_quotes").select("id, date, agent_id, payload", { count: "exact" })
+        .eq("shop_id", shopId).eq("status", "completed").eq("voided", false)
+        .gte("date", `${monthKey}-01`).lt("date", nextMonthStart(monthKey))),
     ]);
     if (agentsErr) return json({ error: agentsErr.message, stage: "agents" }, 500);
     if (ordersErr) return json({ error: ordersErr.message, stage: "orders" }, 500);
 
-    const monthKey = new Date().toISOString().slice(0, 7);
     const totals = new Map<string, { amount: number; completedOrders: number }>();
     for (const row of orders || []) {
       const payload = row.payload || {};

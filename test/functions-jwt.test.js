@@ -46,18 +46,27 @@ const names = fs.readdirSync(FN_DIR)
 
 // 20 with agent-change-order: an agent cancelling, asking for fewer, or
 // spending credit. It reads the caller's JWT like the rest of the agent's.
-// 22 with the supplier pair: supplier-accounts (an admin's JWT) and
+// 21 with notify-stock-count: a Database Webhook, like notify-worker.
+// 22 with push-send (0120): the same, on every push_outbox insert.
+// 24 with the supplier pair: supplier-accounts (an admin's JWT) and
 // supplier-portal (no JWT; a PIN, then its own session token).
-t.check(names.length === 22, `all ${names.length} functions found`);
+t.check(names.length === 24, `all ${names.length} functions found`);
 
 const open = [];   // no incoming Authorization — must be verify_jwt = false
 const closed = [];
+// Open AND reading a JWT: the caller without one (a Cron job) is let in by
+// its own shared secret, and the one action a signed-in agent may call
+// checks their token itself. Named here so a function cannot drift into
+// this state unnoticed.
+const MIXED = ['agent-nudge'];
 names.forEach((n) => {
   const dir = path.join(FN_DIR, n);
   const files = fs.readdirSync(dir).filter((f) => f.endsWith('.ts'));
   if (!files.length) throw new Error(`no TypeScript source in supabase/functions/${n}`);
   const src = files.map((f) => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
-  (READS_INCOMING.test(src) ? closed : open).push(n);
+  (READS_INCOMING.test(src) && MIXED.indexOf(n) === -1 ? closed : open).push(n);
+  if (MIXED.indexOf(n) !== -1) t.check(READS_INCOMING.test(src) && /auth\.getUser\(/.test(src),
+    `${n} is open for its schedule and checks the JWT itself where it reads one`);
 });
 
 /* ---------- what config.toml declares -------------------------------- */
@@ -92,9 +101,9 @@ t.check(declared.length > 0, `config.toml declares ${declared.length} function(s
 
 /* ---------- the ones the README calls out by name -------------------- */
 {
-  // Named rather than derived, because these four are the cases where
+  // Named rather than derived, because these are the cases where
   // getting it wrong is silent: nobody is watching a provider callback.
-  ['notify-worker', 'mtn-payment-webhook', 'airtel-payment-webhook', 'wa-webhook'].forEach((n) => {
+  ['notify-worker', 'notify-stock-count', 'mtn-payment-webhook', 'airtel-payment-webhook', 'wa-webhook'].forEach((n) => {
     t.check(declared.indexOf(n) !== -1, `${n} is open — its caller is a webhook with no JWT`);
   });
   // And the two the customer portal posts to, from a page asserted to

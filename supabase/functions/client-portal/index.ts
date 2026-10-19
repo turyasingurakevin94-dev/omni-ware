@@ -416,9 +416,11 @@ function rememberedPrices(quotes: any[], mine: string): Record<string, { price: 
       const sell = Number(it.sellPrice);
       if (!(sell > 0)) return;
       const key = it.productId + "::" + (it.variantIdx == null ? "" : String(it.variantIdx));
-      // >= so that among orders on the same day the later one in the list
-      // wins, rather than whichever happened to be walked first.
-      if (!out[key] || at >= out[key].at) out[key] = { price: sell, at };
+      // Strictly later dates only. The list arrives newest first, so on a
+      // tie the order already held IS the newer one; `>=` let every older
+      // order on the same day overwrite it, and a price agreed this
+      // afternoon lost to this morning's.
+      if (!out[key] || at > out[key].at) out[key] = { price: sell, at };
     });
   });
   return out;
@@ -661,6 +663,14 @@ function orderLines(payload: any) {
 
 // ---------------------------------------------------------------------
 
+// What every price read answers when one of its inputs could not be
+// read. Refusing is the only safe figure: guessing without the shop's
+// markup prices at cost, and without the customer's history prices
+// above what they were shown.
+function pricesUnreadable() {
+  return json({ error: "We cannot read the prices just now. Try again in a moment." }, 503);
+}
+
 async function sessionAccount(shopId: string, token: string) {
   if (!token) return null;
   const { data } = await admin
@@ -778,50 +788,107 @@ Deno.serve(async (req) => {
         return json({ error: "Enter the four figures we gave you" }, 400);
       }
 
-      const { data: account } = await admin
+      const { data: account, error: accountErr } = await admin
         .from("client_accounts")
         .select("customer_id, pin_hash, pin_expires_at, pin_attempts, status")
         .eq("shop_id", shopId).eq("phone", phone).maybeSingle();
+      if (accountErr) return json({ error: "We could not check that just now. Try again." }, 503);
 
       const wrong = { error: "That PIN is not right", triesLeft: 0 };
       if (!account || account.status !== "active" || !account.pin_hash) return json(wrong, 401);
       if (!account.pin_expires_at || Date.parse(account.pin_expires_at) <= Date.now()) {
         return json({ error: "That PIN has run out. Ask for another." }, 401);
       }
+      const tooMany = () => json({ error: "Too many wrong tries. Ring the shop for a new PIN." }, 429);
       if ((account.pin_attempts || 0) >= PIN_MAX_ATTEMPTS) {
         // Names the only thing that actually helps. "Ask for a new PIN"
         // was advice this endpoint had stopped taking: start will not mint
         // past the ceiling, so the customer would have tapped it and
         // waited for a PIN that was never coming.
-        return json({ error: "Too many wrong tries. Ring the shop for a new PIN." }, 429);
+        return tooMany();
       }
 
-      const ok = safeEqual(account.pin_hash, await hashPin(pin, shopId, account.customer_id));
+      // THE TRY IS TAKEN BEFORE THE PIN IS CHECKED, and taken atomically.
+      // This used to hash first and then write "what I read, plus one":
+      // guesses sent together all read the same count, were all checked,
+      // and all wrote the same number back -- eight wrong guesses left the
+      // count at one, and a right one among them signed in. Now each try
+      // is a compare-and-set from the count it read, on THIS PIN (its hash)
+      // while it is still live: a guess that loses the race reads again,
+      // and none is checked without a try of its own.
+      const pinHash: string = account.pin_hash;
+      let tries = account.pin_attempts || 0;
+      let reserved = false;
+      for (let round = 0; round < 6 && !reserved; round++) {
+        if (tries >= PIN_MAX_ATTEMPTS) return tooMany();
+        const { data: won, error: takeErr } = await admin.from("client_accounts")
+          .update({ pin_attempts: tries + 1 })
+          .eq("shop_id", shopId).eq("customer_id", account.customer_id)
+          .eq("pin_hash", pinHash).eq("pin_attempts", tries)
+          .gt("pin_expires_at", new Date().toISOString())
+          .select("pin_attempts");
+        if (takeErr) return json({ error: "We could not check that just now. Try again." }, 503);
+        if (won && won.length) { reserved = true; tries += 1; break; }
+        const { data: now, error: nowErr } = await admin.from("client_accounts")
+          .select("pin_hash, pin_expires_at, pin_attempts, status")
+          .eq("shop_id", shopId).eq("customer_id", account.customer_id).maybeSingle();
+        if (nowErr) return json({ error: "We could not check that just now. Try again." }, 503);
+        if (!now || now.status !== "active" || now.pin_hash !== pinHash) {
+          return json({ error: "That PIN has been used or replaced. Ask for another." }, 401);
+        }
+        if (!now.pin_expires_at || Date.parse(now.pin_expires_at) <= Date.now()) {
+          return json({ error: "That PIN has run out. Ask for another." }, 401);
+        }
+        tries = now.pin_attempts || 0;
+      }
+      if (!reserved) return json({ error: "Too many tries at once. Wait a moment and try again." }, 429);
+
+      const ok = safeEqual(pinHash, await hashPin(pin, shopId, account.customer_id));
       if (!ok) {
-        const attempts = (account.pin_attempts || 0) + 1;
-        await admin.from("client_accounts").update({ pin_attempts: attempts })
-          .eq("shop_id", shopId).eq("customer_id", account.customer_id);
         return json({
           error: "That PIN is not right",
-          triesLeft: Math.max(0, PIN_MAX_ATTEMPTS - attempts),
+          triesLeft: Math.max(0, PIN_MAX_ATTEMPTS - tries),
         }, 401);
       }
 
-      // Spent on use. A PIN that still works after it has been used is a
-      // PIN that works for whoever reads the message next.
-      await admin.from("client_accounts").update({
-        pin_hash: null, pin_expires_at: null, pin_attempts: 0,
-        last_seen_at: new Date().toISOString(),
-      }).eq("shop_id", shopId).eq("customer_id", account.customer_id);
-
+      // THE SESSION FIRST, THE PIN AFTER, AND A TOKEN ONLY WHEN BOTH HELD.
+      // Neither write used to be checked: a failed session insert answered
+      // "signed in" with a token nothing recognised and the PIN already
+      // spent, and a failed PIN clear left a used PIN live for whoever
+      // read it next. Now the session row is written before the token is
+      // handed out, and the PIN is spent only if it is still the one that
+      // was checked -- two right answers sent together get one session.
       const token = mintToken();
-      await admin.from("client_sessions").insert({
+      const { data: session, error: sessionErr } = await admin.from("client_sessions").insert({
         shop_id: shopId,
         customer_id: account.customer_id,
         token_hash: await sha256Hex(token),
         device_id: deviceId,
         expires_at: new Date(Date.now() + SESSION_TTL_MS).toISOString(),
-      });
+      }).select("id").single();
+      if (sessionErr || !session) {
+        // The PIN was right; the try is handed back, so a database hiccup
+        // does not cost the customer one of their three.
+        await admin.from("client_accounts").update({ pin_attempts: tries - 1 })
+          .eq("shop_id", shopId).eq("customer_id", account.customer_id)
+          .eq("pin_hash", pinHash).eq("pin_attempts", tries);
+        return json({ error: "We could not sign you in just now. Try again." }, 503);
+      }
+
+      // Spent on use. A PIN that still works after it has been used is a
+      // PIN that works for whoever reads the message next.
+      const { data: spent, error: spendErr } = await admin.from("client_accounts").update({
+        pin_hash: null, pin_expires_at: null, pin_attempts: 0,
+        last_seen_at: new Date().toISOString(),
+      }).eq("shop_id", shopId).eq("customer_id", account.customer_id).eq("pin_hash", pinHash)
+        .select("customer_id");
+      if (spendErr || !spent || !spent.length) {
+        // The token has not left this function, so removing its row is
+        // enough to make it as if it never existed.
+        await admin.from("client_sessions").delete().eq("id", session.id);
+        if (spendErr) return json({ error: "We could not sign you in just now. Try again." }, 503);
+        return json({ error: "That PIN has already been used. Ask for another." }, 401);
+      }
 
       const { data: customer } = await admin
         .from("customers").select("name").eq("shop_id", shopId).eq("id", account.customer_id).maybeSingle();
@@ -930,10 +997,14 @@ Deno.serve(async (req) => {
       const PRODUCT_COLS = "id, name, image, category, subcategory, short_description, variants, "
         + "wholesale_markup_type, wholesale_markup_value, retail_markup_type, retail_markup_value";
 
-      const [{ data: settingsRow }, { data: customer }] = await Promise.all([
+      const [{ data: settingsRow, error: settingsErr }, { data: customer, error: customerErr }] = await Promise.all([
         admin.from("app_settings").select("presets").eq("shop_id", shopId).maybeSingle(),
         admin.from("customers").select("phone").eq("shop_id", shopId).eq("id", customerId).maybeSingle(),
       ]);
+      // A read that FAILED is not a shop with no rule. Read as one, a
+      // failed settings read dropped the default markup and showed the
+      // supplier's cost as the price. Every input to a price is checked.
+      if (settingsErr || customerErr) return pricesUnreadable();
       if (!customer) return json({ error: "Sign in again" }, 401);
       const presets = settingsRow?.presets || {};
       const defaultMarkup = presets.defaultMarkup || null;
@@ -942,10 +1013,11 @@ Deno.serve(async (req) => {
       // Their own past orders, for the remembered price. Never anybody
       // else's: the filter lives in rememberedPrices and is the same
       // normalised-phone match the account action uses.
-      const { data: quotes } = await admin.from("saved_quotes")
+      const { data: quotes, error: quotesErr } = await admin.from("saved_quotes")
         .select("client_phone, date, voided, payload")
         .eq("shop_id", shopId).eq("voided", false)
         .order("id", { ascending: false }).limit(200);
+      if (quotesErr) return pricesUnreadable();
       const held = rememberedPrices(quotes || [], mine);
 
       if (action === "price") {
@@ -959,12 +1031,13 @@ Deno.serve(async (req) => {
         // non-variant product's rows silently match nothing.
         let q = admin.from("prices").select(PRICE_COLS).eq("shop_id", shopId).eq("product_id", productId);
         q = variantIdx == null ? q.is("variant_idx", null) : q.eq("variant_idx", String(variantIdx));
-        const [{ data: product }, { data: rows }, { data: stockRow }] = await Promise.all([
+        const [{ data: product, error: productErr }, { data: rows, error: rowsErr }, { data: stockRow, error: stockErr }] = await Promise.all([
           admin.from("products").select(PRODUCT_COLS).eq("shop_id", shopId).eq("id", productId).maybeSingle(),
           q,
           admin.from("stock").select("qty").eq("shop_id", shopId)
             .eq("key", productId + (variantIdx == null ? "" : "::" + variantIdx)).maybeSingle(),
         ]);
+        if (productErr || rowsErr || stockErr) return pricesUnreadable();
         if (!product) return json({ error: "We do not have that item" }, 404);
 
         const row = quotableRow(rows || []);
@@ -990,11 +1063,12 @@ Deno.serve(async (req) => {
       }
 
       // action === "catalogue"
-      const [{ data: products }, { data: rows }, { data: stockRows }] = await Promise.all([
+      const [{ data: products, error: productsErr }, { data: rows, error: rowsErr }, { data: stockRows, error: stockErr }] = await Promise.all([
         admin.from("products").select(PRODUCT_COLS).eq("shop_id", shopId),
         admin.from("prices").select(PRICE_COLS).eq("shop_id", shopId),
         admin.from("stock").select("key, qty").eq("shop_id", shopId),
       ]);
+      if (productsErr || rowsErr || stockErr) return pricesUnreadable();
 
       const byKey = new Map<string, any[]>();
       (rows || []).forEach((r: any) => {
@@ -1148,7 +1222,8 @@ Deno.serve(async (req) => {
       const PRICE_COLS = "product_id, variant_idx, wholesale, retail, pack_qty, unit, pack_unit, tiers, out_of_stock";
       const PRODUCT_COLS = "id, name, image, variants, "
         + "wholesale_markup_type, wholesale_markup_value, retail_markup_type, retail_markup_value";
-      const [{ data: settingsRow }, { data: customer }, { data: products }, { data: priceRows }, { data: stockRows }] =
+      const [{ data: settingsRow, error: settingsErr }, { data: customer, error: customerErr }, { data: products, error: productsErr },
+        { data: priceRows, error: priceErr }, { data: stockRows, error: stockErr }] =
         await Promise.all([
           admin.from("app_settings").select("presets").eq("shop_id", shopId).maybeSingle(),
           admin.from("customers").select("phone").eq("shop_id", shopId).eq("id", session.customer_id).maybeSingle(),
@@ -1156,13 +1231,15 @@ Deno.serve(async (req) => {
           admin.from("prices").select(PRICE_COLS).eq("shop_id", shopId).in("product_id", ids),
           admin.from("stock").select("key, qty").eq("shop_id", shopId),
         ]);
+      if (settingsErr || customerErr || productsErr || priceErr || stockErr) return pricesUnreadable();
       if (!customer) return json({ error: "Sign in again" }, 401);
       const defaultMarkup = (settingsRow?.presets || {}).defaultMarkup || null;
       const mine = normalisePhone(customer.phone);
-      const { data: quotes } = await admin.from("saved_quotes")
+      const { data: quotes, error: quotesErr } = await admin.from("saved_quotes")
         .select("client_phone, date, voided, payload")
         .eq("shop_id", shopId).eq("voided", false)
         .order("id", { ascending: false }).limit(200);
+      if (quotesErr) return pricesUnreadable();
       const held = rememberedPrices(quotes || [], mine);
 
       const productsById = new Map<string, any>((products || []).map((p: any) => [p.id, p]));

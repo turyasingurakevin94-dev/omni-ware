@@ -68,6 +68,7 @@ function builder(db, table) {
     eq(c, v) { st.filters.push((r) => String(r[c]) === String(v)); return b; },
     is(c, v) { st.filters.push((r) => (r[c] === undefined ? null : r[c]) === v); return b; },
     gte(c, v) { st.filters.push((r) => String(r[c] ?? '') >= String(v)); return b; },
+    gt(c, v) { st.filters.push((r) => r[c] != null && String(r[c]) > String(v)); return b; },
     in(c, vs) { st.filters.push((r) => vs.map(String).includes(String(r[c]))); return b; },
     order() { return b; },
     limit(n) { st.limit = n; return b; },
@@ -75,6 +76,7 @@ function builder(db, table) {
     single() { st.single = true; return b; },
     update(p) { st.op = 'update'; st.payload = p; return b; },
     insert(p) { st.op = 'insert'; st.payload = p; return b; },
+    delete() { st.op = 'delete'; return b; },
     then(res, rej) { return Promise.resolve(run()).then(res, rej); },
   };
   /* PostgREST hands back the columns you ASKED FOR and nothing else, and
@@ -92,7 +94,12 @@ function builder(db, table) {
     return out;
   }
   function run() {
-    if (st.op === 'update') { rows().forEach((r) => Object.assign(r, st.payload)); return { data: rows().map(project), error: null }; }
+    /* The rows an update MATCHED, as PostgREST returns them -- not the
+       rows its filters match afterwards. A compare-and-set (update where
+       pin_attempts = n, set it to n + 1) matches no row once written, and
+       re-filtering would report every such update as having lost. */
+    if (st.op === 'update') { const hit = rows(); hit.forEach((r) => Object.assign(r, st.payload)); return { data: hit.map(project), error: null }; }
+    if (st.op === 'delete') { const hit = rows(); db[table] = (db[table] || []).filter((r) => !hit.includes(r)); return { data: null, error: null }; }
     if (st.op === 'insert') {
       const row = Object.assign({ id: (db[table] || []).length + 9000 }, st.payload);
       (db[table] = db[table] || []).push(row);

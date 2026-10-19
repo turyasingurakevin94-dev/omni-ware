@@ -39,12 +39,20 @@ const env = {
   document: { getElementById: () => search },
   promotedMap: () => new Map([['d::', { bonusType: 'fixed', bonusValue: 500 }]]),
   feedItemKey: (p, v) => `${p}::${v == null ? '' : v}`,
+  localStorage: { getItem: () => null, setItem() {} }, agentLocalKey: (k) => k,
+  clientUsuals: () => ({ regs: [] }), orderDate: () => '',
 };
+// A search runs through the same matcher as the order box (searchCatalog).
+const findSrc = (re) => { const m = re.exec(src); if (!m) throw new Error(`missing ${re}`); return m[0]; };
+const MATCHER = ['normFind', 'findStem', 'readFindQuery', 'findDistance', 'myTaughtNames', 'findHay', 'findWordFit',
+  'findScoreItem', 'findLeanings', 'searchCatalog', 'findCommonName', 'findBaseName'];
 const api = compileScope([
   "const AGENT_OTHER_CATEGORY = 'Other';",
   "let findCategory = null, findSub = null, findFilter = { again:false, bonus:false, fresh:false };",
   'function setFind(c, s, f){ findCategory = c; findSub = s; findFilter = Object.assign({ again:false, bonus:false, fresh:false }, f || {}); }',
   fn('itemCategory'), fn('findCategories'), fn('boughtBeforeKeys'), fn('findItems'), fn('groupCatalogItems'),
+  findSrc(/const FIND_PACK_WORDS = [^\n]+/), findSrc(/const FIND_SIZE_RE = [^\n]+/), 'let findHayCache = new WeakMap();',
+  ...MATCHER.map(fn),
 ], env, ['itemCategory', 'findCategories', 'findItems', 'setFind', 'groupCatalogItems']);
 const ids = (items) => items.map((it) => it.productId + (it.variantIdx == null ? '' : it.variantIdx)).join(',');
 
@@ -124,7 +132,7 @@ const ids = (items) => items.map((it) => it.productId + (it.variantIdx == null ?
   };
   t.check(/height:44px/.test(rule('.ax-catpill')), 'the aisle pill is 44px tall');
   t.check(/height:44px/.test(rule('.ax-sub')), 'and so is every shelf chip');
-  t.check(/height:100px/.test(rule('.ax-cat')), 'the aisle tiles in the sheet are big enough to hit without looking');
+  t.check(/height:(1[0-9]{2})px/.test(rule('.ax-cat')) && Number(/height:(\d+)px/.exec(rule('.ax-cat'))[1]) >= 100, 'the aisle tiles in the sheet are big enough to hit without looking');
   t.check(/width:44px;height:44px/.test(rule('.ax-add')), 'the add button on a tile is 44px');
 }
 

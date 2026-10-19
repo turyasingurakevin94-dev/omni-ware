@@ -151,7 +151,7 @@ Not built yet, because nothing in the backend supports them: telling the supplie
 
 ### C2. Identity and access: mirror the client portal (0096) exactly
 
-- **New migration `supabase/migrations/0109_supplier_accounts.sql`** creates three tables:
+- **New migration `supabase/migrations/0132_supplier_accounts.sql`** creates three tables:
   - `supplier_accounts`: primary key `(shop_id, supplier_id)`, `phone` stored as the last 9
     digits, `pin_hash`, `pin_expires_at`, `pin_attempts`, `status` and `last_seen_at`.
   - `supplier_sessions`: token hash and device, the same shape as `client_sessions`.
@@ -269,7 +269,7 @@ So answers land in **`supplier_answers`**:
 | # | Step | What it delivers | Measure |
 |---|---|---|---|
 | M0 | Mockups with `/design`, then owner review | Answer screen, Today, Asks, Pickups, Money and Prices, at phone and desk widths | Sign-off |
-| M1 | One-tap answer link | 0109 (links and answers), `supplier-portal` actions `link` and `answer`, the answer screen, the link in the message, folding answers into the owner app, the agent-side merge | % answered by supplier; minutes to answer |
+| M1 | One-tap answer link | 0132 (links and answers), `supplier-portal` actions `link` and `answer`, the answer screen, the link in the message, folding answers into the owner app, the agent-side merge | % answered by supplier; minutes to answer |
 | M2 | Accounts, Today and Money | PIN sign-in, bills, due dates, consignment, commission | Weekly active suppliers |
 | M3 | Pickups | Trips with the Get ready list | Wait at the stall |
 | M4 | Prices | Out-of-stock toggle, proposals (0110), the owner's queue | Price freshness |
@@ -280,7 +280,7 @@ So answers land in **`supplier_answers`**:
 **New**
 - `supplier.html`
 - `manifest-supplier.json`
-- `supabase/migrations/0109_supplier_accounts.sql`
+- `supabase/migrations/0132_supplier_accounts.sql`
 - `supabase/migrations/0110_supplier_price_proposals.sql`
 - `supabase/functions/supplier-portal/index.ts`
 - `supabase/functions/supplier-accounts/index.ts`
@@ -312,7 +312,7 @@ Shipped (the supplier's side, end to end):
 
 | Piece | File | Notes |
 |---|---|---|
-| Tables | `supabase/migrations/0109_supplier_accounts.sql` | Accounts, sessions, answers and proposals in one migration (0110 folded in). |
+| Tables | `supabase/migrations/0132_supplier_accounts.sql` | Accounts, sessions, answers and proposals in one migration (0110 folded in). |
 | Portal function | `supabase/functions/supplier-portal/index.ts` | Sign in, Today, order answer, products, price and stock, add and new item, money, consignment, insights, pickups, partnership, profile. `verify_jwt = false`. |
 | Admin function | `supabase/functions/supplier-accounts/index.ts` | `list`, `open`, `reissue`, `suspend`, `restore`, `revoke`. Admin JWT only. |
 | App | `supplier.html`, `manifest-supplier.json`, `supplier-sw.js` | Matches the canvas screens. `?demo` runs it on sample data with no backend. |
@@ -394,7 +394,7 @@ the Omni-Ware Supplier App design canvas.
 |---|---|---|
 | 9 | **A named contact at Omni-Ware** (photo, WhatsApp, call) | A field on `suppliers` for the account manager |
 | 10 | **Business profile:** pickup place and hours, and payout details that are **locked** (changing them needs a call-back from Omni-Ware, to stop fraud) | Payout details on `suppliers` |
-| 11 | **Staff roles:** the owner sees everything; a storekeeper confirms orders only | A `supplier_staff` table, with the 0109 session carrying the role |
+| 11 | **Staff roles:** the owner sees everything; a storekeeper confirms orders only | A `supplier_staff` table, with the 0132 session carrying the role |
 | 12 | **Language** (English or Luganda) and **quiet hours** | Preference columns |
 
 **Tier 4: communication**

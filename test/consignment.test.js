@@ -258,11 +258,17 @@ if (scope) {
 {
   const code = src;
   // The write: what one lot becomes on the way to the server.
-  const insertLine = (code.match(/changedKeys\.forEach\(k=> \(stockLotsMap\[k\]\|\|\[\]\)\.forEach\(l=> insertRows\.push\(\{[\s\S]{0,300}?\}\)\)\);/) || [''])[0];
-  t.check(/consign: l\.consign \|\| null/.test(insertLine),
+  // Lots now go up through replace_stock_lots (0109, one transaction),
+  // with the old delete-then-insert kept for a shop without it.
+  const rewrite = extractFunction(src, 'addStockLotsDiffOps', 'index.html');
+  const lotLine = (rewrite.match(/changedKeys\.forEach\(k=> \(stockLotsMap\[k\]\|\|\[\]\)\.forEach\(l=> lotRows\.push\(\{[\s\S]{0,200}?\}\)\)\);/) || [''])[0];
+  t.check(/consign: l\.consign \|\| null/.test(lotLine),
     'the row that goes UP carries the consignor');
-  t.check(/stockLotConsignColumn \? \{consign/.test(insertLine),
-    'guarded by a probe, because one unknown column would fail the whole insert and stop the shop saving its cost lots at all');
+  t.check(/insert into stock_lots\(shop_id, key, qty, cost, consign\)/.test(read('supabase/migrations/0109_atomic_money_writes.sql')),
+    'and the one-transaction rewrite writes it to the column');
+  const fallback = (rewrite.match(/const insertRows = lotRows\.map\([\s\S]{0,240}?\}\)\);/) || [''])[0];
+  t.check(/stockLotConsignColumn \? \{consign/.test(fallback),
+    'the old path stays guarded by a probe, because one unknown column would fail the whole insert and stop the shop saving its cost lots at all');
 
   // The read: what comes back becomes a lot again.
   const loadBlock = (code.match(/\(stockLotsR\.data\|\|\[\]\)\.forEach\(l=>\{[\s\S]{0,400}?\}\);/) || [''])[0];

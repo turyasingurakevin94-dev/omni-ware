@@ -1,7 +1,7 @@
 // The ONLY way a supplier's phone learns anything about this shop
 // (supplier.html).
 //
-// A supplier is the fourth identity (0109): not a shop_member, not an
+// A supplier is the fourth identity (0132): not a shop_member, not an
 // agent, not a customer, not an auth.users row. They have no row-level
 // access to anything. Everything they see is read here with the
 // service-role key and built into a response key by key.
@@ -24,7 +24,7 @@
 // suppliers is NEVER spread into a response, and `sellPrice`,
 // `client_name`, `client_phone` and `customerName` are never read at all.
 //
-// WHAT A SUPPLIER SAYS lands in 0109's own tables — supplier_answers and
+// WHAT A SUPPLIER SAYS lands in 0132's own tables — supplier_answers and
 // supplier_proposals — and is never written into an order or a price.
 // The one exception is out of stock (C5): a fact about their own goods,
 // written onto their own price row.

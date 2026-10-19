@@ -4,7 +4,7 @@
  * supplier-portal -- what a supplier is allowed to see, and how a
  * supplier's PIN behaves.
  *
- * Suppliers are the fourth identity (0109): not shop_members, not
+ * Suppliers are the fourth identity (0132): not shop_members, not
  * agents, not customers, and not auth.users rows, so they have no
  * row-level access to anything. supplier-portal reads with the
  * service-role key and builds every response key by key;
@@ -29,7 +29,7 @@ const accounts = read('supabase/functions/supplier-accounts/index.ts');
 const clientPortal = read('supabase/functions/client-portal/index.ts');
 const page = read('supplier.html');
 const index = read('index.html');
-const migration = read('supabase/migrations/0109_supplier_accounts.sql');
+const migration = read('supabase/migrations/0132_supplier_accounts.sql');
 
 // Comments name every forbidden column on purpose; the code must not.
 function codeOnly(src) {
