@@ -18,7 +18,8 @@
  *      (the Manager's, docs/decision-rights.md); today's share is oldest
  *      first and counts what was confirmed today; a confirmation is logged
  *      for the owner under price.confirm.
- *   4. The canvas. All 25 boards are screens, the tab screens carry the
+ *   4. The canvas. Every board is a screen (the 25, and round 3's Today,
+ *      hunt path, Suppliers, One item and Search), the tab screens carry the
  *      shared tab bar, and no sample name from docs/canvas-cast.md is in
  *      the page (they live only in test/fixtures/sourcing-sample-shop.js).
  *   5. Every screen draws, in a real browser, from the sample shop -- when
@@ -142,7 +143,9 @@ const consoleSrc = read('sourcing-console.js');
 
 /* ---------------- 4. the canvas ---------------- */
 const BOARDS = ['Main', 'Asks', 'AsksDropped', 'NewAsk', 'HuntDropped', 'Hunts', 'Prices', 'Hunt', 'AskSuppliers', 'Quote', 'Decide', 'Sample',
-  'MarketRun', 'AtShop', 'NewSupplier', 'RunDone', 'Spotted', 'Supplier', 'PriceIt', 'AddItem', 'Landed', 'Announce', 'TellAsked', 'Dropped', 'Profile'];
+  'MarketRun', 'AtShop', 'NewSupplier', 'RunDone', 'Spotted', 'Supplier', 'PriceIt', 'AddItem', 'Landed', 'Announce', 'TellAsked', 'Dropped', 'Profile',
+  // Round 3: the hunt's quotes side by side moved to Quotes (Hunt is its way to the shelf).
+  'Quotes', 'Suppliers', 'Item', 'Search'];
 BOARDS.forEach(b => t.check(html.includes(`SCREENS.${b} = {`), `the ${b} board is a screen`));
 ['Main', 'Asks', 'Hunts', 'Prices'].forEach(b => {
   const start = html.indexOf(`SCREENS.${b} = {`), end = html.indexOf('SCREENS.', start + 10);
@@ -155,6 +158,16 @@ BOARDS.forEach(b => t.check(html.includes(`SCREENS.${b} = {`), `the ${b} board i
   t.check(found.length === 0, `no sample name from the canvas cast is in the page (${found.join(', ') || 'none'})`);
 }
 t.check(/supabase\/functions|next_row_id_blocks/.test(html) && html.includes("sb.rpc('next_entity_id'"), 'ids come from the server allocators, as the other apps');
+
+/* ---------------- 4b. round 3: what next, and the item page ---------------- */
+{
+  const steps = extractFunction(html, 'huntSteps', 'sourcing.html');
+  t.check(/leadResearch\(l\)\.meta/.test(steps) && /hold/.test(steps) && /sample/.test(steps) && !/saveLead|sb\.from/.test(steps), 'a hunt\'s seven steps are read from the record (its hold and sample), never written');
+  const jobs = extractFunction(html, 'nextJobs', 'sourcing.html');
+  t.check(/todaysShare\(\)/.test(jobs) && /leadTold\(l\)/.test(jobs) && /quoteLeft\(c\)/.test(jobs) && /fixesOpen\(\)/.test(jobs), 'Today\'s next jobs come from the hunts, today\'s prices, clients to tell, lapsing quotes and the Buyer\'s fixes');
+  const edit = extractFunction(html, 'saveProductDetails', 'sourcing.html');
+  t.check(!/markup/i.test(edit.replace(/\/\/.*$/gm, '')) && /logDecision\('product\.edit'/.test(edit), 'editing an item\'s details never writes a markup, and is logged under product.edit');
+}
 
 /* ---------------- 5. every screen draws ---------------- */
 let chromium = null;
@@ -174,7 +187,7 @@ if (!chromium) {
   await page.goto('file://' + path.join(__dirname, '..', 'sourcing.html'));
   await page.waitForFunction(() => window.SX && window.SX.started, null, { timeout: 10000 });
   for (const b of BOARDS) {
-    for (const props of [null, b === 'Hunt' || b === 'PriceIt' || b === 'Decide' ? { leadId: 'SRC-007' } : null].filter((x, i) => i === 0 || x)) {
+    for (const props of [null, b === 'Hunt' || b === 'Quotes' || b === 'PriceIt' || b === 'Decide' ? { leadId: 'SRC-007' } : b === 'Search' ? { q: 'a' } : null].filter((x, i) => i === 0 || x)) {
       await page.evaluate(([n, p]) => { if (['Main', 'Asks', 'Hunts', 'Prices'].includes(n) && !p) A.tab(n); else { A.tab('Main'); A.go(n, p || {}); } }, [b, props]);
       await page.waitForTimeout(150);
       const res = await page.evaluate(() => { const h = document.getElementById('sx_screen'); return { err: h.getAttribute('data-sv-error'), screen: h.getAttribute('data-screen'), text: h.innerText.length, wide: h.scrollWidth > h.clientWidth + 1 }; });
