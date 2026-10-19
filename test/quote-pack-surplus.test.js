@@ -195,7 +195,9 @@ const line = (over) => Object.assign(
 
   /* Silent, it is stock the shop did not ask for and will not think to
      look for -- which is how goods go missing on paper. */
-  t.check(/left over from packs added to stock/.test(toggle),
+  // Told by the one toast both invoicing paths use (toastInvoiced).
+  t.check(/toastInvoiced\(shortfall, surplusStocked\)/.test(toggle)
+    && /left over from packs added to stock/.test(extractFunction(src, 'toastInvoiced', 'index.html')),
     'the shopkeeper is told it happened');
 }
 

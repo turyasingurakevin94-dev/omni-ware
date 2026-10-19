@@ -57,12 +57,25 @@ t.check(orderCheckingGate({ ...big, items: [{ ...big.items[0], qty: 4 }] }) === 
   t.check(/orderCheckingGate\(q\)\) return false;/.test(leave), 'the automatic move out of Checking asks it too');
 }
 
-/* an order the server invoiced is not invoiced again from an old copy */
+/* the console invoices through the server (invoice_order, 0119) */
 {
   const tog = extractFunction(src, 'toggleQuoteInvoiced', 'index.html');
-  t.check(/if\(!q\.invoiced && typeof sb !== 'undefined'[\s\S]{0,200}from\('saved_quotes'\)\.select\('invoiced'\)[\s\S]{0,200}onServer\.invoiced\)\{ toast\([^;]+; return; \}/.test(tog),
-    'the console asks the server before it invoices, and stops if it is invoiced there already');
-  t.check(tog.indexOf("select('invoiced')") < tog.indexOf('q.invoiced = !q.invoiced'), 'asked before anything changes');
+  t.check(/if\(!q\.invoiced && typeof sb !== 'undefined' && sb && currentShopId\)\{\s+if\(\(await invoiceOnServer\(q\)\) !== 'missing'\) return;/.test(tog),
+    'the console\'s Invoice goes to the server, and invoices for itself only where 0119 is missing');
+  t.check(tog.indexOf('invoiceOnServer(q)') < tog.indexOf('q.invoiced = !q.invoiced'), 'asked before anything changes here');
+  const srv = extractFunction(src, 'invoiceOnServer', 'index.html');
+  t.check(/navigator\.onLine === false[\s\S]{0,200}return 'refused'/.test(srv), 'offline it waits, rather than invoicing a copy the server may already have invoiced');
+  t.check(srv.indexOf('await saveData()') < srv.indexOf("rpc('invoice_order'"), 'this copy goes up first, so the order is invoiced as it stands here');
+  t.check(/rpc\('invoice_order', \{ p_shop_id: currentShopId, p_quote_id: q\.id \}\)/.test(srv), 'by the same function the Manager and the 24-hour run use');
+  t.check(/error\.code === 'PGRST202' \|\| error\.code === '42883'\) return 'missing'/.test(srv), 'a database without 0119 is the only fall-back');
+  t.check(/pollForUpdatesNow\(\{ force: true \}\)/.test(srv), 'then the shop is read back');
+  t.check(!/q\.invoiced\s*=/.test(srv), 'without marking this copy first -- the read-back\'s save would send it up over the server\'s invoice');
+  const batch = extractFunction(src, 'invoicePickedOrders', 'index.html');
+  t.check(/const now = data\.savedQuotes\.find\(x=> x\.id === q\.id\);\s+if\(now && now\.invoiced\)/.test(batch), 'and the batch counts what is invoiced from the fresh copy, by id');
+  const poll = extractFunction(src, 'pollForUpdatesNow', 'index.html');
+  t.check(/const force = !!\(opts && opts\.force\);/.test(poll) && /if\(!force\)\{\s+if\(document\.querySelector\('\.modal-overlay\.show'\)\) return;/.test(poll),
+    'that read-back is not held off by the hands-on-the-screen guards');
+  t.check(/if\(pollInFlight\) return;\s+[\s\S]{0,600}if\(syncSavesInFlight\) return;/.test(poll), 'and still never runs over a refresh or a save');
 }
 
 /* the keys the console must not strip */
