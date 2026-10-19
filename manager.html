@@ -895,8 +895,14 @@ function rowToTrip(r){ return { id: r.id, supplierId: r.supplier_id, status: r.s
   acceptedAt: r.accepted_at, collectedAt: r.collected_at, confirmedAt: r.confirmed_at, note: r.note || '', lines: Array.isArray(r.lines) ? r.lines : [], voided: !!r.voided,
   yardCheckedAt: r.yard_checked_at || null, yardCheckedBy: r.yard_checked_by || null, differenceAcceptedAt: r.difference_accepted_at || null, cashCount: r.cash_count || null }; }
 
+/* buyer_handoffs (0125): the Buyer's yard note comes to the Manager. A
+   database without the table reads as no notes, never a broken app. */
+function yardNotesQuery(){ return sb.from('buyer_handoffs').select('*').eq('shop_id', S.shopId).eq('for_role', 'manager').eq('kind', 'yard_note').eq('status', 'open').limit(200).then(r => r, () => ({ data: [] })); }
+function rowToHandoff(h){ return { id: h.id, kind: h.kind, forRole: h.for_role, ref: h.ref, payload: h.payload || {}, status: h.status, createdBy: h.created_by, createdAt: h.created_at }; }
+function handoffRows(r){ return ((r && !r.error && r.data) || []).map(rowToHandoff).filter(h => h.kind === 'yard_note' && h.forRole === 'manager' && h.status === 'open'); }
+
 async function loadAll(){
-  const [suppliers, customers, debtLog, products, prices, stock, lots, quotes, settingsR, cashR, staff, trips, targetsR, stmR, promises, asksR, countsR, reportsR, restockR, rivalsR] = await Promise.all([
+  const [suppliers, customers, debtLog, products, prices, stock, lots, quotes, settingsR, cashR, staff, trips, targetsR, stmR, promises, asksR, countsR, reportsR, restockR, rivalsR, handR] = await Promise.all([
     selectAll('suppliers'), selectAll('customers'), selectAll('customer_debt_log'), selectAll('products'), selectAll('prices'),
     selectAll('stock', 'key'), selectAll('stock_lots'), selectAll('saved_quotes'),
     sb.from('app_settings').select('presets').eq('shop_id', S.shopId).maybeSingle(),
@@ -914,6 +920,8 @@ async function loadAll(){
     sb.from('stock_reports').select('*').eq('shop_id', S.shopId).eq('status', 'sent').limit(200).then(r => r, () => ({ data: [] })),
     sb.from('restock_lines').select('*').eq('shop_id', S.shopId).in('status', ['planned', 'held']).limit(300).then(r => r, () => ({ data: [] })),
     sb.from('rival_prices').select('product_id, variant_idx, price, seen_on').eq('shop_id', S.shopId).order('seen_on', { ascending: false }).limit(2000).then(r => r, () => ({ data: [] })),
+    // What the Buyer passed on to the Manager (0125 buyer_handoffs): a yard note, open.
+    yardNotesQuery(),
   ]);
   const presets = (settingsR && settingsR.data && settingsR.data.presets) || {};
   const debtBy = {};
@@ -951,6 +959,7 @@ async function loadAll(){
     stockCounts: ((countsR && !countsR.error && countsR.data) || []).map(c => ({ id: c.id, aisle: c.aisle || '', countedBy: c.counted_by, countedByName: c.counted_by_name || '', lines: Array.isArray(c.lines) ? c.lines : [], status: c.status, createdAt: c.created_at })),
     stockReports: ((reportsR && !reportsR.error && reportsR.data) || []).map(r => ({ id: r.id, key: r.key, productId: r.product_id, variantIdx: r.variant_idx == null || r.variant_idx === '' ? null : r.variant_idx, name: r.name || 'Item', qty: Number(r.qty) || 0, why: r.why || 'damaged', note: r.note || '', reportedBy: r.reported_by, reportedByName: r.reported_by_name || '', status: r.status, createdAt: r.created_at })),
     restockLines: ((restockR && !restockR.error && restockR.data) || []).map(r => ({ id: r.id, key: r.key, productId: r.product_id, variantIdx: r.variant_idx == null || r.variant_idx === '' ? null : r.variant_idx, name: r.name || 'Item', qty: Number(r.qty) || 0, unit: r.unit || '', cost: r.cost == null ? null : Number(r.cost), forDate: r.for_date, status: r.status, createdBy: r.created_by })),
+    handoffs: handoffRows(handR),
     rivals: ((rivalsR && !rivalsR.error && rivalsR.data) || []).map(r => ({ productId: r.product_id, variantIdx: r.variant_idx, price: Number(r.price) || 0 })),
   };
   S.loadedAt = Date.now();
@@ -958,9 +967,10 @@ async function loadAll(){
 }
 async function refreshLive(){
   try {
-    const [quotes, trips] = await Promise.all([selectAll('saved_quotes'), selectAll('collection_trips').catch(() => null)]);
+    const [quotes, trips, handR] = await Promise.all([selectAll('saved_quotes'), selectAll('collection_trips').catch(() => null), yardNotesQuery()]);
     S.data.savedQuotes = quotes.map(rowToQuote);
     if (trips) S.data.collectionTrips = trips.map(rowToTrip);
+    if (handR && !handR.error && handR.data) S.data.handoffs = handoffRows(handR);
     S.loadedAt = Date.now(); saveSnapshot(); if (!S.dragging && !S.paying) render();
   } catch (e) { if (!isNetworkError(e)) console.warn(e); }
 }
@@ -1728,7 +1738,7 @@ function phonePush(){
   });
   // No token: a phone without Google Play services, or Firebase not in this build.
   P.addListener('registrationError', e => { window.owPushError = 'register: ' + ((e && e.error) || e); render(); });
-  P.addListener('pushNotificationActionPerformed', () => { loadAll().then(() => render()).catch(() => {}); });
+  P.addListener('pushNotificationActionPerformed', a => { const d = (a && a.notification && a.notification.data) || {}; loadAll().then(() => { pushOpen(d); render(); }).catch(() => {}); });
   (async () => {
     try {
       if (!(await pushInstalled())) { window.owPushError = 'install: this phone has the older app'; render(); return; }
@@ -1737,6 +1747,44 @@ function phonePush(){
       if (perm.receive === 'granted') await P.register(); else { window.owPushError = 'permission: ' + perm.receive; render(); }
     } catch (e) { window.owPushError = 'register: ' + (e && e.message || e); render(); }
   })();
+}
+/* A tapped push opens what it is about (push-send: data = { kind, ...ref },
+   every value a string). Everything the Manager decides sits under Decide
+   now, so Back lands there; a thing already decided or gone opens Decide
+   (or the list it lives in). An unknown kind leaves the app on Today. */
+function pushOpen(d){
+  try {
+    const k = String((d && d.kind) || ''), id = String((d && d.id) || '');
+    const same = x => String(x) === id;
+    const open = (type, args) => { if (S.win) closeWin(); if (S.sheet) closeSheet(); go('today'); push('decide'); if (type) push(type, args); };
+    if (k === 'price.waits') {
+      const x = priceCases().find(y => same(y.q.id));
+      if (!x) { open(); return; }
+      S.ui.pline = 0; S.ui.psetting = null;
+      // A counter sale (0120: payload counter / counterSale): the customer waits at the counter.
+      if (x.q.counter || x.q.counterSale) { open(); S.ui.counterDone = null; openSheet('counter', { id: Number(x.q.id) }); return; }
+      open(x.lines.some(l => l.kind === 'under') ? 'price' : 'pricenew', { id });
+      return;
+    }
+    if (k === 'credit.hold') { const i = caseList().findIndex(y => same(y.q.id)); if (i >= 0) S.ui.hold = i; open('approvals'); return; }
+    if (k === 'pick.short') { if (shortPicks().some(y => same(y.q.id))) { S.ui.spPick = null; S.ui.spDone = null; open('shortpick', { id }); } else open(); return; }
+    if (k === 'agent.change' || k === 'agent.cancel') { if (agentAsks().some(y => same(y.q.id))) { S.ui.agKeep = null; open('agentask', { id }); } else open(); return; }
+    if (k === 'order.delivered') { open('invoices'); return; }
+    if (k === 'trip.difference') { if (tripDiffs().some(y => String(y.t.id) === id)) open('tripcount', { id }); else open(); return; }
+    // The Buyer's yard note (d.id is the buyer_handoffs id): its trip, where the note sits.
+    if (k === 'trip.yard_note') {
+      const h = (D().handoffs || []).find(y => same(y.id)), tid = String(d.tripId || (h ? noteTripId(h) : ''));
+      if (tid && D().collectionTrips.some(y => !y.voided && String(y.id) === tid)) open('tripcount', { id: tid }); else open();
+      return;
+    }
+    if (k === 'stock.report') { if (S.ui.wo && openReports().some(r => same(r.id))) S.ui.wo[id] = true; open('writeoff'); return; }
+    if (k === 'invoice.ask') {
+      const ask = openAsks('credit').concat(openAsks('void')).find(y => same(y.id));
+      if (!ask) { open(); return; }
+      if (ask.kind === 'void') { S.ui.vdWhy = null; open('void', { id }); } else open('return', { id });
+      return;
+    }
+  } catch (e) { console.warn('push open', e); }
 }
 function start(){
   S.started = true;
@@ -2816,7 +2864,7 @@ function decideCounts(){
   const prices = priceCases().reduce((s, x) => s + x.lines.length, 0);
   const credit = heldWaiting().length;
   const invoices = invoiceQueue().length;
-  const stock = shortPicks().length + tripDiffs().length + openReports().length + openCounts().length;
+  const stock = shortPicks().length + tripDiffs().length + yardNotesSeen().length + openReports().length + openCounts().length;
   const returns = openAsks('credit').length + openAsks('void').length + agentAsks().length;
   return { prices, credit, invoices, stock, returns, total: prices + credit + invoices + stock + returns };
 }
@@ -2832,7 +2880,7 @@ function decideCardHTML(){
   const c = decideCounts();
   if (!c.total) return '';
   const tile = (n, w, icn, bg, ink, act) => `<button ${act} style="display:flex;align-items:center;gap:8px;padding:9px 8px;border:none;border-radius:14px;background:var(--bg);min-width:0;text-align:left;color:var(--ink)${n ? '' : ';opacity:.5'}"><span style="width:30px;height:30px;flex:none;border-radius:10px;background:${bg};color:${ink};display:flex;align-items:center;justify-content:center">${ic(icn, 16)}</span><span style="display:flex;flex-direction:column;min-width:0"><span class="m" style="font-size:16px;font-weight:600;line-height:1.1">${n}</span><span class="ell" style="font-size:11px;font-weight:600;color:var(--ink2)">${w}</span></span></button>`;
-  const sp = shortPicks().length, st = tripDiffs().length + openReports().length + openCounts().length;
+  const sp = shortPicks().length, st = tripDiffs().length + yardNotesSeen().length + openReports().length + openCounts().length;
   return `<div class="bx-card" style="border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 1px 2px rgba(22,32,60,.05),0 8px 22px rgba(22,32,60,.07),inset 0 0 0 1px var(--line)">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="display:flex;flex-direction:column;gap:1px"><b style="font-size:17px">Decide now</b><span style="font-size:12px;font-weight:600;color:var(--ink3)">oldest waits <span class="m" style="color:var(--crimson)">${esc(ageWords(oldestWaitMins()))}</span></span></span><span class="bx-chip" style="background:#FDE8E4;color:#A82D24"><span class="m">${c.total}</span>&nbsp;waiting</span></div>
     <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">
@@ -2869,6 +2917,7 @@ PAGE.decide = () => {
     inv.length ? decideRow({ act: 'data-act="push" data-p="invoices"', icon: 'doc', bg: 'var(--skySoft)', ink: 'var(--sky)', t: `${inv.length} ${pl(inv.length, 'invoice')} to raise`, s: inv.filter(x => x.block).length ? `${inv.filter(x => x.block).length} the night run skipped` : 'delivered, not billed yet' }) : '',
     ...sp.map(x => decideRow({ act: `data-act="push" data-p="shortpick" data-id="${x.q.id}"`, icon: 'box', bg: 'var(--soft2)', ink: 'var(--slate)', t: `Short pick · ${esc(clientName(x.q))}`, s: x.lines.length === 1 ? `${esc(x.lines[0].it.productName || 'a line')} · <span class="m">${x.lines[0].picked}</span> of <span class="m">${x.lines[0].ordered}</span> went` : `${x.lines.length} lines came up short` })),
     ...td.map(x => decideRow({ act: `data-act="push" data-p="tripcount" data-id="${x.t.id}"`, icon: 'truck', bg: 'var(--soft2)', ink: 'var(--slate)', t: `Trip count differs · ${esc(supplierName(x.t.supplierId) || 'a trip')}`, s: `yard counted <span class="m" style="color:${x.cost < 0 ? 'var(--crimson)' : 'var(--amberInk)'}">${x.cost < 0 ? '−' : '+'}${short(Math.abs(x.cost))}</span> at cost` })),
+    ...yardNotesSeen().map(h => decideRow({ act: `data-act="push" data-p="tripcount" data-id="${esc(noteTripId(h))}"`, icon: 'truck', bg: 'var(--soft2)', ink: 'var(--slate)', who: staffByUser(h.createdBy), t: `From the Buyer · ${esc(supplierName(h.payload.supplierId) || 'a trip')}`, s: esc(h.payload.words || 'a note on the count') })),
     rep.length ? decideRow({ act: 'data-act="push" data-p="writeoff"', icon: 'warn', bg: 'var(--soft2)', ink: 'var(--slate)', t: 'Damaged stock to write off', s: `reported by the store · <span class="m">${rep.length}</span> ${pl(rep.length, 'report')}` }) : '',
     ...cnt.map(k => decideRow({ act: `data-act="push" data-p="stocktake" data-id="${k.id}"`, icon: 'list', bg: 'var(--soft2)', ink: 'var(--slate)', t: `Stock take · ${esc(k.aisle || 'the shelf')}`, s: `${esc(firstWord(k.countedByName || 'the store'))} counted <span class="m">${(k.lines || []).length}</span> items` })),
     ...cr.map(a => decideRow({ act: `data-act="push" data-p="return" data-id="${a.id}"`, icon: 'ret', bg: 'var(--crimsonSoft)', ink: 'var(--crimson)', t: `Return · ${esc(clientName(quoteById(a.quoteId) || {}))}`, s: `${esc(firstWord(a.askedByName || 'someone'))} asks · <span class="m">${n0(a.amount)}</span> back` })),
@@ -3212,13 +3261,46 @@ function tripDiffs(){
     return { t, lines, cost, off: lines.filter(x => x.yard !== x.got).length };
   }).filter(x => x.off > 0);
 }
+/* The Buyer's yard note (buyer.html passOn('yard_note')): why the count
+   differs, in their words, with their count and the yard's per line. */
+function noteTripId(h){ return String((h.payload && h.payload.tripId) || h.ref || ''); }
+function yardNotes(tripId){ return (D().handoffs || []).filter(h => h.kind === 'yard_note' && h.status === 'open' && (tripId == null || noteTripId(h) === String(tripId))); }
+// A note whose trip has no difference left to decide: only a "Seen" waits.
+function yardNotesSeen(){ const open = new Set(tripDiffs().map(x => String(x.t.id))); return yardNotes().filter(h => !open.has(noteTripId(h)) && D().collectionTrips.some(t => String(t.id) === noteTripId(h))); }
+function yardNoteHTML(t, pending){
+  const notes = yardNotes(t.id); if (!notes.length) return '';
+  const who = staffByUser(notes[0].createdBy) || staffById(t.assignedWorkerId), name = who ? firstWord(who.name) : 'The buyer';
+  return `<div class="bx-card" style="padding:12px 14px;display:flex;flex-direction:column;gap:9px">
+      <span style="display:flex;align-items:center;gap:8px">${pav(who || { name: 'Buyer', id: 'buyer' }, 26)}<span style="flex:1;display:flex;flex-direction:column"><b style="font-size:13px">From the Buyer</b><span style="font-size:11px;font-weight:600;color:var(--ink3)">${esc(name)} · ${esc(hm(msOf(notes[0].createdAt)))}</span></span><span class="m" style="flex:none;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;background:var(--soft2);color:var(--ink2)">${notes.length}</span></span>
+      ${notes.map(h => { const ls = Array.isArray(h.payload.lines) ? h.payload.lines : [];
+        return `<span style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;background:#F7F5F2;font-size:12px;font-weight:600;color:var(--ink2)">“${esc(h.payload.words || 'a note on the count')}”</span>
+      ${ls.map(l => { const you = Number(l.you) || 0, yard = Number(l.yard) || 0, d = yard - you;
+        return `<span style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><b class="ell" style="font-size:13px">${esc(l.name || 'Item')}</b><span style="flex:none;display:flex;align-items:baseline;gap:8px"><span class="m" style="font-size:12px;font-weight:600;color:var(--ink2)">${you} → ${yard}</span><span class="m" style="flex:none;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;${d === 0 ? 'background:var(--greenSoft);color:var(--green)' : d < 0 ? 'background:var(--crimsonSoft);color:var(--crimson)' : 'background:var(--amberSoft);color:var(--amberDeep)'}">${d === 0 ? 'agrees' : (d > 0 ? '+' : '−') + Math.abs(d)}</span></span></span>`; }).join('')}`; }).join('')}
+      ${pending ? '' : can('trip.difference') ? `<button class="bx-btn navy" style="flex:none;height:44px;font-size:13px" data-act="yardseen" data-id="${esc(t.id)}">${ic('tick', 16)}Seen</button>` : ''}</div>`;
+}
+// Closes the trip's open notes: deciding the difference, or "Seen".
+async function closeYardNotes(tripId){
+  for (const h of yardNotes(tripId)) {
+    // A refused update (the task switched off) is no error, just no row: ask for the row back.
+    const r = await sb.from('buyer_handoffs').update({ status: 'done' }).eq('shop_id', S.shopId).eq('id', h.id).select('id');
+    if (r.error) throw r.error;
+    if (Array.isArray(r.data) && !r.data.length) throw new Error('That needs the owner to switch it on for you');
+    h.status = 'done';
+  }
+  D().handoffs = (D().handoffs || []).filter(h => h.status === 'open'); saveSnapshot();
+}
+ACT.yardseen = async t => {
+  if (S.busy) return; S.busy = true;
+  try { await closeYardNotes(t.dataset.id); FEEL.yes(); } catch (e) { toast(failWord(e), 5000); }
+  S.busy = false; render();
+};
 PAGE.tripcount = a => {
   const x = tripDiffs().find(y => String(y.t.id) === String(a.id)), done = S.ui.tdDone === String(a.id);
   const t = x ? x.t : D().collectionTrips.find(y => String(y.id) === String(a.id));
   if (!t) return pageShell({ eyebrow: 'TRIP COUNT', title: 'Gone', body: emptyCard('That trip is gone', '') });
   const lines = x ? x.lines : (t.lines || []).map(l => ({ l, got: tripGot(l), yard: l.yardQty == null ? tripGot(l) : Number(l.yardQty) || 0 }));
   const max = Math.max(1, ...lines.map(z => Math.max(z.got, z.yard))), buyer = staffById(t.assignedWorkerId), yardBy = staffByUser(t.yardCheckedBy);
-  const cost = x ? x.cost : 0, cc = t.cashCount;
+  const cost = x ? x.cost : 0, cc = t.cashCount, pending = !!x && !done;
   const cash = cc && Number(cc.given) > 0 ? (() => { const given = Number(cc.given) || 0, paid = Number(cc.paid) || 0, back = Number(cc.counted) || 0, diff = Number(cc.diff) || (back - (given - paid));
     return `<div role="img" aria-label="Trip cash: ${n0(given)} given, ${n0(paid)} in receipts, ${n0(back)} back, ${diff < 0 ? n0(-diff) + ' short' : diff > 0 ? n0(diff) + ' over' : 'agrees'}" class="bx-card" style="padding:12px 14px;display:flex;flex-direction:column;gap:9px">
       <span style="display:flex;align-items:center;gap:8px">${pav({ name: cc.byName || 'Accounts', id: cc.by || 'acc' }, 26)}<span style="flex:1;display:flex;flex-direction:column"><b style="font-size:13px">Trip cash</b><span style="font-size:11px;font-weight:600;color:var(--ink3)">${esc(firstWord(cc.byName || 'Accounts'))} counted${cc.at ? ' ' + esc(hm(msOf(cc.at))) : ''} · theirs to settle, you’re told</span></span><span class="m" style="flex:none;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;${diff < 0 ? 'background:var(--crimsonSoft);color:var(--crimson)' : diff > 0 ? 'background:var(--amberSoft);color:var(--amberDeep)' : 'background:var(--greenSoft);color:var(--green)'}">${diff < 0 ? 'short ' + n0(-diff) : diff > 0 ? 'over ' + n0(diff) : 'agrees'}</span></span>
@@ -3226,17 +3308,19 @@ PAGE.tripcount = a => {
       <span style="display:grid;grid-template-columns:repeat(3,auto);justify-content:space-between;font-size:11px;font-weight:600;color:var(--ink3)"><span>Given <b class="m" style="color:var(--ink)">${n0(given)}</b></span><span>Receipts <b class="m" style="color:var(--ink)">${n0(paid)}</b></span><span>Back <b class="m" style="color:var(--ink)">${n0(back)}</b></span></span></div>`; })() : '';
   return pageShell({ eyebrow: 'TRIP COUNT DIFFERS', title: esc(supplierName(t.supplierId) || 'A buying trip'), sub: `${buyer ? esc(firstWord(buyer.name)) + ' bought' : 'Bought'} · ${yardBy ? esc(firstWord(yardBy.name)) : 'the yard'} counted ${t.yardCheckedAt ? esc(hm(msOf(t.yardCheckedAt))) : ''}`, face: faceIcon('truck'),
     head: `<div style="display:flex;align-items:baseline;justify-content:space-between"><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:700;color:var(--navyInk2)">Difference at cost</span><span class="m" style="font-size:28px;font-weight:600;letter-spacing:-.03em;color:${cost < 0 ? '#F59A92' : cost > 0 ? 'var(--amber)' : 'var(--mint)'}">${cost < 0 ? '−' : cost > 0 ? '+' : ''}${n0(Math.abs(cost))}</span></span><span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-size:12px;font-weight:600;color:var(--navyInk)"><span><b class="m" style="color:#fff">${lines.filter(z => z.yard === z.got).length}</b> of ${lines.length} lines agree</span><span>the shelf took the yard’s count</span></span></div>`,
-    body: `<div class="bx-card" style="border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:12px">
+    body: `${yardNoteHTML(t, pending)}<div class="bx-card" style="border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:12px">
         <span style="display:flex;align-items:center;justify-content:space-between"><b style="font-size:13px">Line by line</b><span style="display:flex;gap:10px;font-size:11px;font-weight:600;color:var(--ink3)"><span style="display:inline-flex;align-items:center;gap:4px"><i style="width:10px;height:8px;border-radius:2px;box-shadow:inset 0 0 0 1.5px var(--navy)"></i>${esc(buyer ? firstWord(buyer.name) : 'buyer')}</span><span style="display:inline-flex;align-items:center;gap:4px"><i style="width:10px;height:8px;border-radius:2px;background:var(--navy)"></i>yard</span></span></span>
         ${lines.map((z, i) => { const d = z.yard - z.got, w = v => (v / max * 100).toFixed(1) + '%';
           return `<div style="display:flex;flex-direction:column;gap:6px;${i ? 'padding-top:10px;border-top:1px solid #F1EEE8' : ''}"><span style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><b class="ell" style="font-size:13px">${esc(z.l.productName || 'Item')}</b><span class="m" style="flex:none;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;${d === 0 ? 'background:var(--greenSoft);color:var(--green)' : d < 0 ? 'background:var(--crimsonSoft);color:var(--crimson)' : 'background:var(--amberSoft);color:var(--amberDeep)'}">${d === 0 ? 'agrees' : (d > 0 ? '+' : '−') + Math.abs(d) + ' · ' + (d > 0 ? '+' : '−') + n0(Math.abs(d) * tripLineCost(z.l))}</span></span>
             <span style="display:grid;grid-template-columns:1fr 64px;gap:8px;align-items:center"><span style="display:flex;flex-direction:column;gap:3px"><span style="position:relative;height:8px"><i class="a-grow" style="position:absolute;left:0;top:0;bottom:0;width:${w(z.got)};border-radius:999px;box-shadow:inset 0 0 0 1.5px var(--navy)"></i></span><span style="position:relative;height:8px"><i class="a-grow" style="animation-delay:.3s;position:absolute;left:0;top:0;bottom:0;width:${w(z.yard)};border-radius:999px;background:${d < 0 ? '#E5483D' : d > 0 ? '#F5B26B' : 'var(--navy)'}"></i></span></span><span class="m" style="font-size:12px;font-weight:600;text-align:right;color:var(--ink2)">${z.got} → ${z.yard}</span></span></div>`; }).join('')}</div>
       ${cash}${done ? doneHTML('ACCEPTED', 'var(--green)', `${esc(buyer ? firstWord(buyer.name) : 'The buyer')} is told. ${cost < 0 ? '−' : '+'}${n0(Math.abs(cost))} goes in the owner’s log.`) : ''}`,
-    foot: done ? '' : can('trip.difference') ? `<div class="row">${buyer ? `<button class="bx-sq" data-act="nudge" data-who="${buyer.id}" aria-label="Ask ${esc(firstWord(buyer.name))} about the difference">${ic('nudge', 22)}</button>` : ''}${slideHTML('tripok:' + t.id, 'Accept the yard’s count', 'tick')}</div>` : lockedHTML('trip.difference', 'Accepting a trip’s difference') });
+    foot: !pending ? '' : can('trip.difference') ? `<div class="row">${buyer ? `<button class="bx-sq" data-act="nudge" data-who="${buyer.id}" aria-label="Ask ${esc(firstWord(buyer.name))} about the difference">${ic('nudge', 22)}</button>` : ''}${slideHTML('tripok:' + t.id, 'Accept the yard’s count', 'tick')}</div>` : lockedHTML('trip.difference', 'Accepting a trip’s difference') });
 };
 ACT['slide:tripok'] = async el => {
   const id = el.dataset.slide.split(':').slice(1).join(':'); if (S.busy) return; S.busy = true;
-  try { await callFn('accept_trip_difference', { p_trip_id: id }); const t = D().collectionTrips.find(y => String(y.id) === String(id)); if (t) t.differenceAcceptedAt = new Date().toISOString(); S.ui.tdDone = String(id); FEEL.stamp(); }
+  try { await callFn('accept_trip_difference', { p_trip_id: id }); const t = D().collectionTrips.find(y => String(y.id) === String(id)); if (t) t.differenceAcceptedAt = new Date().toISOString(); S.ui.tdDone = String(id); FEEL.stamp();
+    // Decided: the Buyer's note on it is done too.
+    try { await closeYardNotes(id); } catch (e) { toast(failWord(e), 5000); } }
   catch (e) { toast(rpcMissing(e) ? 'Accepting a trip’s difference needs the Manager’s database update (0122).' : failWord(e), 6000); }
   S.busy = false; render();
 };

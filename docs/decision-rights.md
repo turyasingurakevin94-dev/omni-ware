@@ -333,6 +333,15 @@ report decided (Store), a trip that needs cash and a bill due tomorrow
 (Accounts), and a new request, a line dropped at Checking and the day's
 prices to confirm (Sourcing).
 
+0134 adds the other four things the Buyer passes on (`buyer_handoffs`): a
+paper bill to record (Accounts, `bill.record`), a supplier's details to fix
+(Sourcing, `price.list`), an item switched (the salesperson on the order, else
+Sales by `quote.make`) and why the trip's count differs (the Manager,
+`trip.difference`).
+
+A tap on a push opens the screen it is about: each app's `pushOpen` reads the
+push's kind and the ids it carries (push-send copies the ref into the data).
+
 Built in 0120: the database writes each of these to `push_outbox` in the
 same transaction as the handoff, addressed by task (so it follows this file),
 and `push-send` delivers it. A new handoff adds its trigger there, never a
@@ -466,6 +475,7 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0131 | Pushes for every handoff: the eleven the notifications canvas added (invoice asks, credit released, an order to buy, trip cash, a report decided, Sourcing's requests, bills due, prices to confirm) |
 | 0132 | The supplier app: supplier accounts, sessions, answers and price proposals (was 0109 on its branch, which main had already used) |
 | 0133 | A supplier's answer from the supplier app pushes the Buyer (`supplier.confirm`) |
+| 0134 | Pushes for the Buyer's other four hand-offs (paper bill, details to fix, item switched, yard note) |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.

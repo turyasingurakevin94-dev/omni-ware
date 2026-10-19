@@ -904,12 +904,14 @@ function rowToQuote(q){ return { id: q.id, status: q.status || 'draft', voided: 
 
 async function loadAll(){
   const soft = (p) => p.catch(() => []);
-  const [leads, suppliers, products, prices, quotes, followUps, rivals, customers, staff, agents, agentReqs, links, stock, settingsR, logR] = await Promise.all([
+  const [leads, suppliers, products, prices, quotes, followUps, rivals, customers, staff, agents, agentReqs, links, stock, settingsR, logR, handoffs] = await Promise.all([
     selectAll('sourcing_leads'), selectAll('suppliers'), selectAll('products'), selectAll('prices'), selectAll('saved_quotes'),
     soft(selectAll('follow_ups')), soft(selectAll('rival_prices')), soft(selectAll('customers')), soft(selectAll('staff')), soft(selectAll('agents')),
     soft(selectAll('agent_requests', 'id', q => q.eq('kind', 'stock'))), soft(selectAll('product_links')), soft(selectAll('stock', 'key')),
     sb.from('app_settings').select('presets').eq('shop_id', S.shopId).maybeSingle(),
     sb.from('decision_log').select('*').eq('shop_id', S.shopId).gte('at', new Date(Date.now() - 31 * DAY).toISOString()).order('at', { ascending: false }).limit(500),
+    // The Buyer's fixes to a supplier's details (0125 buyer_handoffs), still open.
+    soft(selectAll('buyer_handoffs', 'id', q => q.eq('kind', 'sourcing_fix').eq('status', 'open'))),
   ]);
   const presets = (settingsR && settingsR.data && settingsR.data.presets) || {};
   const stockMap = {}; stock.forEach(s => { stockMap[s.key] = Number(s.qty) || 0; });
@@ -928,6 +930,8 @@ async function loadAll(){
       clientName: r.client_name || '', status: r.status || 'open', createdAt: r.created_at })),
     links: links.map(x => ({ id: x.id, fromId: x.from_id, verb: x.verb, toId: x.to_id, active: x.active !== false })),
     stock: stockMap,
+    handoffs: (handoffs || []).filter(h => h.kind === 'sourcing_fix' && h.status === 'open')
+      .map(h => ({ id: h.id, kind: h.kind, ref: h.ref || null, payload: h.payload || {}, status: h.status, createdBy: h.created_by || null, createdAt: h.created_at })),
     log: ((logR && logR.data) || []).map(x => ({ id: x.id, at: x.at, by: x.by, byName: x.by_name || '', role: x.role || '', task: x.task, what: x.what, amount: x.amount == null ? null : Number(x.amount), ref: x.ref || null, before: x.before || null, after: x.after || null })),
     presets: {
       defaultMarkup: presets.defaultMarkup || null,
@@ -1178,6 +1182,27 @@ function priceRowTiers(r){
   return out;
 }
 function priceRowCost(r){ const t = priceRowTiers(r); return t.length ? t[0].price : 0; }
+
+/* ---------------- the Buyer's fixes (buyer_handoffs sourcing_fix) ----------------
+   The Buyer says what a supplier's line or details should say; Sourcing
+   checks each one and marks it done (price.list or supplier.edit). */
+function fixesOpen(){ return (D().handoffs || []).filter(h => h.kind === 'sourcing_fix' && h.status === 'open').sort((a, b) => msOf(b.createdAt) - msOf(a.createdAt)); }
+function fixSupplierId(h){ return String((h.payload && h.payload.supplierId) || h.ref || ''); }
+function fixesFor(sid){ return fixesOpen().filter(h => fixSupplierId(h) === String(sid)); }
+function fixBy(h){ const st = h.createdBy ? D().staff.find(x => x.userId && x.userId === h.createdBy) : null; return st ? st.name : ''; }
+// The Buyer who sent it, by first name; "the Buyer" when their staff row is not found.
+function fixByWord(h){ const n = fixBy(h); return n ? firstWord(n) : 'the Buyer'; }
+const FIX_HOW_WORD = { phone: 'by phone', wa: 'on WhatsApp', saw: 'saw it', bill: 'on a bill' };
+function fixCount(h){ return Array.isArray(h.payload && h.payload.fixes) ? h.payload.fixes.length : 0; }
+function canCloseFix(){ return hasTask('price.list') || hasTask('supplier.edit'); }
+async function closeFix(h){
+  // A refused update (the task switched off) is no error, just no row: ask for the row back.
+  const { data, error } = await sb.from('buyer_handoffs').update({ status: 'done' }).eq('shop_id', S.shopId).eq('id', h.id).select('id');
+  if (error) throw error;
+  if (Array.isArray(data) && !data.length) throw new Error('That needs the owner to switch it on for you');
+  const x = (D().handoffs || []).find(y => y.id === h.id); if (x) x.status = 'done';
+  saveSnapshot();
+}
 
 /* ==================================================================
    Writes. Each one is the row the console would write, then the screen
@@ -1722,7 +1747,7 @@ function phonePush(){
   });
   // No token: a phone without Google Play services, or Firebase not in this build.
   P.addListener('registrationError', e => { window.owPushError = 'register: ' + ((e && e.error) || e); A.redraw(); });
-  P.addListener('pushNotificationActionPerformed', () => { loadAll().then(() => A.redraw()).catch(() => {}); });
+  P.addListener('pushNotificationActionPerformed', a => { const d = (a && a.notification && a.notification.data) || {}; loadAll().then(() => { pushOpen(d); A.redraw(); }).catch(() => {}); });
   (async () => {
     try {
       if (!(await pushInstalled())) { window.owPushError = 'install: this phone has the older app'; A.redraw(); return; }
@@ -1731,6 +1756,47 @@ function phonePush(){
       if (perm.receive === 'granted') await P.register(); else { window.owPushError = 'permission: ' + perm.receive; A.redraw(); }
     } catch (e) { window.owPushError = 'register: ' + (e && e.message || e); A.redraw(); }
   })();
+}
+function pushOn(){ return !!window.owPushReady; }
+// Why this phone is not signed up (phonePush keeps it in owPushError), in a few words.
+function pushWhy(){
+  const e = String(window.owPushError || '');
+  if (!e || pushOn()) return '';
+  if (/^install/.test(e)) return 'install the new Sourcing app to get pushes on this phone';
+  if (/^permission/.test(e)) return 'notifications are off for this app in the phone’s settings';
+  if (/^register/.test(e)) return 'this phone can’t get pushes: it has no Google Play services';
+  return 'this phone could not be saved: open the app again';
+}
+function pushNative(){ const C = window.Capacitor; return !!(C && C.isNativePlatform && C.isNativePlatform() && C.Plugins && C.Plugins.PushNotifications); }
+// The Notifications row on Profile: [chip, sub].
+function pushState(){
+  if (pushOn()) return ['On', 'this phone gets your pushes'];
+  if (pushWhy()) return ['Not on', pushWhy()];
+  if (!pushNative()) return ['Not on', 'pushes come in the installed app'];
+  return ['Checking', 'checking this phone, a moment'];
+}
+// A tap on a push opens what it is about. push-send hands { kind, ...ref },
+// every value a string. A request or line that is gone opens its list; a
+// kind that is not Sourcing's leaves the app as it is.
+function pushOpen(d){
+  try {
+    const k = d && d.kind;
+    if (!k || !S.data) return;
+    const open = (stack) => { S.stack = stack; A.show(); };
+    if (k === 'sourcing.request' || k === 'sourcing.dropped') {
+      const l = d.id ? D().leads.find(x => String(x.id) === d.id && !x.voided) : null;
+      if (k === 'sourcing.request') open([{ name: 'Asks', props: {} }].concat(l ? [{ name: 'Hunt', props: { leadId: l.id } }] : []));
+      else open([{ name: 'Asks', props: {} }, { name: 'AsksDropped', props: {} }].concat(l ? [{ name: 'HuntDropped', props: { leadId: l.id } }] : []));
+    } else if (k === 'prices.confirm') open([{ name: 'Prices', props: {} }]);
+    // The Buyer's fixes to a supplier's details (buyer_handoffs sourcing_fix):
+    // that fix, on the supplier's screen, over Main where every open fix is.
+    else if (k === 'sourcing.fix') {
+      const h = d.id ? (D().handoffs || []).find(x => String(x.id) === d.id && x.status === 'open') : null;
+      const sid = h ? fixSupplierId(h) : d.supplierId;
+      const s = sid ? D().suppliers.find(x => String(x.id) === String(sid)) : null;
+      open([{ name: 'Main', props: {} }].concat(s ? [{ name: 'Supplier', props: h ? { supplierId: s.id, handoffId: h.id } : { supplierId: s.id } }] : []));
+    }
+  } catch (_e) {}
 }
 function start(){
   S.started = true;
@@ -4594,6 +4660,14 @@ SCREENS.Main = {
   </div>
 
   <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px calc(100px + var(--safe-b)); display: flex; flex-direction: column; gap: 10px">
+    <sc-for list="{{ buyerFixes }}" as="x" hint-placeholder-count="1">
+    <a href="Supplier.dc.html" data-sx="{{ x.sx }}" aria-label="{{ x.label }}" style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 18px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD">
+      <span style="{{ x.tile }}">{{ x.ini }}</span>
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ x.title }}</span><span style="font-size: 12px; color: #6B7480; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ x.sub }}</span></span>
+      <span style="height: 24px; padding: 0 9px; border-radius: 999px; background: #FDEEE1; color: #95530C; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; white-space: nowrap">{{ x.n }}</span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7480" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+    </a>
+    </sc-for>
     <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 2px">
       <span style="font-size: 17px; font-weight: 700">Most asked for</span>
       <span style="font-size: 12px; font-weight: 600; color: #6B7480">by clients · then money</span>
@@ -4743,7 +4817,15 @@ SCREENS.Main = {
           state: st[0], stateStyle: `font-size: 11px; font-weight: 700; color: ${st[1]}` };
       });
       const stageWords = funnel.map(f => f.n + ' ' + f.word.toLowerCase()).join(', ');
+      // The Buyer's open fixes, one row a hand-off: it opens on the supplier.
+      const buyerFixes = fixesOpen().map(h => {
+        const sup = supplierById(fixSupplierId(h)), name = sup ? sup.name : (h.payload.supplier || 'A supplier'), t = tintFor(sup ? sup.id : name), n = fixCount(h), who = fixByWord(h);
+        return sup ? { sx: JSON.stringify({ supplierId: sup.id, handoffId: h.id }), ini: initials(name), title: name, n: plural(n, 'fix', 'fixes'),
+          sub: `from ${who} · ${agoWord(h.createdAt)}`, label: `${who} sent ${plural(n, 'fix', 'fixes')} for ${name}`,
+          tile: `width: 40px; height: 40px; flex: none; border-radius: 12px; background: ${t[0]}; color: ${t[1]}; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center` } : null;
+      }).filter(Boolean);
       return {
+        buyerFixes,
         nav: navVals(),
         greeting, dateWord: dayWord(todayISO()), roleWord: S.role === 'sourcing' ? 'Sourcing' : S.role === 'owner' ? 'Owner' : 'Admin', me: initials(me ? me.name : myName()),
         weekMoney: n0(money), hasUnpriced: unpriced > 0, unpriced, weekAsks: asks, weekItems: items.size, weekClients: clients.size, asksWord: asks === 1 ? 'ask' : 'asks', itemsWord: items.size === 1 ? 'item' : 'items', clientsWord: clients.size === 1 ? 'client' : 'clients',
@@ -6058,6 +6140,11 @@ SCREENS.Profile = {
         <span style="flex: 1; font-size: 13px; font-weight: 700">Sounds and buzz</span>
         <span style="{{ track }}"><span style="{{ knob }}"></span></span>
       </button>
+      <span role="status" aria-label="{{ pushLabel }}" style="padding: 0; font-family: inherit; color: #1C2233; display: flex; align-items: center; gap: 10px; min-height: 52px; border-bottom: 1px solid #F1EEE8; text-align: left">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="{{ pushIco }}"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 13px; font-weight: 700">Notifications</span><span style="font-size: 11px; color: #6B7480">{{ pushSub }}</span></span>
+        <span style="{{ pushChip }}">{{ pushWord }}</span>
+      </span>
       <button type="button" onClick="{{ signOut }}" style="border: none; background: transparent; padding: 0; font-family: inherit; color: #8E2A22; display: flex; align-items: center; gap: 10px; min-height: 52px; cursor: pointer; text-align: left">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10"></path></svg>
         <span style="flex: 1; font-size: 13px; font-weight: 700">Sign out</span>
@@ -6107,7 +6194,11 @@ SCREENS.Profile = {
       const locked = rows.map((r, i) => ({ ...r, hasN: !!r.n,
         rowStyle: 'display: flex; align-items: center; gap: 10px; min-height: 40px; font-size: 13px; font-weight: 600; color: #5F6980' + (i < rows.length - 1 ? '; border-bottom: 1px solid #E6E3DD' : '') }));
       const on = !!S.prefs.sound;
+      const [pushWord, pushSub] = pushState(), pushLit = pushWord === 'On';
       return {
+        pushWord, pushSub, pushLabel: `Notifications: ${pushWord}, ${pushSub}`,
+        pushIco: `flex: none; color: ${pushLit ? '#0F6B43' : '#6B7480'}`,
+        pushChip: `flex: none; height: 24px; padding: 0 9px; border-radius: 999px; background: ${pushLit ? '#E4F4EA' : '#F1EEE8'}; color: ${pushLit ? '#0F6B43' : '#5F6980'}; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; white-space: nowrap`,
         ini: initials(name), name, roleWord: S.role === 'sourcing' ? 'Sourcing' : S.role === 'owner' ? 'Owner' : S.role === 'admin' ? 'Admin' : 'Sourcing', shop: S.shopName || 'The shop',
         month, landed, told, takes: median == null ? '— —' : Math.round(median), hasTakes: median != null,
         landedLabel: `${landed} new items landed on the shelf this month`, toldLabel: `${told} times a client was told this month`,
@@ -7124,6 +7215,25 @@ SCREENS.Supplier = {
       </div>
     </sc-if>
     <sc-if value="{{ has }}">
+    <sc-if value="{{ hasFixes }}">
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 2px"><span style="font-size: 15px; font-weight: 700">From the Buyer</span><span style="{{ fixChip }}">{{ fixWord }}</span></div>
+    <sc-for list="{{ fixes }}" as="h" hint-placeholder-count="1">
+    <div data-handoff="{{ h.id }}" style="{{ h.box }}">
+      <span style="display: flex; align-items: center; gap: 12px; min-height: 58px; border-bottom: 1px solid #F1EEE8">
+        <span style="{{ h.av }}">{{ h.ini }}</span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ h.who }}</span><span style="font-size: 12px; color: #6B7480; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ h.sub }}</span></span>
+      </span>
+      <sc-for list="{{ h.rows }}" as="f" hint-placeholder-count="2">
+      <span style="{{ f.rowStyle }}">
+        <span style="font-size: 10px; font-weight: 700; letter-spacing: .1em; color: #6B7480">{{ f.label }}</span>
+        <span style="min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; color: #6B7480; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ f.item }}</span><span role="img" aria-label="{{ f.aria }}" style="display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 14px; font-weight: 700"><span style="{{ f.wasStyle }}">{{ f.was }}</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F6B43" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M5 12h14M13 6l6 6-6 6"></path></svg><span style="{{ f.nowStyle }}">{{ f.now }}</span></span></span>
+        <sc-if value="{{ f.canEdit }}"><a href="NewSupplier.dc.html" data-sx="{{ f.editSx }}" aria-label="{{ f.editLabel }}" style="height: 40px; padding: 0 10px; border-radius: 12px; background: #F1EEE8; color: #1C2233; font-size: 12px; font-weight: 700; display: flex; align-items: center">Edit</a></sc-if>
+      </span>
+      </sc-for>
+      <button type="button" onClick="{{ h.done }}" aria-disabled="{{ h.locked }}" aria-label="{{ h.doneLabel }}" style="{{ h.doneStyle }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"></path></svg>{{ h.doneWord }}</button>
+    </div>
+    </sc-for>
+    </sc-if>
     <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 2px"><span style="font-size: 15px; font-weight: 700">Their quotes on our hunts</span><span style="font-size: 12px; font-weight: 600; color: #6B7480">{{ heldWord }}</span></div>
     <sc-if value="{{ noQuotes }}">
       <div style="padding: 14px; border-radius: 18px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD; font-size: 13px; color: #6B7480; text-align: center">Not on any open hunt yet</div>
@@ -7255,7 +7365,34 @@ SCREENS.Supplier = {
         ? `Hello ${s.name}, this is ${myName()} from ${S.shopName || 'the shop'}. Please send me your price for:\n${toAsk.map(n => '• ' + n).join('\n')}\nWith the pack and how long the price holds. Thank you.`
         : `Hello ${s.name}, this is ${myName()} from ${S.shopName || 'the shop'}.`;
       const t = tintFor(s.id), ph = phoneDigits(s.phone);
+      // The Buyer's open fixes for them: each field, was → should be.
+      const canFix = canCloseFix(), editSx = JSON.stringify({ supplierId: s.id });
+      const fixNum = v => Number(String(v == null ? '' : v).replace(/[^0-9]/g, '')) || 0;
+      const fixShow = (f, v) => f.field === 'price' ? (fixNum(v) ? n0(fixNum(v)) : '— —') : (String(v == null ? '' : v).trim() || '— —');
+      const mono = "font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; ";
+      const fixes = fixesFor(s.id).map(h => {
+        const name = fixBy(h) || 'Buyer', who = fixByWord(h), list = Array.isArray(h.payload.fixes) ? h.payload.fixes : [], on = String(this.props.handoffId || '') === String(h.id);
+        return { id: h.id, who: fixBy(h) ? who + ' · Buyer' : 'The Buyer', ini: initials(name), av: avStyle(name, 36),
+          sub: [FIX_HOW_WORD[h.payload.how] || '', agoWord(h.createdAt)].filter(Boolean).join(' · '),
+          box: `display: flex; flex-direction: column; padding: 0 14px; border-radius: 18px; background: #FFFFFF; box-shadow: inset 0 0 0 ${on ? '1.5px #16203C' : '1px #E6E3DD'}`,
+          rows: list.map((f, i) => ({ label: String(f.label || f.field || '').toUpperCase(), item: f.tab === 'sup' ? 'The supplier' : (f.item || ''),
+            was: fixShow(f, f.was), now: fixShow(f, f.now), aria: `${String(f.label || f.field || '').toLowerCase()}: ${fixShow(f, f.was)} should be ${fixShow(f, f.now)}`,
+            wasStyle: (f.field === 'price' ? mono : '') + 'flex: none; max-width: 45%; font-size: 12px; font-weight: 600; color: #B9B2A6; text-decoration: line-through; white-space: nowrap; overflow: hidden; text-overflow: ellipsis',
+            nowStyle: (f.field === 'price' ? mono : '') + 'min-width: 0; color: #0F6B43; white-space: nowrap; overflow: hidden; text-overflow: ellipsis',
+            canEdit: f.tab === 'sup' && hasTask('supplier.edit'), editSx, editLabel: `Edit ${s.name}'s ${String(f.label || f.field || '').toLowerCase()}`,
+            rowStyle: 'display: grid; grid-template-columns: 62px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 56px' + (i < list.length - 1 ? '; border-bottom: 1px solid #F1EEE8' : '') })),
+          locked: canFix ? null : 'true', doneWord: canFix ? 'Checked · done' : 'Not your login’s to close',
+          doneLabel: canFix ? `Mark ${who}’s ${plural(list.length, 'fix', 'fixes')} for ${s.name} done` : 'Closing a fix needs price.list or supplier.edit',
+          doneStyle: `width: 100%; height: 52px; margin: 12px 0 14px; border: none; border-radius: 14px; background: #0F6B43; color: #FFFFFF; font-family: inherit; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer${canFix ? '' : '; opacity: .55; pointer-events: none'}`,
+          done: () => canFix && guarded('Close the Buyer’s fix', async () => {
+            await closeFix(h);
+            FEEL.yes(); toast(`${s.name}: ${who}’s ${plural(list.length, 'fix', 'fixes')} done`);
+          }) };
+      });
+      const fixN = fixes.reduce((a, h) => a + h.rows.length, 0);
       return {
+        hasFixes: fixes.length > 0, fixes, fixWord: plural(fixN, 'fix', 'fixes'),
+        fixChip: 'height: 24px; padding: 0 9px; border-radius: 999px; background: #FDEEE1; color: #95530C; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; white-space: nowrap',
         has: true, none: false, name: s.name, ini: initials(s.name),
         avatar: `width: 60px; height: 60px; flex: none; border-radius: 18px; background: ${t[0]}; color: ${t[1]}; font-size: 20px; font-weight: 700; display: flex; align-items: center; justify-content: center`,
         place: s.location || 'where not set', hasShopNo: !!s.shopNo, shopNo: s.shopNo, hasPhone: !!s.phone, phoneWord: supplierPhoneWord(s.phone),

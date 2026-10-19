@@ -2371,6 +2371,7 @@ const ICON = {
   bookmark: '<path d="M6 3h12v18l-6-4-6 4z"/>',
   refresh: '<path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/>',
   sound: '<path d="M4 9.5h3.5L12 5.5v13L7.5 14.5H4z"/><path d="M15.5 9a4.5 4.5 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/>',
+  bell: '<path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"/><path d="M10 20a2 2 0 0 0 4 0"/>',
   lock: '<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>',
   store: '<path d="M3 9l1.5-5h15L21 9M4 9v11h16V9M3 9h18M9 20v-6h6v6"/>',
   item: '<path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/>',
@@ -2424,7 +2425,7 @@ async function selectAll(table, keyCol){
 function monthStartISO(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-01'; }
 
 async function loadAll(){
-  const [suppliers, customers, debtLog, products, prices, stock, lots, quotes, links, settingsR, cashR, staff, tripsR, targetsR, stmR, membersR, promises, asks, payAsksR, leadsR] = await Promise.all([
+  const [suppliers, customers, debtLog, products, prices, stock, lots, quotes, links, settingsR, cashR, staff, tripsR, targetsR, stmR, membersR, promises, asks, payAsksR, leadsR, switchesR] = await Promise.all([
     selectAll('suppliers'), selectAll('customers'), selectAll('customer_debt_log'), selectAll('products'), selectAll('prices'),
     selectAll('stock', 'key'), selectAll('stock_lots'), selectAll('saved_quotes'), selectAll('product_links').catch(() => []),
     sb.from('app_settings').select('presets').eq('shop_id', S.shopId).maybeSingle(),
@@ -2446,6 +2447,8 @@ async function loadAll(){
     // Asks to Accounts to correct a payment (0130). null: not on this database, and the link stays away.
     sb.from('payment_asks').select('*').eq('shop_id', S.shopId).gte('created_at', new Date(Date.now() - 60 * 864e5).toISOString()).then(r => r.error ? null : r.data || [], () => null),
     sb.from('sourcing_leads').select('id, name, status, voided, product_id, assigned_staff_id, created_at, stage_entered_at, requests, candidates').eq('shop_id', S.shopId).eq('voided', false).limit(1000).then(r => r.error ? null : r.data || [], () => null),
+    // Lines the Buyer switched to another item, for Sales to tell the customer (0125 item_switch). A missing table: none.
+    switchesQuery().then(r => r || [], () => []),
   ]);
   const presets = (settingsR && settingsR.data && settingsR.data.presets) || {};
   const debtBy = {};
@@ -2487,6 +2490,7 @@ async function loadAll(){
     asks: asks == null ? null : asks.map(rowToAsk),
     leads: leadsR == null ? null : leadsR.map(rowToLead),
     payAsks: payAsksR == null ? null : payAsksR.map(rowToPayAsk),
+    switches: (switchesR || []).map(rowToSwitch),
   };
   S.loadedAt = Date.now();
   saveSnapshot();
@@ -2501,9 +2505,13 @@ function rowToQuote(q){
 function rowToPromise(r){ return { id: Number(r.id), customerId: String(r.customer_id), promisedOn: r.promised_on, madeOn: r.made_on, amount: r.amount == null ? null : Number(r.amount), note: r.note || '' }; }
 function rowToAsk(r){ return { id: r.id, quoteId: r.quote_id, customerId: r.customer_id, kind: r.kind, amount: Number(r.amount) || 0, reason: r.reason || '', note: r.note || '', askedBy: r.asked_by, askedByName: r.asked_by_name || '', status: r.status, decidedAt: r.decided_at, createdAt: r.created_at }; }
 function rowToPayAsk(r){ return { id: r.id, cashTxnId: Number(r.cash_txn_id), customerId: r.customer_id, quoteId: r.quote_id == null ? null : Number(r.quote_id), amount: Number(r.amount) || 0, what: r.what, want: r.want || {}, note: r.note || '', askedBy: r.asked_by, askedByName: r.asked_by_name || '', status: r.status, decidedByName: r.decided_by_name || '', decidedAt: r.decided_at, createdAt: r.created_at }; }
+// The hand-off's buying costs are the Buyer's: never read here, never drawn.
+function rowToSwitch(h){ const p = h.payload || {}; return { id: h.id, orderId: p.orderId != null ? String(p.orderId) : String(h.ref || ''), lineId: p.lineId, client: p.client || '', from: p.from || '', to: p.to || '', why: p.why || '', by: h.created_by || null, at: Date.parse(h.created_at || '') || 0 }; }
 function rowToLead(r){ return { id: r.id, name: r.name || '', status: r.status || 'asked', productId: r.product_id || null, assignedStaffId: r.assigned_staff_id || null, createdAt: r.created_at, stageEnteredAt: r.stage_entered_at == null ? null : Number(r.stage_entered_at), requests: Array.isArray(r.requests) ? r.requests : [], candidates: Array.isArray(r.candidates) ? r.candidates : [] }; }
+// The Buyer's open item switches (0125 buyer_handoffs); null when the read fails.
+function switchesQuery(){ return sb.from('buyer_handoffs').select('*').eq('shop_id', S.shopId).eq('for_role', 'sales').eq('kind', 'item_switch').eq('status', 'open').limit(500).then(r => r.error ? null : r.data || [], () => null); }
 async function refreshQuotes(){
-  try { const rows = await selectAll('saved_quotes'); S.data.savedQuotes = rows.map(rowToQuote); S.loadedAt = Date.now(); saveSnapshot(); render(); }
+  try { const [rows, sw] = await Promise.all([selectAll('saved_quotes'), switchesQuery()]); S.data.savedQuotes = rows.map(rowToQuote); if (sw) S.data.switches = sw.map(rowToSwitch); S.loadedAt = Date.now(); saveSnapshot(); render(); }
   catch (e) { if (!isNetworkError(e)) console.warn(e); }
 }
 
@@ -3188,7 +3196,7 @@ function phonePush(){
   });
   // No token: a phone without Google Play services, or Firebase not in this build.
   P.addListener('registrationError', e => { window.owPushError = 'register: ' + ((e && e.error) || e); render(); });
-  P.addListener('pushNotificationActionPerformed', () => { loadAll().then(() => render()).catch(() => {}); });
+  P.addListener('pushNotificationActionPerformed', a => { const d = (a && a.notification && a.notification.data) || {}; loadAll().then(() => { pushOpen(d); render(); }).catch(() => {}); });
   (async () => {
     try {
       if (!(await pushInstalled())) { window.owPushError = 'install: this phone has the older app'; render(); return; }
@@ -3197,6 +3205,53 @@ function phonePush(){
       if (perm.receive === 'granted') await P.register(); else { window.owPushError = 'permission: ' + perm.receive; render(); }
     } catch (e) { window.owPushError = 'register: ' + (e && e.message || e); render(); }
   })();
+}
+function pushOn(){ return !!window.owPushReady; }
+// Why this phone is not signed up (phonePush keeps it in owPushError), in a few words.
+function pushWhy(){
+  const e = String(window.owPushError || '');
+  if (!e || pushOn()) return '';
+  if (/^install/.test(e)) return 'install the new Sales app to get pushes on this phone';
+  if (/^permission/.test(e)) return 'notifications are off for this app in the phone’s settings';
+  if (/^register/.test(e)) return 'this phone can’t get pushes: it has no Google Play services';
+  return 'this phone could not be saved: open the app again';
+}
+function pushNative(){ const C = window.Capacitor; return !!(C && C.isNativePlatform && C.isNativePlatform() && C.Plugins && C.Plugins.PushNotifications); }
+// The Notifications row on You: [chip, sub].
+function pushState(){
+  if (pushOn()) return ['On', 'this phone gets your pushes'];
+  if (pushWhy()) return ['Not on', pushWhy()];
+  if (!pushNative()) return ['Not on', 'pushes come in the installed app'];
+  return ['Checking', 'checking this phone, a moment'];
+}
+function pushSub(){ return pushState()[1]; }
+/* A tapped push opens what it is about (push-send's data: kind + the ref,
+   every value a string). Found: its page; gone: the list it lives in.
+   An unknown kind leaves the app where it is. */
+function pushOpen(d){
+  try {
+    d = d || {}; const k = String(d.kind || ''), has = v => v != null && v !== '';
+    const order = id => {
+      const q = has(id) ? (D().savedQuotes || []).find(x => String(x.id) === String(id)) : null;
+      S.view = 'orders';
+      if (q) { S.ordersStage = q.status || 'draft'; S.stack = [{ type: 'order', args: { id: Number(q.id) } }]; } else S.stack = [];
+    };
+    let done = true;
+    if (['price.decided', 'price.changed', 'credit.decided'].includes(k)) order(has(d.orderId) ? d.orderId : d.id);
+    else if (k === 'item.switch') { const sw = (D().switches || []).find(x => String(x.id) === String(d.id)); order(has(d.orderId) ? d.orderId : sw && sw.orderId); }
+    else if (k === 'invoice.ask.decided') {
+      const ask = (D().asks || []).find(x => String(x.id) === String(d.id));
+      order(has(d.quote) ? d.quote : ask && ask.quoteId);
+    } else if (k === 'payment.ask.decided') {
+      const ask = (D().payAsks || []).find(x => String(x.id) === String(d.id));
+      if (ask && paTxn(ask.cashTxnId)) { S.view = 'me'; S.stack = [{ type: 'paid', args: { fromTxn: Number(ask.cashTxnId), fromTxns: [Number(ask.cashTxnId)] } }]; }
+      else if (ask && ask.quoteId != null && quoteById(ask.quoteId)) order(ask.quoteId);
+      else if (ask && ask.customerId != null && customerById(ask.customerId)) { S.view = 'customers'; S.stack = [{ type: 'customer', args: { id: ask.customerId } }]; }
+      else { S.view = 'me'; S.stack = [{ type: 'day', args: { mode: 'money' } }]; }
+    } else if (k === 'request.listed') { S.view = 'me'; S.stack = D().leads != null ? [{ type: 'srcasks', args: {} }] : []; }
+    else done = false;
+    if (done) { closeSheet(); window.scrollTo(0, 0); }
+  } catch (e) { console.warn(e); }
 }
 function start(){
   S.started = true;
@@ -3391,7 +3446,7 @@ function viewToday(){
   const waiting = (S.wa && S.wa.convs) ? waWaiting() : [];
   const ask = typeof waAsks === 'function' ? waAsks()[0] || null : null;
   const chatRows = tdyChatRows(waiting, ask);
-  const needs = needsYou(), tells = tdyTells(), me = firstWord(myName()), greet = greeting() + (me ? ', ' + me : '');
+  const needs = needsYou(), tells = tdyTells(), sws = swMine(), me = firstWord(myName()), greet = greeting() + (me ? ', ' + me : '');
   return `<span id="tdy_ptr" class="tdy-ptr" aria-hidden="true">${ic('refresh', 18)}</span>
   <div class="sx-hero" data-navy-top>
     <div style="display:flex;align-items:center;gap:12px">
@@ -3414,11 +3469,12 @@ function viewToday(){
     </div>
   </div>
   <div class="sx-body" style="gap:10px">
-    <div class="tdy-sec"><span>Needs you</span>${waiting.length ? `<button class="tdy-wait" data-act="tab" data-v="chats">${waiting.length} waiting</button>` : (needs.length + tells.length ? `<span class="tdy-n">${needs.length + tells.length} thing${needs.length + tells.length === 1 ? '' : 's'}</span>` : '')}</div>
+    <div class="tdy-sec"><span>Needs you</span>${waiting.length ? `<button class="tdy-wait" data-act="tab" data-v="chats">${waiting.length} waiting</button>` : (needs.length + tells.length + sws.length ? `<span class="tdy-n">${needs.length + tells.length + sws.length} thing${needs.length + tells.length + sws.length === 1 ? '' : 's'}</span>` : '')}</div>
     ${tells.map(tdyTellCard).join('')}
+    ${sws.map(swCard).join('')}
     ${ask ? tdyAskCard(ask) : ''}
     ${chatRows.length || needs.length ? `<div class="sx-card sx-list" data-key="tdy-needs">${chatRows.concat(needs.map(tdyNeedRow)).join('')}</div>`
-      : ask || tells.length ? '' : `<div class="sx-card cht-empty"><span class="cht-emico" style="background:var(--greenSoft);color:var(--green)">${ic('tick', 26)}</span><b>All caught up</b><span>Nothing is waiting on you. Take an order with the red button.</span></div>`}
+      : ask || tells.length || sws.length ? '' : `<div class="sx-card cht-empty"><span class="cht-emico" style="background:var(--greenSoft);color:var(--green)">${ic('tick', 26)}</span><b>All caught up</b><span>Nothing is waiting on you. Take an order with the red button.</span></div>`}
   </div>`;
 }
 // Ten digits and more step the big figure down a size, so it never runs under the ring.
@@ -4026,6 +4082,7 @@ PAGE.order = ({ id }) => {
         ${foot}
       </div></div>
       ${ordTellPriceRow(q)}
+      ${swForOrder(q).map(swCard).join('')}
       ${done && q.invoiced ? `<div class="ord-invrow"><span class="ord-inv">${ordIc('doc', 15, 'stroke:#0F6B43')}Invoice <span class="m">${invoiceLabel(q)}</span></span>${stamp}</div>` : stamp ? `<div class="ord-stampw">${stamp}</div>` : ''}
       ${q.invoiced && !q.voided ? ordAskRow(q) : ''}
     </div>
@@ -4112,6 +4169,57 @@ async function ordMarkTold(qid){
 ACT.toldprice = async t => {
   if (S.ordTelling) return; S.ordTelling = true;
   try { await ordMarkTold(Number(t.dataset.id)); haptic('success'); toast('Marked as told'); }
+  catch (e) { toast(isNetworkError(e) ? 'No connection — try again when you have signal' : 'Not saved: ' + (e.message || e), 5000); }
+  finally { S.ordTelling = false; render(); }
+};
+/* "Tell them about the switch": the Buyer put another item on a line
+   (buyer_handoffs item_switch, 0125). Orders this login took, or nobody
+   recorded taking. Told -- by the tick, or by sending it -- closes it
+   (quote.make). Selling prices only: the hand-off's figures are costs. */
+function swForOrder(q){ return (D().switches || []).filter(s => String(s.orderId) === String(q.id)).sort((a, b) => b.at - a.at); }
+function swMine(){
+  const uid = S.user ? String(S.user.id) : null;
+  return (D().switches || []).filter(s => { const q = quoteById(s.orderId); return q && !q.voided && !q.cancelledAt && (q.takenBy == null || String(q.takenBy) === uid); }).sort((a, b) => b.at - a.at);
+}
+function swBuyer(s){ const st = (D().staff || []).find(x => x.userId && String(x.userId) === String(s.by)); return st && st.name ? st.name : 'The Buyer'; }
+function swPrices(q, s){
+  const it = (q.items || []).find(x => String(x.lineId) === String(s.lineId)) || null;
+  const now = it && !linePriceToConfirm(it) ? Math.round(quoteItemSellPrice(it)) : null;
+  // The hand-off's prices are buying costs, never drawn here, and the old
+  // item's selling price is not on the order any more: only now is shown.
+  return { it, now, was: null };
+}
+function swCard(s){
+  const q = quoteById(s.orderId); if (!q) return '';
+  const name = (q.client && q.client.name) || s.client || 'Walk-in', first = firstWord(name) || 'them', by = swBuyer(s), t = tintFor(name);
+  const pr = swPrices(q, s), qw = pr.it ? ordQty(pr.it) : null, can = nmTasks().includes('quote.make');
+  return `<div class="tdy-tell" data-key="sw-${esc(s.id)}">
+    <div class="tdy-th"><span class="tdy-tav" style="background:${t[0]};color:${t[1]}">${esc(initials(name))}<span class="b">${mgrFace(20, by)}</span></span>
+      <span class="tx"><b>Tell ${esc(first)} about the switch</b><span>${esc(firstWord(by) || by)} switched an item · ${orderNo(q)}${s.at ? ' · ' + timeOf(s.at) : ''}</span></span><span class="tdy-tchip">Tell them</span></div>
+    <div class="tdy-tline"><span class="tx"><b class="ell">${esc(s.to || (pr.it ? ordItemName(pr.it) : ''))}</b><small>${qw ? `<span class="m">${n0(qw.n)}</span> ${esc(qw.u)} · ` : ''}not ${esc(s.from)}</small></span>${pr.was != null ? `<span class="m was">${n0(pr.was)}</span>${ic('chev', 14, 'style="stroke-width:2.4;color:var(--ink3)"')}` : '<span></span><span></span>'}<span class="m now">${pr.now != null ? n0(pr.now) : ''}</span></div>
+    ${s.why ? `<span class="tdy-tmore">${esc(s.why)}</span>` : ''}
+    ${can ? `<div class="tdy-tact"><button class="tdy-tdone" data-act="toldswitch" data-v="${esc(s.id)}" aria-label="Told them, ${esc(first)} knows">${ic('tick', 22, 'style="stroke-width:2.2"')}</button><button class="sx-btn red" data-act="tellswitch" data-v="${esc(s.id)}">${ic('chat', 18)}<span class="ell">${first.length <= 9 ? 'Tell ' + esc(first) + ' on WhatsApp' : 'Tell them on WhatsApp'}</span></button></div>` : ''}
+  </div>`;
+}
+function swText(q, s){
+  const name = ordGreet(ordName(q) === 'Walk-in' ? '' : ordName(q)) || 'there', pr = swPrices(q, s);
+  return `Hello ${name}, one change on your order ${orderNo(q)}: ${s.to} instead of ${s.from}${pr.now != null ? `, at ${n0(pr.now)} each${pr.was != null ? `, not ${n0(pr.was)}` : ''}` : ''}. Everything else is the same.`;
+}
+async function swDone(id){
+  // A refused update (the task switched off) is no error, just no row: ask for the row back.
+  const r = await sb.from('buyer_handoffs').update({ status: 'done' }).eq('shop_id', S.shopId).eq('id', id).select('id');
+  if (r.error) throw r.error;
+  if (Array.isArray(r.data) && !r.data.length) throw new Error('That needs the owner to switch it on for you');
+  D().switches = (D().switches || []).filter(x => String(x.id) !== String(id)); S.loadedAt = Date.now(); saveSnapshot();
+}
+ACT.tellswitch = t => {
+  const s = (D().switches || []).find(x => String(x.id) === t.dataset.v), q = s && quoteById(s.orderId); if (!q || !nmTasks().includes('quote.make')) return;
+  openSheet('tell', { id: q.id, text: swText(q, s), pic: false, editing: false, swId: s.id });
+  if (S.wa.configured == null) waStatus().then(() => { if (S.sheet && S.sheet.type === 'tell') renderSheet(); });
+};
+ACT.toldswitch = async t => {
+  if (S.ordTelling || !nmTasks().includes('quote.make')) return; S.ordTelling = true;
+  try { await swDone(t.dataset.v); haptic('success'); toast('Marked as told'); }
   catch (e) { toast(isNetworkError(e) ? 'No connection — try again when you have signal' : 'Not saved: ' + (e.message || e), 5000); }
   finally { S.ordTelling = false; render(); }
 };
@@ -4365,7 +4473,7 @@ SHEET.tell = a => {
       <div class="opts">${send ? `<button class="ord-sw${a.pic ? ' on' : ''}" role="switch" aria-checked="${!!a.pic}" data-act="tellpic"><i>${a.pic ? ordIc('tick', 12, 'stroke-width:3') : ''}</i>Order picture</button>` : `<span class="ord-note">${note}</span>`}
         <button class="ord-edit" data-act="telledit">${ic(a.editing ? 'tick' : 'pen', 15)}${a.editing ? 'Done' : 'Edit'}</button></div>
       ${sliderHTML('tell', send ? `Slide to send to ${first}` : 'Slide to open WhatsApp', { disabled: !!S.ordSending })}
-      ${a.price ? `<span class="ord-note c">The card leaves Today once it’s ${send ? 'sent' : 'opened in WhatsApp'}</span>` : ''}
+      ${a.price || a.swId ? `<span class="ord-note c">The card leaves Today once it’s ${send ? 'sent' : 'opened in WhatsApp'}</span>` : ''}
     </div></div>`;
 };
 ACT['in:telltext'] = t => { if (S.sheet && S.sheet.type === 'tell') S.sheet.args.text = t.value; ordFitText(t); };
@@ -4384,6 +4492,7 @@ ACT['slide:tell'] = async () => {
     window.open(`https://wa.me/${ph || ''}?text=${encodeURIComponent(text)}`, '_blank');
     closeSheet();
     if (a.price) ordMarkTold(q.id).then(render).catch(e => toast('Not marked as told: ' + (e.message || e), 5000));
+    if (a.swId) swDone(a.swId).then(render).catch(e => toast('Not marked as told: ' + (e.message || e), 5000));
     return;
   }
   S.ordSending = true; toast('Sending to ' + first + '…');
@@ -4392,6 +4501,7 @@ ACT['slide:tell'] = async () => {
     else await waSendText(conv.id, text);
     S.ordSending = false; haptic('success'); toast('Sent to ' + first + ' on WhatsApp'); closeSheet();
     if (a.price) { try { await ordMarkTold(q.id); } catch (e) { toast('Sent, but not marked as told: ' + (e.message || e), 5000); } }
+    if (a.swId) { try { await swDone(a.swId); } catch (e) { toast('Sent, but not marked as told: ' + (e.message || e), 5000); } }
     render();
   } catch (e) {
     S.ordSending = false; toast('Not sent: ' + (e.message || e), 5000); renderSheet();
@@ -4728,6 +4838,9 @@ function viewMe(){
     <div class="sx-card nm-shop"><span class="nm-shop-i">${ic('store', 20)}</span>
       <span class="nm-shop-t"><b class="ell">${esc(S.shopName)}</b><span class="nm-shop-s">${addr ? `<i></i><span class="ell">${esc(addr)}</span>` : `<span class="ell">Books read ${esc(agoWords(S.loadedAt))}</span>`}</span></span>
       ${phone ? `<a class="nm-call" href="tel:${esc(String(phone).replace(/[^0-9+]/g, ''))}" aria-label="Call the shop">${ic('phone', 18)}</a>` : `<button class="nm-call" data-act="refresh" aria-label="Refresh">${ic('refresh', 17)}</button>`}</div>
+    <div class="sx-card nm-shop"><span class="nm-shop-i" style="${pushOn() ? 'background:var(--navy);color:var(--mint)' : 'background:none;border:1.5px dashed #9AA1AE;color:var(--ink2);box-sizing:border-box'}">${ic('bell', 20)}</span>
+      <span class="nm-shop-t"><b class="ell">Notifications</b><span class="nm-shop-s"><span class="ell">${esc(pushSub())}</span></span></span>
+      <span class="sx-chip" style="${pushOn() ? 'background:var(--greenSoft);color:var(--green)' : 'background:var(--soft2);color:var(--ink2)'}">${esc(pushState()[0])}</span></div>
     <div class="nm-sign"><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:700;color:var(--ink3)">Signed in as</span><span class="ell" style="font-size:13px;font-weight:600">${esc((S.user && S.user.email) || '')}</span></span>
       <button class="sx-btn ghost nm-out${S.nmSignout ? ' sure' : ''}" data-act="signout" style="height:44px;color:var(--crimson)">${ic('out', 16)}${S.nmSignout ? 'Tap again to sign out' : 'Sign out'}</button></div>
   </div>`;
