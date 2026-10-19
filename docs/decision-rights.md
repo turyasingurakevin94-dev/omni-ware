@@ -326,6 +326,13 @@ That covers:
   the owner picks in the Owner app (`presets.digestHour`, 19:00 when unset;
   0127 runs `ow_owner_digest` every hour and sends each shop at its own).
 
+0131 adds the handoffs the notifications canvas found telling nobody: an
+invoice to void or credit (Manager), credit released and a void ask decided
+(the salesperson), an order to buy and cash ready for a trip (Buyer), a
+report decided (Store), a trip that needs cash and a bill due tomorrow
+(Accounts), and a new request, a line dropped at Checking and the day's
+prices to confirm (Sourcing).
+
 Built in 0120: the database writes each of these to `push_outbox` in the
 same transaction as the handoff, addressed by task (so it follows this file),
 and `push-send` delivers it. A new handoff adds its trigger there, never a
@@ -456,6 +463,7 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0128 | The `'sourcing'` role, ahead of the rest of the shared foundation (0119) |
 | 0129 | Push for 0122's tables: the write-off report and the held restock line (after 0120 and 0122) |
 | 0130 | Sales, second: the counter sale's quiet push, and asking Accounts to correct a payment (`payment_asks`) |
+| 0131 | Pushes for every handoff: the eleven the notifications canvas added (invoice asks, credit released, an order to buy, trip cash, a report decided, Sourcing's requests, bills due, prices to confirm) |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.
