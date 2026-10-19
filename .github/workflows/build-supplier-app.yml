@@ -1,0 +1,84 @@
+name: Build supplier app (Android)
+
+# The supplier app is supplier.html inside a native shell (apps/supplier).
+# Every change to either is built, and the APK goes two places: the run's
+# Artifacts, like the staff apps, and the rolling "supplier-app" release,
+# whose download link never changes -- the link the shop sends suppliers:
+#
+#   https://github.com/<owner>/<repo>/releases/download/supplier-app/omniware-supplier.apk
+#
+# Signing: without a key, a debug build signs with the runner's own, new on
+# every run, so a phone must uninstall before it can take a newer APK. With
+# the repo secret ANDROID_DEBUG_KEYSTORE_B64 (base64 of one keystore, alias
+# androiddebugkey, passwords "android") every build signs with that one key
+# and updates install over the top. The log prints both fingerprints.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supplier.html'
+      - 'apps/supplier/**'
+      - '.github/workflows/build-supplier-app.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/supplier
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - name: Build www from supplier.html
+        run: npm run build
+      - run: npx cap sync android
+      - name: Use the shared signing key, if there is one
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            # Named explicitly (app/build.gradle reads OW_KEYSTORE): Gradle does
+            # not reliably look in ~/.android on the runner.
+            KS="$RUNNER_TEMP/supplier.keystore"
+            echo "$KEYSTORE_B64" | tr -d ' \r\n' | base64 -d > "$KS"
+            echo "OW_KEYSTORE=$KS" >> "$GITHUB_ENV"
+            # The fingerprint is public, and says which key this is.
+            keytool -list -v -keystore "$KS" -storepass android -alias androiddebugkey | grep 'SHA256:'
+            echo "Signing with the shared key: updates install over the top."
+          else
+            echo "::notice::No ANDROID_DEBUG_KEYSTORE_B64 secret -- this APK has a one-off signature; phones must uninstall the old app first."
+          fi
+      - name: Build debug APK
+        working-directory: apps/supplier/android
+        run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+      - name: Name the APK
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk omniware-supplier.apk
+          # Which key the APK really carries, to compare with the line above.
+          "$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)/apksigner" verify --print-certs omniware-supplier.apk | grep 'SHA-256'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: omniware-supplier-debug-apk
+          path: apps/supplier/omniware-supplier.apk
+          if-no-files-found: error
+      - name: Publish to the supplier-app release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view supplier-app >/dev/null 2>&1 || gh release create supplier-app \
+            --title "Omni-Ware Supplier app" \
+            --notes "The latest supplier app for Android, rebuilt on every change. Download omniware-supplier.apk below, open it on the phone and allow the install." \
+            --latest=false
+          gh release upload supplier-app omniware-supplier.apk --clobber

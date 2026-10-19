@@ -53,3 +53,7 @@ Be creative in finding visual solutions, but always prioritize usability, functi
 My ideal interface is visually rich in meaningful information, yet visually simple in presentation.
 
 Treat this as a persistent design requirement, not a one-time instruction. Apply it proactively to all future UI/UX decisions unless I explicitly request otherwise.
+
+## Mockups
+
+Always make mockups with **/design**. Do not hand-build design canvases.

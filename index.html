@@ -7869,6 +7869,20 @@
      on a desktop: the drawing says the date the prices are read at, not
      a sentence about how to read them. */
   .prx-asof{margin-left:auto;font-size:var(--ow-t-12);color:var(--ow-ink-400);white-space:nowrap;}
+  /* What suppliers propose from their app (0132): above the strip, and
+     only while something waits. */
+  .prx-sp{margin-bottom:var(--ow-sp-12);}
+  .sp-wait{margin-bottom:var(--ow-sp-12);}
+  /* The portal box is the customer form's; inside a panel the panel is
+     already the box, so it loses its own frame. */
+  .su-pan > .cf-portal{background:transparent;border:0;border-radius:0;}
+  .su-pan > .cf-pin{padding:var(--ow-sp-12) var(--ow-sp-12) 0;box-sizing:border-box;}
+  .ow-tbl.prx-sp-t{--ow-tbl-cols:minmax(0,1.5fr) minmax(0,1fr) auto;}
+  .prx-sp-t .ow-tbl-r{min-height:52px;}
+  .prx-sp-was{color:var(--ow-ink-400);text-decoration:line-through;margin-right:var(--ow-sp-6);}
+  .prx-sp-acts{display:flex;gap:var(--ow-sp-6);flex-wrap:wrap;justify-content:flex-end;}
+  .prx-sp-why{display:flex;gap:var(--ow-sp-6);align-items:center;grid-column:1/-1;}
+  .prx-sp-why input{flex:1;min-width:0;}
   .prx-asof b{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-weight:var(--ow-fw-500);color:var(--ow-ink-600);}
   #tab-prices .pr-lens .pr-lens-note{display:none;}
   .prx-asof[hidden]{display:none;}
@@ -39072,6 +39086,9 @@
           <div id="supWinsWrap"></div>
         </div>
       </div>
+      <!-- Suppliers who cannot get into the supplier app until the shop
+           issues them a PIN (0132). Empty, and so invisible, otherwise. -->
+      <div id="supPortalWrap"></div>
       <div class="ow-pan" id="supBookPan">
         <div class="ow-tb su-tb">
           <div class="ow-seg" id="sup_lens" role="tablist" aria-label="Show">
@@ -40107,6 +40124,9 @@
         <span class="prx-asof" id="prx_asof"></span>
       </div>
       <div class="pr-lens-body" id="pr_lens_quotes">
+      <!-- Prices and products suppliers propose from their own app (0132).
+           Drawn only while one waits for the owner's answer. -->
+      <div id="prxProposals"></div>
       <!-- The strip first, then the controls: what the registry says reads
            before how to narrow it. -->
       <div id="pricesSummary"></div>
@@ -44943,7 +44963,8 @@ async function loadData(shopId){
     savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR,
     mediaR, mediaFoldersR, waPostsR,
     rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, followUpsR, rivalPricesR, paymentPromisesR, productLinksR, briefsSentR, statementsSentR, variantColR, imageColR, askedColR, transferColR, lotConsignColR, rivalSideColR, stageColR, managerNotesR, linkSizeColR, coversColR, clientAccountsR, termsColR, waPostKindsColR, cashMetaColR, cashCloseColR,
-    supTermsColR, stockLogMetaColR, debtLogLinkColR, supplierStopColR
+    supTermsColR, stockLogMetaColR, debtLogLinkColR, supplierStopColR,
+    supplierAccountsR, supplierAnswersR, supplierProposalsR
   ] = await Promise.all([
     sel('suppliers'), sel('staff'), sel('customers'), sel('customer_debt_log'), sel('products'), sel('prices'),
     sel('stock'), sel('stock_lots'), sel('stock_log'), sel('cash_days'), sel('cash_txns'),
@@ -44992,7 +45013,18 @@ async function loadData(shopId){
        reaches before they stop delivering, and their delivery days. Their
        credit days are 0106's terms_days, probed above. Probed alone: a
        supplier row goes up on every save. */
-    sb.from('suppliers').select('stop_at_days, delivery_days').limit(1)
+    sb.from('suppliers').select('stop_at_days, delivery_days').limit(1),
+    /* 0132, the supplier app. The accounts table says whether it exists
+       here at all; the answers and proposals are what suppliers have
+       said from it. Neither is written into `data`: they are their own
+       rows, read every refresh, and folded in by the owner's own app. A
+       shop whose 0132 has not landed reads nothing and loses nothing. */
+    sb.from('supplier_accounts').select('supplier_id').limit(1),
+    sb.from('supplier_answers').select('id, order_id, supplier_id, state, terms, changes, note, at, folded_at')
+      .eq('shop_id', shopId).gte('at', new Date(Date.now() - 30 * 86400000).toISOString()).order('at'),
+    sb.from('supplier_proposals').select('id, supplier_id, kind, price_id, product_id, payload, status, created_at, decided_at, decided_note')
+      .eq('shop_id', shopId).or('status.eq.pending,decided_at.gte.' + new Date(Date.now() - 14 * 86400000).toISOString())
+      .order('created_at')
   ]);
   /* WHEN THE BOOKS WERE LAST READ, for the Manager's header: the time of
      this read when every table the shop needs answered, or -- when one
@@ -45151,6 +45183,15 @@ async function loadData(shopId){
   clientAccountsWhy = (clientAccountsR && clientAccountsR.error
     && (clientAccountsR.error.message || String(clientAccountsR.error))) || '';
   customerTermsColumns = !(termsColR && termsColR.error);
+  /* 0132. Same tolerance as the client portal: no table, no supplier app,
+     and the screens say so in one line rather than offering buttons. */
+  supplierAccountsTable = !(supplierAccountsR && supplierAccountsR.error);
+  supplierAccountsWhy = (supplierAccountsR && supplierAccountsR.error
+    && (supplierAccountsR.error.message || String(supplierAccountsR.error))) || '';
+  supplierAnswersTable = !(supplierAnswersR && supplierAnswersR.error);
+  supplierAnswerRows = (supplierAnswersR && !supplierAnswersR.error && supplierAnswersR.data) || [];
+  supplierProposalsTable = !(supplierProposalsR && supplierProposalsR.error);
+  supplierProposalRows = (supplierProposalsR && !supplierProposalsR.error && supplierProposalsR.data) || [];
 
   const debtByCustomer = {};
   (debtLogR.data||[]).forEach(l=>{
@@ -45704,6 +45745,14 @@ let siteStageColumn = false;
 let clientAccountsTable = false;
 let clientAccountsWhy = '';          // why the probe failed, in the database's own words
 let customerTermsColumns = false;
+/* 0132, the supplier app: whether its tables exist here, and what
+   suppliers have said from it. Read by loadData, never put in `data`. */
+let supplierAccountsTable = false;
+let supplierAccountsWhy = '';
+let supplierAnswersTable = false;
+let supplierAnswerRows = [];
+let supplierProposalsTable = false;
+let supplierProposalRows = [];
 let linkSizeColumn = false;
 let waPostKindsColumn = false;
 let cashTransferColumn = false;
@@ -64332,7 +64381,11 @@ function orderSupplierConfirmState(q, supplierId){
   const state = (rec.state === 'confirmed' && rec.terms !== orderSupplierTerms(q, supplierId))
     ? 'stale'
     : (rec.state || 'pending');
-  return {state, at: rec.at || null, askedAt: rec.askedAt || null, note: rec.note || ''};
+  return {state, at: rec.at || null, askedAt: rec.askedAt || null, note: rec.note || '',
+    // Who gave the answer: 'supplier' when it came from the supplier app
+    // (0132), absent when somebody here recorded it after a call. And for
+    // a short answer, what they said they can give, line by line.
+    by: rec.by || null, short: Array.isArray(rec.short) && rec.short.length ? rec.short : null};
 }
 function orderUnconfirmedSuppliers(q){
   return orderSupplierGroups(q)
@@ -64422,7 +64475,12 @@ function agentShelfConfirm(q){
   return true;
 }
 
-function setOrderSupplierConfirm(orderId, supplierId, state, note){
+function setOrderSupplierConfirm(orderId, supplierId, state, note, opts){
+  /* opts, for an answer that arrived from the supplier app (0132):
+     by 'supplier', the moment THEY answered (not the moment it was
+     read), and for a short answer what they can give. Absent for every
+     answer recorded here by hand, which keeps the record as it was. */
+  const o = opts || {};
   const q = data.savedQuotes.find(x=> x.id === orderId);
   if(!q) return null;
   // Read before the write, so "was it already ready" can be told apart
@@ -64444,7 +64502,7 @@ function setOrderSupplierConfirm(orderId, supplierId, state, note){
   } else {
     q.supplierConfirms[key] = {
       state,
-      at: Date.now(),
+      at: o.at || Date.now(),
       // Survives the answer: "asked an hour ago, still nothing back" is
       // the thing worth chasing, and a reply overwriting it would lose
       // the only record that anybody had rung at all.
@@ -64454,6 +64512,8 @@ function setOrderSupplierConfirm(orderId, supplierId, state, note){
       terms: state === 'confirmed' ? orderSupplierTerms(q, supplierId) : null,
       note: note || ''
     };
+    if(o.by) q.supplierConfirms[key].by = o.by;
+    if(Array.isArray(o.short) && o.short.length) q.supplierConfirms[key].short = o.short;
   }
   /* An agent's order every supplier has now said yes to is confirmed for
      the agent as it stands (agentOrderSuppliersConfirmed), and their Pay
@@ -64481,6 +64541,96 @@ function setOrderSupplierConfirm(orderId, supplierId, state, note){
   }
   return q.supplierConfirms[key] || null;
 }
+/* ---- ANSWERS FROM THE SUPPLIER APP (0132) --------------------------
+   A supplier answers "have all / some short / none" in supplier.html,
+   and the answer lands in supplier_answers -- never in the order. This
+   is where it comes in, through setOrderSupplierConfirm like any answer
+   taken by phone, so there is still only one way into an order.
+
+   Folded only when it is still about this order AS IT STANDS: an answer
+   carries the terms signature of the lines the supplier was shown, and
+   one given before an edit is shown on the row, not applied. Never over
+   something newer: if anybody here recorded an answer after theirs, that
+   one stands. Idempotent for the same reason, so two devices reading the
+   same answer fold it once.
+
+   "Have all" settles the row by itself -- that is the point of asking in
+   the app. "None" and "short" are recorded as a problem with what they
+   said; a short answer offers Accept their terms, which changes the order
+   and so is the owner's tap. */
+const SUPPLIER_APP_SAID = { confirmed: 'Said have all', short: 'Said some short', none: 'Said none' };
+function supplierAppLatestAnswers(){
+  const by = new Map();
+  (supplierAnswerRows || []).forEach(a=>{
+    const k = String(a.order_id) + '|' + String(a.supplier_id);
+    const prev = by.get(k);
+    if(!prev || Date.parse(a.at) >= Date.parse(prev.at)) by.set(k, a);
+  });
+  return by;
+}
+function supplierAppAnswerFor(q, supplierId){
+  if(!q || !supplierAnswersTable) return null;
+  const a = supplierAppLatestAnswers().get(String(q.id) + '|' + String(supplierId));
+  if(!a) return null;
+  return Object.assign({}, a, { outdated: a.terms !== orderSupplierTerms(q, supplierId) });
+}
+function supplierAppAnswerNote(q, a){
+  /* Their own words, quoted. A short answer's line-by-line figures are
+     kept on the record (`short`) and drawn as lines, not as prose. */
+  const said = SUPPLIER_APP_SAID[a.state] || 'Answered';
+  return said + (a.note ? `: “${a.note}”` : '');
+}
+function foldSupplierAnswers(){
+  if(!supplierAnswersTable || !(supplierAnswerRows || []).length) return 0;
+  const done = [];
+  let folded = 0;
+  supplierAppLatestAnswers().forEach(a=>{
+    const q = (data.savedQuotes || []).find(x=> String(x.id) === String(a.order_id));
+    const sid = String(a.supplier_id);
+    const at = Date.parse(a.at);
+    const live = q && !q.voided && q.status === 'draft'
+      && orderSupplierGroups(q).some(g=> String(g.supplierId) === sid);
+    if(!live){ if(!a.folded_at) done.push(a.id); return; }
+    const rec = (q.supplierConfirms || {})[sid] || {};
+    if(rec.at && rec.at >= at){ if(!a.folded_at) done.push(a.id); return; }
+    if(a.terms !== orderSupplierTerms(q, sid)){ if(!a.folded_at) done.push(a.id); return; }
+    setOrderSupplierConfirm(q.id, sid, a.state === 'confirmed' ? 'confirmed' : 'problem',
+      a.state === 'confirmed' ? (a.note || '') : supplierAppAnswerNote(q, a),
+      { by: 'supplier', at, short: a.state === 'short' ? a.changes : null });
+    folded++;
+    if(!a.folded_at) done.push(a.id);
+  });
+  /* Marked read so the next device need not weigh it again. Admins only
+     under RLS; a refusal costs nothing, because the fold above is
+     idempotent on its own. */
+  if(done.length) sb.from('supplier_answers').update({ folded_at: new Date().toISOString() })
+    .in('id', done).then(()=>{ (supplierAnswerRows || []).forEach(r=>{ if(done.includes(r.id)) r.folded_at = r.folded_at || new Date().toISOString(); }); }, ()=>{});
+  if(folded) toast(`${folded} ${folded === 1 ? 'answer' : 'answers'} came in from the supplier app`, 4000);
+  return folded;
+}
+/* Taking a short answer: each line they cannot fully give is cut to
+   what they can, a line they have none of comes off, and the row is then
+   confirmed at the new terms. A line nobody else can supply is better
+   cut here, before any money moves, than refunded later. */
+function acceptSupplierTerms(orderId, supplierId){
+  const q = (data.savedQuotes || []).find(x=> x.id === orderId);
+  if(!q || q.status !== 'draft') return false;
+  const st = orderSupplierConfirmState(q, supplierId);
+  if(!st.short) return false;
+  let cut = 0;
+  st.short.forEach(c=>{
+    const it = (q.items || []).find(x=> String(x.lineId) === String(c.lineId));
+    if(!it) return;
+    const have = Math.max(0, Math.floor(Number(c.have) || 0));
+    if(have >= Number(it.qty)) return;
+    if(have > 0) it.qty = have; else q.items = q.items.filter(x=> x !== it);
+    cut++;
+  });
+  setOrderSupplierConfirm(orderId, supplierId, 'confirmed', 'Their terms, accepted', { by: 'supplier' });
+  toast(`${supplierName(supplierId)}'s terms taken — ${cut} ${cut === 1 ? 'line' : 'lines'} cut to what they can give`, 4500);
+  return true;
+}
+
 function markOrderSupplierAsked(orderId, supplierId){
   const q = data.savedQuotes.find(x=> x.id === orderId);
   if(!q) return;
@@ -64599,6 +64749,12 @@ function supplierConfirmActionsHTML(supplierId, st){
     // The quote moved under them, so asking again IS the work.
     inner = ask('Ask again at the new terms', 'btn-accent')
       + yes('They confirmed', 'btn-ghost') + no('Report a problem');
+  } else if(st.state === 'problem' && st.short){
+    // They said what they CAN give, in the supplier app. Taking that is
+    // the one move that settles the row; it changes the order, so it is
+    // a tap of the owner's and never automatic.
+    inner = `<button type="button" class="btn btn-accent sconf-terms" data-sup="${sid}">Accept their terms</button>`
+      + ask('Ask again', 'btn-ghost') + no('Edit what they said');
   } else if(st.state === 'problem'){
     inner = ask('Ask again', 'btn-accent') + yes('They confirmed', 'btn-ghost')
       + no('Edit what they said');
@@ -64646,15 +64802,32 @@ function renderSupplierConfirmList(){
        grey again: somebody DID ring this supplier, and the useful fact
        is that the quote moved underneath that call, not that the tick
        is missing. */
-    const note = st.state === 'stale'
+    /* From the supplier app: said where it came from, because "by
+       supplier" is an answer nobody here has to vouch for, and an answer
+       to the order as it USED to be is shown rather than dropped. */
+    const byApp = st.by === 'supplier' && st.state !== 'stale'
+      ? `<div class="sconf-note">${st.state === 'confirmed' ? 'Confirmed' : 'Answered'} in the supplier app &middot; ${esc(savedAgoLabel(st.at))}</div>` : '';
+    const oldAns = supplierAppAnswerFor(q, g.supplierId);
+    const oldNote = oldAns && oldAns.outdated && !(st.at && st.at >= Date.parse(oldAns.at))
+      ? `<div class="sconf-note">${esc(SUPPLIER_APP_SAID[oldAns.state] || 'Answered')} in the supplier app ${esc(savedAgoLabel(Date.parse(oldAns.at)))} &mdash; for the order as it was then. Ask again.</div>`
+      : '';
+    const shortLines = st.state === 'problem' && st.short
+      ? `<div class="sconf-lines">${st.short.map(c=>{
+          const it = (q.items || []).find(x=> String(x.lineId) === String(c.lineId));
+          return it ? `<div class="sconf-line"><span>${esc(it.productName || 'Item')}</span><span>they can give <b>${esc(String(c.have))}</b> of ${esc(String(it.qty))}</span></div>` : '';
+        }).join('')}</div>`
+      : '';
+    const note = byApp + oldNote + shortLines + (st.state === 'stale'
       ? `<div class="sconf-note">Confirmed ${esc(savedAgoLabel(st.at))}, but the items, quantities or prices have changed since. Ask again.</div>`
       : (st.state === 'problem' && st.note)
         ? `<div class="sconf-note">${esc(st.note)}</div>`
-        : (st.state === 'confirmed' && st.at)
+        : (byApp || oldNote)
+          ? ''
+          : (st.state === 'confirmed' && st.at)
           ? `<div class="sconf-note">Confirmed ${esc(savedAgoLabel(st.at))}</div>`
           : (st.askedAt)
             ? `<div class="sconf-note">Asked ${esc(savedAgoLabel(st.askedAt))} — nothing back yet</div>`
-            : '';
+            : '');
     /* Said up front, because the surprise is otherwise at the far end: with
        no number on file WhatsApp opens its contact picker instead of the
        supplier's chat, and somebody who was not expecting that assumes the
@@ -64719,7 +64892,7 @@ function wireSupplierConfirmPanel(){
   const list = document.getElementById('supplierConfirmList');
   if(!list) return;
   list.addEventListener('click', (e)=>{
-    const btn = e.target.closest('.sconf-ask, .sconf-yes, .sconf-no, .sconf-undo, .sconf-why-save, .sconf-why-cancel');
+    const btn = e.target.closest('.sconf-ask, .sconf-yes, .sconf-no, .sconf-undo, .sconf-terms, .sconf-why-save, .sconf-why-cancel');
     if(!btn) return;
     const sup = btn.dataset.sup;
     const q = data.savedQuotes.find(x=> x.id === supplierConfirmOrderId);
@@ -64739,6 +64912,9 @@ function wireSupplierConfirmPanel(){
       // The last one is spoken for by setOrderSupplierConfirm, which
       // also moves the order; a second toast here contradicted it.
       if(leftNow) toast(`${supplierName(sup)} confirmed — ${leftNow} to go`, 3500);
+    } else if(btn.classList.contains('sconf-terms')){
+      supplierConfirmWhyFor = null;
+      acceptSupplierTerms(supplierConfirmOrderId, sup);
     } else if(btn.classList.contains('sconf-undo')){
       supplierConfirmWhyFor = null;
       setOrderSupplierConfirm(supplierConfirmOrderId, sup, 'pending', '');
@@ -82747,6 +82923,215 @@ function supDrawerHTML(r){
    keyboard behind whatever was opened next. The register steps aside
    for it instead, so the supplier's name is the page name while you
    are on it and Escape brings the book back. */
+/* ---- THE SUPPLIER APP (0132) ---------------------------------------
+   A supplier signs in to supplier.html with their number and a PIN the
+   shop gives them. Everything here goes through the supplier-accounts
+   Edge Function, for the reason the customer form's portal block does:
+   a PIN has to be MINTED and HASHED, and doing that in a browser would
+   put the hashing rule in two places.
+
+   Nothing on this screen is ever put in `data`. An account is a
+   credential, not the shop's record of a supplier, and `data` is diffed
+   against the server every few seconds and lands in every backup. The
+   PIN lives in spPinShown and on screen, and nowhere else. */
+let supplierAccountsById = null;       // supplierId -> account view, or null if never loaded
+let supplierAccountsAt = 0;
+let supplierAccountsLoading = null;
+let spPinShown = null;                 // { supplierId, pin, expiresAt, phone } -- on screen only
+
+async function spLoadAccounts(force){
+  if(!supplierAccountsTable) return null;
+  if(!force && supplierAccountsById && Date.now() - supplierAccountsAt < 60000) return supplierAccountsById;
+  if(supplierAccountsLoading) return supplierAccountsLoading;
+  supplierAccountsLoading = (async ()=>{
+    try{
+      const { data: res, error } = await sb.functions.invoke('supplier-accounts', {
+        body: { shopId: currentShopId, action: 'list' },
+      });
+      if(error || !res || res.error) throw new Error((res && res.error) || error.message);
+      const by = {};
+      (res.accounts || []).forEach(a=> by[String(a.supplierId)] = a);
+      supplierAccountsById = by;
+      supplierAccountsAt = Date.now();
+      return by;
+    }catch(e){
+      return supplierAccountsById;
+    }finally{
+      supplierAccountsLoading = null;
+    }
+  })();
+  return supplierAccountsLoading;
+}
+function spAccountOf(supplierId){
+  return (supplierAccountsById && supplierAccountsById[String(supplierId)]) || null;
+}
+/* One word for where they stand, in the order that matters: a supplier
+   who cannot get in comes before one who can. */
+function spPortalState(a){
+  if(!a) return { key:'none', label:'Not in the app', tone:'' };
+  if(a.status === 'suspended') return { key:'suspended', label:'Suspended', tone:'' };
+  if(a.lockedOut) return { key:'locked', label:'Locked out', tone:'ow-bad' };
+  if(a.pinRequestedAt) return { key:'asked', label:'Asked for a new PIN', tone:'ow-warn' };
+  if(a.pinLive) return { key:'invited', label:'PIN sent, not used yet', tone:'' };
+  if(a.devices) return { key:'active', label:'In the app', tone:'ow-good' };
+  return { key:'idle', label:'Signed out', tone:'' };
+}
+/* Those who cannot get in until the shop acts: they asked, or they ran
+   out of tries. Oldest first -- they have waited longest. */
+function spWaitingForPin(){
+  if(!supplierAccountsById) return [];
+  return Object.values(supplierAccountsById)
+    .filter(a=> a.status !== 'suspended' && (a.lockedOut || a.pinRequestedAt))
+    .filter(a=> (data.suppliers || []).some(s=> String(s.id) === String(a.supplierId)))
+    .sort((x, y)=> String(x.pinRequestedAt || '').localeCompare(String(y.pinRequestedAt || '')));
+}
+/* Built from where this app is served, like the customer portal's link:
+   supplier.html sits beside index.html, and the shop id tells it which
+   shop it is for. */
+function spAppUrl(){
+  return location.origin + location.pathname.replace(/[^/]*$/, '')
+    + 'supplier.html?s=' + encodeURIComponent(currentShopId || '');
+}
+function spPinMessage(s, pin){
+  return [
+    `Hello *${s.name || 'there'}*,`,
+    '',
+    'Omni-Ware has opened your supplier account. See our orders, your prices and what we owe you, any time.',
+    '',
+    `Open: ${spAppUrl()}`,
+    `Number: ${cfPhoneAsWritten(pin.phone)}`,
+    `PIN: *${pin.pin}*`,
+    '',
+    'The PIN works for 7 days. We will never ask you for it by phone.'
+  ].join('\n');
+}
+function spAgo(iso){
+  const t = Date.parse(iso || '');
+  return Number.isFinite(t) ? savedAgoLabel(t) : '';
+}
+
+/* The panel on a supplier's account. Absent where 0132 has not landed --
+   with one line saying why, as the customer form does, so a shop that
+   has pasted the migration is not left looking for a button. */
+function supplierPortalPanelHTML(s){
+  if(!s) return '';
+  const head = (n)=> `<div class="ow-pan-h su-pan-h"><span class="ow-pan-t">Supplier app</span>${n ? `<span class="ow-pan-n">${n}</span>` : ''}</div>`;
+  if(!supplierAccountsTable){
+    return `<div class="ow-pan su-pan">${head('')}<div class="cf-portal">
+      <div class="cf-portal-state"><b>The supplier app is not turned on.</b></div>
+      <div class="cf-portal-meta">${esc(supplierAccountsWhy || 'supplier_accounts could not be read.')}</div>
+      <div class="cf-portal-note">Paste <b>0132_supplier_accounts.sql</b> and reload this page.</div></div></div>`;
+  }
+  if(!supplierAccountsById){
+    return `<div class="ow-pan su-pan">${head('')}<div class="cf-portal"><div class="cf-portal-meta">Reading who can sign in&hellip;</div></div></div>`;
+  }
+  const a = spAccountOf(s.id);
+  const st = spPortalState(a);
+  const pin = spPinShown && String(spPinShown.supplierId) === String(s.id) ? spPinShown : null;
+  const btn = (act, label, accent)=> `<button type="button" class="${accent ? 'btn btn-accent ow-sm' : 'cf-act'}" data-sportal="${act}" data-sid="${esc(s.id)}">${label}</button>`;
+  const pinCard = pin ? `
+    <div class="cf-pin">
+      <div class="cf-pin-figs">${esc(pin.pin)}</div>
+      <div class="cf-pin-say"><b>Send these four figures to ${esc(s.name || s.id)} now.</b> ${esc(cfPinGoodUntil(pin.expiresAt))}</div>
+      <div class="cf-pin-acts">${btn('wa', 'Send on WhatsApp', true)}${btn('copy', 'Copy')}</div>
+      <div class="cf-pin-say">This is the only time they are shown. The shop keeps no copy &mdash; leaving this page loses them, and the only way back is a new PIN.</div>
+    </div>` : '';
+  if(!a){
+    const phone = contactPhones(s)[0] || '';
+    return `<div class="ow-pan su-pan">${head('')}${pinCard}<div class="cf-portal">
+      <div class="cf-portal-state"><span class="ow-cp"><span class="ow-cp-d"></span>${esc(st.label)}</span></div>
+      <div class="cf-portal-meta">With a login they answer your order asks, keep their prices current and see what you owe them &mdash; without a call. They never see a buyer, your sell price or another supplier.</div>
+      <div class="cf-portal-acts">${phone ? btn('open', 'Invite to the app', !pin && !(supplierAskList(s.id).length > 0)) : ''}</div>
+      <div class="cf-portal-note">${phone ? `They sign in on <b>${esc(phone)}</b>.` : 'Add their phone number first &mdash; they sign in with it.'}</div>
+    </div></div>`;
+  }
+  const suspended = a.status === 'suspended';
+  const meta = ['Signs in on ' + esc(cfPhoneAsWritten(a.phone))];
+  if(a.devices) meta.push(`${a.devices} ${a.devices === 1 ? 'phone' : 'phones'} signed in`);
+  meta.push(a.lastSeenAt ? 'last used ' + esc(spAgo(a.lastSeenAt)) : 'never used');
+  if(a.pinLive && a.pinExpiresAt) meta.push(esc(cfPinGoodUntil(a.pinExpiresAt)).replace(/\.$/, ''));
+  const warn = [];
+  if(suspended) warn.push('<div class="cf-portal-warn">Suspended. They cannot sign in, and every phone they used has been signed out.</div>');
+  if(a.lockedOut && !suspended) warn.push('<div class="cf-portal-warn">Locked out after five wrong PINs. Call first &mdash; was it them? &mdash; then issue a new one.</div>');
+  if(a.pinRequestedAt && !a.lockedOut && !suspended) warn.push(`<div class="cf-portal-warn">They tapped &ldquo;Forgot PIN?&rdquo; ${esc(spAgo(a.pinRequestedAt))}.</div>`);
+  /* One accent per screen: the account's own "Ask for prices" holds it
+     whenever there are stale prices and a number to ask on. */
+  const otherAccent = supplierAskList(s.id).length > 0 && contactPhones(s).length > 0;
+  const needsPin = !suspended && (a.lockedOut || a.pinRequestedAt) && !otherAccent;
+  return `<div class="ow-pan su-pan">${head(`<span class="ow-cp ${st.tone}"><span class="ow-cp-d"></span>${esc(st.label)}</span>`)}${pinCard}
+    <div class="cf-portal">
+      <div class="cf-portal-meta">${meta.join(' &middot; ')}</div>
+      ${warn.join('')}
+      <div class="cf-portal-acts">
+        ${suspended ? '' : btn('reissue', a.pinLive ? 'Replace the PIN' : 'Issue a new PIN', needsPin && !pin)}
+        ${a.devices ? btn('revoke', 'Sign out their phones') : ''}
+        ${btn(suspended ? 'restore' : 'suspend', suspended ? 'Let them back in' : 'Suspend')}
+      </div>
+    </div></div>`;
+}
+
+const SP_CONFIRM = {
+  reissue: 'The PIN they have now stops working. Issue a new one?',
+  revoke: 'Every phone they are signed in on gets signed out. They will need a new PIN to get back in. Go on?',
+  suspend: 'They will not be able to sign in, and any phone signed in now gets signed out. Their record, bills and prices are untouched. Suspend?',
+};
+async function spPortalAct(supplierId, action){
+  const s = (data.suppliers || []).find(x=> String(x.id) === String(supplierId));
+  if(!s) return;
+  if(action === 'copy'){
+    try{ await navigator.clipboard.writeText(spPinShown ? spPinShown.pin : ''); toast('Copied — paste it into WhatsApp before you leave this page'); }
+    catch(e){ toast('Could not copy — read the figures out instead', 4000); }
+    return;
+  }
+  if(action === 'wa'){
+    /* The owner's own send: WhatsApp opens with the message written,
+       and nothing goes until they press send there. */
+    if(spPinShown) window.open(waComposeUrl(spPinShown.phone || contactPhones(s)[0] || '', spPinMessage(s, spPinShown)), '_blank');
+    return;
+  }
+  const a = spAccountOf(supplierId);
+  /* A replaced PIN is only worth a question when one is live: an
+     expired or locked one is already worth nothing to them. */
+  const ask = action === 'reissue' ? (a && a.pinLive ? SP_CONFIRM.reissue : null) : SP_CONFIRM[action];
+  if(ask && !confirm(ask)) return;
+  try{
+    const { data: res, error } = await sb.functions.invoke('supplier-accounts', {
+      body: { shopId: currentShopId, action, supplierId: String(supplierId) },
+    });
+    const said = (res && res.error) || (error && error.context && await error.context.json().then(b=> b.error).catch(()=> null));
+    if(said) throw new Error(said);
+    if(error) throw error;
+    spPinShown = res && res.pin ? { supplierId: String(supplierId), pin: res.pin, expiresAt: res.expiresAt, phone: res.phone } : null;
+    if(res && res.revoked != null) toast(`${res.revoked} ${res.revoked === 1 ? 'phone' : 'phones'} signed out`);
+    if(action === 'suspend') toast(`${s.name} can no longer sign in`);
+    if(action === 'restore') toast(`${s.name} can sign in again — issue a PIN if they need one`);
+  }catch(e){
+    spPinShown = null;
+    toast((e && e.message) || 'That did not work', 6000);
+  }
+  await spLoadAccounts(true);
+  supAcctRedraw();
+}
+
+/* On the book: who is waiting for the shop before they can get back in.
+   Drawn only when somebody is -- an empty strip would be a box to read
+   that says nothing. */
+function supPortalQueueHTML(){
+  const wait = spWaitingForPin();
+  if(!wait.length) return '';
+  const rows = wait.map(a=>{
+    const s = (data.suppliers || []).find(x=> String(x.id) === String(a.supplierId));
+    const why = a.lockedOut ? 'Locked out after five wrong PINs' : `Tapped “Forgot PIN?” ${spAgo(a.pinRequestedAt)}`;
+    return `<div class="ow-tbl-r">
+      <span class="ow-tbl-c"><span class="ow-tbl-p">${esc(s ? s.name : a.supplierId)}</span><span class="ow-tbl-s">${esc(why)}</span></span>
+      <span class="ow-tbl-a"><button type="button" class="btn btn-ghost ow-sm" data-sopen-go="${esc(a.supplierId)}">Issue a new PIN</button></span>
+    </div>`;
+  }).join('');
+  return `<div class="ow-pan sp-wait">
+    <div class="ow-pan-h su-pan-h"><span class="ow-pan-t">Waiting for a new PIN</span><span class="ow-pan-n ow-fig">${wait.length}</span></div>
+    <div class="ow-tbl">${rows}</div></div>`;
+}
+
 function renderSupplierAccount(id){
   const wrap = document.getElementById('supAccountWrap');
   if(!wrap) return;
@@ -82761,6 +83146,7 @@ function renderSupplierAccount(id){
         <span>They were deleted here or on another device while this was open. Nothing has been lost from the books &mdash; their bills and the payments against them keep their own record on Invoices, under Purchases &mdash; but there is no account left to draw.</span></div></div>`;
     return;
   }
+  if(supplierAccountsTable && !supplierAccountsById) spLoadAccounts().then(()=>{ if(String(supViewId) === String(id)) supAcctRedraw(); });
   const r = supplierBookRow(s);
   const st = supAcctState(s.id);
   const reason = supAttentionReason(r);
@@ -82819,6 +83205,7 @@ function renderSupplierAccount(id){
           <span>What you owe and what you have paid are built from purchase invoices, so the statement fills in once the first order to them is billed. A bill is raised when an order is marked invoiced, or when a delivery on your own purchase order is received.</span></div></div>`}
       </div>
       <div class="ow-side">
+        ${supplierPortalPanelHTML(s)}
         ${supplierAskBlockHTML(r.id, r.ask)}
         ${supplierBillsHTML(r)}
         ${supplierAccountRailHTML(r)}
@@ -82845,6 +83232,7 @@ function supAcctClick(e){
   const s = supAcct, t = e.target;
   const hit = (sel)=> t.closest(sel);
   let b;
+  if((b = hit('[data-sportal]'))){ spPortalAct(b.dataset.sid, b.dataset.sportal); return true; }
   if((b = hit('[data-smore]'))){ s.more = !s.more; supAcctRedraw(); return true; }
   if((b = hit('[data-saskall]'))){ s.askAll = !s.askAll; supAcctRedraw(); return true; }
   if(s.more && !hit('.su-menu')){ s.more = false; }
@@ -83499,7 +83887,8 @@ function supplierRegisterRowHTML(r, matches, scale){
     : '';
   const meta = [r.place, r.id, r.shopNo ? 'Shop ' + r.shopNo : '',
     r.linked ? 'Also a customer' : '',
-    r.commissionPct ? r.commissionPct + '% commission' : ''].filter(Boolean).join(' · ');
+    r.commissionPct ? r.commissionPct + '% commission' : '',
+    spAccountOf(r.id) ? spPortalState(spAccountOf(r.id)).label : ''].filter(Boolean).join(' · ');
   /* The share of their priced lines they win, as a ring: a count of two
      is only good news against how many they price. */
   const share = r.priced ? Math.round(r.wins / r.priced * 100) : 0;
@@ -83583,11 +83972,22 @@ function renderSuppliers(filter=''){
   const acct = document.getElementById('supAccountWrap');
   if(supViewId){
     book.forEach(id=>{ const el = document.getElementById(id); if(el) el.style.display = 'none'; });
+    const portalQ = document.getElementById('supPortalWrap');
+    if(portalQ) portalQ.innerHTML = '';
     if(acct){ acct.style.display = 'block'; renderSupplierAccount(supViewId); }
     return;
   }
   book.forEach(id=>{ const el = document.getElementById(id); if(el) el.style.display = ''; });
   if(acct){ acct.style.display = 'none'; acct.innerHTML = ''; }
+  /* Leaving an account loses its PIN, as the panel promised. */
+  spPinShown = null;
+  const portal = document.getElementById('supPortalWrap');
+  if(portal){
+    portal.innerHTML = supPortalQueueHTML();
+    if(supplierAccountsTable && (!supplierAccountsById || Date.now() - supplierAccountsAt > 60000)){
+      spLoadAccounts().then(()=>{ const p = document.getElementById('supPortalWrap'); if(p && !supViewId) p.innerHTML = supPortalQueueHTML(); });
+    }
+  }
   const all = supplierBookRows();
 
   const strip = document.getElementById('supStripWrap');
@@ -93128,6 +93528,8 @@ async function sendSupplierStatementPdf(supplierId){
   };
   wrap.addEventListener('click', onClick);
   if(band) band.addEventListener('click', onClick);
+  const portalQueue = document.getElementById('supPortalWrap');
+  if(portalQueue) portalQueue.addEventListener('click', onClick);
   const wins = document.getElementById('supWinsWrap');
   if(wins) wins.addEventListener('click', onClick);
   const pageTabs = document.getElementById('supPageTabs');
@@ -115549,7 +115951,196 @@ function prxPagerHTML(total){
     <button type="button" class="prx-pgb" data-prx-page="${prxPage - 1}" aria-label="Previous page"${prxPage <= 1 ? ' disabled' : ''}><svg class="icon" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></button>${btns}
     <button type="button" class="prx-pgb" data-prx-page="${prxPage + 1}" aria-label="Next page"${prxPage >= pages ? ' disabled' : ''}><svg class="icon" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button></nav>`;
 }
+/* ---- WHAT SUPPLIERS PROPOSE (0132) -------------------------------
+   From the supplier app: "still correct", a new price, "I can supply
+   this", and items the catalogue does not have. NOTHING HERE CHANGES A
+   PRICE BY ITSELF. A proposal is the supplier's word in their own row;
+   the registry changes on the owner's Accept and through the same edits
+   a typed price makes, and the supplier sees the answer in their app.
+
+   Out of stock is not here: that is a fact about their own goods, and
+   their app writes it straight onto their price row. */
+let prxSpWhyFor = null;   // the proposal whose decline reason is being typed
+function prxProposalsPending(){
+  return supplierProposalsTable ? (supplierProposalRows || []).filter(x=> x.status === 'pending') : [];
+}
+function prxProposalPriceRow(x){
+  return x.price_id == null ? null : (data.prices || []).find(p=> String(p.id) === String(x.price_id)) || null;
+}
+function prxProposalNow(row){
+  if(!row) return null;
+  const v = row.retail != null ? row.retail : row.wholesale;
+  return v == null ? null : Number(v);
+}
+/* The ladder a price proposal asks for, in the registry's own shape:
+   the unit price at the row's own first step, then each "from N" line. */
+function prxProposalTiers(x, row){
+  const p = x.payload || {};
+  const base = row && (row.tiers || []).length ? Math.min(...row.tiers.map(t=> Number(t.minQty) || 1)) : 1;
+  const tiers = [{ minQty: base, price: Math.round(Number(p.unitPrice) || 0) }];
+  (Array.isArray(p.lines) ? p.lines : []).forEach(l=>{
+    const q = Math.floor(Number(l.qty) || 0), pr = Math.round(Number(l.price) || 0);
+    if(q > base && pr > 0 && !tiers.some(t=> t.minQty === q)) tiers.push({ minQty: q, price: pr });
+  });
+  return tiers.filter(t=> t.price > 0).sort((a, b)=> a.minQty - b.minQty);
+}
+function prxProposalView(x){
+  const p = x.payload || {};
+  const row = prxProposalPriceRow(x);
+  const sname = supplierName(x.supplier_id);
+  const pid = x.product_id || (row && row.productId) || null;
+  const product = pid ? (data.products || []).find(y=> String(y.id) === String(pid)) : null;
+  const name = x.kind === 'new' ? String(p.name || 'New item') : product ? product.name : (row ? productName(row.productId) : 'An item no longer on file');
+  const was = prxProposalNow(row);
+  let now = null, kind = '', detail = '', safe = false, can = true, why = '';
+  if(x.kind === 'still'){
+    kind = 'Still correct'; now = was; safe = !!row;
+    detail = row && row.date ? `last checked ${fmtShortDate(row.date)}` : 'never dated';
+  }else if(x.kind === 'price'){
+    kind = 'New price'; now = Math.round(Number(p.unitPrice) || 0);
+    const steps = (Array.isArray(p.lines) ? p.lines : []).filter(l=> Number(l.qty) > 1);
+    const pack = (Array.isArray(p.packing) ? p.packing : []).map(k=> `1 ${k.pack} has ${k.has} ${k.of}`);
+    detail = [steps.length ? steps.map(l=> `from ${l.qty} · ${Number(l.price).toLocaleString('en-UG')}`).join(', ') : '', pack.join(', ')].filter(Boolean).join(' · ');
+    safe = was != null && was > 0 && Math.abs(now - was) / was < 0.02;
+  }else if(x.kind === 'add'){
+    kind = 'Wants to supply';
+    const lines = Array.isArray(p.lines) ? p.lines : [];
+    const first = lines.slice().sort((a, b)=> (Number(a.qty) || 0) - (Number(b.qty) || 0))[0];
+    now = first ? Math.round(Number(first.price) || 0) : null;
+    const others = (data.prices || []).filter(r=> String(r.productId) === String(pid) && String(r.supplierId) !== String(x.supplier_id))
+      .map(r=> prxProposalNow(r)).filter(v=> v != null && v > 0);
+    const cheapest = others.length ? Math.min(...others) : null;
+    detail = cheapest != null ? `cheapest on file now ${cheapest.toLocaleString('en-UG')}` : 'nobody else prices it';
+    if(product && product.type === 'variable' && (product.variants || []).length){ can = false; why = 'It comes in sizes — enter it with Add a price entry, then mark it done.'; }
+  }else if(x.kind === 'new'){
+    kind = 'New item'; can = false;
+    const lines = Array.isArray(p.lines) ? p.lines : [];
+    now = lines.length ? Math.round(Number(lines[0].price) || 0) : null;
+    const pack = (Array.isArray(p.packing) ? p.packing : []).map(k=> `1 ${k.pack} has ${k.has} ${k.of}`);
+    detail = [p.category ? p.category : 'category not given', pack.join(', ')].filter(Boolean).join(' · ');
+    why = 'Not in your catalogue — add it under Products, then mark it done.';
+  }
+  if((x.kind === 'still' || x.kind === 'price') && !row){ can = false; why = 'That price entry is no longer on file.'; }
+  const change = was != null && now != null && was > 0 && x.kind !== 'still' && x.kind !== 'new' ? (now - was) / was * 100 : null;
+  return { x, row, sname, name, kind, was, now, change, detail, safe, can, why };
+}
+function prxProposalsHTML(){
+  const wrap = document.getElementById('prxProposals');
+  if(!wrap) return;
+  const list = prxProposalsPending().map(prxProposalView);
+  if(!list.length){ wrap.innerHTML = ''; return; }
+  const f = (n)=> n == null ? '&mdash;' : Number(n).toLocaleString('en-UG');
+  const safeN = list.filter(v=> v.safe && v.can).length;
+  const rows = list.map(v=>{
+    const id = esc(String(v.x.id));
+    const chip = v.x.kind === 'still' ? '<span class="ow-cp ow-good">Same</span>'
+      : v.change == null ? '' : `<span class="ow-cp ${v.change > 0 ? (v.x.kind === 'add' ? 'ow-bad' : 'ow-bad') : 'ow-good'}">${v.change > 0 ? '+' : ''}${v.change.toFixed(1)}%</span>`;
+    const asking = String(prxSpWhyFor) === String(v.x.id);
+    const acts = asking
+      ? `<div class="prx-sp-why"><input type="text" class="ow-f-v" data-spwhy="${id}" placeholder="A word to them, e.g. we buy at 64,500 elsewhere (optional)" autocomplete="off">
+          <button type="button" class="btn btn-ghost ow-sm" data-spdo="decline" data-spid="${id}">Decline</button>
+          <button type="button" class="btn btn-ghost ow-sm" data-spdo="cancel" data-spid="${id}">Cancel</button></div>`
+      : `<span class="ow-tbl-a prx-sp-acts">
+          ${v.can ? `<button type="button" class="btn btn-ghost ow-sm" data-spdo="accept" data-spid="${id}">${v.x.kind === 'still' ? 'Mark checked' : v.x.kind === 'add' ? 'Add their price' : 'Accept'}</button>`
+            : `<button type="button" class="btn btn-ghost ow-sm" data-spdo="done" data-spid="${id}" title="${esc(v.why)}">Mark done</button>`}
+          <button type="button" class="btn btn-ghost ow-sm" data-spdo="ask" data-spid="${id}">Decline</button></span>`;
+    return `<div class="ow-tbl-r">
+      <span class="ow-tbl-c"><span class="ow-tbl-p" title="${esc(v.name)}">${esc(v.name)}</span><span class="ow-tbl-s">${esc(v.kind)} &middot; ${esc(v.sname)}${v.detail ? ' &middot; ' + esc(v.detail) : ''}${v.can ? '' : ' &middot; ' + esc(v.why)}</span></span>
+      <span class="ow-tbl-n" data-l="Price"><span class="ow-fig">${v.x.kind === 'price' && v.was != null ? `<span class="prx-sp-was">${f(v.was)}</span>` : ''}${f(v.now)}</span> ${chip}</span>
+      ${asking ? '' : acts}
+      ${asking ? acts : ''}
+    </div>`;
+  }).join('');
+  wrap.innerHTML = `<div class="ow-pan prx-sp">
+    <div class="ow-pan-h"><span class="ow-pan-t">From suppliers</span><span class="ow-pan-n ow-fig">${list.length}</span>
+      <span class="ow-ph-sp"></span>${safeN ? `<button type="button" class="btn btn-ghost ow-sm" data-spdo="safe" title="Still-correct answers, and changes under 2%">Accept ${safeN} safe ${safeN === 1 ? 'one' : 'ones'}</button>` : ''}</div>
+    <div class="ow-tbl prx-sp-t">${rows}</div>
+  </div>`;
+  if(prxSpWhyFor != null){ const i = wrap.querySelector('[data-spwhy]'); if(i) i.focus(); }
+}
+/* The registry change a proposal asks for, made here and nowhere else.
+   Returns false when there is nothing it can safely write. */
+function prxApplyProposal(v){
+  const x = v.x, p = x.payload || {};
+  if(x.kind === 'still') return confirmPriceUnchanged(v.row.id);
+  if(x.kind === 'price'){
+    const tiers = prxProposalTiers(x, v.row);
+    if(!tiers.length) return false;
+    const d = deriveWholesaleRetail(tiers, Number(v.row.packQty) || 0);
+    Object.assign(v.row, { tiers, wholesale: d.wholesale, retail: d.retail, date: todayISO(), priceSource: 'supplier' });
+    return true;
+  }
+  if(x.kind === 'add'){
+    const lines = (Array.isArray(p.lines) ? p.lines : []).map(l=> ({ minQty: Math.max(1, Math.floor(Number(l.qty) || 1)), price: Math.round(Number(l.price) || 0) }))
+      .filter(t=> t.price > 0).sort((a, b)=> a.minQty - b.minQty)
+      .filter((t, i, all)=> i === 0 || t.minQty !== all[i - 1].minQty);
+    if(!lines.length) return false;
+    const product = (data.products || []).find(y=> String(y.id) === String(x.product_id));
+    if(!product) return false;
+    const d = deriveWholesaleRetail(lines, 0);
+    const dups = data.prices.filter(r=> String(r.productId) === String(product.id) && r.variantIdx == null && String(r.supplierId) === String(x.supplier_id));
+    const keep = dups[0];
+    data.prices = data.prices.filter(r=> !dups.includes(r));
+    data.prices.push({ productId: product.id, variantIdx: null, supplierId: x.supplier_id,
+      wholesale: d.wholesale, retail: d.retail, date: todayISO(),
+      unit: keep ? keep.unit : (product.unit || ''), packUnit: keep ? keep.packUnit : '', packQty: keep ? keep.packQty : 0,
+      piecesPerUnit: keep ? (keep.piecesPerUnit == null ? null : keep.piecesPerUnit) : null,
+      priceSource: 'supplier', supplierSku: keep ? (keep.supplierSku || '') : '', tiers: lines,
+      id: keep ? keep.id : allocRowId('price'), outOfStock: keep ? !!keep.outOfStock : false, outOfStockSince: keep ? (keep.outOfStockSince || null) : null });
+    return true;
+  }
+  return false;
+}
+async function prxDecideProposals(ids, status, note){
+  const now = new Date().toISOString();
+  const { error } = await sb.from('supplier_proposals').update({ status, decided_at: now, decided_note: note || '' })
+    .eq('shop_id', currentShopId).in('id', ids);
+  if(error) throw error;
+  (supplierProposalRows || []).forEach(r=>{ if(ids.some(i=> String(i) === String(r.id))){ r.status = status; r.decided_at = now; r.decided_note = note || ''; } });
+}
+async function prxProposalAct(action, id){
+  const views = prxProposalsPending().map(prxProposalView);
+  try{
+    if(action === 'ask'){ prxSpWhyFor = id; prxProposalsHTML(); return; }
+    if(action === 'cancel'){ prxSpWhyFor = null; prxProposalsHTML(); return; }
+    if(action === 'decline'){
+      const box = document.querySelector(`[data-spwhy="${CSS.escape(String(id))}"]`);
+      prxSpWhyFor = null;
+      await prxDecideProposals([id], 'declined', box ? box.value.trim() : '');
+      toast('Declined — they see it in their app');
+    }else if(action === 'done'){
+      await prxDecideProposals([id], 'accepted', '');
+      toast('Marked done — they see it as accepted');
+    }else if(action === 'accept' || action === 'safe'){
+      const pick = action === 'safe' ? views.filter(v=> v.safe && v.can) : views.filter(v=> String(v.x.id) === String(id));
+      const ok = pick.filter(v=> v.can && prxApplyProposal(v));
+      if(!ok.length){ toast('Nothing on file to change — mark it done or decline it', 5000); return; }
+      saveData();
+      try{ await prxDecideProposals(ok.map(v=> v.x.id), 'accepted', ''); }
+      catch(e){ toast(`Saved in your registry — but the supplier will not see your answer yet: ${e.message || e}`, 7000); triggerPricesRender(); return; }
+      toast(ok.length === 1 ? `${ok[0].name} updated — ${ok[0].sname} sees it accepted` : `${ok.length} accepted — each supplier sees it in their app`);
+    }
+  }catch(e){
+    toast(`That did not save: ${(e && e.message) || e}`, 6000);
+  }
+  triggerPricesRender();
+}
+(function wireSupplierProposals(){
+  const wrap = document.getElementById('prxProposals');
+  if(!wrap) return;
+  wrap.addEventListener('click', (e)=>{
+    const b = e.target.closest('[data-spdo]');
+    if(b) prxProposalAct(b.dataset.spdo, b.dataset.spid);
+  });
+  wrap.addEventListener('keydown', (e)=>{
+    if(!e.target.dataset || e.target.dataset.spwhy == null) return;
+    if(e.key === 'Enter'){ e.preventDefault(); prxProposalAct('decline', e.target.dataset.spwhy); }
+    if(e.key === 'Escape'){ e.preventDefault(); prxProposalAct('cancel', e.target.dataset.spwhy); }
+  });
+})();
+
 function renderPrices(filter='', supplierFilter='', categoryFilter='', ageFilter='', sortMode='added', stockFilter=''){
+  prxProposalsHTML();
   populatePriceCategoryFilter(categoryFilter);
   const wrap = document.getElementById('pricesTableWrap');
   const strip = document.getElementById('pricesSummary');
@@ -177074,6 +177665,9 @@ async function boot(){
     // tab's content above, so this just needs to flip which one shows.
     const savedTab = lsGet('pbLastTab');
     if(savedTab && document.getElementById('tab-'+resolveTab(savedTab)) && (typeof salesDeskAllows !== 'function' || salesDeskAllows(resolveTab(savedTab)))) goToTab(savedTab);
+    /* What suppliers said in their app while nobody had this open. After
+       the first paint, so an order that moves itself is drawn moving. */
+    foldSupplierAnswers();
   }
   // Only reveal the app shell now that the correct view (worker-only or
   // normal admin) is already in place -- avoids ever flashing the wrong
@@ -177355,6 +177949,10 @@ async function pollForUpdatesNow(opts){
        out rather than left to the frame the observer would wait for, so a
        refresh never shows the screen at the start of itself first. */
     const pageX = window.scrollX, pageY = window.scrollY;
+    /* Supplier-app answers fold in here, behind the same guard as the
+       redraw: an order moving under an open form is the thing it exists
+       to prevent. A guarded tick leaves them for the next one. */
+    if(typeof foldSupplierAnswers === 'function' && !(typeof myStaff !== 'undefined' && myStaff)) foldSupplierAnswers();
     redrawCurrentTab();
     owScrollGiveBack();
     if(window.scrollX !== pageX || window.scrollY !== pageY) window.scrollTo(pageX, pageY);
