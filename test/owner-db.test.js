@@ -78,4 +78,21 @@ const fn = name => { const at = sql.indexOf('create or replace function ' + name
 });
 t.check(sql.includes('revoke all on function owner_log(uuid, text, text, jsonb, jsonb, jsonb) from public, anon, authenticated;'), 'owner_log is called from inside the database only');
 
+/* run order: 0127 must come after 0120, whose two functions it replaces */
+{
+  const fs = require('fs'), path = require('path');
+  const dir = path.join(__dirname, '..', 'supabase', 'migrations');
+  const files = fs.readdirSync(dir).filter(f => /^\d{4}_.*\.sql$/.test(f)).sort();
+  const last = re => files.filter(f => re.test(fs.readFileSync(path.join(dir, f), 'utf8'))).pop();
+  t.check(last(/create or replace function ow_push_recipients\(/) === '0127_owner_app.sql', 'in number order, 0127 is the last word on ow_push_recipients, so the shop_task_off filter holds');
+  t.check(last(/create or replace function ow_owner_digest\(/) === '0127_owner_app.sql' && last(/cron\.schedule\('ow-owner-digest'/) === '0127_owner_app.sql', 'and on the digest and its hourly schedule');
+  t.check(last(/create or replace function has_task\(/) === '0127_owner_app.sql', 'and on has_task');
+  t.check(/RUN AFTER 0120[\s\S]*If 0120\s+-- is ever run again, run this file again after it/.test(sql), 'its header says to run it after 0120, and again after any re-run of 0120');
+  const has = fn('has_task');
+  t.check(/create or replace function has_task\(p_shop_id uuid, p_task text\)\s+returns boolean\s+language sql\s+security definer\s+stable\s+set search_path = public/.test(has),
+    'has_task keeps its signature, security definer and stable, as the policies of 0113-0126 expect');
+  const k = fn('app_settings_keep_role_keys');
+  t.check(/if old\.presets \? k and not new\.presets \? k then/.test(k), 'the settings guard fills a key back only when the new row leaves it out, never over a key a function set');
+}
+
 process.exit(t.done() ? 1 : 0);

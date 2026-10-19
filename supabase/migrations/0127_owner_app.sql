@@ -30,6 +30,11 @@
 --
 -- Migrations are applied by hand. Safe to run twice.
 --
+-- RUN AFTER 0120. This file replaces two of 0120's functions
+-- (ow_push_recipients, ow_owner_digest) and the digest's schedule. If 0120
+-- is ever run again, run this file again after it. The order for a fresh
+-- database: 0119, 0120, 0127, 0128, 0129.
+--
 -- CHECK AFTERWARDS:
 --   select * from shop_task_off;                          -- empty at first
 --   select has_task('YOUR-SHOP-ID', 'markup.set');        -- as a manager: true
