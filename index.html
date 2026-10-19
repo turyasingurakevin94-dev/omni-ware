@@ -65958,8 +65958,10 @@ async function invoiceOnServer(q){
     if(/invoiced already/.test(error.message || '')){ await pollForUpdatesNow({ force: true }); redrawInvoiceScreens(); }
     return 'refused';
   }
-  // The batch (invoicePickedOrders) reads this copy back.
-  q.invoiced = true;
+  /* This copy is left as it was: marked here, the read-back's own save
+     would send it up over the server's invoice and lose what the server
+     wrote on the order (invoicedBy, debtCharged, _stockTaken, _stockLots,
+     _surplusStocked). The batch reads the fresh copy by id. */
   await pollForUpdatesNow({ force: true });
   redrawInvoiceScreens();
   toastInvoiced(!!(res && res.shortOnShelf), res ? Number(res.surplusStocked) || 0 : 0);
@@ -68789,7 +68791,9 @@ async function invoicePickedOrders(ids){
   let done = 0;
   for(const q of ready){
     await toggleQuoteInvoiced(q.id);
-    if(q.invoiced){ done++; otInvoicePick.delete(q.id); }
+    // By id: the server's invoice reads the shop back as new copies.
+    const now = data.savedQuotes.find(x=> x.id === q.id);
+    if(now && now.invoiced){ done++; otInvoicePick.delete(q.id); }
   }
   renderSavedQuotes();
   otDlgDraw();

@@ -68,7 +68,10 @@ t.check(orderCheckingGate({ ...big, items: [{ ...big.items[0], qty: 4 }] }) === 
   t.check(srv.indexOf('await saveData()') < srv.indexOf("rpc('invoice_order'"), 'this copy goes up first, so the order is invoiced as it stands here');
   t.check(/rpc\('invoice_order', \{ p_shop_id: currentShopId, p_quote_id: q\.id \}\)/.test(srv), 'by the same function the Manager and the 24-hour run use');
   t.check(/error\.code === 'PGRST202' \|\| error\.code === '42883'\) return 'missing'/.test(srv), 'a database without 0119 is the only fall-back');
-  t.check(/pollForUpdatesNow\(\{ force: true \}\)/.test(srv) && /q\.invoiced = true;/.test(srv), 'then the shop is read back, and the batch sees it invoiced');
+  t.check(/pollForUpdatesNow\(\{ force: true \}\)/.test(srv), 'then the shop is read back');
+  t.check(!/q\.invoiced\s*=/.test(srv), 'without marking this copy first -- the read-back\'s save would send it up over the server\'s invoice');
+  const batch = extractFunction(src, 'invoicePickedOrders', 'index.html');
+  t.check(/const now = data\.savedQuotes\.find\(x=> x\.id === q\.id\);\s+if\(now && now\.invoiced\)/.test(batch), 'and the batch counts what is invoiced from the fresh copy, by id');
   const poll = extractFunction(src, 'pollForUpdatesNow', 'index.html');
   t.check(/const force = !!\(opts && opts\.force\);/.test(poll) && /if\(!force\)\{\s+if\(document\.querySelector\('\.modal-overlay\.show'\)\) return;/.test(poll),
     'that read-back is not held off by the hands-on-the-screen guards');
