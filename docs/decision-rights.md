@@ -476,6 +476,7 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0132 | The supplier app: supplier accounts, sessions, answers and price proposals (was 0109 on its branch, which main had already used) |
 | 0133 | A supplier's answer from the supplier app pushes the Buyer (`supplier.confirm`) |
 | 0134 | Pushes for the Buyer's other four hand-offs (paper bill, details to fix, item switched, yard note) |
+| 0135 | A new customer's id past C999: invoicing (0119) and `next_entity_id` (0032) no longer cut C1000 to C100 |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.
