@@ -77,7 +77,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, ctPlace, ctPay, counterDockHTML, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, ctPlace, ctPay, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -249,6 +249,19 @@ matrix.forEach(([what, it]) => {
     X.S.data.savedQuotes = [{ id: 41 }];
     X.S.draft = { ...X.newDraft(null), counter: true, items: [X.makeLine('P1', null, 10, { lineId: 1 })] };
     t.check(/Slide · paid/.test(X.counterDockHTML()), 'all from the shelf at the shop’s price: one slide, paid');
+    const dk = X.counterDockHTML(), tot = X.pricedView(X.draftQuote()).total;
+    t.check(/THEY GAVE/.test(dk) && /data-act="ctgiven"/.test(dk) && /CHANGE/.test(dk), 'cash: what they gave, as one tap each, and the change');
+    X.S.draft.given = Math.ceil(tot / 5000) * 5000 + 5000;
+    t.check(X.counterDockHTML().includes(X.n0(X.S.draft.given - tot)), 'the change is what they gave less the total');
+    X.S.draft.payMethod = 'momo';
+    t.check(!/THEY GAVE/.test(X.counterDockHTML()), 'no change to give on MoMo');
+    X.S.draft.payMethod = 'cash'; X.S.draft.given = null;
+    t.check(/ON THE COUNTER/.test(X.PAGE.counter()) && /all at the shop’s price/.test(X.PAGE.counter()), 'the counter screen lists the lines, at the shop’s price');
+    const keep = X.S.draft; X.S.draft = { ...X.newDraft(null), counter: true };
+    const empty = X.PAGE.counter();
+    t.check(/Sells most at the counter/.test(empty) && /data-act="ctadd"/.test(empty) && /Nothing on the counter yet/.test(empty), 'an empty counter offers the shelf, one tap each');
+    t.check(!/data-pid="P2"/.test(empty), 'only what is on our own shelf');
+    X.S.draft = keep;
     const id = await X.ctPlace(X.S.draft);
     const placed = db.tables.saved_quotes.find(r => r.id === id);
     t.check(placed && placed.payload.counter === true && placed.status === 'draft', 'it is placed as a counter sale (the gate moves a shelf-only order on by itself)');
@@ -257,6 +270,10 @@ matrix.forEach(([what, it]) => {
     t.check(rc && rc.type === 'receipt' && rc.account === 'cash' && rc.quote_id === id && rc.amount === r.total && r.total > 0, 'one cash receipt on the sale, for the whole of it');
     t.check(row.status === 'completed' && row.amount_paid === r.total && row.payload.payments.length === 1 && row.payload.payments[0].cashTxnId === rc.id, 'the sale is at Delivered, paid in full, the payment on it');
     t.check(db.writes.some(w => w[0] === 'rpc' && w[1] === 'invoice_order' && w[2].p_quote_id === id) && row.invoiced === true && r.invoice === 'INV-' + String(id).padStart(4, '0'), 'and invoiced through invoice_order, never a copy of it');
+    X.S.stack = [];
+    X.ctLand(id, r, 'cash', r.total + 1000);
+    const done = X.PAGE.counterdone(X.S.stack[X.S.stack.length - 1].args);
+    t.check(/INVOICED/.test(done) && /GIVE BACK/.test(done) && done.includes(X.n0(1000)) && done.includes(r.invoice), 'sold, paid, invoiced: the change to give back and the invoice');
     X.S.draft = { ...X.newDraft(null), counter: true, items: [X.makeLine('P2', 0, 5, { lineId: 1 })] };
     t.check(/isn’t all on the shelf/.test(X.counterDockHTML()) && !/data-slide="counter"/.test(X.counterDockHTML()), 'a line bought in from a supplier is no counter sale: it becomes an order');
     const it = X.makeLine('P1', null, 10, { lineId: 1 });
