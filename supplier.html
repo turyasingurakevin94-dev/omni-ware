@@ -17,6 +17,7 @@
      one lit red button for the next move, money in tabular mono. Every
      colour answers one question: ground/ink, state (green good, amber needs
      you, crimson none/late), action (red), or what an item is (tile tints). */
+  :root{--z:1;--vh:calc(100vh / var(--z));}
   :root{
     --ground:#F4F1EC; --paper:#FFFFFF; --ink:#1C2233; --ink2:#5F6980; --cap:#767F91;
     --hair:#F1EEE8; --rule:#E6E3DD; --sunk:#EAE6DF;
@@ -32,7 +33,7 @@
   html,body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--f);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
   button{font-family:inherit;color:inherit}
   a{color:inherit;text-decoration:none}
-  .app{max-width:480px;margin:0 auto;min-height:100vh;position:relative;padding-bottom:110px}
+  .app{max-width:480px;margin:0 auto;min-height:var(--vh);position:relative;padding-bottom:110px}
   .app.no-tabs{padding-bottom:28px}
   .app.has-dock{padding-bottom:190px}
   .fig{font-family:var(--m);font-variant-numeric:tabular-nums;letter-spacing:-.03em}
@@ -129,6 +130,8 @@
   .line{padding:12px;display:flex;flex-direction:column;gap:10px;animation:rise .4s ease-out both}
   .line.out{background:#FBF8F6;box-shadow:inset 0 0 0 1.5px rgba(142,42,34,.28)}
   .line.newp{background:linear-gradient(170deg,#fff,#FFFBF6);box-shadow:0 12px 24px -14px rgba(149,83,12,.35),inset 0 0 0 1.5px rgba(149,83,12,.35)}
+  .clamp2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+  .variant{display:inline-flex;align-items:center;min-height:24px;padding:2px 9px;border-radius:8px;background:var(--ground);box-shadow:inset 0 0 0 1px rgba(14,21,48,.08);font-size:13px;font-weight:600;color:var(--ink2);line-height:1.25}
   .pricebtn{align-self:flex-start;display:flex;align-items:center;gap:6px;min-height:28px;border:0;background:none;padding:0;font:600 13px var(--m);color:var(--ink2);cursor:pointer}
   .pricebtn .q{font-size:15px;color:var(--ink)}
   .pencil{width:22px;height:22px;border-radius:7px;background:var(--ground);display:flex;align-items:center;justify-content:center}
@@ -388,6 +391,13 @@ function shopId(){
 // there: signing in finds the shop from the phone.
 const NATIVE = typeof window !== 'undefined' && !!window.Capacitor;
 const DEMO = new URLSearchParams(location.search).has('demo') || (!shopId() && !NATIVE);
+/* Bigger on a phone. The screens were drawn at 390 points across; most
+   suppliers' phones are 360, where everything came out small with half
+   the screen empty. The whole page scales up together, so nothing moves
+   relative to anything else; full-height screens use --vh (100vh scales
+   with zoom), and the swipe divides the finger's travel by ZOOM. */
+const ZOOM = Math.min(window.innerWidth || 390, (window.screen && screen.width) || 390) < 430 ? 1.15 : 1;
+if(ZOOM !== 1){ document.documentElement.style.zoom = ZOOM; document.documentElement.style.setProperty('--z', ZOOM); }
 function deviceId(){
   let d = store(K_DEV);
   if(!d){
@@ -634,7 +644,7 @@ ROUTES.signin = function(){
   const keys = ['1','2','3','4','5','6','7','8','9'].map(k=> `<button data-a="pinKey" data-k="${k}">${k}</button>`).join('');
   const title = ok ? 'Welcome' + (SI.name ? ', ' + esc(firstName(SI.name)) : '') : 'Your 4-digit PIN';
   const hint = SI.msg || (ok ? 'You stay signed in for 30 days' : 'From the shop, on WhatsApp · 5 tries');
-  return `<div style="min-height:100vh;display:flex;flex-direction:column;background:#0B1122;color:#fff;position:relative;overflow:hidden">
+  return `<div style="min-height:var(--vh);display:flex;flex-direction:column;background:#0B1122;color:#fff;position:relative;overflow:hidden">
     <span class="g a" aria-hidden="true" style="position:absolute;border-radius:999px;left:-110px;top:-120px;width:440px;height:440px;background:radial-gradient(circle,rgba(64,82,152,.85) 0%,rgba(64,82,152,0) 65%)"></span>
     <span aria-hidden="true" style="position:absolute;border-radius:999px;right:-150px;top:140px;width:400px;height:400px;background:radial-gradient(circle,rgba(201,58,48,.28) 0%,rgba(201,58,48,0) 65%)"></span>
     <div style="position:relative;padding:calc(28px + env(safe-area-inset-top)) 24px 0;display:flex;align-items:center;gap:10px">
@@ -734,8 +744,8 @@ ROUTES.today = async function(){
         ${lines.length ? `<div style="display:grid;grid-template-columns:repeat(${Math.min(4, lines.length)},minmax(0,1fr));gap:6px">${lines.slice(0,4).map(l=>{ const [i,c] = itemIcon(l.name); return `<span class="${c}" style="height:74px;border-radius:18px;box-shadow:inset 0 0 0 1px rgba(14,21,48,.06);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px">${ic(i,24,1.9)}<b class="fig" style="font-size:13px;font-weight:600;color:var(--ink)">${esc(l.qty)}${/ctn|carton|box|bundle/i.test(l.unit) ? ' ' + esc(l.unit) : ''}</b></span>`; }).join('')}</div>` : ''}
         ${lines.length > 4 ? `<div class="t2">+${lines.length - 4} more</div>` : ''}
         <span style="height:1px;background:linear-gradient(90deg,rgba(14,21,48,0),rgba(14,21,48,.1) 20%,rgba(14,21,48,.1) 80%,rgba(14,21,48,0))"></span>
-        <div class="top"><span class="grow" style="display:flex;flex-direction:column;gap:3px"><span class="cap dk">At your prices</span><span class="fig" style="font-size:28px;font-weight:600;line-height:1">${money(a.total)}</span></span>
-          <span class="btn btn-red">Answer${ic('go',18,2.4)}</span></div>
+        <div style="display:flex;flex-direction:column;gap:12px"><span style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><span class="cap dk">At your prices</span><span class="fig" style="font-size:28px;font-weight:600;line-height:1">${money(a.total)}</span></span>
+          <span class="btn btn-red block">Answer${ic('go',18,2.4)}</span></div>
       </a>`;
   }else if(checks.length){
     const p = checks[0];
@@ -835,11 +845,13 @@ ROUTES.order = async function(id){
         const out = !!st.not[l.lineId], np = st.price[l.lineId];
         const price = np || l.price;
         return `<div class="card line ${out ? 'out' : np ? 'newp' : ''}">
-          <div class="top">${tile(l.name, 'lg', 24).replace('class="tile lg', `style="opacity:${out?.5:1}" class="tile lg`)}
-            <span class="grow" style="display:flex;flex-direction:column;gap:3px"><b class="trunc" style="font-size:15px;${out?'color:var(--ink2)':''}" title="${esc(l.name)}">${esc(l.name)}</b>
-              ${out ? `<span class="fig t2" style="text-decoration:line-through;font-size:13px">${esc(l.qty)} ${esc(l.unit)} × ${money(l.price)}</span>`
-                : `<button class="pricebtn" data-a="editPrice" data-o="${esc(id)}" data-l="${esc(l.lineId)}" aria-label="Change the price of ${esc(l.name)}"><span class="q">${esc(l.qty)} ${esc(l.unit)}</span>× ${np ? `<s style="color:var(--cap)">${money(l.price)}</s><span class="newchip">${money(np)}</span>` : money(l.price)}<span class="pencil">${ic('pencil',12,2.2)}</span></button>`}</span>
-            <b class="fig" style="font-size:15px;font-weight:600;flex:none;${out?'color:var(--crimson)':''}">${out ? 'none' : money(l.qty * price)}</b></div>
+          <div class="top" style="align-items:flex-start">${tile(l.name, 'lg', 24).replace('class="tile lg', `style="opacity:${out?.5:1}" class="tile lg`)}
+            <span class="grow" style="display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0"><b class="clamp2" style="font-size:16px;line-height:1.25;${out?'color:var(--ink2)':''}">${esc(l.name)}</b>
+              ${l.variant ? `<span class="variant">${esc(l.variant)}</span>` : ''}</span></div>
+          <div class="top" style="justify-content:space-between;gap:8px">
+            ${out ? `<span class="fig t2" style="text-decoration:line-through;font-size:14px">${esc(l.qty)} ${esc(l.unit)} × ${money(l.price)}</span>`
+              : `<button class="pricebtn" data-a="editPrice" data-o="${esc(id)}" data-l="${esc(l.lineId)}" aria-label="Change the price of ${esc(l.name)}${l.variant ? ', ' + esc(l.variant) : ''}"><span class="q">${esc(l.qty)}&nbsp;${esc(l.unit)}</span>× ${np ? `<s style="color:var(--cap)">${money(l.price)}</s><span class="newchip">${money(np)}</span>` : money(l.price)}<span class="pencil">${ic('pencil',12,2.2)}</span></button>`}
+            <b class="fig" style="font-size:16px;font-weight:600;flex:none;${out?'color:var(--crimson)':''}">${out ? 'none' : money(l.qty * price)}</b></div>
           <div class="seg"><button class="${out ? '' : 'have'}" data-a="haveLine" data-o="${esc(id)}" data-l="${esc(l.lineId)}" aria-pressed="${!out}">${ic('check',18,2.8)}${out ? 'I have it' : np ? 'Have it · new price' : 'Have it'}</button><button class="${out ? 'not' : ''}" data-a="notLine" data-o="${esc(id)}" data-l="${esc(l.lineId)}" aria-pressed="${out}" aria-label="I don't have ${esc(l.name)}">${ic('close',17,2.8)}</button></div>
         </div>`;
       }).join('')}
@@ -863,7 +875,7 @@ function priceSheet(id, o, st){
   const quick = [['Same', l.price], ['+500', l.price + 500], ['+1,000', l.price + 1000]];
   return `<div class="scrim" data-a="closePrice" data-o="${esc(id)}"></div>
   <div class="sheet" role="dialog" aria-label="New price for ${esc(l.name)}"><div class="grab"></div>
-    <div class="top">${tile(l.name,'lg',26)}<span class="grow"><b style="font-size:19px;display:block" class="trunc">${esc(l.name)}</b><span class="t2" style="font-size:13px">The shop wants <span class="fig" style="color:var(--ink)">${esc(l.qty)} ${esc(l.unit)}</span></span></span><button class="roundbtn" data-a="closePrice" data-o="${esc(id)}" aria-label="Close">${ic('close',14,2.8)}</button></div>
+    <div class="top">${tile(l.name,'lg',26)}<span class="grow"><b style="font-size:19px;display:block;line-height:1.25" class="clamp2">${esc(fullName(l))}</b><span class="t2" style="font-size:13px">The shop wants <span class="fig" style="color:var(--ink)">${esc(l.qty)} ${esc(l.unit)}</span></span></span><button class="roundbtn" data-a="closePrice" data-o="${esc(id)}" aria-label="Close">${ic('close',14,2.8)}</button></div>
     <div class="pricecard"><span class="g" aria-hidden="true"></span>
       <span class="top" style="justify-content:space-between"><span class="cap">New price · 1 ${esc(l.unit || 'unit')}</span><span class="fig" style="font-size:13px;color:rgba(255,255,255,.45)">was <s>${money(l.price)}</s></span></span>
       <span class="top"><span class="bigprice">${v ? money(v) : '0'}<span class="caret"></span></span>${diff ? `<span class="chip" style="margin-left:auto;background:rgba(245,178,107,.16);box-shadow:inset 0 0 0 1px rgba(245,178,107,.3);color:var(--gold);font-family:var(--m);height:30px">${ic(diff > 0 ? 'up' : 'up',12,3).replace('<svg', diff < 0 ? '<svg style="transform:rotate(180deg)"' : '<svg')}${money(Math.abs(diff))}</span>` : ''}</span>
@@ -884,7 +896,7 @@ function keypad(action, extra){
 function sentScreen(id, o, st, m){
   const lines = o.lines || [];
   const stampTxt = st.queued ? 'SAVED' : 'SENT';
-  return `<div style="min-height:100vh;background:#0B1122;color:#fff;position:relative;overflow:hidden;display:flex;flex-direction:column">
+  return `<div style="min-height:var(--vh);background:#0B1122;color:#fff;position:relative;overflow:hidden;display:flex;flex-direction:column">
     <span aria-hidden="true" style="position:absolute;border-radius:999px;left:-110px;top:-120px;width:440px;height:440px;background:radial-gradient(circle,rgba(64,82,152,.8) 0%,rgba(64,82,152,0) 65%)"></span>
     <span aria-hidden="true" style="position:absolute;border-radius:999px;left:50%;top:20px;width:340px;height:340px;margin-left:-170px;background:radial-gradient(circle,rgba(111,220,176,.26) 0%,rgba(111,220,176,0) 62%)"></span>
     <div style="position:relative;padding:calc(48px + env(safe-area-inset-top)) 24px 0;display:flex;flex-direction:column;align-items:center;gap:16px">
@@ -894,7 +906,7 @@ function sentScreen(id, o, st, m){
     <div class="slip" style="margin:24px 30px 0;transform:rotate(-1.2deg);animation:rise .7s .4s cubic-bezier(.2,.8,.3,1) both">
       <div class="paper" style="border-radius:14px 14px 0 0;gap:8px">
         <span style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--cap)"><span>ORDER #${esc(id)}</span><span>${clock(st.at || Date.now())}</span></span>
-        ${lines.map(l=>{ const out = !!st.not[l.lineId], np = st.price[l.lineId]; return `<span style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;${out?'color:var(--cap)':''}">${out ? ic('close',16,3,'#8E2A22') : ic('check',16,3,'#0F6B43')}<span class="grow trunc" style="${out?'text-decoration:line-through':''}">${esc(l.name)}${np ? ` · <span class="fig" style="color:var(--amber-ink)">${money(np)}</span>` : ''}</span><span class="fig">${out ? 0 : esc(l.qty)}</span></span>`; }).join('')}
+        ${lines.map(l=>{ const out = !!st.not[l.lineId], np = st.price[l.lineId]; return `<span style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;${out?'color:var(--cap)':''}">${out ? ic('close',16,3,'#8E2A22') : ic('check',16,3,'#0F6B43')}<span class="grow trunc" style="${out?'text-decoration:line-through':''}">${esc(fullName(l))}${np ? ` · <span class="fig" style="color:var(--amber-ink)">${money(np)}</span>` : ''}</span><span class="fig">${out ? 0 : esc(l.qty)}</span></span>`; }).join('')}
         <span class="dash" style="margin-top:4px;padding-top:10px;display:flex;align-items:baseline;justify-content:space-between"><b style="font-size:13px;color:var(--ink2)">To you</b><b class="fig" style="font-size:24px;font-weight:600">${money(m.total)}</b></span>
         <span class="stamp ${st.queued ? 'amber' : ''}" style="left:18px;bottom:-34px;z-index:2">${stampTxt}</span>
       </div>${edge('bottom', '#FBF8F2')}
@@ -916,7 +928,7 @@ ROUTES.trip = async function(id){
   if(t.status === 'confirmed' || t.status === 'collected'){
     const counted = t.status === 'confirmed';
     const shortN = lines.filter(l=> l.counted != null && l.counted < l.sent).length;
-    return `<div style="min-height:100vh;background:#0B1122;color:#fff;position:relative;overflow:hidden;padding-bottom:30px">
+    return `<div style="min-height:var(--vh);background:#0B1122;color:#fff;position:relative;overflow:hidden;padding-bottom:30px">
       <span aria-hidden="true" style="position:absolute;border-radius:999px;left:-120px;top:-120px;width:440px;height:440px;background:radial-gradient(circle,rgba(64,82,152,.8) 0%,rgba(64,82,152,0) 65%)"></span>
       <span aria-hidden="true" style="position:absolute;border-radius:999px;right:-150px;bottom:60px;width:420px;height:420px;background:radial-gradient(circle,rgba(111,220,176,.2) 0%,rgba(111,220,176,0) 65%)"></span>
       <div style="position:relative;padding:calc(14px + env(safe-area-inset-top)) 16px 0" class="top"><a class="glassbtn" href="#today" aria-label="Back">${ic('back',20,2.4)}</a>
@@ -997,7 +1009,7 @@ ROUTES.check = async function(){
   const per = p.unitPrice != null ? (p.unit || 'unit') : (p.packUnit || 'pack');
   const price = p.unitPrice != null ? p.unitPrice : p.packPrice;
   const tiers = p.tiers || [];
-  return `<div style="min-height:100vh;display:flex;flex-direction:column;position:relative;overflow:hidden">
+  return `<div style="min-height:var(--vh);display:flex;flex-direction:column;position:relative;overflow:hidden">
     <span aria-hidden="true" style="position:absolute;left:50%;top:120px;width:420px;height:420px;margin-left:-210px;border-radius:999px;background:radial-gradient(circle,rgba(58,63,155,.14) 0%,rgba(58,63,155,0) 65%)"></span>
     <div class="top" style="position:relative;padding:calc(14px + env(safe-area-inset-top)) 16px 0"><a class="roundbtn" href="#today" aria-label="Close">${ic('close',16,2.6)}</a>
       <span class="progress" style="grid-template-columns:repeat(${n},minmax(0,1fr))">${CK.list.map((_, i)=> `<i class="${i < CK.i ? 'd' : i === CK.i ? 'n' : ''}"></i>`).join('')}</span><span class="fig t2" style="font-size:14px">${CK.i + 1}/${n}</span></div>
@@ -1025,7 +1037,7 @@ function priceDone(d, results){
   const fresh = items.filter(p=> !isStale(p)).length;
   const left = groupItems(items.filter(isStale)).length;
   const stamp = (r)=> r.kind === 'same' ? ['SAME','#6FDCB0'] : r.kind === 'out' ? ['OUT','#F0A39B'] : ['SHOP CHECKS','#F5B26B'];
-  return `<div style="min-height:100vh;background:#0B1122;color:#fff;position:relative;overflow:hidden;display:flex;flex-direction:column">
+  return `<div style="min-height:var(--vh);background:#0B1122;color:#fff;position:relative;overflow:hidden;display:flex;flex-direction:column">
     <span aria-hidden="true" style="position:absolute;border-radius:999px;left:-110px;top:-130px;width:440px;height:440px;background:radial-gradient(circle,rgba(64,82,152,.8) 0%,rgba(64,82,152,0) 65%)"></span>
     <span aria-hidden="true" style="position:absolute;border-radius:999px;left:50%;top:40px;width:340px;height:340px;margin-left:-170px;background:radial-gradient(circle,rgba(111,220,176,.24) 0%,rgba(111,220,176,0) 62%)"></span>
     <div style="position:relative;padding:calc(56px + env(safe-area-inset-top)) 20px 0;display:flex;flex-direction:column;align-items:center;gap:18px">
@@ -1063,7 +1075,7 @@ function priceEditor(g, opt){
     </button>`;
   };
   const back = opt.from === 'check' ? `data-a="ckBack"` : `href="#prices"`;
-  return `<div style="min-height:100vh;display:flex;flex-direction:column">
+  return `<div style="min-height:var(--vh);display:flex;flex-direction:column">
     <div class="top" style="padding:calc(14px + env(safe-area-inset-top)) 16px 0"><${opt.from === 'check' ? 'button' : 'a'} class="roundbtn" ${back} aria-label="Back">${ic('back',18,2.4)}</${opt.from === 'check' ? 'button' : 'a'}>
       ${opt.from === 'check' ? `<span class="progress" style="grid-template-columns:repeat(${CK.list.length},minmax(0,1fr))">${CK.list.map((_, i)=> `<i class="${i < CK.i ? 'd' : i === CK.i ? 'n' : ''}"></i>`).join('')}</span><span class="fig t2" style="font-size:14px">${CK.i + 1}/${CK.list.length}</span>` : `<b class="grow" style="font-size:17px">New price</b>`}</div>
     <div class="pad">
@@ -1118,7 +1130,7 @@ ROUTES.prices = async function(){
     const price = p.unitPrice != null ? p.unitPrice : p.packPrice;
     return `<div class="row" style="min-height:64px">
       <a href="#price/${p.priceId}" class="top grow" style="gap:12px;min-height:64px" aria-label="${esc(p.name)}, change price">${p.outOfStock ? `<span class="tile t-slate" style="opacity:.6">${ic(itemIcon(p.name)[0],21,1.9)}</span>` : tile(p.name)}
-        <span class="grow" style="display:flex;flex-direction:column;gap:3px"><b class="trunc" style="font-size:14px;${p.outOfStock?'color:var(--cap)':''}">${esc(p.name)}</b><span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:${status[1]}">${status[2] === 'dot' ? `<i class="dot" style="background:${status[1]}"></i>` : ic('clock',12,2.6)}${esc(status[0])}</span></span>
+        <span class="grow" style="display:flex;flex-direction:column;gap:3px"><b class="clamp2" style="font-size:14px;line-height:1.25;${p.outOfStock?'color:var(--cap)':''}">${esc(p.name)}</b><span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:${status[1]}">${status[2] === 'dot' ? `<i class="dot" style="background:${status[1]}"></i>` : ic('clock',12,2.6)}${esc(status[0])}</span></span>
         ${p.outOfStock ? '' : `<span style="display:flex;flex-direction:column;align-items:flex-end;gap:1px"><b class="fig" style="font-size:16px;font-weight:600">${price != null ? money(price) : '—'}</b><span class="t2" style="font-size:11px">${p.unitPrice != null ? esc(p.unit) : esc(p.packUnit)}${p.unitPrice != null && p.packPrice != null && p.packUnit ? ' · ' + short(p.packPrice) + ' ' + esc(p.packUnit) : ''}</span></span>`}</a>
       ${p.outOfStock ? `<button class="sw" role="switch" aria-checked="false" aria-label="${esc(p.name)} in stock" data-a="stockToggle" data-id="${p.priceId}"></button>` : ''}
     </div>`;
@@ -1210,9 +1222,9 @@ ROUTES.bill = async function(label){
   const paid = b.balance === 0;
   const pays = (m.payments || []).filter(p=> p.bill === b.label);
   const onTime = paid && b.lastPaid && b.due ? b.lastPaid <= b.due : null;
-  return `<div style="min-height:100vh;background:#0B1122;position:relative;overflow:hidden">
+  return `<div style="min-height:var(--vh);background:#0B1122;position:relative;overflow:hidden">
     <a href="#money" aria-label="Back to Money" style="position:absolute;inset:0 0 auto 0;height:58px"></a>
-    <div class="sheet" style="position:relative;left:auto;transform:none;margin:58px auto 0;max-height:none;min-height:calc(100vh - 58px);animation:rise .4s ease-out both">
+    <div class="sheet" style="position:relative;left:auto;transform:none;margin:58px auto 0;max-height:none;min-height:calc(var(--vh) - 58px);animation:rise .4s ease-out both">
       <div class="grab"></div>
       <div class="top"><span class="shopbadge">${esc(initials(SHOP_NAME))}</span><span class="grow"><b style="font-size:19px;display:block">Bill <span class="fig">${esc(b.label)}</span></b><span class="t2" style="font-size:13px">${esc(fmtDay(b.date))}</span></span><a class="roundbtn" href="#money" aria-label="Close">${ic('close',14,2.8)}</a></div>
       <div class="slip" style="filter:drop-shadow(0 18px 24px rgba(14,21,48,.16)) drop-shadow(0 3px 5px rgba(14,21,48,.06))">
@@ -1463,7 +1475,7 @@ document.addEventListener('pointerdown', (e)=>{
 });
 document.addEventListener('pointermove', (e)=>{
   if(!drag || e.pointerId !== drag.id) return;
-  drag.dx = Math.max(0, Math.min(drag.max, e.clientX - drag.x0));
+  drag.dx = Math.max(0, Math.min(drag.max, (e.clientX - drag.x0) / ZOOM));
   drag.th.style.transform = `translateX(${drag.dx}px)`;
   drag.w.querySelector('.trail').style.width = (drag.dx + 64) + 'px';
   drag.w.querySelector('.lbl').style.opacity = String(1 - drag.dx / drag.max);
@@ -1517,6 +1529,8 @@ async function pinPress(k){
    at 0) or none. A changed price rides along in the answer's own words,
    which the shop sees on the order, and as a proposal on the item when
    this phone knows which price row the line came from. */
+// An order line's name with its variant, for anywhere it is said in one go.
+function fullName(l){ return l.name + (l.variant ? ' · ' + l.variant : ''); }
 async function answerOrder(id){
   const o = S.cache['order:' + id]; const st = orderState(id);
   if(!o || o.open === false) return;
@@ -1525,7 +1539,7 @@ async function answerOrder(id){
   const state = outIds.length === 0 ? 'confirmed' : outIds.length === lines.length ? 'none' : 'short';
   const changes = state === 'short' ? outIds.map(lid=> ({ lineId: lid, have: 0 })) : [];
   const priced = lines.filter(l=> st.price[l.lineId] && !st.not[l.lineId]);
-  const note = priced.length ? ('New price: ' + priced.map(l=> l.name + ' ' + money(st.price[l.lineId]) + ' (was ' + money(l.price) + ')').join('; ')).slice(0, 300) : '';
+  const note = priced.length ? ('New price: ' + priced.map(l=> fullName(l) + ' ' + money(st.price[l.lineId]) + ' (was ' + money(l.price) + ')').join('; ')).slice(0, 300) : '';
   try{
     const r = await send('answer', { orderId:Number(id), state, terms:o.terms, changes, note }, 'Order #' + id + ' · ' + (state === 'confirmed' ? 'have all' : state === 'none' ? 'none' : outIds.length + ' out'));
     if(priced.length){
@@ -1533,7 +1547,7 @@ async function answerOrder(id){
       try{ prods = await load('products', 'products'); }catch(_){ prods = null; }
       for(const l of priced){
         const row = prods && (prods.items || []).find(p=> l.productId != null && String(p.productId) === String(l.productId) && (p.variantIdx == null ? l.variantIdx == null : Number(p.variantIdx) === Number(l.variantIdx)));
-        if(row){ try{ await send('price', { priceId: row.priceId, unitPrice: st.price[l.lineId], lines: [] }, 'New price · ' + l.name); row.proposal = { kind:'price', status:'pending' }; }catch(_){} }
+        if(row){ try{ await send('price', { priceId: row.priceId, unitPrice: st.price[l.lineId], lines: [] }, 'New price · ' + fullName(l)); row.proposal = { kind:'price', status:'pending' }; }catch(_){} }
       }
     }
     st.sent = state; st.queued = !!r.queued; st.at = Date.now();
@@ -1585,7 +1599,7 @@ function demoData(t){
   );
   const lines = [
     { lineId:1, productId:'g28-3', variantIdx:0, name:'Iron sheet G28 · 3m red', qty:60, unit:'sheet', price:38500, total:2310000 },
-    { lineId:2, productId:'ridge', variantIdx:0, name:'Ridge cap G28 red', qty:12, unit:'pc', price:24000, total:288000 },
+    { lineId:2, productId:'ridge', variantIdx:0, name:'Ridge cap G28', variant:'Red / Half round', qty:12, unit:'pc', price:24000, total:288000 },
     { lineId:3, productId:'screw', variantIdx:null, name:'Roofing screws 2"', qty:2, unit:'ctn', price:330000, total:660000 },
     { lineId:4, productId:'gutter', variantIdx:null, name:'Gutter 4" · 3m', qty:10, unit:'pc', price:32000, total:320000 },
   ];

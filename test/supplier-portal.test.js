@@ -29,6 +29,7 @@ const accounts = read('supabase/functions/supplier-accounts/index.ts');
 const clientPortal = read('supabase/functions/client-portal/index.ts');
 const page = read('supplier.html');
 const index = read('index.html');
+const buyer = read('buyer.html');
 const migration = read('supabase/migrations/0132_supplier_accounts.sql');
 
 // Comments name every forbidden column on purpose; the code must not.
@@ -206,6 +207,44 @@ const accountsCode = codeOnly(accounts);
     'the shop id is returned only after the PIN has been checked');
   t.check(/const DEMO = [^\n]*\(!shopId\(\) && !NATIVE\)/.test(page) && /store\(K_SHOP, r\.shopId\)/.test(page),
     'inside the app no shop is not demo mode, and the shop from sign-in is kept');
+}
+
+/* ---------- 10. an order reaches the supplier, named and answered ---- */
+{
+  // Chosen is enough: the supplier sees every order still in Checking
+  // with a line that names them, without waiting for the shop's ask.
+  const asks = extractFunction(portalCode, 'readAsks', 'supplier-portal');
+  t.check(!/askedAt\s*;?\s*\n?\s*\}\);/.test(asks) && !/&&\s*!!rec\.askedAt/.test(asks),
+    'an order shows the moment the supplier is chosen, not only after the shop asks');
+
+  // Which one of the item: the shop stores a variant as { combo }.
+  const tsFree = stripTypeScriptTypes(
+    portal.replace(/^import[^\n]*\n/m, '').replace(/^export function /gm, 'function '), { mode: 'strip' });
+  const variantText = new Function(`${extractFunction(tsFree, 'variantText', 'supplier-portal')}\nreturn variantText;`)();
+  t.check(variantText({ combo: { Bend: 'Half Bend(Type B)' } }) === 'Half Bend(Type B)'
+    && variantText({ combo: { Colour: 'Red', Length: '3m' } }) === 'Red / 3m'
+    && variantText({ label: 'Old' }) === 'Old' && variantText(null) === '',
+    'a variant is named from its combo, as the shop\'s apps name it');
+  t.check(/variant:/.test(extractFunction(portal, 'lineView', 'supplier-portal')) && /lineView\(it, variants\)/.test(portalCode),
+    'an order line carries its variant, so the supplier knows which one');
+  t.check(/variantText\(prod\.variants\[vi\]\)/.test(portalCode), 'and so does each row of their price list');
+  t.check(/l\.variant \? `<span class="variant">/.test(page), 'the app shows the variant under the item\'s name');
+
+  // The answer reaches the Buyer, who records it (decision-rights:
+  // supplier.confirm), on the Buyer app's own reads.
+  t.check(/from\('supplier_answers'\)/.test(buyer) && /async function readAppAnswers/.test(buyer),
+    'the Buyer app reads answers from the supplier app');
+  const fold = extractFunction(buyer, 'readAppAnswers', 'buyer.html');
+  t.check(/a\.terms === orderSupplierTerms\(q, sid\)/.test(fold) && /q\.status === 'draft'/.test(fold) && /changeOrder\(/.test(fold)
+    && /setOrderSupplierConfirm\(/.test(fold) && /by: 'supplier'/.test(fold),
+    'it folds an answer only into the order the supplier saw, still in Checking, through the shop\'s own rule');
+  t.check(/readAppAnswers\(\);[\s\S]{0,40}\}\s*catch/.test(extractFunction(buyer, 'refreshLive', 'buyer.html')),
+    'and on every refresh, not just at start');
+
+  // And the Buyer is pushed when one arrives (0133).
+  const push = read('supabase/migrations/0133_supplier_answer_push.sql');
+  t.check(/after insert on supplier_answers/.test(push) && /'supplier\.confirm'/.test(push) && /'supanswer:' \|\| new\.id/.test(push),
+    'a supplier\'s answer pushes whoever records supplier answers, once');
 }
 
 process.exit(t.done() ? 1 : 0);

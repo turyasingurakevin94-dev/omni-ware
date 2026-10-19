@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * The other four things the Buyer passes on (0133): a paper bill to
+ * The other four things the Buyer passes on (0134): a paper bill to
  * Accounts, details to fix to Sourcing, an item switched to the
  * salesperson, a note on the yard's count to the Manager. Each sends a
  * push to whoever takes it, as trip cash does since 0131.
  *
  *   1. The SQL text: the trigger, the task or person each one pushes to.
  *   2. A REAL database, when OW_PG names one: every migration in order,
- *      0133 run twice, then test/fixtures/push-buyer-handoffs-scenario.sql
+ *      0134 run twice, then test/fixtures/push-buyer-handoffs-scenario.sql
  *      walks each hand-off as the Buyer.
  *
  * Run: node test/push-buyer-handoffs-db.test.js
@@ -19,8 +19,8 @@ const fs = require('fs');
 const path = require('path');
 const { read, createReporter } = require('./_extract');
 
-const t = createReporter('pushes for the buyer\'s hand-offs (0133)');
-const raw = read('supabase/migrations/0133_pushes_for_buyer_handoffs.sql');
+const t = createReporter('pushes for the buyer\'s hand-offs (0134)');
+const raw = read('supabase/migrations/0134_pushes_for_buyer_handoffs.sql');
 const sql = raw.replace(/--[^\n]*/g, '');
 
 /* ---------------- 1. each hand-off, to whom the rules say ---------------- */
@@ -40,7 +40,7 @@ const sql = raw.replace(/--[^\n]*/g, '');
   t.check(/to_regclass\('public\.buyer_handoffs'\) is null/.test(sql), 'a database without 0125 is skipped and named, not an error');
   for (const k of ["'supplierId'", "'orderId'", "'tripId'"]) t.check(sql.includes(k), `the push carries ${k} so the tap can open it`);
   t.check(/Safe to run twice/.test(raw) && /ROLLBACK/.test(raw) && /CHECK AFTERWARDS/.test(raw), 'the header says it runs twice, and how to check and roll back');
-  t.check(/\| 0133 \| /.test(read('docs/decision-rights.md')), 'docs/decision-rights.md reserves 0133 for this build');
+  t.check(/\| 0134 \| /.test(read('docs/decision-rights.md')), 'docs/decision-rights.md reserves 0134 for this build');
   const buyer = read('buyer.html');
   for (const k of ['paper_bill', 'sourcing_fix', 'item_switch', 'yard_note']) {
     t.check(new RegExp(`passOn\\('${k}'`).test(buyer), `the Buyer app still passes on ${k}`);
@@ -71,8 +71,8 @@ fs.readdirSync(migDir).filter((f) => f.endsWith('.sql')).sort().forEach((f) => {
   if (r.status !== 0) failed.push(`${f}: ${(r.stderr || '').trim().split('\n')[0]}`);
 });
 t.check(failed.length === 0, `every migration applied, in order (${JSON.stringify(failed)})`);
-const again = onDb(['-qAt', '-v', 'ON_ERROR_STOP=1', '-f', path.join(migDir, '0133_pushes_for_buyer_handoffs.sql')]);
-t.check(again.status === 0, `0133 runs a second time without error (${(again.stderr || '').trim().split('\n').filter((l) => /ERROR/.test(l))[0] || 'ok'})`);
+const again = onDb(['-qAt', '-v', 'ON_ERROR_STOP=1', '-f', path.join(migDir, '0134_pushes_for_buyer_handoffs.sql')]);
+t.check(again.status === 0, `0134 runs a second time without error (${(again.stderr || '').trim().split('\n').filter((l) => /ERROR/.test(l))[0] || 'ok'})`);
 
 const scenario = fs.readFileSync(path.join(__dirname, 'fixtures', 'push-buyer-handoffs-scenario.sql'), 'utf8');
 const run = onDb(['-qAt', '-F', '\t'], scenario);

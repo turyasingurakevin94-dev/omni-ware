@@ -1,4 +1,4 @@
--- The four hand-offs 0133 adds, asked of a real database: each one the
+-- The four hand-offs 0134 adds, asked of a real database: each one the
 -- Buyer passes on puts one push in the outbox, for the task that takes it
 -- or the salesperson on the order, never the owner and never the Buyer.
 grant all on all tables in schema public to authenticated;

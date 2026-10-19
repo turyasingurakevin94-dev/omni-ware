@@ -143,7 +143,27 @@ export function supplierTerms(payload: any, supplierId: string): string {
 
 // One line as the supplier sees it: what, how many, at THEIR price. The
 // line's sellPrice is never read — not to total, not to check.
-function lineView(it: any) {
+/* A variant's name, the way the shop's own apps write it (buyer.html
+   variantLabel): its options' values, "Half Bend(Type B)" or "Red / 3m".
+   The shop stores a variant as { combo }, so a label or name is only a
+   fallback for older rows. */
+export function variantText(v: any): string {
+  if (!v) return "";
+  const c = v.combo && typeof v.combo === "object" ? Object.values(v.combo).map(String).filter(Boolean) : [];
+  return c.length ? c.join(" / ") : String(v.label || v.name || "");
+}
+
+/* The variants of the products these lines name, for their names. */
+async function productVariants(shopId: string, items: any[]): Promise<Record<string, any[]>> {
+  const ids = Array.from(new Set(items.map(function (it: any) { return it && it.productId; }).filter(Boolean).map(String)));
+  if (!ids.length) return {};
+  const { data } = await admin.from("products").select("id, variants").eq("shop_id", shopId).in("id", ids);
+  const out: Record<string, any[]> = {};
+  (data || []).forEach(function (p: any) { out[String(p.id)] = Array.isArray(p.variants) ? p.variants : []; });
+  return out;
+}
+
+function lineView(it: any, variants?: Record<string, any[]>) {
   const qty = Number(it && it.qty) || 0;
   const price = Math.round(Number(it && it.price) || 0);
   return {
@@ -153,6 +173,9 @@ function lineView(it: any) {
     productId: it && it.productId != null ? String(it.productId) : null,
     variantIdx: it && it.variantIdx != null && it.variantIdx !== "" ? Number(it.variantIdx) : null,
     name: String((it && it.productName) || ""),
+    // Which one of the item -- the size, colour or type the shop wants.
+    variant: variants && it && it.variantIdx != null && it.variantIdx !== ""
+      ? variantText((variants[String(it.productId)] || [])[Number(it.variantIdx)]) : "",
     qty,
     unit: String((it && it.unit) || ""),
     price,
@@ -305,13 +328,13 @@ async function readSupplierPrices(shopId: string, supplierId: string) {
   return (rows || []).map(function (r: any) {
     const prod = names[r.product_id] || { name: "", category: "", variants: [] };
     const vi = r.variant_idx == null || r.variant_idx === "" ? null : Number(r.variant_idx);
-    const variant = vi != null ? prod.variants[vi] : null;
-    const variantLabel = variant ? String(variant.label || variant.name || "") : "";
+    const variantLabel = vi != null ? variantText(prod.variants[vi]) : "";
     return {
       priceId: r.id,
       productId: String(r.product_id),
       variantIdx: vi,
-      name: prod.name + (variantLabel ? " " + variantLabel : ""),
+      name: prod.name + (variantLabel ? " · " + variantLabel : ""),
+      variant: variantLabel,
       category: prod.category,
       unit: String(r.unit || ""),
       packUnit: String(r.pack_unit || ""),
@@ -393,11 +416,13 @@ async function readAsks(shopId: string, supplierId: string) {
     .eq("shop_id", shopId).eq("status", "draft").eq("voided", false);
   const mine = (orders || []).filter(function (q: any) {
     const p = q.payload || {};
-    const rec = (p.supplierConfirms || {})[String(supplierId)] || {};
-    // Only orders the shop has actually asked them about.
-    return supplierLines(p, supplierId).length > 0 && !!rec.askedAt;
+    // Every order still being checked with a line that names them, asked
+    // or not: the app is the ask, so the supplier can answer the moment
+    // they are chosen instead of waiting for the shop's WhatsApp.
+    return supplierLines(p, supplierId).length > 0;
   });
   if (!mine.length) return [];
+  const variants = await productVariants(shopId, mine.flatMap(function (q: any) { return supplierLines(q.payload || {}, supplierId); }));
   const { data: answers } = await admin
     .from("supplier_answers").select("order_id, terms, state, at")
     .eq("shop_id", shopId).eq("supplier_id", supplierId)
@@ -409,7 +434,7 @@ async function readAsks(shopId: string, supplierId: string) {
     const answered = (answers || []).some(function (a: any) { return a.order_id === q.id && a.terms === terms; })
       || (rec.state === "confirmed" && rec.terms === terms);
     if (answered) return null;
-    const lines = supplierLines(p, supplierId).map(lineView);
+    const lines = supplierLines(p, supplierId).map(function (it: any) { return lineView(it, variants); });
     return {
       orderId: q.id,
       askedAt: rec.askedAt || null,
@@ -652,6 +677,7 @@ Deno.serve(async (req) => {
       const terms = supplierTerms(q.payload, supplierId);
 
       if (action === "order") {
+        const variants = await productVariants(shopId, lines);
         const rec = ((q.payload || {}).supplierConfirms || {})[String(supplierId)] || {};
         return json({
           ok: true,
@@ -659,7 +685,7 @@ Deno.serve(async (req) => {
           open: q.status === "draft",
           askedAt: rec.askedAt || null,
           terms,
-          lines: lines.map(lineView),
+          lines: lines.map(function (it: any) { return lineView(it, variants); }),
         });
       }
 

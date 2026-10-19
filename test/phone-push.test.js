@@ -103,7 +103,7 @@ t.check(/function enablePush\(\)/.test(read('store.html')) && /push_subscription
 }
 
 {
-  // What the Buyer passes on is read by the app it is for (0125, pushed by 0131 and 0133).
+  // What the Buyer passes on is read by the app it is for (0125, pushed by 0131 and 0134).
   for (const [a, kind] of [['accounts', 'trip_cash'], ['accounts', 'paper_bill'], ['sourcing', 'sourcing_fix'], ['sales', 'item_switch'], ['manager', 'yard_note']]) {
     const src = read(`${a}.html`);
     t.check(/from\('buyer_handoffs'\)\.select|selectAll\('buyer_handoffs'/.test(src) && src.includes(`'${kind}'`), `${a}: loads the Buyer's ${kind} hand-offs`);
