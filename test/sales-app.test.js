@@ -77,7 +77,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, ctPlace, ctPay, counterDockHTML, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -102,6 +102,7 @@ function fakeDb(tables){
     from: t => new Q(t),
     rpc: async (fn, a) => {
       if (fn === 'next_row_id_blocks') { const k = a.p_kinds[0]; ids[k] = Math.max(ids[k], Number(a.p_floors[k]) || 0) + 1; return { data: { [k]: ids[k] }, error: null }; }
+      if (fn === 'invoice_order') { const q = (tables.saved_quotes || []).find(r => Number(r.id) === Number(a.p_quote_id)); writes.push(['rpc', fn, a]); if (!q || q.status !== 'completed') return { data: null, error: { message: 'Only a delivered order is invoiced.' } }; q.invoiced = true; return { data: { ok: true, invoice: 'INV-' + String(q.id).padStart(4, '0') }, error: null }; }
       if (fn === 'next_entity_id') return { data: 'C' + String(++custN).padStart(3, '0'), error: null };
       return { data: null, error: { message: 'no such rpc' } };
     } };
@@ -238,6 +239,29 @@ matrix.forEach(([what, it]) => {
     await X.ACT.srcsend();
     const ins = db.writes.find(w => w[0] === 'insert' && w[1] === 'sourcing_leads');
     t.check(ins && ins[2].status === 'asked' && ins[2].name === 'Solar water pump 1hp' && /^SRC-/.test(ins[2].id) && ins[2].requests.length === 1 && ins[2].requests[0].source === 'sourcing.ask', 'an item nobody has asked for starts a new lead at Asked');
+  }
+
+  // 3d. a counter sale: placed, paid in full, at Delivered, and invoiced by the one function
+  {
+    const db = fakeDb({ saved_quotes: [], cash_txns: [] });
+    const X = loadPage(db);
+    Object.assign(X.S, { data: fixture(), shopId: SH, user: { id: 'u1' } });
+    X.S.data.savedQuotes = [{ id: 41 }];
+    X.S.draft = { ...X.newDraft(null), counter: true, items: [X.makeLine('P1', null, 10, { lineId: 1 })] };
+    t.check(/Slide · paid/.test(X.counterDockHTML()), 'all from the shelf at the shop’s price: one slide, paid');
+    const id = await X.ctPlace(X.S.draft);
+    const placed = db.tables.saved_quotes.find(r => r.id === id);
+    t.check(placed && placed.payload.counter === true && placed.status === 'draft', 'it is placed as a counter sale (the gate moves a shelf-only order on by itself)');
+    const r = await X.ctPay(id, 'cash');
+    const row = db.tables.saved_quotes.find(x => x.id === id), rc = db.tables.cash_txns[0];
+    t.check(rc && rc.type === 'receipt' && rc.account === 'cash' && rc.quote_id === id && rc.amount === r.total && r.total > 0, 'one cash receipt on the sale, for the whole of it');
+    t.check(row.status === 'completed' && row.amount_paid === r.total && row.payload.payments.length === 1 && row.payload.payments[0].cashTxnId === rc.id, 'the sale is at Delivered, paid in full, the payment on it');
+    t.check(db.writes.some(w => w[0] === 'rpc' && w[1] === 'invoice_order' && w[2].p_quote_id === id) && row.invoiced === true && r.invoice === 'INV-' + String(id).padStart(4, '0'), 'and invoiced through invoice_order, never a copy of it');
+    X.S.draft = { ...X.newDraft(null), counter: true, items: [X.makeLine('P2', 0, 5, { lineId: 1 })] };
+    t.check(/isn’t all on the shelf/.test(X.counterDockHTML()) && !/data-slide="counter"/.test(X.counterDockHTML()), 'a line bought in from a supplier is no counter sale: it becomes an order');
+    const it = X.makeLine('P1', null, 10, { lineId: 1 });
+    X.S.draft = { ...X.newDraft(null), counter: true, items: [Object.assign(it, { sellPrice: it.sellPrice - 500, priceBy: 'u1', priceNote: 'under', priceShop: it.sellPrice })] };
+    t.check(/data-slide="counterask"/.test(X.counterDockHTML()) && !/data-slide="counter"/.test(X.counterDockHTML()), 'under the shop’s price, the slide asks the Manager first');
   }
 
   // 4. a payment over two bills and a loose balance

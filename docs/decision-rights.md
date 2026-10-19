@@ -458,6 +458,7 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0127 | Owner app |
 | 0128 | The `'sourcing'` role, ahead of the rest of the shared foundation (0119) |
 | 0129 | Push for 0122's tables: the write-off report and the held restock line (after 0120 and 0122) |
+| 0130 | Sales, second: the counter sale's quiet push, and asking Accounts to correct a payment (`payment_asks`) |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.
