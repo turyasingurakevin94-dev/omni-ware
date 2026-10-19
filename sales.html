@@ -2911,12 +2911,15 @@ function mgrFace(size, fullName){ const n = String(fullName || mgrFull() || 'Man
    figure it named: change the price after, and it waits again. */
 const PRICE_DECIDES = { under: true, nomargin: true };
 function priceReviewState(it){
-  if (!it || !it.priceBy || !PRICE_DECIDES[it.priceNote]) return null;
+  if (!it || !it.priceBy) return null;
   const r = it.priceReview;
   // For the figure and the quantity it named (manager.html writes both): change either after, and it waits again.
-  if (r && (r.state === 'approved' || r.state === 'changed') && Math.round(Number(r.price)) === Math.round(Number(it.sellPrice))
-    && (r.qty == null || Number(r.qty) === Number(it.qty))) return r.state;
-  return 'wait';
+  const done = r && (r.state === 'approved' || r.state === 'changed') && Math.round(Number(r.price)) === Math.round(Number(it.sellPrice))
+    && (r.qty == null || Number(r.qty) === Number(it.qty));
+  // No known cost: still "to be confirmed" until the Manager prices it (manager.html ncgo); once they have, it reads like any other decision.
+  if (it.priceNote === 'nocost') return done ? r.state : null;
+  if (!PRICE_DECIDES[it.priceNote]) return null;
+  return done ? r.state : 'wait';
 }
 function priceReviewer(it){ const r = it && it.priceReview; return (r && firstWord(r.byName)) || mgrName(); }
 function priceReviewMs(it){ const v = it && it.priceReview && it.priceReview.at; if (v == null || v === '') return 0; const n = Number(v); return isFinite(n) && n > 1e11 ? n : (Date.parse(v) || 0); }

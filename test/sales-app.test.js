@@ -161,6 +161,13 @@ matrix.forEach(([what, it]) => {
   const base = { productId: 'P1', qty: 2, sellPrice: 165000, priceBy: 'u1', priceNote: 'under', priceShop: 172000 };
   t.check(P.priceReviewState(base) === 'wait', 'a price under the shop\'s waits for the Manager');
   t.check(P.priceReviewState({ ...base, priceNote: 'nocost' }) === null, 'a price with no cost yet is not the Manager\'s to decide first');
+  {
+    // Once the Manager prices a no-cost line (manager.html ncgo writes sellPrice and the review), Sales reads it as decided.
+    const nc = { ...base, priceNote: 'nocost', priceAsk: true, sellPrice: 51000, priceReview: { state: 'changed', price: 51000, was: 0, qty: 2, byName: 'Ruth Nakato', at: 1 } };
+    t.check(P.priceReviewState(nc) === 'changed' && P.priceToTell(nc) && /Ruth set/.test(P.priceTagHTML(nc, true)) && !/to be confirmed/.test(P.priceTagHTML(nc)),
+      'a no-cost line the Manager has priced shows the Manager\'s price, and is one to tell the customer');
+    t.check(P.priceReviewState({ ...nc, sellPrice: 50000 }) === null, 'and goes back to "to be confirmed" if the price moves after');
+  }
   t.check(P.priceReviewState({ ...base, priceReview: { state: 'approved', price: 165000, byName: 'Ruth Nakato', at: 1 } }) === 'approved', 'approved at the figure it names');
   const changed = { ...base, sellPrice: 172000, priceReview: { state: 'changed', price: 172000, was: 165000, byName: 'Ruth Nakato', at: '2026-10-17T12:31:00Z' } };
   t.check(P.priceReviewState(changed) === 'changed' && P.priceToTell(changed), 'the Manager\'s new price is one to tell the customer');
