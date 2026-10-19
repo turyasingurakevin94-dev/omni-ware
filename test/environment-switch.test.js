@@ -33,7 +33,7 @@ const { read, createReporter } = require('./_extract');
 const t = createReporter('environment switch');
 
 const APP_FILES = ['index.html', 'agent.html', 'worker.html'];
-const PORTAL_FILES = ['client.html', 'catalogue.html'];
+const PORTAL_FILES = ['client.html', 'catalogue.html', 'supplier.html'];
 const PROJECT_REF = 'hgywjaifdmgrcnwxstxg';
 const OPENER = '/* ---------------- Which Supabase project this copy talks to ----------';
 const CLOSER = '\n})();';

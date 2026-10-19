@@ -48,7 +48,9 @@ const names = fs.readdirSync(FN_DIR)
 // spending credit. It reads the caller's JWT like the rest of the agent's.
 // 21 with notify-stock-count: a Database Webhook, like notify-worker.
 // 22 with push-send (0120): the same, on every push_outbox insert.
-t.check(names.length === 22, `all ${names.length} functions found`);
+// 24 with the supplier pair: supplier-accounts (an admin's JWT) and
+// supplier-portal (no JWT; a PIN, then its own session token).
+t.check(names.length === 24, `all ${names.length} functions found`);
 
 const open = [];   // no incoming Authorization — must be verify_jwt = false
 const closed = [];
@@ -109,6 +111,8 @@ t.check(declared.length > 0, `config.toml declares ${declared.length} function(s
   ['client-portal', 'client-submit-order'].forEach((n) => {
     t.check(declared.indexOf(n) !== -1, `${n} is open — client.html ships no key to authenticate with`);
   });
+  t.check(declared.indexOf('supplier-portal') !== -1, 'supplier-portal is open — supplier.html ships no key to authenticate with');
+  t.check(declared.indexOf('supplier-accounts') === -1, 'supplier-accounts verifies — only a shop admin issues a supplier PIN');
 }
 
 process.exit(t.done() ? 1 : 0);
