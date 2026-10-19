@@ -1420,13 +1420,15 @@ async function loadAll(){
     sb.from('shop_members').select('user_id, role').eq('shop_id', S.shopId).then(r => r, () => ({ data: [] })),
   ]);
   // The treasurer's books (0123). Each is optional: a table this database never got reads as empty.
-  const [dues, loans, assets, rents, stockRows, lots, trips, agents, claims, asks] = await Promise.all([
+  const [dues, loans, assets, rents, stockRows, lots, trips, agents, claims, asks, payAsks] = await Promise.all([
     opt(selectAll('dues')), opt(selectAll('loans')), opt(selectAll('fixed_assets')), opt(selectAll('rent_agreements')),
     opt(selectAll('stock', 'key')), opt(selectAll('stock_lots')),
     sb.from('collection_trips').select('*').eq('shop_id', S.shopId).gte('created_at', new Date(Date.now() - 60 * 864e5).toISOString()).limit(2000).then(r => r.error ? [] : r.data || [], () => []),
     opt(selectAll('agents')),
     sb.from('agent_commission_claims').select('*').eq('shop_id', S.shopId).then(r => r.error ? [] : r.data || [], () => []),
     sb.from('invoice_asks').select('*').eq('shop_id', S.shopId).gte('created_at', new Date(Date.now() - 120 * 864e5).toISOString()).then(r => r.error ? [] : r.data || [], () => []),
+    // Sales and the Manager asking for a payment to be corrected (0130). Absent before 0130.
+    sb.from('payment_asks').select('*').eq('shop_id', S.shopId).gte('created_at', new Date(Date.now() - 60 * 864e5).toISOString()).then(r => r.error ? [] : r.data || [], () => []),
   ]);
   const stockMap = {}; (stockRows || []).forEach(x => { stockMap[x.key] = Number(x.qty) || 0; });
   const lotMap = {}; (lots || []).forEach(l => { const lot = { qty: Number(l.qty) || 0, cost: l.cost == null ? null : Number(l.cost) }; if (l.consign) lot.consign = l.consign; (lotMap[l.key] ||= []).push(lot); });
@@ -1458,6 +1460,7 @@ async function loadAll(){
     agents: (agents || []).map(a => ({ id: a.id, name: a.name || '', phone: a.phone || '', paymentTerm: a.payment_term || 'prepay', userId: a.user_id || null })),
     claims: (claims || []).map(c => ({ id: c.id, agentId: c.agent_id, month: c.month, amount: Number(c.bonus_amount) || 0, status: c.status, requestedAt: c.requested_at, paidAt: c.paid_at })),
     asks: (asks || []).map(rowToAsk),
+    payAsks: (payAsks || []).map(x => ({ id: x.id, cashTxnId: Number(x.cash_txn_id), customerId: x.customer_id, quoteId: x.quote_id == null ? null : Number(x.quote_id), amount: Number(x.amount) || 0, what: x.what, want: x.want || {}, note: x.note || '', askedBy: x.asked_by, askedByName: x.asked_by_name || '', status: x.status, createdAt: x.created_at })),
     members: (membersR && membersR.data) || [],
     cashTxns: txns.map(rowToTxn),
     cashDays,
@@ -2391,6 +2394,9 @@ function viewToday(){
   if (pos.rec.openingSet && carried && ACCOUNTS.some(a => Math.round(carried.values[a.key]) !== Math.round(Number(pos.rec.opening[a.key]) || 0)))
     issues.push({ act: 'days', tone: 'warn', icon: 'book', title: 'Today didn’t open where yesterday ended', sub: 'check the opening in Days', fig: '' });
   tripsToCount().forEach(g => { const st = (D().staff || []).find(s => String(s.id) === String(g.workerId)); issues.unshift({ act: 'trips', tone: 'warn', icon: 'truck', title: `${st ? firstWord(st.name) + '’s' : 'A'} trip is back · count its cash`, sub: `<span class="m">${g.trips.length}</span> stop${g.trips.length === 1 ? '' : 's'} · <span class="m">${n0(g.expected)}</span> should come back`, cta: 'Count' }); });
+  // Asked to correct a payment (0130): who asked, what is wrong, what it should be.
+  (D().payAsks || []).filter(x => x.status === 'sent' && txnById(x.cashTxnId)).forEach(x => { const tr = txnTrace(txnById(x.cashTxnId));
+    issues.unshift({ act: 'payaskfix', id: x.id, tone: 'warn', icon: 'swap', title: `${firstWord(x.askedByName) || 'Sales'} asks: correct ${PAYASK_WHAT[x.what] || 'a payment'}`, sub: `${esc(tr.cust ? tr.cust.name : 'A payment')} · <span class="m">${n0(x.amount)}</span> · ${esc(payAskWant(x))}`, cta: 'Fix' }); });
   daysNotClosed().slice(0, 1).forEach(d => issues.push({ act: 'days', tone: 'bad', icon: 'cal', title: `${dShort(d)} was never closed`, sub: 'close it late, from Days', cta: 'Days' }));
   const lateInv = D().savedQuotes.filter(q => q.invoiced && !q.voided && balanceDue(q) > 0.5 && invLateDays(q) > 0).length;
   const stmtN = debtors().filter(statementDue).length;
@@ -2442,6 +2448,30 @@ function dueTile(act, n, words, mark, v){
 }
 function acctWord(t){ const a = acctOf(t); return a === 'momo' ? 'mobile money' : a === 'bank' ? 'bank' : 'cash'; }
 ACT.owedlate = () => { S.ui.owesSort = 'old'; go('owed'); };
+/* ---- asked to correct a payment (payment_asks, 0130) ----
+   Sales or the Manager proposes; the fix is this app's own correction
+   screen, opened with what they asked for, and saving it closes the ask. */
+const PAYASK_WHAT = { method: 'the method', amount: 'the amount', bill: 'the bill', day: 'the day' };
+function payAskWant(x){ const w = x.want || {}, A = { cash: 'Cash', momo: 'Mobile money', bank: 'Bank' };
+  if (x.what === 'method') return `${A[w.from] || 'it'} → ${A[w.account] || '?'}`;
+  if (x.what === 'amount') return `${n0(x.amount)} → ${n0(w.amount)}`;
+  if (x.what === 'bill') return '→ ' + (w.quoteId ? 'INV-' + String(w.quoteId).padStart(4, '0') : 'on account');
+  return '→ ' + dShort(w.date); }
+ACT.payaskfix = t => {
+  const x = (D().payAsks || []).find(k => String(k.id) === String(t.dataset.id)); if (!x || !needTask('payment.edit')) return;
+  const w = x.want || {}, args = { id: x.cashTxnId, askId: x.id };
+  if (x.what === 'method' && w.account) args.acct = w.account;
+  if (x.what === 'amount' && Number(w.amount) > 0) args.amt = Number(w.amount);
+  if (x.what === 'day' && w.date) args.date = w.date;
+  if (x.what === 'bill') args.to = w.quoteId == null ? null : String(w.quoteId);
+  FEEL.open(); push('payedit', args);
+};
+ACT.payaskno = async t => {
+  try { S.busy = true; const r = await sb.rpc('decide_payment_ask', { p_id: t.dataset.id, p_status: 'declined' }); if (r.error) throw r.error;
+    const x = (D().payAsks || []).find(k => String(k.id) === String(t.dataset.id)); if (x) x.status = 'declined';
+    booksChanged(); FEEL.back(); toast('Kept as it is · they are told'); S.stack = S.stack.filter(p => p.type !== 'payedit'); render(); }
+  catch (e) { await afterFail(e); } finally { S.busy = false; }
+};
 ACT.acct = t => { FEEL.open(); push('acct', { key: t.dataset.key }); };
 ACT.short = t => { FEEL.open(); push('short', { key: t.dataset.key }); };
 ACT.closed = () => { push('closed', {}); };
@@ -5650,6 +5680,7 @@ PAGE.payedit = a => {
   return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
     <div class="bx-body" style="padding-top:8px"><span class="bx-grip" style="background:#D9D4CB"></span>
       <div style="display:flex;align-items:center;gap:10px">${c ? avatar(c.name, c.id, 42, true) : `<span class="bx-av round" style="background:var(--soft2)">${ic('cash', 18)}</span>`}<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span class="bx-eyebrow" style="color:var(--ink3)">Correct a payment</span><span class="ell" style="font-size:17px;font-weight:700">${esc(c ? c.name : txnWho(t))} · <span class="m">${n0(t.amount)}</span></span></span>${closeBtn(true)}</div>
+      ${a.askId ? (() => { const x = (D().payAsks || []).find(k => String(k.id) === String(a.askId)); return x ? `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:var(--amberSoft);color:var(--amberInk)"><span class="bx-av round" style="width:30px;height:30px;font-size:11px;background:#fff;color:var(--amberInk)">${esc(initials(x.askedByName || 'Sales'))}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><b style="font-size:13px">${esc(firstWord(x.askedByName) || 'Sales')} asks: ${esc(PAYASK_WHAT[x.what] || 'a fix')} · ${esc(payAskWant(x))}</b>${x.note ? `<span class="ell" style="font-size:12px;font-weight:600">“${esc(x.note)}”</span>` : ''}</span><button class="bx-chip" data-act="payaskno" data-id="${esc(x.id)}" style="border:none;height:32px;padding:0 10px;background:#fff;color:var(--ink)">Keep it</button></div>` : ''; })() : ''}
       <div role="img" aria-label="Before and after" style="display:grid;grid-template-columns:minmax(0,1fr) 36px minmax(0,1fr);align-items:stretch">
         <span style="display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:16px;background:var(--soft)"><span style="font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--ink3)">NOW</span>${nowBox}<span class="m" style="font-size:12px;color:var(--ink2)">${esc(acctWord(t))} · ${n0(t.amount)}</span></span>
         <span style="display:flex;align-items:center;justify-content:center;color:var(--red)">${ic('arrow', 24, 'style="stroke-width:2.4"')}</span>
@@ -5734,6 +5765,7 @@ ACT.payeditsave = async () => {
     const cu2 = await sb.from('cash_txns').update({ amount: a1, account: a.acct, date: a.date, quote_id: toId ? Number(toId) : null, description: B ? `Payment — ${invoiceLabel(B)}` : `Payment — ${c.name}` }).eq('shop_id', S.shopId).eq('id', t.id);
     if (cu2.error) throw cu2.error;
     logDecision('payment.edit', `Corrected ${poss(c.name)} ${n0(a0)}: ${before.link} → ${B ? invoiceLabel(B) : 'on account'}${a1 !== a0 ? `, ${n0(a0)} → ${n0(a1)}` : ''}${a.acct !== acctOf(t) ? `, ${acctOf(t)} → ${a.acct}` : ''}${a.date !== t.date ? `, ${t.date} → ${a.date}` : ''}`, { amount: a1, ref: { table: 'cash_txns', id: t.id }, before, after: { amount: a1, account: a.acct, date: a.date, quote_id: toId } });
+    if (a.askId) { const r = await sb.rpc('decide_payment_ask', { p_id: a.askId, p_status: 'done' }).then(x => x, () => null); if (r && r.error) console.warn(r.error); }
     await loadAll(); FEEL.stamp(); toast('The payment is corrected'); S.stack = S.stack.filter(p => p.type !== 'payedit' && p.type !== 'find'); render();
   } catch (e) { await afterFail(e); } finally { S.busy = false; }
 };
