@@ -148,6 +148,10 @@ function lineView(it: any) {
   const price = Math.round(Number(it && it.price) || 0);
   return {
     lineId: it && it.lineId != null ? it.lineId : null,
+    // Their own item's ids, so the app can match the line to the price
+    // row it came from (a new price on an order line is proposed there).
+    productId: it && it.productId != null ? String(it.productId) : null,
+    variantIdx: it && it.variantIdx != null && it.variantIdx !== "" ? Number(it.variantIdx) : null,
     name: String((it && it.productName) || ""),
     qty,
     unit: String((it && it.unit) || ""),
@@ -671,6 +675,10 @@ Deno.serve(async (req) => {
           const lot = lots[stockKey(p.productId, p.variantIdx)];
           return {
             priceId: p.priceId,
+            // Variants of one product that share a price are confirmed in
+            // one tap, so the app needs to know which rows belong together.
+            productId: p.productId,
+            variantIdx: p.variantIdx,
             name: p.name,
             category: p.category,
             unit: p.unit,

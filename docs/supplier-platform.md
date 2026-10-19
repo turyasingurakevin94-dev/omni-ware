@@ -134,6 +134,21 @@ AFTER   order → staff tap "Ask them" → WhatsApp with a link → supplier tap
                                                              → board updates itself → agent's Pay opens
 ```
 
+### C1a. The simple supplier app (`supplier.html`)
+
+Three tabs: **Today**, **Prices**, **Money**. The order is the hero.
+
+- **Order:** each line is *Have it* or ✕. Tap the price to change it. Swipe to send.
+  - The answer goes out as confirmed, short (missing lines at 0) or none.
+  - A changed price rides along twice: in the answer's note, which the shop sees on the order, and as a price proposal on the item. This works because order lines now carry `productId` and `variantIdx`.
+- **Price check:** at most 3 cards a day, oldest first. Variants of one product at one price are a single card, so "Still the same" confirms them all in one `still` call.
+- **Price editor:** price per piece and per carton, a "1 ctn has 20 dozens" picture, and volume tiers behind "Cheaper for many?". The shop approves every price before it is used.
+- **Money:** owed and due bills, bill receipts, goods at the shop, paid records.
+- **Sign-in:** phone plus a 4-digit PIN from the shop. There is no sign-up.
+- **Offline:** answers, prices and stock flips are queued on the phone and sent when data returns.
+
+Not built yet, because nothing in the backend supports them: telling the supplier the shop took the answer, the rider's arrival time, the payment reference and photo upload.
+
 ### C2. Identity and access: mirror the client portal (0096) exactly
 
 - **New migration `supabase/migrations/0109_supplier_accounts.sql`** creates three tables:
