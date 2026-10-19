@@ -120,7 +120,8 @@
   if(legacy || !(WebView && Http && FS && App && window.crypto && crypto.subtle)) return;
   var SOURCE = 'https://omni-ware.vercel.app/manager.html';
   var KEY = 'ow-manager-bundle';
-  var EVERY = 30 * 60 * 1000;
+  // A check is one small request (a 304 when nothing changed), so it can be often.
+  var EVERY = 3 * 60 * 1000;
   function load(){ try{ return JSON.parse(localStorage.getItem(KEY)) || {}; }catch(_e){ return {}; } }
   function save(s){ try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(_e){} }
   function header(h, name){
