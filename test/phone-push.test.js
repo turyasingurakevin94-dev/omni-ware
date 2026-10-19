@@ -19,7 +19,7 @@ const path = require('path');
 const { read, extractFunction, createReporter } = require('./_extract');
 
 const t = createReporter('phone push');
-const APPS = ['sales', 'manager', 'buyer', 'store', 'accounts', 'sourcing'];
+const APPS = ['sales', 'manager', 'buyer', 'store', 'accounts', 'sourcing', 'owner'];
 
 for (const a of APPS) {
   const appId = JSON.parse(read(`apps/${a}/capacitor.config.json`)).appId;

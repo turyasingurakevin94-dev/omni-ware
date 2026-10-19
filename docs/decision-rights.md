@@ -331,10 +331,7 @@ same transaction as the handoff, addressed by task (so it follows this file),
 and `push-send` delivers it. A new handoff adds its trigger there, never a
 send from an app.
 
-Every phone app ships with push. The Owner app (`com.omniware.owner`) is the
-one still waiting for its Firebase entry: until its `google-services.json` is in
-`apps/owner`, the page does not ask for pushes (`OWNER_PUSH_READY`, see
-`apps/owner/README.md`). A nudge is a push,
+Every phone app ships with push, the Owner app (`com.omniware.owner`) included. A nudge is a push,
 no longer only a WhatsApp link.
 
 ### Settings stored as one block
