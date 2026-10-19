@@ -1420,7 +1420,7 @@ async function loadAll(){
     sb.from('shop_members').select('user_id, role').eq('shop_id', S.shopId).then(r => r, () => ({ data: [] })),
   ]);
   // The treasurer's books (0123). Each is optional: a table this database never got reads as empty.
-  const [dues, loans, assets, rents, stockRows, lots, trips, agents, claims, asks, payAsks] = await Promise.all([
+  const [dues, loans, assets, rents, stockRows, lots, trips, agents, claims, asks, payAsks, handoffs] = await Promise.all([
     opt(selectAll('dues')), opt(selectAll('loans')), opt(selectAll('fixed_assets')), opt(selectAll('rent_agreements')),
     opt(selectAll('stock', 'key')), opt(selectAll('stock_lots')),
     sb.from('collection_trips').select('*').eq('shop_id', S.shopId).gte('created_at', new Date(Date.now() - 60 * 864e5).toISOString()).limit(2000).then(r => r.error ? [] : r.data || [], () => []),
@@ -1429,6 +1429,8 @@ async function loadAll(){
     sb.from('invoice_asks').select('*').eq('shop_id', S.shopId).gte('created_at', new Date(Date.now() - 120 * 864e5).toISOString()).then(r => r.error ? [] : r.data || [], () => []),
     // Sales and the Manager asking for a payment to be corrected (0130). Absent before 0130.
     sb.from('payment_asks').select('*').eq('shop_id', S.shopId).gte('created_at', new Date(Date.now() - 60 * 864e5).toISOString()).then(r => r.error ? [] : r.data || [], () => []),
+    // What the Buyer passed on to Accounts and is still open (0125): a trip's cash, a supplier's paper bill. Absent before 0125.
+    sb.from('buyer_handoffs').select('*').eq('shop_id', S.shopId).eq('for_role', 'accounts').eq('status', 'open').then(r => r.error ? [] : r.data || [], () => []),
   ]);
   const stockMap = {}; (stockRows || []).forEach(x => { stockMap[x.key] = Number(x.qty) || 0; });
   const lotMap = {}; (lots || []).forEach(l => { const lot = { qty: Number(l.qty) || 0, cost: l.cost == null ? null : Number(l.cost) }; if (l.consign) lot.consign = l.consign; (lotMap[l.key] ||= []).push(lot); });
@@ -1462,6 +1464,8 @@ async function loadAll(){
     asks: (asks || []).map(rowToAsk),
     payAsks: (payAsks || []).map(x => ({ id: x.id, cashTxnId: Number(x.cash_txn_id), customerId: x.customer_id, quoteId: x.quote_id == null ? null : Number(x.quote_id), amount: Number(x.amount) || 0, what: x.what, want: x.want || {}, note: x.note || '', askedBy: x.asked_by, askedByName: x.asked_by_name || '', status: x.status, createdAt: x.created_at })),
     members: (membersR && membersR.data) || [],
+    handoffs: (handoffs || []).filter(h => h.kind === 'trip_cash' || h.kind === 'paper_bill').map(h => ({ id: h.id, kind: h.kind, ref: h.ref, p: h.payload || {}, createdBy: h.created_by, createdAt: h.created_at }))
+      .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt))),
     cashTxns: txns.map(rowToTxn),
     cashDays,
     bills: bills.map(rowToBill),
@@ -2215,6 +2219,50 @@ async function pushInstalled(){
   try { const A = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App; const i = A && await A.getInfo(); return !!i && Number(i.build) >= 2; }
   catch (_e) { return false; }
 }
+function pushOn(){ return !!window.owPushReady; }
+// Why this phone is not signed up (phonePush keeps it in owPushError), in a few words.
+function pushWhy(){
+  const e = String(window.owPushError || '');
+  if (!e || pushOn()) return '';
+  if (/^install/.test(e)) return 'install the new Accounts app to get pushes on this phone';
+  if (/^permission/.test(e)) return 'notifications are off for this app in the phone’s settings';
+  if (/^register/.test(e)) return 'this phone can’t get pushes: it has no Google Play services';
+  return 'this phone could not be saved: open the app again';
+}
+function pushNative(){ const C = window.Capacitor; return !!(C && C.isNativePlatform && C.isNativePlatform() && C.Plugins && C.Plugins.PushNotifications); }
+// The Notifications row on You: [chip, sub].
+function pushState(){
+  if (pushOn()) return ['On', 'this phone gets your pushes'];
+  if (pushWhy()) return ['Not on', pushWhy()];
+  if (!pushNative()) return ['Not on', 'pushes come in the installed app'];
+  return ['Checking', 'checking this phone, a moment'];
+}
+// A tapped push opens what it is about (push-send data: kind + its ref, every value a string).
+// Found: that screen. Gone already: the tab it lives in. Another app's kind: nothing.
+function handoffShow(id){ setTimeout(() => { const el = document.getElementById('ho_' + id); if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center' }); }, 80); }
+function pushOpen(d){
+  try {
+    const k = String((d && d.kind) || ''), id = String((d && d.id) || '');
+    if (k === 'trip.cash') {
+      // A trip handed in: count its cash (grouped by buyer and day).
+      const g = tripsToCount().find(x => x.trips.some(t => String(t.id) === id));
+      go('today'); if (g) push('tripcash', { key: g.key });
+    } else if (k === 'trip.cash.ask') {
+      // The Buyer asking for a trip's cash: its row in From the Buyer on Today.
+      go('today'); if (handoffById(id)) handoffShow(id);
+    } else if (k === 'bill.due') {
+      const b = D().bills.find(x => String(x.id) === id);
+      go('bills'); if (b) push('bill', { id: Number(b.id) });
+    } else if (k === 'payment.ask') {
+      const x = (D().payAsks || []).find(y => String(y.id) === id);
+      go('today'); if (x && x.status === 'sent' && txnById(x.cashTxnId)) ACT.payaskfix({ dataset: { id: x.id } });
+    } else if (k === 'bill.paper') {
+      // The Buyer's paper bill: its row on Today, and the bill screen filled from it. Recorded already: Bills.
+      const h = handoffById(id);
+      if (h) { go('today'); handoffShow(id); if (can('bill.record')) push('billrec', handoffBillArgs(h)); } else go('bills');
+    }
+  } catch (e) { console.error(e); }
+}
 function phonePush(){
   const C = window.Capacitor, P = C && C.isNativePlatform && C.isNativePlatform() && C.Plugins && C.Plugins.PushNotifications;
   if (!P || phonePush.on || !S.user || !S.shopId) return; phonePush.on = true;
@@ -2228,7 +2276,7 @@ function phonePush(){
   });
   // No token: a phone without Google Play services, or Firebase not in this build.
   P.addListener('registrationError', e => { window.owPushError = 'register: ' + ((e && e.error) || e); render(); });
-  P.addListener('pushNotificationActionPerformed', () => { loadAll().then(() => render()).catch(() => {}); });
+  P.addListener('pushNotificationActionPerformed', a => { const d = (a && a.notification && a.notification.data) || {}; loadAll().then(() => { pushOpen(d); render(); }).catch(() => {}); });
   (async () => {
     try {
       if (!(await pushInstalled())) { window.owPushError = 'install: this phone has the older app'; render(); return; }
@@ -2448,6 +2496,7 @@ function viewToday(){
         ${i.cta ? `<span class="bx-chip" style="height:34px;padding:0 14px;background:var(--navy);color:#fff;font-size:13px">${i.cta}</span>` : i.fig ? `<span class="m" style="font-size:15px;font-weight:600;${i.tone === 'bad' ? 'color:var(--crimson)' : ''}">${esc(i.fig)}</span>` : ''}</button>`).join('')}
       ${issues.length > 5 ? `<div class="bx-sub" style="text-align:center;padding:8px 0 10px">+ <span class="m">${issues.length - 5}</span> more on the Cash book</div>` : ''}</div>`
       : `<div class="bx-card" style="padding:16px;display:flex;align-items:center;gap:12px"><span class="bx-av" style="background:var(--greenSoft);color:var(--green)">${ic('tick', 20, 'style="stroke-width:2.6"')}</span><span class="bx-sub" style="font-size:13px">Every count agrees and every payment found its invoice.</span></div>`}
+    ${handoffCard()}
     <span style="font-size:13px;font-weight:700;color:var(--ink2);padding:4px 2px 0">Due</span>
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
       ${dueTile('owedlate', lateInv, 'invoices past their terms', lateInv ? '<i class="bx-dot" style="width:8px;height:8px;background:var(--amber)"></i>' : '')}
@@ -2457,6 +2506,53 @@ function viewToday(){
     </div>
   </div>`;
 }
+/* ---- from the Buyer (buyer_handoffs, 0125) ----
+   The cash a trip needs (trip_cash: hand it over) and a supplier's paper
+   bill with its photo (paper_bill: record it on the supplier's bill).
+   Closing one sets status 'done'; the guard stamps who and when. */
+function handoffs(){ return (D().handoffs || []); }
+function handoffById(id){ return handoffs().find(h => String(h.id) === String(id)) || null; }
+// Who passed it on: the staff row whose login made it, by first name.
+function handoffBy(h){ const st = (D().staff || []).find(x => x.userId && String(x.userId) === String(h.createdBy)); return st ? firstWord(st.name) : 'The Buyer'; }
+function handoffSupplier(h){ const s = supplierById(h.p.supplierId); return (s && s.name) || h.p.supplier || 'a supplier'; }
+function handoffWhen(h){ const iso = String(h.createdAt || '').slice(0, 10); return iso === todayISO() ? hm(Date.parse(h.createdAt)) : shortDay(iso); }
+function handoffCard(){
+  const list = handoffs(); if (!list.length) return '';
+  return `<div class="bx-sec"><b style="font-size:17px">From the Buyer</b><span class="bx-chip" style="background:var(--amberSoft);color:var(--amberInk)"><span class="m">${list.length}</span> to do</span></div>
+    <div class="bx-card bx-list">${list.map(h => {
+      const Who = handoffBy(h), cash = h.kind === 'trip_cash';
+      const title = cash ? `${Who} needs cash · ${handoffSupplier(h)}` : `${handoffSupplier(h)}’s paper bill`;
+      const sub = cash ? `<span class="m">${n0(Number(h.p.amount) || 0)}</span>${h.p.for ? ' · for ' + esc(firstWord(h.p.for)) : ''} · ${esc(handoffWhen(h))}`
+        : `${h.p.billNo ? `no. <span class="m">${esc(h.p.billNo)}</span> · ` : ''}<span class="m">${n0(Number(h.p.total) || 0)}</span> · ${esc(Who)} · ${esc(handoffWhen(h))}`;
+      return `<div class="bx-row" id="ho_${esc(h.id)}" style="min-height:64px">
+        <span class="bx-av" style="width:38px;height:38px;background:var(--amberSoft);color:var(--amberInk)">${ic(cash ? 'cash' : 'doc', 19)}</span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="bx-t ell">${esc(title)}</span><span class="bx-sub ell">${sub}</span></span>
+        ${!cash && h.p.photoPath ? `<button class="ac-open" data-act="hophoto" data-id="${esc(h.id)}" aria-label="Photo of their paper bill">${ic('cam', 16)}</button>` : ''}
+        <button class="bx-chip" data-act="${cash ? 'hocash' : 'horec'}" data-id="${esc(h.id)}" style="border:none;height:34px;padding:0 14px;background:var(--navy);color:#fff;font-size:13px">${cash ? 'Cash handed over' : 'Record it'}</button></div>`; }).join('')}</div>`;
+}
+// Close a hand-off: only its status changes (0125 guard). Throws when nothing was closed.
+async function handoffDone(id){
+  const r = await sb.from('buyer_handoffs').update({ status: 'done' }).eq('shop_id', S.shopId).eq('id', id).select('id'); if (r.error) throw r.error;
+  if (Array.isArray(r.data) && !r.data.length) throw new Error('That needs the owner to switch it on for you');
+  D().handoffs = handoffs().filter(h => String(h.id) !== String(id));
+}
+ACT.hocash = async t => {
+  const h = handoffById(t.dataset.id); if (!h || !needTask('trip.cash') || S.busy) return;
+  try { S.busy = true; await handoffDone(h.id);
+    const who = handoffBy(h), amt = Number(h.p.amount) || 0;
+    logDecision('trip.cash', `Cash for ${poss(who)} trip to ${handoffSupplier(h)} handed over${amt ? ': ' + n0(amt) : ''}`, { amount: amt || null, ref: { table: 'buyer_handoffs', id: h.id } });
+    FEEL.stamp(); toast(`Handed over · ${who} is told`); render(); }
+  catch (e) { await afterFail(e); } finally { S.busy = false; }
+};
+// The record-a-bill screen, filled from the Buyer's paper: the supplier, their number, the photo, what it totals.
+function handoffBillArgs(h){ const s = supplierById(h.p.supplierId);
+  return { ...(s ? { sid: s.id } : {}), hid: h.id, ref: String(h.p.billNo || '').trim(), photo: h.p.photoPath || null, paperTotal: Number(h.p.total) || 0 }; }
+ACT.horec = t => { const h = handoffById(t.dataset.id); if (!h || !needTask('bill.record')) return; FEEL.open(); push('billrec', handoffBillArgs(h)); };
+ACT.hophoto = async t => {
+  const h = handoffById(t.dataset.id); if (!h || !h.p.photoPath) return;
+  try { const { data, error } = await sb.storage.from('bill-photos').createSignedUrl(h.p.photoPath, 3600); if (error) throw error; window.open(data.signedUrl, '_blank'); }
+  catch (e) { toast(isNetworkError(e) ? 'No connection — try the photo again.' : 'The photo did not open: ' + (e.message || e)); }
+};
 function dueTile(act, n, words, mark, v){
   return `<button data-act="${act}" ${v ? `data-v="${v}"` : ''} class="bx-card" style="border:none;text-align:left;padding:12px;display:flex;flex-direction:column;gap:6px;color:var(--ink)"><span style="display:flex;align-items:center;justify-content:space-between"><span class="m" style="font-size:22px;font-weight:600;${n ? '' : 'color:var(--ink4)'}">${n}</span>${mark || ''}</span><span style="font-size:12px;font-weight:600;line-height:1.3;color:var(--ink2)">${words}</span></button>`;
 }
@@ -3596,7 +3692,7 @@ PAGE.me = () => {
       <div class="ac-keys">${OWNER_KEEPS.map(w => plain(w, 'background:var(--soft2);color:var(--ink2)')).join('')}</div>
       <span style="display:flex;align-items:center;gap:8px;margin-top:4px;padding:10px 12px;border-radius:14px;background:#EEF0F6;color:var(--navy);font-size:12px;font-weight:600">${ic('eye', 15)}Nothing you do waits for the owner — they see every change in their log</span>
       <div class="ac-keys" style="margin-top:4px"><button class="ac-key" data-act="backup" style="border:none;background:var(--greenSoft);color:var(--green);text-align:left">${ic('download', 16)}Download a backup</button></div>
-      <div class="bx-card bx-list" style="margin-top:4px">${[['sound', 'Sounds & buzz', 'the till, the stamp, the chime', 'sound'], ['big', 'Big text', 'easier to read at the counter', 'big']].map(([k2, w, sub, icn], i) => `<div style="display:flex;align-items:center;gap:12px;min-height:58px;${i ? 'border-top:1px solid #F1EEE8' : ''}"><span style="width:32px;height:32px;border-radius:10px;background:var(--soft);display:flex;align-items:center;justify-content:center;flex:none">${ic(icn, 17)}</span><span style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:14px;font-weight:700">${w}</span><span class="bx-sub">${sub}</span></span><button class="bx-switch" role="switch" aria-checked="${!!S.prefs[k2]}" aria-label="${w}" data-act="pref" data-k="${k2}"></button></div>`).join('')}</div>
+      <div class="bx-card bx-list" style="margin-top:4px">${[['sound', 'Sounds & buzz', 'the till, the stamp, the chime', 'sound'], ['big', 'Big text', 'easier to read at the counter', 'big']].map(([k2, w, sub, icn], i) => `<div style="display:flex;align-items:center;gap:12px;min-height:58px;${i ? 'border-top:1px solid #F1EEE8' : ''}"><span style="width:32px;height:32px;border-radius:10px;background:var(--soft);display:flex;align-items:center;justify-content:center;flex:none">${ic(icn, 17)}</span><span style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:14px;font-weight:700">${w}</span><span class="bx-sub">${sub}</span></span><button class="bx-switch" role="switch" aria-checked="${!!S.prefs[k2]}" aria-label="${w}" data-act="pref" data-k="${k2}"></button></div>`).join('')}${(([chip, sub]) => `<div style="display:flex;align-items:center;gap:12px;min-height:58px;border-top:1px solid #F1EEE8"><span style="width:32px;height:32px;border-radius:10px;${pushOn() ? 'background:var(--navy);color:var(--mint)' : 'border:1.5px dashed #9AA1AE;color:var(--ink2);box-sizing:border-box'};display:flex;align-items:center;justify-content:center;flex:none">${ic('bell', 17)}</span><span style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:14px;font-weight:700">Notifications</span><span class="bx-sub">${esc(sub)}</span></span><span class="bx-chip" style="${chip === 'On' ? 'background:var(--greenSoft);color:var(--green)' : 'background:var(--soft2);color:var(--ink2)'}">${chip}</span></div>`)(pushState())}</div>
     </div>
     <div class="bx-foot"><div class="row"><button class="bx-btn ghost" style="height:52px;font-size:15px" data-act="signout">${ic('out', 18)}Sign out</button></div></div>
   </div>`;
@@ -5924,6 +6020,8 @@ function billPaperView(a, s, head){
   if (a.match === undefined) a.match = paperless.length ? paperless[0].id : null;
   const match = a.match != null ? D().bills.find(b => Number(b.id) === Number(a.match)) : null;
   if (!match && !a.lines) { const tl = latestTripLines(s.id); a.lines = tl ? tl.lines : []; a.fromTrip = tl ? tl.trip.id : null; }
+  // From the Buyer's paper with nothing to fill it from: one line for what their paper says.
+  if (!match && a.paperTotal && !a.lines.length && !a.paperLine) { a.paperLine = true; a.lines.push({ productId: null, variantIdx: null, productName: 'Their bill' + (a.ref ? ' ' + a.ref : ''), unit: '', packUnit: '', packQty: 0, qty: 1, price: a.paperTotal }); }
   const lines = match ? match.items || [] : a.lines || [];
   const terms = supplierTerms(s.id), due = a.due || (terms ? 'terms' : 'now');
   const dueDate = due === 'terms' && terms ? isoOf(new Date(Date.now() + terms * 864e5)) : null;
@@ -5942,6 +6040,7 @@ function billPaperView(a, s, head){
         <div class="ac-sliptotal"><span>Bill total</span><span class="m">${n0(total)}</span></div>
       </div></div>
       ${match ? `<span class="bx-hint" style="color:${came && came.all ? 'var(--green)' : 'var(--amberInk)'}">${ic(came && came.all ? 'tick' : 'clock', 14)}${came && came.all ? 'Lines from the books · matches what came in' : 'Lines from the books — check them against their paper'}</span>` : a.fromTrip ? `<span class="bx-hint" style="color:var(--green)">${ic('tick', 14)}Lines filled from the trip · matches what was collected</span>` : ''}
+      ${a.paperTotal ? `<span class="bx-hint" style="color:${Math.abs(total - a.paperTotal) < 1 ? 'var(--green)' : 'var(--amberInk)'}">${ic(Math.abs(total - a.paperTotal) < 1 ? 'tick' : 'clock', 14)}Their paper says <span class="m">${n0(a.paperTotal)}</span>${Math.abs(total - a.paperTotal) < 1 ? ' · it agrees' : ''}</span>` : ''}
       ${photoBtn(a, ['Photo of their bill', 'kept with the bill'])}
       ${match ? '' : `<span style="font-size:13px;font-weight:700;padding:0 2px">Due</span><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px">${[['now', 'On delivery'], ...(terms ? [['terms', `${terms} days · ${dShort(isoOf(new Date(Date.now() + terms * 864e5)))}`]] : [])].map(([k, w]) => `<button class="bx-chip" data-act="brdue" data-v="${k}" style="border:none;height:40px;justify-content:center;${due === k ? 'background:var(--navy);color:#fff' : 'background:#fff;box-shadow:inset 0 0 0 1px var(--line);color:var(--ink)'}">${esc(w)}</button>`).join('')}</div>`}
     </div>
@@ -5969,7 +6068,7 @@ function billCreditView(a, s, head){
   </div>`;
 }
 ACT['in:brq'] = t => { S.ui.brQ = t.value; render(); };
-ACT.brsup = t => { replaceTop('billrec', { sid: t.dataset.v }); FEEL.tick(); };
+ACT.brsup = t => { const a = topArgs(); replaceTop('billrec', { sid: t.dataset.v, ...(a.hid ? { hid: a.hid, ref: a.ref, photo: a.photo, paperTotal: a.paperTotal } : {}) }); FEEL.tick(); };
 ACT.brkind = t => { topArgs().kind = t.dataset.v; FEEL.tick(); render(); };
 ACT.brmatch = t => { const a = topArgs(); a.match = t.dataset.v ? Number(t.dataset.v) : null; a.lines = null; FEEL.tick(); render(); };
 ACT.brdue = t => { topArgs().due = t.dataset.v; FEEL.tick(); render(); };
@@ -6006,6 +6105,8 @@ ACT.brsave = async () => {
       logDecision('bill.record', `Bill from ${s.name}: ${n0(purchaseInvoiceTotal(bill))}${a.ref ? ' (their no. ' + a.ref + ')' : ''}`, { amount: purchaseInvoiceTotal(bill), ref: { table: 'purchase_invoices', id } });
       toast(`${billLabel(bill)} is in · we owe ${firstWord(s.name)} ${n0(purchaseInvoiceTotal(bill))}`);
     }
+    // Recorded from the Buyer's paper: that hand-off is done.
+    if (a.hid) { try { await handoffDone(a.hid); } catch (e) { console.error(e); toast('The bill is in · the Buyer’s paper stays open: ' + (isNetworkError(e) ? 'no connection' : (e && e.message || e)), 6000); } }
     booksChanged(); FEEL.stamp(); pop(); }
   catch (e) { await afterFail(e); } finally { S.busy = false; }
 };
