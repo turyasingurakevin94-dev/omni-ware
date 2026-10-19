@@ -319,16 +319,19 @@ That covers:
 - a trip back, to the Store and to Accounts for the trip's cash;
 - a price changed, to Sales ("tell them");
 - a request listed, to the salesperson who asked;
-- the owner's log, as a daily digest, not a ping per decision.
+- the owner's log, as a daily digest, not a ping per decision, at the hour
+  the owner picks in the Owner app (`presets.digestHour`, 19:00 when unset;
+  0127 runs `ow_owner_digest` every hour and sends each shop at its own).
 
 Built in 0120: the database writes each of these to `push_outbox` in the
 same transaction as the handoff, addressed by task (so it follows this file),
 and `push-send` delivers it. A new handoff adds its trigger there, never a
 send from an app.
 
-Every phone app ships with push. The apps that still lack their Firebase set-up
-(`google-services.json` for sales, buyer, store, manager, accounts, sourcing
-and the Owner app) get it as part of the build, not later. A nudge is a push,
+Every phone app ships with push. The Owner app (`com.omniware.owner`) is the
+one still waiting for its Firebase entry: until its `google-services.json` is in
+`apps/owner`, the page does not ask for pushes (`OWNER_PUSH_READY`, see
+`apps/owner/README.md`). A nudge is a push,
 no longer only a WhatsApp link.
 
 ### Settings stored as one block
@@ -338,6 +341,12 @@ and `priceReview` are written through narrow functions that check `has_task`.
 Never open the whole settings row to a role. The same goes for product markups:
 a guard on `products` lets `markup.set` change only the markup columns, and
 lets `product.edit` change only everything else.
+
+The owner's own keys go the same way, through `owner_set_preset` (0127):
+`priceReview.perDay`, `digestHour`, the receipt details and the word lists, one
+key at a time. The console still saves the whole row from its own copy, so
+0127's `app_settings_keep_role_keys` keeps `digestHour`, `creditHold` and
+`priceReview.perDay` when a console save leaves them out.
 
 ---
 
@@ -355,6 +364,27 @@ lets `product.edit` change only everything else.
 Where it lives: the **Owner phone app** holds these and the log of every
 decision made on the owner's behalf. The **desktop console** is the
 intelligence centre for analytics, the AI manager and reports (section 1).
+
+Built in 0127 and `owner.html`:
+
+- **Switching a role's tasks.** `role_tasks` stays the list of what each role
+  *can* be given. The owner switches a task off for their shop
+  (`shop_task_off`, through `owner_set_task`), and `has_task()` honours it, so
+  every guard and function refuses a switched-off task, and a push addressed by
+  that task no longer reaches the role. Switching it back on deletes the row.
+- **Stepping in.** `owner_step_in` puts a logged decision back, or sets another
+  value, through the role's own function (the Manager's, from 0122), so the
+  role's guards and log apply, and the new log line carries `steps_in`, the
+  line it answers. Other kinds of decision are refused by name, and the app offers a
+  call to the person instead.
+- **Hiring, pay and the shop's goal.** These are written by the app, logged as
+  the owner's (`staff.hire`, `staff.edit`, `goal.shop`). The goal is a
+  `manager_notes` target with no `who`, the row the Manager's app and the
+  console already read.
+- **Backups.** A copy of every shop table goes to the phone. Restoring,
+  clearing all data and a permanent delete stay on the desk console for now,
+  where the whole of the books is loaded and checked first, and the Owner app
+  says so.
 
 ---
 
