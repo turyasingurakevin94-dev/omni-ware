@@ -167,6 +167,22 @@ const tablesFor = data => ({ saved_quotes: data.savedQuotes.map(quoteRow), custo
     t.check(p.agentCredit && p.agentCredit.amount === 1120000 - 672000, 'what the paid order now holds beyond its worth is the agent’s credit: ' + (p.agentCredit && p.agentCredit.amount));
   }
 
+  /* ---------------- 6b. a line with no known cost: the Manager gives it ---------------- */
+  {
+    const data = fixture(), db = fakeDb(tablesFor(data)), X = page(db, data);
+    t.check(/Type the cost to decide/.test(X.PAGE.pricenew({ id: 2391 })) && /What it cost us/.test(X.PAGE.pricenew({ id: 2391 })), 'no known cost: the Manager can type the cost, not only ask for it');
+    X.S.ui['nc:2391:0'] = 40000;
+    t.check(/data-act="ncgo"/.test(X.PAGE.pricenew({ id: 2391 })) && /22\.0%|21\.6%/.test(X.PAGE.pricenew({ id: 2391 })), 'with the cost typed the margin shows and the yes is offered');
+    await X.ACT.ncgo({ dataset: { id: '2391' } });
+    const it = db.tables.saved_quotes.find(q => q.id === 2391).payload.items[0];
+    t.check(it.price === 40000 && it.costBy.source === 'manager' && it.priceReview.state === 'approved' && it.priceReview.price === 51000, 'the cost lands on the line as the Manager’s, and the sold price is approved');
+    t.check(!X.priceCases().some(x => x.q.id === 2391) && db.tables.decision_log.some(l => l.task === 'price.approve' && l.after.cost === 40000), 'it leaves the queue, logged with the cost');
+    const d2 = fixture(), db2 = fakeDb(tablesFor(d2)), Y = page(db2, d2);
+    Y.S.ui['nc:2391:0'] = 60000; await Y.ACT.ncgo({ dataset: { id: '2391' } });
+    const it2 = db2.tables.saved_quotes.find(q => q.id === 2391).payload.items[0];
+    t.check(it2.price === 60000 && it2.sellPrice >= 60000 && it2.priceReview.state === 'changed', 'sold below the cost it was given: repriced to cost + markup, never below cost');
+  }
+
   /* ---------------- 7. every screen draws ---------------- */
   {
     const X = page(fakeDb({}));
