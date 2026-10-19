@@ -1792,7 +1792,36 @@ function listenPush(){
   P.addListener('registration', async t => { const me = myStaff(); if (!me) return;
     try { await sb.from('push_subscriptions').upsert({ shop_id: S.shopId, staff_id: me.id, user_id: S.user.id, fcm_token: t.value }, { onConflict: 'fcm_token' }); } catch (_e) {} });
   P.addListener('pushNotificationActionPerformed', a => { const d = (a && a.notification && a.notification.data) || {};
-    refreshLive().then(() => { if (d.kind === 'stock_count' && d.countId) { S.stack = []; push('decide', { id: d.countId }); } else render(); }); });
+    refreshLive().then(() => { pushOpen(d); render(); }).catch(() => {}); });
+}
+// A tapped push opens what it is about: the thing itself when it is still
+// here, else the list it lives in. Ids come as strings. Unknown: home.
+function pushOpen(d){
+  try {
+    d = d || {}; const k = d.kind;
+    const fresh = v => { closeSheet(true); S.view = v; S.stack = []; };
+    // notify-stock-count: a blind count to accept or recount.
+    if (k === 'stock_count' && d.countId) { fresh('today'); push('decide', { id: d.countId }); return; }
+    // 0120: a trip is back -- count it in at the yard.
+    if (k === 'trip.back') {
+      const t = (D().collectionTrips || []).find(x => String(x.id) === String(d.id));
+      fresh('today'); if (t) push('receive', { id: t.id }); else push('movein', {}); return;
+    }
+    // 0131: the Manager wrote off or dismissed a loss this person reported.
+    if (k === 'stock.report.decided') {
+      const r = (D().reports || []).find(x => String(x.id) === String(d.id));
+      const x = r && stockItems().find(i => i.key === r.key);
+      fresh('shelf'); if (x) push('stock', { key: x.key }); return;
+    }
+    // notify-worker: an order to pack (assigned, or new in the queue) -- no kind, just orderId.
+    if (!k && d.orderId) {
+      const q = quoteById(d.orderId); fresh('today'); if (!q) return;
+      // A tap never takes an order: only one already this person's opens to pack; else Today, where they press Pack.
+      if (packQueue().some(o => o.id === q.id)) { if (orderIsMine(q)) Promise.resolve(openPack(q.id)).catch(() => {}); return; }
+      if (loadQueue().some(o => o.id === q.id)) { push('load', {}); return; }
+      if (myDrops().some(o => o.id === q.id)) push('deliver', { id: q.id });
+    }
+  } catch (e) { console.warn('pushOpen', e); }
 }
 
 Object.assign(ICON, {

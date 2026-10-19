@@ -1380,7 +1380,7 @@ function phonePush(){
   });
   // No token: a phone without Google Play services, or Firebase not in this build.
   P.addListener('registrationError', e => { window.owPushError = 'register: ' + ((e && e.error) || e); render(); });
-  P.addListener('pushNotificationActionPerformed', () => { loadAll().then(() => render()).catch(() => {}); });
+  P.addListener('pushNotificationActionPerformed', a => { const d = (a && a.notification && a.notification.data) || {}; loadAll().then(() => { pushOpen(d); render(); }).catch(() => {}); });
   (async () => {
     try {
       if (!(await pushInstalled())) { window.owPushError = 'install: this phone has the older app'; render(); return; }
@@ -1390,6 +1390,40 @@ function phonePush(){
     } catch (e) { window.owPushError = 'register: ' + (e && e.message || e); render(); }
   })();
 }
+/* A tap on a push opens what it is about (push-send: data = { kind, ...ref },
+   every value a string). Not found any more: the list it lives in. */
+function pushOpen(d){
+  try {
+    if (!d || !S.data) return;
+    const id = String(d.orderId || d.id || ''), at = (type, args) => { S.stack = [{ type, args: args || {} }]; closeSheet(); };
+    if (d.kind === 'order.buying') {
+      const q = quoteById(id), run = q && runsToGo().find(r => r.lines.some(l => l.order && String(l.order.id) === String(q.id)));
+      if (run) at('plan', { sid: run.supplierId }); else if (q) at('order', { id: Number(q.id) }); else at('plan', {});
+    } else if (d.kind === 'trip.cash.ready') {
+      const h = (D().handoffs || []).find(x => String(x.id) === String(d.id));
+      at('plan', h && h.payload && h.payload.supplierId ? { sid: h.payload.supplierId } : {});
+    } else if (d.kind === 'restock.held') at('restock', { picked: null });
+  } catch (e) { console.warn(e); }
+}
+function pushOn(){ return !!window.owPushReady; }
+// Why this phone is not signed up (phonePush keeps it in owPushError), in a few words.
+function pushWhy(){
+  const e = String(window.owPushError || '');
+  if (!e || pushOn()) return '';
+  if (/^install/.test(e)) return 'install the new Buyer app to get pushes on this phone';
+  if (/^permission/.test(e)) return 'notifications are off for this app in the phone’s settings';
+  if (/^register/.test(e)) return 'this phone can’t get pushes: it has no Google Play services';
+  return 'this phone could not be saved: open the app again';
+}
+function pushNative(){ const C = window.Capacitor; return !!(C && C.isNativePlatform && C.isNativePlatform() && C.Plugins && C.Plugins.PushNotifications); }
+// The Notifications row on You: [chip, sub].
+function pushState(){
+  if (pushOn()) return ['On', 'this phone gets your pushes'];
+  if (pushWhy()) return ['Not on', pushWhy()];
+  if (!pushNative()) return ['Not on', 'pushes come in the installed app'];
+  return ['Checking', 'checking this phone, a moment'];
+}
+function pushSub(){ return pushState()[1]; }
 function start(){
   S.started = true;
   phonePush();
@@ -2998,7 +3032,7 @@ PAGE.me = () => {
       <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px">${DOORS.map(([k, w, sub, icn, mine]) => { const on = sel === k;
         return `<button aria-pressed="${on}" data-act="door" data-v="${k}" style="min-height:56px;border:none;border-radius:14px;display:flex;align-items:center;gap:10px;padding:6px 10px;color:${mine ? 'var(--ink)' : 'var(--ink3)'};background:${mine ? '#fff' : '#F2EFEA'};box-shadow:${on ? 'inset 0 0 0 2px var(--navy),0 6px 14px rgba(22,32,60,.1)' : mine ? 'inset 0 0 0 1px var(--line)' : 'inset 0 0 0 1.5px #DDD8CF'}"><span style="width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex:none;${mine ? 'background:var(--greenSoft);color:var(--green)' : 'box-shadow:inset 0 0 0 1.5px #C9C4BA;color:var(--ink4)'}">${ic(icn, 16)}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;text-align:left"><span class="ell" style="font-size:13px;font-weight:700">${esc(w)}</span><span style="font-size:11px;font-weight:600;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:${mine ? 'var(--ink3)' : 'var(--ink4)'}">${esc(sub)}</span></span></button>`; }).join('')}</div>
       <span class="a-card" style="display:flex;align-items:center;min-height:36px;padding:0 12px;border-radius:12px;font-size:12px;font-weight:600;line-height:1.35;${cur[4] ? 'background:var(--greenSoft);color:#0B5435' : 'background:var(--soft2);color:var(--ink2)'}">${esc(cur[5])}</span>
-      <div class="bx-card bx-list">${[['sound', 'Sounds & buzz', 'ticks, stamps, the horn', 'sound'], ['big', 'Big text', 'for the yard in daylight', 'big']].map(([k, w, sub, icn], i) => `<div style="display:flex;align-items:center;gap:12px;min-height:58px;${i ? 'border-top:1px solid #F1EEE8' : ''}"><span style="width:32px;height:32px;border-radius:10px;background:var(--soft);display:flex;align-items:center;justify-content:center;flex:none">${ic(icn, 17)}</span><span style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:14px;font-weight:700">${w}</span><span class="bx-sub">${sub}</span></span><button class="bx-switch" role="switch" aria-checked="${!!S.prefs[k]}" aria-label="${w}" data-act="pref" data-k="${k}"></button></div>`).join('')}</div>
+      <div class="bx-card bx-list">${[['sound', 'Sounds & buzz', 'ticks, stamps, the horn', 'sound'], ['big', 'Big text', 'for the yard in daylight', 'big']].map(([k, w, sub, icn], i) => `<div style="display:flex;align-items:center;gap:12px;min-height:58px;${i ? 'border-top:1px solid #F1EEE8' : ''}"><span style="width:32px;height:32px;border-radius:10px;background:var(--soft);display:flex;align-items:center;justify-content:center;flex:none">${ic(icn, 17)}</span><span style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:14px;font-weight:700">${w}</span><span class="bx-sub">${sub}</span></span><button class="bx-switch" role="switch" aria-checked="${!!S.prefs[k]}" aria-label="${w}" data-act="pref" data-k="${k}"></button></div>`).join('')}${(() => { const [chip] = pushState(), on = pushOn(); return `<div style="display:flex;align-items:center;gap:12px;min-height:58px;border-top:1px solid #F1EEE8"><span style="width:32px;height:32px;border-radius:10px;${on ? 'background:var(--navy);color:var(--mint)' : 'border:1.5px dashed #9AA1AE;color:var(--ink2);box-sizing:border-box'};display:flex;align-items:center;justify-content:center;flex:none">${ic('bell', 17)}</span><span style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:14px;font-weight:700">Notifications</span><span class="bx-sub">${esc(pushSub())}</span></span><span class="bx-chip" style="${on ? 'background:var(--greenSoft);color:var(--green)' : 'background:var(--soft2);color:var(--ink2)'}">${esc(chip)}</span></div>`; })()}</div>
     </div>
     <div class="bx-foot"><div class="row"><button class="bx-btn ghost" style="height:52px;font-size:15px" data-act="signout">${ic('out', 18)}Sign out</button></div></div>
   </div>`;
