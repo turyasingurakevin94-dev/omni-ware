@@ -738,6 +738,7 @@ async function loadAll(){
     // 0125: until it is applied these read as empty, and nothing is passed on.
     selectAll('buyer_handoffs').catch(() => []), selectAll('restock_buys').catch(() => []),
   ]);
+  readAppAnswers();
   const presets = (settingsR && settingsR.data && settingsR.data.presets) || {};
   const stockMap = {}; stock.forEach(s => { stockMap[s.key] = Number(s.qty) || 0; });
   const lotMap = {}; lots.forEach(l => { (lotMap[l.key] ||= []).push({ qty: Number(l.qty) || 0, cost: l.cost == null ? null : Number(l.cost) }); });
@@ -771,6 +772,7 @@ async function refreshLive(){
     if (handoffs) S.data.handoffs = handoffs.map(rowToHandoff);
     if (restock) S.data.restockBuys = restock.map(rowToRestock);
     S.loadedAt = Date.now(); saveSnapshot(); if (!S.dragging) render();
+    readAppAnswers();
   } catch (e) { if (!isNetworkError(e)) console.warn(e); }
 }
 function snapKey(){ return 'ow-buyer-snap:' + (S.user && S.user.id); }
@@ -1893,6 +1895,53 @@ async function changeOrder(id, fn){
   if (i >= 0) D().savedQuotes[i] = fresh; else D().savedQuotes.push(fresh);
   saveSnapshot();
   return { q: fresh, out, moved: q.status !== before };
+}
+/* ==================================================================
+   Answers from the supplier app (0132). A supplier answers in
+   supplier.html; the row lands in supplier_answers and waits to be folded
+   into the order. The console did that only while it was open -- so it is
+   done here too, on every read, through setOrderSupplierConfirm, with the
+   console's own tests (index.html foldSupplierAnswers): the order is
+   still in Checking, the supplier still has lines on it, nothing newer was
+   recorded for them, and the order is the one they saw (terms). Folding
+   twice is harmless: the second finds the newer record and stops.
+   ================================================================== */
+const APP_SAID = { confirmed: 'Said have all', short: 'Said some short', none: 'Said none' };
+let appFolding = false;
+const appFolded = new Set();
+async function readAppAnswers(){
+  if (appFolding) return;
+  appFolding = true;
+  try {
+    const r = await sb.from('supplier_answers').select('id, order_id, supplier_id, state, terms, changes, note, at')
+      .eq('shop_id', S.shopId).gte('at', new Date(Date.now() - 14 * 86400000).toISOString()).order('at');
+    if (r.error || !r.data || !r.data.length) return;   // no 0132 yet, or nothing said
+    const latest = new Map();
+    r.data.forEach(a => latest.set(String(a.order_id) + '|' + String(a.supplier_id), a));
+    let folded = 0, moved = null;
+    for (const a of latest.values()) {
+      if (appFolded.has(a.id)) continue;
+      const sid = String(a.supplier_id), at = Date.parse(a.at);
+      const fits = q => q && !q.voided && q.status === 'draft'
+        && orderSupplierGroups(q).some(g => String(g.supplierId) === sid)
+        && !((((q.supplierConfirms || {})[sid] || {}).at || 0) >= at)
+        && a.terms === orderSupplierTerms(q, sid);
+      // Weighed on this phone's copy first, so a settled answer costs no read.
+      if (!fits(D().savedQuotes.find(x => String(x.id) === String(a.order_id)))) { appFolded.add(a.id); continue; }
+      const note = APP_SAID[a.state] ? APP_SAID[a.state] + (a.note ? `: “${a.note}”` : '') : (a.note || '');
+      try {
+        const res = await changeOrder(Number(a.order_id), q => !fits(q) ? false
+          : setOrderSupplierConfirm(q, sid, a.state === 'confirmed' ? 'confirmed' : 'problem', note,
+            { by: 'supplier', at, short: a.state === 'short' ? a.changes : null }));
+        appFolded.add(a.id);
+        if (res) { folded++; if (res.moved) moved = res.q; }
+      } catch (e) { if (!isNetworkError(e)) console.warn(e); }
+    }
+    if (moved) movedToast(moved);
+    else if (folded) toast(`${folded} ${folded === 1 ? 'supplier answered' : 'suppliers answered'} in their app`, 4000);
+    if (folded && !S.dragging) render();
+  } catch (e) { if (!isNetworkError(e)) console.warn(e); }
+  finally { appFolding = false; }
 }
 function movedToast(q){ toast(`All suppliers confirmed — ${quoteClientName(q)}'s order has moved to ${STAGE_WORD[q.status]}.`, 5000); }
 

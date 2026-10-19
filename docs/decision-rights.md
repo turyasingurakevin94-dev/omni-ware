@@ -465,6 +465,7 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0130 | Sales, second: the counter sale's quiet push, and asking Accounts to correct a payment (`payment_asks`) |
 | 0131 | Pushes for every handoff: the eleven the notifications canvas added (invoice asks, credit released, an order to buy, trip cash, a report decided, Sourcing's requests, bills due, prices to confirm) |
 | 0132 | The supplier app: supplier accounts, sessions, answers and price proposals (was 0109 on its branch, which main had already used) |
+| 0133 | A supplier's answer from the supplier app pushes the Buyer (`supplier.confirm`) |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.
