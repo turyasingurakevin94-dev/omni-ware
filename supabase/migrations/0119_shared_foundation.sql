@@ -687,13 +687,16 @@ declare
   taken jsonb := '[]'::jsonb;
   floor_id bigint;
 begin
+  -- The row first, so there is always one to lock: two moves on a key
+  -- nobody has stocked yet wait for each other instead of both reading 0.
+  insert into stock (shop_id, key, product_id, variant_idx, qty)
+       values (p_shop_id, k, p_product, p_vi::text, 0)
+  on conflict (shop_id, key) do nothing;
   select qty into v_before from stock where shop_id = p_shop_id and key = k for update;
   v_before := coalesce(v_before, 0);
   v_after := greatest(0, round(v_before + p_delta, 6));
   v_change := round(v_after - v_before, 6);
-  insert into stock (shop_id, key, product_id, variant_idx, qty)
-       values (p_shop_id, k, p_product, p_vi::text, v_after)
-  on conflict (shop_id, key) do update set qty = excluded.qty;
+  update stock set qty = v_after where shop_id = p_shop_id and key = k;
   if v_change > 0 then
     insert into stock_lots (shop_id, key, qty, cost) values (p_shop_id, k, v_change, p_cost);
   elsif v_change < 0 then

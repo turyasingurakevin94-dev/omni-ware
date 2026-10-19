@@ -9,7 +9,7 @@
  *      trigger and the task it names, the owner's digest, and that the
  *      push-send function delivers it.
  *   2. A REAL database, when OW_PG names one: every migration applied in
- *      order, 0120 run again (after 0122, as its header says), then
+ *      order, once (as staging's db push does), 0120 run a second time, then
  *      test/fixtures/push-scenario.sql walks each handoff.
  *
  * Run: node test/push-db.test.js
@@ -22,7 +22,10 @@ const { read, createReporter } = require('./_extract');
 
 const t = createReporter('push for every app (0120)');
 const raw = read('supabase/migrations/0120_push_for_every_app.sql');
-const sql = raw.replace(/--[^\n]*/g, '');
+const raw29 = read('supabase/migrations/0129_push_after_manager.sql');
+// 0129 carries the two triggers on 0122's tables; read together, the
+// pair is what the rules ask for.
+const sql = (raw + '\n' + raw29).replace(/--[^\n]*/g, '');
 
 function fnBody(name) {
   const at = sql.search(new RegExp(`create or replace function ${name}\\(`));
@@ -65,8 +68,12 @@ function fnBody(name) {
     t.check(new RegExp(`create trigger ${fn} after [a-z ]+ on ${tbl}`).test(sql) && sql.includes(`drop trigger if exists ${fn} on ${tbl};`),
       `${fn} runs after the write, and is dropped before it is made`);
   }
-  t.check(/to_regclass\('public\.stock_reports'\) is null/.test(sql) && /to_regclass\('public\.restock_lines'\) is null/.test(sql) && /RUN IT AGAIN AFTER 0122/.test(raw),
-    '0122\'s two tables are skipped and named when missing, and the header says to run it again');
+  t.check(!/stock_reports|restock_lines/.test(raw.replace(/--[^\n]*/g, '')) && /create trigger stock_reports_ow_push/.test(raw29) && /create trigger restock_lines_ow_push/.test(raw29),
+    'the triggers on 0122\'s two tables are 0129\'s, after 0122, so a fresh database gets them in one ordered run');
+  const claim = fnBody('ow_push_claim');
+  t.check(/for update skip locked/.test(claim) && /claimed_at < now\(\) - interval '2 minutes'/.test(claim)
+    && sql.includes('revoke all on function ow_push_claim(int) from public, anon, authenticated;'), 'a row is claimed by one sender at a time, and freed if that sender dies');
+  t.check(/delivered bigint\[\] not null default '\{\}'/.test(sql), 'a row remembers the phones that already have it');
   const d = fnBody('ow_owner_digest');
   t.check(/'owner'/.test(d) && /'digest:' \|\| d/.test(d), 'the owner gets one digest a day, not a ping per decision');
   t.check(/cron\.schedule\('ow-owner-digest', '0 16 \* \* \*'/.test(sql), 'at 19:00 in Kampala');
@@ -77,9 +84,10 @@ function fnBody(name) {
 /* ---------------- 3. delivery ---------------- */
 {
   const fn = read('supabase/functions/push-send/index.ts');
-  t.check(/rpc\("ow_push_recipients"/.test(fn) && /from\("push_outbox"\)/.test(fn) && /\.is\("sent_at", null\)/.test(fn), 'push-send sends what the outbox holds, to whom the database says');
+  t.check(/rpc\("ow_push_recipients"/.test(fn) && /rpc\("ow_push_claim"/.test(fn), 'push-send claims what the outbox holds and sends it to whom the database says');
+  t.check(/!done\.has\(Number\(sub\.id\)\)/.test(fn) && /const finished = !errors\.length;/.test(fn), 'a retry goes only to the phones that missed, and a row is sent only when none did');
   t.check(/x-webhook-secret/.test(fn) && /PUSH_SEND_SECRET/.test(fn), 'and checks the webhook\'s secret');
-  t.check(/UNREGISTERED/.test(fn) && /MAX_TRIES/.test(fn), 'a retired phone is dropped, a failed push is tried again a few times');
+  t.check(/UNREGISTERED/.test(fn), 'a retired phone is dropped');
   t.check(/\[functions\.push-send\]\s+verify_jwt = false/.test(read('supabase/config.toml')), 'deployed open, like notify-worker, because a webhook drives it');
 }
 
@@ -105,8 +113,6 @@ fs.readdirSync(migDir).filter((f) => f.endsWith('.sql')).sort().forEach((f) => {
   if (r.status !== 0) failed.push(`${f}: ${(r.stderr || '').trim().split('\n')[0]}`);
 });
 t.check(failed.length === 0, `every migration applied, in order (${JSON.stringify(failed)})`);
-// Run again after 0122, as the header says: that attaches the triggers on
-// 0122's two tables.
 const again = onDb(['-qAt', '-v', 'ON_ERROR_STOP=1', '-f', path.join(migDir, '0120_push_for_every_app.sql')]);
 t.check(again.status === 0, `0120 runs a second time without error (${(again.stderr || '').trim().split('\n').filter((l) => /ERROR/.test(l))[0] || 'ok'})`);
 

@@ -123,5 +123,15 @@ set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 select _try('owner: registers a phone', 'ok', $q$insert into push_subscriptions(shop_id, user_id, fcm_token) values ('11111111-1111-1111-1111-111111111111','00000000-0000-0000-0000-00000000000a','tok-owner')$q$);
 select _try('owner: registers a phone as somebody else', 'refused', $q$insert into push_subscriptions(shop_id, user_id, fcm_token) values ('11111111-1111-1111-1111-111111111111','00000000-0000-0000-0000-00000000000d','tok-x')$q$);
 
+-- ---- delivery: one sender per row
+reset role;
+select _try('a sender claims the unsent rows', 'ok', $q$select _is($c$(select count(*) from ow_push_claim(500)) = (select count(*) from push_outbox where sent_at is null)$c$)$q$);
+select _try('check: a second sender at the same moment gets none of them', 'ok', $q$select _is($c$(select count(*) from ow_push_claim(500)) = 0$c$)$q$);
+select _try('a sender that died two minutes ago', 'ok', $q$update push_outbox set claimed_at = now() - interval '3 minutes' where id = (select min(id) from push_outbox)$q$);
+select _try('check: its claim is free again, for that row only', 'ok', $q$select _is($c$(select count(*) from ow_push_claim(500)) = 1$c$)$q$);
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+select _try('manager: claim pushes', 'refused', $q$select ow_push_claim(1)$q$);
+
 reset role;
 select case when (expect='ok' and got='ok') or (expect='refused' and got like 'refused%') then 'PASS' else 'FAIL' end, label, got from _r order by n;

@@ -53,27 +53,24 @@
 --        - a Database Webhook on push_outbox INSERT (Dashboard ->
 --          Database -> Webhooks -> push_outbox, Insert, the push-send
 --          function, header x-webhook-secret = PUSH_SEND_SECRET);
---        - and on every call it sweeps every unsent row of the last day.
+--        - and on every call it sweeps every unsent row of the last day,
+--          each row claimed by one call (ow_push_claim), so none goes twice.
 --      It reads the outbox with the service key; no login reads another's.
 --
 -- Applied by hand like every migration here, after 0119. Every function,
 -- trigger and policy is replaced or dropped before it is created. Safe to
--- run twice -- and RUN IT AGAIN AFTER 0122: the write-off reports and the
--- restock lines are 0122's tables, so on a database without them yet
--- those two triggers are skipped and named, and a second run attaches
--- them.
+-- run twice. The write-off report and the held restock line push from
+-- 0122's tables, so their two triggers are 0129's, after it.
 --
 -- CHECK AFTERWARDS:
 --   select count(*) from pg_trigger where tgname like '%_ow_push';
---   -- 6
+--   -- 4 (6 once 0129 is run)
 --   select jobname, schedule from cron.job where jobname = 'ow-owner-digest';
 --   -- 1 row, '0 16 * * *' (16:00 UTC is 19:00 in Kampala; only where pg_cron is on)
 --
 -- ROLLBACK:
 --   drop trigger if exists saved_quotes_ow_push on saved_quotes;
 --   drop trigger if exists collection_trips_ow_push on collection_trips;
---   drop trigger if exists stock_reports_ow_push on stock_reports;
---   drop trigger if exists restock_lines_ow_push on restock_lines;
 --   drop trigger if exists prices_ow_push on prices;
 --   drop trigger if exists sourcing_leads_ow_push on sourcing_leads;
 --   select cron.unschedule('ow-owner-digest');
@@ -105,10 +102,14 @@ create table if not exists push_outbox (
   sent_to int,
   tries int not null default 0,
   last_error text,
+  claimed_at timestamptz,
+  delivered bigint[] not null default '{}',
   constraint push_outbox_names_someone check (to_user is not null or to_task is not null or to_role is not null)
 );
 create unique index if not exists push_outbox_dedupe_idx on push_outbox(shop_id, dedupe) where dedupe is not null;
 create index if not exists push_outbox_unsent_idx on push_outbox(created_at) where sent_at is null;
+alter table push_outbox add column if not exists claimed_at timestamptz;
+alter table push_outbox add column if not exists delivered bigint[] not null default '{}';
 alter table push_outbox enable row level security;
 -- A login reads the pushes sent to it by name (an in-app list, later);
 -- nobody writes the outbox but the database itself.
@@ -131,6 +132,26 @@ language sql stable security definer set search_path = public as $$
 $$;
 revoke all on function ow_push_recipients(bigint) from public, anon, authenticated;
 grant execute on function ow_push_recipients(bigint) to service_role;
+
+-- push-send takes its rows here, so two calls at once (a trip back writes
+-- two rows, and two webhooks fire) never send the same push twice: each
+-- row is claimed by one call, and a claim older than two minutes (a call
+-- that died) is free again. delivered holds the phones (push_subscriptions
+-- ids) that already have it, so a retry reaches only the ones that missed.
+create or replace function ow_push_claim(p_limit int)
+returns setof push_outbox
+language sql security definer set search_path = public as $$
+  update push_outbox o
+     set claimed_at = now(), tries = o.tries + 1
+   where o.id in (select x.id from push_outbox x
+                   where x.sent_at is null and x.tries < 5 and x.created_at > now() - interval '1 day'
+                     and (x.claimed_at is null or x.claimed_at < now() - interval '2 minutes')
+                   order by x.id limit greatest(1, least(coalesce(p_limit, 100), 500))
+                   for update skip locked)
+  returning o.*
+$$;
+revoke all on function ow_push_claim(int) from public, anon, authenticated;
+grant execute on function ow_push_claim(int) to service_role;
 
 -- One push into the outbox. Never stops the write that asked for it.
 create or replace function ow_push(p_shop_id uuid, p_kind text, p_title text, p_body text,
@@ -283,53 +304,8 @@ drop trigger if exists collection_trips_ow_push on collection_trips;
 create trigger collection_trips_ow_push after insert or update on collection_trips
   for each row execute function collection_trips_ow_push();
 
--- 3c. A write-off report from the Store.
-create or replace function stock_reports_ow_push() returns trigger
-language plpgsql security definer set search_path = public as $$
-begin
-  perform ow_push(new.shop_id, 'stock.report', 'Stock reported ' || coalesce(new.why, ''),
-    trim_scale(coalesce(new.qty, 0))::text || ' ' || coalesce(new.name, 'items') || coalesce(' — ' || nullif(new.reported_by_name, ''), ''),
-    null, 'stock.writeoff', null, jsonb_build_object('table', 'stock_reports', 'id', new.id), 'report:' || new.id);
-  return null;
-exception when others then
-  raise notice 'push (report): % (%)', sqlerrm, sqlstate;
-  return null;
-end $$;
-do $$
-begin
-  if to_regclass('public.stock_reports') is null then
-    raise notice 'skipped stock_reports: not on this database yet (0122 makes it). Run this file again after 0122.';
-  else
-    drop trigger if exists stock_reports_ow_push on stock_reports;
-    create trigger stock_reports_ow_push after insert on stock_reports
-      for each row execute function stock_reports_ow_push();
-  end if;
-end $$;
-
--- 3d. A restock line the Manager held.
-create or replace function restock_lines_ow_push() returns trigger
-language plpgsql security definer set search_path = public as $$
-begin
-  if new.status = 'held' and old.status is distinct from 'held' then
-    perform ow_push(new.shop_id, 'restock.held', 'The Manager held a restock line',
-      coalesce(new.name, 'A line') || ' — not to buy for now.',
-      null, 'buy.restock', null, jsonb_build_object('table', 'restock_lines', 'id', new.id), 'held:' || new.id || ':' || coalesce(new.held_at::text, ''));
-  end if;
-  return null;
-exception when others then
-  raise notice 'push (restock): % (%)', sqlerrm, sqlstate;
-  return null;
-end $$;
-do $$
-begin
-  if to_regclass('public.restock_lines') is null then
-    raise notice 'skipped restock_lines: not on this database yet (0122 makes it). Run this file again after 0122.';
-  else
-    drop trigger if exists restock_lines_ow_push on restock_lines;
-    create trigger restock_lines_ow_push after update on restock_lines
-      for each row execute function restock_lines_ow_push();
-  end if;
-end $$;
+-- (3c and 3d, the write-off report and the held restock line, are 0129's:
+-- their tables come with 0122, after this file.)
 
 -- 3e. A supplier's price changed: whoever took an open order with that
 -- supplier's line on it tells the customer. Once a day per order and row.

@@ -5,6 +5,9 @@
 // ../README.md). Each call does not trust the request body beyond "there
 // is something to send": it sweeps every unsent row of the last day,
 // oldest first, so a push missed by one call goes out with the next.
+// Rows are claimed first (ow_push_claim), so two calls at once never send
+// the same push twice; a row remembers the phones that already have it
+// (delivered), so a retry reaches only the ones that missed.
 //
 // Who a row is for is the database's answer (ow_push_recipients): one
 // login, everyone whose role holds a task, or everyone with a role --
@@ -25,7 +28,6 @@ const FIREBASE_SERVICE_ACCOUNT_JSON = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_JSO
 // function only sends what is already in the outbox.
 const PUSH_SEND_SECRET = Deno.env.get("PUSH_SEND_SECRET");
 const BATCH = 100;
-const MAX_TRIES = 5;
 
 let fsa: { project_id: string; client_email: string; private_key: string } | null = null;
 if (FIREBASE_SERVICE_ACCOUNT_JSON) {
@@ -81,16 +83,17 @@ async function getFcmAccessToken(sa: { client_email: string; private_key: string
   return data.access_token;
 }
 
-type Row = { id: number; shop_id: string; kind: string; title: string; body: string; ref: Record<string, unknown> | null; tries: number };
+type Row = { id: number; shop_id: string; kind: string; title: string; body: string; ref: Record<string, unknown> | null; tries: number; delivered: number[] | null };
 
-/* One outbox row to every phone it is for. Returns how many phones took
-   it; throws when FCM refused every one of them, so the row is tried
-   again on the next call. */
-async function deliver(token: string, row: Row): Promise<number> {
+/* One outbox row to every phone it is for that does not have it yet.
+   Returns the phones that have it now and the errors from the rest; a row
+   with errors stays unsent and is tried again on a later call. */
+async function deliver(token: string, row: Row): Promise<{ delivered: number[]; errors: string[] }> {
+  const done = new Set<number>((row.delivered ?? []).map(Number));
   const { data: who, error: whoErr } = await admin.rpc("ow_push_recipients", { p_id: row.id });
   if (whoErr) throw new Error(`recipients: ${whoErr.message}`);
   const users = (who ?? []).map((r: { user_id: string }) => r.user_id).filter(Boolean);
-  if (!users.length) return 0;
+  if (!users.length) return { delivered: [...done], errors: [] };
 
   const { data: subs, error: subErr } = await admin
     .from("push_subscriptions")
@@ -99,7 +102,8 @@ async function deliver(token: string, row: Row): Promise<number> {
     .in("user_id", users)
     .not("fcm_token", "is", null);
   if (subErr) throw new Error(`subscriptions: ${subErr.message}`);
-  if (!subs?.length) return 0;
+  const todo = (subs ?? []).filter((sub) => !done.has(Number(sub.id)));
+  if (!todo.length) return { delivered: [...done], errors: [] };
 
   const data: Record<string, string> = { kind: String(row.kind) };
   if (row.ref && typeof row.ref === "object") {
@@ -108,17 +112,24 @@ async function deliver(token: string, row: Row): Promise<number> {
   // notify-worker's tap handler reads orderId; keep it for an order.
   if (data.table === "saved_quotes" && data.id) data.orderId = data.id;
 
-  let sent = 0;
   const errors: string[] = [];
-  await Promise.all(subs.map(async (sub) => {
-    const resp = await fetch(`https://fcm.googleapis.com/v1/projects/${fsa!.project_id}/messages:send`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({
-        message: { token: sub.fcm_token, notification: { title: row.title, body: row.body }, data, android: { priority: "high" } },
-      }),
-    });
-    if (resp.ok) { sent++; return; }
+  await Promise.all(todo.map(async (sub) => {
+    // A phone whose send throws (the network) is an error like any other,
+    // so the phones that did get it are still recorded.
+    let resp: Response;
+    try {
+      resp = await fetch(`https://fcm.googleapis.com/v1/projects/${fsa!.project_id}/messages:send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          message: { token: sub.fcm_token, notification: { title: row.title, body: row.body }, data, android: { priority: "high" } },
+        }),
+      });
+    } catch (e) {
+      errors.push(String((e as Error)?.message || e).slice(0, 80));
+      return;
+    }
+    if (resp.ok) { done.add(Number(sub.id)); return; }
     const errBody = await resp.json().catch(() => ({}));
     const fcmStatus = errBody?.error?.status;
     // A phone FCM has retired is dropped, not retried for ever.
@@ -128,8 +139,7 @@ async function deliver(token: string, row: Row): Promise<number> {
     }
     errors.push(`${resp.status} ${fcmStatus || ""}`.trim());
   }));
-  if (!sent && errors.length) throw new Error(`FCM refused: ${errors.join(", ")}`);
-  return sent;
+  return { delivered: [...done], errors };
 }
 
 Deno.serve(async (req) => {
@@ -141,16 +151,8 @@ Deno.serve(async (req) => {
   }
   if (!fsa) return json({ ok: true, skipped: "FIREBASE_SERVICE_ACCOUNT_JSON not configured" });
 
-  const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
-  const { data: rows, error } = await admin
-    .from("push_outbox")
-    .select("id, shop_id, kind, title, body, ref, tries")
-    .is("sent_at", null)
-    .lt("tries", MAX_TRIES)
-    .gte("created_at", since)
-    .order("id", { ascending: true })
-    .limit(BATCH);
-  if (error) return json({ error: error.message, stage: "outbox" }, 500);
+  const { data: rows, error } = await admin.rpc("ow_push_claim", { p_limit: BATCH });
+  if (error) return json({ error: error.message, stage: "claim" }, 500);
   if (!rows?.length) return json({ ok: true, sent: 0 });
 
   let token: string;
@@ -164,12 +166,18 @@ Deno.serve(async (req) => {
   const results = [];
   for (const row of rows as Row[]) {
     try {
-      const n = await deliver(token, row);
-      await admin.from("push_outbox").update({ sent_at: new Date().toISOString(), sent_to: n, tries: row.tries + 1, last_error: null }).eq("id", row.id);
-      results.push({ id: row.id, sent: n });
+      const { delivered, errors } = await deliver(token, row);
+      const finished = !errors.length;
+      await admin.from("push_outbox").update({
+        delivered,
+        claimed_at: null,
+        ...(finished ? { sent_at: new Date().toISOString(), sent_to: delivered.length, last_error: null }
+                     : { last_error: `FCM refused: ${errors.join(", ")}`.slice(0, 300) }),
+      }).eq("id", row.id);
+      results.push({ id: row.id, sent: delivered.length, ...(finished ? {} : { errors }) });
     } catch (e) {
       const msg = String((e as Error)?.message || e).slice(0, 300);
-      await admin.from("push_outbox").update({ tries: row.tries + 1, last_error: msg }).eq("id", row.id);
+      await admin.from("push_outbox").update({ claimed_at: null, last_error: msg }).eq("id", row.id);
       results.push({ id: row.id, error: msg });
     }
   }
