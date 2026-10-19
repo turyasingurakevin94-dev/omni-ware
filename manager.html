@@ -1700,8 +1700,32 @@ async function boot(){
   try { await loadAll(); if (!S.started) start(); else render(); }
   catch (e) { if (S.data) toast(isNetworkError(e) ? 'Offline — showing what you last saw' : 'Could not refresh: ' + e.message, 5000); else document.getElementById('bx_main').innerHTML = `<div class="bx-empty" style="padding-top:35vh"><b>Could not open the books</b>${esc(e.message || e)}<br><br><button class="bx-btn navy" style="flex:none;margin:0 auto" onclick="location.reload()">Try again</button></div>`; }
 }
+/* ---- pushes to this phone (0120: push_outbox, sent by push-send) ----
+   Asked once, quietly, as the app starts: Android's own "allow
+   notifications" is the only thing that shows. The phone is this login's
+   (user_id), with its staff row when it has one. A tap opens the app on
+   fresh figures. Inside the installed app only. */
+function phonePush(){
+  const C = window.Capacitor, P = C && C.isNativePlatform && C.isNativePlatform() && C.Plugins && C.Plugins.PushNotifications;
+  if (!P || phonePush.on || !S.user || !S.shopId) return; phonePush.on = true;
+  P.addListener('registration', async t => {
+    try {
+      const { data: st } = await sb.from('staff').select('id').eq('shop_id', S.shopId).eq('user_id', S.user.id).maybeSingle();
+      await sb.from('push_subscriptions').upsert({ shop_id: S.shopId, staff_id: st ? st.id : null, user_id: S.user.id, fcm_token: t.value }, { onConflict: 'fcm_token' });
+    } catch (_e) {}
+  });
+  P.addListener('pushNotificationActionPerformed', () => { loadAll().then(() => render()).catch(() => {}); });
+  (async () => {
+    try {
+      let perm = await P.checkPermissions();
+      if (perm.receive !== 'granted' && perm.receive !== 'denied') perm = await P.requestPermissions();
+      if (perm.receive === 'granted') await P.register();
+    } catch (_e) {}
+  })();
+}
 function start(){
   S.started = true;
+  phonePush();
   tasks();
   render();
   maybeTeamWin();
