@@ -199,6 +199,18 @@ function billItemsText(p: any): string {
 // Sessions
 // ---------------------------------------------------------------------
 
+/* The shop a phone signs in to, when the app could not say. With a live
+   PIN only, for verify: that is the account the shop has just invited.
+   "many" when the number is a supplier to more than one shop, which only
+   the invite link can settle. Never sent back unless the PIN is right. */
+async function shopForPhone(phone: string, livePin: boolean): Promise<string | null | "many"> {
+  let q = admin.from("supplier_accounts").select("shop_id").eq("phone", phone).eq("status", "active");
+  if (livePin) q = q.not("pin_hash", "is", null).gt("pin_expires_at", new Date().toISOString());
+  const { data } = await q.limit(2);
+  if (!data || !data.length) return null;
+  return data.length > 1 ? "many" : String(data[0].shop_id);
+}
+
 async function sessionSupplier(shopId: string, token: string) {
   if (!token) return null;
   const { data } = await admin
@@ -488,9 +500,13 @@ Deno.serve(async (req) => {
   let body: Record<string, unknown>;
   try { body = await req.json(); } catch { return json({ error: "Invalid JSON body" }, 400); }
 
-  const shopId = String(body.shopId ?? "");
+  let shopId = String(body.shopId ?? "");
   const action = String(body.action ?? "");
-  if (!shopId || !action) return json({ error: "shopId and action are required" }, 400);
+  // The installed app has no invite link to read ?s= from, so signing in
+  // may come without a shop: the phone finds it (shopForPhone). Every
+  // other action needs the shop the session was made for.
+  const signingIn = action === "verify" || action === "ask_pin";
+  if (!action || (!shopId && !signingIn)) return json({ error: "shopId and action are required" }, 400);
 
   try {
     // -----------------------------------------------------------------
@@ -503,6 +519,12 @@ Deno.serve(async (req) => {
       const deviceId = String(body.deviceId ?? "").trim().slice(0, 120);
       if (!phone || !/^\d{4}$/.test(pin) || !deviceId) {
         return json({ error: "Enter your phone and the four figures Omni-Ware sent you" }, 400);
+      }
+      if (!shopId) {
+        const found = await shopForPhone(phone, true);
+        if (found === "many") return json({ error: "Open the link Omni-Ware sent you on WhatsApp once, then sign in" }, 409);
+        if (!found) return json({ error: "That PIN is not right", triesLeft: 0 }, 401);
+        shopId = found;
       }
       const { data: account } = await admin
         .from("supplier_accounts")
@@ -540,7 +562,9 @@ Deno.serve(async (req) => {
         expires_at: new Date(Date.now() + SESSION_TTL_MS).toISOString(),
       });
       const sup = await readSupplier(shopId, account.supplier_id);
-      return json({ ok: true, token, name: sup.name });
+      // shopId too, for the installed app to keep: it may have come in
+      // without one.
+      return json({ ok: true, token, name: sup.name, shopId });
     }
 
     // -----------------------------------------------------------------
@@ -549,7 +573,11 @@ Deno.serve(async (req) => {
     // -----------------------------------------------------------------
     if (action === "ask_pin") {
       const phone = normalisePhone(body.phone);
-      if (phone) {
+      if (phone && !shopId) {
+        const found = await shopForPhone(phone, false);
+        if (found && found !== "many") shopId = found;
+      }
+      if (phone && shopId) {
         await admin.from("supplier_accounts")
           .update({ pin_requested_at: new Date().toISOString() })
           .eq("shop_id", shopId).eq("phone", phone).eq("status", "active");

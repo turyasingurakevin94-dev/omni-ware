@@ -384,7 +384,10 @@ function shopId(){
   if(fromUrl){ store(K_SHOP, fromUrl); return fromUrl; }
   return store(K_SHOP);
 }
-const DEMO = new URLSearchParams(location.search).has('demo') || !shopId();
+// The installed app has no invite link, so no shop yet is not a demo
+// there: signing in finds the shop from the phone.
+const NATIVE = typeof window !== 'undefined' && !!window.Capacitor;
+const DEMO = new URLSearchParams(location.search).has('demo') || (!shopId() && !NATIVE);
 function deviceId(){
   let d = store(K_DEV);
   if(!d){
@@ -1500,6 +1503,7 @@ async function pinPress(k){
   SI.busy = true; render();
   try{
     const r = await api('verify', { phone, pin: SI.pin, deviceId: deviceId() });
+    if(r.shopId && !shopId()) store(K_SHOP, r.shopId);
     store(K_TOKEN, r.token); SI.status = 'ok'; SI.name = r.name || ''; SI.msg = ''; SI.busy = false; SI.editPhone = false; render();
     setTimeout(()=> go(setup().seen ? '#today' : '#welcome'), 700);
   }catch(err){
@@ -1634,7 +1638,7 @@ function demoData(t){
     const tag = document.createElement('div'); tag.className = 'demo-tag'; tag.textContent = 'DEMO · SAMPLE DATA'; document.body.appendChild(tag);
     if(!location.hash) location.hash = '#today';
   }
-  if('serviceWorker' in navigator && !DEMO){ navigator.serviceWorker.register('/supplier-sw.js', { scope:'/supplier.html' }).catch(()=>{}); }
+  if('serviceWorker' in navigator && !DEMO && !NATIVE){ navigator.serviceWorker.register('/supplier-sw.js', { scope:'/supplier.html' }).catch(()=>{}); }
   navigator.serviceWorker && navigator.serviceWorker.addEventListener && navigator.serviceWorker.addEventListener('message', (e)=>{ if(e.data && e.data.url){ const h = String(e.data.url).split('#')[1]; if(h) go('#' + h); } });
   if(!DEMO && !store(K_TOKEN)){ location.hash = '#signin'; }
   render();

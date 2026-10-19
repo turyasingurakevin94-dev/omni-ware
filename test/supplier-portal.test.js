@@ -188,4 +188,24 @@ const accountsCode = codeOnly(accounts);
   if (ok) t.check(true, 'the inline script parses');
 }
 
+/* ---------- 9. the installed app signs in without a shop id ---------- */
+{
+  // An APK has no invite link to read ?s= from. Only signing in may come
+  // without a shop, the phone finds it, and the shop goes back only once
+  // the PIN is right.
+  t.check(/const signingIn = action === "verify" \|\| action === "ask_pin"/.test(portalCode)
+    && /\(!shopId && !signingIn\)/.test(portalCode),
+    'only verify and ask_pin may arrive without a shopId; every other action still needs one');
+  const finder = extractFunction(portalCode, 'shopForPhone', 'supplier-portal');
+  t.check(/\.eq\("status", "active"\)/.test(finder) && /pin_hash/.test(finder) && /pin_expires_at/.test(finder),
+    'the phone finds an active account, and for verify only one with a live PIN');
+  t.check(/limit\(2\)/.test(finder) && /"many"/.test(finder),
+    'a number that supplies two shops is not guessed between');
+  const verify = portalCode.slice(portalCode.indexOf('if (action === "verify")'), portalCode.indexOf('if (action === "ask_pin")'));
+  t.check(verify.indexOf('shopId });') > verify.indexOf('safeEqual('),
+    'the shop id is returned only after the PIN has been checked');
+  t.check(/const DEMO = [^\n]*\(!shopId\(\) && !NATIVE\)/.test(page) && /store\(K_SHOP, r\.shopId\)/.test(page),
+    'inside the app no shop is not demo mode, and the shop from sign-in is kept');
+}
+
 process.exit(t.done() ? 1 : 0);
