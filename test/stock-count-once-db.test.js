@@ -27,16 +27,28 @@ const sql = raw.replace(/--[^\n]*/g, '');
   const strip = (x) => x.replace(/--[^\n]*/g, '').replace(/\s+/g, ' ').trim();
   const fnOf = (s) => { const a = s.indexOf('create or replace function accept_stock_count('); return s.slice(a, s.indexOf('$$;', s.indexOf('end;', a)) + 3); };
   const was = strip(fnOf(read('supabase/migrations/0115_store_role.sql')));
+  // 0115 sets after from the count before it reads the books; 0141 reads the books first,
+  // then sets after from the count's own difference (or, for an older count, adds back what is out).
+  const was0 = was.replace(" after := greatest(0, round(coalesce((l ->> 'counted')::numeric, 0), 6));", '');
   const now = strip(fnOf(raw))
-    .replace(' gone numeric;', '')
-    .replace(" if k is null then continue; end if; gone := ow_held_gone(c.shop_id, k); after := greatest(0, round(coalesce((l ->> 'counted')::numeric, 0), 6)) + gone;",
-             " after := greatest(0, round(coalesce((l ->> 'counted')::numeric, 0), 6)); if k is null then continue; end if;")
-    .replace(" || case when gone > 0 then ' · ' || trim_scale(gone) || ' out on orders not yet invoiced' else '' end,", ',');
-  t.check(now === was, 'accept_stock_count is 0115\'s but for counting back what live orders took');
+    .replace(' gone numeric; now_qty jsonb := \'{}\'::jsonb;', '')
+    .replace(/ if l \? 'held' and ow_num\(l ->> 'system'\) is not null then [\s\S]*? end if; delta :=/, ' delta :=')
+    .replace(' now_qty := now_qty || jsonb_build_object(k, after);', '')
+    .replace(" || case when gone > 0 then ' · ' || trim_scale(gone) || ' out on orders not yet invoiced' else '' end,", ',')
+    .replace("return jsonb_build_object('ok', true, 'changed', changed, 'stock', now_qty);", "return jsonb_build_object('ok', true, 'changed', changed);");
+  t.check(now === was0, 'accept_stock_count is 0115\'s but for applying the count\'s own difference (or counting back what is out), the log note and the stock it returns');
   const held = sql.slice(sql.indexOf('create or replace function ow_held_gone('), sql.indexOf('create or replace function accept_stock_count('));
   t.check(/not s\.invoiced and not coalesce\(s\.voided, false\)/.test(held) && /cancelledAt/.test(held), 'only orders not invoiced, voided or cancelled');
   t.check(/s\.status in \('pending_delivery', 'completed'\)/.test(held) && /s\.payload ->> 'pickingStatus' = 'done'/.test(held), 'whose goods have left the shelf: packed, out, or delivered');
   t.check(/'__stock__' or ow_line_received\(it\)/.test(held) && /ow_on_shelf\(/.test(held), 'the lines the invoice takes, converted the way the invoice converts them');
+  t.check(/if l \? 'held' and ow_num\(l ->> 'system'\) is not null then\s*gone := [^;]*;\s*after := greatest\(0, round\(before \+ coalesce\(\(l ->> 'counted'\)::numeric, 0\) - ow_num\(l ->> 'system'\), 6\)\);/.test(raw),
+    'a count saved with what was out applies only its own difference to the books at acceptance');
+  t.check(/coalesce\(q\.payload ->> 'pickShortfallAckAt', ''\) = ''/.test(held), 'a short pick let stand as the full quantity counts the full quantity, as the invoice takes it');
+  const store = read('store.html');
+  t.check(/system: ct\.system\[i\], held: \(ct\.held \|\| \{\}\)\[i\] \|\| 0/.test(store) && /ct\.system\[ct\.i\] = Math\.max\(0, \(Number\(D\(\)\.stock\[x\.key\]\) \|\| 0\) - ct\.held\[ct\.i\]\)/.test(store),
+    'the Store saves what was out with each counted line, and expects the books less it');
+  t.check(/data\.stock && typeof data\.stock === 'object'/.test(store) && /pickStatus === 'short' && !q\.pickShortfallAckAt/.test(store),
+    'the Store shows what the books say after acceptance, and counts an acknowledged short in full');
   t.check(/Safe to run twice/.test(raw) && /ROLLBACK/.test(raw) && /CHECK AFTERWARDS/.test(raw), 'the header says it runs twice, and how to check and roll back');
   t.check(/\| 0141 \| /.test(read('docs/decision-rights.md')), 'docs/decision-rights.md reserves 0141 for this build');
   const others = fs.readdirSync(path.join(__dirname, '..', 'supabase', 'migrations')).filter((f) => /^\d{4}_.*\.sql$/.test(f)).sort()

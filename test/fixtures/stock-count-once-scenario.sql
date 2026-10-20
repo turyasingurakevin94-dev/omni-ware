@@ -35,7 +35,8 @@ insert into saved_quotes(id, shop_id, client_name, status, invoiced, amount_paid
  (9604,'11111111-1111-1111-1111-111111111111','Nansana Hardware','preparing',false,0,
   '{"pickingStatus":"done","client":{"name":"Nansana Hardware"},"items":[{"productId":"P1","productName":"BB Silicone","qty":6,"price":30000,"sellPrice":50000,"unit":"piece","supplierId":"__stock__","pickStatus":"done"}]}');
 update saved_quotes set voided = true where id = 9604;
--- The shelf holds 15: 20 less the 3 packed and the 2 delivered.
+-- The shelf holds 15: 20 less the 3 packed and the 2 delivered. A count saved by an
+-- older Store app, with no `held`: accepting it counts back in what orders hold now.
 insert into stock_counts(id, shop_id, counted_by, counted_by_name, lines) values
  ('cccccccc-0000-0000-0000-000000000001','11111111-1111-1111-1111-111111111111','00000000-0000-0000-0000-00000000000d','Grace',
   '[{"key":"P1","productId":"P1","name":"BB Silicone","counted":15,"system":20}]');
@@ -73,10 +74,30 @@ select _try('check: after its invoice the books are 17, once taken', 'ok', $q$se
 -- a real loss: the shelf is one short of what the books expect
 insert into stock_counts(id, shop_id, counted_by, counted_by_name, lines) values
  ('cccccccc-0000-0000-0000-000000000002','11111111-1111-1111-1111-111111111111','00000000-0000-0000-0000-00000000000d','Grace',
-  '[{"key":"P1","productId":"P1","name":"BB Silicone","counted":14,"system":17}]');
+  '[{"key":"P1","productId":"P1","name":"BB Silicone","counted":14,"system":15,"held":2}]');
 set role authenticated;
-select _try('manager: accepts a count one short (14 on the shelf, 2 still out for Ggaba)', 'ok', $q$select accept_stock_count('cccccccc-0000-0000-0000-000000000002')$q$);
+select _try('manager: accepts a count one short (14 on the shelf; the Store expected 15: 17 less the 2 out for Ggaba)', 'ok', $q$select accept_stock_count('cccccccc-0000-0000-0000-000000000002')$q$);
 reset role;
 select _try('check: only the real loss comes off: 16', 'ok', $q$select _is($c$(select qty from stock where key='P1') = 16 and exists(select 1 from stock_log where key='P1' and type='count' and delta = -1 and note like '%2 out on orders not yet invoiced%')$c$)$q$);
+
+-- Codex on #40: an order packed between the count and its acceptance moves nothing twice.
+insert into stock_counts(id, shop_id, counted_by, counted_by_name, lines) values
+ ('cccccccc-0000-0000-0000-000000000003','11111111-1111-1111-1111-111111111111','00000000-0000-0000-0000-00000000000d','Grace',
+  '[{"key":"P1","productId":"P1","name":"BB Silicone","counted":14,"system":14,"held":2}]');
+insert into saved_quotes(id, shop_id, client_name, status, invoiced, amount_paid, payload) overriding system value values
+ (9605,'11111111-1111-1111-1111-111111111111','Mukono Roofing','preparing',false,150000,
+  '{"pickingStatus":"done","client":{"name":"Mukono Roofing"},"items":[{"productId":"P1","productName":"BB Silicone","qty":3,"price":30000,"sellPrice":50000,"unit":"piece","supplierId":"__stock__","pickStatus":"done"}]}');
+set role authenticated;
+select _try('manager: accepts a count that matched, after another order was packed', 'ok', $q$select _is($c$(select (r->'stock'->>'P1')::numeric = 16 from (select accept_stock_count('cccccccc-0000-0000-0000-000000000003') r) x)$c$)$q$);
+reset role;
+select _try('check: the books stay 16 (the count found no difference), and it says so to the phone', 'ok', $q$select _is($c$(select qty from stock where key='P1') = 16$c$)$q$);
+update saved_quotes set status = 'completed' where id = 9605;
+set role authenticated;
+select _try('manager: invoices the order packed in between', 'ok', $q$select invoice_order('11111111-1111-1111-1111-111111111111', 9605)$q$);
+reset role;
+select _try('check: its invoice takes its 3 once: 13', 'ok', $q$select _is($c$(select qty from stock where key='P1') = 13$c$)$q$);
+-- Codex on #40: a short pick the Manager let stand as the full quantity is invoiced at qty.
+update saved_quotes set payload = payload || '{"pickShortfallAckAt":"2026-10-20T10:00:00Z"}' where id = 9602;
+select _try('check: then all 4 of Ggaba''s line count as gone, not the 2 picked', 'ok', $q$select _is($c$ow_held_gone('11111111-1111-1111-1111-111111111111', 'P1') = 4$c$)$q$);
 
 select case when (expect = 'ok' and got = 'ok') or (expect like 'refused%' and got like expect || '%') then 'PASS' else 'FAIL' end, label, got from _r order by n;

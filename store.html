@@ -1193,7 +1193,8 @@ function heldGone(productId, variantIdx){
     if (!(q.status === 'pending_delivery' || q.status === 'completed' || (q.status === 'preparing' && q.pickingStatus === 'done'))) return;
     (q.items || []).forEach(it => {
       if (!lineTakesShelf(it) || stockKey(it.productId, it.variantIdx) !== key) return;
-      const picked = it.pickStatus === 'short' ? Number(it.pickedQty) || 0 : Number(it.qty) || 0;
+      // A short the Manager let stand as the full quantity (pickShortfallAckAt) is invoiced at qty.
+      const picked = it.pickStatus === 'short' && !q.pickShortfallAckAt ? Number(it.pickedQty) || 0 : Number(it.qty) || 0;
       if (picked > 0) n += picked * shelfPackFor(it);
     });
   });
@@ -1778,11 +1779,13 @@ async function sendCount(aisle, lines){
   return rowToCount(data);
 }
 async function decideCount(id, accept){
-  const { error } = await sb.rpc(accept ? 'accept_stock_count' : 'ask_recount', { p_id: id });
+  const { data, error } = await sb.rpc(accept ? 'accept_stock_count' : 'ask_recount', { p_id: id });
   if (error) throw error;
   const c = (D().counts || []).find(x => x.id === id);
   if (c) { c.status = accept ? 'accepted' : 'recount'; c.decidedAt = new Date().toISOString(); c.decidedBy = S.user.id; }
-  if (accept && c) c.lines.forEach(l => { D().stock[l.key] = Number(l.counted) || 0; D().lastCounted[l.key] = Date.now(); });
+  // What the books now say (0141 returns it: the count's difference on today's books, what is out on orders kept).
+  const now = accept && data && data.stock && typeof data.stock === 'object' ? data.stock : null;
+  if (accept && c) c.lines.forEach(l => { D().stock[l.key] = now && now[l.key] != null ? Number(now[l.key]) || 0 : (Number(l.counted) || 0) + (Number(l.held) || 0); D().lastCounted[l.key] = Date.now(); });
   saveSnapshot();
 }
 
@@ -3024,7 +3027,8 @@ ACT.ctsave = () => {
   if (!L.some((_, k) => E[k] !== undefined && E[k] !== '')) return;
   ct.counts[ct.i] = Math.round(L.reduce((t, l, k) => t + (parseInt(E[k], 10) || 0) * l[2], 0) * 1e6) / 1e6;
   // What the shelf should hold: the books less what has left for orders not yet invoiced (0141). Taken now, shown only after the last item.
-  ct.system[ct.i] = Math.max(0, (Number(D().stock[x.key]) || 0) - heldGone(x.productId, x.variantIdx));
+  (ct.held ||= {})[ct.i] = heldGone(x.productId, x.variantIdx);
+  ct.system[ct.i] = Math.max(0, (Number(D().stock[x.key]) || 0) - ct.held[ct.i]);
   const last = Object.keys(ct.counts).length === ct.keys.length;
   if (last) { buzz([40, 60, 40, 60, 90]); sfxNotes([[523.25, 0, 0.4, 0.15], [659.25, 0.1, 0.4, 0.14], [783.99, 0.2, 0.7, 0.13]]); }
   else { buzz(30); sfxNotes([[880, 0, 0.1, 0.14], [1174.7, 0.07, 0.22, 0.11]]); }
@@ -3034,7 +3038,7 @@ ACT.ctsave = () => {
 ACT.ctreveal = () => { FEEL.stamp(); replaceTop('countresults', {}); sendCountOnce(); };
 async function sendCountOnce(){
   const ct = S.ui.ct; if (!ct || ct.sent || ct.sending) return; ct.sending = true;
-  const lines = ct.keys.map((k, i) => { const x = stockItems().find(s => s.key === k); return { key: k, productId: x.productId, variantIdx: x.variantIdx, name: x.productName, counted: ct.counts[i], system: ct.system[i] }; });
+  const lines = ct.keys.map((k, i) => { const x = stockItems().find(s => s.key === k); return { key: k, productId: x.productId, variantIdx: x.variantIdx, name: x.productName, counted: ct.counts[i], system: ct.system[i], held: (ct.held || {})[i] || 0 }; });
   try { const c = await sendCount(ct.aisle, lines); ct.sent = c.id; saveCt(); }
   catch (e) { ct.sendErr = failSay(e); }
   ct.sending = false; if (topType() === 'countresults') render();

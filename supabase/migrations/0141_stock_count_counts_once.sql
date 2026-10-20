@@ -8,13 +8,21 @@
 -- when the invoice took them. Stock ended understated by every order that
 -- was picked but not yet invoiced when the count was accepted.
 --
--- Accepting a count now adds back what such orders have taken off the
--- shelf (ow_held_gone): for each order not invoiced, voided or cancelled
--- whose goods have left the shelf (packed: picking done, or out for
--- delivery, or delivered), each line the invoice will take (from the
--- shelf, or bought in and received), at what was picked, in shelf units
--- the way the invoice converts them (ow_on_shelf). The stock log line
--- says how much was counted back in. Nothing else changes.
+-- What has left the shelf for such orders (ow_held_gone; store.html
+-- heldGone, the same rule): each order not invoiced, voided or cancelled
+-- whose goods have left (packed: picking done, or out for delivery, or
+-- delivered), each line the invoice will take (from the shelf, or bought
+-- in and received), at what went (what was picked, or the full quantity
+-- when the Manager let a short pick stand as all of it), in shelf units the
+-- way the invoice converts them (ow_on_shelf).
+--
+-- The Store's count now saves that with each line (`held`) and expects the
+-- books less it (`system`). Accepting the count applies only the
+-- difference it found (counted - system) to the books as they stand at
+-- acceptance, so an order packed, delivered or invoiced in between moves
+-- nothing twice. A count saved before this (no `held`) counts back in what
+-- such orders hold at acceptance. The stock log says how much was out, and
+-- the function returns what each counted item now stands at.
 --
 -- Applied by hand after 0115 and 0119. Safe to run twice.
 --
@@ -46,7 +54,10 @@ begin
       if not (coalesce(it ->> 'supplierId', '') = '__stock__' or ow_line_received(it)) then continue; end if;
       vi := ow_num(it ->> 'variantIdx');
       if ow_stock_key(it ->> 'productId', vi) is distinct from p_key then continue; end if;
-      picked := case when it ->> 'pickStatus' = 'short' then coalesce(ow_num(it ->> 'pickedQty'), 0)
+      -- A short pick the Manager let stand as "the full quantity went" (pickShortfallAckAt)
+      -- is invoiced at qty, so qty is what has gone.
+      picked := case when it ->> 'pickStatus' = 'short' and coalesce(q.payload ->> 'pickShortfallAckAt', '') = ''
+                     then coalesce(ow_num(it ->> 'pickedQty'), 0)
                      else coalesce(ow_num(it ->> 'qty'), 0) end;
       if picked <= 0 then continue; end if;
       total := total + coalesce((ow_on_shelf(p_shop_id, it ->> 'productId', vi, picked, it ->> 'unit', it, null)).qty, 0);
@@ -76,6 +87,7 @@ declare
   floor_id bigint;
   changed int := 0;
   gone numeric;
+  now_qty jsonb := '{}'::jsonb;
 begin
   select * into c from stock_counts where id = p_id for update;
   if not found then raise exception 'That count is gone.'; end if;
@@ -88,13 +100,23 @@ begin
   loop
     k := l ->> 'key';
     if k is null then continue; end if;
-    -- 0141: what live orders have already taken off the shelf, and their invoices
-    -- will take off the books, is counted back in, so it comes off once.
-    gone := ow_held_gone(c.shop_id, k);
-    after := greatest(0, round(coalesce((l ->> 'counted')::numeric, 0), 6)) + gone;
     select qty into before from stock where shop_id = c.shop_id and key = k for update;
     before := coalesce(before, 0);
+    -- 0141: what live orders had already taken off the shelf is still in the books, and
+    -- their invoices will take it off. A count the Store saved with `held` (what was out
+    -- on such orders when it counted; its `system` is the books less that) applies only
+    -- the difference it found to the books as they are now, so an order packed, out or
+    -- invoiced between the count and this acceptance moves nothing twice. An older count,
+    -- saved without it, counts back in what such orders hold now.
+    if l ? 'held' and ow_num(l ->> 'system') is not null then
+      gone := coalesce(ow_num(l ->> 'held'), 0);
+      after := greatest(0, round(before + coalesce((l ->> 'counted')::numeric, 0) - ow_num(l ->> 'system'), 6));
+    else
+      gone := ow_held_gone(c.shop_id, k);
+      after := greatest(0, round(coalesce((l ->> 'counted')::numeric, 0), 6)) + gone;
+    end if;
     delta := round(after - before, 6);
+    now_qty := now_qty || jsonb_build_object(k, after);
     if delta = 0 then continue; end if;
 
     insert into stock (shop_id, key, product_id, variant_idx, qty)
@@ -135,6 +157,7 @@ begin
   end loop;
 
   update stock_counts set status = 'accepted', decided_by = auth.uid(), decided_at = now() where id = p_id;
-  return jsonb_build_object('ok', true, 'changed', changed);
+  -- 0141: what each counted item now stands at in the books, for the phone that accepted it.
+  return jsonb_build_object('ok', true, 'changed', changed, 'stock', now_qty);
 end;
 $$;
