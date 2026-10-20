@@ -1317,7 +1317,19 @@ function leadToRow(l){ return { id: l.id, shop_id: S.shopId, name: l.name || '',
   product_id: l.productId || null, graduated_at: l.graduatedAt || null, created_at: l.createdAt || null, stage_entered_at: l.stageEnteredAt == null ? null : Number(l.stageEnteredAt),
   requests: l.requests || [], candidates: l.candidates || [], variant_attrs: l.variantAttrs || [], image: l.image || null,
   voided: !!l.voided, dropped_reason: l.droppedReason || null, dropped_at: l.droppedAt || null }; }
+// Sales appends a customer's ask to a lead's requests on the server (sales.html
+// srcAsk); a save from this phone's copy must not drop it. The server's list is
+// the base; this phone's entries replace their match (a withdrawal, say) or join it.
+function mergeRequests(server, local){
+  const key = r => [r.at || '', r.source || '', r.customerId || '', r.orderId || ''].join('|');
+  const out = (server || []).slice(), at = new Map(out.map((r, i) => [key(r), i]));
+  (local || []).forEach(r => { const i = at.get(key(r)); if (i == null) { at.set(key(r), out.length); out.push(r); } else out[i] = r; });
+  return out;
+}
 async function saveLead(l){
+  const cur = await sb.from('sourcing_leads').select('requests').eq('shop_id', S.shopId).eq('id', l.id).maybeSingle();
+  if (cur.error) throw cur.error;
+  if (cur.data) l.requests = mergeRequests(cur.data.requests, l.requests);
   let { error } = await sb.from('sourcing_leads').upsert(leadToRow(l), { onConflict: 'shop_id,id' });
   if (error && /variant_attrs|image/.test(String(error.message))) { const row = leadToRow(l); delete row.variant_attrs; delete row.image; ({ error } = await sb.from('sourcing_leads').upsert(row, { onConflict: 'shop_id,id' })); }
   if (error) throw error;

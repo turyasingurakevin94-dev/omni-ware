@@ -1498,6 +1498,7 @@ function pushOpen(d){
       const h = (D().handoffs || []).find(x => String(x.id) === String(d.id));
       at('plan', h && h.payload && h.payload.supplierId ? { sid: h.payload.supplierId } : {});
     } else if (d.kind === 'restock.held' || d.kind === 'restock.released') at('restock', { picked: null });
+    else if (d.kind === 'supplier.answered') { const q = quoteById(id); if (q) at('order', { id: Number(q.id) }); else at('plan', {}); }
   } catch (e) { console.warn(e); }
 }
 function pushOn(){ return !!window.owPushReady; }

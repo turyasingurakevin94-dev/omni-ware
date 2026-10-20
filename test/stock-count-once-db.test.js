@@ -53,7 +53,7 @@ const sql = raw.replace(/--[^\n]*/g, '');
   t.check(/\| 0142 \| /.test(read('docs/decision-rights.md')), 'docs/decision-rights.md reserves 0142 for this build');
   const others = fs.readdirSync(path.join(__dirname, '..', 'supabase', 'migrations')).filter((f) => /^\d{4}_.*\.sql$/.test(f)).sort()
     .filter((f) => /create or replace function accept_stock_count\(/.test(read('supabase/migrations/' + f)));
-  t.check(others[others.length - 1] === '0142_stock_count_counts_once.sql', 'in number order, 0142 is the last word on accept_stock_count');
+  t.check(others[others.length - 1] === '0143_count_once_closed_day.sql', 'in number order, 0143 (which keeps 0142\'s change) is the last word on accept_stock_count');
 }
 
 /* ---------------- 2. on a real database ---------------- */
