@@ -827,7 +827,8 @@ function supplierById(id){ return D().suppliers.find(s => String(s.id) === Strin
 function supplierName(id){ if (id === '__stock__') return 'Our stock'; const s = supplierById(id); return s ? s.name : ''; }
 function supplierShort(id){ const n = supplierName(id); return firstWord(n) || n; }
 function supplierWhere(s){ return s ? [s.location, s.shopNo ? 'shop ' + s.shopNo : ''].filter(Boolean).join(' · ') : ''; }
-function supplierPhone(id){ const s = supplierById(id); return s ? (contactPhones(s)[0] || '') : ''; }
+// A number saved on this phone (Asking) stands in until the books have one.
+function supplierPhone(id){ const s = supplierById(id); return (s && contactPhones(s)[0]) || localPhones()[String(id)] || ''; }
 function staffById(id){ return D().staff.find(s => String(s.id) === String(id)) || null; }
 // shared-worker.js 2173
 // A supplier delivery is carried by the supplier (TRIP_SUPPLIER_CARRIER):
@@ -2889,13 +2890,15 @@ function pickReason(it){
   if (rows.length === 1) return { text: 'Only ' + supplierShort(rows[0].supplierId) + ' sells it', tie: false };
   const cur = rows.find(r => String(r.supplierId) === String(it.supplierId)), band = tieBand();
   if (!cur) return { text: supplierShort(rows[0].supplierId) + ' is cheapest', tie: false };
-  const tied = rows.filter(r => r !== cur && Math.abs(r.purchasePrice - cur.purchasePrice) <= Math.min(r.purchasePrice, cur.purchasePrice) * band / 100);
+  // A tie is only ever among the cheapest: a dearer pair close to each other is no tie.
+  const p0 = rows[0].purchasePrice, cheapest = rows.filter(r => r.purchasePrice <= p0 * (1 + band / 100));
+  const tied = cheapest.includes(cur) ? cheapest.filter(r => r !== cur) : [];
   if (tied.length) {
     const A = supplierFacts(cur.supplierId, it), best = tied.map(r => supplierFacts(r.supplierId, it)).sort((a, b) => b.s.total - a.s.total)[0];
     if (best.s.total > A.s.total + 2) { const e = edgeWords(best, A); return { text: 'Same price at ' + supplierShort(best.sid) + (e.length ? ', ' + e[0] : ''), tie: true, better: best.sid }; }
     const e = edgeWords(A, best); return { text: 'Tie on price · ' + (e[0] || 'about the same record'), tie: true };
   }
-  if (rows[0] === cur) return { text: 'Cheapest of ' + rows.length + ', by ' + Math.max(1, Math.round((rows[1].purchasePrice - cur.purchasePrice) / (cur.purchasePrice || 1) * 100)) + '%', tie: false };
+  if (cheapest.includes(cur)) return { text: 'Cheapest of ' + rows.length + ', by ' + Math.max(1, Math.round((rows[1].purchasePrice - cur.purchasePrice) / (cur.purchasePrice || 1) * 100)) + '%', tie: false };
   return { text: supplierShort(rows[0].supplierId) + ' is ' + Math.max(1, Math.round((cur.purchasePrice - rows[0].purchasePrice) / (rows[0].purchasePrice || 1) * 100)) + '% cheaper', tie: false, better: rows[0].supplierId };
 }
 
@@ -3538,7 +3541,7 @@ const FLOW_NEEDS = ['toask', 'asked', 'back'];
 // A number saved on this phone for a supplier with none on file; Sourcing
 // is passed it to add to the books (supplier.edit is theirs).
 function localPhones(){ try { return JSON.parse(localStorage.getItem('ow-buyer-phones')) || {}; } catch (_e) { return {}; } }
-function phoneFor(sid){ return supplierPhone(sid) || localPhones()[String(sid)] || ''; }
+function phoneFor(sid){ return supplierPhone(sid); }
 function avatarTile(name, key, size, stage){ const s = stage ? STAGE[stage] : null, t = tintFor(key || name); size = size || 40;
   return `<span class="bx-av" style="width:${size}px;height:${size}px;border-radius:${Math.round(size * .33)}px;font-size:${Math.round(size * .3)}px;font-weight:800;background:${s ? s.bg : t[0]};color:${s ? s.ink : t[1]}">${esc(initials(name))}</span>`; }
 const eyebrow = (text, col) => `<span style="font-size:11px;font-weight:700;letter-spacing:.18em;color:${col || '#8D99B5'}">${esc(text)}</span>`;
@@ -3844,10 +3847,10 @@ PAGE.why = (args) => {
   const rows = lineRank(it).rows, cur = rows.find(r => String(r.supplierId) === String(it.supplierId)) || null, band = tieBand(), draft = q.status === 'draft';
   const others = rows.filter(r => r !== cur);
   const p0 = rows.length ? rows[0].purchasePrice : 0, tied = rows.filter(r => r.purchasePrice <= p0 * (1 + band / 100));
-  const pickOther = (tied.length > 1 && cur && tied.includes(cur) ? tied.filter(r => r !== cur).sort((a, b) => supplierScore(b.supplierId).total - supplierScore(a.supplierId).total)[0] : null) || others[0] || null;
+  const pickOther = (tied.length > 1 && cur && tied.includes(cur) ? tied.filter(r => r !== cur).sort((a, b) => supplierScore(b.supplierId).total - supplierScore(a.supplierId).total)[0] : null) || (cur && !tied.includes(cur) ? rows[0] : others[0]) || null;
   const c = quoteLineCount(it, it.qty);
   const A = cur ? supplierFacts(cur.supplierId, it) : null, B = pickOther ? supplierFacts(pickOther.supplierId, it) : null;
-  const tie = !!(cur && pickOther && Math.abs(pickOther.purchasePrice - cur.purchasePrice) <= Math.min(cur.purchasePrice, pickOther.purchasePrice) * band / 100);
+  const tie = !!(cur && pickOther && tied.includes(cur) && tied.includes(pickOther));
   let better = A;
   if (A && B) better = tie ? (B.s.total > A.s.total + 2 ? B : A) : (pickOther.purchasePrice < cur.purchasePrice ? B : A);
   const worse = better === A ? B : A;

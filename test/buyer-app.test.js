@@ -570,5 +570,14 @@ const P = page(fakeDb({}));
     t.check(p1 && X.restockKind(p1) === 'slow', 'an item selling under one a week is hidden: ' + (p1 && p1.rate));
   }
 
+  {
+    // a dearer pair close to each other is no tie: the cheapest is named
+    const data = fixture();
+    data.prices.push({ id: 21, productId: 'P2', variantIdx: null, supplierId: 'S1', wholesale: 23000, retail: null, unit: 'pc', packUnit: '', packQty: 0, outOfStock: false, tiers: [] }, { id: 22, productId: 'P2', variantIdx: null, supplierId: 'S3', wholesale: 28300, retail: null, unit: 'pc', packUnit: '', packQty: 0, outOfStock: false, tiers: [] });
+    const X = page(fakeDb({}), data);
+    const r = X.pickReason(it(1, 'P2', null, 6, 'S2', 28000));
+    t.check(!r.tie && r.better === 'S1' && /Kikuubo is \d+% cheaper/.test(r.text), 'outside the cheapest band there is no tie: ' + r.text);
+  }
+
   process.exit(t.done() ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });
