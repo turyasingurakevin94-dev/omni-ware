@@ -1204,7 +1204,8 @@ function custTerms(c){ return c.termsDays != null ? Number(c.termsDays) : D().pr
 function custISO(v){ const s = String(v || ''); return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : isoOf(v); }
 function custBillAge(q){ return Math.max(0, daysBetween(custISO(q.invoicedAt || q.date), todayISO())); }
 function custOpen(cid){ return memo('cuOpen', cid, () => outstandingInvoices(cid)); }
-function custOldestAge(c){ const inv = custOpen(c.id); return inv.length ? custBillAge(inv[0]) : 0; }
+// How old a debt is comes from the customer's debt log (custAging, accounts.html's rule), not from invoice dates.
+function custOldestAge(c){ return custAging(c).oldest; }
 function custOverdue(c){ return c.debt > 0 && custOldestAge(c) > custTerms(c); }
 function custLimit(c){ return Number(c.creditLimit) || 0; }
 function custOverLimit(c){ const l = custLimit(c); return l > 0 && c.debt > l; }
@@ -1461,17 +1462,55 @@ function stageTimes(q){
 
 /* ---- debts: by age, in the days and weeks this shop runs on ---- */
 const BANDS = [{ w: 'under 7d', to: 7, col: '#6FDCB0', ink: '#0F6B43' }, { w: '7–14', to: 14, col: '#F5B26B', ink: '#95530C' }, { w: '14–30', to: 30, col: '#E5483D', ink: '#8E2A22' }, { w: 'over 30', to: Infinity, col: '#F59A92', ink: '#8E2A22', hatch: true }];
-function bandOf(age){ return BANDS.findIndex(b => age < b.to); }
-function debtors(){ return D().customers.filter(c => c.debt > 0).map(c => ({ c, age: custOldestAge(c) })).sort((a, b) => b.age - a.age || b.c.debt - a.c.debt); }
-function debtBands(list){
-  const out = [0, 0, 0, 0];
-  list.forEach(({ c }) => {
-    const open = custOpen(c.id); let rest = c.debt;
-    open.forEach(q => { const due = Math.min(rest, balanceDue(q)); if (due <= 0) return; out[Math.max(0, bandOf(custBillAge(q)))] += due; rest -= due; });
-    if (rest > 0) out[open.length ? Math.max(0, bandOf(custBillAge(open[0]))) : 0] += rest;
+function ageBand(age){ return BANDS.findIndex(b => age < b.to); }
+/* accounts.html custOpenCharges / custAging, the one rule for how old a
+   debt is (Manager, Sales and Accounts age it the same way): FIFO over the
+   debt log, a payment paying its own bill first; a charge is as old as its
+   date. What the log does not place -- a debt from before the log, or a
+   charge with no date -- is "no date": its own grey part, never aged and
+   never counted as new. The bands are this desk's own. */
+// index.html 98936: what is still open, charge by charge, after payments (a payment naming a bill pays that bill first).
+function custOpenCharges(c){
+  const log = (c.debtLog || []).slice().sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.id - b.id));
+  const open = []; let credit = 0;
+  log.forEach(e => {
+    const amt = Number(e.amount) || 0;
+    if (e.type === 'charge') { const take = Math.min(credit, amt); credit -= take; open.push({ date: e.date, remaining: amt - take, quoteId: e.quoteId }); }
+    else if (e.type === 'payment') {
+      let rem = amt;
+      if (e.quoteId != null) for (const ch of open) { if (rem <= 0) break; if (ch.quoteId == null || String(ch.quoteId) !== String(e.quoteId)) continue; const take = Math.min(ch.remaining, rem); ch.remaining -= take; rem -= take; }
+      for (const ch of open) { if (rem <= 0) break; const take = Math.min(ch.remaining, rem); ch.remaining -= take; rem -= take; }
+      if (rem > 0) credit += rem;
+    }
   });
+  return open.filter(ch => ch.remaining > 0.5);
+}
+function chargeAge(ch){ return ch && ch.date ? Math.max(0, daysBetween(String(ch.date).slice(0, 10), todayISO())) : null; }
+// accounts.html's bands, the ones custAging fills: its "over 30" is b60 + b90 + b90p.
+const AGE_BANDS = [{ k: 'b30', lo: 0, hi: 29 }, { k: 'b60', lo: 30, hi: 59 }, { k: 'b90', lo: 60, hi: 89 }, { k: 'b90p', lo: 90, hi: Infinity }];
+function bandOf(age){ return AGE_BANDS.find(b => age >= b.lo && age <= b.hi) || AGE_BANDS[0]; }
+function custAging(c){
+  return memo('aging', c.id, () => {
+    const parts = { b30: 0, b60: 0, b90: 0, b90p: 0 }; let oldest = 0, known = 0;
+    // A charge with no date cannot be aged: it stays in "no date" with what the log does not cover, never counted as new.
+    custOpenCharges(c).forEach(ch => { if (!ch.date) return; const age = Math.max(0, daysBetween(String(ch.date).slice(0, 10), todayISO())); parts[bandOf(age).k] += ch.remaining; known += ch.remaining; if (age > oldest) oldest = age; });
+    // What the log cannot place (a debt from before the log, or a charge with no date) is named "no date", not dropped.
+    const unknown = Math.max(0, (Number(c.debt) || 0) - known);
+    return { parts, oldest, unknown };
+  });
+}
+// Nothing of it carries a date: the whole debt is "no date".
+function custUndated(c){ return c.debt > 0.5 && custAging(c).unknown >= c.debt - 0.5; }
+function debtors(){ return D().customers.filter(c => c.debt > 0).map(c => ({ c, age: custOldestAge(c) })).sort((a, b) => b.age - a.age || b.c.debt - a.c.debt); }
+// Owing over 30 days: the part of each debt aged 30 days or more (accounts.html's "over 30").
+function over30(c){ const p = custAging(c).parts; return p.b60 + p.b90 + p.b90p; }
+// This desk's own bands (days and weeks), filled from the same open charges; "no date" is its own part.
+function debtBands(list){
+  const out = BANDS.map(() => 0); out.unknown = 0;
+  list.forEach(({ c }) => { custOpenCharges(c).forEach(ch => { const age = chargeAge(ch); if (age != null) out[Math.max(0, ageBand(age))] += ch.remaining; }); out.unknown += custAging(c).unknown; });
   return out;
 }
+const NODATE_COL = '#C9C4BA', NODATE_NAVY = 'repeating-linear-gradient(135deg,rgba(255,255,255,.1) 0 3px,rgba(255,255,255,.22) 3px 6px)';
 // Who last sold to them: the newest order of theirs that carries a taker.
 function lastSeller(c){
   const qs = customerOrdersFor(c.id).filter(q => takenBy(q)).sort((a, b) => createdMs(b) - createdMs(a));
@@ -1540,7 +1579,21 @@ function handToDriver(q, staffId){
 function packLoad(sid){ return D().savedQuotes.filter(q => !q.voided && q.status === 'preparing' && String(q.assignedWorkerId) === String(sid) && q.pickingStatus !== 'done'); }
 function driveLoad(sid){ return D().savedQuotes.filter(q => !q.voided && q.status === 'pending_delivery' && String(q.assignedDeliveryId) === String(sid)); }
 function tripsOf(sid){ return (D().collectionTrips || []).filter(t => tripIsLive(t) && String(t.assignedWorkerId) === String(sid)); }
-function packedToday(sid){ const t = todayISO(); return D().savedQuotes.filter(q => !q.voided && String(q.assignedWorkerId) === String(sid) && q.pickingDoneAt && isoOf(q.pickingDoneAt) === t).length; }
+/* When an order was packed: its pickingDoneAt, else when its stage log
+   shows it leaving Packing (a hand-over that skipped the pick screen). */
+function packedAtMs(q){
+  const done = msOf(q.pickingDoneAt); if (done) return done;
+  const log = (Array.isArray(q.stageLog) ? q.stageLog : []).filter(e => e && e.status).map(e => ({ status: e.status, at: Number(e.at) || msOf(e.at) })).sort((a, b) => a.at - b.at);
+  const i = log.findIndex(e => e.status === 'preparing'), next = i >= 0 ? log.slice(i + 1).find(e => e.status !== 'preparing') : null;
+  return next ? next.at : 0;
+}
+// Every order packed today, whoever packed it (a login with no staff row packs too).
+function packedOrdersToday(){ const t = todayISO(); return D().savedQuotes.filter(q => !q.voided && packedAtMs(q) && isoOf(packedAtMs(q)) === t); }
+function packedToday(sid){ return packedOrdersToday().filter(q => String(q.assignedWorkerId) === String(sid)).length; }
+/* A trip the supplier brings (buyer.html TRIP_SUPPLIER_CARRIER) is buying
+   work too: counted on the Buying card as the suppliers' own row. */
+const TRIP_SUPPLIER_CARRIER = '__supplier__';
+function tripsBackToday(sid){ const t = todayISO(); return (D().collectionTrips || []).filter(x => !x.voided && String(x.assignedWorkerId) === String(sid) && x.collectedAt && isoOf(x.collectedAt) === t).length; }
 const PACK_CAP = 5;
 
 /* ==================================================================
@@ -1970,8 +2023,8 @@ function overBarHTML(q, w, h){
 function needsYou(){
   const out = [], stuck = stuckOrders(), T = team();
   T.sales.forEach(s => { const g = s.userId ? personGoal(s.userId) : null; if (g && g.ahead < 0 && !g.reached) out.push({ k: 'behind', s, g }); });
-  const old = debtors().filter(d => d.age > 30);
-  if (old.length) out.push({ k: 'old', n: old.length, v: sum(old, d => d.c.debt) });
+  const old = debtors().filter(d => over30(d.c) > 0.5);
+  if (old.length) out.push({ k: 'old', n: old.length, v: sum(old, d => over30(d.c)) });
   return { first: stuck[0] || null, rest: out, total: stuck.length + out.length };
 }
 function viewToday(){
@@ -2012,8 +2065,8 @@ function viewToday(){
       <button class="bx-circle" data-act="tab" data-v="orders" aria-label="Find an order">${ic('search', 20)}</button>
       <button class="mx-me" data-act="push" data-p="me" aria-label="You: profile and what your login opens">${esc(initials(myName()))}</button></div>
     <button class="mx-goal" data-act="tab" data-v="team">${teamRingHTML(m, 88, 8)}
-      <span class="fig"><span class="mx-lbl">Team sales · ${esc(monthWord())}</span><span class="mx-big">${n0(m.actual)}</span>
-        ${m.tg ? `<span style="display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:600;color:var(--navyInk2)"><span>of <span class="m" style="color:#DDE3F0">${n0(m.tg.aim)}</span></span><span style="color:${behind ? 'var(--amber)' : 'var(--mint)'}">${m.tg.reached ? 'goal reached' : (behind ? '−' : '+') + short(Math.abs(m.tg.ahead)) + (behind ? ' behind' : ' ahead')}</span></span>` : `<span style="font-size:12px;font-weight:600;color:var(--navyInk2)">invoiced this month · no shop goal yet</span>`}
+      <span class="fig"><span class="mx-lbl">Team sales invoiced · ${esc(monthWord())}</span><span class="mx-big">${n0(m.actual)}</span>
+        ${m.tg ? `<span style="display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:600;color:var(--navyInk2)"><span>of <span class="m" style="color:#DDE3F0">${n0(m.tg.aim)}</span></span><span style="color:${behind ? 'var(--amber)' : 'var(--mint)'}">${m.tg.reached ? 'goal reached' : (behind ? '−' : '+') + short(Math.abs(m.tg.ahead)) + (behind ? ' behind' : ' ahead')}</span></span>` : `<span style="font-size:12px;font-weight:600;color:var(--navyInk2)">no shop goal yet</span>`}
         ${legend}</span></button>
     <button class="bx-glass mx-day" data-act="push" data-p="teamday" aria-label="Today: sold ${n0(day.soldV)} in ${day.sold.length} ${pl(day.sold.length, 'order')}, money in ${n0(day.inV)}">
       <span class="two"><span><span class="l">Sold today · <span class="m">${day.sold.length}</span></span><span class="v">${n0(day.soldV)}</span></span><span style="align-items:flex-end"><span class="l">Money in today</span><span class="v" style="color:var(--mint)">${n0(day.inV)}</span></span></span>
@@ -2127,21 +2180,27 @@ function loadRing(q, size){
   return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true" style="position:absolute;inset:0;transform:rotate(-90deg)">${segs.map((c, i) => `<circle class="${c === '#16203C' || c === '#E5483D' ? 'a-ring' : ''}" cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${c}" stroke-width="4.5" pathLength="100" stroke-dasharray="17 83" stroke-dashoffset="${(-1.5 - i * 20).toFixed(1)}" stroke-linecap="round"/>`).join('')}</svg>`;
 }
 function floorHTML(T){
-  const buyCard = T.buyers.length ? `<div class="bx-card" style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
+  const supTr = tripsOf(TRIP_SUPPLIER_CARRIER).filter(t => !t.collectedAt), supDone = tripsBackToday(TRIP_SUPPLIER_CARRIER);
+  const buyCard = T.buyers.length || supTr.length || supDone ? `<div class="bx-card" style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
     <span style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:3px;background:var(--indigo)"></span><b style="font-size:13px">Buying</b><span style="margin-left:auto;font-size:12px;font-weight:600;color:var(--ink3)">trips</span></span>
     ${T.buyers.map(b => { const tr = tripsOf(b.id), asking = liveOrders().filter(q => q.status === 'draft').reduce((n, q) => n + supplierGroups(q).filter(g => confirmState(q, g.supplierId).askedAt && confirmState(q, g.supplierId).state === 'pending').length, 0);
-      const done = (D().collectionTrips || []).filter(t => !t.voided && String(t.assignedWorkerId) === String(b.id) && t.collectedAt && isoOf(t.collectedAt) === todayISO()).length;
+      const done = tripsBackToday(b.id);
       const out = tr.find(t => t.status === 'collecting');
       return `<button data-act="push" data-p="person" data-id="${b.id}" style="display:grid;grid-template-columns:38px 1fr auto;gap:10px;align-items:center;border:none;background:none;padding:0;text-align:left;color:var(--ink)">${pav(b, 38)}
         <span style="display:flex;flex-direction:column;gap:5px;min-width:0"><span class="ell" style="font-size:14px;font-weight:700">${esc(firstWord(b.name))} <span style="font-size:12px;font-weight:600;color:var(--ink3)">· ${asking ? `${asking} ${pl(asking, 'line')} asking` : 'nothing asked yet'}</span></span>
           <span style="display:grid;grid-template-columns:repeat(${Math.max(3, done + tr.length)},minmax(0,1fr));gap:3px">${Array.from({ length: done }, () => '<i style="height:6px;border-radius:999px;background:var(--green)"></i>').join('')}${tr.map(t => `<i class="${t.status === 'collecting' ? 'a-blink' : ''}" style="height:6px;border-radius:999px;background:${t.status === 'collecting' ? 'var(--amber)' : '#C9C4BA'}"></i>`).join('')}${Array.from({ length: Math.max(0, 3 - done - tr.length) }, () => '<i style="height:6px;border-radius:999px;background:#EFECE6"></i>').join('')}</span>
-          <span style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink3)"><span>${done ? `${done} back today` : 'none back yet'}</span><span>${out ? `out · <span class="m" style="color:var(--amberInk)">${ageWords(minsSince(msOf(out.acceptedAt || out.assignedAt || out.createdAt)))}</span>` : tr.length ? tr.length + ' planned' : 'no trip planned'}</span></span></span>${ic('chev', 16, 'style="color:#9AA1AE"')}</button>`; }).join('')}</div>` : '';
+          <span style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink3)"><span>${done ? `${done} back today` : 'none back yet'}</span><span>${out ? `out · <span class="m" style="color:var(--amberInk)">${ageWords(minsSince(msOf(out.acceptedAt || out.assignedAt || out.createdAt)))}</span>` : tr.length ? tr.length + ' planned' : 'no trip planned'}</span></span></span>${ic('chev', 16, 'style="color:#9AA1AE"')}</button>`; }).join('')}
+    ${supTr.length || supDone ? (() => { const n = supDone + supTr.length, on = supTr.filter(t => t.status === 'collecting').length;
+      return `<div style="display:grid;grid-template-columns:38px 1fr auto;gap:10px;align-items:center;color:var(--ink)"><span style="width:38px;height:38px;border-radius:999px;background:var(--indigoSoft);color:var(--indigo);display:flex;align-items:center;justify-content:center">${ic('truck', 18, 'style="stroke-width:2"')}</span>
+        <span style="display:flex;flex-direction:column;gap:5px;min-width:0"><span class="ell" style="font-size:14px;font-weight:700">Suppliers <span style="font-size:12px;font-weight:600;color:var(--ink3)">· they bring it</span></span>
+          <span style="display:grid;grid-template-columns:repeat(${Math.max(3, n)},minmax(0,1fr));gap:3px">${Array.from({ length: supDone }, () => '<i style="height:6px;border-radius:999px;background:var(--green)"></i>').join('')}${supTr.map(t => `<i class="${t.status === 'collecting' ? 'a-blink' : ''}" style="height:6px;border-radius:999px;background:${t.status === 'collecting' ? 'var(--amber)' : '#C9C4BA'}"></i>`).join('')}${Array.from({ length: Math.max(0, 3 - n) }, () => '<i style="height:6px;border-radius:999px;background:#EFECE6"></i>').join('')}</span>
+          <span style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink3)"><span>${supDone ? `${supDone} back today` : 'none back yet'}</span><span>${on ? `<span class="m" style="color:var(--amberInk)">${on}</span> on the way` : supTr.length ? supTr.length + ' planned' : 'none on the way'}</span></span></span><span></span></div>`; })() : ''}</div>` : '';
   const packers = T.packers.map(p => { const jobs = packLoad(p.id), late = jobs.filter(isStuck).length, notTaken = jobs.find(q => q.pickingStatus === 'awaiting_accept' && isStuck(q)); return { p, jobs, late, notTaken, n: jobs.length, free: !p.unavailable && jobs.length < 2 }; });
   const held = sum(packers, x => x.n), lateAll = sum(packers, x => x.late), cap = Math.max(10, packers.filter(x => !x.p.unavailable).length * PACK_CAP);
   const free = packers.filter(x => x.free).sort((a, b) => a.n - b.n)[0];
   const storeCard = packers.length ? `<div class="bx-card" style="border-radius:20px;padding:12px 14px 6px;display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(22,32,60,.05),0 8px 22px rgba(22,32,60,.06),inset 0 0 0 1px var(--line)">
     <div style="display:flex;align-items:center;gap:10px;padding-bottom:10px"><span style="width:32px;height:32px;border-radius:10px;background:var(--slateSoft);color:var(--slate);display:flex;align-items:center;justify-content:center;flex:none">${ic('box', 17)}</span>
-      <span style="flex:1;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px;white-space:nowrap">Store · packing</b><span style="font-size:11px;font-weight:600;color:var(--ink3)"><span class="m" style="color:var(--ink)">${held}</span> in hand · <span class="m" style="color:var(--ink)">${sum(packers, x => packedToday(x.p.id))}</span> packed today</span></span>
+      <span style="flex:1;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px;white-space:nowrap">Store · packing</b><span style="font-size:11px;font-weight:600;color:var(--ink3)"><span class="m" style="color:var(--ink)">${held}</span> in hand · <span class="m" style="color:var(--ink)">${packedOrdersToday().length}</span> packed today</span></span>
       <span class="mx-shelfwrap" style="display:flex;flex-direction:column;align-items:flex-end;gap:3px" role="img" aria-label="${held} of ${cap} packing slots in use, ${lateAll} late"><span style="font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--ink3)">SHELF</span><span class="mx-shelf">${Array.from({ length: Math.min(12, cap) }, (_, i) => `<i class="${i < Math.min(lateAll, 12) ? 'late' : i < held ? '' : 'free'}"></i>`).join('')}</span></span></div>
     ${packers.map(x => { const p = x.p, off = p.unavailable;
       const pill = off ? `<span class="mx-pill idle">Off today</span>`
@@ -2170,7 +2229,7 @@ function viewTeam(){
   return `<div class="bx-hero" data-navy-top>
     <div class="mx-top"><span class="t"><span style="font-size:26px;font-weight:700;letter-spacing:-.02em">Team <span class="m" style="font-size:16px;color:var(--navyInk2)">${T.all.length}</span></span><span style="font-size:13px;color:var(--navyInk)">${T.all.length - off.length} in today${off.length ? ' · ' + esc(off.slice(0, 2).map(s => firstWord(s.name)).join(', ')) + (off.length > 2 ? ' +' + (off.length - 2) : '') + ' off' : ''}</span></span>
       <span style="display:flex">${T.all.slice(0, 4).map((s, i) => `<span style="margin-left:${i ? -5 : 0}px;border-radius:999px;box-shadow:0 0 0 2px #16203C">${pav(s, 30)}</span>`).join('')}${T.all.length > 4 ? `<span class="m" style="margin-left:-5px;width:30px;height:30px;border-radius:999px;background:var(--navy2);color:var(--navyInk);font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #16203C">+${T.all.length - 4}</span>` : ''}</span></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span class="mx-lbl" style="white-space:nowrap">Selling · <span class="m">${T.sales.length}</span> · ${esc(monthWord())}</span>${can('goal.set') ? `<button data-act="push" data-p="teamrules" style="border:none;background:none;padding:0;display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:var(--mint)">${anyGoal ? 'Set goals' : 'Set each goal'}${ic('chev', 12, 'style="stroke-width:2.4"')}</button>` : ''}</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span class="mx-lbl" style="white-space:nowrap">Selling · <span class="m">${T.sales.length}</span> · ${esc(monthWord())} invoiced</span>${can('goal.set') ? `<button data-act="push" data-p="teamrules" style="border:none;background:none;padding:0;display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:var(--mint)">${anyGoal ? 'Set goals' : 'Set each goal'}${ic('chev', 12, 'style="stroke-width:2.4"')}</button>` : ''}</div>
     ${sellingHTML(T)}
   </div>
   <div class="bx-body">${floorHTML(T) || emptyCard('No buyers, packers or drivers yet', 'Staff with those jobs show here, with what each holds.')}</div>`;
@@ -2198,8 +2257,8 @@ PAGE.person = a => {
         ${watch.map(q => `<button data-act="push" data-p="order" data-id="${q.id}" style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px 0;border:none;border-top:1px solid #F1EEE8;background:none;text-align:left;color:var(--ink)"><span style="display:flex;flex-direction:column;gap:3px;min-width:0"><b class="ell" style="font-size:14px">${esc(clientName(q))}</b><span style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink3);min-width:0"><span class="bx-chip" style="height:20px;padding:0 7px;font-size:11px;${isStuck(q) ? 'background:var(--crimsonSoft);color:var(--crimson)' : 'background:var(--soft2);color:var(--ink2)'}">${stageOf(q).short} · <span class="m">${ageWords(inStageMins(q))}</span></span><span class="ell">${esc(whyStuck(q).w)}</span></span></span><span class="m" style="font-size:14px;font-weight:600">${n0(orderTotal(q))}</span></button>`).join('')}</div>
       <button class="bx-card" data-act="tab" data-v="money" style="border:none;width:100%;text-align:left;padding:12px 14px;display:flex;flex-direction:column;gap:8px;color:var(--ink)">
         <span style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><b style="font-size:13px">Owed by customers ${esc(firstWord(s.name))} last sold to</b><span class="m" style="font-size:15px;font-weight:600">${n0(owed)}</span></span>
-        <span style="display:flex;gap:3px;height:10px">${bands.map((v, i) => v > 0 ? `<i class="a-grow" style="flex:${v};border-radius:3px;background:${BANDS[i].hatch ? 'repeating-linear-gradient(135deg,#F59A92 0 3px,#E5483D 3px 6px)' : BANDS[i].col}"></i>` : '').join('') || '<i style="flex:1;border-radius:999px;background:#F1EEE8"></i>'}</span>
-        <span style="display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;font-weight:600;color:var(--ink2)">${BANDS.map((b, i) => bands[i] > 0 ? `<span style="display:inline-flex;align-items:center;gap:5px"><i style="width:7px;height:7px;border-radius:999px;background:${b.col}"></i>${b.w} · <span class="m">${short(bands[i])}</span></span>` : '').join('') || 'Nobody owes'}</span></button>`;
+        <span style="display:flex;gap:3px;height:10px">${(bands.map((v, i) => v > 0 ? `<i class="a-grow" style="flex:${v};border-radius:3px;background:${BANDS[i].hatch ? 'repeating-linear-gradient(135deg,#F59A92 0 3px,#E5483D 3px 6px)' : BANDS[i].col}"></i>` : '').join('') + (bands.unknown > 0.5 ? `<i class="a-grow" style="flex:${bands.unknown};border-radius:3px;background:${NODATE_COL}"></i>` : '')) || '<i style="flex:1;border-radius:999px;background:#F1EEE8"></i>'}</span>
+        <span style="display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;font-weight:600;color:var(--ink2)">${(BANDS.map((b, i) => bands[i] > 0 ? `<span style="display:inline-flex;align-items:center;gap:5px"><i style="width:7px;height:7px;border-radius:999px;background:${b.col}"></i>${b.w} · <span class="m">${short(bands[i])}</span></span>` : '').join('') + (bands.unknown > 0.5 ? `<span style="display:inline-flex;align-items:center;gap:5px"><i style="width:7px;height:7px;border-radius:999px;background:${NODATE_COL}"></i>no date · <span class="m">${short(bands.unknown)}</span></span>` : '')) || 'Nobody owes'}</span></button>`;
   } else {
     const jobs = s.role === 'worker' || s.role === 'store' ? packLoad(s.id) : s.role === 'delivery' ? driveLoad(s.id) : [];
     const trips = s.role === 'buyer' ? tripsOf(s.id) : [];
@@ -2420,7 +2479,7 @@ function reasonsFor(s){
     const g = personGoal(s.userId);
     if (g && g.ahead < 0 && !g.reached) out.push({ t: `Behind pace by ${short(-g.ahead)}`, s: `${g.days - g.dayN} days left`, m: `${first}, you are ${short(-g.ahead)} behind pace with ${g.days - g.dayN} days left. Let us look at who is due to buy.` });
     heldWaiting().filter(x => takenBy(x.q) === String(s.userId)).slice(0, 1).forEach(x => out.push({ t: `${x.c.name} waits for a yes`, s: x.over ? 'over their credit limit' : `owing ${x.age} days`, m: `${first}, ${x.c.name}'s order is held: ${x.over ? 'it takes them over their credit limit' : 'they have owed ' + x.age + ' days'}. Can you collect from them first?` }));
-    const owing = debtors().filter(d => d.age > 30 && lastSeller(d.c) && String(lastSeller(d.c).id) === String(s.id)).slice(0, 1);
+    const owing = debtors().filter(d => over30(d.c) > 0.5 && lastSeller(d.c) && String(lastSeller(d.c).id) === String(s.id)).slice(0, 1);
     owing.forEach(d => out.push({ t: `Chase ${d.c.name}`, s: `${n0(d.c.debt)} · ${d.age} days`, m: `${first}, ${d.c.name} owes ${n0(d.c.debt)} for ${d.age} days. Can you call them today?` }));
   }
   if ((s.role === 'worker' || s.role === 'store') && packedToday(s.id)) out.push({ t: `${packedToday(s.id)} packed today`, s: 'a thank-you', m: `${first}, ${packedToday(s.id)} orders packed today. Thank you!` });
@@ -2467,7 +2526,7 @@ ACT.nsent = () => { bumpDay('nudges'); FEEL.ask(); setTimeout(() => closeSheet()
    customer; the orders held for credit; taking a payment.
    ================================================================== */
 function custAv(c, size, ring){ const t = tintFor(c.id || c.name); return `<span class="mx-av" style="width:${size}px;height:${size}px;font-size:${Math.round(size * .32)}px;background:${t[0]};color:${t[1]}${ring ? ';box-shadow:0 0 0 2.5px #fff,0 0 0 4.5px ' + ring : ''}">${esc(initials(c.name))}</span>`; }
-function bandCol(age){ const b = BANDS[Math.max(0, bandOf(age))]; return b.col; }
+function bandCol(age){ const b = BANDS[Math.max(0, ageBand(age))]; return b.col; }
 function sellerBadge(s){ if (!s) return ''; const c = personCol(s); return `<span class="who" style="background:${c[0]};color:${c[1]}">${esc(initials(s.name))}</span>`; }
 function moneyList(){
   const f = S.ui.money, area = S.ui.area;
@@ -2478,7 +2537,7 @@ function moneyList(){
   return list;
 }
 function viewMoney(){
-  const all = debtors(), total = sum(all, d => d.c.debt), bands = debtBands(all), T = team();
+  const all = debtors(), total = sum(all, d => d.c.debt), bands = debtBands(all), undated = bands.unknown > 0.5, T = team();
   const by = T.sales.map(s => ({ s, v: sum(all.filter(d => { const ls = lastSeller(d.c); return ls && String(ls.id) === String(s.id); }), d => d.c.debt) })).filter(x => x.v > 0);
   const older = Math.max(0, total - sum(by, x => x.v));
   const areas = {}; all.forEach(d => { const k = custAreaOf(d.c) || '—'; areas[k] = (areas[k] || 0) + 1; });
@@ -2489,15 +2548,15 @@ function viewMoney(){
   const rows = shown.map(({ c, age }) => {
     const ls = lastSeller(c), over = custOverLimit(c), prom = promisesFor(c).filter(p => promiseState(p, c) !== 'kept').slice(-1)[0];
     const pst = prom ? promiseState(prom, c) : null;
-    const sub = (custOpen(c.id).length ? `<span class="m">${age}</span> ${pl(age, 'day')} · ` : 'no dated bill · ') + (over ? '<span style="color:var(--amberInk)">over their limit</span>' : pst === 'broken' ? `<span style="color:var(--crimson)">promise broken ${esc(dayLabel(prom.promisedOn))}</span>` : pst === 'open' ? `<span style="color:var(--green)">promised ${prom.amount ? '<span class="m">' + n0(prom.amount) + '</span> ' : ''}by ${esc(dayLabel(prom.promisedOn))}</span>` : 'no promise');
-    return `<button class="mx-crow" data-act="push" data-p="debtor" data-id="${esc(c.id)}"><span class="mx-face">${custAv(c, 42, bandCol(age))}${sellerBadge(ls)}</span>
+    const sub = (custUndated(c) ? 'no date · ' : `<span class="m">${age}</span> ${pl(age, 'day')} · `) + (over ? '<span style="color:var(--amberInk)">over their limit</span>' : pst === 'broken' ? `<span style="color:var(--crimson)">promise broken ${esc(dayLabel(prom.promisedOn))}</span>` : pst === 'open' ? `<span style="color:var(--green)">promised ${prom.amount ? '<span class="m">' + n0(prom.amount) + '</span> ' : ''}by ${esc(dayLabel(prom.promisedOn))}</span>` : 'no promise');
+    return `<button class="mx-crow" data-act="push" data-p="debtor" data-id="${esc(c.id)}"><span class="mx-face">${custAv(c, 42, custUndated(c) ? NODATE_COL : bandCol(age))}${sellerBadge(ls)}</span>
       <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><b class="ell" style="font-size:15px">${esc(c.name)}</b><span class="ell" style="font-size:12px;font-weight:600;color:${age > 30 ? 'var(--crimson)' : 'var(--ink3)'}">${sub}</span></span>
       <span class="m" style="font-size:15px;font-weight:600;color:${over ? 'var(--crimson)' : 'var(--ink)'}">${n0(c.debt)}</span></button>`; }).join('');
   return `<div class="bx-hero" data-navy-top>
     <div class="mx-top"><span class="t"><span style="font-size:26px;font-weight:700;letter-spacing:-.02em">To collect</span><span style="font-size:13px;color:var(--navyInk)"><span class="m">${all.length}</span> customer${all.length === 1 ? '' : 's'} owe the shop</span></span><span class="mx-big" style="font-size:24px">${n0(total)}</span></div>
     <div style="display:flex;flex-direction:column;gap:7px"><span class="mx-lbl">How old</span>
-      <span role="img" aria-label="${BANDS.map((b, i) => b.w + ' ' + short(bands[i])).join(', ')}" style="display:flex;gap:3px;height:14px">${bands.map((v, i) => v > 0 ? `<i class="a-grow" style="flex:${v};min-width:8px;border-radius:3px;background:${BANDS[i].hatch ? 'repeating-linear-gradient(135deg,#F59A92 0 3px,#E5483D 3px 6px)' : BANDS[i].col}"></i>` : '').join('') || '<i style="flex:1;border-radius:999px;background:rgba(255,255,255,.1)"></i>'}</span>
-      <span class="mx-bands">${BANDS.map((b, i) => `<span style="${i === 3 ? 'text-align:right' : ''}"><b style="color:${i === 0 ? 'var(--mint)' : i === 1 ? 'var(--amber)' : 'var(--rose)'}">${short(bands[i])}</b>${b.w}</span>`).join('')}</span></div>
+      <span role="img" aria-label="${BANDS.map((b, i) => b.w + ' ' + short(bands[i])).join(', ')}${undated ? ', no date ' + short(bands.unknown) : ''}" style="display:flex;gap:3px;height:14px">${(bands.map((v, i) => v > 0 ? `<i class="a-grow" style="flex:${v};min-width:8px;border-radius:3px;background:${BANDS[i].hatch ? 'repeating-linear-gradient(135deg,#F59A92 0 3px,#E5483D 3px 6px)' : BANDS[i].col}"></i>` : '').join('') + (undated ? `<i class="a-grow" style="flex:${bands.unknown};min-width:8px;border-radius:3px;background:${NODATE_NAVY}"></i>` : '')) || '<i style="flex:1;border-radius:999px;background:rgba(255,255,255,.1)"></i>'}</span>
+      <span class="mx-bands"${undated ? ' style="grid-template-columns:repeat(5,minmax(0,1fr))"' : ''}>${BANDS.map((b, i) => `<span style="${i === 3 && !undated ? 'text-align:right' : ''}"><b style="color:${i === 0 ? 'var(--mint)' : i === 1 ? 'var(--amber)' : 'var(--rose)'}">${short(bands[i])}</b>${b.w}</span>`).join('')}${undated ? `<span style="text-align:right"><b style="color:var(--navyInk)">${short(bands.unknown)}</b>no date</span>` : ''}</span></div>
     ${by.length ? `<div style="display:flex;flex-direction:column;gap:7px"><span class="mx-lbl">Who sold it</span>
       <span style="display:flex;gap:3px;height:10px">${by.map(x => `<i class="a-grow" style="flex:${x.v};border-radius:3px;background:${personCol(x.s)[2]}"></i>`).join('')}${older ? `<i style="flex:${older};border-radius:3px;background:repeating-linear-gradient(135deg,rgba(255,255,255,.1) 0 3px,rgba(255,255,255,.22) 3px 6px)"></i>` : ''}</span>
       <span class="mx-legend">${by.map(x => `<span><i style="background:${personCol(x.s)[2]}"></i>${esc(firstWord(x.s.name))} <b class="m" style="color:#fff">${short(x.v)}</b></span>`).join('')}${older ? `<span style="margin-left:auto">older <b class="m" style="color:#fff">${short(older)}</b></span>` : ''}</span></div>` : ''}
@@ -2518,13 +2577,14 @@ function pendingFor(c){ return customerOrdersFor(c.id).filter(q => !q.invoiced &
 PAGE.debtor = a => {
   const c = customerById(a.id); if (!c) return goneCard('That customer is no longer on the books');
   const ls = lastSeller(c), age = custOldestAge(c), terms = custTerms(c), limit = custLimit(c), pend = pendingFor(c);
-  const open = custOpen(c.id), proms = promisesFor(c).slice(-3);
+  // The bills still open, dated and aged the one way (custOpenCharges); what has no date is named under them.
+  const aging = custAging(c), open = custOpenCharges(c).filter(ch => ch.date).map(ch => ({ d: chargeAge(ch), due: ch.remaining })), proms = promisesFor(c).slice(-3);
   const max = Math.max(limit, c.debt + pend) * 1.06 || 1, pc = v => Math.min(100, v / max * 100).toFixed(1) + '%';
   const over = limit > 0 && c.debt + pend > limit;
   const st = (D().statementsSent || []).filter(x => String(x.customer_id) === String(c.id))[0];
   const scale = 30, x = d => Math.max(4, Math.min(96, (scale - Math.min(d, scale)) / scale * 100));
-  const bmax = Math.max(1, ...open.map(q => balanceDue(q)));
-  const bills = open.slice(-6).map((q, i) => { const d = custBillAge(q), due = balanceDue(q), hgt = Math.max(18, Math.round(due / bmax * 52)), col = d <= terms ? '#0F6B43' : d > 30 ? '#8E2A22' : d > 14 ? '#E5483D' : '#F5B26B';
+  const bmax = Math.max(1, ...open.map(b => b.due));
+  const bills = open.slice(-6).map((b, i) => { const d = b.d, due = b.due, hgt = Math.max(18, Math.round(due / bmax * 52)), col = d <= terms ? '#0F6B43' : d > 30 ? '#8E2A22' : d > 14 ? '#E5483D' : '#F5B26B';
     return `<span class="a-done" style="animation-delay:${.15 + i * .08}s;position:absolute;left:${x(d)}%;bottom:17px;transform:translateX(-50%);width:44px;height:${hgt}px;border-radius:8px 8px 3px 3px;background:${col};color:${col === '#F5B26B' ? 'var(--amberDeep)' : '#fff'};font-family:var(--mono);font-size:10px;font-weight:600;display:flex;align-items:flex-start;justify-content:center;padding-top:4px">${short(due)}</span>`; }).join('');
   const canPay = can('payment.receive');
   const pst = p => promiseState(p, c);
@@ -2532,7 +2592,7 @@ PAGE.debtor = a => {
     <div class="bx-sheethead" style="gap:14px"><span class="bx-grip"></span>
       <div style="display:flex;align-items:center;gap:12px"><span class="mx-face">${avatar(c.name, c.id, 46, true)}${sellerBadge(ls).replace('box-shadow:0 0 0 2px #fff', '')}</span>
         <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:17px;font-weight:700">${esc(c.name)}</span><span class="ell" style="font-size:12px;color:var(--navyInk)">${ls ? esc(firstWord(ls.name)) + ' last sold · ' : ''}terms <span class="m">${terms}</span> days${custAreaOf(c) ? ' · ' + esc(custAreaOf(c)) : ''}</span></span>${can('credit.set') || can('customer.edit') ? `<button class="bx-circle" data-act="push" data-p="custedit" data-id="${esc(c.id)}" aria-label="Edit ${esc(c.name)}: limit and terms">${ic('lines', 16)}</button>` : ''}${closeBtn()}</div>
-      <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:700;color:var(--navyInk2)">Owes the shop</span><span class="mx-big" style="font-size:30px">${n0(c.debt)}</span></span>${c.debt > 0 ? `<span class="bx-chip" style="background:${age > terms ? 'rgba(229,72,61,.18)' : 'rgba(111,220,176,.14)'};color:${age > terms ? 'var(--rose)' : 'var(--mint)'}">oldest <span class="m" style="margin:0 3px">${age}</span> days</span>` : ''}</div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:700;color:var(--navyInk2)">Owes the shop</span><span class="mx-big" style="font-size:30px">${n0(c.debt)}</span></span>${c.debt > 0 ? (custUndated(c) ? `<span class="bx-chip" style="background:rgba(255,255,255,.08);color:var(--navyInk)">no date</span>` : `<span class="bx-chip" style="background:${age > terms ? 'rgba(229,72,61,.18)' : 'rgba(111,220,176,.14)'};color:${age > terms ? 'var(--rose)' : 'var(--mint)'}">oldest <span class="m" style="margin:0 3px">${age}</span> days</span>`) : ''}</div>
       <div role="img" aria-label="Owes ${n0(c.debt)}${limit ? ' of a ' + n0(limit) + ' limit' : ', no credit limit set'}${pend ? '; orders on the way add ' + n0(pend) : ''}" style="display:flex;flex-direction:column;gap:6px">
         <span style="position:relative;height:14px;border-radius:999px;background:rgba(255,255,255,.08)"><i class="a-grow" style="position:absolute;left:0;top:0;bottom:0;width:${pc(c.debt)};border-radius:999px 0 0 999px;background:${limit && c.debt > limit ? '#E5483D' : 'var(--amber)'}"></i>${pend ? `<i class="a-grow" style="animation-delay:.5s;position:absolute;left:${pc(c.debt)};top:0;bottom:0;width:${pc(pend)};border-radius:0 999px 999px 0;background:repeating-linear-gradient(135deg,${over ? 'rgba(229,72,61,.7)' : 'rgba(245,178,107,.55)'} 0 4px,rgba(245,178,107,.2) 4px 7px)"></i>` : ''}${limit ? `<i style="position:absolute;left:${pc(limit)};top:-5px;bottom:-5px;width:2.5px;border-radius:2px;background:#fff"></i>` : ''}</span>
         <span style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--navyInk)"><span>${pend ? `+ orders on the way <b class="m" style="color:#fff">${n0(pend)}</b>` : 'nothing else on the way'}</span><span style="display:inline-flex;align-items:center;gap:4px">${ic('lock', 11, 'style="stroke-width:2.2"')}${limit ? `limit <b class="m" style="color:#fff">${n0(limit)}</b>` : 'no limit set'}</span></span></div>
@@ -2540,10 +2600,11 @@ PAGE.debtor = a => {
     <div class="bx-body">
       <div class="bx-card" style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
         <div style="display:flex;align-items:center;justify-content:space-between"><b style="font-size:13px">Unpaid bills · how old</b><span style="font-size:11px;font-weight:600;color:var(--ink3)">terms end at <span class="m">${terms}d</span></span></div>
-        ${open.length ? `<div role="img" aria-label="${open.length} unpaid bills: ${open.map(q => short(balanceDue(q)) + ' at ' + custBillAge(q) + ' days').join(', ')}" style="position:relative;height:76px">
+        ${open.length ? `<div role="img" aria-label="${open.length} unpaid bills: ${open.map(b => short(b.due) + ' at ' + b.d + ' days').join(', ')}" style="position:relative;height:76px">
           <span style="position:absolute;left:0;right:0;bottom:16px;height:1px;background:var(--rule)"></span>
           <span style="position:absolute;left:0;width:${(100 - x(Math.min(terms, scale))).toFixed(1)}%;top:0;bottom:16px;background:rgba(229,72,61,.05);border-right:1.5px dashed #E5483D"></span>${bills}
           <span class="m" style="position:absolute;left:0;bottom:0;font-size:10px;color:var(--ink3)">30d+</span><span class="m" style="position:absolute;left:${(100 - x(Math.min(terms, scale))).toFixed(1)}%;bottom:0;transform:translateX(-50%);font-size:10px;font-weight:600;color:var(--crimson)">${terms}d</span><span class="m" style="position:absolute;right:0;bottom:0;font-size:10px;color:var(--ink3)">today</span></div>` : `<span class="bx-sub">No open bills${c.debt > 0 ? ' — the debt is on account' : ''}.</span>`}
+        ${aging.unknown > 0.5 ? `<span class="bx-hint" style="font-size:11px;color:var(--ink3)"><i style="width:7px;height:7px;flex:none;border-radius:999px;background:${NODATE_COL}"></i><span class="m" style="color:var(--ink)">${n0(aging.unknown)}</span> of it has no date</span>` : ''}
       </div>
       <div class="bx-card" style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
         <div style="display:flex;align-items:center;justify-content:space-between"><b style="font-size:13px">Promises</b>${can('promise.record') ? `<button class="mx-act soft" style="height:30px" data-act="push" data-p="promise" data-id="${esc(c.id)}">${ic('plus', 13, 'style="stroke-width:2.4"')}Record a promise</button>` : `<span style="font-size:11px;font-weight:600;color:var(--ink3)">kept or broken</span>`}</div>
@@ -2573,8 +2634,8 @@ PAGE.approvals = () => {
   const q = x.q, c = x.c, taker = staffByUser(takenBy(q)), times = x.withIt / (x.limit || 1);
   const max = Math.max(x.withIt, x.limit) * 1.06, pc = v => Math.min(100, v / max * 100).toFixed(1) + '%';
   const proms = promisesFor(c).slice(-4), pays = paysInDays(c);
-  const oldest = custOpen(c.id)[0];
-  const way = x.over ? `Paying <b class="m">${n0(x.withIt - x.limit)}</b> brings ${esc(firstWord(c.name))} inside the limit${x.old && oldest ? ', and clearing the ' + custBillAge(oldest) + '-day bill fixes the age' : ''}.` : oldest ? `Clear the ${custBillAge(oldest)}-day bill (<b class="m">${n0(balanceDue(oldest))}</b>) and this order can go.` : 'Collect what is owed and this order can go.';
+  const oldest = custOpenCharges(c).filter(ch => ch.date)[0], oldAge = oldest ? chargeAge(oldest) : 0;
+  const way = x.over ? `Paying <b class="m">${n0(x.withIt - x.limit)}</b> brings ${esc(firstWord(c.name))} inside the limit${x.old && oldest ? ', and clearing the ' + oldAge + '-day bill fixes the age' : ''}.` : oldest ? `Clear the ${oldAge}-day bill (<b class="m">${n0(oldest.remaining)}</b>) and this order can go.` : 'Collect what is owed and this order can go.';
   const dec = S.ui.decided[q.id];
   const stampCol = { RELEASED: '#0F6B43', ASKED: '#16203C', HELD: '#95530C' }[dec] || '#95530C';
   return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">${head}
@@ -3221,20 +3282,25 @@ ACT.invoiceall = async () => { if (S.busy) return; S.busy = true; let n = 0; for
    brings each line down to what left the shop; 'full' stands by the
    order (topped up off another shelf) and records it as settled. */
 function shortPicks(){ return liveOrders().filter(q => !q.invoiced && hasShortfall(q)).map(q => ({ q, lines: pickShortfallLinesOf(q) })); }
+/* What an order bills, the sales desk's way (pricedView): the priced lines
+   only, and how many lines still wait for a price -- never those at cost.
+   A line settled down to nothing is not counted as waiting. */
+function knownBill(q){ const v = pricedView(q); return { total: Math.round(v.total), toPrice: (q.items || []).filter(it => linePriceToConfirm(it) && Number(it.qty) > 0).length }; }
+function billWords(b){ return n0(b.total) + (b.toPrice ? ` + ${b.toPrice} to price` : ''); }
 PAGE.shortpick = a => {
   const x = shortPicks().find(y => Number(y.q.id) === Number(a.id)), done = S.ui.spDone && S.ui.spDone.id === Number(a.id) ? S.ui.spDone : null;
   if (!x && !done) return pageShell({ eyebrow: 'SHORT PICK', title: 'Settled', body: emptyCard('Nothing to settle', 'This order has no short pick waiting.') });
   const q = x ? x.q : quoteById(a.id), lines = x ? x.lines : [], pick = S.ui.spPick || 'went', picker = staffById(q.assignedWorkerId), seller = staffByUser(takenBy(q));
   const went = { ...q, items: (q.items || []).map((it, i) => { const l = lines.find(z => z.idx === i); return l ? { ...it, qty: l.picked } : it; }) };
-  const tWent = Math.round(quoteTotal(went)), tFull = Math.round(quoteTotal(q));
-  const opt = (k, w, v, why) => `<button class="bx-pick" role="radio" aria-checked="${pick === k}" data-act="sppick" data-v="${k}" style="flex-direction:column;align-items:flex-start;gap:4px"><span style="display:flex;align-items:center;gap:8px;width:100%"><span style="width:18px;height:18px;border-radius:999px;flex:none;box-shadow:inset 0 0 0 ${pick === k ? '5px var(--navy)' : '2px #C9C4BA'}"></span><b style="flex:1;font-size:14px">${w}</b><span class="m" style="font-size:15px;font-weight:600">${n0(v)}</span></span><span style="padding-left:26px;font-size:12px;font-weight:600;color:var(--ink3)">${why}</span></button>`;
+  const bWent = knownBill(went), bFull = knownBill(q), tWent = bWent.total, tFull = bFull.total;
+  const opt = (k, w, v, why) => `<button class="bx-pick" role="radio" aria-checked="${pick === k}" data-act="sppick" data-v="${k}" style="flex-direction:column;align-items:flex-start;gap:4px"><span style="display:flex;align-items:center;gap:8px;width:100%"><span style="width:18px;height:18px;border-radius:999px;flex:none;box-shadow:inset 0 0 0 ${pick === k ? '5px var(--navy)' : '2px #C9C4BA'}"></span><b style="flex:1;font-size:14px">${w}</b><span class="m" style="font-size:15px;font-weight:600">${billWords(v)}</span></span><span style="padding-left:26px;font-size:12px;font-weight:600;color:var(--ink3)">${why}</span></button>`;
   return pageShell({ eyebrow: 'SHORT PICK · ' + esc((picker ? firstWord(picker.name) : 'the picker').toUpperCase()) + ' FOUND LESS', title: esc(clientName(q)), sub: `<span class="m">Q-${String(q.id).padStart(4, '0')}</span>${seller ? ' · ' + esc(firstWord(seller.name)) + ' sold it' : ''}`, face: faceIcon('box'),
     body: `<div class="bx-card" style="padding:14px;display:flex;flex-direction:column;gap:12px">${(done ? [] : lines).map(l => `<div style="display:flex;flex-direction:column;gap:6px"><span style="display:flex;justify-content:space-between;gap:8px"><b class="ell" style="font-size:14px">${esc(l.it.productName || 'A line')}</b><span class="m" style="font-size:13px;font-weight:600"><span style="color:var(--crimson)">${l.picked}</span> of ${l.ordered}</span></span>
         <span role="img" aria-label="${l.picked} of ${l.ordered} found" style="display:flex;gap:2px;height:10px">${Array.from({ length: Math.min(40, l.ordered) }, (_, k) => `<i style="flex:1;border-radius:2px;${k < Math.round(l.picked / l.ordered * Math.min(40, l.ordered)) ? 'background:var(--navy)' : 'box-shadow:inset 0 0 0 1.5px #F2B7AE;background:#FDE8E4'}"></i>`).join('')}</span></div>`).join('')}
-      ${done ? '' : `<div role="radiogroup" aria-label="What to bill" style="display:flex;flex-direction:column;gap:8px">${opt('went', 'Bill what went', tWent, 'What actually left the shop')}${opt('full', 'Bill the full quantity', tFull, 'Topped up off another shelf')}</div>`}</div>
+      ${done ? '' : `<div role="radiogroup" aria-label="What to bill" style="display:flex;flex-direction:column;gap:8px">${opt('went', 'Bill what went', bWent, 'What actually left the shop')}${opt('full', 'Bill the full quantity', bFull, 'Topped up off another shelf')}</div>`}</div>
       ${!done && pick === 'went' && (Number(q.amountPaid) || 0) > tWent ? `<div class="mx-lock" style="background:var(--amberSoft);color:var(--amberDeep)">${ic('warn', 16)}<span>${esc(clientName(q))} has paid ${n0(q.amountPaid)} already — ${n0(q.amountPaid - tWent)} more than this. Accounts refunds it or carries it to the next order.</span></div>` : ''}
-      ${done ? doneHTML(done.pick === 'went' ? 'AMENDED' : 'SETTLED', done.pick === 'went' ? 'var(--navy)' : 'var(--green)', done.pick === 'went' ? `The order now bills ${n0(done.total)}. ${seller ? esc(firstWord(seller.name)) + ' is told.' : ''}` : `It bills the full ${n0(done.total)}. ${seller ? esc(firstWord(seller.name)) + ' is told.' : ''}`) : ''}`,
-    foot: done ? '' : can('pick.settle') ? `<button class="bx-btn red" data-act="spgo" data-id="${q.id}">${ic('tick', 18, 'style="stroke-width:2.4"')}${pick === 'went' ? 'Bill what went · ' + n0(tWent) : 'Bill the full ' + n0(tFull)}</button>` : lockedHTML('pick.settle', 'Settling a short pick') });
+      ${done ? doneHTML(done.pick === 'went' ? 'AMENDED' : 'SETTLED', done.pick === 'went' ? 'var(--navy)' : 'var(--green)', done.pick === 'went' ? `The order now bills ${billWords(done)}. ${seller ? esc(firstWord(seller.name)) + ' is told.' : ''}` : `It bills the full ${billWords(done)}. ${seller ? esc(firstWord(seller.name)) + ' is told.' : ''}`) : ''}`,
+    foot: done ? '' : can('pick.settle') ? `<button class="bx-btn red" data-act="spgo" data-id="${q.id}">${ic('tick', 18, 'style="stroke-width:2.4"')}${pick === 'went' ? 'Bill what went · ' + billWords(bWent) : 'Bill the full ' + billWords(bFull)}</button>` : lockedHTML('pick.settle', 'Settling a short pick') });
 };
 ACT.sppick = t => { S.ui.spPick = t.dataset.v; FEEL.tick(); render(); };
 ACT.spgo = async t => {
@@ -3246,8 +3312,8 @@ ACT.spgo = async t => {
       q.pickSettle = { pick, by: S.user ? S.user.id : null, byName: myName(), at: new Date().toISOString(), lines: lines.map(l => ({ idx: l.idx, ordered: l.ordered, picked: l.picked })) };
     }, ['items', 'pickShortfallAckAt', 'pickSettle']);
     if (!res) throw new Error('that short pick is settled already');
-    const total = Math.round(quoteTotal(res.q));
-    S.ui.spDone = { id: Number(t.dataset.id), pick, total };
+    const bill = knownBill(res.q), total = bill.total;
+    S.ui.spDone = { id: Number(t.dataset.id), pick, total, toPrice: bill.toPrice };
     logDecision('pick.settle', `${pick === 'went' ? 'Billed what went' : 'Billed the full quantity'} on ${clientName(res.q)}`, { amount: total, ref: { table: 'saved_quotes', id: res.q.id }, before: res.q.pickSettle.lines, after: { pick } });
     FEEL.stamp();
   } catch (e) { toast(failWord(e), 5000); }

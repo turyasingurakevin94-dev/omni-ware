@@ -34,6 +34,7 @@ const html = read('manager.html');
 const salesSrc = read('sales.html');
 const adminSrc = read('index.html');
 const workerSrc = read('shared-worker.js');
+const accountsSrc = read('accounts.html');
 const app = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]).find(s => s.includes('function holderOf'));
 if (!app) throw new Error('manager.html has no app script');
 
@@ -53,8 +54,22 @@ const same = (name, src, where) => {
 };
 ['goodsTotal', 'pricedView', 'chargeAmount', 'chargesTotal', 'cashTotal', 'creditCharge', 'quoteTotal', 'balanceDue', 'quoteItemSellPrice', 'lineHasRule', 'linePriceToConfirm',
   'effectiveMarkupRule', 'effectiveStockMarkupRule', 'applyRule', 'sellSideFor', 'productPriceRows', 'customerOrdersFor', 'outstandingInvoices',
-  'custTerms', 'custBillAge', 'custOldestAge', 'custOverdue', 'custLimit', 'custOverLimit', 'nmInvoiceSales', 'nmInvoicesIn', 'nmIsSale', 'salesTarget', 'payPlan', 'payNextPaymentId', 'insertRow', 'issueRowId',
+  'custTerms', 'custBillAge', 'custOverdue', 'custLimit', 'custOverLimit', 'nmInvoiceSales', 'nmInvoicesIn', 'nmIsSale', 'salesTarget', 'payPlan', 'payNextPaymentId', 'insertRow', 'issueRowId',
   'supplierGroups', 'supplierTerms', 'confirmState'].forEach(n => same(n, salesSrc, 'sales.html'));
+// How old a debt is (19 Oct 2026 report, fix 9): no longer the oldest open
+// invoice's date (the sales desk's old custOldestAge), but the debt log's open
+// charges -- accounts.html's custOpenCharges, word for word -- so the Manager,
+// Sales and Accounts show one oldest age and one "over 30 days" figure.
+same('custOpenCharges', accountsSrc, 'accounts.html');
+same('custAging', accountsSrc, 'accounts.html');
+{
+  // custAging's bands are accounts.html's (k, lo, hi), and bandOf finds them the same way.
+  const tri = src => [...src.matchAll(/\{ k: '(b\d+p?)',[^}]*?lo: (\d+), hi: (\d+|Infinity)/g)].map(m => m.slice(1).join(':')).slice(0, 4).join(' ');
+  const accBands = accountsSrc.slice(accountsSrc.indexOf('const BANDS = ['), accountsSrc.indexOf('function bandOf'));
+  t.check(tri(accBands) === 'b30:0:29 b60:30:59 b90:60:89 b90p:90:Infinity' && tri(app.slice(app.indexOf('const AGE_BANDS'))) === tri(accBands), "custAging's bands are accounts.html's: " + tri(accBands));
+  t.check(norm(fnOf(app, 'bandOf', 'manager.html')).replace(/AGE_BANDS/g, 'BANDS') === norm(fnOf(accountsSrc, 'bandOf', 'accounts.html')), 'bandOf() is accounts.html\'s, on those bands');
+}
+t.check(/function custOldestAge\(c\)\{ return custAging\(c\)\.oldest; \}/.test(app), 'the oldest age is the debt log\'s (custAging), not an invoice date');
 same('orderStageOverdue', adminSrc, 'index.html');
 same('resetPickingProgress', workerSrc, 'shared-worker.js');
 same('staffEligibleForRole', workerSrc, 'shared-worker.js');
@@ -87,8 +102,12 @@ function fixture(nSales){
       { id: 'D1', name: 'Ssali Paul', phone: '0772300377', role: 'delivery', unavailable: false, userId: null },
       { id: 'D2', name: 'Hassan L', phone: '', role: 'delivery', unavailable: true, userId: null }],
     customers: [
-      { id: 'C1', name: 'Kyaligonza & Sons', phone: '0700111222', phone2: '', location: 'Najjera', notes: '', debt: 746000, termsDays: 7, creditLimit: 600000, debtLog: [] },
-      { id: 'C2', name: 'Mukono Roofing Centre', phone: '0700333444', phone2: '', location: 'Mukono', notes: '', debt: 1846000, termsDays: 7, creditLimit: 3000000, debtLog: [{ id: 1, date: iso(NOW - 12 * D), type: 'payment', amount: 1000000, note: '', cashTxnId: null, quoteId: null }] },
+      { id: 'C1', name: 'Kyaligonza & Sons', phone: '0700111222', phone2: '', location: 'Najjera', notes: '', debt: 746000, termsDays: 7, creditLimit: 600000, debtLog: [{ id: 2, date: iso(NOW - 12 * D), type: 'charge', amount: 746000, note: 'Auto-sync — INV-0012', cashTxnId: null, quoteId: 12 }] },
+      { id: 'C2', name: 'Mukono Roofing Centre', phone: '0700333444', phone2: '', location: 'Mukono', notes: '', debt: 1846000, termsDays: 7, creditLimit: 3000000, debtLog: [
+        { id: 3, date: iso(NOW - 26 * D), type: 'charge', amount: 1120000, note: 'Auto-sync — INV-0010', cashTxnId: null, quoteId: 10 },
+        { id: 4, date: iso(NOW - 15 * D), type: 'charge', amount: 726000, note: 'Auto-sync — INV-0011', cashTxnId: null, quoteId: 11 },
+        { id: 5, date: iso(NOW - 13 * D), type: 'charge', amount: 1000000, note: 'Auto-sync — INV-0009', cashTxnId: null, quoteId: 9 },
+        { id: 1, date: iso(NOW - 12 * D), type: 'payment', amount: 1000000, note: '', cashTxnId: null, quoteId: 9 }] },
       { id: 'C3', name: 'Nansana Hardware', phone: '', phone2: '', location: '', notes: '', debt: 0, termsDays: null, creditLimit: null, debtLog: [] },
     ],
     products: [{ id: 'P1', name: 'Iron sheet G28', variants: [] }],
@@ -150,7 +169,7 @@ function page(db, data, role){
   };
   sandbox.window = sandbox; sandbox.window.open = () => {}; sandbox.window.addEventListener = () => {};
   vm.createContext(sandbox);
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, SHEET, D, render, renderSheet, viewToday, viewTeam, viewOrders, viewMoney, holderOf, whyStuck, stuckOrders, isStuck, heldOrders, heldWaiting, creditCase, debtBands, debtors, lastSeller, personGoal, salesTarget, teamMonth, stageTimes, promiseState, rowToQuote, handToPacker, handToDriver, changeOrder, quoteTotal, balanceDue, custOldestAge, team, payPlan, customerById, showWin, candidatesFor };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, SHEET, D, render, renderSheet, viewToday, viewTeam, viewOrders, viewMoney, holderOf, whyStuck, stuckOrders, isStuck, heldOrders, heldWaiting, creditCase, debtBands, debtors, lastSeller, personGoal, salesTarget, teamMonth, stageTimes, promiseState, rowToQuote, handToPacker, handToDriver, changeOrder, quoteTotal, balanceDue, custOldestAge, team, payPlan, customerById, showWin, candidatesFor, needsYou, custAging, custOpenCharges, knownBill, packedOrdersToday, floorHTML };', sandbox);
   const X = sandbox.__x;
   Object.assign(X.S, { data: data || fixture(), shopId: SH, user: { id: 'u1', email: 'sarah@shop.ug' }, shopName: 'Mukasa Hardware', role: role || 'manager', started: true,
     tasks: ['order.move', 'order.assign', 'credit.release', 'team.nudge', 'customer.edit', 'payment.receive', 'statement.send'] });
@@ -187,7 +206,7 @@ const quoteRow = (q) => {
     const m = X.creditCase(X.D().savedQuotes.find(q => q.id === 24));
     t.check(m.old && m.age === 26 && !m.over, 'the age check is the oldest open bill against the hold line (21 days unless the owner sets one)');
     const bands = X.debtBands(X.debtors());
-    t.check(bands[0] === 0 && bands[1] === 746000 && bands[2] === 1846000 && bands[3] === 0, 'debts are aged by bill into days and weeks: ' + bands.join(', '));
+    t.check(bands[0] === 0 && bands[1] === 746000 && bands[2] === 1846000 && bands[3] === 0 && bands.unknown === 0, 'debts are aged by their open charges into days and weeks: ' + bands.join(', '));
     t.check(X.lastSeller(X.customerById('C2')).id === 'S2', 'who last sold to a customer is the taker of their newest order');
     const tg = X.salesTarget();
     const inMonth = X.D().savedQuotes.filter(q => q.invoiced && !q.voided && q.invoicedAt >= M0).reduce((a, q) => a + X.quoteTotal(q), 0);
@@ -271,6 +290,73 @@ const quoteRow = (q) => {
     Y.S.tasks = []; Y.S.stack = [{ type: 'pay', args: { id: 'C2', amt: 100000 } }];
     await Y.ACT['slide:pay']();
     t.check(Y.S.stack[0].type === 'pay', 'without payment.receive nothing is recorded');
+  }
+  // 9 (19 Oct 2026 report). How old a debt is: the debt log's open charges, the
+  // rule Accounts uses; what has no date is "no date", never aged, never new.
+  {
+    const data = fixture();
+    const ch = (id, days, amount, quoteId) => ({ id, date: days == null ? null : iso(NOW - days * D), type: 'charge', amount, note: '', cashTxnId: null, quoteId });
+    data.customers.push(
+      { id: 'C4', name: 'Sadat', phone: '', phone2: '', location: '', notes: '', debt: 310000, termsDays: null, creditLimit: null, debtLog: [] },
+      { id: 'C5', name: 'Ken Bwaise', phone: '', phone2: '', location: '', notes: '', debt: 800000, termsDays: null, creditLimit: null, debtLog: [ch(40, 40, 500000, 40), ch(41, 5, 300000, 41)] },
+      { id: 'C6', name: 'Hajat Faluk', phone: '', phone2: '', location: '', notes: '', debt: 200000, termsDays: null, creditLimit: null, debtLog: [ch(42, null, 200000, 42)] },
+      { id: 'C7', name: 'Ssendawula Sam', phone: '', phone2: '', location: '', notes: '', debt: 900000, termsDays: null, creditLimit: null,
+        debtLog: [ch(43, 45, 600000, 43), { id: 44, date: iso(NOW - 20 * D), type: 'payment', amount: 600000, note: '', cashTxnId: null, quoteId: null }, ch(45, 14, 900000, 45)] });
+    // Ken's invoice is dated 60 days back: the old invoice-date age would say 60.
+    data.savedQuotes.push({ id: 40, status: 'completed', invoiced: true, invoicedAt: iso(NOW - 60 * D), date: iso(NOW - 60 * D), amountPaid: 0, voided: false, client: { name: 'Ken Bwaise' }, customerId: 'C5', items: [line(1, 8, 100000)], charges: [], payments: [], takenBy: 'u2' });
+    const X = page(fakeDb({}), data), cu = id => X.customerById(id);
+    t.check(X.custOldestAge(cu('C5')) === 40, 'the oldest age is the oldest open charge on the log (40 days), not the invoice date (60)');
+    const a4 = X.custAging(cu('C4')), a6 = X.custAging(cu('C6'));
+    t.check(a4.unknown === 310000 && a4.oldest === 0 && a6.unknown === 200000 && a6.oldest === 0 && a6.parts.b30 === 0, 'a debt the log does not cover, or a charge with no date, is "no date" — not aged 0, not counted as new');
+    t.check(X.custOldestAge(cu('C7')) === 14, 'a payment pays the oldest charge first, so what is left is 14 days old');
+    const bands = X.debtBands(X.debtors());
+    t.check(bands.unknown === 510000 && bands[0] === 300000 && bands[3] === 500000, 'the HOW OLD bands come from the open charges, with "no date" its own part: ' + bands.join(', ') + ' · no date ' + bands.unknown);
+    const old = X.needsYou().rest.find(n => n.k === 'old');
+    t.check(old && old.n === 1 && old.v === 500000, 'Watch "owing 30+ days" is the part aged 30 days or more (500,000), not the whole debt of anyone with an old bill');
+    const money = X.viewMoney();
+    t.check(/over 30 500K, no date 510K"/.test(money) && /<b style="color:var\(--navyInk\)">510K<\/b>no date<\/span>/.test(money), 'Money › How old draws a "no date" segment of its own (510K), not "under 7d"');
+    t.check(!/no dated bill/.test(money) && /no date · /.test(money), 'a debtor with nothing dated reads "no date", never as new');
+    t.check(/>no date</.test(X.PAGE.debtor({ id: 'C4' })) && /200,000<\/span> of it has no date/.test(X.PAGE.debtor({ id: 'C6' })), 'one customer: "no date" instead of an oldest age, and the undated part named under the bills');
+    // The same figures Accounts shows: accounts.html's own functions, run on the same customers.
+    const pick = name => { const i = accountsSrc.indexOf(name); return accountsSrc.slice(i, accountsSrc.indexOf('\n}\n', i) + 2); };
+    const accCode = [accountsSrc.slice(accountsSrc.indexOf('const BANDS = ['), accountsSrc.indexOf('function bandOf')), fnOf(accountsSrc, 'bandOf', 'accounts.html'), fnOf(accountsSrc, 'daysBetween', 'accounts.html'),
+      fnOf(app, 'todayISO', 'manager.html'), pick('function custOpenCharges(c){'), pick('function custAging(c){'), 'const memo = (n, a, f) => f();', 'globalThis.__a = { custAging };'].join('\n');
+    const box = { Math, Number, String, Date, Infinity }; vm.createContext(box); vm.runInContext(accCode, box);
+    const agree = data.customers.filter(c => c.debt > 0).every(c => { const A = box.__a.custAging(c), M = X.custAging(cu(c.id)), over = p => p.b60 + p.b90 + p.b90p;
+      return A.oldest === X.custOldestAge(cu(c.id)) && over(A.parts) === over(M.parts) && A.unknown === M.unknown; });
+    t.check(agree, 'for every customer the Manager shows the oldest age, the "over 30 days" amount and the "no date" part Accounts shows');
+  }
+  // 12. The short-pick sheet bills what Sales shows: priced lines only, and the count still to price -- never a cost total.
+  {
+    const data = fixture();
+    data.savedQuotes.push({ id: 30, status: 'preparing', invoiced: false, voided: false, client: { name: 'Walk-in' }, customerId: null,
+      items: [line(1, 10, 100000, { pickStatus: 'short', pickedQty: 6 }), line(2, 3, 50000, { productName: 'Glass Door Locks', sellPrice: null, pickStatus: 'done' })],
+      charges: [], payments: [], takenBy: 'u2', createdAt: new Date(NOW - 2 * H).toISOString(), stageEnteredAt: NOW - H, stageLog: [] });
+    const db = fakeDb({ saved_quotes: data.savedQuotes.map(quoteRow) }), X = page(db, data);
+    const kb = X.knownBill(X.D().savedQuotes.find(q => q.id === 30));
+    t.check(kb.total === 1000000 && kb.toPrice === 1, 'an order bills its priced lines only, with one line to price');
+    const sheet = X.PAGE.shortpick({ id: 30 });
+    t.check(/600,000 \+ 1 to price/.test(sheet) && /1,000,000 \+ 1 to price/.test(sheet) && !/750,000|1,150,000/.test(sheet), 'both choices show the known total and "+ 1 to price", never the line at cost');
+    await X.ACT.spgo({ dataset: { id: '30' } });
+    t.check(X.S.ui.spDone && X.S.ui.spDone.total === 600000 && X.S.ui.spDone.toPrice === 1 && /The order now bills 600,000 \+ 1 to price/.test(X.PAGE.shortpick({ id: 30 })), '"The order now bills" is the known total and the unpriced count');
+  }
+  // 8 (second half). Team › Buying counts the suppliers' own deliveries; "packed today" counts every order packed today.
+  {
+    const data = fixture(), recent = NOW - 60e3;
+    data.collectionTrips.push({ id: 'T2', supplierId: 'SUP1', status: 'collected', assignedWorkerId: '__supplier__', createdAt: new Date(NOW - 2 * 60e3).toISOString(), collectedAt: new Date(recent).toISOString(), lines: [], voided: false },
+      { id: 'T3', supplierId: 'SUP1', status: 'collecting', assignedWorkerId: '__supplier__', createdAt: new Date(NOW - 2 * 60e3).toISOString(), lines: [], voided: false });
+    data.savedQuotes.push({ id: 31, status: 'pending_delivery', invoiced: false, voided: false, client: { name: 'Walk-in' }, customerId: null, items: [line(1, 1, 1000)], charges: [], payments: [], takenBy: 'u2', assignedWorkerId: null, pickingStatus: 'done', pickingDoneAt: recent, stageLog: [] },
+      { id: 32, status: 'completed', invoiced: false, voided: false, client: { name: 'Walk-in' }, customerId: null, items: [line(1, 1, 1000)], charges: [], payments: [], takenBy: 'u2', pickingDoneAt: null,
+        stageLog: [{ status: 'preparing', at: NOW - 3 * 60e3 }, { status: 'pending_delivery', at: recent }] });
+    const X = page(fakeDb({}), data), floor = X.floorHTML(X.team());
+    t.check(/Suppliers/.test(floor) && /they bring it/.test(floor) && /1 back today/.test(floor) && /1<\/span> on the way/.test(floor), 'Buying shows the suppliers\' deliveries: one back today, one on the way');
+    const ids = X.packedOrdersToday().map(q => q.id).sort();
+    t.check(ids.join() === '31,32' && />2<\/span> packed today/.test(floor), 'packed today counts every order packed today, whoever packed it, by pickingDoneAt or the stage log');
+  }
+  // 18. The month's team sales are invoiced-only, and the card says so.
+  {
+    const X = page(fakeDb({}), fixture());
+    t.check(/Team sales invoiced · /.test(X.viewToday()) && / invoiced<\/span>/.test(X.viewTeam()), 'the team\'s month is labelled "invoiced" on Today and Team');
   }
   // 5. every screen draws
   for (const n of [0, 1, 3, 5]) {
