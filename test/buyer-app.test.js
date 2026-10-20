@@ -98,7 +98,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, SHEET, D, render, orderSupplierTerms, orderSupplierConfirmState, supplierConfirmMessage, supplierTripMessage, ipLineOutlay, quoteLineQtyText, quoteLineCount, quoteLineEach, purchaseInvoiceTotal, purchaseInvoiceBalanceDue, tripShortLines, tripAllAnswered, orderPurchaseLines, buyingListRuns, beingPreparedOrders, runsToGo, tripFromRun, flushTrip, setGot, rowToQuote, rowToTrip, checkOrders, askingSuppliers, supplierOwed, viewToday, viewCheck, viewAsking, viewSuppliers, orderLeaveDraft, priceWaits, noneOpen, pickReason, restockRows, managerWaits, heldForOrders, shelfAvailable, shelfFor, packSplitText, linePackSplit, tripLinePackSplit, staffName, tripWho, canAddMe, refreshLive, triHTML, answerOf, topArgs, pushOpen, supplierTidy, fmtPhone, poss, go, restockKind };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, SHEET, D, render, orderSupplierTerms, orderSupplierConfirmState, supplierConfirmMessage, supplierTripMessage, ipLineOutlay, quoteLineQtyText, quoteLineCount, quoteLineEach, purchaseInvoiceTotal, purchaseInvoiceBalanceDue, tripShortLines, tripAllAnswered, orderPurchaseLines, buyingListRuns, beingPreparedOrders, runsToGo, tripFromRun, flushTrip, setGot, rowToQuote, rowToTrip, checkOrders, askingSuppliers, supplierOwed, viewToday, viewCheck, viewAsking, viewSuppliers, orderLeaveDraft, priceWaits, noneOpen, pickReason, restockRows, managerWaits, heldForOrders, shelfAvailable, shelfFor, packSplitText, linePackSplit, tripLinePackSplit, staffName, tripWho, canAddMe, refreshLive, triHTML, answerOf, topArgs, pushOpen, supplierTidy, fmtPhone, poss, go, restockKind, priceItems, supplierJobs, staleBySupplier, shareToday, fixAll, fixTabs, packWords };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -548,7 +548,7 @@ const P = page(fakeDb({}));
     t.check(/id="bx_supq"/.test(list) && /LOOKS LIKE ONE SUPPLIER/.test(list), 'the supplier list has its search out, and the tidy card');
     t.check(/\+ phone/.test(list), 'a supplier with no phone says so on the list');
     const one = X.PAGE.supplier({ sid: 'S8' });
-    t.check(/data-act="savephone"/.test(one) && /WhatsApp opens once a phone is saved/.test(one), 'one supplier with no phone: the field first, WhatsApp waits for it');
+    t.check(/data-act="savephone"/.test(one) && /No phone on file/.test(one) && !/wa\.me/.test(one), 'one supplier with no phone: the field sits where Call and WhatsApp go, and nothing opens WhatsApp yet');
   }
   {
     const X = page(fakeDb({}));
@@ -559,6 +559,41 @@ const P = page(fakeDb({}));
     X.ACT.tripsback();
     t.check(X.S.stack.length === 1 && X.S.stack[0].type === 'trips', 'and from Trips it simply goes back');
     t.check(X.restockKind({ hold: {} }) === 'held' && X.restockKind({ key: 'zz', rate: 0.05, need: 3, best: {} }) === 'nocount', 'What to buy sorts each line: held, no count yet, and so on');
+  }
+
+  // 9. The supplier redesign: who sells it, prices to confirm, the pack picker.
+  {
+    const db = fakeDb({ __rpcOk: true }), X = page(db);
+    const g = X.priceItems('ridge');
+    t.check(g.length === 1 && g[0].rows.length === 2, 'typing an item finds it on the price list, with everyone who sells it');
+    X.S.view = 'suppliers'; X.S.ui.supQuery = 'ridge caps';
+    t.check(/WHO SELLS IT · CHEAPEST FIRST/.test(X.viewSuppliers()) && /THE PICK/.test(X.viewSuppliers()), 'the supplier tab shows who sells it cheapest, and the pick');
+    X.S.ui.supQuery = '';
+    const stale = X.staleBySupplier();
+    t.check(stale.length >= 1 && stale.some(x => x.rows.some(r => r.r.id === 2)), 'a price never dated is one to confirm');
+    t.check(X.supplierJobs().some(j => j.kind === 'confirm'), 'and a supplier with prices to confirm is a job on Needs you');
+    X.S.stack = [{ type: 'confirm', args: { sid: null, edit: null, v: null } }];
+    const html = X.PAGE.confirm(X.topArgs());
+    t.check(/Is it still the price\?/.test(html) && /data-act="pconfirm"/.test(html), 'Prices to confirm offers "still the price" in one tap');
+    await X.ACT.pconfirm({ dataset: { id: '2' } });
+    const rpc = db.writes.find(w => w[0] === 'rpc' && w[1] === 'buyer_confirm_price');
+    t.check(rpc && rpc[2].p_price_id === 2 && rpc[2].p_wholesale === null && rpc[2].p_qty === 1, '"still" confirms through buyer_confirm_price with no new figure (price.confirm)');
+    t.check(X.shareToday().done === 1, 'and it counts in today\'s share');
+    X.topArgs().edit = '1'; X.topArgs().v = 15000;
+    await X.ACT.pconfirm({ dataset: { id: '1', new: '1' } });
+    const rpc2 = db.writes.filter(w => w[0] === 'rpc' && w[1] === 'buyer_confirm_price')[1];
+    t.check(rpc2 && rpc2[2].p_wholesale === 15000 && X.D().prices.find(r => r.id === 1).retail === 15000, 'a new price is saved on the side a single unit is sold at');
+    X.D().prices.push({ id: 9, productId: 'P2', variantIdx: null, supplierId: 'S1', wholesale: null, retail: 30000, unit: 'pc', packUnit: '', packQty: 0, outOfStock: true, outOfStockSince: '2026-09-01', tiers: [], date: '2026-09-01' });
+    await X.ACT.pback({ dataset: { id: '9' } });
+    const h = db.writes.find(w => w[0] === 'insert' && w[1] === 'buyer_handoffs');
+    t.check(h && h[2].kind === 'sourcing_fix' && h[2].payload.fixes[0].field === 'status' && h[2].payload.fixes[0].now === 'sells it', 'back in stock goes to Sourcing as a fix: the stock flag is theirs');
+  }
+  {
+    const X = page(fakeDb({})), s = X.D().suppliers[0], tabs = X.fixTabs(s), tb = tabs.find(x => x.priceId === 4), f = tb.fields.find(x => x[0] === 'pack');
+    t.check(f[2] === 'pack' && f[3] === 'box|25' && X.packWords(f[3], f[5]) === 'box of 25 kg', 'a pack is picked, not typed: box of 25 kg');
+    const all = X.fixAll(tabs, { [tb.k + ':pack']: 'bag|50' });
+    t.check(all.length === 1 && all[0].was === 'box of 25 kg' && all[0].now === 'bag of 50 kg' && all[0].packUnit === 'bag' && all[0].packQty === 50, 'the fix carries the words and the pack, for Sourcing');
+    t.check(X.packWords('loose|1', 'pc') === 'sold loose, no pack' && X.packWords('bundle|10', 'sheet') === 'bundle of 10 sheets', 'loose, and plurals read right');
   }
 
   process.exit(t.done() ? 1 : 0);
