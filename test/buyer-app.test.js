@@ -98,7 +98,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, SHEET, D, render, orderSupplierTerms, orderSupplierConfirmState, supplierConfirmMessage, supplierTripMessage, ipLineOutlay, quoteLineQtyText, quoteLineCount, quoteLineEach, purchaseInvoiceTotal, purchaseInvoiceBalanceDue, tripShortLines, tripAllAnswered, orderPurchaseLines, buyingListRuns, beingPreparedOrders, runsToGo, tripFromRun, flushTrip, setGot, rowToQuote, rowToTrip, checkOrders, askingSuppliers, supplierOwed, viewToday, viewCheck, viewAsking, viewSuppliers, orderLeaveDraft, priceWaits, noneOpen, pickReason, restockRows, managerWaits, heldForOrders, shelfAvailable, shelfFor, packSplitText, linePackSplit, tripLinePackSplit, staffName, tripWho, canAddMe, refreshLive, triHTML, answerOf, topArgs, pushOpen, supplierTidy, fmtPhone, poss, go, restockKind, priceItems, supplierJobs, staleBySupplier, shareToday, fixAll, fixTabs, packWords };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, SHEET, D, render, orderSupplierTerms, orderSupplierConfirmState, supplierConfirmMessage, supplierTripMessage, ipLineOutlay, quoteLineQtyText, quoteLineCount, quoteLineEach, purchaseInvoiceTotal, purchaseInvoiceBalanceDue, tripShortLines, tripAllAnswered, orderPurchaseLines, buyingListRuns, beingPreparedOrders, runsToGo, tripFromRun, flushTrip, setGot, rowToQuote, rowToTrip, checkOrders, askingSuppliers, supplierOwed, viewToday, viewCheck, viewAsking, viewSuppliers, orderLeaveDraft, priceWaits, noneOpen, pickReason, restockRows, managerWaits, heldForOrders, shelfAvailable, shelfFor, packSplitText, linePackSplit, tripLinePackSplit, staffName, tripWho, canAddMe, refreshLive, triHTML, answerOf, topArgs, pushOpen, supplierTidy, fmtPhone, poss, go, restockKind, priceItems, supplierJobs, staleBySupplier, shareToday, fixAll, fixTabs, packWords, flushYes, withLineIds, roundCashAsk, tripRound, roundCash, shelfIncoming, askAllMessage, askPack, flowNow };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -118,7 +118,8 @@ function fakeDb(tables){
     if (this.op === 'update') { writes.push(['update', this.t, clone(this.row), hit.map(r => r.id)]); hit.forEach(r => Object.assign(r, clone(this.row))); return Promise.resolve({ error: null }).then(res, rej); }
     return Promise.resolve({ data: clone(this.one ? (hit[0] || null) : hit), count: hit.length, error: null }).then(res, rej);
   };
-  return { writes, tables, auth: { getUser: () => new Promise(() => {}), getSession: async () => ({ data: { session: null } }), signOut: async () => ({}) }, from: tb => new Q(tb), rpc: async (fn, args) => { writes.push(['rpc', fn, args]); return tables.__rpcOk ? { data: 1, error: null } : { data: null, error: { message: 'no rpc' } }; } };
+  const storage = { from: () => ({ upload: async (path) => { writes.push(['upload', path]); return { error: null }; } }) };
+  return { writes, tables, storage, auth: { getUser: () => new Promise(() => {}), getSession: async () => ({ data: { session: null } }), signOut: async () => ({}) }, from: tb => new Q(tb), rpc: async (fn, args) => { writes.push(['rpc', fn, args]); return tables.__rpcOk ? { data: 1, error: null } : { data: null, error: { message: 'no rpc' } }; } };
 }
 function page(db, data){
   const X = loadPage(db);
@@ -170,7 +171,7 @@ const P = page(fakeDb({}));
     const row = orderRow(5, [it(1, 'P1', 0, 12, 'S1', 14500), it(2, 'P2', null, 6, 'S2', 28000)], { supplierConfirms: { S2: { state: 'confirmed', at: NOW - 6e5, askedAt: NOW - 9e5, terms: 'P2::6:28000', note: '' }, S1: { state: 'pending', at: null, askedAt: NOW - 7e6, terms: null, note: '' } } });
     const db = fakeDb({ saved_quotes: [row] }), X = page(db);
     X.D().savedQuotes = [X.rowToQuote(JSON.parse(JSON.stringify(row)))];
-    await X.ACT.answer(5, 'S1', 'yes');
+    await X.ACT.answer(5, 'S1', 'yes', true);
     const up = db.writes.filter(w => w[0] === 'update' && w[1] === 'saved_quotes');
     t.check(up.length === 1, 'one write to the order');
     const p = db.tables.saved_quotes[0].payload, rec = p.supplierConfirms.S1;
@@ -186,7 +187,7 @@ const P = page(fakeDb({}));
     const row = orderRow(6, [it(1, 'P2', null, 6, 'S2', 28000, { sellPrice: 35000 })], { originAgentId: 'A1', agentPaymentStatus: 'unpaid' });
     const db = fakeDb({ saved_quotes: [row] }), X = page(db);
     X.D().savedQuotes = [X.rowToQuote(JSON.parse(JSON.stringify(row)))];
-    await X.ACT.answer(6, 'S2', 'yes');
+    await X.ACT.answer(6, 'S2', 'yes', true);
     const r = db.tables.saved_quotes[0];
     t.check(r.status === 'draft' && r.payload.shopConfirmedAt && r.payload.shopConfirmedTerms === 'P2::6:35000', 'a prepay agent\'s order is confirmed for the agent but waits for their money before it moves');
   }
@@ -196,7 +197,7 @@ const P = page(fakeDb({}));
     const db = fakeDb({ saved_quotes: [row] }), X = page(db);
     X.D().savedQuotes = [X.rowToQuote(JSON.parse(JSON.stringify(row)))];
     db.tables.saved_quotes[0].payload.supplierConfirms = { S2: { state: 'problem', at: NOW, askedAt: null, terms: null, note: 'from the owner' } };
-    await X.ACT.answer(7, 'S1', 'yes');
+    await X.ACT.answer(7, 'S1', 'yes', true);
     const sc = db.tables.saved_quotes[0].payload.supplierConfirms;
     t.check(sc.S2 && sc.S2.note === 'from the owner' && sc.S1.state === 'confirmed', 'an answer written by another phone since this one loaded survives');
     t.check(db.tables.saved_quotes[0].status === 'draft', 'an order with a problem still on it stays in Checking');
@@ -254,7 +255,7 @@ const P = page(fakeDb({}));
     const runs = X.runsToGo();
     t.check(runs.length === 2 && runs[0].supplierId === 'S1', 'the buying list has a stop per cheapest supplier, biggest first');
     t.check(runs[0].total === 12 * 14000 + 50 * 5000, 'a stop carries the money for whole cartons: ' + runs[0].total);
-    X.S.stack = [{ type: 'plan', args: { sid: 'S1', who: 'me', given: 450000 } }];
+    X.S.stack = [{ type: 'plan', args: { sel: ['S1'], who: 'me', given: 450000 } }];
     await X.ACT['slide:trip']();
     const ins = db.writes.filter(w => w[0] === 'insert' && w[1] === 'collection_trips');
     t.check(ins.length === 1, 'starting writes one collection_trips row');
@@ -284,9 +285,18 @@ const P = page(fakeDb({}));
     t.check(db.tables.collection_trips[0].status === 'collecting', 'a trip with a line unanswered is not handed in');
     X.ACT.tall({ dataset: { i: '0' } });
     await X.ACT['slide:handin']();
+    t.check(db.tables.collection_trips[0].status === 'collecting', 'every line answered, it still waits for what was paid and the receipt');
+    X.ACT['in:tpaid']({ value: '417,000' });
+    await X.ACT['slide:handin']();
+    t.check(db.tables.collection_trips[0].status === 'collecting', 'the amount alone is not enough: the receipt photo too');
+    X.S.tripPay[id].photo = { file: { name: 'r.jpg', type: 'image/jpeg' }, url: '', at: new Date(NOW).toISOString() };
+    await X.ACT['slide:handin']();
     const tr = db.tables.collection_trips[0];
     t.check(tr.status === 'collected' && tr.collected_at && tr.lines[0].gotQty === 12, 'answered in full, it is handed in for the owner to check in');
     t.check(X.S.stack[0].type === 'done', 'and the tailgate opens');
+    const rc = db.writes.find(w => w[0] === 'insert' && w[1] === 'buyer_handoffs' && w[2].kind === 'paper_bill');
+    t.check(rc && rc[2].for_role === 'accounts' && rc[2].payload.tripId === id && rc[2].payload.total === 417000 && rc[2].payload.receipt === true && /^shop1\//.test(rc[2].payload.photoPath), 'what was paid and the receipt go to Accounts as the trip\'s paper bill');
+    t.check(/You paid/.test(X.PAGE.done({ id })) && />receipt</.test(X.PAGE.done({ id })) && /417,000/.test(X.PAGE.done({ id })), 'the tailgate shows what you said you paid, with the receipt');
     t.check(!db.writes.some(w => ['stock', 'stock_lots', 'purchase_invoices', 'cash_txns', 'prices', 'suppliers'].includes(w[1])), 'nothing the owner keeps — stock, bills, cash, prices, suppliers — is ever written');
   }
   // 4b. sending somebody else, and a supplier delivery
@@ -496,7 +506,7 @@ const P = page(fakeDb({}));
     const row = orderRow(73, [it(1, 'P1', 0, 12, 'S1', 14500), it(2, 'P2', null, 6, 'S2', 28000), it(3, 'P1', 0, 2, 'S3', 15000)]);
     const db = fakeDb({ saved_quotes: [row] }), X = page(db);
     X.D().savedQuotes = [X.rowToQuote(JSON.parse(JSON.stringify(row)))];
-    const a = X.ACT.answer(73, 'S1', 'yes'), b = X.ACT.answer(73, 'S2', 'yes');
+    const a = X.ACT.answer(73, 'S1', 'yes', true), b = X.ACT.answer(73, 'S2', 'yes', true);
     const q0 = X.D().savedQuotes[0], g = { supplierId: 'S2', lines: q0.items.filter(i => i.supplierId === 'S2'), a: X.answerOf(q0, 'S2') };
     t.check(/data-pos="yes"/.test(X.triHTML(q0, g)), 'a slide waiting to be written stays where it was let go');
     await Promise.all([a, b]);
@@ -594,6 +604,88 @@ const P = page(fakeDb({}));
     const all = X.fixAll(tabs, { [tb.k + ':pack']: 'bag|50' });
     t.check(all.length === 1 && all[0].was === 'box of 25 kg' && all[0].now === 'bag of 50 kg' && all[0].packUnit === 'bag' && all[0].packQty === 50, 'the fix carries the words and the pack, for Sourcing');
     t.check(X.packWords('loose|1', 'pc') === 'sold loose, no pack' && X.packWords('bundle|10', 'sheet') === 'bundle of 10 sheets', 'loose, and plurals read right');
+  }
+
+
+  // 8. The browser test of 20 Oct 2026, built from the Buyer canvas.
+  // 8a. A pack-only supplier is asked for the whole pack, split order and shelf.
+  {
+    const row = orderRow(80, [it(1, 'P3', null, 30, 'S1', 5000, { qtyIn: '' })]);
+    const db = fakeDb({ saved_quotes: [row] }), X = page(db);
+    X.D().savedQuotes = [X.rowToQuote(JSON.parse(JSON.stringify(row)))];
+    const r = X.flowNow().toAsk.find(x => x.supplierId === 'S1'), msg = X.askAllMessage('S1', r);
+    t.check(/Roofing nails — 50 kg/.test(msg) && /\(30 for our order \+ 20 for our shelf\)/.test(msg), 'the ask says the 50 kg the trip will pay for, and which part is the order\'s: ' + msg.split('\n').find(l => /•/.test(l)));
+    t.check(/sold by the 50/.test(X.PAGE.ask({ sid: 'S1' })) && /20<\/b>shelf/.test(X.PAGE.ask({ sid: 'S1' })), 'the Ask screen splits the line: the order\'s part and the shelf\'s');
+    // 8b. Nothing is marked asked until the buyer says it went.
+    X.ACT.askall({ dataset: { sid: 'S1' } });
+    t.check(X.S.sheet && X.S.sheet.type === 'sent' && !db.writes.some(w => w[1] === 'saved_quotes'), 'opening WhatsApp asks "Did you send it?" and marks nothing');
+    t.check(/Yes, I sent it/.test(X.SHEET.sent(X.S.sheet.args)) && /I asked another way/.test(X.SHEET.sent(X.S.sheet.args)), 'Yes, Not yet, or I asked another way');
+    X.S.sheet.args.other = true;
+    t.check(/Called them/.test(X.SHEET.sent(X.S.sheet.args)) && /In person/.test(X.SHEET.sent(X.S.sheet.args)) && /Another phone/.test(X.SHEET.sent(X.S.sheet.args)), 'asked another way: a call, in person, another phone');
+    await X.ACT.sentyes({ dataset: { sid: 'S1', how: 'call' } });
+    const rec = db.tables.saved_quotes[0].payload.supplierConfirms.S1;
+    t.check(rec && rec.askedAt && rec.askedHow === 'call', 'a call counts as asked, and says how');
+    t.check(/called /.test(X.PAGE.ask({ sid: 'S1' })) && /Chase opens/.test(X.PAGE.ask({ sid: 'S1' })), 'the ask shows "called 12:02", and a chase waits for half an hour');
+  }
+  // 8c. A yes waits six seconds with Undo before it is written.
+  {
+    const row = orderRow(81, [it(1, 'P2', null, 6, 'S2', 28000)], { supplierConfirms: { S2: { state: 'pending', askedAt: NOW - 9e5 } } });
+    const db = fakeDb({ saved_quotes: [row] }), X = page(db);
+    X.D().savedQuotes = [X.rowToQuote(JSON.parse(JSON.stringify(row)))];
+    let done = false; X.ACT.answer(81, 'S2', 'yes').then(() => { done = true; });
+    await Promise.resolve();
+    t.check(!done && !db.writes.length && X.S.yesWait['81|S2'], 'a yes is held, not written, while Undo shows');
+    X.ACT.undoyes({ dataset: { key: '81|S2' } });
+    await new Promise(r => setImmediate(r));
+    t.check(done && !db.writes.length && !X.S.answering['81|S2'], 'Undo takes it back: nothing was written');
+    X.ACT.answer(81, 'S2', 'yes'); X.flushYes(); await X.ACT.answer(81, 'S2', 'mid').catch(() => {});
+    t.check(db.writes.some(w => w[1] === 'saved_quotes'), 'leaving the app writes a held yes at once');
+  }
+  // 8d. Q-0548: an agent-app order without line ids still has buttons that find their line.
+  {
+    const X = page(fakeDb({}));
+    const q = X.rowToQuote(orderRow(82, [{ ...it(null, 'P2', null, 6, 'S2', 28000), lineId: undefined }, { ...it(null, 'P1', 0, 2, 'S1', 14500), lineId: undefined }]));
+    t.check(q.items[0].lineId === 'L82-0' && q.items[1].lineId === 'L82-1' && X.rowToQuote(orderRow(82, [it(7, 'P2', null, 6, 'S2', 28000)])).items[0].lineId === 7, 'a line without an id gets one from its place on the order; a line with one keeps it');
+    X.D().savedQuotes = [q];
+    t.check(!/That line is no longer/.test(X.PAGE.why({ id: 82, lineId: 'L82-0' })) && /nothing to pick/.test(X.PAGE.order({ id: 82 })), 'its Why and Switch open; one supplier is a label, not a step');
+    t.check(!/out of 100|THE OWNER SETS WEIGHTS/.test(X.PAGE.why({ id: 82, lineId: 'L82-0' })), 'one supplier has no score to show');
+    X.D().suppliers[1].phone2 = '';
+    const h = X.PAGE.order({ id: 82 });
+    t.check(/data-act="askother"/.test(h) && /Add phone/.test(h) && /Ask Ndeeba and Kikuubo/.test(h), 'a supplier with no phone: asked another way, or add the phone; the button names every supplier to ask');
+  }
+  // 8e. The round: two stops, one start, one cash ask that only Accounts hands over.
+  {
+    const buying = orderRow(83, [it(1, 'P1', 0, 12, 'S1', 14500), it(3, 'P2', null, 6, 'S2', 28000)], {}, { status: 'awaiting_goods' });
+    const data = fixture(); data.handoffs = [];
+    const db = fakeDb({ saved_quotes: [buying], collection_trips: [], buyer_handoffs: [] }), X = page(db, data);
+    X.D().savedQuotes = [X.rowToQuote(JSON.parse(JSON.stringify(buying)))];
+    X.S.stack = [{ type: 'plan', args: { who: 'me' } }];
+    const h0 = X.PAGE.plan(X.topArgs());
+    t.check(X.topArgs().sel.length === 2 && /Slide to start · 2 stops/.test(h0) && /role="checkbox" aria-checked="true"/.test(h0), 'every stop is ticked, and one slide starts the round');
+    t.check(!/Back · to check in/.test(h0) && !/Got it/.test(h0), 'the strip shows only trips out, and the buyer never marks their own cash');
+    const given = Number((h0.match(/data-act="cashask" data-v="(\d+)"/) || [])[1]);
+    await X.ACT.cashask({ dataset: { v: String(given) } });
+    const ask = db.tables.buyer_handoffs[0];
+    t.check(ask && ask.kind === 'trip_cash' && ask.payload.supplierIds.join() === 'S1,S2' && ask.payload.amount === given && /^round:/.test(ask.ref), 'one ask for the whole round goes to Accounts');
+    t.check(/Waiting for/.test(X.PAGE.plan(X.topArgs())), 'then it waits for Accounts: no "Got it" for the buyer');
+    X.D().handoffs[0].status = 'done';
+    t.check(/handed over/.test(X.PAGE.plan(X.topArgs())), 'Accounts marks it handed over in their app');
+    await X.ACT['slide:trip']();
+    const trips = db.tables.collection_trips;
+    t.check(trips.length === 2 && /-1$/.test(trips[0].id) && /-2$/.test(trips[1].id) && trips.reduce((s, r) => s + r.cash_given, 0) === given, 'two trips, in stop order, the cash split between them to the shilling');
+    t.check(X.tripRound(X.D().collectionTrips[0]).length === 2 && X.S.stack[0].type === 'trip', 'they are one round, and stop 1 opens');
+    t.check(!X.roundCashAsk(['S1', 'S2']), 'a handover already spent on a trip never shows as cash in hand again');
+  }
+  // 8f. What to buy counts the yard and the trips.
+  {
+    const data = fixture(); data.stock = { P3: 0 }; data.restockBuys = [];
+    const X = page(fakeDb({}), data);
+    X.D().savedQuotes = [X.rowToQuote(orderRow(84, [it(1, 'P3', null, 60, '__stock__', 4600)], { createdAt: new Date(NOW - 5 * 864e5).toISOString() }, { status: 'completed' })),
+      X.rowToQuote(orderRow(85, [it(1, 'P3', null, 30, 'S1', 5000, { qtyIn: '' })], {}, { status: 'awaiting_goods' }))];
+    X.D().collectionTrips = [X.rowToTrip({ id: 'TRIP-Z', supplier_id: 'S1', status: 'collected', assigned_worker_id: 'W1', created_at: new Date(NOW - 7200e3).toISOString(), collected_at: new Date(NOW - 600e3).toISOString(), lines: [{ orderId: 85, lineId: 1, productId: 'P3', variantIdx: null, productName: 'Roofing nails', unit: 'kg', qty: 50, expectedPrice: 5000, gotQty: 50, gotPrice: 5000 }], cash_given: 300000 })];
+    const inc = X.shelfIncoming('P3', null), row = X.restockRows().find(r => r.pid === 'P3');
+    t.check(inc.yard === 20, 'the 20 kg a box brought beyond the order wait at the yard for the shelf');
+    t.check(row && row.coming === 20 && /\+ 20 at the yard/.test(X.PAGE.restock({ picked: null })), 'and What to buy counts them before it asks for more');
   }
 
   process.exit(t.done() ? 1 : 0);
