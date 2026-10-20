@@ -71,7 +71,7 @@ t.check(/function enablePush\(\)/.test(read('store.html')) && /push_subscription
   // the data, and each app's pushOpen sends that to its own screen.
   const KINDS = {
     sales: ['price.decided', 'price.changed', 'credit.decided', 'invoice.ask.decided', 'payment.ask.decided', 'request.listed', 'item.switch'],
-    manager: ['price.waits', 'credit.hold', 'pick.short', 'agent.change', 'order.delivered', 'trip.difference', 'trip.yard_note', 'stock.report', 'invoice.ask'],
+    manager: ['price.waits', 'credit.hold', 'pick.short', 'agent.change', 'order.delivered', 'trip.difference', 'trip.yard_note', 'stock.report', 'invoice.ask', 'invoice.held'],
     buyer: ['order.buying', 'trip.cash.ready', 'restock.held'],
     accounts: ['trip.cash', 'trip.cash.ask', 'bill.due', 'payment.ask', 'bill.paper'],
     sourcing: ['sourcing.request', 'sourcing.dropped', 'prices.confirm', 'sourcing.fix'],

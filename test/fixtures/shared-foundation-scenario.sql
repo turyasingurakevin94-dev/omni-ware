@@ -48,7 +48,8 @@ insert into saved_quotes(id, shop_id, client_name, status, invoiced, payload) ov
  (8002,'11111111-1111-1111-1111-111111111111','Lubowa Builders','completed',false,
   json_build_object('client', json_build_object('name','Lubowa Builders'), 'deliveredAt', (now() - interval '30 hours')::text,
    'items', json_build_array(json_build_object('productId','P1','productName','Cement','qty',2,'pickedQty',1,'pickStatus','short','price',28000,'unit','bag','supplierId','__stock__')))::jsonb),
- -- a counter sale, and an ordinary delivered order
+ -- a counter sale, and an ordinary delivered order (8003 is paid at the counter, as
+ -- counter_sale (0136) writes it; since 0138 an unpaid walk-in is never made a debtor)
  (8003,'11111111-1111-1111-1111-111111111111','Walk-in','completed',false,
   '{"counter":true,"items":[{"productId":"P1","productName":"Cement","qty":1,"price":28000,"unit":"bag","supplierId":"__stock__"}]}'),
  (8007,'11111111-1111-1111-1111-111111111111','Walk-in','completed',false,
@@ -79,6 +80,7 @@ begin execute 'select (' || cond_sql || ')' into ok;
   if not coalesce(ok, false) then raise exception 'not so: %', cond_sql; end if; end $$;
 grant execute on function _is to authenticated;
 
+update saved_quotes set amount_paid = 35000 where id = 8003;
 set role authenticated;
 
 -- ================= the Checking gate =================
