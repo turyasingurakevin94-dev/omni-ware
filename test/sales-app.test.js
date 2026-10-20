@@ -77,7 +77,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, ctPlace, ctPay, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, ctRowFor, ctSell, ctKeepLocal, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -104,6 +104,19 @@ function fakeDb(tables){
       if (fn === 'next_row_id_blocks') { const k = a.p_kinds[0]; ids[k] = Math.max(ids[k], Number(a.p_floors[k]) || 0) + 1; return { data: { [k]: ids[k] }, error: null }; }
       if (fn === 'invoice_order') { const q = (tables.saved_quotes || []).find(r => Number(r.id) === Number(a.p_quote_id)); writes.push(['rpc', fn, a]); if (!q || q.status !== 'completed') return { data: null, error: { message: 'Only a delivered order is invoiced.' } }; q.invoiced = true; return { data: { ok: true, invoice: 'INV-' + String(q.id).padStart(4, '0') }, error: null }; }
       if (fn === 'next_entity_id') return { data: 'C' + String(++custN).padStart(3, '0'), error: null };
+      // 0136 counter_sale, as the database does it: one write places, pays and invoices; a short shelf or a price under the shop's refuses or waits.
+      if (fn === 'counter_sale') {
+        writes.push(['rpc', fn, a]);
+        const row = a.p_row, items = (row && row.payload && row.payload.items) || [];
+        if (a.p_quote_id == null && !row) return { data: null, error: { message: 'Nothing to sell.' } };
+        if (items.some(it => it.supplierId !== '__stock__')) return { data: null, error: { message: 'A counter sale is only for goods on the shelf.' } };
+        const id = ++ids['row:saved_quote'];
+        if (items.some(it => it.priceBy && ['under', 'nomargin', 'nocost'].includes(it.priceNote))) { tables.saved_quotes.push({ id, shop_id: a.p_shop_id, status: 'draft', invoiced: false, amount_paid: 0, payload: { ...row.payload, counter: true } }); return { data: { ok: true, waiting: 'price', id }, error: null }; }
+        const total = items.reduce((t, it) => t + (Number(it.qty) || 0) * (Number(it.sellPrice) || 0), 0), cashId = ++ids['row:cash_txn'];
+        tables.cash_txns.push({ id: cashId, shop_id: a.p_shop_id, type: 'receipt', category: 'Sales Revenue', account: a.p_method, amount: total, quote_id: id });
+        tables.saved_quotes.push({ id, shop_id: a.p_shop_id, status: 'completed', invoiced: true, amount_paid: total, payload: { ...row.payload, counter: true, payments: [{ id: 1, amount: total, cashTxnId: cashId, method: a.p_method }] } });
+        return { data: { ok: true, id, invoice: 'INV-' + String(id).padStart(4, '0'), total, pay: total, cashTxnId: cashId, change: Math.max(0, (Number(a.p_given) || 0) - total), invoiced: true }, error: null };
+      }
       return { data: null, error: { message: 'no such rpc' } };
     } };
 }
@@ -262,14 +275,17 @@ matrix.forEach(([what, it]) => {
     t.check(/Sells most at the counter/.test(empty) && /data-act="ctadd"/.test(empty) && /Nothing on the counter yet/.test(empty), 'an empty counter offers the shelf, one tap each');
     t.check(!/data-pid="P2"/.test(empty), 'only what is on our own shelf');
     X.S.draft = keep;
-    const id = await X.ctPlace(X.S.draft);
-    const placed = db.tables.saved_quotes.find(r => r.id === id);
-    t.check(placed && placed.payload.counter === true && placed.status === 'draft', 'it is placed as a counter sale (the gate moves a shelf-only order on by itself)');
-    const r = await X.ctPay(id, 'cash');
+    // 0136: the whole sale is ONE write, counter_sale. The phone never inserts the order or the receipt itself.
+    const rowIn = X.ctRowFor(X.S.draft);
+    t.check(rowIn.payload.counter === undefined && rowIn.payload.items.length === 1 && rowIn.payload.items[0].supplierId === '__stock__' && rowIn.client_name === 'Walk-in', 'the sale goes to the database as the counter holds it: lines from the shelf, a walk-in');
+    const r = await X.ctSell(null, rowIn, 'cash', 0), id = r.id;
     const row = db.tables.saved_quotes.find(x => x.id === id), rc = db.tables.cash_txns[0];
+    t.check(db.writes.filter(w => w[0] === 'insert' && (w[1] === 'saved_quotes' || w[1] === 'cash_txns')).length === 0, 'the phone writes neither the order nor the receipt: the database does, together');
+    t.check(db.writes.some(w => w[0] === 'rpc' && w[1] === 'counter_sale' && w[2].p_row === rowIn && w[2].p_method === 'cash'), 'through counter_sale');
     t.check(rc && rc.type === 'receipt' && rc.account === 'cash' && rc.quote_id === id && rc.amount === r.total && r.total > 0, 'one cash receipt on the sale, for the whole of it');
-    t.check(row.status === 'completed' && row.amount_paid === r.total && row.payload.payments.length === 1 && row.payload.payments[0].cashTxnId === rc.id, 'the sale is at Delivered, paid in full, the payment on it');
-    t.check(db.writes.some(w => w[0] === 'rpc' && w[1] === 'invoice_order' && w[2].p_quote_id === id) && row.invoiced === true && r.invoice === 'INV-' + String(id).padStart(4, '0'), 'and invoiced through invoice_order, never a copy of it');
+    t.check(row.status === 'completed' && row.amount_paid === r.total && row.payload.payments.length === 1 && row.payload.payments[0].cashTxnId === rc.id && row.invoiced === true && r.invoice === 'INV-' + String(id).padStart(4, '0'), 'the sale is at Delivered, paid in full, invoiced');
+    X.ctKeepLocal(r, rowIn, 'cash');
+    t.check(X.S.data.savedQuotes.some(q => Number(q.id) === id && q.status === 'completed' && q.invoiced), 'and this phone holds it at once, until the next refresh');
     X.S.stack = [];
     X.ctLand(id, r, 'cash', r.total + 1000);
     const done = X.PAGE.counterdone(X.S.stack[X.S.stack.length - 1].args);

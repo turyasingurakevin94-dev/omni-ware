@@ -111,7 +111,8 @@ t.check(/function enablePush\(\)/.test(read('store.html')) && /push_subscription
       `${a}: and closes them (status done), counting it closed only when the row came back -- a switched-off task is no error, just no row`);
   }
   const sales = read('sales.html');
-  t.check(/async function refreshQuotes\(\)\{\n  try \{ const \[rows, sw\] = await Promise\.all\(\[selectAll\('saved_quotes'\), switchesQuery\(\)\]\)/.test(sales), 'sales: a switch made while the app is open shows on the next live refresh');
+  // The refresh reads the orders that can still change (liveQuoteFilter) and merges them; the switches come with it.
+  t.check(/async function refreshQuotes\(\)\{\n  try \{ const \[rows, sw\] = await Promise\.all\(\[selectAll\('saved_quotes', 'id', liveQuoteFilter\), switchesQuery\(\)\]\); mergeQuotes\(rows\);/.test(sales), 'sales: a switch made while the app is open shows on the next live refresh');
   {
     const acc = read('accounts.html');
     t.check(/tripId: h\.p\.tripId \|\| null/.test(acc) && /latestTripLines\(s\.id, a\.tripId\)/.test(acc) && /tripId == null \|\| String\(x\.id\) === String\(tripId\)/.test(acc),

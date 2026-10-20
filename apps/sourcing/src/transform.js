@@ -13,8 +13,9 @@
     // The install manifest is for the browser; the app is already installed.
     [/<link rel="manifest"[^>]*>\s*/, ''],
     [/<link rel="preconnect" href="https:\/\/fonts\.googleapis\.com">\s*/, ''],
+    [/<link rel="preconnect" href="https:\/\/cdn\.jsdelivr\.net" crossorigin>\s*/, ''],
     [/<link rel="stylesheet"[^>]*href="https:\/\/fonts\.googleapis\.com\/css2[^"]*">/, '<link rel="stylesheet" href="fonts/fonts.css">'],
-    [/<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2\/dist\/umd\/supabase\.js"><\/script>/, '<script src="vendor/supabase.js"></script>'],
+    [/<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2.118.0\/dist\/umd\/supabase\.js"><\/script>/, '<script src="vendor/supabase.js"></script>'],
     // The swaps again, for the installed app's live updates. The native
     // layer itself is inside sourcing.html, so it updates with the page.
     // Anchored to <html>: the page's own comments mention <head> too.

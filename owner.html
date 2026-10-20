@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#16203C">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <title>Omni-Ware Owner</title>
 <!-- The phone app's native layer (apps/owner). Inert in a browser. It
      lives here rather than in the app's own files so a fix to it reaches
@@ -671,7 +672,7 @@ input{font-family:inherit;color:var(--ink)}
 <div id="bx_app"><div id="bx_main"><div class="bx-empty" style="padding-top:40vh"><b>Omni-Ware Owner</b>Opening…</div></div></div>
 <div id="bx_pages"></div>
 <div id="bx_sheet"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
 <script>
 /* ==================================================================
    Omni-Ware Owner — what only the owner decides, on a phone.
@@ -1301,7 +1302,7 @@ async function selectAll(table, keyCol, since){
   let rows = [], total = null;
   for (;;) {
     let q = sb.from(table).select('*', total === null ? { count: 'exact' } : undefined).eq('shop_id', S.shopId);
-    if (since) q = q.gte(since[0], since[1]);
+    if (typeof since === 'function') q = since(q); else if (since) q = q.gte(since[0], since[1]);
     if (rows.length) q = q.gt(keyCol, rows[rows.length - 1][keyCol]);
     const r = await q.order(keyCol, { ascending: true }).limit(1000);
     if (r.error) throw r.error;
@@ -1346,6 +1347,27 @@ function rowToLog(l){ return { id: l.id, at: l.at, ms: msOf(l.at), by: l.by || n
 function rowToStaff(s){ return { id: s.id, name: s.name || '', phone: s.phone || '', role: s.role || '', notes: s.notes || '', userId: s.user_id || null, unavailable: !!s.unavailable,
   payBasis: s.pay_basis || null, payRate: s.pay_rate == null ? null : Number(s.pay_rate) }; }
 
+
+/* The orders that can still change: not delivered, not yet invoiced, voided,
+   or invoiced in the last two days. A refresh reads these and merges them
+   over the copy on the phone, instead of the whole order history on every
+   tick (the audit measured 2 MB a tick on a shop of 1,500 orders). The
+   whole history is read once, at boot and when the app comes back after
+   half a minute away. */
+function liveQuoteFilter(q){ return q.or('status.neq.completed,invoiced.eq.false,voided.eq.true,invoiced_ts.gte.' + new Date(Date.now() - 2 * 864e5).toISOString()); }
+function mergeQuotes(rows){
+  const list = D().savedQuotes || [], at = new Map(list.map((q, i) => [Number(q.id), i]));
+  rows.forEach(r => { const q = rowToQuote(r), i = at.get(Number(q.id)); if (i == null) list.push(q); else list[i] = q; });
+  D().savedQuotes = list;
+}
+async function refreshLive(){
+  if (!S.data) return loadAll();
+  const since = new Date(Math.max(0, (S.loadedAt || 0) - 5 * 60000)).toISOString();
+  const [quotes, log] = await Promise.all([selectAll('saved_quotes', 'id', liveQuoteFilter), selectAll('decision_log', 'id', ['at', since]).catch(() => null)]);
+  mergeQuotes(quotes);
+  if (log) { const seen = new Set((D().log || []).map(l => String(l.id))); const fresh = log.filter(l => !seen.has(String(l.id))).map(rowToLog); if (fresh.length) D().log = fresh.reverse().concat(D().log || []); }
+  S.loadedAt = Date.now(); saveSnapshot();
+}
 async function loadAll(){
   const opt = p => p.then(r => r, () => []);
   const rows = r => (r && !r.error && r.data) || [];
@@ -1361,7 +1383,8 @@ async function loadAll(){
     sb.from('role_tasks').select('role, task').then(r => r, () => ({ data: [] })),
     sb.from('shop_task_off').select('role, task').eq('shop_id', S.shopId).then(r => r, () => ({ data: [], error: { missing: true } })),
     // The log of everything decided for the owner (0123), newest first.
-    sb.from('decision_log').select('*').eq('shop_id', S.shopId).gte('at', new Date(Date.now() - 62 * 864e5).toISOString()).order('at', { ascending: false }).limit(3000).then(r => r, () => ({ data: [], error: { missing: true } })),
+    // The log of the last 62 days, paged (a bare limit was cut at 1,000 rows, with no error).
+    selectAll('decision_log', 'id', ['at', new Date(Date.now() - 62 * 864e5).toISOString()]).then(rows => ({ data: rows.slice().reverse() }), e => ({ data: [], error: e })),
     sb.from('manager_notes').select('*').eq('shop_id', S.shopId).eq('kind', 'target').eq('status', 'open').limit(200).then(r => r, () => ({ data: [] })),
     sb.from('shop_payment_providers').select('provider, environment, enabled, credentials, updated_at').eq('shop_id', S.shopId).then(r => r, () => ({ data: [] })),
     sb.from('agent_mobile_payments').select('id, status, created_at, provider').eq('shop_id', S.shopId).eq('status', 'pending').limit(200).then(r => r, () => ({ data: [] })),
@@ -1633,7 +1656,9 @@ function start(){
   S.started = true;
   phonePush();
   render();
-  setInterval(() => { if (document.visibilityState === 'visible' && quiet() && !S.sheet) loadAll().then(() => { if (quiet()) render(); }).catch(() => {}); }, 90000);
+  // Every 90 s: new log lines and the orders that can still change, not the
+  // whole books (25 reads and 3 MB a tick on a big shop, the audit measured).
+  setInterval(() => { if (document.visibilityState === 'visible' && quiet() && !S.sheet) refreshLive().then(() => { if (quiet()) render(); }).catch(() => {}); }, 90000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Date.now() - S.loadedAt > 30000 && quiet()) loadAll().then(() => { if (quiet()) render(); }).catch(() => {}); });
 }
 // A refresh never redraws under a finger: not mid-slide, mid-write, or while a figure is being typed.
@@ -3270,9 +3295,10 @@ function canStepIn(l){
 async function logOwner(task, what, o){
   o = o || {};
   try {
-    await sb.from('decision_log').insert({ shop_id: S.shopId, by: S.user ? S.user.id : null, by_name: myName(), role: S.role, task, what,
+    const { error } = await sb.from('decision_log').insert({ shop_id: S.shopId, by: S.user ? S.user.id : null, by_name: myName(), role: S.role, task, what,
       amount: o.amount == null ? null : Math.round(o.amount), ref: o.ref || null, before: o.before || null, after: o.after || null });
-  } catch (_e) {}
+    if (error) throw error;
+  } catch (e) { toast('Done — but the line for your log did not save: ' + ((e && e.message) || e), 6000); }
 }
 function rpcMissing(e){ const m = String((e && (e.message || e.code)) || e || ''); return /PGRST202|could not find the function|does not exist|42883/i.test(m); }
 async function callFn(name, args){ const r = await sb.rpc(name, args); if (r.error) throw r.error; return r.data; }

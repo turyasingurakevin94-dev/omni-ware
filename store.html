@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#16203C">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <title>Omni-Ware Store</title>
 <!-- The phone app's native layer (apps/store). Inert in a browser. It
      lives here rather than in the app's own files so a fix to it reaches
@@ -615,7 +616,7 @@ html.big .ct-key{height:60px}
 <div id="st_app"><div id="st_main"><div class="st-empty" style="padding-top:40vh"><b>Omni-Ware Store</b>Opening…</div></div></div>
 <div id="st_pages"></div>
 <div id="st_sheet"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
 <script>
 /* ==================================================================
    Omni-Ware Store — the shop floor and the storeroom on a phone.
@@ -817,11 +818,12 @@ const FEEL = {
   hand: () => { buzz([20, 40, 60]); sfx('horn'); }, stamp: () => { buzz(16); sfx('stamp'); },
 };
 
-async function selectAll(table, keyCol){
+async function selectAll(table, keyCol, filter){
   keyCol = keyCol || 'id';
   let rows = [], total = null;
   for (;;) {
     let q = sb.from(table).select('*', total === null ? { count: 'exact' } : undefined).eq('shop_id', S.shopId);
+    if (filter) q = filter(q);
     if (rows.length) q = q.gt(keyCol, rows[rows.length - 1][keyCol]);
     const r = await q.order(keyCol, { ascending: true }).limit(1000);
     if (r.error) throw r.error;
@@ -940,14 +942,27 @@ async function loadAll(){
   S.loadedAt = Date.now();
   saveSnapshot();
 }
+
+/* The orders that can still change: not delivered, not yet invoiced, voided,
+   or invoiced in the last two days. A refresh reads these and merges them
+   over the copy on the phone, instead of the whole order history on every
+   tick (the audit measured 2 MB a tick on a shop of 1,500 orders). The
+   whole history is read once, at boot and when the app comes back after
+   half a minute away. */
+function liveQuoteFilter(q){ return q.or('status.neq.completed,invoiced.eq.false,voided.eq.true,invoiced_ts.gte.' + new Date(Date.now() - 2 * 864e5).toISOString()); }
+function mergeQuotes(rows){
+  const list = D().savedQuotes || [], at = new Map(list.map((q, i) => [Number(q.id), i]));
+  rows.forEach(r => { const q = rowToQuote(r), i = at.get(Number(q.id)); if (i == null) list.push(q); else list[i] = q; });
+  D().savedQuotes = list;
+}
 async function refreshLive(){
   try {
-    const [quotes, trips, stock, counts, reports, returns] = await Promise.all([selectAll('saved_quotes'), selectAll('collection_trips').catch(() => null),
+    const [quotes, trips, stock, counts, reports, returns] = await Promise.all([selectAll('saved_quotes', 'id', liveQuoteFilter), selectAll('collection_trips').catch(() => null),
       selectCols('stock', 'key,product_id,variant_idx,qty', 'key').catch(() => null),
       sb.from('stock_counts').select('*').eq('shop_id', S.shopId).order('created_at', { ascending: false }).limit(40).then(r => r.error ? null : r.data),
       sb.from('stock_reports').select('*').eq('shop_id', S.shopId).order('created_at', { ascending: false }).limit(60).then(r => r.error ? null : r.data),
       sb.from('invoice_asks').select('id,quote_id,kind,lines,reason,note,asked_by_name,status,created_at').eq('shop_id', S.shopId).eq('kind', 'credit').order('created_at', { ascending: false }).limit(40).then(r => r.error ? null : r.data)]);
-    S.data.savedQuotes = quotes.map(rowToQuote);
+    mergeQuotes(quotes);
     if (trips) S.data.collectionTrips = trips.map(rowToTrip);
     if (stock) { const m = {}; stock.forEach(s => { m[s.key] = Number(s.qty) || 0; }); S.data.stock = m; }
     if (counts) S.data.counts = counts.map(rowToCount);
@@ -1520,7 +1535,7 @@ function setPick(q, i, s, n){
   const d = S.pickDraft[q.id] || (S.pickDraft[q.id] = {});
   d[lineKey(it, i)] = { s, n: s === 'done' ? Number(it.qty) || 0 : s === 'short' ? Math.max(0, Math.floor(Number(n) || 0)) : null, cur: i };
   saveDrafts();
-  clearTimeout(setPick.t); setPick.t = setTimeout(() => flushPicks(q.id).catch(() => {}), 900);
+  clearTimeout(setPick.t); setPick.t = setTimeout(() => flushPicks(q.id).catch(e => toast(pickKeptWords(e), 6000)), 900);
 }
 // shared-worker.js setItemPickedQty / toggleItemPickedAt, for each answer this phone holds.
 async function flushPicks(id){
@@ -1790,7 +1805,8 @@ async function enablePush(){
 function listenPush(){
   const P = nativePush(); if (!P || listenPush.on) return; listenPush.on = true;
   P.addListener('registration', async t => { const me = myStaff(); if (!me) return;
-    try { await sb.from('push_subscriptions').upsert({ shop_id: S.shopId, staff_id: me.id, user_id: S.user.id, fcm_token: t.value }, { onConflict: 'fcm_token' }); } catch (_e) {} });
+    try { const { error } = await sb.from('push_subscriptions').upsert({ shop_id: S.shopId, staff_id: me.id, user_id: S.user.id, fcm_token: t.value }, { onConflict: 'fcm_token' }); if (error) toast('This phone could not be signed up for alerts — ' + error.message, 6000); }
+    catch (e) { toast('This phone could not be signed up for alerts — ' + ((e && e.message) || e), 6000); } });
   P.addListener('pushNotificationActionPerformed', a => { const d = (a && a.notification && a.notification.data) || {};
     refreshLive().then(() => { pushOpen(d); render(); }).catch(() => {}); });
 }
@@ -2344,7 +2360,10 @@ ACT.pkfix = () => { const q = pkQ(), it = pickView(q)[S.ui.pk.i]; if (it.pickSta
 ACT.pkgo = t => pkGo(S.ui.pk.i + Number(t.dataset.d));
 ACT.pkto = t => pkGo(Number(t.dataset.i));
 ACT.pksound = () => { S.prefs.sound = !S.prefs.sound; savePrefs(); if (S.prefs.sound) FEEL.tick(); render(); };
-ACT.pkclose = () => { const q = pkQ(); if (q) flushPicks(q.id).catch(() => {}); FEEL.back(); pop(); };
+ACT.pkclose = () => { const q = pkQ(); if (q) flushPicks(q.id).catch(e => toast(pickKeptWords(e), 6000)); FEEL.back(); pop(); };
+// A pick that did not reach the books stays on this phone (S.pickDraft) and
+// goes with the next tap; the picker is told, not left believing it is done.
+function pickKeptWords(e){ return isNetworkError(e) ? 'No signal — your picks are kept on this phone and go when it is back.' : 'Your picks are kept on this phone but not saved yet — ' + ((e && e.message) || e) + '. They go with your next tap.'; }
 ACT.pkfinish = async () => {
   const q = pkQ(); if (!q) return; S.busy = true; render();
   try { const r = await finishPack(q.id); if (!r) toast('Every line needs an answer first'); else { chimeDone(); S.stack = []; push('load', { fresh: q.id }); } }

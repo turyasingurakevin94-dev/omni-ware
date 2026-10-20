@@ -273,8 +273,11 @@ to Packing. It stops in Checking only when the Manager has a price or credit
 decision to make on it.
 
 A **counter sale** at or above the shop's price is sold, paid and invoiced in
-one slide. A counter sale below the shop's price needs the Manager's yes first,
-by push to the Manager's phone.
+one slide, and in **one database write** (`counter_sale`, 0136): the money, the
+order and the invoice land together or not at all, so a phone that loses
+signal half-way leaves no ghost order and no unmatched cash. A counter sale
+below the shop's price needs the Manager's yes first, by push to the Manager's
+phone; the same function places it and waits.
 
 ### Goods from a trip onto the shelf
 
@@ -298,7 +301,8 @@ the supplier price list automatically.
 - Each day, **Sourcing confirms the owner's set number of supplier prices**
   (`presets.priceReview`), oldest first: still right, or the new figure.
 - **The Buyer confirms on a supplier's behalf** by phone when the supplier is
-  slow or can't do it themselves. It counts toward the day's share.
+  slow or can't do it themselves. It counts toward the day's share, as does a
+  price paid on a trip (`price_source` 'confirmed' and 'purchase', 0136).
 - **Later, suppliers confirm their own prices and items** in a supplier app.
   Like agents, suppliers are outside the shop and not a shop role. Their
   confirmations go through server functions, the way agent orders do. Until
@@ -332,6 +336,10 @@ invoice to void or credit (Manager), credit released and a void ask decided
 report decided (Store), a trip that needs cash and a bill due tomorrow
 (Accounts), and a new request, a line dropped at Checking and the day's
 prices to confirm (Sourcing).
+
+0136 adds a line dropped at Checking, to the salesperson who took the order
+(`line.dropped`), and the Manager's hold and release of a restock line, to
+the Buyer (`restock.held`, `restock.released`, on `restock_buys`).
 
 0134 adds the other four things the Buyer passes on (`buyer_handoffs`): a
 paper bill to record (Accounts, `bill.record`), a supplier's details to fix
@@ -477,6 +485,8 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0133 | A supplier's answer from the supplier app pushes the Buyer (`supplier.confirm`) |
 | 0134 | Pushes for the Buyer's other four hand-offs (paper bill, details to fix, item switched, yard note) |
 | 0135 | A new customer's id past C999: invoicing (0119) and `next_entity_id` (0032) no longer cut C1000 to C100 |
+| 0136 | The audit of 19 Oct 2026, part one: the counter sale as one write (`counter_sale`), restock goods reaching the shelf (`receive_trip`), "cash first" holding until paid, phone and trip prices counting in the share, the restock hold on `restock_buys` (`hold_restock_buy`; `restock_lines` retired), a dropped line pushed to the salesperson (`line.dropped`), the invoice label past 9999 |
+| 0137 | The audit, part two: the indexes the apps' date windows, the live refresh and the hourly invoice run were missing |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.

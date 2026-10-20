@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#16203C">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <title>Omni-Ware Accounts</title>
 <!-- The phone app's native layer (apps/accounts). Inert in a browser. It
      lives here rather than in the app's own files so a fix to it reaches
@@ -722,7 +723,7 @@ input{font-family:inherit;color:var(--ink)}
 <div id="bx_app"><div id="bx_main"><div class="bx-empty" style="padding-top:40vh"><b>Omni-Ware Accounts</b>Opening…</div></div></div>
 <div id="bx_pages"></div>
 <div id="bx_sheet"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
 <script>
 /* ==================================================================
    Omni-Ware Accounts — the books on a phone.
@@ -1361,7 +1362,7 @@ async function selectAll(table, keyCol, since){
   let rows = [], total = null;
   for (;;) {
     let q = sb.from(table).select('*', total === null ? { count: 'exact' } : undefined).eq('shop_id', S.shopId);
-    if (since) q = q.gte(since[0], since[1]);
+    if (typeof since === 'function') q = since(q); else if (since) q = q.gte(since[0], since[1]);
     if (rows.length) q = q.gt(keyCol, rows[rows.length - 1][keyCol]);
     const r = await q.order(keyCol, { ascending: true }).limit(1000);
     if (r.error) throw r.error;
@@ -1400,8 +1401,41 @@ function rowToDue(d){ return { id: d.id, kind: d.kind, refId: d.ref_id, period: 
   proposed: (d.payload && Array.isArray(d.payload.proposed)) ? d.payload.proposed : [] }; }
 function rowToTrip(r){ return { id: r.id, supplierId: r.supplier_id, status: r.status, assignedWorkerId: r.assigned_worker_id, collectedAt: r.collected_at, confirmedAt: r.confirmed_at, lines: Array.isArray(r.lines) ? r.lines : [], voided: !!r.voided,
   cashGiven: r.cash_given == null ? null : Number(r.cash_given), cashCount: r.cash_count || null }; }
+function rowToPayAsk(x){ return ({ id: x.id, cashTxnId: Number(x.cash_txn_id), customerId: x.customer_id, quoteId: x.quote_id == null ? null : Number(x.quote_id), amount: Number(x.amount) || 0, what: x.what, want: x.want || {}, note: x.note || '', askedBy: x.asked_by, askedByName: x.asked_by_name || '', status: x.status, createdAt: x.created_at }); }
+function accHandoffs(rows){ return (rows || []).filter(h => h.kind === 'trip_cash' || h.kind === 'paper_bill').map(h => ({ id: h.id, kind: h.kind, ref: h.ref, p: h.payload || {}, createdBy: h.created_by, createdAt: h.created_at })).sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt))); }
 function rowToAsk(x){ return { id: x.id, quoteId: x.quote_id, customerId: x.customer_id, kind: x.kind, amount: Number(x.amount) || 0, lines: x.lines || [], reason: x.reason || '', status: x.status, askedBy: x.asked_by, createdAt: x.created_at, decidedAt: x.decided_at || null }; }
 
+
+/* The orders that can still change: not delivered, not yet invoiced, voided,
+   or invoiced in the last two days. A refresh reads these and merges them
+   over the copy on the phone, instead of the whole order history on every
+   tick (the audit measured 2 MB a tick on a shop of 1,500 orders). The
+   whole history is read once, at boot and when the app comes back after
+   half a minute away. */
+function liveQuoteFilter(q){ return q.or('status.neq.completed,invoiced.eq.false,voided.eq.true,invoiced_ts.gte.' + new Date(Date.now() - 2 * 864e5).toISOString()); }
+function mergeQuotes(rows){
+  const list = D().savedQuotes || [], at = new Map(list.map((q, i) => [Number(q.id), i]));
+  rows.forEach(r => { const q = rowToQuote(r), i = at.get(Number(q.id)); if (i == null) list.push(q); else list[i] = q; });
+  D().savedQuotes = list;
+}
+async function refreshLive(){
+  if (!S.data) return loadAll();
+  const [quotes, txns, asks, payAsks, handoffs] = await Promise.all([
+    selectAll('saved_quotes', 'id', liveQuoteFilter),
+    selectAll('cash_txns', 'id', ['date', daysAgoISO(2)]),
+    sb.from('invoice_asks').select('*').eq('shop_id', S.shopId).gte('created_at', new Date(Date.now() - 120 * 864e5).toISOString()).then(r => r.error ? null : r.data || [], () => null),
+    sb.from('payment_asks').select('*').eq('shop_id', S.shopId).gte('created_at', new Date(Date.now() - 60 * 864e5).toISOString()).then(r => r.error ? null : r.data || [], () => null),
+    sb.from('buyer_handoffs').select('*').eq('shop_id', S.shopId).eq('for_role', 'accounts').eq('status', 'open').then(r => r.error ? null : r.data || [], () => null),
+  ]);
+  mergeQuotes(quotes);
+  const list = D().cashTxns || [], at = new Map(list.map((t, i) => [Number(t.id), i]));
+  txns.forEach(r => { const t = rowToTxn(r), i = at.get(Number(t.id)); if (i == null) list.push(t); else list[i] = t; });
+  D().cashTxns = list;
+  if (asks) D().asks = asks.map(rowToAsk);
+  if (payAsks) D().payAsks = payAsks.map(rowToPayAsk);
+  if (handoffs) D().handoffs = accHandoffs(handoffs);
+  S.loadedAt = Date.now(); saveSnapshot();
+}
 async function loadAll(){
   const opt = p => p.then(r => r, () => []);
   const [customers, debtLog, products, prices, quotes, suppliers, staff, txns, days, bills, stm, promises, stockIn, settingsR, tasksR, membersR] = await Promise.all([
@@ -1414,7 +1448,7 @@ async function loadAll(){
     opt(selectAll('statements_sent')),
     opt(selectAll('payment_promises')),
     // What came into stock against a supplier's bill (0107 pi_id). Absent before 0107.
-    sb.from('stock_log').select('pi_id, product_id, variant_idx, delta, date').eq('shop_id', S.shopId).not('pi_id', 'is', null).gte('date', daysAgoISO(400)).limit(5000).then(r => r.error ? null : r.data, () => null),
+    selectAll('stock_log', 'id', q => q.not('pi_id', 'is', null).gte('date', daysAgoISO(400))).then(rows => rows, () => null),
     sb.from('app_settings').select('presets').eq('shop_id', S.shopId).maybeSingle(),
     sb.from('role_tasks').select('task').eq('role', S.role || '').then(r => r, () => ({ data: [] })),
     sb.from('shop_members').select('user_id, role').eq('shop_id', S.shopId).then(r => r, () => ({ data: [] })),
@@ -1423,7 +1457,7 @@ async function loadAll(){
   const [dues, loans, assets, rents, stockRows, lots, trips, agents, claims, asks, payAsks, handoffs] = await Promise.all([
     opt(selectAll('dues')), opt(selectAll('loans')), opt(selectAll('fixed_assets')), opt(selectAll('rent_agreements')),
     opt(selectAll('stock', 'key')), opt(selectAll('stock_lots')),
-    sb.from('collection_trips').select('*').eq('shop_id', S.shopId).gte('created_at', new Date(Date.now() - 60 * 864e5).toISOString()).limit(2000).then(r => r.error ? [] : r.data || [], () => []),
+    selectAll('collection_trips', 'id', q => q.gte('created_at', new Date(Date.now() - 60 * 864e5).toISOString())).then(rows => rows, () => []),
     opt(selectAll('agents')),
     sb.from('agent_commission_claims').select('*').eq('shop_id', S.shopId).then(r => r.error ? [] : r.data || [], () => []),
     sb.from('invoice_asks').select('*').eq('shop_id', S.shopId).gte('created_at', new Date(Date.now() - 120 * 864e5).toISOString()).then(r => r.error ? [] : r.data || [], () => []),
@@ -1462,10 +1496,9 @@ async function loadAll(){
     agents: (agents || []).map(a => ({ id: a.id, name: a.name || '', phone: a.phone || '', paymentTerm: a.payment_term || 'prepay', userId: a.user_id || null })),
     claims: (claims || []).map(c => ({ id: c.id, agentId: c.agent_id, month: c.month, amount: Number(c.bonus_amount) || 0, status: c.status, requestedAt: c.requested_at, paidAt: c.paid_at })),
     asks: (asks || []).map(rowToAsk),
-    payAsks: (payAsks || []).map(x => ({ id: x.id, cashTxnId: Number(x.cash_txn_id), customerId: x.customer_id, quoteId: x.quote_id == null ? null : Number(x.quote_id), amount: Number(x.amount) || 0, what: x.what, want: x.want || {}, note: x.note || '', askedBy: x.asked_by, askedByName: x.asked_by_name || '', status: x.status, createdAt: x.created_at })),
+    payAsks: (payAsks || []).map(rowToPayAsk),
     members: (membersR && membersR.data) || [],
-    handoffs: (handoffs || []).filter(h => h.kind === 'trip_cash' || h.kind === 'paper_bill').map(h => ({ id: h.id, kind: h.kind, ref: h.ref, p: h.payload || {}, createdBy: h.created_by, createdAt: h.created_at }))
-      .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt))),
+    handoffs: accHandoffs(handoffs),
     cashTxns: txns.map(rowToTxn),
     cashDays,
     bills: bills.map(rowToBill),
@@ -2290,7 +2323,10 @@ function start(){
   S.started = true;
   phonePush();
   render();
-  setInterval(() => { if (document.visibilityState === 'visible' && quiet() && !S.sheet) loadAll().then(() => { if (quiet()) render(); }).catch(() => {}); }, 90000);
+  // Every 90 s: the orders that can still change, today's cash, the asks and
+  // the hand-offs -- not the whole books (29 reads and 3 MB a tick on a big
+  // shop, the audit measured). The whole books load at boot and on coming back.
+  setInterval(() => { if (document.visibilityState === 'visible' && quiet() && !S.sheet) refreshLive().then(() => { if (quiet()) render(); }).catch(() => {}); }, 90000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Date.now() - S.loadedAt > 30000 && quiet()) loadAll().then(() => { if (quiet()) render(); }).catch(() => {}); });
 }
 // A refresh never redraws under a finger: not mid-slide, mid-write, or while a figure is being typed.
@@ -3059,7 +3095,7 @@ ACT['slide:pay'] = async () => {
     loadAll().then(() => { if (S.stack.length && S.stack[S.stack.length - 1].type === 'paid') render(); }).catch(() => {});
   } catch (e) {
     S.busy = false;
-    if (e.partial > 0) { toast(`Stopped part-way: ${n0(e.partial)} of ${n0(a.amt)} was recorded. Check the cash book before trying again.`, 9000); loadAll().then(render).catch(() => {}); }
+    if (e.partial > 0) { toast(`Stopped part-way: ${n0(e.partial)} of ${n0(a.amt)} was recorded — ${(e && e.message) || e}. Check the cash book before trying again.`, 9000); loadAll().then(render).catch(() => {}); }
     else { render(); toast(failWord(e), 6000); }
   }
 };
@@ -5175,11 +5211,15 @@ function nowHM(){ return new Date().toTimeString().slice(0, 5); }
 // index.html addCashReceipt / addCashPayment: one line, its id from the server.
 async function addCash(o){
   const id = await issueRowId('row:cash_txn', cashMax());
+  S.landed = null;
   const row = { id, shop_id: S.shopId, date: o.date || todayISO(), account: o.account, type: o.type, category: o.category, amount: Math.round(o.amount),
     description: o.description || o.category, time: nowHM(), quote_id: o.quoteId == null ? null : o.quoteId, entered_by: S.user ? String(S.user.id) : null,
     ...(o.transferId != null ? { transfer_id: o.transferId } : {}), ...(o.photo ? { photo: o.photo } : {}) };
   await insertRow('cash_txns', row, ['entered_by', 'transfer_id', 'photo']);
   D().cashTxns.push(rowToTxn(row));
+  // Remembered until the action finishes: a later write that fails must not
+  // say "nothing was changed" when this line is already in the book.
+  S.landed = { id, amount: row.amount, category: row.category, account: row.account, at: Date.now() };
   return id;
 }
 // The owner's log (0123 decision_log). Never blocks the work: a database
@@ -5187,13 +5227,19 @@ async function addCash(o){
 async function logDecision(task, what, o){
   o = o || {};
   try {
-    await sb.from('decision_log').insert({ shop_id: S.shopId, by: S.user ? S.user.id : null, by_name: myName(), role: S.role, task, what,
+    const { error } = await sb.from('decision_log').insert({ shop_id: S.shopId, by: S.user ? S.user.id : null, by_name: myName(), role: S.role, task, what,
       amount: o.amount == null ? null : Math.round(o.amount), ref: o.ref || null, before: o.before || null, after: o.after || null });
-  } catch (_e) {}
+    if (error) throw error;
+  } catch (e) { toast('Done — but the line for the owner’s log did not save: ' + ((e && e.message) || e), 6000); }
 }
-function booksChanged(){ S.loadedAt = Date.now(); saveSnapshot(); }
+function booksChanged(){ S.loadedAt = Date.now(); S.landed = null; saveSnapshot(); }
 // A write that failed half way: reload the books so the screen shows what landed.
-async function afterFail(e){ toast(failWord(e), 7000); try { await loadAll(); } catch (_e) {} render(); }
+async function afterFail(e){
+  const l = S.landed; S.landed = null;
+  if (l && Date.now() - l.at < 120000) toast(`${l.category} of ${n0(l.amount)} is in the ${ACCT_WORD[l.account] || l.account} book (line ${l.id}), but the rest did not save — ${(e && e.message) || e}. Put the rest right, or correct that line in the cash book.`, 10000);
+  else toast(failWord(e), 7000);
+  try { await loadAll(); } catch (_e) {} render();
+}
 function needTask(task){ if (can(task)) return true; toast(`That needs “${TASK_WORDS[task] || task}” — the owner switches it on`, 5000); return false; }
 
 /* ---- money helpers the new screens share ---- */
