@@ -39,8 +39,9 @@ const sql = raw.replace(/--[^\n]*/g, '');
   const was = strip(old.slice(0, old.indexOf('end $$;') + 7));
   const now = strip(core.slice(0, core.indexOf('end $$;') + 7))
     .replace(/ if ow_order_unpriced[\s\S]*?end if;/, '').replace(' and not ow_generic_client(client)', '')
-.replace(/ if c\.id is null and delta > 0 then[\s\S]*?end if;/, '')
-    .replace(/ select b\.id into bill_id from purchase_invoices b[\s\S]*?continue; end if;/, '');
+    .replace(/ if c\.id is null and delta > 0 then[\s\S]*?end if;/, '')
+    .replace(/ select b\.id into bill_id from purchase_invoices b[\s\S]*?continue; end if;/, '')
+    .replace(/ \|\| coalesce\(\(select jsonb_build_object\('dueDate'[\s\S]*?'\{\}'::jsonb\)/, '');
   const wasNoBil = was.replace(/ if exists \(select 1 from purchase_invoices b where b\.shop_id = p_shop_id and b\.quote_id = p_quote_id and coalesce\(b\.payload ->> 'voided', 'false'\) <> 'true'\) then raise exception 'Supplier bills for % are raised already\.', inv_label using errcode = 'OWBIL'; end if;/, '');
   t.check(wasNoBil !== was && now === wasNoBil, 'and is otherwise 0136\'s, line for line');
   const run = sql.slice(sql.indexOf('create or replace function ow_invoice_due_orders('));

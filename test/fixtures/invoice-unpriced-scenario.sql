@@ -19,6 +19,7 @@ insert into staff(shop_id,id,name,role,user_id) values
 insert into app_settings(shop_id, presets) values ('11111111-1111-1111-1111-111111111111','{}')
  on conflict (shop_id) do update set presets = excluded.presets;
 insert into suppliers(shop_id, id, name) values ('11111111-1111-1111-1111-111111111111','S1','Maria Building Materials'),('11111111-1111-1111-1111-111111111111','S2','Karddia');
+update suppliers set terms_days = 14 where id = 'S2';
 insert into products(shop_id,id,name) values
  ('11111111-1111-1111-1111-111111111111','P1','BB Silicone'),('11111111-1111-1111-1111-111111111111','P2','MEGGO Handles');
 insert into prices(id, shop_id, product_id, supplier_id, retail, unit) values
@@ -89,6 +90,7 @@ select _try('manager: invoice Kato''s order on credit', 'ok', $q$select invoice_
 select _try('manager: invoice an order with Maria''s bill already on file (fix 4)', 'ok', $q$select _is($c$(select r->'bills' @> '[7001]'::jsonb and jsonb_array_length(r->'bills') = 2 from (select invoice_order('11111111-1111-1111-1111-111111111111', 9507) r) x)$c$)$q$);
 reset role;
 select _try('check: Maria''s bill is kept, Karddia gets one, one bill per supplier', 'ok', $q$select _is($c$(select count(*) = 2 and count(distinct payload->>'supplierId') = 2 from purchase_invoices where quote_id = 9507) and exists(select 1 from purchase_invoices where id = 7001 and quote_id = 9507)$c$)$q$);
+select _try('check: Karddia''s new bill is due on their 14 days'' terms (fix 10)', 'ok', $q$select _is($c$(select (payload->>'dueDate')::date = date + 14 from purchase_invoices where quote_id = 9507 and payload->>'supplierId' = 'S2')$c$)$q$);
 select _try('check: nothing of 9501 or 9502 was written: not invoiced, no bills', 'ok', $q$select _is($c$not (select invoiced from saved_quotes where id=9501) and not (select invoiced from saved_quotes where id=9502) and not exists(select 1 from purchase_invoices where quote_id in (9501,9502))$c$)$q$);
 select _try('check: Kato owes the 50,000 and the 63,000', 'ok', $q$select _is($c$(select debt from customers where id='C001') = 113000$c$)$q$);
 

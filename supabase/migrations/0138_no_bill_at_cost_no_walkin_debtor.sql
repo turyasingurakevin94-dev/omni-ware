@@ -19,7 +19,11 @@
 --    left the shelf and no debt was raised (Q-0531, Q-0539, Q-0540). That
 --    bill is kept now, and only the suppliers without one are billed: one
 --    bill per supplier per order.
--- 4. The hourly run told nobody what it skipped (the audit's section 4,
+-- 4. Fix 10: a bill raised here had no dueDate, so Accounts > Bills read
+--    "no date" for every one and "nothing due this week" was always true.
+--    It is due on the supplier's terms now (suppliers.terms_days, 0106),
+--    as Accounts' own bill form sets it. Older open bills: see BACKFILL.
+-- 5. The hourly run told nobody what it skipped (the audit's section 4,
 --    item 3). Each order it cannot invoice pushes the Manager once a day:
 --    a price to set (price.approve), anything else (invoice.make).
 --
@@ -31,6 +35,18 @@
 --   select q.id, ow_order_unpriced(q.shop_id, q.payload -> 'items',
 --          (select presets from app_settings a where a.shop_id = q.shop_id)) as unpriced
 --     from saved_quotes q where q.status = 'completed' and not q.invoiced and not q.voided;
+--
+-- BACKFILL (fix 10, not run by this file; look first, then run it if the
+-- rows are right): open bills with no due date, due on their date plus the
+-- supplier's terms.
+--   select pi.id, pi.date, s.name, s.terms_days, pi.date + s.terms_days as due
+--     from purchase_invoices pi join suppliers s on s.shop_id = pi.shop_id and s.id = pi.payload ->> 'supplierId'
+--    where coalesce(pi.payload ->> 'dueDate', '') = '' and s.terms_days is not null
+--      and coalesce(pi.payload ->> 'voided', 'false') <> 'true' and pi.date is not null;
+--   update purchase_invoices pi set payload = pi.payload || jsonb_build_object('dueDate', to_char(pi.date + s.terms_days, 'YYYY-MM-DD'))
+--     from suppliers s where s.shop_id = pi.shop_id and s.id = pi.payload ->> 'supplierId'
+--      and coalesce(pi.payload ->> 'dueDate', '') = '' and s.terms_days is not null
+--      and coalesce(pi.payload ->> 'voided', 'false') <> 'true' and pi.date is not null;
 --
 -- ROLLBACK: run 0136's ow_invoice_core and 0119's ow_invoice_due_orders again;
 --   drop function if exists ow_order_unpriced(uuid, jsonb, jsonb);
@@ -212,7 +228,10 @@ begin
            'supplierId', sid,
            'supplierName', coalesce((select s.name from suppliers s where s.shop_id = p_shop_id and s.id = sid),
                                     (select e ->> 'supplierName' from jsonb_array_elements(out_items) e where e ->> 'supplierId' = sid limit 1), ''),
-           'items', bill_items, 'amountPaid', 0, 'payments', '[]'::jsonb, 'voided', false));
+           'items', bill_items, 'amountPaid', 0, 'payments', '[]'::jsonb, 'voided', false)
+           -- 0138: due on the supplier's terms, as Accounts' own bill form sets it (fix 10).
+           || coalesce((select jsonb_build_object('dueDate', to_char(inv_at + s.terms_days, 'YYYY-MM-DD'))
+                          from suppliers s where s.shop_id = p_shop_id and s.id = sid and s.terms_days is not null), '{}'::jsonb));
     bills := bills || to_jsonb(bill_id);
   end loop;
 

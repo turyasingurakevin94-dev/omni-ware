@@ -487,7 +487,7 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0135 | A new customer's id past C999: invoicing (0119) and `next_entity_id` (0032) no longer cut C1000 to C100 |
 | 0136 | The audit of 19 Oct 2026, part one: the counter sale as one write (`counter_sale`), restock goods reaching the shelf (`receive_trip`), "cash first" holding until paid, phone and trip prices counting in the share, the restock hold on `restock_buys` (`hold_restock_buy`; `restock_lines` retired), a dropped line pushed to the salesperson (`line.dropped`), the invoice label past 9999 |
 | 0137 | The audit, part two: the indexes the apps' date windows, the live refresh and the hourly invoice run were missing |
-| 0138 | The end-to-end test of 19 Oct 2026, fix 2: invoicing refuses a line still to price (`OWTPC`), never makes a debtor of a generic name like "Walk-in" (`OWWLK`), and the hourly run pushes the Manager each order it skips (`invoice.held`) |
+| 0138 | The end-to-end test of 19 Oct 2026, fix 2: invoicing refuses a line still to price (`OWTPC`), never makes a debtor of a generic name like "Walk-in" (`OWWLK`), keeps a supplier bill already on the order instead of refusing it (fix 4, no more `OWBIL`), dates its bills by the supplier's terms (fix 10), and the hourly run pushes the Manager each order it skips (`invoice.held`) |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.
