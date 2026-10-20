@@ -165,9 +165,9 @@ row in the same commit. The test fails on any mismatch, in either direction.
 |---|---|---|---|---|---|
 | **Work a request: asked, looking, found, priced, listed** | `sourcing.lead` | Sourcing | Sales | Sales (who asked) | yes |
 | **Add a new item to what we sell, or edit a product's details (not its markup)** | `product.edit` | Sourcing | — | Manager (to set the markup) | yes |
-| **Add or edit suppliers** | `supplier.edit` | Sourcing | Buyer | — | yes |
+| **Add or edit suppliers, and merge two records that are one supplier** (`merge_suppliers`, 0145) | `supplier.edit` | Sourcing | Buyer | — | yes |
 | **Keep the supplier price list and rival prices right** | `price.list` | Sourcing | Buyer | — | yes |
-| **Confirm today's share of prices** (the owner sets how many); the Buyer confirms by phone for a supplier who is slow or can't | `price.confirm` | Sourcing, Buyer | — | owner's log | yes: Sourcing, Buyer |
+| **Confirm today's share of prices, and set how many a day** (`set_prices_per_day`, 0145; the owner can still change it); the Buyer confirms by phone for a supplier who is slow or can't | `price.confirm` | Sourcing, Buyer | — | owner's log | yes: Sourcing, Buyer |
 
 ### The team
 
@@ -303,8 +303,9 @@ the supplier price list automatically.
   Sourcing request the same way (0139). When Sourcing finds a supplier, the
   Buyer who sent it gets a push (0144).
 - Agents' stock requests (`agent_requests`, kind `stock`) land there too.
-- Each day, **Sourcing confirms the owner's set number of supplier prices**
-  (`presets.priceReview`), oldest first: still right, or the new figure.
+- Each day, **Sourcing confirms its set number of supplier prices**
+  (`presets.priceReview`, set in the Sourcing app since 0145), oldest first:
+  still right, or the new figure.
 - **The Buyer confirms on a supplier's behalf** by phone when the supplier is
   slow or can't do it themselves. It counts toward the day's share, as does a
   price paid on a trip (`price_source` 'confirmed' and 'purchase', 0136).
@@ -405,8 +406,8 @@ key at a time. The console still saves the whole row from its own copy, so
 ## 4. What the owner keeps: governance, never operations
 
 - Hiring: staff records, pay rates, roles, and switching on each role's tasks
-- The policy numbers: how many prices Sourcing confirms per day, and the
-  shop's own goal
+- The policy numbers: the shop's own goal (how many prices Sourcing confirms
+  per day moved to Sourcing, 0145; the owner can still change it)
 - One-time shop set-up: receipt details, MoMo merchant set-up, the words and
   categories
 - Restoring a backup, clearing data, and every permanent delete (0058).
@@ -522,6 +523,7 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0142 | A stock count counts delivered goods once: accepting it adds back what orders packed, out or delivered but not yet invoiced took off the shelf (`ow_held_gone`), so their invoices take it off the books once |
 | 0143 | A stock count is accepted once, from 'sent' (on 0142's), and a surplus lot is valued at the last cost known (`ow_last_known_cost`); an Accounts login cannot book a cash line on a closed day (the 0123 guard on INSERT too) |
 | 0144 | Buyer, second: Sourcing finding a supplier for a line the client waits for pushes the Buyer who sent it (`sourcing.found`), and a trip handed in short pushes each short order's salesperson (`trip.short`) |
+| 0145 | Sourcing v2: two supplier records that are one supplier merged in one write (`merge_suppliers`, supplier.edit), and prices a day set by Sourcing (`set_prices_per_day`, price.confirm) |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.

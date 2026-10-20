@@ -24,6 +24,8 @@ insert into agent_requests(shop_id,agent_id,kind,words,product_id) values ('1111
 insert into saved_quotes(id, shop_id, client_name, client_phone, status, payload) overriding system value values
  (9101,'11111111-1111-1111-1111-111111111111','Nansana Hardware','0772000111','draft',
   '{"customerId":"C001","droppedLines":[{"productId":"P001","productName":"Valley flashing 3m","qty":6,"unit":"pc","sellPrice":17000,"at":2,"reason":"Nobody has it","droppedAt":1760000000000},{"productId":"P001","productName":"Gutter bracket","qty":3,"at":3,"reason":"Client said no","droppedAt":1760000000000}]}');
+insert into saved_quotes(id, shop_id, client_name, status, payload) overriding system value values
+ (9102,'11111111-1111-1111-1111-111111111111','Restock','draft','{"items":[{"productId":"P001","supplierId":"S003","qty":2}],"supplierConfirms":{"S003":{"state":"confirmed"}}}');
 create table _r(n serial, label text, expect text, got text);
 create function _try(label text, expect text, q text) returns void language plpgsql as $$
 declare got text := 'ok';
@@ -75,8 +77,29 @@ select _try('sourcing: touch stock', 'refused', $q$insert into stock(shop_id,key
 select _try('sourcing: a supplier bill', 'refused', $q$insert into purchase_invoices(shop_id,date,payload) values ('11111111-1111-1111-1111-111111111111',current_date,'{}')$q$);
 select _try('sourcing: add role_tasks rows', 'refused', $q$insert into role_tasks values ('sourcing','markup.set')$q$);
 
+-- ---- 0145: two records that are one supplier, merged; prices a day set by Sourcing
+select _try('sourcing: a look-alike supplier', 'ok', $q$insert into suppliers(shop_id,id,name,phone) values ('11111111-1111-1111-1111-111111111111','S003','Namanve Sheets.','0701')$q$);
+select _try('sourcing: the look-alike''s price for an item the kept one lacks', 'ok', $q$insert into prices(shop_id,product_id,supplier_id,wholesale,date,price_source) values ('11111111-1111-1111-1111-111111111111','P002','S003',9000,current_date,'manual')$q$);
+select _try('sourcing: both have a price for the same item', 'ok', $q$insert into prices(shop_id,product_id,supplier_id,wholesale,date,price_source) values ('11111111-1111-1111-1111-111111111111','P001','S001',11000,current_date,'manual'),('11111111-1111-1111-1111-111111111111','P001','S003',99000,current_date,'manual')$q$);
+select _try('sourcing: a hunt quoting the look-alike', 'ok', $q$update sourcing_leads set candidates='[{"supplierId":"S003","name":"Namanve Sheets.","quotedPrice":9000},{"supplierId":"S002"}]' where id='SRC-T1'$q$);
+select _try('sourcing: merge into itself is refused', 'refused', $q$select merge_suppliers('11111111-1111-1111-1111-111111111111','S001','S001')$q$);
+select _try('sourcing: merge the look-alike into the supplier', 'ok', $q$select merge_suppliers('11111111-1111-1111-1111-111111111111','S001','S003')$q$);
+select _try('merge: the folded record is gone', 'ok', $q$do $d$ begin if exists (select 1 from suppliers where id='S003') then raise exception 'still there'; end if; end $d$$q$);
+select _try('merge: its price for a new item moved over', 'ok', $q$do $d$ begin if not exists (select 1 from prices where supplier_id='S001' and product_id='P002' and wholesale=9000) then raise exception 'not moved'; end if; end $d$$q$);
+select _try('merge: the kept one''s own price for the same item stays, not doubled', 'ok', $q$do $d$ begin if (select count(*) from prices where supplier_id='S001' and product_id='P001') <> 1 or not exists (select 1 from prices where supplier_id='S001' and product_id='P001' and wholesale=11000) then raise exception 'doubled or lost'; end if; end $d$$q$);
+select _try('merge: the hunt now names the kept supplier', 'ok', $q$do $d$ begin if (select candidates->0->>'supplierId' from sourcing_leads where id='SRC-T1') <> 'S001' or (select candidates->1->>'supplierId' from sourcing_leads where id='SRC-T1') <> 'S002' then raise exception 'not swapped'; end if; end $d$$q$);
+select _try('merge: the order to suppliers names the kept one, and its confirmation moved', 'ok', $q$do $d$ begin if (select payload->'items'->0->>'supplierId' from saved_quotes where id=9102) <> 'S001' or not ((select payload->'supplierConfirms' from saved_quotes where id=9102) ? 'S001') then raise exception 'not swapped'; end if; end $d$$q$);
+select _try('merge: in the owner''s log under supplier.edit', 'ok', $q$do $d$ begin if not exists (select 1 from decision_log where task='supplier.edit' and what like 'Merged%') then raise exception 'no line'; end if; end $d$$q$);
+select _try('sourcing: merging it again is refused (already merged)', 'refused', $q$select merge_suppliers('11111111-1111-1111-1111-111111111111','S001','S003')$q$);
+select _try('sourcing: set prices a day', 'ok', $q$select set_prices_per_day('11111111-1111-1111-1111-111111111111', 8)$q$);
+select _try('prices a day: 8, the month figure in step', 'ok', $q$do $d$ begin if not exists (select 1 from app_settings where shop_id='11111111-1111-1111-1111-111111111111' and presets->'priceReview'->>'perDay'='8' and presets->'priceReview'->>'targetPerPeriod'='208') then raise exception 'not set'; end if; end $d$$q$);
+select _try('prices a day: in the owner''s log', 'ok', $q$do $d$ begin if not exists (select 1 from decision_log where task='price.confirm' and what like 'Prices Sourcing confirms a day set to 8') then raise exception 'no line'; end if; end $d$$q$);
+select _try('sourcing: prices a day of 0 is refused', 'refused', $q$select set_prices_per_day('11111111-1111-1111-1111-111111111111', 0)$q$);
+
 -- ---- as WORKER (staff): the same walls as before
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000c';
+select _try('worker: merge suppliers', 'refused', $q$select merge_suppliers('11111111-1111-1111-1111-111111111111','S001','S002')$q$);
+select _try('worker: set prices a day', 'refused', $q$select set_prices_per_day('11111111-1111-1111-1111-111111111111', 3)$q$);
 select _try('worker: add a supplier', 'refused', $q$insert into suppliers(shop_id,id,name) values ('11111111-1111-1111-1111-111111111111','S009','W')$q$);
 select _try('worker: a request', 'refused', $q$insert into sourcing_leads(id,shop_id,name) values ('SRC-W','11111111-1111-1111-1111-111111111111','W')$q$);
 select _try('worker: a price row', 'refused', $q$insert into prices(shop_id,product_id,supplier_id) values ('11111111-1111-1111-1111-111111111111','P001','S001')$q$);
